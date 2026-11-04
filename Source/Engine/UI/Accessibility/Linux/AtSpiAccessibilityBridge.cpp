@@ -835,9 +835,9 @@ namespace sw
             DBusConnection*         _pSession{ nullptr }; ///< 세션 버스(접근성 버스 주소와 스크린 리더 켜짐 신호를 받는다)
             DBusConnection*         _pBus{ nullptr };     ///< 접근성 버스(객체를 내보내는 연결)
             string                  _busName{};           ///< 접근성 버스에서의 이 앱 고유 이름
-            uint8                   _bReaderOn : 1;
-            UIAccessibilitySnapshot _snapshot{};
+            uint8                   _bReaderOn      : 1;
             uint8                   _bSnapshotValid : 1;
+            UIAccessibilitySnapshot _snapshot{};
         };
     } // namespace
 

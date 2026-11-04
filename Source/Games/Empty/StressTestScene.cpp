@@ -414,6 +414,7 @@ namespace sw
         , _benchGridSide{ 0 }
         , _probeFrame{ 0 }
         , _bRefreshedCameras{ SW_FALSE }
+        , _reserved{ 0 }
         , _listRigBody{}
         , _listRagdoll{}
         , _ragdollHalfExtent{ 0.0f }
@@ -421,7 +422,6 @@ namespace sw
         , _rigLookTarget{}
         , _framedInput{}
         , _framingMode{ FramingMode::Grid }
-        , _reserved{ 0 }
     {
     }
 

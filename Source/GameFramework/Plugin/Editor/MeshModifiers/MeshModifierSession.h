@@ -207,11 +207,16 @@ namespace sw::editor
         MeshModifierStack          _stack;
         shared_ptr<Mesh>           _gpuPreviewMesh;         ///< 레스트 정점 + GPU 모프(엔진이 만든 메시라 모듈이 내려가도 소멸 코드는 엔진에 있다)
         uint8                      _bGPUPreviewColored : 1; ///< GPU 미리보기 메시의 정점 색을 Paint 결과로 덮었다(칠하는 스택이 아니게 되면 원본 색으로 되돌린다)
-        shared_ptr<Mesh>           _cpuPreviewMesh;         ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
-        shared_ptr<Mesh>           _originalMesh;           ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
+        uint8                      _bShadedPreview     : 1;
+        uint8                      _bPreviewDirty      : 1;
+        uint8                      _bStagePreviewDirty : 1;
+        uint8                      _bInputBoundsDirty  : 1;
+        uint8                      _bMirrorEditing     : 1;
+        uint8                      _bPreviewPlaying    : 1;
+        shared_ptr<Mesh>           _cpuPreviewMesh; ///< CPU 결과 정점(GPU 로 못 옮기는 스택일 때만 있다)
+        shared_ptr<Mesh>           _originalMesh;   ///< 미리보기를 끼우기 전 대상 컴포넌트의 메시
         vector<float4>             _listGPUProgram;
         int32                      _gpuBlockingIndex;
-        uint8                      _bShadedPreview : 1;
         MeshModifierMesh           _previewMesh;
         MeshModifierMesh           _stagePreviewMesh;      ///< 고른 모디파이어까지만 건 결과(`makeStagePreviewSegments`)
         MeshModifierMesh           _prefixMesh;            ///< 고른 모디파이어 앞까지 건 결과(앞부분 캐시, `updatePrefixCache`)
@@ -237,10 +242,5 @@ namespace sw::editor
         int32                      _stagePreviewIndex; ///< `_stagePreviewMesh` 를 만든 고른 번호(-1 이면 없음)
         int32                      _selectedControlPoint;
         uint32                     _mirrorAxis;
-        uint8                      _bPreviewDirty      : 1;
-        uint8                      _bStagePreviewDirty : 1;
-        uint8                      _bInputBoundsDirty  : 1;
-        uint8                      _bMirrorEditing     : 1;
-        uint8                      _bPreviewPlaying    : 1;
     };
 } // namespace sw::editor

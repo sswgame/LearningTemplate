@@ -190,8 +190,8 @@ namespace sw
         , _listRetiredFrameSystem{}
         , _services{ services }
         , _bRunningFrameSystems{ SW_FALSE }
-        , _updateSerial{ 0 }
         , _bPhysicsStepEnabled{ SW_TRUE }
+        , _updateSerial{ 0 }
         , _deferredRegistrationDepth{ 0 }
         , _listDeferredRegister{}
         , _listDeferredPostLoad{}

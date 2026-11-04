@@ -247,11 +247,16 @@ namespace sw::editor
         : _stack{}
         , _gpuPreviewMesh{}
         , _bGPUPreviewColored{ SW_FALSE }
+        , _bShadedPreview{ SW_TRUE }
+        , _bPreviewDirty{ SW_TRUE }
+        , _bStagePreviewDirty{ SW_TRUE }
+        , _bInputBoundsDirty{ SW_TRUE }
+        , _bMirrorEditing{ SW_FALSE }
+        , _bPreviewPlaying{ SW_FALSE }
         , _cpuPreviewMesh{}
         , _originalMesh{}
         , _listGPUProgram{}
         , _gpuBlockingIndex{ -1 }
-        , _bShadedPreview{ SW_TRUE }
         , _previewMesh{}
         , _stagePreviewMesh{}
         , _prefixMesh{}
@@ -277,11 +282,6 @@ namespace sw::editor
         , _stagePreviewIndex{ -1 }
         , _selectedControlPoint{ -1 }
         , _mirrorAxis{ 0 }
-        , _bPreviewDirty{ SW_TRUE }
-        , _bStagePreviewDirty{ SW_TRUE }
-        , _bInputBoundsDirty{ SW_TRUE }
-        , _bMirrorEditing{ SW_FALSE }
-        , _bPreviewPlaying{ SW_FALSE }
     {
     }
 

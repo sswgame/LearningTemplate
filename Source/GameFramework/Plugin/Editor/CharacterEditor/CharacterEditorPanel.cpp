@@ -227,11 +227,11 @@ namespace sw::editor
         , _bModelsWereDirty{ SW_FALSE }
         , _bCustomizationOpen{ SW_TRUE }
         , _bCustomizationActive{ SW_FALSE }
+        , _bBoneGizmoPlaced{ SW_FALSE }
         , _seenFitRevision{ 0 }
         , _gizmo{}
         , _boneGizmoTarget{}
         , _placedBoneWorld{}
-        , _bBoneGizmoPlaced{ SW_FALSE }
         , _bRigPreview{ false }
         , _published{}
         , _thumbnailCapturePath{}

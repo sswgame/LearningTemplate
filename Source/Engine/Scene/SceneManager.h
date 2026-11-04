@@ -333,6 +333,7 @@ namespace sw
         Scene*                    _pFocusedScene;     ///< `focusScene` 으로 고른 씬(nullptr 이면 활성 씬)
         uint32                    _nextPreviewKey;    ///< 다음 미리보기 씬 키(1 부터, 줄이지 않는다)
         uint8                     _bWorldPlaying : 1; ///< `setWorldPlaying`
+        uint8                     _bInitialized  : 1;
         uint64                    _sceneGeneration;
         IRHIDevice*               _pRHIDevice;
         SceneEngineServices       _services; ///< 생성자가 읽고 `initializeSubsystem` 이 다시 읽은 엔진 서비스 묶음(빌림)
@@ -349,7 +350,6 @@ namespace sw
         SceneObjectsInvalidatedDelegate _onSceneObjectsInvalidated; ///< `onSceneObjectsInvalidated`
         SceneLoadRequestedDelegate      _onSceneLoadRequested;      ///< `onSceneLoadRequested`
         NetLinkValue                    _netLink;                   ///< 새로 받아들이는 씬에 올릴 넷 링크(`setNetLink`). 비어 있으면 올리지 않는다
-        uint8                           _bInitialized : 1;
 
         unique_ptr<PreloadSet> _pScenePreload;     ///< 로드 중이거나 끝난 지 얼마 안 된 씬의 프리로드. 없으면 nullptr
         uint32                 _preloadHeldFrames; ///< 로드가 끝난 뒤 프리로드를 붙들고 지난 프레임 수

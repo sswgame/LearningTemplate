@@ -109,7 +109,8 @@ namespace sw::editor
         uint64                                  _structureGeneration;
         uint64                                  _tagGeneration;
         uint32                                  _rebuildCount; ///< 다시 지은 횟수(감시 값 `Editor.HierarchyRowRebuildCount`)
-        uint8                                   _bFilterActive : 1;
+        uint8                                   _bFilterActive     : 1;
+        uint8                                   _bClickedThisFrame : 1;
 
         // 그린 행 · 선택
         vector<uint64>                         _listDrawnRow;
@@ -119,7 +120,6 @@ namespace sw::editor
         uint64                                 _lastPrimaryID;      ///< 지난 프레임의 주 선택. 외부에서 바뀌었는지 구분하는 데 쓴다
         uint64                                 _pendingRenameID;    ///< 이름 바꾸기 명령이 고른 오브젝트. 다음 그리기에서 입력 칸을 연다
         fixed_string<constant::buffer::kMax64> _addComponentSearch; ///< "Add Component" 메뉴의 검색 칸 글(메뉴를 닫았다 열어도 남는다)
-        uint8                                  _bClickedThisFrame : 1;
     };
 
     /**

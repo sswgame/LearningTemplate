@@ -125,10 +125,10 @@ namespace sw::editor
         , _filter{}
         , _bOnlySelectedEvent{ false }
         , _bEditDirty{ SW_FALSE }
+        , _bVisibleEventStale{ SW_TRUE }
         , _pEventNameEngine{ nullptr }
         , _eventNameGeneration{ 0 }
         , _visibleEventFilter{}
-        , _bVisibleEventStale{ SW_TRUE }
     {
     }
 

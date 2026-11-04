@@ -123,20 +123,20 @@ namespace sw::editor
         , _resolutionTable{}
         , _resolutionIndex{ 0 }
         , _bResolutionTableAttempted{ SW_FALSE }
+        , _bInteract{ SW_FALSE }
+        , _bNavigationMode{ SW_FALSE }
+        , _bMutated{ SW_FALSE }
+        , _bAnimationPaused{ SW_FALSE }
+        , _bPointerInside{ SW_FALSE }
+        , _bPointerPressed{ SW_FALSE }
+        , _bApplyLocalization{ SW_FALSE }
+        , _bAwaitReload{ SW_FALSE }
         , _uiScale{ 1.0f }
         , _textScale{ 1.0f }
         , _safeZone{ 0.0f }
         , _animationScrub{ 0.0f }
         , _lastPointer{}
-        , _bInteract{ SW_FALSE }
-        , _bNavigationMode{ SW_FALSE }
-        , _bMutated{ SW_FALSE }
-        , _bAnimationPaused{ SW_FALSE }
         , _bAnimationLoop{ false }
-        , _bPointerInside{ SW_FALSE }
-        , _bPointerPressed{ SW_FALSE }
-        , _bApplyLocalization{ SW_FALSE }
-        , _bAwaitReload{ SW_FALSE }
         , _bReloadedAfterSave{ false }
     {
         _pSession->_pModel = this;

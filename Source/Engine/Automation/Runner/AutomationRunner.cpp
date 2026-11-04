@@ -60,6 +60,8 @@ namespace sw
         , _screenshotRequestedCount{ 0 }
         , _screenshotCompletedCount{ 0 }
         , _bFinishWaiting{ SW_FALSE }
+        , _bClockHeld{ SW_FALSE }
+        , _reserved{ 0 }
         , _assetSettledFrameCount{ 0 }
         , _pHeldStepState{}
         , _pHeldStateStep{ nullptr }
@@ -67,8 +69,6 @@ namespace sw
         , _holdStartSeconds{ 0.0 }
         , _clockHoldFrameCount{ 0 }
         , _seenFrameCount{ 0 }
-        , _bClockHeld{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 
@@ -141,6 +141,11 @@ namespace sw
         , _outputDirectory{}
         , _finishReason{}
         , _bSkippedByBuild{ SW_FALSE }
+        , _bStarted{ SW_FALSE }
+        , _bEnded{ SW_FALSE }
+        , _bHangWatchArmed{ SW_FALSE }
+        , _bWriteGateHeld{ SW_FALSE }
+        , _reserved{ 0 }
         , _startedAt{}
         , _reproduceInput{}
         , _hangPayload{}
@@ -152,11 +157,6 @@ namespace sw
         , _startScenePath{}
         , _startSceneLoad{}
         , _result{ AutomationOutcome::Running }
-        , _bStarted{ SW_FALSE }
-        , _bEnded{ SW_FALSE }
-        , _bHangWatchArmed{ SW_FALSE }
-        , _bWriteGateHeld{ SW_FALSE }
-        , _reserved{ 0 }
     {
     }
 

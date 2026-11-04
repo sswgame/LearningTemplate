@@ -42,9 +42,8 @@
 
 | 일 | 내용 |
 |---|---|
-| 비트필드 묶음 붙이기 | 비트필드 깃발 사이에 bool · 다른 칸이 끼면 묶음이 끊겨 바이트를 따로 먹는다(리플렉션은 `resolveBitField` 가 실제 레이아웃에서 찾아 순서와 무관). CppShape 에 "끊긴 비트필드 묶음" 검사를 세우고, 칸을 옮기면 생성자 초기화 목록도 같은 순서로 |
 | 주인 우선(Helpers.md) — 다른 헤더 | 같은 헤더의 `X` + `XUtil` 은 끝났고 린트가 막는다. 남은 것: 다른 헤더에 있는 `XxxUtil` 가운데 함수 대부분이 한 타입만 받는 것, 주인이 있는데 `XxxInternal` · 자유 함수로 빠진 것 — 린트가 못 보는 자리라 셈 스크립트로 후보를 뽑아 하나씩 본다 |
-| 정적 상태 클래스 | 크래시 처리기처럼 상태를 전역에 둔 정적 클래스(`GPUBreadcrumbs` · `ShutdownSignal` …)와 .cpp 전역 상태 묶음(`GameService.cpp` 의 `s_gameServiceState` · `EditorService.cpp` 의 `s_editorScope` · `FileUtil.cpp` 의 `s_writeCounters` — 구조체 정리 중 찾음)을 소유자가 든 인스턴스로 — OS 가 하나만 두는 진입점만 전역 |
+| 정적 상태 | 크래시 처리기는 끝났고 `GPUBreadcrumbs` 는 상태가 없는 창구(상태는 `GPUBreadcrumbLog` 서브시스템)다. 남은 것: .cpp 전역 가변 변수(`s_*` — 대입까지 센 어림 310, 선언만 다시 뽑는다)를 하나씩 판정한다. 그대로 두는 것: OS 진입점(신호 · 예외 처리기 · `ShutdownSignal`), 모듈 경계 창구(`s_gameServiceState` · `s_editorScope` — 언리얼 `GEngine` 자리), 프로세스 하나인 자원의 번호(`FileUtil` 의 `s_writeCounters`). 나머지(캐시 · 레지스트리 · 함수 지역 정적 저장소)는 그 상태를 쓰는 서브시스템이나 소유자 인스턴스로 |
 | JSON 손 스키마 | `ConfigKeyDoc`(키 · 형식 · 기본값 · 설명의 손 표)을 지우고 텍스처 · 모델 임포트 규칙을 리플렉션 구조체로(F 묶음의 첫 일). JSON 에는 XMLFields 에 해당하는 읽기(적은 칸만 · 모르는 키를 이름으로 알림)가 없다 — 먼저 세운다. `readObject` 는 적지 않은 칸을 기본값으로 되돌려 프리셋 상속을 담지 못한다 |
 | 리눅스 빌드 | 크래시 처리기 인스턴스화(748605fe5e)의 POSIX 파일 · `CallStackCapture` 는 이 기계에서 짓지 못했다 — WSL 에서 빌드 · 크래시 테스트 |
 

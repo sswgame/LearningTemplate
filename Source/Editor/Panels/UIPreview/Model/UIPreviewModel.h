@@ -293,20 +293,20 @@ namespace sw::editor
         UIResolutionPresetTable         _resolutionTable; ///< 해상도 견본 — 처음 쓸 때 한 번 읽는다
         uint32                          _resolutionIndex;
         uint8                           _bResolutionTableAttempted : 1; ///< 테이블을 읽어 봤다(실패도 한 번만 알린다)
+        uint8                           _bInteract                 : 1; ///< 입력 흉내를 켰는지(이미지 위 클릭이 선택 대신 UI 로 간다)
+        uint8                           _bNavigationMode           : 1; ///< 탐색 방식으로 보이는지(포커스 테두리)
+        uint8                           _bMutated                  : 1; ///< 입력 흉내나 애니메이션이 트리 값을 바꿨는지
+        uint8                           _bAnimationPaused          : 1;
+        uint8                           _bPointerInside            : 1;
+        uint8                           _bPointerPressed           : 1; ///< 포인터 버튼을 누른 채인지(이미지 밖에서 놓아도 Up 을 보낸다)
+        uint8                           _bApplyLocalization        : 1; ///< 화면에 문화권 관리자를 다시 등록해야 하는지(화면을 새로 열었거나 언어를 바꿨다)
+        uint8                           _bAwaitReload              : 1; ///< 저장했고 핫 리로드가 트리를 다시 만들기를 기다리는지
         float32                         _uiScale;
         float32                         _textScale;
         float32                         _safeZone;
-        float32                         _animationScrub;       ///< 시간 막대 값(초)
-        float2                          _lastPointer;          ///< 마지막으로 보낸 포인터 위치(UI 단위)
-        uint8                           _bInteract        : 1; ///< 입력 흉내를 켰는지(이미지 위 클릭이 선택 대신 UI 로 간다)
-        uint8                           _bNavigationMode  : 1; ///< 탐색 방식으로 보이는지(포커스 테두리)
-        uint8                           _bMutated         : 1; ///< 입력 흉내나 애니메이션이 트리 값을 바꿨는지
-        uint8                           _bAnimationPaused : 1;
-        bool                            _bAnimationLoop; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
-        uint8                           _bPointerInside     : 1;
-        uint8                           _bPointerPressed    : 1; ///< 포인터 버튼을 누른 채인지(이미지 밖에서 놓아도 Up 을 보낸다)
-        uint8                           _bApplyLocalization : 1; ///< 화면에 문화권 관리자를 다시 등록해야 하는지(화면을 새로 열었거나 언어를 바꿨다)
-        uint8                           _bAwaitReload       : 1; ///< 저장했고 핫 리로드가 트리를 다시 만들기를 기다리는지
-        bool                            _bReloadedAfterSave;     ///< 그 뒤 트리가 새로 지어졌는지(감시 값) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        float32                         _animationScrub;     ///< 시간 막대 값(초)
+        float2                          _lastPointer;        ///< 마지막으로 보낸 포인터 위치(UI 단위)
+        bool                            _bAnimationLoop;     ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool                            _bReloadedAfterSave; ///< 그 뒤 트리가 새로 지어졌는지(감시 값) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor

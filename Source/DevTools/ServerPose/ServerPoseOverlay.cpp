@@ -145,8 +145,8 @@ namespace sw
         , _listDelta{}
         , _thread{}
         , _bStarted{ SW_FALSE }
-        , _bReceived{ SW_FALSE }
         , _reserved{ 0 }
+        , _bReceived{ SW_FALSE }
     {
     }
 

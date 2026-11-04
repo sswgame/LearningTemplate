@@ -464,16 +464,16 @@ namespace sw
         CursorShape                               _cursorShape;                               /**< OS 커서 모양입니다(`setCursorShape`). */
         [[maybe_unused]] uint16                   _pendingHighSurrogate;                      /**< 짝을 기다리는 서로게이트의 앞 반쪽입니다(Win32 WM_CHAR). 0 이면 없습니다. */
         uint8                                     _consumedButtonMask;                        /**< 잠금을 다시 잡느라 삼킨, 아직 떼지 않은 마우스 버튼 비트입니다(`1 << MouseButton`). */
-        uint8                                     _bInitialized          : 1;
-        uint8                                     _bInputMuted           : 1;
-        uint8                                     _bWindowFocused        : 1;           /**< 창이 포커스를 가지고 있는지 나타냅니다(포커스 메시지로 갱신하며, 창 없는 테스트에서는 true). */
-        uint8                                     _bMouseLockEngaged     : 1;           /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는지 나타냅니다. */
-        uint8                                     _bAltHeld              : 1;           /**< Alt 를 누르고 있는지 나타냅니다(누르는 동안 잠금을 쉽니다). */
-        uint8                                     _bCursorHiddenApplied  : 1;           /**< OS 커서를 숨겨 둔 상태인지 나타냅니다. `ShowCursor` 는 카운터라서 전이할 때만 부릅니다. */
-        uint8                                     _bOSDeviceInputBlocked : 1;           /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOSDeviceInputBlocked`). */
-        uint8                                     _bNativeWindowFocused  : 1;           /**< OS 창 자체가 포커스를 가졌는지입니다(X11 FocusIn/FocusOut) — 보조 폴링 · 가운데 되돌리기를 건너뛸지 정한다. */
-        uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`noteNativeEvent`) */
+        uint8                                     _bInitialized                    : 1;
+        uint8                                     _bInputMuted                     : 1;
+        uint8                                     _bWindowFocused                  : 1; /**< 창이 포커스를 가지고 있는지 나타냅니다(포커스 메시지로 갱신하며, 창 없는 테스트에서는 true). */
+        uint8                                     _bMouseLockEngaged               : 1; /**< 포커스를 잃은 뒤 클라이언트를 눌러 잠금을 다시 잡았는지 나타냅니다. */
+        uint8                                     _bAltHeld                        : 1; /**< Alt 를 누르고 있는지 나타냅니다(누르는 동안 잠금을 쉽니다). */
+        uint8                                     _bCursorHiddenApplied            : 1; /**< OS 커서를 숨겨 둔 상태인지 나타냅니다. `ShowCursor` 는 카운터라서 전이할 때만 부릅니다. */
+        uint8                                     _bOSDeviceInputBlocked           : 1; /**< 무인 자동화가 창 메시지 단계에서 사람의 마우스와 키보드 이벤트를 버리는지 나타냅니다(`setOSDeviceInputBlocked`). */
+        uint8                                     _bNativeWindowFocused            : 1; /**< OS 창 자체가 포커스를 가졌는지입니다(X11 FocusIn/FocusOut) — 보조 폴링 · 가운데 되돌리기를 건너뛸지 정한다. */
         uint8                                     _bAccessibilityShortcutsDisabled : 1; /**< 접근성 단축키를 꺼 두었는지입니다(`_arrSavedAccessibilityFlags` 가 유효하다). */
+        uint64                                    _humanInputSerial{ 0 };               /**< 사람이 낸 OS 키보드 · 마우스 입력 수(`noteNativeEvent`) */
 
     private:
     };

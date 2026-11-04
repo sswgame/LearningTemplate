@@ -270,7 +270,8 @@ namespace sw
         /** @brief `updateProbes` 가 센 벤치 프레임 수입니다(감시 값을 거는 프레임을 고릅니다). */
         uint32 _probeFrame;
         /** @brief 늦게 생기는 에디터 카메라까지 한 번 더 맞췄으면 1. */
-        uint8 _bRefreshedCameras : 1;
+        uint8                  _bRefreshedCameras : 1;
+        [[maybe_unused]] uint8 _reserved          : 7;
         /** @brief 리그 데모의 기사 몸 유닛 핸들입니다. 몸 돌리기와 걷기에 씁니다. */
         vector<TComponentHandle<SkeletalMeshComponent>> _listRigBody;
         /** @brief 래그돌 군중의 래그돌 컴포넌트 핸들입니다. */
@@ -284,7 +285,6 @@ namespace sw
         /** @brief 마지막으로 카메라를 맞출 때의 입력입니다. `captureFramingInput()` 이 이와 달라지면(시나리오가 `-gv_stressTest…` 를 도중에 바꾼 경우) `update` 가 다시 맞춥니다. */
         FramingInput _framedInput;
         /** @brief 지금의 보기 모드입니다. 스폰이 정하고 `despawn` 이 격자로 되돌립니다. */
-        FramingMode            _framingMode;
-        [[maybe_unused]] uint8 _reserved : 7;
+        FramingMode _framingMode;
     };
 } // namespace sw

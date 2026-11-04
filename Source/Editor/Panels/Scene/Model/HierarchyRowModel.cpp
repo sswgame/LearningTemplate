@@ -54,6 +54,7 @@ namespace sw::editor
         , _tagGeneration{ 0 }
         , _rebuildCount{ 0 }
         , _bFilterActive{ SW_FALSE }
+        , _bClickedThisFrame{ SW_FALSE }
         , _listDrawnRow{}
         , _listPreviousRow{}
         , _anchorObjectID{ 0 }
@@ -61,7 +62,6 @@ namespace sw::editor
         , _lastPrimaryID{ 0 }
         , _pendingRenameID{ 0 }
         , _addComponentSearch{}
-        , _bClickedThisFrame{ SW_FALSE }
     {
     }
 

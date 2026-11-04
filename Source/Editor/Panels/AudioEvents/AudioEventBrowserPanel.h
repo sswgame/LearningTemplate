@@ -92,10 +92,10 @@ namespace sw::editor
         hashed_string                           _editEvent;       ///< 사본에서 고치는 이벤트 이름(복제한 새 이벤트일 수 있다)
         fixed_string<constant::buffer::kMax128> _filter;
         bool                                    _bOnlySelectedEvent;     ///< 재생 중 목록을 고른 이벤트로 거른다. NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        uint8                                   _bEditDirty : 1;         ///< 사본을 고친 뒤 아직 저장하지 않았다.
+        uint8                                   _bEditDirty         : 1; ///< 사본을 고친 뒤 아직 저장하지 않았다.
+        uint8                                   _bVisibleEventStale : 1; ///< 이름 목록이 바뀌어 다시 걸러야 한다
         const AudioEngine*                      _pEventNameEngine;       ///< `_listEventName` 을 모은 엔진(엔진이 새로 뜨면 세대가 다시 1 부터라 함께 본다)
         uint32                                  _eventNameGeneration;    ///< `_listEventName` 을 모은 때의 `AudioEngine::getEventLibraryGeneration`
         string                                  _visibleEventFilter;     ///< `_listVisibleEvent` 를 거른 검색 글
-        uint8                                   _bVisibleEventStale : 1; ///< 이름 목록이 바뀌어 다시 걸러야 한다
     };
 } // namespace sw::editor

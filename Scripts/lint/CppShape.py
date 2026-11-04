@@ -3,8 +3,8 @@
 """
 Scripts/lint/CppShape.py
 
-C++ 모양 규칙 중 컴파일러가 보지 않는 다섯을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
-**왜 형식이 아니라 린트인가.** 다섯 다 C++ 문법으로 막을 수 없다(멤버 순서 · 칸 형식의 선택 · 익명 네임스페이스 수 · 함수가 놓인 타입 · include 자리).
+C++ 모양 규칙 중 컴파일러가 보지 않는 여섯을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
+**왜 형식이 아니라 린트인가.** 여섯 다 C++ 문법으로 막을 수 없다(멤버 순서 · 칸 형식의 선택 · 익명 네임스페이스 수 · 함수가 놓인 타입 · include 자리).
 
 1. 선언 순서(`docs/agents/Includes.md`): public 멤버 변수 → 생성자 · 소멸자 → … → private 함수(따로 된 접근 구역) → private 멤버 변수(마지막).
    - public 멤버 변수가 함수 뒤에 온다 · private/protected 멤버 변수 뒤에 함수가 온다 · private/protected 함수와 변수가 한 구역에 섞였다.
@@ -15,6 +15,7 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 다섯을 본다. 규칙 문
 5. 중괄호 안 헤더 include: X-매크로 표(`.xxx`) · 인라인 본문(`.inl`) 말고는 `#include` 가 이름공간 · 클래스 · 함수 몸통 안에 있으면 안 된다.
    2026-11-05 — 파일을 합치는 일회용 스크립트가 "마지막 include 뒤" 에 헤더를 붙여 클래스 몸통 · 배열 초기값 안에 들어갔고, 다른 헤더가 먼저 끌어와
    `#pragma once` 로 비어 있어 컴파일러가 알리지 않았다.
+6. 끊긴 비트필드 묶음: 같은 접근 구역의 비트필드 사이에 다른 칸이 있으면 묶음마다 바이트를 따로 먹는다(전처리 갈래로 끊긴 것은 보지 않는다).
 
 `py -3 -m Scripts cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
 """
@@ -341,6 +342,29 @@ def checkBoolFlags(info: ClassInfo, rawLines: list[str]) -> list[tuple[int, str]
     return problems
 
 
+def checkBitFieldRuns(info: ClassInfo, rawLines: list[str]) -> list[tuple[int, str]]:
+    """같은 접근 구역의 비트필드가 다른 칸으로 끊기면 묶음마다 바이트(와 다음 칸의 정렬)를 따로 먹는다. 사이에 전처리 갈래가 있으면 구성마다 칸이 달라 보지 않는다."""
+    problems: list[tuple[int, str]] = []
+    lastBitLine: dict[str, int] = {}
+    brokenAfter: dict[str, int] = {}
+    for kind, access, line, statement in info.items:
+        if kind != "var" or re.search(r"\bstatic\b|\bconstexpr\b", statement):
+            continue
+        declaration = re.sub(r"\{.*|=.*", "", re.sub(r"\s+", " ", statement)).strip()
+        isBit = re.search(r":\s*\d+\s*$", declaration) is not None
+        if isBit:
+            previous = lastBitLine.get(access)
+            if previous is not None and access in brokenAfter:
+                between = rawLines[previous:line - 1]
+                if not any(text.lstrip().startswith("#") for text in between):
+                    problems.append((line, f"`{info.name}` 의 비트필드 묶음이 {brokenAfter[access]} 줄의 칸으로 끊겼다 — 같은 접근 구역의 비트필드는 붙여 둔다(생성자 초기화 목록도 같은 순서로)"))
+            lastBitLine[access] = line
+            brokenAfter.pop(access, None)
+        elif access in lastBitLine:
+            brokenAfter.setdefault(access, line)
+    return problems
+
+
 def checkAnonymousNamespaces(code: str) -> list[tuple[int, str]]:
     problems: list[tuple[int, str]] = []
     blocks = list(re.finditer(r"\bnamespace\s*\{", code))
@@ -399,6 +423,7 @@ def inspectFile(path: Path, relative: str) -> list[str]:
     for info in collectClasses(code):
         listProblem += checkDeclarationOrder(info)
         listProblem += checkBoolFlags(info, rawLines)
+        listProblem += checkBitFieldRuns(info, rawLines)
     if relative.endswith(".cpp"):
         listProblem += checkAnonymousNamespaces(code)
     listProblem += checkUtilBesideOwner(code, relative)

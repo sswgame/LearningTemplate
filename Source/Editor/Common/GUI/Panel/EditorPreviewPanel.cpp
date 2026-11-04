@@ -91,13 +91,13 @@ namespace sw::editor
         , _commandStack{}
         , _selection{}
         , _bFocusApplied{ SW_FALSE }
+        , _bPreviewPaused{ SW_FALSE }
+        , _bFloorShown{ SW_TRUE }
+        , _bAxesShown{ SW_TRUE }
         , _seenCommandCount{ 0 }
         , _previewBarSize{}
         , _speedIndex{ EditorPreviewPanelInternal::kDefaultSpeedIndex }
         , _stepFramesLeft{ 0 }
-        , _bPreviewPaused{ SW_FALSE }
-        , _bFloorShown{ SW_TRUE }
-        , _bAxesShown{ SW_TRUE }
     {
     }
 

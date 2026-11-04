@@ -123,7 +123,7 @@ namespace sw
         vector<AuthorityDelta> _listDelta     SW_GUARDED_BY( _mutex );        ///< 마지막 `update` 의 차이(`_mutex` - `describe` 가 다른 스레드에서 읽을 수 있다)
         sw::thread                            _thread;                        ///< 정지 요청은 스레드의 토큰으로 한다(`shutdown`)
         uint8                                 _bStarted  : 1;
-        uint8                                 _bReceived : 1 SW_GUARDED_BY( _mutex ); ///< 서버 포즈를 한 번이라도 받았다(`_mutex`)
         [[maybe_unused]] uint8                _reserved  : 6;
+        uint8                                 _bReceived : 1 SW_GUARDED_BY( _mutex ); ///< 서버 포즈를 한 번이라도 받았다(`_mutex`)
     };
 } // namespace sw

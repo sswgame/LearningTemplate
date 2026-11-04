@@ -50,7 +50,9 @@ namespace sw
         uint32                           _waitFrameCount;        ///< 시작 조건을 기다린 프레임 수입니다.
         uint32                           _screenshotRequestedCount;
         uint32                           _screenshotCompletedCount;
-        uint8                            _bFinishWaiting : 1;     ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
+        uint8                            _bFinishWaiting : 1; ///< 이 프레임에 `<Pass/>` 가 뒤의 일을 기다린다 - 시나리오 시한에 세지 않는다(그 대기는 `kMaxFinishWaitFrames` 가 따로 묶는다)
+        uint8                            _bClockHeld     : 1; ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
+        [[maybe_unused]] uint8           _reserved       : 7;
         uint32                           _assetSettledFrameCount; ///< `<Screenshot>` 앞에서 에셋 일이 0 인 채로 지난 프레임 수입니다
         unique_ptr<IAutomationStepState> _pHeldStepState;         ///< 붙잡은 단계가 맡긴 상태(`setHeldStepState`). 그 단계가 놓이면 지운다
         const AutomationStep*            _pHeldStateStep;         ///< `_pHeldStepState` 를 맡긴 단계(없으면 nullptr)
@@ -58,8 +60,6 @@ namespace sw
         float64                          _holdStartSeconds;       ///< 지금 단계가 붙잡기 시작한 단조 시계 초(`<WaitUntil timeoutWallSeconds>` 의 시한 기준)
         uint32                           _clockHoldFrameCount;    ///< 시계 잡기 조건이 이어서 붙잡은 프레임
         uint32                           _seenFrameCount;         ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
-        uint8                            _bClockHeld : 1;         ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
-        [[maybe_unused]] uint8           _reserved   : 7;
         AutomationStepTimeline();
 
         /** @brief 스크린샷 경로를 대기열에 더합니다(`<Screenshot>`). 렌더 패킷이 한 장씩 꺼내 간다. */
@@ -301,7 +301,12 @@ namespace sw
         AutomationTimeline       _wallProfile;  ///< 벽시계가 프레임 종류(고정 대기 · 조건 대기 · 단계 …)별로 어디에 쓰였는지(보고의 `timeline`)
         string                   _outputDirectory;
         string                   _finishReason;
-        uint8                    _bSkippedByBuild : 1;    ///< 시나리오가 선언한 빌드 구성(없는 모듈 · 빠진 개발 명령)으로 건너뛰었다 - 환경 탓의 건너뜀과 달리 경고가 아니다
+        uint8                    _bSkippedByBuild : 1; ///< 시나리오가 선언한 빌드 구성(없는 모듈 · 빠진 개발 명령)으로 건너뛰었다 - 환경 탓의 건너뜀과 달리 경고가 아니다
+        uint8                    _bStarted        : 1;
+        uint8                    _bEnded          : 1;
+        uint8                    _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
+        uint8                    _bWriteGateHeld  : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratch::acquireWriteGate` — `endRun` 이나 소멸자가 놓는다)
+        [[maybe_unused]] uint8   _reserved        : 4;
         string                   _startedAt;              ///< 벽시계 시작 지역 시각 글(`2026-10-26 14:03:11`). 얻지 못하면 빈 글
         AutomationReproduceInput _reproduceInput;         ///< 보고의 재현 명령 재료(`setReproduceInput`). 이 시나리오의 `<Launch>` 변수는 보고를 쓸 때 더한다
         AutomationHangPayload    _hangPayload;            ///< 감시 스레드에 넘기는 스냅샷의 게임 스레드 쪽 사본(바뀌지 않는 칸은 시작할 때 한 번 채운다)
@@ -313,11 +318,6 @@ namespace sw
         string                   _startScenePath;         ///< 시작 조건 전에 열 씬(`requireStartScene`). 열렸으면 비운다
         TaskFuture<Scene*>       _startSceneLoad;         ///< 시작 씬의 로드 요청(요청 전이면 무효)
         AutomationOutcome        _result;
-        uint8                    _bStarted        : 1;
-        uint8                    _bEnded          : 1;
-        uint8                    _bHangWatchArmed : 1; ///< `armHangWatchdog` 를 불렀다(실제 프로세스를 끝낼 수 있는 감시라 세션만 켠다)
-        uint8                    _bWriteGateHeld  : 1; ///< 쓰기 입구 게이트를 쥐고 있다(`AutomationScratch::acquireWriteGate` — `endRun` 이나 소멸자가 놓는다)
-        [[maybe_unused]] uint8   _reserved        : 4;
         AutomationFrameStats     _frameStats{}; ///< 벤치마크 구간의 프레임 시간(`BeginFrameStats` … `EndFrameStats`)
     };
 } // namespace sw

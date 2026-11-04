@@ -47,6 +47,7 @@ namespace sw
         , _pFocusedScene{ nullptr }
         , _nextPreviewKey{ 1 }
         , _bWorldPlaying{ SW_FALSE }
+        , _bInitialized{ SW_FALSE }
         , _sceneGeneration{ 0 }
         , _pRHIDevice{ nullptr }
         , _services{ SceneEngineServices::makeFromBoundEngine() }
@@ -60,7 +61,6 @@ namespace sw
         , _onSceneObjectsInvalidated{}
         , _onSceneLoadRequested{}
         , _netLink{}
-        , _bInitialized{ SW_FALSE }
         , _pScenePreload{}
         , _preloadHeldFrames{ 0 }
         , _leakProbe{}

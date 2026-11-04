@@ -351,10 +351,10 @@ namespace sw
         , _backBufferHeight{ 0 }
         , _bPreferredVSync{ SW_FALSE }
         , _bImmediateSubmit{ SW_FALSE }
-        , _bParallelRecording{ false }
         , _bSoftwareAdapter{ SW_FALSE }
-        , _initResult{ RHIInitResult::NotStarted }
         , _bShutDown{ SW_FALSE }
+        , _bParallelRecording{ false }
+        , _initResult{ RHIInitResult::NotStarted }
         , _memoryTracker{ make_unique<RHIMemoryTracker>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
     {

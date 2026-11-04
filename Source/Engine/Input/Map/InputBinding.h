@@ -272,6 +272,9 @@ namespace sw
         float32          _scale{ 1.0f };           /**< MouseDelta2D · MouseWheel1D: 감도 배율. VirtualJoystick2D: 드래그 반경(px). */
         float2           _axisScale{ 1.0f, 1.0f }; /**< GamepadStick2D: 축마다 배율(언리얼 Enhanced Input 의 Scale). 마우스 Y 는 아래가 +라 스틱을 Look 에 묶으려면 Y 를 음수로 둔다. */
         uint8            _bScaleByDelta : 1;       /**< GamepadStick2D: 프레임 시간을 곱한다(Scale By Delta Time). 배율을 초당 값(픽셀/초)으로 적을 수 있다. */
+        /** @brief 바인딩 값의 부호를 뒤집습니다(언리얼 Negate 모디파이어, 유니티 Invert 프로세서). 눌림과 발화는 그대로이고 값만 바뀐다. */
+        uint8         _bNegate           : 1;
+        mutable uint8 _bJoystickAnchored : 1; /**< VirtualJoystick2D 전용입니다. 드래그 중이라 앵커가 잡혀 있는지 나타냅니다. */
         /**
          * @brief 이 바인딩의 발화 시간(초)입니다. 0 이면 맵 전체 값을 씁니다(`InputMap::getEffectiveTriggerTime`).
          * @details Hold · HoldAndRelease 는 누를 시간, Tap 은 떼야 할 최대 시간, Pulse 는 반복 간격, DoubleTap · DoubleClicked 는 두 누름 사이 최대 간격이다.
@@ -279,13 +282,10 @@ namespace sw
          *          유니티 Input System 의 Interaction 마다 duration 에 해당한다. 같은 맵에서 짧은 차지와 긴 차지를 함께 쓸 수 있다.
          */
         float32 _triggerTime{ 0.0f };
-        /** @brief 바인딩 값의 부호를 뒤집습니다(언리얼 Negate 모디파이어, 유니티 Invert 프로세서). 눌림과 발화는 그대로이고 값만 바뀐다. */
-        uint8 _bNegate : 1;
         /** @brief MultiTap 이 발화하는 누름 횟수입니다(2 이상). 다른 트리거는 쓰지 않는다. XML 의 `taps` 속성이며 기본값 2 는 적지 않는다. */
         uint8          _tapCount{ 2 };
         mutable uint32 _cachedLayerIndex{ kInvalidLayerIndex }; /**< `_listLayerEntry` 의 안정된 인덱스입니다. 포인터가 아니라 인덱스라서 재할당되어도 안전합니다. */
         mutable float2 _joystickAnchor{ 0.0f, 0.0f };           /**< VirtualJoystick2D 전용입니다. 드래그를 시작한 순간의 마우스 위치(플로팅 앵커)입니다. */
-        mutable uint8  _bJoystickAnchored : 1;                  /**< VirtualJoystick2D 전용입니다. 드래그 중이라 앵커가 잡혀 있는지 나타냅니다. */
 
         ActionBinding()
             : _bScaleByDelta{ SW_FALSE }

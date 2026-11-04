@@ -88,12 +88,12 @@ namespace sw::editor
         int32         _nestedSelectedIndex; ///< 보이는 하위 스택에서 고른 번호(-1 이면 없음)
         int32         _enterRequest;        ///< 이번 프레임 끝에 들어갈 묶음 번호(-1 이면 없음)
         uint8         _bLeaveRequested : 1; ///< 이번 프레임 끝에 한 단계 나온다
+        uint8         _bEditing        : 1; ///< 끌기 중인 입력칸이 이미 되돌리기 기록을 남겼다
         uint64        _curveModifierID;     ///< 곡선 팝업을 연 모디파이어의 인스턴스 번호(0 이면 없음)
         uint32        _curveParamIndex;     ///< 곡선 팝업을 연 매개변수 번호
         int32         _curveItemIndex;      ///< 곡선 팝업을 연 목록 항목 번호(단일 곡선이면 -1)
         string        _descriptionID;       ///< 설명을 만들어 둔 등록 id
         string        _description;         ///< `_descriptionID` 모디파이어의 설명
         string        _warpExportPath;      ///< 보이는 하위 스택을 내보낼 워프 정의 파일 경로(`.mfwarp`, `WorldWarpModifier::writeWarpFile`)
-        uint8         _bEditing : 1;        ///< 끌기 중인 입력칸이 이미 되돌리기 기록을 남겼다
     };
 } // namespace sw::editor

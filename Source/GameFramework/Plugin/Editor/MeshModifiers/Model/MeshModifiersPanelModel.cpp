@@ -21,13 +21,13 @@ namespace sw::editor
         , _nestedSelectedIndex{ -1 }
         , _enterRequest{ -1 }
         , _bLeaveRequested{ SW_FALSE }
+        , _bEditing{ SW_FALSE }
         , _curveModifierID{ 0 }
         , _curveParamIndex{ 0 }
         , _curveItemIndex{ -1 }
         , _descriptionID{}
         , _description{}
         , _warpExportPath{}
-        , _bEditing{ SW_FALSE }
     {
     }
 

@@ -175,18 +175,18 @@ namespace sw::editor
         , _uniqueSetRunningImportKey{}
         , _uniqueSetDeferredFile{}
         , _bImportInFlight{ SW_FALSE }
+        , _bChangedPathsUnknown{ SW_FALSE }
+        , _bFenceWaiting{ SW_FALSE }
+        , _bFenceSeen{ SW_FALSE }
         , _finishedImportCount{ 0 }
         , _fenceImportDeadlineNanoseconds{ 0 }
         , _resourceWatch{}
         , _contentWatch{}
         , _contentChangeSerial{ 0 }
         , _listChangedPath{}
-        , _bChangedPathsUnknown{ SW_FALSE }
         , _fencePrepareCount{ AutomationScratch::getPrepareCount() }
         , _fenceArmedCount{ 0 }
         , _fenceDeadlineNanoseconds{ 0 }
-        , _bFenceWaiting{ SW_FALSE }
-        , _bFenceSeen{ SW_FALSE }
     {
     }
 
