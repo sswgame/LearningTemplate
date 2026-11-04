@@ -80,6 +80,18 @@ namespace sw::editor
             }
 
             /**
+             * @brief 사건의 리소스 id(소문자)를 @p outAssetID 에 담고, 다른 프로세스(나란히 도는 시나리오 실행 — 백엔드마다의 자식 App)의 스크래치 사본에서 온 사건이면 true 입니다. 그 사본은 이 에디터의 콘텐츠가 아니다.
+             * @details 감시 사건의 입구 둘(트리 · 파일)이 모두 이것으로 거른다. 예전에는 트리 입구만 걸러, 파일 입구가 남의 사본을 다시 읽다가 그 프로세스가 단계 끝에
+             *          폴더를 지우는 순간 `File.NotFound` 를 남겼다(Release `Scenario.editor` 의 bugreport 단계 — dx11 이 dx12 의 `assetmanage_p<pid>` 를 읽었다).
+             *          트리 입구에서는 그 쓰기마다 참조 색인을 처음부터 다시 읽어 단언이 낡은 색인을 봤다(assetmanage).
+             */
+            static bool isOtherProcessScratchEvent( const FileChangeEvent& changeEvent, string& outAssetID )
+            {
+                outAssetID = StringUtil::toLower( editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).c_str() );
+                return AutomationScratch::isOtherProcessInstance( outAssetID );
+            }
+
+            /**
              * @brief 울타리 표지 파일의 이름(`contentfence_p<pid>.tmp`)입니다.
              * @details `Content/scratch/` 는 같은 체크아웃에서 동시에 도는 에디터가 나눠 쓴다. 이름이 고정이면 한쪽이 지운 표지를 다른 쪽이 쓰다 실패하거나 남의 사건을 제 것으로 읽는다.
              */
@@ -277,9 +289,8 @@ namespace sw::editor
 
     void AssetHotReload::onResourceTreeChanged( const FileChangeEvent& changeEvent )
     {
-        // 다른 프로세스(나란히 도는 시나리오 실행)의 스크래치 사본은 이 에디터의 콘텐츠가 아니다 — 그 쓰기마다 참조 색인을 처음부터 다시 읽어 단언이 낡은 색인을 봤다(assetmanage).
-        const string eventAssetID = StringUtil::toLower( editor::getSubsystem<AssetPaths>().toAssetID( FileUtil::joinPath( changeEvent._directory, changeEvent._filename ) ).c_str() );
-        if ( AutomationScratch::isOtherProcessInstance( eventAssetID ) )
+        string eventAssetID;
+        if ( AssetHotReloadInternal::isOtherProcessScratchEvent( changeEvent, eventAssetID ) )
             return;
         ++_contentChangeSerial;
         bool bOwnFence = false;
@@ -379,7 +390,8 @@ namespace sw::editor
         // 바깥 편집기의 "안전한 저장" 도 같다. 새로 생긴 파일(Added)은 아직 가진 캐시가 없어 할 일이 없지만 검증은 돈다.
         const bool bContentChanged = changeEvent._action == FileWatcherAction::Modified || changeEvent._action == FileWatcherAction::RenamedNewName ||
                                      changeEvent._action == FileWatcherAction::Added;
-        if ( bContentChanged == false )
+        string eventAssetID;
+        if ( bContentChanged == false || AssetHotReloadInternal::isOtherProcessScratchEvent( changeEvent, eventAssetID ) )
             return;
 
         string relPath{};
