@@ -13,6 +13,8 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/Countdown.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/WeaponMath.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -28,34 +30,57 @@ namespace sw
      * @details 퍼짐은 쏠 때마다 `_spreadPerShot` 만큼 커지고(상한은 `_maxSpread`), 쏘지 않으면 초당 `_spreadRecovery` 만큼 `_minSpread` 로 돌아온다.
      *          피해는 숫자로만 보관하고, 게임이 어빌리티 시스템의 피해 이펙트(SetByCaller)로 넘긴다.
      */
-    struct WeaponDef
+    REFLECT()
+    struct SW_GF_API WeaponDef
     {
-        static constexpr float32 kMinFireInterval = 0.01f; ///< `fireInterval` 의 하한(s) — 0 이면 한 프레임에 탄창을 비운다
-        static constexpr float32 kMinRange        = 0.1f;  ///< `range` 의 하한(m)
+        REFLECT_BODY();
 
+        PROPERTY( Required )
         hashed_string _id{};
-        hashed_string _ammoID{};             ///< 예비탄으로 쓰는 아이템 id. 인벤토리와 연결하는 게임이 읽는다. 비면 무기 자체 예비탄을 쓴다
-        hashed_string _itemID{};             ///< 이 무기를 나타내는 장비 아이템 id. 표시 이름과 외형은 그 아이템이 정한다(이름을 무기 표에 또 적지 않는다). 아이템 표를 쓰지 않는 게임은 비운다
-        string        _name{};               ///< 로그용 이름. 데이터에 `name` 이 없으면 id 다
-        float32       _fireInterval{ 0.1f }; ///< 발사 사이 최소 간격(s)
-        float32       _reloadTime{ 1.8f };
-        float32       _damage{ 10.0f }; ///< 한 발(산탄이면 한 알)의 피해
-        float32       _range{ 80.0f };
-        float32       _minSpread{ 0.5f }; ///< 가만히 쏠 때의 원뿔 반각(도)
-        float32       _maxSpread{ 4.0f };
-        float32       _spreadPerShot{ 0.6f };
-        float32       _spreadRecovery{ 6.0f }; ///< 초당 줄어드는 퍼짐(도)
-        float32       _recoilPitch{ 0.6f };    ///< 한 발의 반동(도, 위로)
-        float32       _falloffStart{ 0.0f };   ///< 이 거리까지는 피해 그대로(0 = 감쇠 없음)
-        float32       _falloffEnd{ 0.0f };     ///< 이 거리부터 `_falloffMinScale`
-        float32       _falloffMinScale{ 1.0f };
-        float32       _projectileSpeed{ 0.0f };   ///< 탄속(m/s). 0 이면 히트스캔(광선), 아니면 탄도(`Ballistics`)
-        float32       _projectileGravity{ 1.0f }; ///< 탄 낙차의 중력 배율. 0 이면 곧게 간다
-        float32       _headshotMultiplier{ 2.0f };
-        int32         _magazineSize{ 30 };
-        int32         _maxReserveAmmo{ 180 };
-        int32         _pelletCount{ 1 };      ///< 한 번에 나가는 알 수(산탄)
-        uint8         _bAutomatic{ SW_TRUE }; ///< 누르고 있으면 계속 쏜다(아니면 누를 때마다 한 발)
+        PROPERTY( Name = "ammo" )
+        hashed_string _ammoID{}; ///< 예비탄으로 쓰는 아이템 id. 인벤토리와 연결하는 게임이 읽는다. 비면 무기 자체 예비탄을 쓴다
+        PROPERTY( Name = "item" )
+        hashed_string _itemID{}; ///< 이 무기를 나타내는 장비 아이템 id. 표시 이름과 외형은 그 아이템이 정한다(이름을 무기 표에 또 적지 않는다). 아이템 표를 쓰지 않는 게임은 비운다
+        PROPERTY()
+        string _name{}; ///< 로그용 이름. 데이터에 `name` 이 없으면 id 다
+        PROPERTY( Min = 0.01, Units = s )
+        float32 _fireInterval{ 0.1f }; ///< 발사 사이 최소 간격(s)
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _reloadTime{ 1.8f };
+        PROPERTY()
+        float32 _damage{ 10.0f }; ///< 한 발(산탄이면 한 알)의 피해
+        PROPERTY( Min = 0.1, Units = m )
+        float32 _range{ 80.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _minSpread{ 0.5f }; ///< 가만히 쏠 때의 원뿔 반각(도)
+        PROPERTY( Min = "_minSpread" )
+        float32 _maxSpread{ 4.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _spreadPerShot{ 0.6f };
+        PROPERTY( Min = 0.0 )
+        float32 _spreadRecovery{ 6.0f }; ///< 초당 줄어드는 퍼짐(도)
+        PROPERTY()
+        float32 _recoilPitch{ 0.6f }; ///< 한 발의 반동(도, 위로)
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _falloffStart{ 0.0f }; ///< 이 거리까지는 피해 그대로(0 = 감쇠 없음)
+        PROPERTY( Min = "_falloffStart", Units = m )
+        float32 _falloffEnd{ 0.0f }; ///< 이 거리부터 `_falloffMinScale`
+        PROPERTY( Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _falloffMinScale{ 1.0f };
+        PROPERTY( Min = 0.0, Units = "m/s" )
+        float32 _projectileSpeed{ 0.0f }; ///< 탄속(m/s). 0 이면 히트스캔(광선), 아니면 탄도(`Ballistics`)
+        PROPERTY()
+        float32 _projectileGravity{ 1.0f }; ///< 탄 낙차의 중력 배율. 0 이면 곧게 간다
+        PROPERTY( Min = 0.0 )
+        float32 _headshotMultiplier{ 2.0f };
+        PROPERTY( Min = 1 )
+        int32 _magazineSize{ 30 };
+        PROPERTY( Min = 0 )
+        int32 _maxReserveAmmo{ 180 };
+        PROPERTY( Min = 1 )
+        int32 _pelletCount{ 1 }; ///< 한 번에 나가는 알 수(산탄)
+        PROPERTY()
+        bool _bAutomatic{ true }; ///< 누르고 있으면 계속 쏜다(아니면 누를 때마다 한 발)
     };
 } // namespace sw
 

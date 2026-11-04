@@ -118,7 +118,7 @@ SW_TEST_CASE( WeaponTest, ReloadMovesOnlyWhatIsMissing )
 SW_TEST_CASE( WeaponTest, SemiAutoAndPellets )
 {
     sw::WeaponDef shotgun = makeRifle();
-    shotgun._bAutomatic   = SW_FALSE;
+    shotgun._bAutomatic   = false;
     shotgun._pelletCount  = 8;
     sw::WeaponState state;
     state.equip( shotgun, 0 );
