@@ -5,9 +5,11 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/DeterministicRandom.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
+#include "Engine/Object/Component/3D/MeshSectionComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
@@ -62,6 +64,44 @@ namespace sw
                 return modelIndex;
         }
         return lastIndex;
+    }
+
+    bool PropScatterMath::validateModels( const vector<PropScatterModel>& listModel, string_view componentMaterial, string& outError )
+    {
+        for ( size_t modelIndex = 0; modelIndex < listModel.size(); ++modelIndex )
+        {
+            const PropScatterModel& model = listModel[modelIndex];
+            if ( model._meshID.empty() )
+            {
+                outError = formatToString( "model %# has no mesh", modelIndex );
+                return false;
+            }
+            if ( model._listSection.empty() )
+                continue;
+            if ( componentMaterial.empty() == false )
+            {
+                outError = formatToString( "model '%#' lists section materials and the component also sets a material - set one of them", model._meshID.c_str() );
+                return false;
+            }
+            for ( size_t sectionIndex = 0; sectionIndex < model._listSection.size(); ++sectionIndex )
+            {
+                const PropScatterSection& section = model._listSection[sectionIndex];
+                if ( section._sectionName.empty() || section._materialPath.empty() )
+                {
+                    outError = formatToString( "model '%#' section %# needs both a section name and a material", model._meshID.c_str(), sectionIndex );
+                    return false;
+                }
+                for ( size_t earlierIndex = 0; earlierIndex < sectionIndex; ++earlierIndex )
+                {
+                    if ( model._listSection[earlierIndex]._sectionName == section._sectionName )
+                    {
+                        outError = formatToString( "model '%#' lists section '%#' twice", model._meshID.c_str(), section._sectionName.c_str() );
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
     }
 
     void PropScatterMath::computePlacements( const PropScatterParams& params, vector<PropScatterPlacement>& outListPlacement )
@@ -215,6 +255,12 @@ namespace sw
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager == nullptr )
             return;
+        string modelError;
+        if ( PropScatterMath::validateModels( _listModel, _materialPath, modelError ) == false )
+        {
+            SW_LOG_ERROR_ID( "PropScatter.InvalidModels", "Prop scatter '%#' is not spawned: %#", _propName.c_str(), modelError.c_str() );
+            return;
+        }
         vector<PropScatterPlacement> listPlacement;
         const PropScatterParams      params = makeParams();
         if ( params._mode == PropScatterMode::Rules )
@@ -250,12 +296,33 @@ namespace sw
                 pManager->destroyObject( pProp );
                 continue;
             }
-            pMesh->setMeshID( _listModel[static_cast<size_t>( placement._modelIndex )]._meshID );
-            if ( _materialPath.empty() == false )
-                pMesh->setMaterialPath( _materialPath );
+            const PropScatterModel& model = _listModel[static_cast<size_t>( placement._modelIndex )];
+            pMesh->setMeshID( model._meshID );
             pMesh->setLocalPosition( placement._position );
             pMesh->setLocalRotation( float3{ 0.0f, placement._yaw, 0.0f } );
             pMesh->setLocalScale( float3{ placement._scale, placement._scale, placement._scale } );
+            if ( model._listSection.empty() )
+            {
+                if ( _materialPath.empty() == false )
+                    pMesh->setMaterialPath( _materialPath );
+            }
+            else
+            {
+                // 첫 구간은 주 메시 컴포넌트가, 나머지는 같은 메시를 빌리는 구간 컴포넌트가 자기 머티리얼로 그린다.
+                pMesh->setSectionName( hashed_string( model._listSection[0]._sectionName.c_str() ) );
+                pMesh->setMaterialPath( model._listSection[0]._materialPath );
+                for ( size_t sectionIndex = 1; sectionIndex < model._listSection.size(); ++sectionIndex )
+                {
+                    const PropScatterSection&   section  = model._listSection[sectionIndex];
+                    MeshSectionComponent* const pSection = pProp->addComponent<MeshSectionComponent>();
+                    if ( pSection == nullptr )
+                        continue;
+                    pSection->setSectionName( hashed_string( section._sectionName.c_str() ) );
+                    pSection->setMaterialPath( section._materialPath );
+                    if ( pSection->attachToComponent( pMesh ) == false )
+                        SW_LOG_ERROR_ID( "PropScatter.SectionNotAttached", "Prop scatter '%#' could not attach section '%#' to its mesh", _propName.c_str(), section._sectionName.c_str() );
+                }
+            }
             _listSpawned.push_back( pProp->getHandle() );
         }
     }
