@@ -24,7 +24,6 @@
 3. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
 4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). Quaternius 열 팩은 `/AssetLibrary/Quaternius/`(무시)에 받아 두었고, 게임에 쓰는 것만
    `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 농장 · 서부 · 놀이공원 · 투기장 · 나일 소품과 HarvestValley 농부 · 마을 사람(외형 · 피팅 · UAL 클립)은 했다. 남은 것:
-   - Shooter3D 적 생물(QuadShell · Trilobite — `prefabs/quadshell` · `trilobite`)의 맞음 상자 · 소켓은 구로 잡은 어림값이다(`characters/<생물>/<생물>.physics.xml`) — 가까운 사진으로 다리 · 몸 구를 맞춘다.
    - Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품.
 
 ### 2. 테스트 · 시나리오 공백

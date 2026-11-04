@@ -1,39 +1,91 @@
 <!--
-	Quaternius Sci-Fi Essentials Trilobite(CC0)의 래그돌 · 맞음 상자 물리 에셋 — 뼈 축과 무관한 구로 몸통 하나와 다리 마디를 덮는다(어림값, 사진으로 맞춘다).
+	Quaternius Sci-Fi Essentials Trilobite(CC0)의 래그돌 · 맞음 상자 물리 에셋 — 몸(원반 판의 팔각 기둥 볼록 껍질 + 총 두 자루 상자의 컴파운드)과 다리 여덟 마디(넷째 마디는 발 포함).
+	셰이프 · 관절 축은 뼈 로컬(엔진 공간: glTF 의 X 를 뒤집은 것, +Y 가 뼈 방향)이고, 값은 원본 glTF(models_raw/quaternius/scifi/enemy_trilobite.gltf)의 묶인 정점에서 계산했다:
+	정점은 가중치가 가장 큰 뼈에 묶고, 바디가 없는 자식 뼈(Gun · Foot)의 정점은 바디가 있는 조상 바디에 합친다. 셰이프는 그 정점의 뼈 로컬 경계 상자이고,
+	단면이 둥글고 뼈 방향으로 긴 마디는 캡슐이다. 질량은 셰이프 부피에 비례하고 몸이 30 kg 이다.
 	히트 존: 몸통 ×1 · 다리 ×0.7. RagdollComponent 가 쓴다.
 -->
 <PhysicsAsset _defaultLayer="Ragdoll" _bCollideJointedBodies="false">
 	<_listBody>
 		<PhysicsAssetBodyDef _bone="Body" _mass="30" _material="Metal">
 			<_listShape>
-				<PhysicsShapeDesc3D _type="Sphere" _radius="0.95" _localPosition="0,-0.5,0.2" />
+				<PhysicsShapeDesc3D _type="ConvexHull">
+					<_listPoint>
+						<item>1.271,-0.039,0.511</item>
+						<item>0.526,-0.039,1.255</item>
+						<item>-0.526,-0.039,1.255</item>
+						<item>-1.271,-0.039,0.511</item>
+						<item>-1.271,-0.039,-0.541</item>
+						<item>-0.526,-0.039,-1.286</item>
+						<item>0.526,-0.039,-1.286</item>
+						<item>1.271,-0.039,-0.541</item>
+						<item>1.271,0.433,0.511</item>
+						<item>0.526,0.433,1.255</item>
+						<item>-0.526,0.433,1.255</item>
+						<item>-1.271,0.433,0.511</item>
+						<item>-1.271,0.433,-0.541</item>
+						<item>-0.526,0.433,-1.286</item>
+						<item>0.526,0.433,-1.286</item>
+						<item>1.271,0.433,-0.541</item>
+					</_listPoint>
+				</PhysicsShapeDesc3D>
+				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.088,0.053,0.428" _localPosition="-0.298,0.16,1.004" />
+				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.088,0.053,0.428" _localPosition="0.298,0.16,1.004" />
 			</_listShape>
 			<_hitZone _name="Torso" _damageMultiplier="1.0" />
 		</PhysicsAssetBodyDef>
-		<PhysicsAssetBodyDef _bone="Leg2.L" _mass="4" _material="Metal">
+		<PhysicsAssetBodyDef _bone="Leg1.L" _mass="6.46" _material="Metal">
 			<_listShape>
-				<PhysicsShapeDesc3D _type="Sphere" _radius="0.2" _localPosition="0,0,0" />
+				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.386,0.648,0.274" _localPosition="-0.035,0.414,-0.029" />
 			</_listShape>
 			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
-		<PhysicsAssetBodyDef _bone="Leg2.R" _mass="4" _material="Metal">
+		<PhysicsAssetBodyDef _bone="Leg2.L" _mass="1.97" _material="Metal">
 			<_listShape>
-				<PhysicsShapeDesc3D _type="Sphere" _radius="0.2" _localPosition="0,0,0" />
+				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.163,0.56,0.23" _localPosition="0,0.376,0.048" />
 			</_listShape>
 			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
-		<PhysicsAssetBodyDef _bone="Leg4.L" _mass="4" _material="Metal">
+		<PhysicsAssetBodyDef _bone="Leg3.L" _mass="2.29" _material="Metal">
 			<_listShape>
-				<PhysicsShapeDesc3D _type="Sphere" _radius="0.2" _localPosition="0,0,0" />
+				<PhysicsShapeDesc3D _type="Capsule" _radius="0.267" _halfHeight="0.256" _localPosition="0,0.404,0.002" />
 			</_listShape>
 			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />
 		</PhysicsAssetBodyDef>
-		<PhysicsAssetBodyDef _bone="Leg4.R" _mass="4" _material="Metal">
+		<PhysicsAssetBodyDef _bone="Leg4.L" _mass="2.51" _material="Metal">
 			<_listShape>
-				<PhysicsShapeDesc3D _type="Sphere" _radius="0.2" _localPosition="0,0,0" />
+				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.267,0.303,0.33" _localPosition="0,0.184,-0.211" />
+			</_listShape>
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_hitZone _name="Leg" _damageMultiplier="0.7" />
+		</PhysicsAssetBodyDef>
+		<PhysicsAssetBodyDef _bone="Leg1.R" _mass="6.46" _material="Metal">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.386,0.648,0.274" _localPosition="0.035,0.414,-0.029" />
+			</_listShape>
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_hitZone _name="Leg" _damageMultiplier="0.7" />
+		</PhysicsAssetBodyDef>
+		<PhysicsAssetBodyDef _bone="Leg2.R" _mass="1.97" _material="Metal">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.163,0.56,0.23" _localPosition="0,0.376,0.048" />
+			</_listShape>
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_hitZone _name="Leg" _damageMultiplier="0.7" />
+		</PhysicsAssetBodyDef>
+		<PhysicsAssetBodyDef _bone="Leg3.R" _mass="2.29" _material="Metal">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Capsule" _radius="0.267" _halfHeight="0.256" _localPosition="0,0.404,0.002" />
+			</_listShape>
+			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
+			<_hitZone _name="Leg" _damageMultiplier="0.7" />
+		</PhysicsAssetBodyDef>
+		<PhysicsAssetBodyDef _bone="Leg4.R" _mass="2.51" _material="Metal">
+			<_listShape>
+				<PhysicsShapeDesc3D _type="Box" _halfExtents="0.267,0.303,0.33" _localPosition="0,0.184,-0.211" />
 			</_listShape>
 			<_joint _type="Cone" _twistAxis="0,1,0" _normalAxis="1,0,0" _swingLimitNormal="0.5" _swingLimitPlane="0.5" _twistMin="-0.2" _twistMax="0.2" />
 			<_hitZone _name="Leg" _damageMultiplier="0.7" />

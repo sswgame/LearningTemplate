@@ -53,7 +53,7 @@
 			                 _pivot="0.5,1"
 			                 _worldSize="1,0.5"
 			                 _screenOffset="0,0"
-			                 _worldOffset="0,1.9,0"
+			                 _worldOffset="0,1.66,0"
 			                 _maxDistance="0"
 			                 _referenceDistance="10"
 			                 _bClampToScreenEdge="false"
@@ -73,9 +73,9 @@
 			<ShooterEnemyComponent _componentName="ShooterEnemyComponent"
 			                       _bActive="true"
 			                       _director="0"
-			                       _radius="0.9"
-			                       _height="1.6"
-			                       _reach="2.2"
+			                       _radius="1.39"
+			                       _height="1.33"
+			                       _reach="1.35"
 			                       _damage="9"
 			                       _attackInterval="1.5"
 			                       _attackHitEvent="AttackHit"
@@ -90,8 +90,8 @@
 			                       _agentType="Humanoid"
 			                       _maxSpeed="3"
 			                       _maxAcceleration="12"
-			                       _stoppingDistance="1.45"
-			                       _radius="0.9"
+			                       _stoppingDistance="1.15"
+			                       _radius="1.39"
 			                       _separationWeight="2"
 			                       _avoidanceQuality="Medium"
 			                       _turnRate="8"
@@ -120,7 +120,7 @@
 			                              _sprintSpeed="3"
 			                              _jumpSpeed="0"
 			                              _gravity="18"
-			                              _radius="0.9" />
+			                              _radius="1.39" />
 		</_listComponent>
 	</GameObject>
 </Prefab>
