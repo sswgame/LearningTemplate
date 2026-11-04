@@ -12,6 +12,7 @@ vcpkg_from_github(
         fix-imgui-v1.92.5.patch
         fit-without-zoom-in.patch # 프로젝트 오버레이: 내용 맞추기가 작은 그래프를 1:1 위로 확대하지 않게(언리얼 · 유니티 그래프의 "맞추기"와 같다)
         navigate-to-rect.patch # 프로젝트 오버레이: 캔버스 사각형으로 보기를 옮긴다(미니맵 누르기 — 언리얼 · Godot 미니맵의 끌어 옮기기)
+        get-group-size.patch # 프로젝트 오버레이: 그룹(주석 상자) 영역 크기를 읽는다 — 사용자가 늘인 주석 상자를 애셋에 저장한다(SetGroupSize 의 짝)
 )
 
 file(COPY "${CMAKE_CURRENT_LIST_DIR}/CMakeLists.txt" DESTINATION "${SOURCE_PATH}")

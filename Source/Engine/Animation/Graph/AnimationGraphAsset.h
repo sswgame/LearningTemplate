@@ -13,6 +13,7 @@
 
 #include "Engine/Animation/Graph/AnimationBoneMask.h"
 #include "Engine/Animation/Graph/BlendSpace.h"
+#include "Engine/Asset/GraphCommentBox.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 
@@ -258,12 +259,15 @@ namespace sw
         vector<AnimationGraphLink>     _listLink;     /**< 링크 목록입니다. */
         vector<AnimationBoneMaskDef>   _listBoneMask; /**< 본 마스크 목록입니다(XML "bone_masks"). 레이어가 이름으로 가리킵니다. */
         vector<AnimationGraphLayerDef> _listLayer;    /**< 레이어 목록입니다(XML "layers"). 적은 순서대로 얹습니다. */
+        vector<GraphCommentBox>        _listComment;  /**< 그래프 에디터의 주석 상자입니다(XML "comments", 선택 — 실행에는 쓰지 않는다). */
 
     private:
         /** @brief 이미 파싱된 XML 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기나 잘못된 블렌드 스페이스면 false 를 반환합니다. @p sourceLabel 은 오류에 적는 이름입니다. */
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
         /** @brief "nodes" 의 노드를 읽어 목록에 더합니다. 깨진 노드는 오류를 남기고 건너뛰며 false 를 돌려줍니다. */
         [[nodiscard]] bool parseNodes( const XMLNode& root, string_view sourceLabel );
+        /** @brief "comments" 의 주석 상자를 읽어 목록에 더합니다. id 가 1 미만이거나 겹치면 오류를 남기고 false 를 돌려줍니다. */
+        [[nodiscard]] bool parseComments( const XMLNode& root, string_view sourceLabel );
         /** @brief "links" 의 링크를 읽어 목록에 더합니다. 깨진 링크는 오류를 남기고 건너뛰며 false 를 돌려줍니다. */
         [[nodiscard]] bool parseLinks( const XMLNode& root, string_view sourceLabel );
         /** @brief "bone_masks" 를 읽어 목록에 더합니다. 이름이 비거나 겹치거나 본문이 깨졌으면 오류를 남기고 건너뛰며 false 를 돌려줍니다. */

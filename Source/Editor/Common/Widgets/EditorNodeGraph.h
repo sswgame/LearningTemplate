@@ -15,10 +15,25 @@
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/Widgets/EditorNodeGraphRules.h"
 
+#include "Engine/Asset/GraphCommentBox.h"
+
 namespace ax::NodeEditor
 {
     struct EditorContext;
 } // namespace ax::NodeEditor
+
+namespace sw::editor
+{
+    /** @brief 캔버스 단축키가 낸 편집 명령입니다(`EditorNodeGraph::queryEditCommand`). */
+    enum class EditorGraphEditCommand : uint8
+    {
+        None = 0,
+        Copy,      ///< Ctrl+C
+        Cut,       ///< Ctrl+X
+        Paste,     ///< Ctrl+V
+        Duplicate, ///< Ctrl+D
+    };
+} // namespace sw::editor
 
 namespace sw::editor
 {
@@ -65,6 +80,40 @@ namespace sw::editor
         void beginPin( int32 pinID, bool bInput );
         /** @brief beginPin() 와 짝입니다. */
         void endPin();
+        /**
+         * @brief 캔버스 단축키 Ctrl+C · Ctrl+X · Ctrl+V · Ctrl+D 를 받습니다. 캔버스 안에서 노드를 그린 뒤 프레임마다 부릅니다.
+         * @param outListNodeID 대상 노드(고른 노드)입니다. 붙여 넣기는 비어 있습니다.
+         * @param outPastePosition 붙일 자리 — 마우스의 캔버스 좌표입니다.
+         * @return 이번 프레임의 명령입니다. 없으면 `None` 입니다.
+         */
+        EditorGraphEditCommand queryEditCommand( vector<int32>& outListNodeID, float2& outPastePosition );
+        /** @brief 다음 캔버스를 열 때 고른 노드를 비웁니다 — 붙여 넣은 노드만 고른 채로 두려고 붙이기 전에 부릅니다. */
+        void clearSelectionOnNextDraw() { _bClearSelection = true; }
+        /** @brief 그래프 복사 버퍼에 애셋 종류 @p kind 의 조각 @p text 를 둡니다. 편집기 프로세스 안의 버퍼라 OS 클립보드를 건드리지 않습니다. */
+        static void storeClipboard( string_view kind, string text );
+        /** @brief 복사 버퍼가 종류 @p kind 의 조각이면 @p outText 에 담고 true 입니다. 비었거나 다른 종류면 false 입니다. */
+        [[nodiscard]] static bool readClipboard( string_view kind, string& outText );
+
+        /** @brief 주석 상자 노드 id 의 시작입니다. 패널의 노드 id 와 겹치지 않는 높은 범위다(주석 id 1 → 이 값 + 1). */
+        static constexpr int32 kCommentNodeIDBase = 0x40000000;
+        /** @brief 캔버스 노드 id @p nodeID 가 주석 상자이면 true 입니다. 고른 노드 · 지우기 요청을 패널 노드와 가를 때 씁니다. */
+        static bool isCommentNode( int32 nodeID ) { return nodeID > kCommentNodeIDBase; }
+        /** @brief 보기 막대에 주석 단추를 둡니다. 주석 상자를 저장하는 그래프(`EditorGraphDocumentPanel`)만 켭니다. */
+        void setCommentsEnabled( bool bEnabled ) { _bCommentsEnabled = bEnabled; }
+        /**
+         * @brief 주석 상자를 그립니다(언리얼 그래프 Comment · Godot GraphFrame). 캔버스 안에서 노드보다 먼저 부릅니다. 상자를 옮기면 안의 노드도 함께 옮겨진다.
+         * @param bSeed 자리와 크기를 데이터에서 캔버스로 다시 넣습니다(문서를 열거나 되돌린 프레임). 처음 보는 상자는 늘 넣는다.
+         * @details 머리줄을 두 번 누르면 이름 바꾸기 칸이 열린다.
+         * @return 이름을 바꿨으면 true 입니다 — 패널이 편집으로 남긴다.
+         */
+        bool drawComments( vector<GraphCommentBox>& listComment, bool bSeed );
+        /** @brief 캔버스의 주석 상자 자리와 크기를 @p listComment 에 싣습니다. 하나라도 바뀌었으면 true 입니다(끌어 옮기거나 늘였다). */
+        bool syncCommentLayout( vector<GraphCommentBox>& listComment ) const;
+        /** @brief 보기 막대의 주석 단추가 낸 요청입니다. 고른 노드를 감싸는 자리(없으면 보이는 가운데)를 돌려주고 요청을 지웁니다. */
+        bool takeCommentRequest( float2& outPosition, float2& outSize );
+        /** @brief 가장 최근에 그린 캔버스의 주석 상자 수입니다(감시 값 `Editor.GraphCommentCount`). */
+        static uint32 getDrawnCommentCount();
+
         /** @brief 노드 위치를 그래프가 스스로 정하면(행동 트리의 자동 배치) true 로 둡니다. 보기 막대가 정렬 메뉴를 감춥니다 — 맞춘 위치가 다음 배치에 사라진다. */
         void setAutoLayout( bool bAutoLayout ) { _bAutoLayout = bAutoLayout; }
 
@@ -152,6 +201,8 @@ namespace sw::editor
         void applyViewRequests();
         /** @brief 미니맵에 그릴 노드 사각형 · 고른 노드 · 보이는 범위를 캔버스를 닫기 전에 모읍니다. */
         void collectMinimap();
+        /** @brief 주석 단추를 눌렀으면 새 상자의 자리(고른 노드를 감싸거나 보이는 가운데)를 잽니다. `collectMinimap` 뒤에 부릅니다. */
+        void measureCommentRequest();
         /** @brief 캔버스 오른쪽 위 보기 막대(맞춤 · 정렬 · 미니맵)를 그립니다. */
         void drawViewBar();
         /** @brief 보기 막대의 정렬 메뉴입니다. 고른 노드가 모자란 항목은 끕니다. */
@@ -195,6 +246,15 @@ namespace sw::editor
         bool                                   _bPendingNavigate; ///< 다음 프레임에 보기를 맞춘다(고른 노드가 있으면 그 노드에)
         bool                                   _bOpenAddFromPin;  ///< 다음 `drawAddNodePopup` 이 노드 검색 팝업을 연다(핀 끌기)
         bool                                   _bMinimapVisible;
-        bool                                   _bAutoLayout; ///< 노드 위치를 그래프가 정한다 — 정렬 메뉴를 감춘다
+        bool                                   _bAutoLayout;       ///< 노드 위치를 그래프가 정한다 — 정렬 메뉴를 감춘다
+        bool                                   _bClearSelection;   ///< 다음 캔버스를 열 때 고른 노드를 비운다(붙여 넣기)
+        bool                                   _bCommentsEnabled;  ///< 보기 막대에 주석 단추를 둔다
+        bool                                   _bCommentRequested; ///< 주석 단추를 눌렀다 — 다음 캔버스를 닫기 전에 자리를 잰다
+        bool                                   _bCommentReady;     ///< 잰 자리가 있다(takeCommentRequest 가 가져간다)
+        float2                                 _commentPosition;   ///< 새 주석 상자의 왼쪽 위(캔버스 좌표)
+        float2                                 _commentSize;       ///< 새 주석 상자의 영역 크기
+        int32                                  _renameCommentID;   ///< 이름을 바꾸는 주석 id. 0 이면 없다
+        fixed_string<constant::buffer::kMax64> _renameText;        ///< 이름 바꾸기 칸의 글
+        vector<int32>                          _listSeededComment; ///< 자리 · 크기를 캔버스에 넣은 주석 id
     };
 } // namespace sw::editor

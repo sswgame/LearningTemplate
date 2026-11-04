@@ -72,6 +72,18 @@ namespace sw::editor
             {
                 return ( pin % kPinScale ) == kPinOffsetOut;
             }
+            /** @brief 링크 양 끝의 노드 id 입니다. 복사 · 붙여 넣기 · 복제가 쓴다. */
+            static void linkNodes( const AnimationGraphLink& link, int32& outFromNode, int32& outToNode )
+            {
+                outFromNode = link._fromNode;
+                outToNode   = link._toNode;
+            }
+            /** @brief 링크 양 끝을 새 노드 id 로 바꿉니다(전이 조건은 그대로). */
+            static void remapLink( AnimationGraphLink& link, int32 fromNode, int32 toNode )
+            {
+                link._fromNode = fromNode;
+                link._toNode   = toNode;
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -228,6 +240,7 @@ namespace sw::editor
             return;
         }
 
+        drawGraphComments();
         drawStateNodes();
         drawTransitionLinks();
         drawNodeContextMenu();
@@ -313,7 +326,7 @@ namespace sw::editor
         if ( ImGui::BeginPopup( "AnimationNodeContext" ) )
         {
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "Duplicate" ) ) )
-                duplicateNode( _selectedNodeID );
+                duplicateGraphNodes( vector<int32>{ _selectedNodeID }, &AnimationGraphPanelInternal::linkNodes, &AnimationGraphPanelInternal::remapLink, "Duplicate Animation Graph Node" );
             if ( ImGui::MenuItem( SW_LOCKEY( "EdVerb", "Delete" ) ) )
                 ed::DeleteNode( toNodeID( _selectedNodeID ) );
             ImGui::EndPopup();
@@ -366,6 +379,9 @@ namespace sw::editor
             placeNodeOnNextDraw( addNamedNode( listKind[kindID]._pName ), canvasPosition );
             notifyDocumentEdited( "Add Animation Graph Node" );
         }
+
+        // 복사 · 잘라내기 · 붙여 넣기 · 복제(Ctrl+C · X · V · D). 잘라내기는 지우기 요청을 내므로 지우기 처리보다 먼저다.
+        processCanvasEditCommands( &AnimationGraphPanelInternal::linkNodes, &AnimationGraphPanelInternal::remapLink, "Paste Animation Graph Nodes" );
 
         processCanvasDeletions( []( const auto& link, int32 nodeID )
         { return link._fromNode == nodeID || link._toNode == nodeID; },
@@ -463,7 +479,8 @@ namespace sw::editor
         vector<int32> listNow;
         for ( int32 index = 0; index < nodeCount; ++index )
         {
-            listNow.push_back( static_cast<int32>( arrNode[index].Get() ) );
+            if ( EditorNodeGraph::isCommentNode( static_cast<int32>( arrNode[index].Get() ) ) == false ) // 주석 상자는 상태가 아니다
+                listNow.push_back( static_cast<int32>( arrNode[index].Get() ) );
         }
         vector<int32> listOrdered;
         for ( const int32 nodeID : _listSelectionOrder )
@@ -511,22 +528,6 @@ namespace sw::editor
         _graph._listLink.push_back( link );
         _selectedLinkID = link._id;
         notifyDocumentEdited( "Link Animation Graph Nodes" );
-    }
-
-    void AnimationGraphPanel::duplicateNode( int32 nodeID )
-    {
-        for ( const GraphNode& node : _graph._listNode )
-        {
-            if ( node._id != nodeID )
-                continue;
-            GraphNode copy = node;
-            copy._id       = nextNodeID();
-            copy._position = float2{ node._position._x + 40.0f, node._position._y + 40.0f };
-            placeNodeOnNextDraw( copy._id, copy._position );
-            _graph._listNode.push_back( std::move( copy ) );
-            notifyDocumentEdited( "Duplicate Animation Graph Node" );
-            return;
-        }
     }
 
     uint32 AnimationGraphPanel::countConditionLinks() const

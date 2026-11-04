@@ -14,6 +14,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
+#include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
@@ -34,6 +35,14 @@ namespace sw::editor
             uint32 _autoLinkCount{ 0 };    ///< 핀을 끌어 만든 노드에 이은 링크 수(누적)
             uint32 _alignedNodeCount{ 0 }; ///< 마지막 정렬이 옮긴 노드 수
             bool   _bMinimapShown{ false };
+            uint32 _commentCount{ 0 }; ///< 가장 최근에 그린 캔버스의 주석 상자 수
+        };
+
+        /** @brief 그래프 복사 버퍼 — 마지막으로 복사한 노드 조각과 그 애셋 종류입니다(유니티처럼 편집기 프로세스 안에 둔다). */
+        struct EditorNodeGraphClipboardState
+        {
+            string _kind;
+            string _text;
         };
 
         struct EditorNodeGraphInternal
@@ -49,6 +58,13 @@ namespace sw::editor
             static constexpr float32 kMinimapMaxFraction = 0.3f;
             /// @brief 이보다 작으면 미니맵을 그리지 않는다(글자 줄 높이 배).
             static constexpr float32 kMinimapMinLines = 3.0f;
+            /// @brief 고른 노드를 감싸는 새 주석 상자의 여백(캔버스 좌표) — 언리얼 Comment 의 감싸기 여백과 같은 결.
+            static constexpr float32 kCommentPadding = 24.0f;
+            /// @brief 고른 노드가 없을 때 새 주석 상자의 크기(캔버스 좌표).
+            static constexpr float32 kCommentDefaultWidth  = 320.0f;
+            static constexpr float32 kCommentDefaultHeight = 200.0f;
+            /// @brief 주석 상자 바탕의 불투명도 — 안의 노드와 격자가 비쳐 보이게.
+            static constexpr float32 kCommentFillAlpha = 0.35f;
         };
     } // namespace
 
@@ -81,6 +97,15 @@ namespace sw::editor
         , _bOpenAddFromPin{ false }
         , _bMinimapVisible{ true }
         , _bAutoLayout{ false }
+        , _bClearSelection{ false }
+        , _bCommentsEnabled{ false }
+        , _bCommentRequested{ false }
+        , _bCommentReady{ false }
+        , _commentPosition{}
+        , _commentSize{}
+        , _renameCommentID{ 0 }
+        , _renameText{}
+        , _listSeededComment{}
     {
     }
 
@@ -150,6 +175,55 @@ namespace sw::editor
                                                    ImGui::ColorConvertFloat4ToU32( ed::GetStyle().Colors[ed::StyleColor_Bg] ) );
 
         ed::Begin( pCanvasID );
+        if ( _bClearSelection )
+        {
+            ed::ClearSelection();
+            _bClearSelection = false;
+        }
+        return true;
+    }
+
+    EditorGraphEditCommand EditorNodeGraph::queryEditCommand( vector<int32>& outListNodeID, float2& outPastePosition )
+    {
+        outListNodeID.clear();
+        EditorGraphEditCommand command = EditorGraphEditCommand::None;
+        if ( ed::BeginShortcut() )
+        {
+            if ( ed::AcceptCut() )
+                command = EditorGraphEditCommand::Cut;
+            else if ( ed::AcceptCopy() )
+                command = EditorGraphEditCommand::Copy;
+            else if ( ed::AcceptPaste() )
+                command = EditorGraphEditCommand::Paste;
+            else if ( ed::AcceptDuplicate() )
+                command = EditorGraphEditCommand::Duplicate;
+            const int32        contextCount = command == EditorGraphEditCommand::None ? 0 : ed::GetActionContextSize();
+            vector<ed::NodeId> listNode( static_cast<size_t>( contextCount > 0 ? contextCount : 0 ) );
+            const int32        nodeCount = listNode.empty() ? 0 : ed::GetActionContextNodes( listNode.data(), contextCount );
+            for ( int32 index = 0; index < nodeCount; ++index )
+            {
+                outListNodeID.push_back( static_cast<int32>( listNode[static_cast<size_t>( index )].Get() ) );
+            }
+        }
+        ed::EndShortcut();
+        const ImVec2 canvasMouse = ImGui::GetMousePos(); // 캔버스 안이라 캔버스 좌표다
+        outPastePosition         = float2{ canvasMouse.x, canvasMouse.y };
+        return command;
+    }
+
+    void EditorNodeGraph::storeClipboard( string_view kind, string text )
+    {
+        EditorNodeGraphClipboardState& state = getEditorState<EditorNodeGraphClipboardState>();
+        state._kind                          = string{ kind };
+        state._text                          = std::move( text );
+    }
+
+    bool EditorNodeGraph::readClipboard( string_view kind, string& outText )
+    {
+        const EditorNodeGraphClipboardState& state = getEditorState<EditorNodeGraphClipboardState>();
+        if ( state._text.empty() || string_view{ state._kind } != kind )
+            return false;
+        outText = state._text;
         return true;
     }
 
@@ -188,6 +262,7 @@ namespace sw::editor
     {
         applyViewRequests();
         collectMinimap();
+        measureCommentRequest();
         ed::End();
         EditorSelfTestMarks::note( ( _markScope + ".canvas" ).c_str() ); // 마지막 항목은 캔버스 자식 창이다
         // 막대 · 미니맵은 캔버스 다음에 연 자식 창이라 캔버스 위에 놓이고 마우스도 먼저 받는다(노드 편집기는 그 아래를 누른 것으로 보지 않는다).
@@ -269,6 +344,135 @@ namespace sw::editor
         _pendingAlign                                                 = EditorGraphAlign::Count;
     }
 
+    bool EditorNodeGraph::drawComments( vector<GraphCommentBox>& listComment, bool bSeed )
+    {
+        if ( bSeed )
+            _listSeededComment.clear();
+        const ImVec4 panel = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "PanelBg" ) );
+        ed::PushStyleColor( ed::StyleColor_NodeBg, ImVec4{ panel.x, panel.y, panel.z, EditorNodeGraphInternal::kCommentFillAlpha } );
+        ed::PushStyleColor( ed::StyleColor_NodeBorder, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Border" ) ) );
+        for ( const GraphCommentBox& comment : listComment )
+        {
+            const ed::NodeId nodeID{ static_cast<uintptr_t>( kCommentNodeIDBase + comment._id ) };
+            if ( VectorUtil::contains( _listSeededComment, comment._id ) == false )
+            {
+                ed::SetNodePosition( nodeID, ImVec2{ comment._position._x, comment._position._y } );
+                ed::SetGroupSize( nodeID, ImVec2{ comment._size._x, comment._size._y } );
+                _listSeededComment.push_back( comment._id );
+            }
+            ed::BeginNode( nodeID );
+            ImGui::TextUnformatted( comment._text.empty() ? SW_LOCKEY( "EdCommon", "GraphCommentUntitled" ) : comment._text.c_str() );
+            ed::Group( ImVec2{ comment._size._x, comment._size._y } );
+            ed::EndNode();
+        }
+        ed::PopStyleColor( 2 );
+        getEditorState<EditorNodeGraphDrawnState>()._commentCount = static_cast<uint32>( listComment.size() );
+
+        // 머리줄을 두 번 누르면 이름 바꾸기(언리얼 Comment 의 제목 고치기).
+        const int32 doubleClicked = static_cast<int32>( ed::GetDoubleClickedNode().Get() );
+        bool        bRenamed      = false;
+        ed::Suspend();
+        if ( isCommentNode( doubleClicked ) )
+        {
+            const GraphCommentBox* pComment = VectorUtil::findBy<&GraphCommentBox::_id>( listComment, doubleClicked - kCommentNodeIDBase );
+            _renameCommentID                = pComment != nullptr ? pComment->_id : 0;
+            _renameText                     = fixed_string<constant::buffer::kMax64>{ pComment != nullptr ? pComment->_text.c_str() : "" };
+            if ( pComment != nullptr )
+                EditorInputGUI::openPopup( "##graphCommentRename" );
+        }
+        if ( ImGui::BeginPopup( "##graphCommentRename" ) )
+        {
+            if ( ImGui::IsWindowAppearing() )
+                ImGui::SetKeyboardFocusHere();
+            EditorChrome::setNextItemWidthColumns( 29.0f );
+            const bool bSubmitted = EditorWidgets::drawHintField( "##commentTitle", _renameText, SW_LOCKEY( "EdCommon", "GraphCommentHint" ), ( _markScope + ".comment.title" ).c_str(), true )._bSubmitted;
+            if ( bSubmitted || ImGui::IsItemDeactivatedAfterEdit() )
+            {
+                for ( GraphCommentBox& comment : listComment )
+                {
+                    if ( comment._id != _renameCommentID || comment._text == _renameText.c_str() )
+                        continue;
+                    comment._text = _renameText.c_str();
+                    bRenamed      = true;
+                }
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+        ed::Resume();
+        return bRenamed;
+    }
+
+    bool EditorNodeGraph::syncCommentLayout( vector<GraphCommentBox>& listComment ) const
+    {
+        bool bChanged = false;
+        for ( GraphCommentBox& comment : listComment )
+        {
+            if ( VectorUtil::contains( _listSeededComment, comment._id ) == false )
+                continue; // 아직 캔버스에 넣지 않았다 — 데이터가 원본이다
+            const ed::NodeId nodeID{ static_cast<uintptr_t>( kCommentNodeIDBase + comment._id ) };
+            const ImVec2     position = ed::GetNodePosition( nodeID );
+            const ImVec2     size     = ed::GetGroupSize( nodeID );
+            if ( size.x <= 0.0f || size.y <= 0.0f )
+                continue; // 그룹 영역이 아직 없다(처음 그린 프레임)
+            const bool bMoved   = EditorSessionPolicy::hasNodeMoved( comment._position._x, comment._position._y, position.x, position.y );
+            const bool bResized = EditorSessionPolicy::hasNodeMoved( comment._size._x, comment._size._y, size.x, size.y );
+            bChanged            = bChanged || bMoved || bResized;
+            comment._position   = float2{ position.x, position.y };
+            comment._size       = float2{ size.x, size.y };
+        }
+        return bChanged;
+    }
+
+    bool EditorNodeGraph::takeCommentRequest( float2& outPosition, float2& outSize )
+    {
+        if ( _bCommentReady == false )
+            return false;
+        outPosition    = _commentPosition;
+        outSize        = _commentSize;
+        _bCommentReady = false;
+        return true;
+    }
+
+    uint32 EditorNodeGraph::getDrawnCommentCount()
+    {
+        return getEditorState<EditorNodeGraphDrawnState>()._commentCount;
+    }
+
+    void EditorNodeGraph::measureCommentRequest()
+    {
+        if ( _bCommentRequested == false )
+            return;
+        _bCommentRequested = false;
+        // 고른 노드(주석 상자 제외)를 여백을 두고 감싼다. 없으면 보이는 가운데에 기본 크기로 둔다(언리얼 C 키 · Godot 프레임 만들기).
+        bool   bAny      = false;
+        float2 boundsMin = _viewMin;
+        float2 boundsMax = _viewMax;
+        for ( const EditorGraphNodeRect& rect : _listMinimapRect )
+        {
+            if ( isCommentNode( rect._nodeID ) || VectorUtil::contains( _listSelectedNode, rect._nodeID ) == false )
+                continue;
+            boundsMin = bAny ? float2{ MathUtil::min( boundsMin._x, rect._position._x ), MathUtil::min( boundsMin._y, rect._position._y ) } : rect._position;
+            boundsMax = bAny ? float2{ MathUtil::max( boundsMax._x, rect._position._x + rect._size._x ), MathUtil::max( boundsMax._y, rect._position._y + rect._size._y ) }
+                             : rect._position + rect._size;
+            bAny      = true;
+        }
+        const float32 padding = EditorNodeGraphInternal::kCommentPadding;
+        const float32 header  = ImGui::GetTextLineHeightWithSpacing() + ed::GetStyle().NodePadding.y * 2.0f; // 머리줄(제목 한 줄) 높이만큼 위로 비켜 노드가 영역 안에 든다
+        if ( bAny )
+        {
+            _commentPosition = float2{ boundsMin._x - padding, boundsMin._y - padding - header };
+            _commentSize     = float2{ boundsMax._x - boundsMin._x + padding * 2.0f, boundsMax._y - boundsMin._y + padding * 2.0f };
+        }
+        else
+        {
+            const float2 center = ( _viewMin + _viewMax ) * 0.5f;
+            _commentSize        = float2{ EditorNodeGraphInternal::kCommentDefaultWidth, EditorNodeGraphInternal::kCommentDefaultHeight };
+            _commentPosition    = center - _commentSize * 0.5f;
+        }
+        _bCommentReady = true;
+    }
+
     void EditorNodeGraph::collectMinimap()
     {
         _listMinimapRect.clear();
@@ -315,6 +519,14 @@ namespace sw::editor
                 EditorSelfTestMarks::note( ( _markScope + ".view.align" ).c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphAlignTip" ) );
                 drawAlignMenu();
+            }
+            if ( _bCommentsEnabled )
+            {
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphComment" ), "Comment" ) ) )
+                    _bCommentRequested = true;
+                EditorSelfTestMarks::note( ( _markScope + ".view.comment" ).c_str() );
+                EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphCommentTip" ) );
             }
             ImGui::SameLine();
             ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( _bMinimapVisible ? SW_THEMECOLOR( "Base", "ToggleActive" ) : SW_THEMECOLOR( "Base", "ToggleInactive" ) ) );

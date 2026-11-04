@@ -85,12 +85,14 @@ namespace sw
     {
         _listNode.clear();
         _listLink.clear();
+        _listComment.clear();
         const string label{ sourceLabel };
         // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 모르는 노드 종류 · 읽지 못한 값 · 빠진 필수 칸은 오류다(`readConfigXMLElement` 가 로그로 알린다).
         if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() ) && validateFile( sourceLabel ) )
             return true;
         _listNode.clear();
         _listLink.clear();
+        _listComment.clear();
         return false;
     }
 

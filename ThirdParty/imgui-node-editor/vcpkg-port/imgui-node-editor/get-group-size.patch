@@ -1,0 +1,25 @@
+diff --git a/imgui_node_editor.h b/imgui_node_editor.h
+--- a/imgui_node_editor.h
++++ b/imgui_node_editor.h
+@@ -344,4 +344,5 @@
+ IMGUI_NODE_EDITOR_API void SetNodePosition(NodeId nodeId, const ImVec2& editorPosition);
+ IMGUI_NODE_EDITOR_API void SetGroupSize(NodeId nodeId, const ImVec2& size);
++IMGUI_NODE_EDITOR_API ImVec2 GetGroupSize(NodeId nodeId); // group area (what SetGroupSize sets); zero when the node is not a group
+ IMGUI_NODE_EDITOR_API ImVec2 GetNodePosition(NodeId nodeId);
+ IMGUI_NODE_EDITOR_API ImVec2 GetNodeSize(NodeId nodeId);
+diff --git a/imgui_node_editor_api.cpp b/imgui_node_editor_api.cpp
+--- a/imgui_node_editor_api.cpp
++++ b/imgui_node_editor_api.cpp
+@@ -395,6 +395,12 @@
+ void ax::NodeEditor::SetGroupSize(NodeId nodeId, const ImVec2& size)
+ {
+     s_Editor->SetGroupSize(nodeId, size);
+ }
++
++ImVec2 ax::NodeEditor::GetGroupSize(NodeId nodeId)
++{
++    auto node = s_Editor->FindNode(nodeId);
++    return node && node->m_GroupBounds.GetWidth() > 0.0f ? node->m_GroupBounds.GetSize() : ImVec2(0, 0);
++}
+ 
+ ImVec2 ax::NodeEditor::GetNodePosition(NodeId nodeId)

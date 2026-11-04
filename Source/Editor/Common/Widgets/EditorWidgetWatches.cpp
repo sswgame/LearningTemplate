@@ -40,6 +40,12 @@ namespace sw::editor
             return true;
         }
 
+        [[nodiscard]] bool readGraphCommentCount( const GameObjectManager* /*pManager*/, float64& outValue )
+        {
+            outValue = static_cast<float64>( EditorNodeGraph::getDrawnCommentCount() );
+            return true;
+        }
+
         [[nodiscard]] bool readGraphMinimapShown( const GameObjectManager* /*pManager*/, float64& outValue )
         {
             outValue = EditorNodeGraph::isMinimapShown() ? 1.0 : 0.0;
@@ -55,5 +61,6 @@ namespace sw::editor
                          &readGraphAutoLinkCount );
     SW_AUTOMATION_WATCH( editorGraphAlignedNodeCount, "Editor.GraphAlignedNodeCount", "Nodes the last Align command of a node graph canvas moved (0 when too few were selected)",
                          &readGraphAlignedNodeCount );
+    SW_AUTOMATION_WATCH( editorGraphCommentCount, "Editor.GraphCommentCount", "Comment boxes of the node graph canvas drawn most recently", &readGraphCommentCount );
     SW_AUTOMATION_WATCH( editorGraphMinimapShown, "Editor.GraphMinimapShown", "1 when the node graph canvas drawn most recently showed its minimap", &readGraphMinimapShown );
 } // namespace sw::editor

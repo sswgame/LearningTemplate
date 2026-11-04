@@ -74,6 +74,20 @@ namespace sw::editor
             {
                 return DialogueGraphAsset::encodeChoicePin( nodeID, choiceIndex );
             }
+
+            /** @brief 링크 양 끝의 노드 id 입니다(핀 번호에서 꺼낸다 — 해석의 원본은 `DialogueGraphAsset`). 복사 · 붙여 넣기가 쓴다. */
+            static void linkNodes( const DialogueAssetLink& link, int32& outFromNode, int32& outToNode )
+            {
+                outFromNode = DialogueGraphAsset::decodePinNodeID( link._fromPin );
+                outToNode   = DialogueGraphAsset::decodePinNodeID( link._toPin );
+            }
+
+            /** @brief 링크 양 끝을 새 노드 id 로 바꿉니다. 핀 오프셋(어느 출력 · 선택지인지)은 그대로 둔다. */
+            static void remapLink( DialogueAssetLink& link, int32 fromNode, int32 toNode )
+            {
+                link._fromPin = DialogueGraphAsset::encodePin( fromNode, DialogueGraphAsset::decodePinOffset( link._fromPin ) );
+                link._toPin   = DialogueGraphAsset::encodePin( toNode, DialogueGraphAsset::decodePinOffset( link._toPin ) );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -181,6 +195,7 @@ namespace sw::editor
             return;
         }
 
+        drawGraphComments();
         drawGraphNodes();
 
         // 링크 렌더링
@@ -195,7 +210,7 @@ namespace sw::editor
         // 선택 노드 추적
         ed::NodeId  selectedNodes[1];
         const int32 count = ed::GetSelectedNodes( selectedNodes, 1 );
-        if ( count > 0 )
+        if ( count > 0 && EditorNodeGraph::isCommentNode( static_cast<int32>( selectedNodes[0].Get() ) ) == false ) // 주석 상자는 인스펙터가 없다
             _selectedNodeID = static_cast<int32>( selectedNodes[0].Get() );
 
         _nodeGraph.applyContentFitIfNeeded();
@@ -252,6 +267,9 @@ namespace sw::editor
             placeNodeOnNextDraw( addNode( static_cast<DialogueAssetNodeType>( kindID ) ), canvasPosition );
             notifyDocumentEdited( "Add Dialogue Node" );
         }
+
+        // 복사 · 잘라내기 · 붙여 넣기 · 복제(Ctrl+C · X · V · D). 잘라내기는 지우기 요청을 내므로 지우기 처리보다 먼저다.
+        processCanvasEditCommands( &DialogueGraphPanelInternal::linkNodes, &DialogueGraphPanelInternal::remapLink, "Paste Dialogue Nodes" );
 
         // 삭제 처리. 링크가 노드에 닿는지는 핀 번호를 해석해서 판단한다. 핀을 해석하는 원본은 `DialogueGraphAsset` 이다.
         // 핀을 해석하는 기준(`kPinScale`)은 `decodePinNodeID` 한 곳에만 있다. 여기서 직접 해석하면

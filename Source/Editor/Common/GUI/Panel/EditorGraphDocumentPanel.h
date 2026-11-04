@@ -28,6 +28,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
 #include "Editor/Common/EditorExports.h"
@@ -66,14 +68,14 @@ namespace sw::editor
         /** @brief `beginGraphCanvas` 와 짝입니다. 그린 노드 수 @p drawnNodeCount 를 프로브(`Editor.GraphNodeCount`)에 기록합니다. */
         void finishGraphCanvas( uint32 drawnNodeCount );
 
-        /** @brief 새 노드 @p nodeID 를 다음에 그릴 때 캔버스 좌표 @p canvasPosition 에 둡니다. 노드 검색 팝업에서 오른쪽 클릭한 위치입니다. */
-        void placeNodeOnNextDraw( int32 nodeID, const float2& canvasPosition )
-        {
-            _pendingPlacementNodeID = nodeID;
-            _pendingPlacement       = canvasPosition;
-        }
-        /** @brief 노드를 그린 직후(`ed::EndNode` 뒤)에 호출합니다. 놓을 위치가 예약된 노드이면 그 위치에 둡니다. */
+        /** @brief 새 노드 @p nodeID 를 다음에 그릴 때 캔버스 좌표 @p canvasPosition 에 둡니다(노드 검색 팝업을 연 자리 · 붙여 넣은 자리). 여러 노드를 한 번에 예약할 수 있습니다. */
+        void placeNodeOnNextDraw( int32 nodeID, const float2& canvasPosition ) { _listPendingPlacement.push_back( PendingPlacement{ nodeID, canvasPosition } ); }
+        /** @brief 노드를 그린 직후(`endNode` 뒤)에 호출합니다. 놓을 위치가 예약된 노드이면 그 위치에 두고 고른 노드로 삼습니다. */
         void applyNodePlacement( int32 nodeID );
+        /** @brief 캔버스에 노드 @p nodeID 를 지우라고 요청합니다. 지우기는 다음 `processCanvasDeletions` 가 목록에 반영합니다(잘라내기). */
+        void requestNodeDeletion( int32 nodeID );
+        /** @brief 이 패널 애셋 종류의 id 입니다(그래프 복사 버퍼의 열쇠 — 다른 종류의 그래프에는 붙지 않는다). */
+        string getGraphClipboardKind() const { return string{ getDocumentKind().getID() }; }
         /** @brief 캔버스 안에서 노드 @p nodeID 의 캔버스 좌표입니다. */
         float2 getCanvasNodePosition( int32 nodeID ) const;
 
@@ -87,14 +89,20 @@ namespace sw::editor
         void endCanvasDeletion();
 
     protected:
-        EditorNodeGraph        _nodeGraph;              /**< 캔버스 컨텍스트. 패널마다 하나씩 소유한다. */
-        NodeEditorBindFunction _bindModuleCopy;         /**< 패널 모듈의 imgui-node-editor 사본에 편집기를 거는 함수. */
-        const utf8*            _pNodeMoveEditLabel;     /**< 노드 이동 Undo 이름. */
-        const utf8*            _pNodeMoveCoalesceKey;   /**< 노드 이동을 합치는 키. */
-        int32                  _pendingPlacementNodeID; /**< 다음 그리기에서 위치를 정할 새 노드. 0 이면 없다. */
-        float2                 _pendingPlacement;       /**< 그 노드의 캔버스 좌표. */
-        uint8                  _bGraphLayoutReady : 1;  /**< 캔버스가 위치를 한 번 정한 뒤에 켠다. */
-        [[maybe_unused]] uint8 _reservedGraph     : 7;
+        /** @brief 다음 그리기에서 위치를 정할 노드 하나입니다. */
+        struct PendingPlacement
+        {
+            int32  _nodeID{ 0 };
+            float2 _position{};
+        };
+
+        EditorNodeGraph          _nodeGraph;             /**< 캔버스 컨텍스트. 패널마다 하나씩 소유한다. */
+        NodeEditorBindFunction   _bindModuleCopy;        /**< 패널 모듈의 imgui-node-editor 사본에 편집기를 거는 함수. */
+        const utf8*              _pNodeMoveEditLabel;    /**< 노드 이동 Undo 이름. */
+        const utf8*              _pNodeMoveCoalesceKey;  /**< 노드 이동을 합치는 키. */
+        vector<PendingPlacement> _listPendingPlacement;  /**< 다음 그리기에서 위치를 정할 새 노드들(검색으로 넣은 노드 · 붙여 넣은 노드). */
+        uint8                    _bGraphLayoutReady : 1; /**< 캔버스가 위치를 한 번 정한 뒤에 켠다. */
+        [[maybe_unused]] uint8   _reservedGraph     : 7;
     };
 } // namespace sw::editor
 
@@ -119,6 +127,7 @@ namespace sw::editor
             : EditorGraphDocumentPanelBase{ kind, pNodeMoveEditLabel, pNodeMoveCoalesceKey, bindModuleCopy }
             , _graph{}
         {
+            _nodeGraph.setCommentsEnabled( true ); // 이 문서 틀의 애셋은 주석 상자를 저장한다(`_listComment`)
         }
 
         /** @brief 노드가 하나도 없을 때 기본 노드를 채웁니다. 패널마다 다르므로 반드시 구현해야 합니다. */
@@ -126,6 +135,22 @@ namespace sw::editor
 
         /** @brief 다음에 쓸 노드 ID 입니다. */
         int32 nextNodeID() const { return nextItemID( _graph._listNode ); }
+        /**
+         * @brief 주석 상자를 그리고, 보기 막대의 주석 단추가 낸 요청이면 새 상자를 더합니다. 캔버스 안에서 노드보다 먼저 부릅니다.
+         * @details 상자의 자리 · 크기는 `cacheNodeLayout` 이 노드와 같은 규칙으로 싣는다(끌어 옮기거나 늘이면 편집).
+         */
+        void drawGraphComments()
+        {
+            if ( _nodeGraph.drawComments( _graph._listComment, _nodeGraph.needsContentFit() ) )
+                notifyDocumentEdited( "Rename Graph Comment" );
+            GraphCommentBox comment{};
+            if ( _nodeGraph.takeCommentRequest( comment._position, comment._size ) == false )
+                return;
+            comment._id = nextItemID( _graph._listComment );
+            _graph._listComment.push_back( std::move( comment ) );
+            notifyDocumentEdited( "Add Graph Comment" );
+        }
+
         /** @brief 다음에 쓸 링크 ID 입니다. */
         int32 nextLinkID() const { return nextItemID( _graph._listLink ); }
 
@@ -192,9 +217,70 @@ namespace sw::editor
                 node._position._y = position._y;
             }
 
+            // 주석 상자는 노드와 같은 규칙이다 — 첫 프레임에 자리가 정해지는 것은 편집이 아니다.
+            const bool bCommentChanged = _nodeGraph.needsContentFit() == false && _nodeGraph.syncCommentLayout( _graph._listComment );
+            if ( EditorSessionPolicy::shouldMarkDocumentDirtyOnNodeMove( _bGraphLayoutReady == SW_TRUE, bCommentChanged ) )
+                bMoved = true;
+
             if ( bMoved )
                 notifyDocumentEdited( _pNodeMoveEditLabel, _pNodeMoveCoalesceKey );
             _bGraphLayoutReady = SW_TRUE;
+        }
+
+        /**
+         * @brief 캔버스 단축키 복사 · 잘라내기 · 붙여 넣기 · 복제(Ctrl+C · X · V · D)를 목록에 반영합니다. 캔버스 안에서 `processCanvasDeletions` 보다 먼저 부릅니다(잘라내기는 지우기 요청을 낸다).
+         * @details 언리얼 그래프 편집기의 노드 복사와 같은 모양이다 — 고른 노드와 **그 노드끼리의** 링크를 애셋 XML 조각으로 만들어 편집기 복사 버퍼에 두고(OS 클립보드는 쓰지 않는다,
+         *          `ObjectCopyBuffer` 와 같은 까닭), 붙일 때 노드 · 링크 id 를 새로 매긴다. 붙여 넣기는 마우스 자리에, 복제는 원본에서 조금 비켜 놓는다. 패널마다 다른 것은
+         *          링크 양 끝이 어느 노드인지(@p linkNodes)와 양 끝을 새 노드 id 로 바꾸는 법(@p remapLink)뿐이다(대화는 핀 번호에 노드 id 가 들어 있다).
+         * @param linkNodes `( const LinkType&, int32& outFromNode, int32& outToNode ) -> void` 시그니처의 콜백입니다.
+         * @param remapLink `( LinkType&, int32 fromNode, int32 toNode ) -> void` 시그니처의 콜백입니다. 링크 양 끝을 새 노드 id 로 바꿉니다.
+         */
+        template <typename LinkNodesFn, typename RemapLinkFn>
+        void processCanvasEditCommands( LinkNodesFn&& linkNodes, RemapLinkFn&& remapLink, const utf8* pPasteLabel )
+        {
+            vector<int32>                listNodeID;
+            float2                       pastePosition{};
+            const EditorGraphEditCommand command = _nodeGraph.queryEditCommand( listNodeID, pastePosition );
+            if ( command == EditorGraphEditCommand::None )
+                return;
+            if ( command == EditorGraphEditCommand::Paste )
+            {
+                string    text;
+                AssetType pasted;
+                // 복사 버퍼는 이 편집기가 쓴 같은 종류의 XML 이다 — 읽지 못하면 결함이라 알리고 붙이지 않는다.
+                if ( EditorNodeGraph::readClipboard( getGraphClipboardKind(), text ) == false )
+                    return;
+                if ( pasted.parseXML( text ) == false )
+                {
+                    SW_LOG_WARNING_ID( "EditorGraphDocumentPanel.ClipboardUnreadable", "Copied graph nodes could not be read - nothing pasted" );
+                    return;
+                }
+                pasteGraphNodes( std::move( pasted ), true, pastePosition, linkNodes, remapLink, pPasteLabel );
+                return;
+            }
+            AssetType copied = copyGraphNodes( listNodeID, linkNodes );
+            if ( command == EditorGraphEditCommand::Duplicate )
+            {
+                pasteGraphNodes( std::move( copied ), false, float2{}, linkNodes, remapLink, pPasteLabel );
+                return;
+            }
+            EditorNodeGraph::storeClipboard( getGraphClipboardKind(), copied.toXML() );
+            if ( command != EditorGraphEditCommand::Cut )
+                return;
+            for ( const int32 nodeID : listNodeID )
+            {
+                requestNodeDeletion( nodeID );
+            }
+        }
+
+        /**
+         * @brief 노드 @p listNodeID 를 원본에서 조금 비켜 복제합니다(노드 오른쪽 클릭 메뉴의 Duplicate). 그 노드끼리의 링크도 함께 복제합니다.
+         * @param linkNodes · remapLink 는 `processCanvasEditCommands` 와 같습니다.
+         */
+        template <typename LinkNodesFn, typename RemapLinkFn>
+        void duplicateGraphNodes( const vector<int32>& listNodeID, LinkNodesFn&& linkNodes, RemapLinkFn&& remapLink, const utf8* pLabel )
+        {
+            pasteGraphNodes( copyGraphNodes( listNodeID, linkNodes ), false, float2{}, linkNodes, remapLink, pLabel );
         }
 
         /**
@@ -222,6 +308,14 @@ namespace sw::editor
 
             while ( takeDeletedNode( id ) )
             {
+                if ( EditorNodeGraph::isCommentNode( id ) )
+                {
+                    const int32 commentID = id - EditorNodeGraph::kCommentNodeIDBase;
+                    VectorUtil::removeIf( _graph._listComment, [commentID]( const GraphCommentBox& comment )
+                    { return comment._id == commentID; } );
+                    notifyDocumentEdited( "Delete Graph Comment" );
+                    continue; // 상자만 지운다 — 안의 노드는 남는다(언리얼 Comment 지우기와 같다)
+                }
                 VectorUtil::removeIf( _graph._listNode, [id]( const NodeType& node )
                 { return node._id == id; } );
                 VectorUtil::removeIf( _graph._listLink, [id, &linkTouchesNode]( const LinkType& link )
@@ -231,6 +325,80 @@ namespace sw::editor
             }
             endCanvasDeletion();
         }
+
+    private:
+        /** @brief 노드 @p listNodeID 와 그 노드끼리의 링크만 담은 애셋 조각입니다. */
+        template <typename LinkNodesFn>
+        AssetType copyGraphNodes( const vector<int32>& listNodeID, LinkNodesFn&& linkNodes ) const
+        {
+            AssetType copied;
+            for ( const NodeType& node : _graph._listNode )
+            {
+                if ( VectorUtil::contains( listNodeID, node._id ) )
+                    copied._listNode.push_back( node );
+            }
+            for ( const LinkType& link : _graph._listLink )
+            {
+                int32 fromNode = 0;
+                int32 toNode   = 0;
+                linkNodes( link, fromNode, toNode );
+                if ( VectorUtil::contains( listNodeID, fromNode ) && VectorUtil::contains( listNodeID, toNode ) )
+                    copied._listLink.push_back( link );
+            }
+            return copied;
+        }
+
+        /**
+         * @brief 조각 @p pieces 의 노드 · 링크에 새 id 를 매겨 그래프에 더합니다. @p bAtPosition 이면 조각의 왼쪽 위를 @p anchor 에, 아니면 원본에서 비켜 놓습니다.
+         * @details 붙인 노드는 다음 그리기에 그 자리에 놓이고 고른 노드가 된다(`applyNodePlacement`). 노드가 없으면 아무것도 하지 않는다.
+         */
+        template <typename LinkNodesFn, typename RemapLinkFn>
+        void pasteGraphNodes( AssetType&& pieces, bool bAtPosition, const float2& anchor, LinkNodesFn&& linkNodes, RemapLinkFn&& remapLink, const utf8* pLabel )
+        {
+            if ( pieces._listNode.empty() )
+                return;
+            float2 corner = pieces._listNode[0]._position;
+            for ( const NodeType& node : pieces._listNode )
+            {
+                corner = float2{ MathUtil::min( corner._x, node._position._x ), MathUtil::min( corner._y, node._position._y ) };
+            }
+            // 복제는 원본 옆에 겹치지 않게(언리얼 Ctrl+W · 유니티 Ctrl+D 의 비켜 놓기), 붙여 넣기는 마우스 자리에.
+            const float2                    offset = bAtPosition ? anchor - corner : float2{ kDuplicateOffset, kDuplicateOffset };
+            vector<std::pair<int32, int32>> listIDMap;
+            int32                           newNodeID = nextNodeID();
+            for ( NodeType& node : pieces._listNode )
+            {
+                listIDMap.emplace_back( node._id, newNodeID );
+                node._id       = newNodeID++;
+                node._position = node._position + offset;
+                placeNodeOnNextDraw( node._id, node._position );
+                _graph._listNode.push_back( node );
+            }
+            const auto mapID = [&listIDMap]( int32 oldID )
+            {
+                for ( const std::pair<int32, int32>& entry : listIDMap )
+                {
+                    if ( entry.first == oldID )
+                        return entry.second;
+                }
+                return 0;
+            };
+            int32 newLinkID = nextLinkID();
+            for ( LinkType& link : pieces._listLink )
+            {
+                int32 fromNode = 0;
+                int32 toNode   = 0;
+                linkNodes( link, fromNode, toNode );
+                link._id = newLinkID++;
+                remapLink( link, mapID( fromNode ), mapID( toNode ) );
+                _graph._listLink.push_back( link );
+            }
+            _nodeGraph.clearSelectionOnNextDraw();
+            notifyDocumentEdited( pLabel );
+        }
+
+        /** @brief 복제가 원본에서 비켜 놓는 거리(캔버스 좌표) — 노드 머리줄 하나쯤이라 원본과 사본이 함께 보인다. */
+        static constexpr float32 kDuplicateOffset = 40.0f;
 
     protected:
         AssetType _graph; /**< 편집 중인 애셋. 노드의 캔버스 위치는 cacheNodeLayout 이 담는다. */

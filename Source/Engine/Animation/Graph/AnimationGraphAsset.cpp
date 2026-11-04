@@ -215,9 +215,10 @@ namespace sw
             SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphExpectedAnimationGraphAsset", "Animation graph '%#': expected an <AnimationGraphAsset> root element", sourceLabel );
             return false;
         }
-        bool bValid = XMLReadUtil::hasOnlyKnownNames( root, {}, { "nodes", "links", "bone_masks", "layers" }, sourceLabel );
+        bool bValid = XMLReadUtil::hasOnlyKnownNames( root, {}, { "nodes", "links", "bone_masks", "layers", "comments" }, sourceLabel );
         bValid      = parseNodes( root, sourceLabel ) && bValid;
         bValid      = parseLinks( root, sourceLabel ) && bValid;
+        bValid      = parseComments( root, sourceLabel ) && bValid;
         if ( parseLayers( root ) == false )
             bValid = false;
         if ( bValid == false )
@@ -357,6 +358,45 @@ namespace sw
         _listLink.clear();
         _listBoneMask.clear();
         _listLayer.clear();
+        _listComment.clear();
+    }
+
+    bool AnimationGraphAsset::parseComments( const XMLNode& root, string_view sourceLabel )
+    {
+        bool bValid = true;
+        for ( XMLNode commentXML = root.findChild( "comments" ).findChild(); commentXML.isValid(); commentXML = commentXML.findNextSibling() )
+        {
+            // id 는 필수이고 1 이상이며 겹치지 않는다. 글 · 자리 · 크기는 없으면 상자의 초기값이다.
+            if ( string_view{ commentXML.getName() } != "comment" || XMLReadUtil::hasOnlyKnownNames( commentXML, { "id", "text", "x", "y", "w", "h" }, {}, sourceLabel ) == false )
+            {
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.CommentsHoldsOnlyComment", "Animation graph '%#': <comments> holds only <comment> elements", sourceLabel );
+                bValid = false;
+                continue;
+            }
+            GraphCommentBox            comment{};
+            const std::optional<int32> commentID = commentXML.readRequiredAttribute<int32>( "id" );
+            std::optional<float32>     x;
+            std::optional<float32>     y;
+            std::optional<float32>     w;
+            std::optional<float32>     h;
+            const bool                 bRead = commentID.has_value() && *commentID > 0 && commentXML.readOptionalAttribute( "x", x ) && commentXML.readOptionalAttribute( "y", y ) &&
+                               commentXML.readOptionalAttribute( "w", w ) && commentXML.readOptionalAttribute( "h", h );
+            const bool bDuplicate = commentID.has_value() && VectorUtil::containsBy<&GraphCommentBox::_id>( _listComment, *commentID );
+            if ( bRead == false || bDuplicate )
+            {
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.CommentNeedsID", "Animation graph '%#': a comment needs a unique 'id' of 1 or more and numeric 'x', 'y', 'w' and 'h'", sourceLabel );
+                bValid = false;
+                continue;
+            }
+            comment._id   = *commentID;
+            comment._text = string{ commentXML.getAttributeText( "text" ) };
+            if ( x.has_value() && y.has_value() )
+                comment._position = float2{ *x, *y };
+            if ( w.has_value() && h.has_value() )
+                comment._size = float2{ *w, *h };
+            _listComment.push_back( std::move( comment ) );
+        }
+        return bValid;
     }
 
     bool AnimationGraphAsset::parseLayers( const XMLNode& root )
@@ -615,6 +655,21 @@ namespace sw
             }
         }
         writeLayers( root );
+
+        if ( _listComment.empty() == false )
+        {
+            const XMLNode commentsXML = root.appendChild( "comments" );
+            for ( const GraphCommentBox& comment : _listComment )
+            {
+                const XMLNode commentXML = commentsXML.appendChild( "comment" );
+                commentXML.appendAttribute( "id", comment._id );
+                commentXML.appendAttribute( "text", string_view{ comment._text } );
+                commentXML.appendAttribute( "x", comment._position._x );
+                commentXML.appendAttribute( "y", comment._position._y );
+                commentXML.appendAttribute( "w", comment._size._x );
+                commentXML.appendAttribute( "h", comment._size._y );
+            }
+        }
 
         return doc.saveToString();
     }

@@ -87,8 +87,6 @@ namespace sw::editor
         void trackCanvasSelection();
         /** @brief 선택한 노드 둘을 먼저 선택한 것에서 나중에 선택한 것으로 연결합니다. */
         void linkSelectedNodes();
-        /** @brief 노드를 옆에 복제합니다. */
-        void duplicateNode( int32 nodeID );
 
     private:
         AnimationGraphPreviewModel _preview;             ///< 미리보기 그래프 사본 · 플레이어 · 재생 상태

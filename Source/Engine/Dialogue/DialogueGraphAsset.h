@@ -10,6 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Asset/GraphCommentBox.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -239,6 +240,9 @@ namespace sw
         vector<DialogueAssetNode> _listNode;
         PROPERTY( Tooltip = "Links between node pins" )
         vector<DialogueAssetLink> _listLink;
+        /** @brief 그래프 에디터의 주석 상자입니다(실행에는 쓰지 않는 배치 데이터 — `GraphCommentBox`). */
+        PROPERTY( Tooltip = "Comment boxes of the graph editor" )
+        vector<GraphCommentBox> _listComment;
 
     private:
         /** @brief 읽은 본문(@p xml)을 이 그래프에 채우고 의미를 봅니다. 틀리면 그래프를 비우고 false 입니다. */
