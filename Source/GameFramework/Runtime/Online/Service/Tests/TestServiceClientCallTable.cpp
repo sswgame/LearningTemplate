@@ -76,7 +76,7 @@ namespace
     class LifetimeClientService final : public IOnlineClientService
     {
     public:
-        const OnlineProtocolEntry& getProtocol() const override { return test::kTestLoginProtocol; }
+        const OnlineProtocolEntry& getProtocol() const override { return test::getTestLoginProtocol(); }
         void                       onServicePush( uint16 kind, BitReader& body ) override
         {
             (void)kind;
@@ -91,7 +91,7 @@ namespace
         unique_ptr<SelfDestroyingClientService>* _pOwner{ nullptr };
         int32*                                   _pResponseCount{ nullptr };
 
-        const OnlineProtocolEntry& getProtocol() const override { return test::kTestLoginProtocol; }
+        const OnlineProtocolEntry& getProtocol() const override { return test::getTestLoginProtocol(); }
         void                       onServicePush( uint16 kind, BitReader& body ) override
         {
             (void)kind;
@@ -135,20 +135,6 @@ namespace
     private:
         const OnlineProtocolEntry* _pProtocol;
     };
-
-    /** @brief 서버 하나 + 클라이언트 묶음(같은 망 · 메모리 저장소 · 캐시 · 버스)입니다. */
-    struct LoopbackServerRig
-    {
-        LoopbackStreamNetwork   _network{ 5u };
-        MemoryServiceDatabase   _database{};
-        SystemMonotonicClock    _cacheClock{};
-        MemoryEphemeralDatabase _cacheDatabase{ _cacheClock };
-        LocalServerBusHub       _hub{};
-        test::OnlineTestServer  _server{ _network, &_database, &_cacheDatabase, &_hub, 1 };
-        test::OnlineTestClients _clients{ _network };
-
-        LoopbackServerRig() { _server.start(); }
-    };
 } // namespace
 
 /**
@@ -185,7 +171,7 @@ SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedWhileFailingQueuedCallsGet
  */
 SW_TEST_CASE( ServiceClientCallTableTest, KitDestroyedDuringReadyNotificationIsSkipped )
 {
-    LoopbackServerRig                            rig;
+    test::OnlineTestRig                          rig;
     int32                                        readyCount = 0;
     unique_ptr<DestroyOtherOnReadyClientService> killer     = make_unique<DestroyOtherOnReadyClientService>( kKillerProtocol );
     unique_ptr<DestroyOtherOnReadyClientService> victim     = make_unique<DestroyOtherOnReadyClientService>( kVictimProtocol );
@@ -215,8 +201,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, ImmediateFailureInsideSendStillReaches
 
 SW_TEST_CASE( ServiceClientCallTableTest, ResponsesFindTheirOwnDelegateOverLoopback )
 {
-    LoopbackServerRig rig;
-    const int32       clientIndex = rig._clients.connect( rig._server._port, {} );
+    test::OnlineTestRig rig;
+    const int32         clientIndex = rig._clients.connect( rig._server._port, {} );
     test::updateAll( { &rig._server }, rig._clients, 0 );
     SW_REQUIRE_TRUE( rig._clients.getClient( clientIndex ).isReady() );
 
@@ -264,8 +250,8 @@ SW_TEST_CASE( ServiceClientCallTableTest, ForeignResponseDuringSendDoesNotTakeTh
 /** @brief [ServiceClientCallTableTest] 키트 클라이언트가 응답 전에 사라진 모양 — 보낸 요청의 델리게이트 주인을 지운 뒤 응답이 오면 버려지고, 서버는 처리했다 */
 SW_TEST_CASE( ServiceClientCallTableTest, CancelledRequestsDropTheirAnswersWithoutCallingTheOwner )
 {
-    LoopbackServerRig rig;
-    const int32       clientIndex = rig._clients.connect( rig._server._port, {} );
+    test::OnlineTestRig rig;
+    const int32         clientIndex = rig._clients.connect( rig._server._port, {} );
     test::updateAll( { &rig._server }, rig._clients, 0 );
     SW_REQUIRE_TRUE( rig._clients.getClient( clientIndex ).isReady() );
 

@@ -5,7 +5,8 @@
  *          - I/O 스레드 없이 `updateAll` 로 돈다(결정적). 서버 여럿은 같은 데이터(`MemoryServiceDatabase` · `MemoryEphemeralDatabase` · `LocalServerBusHub`)를 나눠 쓴다.
  *          - 클라이언트는 공유 엔드포인트 모드(`OnlineServiceClient::initializeOnSharedEndpoint`) — 연결이 열리면 붙는다. `connect` 뒤 `updateAll` 한 번이면 Hello 까지 끝난다.
  *          - 내리는 순서는 실제 서버와 같다: 저장소 → 호스트 → 남은 저장소 완료 → 캐시.
- *          스위트 파일이 아니다 — 서비스 틀 테스트(`ServiceClientCallTableTest`)와 키트 끝단 테스트가 include 한다.
+ *          스위트 파일이 아니다 — 서비스 틀 테스트(`ServiceClientCallTableTest`)와 키트 끝단 테스트(`ServerListModelTest` — 키트 DLL)가 include 한다.
+ *          키트 서비스의 서버 쪽은 테스트가 가짜(`IOnlineServerService`)로 올려도 된다 — 키트의 프로토콜 항목만 같으면 클라이언트 창구를 그대로 지난다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -15,6 +16,7 @@
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Serialization/BitStream.h"
 #include "Core/Testing/TestFramework.h"
+#include "Core/Time/Clock.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/Runtime/Online/Bus/LocalServerBus.h"
@@ -42,8 +44,12 @@ namespace sw::test
     {
     };
 
-    /** @brief 테스트 로그인 서비스의 프로토콜 항목입니다. 테스트 실행 파일에 하나뿐이도록 inline 변수로 둡니다(서버와 클라이언트가 같은 해시를 얻는다). */
-    inline const OnlineProtocolEntry kTestLoginProtocol{ "OnlineHostTestUtil.Login", TestEmptyMethodTable<OnlineMethodRange::kGame>{}, OnlineMessageTypes<>{} };
+    /**
+     * @brief 테스트 로그인 서비스의 프로토콜 항목입니다(서버와 클라이언트가 같은 해시를 얻는다).
+     * @details 항목은 GameFramework.dll 한 곳(`OnlineHostTestUtil.cpp`)에 있다 — 헤더의 inline 변수면 이 헤더를 include 하는 DLL(키트 끝단 테스트)마다 한 벌씩 생겨
+     *          같은 이름이 레지스트리에 두 번 올라 멈춘다(`OnlineProtocolRegistry::registerEntry`).
+     */
+    SW_GF_API const OnlineProtocolEntry& getTestLoginProtocol();
 
     /** @brief 테스트 로그인 — 몸 `varuint 계정 id` 로 이 연결을 그 계정에 묶습니다. 계정 0 이면 kInvalidRequest, 이미 다른 연결에 붙은 계정이면 kConflict. */
     class TestLoginService final : public IOnlineServerService
@@ -51,7 +57,7 @@ namespace sw::test
     public:
         static constexpr uint16 kLoginMethod = OnlineMethodRange::kGame + 0x01;
 
-        const OnlineProtocolEntry& getProtocol() const override { return kTestLoginProtocol; }
+        const OnlineProtocolEntry& getProtocol() const override { return getTestLoginProtocol(); }
         bool                       isAnonymousMethod( uint16 method ) const override { return method == kLoginMethod; }
 
         void onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override
@@ -75,7 +81,7 @@ namespace sw::test
     class TestLoginClientService final : public IOnlineClientService
     {
     public:
-        const OnlineProtocolEntry& getProtocol() const override { return kTestLoginProtocol; }
+        const OnlineProtocolEntry& getProtocol() const override { return getTestLoginProtocol(); }
         void                       onServicePush( uint16 kind, BitReader& body ) override
         {
             (void)kind;
@@ -260,6 +266,27 @@ namespace sw::test
         vector<unique_ptr<OnlineServiceClient>> _listClient;
         vector<StreamConnectionHandle>          _listHandle;
         TestLoginClientService                  _loginClientService;
+    };
+
+    /**
+     * @brief 서버 하나 + 클라이언트 묶음(같은 망 · 메모리 저장소 · 캐시 · 버스)입니다. 키트 서비스를 올리려면 `_server._host.registerServerService` 뒤 `_server.start()` 를 부른다.
+     * @details @p bStart 가 false 면 받기를 시작하지 않는다 — 키트 서비스를 먼저 올리는 테스트가 쓴다(호스트는 `initialize` 전에만 서비스를 받는다).
+     */
+    struct OnlineTestRig
+    {
+        LoopbackStreamNetwork   _network{ 5u };
+        MemoryServiceDatabase   _database{};
+        SystemMonotonicClock    _cacheClock{};
+        MemoryEphemeralDatabase _cacheDatabase{ _cacheClock };
+        LocalServerBusHub       _hub{};
+        OnlineTestServer        _server{ _network, &_database, &_cacheDatabase, &_hub, 1 };
+        OnlineTestClients       _clients{ _network };
+
+        explicit OnlineTestRig( bool bStart = true )
+        {
+            if ( bStart )
+                _server.start();
+        }
     };
 
     /** @brief 클라이언트 묶음과 서버들을 번갈아 @p roundCount 번 돌립니다(요청 → 응답 · 알림 한 왕복에 넉넉한 수). */
