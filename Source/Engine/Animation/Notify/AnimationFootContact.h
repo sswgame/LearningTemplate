@@ -11,6 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     /**
@@ -19,13 +21,21 @@ namespace sw
      * @details 모든 필드가 필수다. `release_height` 는 `contact_height` 보다 커야 한다(그 사이가 떨림을 막는 간격이다).
      *          `notify` 는 같은 테이블의 `<Notify>` 이름이어야 하고, 그 이름의 알림은 감지만 낸다 — 클립에 같은 이름의 알림이 있어도 처리하지 않는다(출처는 하나).
      */
-    struct AnimationFootContactDef
+    REFLECT()
+    struct SW_API AnimationFootContactDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _notify{};
+        PROPERTY( Required )
         hashed_string _bone{};
-        float32       _contactHeight{ 0.0f };    ///< 이 높이(m) 이하로 내려오면 닿을 수 있다
-        float32       _releaseHeight{ 0.0f };    ///< 이 높이(m) 위로 올라가야 다음 닿음을 받는다
-        float32       _maxVerticalSpeed{ 0.0f }; ///< 세로 속도(m/s)가 이 값 이하일 때 닿았다고 본다
+        PROPERTY( Name = "contact_height", Required, Units = m )
+        float32 _contactHeight{ 0.0f }; ///< 이 높이(m) 이하로 내려오면 닿을 수 있다
+        PROPERTY( Name = "release_height", Required, Units = m )
+        float32 _releaseHeight{ 0.0f }; ///< 이 높이(m) 위로 올라가야 다음 닿음을 받는다
+        PROPERTY( Name = "max_vertical_speed", Required, Min = 0.0001, Units = "m/s" )
+        float32 _maxVerticalSpeed{ 0.0f }; ///< 세로 속도(m/s)가 이 값 이하일 때 닿았다고 본다
     };
 } // namespace sw
 

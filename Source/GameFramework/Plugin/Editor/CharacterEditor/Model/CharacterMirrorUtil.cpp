@@ -6,6 +6,7 @@
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw::editor
 {
@@ -49,8 +50,6 @@ namespace sw::editor
                 return false;
             }
 
-            static constexpr const utf8* kArrPairAttribute[] = { "first", "second" };
-
             /** @brief `<Pair>` ?먯냼留덈떎 ?띿쓣 ?쎌뼱 @p inoutRules ???뷀빀?덈떎. ?섎せ???띿? ?ㅻ쪟濡??④퉩?덈떎. */
             static void readRoot( const XMLNode& root, CharacterDataReader& reader, MirrorNameRules& inoutRules )
             {
@@ -62,10 +61,10 @@ namespace sw::editor
                         reader.reportUnknownElement( child );
                         continue;
                     }
-                    reader.reportUnknownAttributes( child, kArrPairAttribute );
-                    const string_view first  = child.getAttributeText( "first" );
-                    const string_view second = child.getAttributeText( "second" );
-                    if ( inoutRules.addPair( first, second ) == false )
+                    MirrorTokenPair pair;
+                    if ( reader.readFields( child, pair ) == false ) // 칸은 MirrorTokenPair 의 PROPERTY
+                        continue;
+                    if ( inoutRules.addPair( pair._first, pair._second ) == false )
                         reader.addError( "Character.MirrorPairInvalid", child, "needs two different non-empty attributes 'first' and 'second'" );
                 }
             }
@@ -110,9 +109,7 @@ namespace sw::editor
         XMLNode     root = document.appendRoot( "MirrorNames" );
         for ( const MirrorTokenPair& pair : _listPair )
         {
-            XMLNode node = root.appendChild( "Pair" );
-            node.appendAttribute( "first", string_view( pair._first ) );
-            node.appendAttribute( "second", string_view( pair._second ) );
+            XMLFields::writeFields( root.appendChild( "Pair" ), pair );
         }
         return document.saveToString();
     }

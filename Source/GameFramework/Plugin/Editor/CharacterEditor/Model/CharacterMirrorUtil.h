@@ -29,9 +29,14 @@ namespace sw::editor
 namespace sw::editor
 {
     /** @brief 좌우 이름 토큰 한 쌍입니다(예: `_L` 과 `_R`). */
+    REFLECT()
     struct MirrorTokenPair
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         string _first{};
+        PROPERTY( Required )
         string _second{};
     };
 } // namespace sw::editor
