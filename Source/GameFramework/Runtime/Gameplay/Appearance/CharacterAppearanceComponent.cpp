@@ -607,6 +607,16 @@ namespace sw
         }
     }
 
+    GameObjectHandle CharacterAppearanceComponent::findSlotPartObject( const hashed_string& slot ) const
+    {
+        for ( const SpawnedPart& part : _listSpawnedPart )
+        {
+            if ( part._owner == slot && part._bSocketPart == SW_TRUE && part._bMerged == SW_FALSE )
+                return part._object;
+        }
+        return GameObjectHandle{};
+    }
+
     // ------------------------------------------------------------------------------
     // 조립(게임 스레드, 틱 밖)
     // ------------------------------------------------------------------------------

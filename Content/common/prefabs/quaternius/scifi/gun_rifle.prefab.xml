@@ -1,11 +1,11 @@
-<!-- Quaternius Sci-Fi Essentials gun_rifle(CC0) — 모델의 총열이 -X 라 Y 로 -90 도 돌려 블래스터와 같은 -Z 로 둔다(소켓은 돌린 뒤의 자리). -->
+<!-- Quaternius Sci-Fi Essentials gun_rifle(CC0) — 원본 모델의 총열은 -X 라 옮길 때 glTF 마디에 Y 회전을 넣어 가져온 메시가 무기 규약(총열 -Z)이 되게 했다 — 프리팹 · 외형 · 1인칭 총이 따로 돌리지 않는다(프리팹 루트 회전은 소켓 붙이기가 덮는다). -->
 <Prefab formatVersion="0" name="SciFiRifle">
 	<GameObject _schemaVersion="0" _name="SciFiRifle" _bActive="true">
 		<_listComponent>
 			<MeshComponent _componentName="MeshComponent"
 			               _bActive="true"
 			               _localPosition="0,0,0"
-			               _localRotation="0,-90,0"
+			               _localRotation="0,0,0"
 			               _localScale="1,1,1"
 			               _attachOwner="None"
 			               _attachOwnerID="0"

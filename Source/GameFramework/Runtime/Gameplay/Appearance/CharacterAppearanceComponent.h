@@ -219,6 +219,11 @@ namespace sw
         const BoneProportion& getBodyProportion() const { return _bodyProportion; }
         /** @brief 지금 스폰해 둔 부품 오브젝트입니다. */
         void collectPartObjects( vector<GameObjectHandle>& outListObject ) const;
+        /**
+         * @brief 칸 @p slot 에 소켓으로 붙인 첫 부품 오브젝트입니다(무기 칸의 총). 칸이 비었거나 아직 조립하지 않았으면 빈 손잡이입니다.
+         * @details 1인칭 시점 무기처럼 같은 아이템을 몸 밖에서 한 번 더 보이는 쪽이 메시 · 머티리얼을 이 부품에서 읽는다 — 외형 데이터가 하나의 원본이다.
+         */
+        GameObjectHandle findSlotPartObject( const hashed_string& slot ) const;
 
     private:
         /** @brief 스폰한 부품 하나입니다. */

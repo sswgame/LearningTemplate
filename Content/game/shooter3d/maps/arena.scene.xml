@@ -507,8 +507,8 @@
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="CameraComponent#0"
-					               _meshID="common/models/blaster_d.mesh"
-					               _materialPath="common/materials/blaster_palette.material"
+					               _meshID="common/models/quaternius/scifi/gun_rifle.mesh"
+					               _materialPath="common/models/quaternius/scifi/gun_rifle/materials/mi_guns_batch1.material"
 					               _boundsRadius="0.866"
 					               _blendMode="Opaque"
 					               _gpuSpinSeed="0"
@@ -594,11 +594,6 @@
 							<item>shotgun</item>
 							<item>pistol</item>
 						</_listWeaponID>
-						<_listWeaponModel>
-							<item>common/models/blaster_d.mesh</item>
-							<item>common/models/blaster_h.mesh</item>
-							<item>common/models/blaster_a.mesh</item>
-						</_listWeaponModel>
 					</ShooterPlayerComponent>
 				</_listComponent>
 			</GameObject>

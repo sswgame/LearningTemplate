@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Quaternius Universal Base Characters 리그(65 뼈 — 언리얼 마네킹 이름)의 몸 소켓. KayKit 소켓(kaykit_humanoid.sockets.xml)과 같은 이름이라
-     같은 칸의 장비가 어느 몸에든 붙는다. 자리는 바인드 포즈의 머리 · 가슴 · 손 뼈 기준 어림값이다 — 장비를 입혀 보며 맞춘다. Gun 은 hand_r 축(언리얼 마네킹)에서 롤 -90 이라야 총열(-Z)이 겨누는 쪽이다(bodyviews 사진으로 맞췄다). 회전은 도 단위 "피치 요 롤". -->
+     같은 칸의 장비가 어느 몸에든 붙는다. 자리는 바인드 포즈의 머리 · 가슴 · 손 뼈 기준 어림값이다 — 장비를 입혀 보며 맞춘다. 회전은 도 단위 "피치 요 롤". -->
 <SocketSet>
   <Socket name="Eyes" parent="Head" translation="0 0.09 0.09" kind="LockOn"/>
   <Socket name="Helmet" parent="Head" translation="0 0.1 0" kind="Attach"/>
   <Socket name="Back" parent="spine_03" translation="0 0.1 -0.15" kind="Attach"/>
-  <Socket name="Gun" parent="hand_r" translation="0.05 0 0" rotation="0 0 -90" kind="Attach"/>
+  <Socket name="Gun" parent="hand_r" translation="0.05 0 0" rotation="0 -90 0" kind="Attach"/>
   <Socket name="Blade" parent="hand_r" translation="0.05 0 0" rotation="0 180 0" kind="Attach"/>
   <Socket name="BowGrip" parent="hand_l" rotation="70 0 0" kind="Attach"/>
   <Socket name="Shield" parent="lowerarm_l" translation="0 0.15 0.05" kind="Attach"/>

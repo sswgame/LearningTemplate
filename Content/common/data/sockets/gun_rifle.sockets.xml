@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Sci-Fi gun_rifle 의 소켓 — 프리팹 공간(총열이 -Z, 모델을 Y 로 -90 도 돌린 뒤). Muzzle 은 총구(탄도선 · 총구 섬광, +Z 가 총구 방향), SupportHand 는 보조 손이 쥐는 총열 아래. -->
+<!-- Sci-Fi gun_rifle 의 소켓 — 모델 공간(총열이 -Z). Muzzle 은 총구(탄도선 · 총구 섬광, +Z 가 총구 방향), SupportHand 는 보조 손이 쥐는 총열 아래. -->
 <SocketSet>
   <Socket name="Muzzle" translation="0 0.165 -0.752" rotation="0 180 0" kind="EffectSpawn"/>
   <Socket name="SupportHand" translation="0 0.0 -0.38" kind="Attach"/>

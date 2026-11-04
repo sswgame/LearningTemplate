@@ -147,7 +147,7 @@ namespace sw
 
     private:
         /**
-         * @brief 무기 슬롯 셋을 씬 데이터(`_listWeaponID` · `_listWeaponModel`)대로 채웁니다.
+         * @brief 무기 슬롯 셋을 씬 데이터(`_listWeaponID`)대로 채웁니다. 1인칭 총은 몸의 MainHand 부품(그 무기 아이템의 외형)을 따라 그린다(`syncViewWeapon`).
          * @details 목록 길이가 슬롯 수와 다르거나 id 가 무기 카탈로그에 없거나 그 무기에 `item` 이 없으면 오류를 남기고 false 다. 다른 무기로 대체하지 않는다.
          */
         [[nodiscard]] bool equipWeapons();
@@ -179,6 +179,8 @@ namespace sw
         void spawnBody();
         /** @brief 1인칭인지 아닌지에 따라 손에 든 총과 몸의 가시성을 맞춥니다(게임 스레드). 조준선은 `updateHUD` 가 맞춥니다. */
         void applyViewMode();
+        /** @brief 1인칭 총의 메시 · 머티리얼을 몸의 MainHand 부품에서 가져옵니다. 몸이 아직 조립하지 않았으면 다음 틱에 다시 본다. */
+        void syncViewWeapon();
 
     private:
         PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the ShooterDirectorComponent" )
@@ -189,8 +191,6 @@ namespace sw
         string _bodyPrefab;
         PROPERTY( Category = "Player", DisplayName = "Weapon IDs", Tooltip = "Weapon catalog id of each slot (keys Weapon1..Weapon3) - every id must be in weapons.xml" )
         vector<string> _listWeaponID;
-        PROPERTY( Category = "Player", DisplayName = "Weapon Models", Tooltip = "First-person mesh of each weapon slot" )
-        vector<string> _listWeaponModel;
         PROPERTY( Category = "View", DisplayName = "Eye Height", Tooltip = "Used until the body's Eyes socket is known", Min = 0.0, Units = m )
         float32 _eyeHeight;
         PROPERTY( Category = "Health", DisplayName = "Max Health", Min = 1.0 )
@@ -237,7 +237,8 @@ namespace sw
         uint32                   _shotCount;
         uint32                   _hitCount;
         uint32                   _hitReactionCount;
-        uint8                    _bWeaponModelDirty   : 1; ///< 틱이 끝난 뒤 손에 든 총 모델과 몸의 무기를 바꾼다.
+        uint8                    _bWeaponModelDirty   : 1; ///< 틱이 끝난 뒤 몸의 무기(MainHand 칸)를 바꾼다.
+        uint8                    _bViewWeaponSynced   : 1; ///< 1인칭 총이 몸의 MainHand 부품을 따랐다. 아니면 틱이 끝날 때마다 다시 본다(몸 조립은 틱 뒤에 미뤄진다)
         uint8                    _bFlushScheduled     : 1;
         uint8                    _bRoundJustRestarted : 1; ///< 쓰러져 다시 시작한 프레임. 같은 틱이 끝난 뒤에 남은 공격은 무시한다.
         uint8                    _bFirstPerson        : 1;

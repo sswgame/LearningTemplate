@@ -15,7 +15,13 @@
  "nodes": [
   {
    "mesh": 0,
-   "name": "Gun_Pistol"
+   "name": "Gun_Pistol",
+   "rotation": [
+    0.0,
+    0.7071067811865476,
+    0.0,
+    0.7071067811865476
+   ]
   }
  ],
  "materials": [

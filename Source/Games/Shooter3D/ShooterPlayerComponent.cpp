@@ -268,7 +268,6 @@ namespace sw
         , _spawnPosition{ 0.0f, 0.0f, -16.0f }
         , _bodyPrefab{}
         , _listWeaponID{}
-        , _listWeaponModel{}
         , _eyeHeight{ 1.6f }
         , _maxHealth{ 100.0f }
         , _regenDelay{ 4.0f }
@@ -301,6 +300,7 @@ namespace sw
         , _hitCount{ 0 }
         , _hitReactionCount{ 0 }
         , _bWeaponModelDirty{ SW_FALSE }
+        , _bViewWeaponSynced{ SW_FALSE }
         , _bFlushScheduled{ SW_FALSE }
         , _bRoundJustRestarted{ SW_FALSE }
         , _bFirstPerson{ SW_TRUE }
@@ -552,12 +552,11 @@ namespace sw
             SW_LOG_ERROR_ID( "ShooterPlayer.NoWeaponCatalogGameService", "[Shooter] no WeaponCatalog game service - the player cannot be armed" );
             return false;
         }
-        const size_t slotCount   = static_cast<size_t>( kWeaponCount );
-        const bool   bSlotsMatch = _listWeaponID.size() == slotCount && _listWeaponModel.size() == slotCount;
-        if ( bSlotsMatch == false )
+        const size_t slotCount = static_cast<size_t>( kWeaponCount );
+        if ( _listWeaponID.size() != slotCount )
         {
-            SW_LOG_ERROR_ID( "ShooterPlayer.PlayerNeedsWeaponIds", "[Shooter] the player needs %# weapon ids and models (has %#, %#) - the player cannot be armed", kWeaponCount,
-                             static_cast<uint32>( _listWeaponID.size() ), static_cast<uint32>( _listWeaponModel.size() ) );
+            SW_LOG_ERROR_ID( "ShooterPlayer.PlayerNeedsWeaponIds", "[Shooter] the player needs %# weapon ids (has %#) - the player cannot be armed", kWeaponCount,
+                             static_cast<uint32>( _listWeaponID.size() ) );
             return false;
         }
         bool bArmed = true;
@@ -846,7 +845,7 @@ namespace sw
     bool ShooterPlayerComponent::hasPending() const
     {
         return _listPendingShot.empty() == false || _listPendingEffect.empty() == false || _listPendingTracer.empty() == false || _soundQueue.isEmpty() == false ||
-               _bWeaponModelDirty == SW_TRUE || _bViewModeDirty == SW_TRUE || _bBodyRequested == SW_TRUE;
+               _bWeaponModelDirty == SW_TRUE || _bViewWeaponSynced == SW_FALSE || _bViewModeDirty == SW_TRUE || _bBodyRequested == SW_TRUE;
     }
 
     void ShooterPlayerComponent::scheduleFlush()
@@ -862,7 +861,6 @@ namespace sw
 
     void ShooterPlayerComponent::flushPending()
     {
-        using Internal              = ShooterPlayerComponentInternal;
         _bFlushScheduled            = SW_FALSE;
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -890,17 +888,16 @@ namespace sw
         _soundQueue.playAll();
         if ( _bWeaponModelDirty == SW_TRUE )
         {
-            _bWeaponModelDirty       = SW_FALSE;
-            MeshComponent* pModel    = Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName );
-            const bool     bHasModel = 0 <= _weaponIndex && _weaponIndex < static_cast<int32>( _listWeaponModel.size() );
-            if ( pModel != nullptr && bHasModel )
-                pModel->setMeshID( _listWeaponModel[static_cast<size_t>( _weaponIndex )] );
+            _bWeaponModelDirty = SW_FALSE;
+            _bViewWeaponSynced = SW_FALSE; // 몸이 새 무기를 조립한 뒤(다음 틱 뒤) 1인칭 총이 그 부품을 따른다
             // 몸의 무기는 외형의 MainHand 슬롯이다(같은 소켓 이름 MainHand.Muzzle 이 새 무기의 총구를 가리킨다).
             GameObject*                   pBody       = findBodyObject();
             CharacterAppearanceComponent* pAppearance = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
             if ( pAppearance != nullptr )
                 pAppearance->setSlotItem( hashed_string( "MainHand" ), getWeaponItem( _weaponIndex ) );
         }
+        if ( _bViewWeaponSynced == SW_FALSE )
+            syncViewWeapon();
         if ( _bViewModeDirty == SW_TRUE )
             applyViewMode();
         updateHUD();
@@ -937,6 +934,26 @@ namespace sw
             pAppearance->setSlotItem( hashed_string( "MainHand" ), getWeaponItem( _weaponIndex ) );
         pAvatar->setFirstPerson( _bFirstPerson == SW_TRUE );
         _body = pBody->getHandle();
+    }
+
+    void ShooterPlayerComponent::syncViewWeapon()
+    {
+        // 1인칭 총(카메라 자식)은 몸의 MainHand 부품과 같은 메시 · 머티리얼이다 — 무기 외형(itemvisuals.xml)이 하나의 원본이다(씬에 총 메시 목록을 따로 두지 않는다).
+        using Internal                               = ShooterPlayerComponentInternal;
+        GameObject* const                   pOwner   = getOwner();
+        GameObject* const                   pBody    = findBodyObject();
+        const CharacterAppearanceComponent* pLook    = pBody != nullptr ? pBody->getComponent<CharacterAppearanceComponent>() : nullptr;
+        GameObjectManager* const            pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        if ( pOwner == nullptr || pLook == nullptr || pManager == nullptr )
+            return;
+        const GameObject* const pPart     = pManager->resolveGameObject( pLook->findSlotPartObject( hashed_string( "MainHand" ) ) );
+        const MeshComponent*    pPartMesh = pPart != nullptr ? pPart->getComponent<MeshComponent>() : nullptr;
+        MeshComponent* const    pView     = Internal::findNamed<MeshComponent>( *pOwner, Internal::kViewWeaponName );
+        if ( pPartMesh == nullptr || pView == nullptr || pPartMesh->getMeshID().empty() )
+            return; // 아직 조립 전이다 — 다음 틱에 다시 본다
+        pView->setMeshID( pPartMesh->getMeshID() );
+        pView->setMaterialPath( pPartMesh->getMaterialPath().c_str() );
+        _bViewWeaponSynced = SW_TRUE;
     }
 
     void ShooterPlayerComponent::applyViewMode()
