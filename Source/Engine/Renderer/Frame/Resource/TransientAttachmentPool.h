@@ -147,11 +147,11 @@ namespace sw
         unordered_map<string, Attachment> _mapAttachment;
         /// @brief 꺼진 효과의 출력 이름 → 그 원본 이름입니다(`forward`). 뷰가 프레임마다 정하고 패스 기록 중에는 읽기만 한다.
         unordered_map<string, string> _mapForward;
+        mutable mutex                 _clearedMutex;
         /// @brief 이번 프레임에 이미 클리어한 첨부들입니다. 병렬 패스가 동시에 갱신하므로 _clearedMutex 로 보호합니다.
-        vector<hashed_string> _listClearedThisFrame;
-        mutable mutex         _clearedMutex;
-        uint32                _width;
-        uint32                _height;
-        uint32                _allocationCount;
+        vector<hashed_string> _listClearedThisFrame SW_GUARDED_BY( _clearedMutex );
+        uint32                                      _width;
+        uint32                                      _height;
+        uint32                                      _allocationCount;
     };
 } // namespace sw

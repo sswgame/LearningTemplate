@@ -365,6 +365,8 @@ namespace sw
                     SW_LOG_ERROR_ID( "App.GameModuleManagerInitializationFailed", "GameModuleManager initialization failed." );
                     return false;
                 }
+                // 에디터 렌더 훅은 모듈 매니저가 사는 동안만 걸린다(떼는 것은 stopHostService — 렌더 스레드가 사라진 매니저를 부르지 않는다).
+                bindEditorRenderHooks( true );
                 // 시나리오 체인이 단계마다 게임을 처음부터 다시 세운다(`AutomationSession::startStage` 가 `engine::findSubsystem<IGameRestarter>()` 로 찾는다).
                 return _host.bind<IGameRestarter>( _gameModuleManager.get() );
             }
@@ -412,6 +414,8 @@ namespace sw
                 _host.unbind<IGameRestarter>();
                 // 에디터 shutdown 이 씬 뷰 · 게임 뷰 RT 를 놓을 때 렌더 스레드와 RHI 디바이스를 쓴다 — 호스트 서비스는 엔진 종료 앞에서 내려간다.
                 _gameModuleManager->shutdown();
+                // 렌더 스레드가 받은 패킷을 끝낸 뒤 훅을 뗀다(`RenderThread::setPresentHook`) — 그 뒤에 매니저를 지운다.
+                bindEditorRenderHooks( false );
                 _gameModuleManager.reset();
                 return;
             }
@@ -469,14 +473,21 @@ namespace sw
                 AppAssertDialog::installForInteractiveRun( *pCommandLine );
         }
 
-        // 렌더 스레드 훅은 렌더 스레드에 바로 건다(엔진은 렌더 스레드를 빌려 줄 뿐 훅을 중계하지 않는다). 헤드리스가 아닌 클라이언트에는 늘 있다.
+        // 개발 도구의 프레임 시작 훅은 렌더 스레드에 바로 건다(엔진은 렌더 스레드를 빌려 줄 뿐 훅을 중계하지 않는다). 헤드리스가 아닌 클라이언트에는 늘 있다.
+        // 에디터 렌더 훅은 게임 호스트 서비스와 함께 걸고 뗀다(`bindEditorRenderHooks`).
         if ( RenderThread* const pRenderThread = _engine.getRenderThread() )
-        {
-            pRenderThread->setPrepareHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPrepareRender, this ) );
-            pRenderThread->setPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) );
-            pRenderThread->setPostPresentHook( SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) );
             AppDevTools::bindRenderThreadHooks( *pRenderThread, _backendSwap );
-        }
+    }
+
+    void App::bindEditorRenderHooks( bool bBind )
+    {
+        RenderThread* const pRenderThread = _engine.getRenderThread();
+        if ( pRenderThread == nullptr ) // 헤드리스 호스트 — 그릴 렌더 스레드가 없다
+            return;
+        // 세터가 렌더 스레드를 비운 뒤 바꾼다 — 렌더 스레드가 훅을 부르는 중에 덮이거나, 뗀 뒤에 모듈 매니저를 부르는 일이 없다.
+        pRenderThread->setPrepareHook( bBind ? SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPrepareRender, this ) : PresentHookDelegate{} );
+        pRenderThread->setPresentHook( bBind ? SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorRender, this ) : PresentHookDelegate{} );
+        pRenderThread->setPostPresentHook( bBind ? SW_DELEGATE_METHOD( PresentHookDelegate, &App::onEditorPostPresent, this ) : PresentHookDelegate{} );
     }
 
     void App::shutdown()
@@ -658,28 +669,20 @@ namespace sw
         return false;
     }
 
+    // 아래 셋은 렌더 스레드가 부른다. 훅은 모듈 매니저가 사는 동안만 걸려 있다(`bindEditorRenderHooks` — 떼는 세터가 렌더 스레드를 먼저 비운다).
+    // 예전에는 훅을 끝까지 걸어 두고 렌더 스레드에서 `_gameModuleManager == nullptr` 를 읽어 넘겼다 — 게임 스레드가 지우는 포인터를 다른 스레드가 읽는 모양이었다.
     void App::onEditorPrepareRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
-        if ( _gameModuleManager == nullptr ) // 아래 onEditorRender 와 같은 까닭이다
-            return;
         _gameModuleManager->prepareRenderEditor( renderDevice );
     }
 
     void App::onEditorRender( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
-        // 이 훅은 렌더 스레드가 부른다. GameModuleManager 가 사라진 뒤에는 불리지 않는다. shutdown 이 GameModuleManager 를 지우기 전에
-        // drainRenderWorkers 로 큐를 비우고, 그 시점에는 메인 루프가 이미 끝나 새 프레임이 들어오지 않는다. 훅 델리게이트 자체를
-        // 여기서 끊는 것은 오히려 위험하다. RenderThread::setPresentHook 은 잠금 없는 대입이라, 렌더 스레드가 도는 중에 바꾸면
-        // 레이스가 된다(실제로 종료할 때 크래시가 났다). 아래 검사는 그 불변 조건이 깨졌을 때 죽는 대신 조용히 넘어가기 위한 것이다.
-        if ( _gameModuleManager == nullptr )
-            return;
         _gameModuleManager->renderEditor( renderDevice );
     }
 
     void App::onEditorPostPresent( IRHIDevice& renderDevice, const RenderFramePacket& /*framePacket*/ )
     {
-        if ( _gameModuleManager == nullptr )
-            return;
         _gameModuleManager->postPresentEditor( renderDevice );
     }
 } // namespace sw

@@ -28,20 +28,19 @@ namespace sw
             SW_MEMORY_SCOPE( RenderCPU );
             _renderThread = make_unique<RenderThread>();
         }
-        if ( _renderThread->attach( &_rhiSubsystem.findRHI()->getDevice(), &_frameRendererSubsystem.getFrameRenderer() ) == false )
+        // 화면 밖 씬 렌더러도 디바이스 · 주 렌더러와 함께 붙인다 — 스레드가 뜬 뒤 따로 꽂으면 렌더 스레드가 읽는 포인터를 게임 스레드가 덮는 모양이다.
+        if ( _renderThread->attach( &_rhiSubsystem.findRHI()->getDevice(), &_frameRendererSubsystem.getFrameRenderer(), &_frameRendererSubsystem.getOffscreenRenderers() ) == false )
         {
             SW_LOG_ERROR_ID( "RenderThread.FailedAttachRenderThread", "Failed to attach RenderThread!" );
             return SubsystemInitResult::Failed;
         }
-        _renderThread->setOffscreenRenderers( &_frameRendererSubsystem.getOffscreenRenderers() );
         return SubsystemInitResult::Succeeded;
     }
 
     void RenderThreadSubsystem::shutdownSubsystem()
     {
         _renderThread->waitIdle( RHIWaitIdleReason::Shutdown );
-        _renderThread->stop();
-        _renderThread->setOffscreenRenderers( nullptr );
+        _renderThread->stop(); // 붙인 렌더 쪽 객체 셋을 함께 놓는다
     }
 
     span<const utf8* const> RenderThreadSubsystem::getSubsystemDependencies() const

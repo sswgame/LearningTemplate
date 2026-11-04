@@ -201,6 +201,7 @@ namespace sw
         , _pFrameRenderer{ nullptr }
         , _pOffscreenRenderers{ nullptr }
         , _listPendingRetiredSceneKey{}
+        , _packetThread{}
         , _prepareHook{}
         , _presentHook{}
         , _postPresentHook{}
@@ -239,7 +240,7 @@ namespace sw
         stop();
     }
 
-    bool RenderThread::bind( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer )
+    bool RenderThread::bind( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer, OffscreenSceneRenderers* pOffscreenRenderers )
     {
         if ( pDevice == nullptr )
             return false;
@@ -250,24 +251,25 @@ namespace sw
             return false;
         }
 
-        _pDevice        = pDevice;
-        _pFrameRenderer = pFrameRenderer;
-        _bContextBound  = false;
+        _pDevice             = pDevice;
+        _pFrameRenderer      = pFrameRenderer;
+        _pOffscreenRenderers = pOffscreenRenderers;
+        _bContextBound       = false;
         SW_LOG_INFO_ID( "RenderThread.BoundInlineSubmitNo", "Bound for inline submit (no dedicated worker). Backend=%#", pDevice->getBackendName() );
         return true;
     }
 
-    bool RenderThread::attach( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer )
+    bool RenderThread::attach( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer, OffscreenSceneRenderers* pOffscreenRenderers )
     {
-        return gv_useRenderThread ? start( pDevice, pFrameRenderer ) : bind( pDevice, pFrameRenderer );
+        return gv_useRenderThread ? start( pDevice, pFrameRenderer, pOffscreenRenderers ) : bind( pDevice, pFrameRenderer, pOffscreenRenderers );
     }
 
-    bool RenderThread::start( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer )
+    bool RenderThread::start( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer, OffscreenSceneRenderers* pOffscreenRenderers )
     {
         if ( _bRunning.load( std::memory_order_relaxed ) )
             return true;
 
-        if ( bind( pDevice, pFrameRenderer ) == false )
+        if ( bind( pDevice, pFrameRenderer, pOffscreenRenderers ) == false )
             return false;
 
         RenderThreadInternal::unbindGraphicsContext( pDevice );
@@ -287,9 +289,10 @@ namespace sw
         if ( _bRunning.exchange( false, std::memory_order_acq_rel ) == false )
         {
             discardPendingRenderTargetRead(); // 인라인 제출은 호출한 스레드가 읽기를 이었다 — 티켓이 팩토리보다 오래 살지 않게 한다
-            _pDevice        = nullptr;
-            _pFrameRenderer = nullptr;
-            _bContextBound  = false;
+            _pDevice             = nullptr;
+            _pFrameRenderer      = nullptr;
+            _pOffscreenRenderers = nullptr;
+            _bContextBound       = false;
             return;
         }
         {
@@ -310,9 +313,10 @@ namespace sw
         discardPendingRenderTargetRead(); // 스레드가 끝난 뒤, 디바이스를 놓기 전에
         if ( _pDevice != nullptr )
             _pDevice->setRenderThreadDrain( nullptr, nullptr, std::thread::id{} );
-        _pDevice        = nullptr;
-        _pFrameRenderer = nullptr;
-        _bContextBound  = false;
+        _pDevice             = nullptr;
+        _pFrameRenderer      = nullptr;
+        _pOffscreenRenderers = nullptr;
+        _bContextBound       = false;
         SW_LOG_TRACE_ID( "RenderThread.Stopped", "Stopped" );
     }
 
@@ -328,8 +332,9 @@ namespace sw
         const bool bShouldRunWorker = gv_useRenderThread;
         if ( _bRunning.load( std::memory_order_acquire ) != bShouldRunWorker )
         {
-            IRHIDevice*    pSavedDevice        = _pDevice;
-            FrameRenderer* pSavedFrameRenderer = _pFrameRenderer;
+            IRHIDevice*              pSavedDevice             = _pDevice;
+            FrameRenderer*           pSavedFrameRenderer      = _pFrameRenderer;
+            OffscreenSceneRenderers* pSavedOffscreenRenderers = _pOffscreenRenderers;
 
             if ( bShouldRunWorker )
             {
@@ -338,13 +343,13 @@ namespace sw
                     RenderThreadInternal::unbindGraphicsContext( _pDevice );
                     _bContextBound = false;
                 }
-                start( pSavedDevice, pSavedFrameRenderer );
+                start( pSavedDevice, pSavedFrameRenderer, pSavedOffscreenRenderers );
             }
             else
             {
                 waitIdle( RHIWaitIdleReason::Tool ); // `gv_useRenderThread` 토글은 개발 토글이다(프레임 경로가 아니다)
                 stop();
-                if ( bind( pSavedDevice, pSavedFrameRenderer ) == false )
+                if ( bind( pSavedDevice, pSavedFrameRenderer, pSavedOffscreenRenderers ) == false )
                     SW_LOG_ERROR_ID( "RenderThread.RenderThreadCouldNot", "Render thread could not go back to inline submit - no device is bound" );
             }
         }
@@ -393,6 +398,34 @@ namespace sw
         { return _stop.isStopRequested() || _tail.load( std::memory_order_acquire ) == _head.load( std::memory_order_acquire ); } );
     }
 
+    void RenderThread::setPrepareHook( PresentHookDelegate hook )
+    {
+        drainPackets(); // 받은 패킷이 이 훅을 다 부른 뒤에 바꾼다(헤더의 훅 세터 설명)
+        const ScopedThreadRoleBorrow borrow{ _packetThread };
+        _prepareHook = std::move( hook );
+    }
+
+    void RenderThread::setPresentHook( PresentHookDelegate hook )
+    {
+        drainPackets();
+        const ScopedThreadRoleBorrow borrow{ _packetThread };
+        _presentHook = std::move( hook );
+    }
+
+    void RenderThread::setPostPresentHook( PresentHookDelegate hook )
+    {
+        drainPackets();
+        const ScopedThreadRoleBorrow borrow{ _packetThread };
+        _postPresentHook = std::move( hook );
+    }
+
+    void RenderThread::setBeginFrameHook( BeginFrameHookDelegate hook )
+    {
+        drainPackets();
+        const ScopedThreadRoleBorrow borrow{ _packetThread };
+        _beginFrameHook = std::move( hook );
+    }
+
     void RenderThread::waitIdle( RHIWaitIdleReason reason )
     {
         if ( _bRunning.load( std::memory_order_acquire ) == false )
@@ -424,6 +457,7 @@ namespace sw
         ThreadCrashStack::initializeCurrentThread();
         ThreadName::setCurrentThreadName( "RenderThread" );
         _bContextBound = false;
+        _packetThread.bindToCurrentThread(); // 이 스레드가 패킷을 실행한다 — 다른 스레드가 패킷 실행 역할로 들어오면 Debug 가 단언한다
 
         for ( ;; )
         {
@@ -484,10 +518,12 @@ namespace sw
             RenderThreadInternal::unbindGraphicsContext( _pDevice );
             _bContextBound = false;
         }
+        _packetThread.unbind(); // 다음은 인라인 실행(부른 스레드) 또는 새 워커다
     }
 
     void RenderThread::executePacket( RenderFramePacket& packet )
     {
+        _packetThread.assumeHeld();
         // 글리프 아틀라스 업로드는 차분이다 — 이 패킷을 그리지 않고 끝내는 길(시점 없음 · 컨텍스트 실패 · 그래프 준비 전)보다 먼저 거울에 옮긴다.
         // 그러지 않으면 그 묶음의 글자가 영영 빈칸으로 남는다(첫 프레임에 만든 글리프가 HUD 에서 빠졌다).
         if ( _pFrameRenderer != nullptr )

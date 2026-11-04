@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Concurrency/StopToken.h"
+#include "Core/Concurrency/ThreadSafety.h"
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Concurrency/thread.h"
@@ -49,20 +50,21 @@ namespace sw
 
         /**
          * @brief 워커 없이 디바이스와 렌더러를 붙입니다(GT 에서 바로 실행합니다).
-         * @details submit() 이 부르는 스레드에서 executePacket 합니다.
+         * @details submit() 이 부르는 스레드에서 executePacket 합니다. 렌더 쪽 객체 셋(디바이스 · 주 렌더러 · 화면 밖 씬 렌더러)은 붙는 동안 바뀌지 않는다 —
+         *          스레드가 도는 중에 따로 바꾸는 세터를 두지 않는다(렌더 스레드가 읽는 포인터를 다른 스레드가 덮는 모양을 쓸 수 없게).
          */
-        [[nodiscard]] bool bind( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
+        [[nodiscard]] bool bind( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer, OffscreenSceneRenderers* pOffscreenRenderers );
         /**
          * @brief 전용 워커를 띄웁니다. bindGraphicsContext 는 그 스레드에서 실행됩니다.
          */
-        bool start( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
+        bool start( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer, OffscreenSceneRenderers* pOffscreenRenderers );
         /** @brief 워커를 멈춥니다. */
         void stop();
         /**
          * @brief 디바이스와 렌더러를 붙입니다. 전용 워커를 띄울지(`start`) 부르는 스레드에 붙일지(`bind`)는 `-gv_useRenderThread` 를 보고 정합니다.
          * @details 실행 중에 그 값이 바뀌면 `submit()` 이 모드를 그 자리에서 바꿉니다. 그래서 그 변수를 읽는 곳은 이 클래스뿐입니다.
          */
-        [[nodiscard]] bool attach( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer );
+        [[nodiscard]] bool attach( IRHIDevice* pDevice, FrameRenderer* pFrameRenderer, OffscreenSceneRenderers* pOffscreenRenderers );
 
         /**
          * @brief 워커가 있으면 링에 넣고, 없으면 executeInline 합니다.
@@ -86,17 +88,20 @@ namespace sw
          */
         [[nodiscard]] bool executeAndWait( const RenderCommandDelegate& command );
 
+        // 훅 세터 넷은 렌더 스레드가 받은 패킷을 모두 끝내기를 기다린 뒤(`drainPackets`) 패킷 실행 역할을 빌려 바꾼다. 패킷을 내는 쪽(게임 스레드)이 부르므로
+        // 그동안 새 패킷이 들어오지 않는다 — 렌더 스레드가 훅을 부르는 중에 델리게이트를 덮는 일이 없다(언리얼도 렌더 스레드가 읽는 값은
+        // `FlushRenderingCommands` 뒤나 렌더 명령으로만 바꾼다). 빈 델리게이트를 넘기면 훅을 뗀다 — 뗀 뒤에는 렌더 스레드가 그 훅의 주인을 다시 부르지 않는다.
         /**
          * @brief 씬 렌더 뒤, 백버퍼 패스를 열기 직전에 부를 훅을 정합니다 — 렌더 패스 밖이라 업로드(버퍼 · 텍스처 · bindless 등록)를 한다.
          * @details 열린 패스 안의 업로드는 Vulkan 이 패스를 닫아 그 뒤의 드로우를 버린다(전송 계약 3 — 업로드는 그리기 기록 전에). present 훅은 그리기만 한다.
          */
-        void setPrepareHook( PresentHookDelegate hook ) { _prepareHook = std::move( hook ); }
+        void setPrepareHook( PresentHookDelegate hook );
         /** @brief 씬 렌더 뒤, Present 전에 열린 백버퍼 패스 안에서 부를 훅을 정합니다(패킷을 실행하는 스레드에서 불립니다). 그리기만 한다 — 업로드는 `setPrepareHook` 의 훅이 한다. */
-        void setPresentHook( PresentHookDelegate hook ) { _presentHook = std::move( hook ); }
+        void setPresentHook( PresentHookDelegate hook );
         /** @brief Present 뒤에 부를 훅을 정합니다(멀티 뷰포트와 플랫폼 창 처리용). */
-        void setPostPresentHook( PresentHookDelegate hook ) { _postPresentHook = std::move( hook ); }
-        /** @brief 프레임의 `beginFrame` 바로 앞 훅을 겁니다(렌더 스레드가 부른다 — 프레젠트 훅처럼 렌더 스레드가 돌기 전에 건다). */
-        void setBeginFrameHook( BeginFrameHookDelegate hook ) { _beginFrameHook = std::move( hook ); }
+        void setPostPresentHook( PresentHookDelegate hook );
+        /** @brief 프레임의 `beginFrame` 바로 앞 훅을 겁니다(렌더 스레드가 부른다). */
+        void setBeginFrameHook( BeginFrameHookDelegate hook );
 
         /** @brief 워커가 돌고 있으면 true 를 반환합니다. */
         bool isRunning() const { return _bRunning.load( std::memory_order_acquire ); }
@@ -106,9 +111,7 @@ namespace sw
         IRHIDevice* getDevice() const { return _pDevice; }
         /** @brief 패킷을 그리는 주 렌더러입니다(없으면 nullptr). 렌더 스레드 객체 — `executeAndWait` 의 명령 안에서만 만진다. */
         FrameRenderer* getFrameRenderer() const { return _pFrameRenderer; }
-        /** @brief 화면 밖 씬(미리보기 · 캡처)마다의 렌더러를 붙이거나(nullptr 로) 뗍니다. 소유는 `FrameRendererSubsystem` 이다. 붙지 않으면 미리보기를 그리지 않는다. */
-        void setOffscreenRenderers( OffscreenSceneRenderers* pOffscreenRenderers ) { _pOffscreenRenderers = pOffscreenRenderers; }
-        /** @brief 화면 밖 씬 렌더러입니다(없으면 nullptr). 렌더 스레드 객체 — `executeAndWait` 의 명령 안에서만 만진다. */
+        /** @brief 화면 밖 씬 렌더러입니다(없으면 nullptr — 미리보기를 그리지 않는다). 소유는 `FrameRendererSubsystem`. 렌더 스레드 객체 — `executeAndWait` 의 명령 안에서만 만진다. */
         OffscreenSceneRenderers* getOffscreenRenderers() const { return _pOffscreenRenderers; }
         /**
          * @brief 지난 프레임에 씬 키 @p sceneKey(0 = 주 화면, 미리보기 씬 키)를 그린 렌더러가 머티리얼 PSO 를 아직 만드는 중이라 빠뜨린 배치 묶음 수를 @p outCount 에 담습니다.
@@ -165,7 +168,7 @@ namespace sw
     private:
         /** @brief 렌더 스레드 루프입니다. 패킷을 꺼내 executePacket 합니다. */
         void threadMain();
-        /** @brief 패킷을 실행하고, 중단되더라도 postPresent 훅이 호출되도록 보장합니다. */
+        /** @brief 패킷을 실행하고, 중단되더라도 postPresent 훅이 호출되도록 보장합니다. 패킷 실행 역할(`_packetThread`)의 진입점입니다. */
         void executePacket( RenderFramePacket& packet );
         /** @brief 지금 스레드(패킷을 실행하는 스레드)에서 명령 하나를 실행합니다. 패킷처럼 컨텍스트를 잡고 끝나면 놓습니다. */
         [[nodiscard]] bool runCommand( const RenderCommandDelegate& command );
@@ -176,7 +179,7 @@ namespace sw
          * @details 남은 본문은 프레임 단계의 순서(컨텍스트 → beginFrame → 게임 뷰 → 미리보기 → 백버퍼 → 훅 → Present → 촬영)가 곧 의미라 더 나누지 않는다.
          * @return 프레임을 실제로 그렸으면 true 이고, 유효하지 않은 패킷이나 리소스라 건너뛰었으면 false 입니다.
          */
-        [[nodiscard]] bool executeFrameBody( RenderFramePacket& packet );
+        [[nodiscard]] bool executeFrameBody( RenderFramePacket& packet ) SW_REQUIRES_LOCK( _packetThread );
         /**
          * @brief 에디터 미리보기 씬마다 자기 타깃을 열고 그린 뒤 읽기 상태로 둡니다. 렌더러가 준비 전이거나 프레임 스트림이 없으면 건너뜁니다.
          * @details 그린 뒤 씬마다(주 화면 = 키 0, @p bMainDrew 면) 빠뜨린 배치 수를 표에 다시 쓴다(`findPendingMaterialPSOBatchCount`).
@@ -211,14 +214,16 @@ namespace sw
         FrameRenderer*           _pFrameRenderer;
         OffscreenSceneRenderers* _pOffscreenRenderers;
         vector<uint32>           _listPendingRetiredSceneKey; ///< 받은 패킷이 알린 사라진 미리보기 씬 키 — 내릴 수 있는 프레임까지 모은다(알림은 한 번뿐이라 그리지 않은 패킷에서 잃으면 렌더러가 남는다)
-        PresentHookDelegate      _prepareHook;
-        PresentHookDelegate      _presentHook;
-        PresentHookDelegate      _postPresentHook;
-        BeginFrameHookDelegate   _beginFrameHook;
-        sw::thread               _thread;
-        atomic<bool>             _bRunning;
-        StopSource               _stop;          ///< 렌더 스레드를 멈추라는 신호(다시 시작하면 새 원천으로 바꾼다)
-        atomic<bool>             _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
+        /// @brief 패킷을 실행하는 스레드의 역할입니다(전용 워커면 그 스레드, 인라인이면 부른 스레드). 훅은 이 역할 아래에 있고 세터는 렌더 스레드를 비운 뒤 빌린다.
+        ThreadRole                             _packetThread;
+        PresentHookDelegate _prepareHook       SW_GUARDED_BY( _packetThread );
+        PresentHookDelegate _presentHook       SW_GUARDED_BY( _packetThread );
+        PresentHookDelegate _postPresentHook   SW_GUARDED_BY( _packetThread );
+        BeginFrameHookDelegate _beginFrameHook SW_GUARDED_BY( _packetThread );
+        sw::thread                             _thread;
+        atomic<bool>                           _bRunning;
+        StopSource                             _stop;          ///< 렌더 스레드를 멈추라는 신호(다시 시작하면 새 원천으로 바꾼다)
+        atomic<bool>                           _bContextBound; ///< 지금 실행 스레드에서 bindGraphicsContext 가 성공했는지 나타냅니다.
         /// @brief 직전 프레임에 디바이스로 전달한 제출 정책입니다. 바뀔 때만 로그를 남기려고 둡니다.
         bool         _bLastImmediateSubmit;
         uint8        _bScreenshotTaken;                ///< -gv_screenshot 은 한 장만 찍는다.

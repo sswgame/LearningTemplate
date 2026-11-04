@@ -7,11 +7,9 @@
  */
 #pragma once
 #include "Core/Concurrency/atomic.h"
-#include "Core/Concurrency/mutex.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/Task/TaskTypes.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
@@ -126,8 +124,6 @@ namespace sw
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromFile` 에 넣으면 팩 전용 구성이 거절합니다.
          */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
-        /** @brief 파일을 비동기로 로드합니다. */
-        TaskHandle loadFromFileAsync( string_view assetRelativePath );
         /** @brief 파일로 저장합니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief 현재 디스크립터를 XML 문자열로 만듭니다. */
@@ -300,21 +296,12 @@ namespace sw
         /** @brief 레이아웃 오류 뒤 바이트와 stride 를 비운다 — 틀린 바이트(적지 않은 칸의 0)가 GPU 에 올라가지 않게 한다. */
         void discardBytesAfterLayoutError();
 
-        /// @brief 비동기 파일 로드가 머티리얼이 아직 살아 있는지 확인하는 상태입니다. 소멸자가 포인터를 끊습니다.
-        struct AsyncLoadState
-        {
-            mutex     _mutex;
-            Material* _pMaterial{ nullptr };
-        };
-
         /** @brief Desc 를 런타임 상태에 적용합니다. */
         void applyDescToRuntime();
         /** @brief 서수 @p ordinal 의 텍스처 로드가 끝났으면 대신 빌린 텍스처를 놓고 진짜(실패면 누락 체커)로 바꿉니다(`refreshTextureBindings`). */
         void resolveArrivedTexture( TextureCache& textures, size_t ordinal );
         /** @brief 런타임 프로퍼티를 Desc 에 다시 씁니다(저장용). */
         void syncDescFromRuntime() const;
-        /** @brief 비동기 로드 태스크 본문입니다. TaskArgs 에는 AsyncLoadState shared_ptr 와 경로 문자열이 들어 있습니다. */
-        static void loadFromFileAsyncJob( const TaskArgs& args );
 
         /** @brief initialize 가 받은 에셋 경로입니다. 디바이스가 바뀌면 이 경로만으로 스스로 복원합니다. */
         string                               _assetPath;
@@ -336,7 +323,6 @@ namespace sw
         vector<RHIDescriptorIndex>           _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>                _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
         RHIBlendMode                         _blendMode;
-        shared_ptr<AsyncLoadState>           _asyncLoadState;
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;

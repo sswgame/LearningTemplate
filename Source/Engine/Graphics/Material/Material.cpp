@@ -2,10 +2,8 @@
 
 #include "Engine/Graphics/Material/Material.h"
 
-#include "Core/Concurrency/mutex.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Hash/HashUtil.h"
-#include "Core/Task/TaskManager.h"
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
@@ -77,7 +75,6 @@ namespace sw
         , _listMaterialTextureSRV{}
         , _listMaterialTextureName{}
         , _blendMode{ RHIBlendMode::Opaque }
-        , _asyncLoadState{ sw::make_shared<AsyncLoadState>() }
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
         , _cachedShaderPathHash{ 0 }
@@ -86,18 +83,12 @@ namespace sw
         , _bShaderLayoutSynced{ SW_FALSE }
         , _reservedMaterial{ 0 }
     {
-        _asyncLoadState->_pMaterial = this;
     }
 
     Material::~Material()
     {
         if ( _pRHIDevice != nullptr )
             releaseRHI( _pRHIDevice );
-        if ( _asyncLoadState != nullptr )
-        {
-            ScopedLock<mutex> lock{ _asyncLoadState->_mutex };
-            _asyncLoadState->_pMaterial = nullptr;
-        }
     }
 
     bool Material::initialize( IRHIDevice* pRHI, const AssetID& assetID )
@@ -1032,29 +1023,6 @@ namespace sw
         if ( doc.loadFile( diskPath ) == false )
             return false;
         return loadFromXML( doc.saveToString() );
-    }
-
-    TaskHandle Material::loadFromFileAsync( string_view assetRelativePath )
-    {
-        TaskHandle handle = engine::getSubsystem<TaskManager>().emplaceTask(
-            "LoadMaterialAsync",
-            SW_DELEGATE_FUNCTION( TaskArgsDelegate, Material::loadFromFileAsyncJob ),
-            MakeTaskArgs( _asyncLoadState, string( assetRelativePath ) ) );
-        handle.submit();
-        return handle;
-    }
-
-    void Material::loadFromFileAsyncJob( const TaskArgs& args )
-    {
-        shared_ptr<AsyncLoadState> state = args.get<shared_ptr<AsyncLoadState>>( 0 );
-        if ( state == nullptr )
-            return;
-
-        ScopedLock<mutex> lock{ state->_mutex };
-        if ( state->_pMaterial == nullptr )
-            return;
-        if ( state->_pMaterial->loadFromFile( AssetID{ args.get<string>( 1 ) } ) == false )
-            SW_LOG_WARNING_ID( "Material.CommandLoadFailed", "Could not load material '%#'", args.get<string>( 1 ) );
     }
 
     bool Material::saveToFile( const AbsolutePath& absPath ) const

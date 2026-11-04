@@ -11,8 +11,8 @@ namespace sw
 {
     TransientAttachmentPool::TransientAttachmentPool()
         : _mapAttachment{}
-        , _listClearedThisFrame{}
         , _clearedMutex{}
+        , _listClearedThisFrame{}
         , _width{ 0 }
         , _height{ 0 }
         , _allocationCount{ 0 }

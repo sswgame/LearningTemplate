@@ -81,12 +81,12 @@ namespace sw
         bool popJob( Job& outJob, IRHIDevice*& outDevice );
         void pushResult( Job&& job, RHIPipelineStateHandle handle );
 
-        mutable mutex  _mutex;
-        vector<Job>    _listUrgent;
-        vector<Job>    _listLow;
-        vector<Result> _listResult;
-        IRHIDevice*    _pDevice{ nullptr };
-        uint32         _inFlight{ 0 };
+        mutable mutex              _mutex;
+        vector<Job> _listUrgent    SW_GUARDED_BY( _mutex );
+        vector<Job> _listLow       SW_GUARDED_BY( _mutex );
+        vector<Result> _listResult SW_GUARDED_BY( _mutex );
+        IRHIDevice* _pDevice       SW_GUARDED_BY( _mutex ){ nullptr };
+        uint32 _inFlight           SW_GUARDED_BY( _mutex ){ 0 };
         /** @brief 빌더 스레드입니다. 일은 신호(값은 쓰지 않는다)이고 작업 자체는 위 줄에서 급한 것부터 꺼낸다. 처음 넣을 때 띄운다. */
         DedicatedWorker<uint8> _worker;
     };

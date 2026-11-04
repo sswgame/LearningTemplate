@@ -87,8 +87,10 @@ namespace sw
         [[nodiscard]] bool startHostService( HostServiceID id );
         /** @brief `startHostService` 가 세운 서비스 하나를 내립니다. 호스트 서비스 집합이 역순으로 부릅니다. */
         void stopHostService( HostServiceID id );
-        /** @brief 창 콜백 · Present 훅을 연결합니다(호스트 서비스이 선 뒤). */
+        /** @brief 창 콜백 · 개발 도구의 프레임 시작 훅을 연결합니다(호스트 서비스가 선 뒤). */
         void bindHostCallbacks();
+        /** @brief 에디터 렌더 훅 셋(준비 · 그리기 · Present 뒤)을 렌더 스레드에 걸거나(@p bBind) 뗍니다. 게임 호스트 서비스가 매니저를 세운 뒤 걸고 지우기 전에 뗀다. */
+        void bindEditorRenderHooks( bool bBind );
 
         /** @brief 설정 파일을 다시 읽었습니다. EngineConfig 면 프레임 시간 정책(최대 델타 · 고정 스텝)을 다시 정합니다. */
         void onConfigReloaded( const hashed_string& configTypeName );
