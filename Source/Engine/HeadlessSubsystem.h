@@ -24,6 +24,7 @@ namespace sw
         CommandLineArgument::CHECK_TEXT,
         CommandLineArgument::EXPORT_PO,
         CommandLineArgument::IMPORT_PO,
+        CommandLineArgument::CHECK_ASSET_REFS,
         CommandLineArgument::IMPORT_TEXTURES,
         CommandLineArgument::CHECK_TEXTURES,
         CommandLineArgument::IMPORT_MODELS,

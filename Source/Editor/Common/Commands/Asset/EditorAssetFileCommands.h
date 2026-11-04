@@ -20,7 +20,8 @@ namespace sw::editor
      * @struct EditorAssetFileCommands
      * @brief 에셋 파일을 만들고 옮기고 지웁니다. 이름은 리소스 규칙(소문자, 숫자, `_`, `-`, `.`)을 지키고, 겹치면 `_2` · `_3` 을 붙입니다.
      * @details 옮기기와 이름 바꾸기는 참조 역색인(`EditorReferenceIndex`)이 아는 텍스트 에셋의 글을 새 리소스 id 로 고칩니다(언리얼 Fix Up Redirectors 를 바로 하는 것과 같다).
-     *          에셋은 경로 하나로 가리키므로(식별자 표 · `.meta` 는 없다) 참조를 고치는 일이 옮기기의 전부다.
+     *          에셋은 경로 하나로 가리키므로(식별자 표 · `.meta` 는 없다) 참조를 고치는 일이 옮기기의 전부다. 고치는 자리는 경로 칸(`AssetReferenceFields` —
+     *          커밋 전 검사 · `py -3 -m Scripts move-asset` 과 같은 `Config/Dev/AssetReferenceFields.json`)의 값뿐이다.
      */
     struct EditorAssetFileCommands
     {
@@ -43,7 +44,7 @@ namespace sw::editor
         /** @brief 에셋을 같은 폴더에 `<stem>_2` 처럼 복제합니다. */
         [[nodiscard]] static bool duplicateAsset( string_view sourceAbs, string& outAssetAbs );
         /**
-         * @brief 에셋을 @p destinationAbs 로 옮기고(이름 바꾸기 포함) 그 에셋을 적은 텍스트 에셋의 글을 고칩니다.
+         * @brief 에셋을 @p destinationAbs 로 옮기고(이름 바꾸기 포함) 그 에셋을 적은 텍스트 에셋의 경로 칸을 고칩니다(칸 목록을 읽지 못하면 옮기지 않는다).
          * @param inoutIndex 다 만들어진 역색인. 옮긴 파일과 고친 파일의 줄을 다시 훑는다.
          * @param outFixedFileCount 글을 고친 파일 수
          * @return 대상이 이미 있거나, 이름이 규칙에 맞지 않거나, 역색인이 아직이면 아무것도 하지 않고 false 입니다(이유를 알린다).

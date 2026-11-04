@@ -100,10 +100,32 @@ namespace sw
                 }
             }
 
+            /**
+             * @brief 에셋 참조 검사(`--check-asset-refs`)입니다. 글 에셋 · 테스트 CMake 의 경로 칸과 리플렉션 `AssetPath` 프로퍼티를 칸 목록(`Config/Dev/AssetReferenceFields.json`)으로 본다.
+             * @details 에디터 모듈의 일이라 임포트와 같은 경로로 부릅니다(배포 엔진에는 검증 코드가 없다).
+             */
+            static TaskResult runAssetReferenceCheck( const CommandLineManager& commandLine )
+            {
+                bool bCheck = false;
+                commandLine.getArgument( CommandLineArgument::CHECK_ASSET_REFS, bCheck );
+                if ( bCheck == false )
+                    return TaskResult::NotRequested;
+                if constexpr ( build::kShipping ) // 에디터 모듈의 일이다 — 배포에는 에디터 모듈도 그 경로(`EditorModuleManager.cpp` 의 개발 전용 구역)도 없다
+                {
+                    SW_LOG_ERROR_ID( "App.AssetReferenceCheckNeedsEditor", "The asset reference check needs the editor module, which a Shipping build does not have - run it from a Dev build." );
+                    return TaskResult::Failed;
+                }
+                else
+                {
+                    return EditorModuleManager::checkAssetReferencesWithEditorModule() ? TaskResult::Succeeded : TaskResult::Failed;
+                }
+            }
+
             /** @brief 헤드리스 작업 표입니다. 새 작업은 인자를 `ArgumentList.xxx` 에 추가하고 여기에 항목 하나를 더합니다. 에디터 모듈의 작업이면 인자를 `kArrEditorToolArgument` 에도 더한다(엔진이 헤드리스로 서는 판정). */
             static constexpr AppHeadlessTasks::TaskFunction kArrHeadlessTask[] = {
                 &runCrashReporter,
                 &runLocalizationTools,
+                &runAssetReferenceCheck,
                 &runEditorImport<EditorImportKind::Texture, CommandLineArgument::IMPORT_TEXTURES, CommandLineArgument::CHECK_TEXTURES>,
                 &runEditorImport<EditorImportKind::Model, CommandLineArgument::IMPORT_MODELS, CommandLineArgument::CHECK_MODELS>,
                 &runEditorImport<EditorImportKind::Heightfield, CommandLineArgument::IMPORT_HEIGHTFIELDS, CommandLineArgument::CHECK_HEIGHTFIELDS>,

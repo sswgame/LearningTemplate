@@ -514,5 +514,14 @@ namespace sw
             return pfnRun( static_cast<uint32>( task ), poPathText.c_str(), projectText.c_str(), &service ) == 0;
         } );
     }
+
+    bool EditorModuleManager::checkAssetReferencesWithEditorModule()
+    {
+        return EditorModuleManagerHeadlessInternal::callEditorModuleEntry<PFN_CheckEditorAssetReferences>(
+            getModuleSymbols(), kCheckEditorAssetReferencesSymbol, "Asset reference check", []( PFN_CheckEditorAssetReferences pfnCheck, const ISubsystemLocator& service )
+        {
+            return pfnCheck( &service ) == 0;
+        } );
+    }
 #endif // !SW_SHIPPING
 } // namespace sw

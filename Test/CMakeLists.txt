@@ -104,6 +104,13 @@ if(TARGET EditorModule)
 		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
 	set_tests_properties(ToolCheckText PROPERTIES LABELS nogpu TIMEOUT 300)
 
+	# 에셋 참조 — 에셋은 경로 하나로 가리키므로(.meta · GUID 없음) 글 에셋 · 이 파일의 경로 칸이 모두 있는 것을 가리키는지, 리플렉션 `AssetPath` 프로퍼티가 모두
+	# 칸 목록(`Config/Dev/AssetReferenceFields.json`)에 있는지 본다. 커밋 전 검사(`Scripts/lint/AssetReferences.py`)와 같은 목록이다. 임포트 산출물을 보므로 임포트 뒤에 돈다.
+	add_test(NAME ToolCheckAssetRefs
+		COMMAND $<TARGET_FILE:App> --check-asset-refs -unattended -log-file=${CMAKE_BINARY_DIR}/Testing/Logs/ToolCheckAssetRefs.log
+		WORKING_DIRECTORY "${CMAKE_BINARY_DIR}/Bin")
+	set_tests_properties(ToolCheckAssetRefs PROPERTIES LABELS nogpu TIMEOUT 300)
+
 	# 초상화 굽기 — 스튜디오 씬 → 패킷(게임 스레드)과 그리기 · 읽기(렌더 스레드 명령 `RenderThread::executeAndWait`)를 한 번 지난다.
 	# 예전에는 게임 스레드가 렌더 스레드를 세우고 직접 그렸고, 그 길을 도는 테스트가 없었다. 창 · GPU 가 필요해 hostgpu 다.
 	# 백엔드마다 돈다 — 기본 백엔드(DX12)만 돌 때 DX11 에서 머티리얼 PSO 가 만드는 중인 프레임을 읽어 빈 사진이 되던 결함이 숨었다.

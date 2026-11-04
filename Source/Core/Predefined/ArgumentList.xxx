@@ -138,6 +138,10 @@ SW_REGISTER_ARGUMENT( GATHER_TEXT, false, false, "gather-text" )
 SW_REGISTER_ARGUMENT( CHECK_TEXT, false, false, "check-text" )
 SW_REGISTER_ARGUMENT( LOC_PROJECT, "", false, "loc-project" )
 
+// 에셋 참조 검사 — 글 에셋 · 테스트 CMake 의 경로 칸(`Config/Dev/AssetReferenceFields.json`)이 모두 있는 것을 가리키는지, 리플렉션 `AssetPath` 프로퍼티가
+// 모두 그 목록에 있는지 본다(ctest `ToolCheckAssetRefs`). 에디터 모듈의 일이라 Dev 빌드에서만 된다.
+SW_REGISTER_ARGUMENT( CHECK_ASSET_REFS, false, false, "check-asset-refs" )
+
 // 번역 교환 — 문화권마다 `po/<culture>.po` 를 쓴다 · PO 하나를 번역 표로 가져온다(`-import-po=<파일>`). 에디터 모듈의 일이라 Dev 빌드에서만 된다.
 SW_REGISTER_ARGUMENT( EXPORT_PO, false, false, "export-po" )
 SW_REGISTER_ARGUMENT( IMPORT_PO, CommandLineDiskPath{}, false, "import-po" )

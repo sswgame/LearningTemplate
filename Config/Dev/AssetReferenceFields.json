@@ -24,7 +24,7 @@
         "_listExtensionShader", "_listGrowingModel", "_listRenderPassRef", "_listStyleSheet", "loadingScreen", "_loadingTexture", "_localizationProject",
         "localizationProject", "_mappingPath", "_material", "material", "_materialPath", "_mesh", "mesh", "_meshID", "_meshLODSettings", "_meshPath",
         "_missingMaterial", "_missingTexture", "_modelBuildingPrefab", "_navMeshSettings", "_netEmulationPresets", "normalAtlas", "_normalMapName",
-        "_notifyTablePath", "_pacingProfile", "_pairedAnimationPath", "_parkDataPath", "_path", "path", "_pathPrefab", "_pbrMaterialTemplate",
+        "_notifyTablePath", "_pacingProfile", "_pairedAnimationPath", "parent", "_parkDataPath", "_path", "path", "_pathPrefab", "_pbrMaterialTemplate",
         "_photoModeInputMap", "_physicsAssetPath", "_playerPrefab", "_prefab", "prefab", "_profilePath", "_projectilePrefab", "_railPrefab", "_readyModel",
         "_regionTablePath", "_rideEntrancePrefab", "rig", "_rigCapeMaterial", "_rigCapeMesh", "_rigCapeRig", "_rigCapeSkeleton", "_rigKnightRig", "_rigPath",
         "_rigWeaponMaterial", "_rigWeaponMesh", "_rigWeaponRig", "_rigWeaponSockets", "_roadPrefab", "_scheduleDataPath", "screen", "_sequencePath",

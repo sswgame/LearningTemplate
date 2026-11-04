@@ -1,0 +1,578 @@
+/**
+ * @file AssetReferenceFields.cpp
+ * @brief 에셋 참조 칸 목록의 읽기 · 뽑기 · 있음 판정 · 고쳐 쓰기를 구현합니다. 뽑기는 `Scripts/lint/AssetReferences.py` 의 `_extract*` 와 같은 규칙이다.
+ */
+#include "pch.h"
+
+#include "Editor/Common/Asset/AssetReferenceFields.h"
+
+#include "Core/Container/StringUtil.h"
+#include "Core/File/FileUtil.h"
+#include "Core/Foundation/StdHeaders.h"
+#include "Core/Log/Logger.h"
+
+#include "Engine/Serialization/JSON/JSONDocument.h"
+
+namespace sw::editor
+{
+    namespace
+    {
+        struct AssetReferenceFieldsInternal
+        {
+            /** @brief 경로 낱말을 가르는 글자입니다(값 하나에 경로 여럿 — 쉼표 · 세미콜론 · 공백). 리소스 이름 규칙(`[a-z0-9_.-/]`) 안에는 오지 않는다. */
+            static constexpr string_view kTokenSeparators = ",; \t\r\n";
+            /** @brief 이 글자가 든 낱말은 경로가 아니라 틀입니다(`{bind:…}` · CMake `${…}` · 와일드카드). */
+            static constexpr string_view kTemplateCharacters = "{}$*%<>";
+            /** @brief CMake 인자 앞에 올 수 있는 글자(줄 처음 말고)와 값이 끝나는 글자입니다. */
+            static constexpr string_view kCMakeArgumentBoundary = " \t\r\n\"(";
+            static constexpr string_view kCMakeValueEnd         = " \t\r\n\")";
+            /** @brief 목록 원소 요소의 이름입니다(`<_listX><item>경로</item></_listX>` — 리플렉션 컨테이너 직렬화). */
+            static constexpr string_view kItemElement = "item";
+
+            static bool isOneOf( utf8 character, string_view set ) { return set.find( character ) != string_view::npos; }
+
+            static bool isNameStart( utf8 character ) { return ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) || character == '_'; }
+
+            static bool isNameChar( utf8 character )
+            {
+                return isNameStart( character ) || ( '0' <= character && character <= '9' ) || character == '.' || character == ':' || character == '-';
+            }
+
+            static bool isSpace( utf8 character ) { return character == ' ' || character == '\t' || character == '\r' || character == '\n'; }
+
+            static string normalizePath( string_view token )
+            {
+                string normalized( token );
+                for ( utf8& character : normalized )
+                {
+                    character = character == '\\' ? '/' : StringUtil::toLowerChar( character );
+                }
+                return normalized;
+            }
+
+            static bool startsWithDomain( string_view path, const vector<string>& listDomain )
+            {
+                for ( const string& domain : listDomain )
+                {
+                    if ( path.size() > domain.size() && StringUtil::startsWith( path, domain ) && path[domain.size()] == '/' )
+                        return true;
+                }
+                return false;
+            }
+
+            static vector<size_t> makeLineStarts( string_view text )
+            {
+                vector<size_t> listLineStart{ 0 };
+                for ( size_t index = 0; index < text.size(); ++index )
+                {
+                    if ( text[index] == '\n' )
+                        listLineStart.push_back( index + 1 );
+                }
+                return listLineStart;
+            }
+
+            static uint32 lineOf( const vector<size_t>& listLineStart, size_t offset )
+            {
+                const auto itNext = std::upper_bound( listLineStart.begin(), listLineStart.end(), offset );
+                return static_cast<uint32>( itNext - listLineStart.begin() );
+            }
+
+            /** @brief `>` 다음 자리입니다. 따옴표 안의 `>` 는 건너뛴다. */
+            static size_t findTagEnd( string_view text, size_t tagStart )
+            {
+                utf8 quote = '\0';
+                for ( size_t index = tagStart + 1; index < text.size(); ++index )
+                {
+                    const utf8 character = text[index];
+                    if ( quote != '\0' )
+                    {
+                        if ( character == quote )
+                            quote = '\0';
+                    }
+                    else if ( character == '"' || character == '\'' )
+                        quote = character;
+                    else if ( character == '>' )
+                        return index + 1;
+                }
+                return text.size();
+            }
+
+            /** @brief JSON 문자열 `"…"` 의 내용 끝(닫는 따옴표 자리)입니다. 닫히지 않으면 npos. */
+            static size_t findStringEnd( string_view text, size_t contentStart )
+            {
+                for ( size_t index = contentStart; index < text.size(); ++index )
+                {
+                    if ( text[index] == '\\' )
+                        ++index;
+                    else if ( text[index] == '"' )
+                        return index;
+                }
+                return string_view::npos;
+            }
+
+            /** @brief 칸 목록의 글 배열 하나를 읽습니다. 없거나 배열이 아니거나 글이 아닌 원소가 있으면 오류와 false 입니다. */
+            [[nodiscard]] static bool readStringArray( const JSONValue& object, string_view key, string_view sourceLabel, vector<string>& outList )
+            {
+                const JSONValue array = object.get( key );
+                if ( array.isArray() == false )
+                {
+                    SW_LOG_ERROR_ID( "AssetReferenceFields.ArrayMissing", "%#: '%#' is missing or not an array", sourceLabel, key );
+                    return false;
+                }
+                outList.clear();
+                for ( size_t index = 0; index < array.size(); ++index )
+                {
+                    const JSONValue element = array.at( index );
+                    if ( element.isString() == false || element.asString().empty() )
+                    {
+                        SW_LOG_ERROR_ID( "AssetReferenceFields.ElementNotText", "%#: '%#' element %# is not a non-empty string", sourceLabel, key, static_cast<uint32>( index ) );
+                        return false;
+                    }
+                    outList.push_back( element.asString() );
+                }
+                return true;
+            }
+        };
+    } // namespace
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    void AssetIDSet::addFile( string_view assetID )
+    {
+        const string lowered = AssetReferenceFieldsInternal::normalizePath( assetID );
+        size_t       slash   = lowered.rfind( '/' );
+        while ( slash != string::npos && slash > 0 )
+        {
+            if ( _setFolder.insert( lowered.substr( 0, slash ) ).second == false )
+                break; // 위 폴더들은 이미 들어 있다
+            slash = lowered.rfind( '/', slash - 1 );
+        }
+        _setFile.insert( lowered );
+    }
+
+    bool AssetIDSet::contains( string_view assetID ) const
+    {
+        const string key( assetID );
+        return _setFile.find( key ) != _setFile.end() || _setFolder.find( key ) != _setFolder.end();
+    }
+
+    bool AssetReferenceFields::load( string_view projectRoot )
+    {
+        const string path = FileUtil::joinPath( projectRoot, kConfigFile );
+        JSONDocument document;
+        if ( document.loadFile( path ) == false )
+        {
+            SW_LOG_ERROR_ID( "AssetReferenceFields.ConfigUnreadable", "Asset reference fields %# could not be read", path );
+            return false;
+        }
+        const JSONValue root = document.getRoot();
+        vector<string>  listField;
+        const bool      bLists = AssetReferenceFieldsInternal::readStringArray( root, "_listDomain", path, _listDomain ) &&
+                            AssetReferenceFieldsInternal::readStringArray( root, "_listUncheckedDomain", path, _listUncheckedDomain ) &&
+                            AssetReferenceFieldsInternal::readStringArray( root, "_listTextExtension", path, _listTextExtension ) &&
+                            AssetReferenceFieldsInternal::readStringArray( root, "_listCMakeFile", path, _listCMakeFile ) &&
+                            AssetReferenceFieldsInternal::readStringArray( root, "_listCMakeArgument", path, _listCMakeArgument ) &&
+                            AssetReferenceFieldsInternal::readStringArray( root, "_listField", path, listField );
+        const JSONValue imported = root.get( "_listImportedFolder" );
+        if ( bLists == false || imported.isArray() == false )
+        {
+            SW_LOG_ERROR_ID( "AssetReferenceFields.ConfigInvalid", "Asset reference fields %# need every list (_listDomain … _listField, _listImportedFolder)", path );
+            return false;
+        }
+        _setField.clear();
+        _setField.insert( listField.begin(), listField.end() );
+        _listImported.clear();
+        for ( size_t index = 0; index < imported.size(); ++index )
+        {
+            const JSONValue             entry = imported.at( index );
+            AssetImportedFolder         folder;
+            const std::optional<string> name       = entry.readRequired<string>( "_folder" );
+            const std::optional<string> sourceName = entry.readRequired<string>( "_sourceFolder" );
+            const std::optional<bool>   bGenerated = entry.readRequired<bool>( "_bGeneratedReferrers" );
+            if ( name.has_value() == false || sourceName.has_value() == false || bGenerated.has_value() == false ||
+                 AssetReferenceFieldsInternal::readStringArray( entry, "_listSourceExtension", path, folder._listSourceExtension ) == false )
+            {
+                SW_LOG_ERROR_ID( "AssetReferenceFields.ImportedFolderInvalid", "Asset reference fields %#: imported folder %# needs _folder, _sourceFolder, _listSourceExtension and _bGeneratedReferrers",
+                                 path, static_cast<uint32>( index ) );
+                return false;
+            }
+            folder._folder              = *name;
+            folder._sourceFolder        = *sourceName;
+            folder._bGeneratedReferrers = *bGenerated;
+            _listImported.push_back( std::move( folder ) );
+        }
+        return true;
+    }
+
+    bool AssetReferenceFields::isField( string_view name ) const
+    {
+        return _setField.find( string( name ) ) != _setField.end();
+    }
+
+    bool AssetReferenceFields::isReferrer( string_view assetID ) const
+    {
+        const string lowered    = AssetReferenceFieldsInternal::normalizePath( assetID );
+        const bool   bExtension = std::any_of( _listTextExtension.begin(), _listTextExtension.end(), [&lowered]( const string& extension )
+          { return StringUtil::endsWith( lowered, extension ); } );
+        if ( bExtension == false || AssetReferenceFieldsInternal::startsWithDomain( lowered, _listUncheckedDomain ) )
+            return false;
+        const string wrapped = "/" + lowered;
+        return std::none_of( _listImported.begin(), _listImported.end(), [&wrapped]( const AssetImportedFolder& folder )
+        { return folder._bGeneratedReferrers && wrapped.find( "/" + folder._folder + "/" ) != string::npos; } );
+    }
+
+    bool AssetReferenceFields::isChecked( string_view path ) const
+    {
+        return AssetReferenceFieldsInternal::startsWithDomain( path, _listUncheckedDomain ) == false;
+    }
+
+    AssetReferenceSyntax AssetReferenceFields::syntaxOf( string_view path )
+    {
+        if ( FileUtil::hasExtension( path, ".json" ) )
+            return AssetReferenceSyntax::JSON;
+        const bool bCMake = FileUtil::hasExtension( path, ".cmake" ) || StringUtil::endsWith( FileUtil::normalizeSeparators( path ), "/CMakeLists.txt" ) || path == "CMakeLists.txt";
+        return bCMake ? AssetReferenceSyntax::CMake : AssetReferenceSyntax::XML;
+    }
+
+    void AssetReferenceFields::appendTokens( string_view text, size_t valueStart, size_t valueEnd, string_view field, const vector<size_t>& listLineStart,
+                                             vector<AssetReference>& outListReference ) const
+    {
+        size_t cursor = valueStart;
+        while ( cursor < valueEnd )
+        {
+            while ( cursor < valueEnd && AssetReferenceFieldsInternal::isOneOf( text[cursor], AssetReferenceFieldsInternal::kTokenSeparators ) )
+            {
+                ++cursor;
+            }
+            const size_t tokenStart = cursor;
+            while ( cursor < valueEnd && AssetReferenceFieldsInternal::isOneOf( text[cursor], AssetReferenceFieldsInternal::kTokenSeparators ) == false )
+            {
+                ++cursor;
+            }
+            const string_view token = text.substr( tokenStart, cursor - tokenStart );
+            const bool        bTemplate =
+                std::any_of( token.begin(), token.end(), []( utf8 character )
+            { return AssetReferenceFieldsInternal::isOneOf( character, AssetReferenceFieldsInternal::kTemplateCharacters ); } );
+            if ( token.empty() || bTemplate )
+                continue;
+            string normalized = AssetReferenceFieldsInternal::normalizePath( token );
+            if ( AssetReferenceFieldsInternal::startsWithDomain( normalized, _listDomain ) == false )
+                continue;
+            AssetReference reference;
+            reference._line   = AssetReferenceFieldsInternal::lineOf( listLineStart, tokenStart );
+            reference._field  = string( field );
+            reference._offset = tokenStart;
+            reference._length = token.size();
+            reference._path   = std::move( normalized );
+            outListReference.push_back( std::move( reference ) );
+        }
+    }
+
+    void AssetReferenceFields::extractXML( string_view text, const vector<size_t>& listLineStart, vector<AssetReference>& outListReference ) const
+    {
+        vector<string> listOpenField; // 열린 경로 요소(안의 글이 값이다). `<item>` 은 부모 칸 이름으로 쌓는다
+        size_t         cursor = 0;
+        while ( cursor < text.size() )
+        {
+            const size_t tagStart = text.find( '<', cursor );
+            const size_t textEnd  = tagStart == string_view::npos ? text.size() : tagStart;
+            if ( listOpenField.empty() == false && textEnd > cursor )
+                appendTokens( text, cursor, textEnd, listOpenField.back(), listLineStart, outListReference );
+            if ( tagStart == string_view::npos )
+                break;
+            const string_view rest = text.substr( tagStart );
+            if ( StringUtil::startsWith( rest, "<!--" ) )
+            {
+                const size_t commentEnd = text.find( "-->", tagStart + 4 );
+                cursor                  = commentEnd == string_view::npos ? text.size() : commentEnd + 3;
+                continue;
+            }
+            if ( StringUtil::startsWith( rest, "<?" ) || StringUtil::startsWith( rest, "<!" ) )
+            {
+                const size_t declarationEnd = text.find( '>', tagStart );
+                cursor                      = declarationEnd == string_view::npos ? text.size() : declarationEnd + 1;
+                continue;
+            }
+            const size_t tagEnd   = AssetReferenceFieldsInternal::findTagEnd( text, tagStart );
+            const bool   bClosing = tagStart + 1 < text.size() && text[tagStart + 1] == '/';
+            size_t       position = tagStart + ( bClosing ? 2 : 1 );
+            while ( position < tagEnd && AssetReferenceFieldsInternal::isSpace( text[position] ) )
+            {
+                ++position;
+            }
+            const size_t nameStart = position;
+            if ( position >= tagEnd || AssetReferenceFieldsInternal::isNameStart( text[position] ) == false )
+            {
+                cursor = tagStart + 1;
+                continue;
+            }
+            while ( position < tagEnd && AssetReferenceFieldsInternal::isNameChar( text[position] ) )
+            {
+                ++position;
+            }
+            const string_view name = text.substr( nameStart, position - nameStart );
+            if ( bClosing )
+            {
+                if ( listOpenField.empty() == false && listOpenField.back() == name )
+                    listOpenField.pop_back();
+                cursor = tagEnd;
+                continue;
+            }
+
+            // 속성: `이름 = "값"` · `이름 = '값'`. 모양이 아닌 글자는 하나씩 건너뛴다.
+            while ( position < tagEnd )
+            {
+                if ( AssetReferenceFieldsInternal::isNameStart( text[position] ) == false )
+                {
+                    ++position;
+                    continue;
+                }
+                const size_t attributeStart = position;
+                while ( position < tagEnd && AssetReferenceFieldsInternal::isNameChar( text[position] ) )
+                {
+                    ++position;
+                }
+                const string_view attribute = text.substr( attributeStart, position - attributeStart );
+                size_t            equals    = position;
+                while ( equals < tagEnd && AssetReferenceFieldsInternal::isSpace( text[equals] ) )
+                {
+                    ++equals;
+                }
+                if ( equals >= tagEnd || text[equals] != '=' )
+                    continue;
+                size_t quote = equals + 1;
+                while ( quote < tagEnd && AssetReferenceFieldsInternal::isSpace( text[quote] ) )
+                {
+                    ++quote;
+                }
+                if ( quote >= tagEnd || ( text[quote] != '"' && text[quote] != '\'' ) )
+                {
+                    position = quote;
+                    continue;
+                }
+                const size_t valueEnd = text.find( text[quote], quote + 1 );
+                if ( valueEnd == string_view::npos || valueEnd >= tagEnd )
+                    break;
+                if ( isField( attribute ) )
+                    appendTokens( text, quote + 1, valueEnd, attribute, listLineStart, outListReference );
+                position = valueEnd + 1;
+            }
+
+            size_t last = tagEnd - 1; // `>` 자리
+            while ( last > tagStart && ( text[last] == '>' || AssetReferenceFieldsInternal::isSpace( text[last] ) ) )
+            {
+                --last;
+            }
+            const bool bSelfClosing = text[last] == '/';
+            if ( bSelfClosing == false )
+            {
+                if ( isField( name ) )
+                    listOpenField.emplace_back( name );
+                else if ( listOpenField.empty() == false && name == AssetReferenceFieldsInternal::kItemElement )
+                    listOpenField.push_back( listOpenField.back() );
+            }
+            cursor = tagEnd;
+        }
+    }
+
+    void AssetReferenceFields::extractJSON( string_view text, const vector<size_t>& listLineStart, vector<AssetReference>& outListReference ) const
+    {
+        size_t cursor = 0;
+        while ( ( cursor = text.find( '"', cursor ) ) != string_view::npos )
+        {
+            // 키 `"이름"` 뒤에 `:` 가 오는지 본다. 아니면 다음 따옴표부터 다시(정규식 finditer 와 같은 뜻).
+            const size_t keyStart = cursor + 1;
+            size_t       keyEnd   = keyStart;
+            if ( keyEnd >= text.size() || AssetReferenceFieldsInternal::isNameStart( text[keyEnd] ) == false )
+            {
+                ++cursor;
+                continue;
+            }
+            while ( keyEnd < text.size() && ( AssetReferenceFieldsInternal::isNameChar( text[keyEnd] ) && text[keyEnd] != ':' ) )
+            {
+                ++keyEnd;
+            }
+            size_t colon = keyEnd + 1;
+            while ( colon < text.size() && AssetReferenceFieldsInternal::isSpace( text[colon] ) )
+            {
+                ++colon;
+            }
+            if ( keyEnd >= text.size() || text[keyEnd] != '"' || colon >= text.size() || text[colon] != ':' )
+            {
+                ++cursor;
+                continue;
+            }
+            size_t valueStart = colon + 1;
+            while ( valueStart < text.size() && AssetReferenceFieldsInternal::isSpace( text[valueStart] ) )
+            {
+                ++valueStart;
+            }
+            cursor                = valueStart;
+            const string_view key = text.substr( keyStart, keyEnd - keyStart );
+            if ( valueStart >= text.size() || isField( key ) == false )
+                continue;
+            if ( text[valueStart] == '"' )
+            {
+                const size_t valueEnd = AssetReferenceFieldsInternal::findStringEnd( text, valueStart + 1 );
+                if ( valueEnd != string_view::npos )
+                    appendTokens( text, valueStart + 1, valueEnd, key, listLineStart, outListReference );
+            }
+            else if ( text[valueStart] == '[' )
+            {
+                const size_t arrayEnd = std::min( text.find( ']', valueStart ), text.size() );
+                size_t       element  = valueStart;
+                while ( ( element = text.find( '"', element ) ) != string_view::npos && element < arrayEnd )
+                {
+                    const size_t elementEnd = AssetReferenceFieldsInternal::findStringEnd( text, element + 1 );
+                    if ( elementEnd == string_view::npos || elementEnd > arrayEnd )
+                        break;
+                    appendTokens( text, element + 1, elementEnd, key, listLineStart, outListReference );
+                    element = elementEnd + 1;
+                }
+            }
+        }
+    }
+
+    void AssetReferenceFields::extractCMake( string_view text, const vector<size_t>& listLineStart, vector<AssetReference>& outListReference ) const
+    {
+        for ( const string& argument : _listCMakeArgument )
+        {
+            const string prefix = argument + "=";
+            size_t       start  = text.find( prefix );
+            while ( start != string_view::npos )
+            {
+                const bool   bBoundary  = start == 0 || AssetReferenceFieldsInternal::isOneOf( text[start - 1], AssetReferenceFieldsInternal::kCMakeArgumentBoundary );
+                const size_t valueStart = start + prefix.size();
+                size_t       valueEnd   = valueStart;
+                while ( valueEnd < text.size() && AssetReferenceFieldsInternal::isOneOf( text[valueEnd], AssetReferenceFieldsInternal::kCMakeValueEnd ) == false )
+                {
+                    ++valueEnd;
+                }
+                if ( bBoundary )
+                    appendTokens( text, valueStart, valueEnd, argument, listLineStart, outListReference );
+                start = text.find( prefix, valueEnd );
+            }
+        }
+    }
+
+    void AssetReferenceFields::extract( string_view text, AssetReferenceSyntax syntax, vector<AssetReference>& outListReference ) const
+    {
+        const vector<size_t> listLineStart = AssetReferenceFieldsInternal::makeLineStarts( text );
+        switch ( syntax )
+        {
+            case AssetReferenceSyntax::XML:
+                extractXML( text, listLineStart, outListReference );
+                return;
+            case AssetReferenceSyntax::JSON:
+                extractJSON( text, listLineStart, outListReference );
+                return;
+            case AssetReferenceSyntax::CMake:
+                extractCMake( text, listLineStart, outListReference );
+                return;
+        }
+    }
+
+    bool AssetReferenceFields::isImportedFromSource( string_view assetID, const AssetIDSet& assets ) const
+    {
+        for ( const AssetImportedFolder& imported : _listImported )
+        {
+            const string marker   = "/" + imported._folder + "/";
+            size_t       position = assetID.find( marker );
+            while ( position != string_view::npos )
+            {
+                const string              base        = string( assetID.substr( 0, position ) ) + "/" + imported._sourceFolder + "/";
+                const vector<string_view> listSegment = StringUtil::split( assetID.substr( position + marker.size() ), "/" );
+                // 원본은 산출물 자리의 어느 조상이다 — `models/a/b/c.mesh` 는 `models_raw/a/b/c.glb` → `a/b.glb` → `a.glb` 순서로 본다(옆 폴더 `a/clips` 도 `a.glb` 의 것).
+                for ( size_t count = listSegment.size(); count > 0; --count )
+                {
+                    string head;
+                    for ( size_t segment = 0; segment + 1 < count; ++segment )
+                    {
+                        head.append( listSegment[segment] ).append( "/" );
+                    }
+                    const string last( listSegment[count - 1] );
+                    const string arrStem[] = { last.substr( 0, last.find( '.' ) ), FileUtil::removeExtension( last ) };
+                    for ( const string& stem : arrStem )
+                    {
+                        for ( const string& extension : imported._listSourceExtension )
+                        {
+                            if ( assets.contains( base + head + stem + extension ) )
+                                return true;
+                        }
+                    }
+                }
+                position = assetID.find( marker, position + 1 );
+            }
+        }
+        return false;
+    }
+
+    bool AssetReferenceFields::resolves( string_view assetID, const AssetIDSet& assets ) const
+    {
+        return assets.contains( assetID ) || isImportedFromSource( assetID, assets );
+    }
+
+    vector<AssetReferenceRewriteRule> AssetReferenceFields::makeRewriteRules( string_view oldID, string_view newID, bool bFolder ) const
+    {
+        const string                      oldPath = AssetReferenceFieldsInternal::normalizePath( oldID );
+        const string                      newPath = AssetReferenceFieldsInternal::normalizePath( newID );
+        vector<AssetReferenceRewriteRule> listRule{
+            AssetReferenceRewriteRule{ oldPath, newPath, bFolder }
+        };
+        for ( const AssetImportedFolder& imported : _listImported )
+        {
+            const string marker      = "/" + imported._sourceFolder + "/";
+            string       oldImported = "/" + oldPath;
+            string       newImported = "/" + newPath;
+            const size_t oldAt       = oldImported.find( marker );
+            const size_t newAt       = newImported.find( marker );
+            if ( oldAt == string::npos || newAt == string::npos )
+                continue;
+            oldImported.replace( oldAt, marker.size(), "/" + imported._folder + "/" );
+            newImported.replace( newAt, marker.size(), "/" + imported._folder + "/" );
+            if ( bFolder == false )
+            {
+                const auto hasSourceExtension = [&imported]( const string& path )
+                {
+                    return std::any_of( imported._listSourceExtension.begin(), imported._listSourceExtension.end(), [&path]( const string& extension )
+                    { return StringUtil::endsWith( path, extension ); } );
+                };
+                if ( hasSourceExtension( oldImported ) == false || hasSourceExtension( newImported ) == false )
+                    continue;
+                oldImported = FileUtil::removeExtension( oldImported );
+                newImported = FileUtil::removeExtension( newImported );
+            }
+            // 산출물은 `<이름>.mesh` · `<이름>/…` 라 접두로 바꾼다.
+            listRule.push_back( AssetReferenceRewriteRule{ oldImported.substr( 1 ), newImported.substr( 1 ), true } );
+        }
+        return listRule;
+    }
+
+    uint32 AssetReferenceFields::rewrite( string& inoutText, AssetReferenceSyntax syntax, const vector<AssetReferenceRewriteRule>& listRule ) const
+    {
+        vector<AssetReference> listReference;
+        extract( inoutText, syntax, listReference );
+        // 뒤에서부터 바꿔 앞 참조의 자리가 밀리지 않게 한다. CMake 는 인자마다 따로 뽑아 글 순서가 아니므로 자리로 정렬한다.
+        std::sort( listReference.begin(), listReference.end(), []( const AssetReference& left, const AssetReference& right )
+        { return left._offset < right._offset; } );
+        uint32 rewriteCount{ 0 };
+        for ( auto itReference = listReference.rbegin(); itReference != listReference.rend(); ++itReference )
+        {
+            const string& path = itReference->_path;
+            for ( const AssetReferenceRewriteRule& rule : listRule )
+            {
+                const bool bExact  = path == rule._oldPath;
+                const bool bPrefix = rule._bPrefix && path.size() > rule._oldPath.size() && StringUtil::startsWith( path, rule._oldPath ) &&
+                                     ( path[rule._oldPath.size()] == '/' || path[rule._oldPath.size()] == '.' );
+                if ( bExact == false && bPrefix == false )
+                    continue;
+                const string rewritten = rule._newPath + path.substr( rule._oldPath.size() );
+                inoutText.replace( itReference->_offset, itReference->_length, rewritten );
+                ++rewriteCount;
+                break;
+            }
+        }
+        return rewriteCount;
+    }
+} // namespace sw::editor
