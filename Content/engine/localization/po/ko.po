@@ -525,6 +525,11 @@ msgctxt "EdPlugin.Down"
 msgid "Down"
 msgstr "아래"
 
+#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
+msgctxt "EdPlugin.Duplicate"
+msgid "Duplicate"
+msgstr "복제"
+
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 msgctxt "EdPlugin.Edit"
 msgid "Edit"
@@ -984,12 +989,6 @@ msgctxt "EdPlugin.WhyDoesItLookLikeThisRules"
 msgid "Why does it look like this? (rules)"
 msgstr "왜 이렇게 보이나(규칙)"
 
-#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
-#: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
-msgctxt "EdPlugin.ZoomFit"
-msgid "Zoom fit"
-msgstr "맞춰 보기"
-
 #: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
 msgctxt "EdPluginButton.Reload"
 msgid "Reload"
@@ -1300,11 +1299,6 @@ msgstr "프리셋 파일을 다시 읽습니다(카탈로그 편집기에서 저
 msgctxt "EdPluginTip.SaveStackBeforePickingMesh"
 msgid "Save or reload the modifier stack before picking another mesh"
 msgstr "다른 메시를 고르기 전에 모디파이어 스택을 저장하거나 다시 불러오세요"
-
-#: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
-msgctxt "EdPluginTip.SharedTimelineTimeEveryRoleFollowsThe"
-msgid "Shared timeline time - every role follows the anchor clock"
-msgstr "공유 타임라인 시간 — 모든 역할이 기준 시계를 따릅니다"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPluginTip.SolveTheEndOntoTheSourceEnd"

@@ -35,7 +35,21 @@
 ### 3. 에셋 · 그래프 편집기 UX — 남은 것 (2026-11-04)
 
 공통 바닥(`EditorNodeGraph` 보기 막대 · 미니맵 · 정렬 · 핀 끌어 만들기, `EditorGraphDocumentPanel` 복사 · 붙여 넣기 · 주석, `EditorPreviewPanel` 재생 막대)은 했다. 남은 것:
-- 엔진 형식인데 손으로 읽고 쓰는 애셋을 리플렉션으로(대화 · 소리 그래프와 같은 길): `AnimationGraphAsset`(리플렉션 없음, 콘텐츠 10 개), 행동 트리(런타임 `BehaviorTreeAsset` 과 에디터 `BehaviorTreeEditModel` 이 같은 `.bt.xml` 을 따로 파싱). 바깥 표준 형식(PO · TMX 등)은 손 리더로 남는다.
+
+### 1. 리플렉션으로 옮기기 — Source 전체 (2026-11-04 사용자 지시: "리플렉션 활용이 가능한 부분은 모두")
+
+엔진이 정한 형식을 손으로 읽고 쓰는 곳을 원소마다 `PROPERTY` 스키마 구조체 + `readFields` · `writeFields` 로 옮긴다(행동 트리 · 카탈로그와 같은 길 — 이름 · 필수 · 범위 · 기본값이 스키마 한 곳). 칸 사이 의미 검사만 손으로 남긴다. 열거 표기는 열거자 이름(`ENUM()`)으로 맞추고 콘텐츠는 변환 스크립트로 한 번에 고친다. 묶음마다 끝에 전체 검증.
+**그대로 두는 것**(바깥 표준 · 원문 편집): VRM · glTF(`Vrm*` · `ModelImportVrm` · `ModelImportMaterial`), TMX(`TranslationMemory`), JWT, 프로파일러 트레이스, 스토어 영수증, `CatalogXMLText` · `RigFileRewrite`(원문 위치를 지키며 고친다), `TextGatherer`, `XMLReadUtil`.
+
+| 묶음 | 대상(손 호출 수) |
+|---|---|
+| A 기반 · 애니메이션 | `GameDataXML::readFields` · `writeFields` 를 Engine `XMLFields` 로(부르는 곳 모두), `copyFields` 는 `SerializerUtil`. `AnimationGraphAsset`(83 — 리플렉션 없음, 단위 테스트 없음 · 콘텐츠 10) · `AnimationBoneMask` |
+| B 입력 | `InputMap`(94) · `InputRemapSerializer`(53) · `DebugKeyActions` |
+| C 엔진 애셋 | `TileMapXML`(34) · `TileSetAsset` · `PairedAnimationDef` · `SocketSet` · `RetargetProfile` · `MaterialXML` · `Material` · `MaterialInstance` · `TelemetrySchema` · `UserSettingsSchema`(39) · `PackPatch` · `CultureInfo` · `DestructionProfile` · `FitTables` · `AnimationNotifyTable` · `SkeletonBoneLOD` · `VertexAnimationCooker` · `Render2DSettings` · `UIStyleSheet` · `UIDocumentLoader/Writer` · `SceneDocument` · `PrefabOverrides` · `PrefabAsset` · `LocalizationDocuments`(엔진 글 표 — 수집이 바이트로 대조) · `CharacterMeshLOD` · `AnimationCrowd` · `RigNode` · `AssetFormat` · `LipSync` · `ComponentDefaults` |
+| D 시나리오 단계 인자 | `AutomationJudge`(22) · `AutomationRunnerSteps`(20) · `AutomationStepArgs` · `AutomationActionSteps` · `AutomationWindowSteps` · `AutomationSceneSteps` · `AutomationEnvironmentSteps` · `AutomationBackendSteps` · `AutomationScenario` · `AutomationStepValidation` · `AutomationFrameStats` · `EditorScenarioSteps` · `EditorScenarioStepValidation` · `EditorCaptureSteps` · `ControlAutomationSteps` · `GameplayAutomationSteps` · `UIScenarioSteps` |
+| E 카탈로그의 남은 손 읽기 | `CharacterAppearance`(29) · `ScheduleCatalog` · `ScheduleCondition` · `AbilityCatalog` · `InteractionCatalog` · `ElementRuleTable` · `AIDirectorProfile` · `ItemCatalog` · `ElementChart` · `GimmickCircuitDef` · `FrameData` · `Shop` · `ItemVisual` · `SkillTree` · `Reputation` · `AppearanceRule` · `AppearanceXMLUtil` · `Weapon` · `PlayerStats` · `Crafting` · `CustomizationSchema` · `CombatAttributeSet` · `GameSettings` · `Autosave` · `LevelProgress` · `AreaGraph` · `WeatherSystem` · `SpawnDirector` · 키트 카탈로그 스물남짓(`readFields` 와 섞인 손 읽기) · 에디터(`ReferencePoseOverride` · `CharacterMirrorUtil` · `CharacterEditorPackData` · `EditorGlobalVariableCommands` · `ProjectSettingsDocument`) |
+| F JSON 손 읽기 | `MeshModifierStack` · `LatticeModifier` · `ModelImportConfig` · `TextureImportConfig` · `ModelImportGeometry` · `ModelImportAnimation` · `EditorSettingsRegistry` · `ProjectSettingsDocument` · `PrefabAsset`(JSON) · `CrashReportService` · `VisualLogger` · `UserSettingsFile` · `AssetReferenceFields` · `LoadBotMetrics` 등(`git grep -l "JSONValue" -- Source` 44 파일에서 바깥 형식 뺀 것) |
+| G 손 열거 이름표 | `EnumNameTable` · `kArr…Name[]` 46 파일 → `ENUM()` + `getEnumName` |
 - 시퀀서 · 타일맵 · 스프라이트 클립 · 입력 맵 · 데이터 테이블 · 전역 변수 · 카탈로그 · 리타깃 · 테마파크 배치 · UI 미리보기는 상용 엔진 대비 점검만 했고 손대지 않았다(보고의 비교 표).
 
 ### 5. 그 뒤

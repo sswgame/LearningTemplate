@@ -127,6 +127,7 @@
 		<entry key="EdPlugin.Disconnect" text="연결 끊기" sourceHash="d2208cd1a767644b" />
 		<entry key="EdPlugin.Dismiss" text="닫기" sourceHash="12d6dde9b30c3093" />
 		<entry key="EdPlugin.Down" text="아래" sourceHash="032c13736048bf35" />
+		<entry key="EdPlugin.Duplicate" text="복제" sourceHash="fac15b89e0668996" />
 		<entry key="EdPlugin.Edit" text="편집" sourceHash="64ef2a6c2dd1d3d1" />
 		<entry key="EdPlugin.EndMaintenance" text="점검 끝내기" sourceHash="7d5699fb9376bca1" />
 		<entry key="EdPlugin.ExportDataPreset" text="데이터 프리셋 내보내기" sourceHash="64b8de7de2582e1c" />

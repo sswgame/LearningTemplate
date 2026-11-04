@@ -513,6 +513,11 @@
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPlugin.Duplicate" source="Duplicate">
+			<origins>
+				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPlugin.Edit" source="Edit">
 			<origins>
 				<item>Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp</item>

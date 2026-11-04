@@ -135,6 +135,7 @@
 		<entry key="EdPlugin.Disconnect" text="切断" sourceHash="d2208cd1a767644b" />
 		<entry key="EdPlugin.Dismiss" text="閉じる" sourceHash="12d6dde9b30c3093" />
 		<entry key="EdPlugin.Down" text="下" sourceHash="032c13736048bf35" />
+		<entry key="EdPlugin.Duplicate" text="複製" sourceHash="fac15b89e0668996" />
 		<entry key="EdPlugin.Edit" text="編集" sourceHash="64ef2a6c2dd1d3d1" />
 		<entry key="EdPlugin.EndMaintenance" text="メンテナンス終了" sourceHash="7d5699fb9376bca1" />
 		<entry key="EdPlugin.ExportDataPreset" text="データプリセットを書き出す" sourceHash="64b8de7de2582e1c" />

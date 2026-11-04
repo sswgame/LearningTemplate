@@ -106,6 +106,7 @@
 		<entry source="Display" text="ディスプレイ" />
 		<entry source="Down" text="下" />
 		<entry source="Dropped: {dropped}" text="除外: {dropped}" />
+		<entry source="Duplicate" text="複製" />
 		<entry source="Duplicate row" text="行を複製" />
 		<entry source="Duration (s)" text="長さ(秒)" />
 		<entry source="Edit" text="編集" />

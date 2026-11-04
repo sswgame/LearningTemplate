@@ -522,9 +522,9 @@ namespace sw::editor
         }
         if ( ImGui::BeginPopup( "BehaviorNodeContext" ) )
         {
-            if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "Duplicate" ) ) )
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdPlugin", "Duplicate" ) ) )
                 duplicateID = _selectedID;
-            if ( ImGui::MenuItem( SW_LOCKEY( "EdVerb", "Delete" ) ) )
+            if ( ImGui::MenuItem( SW_LOCKEY( "EdPlugin", "Delete" ) ) )
                 ed::DeleteNode( toNodeID( _selectedID ) );
             ImGui::EndPopup();
         }

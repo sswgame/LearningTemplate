@@ -110,6 +110,7 @@
 		<entry source="Display" text="화면" />
 		<entry source="Down" text="아래" />
 		<entry source="Dropped: {dropped}" text="빠짐: {dropped}" />
+		<entry source="Duplicate" text="복제" />
 		<entry source="Duplicate row" text="행 복제" />
 		<entry source="Duration (s)" text="길이(초)" />
 		<entry source="Edit" text="편집" />
