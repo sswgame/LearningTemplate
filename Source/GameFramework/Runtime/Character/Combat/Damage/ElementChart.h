@@ -12,6 +12,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
 
@@ -21,11 +23,41 @@ namespace sw
     class XMLNode;
 
     /** @brief 속성 하나가 거는 상태이상 하나의 확률입니다. */
-    struct ElementStatusChance
+    REFLECT()
+    struct SW_GF_API ElementStatusChance
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _element{};
+        PROPERTY( Required )
         hashed_string _status{};
-        float32       _chance{ 0.0f }; ///< 0..1
+        PROPERTY( Required, Min = 0.0, Max = 1.0, Units = ratio )
+        float32 _chance{ 0.0f }; ///< 0..1
+    };
+
+    /** @brief 속성 선언(`<Element id/>`)입니다. */
+    REFLECT()
+    struct SW_GF_API ElementDeclFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+    };
+
+    /** @brief 상성 규칙(`<Rule attack defend multiplier/>`)입니다. 규칙 줄은 배율을 적으려고 있는 것이다 — 빠진 배율을 1 로 두지 않는다. */
+    REFLECT()
+    struct SW_GF_API ElementRuleFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _attack{};
+        PROPERTY( Required )
+        hashed_string _defend{};
+        PROPERTY( Required, Min = 0.0 )
+        float32 _multiplier{ 1.0f };
     };
 } // namespace sw
 

@@ -25,16 +25,36 @@ namespace sw
     class XMLNode;
 
     /** @brief 레시피 하나입니다. */
-    struct RecipeDef
+    REFLECT()
+    struct SW_GF_API RecipeDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
+        PROPERTY()
         hashed_string _station{}; ///< 필요한 작업대(비어 있으면 어디서나 만들 수 있는 맨손 제작)
-        ItemStackList _inputs{};  ///< 써서 없어지는 재료
-        ItemStackList _tools{};   ///< 있어야 하지만 소모되지 않는 것(망치, 절구)
-        ItemStackList _outputs{};
-        float32       _time{ 0.0f }; ///< 대기열에서 걸리는 시간. `Crafter` 는 `update` 에 넘긴 단위(보통 초)를 그대로 쓴다. 게임 시간을 분 단위로 진행하는 키트에서는 분이다
-        int32         _requiredLevel{ 0 };
-        uint8         _bStartsKnown{ SW_TRUE }; ///< 처음부터 아는 레시피인지 여부(아니면 설계도나 레시피 책으로 배워야 한다)
+        ItemStackList _inputs{};  ///< 써서 없어지는 재료(`<In item count/>`)
+        ItemStackList _tools{};   ///< 있어야 하지만 소모되지 않는 것(망치, 절구 — `<Tool …/>`)
+        ItemStackList _outputs{}; ///< `<Out …/>`
+        PROPERTY( Min = 0.0 )
+        float32 _time{ 0.0f }; ///< 대기열에서 걸리는 시간. `Crafter` 는 `update` 에 넘긴 단위(보통 초)를 그대로 쓴다. 게임 시간을 분 단위로 진행하는 키트에서는 분이다
+        PROPERTY( Name = "level" )
+        int32 _requiredLevel{ 0 };
+        PROPERTY( Name = "known" )
+        bool _bStartsKnown{ true }; ///< 처음부터 아는 레시피인지 여부(아니면 설계도나 레시피 책으로 배워야 한다)
+    };
+
+    /** @brief 레시피의 물건 줄(`<In|Tool|Out item count/>`)입니다. */
+    REFLECT()
+    struct SW_GF_API RecipeItemFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _item{};
+        PROPERTY( Min = 1 )
+        int32 _count{ 1 };
     };
 } // namespace sw
 

@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
@@ -20,19 +21,15 @@ namespace sw
     {
         struct CraftingInternal
         {
-            static constexpr int32 kDefaultItemCount = 1; ///< `count` 를 적지 않은 줄은 한 개다
-
             /** @brief @p pChildName 줄들을 읽습니다. `item` 은 필수, `count` 는 1 이상이고 깨지면 오류와 false 입니다(그 줄은 넣지 않는다). */
             [[nodiscard]] static bool readItems( const XMLNode& node, const utf8* pChildName, ItemStackList& outItems, string_view sourceName )
             {
                 bool bValid = true;
                 for ( XMLNode child = node.findChild( pChildName ); child; child = child.findNextSibling( pChildName ) )
                 {
-                    const std::optional<string> item   = child.readRequiredAttribute<string>( "item" );
-                    int32                       count  = kDefaultItemCount;
-                    const bool                  bCount = XMLReadUtil::readOptionalNumber( child, "count", sourceName, 1, MathUtil::kMaxInt32, count );
-                    if ( item.has_value() && bCount )
-                        outItems.addItem( hashed_string( *item ), count );
+                    RecipeItemFields line; // item 필수 · count >= 1(적지 않으면 한 개)은 PROPERTY 가 본다
+                    if ( XMLFields::readFields( child, line, sourceName ) )
+                        outItems.addItem( line._item, line._count );
                     else
                         bValid = false;
                 }
@@ -80,20 +77,13 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Recipe" ); node; node = node.findNextSibling( "Recipe" ) )
         {
-            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            RecipeDef recipe;
-            recipe._id           = hashed_string( pID );
-            const utf8* pStation = node.findAttribute( "station" );
-            recipe._station      = pStation != nullptr ? hashed_string( pStation ) : hashed_string{};
             // 적지 않은 칸은 RecipeDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 레시피를 넣지 않는 오류다(자르지 않는다).
-            bool bValid = XMLReadUtil::readOptionalNumber( node, "time", sourceName, 0.0f, MathUtil::kMaxFloat, recipe._time );
-            bValid      = XMLReadUtil::readOptionalNumber( node, "level", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, recipe._requiredLevel ) && bValid;
-            bValid      = XMLReadUtil::readOptionalFlag( node, "known", recipe._bStartsKnown ) && bValid;
-            bValid      = CraftingInternal::readItems( node, "In", recipe._inputs, sourceName ) && bValid;
-            bValid      = CraftingInternal::readItems( node, "Tool", recipe._tools, sourceName ) && bValid;
-            bValid      = CraftingInternal::readItems( node, "Out", recipe._outputs, sourceName ) && bValid;
+            RecipeDef         recipe;
+            bool              bValid = XMLFields::readFields( node, recipe, sourceName );
+            const utf8* const pID    = recipe._id.c_str();
+            bValid                   = CraftingInternal::readItems( node, "In", recipe._inputs, sourceName ) && bValid;
+            bValid                   = CraftingInternal::readItems( node, "Tool", recipe._tools, sourceName ) && bValid;
+            bValid                   = CraftingInternal::readItems( node, "Out", recipe._outputs, sourceName ) && bValid;
             if ( bValid == false )
             {
                 SW_LOG_ERROR_ID( "Crafting.RecipeInvalidFieldsSkipped", "%#: recipe '%#' has invalid fields - skipped", sourceName, pID );

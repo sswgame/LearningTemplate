@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
@@ -95,9 +96,9 @@ namespace sw
         clear();
         for ( XMLNode node = root.findChild( "Element" ); node; node = node.findNextSibling( "Element" ) )
         {
-            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-            if ( pID != nullptr )
-                addElement( hashed_string( pID ) );
+            ElementDeclFields element;
+            if ( XMLFields::readFields( node, element, sourceName ) )
+                addElement( element._id );
         }
         if ( _listElement.empty() )
         {
@@ -107,31 +108,21 @@ namespace sw
 
         for ( XMLNode node = root.findChild( "Rule" ); node; node = node.findNextSibling( "Rule" ) )
         {
-            const hashed_string attack( node.getAttributeText( "attack" ) );
-            const hashed_string defend( node.getAttributeText( "defend" ) );
-            if ( hasElement( attack ) == false || hasElement( defend ) == false )
+            ElementRuleFields rule; // 칸 · 배율 >= 0 은 PROPERTY 가 본다
+            if ( XMLFields::readFields( node, rule, sourceName ) == false )
+                continue;
+            if ( hasElement( rule._attack ) == false || hasElement( rule._defend ) == false )
             {
-                SW_LOG_WARNING_ID( "ElementChart.RuleNamesUndeclaredElement", "%#: rule '%#' -> '%#' names an undeclared element - skipped", sourceName, attack.c_str(), defend.c_str() );
+                SW_LOG_WARNING_ID( "ElementChart.RuleNamesUndeclaredElement", "%#: rule '%#' -> '%#' names an undeclared element - skipped", sourceName, rule._attack.c_str(), rule._defend.c_str() );
                 continue;
             }
-            // 규칙 줄은 배율을 적으려고 있는 것이다 — 빠진 배율을 1 로 두지 않는다.
-            const std::optional<float32> multiplier = node.readRequiredAttribute<float32>( "multiplier" );
-            if ( multiplier.has_value() )
-                if ( setMultiplier( attack, defend, *multiplier ) == false )
-                    SW_LOG_WARNING_ID( "ElementChart.RuleNegativeMultiplierSkipped", "%#: rule '%#' -> '%#' has a negative multiplier - skipped", sourceName, attack.c_str(), defend.c_str() );
+            (void)setMultiplier( rule._attack, rule._defend, rule._multiplier ); // 음수는 위에서 막았다
         }
 
         for ( XMLNode node = root.findChild( "Status" ); node; node = node.findNextSibling( "Status" ) )
         {
-            ElementStatusChance entry;
-            entry._element = hashed_string( node.getAttributeText( "element" ) );
-            entry._status  = hashed_string( node.getAttributeText( "status" ) );
-            // 확률은 필수이고 [0, 1] 이다.
-            const std::optional<float32> chance       = node.readRequiredAttribute<float32>( "chance" );
-            const bool                   bChanceValid = chance.has_value() && 0.0f <= *chance && *chance <= 1.0f;
-            if ( bChanceValid )
-                entry._chance = *chance;
-            const bool bEntryValid = hasElement( entry._element ) && entry._status.empty() == false && bChanceValid;
+            ElementStatusChance entry; // 칸 · 확률 0..1 은 PROPERTY 가 본다
+            const bool          bEntryValid = XMLFields::readFields( node, entry, sourceName ) && hasElement( entry._element );
             if ( bEntryValid == false )
             {
                 SW_LOG_WARNING_ID( "ElementChart.StatusInvalidSkipped", "%#: status '%#' on '%#' is invalid - skipped", sourceName, entry._status.c_str(), entry._element.c_str() );
