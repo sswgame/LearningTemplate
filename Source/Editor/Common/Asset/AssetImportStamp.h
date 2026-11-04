@@ -77,7 +77,7 @@ namespace sw::editor
         virtual string_view getStampHeader() const = 0;
         /** @brief 문제 메시지에 쓰는 결과의 이름입니다("DDS", "메시"). */
         virtual string_view getImportedLabel() const = 0;
-        /** @brief 임포트하는 원본 확장자인지 확인합니다. `import.stamp` 와 `.meta` 같은 파일은 원본이 아닙니다. */
+        /** @brief 임포트하는 원본 확장자인지 확인합니다. `import.stamp` 같은 파일은 원본이 아닙니다. */
         virtual bool isSourceFile( string_view path ) const = 0;
         /** @brief 원본 경로에 해당하는 결과 경로를 반환합니다. 원본 폴더 구간이 없으면 빈 문자열입니다. */
         virtual string makeImportedPath( string_view sourcePath ) const = 0;

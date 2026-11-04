@@ -125,3 +125,6 @@ graphify-out/
 
 # 내려받은 에셋 팩 원본(Quaternius 등) — 게임에 쓰는 모델만 Content/**/models_raw · textures_raw 로 옮겨 커밋한다(팩 전체는 LFS 용량을 넘긴다)
 /AssetLibrary/
+
+# 옛 에셋 `.meta`(GUID) — 에셋은 경로 하나로 가리키고 `.meta` 는 없다. 예전 체크아웃에 남은 파일이 다시 올라오지 않게 막는다
+Content/**/*.meta

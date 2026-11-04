@@ -100,8 +100,7 @@ namespace sw
     }
 
     AssetManager::AssetManager()
-        : _assetDatabase{}
-        , _listOwnedAssetCache{}
+        : _listOwnedAssetCache{}
         , _pPackManager{ make_unique<PackManager>() }
         , _listBuiltInAssetCache{}
         , _registeredAssetCache{ "AssetManager.AssetCache", RegistrationList<AssetCacheBase>::ReleaseFunction::create<&AssetManager::releaseAssetCache>( this ) }
@@ -144,10 +143,9 @@ namespace sw
         if ( listSearchPriority.empty() == false )
             engine::getSubsystem<AssetPaths>().setSearchPriority( listSearchPriority );
 
-        // 소스를 읽는 실행(개발 · 쿠킹)은 팩을 올리지 않는다 — 팩은 쿠킹의 산출물이라 소스와 섞어 읽으면 어긋난 쿠킹본을 모르고 읽는다. GUID 표는 `.meta` 를 훑는다.
+        // 소스를 읽는 실행(개발 · 쿠킹)은 팩을 올리지 않는다 — 팩은 쿠킹의 산출물이라 소스와 섞어 읽으면 어긋난 쿠킹본을 모르고 읽는다.
         _pPackManager->setContentSource( source );
         const bool bMounted = source == ContentSource::Cooked && mountStartupPacks();
-        loadAssetRegistries();
         return bMounted;
     }
 
@@ -172,44 +170,6 @@ namespace sw
         return _pPackManager->scanAndMountPacks( ProcessRoots::get()._packs.str() );
     }
 
-    uint32 AssetManager::loadAssetRegistries()
-    {
-        // 에셋 식별자(GUID) 표를 시작 시점에 채운다 — 이름을 바꾼 프리팹의 GUID 복구가 "그 세션에서 먼저 로드됐을 때만" 동작하지 않게.
-        // 팩이면 쿠커가 만든 assetregistry.txt 를 도메인마다 읽고(배포본은 .meta 를 싣지 않는다), 없으면(느슨한 트리) .meta 를 훑는다.
-        // 유니티의 GUID 표, 언리얼의 AssetRegistry 가 하는 일이다.
-        uint32       registered{ 0 };
-        const string gameRoot    = engine::getSubsystem<GameConfig>()._packRoot.get();
-        const string arrDomain[] = { "engine", "common", gameRoot };
-        for ( const string& domain : arrDomain )
-        {
-            if ( domain.empty() == false )
-                registered += _assetDatabase.loadRegistry( AssetID{ domain + "/assetregistry.txt" } );
-        }
-        // 어느 경로로 채웠는지 같이 적는다. 팩과 느슨한 트리가 둘 다 있는 자리에서 "5 항목" 만으로는 구분이 안 된다.
-        if ( registered > 0 )
-        {
-            SW_LOG_INFO_ID( "AssetManager.AssetRegistryEntriesPack", "Asset registry: %# entries (pack assetregistry.txt)", registered );
-        }
-        else if ( getPackManager().isAllowLooseFiles() == false )
-        {
-            // 팩 전용 구성은 디스크의 .meta 를 훑지 않는다(배포본은 .meta 를 싣지 않고, 훑으면 낱개 파일 금지를 지나간다). 레지스트리가 빠진 팩은
-            // 쿠킹이 막는다(`PackCooker` — .meta 가 있는 도메인에 assetregistry.txt 가 없으면 그 팩을 실패로 한다). 그래서 0 항목은 .meta 가 하나도
-            // 없는 콘텐츠라는 뜻이고, 그 사실을 남긴다.
-            SW_LOG_INFO_ID( "AssetManager.AssetRegistryEntriesNo", "Asset registry: 0 entries (no assetregistry.txt in the pack - content without .meta)" );
-        }
-        else if ( engine::getSubsystem<AssetPaths>().getRootFolderPath().empty() == false )
-        {
-            // 쿠킹한 팩과 같은 도메인만 훑는다 — 다른 게임 팩의 .meta 는 이 게임이 닿지 않는다(느린 디스크에서 파일 하나가 읽기 한 번이다).
-            for ( const string& domain : arrDomain )
-            {
-                if ( domain.empty() == false )
-                    registered += _assetDatabase.scanMetaFiles( FileUtil::joinPath( engine::getSubsystem<AssetPaths>().getRootFolderPath(), domain ) );
-            }
-            SW_LOG_INFO_ID( "AssetManager.AssetRegistryEntriesMeta", "Asset registry: %# entries (.meta scan)", registered );
-        }
-        return registered;
-    }
-
     void AssetManager::shutdown()
     {
         if ( _pPackManager != nullptr )
@@ -219,7 +179,6 @@ namespace sw
         // 비운 **뒤에** 말한다. 여기까지 왔다는 것은 죽은 포인터를 아직 밟지 않았다는 뜻이고,
         // 다음 실행에서 같은 일이 반복되지 않게 이름을 남겨야 한다.
         warnAboutRemainingModuleCaches();
-        _assetDatabase.clear();
     }
 
     void AssetManager::garbageCollectUnusedAssets()

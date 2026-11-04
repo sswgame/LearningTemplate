@@ -379,7 +379,7 @@ namespace sw::editor
             /** @brief 임포터(인코더) 버전입니다. 같은 원본과 규칙에서 다른 바이트가 나오게 바꿨다면 올립니다. DirectXTex 버전을 올린 것도 그렇습니다. 원본 해시에 섞입니다. */
             static constexpr uint32 kImporterVersion = 2; // 2: BC 압축 원본을 4 의 배수 크기로 다시 표본한다
 
-            /** @brief 임포트하는 원본 이미지 확장자인지 확인합니다. `.dds`, `import.stamp`, `.meta` 같은 파일은 원본이 아닙니다. */
+            /** @brief 임포트하는 원본 이미지 확장자인지 확인합니다. `.dds`, `import.stamp` 같은 파일은 원본이 아닙니다. */
             static bool isSourceImage( string_view path ) { return FileUtil::hasAnyExtension( path, { ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr" } ); }
         };
 

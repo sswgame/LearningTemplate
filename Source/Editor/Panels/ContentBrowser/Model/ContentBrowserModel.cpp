@@ -269,7 +269,6 @@ namespace sw::editor
 
     void ContentBrowserModel::applyFolderListing( vector<EditorFolderListingEntry>& listEntry )
     {
-        // 목록을 보기만 하고 `.meta` 를 쓰지 않는다. GUID 는 그 에셋을 쓰는 시스템(머티리얼 캐시, 프리팹, 씬 저장, 임포트)이 만든다.
         _listEntry = std::move( listEntry );
         VectorUtil::sort( _listEntry, []( const AssetEntry& entryA, const AssetEntry& entryB )
         {

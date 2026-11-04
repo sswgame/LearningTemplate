@@ -1,6 +1,6 @@
 /**
  * @file ModelImportUtil.h
- * @brief 모델 임포트 조각이 함께 쓰는 원본 폴더 규칙, 임포트 정점 · 합친 메시 타입, cgltf 할당자, 좌표계 변환, 접근자 읽기, 이름 규칙, 산출물 `.meta` 쓰기를 담습니다.
+ * @brief 모델 임포트 조각이 함께 쓰는 원본 폴더 규칙, 임포트 정점 · 합친 메시 타입, cgltf 할당자, 좌표계 변환, 접근자 읽기, 이름 규칙을 담습니다.
  * @note 임포터 내부 전용입니다. 공개 API 는 `ModelImporter.h` 입니다.
  */
 #pragma once
@@ -14,16 +14,11 @@
 
 #include <cgltf.h>
 
-namespace sw
-{
-    class AssetPaths;
-} // namespace sw
-
 namespace sw::editor
 {
     /**
      * @struct ModelImportUtil
-     * @brief 모델 임포트 조각이 함께 쓰는 원본 폴더 규칙, 임포트 정점 · 합친 메시 타입, cgltf 할당자, 좌표계 변환, 접근자 읽기, 이름 규칙, 산출물 `.meta` 쓰기를 담습니다.
+     * @brief 모델 임포트 조각이 함께 쓰는 원본 폴더 규칙, 임포트 정점 · 합친 메시 타입, cgltf 할당자, 좌표계 변환, 접근자 읽기, 이름 규칙을 담습니다.
      */
     struct ModelImportUtil
     {
@@ -148,16 +143,6 @@ namespace sw::editor
 
         /** @brief 같은 이름이 두 번째부터 번호를 받은 파일 이름을 만듭니다("sword", "sword_1"). */
         static string makeNumberedStem( const string& baseStem, uint32 useCount );
-
-        /** @brief 리소스 경로에서 UUID 문자열을 만듭니다. 버전 4와 변형 비트를 맞춘 FNV-1a 두 개로 만들며, 같은 경로는 어디서 임포트해도 같은 GUID 가 나옵니다. */
-        static string makeImportedGUID( string_view assetID );
-
-        /**
-         * @brief 임포터가 만든 산출물(@p assetPath, 디스크 경로)의 `.meta` 를 씁니다 — 경로에서 정해지는 GUID(`makeImportedGUID`), `_bImported`.
-         * @details 글로 짓지 않고 `AssetMeta` 로 쓴다(형식은 그 타입 하나가 정한다 — 손으로 지은 키=값 글은 형식이 XML 로 바뀐 뒤 읽히지 않았다).
-         *          캐시가 잡을 때 `.meta` 를 지어 붙이면 실행마다 GUID 가 달라 임포트 결과 해시가 어긋나므로 임포터가 미리 쓴다.
-         */
-        [[nodiscard]] static bool writeImportedMeta( const AssetPaths& assetPaths, const string& assetPath );
 
         /** @brief 머티리얼 XML 에 쓰는 수입니다(소수 여섯 자리까지). 음의 0 은 0 으로 쓴다(부호를 뒤집은 0 이 "-0" 으로 남지 않게 — -0 + 0 = +0). */
         static string formatMaterialNumber( float32 value );

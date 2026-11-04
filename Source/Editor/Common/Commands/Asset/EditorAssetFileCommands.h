@@ -20,7 +20,7 @@ namespace sw::editor
      * @struct EditorAssetFileCommands
      * @brief 에셋 파일을 만들고 옮기고 지웁니다. 이름은 리소스 규칙(소문자, 숫자, `_`, `-`, `.`)을 지키고, 겹치면 `_2` · `_3` 을 붙입니다.
      * @details 옮기기와 이름 바꾸기는 참조 역색인(`EditorReferenceIndex`)이 아는 텍스트 에셋의 글을 새 리소스 id 로 고칩니다(언리얼 Fix Up Redirectors 를 바로 하는 것과 같다).
-     *          짝 `.meta` 는 GUID 가 이어지도록 함께 옮기고 그 안의 `sourcePath` 도 고친다. 복제는 `.meta` 를 베끼지 않는다(새 에셋은 새 GUID 다).
+     *          에셋은 경로 하나로 가리키므로(식별자 표 · `.meta` 는 없다) 참조를 고치는 일이 옮기기의 전부다.
      */
     struct EditorAssetFileCommands
     {
@@ -40,7 +40,7 @@ namespace sw::editor
         [[nodiscard]] static bool createFolder( string_view parentAbs, string& outFolderAbs );
         /** @brief @p folderAbs 안에 @p assetTemplate(종류 등록의 틀, `EditorAssetTypeRegistry::collectNewAssetTemplates`)의 새 에셋(`<줄기><확장자>`, 겹치면 `_2` 부터)을 씁니다. */
         [[nodiscard]] static bool createAsset( string_view folderAbs, const EditorNewAssetTemplate& assetTemplate, string& outAssetAbs );
-        /** @brief 에셋을 같은 폴더에 `<stem>_2` 처럼 복제합니다(`.meta` 는 베끼지 않는다). */
+        /** @brief 에셋을 같은 폴더에 `<stem>_2` 처럼 복제합니다. */
         [[nodiscard]] static bool duplicateAsset( string_view sourceAbs, string& outAssetAbs );
         /**
          * @brief 에셋을 @p destinationAbs 로 옮기고(이름 바꾸기 포함) 그 에셋을 적은 텍스트 에셋의 글을 고칩니다.
@@ -49,12 +49,12 @@ namespace sw::editor
          * @return 대상이 이미 있거나, 이름이 규칙에 맞지 않거나, 역색인이 아직이면 아무것도 하지 않고 false 입니다(이유를 알린다).
          */
         [[nodiscard]] static bool moveAsset( string_view sourceAbs, string_view destinationAbs, EditorReferenceIndex& inoutIndex, uint32& outFixedFileCount );
-        /** @brief 에셋과 짝 `.meta` 를 OS 휴지통으로 보냅니다. 휴지통이 없는 플랫폼은 지웁니다. */
+        /** @brief 에셋을 OS 휴지통으로 보냅니다. 휴지통이 없는 플랫폼은 지웁니다. */
         [[nodiscard]] static bool moveToTrash( string_view absolutePath );
-        /** @brief 에셋 파일과 짝이 되는 .meta 파일을 삭제합니다. */
+        /** @brief 에셋 파일을 삭제합니다. */
         [[nodiscard]] static bool deleteAsset( string_view absolutePath );
         /**
-         * @brief 파일을 Content Browser 폴더로 복사하고 메타를 만듭니다. 같은 이름이 있으면 덮지 않고 `_2` 처럼 새 이름으로 둡니다.
+         * @brief 파일을 Content Browser 폴더로 복사합니다. 같은 이름이 있으면 덮지 않고 `_2` 처럼 새 이름으로 둡니다.
          * @return 복사한 파일 수입니다. 이미 그 폴더에 있는 파일과 없는 파일은 건너뜁니다.
          */
         static uint32 importFiles( string_view destFolderAbs, const vector<string>& listSourcePath );

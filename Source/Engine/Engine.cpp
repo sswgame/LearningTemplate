@@ -25,7 +25,6 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
-#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/AssetStreamingQueue.h"

@@ -24,8 +24,8 @@
 |---|---|---|
 | `AbsolutePath` + 엄격한 판정 | 검증하는 생성 함수로만 만든다. Windows 는 `X:/` · `X:\` · UNC, POSIX 는 `/`. **지금 `FileUtil::isAbsolutePath`(FileUtil.cpp:450)는 `C:foo` · `\foo` 를 절대로 본다** | 느슨한 판정 |
 | `ProcessRoots` | 기동 때 한 번(실행 파일 위치 · `-project=`): binary · project · content · saved · logs · crash · userData · packs · DDC. 못 정하면 기동 오류. 지금 Saved 기준이 **일곱**(작업 폴더 · 실행 파일 폴더 · 프로젝트 · `UserDataPath` 상대 폴백 · `TestRunner` · RenderDoc · 크래시 폴더 "로그 부모" 세 곳)이다 | `getSavedFolderPath` 의 작업 폴더 의존, `AssetPaths::initialize` 의 작업 폴더에서 위로 찾기, 팩 폴더 후보 체인(AssetManager.cpp:155), `AutomationSession` 의 작업 폴더 복구, `"Saved"` 리터럴, `UserDataPath::makeFallback` |
-| `ResourcePath{DomainID, RelPath}` | 만들 때 정규화(소문자 · `/` · `./` 제거 · `..` 거절). 문자열에서 암시적으로 못 만든다. 캐시 · GUID 표 · 쿠킹 입력의 키는 **해석이 끝난** 값 | `AssetID` 의 무정규화, 캐시마다 다른 키 정규화 다섯(SharedAssetTable · PrefabCache · AssetPaths 캐시 · AssetDatabase · CookJob)과 Texture · Material · Mesh · UIText · PhysicsMeshShape 의 `normalizePath` 키 |
-| `DomainTable` | 도메인 이름표(engine · common · editor · `game/<팩>` · `dlc/<이름>` · scratch · 붙인 디스크 도메인) · 우선순위 · 쿠킹 대상 · 레지스트리를 한 표로. 데이터의 한 줄 참조(`common/x`)를 두 칸으로 가르는 일은 이 표의 최장 일치 한 곳에서만 | 도메인 판정 셋(`mapGlobalIDToRoot` 의 디스크 폴더 존재 · `PackManager::trySplitDomainPrefix` 의 글자 · 팩 파일 이름 `_` 변환 세 곳), 도메인 나열 넷(`buildResourceFolders` · `PackCooker::collectDomains` · `AssetDatabase::writeRegistryFiles`(scratch 까지 굽는다) · `loadAssetRegistries`), 우선순위 표 둘 |
+| `ResourcePath{DomainID, RelPath}` | 만들 때 정규화(소문자 · `/` · `./` 제거 · `..` 거절). 문자열에서 암시적으로 못 만든다. 캐시 · 쿠킹 입력의 키는 **해석이 끝난** 값 | `AssetID` 의 무정규화, 캐시마다 다른 키 정규화 다섯(SharedAssetTable · PrefabCache · AssetPaths 캐시 · CookJob)과 Texture · Material · Mesh · UIText · PhysicsMeshShape 의 `normalizePath` 키 |
+| `DomainTable` | 도메인 이름표(engine · common · editor · `game/<팩>` · `dlc/<이름>` · scratch · 붙인 디스크 도메인) · 우선순위 · 쿠킹 대상을 한 표로. 데이터의 한 줄 참조(`common/x`)를 두 칸으로 가르는 일은 이 표의 최장 일치 한 곳에서만 | 도메인 판정 셋(`mapGlobalIDToRoot` 의 디스크 폴더 존재 · `PackManager::trySplitDomainPrefix` 의 글자 · 팩 파일 이름 `_` 변환 세 곳), 도메인 나열 둘(`buildResourceFolders` · `PackCooker::collectDomains`), 우선순위 표 둘 |
 | 입력 경계 형식 | `CommandLineManager` 의 값 종류 `DiskPath`(parse 때 R5 로 절대화, 오류는 모아 기동 실패), `gv_` 보류 값도 같은 변환기, 개발 명령 인자 읽기 `readDiskPathArgument` · `readResourcePathArgument`, 시나리오 단계 등록이 속성마다 경로 종류를 선언(`{out}` 은 디스크 칸에서만) | `setValue` 의 "실패하면 0 넣고 읽음 표시", `"--service"` 글자 비교, 토큰 나누기 둘, `prefab.spawn` 류 추측, 녹화 경로의 글자 치환(`makeReplayID`), `bindOutputDirectory` 의 모든 속성 치환 |
 
 ## 3. 주제별 설계
@@ -41,7 +41,7 @@
 - `PackManager` 는 (도메인, 상대 경로) 색인 하나. 팩 머리에 마운트 도메인을 적고(언리얼 pak mount point) 패치 교체 · 제거도 같은 키. **지금 결함**: 도메인 없는 키로 읽으면 패치가 바꾸거나 지운 파일이 보이지 않는다(`visitPacksWithFile` 1 단계 해시가 전체 경로 기준), `dlc/<이름>` 은 팩에서 못 찾는다.
 - 확인과 실행을 맞춘다: `hasAsset` 이 폴더에 true(읽기는 `isRegularFile`), `collectAssets` 가 소스 구성에선 한 도메인 · 팩 구성에선 합집합, `LocalizationManagerReload::isSamePath` 의 꼬리 글자 비교.
 - 리소스 참조 형식: 장면 데이터의 `string _…Path` 속성 약 60 개를 리소스 참조 형식으로(`FileUtil` 이 받을 수 없게). `IntentTrackControllerComponent::_trackFile` 은 지금 `FileUtil` 로 작업 폴더 기준 읽기(런타임 결함).
-- 캐시: `AudioClipCache` 를 `AssetCacheBase` + `AssetLoadOperation` 으로(지금은 `finishPendingAssetWork` 가 오디오 디코드를 기다리지 않는다, 리로드도 DevTools 별도 길). `TextureCache` 의 `rendertarget/` · `cpu/` 는 가상 도메인, 선언하지 않은 렌더 타깃은 256×256 으로 만들지 않고 오류. `AssetDatabase::toRelativePath` 는 `toAssetID` 로 합친다.
+- 캐시: `AudioClipCache` 를 `AssetCacheBase` + `AssetLoadOperation` 으로(지금은 `finishPendingAssetWork` 가 오디오 디코드를 기다리지 않는다, 리로드도 DevTools 별도 길). `TextureCache` 의 `rendertarget/` · `cpu/` 는 가상 도메인, 선언하지 않은 렌더 타깃은 256×256 으로 만들지 않고 오류.
 
 - **결정(2026-10-31)**: `TextureCache` 의 렌더 타깃 기본 크기(256)는 그대로 둔다 — 카메라가 나중에 크기를 알리면 `resizeRenderTarget` 이 다시 만들어 맞추므로 폴백이 아니라 자리 표시 값이다(언리얼 렌더 타깃 에셋의 기본 크기와 같다). 씬 데이터의 `string _…Path` 칸(컴포넌트 44 개)을 참조 형식으로 바꾸는 일은 하지 않는다 — 그 값이 디스크 입구(`FileUtil`)로 가는 곳은 0 이고(조사), 7 단계부터 상대 경로가 OS 경계에 닿으면 오류라 남은 위험도 드러난다. 리플렉션 · 세 직렬화기 · 에디터 위젯을 바꾸는 비용에 견줘 얻는 것이 작다(새 결함이 이 모양으로 나오면 그때 형식으로).
 - `AudioClipCache` 의 디코드는 에셋 로드 단계(`AssetManager::addLoadTask`)에 넣는다(끝, 2026-10-31) — 프레임 경계 대기가 오디오도 기다린다.
@@ -80,10 +80,10 @@
 - 헤드리스 작업 표 둘(Engine `enterEditorToolTask` · App 표 · 크래시 리포터 인자 재읽기) → `HeadlessTaskRegistration{인자[], 실행}` 하나.
 - 게임 카탈로그 읽기 둘 → `GameInstance::loadRequiredCatalog` 하나(디렉터 컴포넌트의 자체 사본 · WARNING 폴백 제거 — HarvestValley · NileCity · StarSkirmish · ThemePark · WildWest).
 - 지수 백오프 셋 → Core `ExponentialBackoff`. 토큰 나누기 둘 → `Core/String` 하나. 루프백 판정 · 포트 7100 상수 하나.
-- 에디터: 게임 팩 나열 셋, 현지화 프로젝트 모으기 둘, 저장소 루트 셋, 파일 글 되돌리기 둘, `.meta` 쓰기 둘 → 각각 하나.
+- 에디터: 게임 팩 나열 셋, 현지화 프로젝트 모으기 둘, 저장소 루트 셋, 파일 글 되돌리기 둘 → 각각 하나.
 - `isInInactiveGamePack` 복제(VAT 쿠커 ↔ SceneCooker) → 함수 하나.
 
-- **끝(2026-10-31)**: 쿠커의 `isInInactiveGamePack` 셋 → `AssetCookPath`, 백오프 둘 → `Core/Time/ExponentialBackoff`, 따옴표 낱말 나누기 둘 → `StringUtil::splitQuotedTokens`, 루프백 판정 다섯 → `NetAddress::isLoopback`, 포트 7100 셋 → `OnlineServiceHostConfig::kDefaultPort`, 게임 팩 나열 일곱 → `AssetPaths::collectGamePackDomains`, 현지화 프로젝트 모으기 둘 → `LocalizationTools::collectProjectPaths`, 저장소 루트 사본 → `ProcessRoots::_project`, 헤드리스 작업 표의 에디터 도구 인자 → `kArrEditorToolArgument`. **결정**: 디렉터 컴포넌트의 카탈로그 읽기는 컴포넌트 칸의 경로로 씬마다 다른 데이터라 게임 범위 `loadRequiredCatalog` 로 옮기지 않고 실패 등급만 ERROR 로. 파일 글 되돌리기 둘(프리팹은 캐시를 바로, 리그는 파일 감시가 다시 읽는다) · `.meta` 쓰기 둘(만들기 · 옮길 때 고쳐 쓰기)은 뒤따르는 일이 달라 합치지 않는다.
+- **끝(2026-10-31)**: 쿠커의 `isInInactiveGamePack` 셋 → `AssetCookPath`, 백오프 둘 → `Core/Time/ExponentialBackoff`, 따옴표 낱말 나누기 둘 → `StringUtil::splitQuotedTokens`, 루프백 판정 다섯 → `NetAddress::isLoopback`, 포트 7100 셋 → `OnlineServiceHostConfig::kDefaultPort`, 게임 팩 나열 일곱 → `AssetPaths::collectGamePackDomains`, 현지화 프로젝트 모으기 둘 → `LocalizationTools::collectProjectPaths`, 저장소 루트 사본 → `ProcessRoots::_project`, 헤드리스 작업 표의 에디터 도구 인자 → `kArrEditorToolArgument`. **결정**: 디렉터 컴포넌트의 카탈로그 읽기는 컴포넌트 칸의 경로로 씬마다 다른 데이터라 게임 범위 `loadRequiredCatalog` 로 옮기지 않고 실패 등급만 ERROR 로. 파일 글 되돌리기 둘(프리팹은 캐시를 바로, 리그는 파일 감시가 다시 읽는다)은 뒤따르는 일이 달라 합치지 않는다. `.meta` 쓰기 둘은 `.meta` 를 통째로 지워(경로 하나로 가리킨다) 없어졌다.
 
 ### T8. `#if` → 빌드 단위 (R9 · R6)
 - `App.cpp` 의 `#if !defined(SW_SHIPPING)` 11 곳 → 개발 도구 함수 선언 하나(Dev 구현 파일 · Shipping 빈 구현 파일을 CMake 가 고름 — 빌드마다 고정이라 인터페이스 · 가상 함수를 두지 않는다, `docs/agents/CppStyle.md` 의 상속 규칙). `AppAutomationHost` 두 구현 → 두 파일, 자동화 없는 빌드에서 `-scenario` 를 받으면 기동 오류(지금은 로그만 남기고 계속).

@@ -55,7 +55,7 @@ namespace sw::editor
         /** @brief 에셋 삭제 확인 모달을 엽니다. 실제 삭제는 사용자가 확인한 뒤 `confirmDeleteAsset` 이 합니다. */
         void requestDeleteAsset( string_view absolutePath );
         /**
-         * @brief 확인을 기다리던 에셋을 OS 휴지통으로 보냅니다. 짝이 되는 `.meta` 파일도 함께 보냅니다. 성공하면 선택을 비우고 폴더 목록을 다시 읽게 합니다.
+         * @brief 확인을 기다리던 에셋을 OS 휴지통으로 보냅니다. 성공하면 선택을 비우고 폴더 목록을 다시 읽게 합니다.
          * @return 휴지통으로 보냈으면 true 입니다. 기다리던 에셋이 없거나 보내지 못했으면 false 이며, 실패는 `EditorAssetFileCommands::moveToTrash` 가 알립니다.
          */
         bool confirmDeleteAsset() { return _model.confirmDeleteAsset(); }

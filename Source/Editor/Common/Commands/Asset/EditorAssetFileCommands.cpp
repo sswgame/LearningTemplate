@@ -18,8 +18,6 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
-#include "Engine/Asset/AssetDatabase.h"
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
@@ -259,16 +257,6 @@ namespace sw::editor
         if ( EditorAssetFileCommandsInternal::moveFile( source, destination ) == false )
             return false;
 
-        // 짝 .meta 는 GUID 가 이어지게 같이 옮기고, 안의 sourcePath 도 새 id 로 고친다.
-        const string sourceMeta = AssetDatabase::metaPathFor( source );
-        string       metaText;
-        if ( FileUtil::readOptionalTextFile( sourceMeta, metaText ) == OptionalFileRead::Read ) // .meta 가 없는 파일도 있다
-        {
-            (void)replaceReference( metaText, oldID, newID ); // 경로를 적지 않은 .meta 는 그대로 옮긴다
-            if ( FileUtil::writeTextFile( AssetDatabase::metaPathFor( destination ), metaText ) == false || FileUtil::removeFile( sourceMeta ) == false )
-                SW_LOG_WARNING_ID( "EditorAssetFileCommands.MovedButMetaCould", "Moved '%#' but its .meta could not follow", newID );
-        }
-
         const string& resourceRoot = editor::getSubsystem<AssetPaths>().getRootFolderPath();
         inoutIndex.refreshFile( resourceRoot, oldID );
         inoutIndex.refreshFile( resourceRoot, newID );
@@ -306,13 +294,8 @@ namespace sw::editor
         if ( PlatformFileUtil::hasRecycleBin() == false )
             return deleteAsset( absolutePath );
 
-        // 에셋과 짝 .meta 를 한 번에 보낸다.
-        const string   assetPath = FileUtil::normalizeSeparators( absolutePath );
-        const string   metaPath  = AssetDatabase::metaPathFor( assetPath );
-        vector<string> listPath{ assetPath };
-        if ( FileUtil::exists( metaPath ) )
-            listPath.push_back( metaPath );
-        if ( FileUtil::moveToRecycleBin( listPath ) )
+        const string assetPath = FileUtil::normalizeSeparators( absolutePath );
+        if ( FileUtil::moveToRecycleBin( vector<string>{ assetPath } ) )
         {
             SW_LOG_INFO_ID( "Asset.Recycled", "Moved '%#' to the recycle bin", editor::getSubsystem<AssetPaths>().toAssetID( assetPath ) );
             return true;
@@ -323,19 +306,14 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::deleteAsset( string_view absolutePath )
     {
-        // `.meta` 는 **에셋이 실제로 지워진 뒤에만** 지운다 — 에셋 삭제가 실패했는데(잠긴 파일) `.meta` 를 지우면 남은 에셋이 다음에 새 GUID 를 받아
-        // 그 GUID 로 가리키던 참조(씬의 프리팹 · 머티리얼)가 끊긴다.
         if ( absolutePath.empty() )
             return false;
         const string abs{ absolutePath };
         if ( FileUtil::removeFile( abs ) == false )
         {
-            SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotDeleteMeta", "Could not delete '%#' - it and its .meta are kept", abs );
+            SW_LOG_ERROR_ID( "EditorAssetFileCommands.CouldNotDelete", "Could not delete '%#' - it is kept", abs );
             return false;
         }
-        const string metaPath = AssetDatabase::metaPathFor( abs );
-        if ( FileUtil::exists( metaPath ) && FileUtil::removeFile( metaPath ) == false )
-            SW_LOG_WARNING_ID( "EditorAssetFileCommands.DeletedButMetaCould", "Deleted '%#' but its .meta could not be removed", abs );
         return true;
     }
 
@@ -389,9 +367,6 @@ namespace sw::editor
             }
 
             ++copied;
-            const string rel = AssetDatabase::toRootAssetID( destPath );
-            if ( rel.empty() == false )
-                editor::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( rel, true );
             SW_LOG_TRACE_ID( "EditorAssetFileCommands.Imported", "Imported: %# -> %#", sourcePath.c_str(), destPath.c_str() );
         }
         return copied;

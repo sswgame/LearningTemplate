@@ -40,7 +40,7 @@ namespace sw
     {
         CookInputKind _kind{ CookInputKind::Resource };
         string        _source;    ///< 리소스 id(`Resource`) 또는 절대 경로(`DiskFile` · `Listing`) - 종류가 정한다
-        string        _extension; ///< 목록일 때만 쓴다(예: ".meta")
+        string        _extension; ///< 목록일 때만 쓴다(예: ".material")
         uint64        _contentHash{ 0 };
 
         bool operator==( const CookInput& other ) const

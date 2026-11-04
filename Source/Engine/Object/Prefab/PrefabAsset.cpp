@@ -9,9 +9,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/FourCcUtil.h"
-#include "Core/UUID/UUID.h"
 
-#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
 #include "Engine/Asset/AssetManager.h"
@@ -75,39 +73,23 @@ namespace sw
                 PathStackScope& operator=( const PathStackScope& ) = delete;
             };
 
-            /**
-             * @brief 프리팹 참조(경로 또는 GUID 문자열)를 경로로 풉니다. GUID 가 아니거나 데이터베이스에 없으면 받은 그대로 반환합니다.
-             * @details 로드와 스폰이 함께 씁니다 — 한쪽만 GUID 를 풀면 같은 참조가 로드는 되고 스폰은 안 됩니다.
-             */
-            static string resolvePrefabPath( string_view assetReference )
-            {
-                if ( engine::areEngineServicesBound() == false )
-                    return string{ assetReference };
-
-                UUID   guid{};
-                string resolvedPath{ assetReference };
-                if ( UUID::tryParse( assetReference, guid ) == false || guid.isNull() )
-                    return resolvedPath;
-
-                string mappedPath;
-                if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetPath( guid, mappedPath ) && mappedPath.empty() == false )
-                    resolvedPath = std::move( mappedPath );
-                return resolvedPath;
-            }
-
             static constexpr const utf8* kRoot            = "Prefab";
             static constexpr const utf8* kName            = "name";
             static constexpr const utf8* kGameObject      = "GameObject";
             static constexpr const utf8* kDefaultInstance = "PrefabInstance";
             static constexpr const utf8* kNestedInstance  = "PrefabInstance";
             static constexpr const utf8* kNestedPrefab    = "prefab";
-            static constexpr const utf8* kNestedGUID      = "prefabGUID";
-            static constexpr const utf8* kNestedAttach    = "attach";
-            static constexpr const utf8* kNestedOverrides = "overrides";
-            static constexpr const utf8* kNestedList      = "_listPrefabInstance";
-            static constexpr uint32      kBinMagic        = FourCcUtil::make( "PFB2" );
-            /** @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙고, 2 부터 노드에 부품 경로(`_partPath`)가 붙는다. 다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다). */
-            static constexpr uint32 kBinVersion = 2;
+            /** @brief 지운 칸입니다. 중첩 원본은 경로(`prefab`)로만 가리킨다 — 이 칸이 남은 프리팹은 오류로 읽지 않는다. */
+            static constexpr const utf8* kRemovedNestedGUID = "prefabGUID";
+            static constexpr const utf8* kNestedAttach      = "attach";
+            static constexpr const utf8* kNestedOverrides   = "overrides";
+            static constexpr const utf8* kNestedList        = "_listPrefabInstance";
+            static constexpr uint32      kBinMagic          = FourCcUtil::make( "PFB2" );
+            /**
+             * @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙고, 2 부터 노드에 부품 경로(`_partPath`)가 붙고, 3 에서 노드의 GUID 칸을 지웠다(경로 하나로 가리킨다).
+             *        다른 버전은 읽지 않는다(쿠킹본은 다시 쿠킹한다).
+             */
+            static constexpr uint32 kBinVersion = 3;
 
             static string makePrefabCacheKey( string_view assetRelativePath )
             {
@@ -242,29 +224,8 @@ namespace sw
                 return true;
             }
 
-            /** @brief 노드의 GUID 가 데이터베이스에 있으면 그 경로로 바꿉니다 — 원본을 옮겨도 노드가 이어진다(씬 엔티티의 `prefabGUID` 와 같다). */
-            static void resolveNodePathByGUID( PrefabInstanceNode& node )
-            {
-                if ( node._prefabGUID.empty() )
-                    return;
-                const string mappedPath = resolvePrefabPath( node._prefabGUID );
-                if ( mappedPath != node._prefabGUID )
-                    node._prefabPath = mappedPath;
-            }
-
-            /** @brief 쓸 때 적을 노드의 GUID 입니다. 데이터베이스가 경로의 GUID 를 알면 그것, 아니면 읽은 값입니다. */
-            static string makeNodeGUID( const PrefabInstanceNode& node )
-            {
-                if ( node._prefabPath.empty() || engine::areEngineServicesBound() == false )
-                    return node._prefabGUID;
-                UUID guid{};
-                if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetGUID( node._prefabPath, guid ) && guid.isNull() == false )
-                    return guid.toString();
-                return node._prefabGUID;
-            }
-
             /**
-             * @brief 노드 목록이 규칙(부모가 자기보다 앞, 원본 경로나 GUID 나 펼친 상태가 있음, 펼친 노드는 부품 경로가 있고 저작본 노드는 없음)을 지키면 true 입니다.
+             * @brief 노드 목록이 규칙(부모가 자기보다 앞, 원본 경로나 펼친 상태가 있음, 펼친 노드는 부품 경로가 있고 저작본 노드는 없음)을 지키면 true 입니다.
              *        어긴 노드를 오류로 알립니다.
              */
             static bool areNodesWellFormed( const vector<PrefabInstanceNode>& listNode, string_view sourceName )
@@ -273,7 +234,7 @@ namespace sw
                 {
                     const PrefabInstanceNode& node        = listNode[index];
                     const bool                bParentOk   = -1 <= node._parentIndex && node._parentIndex < static_cast<int32>( index );
-                    const bool                bHasSource  = node.isResolved() || node._prefabPath.empty() == false || node._prefabGUID.empty() == false;
+                    const bool                bHasSource  = node.isResolved() || node._prefabPath.empty() == false;
                     const bool                bPartPathOk = node.isResolved() != node._partPath.empty();
                     const bool                bWellFormed = bParentOk && bHasSource && bPartPathOk;
                     if ( bWellFormed )
@@ -287,28 +248,33 @@ namespace sw
                 return true;
             }
 
-            /** @brief `<PrefabInstance>` 원소들(@p parent 의 자식)을 읽어 끝에 더합니다. 안에 둔 `<PrefabInstance>` 는 그 노드에 붙는 노드입니다. */
-            static void readNodesFromXML( const XMLNode& parent, int32 parentIndex, vector<PrefabInstanceNode>& inoutListNode )
+            /** @brief `<PrefabInstance>` 원소들(@p parent 의 자식)을 읽어 끝에 더합니다. 안에 둔 `<PrefabInstance>` 는 그 노드에 붙는 노드입니다. 지운 칸(`prefabGUID`)이 있으면 오류로 false 입니다. */
+            [[nodiscard]] static bool readNodesFromXML( const XMLNode& parent, int32 parentIndex, vector<PrefabInstanceNode>& inoutListNode, string_view sourceName )
             {
                 for ( XMLNode element = parent.findChild( kNestedInstance ); element.isValid(); element = element.findNextSibling( kNestedInstance ) )
                 {
                     PrefabInstanceNode node{};
                     const utf8*        pName   = element.findAttribute( kName );
                     const utf8*        pPrefab = element.findAttribute( kNestedPrefab );
-                    const utf8*        pGuid   = element.findAttribute( kNestedGUID );
                     const utf8*        pAttach = element.findAttribute( kNestedAttach );
                     node._name                 = pName != nullptr ? pName : "";
                     node._prefabPath           = pPrefab != nullptr ? pPrefab : "";
-                    node._prefabGUID           = pGuid != nullptr ? pGuid : "";
                     node._attachKey            = pAttach != nullptr ? pAttach : "";
                     node._parentIndex          = parentIndex;
                     const XMLNode overrides    = element.findChild( PrefabOverrides::kRootName );
                     if ( overrides.isValid() )
                         node._overrideXML = overrides.toString();
-                    resolveNodePathByGUID( node );
+                    if ( element.findAttribute( kRemovedNestedGUID ) != nullptr )
+                    {
+                        SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabGUIDRemoved", "Nested prefab instance '%#' in '%#' still has '%#' - prefabs are referenced by path only; the prefab is not loaded", node._name,
+                                         sourceName, kRemovedNestedGUID );
+                        return false;
+                    }
                     inoutListNode.push_back( std::move( node ) );
-                    readNodesFromXML( element, static_cast<int32>( inoutListNode.size() - 1 ), inoutListNode );
+                    if ( readNodesFromXML( element, static_cast<int32>( inoutListNode.size() - 1 ), inoutListNode, sourceName ) == false )
+                        return false;
                 }
+                return true;
             }
 
             /** @brief 부모가 @p parentIndex 인 노드를 `<PrefabInstance>` 로 씁니다(그 노드에 붙는 노드는 안에). 오버라이드가 XML 이 아니면 false 입니다. */
@@ -323,9 +289,6 @@ namespace sw
                     if ( node._name.empty() == false )
                         element.appendAttribute( kName, string_view{ node._name } );
                     element.appendAttribute( kNestedPrefab, string_view{ node._prefabPath } );
-                    const string guid = makeNodeGUID( node );
-                    if ( guid.empty() == false )
-                        element.appendAttribute( kNestedGUID, string_view{ guid } );
                     if ( node._attachKey.empty() == false )
                         element.appendAttribute( kNestedAttach, string_view{ node._attachKey } );
                     if ( node._overrideXML.empty() == false )
@@ -344,12 +307,12 @@ namespace sw
                 return true;
             }
 
-            /** @brief JSON 배열 `_listPrefabInstance`(@p parent 의 멤버)의 노드를 읽어 끝에 더합니다. 객체마다 같은 이름의 배열이 그 노드에 붙는 노드입니다. */
-            static void readNodesFromJSON( const JSONValue& parent, int32 parentIndex, vector<PrefabInstanceNode>& inoutListNode )
+            /** @brief JSON 배열 `_listPrefabInstance`(@p parent 의 멤버)의 노드를 읽어 끝에 더합니다. 객체마다 같은 이름의 배열이 그 노드에 붙는 노드입니다. 지운 칸(`prefabGUID`)이 있으면 오류로 false 입니다. */
+            [[nodiscard]] static bool readNodesFromJSON( const JSONValue& parent, int32 parentIndex, vector<PrefabInstanceNode>& inoutListNode, string_view sourceName )
             {
                 const JSONValue arrayValue = parent.get( kNestedList );
                 if ( arrayValue.isArray() == false )
-                    return;
+                    return true;
                 const size_t count = arrayValue.size();
                 for ( size_t index = 0; index < count; ++index )
                 {
@@ -359,14 +322,20 @@ namespace sw
                     PrefabInstanceNode node{};
                     node._name        = element.get( kName ).asString();
                     node._prefabPath  = element.get( kNestedPrefab ).asString();
-                    node._prefabGUID  = element.get( kNestedGUID ).asString();
                     node._attachKey   = element.get( kNestedAttach ).asString();
                     node._overrideXML = element.get( kNestedOverrides ).asString();
                     node._parentIndex = parentIndex;
-                    resolveNodePathByGUID( node );
+                    if ( element.has( kRemovedNestedGUID ) )
+                    {
+                        SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabGUIDRemovedJSON", "Nested prefab instance '%#' in '%#' still has '%#' - prefabs are referenced by path only; the prefab is not loaded",
+                                         node._name, sourceName, kRemovedNestedGUID );
+                        return false;
+                    }
                     inoutListNode.push_back( std::move( node ) );
-                    readNodesFromJSON( element, static_cast<int32>( inoutListNode.size() - 1 ), inoutListNode );
+                    if ( readNodesFromJSON( element, static_cast<int32>( inoutListNode.size() - 1 ), inoutListNode, sourceName ) == false )
+                        return false;
                 }
+                return true;
             }
 
             /** @brief 부모가 @p parentIndex 인 노드를 @p parent 의 배열 `_listPrefabInstance` 로 씁니다. 그런 노드가 없으면 배열을 만들지 않습니다. */
@@ -388,9 +357,6 @@ namespace sw
                     if ( node._name.empty() == false )
                         element.set( kName ).setString( node._name );
                     element.set( kNestedPrefab ).setString( node._prefabPath );
-                    const string guid = makeNodeGUID( node );
-                    if ( guid.empty() == false )
-                        element.set( kNestedGUID ).setString( guid );
                     if ( node._attachKey.empty() == false )
                         element.set( kNestedAttach ).setString( node._attachKey );
                     if ( node._overrideXML.empty() == false )
@@ -681,8 +647,7 @@ namespace sw
         _stateData = bodyNode.toString();
 
         vector<PrefabInstanceNode> listNode;
-        PrefabAssetInternal::readNodesFromXML( root, -1, listNode );
-        if ( PrefabAssetInternal::areNodesWellFormed( listNode, absPath ) == false )
+        if ( PrefabAssetInternal::readNodesFromXML( root, -1, listNode, absPath ) == false || PrefabAssetInternal::areNodesWellFormed( listNode, absPath ) == false )
             return false;
         _listNestedInstance = std::move( listNode );
 
@@ -716,8 +681,7 @@ namespace sw
         _name = root.get( "_name" ).asString();
 
         vector<PrefabInstanceNode> listNode;
-        PrefabAssetInternal::readNodesFromJSON( root, -1, listNode );
-        if ( PrefabAssetInternal::areNodesWellFormed( listNode, absPath ) == false )
+        if ( PrefabAssetInternal::readNodesFromJSON( root, -1, listNode, absPath ) == false || PrefabAssetInternal::areNodesWellFormed( listNode, absPath ) == false )
             return false;
         _listNestedInstance = std::move( listNode );
 
@@ -787,7 +751,7 @@ namespace sw
         vector<PrefabInstanceNode> listNode( nodeCount );
         for ( PrefabInstanceNode& node : listNode )
         {
-            arch >> node._name >> node._prefabPath >> node._prefabGUID >> node._attachKey >> node._overrideXML >> node._resolvedStateXML >> node._partPath >> node._parentIndex;
+            arch >> node._name >> node._prefabPath >> node._attachKey >> node._overrideXML >> node._resolvedStateXML >> node._partPath >> node._parentIndex;
         }
         if ( arch.isError() )
         {
@@ -857,8 +821,6 @@ namespace sw
             return false;
         }
 
-        if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( absPath.str() );
         SW_LOG_INFO_ID( "PrefabAsset.Saved", "Saved '%#' -> %#", _name, absPath.str() );
         return true;
     }
@@ -898,8 +860,6 @@ namespace sw
             return false;
         }
 
-        if ( engine::areEngineServicesBound() )
-            engine::getSubsystem<AssetManager>().getAssetDatabase().ensureMeta( absPath.str() );
         SW_LOG_INFO_ID( "PrefabAsset.SavedJSON", "Saved '%#' JSON %#", _name, absPath.str() );
         return true;
     }
@@ -927,7 +887,7 @@ namespace sw
         arch << static_cast<uint32>( _listNestedInstance.size() );
         for ( const PrefabInstanceNode& node : _listNestedInstance )
         {
-            arch << node._name << node._prefabPath << node._prefabGUID << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex;
+            arch << node._name << node._prefabPath << node._attachKey << node._overrideXML << node._resolvedStateXML << node._partPath << node._parentIndex;
         }
 
         if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || arch.saveFile( absPath.str() ) == false )
@@ -995,7 +955,7 @@ namespace sw
                 PrefabAssetInternal::collectPrefabRefsFromXMLText( node._resolvedStateXML, listFound );
                 continue;
             }
-            listFound.push_back( node._prefabPath.empty() ? node._prefabGUID : node._prefabPath );
+            listFound.push_back( node._prefabPath );
             PrefabAssetInternal::collectPrefabRefsFromXMLText( node._overrideXML, listFound );
         }
 
@@ -1130,7 +1090,7 @@ namespace sw
 
     PrefabHandle PrefabCache::requestWith( string_view assetRelativePath, AssetLoadStart start )
     {
-        const string resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
+        const string resolvedPath = string( assetRelativePath );
         const string cacheKey     = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
 
         shared_ptr<PrefabLoadOperation> pOperation;
@@ -1171,7 +1131,7 @@ namespace sw
     shared_ptr<const PrefabAsset> PrefabCache::loadAndCache( string_view assetRelativePath )
     {
         SW_MEMORY_SCOPE( Scene );
-        const string resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
+        const string resolvedPath = string( assetRelativePath );
 
         const string cacheKey   = PrefabAssetInternal::makePrefabCacheKey( resolvedPath );
         const uint32 generation = _cacheGeneration.load( std::memory_order_acquire );
@@ -1245,7 +1205,7 @@ namespace sw
             {
                 if ( node.isResolved() )
                     continue;
-                const string                childPath  = PrefabAssetInternal::resolvePrefabPath( node._prefabPath.empty() ? node._prefabGUID : node._prefabPath );
+                const string                childPath  = string( node._prefabPath );
                 const std::optional<size_t> stackIndex = VectorUtil::findIndex( stack, PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( childPath ) ) );
                 if ( stackIndex.has_value() )
                 {
@@ -1279,7 +1239,7 @@ namespace sw
             return nullptr;
         }
 
-        const string        resolvedPath = PrefabAssetInternal::resolvePrefabPath( assetRelativePath );
+        const string        resolvedPath = string( assetRelativePath );
         const hashed_string pathKey      = PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( resolvedPath ) );
 
         PrefabAssetInternal::PrefabPathStack& spawnStack = t_prefabChain._spawnStack;
@@ -1356,7 +1316,7 @@ namespace sw
             return true;
         }
 
-        const shared_ptr<const PrefabAsset> pSource = loadPrefab( node._prefabPath.empty() ? node._prefabGUID : node._prefabPath );
+        const shared_ptr<const PrefabAsset> pSource = loadPrefab( node._prefabPath );
         if ( pSource == nullptr || pSource->isValid() == false )
         {
             SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabCouldNot3", "Nested prefab '%#' could not be loaded - instance '%#' is skipped", node._prefabPath, node._name );
@@ -1420,7 +1380,7 @@ namespace sw
             if ( node.isResolved() == false )
             {
                 sourceKey = PrefabAssetInternal::makePathKey(
-                    PrefabAssetInternal::makePrefabCacheKey( PrefabAssetInternal::resolvePrefabPath( node._prefabPath.empty() ? node._prefabGUID : node._prefabPath ) ) );
+                    PrefabAssetInternal::makePrefabCacheKey( string( node._prefabPath ) ) );
                 if ( VectorUtil::contains( spawnStack, sourceKey ) )
                 {
                     SW_LOG_ERROR_ID( "PrefabAsset.CircularNestedPrefabInstance", "Circular nested prefab '%#' in '%#' - instance '%#' is not spawned", node._prefabPath, asset.getName(), node._name );
@@ -1568,7 +1528,7 @@ namespace sw
                 continue;
             }
 
-            const string                        sourcePath = PrefabAssetInternal::resolvePrefabPath( node._prefabPath.empty() ? node._prefabGUID : node._prefabPath );
+            const string                        sourcePath = string( node._prefabPath );
             const hashed_string                 sourceKey  = PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( sourcePath ) );
             const shared_ptr<const PrefabAsset> pSource    = loadPrefab( sourcePath );
             if ( pSource == nullptr || VectorUtil::contains( spawnStack, sourceKey ) )
@@ -1585,7 +1545,6 @@ namespace sw
             PrefabInstanceNode flat{};
             flat._name        = node._name.empty() ? pSource->getName() : node._name;
             flat._prefabPath  = node._prefabPath;
-            flat._prefabGUID  = node._prefabGUID;
             flat._attachKey   = node._attachKey;
             flat._partPath    = partPath;
             flat._parentIndex = flatParent;

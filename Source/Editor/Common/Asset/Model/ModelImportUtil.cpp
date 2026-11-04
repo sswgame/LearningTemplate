@@ -8,14 +8,9 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
-
-#include "Engine/Asset/AssetMeta.h"
-#include "Engine/Content/AssetPaths.h"
 
 namespace sw::editor
 {
@@ -145,26 +140,6 @@ namespace sw::editor
         return hashed_string( formatToString( "target%#", static_cast<uint64>( targetIndex ) ) );
     }
 
-    string ModelImportUtil::makeImportedGUID( string_view assetID )
-    {
-        const uint64 high = HashUtil::computeStringHash64( assetID.data(), assetID.size(), false );
-        const uint64 low  = HashUtil::computeStringHash64( assetID.data(), assetID.size(), false, high ^ HashUtil::kGoldenRatio64 );
-        // 8-4-4-4-12 글자 16 진. 셋째 그룹 첫 글자는 버전 4, 넷째 그룹 첫 글자는 변형(8..b)이다.
-        const auto appendHex = []( string& inoutText, uint64 value, uint32 digitCount )
-        { HexUtil::appendUint64( inoutText, value, digitCount ); };
-        string text;
-        appendHex( text, high >> 32, 8 );
-        text += '-';
-        appendHex( text, ( high >> 16 ) & 0xFFFFu, 4 );
-        text += "-4";
-        appendHex( text, high & 0x0FFFu, 3 );
-        text += '-';
-        appendHex( text, 0x8000u | ( ( low >> 48 ) & 0x3FFFu ), 4 );
-        text += '-';
-        appendHex( text, low & 0xFFFFFFFFFFFFull, 12 );
-        return text;
-    }
-
     string ModelImportUtil::formatMaterialNumber( float32 value )
     {
         utf8 arrText[constant::buffer::kMax32]{};
@@ -175,15 +150,5 @@ namespace sw::editor
     string ModelImportUtil::formatMaterialColor( const float4& color )
     {
         return formatMaterialNumber( color._x ) + " " + formatMaterialNumber( color._y ) + " " + formatMaterialNumber( color._z ) + " " + formatMaterialNumber( color._w );
-    }
-
-    bool ModelImportUtil::writeImportedMeta( const AssetPaths& assetPaths, const string& assetPath )
-    {
-        const string assetID = assetPaths.toAssetID( assetPath );
-        AssetMeta    meta;
-        meta._guid       = makeImportedGUID( assetID );
-        meta._sourcePath = assetID;
-        meta._bImported  = true;
-        return FileUtil::writeTextFile( assetPath + constant::path::kMetaExtension, meta.toXML() );
     }
 } // namespace sw::editor

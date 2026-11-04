@@ -200,7 +200,7 @@ namespace sw::editor
             }
 
             /**
-             * @brief 원본 파일 하나를 임시 리소스 폴더로 가져옵니다. 콘텐츠 브라우저 Import 와 같은 경로(`EditorAssetFileCommands::importFiles`, `.meta` 생성)이고
+             * @brief 원본 파일 하나를 임시 리소스 폴더로 가져옵니다. 콘텐츠 브라우저 Import 와 같은 경로(`EditorAssetFileCommands::importFiles`)이고
              *        OS 파일 대화상자만 건너뜁니다.
              * @details 원본은 절대 경로나 리소스 id 다(`readSourceFileArgument`). 같은 이름이 있으면 새 이름을 받으므로 시나리오는 먼저 폴더를 지운다.
              */
@@ -221,7 +221,7 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 시나리오의 처음과 끝에 임시 리소스 폴더 하나를 `.meta` 까지 통째로 지웁니다. 폴더가 없으면 할 일이 없으므로 성공입니다. */
+            /** @brief 시나리오의 처음과 끝에 임시 리소스 폴더 하나를 통째로 지웁니다. 폴더가 없으면 할 일이 없으므로 성공입니다. */
             static bool runRemoveImportFolder( const vector<string>& listArgument, string& outReply )
             {
                 string folderPath;
@@ -342,7 +342,7 @@ namespace sw::editor
                     "Import a file into a temp resource folder the way Content Browser Import does, without the file dialog",
                     &EditorAutomationAssetCommandsInternal::runImportAsset );
     SW_DEV_COMMAND( RemoveImportFolder, "asset.removeImportFolder", "asset.removeImportFolder <scratch/import/...folder>",
-                    "Remove a temp resource folder that asset.import filled (with its .meta files)", &EditorAutomationAssetCommandsInternal::runRemoveImportFolder );
+                    "Remove a temp resource folder that asset.import filled", &EditorAutomationAssetCommandsInternal::runRemoveImportFolder );
     SW_AUTOMATION_WATCH( editorTempAssetExists, "Editor.TempAssetExists", "1 when the file of the last asset.open exists on disk",
                          &EditorAutomationAssetCommandsInternal::readTempAssetExists );
     SW_DEV_COMMAND( CreatePrefab, "prefab.create", "prefab.create <Saved/Automation/...prefab.xml>",

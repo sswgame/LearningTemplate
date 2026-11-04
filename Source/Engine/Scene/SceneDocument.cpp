@@ -5,12 +5,9 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/FourCcUtil.h"
-#include "Core/UUID/UUID.h"
 
-#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetLoadProfiler.h"
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -36,32 +33,24 @@ namespace sw
             static constexpr const utf8* kDefaultEntity = "Entity";
             static constexpr uint32      kBinMagic      = FourCcUtil::make( "SCN1" );
             // 배치: 이름 · 월드 설정(리플렉션 바이너리) · 기본 엔티티 목록 · 셀 목록(셀 좌표 x · z, 그 셀의 엔티티 목록).
-            // 엔티티 하나: 이름 · 프리팹 · GUID · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`).
+            // 엔티티 하나: 이름 · 프리팹 경로 · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`). 프리팹은 경로 하나로 가리킨다(판 5 에서 GUID 칸을 지웠다).
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
-            static constexpr uint32 kBinVersion = 4;
-            // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 여섯과 파일 id(8바이트)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
-            static constexpr uint64 kMinBytesPerEntity = 6u * sizeof( uint32 ) + sizeof( uint64 );
+            static constexpr uint32 kBinVersion = 5;
+            // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯과 파일 id(8바이트)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
+            static constexpr uint64 kMinBytesPerEntity = 5u * sizeof( uint32 ) + sizeof( uint64 );
+            /** @brief 지운 칸입니다. 프리팹은 경로로만 가리킨다 — 이 속성이 남은 씬은 오류로 읽지 않는다(옛 GUID 를 말없이 버리면 그 엔티티가 무엇을 가리켰는지 모른다). */
+            static constexpr const utf8* kRemovedPrefabGUID = "prefabGUID";
             // 셀 하나는 좌표 둘과 엔티티 수다.
             static constexpr uint64 kMinBytesPerCell = 2u * sizeof( int32 ) + sizeof( uint32 );
 
-            /** @brief 엔티티 목록을 씁니다(수, 엔티티마다 필드). 프리팹 GUID 가 비었으면 에셋 DB 에서 풀어 적습니다. */
+            /** @brief 엔티티 목록을 씁니다(수, 엔티티마다 필드). */
             static void writeEntities( Archive& arch, const vector<SceneDocument::SceneObjectNode>& listNode )
             {
                 arch << static_cast<uint32>( listNode.size() );
                 for ( const SceneDocument::SceneObjectNode& entity : listNode )
                 {
-                    string     prefabGUID         = entity._prefabGUID;
-                    const bool bResolvePrefabGUID = prefabGUID.empty() && entity._prefab.empty() == false && engine::areEngineServicesBound();
-                    if ( bResolvePrefabGUID )
-                    {
-                        UUID resolvedGUID{};
-                        if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetGUID( entity._prefab, resolvedGUID ) && resolvedGUID.isNull() == false )
-                            prefabGUID = resolvedGUID.toString();
-                    }
-
                     arch << entity._name;
                     arch << entity._prefab;
-                    arch << prefabGUID;
                     arch << entity._embeddedXML;
                     arch << entity._embeddedStateBytes;
                     arch << entity._fileID;
@@ -90,35 +79,16 @@ namespace sw
                 for ( uint32 entityIndex = 0; entityIndex < entityCount; ++entityIndex )
                 {
                     SceneDocument::SceneObjectNode node{};
-                    arch >> node._name >> node._prefab >> node._prefabGUID >> node._embeddedXML >> node._embeddedStateBytes >> node._fileID >> node._prefabOverrideXML;
+                    arch >> node._name >> node._prefab >> node._embeddedXML >> node._embeddedStateBytes >> node._fileID >> node._prefabOverrideXML;
                     // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
                     if ( arch.isError() )
                     {
                         SW_LOG_ERROR_ID( "SceneDocument.BinarySceneStreamCorrupted", "Binary scene stream corrupted in %#", absPath );
                         return false;
                     }
-                    resolvePrefabPathByGUID( node );
                     outListNode.push_back( std::move( node ) );
                 }
                 return true;
-            }
-
-            /**
-             * @brief 프리팹 GUID 로 경로를 다시 풉니다. 파일 이동 · 이름 변경을 자동으로 따라갑니다.
-             * @details XML 로더와 바이너리 로더가 함께 씁니다 — 한쪽만 고치면 그 포맷으로 읽은 씬만 옮긴 프리팹을 못 찾습니다.
-             */
-            static void resolvePrefabPathByGUID( SceneDocument::SceneObjectNode& node )
-            {
-                if ( node._prefabGUID.empty() || engine::areEngineServicesBound() == false )
-                    return;
-
-                UUID guid{};
-                if ( UUID::tryParse( node._prefabGUID, guid ) == false || guid.isNull() )
-                    return;
-
-                string resolved;
-                if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetPath( guid, resolved ) && resolved.empty() == false )
-                    node._prefab = std::move( resolved );
             }
 
             /**
@@ -161,15 +131,16 @@ namespace sw
                     return false;
                 }
 
-                const utf8* pPrefabGUID = sceneObjectNode.findAttribute( "prefabGUID" );
-                if ( pPrefabGUID != nullptr )
-                    outNode._prefabGUID = pPrefabGUID;
+                if ( sceneObjectNode.findAttribute( kRemovedPrefabGUID ) != nullptr )
+                {
+                    SW_LOG_ERROR_ID( "SceneDocument.EntityPrefabGUIDRemoved", "Entity '%#' still has '%#' in %# - prefabs are referenced by path only (put the prefab's path in 'prefab'); the scene is not loaded",
+                                     outNode._name, kRemovedPrefabGUID, absPath );
+                    return false;
+                }
 
                 const utf8* pPrefab = sceneObjectNode.findAttribute( kPrefab );
                 if ( pPrefab != nullptr )
                     outNode._prefab = pPrefab;
-
-                resolvePrefabPathByGUID( outNode );
 
                 const XMLNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
                 if ( overrideNode.isValid() )
@@ -322,16 +293,6 @@ namespace sw
             sceneObjectNode.appendAttribute( SceneDocumentInternal::kName, entity._name );
             if ( entity._prefab.empty() == false )
                 sceneObjectNode.appendAttribute( SceneDocumentInternal::kPrefab, entity._prefab );
-            if ( entity._prefabGUID.empty() == false )
-            {
-                sceneObjectNode.appendAttribute( "prefabGUID", entity._prefabGUID );
-            }
-            else if ( entity._prefab.empty() == false && engine::areEngineServicesBound() )
-            {
-                UUID prefabGUID{};
-                if ( engine::getSubsystem<AssetManager>().getAssetDatabase().tryGetGUID( entity._prefab, prefabGUID ) && prefabGUID.isNull() == false )
-                    sceneObjectNode.appendAttribute( "prefabGUID", prefabGUID.toString() );
-            }
             if ( entity._prefabOverrideXML.empty() == false )
             {
                 XMLDocument overrideDoc;

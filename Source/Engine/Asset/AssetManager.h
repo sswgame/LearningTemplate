@@ -1,8 +1,8 @@
 /**
  * @file AssetManager.h
- * @brief 팩 에셋(GUID, 스키마, Material, Texture, Prefab, Mesh)을 한곳에서 관리하는 파사드입니다. `Engine` 가 `EngineServiceCollection` 으로 소유합니다.
+ * @brief 팩 에셋(스키마, Material, Texture, Prefab, Mesh)을 한곳에서 관리하는 파사드입니다. `Engine` 가 `EngineServiceCollection` 으로 소유합니다.
  * @note
- *   포함: AssetDatabase, PackManager, 에셋 캐시 레지스트리.
+ *   포함: PackManager, 에셋 캐시 레지스트리. 에셋은 경로 하나로 가리킨다(식별자 표 · `.meta` 는 없다).
  *   기능 캐시(Material, Texture, Prefab, Mesh, Skeleton, Fracture 등)는 **각 기능 폴더가 등록합니다**(`SW_BUILT_IN_ASSET_CACHE`, `Cache/BuiltInAssetCache.h`).
  *   매니저는 생성자에서 등록 테이블을 훑어 캐시를 모두 만들어 소유합니다(코드로 만드는 값 테이블 `WeakInternCache` 파생도 같다). 타입으로 찾을 때는 `getAssetCache<T>()` 를 씁니다.
  *   제외(수명이 다름):
@@ -24,7 +24,6 @@
 #include "Core/Subsystem/ISubsystem.h"
 #include "Core/Task/TaskTypes.h"
 
-#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/ContentSource.h"
@@ -55,23 +54,23 @@ namespace sw
         [[nodiscard]] bool initialize();
 
         /**
-         * @brief 콘텐츠를 로드합니다. 검색 우선순위 적용, 시작 팩 마운트, 에셋 레지스트리 적재 순서로 진행합니다.
+         * @brief 콘텐츠를 로드합니다. 검색 우선순위 적용, 시작 팩 마운트 순서로 진행합니다.
          * @param listSearchPriority 검색 우선순위 토큰 목록. 비우면 지금 설정된 것을 그대로 씁니다.
          * @param source 콘텐츠 정책 — 팩 매니저에 걸어 모든 읽기가 본다(`AssetIO::getContentSource`). 소스(`ContentSource::Source` — 개발 실행 · 쿠킹)면 팩을
          *               마운트하지 않고 느슨한 소스 파일만 읽습니다. 쿠킹의 입력은 소스이고 팩은 그 산출물이라, 팩을 올리면 지난 빌드의 결과(엔진 데이터,
-         *               프리팹, GUID 테이블)를 다시 읽거나 소스와 어긋난 것을 읽습니다.
+         *               프리팹)를 다시 읽거나 소스와 어긋난 것을 읽습니다.
          * @return 팩을 하나라도 마운트했으면 true 입니다(느슨한 `Content/` 트리만 있으면 false).
          *
          * @details **호스트 게임 프리셋(`ConfigManager` 가 `GameConfig` 를 읽은 뒤)에 불러야 한다.** "game" 토큰은 `GameConfig._packRoot`
-         *          로 풀리므로, 그 전에 부르면 게임 도메인이 통째로 빠진 채 팩이 로드되고 GUID 테이블도
-         *          engine 과 common 만 채워진다.
+         *          로 풀리므로, 그 전에 부르면 게임 도메인이 통째로 빠진 채
+         *          engine 과 common 팩만 로드된다.
          *
          *          `initialize()` 와 나눈 이유가 그것이다. "설정이 먼저"라는 전제가 부르는 쪽에 드러나고,
          *          우선순위 적용과 마운트가 한 호출로 묶여 사이가 벌어지지 않는다.
          */
         [[nodiscard]] bool mountContent( const vector<string>& listSearchPriority, ContentSource source );
 
-        /** @brief 마운트된 팩을 언마운트하고, 등록된 에셋 캐시와 GUID 테이블을 비웁니다. */
+        /** @brief 마운트된 팩을 언마운트하고, 등록된 에셋 캐시를 비웁니다. */
         void shutdown();
 
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
@@ -86,13 +85,6 @@ namespace sw
         const utf8*                getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const>    getSubsystemDependencies() const override;
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Asset;
-        /**
-         * @brief 에셋 식별자(GUID) 테이블을 채웁니다. 반환값은 등록 수입니다.
-         * @details 팩이면 쿠커가 도메인마다 넣는 `assetregistry.txt` 를 읽고(배포본은 .meta 를 싣지 않는다), 하나도
-         *          없으면(느슨한 트리) 리소스 루트의 `.meta` 를 훑는다. 보통은 `mountContent` 가 부른다.
-         *          전역 VFS 를 건드린 테스트가 되돌릴 때 직접 부른다.
-         */
-        uint32 loadAssetRegistries();
 
         /**
          * @brief 실행 파일 옆(또는 프로젝트)의 `Packs/` 를 찾아 모두 마운트합니다.
@@ -188,10 +180,6 @@ namespace sw
          */
         void finishPendingAssetWork();
 
-        /** @brief 경로와 GUID(.meta)를 대응시키는 테이블을 반환합니다. */
-        AssetDatabase&       getAssetDatabase() { return _assetDatabase; }
-        const AssetDatabase& getAssetDatabase() const { return _assetDatabase; }
-
     private:
         /** @brief 내장 캐시(`_listBuiltInAssetCache`)인지 확인합니다. 종료 경고와 모듈 코드 순회에서 제외합니다. */
         bool isBuiltInAssetCache( const AssetCacheBase* pCache ) const;
@@ -202,7 +190,6 @@ namespace sw
         /** @brief `getAssetCache<T>()` 의 본체입니다. 종류 이름으로 내장 캐시를 찾습니다. 없으면 단언합니다(등록하지 않은 타입을 물은 경우). */
         AssetCacheBase& getBuiltInAssetCache( string_view assetKindName ) const;
 
-        AssetDatabase                      _assetDatabase;
         mutable mutex                      _loadStageMutex;
         TaskStageHandle _loadStage         SW_GUARDED_BY( _loadStageMutex ); ///< 워커 로드 태스크의 단계(처음 낼 때 만들고 다시 쓴다 — `addLoadTask`)
         vector<unique_ptr<AssetCacheBase>> _listOwnedAssetCache;             ///< 기능 폴더가 등록한 소유 캐시(`SW_BUILT_IN_ASSET_CACHE`)다. 매니저마다 하나씩 가진다

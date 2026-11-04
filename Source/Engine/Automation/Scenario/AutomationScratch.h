@@ -6,7 +6,7 @@
  *          사본 id 에 프로세스 꼬리를 붙여(`scratch/assetmanage_p<pid>`, `makeInstanceID` — 시나리오 단계의 id 도 같이 바뀐다, `AutomationScenario::bindScratchInstances`)
  *          사본 폴더를 지운 뒤 원본을 복사한다(`prepare`). 저장소의 `Content/` 는 같은 체크아웃의 모든 App 이 나눠 쓰므로 이름이 고정이면 동시에 도는 App 이
  *          서로의 사본을 지운다. 사본은 리소스 id 가 있는 보통 도메인 폴더라 편집기의 모든 경로(루트를 붙이는 곳 · 감시 · 색인)가 같게 본다.
- *          복사하면서 글 파일 안의 원본 id 를 사본 id 로 바꾸고(씬이 사본의 머티리얼을 가리키게), `.meta` 의 guid 는 새로 만든다(원본과 겹치지 않게).
+ *          복사하면서 글 파일 안의 원본 id 를 사본 id 로 바꾼다(씬이 사본의 머티리얼을 가리키게 — 에셋은 경로 하나로 가리킨다).
  *          `Content/scratch/` 는 `.gitignore` 에 있다.
  */
 #pragma once
@@ -51,7 +51,7 @@ namespace sw
          */
         static void resetInstanceFolder( const string& instanceDir );
         /**
-         * @brief 사본 폴더를 지우고 원본을 복사합니다. 글 파일의 원본 id 는 사본 id 로 바꾸고 `.meta` 의 guid 는 새로 만듭니다.
+         * @brief 사본 폴더를 지우고 원본을 복사합니다. 글 파일의 원본 id 는 사본 id 로 바꿉니다.
          * @details 사본 id 가 프로세스 꼬리(`makeInstanceID`)를 가졌으면, 같은 이름의 다른 사본 가운데 끝난 프로세스의 것을 먼저 지운다(죽은 실행의 사본이 쌓이지 않게).
          * @return 원본이 없거나 지우기 · 복사 · 쓰기가 실패하면 false 와 이유입니다(시나리오는 시작하지 않는다 — 원본에 쓰는 길로 돌아가지 않는다).
          */

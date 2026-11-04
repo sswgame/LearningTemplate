@@ -333,13 +333,6 @@ namespace sw::editor
                 SW_LOG_ERROR_ID( "ModelImporter.FailedWriteToonMaterial", "Failed to write toon material %#", materialPath.c_str() );
                 return false;
             }
-            // 머티리얼 캐시는 잡을 때 `.meta` 를 지어 붙인다 — 옆 폴더에 실행마다 다른 GUID 가 생기면 임포트 결과 해시가 어긋난다.
-            // 그래서 임포터가 경로에서 정해지는 GUID 로 미리 쓴다(언리얼 · 유니티의 임포트 부산물도 임포터가 식별자를 정한다).
-            if ( ModelImportUtil::writeImportedMeta( assetPaths, materialPath ) == false )
-            {
-                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteMeta", "Failed to write %#.meta", materialPath.c_str() );
-                return false;
-            }
         }
         if ( result._listIgnoredMaterialKey.empty() == false )
         {
@@ -544,7 +537,7 @@ namespace sw::editor
         }
         const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );
         const bool   bWritten     = FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, document.saveToString() );
-        if ( bWritten == false || ModelImportUtil::writeImportedMeta( assetPaths, materialPath ) == false )
+        if ( bWritten == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWritePBRMaterial", "Failed to write PBR material %#", materialPath.c_str() );
             return false;

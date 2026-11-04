@@ -70,6 +70,5 @@ namespace sw
         /** @brief 팩 상대 게임 설정 파일입니다(`GameSettings`). 게임마다 이 이름 하나다. */
         inline constexpr const utf8* kGameSettingsFile = "data/gamesettings.xml";
         /** @brief 에셋 메타 파일 확장자입니다. */
-        inline constexpr const utf8* kMetaExtension = ".meta";
     } // namespace constant::path
 } // namespace sw

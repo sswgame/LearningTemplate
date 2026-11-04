@@ -521,7 +521,7 @@ namespace sw::editor
         EditorSelfTestMarks::note( "contentBrowser.delete.confirm" );
         if ( bConfirmed )
         {
-            (void)confirmDeleteAsset(); // 실패는 moveToTrash 가 알린다(파일과 .meta 를 그대로 둔다)
+            (void)confirmDeleteAsset(); // 실패는 moveToTrash 가 알린다(파일을 그대로 둔다)
             ImGui::CloseCurrentPopup();
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Cancel" ) ) );

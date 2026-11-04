@@ -16,7 +16,6 @@
 #include "Engine/Animation/Retarget/PoseRetargeter.h"
 #include "Engine/Animation/Scene/AnimationCrowd.h"
 #include "Engine/Animation/Scene/VertexAnimationCooker.h"
-#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Asset/Cook/PackCooker.h"
 #include "Engine/Audio/LipSyncImport.h"
@@ -58,7 +57,7 @@ namespace sw
         struct HeadlessSubsystemInternal
         {
             /**
-             * @brief 씬 · 프리팹 · GUID 레지스트리 · VAT · 내비메시를 @p cookedDir 에 베이크합니다. 하나라도 실패하면 false 입니다. 모두 성공하면 이번 쿠킹이 요청하지 않은 옛 출력(사라진 소스의 것)을 스테이징에서 지웁니다.
+             * @brief 씬 · 프리팹 · VAT · 내비메시를 @p cookedDir 에 베이크합니다. 하나라도 실패하면 false 입니다. 모두 성공하면 이번 쿠킹이 요청하지 않은 옛 출력(사라진 소스의 것)을 스테이징에서 지웁니다.
              * @details 엔티티 상태를 바이너리로 구우려면 리플렉션이 필요하고, 그것은 엔진 안에만 있다. 형식과 규칙을 쓰는 곳이 엔진 하나다.
              *          @p bCrowdSettingsLoaded 가 거짓이면 코드 기본 프레임율로 베이크하지 않고 VAT 베이크를 실패로 센다(군중 표는 쿠킹 세션 전에 읽는다 — 작업 키의 설정이다).
              */
@@ -71,8 +70,6 @@ namespace sw
                 const uint32                  sceneCount                 = SceneCooker::cookAllScenes( sceneServices, resourceRoot, cookedDir, cookStore, sceneFailedCount );
                 uint32                        prefabFailedCount          = 0;
                 [[maybe_unused]] const uint32 prefabCount                = PrefabCache::cookAllPrefabs( resourceRoot, cookedDir, cookStore, prefabFailedCount );
-                uint32                        registryFailedCount        = 0;
-                [[maybe_unused]] const uint32 registryCount              = AssetDatabase::writeRegistryFiles( resourceRoot, cookedDir, cookStore, registryFailedCount );
                 uint32                        vertexAnimationFailedCount = bCrowdSettingsLoaded ? 0u : 1u;
                 [[maybe_unused]] const uint32 vertexAnimationCount =
                     bCrowdSettingsLoaded
@@ -81,15 +78,15 @@ namespace sw
                 // 내비메시 — 표면이 놓인 씬마다 런타임 베이크와 같은 함수로 `<씬>.navmesh` 를 쓴다.
                 uint32                        navMeshFailedCount = 0;
                 [[maybe_unused]] const uint32 navMeshCount       = SceneNavigationCooker::cookAll( sceneServices, resourceRoot, cookedDir, cookStore, navMeshFailedCount );
-                SW_LOG_INFO_ID( "Headless.CookedScenesFailuresPrefabs", "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# asset registries (%# failures), %# vertex animations (%# failures), "
+                SW_LOG_INFO_ID( "Headless.CookedScenesFailuresPrefabs", "Cooked %# scenes (%# failures), %# prefabs (%# failures), %# vertex animations (%# failures), "
                                                                         "%# navmeshes (%# failures).",
-                                sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, registryCount, registryFailedCount, vertexAnimationCount,
+                                sceneCount, sceneFailedCount, prefabCount, prefabFailedCount, vertexAnimationCount,
                                 vertexAnimationFailedCount, navMeshCount, navMeshFailedCount );
-                const bool bFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || registryFailedCount > 0 || vertexAnimationFailedCount > 0 ||
+                const bool bFailed = sceneCount == 0 || sceneFailedCount > 0 || prefabFailedCount > 0 || vertexAnimationFailedCount > 0 ||
                                      navMeshFailedCount > 0;
                 if ( bFailed )
                     return false;
-                // 사라진 소스의 옛 쿠킹본이 스테이징에 남으면 팩에 실린다 — 다섯 쿠커가 모두 성공한 뒤에만(돌지 않은 쿠커의 출력을 지우지 않게) 요청에 없는 출력을 치운다.
+                // 사라진 소스의 옛 쿠킹본이 스테이징에 남으면 팩에 실린다 — 네 쿠커가 모두 성공한 뒤에만(돌지 않은 쿠커의 출력을 지우지 않게) 요청에 없는 출력을 치운다.
                 uint32                        removeFailedCount = 0;
                 [[maybe_unused]] const uint32 removedCount      = cookStore.removeUnrequestedOutputs( cookedDir, removeFailedCount );
                 return removeFailedCount == 0;

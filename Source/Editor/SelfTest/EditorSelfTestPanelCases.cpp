@@ -200,45 +200,6 @@ namespace sw::editor
             }
 
             // ------------------------------------------------------------------------------
-            // contentBrowser.browsingWritesNoMeta: 폴더를 보기만 해서는 `.meta` 가 생기지 않는다. GUID 는 그 에셋을 쓰는 시스템이 만든다
-            // ------------------------------------------------------------------------------
-            static EditorSelfTestStep runBrowsingWritesNoMeta( EditorSelfTestContext& context )
-            {
-                constexpr uint32      kPhaseWaitListing = 1;
-                constexpr const utf8* kFileName         = "probe.txt";
-
-                ContentBrowserProbe& probe     = context.getTestState<ContentBrowserProbe>();
-                const uint32         stepIndex = context.getStepIndex();
-                ContentBrowserPanel* pPanel    = findVisibleContentBrowser( context );
-                if ( pPanel == nullptr )
-                {
-                    removeProbeFolder( context, probe );
-                    return EditorSelfTestStep::Done;
-                }
-
-                if ( stepIndex == 0 )
-                {
-                    if ( context.expect( makeProbeFolder( probe, kFileName ), "could not write the self test folder" ) == false )
-                    {
-                        removeProbeFolder( context, probe );
-                        return EditorSelfTestStep::Done;
-                    }
-                    pPanel->openFolder( probe._folderAbs );
-                    enterPhase( probe, kPhaseWaitListing, stepIndex );
-                    return EditorSelfTestStep::Continue;
-                }
-
-                const bool bListed = pPanel->getEntryCount() == 1 && pPanel->isFolderRefreshPending() == false;
-                if ( bListed == false && hasPhaseTimedOut( probe, stepIndex ) == false )
-                    return EditorSelfTestStep::Continue;
-                (void)context.expect( bListed, "the self test folder listing never arrived (is the content browser drawn?)" );
-                (void)context.expect( FileUtil::exists( FileUtil::joinPath( probe._folderAbs, string{ kFileName } + ".meta" ) ) == false,
-                                      "browsing a folder wrote a .meta file" );
-                removeProbeFolder( context, probe );
-                return EditorSelfTestStep::Done;
-            }
-
-            // ------------------------------------------------------------------------------
             // contentBrowser.treeDoesNotReadTheDiskEveryFrame: 폴더 트리는 처음 그릴 때만 하위 폴더를 디스크에서 읽는다. 프레임마다 읽으면 Debug 에서 16.8 ms 가 걸린다
             // ------------------------------------------------------------------------------
             /** @brief 폴더 트리 테스트의 진행 상태입니다. 앞 테스트가 지운 폴더의 파일 감시 이벤트가 캐시를 비울 수 있으므로 변경 번호가 멈출 때까지 기다립니다. */
@@ -669,7 +630,6 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_SELF_TEST( ContentBrowserDelete, "contentBrowser.deleteRefreshesTheList", 1100, &EditorSelfTestPanelCasesInternal::runDeleteRefreshesTheList );
-    SW_EDITOR_SELF_TEST( ContentBrowserNoMeta, "contentBrowser.browsingWritesNoMeta", 1110, &EditorSelfTestPanelCasesInternal::runBrowsingWritesNoMeta );
     SW_EDITOR_SELF_TEST( ContentBrowserTree, "contentBrowser.treeDoesNotReadTheDiskEveryFrame", 1120, &EditorSelfTestPanelCasesInternal::runTreeDoesNotReadTheDiskEveryFrame );
     SW_EDITOR_SELF_TEST( ContentBrowserActivePack, "contentBrowser.showsActivePackOnly", 1130, &EditorSelfTestPanelCasesInternal::runShowsActivePackOnly );
     SW_EDITOR_SELF_TEST( MapCheckSelect, "mapCheck.selectsIssueObject", 1140, &EditorSelfTestPanelCasesInternal::runMapCheckSelectsIssueObject );

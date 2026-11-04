@@ -44,9 +44,6 @@ namespace sw
 #undef SW_PACK_COOKER_SHADER_FOLDER_ROW
             };
 
-            /** @brief GUID 레지스트리 파일 이름입니다(`AssetDatabase::writeRegistryFiles` 가 스테이징에 쓴다). */
-            static constexpr string_view kAssetRegistryFileName{ "assetregistry.txt" };
-
             /** @brief 정규화(소문자 · '/')한 도메인 기준 경로를 폴더 성분과 파일 이름으로 나눕니다. */
             static void splitPath( string_view normalized, vector<string_view>& outListDirectory, string_view& outFileName )
             {
@@ -187,13 +184,11 @@ namespace sw
                 if ( CookJob::collectFiles( domainDir, "", listSourceFile ) == false )
                     return CookStep::Failed;
                 vector<string> listStale;
-                bool           bHasMeta = false;
                 for ( const string& absPath : listSourceFile )
                 {
                     string relativePath;
                     if ( FileUtil::tryMakePathUnderRoot( domainDir, absPath, relativePath, true ) == false )
                         continue;
-                    bHasMeta = bHasMeta || StringUtil::endsWith( relativePath, ".meta", true );
                     if ( PackCooker::shouldIncludeFile( relativePath, config, params._shaderFolder, params._buildTarget ) == false )
                         continue;
                     if ( VectorUtil::contains( params._listExcludedSourceFile, FileUtil::normalizePath( absPath ) ) )
@@ -214,25 +209,15 @@ namespace sw
                 vector<string> listStagedFile;
                 if ( CookJob::collectFiles( stagedDir, "", listStagedFile ) == false )
                     return CookStep::Failed;
-                bool bHasRegistry = false;
                 for ( const string& absPath : listStagedFile )
                 {
                     string relativePath;
                     if ( FileUtil::tryMakePathUnderRoot( stagedDir, absPath, relativePath, true ) == false )
                         continue;
-                    bHasRegistry = bHasRegistry || StringUtil::equals( relativePath, kAssetRegistryFileName, true );
                     if ( PackCooker::shouldIncludeStagedFile( relativePath, params._shaderFolder, params._buildTarget ) == false )
                         continue;
                     if ( addFile( writer, relativePath, absPath, ioTiming ) == false )
                         return CookStep::Failed;
-                }
-
-                // 레지스트리가 없으면 배포본의 GUID 참조가 전부 경로로 대신 찾는다(이름을 바꾼 에셋은 배포본에서만 못 찾는다) — 이 팩을 실패로 한다.
-                if ( bHasMeta && bHasRegistry == false )
-                {
-                    SW_LOG_ERROR_ID( "PackCooker.PackCookMetaFiles", "Pack cook: %# has .meta files but the staging folder has no %# - run the scene cook (--cook-scenes or --cook-all) first", domain,
-                                     kAssetRegistryFileName );
-                    return CookStep::Failed;
                 }
 
                 PackWriteStats writeStats;

@@ -22,7 +22,6 @@
     "*.psd",
     "*.blend",
     "*.blend1",
-    "*.meta",
     "*.sources.json",
     "*.bak",
     "*.tmp",

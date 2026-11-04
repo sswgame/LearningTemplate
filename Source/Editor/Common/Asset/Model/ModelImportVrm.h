@@ -52,7 +52,6 @@ namespace sw::editor
          *        얼굴 리그 · 후처리 리그 파일이 있으면 `FacialAnimationComponent` · `PoseModifierComponent` 가 그 파일을 참조합니다. 구간이 없는 모델은 쓰지 않습니다.
          * @details 런타임은 이 프리팹을 스폰하면 구간마다의 머티리얼과 VRM 의 표정 · 스프링 본 · 1인칭 숨김(구간 가시성)을 쓴다. 적은 칸만 쓰고 나머지는 컴포넌트의 기본값이다.
          *          맵은 머티리얼이 여럿인 모델을 이 프리팹으로 놓는다(메시 하나에 머티리얼 하나인 컴포넌트로는 구간 하나만 그린다).
-         *          `.meta` 는 경로에서 정해지는 GUID 로 함께 쓴다(머티리얼과 같은 규칙 — 다시 임포트해도 같다).
          */
         [[nodiscard]] static bool writeSectionPrefab( const AssetPaths& assetPaths, const ModelImportResult& result, string_view meshPath, string_view sideFolder, string_view stem );
 

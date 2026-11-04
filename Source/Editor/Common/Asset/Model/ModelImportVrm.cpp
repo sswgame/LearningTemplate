@@ -262,7 +262,7 @@ namespace sw::editor
             Internal::appendComponent( listComponent, "PoseModifierComponent" ).appendAttribute( "_rigPath", string_view{ resourceOf( RigAsset::kExtension ) } );
 
         const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
-        const bool   bWritten   = prefabDocument.saveFile( prefabPath ) && ModelImportUtil::writeImportedMeta( assetPaths, prefabPath );
+        const bool   bWritten   = prefabDocument.saveFile( prefabPath );
         if ( bWritten == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteCharacterPrefab", "Failed to write section prefab %#", prefabPath.c_str() );

@@ -11,9 +11,7 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Process/Process.h"
-#include "Core/UUID/UUID.h"
 
-#include "Engine/Asset/AssetMeta.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -149,23 +147,6 @@ namespace sw
                     (void)FileUtil::removeDirectory( deadDir ); // 못 지우면 경고가 남고 다음 실행이 다시 거둔다(위 설명)
                 }
             }
-
-            /**
-             * @brief `.meta`(이미 사본 id 로 바꾼 글)를 `AssetMeta` 로 읽어 guid 를 새로 만든 글을 돌려줍니다. 원본과 사본이 같은 guid 를 가지면 안 된다.
-             * @details 글자 찾기로 고치지 않는다 — 형식이 바뀌면(키=값 → XML) 조용히 그대로 복사됐다. 읽지 못하면 오류다.
-             */
-            [[nodiscard]] static bool renewMetaGUID( string_view text, const string& sourceFile, string& outText, string& outError )
-            {
-                AssetMeta meta;
-                if ( meta.parseXML( text, sourceFile.c_str() ) == false )
-                {
-                    outError = "could not read the asset meta " + sourceFile;
-                    return false;
-                }
-                meta._guid = UUID::generate().toString();
-                outText    = meta.toXML();
-                return true;
-            }
         };
     } // namespace
 
@@ -288,7 +269,7 @@ namespace sw
                 outError = "could not read " + sourceFile;
                 return false;
             }
-            // NUL 이 든 파일은 바이너리다 — 그대로 복사한다. 글 파일은 원본 id 를 사본 id 로 바꾸고, `.meta` 는 guid 를 새로 만든다.
+            // NUL 이 든 파일은 바이너리다 — 그대로 복사한다. 글 파일은 원본 id 를 사본 id 로 바꾼다(에셋은 경로 하나로 가리키므로 id 를 바꾸면 사본끼리 이어진다).
             const bool bBinary = std::find( bytes.begin(), bytes.end(), uint8{ 0 } ) != bytes.end();
             if ( bBinary )
             {
@@ -300,10 +281,7 @@ namespace sw
                 continue;
             }
             const string_view sourceText( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
-            string            text  = rebaseText( sourceText, folder._sourceID, folder._scratchID );
-            const bool        bMeta = StringUtil::endsWith( FileUtil::normalizePath( targetFile ), ".meta" );
-            if ( bMeta && AutomationScratchInternal::renewMetaGUID( string( text ), sourceFile, text, outError ) == false )
-                return false;
+            const string      text = rebaseText( sourceText, folder._sourceID, folder._scratchID );
             if ( FileUtil::writeTextFile( targetFile, text ) == false )
             {
                 outError = "could not write " + targetFile;

@@ -74,7 +74,7 @@ namespace sw::editor
         /** @brief 기다리던 삭제를 취소합니다. */
         void cancelDelete() { _pendingDeleteAbs.clear(); }
         /**
-         * @brief 기다리던 에셋을 OS 휴지통으로 보냅니다. 짝이 되는 `.meta` 파일도 함께 보냅니다. 성공하든 실패하든 기다리던 삭제는 끝납니다.
+         * @brief 기다리던 에셋을 OS 휴지통으로 보냅니다. 성공하든 실패하든 기다리던 삭제는 끝납니다.
          * @return 휴지통으로 보냈으면 true 입니다. 기다리던 에셋이 없으면 false 입니다.
          */
         bool confirmDelete();

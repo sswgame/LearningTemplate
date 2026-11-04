@@ -58,7 +58,7 @@ SW_REGISTER_ARGUMENT( LANGUAGE, "", false, "lang" )
 // 셰이더를 모든 백엔드의 바이너리로 쿠킹하고 끝낸다(헤드리스). 쓸 폴더는 `-cooked-dir=<폴더>` 다(`<폴더>/<도메인>/shaders/bin/<백엔드>` — 팩이 거기서 담는다). 개발 실행은 굽지 않아도 돈다(쓰일 때 컴파일)
 SW_REGISTER_ARGUMENT( COOK_SHADERS, false, false, "cook-shaders" )
 
-// 씬과 프리팹을 바이너리(SCN1, PFB2)로 쿠킹하고 끝낸다(GUID 레지스트리 · VAT · 내비메시 포함). 쓸 폴더는 `-cooked-dir=<폴더>` 다
+// 씬과 프리팹을 바이너리(SCN1, PFB2)로 쿠킹하고 끝낸다(VAT · 내비메시 포함). 쓸 폴더는 `-cooked-dir=<폴더>` 다
 SW_REGISTER_ARGUMENT( COOK_SCENES, false, false, "cook-scenes" )
 
 // 리소스 팩(engine · common · game_<팩>.pack)을 `-pack-dir=<폴더>` 에 굽고 끝낸다. 스테이징(`-cooked-dir`)의 쿠킹 산출물을 함께 담는다. `-game=` 을 주면 그 게임 팩만, 없으면 모든 게임 팩이다

@@ -11,7 +11,6 @@
 #include "Core/String/TagID.h"
 #include "Core/Time/GameTimer.h"
 
-#include "Engine/Asset/AssetDatabase.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -198,7 +197,7 @@ namespace sw
             /**
              * @brief 엔티티 하나의 오브젝트를 만듭니다. 프리팹 엔티티는 **원형에 덮어쓴 것을 얹은 상태**로 한 번에 만든다(@p outPrefabInstanceState). 프리팹을 고치면 놓인 인스턴스에 퍼진다(언리얼과 유니티의
              *        프리팹 인스턴스). 전체 상태가 실린 엔티티는 그 상태가 기준이라 원형을 만들지 않는다(원형은 버려지고, 만드는 동안 컴포넌트가 한 벌 더 생긴다) — 프리팹이 있는지만 본다.
-             * @return 만든 오브젝트입니다. 프리팹을 찾지 못하면 nullptr 이고, 버리지 않는다 — 버리면 다음 저장이 파일에서 지운다(덮어쓴 값과 프리팹 GUID 까지).
+             * @return 만든 오브젝트입니다. 프리팹을 찾지 못하면 nullptr 이고, 버리지 않는다 — 버리면 다음 저장이 파일에서 지운다(덮어쓴 값과 프리팹 경로까지).
              *         문서 그대로 @p inoutListUnresolved 에 보관했다가 저장할 때 다시 써 넣는다(유니티의 "Missing Prefab" 과 같다). 스트리밍 셀의 엔티티는 보관하지 않는다.
              */
             static GameObject* createEntityObject( GameObjectManager& objects, AssetManager* pAssetManager, unordered_map<string, string>& inoutMapBaseState,
@@ -224,8 +223,7 @@ namespace sw
                 GameObject* pGo = bStateMade ? objects.createGameObject( hashed_string( entity._name.c_str() ) ) : nullptr;
                 if ( pGo == nullptr )
                 {
-                    SW_LOG_WARNING_ID( "Scene.PrefabSpawnFailedEntity", "Prefab spawn failed for entity '%#' (%#, guid %#) - kept as-is and written back on save", entity._name, entity._prefab,
-                                       entity._prefabGUID.empty() ? "none" : entity._prefabGUID.c_str() );
+                    SW_LOG_WARNING_ID( "Scene.PrefabSpawnFailedEntity", "Prefab spawn failed for entity '%#' (%#) - kept as-is and written back on save", entity._name, entity._prefab );
                     if ( bStreamingCell == false )
                         inoutListUnresolved.push_back( entity );
                 }
@@ -322,7 +320,7 @@ namespace sw
              * @brief 오브젝트 하나를 문서의 엔티티로 씁니다. 프리팹 인스턴스는 원형과 다른 것만 적고, 프리팹을 읽지 못했으면 전체 상태를 적습니다(다음 로드가 그 상태로 만든다).
              * @return 문서에 넣을 엔티티가 만들어졌으면 true 입니다(적을 상태도 프리팹도 없으면 false).
              */
-            [[nodiscard]] static bool writeEntityNode( GameObject* pGo, AssetManager* pAssetManager, const unordered_map<uint64, string>& mapPrefabSource, const SaveInputs& inputs,
+            [[nodiscard]] static bool writeEntityNode( GameObject* pGo, const unordered_map<uint64, string>& mapPrefabSource, const SaveInputs& inputs,
                                                        const ObjectSaveOptions& saveOptions, SceneDocument::SceneObjectNode& outNode )
             {
                 outNode._name        = pGo->getName().c_str();
@@ -336,12 +334,6 @@ namespace sw
                 if ( outNode._prefab.empty() && detachedIt != inputs._mapDetachedPartPrefab.end() )
                     outNode._prefab = detachedIt->second;
 
-                if ( outNode._prefab.empty() == false && pAssetManager != nullptr )
-                {
-                    const UUID guid = pAssetManager->getAssetDatabase().ensureMeta( outNode._prefab );
-                    if ( guid.isNull() == false )
-                        outNode._prefabGUID = guid.toString();
-                }
                 const string state = ObjectStateSerializer::saveToXMLString( pGo, saveOptions );
                 // 프리팹 인스턴스는 원형과 다른 것만 적는다. 프리팹을 읽지 못했으면 전체 상태를 적는다. 다음 로드가 그 상태로 만든다.
                 const auto    baseIt     = outNode._prefab.empty() ? inputs._mapPrefabBaseState.end() : inputs._mapPrefabBaseState.find( outNode._prefab );
@@ -676,7 +668,7 @@ namespace sw
             if ( inputs._uniqueRespawnedPart.find( pGo->getObjectID() ) != inputs._uniqueRespawnedPart.end() )
                 return; // 바깥 프리팹 인스턴스가 로드할 때 다시 스폰한다
             SceneDocument::SceneObjectNode node{};
-            if ( SceneInternal::writeEntityNode( pGo, pAssetManager, _mapPrefabSource, inputs, saveOptions, node ) )
+            if ( SceneInternal::writeEntityNode( pGo, _mapPrefabSource, inputs, saveOptions, node ) )
                 outDoc._listSceneObjectNode.push_back( std::move( node ) );
         } );
         // 프리팹을 찾지 못한 엔티티는 읽은 그대로 다시 쓴다(`instantiate` 설명). 파일 id 도 그대로다. 그 자식들이 그 id 로 가리킨다.
