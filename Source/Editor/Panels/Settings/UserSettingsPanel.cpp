@@ -78,7 +78,8 @@ namespace sw::editor
         ImGui::Separator();
 
         const vector<UserSettingCategoryDef>& listCategory = settings.getCategories();
-        if ( ImGui::BeginTabBar( "##UserSettingsTabs" ) == false )
+        // 범주는 데이터(스키마)라 늘 수 있다 — 폭을 넘긴 탭도 목록 단추로 고를 수 있게 한다(언리얼 탭 넘침 목록과 같다).
+        if ( ImGui::BeginTabBar( "##UserSettingsTabs", ImGuiTabBarFlags_TabListPopupButton ) == false )
             return;
         vector<const UserSettingDef*> listSetting;
         for ( uint32 categoryIndex = 0; categoryIndex < static_cast<uint32>( listCategory.size() ); ++categoryIndex )
