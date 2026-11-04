@@ -7,12 +7,40 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
 {
     class Archive;
     class XMLNode;
+
+    /** @brief 경험치 곡선 공식(`<ExperienceCurve maxLevel base exponent linear>`)의 칸입니다. 곡선이 지금 값으로 채운 뒤 읽는다 — 적지 않은 칸은 생성자의 초기값이다. */
+    REFLECT()
+    struct SW_GF_API ExperienceCurveFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0 )
+        float32 _base{ 0.0f };
+        PROPERTY()
+        float32 _exponent{ 0.0f };
+        PROPERTY()
+        float32 _linear{ 0.0f };
+        PROPERTY( Min = 1 )
+        int32 _maxLevel{ 1 };
+    };
+
+    /** @brief 경험치 표의 한 줄(`<Level xp>`)입니다. */
+    REFLECT()
+    struct SW_GF_API ExperienceLevelFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 1 )
+        int32 _xp{ 1 };
+    };
 
     /**
      * @class ExperienceCurve

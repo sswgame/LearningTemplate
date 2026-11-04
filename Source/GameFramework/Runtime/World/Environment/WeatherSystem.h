@@ -10,6 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
@@ -32,16 +34,21 @@ namespace sw
 namespace sw
 {
     /** @brief 날씨 한 종류입니다. */
+    REFLECT()
     struct SW_GF_API WeatherDef
     {
-        static constexpr float32 kMinDuration = 1.0f; ///< `minDuration` 의 하한(게임 초) — 0 이면 한 프레임마다 날씨가 바뀐다
+        REFLECT_BODY();
 
+        PROPERTY( Required )
         hashed_string               _id{};
-        vector<WeatherSeasonWeight> _listSeasonWeight{}; ///< 비면 모든 계절에 `_weight`
+        vector<WeatherSeasonWeight> _listSeasonWeight{}; ///< 비면 모든 계절에 `_weight` — `seasons="Spring:3,Summer:1"` 은 손으로 푼다
         StatBlock                   _values{};           ///< `<Values wetness="1" wind="0.6" fog="0.2"/>` . 렌더러와 게임 규칙이 읽는다
-        float32                     _weight{ 1.0f };
-        float32                     _minDuration{ 600.0f }; ///< 게임 초
-        float32                     _maxDuration{ 1800.0f };
+        PROPERTY( Min = 0.0 )
+        float32 _weight{ 1.0f };
+        PROPERTY( Min = 1.0, Units = s ) ///< 0 이면 한 프레임마다 날씨가 바뀐다
+        float32 _minDuration{ 600.0f };  ///< 게임 초
+        PROPERTY( Min = 1.0, Units = s ) ///< `minDuration` 이상이어야 한다(읽기가 본다)
+        float32 _maxDuration{ 1800.0f };
 
         float32 computeWeight( const hashed_string& season ) const;
     };
@@ -57,6 +64,16 @@ namespace sw
      *         <Values wetness="1" wind="0.4"/></Weather></WeatherCatalog>
      * @endcode
      */
+    /** @brief 날씨 표 루트(`<Weathers transition>`)의 칸입니다. */
+    REFLECT()
+    struct SW_GF_API WeatherCatalogRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _transition{ 0.0f };
+    };
+
     class SW_GF_API WeatherCatalog : public GameCatalog<WeatherDef, XMLCatalog<WeatherCatalog>>
     {
         friend class XMLCatalog<WeatherCatalog>;

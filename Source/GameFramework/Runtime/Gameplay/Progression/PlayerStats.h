@@ -31,15 +31,20 @@ namespace sw
         Time         ///< 초를 더한다(플레이 시간, 그 무기를 든 시간)
     };
 
-    [[nodiscard]] SW_GF_API bool parseStatKind( string_view text, StatKind& outKind );
-
     /** @brief 통계 하나의 정의입니다. */
-    struct StatDef
+    REFLECT()
+    struct SW_GF_API StatDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        string        _name{};          ///< 표시 이름(없으면 id)
-        float64       _maxValue{ 0.0 }; ///< 0 보다 크면 값의 상한이다. 카운터가 넘치지 않게 하며, Steam 의 maxchange 에 해당한다
-        StatKind      _kind{ StatKind::Counter };
+        PROPERTY()
+        string _name{}; ///< 표시 이름(없으면 id)
+        PROPERTY( Name = "max", Min = 0.0 )
+        float64 _maxValue{ 0.0 }; ///< 0 보다 크면 값의 상한이다. 카운터가 넘치지 않게 하며, Steam 의 maxchange 에 해당한다
+        PROPERTY()
+        StatKind _kind{ StatKind::Counter };
     };
 } // namespace sw
 

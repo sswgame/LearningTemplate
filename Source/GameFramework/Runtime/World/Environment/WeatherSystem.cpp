@@ -7,6 +7,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
@@ -28,20 +29,21 @@ namespace sw
     uint32 WeatherCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 적지 않은 칸은 초기값이다. 깨진 값 · 범위 밖 값은 오류다(자르지 않는다). 날씨는 그 원소를, 전환 시간은 표 전체를 넣지 않는다.
-        constexpr float32 kAnyFloat = MathUtil::kMaxFloat;
-        if ( XMLReadUtil::readOptionalNumber( root, "transition", sourceName, 0.0f, kAnyFloat, _transitionTime ) == false )
+        WeatherCatalogRootFields rootFields{ _transitionTime };
+        if ( XMLFields::readFields( root, rootFields, sourceName ) == false )
             return 0;
+        _transitionTime    = rootFields._transition;
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Weather" ); node; node = node.findNextSibling( "Weather" ) )
         {
-            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
-            WeatherDef weather;
-            weather._id = hashed_string( pID );
-            bool bValid = XMLReadUtil::readOptionalNumber( node, "weight", sourceName, 0.0f, kAnyFloat, weather._weight );
-            bValid      = XMLReadUtil::readOptionalNumber( node, "minDuration", sourceName, WeatherDef::kMinDuration, kAnyFloat, weather._minDuration ) && bValid;
-            bValid      = XMLReadUtil::readOptionalNumber( node, "maxDuration", sourceName, weather._minDuration, kAnyFloat, weather._maxDuration ) && bValid;
+            WeatherDef  weather;
+            bool        bValid = XMLFields::readFields( node, weather, sourceName, { "seasons" } ); // 칸 · 범위는 WeatherDef 의 PROPERTY
+            const utf8* pID    = weather._id.c_str();
+            if ( bValid && weather._maxDuration < weather._minDuration )
+            {
+                SW_LOG_ERROR_ID( "WeatherSystem.WeatherDurationOrder", "%#: weather '%#' needs maxDuration >= minDuration", sourceName, pID );
+                bValid = false;
+            }
             // "Spring:3,Summer:1" — 계절:가중치(가중치를 빼면 그 날씨의 `weight`). 읽히지 않거나 음수인 가중치는 오류다.
             XMLReadUtil::forEachNamedNumber( node.getAttributeText( "seasons" ), ", ", weather._weight, XMLReadUtil::MissingValue::UseDefault,
                                              [&]( string_view token, string_view seasonName, float32 weight, bool bNumberValid )

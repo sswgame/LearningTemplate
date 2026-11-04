@@ -10,6 +10,7 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
@@ -28,30 +29,6 @@ namespace sw
 
 namespace sw
 {
-    bool parseStatKind( string_view text, StatKind& outKind )
-    {
-        struct KindName
-        {
-            const utf8* _pName;
-            StatKind    _kind;
-        };
-        static constexpr KindName kArrKind[] = {
-            {"Counter", StatKind::Counter},
-            {    "Max",     StatKind::Max},
-            {    "Min",     StatKind::Min},
-            {   "Time",    StatKind::Time},
-        };
-        for ( const KindName& entry : kArrKind )
-        {
-            if ( StringUtil::equals( text, entry._pName ) )
-            {
-                outKind = entry._kind;
-                return true;
-            }
-        }
-        return false;
-    }
-
     // ------------------------------------------------------------------------------
     // 카탈로그
     // ------------------------------------------------------------------------------
@@ -86,27 +63,12 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Stat" ); node; node = node.findNextSibling( "Stat" ) )
         {
-            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
+            // 칸 · 종류 이름 · 상한 >= 0 은 StatDef 의 PROPERTY 가 본다. 틀린 통계는 넣지 않는다(자르지 않는다).
+            StatDef def;
+            if ( XMLFields::readFields( node, def, sourceName ) == false )
                 continue;
-            StatDef           def;
-            const string_view kindText = node.getAttributeText( "kind" );
-            if ( kindText.empty() == false && parseStatKind( kindText, def._kind ) == false )
-            {
-                SW_LOG_ERROR_ID( "PlayerStats.StatUnknownKindCounter", "%#: stat '%#' has an unknown kind '%#' (Counter, Max, Min, Time) - skipped", sourceName, pID, kindText );
-                continue;
-            }
-            const utf8* pName = node.findAttribute( "name" );
-            def._id           = hashed_string( pID );
-            def._name         = pName != nullptr ? pName : pID;
-            // 상한을 적지 않으면 정의의 초기값이다. 깨진 값 · 음수는 그 통계를 넣지 않는 오류다(자르지 않는다).
-            float32 maxValue = static_cast<float32>( def._maxValue );
-            if ( XMLReadUtil::readOptionalNumber( node, "max", sourceName, 0.0f, MathUtil::kMaxFloat, maxValue ) == false )
-            {
-                SW_LOG_ERROR_ID( "PlayerStats.StatInvalidMaxSkipped", "%#: stat '%#' has an invalid max - skipped", sourceName, pID );
-                continue;
-            }
-            def._maxValue = static_cast<float64>( maxValue );
+            if ( def._name.empty() )
+                def._name = def._id.c_str();
             addStat( def );
             ++loadedCount;
         }

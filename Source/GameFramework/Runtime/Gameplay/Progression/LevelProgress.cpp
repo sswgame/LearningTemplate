@@ -6,6 +6,7 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
@@ -59,15 +60,11 @@ namespace sw
         vector<int64> listXPToNext;
         for ( XMLNode child = node.findChild( "Level" ); child; child = child.findNextSibling( "Level" ) )
         {
-            const std::optional<int32> xp = child.readRequiredAttribute<int32>( "xp" );
-            if ( xp.has_value() && *xp >= 1 )
-            {
-                listXPToNext.push_back( *xp );
-                continue;
-            }
-            if ( xp.has_value() )
-                SW_LOG_ERROR_ID( "LevelProgress.LevelXpMustLeast", "%#: <Level xp=\"%#\"> must be at least 1", sourceName, *xp );
-            bValid = false;
+            ExperienceLevelFields level; // xp 필수 · >= 1 은 PROPERTY 가 본다
+            if ( XMLFields::readFields( child, level, sourceName ) )
+                listXPToNext.push_back( level._xp );
+            else
+                bValid = false;
         }
         if ( bValid == false )
             return false;
@@ -76,15 +73,8 @@ namespace sw
             setTable( listXPToNext );
             return true;
         }
-        float32 base     = _base;
-        float32 exponent = _exponent;
-        float32 linear   = _linear;
-        int32   maxLevel = _maxLevel;
-        bValid           = XMLReadUtil::readOptionalNumber( node, "base", sourceName, 0.0f, MathUtil::kMaxFloat, base );
-        bValid           = XMLReadUtil::readOptionalNumber( node, "exponent", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, exponent ) && bValid;
-        bValid           = XMLReadUtil::readOptionalNumber( node, "linear", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, linear ) && bValid;
-        bValid           = XMLReadUtil::readOptionalNumber( node, "maxLevel", sourceName, 1, MathUtil::kMaxInt32, maxLevel ) && bValid;
-        return bValid && setFormula( base, exponent, linear, maxLevel );
+        ExperienceCurveFields fields{ _base, _exponent, _linear, _maxLevel };
+        return XMLFields::readFields( node, fields, sourceName ) && setFormula( fields._base, fields._exponent, fields._linear, fields._maxLevel );
     }
 
     int64 ExperienceCurve::getXPToNext( int32 level ) const
