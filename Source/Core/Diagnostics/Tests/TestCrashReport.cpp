@@ -346,7 +346,7 @@ SW_TEST_CASE( CrashReportTest, FailedAssertNamesItsExpressionBeforeStopping, ._t
     SW_REQUIRE_TRUE( child._bLaunched && child._bTimedOut == false );
     SW_EXPECT_TRUE( child._exitCode != 0 );
     const bool bNamesExpression = child._output.find( "[SW_ASSERT] s_bAssertProbeHolds" ) != string::npos;
-    const bool bNamesPlace      = child._output.find( "CrashContext.cpp:" ) != string::npos;
+    const bool bNamesPlace      = child._output.find( "CrashHandler.cpp:" ) != string::npos;
     SW_EXPECT_TRUE_MSG( bNamesExpression && bNamesPlace, "the assert did not name its expression and place - last output:" + child.getOutputTail() );
     SW_EXPECT_FALSE( findReportFile( folder, "stack.txt" ).empty() );
 }
