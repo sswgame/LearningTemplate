@@ -525,28 +525,18 @@ namespace sw
         return MaterialParentInternal::flatten( xmlText, listChain, outText, outParentPath );
     }
 
-    bool MaterialXML::makeParentDelta( string_view fullText, string_view parentPath, string& outText )
+    bool MaterialXML::makeParentDelta( string_view fullText, string_view parentFullText, string_view parentPath, string& outText )
     {
         using Internal = MaterialParentInternal;
         const string parentID( parentPath );
         XMLDocument  full;
-        if ( full.parse( fullText ) == false )
+        XMLDocument  parent;
+        if ( full.parse( fullText ) == false || parent.parse( parentFullText ) == false )
             return false;
-        const XMLNode fullRoot = full.getRoot( Internal::kRootName );
-        XMLDocument   parentSource;
-        if ( fullRoot.isValid() == false || parentSource.loadResource( AssetID{ parentID } ) == false )
-        {
-            SW_LOG_ERROR_ID( "Material.ParentNotFound", "Material parent '%#' could not be read - the material is not loaded", parentID );
-            return false;
-        }
-        string parentText;
-        string grandParentPath;
-        if ( flattenParent( parentSource.saveToString(), parentText, grandParentPath ) == false )
-            return false;
-        XMLDocument parent;
-        if ( parent.parse( parentText ) == false )
-            return false;
+        const XMLNode fullRoot   = full.getRoot( Internal::kRootName );
         const XMLNode parentRoot = parent.getRoot( Internal::kRootName );
+        if ( fullRoot.isValid() == false || parentRoot.isValid() == false )
+            return false;
 
         XMLDocument   delta;
         const XMLNode deltaRoot = delta.appendRoot( Internal::kRootName );

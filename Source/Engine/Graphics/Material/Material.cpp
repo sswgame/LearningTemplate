@@ -1068,6 +1068,23 @@ namespace sw
 
     string Material::saveToString() const
     {
+        const string fullText = saveFullToString();
+        if ( _desc._parentPath.empty() )
+            return fullText;
+        // 부모를 가리키는 머티리얼은 부모와 다른 칸만 적는다 — 에디터 저장이 부모 구조를 펼쳐 견본 칸을 다시 베끼지 않게.
+        // 부모도 같은 직렬화로 펼친 글과 맞댄다 — 손으로 쓴 원문(`0.0` · 빠진 기본 속성)과 비교하면 같은 값도 다르게 보인다.
+        const shared_ptr<Material> parent = Material::create();
+        string                     deltaText;
+        if ( parent->loadFromFile( AssetID{ _desc._parentPath } ) &&
+             MaterialXML::makeParentDelta( fullText, parent->saveFullToString(), _desc._parentPath, deltaText ) )
+            return deltaText;
+        // 모든 칸을 적어 부모를 끊지 않는다 — 빈 글을 돌려 저장이 실패로 드러나게 한다.
+        SW_LOG_ERROR_ID( "Material.SaveParentDeltaFailed", "Material '%#' could not be written as a delta of parent '%#' - it is not saved", _desc._name, _desc._parentPath );
+        return string{};
+    }
+
+    string Material::saveFullToString() const
+    {
         this->syncDescFromRuntime();
 
         XMLDocument doc;
@@ -1134,17 +1151,6 @@ namespace sw
         }
 
         MaterialXML::appendPermutationNode( root, _desc._permutations );
-
-        // 부모를 가리키는 머티리얼은 부모와 다른 칸만 적는다 — 에디터 저장이 부모 구조를 펼쳐 견본 칸을 다시 베끼지 않게.
-        if ( _desc._parentPath.empty() == false )
-        {
-            string deltaText;
-            if ( MaterialXML::makeParentDelta( doc.saveToString(), _desc._parentPath, deltaText ) )
-                return deltaText;
-            // 모든 칸을 적어 부모를 끊지 않는다 — 빈 글을 돌려 저장이 실패로 드러나게 한다.
-            SW_LOG_ERROR_ID( "Material.SaveParentDeltaFailed", "Material '%#' could not be written as a delta of parent '%#' - it is not saved", _desc._name, _desc._parentPath );
-            return string{};
-        }
         return doc.saveToString();
     }
 

@@ -291,6 +291,8 @@ namespace sw
         bool getScalarParameter( hashed_string name, float32& outValue ) const;
 
     private:
+        /** @brief 부모와 상관없이 모든 칸을 적은 XML 입니다 — `saveToString` 이 이것과 부모의 같은 글을 맞대 차이만 남긴다. */
+        string saveFullToString() const;
         /** @brief 프로퍼티가 없는 머티리얼에 리플렉션 스키마의 멤버를 프로퍼티로 채우고(텍스처 인덱스 멤버는 텍스처 속성) 바이트를 쌓습니다. */
         void fillPropertiesFromSchema( const ShaderBufferInfo& schema );
         /** @brief 있는 프로퍼티를 스키마 멤버에 맞춰 오프셋 · 크기 · 셰이더 타입을 받습니다. 없거나 크기가 맞지 않는 프로퍼티가 있으면 false 입니다. */

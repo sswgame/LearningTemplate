@@ -55,10 +55,10 @@ namespace sw
          */
         [[nodiscard]] static bool flattenParent( string_view xmlText, string& outText, string& outParentPath );
         /**
-         * @brief 펼친 머티리얼 XML(@p fullText)을 부모 @p parentPath 와 다른 칸만 남긴 자식 XML 로 줄입니다(에디터 저장이 부모 구조를 지키게).
+         * @brief 펼친 머티리얼 XML(@p fullText)을 펼친 부모(@p parentFullText, 경로 @p parentPath)와 다른 칸만 남긴 자식 XML 로 줄입니다(에디터 저장이 부모 구조를 지키게).
          * @details 같은 줄은 빼고, 다른 줄은 이름 + 다른 속성만 남긴다(하위 원소가 다르면 줄을 통째로). 루트의 셰이더 · 블렌드는 다를 때만, 퍼뮤테이션은 다를 때만 적는다.
-         *          부모를 읽지 못하면 오류를 남기고 false 다.
+         *          두 글은 같은 직렬화(`Material::saveFullToString`)로 만든 것이어야 한다 — 손으로 쓴 원문과 맞대면 같은 값도 글자가 달라 다른 칸으로 남는다.
          */
-        [[nodiscard]] static bool makeParentDelta( string_view fullText, string_view parentPath, string& outText );
+        [[nodiscard]] static bool makeParentDelta( string_view fullText, string_view parentFullText, string_view parentPath, string& outText );
     };
 } // namespace sw
