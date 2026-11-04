@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  WildWest 탑승 시나리오 — 기수가 곁의 말(Bessie)에 올라타고(Mount), W + Shift 로 2 초 질주하고, 멈춘 뒤 내린다(Dismount).
+  WildWest 탑승 시나리오 — 기수가 곁의 말(Bessie)에 올라타고(Mount), W + Shift 로 2 초 질주하고, 멈춘 뒤 먹이를 주고(FeedHorse — 키트 단계) 내린다(Dismount).
   탑승 단계와 감시 값 Pawn.Seat · Pawn.Controller 를 실제 게임에서 돌리고, 말 AI 가 탈 때 빙의를 넘기고 내리면 되찾는지 본다.
   사진 둘(안장에 앉은 기수 · 질주하는 말과 기수)은 백엔드별 골든과 견준다. 질주 사진은 그 프레임을 바로 찍는다(자리 잡기를 기다리면 질주가 흘러간다).
   실행: ctest -R Scenario.wildwest (SW_ACTIVE_GAME=WildWest) · App -scenario=game/wildwest/automation/mount.scenario.xml -unattended
@@ -36,6 +36,10 @@
 	<Release slot="Key.LeftShift"/>
 	<!-- 감속(8 m/s²)으로 선다. -->
 	<WaitUntil watch="Mount.Gait" target="Bessie" equals="0" timeoutFrames="180"/>
+	<!-- 키트 단계(GF_OpenWorldWestern 이 등록): 귀리(oats)는 스태미나 게이지를 가득 채운다 — 질주로 쓴 만큼이 바로 돌아온다. -->
+	<Expect watch="Western.Stamina" target="Bessie" atMost="0.9"/>
+	<FeedHorse horse="Bessie" food="oats"/>
+	<Expect watch="Western.Stamina" target="Bessie" near="1" tolerance="0.001"/>
 	<!-- 내린다 — 플레이어 조종자는 기수를, 말 AI 는 말을 되찾는다. 기수는 말 왼쪽(하차 위치)에 서서 바닥에 닿는다. -->
 	<Dismount rider="Player"/>
 	<WaitUntil watch="Pawn.Seat" target="Player" is="none" timeoutFrames="30"/>

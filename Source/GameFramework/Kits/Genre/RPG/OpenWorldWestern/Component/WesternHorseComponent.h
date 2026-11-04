@@ -51,6 +51,8 @@ namespace sw
 
         /** @brief 말을 열었으면 그 상태이고, 아니면 nullptr 입니다(HUD · 감시 값이 읽는다). */
         const WesternHorse* findHorse() const { return _bOpened == SW_TRUE ? &_horse : nullptr; }
+        /** @brief 먹이를 줍니다(`WesternHorse::feed` — 코어 · 게이지 회복, 유대 경험치). 말을 열지 않았거나 카탈로그에 없는 먹이면 false 입니다. */
+        [[nodiscard]] bool feed( const hashed_string& foodID ) { return _bOpened == SW_TRUE && _horse.feed( foodID ); }
 
     private:
         /** @brief 디렉터의 카탈로그로 말을 열고 탈것 컴포넌트에 빌려 줍니다. 열지 못하면 까닭을 오류로 남기고 false 입니다. */

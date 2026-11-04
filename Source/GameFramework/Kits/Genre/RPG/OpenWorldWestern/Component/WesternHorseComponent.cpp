@@ -2,6 +2,9 @@
 
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseComponent.h"
 
+#include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -191,4 +194,40 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( westernStamina, "Western.Stamina", "Stamina ratio (0..1) of the western horse on target", &readStamina, true, false );
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 단계 `<FeedHorse horse="Bessie" food="oats"/>` 입니다 — 대상 말(`AutomationTarget` 규칙)에게 카탈로그의 먹이를 준다. 키트가 제 단계를 등록하는 본보기다. */
+        struct WesternHorseStepsInternal
+        {
+            static bool validateFeedHorse( const AutomationStep& step, string& outError )
+            {
+                return step.hasOnlyAttributes( { "horse", "food" }, outError ) && step.requireAttribute( "horse", outError ) != nullptr &&
+                       step.requireAttribute( "food", outError ) != nullptr;
+            }
+
+            static bool runFeedHorse( AutomationStepContext& context, const AutomationStep& step )
+            {
+                const string&          horseName = *step.findAttribute( "horse" );
+                const string&          foodID    = *step.findAttribute( "food" );
+                AutomationTargetLookup lookup    = AutomationTargetLookup::NotGiven;
+                string                 problem;
+                GameObject*            pObject = AutomationTarget::find( context.findActiveObjectManager(), horseName, lookup, problem );
+                WesternHorseComponent* pHorse  = pObject != nullptr ? pObject->getComponent<WesternHorseComponent>() : nullptr;
+                if ( pObject == nullptr )
+                    context.recordFailure( step, problem );
+                else if ( pHorse == nullptr )
+                    context.recordFailure( step, "object '" + horseName + "' has no Western Horse" );
+                else if ( pHorse->feed( hashed_string{ foodID.c_str() } ) == false )
+                    context.recordFailure( step, "'" + horseName + "' did not take '" + foodID + "' (horse not opened or food not in the western catalog)" );
+                return true;
+            }
+        };
+    } // namespace
+
+    // 키트 단계도 엔진 단계와 같은 레지스트리에 제 .cpp 가 올린다(언리얼 Functional Test 의 게임 쪽 액션과 같은 자리). 씬 틱 뒤에 돈다 — 다음 틱의 탈것이 회복한 스태미나를 본다.
+    SW_AUTOMATION_STEP( westernFeedHorse, "FeedHorse", &WesternHorseStepsInternal::runFeedHorse, &WesternHorseStepsInternal::validateFeedHorse, false );
 } // namespace sw
