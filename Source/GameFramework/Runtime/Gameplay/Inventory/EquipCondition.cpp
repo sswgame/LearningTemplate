@@ -90,20 +90,6 @@ namespace sw
 
 namespace sw
 {
-    bool parseEquipBreakPolicy( string_view text, EquipBreakPolicy& outPolicy )
-    {
-        constexpr EquipBreakPolicy kArrPolicy[] = { EquipBreakPolicy::UnequipTogether, EquipBreakPolicy::KeepHidden, EquipBreakPolicy::RefuseUnequip };
-        for ( const EquipBreakPolicy policy : kArrPolicy )
-        {
-            if ( StringUtil::equals( text, string_view( getEnumName( policy ) ) ) )
-            {
-                outPolicy = policy;
-                return true;
-            }
-        }
-        return false;
-    }
-
     bool EquipConditionUtil::isMet( const EquipCondition& condition, const vector<EquipSlot>& listSlot, int32 selfSlotIndex, const ItemCatalog& catalog,
                                     const IEquipSetLookup* pSetLookup, const EquipCharacterContext& context )
     {

@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
@@ -20,23 +22,54 @@ namespace sw
     class XMLNode;
 
     /** @brief 아이템 한 종류입니다. 분류, 장비 슬롯, 태그는 문자열 id 이므로 장르마다 자유롭게 정합니다. */
+    /** @brief 장착 조건(`<Requires …/>`)의 칸입니다. `set` · `equippedTag` · `characterTag` · `bodyShape` 중 정확히 하나를 적는다(읽기가 본다). 몸 모양은 이름 목록이라 손으로 푼다. */
+    REFLECT()
+    struct SW_GF_API EquipRequiresFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _set{};
+        PROPERTY( Min = 0 )
+        int32 _pieces{ 0 }; ///< 적지 않으면 세트를 다 갖춘 조건이다
+        PROPERTY()
+        string _equippedTag{};
+        PROPERTY()
+        string _characterTag{};
+    };
+
+    REFLECT()
     struct SW_GF_API ItemDef
     {
-        hashed_string          _id{};
-        hashed_string          _category{};  ///< "Weapon", "Food", "Material" 등. 정렬과 필터에 쓴다
-        hashed_string          _equipSlot{}; ///< 낄 수 있는 슬롯 종류("Head", "Ring"). 비어 있으면 장비가 아니다
-        hashed_string          _useEffect{}; ///< 쓰면 적용할 효과 id(어빌리티 카탈로그의 이펙트). 게임이 연결한다
-        hashed_string          _visualID{};  ///< 아이템 외형 id(`ItemVisualCatalog`). 게임플레이 정의와 따로 둔 외형이며, 비어 있으면 보이지 않는다
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        hashed_string _category{}; ///< "Weapon", "Food", "Material" 등. 정렬과 필터에 쓴다
+        PROPERTY( Name = "slot" )
+        hashed_string _equipSlot{}; ///< 낄 수 있는 슬롯 종류("Head", "Ring"). 비어 있으면 장비가 아니다
+        PROPERTY()
+        hashed_string _useEffect{}; ///< 쓰면 적용할 효과 id(어빌리티 카탈로그의 이펙트). 게임이 연결한다
+        PROPERTY( Name = "visual" )
+        hashed_string _visualID{}; ///< 아이템 외형 id(`ItemVisualCatalog`). 게임플레이 정의와 따로 둔 외형이며, 비어 있으면 보이지 않는다
+        PROPERTY()
         string                 _name{};
         vector<hashed_string>  _listTag{};
         StatBlock              _stats{};
         vector<EquipCondition> _listEquipCondition{}; ///< 끼려면 모두 맞아야 하는 조건(`<Requires>`)
-        float32                _weight{ 0.0f };
-        float32                _maxDurability{ 0.0f }; ///< 0 이면 닳지 않는다
-        int32                  _maxStack{ 1 };
-        int32                  _value{ 0 }; ///< 팔 때 값
-        int32                  _rarity{ 0 };
-        EquipBreakPolicy       _breakPolicy{ EquipBreakPolicy::UnequipTogether }; ///< 조건이 깨질 때
+        PROPERTY( Min = 0.0 )
+        float32 _weight{ 0.0f };
+        PROPERTY( Name = "durability", Min = 0.0 )
+        float32 _maxDurability{ 0.0f }; ///< 0 이면 닳지 않는다
+        PROPERTY( Min = 1 )
+        int32 _maxStack{ 1 };
+        PROPERTY( Min = 0 )
+        int32 _value{ 0 }; ///< 팔 때 값
+        PROPERTY()
+        int32 _rarity{ 0 };
+        PROPERTY()
+        EquipBreakPolicy _breakPolicy{ EquipBreakPolicy::UnequipTogether }; ///< 조건이 깨질 때
 
         bool hasTag( const hashed_string& tag ) const;
         /** @brief 태그 중 하나가 @p parentTag 이거나 그 하위 태그이면 true 입니다(`Armor.Heavy` 는 `Armor` 의 하위). */

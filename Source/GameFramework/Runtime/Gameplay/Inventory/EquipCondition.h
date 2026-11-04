@@ -39,9 +39,6 @@ namespace sw
         RefuseUnequip        ///< 조건을 깨뜨리는 벗기와 바꿔 끼기를 거부한다. 캐릭터 쪽 변화로 깨지면 숨김으로 둔다
     };
 
-    /** @brief 데이터 이름을 정책으로 읽습니다. 알 수 없는 이름이면 false 입니다. */
-    [[nodiscard]] SW_GF_API bool parseEquipBreakPolicy( string_view text, EquipBreakPolicy& outPolicy );
-
     /** @brief 장착 조건 하나입니다. 한 아이템의 조건은 모두 맞아야 합니다(AND). */
     struct EquipCondition
     {
