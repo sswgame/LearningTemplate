@@ -76,6 +76,60 @@ namespace sw
         Surface,  ///< 바인드할 때 가장 가까운 표면 점에 묶이고, 체형 모프가 표면을 옮기면 같이 옮겨진다.
     };
 
+    /**
+     * @brief `<Socket>` 의 칸입니다(`<SocketKinds><Kind name>` 은 `name` 하나라 `_name` 만 쓴다). 회전은 도 단위 오일러(피치, 요, 롤)이고 읽은 뒤 쿼터니언으로 옮긴다.
+     * @details 소켓은 덮어쓰기 층이라 어느 칸을 **적었는지**가 뜻이다 — 칸은 이 스키마로 읽고, 적은 칸의 표시(`SocketFieldBit`)는 `SocketSet::readSocket` 이 정한다.
+     *          `fallback` 은 이름 목록 글이라 손으로 푼다.
+     */
+    REFLECT()
+    struct SW_API SocketFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY()
+        hashed_string _parent{};
+        PROPERTY()
+        hashed_string _kind{};
+        PROPERTY( Units = m )
+        float3 _translation{};
+        PROPERTY( Units = deg )
+        float3 _rotation{};
+        PROPERTY()
+        float3 _scale{ 1.0f, 1.0f, 1.0f };
+        PROPERTY()
+        string _preview{};
+        PROPERTY()
+        SocketAnchor _anchor{ SocketAnchor::Bone };
+    };
+
+    /** @brief `<VirtualBone>` 의 칸입니다. */
+    REFLECT()
+    struct SW_API VirtualBoneFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY( Required )
+        hashed_string _from{};
+        PROPERTY( Required )
+        hashed_string _to{};
+        PROPERTY()
+        float32 _weight{ 0.5f };
+    };
+
+    /** @brief `<SocketKinds><Kind>` 의 칸입니다. */
+    REFLECT()
+    struct SW_API SocketKindFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+    };
+
     /** @brief 덮어쓰기 층에서 "이 필드를 적었다"를 나타내는 비트입니다. */
     struct SocketFieldBit
     {

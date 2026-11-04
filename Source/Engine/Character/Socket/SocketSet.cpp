@@ -20,9 +20,6 @@ namespace sw
     {
         struct SocketSetInternal
         {
-            static constexpr const utf8* kArrKindAttribute[]        = { "name" };
-            static constexpr const utf8* kArrSocketAttribute[]      = { "name", "parent", "kind", "translation", "rotation", "scale", "preview", "fallback", "anchor" };
-            static constexpr const utf8* kArrVirtualBoneAttribute[] = { "name", "from", "to", "weight" };
 
             /** @brief 위층 항목에서 적은 필드만 아래층 항목에 옮깁니다. */
             static void mergeSocket( SocketDef& inoutLower, const SocketDef& upper )
@@ -92,8 +89,9 @@ namespace sw
                 reader.reportUnknownElement( child );
                 continue;
             }
-            reader.reportUnknownAttributes( child, SocketSetInternal::kArrKindAttribute );
-            const hashed_string name = reader.readName( child, "name", true );
+            SocketKindFields kindFields;
+            (void)reader.readFields( child, kindFields ); // 오류는 읽개의 목록에 쌓인다
+            const hashed_string name = kindFields._name;
             if ( name.empty() )
                 continue;
             if ( hasKind( name ) )
@@ -179,10 +177,12 @@ namespace sw
 
     void SocketSet::readSocket( const XMLNode& node, const SocketKindTable& kinds, CharacterDataReader& reader )
     {
-        reader.reportUnknownAttributes( node, SocketSetInternal::kArrSocketAttribute );
+        // 칸은 스키마로 읽고, 적은 칸만 덮어쓰기 표시를 단다(층이 쌓일 때 적지 않은 칸은 아래 층의 값을 둔다).
+        SocketFields fields;
+        (void)reader.readFields( node, fields, { "fallback" } );
         SocketDef socket;
         socket._fieldMask = 0;
-        socket._name      = reader.readName( node, "name", true );
+        socket._name      = fields._name;
         if ( socket._name.empty() )
             return;
         if ( findSocket( socket._name ) != nullptr )
@@ -190,61 +190,45 @@ namespace sw
             reader.addError( "Character.SocketRepeated", node, string( "repeats socket '" ) + socket._name.c_str() + "'" );
             return;
         }
-        if ( node.hasAttribute( "parent" ) )
+        const auto markWritten = [&node, &socket]( const utf8* pName, uint16 bit )
         {
-            socket._parent = reader.readName( node, "parent", false );
-            socket._fieldMask |= SocketFieldBit::kParent;
-        }
-        if ( node.hasAttribute( "kind" ) )
+            const bool bWritten = node.hasAttribute( pName );
+            if ( bWritten )
+                socket._fieldMask |= bit;
+            return bWritten;
+        };
+        if ( markWritten( "parent", SocketFieldBit::kParent ) )
+            socket._parent = fields._parent;
+        if ( markWritten( "kind", SocketFieldBit::kKind ) )
         {
-            socket._kind = reader.readName( node, "kind", true );
-            socket._fieldMask |= SocketFieldBit::kKind;
+            socket._kind = fields._kind;
             if ( socket._kind.empty() == false && kinds.hasKind( socket._kind ) == false )
                 reader.addError( "Character.SocketKindUnknown", node, string( "has unknown kind '" ) + socket._kind.c_str() + "'" );
         }
-        if ( node.hasAttribute( "translation" ) )
-        {
-            socket._translation = reader.readFloat3( node, "translation" );
-            socket._fieldMask |= SocketFieldBit::kTranslation;
-        }
-        if ( node.hasAttribute( "rotation" ) )
-        {
-            socket._rotation = reader.readRotation( node, "rotation" );
-            socket._fieldMask |= SocketFieldBit::kRotation;
-        }
-        if ( node.hasAttribute( "scale" ) )
-        {
-            socket._scale = reader.readFloat3( node, "scale" );
-            socket._fieldMask |= SocketFieldBit::kScale;
-        }
-        if ( node.hasAttribute( "preview" ) )
-        {
-            socket._previewMesh = string( StringUtil::trim( node.getAttributeText( "preview" ) ) );
-            socket._fieldMask |= SocketFieldBit::kPreview;
-        }
-        if ( node.hasAttribute( "fallback" ) )
-        {
+        if ( markWritten( "translation", SocketFieldBit::kTranslation ) )
+            socket._translation = fields._translation;
+        if ( markWritten( "rotation", SocketFieldBit::kRotation ) )
+            socket._rotation = quaternion::makeFromYawPitchRoll( fields._rotation * MathUtil::kDegreeToRadian );
+        if ( markWritten( "scale", SocketFieldBit::kScale ) )
+            socket._scale = fields._scale;
+        if ( markWritten( "preview", SocketFieldBit::kPreview ) )
+            socket._previewMesh = string( StringUtil::trim( fields._preview ) );
+        if ( markWritten( "fallback", SocketFieldBit::kFallback ) )
             reader.readNameList( node, "fallback", socket._listFallback );
-            socket._fieldMask |= SocketFieldBit::kFallback;
-        }
-        if ( node.hasAttribute( "anchor" ) )
-        {
-            const string_view anchorText = StringUtil::trim( node.getAttributeText( "anchor" ) );
-            if ( engine::getSubsystem<TypeRegistry>().enumFromString( anchorText, socket._anchor ) == false )
-                reader.addError( "Character.SocketAnchorUnknown", node, string( "has unknown anchor '" ) + string( anchorText ) + "' (Bone, Surface)" );
-            socket._fieldMask |= SocketFieldBit::kAnchor;
-        }
+        if ( markWritten( "anchor", SocketFieldBit::kAnchor ) )
+            socket._anchor = fields._anchor;
         _listSocket.push_back( std::move( socket ) );
     }
 
     void SocketSet::readVirtualBone( const XMLNode& node, CharacterDataReader& reader )
     {
-        reader.reportUnknownAttributes( node, SocketSetInternal::kArrVirtualBoneAttribute );
+        VirtualBoneFields fields;
+        (void)reader.readFields( node, fields );
         VirtualBoneDef virtualBone;
-        virtualBone._name = reader.readName( node, "name", true );
-        virtualBone._from = reader.readName( node, "from", true );
-        virtualBone._to   = reader.readName( node, "to", true );
-        reader.readOptionalFloat( node, "weight", virtualBone._weight );
+        virtualBone._name                 = fields._name;
+        virtualBone._from                 = fields._from;
+        virtualBone._to                   = fields._to;
+        virtualBone._weight               = fields._weight;
         const bool bIncompleteVirtualBone = virtualBone._name.empty() || virtualBone._from.empty() || virtualBone._to.empty();
         if ( bIncompleteVirtualBone )
             return;
