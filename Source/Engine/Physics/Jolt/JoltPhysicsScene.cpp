@@ -302,10 +302,10 @@ namespace sw
         , _pairFilter{}
         , _contactTracker{}
         , _listContactEvent{}
+        , _reportMutex{}
         , _listContactReport{}
         , _listMovedBody{}
         , _listActiveBodyID{}
-        , _reportMutex{}
         , _bodyCount{ 0 }
     {
         _objectLayerPairFilter.setLayers( _settings.makeCollisionLayers() );
@@ -354,7 +354,10 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Physics );
         _listContactEvent.clear();
-        _listContactReport.clear();
+        {
+            ScopedLock<mutex> lock{ _reportMutex };
+            _listContactReport.clear();
+        }
         // 스텝 앞에 깨어 있던 바디와 뒤에 깨어 있는 바디를 함께 든다(`getMovedBodies`) — 이 스텝에 잠든 바디도 마지막으로 조금 움직였다.
         _listMovedBody.clear();
         appendActiveBodies();
@@ -1197,6 +1200,8 @@ namespace sw
 
     void JoltPhysicsScene::flushContactReports()
     {
+        // 스텝이 끝나 잡 스레드는 더 붙이지 않는다 — 잠금은 다투지 않고, 목록을 만지는 자리가 모두 같은 잠금 아래라는 계약을 형식(`SW_GUARDED_BY`)으로 둔다.
+        ScopedLock<mutex> lock{ _reportMutex };
         // 잡 스레드가 붙인 순서는 매번 다르다. 바디 쌍, 서브 셰이프, 종류 순으로 정렬해 같은 입력이면 같은 이벤트를 낸다.
         VectorUtil::sort( _listContactReport, &JoltPhysicsScene::isEarlierReport );
         for ( ContactReport& report : _listContactReport )

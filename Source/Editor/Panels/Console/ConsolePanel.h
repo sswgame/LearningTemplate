@@ -123,13 +123,13 @@ namespace sw::editor
         EditorLogTagFilter                      _tagFilter;
         uint32                                  _cachedTagRevision;
         mutex                                   _entriesMutex;
-        Subscription                            _logListenerSubscription; ///< 전역 로그 리스너. 소멸자 · `shutdown` 이 항목보다 먼저 푼다(콜백이 항목을 만진다)
-        uint64                                  _errorSerial;             ///< 받은 오류 행의 누계. `_entriesMutex` 가 보호한다
-        uint64                                  _entrySerial;             ///< 받은 행의 누계. `_entriesMutex` 가 보호한다
-        uint64                                  _snapshotSerial;          ///< 그리기용 복사본이 따라잡은 누계. UI 스레드만 쓴다
-        uint64                                  _seenErrorSerial;         ///< Error Pause 가 마지막으로 확인한 누계
-        uint64                                  _snapshotGeneration;      ///< 그리기용 복사본이 바뀔 때(새 줄 · 지우기)마다 오른다. UI 스레드만 쓴다
-        uint64                                  _tagCacheGeneration;      ///< `_listTagCache` 를 지은 때의 `_snapshotGeneration`
+        Subscription                            _logListenerSubscription;       ///< 전역 로그 리스너. 소멸자 · `shutdown` 이 항목보다 먼저 푼다(콜백이 항목을 만진다)
+        uint64 _errorSerial                     SW_GUARDED_BY( _entriesMutex ); ///< 받은 오류 행의 누계
+        uint64 _entrySerial                     SW_GUARDED_BY( _entriesMutex ); ///< 받은 행의 누계
+        uint64                                  _snapshotSerial;                ///< 그리기용 복사본이 따라잡은 누계. UI 스레드만 쓴다
+        uint64                                  _seenErrorSerial;               ///< Error Pause 가 마지막으로 확인한 누계
+        uint64                                  _snapshotGeneration;            ///< 그리기용 복사본이 바뀔 때(새 줄 · 지우기)마다 오른다. UI 스레드만 쓴다
+        uint64                                  _tagCacheGeneration;            ///< `_listTagCache` 를 지은 때의 `_snapshotGeneration`
         fixed_string<constant::buffer::kMax128> _filterBuffer;
         DevConsole                              _devConsole;
         fixed_string<constant::buffer::kMax512> _commandBuffer;

@@ -24,8 +24,8 @@ namespace sw
 namespace sw
 {
     AutomationLogCapture::AutomationLogCapture()
-        : _listLogLine{}
-        , _mutex{}
+        : _mutex{}
+        , _listLogLine{}
         , _listenerSubscription{}
         , _frameIndex{ 0 }
     {

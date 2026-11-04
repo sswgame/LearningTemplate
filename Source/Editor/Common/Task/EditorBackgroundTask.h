@@ -126,12 +126,12 @@ namespace sw::editor
         struct State
         {
             mutable mutex          _mutex{};
-            TInput                 _input{};
-            TResult                _result{};
-            uint32                 _generation{ 0 };
-            StopToken              _stopToken{}; ///< 종료가 시작되면 올라가는 신호(`requestEditorBackgroundStop`). 묶이지 않았으면 멈출 일이 없다
-            uint8                  _bPending : 1;
-            uint8                  _bReady   : 1;
+            TInput _input          SW_GUARDED_BY( _mutex ){};
+            TResult _result        SW_GUARDED_BY( _mutex ){};
+            uint32 _generation     SW_GUARDED_BY( _mutex ){ 0 };
+            StopToken _stopToken   SW_GUARDED_BY( _mutex ){}; ///< 종료가 시작되면 올라가는 신호(`requestEditorBackgroundStop`). 묶이지 않았으면 멈출 일이 없다
+            uint8                  _bPending : 1 SW_GUARDED_BY( _mutex );
+            uint8                  _bReady   : 1 SW_GUARDED_BY( _mutex );
             [[maybe_unused]] uint8 _reserved : 6;
 
             State()

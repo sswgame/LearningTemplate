@@ -347,9 +347,9 @@ namespace sw
         string                                           _buildStampPath;   ///< 바깥 빌드의 성공 스탬프(`Bin/Modules/` + `config::kFileModuleBuildStamp`). 감시를 시작할 때 정한다
         FileStamp                                        _seenBuildStamp;   ///< 마지막으로 본 스탬프. 이것과 달라지면 바깥 빌드가 끝난 것이다
         mutable mutex                                    _buildMutex;
-        BuildNotice                                      _buildNotice;
-        MulticastDelegate<bool( const vector<string>& )> _onBeforeCommitBatch; ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로, `broadcastUntilReverse`)
-        MulticastDelegate<bool()>                        _reloadHolds;         ///< 리로드 잡음(`addReloadHold`)
+        BuildNotice _buildNotice                         SW_GUARDED_BY( _buildMutex ); ///< 빌드 스레드(모듈 컴파일러)가 적고 게임 스레드의 `update` 가 꺼낸다
+        MulticastDelegate<bool( const vector<string>& )> _onBeforeCommitBatch;         ///< 배치 직전 콜백(더한 순서 — 부를 때는 거꾸로, `broadcastUntilReverse`)
+        MulticastDelegate<bool()>                        _reloadHolds;                 ///< 리로드 잡음(`addReloadHold`)
         DrainWorkersDelegate                             _drainWorkers;
         vector<CallbackRegistration>                     _listCallbackRegistration; ///< 살아 있는 칸 구독이 가리키는 칸
         IDAllocator<uint64>                              _callbackIDAllocator;      ///< 칸 구독 번호(0 은 빈 구독)

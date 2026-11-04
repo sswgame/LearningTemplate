@@ -360,10 +360,10 @@ namespace sw
         PhysicsPairFilter                         _pairFilter;
         PhysicsContactTracker<PhysicsDimension3D> _contactTracker;
         vector<PhysicsContactEvent3D>             _listContactEvent;
-        vector<ContactReport>                     _listContactReport; ///< 스텝 중 잡 스레드가 `_reportMutex` 를 쥐고 붙인다
-        vector<PhysicsBodyHandle>                 _listMovedBody;     ///< 마지막 스텝 앞 · 뒤에 깨어 있던 바디(`getMovedBodies`, 핸들 순)
-        JPH::BodyIDVector                         _listActiveBodyID;  ///< `appendActiveBodies` 가 다시 쓰는 버퍼(할당을 재사용한다)
-        mutex                                     _reportMutex;
+        mutable mutex                             _reportMutex;
+        vector<ContactReport> _listContactReport  SW_GUARDED_BY( _reportMutex ); ///< 스텝 중 잡 스레드가 붙이고 스텝 뒤 게임 스레드가 비운다
+        vector<PhysicsBodyHandle>                 _listMovedBody;                ///< 마지막 스텝 앞 · 뒤에 깨어 있던 바디(`getMovedBodies`, 핸들 순)
+        JPH::BodyIDVector                         _listActiveBodyID;             ///< `appendActiveBodies` 가 다시 쓰는 버퍼(할당을 재사용한다)
         uint32                                    _bodyCount;
     };
 } // namespace sw
