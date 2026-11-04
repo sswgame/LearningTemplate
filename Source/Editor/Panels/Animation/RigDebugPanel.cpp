@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Animation/RigDebugPanel.h"
 
+#include "Core/Container/formatString.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
@@ -31,6 +32,7 @@
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
@@ -246,6 +248,62 @@ namespace sw::editor
                 }
             }
 
+            /** @brief 고른 오브젝트의 묶인 리그 인스턴스입니다. 고른 것이 없거나 리그가 아직 묶이지 않았으면 nullptr 입니다(감시 값이 읽는다). */
+            [[nodiscard]] static const RigInstance* findSelectedInstance()
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
+                    return nullptr;
+                const PoseModifierComponent* pModifier = findModifier( pContext->getSubsystem<EditorWorkspace>().getSelectedObjectID() );
+                return pModifier != nullptr && pModifier->getRigInstance().isInitialized() ? &pModifier->getRigInstance() : nullptr;
+            }
+
+            [[nodiscard]] static bool readNodeCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const RigInstance* pInstance = findSelectedInstance();
+                if ( pInstance == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pInstance->getNodeCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readEnabledNodeCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const RigInstance* pInstance = findSelectedInstance();
+                if ( pInstance == nullptr )
+                    return false;
+                uint32 enabledCount{ 0 };
+                for ( uint32 nodeIndex = 0; nodeIndex < pInstance->getNodeCount(); ++nodeIndex )
+                {
+                    if ( pInstance->getNode( nodeIndex ).isEnabled() )
+                        ++enabledCount;
+                }
+                outValue = static_cast<float64>( enabledCount );
+                return true;
+            }
+
+            [[nodiscard]] static bool readWeightSum( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const RigInstance* pInstance = findSelectedInstance();
+                if ( pInstance == nullptr )
+                    return false;
+                float64 weightSum{ 0.0 };
+                for ( uint32 nodeIndex = 0; nodeIndex < pInstance->getNodeCount(); ++nodeIndex )
+                {
+                    weightSum += static_cast<float64>( pInstance->getNode( nodeIndex ).getWeight() );
+                }
+                outValue = weightSum;
+                return true;
+            }
+
+            /** @brief @p nodeIndex 번 노드 줄의 칸 @p pCell 에 표식을 남깁니다(시나리오가 켜짐 · 가중치를 고친다). */
+            static void noteNodeMark( uint32 nodeIndex, const utf8* pCell )
+            {
+                fixed_string<constant::buffer::kMax64> mark;
+                formatstring( mark.data(), mark.capacity(), "rigdebug.node.%#.%#", nodeIndex, pCell );
+                EditorSelfTestMarks::note( mark.c_str() );
+            }
+
             /** @brief 노드가 쓰는 본 이름을 "첫 본 (+n)" 꼴로 줄입니다. */
             static string describeBones( const Skeleton& skeleton, const vector<uint32>& listBone )
             {
@@ -280,6 +338,12 @@ namespace sw::editor
     SW_EDITOR_VISUALIZER( RigTargetGizmo, "rig_target_gizmo", 900, ::sw::editor::EditorIconName{}, SW_LOCKEYREF( "EdVisualizer", "RigTargetGizmoLabel" ),
                           SW_LOCKEYREF( "EdVisualizer", "RigTargetGizmoTip" ), true,
                           &RigDebugPanelInternal::drawTargetGizmo );
+    SW_AUTOMATION_WATCH( editorRigDebugNodeCount, "Editor.RigDebugNodeCount", "Rig nodes of the selected object's bound rig (fails while nothing with a bound rig is selected)",
+                         &RigDebugPanelInternal::readNodeCount );
+    SW_AUTOMATION_WATCH( editorRigDebugEnabledNodeCount, "Editor.RigDebugEnabledNodeCount", "Enabled rig nodes of the selected object's bound rig",
+                         &RigDebugPanelInternal::readEnabledNodeCount );
+    SW_AUTOMATION_WATCH( editorRigDebugWeightSum, "Editor.RigDebugWeightSum", "Sum of the node weights of the selected object's bound rig",
+                         &RigDebugPanelInternal::readWeightSum );
 
     RigDebugPanel::RigDebugPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
@@ -336,6 +400,7 @@ namespace sw::editor
                 _weightBeforeEdit = node.getWeight();
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 RigDebugPanelInternal::recordWeight( objectID, nodeIndex, _weightBeforeEdit, node.getWeight() );
+            RigDebugPanelInternal::noteNodeMark( nodeIndex, "weight" );
 
             ImGui::TableNextColumn();
             // 커브 · 슬롯 · LOD 를 모두 곱한 이번 프레임 값 — 시퀀서 리그 슬롯 트랙이 움직이는 것이 여기 보인다.
@@ -354,6 +419,7 @@ namespace sw::editor
                 node.setEnabled( bEnabled );
                 RigDebugPanelInternal::recordEnabled( objectID, nodeIndex, bEnabled );
             }
+            RigDebugPanelInternal::noteNodeMark( nodeIndex, "on" );
             ImGui::PopID();
         }
         ImGui::EndTable();
