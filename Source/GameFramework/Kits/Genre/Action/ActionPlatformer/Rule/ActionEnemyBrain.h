@@ -71,6 +71,7 @@ namespace sw
         void                         enterState( int32 stateIndex );
         const ActionPatternStateDef* getState() const;
 
+    private:
         const ActionPatternDef*        _pPattern;
         const ActionPlatformerCatalog* _pCatalog; ///< `readState` 가 패턴을 찾는 카탈로그(빌려 온 것)
         int32                          _stateIndex;

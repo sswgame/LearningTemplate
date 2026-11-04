@@ -202,6 +202,7 @@ namespace sw
         [[nodiscard]] bool findRating( AccountID accountID, const MatchModeDefinition& mode, int32& outRating ) const;
         static void        fillTeam( const MatchFormed& match, AccountID accountID, MatchAssignment& inoutAssignment );
 
+    private:
         unordered_map<string, MatchModeDefinition> _mapMode;
         unordered_map<string, ModeState>           _mapModeState;
         unordered_map<uint64, LocalTicket>         _mapLocalTicket; ///< 이 서버가 낸 티켓이다

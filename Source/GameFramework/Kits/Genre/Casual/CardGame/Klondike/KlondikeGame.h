@@ -108,6 +108,7 @@ namespace sw
         void revealColumnTop( int32 column );
         void moveToFoundation( const Card& card );
 
+    private:
         vector<KlondikeState> _listHistory;
         KlondikeState         _state;
         KlondikeSettings      _settings;

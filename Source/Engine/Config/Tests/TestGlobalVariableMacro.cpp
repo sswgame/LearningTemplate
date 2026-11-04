@@ -104,6 +104,10 @@ namespace
     /** @brief 케이스 동안 `gv_rhiBackend` 의 변경 콜백(앱의 백엔드 교체 요청)을 떼어 두고, 끝나면 값과 콜백을 되돌립니다. */
     struct ScopedRHIBackendVariable
     {
+
+        sw::GlobalVariableInfo&           _info;
+        int32                             _valueBefore;
+        sw::GlobalVariableChangedDelegate _onChangedBefore;
         explicit ScopedRHIBackendVariable( sw::GlobalVariableInfo& info )
             : _info{ info }
             , _valueBefore{ info.getValueAsInt() }
@@ -118,10 +122,6 @@ namespace
         }
         ScopedRHIBackendVariable( const ScopedRHIBackendVariable& )            = delete;
         ScopedRHIBackendVariable& operator=( const ScopedRHIBackendVariable& ) = delete;
-
-        sw::GlobalVariableInfo&           _info;
-        int32                             _valueBefore;
-        sw::GlobalVariableChangedDelegate _onChangedBefore;
     };
 } // namespace
 

@@ -30,6 +30,7 @@ namespace sw
 
         bool isMarked( uint64 packetNumber ) const;
 
+    private:
         uint64 _arrBit[kWordCount];
         uint64 _highest;
         uint8  _bHasReceived;

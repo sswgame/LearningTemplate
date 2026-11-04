@@ -31,6 +31,21 @@ namespace sw
      */
     struct SceneTransformWrite
     {
+
+        ComponentHandle _handle;
+        /**
+         * @brief 틱 큐 전용입니다. 세터가 자기 자신을 기록합니다. 바깥에서 주는 배치는 비워 두고, 핸들로 대상을 찾습니다.
+         * @details 큐에 쌓인 건은 같은 `tick()` 호출 안에서 적용되고 그 사이 컴포넌트는 해제되지 않는다(파괴는 틱 밖에서만 메모리를
+         *          해제한다). 그래서 핸들로 다시 찾을 필요가 없고, 슬롯 테이블, 오브젝트, 컴포넌트 목록에서 생기는 캐시 미스 세 번이 사라진다.
+         *          삭제 대기 여부는 적용하는 쪽이 확인한다.
+         */
+        SceneComponent* _pTarget{ nullptr };
+        float3          _localPosition{};
+        float3          _localRotation{};
+        float3          _localScale{ 1.0f, 1.0f, 1.0f };
+        uint8           _bSetPosition{ SW_FALSE };
+        uint8           _bSetRotation{ SW_FALSE };
+        uint8           _bSetScale{ SW_FALSE };
         /** @brief 쓸 값의 비트 조합을 반환합니다(`SceneTransformPage::LocalValueBit`). */
         uint8 getValueMask() const
         {
@@ -63,21 +78,6 @@ namespace sw
                 _bSetScale  = SW_TRUE;
             }
         }
-
-        ComponentHandle _handle;
-        /**
-         * @brief 틱 큐 전용입니다. 세터가 자기 자신을 기록합니다. 바깥에서 주는 배치는 비워 두고, 핸들로 대상을 찾습니다.
-         * @details 큐에 쌓인 건은 같은 `tick()` 호출 안에서 적용되고 그 사이 컴포넌트는 해제되지 않는다(파괴는 틱 밖에서만 메모리를
-         *          해제한다). 그래서 핸들로 다시 찾을 필요가 없고, 슬롯 테이블, 오브젝트, 컴포넌트 목록에서 생기는 캐시 미스 세 번이 사라진다.
-         *          삭제 대기 여부는 적용하는 쪽이 확인한다.
-         */
-        SceneComponent* _pTarget{ nullptr };
-        float3          _localPosition{};
-        float3          _localRotation{};
-        float3          _localScale{ 1.0f, 1.0f, 1.0f };
-        uint8           _bSetPosition{ SW_FALSE };
-        uint8           _bSetRotation{ SW_FALSE };
-        uint8           _bSetScale{ SW_FALSE };
     };
 } // namespace sw
 
@@ -292,6 +292,7 @@ namespace sw
         /** @brief 정렬한 틱 큐 건 [start, end) 를 순서대로 적용합니다. 워커에서 불립니다. 대상은 건이 가진 `_pTarget` 입니다. */
         static uint32 applyOrderedWrites( const OrderedTickWrite* pOrdered, uint32 start, uint32 end );
 
+    private:
         /** @brief 이번 플러시가 순회할 루트입니다. 더러워진 노드가 자기 루트를 한 번씩 올립니다. */
         vector<SceneComponent*> _listDirtyRoot;
         /** @brief 워커가 올린 더티 루트입니다. 스레드 슬롯마다 하나이며 `engine::getParallelScratchSlotCount()` 크기입니다. */

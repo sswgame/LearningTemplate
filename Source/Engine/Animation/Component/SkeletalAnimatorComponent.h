@@ -84,6 +84,7 @@ namespace sw
         /** @brief 표본 @p sampleIndex 가 지금 알림을 내는지 봅니다(데이터의 알림 방법과 가중치). */
         bool isNotifySample( uint32 sampleIndex ) const;
 
+    private:
         hashed_string                      _stateName;
         const AnimationGraphBlendSpaceDef* _pDef; ///< 애니메이터의 그래프 노드 데이터다. 그래프를 다시 읽으면 상태도 다시 만든다
         vector<const AnimationClip*>       _listClip;

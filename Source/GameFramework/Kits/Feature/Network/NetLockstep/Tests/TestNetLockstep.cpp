@@ -53,7 +53,10 @@ namespace
         class DuelGame final : public IRollbackGame
         {
         public:
-            void saveState( vector<uint8>& outStateBuffer ) override
+            int32             _arrPosition[2] = { 1, 2 };
+            int32             _frame{ 0 };
+            map<int32, int64> _mapHistory{}; ///< 프레임 → 그 프레임 뒤 상태(되감기가 덮어쓴다)
+            void              saveState( vector<uint8>& outStateBuffer ) override
             {
                 outStateBuffer.resize( sizeof( _arrPosition ) );
                 std::memcpy( outStateBuffer.data(), _arrPosition, sizeof( _arrPosition ) );
@@ -74,17 +77,14 @@ namespace
                 }
                 _mapHistory[_frame++] = static_cast<int64>( _arrPosition[0] ) * 1000003 + _arrPosition[1];
             }
-
-            int32             _arrPosition[2] = { 1, 2 };
-            int32             _frame{ 0 };
-            map<int32, int64> _mapHistory{}; ///< 프레임 → 그 프레임 뒤 상태(되감기가 덮어쓴다)
         };
 
         /** @brief 롤백이 프레임 번호를 알리도록 감쌉니다(되감기는 기록된 프레임부터 다시 센다). */
         class TrackedDuel final : public IRollbackGame
         {
         public:
-            void saveState( vector<uint8>& outStateBuffer ) override
+            DuelGame _game;
+            void     saveState( vector<uint8>& outStateBuffer ) override
             {
                 _game.saveState( outStateBuffer );
                 outStateBuffer.push_back( static_cast<uint8>( _game._frame & 0xFF ) );
@@ -98,8 +98,6 @@ namespace
             }
 
             void advanceFrame( const vector<uint8>& listInput, bool bResimulating ) override { _game.advanceFrame( listInput, bResimulating ); }
-
-            DuelGame _game;
         };
 
         static uint8 scriptInput( int32 player, int32 frame )
@@ -113,7 +111,9 @@ namespace
         class InputRecordingGame final : public IRollbackGame
         {
         public:
-            void saveState( vector<uint8>& outStateBuffer ) override { outStateBuffer.assign( 1, static_cast<uint8>( _frame ) ); }
+            int32                     _frame{ 0 };
+            map<int32, vector<uint8>> _mapInput{};
+            void                      saveState( vector<uint8>& outStateBuffer ) override { outStateBuffer.assign( 1, static_cast<uint8>( _frame ) ); }
 
             void loadState( const vector<uint8>& stateBuffer ) override { _frame = stateBuffer[0]; }
 
@@ -122,9 +122,6 @@ namespace
                 (void)bResimulating;
                 _mapInput[_frame++] = listInput;
             }
-
-            int32                     _frame{ 0 };
-            map<int32, vector<uint8>> _mapInput{};
         };
 
         /** @brief 플레이어 1 의 롤백 입력 메시지 — 확인 · 이점은 비우고 [@p first, @p first + 입력 수) 프레임을 싣는다. */

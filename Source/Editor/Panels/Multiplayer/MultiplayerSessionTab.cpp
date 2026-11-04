@@ -56,6 +56,7 @@ namespace sw::editor
         void drawProcessTable( EditorNetPlaySession& session );
         void drawLog( EditorNetPlaySession& session );
 
+    private:
         fixed_string<constant::buffer::kMax64>  _presetName;      ///< 저장할 프리셋 이름(편집 필드). 비어 있으면 고른 프리셋을 덮는다
         fixed_string<constant::buffer::kMax256> _clientArguments; ///< 클라이언트마다 붙일 인자(편집 필드)
         int32                                   _stepTickCount;   ///< "Step" 이 서버를 돌릴 틱 수

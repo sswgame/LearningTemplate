@@ -283,6 +283,17 @@ namespace sw
         uint32 getExtraViewCount() const { return static_cast<uint32>( _state._listExtraView.size() ); }
 
     private:
+        /** @brief 컴퓨트 디스패치 상수 버퍼 한 항목입니다. 생성(`ensurePassResources`)과 해제(`releasePassResources`)가 같은 테이블을 돕니다. */
+        struct ComputeConstantBufferRow
+        {
+            RHIConstantBuffer* _pSlot{ nullptr };
+            uint32             _byteSize{ 0 };
+            const utf8*        _pUsage{ nullptr };
+        };
+        /// @brief 컴퓨트 상수 버퍼 수입니다. 고정 뷰마다 컬링과 정렬이 하나씩 있고, 인스턴스 애니메이션, 메시 모프, 메시 스킨이 하나씩 더 있습니다. 추가 뷰의 것은 그 뷰가 가집니다.
+        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewType::Count ) * 2 + 3;
+        /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
+        static constexpr uint32 _s_kDrawCbPassEstimate = 4;
         // ------------------------------------------------------------------------------
         // 4) 셋업: 패스 자원, 트랜지언트, 추가 뷰, 프레임 상수(기록 전)
         // ------------------------------------------------------------------------------
@@ -294,16 +305,6 @@ namespace sw
          *          셰이더 핫 리로드처럼 패스 자원만 다시 만드는 경로에서는 이 자원이 다시 만들어지지 않기 때문이다.
          */
         void releasePassResources();
-
-        /** @brief 컴퓨트 디스패치 상수 버퍼 한 항목입니다. 생성(`ensurePassResources`)과 해제(`releasePassResources`)가 같은 테이블을 돕니다. */
-        struct ComputeConstantBufferRow
-        {
-            RHIConstantBuffer* _pSlot{ nullptr };
-            uint32             _byteSize{ 0 };
-            const utf8*        _pUsage{ nullptr };
-        };
-        /// @brief 컴퓨트 상수 버퍼 수입니다. 고정 뷰마다 컬링과 정렬이 하나씩 있고, 인스턴스 애니메이션, 메시 모프, 메시 스킨이 하나씩 더 있습니다. 추가 뷰의 것은 그 뷰가 가집니다.
-        static constexpr uint32 _s_kComputeConstantBufferCount = static_cast<uint32>( RenderViewType::Count ) * 2 + 3;
         /** @brief 컴퓨트 상수 버퍼 테이블을 채웁니다. 새 컴퓨트 상수 버퍼는 여기에 한 줄만 추가하면 됩니다. 생성과 해제를 따로 적지 않습니다. */
         void collectComputeConstantBuffers( ComputeConstantBufferRow ( &outArrRow )[_s_kComputeConstantBufferCount] );
         /** @brief 프레임을 시작할 때마다 패스 상수 슬롯 커서를 되감고 시드를 0번 슬롯에 맞춥니다. */
@@ -394,6 +395,8 @@ namespace sw
          * @details 기록 중에는 버퍼 생성과 bindless 등록을 할 수 없다. 지난 프레임의 최대 사용량(하이워터)도 최솟값으로 본다.
          */
         void ensurePassCbCapacityForFrame();
+        /** @brief 이번 프레임에 그리는 뷰들의 보기 모드를 비트 집합으로 모읍니다(주 시점은 늘 들어갑니다). */
+        uint32 collectFrameViewModeMask() const;
 
     private:
         IRHIDevice* _pDevice;
@@ -430,10 +433,6 @@ namespace sw
         FrameViewResources _viewResources;
         string             _pipelinePath;
         string             _argumentPipelinePath; ///< `initialize` 가 받은 파이프라인(비면 변수 · 팩 설정이 고른다) — `selectPipeline` 이 다시 읽는다
-        /** @brief 이번 프레임에 그리는 뷰들의 보기 모드를 비트 집합으로 모읍니다(주 시점은 늘 들어갑니다). */
-        uint32 collectFrameViewModeMask() const;
-        /// @brief 배치 하나가 한 프레임에 몇 개의 지오메트리 패스(그림자, 프리패스, 불투명, 반투명)에서 그려지는지의 어림값입니다.
-        static constexpr uint32 _s_kDrawCbPassEstimate = 4;
 
         /// @brief 마지막 프레임의 값입니다(getLastIndirectDrawCallCount).
         uint32           _lastIndirectDrawCallCount;

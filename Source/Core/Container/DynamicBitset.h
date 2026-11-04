@@ -199,6 +199,9 @@ namespace sw
         friend std::ostream& operator<<( std::ostream& os, const DynamicBitset& bitset );
 
     private:
+        static constexpr uint32 kBitsPerBlock = sizeof( BlockType ) * 8;
+        static constexpr uint32 kBlockMask    = kBitsPerBlock - 1;
+        static constexpr uint32 kBlockShift   = 6;
         /** @brief 비트 위치가 속한 블록의 인덱스를 반환합니다. */
         static uint32 getBlockIndex( const uint32 bitPosition ) { return bitPosition >> kBlockShift; }
         /** @brief 블록 안에서의 비트 인덱스를 반환합니다. */
@@ -218,10 +221,7 @@ namespace sw
          */
         void sanitize();
 
-        static constexpr uint32 kBitsPerBlock = sizeof( BlockType ) * 8;
-        static constexpr uint32 kBlockMask    = kBitsPerBlock - 1;
-        static constexpr uint32 kBlockShift   = 6;
-
+    private:
         vector<BlockType> _listBlock;
         uint32            _bitCount;
     };

@@ -152,6 +152,7 @@ namespace sw
     private:
         ShaderSourceResolver( const AssetPaths& assetPaths, ShaderIncludeResolver includeResolver );
 
+    private:
         const AssetPaths*     _pAssetPaths;
         ShaderIncludeResolver _includeResolver;
     };

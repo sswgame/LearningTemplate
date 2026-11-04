@@ -105,6 +105,7 @@ namespace sw
         float3 computeDesiredVelocity( const NavGrid& grid );
         void   moveWithCollision( const NavGrid& grid, const float3& delta );
 
+    private:
         NavAgentSettings _settings;
         vector<float3>   _listPathPoint;
         const FlowField* _pFlowField;

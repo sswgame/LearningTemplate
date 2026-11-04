@@ -18,6 +18,8 @@ namespace
     /** @brief 케이스의 처리기(설치하지 않는다)와 그 보고 폴더입니다. */
     struct CrashReportTest
     {
+
+        CrashHandler _handler;
         CrashReportTest()
             : _handler{}
         {
@@ -42,8 +44,6 @@ namespace
             _handler.makeReportPath( arrPath, constant::buffer::kMax1024, pExtension );
             return FileUtil::readTextFile( arrPath, outText );
         }
-
-        CrashHandler _handler;
     };
 } // namespace
 

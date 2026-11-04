@@ -28,6 +28,9 @@ namespace
     public:
         static constexpr const utf8* kKnownKind = "dedicated";
 
+        int32 _requestCount{ 0 };
+        bool  _bHoldAnswers{ false };
+
         const OnlineProtocolEntry& getProtocol() const override { return ServerDirectoryProtocol::kOnlineEntry; }
         bool                       isAnonymousMethod( uint16 method ) const override { return method == ServerDirectoryMethod::kListServers; }
 
@@ -71,9 +74,6 @@ namespace
             return { first, second };
         }
 
-        int32 _requestCount{ 0 };
-        bool  _bHoldAnswers{ false };
-
     private:
         struct HeldRequest
         {
@@ -97,6 +97,7 @@ namespace
             _listHeld.clear();
         }
 
+    private:
         vector<HeldRequest> _listHeld{};
     };
 

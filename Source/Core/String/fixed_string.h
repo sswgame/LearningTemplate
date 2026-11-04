@@ -24,6 +24,8 @@ namespace sw
      */
     struct FixedStringWarningGuard
     {
+
+        bool _bEntered;
         FixedStringWarningGuard()
             : _bEntered{ getWarningFlag() == false }
         {
@@ -41,8 +43,6 @@ namespace sw
         FixedStringWarningGuard& operator=( const FixedStringWarningGuard& ) = delete;
 
         explicit operator bool() const { return _bEntered; }
-
-        bool _bEntered;
 
     private:
         /** @brief 이 스레드가 지금 잘림 경고 안인지입니다(스레드마다 하나, 정의는 fixed_string.cpp 한 곳). */
@@ -337,6 +337,8 @@ namespace sw
         operator std::basic_string_view<T>() const noexcept { return { _arrData, size() }; }
 
     private:
+        /** @brief 대입이 배열 전체를 먼저 0 으로 채우는 크기 상한(바이트)입니다. */
+        static constexpr size_t kWholeFillBytes = 256;
         /**
          * @brief 용량 N 을 넘는 길이를 N 으로 잘라 반환합니다.
          * @details 단언은 실행을 멈추지 않으므로(Debug 는 브레이크, 그 밖은 로그만) 알리기만 하고 원래 길이로 복사하면 `_arrData` 뒤를
@@ -425,9 +427,7 @@ namespace sw
             fillZeroFrom( length );
         }
 
-        /** @brief 대입이 배열 전체를 먼저 0 으로 채우는 크기 상한(바이트)입니다. */
-        static constexpr size_t kWholeFillBytes = 256;
-
+    private:
         T _arrData[N + 1];
     };
 

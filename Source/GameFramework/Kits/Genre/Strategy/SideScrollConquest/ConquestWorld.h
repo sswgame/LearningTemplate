@@ -241,6 +241,7 @@ namespace sw
         int32   findHomeSiteIndex() const;
         void    pushEvent( ConquestEvent::Kind kind, const hashed_string& id, int32 value = 0, ConquestTeam team = ConquestTeam::Neutral );
 
+    private:
         vector<ConquestSite>       _listSite;
         vector<ConquestBuilding>   _listBuilding;
         vector<ConquestUnit>       _listUnit;

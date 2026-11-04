@@ -56,6 +56,13 @@ namespace sw
     class SW_API PrimitiveRegistry
     {
     public:
+        /**
+         * @brief 에셋 로드(또는 그 뒤의 등장 · 조립)를 기다리는 컴포넌트가 프레임마다 받는 함수입니다. 아직 기다리면 true, 다 끝났으면 false 를 반환합니다.
+         * @details 씬 컴포넌트에 묶지 않는다 — 메시를 직접 그리지 않고 읽은 에셋으로 다른 컴포넌트를 조립하는 컴포넌트(외형)도 같은 목록에 걸어야
+         *          자동화의 "에셋 일 0" 이 그 조립까지 센다(따로 세는 길을 두지 않는다).
+         * @param deltaSeconds 이번 씬 프레임의 시간(초)입니다 — 등장 비율을 올리고 내리는 데 쓴다(`MeshComponent::beginAppearance`).
+         */
+        using AssetWaitFunction = bool ( * )( Component& component, float32 deltaSeconds );
         /** @brief 빈 레지스트리를 만듭니다. */
         PrimitiveRegistry() = default;
         /**
@@ -139,14 +146,6 @@ namespace sw
         const vector<PrimitiveInstanceEntry>& getInstanceEntries() const { return _listInstanceEntry; }
         /** @brief 프리미티브 번호 공간의 크기입니다(메시 컴포넌트 수 + 인스턴스 항목 수). */
         uint32 getSlotCount() const { return static_cast<uint32>( _listPrimitive.size() + _listInstanceEntry.size() ); }
-
-        /**
-         * @brief 에셋 로드(또는 그 뒤의 등장 · 조립)를 기다리는 컴포넌트가 프레임마다 받는 함수입니다. 아직 기다리면 true, 다 끝났으면 false 를 반환합니다.
-         * @details 씬 컴포넌트에 묶지 않는다 — 메시를 직접 그리지 않고 읽은 에셋으로 다른 컴포넌트를 조립하는 컴포넌트(외형)도 같은 목록에 걸어야
-         *          자동화의 "에셋 일 0" 이 그 조립까지 센다(따로 세는 길을 두지 않는다).
-         * @param deltaSeconds 이번 씬 프레임의 시간(초)입니다 — 등장 비율을 올리고 내리는 데 쓴다(`MeshComponent::beginAppearance`).
-         */
-        using AssetWaitFunction = bool ( * )( Component& component, float32 deltaSeconds );
         /**
          * @brief 에셋 로드(`AssetHandle`)를 기다리는 컴포넌트를 겁니다(게임 스레드). 이미 걸려 있으면 함수만 바꿉니다.
          * @details 기반에 가상 함수를 더하지 않으려고 함수 포인터로 받는다(파일 머리 `ScenePrimitive.h`). 프리미티브는 `remove` 가 같이 빼고,
@@ -199,6 +198,7 @@ namespace sw
         /** @brief 플래그 배열 @p pArrWord 의 번호 하나를 @p bDirty 로 정합니다(`_mutex` 를 쥔 채). */
         static void storeWordBit( atomic<uint64>* pArrWord, uint32 slot, bool bDirty );
 
+    private:
         /** @brief 등록된 메시 컴포넌트입니다. 소유하지 않습니다(수명은 GameObject 가 관리합니다). */
         vector<ScenePrimitive*> _listPrimitive;
         /** @brief `_listPrimitive` 와 같은 위치의 트랜스폼 슬롯 번호입니다(`getTransformSlots`). */

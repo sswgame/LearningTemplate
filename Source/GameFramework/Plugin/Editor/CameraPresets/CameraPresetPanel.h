@@ -47,6 +47,7 @@ namespace sw::editor
         /** @brief 모델이 카메라 자리를 내면 뷰포트 카메라를 그 자리에 놓습니다. */
         void applySelectedPresetToViewport();
 
+    private:
         CameraPresetModel _model;
     };
 } // namespace sw::editor

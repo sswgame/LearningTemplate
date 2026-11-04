@@ -82,6 +82,9 @@ namespace sw
     class SW_API SceneManager : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName      = "Scene";
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Scene;
         /**
          * @brief 빈 매니저로 만듭니다. 엔진 서비스 묶음은 바인딩된 표에서 한 번 읽어 둡니다(`SceneEngineServices::makeFromBoundEngine`).
          * @details 서비스 저장소(`EngineServiceCollection`)는 표를 묶기 **전에** 이것을 만든다 — 그래서 `initializeSubsystem` 이 묶인 뒤의 표를 다시 읽습니다.
@@ -94,9 +97,6 @@ namespace sw
         SceneManager( const SceneManager& ) = delete;
         /** @brief 대입을 금지합니다. */
         SceneManager& operator=( const SceneManager& ) = delete;
-
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "Scene";
         /**
          * @brief 매니저의 유일한 초기화 길입니다 — 묶인 표의 씬 쪽 묶음을 읽어 초기화하고, 씬이 바뀌면(오브젝트 무효) 되돌리기 기록(있으면)을 비우게 구독합니다.
          * @details 기동 순서와 손으로 만든 매니저(테스트)가 모두 이것을 부릅니다. 이 매니저와 이 매니저가 만드는 씬(동기 · 비동기 로드)은 이 묶음만 씁니다.
@@ -105,10 +105,9 @@ namespace sw
          */
         SubsystemInitResult initializeSubsystem() override;
         /** @brief 로드된 씬을 모두 내리고 종료합니다(유일한 종료 길, 소멸자도 이 길을 탄다). */
-        void                       shutdownSubsystem() override;
-        const utf8*                getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const>    getSubsystemDependencies() const override;
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Scene;
+        void                    shutdownSubsystem() override;
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
 
         /** @brief 새 씬을 만들고, 활성 씬이 없으면 활성으로 정합니다. */
         Scene* createScene( string_view name );
@@ -272,11 +271,21 @@ namespace sw
         SceneLoadRequestedDelegate& onSceneLoadRequested() { return _onSceneLoadRequested; }
 
     private:
-        /** @brief 활성 씬을 @p absPath 에 쓰고, @p sourceID 가 있으면 씬의 소스로 삼습니다. 저장이 막혔거나 활성 씬이 없으면 false 입니다. */
-        [[nodiscard]] bool writeActiveScene( const AbsolutePath& absPath, const string& sourceID );
-
         // 프레임 틱은 엔진 루프만 부른다(`Engine::updateScenes`) — 게임 모듈이 한 프레임에 두 번 틱하는 길이 없다.
         friend class Engine;
+        struct AsyncLoadSlot
+        {
+            mutex                    _mutex;
+            unique_ptr<Scene> _scene SW_GUARDED_BY( _mutex ); ///< 워커가 지은 씬 — 워커가 넣고 게임 스레드가 꺼낸다
+            atomic<bool>             _bReady{ false };
+            atomic<bool>             _bAccepting{ true };
+            StopSource               _stop; ///< `requestAsyncLoadStop` 가 올린다 — `Scene::instantiate` 가 엔티티마다 읽는다
+            TaskPromise<Scene*>      _promise{};
+            uint32                   _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
+            SceneEngineServices      _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)
+        };
+        /** @brief 활성 씬을 @p absPath 에 쓰고, @p sourceID 가 있으면 씬의 소스로 삼습니다. 저장이 막혔거나 활성 씬이 없으면 false 입니다. */
+        [[nodiscard]] bool writeActiveScene( const AbsolutePath& absPath, const string& sourceID );
         /** @brief 활성 씬만 틱합니다. */
         void update( float32 deltaTime );
         /**
@@ -311,19 +320,12 @@ namespace sw
         /** @brief 워커에서 씬을 로드하는 잡 본문입니다. TaskArgs 는 AsyncLoadSlot shared_ptr 와 경로 문자열입니다. */
         static void loadSceneAsyncJob( const TaskArgs& args );
 
-    private:
-        struct AsyncLoadSlot
-        {
-            mutex                    _mutex;
-            unique_ptr<Scene> _scene SW_GUARDED_BY( _mutex ); ///< 워커가 지은 씬 — 워커가 넣고 게임 스레드가 꺼낸다
-            atomic<bool>             _bReady{ false };
-            atomic<bool>             _bAccepting{ true };
-            StopSource               _stop; ///< `requestAsyncLoadStop` 가 올린다 — `Scene::instantiate` 가 엔티티마다 읽는다
-            TaskPromise<Scene*>      _promise{};
-            uint32                   _typeTableGeneration{ 0 }; ///< 로드를 띄울 때의 `TypeRegistry::getGeneration` — 다르면 짓는 동안 타입(생성 함수)이 바뀌었다
-            SceneEngineServices      _services{};               ///< 워커가 짓는 씬에 넘길 묶음(`initializeSubsystem` 이 적는다 — 워커는 전역 표를 읽지 않는다)
-        };
+        /** @brief 요청한 씬의 프리로드 목록을 열어 파일을 미리 읽기 시작합니다. 목록이 없으면 아무것도 하지 않습니다(`tryGetLoadProgress` 참고). */
+        void beginScenePreload( string_view path );
+        /** @brief 프리로드 세트를 한 프레임 진행하고, 로드가 끝난 뒤 붙든 프레임이 차면 놓습니다(`updateTransitions` 가 부른다). */
+        void updateScenePreload();
 
+    private:
         vector<unique_ptr<Scene>> _listLoadedScene;
         vector<uint64>            _listPersistentObjectID; ///< `markPersistent` 로 표시한 루트의 오브젝트 id(옮겨 심어도 같다)
         Scene*                    _pActiveScene;
@@ -348,11 +350,6 @@ namespace sw
         SceneLoadRequestedDelegate      _onSceneLoadRequested;      ///< `onSceneLoadRequested`
         NetLinkValue                    _netLink;                   ///< 새로 받아들이는 씬에 올릴 넷 링크(`setNetLink`). 비어 있으면 올리지 않는다
         bool                            _bInitialized;
-
-        /** @brief 요청한 씬의 프리로드 목록을 열어 파일을 미리 읽기 시작합니다. 목록이 없으면 아무것도 하지 않습니다(`tryGetLoadProgress` 참고). */
-        void beginScenePreload( string_view path );
-        /** @brief 프리로드 세트를 한 프레임 진행하고, 로드가 끝난 뒤 붙든 프레임이 차면 놓습니다(`updateTransitions` 가 부른다). */
-        void updateScenePreload();
 
         unique_ptr<PreloadSet> _pScenePreload;     ///< 로드 중이거나 끝난 지 얼마 안 된 씬의 프리로드. 없으면 nullptr
         uint32                 _preloadHeldFrames; ///< 로드가 끝난 뒤 프리로드를 붙들고 지난 프레임 수

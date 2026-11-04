@@ -135,7 +135,6 @@ namespace sw
         /** @brief 재생 한 번의 GPU 상태입니다. */
         struct EmitterState
         {
-            EmitterState( shared_ptr<const VFXEmitterDef> pDef, float32 spawnScale );
 
             VFXEmitterClock     _clock;          ///< 게임 스레드와 같은 일정(여기서 다시 돈다)
             uint64              _doneStepCount;  ///< 디스패치에 실은 단계 수
@@ -145,6 +144,7 @@ namespace sw
             DrawSource          _drawSource;
             bool                _bNeedsReset; ///< 아직 한 번도 디스패치하지 않았다
             bool                _bSeen;       ///< 이번 프레임 목록에 있었다
+            EmitterState( shared_ptr<const VFXEmitterDef> pDef, float32 spawnScale );
         };
 
         /** @brief 이번 프레임의 시뮬레이션 디스패치 하나입니다. */
@@ -193,6 +193,7 @@ namespace sw
         /** @brief 메시 방출기 @p emitter 의 인스턴스 쓰기 구간을 붙입니다. */
         void appendMeshInstance( const EmitterState& state, const GPUVFXMeshEmitter& emitter );
 
+    private:
         unordered_map<uint64, unique_ptr<EmitterState>> _mapState;
         vector<Dispatch>                                _listDispatch;
         vector<MeshDispatch>                            _listMeshDispatch;

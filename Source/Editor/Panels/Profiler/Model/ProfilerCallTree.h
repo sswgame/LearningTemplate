@@ -93,6 +93,7 @@ namespace sw::editor
         /** @brief 이름 @p name 인 스레드 번호입니다. 없으면 더합니다. */
         uint32 getOrCreateThread( const string& name );
 
+    private:
         vector<ProfilerCallNode>    _listNode;
         vector<uint32>              _listRootNode;   ///< 모든 루트 노드(만든 순서). 합칠 때 찾는 곳이다
         vector<uint32>              _listRoot;       ///< 표시용 루트(`refreshOrder` 가 정렬한다)

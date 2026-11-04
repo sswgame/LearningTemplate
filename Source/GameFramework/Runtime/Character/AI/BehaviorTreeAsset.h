@@ -107,6 +107,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "BehaviorTree"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
+    private:
         BehaviorTree _tree;
     };
 } // namespace sw

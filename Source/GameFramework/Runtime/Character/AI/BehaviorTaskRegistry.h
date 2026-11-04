@@ -66,13 +66,13 @@ namespace sw
     /** @brief `SW_BEHAVIOR_TASK` 가 두는 정적 등록자입니다 — 만들 때 올리고 없앨 때(모듈을 내릴 때) 뺍니다. */
     struct SW_GF_API BehaviorTaskRegistrar
     {
+
+        const BehaviorTaskEntry* _pEntry;
+        bool                     _bRegistered;
         explicit BehaviorTaskRegistrar( const BehaviorTaskEntry* pEntry );
         ~BehaviorTaskRegistrar();
         BehaviorTaskRegistrar( const BehaviorTaskRegistrar& )            = delete;
         BehaviorTaskRegistrar& operator=( const BehaviorTaskRegistrar& ) = delete;
-
-        const BehaviorTaskEntry* _pEntry;
-        bool                     _bRegistered;
     };
 } // namespace sw
 

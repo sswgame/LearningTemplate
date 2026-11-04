@@ -93,6 +93,7 @@ namespace sw::editor
         /** @brief 편집 직전에 부릅니다. @p fieldName 이 있으면 같은 본 · 필드의 연속 편집을 한 단계로 합칩니다. */
         void recordUndo( const hashed_string& bone, string_view fieldName );
 
+    private:
         Skeleton                                   _skeleton;
         ReferencePoseOverride                      _override;
         string                                     _savedText;

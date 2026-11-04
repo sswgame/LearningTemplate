@@ -54,6 +54,7 @@ namespace sw
         void onAssignmentResponse( const OnlineResponse& response );
         void onServerListResponse( const OnlineResponse& response );
 
+    private:
         ServiceClientCallTable<StatusDelegate>     _statusCallTable;
         ServiceClientCallTable<AssignmentDelegate> _assignmentCallTable;
         ServiceClientCallTable<ServerListDelegate> _serverListCallTable;

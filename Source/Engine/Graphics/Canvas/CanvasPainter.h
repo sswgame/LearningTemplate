@@ -33,10 +33,10 @@ namespace sw
         float4                      _nineSliceMargin{};                ///< 이미지 크기의 비율(왼쪽, 위, 오른쪽, 아래, 0..1). 0이면 늘이기다(Slate `FSlateBrush::Margin`).
         float4                      _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f }; ///< 이미지에서 쓸 구간(u0, v0, u1, v1)
         float2                      _imageSize{};                      ///< 9-슬라이스 여백의 기준 크기(Slate `ImageSize`). 0이면 텍스처 픽셀 크기이고, 경로 이미지면 칠할 크기다.
+        float32                     _borderWidth{ 0.0f };              ///< 테두리 두께(단색 사각형만)
 
         /** @brief 이미지(객체 또는 경로)가 있으면 true 입니다. */
-        bool    hasImage() const { return _image != nullptr || _imagePath.empty() == false; }
-        float32 _borderWidth{ 0.0f }; ///< 테두리 두께(단색 사각형만)
+        bool hasImage() const { return _image != nullptr || _imagePath.empty() == false; }
     };
 } // namespace sw
 
@@ -178,6 +178,7 @@ namespace sw
         /** @brief UI 단위 사각형을 지금 변환으로 옮겨 물리 픽셀 사각형(위치, 크기, 축)을 채웁니다. */
         void placeRect( const float2& position, const float2& size, CanvasQuad& outQuad ) const;
 
+    private:
         CanvasDrawList*         _pDrawList; ///< 칠하는 목록(소유하지 않는다).
         vector<CanvasTransform> _listTransform;
         vector<ClipState>       _listClip;

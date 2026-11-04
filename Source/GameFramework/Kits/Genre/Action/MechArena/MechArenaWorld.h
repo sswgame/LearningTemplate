@@ -330,6 +330,7 @@ namespace sw
         bool isEnemyTarget( int32 team, int32 other ) const;
         void pushEvent( MechArenaEvent::Kind kind, int32 pilot, int32 other, float32 value, const hashed_string& id );
 
+    private:
         MechArenaSettings           _settings;
         vector<MechPilot>           _listPilot;
         vector<MechProjectile>      _listProjectile;

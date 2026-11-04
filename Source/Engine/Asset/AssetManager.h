@@ -39,6 +39,9 @@ namespace sw
     class SW_API AssetManager final : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName      = "Asset";
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Asset;
         /** @brief 빈 매니저로 만듭니다. initialize() 전에 바인딩해도 됩니다. */
         AssetManager();
         /** @brief 캐시를 해제합니다. */
@@ -72,19 +75,15 @@ namespace sw
 
         /** @brief 마운트된 팩을 언마운트하고, 등록된 에셋 캐시를 비웁니다. */
         void shutdown();
-
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "Asset";
         /**
          * @brief 기동 순서의 자리 — 리소스 루트를 잡고 활성 엔진 설정의 우선순위로 콘텐츠를 마운트합니다(개발 실행 · 쿠킹은 소스 트리, 배포 구성 · `-cooked-content` 는 팩 — `ContentSource`).
          * @details 팩 루트는 GameConfig, 팩 스트림은 코덱이다. 종료(`shutdown`)가 에셋 캐시를 비운다 — 에셋을 드는 서브시스템이 모두 이 뒤에 서므로,
          *          역순 해제에서 그들의 소멸자가 에셋을 놓은 뒤다.
          */
-        SubsystemInitResult        initializeSubsystem() override;
-        void                       shutdownSubsystem() override { shutdown(); }
-        const utf8*                getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const>    getSubsystemDependencies() const override;
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Asset;
+        SubsystemInitResult     initializeSubsystem() override;
+        void                    shutdownSubsystem() override { shutdown(); }
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
 
         /**
          * @brief 실행 파일 옆(또는 프로젝트)의 `Packs/` 를 찾아 모두 마운트합니다.
@@ -181,6 +180,12 @@ namespace sw
         void finishPendingAssetWork();
 
     private:
+        /** @struct ReloadEntry @brief 캐시 하나의 리로드 함수입니다(`registerAssetCache` · 내장 등록 줄). */
+        struct ReloadEntry
+        {
+            const AssetCacheBase*    _pCache;
+            AssetCacheReloadFunction _pReload;
+        };
         /** @brief 내장 캐시(`_listBuiltInAssetCache`)인지 확인합니다. 종료 경고와 모듈 코드 순회에서 제외합니다. */
         bool isBuiltInAssetCache( const AssetCacheBase* pCache ) const;
         /** @brief 캐시를 목록에 올립니다(이름은 지금 복사). 올렸으면 true 입니다. 내장 캐시는 구독 없이 이것으로 올린다 — 매니저와 수명이 같다. 모듈 캐시는 `registerAssetCache` 가 구독으로 올린다. */
@@ -190,6 +195,7 @@ namespace sw
         /** @brief `getAssetCache<T>()` 의 본체입니다. 종류 이름으로 내장 캐시를 찾습니다. 없으면 단언합니다(등록하지 않은 타입을 물은 경우). */
         AssetCacheBase& getBuiltInAssetCache( string_view assetKindName ) const;
 
+    private:
         mutable mutex                      _loadStageMutex;
         TaskStageHandle _loadStage         SW_GUARDED_BY( _loadStageMutex ); ///< 워커 로드 태스크의 단계(처음 낼 때 만들고 다시 쓴다 — `addLoadTask`)
         vector<unique_ptr<AssetCacheBase>> _listOwnedAssetCache;             ///< 기능 폴더가 등록한 소유 캐시(`SW_BUILT_IN_ASSET_CACHE`)다. 매니저마다 하나씩 가진다
@@ -202,12 +208,6 @@ namespace sw
          *          같은 종류 이름의 둘째 캐시는 거절한다(이름으로 찾는 쪽이 어느 것을 받을지 정해지지 않는다).
          */
         RegistrationList<AssetCacheBase> _registeredAssetCache;
-        /** @struct ReloadEntry @brief 캐시 하나의 리로드 함수입니다(`registerAssetCache` · 내장 등록 줄). */
-        struct ReloadEntry
-        {
-            const AssetCacheBase*    _pCache;
-            AssetCacheReloadFunction _pReload;
-        };
-        vector<ReloadEntry> _listReloadEntry; ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
+        vector<ReloadEntry>              _listReloadEntry; ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
     };
 } // namespace sw

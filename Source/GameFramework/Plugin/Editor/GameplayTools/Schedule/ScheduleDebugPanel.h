@@ -44,6 +44,7 @@ namespace sw::editor
         void drawTimeline( const ScheduleSystem& system, int32 npcIndex );
         void drawExplanation( const ScheduleSystem& system, int32 npcIndex );
 
+    private:
         ScheduleDebugModel _model;
     };
 } // namespace sw::editor

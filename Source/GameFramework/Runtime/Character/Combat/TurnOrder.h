@@ -77,6 +77,7 @@ namespace sw
         void         makeRoundQueue( vector<int32>& outListQueue, const vector<Combatant>& listActor, GameRandom& random ) const;
         static int32 popTimeline( vector<Combatant>& listActor );
 
+    private:
         vector<Combatant> _listCombatant;
         vector<int32>     _listRoundQueue; ///< 라운드제에서 이번 라운드에 남은 차례(앞부터)
         GameRandom        _random;

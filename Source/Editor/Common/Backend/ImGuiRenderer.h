@@ -116,11 +116,6 @@ namespace sw::editor
             bool               _bInUse{ false };
             bool               _bOwned{ false }; ///< ImGui 동적 텍스처라 RHI 텍스처도 이 렌더러가 만들고 놓는다
         };
-
-        /** @brief 빈 칸을 잡습니다(`_textureMutex` 안). */
-        uint32 acquireSlot( RHITextureHandle texture, bool bOwned ) SW_REQUIRES_LOCK( _textureMutex );
-        /** @brief 칸을 비웁니다. 이 렌더러가 만든 텍스처면 번호와 텍스처도 놓습니다(렌더 스레드). 패널 텍스처의 번호는 텍스처 주인의 파괴가 놓는다. */
-        void releaseSlot( IRHIDevice& device, uint32 slotIndex );
         /** @brief UI 스레드가 낸 ImGui 동적 텍스처 연산 하나입니다(`queueTextureUpdates`). 픽셀은 RGBA8 로 넓혀 복사해 두었다. */
         struct TextureOp
         {
@@ -138,6 +133,11 @@ namespace sw::editor
             uint32        _height{ 0 };
             vector<uint8> _listByte;
         };
+
+        /** @brief 빈 칸을 잡습니다(`_textureMutex` 안). */
+        uint32 acquireSlot( RHITextureHandle texture, bool bOwned ) SW_REQUIRES_LOCK( _textureMutex );
+        /** @brief 칸을 비웁니다. 이 렌더러가 만든 텍스처면 번호와 텍스처도 놓습니다(렌더 스레드). 패널 텍스처의 번호는 텍스처 주인의 파괴가 놓는다. */
+        void releaseSlot( IRHIDevice& device, uint32 slotIndex );
         /** @brief 텍스처 연산 하나를 적용합니다(렌더 스레드, 패스 기록 밖). */
         void applyTextureOp( IRHIDevice& device, TextureOp& op );
         /** @brief 보조 창의 스왑체인을 만들거나 바꾸거나 부수기 전에 낸 스냅샷이 다 그려지기를 기다립니다(UI 스레드, ImGui 창 훅). */
@@ -150,6 +150,7 @@ namespace sw::editor
         static void destroyWindowSwapChain( ImGuiViewport* pViewport );
         static void resizeWindowSwapChain( ImGuiViewport* pViewport, ImVec2 size );
 
+    private:
         IRHIDevice*                                _pDevice;
         const DrawSnapshotHandoff*                 _pDrawHandoff;    ///< 보조 창 스왑체인을 바꾸기 전에 낸 스냅샷이 다 그려지기를 기다린다
         RHIPipelineStateHandle                     _pso;             ///< 백버퍼 포맷의 PSO(캡처 텍스처 · 보조 창도 같은 포맷이다)

@@ -74,6 +74,7 @@ namespace sw
         /** @brief 뷰의 기록입니다. 없으면 새로 만들어 "한 번도 안 그림"으로 둡니다. */
         Entry& getOrCreateEntry( uint64 viewID );
 
+    private:
         vector<Entry>   _listEntry;
         vector<uint32>  _listScratchDue;         ///< 때가 된 후보 번호
         vector<float64> _listScratchOverdue;     ///< 그 후보의 늦은 정도(처음 보는 뷰는 아주 크다)

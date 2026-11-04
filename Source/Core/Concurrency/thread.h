@@ -132,6 +132,7 @@ namespace sw
         /** @brief 끝나는 스레드에서 부릅니다 — 자기 합류 키를 놓았다고 알립니다. */
         static void notifyExiting();
 
+    private:
         StopSource  _stopSource{}; ///< 정지 요청 원천. 스레드의 토큰이 이 칸을 읽는다. `_thread` 보다 먼저 선언한다 — 생성자가 이 원천으로 토큰을 만든다
         std::thread _thread;
     };

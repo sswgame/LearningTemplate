@@ -183,6 +183,7 @@ namespace sw
         /** @brief 역할을 잃었습니다. 필수면 세션을 중단하고 true, 선택이면 그 역할만 빼고 false 입니다. */
         bool loseRole( GameObjectManager& manager, uint32 roleIndex, const utf8* pReason );
 
+    private:
         shared_ptr<const PairedAnimationDef> _def;
         vector<RoleState>                    _listRole;
         uint32                               _sessionID;

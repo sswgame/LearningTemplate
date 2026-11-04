@@ -264,6 +264,7 @@ namespace sw
         /** @brief 내용을 비웁니다. */
         void clear();
 
+    private:
         PairedAnimationContentDef _content;
         string                    _sourcePath;
         uint32                    _anchorRoleIndex;

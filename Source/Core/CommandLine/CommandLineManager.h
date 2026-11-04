@@ -227,6 +227,8 @@ namespace sw
         const vector<string>& getOriginalArguments() const { return _listOriginalArgument; }
 
     private:
+        /** @brief 보류표에 담을 키의 접두어입니다. 이것으로 시작하는 미등록 키만 남깁니다. */
+        static constexpr auto kGlobalVariablePrefix = "gv_";
         /** @brief 인자 한 줄(예: "--width=1280", "-fullscreen")을 파싱해 표에 반영합니다. 거절하면 `_listParseError` 에 이유를 더합니다. */
         void parseArgumentLine( string_view argumentLine, const AbsolutePath& baseDirectory );
 
@@ -250,9 +252,7 @@ namespace sw
         template <typename T>
         [[nodiscard]] static bool readValue( const ArgumentInfo& argument, T& outValue );
 
-        /** @brief 보류표에 담을 키의 접두어입니다. 이것으로 시작하는 미등록 키만 남깁니다. */
-        static constexpr auto kGlobalVariablePrefix = "gv_";
-
+    private:
         vector<ArgumentInfo> _listArgument;
         /** @brief 명령줄 철자 → `_listArgument` 인덱스입니다. 기본 해시가 transparent 라 string_view 로 할당 없이 조회됩니다. */
         unordered_map<string, uint32> _mapArgument;

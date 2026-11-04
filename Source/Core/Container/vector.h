@@ -70,6 +70,12 @@ namespace sw
         using const_iterator         = const T*;
         using reverse_iterator       = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+        template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
+        vector( InputIt first, InputIt last, const Allocator& alloc = Allocator() );
+        template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
+        void assign( InputIt first, InputIt last );
+        template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
+        iterator insert( const_iterator pos, InputIt first, InputIt last );
 
         // ------------------------------------------------------------------------------
         // 1) 생성 · 소멸
@@ -78,8 +84,6 @@ namespace sw
         explicit vector( const Allocator& alloc ) noexcept;
         vector( size_type count, const T& value, const Allocator& alloc = Allocator() );
         explicit vector( size_type count, const Allocator& alloc = Allocator() );
-        template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
-        vector( InputIt first, InputIt last, const Allocator& alloc = Allocator() );
         vector( const vector& other );
         vector( vector&& other ) noexcept;
         vector( std::initializer_list<T> init, const Allocator& alloc = Allocator() );
@@ -89,9 +93,7 @@ namespace sw
         vector& operator=( vector&& other ) noexcept;
         vector& operator=( std::initializer_list<T> ilist ); ///< 주의: `x = {}` 도 이 대입이라 버퍼를 남긴다. 놓으려면 `clear()` + `shrink_to_fit()`.
         void    assign( size_type count, const T& value );
-        template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
-        void assign( InputIt first, InputIt last );
-        void assign( std::initializer_list<T> ilist );
+        void    assign( std::initializer_list<T> ilist );
 
         // ------------------------------------------------------------------------------
         // 2) 조회
@@ -133,8 +135,6 @@ namespace sw
         iterator insert( const_iterator pos, const T& value );
         iterator insert( const_iterator pos, T&& value );
         iterator insert( const_iterator pos, size_type count, const T& value );
-        template <class InputIt, typename std::enable_if_t<!std::is_integral_v<InputIt>, int32> = 0>
-        iterator insert( const_iterator pos, InputIt first, InputIt last );
         iterator insert( const_iterator pos, std::initializer_list<T> ilist );
         template <class... Args>
         iterator emplace( const_iterator pos, Args&&... args );

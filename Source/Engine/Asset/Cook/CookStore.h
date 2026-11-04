@@ -122,6 +122,7 @@ namespace sw
         /** @brief 결과 하나를 세고, 요청받은 출력 id 로 적어 둡니다(`Skipped` 는 요청이 아니다). `cookFile` 의 모든 반환이 이것을 지난다 — 한 갈래가 빠지면 멀쩡한 출력이 지워진다. */
         CookOutcome record( string_view outputID, CookOutcome outcome ) const;
 
+    private:
         string                        _recordRootPath;
         DerivedDataCache              _derivedDataCache;
         mutable CookTally             _tally;           ///< 결과 수만 센다 — 출력을 만드는 일은 저장소의 상태를 바꾸지 않는다

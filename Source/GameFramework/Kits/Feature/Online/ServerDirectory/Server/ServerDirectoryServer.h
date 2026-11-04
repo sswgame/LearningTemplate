@@ -42,6 +42,7 @@ namespace sw
     private:
         void attachHost( OnlineServiceHost& host );
 
+    private:
         ServerDirectoryService* _pService;
         OnlineServiceHost*      _pHost;           ///< 붙은 호스트이다(첫 서비스 틱에 붙는다). 붙었는지만 본다
         Subscription            _busSubscription; ///< 버스 주제의 구독. 서버가 한 대면 비어 있다

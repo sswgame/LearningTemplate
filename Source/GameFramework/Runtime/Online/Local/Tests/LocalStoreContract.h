@@ -29,13 +29,12 @@ namespace sw::test
     class LocalStoreTestKey final : public ILocalStoreKeyProvider
     {
     public:
-        bool getSealKey( uint8 ( &outKey )[kKeySize] ) override
+        uint8 _fillByte{ 0x5A };
+        bool  getSealKey( uint8 ( &outKey )[kKeySize] ) override
         {
             std::memset( outKey, _fillByte, kKeySize );
             return true;
         }
-
-        uint8 _fillByte{ 0x5A };
     };
 
     /** @brief 픽스처가 가지는 봉인 문맥 재료(암호 제공자 + 키)입니다. 저장소보다 먼저 선언해 오래 살게 합니다. */

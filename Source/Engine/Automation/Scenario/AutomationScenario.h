@@ -201,6 +201,7 @@ namespace sw
         /** @brief 단계 하나를 지금 프레임(앞의 `<Wait>` 들이 흘린 합)으로 `_listStep` 에 더합니다. 단계 번호를 이어 갱신합니다. */
         [[nodiscard]] bool parseStepNode( const XMLNode& stepNode, uint32 frameIndex, uint32& inoutOrderInFile, string& outError );
 
+    private:
         vector<AutomationStep>   _listStep;
         AutomationTestOptions    _testOptions;
         string                   _name;

@@ -86,6 +86,7 @@ namespace sw
     private:
         [[nodiscard]] bool add( const RemoteConfig& config, string_view experiment, uint64 accountID, string_view eventName );
 
+    private:
         MetricRegistry* _pRegistry;
     };
 } // namespace sw
@@ -152,6 +153,7 @@ namespace sw
         void         onReloadCompleted( ServiceStoreResult result, bool bCancelled, map<string, Entry>& inoutMapEntry );
         void         onSetCompleted( ServiceStoreResult result, const string& key, const RemoteConfigValue& value, uint64 version );
 
+    private:
         map<string, Entry> _mapEntry;
         uint64             _snapshotHash;
         int32              _pendingWorkCount;

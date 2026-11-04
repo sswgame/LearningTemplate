@@ -73,6 +73,7 @@ namespace sw
 
         bool isValidSlot( int32 group, int32 slot ) const;
 
+    private:
         vector<Group>             _listGroup;
         const MonsterHuntCatalog* _pCatalog;
         int32                     _characterLevel;

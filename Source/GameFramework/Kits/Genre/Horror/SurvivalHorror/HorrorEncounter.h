@@ -94,6 +94,7 @@ namespace sw
         void                defeatIfBroken( HorrorInvestigator& investigator );
         void                refreshState();
 
+    private:
         vector<HorrorInvestigator> _listInvestigator;
         HorrorMonsterDef           _monster;
         TurnOrder                  _turnOrder;

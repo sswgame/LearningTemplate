@@ -133,6 +133,7 @@ namespace sw
         void readEntry( const XMLNode& node, const AnimationNotifyHandlerRegistry& registry, CharacterDataReader& reader );
         void readFootContact( const XMLNode& node, CharacterDataReader& reader );
 
+    private:
         vector<AnimationNotifyEntry>    _listEntry;
         vector<AnimationFootContactDef> _listFootContact;
     };

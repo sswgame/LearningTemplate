@@ -196,6 +196,7 @@ namespace sw
         void    updateVertical( const ArcadeVehicleInput& input, float32 deltaTime );
         void    pushEvent( ArcadeVehicleEvent::Kind kind, int32 value );
 
+    private:
         ArcadeVehicleSettings           _settings;
         EventBuffer<ArcadeVehicleEvent> _eventBuffer;
         FixedStepTimer                  _timer;

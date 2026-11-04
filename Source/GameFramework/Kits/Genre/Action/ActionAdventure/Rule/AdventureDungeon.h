@@ -274,6 +274,7 @@ namespace sw
         void            pushEvent( AdventureDungeonEventType type, const hashed_string& dungeonID, const hashed_string& id, const hashed_string& item = hashed_string{},
                                    int32 count = 0 );
 
+    private:
         const AdventureDungeonCatalog*     _pCatalog;
         vector<DungeonRuntime>             _listRuntime; ///< 카탈로그의 던전 순서
         EventBuffer<AdventureDungeonEvent> _eventBuffer;

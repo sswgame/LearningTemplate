@@ -121,6 +121,7 @@ namespace sw
         bool          crossesExisting( int32 floor, int32 fromColumn, int32 toColumn ) const;
         hashed_string pickKind( const RunMapSettings& settings, int32 floor, const hashed_string& previousKind, GameRandom& random ) const;
 
+    private:
         vector<RunNode> _listNode;
         vector<int32>   _listCell; ///< 층과 열에서 노드 번호로의 대응(없으면 −1)
         int32           _floorCount{ 0 };

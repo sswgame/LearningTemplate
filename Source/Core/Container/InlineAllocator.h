@@ -19,6 +19,11 @@ namespace sw
     {
         using value_type = T;
 
+        template <class U>
+        struct rebind
+        {
+            using other = InlineAllocator<U, N>;
+        };
         alignas( T ) uint8 _buffer[N * sizeof( T )];
         bool _isUsed = false;
 
@@ -27,12 +32,6 @@ namespace sw
         InlineAllocator( InlineAllocator&& ) noexcept            = default;
         InlineAllocator& operator=( const InlineAllocator& )     = default;
         InlineAllocator& operator=( InlineAllocator&& ) noexcept = default;
-
-        template <class U>
-        struct rebind
-        {
-            using other = InlineAllocator<U, N>;
-        };
 
         T* allocate( size_t n )
         {

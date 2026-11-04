@@ -191,6 +191,7 @@ namespace sw
         /** @brief 점 하나를 더합니다. 위쪽 벡터는 세계 위쪽을 접선에 직교로 맞춘 것에, 뱅크(라디안)만큼 접선 둘레로 돌린 값입니다. */
         void pushPoint( const float3& position, const float3& tangent, float32 bank, uint8 flags );
 
+    private:
         vector<CoasterTrack::Point> _listPoint;
         float3                      _startPosition;
         float3                      _position;

@@ -203,9 +203,6 @@ namespace sw
         /** @brief 교체된 뒤 언로드를 미루고 아직 로드해 둔 옛 라이브러리 수입니다(`kMaxDeferredUnloadBatchCount` 배치까지). */
         uint32 getDeferredUnloadLibraryCount() const { return _deferredUnloadQueue.getLibraryCount(); }
 
-    protected:
-        void releaseSubscription( uint64 id ) override;
-
     private:
         struct ModuleRecord;
 
@@ -235,11 +232,6 @@ namespace sw
             void*  _pHandle{ nullptr }; ///< 섀도 복사 없이 원본 경로로 올린 라이브러리
         };
 
-        /** @brief @p moduleName 의 @p slot 칸을 새로 걸 구독을 냅니다. 같은 칸의 앞 등록은 표에서 빠집니다(앞 구독은 아무것도 풀지 않게 된다). */
-        [[nodiscard]] Subscription issueSlotSubscription( string_view moduleName, CallbackSlot slot );
-        /** @brief @p registration 이 가리키는 칸을 비웁니다. */
-        void clearSlot( const CallbackRegistration& registration );
-
         struct PreparedShadow
         {
             void*                        _pHandle{ nullptr };
@@ -255,6 +247,52 @@ namespace sw
             ModuleRecord*  _pRecord{ nullptr };
             PreparedShadow _shadow;
         };
+
+        /// @brief 등록된 모듈입니다(경로 · 핸들 · 리로드 예약). 의존 목록은 `_dependencyGraph` 에 있습니다.
+        struct ModuleRecord
+        {
+            OnBeforeReloadDelegate    _onBeforeReload;
+            OnAfterReloadDelegate     _onAfterReload;
+            OnReloadFaultDelegate     _onReloadFault;
+            OnValidateLibraryDelegate _onValidateLibrary;
+            string                    _moduleName;
+            string                    _originalModulePath;
+            string                    _tempModulePath;
+            ShadowLibraryNameState    _libraryName;
+            void*                     _pLibraryModule;
+            uint64                    _loadedSourceMtime;
+            uint64                    _debounceMtime;
+            GameTimer                 _debounceTimer;
+            atomic<bool>              _bPendingReload;
+            atomic<bool>              _bMtimeDebouncing;
+            atomic<bool>              _bForceReload;
+
+            /**
+             * @brief 원자 플래그를 끈 기본값으로 만듭니다. 복사도 이동도 없다 — 컨텍스트는 `_mapModule`(주소 고정 맵)이 한 번 만든 자리에서 산다.
+             *        연쇄 리로드가 `ModuleRecord*` 를 쥔 채 새 모듈 등록이 끼어들어도 그 주소는 그대로다.
+             */
+            ModuleRecord() noexcept;
+        };
+
+        static constexpr int32 kMtimeDebounceMs = 300;
+
+        /** @brief 빌드 쪽(`notifyBuildStarted` · `notifyBuildFinished`, 빌드 스레드)이 쓰고 `update` 가 읽는 상태입니다. `_buildMutex` 가 지킵니다. */
+        struct BuildNotice
+        {
+            string _targetName;                ///< 끝난 빌드의 타깃(비면 전체 빌드)
+            bool   _bInProgress{ false };      ///< 빌드가 도는 중이다
+            bool   _bFinishedPending{ false }; ///< 끝났는데 `update` 가 아직 처리하지 않았다
+            bool   _bSucceeded{ false };       ///< 끝난 빌드가 성공했다
+        };
+
+    protected:
+        void releaseSubscription( uint64 id ) override;
+
+    private:
+        /** @brief @p moduleName 의 @p slot 칸을 새로 걸 구독을 냅니다. 같은 칸의 앞 등록은 표에서 빠집니다(앞 구독은 아무것도 풀지 않게 된다). */
+        [[nodiscard]] Subscription issueSlotSubscription( string_view moduleName, CallbackSlot slot );
+        /** @brief @p registration 이 가리키는 칸을 비웁니다. */
+        void clearSlot( const CallbackRegistration& registration );
 
         /** @brief 섀도 복사본을 LoadLibrary 로 로드합니다. */
         [[nodiscard]] bool loadShadowCopyModule( ModuleRecord& context );
@@ -300,46 +338,10 @@ namespace sw
         /** @brief 모든 모듈 기록과 의존 그래프를 비웁니다. */
         void clearRecords();
 
-        /// @brief 등록된 모듈입니다(경로 · 핸들 · 리로드 예약). 의존 목록은 `_dependencyGraph` 에 있습니다.
-        struct ModuleRecord
-        {
-            OnBeforeReloadDelegate    _onBeforeReload;
-            OnAfterReloadDelegate     _onAfterReload;
-            OnReloadFaultDelegate     _onReloadFault;
-            OnValidateLibraryDelegate _onValidateLibrary;
-            string                    _moduleName;
-            string                    _originalModulePath;
-            string                    _tempModulePath;
-            ShadowLibraryNameState    _libraryName;
-            void*                     _pLibraryModule;
-            uint64                    _loadedSourceMtime;
-            uint64                    _debounceMtime;
-            GameTimer                 _debounceTimer;
-            atomic<bool>              _bPendingReload;
-            atomic<bool>              _bMtimeDebouncing;
-            atomic<bool>              _bForceReload;
-
-            /**
-             * @brief 원자 플래그를 끈 기본값으로 만듭니다. 복사도 이동도 없다 — 컨텍스트는 `_mapModule`(주소 고정 맵)이 한 번 만든 자리에서 산다.
-             *        연쇄 리로드가 `ModuleRecord*` 를 쥔 채 새 모듈 등록이 끼어들어도 그 주소는 그대로다.
-             */
-            ModuleRecord() noexcept;
-        };
-
-        static constexpr int32 kMtimeDebounceMs = 300;
-
-        /** @brief 빌드 쪽(`notifyBuildStarted` · `notifyBuildFinished`, 빌드 스레드)이 쓰고 `update` 가 읽는 상태입니다. `_buildMutex` 가 지킵니다. */
-        struct BuildNotice
-        {
-            string _targetName;                ///< 끝난 빌드의 타깃(비면 전체 빌드)
-            bool   _bInProgress{ false };      ///< 빌드가 도는 중이다
-            bool   _bFinishedPending{ false }; ///< 끝났는데 `update` 가 아직 처리하지 않았다
-            bool   _bSucceeded{ false };       ///< 끝난 빌드가 성공했다
-        };
-
         /** @brief 끝난 빌드를 게임 스레드에서 처리합니다. 빌드가 도는 중이면 true 입니다(그동안 변경을 올리지 않는다). */
         bool consumeBuildNotice();
 
+    private:
         stable_unordered_map<string, ModuleRecord>       _mapModule;        ///< 이름 집합은 `_dependencyGraph` 와 같다(`getOrCreateRecord` · `clearRecords`). 컨텍스트 주소가 고정이다
         ModuleDependencyGraph                            _dependencyGraph;  ///< 모듈 이름 → 의존 모듈 이름. 연쇄 교체 대상과 순서를 계산한다
         vector<SharedLibrary>                            _listSharedModule; ///< `loadSharedModule` 로 올린 공용 모듈(올린 순서 — 리로드 대상을 모두 내린 뒤 `shutdown` 이 거꾸로 내린다)

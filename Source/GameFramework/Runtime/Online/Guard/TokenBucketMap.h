@@ -58,6 +58,7 @@ namespace sw
             }
         }
 
+    private:
         unordered_map<uint64, TokenBucket> _mapKeyToBucket{};
         size_t                             _maxTrackedKeyCount{ 4096 };
         int64                              _refillIntervalMs{ 1000 };

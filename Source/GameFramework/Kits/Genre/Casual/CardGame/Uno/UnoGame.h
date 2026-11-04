@@ -169,6 +169,7 @@ namespace sw
         int32 drawInto( int32 player, int32 count );
         bool  hasColor( int32 player, UnoColor color, uint16 exceptCardID ) const;
 
+    private:
         vector<CardPile>      _listHand;
         EventBuffer<UnoEvent> _eventBuffer;
         CardPile              _drawPile;

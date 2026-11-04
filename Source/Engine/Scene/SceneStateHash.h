@@ -117,11 +117,18 @@ namespace sw
         static constexpr const utf8* kSubsystemName = "StateHashHistory";
         /** @brief 이름 붙은 줄의 상한입니다(풀린 줄도 센다). 넘으면 등록을 거절합니다. */
         static constexpr uint32 kMaxChannels = 8;
+        /** @brief 씬 줄을 뜻하는 이름입니다(명령 인자에서 이름을 생략한 것과 같다). */
+        static constexpr const utf8* kSceneChannelName = "scene";
+        /** @brief 한 줄 판의 머리입니다. 자식 프로세스의 로그 줄에서 이 머리를 찾아 이력을 거둡니다(에디터 Sync 탭의 클라이언트 원천). */
+        static constexpr const utf8* kReportLinePrefix = "State hash history:";
+        /**
+         * @brief 한 줄 판에 실을 수 있는 샘플 수의 상한입니다. 샘플 하나는 가장 길 때 `<20자리 틱>:<16자리 해시>,` 로 38 바이트라 머리와 합쳐 `DebugReplyLine::kMaxBytes` 안에 든다.
+         *          `state.hashline` 은 이보다 많이 묻으면 거절하고, Sync 탭은 이 수만큼 묻는다.
+         */
+        static constexpr uint32 kMaxReportLineSamples = 90;
 
         /** @brief 이름 붙은 줄의 이름이 맞는지 봅니다(`[a-z0-9_.-]`, 1 ~ 32 자, 씬 줄의 이름 `scene` 은 쓸 수 없다). 명령 인자 · 로그 줄에 그대로 실려 공백이 없어야 한다. */
         [[nodiscard]] static bool isValidChannelName( string_view name );
-        /** @brief 씬 줄을 뜻하는 이름입니다(명령 인자에서 이름을 생략한 것과 같다). */
-        static constexpr const utf8* kSceneChannelName = "scene";
 
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override {}
@@ -162,15 +169,8 @@ namespace sw
 
         /** @brief 샘플을 한 줄에 하나(`<tick> <16자리 16진 해시>`)로 씁니다. */
         static void writeReport( const vector<StateHashSample>& listSample, string& outText );
-        /** @brief 한 줄 판의 머리입니다. 자식 프로세스의 로그 줄에서 이 머리를 찾아 이력을 거둡니다(에디터 Sync 탭의 클라이언트 원천). */
-        static constexpr const utf8* kReportLinePrefix = "State hash history:";
         /** @brief 샘플을 한 줄(`kReportLinePrefix <tick>:<16자리 16진 해시>,…`)로 씁니다. 표준 입력 명령의 답이 로그 한 줄로 나가는 길(멀티 프로세스 재생)에 쓴다. */
         [[nodiscard]] static bool writeReportLine( const vector<StateHashSample>& listSample, string& outText );
-        /**
-         * @brief 한 줄 판에 실을 수 있는 샘플 수의 상한입니다. 샘플 하나는 가장 길 때 `<20자리 틱>:<16자리 해시>,` 로 38 바이트라 머리와 합쳐 `DebugReplyLine::kMaxBytes` 안에 든다.
-         *          `state.hashline` 은 이보다 많이 묻으면 거절하고, Sync 탭은 이 수만큼 묻는다.
-         */
-        static constexpr uint32 kMaxReportLineSamples = 90;
         /**
          * @brief @p line 에서 `kReportLinePrefix` 를 찾아 뒤의 샘플을 읽습니다. 머리가 없으면 false 이고, 머리 뒤 첫 덩이의 항목이 하나라도 형식이 다르거나 줄이 `DebugReplyLine::kMaxBytes` 를 넘으면 목록을 비우고 false 입니다.
          * @details 샘플이 없으면 머리 뒤가 `-` 다(빈 이력도 답이다).
@@ -185,9 +185,6 @@ namespace sw
         [[nodiscard]] static bool findFirstDivergence( const vector<StateHashSample>& listLeft, const vector<StateHashSample>& listRight, uint64& outTick );
 
     private:
-        /** @brief 제공자의 등록 구독이 풀렸습니다. 그 제공자가 맡은 줄을 비웁니다(이력은 남긴다). 주소로만 찾는다. */
-        void releaseProvider( const IStateHashProvider* pProvider );
-
         /** @brief 링 버퍼 하나입니다(틱 오름차순으로 쌓이고 가득 차면 `_head` 부터 덮는다). 용량은 이력이 정한다. */
         struct Ring
         {
@@ -207,14 +204,15 @@ namespace sw
             const IStateHashProvider* _pProvider{ nullptr };
             Ring                      _ring;
         };
+        /** @brief 제공자의 등록 구독이 풀렸습니다. 그 제공자가 맡은 줄을 비웁니다(이력은 남긴다). 주소로만 찾는다. */
+        void releaseProvider( const IStateHashProvider* pProvider );
 
         const Channel* findChannel( string_view name ) const;
 
+    private:
         Ring            _scene; ///< 씬 줄
         vector<Channel> _listChannel;
         uint32          _capacity{ 0 };
-
-    private:
         /** @brief 제공자 등록의 구독입니다. 풀리면 `releaseProvider` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<const IStateHashProvider> _subscriptions{ ItemSubscriptionList<const IStateHashProvider>::ReleaseFunction::create<&StateHashHistory::releaseProvider>( this ) };
     };

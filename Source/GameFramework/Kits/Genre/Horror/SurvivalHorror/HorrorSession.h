@@ -187,6 +187,7 @@ namespace sw
         void refreshHallucination();
         bool markSolved( const hashed_string& puzzleID, const hashed_string& flag );
 
+    private:
         ResourceGauge                       _sanity;
         ResourceGauge                       _battery;
         unordered_set<hashed_string>        _uniqueSeenMonster;

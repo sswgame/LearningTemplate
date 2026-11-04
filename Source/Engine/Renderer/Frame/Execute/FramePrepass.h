@@ -123,6 +123,7 @@ namespace sw
         /** @brief 뷰 @p target 하나의 깊이 히스토리 복사를 기록합니다(`recordDepthHistories` 가 뷰마다 부른다). */
         void recordDepthHistory( FrameViewTarget& target );
 
+    private:
         IRHIDevice* const& _pDevice; ///< 렌더러의 `_pDevice` 변수를 참조합니다
         FrameRenderState&  _state;
         FramePSOManager&   _psoManager;

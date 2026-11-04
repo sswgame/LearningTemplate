@@ -99,6 +99,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "SpawnTable"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
+    private:
         GameCatalog<SpawnEntryDef> _catalog;
         FloatCurve                 _curve;
         float32                    _budgetPerMinute;
@@ -187,6 +188,7 @@ namespace sw
         bool isEligible( int32 entryIndex ) const;
         void pickPending();
 
+    private:
         vector<SpawnAlive>      _listAlive;
         vector<int32>           _listAliveCount; ///< 항목마다
         vector<hashed_string>   _listAllowedTag;

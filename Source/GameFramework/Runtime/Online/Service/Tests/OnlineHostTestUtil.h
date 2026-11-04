@@ -260,6 +260,7 @@ namespace sw::test
             return -1;
         }
 
+    private:
         unique_ptr<IStreamTransport>            _transport;
         StreamMessageEndpoint                   _endpoint;
         NetRequestClient                        _requestClient;

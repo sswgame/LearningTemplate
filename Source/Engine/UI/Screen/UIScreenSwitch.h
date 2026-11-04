@@ -54,12 +54,12 @@ namespace sw
     /** @brief `SW_UI_SCREEN_SWITCH` 가 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다(앞 등록을 지우지 않게). */
     struct SW_API UIScreenSwitchRegistrar
     {
+
+        const UIScreenSwitchRegistration* _pRegistration;
         explicit UIScreenSwitchRegistrar( const UIScreenSwitchRegistration* pRegistration );
         ~UIScreenSwitchRegistrar();
         UIScreenSwitchRegistrar( const UIScreenSwitchRegistrar& )            = delete;
         UIScreenSwitchRegistrar& operator=( const UIScreenSwitchRegistrar& ) = delete;
-
-        const UIScreenSwitchRegistration* _pRegistration;
     };
 } // namespace sw
 

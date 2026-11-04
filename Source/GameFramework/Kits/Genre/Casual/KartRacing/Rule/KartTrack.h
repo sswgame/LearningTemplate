@@ -253,6 +253,7 @@ namespace sw
         /** @brief @p distance 가 [@p fromDistance, @p toDistance] 안에 있는지 반환합니다(감김을 허용합니다). */
         bool isWithinSpan( float32 distance, float32 fromDistance, float32 toDistance ) const;
 
+    private:
         KartTrackDef          _def;
         vector<Sample>        _listSample;
         vector<KartTrackGate> _listGate;

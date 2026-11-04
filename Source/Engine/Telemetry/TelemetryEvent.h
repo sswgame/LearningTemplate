@@ -53,6 +53,7 @@ namespace sw
     private:
         TelemetryValue& acquireValue( const hashed_string& name, TelemetryFieldType type );
 
+    private:
         vector<TelemetryValue> _listValue;
         hashed_string          _id;
     };

@@ -167,6 +167,7 @@ namespace sw
         void               collectMatchEvents();
         void               pushEvent( BattleRoyaleEvent::Kind kind, int32 player, int32 other, int32 team, int32 value );
 
+    private:
         vector<BattleRoyalePlayer>     _listPlayer;
         vector<BattleRoyaleSupplyDrop> _listSupplyDrop;
         EventBuffer<BattleRoyaleEvent> _eventBuffer;

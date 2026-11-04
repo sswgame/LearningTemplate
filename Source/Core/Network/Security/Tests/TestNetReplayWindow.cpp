@@ -19,7 +19,10 @@ namespace
     class RecordingSecurityProvider final : public INetSecurityProvider
     {
     public:
-        const utf8* getName() const override { return "Recording"; }
+        vector<uint8> _secret{};
+        vector<uint8> _salt{};
+        vector<uint8> _info{};
+        const utf8*   getName() const override { return "Recording"; }
 
         bool fillRandomBytes( uint8* pOut, int32 size ) override
         {
@@ -121,10 +124,6 @@ namespace
             (void)outSignatureBytes;
             return false;
         }
-
-        vector<uint8> _secret{};
-        vector<uint8> _salt{};
-        vector<uint8> _info{};
     };
 } // namespace
 

@@ -377,6 +377,7 @@ namespace sw
         void               makeNoise( int32 survivor, float32 radius, const float3& position );
         void               pushEvent( AsymmetricHorrorEvent::Kind kind, int32 actor, int32 target, float32 value, const float3& position );
 
+    private:
         HorrorMatchSettings                 _settings;
         HorrorKiller                        _killer;
         vector<HorrorSurvivor>              _listSurvivor;

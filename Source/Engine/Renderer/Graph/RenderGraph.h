@@ -302,27 +302,8 @@ namespace sw
         void clear();
 
     private:
-        vector<RenderGraphNode> _listNode;
-        vector<hashed_string>   _listCompiledExecutionOrder;
-        /** @brief _listCompiledExecutionOrder 와 같은 순서와 내용을 의존성 레벨 단위로 묶은 것입니다. */
-        vector<vector<hashed_string>> _listCompiledLevel;
-
-        // 핫패스에서 할당하지 않기 위한 캐시
-        unordered_map<hashed_string, size_t> _mapNameToIndex;
-
-        /// @brief 레벨(직렬이면 패스)을 기록하기 직전에 부르는 콜백입니다. setLevelPrologue 를 참고하세요.
-        RenderGraphLevelPrologueFn _levelPrologue;
-        /// @brief 이번 레벨(직렬이면 이번 패스)의 배리어입니다. 프레임마다 다시 써서 할당을 반복하지 않습니다.
-        vector<RenderGraphBarrier> _listLevelBarrier;
-        /// @brief 배리어를 추리는 동안 쓰는 스크래치입니다. 자원 이름에서 `_listLevelBarrier` 인덱스를 찾는 맵이며, 레벨 안의 중복을 제거합니다.
-        unordered_map<hashed_string, size_t> _mapLevelBarrierIndex;
-
         /** @brief 병렬 기록이 프레임마다 다시 쓰는 데이터입니다(패스 엔트리 목록과 노드별 커맨드 리스트). 완전한 타입은 cpp 에만 있습니다. */
         struct ParallelScratch;
-        unique_ptr<ParallelScratch> _pParallelScratch;
-        /// @brief compile() 이 계산한 리소스 수명입니다(처음과 마지막 사용 패스, 읽힘과 쓰임 여부).
-        vector<RenderGraphResourceLifetime>  _listResourceLifetime;
-        unordered_map<hashed_string, size_t> _mapResourceLifetimeIndex;
 
         /**
          * @brief 패스 하나가 필요로 하는 전이를 `_listLevelBarrier` 에 추가합니다.
@@ -345,5 +326,25 @@ namespace sw
         [[nodiscard]] bool collectLevelPasses( RenderGraphExecutionContext& context, const vector<hashed_string>& listLevelPass );
         /** @brief 모은 레벨(패스 둘 이상)의 배리어를 첫 리스트 앞머리에 발행하고, 패스들을 병렬로 기록한 뒤 큐 순서대로 제출합니다. */
         void recordAndSubmitParallelLevel( TaskManager* pTaskManager, IRHIDevice* pDevice );
+
+    private:
+        vector<RenderGraphNode> _listNode;
+        vector<hashed_string>   _listCompiledExecutionOrder;
+        /** @brief _listCompiledExecutionOrder 와 같은 순서와 내용을 의존성 레벨 단위로 묶은 것입니다. */
+        vector<vector<hashed_string>> _listCompiledLevel;
+
+        // 핫패스에서 할당하지 않기 위한 캐시
+        unordered_map<hashed_string, size_t> _mapNameToIndex;
+
+        /// @brief 레벨(직렬이면 패스)을 기록하기 직전에 부르는 콜백입니다. setLevelPrologue 를 참고하세요.
+        RenderGraphLevelPrologueFn _levelPrologue;
+        /// @brief 이번 레벨(직렬이면 이번 패스)의 배리어입니다. 프레임마다 다시 써서 할당을 반복하지 않습니다.
+        vector<RenderGraphBarrier> _listLevelBarrier;
+        /// @brief 배리어를 추리는 동안 쓰는 스크래치입니다. 자원 이름에서 `_listLevelBarrier` 인덱스를 찾는 맵이며, 레벨 안의 중복을 제거합니다.
+        unordered_map<hashed_string, size_t> _mapLevelBarrierIndex;
+        unique_ptr<ParallelScratch>          _pParallelScratch;
+        /// @brief compile() 이 계산한 리소스 수명입니다(처음과 마지막 사용 패스, 읽힘과 쓰임 여부).
+        vector<RenderGraphResourceLifetime>  _listResourceLifetime;
+        unordered_map<hashed_string, size_t> _mapResourceLifetimeIndex;
     };
 } // namespace sw

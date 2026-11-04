@@ -138,6 +138,7 @@ namespace sw
         bool                 containsHandle( uint32 typeKey, uint32 channel, ComponentHandle handle ) const;
         Bucket*              findBucket( uint32 typeKey, uint32 channel ) const;
 
+    private:
         /** @brief (타입, 칸) 마다 하나입니다. 주소가 움직이지 않게 따로 잡습니다 — 받아 간 창이 다른 칸의 등록으로 무너지지 않는다. */
         vector<unique_ptr<Bucket>> _listBucket;
         /** @brief 등록 · 해제를 지킵니다(가장 안쪽 락). */

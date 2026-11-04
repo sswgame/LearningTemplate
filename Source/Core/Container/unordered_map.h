@@ -70,49 +70,6 @@ namespace sw
             uint32       _tag;
         };
 
-        vector<uint32>                    _listBucket;    ///< 버킷마다 체인 첫 노드의 인덱스
-        vector<Node>                      _listDenseData; ///< 연속 메모리에 놓인 밀집 데이터 배열
-        CompressedPair<hasher, key_equal> _traits;        ///< 해시 · 키 비교 함수 객체(EBO 로 압축 보관)
-
-        const hasher&    get_hasher() const noexcept { return _traits.first(); }
-        const key_equal& get_equal() const noexcept { return _traits.second(); }
-
-        /** @brief 빈 버킷 슬롯을 나타내는 센티넬 값(모든 비트 1)입니다. */
-        static constexpr uint32 kEmptySlot = constant::invalid_index::kUint32;
-
-        /** @brief 해시를 32비트 태그로 접습니다. 위쪽 절반을 아래쪽 절반에 섞으므로 64비트 해시의 위쪽 비트도 버킷과 태그 비교에 반영됩니다. */
-        static uint32 makeTag( size_t hash ) noexcept
-        {
-            const uint64 wide = static_cast<uint64>( hash );
-            return static_cast<uint32>( wide ^ ( wide >> 32 ) );
-        }
-
-        /** @brief 버킷 수의 최솟값입니다. 버킷 수는 항상 2의 거듭제곱입니다(`bucketIndexOf` 가 마스크로 자르기 때문입니다). */
-        static constexpr size_t kMinBucketCount = 16;
-
-        /**
-         * @brief 해시 태그(`makeTag`)를 버킷 번호로 바꿉니다. 곱셈 한 번 · 접기 한 번 · 마스크 한 번입니다. 버킷 수는 항상 2의 거듭제곱입니다(`rehash_internal`).
-         * @details `hash % 버킷 수` 를 쓰지 않습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
-         *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 위쪽 절반을 아래쪽 절반에 접어 넣으므로, 아래 비트가 고르지 않은
-         *          해시도 고르게 퍼집니다. libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 대해 항등 함수라서, 2의 거듭제곱 크기에
-         *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰립니다.
-         *          순회는 밀집 배열을 따라가므로 버킷 배치가 바뀌어도 순서는 그대로입니다.
-         */
-        static size_t bucketIndexOf( uint32 tag, size_t bucketCount ) noexcept
-        {
-            const uint64 product = static_cast<uint64>( tag ) * HashUtil::kGoldenRatio64;
-            return static_cast<size_t>( product ^ ( product >> 32 ) ) & ( bucketCount - 1 );
-        }
-
-        /**
-         * @brief 부하율(load factor)이 1 에 닿으면 버킷 수를 두 배로 늘리고 재해시합니다.
-         */
-        void check_expand()
-        {
-            if ( _listBucket.empty() || _listDenseData.size() >= _listBucket.size() )
-                rehash_internal( _listBucket.empty() ? kMinBucketCount : _listBucket.size() * 2 );
-        }
-
     public:
         /**
          * @brief 밀집 데이터 배열(_listDenseData)을 차례로 순회하는 이터레이터입니다.
@@ -125,6 +82,9 @@ namespace sw
             using difference_type   = ptrdiff_t;
             using pointer           = value_type*;
             using reference         = value_type&;
+
+            unordered_map* _pMap;
+            size_t         _index;
 
             iterator( unordered_map* pMap, size_t index )
                 : _pMap{ pMap }
@@ -140,9 +100,6 @@ namespace sw
             bool      operator!=( const iterator& other ) const { return _index != other._index; }
             reference operator*() const { return *reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ) ); }
             pointer   operator->() const { return reinterpret_cast<pointer>( const_cast<pair<Key, T>*>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ) ); }
-
-            unordered_map* _pMap;
-            size_t         _index;
         };
 
         /** @brief 밀집 배열을 순회하는 상수 이터레이터입니다. */
@@ -154,6 +111,9 @@ namespace sw
             using difference_type   = ptrdiff_t;
             using pointer           = const value_type*;
             using reference         = const value_type&;
+
+            const unordered_map* _pMap;
+            size_t               _index;
 
             const_iterator( const unordered_map* pMap, size_t index )
                 : _pMap{ pMap }
@@ -173,9 +133,6 @@ namespace sw
             bool      operator!=( const const_iterator& other ) const { return _index != other._index; }
             reference operator*() const { return *reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ); }
             pointer   operator->() const { return reinterpret_cast<pointer>( &std::as_const( _pMap->_listDenseData ).data()[_index]._keyValuePair ); }
-
-            const unordered_map* _pMap;
-            size_t               _index;
         };
 
         // ------------------------------------------------------------------------------
@@ -713,5 +670,50 @@ namespace sw
                 _listBucket.shrink_to_fit();
             }
         }
+
+    private:
+        /** @brief 빈 버킷 슬롯을 나타내는 센티넬 값(모든 비트 1)입니다. */
+        static constexpr uint32 kEmptySlot = constant::invalid_index::kUint32;
+
+        /** @brief 버킷 수의 최솟값입니다. 버킷 수는 항상 2의 거듭제곱입니다(`bucketIndexOf` 가 마스크로 자르기 때문입니다). */
+        static constexpr size_t kMinBucketCount = 16;
+
+        const hasher&    get_hasher() const noexcept { return _traits.first(); }
+        const key_equal& get_equal() const noexcept { return _traits.second(); }
+
+        /** @brief 해시를 32비트 태그로 접습니다. 위쪽 절반을 아래쪽 절반에 섞으므로 64비트 해시의 위쪽 비트도 버킷과 태그 비교에 반영됩니다. */
+        static uint32 makeTag( size_t hash ) noexcept
+        {
+            const uint64 wide = static_cast<uint64>( hash );
+            return static_cast<uint32>( wide ^ ( wide >> 32 ) );
+        }
+
+        /**
+         * @brief 해시 태그(`makeTag`)를 버킷 번호로 바꿉니다. 곱셈 한 번 · 접기 한 번 · 마스크 한 번입니다. 버킷 수는 항상 2의 거듭제곱입니다(`rehash_internal`).
+         * @details `hash % 버킷 수` 를 쓰지 않습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
+         *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 위쪽 절반을 아래쪽 절반에 접어 넣으므로, 아래 비트가 고르지 않은
+         *          해시도 고르게 퍼집니다. libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 대해 항등 함수라서, 2의 거듭제곱 크기에
+         *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰립니다.
+         *          순회는 밀집 배열을 따라가므로 버킷 배치가 바뀌어도 순서는 그대로입니다.
+         */
+        static size_t bucketIndexOf( uint32 tag, size_t bucketCount ) noexcept
+        {
+            const uint64 product = static_cast<uint64>( tag ) * HashUtil::kGoldenRatio64;
+            return static_cast<size_t>( product ^ ( product >> 32 ) ) & ( bucketCount - 1 );
+        }
+
+        /**
+         * @brief 부하율(load factor)이 1 에 닿으면 버킷 수를 두 배로 늘리고 재해시합니다.
+         */
+        void check_expand()
+        {
+            if ( _listBucket.empty() || _listDenseData.size() >= _listBucket.size() )
+                rehash_internal( _listBucket.empty() ? kMinBucketCount : _listBucket.size() * 2 );
+        }
+
+    private:
+        vector<uint32>                    _listBucket;    ///< 버킷마다 체인 첫 노드의 인덱스
+        vector<Node>                      _listDenseData; ///< 연속 메모리에 놓인 밀집 데이터 배열
+        CompressedPair<hasher, key_equal> _traits;        ///< 해시 · 키 비교 함수 객체(EBO 로 압축 보관)
     };
 } // namespace sw

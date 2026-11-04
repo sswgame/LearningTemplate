@@ -106,6 +106,7 @@ namespace sw
         void   onResponse( const OnlineResponse& response );
         void   observe( const TradeSnapshot& snapshot );
 
+    private:
         ServiceClientCallTable<PendingCall> _callTable;
         vector<TradeClientReply>            _listReply;
         vector<TradeClientUpdate>           _listUpdate;

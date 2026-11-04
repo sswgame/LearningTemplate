@@ -64,6 +64,7 @@ namespace sw
         void               insert( const HpackHeader& header );
         void               shrinkTo( uint32 size );
 
+    private:
         deque<HpackHeader> _listDynamic; ///< 앞이 가장 새 항목(색인 62)
         uint32             _dynamicSize;
         uint32             _currentLimit; ///< 상대가 표 크기 갱신으로 정한 지금 상한

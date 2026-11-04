@@ -196,6 +196,7 @@ namespace sw::editor
             return _cache._bValid ? &_cache : nullptr;
         }
 
+    private:
         mutable PointCacheData _cache;
         mutable bool           _bCacheTried;
         uint32                 _fileParam;

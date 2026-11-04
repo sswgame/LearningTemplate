@@ -140,10 +140,6 @@ namespace sw
 
     struct OnlineServiceClientConfig
     {
-        explicit OnlineServiceClientConfig( OnlineClientSecurity security )
-            : _security{ security }
-        {
-        }
 
         OnlineClientSecurity  _security;
         StreamTransportConfig _transportSettings{}; ///< 자기 엔드포인트 모드. `_ioThreadCount == 0` 이면 `tick` 이 전송을 처리한다
@@ -152,6 +148,10 @@ namespace sw
         string                _gameBuild{}; ///< Hello 에 싣는 게임 빌드 글(64 B 이하)
         int64                 _maxBackoffMs{ 5000 };
         uint8                 _platform{ 0 };
+        explicit OnlineServiceClientConfig( OnlineClientSecurity security )
+            : _security{ security }
+        {
+        }
     };
 } // namespace sw
 
@@ -266,6 +266,7 @@ namespace sw
         void        dispatchPush( const uint8* pBody, int32 bodySize );
         void        notifyServices( void ( IOnlineClientService::*pNotify )( OnlineServiceClient& ) );
 
+    private:
         OnlineServiceClientConfig          _settings; ///< `initialize` 전에는 자리표시(공유 엔드포인트 값)다
         vector<IOnlineClientService*>      _listService;
         vector<QueuedCall>                 _listQueuedCall;

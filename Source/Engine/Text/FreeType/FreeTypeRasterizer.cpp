@@ -363,6 +363,7 @@ namespace sw
             return iter != _mapFace.end() ? &iter->second : nullptr;
         }
 
+    private:
         unordered_map<FontFaceID, FaceEntry> _mapFace;
         FT_Library                           _pLibrary;
         IDAllocator<FontFaceID>              _faceIDAllocator;

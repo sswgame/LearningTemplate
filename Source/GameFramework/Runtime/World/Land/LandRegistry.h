@@ -82,6 +82,7 @@ namespace sw
         /** @brief 월드 사각을 셀 사각(양 끝 포함)으로 바꿉니다. */
         void computeWorldRect( const float3& center, const float3& size, int2& outMin, int2& outMax ) const;
 
+    private:
         vector<Cell>          _listCell;
         vector<hashed_string> _listOwnerName; ///< 인덱스 (번호 - 1) 에 둔 이름
         GridTopology          _topology;

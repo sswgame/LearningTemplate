@@ -118,6 +118,7 @@ namespace sw::editor
         int64             getNowMs() const { return _nowMs; }
         FakeAdminAccount* findMutableAccount( AccountID accountID );
 
+    private:
         vector<FakeAdminAccount>  _listAccount;
         vector<ServiceAuditEntry> _listAudit;
         vector<RecordedReply>     _listRecorded;

@@ -63,6 +63,7 @@ namespace sw
     private:
         ItemStack* findStack( const hashed_string& itemID );
 
+    private:
         vector<ItemStack> _listStack;
     };
 } // namespace sw

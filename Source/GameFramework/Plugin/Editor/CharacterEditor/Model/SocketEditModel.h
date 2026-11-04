@@ -114,6 +114,7 @@ namespace sw::editor
         /** @brief 값을 고치는 편집의 공통 경로입니다. 소켓을 복사해 @p fieldBit 를 켜고 되돌리기를 남긴 뒤 표에 되돌려 넣습니다. */
         bool beginFieldEdit( const hashed_string& name, uint16 fieldBit, bool bContinuous, string_view fieldName, SocketDef& outSocket, string& outError );
 
+    private:
         SocketSet                      _sockets;
         SocketKindTable                _kinds;
         MirrorNameRules                _mirrorRules;

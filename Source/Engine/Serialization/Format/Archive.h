@@ -364,6 +364,7 @@ namespace sw
          */
         void readLatched( void* pOutBuffer, uint64 byteSize );
 
+    private:
         StringPool             _stringPool;
         vector<uint8>          _bytes;
         const uint8*           _pData;

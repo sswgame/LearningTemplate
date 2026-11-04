@@ -141,6 +141,7 @@ namespace sw
         /** @brief 적 시작 지점에 닿아 놀고 있는 병력을 가장 가까운 남은 적 건물로 보냅니다(멀리 지은 보급고가 남아 판이 끝나지 않는 일을 막는다). */
         void huntRemaining( int32 player );
 
+    private:
         RTSWorld              _world;
         DrainLease            _eventLease; ///< 월드의 이벤트를 꺼내는 표(이 매치 하나만 꺼낸다)
         RTSCommanderAI        _arrAI[kPlayerCount];

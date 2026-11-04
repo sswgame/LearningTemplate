@@ -91,6 +91,7 @@ namespace sw
         bool        isRegisteredForUse( uint8 kind, uint64 schemaHash ) const;
         static void logMissingCodec( const hashed_string& typeFqn, const string& reason );
 
+    private:
         vector<Entry> _listEntry; ///< 종류 순(봉인이 정렬한다)
         uint8         _bSealed;
     };

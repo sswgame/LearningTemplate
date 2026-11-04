@@ -202,6 +202,7 @@ namespace sw
         [[nodiscard]] bool readInteraction( const XMLNode& node, InteractionDef& outDef, string_view sourceName ) const;
         [[nodiscard]] bool readSmartObject( const XMLNode& node, UsableObjectDef& outDef, string_view sourceName ) const;
 
+    private:
         GameCatalog<InteractionDef>  _interactionCatalog{};
         GameCatalog<UsableObjectDef> _smartObjectCatalog{};
     };

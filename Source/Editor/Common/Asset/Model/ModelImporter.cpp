@@ -700,6 +700,7 @@ namespace sw::editor
                 return true;
             }
 
+        private:
             const AssetPaths&        _assetPaths;
             const ModelImportConfig& _config;
         };

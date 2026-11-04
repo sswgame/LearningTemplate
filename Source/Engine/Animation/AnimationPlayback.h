@@ -176,6 +176,7 @@ namespace sw
         /** @brief 구간 알림의 끝 시각입니다(한 바퀴 끝을 넘지 않습니다). */
         static float32 computeEndTime( const AnimationNotifyEvent& event, float32 playLength );
 
+    private:
         vector<AnimationNotifyEvent> _listEvent;
     };
 } // namespace sw

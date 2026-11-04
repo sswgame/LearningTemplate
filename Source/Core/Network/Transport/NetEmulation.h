@@ -190,6 +190,7 @@ namespace sw
         /** @brief 잠금 안에서 부릅니다. 안쪽 전송에서 받은 것을 받는 쪽 조건으로 큐에 넣습니다. */
         void pullIncomingLocked() SW_REQUIRES_LOCK( _mutex );
 
+    private:
         mutable mutex                              _mutex;
         INetTransport* const                       _pInner; ///< 생성 때 정하고 바뀌지 않는다(const — 잠금 없이 읽는다)
         vector<Pending> _listPending               SW_GUARDED_BY( _mutex );

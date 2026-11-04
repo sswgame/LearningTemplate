@@ -205,6 +205,7 @@ namespace sw
          */
         [[nodiscard]] bool loadMonster( const XMLNode& node, string_view sourceName );
 
+    private:
         unordered_map<hashed_string, MonsterDef> _mapMonster;
     };
 } // namespace sw

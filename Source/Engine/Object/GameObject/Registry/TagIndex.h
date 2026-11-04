@@ -75,6 +75,7 @@ namespace sw
         /** @brief 잠금을 쥔 채 @p record 의 칸에서 소유 오브젝트를 뺍니다. */
         void removeFromBucketsUnlocked( const Record& record ) SW_REQUIRES_LOCK( _mutex );
 
+    private:
         mutable shared_mutex                                             _mutex;
         unordered_map<uint64, vector<GameObject*>> _mapKeyToObject       SW_GUARDED_BY( _mutex ); ///< 태그 id(조상 포함) → 오브젝트. 빈 칸도 용량을 위해 남긴다
         unordered_map<const TagComponent*, Record> _mapComponentToRecord SW_GUARDED_BY( _mutex );

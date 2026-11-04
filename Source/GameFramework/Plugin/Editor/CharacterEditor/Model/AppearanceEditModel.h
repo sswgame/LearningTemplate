@@ -101,6 +101,7 @@ namespace sw::editor
         void          recordUndo( string_view coalesceKey );
         static string makeKey( string_view kind, const hashed_string& target );
 
+    private:
         AppearanceSelection                      _selection;
         AppearanceSelection                      _saved;
         EditSnapshotHistory<AppearanceSelection> _history;

@@ -75,10 +75,9 @@ namespace sw
             {
             }
 
+        private:
             mutable mutex                                  _mutex;
             RegistrationList<ISQLDriver> _registeredDriver SW_GUARDED_BY( _mutex ); ///< 이름은 올릴 때 복사한다 — 이미지가 내려간 뒤에도 안내 문구가 죽은 드라이버를 묻지 않는다
-
-        private:
         };
     } // namespace
 } // namespace sw

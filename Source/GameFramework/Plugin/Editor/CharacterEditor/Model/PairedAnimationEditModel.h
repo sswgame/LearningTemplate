@@ -126,6 +126,7 @@ namespace sw::editor
         bool isRoleIndexValid( uint32 roleIndex, string& outError ) const;
         bool isNotifyIndexValid( uint32 notifyIndex, string& outError ) const;
 
+    private:
         PairedAnimationContentDef                      _content;
         string                                         _savedText;
         EditSnapshotHistory<PairedAnimationContentDef> _history;

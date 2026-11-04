@@ -45,12 +45,6 @@ namespace sw::editor
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
 
-    protected:
-        bool                acceptsDocumentPath( string_view assetPath ) const override;
-        ToolAssetLoadResult loadDocument() override;
-        string              captureDocumentText() const override;
-        void                applyDocumentText( string_view text ) override;
-
     private:
         /** @brief 자동 배치 결과 노드 하나의 캔버스 좌표입니다. */
         struct Placement
@@ -59,6 +53,13 @@ namespace sw::editor
             float2 _position{};
         };
 
+    protected:
+        bool                acceptsDocumentPath( string_view assetPath ) const override;
+        ToolAssetLoadResult loadDocument() override;
+        string              captureDocumentText() const override;
+        void                applyDocumentText( string_view text ) override;
+
+    private:
         // 그리기
         void drawToolbar();
         void drawCanvasArea();
@@ -84,6 +85,7 @@ namespace sw::editor
         /** @brief 선택한 오브젝트의 활성 노드를 내놓는 실행기입니다. 컴포넌트에 안 붙은 실행기(`IBehaviorTreeDebugSource`)는 연 파일과 같은 트리일 때만 잡고 @p outName 에 이름을 채웁니다. */
         const BehaviorTreeRunner* findLiveRunner( string& outName ) const;
 
+    private:
         BehaviorTreeEditModel         _model;
         EditorNodeGraph               _nodeGraph;
         vector<BehaviorTreeEditIssue> _listIssue;

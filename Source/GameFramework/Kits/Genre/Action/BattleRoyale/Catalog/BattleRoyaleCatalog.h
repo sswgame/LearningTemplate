@@ -240,6 +240,7 @@ namespace sw
         [[nodiscard]] bool           loadZone( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadSupplyDrop( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<BattleRoyaleArmorDef>    _armorCatalog;
         GameCatalog<BattleRoyaleBackpackDef> _backpackCatalog;
         GameCatalog<BattleRoyaleLootSpotDef> _lootSpotCatalog;

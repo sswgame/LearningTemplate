@@ -87,6 +87,7 @@ namespace sw
         /** @brief 정의 id 가 @p kind 인 스마트 오브젝트의 슬롯을 (오브젝트 id, 슬롯) 순으로 모읍니다. */
         void collectCandidates( const hashed_string& kind, vector<Candidate>& outListCandidate ) const;
 
+    private:
         const GameObjectManager* _pManager;
         hashed_string            _defaultArea;
         vector<Reservation>      _listReservation;

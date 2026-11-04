@@ -30,6 +30,7 @@ namespace sw
         {
         }
 
+    private:
         std::shared_ptr<const atomic<bool>> _pFlag{};
     };
 

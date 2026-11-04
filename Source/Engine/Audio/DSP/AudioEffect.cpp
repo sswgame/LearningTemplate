@@ -659,13 +659,6 @@ namespace sw
                 _fillIndex     = 0;
             }
 
-        protected:
-            void onParameterChanged() override
-            {
-                _wet = _listParameter[0];
-                _dry = _listParameter[1];
-            }
-
         private:
             /** @brief 젖은 채널 하나의 상태입니다. */
             struct WetChannel
@@ -678,6 +671,14 @@ namespace sw
                 uint32               _impulseChannel{ 0 };
             };
 
+        protected:
+            void onParameterChanged() override
+            {
+                _wet = _listParameter[0];
+                _dry = _listParameter[1];
+            }
+
+        private:
             /** @brief 모은 입력 블록 하나를 컨볼루션해 다음 블록의 젖은 소리를 만듭니다. */
             void runPartition()
             {
@@ -718,6 +719,7 @@ namespace sw
                 _historyCursor = ( _historyCursor + 1 ) % _partitionCount;
             }
 
+        private:
             AudioFFT             _fft;                                            /**< 크기 `kFFTSize` 의 FFT 표입니다. */
             vector<AudioComplex> _arrImpulseSpectrum[audio::kStereoChannelCount]; /**< 응답 채널마다 조각 스펙트럼(조각 수 × FFT 크기)입니다. */
             vector<AudioComplex> _listWork;                                       /**< 입력 FFT 작업 버퍼입니다. */

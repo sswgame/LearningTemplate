@@ -59,6 +59,7 @@ namespace sw
         {
         }
 
+    private:
         string      _path;
         const utf8* _pBakedJSON;
     };
@@ -80,13 +81,12 @@ namespace sw
     class SW_API ConfigManager : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Config";
         ConfigManager();
         ~ConfigManager() override;
         ConfigManager( const ConfigManager& )            = delete;
         ConfigManager& operator=( const ConfigManager& ) = delete;
-
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "Config";
         /**
          * @brief 호스트가 서비스 표에 걸 엔진 설정의 자리입니다(`engine::getSubsystem<EngineConfig>()` 가 이것을 돌려준다).
          * @details 값은 `initializeSubsystem` 이 읽은 뒤에야 쓸 수 있다 — 그 전에는 빈 형식(0)이다. 주소는 이 표가 사는 동안 같다.
@@ -381,6 +381,7 @@ namespace sw
          */
         unique_ptr<IConfig>* findHostSlot( const TypeInfo& type );
 
+    private:
         unordered_map<uint32, unique_ptr<IConfig>> _mapConfig;
         unique_ptr<IConfig>                        _pEngineSlot;       ///< 호스트 엔진 설정의 객체 - 읽기 전까지 여기 있고 읽은 뒤 `_mapConfig` 가 쥔다
         unique_ptr<IConfig>                        _pGameSlot;         ///< 호스트 게임 프리셋의 객체 - `_pEngineSlot` 과 같다

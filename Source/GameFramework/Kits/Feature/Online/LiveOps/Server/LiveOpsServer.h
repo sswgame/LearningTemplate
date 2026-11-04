@@ -51,6 +51,7 @@ namespace sw
         /** @brief 응답을 씁니다. 범위 밖 값이 있어 쓰지 못하면(로그가 남는다) `kInternal` 로 답합니다. */
         void respond( OnlineServiceHost& host, const NetRequestToken& token, const LiveOpsReply& reply );
 
+    private:
         ServicePendingTable          _pendingTable;
         vector<PushDeviceCompletion> _listDeviceCompletionScratch;
         vector<LiveEventStart>       _listStartScratch;

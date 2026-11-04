@@ -73,6 +73,7 @@ namespace sw
     private:
         uint64 send( uint16 method, const SocialRequest& request, const ReplyDelegate& onReply );
 
+    private:
         DrainGate                       _notificationGate;
         EventBuffer<SocialNotification> _notificationBuffer;
     };

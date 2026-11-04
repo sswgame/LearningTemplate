@@ -108,6 +108,8 @@ namespace sw
     class SW_API IRHIDevice
     {
     public:
+        /** @brief 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다리는 함수의 타입입니다. 호출하는 쪽은 렌더 스레드가 아닙니다. */
+        using RenderThreadDrainFunction = void ( * )( void* pContext );
         // ------------------------------------------------------------------------------
         // 1) 수명: initialize/shutdown, resize
         // ------------------------------------------------------------------------------
@@ -201,9 +203,6 @@ namespace sw
          * @details 디버그 레이어의 메시지 큐는 장치 실패 때만 비우므로 평소 로그에 보이지 않는다. 테스트가 "이 그리기는 검증 경고를 내지 않는다" 를 단언할 때 쓴다.
          */
         virtual uint32 getValidationMessageCount() const { return 0; }
-
-        /** @brief 렌더 스레드가 받은 작업을 모두 끝낼 때까지 기다리는 함수의 타입입니다. 호출하는 쪽은 렌더 스레드가 아닙니다. */
-        using RenderThreadDrainFunction = void ( * )( void* pContext );
 
         /**
          * @brief 렌더 스레드가 이 디바이스로 기록을 시작할 때 설정하고(`RenderThread::start`), 멈춘 뒤 해제합니다(nullptr).
@@ -584,6 +583,11 @@ namespace sw
         /** @brief `acquireSwapChainImage` 의 백엔드 훅입니다(렌더 스레드, 프레임 안). */
         [[nodiscard]] virtual bool acquireSwapChainImageInternal( IRHISwapChain& swapChain ) = 0;
 
+    private:
+        /** @brief 미룬 핸들 중 기다리던 프레임이 끝난 것만 해제합니다(`notifyRenderFrameRetired`). */
+        void releaseRetiredHandles();
+
+    protected:
         IRenderSurface* _pSurface;
         /// @brief 렌더 스레드 역할입니다(잠금이 아니라 분석용 능력). 프레임 진행 상태(백엔드의 프레임 링 · 스왑체인 깃발 · 진행 중 커맨드 버퍼)는 이 역할 아래에 있고,
         ///        그 상태를 만지는 함수는 렌더 스레드에서 돌거나 렌더 스레드를 세운 뒤(`RenderThread::waitIdle` · 초기화 · 종료) 불린다고 진입에서 `assumeHeld` 로 적는다.
@@ -614,9 +618,5 @@ namespace sw
         unique_ptr<RHIMemoryTracker> _memoryTracker;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 넘긴 · 끝낸 프레임 수입니다(releaseHandle 참고).
         unique_ptr<RHIDeferredHandleQueue> _pDeferredHandleQueue;
-
-    private:
-        /** @brief 미룬 핸들 중 기다리던 프레임이 끝난 것만 해제합니다(`notifyRenderFrameRetired`). */
-        void releaseRetiredHandles();
     };
 } // namespace sw

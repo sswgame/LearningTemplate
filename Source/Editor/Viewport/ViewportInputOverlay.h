@@ -75,8 +75,8 @@ namespace sw::editor
     {
     public:
         static constexpr const utf8* kSubsystemName = "ViewportInputOverlaySettings";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         ViewportInputOverlayConfig _config{};
+        const utf8*                getSubsystemName() const override { return kSubsystemName; }
     };
 } // namespace sw::editor

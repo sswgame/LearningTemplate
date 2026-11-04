@@ -192,6 +192,10 @@ namespace sw
         /** @brief `readRange` 의 크기로 주면 @p offset 부터 파일 끝까지 읽습니다. */
         static constexpr uint64 kWholeFile = ~uint64( 0 );
 
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 필드가 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName      = "FileIO";
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Asset;
+
         /** @brief 시작하지 않은 매니저입니다. 시작 전 요청은 `ShutDown` 으로 끝납니다. */
         AsyncFileIO();
         /** @brief `shutdown` 을 부릅니다. */
@@ -212,17 +216,13 @@ namespace sw
          * @note 완료 콜백을 태스크로 싣는 설정이면 그 `TaskManager` 가 아직 돌고 있어야 합니다(엔진은 Task 단계가 FileIO 보다 늦게 내려간다).
          */
         void shutdown();
-
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 필드가 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "FileIO";
         /** @brief 기동 순서가 `initialize` 에 넘길 설정입니다(완료 콜백을 싣는 태스크 매니저). 기동 전에 호스트가 정한다. */
         void                setSubsystemSettings( const AsyncFileIOConfig& settings ) { _subsystemSettings = settings; }
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
         /** @brief 완료 콜백을 태스크로 싣는다 — 태스크 매니저가 이것보다 늦게 내려간다. */
-        span<const utf8* const>    getSubsystemDependencies() const override;
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Asset;
+        span<const utf8* const> getSubsystemDependencies() const override;
 
         /** @brief 시작했으면 true 입니다. */
         bool isInitialized() const;
@@ -253,6 +253,7 @@ namespace sw
         /** @brief 요청을 큐에 넣고 핸들을 돌려줍니다. 시작 전 · 내리는 중이면 `ShutDown` 으로 바로 끝냅니다. */
         AsyncReadHandle submit( const shared_ptr<AsyncReadRequest>& pRequest );
 
+    private:
         unique_ptr<AsyncFileIOQueue>    _queue;
         unique_ptr<IAsyncFileIOBackend> _backend;
         AsyncFileIOConfig               _subsystemSettings; ///< `initializeSubsystem` 이 넘길 설정(`setSubsystemSettings`)

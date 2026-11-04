@@ -237,6 +237,7 @@ namespace sw
         [[nodiscard]] bool loadBuilding( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadSite( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<ConquestBuildingDef> _buildingCatalog;
         GameCatalog<ConquestUnitDef>     _unitCatalog;
         GameCatalog<ConquestSiteDef>     _siteCatalog;

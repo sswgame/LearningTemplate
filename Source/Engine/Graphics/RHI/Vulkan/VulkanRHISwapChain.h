@@ -157,6 +157,7 @@ namespace sw
         /** @brief 이미지마다 뷰를 만듭니다. `create` 안에서만 부릅니다. */
         [[nodiscard]] bool createImageViews( VkDevice device );
 
+    private:
         VkSurfaceKHR   _surface{ nullptr };
         VkSwapchainKHR _swapChain{ nullptr };
 

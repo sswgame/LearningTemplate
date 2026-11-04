@@ -57,6 +57,7 @@ namespace sw
         {
         }
 
+    private:
         CacheStatsHandle _handle;
         const utf8*      _pUncountedReason;
     };

@@ -25,7 +25,8 @@ namespace sw
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "FrameRenderer";
+        static constexpr const utf8* kSubsystemName      = "FrameRenderer";
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
         /** @brief @p frameRenderer 를 넘겨받고(서비스 목록에는 호스트가 이미 등록했다) 패킷 빌더를 만듭니다. @p rhiSubsystem 은 이것보다 오래 산다. */
         FrameRendererSubsystem( unique_ptr<FrameRenderer> frameRenderer, const RHISubsystem& rhiSubsystem );
@@ -34,12 +35,11 @@ namespace sw
         FrameRendererSubsystem( const FrameRendererSubsystem& )            = delete;
         FrameRendererSubsystem& operator=( const FrameRendererSubsystem& ) = delete;
 
-        SubsystemInitResult        initializeSubsystem() override;
-        void                       shutdownSubsystem() override;
-        const utf8*                getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const>    getSubsystemDependencies() const override;
-        SubsystemHostMask          getSubsystemHost() const override;
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
+        SubsystemInitResult     initializeSubsystem() override;
+        void                    shutdownSubsystem() override;
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        SubsystemHostMask       getSubsystemHost() const override;
 
         FrameRenderer& getFrameRenderer() const { return *_frameRenderer; }
         /** @brief 화면 밖 씬(미리보기 · 캡처)마다의 렌더러입니다. 주 렌더러의 PSO 캐시를 빌려 쓰므로 주 렌더러보다 먼저 내린다. 렌더 스레드 객체다. */
@@ -50,6 +50,7 @@ namespace sw
         /** @brief 파이프라인을 고르는 변수(`gv_renderPipeline` · `gv_deferredShading`)가 바뀌면 렌더 스레드를 재우고 다시 고릅니다. */
         void onPipelineVariableChanged( GlobalVariableInfo* pVariable );
 
+    private:
         unique_ptr<FrameRenderer>           _frameRenderer;
         unique_ptr<OffscreenSceneRenderers> _offscreenRenderers;
         unique_ptr<RenderPacketBuilder>     _packetBuilder;

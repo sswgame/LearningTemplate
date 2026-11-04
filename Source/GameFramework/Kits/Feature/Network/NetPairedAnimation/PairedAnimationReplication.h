@@ -134,6 +134,7 @@ namespace sw
         bool               hasAnnounced( uint32 sessionID ) const;
         bool               hasRefused( uint32 sessionID ) const;
 
+    private:
         vector<uint32>                  _listAnnouncedID; ///< 상태를 보냈고 아직 끝을 보내지 않은 세션
         vector<uint32>                  _listRefusedID;   ///< 복제할 수 없어 보내지 않은 세션(오류를 한 번만 남긴다)
         vector<int32>                   _listJoiningConnection;
@@ -157,6 +158,8 @@ namespace sw
     class SW_KIT_API PairedAnimationReplicationClient : public INetMessageHandler
     {
     public:
+        /** @brief 보관한 상태를 기다린 프레임 상한입니다. 이 프레임 수를 넘게 준비되지 않으면 오류를 남기고 버립니다(무한히 기다리지 않는다). */
+        static constexpr uint32 kMaxPendingFrames = 300;
         PairedAnimationReplicationClient();
 
         /** @brief @p pManager 의 씬 오브젝트를 번호표(`NetObjectTable::captureSceneObjects`)에 잡고 시작합니다. */
@@ -169,9 +172,6 @@ namespace sw
          *          `retryPending` 이 준비된 뒤 적용한다.
          */
         [[nodiscard]] PairedAnimationStartResult applyState( const PairedAnimationNetState& state );
-
-        /** @brief 보관한 상태를 기다린 프레임 상한입니다. 이 프레임 수를 넘게 준비되지 않으면 오류를 남기고 버립니다(무한히 기다리지 않는다). */
-        static constexpr uint32 kMaxPendingFrames = 300;
         /**
          * @brief 보관한 상태를 다시 적용합니다(게임 스레드, 틱 밖 — 프레임에 한 번). 준비됐으면 복원하고, 아직이면 프레임을 세며 두고, 상한(`kMaxPendingFrames`)을 넘으면
          *        기다린 프레임 수와 함께 오류를 남기고 버립니다. 서버 상태가 기준이라 복원 시각은 보관한 상태의 시각이다(기다린 만큼 서버를 뒤따르다 서버 보정을 받는다).
@@ -203,6 +203,7 @@ namespace sw
         /** @brief 세션 id 의 보관한 상태를 버립니다(더 새로운 상태가 왔거나 끝 메시지를 받았다). */
         void dropPending( uint32 sessionID );
 
+    private:
         PairedAnimationReplicationStats _stats;
         vector<PendingState>            _listPending;
         GameObjectManager*              _pManager;

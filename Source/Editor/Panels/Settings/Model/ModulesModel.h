@@ -93,6 +93,7 @@ namespace sw::editor
     private:
         [[nodiscard]] bool writeProjectOverride();
 
+    private:
         ModuleCatalog               _catalog;
         ModuleResolution            _resolution;
         string                      _loadError;

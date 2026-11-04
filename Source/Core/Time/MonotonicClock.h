@@ -104,6 +104,7 @@ namespace sw
         {
         }
 
+    private:
         int64 _deadlineNanoseconds;
     };
 } // namespace sw

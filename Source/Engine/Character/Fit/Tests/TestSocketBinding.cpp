@@ -25,7 +25,13 @@ namespace
         class FakePhysicsBody final : public ISocketPhysicsBody
         {
         public:
-            void beginPhysics( const float4x4& worldTransform, const float3& linearVelocity ) override
+            float4x4 _startWorld{};
+            float3   _velocity{};
+            float32  _elapsed{ 0.0f };
+            int32    _beginCount{ 0 };
+            int32    _endCount{ 0 };
+            bool     _bRunning{ false };
+            void     beginPhysics( const float4x4& worldTransform, const float3& linearVelocity ) override
             {
                 _startWorld = worldTransform;
                 _velocity   = linearVelocity;
@@ -47,13 +53,6 @@ namespace
                 return true;
             }
             void advance( float32 seconds ) { _elapsed += seconds; }
-
-            float4x4 _startWorld{};
-            float3   _velocity{};
-            float32  _elapsed{ 0.0f };
-            int32    _beginCount{ 0 };
-            int32    _endCount{ 0 };
-            bool     _bRunning{ false };
         };
 
         /** @brief 소켓을 가진 쪽(캐릭터)과 붙을 단위(무기) 한 벌. */

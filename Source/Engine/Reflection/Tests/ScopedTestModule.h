@@ -13,6 +13,8 @@ namespace sw::test
     /** @brief 소멸할 때 @p pModuleName 모듈의 타입 · 열거형을 레지스트리에서 내립니다. */
     struct ScopedTestModule
     {
+
+        const utf8* _pModuleName;
         explicit ScopedTestModule( const utf8* pModuleName )
             : _pModuleName( pModuleName )
         {
@@ -21,7 +23,5 @@ namespace sw::test
 
         ScopedTestModule( const ScopedTestModule& )            = delete;
         ScopedTestModule& operator=( const ScopedTestModule& ) = delete;
-
-        const utf8* _pModuleName;
     };
 } // namespace sw::test

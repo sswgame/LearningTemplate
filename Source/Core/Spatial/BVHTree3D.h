@@ -83,6 +83,7 @@ namespace sw
         static AABB    combineAABB( const AABB& a, const AABB& b );
         static float32 getSurfaceArea( const AABB& box );
 
+    private:
         vector<BVHNode3D>                _listNode;
         vector<uint32>                   _listFreeNode;
         unordered_map<SlotHandle, int32> _mapHandleToNode;

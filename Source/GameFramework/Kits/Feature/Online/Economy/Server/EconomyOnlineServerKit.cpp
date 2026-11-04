@@ -173,6 +173,7 @@ namespace sw
                 return false;
             }
 
+        private:
             CurrencyCatalog               _currencyCatalog;
             OfferCatalog                  _offerCatalog;
             unique_ptr<IReceiptValidator> _pFakeValidator;   ///< `fakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)

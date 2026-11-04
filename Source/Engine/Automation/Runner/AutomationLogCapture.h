@@ -67,6 +67,7 @@ namespace sw
     private:
         void onLogWritten( const LogEntry& entry );
 
+    private:
         mutable mutex                          _mutex;
         vector<AutomationLogLine> _listLogLine SW_GUARDED_BY( _mutex ); ///< 시나리오 동안 남은 로그(상한 `kMaxLogLine`) — 로그를 쓴 스레드가 넣는다
         Subscription                           _listenerSubscription;   ///< 전역 로그 리스너 구독(`start` ~ `stop`). 비어 있으면 듣지 않는다

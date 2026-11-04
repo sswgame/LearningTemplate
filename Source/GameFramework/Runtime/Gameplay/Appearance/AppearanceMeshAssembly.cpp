@@ -144,13 +144,13 @@ namespace sw
         public:
             static constexpr const utf8* kSubsystemName = "AppearanceBakedMeshTable";
 
+            mutex                                                                       _mutex;
+            unordered_map<uint64, AppearanceMeshAssemblyInternal::BakedEntry> _mapEntry SW_GUARDED_BY( _mutex );
+
             // ISubsystem — 세울 것이 없다(처음 구운 차림부터 채운다).
             SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
             void                shutdownSubsystem() override {}
             const utf8*         getSubsystemName() const override { return kSubsystemName; }
-
-            mutex                                                                       _mutex;
-            unordered_map<uint64, AppearanceMeshAssemblyInternal::BakedEntry> _mapEntry SW_GUARDED_BY( _mutex );
         };
     } // namespace
 } // namespace sw

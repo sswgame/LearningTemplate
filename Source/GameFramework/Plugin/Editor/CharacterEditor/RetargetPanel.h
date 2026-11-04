@@ -40,6 +40,14 @@ namespace sw::editor
         /** @brief 패널 id 입니다. */
         static constexpr const utf8* kPanelID = "charactereditor.retarget";
 
+        /** @brief 자동화 감시 값이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). 값은 이 패널 인스턴스의 것이라 에디터마다 따로이고 패널과 함께 사라집니다. */
+        struct Published
+        {
+            uint32 _targetPoseCount{ 0 };     ///< 프로필의 리타깃 포즈 줄 수
+            uint32 _previewSegmentCount{ 0 }; ///< 지난 그리기에 미리보기가 그은 선분 수
+            uint32 _chainCount{ 0 };          ///< 프로필의 사슬 수
+        };
+
         RetargetPanel();
 
         const utf8*        getPanelTitle() const override { return "Retarget Profile"; }
@@ -50,15 +58,7 @@ namespace sw::editor
         const RetargetProfile&           getProfile() const { return _profile; }
         const RetargetProfileInspection& getInspection() const { return _inspection; }
         /** @brief 지난 점검이 실패한 까닭입니다. 묶였으면 비어 있습니다. */
-        const string& getInspectionError() const { return _inspectionError; }
-
-        /** @brief 자동화 감시 값이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). 값은 이 패널 인스턴스의 것이라 에디터마다 따로이고 패널과 함께 사라집니다. */
-        struct Published
-        {
-            uint32 _targetPoseCount{ 0 };     ///< 프로필의 리타깃 포즈 줄 수
-            uint32 _previewSegmentCount{ 0 }; ///< 지난 그리기에 미리보기가 그은 선분 수
-            uint32 _chainCount{ 0 };          ///< 프로필의 사슬 수
-        };
+        const string&    getInspectionError() const { return _inspectionError; }
         const Published& getPublished() const { return _published; }
 
     private:
@@ -94,6 +94,7 @@ namespace sw::editor
         /** @brief 읽어 둔 스켈레톤으로 세 자세(원본 · 대상 레퍼런스 · 리타깃 포즈를 얹은 대상)의 모델 공간 본 위치를 다시 만듭니다. 끄는 동안에도 부릅니다. */
         void rebuildPreviewPoses();
 
+    private:
         RetargetProfile                            _profile;
         RetargetProfileInspection                  _inspection;
         Skeleton                                   _previewSource;

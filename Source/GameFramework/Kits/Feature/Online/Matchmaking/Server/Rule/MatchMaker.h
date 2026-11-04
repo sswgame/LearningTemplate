@@ -66,6 +66,7 @@ namespace sw
         [[nodiscard]] bool tryFormMatch( int32 anchorIndex, int64 nowMs, vector<uint8>& inoutListUsed, MatchFormed& outMatch ) const;
         [[nodiscard]] bool partitionIntoTeams( const vector<int32>& listTicketIndex, MatchFormed& outMatch ) const;
 
+    private:
         vector<MatchTicket>          _listTicket;
         vector<MatchBackfillRequest> _listBackfill; ///< 들어온 순서(오래된 것 먼저)이다
         MatchModeDefinition          _definition;

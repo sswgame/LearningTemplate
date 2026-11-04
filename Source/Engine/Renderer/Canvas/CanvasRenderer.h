@@ -105,6 +105,7 @@ namespace sw
         /** @brief 일괄 텍스처 하나의 SRV 입니다(직접 텍스처 · 경로 이미지 · 아틀라스 페이지 순). 없으면 kInvalidDescriptorIndex 입니다. */
         RHIDescriptorIndex findTextureSRV( const CanvasTextureRef& texture ) const;
 
+    private:
         CanvasGlyphAtlasTexture _atlas;      ///< 글리프 아틀라스 페이지의 CPU 미러와 GPU 텍스처
         CanvasTextureLeases     _textures;   ///< `TextureCache` 에서 빌린 경로 이미지와 렌더 텍스처 대상
         CanvasQuadBuffer        _quadBuffer; ///< 앵커 · 주 출력 · 대상 사각형을 이은 구조 버퍼

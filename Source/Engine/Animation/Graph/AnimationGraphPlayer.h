@@ -96,6 +96,7 @@ namespace sw
         /** @brief 이름으로 재생할 것을 찾아 재생(크로스페이드 또는 inertialization)합니다. */
         bool startPlayable( const hashed_string& name, bool bLoop, AnimationBlendMode blendMode, float32 blendSeconds );
 
+    private:
         AnimationPlayer                 _player;
         hashed_string                   _currentStateName;
         const AnimationGraphAsset*      _pGraph;

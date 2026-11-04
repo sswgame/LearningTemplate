@@ -77,6 +77,7 @@ namespace sw
         void               finishSend( uint64 deliveryID, const HTTPClientResponse& response );
         void               complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
 
+    private:
         ApnsPushSettings              _settings;
         string                        _providerToken;
         string                        _deviceURLPrefix; ///< `<기준 주소>/3/device/`

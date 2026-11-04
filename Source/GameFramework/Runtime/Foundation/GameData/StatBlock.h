@@ -68,6 +68,7 @@ namespace sw
         /** @brief 고칠 값 칸입니다. 공개 `findValue`(읽기 전용, 없음은 std::nullopt)와 이름을 달리해 비 const 호출이 이쪽으로 잘못 가지 않게 한다. */
         StatValue* findMutableValue( const hashed_string& name );
 
+    private:
         vector<StatValue> _listValue{};
     };
 } // namespace sw

@@ -131,6 +131,7 @@ namespace sw
         IPushNotificationProvider* findProvider( string_view providerID ) const;
         void                       sendDelivery( uint64 deliveryID, Delivery& delivery, UnixMilliseconds nowMs );
 
+    private:
         unordered_map<uint64, Delivery>    _mapDelivery;
         vector<IPushNotificationProvider*> _listProvider;
         vector<PushDeliveryResult>         _listResultScratch;

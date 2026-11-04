@@ -793,6 +793,7 @@ namespace sw
                 }
             }
 
+        private:
             GuildRequest         _request;
             GuildOutcome         _outcome;
             GuildService*        _pService;

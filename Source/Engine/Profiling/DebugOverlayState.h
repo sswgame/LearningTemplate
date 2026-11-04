@@ -32,14 +32,14 @@ namespace sw
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
         static constexpr const utf8* kSubsystemName = "DebugOverlay";
 
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-
         unordered_map<hashed_string, float32> _mapFloat;
         unordered_map<hashed_string, string>  _mapString;
         uint8                                 _bVisible : 1;
         [[maybe_unused]] uint8                _reserved : 7;
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         DebugOverlayState()
             : _mapFloat{}

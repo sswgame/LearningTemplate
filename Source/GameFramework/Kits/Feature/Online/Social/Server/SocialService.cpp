@@ -242,6 +242,7 @@ namespace sw
                 return connection.commit( transaction );
             }
 
+        private:
             SocialLinkDecision       _decision;
             string                   _displayName;
             SocialService*           _pService;

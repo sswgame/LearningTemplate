@@ -115,21 +115,6 @@ namespace sw
             RestoreIdentity ///< 오브젝트마다 id + 상태. 같은 프로세스에서 찍었으므로 원래 id 를 복원합니다(핫 리로드).
         };
 
-        /**
-         * @brief 씬 안의 모든 유효 GameObject 를 바이너리로 직렬화합니다.
-         * @details 오브젝트마다 상태 앞에 런타임 id(`ObjectIdentity`)를 싣습니다. 같은 프로세스에서 복원하면(핫 리로드)
-         *          `GameObjectHandle` · `ComponentHandle` 이 그 너머로도 이어집니다.
-         */
-        [[nodiscard]] static bool serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes );
-        /**
-         * @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다.
-         * @param outListRemap id 를 복원하지 않을 때(`WithIdentity`) 저장된 컴포넌트 id → 다시 만든 컴포넌트 id 표를 채웁니다(`ComponentStateStore::remapComponentIDs`).
-         */
-        [[nodiscard]] static bool deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
-                                                           vector<ComponentStateStore::SavedComponentID>& outListRemap );
-        /** @brief 올린 타입마다 실어 둔 상태를 돌려줍니다(읽기 훅 앞). */
-        void restoreStatefulComponents();
-
         // 매니저 타입은 템플릿 매개변수로 둔다 — 이 헤더는 오브젝트 매니저를 include 하지 않고, 등록하는 .cpp 에서 만들어진다.
         template <typename TComponent, typename TManager = GameObjectManager>
         static void captureStateOf( ComponentStateStore& store, TManager& manager )
@@ -156,6 +141,22 @@ namespace sw
             }
         }
 
+        /**
+         * @brief 씬 안의 모든 유효 GameObject 를 바이너리로 직렬화합니다.
+         * @details 오브젝트마다 상태 앞에 런타임 id(`ObjectIdentity`)를 싣습니다. 같은 프로세스에서 복원하면(핫 리로드)
+         *          `GameObjectHandle` · `ComponentHandle` 이 그 너머로도 이어집니다.
+         */
+        [[nodiscard]] static bool serializeSceneObjects( SerializePurpose purpose, vector<uint8>& outBytes );
+        /**
+         * @brief 바이너리 데이터로부터 씬 GameObject 들을 복원합니다. @p format 은 id 가 실렸는지, 복원할지를 알려 줍니다.
+         * @param outListRemap id 를 복원하지 않을 때(`WithIdentity`) 저장된 컴포넌트 id → 다시 만든 컴포넌트 id 표를 채웁니다(`ComponentStateStore::remapComponentIDs`).
+         */
+        [[nodiscard]] static bool deserializeSceneObjects( SerializePurpose purpose, const uint8* pData, size_t size, SceneObjectFormat format,
+                                                           vector<ComponentStateStore::SavedComponentID>& outListRemap );
+        /** @brief 올린 타입마다 실어 둔 상태를 돌려줍니다(읽기 훅 앞). */
+        void restoreStatefulComponents();
+
+    private:
         vector<StatefulComponentType>   _listStatefulType;     ///< 상태 스냅샷에 오른 컴포넌트 타입(등록 순서대로 싣고 걷고 돌려준다)
         unique_ptr<ComponentStateStore> _pComponentStateStore; ///< 스냅샷 봉투의 컴포넌트 상태 섹션
     };

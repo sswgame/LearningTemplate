@@ -262,6 +262,7 @@ namespace sw::editor
         /** @brief 대상의 마지막 보고(`net.emulation stats` 의 답)를 한 줄로 그립니다. */
         static void drawReport( const EditorNetPlayProcessStatus& status );
 
+    private:
         vector<ProcessLink>     _listLink;
         NetEmulationPresetTable _presetTable; ///< 프리셋 단추 — 탭을 처음 그릴 때 한 번 읽는다
         float32                 _spikeSeconds;

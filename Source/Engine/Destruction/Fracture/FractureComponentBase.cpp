@@ -397,6 +397,7 @@ namespace sw
                 return _listLeafShape[leaf];
             }
 
+        private:
             IPhysicsScene3D&           _scene;
             vector<PhysicsShapeHandle> _listLeafShape;
             vector<vector<float3>>     _listLeafPoint;
@@ -565,6 +566,7 @@ namespace sw
                 return _listLeafShape[leaf];
             }
 
+        private:
             IPhysicsScene2D&           _scene;
             vector<PhysicsShapeHandle> _listLeafShape;
             vector<vector<float2>>     _listLeafPolygon;

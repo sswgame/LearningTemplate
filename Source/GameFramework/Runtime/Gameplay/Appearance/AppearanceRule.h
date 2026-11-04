@@ -167,6 +167,7 @@ namespace sw
     private:
         void reportConflicts( AppearanceLoadReport& report, string_view sourceName ) const;
 
+    private:
         vector<AppearanceRuleDef> _listRule{};
     };
 } // namespace sw

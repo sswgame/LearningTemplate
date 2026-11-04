@@ -61,6 +61,7 @@ namespace sw::editor
                 _listWarning.push_back( entry._message );
             }
 
+        private:
             mutex          _mutex;
             vector<string> _listWarning;
             Subscription   _subscription; ///< 마지막 멤버라 먼저 풀린다 — 콜백이 만지는 `_mutex` · `_listWarning` 보다 먼저

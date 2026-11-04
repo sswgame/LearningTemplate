@@ -64,6 +64,7 @@ namespace sw::editor
         /** @brief 미리보기를 비우고 @p bMissing 상태로 둡니다. */
         void clearPreview( bool bMissing );
 
+    private:
         vector<ParkRidePreview> _listRide;
         vector<vector<float3>>  _listTrackPoint; ///< 코스터마다의 트랙 점이다(키트의 `CoasterTrackBuilder` 결과)
         float3                  _gatePosition;

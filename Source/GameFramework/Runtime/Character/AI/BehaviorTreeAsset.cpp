@@ -106,6 +106,7 @@ namespace sw
             /** @brief 칸을 읽은 노드 하나를 트리에 더합니다. 작업 함수가 없는 Action · Condition 은 더하지 않고 -1 입니다(함수 없는 잎이 트리에 남지 않게 한다). */
             int32 addNode( const BehaviorTreeNodeData& data, const XMLNode& node, int32 parent, bool& inoutbValid );
 
+        private:
             BehaviorTree& _tree;
             string_view   _sourceName;
         };

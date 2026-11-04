@@ -52,6 +52,7 @@ namespace sw
     private:
         ReflectedInstance( const TypeInfo& type, MemoryBlock&& block ) noexcept;
 
+    private:
         MemoryBlock     _block{};
         const TypeInfo* _pType{ nullptr };
     };

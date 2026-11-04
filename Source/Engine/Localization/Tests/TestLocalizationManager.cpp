@@ -50,6 +50,11 @@ namespace
      */
     struct LocalizationManagerEngineTest
     {
+
+        ScopedScratchDomain      _domain;
+        sw::LocalizationManager& _loc;
+        sw::string               _previousLanguage;
+        sw::string               _previousFallback;
         LocalizationManagerEngineTest()
             : _loc{ sw::engine::getSubsystem<sw::LocalizationManager>() }
             , _previousLanguage{ _loc.getCurrentLanguage() }
@@ -66,11 +71,6 @@ namespace
         }
         LocalizationManagerEngineTest( const LocalizationManagerEngineTest& )            = delete;
         LocalizationManagerEngineTest& operator=( const LocalizationManagerEngineTest& ) = delete;
-
-        ScopedScratchDomain      _domain;
-        sw::LocalizationManager& _loc;
-        sw::string               _previousLanguage;
-        sw::string               _previousFallback;
     };
 } // namespace
 

@@ -32,6 +32,7 @@ namespace sw
         {
         }
 
+    private:
         string _text;
     };
 } // namespace sw
@@ -117,6 +118,7 @@ namespace sw
         void               closeScope( bool bObject, utf8 closing );
         void               fail();
 
+    private:
         string  _ownedText; ///< `JSONWriter( indent )` 가 쓰는 버퍼(`finish` 가 꺼낸다)
         string* _pString;
         utf8*   _pBuffer;

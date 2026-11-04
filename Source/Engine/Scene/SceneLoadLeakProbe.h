@@ -56,6 +56,7 @@ namespace sw
         /** @brief 모든 회차가 끝났다 — 판정하고 로그를 남기고 `TagTotals` 창을 다시 엽니다. */
         void finish();
 
+    private:
         Phase                  _phase;
         string                 _scenePath;
         uint32                 _totalRounds;   ///< 워밍업 + 측정 회차 수(대조 회차는 따로)

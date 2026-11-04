@@ -135,6 +135,7 @@ namespace sw
         DayPhase computePhase( float32 hour ) const { return computePhaseAt( _settings, hour ); }
         void     advanceGameSeconds( float32 gameSeconds );
 
+    private:
         WorldClockSettings           _settings;
         EventBuffer<WorldClockEvent> _eventBuffer;
         float32                      _secondOfDay; ///< 0.._secondsPerDay

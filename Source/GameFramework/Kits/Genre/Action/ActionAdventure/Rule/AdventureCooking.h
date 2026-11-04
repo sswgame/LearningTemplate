@@ -149,6 +149,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "AdventureCooking"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
+    private:
         GameCatalog<AdventureIngredientDef> _ingredientCatalog;
         GameCatalog<AdventureCookEffectDef> _effectCatalog;
         AdventureCookingRulesDef            _rules;

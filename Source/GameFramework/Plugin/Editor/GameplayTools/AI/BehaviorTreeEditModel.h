@@ -109,6 +109,7 @@ namespace sw::editor
         int32 parseNode( const XMLNode& node, int32 parentID, uint32 depth, string& outError );
         void  writeNode( int32 id, const XMLNode& parentXML ) const;
 
+    private:
         vector<BehaviorTreeEditNode> _listNode{};
         int32                        _rootID{ -1 };
         int32                        _nextID{ 1 };

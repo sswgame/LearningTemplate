@@ -47,6 +47,11 @@ namespace
     /** @brief 메모리 캐시 + 라우터입니다. 등록(쓰기)과 읽는 쪽(읽기)이 같은 라우터를 쓴다. */
     struct DirectoryRig
     {
+
+        sw::ManualClock             _clock;
+        sw::MemoryEphemeralDatabase _database;
+        sw::MemoryEphemeralStore    _store;
+        sw::EphemeralStoreRouter    _router;
         DirectoryRig()
             : _clock{ sw::MonotonicMilliseconds{ 0 } }
             , _database{ _clock }
@@ -65,11 +70,6 @@ namespace
                     return;
             }
         }
-
-        sw::ManualClock             _clock;
-        sw::MemoryEphemeralDatabase _database;
-        sw::MemoryEphemeralStore    _store;
-        sw::EphemeralStoreRouter    _router;
     };
 } // namespace
 

@@ -189,6 +189,7 @@ namespace sw
         /** @brief 무버 캡슐(월드)입니다. */
         b2Capsule makeMoverCapsule( const CharacterRecord& record, const float2& position ) const;
 
+    private:
         PhysicsSettings                           _settings;
         CollisionLayers                           _layers;
         unique_ptr<Box2DWorkerPool>               _pWorkerPool; ///< `_workerCount2D` 가 2 이상일 때만 있다. 월드보다 늦게 사라진다(소멸자가 월드를 먼저 지운다).

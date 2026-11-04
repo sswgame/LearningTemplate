@@ -563,6 +563,7 @@ namespace sw
             }
         }
 
+    private:
         vector<sw::thread> _listThread;
         AsyncFileIOQueue*  _pQueue;
         uint32             _threadCount;

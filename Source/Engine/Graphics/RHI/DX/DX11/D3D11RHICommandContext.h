@@ -96,7 +96,9 @@ namespace sw
          * @details DX11 에는 루트 상수가 없습니다. 그래픽스와 컴퓨트 진입점이 이것을 함께 쓰고, 다른 점은 어느
          *          스테이지에 바인딩하는가뿐입니다(VS+PS / CS). 상한 검사와 WRITE_DISCARD 재명명 규칙이 두 벌이면 한쪽만 고쳐집니다.
          */
-        void                 writeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues, bool bCompute );
+        void writeRootConstants( uint32 num32BitValues, const void* pData, uint32 destOffsetIn32BitValues, bool bCompute );
+
+    private:
         D3D11RHIDevice*      _pDevice;
         ID3D11DeviceContext* _pContext;
         /// @brief 이 컨텍스트가 갱신할 기록 상태입니다.

@@ -83,8 +83,7 @@ namespace sw::editor
         class BuiltinPropertyBase : public IInspectorProperty
         {
         protected:
-            const utf8* _pLabel = "##value";
-            void        showTooltipIfHovered( const PropertyInfo& prop )
+            void showTooltipIfHovered( const PropertyInfo& prop )
             {
                 EditorWidgets::drawTooltip( prop._metadata->_tooltip.c_str() );
             }
@@ -221,6 +220,9 @@ namespace sw::editor
                     return;
                 pPanel->openFolder( FileUtil::getDirectoryPart( fileAbs->str() ) );
             }
+
+        protected:
+            const utf8* _pLabel = "##value";
         };
 
         // ------------------------------------------------------------------------------
@@ -697,6 +699,7 @@ namespace sw::editor
                 showTooltipIfHovered( prop );
             }
 
+        private:
             ValueProperty<ComponentHandle>   _untyped;
             vector<InspectorComponentChoice> _listChoice;     ///< 콤보가 열린 프레임에만 채운다
             unordered_set<uint32>            _uniqueReported; ///< 오류를 이미 남긴 필드(이름 해시)

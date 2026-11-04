@@ -104,6 +104,14 @@ namespace sw
         virtual bool isWatching() const = 0;
 
     protected:
+        /**
+         * @brief 폴링하기 전까지 쌓아 둘 변경 이벤트의 상한입니다.
+         * @details `pollEvents` 를 부르는 쪽이 없거나 밀리는 동안(대량 임포트 · 브랜치 전환) 큐가 끝없이 커지지 않게 합니다.
+         *          상한에 걸리면 개별 이벤트 대신 **합성 리스캔 하나**로 합칩니다. `_filename` 이 빈 `Modified` 가 그 약속이고,
+         *          받는 쪽은 그것을 "전부 다시 확인하라" 로 읽습니다. `pushChange` · `pollEvents` 가 모두 여기 있으므로 값도
+         *          하나뿐입니다.
+         */
+        static constexpr size_t _s_kMaxQueuedEvent = 4096;
         /** @brief 인터페이스만 만들고 감시는 시작하지 않습니다. */
         IFileWatcher() = default;
 
@@ -125,15 +133,7 @@ namespace sw
          */
         void reportWatchLost( string_view reason );
 
-        /**
-         * @brief 폴링하기 전까지 쌓아 둘 변경 이벤트의 상한입니다.
-         * @details `pollEvents` 를 부르는 쪽이 없거나 밀리는 동안(대량 임포트 · 브랜치 전환) 큐가 끝없이 커지지 않게 합니다.
-         *          상한에 걸리면 개별 이벤트 대신 **합성 리스캔 하나**로 합칩니다. `_filename` 이 빈 `Modified` 가 그 약속이고,
-         *          받는 쪽은 그것을 "전부 다시 확인하라" 로 읽습니다. `pushChange` · `pollEvents` 가 모두 여기 있으므로 값도
-         *          하나뿐입니다.
-         */
-        static constexpr size_t _s_kMaxQueuedEvent = 4096;
-
+    protected:
         /** @brief 감시 중인 디렉터리입니다. 합성 리스캔 이벤트에 이 값을 넣습니다. */
         string _directoryPath;
 

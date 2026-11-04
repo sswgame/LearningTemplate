@@ -57,6 +57,22 @@ namespace sw
             kLocalScale    = 1u << 2,
         };
 
+        float4x4        _arrWorldMatrix[kSlotCount];      ///< 계층을 합성한 월드 행렬
+        double3         _arrWorldPositionLwc[kSlotCount]; ///< float64 로 누적한 월드 위치(LWC)
+        float3          _arrLocalPosition[kSlotCount];    ///< 로컬 위치(PROPERTY `_localPosition`)
+        float3          _arrLocalRotation[kSlotCount];    ///< 로컬 오일러 회전(PROPERTY `_localRotation`)
+        float3          _arrLocalScale[kSlotCount];       ///< 로컬 스케일(PROPERTY `_localScale`)
+        quaternion      _arrRotationQuat[kSlotCount];     ///< `_arrRotationSource` 로 만든 쿼터니언입니다(회전 변환 캐시)
+        float3          _arrRotationSource[kSlotCount];   ///< `_arrRotationQuat` 을 만든 오일러 회전입니다
+        float3          _arrPendingPosition[kSlotCount];  ///< 틱 중에 쓴 로컬 위치(적용 전)
+        float3          _arrPendingRotation[kSlotCount];  ///< 틱 중에 쓴 로컬 회전(적용 전)
+        float3          _arrPendingScale[kSlotCount];     ///< 틱 중에 쓴 로컬 스케일(적용 전)
+        SceneComponent* _arrOwner[kSlotCount];            ///< 슬롯을 쓰는 컴포넌트다. 빈 슬롯이면 nullptr 이다
+        uint32          _arrPrimitiveIndex[kSlotCount];   ///< 렌더 프리미티브 번호(`PrimitiveRegistry`). 없으면 `SceneTransformStorage::kNoPrimitive`
+        uint32          _arrWorldVersion[kSlotCount];     ///< 월드 변경 번호. 월드를 쓰는 `composeWorld` · `initializeSlot` 만 올리고 0 으로 되돌리지 않는다(아래 설명)
+        uint8           _arrPendingMask[kSlotCount];      ///< 적용을 기다리는 틱 대기 값(`LocalValueBit` 조합). 슬롯의 주인 오브젝트를 틱하는 스레드만 쓴다
+        uint8           _arrFlag[kSlotCount];             ///< `SlotFlag` 조합
+
         /** @brief 비트 하나가 가리키는 로컬 값의 위치입니다. */
         float3& getLocalValueRef( uint32 pageIndex, uint8 bit )
         {
@@ -83,22 +99,6 @@ namespace sw
             current = value;
             return true;
         }
-
-        float4x4        _arrWorldMatrix[kSlotCount];      ///< 계층을 합성한 월드 행렬
-        double3         _arrWorldPositionLwc[kSlotCount]; ///< float64 로 누적한 월드 위치(LWC)
-        float3          _arrLocalPosition[kSlotCount];    ///< 로컬 위치(PROPERTY `_localPosition`)
-        float3          _arrLocalRotation[kSlotCount];    ///< 로컬 오일러 회전(PROPERTY `_localRotation`)
-        float3          _arrLocalScale[kSlotCount];       ///< 로컬 스케일(PROPERTY `_localScale`)
-        quaternion      _arrRotationQuat[kSlotCount];     ///< `_arrRotationSource` 로 만든 쿼터니언입니다(회전 변환 캐시)
-        float3          _arrRotationSource[kSlotCount];   ///< `_arrRotationQuat` 을 만든 오일러 회전입니다
-        float3          _arrPendingPosition[kSlotCount];  ///< 틱 중에 쓴 로컬 위치(적용 전)
-        float3          _arrPendingRotation[kSlotCount];  ///< 틱 중에 쓴 로컬 회전(적용 전)
-        float3          _arrPendingScale[kSlotCount];     ///< 틱 중에 쓴 로컬 스케일(적용 전)
-        SceneComponent* _arrOwner[kSlotCount];            ///< 슬롯을 쓰는 컴포넌트다. 빈 슬롯이면 nullptr 이다
-        uint32          _arrPrimitiveIndex[kSlotCount];   ///< 렌더 프리미티브 번호(`PrimitiveRegistry`). 없으면 `SceneTransformStorage::kNoPrimitive`
-        uint32          _arrWorldVersion[kSlotCount];     ///< 월드 변경 번호. 월드를 쓰는 `composeWorld` · `initializeSlot` 만 올리고 0 으로 되돌리지 않는다(아래 설명)
-        uint8           _arrPendingMask[kSlotCount];      ///< 적용을 기다리는 틱 대기 값(`LocalValueBit` 조합). 슬롯의 주인 오브젝트를 틱하는 스레드만 쓴다
-        uint8           _arrFlag[kSlotCount];             ///< `SlotFlag` 조합
     };
 } // namespace sw
 

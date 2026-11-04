@@ -17,14 +17,13 @@ namespace
     class SubscribedOwner
     {
     public:
-        void releaseItem( SubscribedItem* pItem )
+        RegistrationList<SubscribedItem> _list{ "Test.SubscribedItem", RegistrationList<SubscribedItem>::ReleaseFunction::create<&SubscribedOwner::releaseItem>( this ) };
+        int32                            _releaseCount{ 0 };
+        void                             releaseItem( SubscribedItem* pItem )
         {
             if ( _list.remove( pItem ) )
                 ++_releaseCount;
         }
-
-        RegistrationList<SubscribedItem> _list{ "Test.SubscribedItem", RegistrationList<SubscribedItem>::ReleaseFunction::create<&SubscribedOwner::releaseItem>( this ) };
-        int32                            _releaseCount{ 0 };
     };
 } // namespace
 

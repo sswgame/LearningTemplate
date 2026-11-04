@@ -57,6 +57,7 @@ namespace sw::editor
          */
         bool drawCommittedText( const utf8* pID, const utf8* pCurrent, string& outCommitted );
 
+    private:
         unordered_map<uint32, string> _mapEditBuffer; ///< 편집 중인 입력란(ImGui id)의 글
         int32                         _selectedLayer; ///< 고른 레이어 순번이다. -1 이면 없다
         int32                         _selectedMask;  ///< 고른 본 마스크 순번이다. -1 이면 없다

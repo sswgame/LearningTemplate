@@ -126,6 +126,7 @@ namespace sw
          */
         void applyStepChanges();
 
+    private:
         vector<Cell>              _listCell;
         EventBuffer<ElementEvent> _eventBuffer;
         vector<PendingChange>     _listPending; ///< 스텝 안에서 다시 쓰는 버퍼

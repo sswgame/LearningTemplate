@@ -1544,8 +1544,13 @@ namespace
     class OverflowingLogSink final : public sw::ILogSink
     {
     public:
-        void initialize() override {}
-        void shutdown() override {}
+        static constexpr uint32 kMaxWriteCount = 8;
+
+        uint32     _writeCount{ 0 };
+        uint32     _lastTinySize{ 0 };
+        sw::string _folderPath;
+        void       initialize() override {}
+        void       shutdown() override {}
 
         void writeLogWithID( sw::LogLevel level, const utf8* pTag, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pID ) override
         {
@@ -1570,17 +1575,13 @@ namespace
         }
         sw::string_view getLogFolderPath() override { return _folderPath; }
         sw::string      getLogFilePath() override { return sw::string{}; }
-
-        static constexpr uint32 kMaxWriteCount = 8;
-
-        uint32     _writeCount{ 0 };
-        uint32     _lastTinySize{ 0 };
-        sw::string _folderPath;
     };
 
     /** @brief 스코프 동안 전역 로그 싱크를 바꿔 끼우고 끝에서 되돌립니다. */
     struct ScopedGlobalLogSinkInternal
     {
+
+        sw::ILogSink* _pPrevious;
         explicit ScopedGlobalLogSinkInternal( sw::ILogSink& sink )
             : _pPrevious{ sw::Logger::getGlobalSink() }
         {
@@ -1589,8 +1590,6 @@ namespace
         ~ScopedGlobalLogSinkInternal() { sw::Logger::setGlobalSink( _pPrevious ); }
         ScopedGlobalLogSinkInternal( const ScopedGlobalLogSinkInternal& )            = delete;
         ScopedGlobalLogSinkInternal& operator=( const ScopedGlobalLogSinkInternal& ) = delete;
-
-        sw::ILogSink* _pPrevious;
     };
 } // namespace
 

@@ -62,6 +62,7 @@ namespace sw
         void onRecordReply( const EphemeralReply& reply );
         void finishRefresh();
 
+    private:
         vector<ServerStatus>          _listSnapshot;
         vector<ServerStatus>          _listBuilding;
         unordered_map<uint64, uint64> _mapRequestToServer; ///< 기록 읽기 요청 id → 서버 id

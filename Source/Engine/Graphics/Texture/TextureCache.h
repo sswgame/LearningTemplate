@@ -42,23 +42,26 @@ namespace sw
     class SW_API TextureCache final : public AssetCacheBase
     {
     public:
-        /** @brief 빈 캐시로 만듭니다. */
-        TextureCache();
-        /** @brief 캐시를 해제합니다. */
-        ~TextureCache() override;
-        TextureCache( const TextureCache& )            = delete;
-        TextureCache& operator=( const TextureCache& ) = delete;
-
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Texture";
-        /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
-        const utf8* getAssetKindName() const override { return kAssetKindName; }
         /// @brief 렌더 텍스처 경로의 접두사입니다.
         static constexpr const utf8* kRenderTargetPrefix = "rendertarget/";
         /// @brief 크기를 알리지 않은 렌더 텍스처의 한 변(px)입니다.
         static constexpr uint32 kDefaultRenderTargetSize = 256;
         /// @brief CPU 텍스처 경로의 접두사입니다(`createCPUTexture`).
         static constexpr const utf8* kCPUTexturePrefix = "cpu/";
+        /** @brief 렌더 스레드가 한 프레임에 올리는 비동기 로드 수의 상한입니다(`completePendingLoads`). */
+        static constexpr uint32 kMaxUploadsPerFrame = 8;
+        /** @brief 렌더 스레드가 한 프레임에 업로드하는 위쪽 밉 수의 상한입니다(`updateStreaming`). 텍스처 하나가 밉 사슬 전부라 처음 로드보다 무겁다. */
+        static constexpr uint32 kMaxStreamingUpgradesPerFrame = 2;
+        /** @brief 빈 캐시로 만듭니다. */
+        TextureCache();
+        /** @brief 캐시를 해제합니다. */
+        ~TextureCache() override;
+        TextureCache( const TextureCache& )            = delete;
+        TextureCache& operator=( const TextureCache& ) = delete;
+        /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
+        const utf8* getAssetKindName() const override { return kAssetKindName; }
 
         /**
          * @brief 경로의 텍스처 로드를 요청합니다. 이미 올라가 있으면 `Ready` 핸들, 같은 경로를 읽는 중이면 그 로드의 핸들, 아니면 새 로드입니다.
@@ -96,8 +99,6 @@ namespace sw
          * @details 스테이징이 차서 `Busy` 로 돌아간 로드는 앞 업로드가 끝난 뒤 다시 낸다 — 두 목록이 빌 때까지 되풀이한다. 끝낸 수를 반환합니다.
          */
         uint32 finishPendingLoads( IRHIDevice* pDevice );
-        /** @brief 렌더 스레드가 한 프레임에 올리는 비동기 로드 수의 상한입니다(`completePendingLoads`). */
-        static constexpr uint32 kMaxUploadsPerFrame = 8;
         /**
          * @brief 아래쪽 밉만 올린 텍스처(비동기 로드, `TextureResidency::StreamingBase`)의 위쪽 밉을 업로드합니다(렌더 스레드, 기록 전, `completePendingLoads` 뒤). 바꿔 끼운 수를 반환합니다.
          * @details 텍스처 밉 스트리밍(계획 PreloadAndLOD P6)이다 — 첫 화면은 작은 밉으로 빨리 나오고 위쪽 밉은 한 프레임에 @p maxCount 개씩 들어온다(먼저 읽힌 것부터).
@@ -113,8 +114,6 @@ namespace sw
         void noteScreenSize( string_view relativePath, float32 screenSize );
         /** @brief 위쪽 밉을 기다리는 텍스처가 있으면 true 입니다(게임 스레드가 화면 크기를 알릴 필요가 있는지 싸게 묻는다). */
         bool hasPendingStreamingUpgrades() const;
-        /** @brief 렌더 스레드가 한 프레임에 업로드하는 위쪽 밉 수의 상한입니다(`updateStreaming`). 텍스처 하나가 밉 사슬 전부라 처음 로드보다 무겁다. */
-        static constexpr uint32 kMaxStreamingUpgradesPerFrame = 2;
         /**
          * @brief 스트리밍이 바꿔 끼운 옛 GPU 자원을 해제합니다(게임 스레드, 프레임마다 — `Engine`). `releaseHandle` 이 이미 만든 패킷이 끝날 때까지 미룬다.
          * @details 렌더 스레드에서 바로 해제하면 옛 SRV 번호를 값으로 가진(게임 스레드가 이미 만든) 패킷이 끝나기 전에 그 번호가 다른 텍스처에 다시 쓰인다.
@@ -214,11 +213,13 @@ namespace sw
             TextureCache& _owner;
         };
 
+        friend class TextureLoadOperation; // 로드 작업이 항목 표(`Impl`)에 결과를 적고 참조를 놓는다
+        struct Impl;
+
         /** @brief `completePendingLoads` · `finishPendingLoads` 의 본체입니다 — 제출한 로드의 끝남 확인(@p bBlocking 이면 끝날 때까지) 뒤 @p maxCount 개까지 새로 제출합니다. */
         uint32 pumpPendingLoads( IRHIDevice* pDevice, uint32 maxCount, bool bBlocking );
 
-        friend class TextureLoadOperation; // 로드 작업이 항목 표(`Impl`)에 결과를 적고 참조를 놓는다
-        struct Impl;
+    private:
         shared_ptr<Impl> _impl; ///< 로드 작업이 약한 참조로 가리킨다 — 캐시가 먼저 사라지면 로드 작업은 놓을 것이 없다
         /// @brief 엔진 범위에 `IRenderTargetDeclarationSink` 로 거는 객체입니다(`getRenderTargetDeclarationSink`).
         RenderTargetDeclarationSink _renderTargetDeclarationSink;

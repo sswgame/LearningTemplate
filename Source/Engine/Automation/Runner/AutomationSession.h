@@ -121,8 +121,6 @@ namespace sw
             Subscription               _frameSubscription{}; ///< 세션을 엔진 프레임 관찰자로 붙인 구독
             unique_ptr<ScenarioPlayer> _pPlayer;             ///< 기본 재생기(`ScenarioPlayback` 이 호스트 범위에서 찾는다) — 세션과 따로 프레임 훅에 붙는다
         };
-
-    private:
         /**
          * @brief 체인의 지금 단계 시나리오를 새 실행기로 시작합니다.
          * @details 둘째 단계부터는 앞 단계의 상태를 이어받지 않는다(언리얼 PIE 가 플레이마다 새 GameInstance 를 만들고 CVar 를 되돌리는 것과 같다) — 전역 변수를 세션 시작의
@@ -147,6 +145,7 @@ namespace sw
         /** @brief 처리한 패킷 사진 수입니다(우편함이 없는 호스트는 0). */
         static uint32 findCompletedScreenshotCount();
 
+    private:
         unique_ptr<AutomationRunner>        _pRunner;
         unique_ptr<AutomationScenarioChain> _pChain;
         ScenarioRecorder                    _recorder;

@@ -128,6 +128,10 @@ namespace sw
         static constexpr const utf8* kSpoolFilePrefix   = "telemetry_";
         static constexpr const utf8* kSpoolExtension    = ".jsonl";
 
+        // ISubsystem — 기동 단계 `Telemetry`. 스키마가 틀려도 기동은 멈추지 않는다(스키마에 없는 사건은 기록되지 않을 뿐이다).
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Telemetry";
+
         TelemetryService();
         ~TelemetryService() override;
 
@@ -139,10 +143,6 @@ namespace sw
         void initialize( string_view spoolFolder, const TelemetryContext& context );
         /** @brief 동의가 켜져 있으면 장면 요약 · `session.end` 를 남기고 쓰고, 지금 파일을 닫아 올립니다. 설정 구독을 뗍니다. */
         void shutdown();
-
-        // ISubsystem — 기동 단계 `Telemetry`. 스키마가 틀려도 기동은 멈추지 않는다(스키마에 없는 사건은 기록되지 않을 뿐이다).
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "Telemetry";
 
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override;
@@ -205,6 +205,7 @@ namespace sw
         void                  onSettingEvent( const UserSettingEvent& event );
         void                  refreshConsentFromSetting();
 
+    private:
         mutable mutex                       _mutex;
         TelemetrySchema                     _schema;
         OnceInit<TelemetryContext>          _context; ///< initialize 가 한 번 정한다(shutdown 이 비운다).

@@ -189,6 +189,8 @@ namespace sw
             Absent,
             Invalid,
         };
+
+        friend class JSONDocument;
         JSONValueRead parseMember( string_view key, int32& outValue ) const;
         JSONValueRead parseMember( string_view key, uint32& outValue ) const;
         JSONValueRead parseMember( string_view key, int64& outValue ) const;
@@ -207,12 +209,11 @@ namespace sw
         JSONValueRead parseSelf( string& outValue ) const;
         /** @brief 필수 멤버가 없다고 오류로 남깁니다. */
         void reportMissing( string_view key ) const;
-
-        friend class JSONDocument;
         /** @brief 내부 JSON 노드 포인터로 핸들을 만듭니다. */
         explicit JSONValue( void* pValue )
             : _pValue{ pValue } {}
 
+    private:
         void* _pValue{ nullptr };
     };
 } // namespace sw

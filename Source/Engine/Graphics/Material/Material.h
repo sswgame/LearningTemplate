@@ -66,8 +66,6 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        /** @brief 머티리얼 에셋 종류입니다(등록은 `MaterialCache.cpp` 의 `SW_ASSET_TYPE`). 판 0. */
-        static constexpr AssetTypeDef kAssetType{ "Material", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /**
          * @brief 생성 키입니다. create() 만 만들 수 있습니다.
@@ -81,6 +79,10 @@ namespace sw
             CreateKey() = default;
             friend class Material;
         };
+        /** @brief 빌린 텍스처가 없는 프로퍼티의 슬롯 값입니다(`findTextureSlot`). */
+        static constexpr uint32 kInvalidTextureSlot = constant::invalid_index::kUint32;
+        /** @brief 머티리얼 에셋 종류입니다(등록은 `MaterialCache.cpp` 의 `SW_ASSET_TYPE`). 판 0. */
+        static constexpr AssetTypeDef kAssetType{ "Material", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
         /** @brief create() 전용 생성자입니다. 키 없이는 만들 수 없습니다. */
         explicit Material( CreateKey );
         /** @brief 빈 머티리얼을 Engine.dll 안에서 shared_ptr 로 만듭니다. Material 을 얻는 유일한 방법입니다. */
@@ -214,8 +216,6 @@ namespace sw
          *          그 백엔드에서 MaterialCB 에 실리는 값은 SRV 인덱스가 아니라 이 배열의 **서수**다.
          */
         const vector<RHIDescriptorIndex>& getMaterialTextureSRVs() const { return _listMaterialTextureSRV; }
-        /** @brief 빌린 텍스처가 없는 프로퍼티의 슬롯 값입니다(`findTextureSlot`). */
-        static constexpr uint32 kInvalidTextureSlot = constant::invalid_index::kUint32;
         /**
          * @brief 텍스처 프로퍼티 `name` 이 슬롯 목록(`getMaterialTextureSRVs`)의 몇 번째인지 반환합니다. 이 머티리얼이 그 프로퍼티에 텍스처를 빌리지
          *        않았으면 kInvalidTextureSlot 입니다.
@@ -309,6 +309,7 @@ namespace sw
         /** @brief 런타임 프로퍼티를 Desc 에 다시 씁니다(저장용). */
         void syncDescFromRuntime() const;
 
+    private:
         /** @brief initialize 가 받은 에셋 경로입니다. 디바이스가 바뀌면 이 경로만으로 스스로 복원합니다. */
         string                               _assetPath;
         MaterialDesc                         _desc;

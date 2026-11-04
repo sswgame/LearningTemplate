@@ -50,6 +50,7 @@ namespace sw
     private:
         void onServerList( uint16 errorCode, const vector<ServerListEntry>& listEntry );
 
+    private:
         vector<ServerListEntry> _listEntry;
         ServerDirectoryClient*  _pClient;
         uint64                  _revision;

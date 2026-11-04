@@ -31,7 +31,8 @@ namespace sw
     {
     public:
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "LiveShader";
+        static constexpr const utf8* kSubsystemName      = "LiveShader";
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Shader;
 
         /** @brief @p frameRendererSubsystem 과 @p renderThreadSubsystem 은 이것보다 오래 삽니다(이것이 그들에 의존합니다). */
         LiveShaderSubsystem( const FrameRendererSubsystem& frameRendererSubsystem, const RenderThreadSubsystem& renderThreadSubsystem );
@@ -41,12 +42,11 @@ namespace sw
         LiveShaderSubsystem& operator=( const LiveShaderSubsystem& ) = delete;
 
         /** @brief 실패해도 성공으로 칩니다. 개발 도구 하나 때문에 기동을 멈추지 않습니다. */
-        SubsystemInitResult        initializeSubsystem() override;
-        void                       shutdownSubsystem() override;
-        const utf8*                getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const>    getSubsystemDependencies() const override;
-        SubsystemHostMask          getSubsystemHost() const override;
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Shader;
+        SubsystemInitResult     initializeSubsystem() override;
+        void                    shutdownSubsystem() override;
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        SubsystemHostMask       getSubsystemHost() const override;
 
         /** @brief 셰이더 라이브 리로드입니다. Debug 가 아니거나 시작하지 않았으면 nullptr 입니다(배포본은 DevTools 를 짓지 않는다). */
         ShaderRecompiler* findShaderRecompiler() const { return _bReady ? _shaderRecompiler.get() : nullptr; }
@@ -54,6 +54,7 @@ namespace sw
     private:
         void onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result );
 
+    private:
         unique_ptr<ShaderRecompiler>  _shaderRecompiler;
         Subscription                  _recompiledSubscription; ///< 재컴파일 알림 칸 구독(재컴파일기가 먼저 사라지면 무효가 된다)
         const FrameRendererSubsystem& _frameRendererSubsystem;

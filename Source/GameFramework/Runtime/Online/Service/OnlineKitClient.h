@@ -157,6 +157,7 @@ namespace sw
                 call._onReply( reply );
         }
 
+    private:
         ServiceClientCallTable<Call> _callTable;
         OnlineServiceClient*         _pClient;
         IDAllocator<uint64>          _requestIDAllocator;

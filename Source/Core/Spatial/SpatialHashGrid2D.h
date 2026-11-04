@@ -150,6 +150,7 @@ namespace sw
                    ( static_cast<uint64>( static_cast<uint32>( cellY ) ) );
         }
 
+    private:
         float32                                   _cellSize;
         unordered_map<uint64, vector<SlotHandle>> _mapBucket;
         unordered_map<SlotHandle, AABB2D>         _mapHandleBound;

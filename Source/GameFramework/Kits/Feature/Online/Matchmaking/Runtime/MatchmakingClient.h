@@ -85,6 +85,7 @@ namespace sw
             return _notificationGate.isHeldBy( lease );
         }
 
+    private:
         DrainGate                    _notificationGate;
         EventBuffer<PartySnapshot>   _partyBuffer;
         EventBuffer<PartyInvite>     _inviteBuffer;

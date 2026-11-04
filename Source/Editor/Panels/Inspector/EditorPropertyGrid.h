@@ -175,6 +175,7 @@ namespace sw::editor
         /** @brief FUNCTION 을 호출하고 반환값을 "Last result" 행에 씁니다. 인자 없는 Run 버튼과 Invoke 버튼이 같은 경로를 씁니다. */
         void invokeTypeMethod( void* pInstance, const TypeInfo* pTypeInfo, const FunctionInfo& method, const TaskArgs& args );
 
+    private:
         fixed_string<constant::buffer::kMax64>                         _propertyFilter;   ///< 프로퍼티 검색 필터
         unordered_map<string, vector<InspectorMethodArgSlot>>          _mapMethodArgSlot; ///< FUNCTION() 인자 슬롯. 키는 타입과 메서드 이름 원문
         fixed_string<constant::buffer::kMax256>                        _lastInvokeResult;

@@ -181,6 +181,7 @@ namespace sw
                 return true;
             }
 
+        private:
             NetSecurityLoginCrypto   _crypto;
             LoginSecretVault         _secretVault;       ///< 로그인 서비스보다 오래 산다(먼저 선언)
             PlatformLoginProviderSet _platformProviders; ///< 로그인 서비스보다 오래 산다(먼저 선언)

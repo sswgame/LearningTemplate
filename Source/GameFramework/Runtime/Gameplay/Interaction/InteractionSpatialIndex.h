@@ -81,6 +81,7 @@ namespace sw
         static void projectToPlane( InteractionSpace space, const float3& position, float32& outPlaneX, float32& outPlaneY );
         void        rebuildSpace( GameObjectManager& manager, InteractionSpace space, SpaceGrid& inoutSpace );
 
+    private:
         SpaceGrid _arrSpace[2];
     };
 } // namespace sw

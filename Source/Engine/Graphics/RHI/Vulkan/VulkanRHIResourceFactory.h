@@ -58,6 +58,7 @@ namespace sw
         /** @brief 현재 프레임 슬롯의 스테이징에서 sizeBytes 를 bump 할당합니다(부족하면 키우고 이전 버퍼는 펜스 뒤 해제). */
         bool acquireStructuredUploadStaging( uint64 sizeBytes, uint64& outOffset, VkBuffer& outBuffer );
 
+    private:
         VulkanRHIDevice* _pDevice;
     };
 } // namespace sw

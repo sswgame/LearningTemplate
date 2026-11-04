@@ -204,6 +204,7 @@ namespace sw
         /** @brief 전달 통지 하나를 그 종류를 보내는 처리기에 넘깁니다. 없으면 세고 버립니다. */
         void dispatchNotice( const NetDeliveryNotice& notice );
 
+    private:
         vector<INetMessageHandler*> _listHandler; ///< 등록 순서대로 보관한다. 사건만 받는 처리기는 등록마다 하나씩 오르므로(중복 허용) `RegistrationList` 가 아니다.
         INetMessageHandler*         _arrKindHandler[kKindCount];
         INetMessageHandler*         _arrNoticeHandler[kKindCount]; ///< 종류마다 그 종류를 전달 통지로 보내는 처리기(`getNotifiedKindMask`).
@@ -211,8 +212,6 @@ namespace sw
         NetInbound                  _inbound;                      ///< `pump` 가 다시 쓰는 버퍼.
         uint64                      _malformedCount;
         uint64                      _unclaimedNoticeCount;
-
-    private:
         /** @brief 이 객체가 내준 처리기 등록 구독입니다. 풀리면 `releaseHandler` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<INetMessageHandler> _subscriptions{ ItemSubscriptionList<INetMessageHandler>::ReleaseFunction::create<&NetMessageRouter::releaseHandler>( this ) };
     };

@@ -28,10 +28,16 @@ namespace sw::editor
     {
     public:
         static constexpr const utf8* kSubsystemName = "AdminToolSession";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 감사 열람이 한 번에 가져오는 줄 수입니다. */
         static constexpr int32 kAuditRequestCount = 20;
+
+        /** @brief 프레임마다 `updateConnection` 끝에서 부르는 처리기입니다(로그인을 맡은 쪽이 응답을 꺼내는 자리). */
+        using FrameHook = Delegate<void()>;
+
+        /** @brief 계정 이름 · 비밀번호를 받아 로그인을 맡을 쪽이 거는 처리기입니다. 받아들이면 true(계정 키트의 `AccountGMLogin::setCredentials` 가 그 모양이다). */
+        using CredentialsHandler = Delegate<bool( string_view loginName, string_view password )>;
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
 
         AdminToolSession();
         AdminToolSession( const AdminToolSession& )            = delete; // 활성 제공자가 자기 멤버를 가리킨다
@@ -54,14 +60,8 @@ namespace sw::editor
         [[nodiscard]] bool connectLive( string_view address, string_view gameBuild, string& outError );
         /** @brief 연결을 닫고 메모리 제공자로 돌아갑니다. */
         void disconnectLive();
-
-        /** @brief 프레임마다 `updateConnection` 끝에서 부르는 처리기입니다(로그인을 맡은 쪽이 응답을 꺼내는 자리). */
-        using FrameHook = Delegate<void()>;
         /** @brief 프레임 처리기를 겁니다. 칸 주인은 하나다(이미 걸려 있으면 단언) - 구독이 풀리면 빈다. 에디터 확장이 inline 으로 부르므로 이 함수는 헤더에 둔다. */
         [[nodiscard]] Subscription bindFrameHook( FrameHook hook ) { return _onFrame.bind( std::move( hook ) ); }
-
-        /** @brief 계정 이름 · 비밀번호를 받아 로그인을 맡을 쪽이 거는 처리기입니다. 받아들이면 true(계정 키트의 `AccountGMLogin::setCredentials` 가 그 모양이다). */
-        using CredentialsHandler = Delegate<bool( string_view loginName, string_view password )>;
         /**
          * @brief 계정 이름 · 비밀번호를 넘길 처리기를 겁니다. 에디터 확장은 계정 키트를 include 할 수 없어 로그인은 조립 쪽이 한다 — 조립 쪽은 이 처리기와 `getConnection().bindLoginHook` 을 함께 건다.
          *        칸 주인은 하나다(이미 걸려 있으면 단언) — 구독이 풀리면 빈다.
@@ -127,6 +127,7 @@ namespace sw::editor
         void send( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key );
         void onReply( const AdminClient::Reply& reply );
 
+    private:
         FakeAdminProvider                _fake;
         AdminClientProvider              _live;
         IAdminCommandProvider*           _pActive;

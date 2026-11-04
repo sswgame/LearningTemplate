@@ -63,6 +63,7 @@ namespace sw::editor
         /** @brief 뷰포트 이미지 위에 스켈레톤 · 바디 셰이프 · 관절을 선으로 겹쳐 그립니다. */
         void drawOverlay( const RagdollComponent* pRagdoll );
 
+    private:
         RagdollPreviewModel _model;
     };
 } // namespace sw::editor

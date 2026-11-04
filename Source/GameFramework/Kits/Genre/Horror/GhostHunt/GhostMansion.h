@@ -153,6 +153,7 @@ namespace sw
         void  revealBoo( size_t booIndex );
         void  pushEvent( GhostMansionEventType type, const hashed_string& id, const hashed_string& room = hashed_string{}, int32 count = 0 );
 
+    private:
         GhostEncounter                 _encounter;
         GameRandom                     _random;
         vector<HidingGhostRuntime>     _listBoo;      ///< 카탈로그의 부 순서를 따른다

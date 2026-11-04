@@ -139,6 +139,7 @@ namespace sw
         void   onResponse( const OnlineResponse& response );
         void   finishDeferred( LoginResult failure );
 
+    private:
         ServiceClientCallTable<PendingCall> _callTable;
         vector<AccountClientReply>          _listReply;
         vector<AccountClientEvent>          _listEvent;

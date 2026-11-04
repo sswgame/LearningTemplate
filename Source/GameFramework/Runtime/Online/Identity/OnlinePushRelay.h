@@ -112,6 +112,7 @@ namespace sw
             return TMessageTypes::write( outBody, body );
         }
 
+    private:
         FqnFunction     _pGetPushEnumFqn;
         FqnFunction     _pGetBodyFqn;
         ConvertFunction _pConvert;

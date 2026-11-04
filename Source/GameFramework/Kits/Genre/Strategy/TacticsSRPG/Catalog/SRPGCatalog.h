@@ -226,6 +226,7 @@ namespace sw
         [[nodiscard]] bool loadUnit( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadPilot( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<SRPGTerrainDef> _terrainCatalog;
         GameCatalog<SRPGWeaponDef>  _weaponCatalog;
         GameCatalog<SRPGUnitDef>    _unitCatalog;

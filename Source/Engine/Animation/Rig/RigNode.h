@@ -221,6 +221,7 @@ namespace sw
         /** @brief 칸 이름을 읽은 것으로 기록하고 자식 요소를 돌려줍니다. 없으면 무효 노드이고 필수면 실패로 둡니다. */
         XMLNode readChild( string_view key, bool bRequired );
 
+    private:
         XMLNode        _element; ///< 값으로 보관한다. 핸들이라 복사가 싸다.
         vector<string> _listUsedKey;
         string         _context;

@@ -61,6 +61,7 @@ namespace sw
         /** @brief @p other 의 목록 자리를 그대로 넘겨받습니다(이웃과 머리를 이 객체로 고친다). */
         inline void takeFrom( Subscription& other ) noexcept;
 
+    private:
         SubscriptionSource* _pSource{ nullptr }; ///< 등록을 내준 출처. 출처가 먼저 사라지면 출처가 nullptr 로 바꾼다
         Subscription*       _pPrev{ nullptr };   ///< 출처의 침입형 목록에서 앞 구독
         Subscription*       _pNext{ nullptr };   ///< 출처의 침입형 목록에서 뒤 구독
@@ -107,6 +108,9 @@ namespace sw
             }
             return *this;
         }
+
+    private:
+        friend class Subscription;
 
     protected:
         /** @brief 등록 @p id 를 소유하는 구독을 만들어 목록에 올립니다. */
@@ -171,8 +175,6 @@ namespace sw
         }
 
     private:
-        friend class Subscription;
-
         /** @brief @p subscription 을 목록에서 뺍니다. 목록 잠금을 쥐고 부릅니다. */
         void unlinkLocked( Subscription& subscription ) noexcept
         {
@@ -198,6 +200,7 @@ namespace sw
             }
         }
 
+    private:
         SpinLock      _listLock;         ///< 목록과 구독의 이웃 · 출처 칸을 지킨다
         Subscription* _pHead{ nullptr }; ///< 살아 있는 구독의 침입형 목록 머리
     };

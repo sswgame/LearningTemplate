@@ -85,6 +85,7 @@ namespace sw
         void                           finish( PendingLogin& pending, bool bSucceeded, bool bCancelled, string_view failureText, vector<uint8> ticketBytes );
         string                         makeRedirectURI() const;
 
+    private:
         HTTPServer                        _redirectServer;
         HTTPClient                        _httpClient;
         vector<PkceLoginProviderConfig>   _listProviderSettings;

@@ -278,6 +278,7 @@ namespace sw
         [[nodiscard]] bool           loadPickup( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadEnemy( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<MetroidvaniaAbilityDef>   _abilityCatalog;
         GameCatalog<MetroidvaniaTrinketDef>   _charmCatalog;
         GameCatalog<MetroidvaniaRegionMapDef> _mapCatalog;

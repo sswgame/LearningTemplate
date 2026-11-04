@@ -26,15 +26,6 @@ namespace sw
      */
     struct AsyncOpenFile
     {
-        /** @brief 이미 연 핸들을 넘겨받습니다. */
-        AsyncOpenFile( NativeFileHandle handle, uint64 size, string path );
-        /** @brief 핸들을 닫습니다. */
-        ~AsyncOpenFile();
-
-        /** @brief 복사를 금지합니다(핸들을 두 번 닫는다). */
-        AsyncOpenFile( const AsyncOpenFile& ) = delete;
-        /** @brief 복사 대입을 금지합니다. */
-        AsyncOpenFile& operator=( const AsyncOpenFile& ) = delete;
 
         string           _path;   ///< 연 경로(로그용)
         uint64           _size;   ///< 열 때 측정한 크기
@@ -44,6 +35,15 @@ namespace sw
          *        이 파일을 동기로 읽습니다. 묶다가 실패하면 `kUnbindablePort` 입니다.
          */
         atomic<void*> _pBoundPort;
+        /** @brief 이미 연 핸들을 넘겨받습니다. */
+        AsyncOpenFile( NativeFileHandle handle, uint64 size, string path );
+        /** @brief 핸들을 닫습니다. */
+        ~AsyncOpenFile();
+
+        /** @brief 복사를 금지합니다(핸들을 두 번 닫는다). */
+        AsyncOpenFile( const AsyncOpenFile& ) = delete;
+        /** @brief 복사 대입을 금지합니다. */
+        AsyncOpenFile& operator=( const AsyncOpenFile& ) = delete;
     };
 } // namespace sw
 
@@ -64,8 +64,6 @@ namespace sw
      */
     struct AsyncReadRequest
     {
-        /** @brief 빈 요청입니다. 매니저가 채웁니다. */
-        AsyncReadRequest();
 
         string                    _path;       ///< 열 경로(`_pFile` 이 있으면 쓰지 않는다)
         shared_ptr<AsyncOpenFile> _pFile;      ///< 이미 연 파일. 없으면 백엔드가 `prepare` 에서 연다
@@ -80,6 +78,8 @@ namespace sw
         atomic<bool>              _bCancelRequested;
         AsyncIOPriority           _priority;
         MemoryTag                 _memoryTag; ///< 요청한 스레드의 태그 — 버퍼 할당과 완료 콜백이 이 태그로 센다
+        /** @brief 빈 요청입니다. 매니저가 채웁니다. */
+        AsyncReadRequest();
     };
 } // namespace sw
 
@@ -167,6 +167,7 @@ namespace sw
         /** @brief 완료 콜백을 부르고 요청을 끝난 것으로 표시합니다. */
         void runDelivery( const shared_ptr<AsyncReadRequest>& pRequest );
 
+    private:
         mutable mutex                                                               _mutex;
         mutable std::condition_variable_any                                         _cv;
         array<deque<shared_ptr<AsyncReadRequest>>, kAsyncIOPriorityCount> _arrQueue SW_GUARDED_BY( _mutex );

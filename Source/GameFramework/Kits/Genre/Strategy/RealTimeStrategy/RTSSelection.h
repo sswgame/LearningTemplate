@@ -66,6 +66,7 @@ namespace sw
     private:
         void addUnit( RTSUnitID unitID );
 
+    private:
         vector<RTSUnitID> _listSelected;
         vector<RTSUnitID> _arrGroup[kGroupCount];
         int32             _player;

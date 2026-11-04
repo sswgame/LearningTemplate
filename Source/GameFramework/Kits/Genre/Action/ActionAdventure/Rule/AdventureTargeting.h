@@ -93,6 +93,7 @@ namespace sw
     private:
         void refreshTargetPosition( const vector<LockOnCandidate>& listCandidate );
 
+    private:
         AdventureTargetingSettings _settings;
         LockOnSelector             _selector;
         float3                     _targetPosition;

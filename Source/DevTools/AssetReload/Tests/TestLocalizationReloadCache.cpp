@@ -17,6 +17,10 @@ namespace
     /** @brief 엔진 관리자의 게임 범위 프로젝트 · 언어를 소멸자에서 되돌린다(도메인은 그 뒤에 뗀다). */
     struct LocalizationReloadCacheTest
     {
+
+        sw::test::ScopedScratchDomain _domain;
+        sw::LocalizationManager&      _loc;
+        sw::string                    _previousLanguage;
         LocalizationReloadCacheTest()
             : _loc{ sw::engine::getSubsystem<sw::LocalizationManager>() }
             , _previousLanguage{ _loc.getCurrentLanguage() }
@@ -30,10 +34,6 @@ namespace
         }
         LocalizationReloadCacheTest( const LocalizationReloadCacheTest& )            = delete;
         LocalizationReloadCacheTest& operator=( const LocalizationReloadCacheTest& ) = delete;
-
-        sw::test::ScopedScratchDomain _domain;
-        sw::LocalizationManager&      _loc;
-        sw::string                    _previousLanguage;
     };
 
     sw::string lookup( const sw::LocalizationManager& loc, const utf8* pKey )

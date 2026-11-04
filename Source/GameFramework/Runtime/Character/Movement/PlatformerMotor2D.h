@@ -165,6 +165,7 @@ namespace sw
         /** @brief 버퍼된 점프를 땅(코요테 포함), 벽, 공중 점프 순으로 시도합니다. @p bWallLeft 와 @p bWallRight 는 양옆 벽이 막혔는지입니다. */
         void tryJump( bool bWallLeft, bool bWallRight );
 
+    private:
         PlatformerSettings _settings;
         float2             _position;
         float2             _velocity;

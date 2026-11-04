@@ -83,7 +83,9 @@ namespace sw
          */
         [[nodiscard]] bool bindIndexedMeshForDraw( uint32& outMode, uint32& outIndexType );
         /** @brief `bindIndexedMeshForDraw` 가 건 VAO · 버퍼를 뗍니다. */
-        void                   unbindIndexedMesh();
+        void unbindIndexedMesh();
+
+    private:
         OpenGLRHIDevice* const _pDevice; ///< 생성자에서 받는다
         /// @brief 이 컨텍스트가 갱신하는 기록 상태입니다.
         OpenGLRecordingState* _pState;

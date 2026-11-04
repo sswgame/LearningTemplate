@@ -49,16 +49,16 @@ namespace sw
         uint32 getPlayCount() const { return _playCount; }
 
     private:
-        /** @brief NPC 의 애니메이터에서 상태를 재생합니다. 성공하면 true 입니다. */
-        bool playState( const hashed_string& npc, const hashed_string& stateName );
-
         /** @brief 활동 종류와 기본 상태의 짝입니다. */
         struct ActivityState
         {
             hashed_string _activity{};
             hashed_string _state{};
         };
+        /** @brief NPC 의 애니메이터에서 상태를 재생합니다. 성공하면 true 입니다. */
+        bool playState( const hashed_string& npc, const hashed_string& stateName );
 
+    private:
         GameObjectManager*    _pManager;
         hashed_string         _idleState;
         vector<ActivityState> _listActivityState;

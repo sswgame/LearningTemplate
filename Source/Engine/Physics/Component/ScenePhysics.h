@@ -61,11 +61,11 @@ namespace sw
     class SW_API ScenePhysics final : public ISceneService
     {
     public:
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
         /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "ScenePhysics";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
+        static const SceneServiceRegistration& getSceneServiceRegistration();
+        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 매니저 @p manager 의 서비스 묶음에 든 물리 서비스로 씬을 만들 물리를 둡니다(소유하지 않음).
@@ -189,6 +189,7 @@ namespace sw
         /** @brief 받은 물리 서비스가 있고 올라와 있으면 그것, 아니면 nullptr 입니다. */
         PhysicsSystem* findInitializedPhysicsSystem() const;
 
+    private:
         GameObjectManager&              _manager;             ///< 이 서비스를 가진 매니저(이벤트의 오브젝트 id 를 푼다)
         PhysicsSystem*                  _pPhysicsSystem;      ///< 매니저의 서비스 묶음에서 받은 물리 서비스(빌림)
         vector<BoxCollider2DComponent*> _listCollider2D;      ///< 콜라이더가 자기 자리(`_colliderIndex`)를 든다

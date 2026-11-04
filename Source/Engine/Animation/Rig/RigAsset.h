@@ -41,6 +41,7 @@ namespace sw
     private:
         RigNodeRegistry() = default;
 
+    private:
         NameRegistry<RigNodeFactory> _registry; ///< 종류 이름 → 생성 함수(등록 순서)
     };
 } // namespace sw
@@ -107,6 +108,7 @@ namespace sw
         [[nodiscard]] bool parseTarget( const XMLNode& value, string_view sourceLabel );
         [[nodiscard]] bool parseNode( const XMLNode& value, string_view sourceLabel );
 
+    private:
         vector<RigTargetDef>        _listTarget;
         vector<unique_ptr<RigNode>> _listNode;
         uint64                      _contentID;

@@ -33,11 +33,11 @@ namespace sw::editor
     {
     public:
         static constexpr const utf8* kSubsystemName = "AdminLoginBridge";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief GM 도구 계정 클라이언트 정보의 플랫폼 · 빌드입니다(파일 머리말). */
         static constexpr const utf8* kGMToolPlatform = "editor";
         static constexpr const utf8* kGMToolBuild    = "1.0.0";
+        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         AdminLoginBridge();
         AdminLoginBridge( const AdminLoginBridge& )            = delete; // 서비스 클라이언트가 계정 클라이언트를 가리킨다
@@ -57,6 +57,7 @@ namespace sw::editor
         void onReady( OnlineServiceClient& client );
         void onFrame();
 
+    private:
         AccountGMLogin _login;
         Subscription   _credentialsSubscription;
         Subscription   _loginHookSubscription;

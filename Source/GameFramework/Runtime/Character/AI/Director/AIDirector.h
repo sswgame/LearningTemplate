@@ -203,6 +203,7 @@ namespace sw
         void                       pushEvent( const AIDirectorEvent& event );
         uint32                     computeChanceKey( int32 poolIndex, int32 encounterIndex ) const;
 
+    private:
         AIDirectorContext                           _context;
         AIDirectorIntensityModel                    _builtinModel;
         SpawnDirector                               _spawnDirector;

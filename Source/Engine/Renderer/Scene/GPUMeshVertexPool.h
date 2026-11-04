@@ -109,6 +109,14 @@ namespace sw
             uint32 _indexCount{ 0 };           ///< 인덱스 수(`Mesh::getDrawIndexCount`)
         };
 
+        /// @brief 풀 상한(정점 수)입니다. 4M 정점 × 44 바이트(Packed — 위치 12 + 속성 32) = 176MB 로, 이 저장소의 씬에는 넉넉합니다.
+        static constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u;
+        /// @brief 처음 만드는 풀의 최소 용량(정점 수)입니다. 작은 씬에서 메시 하나 들어올 때마다 다시 채우지 않게 합니다.
+        static constexpr uint32 kMinPoolVertices = 64u * 1024u;
+        /// @brief 인덱스 풀 상한 · 최소 용량입니다. 삼각형 목록 메시는 인덱스가 정점 수와 같고 나눠 쓰는 메시는 대략 그 1.5 ~ 2 배라 정점의 3 배를 잡는다(12M × 4 바이트 = 48MB).
+        static constexpr uint32 kMaxPoolIndices = 3u * kMaxPoolVertices;
+        static constexpr uint32 kMinPoolIndices = 3u * kMinPoolVertices;
+
         /** @brief 항목의 정점 · 인덱스 구간을 늦게 돌려줍니다(받은 것이 있을 때만). */
         void retireEntry( Entry& inoutEntry, uint64 retireStamp );
         /** @brief 더 큰 새 버퍼를 만들고 살아 있는 메시를 모두 앞에서부터 다시 이어 붙입니다. */
@@ -122,17 +130,10 @@ namespace sw
         /** @brief 들어온 메시에 구간을 주고 그 정점만 한 번에 올립니다. 자리가 없는 메시가 있으면 false 이고, 부르는 쪽이 다시 채운다(`repack`). */
         [[nodiscard]] bool placeAddedMeshes( IRHIDevice* pDevice );
 
-        /// @brief 풀 상한(정점 수)입니다. 4M 정점 × 44 바이트(Packed — 위치 12 + 속성 32) = 176MB 로, 이 저장소의 씬에는 넉넉합니다.
-        static constexpr uint32 kMaxPoolVertices = 4u * 1024u * 1024u;
-        /// @brief 처음 만드는 풀의 최소 용량(정점 수)입니다. 작은 씬에서 메시 하나 들어올 때마다 다시 채우지 않게 합니다.
-        static constexpr uint32 kMinPoolVertices = 64u * 1024u;
-        /// @brief 인덱스 풀 상한 · 최소 용량입니다. 삼각형 목록 메시는 인덱스가 정점 수와 같고 나눠 쓰는 메시는 대략 그 1.5 ~ 2 배라 정점의 3 배를 잡는다(12M × 4 바이트 = 48MB).
-        static constexpr uint32 kMaxPoolIndices = 3u * kMaxPoolVertices;
-        static constexpr uint32 kMinPoolIndices = 3u * kMinPoolVertices;
-
         /** @brief 메시의 그릴 정점 흐름(LOD 0 뒤에 낮은 단계)을 `_listScratchByte`([위치 구간 @p vertexCapacity 칸][속성 구간])의 @p firstVertex 칸부터 원본에서 바로 씁니다. */
         void writeDrawVertices( const Mesh& mesh, uint32 firstVertex, uint32 vertexCapacity );
 
+    private:
         RHIMeshVertexFormat _format;
         SpanAllocator       _allocator;
         SpanAllocator       _indexAllocator;

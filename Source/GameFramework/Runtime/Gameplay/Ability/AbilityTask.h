@@ -56,6 +56,7 @@ namespace sw
         /** @brief 어빌리티가 끝나면서 부릅니다. `onDestroy( bAbilityEnded )` 를 한 번 부릅니다. */
         void finish( bool bAbilityEnded );
 
+    private:
         Ability*               _pAbility;
         uint8                  _bFinished : 1;
         [[maybe_unused]] uint8 _reserved  : 7;
@@ -106,6 +107,7 @@ namespace sw
         /** @brief 컴포넌트가 이벤트를 넘겨 주는 함수입니다. */
         void handleEvent( const AbilityEventData& payload );
 
+    private:
         Delegate<void( const AbilityEventData& )> _onEvent;
         TagID                                     _eventTag;
         Subscription                              _subscription; ///< 주인 컴포넌트의 이벤트 구독. 컴포넌트가 먼저 사라지면 무효가 된다

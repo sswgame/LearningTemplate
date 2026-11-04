@@ -92,6 +92,7 @@ namespace sw
 
         int32 countOverlapping( int32 spotIndex, int32 day, int32 startMinute, int32 endMinute ) const;
 
+    private:
         const ScheduleCatalog* _pCatalog;
         vector<Reservation>    _listReservation;
         uint32                 _nextID;

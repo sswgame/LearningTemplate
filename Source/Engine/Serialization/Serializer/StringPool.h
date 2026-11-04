@@ -64,6 +64,7 @@ namespace sw
     private:
         void initializePredefined();
 
+    private:
         vector<string>                _listString;
         unordered_map<string, uint32> _mapStringToID;
     };

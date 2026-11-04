@@ -108,6 +108,7 @@ namespace sw
         /** @brief UI 전역 명령 `ReturnToTitle` 의 처리 함수입니다(일시정지 메뉴의 "타이틀로"). */
         void onReturnToTitleCommand( const hashed_string& command, Widget& source );
 
+    private:
         const GameSettings&      _settings;                       ///< 게임 인스턴스의 gamesettings(빌림 — 인스턴스가 이 범위보다 오래 든다)
         ScreenTransitionManager& _screenTransition;               ///< 같은 게임 범위의 화면 전환(빌림)
         LoadingScreenController& _loadingScreen;                  ///< 같은 게임 범위의 로딩 화면(빌림)

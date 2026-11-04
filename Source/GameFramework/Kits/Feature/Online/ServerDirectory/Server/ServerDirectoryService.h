@@ -146,6 +146,7 @@ namespace sw
         ServerRegistryReader* findReader( string_view kind ) const;
         void                  submitWrite( unique_ptr<ServerDirectoryWriteWork> work );
 
+    private:
         vector<unique_ptr<ServerRegistryReader>> _listReader;
         vector<MaintenanceWindow>                _listMaintenance;
         vector<ServiceNotice>                    _listNotice; ///< 우선순위 내림차순이다

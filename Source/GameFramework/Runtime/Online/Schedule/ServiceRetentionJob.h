@@ -58,6 +58,7 @@ namespace sw
 
         void onSweepCompleted( vector<ServiceRetentionRule> listRule, ServiceStoreResult result, int64 deletedCount );
 
+    private:
         vector<ServiceRetentionRule> _listRule;
         ServiceRetentionJobConfig    _settings;
         ScheduledRun                 _run;

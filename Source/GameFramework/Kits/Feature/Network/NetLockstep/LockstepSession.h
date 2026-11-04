@@ -148,6 +148,7 @@ namespace sw
         bool isPresentAt( int32 player, uint32 tick ) const { return tick < _listLeaveTick[static_cast<size_t>( player )]; }
         bool hasLeft( int32 player ) const { return _listLeaveTick[static_cast<size_t>( player )] != kNoLeaveTick; }
 
+    private:
         TickRingBuffer<TickInput>     _listTickInput;     ///< 받아 두고 아직 진행하지 않은 틱. 받는 창 [지금, 지금 + `kInputWindow`) 이 링 버퍼 한 바퀴이다
         TickRingBuffer<vector<int64>> _listTickChecksum;  ///< 틱별로 플레이어마다 체크섬을 보관한다(-1이면 아직 못 받음). 창 [지금 − `kChecksumWindow`, 지금 + `kChecksumWindow`) 이 링 버퍼 한 바퀴이다
         vector<uint32>                _listNextInputTick; ///< 플레이어마다 다음에 올 입력 틱

@@ -62,17 +62,17 @@ namespace sw
     /** @brief 전송과 무관한 요청 하나입니다. */
     struct MailboxCall
     {
-        /** @param nowMs 요청의 시각(서버 루프의 유닉스 밀리초)입니다. 필수입니다 — 서비스가 다른 시각으로 메우지 않습니다. */
-        explicit MailboxCall( UnixMilliseconds nowMs )
-            : _nowMs{ nowMs }
-        {
-        }
 
         MailboxRequest    _request{};
         NetIdempotencyKey _idempotencyKey{};
         AccountID         _accountID{ kInvalidAccountID };
         UnixMilliseconds  _nowMs;
         uint16            _method{ 0 };
+        /** @param nowMs 요청의 시각(서버 루프의 유닉스 밀리초)입니다. 필수입니다 — 서비스가 다른 시각으로 메우지 않습니다. */
+        explicit MailboxCall( UnixMilliseconds nowMs )
+            : _nowMs{ nowMs }
+        {
+        }
     };
 } // namespace sw
 
@@ -82,7 +82,8 @@ namespace sw
     class SW_KIT_SERVER_API MailboxService final : public IOnlineServerService
     {
     public:
-        using ReplyDelegate = Delegate<void( const MailboxReply& )>;
+        using ReplyDelegate                      = Delegate<void( const MailboxReply& )>;
+        static constexpr const utf8* kSweepJobID = "mail.sweep";
 
         MailboxService();
         ~MailboxService() override;
@@ -106,8 +107,7 @@ namespace sw
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         // 예약 작업 — 만료 정리 회차를 차지했다
-        void                         onScheduledRun( const ScheduledRun& run );
-        static constexpr const utf8* kSweepJobID = "mail.sweep";
+        void onScheduledRun( const ScheduledRun& run );
 
         /** @brief 작업의 `complete` 가 호출합니다. */
         void completeCall( uint64 callID, const MailboxReply& reply );
@@ -138,6 +138,7 @@ namespace sw
         void finishCall( size_t pendingIndex, const MailboxReply& reply );
         bool isIdle() const;
 
+    private:
         vector<PendingCall>                   _listPendingCall;
         vector<ServiceMailCampaign>           _listCampaign;
         ServiceMetrics                        _metrics;

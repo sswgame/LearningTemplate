@@ -122,6 +122,7 @@ namespace sw
         [[nodiscard]] bool bindIndexBufferForDraw();
         void               transitionTexture( RHITextureHandle texture, D3D12_RESOURCE_STATES newState );
 
+    private:
         D3D12RHIDevice*            _pDevice;
         ID3D12GraphicsCommandList* _pCmdList;
         D3D12RecordingState*       _pState;

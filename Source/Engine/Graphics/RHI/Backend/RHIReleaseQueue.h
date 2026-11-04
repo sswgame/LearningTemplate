@@ -104,6 +104,7 @@ namespace sw
         /** @brief 키 이하가 된 해제를 꺼내 잠금 밖에서 실행합니다(tickFrame 과 tickCompleted 공통). */
         void releaseReady( ReleaseList which, uint64 threshold );
 
+    private:
         KeyedPendingList<RHIResourceReleaseDelegate> _listFrameEntry SW_GUARDED_BY( _spinLock ); ///< 키 = 해제할 CPU 프레임 번호
         KeyedPendingList<RHIResourceReleaseDelegate> _listGPUEntry   SW_GUARDED_BY( _spinLock ); ///< 키 = 지나야 할 GPU 펜스 값
         /// @brief tick 이 완료된 콜백을 옮겨 담는 임시 버퍼입니다. 잠금 밖에서 부르려고 옮깁니다. 프레임마다 다시 채워 용량이 남습니다.

@@ -43,6 +43,55 @@ namespace sw
         using manager_function                    = void* (*)( DelegateManagerOp, void*, const void* );
         static constexpr size_t kInlineBufferSize = 24;
 
+        /** @brief 컴파일 타임 함수 포인터로 바인딩합니다. */
+        template <auto Function, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( Function ), Args...>>>
+        static Delegate create()
+        {
+            Delegate newDelegate{};
+            newDelegate._pInstance = nullptr;
+            newDelegate._stubFunc  = static_cast<stub_function>( []( const void*, Args... args ) -> R
+            { return std::invoke( Function, std::forward<Args>( args )... ); } );
+
+            return newDelegate;
+        }
+
+        /** @brief const 인스턴스의 멤버 함수를 바인딩합니다. */
+        template <auto MemberFunction, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( MemberFunction ), const Class*, Args...>>>
+        static Delegate create( const Class* pClassInstance )
+        {
+            Delegate newDelegate{};
+            newDelegate._pInstance = pClassInstance;
+            newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
+            {
+                const Class* pInstance = static_cast<const Class*>( pPtr );
+                return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
+            } );
+
+            return newDelegate;
+        }
+
+        /** @brief 인스턴스의 멤버 함수를 바인딩합니다. */
+        template <auto MemberFunction, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( MemberFunction ), Class*, Args...>>>
+        static Delegate create( Class* pClassInstance )
+        {
+            Delegate newDelegate{};
+            newDelegate._pInstance = pClassInstance;
+            newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
+            {
+                Class* pInstance = const_cast<Class*>( static_cast<const Class*>( pPtr ) );
+                return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
+            } );
+
+            return newDelegate;
+        }
+
+        /**
+         * @brief 람다로 델리게이트를 만듭니다.
+         * @note 자주 불리는 이벤트(예: 매 프레임 발생하는 Tick)에는 람다 대신 멤버 함수 바인딩(create<Method>)을 쓰십시오.
+         */
+        template <typename Lambda, typename = std::enable_if_t<std::is_same_v<std::decay_t<Lambda>, Delegate> == false && std::is_invocable_r_v<R, Lambda, Args...>>>
+        Delegate( const Lambda& lambdaFunc ) { *this = create( lambdaFunc ); }
+
         /** @brief 빈 델리게이트를 만듭니다. */
         Delegate() = default;
 
@@ -87,13 +136,6 @@ namespace sw
         Delegate( R ( *func )( Args... ) ) { *this = create( func ); }
 
         /**
-         * @brief 람다로 델리게이트를 만듭니다.
-         * @note 자주 불리는 이벤트(예: 매 프레임 발생하는 Tick)에는 람다 대신 멤버 함수 바인딩(create<Method>)을 쓰십시오.
-         */
-        template <typename Lambda, typename = std::enable_if_t<std::is_same_v<std::decay_t<Lambda>, Delegate> == false && std::is_invocable_r_v<R, Lambda, Args...>>>
-        Delegate( const Lambda& lambdaFunc ) { *this = create( lambdaFunc ); }
-
-        /**
          * @brief 두 델리게이트가 같은 대상을 가리키는지 비교합니다.
          * @note 람다로 만든 Delegate 는 복사하면 서로 다른 인스턴스로 취급되어 항상 false 입니다. MulticastDelegate 의 항목은 대상이 아니라
          *       `add` 가 돌려준 구독(`Subscription`)으로만 뗍니다.
@@ -125,18 +167,6 @@ namespace sw
             return std::invoke( _stubFunc, _pInstance, std::forward<UArgs>( args )... );
         }
 
-        /** @brief 컴파일 타임 함수 포인터로 바인딩합니다. */
-        template <auto Function, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( Function ), Args...>>>
-        static Delegate create()
-        {
-            Delegate newDelegate{};
-            newDelegate._pInstance = nullptr;
-            newDelegate._stubFunc  = static_cast<stub_function>( []( const void*, Args... args ) -> R
-            { return std::invoke( Function, std::forward<Args>( args )... ); } );
-
-            return newDelegate;
-        }
-
         /** @brief 런타임 함수 포인터로 델리게이트를 만듭니다. */
         static Delegate create( R ( *pFunc )( Args... ) )
         {
@@ -146,36 +176,6 @@ namespace sw
             {
                 auto pFn = reinterpret_cast<R ( * )( Args... )>( const_cast<void*>( pPtr ) );
                 return pFn( std::forward<Args>( args )... );
-            } );
-
-            return newDelegate;
-        }
-
-        /** @brief const 인스턴스의 멤버 함수를 바인딩합니다. */
-        template <auto MemberFunction, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( MemberFunction ), const Class*, Args...>>>
-        static Delegate create( const Class* pClassInstance )
-        {
-            Delegate newDelegate{};
-            newDelegate._pInstance = pClassInstance;
-            newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
-            {
-                const Class* pInstance = static_cast<const Class*>( pPtr );
-                return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
-            } );
-
-            return newDelegate;
-        }
-
-        /** @brief 인스턴스의 멤버 함수를 바인딩합니다. */
-        template <auto MemberFunction, typename Class, typename = std::enable_if_t<std::is_invocable_r_v<R, decltype( MemberFunction ), Class*, Args...>>>
-        static Delegate create( Class* pClassInstance )
-        {
-            Delegate newDelegate{};
-            newDelegate._pInstance = pClassInstance;
-            newDelegate._stubFunc  = static_cast<stub_function>( []( const void* pPtr, Args... args ) -> R
-            {
-                Class* pInstance = const_cast<Class*>( static_cast<const Class*>( pPtr ) );
-                return std::invoke( MemberFunction, pInstance, std::forward<Args>( args )... );
             } );
 
             return newDelegate;
@@ -302,6 +302,7 @@ namespace sw
             return nullptr;
         }
 
+    private:
         const void*      _pInstance{ nullptr };
         stub_function    _stubFunc{ nullptr };
         manager_function _managerFunc{ nullptr };
@@ -603,6 +604,7 @@ namespace sw
                 _listDelegate.erase( _listDelegate.begin() + static_cast<ptrdiff_t>( *index ) );
         }
 
+    private:
         vector<DelegateEntry>  _listDelegate;
         vector<DelegateHandle> _listPendingRemove; ///< broadcast 중에 미뤄 둔 remove 목록
         uint32                 _broadcastDepth;    ///< 중첩된 broadcast 깊이. 0 이 될 때만 지연된 제거를 반영한다

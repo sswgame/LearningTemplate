@@ -73,13 +73,13 @@ namespace
     /** @brief 픽스처 예 — 케이스마다 새로 서고(준비) 끝나면 사라진다(정리). */
     struct ScratchFileFixture
     {
+
+        string _path;
         ScratchFileFixture()
             : _path{ test::makeScratchPath( "fixture.txt" ) }
         {
             (void)FileUtil::writeTextFile( _path, "ready" );
         }
-
-        string _path;
     };
 
     constexpr uint32 kArrShardCount[] = { 1u, 2u, 7u };

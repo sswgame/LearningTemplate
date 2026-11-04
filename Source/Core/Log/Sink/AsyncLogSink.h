@@ -82,6 +82,12 @@ namespace sw
         bool enableJSONLinesOutput() override;
 
     private:
+        /**
+         * @brief 달 수 있는 출력 장치의 최대 개수입니다.
+         * @details `dispatchToOutputs` 는 잠금 안에서 포인터만 고정 배열로 복사해 오고 쓰기는 **락 밖에서** 합니다(느린 파일 I/O
+         *          가 콘솔을 막지 않도록). 그 배열의 크기가 곧 이 상한이고, `addOutput` 도 이 값으로 거절합니다.
+         */
+        static constexpr uint32 _s_kMaxOutput = 8;
         /** @brief 백그라운드 I/O 작업 스레드의 루프입니다. */
         void workerLoop();
         /** @brief 큐에 남은 로그를 모두 비우고 기록합니다. */
@@ -94,13 +100,6 @@ namespace sw
         void dispatchToOutputs( const LogRecord& record );
 
         /**
-         * @brief 달 수 있는 출력 장치의 최대 개수입니다.
-         * @details `dispatchToOutputs` 는 잠금 안에서 포인터만 고정 배열로 복사해 오고 쓰기는 **락 밖에서** 합니다(느린 파일 I/O
-         *          가 콘솔을 막지 않도록). 그 배열의 크기가 곧 이 상한이고, `addOutput` 도 이 값으로 거절합니다.
-         */
-        static constexpr uint32 _s_kMaxOutput = 8;
-
-        /**
          * @brief 달려 있는 출력 장치의 포인터를 @p outArrDevice 에 복사하고 개수를 돌려줍니다. 장치를 부르는 일(`open` · `close` · `write`)은 모두 이 복사본으로 **락 밖에서** 합니다.
          * @details `_mutex` 는 잎 락입니다 — 락을 쥔 채 로그 · 장치 · 리스너를 부르지 않습니다. 그 호출이 남기는 로그가 이 싱크로 되돌아와 같은 `_mutex` 를 잡으면
          *          재진입 불가라 같은 스레드가 영구 정지합니다(예: 로그 폴더를 못 만들어 남긴 오류가 `initialize` 를 멈춤). 장치는 `addOutput` 으로 붙기만 하고
@@ -108,6 +107,7 @@ namespace sw
          */
         uint32 snapshotOutputs( ILogOutput* ( &outArrDevice )[_s_kMaxOutput] );
 
+    private:
         /**
          * @brief 메모리 리스너(에디터 콘솔 UI · 테스트 캡처)입니다. 방송은 잠금 밖에서 불변 사본을 부르고, 해제는 그 전에 시작한 방송이 끝나기를 기다린다
          *        (콘솔 패널 파괴 · 모듈 언로드 뒤에 그 코드로 들어가지 않게). 이 싱크의 `_mutex` 와 따로인 잎 잠금이다.

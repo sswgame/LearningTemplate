@@ -45,6 +45,7 @@ namespace sw
         /** @brief `<Board>` 와 그 `<Season>` · `<Reward>` 를 스키마로 읽습니다. 하나라도 틀리면 오류를 남기고 false 입니다(그 보드는 넣지 않는다). */
         [[nodiscard]] static bool readBoard( const XMLNode& node, string_view sourceName, LeaderboardDefinition& outBoard );
 
+    private:
         vector<LeaderboardDefinition> _listBoard{};
         vector<AchievementDefinition> _listAchievement{};
     };

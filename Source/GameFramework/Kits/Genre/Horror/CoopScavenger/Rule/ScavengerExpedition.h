@@ -209,6 +209,7 @@ namespace sw
         void    collectThreatEvents( SpawnDirector& director, bool bIndoor );
         void    pushEvent( ScavengerEvent::Kind kind, int32 player, int32 value, const hashed_string& id = hashed_string{} );
 
+    private:
         vector<ScavengerCrewMember> _listCrew;
         vector<ScavengerScrap>      _listShipScrap;
         EventBuffer<ScavengerEvent> _eventBuffer;

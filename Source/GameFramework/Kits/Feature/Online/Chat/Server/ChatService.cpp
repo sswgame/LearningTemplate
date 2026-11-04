@@ -143,6 +143,7 @@ namespace sw
                     (void)connection.commit( trim ); // 정리는 다음 기회에 다시 해도 되므로 Conflict 와 Unavailable 은 버린다
             }
 
+        private:
             vector<ChatMessage> _listMessage;
             vector<string>      _listTrimChannel;
             ChatService*        _pService;

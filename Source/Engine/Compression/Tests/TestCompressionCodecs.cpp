@@ -68,14 +68,14 @@ namespace
     /** @brief 내장 코덱 둘 + 엔진 코덱을 올린 이 케이스만의 레지스트리입니다(활성 슬롯 · 엔진의 레지스트리를 건드리지 않는다). */
     struct EngineCodecRegistryFixture
     {
+
+        sw::CompressionCodecRegistry _registry;
+        sw::vector<sw::Subscription> _listCodecSubscription; ///< 레지스트리 뒤에 선언해 먼저 사라진다
         EngineCodecRegistryFixture()
         {
             _registry.initialize();
             _listCodecSubscription = sw::EngineCompressionCodecUtil::registerAll( _registry );
         }
-
-        sw::CompressionCodecRegistry _registry;
-        sw::vector<sw::Subscription> _listCodecSubscription; ///< 레지스트리 뒤에 선언해 먼저 사라진다
     };
 } // namespace
 

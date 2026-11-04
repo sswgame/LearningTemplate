@@ -76,7 +76,10 @@ namespace sw
 
         /** @brief 블록 크기를 16 의 배수로, 최소 `FreeNode` 크기로 올립니다. */
         static size_t roundBlockSize( size_t blockSize );
+        /** @brief 청크를 하나 더 잡아 자유 목록에 붙입니다. **잠금을 잡은 채로** 부릅니다. */
+        void allocateChunk();
 
+    private:
         // 크기 · 잠금 여부는 생성 뒤 바뀌지 않는다(const — 잠금 없이 읽는다). 목록 둘은 `_bThreadSafe` 면 `_mutex` 아래이고 아니면 한 스레드 전용이라
         // 잠금 여부가 값으로 정해져 SW_GUARDED_BY 로 적을 수 없다(조건부 잠금).
         const size_t _blockSize;
@@ -85,9 +88,6 @@ namespace sw
         sw::mutex    _mutex;
         const uint32 _blocksPerChunk;
         const bool   _bThreadSafe;
-
-        /** @brief 청크를 하나 더 잡아 자유 목록에 붙입니다. **잠금을 잡은 채로** 부릅니다. */
-        void allocateChunk();
     };
 } // namespace sw
 

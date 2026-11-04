@@ -278,6 +278,7 @@ namespace sw::editor
             buildNode( inoutListNode, childBase + 1, middle, first + count - middle, inoutListOrder, listCentroid, padding );
         }
 
+    private:
         vector<float3> _listSource;
         vector<float4> _listPacked;
         uint32         _triangleCount{ 0 };

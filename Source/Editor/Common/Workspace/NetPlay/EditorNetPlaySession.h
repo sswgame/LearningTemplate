@@ -106,13 +106,17 @@ namespace sw::editor
         /** @brief `updateUntil` 이 조건을 다시 보는 간격입니다. */
         static constexpr int64 kUpdatePollMilliseconds = 50;
 
-        EditorNetPlaySession();
-        ~EditorNetPlaySession() override;
-
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorNetPlaySession";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 오브젝트별 해시를 묻는 개발 명령입니다(`SceneStateHash` 의 `state.objectline`). */
+        static constexpr const utf8* kObjectHashCommand = "state.objectline";
+        /** @brief 이른 답 뒤 다시 묻는 상한입니다 — 멈춘 서버를 따라오는 데 드는 답 수보다 넉넉하고, 끊긴 클라이언트에 끝없이 묻지 않게 한다. */
+        static constexpr uint32 kMaxObjectHashReask = 600;
+
+        EditorNetPlaySession();
+        ~EditorNetPlaySession() override;
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
         /** @brief 사용자 프리셋 파일을 읽고, 마지막으로 고른 프리셋이 있으면 다음 세션의 구성(`getSettings`)으로 둡니다. 깨진 파일은 치우고 기동은 잇습니다. */
         SubsystemInitResult initializeSubsystem() override;
 
@@ -165,10 +169,6 @@ namespace sw::editor
          *          받아들인 답에서 `_objectHashReportCount` 가 오른다. 다시 묻기는 `kMaxObjectHashReask` 번까지이고, 넘으면 이른 답을 넘겨 비교가 틱 차이로 실패한다.
          */
         [[nodiscard]] bool requestObjectHashes( int32 processIndex, uint64 minTick );
-        /** @brief 오브젝트별 해시를 묻는 개발 명령입니다(`SceneStateHash` 의 `state.objectline`). */
-        static constexpr const utf8* kObjectHashCommand = "state.objectline";
-        /** @brief 이른 답 뒤 다시 묻는 상한입니다 — 멈춘 서버를 따라오는 데 드는 답 수보다 넉넉하고, 끊긴 클라이언트에 끝없이 묻지 않게 한다. */
-        static constexpr uint32 kMaxObjectHashReask = 600;
 
         bool isRunning() const { return _listProcess.empty() == false; }
         /** @brief `requestStop` 뒤 프로세스 거두기 · 트레이스 합치기가 아직 끝나지 않았으면 true 입니다. 이 동안 `isRunning` 은 거짓이고 `start` 는 거절한다. */
@@ -242,7 +242,9 @@ namespace sw::editor
         /** @brief 프로세스 하나를 인자 목록 @p listArgument 로 띄우고 읽기 스레드를 붙입니다(셸을 거치지 않는다 — `ProcessCommand`). */
         [[nodiscard]] bool launchChild( const string& label, const string& executablePath, vector<string> listArgument, const string& tracePath );
         /** @brief 트레이스 폴더 안의 `<이름>.trace.json` 경로를 만듭니다. 트레이스가 꺼져 있으면 빈 문자열입니다. */
-        string                           makeTracePath( const string& fileStem ) const;
+        string makeTracePath( const string& fileStem ) const;
+
+    private:
         vector<unique_ptr<ChildProcess>> _listProcess;
         vector<unique_ptr<ChildProcess>> _listStoppingProcess; ///< `requestStop` 이 옮긴 프로세스(멈춤이 끝날 때까지 산다 - 잡이 읽기 스레드를 원시 포인터로 합류한다)
         unique_ptr<EditorNetPlayStopJob> _pStopJob;            ///< 읽기 스레드 합류 · 트레이스 합치기 잡

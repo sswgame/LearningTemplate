@@ -44,6 +44,7 @@ namespace sw::editor
         void drawDirectorySection();
         void drawLiveEventSection();
 
+    private:
         string              _gmAddressText;
         string              _loginNameText;
         utf8                _arrPassword[kPasswordCapacity]; ///< 입력 중인 GM 비밀번호. 연결을 누르면 지운다

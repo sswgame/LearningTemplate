@@ -122,6 +122,7 @@ namespace sw
         /** @brief 셀 경로를 찾아 비용 가중 길이를 반환합니다. 경로가 없으면 직선 거리를 반환합니다. */
         float32 findRoute( const ScheduleLocation& from, const ScheduleLocation& to, vector<float3>* pOutListPoint ) const;
 
+    private:
         const NavGrid*  _pGrid;
         GridPathfinder* _pPathfinder;
         SchedulePlane   _plane;
@@ -152,6 +153,7 @@ namespace sw
         void   makeAreaRoute( const ScheduleLocation& from, const ScheduleLocation& to, vector<hashed_string>& outListArea, vector<float3>& outListPoint ) const;
         float3 computeAreaCenter( const hashed_string& areaID, const float3& fallback ) const;
 
+    private:
         const AreaGraph* _pGraph;
         const GameFlags* _pFlags;
         SchedulePlane    _plane;

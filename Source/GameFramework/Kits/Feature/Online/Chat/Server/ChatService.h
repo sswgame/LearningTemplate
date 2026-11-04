@@ -234,6 +234,7 @@ namespace sw
         /** @brief 기록을 읽고 신고할 수 있는 채널이면 true 입니다. 귓속말은 당사자, 나머지는 이 서버의 멤버입니다. */
         bool canReadChannel( AccountID accountID, string_view channelID, ChatChannelKind kind ) const;
 
+    private:
         unordered_map<AccountID, Member>         _mapAccountToMember;
         unordered_map<string, vector<AccountID>> _mapChannelToMember;
         unordered_map<uint64, PendingWhisper>    _mapPresenceRequestToWhisper;

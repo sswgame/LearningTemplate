@@ -55,12 +55,12 @@ namespace sw
     /** @brief `SW_GAME_AUTOPLAY` 가 두는 정적 등록자입니다. */
     struct SW_API GameAutoplayRegistrar
     {
+
+        const GameAutoplayRegistration* _pRegistration;
         explicit GameAutoplayRegistrar( const GameAutoplayRegistration* pRegistration );
         ~GameAutoplayRegistrar();
         GameAutoplayRegistrar( const GameAutoplayRegistrar& )            = delete;
         GameAutoplayRegistrar& operator=( const GameAutoplayRegistrar& ) = delete;
-
-        const GameAutoplayRegistration* _pRegistration;
     };
 } // namespace sw
 

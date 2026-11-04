@@ -54,6 +54,7 @@ namespace sw
         /** @brief 관리 채널의 한 줄을 실행합니다(허용 목록: `help` · `status` · `maintenance on|off|state` · `shutdown`). */
         [[nodiscard]] bool executeCommand( string_view line, string& outReply );
 
+    private:
         unique_ptr<IStreamTransport> _transport; ///< 관리 채널의 스트림 전송(채널을 종료한 뒤 지운다)
         unique_ptr<DebugChannel>     _channel;   ///< 관리 채널(`_adminChannelPort` 가 0 이 아닐 때만)
         ServiceHealthRegistry*       _pHealthRegistry;

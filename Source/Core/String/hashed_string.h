@@ -112,6 +112,8 @@ namespace sw
             /** @brief intern 해시 값을 size_t 로 반환합니다. */
             size_t operator()( const basic_hashed_string& key ) const noexcept { return key.getHash(); }
         };
+        /** @brief intern 맵, 청크 테이블, 아레나 저장소입니다. */
+        struct AllocationInfo;
 
         /** @brief NameType_None 인덱스인 빈 이름으로 둡니다. */
         basic_hashed_string() noexcept
@@ -241,6 +243,11 @@ namespace sw
             uint32 _comparisonIndex{ static_cast<uint32>( PredefinedNameType::NameType_None ) };
             uint32 _displayIndex{ static_cast<uint32>( PredefinedNameType::NameType_None ) };
         };
+        /** @brief 해시 맵 조회와 엔트리 키에 쓰는 구조체입니다. */
+        struct StringKey;
+
+        /** @brief 청크 엔트리입니다(정의는 아래에 있으므로 여기서는 불완전 타입이어도 됩니다). */
+        struct Entry;
 
         /** @brief intern 결과로 만듭니다. */
         explicit basic_hashed_string( const InternedIndex& interned ) noexcept
@@ -253,14 +260,6 @@ namespace sw
         /** @brief 전역 intern 테이블에서 인덱스를 찾거나 넣습니다. */
         static InternedIndex helper( const T* pStr, size_type length ) noexcept;
 
-    public:
-        /** @brief intern 맵, 청크 테이블, 아레나 저장소입니다. */
-        struct AllocationInfo;
-
-    private:
-        /** @brief 해시 맵 조회와 엔트리 키에 쓰는 구조체입니다. */
-        struct StringKey;
-
         /** @brief 지정한 intern 테이블에 넣고 그 인덱스를 가집니다(미리 정의된 이름용). */
         basic_hashed_string( AllocationInfo& info, const T* pStr ) noexcept
             : basic_hashed_string{ helper_internal( info, pStr, StringUtil::strlen( pStr ) ) } {}
@@ -271,15 +270,13 @@ namespace sw
         /** @brief 전역 intern 테이블입니다. */
         static AllocationInfo& getAllocationInfo() noexcept;
 
-        /** @brief 청크 엔트리입니다(정의는 아래에 있으므로 여기서는 불완전 타입이어도 됩니다). */
-        struct Entry;
-
         /** @brief 엔트리를 락 없이 O(1) 로 찾습니다. 없는 인덱스면 nullptr 입니다. */
         static const Entry* findEntry( uint32 entryIndex ) noexcept;
 
         /** @brief 표시 엔트리 번호로 `InternedIndex` 를 만듭니다. 비교 엔트리는 엔트리가 가리키는 값이고, 엔트리가 없으면 표시 번호를 씁니다. */
         static InternedIndex makeInterned( uint32 displayIndex ) noexcept;
 
+    private:
         uint32 _comparisonIndex; ///< 대소문자를 무시한 이름의 엔트리(같음 비교, 해시, 미리 정의된 이름에 쓴다).
         uint32 _displayIndex;    ///< 적은 철자의 엔트리(`c_str()` 과 `size()` 에 쓴다).
     };

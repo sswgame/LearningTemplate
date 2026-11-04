@@ -282,6 +282,13 @@ namespace sw
         bool isUploaded() const { return _instances._buffer != 0; }
 
     private:
+        /// @brief 그룹에서 (버퍼, SRV, 원소 수)를 찾는 테이블입니다. 배치 루프가 조회 대신 읽습니다. 프레임마다 다시 채웁니다.
+        struct ResolvedGroup
+        {
+            RHIBufferHandle    _buffer{ 0 };
+            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
+            uint32             _elementCount{ 0 };
+        };
         /**
          * @brief 그룹마다 머티리얼 패킹 바이트를 원소 stride 로 이어 붙여 구조 버퍼에 올리고, 배치에 버퍼와 SRV 를 기록합니다(RT).
          * @details 바이트가 지난 업로드와 같으면 건너뛴다. 값이 바뀐 그룹만 올린다(언리얼의 더티 업로드).
@@ -315,21 +322,15 @@ namespace sw
         /** @brief 뷰마다의 간접 인자 버퍼를 확보해 올립니다. */
         void uploadIndirectArgs( IRHIDevice* pDevice, uint32 argsCount );
 
+    private:
         /** @brief 패킷에서 받은 스냅샷입니다. 이 안의 것만 GT 가 만든 값입니다. */
         GPUSceneSnapshot _snapshot;
         /// @brief 셰이더 경로에서 머티리얼 데이터 GPU 버퍼를 찾는 맵입니다(RT 영속, 스냅샷 교체와 무관).
         unordered_map<string, GPUMaterialGroupBuffer> _mapMaterialGroupBuffer;
         vector<uint8>                                 _listMaterialScratch;
-        /// @brief 그룹에서 (버퍼, SRV, 원소 수)를 찾는 테이블입니다. 배치 루프가 조회 대신 읽습니다. 프레임마다 다시 채웁니다.
-        struct ResolvedGroup
-        {
-            RHIBufferHandle    _buffer{ 0 };
-            RHIDescriptorIndex _srv{ kInvalidDescriptorIndex };
-            uint32             _elementCount{ 0 };
-        };
-        vector<ResolvedGroup>                 _listResolvedGroupScratch;
-        vector<RHIDrawIndexedIndirectCommand> _listScratchIndirectCmd;
-        vector<GPUBatchInfo>                  _listScratchBatchInfo;
+        vector<ResolvedGroup>                         _listResolvedGroupScratch;
+        vector<RHIDrawIndexedIndirectCommand>         _listScratchIndirectCmd;
+        vector<GPUBatchInfo>                          _listScratchBatchInfo;
         /// @brief 부분 인스턴스 업로드용 영역 목록입니다. 프레임마다 다시 채워 쓰며 할당을 반복하지 않습니다.
         vector<RHIBufferCopyRegion> _listScratchCopyRegion;
 

@@ -109,6 +109,7 @@ namespace sw
         void   finishHistory( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now );
         void   completeRetry( const ReceiptValidationRequest& request, const utf8* pText );
 
+    private:
         AppleReceiptSettings            _settings;
         string                          _authorization;
         unordered_map<uint64, Call>     _mapRequestToCall;

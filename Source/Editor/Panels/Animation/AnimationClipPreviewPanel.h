@@ -47,6 +47,7 @@ namespace sw::editor
         void seekPreviewTimeline( float32 seconds ) override;
         void drawClipInfo();
 
+    private:
         AnimationClipPreviewModel _model;
     };
 } // namespace sw::editor

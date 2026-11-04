@@ -53,6 +53,7 @@ namespace sw
         void respond( OnlineServiceHost& host, uint64 requestTag, const SocialReply& reply );
         void sendNotifications( OnlineServiceHost& host );
 
+    private:
         ServicePendingTable        _pendingTable;
         vector<SocialCompletion>   _listSocialScratch;
         vector<GuildCompletion>    _listGuildScratch;

@@ -29,6 +29,8 @@ namespace sw
         class PrefixTradePolicy final : public ITradePolicy
         {
         public:
+            vector<string> _listTradablePrefix;
+            int32          _maxLegsPerSide;
             PrefixTradePolicy()
                 : _listTradablePrefix{}
                 , _maxLegsPerSide{ TradeOnlineServerKitInternal::kDefaultMaxLegsPerSide }
@@ -41,9 +43,6 @@ namespace sw
                 { return StringUtil::startsWith( assetID, prefix ); } );
             }
             int32 getMaxLegsPerSide() const override { return _maxLegsPerSide; }
-
-            vector<string> _listTradablePrefix;
-            int32          _maxLegsPerSide;
         };
 
         /**

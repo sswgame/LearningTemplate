@@ -55,6 +55,7 @@ namespace sw
     private:
         void onCallSucceeded( const Call& call, const EconomyReply& reply ) override;
 
+    private:
         vector<LedgerBalance> _listBalance;
         uint32                _revision;
     };

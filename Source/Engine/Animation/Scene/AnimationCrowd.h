@@ -283,12 +283,6 @@ namespace sw
         void clear();
 
     private:
-        /** @brief 클립 한 바퀴 안에서 유닛 시간에 가장 가까운 변형 구간을 고릅니다. */
-        uint32 selectVariation( const AnimationSharedPoseRequest& request, float32 duration ) const;
-        /** @brief 키의 묶음을 찾고, 없으면 스킨 원본의 사본 메시로 만듭니다. */
-        AnimationCrowdBucket* findOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton, const shared_ptr<const AnimationClip>& clip,
-                                                  const shared_ptr<const AnimationClip>& nextClip, const shared_ptr<Mesh>& sourceMesh );
-
         /** @brief 베이크한 VAT 메시 하나입니다. */
         struct VertexAnimationEntry
         {
@@ -298,7 +292,13 @@ namespace sw
             uint8                _bAnchorRootMotion{ SW_FALSE };
             shared_ptr<Mesh>     _mesh;
         };
+        /** @brief 클립 한 바퀴 안에서 유닛 시간에 가장 가까운 변형 구간을 고릅니다. */
+        uint32 selectVariation( const AnimationSharedPoseRequest& request, float32 duration ) const;
+        /** @brief 키의 묶음을 찾고, 없으면 스킨 원본의 사본 메시로 만듭니다. */
+        AnimationCrowdBucket* findOrCreateBucket( const AnimationCrowdBucketKey& key, const shared_ptr<const Skeleton>& skeleton, const shared_ptr<const AnimationClip>& clip,
+                                                  const shared_ptr<const AnimationClip>& nextClip, const shared_ptr<Mesh>& sourceMesh );
 
+    private:
         AnimationCrowdSettings                                                                     _settings;
         vector<unique_ptr<AnimationCrowdBucket>>                                                   _listBucket;
         unordered_map<AnimationCrowdBucketKey, AnimationCrowdBucket*, AnimationCrowdBucketKeyHash> _mapBucket;

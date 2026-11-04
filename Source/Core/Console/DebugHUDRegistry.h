@@ -164,13 +164,13 @@ namespace sw
     /** @brief `SW_DEBUG_HUD_SECTION` 이 두는 정적 등록자입니다 — 만들 때 올리고 없앨 때(모듈을 내릴 때) 뺍니다. */
     struct SW_API DebugHUDSectionRegistrar
     {
+
+        const DebugHUDSectionRegistration* _pRegistration;
+        bool                               _bRegistered;
         explicit DebugHUDSectionRegistrar( const DebugHUDSectionRegistration* pRegistration );
         ~DebugHUDSectionRegistrar();
         DebugHUDSectionRegistrar( const DebugHUDSectionRegistrar& )            = delete;
         DebugHUDSectionRegistrar& operator=( const DebugHUDSectionRegistrar& ) = delete;
-
-        const DebugHUDSectionRegistration* _pRegistration;
-        bool                               _bRegistered;
     };
 } // namespace sw
 

@@ -21,6 +21,9 @@ namespace
     {
         static constexpr SequenceSlotReset kSlotReset = SequenceSlotReset::ReuseBuffer;
 
+        vector<uint8> _buffer{};
+        int32         _value{ 0 };
+
         void resetForReuse()
         {
             vector<uint8> keptBuffer = std::move( _buffer );
@@ -28,9 +31,6 @@ namespace
             *this   = ReuseEntry{};
             _buffer = std::move( keptBuffer );
         }
-
-        vector<uint8> _buffer{};
-        int32         _value{ 0 };
     };
 
     /** @brief `ReuseBuffer` 를 밝혔으나 함수 이름을 틀렸다 — 옛 감지 방식이면 조용히 `T{}` 대입으로 돌아갔다. */

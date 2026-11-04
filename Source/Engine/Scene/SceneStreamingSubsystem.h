@@ -47,11 +47,11 @@ namespace sw
     class SW_API SceneStreamingSubsystem final : public ISceneService
     {
     public:
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
         /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "SceneStreaming";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
+        static const SceneServiceRegistration& getSceneServiceRegistration();
+        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief @p manager 의 스트리밍 서비스를 만듭니다(서비스 레지스트리가 매니저마다 부른다). 셀을 받기 전에는 아무것도 하지 않습니다. */
         explicit SceneStreamingSubsystem( GameObjectManager& manager );
@@ -114,6 +114,7 @@ namespace sw
         /** @brief 셀의 오브젝트를 내립니다. */
         void unloadCell( CellSlot& slot );
 
+    private:
         Scene*                        _pScene; ///< 셀을 받은 씬(빌림). nullptr 이면 스트리밍하지 않는다
         SceneSettings                 _settings;
         StreamingCellGrid             _grid;

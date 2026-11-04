@@ -545,6 +545,7 @@ namespace sw
                 return bComputed && hex == _pinnedSHA256Hex;
             }
 
+        private:
             vector<uint8>   _pendingBytes;
             string          _pinnedSHA256Hex;
             string          _failureText;

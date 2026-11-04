@@ -26,6 +26,50 @@ namespace sw
         using value_type                     = T;
         static constexpr KeyType kInvalidKey = constant::invalid_index::kUint32;
 
+        class Iterator
+        {
+        public:
+            Iterator( sparse_set* pSet, size_t index )
+                : _pSet{ pSet }
+                , _index{ index } {}
+
+            Iterator& operator++()
+            {
+                ++_index;
+                return *this;
+            }
+
+            bool                    operator!=( const Iterator& other ) const { return _index != other._index; }
+            bool                    operator==( const Iterator& other ) const { return _index == other._index; }
+            std::tuple<KeyType, T&> operator*() const { return std::tuple<KeyType, T&>( _pSet->_listDenseKey[_index], _pSet->_listDenseValue[_index] ); }
+
+        private:
+            sparse_set* _pSet;
+            size_t      _index;
+        };
+
+        class ConstIterator
+        {
+        public:
+            ConstIterator( const sparse_set* pSet, size_t index )
+                : _pSet{ pSet }
+                , _index{ index } {}
+
+            ConstIterator& operator++()
+            {
+                ++_index;
+                return *this;
+            }
+
+            bool                          operator!=( const ConstIterator& other ) const { return _index != other._index; }
+            bool                          operator==( const ConstIterator& other ) const { return _index == other._index; }
+            std::tuple<KeyType, const T&> operator*() const { return std::tuple<KeyType, const T&>( _pSet->_listDenseKey[_index], _pSet->_listDenseValue[_index] ); }
+
+        private:
+            const sparse_set* _pSet;
+            size_t            _index;
+        };
+
         sparse_set()                                   = default;
         sparse_set( const sparse_set& )                = delete;
         sparse_set& operator=( const sparse_set& )     = delete;
@@ -83,50 +127,6 @@ namespace sw
 
         const T* find( KeyType key ) const { return contains( key ) ? &std::as_const( _listDenseValue )[std::as_const( _listSparse )[key]] : nullptr; }
 
-        class Iterator
-        {
-        public:
-            Iterator( sparse_set* pSet, size_t index )
-                : _pSet{ pSet }
-                , _index{ index } {}
-
-            Iterator& operator++()
-            {
-                ++_index;
-                return *this;
-            }
-
-            bool                    operator!=( const Iterator& other ) const { return _index != other._index; }
-            bool                    operator==( const Iterator& other ) const { return _index == other._index; }
-            std::tuple<KeyType, T&> operator*() const { return std::tuple<KeyType, T&>( _pSet->_listDenseKey[_index], _pSet->_listDenseValue[_index] ); }
-
-        private:
-            sparse_set* _pSet;
-            size_t      _index;
-        };
-
-        class ConstIterator
-        {
-        public:
-            ConstIterator( const sparse_set* pSet, size_t index )
-                : _pSet{ pSet }
-                , _index{ index } {}
-
-            ConstIterator& operator++()
-            {
-                ++_index;
-                return *this;
-            }
-
-            bool                          operator!=( const ConstIterator& other ) const { return _index != other._index; }
-            bool                          operator==( const ConstIterator& other ) const { return _index == other._index; }
-            std::tuple<KeyType, const T&> operator*() const { return std::tuple<KeyType, const T&>( _pSet->_listDenseKey[_index], _pSet->_listDenseValue[_index] ); }
-
-        private:
-            const sparse_set* _pSet;
-            size_t            _index;
-        };
-
         Iterator      begin() { return Iterator( this, 0 ); }
         Iterator      end() { return Iterator( this, _listDenseKey.size() ); }
         ConstIterator begin() const { return ConstIterator( this, 0 ); }
@@ -139,6 +139,7 @@ namespace sw
                 _listSparse.resize( key + 1, kInvalidKey );
         }
 
+    private:
         vector<uint32>  _listSparse;
         vector<KeyType> _listDenseKey;
         vector<T>       _listDenseValue;

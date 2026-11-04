@@ -46,6 +46,7 @@ namespace sw
     private:
         void onFolderChanged();
 
+    private:
         Subscription _watch;             ///< 콘텐츠 폴더 감시 구독(창구가 없으면 비었다)
         string       _folder;            ///< 다시 읽을 리소스 경로
         bool         _bChanged{ false }; ///< 지난 update 뒤로 .xml 이 바뀌었다

@@ -96,6 +96,7 @@ namespace sw::editor
         [[nodiscard]] bool request( string_view commandLine, string& outBody );
         void               appendConsoleLine( string line );
 
+    private:
         unique_ptr<DebugChannelClient> _client;
         vector<EditorRemoteObjectRow>  _listObjectRow;
         vector<string>                 _listCommandName;

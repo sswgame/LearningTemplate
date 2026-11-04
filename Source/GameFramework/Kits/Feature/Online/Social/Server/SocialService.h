@@ -156,6 +156,7 @@ namespace sw
         void               onPresenceReply( const EphemeralReply& reply );
         void               pushCompletion( uint64 requestTag, SocialResult result );
 
+    private:
         unordered_map<AccountID, LocalAccount> _mapAccountToLocal;
         unordered_map<uint64, PresenceRead>    _mapCacheRequestToRead;
         unordered_map<uint64, PresenceQuery>   _mapQuery;

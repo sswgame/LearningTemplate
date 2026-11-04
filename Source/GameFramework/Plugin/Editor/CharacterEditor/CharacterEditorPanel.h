@@ -42,6 +42,22 @@ namespace sw::editor
         /** @brief 패널 id 입니다. 등록(`SW_EDITOR_PANEL`)과 열기(`EditorPanelManager::setPanelOpen<…>`)가 모두 이 상수에서 온다. */
         static constexpr const utf8* kPanelID = "charactereditor.main";
 
+        /** @brief 자동화 감시 값이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). 값은 이 패널 인스턴스의 것이라 에디터마다 따로이고 패널과 함께 사라집니다. */
+        struct Published
+        {
+            uint32 _boneCount{ 0 };
+            uint32 _socketCount{ 0 };
+            uint32 _equippedSlotCount{ 0 };
+            uint32 _traceCount{ 0 };
+            uint32 _presetCount{ 0 };
+            uint32 _exportCount{ 0 };          ///< 이 패널이 데이터 프리셋으로 내보낸 수
+            uint32 _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
+            uint32 _clipPlaying{ 0 };          ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
+            uint32 _penetrationMarkCount{ 0 }; ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
+            uint32 _boneGizmoPlaced{ 0 };      ///< 고른 본에 기즈모 표식을 놓았으면 1
+            uint32 _statusSet{ 0 };            ///< 상태 줄에 글(오류 · 진행)이 있으면 1 — 시나리오가 편집 오류가 남지 않았는지 본다
+        };
+
         CharacterEditorPanel();
 
         const utf8* getPanelTitle() const override { return "Character Editor"; }
@@ -59,23 +75,7 @@ namespace sw::editor
         SocketEditModel&               getSocketModel() { return _document.getSocketModel(); }
         BonePoseEditModel&             getPoseModel() { return _document.getPoseModel(); }
         AppearanceEditModel&           getAppearanceModel() { return _document.getAppearanceModel(); }
-
-        /** @brief 자동화 감시 값이 읽는 값입니다. 패널이 그릴 때마다 게시합니다(게임 스레드). 값은 이 패널 인스턴스의 것이라 에디터마다 따로이고 패널과 함께 사라집니다. */
-        struct Published
-        {
-            uint32 _boneCount{ 0 };
-            uint32 _socketCount{ 0 };
-            uint32 _equippedSlotCount{ 0 };
-            uint32 _traceCount{ 0 };
-            uint32 _presetCount{ 0 };
-            uint32 _exportCount{ 0 };          ///< 이 패널이 데이터 프리셋으로 내보낸 수
-            uint32 _previewAssembleCount{ 0 }; ///< 미리보기 몸을 조립한 수(미리보기 탭을 그릴 때 게시)
-            uint32 _clipPlaying{ 0 };          ///< 미리보기 몸이 고른 클립을 재생 중이면 1(미리보기 탭을 그릴 때 게시)
-            uint32 _penetrationMarkCount{ 0 }; ///< 지난 그리기에 뷰포트에 찍은 관통 점 수
-            uint32 _boneGizmoPlaced{ 0 };      ///< 고른 본에 기즈모 표식을 놓았으면 1
-            uint32 _statusSet{ 0 };            ///< 상태 줄에 글(오류 · 진행)이 있으면 1 — 시나리오가 편집 오류가 남지 않았는지 본다
-        };
-        const Published& getPublished() const { return _published; }
+        const Published&               getPublished() const { return _published; }
         /** @brief 요청한 썸네일 캡처를 아직 거두지 않았으면 true 입니다 — 자동화의 끝 차단(`CharacterEditorThumbnail`)이 캡처 · 저장 사이 틈을 진행 중인 일로 본다. */
         [[nodiscard]] bool isThumbnailCapturePending() const { return _thumbnailCapturePath.empty() == false; }
 
@@ -155,6 +155,7 @@ namespace sw::editor
         void drawDataPresetRow();
         void drawHistoryRow();
 
+    private:
         CharacterEditorDocument                 _document;                ///< 상태와 명령. 이 패널은 그리기와 미리보기 동기화만 한다
         fixed_string<constant::buffer::kMax128> _newName;                 ///< 새 소켓 · 칸 이름 입력칸
         fixed_string<constant::buffer::kMax128> _renameBuffer;            ///< 고른 소켓의 새 이름 입력칸

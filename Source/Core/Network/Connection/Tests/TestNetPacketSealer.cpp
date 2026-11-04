@@ -82,6 +82,7 @@ namespace
             ByteMixer::spread( hash, pOutTag, NetSecurityConstant::kAeadTagSize );
         }
 
+    private:
         uint8 _arrKey[NetSecurityConstant::kAeadKeySize]{};
     };
 
@@ -89,6 +90,7 @@ namespace
     class MixingSecurityProvider final : public INetSecurityProvider
     {
     public:
+        int32       _keyPairCount{ 0 };
         const utf8* getName() const override { return "Mixing"; }
 
         bool fillRandomBytes( uint8* pOut, int32 size ) override
@@ -194,8 +196,6 @@ namespace
             (void)outSignatureBytes;
             return false;
         }
-
-        int32 _keyPairCount{ 0 };
     };
 
     struct NetPacketSealerTestInternal

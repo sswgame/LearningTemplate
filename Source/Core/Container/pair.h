@@ -90,14 +90,6 @@ namespace sw
         T1 first;
         T2 second;
 
-        constexpr pair()
-            : first{}
-            , second{} {}
-
-        constexpr pair( const T1& a, const T2& b )
-            : first{ a }
-            , second{ b } {}
-
         template <typename U1, typename U2,
                   std::enable_if_t<std::is_constructible_v<T1, U1&&> && std::is_constructible_v<T2, U2&&>, int32> = 0>
         constexpr pair( U1&& a, U2&& b )
@@ -127,6 +119,14 @@ namespace sw
         constexpr pair( std::pair<U1, U2>&& other ) noexcept( std::is_nothrow_constructible_v<T1, U1&&> && std::is_nothrow_constructible_v<T2, U2&&> )
             : first{ std::forward<U1>( other.first ) }
             , second{ std::forward<U2>( other.second ) } {}
+
+        constexpr pair()
+            : first{}
+            , second{} {}
+
+        constexpr pair( const T1& a, const T2& b )
+            : first{ a }
+            , second{ b } {}
 
         template <typename... Args1, typename... Args2>
         constexpr pair( std::piecewise_construct_t, std::tuple<Args1...> firstArgs, std::tuple<Args2...> secondArgs )

@@ -22,16 +22,15 @@ namespace sw::editor
     class EditorModuleUnloadListener final : public EditorSubsystem
     {
     public:
-        explicit EditorModuleUnloadListener( EditorContext& context );
-        ~EditorModuleUnloadListener() override;
-
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorModuleUnloadListener";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const>      getSubsystemDependencies() const override;
-        SubsystemInitResult          initializeSubsystem() override;
-        void                         shutdownSubsystem() override;
+        explicit EditorModuleUnloadListener( EditorContext& context );
+        ~EditorModuleUnloadListener() override;
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        SubsystemInitResult     initializeSubsystem() override;
+        void                    shutdownSubsystem() override;
         EditorModuleUnloadListener( const EditorModuleUnloadListener& )            = delete;
         EditorModuleUnloadListener& operator=( const EditorModuleUnloadListener& ) = delete;
 
@@ -41,6 +40,7 @@ namespace sw::editor
         /** @brief 모듈을 내린다 — 기본값 인스턴스를 지운다(다음에 물을 때 다시 만든다). */
         void onModuleUnloading( string_view moduleName );
 
+    private:
         EditorContext& _context;
         Subscription   _registrationRemovedSubscription;
         Subscription   _moduleUnloadingSubscription;

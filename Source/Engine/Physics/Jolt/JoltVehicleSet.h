@@ -66,6 +66,7 @@ namespace sw
         /** @brief 구속을 시스템에서 제거합니다(구속과 스텝 리스너 모두). */
         void remove( Record& record );
 
+    private:
         JPH::PhysicsSystem&     _system;
         SlotHandleTable<Record> _vehicles;
     };

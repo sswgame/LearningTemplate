@@ -21,6 +21,10 @@ namespace
     /** @brief 데이터 하나 + 앞 하나입니다. 시각은 1000 ms 에서 시작합니다. */
     struct CacheRig
     {
+
+        sw::ManualClock             _clock;
+        sw::MemoryEphemeralDatabase _database;
+        sw::MemoryEphemeralStore    _store;
         CacheRig()
             : _clock{ sw::MonotonicMilliseconds{ 1000 } }
             , _database{ _clock }
@@ -41,10 +45,6 @@ namespace
         }
 
         sw::EphemeralResult result( const sw::EphemeralRequest& request ) { return run( request )._result; }
-
-        sw::ManualClock             _clock;
-        sw::MemoryEphemeralDatabase _database;
-        sw::MemoryEphemeralStore    _store;
     };
 } // namespace
 

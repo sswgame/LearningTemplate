@@ -280,6 +280,7 @@ namespace sw
         [[nodiscard]] bool loadEnemy( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadArea( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<JRPGClassDef>  _classCatalog;
         GameCatalog<JRPGSpellDef>  _spellCatalog;
         GameCatalog<JRPGComboDef>  _comboCatalog;

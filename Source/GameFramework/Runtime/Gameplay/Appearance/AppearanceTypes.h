@@ -98,6 +98,7 @@ namespace sw
     private:
         void addMessage( const utf8* pID, string_view message );
 
+    private:
         vector<string>      _listError{};
         vector<const utf8*> _listErrorID{};
     };

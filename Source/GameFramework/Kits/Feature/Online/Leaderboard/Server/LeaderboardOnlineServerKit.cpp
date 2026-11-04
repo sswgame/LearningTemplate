@@ -129,6 +129,7 @@ namespace sw
                 return true;
             }
 
+        private:
             LeaderboardCatalog _catalog;
             vector<string>     _listInlineBoardID; ///< 옵션 `board` 의 id
             LeaderboardService _service;

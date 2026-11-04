@@ -74,6 +74,7 @@ namespace sw
 
         Connection* findConnection( uint64 packedHandle ) SW_REQUIRES_LOCK( _mutex );
 
+    private:
         vector<Connection> _listConnection     SW_GUARDED_BY( _mutex );
         OnceInit<OpsHTTPEndpointConfig>        _settings;
         mutex                                  _mutex;

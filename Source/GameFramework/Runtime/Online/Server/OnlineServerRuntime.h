@@ -116,6 +116,7 @@ namespace sw
         [[nodiscard]] bool startHost( OnlineServerRuntimeConfig& settings, string& outError );
         [[nodiscard]] bool registerServer( string& outError );
 
+    private:
         unique_ptr<Parts> _parts;
         uint8             _bInitialized;
     };

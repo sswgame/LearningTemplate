@@ -81,14 +81,13 @@ namespace sw
         void executeScore( const EphemeralRequest& request, int64 nowMs, EphemeralReply& outReply ) SW_REQUIRES_LOCK( _mutex );
         void executePublish( const EphemeralRequest& request, EphemeralReply& outReply ) SW_REQUIRES_LOCK( _mutex );
 
+    private:
         const IClock&                                     _clock;
         mutable mutex                                     _mutex;
         unordered_map<string, ValueEntry> _mapValue       SW_GUARDED_BY( _mutex );
         unordered_map<string, ScoreSetEntry> _mapScoreSet SW_GUARDED_BY( _mutex );
         unordered_map<uint64, Inbox> _mapInbox            SW_GUARDED_BY( _mutex );
         IDAllocator<uint64> _inboxIDAllocator             SW_GUARDED_BY( _mutex );
-
-    private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&MemoryEphemeralDatabase::releaseSubscription>( this ) };
     };

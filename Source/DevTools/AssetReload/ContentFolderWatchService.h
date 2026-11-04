@@ -37,6 +37,7 @@ namespace sw
         struct Watch;
         void releaseWatch( uint64 id );
 
+    private:
         vector<unique_ptr<Watch>> _listWatch;
         IDAllocator<uint64>       _watchIDAllocator;
         SubscriptionList          _subscriptions{ SubscriptionList::ReleaseFunction::create<&ContentFolderWatchService::releaseWatch>( this ) }; ///< 맨 끝 — 먼저 사라져 남은 구독을 끊는다

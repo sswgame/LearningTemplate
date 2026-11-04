@@ -115,6 +115,7 @@ namespace sw
             return slot;
         }
 
+    private:
         array<T, Capacity> _arrItem;
         uint32             _head;  ///< 가장 오래된 값의 슬롯
         uint32             _count; ///< 들어 있는 값의 수

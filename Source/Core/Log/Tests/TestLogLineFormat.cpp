@@ -17,6 +17,8 @@ namespace
     class LogLineCaptureOutput final : public ILogOutput
     {
     public:
+        mutex              _mutex;
+        vector<string>     _listFormatted;
         [[nodiscard]] bool open() override { return true; }
         void               close() override {}
         void               write( const LogRecord& record ) override
@@ -24,9 +26,6 @@ namespace
             std::scoped_lock<mutex> lock{ _mutex };
             _listFormatted.push_back( record._formatted );
         }
-
-        mutex          _mutex;
-        vector<string> _listFormatted;
     };
 } // namespace
 

@@ -65,10 +65,10 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
-        /** @brief 이 에셋 종류입니다(등록은 `AnimationClip.cpp` 의 `SW_ASSET_TYPE`). */
-        static constexpr AssetTypeDef kAssetType{ "AnimationClip", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
         /** @brief 지금 파일 형식 버전입니다. */
         static constexpr uint32 kVersion = 1;
+        /** @brief 이 에셋 종류입니다(등록은 `AnimationClip.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "AnimationClip", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         AnimationClip();
 
@@ -152,6 +152,7 @@ namespace sw
         /** @brief 내용을 비웁니다. */
         void clear();
 
+    private:
         hashed_string               _name;
         vector<hashed_string>       _listTrackName;
         vector<AnimationCodecBlock> _listCodecBlock;

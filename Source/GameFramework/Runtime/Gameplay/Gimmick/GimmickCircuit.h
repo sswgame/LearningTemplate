@@ -155,6 +155,7 @@ namespace sw
         /** @brief 같은 회로가 쓴 상태(노드 순서가 같음)를 그대로 옮깁니다. `resetToInitial` 과 `loadState` 가 씁니다. */
         void copyState( const GimmickCircuitState& state );
 
+    private:
         vector<NodeRuntime>       _listNode;
         vector<InputWire>         _listInputWire;
         vector<GimmickParamValue> _listParam;

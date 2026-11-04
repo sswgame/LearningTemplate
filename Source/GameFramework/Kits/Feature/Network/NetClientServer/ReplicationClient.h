@@ -105,6 +105,7 @@ namespace sw
         void resetHistory();
         void findBracket( const NetSnapshot*& pOutFrom, const NetSnapshot*& pOutTo, float32& outAlpha ) const;
 
+    private:
         TickRingBuffer<NetSnapshot> _listSnapshot;  ///< 받은 스냅샷. 델타의 기준과 보간 구간을 틱으로 찾는다. 가장 새 틱이 마지막으로 받은 것이다
         NetSnapshot                 _decodeScratch; ///< 받은 델타를 복원하는 버퍼. 링 버퍼 슬롯과 맞바꿔 밀려난 스냅샷의 버퍼를 다음 복원이 재사용하므로 기준 슬롯을 덮어쓰지 않는다
         NetInputSendWindow          _inputWindow;   ///< 내 입력. 서버가 스냅샷에 실어 돌려준 확인 틱의 다음 틱부터 싣는다

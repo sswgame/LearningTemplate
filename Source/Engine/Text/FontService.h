@@ -74,6 +74,9 @@ namespace sw
     class SW_API FontService : public ISubsystem
     {
     public:
+        // ISubsystem — 기동 단계 `Fonts`. 기본 가족(저장소 글꼴)을 못 열면 글자를 그릴 수 없으므로 기동 오류다.
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "Fonts";
         FontService();
         /**
          * @brief 래스터라이저(테스트는 결정적인 가짜)와 문화권 출처를 주입합니다.
@@ -91,10 +94,6 @@ namespace sw
         [[nodiscard]] bool initializeFromCatalog( FontCatalogDesc catalog );
         /** @brief 연 면, 연쇄, 경고 기록을 모두 해제합니다. 다시 `initialize` 할 수 있습니다. */
         void shutdown();
-
-        // ISubsystem — 기동 단계 `Fonts`. 기본 가족(저장소 글꼴)을 못 열면 글자를 그릴 수 없으므로 기동 오류다.
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "Fonts";
 
         SubsystemInitResult initializeSubsystem() override;
         void                shutdownSubsystem() override { shutdown(); }
@@ -131,12 +130,6 @@ namespace sw
         uint32 getWarnedOnceCount() const { return static_cast<uint32>( _warnedOnce.getCount() ); }
 
     private:
-        /** @brief 패밀리 이름으로 면을 엽니다. 저장소 패밀리를 먼저, 시스템 패밀리를 다음으로 봅니다. 못 찾으면 kInvalidFontFaceID 를 반환하고 처음 한 번 경고합니다. 결과(없음 포함)를 캐시합니다. */
-        FontFaceID openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic );
-        /** @brief 폰트 파일 하나를 엽니다. 등록한 메모리 파일, 리소스, 절대 경로 순서로 찾습니다. 같은 (경로, 면 번호)는 한 번만 엽니다. */
-        FontFaceID openFontFile( const AssetID& assetID, uint32 faceIndex, bool bAssetPath );
-        /** @brief 처음이면 경고를 남기고 true 입니다(키 하나에 한 번). */
-        bool markWarnedOnce( const string& key );
         /** @brief 연 가족 면 하나입니다(없음도 캐시해 다시 찾지 않는다). */
         struct OpenedFamilyFace
         {
@@ -144,7 +137,14 @@ namespace sw
             uint8      _bFauxBold{ SW_FALSE };
             uint8      _bFauxItalic{ SW_FALSE };
         };
+        /** @brief 패밀리 이름으로 면을 엽니다. 저장소 패밀리를 먼저, 시스템 패밀리를 다음으로 봅니다. 못 찾으면 kInvalidFontFaceID 를 반환하고 처음 한 번 경고합니다. 결과(없음 포함)를 캐시합니다. */
+        FontFaceID openFamilyFace( string_view family, FontWeight weight, FontSlant slant, uint8& outFauxBold, uint8& outFauxItalic );
+        /** @brief 폰트 파일 하나를 엽니다. 등록한 메모리 파일, 리소스, 절대 경로 순서로 찾습니다. 같은 (경로, 면 번호)는 한 번만 엽니다. */
+        FontFaceID openFontFile( const AssetID& assetID, uint32 faceIndex, bool bAssetPath );
+        /** @brief 처음이면 경고를 남기고 true 입니다(키 하나에 한 번). */
+        bool markWarnedOnce( const string& key );
 
+    private:
         unique_ptr<IFontRasterizer> _rasterizer;
         unique_ptr<GlyphCache>      _glyphCache; ///< 시작할 때 만들고 종료할 때 해제합니다(래스터라이저를 빌립니다).
         FontCatalogDesc             _catalog;

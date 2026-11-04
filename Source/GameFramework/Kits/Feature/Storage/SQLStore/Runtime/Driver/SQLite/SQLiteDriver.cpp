@@ -227,6 +227,7 @@ namespace sw
                     return result;
                 }
 
+            private:
                 unordered_map<string, sqlite3_stmt*> _mapStatement;
                 string                               _lastError;
                 sqlite3*                             _pDatabase;

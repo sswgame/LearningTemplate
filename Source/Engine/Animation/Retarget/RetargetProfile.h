@@ -200,6 +200,7 @@ namespace sw
     private:
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
 
+    private:
         vector<RetargetChain>    _listChain;
         vector<RetargetBonePair> _listBonePair;
         vector<RetargetPoseBone> _listTargetPose;

@@ -167,6 +167,7 @@ namespace sw
          */
         shared_ptr<PackReader> findReaderWithFile( string_view relativePath, uint64& outPathHash, string& outPathInPack ) const;
 
+    private:
         mutable mutex                        _vfsMutex;
         vector<MountedPack> _listMountedPack SW_GUARDED_BY( _vfsMutex );
         DLCEntitlementDelegate               _dlcValidator;

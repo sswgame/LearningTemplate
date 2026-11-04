@@ -220,6 +220,7 @@ namespace sw
                     return _listSlot.back();
                 }
 
+            private:
                 vector<JSONValue, InlineAllocator<JSONValue, 4>> _listSlot;
                 const SerializeContext&                          _context;
             };
@@ -351,6 +352,7 @@ namespace sw
                     return ContainerReadResult::Read;
                 }
 
+            private:
                 vector<JSONValue, InlineAllocator<JSONValue, 4>> _listCursor;
                 const string*                                    _pCurrentKey;
                 const SerializeContext&                          _context;

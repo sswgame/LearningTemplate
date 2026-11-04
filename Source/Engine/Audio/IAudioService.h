@@ -260,6 +260,10 @@ namespace sw
     {
         using CreateFunction = unique_ptr<IAudioService> ( * )();
 
+        const utf8*                  _pName;
+        CreateFunction               _pCreate;
+        const AudioBackendRegistrar* _pNext;
+
         AudioBackendRegistrar( const utf8* pName, CreateFunction pCreate );
         /** @brief 이어 붙은 등록자 목록의 머리입니다. */
         static const AudioBackendRegistrar* getHead();
@@ -269,10 +273,6 @@ namespace sw
         {
             return make_unique<TBackend>();
         }
-
-        const utf8*                  _pName;
-        CreateFunction               _pCreate;
-        const AudioBackendRegistrar* _pNext;
     };
 } // namespace sw
 

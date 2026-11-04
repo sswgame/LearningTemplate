@@ -103,6 +103,7 @@ namespace sw
         /** @brief 고리에 남아 있는 가장 이른 틱을 반환합니다. */
         static uint32 computeOldestTick( const ControlIntentTrack& track );
 
+    private:
         vector<ControlIntentTrack>   _listTrack;
         unordered_map<uint64, int32> _mapComponentIDToTrack; ///< 기록한 폰의 컴포넌트 id 에서 트랙 인덱스로 가는 맵
         int32                        _capacityTicks;

@@ -58,6 +58,7 @@ namespace sw
                 _onRelease( id );
         }
 
+    private:
         ReleaseFunction _onRelease;
     };
 
@@ -97,6 +98,7 @@ namespace sw
     private:
         void releaseSubscription( const uint64 id ) override { _onRelease( reinterpret_cast<T*>( static_cast<uintptr_t>( id ) ) ); }
 
+    private:
         ReleaseFunction _onRelease;
     };
 } // namespace sw

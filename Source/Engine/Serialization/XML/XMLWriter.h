@@ -80,6 +80,7 @@ namespace sw
         void closeStartTag();
         void fail();
 
+    private:
         string      _ownedText; ///< `XMLWriter()` 가 쓰는 버퍼
         string*     _pString;
         OpenElement _arrOpen[kMaxDepth];

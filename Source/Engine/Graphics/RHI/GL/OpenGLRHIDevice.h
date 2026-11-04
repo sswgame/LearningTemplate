@@ -76,9 +76,17 @@ namespace sw
         friend class OpenGLRHICommandContext;
 
     public:
-        RHIBufferHandle createBuffer( const RHIBufferDesc& desc );
-        RHIBufferHandle createIndexBuffer( const void* pData, uint32 sizeBytes );
         friend class OpenGLRHIResourceFactory;
+
+        /**
+         * @brief 컨텍스트를 기다리다 포기하는 시간입니다. 교착(놓지 않는 스레드)을 알아보는 시한이지 프레임 예산이 아니다.
+         * @details 예전 250 ms 는 "렌더 워커가 프레임 끝마다 놓으니 한 프레임이면 된다" 였는데, Debug 의 무거운 프레임(셰이더 컴파일 · 단계 재설정)은 262 ms 를 쥐었고
+         *          그 사이 게임 스레드의 자원 생성(머티리얼 상수 버퍼)이 버려져 기본 머티리얼이 없는 씬이 됐다. 포기는 GL 호출을 잃는 일이라 교착 규모(5 초)로 둔다.
+         *          언리얼 GL RHI 는 모든 GL 호출을 한 스레드로 넘겨 이 경합이 없다 — 자원 생성을 렌더 스레드로 넘기는 것이 근본 해법이다.
+         */
+        static constexpr uint32 kContextAcquireTimeoutMs = 5000;
+        RHIBufferHandle         createBuffer( const RHIBufferDesc& desc );
+        RHIBufferHandle         createIndexBuffer( const void* pData, uint32 sizeBytes );
         /** @brief 빈 OpenGL 디바이스를 만듭니다. */
         OpenGLRHIDevice();
         /** @brief 컨텍스트와 GL 객체를 정리합니다. */
@@ -167,14 +175,6 @@ namespace sw
         const utf8* getBackendName() const override { return "OpenGL (glad 4.6 Core)"; }
 
         /**
-         * @brief 컨텍스트를 기다리다 포기하는 시간입니다. 교착(놓지 않는 스레드)을 알아보는 시한이지 프레임 예산이 아니다.
-         * @details 예전 250 ms 는 "렌더 워커가 프레임 끝마다 놓으니 한 프레임이면 된다" 였는데, Debug 의 무거운 프레임(셰이더 컴파일 · 단계 재설정)은 262 ms 를 쥐었고
-         *          그 사이 게임 스레드의 자원 생성(머티리얼 상수 버퍼)이 버려져 기본 머티리얼이 없는 씬이 됐다. 포기는 GL 호출을 잃는 일이라 교착 규모(5 초)로 둔다.
-         *          언리얼 GL RHI 는 모든 GL 호출을 한 스레드로 넘겨 이 경합이 없다 — 자원 생성을 렌더 스레드로 넘기는 것이 근본 해법이다.
-         */
-        static constexpr uint32 kContextAcquireTimeoutMs = 5000;
-
-        /**
          * @brief 컨텍스트를 이 스레드로 가져옵니다. 다른 스레드가 가지고 있으면 놓을 때까지 기다립니다.
          * @details GL 컨텍스트는 한 스레드만 current 로 가질 수 있다. 렌더 워커는 프레임이 끝나면
          *          놓으므로(`RenderThread::executePacket`) 기다리면 한 프레임 안에 차례가 온다.
@@ -199,20 +199,6 @@ namespace sw
 
         /** @brief 커맨드 리스트를 제출합니다. GL 은 기록이 곧 실행이라 즉시 모드에서만 glFlush 합니다. */
         void executeCommandList( IRHICommandList* pCmdList ) override;
-
-    protected:
-        // 네이티브 핸들 getter 는 기반처럼 보호 구역이다 — 바깥은 종류 확인이 든 `IRHIDevice::queryNativeHandles` · `tryGetNativeTexturePointer` 로만 읽는다.
-        /** @brief 네이티브 GL 텍스처 이름을 포인터 폭으로 넓혀 반환합니다. 없으면 nullptr(이름 0)입니다. */
-        void* getNativeTexturePointer( RHITextureHandle texture ) const override { return reinterpret_cast<void*>( static_cast<uintptr_t>( getGlTextureName( texture ) ) ); }
-
-        /** @brief 플랫폼 디바이스 컨텍스트(HDC · Display*)를 반환합니다. */
-        void* getNativeDevice() const override { return _pHDC; }
-
-        /** @brief 플랫폼 렌더 컨텍스트(HGLRC · GLXContext)를 반환합니다. */
-        void* getNativeContext() const override { return _pHRC; }
-
-        /** @brief OpenGL 에는 커맨드 큐가 없어 nullptr 를 반환합니다. */
-        void* getNativeCommandQueue() const override { return nullptr; }
 
     private:
         /** @brief 타임스탬프 계측 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */
@@ -249,71 +235,8 @@ namespace sw
         private:
             OpenGLRHIDevice& _owner;
         };
-
-        /** @brief makeCurrent 를 한 번 시도하고, 성공하면 가진 스레드와 시각을 기록합니다. */
-        [[nodiscard]] bool tryMakeCurrentAndRecordOwner();
-        /** @brief 타임스탬프 쿼리 객체를 한 번만 만듭니다. */
-        void ensureTimestampQueries();
-        /** @brief 다시 쓰기 직전의 묶음에서 결과를 마이크로초로 변환합니다(기다리지 않습니다). */
-        void collectTimestampsForSlot();
-        /**
-         * @brief 방금 끝낸 프레임에 펜스(`glFenceSync`)를 내고, GPU 가 지난 프레임까지의 `enqueueGPURelease` 콜백을 부릅니다(`endFrame` 이 부릅니다).
-         * @details 링이 가득 차면(프레임 `kMaxFrameCountInFlight` 개가 GPU 에 남음) 가장 오래된 프레임이 끝날 때까지 기다린다 — DX12 · Vulkan 의 링 슬롯 대기와 같다.
-         */
-        void retireFrameOnGPU();
-        /**
-         * @brief 방금 낸 전송 뒤에 펜스를 달고(`glFenceSync` + `glFlush`) 시리얼을 발급합니다. GL 컨텍스트를 가진 스레드에서, 전송 명령을 낸 직후에 부릅니다.
-         * @details `glFlush` 가 있어야 프레임을 돌리지 않아도 펜스가 신호한다(계약 7). 시리얼은 컨텍스트를 쥔 채 큐에 낸 순서대로 매긴다.
-         *          모든 전송(업로드 · 되읽기)은 GPU 에서 끝나므로 펜스 없는 제출은 없다. `glFenceSync` 가 펜스를 주지 않으면 오류를 남기고 장치 손실로 둔다.
-         */
-        uint64 endTransfer();
-        /** @brief 앞에서부터 끝난 전송의 펜스를 놓고 워터마크를 올립니다. 기다리지 않습니다. GL 컨텍스트를 가진 스레드에서만 부릅니다. */
-        void retireFinishedTransfers();
-        /**
-         * @brief 컨텍스트를 기다리지 않고 끝난 전송을 모읍니다. 이 스레드가 이미 쥐었으면 그대로, 비어 있으면 한 번 집어 모으고 놓습니다.
-         * @return 모았으면 true, 다른 스레드가 컨텍스트를 쥐고 있어 못 모았으면 false 입니다(그 스레드의 `endFrame` · 제출이 모은다).
-         * @details `pollTransfer` 와 링이 찼을 때의 할당이 부른다. 쥔 쪽에만 맡기면 RT 가 프레임을 돌리지 않는 동안(동기 로드) 기다리는 쪽이 시간 초과까지 멈춘다.
-         */
-        [[nodiscard]] bool tryRetireFinishedTransfers();
-        /**
-         * @brief 업로드 스테이징 링(영속 매핑 PBO)을 만듭니다. 초기화 끝에 컨텍스트를 쥔 채 부릅니다.
-         * @param soloMaxBytes 링보다 큰 업로드 한 장을 일회성 버퍼로 받는 상한입니다(`RHIStagingAllocator::initialize`).
-         * @return `GL_ARB_buffer_storage`(GL 4.4)가 없어 링을 만들지 않았어도 true 입니다(그때 업로드는 모두 `Rejected`). 용량 설정이 0 이거나 GL 이 버퍼를 만들지 못하면 false 입니다.
-         */
-        [[nodiscard]] bool initializeStagingRing( uint64 capacityBytes, uint64 soloMaxBytes );
-        /** @brief 링의 매핑을 풀고 버퍼를 지웁니다. 컨텍스트를 쥔 채, 전송이 모두 끝난 뒤(`waitIdle` 다음) 부릅니다. */
-        void shutdownStagingRing();
-        /**
-         * @brief 업로드 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다(복사는 컨텍스트 밖에서 한다).
-         * @details 링이 차 있으면 끝난 펜스를 한 번 모아(컨텍스트를 잠깐 빌린다) 다시 시도한다 — 프레임을 돌리지 않는 동기 대기(`submitWhileBusy`)도 링을 비우게 한다(계약 7).
-         *          링보다 큰 한 장은 할당기가 단독 구간을 내주면 그 크기의 일회성 영속 매핑 버퍼를 만든다(`attachSoloBuffer`, 컨텍스트를 잠깐 빌린다).
-         * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
-         *         (옮기고 놓고 남기는 일은 `RHIStagingRingUtil::settleAllocation` 한 곳).
-         */
-        [[nodiscard]] RHISubmitResult allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
-        /**
-         * @brief 텍스처 되읽기 링(`GL_MAP_READ_BIT` 영속 매핑 PBO)을 만듭니다. 초기화 끝에 컨텍스트를 쥔 채 부릅니다.
-         * @param soloMaxBytes 링보다 큰 읽기 한 장을 일회성 버퍼로 받는 상한입니다(`RHIStagingAllocator::initialize`).
-         * @return `GL_ARB_buffer_storage`(GL 4.4)가 없어 링을 만들지 않았어도 true 입니다(그때 되읽기는 모두 `Rejected`). 용량 설정이 0 이거나 GL 이 버퍼를 만들지 못하면 false 입니다.
-         */
-        [[nodiscard]] bool initializeReadbackRing( uint64 capacityBytes, uint64 soloMaxBytes );
         /// @brief 업로드 · 되읽기 링 구간 시작의 정렬입니다. PBO 오프셋은 픽셀 성분(최대 float 4 바이트)과 BC 블록(16 바이트)의 배수면 되지만, CPU 복사가 캐시 줄 경계에서 시작하도록 넉넉히 둔다.
         static constexpr uint64 kTransferRingAlignmentBytes = 256;
-        /** @brief 되읽기 링의 버퍼를 지웁니다. `shutdownStagingRing` 과 같은 때에 부릅니다. 가져가지 않은 되읽기의 구간은 버려진다. */
-        void shutdownReadbackRing();
-        /**
-         * @brief 영속 매핑 링 버퍼 하나를 만들고 매핑합니다(`glBufferStorage` + `glMapBufferRange`, 저장소 플래그 = @p mapFlags).
-         * @return 매핑 주소입니다. 만들거나 매핑하지 못하면 버퍼를 지우고 nullptr 이며 @p outBuffer 는 0 입니다.
-         */
-        [[nodiscard]] uint8* createPersistentRingBuffer( uint64 capacityBytes, uint32 mapFlags, uint32& outBuffer );
-        /**
-         * @brief 되읽기 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다.
-         * @details 되읽기 구간은 GPU 완료가 아니라 CPU 가 다 읽었을 때(`takeTextureReadback`) 돌아온다. 버린 읽기의 구간만 펜스가 지나면 돌아오므로, 차 있으면 펜스를 한 번 모은 뒤 다시 본다.
-         *          링보다 큰 한 장은 업로드와 같이 단독 구간과 일회성 버퍼로 받는다.
-         * @return 잡았으면 `Accepted`, 앞선 되읽기를 아직 가져가지 않아 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
-         *         (옮기는 곳은 업로드와 같은 `RHIStagingRingUtil::settleAllocation`).
-         */
-        [[nodiscard]] RHISubmitResult allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan );
 
         /// @brief 링보다 큰 전송 한 장(단독 구간, `RHIStagingSpan::_bSolo`)이 쓰는 일회성 영속 매핑 버퍼입니다. 링마다 하나다 — 할당기가 단독 구간을 한 번에 하나만 내준다.
         struct OpenGLSoloTransferBuffer
@@ -321,43 +244,7 @@ namespace sw
             uint8* _pMapped{ nullptr }; ///< 영속 매핑 주소. 버퍼가 없으면 nullptr
             uint32 _buffer{ 0 };        ///< GL 버퍼 이름. 0 이면 없다
         };
-        /**
-         * @brief 할당기가 내준 단독 구간 @p span 에 그 크기의 영속 매핑 버퍼를 만들어 붙입니다. 컨텍스트를 빌린다(이미 쥐었으면 그대로).
-         * @details 앞선 단독 구간의 버퍼가 아직 남아 있으면(할당기는 이미 돌려받았다) 먼저 지운다. 만든 버퍼는 메모리 추적기의 Staging 에 올린다.
-         * @return 붙였으면 `Accepted`. 컨텍스트를 얻지 못하면 `Busy`, 버퍼를 만들지 못하면 `Rejected` 이고 두 경우 모두 구간을 할당기에 돌려준다.
-         */
-        [[nodiscard]] RHISubmitResult attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, const RHIStagingSpan& span, uint32 mapFlags,
-                                                        const utf8* pCaller );
-        /** @brief 단독 버퍼를 지우고 메모리 추적기에서 내립니다. 컨텍스트를 쥔 채 부릅니다. 버퍼가 없으면 아무것도 하지 않습니다. */
-        void deleteSoloBuffer( OpenGLSoloTransferBuffer& rSolo );
-        /** @brief 할당기가 단독 구간을 돌려받았으면 그 버퍼를 지웁니다. 컨텍스트를 쥔 채 `retireFinishedTransfers` 가 부릅니다. */
-        void deleteIdleSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, uint64 completedSerial );
-        /** @brief 업로드 구간 @p span 의 바이트를 쓸 매핑 주소입니다(단독 구간이면 단독 버퍼의 시작). */
-        [[nodiscard]] uint8* getStagingBytes( const RHIStagingSpan& span ) const;
-        /** @brief 업로드 구간 @p span 을 담은 GL 버퍼 이름입니다(`GL_PIXEL_UNPACK_BUFFER` 로 건다). */
-        [[nodiscard]] uint32 getStagingBuffer( const RHIStagingSpan& span ) const;
-        /** @brief 되읽기 구간 @p span 의 바이트를 읽을 매핑 주소입니다(단독 구간이면 단독 버퍼의 시작). */
-        [[nodiscard]] const uint8* getReadbackBytes( const RHIStagingSpan& span ) const;
-        /** @brief 되읽기 구간 @p span 을 담은 GL 버퍼 이름입니다(`GL_PIXEL_PACK_BUFFER` 로 건다). */
-        [[nodiscard]] uint32 getReadbackBuffer( const RHIStagingSpan& span ) const;
-
-        /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
-        [[nodiscard]] bool ensureComputeRootConstantUbo();
-        /** @brief MRT 합성 FBO 를 확보합니다. */
-        uint32 ensureCompositeFboMrt( const RHITextureHandle* pColor, const uint16* pColorSlice, uint32 colorCount, RHITextureHandle depth, uint32 depthSlice );
-        /** @brief 불투명 핸들로 GLuint 이름을 찾습니다. */
-        uint32 resolveGlBuffer( RHIBufferHandle handle ) const;
-        /**
-         * @brief GL 버퍼 이름을 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 Buffer 항목에 `sizeBytes` 를 올리는 유일한 지점입니다.
-         * @param sizeBytes `glBufferData` 에 준 크기입니다(논리 크기이며, GL 에는 할당 크기를 물을 API 가 없습니다).
-         */
-        RHIBufferHandle storeGlBuffer( uint32 glName, uint32 sizeBytes );
         struct OpenGLTextureRecord;
-        /** @brief 텍스처(의 면 `slice`)를 지금 바인딩된 FBO 의 `attachment` 에 붙입니다. 면이 여럿인 텍스처는 층(layer)으로 붙입니다. */
-        static void attachTextureToFramebuffer( uint32 attachment, const OpenGLTextureRecord& record, uint32 slice );
-        /** @brief 불투명 텍스처 핸들로 OpenGLTextureRecord 를 찾습니다. */
-        OpenGLTextureRecord*       resolveTexture( RHITextureHandle handle );
-        const OpenGLTextureRecord* resolveTexture( RHITextureHandle handle ) const;
 
         /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. 네 백엔드 공통 안전값은
          *         shaderslot::kRootConstantDwords(DX12 와 Vulkan 의 루트 상수, 푸시 상수 크기)입니다. */
@@ -465,6 +352,121 @@ namespace sw
             RHIVertexLayout      _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
         };
 
+    protected:
+        // 네이티브 핸들 getter 는 기반처럼 보호 구역이다 — 바깥은 종류 확인이 든 `IRHIDevice::queryNativeHandles` · `tryGetNativeTexturePointer` 로만 읽는다.
+        /** @brief 네이티브 GL 텍스처 이름을 포인터 폭으로 넓혀 반환합니다. 없으면 nullptr(이름 0)입니다. */
+        void* getNativeTexturePointer( RHITextureHandle texture ) const override { return reinterpret_cast<void*>( static_cast<uintptr_t>( getGlTextureName( texture ) ) ); }
+
+        /** @brief 플랫폼 디바이스 컨텍스트(HDC · Display*)를 반환합니다. */
+        void* getNativeDevice() const override { return _pHDC; }
+
+        /** @brief 플랫폼 렌더 컨텍스트(HGLRC · GLXContext)를 반환합니다. */
+        void* getNativeContext() const override { return _pHRC; }
+
+        /** @brief OpenGL 에는 커맨드 큐가 없어 nullptr 를 반환합니다. */
+        void* getNativeCommandQueue() const override { return nullptr; }
+
+    private:
+        /** @brief makeCurrent 를 한 번 시도하고, 성공하면 가진 스레드와 시각을 기록합니다. */
+        [[nodiscard]] bool tryMakeCurrentAndRecordOwner();
+        /** @brief 타임스탬프 쿼리 객체를 한 번만 만듭니다. */
+        void ensureTimestampQueries();
+        /** @brief 다시 쓰기 직전의 묶음에서 결과를 마이크로초로 변환합니다(기다리지 않습니다). */
+        void collectTimestampsForSlot();
+        /**
+         * @brief 방금 끝낸 프레임에 펜스(`glFenceSync`)를 내고, GPU 가 지난 프레임까지의 `enqueueGPURelease` 콜백을 부릅니다(`endFrame` 이 부릅니다).
+         * @details 링이 가득 차면(프레임 `kMaxFrameCountInFlight` 개가 GPU 에 남음) 가장 오래된 프레임이 끝날 때까지 기다린다 — DX12 · Vulkan 의 링 슬롯 대기와 같다.
+         */
+        void retireFrameOnGPU();
+        /**
+         * @brief 방금 낸 전송 뒤에 펜스를 달고(`glFenceSync` + `glFlush`) 시리얼을 발급합니다. GL 컨텍스트를 가진 스레드에서, 전송 명령을 낸 직후에 부릅니다.
+         * @details `glFlush` 가 있어야 프레임을 돌리지 않아도 펜스가 신호한다(계약 7). 시리얼은 컨텍스트를 쥔 채 큐에 낸 순서대로 매긴다.
+         *          모든 전송(업로드 · 되읽기)은 GPU 에서 끝나므로 펜스 없는 제출은 없다. `glFenceSync` 가 펜스를 주지 않으면 오류를 남기고 장치 손실로 둔다.
+         */
+        uint64 endTransfer();
+        /** @brief 앞에서부터 끝난 전송의 펜스를 놓고 워터마크를 올립니다. 기다리지 않습니다. GL 컨텍스트를 가진 스레드에서만 부릅니다. */
+        void retireFinishedTransfers();
+        /**
+         * @brief 컨텍스트를 기다리지 않고 끝난 전송을 모읍니다. 이 스레드가 이미 쥐었으면 그대로, 비어 있으면 한 번 집어 모으고 놓습니다.
+         * @return 모았으면 true, 다른 스레드가 컨텍스트를 쥐고 있어 못 모았으면 false 입니다(그 스레드의 `endFrame` · 제출이 모은다).
+         * @details `pollTransfer` 와 링이 찼을 때의 할당이 부른다. 쥔 쪽에만 맡기면 RT 가 프레임을 돌리지 않는 동안(동기 로드) 기다리는 쪽이 시간 초과까지 멈춘다.
+         */
+        [[nodiscard]] bool tryRetireFinishedTransfers();
+        /**
+         * @brief 업로드 스테이징 링(영속 매핑 PBO)을 만듭니다. 초기화 끝에 컨텍스트를 쥔 채 부릅니다.
+         * @param soloMaxBytes 링보다 큰 업로드 한 장을 일회성 버퍼로 받는 상한입니다(`RHIStagingAllocator::initialize`).
+         * @return `GL_ARB_buffer_storage`(GL 4.4)가 없어 링을 만들지 않았어도 true 입니다(그때 업로드는 모두 `Rejected`). 용량 설정이 0 이거나 GL 이 버퍼를 만들지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool initializeStagingRing( uint64 capacityBytes, uint64 soloMaxBytes );
+        /** @brief 링의 매핑을 풀고 버퍼를 지웁니다. 컨텍스트를 쥔 채, 전송이 모두 끝난 뒤(`waitIdle` 다음) 부릅니다. */
+        void shutdownStagingRing();
+        /**
+         * @brief 업로드 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다(복사는 컨텍스트 밖에서 한다).
+         * @details 링이 차 있으면 끝난 펜스를 한 번 모아(컨텍스트를 잠깐 빌린다) 다시 시도한다 — 프레임을 돌리지 않는 동기 대기(`submitWhileBusy`)도 링을 비우게 한다(계약 7).
+         *          링보다 큰 한 장은 할당기가 단독 구간을 내주면 그 크기의 일회성 영속 매핑 버퍼를 만든다(`attachSoloBuffer`, 컨텍스트를 잠깐 빌린다).
+         * @return 잡았으면 `Accepted`, 지금 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
+         *         (옮기고 놓고 남기는 일은 `RHIStagingRingUtil::settleAllocation` 한 곳).
+         */
+        [[nodiscard]] RHISubmitResult allocateStagingSpan( uint64 sizeBytes, const utf8* pCaller, RHIStagingSpan& outSpan );
+        /**
+         * @brief 텍스처 되읽기 링(`GL_MAP_READ_BIT` 영속 매핑 PBO)을 만듭니다. 초기화 끝에 컨텍스트를 쥔 채 부릅니다.
+         * @param soloMaxBytes 링보다 큰 읽기 한 장을 일회성 버퍼로 받는 상한입니다(`RHIStagingAllocator::initialize`).
+         * @return `GL_ARB_buffer_storage`(GL 4.4)가 없어 링을 만들지 않았어도 true 입니다(그때 되읽기는 모두 `Rejected`). 용량 설정이 0 이거나 GL 이 버퍼를 만들지 못하면 false 입니다.
+         */
+        [[nodiscard]] bool initializeReadbackRing( uint64 capacityBytes, uint64 soloMaxBytes );
+        /** @brief 되읽기 링의 버퍼를 지웁니다. `shutdownStagingRing` 과 같은 때에 부릅니다. 가져가지 않은 되읽기의 구간은 버려진다. */
+        void shutdownReadbackRing();
+        /**
+         * @brief 영속 매핑 링 버퍼 하나를 만들고 매핑합니다(`glBufferStorage` + `glMapBufferRange`, 저장소 플래그 = @p mapFlags).
+         * @return 매핑 주소입니다. 만들거나 매핑하지 못하면 버퍼를 지우고 nullptr 이며 @p outBuffer 는 0 입니다.
+         */
+        [[nodiscard]] uint8* createPersistentRingBuffer( uint64 capacityBytes, uint32 mapFlags, uint32& outBuffer );
+        /**
+         * @brief 되읽기 바이트 @p sizeBytes 를 담을 링 구간을 잡습니다. 컨텍스트가 없어도 부를 수 있습니다.
+         * @details 되읽기 구간은 GPU 완료가 아니라 CPU 가 다 읽었을 때(`takeTextureReadback`) 돌아온다. 버린 읽기의 구간만 펜스가 지나면 돌아오므로, 차 있으면 펜스를 한 번 모은 뒤 다시 본다.
+         *          링보다 큰 한 장은 업로드와 같이 단독 구간과 일회성 버퍼로 받는다.
+         * @return 잡았으면 `Accepted`, 앞선 되읽기를 아직 가져가지 않아 차 있으면 `Busy`, 링이 없거나 링과 단독 상한을 모두 넘거나 장치를 잃었으면 이유를 로그로 남기고 `Rejected` 입니다
+         *         (옮기는 곳은 업로드와 같은 `RHIStagingRingUtil::settleAllocation`).
+         */
+        [[nodiscard]] RHISubmitResult allocateReadbackSpan( uint64 sizeBytes, RHIStagingSpan& outSpan );
+        /**
+         * @brief 할당기가 내준 단독 구간 @p span 에 그 크기의 영속 매핑 버퍼를 만들어 붙입니다. 컨텍스트를 빌린다(이미 쥐었으면 그대로).
+         * @details 앞선 단독 구간의 버퍼가 아직 남아 있으면(할당기는 이미 돌려받았다) 먼저 지운다. 만든 버퍼는 메모리 추적기의 Staging 에 올린다.
+         * @return 붙였으면 `Accepted`. 컨텍스트를 얻지 못하면 `Busy`, 버퍼를 만들지 못하면 `Rejected` 이고 두 경우 모두 구간을 할당기에 돌려준다.
+         */
+        [[nodiscard]] RHISubmitResult attachSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, const RHIStagingSpan& span, uint32 mapFlags,
+                                                        const utf8* pCaller );
+        /** @brief 단독 버퍼를 지우고 메모리 추적기에서 내립니다. 컨텍스트를 쥔 채 부릅니다. 버퍼가 없으면 아무것도 하지 않습니다. */
+        void deleteSoloBuffer( OpenGLSoloTransferBuffer& rSolo );
+        /** @brief 할당기가 단독 구간을 돌려받았으면 그 버퍼를 지웁니다. 컨텍스트를 쥔 채 `retireFinishedTransfers` 가 부릅니다. */
+        void deleteIdleSoloBuffer( RHIStagingAllocator& ring, OpenGLSoloTransferBuffer& rSolo, uint64 completedSerial );
+        /** @brief 업로드 구간 @p span 의 바이트를 쓸 매핑 주소입니다(단독 구간이면 단독 버퍼의 시작). */
+        [[nodiscard]] uint8* getStagingBytes( const RHIStagingSpan& span ) const;
+        /** @brief 업로드 구간 @p span 을 담은 GL 버퍼 이름입니다(`GL_PIXEL_UNPACK_BUFFER` 로 건다). */
+        [[nodiscard]] uint32 getStagingBuffer( const RHIStagingSpan& span ) const;
+        /** @brief 되읽기 구간 @p span 의 바이트를 읽을 매핑 주소입니다(단독 구간이면 단독 버퍼의 시작). */
+        [[nodiscard]] const uint8* getReadbackBytes( const RHIStagingSpan& span ) const;
+        /** @brief 되읽기 구간 @p span 을 담은 GL 버퍼 이름입니다(`GL_PIXEL_PACK_BUFFER` 로 건다). */
+        [[nodiscard]] uint32 getReadbackBuffer( const RHIStagingSpan& span ) const;
+
+        /** @brief 컴퓨트 루트 상수 UBO 를 확보합니다. */
+        [[nodiscard]] bool ensureComputeRootConstantUbo();
+        /** @brief MRT 합성 FBO 를 확보합니다. */
+        uint32 ensureCompositeFboMrt( const RHITextureHandle* pColor, const uint16* pColorSlice, uint32 colorCount, RHITextureHandle depth, uint32 depthSlice );
+        /** @brief 불투명 핸들로 GLuint 이름을 찾습니다. */
+        uint32 resolveGlBuffer( RHIBufferHandle handle ) const;
+        /**
+         * @brief GL 버퍼 이름을 테이블에 넣고 핸들을 반환합니다. GPU 메모리 추적기의 Buffer 항목에 `sizeBytes` 를 올리는 유일한 지점입니다.
+         * @param sizeBytes `glBufferData` 에 준 크기입니다(논리 크기이며, GL 에는 할당 크기를 물을 API 가 없습니다).
+         */
+        RHIBufferHandle storeGlBuffer( uint32 glName, uint32 sizeBytes );
+        /** @brief 텍스처(의 면 `slice`)를 지금 바인딩된 FBO 의 `attachment` 에 붙입니다. 면이 여럿인 텍스처는 층(layer)으로 붙입니다. */
+        static void attachTextureToFramebuffer( uint32 attachment, const OpenGLTextureRecord& record, uint32 slice );
+        /** @brief 불투명 텍스처 핸들로 OpenGLTextureRecord 를 찾습니다. */
+        OpenGLTextureRecord*       resolveTexture( RHITextureHandle handle );
+        const OpenGLTextureRecord* resolveTexture( RHITextureHandle handle ) const;
+
+    private:
         /** @brief 플랫폼 GL 컨텍스트(WGL, GLX)입니다. 생성, 바인딩, 프레젠트, VSync 를 모두 여기가 압니다. */
         unique_ptr<IOpenGLPlatformContext> _platformContext;
         /** @brief 메인 창입니다(표면 nullptr — 컨텍스트를 만든 창). 크기는 `_width` · `_height` 와 같다. */

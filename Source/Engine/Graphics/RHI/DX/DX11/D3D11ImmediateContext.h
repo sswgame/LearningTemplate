@@ -51,6 +51,7 @@ namespace sw
         private:
             ScopedLock( ID3D11DeviceContext* pContext, ID3D11Multithread* pMultithread );
 
+        private:
             ID3D11DeviceContext* _pContext;
             ID3D11Multithread*   _pMultithread;
         };
@@ -72,6 +73,7 @@ namespace sw
         /** @brief 가드 없이 컨텍스트를 꺼냅니다. 런타임이 호출마다 잠그므로 호출 하나는 안전하고, 여러 호출을 묶는 일은 `lock()` 으로 합니다. */
         ID3D11DeviceContext* getPerCallProtected() const { return _context.Get(); }
 
+    private:
         Microsoft::WRL::ComPtr<ID3D11DeviceContext> _context;
         Microsoft::WRL::ComPtr<ID3D11Multithread>   _multithread;
     };

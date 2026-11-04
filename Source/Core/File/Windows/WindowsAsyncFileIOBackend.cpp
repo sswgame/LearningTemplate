@@ -235,6 +235,7 @@ namespace sw
             return pExpected == _hPort;
         }
 
+    private:
         sw::thread        _thread;
         AsyncFileIOQueue* _pQueue;
         HANDLE            _hPort;

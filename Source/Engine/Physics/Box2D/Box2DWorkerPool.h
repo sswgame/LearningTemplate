@@ -78,6 +78,7 @@ namespace sw
         [[nodiscard]] bool tryRunOne( uint32 workerIndex );
         void               runWorker( uint32 workerIndex, StopToken stopToken );
 
+    private:
         vector<sw::thread>                 _listThread;
         ThreadRole                         _stepThread;                  ///< 스텝 스레드(월드를 가진 쪽) 역할 — 잠금이 아니라 분석용 능력이다
         vector<unique_ptr<Task>> _listTask SW_GUARDED_BY( _stepThread ); ///< 만든 태스크 전부(소유)

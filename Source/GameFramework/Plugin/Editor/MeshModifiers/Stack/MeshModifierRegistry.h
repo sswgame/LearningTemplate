@@ -27,17 +27,17 @@ namespace sw::editor
      */
     struct MeshModifierRegistration final : ModuleObjectRegistrar
     {
+
+        const utf8*          _pID;          ///< 저장 문서의 종류 키입니다(바꾸면 옛 문서를 못 읽는다)
+        const utf8*          _pDisplayName; ///< 패널 추가 메뉴의 이름(영문)
+        const utf8*          _pCategory;    ///< 패널 추가 메뉴의 묶음(영문)
+        MeshModifierCreateFn _pCreateFn;
         MeshModifierRegistration( const utf8* pID, const utf8* pDisplayName, const utf8* pCategory, MeshModifierCreateFn pCreateFn );
         MeshModifierRegistration( const MeshModifierRegistration& )            = delete;
         MeshModifierRegistration& operator=( const MeshModifierRegistration& ) = delete;
 
         void attach() override;
         void detach() override;
-
-        const utf8*          _pID;          ///< 저장 문서의 종류 키입니다(바꾸면 옛 문서를 못 읽는다)
-        const utf8*          _pDisplayName; ///< 패널 추가 메뉴의 이름(영문)
-        const utf8*          _pCategory;    ///< 패널 추가 메뉴의 묶음(영문)
-        MeshModifierCreateFn _pCreateFn;
     };
 } // namespace sw::editor
 

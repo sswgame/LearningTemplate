@@ -53,6 +53,7 @@ namespace sw
     private:
         [[nodiscard]] bool flushCiphertext( IStreamTransport& transport );
 
+    private:
         vector<uint8>           _cipherBytes;
         unique_ptr<ITLSSession> _tlsSession;
         StreamConnectionHandle  _handle;

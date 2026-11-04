@@ -71,6 +71,7 @@ namespace sw
         /** @brief 소프트 바디를 시스템에서 빼고 지웁니다. */
         void remove( const Record& record );
 
+    private:
         JPH::PhysicsSystem&     _system;
         JPH::TempAllocator&     _tempAllocator;
         SlotHandleTable<Record> _softBodies;

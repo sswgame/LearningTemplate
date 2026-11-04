@@ -47,6 +47,7 @@ namespace sw
     private:
         void flushServiceOutput( OnlineServiceHost& host );
 
+    private:
         ServicePendingTable                 _pendingTable;
         vector<ChatCompletion>              _listCompletionScratch;
         vector<ChatDelivery>                _listDeliveryScratch;

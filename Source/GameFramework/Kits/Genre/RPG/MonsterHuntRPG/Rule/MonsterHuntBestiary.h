@@ -82,6 +82,7 @@ namespace sw
         const Entry* findEntry( const hashed_string& monsterID ) const;
         bool         raiseKnowledge( const hashed_string& monsterID, int32 level );
 
+    private:
         vector<Entry>                         _listEntry;
         EventBuffer<MonsterHuntBestiaryEvent> _eventBuffer;
         const MonsterHuntCatalog*             _pCatalog;

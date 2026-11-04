@@ -60,6 +60,7 @@ namespace sw
         /** @brief force-feedback fd를 닫고 관련 상태를 리셋합니다. */
         void closeForceFeedback();
 
+    private:
         int32                  _fdJoystick;        /**< /dev/input/jsN 파일 디스크립터입니다. 연결 전이면 constant::invalid_index::kInt32(POSIX open() 실패 규약과 같은 -1)입니다. */
         int32                  _fdForceFeedback;   /**< 대응하는 /dev/input/eventN 파일 디스크립터입니다(럼블용). 없으면 constant::invalid_index::kInt32 입니다. */
         int16                  _ffEffectID;        /**< ioctl( EVIOCSFF ) 로 업로드한 FF_RUMBLE 이펙트 ID 입니다. 없으면 constant::invalid_index::kInt16 입니다. */

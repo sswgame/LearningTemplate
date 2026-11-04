@@ -813,9 +813,9 @@ namespace sw::editor
         {
         public:
             static constexpr const utf8* kSubsystemName = "MeshModifiersVisualizerState";
-            const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
             MeshModifiersVisualizerInternal::State _state{};
+            const utf8*                            getSubsystemName() const override { return kSubsystemName; }
         };
 
         MeshModifiersVisualizerInternal::State& MeshModifiersVisualizerInternal::getState()

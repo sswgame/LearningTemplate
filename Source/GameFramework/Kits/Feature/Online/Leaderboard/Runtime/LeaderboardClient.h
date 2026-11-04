@@ -54,6 +54,7 @@ namespace sw
     private:
         uint64 send( uint16 method, const LeaderboardRequest& request, const ReplyDelegate& onReply );
 
+    private:
         DrainGate                     _unlockGate;
         EventBuffer<AchievementState> _unlockBuffer;
     };

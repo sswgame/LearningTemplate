@@ -109,6 +109,7 @@ namespace sw
         /** @brief 해석 스레드입니다. 맡긴 이름을 하나씩 해석해 요청에 적습니다. 종료할 때까지 돕니다. */
         void resolveRequest( uint64& requestID, bool bStopping );
 
+    private:
         const IClock&                                            _clock;
         mutable mutex                                            _mutex;
         unordered_map<uint64, unique_ptr<Call>> _mapCall         SW_GUARDED_BY( _mutex ); ///< 연결(packed) → 요청

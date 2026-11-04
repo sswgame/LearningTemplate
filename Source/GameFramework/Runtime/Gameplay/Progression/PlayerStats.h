@@ -83,6 +83,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "Stats"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
+    private:
         vector<StatDef>                      _listStat;
         unordered_map<hashed_string, uint32> _mapIndex;
     };
@@ -140,6 +141,7 @@ namespace sw
         /** @brief 값을 바꾸고(상한 적용) 바뀌었으면 알립니다. */
         [[nodiscard]] bool applyValue( const StatDef& def, float64 newValue );
 
+    private:
         const StatCatalog*                           _pCatalog;
         unordered_map<hashed_string, float64>        _mapValue;
         MulticastDelegate<void( const StatChange& )> _changedMulticast; ///< 값이 바뀐 것을 듣는 쪽(구독이 소유)

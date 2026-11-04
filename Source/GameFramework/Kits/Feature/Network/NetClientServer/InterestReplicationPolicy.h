@@ -63,6 +63,7 @@ namespace sw
 
         const Observer* findObserver( int32 connectionID ) const;
 
+    private:
         NetInterestGrid               _interest;
         unordered_map<uint32, float3> _mapPosition; ///< 자리를 알린 엔티티
         vector<Observer>              _listObserver;

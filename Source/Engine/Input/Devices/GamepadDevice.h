@@ -139,6 +139,7 @@ namespace sw
         /** @brief 실제 장치가 연결되어 있는지 반환합니다(플랫폼 백엔드가 폴링 결과로 답합니다). */
         virtual bool isHardwareConnected() const { return true; }
 
+    protected:
         GamepadConnectionDelegate _onConnectionChanged;
         uint32                    _deviceIndex;               /**< 컨트롤러 슬롯 인덱스입니다(로컬 멀티플레이어 0~3번 패드). */
         uint32                    _buttonMask;                /**< 이번 프레임의 디지털 버튼 눌림 비트마스크입니다(GamepadButton 인덱스로 비트를 조회). */

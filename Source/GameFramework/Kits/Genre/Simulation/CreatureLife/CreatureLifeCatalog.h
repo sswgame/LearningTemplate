@@ -218,6 +218,7 @@ namespace sw
         [[nodiscard]] bool loadAppeal( const XMLNode& node, string_view sourceName );
         void               rebuildHabitatOrder();
 
+    private:
         GameCatalog<HabitatDef>         _habitatCatalog;
         GameCatalog<CreatureSpeciesDef> _speciesCatalog;
         GameCatalog<CreatureAbilityDef> _abilityCatalog;

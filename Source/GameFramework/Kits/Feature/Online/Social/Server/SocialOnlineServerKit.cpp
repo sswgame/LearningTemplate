@@ -139,6 +139,7 @@ namespace sw
                 _pGroupChannels->addGroupMember( GroupChannelKind::Guild, event._guildID, event._accountID, event._nowMs );
             }
 
+        private:
             SocialService            _socialService;
             GuildService             _guildService;
             SocialServer             _socialServer;

@@ -111,6 +111,7 @@ namespace sw
         /** @brief 스냅샷을 짓고(추가 뷰의 투명 순서 포함) 업로드를 요청한 뒤 패킷에 내보냅니다. 인스턴스 LOD 설정은 부르는 쪽이 먼저 정한다. */
         void buildSnapshot( RenderFramePacket& packet, Scene* pScene, GPUUploadQueue* pUploadQueue );
 
+    private:
         /** @brief GT 쪽 씬 스냅샷 빌더입니다. populateFromScene 의 재구축 판단 캐시가 프레임을 넘어 유지되도록 여기서 소유합니다. */
         unique_ptr<GPUSceneBuilder> _gpuSceneBuilder;
         /** @brief 애니메이션 LOD · 메시 LOD 에 넘기는 이번 프레임의 뷰(주 시점 + 그리는 추가 뷰)입니다. 프레임마다 재사용합니다. */

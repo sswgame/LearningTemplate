@@ -86,6 +86,7 @@ namespace sw
     private:
         WalletBalance& getOrCreateBalance( const hashed_string& currency );
 
+    private:
         vector<WalletBalance>    _listBalance{};
         EventBuffer<WalletEvent> _eventBuffer{};
         uint32                   _revision{ 0 };
@@ -291,6 +292,7 @@ namespace sw
         int32        computeBasePrice( const ShopStockDef& stock ) const;
         bool         isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemID ) const;
 
+    private:
         vector<ShopRuntime>            _listRuntime;
         EventBuffer<ShopEvent>         _eventBuffer;
         const ShopCatalog*             _pShopCatalog;

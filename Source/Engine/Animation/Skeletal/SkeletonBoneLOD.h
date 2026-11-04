@@ -87,6 +87,7 @@ namespace sw
         /** @brief 루트 객체를 읽습니다. */
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
 
+    private:
         vector<SkeletonBoneLODLevel> _listLevel;
         uint64                       _revision{ 0 };
     };

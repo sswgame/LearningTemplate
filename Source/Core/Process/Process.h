@@ -25,6 +25,10 @@ namespace sw
      */
     struct SW_API ProcessCommand
     {
+
+        string         _executable{};
+        vector<string> _listArgument{};
+        bool           _bSearchPath{ false }; ///< true 면 `_executable` 은 검색 경로에서 찾을 이름, false 면 절대 경로다
         /** @brief 빈 명령입니다(띄우면 실패한다). */
         ProcessCommand() = default;
 
@@ -32,10 +36,6 @@ namespace sw
         [[nodiscard]] static ProcessCommand at( const AbsolutePath& executable, vector<string> listArgument );
         /** @brief 이름 @p executableName(`git` · `py`)을 검색 경로(PATH)에서 찾아 띄우는 명령입니다. 이름에 구분자가 있으면 띄울 때 실패한다(경로는 `at`). */
         [[nodiscard]] static ProcessCommand fromSearchPath( string_view executableName, vector<string> listArgument );
-
-        string         _executable{};
-        vector<string> _listArgument{};
-        bool           _bSearchPath{ false }; ///< true 면 `_executable` 은 검색 경로에서 찾을 이름, false 면 절대 경로다
 
         /** @brief 실행 파일을 포함해 CommandLineToArgvW 규칙으로 인용한 명령줄입니다. Windows 가 `CreateProcessW` 에 넘기는 글이고, 양쪽 모두 로그에 씁니다. */
         [[nodiscard]] string toCommandLine() const;

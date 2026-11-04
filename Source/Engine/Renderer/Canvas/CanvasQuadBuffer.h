@@ -50,6 +50,7 @@ namespace sw
         /** @brief 화면 앵커를 버퍼 맨 앞에 업로드합니다. @p bForce 가 아니면 지난번과 같을 때 업로드하지 않습니다. */
         void uploadAnchors( IRHIDevice& device, const vector<CanvasAnchor>& listAnchor, bool bForce );
 
+    private:
         vector<CanvasQuad>   _listAnchorScratch;  ///< 앵커를 사각형 원소 형태(rect = x, y, 배율, -)로 옮긴 사본
         vector<CanvasAnchor> _listUploadedAnchor; ///< 버퍼 앞에 지금 있는 앵커(같으면 다시 업로드하지 않는다)
         vector<CanvasQuad>   _listQuadScratch;    ///< 대상이 있을 때 주 출력과 대상 사각형을 이어 붙인 사본

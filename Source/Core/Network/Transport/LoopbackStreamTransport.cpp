@@ -461,6 +461,7 @@ namespace sw
                 }
             }
 
+        private:
             vector<LoopbackHandleSlot>      _listSlot;
             vector<uint32>                  _listFreeSlot;
             vector<LoopbackEvent>           _listPending;  ///< 망 잠금 안에서 쌓인 사건

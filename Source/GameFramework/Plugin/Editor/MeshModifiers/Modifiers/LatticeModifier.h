@@ -77,6 +77,7 @@ namespace sw::editor
         void elevateAxis( uint32 axisIndex );
         void syncResolutionParams();
 
+    private:
         MeshModifierBounds _box;              ///< 모디파이어 공간의 격자 상자. 무효면 입력 정점의 상자
         vector<float3>     _listControlPoint; ///< X 가 가장 빨리 도는 순서(index = x + Nx · (y + Ny · z))
         uint32             _resolutionXParam;

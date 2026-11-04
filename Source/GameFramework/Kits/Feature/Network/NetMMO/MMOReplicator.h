@@ -254,6 +254,7 @@ namespace sw
         void             resolveInFlightUpdates( Observer& observer ) const;
         const MMOEntity& getEntity( uint32 entityID ) const;
 
+    private:
         unordered_map<uint32, MMOEntity>    _mapEntity;
         vector<Observer>                    _listObserver;
         NetInterestGrid                     _interest;          ///< 엔티티 위치(XZ 평면의 점)와 두 반경. 칸은 `initialize` 가 받은 월드 격자의 셀 크기, 키는 `NetInterestGrid::makeKey`

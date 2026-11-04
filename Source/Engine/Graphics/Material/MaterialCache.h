@@ -51,6 +51,10 @@ namespace sw
     class SW_API MaterialCache final : public AssetCacheBase
     {
     public:
+        /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
+        static constexpr const utf8* kAssetKindName = "Material";
+        /** @brief 한 프레임에 초기화하는 머티리얼 수의 상한입니다(`initializePending`). 게임 스레드의 파일 읽기라 작게 둡니다. */
+        static constexpr uint32 kMaxInitsPerFrame = 4;
         /** @brief 빈 캐시로 만듭니다. */
         MaterialCache();
         /** @brief 캐시를 해제합니다. */
@@ -60,9 +64,6 @@ namespace sw
         MaterialCache( const MaterialCache& ) = delete;
         /** @brief 대입을 금지합니다. */
         MaterialCache& operator=( const MaterialCache& ) = delete;
-
-        /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
-        static constexpr const utf8* kAssetKindName = "Material";
         /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
         const utf8* getAssetKindName() const override { return kAssetKindName; }
         /**
@@ -93,8 +94,6 @@ namespace sw
          *          스튜디오 · 베이커처럼 프레임 없이 한 번에 올리는 호출처는 기본값(전부)을 씁니다.
          */
         void initializePending( IRHIDevice* pDevice, uint32 maxCount = 0xFFFFFFFFu );
-        /** @brief 한 프레임에 초기화하는 머티리얼 수의 상한입니다(`initializePending`). 게임 스레드의 파일 읽기라 작게 둡니다. */
-        static constexpr uint32 kMaxInitsPerFrame = 4;
         /** @brief 지금 보관 중인 항목 수입니다. */
         size_t getCachedCount() const override;
         /**
@@ -119,10 +118,11 @@ namespace sw
         void takePSOWarmEntries( vector<MaterialPSOWarmEntry>& outListEntry );
 
     private:
+        struct Impl;
         /** @brief 초기화를 마친 고정 머티리얼의 PSO 미리 만들기 값을 만들어 렌더 스레드가 꺼낼 줄로 옮깁니다(게임 스레드, `initializePending`). */
         void promoteReadyPSOWarmKeys();
 
-        struct Impl;
+    private:
         unique_ptr<Impl> _impl;
     };
 } // namespace sw

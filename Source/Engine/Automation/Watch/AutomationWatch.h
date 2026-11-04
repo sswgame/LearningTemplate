@@ -75,6 +75,7 @@ namespace sw
     private:
         AutomationWatchQuery() = default;
 
+    private:
         const GameObject*      _pTargetObject{ nullptr };
         string                 _targetProblem{};
         AutomationTargetLookup _targetLookup{ AutomationTargetLookup::NotGiven };
@@ -143,12 +144,12 @@ namespace sw
     /** @brief `SW_AUTOMATION_WATCH` 가 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다(앞 등록을 지우지 않게). */
     struct SW_API AutomationWatchRegistrar
     {
+
+        const AutomationWatchRegistration* _pRegistration;
         explicit AutomationWatchRegistrar( const AutomationWatchRegistration* pRegistration );
         ~AutomationWatchRegistrar();
         AutomationWatchRegistrar( const AutomationWatchRegistrar& )            = delete;
         AutomationWatchRegistrar& operator=( const AutomationWatchRegistrar& ) = delete;
-
-        const AutomationWatchRegistration* _pRegistration;
     };
 } // namespace sw
 

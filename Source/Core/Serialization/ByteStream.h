@@ -216,6 +216,7 @@ namespace sw
             return pBytes;
         }
 
+    private:
         const uint8* _pData;
         size_t       _byteCount;
         size_t       _offset;

@@ -139,6 +139,7 @@ namespace sw
     private:
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
 
+    private:
         vector<TelemetryEventDef> _listEvent;
         TelemetryPipelineConfig   _settings;
         int32                     _version;

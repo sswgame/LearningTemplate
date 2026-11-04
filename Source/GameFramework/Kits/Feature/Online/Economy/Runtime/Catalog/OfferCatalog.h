@@ -112,6 +112,7 @@ namespace sw
         /** @brief `<Offer>` 와 그 자식을 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadOffer( const XMLNode& node, string_view sourceName );
 
+    private:
         vector<OfferDef> _listOffer{};
     };
 } // namespace sw

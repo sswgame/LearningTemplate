@@ -64,6 +64,7 @@ namespace sw
         const Entry*       findEntry( const hashed_string& table, string_view key ) const;
         ServiceStoreResult validate( const ServiceTransaction& transaction, ServiceCommitInfo& outInfo ) const;
 
+    private:
         mutable mutex                       _mutex;
         unordered_map<hashed_string, Table> _mapTable;
         uint64 _commitVersion               SW_GUARDED_BY( _mutex );

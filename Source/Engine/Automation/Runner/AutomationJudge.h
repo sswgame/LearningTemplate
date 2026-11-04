@@ -121,13 +121,6 @@ namespace sw
             string _text{};
         };
 
-        /** @brief 단계의 감시 값 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고 @p outMessage 에 이유를 씁니다. */
-        [[nodiscard]] bool readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const;
-        /** @brief 시작할 때 `<ExpectVisited>` 가 보는 감시 값마다 이력을 만듭니다. */
-        void prepareWatches( const AutomationScenario& scenario );
-        /** @brief 미룬 `<ExpectImage>` 하나를 판정합니다(@p pBackendTag 는 단언한 때의 백엔드). */
-        void judgeImage( AutomationStepContext& context, const AutomationStep& step, const utf8* pBackendTag );
-
         /** @brief 미룬 `<ExpectImage>` 하나입니다. 단계는 시나리오가 들고 있어 실행 동안 산다. */
         struct DeferredImageCheck
         {
@@ -144,6 +137,14 @@ namespace sw
             float64                                   _limit{ 0.0 };
         };
 
+        /** @brief 단계의 감시 값 · 대상 · 키를 읽어 값을 냅니다. 없으면 false 이고 @p outMessage 에 이유를 씁니다. */
+        [[nodiscard]] bool readWatchValue( const AutomationStepContext& context, const AutomationStep& step, AutomationWatchValue& outValue, string& outMessage ) const;
+        /** @brief 시작할 때 `<ExpectVisited>` 가 보는 감시 값마다 이력을 만듭니다. */
+        void prepareWatches( const AutomationScenario& scenario );
+        /** @brief 미룬 `<ExpectImage>` 하나를 판정합니다(@p pBackendTag 는 단언한 때의 백엔드). */
+        void judgeImage( AutomationStepContext& context, const AutomationStep& step, const utf8* pBackendTag );
+
+    private:
         AutomationLogCapture        _logCapture;             ///< 시나리오 동안의 로그 줄(`<ExpectLog>`, 로그 게이트)
         AutomationLogPolicy         _logPolicy;              ///< 로그 게이트의 허용 목록(전역 + `<ExpectLog>`)
         vector<string>              _listFailure;            ///< "frame 40 <Expect> #7: Shooter3D.WeaponIndex == 1, got 2"

@@ -89,6 +89,7 @@ namespace sw
         /** @brief @p camera 로 몇 장 그린 뒤 `LitColor` 를 읽어 @p outFace 의 바이트 · 행 간격에 담습니다(풀지 않는다). */
         [[nodiscard]] bool captureFace( Scene& scene, CameraComponent& camera, uint32 size, ReflectionProbeFaceCapture& outFace, string* pOutError );
 
+    private:
         SceneCapture _capture; ///< 그리기 · 읽기(렌더 스레드 명령)
     };
 } // namespace sw

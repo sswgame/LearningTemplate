@@ -86,6 +86,7 @@ namespace sw
         void onReadReply( const EphemeralReply& reply );
         void onWriteReply( const EphemeralReply& reply );
 
+    private:
         unordered_map<uint64, unique_ptr<Operation>> _mapRequestToOperation;
         EphemeralStoreRouter*                        _pRouter;
         Subscription                                 _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)

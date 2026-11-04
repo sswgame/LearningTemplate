@@ -36,6 +36,9 @@ namespace sw::editor
         ColorMap  _mapColor{};
         MetricMap _mapMetric{};
 
+        uint8 _bAccentOverridden{ SW_FALSE }; ///< 사용자가 강조색을 바꿨다(설정에 저장한다)
+        uint8 _bRadiusOverridden{ SW_FALSE }; ///< 사용자가 둥글기를 바꿨다(설정에 저장한다)
+
         /** @brief @p key 의 색입니다. 표에 없으면 nullptr 입니다. */
         [[nodiscard]] const Color* findColor( const hashed_string& key ) const
         {
@@ -48,9 +51,6 @@ namespace sw::editor
             const auto it = _mapMetric.find( key );
             return it != _mapMetric.end() ? &it->second : nullptr;
         }
-
-        uint8 _bAccentOverridden{ SW_FALSE }; ///< 사용자가 강조색을 바꿨다(설정에 저장한다)
-        uint8 _bRadiusOverridden{ SW_FALSE }; ///< 사용자가 둥글기를 바꿨다(설정에 저장한다)
     };
 } // namespace sw::editor
 

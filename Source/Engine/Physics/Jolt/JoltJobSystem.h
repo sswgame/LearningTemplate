@@ -43,6 +43,15 @@ namespace sw
         /** @brief 장벽을 기다리고, 그때 잡을 실행 중이던 태스크가 모두 끝나기를 기다립니다(파일 머리말 주의). */
         void WaitForJobs( Barrier* pBarrier ) override;
 
+    private:
+        /** @brief 태스크를 실행하는 스레드 하나(스크래치 슬롯)의 잡 실행 수입니다. 나옴 수는 release 로 올려 기다리는 쪽이 그 실행과 선후를 맺는다. */
+        struct alignas( 64 ) ExecutorSlot
+        {
+            atomic<uint64> _enterCount; ///< 기본 생성이 0 이다
+            atomic<uint64> _exitCount;
+        };
+        static constexpr uint32 kMaxExecutorSlotCount = 64; ///< 넘는 슬롯 번호는 마지막 칸을 나눠 쓴다
+
     protected:
         void QueueJob( Job* pJob ) override;
         void QueueJobs( Job** ppJob, JPH::uint jobCount ) override;
@@ -54,14 +63,7 @@ namespace sw
         /** @brief 큐에서 잡 하나를 꺼냅니다. 비었으면 nullptr 입니다. */
         Job* popQueuedJob();
 
-        /** @brief 태스크를 실행하는 스레드 하나(스크래치 슬롯)의 잡 실행 수입니다. 나옴 수는 release 로 올려 기다리는 쪽이 그 실행과 선후를 맺는다. */
-        struct alignas( 64 ) ExecutorSlot
-        {
-            atomic<uint64> _enterCount; ///< 기본 생성이 0 이다
-            atomic<uint64> _exitCount;
-        };
-        static constexpr uint32 kMaxExecutorSlotCount = 64; ///< 넘는 슬롯 번호는 마지막 칸을 나눠 쓴다
-
+    private:
         ExecutorSlot                _arrExecutorSlot[kMaxExecutorSlotCount];
         JPH::FixedSizeFreeList<Job> _jobs;
         deque<Job*> _listQueuedJob  SW_GUARDED_BY( _queueMutex );

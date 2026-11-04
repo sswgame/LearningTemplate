@@ -221,6 +221,7 @@ namespace sw
             _listFree.push_back( index );
         }
 
+    private:
         PagedArray<Slot>         _listSlot;
         vector<uint32> _listFree SW_GUARDED_BY( _mutex );
         mutable mutex            _mutex;

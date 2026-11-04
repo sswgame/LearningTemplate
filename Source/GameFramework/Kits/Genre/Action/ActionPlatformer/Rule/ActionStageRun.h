@@ -102,6 +102,7 @@ namespace sw
     private:
         void commitSecrets();
 
+    private:
         const ActionPlatformerCatalog* _pCatalog;
         const ActionStageDef*          _pStage;
         vector<hashed_string>          _listSecretCommitted; ///< 체크포인트나 클리어로 확정된 것

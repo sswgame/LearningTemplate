@@ -44,6 +44,7 @@ namespace sw
         /** @brief 하위 폴더 색인에서 @p fileName(대소문자 무시)의 경로를 찾습니다. 처음 부를 때 색인을 채웁니다. 없으면 빈 글입니다. */
         string findInRecursiveIndex( string_view fileName ) SW_EXCLUDES_LOCK( _mutex );
 
+    private:
         mutex                                            _mutex;
         bool _bIndexBuilt                                SW_GUARDED_BY( _mutex ){ false };
         unordered_map<string, string> _mapFileNameToPath SW_GUARDED_BY( _mutex ); ///< 소문자 파일 이름 → 경로(앞 폴더가 이긴다)

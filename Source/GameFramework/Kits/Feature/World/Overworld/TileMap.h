@@ -143,6 +143,7 @@ namespace sw
         uint64 getWarpKey( int32 x, int32 y ) const { return ( static_cast<uint64>( static_cast<uint32>( x ) ) << 32 ) | static_cast<uint32>( y ); }
         void   rebuildWarpIndex();
 
+    private:
         TileMapXMLData                        _data;          ///< 맵 데이터. 파일 스키마 그대로 보관한다
         vector<uint8>                         _listTileSolid; ///< 셀마다 단단한 브러시가 칠해졌으면 1 이다(`addSolidLayer`). 저장하지 않는다
         mutable unordered_map<uint64, size_t> _mapWarpIndex;

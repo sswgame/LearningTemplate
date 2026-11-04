@@ -98,6 +98,7 @@ namespace sw
         /** @brief 드로우를 내도 되는지 봅니다. 패스가 없으면 백버퍼가 없던 패스면 조용히, 아니면 알리고 false 입니다. */
         [[nodiscard]] bool isDrawAllowed() const;
 
+    private:
         bool _bRenderPassOpen{ false };
         bool _bRenderPassNoBackBuffer{ false };
     };

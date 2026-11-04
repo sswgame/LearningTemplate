@@ -68,6 +68,7 @@ namespace sw::editor
         void               restorePreviousFile();
         void               syncDirty();
 
+    private:
         fixed_string<constant::buffer::kMax128> _filter;
         vector<FileRow>                         _listFile;
         vector<string>                          _listWarning;

@@ -108,6 +108,7 @@ namespace sw
         void    applyBondLevel( int32 level );
         float32 computeFearResist() const;
 
+    private:
         EventBuffer<WesternHorseEvent> _eventBuffer;
         vector<hashed_string>          _listAbility; ///< 지금 단계까지 열린 능력
         ResourceGauge                  _health;

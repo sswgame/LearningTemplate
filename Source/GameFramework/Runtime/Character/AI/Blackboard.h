@@ -80,6 +80,7 @@ namespace sw
     private:
         BlackboardValue& acquireValue( const hashed_string& key, BlackboardValueType type );
 
+    private:
         unordered_map<hashed_string, BlackboardValue> _mapValue;
         uint32                                        _revision;
     };

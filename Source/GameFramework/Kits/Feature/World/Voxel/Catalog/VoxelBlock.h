@@ -153,6 +153,7 @@ namespace sw
         /** @brief `<Block>` 하나를 스키마와 면 칸으로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadBlock( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<VoxelBlockDef> _catalog; ///< 인덱스가 블록 번호 - 1 이다. id 조회는 해시 한 번으로 끝난다
         int32                      _atlasColumns;
         int32                      _atlasRows;

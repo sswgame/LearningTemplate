@@ -80,6 +80,7 @@ namespace sw
         void    noteCombat();
         float32 computeLevelFloor() const;
 
+    private:
         vector<float32>               _listSignalValue; ///< 신호마다(Impulse 는 마지막에 넣은 양)
         const AIDirectorIntensityDef* _pDef;
         float32                       _stress;

@@ -172,6 +172,7 @@ namespace sw::editor
         /** @brief 복제 키트가 올린 셈(`replicas=`)의 초당 갱신 · 바이트 비중 테이블을 그립니다. */
         void drawReplicaRates( const EditorNetProfilerTrack& track );
 
+    private:
         vector<float32>            _listValueScratch;
         vector<NetStatsKindEntry>  _listKindEntryScratch;
         vector<EditorNetKindShare> _listShareScratch;

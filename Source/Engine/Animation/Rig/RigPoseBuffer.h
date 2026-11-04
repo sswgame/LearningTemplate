@@ -72,6 +72,7 @@ namespace sw
         void refreshModel();
         void markDirty( uint32 boneIndex );
 
+    private:
         vector<int32>      _listParent;
         vector<float3>     _listLocalTranslation;
         vector<quaternion> _listLocalRotation;

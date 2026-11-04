@@ -68,6 +68,15 @@ namespace sw
         void                     transitionBufferNative( RHIBufferHandle buffer, RHIBufferState newState ) override;
         void                     copyBufferToReadbackNative( RHIBufferHandle source, RHIBufferHandle readback, uint32 sizeBytes ) override;
         void                     uavBarrierNative( RHIBufferHandle buffer ) override;
+        /** @brief 마지막으로 연 이벤트 마커입니다(없으면 빈 문자열). 기록이 끝난 뒤 제출하는 스레드가 읽습니다. */
+        const utf8* getLastEventMarker() const { return _lastEventMarker.c_str(); }
+
+        /** @brief 기록 대상 버퍼와 풀 그룹을 교체합니다(소유자가 버퍼와 풀 쌍을 바꿀 때). */
+        void rebindCommandBuffer( VkCommandBuffer targetBuffer, VulkanDescriptorPoolSet* pDescriptorPoolSet )
+        {
+            _targetBuffer       = targetBuffer;
+            _pDescriptorPoolSet = pDescriptorPoolSet;
+        }
 
     private:
         /**
@@ -98,6 +107,10 @@ namespace sw
         /** @brief 인덱스 드로우가 함께 쓰는 준비 — 파이프라인 · 메시 정점 · 인덱스 버퍼를 건다. 인덱스 버퍼가 없거나 커맨드 버퍼가 없으면 false(그리지 않는다). */
         [[nodiscard]] bool bindIndexedMeshForDraw();
 
+        /** @brief 실제로 기록할 커맨드 버퍼입니다(지정된 것이 있으면 그것, 없으면 디바이스의 현재 버퍼). */
+        VkCommandBuffer commandBuffer() const;
+
+    private:
         VulkanRHIDevice* _pDevice;
         /// @brief 이 컨텍스트가 기록할 버퍼입니다. nullptr 이면 디바이스가 지금 연 버퍼를 따라갑니다.
         VkCommandBuffer _targetBuffer;
@@ -107,19 +120,5 @@ namespace sw
         VulkanDescriptorPoolSet* _pDescriptorPoolSet;
         /// @brief 마지막으로 연 이벤트 마커(패스 이름)입니다. 디바이스를 잃었을 때 "마지막으로 제출한 패스" 를 로그에 적는 데 씁니다.
         fixed_string<constant::buffer::kMax64> _lastEventMarker;
-
-        /** @brief 실제로 기록할 커맨드 버퍼입니다(지정된 것이 있으면 그것, 없으면 디바이스의 현재 버퍼). */
-        VkCommandBuffer commandBuffer() const;
-
-    public:
-        /** @brief 마지막으로 연 이벤트 마커입니다(없으면 빈 문자열). 기록이 끝난 뒤 제출하는 스레드가 읽습니다. */
-        const utf8* getLastEventMarker() const { return _lastEventMarker.c_str(); }
-
-        /** @brief 기록 대상 버퍼와 풀 그룹을 교체합니다(소유자가 버퍼와 풀 쌍을 바꿀 때). */
-        void rebindCommandBuffer( VkCommandBuffer targetBuffer, VulkanDescriptorPoolSet* pDescriptorPoolSet )
-        {
-            _targetBuffer       = targetBuffer;
-            _pDescriptorPoolSet = pDescriptorPoolSet;
-        }
     };
 } // namespace sw

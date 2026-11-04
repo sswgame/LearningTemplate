@@ -154,6 +154,7 @@ namespace sw
         /** @brief `getTierIndex` 의 계산입니다. 값 이하인 마지막 단계를 고르고, 그런 단계가 없으면 0(가장 낮은 단계)이며, 단계가 아예 없으면 -1 입니다. */
         static int32 computeTierIndex( const FactionDef* pFaction, int32 value );
 
+    private:
         vector<Entry>                _listEntry;
         EventBuffer<ReputationEvent> _eventBuffer;
         const ReputationCatalog*     _pCatalog;

@@ -138,6 +138,7 @@ namespace sw
         void addRoad( const int2& from, const int2& to, int32 minPopulation );
         void addBuilding( const utf8* pBuildingID, int32 x, int32 y, int32 minPopulation );
 
+    private:
         vector<PlanStep> _listStep;
         int32            _nextStep;
         int32            _skippedCount;

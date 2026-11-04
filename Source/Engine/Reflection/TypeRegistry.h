@@ -26,6 +26,8 @@ namespace sw
     {
     public:
         static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Reflection; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        /** @brief `subscribeModuleUnloading` 의 알림 모양입니다. 인자는 내려가는 모듈 이름(`TypeInfo::_moduleName` 과 같은 값)입니다. */
+        using ModuleUnloadingDelegate = Delegate<void( string_view moduleName )>;
         // ------------------------------------------------------------------------------
         // 1) 수명: 모듈별 등록과 해제, 복제 금지
         // ------------------------------------------------------------------------------
@@ -50,8 +52,6 @@ namespace sw
          *          `SW_SHIPPING` 가드를 기억해야 하고, 잊은 곳은 Shipping 빌드에서야 깨진다(`b206e2a26`). 레지스트리 연산이라 구성과 무관하게 맞다.
          */
         void unregisterTypesByModule( string_view moduleName );
-        /** @brief `subscribeModuleUnloading` 의 알림 모양입니다. 인자는 내려가는 모듈 이름(`TypeInfo::_moduleName` 과 같은 값)입니다. */
-        using ModuleUnloadingDelegate = Delegate<void( string_view moduleName )>;
         /**
          * @brief 모듈을 내리기 직전(그 모듈의 타입 · 코드가 아직 살아 있을 때)의 알림을 받습니다. 구독이 사라지면 뗍니다.
          * @details 모듈 타입의 인스턴스를 든 쪽(UI 화면 · 어빌리티 · 편집기 기본값)이 **타입의 모듈 이름**(데이터)으로 자기 것을 골라 놓는다 —
@@ -296,6 +296,7 @@ namespace sw
             return findEnumByTypeFqn( typeFqn<E>() );
         }
 
+    private:
         mutable shared_mutex _mutex;
         /**
          * @brief FQN 하나당 TypeInfo **하나**입니다. 짧은 이름과 별칭은 값을 복사하지 않고 `_mapAliasToFqn`

@@ -78,6 +78,7 @@ namespace sw
         /** @brief 든 모든 타일의 링크 표시를 다시 맞춥니다(막힌 링크가 있을 때 — 링크 막기 · 장애물 캐시가 타일을 다시 지은 뒤). */
         void applyLinkFlagsToAllTiles();
 
+    private:
         NavAgentTypeDef                 _agentType;
         NavTileGrid                     _grid;
         vector<uint32>                  _listDisabledLinkID; ///< 막힌 링크 번호(정렬)

@@ -58,6 +58,7 @@ namespace sw
         /** @brief 라우터가 이 버스의 채널 메시지 하나를 넘겨줍니다. 봉투를 벗겨 큐에 넣습니다. */
         void onChannelMessage( const EphemeralMessage& message );
 
+    private:
         vector<TopicSubscription> _listSubscription;
         vector<ServerBusMessage>  _listQueuedMessage; ///< 라우터가 넣고 `pollMessages` 가 비운다
         EphemeralStoreRouter*     _pRouter;

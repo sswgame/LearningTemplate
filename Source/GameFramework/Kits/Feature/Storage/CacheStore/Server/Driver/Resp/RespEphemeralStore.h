@@ -140,6 +140,7 @@ namespace sw
         string      makeKey( string_view key ) const;
         RespCommand makeAuthCommand() const SW_REQUIRES_LOCK( _mutex );
 
+    private:
         const IClock&                          _clock;
         StreamEvents                           _streamEvents; ///< 전송에 넘기는 처리기(`initialize`)
         OnceInit<RespStoreConfig>              _settings;

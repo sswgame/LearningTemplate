@@ -827,6 +827,7 @@ namespace sw
                 return replyError( pMessage, DBUS_ERROR_UNKNOWN_METHOD, "unsupported interface" );
             }
 
+        private:
             UISystem&               _ui;
             IWindow&                _window;
             DBusConnection*         _pSession{ nullptr }; ///< 세션 버스(접근성 버스 주소와 스크린 리더 켜짐 신호를 받는다)

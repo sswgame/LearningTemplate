@@ -25,6 +25,11 @@ namespace sw::test
     class FakeRHICommandList final : public IRHICommandList
     {
     public:
+        uint32        _creationIndex;   /**< 디바이스가 몇 번째로 만든 리스트인지(0 부터) */
+        uint32        _beginCount{ 0 }; /**< `beginCommandList` 횟수 */
+        uint32        _endCount{ 0 };   /**< `endCommandList` 횟수 */
+        bool          _bOpen{ false };  /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */
+        hashed_string _passName;        /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
         /** @brief 디바이스가 몇 번째로 만든 리스트인지와 함께 만듭니다. */
         explicit FakeRHICommandList( uint32 creationIndex )
             : _creationIndex{ creationIndex }
@@ -75,12 +80,6 @@ namespace sw::test
         void beginEventMarker( const utf8* ) override {}
         void endEventMarker() override {}
         void writeBreadcrumb( uint32 ) override {}
-
-        uint32        _creationIndex;   /**< 디바이스가 몇 번째로 만든 리스트인지(0 부터) */
-        uint32        _beginCount{ 0 }; /**< `beginCommandList` 횟수 */
-        uint32        _endCount{ 0 };   /**< `endCommandList` 횟수 */
-        bool          _bOpen{ false };  /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */
-        hashed_string _passName;        /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
     };
 } // namespace sw::test
 
@@ -94,6 +93,17 @@ namespace sw::test
     class FakeRHIDevice final : public IRHIDevice
     {
     public:
+        uint32                             _maxCreatable{ 0xFFFFFFFFu }; /**< 이만큼 만든 뒤로는 만들지 못한다 */
+        uint32                             _createdCount{ 0 };           /**< 지금까지 만든 리스트 수 */
+        vector<FakeRHICommandList*>        _listExecuted;                /**< 제출된 순서 그대로의 리스트 */
+        vector<const utf8*>                _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 테스트 자원의 `releaseRHI` 도 여기 적는다 */
+        void*                              _pNativeDevice{ nullptr };    /**< `getNativeDevice` 가 돌려줄 값 */
+        mutable uint32                     _nativeHandleQueryCount{ 0 }; /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
+        vector<RHIResourceReleaseDelegate> _listGPURelease;              /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
+        uint32                             _pendingReleaseCount{ 0 };    /**< `getPendingReleaseCount` 가 답할 값 — 종료 단언 테스트가 정한다 */
+        vector<RHIDescriptorIndex>         _listLiveTextureIndex;        /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
+        vector<RHIDescriptorIndex>         _listLiveBufferIndex;         /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
+
         [[nodiscard]] bool   initializeInternal( const RHISwapChainDesc& ) override { return true; }
         void                 shutdownInternal() override { _listShutdownStep.push_back( "shutdownInternal" ); }
         void                 resizeInternal( uint32, uint32 ) override {}
@@ -157,17 +167,5 @@ namespace sw::test
         void* getNativeContext() const override { return nullptr; }
         void* getNativeCommandQueue() const override { return nullptr; }
         void* getNativeTexturePointer( RHITextureHandle ) const override { return nullptr; }
-
-    public:
-        uint32                             _maxCreatable{ 0xFFFFFFFFu }; /**< 이만큼 만든 뒤로는 만들지 못한다 */
-        uint32                             _createdCount{ 0 };           /**< 지금까지 만든 리스트 수 */
-        vector<FakeRHICommandList*>        _listExecuted;                /**< 제출된 순서 그대로의 리스트 */
-        vector<const utf8*>                _listShutdownStep;            /**< 불린 종료 단계 훅 이름(부른 순서) — 테스트 자원의 `releaseRHI` 도 여기 적는다 */
-        void*                              _pNativeDevice{ nullptr };    /**< `getNativeDevice` 가 돌려줄 값 */
-        mutable uint32                     _nativeHandleQueryCount{ 0 }; /**< 백엔드 훅 `queryNativeHandlesInternal` 이 불린 횟수 */
-        vector<RHIResourceReleaseDelegate> _listGPURelease;              /**< `enqueueGPURelease` 로 받은 콜백(받은 순서) */
-        uint32                             _pendingReleaseCount{ 0 };    /**< `getPendingReleaseCount` 가 답할 값 — 종료 단언 테스트가 정한다 */
-        vector<RHIDescriptorIndex>         _listLiveTextureIndex;        /**< `isBindlessIndexLive` 가 살아 있다고 답할 텍스처 번호 */
-        vector<RHIDescriptorIndex>         _listLiveBufferIndex;         /**< `isBindlessIndexLive` 가 살아 있다고 답할 버퍼 번호 */
     };
 } // namespace sw::test

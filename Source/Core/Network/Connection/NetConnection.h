@@ -180,6 +180,12 @@ namespace sw
         {
             static constexpr SequenceSlotReset kSlotReset = SequenceSlotReset::ReuseBuffer;
 
+            vector<uint8>  _buffer{};
+            float64        _lastSentTime{ -1.0 };
+            uint8          _bResendNow{ SW_FALSE };                     ///< 실린 패킷을 잃었다. 재전송 간격을 기다리지 않는다.
+            uint8          _bMore{ SW_FALSE };                          ///< 다음 ID가 같은 메시지의 이어지는 조각이다(신뢰 순서만).
+            NetChannelType _channel{ NetChannelType::ReliableOrdered }; ///< 신뢰 순서와 신뢰 순서 없음이 ID와 창을 하나로 공유한다.
+
             /** @brief 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남깁니다(`SequenceBuffer` 가 슬롯을 다시 쓸 때 부른다). */
             void resetForReuse()
             {
@@ -188,18 +194,16 @@ namespace sw
                 *this   = OutgoingReliable{};
                 _buffer = std::move( keptBuffer );
             }
-
-            vector<uint8>  _buffer{};
-            float64        _lastSentTime{ -1.0 };
-            uint8          _bResendNow{ SW_FALSE };                     ///< 실린 패킷을 잃었다. 재전송 간격을 기다리지 않는다.
-            uint8          _bMore{ SW_FALSE };                          ///< 다음 ID가 같은 메시지의 이어지는 조각이다(신뢰 순서만).
-            NetChannelType _channel{ NetChannelType::ReliableOrdered }; ///< 신뢰 순서와 신뢰 순서 없음이 ID와 창을 하나로 공유한다.
         };
 
         /** @brief 받은 신뢰 메시지 하나(조각 하나)입니다. 순서가 오면 `deliverReliable` 이 넘기거나 모읍니다. */
         struct IncomingReliable
         {
             static constexpr SequenceSlotReset kSlotReset = SequenceSlotReset::ReuseBuffer;
+
+            vector<uint8> _buffer{};
+            uint8         _bMore{ SW_FALSE };
+            uint8         _bDelivered{ SW_FALSE }; ///< 신뢰 순서 없음에서 받을 때 이미 넘겼다는 표시(순서 커서는 지나가기만 한다).
 
             /** @brief 모든 필드를 기본값으로 되돌리되 버퍼 용량은 남깁니다(`SequenceBuffer` 가 슬롯을 다시 쓸 때 부른다). */
             void resetForReuse()
@@ -209,10 +213,6 @@ namespace sw
                 *this   = IncomingReliable{};
                 _buffer = std::move( keptBuffer );
             }
-
-            vector<uint8> _buffer{};
-            uint8         _bMore{ SW_FALSE };
-            uint8         _bDelivered{ SW_FALSE }; ///< 신뢰 순서 없음에서 받을 때 이미 넘겼다는 표시(순서 커서는 지나가기만 한다).
         };
 
         /** @brief 채널 하나의 받은 메시지 큐입니다. 넣고 꺼낼 때 `pushIncoming` · `popIncoming` 이 바이트를 함께 센다. */
@@ -306,6 +306,7 @@ namespace sw
         /** @brief 채널 큐의 맨 앞 메시지를 빼고 바이트 수를 줄입니다. 큐가 비어 있지 않아야 한다. */
         void popIncoming( IncomingQueue& queue );
 
+    private:
         SequenceBuffer<SentPacket, kPacketWindow>                                _sentPackets;
         SequenceBuffer<ReceivedPacket, kPacketWindow>                            _receivedPackets;
         SequenceBuffer<OutgoingReliable, static_cast<uint32>( kReliableWindow )> _outgoingReliable;

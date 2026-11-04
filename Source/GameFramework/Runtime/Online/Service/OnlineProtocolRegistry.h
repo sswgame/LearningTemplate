@@ -130,6 +130,7 @@ namespace sw
         /** @brief @p enumFqn 열거형의 0 .. @p count - 1 열거자 이름입니다. 이름이 없는 값이 있으면 이유를 남기고 멈춥니다. */
         static vector<string> collectEnumNames( const hashed_string& enumFqn, int32 count );
 
+    private:
         SchemaHashFunction _pComputeMethodHash;
         SchemaHashFunction _pComputeMessageHash;
         uint16             _methodRange;

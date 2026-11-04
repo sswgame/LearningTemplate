@@ -188,6 +188,7 @@ namespace sw
         void                pushEvent( WesternLawEvent::Kind kind, const hashed_string& regionID, int32 value, uint32 incidentID = 0,
                                        const hashed_string& crimeID = hashed_string{}, uint64 witnessID = 0 );
 
+    private:
         vector<RegionRecord>         _listRecord;
         vector<PendingReport>        _listPending;
         EventBuffer<WesternLawEvent> _eventBuffer;

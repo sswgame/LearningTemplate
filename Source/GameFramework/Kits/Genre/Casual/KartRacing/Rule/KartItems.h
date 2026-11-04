@@ -157,6 +157,7 @@ namespace sw
         /** @brief `<RankTable from to>` 하나를 읽습니다. 모르는 아이템 · 빈 표는 오류이고 표를 더하지 않습니다. */
         [[nodiscard]] bool loadRankTable( const XMLNode& node, string_view sourceName );
 
+    private:
         LootCatalog           _lootCatalog;
         vector<KartRankTable> _listRankTable;
         int32                 _referencePlaceCount;

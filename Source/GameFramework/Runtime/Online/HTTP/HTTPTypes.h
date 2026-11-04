@@ -232,6 +232,7 @@ namespace sw
         /** @brief 청크 크기 줄을 읽습니다. 크기 0 이면 트레일러로 넘어갑니다. */
         bool advanceChunkSize();
 
+    private:
         vector<HTTPHeader> _listHeader;
         vector<uint8>      _buffer; ///< 아직 해석하지 않은 바이트
         vector<uint8>      _bodyBytes;

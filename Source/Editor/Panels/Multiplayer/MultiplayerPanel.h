@@ -45,6 +45,7 @@ namespace sw::editor
         /** @brief 창 위쪽의 대상 고르기(서버 · 클라이언트 N)를 그리고 고른 프로세스 번호를 반환합니다. 세션이 돌지 않으면 -1 입니다. */
         int32 drawTargetPicker( EditorNetPlaySession& session );
 
+    private:
         vector<TabEntry> _listTab;
         uint32           _tabGeneration;      ///< `_listTab` 을 맞춘 등록 세대
         int32            _targetProcessIndex; ///< 고른 대상(0 = 서버)

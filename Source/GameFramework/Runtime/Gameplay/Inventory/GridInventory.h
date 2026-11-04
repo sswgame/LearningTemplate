@@ -102,6 +102,7 @@ namespace sw
         void               stampItem( const GridItem& item, int32 value );
         void               eraseItemAt( size_t itemIndex );
 
+    private:
         vector<int32>    _listCell; ///< 셀마다 차지한 번호(-1 이면 빔), 줄 단위로 나열
         vector<GridItem> _listItem; ///< 놓은 순서
         ShapeDelegate    _shapeLookup;

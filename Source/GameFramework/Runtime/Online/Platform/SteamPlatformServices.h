@@ -69,6 +69,7 @@ namespace sw
     private:
         explicit SteamPlatformServices( unique_ptr<ISteamAPIBridge> pBridge );
 
+    private:
         unique_ptr<ISteamAPIBridge> _pBridge;
     };
 } // namespace sw

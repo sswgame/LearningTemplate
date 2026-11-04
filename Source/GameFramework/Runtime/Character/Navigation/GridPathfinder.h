@@ -71,6 +71,7 @@ namespace sw
         void    smoothPath( const NavGrid& grid, vector<int2>& inoutListCell ) const;
         float32 computeHeuristic( const int2& from, const int2& to ) const;
 
+    private:
         vector<float32>   _listCostSoFar;
         vector<int32>     _listParent;
         vector<uint32>    _listStamp; ///< 이번 물음에서 본 셀이면 `_stamp`, 닫혔으면 `_stamp + 1`

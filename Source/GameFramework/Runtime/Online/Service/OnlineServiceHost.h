@@ -251,9 +251,6 @@ namespace sw
     private:
         class ListenerTransport;
 
-        /** @brief `initialize` 가 도중에 실패했을 때와 `shutdown` 이 함께 쓰는 정리입니다 — 전송 · 요청 서버 · 엔드포인트를 해제하고 연결 테이블을 비웁니다. 아직 시작하지 않은 것을 해제해도 안전합니다. */
-        void releaseTransportSide();
-
         struct ConnectionState
         {
             uint64    _remoteKey{ 0 };
@@ -271,6 +268,9 @@ namespace sw
             uint64                _subscriptionID{ 0 }; ///< 이 항목을 소유하는 구독(`Subscription`)이 찾는 번호
         };
 
+        /** @brief `initialize` 가 도중에 실패했을 때와 `shutdown` 이 함께 쓰는 정리입니다 — 전송 · 요청 서버 · 엔드포인트를 해제하고 연결 테이블을 비웁니다. 아직 시작하지 않은 것을 해제해도 안전합니다. */
+        void releaseTransportSide();
+
         /** @brief 구독 @p id 가 풀렸습니다. 그 항목을 지우고, 주제를 듣는 서비스가 더 없으면 버스 구독을 닫습니다. */
         void releaseSubscription( uint64 id );
 
@@ -287,6 +287,7 @@ namespace sw
         /** @brief Hello 를 `_helloTimeoutMs` 안에 끝내지 않은 연결을 닫습니다. `update` 가 부르며 `kHelloSweepIntervalMs` 마다 한 번 표를 돈다. */
         void closeExpiredHelloConnections();
 
+    private:
         OnlineServiceHostConfig                          _settings;
         StreamMessageEndpoint                            _endpoint;
         NetRequestServer                                 _requestServer;
@@ -308,8 +309,6 @@ namespace sw
         int64                                            _nextHelloSweepMs;           ///< 다음 Hello 기한 검사 시각
         uint64                                           _schemaHash;                 ///< `initialize` 때 `OnlineProtocolRegistry::computeSchemaHash` 로 정한다
         uint8                                            _bInitialized;
-
-    private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&OnlineServiceHost::releaseSubscription>( this ) };
     };

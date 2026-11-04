@@ -203,6 +203,7 @@ namespace sw::editor
             pState->_bPending = SW_FALSE;
         }
 
+    protected:
         shared_ptr<State> _pState;
     };
 } // namespace sw::editor

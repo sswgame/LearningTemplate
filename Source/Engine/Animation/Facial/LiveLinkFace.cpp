@@ -85,6 +85,7 @@ namespace sw
                     return true;
                 }
 
+            private:
                 const uint8* _pData;
                 size_t       _size;
                 size_t       _offset;

@@ -117,6 +117,7 @@ namespace sw
         RespParseResult findLine( size_t offset, size_t& outLineBegin, size_t& outLineEnd );
         RespParseResult fail( const utf8* pFailureText );
 
+    private:
         vector<uint8> _buffer;
         const utf8*   _pFailureText;
         size_t        _readOffset;

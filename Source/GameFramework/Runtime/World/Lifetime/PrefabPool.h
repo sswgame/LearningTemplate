@@ -48,6 +48,7 @@ namespace sw
         /** @brief 프리팹을 새로 스폰합니다. */
         GameObject* spawnInstance( GameObjectManager& manager, const utf8* pInstanceName );
 
+    private:
         string                   _prefabPath;
         vector<GameObjectHandle> _listIdle; ///< 꺼 둔 인스턴스(나중에 넣은 것을 먼저 꺼낸다)
         uint32                   _maxIdleCount;

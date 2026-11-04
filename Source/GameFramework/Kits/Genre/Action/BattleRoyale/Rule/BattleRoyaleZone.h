@@ -121,6 +121,7 @@ namespace sw
         const BattleRoyaleZonePhaseDef* findPhase() const;
         void                            pushEvent( BattleRoyaleZoneEvent::Kind kind );
 
+    private:
         BattleRoyaleZoneDef                _settings;
         EventBuffer<BattleRoyaleZoneEvent> _eventBuffer;
         const IBrZoneTerrain*              _pTerrain;

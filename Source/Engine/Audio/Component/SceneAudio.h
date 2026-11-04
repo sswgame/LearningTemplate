@@ -42,12 +42,12 @@ namespace sw
     public:
         /** @brief 한 프레임에 가림을 다시 측정하는 에미터 수입니다(레이 셋씩). */
         static constexpr uint32 kOcclusionChecksPerFrame = 16;
+        /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "SceneAudio";
 
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
         static const SceneServiceRegistration& getSceneServiceRegistration();
-        /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "SceneAudio";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 매니저 @p manager 의 서비스 묶음에 든 오디오 서비스로 소리를 낼 씬 오디오를 둡니다(소유하지 않음).
@@ -121,6 +121,7 @@ namespace sw
         /** @brief 리버브 존 — 스냅샷마다 가장 큰 세기. 바뀐 것만 넣고, 이번에 거는 존이 없는 스냅샷은 0 으로 내린다. */
         void updateReverbZones( AudioEngine& audioEngine ) SW_REQUIRES_LOCK( _mutex );
 
+    private:
         RegistrationList<AudioListenerComponent> _listener SW_GUARDED_BY( _mutex );  /**< 리스너 컴포넌트입니다(구독으로 올린다). 화면 분할 칸마다 하나라 많아야 한 자릿수이므로 선형 등록 목록으로 충분하다. */
         IndexedPtrList<AudioEmitterComponent> _emitter     SW_GUARDED_BY( _mutex );  /**< 에미터 컴포넌트입니다. 수가 많고 씬 중에 자주 오르내려 넣기 · 빼기가 O(1) 이다(순회 순서는 보존되지 않는다 — 가림 측정이 도는 순서만 달라진다). */
         RegistrationList<AudioReverbZoneComponent> _zone   SW_GUARDED_BY( _mutex );  /**< 리버브 존입니다(구독으로 올린다). 레벨 디자이너가 방 · 구역마다 손으로 놓아 많아야 수십 개이고 씬 중에 오르내리지 않으므로 선형 등록 목록으로 충분하다(수천 개로 자라면 `IndexedPtrList`). */
@@ -138,8 +139,6 @@ namespace sw
         uint32                                             _activeListenerMask;      /**< 지난 프레임에 켠 리스너 칸입니다. */
         bool                                               _bHasLastCameraPosition;  /**< `_lastCameraPosition` 이 유효한지입니다. */
         bool                                               _bUpdateEnabled;          /**< 미리보기 정책이 끄면 false 입니다(`applyPreviewPolicy`). */
-
-    private:
         /** @brief 에미터 등록의 구독입니다(에미터는 O(1) 목록이라 `RegistrationList::addSubscribed` 가 아니다). 풀리면 `releaseEmitter` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<AudioEmitterComponent> _emitterSubscriptions{ ItemSubscriptionList<AudioEmitterComponent>::ReleaseFunction::create<&SceneAudio::releaseEmitter>( this ) };
     };

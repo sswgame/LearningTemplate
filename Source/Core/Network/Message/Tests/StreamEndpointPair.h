@@ -21,6 +21,13 @@ namespace sw::test
     class StreamEndpointPair
     {
     public:
+        LoopbackStreamNetwork        _network;
+        unique_ptr<IStreamTransport> _serverTransport;
+        unique_ptr<IStreamTransport> _clientTransport;
+        StreamMessageEndpoint        _server;
+        StreamMessageEndpoint        _client;
+        StreamConnectionHandle       _clientHandle;
+        bool                         _bReady{ false }; ///< 준비(초기화 · listen)가 모두 됐다 — 케이스가 처음에 `SW_REQUIRE_TRUE` 로 본다
         StreamEndpointPair( IStreamEndpointListener& serverListener, IStreamEndpointListener& clientListener, const StreamEndpointConfig& endpointSettings,
                             const LoopbackStreamConditions& conditions )
             : StreamEndpointPair( serverListener, clientListener, endpointSettings, endpointSettings, conditions )
@@ -69,14 +76,6 @@ namespace sw::test
                 (void)_client.pump( *_pClientListener );
             }
         }
-
-        LoopbackStreamNetwork        _network;
-        unique_ptr<IStreamTransport> _serverTransport;
-        unique_ptr<IStreamTransport> _clientTransport;
-        StreamMessageEndpoint        _server;
-        StreamMessageEndpoint        _client;
-        StreamConnectionHandle       _clientHandle;
-        bool                         _bReady{ false }; ///< 준비(초기화 · listen)가 모두 됐다 — 케이스가 처음에 `SW_REQUIRE_TRUE` 로 본다
 
     private:
         IStreamEndpointListener* _pServerListener;

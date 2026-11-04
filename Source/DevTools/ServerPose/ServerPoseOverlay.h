@@ -112,6 +112,7 @@ namespace sw
         void startPoller();
         void runPoller( StopToken stopToken );
 
+    private:
         mutable mutex                         _mutex;
         string _latestText                    SW_GUARDED_BY( _mutex );        ///< 작업 스레드가 받은 최근 `scene.poses` 답(`_mutex`)
         string _parsedText                    SW_GUARDED_BY( _mutex );        ///< 마지막으로 파싱한 글(게임 스레드)

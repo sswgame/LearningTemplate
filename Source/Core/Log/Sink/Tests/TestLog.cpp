@@ -143,22 +143,20 @@ namespace
     class CountingLogOutput final : public sw::ILogOutput
     {
     public:
+        uint32             _writeCount{ 0 };
         [[nodiscard]] bool open() override { return true; }
         void               close() override {}
         void               write( const sw::LogRecord& ) override { ++_writeCount; }
-
-        uint32 _writeCount{ 0 };
     };
 
     /** @brief 받은 줄의 완성된 글(`LogRecord::_formatted` — 파일 · 콘솔이 쓰는 그것)을 모으는 테스트용 출력 장치. */
     class CapturingLogOutput final : public sw::ILogOutput
     {
     public:
-        [[nodiscard]] bool open() override { return true; }
-        void               close() override {}
-        void               write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
-
         sw::vector<sw::string> _listFormatted;
+        [[nodiscard]] bool     open() override { return true; }
+        void                   close() override {}
+        void                   write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
     };
 
 } // namespace
@@ -563,6 +561,8 @@ namespace
      */
     struct FileLogOutputTest
     {
+
+        sw::vector<sw::string> _listProbePath;
         FileLogOutputTest()
             : _listProbePath{}
         {
@@ -582,8 +582,6 @@ namespace
             _listProbePath.push_back( path );
             return path;
         }
-
-        sw::vector<sw::string> _listProbePath;
     };
 } // namespace
 
@@ -633,6 +631,9 @@ namespace
     class BlockedFolderLogOutput final : public sw::ILogOutput
     {
     public:
+        sw::string             _blockedFolder;
+        sw::vector<sw::string> _listFormatted;
+        bool                   _bFolderReady{ true };
         explicit BlockedFolderLogOutput( sw::string blockedFolder )
             : _blockedFolder{ std::move( blockedFolder ) }
         {
@@ -645,16 +646,16 @@ namespace
         }
         void close() override {}
         void write( const sw::LogRecord& record ) override { _listFormatted.push_back( record._formatted ); }
-
-        sw::string             _blockedFolder;
-        sw::vector<sw::string> _listFormatted;
-        bool                   _bFolderReady{ true };
     };
 
     /** @class SelfLoggingLogOutput @brief `open` 이나 첫 `write` 안에서 로그를 남기는 장치입니다 — 장치가 부르는 쪽으로 로그를 되돌리는 모양을 만듭니다. */
     class SelfLoggingLogOutput final : public sw::ILogOutput
     {
     public:
+        uint32 _openCount{ 0 };
+        uint32 _writeCount{ 0 };
+        bool   _bLogInOpen;
+        bool   _bLogInWrite;
         SelfLoggingLogOutput( bool bLogInOpen, bool bLogInWrite )
             : _bLogInOpen{ bLogInOpen }
             , _bLogInWrite{ bLogInWrite }
@@ -675,11 +676,6 @@ namespace
             if ( _bLogInWrite && _writeCount == 1 )
                 SW_LOG_WARNING_ID( "Test.LogProbe", "[Probe] a log written from inside write" );
         }
-
-        uint32 _openCount{ 0 };
-        uint32 _writeCount{ 0 };
-        bool   _bLogInOpen;
-        bool   _bLogInWrite;
     };
 
     /** @brief 스코프 동안 전역 싱크를 @p pSink 로 바꿉니다 — `SW_LOG_*` 가 그 싱크로 들어가 싱크가 자기 로그를 받는 길을 만든다. 싱크보다 **나중에** 만든다(소멸이 거꾸로). */

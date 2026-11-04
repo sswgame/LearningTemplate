@@ -261,6 +261,11 @@ namespace sw
             AABB bounds() const;
         };
 
+        static constexpr uint8 kLayerPlayer     = 0; ///< 플레이어 히트
+        static constexpr uint8 kLayerEnemy      = 1; ///< 적 히트
+        static constexpr uint8 kLayerPlayerAtk  = 2; ///< 플레이어 공격
+        static constexpr uint8 kLayerProjectile = 3; ///< 적 투사체
+
         /** @brief 종 @p monsterID 의 적 하나를 @p position 에 스폰합니다. 정의가 없으면 스폰하지 않습니다(`getOrCreateMonsterDef` 가 오류를 남깁니다). */
         void spawnMonster( const hashed_string& monsterID, const float2& position );
         /** @brief 싸움을 시작하고 @p listSpawn 의 적을 세웁니다. 배치가 비어 있으면 오류를 남깁니다(@p pKindName 은 로그용 이름). */
@@ -291,11 +296,7 @@ namespace sw
         /** @brief 플레이어 공격 박스를 반환합니다. */
         AABB playerAttackBox( float32 x, float32 y, FacingDir facing ) const;
 
-        static constexpr uint8 kLayerPlayer     = 0; ///< 플레이어 히트
-        static constexpr uint8 kLayerEnemy      = 1; ///< 적 히트
-        static constexpr uint8 kLayerPlayerAtk  = 2; ///< 플레이어 공격
-        static constexpr uint8 kLayerProjectile = 3; ///< 적 투사체
-
+    private:
         ActionRoomSite         _site;
         ActionRoomSettings     _settings;
         ActionRoomLayout       _layout;

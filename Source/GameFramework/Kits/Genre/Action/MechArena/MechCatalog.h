@@ -247,6 +247,7 @@ namespace sw
         [[nodiscard]] bool           loadMech( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadSkill( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<MechDef>      _catalogMech;
         GameCatalog<MechSkillDef> _catalogSkill;
         StatBlock                 _arrClassModifier[kMechRangeClassCount];

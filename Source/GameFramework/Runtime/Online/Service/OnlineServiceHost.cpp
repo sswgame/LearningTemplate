@@ -190,6 +190,7 @@ namespace sw
 
         IStreamTransport& getTransport( StreamConnectionHandle outer ) const { return *_arrTransport[outer._index % _listenerCount]; }
 
+    private:
         ChildHandler      _arrHandler[kMaxListener];
         IStreamTransport* _arrTransport[kMaxListener];
         IStreamHandler*   _pHandler;

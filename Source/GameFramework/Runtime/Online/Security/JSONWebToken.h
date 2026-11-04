@@ -90,6 +90,7 @@ namespace sw
         friend class JWTUnverified;
         JWTVerified( unique_ptr<JSONDocument> payload, string keyID );
 
+    private:
         unique_ptr<JSONDocument> _payload;
         string                   _keyID;
     };

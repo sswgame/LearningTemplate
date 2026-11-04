@@ -49,6 +49,10 @@ namespace sw::editor
     class SW_EDITOR_API EditorNodeGraph
     {
     public:
+        /** @brief 주석 상자 노드 id 의 시작입니다. 패널의 노드 id 와 겹치지 않는 높은 범위다(주석 id 1 → 이 값 + 1). */
+        static constexpr int32 kCommentNodeIDBase = 0x40000000;
+        /** @brief 캔버스를 여는 최소 변 길이(픽셀)입니다. 노드 하나도 그릴 수 없는 크기에서는 열지 않습니다. */
+        static constexpr float32 kMinCanvasExtent = 16.0f;
         EditorNodeGraph();
         ~EditorNodeGraph();
         EditorNodeGraph( const EditorNodeGraph& )            = delete;
@@ -93,9 +97,6 @@ namespace sw::editor
         static void storeClipboard( string_view kind, string text );
         /** @brief 복사 버퍼가 종류 @p kind 의 조각이면 @p outText 에 담고 true 입니다. 비었거나 다른 종류면 false 입니다. */
         [[nodiscard]] static bool readClipboard( string_view kind, string& outText );
-
-        /** @brief 주석 상자 노드 id 의 시작입니다. 패널의 노드 id 와 겹치지 않는 높은 범위다(주석 id 1 → 이 값 + 1). */
-        static constexpr int32 kCommentNodeIDBase = 0x40000000;
         /** @brief 캔버스 노드 id @p nodeID 가 주석 상자이면 true 입니다. 고른 노드 · 지우기 요청을 패널 노드와 가를 때 씁니다. */
         static bool isCommentNode( int32 nodeID ) { return nodeID > kCommentNodeIDBase; }
         /** @brief 보기 막대에 주석 단추를 둡니다. 주석 상자를 저장하는 그래프(`EditorGraphDocumentPanel`)만 켭니다. */
@@ -179,8 +180,6 @@ namespace sw::editor
         void applyContentFitIfNeeded();
         /** @brief 캔버스를 열어도 되는 크기인지 확인합니다. 한 변이라도 `kMinCanvasExtent` 보다 작으면 false 입니다. */
         static bool isCanvasRegionUsable( const float2& available ) { return available._x >= kMinCanvasExtent && available._y >= kMinCanvasExtent; }
-        /** @brief 캔버스를 여는 최소 변 길이(픽셀)입니다. 노드 하나도 그릴 수 없는 크기에서는 열지 않습니다. */
-        static constexpr float32 kMinCanvasExtent = 16.0f;
         /** @brief 뷰 맞추기를 해도 되는 크기인지 확인합니다. 0 이 아니고 앞 프레임과 같아야 합니다. */
         static bool isCanvasSizeSettled( const float2& previousSize, const float2& currentSize )
         {
@@ -218,6 +217,7 @@ namespace sw::editor
         void ensureContext( const utf8* pSettingsFileName );
         void destroyContext();
 
+    private:
         ax::NodeEditor::EditorContext*         _pEditor;
         string                                 _settingsPath;
         string                                 _markScope;          ///< 이번 캔버스의 레이블 앞부분(beginCanvas 가 정한다)

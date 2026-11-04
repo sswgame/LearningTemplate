@@ -34,22 +34,6 @@ namespace sw
     class SW_API AutomationStepTimeline
     {
     public:
-        AutomationStepTimeline();
-
-        /** @brief 스크린샷 경로를 대기열에 더합니다(`<Screenshot>`). 렌더 패킷이 한 장씩 꺼내 간다. */
-        void requestScreenshot( string path );
-        /** @brief 붙잡은 단계가 맡긴 상태를 지웁니다(그 단계가 놓였거나 실행이 끝났다). */
-        void clearHeldStepState()
-        {
-            _pHeldStepState.reset();
-            _pHeldStateStep = nullptr;
-            _waitingFor.clear();
-        }
-        /** @brief 아직 렌더 패킷에 싣지 않은 경로 하나를 꺼냅니다. 없으면 false 입니다. */
-        [[nodiscard]] bool takePendingScreenshotPath( string& outPath );
-        /** @brief 요청한 스크린샷이 아직 다 써지지 않았으면 true 입니다(대기열에 남았거나 렌더 스레드가 덜 썼다). */
-        [[nodiscard]] bool hasPendingScreenshot() const { return _listPendingScreenshot.empty() == false || _screenshotCompletedCount < _screenshotRequestedCount; }
-
         vector<string>                   _listPendingScreenshot; ///< 아직 렌더 패킷에 싣지 않은 스크린샷 경로입니다.
         string                           _currentStepKind;       ///< 마지막으로 시작한 실행 단계(입력 단계는 제외)
         string                           _clockHolderName;       ///< 시계를 붙잡은 조건의 이름(로그)
@@ -76,6 +60,21 @@ namespace sw
         uint32                           _seenFrameCount;          ///< `onFrameEnd` 가 불린 횟수(붙잡힌 프레임도 센다 — 크래시 자리를 갱신하는 박자)
         uint8                            _bClockHeld : 1;          ///< 이 프레임을 시계 잡기 조건이 붙잡았다(`onFrameBegin` 이 정하고 `onFrameEnd` 가 단계를 건너뛴다)
         [[maybe_unused]] uint8           _reserved   : 7;
+        AutomationStepTimeline();
+
+        /** @brief 스크린샷 경로를 대기열에 더합니다(`<Screenshot>`). 렌더 패킷이 한 장씩 꺼내 간다. */
+        void requestScreenshot( string path );
+        /** @brief 붙잡은 단계가 맡긴 상태를 지웁니다(그 단계가 놓였거나 실행이 끝났다). */
+        void clearHeldStepState()
+        {
+            _pHeldStepState.reset();
+            _pHeldStateStep = nullptr;
+            _waitingFor.clear();
+        }
+        /** @brief 아직 렌더 패킷에 싣지 않은 경로 하나를 꺼냅니다. 없으면 false 입니다. */
+        [[nodiscard]] bool takePendingScreenshotPath( string& outPath );
+        /** @brief 요청한 스크린샷이 아직 다 써지지 않았으면 true 입니다(대기열에 남았거나 렌더 스레드가 덜 썼다). */
+        [[nodiscard]] bool hasPendingScreenshot() const { return _listPendingScreenshot.empty() == false || _screenshotCompletedCount < _screenshotRequestedCount; }
     };
 } // namespace sw
 
@@ -293,6 +292,7 @@ namespace sw
         /** @brief 감시 스레드가 읽을 스냅샷을 갱신합니다(@p position 은 `describeRunPosition`). 감시가 돌고 있지 않으면 아무것도 하지 않습니다. */
         void publishHangSnapshot( string_view position );
 
+    private:
         AutomationScenario       _scenario;
         VirtualInputScript       _inputScript;
         AutomationJudge          _judge;        ///< 판정 상태 · 비교(실패 · 미확정 · 로그 게이트 · 감시 값 이력). 시간 · 입력은 모른다

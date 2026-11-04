@@ -150,15 +150,16 @@ namespace sw
         static constexpr int32 kExternalBone    = -1; ///< `_listTargetBone` 에 해당하며, 호스트가 값을 넣는 대상이다.
         static constexpr int32 kModelOriginBone = -2; ///< `_listTargetBone` 에 해당하며, 유닛 루트(모델 원점) 기준 소켓이다.
 
-        /** @brief `computeNodeWeight` 의 본체입니다 — 커브 가중치가 있는 노드에는 @p curveFactor 를 곱한다. 커브 값을 아직 모르는 `canWritePose` 도 같은 곱셈을 쓴다. */
-        float32 computeNodeWeightWithCurve( uint32 nodeIndex, float32 curveFactor ) const;
-
         struct SlotWeight
         {
             hashed_string _name{};
             float32       _weight{ 1.0f };
         };
 
+        /** @brief `computeNodeWeight` 의 본체입니다 — 커브 가중치가 있는 노드에는 @p curveFactor 를 곱한다. 커브 값을 아직 모르는 `canWritePose` 도 같은 곱셈을 쓴다. */
+        float32 computeNodeWeightWithCurve( uint32 nodeIndex, float32 curveFactor ) const;
+
+    private:
         shared_ptr<const RigAsset>  _asset;
         vector<RigTargetDef>        _listTargetDef;
         vector<RigTargetValue>      _listTargetValue;

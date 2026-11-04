@@ -45,6 +45,11 @@ namespace sw::editor
     class AssetHotReload : public EditorSubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "AssetHotReload";
+
+        /** @brief 동시에 기억하는 바뀐 파일 수의 한도입니다. 넘으면 개별 파일을 알 수 없는 것으로 치고 전체를 다시 읽게 합니다. */
+        static constexpr size_t kMaxTrackedChangedPaths = 256;
         /** @brief 감시를 시작하지 않은 채 만듭니다. */
         AssetHotReload();
         /** @brief 감시를 정리합니다. */
@@ -56,10 +61,8 @@ namespace sw::editor
             (void)initialize(); // 리소스 루트가 없으면(팩만 실린 실행) 꺼진 채로 둔다
             return SubsystemInitResult::Succeeded;
         }
-        void shutdownSubsystem() override { shutdown(); }
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "AssetHotReload";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        void        shutdownSubsystem() override { shutdown(); }
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
 
         AssetHotReload( const AssetHotReload& )            = delete;
         AssetHotReload& operator=( const AssetHotReload& ) = delete;
@@ -84,9 +87,6 @@ namespace sw::editor
          * @details 디스크 목록을 가진 화면(콘텐츠 브라우저)은 지난번 번호와 다르면 목록을 다시 읽는다. 에디터 바깥(탐색기, git)의 변경도 센다.
          */
         uint64 getContentChangeSerial() const { return _contentChangeSerial; }
-
-        /** @brief 동시에 기억하는 바뀐 파일 수의 한도입니다. 넘으면 개별 파일을 알 수 없는 것으로 치고 전체를 다시 읽게 합니다. */
-        static constexpr size_t kMaxTrackedChangedPaths = 256;
 
         /**
          * @brief 마지막으로 꺼낸(또는 버린) 뒤 바뀐 파일의 리소스 id(소문자)를 꺼내 비웁니다. 디스크 목록을 가진 화면이 바뀐 파일만 다시 읽게 합니다(언리얼 에셋 레지스트리의 증분 갱신).
@@ -218,6 +218,7 @@ namespace sw::editor
         /** @brief 미룬 파일을 처리합니다(임포트가 모두 끝났을 때). */
         void flushDeferredFiles();
 
+    private:
         unique_ptr<FileWatchDispatcher>   _pFileWatchDispatcher;
         unique_ptr<AssetReferenceTracker> _pReferenceTracker;  ///< 에디터 전역의 참조 역색인(연쇄 리로드 · 콘텐츠 브라우저)
         unordered_map<string, FileStamp>  _mapAppliedStamp;    ///< `applySavedAsset` 이 반영한 파일(루트 기준 경로, 소문자)의 도장

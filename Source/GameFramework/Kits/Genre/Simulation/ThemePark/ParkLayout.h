@@ -172,6 +172,7 @@ namespace sw
     private:
         [[nodiscard]] bool loadRoot( const XMLNode& root, const CoasterLayoutCatalog& layouts, string_view sourceName );
 
+    private:
         vector<ParkRidePlacement> _listPlacement;
         float3                    _gatePosition;
         int32                     _entryFee;

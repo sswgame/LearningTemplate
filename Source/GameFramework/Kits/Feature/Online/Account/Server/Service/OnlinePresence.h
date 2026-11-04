@@ -134,6 +134,7 @@ namespace sw
         vector<uint8> makeServerBytes() const;
         vector<uint8> makeNameBytes( const AccountIdentity& identity ) const;
 
+    private:
         unordered_map<uint64, PendingOperation>   _mapRequestToPending;
         unordered_map<AccountID, AccountIdentity> _mapAccountToIdentity; ///< 이 프로세스에 접속한 계정이다
         vector<DeferredFound>                     _listDeferred;         ///< 캐시 없이 끝난 찾기이다. 맡긴 함수 안에서 부르지 않고 다음 `tick` 에 알린다

@@ -98,6 +98,12 @@ namespace sw
         void queuePossess( const TComponentHandle<ControllerComponent>& controller, const TComponentHandle<PawnComponent>& pawn );
 
     private:
+        /** @struct QueuedPossess @brief 다음 틱 첫머리로 미룬 빙의 하나입니다. */
+        struct QueuedPossess
+        {
+            TComponentHandle<ControllerComponent> _controller{};
+            TComponentHandle<PawnComponent>       _pawn{}; ///< 무효면 놓는다
+        };
         /** @brief 자동 빙의가 설정됐지만 빙의한 조종자가 없는 폰을 플레이어 0 이나 AI 조종자에게 빙의시킵니다. */
         void autoPossess( GameObjectManager& manager );
         /** @brief `queuePossess` 로 미룬 빙의를 넣은 순서대로 처리합니다. */
@@ -105,13 +111,7 @@ namespace sw
         /** @brief 틱마다 모든 폰의 의도를 기록에 넣습니다. */
         void recordIntents( GameObjectManager& manager );
 
-        /** @struct QueuedPossess @brief 다음 틱 첫머리로 미룬 빙의 하나입니다. */
-        struct QueuedPossess
-        {
-            TComponentHandle<ControllerComponent> _controller{};
-            TComponentHandle<PawnComponent>       _pawn{}; ///< 무효면 놓는다
-        };
-
+    private:
         ControlIntentHistory                    _history;
         vector<TComponentHandle<PawnComponent>> _listAutoPossessPawn; ///< 이번 프레임에 자동 빙의할 폰(레지스트리를 도는 동안 오브젝트를 만들지 않게 모은다)
         vector<QueuedPossess>                   _listQueuedPossess;

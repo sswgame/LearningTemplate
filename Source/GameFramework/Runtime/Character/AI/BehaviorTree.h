@@ -169,6 +169,7 @@ namespace sw
     private:
         int32 addNode( int32 parent, BehaviorNodeType type, const utf8* pName );
 
+    private:
         vector<BehaviorNode> _listNode;
     };
 } // namespace sw
@@ -225,6 +226,7 @@ namespace sw
         /** @brief 우선순위가 높은 가지의 조건이 거짓에서 참이 됐으면 true 입니다. 관찰 중단 `LowerPriority` 가 씁니다. */
         bool pollHigherPriorityTrigger();
 
+    private:
         const BehaviorTree* _pTree;
         BehaviorContext     _context;
         vector<int32>       _listCursor;

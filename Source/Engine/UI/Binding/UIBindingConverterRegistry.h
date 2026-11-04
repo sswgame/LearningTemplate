@@ -40,14 +40,13 @@ namespace sw
     class SW_API UIBindingConverterRegistry final : public ISubsystem
     {
     public:
-        UIBindingConverterRegistry();
-
         // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UIBindingConverterRegistry>()`, 게임은 `game::getSubsystem<UIBindingConverterRegistry>()`).
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UIBindingConverters";
-        SubsystemInitResult          initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                         shutdownSubsystem() override {}
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        UIBindingConverterRegistry();
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 변환기를 등록하고 그 구독을 돌려줍니다. 같은 이름이 있으면 교체합니다(엔진 기본을 같은 이름으로 덮을 수 있다). 구독이 사라지면 거둔다.
@@ -63,6 +62,7 @@ namespace sw
         /** @brief 엔진 기본 변환기를 올립니다(생성자가 부른다 — 주인 없이 늘 있다). */
         void registerEngineConverters();
 
+    private:
         NameRegistry<UIBindingConverter> _registry; ///< 엔진 기본은 주인 없는 값, 게임 · 키트 것은 주인 있는 값(`addOwned` — 풀리면 덮었던 기본으로 돌아간다)
     };
 } // namespace sw

@@ -98,6 +98,7 @@ namespace sw
         /** @brief 지금 들어와 있는 것이 현재 스레드 자신인지 확인합니다. 그렇다면 재진입이지 레이스가 아닙니다. */
         bool isOwnedByCurrentThread() const;
 
+    private:
         // 하위 16비트: 읽기 수(최대 65535)
         // 상위 16비트: 쓰기 수(최대 65535)
         atomic<uint32> _state{ 0 };

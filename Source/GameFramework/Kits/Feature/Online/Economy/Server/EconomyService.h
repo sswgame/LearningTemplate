@@ -68,11 +68,6 @@ namespace sw
     /** @brief 전송과 무관한 요청 하나입니다. 메서드에 맞는 필드만 채웁니다. */
     struct EconomyCall
     {
-        /** @param nowMs 요청의 시각(서버 루프의 유닉스 밀리초)입니다. 필수입니다 — 서비스가 다른 시각으로 메우지 않습니다. */
-        explicit EconomyCall( UnixMilliseconds nowMs )
-            : _nowMs{ nowMs }
-        {
-        }
 
         EconomyPurchaseRequest _purchase{};
         EconomyRedeemRequest   _redeem{};
@@ -82,6 +77,11 @@ namespace sw
         AccountID              _accountID{ kInvalidAccountID };
         UnixMilliseconds       _nowMs;
         uint16                 _method{ 0 };
+        /** @param nowMs 요청의 시각(서버 루프의 유닉스 밀리초)입니다. 필수입니다 — 서비스가 다른 시각으로 메우지 않습니다. */
+        explicit EconomyCall( UnixMilliseconds nowMs )
+            : _nowMs{ nowMs }
+        {
+        }
     };
 } // namespace sw
 
@@ -94,6 +94,7 @@ namespace sw
         using ReplyDelegate = Delegate<void( const EconomyReply& )>;
 
         static constexpr const utf8* kFeatureFlag = "feature.shop_enabled";
+        static constexpr const utf8* kAuditJobID  = "ledger.audit";
 
         EconomyService();
         ~EconomyService() override;
@@ -124,8 +125,7 @@ namespace sw
         /** @brief 보존 검사 한 번을 맡깁니다. 예약 회차와 테스트가 부릅니다. 이미 도는 중이면 무시합니다. */
         void requestLedgerAudit();
         /** @brief 보존 검사 작업의 `complete` 입니다. 지표와 로그를 남기고 예약 회차를 마칩니다. */
-        void                         completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report, ServiceStoreCompletion completion );
-        static constexpr const utf8* kAuditJobID = "ledger.audit";
+        void completeLedgerAudit( ServiceStoreResult result, const LedgerAuditReport& report, ServiceStoreCompletion completion );
         /** @brief 마지막 보존 검사가 맞았으면 true 입니다(검사 전에는 false). */
         bool wasLastAuditBalanced() const { return _bLastAuditBalanced == SW_TRUE; }
 
@@ -171,6 +171,7 @@ namespace sw
         void pollRefunds();
         void onBalancePresenceFound( const AccountPresenceResult& result );
 
+    private:
         vector<PendingCall>                          _listPendingCall;
         ServiceMetrics                               _metrics;
         EconomyServiceConfig                         _settings;

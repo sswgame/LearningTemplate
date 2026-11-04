@@ -49,6 +49,7 @@ namespace sw::editor
     private:
         void scan( const utf8* pPrefabPath );
 
+    private:
         string                     _selectedPrefabPath;
         string                     _selectedInstanceName;
         string                     _lastScanKey; ///< 지난 훑기의 포커스 열쇠(`EditorAssetTypeRegistry::consumeWorkspaceFocusKey`)

@@ -173,6 +173,7 @@ namespace sw
         void  sendLocalInputs();
         void  rollbackTo( int32 frame );
 
+    private:
         TickRingBuffer<FrameRecord>   _listRecord;          ///< 프레임마다 시작 전 상태와 쓴 입력. 최근 `kHistorySize` 프레임만 보관하며 이것이 되감기 한도이다
         vector<NetInputReceiveBuffer> _listReceive;         ///< 플레이어마다 받은 입력(내 것 포함). 빈틈없이 받은 다음 프레임이 확인 프레임이다
         vector<PeerState>             _listPeer;            ///< 플레이어 순서이다. 내 항목은 쓰지 않는다

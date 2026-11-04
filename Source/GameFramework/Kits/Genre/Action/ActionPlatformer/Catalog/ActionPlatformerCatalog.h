@@ -230,6 +230,7 @@ namespace sw
         [[nodiscard]] bool           loadCombo( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadPattern( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<ActionStageDef>   _stageCatalog;
         GameCatalog<ActionComboDef>   _comboCatalog;
         GameCatalog<ActionPatternDef> _patternCatalog;

@@ -19,6 +19,9 @@ namespace
     /** @brief 콘텐츠 정책을 바꿨다가 소멸자에서 되돌리는 가드입니다(정책은 프로세스 전역 팩 매니저의 값이다). */
     struct ScopedContentSource
     {
+
+        PackManager&  _packs;
+        ContentSource _previous;
         explicit ScopedContentSource( PackManager& packs )
             : _packs{ packs }
             , _previous{ packs.getContentSource() }
@@ -27,9 +30,6 @@ namespace
         ~ScopedContentSource() { _packs.setContentSource( _previous ); }
         ScopedContentSource( const ScopedContentSource& )            = delete;
         ScopedContentSource& operator=( const ScopedContentSource& ) = delete;
-
-        PackManager&  _packs;
-        ContentSource _previous;
     };
 
     std::optional<AbsolutePath> findLoose( string_view id )

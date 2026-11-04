@@ -111,6 +111,7 @@ namespace sw
         {
         }
 
+    private:
         hashed_string _settingID;
         uint32        _settingIndex;
     };

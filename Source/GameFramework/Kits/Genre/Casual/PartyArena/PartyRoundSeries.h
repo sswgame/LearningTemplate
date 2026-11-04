@@ -106,6 +106,7 @@ namespace sw
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         void                         pushEvent( PartySeriesEvent::Kind kind, int32 player, int32 value, int32 points );
 
+    private:
         vector<PartyRoundDef>         _listRound;
         RoundSeriesSettings           _seriesSettings; ///< 다음 `start` 가 시리즈에 넘길 순위 점수, 목표, 동점 규칙(서든 데스)이다
         RoundSeries                   _series;

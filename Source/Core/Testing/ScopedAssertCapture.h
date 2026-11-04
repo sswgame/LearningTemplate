@@ -22,31 +22,41 @@ namespace sw::test
     public:
 #if defined( SW_DEBUG )
         static constexpr bool kAssertsAreActive = true;
-
-        ScopedAssertCapture()
-            : _startCount{ internal::getCapturedAssertCount() }
-        {
-            internal::beginAssertCapture();
-        }
-        ~ScopedAssertCapture() { internal::endAssertCapture(); }
-        ScopedAssertCapture( const ScopedAssertCapture& )            = delete;
-        ScopedAssertCapture& operator=( const ScopedAssertCapture& ) = delete;
-
-        /** @brief 이 스코프가 시작한 뒤 가로챈 단언 수입니다(다른 스레드의 단언도 센다). */
-        [[nodiscard]] uint32 getCount() const { return internal::getCapturedAssertCount() - _startCount; }
-
-    private:
-        uint32 _startCount;
 #else
         static constexpr bool kAssertsAreActive = false;
+#endif
 
-        ScopedAssertCapture() = default;
-        ~ScopedAssertCapture() {} // 사용자 정의 소멸자 — 이름만 둔 가드가 -Wunused-variable 에 걸리지 않는다
+        ScopedAssertCapture()
+#if defined( SW_DEBUG )
+            : _startCount{ internal::getCapturedAssertCount() }
+#endif
+        {
+#if defined( SW_DEBUG )
+            internal::beginAssertCapture();
+#endif
+        }
+        ~ScopedAssertCapture() // 사용자 정의 소멸자 — 단언이 없는 구성에서도 이름만 둔 가드가 -Wunused-variable 에 걸리지 않는다
+        {
+#if defined( SW_DEBUG )
+            internal::endAssertCapture();
+#endif
+        }
         ScopedAssertCapture( const ScopedAssertCapture& )            = delete;
         ScopedAssertCapture& operator=( const ScopedAssertCapture& ) = delete;
 
-        /** @brief 단언이 없는 구성이라 늘 0 입니다. */
-        [[nodiscard]] uint32 getCount() const { return 0; }
+        /** @brief 이 스코프가 시작한 뒤 가로챈 단언 수입니다(다른 스레드의 단언도 센다). 단언이 없는 구성에서는 늘 0 입니다. */
+        [[nodiscard]] uint32 getCount() const
+        {
+#if defined( SW_DEBUG )
+            return internal::getCapturedAssertCount() - _startCount;
+#else
+            return 0;
+#endif
+        }
+
+#if defined( SW_DEBUG )
+    private:
+        uint32 _startCount;
 #endif
     };
 } // namespace sw::test

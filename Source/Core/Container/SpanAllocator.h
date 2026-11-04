@@ -89,6 +89,7 @@ namespace sw
         /** @brief 빈 목록에 구간을 끼워 넣고 이웃과 합칩니다. 겹치면 단언하고 거절합니다. */
         [[nodiscard]] bool insertFreeSpan( uint32 offset, uint32 count );
 
+    private:
         /// @brief 빈 구간들입니다. 시작 오름차순이고 서로 겹치거나 맞닿지 않습니다.
         vector<Span> _listFreeSpan;
         /// @brief 대기 중인 반납입니다. 넣은 순서(번호가 늘어나는 순서라고 가정하지 않습니다).

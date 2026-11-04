@@ -88,6 +88,7 @@ namespace sw
 
         void finishValidation( const PendingValidation& pending, const HTTPClientResponse& response );
 
+    private:
         SteamReceiptSettings                     _settings;
         unordered_map<uint64, PendingValidation> _mapRequestToPending;
         vector<ReceiptValidationResult>          _listDone;

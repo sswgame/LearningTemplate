@@ -48,11 +48,10 @@ namespace sw
         /** @brief 받은편지함 @p id 의 구독이 풀렸습니다. 받은편지함을 지웁니다(`_mutex`). */
         void releaseSubscription( uint64 id );
 
+    private:
         mutable mutex                          _mutex;
         unordered_map<uint64, Inbox> _mapInbox SW_GUARDED_BY( _mutex );
         IDAllocator<uint64> _inboxIDAllocator  SW_GUARDED_BY( _mutex );
-
-    private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&LocalServerBusHub::releaseSubscription>( this ) };
     };

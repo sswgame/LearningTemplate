@@ -208,19 +208,6 @@ namespace sw
         [[nodiscard]] bool bindGraphicsContext();
         /** @brief MakeCurrent 가 없어 놓을 것이 없습니다. 소유 스레드를 바꾸는 것은 부르는 쪽(RenderThread)의 순서가 정합니다. */
         void unbindGraphicsContext() {}
-
-    protected:
-        // 네이티브 핸들 getter 는 기반처럼 보호 구역이다 — 바깥은 종류 확인이 든 `IRHIDevice::queryNativeHandles` · `tryGetNativeTexturePointer` 로만 읽는다.
-        /** @brief ID3D11Device 포인터를 반환합니다. */
-        void* getNativeDevice() const override { return _device.Get(); }
-
-        /** @brief D3D11 은 커맨드 큐 객체가 없어 nullptr 을 반환합니다. */
-        void* getNativeCommandQueue() const override { return nullptr; }
-
-        /** @brief 네이티브 텍스처 포인터(ID3D11Texture2D*)를 반환합니다. */
-        void* getNativeTexturePointer( RHITextureHandle texture ) const override;
-
-    public:
         /** @brief 커맨드 리스트를 만듭니다. 리스트마다 자기 Deferred Context 를 가집니다. */
         unique_ptr<IRHICommandList> createCommandList() override;
 
@@ -231,12 +218,6 @@ namespace sw
         void registerCommandList( D3D11RHICommandList* pCmdList );
         /** @brief 등록을 해제합니다. */
         void unregisterCommandList( D3D11RHICommandList* pCmdList );
-
-    protected:
-        /** @brief 즉시 컨텍스트의 임계 구역을 쥔 채 @p visitor 를 부릅니다. 그 안의 여러 호출은 다른 스레드의 전송 · 폴링 묶음과 섞이지 않습니다. */
-        void withNativeContextInternal( const RHINativeContextVisitor& visitor ) const override;
-        /** @brief 프레임 스트림과 같은 포인터(호출마다 런타임 보호)입니다. `withNativeContextInternal` 을 재정의하므로 밖으로 나가지 않습니다. */
-        void* getNativeContext() const override { return _immediateContext.getPerCallProtected(); }
 
     private:
         /** @brief 타임스탬프 계측 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */
@@ -274,32 +255,6 @@ namespace sw
             D3D11RHIDevice& _owner;
         };
 
-        /** @brief 쿼리 묶음을 한 번만 만듭니다. 만들지 못하면 이 백엔드는 타임스탬프를 보고하지 않습니다. */
-        void ensureTimestampResources();
-        /** @brief 다시 쓰기 직전의 묶음에서 결과를 마이크로초로 변환합니다(기다리지 않습니다). */
-        void collectTimestampsForSlot();
-        /**
-         * @brief 방금 끝낸 프레임에 완료 쿼리를 내고, GPU 가 지난 프레임까지의 `enqueueGPURelease` 콜백을 부릅니다(`endFrame` 이 부릅니다).
-         * @details 링이 가득 차면(프레임 `kMaxFrameCountInFlight` 개가 GPU 에 남음) 가장 오래된 프레임이 끝날 때까지 기다린다 — DX12 · Vulkan 의 링 슬롯 대기와 같다.
-         *          기다리지 않으면 Present 를 하지 않는 반복(오프스크린)에서 GPU 가 얼마든지 뒤처져 "GPU 가 끝난 뒤" 라는 콜백의 약속이 깨진다.
-         */
-        void retireFrameOnGPU();
-
-        /**
-         * @brief 장치 손실을 전송 시리얼에 표시합니다(`RHITransferSerials::markLost`). 처음 표시한 호출만 원인을 로그로 남긴다 — 손실 뒤의 모든 호출이 같은 줄을 되풀이하지 않게 한다.
-         * @details 실제 손실을 표시하는 자리는 이 함수 하나다(`isDeviceRemoved` · `reportQueryFailure` · Present 실패가 부른다). `debugRemoveDevice` 만 시험용이라 로그를 경고로 남기려 직접 표시한다.
-         */
-        void markDeviceLost( const utf8* pCause, HRESULT hr );
-        /**
-         * @brief `GetData` 가 실패했을 때 부릅니다. 쿼리를 읽지 못하면 GPU 가 어디까지 왔는지 볼 수 없으므로, 제거 이유를 묻고(`isDeviceRemoved`) 제거가 아니어도 손실로 표시합니다.
-         * @details 호출 쪽은 이 쿼리를 "끝남" 으로 취급해 대기 루프를 끝낸다(손실 뒤의 대기는 GPU 를 기다리지 않는다). 표시가 없으면 폴링 쪽 티켓이 `Pending` 으로 남는다.
-         */
-        void reportQueryFailure( HRESULT hr, const utf8* pStage );
-        /** @brief 이벤트 쿼리를 한 번 묻습니다. 아직이면 false, 끝났거나 읽지 못하면(장치 제거 · 손실 표시) true 입니다. */
-        bool isEventQueryDone( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, UINT getDataFlags );
-        /** @brief GPU 가 이벤트 쿼리를 지날 때까지 묻습니다. 시한 안에 지났거나 읽지 못했으면 true, 시한을 넘기면 false 입니다. */
-        bool waitForEventQuery( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, uint32 timeoutMilliseconds );
-
         /**
          * @class UploadStaging
          * @brief 큰 업로드 하나가 쓰는 스테이징 텍스처와, 그것이 업로드 스테이징 예산(`_uploadStagingBudget`)에서 잡은 바이트입니다. 옮길 수만 있습니다.
@@ -332,6 +287,7 @@ namespace sw
             /** @brief 텍스처를 추적기에서 내리고 놓은 뒤 예산을 돌려줍니다. 비어 있으면 아무것도 하지 않습니다. */
             void release();
 
+        private:
             Microsoft::WRL::ComPtr<ID3D11Texture2D> _texture;
             D3D11RHIDevice*                         _pDevice;
             uint64                                  _bytes;
@@ -343,26 +299,6 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D11Query> _query;
             UploadStaging                       _staging;
         };
-
-        /**
-         * @brief 업로드 스테이징 예산에서 @p bytes 를 잡습니다. 모자라면 끝난 전송을 한 번 모은 뒤(즉시 컨텍스트 잠금을 잠깐 잡는다) 다시 잡습니다.
-         * @details 예산보다 큰 @p bytes 는 예산 전부를 잡는다 — 복사 중인 다른 업로드가 하나도 없을 때만 들어가고, 들어간 동안 다른 업로드는 `Busy` 다.
-         *          그래서 한 장의 크기에 상한이 없고(예전 `UpdateSubresource` 가 받던 크기를 그대로 받는다) 메모리 최고점은 max(예산, 가장 큰 업로드 하나)다.
-         *          못 받은 그런 업로드는 예약을 남겨 작은 업로드가 잠깐 `Busy` 가 되어 굶지 않는다(`RHIStagingBudget::tryReserve`, GL · Vulkan 의 단독 구간과 같은 규칙).
-         * @return 그래도 모자라면 빈 값입니다 — 앞선 업로드를 GPU 가 끝내면 생기므로 부르는 쪽은 `Busy` 를 돌려준다.
-         */
-        [[nodiscard]] UploadStaging allocateUploadStaging( uint64 bytes );
-
-        /** @brief 전송 하나의 완료를 알릴 이벤트 쿼리를 풀에서 꺼내거나 만듭니다. 풀은 즉시 컨텍스트 잠금이 지키므로 가드를 받습니다. 못 만들면 nullptr 입니다(이유는 로그). */
-        Microsoft::WRL::ComPtr<ID3D11Query> acquireTransferQuery( const D3D11ImmediateContext::ScopedLock& context );
-        /**
-         * @brief 방금 낸 전송 뒤에 이벤트 쿼리를 끝으로 달고 시리얼을 발급합니다. 전송 명령을 낸 그 가드로, 명령 직후에 부릅니다(시리얼은 제출 순서대로 같은 락 안에서 매긴다).
-         * @param staging 스테이징으로 올린 업로드면 그 스테이징입니다. 전송이 끝날 때까지 큐 항목이 쥡니다.
-         * @return 발급한 시리얼입니다.
-         */
-        uint64 endTransfer( const D3D11ImmediateContext::ScopedLock& context, Microsoft::WRL::ComPtr<ID3D11Query> query, UploadStaging staging = UploadStaging{} );
-        /** @brief 앞에서부터 끝난 전송을 풀로 돌려주고 워터마크를 올립니다. `GetData`(플래그 0)가 GPU 에 내보내되 기다리지 않습니다. */
-        void retireFinishedTransfers( const D3D11ImmediateContext::ScopedLock& context );
 
         /// @brief 버퍼와 그 SRV 입니다. SRV 는 셰이더가 버퍼로 읽는 것(구조 버퍼와 인다이렉트 인자 버퍼)에만 있습니다.
         struct BufferRecord
@@ -415,6 +351,109 @@ namespace sw
                 return slice < _listSliceDSV.size() ? _listSliceDSV[slice].Get() : nullptr;
             }
         };
+
+        /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. 네 백엔드 공통 안전값은
+         *         shaderslot::kRootConstantDwords(DX12 와 Vulkan 의 루트 상수, 푸시 상수 크기)입니다. */
+
+        /// @brief VS/PS 와 래스터, 블렌드, 깊이 상태 묶음입니다.
+        struct D3D11PipelineStateRecord
+        {
+            Microsoft::WRL::ComPtr<ID3D11VertexShader>      _vs;
+            Microsoft::WRL::ComPtr<ID3D11PixelShader>       _ps;
+            Microsoft::WRL::ComPtr<ID3D11ComputeShader>     _cs;
+            Microsoft::WRL::ComPtr<ID3D11InputLayout>       _inputLayout;  ///< 셰이더가 읽는 속성만 담는다. 정점 입력이 없는 셰이더는 비어 있다(nullptr)
+            RHIVertexLayout                                 _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
+            Microsoft::WRL::ComPtr<ID3D11RasterizerState>   _rasterizerState;
+            Microsoft::WRL::ComPtr<ID3D11BlendState>        _blendState;
+            Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthStencilState;
+        };
+
+        /**
+         * @struct D3D11TimestampFrame
+         * @brief 프레임 하나분의 타임스탬프 쿼리 묶음입니다.
+         * @details D3D11 은 틱을 초로 바꿀 주파수를 disjoint 쿼리로만 준다. 그 구간 안에서 GPU
+         *          클럭이 바뀌었으면 `Disjoint` 가 서고, 그 프레임 값은 통째로 버려야 한다.
+         */
+        struct D3D11TimestampFrame
+        {
+            Microsoft::WRL::ComPtr<ID3D11Query> _disjoint;
+            Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::render::kMaxGPUTimestampSlot];
+            GPUTimestampSlotMask                _writtenMask{ 0 };
+            uint8                               _bPending{ SW_FALSE };
+        };
+
+        /// @brief 읽기 하나가 들고 있는 것입니다. 복사한 스테이징 텍스처와, 결과 바이트를 꺼낼 때 필요한 배치입니다(`takeTextureReadback` 이 쿼리가 지난 뒤 기다리는 `Map` 으로 읽습니다).
+        struct TextureReadbackRecord
+        {
+            Microsoft::WRL::ComPtr<ID3D11Texture2D> _staging;
+            uint32                                  _width{ 0 };
+            uint32                                  _height{ 0 };
+            uint32                                  _rowBytes{ 0 };
+            uint32                                  _sizeBytes{ 0 };
+            uint8                                   _bDepth{ SW_FALSE };
+        };
+
+    protected:
+        // 네이티브 핸들 getter 는 기반처럼 보호 구역이다 — 바깥은 종류 확인이 든 `IRHIDevice::queryNativeHandles` · `tryGetNativeTexturePointer` 로만 읽는다.
+        /** @brief ID3D11Device 포인터를 반환합니다. */
+        void* getNativeDevice() const override { return _device.Get(); }
+
+        /** @brief D3D11 은 커맨드 큐 객체가 없어 nullptr 을 반환합니다. */
+        void* getNativeCommandQueue() const override { return nullptr; }
+
+        /** @brief 네이티브 텍스처 포인터(ID3D11Texture2D*)를 반환합니다. */
+        void* getNativeTexturePointer( RHITextureHandle texture ) const override;
+        /** @brief 즉시 컨텍스트의 임계 구역을 쥔 채 @p visitor 를 부릅니다. 그 안의 여러 호출은 다른 스레드의 전송 · 폴링 묶음과 섞이지 않습니다. */
+        void withNativeContextInternal( const RHINativeContextVisitor& visitor ) const override;
+        /** @brief 프레임 스트림과 같은 포인터(호출마다 런타임 보호)입니다. `withNativeContextInternal` 을 재정의하므로 밖으로 나가지 않습니다. */
+        void* getNativeContext() const override { return _immediateContext.getPerCallProtected(); }
+
+    private:
+        /** @brief 쿼리 묶음을 한 번만 만듭니다. 만들지 못하면 이 백엔드는 타임스탬프를 보고하지 않습니다. */
+        void ensureTimestampResources();
+        /** @brief 다시 쓰기 직전의 묶음에서 결과를 마이크로초로 변환합니다(기다리지 않습니다). */
+        void collectTimestampsForSlot();
+        /**
+         * @brief 방금 끝낸 프레임에 완료 쿼리를 내고, GPU 가 지난 프레임까지의 `enqueueGPURelease` 콜백을 부릅니다(`endFrame` 이 부릅니다).
+         * @details 링이 가득 차면(프레임 `kMaxFrameCountInFlight` 개가 GPU 에 남음) 가장 오래된 프레임이 끝날 때까지 기다린다 — DX12 · Vulkan 의 링 슬롯 대기와 같다.
+         *          기다리지 않으면 Present 를 하지 않는 반복(오프스크린)에서 GPU 가 얼마든지 뒤처져 "GPU 가 끝난 뒤" 라는 콜백의 약속이 깨진다.
+         */
+        void retireFrameOnGPU();
+
+        /**
+         * @brief 장치 손실을 전송 시리얼에 표시합니다(`RHITransferSerials::markLost`). 처음 표시한 호출만 원인을 로그로 남긴다 — 손실 뒤의 모든 호출이 같은 줄을 되풀이하지 않게 한다.
+         * @details 실제 손실을 표시하는 자리는 이 함수 하나다(`isDeviceRemoved` · `reportQueryFailure` · Present 실패가 부른다). `debugRemoveDevice` 만 시험용이라 로그를 경고로 남기려 직접 표시한다.
+         */
+        void markDeviceLost( const utf8* pCause, HRESULT hr );
+        /**
+         * @brief `GetData` 가 실패했을 때 부릅니다. 쿼리를 읽지 못하면 GPU 가 어디까지 왔는지 볼 수 없으므로, 제거 이유를 묻고(`isDeviceRemoved`) 제거가 아니어도 손실로 표시합니다.
+         * @details 호출 쪽은 이 쿼리를 "끝남" 으로 취급해 대기 루프를 끝낸다(손실 뒤의 대기는 GPU 를 기다리지 않는다). 표시가 없으면 폴링 쪽 티켓이 `Pending` 으로 남는다.
+         */
+        void reportQueryFailure( HRESULT hr, const utf8* pStage );
+        /** @brief 이벤트 쿼리를 한 번 묻습니다. 아직이면 false, 끝났거나 읽지 못하면(장치 제거 · 손실 표시) true 입니다. */
+        bool isEventQueryDone( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, UINT getDataFlags );
+        /** @brief GPU 가 이벤트 쿼리를 지날 때까지 묻습니다. 시한 안에 지났거나 읽지 못했으면 true, 시한을 넘기면 false 입니다. */
+        bool waitForEventQuery( const D3D11ImmediateContext::ScopedLock& context, ID3D11Query* pQuery, uint32 timeoutMilliseconds );
+
+        /**
+         * @brief 업로드 스테이징 예산에서 @p bytes 를 잡습니다. 모자라면 끝난 전송을 한 번 모은 뒤(즉시 컨텍스트 잠금을 잠깐 잡는다) 다시 잡습니다.
+         * @details 예산보다 큰 @p bytes 는 예산 전부를 잡는다 — 복사 중인 다른 업로드가 하나도 없을 때만 들어가고, 들어간 동안 다른 업로드는 `Busy` 다.
+         *          그래서 한 장의 크기에 상한이 없고(예전 `UpdateSubresource` 가 받던 크기를 그대로 받는다) 메모리 최고점은 max(예산, 가장 큰 업로드 하나)다.
+         *          못 받은 그런 업로드는 예약을 남겨 작은 업로드가 잠깐 `Busy` 가 되어 굶지 않는다(`RHIStagingBudget::tryReserve`, GL · Vulkan 의 단독 구간과 같은 규칙).
+         * @return 그래도 모자라면 빈 값입니다 — 앞선 업로드를 GPU 가 끝내면 생기므로 부르는 쪽은 `Busy` 를 돌려준다.
+         */
+        [[nodiscard]] UploadStaging allocateUploadStaging( uint64 bytes );
+
+        /** @brief 전송 하나의 완료를 알릴 이벤트 쿼리를 풀에서 꺼내거나 만듭니다. 풀은 즉시 컨텍스트 잠금이 지키므로 가드를 받습니다. 못 만들면 nullptr 입니다(이유는 로그). */
+        Microsoft::WRL::ComPtr<ID3D11Query> acquireTransferQuery( const D3D11ImmediateContext::ScopedLock& context );
+        /**
+         * @brief 방금 낸 전송 뒤에 이벤트 쿼리를 끝으로 달고 시리얼을 발급합니다. 전송 명령을 낸 그 가드로, 명령 직후에 부릅니다(시리얼은 제출 순서대로 같은 락 안에서 매긴다).
+         * @param staging 스테이징으로 올린 업로드면 그 스테이징입니다. 전송이 끝날 때까지 큐 항목이 쥡니다.
+         * @return 발급한 시리얼입니다.
+         */
+        uint64 endTransfer( const D3D11ImmediateContext::ScopedLock& context, Microsoft::WRL::ComPtr<ID3D11Query> query, UploadStaging staging = UploadStaging{} );
+        /** @brief 앞에서부터 끝난 전송을 풀로 돌려주고 워터마크를 올립니다. `GetData`(플래그 0)가 GPU 에 내보내되 기다리지 않습니다. */
+        void retireFinishedTransfers( const D3D11ImmediateContext::ScopedLock& context );
 
         // ------------------------------------------------------------------------------
         // bindless 레지스트리 접근자. 락을 여기 한 곳에 모아 둔다.
@@ -482,22 +521,15 @@ namespace sw
                                                             const D3D11_SUBRESOURCE_DATA* pArrInitialData, UINT firstDestinationSubresource, UINT destinationX,
                                                             UINT destinationY );
 
-        /** @brief setComputeRootConstants 의 실제 용량(dword)입니다. 네 백엔드 공통 안전값은
-         *         shaderslot::kRootConstantDwords(DX12 와 Vulkan 의 루트 상수, 푸시 상수 크기)입니다. */
+        /**
+         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
+         * @details 다른 창은 이 프레임에 처음 쓰일 때 백버퍼를 잡고(FLIP_DISCARD 라 매 프레임 다시 잡는다) `endFrame` 의 표시 목록에 오른다.
+         */
+        D3D11RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );
+        /** @brief 백버퍼를 가리키는 참조(RTV · 컨텍스트 바인딩 · 기록이 끝난 커맨드 리스트)를 모두 놓고 크기를 바꿉니다. */
+        void resizeSwapChainBuffers( D3D11RHISwapChain& swapChain, uint32 width, uint32 height );
 
-        /// @brief VS/PS 와 래스터, 블렌드, 깊이 상태 묶음입니다.
-        struct D3D11PipelineStateRecord
-        {
-            Microsoft::WRL::ComPtr<ID3D11VertexShader>      _vs;
-            Microsoft::WRL::ComPtr<ID3D11PixelShader>       _ps;
-            Microsoft::WRL::ComPtr<ID3D11ComputeShader>     _cs;
-            Microsoft::WRL::ComPtr<ID3D11InputLayout>       _inputLayout;  ///< 셰이더가 읽는 속성만 담는다. 정점 입력이 없는 셰이더는 비어 있다(nullptr)
-            RHIVertexLayout                                 _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
-            Microsoft::WRL::ComPtr<ID3D11RasterizerState>   _rasterizerState;
-            Microsoft::WRL::ComPtr<ID3D11BlendState>        _blendState;
-            Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthStencilState;
-        };
-
+    private:
         Microsoft::WRL::ComPtr<ID3D11Device>  _device;
         Microsoft::WRL::ComPtr<IDXGIAdapter3> _memoryAdapter; ///< 디바이스가 쓰는 어댑터. GPU 메모리 사용량과 예산을 질의하는 데 쓴다.
         /// @brief 즉시 컨텍스트입니다. 여러 호출과 그것에 딸린 상태(전송 큐 · 쿼리 풀 · 프레임 링 · 타임스탬프)는 `lock()` 가드 안에서만 다룹니다.
@@ -512,14 +544,6 @@ namespace sw
         /// @brief 이 프레임에 그린 다른 창입니다. `useSwapChain` 이 백버퍼를 잡으며 올리고 `endFrame` 이 표시한 뒤 비운다. 프레임 스트림(렌더 스레드)만 쓴다.
         vector<D3D11RHISwapChain*> _listFrameSwapChain;
 
-        /**
-         * @brief 렌더 패스가 고른 스왑체인(`RHIRenderPassBeginInfo::_pSwapChain`)을 이 백엔드의 것으로 풉니다. nullptr 은 메인 창입니다.
-         * @details 다른 창은 이 프레임에 처음 쓰일 때 백버퍼를 잡고(FLIP_DISCARD 라 매 프레임 다시 잡는다) `endFrame` 의 표시 목록에 오른다.
-         */
-        D3D11RHISwapChain& useSwapChain( IRHISwapChain* pSwapChain );
-        /** @brief 백버퍼를 가리키는 참조(RTV · 컨텍스트 바인딩 · 기록이 끝난 커맨드 리스트)를 모두 놓고 크기를 바꿉니다. */
-        void resizeSwapChainBuffers( D3D11RHISwapChain& swapChain, uint32 width, uint32 height );
-
         /// @brief 버퍼 핸들에서 버퍼와 SRV 를 찾는 테이블입니다(텍스처 `_gpuTextures` 와 같은 구조). 기록 스레드가 SRV 를 락 없이 읽습니다(`resolveBufferSRV`).
         RHIHandleTable<BufferRecord>  _gpuBuffers;
         RHIHandleTable<TextureRecord> _gpuTextures;
@@ -531,20 +555,6 @@ namespace sw
         /// 인덱스로 이 목록들을 읽는 동안 register/unregister 가 push_back 으로 재할당을 일으키면
         /// 기록 스레드가 쓰레기를 읽습니다. 읽기는 공유 락이라 병렬 기록을 직렬화하지 않습니다.
         mutable shared_mutex _bindlessMutex;
-
-        /**
-         * @struct D3D11TimestampFrame
-         * @brief 프레임 하나분의 타임스탬프 쿼리 묶음입니다.
-         * @details D3D11 은 틱을 초로 바꿀 주파수를 disjoint 쿼리로만 준다. 그 구간 안에서 GPU
-         *          클럭이 바뀌었으면 `Disjoint` 가 서고, 그 프레임 값은 통째로 버려야 한다.
-         */
-        struct D3D11TimestampFrame
-        {
-            Microsoft::WRL::ComPtr<ID3D11Query> _disjoint;
-            Microsoft::WRL::ComPtr<ID3D11Query> _arrQuery[constant::render::kMaxGPUTimestampSlot];
-            GPUTimestampSlotMask                _writtenMask{ 0 };
-            uint8                               _bPending{ SW_FALSE };
-        };
 
         /**
          * @brief GPU 타임스탬프입니다. 프레임 링만큼 묶음을 돌려 씁니다.
@@ -599,17 +609,6 @@ namespace sw
         vector<D3D11RHICommandList*> _listLiveCmd;
 
         RHIReleaseQueue _releaseQueue;
-
-        /// @brief 읽기 하나가 들고 있는 것입니다. 복사한 스테이징 텍스처와, 결과 바이트를 꺼낼 때 필요한 배치입니다(`takeTextureReadback` 이 쿼리가 지난 뒤 기다리는 `Map` 으로 읽습니다).
-        struct TextureReadbackRecord
-        {
-            Microsoft::WRL::ComPtr<ID3D11Texture2D> _staging;
-            uint32                                  _width{ 0 };
-            uint32                                  _height{ 0 };
-            uint32                                  _rowBytes{ 0 };
-            uint32                                  _sizeBytes{ 0 };
-            uint8                                   _bDepth{ SW_FALSE };
-        };
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다(DX11 은 즉시 컨텍스트 하나라 제출 순서가 곧 실행 순서입니다).
         RHITransferSerials _transferSerials;

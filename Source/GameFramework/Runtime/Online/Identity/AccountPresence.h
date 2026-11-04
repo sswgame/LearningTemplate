@@ -47,6 +47,7 @@ namespace sw
     class IAccountPresence
     {
         // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
+
     public:
         IAccountPresence()          = default;
         virtual ~IAccountPresence() = default;
@@ -82,13 +83,14 @@ namespace sw
         /** @brief 만든 중계 봉투(`OnlinePushRelayRegistry::makeRelay`)를 그 계정의 서버로 넘깁니다. 서버 여럿이 아니면 false. */
         virtual bool relayRemotePush( const OnlinePushRelay& relay ) = 0;
 
-    private:
-        IDAllocator<uint64> _findOwnerIDAllocator{};
-
     protected:
         /** @brief 구독 @p id 가 풀렸습니다 — 구현이 그 등록을 지운다(`_subscriptions` 가 부른다). */
         virtual void releaseSubscription( uint64 id ) = 0;
 
+    private:
+        IDAllocator<uint64> _findOwnerIDAllocator{};
+
+    protected:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&IAccountPresence::releaseSubscription>( this ) };
     };

@@ -51,6 +51,7 @@ namespace sw
         int32 computeTileX( float32 worldX ) const;
         int32 computeTileY( float32 worldY ) const;
 
+    private:
         vector<uint8>  _listDirt; ///< 칸마다 SW_TRUE 또는 SW_FALSE(`_topology` 의 칸 인덱스)
         vector<float2> _listGrapplePoint;
         float2         _origin;
@@ -144,6 +145,7 @@ namespace sw
         /** @brief 직접 움직이던 위치와 속도를 기반 몸에 돌려주고 일반 모드로 돌아갑니다. */
         void returnToMotor( const float2& velocity );
 
+    private:
         PlatformerMotor2D  _motor;
         PlatformerSettings _motorSettings;
         ActionBodyDef      _settings;

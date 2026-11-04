@@ -69,13 +69,13 @@ namespace sw
         static constexpr uint32 kFileVersion = 1;
         /** @brief 분류를 주지 않은 기록의 분류 이름입니다. */
         static constexpr const utf8* kDefaultCategoryName = "Default";
+        static constexpr MemoryTag   kSubsystemMemoryTag  = MemoryTag::RenderCPU;
 
         VisualLogger();
 
-        SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                       shutdownSubsystem() override {}
-        const utf8*                getSubsystemName() const override { return kSubsystemName; }
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 기록을 켜고 끕니다. 끄면 이미 쌓인 기록은 그대로 둔다. */
         void setEnabled( bool bEnabled );
@@ -125,6 +125,7 @@ namespace sw
         /** @brief 용량을 넘은 오래된 기록을 버립니다. 잠근 채 부릅니다. */
         void trimLocked() SW_REQUIRES_LOCK( _mutex );
 
+    private:
         mutable mutex                    _mutex;
         deque<VisualLogEntry> _listEntry SW_GUARDED_BY( _mutex );
         uint64 _frame                    SW_GUARDED_BY( _mutex );

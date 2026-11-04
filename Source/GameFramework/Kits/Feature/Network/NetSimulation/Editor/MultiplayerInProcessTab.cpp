@@ -134,6 +134,7 @@ namespace sw::editor
             }
         }
 
+    private:
         vector<int32> _listWorldIndex;
         string        _lastError;
         int32         _gameIndex{ 0 };

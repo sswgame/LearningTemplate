@@ -31,6 +31,7 @@ namespace sw
     class SW_KIT_SERVER_API TradeServer final : public IOnlineServerService
     {
     public:
+        static constexpr const utf8* kFeatureFlag = "feature.trade_enabled";
         TradeServer();
 
         /** @brief 넘긴 객체는 빌려 씁니다. @p pPresence 는 서버가 여러 대일 때만 넘기며, 없으면 nullptr 이고 서버가 한 대입니다. */
@@ -41,8 +42,6 @@ namespace sw
         void                       onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body ) override;
         void                       onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs ) override;
         void                       onAccountLeft( OnlineServiceHost& host, AccountID accountID ) override;
-
-        static constexpr const utf8* kFeatureFlag = "feature.trade_enabled";
 
     private:
         struct PendingCall
@@ -65,6 +64,7 @@ namespace sw
         void        onPresenceFound( const AccountPresenceResult& found );
         static void collectBalances( const LedgerTransferOutcome& ledger, AccountID accountID, vector<TradeBalance>& outListBalance );
 
+    private:
         unordered_map<uint64, PendingCall>           _mapTagToCall;
         unordered_map<uint64, PendingLookup>         _mapLookupToCall;  ///< 접속 상태 관리자의 이름 찾기에서 신청으로 가는 맵이다
         unordered_map<uint64, LedgerTransferOutcome> _mapTradeToLedger; ///< 이번 틱에 정산된 거래의 이동 뒤 잔액이다. 알림에 싣는다

@@ -106,6 +106,7 @@ namespace sw
         void                         refill( const hashed_string& itemID );
         void                         spendCharge( const hashed_string& itemID );
 
+    private:
         Crafter                         _crafter;
         vector<ChargeEntry>             _listCharge;
         vector<MonsterHuntActiveEffect> _listEffect;

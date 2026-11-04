@@ -63,6 +63,7 @@ namespace sw
     private:
         LocalStoreLocation( Kind kind, string path );
 
+    private:
         string _path; ///< 사용자 데이터 폴더 아래면 상대, 절대면 절대 경로 글. 메모리면 빈 글
         Kind   _kind;
     };

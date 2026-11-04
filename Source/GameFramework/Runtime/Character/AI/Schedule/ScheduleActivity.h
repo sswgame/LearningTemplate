@@ -63,6 +63,7 @@ namespace sw
     private:
         void registerBuiltinActivities();
 
+    private:
         NameRegistry<ScheduleActivityDef> _registry;
     };
 } // namespace sw

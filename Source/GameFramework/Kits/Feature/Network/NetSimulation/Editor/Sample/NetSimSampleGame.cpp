@@ -263,6 +263,7 @@ namespace sw
                 }
             }
 
+        private:
             NetSimSampleSettings _settings;
             vector<Avatar>       _listAvatar;
             vector<PendingMove>  _listPendingMove;
@@ -422,6 +423,7 @@ namespace sw
                 return MathUtil::abs( difference ) < NetSimSampleGameInternal::kSnapDistance ? target : current + difference * NetSimSampleGameInternal::kSmoothing;
             }
 
+        private:
             NetSimSampleSettings _settings;
             vector<Target>       _listTarget; ///< 마지막으로 받은 아바타 목록
             vector<Shown>        _listShown;

@@ -83,6 +83,7 @@ namespace sw::editor
             return offset;
         }
 
+    private:
         uint32 _modeParam;
         uint32 _minParam;
         uint32 _maxParam;

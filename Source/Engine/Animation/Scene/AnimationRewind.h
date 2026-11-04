@@ -149,6 +149,7 @@ namespace sw
         /** @brief 창 밖 프레임과 빈 트랙을 버립니다. */
         void trimToWindow();
 
+    private:
         vector<AnimationRewindTrack> _listTrack;
         float64                      _clock;
         float64                      _scrubTime;

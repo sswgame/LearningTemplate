@@ -108,6 +108,7 @@ namespace sw
     private:
         UserAppearancePreset* findMutablePreset( string_view name );
 
+    private:
         vector<UserAppearancePreset> _listPreset;
         const AppearanceDatabase*    _pDatabase;
     };

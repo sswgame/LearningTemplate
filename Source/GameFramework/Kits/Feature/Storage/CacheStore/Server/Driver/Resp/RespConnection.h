@@ -102,6 +102,7 @@ namespace sw
         bool drainParsedValues();
         void failAwaitingTags();
 
+    private:
         RespParser              _parser;
         deque<RespCommandTag>   _listAwaitTag;
         vector<RespReplyRecord> _listReplyRecord;

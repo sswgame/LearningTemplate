@@ -74,10 +74,6 @@ namespace sw
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
         static constexpr const utf8* kSubsystemName = "CrashReport";
 
-        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                shutdownSubsystem() override {}
-        const utf8*         getSubsystemName() const override { return kSubsystemName; }
-
         static constexpr const utf8* kConsentSettingID = "telemetry.crashReports";
         /** @brief 보고 프로세스를 띄우는 명령줄 키입니다 — `ArgumentList.xxx` 의 CRASH_REPORTER 철자(`-crash-reporter=<폴더>`). */
         static constexpr const utf8* kReporterArgument  = "-crash-reporter";
@@ -87,6 +83,10 @@ namespace sw
         static constexpr uint32      kMaxAttempts       = 3;              ///< 보고 프로세스가 묶음 하나를 올려 보는 횟수 상한
         static constexpr uint32      kMaxReports        = 10;             ///< 남겨 두는 묶음 수
         static constexpr uint64      kMaxLogBytes       = 512u * 1024u;
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         CrashReportService();
         ~CrashReportService() override;
@@ -135,6 +135,7 @@ namespace sw
         void               onSettingEvent( const UserSettingEvent& event );
         void               refreshConsentFromSetting();
 
+    private:
         string               _crashFolder;
         string               _reportsFolder;
         string               _currentSessionID;

@@ -110,6 +110,8 @@ namespace sw
          */
         struct ParallelTaskScope
         {
+
+            TaskNode* _pPreviousRunningTask;
             ParallelTaskScope()
                 : _pPreviousRunningTask{ t_pCurrentRunningTask }
             {
@@ -125,8 +127,6 @@ namespace sw
             }
             ParallelTaskScope( const ParallelTaskScope& )            = delete;
             ParallelTaskScope& operator=( const ParallelTaskScope& ) = delete;
-
-            TaskNode* _pPreviousRunningTask;
         };
 
         /** @brief 큐 항목 하나입니다. 태스크 노드 포인터이거나, 태그 비트가 켜진 병렬 그룹 포인터입니다. */

@@ -39,6 +39,7 @@ namespace sw
         /** @brief UI 전역 명령 `QuitGame` 의 처리 함수입니다. 이번 프레임 뒤 루프를 끝냅니다(`Engine::requestQuit( 0 )`). */
         void onQuitGameCommand( const hashed_string& command, Widget& source );
 
+    private:
         Engine*      _pEngine;
         Subscription _quitCommandRegistration; ///< UI 전역 명령 `QuitGame` 의 구독(`remove` 가 놓는다)
     };

@@ -85,12 +85,11 @@ namespace sw
                 (void)_registeredBackend.addLogged( &_memoryBackend, "Local store backend", _memoryBackend._pName );
             }
 
+        private:
             mutable mutex                                                _mutex;
             RegistrationList<const LocalStoreBackend> _registeredBackend SW_GUARDED_BY( _mutex );
             LocalStoreBackend                                            _fileBackend;   ///< 기반 백엔드. 표가 소유하고, 이미지를 내려도 지워지지 않는다(만들기 함수가 기반 이미지에 있다)
             LocalStoreBackend                                            _memoryBackend; ///< 기반 백엔드
-
-        private:
         };
     } // namespace
 } // namespace sw

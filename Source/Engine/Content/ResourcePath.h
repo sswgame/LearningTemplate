@@ -51,6 +51,7 @@ namespace sw
         {
         }
 
+    private:
         string _domain;
         string _relative;
     };

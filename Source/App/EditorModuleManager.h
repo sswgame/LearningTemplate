@@ -112,6 +112,14 @@ namespace sw
         /** @brief RHI 핫스왑 뒤 게임, 에디터 순서(기동과 같다)로 다시 초기화합니다. 실패하면 false 를 반환합니다. */
         [[nodiscard]] bool reinitializeAfterRHISwap( void* pEditorModule, void* pGameModule );
 
+    private:
+        /** @brief 에디터를 켤 때 EditorModule 다음에 로드할 확장 모듈(종류 EditorExtension) 하나입니다. */
+        struct EditorExtensionModule
+        {
+            string         _name;
+            vector<string> _listDependency; ///< 매니페스트의 의존(EditorModule, 키트). 리로드 그래프가 의존이 바뀌면 확장을 다시 로드한다.
+        };
+
     protected:
         /**
          * @brief 이번 프레임에 게임 로직을 돌려야 하는지 에디터에 묻습니다.
@@ -160,14 +168,6 @@ namespace sw
         /** @brief RHI 교체 뒤 에디터를 다시 만듭니다. 테이블이 비었으면 모듈에서 다시 바인딩합니다. */
         [[nodiscard]] bool recreateEditorInstance( void* pEditorModule );
 
-    private:
-        /** @brief 에디터를 켤 때 EditorModule 다음에 로드할 확장 모듈(종류 EditorExtension) 하나입니다. */
-        struct EditorExtensionModule
-        {
-            string         _name;
-            vector<string> _listDependency; ///< 매니페스트의 의존(EditorModule, 키트). 리로드 그래프가 의존이 바뀌면 확장을 다시 로드한다.
-        };
-
         /**
          * @brief `initialize` 의 끝 — 에디터를 켰으면 에디터 모듈과 확장 모듈(의존과 함께)을 리로드 그래프에 등록합니다. 확장 하나가 실패해도 에디터는 뜹니다(그 확장만 없습니다).
          * @details 개발 구성에만 있다 — 배포는 `initialize` 가 부르지 않고 `-EnableEditor` 면 오류로 멈춘다.
@@ -177,6 +177,7 @@ namespace sw
         /** @brief 에디터 모듈의 서비스 범위에 개발 도구(HUD 조작 · 설정 리로드 창)를 빌려 겁니다. 배포는 개발 도구가 없어 아무것도 걸지 않습니다. */
         void bindDevToolServices( SubsystemScope& editorServices ) const;
 
+    private:
         EditorAPI                     _editorAPI;
         EditorHandle                  _editor;
         unique_ptr<SubsystemScope>    _editorServices;      ///< 에디터 모듈에 넘긴 호스트 서비스 범위(`rebindEditorService` 가 새로 만든다)

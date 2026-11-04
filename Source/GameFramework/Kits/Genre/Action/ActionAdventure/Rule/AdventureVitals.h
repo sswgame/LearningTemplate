@@ -144,6 +144,7 @@ namespace sw
         /** @brief 하트 수에 맞춰 체력 최대값을 다시 설정하고 체력을 가득 채웁니다. 하트 수가 범위 안이면 실패하지 않습니다. */
         [[nodiscard]] bool resetHealth();
 
+    private:
         AdventureVitalsSettings _settings;
         Vitality                _health;
         ResourceGauge           _magic;

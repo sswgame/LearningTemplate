@@ -80,6 +80,7 @@ namespace sw::editor
         void drawIsolationBar();
         void drawChildTree( GameObject& object, int32 depth );
 
+    private:
         PrefabEditorModel  _model;
         EditorPreviewGizmo _gizmo;
     };

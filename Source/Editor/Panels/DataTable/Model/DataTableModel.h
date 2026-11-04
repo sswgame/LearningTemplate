@@ -99,6 +99,7 @@ namespace sw::editor
         /** @brief 원문 @p text 를 고른 파일의 저장된 내용으로 두고 문서를 다시 엽니다(깨진 원문도 글 상자로 고치게 열린다). */
         void openGameDataText( string&& text );
 
+    private:
         LocalizationSheet         _localizationSheet;
         vector<string>            _listLocalizationProject;
         vector<GameDataFileEntry> _listGameDataFile;

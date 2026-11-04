@@ -118,6 +118,7 @@ namespace sw
     private:
         size_t computeIndex( uint32 tick ) const { return static_cast<size_t>( tick % static_cast<uint32>( _listTick.size() ) ); }
 
+    private:
         vector<T>      _listEntry;
         vector<uint32> _listTick; ///< 슬롯마다 들어 있는 틱(`kEmpty` 는 빈 슬롯).
         int32          _count;

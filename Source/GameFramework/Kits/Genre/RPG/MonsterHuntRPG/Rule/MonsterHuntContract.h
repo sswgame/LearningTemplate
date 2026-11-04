@@ -90,6 +90,7 @@ namespace sw
         int32 computeOpenOrder() const;
         bool  isFoundInternal( const hashed_string& clueID ) const;
 
+    private:
         vector<hashed_string>                      _listFound; ///< 지금 단계에서 찾은 단서
         EventBuffer<MonsterHuntInvestigationEvent> _eventBuffer;
         const MonsterHuntCatalog*                  _pCatalog; ///< 상태 바이트의 계약 id 로 찾는 카탈로그

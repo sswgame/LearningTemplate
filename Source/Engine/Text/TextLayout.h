@@ -171,6 +171,7 @@ namespace sw
         /** @brief 텍스트의 양방향 수준을 정해 글리프마다 옮깁니다(`TextBidi`). 모든 수준이 0 이면 false 이며, 줄 안 재배열을 건너뜁니다. */
         [[nodiscard]] bool resolveGlyphLevels( string_view text, TextDirection paragraphDirection );
 
+    private:
         FontService&            _fontService;
         unique_ptr<ITextShaper> _pShaper;               ///< 이 빌드의 셰이퍼(`ITextShaper::createDefault` — 단순 또는 복합 문자)
         vector<ShapingRun>      _listRunScratch;        ///< 런 나누기 결과입니다.

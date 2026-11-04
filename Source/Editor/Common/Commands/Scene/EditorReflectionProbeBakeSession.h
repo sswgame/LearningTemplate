@@ -68,6 +68,7 @@ namespace sw::editor
         /** @brief 편집 잠금을 풀고 결과를 알립니다. */
         void finish( bool bCanceled );
 
+    private:
         vector<uint64>                             _listObjectID; ///< 굽을 프로브의 오브젝트(프레임을 넘어 포인터를 들지 않는다)
         string                                     _lastError;
         unique_ptr<EditorReflectionProbeFilterJob> _pFilterJob; ///< 찍은 면의 풀기 · 접기 · 거르기 · 파일 쓰기(한 번에 하나)

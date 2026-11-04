@@ -91,6 +91,7 @@ namespace sw
         /** @brief 모은 본 짝에서 대상 본이 겹치지 않게(먼저 모은 짝이 이긴다) 짝 목록을 만들고 대상 본 순서(부모가 먼저)로 세웁니다. */
         void populatePairs( const vector<uint32>& listSourceBone, const vector<uint32>& listTargetBone );
 
+    private:
         vector<BonePair>        _listPair; ///< 대상 본 순서(부모가 먼저)
         vector<IKChain>         _listIKChain;
         vector<float3>          _listGoal; ///< IK 목표(사슬마다, 재사용)

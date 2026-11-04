@@ -93,6 +93,7 @@ namespace sw
     private:
         void integrate( float32 deltaTime );
 
+    private:
         CoasterPhysicsParams _params;
         CoasterGForce        _gForce;
         float3               _previousVelocity;

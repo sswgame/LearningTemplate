@@ -121,8 +121,6 @@ namespace sw::editor
         static uint32 countCommonTicks( const vector<StateHashSample>& listLeft, const vector<StateHashSample>& listRight );
 
     private:
-        [[nodiscard]] bool isSourceIndexValid( int32 sourceIndex );
-
         /** @brief 칸을 채널에서 읽었을 때의 주소와 토큰입니다(`compareObjectsFromChannels` 가 같은 서버에 다시 묻는다). */
         struct ChannelOrigin
         {
@@ -130,7 +128,9 @@ namespace sw::editor
             string     _token{};
             bool       _bValid{ false };
         };
+        [[nodiscard]] bool isSourceIndexValid( int32 sourceIndex );
 
+    private:
         EditorStateHashSource     _arrSource[kSourceCount];
         ChannelOrigin             _arrChannel[kSourceCount];
         int32                     _arrClientProcess[kSourceCount];

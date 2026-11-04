@@ -73,6 +73,7 @@ namespace sw
         /** @brief @p frameIndex 까지 더한 마지막 커서 위치(`addMousePosition`)입니다. 없으면 (0, 0) 입니다. */
         int2 findPointerPosition( uint32 frameIndex ) const;
 
+    private:
         vector<VirtualInputScriptEntry> _listEntry; ///< 프레임 번호 순(같은 프레임은 더한 순)으로 정렬한 목록입니다. `addEvent` 가 위치를 찾아 넣습니다.
         uint32                          _cursor;    ///< 다음에 낼 항목입니다(프레임 번호가 되돌아가면 처음부터 찾습니다).
     };

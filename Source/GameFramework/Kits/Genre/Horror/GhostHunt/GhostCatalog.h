@@ -229,6 +229,7 @@ namespace sw
         [[nodiscard]] bool loadRoom( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadFurniture( const XMLNode& node, string_view sourceName );
 
+    private:
         GhostFlashlightDef             _flashlight;
         GhostVacuumDef                 _vacuum;
         GameCatalog<GhostDef>          _ghostCatalog;

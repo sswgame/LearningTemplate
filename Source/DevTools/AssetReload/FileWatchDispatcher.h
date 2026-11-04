@@ -98,12 +98,11 @@ namespace sw
         /** @brief 파일 확장자가 감시 허용 목록에 있으면 true 입니다. */
         bool isExtensionAllowed( const WatchEntry& entry, string_view filename ) const;
 
+    private:
         unique_ptr<IFileWatcher> _fileWatcher;
         vector<WatchEntry>       _listWatch;
         IDAllocator<uint64>      _watchIDAllocator;
         uint64                   _lastDrainTimestamp{ 0 }; ///< 직전 update() 가 큐를 비운 시각(파일 시계, 초)
-
-    private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&FileWatchDispatcher::releaseSubscription>( this ) };
     };

@@ -80,6 +80,7 @@ namespace sw
 
         void advance();
 
+    private:
         std::basic_string_view<T>         _str{};
         std::basic_string_view<T>         _current{};
         size_t                            _start{ 0 };
@@ -143,6 +144,7 @@ namespace sw
         void split( string_view_type delim );
         void split( std::initializer_list<string_view_type> listDelim );
 
+    private:
         string_view_type         _str;
         iterator                 _beginIt;
         vector<string_view_type> _listSplit;

@@ -69,6 +69,7 @@ namespace sw
         /** @brief 에이전트가 링크를 건너기 시작했으면 그 링크(폴리곤 · 번호 · 오른 끝)를 기록합니다. */
         void beginLinkTraversal( LinkTraversal& inoutTraversal ) const;
 
+    private:
         dtCrowd*              _pCrowd;
         dtNavMeshQuery*       _pQuery;     ///< 군중 밖 질의(목적지 붙이기, 위치 맞추기)에 쓴다. 게임 스레드만 쓴다.
         const dtNavMesh*      _pNavMesh;   ///< 링크 찾기(읽기만)

@@ -74,6 +74,7 @@ namespace sw
         template <typename TBody>
         void push( OnlineServiceHost& host, AccountID accountID, uint16 kind, const TBody& message );
 
+    private:
         ServicePendingTable                 _pendingTable;
         vector<PartyLobbyCompletion>        _listPartyCompletionScratch;
         vector<PartyLobbyNotification>      _listPartyNotificationScratch;

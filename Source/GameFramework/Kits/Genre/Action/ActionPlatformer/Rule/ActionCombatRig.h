@@ -134,6 +134,7 @@ namespace sw
         void startHitstop( int32 frames );
         void pushEvent( ActionCombatEventType type, const hashed_string& id, int32 value );
 
+    private:
         const ActionPlatformerCatalog* _pCatalog;
         const MoveCatalog*             _pMoves;
         const ActionComboDef*          _pCombo;

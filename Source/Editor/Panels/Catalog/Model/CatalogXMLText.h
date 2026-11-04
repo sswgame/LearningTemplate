@@ -90,6 +90,7 @@ namespace sw::editor
         /** @brief `parse` 의 본문입니다. 실패해도 일부 요소를 남기므로 `parse` 가 실패 때 비웁니다. */
         [[nodiscard]] bool parseInternal( string_view text, string& outError );
 
+    private:
         vector<CatalogXMLElement> _listElement{};
         int32                     _rootIndex{ -1 };
     };

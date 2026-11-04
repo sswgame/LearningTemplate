@@ -29,6 +29,8 @@ namespace sw
     class SW_API PoseInertializer
     {
     public:
+        /** @brief 전이를 끝내는 시점입니다. 반감기의 이 배수가 지나면 남은 오프셋은 시작 값의 0.01 % 아래입니다(시작 속도 차이가 0 일 때 약 0.0015 %). */
+        static constexpr float32 kSettleHalfLifeCount = 10.0f;
         PoseInertializer();
 
         /**
@@ -59,13 +61,11 @@ namespace sw
         /** @brief 지금 시각의 본 회전 오프셋(축-각 벡터, 길이가 라디안)입니다. 전이 중이 아니거나 범위 밖이면 0 입니다. */
         float3 computeRotationOffset( uint32 boneIndex ) const;
 
-        /** @brief 전이를 끝내는 시점입니다. 반감기의 이 배수가 지나면 남은 오프셋은 시작 값의 0.01 % 아래입니다(시작 속도 차이가 0 일 때 약 0.0015 %). */
-        static constexpr float32 kSettleHalfLifeCount = 10.0f;
-
     private:
         /** @brief 지금 시각의 감쇠 스프링 값(x0, v0 에서 시작)을 구합니다. */
         float3 computeDecayedOffset( const float3& initialOffset, const float3& initialVelocity ) const;
 
+    private:
         vector<float3> _listTranslationOffset;   ///< 본마다 시작 위치 오프셋(source - target)
         vector<float3> _listTranslationVelocity; ///< 본마다 시작 위치 속도 차이(source 속도 - target 속도)
         vector<float3> _listRotationOffset;      ///< 본마다 시작 회전 오프셋(축-각 벡터)

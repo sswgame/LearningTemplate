@@ -40,6 +40,9 @@ namespace sw
         /** @brief 힙에 놓이는 원소 하나입니다. `first` 는 키, `second` 는 값이라 `unordered_map` 의 원소와 같은 모양으로 읽힙니다. */
         struct value_type
         {
+
+            const Key first;
+            T         second;
             template <typename... Args>
             explicit value_type( const Key& key, Args&&... args )
                 : first( key )
@@ -49,9 +52,6 @@ namespace sw
 
             value_type( const value_type& )            = delete;
             value_type& operator=( const value_type& ) = delete;
-
-            const Key first;
-            T         second;
         };
 
         using reference       = value_type&;
@@ -71,6 +71,8 @@ namespace sw
             using pointer           = value_type*;
             using reference         = value_type&;
 
+            typename Storage::iterator _inner;
+
             explicit iterator( typename Storage::iterator inner )
                 : _inner{ inner }
             {
@@ -86,8 +88,6 @@ namespace sw
             bool      operator!=( const iterator& other ) const { return _inner != other._inner; }
             reference operator*() const { return *_inner->second; }
             pointer   operator->() const { return _inner->second.get(); }
-
-            typename Storage::iterator _inner;
         };
 
         /** @brief 상수 이터레이터입니다. */
@@ -99,6 +99,8 @@ namespace sw
             using difference_type   = ptrdiff_t;
             using pointer           = const value_type*;
             using reference         = const value_type&;
+
+            typename Storage::const_iterator _inner;
 
             explicit const_iterator( typename Storage::const_iterator inner )
                 : _inner{ inner }
@@ -120,8 +122,6 @@ namespace sw
             bool      operator!=( const const_iterator& other ) const { return _inner != other._inner; }
             reference operator*() const { return *_inner->second; }
             pointer   operator->() const { return _inner->second.get(); }
-
-            typename Storage::const_iterator _inner;
         };
 
         stable_unordered_map()                                             = default;

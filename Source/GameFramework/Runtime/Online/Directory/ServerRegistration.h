@@ -44,6 +44,7 @@ namespace sw
     private:
         void writeRecord( UnixMilliseconds nowMs );
 
+    private:
         ServerStatus          _status;
         EphemeralStoreRouter* _pRouter;
         UnixMilliseconds      _lastWrittenMs;

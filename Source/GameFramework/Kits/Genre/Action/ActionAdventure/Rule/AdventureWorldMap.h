@@ -112,6 +112,7 @@ namespace sw
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool           readLandmarks( const XMLNode& root, const utf8* pNodeName, AdventureLandmarkKind kind, string_view sourceName, uint32& inoutCount );
 
+    private:
         GameCatalog<AdventureLandmarkDef> _catalog;
         vector<uint8>                     _listActivated; ///< 탑이면 깨웠는지, 사당이면 찾았는지(카탈로그 순서)
         vector<uint8>                     _listCompleted; ///< 사당을 마쳤는지

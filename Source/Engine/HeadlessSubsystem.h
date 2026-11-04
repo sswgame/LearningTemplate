@@ -36,6 +36,9 @@ namespace sw
     /** @brief 헤드리스 작업의 결과입니다(호스트 소유). */
     struct HeadlessTaskState
     {
+
+        bool  _bFailed{ false };      ///< 그 작업이 실패했다 — 호스트가 종료 코드로 내보낸다
+        int32 _failureExitCode{ -1 }; ///< 실패했을 때의 종료 코드(작업이 정하지 않으면 -1) — 백엔드마다 실행은 시나리오 종료 코드(10 · 11 · 12 · 13 · 15)를 그대로 낸다
         /**
          * @brief 헤드리스 작업으로 들어갑니다 — 누수 기준선을 잡고 헤드리스로 표시합니다. 헤드리스로 표시하는 길은 이것뿐입니다.
          * @details 헤드리스 작업은 보통 실행이 기준선을 잡는 자리(`Engine::initialize` 끝)에 닿지 않는다. 기준선이 없으면 종료 때 살아 있는
@@ -48,9 +51,6 @@ namespace sw
         }
 
         bool isHeadless() const { return _bHeadless; }
-
-        bool  _bFailed{ false };      ///< 그 작업이 실패했다 — 호스트가 종료 코드로 내보낸다
-        int32 _failureExitCode{ -1 }; ///< 실패했을 때의 종료 코드(작업이 정하지 않으면 -1) — 백엔드마다 실행은 시나리오 종료 코드(10 · 11 · 12 · 13 · 15)를 그대로 낸다
 
     private:
         bool _bHeadless{ false }; ///< 헤드리스 작업을 했다(뒤 단계를 세우지 않았다)

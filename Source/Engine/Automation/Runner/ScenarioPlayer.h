@@ -52,6 +52,7 @@ namespace sw
         /** @brief 재생을 끝맺고(돌고 있으면 멈추고) 고정 프레임 시간을 되돌린 뒤 알린다. */
         void endPlayback( ScenarioPlayEnd end, InputManager* pInput );
 
+    private:
         unique_ptr<AutomationRunner> _pRunner;               ///< 지금 재생하는 실행기(쉬면 nullptr)
         ScenarioPlayOptions          _options{};             ///< 재생 선택(재생 중일 때만 뜻이 있다)
         AssetID                      _path{};                ///< 재생하는 시나리오

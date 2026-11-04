@@ -296,6 +296,7 @@ namespace sw
         void             sendResponse( StreamConnectionHandle handle, uint64 requestID, NetRequestStatus status, const uint8* pBody, int32 bodySize );
         void             purgeIdempotencyLocked( int64 now ) SW_REQUIRES_LOCK( _mutex );
 
+    private:
         mutable mutex                                             _mutex;
         unordered_map<uint16, NetRequestFunction> _mapHandler     SW_GUARDED_BY( _mutex );
         unordered_map<uint32, InFlight> _mapInFlight              SW_GUARDED_BY( _mutex ); ///< 일련번호에서 처리 중인 요청으로 가는 맵.

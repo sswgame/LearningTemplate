@@ -68,6 +68,7 @@ namespace sw
         uint64 send( uint16 method, const MailboxRequest& request, const NetIdempotencyKey& key, ReplyDelegate onReply );
         void   onCallSucceeded( const Call& call, const MailboxReply& reply ) override;
 
+    private:
         vector<MailView>            _listMail;
         DrainGate                   _newMailGate;
         EventBuffer<MailboxNewMail> _newMailBuffer;

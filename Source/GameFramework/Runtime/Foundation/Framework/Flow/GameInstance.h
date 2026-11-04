@@ -198,9 +198,6 @@ namespace sw
         /** @brief `captureSnapshot` 이 같은 목적으로 쓴 봉투를 읽고(`GameStateSnapshot::readEnvelope`) 읽기 훅을 부릅니다. */
         [[nodiscard]] bool readStateEnvelope( SerializePurpose purpose, const void* pInBuffer, uint32 size );
 
-        GamePackConfig _packConfig; ///< 팩 루트와 gamesettings
-        IWindow*       _pWindow;    ///< 호스트 윈도우 (App 이 소유)
-
     private:
         /** @brief 세이브 슬롯 이름(비면 기본 슬롯)을 정합니다. 없거나 슬롯 이름 규칙을 어기면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool resolveSaveSlot( string_view slot, string& outSlot ) const;
@@ -237,6 +234,11 @@ namespace sw
         /** @brief 게임 범위에 같은 타입이 이미 걸려 있음을 알립니다(`bindScopedService`). */
         void reportScopedServiceConflict( uint64 typeHash ) const;
 
+    protected:
+        GamePackConfig _packConfig; ///< 팩 루트와 gamesettings
+        IWindow*       _pWindow;    ///< 호스트 윈도우 (App 이 소유)
+
+    private:
         GameStateSnapshot                 _stateSnapshot;       ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
         SubsystemScope                    _gameScope;           ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
         unique_ptr<ItemCatalog>           _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(게임 범위 서비스)

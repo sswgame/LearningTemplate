@@ -233,6 +233,7 @@ namespace sw
         int32 findLivingEnemy( int32 preferred ) const;
         void  finishIfDecided();
 
+    private:
         vector<JRPGEnemyState>       _listEnemy;
         vector<JRPGCommand>          _listCommand;   ///< 멤버 인덱스마다의 명령
         vector<uint8>                _listDefending; ///< 이번 라운드에 방어 중인지(멤버 인덱스마다)

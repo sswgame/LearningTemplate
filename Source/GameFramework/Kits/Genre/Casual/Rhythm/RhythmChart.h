@@ -187,6 +187,7 @@ namespace sw
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
         void               makeTimingPoints( const vector<RhythmBpmChange>& listBpmChange, const vector<RhythmStop>& listStop );
 
+    private:
         vector<RhythmNote>          _listNote;
         vector<RhythmTimingPoint>   _listTimingPoint; ///< 박 순서이며 곧 시각 순서이다
         vector<RhythmMeasureChange> _listMeasureChange;

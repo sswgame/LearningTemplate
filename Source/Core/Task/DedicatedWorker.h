@@ -128,6 +128,7 @@ namespace sw
             }
         }
 
+    private:
         deque<TJob>                 _listQueuedJob;
         ProcessDelegate             _process;
         sw::thread                  _thread;

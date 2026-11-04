@@ -71,6 +71,7 @@ namespace sw
         int32 findChild( int32 nodeIndex, uint32 codepoint ) const;
         void  computeFailLinks();
 
+    private:
         vector<Node>       _listNode;
         ChatTextNormalizer _normalizer;
         int32              _wordCount;

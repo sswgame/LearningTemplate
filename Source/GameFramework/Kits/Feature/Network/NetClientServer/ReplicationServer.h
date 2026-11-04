@@ -192,6 +192,7 @@ namespace sw
         [[nodiscard]] bool handleInput( ClientState& client, BitReader& reader );
         void               resetClient( int32 connectionID );
 
+    private:
         vector<ClientState>                 _listClient;
         NetSnapshot                         _world;
         ReplicationServerConfig             _settings;

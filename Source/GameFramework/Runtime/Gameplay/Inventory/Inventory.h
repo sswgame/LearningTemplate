@@ -105,6 +105,7 @@ namespace sw
         int32   computeWeightRoom( const hashed_string& itemID, int32 count ) const;
         float32 getItemWeight( const hashed_string& itemID ) const;
 
+    private:
         vector<InventorySlot> _listSlot;
         const ItemCatalog*    _pCatalog;
         float32               _maxWeight;

@@ -241,6 +241,8 @@ namespace sw
     class SW_API MemoryProfiler final : public IAllocationTracker
     {
     public:
+        /** @brief `printLeakWindowReport` 가 남기는 줄 수의 잠정 상한입니다. */
+        static constexpr uint32 kDefaultMaxPrintedLeakEntry = 64;
         /** @brief 태그 표시 이름을 반환합니다. */
         static const utf8* getMemoryTagName( MemoryTag tag );
         /** @brief 표시 이름(대소문자 무시)으로 태그를 찾습니다. 데이터(예산 표)가 태그를 이름으로 적습니다. 모르는 이름이면 false 입니다. */
@@ -273,8 +275,6 @@ namespace sw
         static void captureMemoryLeakBaseline();
         /** @brief 종료 후 플랫폼 누수를 보고합니다. 힙이 늘었으면 0 이 아닌 값을 반환합니다. */
         static int32 reportMemoryLeaks( const utf8* pPhaseTag = "shutdown" );
-
-    public:
         /** @brief 추적 플래그와 태그 통계를 0 으로 둡니다. */
         MemoryProfiler();
         /** @brief 추적 맵을 비웁니다. */
@@ -383,8 +383,6 @@ namespace sw
          * @return 보고서의 줄 수입니다(상한으로 줄인 줄도 센다). 보고서가 `_bValid` 가 아니면 오류 한 줄을 남기고 0 입니다.
          */
         static uint32 printLeakWindowReport( const LeakWindowReport& report, const utf8* pPhaseTag, uint32 maxPrintedEntry = kDefaultMaxPrintedLeakEntry );
-        /** @brief `printLeakWindowReport` 가 남기는 줄 수의 잠정 상한입니다. */
-        static constexpr uint32 kDefaultMaxPrintedLeakEntry = 64;
         /**
          * @brief 반복 로드의 회차별 점이 평평한지 가릅니다 — 점마다 닫힌 창의 합(`_totalBytes` · `_totalBlockCount`)이고, 처음 `_warmupRounds` 개는 버립니다.
          * @details 남은 점에 최소제곱 직선을 맞춰 기울기가 기준 이하이면 평평합니다. 순수 계산이라 창이나 프로파일러 상태와 무관합니다.
@@ -412,6 +410,7 @@ namespace sw
         /** @brief `TagTotals` 창을 닫을 때 태그 합계를 줄로 만듭니다(합계는 비운다). */
         void collectLeakWindowTagTotals( LeakWindowReport& outReport );
 
+    private:
         atomic<bool> _bInitialized;
         atomic<bool> _bTrackingEnabled;
         atomic<bool> _bDetailedTrackingEnabled;

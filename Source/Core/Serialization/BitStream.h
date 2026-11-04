@@ -193,6 +193,7 @@ namespace sw
         bool               hasBytes( int32 byteCount ) const;
         [[nodiscard]] bool readBlobSize( int32 maxSize, int32& outSize );
 
+    private:
         const uint8* _pData;
         int32        _bitCapacity;
         int32        _bitPosition;

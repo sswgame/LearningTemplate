@@ -69,6 +69,7 @@ namespace sw
         /** @brief 스레드 본문입니다. @p stopToken 이 정지를 받을 때까지 엔드포인트를 갱신합니다. */
         void run( StopToken stopToken );
 
+    private:
         sw::thread              _thread;
         NetEndpoint*            _pHost;
         NetEndpointThreadConfig _settings;

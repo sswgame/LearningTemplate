@@ -78,12 +78,6 @@ namespace sw::editor
             }
         };
 
-        template <typename TState>
-        static unique_ptr<HolderBase> createHolder()
-        {
-            return make_unique<Holder<TState>>();
-        }
-
         using CreateFunc = unique_ptr<HolderBase> ( * )();
 
         struct Entry
@@ -93,9 +87,16 @@ namespace sw::editor
             unique_ptr<HolderBase> _pHolder;
         };
 
+        template <typename TState>
+        static unique_ptr<HolderBase> createHolder()
+        {
+            return make_unique<Holder<TState>>();
+        }
+
         /** @brief @p typeHash 의 값 주소를 반환합니다. 없으면 @p pfnCreate 로 만들어 더합니다. 같은 열쇠에 크기가 다르면 두 타입이 겹친 것이라 멈춘다. */
         void* findOrCreate( uint64 typeHash, size_t size, CreateFunc pfnCreate );
 
+    private:
         mutable mutex            _mutex;
         vector<Entry> _listEntry SW_GUARDED_BY( _mutex );
     };

@@ -124,6 +124,7 @@ namespace sw
         void resolveSkillCheck( bool bSuccess, const hashed_string& grade );
         void pushEvent( InteractionEvent::Kind kind, uint32 actorID, float32 value = 0.0f );
 
+    private:
         InteractionConfig             _config;
         vector<uint32>                _listParticipant; ///< 붙은 순서
         EventBuffer<InteractionEvent> _eventBuffer;

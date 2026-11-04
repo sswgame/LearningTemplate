@@ -177,6 +177,7 @@ namespace sw
         /** @brief 카메라 핸들을 기록합니다. */
         void storeCameraHandle( CameraComponent* pCamera, TComponentHandle<CameraComponent>& outHandle );
 
+    private:
         string                        _name;
         string                        _sourcePath;
         string                        _defaultMaterialPath;

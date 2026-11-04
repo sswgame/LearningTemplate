@@ -303,6 +303,7 @@ namespace sw
         /** @brief 메시의 레스트 정점을 칸 번호를 실어 `_listScratchRest` 에 덧붙입니다. */
         void appendRestVertices( const Mesh& mesh, uint32 slot );
 
+    private:
         RHIStructuredBuffer _rest;
         RHIStructuredBuffer _morph;
         RHIStructuredBuffer _skinRest;

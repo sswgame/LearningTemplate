@@ -161,8 +161,6 @@ namespace sw
          * @return 포맷의 크기를 모르면 `kRHIMemoryUnknownBytes` 입니다.
          */
         static uint64 computeTextureLogicalBytes( const RHITextureDesc& desc );
-
-    public:
         /** @brief 빈 추적기를 만듭니다. 기준은 Allocation 이고 드라이버 값은 "모름" 입니다. */
         RHIMemoryTracker();
         /** @brief 복사를 금지합니다. */
@@ -221,6 +219,7 @@ namespace sw
         /** @brief 추적기에서 항목 하나를 뺍니다. `_mutex` 를 잡고 부릅니다. */
         void subtractLocked( const LiveEntry& entry ) SW_REQUIRES_LOCK( _mutex );
 
+    private:
         mutable mutex                    _mutex;
         unordered_map<uint64, LiveEntry> _arrMapIDToEntry[kRHIMemoryKeySpaceCount] SW_GUARDED_BY( _mutex );
         RHIMemoryKindStats               _arrStat[kRHIMemoryKindCount] SW_GUARDED_BY( _mutex );

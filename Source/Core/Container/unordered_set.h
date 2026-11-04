@@ -44,47 +44,6 @@ namespace sw
             uint32 _tag;
         };
 
-        vector<uint32>                    _listBucket;
-        vector<Node>                      _listDenseData;
-        CompressedPair<hasher, key_equal> _traits;
-
-        const hasher&    get_hasher() const noexcept { return _traits.first(); }
-        const key_equal& get_equal() const noexcept { return _traits.second(); }
-
-        /** @brief 빈 버킷 슬롯 표식(모든 비트 1)입니다. */
-        static constexpr uint32 kEmptySlot = constant::invalid_index::kUint32;
-
-        /** @brief 해시를 32비트 태그로 접습니다. 위쪽 절반을 아래쪽 절반에 섞습니다(`unordered_map::makeTag` 와 같음). */
-        static uint32 makeTag( size_t hash ) noexcept
-        {
-            const uint64 wide = static_cast<uint64>( hash );
-            return static_cast<uint32>( wide ^ ( wide >> 32 ) );
-        }
-
-        /** @brief 버킷 수의 최솟값입니다. 버킷 수는 항상 2의 거듭제곱입니다(`bucketIndexOf` 가 마스크로 자르기 때문입니다). */
-        static constexpr size_t kMinBucketCount = 16;
-
-        /**
-         * @brief 해시를 버킷 번호로 바꿉니다. 곱셈 한 번 · 접기 한 번 · 마스크 한 번입니다. 버킷 수는 항상 2의 거듭제곱입니다(`rehash_internal`).
-         * @details `hash % 버킷 수` 를 쓰지 않습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
-         *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 위쪽 절반을 아래쪽 절반에 접어 넣으므로, 아래 비트가 고르지 않은
-         *          해시도 고르게 퍼집니다. libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 대해 항등 함수라서, 2의 거듭제곱 크기에
-         *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰립니다.
-         *          순회는 밀집 배열을 따라가므로 버킷 배치가 바뀌어도 순서는 그대로입니다.
-         */
-        static size_t bucketIndexOf( uint32 tag, size_t bucketCount ) noexcept
-        {
-            const uint64 product = static_cast<uint64>( tag ) * HashUtil::kGoldenRatio64;
-            return static_cast<size_t>( product ^ ( product >> 32 ) ) & ( bucketCount - 1 );
-        }
-
-        /** @brief 원소 수가 버킷 수에 닿으면(부하율 1) 버킷을 두 배로 늘립니다. 버킷이 없으면 최소 개수로 만듭니다. */
-        void check_expand()
-        {
-            if ( _listBucket.empty() || _listDenseData.size() >= _listBucket.size() )
-                rehash_internal( _listBucket.empty() ? kMinBucketCount : _listBucket.size() * 2 );
-        }
-
     public:
         /** @brief 밀집 배열을 순회하는 이터레이터입니다. */
         class iterator
@@ -95,6 +54,9 @@ namespace sw
             using difference_type   = ptrdiff_t;
             using pointer           = const value_type*;
             using reference         = const value_type&;
+
+            const unordered_set* _pSet;
+            size_t               _index;
 
             iterator( const unordered_set* pSet, size_t index )
                 : _pSet{ pSet }
@@ -110,9 +72,6 @@ namespace sw
             bool      operator!=( const iterator& other ) const { return _index != other._index; }
             reference operator*() const { return std::as_const( _pSet->_listDenseData ).data()[_index]._key; }
             pointer   operator->() const { return &std::as_const( _pSet->_listDenseData ).data()[_index]._key; }
-
-            const unordered_set* _pSet;
-            size_t               _index;
         };
 
         using const_iterator = iterator; // 집합의 이터레이터는 언제나 const 다
@@ -435,5 +394,48 @@ namespace sw
 
         /** @brief rehash( count ) 와 같습니다(버킷을 미리 잡습니다). */
         void reserve( size_type count ) { rehash( count ); }
+
+    private:
+        /** @brief 빈 버킷 슬롯 표식(모든 비트 1)입니다. */
+        static constexpr uint32 kEmptySlot = constant::invalid_index::kUint32;
+
+        /** @brief 버킷 수의 최솟값입니다. 버킷 수는 항상 2의 거듭제곱입니다(`bucketIndexOf` 가 마스크로 자르기 때문입니다). */
+        static constexpr size_t kMinBucketCount = 16;
+
+        const hasher&    get_hasher() const noexcept { return _traits.first(); }
+        const key_equal& get_equal() const noexcept { return _traits.second(); }
+
+        /** @brief 해시를 32비트 태그로 접습니다. 위쪽 절반을 아래쪽 절반에 섞습니다(`unordered_map::makeTag` 와 같음). */
+        static uint32 makeTag( size_t hash ) noexcept
+        {
+            const uint64 wide = static_cast<uint64>( hash );
+            return static_cast<uint32>( wide ^ ( wide >> 32 ) );
+        }
+
+        /**
+         * @brief 해시를 버킷 번호로 바꿉니다. 곱셈 한 번 · 접기 한 번 · 마스크 한 번입니다. 버킷 수는 항상 2의 거듭제곱입니다(`rehash_internal`).
+         * @details `hash % 버킷 수` 를 쓰지 않습니다. 64비트 나눗셈은 이 CPU 에서 수십 사이클이라 캐시에 든 조회 하나와 맞먹습니다
+         *          (`ContainerBenchTest`). 피보나치 상수를 곱하고 위쪽 절반을 아래쪽 절반에 접어 넣으므로, 아래 비트가 고르지 않은
+         *          해시도 고르게 퍼집니다. libstdc++ · libc++ 의 std::hash 는 정수 · 포인터에 대해 항등 함수라서, 2의 거듭제곱 크기에
+         *          `%` 만 쓰면 아래 비트만 남아 8바이트 정렬 포인터가 버킷 여덟 개 중 하나에 몰립니다.
+         *          순회는 밀집 배열을 따라가므로 버킷 배치가 바뀌어도 순서는 그대로입니다.
+         */
+        static size_t bucketIndexOf( uint32 tag, size_t bucketCount ) noexcept
+        {
+            const uint64 product = static_cast<uint64>( tag ) * HashUtil::kGoldenRatio64;
+            return static_cast<size_t>( product ^ ( product >> 32 ) ) & ( bucketCount - 1 );
+        }
+
+        /** @brief 원소 수가 버킷 수에 닿으면(부하율 1) 버킷을 두 배로 늘립니다. 버킷이 없으면 최소 개수로 만듭니다. */
+        void check_expand()
+        {
+            if ( _listBucket.empty() || _listDenseData.size() >= _listBucket.size() )
+                rehash_internal( _listBucket.empty() ? kMinBucketCount : _listBucket.size() * 2 );
+        }
+
+    private:
+        vector<uint32>                    _listBucket;
+        vector<Node>                      _listDenseData;
+        CompressedPair<hasher, key_equal> _traits;
     };
 } // namespace sw

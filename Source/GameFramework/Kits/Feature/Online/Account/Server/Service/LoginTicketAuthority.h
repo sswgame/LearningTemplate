@@ -56,6 +56,7 @@ namespace sw
         [[nodiscard]] bool computeTag( const uint8* pBody, uint8 ( &outTag )[NetGameTicket::kTagSize] ) const;
         [[nodiscard]] bool computeSecret( const uint8* pBody, uint8 ( &outSecret )[NetGameTicket::kSecretSize] ) const;
 
+    private:
         ILoginCrypto* _pCrypto;
         uint8         _arrMasterKey[kMasterKeySize];
     };

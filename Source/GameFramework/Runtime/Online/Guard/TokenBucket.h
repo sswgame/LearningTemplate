@@ -81,6 +81,7 @@ namespace sw
             _lastRefillMs += addedCount * _refillIntervalMs; // 남은 조각 시간은 다음 채우기로 넘긴다
         }
 
+    private:
         int64 _lastRefillMs{ 0 };
         int64 _refillIntervalMs{ 1000 };
         int32 _capacity{ 1 };

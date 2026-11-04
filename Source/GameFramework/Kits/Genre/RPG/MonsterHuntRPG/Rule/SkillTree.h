@@ -145,6 +145,7 @@ namespace sw
     private:
         int32 findIndex( const hashed_string& skillID ) const;
 
+    private:
         vector<int32>       _listRank; ///< 트리의 스킬마다
         const SkillTreeDef* _pTree;
         int32               _points;

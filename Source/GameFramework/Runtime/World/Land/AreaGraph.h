@@ -180,6 +180,7 @@ namespace sw
         void  markVisited( int32 areaIndex );
         void  fillMarkedAreas( const vector<uint8>& listMark, vector<hashed_string>& outListArea ) const;
 
+    private:
         GameCatalog<AreaDef>  _catalog;
         vector<AreaLink>      _listLink;
         vector<vector<int32>> _listAdjacency;  ///< 방마다 닿은 연결의 인덱스(읽은 순서)

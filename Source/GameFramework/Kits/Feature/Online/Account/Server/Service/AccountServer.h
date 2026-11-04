@@ -127,6 +127,7 @@ namespace sw
         /** @brief 다른 서버에 접속한 세션을 끊은 기록을 버스로 알립니다. */
         void publishRemoteRevocations( OnlineServiceHost& host );
 
+    private:
         unordered_map<uint64, PendingCall>     _mapTagToCall;
         unordered_map<AccountID, BoundSession> _mapAccountToSession;
         unordered_map<AccountID, string>       _mapAccountToReasonCode;

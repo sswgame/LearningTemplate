@@ -156,6 +156,7 @@ namespace sw
         const LiveEventDefinition* findEvent( string_view eventID ) const;
         void                       submitWrite( unique_ptr<LiveOpsWriteWork> work );
 
+    private:
         vector<LiveEventDefinition>    _listEvent;
         vector<OpenWindow>             _listOpenWindow; ///< 지난번 판정에서 열려 있던 창
         vector<LiveEventStart>         _listStarted;

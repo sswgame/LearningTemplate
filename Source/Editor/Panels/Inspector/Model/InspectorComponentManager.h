@@ -61,6 +61,8 @@ namespace sw::editor
     class InspectorComponentManager : public EditorSubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "InspectorComponentManager";
         InspectorComponentManager();
         ~InspectorComponentManager() override;
 
@@ -70,9 +72,7 @@ namespace sw::editor
             registerDefaults();
             return SubsystemInitResult::Succeeded;
         }
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "InspectorComponentManager";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
         InspectorComponentManager( const InspectorComponentManager& )            = delete;
         InspectorComponentManager& operator=( const InspectorComponentManager& ) = delete;
 
@@ -92,16 +92,16 @@ namespace sw::editor
         void syncWithRegistry();
 
     private:
+        /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시입니다. */
+        static constexpr uint32 kNotSynced = constant::invalid_index::kUint32;
         /** @brief 타입별 확장 목록을 버리고 그 기준 세대를 @p typeGeneration 으로 둡니다. `_listEntry` 를 바꾸는 곳은 모두 바꾸기 전에 부른다. */
         void resetTypeCache( uint32 typeGeneration );
 
+    private:
         vector<InspectorComponentEntry>                              _listEntry;           ///< 확장은 열 개 안팎이므로 선형 탐색으로 충분하다
         unordered_map<const TypeInfo*, vector<IInspectorComponent*>> _mapTypeInspector;    ///< 타입 → 기반에서 파생 순서의 확장(`getInspectorsForType`)
         uint32                                                       _syncedGeneration;    ///< 마지막으로 맞춘 등록 세대
         uint32                                                       _cacheTypeGeneration; ///< `_mapTypeInspector` 를 모은 타입 레지스트리 세대
-
-        /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시입니다. */
-        static constexpr uint32 kNotSynced = constant::invalid_index::kUint32;
     };
 } // namespace sw::editor
 

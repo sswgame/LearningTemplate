@@ -344,6 +344,7 @@ namespace sw
         [[nodiscard]] bool loadMonster( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadContract( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<MonsterHuntMonsterDef>    _monsterCatalog;
         GameCatalog<MonsterHuntAlchemyDef>    _alchemyCatalog;
         GameCatalog<MonsterHuntSignDef>       _signCatalog;

@@ -49,6 +49,7 @@ namespace sw::editor
         void              drawTargetPicker( const AbilityComponent* pCurrent );
         void              drawSnapshot();
 
+    private:
         AbilityDebugSnapshot     _snapshot;
         vector<GameObjectHandle> _listCandidate;
         GameObjectHandle         _pickedHandle;

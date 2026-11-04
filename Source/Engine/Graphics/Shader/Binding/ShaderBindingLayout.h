@@ -121,6 +121,7 @@ namespace sw
         /** @brief 드로우마다 반복하던 계산을 여기서 한 번만 합니다(make 끝에서 부릅니다). */
         void computeBindPlan();
 
+    private:
         vector<ShaderBindingSlot>            _listSlot;
         unordered_map<hashed_string, uint32> _mapNameToSlot;
 

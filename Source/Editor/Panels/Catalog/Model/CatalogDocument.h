@@ -76,6 +76,7 @@ namespace sw::editor
         void               pushUndo();
         [[nodiscard]] bool applyEdit( const string& editedText );
 
+    private:
         string         _text{};
         string         _savedText{};
         string         _error{};

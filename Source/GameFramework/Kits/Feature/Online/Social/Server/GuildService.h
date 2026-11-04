@@ -179,6 +179,7 @@ namespace sw
     private:
         void raiseEvent( AccountID accountID, uint64 guildID, GuildEvent::Kind kind, UnixMilliseconds nowMs );
 
+    private:
         EventBuffer<GuildCompletion>     _completionBuffer;
         EventBuffer<SocialNotification>  _notificationBuffer;
         DelegateSlot<GuildEventDelegate> _onEvent;

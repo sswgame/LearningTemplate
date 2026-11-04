@@ -279,6 +279,7 @@ namespace sw
         bool               isRoad( int32 x, int32 y ) const;
         int32              getRoadComponent( const int2& tile ) const;
 
+    private:
         vector<CityTile>          _listTile;
         vector<CityBuilding>      _listBuilding;
         vector<CityWalker>        _listWalker;

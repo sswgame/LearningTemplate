@@ -52,6 +52,7 @@ namespace sw
         /** @brief clang 수식어(const/class 등)와 참조를 제거합니다. */
         string_view stripDecorations( string_view spelling ) const;
 
+    private:
         unordered_map<string, string> _mapAliasToCanonical;
         vector<string>                _listStripPrefix;
         vector<string>                _listPacked;

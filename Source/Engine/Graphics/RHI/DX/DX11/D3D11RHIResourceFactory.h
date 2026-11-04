@@ -55,7 +55,9 @@ namespace sw
         RHIBufferHandle createFilledBuffer( const void* pData, uint32 sizeBytes, uint32 bindFlags );
         /** @brief UAV 를 레지스트리에 넣고 인덱스를 반환합니다. 반납된 슬롯을 먼저 씁니다. 버퍼 UAV 와 텍스처 UAV 가 같은 경로를 씁니다. */
         RHIDescriptorIndex registerUAVView( ID3D11UnorderedAccessView* pUAV, RHIBufferHandle sourceBuffer );
-        D3D11RHIDevice*    _pDevice;
+
+    private:
+        D3D11RHIDevice* _pDevice;
     };
 } // namespace sw
 #endif

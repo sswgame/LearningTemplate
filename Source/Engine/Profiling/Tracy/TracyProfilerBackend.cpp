@@ -82,6 +82,7 @@ namespace sw
              */
             struct TracyClientAPI
             {
+                bool                                          _bLoaded{ false }; ///< 모든 칸이 찼다
                 decltype( &___tracy_connected )               _pfnConnected{ nullptr };
                 decltype( &___tracy_emit_zone_begin )         _pfnZoneBegin{ nullptr };
                 decltype( &___tracy_emit_zone_end )           _pfnZoneEnd{ nullptr };
@@ -95,7 +96,6 @@ namespace sw
                 decltype( &___tracy_emit_gpu_zone_begin )     _pfnGPUZoneBegin{ nullptr };
                 decltype( &___tracy_emit_gpu_time )           _pfnGPUTime{ nullptr };
                 decltype( &___tracy_emit_gpu_zone_end )       _pfnGPUZoneEnd{ nullptr };
-                bool                                          _bLoaded{ false }; ///< 모든 칸이 찼다
 
                 /** @brief 모든 칸이 찼는지 봅니다. */
                 bool hasEveryFunction() const

@@ -103,6 +103,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "ElementChart"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
+    private:
         vector<hashed_string>                                               _listElement;      ///< 읽은 순서
         unordered_map<hashed_string, unordered_map<hashed_string, float32>> _mapRule;          ///< 공격 → 방어 → 배율
         vector<ElementStatusChance>                                         _listStatusChance; ///< 적은 순서

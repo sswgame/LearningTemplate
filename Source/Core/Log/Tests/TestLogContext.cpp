@@ -21,6 +21,8 @@ namespace
     class LogContextCaptureOutput final : public ILogOutput
     {
     public:
+        vector<string>     _listFormatted{};
+        mutex              _mutex{};
         [[nodiscard]] bool open() override { return true; }
         void               close() override {}
         void               write( const LogRecord& record ) override
@@ -28,9 +30,6 @@ namespace
             std::scoped_lock<mutex> lock{ _mutex };
             _listFormatted.push_back( record._formatted );
         }
-
-        vector<string> _listFormatted{};
-        mutex          _mutex{};
     };
 
     struct LogContextEntryCapture

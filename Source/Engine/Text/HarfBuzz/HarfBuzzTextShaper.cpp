@@ -114,6 +114,7 @@ namespace sw
                 return &_mapFont.emplace( face, entry ).first->second;
             }
 
+        private:
             mutable unordered_map<FontFaceID, FontEntry> _mapFont;
         };
     } // namespace

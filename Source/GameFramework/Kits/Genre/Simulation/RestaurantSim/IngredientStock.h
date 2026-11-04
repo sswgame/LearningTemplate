@@ -77,6 +77,7 @@ namespace sw
         void reconcile( const hashed_string& itemID );
         void sortBatches();
 
+    private:
         vector<IngredientBatch> _listBatch; ///< 남은 날이 적은 것부터 정렬한다(상하지 않는 것은 뒤)
         Inventory*              _pInventory;
     };

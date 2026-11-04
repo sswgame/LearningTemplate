@@ -91,6 +91,7 @@ namespace sw
         /** @brief 점광 · 스폿의 경계 구가 덮는 클러스터 범위를 구합니다. 화면 밖이거나 깊이 범위 밖이면 거짓입니다. 컴퓨트 light_grid.hlsl `computeLightRange` 와 같은 식입니다. */
         bool computeLightRange( const float4x4& viewProj, const GPULight& light, ClusterRange& outRange ) const;
 
+    private:
         vector<uint32>       _listWord;
         vector<ClusterRange> _listRangeScratch;   ///< 라이트마다의 범위(프레임마다 다시 쓴다)
         vector<uint32>       _listClusterScratch; ///< 클러스터마다의 개수, 이어서 채우기 커서

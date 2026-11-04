@@ -105,6 +105,7 @@ namespace sw
         /** @brief 씨앗과 수확물에서 작물 index 로 가는 맵을 다시 만듭니다(작물이 추가될 때 호출합니다). */
         void rebuildItemIndex();
 
+    private:
         GameCatalog<CropDef>                 _catalog;         ///< 읽은 순서이며 가게 진열 순서이다
         unordered_map<hashed_string, uint32> _mapSeedIndex;    ///< 씨앗 아이템에서 index 로 가는 맵
         unordered_map<hashed_string, uint32> _mapProduceIndex; ///< 수확물 아이템에서 index 로 가는 맵

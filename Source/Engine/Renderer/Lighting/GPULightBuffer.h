@@ -106,11 +106,6 @@ namespace sw
     class SW_API GPULightBuffer
     {
     public:
-        GPULightBuffer()                                   = default;
-        ~GPULightBuffer()                                  = default;
-        GPULightBuffer( const GPULightBuffer& )            = delete;
-        GPULightBuffer& operator=( const GPULightBuffer& ) = delete;
-
         /**
          * @brief GPU 구간(`getGPULightBase` 부터 `getGPULightCount` 개)의 상한입니다 — 프레임 라이트 상한의 4분의 1입니다(측정 뒤 조정).
          * @details 라이트 버퍼는 [CPU 라이트][GPU 구간][그림자 타일] 순서입니다. GPU 구간은 컴퓨트(vfx_simulate.hlsl)가 파티클 라이트를 쓰는 자리이고, CPU 라이트 바로 뒤라서
@@ -119,6 +114,10 @@ namespace sw
          */
         static constexpr uint32 kMaxGPULight = shaderslot::kMaxFrameLight / 4;
         static_assert( 0 < kMaxGPULight && kMaxGPULight < shaderslot::kMaxFrameLight, "GPU 구간은 프레임 라이트 상한 안의 일부여야 한다" );
+        GPULightBuffer()                                   = default;
+        ~GPULightBuffer()                                  = default;
+        GPULightBuffer( const GPULightBuffer& )            = delete;
+        GPULightBuffer& operator=( const GPULightBuffer& ) = delete;
 
         /**
          * @brief GPU 구간으로 받을 수 있는 슬롯 수를 정합니다. **GPU 생산자만 받습니다.**
@@ -197,6 +196,7 @@ namespace sw
         /** @brief GPU 구간을 거절한 이유(생산자가 GPU 가 아니다)를 한 번만 남깁니다. */
         void reportGPULightRefused( uint32 requestedSlotCount );
 
+    private:
         RHIStructuredBuffer _buffer;
         RHIStructuredBuffer _cpuGridBuffer;                           ///< CPU 생산자의 그리드 단어(동적, t12)
         RHIStructuredBuffer _gpuGridBuffer;                           ///< GPU 생산자의 그리드 단어(기본 힙 UAV, t12 · 컴퓨트 u0)

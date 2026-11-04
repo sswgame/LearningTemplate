@@ -156,6 +156,7 @@ namespace sw
         constexpr uint32 capacity() const { return Capacity; }
 
     private:
+        static constexpr uint32 kMask = Capacity - 1;
         /**
          * @brief 넣을 슬롯 하나를 CAS 로 예약합니다. 가득 차 있으면 nullptr 입니다.
          * @note 예약한 슬롯은 호출한 쪽이 값을 쓴 뒤 `_sequence` 를 `outPos + 1` 로 release 저장해야 소비자에게 보입니다.
@@ -185,8 +186,6 @@ namespace sw
         }
 
     private:
-        static constexpr uint32 kMask = Capacity - 1;
-
         // 여러 스레드가 이 버퍼를 일부러 동시에 만진다(슬롯마다 원자적 sequence 로 동기화한다).
         // 그래서 레이스 탐지기가 붙은 sw::array 를 쓰지 않는다. 이유는 Core/Container/array.h 머리말에 있다.
         std::array<Cell, Capacity> _arrBuffer{};

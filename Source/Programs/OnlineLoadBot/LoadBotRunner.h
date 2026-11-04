@@ -44,6 +44,8 @@ namespace sw
     class LoadBotRunner final : public IStreamEndpointListener
     {
     public:
+        /** @brief 실행기 시각의 기원입니다. 봇의 시한과 시작 순서가 같은 단조 시각에서 잰다. */
+        static constexpr MonotonicMilliseconds kRunStart{ 0 };
         LoadBotRunner();
         ~LoadBotRunner() override;
 
@@ -70,8 +72,6 @@ namespace sw
 
         // 봇이 부른다
         LoadBotMetrics& getMutableMetrics() { return _metrics; }
-        /** @brief 실행기 시각의 기원입니다. 봇의 시한과 시작 순서가 같은 단조 시각에서 잰다. */
-        static constexpr MonotonicMilliseconds kRunStart{ 0 };
 
         MonotonicMilliseconds  getNowMs() const;
         int64                  getNowUs() const;
@@ -88,6 +88,7 @@ namespace sw
         LoadBot* findBotByConnection( StreamConnectionHandle handle ) const;
         int64    computeLaunchMs( int32 botIndex ) const;
 
+    private:
         vector<unique_ptr<LoadBot>>  _listBot;
         unordered_map<uint64, int32> _mapConnectionToBot; ///< 연결(packed) → 봇 번호
         LoadBotScenario              _scenario;

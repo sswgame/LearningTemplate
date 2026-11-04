@@ -69,6 +69,7 @@ namespace sw::editor
          */
         void scaleDockSizeToViewport( uint32 dockspaceID );
 
+    private:
         string                 _imguiINIPath;
         string                 _panelVisibilityPath;
         string                 _pendingLayoutINI; ///< 다음 프레임 시작에 적용할 레이아웃의 ImGui 설정 문자열

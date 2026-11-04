@@ -299,7 +299,6 @@ namespace sw
 
     TradeResult TradeStoreLogic::closeForAccount( AccountID accountID, TradeCloseReason reason, int64 nowMs, TradeSnapshot& outSnapshot )
     {
-        using Internal = TradeStoreLogicInternal;
         for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
         {
             ServiceRecord            linkRaw;

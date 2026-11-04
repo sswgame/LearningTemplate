@@ -69,6 +69,7 @@ namespace sw
         /** @brief 묶음의 연결 ID 를 샤드와 샤드 안의 ID 로 풉니다. 범위 밖이면 nullptr 입니다. */
         NetEndpoint* findShard( int32 connectionID, int32& outLocalConnectionID ) const;
 
+    private:
         vector<NetEndpoint*> _listShard;
         NetInbound           _shardInbound; ///< `drainInbound` 가 샤드마다 다시 쓴다(게임 스레드 전용)
         int32                _connectionStride;

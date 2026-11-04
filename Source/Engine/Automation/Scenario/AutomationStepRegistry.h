@@ -151,12 +151,12 @@ namespace sw
     /** @brief `SW_AUTOMATION_STEP` 가 두는 정적 등록자입니다. */
     struct SW_API AutomationStepRegistrar
     {
+
+        const AutomationStepRegistration* _pRegistration;
         explicit AutomationStepRegistrar( const AutomationStepRegistration* pRegistration );
         ~AutomationStepRegistrar();
         AutomationStepRegistrar( const AutomationStepRegistrar& )            = delete;
         AutomationStepRegistrar& operator=( const AutomationStepRegistrar& ) = delete;
-
-        const AutomationStepRegistration* _pRegistration;
     };
 } // namespace sw
 
@@ -165,12 +165,12 @@ namespace sw
     /** @brief `SW_AUTOMATION_START_BLOCKER` · `SW_AUTOMATION_CLOCK_HOLDER` · `SW_AUTOMATION_CAPTURE_BLOCKER` 가 두는 정적 등록자입니다. */
     struct SW_API AutomationBlockerRegistrar
     {
+
+        const AutomationBlocker* _pBlocker;
         explicit AutomationBlockerRegistrar( const AutomationBlocker* pBlocker );
         ~AutomationBlockerRegistrar();
         AutomationBlockerRegistrar( const AutomationBlockerRegistrar& )            = delete;
         AutomationBlockerRegistrar& operator=( const AutomationBlockerRegistrar& ) = delete;
-
-        const AutomationBlocker* _pBlocker;
     };
 } // namespace sw
 

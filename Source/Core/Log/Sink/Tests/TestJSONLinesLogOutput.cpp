@@ -20,6 +20,8 @@ namespace
     class JSONCaptureOutput final : public ILogOutput
     {
     public:
+        vector<string>     _listJSON{};
+        mutex              _mutex{};
         [[nodiscard]] bool open() override { return true; }
         void               close() override {}
         bool               needsStructuredFields() const override { return true; }
@@ -28,15 +30,14 @@ namespace
             std::scoped_lock<mutex> lock{ _mutex };
             _listJSON.push_back( record._json );
         }
-
-        vector<string> _listJSON{};
-        mutex          _mutex{};
     };
 
     /** @brief 구조화 칸을 읽지 않는 장치입니다 — 달려도 싱크가 JSON 을 만들지 않습니다. */
     class PlainCaptureOutput final : public ILogOutput
     {
     public:
+        vector<string>     _listJSON{};
+        mutex              _mutex{};
         [[nodiscard]] bool open() override { return true; }
         void               close() override {}
         void               write( const LogRecord& record ) override
@@ -44,9 +45,6 @@ namespace
             std::scoped_lock<mutex> lock{ _mutex };
             _listJSON.push_back( record._json );
         }
-
-        vector<string> _listJSON{};
-        mutex          _mutex{};
     };
 } // namespace
 

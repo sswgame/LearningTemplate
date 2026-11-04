@@ -142,6 +142,7 @@ namespace sw
         void     failImmediately( uint64 requestID, const utf8* pFailure ) SW_REQUIRES_LOCK( _mutex );
         Session* findByHandleLocked( StreamConnectionHandle handle ) SW_REQUIRES_LOCK( _mutex );
 
+    private:
         const IClock&                                            _clock;
         mutable mutex                                            _mutex;
         unordered_map<uint64, unique_ptr<Session>> _mapSession   SW_GUARDED_BY( _mutex ); ///< 연결 id → 연결

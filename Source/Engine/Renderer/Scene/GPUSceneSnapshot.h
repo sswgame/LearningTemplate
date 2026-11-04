@@ -628,6 +628,7 @@ namespace sw
             return lastBatch._instanceBase + lastBatch._instanceCount;
         }
 
+    private:
         /**
          * @brief 배치 목록 **한 벌**입니다. 불투명 배치 `[0, _opaqueBatchCount)` 다음에 투명 배치가 오며, 간접 슬롯과 일치합니다.
          * @details 불투명 · 투명 목록을 따로 복사해 두지 않는다. 사본은 패킷마다 함께 복사되고(배치마다 shared_ptr 셋), RT 가 덧쓰는

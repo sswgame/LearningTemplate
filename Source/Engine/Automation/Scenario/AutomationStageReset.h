@@ -44,12 +44,12 @@ namespace sw
     /** @brief `SW_AUTOMATION_STAGE_RESET` 이 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다. */
     struct SW_API AutomationStageResetRegistrar
     {
+
+        const AutomationStageResetRegistration* _pRegistration;
         explicit AutomationStageResetRegistrar( const AutomationStageResetRegistration* pRegistration );
         ~AutomationStageResetRegistrar();
         AutomationStageResetRegistrar( const AutomationStageResetRegistrar& )            = delete;
         AutomationStageResetRegistrar& operator=( const AutomationStageResetRegistrar& ) = delete;
-
-        const AutomationStageResetRegistration* _pRegistration;
     };
 } // namespace sw
 

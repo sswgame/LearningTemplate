@@ -86,6 +86,7 @@ namespace sw
         /** @brief 경로의 텍스처 SRV 입니다. 빌리지 못했거나 아직 읽는 중이거나 읽지 못했으면 kInvalidDescriptorIndex 입니다. */
         RHIDescriptorIndex findTextureSRV( const hashed_string& path ) const;
 
+    private:
         vector<GPUParticle> _listUploadScratch; ///< 모든 방출기의 입자를 이어 붙인 사본
         vector<uint32>      _listBatchBase;     ///< 방출기마다 공유 버퍼 안 시작 위치(GPU 방출기는 자리표)
         vector<PathTexture> _listTexture;       ///< 입자 텍스처(몇 개뿐이라 선형 검색)

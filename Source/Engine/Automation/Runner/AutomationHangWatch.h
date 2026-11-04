@@ -150,6 +150,7 @@ namespace sw
         /** @brief 행으로 처리합니다 — 스냅샷으로 보고를 쓰고 컨텍스트 파일을 남기고 stderr 에 적은 뒤 종료 함수를 부릅니다. */
         void handleHang( uint32 elapsedMilliseconds ) const;
 
+    private:
         AutomationHangSnapshot _snapshot;
         Settings               _settings;
         thread                 _thread;

@@ -61,6 +61,7 @@ namespace sw
     private:
         void onConfigFileChanged( const FileChangeEvent& changeEvent );
 
+    private:
         ConfigManager&                  _configManager;
         unique_ptr<FileWatchDispatcher> _pFileWatchDispatcher;
         Subscription                    _configWatch; ///< 설정 폴더 감시 구독

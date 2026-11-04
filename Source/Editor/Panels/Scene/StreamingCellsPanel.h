@@ -43,6 +43,7 @@ namespace sw::editor
         /** @brief 셀 표 — 좌표 · 엔티티 수 · 상태. 줄을 누르면 그 셀의 엔티티를 고른다. */
         void drawCells( Scene& scene );
 
+    private:
         StreamingCellsModel _model;
     };
 } // namespace sw::editor

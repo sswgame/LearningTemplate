@@ -137,6 +137,7 @@ namespace sw::editor
         /** @brief `-gv_editorPreviewScreenshot` 이 있으면 충분히 그린 뒤 이 타깃을 한 번 찍습니다(시나리오 눈 확인). */
         void requestScreenshotIfAsked();
 
+    private:
         Scene*  _pScene;
         float2  _imagePosition;
         float2  _imageSize;

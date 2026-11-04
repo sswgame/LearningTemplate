@@ -308,6 +308,7 @@ namespace sw
                     return result;
                 }
 
+            private:
                 unordered_map<string, PreparedStatement> _mapStatementName;
                 string                                   _lastError;
                 PGconn*                                  _pConnection;

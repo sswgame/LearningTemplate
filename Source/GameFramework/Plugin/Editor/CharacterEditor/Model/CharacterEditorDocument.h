@@ -216,6 +216,7 @@ namespace sw::editor
         void onPresetsWritten( const LocalStoreCompletion& completion );
         void onThumbnailWritten( const LocalStoreCompletion& completion );
 
+    private:
         SocketEditModel           _sockets;
         BonePoseEditModel         _pose;
         AppearanceEditModel       _appearance;

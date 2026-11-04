@@ -302,6 +302,7 @@ namespace sw
         const RecipeDef* findRecipe( const DishDef& dish ) const;
         float32          computeDishDemand( const DishDef& dish, int64 price ) const;
 
+    private:
         vector<StaffMember>          _listStaff;
         vector<RestaurantCustomer>   _listCustomer;
         deque<KitchenOrder>          _listOrder;

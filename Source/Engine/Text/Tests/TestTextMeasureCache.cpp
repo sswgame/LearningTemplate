@@ -20,6 +20,9 @@ namespace
         /** @brief 번호로 만든 키와 그 글의 저장소입니다. 해시는 번호 그대로이고 글은 번호를 문자로 쓴 것이라, 번호가 다르면 글도 다르다. 키는 글 보기를 들므로 이 값이 사는 동안만 쓴다. */
         struct OwnedKey
         {
+
+            uint64     _number;
+            sw::string _text;
             explicit OwnedKey( uint64 number )
                 : _number{ number }
                 , _text{ sw::to_string( number ) }
@@ -27,9 +30,6 @@ namespace
             }
 
             sw::TextMeasureKey get() const { return sw::TextMeasureKey::fromHashForTest( _number, _text, 0 ); }
-
-            uint64     _number;
-            sw::string _text;
         };
 
         static OwnedKey makeKey( uint64 number ) { return OwnedKey{ number }; }

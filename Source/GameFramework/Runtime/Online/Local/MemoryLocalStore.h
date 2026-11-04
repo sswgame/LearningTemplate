@@ -74,6 +74,7 @@ namespace sw
     private:
         uint64 executeRequest( LocalStoreRequest& request );
 
+    private:
         vector<LocalStoreCompletion> _listCompletion;
         LocalSealContext             _sealContext;
         MemoryLocalDatabase*         _pDatabase;

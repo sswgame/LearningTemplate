@@ -114,6 +114,10 @@ namespace sw
             rebuildSnapshot();
         }
 
+    private:
+        /// @brief 이 스레드가 지금 이 시그니처의 방송 안에 있는 깊이입니다. 인스턴스마다 둘 수 없어 시그니처마다 하나다(다른 인스턴스의 해제도 기다리지 않는 쪽으로 기운다).
+        static inline thread_local uint32 _s_broadcastDepth{ 0 };
+
     protected:
         /** @brief 구독 @p id 가 풀렸습니다. 항목을 떼고, 떼기 **전에** 시작한 방송이 끝나기를 기다립니다. */
         void releaseSubscription( uint64 id ) override
@@ -168,9 +172,7 @@ namespace sw
             }
         }
 
-        /// @brief 이 스레드가 지금 이 시그니처의 방송 안에 있는 깊이입니다. 인스턴스마다 둘 수 없어 시그니처마다 하나다(다른 인스턴스의 해제도 기다리지 않는 쪽으로 기운다).
-        static inline thread_local uint32 _s_broadcastDepth{ 0 };
-
+    private:
         mutable mutex                               _mutex;                  ///< 목록 · 사본 · 세대를 지키는 잎 잠금(남의 코드를 부르는 동안 쥐지 않는다)
         multicast_type _inner                       SW_GUARDED_BY( _mutex ); ///< 등록 원본(사본을 짓는 데만 쓴다 — 직접 방송하지 않는다)
         vector<Entry> _listEntry                    SW_GUARDED_BY( _mutex ); ///< 바깥 구독 번호 → 안쪽 구독

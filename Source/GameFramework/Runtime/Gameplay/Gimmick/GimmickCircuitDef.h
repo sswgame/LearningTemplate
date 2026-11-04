@@ -128,6 +128,7 @@ namespace sw
     private:
         [[nodiscard]] bool loadRoot( const XMLNode& root );
 
+    private:
         vector<GimmickNodeDef> _listNode{};
         vector<GimmickWireDef> _listWire{};
         string                 _sourceName{};

@@ -86,6 +86,7 @@ namespace sw
             _listPending.clear();
         }
 
+    private:
         vector<T> _listPending;
         DrainGate _gate;
     };

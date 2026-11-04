@@ -108,6 +108,7 @@ namespace sw
         void onDirectoryAssignment( uint16 errorCode, const ServerAssignment& assignment );
         void onFriendAccepted( const SocialClient::Reply& reply );
 
+    private:
         OnlineServiceClient        _client;
         AccountClient              _accountClient;
         ServerDirectoryClient      _directoryClient;

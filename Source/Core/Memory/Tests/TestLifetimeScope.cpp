@@ -22,6 +22,8 @@ namespace
         static inline uint32         s_arrDestroyedID[kMaxRecord]{};
         static inline uint32         s_nextID{ 0 };
 
+        uint32 _id;
+
         static void resetRecord()
         {
             s_createdCount.store( 0 );
@@ -41,8 +43,6 @@ namespace
                 s_arrDestroyedID[s_destroyedCount] = _id;
             ++s_destroyedCount;
         }
-
-        uint32 _id;
     };
 } // namespace
 

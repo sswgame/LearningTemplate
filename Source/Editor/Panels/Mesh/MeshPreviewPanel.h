@@ -54,6 +54,7 @@ namespace sw::editor
         void syncPreviewSubject();
         void drawLODTable( const MeshComponent& subject );
 
+    private:
         MeshPreviewModel _model;
         float3           _frameCenter; ///< 맞춤(F)이 담을 구의 중심 — 대상을 바꿀 때 그 경계 구로 정한다
         float32          _frameRadius;

@@ -39,6 +39,8 @@ namespace sw
         template <typename TFunction>
         struct AfterScope
         {
+
+            TFunction _function;
             explicit AfterScope( TFunction function )
                 : _function{ std::move( function ) }
             {
@@ -46,8 +48,6 @@ namespace sw
             ~AfterScope() { _function(); }
             AfterScope( const AfterScope& )            = delete;
             AfterScope& operator=( const AfterScope& ) = delete;
-
-            TFunction _function;
         };
     } // namespace
 } // namespace sw

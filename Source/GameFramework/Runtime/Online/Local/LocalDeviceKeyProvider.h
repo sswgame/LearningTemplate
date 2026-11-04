@@ -36,6 +36,7 @@ namespace sw
         /** @brief 키를 읽거나 만들어 둡니다. 실패하면 @p outError 에 이유를 적고 false 입니다 — 로그는 부르는 쪽이 잠금을 놓은 뒤 남긴다. */
         [[nodiscard]] bool loadOrCreateKeyLocked( string& outError ) SW_REQUIRES_LOCK( _mutex );
 
+    private:
         string                _keyFilePath;
         mutable mutex         _mutex;
         INetSecurityProvider* _pSecurityProvider;

@@ -114,6 +114,7 @@ namespace sw
         {
         }
 
+    private:
         void* _pData;
         bool  _bAligned;
     };

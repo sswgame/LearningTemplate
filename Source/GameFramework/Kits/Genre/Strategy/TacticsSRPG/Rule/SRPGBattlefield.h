@@ -268,6 +268,7 @@ namespace sw
         void refillUnit( SRPGUnit& unit );
         bool isPhaseFinished() const;
 
+    private:
         vector<const SRPGTerrainDef*> _listTerrain; ///< 셀마다의 지형이다
         vector<SRPGUnit>              _listUnit;
         EventBuffer<SRPGEvent>        _eventBuffer;

@@ -171,6 +171,8 @@ namespace sw
 #if defined( SW_ENABLE_DEADLOCK_DETECTION )
     struct MutexReentryGuard
     {
+
+        bool _bEntered;
         MutexReentryGuard()
             : _bEntered{ _s_bInHook == false }
         {
@@ -188,8 +190,6 @@ namespace sw
 
         /** @brief 이 스레드가 지금 관찰자 훅 안인지입니다. */
         static bool isInHook() { return _s_bInHook; }
-
-        bool _bEntered;
 
     private:
         /**

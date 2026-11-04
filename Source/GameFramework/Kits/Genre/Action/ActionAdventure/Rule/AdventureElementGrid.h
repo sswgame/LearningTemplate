@@ -146,6 +146,7 @@ namespace sw
         /** @brief 설정 값으로 규칙 테이블을 만듭니다. 내용은 `default.elements.xml` 과 같고, 재질 번호는 `AdventureMaterial` 입니다. */
         void populateRuleTable();
 
+    private:
         AdventureElementSettings      _settings;
         ElementRuleTable              _table;
         ElementGrid                   _grid;

@@ -53,6 +53,24 @@ namespace
     class FakeOnlineService final : public IOnlineServerService
     {
     public:
+        vector<NetRequestToken>    _listLateToken{};
+        vector<uint8>              _listLateAnswer{};
+        vector<AccountID>          _listJoinedAccount{};
+        vector<AccountID>          _listLeftAccount{};
+        vector<ServerBusMessage>   _listBusMessage{};
+        vector<EphemeralReply>     _listCacheReply{};
+        string                     _cacheKeyToRead{};
+        Subscription               _cacheReplyOwner{}; ///< 캐시 답의 주인 몫(틱에서 읽을 때 연다)
+        LogContext                 _lastLogContext{};  ///< 마지막 요청을 처리할 때의 로그 문맥
+        LogTraceID                 _lastTraceID{};     ///< 마지막 요청의 추적 id
+        const OnlineProtocolEntry* _pProtocol;
+        uint16                     _range;
+        OnlineServiceExposure      _exposure{ OnlineServiceExposure::Player }; ///< 테스트가 바꾼다(GM 리슨 테스트)
+        int32                      _handledCount{ 0 };
+        int32                      _hostShutdownCount{ 0 };
+        int32                      _cacheReplyCountAtHostShutdown{ -1 }; ///< 호스트가 내려간다고 알릴 때 이미 받은 캐시 답 수(-1 = 아직 안 알림)
+        bool                       _bReadCacheOnTick{ false };
+        bool                       _bHoldLateAnswers{ false }; ///< 켜면 늦은 요청에 답하지 않고 토큰만 든다
         explicit FakeOnlineService( const OnlineProtocolEntry& protocol )
             : _pProtocol{ &protocol }
             , _range{ protocol.getMethodRange() }
@@ -149,31 +167,15 @@ namespace
         }
 
         void onCacheReply( const EphemeralReply& reply ) { _listCacheReply.push_back( reply ); }
-
-        vector<NetRequestToken>    _listLateToken{};
-        vector<uint8>              _listLateAnswer{};
-        vector<AccountID>          _listJoinedAccount{};
-        vector<AccountID>          _listLeftAccount{};
-        vector<ServerBusMessage>   _listBusMessage{};
-        vector<EphemeralReply>     _listCacheReply{};
-        string                     _cacheKeyToRead{};
-        Subscription               _cacheReplyOwner{}; ///< 캐시 답의 주인 몫(틱에서 읽을 때 연다)
-        LogContext                 _lastLogContext{};  ///< 마지막 요청을 처리할 때의 로그 문맥
-        LogTraceID                 _lastTraceID{};     ///< 마지막 요청의 추적 id
-        const OnlineProtocolEntry* _pProtocol;
-        uint16                     _range;
-        OnlineServiceExposure      _exposure{ OnlineServiceExposure::Player }; ///< 테스트가 바꾼다(GM 리슨 테스트)
-        int32                      _handledCount{ 0 };
-        int32                      _hostShutdownCount{ 0 };
-        int32                      _cacheReplyCountAtHostShutdown{ -1 }; ///< 호스트가 내려간다고 알릴 때 이미 받은 캐시 답 수(-1 = 아직 안 알림)
-        bool                       _bReadCacheOnTick{ false };
-        bool                       _bHoldLateAnswers{ false }; ///< 켜면 늦은 요청에 답하지 않고 토큰만 든다
     };
 
     /** @brief 클라이언트 쪽 가짜 키트 — 알림을 적는다. */
     class FakeClientService final : public IOnlineClientService
     {
     public:
+        vector<uint16>             _listPushKind{};
+        const OnlineProtocolEntry* _pProtocol;
+        int32                      _readyCount{ 0 };
         explicit FakeClientService( const OnlineProtocolEntry& protocol )
             : _pProtocol{ &protocol }
         {
@@ -190,10 +192,6 @@ namespace
             (void)client;
             ++_readyCount;
         }
-
-        vector<uint16>             _listPushKind{};
-        const OnlineProtocolEntry* _pProtocol;
-        int32                      _readyCount{ 0 };
     };
 
     /** @brief 응답 하나를 적는 곳입니다. */

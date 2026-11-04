@@ -270,6 +270,7 @@ namespace sw
         [[nodiscard]] bool resolveReferences( string_view sourceName );
         bool               validatePacingNames( const vector<hashed_string>& listPacing, const hashed_string& ownerID, string_view sourceName ) const;
 
+    private:
         AIDirectorIntensityDef     _intensity;
         vector<AIDirectorPhaseDef> _listPhase;
         vector<AIDirectorPoolDef>  _listPool;

@@ -71,6 +71,7 @@ namespace sw
         /** @brief 사이클에 걸린 스레드들의 대기 · 보유 락을 로그로 남깁니다. */
         void dumpDeadlock( const vector<std::thread::id>& listCycle );
 
+    private:
         atomic<bool>                                _bInitialized;
         mutex                                       _mutex;
         unordered_map<std::thread::id, ThreadState> _mapThreadState;

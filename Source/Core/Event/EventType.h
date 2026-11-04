@@ -65,6 +65,8 @@ private:                                                      \
     /** @brief 디스패처 큐에 올라가는 이벤트 베이스입니다. */
     struct SW_API IEvent
     {
+
+        mutable atomic<IEvent*> _next;
         /** @brief 다음 포인터만 비운 상태로 만듭니다. */
         IEvent();
         /** @brief 큐 링크는 복사하지 않습니다 — 사본은 어느 큐에도 매달리지 않은 상태로 시작합니다. */
@@ -89,7 +91,5 @@ private:                                                      \
         virtual ~IEvent();
         /** @brief 등록된 이벤트 타입 ID 입니다. */
         virtual EventTypeID getEventType() const = 0;
-
-        mutable atomic<IEvent*> _next;
     };
 } // namespace sw

@@ -330,6 +330,7 @@ namespace sw
         [[nodiscard]] bool loadSpecies( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadEncounter( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<MonsterSpeciesDef>   _speciesCatalog;
         GameCatalog<MonsterMoveDef>      _moveCatalog;
         GameCatalog<MonsterNatureDef>    _natureCatalog;

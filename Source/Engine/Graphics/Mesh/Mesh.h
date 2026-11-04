@@ -406,6 +406,7 @@ namespace sw
         /** @brief 낮은 단계를 뗍니다(정점 · 스킨이 바뀌어 옛 단계가 맞지 않을 때). */
         void clearLODs();
 
+    private:
         vector<RHIVertex> _listVertex;
         /// @brief getIndices 를 참고하세요. 수는 3 의 배수이고 번호는 `_listVertex` 안입니다.
         vector<uint32> _listIndex;

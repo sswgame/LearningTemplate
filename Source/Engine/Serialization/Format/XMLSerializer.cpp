@@ -246,6 +246,7 @@ namespace sw
                     return ContainerReadResult::FieldFailed;
                 }
 
+            private:
                 IXMLBackend&               _backend;
                 const SerializeContext&    _context;
                 vector<SchemaOrphanValue>* _pOutListOrphan;

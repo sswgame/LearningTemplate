@@ -100,6 +100,7 @@ namespace sw
         float3  getControlPointWrapped( int32 index ) const;
         float32 findParameterAtDistance( float32 wrappedDistance ) const;
 
+    private:
         vector<float3>     _listControlPoint;
         vector<TablePoint> _listTablePoint;
         float32            _length;

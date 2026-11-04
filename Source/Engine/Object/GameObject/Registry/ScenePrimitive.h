@@ -111,6 +111,7 @@ namespace sw
         /** @brief 항목 @p entryCount 개로, 등록되지 않은 상태로 만듭니다. `MeshInstanceBatch` 만 부릅니다. */
         explicit ScenePrimitiveBatch( uint32 entryCount );
 
+    private:
         PrimitiveRegistry* _pRegistry;  ///< 등록된 레지스트리. 레지스트리가 먼저 사라지면 레지스트리가 비웁니다
         uint32             _firstEntry; ///< 레지스트리의 인스턴스 항목 목록에서 첫 항목 자리. 레지스트리가 적습니다
         uint32             _entryCount; ///< 항목 수. 만들 때 정해집니다

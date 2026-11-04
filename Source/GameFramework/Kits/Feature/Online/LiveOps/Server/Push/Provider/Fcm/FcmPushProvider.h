@@ -80,6 +80,7 @@ namespace sw
         void finishSend( uint64 deliveryID, const HTTPClientResponse& response );
         void complete( uint64 deliveryID, PushDeliveryStatus status, int64 retryAfterMs = 0 );
 
+    private:
         ServiceAccountTokenSource     _tokenSource;
         string                        _sendURL;
         vector<Waiting>               _listWaiting;

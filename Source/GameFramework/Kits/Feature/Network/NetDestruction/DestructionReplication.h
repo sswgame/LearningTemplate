@@ -165,6 +165,7 @@ namespace sw
         void  sendHash( const Entry& entry, const FractureComponentBase& component );
         int32 broadcast( NetChannelType channel );
 
+    private:
         vector<Entry>                _listEntry;
         vector<Request>              _listRequest;
         DestructionReplicationConfig _settings;
@@ -268,6 +269,7 @@ namespace sw
         void               driveChunks( Entry& entry, FractureComponentBase& component );
         void               requestSnapshot( Entry& entry );
 
+    private:
         vector<Entry>                _listEntry;
         DestructionReplicationConfig _settings;
         DestructionReplicationStats  _stats;

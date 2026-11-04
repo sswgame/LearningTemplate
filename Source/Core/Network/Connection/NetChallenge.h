@@ -44,6 +44,7 @@ namespace sw
     private:
         uint64 makeTokenForWindow( const NetAddress& address, uint64 clientSalt, int64 window ) const;
 
+    private:
         SipHashKey _saltKey;   ///< 솔트 PRF 의 비밀 키. 솔트는 (키, 순번) 의 SipHash 라 받은 솔트에서 다음 솔트를 맞힐 수 없다
         SipHashKey _key;       ///< 서버 전용. 챌린지 값의 비밀 키(솔트 키와 따로 뽑는다).
         uint64     _saltCount; ///< 지금까지 낸 솔트 수(PRF 입력)

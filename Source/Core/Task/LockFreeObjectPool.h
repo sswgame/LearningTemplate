@@ -205,6 +205,8 @@ namespace sw
 
     private:
         alignas( alignof( T ) ) std::array<uint8, Capacity * sizeof( T )> _arrStorage;
+
+    private:
         /**
          * @brief 다중 생산자, 다중 소비자 큐. acquire/release 를 스레드 안전하게 만든다.
          * @details 칸 수를 블록 수의 두 배로 둔다. 블록 수와 같으면 반납 자리가 몇 연산 전에 꺼낸 칸이라, 꺼낸 소비자가 순번을 공개하기 전에 선점되면

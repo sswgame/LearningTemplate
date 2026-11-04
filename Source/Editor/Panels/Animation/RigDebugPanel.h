@@ -44,6 +44,7 @@ namespace sw::editor
         /** @brief 대상 표를 그립니다(이름 · 오프셋 · 기즈모). 자기 유닛 대상의 "Gizmo" 를 켜면 뷰포트 시각화가 그 대상에 기즈모를 놓습니다. */
         void drawTargetTable( uint64 objectID, const PoseModifierComponent& modifier, RigInstance& instance, int32 tableFlags );
 
+    private:
         string                 _status;           ///< 저장 결과 줄
         uint64                 _selectedObjectID; ///< 고른 노드가 속한 오브젝트다(오브젝트가 바뀌면 노드 선택을 푼다)
         int32                  _selectedNode;     ///< 고른 노드 번호다(-1 이면 없음)

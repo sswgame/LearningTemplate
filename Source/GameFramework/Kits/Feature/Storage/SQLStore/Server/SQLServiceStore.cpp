@@ -205,6 +205,7 @@ namespace sw
                     return ServiceStoreResult::Ok;
                 }
 
+            private:
                 SQLRowSet       _rowSet;
                 ISQLConnection& _connection;
             };

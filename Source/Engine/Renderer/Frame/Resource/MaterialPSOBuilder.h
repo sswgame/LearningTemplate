@@ -81,6 +81,7 @@ namespace sw
         bool popJob( Job& outJob, IRHIDevice*& outDevice );
         void pushResult( Job&& job, RHIPipelineStateHandle handle );
 
+    private:
         mutable mutex              _mutex;
         vector<Job> _listUrgent    SW_GUARDED_BY( _mutex );
         vector<Job> _listLow       SW_GUARDED_BY( _mutex );

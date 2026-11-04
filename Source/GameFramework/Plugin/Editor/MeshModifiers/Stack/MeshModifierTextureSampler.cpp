@@ -223,16 +223,16 @@ namespace sw::editor
     /** @brief 표본기가 소유하는 캐시와 그 잠금입니다. 여러 작업 스레드가 같이 부르므로 잠금이 캐시를 지킨다. */
     struct MeshModifierTextureSampler::State
     {
+
+        const AssetPaths&                                _assetPaths; ///< 리소스 id 를 푸는 경로 상태(만든 쪽이 넘겼다 — 표본기보다 오래 산다)
+        shared_mutex                                     _mutex;
+        MeshModifierTextureSamplerInternal::TextureCache _cache;
         explicit State( const AssetPaths& assetPaths )
             : _assetPaths{ assetPaths }
             , _mutex{}
             , _cache{}
         {
         }
-
-        const AssetPaths&                                _assetPaths; ///< 리소스 id 를 푸는 경로 상태(만든 쪽이 넘겼다 — 표본기보다 오래 산다)
-        shared_mutex                                     _mutex;
-        MeshModifierTextureSamplerInternal::TextureCache _cache;
     };
 
     MeshModifierTextureSampler::MeshModifierTextureSampler( const AssetPaths& assetPaths )

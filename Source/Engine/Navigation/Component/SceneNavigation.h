@@ -101,12 +101,12 @@ namespace sw
     public:
         /** @brief 레지스트리에 없는 자리입니다. */
         static constexpr uint32 kNotRegistered = constant::invalid_index::kUint32;
+        /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "SceneNavigation";
 
         /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
         static const SceneServiceRegistration& getSceneServiceRegistration();
-        /** @brief 서브시스템 이름입니다(씬 범위의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "SceneNavigation";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief @p manager 의 기하를 모으는 내비게이션을 만듭니다(레지스트리가 매니저마다 부른다). */
         explicit SceneNavigation( GameObjectManager& manager );
@@ -240,7 +240,15 @@ namespace sw
         void updateAgents( float32 deltaTime );
         /** @brief 막기 · 풀기가 바뀐 링크를 모든 내비메시에 넣습니다(타일 교체와 같은 시점 — 질의가 없는 동안). */
         void applyLinkStates();
+        // 등록 구독이 풀렸을 때 부르는 해제 — 종류마다 구독 목록 하나라 id 에 종류를 싣지 않는다. 구독은 컴포넌트 · 소스가 살아 있는 동안 풀린다(`onUnregister`).
+        /** @brief 기하 소스를 순서를 지키며 뺍니다. */
+        void releaseGeometrySource( INavGeometrySource* pSource );
+        void unregisterAgent( NavMeshAgentComponent* pAgent );
+        void unregisterSurface( NavMeshSurfaceComponent* pSurface );
+        void unregisterObstacle( NavMeshObstacleComponent* pObstacle );
+        void unregisterLink( NavMeshLinkComponent* pLink );
 
+    private:
         NavMeshSettings                    _settings;
         string                             _sourcePath;
         shared_ptr<const NavMeshAsset>     _pCookedAsset;
@@ -249,13 +257,6 @@ namespace sw
         vector<NavMeshSurfaceComponent*>   _listSurface;
         vector<NavMeshObstacleComponent*>  _listObstacle;
         vector<NavMeshLinkComponent*>      _listLink; ///< 링크 컴포넌트(등록 · 해제는 `_navIndex` 로 O(1)). 순회는 매 갱신 `applyLinkStates` 의 켜짐 표지 확인과 `findLink`(에이전트가 링크에 오른 첫 갱신) 뿐이다. 링크는 문 · 사다리 · 점프 지점이라 씬당 수십 ~ 수백이어서 선형으로 충분하다. 수천이 되면 껐다 켠 링크만 모으는 목록과 id 색인으로 바꾼다
-        // 등록 구독이 풀렸을 때 부르는 해제 — 종류마다 구독 목록 하나라 id 에 종류를 싣지 않는다. 구독은 컴포넌트 · 소스가 살아 있는 동안 풀린다(`onUnregister`).
-        /** @brief 기하 소스를 순서를 지키며 뺍니다. */
-        void releaseGeometrySource( INavGeometrySource* pSource );
-        void unregisterAgent( NavMeshAgentComponent* pAgent );
-        void unregisterSurface( NavMeshSurfaceComponent* pSurface );
-        void unregisterObstacle( NavMeshObstacleComponent* pObstacle );
-        void unregisterLink( NavMeshLinkComponent* pLink );
 
         RegistrationList<INavGeometrySource> _listGeometrySource;  ///< 구독으로 올린다. 등록 순서(빼도 순서 유지) — 한 주인을 여러 소스가 맡으면 먼저 등록한 것이 이긴다. 순서가 뜻이라 순서를 버리는 `IndexedPtrList` 로 바꾸지 않는다(소스가 수천이 되면 순서 보존 색인이 필요하다)
         vector<hashed_string>                _listFailedAgentType; ///< 모르는 종류 — 오류를 한 번만
@@ -265,8 +266,6 @@ namespace sw
         uint32                               _waitingMeshCount; ///< 이번 갱신에 마련을 미룬(`NavMeshArrival::Defer`) 모으기들이 센, 아직 읽는 중인 메시 수. 갱신 첫머리에 0 으로 돌린다
         bool                                 _bSettingsLoaded;
         bool                                 _bIgnoreCooked; ///< 다시 베이크하는 동안 쿠킹본을 읽지 않는다(`rebakeAllNavMeshes`)
-
-    private:
         // 슬롯 색인(`_navIndex`)으로 O(1) 빼는 목록 넷의 등록 구독입니다. 풀리면 그 종류의 `unregister…` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다.
         ItemSubscriptionList<NavMeshAgentComponent>    _agentSubscriptions{ ItemSubscriptionList<NavMeshAgentComponent>::ReleaseFunction::create<&SceneNavigation::unregisterAgent>( this ) };
         ItemSubscriptionList<NavMeshSurfaceComponent>  _surfaceSubscriptions{ ItemSubscriptionList<NavMeshSurfaceComponent>::ReleaseFunction::create<&SceneNavigation::unregisterSurface>( this ) };

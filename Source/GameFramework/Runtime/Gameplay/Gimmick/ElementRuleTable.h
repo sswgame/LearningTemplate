@@ -279,6 +279,7 @@ namespace sw
         [[nodiscard]] bool readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const, int32& outIndex,
                                       string_view sourceName ) const;
 
+    private:
         vector<hashed_string>      _listFlag{};
         vector<ElementMaterialDef> _listMaterial{};
         vector<ElementStatusDef>   _listStatus{};

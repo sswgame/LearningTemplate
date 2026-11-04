@@ -120,6 +120,7 @@ namespace sw
         /** @brief 마디 @p nodeIndex 에서 시작해 너비 @p width 가 들어가면 그 위치의 바닥 높이를 반환합니다. */
         [[nodiscard]] static bool findFitHeight( const Page& page, size_t nodeIndex, uint32 width, uint32 height, uint32& outY );
 
+    private:
         vector<Page>   _listPage;
         GlyphFieldKind _kind;
         uint32         _generation;

@@ -394,6 +394,7 @@ namespace sw
         void               refundCost( RTSPlayer& player, const RTSUnitDef& def );
         void               pushEvent( RTSEvent::Kind kind, int32 player, RTSUnitID unitID, const hashed_string& defID, int32 value = 0, RTSUnitID otherID = RTSUnitID{} );
 
+    private:
         NavGrid               _grid;
         NavGrid               _airGrid; ///< 하늘 격자이다. 모두 열려 있고 크기는 같으며, 공중 유닛은 지형과 건물을 넘는다
         GridPathfinder        _pathfinder;

@@ -91,6 +91,7 @@ namespace sw::editor
         /** @brief @p index 의 서브시스템을 범위에서 해제하고 종료한 뒤 소멸시킵니다. */
         void releaseAt( size_t index );
 
+    private:
         SubsystemScope& _scope;
         vector<Entry>   _listEntry;
         uint32          _syncedGeneration;

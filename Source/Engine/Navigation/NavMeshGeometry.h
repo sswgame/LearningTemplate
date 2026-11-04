@@ -117,6 +117,7 @@ namespace sw
     private:
         void expandBounds( const float3& point );
 
+    private:
         vector<float3>          _listVertex;
         vector<uint32>          _listIndex;        ///< 삼각형마다 점 셋을 가진다.
         vector<uint8>           _listTriangleArea; ///< 삼각형마다 하나를 가진다.

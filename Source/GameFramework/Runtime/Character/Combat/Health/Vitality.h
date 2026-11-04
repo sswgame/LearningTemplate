@@ -220,6 +220,7 @@ namespace sw
         void finishRevive();
         void pushEvent( VitalityEventType type, float32 amount, int32 instigatorID );
 
+    private:
         VitalitySettings           _settings;
         EventBuffer<VitalityEvent> _eventBuffer;
         float32                    _health;

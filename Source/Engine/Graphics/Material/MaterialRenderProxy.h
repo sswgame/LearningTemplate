@@ -76,6 +76,7 @@ namespace sw
         /** @brief 핸들을 비우고 다음 `sync` 가 다시 올리게 합니다. */
         void forgetHandles();
 
+    private:
         RHIDeviceBuffer                      _constant;
         uint32                               _constantByteSize; ///< `_constant` 를 만든 크기. 바이트가 이보다 커지면 다시 만든다(크기를 넘긴 update 는 버퍼 밖을 쓴다)
         RHIDescriptorIndex                   _descriptorIndex;

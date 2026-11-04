@@ -254,6 +254,7 @@ namespace sw
         void               resolveRaceEnd();
         void               pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time );
 
+    private:
         vector<KartRacer>          _listRacer;
         vector<KartProjectile>     _listProjectile;
         EventBuffer<KartRaceEvent> _eventBuffer;

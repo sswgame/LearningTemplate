@@ -160,6 +160,7 @@ namespace sw
         void finishByScore();
         void pushEvent( MatchEvent::Kind kind, int32 participant, int32 other, int32 team, int32 value );
 
+    private:
         vector<MatchTeam>        _listTeam;
         vector<MatchParticipant> _listParticipant;
         EventBuffer<MatchEvent>  _eventBuffer;

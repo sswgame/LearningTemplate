@@ -93,6 +93,7 @@ namespace sw
         RTSUnitID findDepot() const;
         void      collectArmy( vector<RTSUnitID>& outListUnit ) const;
 
+    private:
         BehaviorTree           _tree;
         BehaviorTreeRunner     _runner;
         Blackboard             _blackboard;

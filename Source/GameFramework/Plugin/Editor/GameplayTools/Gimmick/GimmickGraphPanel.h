@@ -94,6 +94,7 @@ namespace sw::editor
         void editSetTarget( GimmickCircuitComponent& circuit, int32 nodeID, GameObjectHandle target );
         void editSetInvert( GimmickCircuitComponent& circuit, int32 wireID, bool bInvert );
 
+    private:
         GimmickGraphModel         _model;
         EditorNodeGraph           _nodeGraph;
         vector<GimmickGraphIssue> _listIssue;

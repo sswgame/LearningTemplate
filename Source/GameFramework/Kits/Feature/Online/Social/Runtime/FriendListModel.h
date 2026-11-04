@@ -76,6 +76,7 @@ namespace sw
         void fail( uint16 errorCode, SocialResult result );
         void sortEntries();
 
+    private:
         vector<FriendEntry>        _listEntry;
         vector<SocialNotification> _listDrained;
         DrainLease                 _drainLease;

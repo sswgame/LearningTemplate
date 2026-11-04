@@ -214,6 +214,7 @@ namespace sw
         void   completeLobby( const Request& request, MatchmakingResult result, const LobbySnapshot& lobby );
         uint64 allocateID() { return ( _serverID << 32 ) | ++_sequence; }
 
+    private:
         CacheRecordUpdater                  _updater;
         unordered_map<uint64, PendingStep>  _mapRequestToStep;
         unordered_map<uint64, PendingList>  _mapListIDToList;

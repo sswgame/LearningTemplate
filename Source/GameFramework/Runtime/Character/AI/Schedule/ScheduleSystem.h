@@ -374,6 +374,17 @@ namespace sw
             uint8 _bDone{ SW_FALSE };
         };
 
+        /** @brief 빌려 쓰는 바깥 서비스입니다. 경로 둘과 자리 제공자는 비지 않는다 — 바깥이 주지 않으면 아래 기본 제공자를 가리킨다(생성자 · 설정 함수가 지킨다). */
+        struct Services
+        {
+            const ISchedulePathing*    _pPlanning;
+            const ISchedulePathing*    _pFine;
+            IScheduleActivityLocator*  _pLocator;
+            IScheduleActivityAnimator* _pAnimator{ nullptr };
+            const GameFlags*           _pFlags{ nullptr };
+            const TagContainer*        _pWorldTags{ nullptr };
+        };
+
         // 계획
         void                     planNPC( int32 npcIndex, int32 originMinute, const ScheduleLocation& origin );
         void                     replanNPC( int32 npcIndex, int32 minute, bool bKeepOriginIfSame );
@@ -407,17 +418,7 @@ namespace sw
         void  resumeNPC( int32 npcIndex );
         void  logTraceRequest();
 
-        /** @brief 빌려 쓰는 바깥 서비스입니다. 경로 둘과 자리 제공자는 비지 않는다 — 바깥이 주지 않으면 아래 기본 제공자를 가리킨다(생성자 · 설정 함수가 지킨다). */
-        struct Services
-        {
-            const ISchedulePathing*    _pPlanning;
-            const ISchedulePathing*    _pFine;
-            IScheduleActivityLocator*  _pLocator;
-            IScheduleActivityAnimator* _pAnimator{ nullptr };
-            const GameFlags*           _pFlags{ nullptr };
-            const TagContainer*        _pWorldTags{ nullptr };
-        };
-
+    private:
         const ScheduleCatalog*     _pCatalog;
         Services                   _services;
         ScheduleSystemRegistry*    _pLiveRegistry;  ///< 생성자가 오른 살아 있는 목록(모듈 서브시스템). 없으면(게임 서비스 없는 테스트) nullptr — 소멸자가 같은 목록에서 빠진다

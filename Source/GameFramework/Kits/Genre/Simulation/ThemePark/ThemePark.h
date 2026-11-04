@@ -234,6 +234,7 @@ namespace sw
         ParkGuest* findGuest( uint32 guestID );
         float32    nextRandom() { return _random.nextFloat(); }
 
+    private:
         ThemeParkSettings _settings;
         vector<ParkRide>  _listRide;
         vector<ParkGuest> _listGuest;

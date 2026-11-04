@@ -95,6 +95,7 @@ namespace sw
         VoxelChunk* findChunkMutable( int32 chunkX, int32 chunkZ );
         void        markChunkDirty( int32 chunkX, int32 chunkZ );
 
+    private:
         vector<VoxelChunk>       _listChunk; ///< 인덱스는 `chunkZ × countX + chunkX` 이다
         const VoxelBlockCatalog* _pCatalog;
         LandBinding              _land; ///< 빌린 공유 땅이다. 없으면 단독으로 쓴다

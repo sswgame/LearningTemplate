@@ -127,6 +127,7 @@ namespace sw
         void markUsed();
         void releaseLockIfRecovered();
 
+    private:
         ResourceGaugeSettings _settings;
         float32               _value;
         float32               _maxBonus;

@@ -89,6 +89,7 @@ namespace sw
         /** @brief 구독 @p id 가 풀렸습니다. 채널 구독이면 줄을 지우고 채널의 마지막 구독자였으면 앞의 구독을 닫습니다. 주인 몫이면 그 몫의 기다리는 답을 지웁니다. */
         void releaseSubscription( uint64 id );
 
+    private:
         vector<EphemeralReply>              _listReplyScratch;
         vector<EphemeralMessage>            _listMessageScratch;
         vector<MessageDelegate>             _listDispatchScratch;
@@ -96,8 +97,6 @@ namespace sw
         unordered_map<uint64, PendingReply> _mapRequestToReply;
         IEphemeralStore*                    _pStore;
         IDAllocator<uint64>                 _subscriptionIDAllocator;
-
-    private:
         /** @brief 이 객체가 내준 구독입니다(믹스인 상속 대신 합성). 풀리면 `releaseSubscription` 이 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         SubscriptionList _subscriptions{ SubscriptionList::ReleaseFunction::create<&EphemeralStoreRouter::releaseSubscription>( this ) };
     };

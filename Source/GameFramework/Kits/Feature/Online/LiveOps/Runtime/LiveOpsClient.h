@@ -45,6 +45,7 @@ namespace sw
     private:
         void onCallSucceeded( const Call& call, const LiveOpsReply& reply ) override;
 
+    private:
         vector<LiveEventState> _listEvent;
         string                 _region;
         uint64                 _revision;

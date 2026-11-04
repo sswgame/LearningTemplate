@@ -45,6 +45,7 @@ namespace sw::editor
         /** @brief 맞춤(F)과 창을 처음 열 때의 카메라가 담을 구입니다. */
         bool findPreviewFrameSphere( float3& outCenter, float32& outRadius ) const override;
 
+    private:
         VFXPreviewModel _model;
     };
 } // namespace sw::editor

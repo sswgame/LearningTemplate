@@ -103,6 +103,7 @@ namespace sw
         /** @brief `<Currency>` 와 그 `<Funding>` 을 스키마로 읽습니다. 오류면 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
         [[nodiscard]] bool loadCurrency( const XMLNode& node, string_view sourceName );
 
+    private:
         vector<CurrencyDef> _listCurrency;
         LedgerPolicy        _ledgerPolicy; ///< 원장 상한 정책(`getLedgerPolicy`)
     };

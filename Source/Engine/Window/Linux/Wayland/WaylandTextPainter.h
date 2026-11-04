@@ -63,6 +63,7 @@ namespace sw
         /** @brief 후보 파일 이름 @p listFileName 가운데 시스템 글꼴 폴더에서 처음 열리는 것을 연다. 못 열면 `kInvalidFontFaceID` 다. */
         FontFaceID openFirstFace( vector_reference<const string_view> listFileName );
 
+    private:
         unique_ptr<IFontRasterizer>  _pRasterizer;
         FontFaceID                   _latinFace;
         FontFaceID                   _fallbackFace;

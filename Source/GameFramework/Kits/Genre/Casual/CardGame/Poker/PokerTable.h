@@ -179,6 +179,7 @@ namespace sw
         void               finishShowdown();
         void               finishUncontested( int32 winnerSeat );
 
+    private:
         vector<PokerSeat>       _listSeat;
         vector<PokerPot>        _listLastPot;
         EventBuffer<PokerEvent> _eventBuffer;

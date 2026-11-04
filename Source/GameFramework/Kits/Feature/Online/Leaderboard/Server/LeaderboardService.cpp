@@ -736,6 +736,7 @@ namespace sw
                 return nullptr;
             }
 
+        private:
             vector<LeaderboardScoreRow> _listPage;
             LeaderboardDefinition       _board;
             LeaderboardSeason           _season;

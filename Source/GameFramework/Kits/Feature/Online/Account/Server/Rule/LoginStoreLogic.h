@@ -135,6 +135,7 @@ namespace sw
         LoginResult stageSessionRevoke( uint64 accountID, LoginRevokeReason reason, int64 nowMs, ServiceTransaction& inoutTransaction, uint64& outSessionID );
         LoginResult purgeAccount( uint64 accountID, string_view deletionKey, int64 nowMs );
 
+    private:
         IServiceStoreConnection&    _connection;
         ILoginCrypto&               _crypto;
         const LoginServiceConfig&   _settings;

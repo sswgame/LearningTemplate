@@ -37,6 +37,11 @@ namespace sw
          */
         struct ACLPoseWriter final : public acl::track_writer
         {
+
+            float3*      _pTranslation;
+            quaternion*  _pRotation;
+            float3*      _pScale;
+            const uint8* _pTrackMask;
             ACLPoseWriter( Pose& inoutPose, const uint8* pTrackMask )
                 : _pTranslation{ inoutPose.getTranslationData() }
                 , _pRotation{ inoutPose.getRotationData() }
@@ -64,11 +69,6 @@ namespace sw
             {
                 _pScale[trackIndex] = float3{ rtm::vector_get_x( scale ), rtm::vector_get_y( scale ), rtm::vector_get_z( scale ) };
             }
-
-            float3*      _pTranslation;
-            quaternion*  _pRotation;
-            float3*      _pScale;
-            const uint8* _pTrackMask;
         };
     } // namespace
 } // namespace sw

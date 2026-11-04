@@ -113,6 +113,7 @@ namespace sw
         void finishForwardedCall( uint64 callID, AdminResult result );
         void finishCall( size_t pendingIndex, const AdminReply& reply );
 
+    private:
         vector<PendingCall> _listPendingCall;
         ServiceMetrics      _metrics;
         AdminServiceConfig  _settings;

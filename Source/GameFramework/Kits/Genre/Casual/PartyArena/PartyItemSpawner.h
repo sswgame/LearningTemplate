@@ -139,6 +139,7 @@ namespace sw
         void                         spawnOne();
         float32                      rollInterval();
 
+    private:
         GameCatalog<PartyItemDef>   _catalog;
         vector<PartyItemInstance>   _listInstance;
         EventBuffer<PartyItemEvent> _eventBuffer;

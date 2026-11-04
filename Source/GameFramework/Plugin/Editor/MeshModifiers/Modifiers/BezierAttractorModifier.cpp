@@ -83,6 +83,7 @@ namespace sw::editor
             return best;
         }
 
+    private:
         uint32 _point0Param;
         uint32 _point1Param;
         uint32 _point2Param;

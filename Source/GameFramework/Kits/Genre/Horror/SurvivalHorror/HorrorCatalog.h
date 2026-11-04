@@ -309,6 +309,7 @@ namespace sw
         [[nodiscard]] bool loadDocument( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadDeduction( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<HorrorItemDef>      _itemCatalog;
         GameCatalog<HorrorMonsterDef>   _monsterCatalog;
         GameCatalog<HorrorKeyLockDef>   _keyLockCatalog;

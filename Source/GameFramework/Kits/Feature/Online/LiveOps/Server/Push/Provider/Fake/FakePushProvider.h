@@ -40,16 +40,16 @@ namespace sw
         const vector<SentRecord>& getSent() const { return _listSent; }
 
     private:
-        /** @brief 정해 둔 결과를 한 번 소비해 다음 `pollResults` 에 올립니다. */
-        void queueResult( uint64 deliveryID, const string& scriptKey );
-
         struct Script
         {
             int64              _retryAfterMs{ 0 };
             int32              _remainingCount{ 0 };
             PushDeliveryStatus _status{ PushDeliveryStatus::Delivered };
         };
+        /** @brief 정해 둔 결과를 한 번 소비해 다음 `pollResults` 에 올립니다. */
+        void queueResult( uint64 deliveryID, const string& scriptKey );
 
+    private:
         vector<SentRecord>            _listSent;
         vector<PushDeliveryResult>    _listPending;
         unordered_map<string, Script> _mapTokenToScript;

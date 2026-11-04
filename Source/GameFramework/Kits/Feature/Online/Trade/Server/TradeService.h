@@ -91,6 +91,7 @@ namespace sw
         void submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, UnixMilliseconds nowMs, uint64 requestTag );
         void trackTrade( const TradeSnapshot& snapshot );
 
+    private:
         EventBuffer<TradeCompletion> _completionBuffer;
         EventBuffer<TradeSnapshot>   _updateBuffer;
         unordered_map<uint64, int64> _mapTradeToDeadline; ///< 이 서비스가 본 열린 거래에서 시한으로 가는 맵이다

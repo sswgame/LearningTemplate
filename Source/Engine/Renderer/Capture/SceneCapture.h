@@ -94,6 +94,7 @@ namespace sw
         /** @brief (렌더 스레드) 요청 크기의 출력 타깃(RGBA8)을 갖춥니다. 크기가 다르면 다시 만든다. */
         [[nodiscard]] bool ensureOutputTarget( IRHIDevice& device, uint32 width, uint32 height );
 
+    private:
         RenderThread*              _pRenderThread;
         string                     _pipelinePath;
         unique_ptr<Texture2D>      _outputTarget; ///< 렌더 스레드 객체 — 출력(Present 결과)이 그려지는 곳

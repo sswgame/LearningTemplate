@@ -467,6 +467,7 @@ namespace sw
         /** @brief `<Honor>` 를 읽습니다. 스키마 오류가 있으면 그 단계 · 행동을 빼고 false 입니다. */
         [[nodiscard]] bool loadHonor( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<WesternCrimeDef>       _crimeCatalog;
         GameCatalog<WesternRegionDef>      _regionCatalog;
         GameCatalog<WesternHorseDef>       _horseCatalog;

@@ -67,13 +67,13 @@ namespace sw
     {
         using CreateFunction = unique_ptr<IUIAccessibilityBridge> ( * )( UISystem& ui, IWindow& window );
 
-        UIAccessibilityBridgeRegistrar( const utf8* pName, CreateFunction pCreate );
-        /** @brief 이어 붙은 등록자 목록의 머리입니다. */
-        static const UIAccessibilityBridgeRegistrar* getHead();
-
         const utf8*                           _pName;
         CreateFunction                        _pCreate;
         const UIAccessibilityBridgeRegistrar* _pNext;
+
+        UIAccessibilityBridgeRegistrar( const utf8* pName, CreateFunction pCreate );
+        /** @brief 이어 붙은 등록자 목록의 머리입니다. */
+        static const UIAccessibilityBridgeRegistrar* getHead();
     };
 } // namespace sw
 

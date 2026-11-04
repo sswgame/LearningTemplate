@@ -49,6 +49,10 @@ namespace sw
      */
     struct ComponentPoolEntry
     {
+
+        PoolAllocator      _pool;          ///< 그 타입의 블록 풀이다. 자체 잠금이 있어 반납은 저장소 잠금 밖에서 한다
+        vector<Component*> _listComponent; ///< 버킷이다. 저장소 `_mutex` 아래에서만 바뀐다. 순서는 약속하지 않는다(제거가 마지막 원소를 빈 자리로 옮긴다)
+        const TypeInfo*    _pType;         ///< 버킷의 타입이다. 버킷이 비면 nullptr 이다
         /** @brief 블록 크기 @p typeSize 의 풀로 만듭니다. 버킷은 비어 있습니다. */
         explicit ComponentPoolEntry( size_t typeSize )
             : _pool{ typeSize, 64u, true }
@@ -59,10 +63,6 @@ namespace sw
 
         ComponentPoolEntry( const ComponentPoolEntry& )            = delete;
         ComponentPoolEntry& operator=( const ComponentPoolEntry& ) = delete;
-
-        PoolAllocator      _pool;          ///< 그 타입의 블록 풀이다. 자체 잠금이 있어 반납은 저장소 잠금 밖에서 한다
-        vector<Component*> _listComponent; ///< 버킷이다. 저장소 `_mutex` 아래에서만 바뀐다. 순서는 약속하지 않는다(제거가 마지막 원소를 빈 자리로 옮긴다)
-        const TypeInfo*    _pType;         ///< 버킷의 타입이다. 버킷이 비면 nullptr 이다
     };
 } // namespace sw
 
@@ -72,6 +72,28 @@ namespace sw
     class SW_API GameObjectStore
     {
     public:
+        /**
+         * @brief 잠금 없는 id 테이블의 슬롯 수입니다. 슬롯은 id 의 아래 비트(`id % kObjectSlotCount`)로 정합니다.
+         * @details 이 값만큼 떨어진 id 둘이 함께 살아 있을 때만 나중에 온 것이 맵(잠금과 해시)으로 간다. `getOverflowObjectCount` 를 참고한다.
+         */
+        static constexpr uint64 kObjectSlotCount = 1ull << 22;
+
+        /**
+         * @struct WalkScope
+         * @brief `forEachGameObject` 가 공유 잠금을 쥔 동안을 표시합니다(스레드별 깊이). 그 안에서 구조를 바꾸는 호출은 Debug 에서 단언합니다.
+         * @details `_mutex` 는 재진입하지 않는다. 순회 콜백이 오브젝트를 만들거나(배타 잠금) 컴포넌트를 붙이면(풀 맵의 배타 잠금) 같은
+         *          스레드가 자기 공유 잠금을 기다리며 **멈춘다.** 예를 들어 beginPlay → onBeginPlay → addTag → addComponent 경로에서 에디터 Play 가 멈춘다.
+         *          멈추는 대신 단언으로 알린다. 깊이는 엔진 쪽 변수 하나라서 모듈이 순회를 인스턴스화해도 같은 변수를 센다.
+         */
+        struct SW_API WalkScope
+        {
+            WalkScope();
+            ~WalkScope();
+            WalkScope( const WalkScope& )            = delete;
+            WalkScope& operator=( const WalkScope& ) = delete;
+            /** @brief 지금 스레드가 `forEachGameObject` 안에 있으면 true 입니다. */
+            static bool isInsideWalk();
+        };
         /**
          * @brief 매니저의 다른 단위를 받아 만듭니다. 받은 참조는 매니저가 함께 소유하므로 이 타입보다 오래 삽니다.
          * @param manager 만든 오브젝트의 소유 매니저이자, 컴포넌트 등록 해제(`onUnregister`)가 받는 매니저
@@ -99,12 +121,6 @@ namespace sw
         GameObject* resolveGameObject( GameObjectHandle handle ) const { return findGameObjectByID( handle.objectID() ); }
         /** @brief 핸들이 가리키는 컴포넌트를 찾습니다. 파괴됐으면 nullptr 이고, 삭제 대기 중이어도 돌려주므로 호출부가 `isPendingDestroy()` 를 봅니다. */
         Component* resolveComponent( ComponentHandle handle ) const;
-
-        /**
-         * @brief 잠금 없는 id 테이블의 슬롯 수입니다. 슬롯은 id 의 아래 비트(`id % kObjectSlotCount`)로 정합니다.
-         * @details 이 값만큼 떨어진 id 둘이 함께 살아 있을 때만 나중에 온 것이 맵(잠금과 해시)으로 간다. `getOverflowObjectCount` 를 참고한다.
-         */
-        static constexpr uint64 kObjectSlotCount = 1ull << 22;
         /** @brief 테이블의 슬롯을 다른 오브젝트가 써서 맵에 들어간 오브젝트 수입니다. 진단과 회귀 테스트용이며, 보통 0 입니다. */
         uint32 getOverflowObjectCount() const { return _overflowObjectCount.load( std::memory_order_relaxed ); }
 
@@ -122,23 +138,6 @@ namespace sw
         uint64 getStructureGeneration() const { return _structureGeneration.load( std::memory_order_relaxed ); }
         /** @brief 구조 세대를 올립니다(`GameObjectManager::notifyStructureChanged`). 어느 스레드에서나 됩니다. */
         void notifyStructureChanged() { _structureGeneration.fetch_add( 1, std::memory_order_relaxed ); }
-
-        /**
-         * @struct WalkScope
-         * @brief `forEachGameObject` 가 공유 잠금을 쥔 동안을 표시합니다(스레드별 깊이). 그 안에서 구조를 바꾸는 호출은 Debug 에서 단언합니다.
-         * @details `_mutex` 는 재진입하지 않는다. 순회 콜백이 오브젝트를 만들거나(배타 잠금) 컴포넌트를 붙이면(풀 맵의 배타 잠금) 같은
-         *          스레드가 자기 공유 잠금을 기다리며 **멈춘다.** 예를 들어 beginPlay → onBeginPlay → addTag → addComponent 경로에서 에디터 Play 가 멈춘다.
-         *          멈추는 대신 단언으로 알린다. 깊이는 엔진 쪽 변수 하나라서 모듈이 순회를 인스턴스화해도 같은 변수를 센다.
-         */
-        struct SW_API WalkScope
-        {
-            WalkScope();
-            ~WalkScope();
-            WalkScope( const WalkScope& )            = delete;
-            WalkScope& operator=( const WalkScope& ) = delete;
-            /** @brief 지금 스레드가 `forEachGameObject` 안에 있으면 true 입니다. */
-            static bool isInsideWalk();
-        };
 
         /**
          * @brief 힙 할당 없이 등록된 모든 유효한 GameObject 를 순회합니다.
@@ -318,6 +317,15 @@ namespace sw
             SlotArray      _listSlot;
             atomic<uint64> _compareFromID{ kObjectSlotCount }; ///< 이 값 이상의 id 를 물으면 슬롯의 오브젝트 id 와 비교한다. 슬롯 수를 넘은 id 가 들어오면 0 이 되고, `clear` 가 되돌린다
         };
+        /**
+         * @brief 오브젝트 id 발급 카운터입니다. **프로세스 전체에서 하나**입니다(컴포넌트 id `Component::_s_nextComponentID` 와 같은 규칙).
+         * @details 씬을 넘어 옮긴 오브젝트(`SceneManager::markPersistent`)가 같은 id 를 유지하려면 다른 매니저의 발급과 겹치지 않아야 한다.
+         *          겹치면 새 id 를 받고 그 오브젝트를 가리키던 핸들이 끊긴다. 유니티의 인스턴스 id 도 프로세스 전체에서 하나다.
+         */
+        static atomic<uint64> _s_nextObjectID;
+
+        /** @brief 구조 세대의 시작 값에서 오브젝트 id 를 올려 둘 비트 수입니다(`getStructureGeneration`). */
+        static constexpr uint32 kStructureGenerationShift = 24;
 
         /** @brief 새 ObjectID 를 발급합니다. */
         static uint64 allocateID();
@@ -344,6 +352,7 @@ namespace sw
          */
         bool isNameTakenUnlocked( hashed_string name ) const;
 
+    private:
         GameObjectManager*                             _pManager;                ///< 만든 오브젝트의 소유 매니저(`GameObject::_pOwnerManager`)
         TickRegistry*                                  _pTickRegistry;           ///< 지운 컴포넌트와 오브젝트를 틱 레지스트리에 알린다
         [[maybe_unused]] const StructuralChangeBuffer* _pStructuralChangeBuffer; ///< 틱 중인지만 읽는다. 해체 단언에 쓰며, 단언이 빠지는 Release 와 Shipping 에서는 읽는 곳이 없다
@@ -370,12 +379,6 @@ namespace sw
         vector<ComponentHandle>                              _listProcessingDestroyComponent;
 
         mutable shared_mutex _mutex;
-        /**
-         * @brief 오브젝트 id 발급 카운터입니다. **프로세스 전체에서 하나**입니다(컴포넌트 id `Component::_s_nextComponentID` 와 같은 규칙).
-         * @details 씬을 넘어 옮긴 오브젝트(`SceneManager::markPersistent`)가 같은 id 를 유지하려면 다른 매니저의 발급과 겹치지 않아야 한다.
-         *          겹치면 새 id 를 받고 그 오브젝트를 가리키던 핸들이 끊긴다. 유니티의 인스턴스 id 도 프로세스 전체에서 하나다.
-         */
-        static atomic<uint64> _s_nextObjectID;
 
         bool                                          _bProcessingDestruction;          ///< 지연 파괴를 처리하는 중이다. 소멸자에서 다시 들어오면 단언한다
         vector<GameObject*>                           _listPlayWalk;                    ///< beginPlay 와 endPlay 가 잠금 없이 순회할 오브젝트 목록이다(할당 재사용)
@@ -383,9 +386,6 @@ namespace sw
         mutex _beginPlayMutex                         SW_ACQUIRED_AFTER( _mutex );      ///< 시작 대기열을 보호한다(비동기 씬 로드는 워커에서 컴포넌트를 붙인다)
         vector<ComponentHandle> _listPendingBeginPlay SW_GUARDED_BY( _beginPlayMutex ); ///< 플레이 중에 붙어 onBeginPlay 를 기다리는 컴포넌트
         vector<ComponentHandle>                       _listProcessingBeginPlay;         ///< 처리 중인 시작 대기열이다(할당 재사용)
-
-        /** @brief 구조 세대의 시작 값에서 오브젝트 id 를 올려 둘 비트 수입니다(`getStructureGeneration`). */
-        static constexpr uint32 kStructureGenerationShift = 24;
-        atomic<uint64>          _structureGeneration; ///< 구조 세대(`getStructureGeneration`)
+        atomic<uint64>                                _structureGeneration;             ///< 구조 세대(`getStructureGeneration`)
     };
 } // namespace sw

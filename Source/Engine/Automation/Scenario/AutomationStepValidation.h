@@ -89,12 +89,12 @@ namespace sw
     /** @brief `SW_AUTOMATION_STEP_VALIDATOR` 가 두는 정적 등록자입니다. 등록이 거절됐으면 내릴 때 빼지 않습니다(앞 등록을 지우지 않게). */
     struct SW_API AutomationStepValidatorRegistrar
     {
+
+        const AutomationStepValidatorRegistration* _pRegistration;
         explicit AutomationStepValidatorRegistrar( const AutomationStepValidatorRegistration* pRegistration );
         ~AutomationStepValidatorRegistrar();
         AutomationStepValidatorRegistrar( const AutomationStepValidatorRegistrar& )            = delete;
         AutomationStepValidatorRegistrar& operator=( const AutomationStepValidatorRegistrar& ) = delete;
-
-        const AutomationStepValidatorRegistration* _pRegistration;
     };
 } // namespace sw
 

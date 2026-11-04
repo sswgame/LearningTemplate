@@ -46,13 +46,13 @@ namespace sw
     {
         using CreateFunction = IRHIDevice* (*)();
 
-        RHIStaticBackendRegistrar( RHIBackend backend, CreateFunction pCreate );
-        /** @brief 이어 붙은 등록자 목록의 머리입니다. */
-        static const RHIStaticBackendRegistrar* getHead();
-
         RHIBackend                       _backend;
         CreateFunction                   _pCreate;
         const RHIStaticBackendRegistrar* _pNext;
+
+        RHIStaticBackendRegistrar( RHIBackend backend, CreateFunction pCreate );
+        /** @brief 이어 붙은 등록자 목록의 머리입니다. */
+        static const RHIStaticBackendRegistrar* getHead();
     };
 
     /**
@@ -63,14 +63,23 @@ namespace sw
     {
     public:
         /** @brief 서브시스템 이름입니다. 초기화하거나 종료할 것이 없고, 수명만 컬렉션이 정합니다. 서비스 범위는 엔진 범위보다 먼저 생성되고 나중에 사라집니다. */
-        static constexpr const utf8* kSubsystemName = "RHIBackendRegistry";
+        static constexpr const utf8* kSubsystemName      = "RHIBackendRegistry";
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::RenderCPU;
 
-        SubsystemInitResult        initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
-        void                       shutdownSubsystem() override {}
-        const utf8*                getSubsystemName() const override { return kSubsystemName; }
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::RenderCPU;
+        /** @brief 빈 레지스트리로 만듭니다. */
+        RHIBackendRegistry();
+        /** @brief 로드된 모듈을 정리합니다. */
+        ~RHIBackendRegistry() override;
 
-    public:
+        /** @brief 복사를 금지합니다. */
+        RHIBackendRegistry( const RHIBackendRegistry& ) = delete;
+        /** @brief 대입을 금지합니다. */
+        RHIBackendRegistry& operator=( const RHIBackendRegistry& ) = delete;
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
         // ------------------------------------------------------------------------------
         // 2) 등록, 조회, 생성
         // ------------------------------------------------------------------------------
@@ -104,17 +113,6 @@ namespace sw
         void unloadModules();
 
     private:
-    public:
-        /** @brief 빈 레지스트리로 만듭니다. */
-        RHIBackendRegistry();
-        /** @brief 로드된 모듈을 정리합니다. */
-        ~RHIBackendRegistry() override;
-
-        /** @brief 복사를 금지합니다. */
-        RHIBackendRegistry( const RHIBackendRegistry& ) = delete;
-        /** @brief 대입을 금지합니다. */
-        RHIBackendRegistry& operator=( const RHIBackendRegistry& ) = delete;
-
         struct LoadedModule
         {
             RHIBackend _backend{};
@@ -122,6 +120,7 @@ namespace sw
             string     _modulePath; ///< 언로드할 때 로그에 쓰는 이름. 종료 중에는 리플렉션 조회(`RHI::getBackendTypeName`)를 쓸 수 없다
         };
 
+    private:
         vector<RHIBackendEntry> _listEntry;
         vector<LoadedModule>    _listLoadedModule;
     };

@@ -407,6 +407,7 @@ namespace sw
             _ringFd  = -1;
         }
 
+    private:
         sw::thread        _thread;
         AsyncFileIOQueue* _pQueue;
         void*             _pSqRing;

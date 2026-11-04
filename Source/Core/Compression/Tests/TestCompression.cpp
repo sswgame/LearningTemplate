@@ -52,6 +52,8 @@ namespace
     /** @brief 케이스 동안 활성 레지스트리를 바꿔 끼운다(끝에 되돌린다 — 엔진 서비스의 레지스트리를 건드리지 않는다). */
     struct ScopedActiveRegistry
     {
+
+        sw::CompressionCodecRegistry* _pPrevious;
         explicit ScopedActiveRegistry( sw::CompressionCodecRegistry* pRegistry )
             : _pPrevious{ sw::CompressionCodecRegistry::getActive() }
         {
@@ -61,8 +63,6 @@ namespace
 
         ScopedActiveRegistry( const ScopedActiveRegistry& )            = delete;
         ScopedActiveRegistry& operator=( const ScopedActiveRegistry& ) = delete;
-
-        sw::CompressionCodecRegistry* _pPrevious;
     };
 } // namespace
 

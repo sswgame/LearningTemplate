@@ -89,6 +89,7 @@ namespace sw::editor
         /** @brief 미리보기 씬의 매니저입니다. 씬이 없으면 nullptr 입니다. */
         GameObjectManager* findPreviewManager() const;
 
+    private:
         PairedAnimationEditModel               _model;
         EditorPreviewGizmo                     _gizmo;
         vector<RoleSlot>                       _listSlot;

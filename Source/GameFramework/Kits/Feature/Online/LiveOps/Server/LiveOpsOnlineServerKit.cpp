@@ -147,6 +147,7 @@ namespace sw
                 return true;
             }
 
+        private:
             LiveOpsService                        _service;
             LiveOpsServer                         _server;
             PushNotificationDispatcher            _dispatcher;

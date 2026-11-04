@@ -77,13 +77,12 @@ namespace sw::editor
     class SW_EDITOR_API EditorPanelManager : public EditorSubsystem
     {
     public:
-        EditorPanelManager();
-        ~EditorPanelManager() override;
-
         // EditorSubsystem — EditorContext 가 의존 순서로 초기화하고 역순으로 종료 · 소멸한다.
         /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
         static constexpr const utf8* kSubsystemName = "EditorPanelManager";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
+        EditorPanelManager();
+        ~EditorPanelManager() override;
+        const utf8* getSubsystemName() const override { return kSubsystemName; }
         EditorPanelManager( const EditorPanelManager& )            = delete;
         EditorPanelManager& operator=( const EditorPanelManager& ) = delete;
 
@@ -153,20 +152,20 @@ namespace sw::editor
         void discardAllDirtyDocuments();
 
     private:
+        /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시값입니다. */
+        static constexpr uint32 kNotSynced = constant::invalid_index::kUint32;
         /** @brief `resetOptionalPanels` · `resetAllPanels` 의 몸통입니다. @p bIncludeCore 면 핵심 패널도 다시 만든다. */
         uint32 resetPanels( bool bIncludeCore );
 
         /** @brief `-gv_editorPanelTimes=N` 이 모은 패널별 시간을 큰 순서로 한 번 로그에 남깁니다(`EditorPanelTime|<id>|avg … us|max … us`). */
         void reportPanelTimes();
 
+    private:
         vector<EditorPanelEntry> _listPanel;
         vector<string>           _listRememberedOpenID; ///< 지운 패널 중 열려 있던 id. 다시 등록되면 연다
         uint32                   _syncedGeneration;     ///< 마지막으로 맞춘 등록 세대. 맞춘 적이 없으면 kNotSynced 이다
         uint32                   _panelTimeFrameCount;  ///< 패널 시간을 모은 프레임 수
         bool                     _bPanelTimesReported;  ///< 한 번 기록했으면 더 모으지 않는다
-
-        /** @brief 아직 등록 목록과 맞춘 적이 없다는 표시값입니다. */
-        static constexpr uint32 kNotSynced = constant::invalid_index::kUint32;
     };
 } // namespace sw::editor
 

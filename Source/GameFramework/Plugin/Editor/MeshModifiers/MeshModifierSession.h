@@ -38,12 +38,14 @@ namespace sw::editor
     {
     public:
         static constexpr const utf8* kSubsystemName = "MeshModifierSession";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 되돌리기 기록의 최대 수입니다. */
         static constexpr size_t kMaxUndoCount = 64;
         /** @brief 미리보기 선을 그릴 최대 삼각형 수입니다. 넘으면 고르게 건너뜁니다. */
         static constexpr size_t kMaxPreviewTriangleCount = 20000;
+        /** @brief 미리보기 시간 칸의 상한(초)입니다. 재생은 여기서 0 으로 되감습니다. */
+        static constexpr float32 kMaxPreviewTimeSeconds = 600.0f;
+        const utf8*              getSubsystemName() const override { return kSubsystemName; }
 
         MeshModifierSession();
 
@@ -122,8 +124,6 @@ namespace sw::editor
         void                     setSelectedIndex( int32 index ) { _selectedIndex = index; }
         float32                  getPreviewTime() const { return _previewTime; }
         void                     setPreviewTime( float32 time );
-        /** @brief 미리보기 시간 칸의 상한(초)입니다. 재생은 여기서 0 으로 되감습니다. */
-        static constexpr float32 kMaxPreviewTimeSeconds = 600.0f;
         /** @brief 미리보기 시간을 재생하는지입니다. 켜면 `advancePreviewTime` 이 시간을 흘려 애니메이션 모디파이어가 움직입니다. */
         bool isPreviewPlaying() const { return _bPreviewPlaying; }
         void setPreviewPlaying( bool bPlaying ) { _bPreviewPlaying = bPlaying; }
@@ -203,6 +203,7 @@ namespace sw::editor
         /** @brief 대상에 끼워 둔 미리보기 메시를 원래 메시로 되돌립니다. 대상이 지워졌으면 잡아 둔 포인터만 놓습니다. */
         void restoreOriginalMesh();
 
+    private:
         MeshModifierStack          _stack;
         shared_ptr<Mesh>           _gpuPreviewMesh;              ///< 레스트 정점 + GPU 모프(엔진이 만든 메시라 모듈이 내려가도 소멸 코드는 엔진에 있다)
         bool                       _bGPUPreviewColored{ false }; ///< GPU 미리보기 메시의 정점 색을 Paint 결과로 덮었다(칠하는 스택이 아니게 되면 원본 색으로 되돌린다)

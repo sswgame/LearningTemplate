@@ -189,6 +189,7 @@ namespace sw
          */
         string convertState( PrefabStateFormat targetFormat ) const;
 
+    private:
         string                     _name;
         string                     _stateData;
         vector<PrefabInstanceNode> _listNestedInstance;
@@ -244,6 +245,10 @@ namespace sw
     class SW_API PrefabCache final : public AssetCacheBase
     {
     public:
+        /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
+        static constexpr const utf8* kAssetKindName = "Prefab";
+        /** @brief 프리팹 쿠커 버전입니다. 쿠킹본 형식(`saveToBinaryFile`)이나 펼치기 규칙을 바꾸면 올립니다 — 모든 프리팹이 다시 베이크됩니다. */
+        static constexpr uint32 kCookVersion = 1;
         /** @brief 빈 프리팹 캐시로 만듭니다. */
         PrefabCache();
         /** @brief 진행 중인 로드를 기다린 뒤 캐시된 프리팹을 정리합니다(워커의 로드가 사라진 캐시에 쓰지 않게). */
@@ -305,9 +310,6 @@ namespace sw
          *          만들었는지 다음 로드가 다시 본다(상위 프리팹은 원본을 경로로만 가지므로 버리지 않아도 고친 원본이 퍼진다).
          */
         void reload( const AssetID& assetID );
-
-        /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
-        static constexpr const utf8* kAssetKindName = "Prefab";
         /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
         const utf8* getAssetKindName() const override { return kAssetKindName; }
         /** @brief 그 프리팹을 캐시가 지금 가지고 있으면 true 입니다. */
@@ -331,8 +333,6 @@ namespace sw
         static uint32 cookAllPrefabs( string_view sourceRoot, string_view cookedDir, const CookStore& store, uint32& outFailedCount );
         /** @brief 프리팹 쿠킹 작업의 키 값입니다. */
         static CookJobDesc makeCookJobDesc();
-        /** @brief 프리팹 쿠커 버전입니다. 쿠킹본 형식(`saveToBinaryFile`)이나 펼치기 규칙을 바꾸면 올립니다 — 모든 프리팹이 다시 베이크됩니다. */
-        static constexpr uint32 kCookVersion = 1;
 
     private:
         friend class PrefabLoadOperation;
@@ -372,6 +372,7 @@ namespace sw
         uint32 spawnNestedInstancesUnder( GameObject* pRoot, const PrefabAsset& asset, string_view rootPath, const vector<PrefabPartOverride>& listPartOverride,
                                           vector<string>& inoutListSpawnedPath );
 
+    private:
         mutable shared_mutex                                             _mapCacheMutex;
         unordered_map<string, shared_ptr<const PrefabAsset>> _mapCache   SW_GUARDED_BY( _mapCacheMutex );
         unordered_map<string, weak_ptr<PrefabLoadOperation>> _mapLoading SW_GUARDED_BY( _mapCacheMutex ); ///< 읽는 중인 로드(같은 경로의 동시 요청은 같은 로드 작업). `_mapCacheMutex` 로 지킨다

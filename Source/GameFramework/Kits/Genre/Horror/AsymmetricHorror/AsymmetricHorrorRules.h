@@ -309,6 +309,7 @@ namespace sw
         [[nodiscard]] bool loadElement( const XMLNode& node, string_view name, string_view sourceName );
         [[nodiscard]] bool loadSkillCheck( const XMLNode& node, string_view sourceName );
 
+    private:
         AsymmetricHorrorRules        _rules;
         TimingJudge                  _judge;
         GameCatalog<HorrorKillerDef> _catalogKiller;

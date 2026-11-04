@@ -93,6 +93,7 @@ namespace sw
         /** @brief 버퍼 · 구간 할당기를 @p capacity 단어로 다시 만들고 모든 기록을 비웁니다. 못 만들면 풀을 비우고 false 입니다. */
         [[nodiscard]] bool resetStorage( IRHIDevice* pDevice, uint32 capacity );
 
+    private:
         RHIStructuredBuffer                              _table;
         SpanAllocator                                    _allocator;
         unordered_map<const MeshVertexAnimation*, Entry> _mapEntry;

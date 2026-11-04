@@ -7,6 +7,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/GameObjectHandle.h"
+#include "Core/Container/span.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -27,6 +28,7 @@
 #include "Engine/Object/GameObject/Service/ISceneService.h"
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 #include "Engine/Object/GameObject/Tick/ISceneFrameSystem.h"
+#include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 #include "Engine/Object/GameObject/Tick/SceneFrameStep.h"
 #include "Engine/Object/GameObject/Tick/SceneTickScheduler.h"
 #include "Engine/Object/GameObject/Tick/StructuralChangeBuffer.h"
@@ -634,10 +636,9 @@ namespace sw
         // 프레임 단계 본문 — 표(`SceneFrameStepList.xxx`)의 줄마다 하나. `tick` 이 줄 순서대로 부른다.
 #define SW_SCENE_FRAME_STEP( Name ) void runFrameStep##Name( float32 deltaTime );
 #include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
-#include "Core/Container/span.h"
-#include "Engine/Object/GameObject/Tick/SceneFrameAccess.h"
 #undef SW_SCENE_FRAME_STEP
 
+    private:
         // 단위들은 소유만 한다. 선언 순서가 생성 순서다 — 뒤 단위가 앞 단위를 참조로 받는다(틱 디스패치 → 계층 · 레지스트리 · 틱 중 규칙,
         // 저장소 → 틱 레지스트리 · 틱 중 규칙). 오브젝트는 소멸자의 `clear` 가 먼저 지우므로 단위가 사라지는 순서에 기대지 않는다.
 

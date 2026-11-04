@@ -80,6 +80,7 @@ namespace sw
         /** @brief 장애물이 바꾼 자리를 알립니다 — 다시 베이크 종류에만 닿는다(캐시 종류는 캐시 장애물로 받는다). 게임 스레드에서만 부릅니다. */
         void invalidateObstacleArea( const AABB& bounds );
 
+    private:
         vector<AABB>     _listDirtyArea;    ///< `_dirtyLock` 아래
         vector<AABB>     _listObstacleArea; ///< 장애물이 바꾼 자리(게임 스레드만 — 다시 베이크 종류에만 닿는다)
         uint32           _rebakedTileCount;

@@ -42,6 +42,7 @@ namespace sw
          */
         void markDisconnected( uint32 userIndex, bool bWasConnected );
 
+    private:
         [[maybe_unused]] float32 _reconnectTimer;
         uint8                    _bConnected  : 1;
         [[maybe_unused]] uint8   _reservedPad : 7;

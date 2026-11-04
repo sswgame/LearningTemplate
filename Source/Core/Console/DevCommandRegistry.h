@@ -97,13 +97,13 @@ namespace sw
     /** @brief `SW_DEV_COMMAND` 가 두는 정적 등록자입니다 — 만들 때 올리고 없앨 때(모듈을 내릴 때) 뺍니다. */
     struct SW_API DevCommandRegistrar
     {
+
+        const DevCommandRegistration* _pRegistration;
+        bool                          _bRegistered;
         explicit DevCommandRegistrar( const DevCommandRegistration* pRegistration );
         ~DevCommandRegistrar();
         DevCommandRegistrar( const DevCommandRegistrar& )            = delete;
         DevCommandRegistrar& operator=( const DevCommandRegistrar& ) = delete;
-
-        const DevCommandRegistration* _pRegistration;
-        bool                          _bRegistered;
     };
 } // namespace sw
 

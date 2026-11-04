@@ -154,6 +154,7 @@ namespace sw
                 _listLoadedModule.clear();
             }
 
+        private:
             SubsystemScope      _host;
             Engine              _engine;
             vector<const utf8*> _listLoadedModule;

@@ -110,13 +110,12 @@ namespace
     class DestroyOtherOnReadyClientService final : public IOnlineClientService
     {
     public:
+        unique_ptr<DestroyOtherOnReadyClientService>* _pVictim{ nullptr };
+        int32*                                        _pReadyCount{ nullptr };
         explicit DestroyOtherOnReadyClientService( const OnlineProtocolEntry& protocol )
             : _pProtocol{ &protocol }
         {
         }
-
-        unique_ptr<DestroyOtherOnReadyClientService>* _pVictim{ nullptr };
-        int32*                                        _pReadyCount{ nullptr };
 
         const OnlineProtocolEntry& getProtocol() const override { return *_pProtocol; }
         void                       onServicePush( uint16 kind, BitReader& body ) override

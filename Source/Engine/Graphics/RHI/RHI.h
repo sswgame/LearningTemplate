@@ -61,15 +61,15 @@ namespace sw
         // ------------------------------------------------------------------------------
         /** @brief 디바이스 없이 만듭니다. */
         RHI();
-        /** @brief 디바이스를 정리합니다. */
-        ~RHI();
 
         /** @brief 복사를 금지합니다. */
         RHI( const RHI& ) = delete;
-        /** @brief 대입을 금지합니다. */
-        RHI& operator=( const RHI& ) = delete;
         /** @brief 이동을 금지합니다. */
         RHI( RHI&& ) = delete;
+        /** @brief 디바이스를 정리합니다. */
+        ~RHI();
+        /** @brief 대입을 금지합니다. */
+        RHI& operator=( const RHI& ) = delete;
         /** @brief 이동 대입을 금지합니다. */
         RHI& operator=( RHI&& ) = delete;
 

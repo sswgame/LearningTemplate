@@ -298,6 +298,7 @@ namespace sw
         /** @brief NPC 마다 아키타입 체인의 루틴을 이어 붙이고 약속 참가자를 모읍니다. 순환이나 모르는 이름은 경고합니다. */
         void resolveReferences( string_view sourceName );
 
+    private:
         GameCatalog<SchedulePlaceDef>       _placeCatalog;
         GameCatalog<ScheduleSpotDef>        _spotCatalog;
         GameCatalog<ScheduleInterruptDef>   _interruptCatalog;

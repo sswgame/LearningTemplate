@@ -127,6 +127,7 @@ namespace sw
         int32                computeEntryBits( const NetInputEntry& entry ) const;
         void                 writeEntry( BitWriter& writer, const NetInputEntry& entry ) const;
 
+    private:
         TickRingBuffer<NetInputEntry> _listEntry; ///< 틱으로 찾는 링 버퍼. 보관 중인 틱 [_oldestTick, _latestTick] 은 항상 들어 있다.
         NetInputFormat                _format;
         uint32                        _oldestTick; ///< 보관 중인 가장 오래된 틱(그 앞은 덮였거나 틱이 건너뛰었다).
@@ -188,6 +189,7 @@ namespace sw
         [[nodiscard]] bool readEntry( BitReader& reader, NetInputEntry& outEntry ) const;
         [[nodiscard]] bool skipEntry( BitReader& reader ) const;
 
+    private:
         TickRingBuffer<NetInputEntry> _listEntry; ///< 틱으로 찾는 링 버퍼. 받는 창이 링 크기를 넘지 않으므로 창 안의 틱끼리 덮어쓰지 않는다.
         NetInputFormat                _format;
         uint32                        _windowFirst;

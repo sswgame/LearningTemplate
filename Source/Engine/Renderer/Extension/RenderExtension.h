@@ -246,6 +246,7 @@ namespace sw
         {
         }
 
+    private:
         FramePassExecutor* _pExecutor;
         void*              _pPassContext;
         const void*        _pPass;

@@ -72,6 +72,7 @@ namespace sw
         /** @brief 프레임 이력과 메시지 종류별 누적 셈을 `Saved/ServerReports/frames_<세션>_<틱>_<까닭>.txt` 로 씁니다. 이력이 비었거나 폴더를 만들 수 없으면 경고만 남깁니다. */
         void dumpFrameHistory( const utf8* pReason, uint64 tickCount );
 
+    private:
         const ServerConfig*               _pServerConfig; ///< ConfigManager 가 소유한다
         unique_ptr<MetricRegistry>        _metricRegistry;
         unique_ptr<ServiceHealthRegistry> _healthRegistry;

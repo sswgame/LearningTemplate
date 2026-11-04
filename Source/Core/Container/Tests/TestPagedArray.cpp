@@ -15,10 +15,10 @@ namespace
         static inline int32 s_constructCount = 0;
         static inline int32 s_destructCount  = 0;
 
+        uint64 _value{ 0 };
+
         PagedArrayCountedElement() { ++s_constructCount; }
         ~PagedArrayCountedElement() { ++s_destructCount; }
-
-        uint64 _value{ 0 };
     };
 } // namespace
 

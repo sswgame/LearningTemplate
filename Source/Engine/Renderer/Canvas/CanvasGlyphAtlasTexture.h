@@ -95,6 +95,7 @@ namespace sw
         /** @brief 페이지를 멈춥니다: 오류를 남기고, `release` 전까지 그리지도 올리지도 않습니다(폴백 없이 실패를 드러냅니다). */
         void failPage( AtlasPage& page, string_view reason );
 
+    private:
         vector<AtlasPage> _listPage;
         vector<uint8>     _regionScratchBytes; ///< 구간 업로드용으로 행 사이의 빈틈을 없앤 사본
         uint32            _lastUploadCallCount;

@@ -88,6 +88,7 @@ namespace sw
     private:
         void runWorker( int32 workerIndex );
 
+    private:
         vector<sw::thread>                         _listWorker;
         deque<unique_ptr<ISQLJob>> _listQueuedJob  SW_GUARDED_BY( _mutex );
         vector<unique_ptr<ISQLJob>> _listCompleted SW_GUARDED_BY( _mutex );

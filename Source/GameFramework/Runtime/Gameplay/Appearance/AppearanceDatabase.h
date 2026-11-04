@@ -114,6 +114,7 @@ namespace sw
         bool               isVariantDeclared( const hashed_string& variant ) const;
         bool               isPartDeclared( const hashed_string& part ) const;
 
+    private:
         SlotTable                  _slotTable;
         EquipSetCatalog            _sets;
         ItemVisualCatalog          _visuals;

@@ -138,6 +138,7 @@ namespace sw
         /** @brief 잠금 안에서 모은 로그를 쓴다 — 연결 잠금을 쥔 채 로그를 쓰지 않으려고, 잠금을 놓은 뒤 부른다. */
         void flushDeferredLog( Connection& connection );
 
+    private:
         mutable mutex                                                _tableMutex;
         unordered_map<uint64, shared_ptr<Connection>> _mapConnection SW_GUARDED_BY( _tableMutex ); ///< 핸들(packed)에서 연결로 가는 맵. I/O 스레드가 열고 닫는다.
         mutable mutex                                                _inboxMutex;

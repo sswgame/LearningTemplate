@@ -77,6 +77,7 @@ namespace sw
     private:
         [[nodiscard]] bool parseStep( string_view token, vector<InputCommandStep>& outListStep ) const;
 
+    private:
         vector<string> _listButtonName;
     };
 } // namespace sw

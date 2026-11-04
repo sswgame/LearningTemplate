@@ -263,6 +263,7 @@ namespace sw
         int2 computeCreatureAnchor( const TownCreature& creature ) const;
         bool isBlockingObject( const hashed_string& object ) const;
 
+    private:
         vector<hashed_string>          _listObject; ///< 셀마다의 오브젝트 id 이다(`_topology` 의 타일 번호). 빈 id 는 빈 셀이다
         vector<HabitatInstance>        _listHabitat;
         vector<TownCreature>           _listCreature; ///< 온 순서

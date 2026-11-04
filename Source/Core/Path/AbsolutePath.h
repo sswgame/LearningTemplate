@@ -44,6 +44,7 @@ namespace sw
         {
         }
 
+    private:
         string _path;
     };
 } // namespace sw

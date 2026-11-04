@@ -218,40 +218,6 @@ namespace sw
         }
         /** @brief 이번 프레임이 쓰는 쿼리 구간의 시작 인덱스입니다. */
         uint32 getTimestampBase() const { return _currentFrame * constant::render::kMaxGPUTimestampSlot; }
-
-    protected:
-        /**
-         * @brief 지금 열려 있는 프레임 세그먼트의 VkCommandBuffer 입니다. 프레임 밖이면 null 입니다. 밖으로는 `withNativeContext` 로만 나갑니다.
-         * @details 프레임 세그먼트는 렌더 스레드만 기록하므로 잡을 잠금이 없다(큐 제출은 `_queueMutex` 가 따로 지킨다).
-         */
-        void* getNativeContext() const override { return currentCommandBuffer(); }
-
-    private:
-        /** @brief 타임스탬프 계측 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */
-        class TimestampProvider final : public IRHITimestampProvider
-        {
-        public:
-            explicit TimestampProvider( VulkanRHIDevice& owner )
-                : _owner{ owner }
-            {
-            }
-
-            void               setTimestampEnabled( bool bEnabled ) override { _owner.setTimestampEnabled( bEnabled ); }
-            uint32             getTimestampSlotCount() const override { return _owner.getTimestampSlotCount(); }
-            [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override { return _owner.readTimestamps( outFrame ); }
-            [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override { return _owner.readGPUClockNanos( outGPUNanos ); }
-            bool               isGPUClockReadCheap() const override { return _owner.isGPUClockReadCheap(); }
-
-        private:
-            VulkanRHIDevice& _owner;
-        };
-
-        /** @brief 쿼리 풀을 한 번만 만듭니다. */
-        void ensureTimestampPool();
-        /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 변환합니다. */
-        void collectTimestampsForSlot();
-
-    public:
         /** @brief 리소스 생성과 파괴 인터페이스(VulkanRHIResourceFactory)를 반환합니다. */
         IRHIResourceFactory* getResourceFactory() override;
         /** @brief 프레임 스트림 컨텍스트입니다. 백버퍼 패스와 Present 가 여기에 기록합니다. */
@@ -297,6 +263,190 @@ namespace sw
 
         /** @brief 서피스 제약으로 계약 포맷을 낼 수 없는 경우가 있으므로 실제로 채택한 포맷을 보고합니다. */
         RHIFormat getBackBufferFormat() const override { return _swapChain.getActualBackBufferFormat(); }
+        /**
+         * @brief 큐 호출(`vkQueueSubmit` · `vkQueueWaitIdle` · `vkWaitForFences`)의 결과를 봅니다. 성공이면 아무것도 하지 않습니다.
+         * @details 실패면 어디서(@p pWhere) · 무슨 `VkResult` 인지와 마지막으로 제출 순서에 넣은 패스(이벤트 마커)를 오류 로그로 남긴다.
+         *          `VK_ERROR_DEVICE_LOST` 면 처음 한 번만 VK_EXT_device_fault 의 결함 정보(설명 · 주소 · 공급사 코드)를 덧붙인다(확장이 켜졌을 때).
+         *          어느 스레드에서 불러도 된다(일회성 업로드는 로더 스레드에서 온다).
+         * @param result `VkResult` 값(이 헤더는 vulkan.h 를 들이지 않아 정수로 받는다)
+         */
+        void reportQueueResult( int32 result, const utf8* pWhere );
+
+    private:
+        /** @brief 타임스탬프 계측 능력입니다. 디바이스의 같은 이름 함수로 넘깁니다(수명은 디바이스와 같다). */
+        class TimestampProvider final : public IRHITimestampProvider
+        {
+        public:
+            explicit TimestampProvider( VulkanRHIDevice& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void               setTimestampEnabled( bool bEnabled ) override { _owner.setTimestampEnabled( bEnabled ); }
+            uint32             getTimestampSlotCount() const override { return _owner.getTimestampSlotCount(); }
+            [[nodiscard]] bool readTimestamps( RHITimestampFrame& outFrame ) override { return _owner.readTimestamps( outFrame ); }
+            [[nodiscard]] bool readGPUClockNanos( int64& outGPUNanos ) override { return _owner.readGPUClockNanos( outGPUNanos ); }
+            bool               isGPUClockReadCheap() const override { return _owner.isGPUClockReadCheap(); }
+
+        private:
+            VulkanRHIDevice& _owner;
+        };
+        struct VulkanBufferRecord;
+        struct VulkanTextureRecord;
+
+        /** @brief 텍스처 배열 세트(set 1)의 원소 수입니다. DX12 는 힙 하나(kMaxShaderVisibleDescriptors)를 쓰므로 값이 다릅니다. */
+        static constexpr uint32 kBindlessTextureCount = shaderslot::bindless::kVkTextureCount;
+        /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 수입니다. UAV 인덱스가 이 값 미만이어야 등록됩니다. */
+        static constexpr uint32 kBindlessStorageImageCount = shaderslot::bindless::kVkStorageImageCount;
+        /** @brief 슬롯 세트(set 0) 풀 하나의 세트 수입니다. 바인딩 상태가 바뀔 때마다 하나씩 쓰며(배치, 패스 단위), 차면 풀을 하나 더 만듭니다. */
+        static constexpr uint32 kSlotSetsPerPool = 4096;
+
+        /// @brief VkBuffer 와 메모리, 사용 플래그입니다.
+        struct VulkanBufferRecord
+        {
+            VkBuffer       _buffer{ nullptr };
+            VkDeviceMemory _memory{ nullptr };
+            uint32         _sizeBytes{ 0 };
+            uint32         _usage{ 0 }; ///< VkBufferUsageFlags
+            RHIBufferState _state = RHIBufferState::Common;
+        };
+
+        /// @brief VkImage 와 뷰, 현재 레이아웃입니다.
+        struct VulkanTextureRecord
+        {
+            VkImage             _image{ nullptr };
+            VkImageView         _imageView{ nullptr };
+            VkImageView         _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
+            VkDeviceMemory      _memory{ nullptr };
+            VkFramebuffer       _framebuffer{ nullptr };
+            VkRenderPass        _renderPass{ nullptr };
+            uint32              _format{ 0 };    ///< VkFormat
+            uint32              _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기를 계산하는 데 쓴다(VkFormat 은 깊이 선택에 따라 달라질 수 있다).
+            uint32              _layout{ 0 };    ///< VkImageLayout (UNDEFINED=0)
+            uint32              _width{ 0 };
+            uint32              _height{ 0 };
+            uint32              _mipLevels{ 1 };
+            uint32              _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
+            RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
+            /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
+            RHITextureUploadSerials _uploadSerials;
+            /// 이 텍스처에서 마지막으로 읽은 전송(되읽기)의 시리얼입니다. bindless 등록은 보지 않고, 파괴가 이 복사가 끝날 때까지 이미지를 남길 때 씁니다(전송 계약 6).
+            atomic<uint64> _lastReadbackSerial{ 0 };
+            uint8          _bRenderTarget : 1;
+            uint8          _bDepthStencil : 1;
+            uint8          _reserved      : 6;
+            /// @brief 이 텍스처에 발급한 bindless 번호들입니다. 등록마다 하나씩이다(DX11 · DX12 · GL 과 같은 규칙 — 다른 쪽의 해제가 내 번호를 놓지 않는다). 파괴가 모두 놓는다.
+            vector<RHIDescriptorIndex> _listBindlessIndex;
+            /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. 이때 `_imageView` 는 셰이더가 보는 배열 또는 큐브 뷰입니다.
+            vector<VkImageView>   _listSliceView;
+            vector<VkFramebuffer> _listSliceFramebuffer;
+
+            /** @brief 면 `slice` 를 렌더 패스 첨부로 쓸 뷰입니다. 없으면 nullptr 입니다. */
+            VkImageView findAttachmentView( uint32 slice ) const
+            {
+                if ( _listSliceView.empty() )
+                    return slice == 0 ? _imageView : nullptr;
+                return slice < _listSliceView.size() ? _listSliceView[slice] : nullptr;
+            }
+            /** @brief 면 `slice` 하나를 타깃으로 하는 오프스크린 프레임버퍼입니다. 없으면 nullptr 입니다. */
+            VkFramebuffer findSliceFramebuffer( uint32 slice ) const
+            {
+                if ( _listSliceFramebuffer.empty() )
+                    return slice == 0 ? _framebuffer : nullptr;
+                return slice < _listSliceFramebuffer.size() ? _listSliceFramebuffer[slice] : nullptr;
+            }
+        };
+
+        /// @brief VkPipeline 과 레이아웃입니다.
+        struct VulkanPipelineStateRecord
+        {
+            VkPipeline      _pipeline{ nullptr };
+            RHIVertexLayout _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
+        };
+        /// @brief 프레임 밖에서 기록된 리스트가 바꾼 레이아웃의 원래 값입니다.
+        struct VulkanPendingLayout
+        {
+            VkCommandBuffer _cmd{ nullptr };
+            VkImage         _image{ nullptr };
+            uint32          _oldLayout{ 0 };
+        };
+
+        /**
+         * @struct StructuredUploadSlot
+         * @brief updateStructuredBufferRegions 가 쓰는 프레임 슬롯별 호스트 가시 스테이징(bump 할당)입니다.
+         * @details 목적 버퍼에 vkMapMemory 로 직접 쓰면 GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가
+         *          덮어써 프레임 간 찢어짐이 생긴다. 그래서 스테이징에 쓰고
+         *          vkCmdCopyBuffer 를 프레임 커맨드 버퍼에 기록한다. 그러면 복사는 GPU 큐 순서상 앞 프레임의
+         *          읽기 뒤, 이번 프레임의 드로우 앞에 놓인다(DX12 와 같은 모델). 슬롯은 beginFrame 이
+         *          그 슬롯의 펜스를 기다린 뒤에만 다시 쓰이고, 같은 펜스 구간 안에서는 오프셋을 이어서 쓴다.
+         */
+        struct StructuredUploadSlot
+        {
+            VkBuffer       _buffer{ nullptr };
+            VkDeviceMemory _memory{ nullptr };
+            void*          _pMapped{ nullptr };
+            uint64         _capacity{ 0 };
+            uint64         _uploadOffset{ 0 };
+            uint64         _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 _frameFenceCounter
+        };
+
+        /**
+         * @struct VulkanTransferJob
+         * @brief 텍스처 전송 제출 하나의 커맨드 버퍼와 펜스입니다. 제출 뒤에도 살아 있다가 펜스를 지나면 `_listFreeTransferJob` 으로 돌아가 다시 쓰인다.
+         * @details 버퍼는 `_transferCommandPool` 에서 받는다(`_transferMutex` 가 풀을 지킨다). 펜스는 다시 쓰기 직전에 리셋한다.
+         */
+        struct VulkanTransferJob
+        {
+            VkCommandBuffer _commandBuffer{ nullptr };
+            VkFence         _fence{ nullptr };
+        };
+
+        /**
+         * @struct VulkanStagingRing
+         * @brief 영속 매핑한 호스트 가시 · 일관 버퍼 하나와 그 구간 할당기입니다. 업로드 링과 되읽기 링이 하나씩 있다.
+         * @details 업로드 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 되읽기 구간은 결과를 가져갈 때(`free`) 돌아오고, 끝나기 전에 버린 구간은
+         *          그때 시리얼을 붙여 복사가 끝난 뒤에 돌아온다 — 구간을 GPU 가 아직 쓰는 동안 다음 되읽기가 같은 자리를 받지 않는다.
+         *          링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::_bSolo`, 오프셋 0)으로 내주고, 그 크기의 일회성 버퍼(`_solo*`)를 만들어 쓴다. 할당기가 단독 구간을
+         *          한 번에 하나만 내주므로 링마다 하나다. 할당기가 돌려받은 뒤(`hasLiveSolo` 거짓) `retireFinishedTransfers` 가 지운다.
+         */
+        struct VulkanStagingRing
+        {
+            RHIStagingAllocator _allocator;
+            VkBuffer            _buffer{ nullptr };
+            VkDeviceMemory      _memory{ nullptr };
+            uint8*              _pMapped{ nullptr };
+            mutex               _soloMutex; ///< 단독 버퍼 칸(아래 셋)을 지키는 잎 락. 만드는 쪽(제출 스레드)과 지우는 쪽(아무 스레드의 회수)이 다르다
+            VkBuffer            _soloBuffer{ nullptr };
+            VkDeviceMemory      _soloMemory{ nullptr };
+            uint8*              _pSoloMapped{ nullptr };
+
+            /** @brief @p span 을 담은 버퍼입니다(단독 구간이면 단독 버퍼). 구간 안의 오프셋은 `span._offsetBytes` 에서 센다. */
+            [[nodiscard]] VkBuffer getSpanBuffer( const RHIStagingSpan& span ) const { return span._bSolo != SW_FALSE ? _soloBuffer : _buffer; }
+            /** @brief @p span 을 담은 버퍼의 매핑 시작 주소입니다. 구간의 바이트는 여기에 `span._offsetBytes` 이상의 오프셋을 더해 읽고 쓴다. */
+            [[nodiscard]] uint8* getSpanMappedBase( const RHIStagingSpan& span ) const { return span._bSolo != SW_FALSE ? _pSoloMapped : _pMapped; }
+        };
+
+        /** @brief 가져가지 않은 텍스처 읽기 하나입니다. 결과 바이트는 되읽기 링에 그대로 있고 `takeTextureReadback` 이 그때 복사해 간다. */
+        struct VulkanPendingReadback
+        {
+            RHIStagingSpan _span{};
+            uint64         _dataOffsetBytes{ 0 };   ///< 복사가 쓴 링 오프셋(구간 시작을 복사 정렬로 올린 값)
+            uint32         _sizeBytes{ 0 };         ///< 결과 바이트 수(`RHITextureMipSpan::_sizeBytes`)
+            uint32         _depth24TexelCount{ 0 }; ///< D24 깊이를 float32 로 바꿀 텍셀 수. 0 이면 바꾸지 않는다
+        };
+
+    protected:
+        /**
+         * @brief 지금 열려 있는 프레임 세그먼트의 VkCommandBuffer 입니다. 프레임 밖이면 null 입니다. 밖으로는 `withNativeContext` 로만 나갑니다.
+         * @details 프레임 세그먼트는 렌더 스레드만 기록하므로 잡을 잠금이 없다(큐 제출은 `_queueMutex` 가 따로 지킨다).
+         */
+        void* getNativeContext() const override { return currentCommandBuffer(); }
+
+    private:
+        /** @brief 쿼리 풀을 한 번만 만듭니다. */
+        void ensureTimestampPool();
+        /** @brief 방금 펜스를 통과한 링 슬롯의 결과를 마이크로초로 변환합니다. */
+        void collectTimestampsForSlot();
 
     protected:
         // 네이티브 핸들 getter 는 기반처럼 보호 구역이다 — 바깥은 종류 확인이 든 `IRHIDevice::queryNativeHandles` · `tryGetNativeTexturePointer` 로만 읽는다.
@@ -398,18 +548,6 @@ namespace sw
         [[nodiscard]] bool recreateSurfaceAndSwapChain();
         /** @brief 서피스를 잃은 것을 세고 경고로 남깁니다(잃은 횟수와 그때의 프레임). 다음에 관찰했을 때 환경 탓인지 가리는 데 씁니다. */
         void noteSurfaceLost( const utf8* pWhere );
-
-    public:
-        /**
-         * @brief 큐 호출(`vkQueueSubmit` · `vkQueueWaitIdle` · `vkWaitForFences`)의 결과를 봅니다. 성공이면 아무것도 하지 않습니다.
-         * @details 실패면 어디서(@p pWhere) · 무슨 `VkResult` 인지와 마지막으로 제출 순서에 넣은 패스(이벤트 마커)를 오류 로그로 남긴다.
-         *          `VK_ERROR_DEVICE_LOST` 면 처음 한 번만 VK_EXT_device_fault 의 결함 정보(설명 · 주소 · 공급사 코드)를 덧붙인다(확장이 켜졌을 때).
-         *          어느 스레드에서 불러도 된다(일회성 업로드는 로더 스레드에서 온다).
-         * @param result `VkResult` 값(이 헤더는 vulkan.h 를 들이지 않아 정수로 받는다)
-         */
-        void reportQueueResult( int32 result, const utf8* pWhere );
-
-    private:
         /** @brief 제출 순서에 들어간 리스트 · 프레임 세그먼트의 마지막 이벤트 마커를 적어 둡니다(디바이스 손실 로그용). 비어 있으면 그대로 둡니다. */
         void noteSubmittedEventMarker( const utf8* pMarker );
         /** @brief VK_EXT_device_fault 로 디바이스 손실의 결함 정보를 읽어 로그로 남깁니다. 확장이 없으면 없다고 한 줄 남깁니다. */
@@ -424,8 +562,6 @@ namespace sw
          * @brief 메모리 타입을 찾습니다. 찾으면 true 를 반환하며 outIndex 를 채웁니다.
          */
         [[nodiscard]] bool findMemoryType( uint32 typeFilter, uint32 properties, uint32& outIndex );
-        struct VulkanBufferRecord;
-        struct VulkanTextureRecord;
         /** @brief 불투명 버퍼 핸들로 VulkanBufferRecord 를 찾습니다. */
         VulkanBufferRecord*       resolveAllocatedBuffer( RHIBufferHandle handle );
         const VulkanBufferRecord* resolveAllocatedBuffer( RHIBufferHandle handle ) const;
@@ -439,76 +575,6 @@ namespace sw
         /** @brief 불투명 텍스처 핸들로 VulkanTextureRecord 를 찾습니다. */
         VulkanTextureRecord*       resolveTexture( RHITextureHandle handle );
         const VulkanTextureRecord* resolveTexture( RHITextureHandle handle ) const;
-
-        /** @brief 텍스처 배열 세트(set 1)의 원소 수입니다. DX12 는 힙 하나(kMaxShaderVisibleDescriptors)를 쓰므로 값이 다릅니다. */
-        static constexpr uint32 kBindlessTextureCount = shaderslot::bindless::kVkTextureCount;
-        /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 수입니다. UAV 인덱스가 이 값 미만이어야 등록됩니다. */
-        static constexpr uint32 kBindlessStorageImageCount = shaderslot::bindless::kVkStorageImageCount;
-        /** @brief 슬롯 세트(set 0) 풀 하나의 세트 수입니다. 바인딩 상태가 바뀔 때마다 하나씩 쓰며(배치, 패스 단위), 차면 풀을 하나 더 만듭니다. */
-        static constexpr uint32 kSlotSetsPerPool = 4096;
-
-        /// @brief VkBuffer 와 메모리, 사용 플래그입니다.
-        struct VulkanBufferRecord
-        {
-            VkBuffer       _buffer{ nullptr };
-            VkDeviceMemory _memory{ nullptr };
-            uint32         _sizeBytes{ 0 };
-            uint32         _usage{ 0 }; ///< VkBufferUsageFlags
-            RHIBufferState _state = RHIBufferState::Common;
-        };
-
-        /// @brief VkImage 와 뷰, 현재 레이아웃입니다.
-        struct VulkanTextureRecord
-        {
-            VkImage             _image{ nullptr };
-            VkImageView         _imageView{ nullptr };
-            VkImageView         _sampleView{ nullptr }; ///< 깊이 텍스처 샘플링용 DEPTH 단일 aspect 뷰입니다. 컬러는 nullptr 이며 `_imageView` 를 그대로 씁니다.
-            VkDeviceMemory      _memory{ nullptr };
-            VkFramebuffer       _framebuffer{ nullptr };
-            VkRenderPass        _renderPass{ nullptr };
-            uint32              _format{ 0 };    ///< VkFormat
-            uint32              _rhiFormat{ 0 }; ///< RHIFormat. 업로드 때 픽셀 크기를 계산하는 데 쓴다(VkFormat 은 깊이 선택에 따라 달라질 수 있다).
-            uint32              _layout{ 0 };    ///< VkImageLayout (UNDEFINED=0)
-            uint32              _width{ 0 };
-            uint32              _height{ 0 };
-            uint32              _mipLevels{ 1 };
-            uint32              _arrayLayers{ 1 }; ///< 면 수(배열 원소 · 큐브 면)
-            RHITextureDimension _dimension{ RHITextureDimension::Texture2D };
-            /// 이 텍스처에 마지막으로 제출한 쓰기 전송(업로드)의 시리얼입니다. 0 이면 전송한 적이 없습니다. bindless 등록이 이 전송이 끝났는지 확인합니다(`RHITransferSerials::isTextureReadyToRegister`).
-            RHITextureUploadSerials _uploadSerials;
-            /// 이 텍스처에서 마지막으로 읽은 전송(되읽기)의 시리얼입니다. bindless 등록은 보지 않고, 파괴가 이 복사가 끝날 때까지 이미지를 남길 때 씁니다(전송 계약 6).
-            atomic<uint64> _lastReadbackSerial{ 0 };
-            uint8          _bRenderTarget : 1;
-            uint8          _bDepthStencil : 1;
-            uint8          _reserved      : 6;
-            /// @brief 이 텍스처에 발급한 bindless 번호들입니다. 등록마다 하나씩이다(DX11 · DX12 · GL 과 같은 규칙 — 다른 쪽의 해제가 내 번호를 놓지 않는다). 파괴가 모두 놓는다.
-            vector<RHIDescriptorIndex> _listBindlessIndex;
-            /// @brief 면이 여럿일 때 면마다의 2D 뷰(렌더 패스 첨부용)와 단일 RT 프레임버퍼입니다. 이때 `_imageView` 는 셰이더가 보는 배열 또는 큐브 뷰입니다.
-            vector<VkImageView>   _listSliceView;
-            vector<VkFramebuffer> _listSliceFramebuffer;
-
-            /** @brief 면 `slice` 를 렌더 패스 첨부로 쓸 뷰입니다. 없으면 nullptr 입니다. */
-            VkImageView findAttachmentView( uint32 slice ) const
-            {
-                if ( _listSliceView.empty() )
-                    return slice == 0 ? _imageView : nullptr;
-                return slice < _listSliceView.size() ? _listSliceView[slice] : nullptr;
-            }
-            /** @brief 면 `slice` 하나를 타깃으로 하는 오프스크린 프레임버퍼입니다. 없으면 nullptr 입니다. */
-            VkFramebuffer findSliceFramebuffer( uint32 slice ) const
-            {
-                if ( _listSliceFramebuffer.empty() )
-                    return slice == 0 ? _framebuffer : nullptr;
-                return slice < _listSliceFramebuffer.size() ? _listSliceFramebuffer[slice] : nullptr;
-            }
-        };
-
-        /// @brief VkPipeline 과 레이아웃입니다.
-        struct VulkanPipelineStateRecord
-        {
-            VkPipeline      _pipeline{ nullptr };
-            RHIVertexLayout _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
-        };
 
         /** @brief 서술대로 VkRenderPass 를 만듭니다. 실패하면 VK_NULL_HANDLE 을 반환합니다. */
         VkRenderPass createRenderPassFromSpec( const VulkanRHIRenderPassCache::RenderPassSpec& spec ) const;
@@ -582,7 +648,54 @@ namespace sw
         void destroyCompositeFramebuffersUsing( RHITextureHandle texture );
         /** @brief usageFlags 로 VkBuffer 를 만들고 초기 데이터를 올립니다. */
         RHIBufferHandle createVulkanBuffer( uint32 sizeBytes, uint32 usageFlags, const void* pInitialData );
+        /** @brief `_listDroppedFrameLayout` 의 기록을 텍스처 레코드에 되돌리고 비웁니다. 새 프레임의 기록이 시작되기 전에만 부릅니다. */
+        void restoreDroppedFrameLayouts();
 
+        /**
+         * @brief 전송 전용 커맨드 풀과 업로드 · 되읽기 스테이징 링을 만듭니다.
+         * @param desc 업로드 링(`_stagingRingBytes`), 되읽기 링(`_readbackRingBytes`), 링보다 큰 한 장의 상한(`_stagingSoloMaxBytes`, 두 링에 같이)을 읽습니다.
+         *             링 용량이 0 이면 오류를 남기고 false 입니다(기본값으로 바꾸지 않는다).
+         */
+        [[nodiscard]] bool initializeTransfers( const RHISwapChainDesc& desc );
+        /** @brief 남은 전송 작업, 전송을 기다리던 해제, 링, 풀을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
+        void shutdownTransfers();
+        /** @brief @p ring 에 @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다. 단독 상한은 @p soloMaxBytes 입니다. */
+        [[nodiscard]] bool createStagingRing( VulkanStagingRing& ring, uint64 capacityBytes, uint64 soloMaxBytes, uint32 usageFlags, const utf8* pName );
+        /** @brief 링 버퍼와 단독 버퍼를 놓고 구간 할당기를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
+        void destroyStagingRing( VulkanStagingRing& ring );
+        /**
+         * @brief @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다).
+         * @return 만들었으면 true. 실패하면 이유를 로그로 남기고 만든 것을 놓은 뒤 false 이며 세 출력은 비어 있다.
+         */
+        [[nodiscard]] bool createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VkDeviceMemory& outMemory,
+                                                      uint8*& outMapped );
+        /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. 세 칸을 비웁니다. */
+        void destroyMappedStagingBuffer( VkBuffer& rBuffer, VkDeviceMemory& rMemory, uint8*& pMapped );
+        /**
+         * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
+         * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::settleAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
+         *          일회성 버퍼를 만들어 붙인다(앞선 단독 버퍼가 남아 있으면 먼저 지운다 — 할당기가 새 단독 구간을 내줬다면 앞 구간은 이미 돌아왔다).
+         *          Rejected 면 이유를 로그로 남기고 잡은 구간은 놓는다. 어느 스레드에서나, 전송 락 밖에서 부른다.
+         */
+        [[nodiscard]] RHISubmitResult allocateStagingSpan( VulkanStagingRing& ring, uint64 sizeBytes, uint32 usageFlags, const utf8* pCaller, RHIStagingSpan& outSpan );
+        /** @brief 할당기가 단독 구간을 돌려받았으면(`hasLiveSolo` 거짓) @p ring 의 단독 버퍼를 지웁니다. `retireFinishedTransfers` 가 부릅니다. */
+        void destroyIdleSoloBuffer( VulkanStagingRing& ring );
+        /** @brief 놀고 있는 전송 작업을 꺼내(없으면 만들어) 기록을 시작합니다. `_transferMutex` 를 쥐고 부릅니다. */
+        [[nodiscard]] bool beginTransferJob( VulkanTransferJob& outJob );
+        /**
+         * @brief 기록을 끝내고 큐 락 안에서 작업의 펜스와 함께 제출한 뒤, 같은 락 안에서 시리얼을 매깁니다(계약 5). 완료를 기다리지 않습니다.
+         * @return 시리얼입니다. 제출하지 못했으면 결과를 보고하고 작업을 돌려놓은 뒤 0 입니다. `_transferMutex` 를 쥐고 부릅니다.
+         */
+        [[nodiscard]] uint64 submitTransferJob( const VulkanTransferJob& job, const utf8* pWhere );
+        /** @brief 펜스를 지난 작업을 놀고 있는 작업 목록으로 돌려놓습니다. */
+        void recycleTransferJob( const VulkanTransferJob& job );
+        /**
+         * @brief 펜스를 지난 전송을 앞에서부터 걷어 워터마크를 올리고, 전송을 기다리던 해제를 프레임 해제 큐로 넘깁니다. 기다리지 않습니다.
+         * @details 어느 스레드에서나 부른다(`pollTransfer`, 링이 찬 제출, `beginFrame`). 펜스는 하나씩 확인하므로 앞의 것이 늦게 끝나면 뒤가 끝나도 워터마크는 거기서 멈춘다.
+         */
+        void retireFinishedTransfers();
+
+    private:
         VkInstance               _instance;
         VkDebugUtilsMessengerEXT _debugMessenger;
         VkPhysicalDevice         _physicalDevice;
@@ -617,21 +730,12 @@ namespace sw
 
         /// @brief 텍스처 레이아웃 확인과 전이를 보호합니다(transitionTextureLayout 참고).
         mutable mutex _imageLayoutMutex;
-        /// @brief 프레임 밖에서 기록된 리스트가 바꾼 레이아웃의 원래 값입니다.
-        struct VulkanPendingLayout
-        {
-            VkCommandBuffer _cmd{ nullptr };
-            VkImage         _image{ nullptr };
-            uint32          _oldLayout{ 0 };
-        };
         /**
          * @brief 시작되지 못한 프레임(최소화, 스왑체인 재생성 중)에 기록되다 버려진 리스트가 바꾼 레이아웃의 원래 값입니다.
          * @details 리스트가 제출되지 않으므로 `VulkanTextureRecord::_layout` 만 앞서 나간다. 다음 `beginFrame` 이 되돌린다.
          *          프레임 밖 일회성 제출(`executeCommandListImmediate`)은 제출한 리스트의 기록을 지운다. `_imageLayoutMutex` 가 보호한다.
          */
         vector<VulkanPendingLayout> _listDroppedFrameLayout;
-        /** @brief `_listDroppedFrameLayout` 의 기록을 텍스처 레코드에 되돌리고 비웁니다. 새 프레임의 기록이 시작되기 전에만 부릅니다. */
-        void restoreDroppedFrameLayouts();
         /// @brief 리스트에 빌려주는 (풀, 버퍼) 쌍의 재사용 풀입니다. 펜스를 통과한 것만 들어 있습니다.
         mutable mutex                                        _cmdListPoolMutex;
         vector<VulkanCommandListEntry> _listFreeCmdListEntry SW_GUARDED_BY( _cmdListPoolMutex );
@@ -647,28 +751,9 @@ namespace sw
         vector<VkCommandBuffer> _listPendingSubmit;
         /// @brief 프레임 스트림을 리스트 제출 지점마다 잘라 쓰는 추가 세그먼트 버퍼입니다(프레임 슬롯별로 재사용합니다).
         vector<VkCommandBuffer> _arrFrameSegment[constant::render::kMaxFrameCountInFlight];
-
-        /**
-         * @struct StructuredUploadSlot
-         * @brief updateStructuredBufferRegions 가 쓰는 프레임 슬롯별 호스트 가시 스테이징(bump 할당)입니다.
-         * @details 목적 버퍼에 vkMapMemory 로 직접 쓰면 GPU 가 직전 프레임을 아직 읽는 중인 메모리를 CPU 가
-         *          덮어써 프레임 간 찢어짐이 생긴다. 그래서 스테이징에 쓰고
-         *          vkCmdCopyBuffer 를 프레임 커맨드 버퍼에 기록한다. 그러면 복사는 GPU 큐 순서상 앞 프레임의
-         *          읽기 뒤, 이번 프레임의 드로우 앞에 놓인다(DX12 와 같은 모델). 슬롯은 beginFrame 이
-         *          그 슬롯의 펜스를 기다린 뒤에만 다시 쓰이고, 같은 펜스 구간 안에서는 오프셋을 이어서 쓴다.
-         */
-        struct StructuredUploadSlot
-        {
-            VkBuffer       _buffer{ nullptr };
-            VkDeviceMemory _memory{ nullptr };
-            void*          _pMapped{ nullptr };
-            uint64         _capacity{ 0 };
-            uint64         _uploadOffset{ 0 };
-            uint64         _resetFence{ UINT64_MAX }; ///< 마지막으로 오프셋을 되감은 _frameFenceCounter
-        };
-        StructuredUploadSlot _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
-        uint32               _frameSegmentCursor;
-        float32              _timestampPeriod; ///< 타임스탬프 한 슬롯의 나노초(아래 `_timestampPool` 의 값)
+        StructuredUploadSlot    _arrStructuredUploadSlot[constant::render::kMaxFrameCountInFlight];
+        uint32                  _frameSegmentCursor;
+        float32                 _timestampPeriod; ///< 타임스탬프 한 슬롯의 나노초(아래 `_timestampPool` 의 값)
         /// @brief 지금 기록 중인 프레임 세그먼트입니다. beginFrame 이 첫 세그먼트로 설정합니다.
         VkCommandBuffer _activeFrameBuffer;
 
@@ -776,95 +861,6 @@ namespace sw
 
         RHIHandleTable<VulkanPipelineStateRecord> _pipelineStates;
         VkPipelineCache                           _pipelineCache;
-
-        /**
-         * @struct VulkanTransferJob
-         * @brief 텍스처 전송 제출 하나의 커맨드 버퍼와 펜스입니다. 제출 뒤에도 살아 있다가 펜스를 지나면 `_listFreeTransferJob` 으로 돌아가 다시 쓰인다.
-         * @details 버퍼는 `_transferCommandPool` 에서 받는다(`_transferMutex` 가 풀을 지킨다). 펜스는 다시 쓰기 직전에 리셋한다.
-         */
-        struct VulkanTransferJob
-        {
-            VkCommandBuffer _commandBuffer{ nullptr };
-            VkFence         _fence{ nullptr };
-        };
-
-        /**
-         * @struct VulkanStagingRing
-         * @brief 영속 매핑한 호스트 가시 · 일관 버퍼 하나와 그 구간 할당기입니다. 업로드 링과 되읽기 링이 하나씩 있다.
-         * @details 업로드 구간은 시리얼을 붙여(`markSubmitted`) 워터마크가 지나면 돌아온다. 되읽기 구간은 결과를 가져갈 때(`free`) 돌아오고, 끝나기 전에 버린 구간은
-         *          그때 시리얼을 붙여 복사가 끝난 뒤에 돌아온다 — 구간을 GPU 가 아직 쓰는 동안 다음 되읽기가 같은 자리를 받지 않는다.
-         *          링보다 큰 한 장은 할당기가 단독 구간(`RHIStagingSpan::_bSolo`, 오프셋 0)으로 내주고, 그 크기의 일회성 버퍼(`_solo*`)를 만들어 쓴다. 할당기가 단독 구간을
-         *          한 번에 하나만 내주므로 링마다 하나다. 할당기가 돌려받은 뒤(`hasLiveSolo` 거짓) `retireFinishedTransfers` 가 지운다.
-         */
-        struct VulkanStagingRing
-        {
-            RHIStagingAllocator _allocator;
-            VkBuffer            _buffer{ nullptr };
-            VkDeviceMemory      _memory{ nullptr };
-            uint8*              _pMapped{ nullptr };
-            mutex               _soloMutex; ///< 단독 버퍼 칸(아래 셋)을 지키는 잎 락. 만드는 쪽(제출 스레드)과 지우는 쪽(아무 스레드의 회수)이 다르다
-            VkBuffer            _soloBuffer{ nullptr };
-            VkDeviceMemory      _soloMemory{ nullptr };
-            uint8*              _pSoloMapped{ nullptr };
-
-            /** @brief @p span 을 담은 버퍼입니다(단독 구간이면 단독 버퍼). 구간 안의 오프셋은 `span._offsetBytes` 에서 센다. */
-            [[nodiscard]] VkBuffer getSpanBuffer( const RHIStagingSpan& span ) const { return span._bSolo != SW_FALSE ? _soloBuffer : _buffer; }
-            /** @brief @p span 을 담은 버퍼의 매핑 시작 주소입니다. 구간의 바이트는 여기에 `span._offsetBytes` 이상의 오프셋을 더해 읽고 쓴다. */
-            [[nodiscard]] uint8* getSpanMappedBase( const RHIStagingSpan& span ) const { return span._bSolo != SW_FALSE ? _pSoloMapped : _pMapped; }
-        };
-
-        /** @brief 가져가지 않은 텍스처 읽기 하나입니다. 결과 바이트는 되읽기 링에 그대로 있고 `takeTextureReadback` 이 그때 복사해 간다. */
-        struct VulkanPendingReadback
-        {
-            RHIStagingSpan _span{};
-            uint64         _dataOffsetBytes{ 0 };   ///< 복사가 쓴 링 오프셋(구간 시작을 복사 정렬로 올린 값)
-            uint32         _sizeBytes{ 0 };         ///< 결과 바이트 수(`RHITextureMipSpan::_sizeBytes`)
-            uint32         _depth24TexelCount{ 0 }; ///< D24 깊이를 float32 로 바꿀 텍셀 수. 0 이면 바꾸지 않는다
-        };
-
-        /**
-         * @brief 전송 전용 커맨드 풀과 업로드 · 되읽기 스테이징 링을 만듭니다.
-         * @param desc 업로드 링(`_stagingRingBytes`), 되읽기 링(`_readbackRingBytes`), 링보다 큰 한 장의 상한(`_stagingSoloMaxBytes`, 두 링에 같이)을 읽습니다.
-         *             링 용량이 0 이면 오류를 남기고 false 입니다(기본값으로 바꾸지 않는다).
-         */
-        [[nodiscard]] bool initializeTransfers( const RHISwapChainDesc& desc );
-        /** @brief 남은 전송 작업, 전송을 기다리던 해제, 링, 풀을 놓습니다. GPU 가 쉰 뒤(종료 2단계 뒤)에 부릅니다. */
-        void shutdownTransfers();
-        /** @brief @p ring 에 @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다. 단독 상한은 @p soloMaxBytes 입니다. */
-        [[nodiscard]] bool createStagingRing( VulkanStagingRing& ring, uint64 capacityBytes, uint64 soloMaxBytes, uint32 usageFlags, const utf8* pName );
-        /** @brief 링 버퍼와 단독 버퍼를 놓고 구간 할당기를 비웁니다. 없는 링이면 아무것도 하지 않습니다. */
-        void destroyStagingRing( VulkanStagingRing& ring );
-        /**
-         * @brief @p capacityBytes 의 호스트 가시 · 일관 버퍼를 만들어 영속 매핑하고 메모리 추적기의 Staging 항목에 올립니다(링과 단독 버퍼가 같이 쓴다).
-         * @return 만들었으면 true. 실패하면 이유를 로그로 남기고 만든 것을 놓은 뒤 false 이며 세 출력은 비어 있다.
-         */
-        [[nodiscard]] bool createMappedStagingBuffer( uint64 capacityBytes, uint32 usageFlags, const utf8* pName, VkBuffer& outBuffer, VkDeviceMemory& outMemory,
-                                                      uint8*& outMapped );
-        /** @brief `createMappedStagingBuffer` 로 만든 버퍼를 놓고 메모리 추적기에서 내립니다. 비어 있으면 아무것도 하지 않습니다. 세 칸을 비웁니다. */
-        void destroyMappedStagingBuffer( VkBuffer& rBuffer, VkDeviceMemory& rMemory, uint8*& pMapped );
-        /**
-         * @brief @p ring 에서 구간을 잡습니다. 차 있으면 끝난 전송을 한 번 걷은 뒤 다시 봅니다. 기다리지 않습니다.
-         * @details 할당 결과를 제출 결과로 옮기고 못 받은 구간을 놓고 이유를 남기는 곳은 `RHIStagingRingUtil::settleAllocation` 하나다(잃은 장치면 Full 도 Rejected). 단독 구간이면 그 크기의
-         *          일회성 버퍼를 만들어 붙인다(앞선 단독 버퍼가 남아 있으면 먼저 지운다 — 할당기가 새 단독 구간을 내줬다면 앞 구간은 이미 돌아왔다).
-         *          Rejected 면 이유를 로그로 남기고 잡은 구간은 놓는다. 어느 스레드에서나, 전송 락 밖에서 부른다.
-         */
-        [[nodiscard]] RHISubmitResult allocateStagingSpan( VulkanStagingRing& ring, uint64 sizeBytes, uint32 usageFlags, const utf8* pCaller, RHIStagingSpan& outSpan );
-        /** @brief 할당기가 단독 구간을 돌려받았으면(`hasLiveSolo` 거짓) @p ring 의 단독 버퍼를 지웁니다. `retireFinishedTransfers` 가 부릅니다. */
-        void destroyIdleSoloBuffer( VulkanStagingRing& ring );
-        /** @brief 놀고 있는 전송 작업을 꺼내(없으면 만들어) 기록을 시작합니다. `_transferMutex` 를 쥐고 부릅니다. */
-        [[nodiscard]] bool beginTransferJob( VulkanTransferJob& outJob );
-        /**
-         * @brief 기록을 끝내고 큐 락 안에서 작업의 펜스와 함께 제출한 뒤, 같은 락 안에서 시리얼을 매깁니다(계약 5). 완료를 기다리지 않습니다.
-         * @return 시리얼입니다. 제출하지 못했으면 결과를 보고하고 작업을 돌려놓은 뒤 0 입니다. `_transferMutex` 를 쥐고 부릅니다.
-         */
-        [[nodiscard]] uint64 submitTransferJob( const VulkanTransferJob& job, const utf8* pWhere );
-        /** @brief 펜스를 지난 작업을 놀고 있는 작업 목록으로 돌려놓습니다. */
-        void recycleTransferJob( const VulkanTransferJob& job );
-        /**
-         * @brief 펜스를 지난 전송을 앞에서부터 걷어 워터마크를 올리고, 전송을 기다리던 해제를 프레임 해제 큐로 넘깁니다. 기다리지 않습니다.
-         * @details 어느 스레드에서나 부른다(`pollTransfer`, 링이 찬 제출, `beginFrame`). 펜스는 하나씩 확인하므로 앞의 것이 늦게 끝나면 뒤가 끝나도 워터마크는 거기서 멈춘다.
-         */
-        void retireFinishedTransfers();
 
         /// @brief 전송 티켓의 시리얼 발급기와 완료 워터마크입니다. 시리얼은 큐 제출 락 안에서 `_transferFenceQueue` 가 매긴다.
         RHITransferSerials _transferSerials;

@@ -267,6 +267,7 @@ namespace sw::editor
          */
         void drawReplay();
 
+    private:
         fixed_string<constant::buffer::kMax64>     _arrChannelName;                                                ///< 읽을 해시 줄 이름(편집 필드, `EditorStateHashCompare::setHashChannel`)
         fixed_string<constant::file::kMaxPathSize> _arrPath[EditorStateHashCompare::kSourceCount];                 ///< 슬롯마다 파일 경로(편집 필드)
         fixed_string<constant::buffer::kMax64>     _arrAddress[EditorStateHashCompare::kSourceCount];              ///< 슬롯마다 채널 주소(편집 필드)

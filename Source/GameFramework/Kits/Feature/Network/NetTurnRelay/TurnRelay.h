@@ -228,6 +228,7 @@ namespace sw
         int32  countPending( int32 connectionID ) const;
         uint32 nextToken();
 
+    private:
         vector<TurnRoom>            _listRoom;
         vector<PendingMessage>      _listPending;
         vector<int32>               _listBlockedScratch; ///< `flushPending` 에서 이번에 막힌 연결. 버퍼를 재사용한다

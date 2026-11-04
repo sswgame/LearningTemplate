@@ -142,6 +142,7 @@ namespace sw
         int32 applyNotify( const hashed_string& kind, const hashed_string& target, int32 value, bool bAbsolute );
         void  pushEvent( QuestEvent::Kind kind, const QuestProgress& progress, int32 objective = -1, int32 value = 0, const QuestReward* pReward = nullptr );
 
+    private:
         vector<QuestProgress>   _listProgress;
         EventBuffer<QuestEvent> _eventBuffer;
         const QuestCatalog*     _pCatalog;

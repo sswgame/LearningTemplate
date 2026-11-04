@@ -11,6 +11,8 @@ namespace
     class CountingSurface final : public sw::IRenderSurface
     {
     public:
+        uint32 _recreateCount;
+        bool   _bRecreateSucceeds;
         explicit CountingSurface( bool bRecreateSucceeds )
             : _recreateCount{ 0 }
             , _bRecreateSucceeds{ bRecreateSucceeds }
@@ -28,9 +30,6 @@ namespace
             ++_recreateCount;
             return _bRecreateSucceeds;
         }
-
-        uint32 _recreateCount;
-        bool   _bRecreateSucceeds;
     };
 } // namespace
 

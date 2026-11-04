@@ -332,34 +332,6 @@ namespace sw
      */
     struct TaskNode
     {
-        void retain() { _refCount.fetch_add( 1, std::memory_order_relaxed ); }
-        /**
-         * @brief 참조가 하나라도 남아 있을 때만 하나를 더 잡습니다(자유 노드 `_refCount == 0` 은 되살리지 않는다).
-         * @details 노드를 가리키는 핸들 없이 풀을 훑는 진단(`TaskNodePool::describeFirstUnfinished`)이 쓴다. 성공하면 `release` 로 짝을 맞춘다.
-         */
-        [[nodiscard]] bool tryRetain()
-        {
-            int32 current = _refCount.load( std::memory_order_relaxed );
-            while ( current > 0 )
-            {
-                if ( _refCount.compare_exchange_weak( current, current + 1, std::memory_order_acq_rel, std::memory_order_relaxed ) )
-                    return true;
-            }
-            return false;
-        }
-        /** @brief 마지막 참조가 놓이면 풀로 돌아갑니다(매니저가 살아 있으면 매니저를 거친다). */
-        void release();
-        /** @brief 선행 하나가 채워졌음을 알립니다. 마지막이었으면 소유 매니저가 큐에 넣습니다. */
-        void resolveOneDependency();
-
-        /** @brief 디버깅 · 프로파일링용 이름을 정합니다(용량을 넘으면 잘라 담습니다). */
-        void setName( [[maybe_unused]] string_view name )
-        {
-#if !defined( SW_SHIPPING )
-            copyTaskDebugName( _arrName, name );
-#endif
-        }
-
 #if !defined( SW_SHIPPING )
         utf8 _arrName[kTaskDebugNameCapacity + 1]{};
 #endif
@@ -413,5 +385,33 @@ namespace sw
          * @details 마지막 카운터 뒤의 패딩 영역에 둡니다 — 노드 크기가 늘지 않습니다(프레임마다 수백 개를 기록하는 노드다).
          */
         MemoryTag _memoryTag{ MemoryTag::Unknown };
+
+        void retain() { _refCount.fetch_add( 1, std::memory_order_relaxed ); }
+        /**
+         * @brief 참조가 하나라도 남아 있을 때만 하나를 더 잡습니다(자유 노드 `_refCount == 0` 은 되살리지 않는다).
+         * @details 노드를 가리키는 핸들 없이 풀을 훑는 진단(`TaskNodePool::describeFirstUnfinished`)이 쓴다. 성공하면 `release` 로 짝을 맞춘다.
+         */
+        [[nodiscard]] bool tryRetain()
+        {
+            int32 current = _refCount.load( std::memory_order_relaxed );
+            while ( current > 0 )
+            {
+                if ( _refCount.compare_exchange_weak( current, current + 1, std::memory_order_acq_rel, std::memory_order_relaxed ) )
+                    return true;
+            }
+            return false;
+        }
+        /** @brief 마지막 참조가 놓이면 풀로 돌아갑니다(매니저가 살아 있으면 매니저를 거친다). */
+        void release();
+        /** @brief 선행 하나가 채워졌음을 알립니다. 마지막이었으면 소유 매니저가 큐에 넣습니다. */
+        void resolveOneDependency();
+
+        /** @brief 디버깅 · 프로파일링용 이름을 정합니다(용량을 넘으면 잘라 담습니다). */
+        void setName( [[maybe_unused]] string_view name )
+        {
+#if !defined( SW_SHIPPING )
+            copyTaskDebugName( _arrName, name );
+#endif
+        }
     };
 } // namespace sw

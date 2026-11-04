@@ -146,10 +146,10 @@ namespace sw
          */
         struct ShooterNetSimRegistrar
         {
-            ShooterNetSimRegistrar() { (void)NetSimGameRegistry::registerGame( _entry ); }
-            ~ShooterNetSimRegistrar() { (void)NetSimGameRegistry::unregisterGame( _entry ); }
 
             NetSimGameEntry _entry{ ShooterNetSimGame::kName, &ShooterNetSimGame::create };
+            ShooterNetSimRegistrar() { (void)NetSimGameRegistry::registerGame( _entry ); }
+            ~ShooterNetSimRegistrar() { (void)NetSimGameRegistry::unregisterGame( _entry ); }
         };
 
         const ShooterNetSimRegistrar s_shooterNetSimRegistrar;

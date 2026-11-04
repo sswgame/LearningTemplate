@@ -74,6 +74,7 @@ namespace sw
         void beginStep();
         void completeStep();
 
+    private:
         const InteractionDef*                _pDef;
         InteractionProgress                  _holdProgress;
         EventBuffer<InteractionSessionEvent> _eventBuffer;

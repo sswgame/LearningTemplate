@@ -52,20 +52,20 @@ namespace sw
         static constexpr float32 kMinReadingSeconds = 2.0f;
         /** @brief 글자 하나의 읽기 시간(초)입니다. */
         static constexpr float32 kReadingSecondsPerCharacter = 0.06f;
-        // 자막 화면 문서는 엔진 기본 에셋 표가 기준이다(`UISystem::getEngineDocuments()._subtitles`). 줄 위젯 이름은 `Line<n>`(바탕), `Speaker<n>`, `Text<n>`(텍스트)입니다.
-
-        UISubtitleService();
-        ~UISubtitleService() override;
 
         // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UISubtitleService>()`, 게임은 `game::getSubsystem<UISubtitleService>()`). 화면 스택(`UISystem`)에 의존하고,
         // 기동이 UI 갱신 칸(`UISystem::onUpdateBeforeScreens`)에 걸고 종료가 줄을 비우고 푼다.
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UISubtitles";
-        SubsystemInitResult          initializeSubsystem() override;
-        void                         shutdownSubsystem() override;
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const>      getSubsystemDependencies() const override;
-        SubsystemHostMask            getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+        // 자막 화면 문서는 엔진 기본 에셋 표가 기준이다(`UISystem::getEngineDocuments()._subtitles`). 줄 위젯 이름은 `Line<n>`(바탕), `Speaker<n>`, `Text<n>`(텍스트)입니다.
+
+        UISubtitleService();
+        ~UISubtitleService() override;
+        SubsystemInitResult     initializeSubsystem() override;
+        void                    shutdownSubsystem() override;
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
         /**
          * @brief 줄 하나를 올립니다. 자리가 있으면 다음 `update` 부터 보이고, 없으면 대기열 끝에 섭니다.
@@ -105,6 +105,7 @@ namespace sw
         /** @brief 줄 슬롯 @p slot 을 줄 @p pLine 으로 맞춥니다(nullptr 이면 접습니다). 바뀐 필드만 씁니다. */
         void applySlot( UIScreen& screen, uint32 slot, const UISubtitleLine* pLine, float32 sizeScale, float32 backgroundOpacity );
 
+    private:
         UISystem*              _pUI;                     ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr — `post` 는 쌓기만 한다)
         Subscription           _updateSubscription;      ///< UI 갱신 칸(`UISystem::onUpdateBeforeScreens`) 구독
         vector<UISubtitleLine> _listActive;              ///< 보이는 줄입니다(오래된 것이 앞).

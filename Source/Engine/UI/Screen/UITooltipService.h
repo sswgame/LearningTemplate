@@ -37,17 +37,17 @@ namespace sw
         static constexpr float32 kPointerOffsetX = 16.0f;
         static constexpr float32 kPointerOffsetY = 20.0f;
 
-        UITooltipService();
-
         // ISubsystem — 엔진 범위의 서브시스템이다(`engine::getSubsystem<UITooltipService>()`, 게임은 `game::getSubsystem<UITooltipService>()`). 화면 스택(`UISystem`)에 의존하고,
         // 기동이 UI 갱신 칸(`UISystem::onUpdateBeforeScreens`)에 걸고 종료가 줄을 비우고 푼다.
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "UITooltips";
-        SubsystemInitResult          initializeSubsystem() override;
-        void                         shutdownSubsystem() override;
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const>      getSubsystemDependencies() const override;
-        SubsystemHostMask            getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
+
+        UITooltipService();
+        SubsystemInitResult     initializeSubsystem() override;
+        void                    shutdownSubsystem() override;
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
+        SubsystemHostMask       getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
 
         /** @brief 호버 경로로 커서 모양을 정하고, 머문 시간을 세어 툴팁을 열고 닫고 옮깁니다. UI 갱신의 화면 틱 앞 칸이 부릅니다(화면 그리기를 막은 동안은 건너뛴다). */
         void update( float32 deltaSeconds );
@@ -79,6 +79,7 @@ namespace sw
         /** @brief 툴팁 화면을 닫습니다. */
         void hide();
 
+    private:
         UISystem*      _pUI;                ///< 화면 스택(기동이 찾는다, 그 전 · 종료 뒤에는 nullptr)
         Subscription   _updateSubscription; ///< UI 갱신 칸(`UISystem::onUpdateBeforeScreens`) 구독
         UIScreenHandle _screen;

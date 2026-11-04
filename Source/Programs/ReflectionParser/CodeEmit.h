@@ -164,6 +164,7 @@ namespace sw
             }
         }
 
+    private:
         CodeEmitBuffer& _out;
         uint8           _indent;
     };

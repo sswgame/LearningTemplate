@@ -124,6 +124,7 @@ namespace sw
         void onClaimCompleted( size_t jobIndex, int64 occurrenceMs, ClaimOutcome outcome, uint64 runToken, int64 retryAtMs );
         void onWorkCompleted() { --_pendingWorkCount; }
 
+    private:
         vector<Job>      _listJob;
         IServiceStore*   _pStore;
         uint64           _serverID;

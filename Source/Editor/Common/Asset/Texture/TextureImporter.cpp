@@ -436,6 +436,7 @@ namespace sw::editor
                 return true;
             }
 
+        private:
             const TextureImportConfig& _config;
             TaskManager* const         _pTaskManager; ///< 밴드 압축을 나눠 돌릴 작업 시스템(빌림). nullptr 이면 호출한 스레드가 차례로 압축한다
         };

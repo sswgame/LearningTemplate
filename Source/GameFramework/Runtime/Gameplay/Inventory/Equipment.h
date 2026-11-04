@@ -110,6 +110,7 @@ namespace sw
         /** @brief 테스트용 상태를 실제 상태로 반영하고, 실제로 바뀌었으면 버전을 올립니다. */
         void commitSlots( vector<EquipSlot>&& listSlot );
 
+    private:
         vector<EquipSlot>      _listSlot;
         EquipCharacterContext  _context;
         const ItemCatalog*     _pCatalog;

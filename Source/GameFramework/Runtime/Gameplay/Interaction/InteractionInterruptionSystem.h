@@ -66,6 +66,7 @@ namespace sw
 
         int32 resolveNPC( const GameObject& target ) const;
 
+    private:
         ScheduleSystem* _pSchedule;
         NPCResolveFunc  _pResolver;
         hashed_string   _interactionID;

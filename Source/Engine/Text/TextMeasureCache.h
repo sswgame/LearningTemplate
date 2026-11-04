@@ -68,6 +68,7 @@ namespace sw
         {
         }
 
+    private:
         uint64      _hash;
         string_view _text;
         uint64      _contextHash;
@@ -200,6 +201,7 @@ namespace sw
             return _mapCurrent.emplace( hash, std::move( entry ) ).first->second;
         }
 
+    private:
         unordered_map<uint64, Entry> _mapCurrent; ///< 현재 세대입니다. 새로 잰 것과 승격한 것이 들어옵니다.
         unordered_map<uint64, Entry> _mapOlder;   ///< 이전 세대입니다. 다음 교대에 통째로 버려집니다.
         size_t                       _generationCapacity;

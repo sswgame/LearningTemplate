@@ -81,6 +81,7 @@ namespace sw
         void   finishRevocation( uint64 revocationID, const HTTPClientResponse& response );
         uint64 submitForm( const string& url, const vector<HTTPHeader>& listForm, UnixMilliseconds nowMs );
 
+    private:
         PlatformLoginProviderConfig       _settings;
         OidcLoginProvider                 _oidc;
         string                            _signingKeyPem;

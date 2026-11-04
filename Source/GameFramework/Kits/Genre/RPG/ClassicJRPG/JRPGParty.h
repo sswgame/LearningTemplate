@@ -160,6 +160,7 @@ namespace sw
         void learnSpellsAtLevel( int32 memberIndex, const JRPGClassDef& classDef, int32 level );
         void pushEvent( JRPGPartyEvent::Kind kind, int32 memberIndex, int32 value, const hashed_string& id = hashed_string{} );
 
+    private:
         vector<JRPGMember>          _listMember;
         EventBuffer<JRPGPartyEvent> _eventBuffer;
         string                      _equipLayout;

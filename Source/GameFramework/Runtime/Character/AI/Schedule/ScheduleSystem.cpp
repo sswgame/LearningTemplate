@@ -121,13 +121,13 @@ namespace sw
     public:
         static constexpr const utf8* kSubsystemName = "ScheduleSystemRegistry";
 
+        mutex                                     _mutex;
+        vector<const ScheduleSystem*> _listSystem SW_GUARDED_BY( _mutex );
+
         // ISubsystem — 세울 것이 없다. 일정 시스템(컴포넌트)은 GameFramework 가 내려가기 전에 사라진다.
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
-
-        mutex                                     _mutex;
-        vector<const ScheduleSystem*> _listSystem SW_GUARDED_BY( _mutex );
     };
 
     SW_MODULE_SUBSYSTEM( Engine, ScheduleSystemRegistry, ScheduleSystemRegistry );

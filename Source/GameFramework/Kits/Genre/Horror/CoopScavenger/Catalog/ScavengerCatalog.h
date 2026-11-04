@@ -244,6 +244,7 @@ namespace sw
         [[nodiscard]] bool loadElement( const XMLNode& node, string_view name, string_view sourceName );
         [[nodiscard]] bool loadMoon( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<ScavengerMoonDef>  _moonCatalog;
         GameCatalog<ScavengerScrapDef> _scrapCatalog;
         vector<ScavengerBuyRatePoint>  _listBuyRate; ///< 남은 날 오름차순이다

@@ -11,11 +11,11 @@ namespace
     /// 복사도 이동도 안 되는 값입니다 — 주소 고정 맵은 값을 옮기지 않으므로 이런 값도 담을 수 있어야 합니다.
     struct PinnedValue
     {
+
+        int32 _value{ 0 };
         PinnedValue()                                = default;
         PinnedValue( const PinnedValue& )            = delete;
         PinnedValue& operator=( const PinnedValue& ) = delete;
-
-        int32 _value{ 0 };
     };
 } // namespace
 

@@ -75,6 +75,7 @@ namespace sw
         /** @brief 슬롯을 하나 더 만듭니다. 못 만들면 false 입니다. */
         bool appendSlot( IRHIDevice* pDevice );
 
+    private:
         vector<RHIConstantBuffer> _listSlot;
         atomic<uint32>            _cursor;
         atomic<uint32>            _highWater;

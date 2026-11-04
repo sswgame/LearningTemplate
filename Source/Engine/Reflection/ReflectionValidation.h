@@ -67,6 +67,7 @@ namespace sw
     private:
         void add( ValidationSeverity severity, string_view message );
 
+    private:
         vector<ValidationIssue> _listIssue;
         string                  _sourceLabel;
         hashed_string           _typeName;

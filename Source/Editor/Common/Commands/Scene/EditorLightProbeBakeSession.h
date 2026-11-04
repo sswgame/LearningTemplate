@@ -69,6 +69,7 @@ namespace sw::editor
         /** @brief 편집 잠금을 풀고 결과를 알립니다. */
         void finish( bool bCanceled );
 
+    private:
         vector<uint64>              _listObjectID; ///< 굽을 볼륨의 오브젝트(프레임을 넘어 포인터를 들지 않는다)
         unique_ptr<IPhysicsScene3D> _pOccluders;   ///< 베이크하는 볼륨의 가림 씬 — `_job` 이 빌리므로 `_job` 보다 앞에 둔다(뒤에 사라진다)
         LightProbeBakeJob           _job;

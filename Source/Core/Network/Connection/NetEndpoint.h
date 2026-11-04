@@ -239,6 +239,19 @@ namespace sw
         static constexpr int32 kReceiveBatchSize     = 64;  ///< 일괄 받기 한 번에 받는 데이터그램 수. 시스템 호출 한 번이 이만큼을 받는다(`INetTransport::receiveBatch`).
         static constexpr int32 kMaxPacketsPerSend    = 8;   ///< 한 번의 전송에서 연결마다 보내는 패킷 상한. 대역폭 토큰이 남고 보낼 것이 있으면 여러 개를 보낸다.
 
+        /** @brief 패킷 본문의 첫 3비트로, 핸드셰이크 단계와 데이터와 끊김을 구분합니다. */
+        enum class PacketType : uint8
+        {
+            ConnectRequest = 0,
+            Challenge,
+            ChallengeResponse,
+            Accepted,
+            Denied,
+            Payload,
+            Disconnect,
+            Count
+        };
+
         NetEndpoint();
         ~NetEndpoint() override;
 
@@ -327,28 +340,12 @@ namespace sw
          */
         bool isConnectionSaturated( int32 connectionID ) const SW_EXCLUDES_LOCK( _mutex ) override;
 
-        /** @brief 패킷 본문의 첫 3비트로, 핸드셰이크 단계와 데이터와 끊김을 구분합니다. */
-        enum class PacketType : uint8
-        {
-            ConnectRequest = 0,
-            Challenge,
-            ChallengeResponse,
-            Accepted,
-            Denied,
-            Payload,
-            Disconnect,
-            Count
-        };
-
         /** @brief 데이터그램(헤더 포함)의 패킷 종류를 미리 확인합니다. 체크섬은 보지 않으며, 너무 짧으면 Count 를 반환합니다(위조 패킷 필터와 진단용). */
         static PacketType peekPacketType( const uint8* pData, int32 size );
         /** @brief 패킷 체크섬입니다(헤더 값을 먼저 섞은 FNV-1a). 테스트와 진단 도구가 고친 패킷의 체크섬을 다시 맞출 때 씁니다. */
         static uint32 computePacketChecksum( uint32 headerID, const uint8* pBody, int32 size );
 
     private:
-        /** @brief 버전과 상관없는 고정 헤더(`NetProtocol::kHandshakeID`)로 싸는 패킷입니다. 요청과 거절뿐이며, 두 패킷의 배치는 버전이 바뀌어도 그대로 둡니다. */
-        static bool isHandshakeFramed( PacketType type ) { return type == PacketType::ConnectRequest || type == PacketType::Denied; }
-
         /** @brief 보낼 데이터그램 하나입니다. 바이트는 `OutgoingBatch::_bytes` 의 [_offset, _offset + _size) 범위입니다. */
         struct OutgoingDatagram
         {
@@ -399,6 +396,8 @@ namespace sw
             uint64     _valueA{ 0 };
             uint64     _valueB{ 0 };
         };
+        /** @brief 버전과 상관없는 고정 헤더(`NetProtocol::kHandshakeID`)로 싸는 패킷입니다. 요청과 거절뿐이며, 두 패킷의 배치는 버전이 바뀌어도 그대로 둡니다. */
+        static bool isHandshakeFramed( PacketType type ) { return type == PacketType::ConnectRequest || type == PacketType::Denied; }
 
         // 아래 함수는 모두 잠금을 잡은 채로 부른다.
         /** @brief 받은 데이터그램 하나의 헤더와 종류를 검사하고 종류별 처리로 넘깁니다. 틀린 패킷은 `_rejectedPacketCount` 로만 셉니다. */
@@ -453,6 +452,7 @@ namespace sw
         static void sendBatch( INetTransport* pTransport, const OutgoingBatch& batch );
         static void deliverFinished( vector<FinishedConnect>& listFinished );
 
+    private:
         mutable mutex                                 _mutex;                  ///< 아래 상태 전부. 잠금 밖 전용이라고 적은 것은 제외한다.
         NetSlotTable _slotTable                       SW_GUARDED_BY( _mutex ); ///< 연결 슬롯과 주소 맵.
         NetChallenge _challenge                       SW_GUARDED_BY( _mutex ); ///< 챌린지 값의 비밀 키와 솔트 수열.

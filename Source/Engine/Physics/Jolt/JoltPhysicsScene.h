@@ -341,6 +341,7 @@ namespace sw
         /** @brief 지금 깨어 있는 강체를 `_listMovedBody` 에 붙입니다(스텝 앞 · 뒤에 한 번씩). */
         void appendActiveBodies();
 
+    private:
         PhysicsSettings                           _settings;
         JoltBroadPhaseLayers                      _broadPhaseLayers;
         JoltObjectVsBroadPhaseFilter              _objectVsBroadPhaseFilter;

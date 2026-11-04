@@ -126,6 +126,7 @@ namespace sw::editor
         /** @brief 노드 번호로 든 고름 · 놓을 노드를 풉니다(그래프를 통째로 바꾸거나 노드를 지웠을 때). */
         void clearNodeRefs();
 
+    private:
         AudioGraphDef  _editGraph;         ///< 고치는 중인 그래프 사본(파일에서 읽음)
         vector<uint32> _listOrder;         ///< 처리 순서 버퍼
         AudioPlayingID _previewID;         ///< 미리 듣기의 재생 id 다(0 = 없음).

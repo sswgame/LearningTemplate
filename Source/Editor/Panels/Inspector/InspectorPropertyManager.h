@@ -29,6 +29,8 @@ namespace sw::editor
     class InspectorPropertyManager : public EditorSubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
+        static constexpr const utf8* kSubsystemName = "InspectorPropertyManager";
         InspectorPropertyManager();
         ~InspectorPropertyManager() override;
 
@@ -38,10 +40,8 @@ namespace sw::editor
             registerDefaults();
             return SubsystemInitResult::Succeeded;
         }
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 칸이 이 상수를 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "InspectorPropertyManager";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
-        span<const utf8* const>      getSubsystemDependencies() const override;
+        const utf8*             getSubsystemName() const override { return kSubsystemName; }
+        span<const utf8* const> getSubsystemDependencies() const override;
         InspectorPropertyManager( const InspectorPropertyManager& )            = delete;
         InspectorPropertyManager& operator=( const InspectorPropertyManager& ) = delete;
 
@@ -64,6 +64,7 @@ namespace sw::editor
         /** @brief 내장 표(`ReflectBuiltins.xxx`)의 위젯을 모두 다시 겁니다. */
         void registerBuiltins();
 
+    private:
         NameRegistry<unique_ptr<IInspectorProperty>>    _registry;         ///< 프로퍼티 타입 이름 → 위젯
         vector<const EditorPropertyDrawerRegistration*> _listRegistration; ///< 지금 걸려 있는 그리기 확장 등록 줄
         uint32                                          _syncedGeneration; ///< 마지막으로 맞춘 등록 세대

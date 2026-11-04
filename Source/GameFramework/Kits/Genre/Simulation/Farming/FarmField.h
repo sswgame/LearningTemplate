@@ -112,6 +112,7 @@ namespace sw
         FarmTile*      findTileMutable( int32 x, int32 y );
         const CropDef* findCropDef( const FarmTile& tile ) const;
 
+    private:
         vector<FarmTile>   _listTile; ///< 타일마다의 상태이다(`_topology` 의 타일 번호)
         const CropCatalog* _pCatalog;
         GridTopology       _topology;

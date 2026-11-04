@@ -85,6 +85,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "WeatherCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
+    private:
         float32 _transitionTime{ 60.0f };
     };
 } // namespace sw
@@ -128,6 +129,7 @@ namespace sw
         const WeatherDef* pickWeather( const hashed_string& season, GameRandom& random, const WeatherDef* pExclude ) const;
         float32           pickDuration( const WeatherDef& weather, GameRandom& random ) const;
 
+    private:
         const WeatherCatalog* _pCatalog;
         const WeatherDef*     _pCurrent;
         const WeatherDef*     _pPrevious;

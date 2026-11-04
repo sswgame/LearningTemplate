@@ -32,12 +32,12 @@ namespace sw
             /** @brief `LoadScene` 이 요청한 씬 로드의 답입니다 — 이번 실행의 붙잡은 단계 상태라 실행기가 소유하고, 단계가 놓이거나 실행이 끝나면 지운다. */
             struct PendingLoad final : IAutomationStepState
             {
+
+                TaskFuture<Scene*> _future;
                 explicit PendingLoad( TaskFuture<Scene*> future )
                     : _future{ std::move( future ) }
                 {
                 }
-
-                TaskFuture<Scene*> _future;
             };
 
             static uint32 readTimeoutFrames( const AutomationStep& step, uint32 defaultFrames )

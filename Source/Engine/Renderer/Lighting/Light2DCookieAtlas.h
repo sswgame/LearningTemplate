@@ -74,6 +74,7 @@ namespace sw
         /** @brief 비어 있는 칸 번호입니다. 없으면 `kLight2DCookieCellCount` 입니다. */
         uint32 findFreeCell() const;
 
+    private:
         vector<Entry>         _listEntry;
         vector<CellDraw>      _listPendingDraw;
         unique_ptr<Texture2D> _atlas;

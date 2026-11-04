@@ -58,6 +58,7 @@ namespace sw
         /** @brief 씬 키의 항목을 찾고, 없으면 만듭니다. */
         ScenePreviewEntry& getOrCreateEntry( uint32 sceneKey );
 
+    private:
         /** @brief 미리보기 씬마다의 채우기입니다. 요청이 끊긴 씬의 것은 해제합니다. */
         vector<ScenePreviewEntry> _listEntry;
         /** @brief 새 채우기를 맞출 디바이스입니다(`initialize`). 없으면 미리보기를 채우지 않는다. */

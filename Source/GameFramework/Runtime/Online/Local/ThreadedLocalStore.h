@@ -41,6 +41,7 @@ namespace sw
         /** @brief 작업 스레드에서 요청 하나를 실행해 완료를 쌓습니다. 종료 중에도 쓰기 · 지우기는 끝까지 하고, 읽기 · 나열은 받을 사람이 없어 실패로 끝냅니다. */
         void processRequest( LocalStoreRequest& request, bool bStopping );
 
+    private:
         vector<LocalStoreCompletion> _listCompletion SW_GUARDED_BY( _mutex );
         LocalSealContext                             _sealContext;
         unique_ptr<ILocalSlotStorage>                _storage;

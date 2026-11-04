@@ -67,6 +67,7 @@ namespace sw
     private:
         void collectDetachEvents( const ResolvedAppearance& previous, const ResolvedAppearance& current );
 
+    private:
         CharacterAppearanceSpec       _spec;
         ResolvedAppearance            _resolved;
         vector<AppearanceDetachEvent> _listPendingEvent;

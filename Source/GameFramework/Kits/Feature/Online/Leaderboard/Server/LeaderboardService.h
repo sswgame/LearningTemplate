@@ -254,6 +254,7 @@ namespace sw
         void finishSettlement( uint64 settlementID, bool bSucceeded );
         void applySettlement( const string& jobID, const SettlementDelegate& onDone, bool bSucceeded );
 
+    private:
         unordered_map<string, LeaderboardDefinition>       _mapBoard;
         unordered_map<string, vector<PendingRead>>         _mapRankKeyToWaitingRead; ///< 다시 채우는 동안 대기 중인 읽기이다
         unordered_map<string, vector<LeaderboardScoreRow>> _mapRankKeyToLateWrite;   ///< 다시 채우는 동안 쓴 점수(캐시 점수)이다. 채운 뒤 한 번 더 싣는다

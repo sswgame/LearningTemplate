@@ -121,6 +121,7 @@ namespace sw
                     collectValue( pElement, shape._elementTypeName );
             }
 
+        private:
             const TypeRegistry&                  _registry;
             vector<const SceneObjectReference*>& _outListReference;
         };

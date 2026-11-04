@@ -3,8 +3,8 @@
 """
 Scripts/lint/CppShape.py
 
-C++ 모양 규칙 중 컴파일러가 보지 않는 넷을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
-**왜 형식이 아니라 린트인가.** 넷 다 C++ 문법으로 막을 수 없다(멤버 순서 · 칸 형식의 선택 · 익명 네임스페이스 수 · 함수가 놓인 타입).
+C++ 모양 규칙 중 컴파일러가 보지 않는 다섯을 본다. 규칙 문서만 있고 검사가 없어 어긋남이 퍼졌던 자리다(2026-11-05 — 선언 순서 위반 1240 곳 · bool 깃발 1228 칸).
+**왜 형식이 아니라 린트인가.** 다섯 다 C++ 문법으로 막을 수 없다(멤버 순서 · 칸 형식의 선택 · 익명 네임스페이스 수 · 함수가 놓인 타입 · include 자리).
 
 1. 선언 순서(`docs/agents/Includes.md`): public 멤버 변수 → 생성자 · 소멸자 → … → private 함수(따로 된 접근 구역) → private 멤버 변수(마지막).
    - public 멤버 변수가 함수 뒤에 온다 · private/protected 멤버 변수 뒤에 함수가 온다 · private/protected 함수와 변수가 한 구역에 섞였다.
@@ -12,6 +12,9 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 넷을 본다. 규칙 문서
    이웃 칸(같은 바이트 경합)은 `bool` 로 두고 그 줄에 `NOLINT(sw-bool-flag): <이유>` 를 적는다.
 3. 익명 네임스페이스(`docs/agents/Helpers.md`): `.cpp` 에 하나(전처리 갈래가 갈리는 경우는 갈래마다), 빈 블록 없음.
 4. 주인 우선(`docs/agents/Helpers.md`): 같은 헤더에 타입 `X`(열거가 아닌)와 `XUtil` 이 함께 있으면 `XUtil` 의 함수는 `X` 의 (static) 멤버다.
+5. 중괄호 안 헤더 include: X-매크로 표(`.xxx`) · 인라인 본문(`.inl`) 말고는 `#include` 가 이름공간 · 클래스 · 함수 몸통 안에 있으면 안 된다.
+   2026-11-05 — 파일을 합치는 일회용 스크립트가 "마지막 include 뒤" 에 헤더를 붙여 클래스 몸통 · 배열 초기값 안에 들어갔고, 다른 헤더가 먼저 끌어와
+   `#pragma once` 로 비어 있어 컴파일러가 알리지 않았다.
 
 `py -3 -m Scripts cpp-shape [--files …|--all]` 로 돌리고, 커밋 훅(`PreCommit.py`)이 staged 파일에 돌린다.
 """
@@ -118,6 +121,28 @@ def removeAngleGroups(text: str) -> str:
     return text
 
 
+def stripTemplateHead(text: str) -> str:
+    """앞의 `template < … >` 를 짝 맞춰 벗깁니다(기본 인자 `typename = enable_if_t<…>` 의 `=` · 괄호가 문장 본체로 읽히지 않게)."""
+    match = re.match(r"template\s*<", text)
+    if match is None:
+        return text
+    depth = 0
+    paren = 0  # 괄호 안(`decltype( a << b )`)의 꺾쇠는 세지 않는다
+    for index in range(match.end() - 1, len(text)):
+        char = text[index]
+        if char == "(":
+            paren += 1
+        elif char == ")":
+            paren -= 1
+        elif paren == 0 and char == "<":
+            depth += 1
+        elif paren == 0 and char == ">":
+            depth -= 1
+            if depth == 0:
+                return text[index + 1:].lstrip()
+    return text
+
+
 def classifyStatement(statement: str, className: str) -> str | None:
     """클래스 깊이 문장의 종류 — ctor · func · var · None(타입 별칭 · friend · static · 매크로 등 순서 밖)."""
     text = re.sub(r"\s+", " ", statement).strip()
@@ -132,9 +157,15 @@ def classifyStatement(statement: str, className: str) -> str | None:
         text = rest
     if not text:
         return None
+    body = stripTemplateHead(text)
+    if re.match(r"friend\b", body) and not re.match(r"friend\s+(class|struct|union)\b", body) and "(" in removeAngleGroups(body):
+        return "func"  # friend 함수(연산자 · 스트림 출력) — 공개 함수 무리
     if re.match(r"(using|typedef|friend|static_assert|namespace|template\s*<[^>]*>\s*(class|struct|using))\b", text):
         return None
-    text = re.sub(r"^template\s*<.*?>\s*", "", text)
+    if re.match(r"(class|struct|union|enum(\s+class|\s+struct)?)\s+\w+(\s*:\s*[\w:]+)?$", text):
+        return None  # 전방 선언(`struct Entry;`) — 순서 밖(뒤의 선언이 쓴다)
+    text = stripTemplateHead(text)
+    text = re.sub(r"^alignas\s*\((?:[^()]|\([^()]*\))*\)\s*", "", text)  # `alignas( … )` 의 괄호는 함수 인자가 아니다
     if re.match(r"(static|inline\s+static|constexpr\s+static)\b", text) or re.match(r"(constexpr|inline)\s+static\b", text):
         return None  # 정적 멤버는 순서 규칙 밖(상수 · 정적 함수)
     if re.match(r"(explicit\s+|constexpr\s+|inline\s+|virtual\s+)*~?" + re.escape(className) + r"\s*\(", text):
@@ -142,8 +173,10 @@ def classifyStatement(statement: str, className: str) -> str | None:
     # 변수 이름 뒤에 붙는 매크로(SW_GUARDED_BY( … ))를 지운다
     text = re.sub(r"\s+SW_[A-Z_]+\s*\((?:[^()]|\([^()]*\))*\)", "", text)
     flat = removeAngleGroups(text)
-    if re.match(r"^[\w:\s*&]+\(\s*[*&]\s*\w+\s*\)\s*[\(\[]", flat):
-        return "var"  # 함수 포인터 · 배열 참조 멤버
+    flat = re.sub(r"\[[^\[\]]*\]", "[]", flat)  # 배열 크기 안의 괄호(`_arr[static_cast<int32>( … )]`)는 함수 인자가 아니다
+    firstParen = flat.find("(")
+    if firstParen >= 0 and re.match(r"\(\s*(?:[\w:]+::)?[*&]\s*\w+\s*\)\s*[\(\[]", flat[firstParen:]):
+        return "var"  # 함수 포인터 · 멤버 함수 포인터 · 배열 참조 멤버 — 문장의 첫 괄호가 `( *name )` · `( Type::*name )` 이다
     if "(" in flat:
         head = flat.split("(")[0]
         if "operator" in head or ("=" not in head and "{" not in head):
@@ -172,8 +205,9 @@ def parseClass(code: str, start: int, end: int, info: ClassInfo, outClasses: lis
         if char == "{":
             head = code[statementStart:index]
             token = previousToken(code, index)
-            match = kTypeHead.search(head)
-            if match and "(" not in head[:match.start()] and match.group(1).startswith(("class", "struct", "union")) and "=" not in head[match.end():]:
+            typeHead = removeAngleGroups(head)  # 템플릿 인자의 `class T` 는 타입 정의가 아니다
+            match = kTypeHead.search(typeHead)
+            if match and "(" not in typeHead[:match.start()] and match.group(1).startswith(("class", "struct", "union")) and "=" not in typeHead[match.end():]:
                 close = matchBrace(code, index)
                 nested = ClassInfo(match.group(2), match.group(1) == "struct", lineOf(code, index))
                 parseClass(code, index + 1, close, nested, outClasses)
@@ -231,9 +265,10 @@ def parseScope(code: str, start: int, end: int, outClasses: list[ClassInfo]) -> 
         char = code[index]
         if char == "{":
             head = code[statementStart:index]
-            match = kTypeHead.search(head)
+            typeHead = removeAngleGroups(head)  # 템플릿 인자의 `class T` 는 타입 정의가 아니다
+            match = kTypeHead.search(typeHead)
             close = matchBrace(code, index)
-            if match and match.group(1).startswith(("class", "struct", "union")) and "(" not in head[:match.start()] and "=" not in head[match.end():] and match.group(2):
+            if match and match.group(1).startswith(("class", "struct", "union")) and "(" not in typeHead[:match.start()] and "=" not in typeHead[match.end():] and match.group(2):
                 info = ClassInfo(match.group(2), match.group(1) == "struct", lineOf(code, index))
                 parseClass(code, index + 1, close, info, outClasses)
                 outClasses.append(info)
@@ -332,6 +367,21 @@ def checkUtilBesideOwner(code: str, relative: str) -> list[tuple[int, str]]:
     return problems
 
 
+kIncludeLine = re.compile(r'^[ 	]*#[ 	]*include[ 	]*[<"]([^>"]+)[>"]', re.M)
+
+
+def checkIncludesInsideBraces(raw: str, code: str) -> list[tuple[int, str]]:
+    problems: list[tuple[int, str]] = []
+    depth = 0
+    position = 0
+    for match in kIncludeLine.finditer(raw):
+        depth += code.count("{", position, match.start()) - code.count("}", position, match.start())
+        position = match.start()
+        if depth > 0 and not match.group(1).endswith((".xxx", ".inl")):
+            problems.append((lineOf(raw, match.start()), f"`{match.group(1)}` include 가 중괄호(이름공간 · 클래스 · 함수) 안에 있다 — 파일 맨 위 include 영역으로 옮긴다"))
+    return problems
+
+
 def inspectFile(path: Path, relative: str) -> list[str]:
     raw = path.read_text(encoding="utf-8-sig", errors="ignore")
     code = stripCode(raw)
@@ -343,6 +393,7 @@ def inspectFile(path: Path, relative: str) -> list[str]:
     if relative.endswith(".cpp"):
         listProblem += checkAnonymousNamespaces(code)
     listProblem += checkUtilBesideOwner(code, relative)
+    listProblem += checkIncludesInsideBraces(raw, code)
     return [f"{relative}:{line}: {message}" for line, message in sorted(set(listProblem))]
 
 
@@ -365,7 +416,7 @@ def checkCppShape(projectRoot: Path, listFile: Sequence[str]) -> list[str]:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="C++ 모양 규칙(선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선)을 본다")
+    parser = argparse.ArgumentParser(description="C++ 모양 규칙(선언 순서 · 깃발 칸 · 익명 네임스페이스 · 주인 우선 · 중괄호 안 include)을 본다")
     parser.add_argument("--files", nargs="*", default=None, help="볼 파일(없으면 --all)")
     parser.add_argument("--all", action="store_true", help="Source 전체")
     parser.add_argument("--summary", action="store_true", help="종류별 수만")

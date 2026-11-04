@@ -36,6 +36,7 @@ namespace sw
     public:
         /** @brief 서브시스템 이름입니다. 초기화 · 종료할 것이 없고 수명(서비스 범위 — 엔진 범위보다 먼저 서고 나중에 사라진다)만 컬렉션이 정한다. */
         static constexpr const utf8* kSubsystemName = "ComponentDefaults";
+        // 정적 창구는 두지 않는다 — 값의 주인은 엔진 범위의 이 서비스이고, 쓰는 쪽이 `engine::getSubsystem<ComponentDefaults>()`(모듈은 `game::`)로 찾는다.
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
@@ -69,7 +70,6 @@ namespace sw
          *          워커와 게임 스레드가 처음 보는 타입을 함께 만들 때).
          */
         const void* findResolvedAddress( const TypeInfo& typeInfo ) const;
-        // 정적 창구는 두지 않는다 — 값의 주인은 엔진 범위의 이 서비스이고, 쓰는 쪽이 `engine::getSubsystem<ComponentDefaults>()`(모듈은 `game::`)로 찾는다.
 
     private:
         /**
@@ -86,13 +86,6 @@ namespace sw
             uint8               _bMemcpy = SW_FALSE;
         };
 
-        /** @brief 한 단계(타입 하나)의 `<Defaults>` 노드를 패치로 풉니다. 속성 찾기와 텍스트 파싱을 여기서 한 번 합니다. */
-        static void resolveNodeToPatches( const TypeInfo& typeInfo, const XMLNode& compNode, vector<DefaultPatch>& inoutListPatch );
-        /** @brief 패치 하나를 인스턴스에 넣습니다(memcpy 또는 텍스트 파싱). */
-        static void applyPatch( void* pInstance, const DefaultPatch& patch );
-
-        void ensureDefaultsLoaded();
-
         /**
          * @brief 한 타입에 적용할 `<Defaults>` 단계들입니다. **루트 → 파생** 순서입니다.
          * @details 이 목록은 `TypeInfo` 와 기본값 문서만으로 정해지고 문서는 로드 중 바뀌지
@@ -105,6 +98,13 @@ namespace sw
             uint32               _generation = 0; ///< 풀 때의 타입 표 세대. 재등록으로 프로퍼티 목록이 갈리면 다시 풉니다
         };
 
+        /** @brief 한 단계(타입 하나)의 `<Defaults>` 노드를 패치로 풉니다. 속성 찾기와 텍스트 파싱을 여기서 한 번 합니다. */
+        static void resolveNodeToPatches( const TypeInfo& typeInfo, const XMLNode& compNode, vector<DefaultPatch>& inoutListPatch );
+        /** @brief 패치 하나를 인스턴스에 넣습니다(memcpy 또는 텍스트 파싱). */
+        static void applyPatch( void* pInstance, const DefaultPatch& patch );
+
+        void ensureDefaultsLoaded();
+
         /**
          * @brief 타입별 해석 결과입니다. 문서를 다시 읽으면(`setPath`) 통째로 버리고, 타입 표 세대가 바뀌면 다시 풉니다.
          * @details 돌려주는 참조는 잠금 밖에서 순회됩니다. 그래서 결과는 **힙에 따로** 살고(다른 타입이 들어와도 주소가 그대로),
@@ -114,6 +114,7 @@ namespace sw
         /** @brief 문서를 다시 읽을 때 해석 결과를 버립니다. 패치는 그 문서에서 푼 값입니다. */
         void clearResolvedCache();
 
+    private:
         XMLDocument                _defaultsDoc;
         string _customDefaultsPath SW_GUARDED_BY( _defaultsMutex );
 

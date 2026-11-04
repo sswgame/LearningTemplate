@@ -57,6 +57,7 @@ namespace sw::editor
         /** @brief 몸 루트의 애니메이터에 클립 @p clipPath 를 읽혀 재생합니다. 읽지 못하면 상태 줄이 알린다. */
         void playClip( SkeletalAnimatorComponent& animator, string_view clipPath );
 
+    private:
         string           _bodyPrefabPath;    ///< 입력란의 몸 프리팹 경로(Spawn 을 눌러야 적용한다)
         string           _activePrefabPath;  ///< Spawn 으로 확정한 몸 프리팹 경로
         string           _spawnedPrefabPath; ///< 미리보기 씬에 놓은 몸의 프리팹 경로(비면 아직 놓지 않았다)

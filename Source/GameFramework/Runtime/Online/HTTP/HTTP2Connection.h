@@ -129,6 +129,7 @@ namespace sw
         void               pushFailure( uint64 requestID, const utf8* pFailure );
         [[nodiscard]] bool failConnection( const utf8* pReason, string& outError );
 
+    private:
         HpackDecoder                  _decoder;
         HTTP2ConnectionConfig         _settings;
         unordered_map<uint32, Stream> _mapStream;

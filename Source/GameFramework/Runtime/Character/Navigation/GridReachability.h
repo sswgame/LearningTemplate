@@ -105,6 +105,7 @@ namespace sw
             std::push_heap( _listOpen.begin(), _listOpen.end(), &OpenEntry::isWorse );
         }
 
+    private:
         vector<int32>             _listCost{};
         vector<int32>             _listParent{};
         vector<uint8>             _listStoppable{};

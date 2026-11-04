@@ -84,6 +84,10 @@ namespace sw
         /** @brief 구독이 풀렸다 - 그 요청의 콜백을 지운다(요청 자체는 저장소가 끝까지 한다). */
         void releaseRequest( uint64 requestID );
 
+        void linkLive();
+        void unlinkLive();
+
+    private:
         unique_ptr<LocalDeviceKeyProvider> _keyProvider; ///< 봉인 키(장치 키). 저장소보다 먼저 서고 늦게 진다
         LocalSealContext                   _sealContext; ///< 저장소가 빌려 쓴다
         unique_ptr<ILocalStore>            _store;
@@ -91,8 +95,5 @@ namespace sw
         SubscriptionList                   _subscriptions{ SubscriptionList::ReleaseFunction::create<&LocalStoreChannel::releaseRequest>( this ) };
         LocalStoreChannel*                 _pPrevLive{ nullptr }; ///< 살아 있는 채널 목록의 앞(`isAnyChannelBusy`)
         LocalStoreChannel*                 _pNextLive{ nullptr }; ///< 살아 있는 채널 목록의 뒤
-
-        void linkLive();
-        void unlinkLive();
     };
 } // namespace sw

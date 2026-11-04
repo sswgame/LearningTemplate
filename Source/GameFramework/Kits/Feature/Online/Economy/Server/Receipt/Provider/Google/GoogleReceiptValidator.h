@@ -103,6 +103,7 @@ namespace sw
         void flushWaiting( ServiceAccountTokenSource::Outcome outcome, UnixMilliseconds now );
         void completeRetry( const PendingValidation& pending, const utf8* pText );
 
+    private:
         GoogleReceiptSettings              _settings;
         ServiceAccountTokenSource          _tokenSource;
         unordered_map<uint64, WaitingCall> _mapRequestToCall;

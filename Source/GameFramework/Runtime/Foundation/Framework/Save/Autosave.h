@@ -191,6 +191,7 @@ namespace sw
         [[nodiscard]] static bool readSlotInfo( const vector<uint8>& bytes, AutosaveSlotInfo& outInfo );
         static int32              getTriggerPriority( AutosaveTrigger trigger );
 
+    private:
         AutosaveSettings         _settings;
         SaveDelegate             _onSave;
         LoadDelegate             _onLoad;

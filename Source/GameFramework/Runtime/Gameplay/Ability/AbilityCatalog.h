@@ -397,15 +397,14 @@ namespace sw
         uint32 getCueCount() const { return static_cast<uint32>( _mapCue.size() ); }
 
     private:
+        /** @brief `<AbilityCatalog>` 루트 하나를 읽습니다. 읽은 정의 수를 반환합니다. */
+        static constexpr const utf8* kXMLRootName = "AbilityCatalog"; ///< 루트 원소(`XMLCatalog`)
         template <typename TBase, typename T>
         static unique_ptr<TBase> createDefault()
         {
             return unique_ptr<TBase>( make_unique<T>() );
         }
-
-        /** @brief `<AbilityCatalog>` 루트 하나를 읽습니다. 읽은 정의 수를 반환합니다. */
-        static constexpr const utf8* kXMLRootName = "AbilityCatalog"; ///< 루트 원소(`XMLCatalog`)
-        uint32                       loadRoot( const XMLNode& root, string_view sourceName );
+        uint32 loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief `<AbilityEffect>` 하나를 읽습니다. */
         [[nodiscard]] bool readEffect( const XMLNode& node, string_view sourceName, AbilityEffectDef& outDef ) const;
         /** @brief `<Ability>` 하나를 읽습니다. */
@@ -417,6 +416,7 @@ namespace sw
         /** @brief 이펙트 id 로 정의를 찾습니다. id 가 비어 있으면 nullptr 이고, 정의가 없으면 경고를 남기고 nullptr 입니다. */
         shared_ptr<const AbilityEffectDef> resolveEffectReference( const utf8* pEffectID, const utf8* pOwnerID, string_view sourceName ) const;
 
+    private:
         unordered_map<hashed_string, shared_ptr<const AbilityEffectDef>> _mapEffect;
         unordered_map<hashed_string, AbilityDef>                         _mapAbility;
         unordered_map<hashed_string, AbilitySetDef>                      _mapAbilitySet;

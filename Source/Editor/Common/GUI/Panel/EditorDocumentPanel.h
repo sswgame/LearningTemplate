@@ -32,6 +32,9 @@ namespace sw::editor
         EditorDockSlot  getDefaultDockSlot() const override { return EditorDockSlot::Center; }
         EditorAssetType getDocumentKind() const override { return _kind; }
 
+    private:
+        static constexpr uint32 kMaxRecentDocumentCount = 8;
+
     protected:
         /**
          * @param kind 이 패널이 다루는 애셋 종류입니다.
@@ -139,8 +142,6 @@ namespace sw::editor
         }
 
     private:
-        static constexpr uint32 kMaxRecentDocumentCount = 8;
-
         void drawContent() final { drawDocumentContent(); }
 
         /** @brief 이 종류의 에셋 목록 팝업을 그립니다. */
@@ -154,6 +155,7 @@ namespace sw::editor
         /** @brief 읽지 못했음을 표시합니다. 다시 읽으려 하지 않고(`isDocumentLoaded`) 저장을 막습니다(`canSaveDocument`). 다른 문서로 바꾸거나 다시 읽어 성공하면 풀립니다. */
         void markDocumentLoadFailed( string_view reason );
 
+    private:
         EditorAssetType                         _kind;
         string                                  _loadedAssetPath;
         string                                  _pendingFocusPath;

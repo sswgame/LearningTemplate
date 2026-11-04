@@ -127,6 +127,7 @@ namespace sw
         /** @brief 머리말 · FAT · 페이로드 · 스트링 풀을 @p outBytes 에 제자리 복사합니다. 항목의 압축 바이트는 복사 직후 놓습니다. */
         void assemblePack( const vector<const Entry*>& listSorted, vector<CompressSlot>& inoutListSlot, const PackLayout& layout, vector<uint8>& outBytes ) const;
 
+    private:
         vector<Entry>  _listEntry;
         PackWriterDesc _desc;
     };

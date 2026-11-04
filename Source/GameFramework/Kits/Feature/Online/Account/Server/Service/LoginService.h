@@ -198,6 +198,7 @@ namespace sw
         void        finishVerification( const PendingVerification& pending, const PlatformLoginVerification& verification );
         void        removeOfflineIdentities();
 
+    private:
         EventBuffer<LoginEvent>                  _eventBuffer;
         EventBuffer<LoginEvent>                  _remoteRevokeBuffer;
         EventBuffer<LoginCompletion>             _completionBuffer;

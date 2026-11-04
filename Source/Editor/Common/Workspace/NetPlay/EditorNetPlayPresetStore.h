@@ -61,6 +61,7 @@ namespace sw::editor
         /** @brief @p file 을 `_filePath` 에 쓰고, 썼을 때만 지금 목록으로 들입니다 — 쓰지 못한 변경이 메모리에만 남아 파일과 어긋나지 않게 합니다. */
         [[nodiscard]] bool commitFile( EditorNetPlayPresetFile&& file );
 
+    private:
         EditorNetPlayPresetFile _file;
         string                  _filePath; ///< `load` 가 연 파일. 비어 있으면 바꾸는 호출이 실패한다
     };

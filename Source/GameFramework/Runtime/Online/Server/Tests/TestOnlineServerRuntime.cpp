@@ -124,6 +124,12 @@ namespace
     /** @brief 케이스마다 두 테스트 키트를 레지스트리에 올리고 사건 줄을 비웁니다. 소멸자가 둘 다 되돌립니다. */
     struct OnlineServerRuntimeTest
     {
+
+        const OnlineServerKitRegistrar<ConsumerTestKit> _consumer{ ConsumerTestKit::kName };
+        const OnlineServerKitRegistrar<ProviderTestKit> _provider{ ProviderTestKit::kName };
+        SystemMonotonicClock                            _clock{};
+        LoopbackStreamNetwork                           _network{};
+        unique_ptr<IStreamTransport>                    _transport{ _network.createTransport() };
         OnlineServerRuntimeTest() { getKitEventLog().clear(); }
         ~OnlineServerRuntimeTest() { getKitEventLog().clear(); }
 
@@ -149,12 +155,6 @@ namespace
             option._key                = pKey;
             option._value              = pValue;
         }
-
-        const OnlineServerKitRegistrar<ConsumerTestKit> _consumer{ ConsumerTestKit::kName };
-        const OnlineServerKitRegistrar<ProviderTestKit> _provider{ ProviderTestKit::kName };
-        SystemMonotonicClock                            _clock{};
-        LoopbackStreamNetwork                           _network{};
-        unique_ptr<IStreamTransport>                    _transport{ _network.createTransport() };
     };
 } // namespace
 

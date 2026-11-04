@@ -133,6 +133,7 @@ namespace sw::editor
         /** @brief 포커스를 가진 채 닫혀도 초점 씬과 창 스택을 해제합니다. 닫힌 창은 그려지지 않아 `beginPreviewFrame` 의 `applyWindowFocus( false )` 가 다시 돌지 않습니다. */
         void onPanelClosed() override { applyWindowFocus( false ); }
 
+    private:
         EditorPreviewViewport _viewport;
         CommandStack          _commandStack;
         EditorSelection       _selection;

@@ -206,10 +206,6 @@ namespace sw
     struct OnlineServerRuntime::Parts
     {
         MemoryServiceDatabase _memoryDatabase{};
-        explicit Parts( const IClock& clock )
-            : _clock{ clock }
-        {
-        }
 
         const IClock&                       _clock;                 ///< 설정이 준 단조 시계(메모리 캐시 · 키트의 HTTP 시한)
         unique_ptr<MemoryEphemeralDatabase> _memoryCacheDatabase{}; ///< 캐시 드라이버가 메모리일 때만 있다
@@ -234,6 +230,10 @@ namespace sw
         UnixMilliseconds                    _nextRemoteConfigReloadMs{ 0 };
         int32                               _healthCheckIndex{ -1 };
         uint8                               _bRegistered{ SW_FALSE };
+        explicit Parts( const IClock& clock )
+            : _clock{ clock }
+        {
+        }
     };
 
     /**

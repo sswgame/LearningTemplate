@@ -60,6 +60,7 @@ namespace sw
     private:
         CustomizationValue* findMutableValue( const hashed_string& parameter );
 
+    private:
         vector<CustomizationValue> _listValue{};
     };
 } // namespace sw

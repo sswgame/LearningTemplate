@@ -28,7 +28,8 @@ namespace sw
     {
     public:
         /** @brief 서브시스템 이름입니다(창을 쓰는 서브시스템이 의존 항목으로 가리킨다). */
-        static constexpr const utf8* kSubsystemName = "MainWindow";
+        static constexpr const utf8* kSubsystemName      = "MainWindow";
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc;
 
         MainWindowSubsystem();
         ~MainWindowSubsystem() override;
@@ -38,10 +39,9 @@ namespace sw
 
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         /** @brief 창을 파괴합니다(네이티브 핸들을 놓고 객체를 지운다). 창을 쓰는 서브시스템은 이미 내려갔다. */
-        void                       shutdownSubsystem() override;
-        const utf8*                getSubsystemName() const override { return kSubsystemName; }
-        SubsystemHostMask          getSubsystemHost() const override;
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::EngineMisc;
+        void              shutdownSubsystem() override;
+        const utf8*       getSubsystemName() const override { return kSubsystemName; }
+        SubsystemHostMask getSubsystemHost() const override;
 
         /**
          * @brief 주 창을 넘겨받습니다. 이미 창이 있거나 @p window 가 비면 false 이고 아무것도 바꾸지 않습니다(두 번째 주 창을 조용히 바꿔 끼우지 않는다).
@@ -87,11 +87,10 @@ namespace sw
         private:
             MainWindowSubsystem& _owner;
         };
-
-    private:
         const utf8* getCurrentTitle() const;
         void        applyWindowTitle( const utf8* pTitle );
 
+    private:
         unique_ptr<IWindow> _window;
         string              _baseTitle;
         FramePacer          _framePacer;

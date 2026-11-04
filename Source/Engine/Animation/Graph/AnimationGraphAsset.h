@@ -221,6 +221,12 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
+
+        vector<AnimationGraphNode>     _listNode;     /**< 노드 목록입니다. */
+        vector<AnimationGraphLink>     _listLink;     /**< 링크 목록입니다. */
+        vector<AnimationBoneMaskDef>   _listBoneMask; /**< 본 마스크 목록입니다(XML "bone_masks"). 레이어가 이름으로 가리킵니다. */
+        vector<AnimationGraphLayerDef> _listLayer;    /**< 레이어 목록입니다(XML "layers"). 적은 순서대로 얹습니다. */
+        vector<GraphCommentBox>        _listComment;  /**< 그래프 에디터의 주석 상자입니다(XML "comments", 선택 — 실행에는 쓰지 않는다). */
         /** @brief 이 에셋 종류입니다(등록은 `AnimationGraphAsset.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "AnimationGraphAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
@@ -251,12 +257,6 @@ namespace sw
         const AnimationBoneMaskDef* findBoneMask( const hashed_string& name ) const;
         /** @brief 이름으로 레이어를 찾습니다. 없으면 nullptr 입니다. */
         const AnimationGraphLayerDef* findLayer( const hashed_string& name ) const;
-
-        vector<AnimationGraphNode>     _listNode;     /**< 노드 목록입니다. */
-        vector<AnimationGraphLink>     _listLink;     /**< 링크 목록입니다. */
-        vector<AnimationBoneMaskDef>   _listBoneMask; /**< 본 마스크 목록입니다(XML "bone_masks"). 레이어가 이름으로 가리킵니다. */
-        vector<AnimationGraphLayerDef> _listLayer;    /**< 레이어 목록입니다(XML "layers"). 적은 순서대로 얹습니다. */
-        vector<GraphCommentBox>        _listComment;  /**< 그래프 에디터의 주석 상자입니다(XML "comments", 선택 — 실행에는 쓰지 않는다). */
 
     private:
         /** @brief 이미 파싱된 XML 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기나 잘못된 블렌드 스페이스면 false 를 반환합니다. @p sourceLabel 은 오류에 적는 이름입니다. */

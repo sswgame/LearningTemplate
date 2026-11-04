@@ -25,6 +25,7 @@ namespace
     class CountingCodec final : public ICompressionCodec
     {
     public:
+        int32*               _pDecompressCount{ nullptr };
         CompressionCodecType getCodecType() const override { return CompressionCodecType::Custom; }
         const utf8*          getCodecName() const override { return "Counting"; }
         size_t               compressBound( size_t uncompressedSize ) const override { return uncompressedSize; }
@@ -43,8 +44,6 @@ namespace
             std::memcpy( pDst, pSrc, outUncompressedSize );
             return true;
         }
-
-        int32* _pDecompressCount{ nullptr };
     };
 
     struct EndpointRecord final : public IStreamEndpointListener
@@ -76,6 +75,8 @@ namespace
     /** @brief 테스트 동안 활성 레지스트리를 바꿔 끼운다(끝에 되돌린다). */
     struct ScopedActiveRegistry
     {
+
+        CompressionCodecRegistry* _pPrevious;
         explicit ScopedActiveRegistry( CompressionCodecRegistry* pRegistry )
             : _pPrevious{ CompressionCodecRegistry::getActive() }
         {
@@ -85,8 +86,6 @@ namespace
 
         ScopedActiveRegistry( const ScopedActiveRegistry& )            = delete;
         ScopedActiveRegistry& operator=( const ScopedActiveRegistry& ) = delete;
-
-        CompressionCodecRegistry* _pPrevious;
     };
 
     NetCompressionConfig makeRleSettings()

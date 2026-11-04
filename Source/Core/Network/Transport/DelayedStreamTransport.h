@@ -54,6 +54,7 @@ namespace sw
         void  runTimer();
         int32 flushDue();
 
+    private:
         unique_ptr<IStreamTransport> _pInner;
         int64                        _delayNanoseconds;
         mutex                        _mutex;

@@ -54,13 +54,6 @@ namespace sw
      */
     struct ObjectSaveOptions
     {
-        /** @brief 목적 @p purpose 로 저장합니다. 참조는 런타임 id 그대로 적습니다(아래 필드로 바꾼다). */
-        explicit ObjectSaveOptions( SerializePurpose purpose )
-            : _purpose{ purpose }
-        {
-        }
-
-        SerializePurpose getPurpose() const { return _purpose; }
 
         /** @brief 있으면 다른 오브젝트의 런타임 id 를 이 테이블로 바꿔 적습니다(씬 파일 id). 없으면 런타임 id 를 그대로 적습니다(같은 실행의 스냅샷). */
         const ObjectSavedIDMap* _pSavedIDMap{ nullptr };
@@ -75,6 +68,13 @@ namespace sw
          * @details 참조는 모두 `getSavedObjectID` 를 거치므로 여기서 모으면 부착 · 핸들 PROPERTY 를 타입마다 따로 훑지 않아도 된다.
          */
         vector<uint64>* _pOutListReferencedID{ nullptr };
+        /** @brief 목적 @p purpose 로 저장합니다. 참조는 런타임 id 그대로 적습니다(아래 필드로 바꾼다). */
+        explicit ObjectSaveOptions( SerializePurpose purpose )
+            : _purpose{ purpose }
+        {
+        }
+
+        SerializePurpose getPurpose() const { return _purpose; }
 
         /**
          * @brief 다른 오브젝트의 런타임 id 를 저장할 id 로 바꿉니다. 부착(`SceneComponent`)과 핸들 PROPERTY 가 모두 이 함수를 거칩니다.
@@ -105,19 +105,6 @@ namespace sw
      */
     struct ObjectLoadContext
     {
-        /**
-         * @brief 목적 @p purpose 로 읽습니다. 나머지는 선택입니다 — @p pIdentity 를 주면 원래 id 를 복원하고(같은 오브젝트를 같은 실행에서 복원할 때),
-         *        @p pBatch 를 주면 그 배치에 기록하며, @p savedID 는 이 상태가 저장될 때의 id 입니다.
-         */
-        explicit ObjectLoadContext( SerializePurpose purpose, const ObjectIdentity* pIdentity = nullptr, ObjectStateBatch* pBatch = nullptr, uint64 savedID = 0 )
-            : _pIdentity{ pIdentity }
-            , _pBatch{ pBatch }
-            , _savedID{ savedID }
-            , _purpose{ purpose }
-        {
-        }
-
-        SerializePurpose getPurpose() const { return _purpose; }
 
         /** @brief 같은 오브젝트를 복원할 때의 원래 id 입니다. 주면 다시 만드는 컴포넌트가 원래 componentID 를 받습니다. */
         const ObjectIdentity* _pIdentity{ nullptr };
@@ -133,6 +120,19 @@ namespace sw
          *          되돌리기는 결과를 버리므로 그 빈 오브젝트가 그대로 저장된다.
          */
         bool _bRestorePreviousOnFailure{ true };
+        /**
+         * @brief 목적 @p purpose 로 읽습니다. 나머지는 선택입니다 — @p pIdentity 를 주면 원래 id 를 복원하고(같은 오브젝트를 같은 실행에서 복원할 때),
+         *        @p pBatch 를 주면 그 배치에 기록하며, @p savedID 는 이 상태가 저장될 때의 id 입니다.
+         */
+        explicit ObjectLoadContext( SerializePurpose purpose, const ObjectIdentity* pIdentity = nullptr, ObjectStateBatch* pBatch = nullptr, uint64 savedID = 0 )
+            : _pIdentity{ pIdentity }
+            , _pBatch{ pBatch }
+            , _savedID{ savedID }
+            , _purpose{ purpose }
+        {
+        }
+
+        SerializePurpose getPurpose() const { return _purpose; }
 
     private:
         SerializePurpose _purpose;
@@ -268,6 +268,7 @@ namespace sw
         ComponentHandle resolveComponentReference( const Entry& entry, const TypeRegistry& registry, ComponentHandle savedHandle, const PropertyInfo& leafProperty,
                                                    bool& outInvalid ) const;
 
+    private:
         vector<Entry>                        _listEntry;
         unordered_map<uint64, GameObject*>   _mapSavedIDToObject;
         unordered_map<hashed_string, uint32> _mapSavedNameToEntry;

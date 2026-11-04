@@ -189,6 +189,15 @@ namespace sw
         static constexpr AssetSuffix kArrAssetSuffix[] = {
             { kExtension, AssetSuffixRole::Plain },
         };
+
+        string                        _name;
+        string                        _sourceCulture;
+        vector<string>                _listCulture;
+        vector<string>                _listStagedCulture;
+        vector<string>                _listStringTable;
+        vector<string>                _listCodeRoot;
+        vector<string>                _listAssetRoot;
+        vector<LocalizationAssetRule> _listAssetRule;
         /** @brief 이 에셋 종류입니다(등록은 `LocalizationDocuments.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "LocalizationProject", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
@@ -207,14 +216,5 @@ namespace sw
          * @return 프로젝트를 읽지 못하면 false 이고 이유는 @p outError 입니다 — 어느 테이블이 출시 문화권인지 모른 채 팩을 베이크하지 않는다.
          */
         [[nodiscard]] static bool collectUnstagedTranslationTables( string_view folder, vector<string>& outListAbsPath, string& outError );
-
-        string                        _name;
-        string                        _sourceCulture;
-        vector<string>                _listCulture;
-        vector<string>                _listStagedCulture;
-        vector<string>                _listStringTable;
-        vector<string>                _listCodeRoot;
-        vector<string>                _listAssetRoot;
-        vector<LocalizationAssetRule> _listAssetRule;
     };
 } // namespace sw

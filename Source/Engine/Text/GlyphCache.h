@@ -104,6 +104,7 @@ namespace sw
         /** @brief 비운 페이지에 있던 글리프를 표에서 지웁니다. */
         void forgetPage( uint32 page );
 
+    private:
         IFontRasterizer&                   _rasterizer;
         GlyphAtlas                         _atlas;
         unordered_map<uint64, CachedGlyph> _mapGlyph;                ///< 키 = makeKey

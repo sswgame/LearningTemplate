@@ -254,6 +254,7 @@ namespace sw
         void applyItem( int32 player, const PartyItemDef& def );
         void pushEvent( TrampolineEvent::Kind kind, int32 player, int32 other, int32 value );
 
+    private:
         vector<TrampolinePlayer>     _listPlayer;
         EventBuffer<TrampolineEvent> _eventBuffer;
         vector<MatchEvent>           _listMatchEvent; ///< 걸음마다 다시 쓰는 경기 이벤트 버퍼이다

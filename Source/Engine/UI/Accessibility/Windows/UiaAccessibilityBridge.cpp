@@ -560,6 +560,7 @@ namespace sw
                     outValue.bstrVal = makeBstr( text );
                 }
 
+            private:
                 Core*    _pCore;
                 uint32   _screen;
                 WidgetID _widget;
@@ -636,6 +637,7 @@ namespace sw
                     return true;
                 }
 
+            private:
                 Core*        _pCore;
                 Subscription _getObjectSubscription; ///< 창의 접근성 요청 칸(`WM_GETOBJECT`) 구독 — 다리가 사라지면 놓는다
             };

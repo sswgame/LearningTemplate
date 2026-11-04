@@ -114,12 +114,13 @@ namespace sw
         uint64 getServerID() const { return _pTransport->getServerID(); }
 
     private:
+        void publishBytes( string_view topic, const vector<uint8>& bytes ) { _pTransport->publish( topic, bytes.data(), static_cast<int32>( bytes.size() ) ); }
+
+    private:
         template <typename T>
         friend class ServerBusTopic;
         template <typename T>
         friend class ServerBusTopicFamily;
-
-        void publishBytes( string_view topic, const vector<uint8>& bytes ) { _pTransport->publish( topic, bytes.data(), static_cast<int32>( bytes.size() ) ); }
 
         IServerBusTransport* _pTransport;
     };

@@ -15,17 +15,6 @@ namespace sw
      */
     struct AsyncBufferReadback::State
     {
-        /** @brief 만든 버퍼로 상태를 세웁니다 — 크기는 이 뒤로 바뀌지 않고(const), 장치 · 버퍼는 `shutdown` 이 잠금 아래에서 비운다. */
-        State( IRHIDevice* pDevice, uint32 sizeBytes, const RHIBufferHandle ( &arrBuffer )[kSlotCount] )
-            : _mutex{}
-            , _pDevice{ pDevice }
-            , _sizeBytes{ sizeBytes }
-        {
-            for ( uint32 slot = 0; slot < kSlotCount; ++slot )
-            {
-                _arrBuffer[slot] = arrBuffer[slot];
-            }
-        }
 
         mutex                 _mutex;
         IRHIDevice* _pDevice  SW_GUARDED_BY( _mutex ); ///< `shutdown` 이 null 로 만든다 — 그 뒤의 콜백은 읽지 않는다
@@ -37,6 +26,17 @@ namespace sw
         uint64 _latestTag     SW_GUARDED_BY( _mutex ){ 0 };
         uint8 _bHasLatest     SW_GUARDED_BY( _mutex ){ SW_FALSE };
         uint8 _bFresh         SW_GUARDED_BY( _mutex ){ SW_FALSE }; ///< `_latest` 를 아직 아무도 가져가지 않았다
+        /** @brief 만든 버퍼로 상태를 세웁니다 — 크기는 이 뒤로 바뀌지 않고(const), 장치 · 버퍼는 `shutdown` 이 잠금 아래에서 비운다. */
+        State( IRHIDevice* pDevice, uint32 sizeBytes, const RHIBufferHandle ( &arrBuffer )[kSlotCount] )
+            : _mutex{}
+            , _pDevice{ pDevice }
+            , _sizeBytes{ sizeBytes }
+        {
+            for ( uint32 slot = 0; slot < kSlotCount; ++slot )
+            {
+                _arrBuffer[slot] = arrBuffer[slot];
+            }
+        }
 
         /** @brief 요청 하나의 GPU 작업이 끝났을 때(해제 큐 콜백) 부릅니다. 읽어 오고 슬롯을 비웁니다. */
         void onGPUDone( uint32 slot )

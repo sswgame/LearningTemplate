@@ -60,6 +60,13 @@ namespace sw::editor
         const EditorOverlayBarRuntime* findRuntime( string_view barID ) const;
 
     private:
+        /** @brief 이번 프레임에 놓인 바 하나(겹침 피하기)입니다. */
+        struct PlacedBar
+        {
+            EditorOverlayDock _dock;
+            float2            _position;
+            float2            _size;
+        };
         void                     ensureLoaded();
         void                     save() const;
         EditorOverlayBarRuntime& getRuntime( string_view barID );
@@ -74,14 +81,7 @@ namespace sw::editor
         /** @brief 이번 프레임에 먼저 놓인 바와 겹치면 가장자리에서 먼 쪽으로 밀어 낸 위치입니다. */
         float2 pushOutOfPlacedBars( EditorOverlayDock dock, const float2& position, const float2& size ) const;
 
-        /** @brief 이번 프레임에 놓인 바 하나(겹침 피하기)입니다. */
-        struct PlacedBar
-        {
-            EditorOverlayDock _dock;
-            float2            _position;
-            float2            _size;
-        };
-
+    private:
         EditorViewportOverlayLayout     _layout;
         vector<EditorOverlayBarRuntime> _listRuntime;
         vector<PlacedBar>               _listPlaced; ///< 이번 프레임에 놓인 바

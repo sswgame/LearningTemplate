@@ -164,6 +164,7 @@ namespace sw
         /** @brief 정의 캐시가 더러우면 다시 만듭니다(`getCachedShaderDefines` · `getPermutationHash`). */
         void refreshCachedDefines() const;
 
+    private:
         Material*            _pParentMaterial;
         MaterialInstanceDesc _desc;
 

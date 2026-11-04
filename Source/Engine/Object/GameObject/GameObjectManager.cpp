@@ -7,6 +7,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Task/TaskManager.h"
 
@@ -593,12 +594,6 @@ namespace sw
         static constexpr const utf8* kArrName[] = {
 #define SW_SCENE_FRAME_STEP( Name ) #Name,
 #include "Engine/Object/GameObject/Tick/SceneFrameStepList.xxx"
-#include "Core/Memory/Memory.h"
-#include "Core/Task/TaskManager.h"
-#include "Engine/Foundation/EngineParallel.h"
-#include "Engine/Object/Component/Component.h"
-#include "Engine/Profiling/FrameProfiler.h"
-#include "Core/Math/MathUtil.h"
 #undef SW_SCENE_FRAME_STEP
         };
         const uint32 index = static_cast<uint32>( step );

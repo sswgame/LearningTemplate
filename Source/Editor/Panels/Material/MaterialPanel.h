@@ -23,6 +23,13 @@ namespace sw::editor
 
         void               drawDocumentContent() override;
         [[nodiscard]] bool saveDocument() override;
+        /** @brief 지난 그리기의 미리보기 평균 (R - B)(0..255)입니다. 지난 프레임에 그리지 않았으면 false 입니다(감시 값 `Editor.MaterialPreviewRedMinusBlue`). */
+        [[nodiscard]] bool findPreviewRedMinusBlue( float32& outValue ) const { return _model.findPreviewRedMinusBlue( outValue ); }
+        /** @brief 미저장 편집 때문에 "그래도 바꿀까요?" 대답을 기다리는 중이면 true 입니다(감시 값 `Editor.MaterialSwitchPending`). */
+        bool isWaitingForSwitchAnswer() const { return isSwitchConfirmPending(); }
+
+        /** @brief 기본값과 다른 프로퍼티 수입니다(감시 값 `Editor.MaterialModifiedPropertyCount`). */
+        uint32 countModifiedProperties() const;
 
     private:
         string captureDocumentText() const override;
@@ -39,20 +46,10 @@ namespace sw::editor
         void populatePreviewScene( Scene& scene ) override;
         /** @brief 미리보기 구가 지금 문서의 머티리얼을 쓰게 합니다(경로가 바뀌었을 때만). */
         void syncPreviewSubjectMaterial();
-
-    public:
-        /** @brief 지난 그리기의 미리보기 평균 (R - B)(0..255)입니다. 지난 프레임에 그리지 않았으면 false 입니다(감시 값 `Editor.MaterialPreviewRedMinusBlue`). */
-        [[nodiscard]] bool findPreviewRedMinusBlue( float32& outValue ) const { return _model.findPreviewRedMinusBlue( outValue ); }
-        /** @brief 미저장 편집 때문에 "그래도 바꿀까요?" 대답을 기다리는 중이면 true 입니다(감시 값 `Editor.MaterialSwitchPending`). */
-        bool isWaitingForSwitchAnswer() const { return isSwitchConfirmPending(); }
-
-        /** @brief 기본값과 다른 프로퍼티 수입니다(감시 값 `Editor.MaterialModifiedPropertyCount`). */
-        uint32 countModifiedProperties() const;
-
-    private:
         /** @brief 프로퍼티 목록(검색 · 행마다 기본값 되돌리기)을 그립니다. 언리얼 머티리얼 인스턴스 에디터의 파라미터 목록과 같은 자리다. */
         void drawPropertyList();
 
+    private:
         MaterialModel                          _model;
         fixed_string<constant::buffer::kMax64> _propertyFilter; ///< 프로퍼티 검색 글(이름 · 표시 이름 부분 일치)
     };

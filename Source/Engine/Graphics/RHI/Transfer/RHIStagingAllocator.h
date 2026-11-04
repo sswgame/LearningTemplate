@@ -110,6 +110,7 @@ namespace sw
         /** @brief 단독 구간을 돌려받습니다. `_mutex` 를 쥔 채 부릅니다. */
         void releaseSoloLocked() SW_REQUIRES_LOCK( _mutex );
 
+    private:
         mutable mutex                        _mutex;
         SpanAllocator _slots                 SW_GUARDED_BY( _mutex ); ///< 한 칸 = `_alignmentBytes`. 시리얼을 붙인 구간은 시리얼을 번호로 미뤄 돌려받는다
         uint64 _capacityBytes                SW_GUARDED_BY( _mutex );

@@ -443,6 +443,7 @@ namespace sw
                         _bAllWritten = false;
                 }
 
+            private:
                 vector<uint8>&          _listBuffer;
                 const SerializeContext& _context;
                 bool                    _bAllWritten;
@@ -525,6 +526,7 @@ namespace sw
                     return bSkippable ? ContainerReadResult::FieldFailed : ContainerReadResult::StreamBroken;
                 }
 
+            private:
                 vector<uint32, InlineAllocator<uint32, 4>> _listOpenCount;
                 const uint8*                               _pData;
                 size_t                                     _dataSize;

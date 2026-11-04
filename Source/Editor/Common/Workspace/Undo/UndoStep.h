@@ -131,6 +131,8 @@ namespace sw::editor
     /** @brief `UndoStepFunction` 이 두는 정적 등록자입니다. 만들 때 올리고 사라질 때(그 DLL 이 내려갈 때) 내립니다. */
     struct UndoStepRegistrar
     {
+
+        uint64 _functionHash;
         UndoStepRegistrar( uint64 functionHash, UndoStepInvoker invoker )
             : _functionHash{ functionHash }
         {
@@ -139,8 +141,6 @@ namespace sw::editor
         ~UndoStepRegistrar() { UndoStepRegistry::remove( _functionHash ); }
         UndoStepRegistrar( const UndoStepRegistrar& )            = delete;
         UndoStepRegistrar& operator=( const UndoStepRegistrar& ) = delete;
-
-        uint64 _functionHash;
     };
 
     /**

@@ -251,6 +251,7 @@ namespace sw
         void finishGame( int32 winner );
         bool areHandsEmpty() const;
 
+    private:
         vector<MatgoPlayer>     _listPlayer;
         EventBuffer<MatgoEvent> _eventBuffer;
         vector<int32>           _listSettlement;

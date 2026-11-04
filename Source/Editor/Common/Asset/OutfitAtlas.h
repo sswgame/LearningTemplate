@@ -81,6 +81,7 @@ namespace sw
     private:
         const OutfitAtlasRect* findRect( const hashed_string& part ) const;
 
+    private:
         hashed_string           _groupName;
         float32                 _atlasSize;
         vector<OutfitAtlasRect> _listRect;

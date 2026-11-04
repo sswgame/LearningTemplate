@@ -140,6 +140,7 @@ namespace sw::editor
         string makeUniqueID( const hashed_string& kind ) const;
         string makePortReference( const GimmickGraphNode& node, string_view port ) const;
 
+    private:
         const GimmickNodeRegistry* _pRegistry;
         vector<GimmickGraphNode>   _listNode;
         vector<GimmickGraphWire>   _listWire;

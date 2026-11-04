@@ -166,6 +166,7 @@ namespace sw::editor
                 return nullptr;
             }
 
+        private:
             vector<SceneObjectChoice> _listChoice{};
         };
     } // namespace

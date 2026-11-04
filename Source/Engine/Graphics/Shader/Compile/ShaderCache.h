@@ -75,6 +75,9 @@ namespace sw
     class SW_API ShaderCache : public ISubsystem
     {
     public:
+        /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킵니다). */
+        static constexpr const utf8* kSubsystemName      = "ShaderCache";
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Shader;
         ShaderCache();
         ~ShaderCache() override;
 
@@ -89,14 +92,11 @@ namespace sw
         // ISubsystem: 기동 단계 `ShaderCache`.
         SubsystemInitResult initializeSubsystem() override { return initialize() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed; }
         void                shutdownSubsystem() override { shutdown(); }
-        /** @brief 서브시스템 이름입니다(다른 선언의 의존 항목이 이 상수를 가리킵니다). */
-        static constexpr const utf8* kSubsystemName = "ShaderCache";
 
         const utf8*       getSubsystemName() const override { return kSubsystemName; }
         SubsystemHostMask getSubsystemHost() const override { return SubsystemHostMask::All; }
         /** @brief 에셋 매니저 뒤에 섭니다 — 바이트코드 공급자를 고르는 콘텐츠 정책을 그것이 정한다. */
-        span<const utf8* const>    getSubsystemDependencies() const override;
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Shader;
+        span<const utf8* const> getSubsystemDependencies() const override;
 
         /**
          * @brief 바이트코드 로드를 요청합니다. 같은 요청(경로 · 진입점 · 스테이지 · 대상 · 코드젠 · define)을 읽는 중이면 그 로드를 받고, 아니면 워커가 읽거나
@@ -152,6 +152,7 @@ namespace sw
         /** @brief 진행 중인 로드를 모두 기다립니다(종료 — 워커의 로드가 사라진 캐시에 쓰지 않게). */
         void waitForLoadsInFlight();
 
+    private:
         unique_ptr<IShaderBytecodeProvider>                              _pProvider;           ///< 기동 때(`initialize`) 콘텐츠 정책으로 고른 바이트코드 공급자. 로드 워커는 읽기만 한다
         ShaderReflectionManifestCache                                    _reflectionManifests; ///< 읽은 리플렉션 매니페스트(`ShaderReflectionLibrary` 의 조회가 찾는다)
         unordered_map<string, ShaderCacheEntry> _mapCache                SW_GUARDED_BY( _mutexCache );

@@ -61,6 +61,7 @@ namespace sw
         /** @brief 선행 조건 스테이지 사이(게임 스레드, 동결 중)에서 그때까지 쌓인 틱 중 트랜스폼 쓰기를 적용하고 플러시합니다. */
         void applyStageTransforms();
 
+    private:
         GameObjectManager*       _pManager;
         SceneTransformHierarchy* _pHierarchy;
         PrimitiveRegistry*       _pPrimitiveRegistry;

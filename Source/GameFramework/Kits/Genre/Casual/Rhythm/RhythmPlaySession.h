@@ -181,6 +181,7 @@ namespace sw
         const RhythmGradeRule* findGradeRule( const hashed_string& grade ) const;
         void                   finishIfDone();
 
+    private:
         RhythmPlaySettings        _settings;
         vector<LaneQueue>         _listLane;
         vector<int32>             _listGradeCount; ///< 판정기의 창 순서(좁은 것부터)를 따른다

@@ -77,6 +77,7 @@ namespace sw
 
         void sendReply( uint64 packedHandle, bool bOk, string_view body ) const;
 
+    private:
         vector<Connection> _listConnection    SW_GUARDED_BY( _mutex );
         vector<Request> _listRequest          SW_GUARDED_BY( _mutex );
         OnceInit<DebugChannelConfig>          _settings;

@@ -119,6 +119,7 @@ namespace sw
             return requestID;
         }
 
+    private:
         unordered_map<uint64, TDelegate> _mapRequestToDelegate{};
         TDelegate                        _sendingDelegate{};
         uint64                           _sendingRequestID{ 0 }; ///< 보내는 중인 요청의 id(0 = 보내는 중 아님)

@@ -199,6 +199,7 @@ namespace sw
         [[nodiscard]] bool loadBuilding( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool loadHouseLevel( const XMLNode& node, string_view sourceName );
 
+    private:
         GameCatalog<CityBuildingDef> _buildingCatalog;
         GameCatalog<CityGoodDef>     _goodCatalog;
         vector<CityHouseLevelDef>    _listHouseLevel;

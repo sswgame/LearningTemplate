@@ -28,6 +28,16 @@ namespace sw
     {
     public:
         /**
+         * @struct Marker
+         * @brief createMarker / rollbackToMarker 에 쓰는 청크 · 오프셋 스냅샷입니다.
+         */
+        struct Marker
+        {
+            size_t _chunkIndex{ 0 };
+            size_t _offset{ 0 };
+            size_t _usedBytes{ 0 };
+        };
+        /**
          * @brief 첫 청크를 잡고 할당자를 준비합니다.
          * @param defaultCapacity 초기 청크 크기(바이트)
          */
@@ -93,17 +103,6 @@ namespace sw
         void reset();
 
         /**
-         * @struct Marker
-         * @brief createMarker / rollbackToMarker 에 쓰는 청크 · 오프셋 스냅샷입니다.
-         */
-        struct Marker
-        {
-            size_t _chunkIndex{ 0 };
-            size_t _offset{ 0 };
-            size_t _usedBytes{ 0 };
-        };
-
-        /**
          * @brief 현재 청크 인덱스 · 오프셋 · 사용량을 캡처합니다.
          */
         Marker createMarker() const;
@@ -157,6 +156,7 @@ namespace sw
          */
         void* allocateSlow( size_t size, size_t alignment );
 
+    private:
         size_t        _defaultCapacity;
         size_t        _totalAllocatedBytes;
         size_t        _usedBytes;

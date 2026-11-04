@@ -43,6 +43,7 @@ namespace sw::editor
         /** @brief 경로의 워프 스택을 (필요하면 읽어) 냅니다. 못 읽으면 경고 한 번 뒤 nullptr 입니다. */
         const MeshModifierStack* findWarp( const string& path ) const;
 
+    private:
         mutable MeshModifierStack _warpStack;
         mutable string            _loadedPath;
         mutable bool              _bLoadTried;

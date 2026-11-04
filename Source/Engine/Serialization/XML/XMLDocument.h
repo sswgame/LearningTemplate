@@ -46,6 +46,7 @@ namespace sw
         explicit XMLAttribute( void* pAttr )
             : _pAttr{ pAttr } {}
 
+    private:
         void* _pAttr{ nullptr };
     };
 } // namespace sw
@@ -232,6 +233,15 @@ namespace sw
         XMLNode appendClone( XMLNode src ) const;
 
     private:
+        /** @brief 값 글 하나를 읽은 결과입니다. 깨진 값은 읽는 함수가 원소 · 이름과 함께 오류로 남깁니다. */
+        enum class XMLValueRead : uint8
+        {
+            Read,
+            Absent,
+            Invalid,
+        };
+
+        friend class XMLDocument;
         /**
          * @brief 숫자를 XML 텍스트로 바꿉니다. 받는 타입을 세 가지로 고정합니다. 암묵 변환을 허용하면 int64 를 int32 로 잘라
          *        적어도 컴파일이 되기 때문입니다. 다른 타입은 여기서 컴파일 오류가 납니다.
@@ -245,15 +255,6 @@ namespace sw
             sb.append( value );
             return sb;
         }
-
-    private:
-        /** @brief 값 글 하나를 읽은 결과입니다. 깨진 값은 읽는 함수가 원소 · 이름과 함께 오류로 남깁니다. */
-        enum class XMLValueRead : uint8
-        {
-            Read,
-            Absent,
-            Invalid,
-        };
         XMLValueRead parseAttributeValue( const utf8* pName, int32& outValue ) const;
         XMLValueRead parseAttributeValue( const utf8* pName, uint32& outValue ) const;
         XMLValueRead parseAttributeValue( const utf8* pName, float32& outValue ) const;
@@ -268,12 +269,11 @@ namespace sw
         void reportMissing( const utf8* pKind, const utf8* pName ) const;
         /** @brief 속성 값이 범위 밖이라고 원소 이름과 함께 오류로 남깁니다. */
         void reportOutOfRange( const utf8* pName, float64 value, float64 minValue, float64 maxValue ) const;
-
-        friend class XMLDocument;
         /** @brief pugixml 노드 포인터로 핸들을 만듭니다. */
         explicit XMLNode( void* pNode )
             : _pNode{ pNode } {}
 
+    private:
         void* _pNode{ nullptr };
     };
 } // namespace sw

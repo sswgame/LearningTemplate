@@ -99,6 +99,7 @@ namespace sw
 
         static uint64 hashScopeAndKey( string_view scope, string_view key ) noexcept;
 
+    private:
         unordered_map<uint64, AnnotationBinding> _mapBare; ///< (scope, alias) 해시 → 바인딩
         unordered_map<uint64, AnnotationBinding> _mapKey;
         vector<AnnotationMetaEntry>              _listEntry;

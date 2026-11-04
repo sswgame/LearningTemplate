@@ -41,6 +41,7 @@ namespace sw::editor
     private:
         void onPropertyEdited( const PropertyInfo& prop );
 
+    private:
         EditorPropertyGrid    _grid; ///< 검색 칸(`getFilterText`)도 든다
         PreferencesModel      _model;
         vector<hashed_string> _listHidden; ///< "Modified only" 가 숨길 프로퍼티(멤버로 두어 프레임마다 할당하지 않는다)

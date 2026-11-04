@@ -52,6 +52,10 @@ namespace sw
         static constexpr const utf8* kExtension  = ".po";
         static constexpr const utf8* kFolderName = "po";
 
+        string                      _language;
+        string                      _projectName;
+        vector<PortableObjectEntry> _listEntry;
+
         /** @brief PO 글을 읽습니다. 틀린 줄이면 @p pOutError 에 `줄: 이유` 를 적고 false 입니다. */
         [[nodiscard]] bool parse( string_view text, string* pOutError = nullptr );
         /** @brief PO 글을 만듭니다(머리 항목 포함). */
@@ -59,9 +63,5 @@ namespace sw
 
         /** @brief PO 따옴표 안에 넣을 텍스트로 바꿉니다(백슬래시, 따옴표, 줄바꿈, 탭을 이스케이프합니다). */
         static string escapeText( string_view text );
-
-        string                      _language;
-        string                      _projectName;
-        vector<PortableObjectEntry> _listEntry;
     };
 } // namespace sw

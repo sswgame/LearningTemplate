@@ -51,6 +51,7 @@ namespace sw::editor
         void drawShortcutRow( EditorInputActions& inputActions, const EditorCommandDesc& desc, const string& shortcutLabel );
         void finishCapture();
 
+    private:
         fixed_string<constant::buffer::kMax64> _filter;
         string                                 _captureAction;   ///< 조합을 받는 중인 액션(비면 받지 않는다)
         string                                 _conflictAction;  ///< 받은 조합과 겹친 액션(비면 충돌 없음)

@@ -75,6 +75,7 @@ namespace sw
         /** @brief 한 축으로 @p delta 만큼 움직입니다. 막히면 그 위치에서 멈추고 true 를 반환합니다. */
         [[nodiscard]] bool moveAxis( const VoxelWorld& world, int32 axis, float32 delta );
 
+    private:
         VoxelBodySettings _settings;
         float3            _position;
         float3            _velocity;

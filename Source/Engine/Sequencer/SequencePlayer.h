@@ -18,6 +18,8 @@ namespace sw
     class SW_API SequencePlayer
     {
     public:
+        /** @brief `getFrameBeforeWrap` 가 "이번 갱신은 되감지 않았다" 를 뜻할 때의 값입니다. */
+        static constexpr int32 kNoLoopWrap = ( -2147483647 - 1 );
         SequencePlayer();
 
         /** @brief JSON 시퀀스를 로드합니다. */
@@ -36,8 +38,6 @@ namespace sw
         void  seekToFrame( int32 frame );
         int32 getCurrentFrame() const;
         int32 getPreviousFrame() const { return _previousFrame; }
-        /** @brief `getFrameBeforeWrap` 가 "이번 갱신은 되감지 않았다" 를 뜻할 때의 값입니다. */
-        static constexpr int32 kNoLoopWrap = ( -2147483647 - 1 );
         /**
          * @brief 이번 `update` 가 루프를 되감았으면 되감기 **직전**의 프레임을, 아니면 `kNoLoopWrap` 을 반환합니다.
          * @details 되감으면 이전 프레임이 `_frameMin - 1` 로 돌아가 (직전 프레임, `_frameMax`] 구간을 아무도 보지 않게 된다. 끝쪽 이벤트가
@@ -56,6 +56,7 @@ namespace sw
     private:
         int32 computeFrame( float32 timeSeconds ) const;
 
+    private:
         SequenceAsset          _asset;
         float32                _framesPerSecond;
         float32                _playbackTime;

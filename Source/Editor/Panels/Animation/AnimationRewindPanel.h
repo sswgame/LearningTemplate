@@ -43,6 +43,7 @@ namespace sw::editor
         /** @brief 고른 트랙의 그 시각 프레임(상태 · 알림 · 커브 · 루트 모션)과 뼈대 그리기입니다. */
         void drawFrame( const AnimationRewindTrack& track, const AnimationRewindFrame& frame );
 
+    private:
         vector<float3>         _listScratchPosition;
         float32                _scrubSecondsAgo; ///< 시간 막대 값(가장 늦은 기록에서 몇 초 전)
         uint8                  _bDrawSkeleton : 1;

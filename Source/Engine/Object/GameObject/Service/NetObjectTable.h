@@ -36,14 +36,14 @@ namespace sw
     class SW_API NetObjectTable final : public ISceneService
     {
     public:
-        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
-        static const SceneServiceRegistration& getSceneServiceRegistration();
         /** @brief 서브시스템 이름입니다. */
         static constexpr const utf8* kSubsystemName = "NetObjectTable";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 생성 번호에 켜는 비트입니다. 씬 번호는 이 비트가 꺼져 있습니다. 0 은 번호 없음입니다. */
         static constexpr uint32 kSpawnedBit = 0x80000000u;
+        /** @brief 씬 서비스 등록 줄입니다(`SW_SCENE_SERVICE` 가 정의한다). */
+        static const SceneServiceRegistration& getSceneServiceRegistration();
+        const utf8*                            getSubsystemName() const override { return kSubsystemName; }
 
         explicit NetObjectTable( GameObjectManager& manager );
         ~NetObjectTable() override = default;
@@ -95,6 +95,7 @@ namespace sw
         const Entry* findSceneEntry( uint32 netID ) const;
         const Entry* findSpawnedEntryByObject( GameObjectHandle object ) const;
 
+    private:
         GameObjectManager* _pManager;
         vector<Entry>      _listScene;   ///< 번호 순서(이분 탐색)
         vector<Entry>      _listSpawned; ///< 번호 순서(새 번호가 늘 크다 — 클라이언트의 묶기는 끼워 넣는다)

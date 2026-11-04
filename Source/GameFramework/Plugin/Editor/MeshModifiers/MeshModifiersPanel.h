@@ -107,6 +107,7 @@ namespace sw::editor
         /** @brief 입력칸을 그린 뒤 부릅니다. 끌기가 끝났으면 다음 편집이 새 기록을 남기게 합니다. */
         void finishItem();
 
+    private:
         MeshModifiersPanelModel _model;
         EditorCurveEditorState  _curveState; ///< 열린 곡선 편집기 팝업 하나의 화면 상태(보기 · 끌기 · 작업 사본). 연 자리는 `_model` 이 든다
     };

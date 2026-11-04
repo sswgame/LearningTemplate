@@ -159,6 +159,7 @@ namespace sw
         void drawCards( int32 count );
         void applyEffect( const DeckBattleEffect& effect );
 
+    private:
         vector<int32>            _listDefIndex; ///< 카드 번호에서 카탈로그 index 로 가는 매핑이다
         CardPile                 _drawPile;
         CardPile                 _hand;

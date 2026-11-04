@@ -92,6 +92,7 @@ namespace sw
         /** @brief 이번 프레임의 살아 있는 KB 를 FrameProfiler 카운터로 더합니다(전체 한 줄 + 예산이 있는 태그마다 한 줄). */
         void addFrameProfilerCounters( const MemoryProfiler& profiler );
 
+    private:
         /** @brief 태그마다 FrameProfiler 슬롯입니다(처음 쓸 때 등록). 예산 없는 태그는 쓰지 않는다 — 슬롯은 64 개뿐이다. */
         array<uint32, kMemoryTagCount> _arrTagCounterSlot;
         uint32                         _liveCounterSlot;

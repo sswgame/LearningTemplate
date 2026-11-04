@@ -300,6 +300,7 @@ namespace sw
         void update( float32 deltaTime );
         void stop();
 
+    private:
         NetSimTrafficCounter       _counter; ///< 호스트 → 카운터 → 흉내 → 루프백 엔드포인트 순서로 거친다
         NetEndpoint                _host;
         NetMessageRouter           _router;
@@ -402,6 +403,7 @@ namespace sw
         void                    applyLinkConditions( int32 worldIndex, const NetSimLinkConditions& conditions );
         void                    updateNetwork();
 
+    private:
         NetSimConfig                    _settings;
         SceneEngineServices             _services; ///< `initialize` 가 받은 묶음(빌림). 월드의 씬을 이것으로 짓는다
         unique_ptr<LoopbackNetwork>     _pNetwork;

@@ -61,6 +61,7 @@ namespace sw
 
         void initializeWithNames( MetricRegistry* pRegistry, const utf8* pServiceName, const vector<string>& listMethodName, const vector<string>& listResultName );
 
+    private:
         vector<MetricCounter*>   _listRequestCounter; ///< 메서드 × 결과
         vector<MetricHistogram*> _listLatency;        ///< 메서드
         MetricGauge*             _pPending;

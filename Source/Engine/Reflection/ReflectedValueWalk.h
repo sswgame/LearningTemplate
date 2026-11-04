@@ -267,6 +267,7 @@ namespace sw
             return bHolds;
         }
 
+    private:
         const TypeRegistry&                  _registry;
         hashed_string                        _leafTypeName;
         TFieldFilter                         _filter;

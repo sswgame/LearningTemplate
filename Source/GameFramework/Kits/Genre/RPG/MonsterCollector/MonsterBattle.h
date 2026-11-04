@@ -243,6 +243,7 @@ namespace sw
         int32              findFirstUsable( int32 side ) const;
         void               setOutcome( MonsterBattleOutcome outcome );
 
+    private:
         Side                            _arrSide[kSideCount];
         EventBuffer<MonsterBattleEvent> _eventBuffer;
         TurnOrder                       _turnOrder;

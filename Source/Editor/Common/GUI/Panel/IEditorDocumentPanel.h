@@ -64,6 +64,9 @@ namespace sw::editor
          */
         void applyCloseChoice( EditorUnsavedChoice choice );
 
+    private:
+        friend class IEditorPanel; // 셸(`draw` · `requestClose`)이 문서 상태를 묻고 확인을 띄운다
+
     protected:
         /** @brief 기본 열림 상태로 문서 패널을 만듭니다. */
         explicit IEditorDocumentPanel( bool bOpenByDefault = true )
@@ -103,12 +106,12 @@ namespace sw::editor
         virtual void revertDocument() = 0;
 
     private:
-        friend class IEditorPanel; // 셸(`draw` · `requestClose`)이 문서 상태를 묻고 확인을 띄운다
         /** @brief 미저장이면서 닫기 확인을 거쳐야 하면 확인을 걸고 true 입니다(셸의 `requestClose`). */
         bool beginCloseConfirmIfNeeded();
         /** @brief 닫기 확인 모달을 그리고 고른 항목을 적용합니다(창 밖, 접힌 창도). */
         void drawCloseConfirm();
 
+    private:
         bool _bDocumentDirty;
         bool _bConfirmClose; ///< 닫으려다 미저장 확인을 기다리는 중
     };

@@ -32,11 +32,11 @@ namespace sw::editor
     {
     public:
         static constexpr const utf8* kSubsystemName = "EditorFocus";
-        const utf8*                  getSubsystemName() const override { return kSubsystemName; }
 
         CommandStack*            _pFocusedCommandStack{ nullptr }; ///< 포커스된 툴 창의 Undo 스택. nullptr 이면 메인 스택
         EditorSelection*         _pFocusedSelection{ nullptr };    ///< 겨누는 미리보기 선택. nullptr 이면 메인 선택
         vector<EditorSelection*> _listPreviewSelection;            ///< 미리보기 씬에 묶인 선택(빌림)
+        const utf8*              getSubsystemName() const override { return kSubsystemName; }
     };
 } // namespace sw::editor
 

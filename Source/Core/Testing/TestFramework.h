@@ -73,13 +73,13 @@ namespace sw::test
     /** @brief `SW_TEST_CASE` 가 두는 정적 등록자입니다 — 만들 때 올리고 없앨 때(모듈을 내릴 때) 뺍니다. */
     struct SW_API TestCaseRegistrar
     {
+
+        const TestCaseRegistration* _pRegistration;
+        bool                        _bRegistered;
         explicit TestCaseRegistrar( const TestCaseRegistration* pRegistration );
         ~TestCaseRegistrar();
         TestCaseRegistrar( const TestCaseRegistrar& )            = delete;
         TestCaseRegistrar& operator=( const TestCaseRegistrar& ) = delete;
-
-        const TestCaseRegistration* _pRegistration;
-        bool                        _bRegistered;
     };
 
     /** @brief `SW_TEST_CASE_EACH` 가 두는 정적 등록자입니다 — 원소마다 이름(`<기본 이름>/<번호>`)과 등록 줄을 만들어 올린다. */

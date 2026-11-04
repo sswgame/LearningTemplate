@@ -68,6 +68,7 @@ namespace sw
         size_t findLowerIndex( uint32 entityID ) const;
         Entry* findEntry( uint32 entityID );
 
+    private:
         vector<Entry> _listEntry;       ///< ID 오름차순.
         vector<Entry> _listRankScratch; ///< `collectOrder` 의 정렬용 스크래치 버퍼(틱마다 다시 쓴다).
     };

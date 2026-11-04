@@ -99,6 +99,7 @@ namespace sw
         /** @brief 잠그는 쪽의 항목을 원장 잔액과 비교합니다. 미리 확인하는 것이며 정산할 때 다시 확인합니다. */
         TradeResult evaluateFunds( const TradeSide& side );
 
+    private:
         IServiceStoreConnection&  _connection;
         const ITradePolicy&       _policy;
         const ILedgerPolicy*      _pLedgerPolicy;

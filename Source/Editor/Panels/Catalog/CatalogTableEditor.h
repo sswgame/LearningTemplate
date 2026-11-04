@@ -53,6 +53,7 @@ namespace sw::editor
         void               drawCurveBlock( const CatalogDocument& document, const CatalogCurve& curve );
         [[nodiscard]] bool applyPending( CatalogDocument& inoutDocument );
 
+    private:
         vector<CatalogCurve>    _listCurve;       ///< 곡선 창이 이번 프레임에 그리는 곡선
         vector<CatalogGradient> _listGradient;    ///< 그 가운데 네 채널이 갖춰진 묶음
         vector<CatalogCurve>    _listProbeCurve;  ///< 행마다 "곡선이 있나" 를 묻는 재사용 버퍼

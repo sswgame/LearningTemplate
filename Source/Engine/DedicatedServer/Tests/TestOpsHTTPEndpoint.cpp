@@ -25,7 +25,12 @@ namespace
     class OpsHTTPProbe final : public IStreamHandler
     {
     public:
-        void onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override
+        atomic<bool>           _bOpened{ false };
+        atomic<bool>           _bClosed{ false };
+        mutex                  _mutex{};
+        string                 _received{};
+        StreamConnectionHandle _handle{};
+        void                   onStreamOpened( StreamConnectionHandle handle, const NetAddress& remote, bool bAccepted ) override
         {
             (void)remote;
             (void)bAccepted;
@@ -59,12 +64,6 @@ namespace
             std::scoped_lock<mutex> lock{ _mutex };
             return _handle;
         }
-
-        atomic<bool>           _bOpened{ false };
-        atomic<bool>           _bClosed{ false };
-        mutex                  _mutex{};
-        string                 _received{};
-        StreamConnectionHandle _handle{};
     };
 
     /** @brief 루프백 망 위의 엔드포인트 + 클라이언트 하나(한 스레드, 결정적). */

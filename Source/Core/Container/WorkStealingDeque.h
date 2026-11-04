@@ -150,6 +150,7 @@ namespace sw
         alignas( 64 ) atomic<uint64> _top;
         alignas( 64 ) atomic<uint64> _bottom;
 
+    private:
         unique_ptr<atomic<T>[]> _buffer;
         uint64                  _capacityMask;
     };

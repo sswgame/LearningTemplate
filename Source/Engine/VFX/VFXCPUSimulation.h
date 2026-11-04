@@ -106,6 +106,7 @@ namespace sw
         /** @brief 입자 하나가 이번 단계에 @p from 에서 움직인 선분의 충돌을 처리합니다. 사라져야 하면 false 입니다. */
         [[nodiscard]] bool resolveCollision( Particle& particle, const float3& from, const IVFXCollisionScene& collision ) const;
 
+    private:
         VFXEmitterClock  _clock;
         uint64           _seed;
         vector<Particle> _listParticle;

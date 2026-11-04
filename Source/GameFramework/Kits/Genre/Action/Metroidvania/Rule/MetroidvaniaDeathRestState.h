@@ -147,6 +147,7 @@ namespace sw
         void          pushEvent( MetroidvaniaDeathRestEventType type, const hashed_string& id, int32 amount );
         hashed_string getCurrencyName() const;
 
+    private:
         const MetroidvaniaCatalog*              _pCatalog;
         vector<MetroidvaniaKillRecord>          _listKill;
         EventBuffer<MetroidvaniaDeathRestEvent> _eventBuffer;

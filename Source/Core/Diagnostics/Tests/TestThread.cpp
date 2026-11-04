@@ -28,6 +28,8 @@ namespace
      */
     struct ScopedHostLockObserverRemoval
     {
+
+        ILockObserver* _pPrevious;
         ScopedHostLockObserverRemoval()
             : _pPrevious{ mutex::getLockObserver() }
         {
@@ -41,8 +43,6 @@ namespace
         }
         ScopedHostLockObserverRemoval( const ScopedHostLockObserverRemoval& )            = delete;
         ScopedHostLockObserverRemoval& operator=( const ScopedHostLockObserverRemoval& ) = delete;
-
-        ILockObserver* _pPrevious;
     };
 
     /** @brief 받은 사건을 차례로 적는 관찰자입니다(스레드 · 종류 · 키). */
@@ -73,6 +73,7 @@ namespace
             _listEvent.push_back( Event{ std::this_thread::get_id(), pKey, kind } );
         }
 
+    private:
         mutex                    _mutex;
         vector<Event> _listEvent SW_GUARDED_BY( _mutex );
     };
