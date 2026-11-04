@@ -1,25 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 짓기 커서 — 반투명 유리 머티리얼에 노란 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="NileCityCursor" shaderPath="engine/shaders/forward_lit.hlsl" blendMode="Transparent">
+<MaterialDesc formatVersion="0" name="NileCityCursor" parent="engine/materials/glassmaterial.material">
 	<_properties>
-		<item name="_color" type="Color" shaderType="Float4" defaultValue="1.0 0.9 0.2 0.45" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
-		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface"/>
-		<item name="_metallic" type="Range" shaderType="Float" defaultValue="0.0" min="0.0" max="1.0" group="Surface"/>
-		<item name="_albedoMap" type="Texture2D" displayName="Albedo" group="Surface" bSrgb="1"/>
+		<item name="_color" defaultValue="1.0 0.9 0.2 0.45" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
-		<_alwaysDefines>
-			<item>MATERIAL_DOMAIN_SURFACE</item>
-			<item>MATERIAL_BLEND_TRANSLUCENT</item>
-		</_alwaysDefines>
-		<_multiCompiles>
-			<item name="FogMode" selected="FOG_OFF">
-				<_options>
-					<item>FOG_OFF</item>
-					<item>FOG_LINEAR</item>
-					<item>FOG_EXP</item>
-				</_options>
-			</item>
-		</_multiCompiles>
-	</_permutations>
 </MaterialDesc>
