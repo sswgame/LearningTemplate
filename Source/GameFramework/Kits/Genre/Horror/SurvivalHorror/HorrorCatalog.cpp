@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Horror/SurvivalHorror/HorrorCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/String/EnumNameTable.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -15,9 +14,6 @@ namespace sw
     {
         struct HorrorCatalogInternal
         {
-            static constexpr const utf8*                   kArrItemKindName[] = { "None", "Weapon", "Ammo", "Heal", "Key", "SaveItem", "Battery", "Document" };
-            static constexpr EnumNameTable<HorrorItemKind> kItemKindTable{ kArrItemKindName };
-            static_assert( kItemKindTable.getCount() == static_cast<size_t>( HorrorItemKind::Document ) + 1, "item kind names must cover every HorrorItemKind" );
 
             /** @brief `code="3 1 4"` 를 숫자 목록으로 읽습니다. 비었거나 깨진 숫자가 있으면 오류입니다. */
             [[nodiscard]] static bool readDigits( string_view text, vector<int32>& outListDigit, string_view sourceName, const hashed_string& id )
@@ -67,16 +63,6 @@ namespace sw
             }
         };
     } // namespace
-
-    bool parseHorrorItemKind( string_view text, HorrorItemKind& outKind )
-    {
-        return HorrorCatalogInternal::kItemKindTable.parse( text, outKind );
-    }
-
-    const utf8* toString( HorrorItemKind kind )
-    {
-        return HorrorCatalogInternal::kItemKindTable.toString( kind );
-    }
 
     HorrorCatalog::HorrorCatalog()
         : _itemCatalog{}

@@ -45,9 +45,6 @@ namespace sw
         InkRibbon ///< 세이브마다 `SaveItem` 하나를 쓴다
     };
 
-    [[nodiscard]] SW_KIT_API bool parseHorrorItemKind( string_view text, HorrorItemKind& outKind );
-    SW_KIT_API const utf8*        toString( HorrorItemKind kind );
-
     /** @brief 아이템 하나입니다. 격자에서 `_width` x `_height` 셀을 차지하며, 돌리면 바뀝니다. */
     REFLECT()
     struct HorrorItemDef

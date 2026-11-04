@@ -48,8 +48,6 @@ namespace sw
         Ladder ///< 성벽에 걸치면 성문을 부수지 않고 넘어간다. 싸우지 않는다
     };
 
-    [[nodiscard]] SW_KIT_API bool parseConquestTeam( string_view text, ConquestTeam& outTeam );
-
     /** @brief 건물 하나입니다. */
     REFLECT()
     struct ConquestBuildingDef

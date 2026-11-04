@@ -18,50 +18,12 @@ namespace sw
     {
         struct KartItemsInternal
         {
-            /** @brief 열거자 이름 한 줄을 반환합니다. */
-            struct KindName
-            {
-                KartItemKind _kind;
-                const utf8*  _pName;
-            };
-
-            static constexpr KindName kArrKindName[] = {
-                {     KartItemKind::Banana,      "Banana"},
-                { KartItemKind::GreenShell,  "GreenShell"},
-                {   KartItemKind::RedShell,    "RedShell"},
-                {    KartItemKind::Booster,     "Booster"},
-                {     KartItemKind::Shield,      "Shield"},
-                {KartItemKind::LeaderShell, "LeaderShell"},
-            };
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    bool parseKartItemKind( string_view text, KartItemKind& outKind )
-    {
-        for ( const KartItemsInternal::KindName& entry : KartItemsInternal::kArrKindName )
-        {
-            if ( StringUtil::equals( text, string_view( entry._pName ) ) )
-            {
-                outKind = entry._kind;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    const utf8* toString( KartItemKind kind )
-    {
-        for ( const KartItemsInternal::KindName& entry : KartItemsInternal::kArrKindName )
-        {
-            if ( entry._kind == kind )
-                return entry._pName;
-        }
-        return "Unknown";
-    }
-
     KartItemCatalog::KartItemCatalog()
         : _lootCatalog{}
         , _listRankTable{}

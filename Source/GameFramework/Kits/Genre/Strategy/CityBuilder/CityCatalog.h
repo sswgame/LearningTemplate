@@ -20,6 +20,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 땅의 종류입니다. */
+    ENUM()
     enum class CityTerrain : uint8
     {
         Grass = 0,
@@ -62,9 +63,7 @@ namespace sw
         Radius      ///< 반경 안의 집에 항상 전달한다(우물)
     };
 
-    [[nodiscard]] SW_KIT_API bool parseCityService( string_view text, CityService& outService );
-    SW_KIT_API const utf8*        toString( CityService service );
-    constexpr uint8               makeCityServiceBit( CityService service )
+    constexpr uint8 makeCityServiceBit( CityService service )
     {
         return static_cast<uint8>( 1u << static_cast<uint32>( service ) );
     }

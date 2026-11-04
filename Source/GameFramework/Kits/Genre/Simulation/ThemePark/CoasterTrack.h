@@ -29,7 +29,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 1) 조각과 구간 표시
     // ------------------------------------------------------------------------------
-    /** @brief 트랙 조각의 종류입니다. 데이터(XML)에는 열거자 이름 그대로 적습니다(대소문자 무시). */
+    /** @brief 트랙 조각의 종류입니다. 데이터(XML)에는 열거자 이름 그대로 적습니다(철자 그대로 — `ENUM()` 이름). */
     ENUM()
     enum class CoasterPieceType : uint8
     {
@@ -83,10 +83,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 조각 이름을 열거자로 읽습니다. 모르는 이름이면 false 를 반환하고 @p outType 은 그대로입니다. */
-    [[nodiscard]] SW_KIT_API bool parseCoasterPieceType( string_view text, CoasterPieceType& outType );
-    /** @brief 조각 열거자의 이름을 반환합니다. */
-    SW_KIT_API const utf8* toString( CoasterPieceType type );
 
     // ------------------------------------------------------------------------------
     // 2) 트랙: 샘플 점 목록과 거리 매개변수

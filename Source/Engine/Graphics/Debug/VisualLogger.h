@@ -21,11 +21,14 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class DebugDrawQueue;
 
-    /** @brief 기록 하나의 모양입니다. */
+    /** @brief 기록 하나의 모양입니다(기록 파일에는 열거자 이름으로 적는다). */
+    ENUM()
     enum class VisualLogShape : uint8
     {
         Text = 0, ///< `_a` 위치의 글(`_text`)

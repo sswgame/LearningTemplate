@@ -22,7 +22,7 @@ namespace sw
     class GameRandom;
     class XMLNode;
 
-    /** @brief 아이템이 하는 일입니다. XML 에는 열거자 이름 그대로 적습니다(대소문자 무시). */
+    /** @brief 아이템이 하는 일입니다. XML 에는 열거자 이름 그대로 적습니다(철자 그대로 — `ENUM()` 이름). */
     ENUM()
     enum class KartItemKind : uint8
     {
@@ -33,10 +33,6 @@ namespace sw
         Shield,     ///< 다음 한 번의 피격을 막는다
         LeaderShell ///< 1등을 쫓아가 터진다(파란 껍질). 터질 때 둘레의 차도 맞는다
     };
-
-    /** @brief 이름을 열거자로 읽습니다. 모르는 이름이면 false 를 반환합니다. */
-    [[nodiscard]] SW_KIT_API bool parseKartItemKind( string_view text, KartItemKind& outKind );
-    SW_KIT_API const utf8*        toString( KartItemKind kind );
 
     /** @brief 아이템 정의 하나입니다. 종류마다 쓰는 값만 읽습니다. */
     REFLECT()

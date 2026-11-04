@@ -18,26 +18,6 @@ namespace sw
         {
             static constexpr float32 kDuplicateEpsilon = 1.0e-4f;
 
-            /** @brief 열거자 이름 한 줄입니다. */
-            struct PieceName
-            {
-                CoasterPieceType _type;
-                const utf8*      _pName;
-            };
-
-            static constexpr PieceName kArrPieceName[] = {
-                {  CoasterPieceType::Station,   "Station"},
-                { CoasterPieceType::Straight,  "Straight"},
-                { CoasterPieceType::LiftHill,  "LiftHill"},
-                {     CoasterPieceType::Drop,      "Drop"},
-                {     CoasterPieceType::Hill,      "Hill"},
-                { CoasterPieceType::TurnLeft,  "TurnLeft"},
-                {CoasterPieceType::TurnRight, "TurnRight"},
-                {     CoasterPieceType::Loop,      "Loop"},
-                {   CoasterPieceType::Brakes,    "Brakes"},
-                {  CoasterPieceType::Booster,   "Booster"},
-            };
-
             static float32 smoothStepSlope( float32 t ) { return 6.0f * t * ( 1.0f - t ); }
 
             /** @brief 길이가 거의 0 이면 @p fallback 을 반환하는 정규화입니다. */
@@ -80,29 +60,6 @@ namespace sw
 
 namespace sw
 {
-    bool parseCoasterPieceType( string_view text, CoasterPieceType& outType )
-    {
-        for ( const CoasterTrackInternal::PieceName& entry : CoasterTrackInternal::kArrPieceName )
-        {
-            if ( StringUtil::equals( text, string_view( entry._pName ) ) )
-            {
-                outType = entry._type;
-                return true;
-            }
-        }
-        return false;
-    }
-
-    const utf8* toString( CoasterPieceType type )
-    {
-        for ( const CoasterTrackInternal::PieceName& entry : CoasterTrackInternal::kArrPieceName )
-        {
-            if ( entry._type == type )
-                return entry._pName;
-        }
-        return "Unknown";
-    }
-
     // ------------------------------------------------------------------------------
     // CoasterTrack
     // ------------------------------------------------------------------------------

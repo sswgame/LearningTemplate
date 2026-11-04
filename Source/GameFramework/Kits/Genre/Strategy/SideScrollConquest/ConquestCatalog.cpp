@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Genre/Strategy/SideScrollConquest/ConquestCatalog.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/String/EnumNameTable.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -15,10 +14,6 @@ namespace sw
     {
         struct ConquestCatalogInternal
         {
-            static constexpr const utf8*                 kArrTeamName[] = { "Neutral", "Player", "Enemy" };
-            static constexpr EnumNameTable<ConquestTeam> kTeamTable{ kArrTeamName };
-            static_assert( kTeamTable.getCount() == static_cast<size_t>( ConquestTeam::Enemy ) + 1, "team names must cover every ConquestTeam" );
-
             /** @brief 자식 원소(`<Cost>` · `<Income>`)의 속성을 자원 이름과 양으로 읽습니다. 자식이 없으면 비어 있습니다. */
             static void loadStatChild( const XMLNode& node, const utf8* pChildName, StatBlock& outStats )
             {
@@ -50,11 +45,6 @@ namespace sw
             }
         };
     } // namespace
-
-    bool parseConquestTeam( string_view text, ConquestTeam& outTeam )
-    {
-        return ConquestCatalogInternal::kTeamTable.parse( text, outTeam );
-    }
 
     ConquestCatalog::ConquestCatalog()
         : _buildingCatalog{}

@@ -11,32 +11,14 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
+#include "Engine/Reflection/EnumName.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw
 {
     namespace
     {
-        constexpr const utf8* kArrShapeName[] = { "Text", "Line", "Sphere", "Box", "Arrow" };
-
-        const utf8* toShapeName( VisualLogShape shape )
-        {
-            return kArrShapeName[static_cast<size_t>( shape )];
-        }
-
-        [[nodiscard]] bool tryParseShape( string_view name, VisualLogShape& outShape )
-        {
-            for ( size_t index = 0; index < SW_COUNT_OF( kArrShapeName ); ++index )
-            {
-                if ( StringUtil::equals( name, string_view( kArrShapeName[index] ) ) )
-                {
-                    outShape = static_cast<VisualLogShape>( index );
-                    return true;
-                }
-            }
-            return false;
-        }
-
         void writeFloats( const JSONValue& parent, string_view key, const float32* pValue, uint32 count )
         {
             JSONValue array = parent.set( key );
@@ -75,7 +57,7 @@ namespace sw
             if ( bMissingField )
                 return false;
             VisualLogEntry entry;
-            if ( tryParseShape( *shapeTxt, entry._shape ) == false )
+            if ( engine::getSubsystem<TypeRegistry>().enumFromString( *shapeTxt, entry._shape ) == false )
                 return false;
             float32    arrA[3]{};
             float32    arrB[3]{};
@@ -442,7 +424,7 @@ namespace sw
             node.set( "frame" ).setUint( entry._frame );
             node.set( "object" ).setUint( entry._objectID );
             node.set( "category" ).setString( entry._category.c_str() );
-            node.set( "shape" ).setString( toShapeName( entry._shape ) );
+            node.set( "shape" ).setString( getEnumName( entry._shape ) );
             node.set( "text" ).setString( entry._text );
             node.set( "radius" ).setFloat( static_cast<float64>( entry._radius ) );
             const float32 arrA[3]     = { entry._a._x, entry._a._y, entry._a._z };
