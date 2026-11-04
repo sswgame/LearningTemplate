@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  ThemeParkTycoon 에디터 시나리오 — 오디오 이벤트 창(audioevents). 엔진 에디터 체인(Empty)에는 이벤트 라이브러리가 없어 이 게임의 라이브러리(themepark.audioevents.xml)로 본다.
+  ① 창을 열면 이벤트 셋이 목록에 뜨고 Built 를 고른다. ② Post Event 를 누르면 오디오 스레드가 이벤트를 받아들인다(받은 수가 는다 — 벽시계로 기다린다).
+  ③ Edit 은 라이브러리 파일을 사본으로 읽는다(이벤트 셋). Duplicate 는 사본에 하나를 더하고 창이 저장 안 된 상태가 되며, Delete 가 그 복제를 지운다.
+  Stop Editing 은 사본을 버린다 — 저장하지 않으므로 저장소의 라이브러리를 바꾸지 않는다.
+  감시 값: Editor.AudioEventCount · Editor.AudioEventSelected · Editor.AudioEventsPlayed(벽시계) · Editor.AudioEventEditCount · Editor.PanelDirty(gv_editorWatchPanel=audioevents).
+  실행: App -EnableEditor -game=ThemeParkTycoon -scenario=game/themepark/automation/editor/audioevents.scenario.xml -unattended
+-->
+<Scenario name="game.themepark.audioevents" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="Immediately" input="exclusive">
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchPanel" value="audioevents"/>
+	<EditorWaitSettled/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<!-- ① 목록 · 고르기 -->
+	<DevCommand line="panel.focus audioevents"/>
+	<WaitUntil watch="Editor.AudioEventCount" atLeast="3" timeoutFrames="60"/>
+	<Expect watch="Editor.AudioEventSelected" equals="0"/>
+	<EditorClick mark="audioevents.event.Built"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.AudioEventSelected" equals="1"/>
+	<!-- ② Post Event — 오디오 스레드가 받는다 -->
+	<Remember watch="Editor.AudioEventsPlayed" as="played"/>
+	<EditorClick mark="audioevents.postEvent"/>
+	<WaitUntil watch="Editor.AudioEventsPlayed" differsFrom="played" timeoutWallSeconds="10"/>
+	<EditorWaitSettled/>
+	<!-- ③ 고치기 — 사본에 복제를 더했다 지우고 버린다 -->
+	<Expect watch="Editor.AudioEventEditCount" equals="0"/>
+	<EditorClick mark="audioevents.edit"/>
+	<WaitUntil watch="Editor.AudioEventEditCount" equals="3" timeoutFrames="30"/>
+	<Expect watch="Editor.PanelDirty" equals="0"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="audioevents.duplicate"/>
+	<WaitUntil watch="Editor.AudioEventEditCount" equals="4" timeoutFrames="30"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.PanelDirty" equals="1"/>
+	<EditorClick mark="audioevents.delete"/>
+	<WaitUntil watch="Editor.AudioEventEditCount" equals="3" timeoutFrames="30"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="audioevents.stopEditing"/>
+	<WaitUntil watch="Editor.AudioEventEditCount" equals="0" timeoutFrames="30"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.PanelDirty" equals="0"/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

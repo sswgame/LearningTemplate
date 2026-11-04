@@ -49,6 +49,12 @@ namespace sw::editor
         /** @brief 고치는 라이브러리 사본을 파일에 씁니다(닫기 · 종료 확인의 Save). 검사를 통과하지 못하면 쓰지 않고 false 입니다. */
         [[nodiscard]] bool saveDocument() override;
         bool               canSaveDocument() const override { return _bEditDirty; }
+        /** @brief 엔진에서 모은 이벤트 이름 수입니다(감시 값 `Editor.AudioEventCount`). */
+        uint32 getEventCount() const { return static_cast<uint32>( _listEventName.size() ); }
+        /** @brief 목록에서 이벤트를 골랐습니다(감시 값 `Editor.AudioEventSelected`). */
+        bool hasSelectedEvent() const { return _selectedEvent.empty() == false; }
+        /** @brief 고치는 라이브러리 사본의 이벤트 수입니다. 고치는 중이 아니면 0 입니다(감시 값 `Editor.AudioEventEditCount`). */
+        uint32 getEditEventCount() const { return _editLibraryName.empty() ? 0u : static_cast<uint32>( _editLibrary._listEvent.size() ); }
 
     private:
         /** @brief 사본의 미저장(`_bEditDirty`)을 패널 dirty 로 옮깁니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). */

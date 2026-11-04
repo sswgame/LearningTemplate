@@ -22,6 +22,7 @@
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -53,6 +54,53 @@ namespace sw::editor
                 ImGui::PushStyleColor( ImGuiCol_PlotHistogram, EditorColorUtil::toImVec4( bLimitReached ? SW_THEMECOLOR( "Signal", "Warning" ) : SW_THEMECOLOR( "Signal", "Success" ) ) );
                 ImGui::ProgressBar( usage, ImVec2{ -1.0f, 0.0f }, overlay.c_str() );
                 ImGui::PopStyleColor();
+            }
+
+            /** @brief 열린 오디오 이벤트 창입니다. 닫혔으면 nullptr 입니다(감시 값이 읽는다). */
+            [[nodiscard]] static const AudioEventBrowserPanel* findOpenPanel()
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
+                    return nullptr;
+                const AudioEventBrowserPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<AudioEventBrowserPanel>();
+                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+            }
+
+            [[nodiscard]] static bool readEventCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AudioEventBrowserPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getEventCount() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readSelected( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AudioEventBrowserPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = pPanel->hasSelectedEvent() ? 1.0 : 0.0;
+                return true;
+            }
+
+            [[nodiscard]] static bool readEditCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AudioEventBrowserPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getEditEventCount() );
+                return true;
+            }
+
+            /** @brief 오디오 스레드가 마지막으로 게시한 받아들인 이벤트 수입니다. 오디오 서비스가 없거나 시작하지 않았으면 값을 내지 않는다. */
+            [[nodiscard]] static bool readPlayedCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                IAudioService* pAudio = editor::findSubsystem<IAudioService>();
+                if ( pAudio == nullptr || pAudio->isInitialized() == false )
+                    return false;
+                outValue = static_cast<float64>( pAudio->getEngine().getStats()._playedEventCount );
+                return true;
             }
         };
     } // namespace
@@ -228,6 +276,9 @@ namespace sw::editor
         {
             if ( ImGui::Selectable( name.c_str(), name == _selectedEvent ) )
                 _selectedEvent = name;
+            fixed_string<constant::buffer::kMax128> mark;
+            formatstring( mark.data(), mark.capacity(), "audioevents.event.%#", name.c_str() );
+            EditorSelfTestMarks::note( mark.c_str() ); // 시나리오가 이벤트를 고른다
         }
         EditorSelfTestMarks::note( "audioevents.list" );
     }
@@ -413,5 +464,12 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( AudioEventBrowserPanel, AudioEventBrowserPanel::kPanelID, EditorPanelCategory::Tool, 2101 );
+    SW_AUTOMATION_WATCH( editorAudioEventCount, "Editor.AudioEventCount", "Audio events the Audio Events window lists (fails while it is closed)",
+                         &AudioEventBrowserPanelInternal::readEventCount );
+    SW_AUTOMATION_WATCH( editorAudioEventSelected, "Editor.AudioEventSelected", "1 while the Audio Events window has an event picked", &AudioEventBrowserPanelInternal::readSelected );
+    SW_AUTOMATION_WATCH( editorAudioEventEditCount, "Editor.AudioEventEditCount", "Events in the library copy the Audio Events window edits (0 while not editing)",
+                         &AudioEventBrowserPanelInternal::readEditCount );
+    SW_AUTOMATION_WALL_WATCH( editorAudioEventsPlayed, "Editor.AudioEventsPlayed", "Audio events the audio thread admitted, as it last published (follows the audio thread)",
+                              &AudioEventBrowserPanelInternal::readPlayedCount );
     SW_EDITOR_COMMAND( AudioEventBrowserOpen, "window.audioEvents", &AudioEventBrowserPanelInternal::openPanel, nullptr, NoScene );
 } // namespace sw::editor
