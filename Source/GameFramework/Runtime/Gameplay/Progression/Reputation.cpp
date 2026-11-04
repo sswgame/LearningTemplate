@@ -9,6 +9,7 @@
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
@@ -34,32 +35,27 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Faction" ); node; node = node.findNextSibling( "Faction" ) )
         {
-            const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-            if ( pID == nullptr )
-                continue;
+            // 적지 않은 칸은 FactionDef 의 초기값이다. 깨진 값 · 범위 밖 값(최대 >= 최소, 시작은 그 사이)은 그 세력을 넣지 않는 오류다(자르지 않는다).
             FactionDef faction;
-            faction._id       = hashed_string( pID );
-            const utf8* pName = node.findAttribute( "name" );
-            faction._name     = pName != nullptr ? pName : pID;
-            // 적지 않은 칸은 FactionDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 세력을 넣지 않는 오류다(자르지 않는다).
-            constexpr int32 kAnyInt = MathUtil::kMaxInt32;
-            bool            bValid  = XMLReadUtil::readOptionalNumber( node, "min", sourceName, MathUtil::kMinInt32, kAnyInt, faction._minValue );
-            bValid                  = XMLReadUtil::readOptionalNumber( node, "max", sourceName, faction._minValue, kAnyInt, faction._maxValue ) && bValid;
-            bValid                  = XMLReadUtil::readOptionalNumber( node, "start", sourceName, faction._minValue, faction._maxValue, faction._startValue ) && bValid;
-            bValid                  = XMLReadUtil::readOptionalNumber( node, "decay", sourceName, 0, kAnyInt, faction._dailyDecay ) && bValid;
+            bool       bValid = XMLFields::readFields( node, faction, sourceName );
+            if ( faction._id.empty() )
+                continue;
+            const utf8* const pID = faction._id.c_str();
+            if ( faction._name.empty() )
+                faction._name = pID;
             for ( XMLNode child = node.findChild( "Tier" ); child; child = child.findNextSibling( "Tier" ) )
             {
                 // 단계의 하한을 적지 않으면 세력의 하한이다(이 데이터의 값).
                 ReputationTier tier{ hashed_string{}, faction._minValue };
-                const bool     bNamed = XMLReadUtil::readRequiredName( child, "name", sourceName, tier._name );
-                bValid                = XMLReadUtil::readOptionalNumber( child, "min", sourceName, faction._minValue, faction._maxValue, tier._minValue ) && bValid;
-                if ( bNamed )
+                const bool     bTierRead = XMLFields::readFields( child, tier, sourceName ); // 이름 필수
+                const bool     bInside   = faction._minValue <= tier._minValue && tier._minValue <= faction._maxValue;
+                if ( bTierRead && bInside )
                 {
                     faction._listTier.push_back( tier );
                 }
                 else
                 {
-                    SW_LOG_ERROR_ID( "Reputation.FactionTierWithoutName", "%#: faction '%#' has a <Tier> without a name", sourceName, pID );
+                    SW_LOG_ERROR_ID( "Reputation.FactionTierInvalid", "%#: faction '%#' has a <Tier> without a name or with min outside [min, max]", sourceName, pID );
                     bValid = false;
                 }
             }
@@ -67,10 +63,9 @@ namespace sw
             for ( XMLNode child = node.findChild( "Link" ); child; child = child.findNextSibling( "Link" ) )
             {
                 // 연결은 상대 세력과 비율을 반드시 적는다 — 빠진 비율을 0 으로 두지 않는다.
-                const std::optional<string>  linkedFaction = child.readRequiredAttribute<string>( "faction" );
-                const std::optional<float32> ratio         = child.readRequiredAttribute<float32>( "ratio" );
-                if ( linkedFaction.has_value() && ratio.has_value() )
-                    faction._listLink.push_back( ReputationLink{ hashed_string( *linkedFaction ), *ratio } );
+                ReputationLink link;
+                if ( XMLFields::readFields( child, link, sourceName ) )
+                    faction._listLink.push_back( link );
                 else
                     bValid = false;
             }

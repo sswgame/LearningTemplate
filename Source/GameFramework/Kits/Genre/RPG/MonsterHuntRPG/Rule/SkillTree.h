@@ -31,18 +31,39 @@ namespace sw
 namespace sw
 {
     /** @brief 스킬 하나입니다. */
-    struct SkillDef
+    REFLECT()
+    struct SW_KIT_API SkillDef
     {
-        hashed_string            _id{};
-        hashed_string            _group{};   ///< 같은 그룹에서는 하나만 배운다(갈림길, 전문화)
-        hashed_string            _ability{}; ///< 랭크 1 부터 주는 어빌리티 id. 게임이 `AbilityComponent` 에 부여한다
-        string                   _name{};
-        vector<SkillRequirement> _listRequirement{};
-        StatBlock                _statsPerRank{};
-        int32                    _maxRank{ 1 };
-        int32                    _cost{ 1 }; ///< 랭크마다 드는 점수
-        int32                    _requiredLevel{ 0 };
-        int32                    _requiredSpent{ 0 }; ///< 이 트리에 이만큼 써야 열린다. 단이나 층 개념이다
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        hashed_string _group{}; ///< 같은 그룹에서는 하나만 배운다(갈림길, 전문화)
+        PROPERTY()
+        hashed_string _ability{}; ///< 랭크 1 부터 주는 어빌리티 id. 게임이 `AbilityComponent` 에 부여한다
+        PROPERTY()
+        string                   _name{};            ///< 적지 않으면 id
+        vector<SkillRequirement> _listRequirement{}; ///< `requires="basic:2,stance"` 는 손으로 푼다
+        StatBlock                _statsPerRank{};    ///< `<Stats …/>`
+        PROPERTY( Min = 1 )
+        int32 _maxRank{ 1 };
+        PROPERTY( Min = 0 )
+        int32 _cost{ 1 }; ///< 랭크마다 드는 점수
+        PROPERTY( Name = "level" )
+        int32 _requiredLevel{ 0 };
+        PROPERTY( Name = "spent", Min = 0 )
+        int32 _requiredSpent{ 0 }; ///< 이 트리에 이만큼 써야 열린다. 단이나 층 개념이다
+    };
+
+    /** @brief 스킬 트리 머리(`<Tree id>`)의 칸입니다. */
+    REFLECT()
+    struct SW_KIT_API SkillTreeHeadFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
     };
 } // namespace sw
 

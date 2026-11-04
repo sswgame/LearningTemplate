@@ -11,6 +11,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
@@ -21,36 +23,55 @@ namespace sw
     class XMLNode;
 
     /** @brief 단계 하나입니다. 값이 `_minValue` 이상이면 이 단계입니다. */
-    struct ReputationTier
+    REFLECT()
+    struct SW_GF_API ReputationTier
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _name{};
-        int32         _minValue{ 0 };
+        PROPERTY( Name = "min" )
+        int32 _minValue{ 0 }; ///< 적지 않으면 세력의 하한(읽기가 채운 뒤 읽는다) — 세력 범위 안인지는 읽기가 본다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 다른 세력으로 번지는 비율입니다. */
-    struct ReputationLink
+    REFLECT()
+    struct SW_GF_API ReputationLink
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "faction", Required )
         hashed_string _factionID{};
-        float32       _ratio{ 0.0f }; ///< 이 세력의 변화에 ratio 를 곱한 값이 그 세력에 적용된다. 적대 관계이면 음수이다
+        PROPERTY( Required )
+        float32 _ratio{ 0.0f }; ///< 이 세력의 변화에 ratio 를 곱한 값이 그 세력에 적용된다. 적대 관계이면 음수이다. 빠진 비율을 0 으로 두지 않는다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 세력이나 NPC 하나입니다. */
-    struct FactionDef
+    REFLECT()
+    struct SW_GF_API FactionDef
     {
-        hashed_string          _id{};
-        string                 _name{};
-        vector<ReputationTier> _listTier{}; ///< 낮은 값부터 나열한다
-        vector<ReputationLink> _listLink{};
-        int32                  _minValue{ -1000 };
-        int32                  _maxValue{ 1000 };
-        int32                  _startValue{ 0 };
-        int32                  _dailyDecay{ 0 }; ///< 하루마다 시작값 쪽으로 돌아가는 양. 호감도가 식는다
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        string                 _name{};     ///< 적지 않으면 id
+        vector<ReputationTier> _listTier{}; ///< 낮은 값부터 나열한다(`<Tier>`)
+        vector<ReputationLink> _listLink{}; ///< `<Link>`
+        PROPERTY( Name = "min" )
+        int32 _minValue{ -1000 };
+        PROPERTY( Name = "max", Min = "_minValue" )
+        int32 _maxValue{ 1000 };
+        PROPERTY( Name = "start", Min = "_minValue", Max = "_maxValue" )
+        int32 _startValue{ 0 };
+        PROPERTY( Name = "decay", Min = 0 )
+        int32 _dailyDecay{ 0 }; ///< 하루마다 시작값 쪽으로 돌아가는 양. 호감도가 식는다
     };
 } // namespace sw
 

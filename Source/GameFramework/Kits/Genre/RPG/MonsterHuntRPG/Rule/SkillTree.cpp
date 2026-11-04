@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -25,30 +26,21 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode treeNode = root.findChild( "Tree" ); treeNode; treeNode = treeNode.findNextSibling( "Tree" ) )
         {
-            const utf8* pTreeID = XMLReadUtil::findRequiredID( treeNode, sourceName );
-            if ( pTreeID == nullptr )
+            SkillTreeHeadFields head;
+            if ( XMLFields::readFields( treeNode, head, sourceName ) == false )
                 continue;
             SkillTreeDef tree;
-            tree._id = hashed_string( pTreeID );
+            tree._id = head._id;
             for ( XMLNode node = treeNode.findChild( "Skill" ); node; node = node.findNextSibling( "Skill" ) )
             {
-                const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-                if ( pID == nullptr )
-                    continue;
-                SkillDef skill;
-                skill._id            = hashed_string( pID );
-                const utf8* pName    = node.findAttribute( "name" );
-                const utf8* pGroup   = node.findAttribute( "group" );
-                const utf8* pAbility = node.findAttribute( "ability" );
-                skill._name          = pName != nullptr ? pName : pID;
-                skill._group         = pGroup != nullptr ? hashed_string( pGroup ) : hashed_string{};
-                skill._ability       = pAbility != nullptr ? hashed_string( pAbility ) : hashed_string{};
                 // 적지 않은 칸은 SkillDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 스킬을 넣지 않는 오류다(자르지 않는다).
-                constexpr int32 kAnyInt = MathUtil::kMaxInt32;
-                bool            bValid  = XMLReadUtil::readOptionalNumber( node, "maxRank", sourceName, 1, kAnyInt, skill._maxRank );
-                bValid                  = XMLReadUtil::readOptionalNumber( node, "cost", sourceName, 0, kAnyInt, skill._cost ) && bValid;
-                bValid                  = XMLReadUtil::readOptionalNumber( node, "level", sourceName, MathUtil::kMinInt32, kAnyInt, skill._requiredLevel ) && bValid;
-                bValid                  = XMLReadUtil::readOptionalNumber( node, "spent", sourceName, 0, kAnyInt, skill._requiredSpent ) && bValid;
+                SkillDef skill;
+                bool     bValid = XMLFields::readFields( node, skill, sourceName, { "requires" } );
+                if ( skill._id.empty() )
+                    continue;
+                const utf8* const pID = skill._id.c_str();
+                if ( skill._name.empty() )
+                    skill._name = pID;
                 // "basic:2,stance" 형식이며, 이름:랭크로 적고 랭크를 생략하면 SkillRequirement 의 초기값(1)이다. 읽히지 않거나 1 아래인 랭크는 오류다.
                 XMLReadUtil::forEachNamedNumber( node.getAttributeText( "requires" ), ", ", SkillRequirement{}._rank, XMLReadUtil::MissingValue::UseDefault,
                                                  [&]( string_view token, string_view skillName, int32 rank, bool bNumberValid )
