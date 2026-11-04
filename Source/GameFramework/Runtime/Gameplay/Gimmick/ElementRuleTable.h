@@ -31,6 +31,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -41,6 +42,7 @@ namespace sw
     class XMLNode;
 
     /** @brief 상태 값이 스텝마다 어떻게 바뀌는지 나타냅니다. */
+    ENUM()
     enum class ElementStatusKind : uint8
     {
         Age = 0,  ///< 붙은 뒤 지난 스텝 수. 0 부터 늘어나고 255 에서 멈춘다. 타는 중 상태에 쓴다
@@ -56,6 +58,7 @@ namespace sw
     };
 
     /** @brief 번짐 형태입니다. */
+    ENUM()
     enum class ElementSpreadPattern : uint8
     {
         Neighbors4 = 0, ///< 항상 네 이웃
@@ -81,11 +84,91 @@ namespace sw
 namespace sw
 {
     /** @brief 상태 하나입니다. 셀마다 최대 `ElementRuleTable::kMaxStatusCount` 개를 가질 수 있습니다. */
-    struct ElementStatusDef
+    REFLECT()
+    struct SW_GF_API ElementStatusDef
     {
-        hashed_string     _id{};
-        int32             _steps{ 1 }; ///< Countdown 이 붙을 때의 스텝 수
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Min = 1 )
+        int32 _steps{ 1 }; ///< Countdown 이 붙을 때의 스텝 수
+        PROPERTY()
         ElementStatusKind _kind{ ElementStatusKind::Age };
+    };
+
+    /** @brief 이름 하나만 받는 선언(`<Flag id/>` · `<Stimulus id>`)의 칸입니다. */
+    REFLECT()
+    struct SW_GF_API ElementNameFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+    };
+
+    /** @brief 규칙표 루트(`<ElementRules stepTime>`)의 칸입니다. 표가 지금 값(기본 스텝)으로 채운 뒤 읽는다. */
+    REFLECT()
+    struct SW_GF_API ElementRuleRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0.0001, Units = s )
+        float32 _stepTime{ 0.0f };
+    };
+
+    /** @brief 자극 규칙(`<On …/>`)의 칸입니다. 이름은 이 표에서 앞에 선언한 것만 가리키며, 읽기가 번호로 바꾼다. */
+    REFLECT()
+    struct SW_GF_API ElementStimulusRuleFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _material{};
+        PROPERTY()
+        hashed_string _flag{};
+        PROPERTY()
+        hashed_string _status{};
+        PROPERTY()
+        hashed_string _without{};
+        PROPERTY()
+        hashed_string _setMaterial{};
+        PROPERTY()
+        hashed_string _addStatus{};
+        PROPERTY()
+        hashed_string _removeStatus{};
+        PROPERTY()
+        hashed_string _floodStatus{};
+        PROPERTY()
+        hashed_string _through{};
+        PROPERTY()
+        hashed_string _event{};
+    };
+
+    /** @brief 스텝 규칙(`<Expire>` · `<Convert>` · `<Spread>`)의 칸입니다. 이름은 읽기가 번호로 바꾼다. */
+    REFLECT()
+    struct SW_GF_API ElementStepRuleFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _status{};
+        PROPERTY()
+        hashed_string _neighbor{};
+        PROPERTY()
+        hashed_string _setMaterial{};
+        PROPERTY()
+        hashed_string _to{};
+        PROPERTY( Min = 0 )
+        int32 _after{ 0 };
+        PROPERTY()
+        bool _bCrosswind{ false };
+        PROPERTY()
+        hashed_string _stepsParam{};
+        PROPERTY()
+        hashed_string _event{};
+        PROPERTY()
+        ElementSpreadPattern _pattern{ ElementSpreadPattern::Neighbors4 };
     };
 } // namespace sw
 
@@ -193,7 +276,7 @@ namespace sw
         [[nodiscard]] bool readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const;
         [[nodiscard]] bool readStepRule( const XMLNode& node, ElementStepRule& outRule, string_view sourceName ) const;
         /** @brief 이름 속성을 테이블의 번호로 읽습니다. 속성이 없으면 -1 로 두고 true 를 반환하고, 알 수 없는 이름이면 경고를 남기고 false 를 반환합니다. */
-        [[nodiscard]] bool readIndex( const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const, int32& outIndex,
+        [[nodiscard]] bool readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const, int32& outIndex,
                                       string_view sourceName ) const;
 
         vector<hashed_string>      _listFlag{};

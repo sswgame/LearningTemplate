@@ -8,6 +8,7 @@
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -219,32 +220,33 @@ namespace sw
         return loadRoot( root, sourceName );
     }
 
-    bool ElementRuleTable::readIndex( const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const, int32& outIndex,
-                                      string_view sourceName ) const
+    bool ElementRuleTable::readIndex( const hashed_string& name, const XMLNode& node, const utf8* pAttribute, int32 ( ElementRuleTable::*pFind )( const hashed_string& ) const,
+                                      int32& outIndex, string_view sourceName ) const
     {
-        outIndex          = -1;
-        const utf8* pText = node.findAttribute( pAttribute );
-        if ( pText == nullptr )
+        outIndex = -1;
+        if ( name.empty() ) // 적지 않으면 "없음"(-1)
             return true;
-        outIndex = ( this->*pFind )( hashed_string( pText ) );
+        outIndex = ( this->*pFind )( name );
         if ( outIndex >= 0 )
             return true;
-        SW_LOG_WARNING_ID( "ElementRuleTable.NamesNothingDeclaredTable", "%#: <%#> %#=\"%#\" names nothing declared in this table", sourceName, node.getName(), pAttribute, pText );
+        SW_LOG_WARNING_ID( "ElementRuleTable.NamesNothingDeclaredTable", "%#: <%#> %#=\"%#\" names nothing declared in this table", sourceName, node.getName(), pAttribute, name.c_str() );
         return false;
     }
 
     bool ElementRuleTable::readStimulusRule( const XMLNode& node, ElementStimulusRule& outRule, string_view sourceName ) const
     {
-        bool bValid    = readIndex( node, "material", &ElementRuleTable::findMaterial, outRule._material, sourceName );
-        bValid         = readIndex( node, "flag", &ElementRuleTable::findFlag, outRule._flag, sourceName ) && bValid;
-        bValid         = readIndex( node, "status", &ElementRuleTable::findStatus, outRule._status, sourceName ) && bValid;
-        bValid         = readIndex( node, "without", &ElementRuleTable::findStatus, outRule._without, sourceName ) && bValid;
-        bValid         = readIndex( node, "setMaterial", &ElementRuleTable::findMaterial, outRule._setMaterial, sourceName ) && bValid;
-        bValid         = readIndex( node, "addStatus", &ElementRuleTable::findStatus, outRule._addStatus, sourceName ) && bValid;
-        bValid         = readIndex( node, "removeStatus", &ElementRuleTable::findStatus, outRule._removeStatus, sourceName ) && bValid;
-        bValid         = readIndex( node, "floodStatus", &ElementRuleTable::findStatus, outRule._floodStatus, sourceName ) && bValid;
-        bValid         = readIndex( node, "through", &ElementRuleTable::findFlag, outRule._floodThrough, sourceName ) && bValid;
-        outRule._event = hashed_string( node.getAttributeText( "event" ).empty() ? "" : string( node.getAttributeText( "event" ) ).c_str() );
+        ElementStimulusRuleFields fields;
+        bool                      bValid = XMLFields::readFields( node, fields, sourceName );
+        bValid                           = readIndex( fields._material, node, "material", &ElementRuleTable::findMaterial, outRule._material, sourceName ) && bValid;
+        bValid                           = readIndex( fields._flag, node, "flag", &ElementRuleTable::findFlag, outRule._flag, sourceName ) && bValid;
+        bValid                           = readIndex( fields._status, node, "status", &ElementRuleTable::findStatus, outRule._status, sourceName ) && bValid;
+        bValid                           = readIndex( fields._without, node, "without", &ElementRuleTable::findStatus, outRule._without, sourceName ) && bValid;
+        bValid                           = readIndex( fields._setMaterial, node, "setMaterial", &ElementRuleTable::findMaterial, outRule._setMaterial, sourceName ) && bValid;
+        bValid                           = readIndex( fields._addStatus, node, "addStatus", &ElementRuleTable::findStatus, outRule._addStatus, sourceName ) && bValid;
+        bValid                           = readIndex( fields._removeStatus, node, "removeStatus", &ElementRuleTable::findStatus, outRule._removeStatus, sourceName ) && bValid;
+        bValid                           = readIndex( fields._floodStatus, node, "floodStatus", &ElementRuleTable::findStatus, outRule._floodStatus, sourceName ) && bValid;
+        bValid                           = readIndex( fields._through, node, "through", &ElementRuleTable::findFlag, outRule._floodThrough, sourceName ) && bValid;
+        outRule._event                   = fields._event;
         if ( outRule._floodStatus >= 0 && outRule._floodThrough < 0 )
         {
             SW_LOG_WARNING_ID( "ElementRuleTable.FloodStatusNeedsThroughFlag", "%#: <On floodStatus> needs through=\"<flag>\"", sourceName );
@@ -266,25 +268,18 @@ namespace sw
             SW_LOG_WARNING_ID( "ElementRuleTable.UnknownStepRuleExpire", "%#: unknown step rule <%#> (Expire, Convert, Spread)", sourceName, node.getName() );
             return false;
         }
-        bool bValid               = readIndex( node, "status", &ElementRuleTable::findStatus, outRule._status, sourceName );
-        bValid                    = readIndex( node, "neighbor", &ElementRuleTable::findMaterial, outRule._material, sourceName ) && bValid;
-        bValid                    = readIndex( node, "setMaterial", &ElementRuleTable::findMaterial, outRule._setMaterial, sourceName ) && bValid;
-        bValid                    = readIndex( node, "to", &ElementRuleTable::findFlag, outRule._toFlag, sourceName ) && bValid;
-        bValid                    = XMLReadUtil::readOptionalNumber( node, "after", sourceName, 0, MathUtil::kMaxInt32, outRule._after ) && bValid;
-        bValid                    = XMLReadUtil::readOptionalFlag( node, "crosswind", outRule._bCrosswind ) && bValid;
-        outRule._stepsParam       = hashed_string( string( node.getAttributeText( "stepsParam" ) ).c_str() );
-        outRule._event            = hashed_string( string( node.getAttributeText( "event" ) ).c_str() );
-        const string_view pattern = node.getAttributeText( "pattern" );
-        if ( pattern.empty() || StringUtil::equals( pattern, "Neighbors4" ) )
-            outRule._pattern = ElementSpreadPattern::Neighbors4;
-        else if ( StringUtil::equals( pattern, "Wind" ) )
-            outRule._pattern = ElementSpreadPattern::Wind;
-        else
-        {
-            SW_LOG_WARNING_ID( "ElementRuleTable.UnknownPatternNeighbors4Wind", "%#: <%#> has unknown pattern '%#' (Neighbors4, Wind)", sourceName, node.getName(), pattern );
-            bValid = false;
-        }
-        if ( outRule._status < 0 )
+        ElementStepRuleFields fields; // 상태 필수 · 형태는 ENUM() 이름 · after >= 0
+        bool                  bValid = XMLFields::readFields( node, fields, sourceName );
+        bValid                       = readIndex( fields._status, node, "status", &ElementRuleTable::findStatus, outRule._status, sourceName ) && bValid;
+        bValid                       = readIndex( fields._neighbor, node, "neighbor", &ElementRuleTable::findMaterial, outRule._material, sourceName ) && bValid;
+        bValid                       = readIndex( fields._setMaterial, node, "setMaterial", &ElementRuleTable::findMaterial, outRule._setMaterial, sourceName ) && bValid;
+        bValid                       = readIndex( fields._to, node, "to", &ElementRuleTable::findFlag, outRule._toFlag, sourceName ) && bValid;
+        outRule._after               = fields._after;
+        outRule._bCrosswind          = fields._bCrosswind;
+        outRule._stepsParam          = fields._stepsParam;
+        outRule._event               = fields._event;
+        outRule._pattern             = fields._pattern;
+        if ( bValid && outRule._status < 0 )
         {
             SW_LOG_WARNING_ID( "ElementRuleTable.NeedsStatus", "%#: <%#> needs a status", sourceName, node.getName() );
             bValid = false;
@@ -296,18 +291,17 @@ namespace sw
     {
         clear();
         // 적지 않으면 clear() 가 둔 기본 스텝 길이다. 0 이하 · 깨진 값은 오류다.
-        bool bValid = XMLReadUtil::readOptionalNumber( root, "stepTime", sourceName, 0.0f, MathUtil::kMaxFloat, _stepTime );
-        if ( _stepTime <= 0.0f )
-        {
-            SW_LOG_ERROR_ID( "ElementRuleTable.StepTimeMustPositive", "%#: stepTime must be positive", sourceName );
-            bValid = false;
-        }
+        ElementRuleRootFields rootFields{ _stepTime };
+        bool                  bValid = XMLFields::readFields( root, rootFields, sourceName ); // stepTime > 0 은 PROPERTY 가 본다
+        _stepTime                    = bValid ? rootFields._stepTime : _stepTime;
         // 이름은 앞에서 선언한 것만 가리킬 수 있다. 그래서 플래그, 재질, 상태를 먼저 모두 읽고 규칙을 읽는다.
         for ( XMLNode child = root.findChild(); child; child = child.findNextSibling() )
         {
             if ( XMLReadUtil::isElement( child.getName(), "Flag" ) )
             {
-                if ( addFlag( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ) ) < 0 )
+                ElementNameFields flag;
+                bValid = XMLFields::readFields( child, flag, sourceName ) && bValid;
+                if ( addFlag( flag._id ) < 0 )
                 {
                     SW_LOG_WARNING_ID( "ElementRuleTable.MoreFlags", "%#: more than %# flags", sourceName, kMaxFlagCount );
                     bValid = false;
@@ -315,18 +309,9 @@ namespace sw
             }
             else if ( XMLReadUtil::isElement( child.getName(), "Status" ) )
             {
-                const string_view kindText = child.getAttributeText( "kind" );
-                ElementStatusKind kind{ ElementStatusKind::Age };
-                if ( StringUtil::equals( kindText, "Countdown" ) )
-                    kind = ElementStatusKind::Countdown;
-                else if ( StringUtil::equals( kindText, "Age" ) == false )
-                {
-                    SW_LOG_WARNING_ID( "ElementRuleTable.StatusUnknownKindAge", "%#: <Status> has unknown kind '%#' (Age, Countdown)", sourceName, kindText );
-                    bValid = false;
-                }
-                int32 steps = ElementStatusDef{}._steps;
-                bValid      = XMLReadUtil::readOptionalNumber( child, "steps", sourceName, 1, MathUtil::kMaxInt32, steps ) && bValid;
-                if ( addStatus( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ), kind, steps ) < 0 )
+                ElementStatusDef status; // 종류는 ENUM() 이름 · steps >= 1
+                bValid = XMLFields::readFields( child, status, sourceName ) && bValid;
+                if ( addStatus( status._id, status._kind, status._steps ) < 0 )
                 {
                     SW_LOG_WARNING_ID( "ElementRuleTable.DuplicateStatusMoreStatuses", "%#: duplicate status or more than %# statuses", sourceName, kMaxStatusCount );
                     bValid = false;
@@ -362,7 +347,9 @@ namespace sw
         }
         for ( XMLNode child = root.findChild( "Stimulus" ); child; child = child.findNextSibling( "Stimulus" ) )
         {
-            const int32 stimulus = addStimulus( hashed_string( string( child.getAttributeText( "id" ) ).c_str() ) );
+            ElementNameFields stimulusFields;
+            bValid               = XMLFields::readFields( child, stimulusFields, sourceName ) && bValid;
+            const int32 stimulus = addStimulus( stimulusFields._id );
             for ( XMLNode ruleNode = child.findChild( "On" ); ruleNode; ruleNode = ruleNode.findNextSibling( "On" ) )
             {
                 ElementStimulusRule rule;
