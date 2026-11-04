@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 전역 변수 창(global_variables): 검색 칸에 gv_debugHUD 를 치고 그 줄의 체크 상자를 누르면 변수가 바로 켜지고 창이 저장 안 된 상태가 된다.
+  기본값과 달라진 줄에만 서는 Reset 단추를 누르면 기본값(false)으로 돌아간다.
+  감시 값: ExpectVariable gv_debugHUD(변수 값) · Editor.PanelDirty(gv_editorWatchPanel=global_variables — 세션 저장 전 상태).
+  실행: App -EnableEditor -scenario=engine/automation/editor/globalvariablespanel.scenario.xml -unattended
+-->
+<Scenario name="editor.globalvariablespanel" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchPanel" value="global_variables"/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus global_variables"/>
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutSeconds="10"/>
+	<Expect watch="Editor.PanelDirty" equals="0"/>
+	<ExpectVariable name="gv_debugHUD" value="false"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="globalVariables.search"/>
+	<EditorWaitSettled/>
+	<EditorText value="gv_debugHUD"/>
+	<EditorWaitSettled/>
+	<!-- 값 칸(체크 상자)을 누르면 변수가 바로 바뀐다 -->
+	<EditorClick mark="globalVariables.value.gv_debugHUD"/>
+	<EditorWaitSettled/>
+	<ExpectVariable name="gv_debugHUD" value="true"/>
+	<Expect watch="Editor.PanelDirty" equals="1"/>
+	<!-- 기본값과 다른 줄의 Reset — 기본값으로 -->
+	<EditorClick mark="globalVariables.reset.gv_debugHUD"/>
+	<EditorWaitSettled/>
+	<ExpectVariable name="gv_debugHUD" value="false"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

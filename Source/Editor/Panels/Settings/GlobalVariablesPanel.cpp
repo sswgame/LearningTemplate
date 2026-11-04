@@ -2,6 +2,7 @@
 
 #include "Editor/Panels/Settings/GlobalVariablesPanel.h"
 
+#include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -18,6 +19,7 @@
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -244,6 +246,7 @@ namespace sw::editor
         {
             EditorWidgets::drawSearchField( "##GvSearch", _searchFilter,
                                             SW_LOCKEY( "EditorSettings", "FilterVariablesHint" ), 200.0f, true );
+            EditorSelfTestMarks::note( "globalVariables.search" );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "GroupByModule" ) ) );
             (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "GroupByModule" ), &_bGroupByModule );
@@ -446,6 +449,9 @@ namespace sw::editor
         ImGui::TableNextColumn();
         if ( GlobalVariablesPanelInternal::drawVariableWidget( info ) )
             markSessionDirty();
+        fixed_string<constant::buffer::kMax128> mark;
+        formatstring( mark.data(), mark.capacity(), "globalVariables.value.%#", info._name.c_str() );
+        EditorSelfTestMarks::note( mark.c_str() ); // 시나리오가 그 변수의 값을 바꾼다
 
         // Reset 컬럼 — 기본값과 다른 줄에만 단추를 둔다(언리얼 디테일의 "기본값으로" 화살표). 모든 줄의 단추는 바뀐 줄을 찾기 어렵게 했다(uiaudit 10).
         ImGui::TableNextColumn();
@@ -456,6 +462,8 @@ namespace sw::editor
                 info.resetToDefault();
                 markSessionDirty();
             }
+            formatstring( mark.data(), mark.capacity(), "globalVariables.reset.%#", info._name.c_str() );
+            EditorSelfTestMarks::note( mark.c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetVariable" ) );
         }
     }
