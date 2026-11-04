@@ -18,9 +18,34 @@
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    /** @brief 프리팹 루트(`<Prefab formatVersion name>`)의 칸입니다. `formatVersion` 은 에셋 형식이 읽는다. */
+    REFLECT()
+    struct SW_API PrefabRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _name{};
+    };
+
+    /** @brief 중첩 프리팹(`<PrefabInstance name prefab attach>`)의 칸입니다. 덮어쓰기와 그 노드에 붙는 노드는 자식 원소다. */
+    REFLECT()
+    struct SW_API PrefabInstanceFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _name{};
+        PROPERTY()
+        string _prefab{};
+        PROPERTY()
+        string _attach{};
+    };
+
     struct CookJobDesc;
     struct ObjectIdentity;
     struct PrefabPartOverride;

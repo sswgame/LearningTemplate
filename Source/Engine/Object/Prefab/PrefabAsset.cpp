@@ -29,6 +29,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw
 {
@@ -253,23 +254,24 @@ namespace sw
             {
                 for ( XMLNode element = parent.findChild( kNestedInstance ); element.isValid(); element = element.findNextSibling( kNestedInstance ) )
                 {
-                    PrefabInstanceNode node{};
-                    const utf8*        pName   = element.findAttribute( kName );
-                    const utf8*        pPrefab = element.findAttribute( kNestedPrefab );
-                    const utf8*        pAttach = element.findAttribute( kNestedAttach );
-                    node._name                 = pName != nullptr ? pName : "";
-                    node._prefabPath           = pPrefab != nullptr ? pPrefab : "";
-                    node._attachKey            = pAttach != nullptr ? pAttach : "";
-                    node._parentIndex          = parentIndex;
-                    const XMLNode overrides    = element.findChild( PrefabOverrides::kRootName );
-                    if ( overrides.isValid() )
-                        node._overrideXML = overrides.toString();
+                    // 지운 칸은 옮겨 갈 곳을 알려 준다(모르는 칸 오류보다 먼저).
                     if ( element.findAttribute( kRemovedNestedGUID ) != nullptr )
                     {
-                        SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabGUIDRemoved", "Nested prefab instance '%#' in '%#' still has '%#' - prefabs are referenced by path only; the prefab is not loaded", node._name,
-                                         sourceName, kRemovedNestedGUID );
+                        SW_LOG_ERROR_ID( "PrefabAsset.NestedPrefabGUIDRemoved", "Nested prefab instance '%#' in '%#' still has '%#' - prefabs are referenced by path only; the prefab is not loaded",
+                                         element.getAttributeText( kName ), sourceName, kRemovedNestedGUID );
                         return false;
                     }
+                    PrefabInstanceFields fields;
+                    if ( XMLFields::readFields( element, fields, sourceName ) == false )
+                        return false;
+                    PrefabInstanceNode node{};
+                    node._name              = std::move( fields._name );
+                    node._prefabPath        = std::move( fields._prefab );
+                    node._attachKey         = std::move( fields._attach );
+                    node._parentIndex       = parentIndex;
+                    const XMLNode overrides = element.findChild( PrefabOverrides::kRootName );
+                    if ( overrides.isValid() )
+                        node._overrideXML = overrides.toString();
                     inoutListNode.push_back( std::move( node ) );
                     if ( readNodesFromXML( element, static_cast<int32>( inoutListNode.size() - 1 ), inoutListNode, sourceName ) == false )
                         return false;
@@ -286,11 +288,7 @@ namespace sw
                     if ( node._parentIndex != parentIndex )
                         continue;
                     XMLNode element = parent.appendChild( kNestedInstance );
-                    if ( node._name.empty() == false )
-                        element.appendAttribute( kName, string_view{ node._name } );
-                    element.appendAttribute( kNestedPrefab, string_view{ node._prefabPath } );
-                    if ( node._attachKey.empty() == false )
-                        element.appendAttribute( kNestedAttach, string_view{ node._attachKey } );
+                    XMLFields::writeFields( element, PrefabInstanceFields{ node._name, node._prefabPath, node._attachKey } );
                     if ( node._overrideXML.empty() == false )
                     {
                         XMLDocument overrideDoc;
@@ -634,9 +632,11 @@ namespace sw
             return false;
         }
 
-        const utf8* pNameAttr = root.findAttribute( PrefabAssetInternal::kName );
-        if ( pNameAttr != nullptr )
-            _name = pNameAttr;
+        PrefabRootFields rootFields;
+        if ( XMLFields::readFields( root, rootFields, absPath, { "formatVersion" } ) == false )
+            return false;
+        if ( rootFields._name.empty() == false )
+            _name = rootFields._name;
 
         XMLNode bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
         if ( bodyNode.isValid() == false )
@@ -788,7 +788,7 @@ namespace sw
         XMLDocument xmlDoc;
         XMLNode     root = xmlDoc.appendRoot( PrefabAssetInternal::kRoot );
         root.appendAttribute( "formatVersion", static_cast<uint32>( PrefabAsset::kAssetType._formatVersion ) );
-        root.appendAttribute( PrefabAssetInternal::kName, _name );
+        XMLFields::writeFields( root, PrefabRootFields{ _name } );
         if ( xmlBody.empty() == false )
         {
             XMLDocument bodyDoc;

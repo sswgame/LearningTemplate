@@ -13,10 +13,38 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Scene/SceneSettings.h"
 
 namespace sw
 {
+    /** @brief 씬 루트(`<Scene formatVersion name>`)의 칸입니다. 이름을 적지 않으면 파일 이름이다. `formatVersion` 은 에셋 형식이 읽는다. */
+    REFLECT()
+    struct SW_API SceneRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _name{};
+    };
+
+    /**
+     * @brief 엔티티(`<entities><entity id name prefab>`)의 칸입니다. 상태(`<GameObject>`)와 프리팹 덮어쓰기는 자식 원소라 서브트리째 둔다.
+     * @details 파일 id 는 0 이 아니어야 한다(`Scene::serializeToDocument` 가 늘 적는다) — 부착 · 핸들이 이 값으로 부모를 가리키고 쿠커가 엔티티를 찾는다.
+     */
+    REFLECT()
+    struct SW_API SceneEntityFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 1 )
+        uint64 _id{ 0 };
+        PROPERTY()
+        string _name{};
+        PROPERTY()
+        string _prefab{};
+    };
+
     class AssetLoadScope;
     class XMLDocument;
 

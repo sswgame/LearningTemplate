@@ -16,6 +16,7 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw
 {
@@ -24,11 +25,8 @@ namespace sw
         struct SceneDocumentInternal
         {
             static constexpr const utf8* kRoot          = "Scene";
-            static constexpr const utf8* kName          = "name";
             static constexpr const utf8* kEntities      = "entities";
             static constexpr const utf8* kEntity        = "entity";
-            static constexpr const utf8* kFileID        = "id";
-            static constexpr const utf8* kPrefab        = "prefab";
             static constexpr const utf8* kGameObject    = "GameObject";
             static constexpr const utf8* kDefaultEntity = "Entity";
             static constexpr uint32      kBinMagic      = FourCcUtil::make( "SCN1" );
@@ -119,28 +117,23 @@ namespace sw
              */
             [[nodiscard]] static bool readEntityNode( const XMLNode& sceneObjectNode, string_view absPath, SceneDocument::SceneObjectNode& outNode )
             {
-                const utf8* pName = sceneObjectNode.findAttribute( kName );
-                if ( pName != nullptr )
-                    outNode._name = pName;
-
-                const utf8* pFileID        = sceneObjectNode.findAttribute( kFileID );
-                const bool  bInvalidFileID = pFileID == nullptr || StringUtil::parseUint64( pFileID, outNode._fileID ) == false || outNode._fileID == 0;
-                if ( bInvalidFileID )
-                {
-                    SW_LOG_ERROR_ID( "SceneDocument.EntityNoValidId", "Entity '%#' has no valid id ('%#') in %# - the scene is not loaded", outNode._name, pFileID != nullptr ? pFileID : "", absPath );
-                    return false;
-                }
-
+                // 지운 칸은 옮겨 갈 곳을 알려 준다(모르는 칸 오류보다 먼저).
                 if ( sceneObjectNode.findAttribute( kRemovedPrefabGUID ) != nullptr )
                 {
                     SW_LOG_ERROR_ID( "SceneDocument.EntityPrefabGUIDRemoved", "Entity '%#' still has '%#' in %# - prefabs are referenced by path only (put the prefab's path in 'prefab'); the scene is not loaded",
-                                     outNode._name, kRemovedPrefabGUID, absPath );
+                                     sceneObjectNode.getAttributeText( "name" ), kRemovedPrefabGUID, absPath );
                     return false;
                 }
-
-                const utf8* pPrefab = sceneObjectNode.findAttribute( kPrefab );
-                if ( pPrefab != nullptr )
-                    outNode._prefab = pPrefab;
+                // 칸 · 0 이 아닌 id 는 SceneEntityFields 의 PROPERTY 가 본다.
+                SceneEntityFields fields;
+                if ( XMLFields::readFields( sceneObjectNode, fields, absPath ) == false )
+                {
+                    SW_LOG_ERROR_ID( "SceneDocument.EntityNoValidId", "Entity '%#' is not readable in %# - the scene is not loaded", fields._name, absPath );
+                    return false;
+                }
+                outNode._fileID = fields._id;
+                outNode._name   = std::move( fields._name );
+                outNode._prefab = std::move( fields._prefab );
 
                 const XMLNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
                 if ( overrideNode.isValid() )
@@ -213,12 +206,13 @@ namespace sw
         }
 
         // 씬 · 엔티티의 값은 속성에만 있다(`saveXML` 이 쓰는 모양).
-        const utf8* pSceneName = root.findAttribute( SceneDocumentInternal::kName );
-
-        if ( pSceneName != nullptr )
-            _name = pSceneName;
-        else
-            _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
+        SceneRootFields rootFields;
+        if ( XMLFields::readFields( root, rootFields, absPath, { "formatVersion" } ) == false )
+        {
+            *this = {};
+            return false;
+        }
+        _name = rootFields._name.empty() ? FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) ) : rootFields._name;
 
         if ( SceneDocumentInternal::readSceneSettings( root, _name, absPath, _sceneSettings ) == false )
         {
@@ -265,7 +259,7 @@ namespace sw
         XMLDocument xmlDoc;
         XMLNode     root = xmlDoc.appendRoot( SceneDocumentInternal::kRoot );
         root.appendAttribute( "formatVersion", static_cast<uint32>( kAssetType._formatVersion ) );
-        root.appendAttribute( "name", _name );
+        XMLFields::writeFields( root, SceneRootFields{ _name } );
         {
             XMLDocument sceneSettingsDoc;
             if ( sceneSettingsDoc.parse( XMLSerializer::serialize( &_sceneSettings, *SceneSettings::StaticType() ) ) == false ||
@@ -286,13 +280,8 @@ namespace sw
                 SW_LOG_ERROR_ID( "SceneDocument.EntityNoIdScene", "Entity '%#' has no id - scene '%#' is not saved", entity._name, _name );
                 return false;
             }
-            XMLNode      sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
-            utf8         arrFileIDText[constant::buffer::kMax32]{};
-            const uint32 fileIDLength = StringUtil::formatNumber( arrFileIDText, constant::buffer::kMax32, entity._fileID, 10 );
-            sceneObjectNode.appendAttribute( SceneDocumentInternal::kFileID, string_view( arrFileIDText, fileIDLength ) );
-            sceneObjectNode.appendAttribute( SceneDocumentInternal::kName, entity._name );
-            if ( entity._prefab.empty() == false )
-                sceneObjectNode.appendAttribute( SceneDocumentInternal::kPrefab, entity._prefab );
+            XMLNode sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
+            XMLFields::writeFields( sceneObjectNode, SceneEntityFields{ entity._fileID, entity._name, entity._prefab } );
             if ( entity._prefabOverrideXML.empty() == false )
             {
                 XMLDocument overrideDoc;
