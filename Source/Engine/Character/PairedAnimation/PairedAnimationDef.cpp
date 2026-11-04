@@ -16,12 +16,7 @@ namespace sw
         struct PairedAnimationDefInternal
         {
             static constexpr const utf8* kRootName                = "PairedAnimation";
-            static constexpr const utf8* kArrRootAttribute[]      = { "duration" };
-            static constexpr const utf8* kArrNotifyAttribute[]    = { "name", "time", "role" };
-            static constexpr const utf8* kArrRoleAttribute[]      = { "name", "clip", "required", "anchor", "start", "enterBlend", "exitState",
-                                                                      "exitBlend", "skeleton", "align", "offset", "yaw", "warpEnd", "maxAlignDistance" };
             static constexpr const utf8* kArrAlignOnlyAttribute[] = { "offset", "yaw", "maxAlignDistance" };
-            static constexpr const utf8* kArrSelectAttribute[]    = { "role", "minAngle", "maxAngle", "maxDistance" };
 
             /** @brief 각(도)이 [-180, 180] 밖이거나 유한하지 않으면 오류를 남깁니다. */
             static void requireHalfTurn( CharacterDataReader& reader, const XMLNode& node, const utf8* pName, float32 degrees )
@@ -63,7 +58,7 @@ namespace sw
                     reader.addError( "Character.PairedAlignMissing", node, "needs attribute 'align'" );
                     return PairedAnimationAlign::None;
                 }
-                const string_view text( pText );
+                const string_view text( pText ); // 칸 이름 · 모르는 속성은 스키마가 보았다 — 여기서는 값의 철자만 푼다
                 if ( text == "none" )
                     return PairedAnimationAlign::None;
                 if ( text == "snap" )
@@ -228,8 +223,9 @@ namespace sw
 
     void PairedAnimationDef::readRoot( const XMLNode& root, CharacterDataReader& reader )
     {
-        reader.reportUnknownAttributes( root, PairedAnimationDefInternal::kArrRootAttribute );
-        _content._duration = reader.readFloat( root, "duration" );
+        PairedAnimationRootFields rootFields;
+        (void)reader.readFields( root, rootFields ); // 오류는 읽개의 목록에 쌓이고 `finish` 가 읽기를 실패로 돌린다
+        _content._duration = rootFields._duration;
         PairedAnimationDefInternal::requireFinite( reader, root, "duration", _content._duration );
         if ( _content._duration <= 0.0f )
             reader.addError( "Character.PairedDurationInvalid", root, "attribute 'duration' must be positive" );
@@ -249,19 +245,18 @@ namespace sw
 
     void PairedAnimationDef::readRole( const XMLNode& node, CharacterDataReader& reader )
     {
-        reader.reportUnknownAttributes( node, PairedAnimationDefInternal::kArrRoleAttribute );
+        PairedAnimationRoleFields fields;
+        (void)reader.readFields( node, fields );
         PairedAnimationRoleDef role;
-        role._name      = reader.readName( node, "name", true );
-        role._clip      = reader.readName( node, "clip", true );
-        role._exitState = reader.readName( node, "exitState", true );
-        // 경로는 글 그대로 둔다 — 빈 hashed_string 의 c_str() 은 "None" 이라 "적지 않음"이 경로 "None" 으로 바뀐다.
-        const utf8* pSkeletonPath = node.findAttribute( "skeleton" );
-        role._skeletonPath        = pSkeletonPath != nullptr ? pSkeletonPath : "";
-        role._bRequired           = reader.readBool( node, "required" );
-        reader.readOptionalBool( node, "anchor", role._bAnchor );
-        reader.readOptionalFloat( node, "start", role._startSeconds );
-        role._enterBlendSeconds = reader.readFloat( node, "enterBlend" );
-        role._exitBlendSeconds  = reader.readFloat( node, "exitBlend" );
+        role._name              = fields._name;
+        role._clip              = fields._clip;
+        role._exitState         = fields._exitState;
+        role._skeletonPath      = fields._skeleton;
+        role._bRequired         = fields._bRequired;
+        role._bAnchor           = fields._bAnchor;
+        role._startSeconds      = fields._start;
+        role._enterBlendSeconds = fields._enterBlend;
+        role._exitBlendSeconds  = fields._exitBlend;
         PairedAnimationDefInternal::requireNonNegative( reader, node, "start", role._startSeconds );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "enterBlend", role._enterBlendSeconds );
         PairedAnimationDefInternal::requireNonNegative( reader, node, "exitBlend", role._exitBlendSeconds );
@@ -276,12 +271,15 @@ namespace sw
         const bool bAligned = role._align == PairedAnimationAlign::Snap || role._align == PairedAnimationAlign::Warp;
         if ( bAligned )
         {
-            role._offset = reader.readFloat3( node, "offset" );
-            // 데이터의 요는 도 단위다. 없으면 정의의 초기값(0)이다.
-            float32 yawDegrees = role._yawRadians * MathUtil::kRadianToDegree;
-            reader.readOptionalFloat( node, "yaw", yawDegrees );
-            role._yawRadians       = yawDegrees * MathUtil::kDegreeToRadian;
-            role._maxAlignDistance = reader.readFloat( node, "maxAlignDistance" );
+            // 정렬하는 역할에만 필수다 — 스키마는 정렬과 상관없이 선택 칸으로 두고 여기서 적었는지 본다.
+            for ( const utf8* pName : { "offset", "maxAlignDistance" } )
+            {
+                if ( node.hasAttribute( pName ) == false )
+                    reader.addError( "Character.AttributeMissing", node, string( "needs attribute '" ) + pName + "'" );
+            }
+            role._offset           = fields._offset;
+            role._yawRadians       = fields._yaw * MathUtil::kDegreeToRadian; // 데이터의 요는 도 단위다
+            role._maxAlignDistance = fields._maxAlignDistance;
             for ( uint32 axis = 0; axis < 3; ++axis )
             {
                 PairedAnimationDefInternal::requireFinite( reader, node, "offset", role._offset.data()[axis] );
@@ -299,7 +297,9 @@ namespace sw
         }
         if ( role._align == PairedAnimationAlign::Warp )
         {
-            role._warpEndSeconds = reader.readFloat( node, "warpEnd" );
+            if ( node.hasAttribute( "warpEnd" ) == false )
+                reader.addError( "Character.AttributeMissing", node, "needs attribute 'warpEnd'" );
+            role._warpEndSeconds = fields._warpEnd;
             PairedAnimationDefInternal::requireFinite( reader, node, "warpEnd", role._warpEndSeconds );
             // 크로스페이드가 끝나야 루트 모션 프레임의 클립이 이 역할의 클립이 된다 — 그 전에 창이 끝나면 한 번도 휘지 않는다.
             if ( role._warpEndSeconds <= role._enterBlendSeconds )
@@ -319,28 +319,30 @@ namespace sw
 
     void PairedAnimationDef::readNotify( const XMLNode& node, CharacterDataReader& reader )
     {
-        reader.reportUnknownAttributes( node, PairedAnimationDefInternal::kArrNotifyAttribute );
+        PairedAnimationNotifyFields fields;
+        (void)reader.readFields( node, fields );
         PairedAnimationNotifyDef notify;
-        notify._name = reader.readName( node, "name", true );
-        notify._role = reader.readName( node, "role", true );
-        notify._time = reader.readFloat( node, "time" );
+        notify._name = fields._name;
+        notify._role = fields._role;
+        notify._time = fields._time;
         PairedAnimationDefInternal::requireNonNegative( reader, node, "time", notify._time );
         _content._listNotify.push_back( notify );
     }
 
     void PairedAnimationDef::readSelect( const XMLNode& node, CharacterDataReader& reader )
     {
-        reader.reportUnknownAttributes( node, PairedAnimationDefInternal::kArrSelectAttribute );
+        PairedAnimationSelectFields fields;
+        (void)reader.readFields( node, fields );
         if ( _content._bHasSelect )
         {
             reader.addError( "Character.PairedSelectRepeated", node, "repeats <Select> (a paired animation has at most one)" );
             return;
         }
         _content._bHasSelect                = true;
-        _content._select._role              = reader.readName( node, "role", true );
-        const float32 minDegrees            = reader.readFloat( node, "minAngle" );
-        const float32 maxDegrees            = reader.readFloat( node, "maxAngle" );
-        _content._select._maxDistance       = reader.readFloat( node, "maxDistance" );
+        _content._select._role              = fields._role;
+        const float32 minDegrees            = fields._minAngle;
+        const float32 maxDegrees            = fields._maxAngle;
+        _content._select._maxDistance       = fields._maxDistance;
         _content._select._minBearingRadians = minDegrees * MathUtil::kDegreeToRadian;
         _content._select._maxBearingRadians = maxDegrees * MathUtil::kDegreeToRadian;
         PairedAnimationDefInternal::requireHalfTurn( reader, node, "minAngle", minDegrees );

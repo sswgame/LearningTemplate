@@ -26,6 +26,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -98,6 +99,86 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 파일 루트(`<PairedAnimation duration>`)의 칸입니다. */
+    REFLECT()
+    struct SW_API PairedAnimationRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Units = s )
+        float32 _duration{ 0.0f };
+    };
+
+    /**
+     * @brief `<Role>` 의 칸입니다. 각은 파일에서 도 단위이고 읽은 뒤 라디안으로 옮긴다.
+     * @details 정렬(`align` — none · snap · warp)에 따라 받는 칸이 다르다: snap · warp 는 `offset` · `maxAlignDistance` 가 필수, warp 는 `warpEnd` 도 필수,
+     *          그 밖에는 셋을 적으면 오류다. 그 "적었는지"는 `PairedAnimationDef::readRole` 이 본다.
+     */
+    REFLECT()
+    struct SW_API PairedAnimationRoleFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY( Required )
+        hashed_string _clip{};
+        PROPERTY( Required )
+        hashed_string _exitState{};
+        PROPERTY()
+        string _skeleton{};
+        PROPERTY( Required )
+        bool _bRequired{ false };
+        PROPERTY()
+        bool _bAnchor{ false };
+        PROPERTY( Units = s )
+        float32 _start{ 0.0f };
+        PROPERTY( Required, Units = s )
+        float32 _enterBlend{ 0.0f };
+        PROPERTY( Required, Units = s )
+        float32 _exitBlend{ 0.0f };
+        PROPERTY()
+        string _align{};
+        PROPERTY( Units = m )
+        float3 _offset{};
+        PROPERTY( Units = deg )
+        float32 _yaw{ 0.0f };
+        PROPERTY( Units = m )
+        float32 _maxAlignDistance{ 0.0f };
+        PROPERTY( Units = s )
+        float32 _warpEnd{ 0.0f };
+    };
+
+    /** @brief `<Notify>` 의 칸입니다. */
+    REFLECT()
+    struct SW_API PairedAnimationNotifyFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY( Required )
+        hashed_string _role{};
+        PROPERTY( Required, Units = s )
+        float32 _time{ 0.0f };
+    };
+
+    /** @brief `<Select>` 의 칸입니다. 각은 도 단위다. */
+    REFLECT()
+    struct SW_API PairedAnimationSelectFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _role{};
+        PROPERTY( Required, Units = deg )
+        float32 _minAngle{ 0.0f };
+        PROPERTY( Required, Units = deg )
+        float32 _maxAngle{ 0.0f };
+        PROPERTY( Required, Units = m )
+        float32 _maxDistance{ 0.0f };
+    };
+
     /**
      * @struct PairedAnimationContentDef
      * @brief 파일 한 장의 내용 그대로입니다(타임라인 길이 · 역할 · 알림 · 고르기 조건). 에디터는 이것을 고치고 `PairedAnimationDef::makeXMLText` 로 쓴 뒤 다시 읽어 검사합니다.

@@ -8,6 +8,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -63,6 +64,15 @@ namespace sw
         text += "> ";
         text += message;
         _listError.push_back( { std::move( text ), pID } );
+    }
+
+    bool CharacterDataReader::readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, std::initializer_list<string_view> listHandRead )
+    {
+        XMLFieldsIssueSink sink;
+        sink._pContext = this;
+        sink._pfnAdd   = []( void* pContext, const utf8* pID, string_view text )
+        { static_cast<CharacterDataReader*>( pContext )->_listError.push_back( { string( text ), pID } ); };
+        return XMLFields::readFields( node, pInstance, typeInfo, _sourceName, listHandRead, nullptr, sink );
     }
 
     void CharacterDataReader::addError( const utf8* pID, string_view message )

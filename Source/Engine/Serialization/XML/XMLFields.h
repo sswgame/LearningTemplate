@@ -21,6 +21,16 @@ namespace sw
     class XMLNode;
 
     /**
+     * @brief 칸 오류 하나를 받는 곳입니다(@p pID 는 `"영역.사건"` 글자 상수). 주지 않으면 오류는 곧바로 로그에 쓰인다.
+     * @details 오류를 모았다가 파일 끝에 한꺼번에 내는 읽기(`CharacterDataReader`)가 넘긴다 — 같은 오류가 로그와 목록에 두 번 나지 않는다.
+     */
+    struct XMLFieldsIssueSink
+    {
+        void ( *_pfnAdd )( void* pContext, const utf8* pID, string_view text ){ nullptr };
+        void* _pContext{ nullptr };
+    };
+
+    /**
      * @struct XMLFields
      * @brief 리플렉션 스키마로 원소 속성을 읽고 쓰는 함수 묶음입니다.
      */
@@ -38,7 +48,7 @@ namespace sw
          * @return 오류가 하나도 없으면 true 입니다. 오류가 있어도 읽을 수 있는 칸은 채웁니다.
          */
         [[nodiscard]] static bool readFields( const XMLNode& node, void* pInstance, const TypeInfo& typeInfo, string_view sourceName,
-                                              std::initializer_list<string_view> listHandRead = {}, AcceptAttributeFunction pfnHandRead = nullptr );
+                                              std::initializer_list<string_view> listHandRead = {}, AcceptAttributeFunction pfnHandRead = nullptr, const XMLFieldsIssueSink& sink = {} );
         /** @brief `readFields` 의 타입 지정 버전입니다(`TDef::StaticType()`). */
         template <typename TDef>
         [[nodiscard]] static bool readFields( const XMLNode& node, TDef& outDef, string_view sourceName, std::initializer_list<string_view> listHandRead = {},
