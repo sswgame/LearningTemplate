@@ -29,6 +29,35 @@ namespace sw
 
 namespace sw
 {
+    MoveFrameData::MoveFrameData()
+        : _id{}
+        , _name{}
+        , _listHitbox{}
+        , _listCancel{}
+        , _damage{ 0.0f }
+        , _chipDamage{ 0.0f }
+        , _startup{ 1 }
+        , _active{ 1 }
+        , _recovery{ 0 }
+        , _hitstun{ 0 }
+        , _blockstun{ 0 }
+        , _hitstop{ 0 }
+        , _height{ AttackHeight::Mid }
+        , _bLauncher{ SW_FALSE }
+        , _bKnockdown{ SW_FALSE }
+        , _bWallSplat{ SW_FALSE }
+        , _bUnblockable{ SW_FALSE }
+    {
+    }
+
+    MoveCancelWindow::MoveCancelWindow()
+        : _listMoveID{}
+        , _fromFrame{ 0 }
+        , _toFrame{ 0 }
+        , _bOnHitOnly{ SW_FALSE }
+    {
+    }
+
     // ------------------------------------------------------------------------------
     // MoveFrameData
     // ------------------------------------------------------------------------------
@@ -228,7 +257,7 @@ namespace sw
         {
             if ( _frame < window._fromFrame || _frame > window._toFrame )
                 continue;
-            if ( window._bOnHitOnly && _bContact == SW_FALSE )
+            if ( window._bOnHitOnly == SW_TRUE && _bContact == SW_FALSE )
                 continue;
             for ( const hashed_string& candidate : window._listMoveID )
             {

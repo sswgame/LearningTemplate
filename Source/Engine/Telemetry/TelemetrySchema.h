@@ -50,12 +50,14 @@ namespace sw
     {
         REFLECT_BODY();
 
+        TelemetryFieldDef();
+
         PROPERTY( Required )
-        hashed_string _name{};
+        hashed_string _name;
         PROPERTY( Required )
-        TelemetryFieldType _type{ TelemetryFieldType::String };
+        TelemetryFieldType _type;
         PROPERTY()
-        bool _bRequired{ false }; ///< 적지 않으면 선택 칸이다
+        uint8 _bRequired : 1; ///< 적지 않으면 선택 칸이다
     };
 } // namespace sw
 

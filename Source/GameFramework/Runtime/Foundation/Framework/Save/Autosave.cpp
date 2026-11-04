@@ -41,6 +41,19 @@ namespace sw
 
 namespace sw
 {
+    AutosaveSettings::AutosaveSettings()
+        : _group{ "autosave" }
+        , _prefix{ "slot" }
+        , _interval{ 300.0f }
+        , _minimumGap{ 30.0f }
+        , _slotCount{ 3 }
+        , _bOnAreaChange{ SW_TRUE }
+        , _bOnCheckpoint{ SW_TRUE }
+        , _bOnBeforeBoss{ SW_TRUE }
+        , _bOnQuit{ SW_TRUE }
+    {
+    }
+
     // ------------------------------------------------------------------------------
     // 정책 수치
     // ------------------------------------------------------------------------------
@@ -195,7 +208,7 @@ namespace sw
 
     bool AutosaveManager::notifyQuit()
     {
-        if ( _settings._bOnQuit == false || _bSaving == SW_TRUE || isScanning() || isSaving() )
+        if ( _settings._bOnQuit == SW_FALSE || _bSaving == SW_TRUE || isScanning() || isSaving() )
             return false;
         _bPending = SW_FALSE;
         return performSave( AutosaveTrigger::Quit, hashed_string{} );
@@ -312,13 +325,13 @@ namespace sw
             case AutosaveTrigger::Interval:
                 return _settings._interval > 0.0f;
             case AutosaveTrigger::AreaChanged:
-                return _settings._bOnAreaChange;
+                return _settings._bOnAreaChange == SW_TRUE;
             case AutosaveTrigger::Checkpoint:
-                return _settings._bOnCheckpoint;
+                return _settings._bOnCheckpoint == SW_TRUE;
             case AutosaveTrigger::BeforeBoss:
-                return _settings._bOnBeforeBoss;
+                return _settings._bOnBeforeBoss == SW_TRUE;
             case AutosaveTrigger::Quit:
-                return _settings._bOnQuit;
+                return _settings._bOnQuit == SW_TRUE;
             case AutosaveTrigger::Manual:
                 return true;
         }

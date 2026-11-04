@@ -40,6 +40,13 @@ namespace sw
 
 namespace sw
 {
+    TelemetryFieldDef::TelemetryFieldDef()
+        : _name{}
+        , _type{ TelemetryFieldType::String }
+        , _bRequired{ SW_FALSE }
+    {
+    }
+
     const utf8* toString( TelemetryFieldType type )
     {
         return getEnumName( type );

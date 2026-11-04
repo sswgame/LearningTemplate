@@ -40,16 +40,18 @@ namespace sw
     {
         REFLECT_BODY();
 
+        SurfaceChannelDef();
+
         PROPERTY( Required )
-        hashed_string _name{};
+        hashed_string _name;
         PROPERTY( Min = 0.0 )
-        float32 _decayPerSecond{ 0.0f };
+        float32 _decayPerSecond;
         PROPERTY( Name = "max", Min = 0.0001 )
-        float32 _maxValue{ 1.0f };
+        float32 _maxValue;
         PROPERTY( Max = 4096 )
-        uint16 _maskResolution{ 0 };
+        uint16 _maskResolution;
         PROPERTY()
-        bool _bClip{ false }; ///< 머티리얼이 알파로 잘라 구멍을 낸다(찢김)
+        uint8 _bClip : 1; ///< 머티리얼이 알파로 잘라 구멍을 낸다(찢김)
     };
 } // namespace sw
 

@@ -109,6 +109,22 @@ namespace sw
 
 namespace sw
 {
+    InteractionDef::InteractionDef()
+        : _id{}
+        , _listStep{}
+        , _requiredTags{}
+        , _forbiddenTags{}
+        , _alignmentMarker{}
+        , _maxDistance{ 2.0f }
+        , _maxAngle{ 0.0f }
+        , _cooldown{ 0.0f }
+        , _highlight{ InteractionHighlight::Outline }
+        , _highlightColor{ 1.0f, 0.85f, 0.3f }
+        , _authority{ InteractionAuthority::Local }
+        , _bLineOfSight{ SW_TRUE }
+    {
+    }
+
     bool InteractionDef::allowsInteractor( const TagContainer& interactorTags ) const
     {
         return interactorTags.matchesTags( _requiredTags, _forbiddenTags );

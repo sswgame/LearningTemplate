@@ -24,6 +24,33 @@ namespace sw
 
 namespace sw
 {
+    WeaponDef::WeaponDef()
+        : _id{}
+        , _ammoID{}
+        , _itemID{}
+        , _name{}
+        , _fireInterval{ 0.1f }
+        , _reloadTime{ 1.8f }
+        , _damage{ 10.0f }
+        , _range{ 80.0f }
+        , _minSpread{ 0.5f }
+        , _maxSpread{ 4.0f }
+        , _spreadPerShot{ 0.6f }
+        , _spreadRecovery{ 6.0f }
+        , _recoilPitch{ 0.6f }
+        , _falloffStart{ 0.0f }
+        , _falloffEnd{ 0.0f }
+        , _falloffMinScale{ 1.0f }
+        , _projectileSpeed{ 0.0f }
+        , _projectileGravity{ 1.0f }
+        , _headshotMultiplier{ 2.0f }
+        , _magazineSize{ 30 }
+        , _maxReserveAmmo{ 180 }
+        , _pelletCount{ 1 }
+        , _bAutomatic{ SW_TRUE }
+    {
+    }
+
     // ------------------------------------------------------------------------------
     // WeaponCatalog
     // ------------------------------------------------------------------------------
@@ -106,7 +133,7 @@ namespace sw
         outShot._spreadAtFire = _currentSpread;
         if ( _reload.isActive() )
             return WeaponFireResult::Reloading;
-        if ( _def._bAutomatic == false && bTriggerJustPressed == false )
+        if ( _def._bAutomatic == SW_FALSE && bTriggerJustPressed == false )
             return WeaponFireResult::SemiAutoHeld;
         if ( _cooldown.isActive() )
             return WeaponFireResult::Cooling;

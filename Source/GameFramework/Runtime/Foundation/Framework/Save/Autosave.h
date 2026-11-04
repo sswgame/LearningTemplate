@@ -51,25 +51,27 @@ namespace sw
     {
         REFLECT_BODY();
 
+        AutosaveSettings();
+
         /** @brief 로컬 저장 슬롯 그룹입니다(`ILocalStore` 슬롯 이름 규칙의 그룹 - `[0-9a-z_.-]`). 자리(사용자 데이터 폴더)는 `GameLocalStore` 가 정한다 */
         PROPERTY()
-        string _group{ "autosave" };
+        string _group;
         PROPERTY()
-        string _prefix{ "slot" }; ///< 슬롯 이름의 접두사. 슬롯은 `<그룹>/<접두사><번호>`, 기록은 그 뒤에 `.info` 다
+        string _prefix; ///< 슬롯 이름의 접두사. 슬롯은 `<그룹>/<접두사><번호>`, 기록은 그 뒤에 `.info` 다
         PROPERTY( Min = 0.0, Units = s )
-        float32 _interval{ 300.0f }; ///< 간격 자동 저장(초, 플레이 시간). 0 이면 끈다
+        float32 _interval; ///< 간격 자동 저장(초, 플레이 시간). 0 이면 끈다
         PROPERTY( Min = 0.0, Units = s )
-        float32 _minimumGap{ 30.0f }; ///< 두 자동 저장 사이의 최소 간격(초). 종료 · 직접 부른 것은 이 간격을 무시한다
+        float32 _minimumGap; ///< 두 자동 저장 사이의 최소 간격(초). 종료 · 직접 부른 것은 이 간격을 무시한다
         PROPERTY( Name = "slots", Min = 1, Max = 64 )
-        int32 _slotCount{ 3 }; ///< 순환해 쓰는 슬롯 수(1..64). 새 저장은 가장 새 슬롯을 건드리지 않는다
+        int32 _slotCount; ///< 순환해 쓰는 슬롯 수(1..64). 새 저장은 가장 새 슬롯을 건드리지 않는다
         PROPERTY( Name = "areaChange" )
-        bool _bOnAreaChange{ true }; ///< 지역 이동에 저장한다
+        uint8 _bOnAreaChange : 1; ///< 지역 이동에 저장한다
         PROPERTY( Name = "checkpoint" )
-        bool _bOnCheckpoint{ true }; ///< 체크포인트에 저장한다
+        uint8 _bOnCheckpoint : 1; ///< 체크포인트에 저장한다
         PROPERTY( Name = "beforeBoss" )
-        bool _bOnBeforeBoss{ true }; ///< 보스 앞에 저장한다
+        uint8 _bOnBeforeBoss : 1; ///< 보스 앞에 저장한다
         PROPERTY( Name = "quit" )
-        bool _bOnQuit{ true }; ///< 종료에 저장한다
+        uint8 _bOnQuit : 1; ///< 종료에 저장한다
 
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );

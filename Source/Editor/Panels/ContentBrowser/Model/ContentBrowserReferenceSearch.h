@@ -19,6 +19,8 @@ namespace sw::editor
     class ContentBrowserReferenceSearch
     {
     public:
+        ContentBrowserReferenceSearch();
+
         /**
          * @brief 에셋의 참조를 찾아 결과를 바꿉니다.
          * @param bDependencies false 면 그 에셋을 사용하는 쪽(Find References)을, true 면 그 에셋이 사용하는 쪽(Show Dependencies)을 찾습니다.
@@ -28,13 +30,13 @@ namespace sw::editor
         /** @brief 마지막 질의의 대상 리소스 id 를 반환합니다. */
         const string& getQueryID() const { return _queryID; }
         /** @brief 마지막 질의가 Show Dependencies 였으면 true 입니다. */
-        bool isDependencyQuery() const { return _bDependencyQuery; }
+        bool isDependencyQuery() const { return _bDependencyQuery == SW_TRUE; }
         /** @brief 마지막 질의의 결과 행을 반환합니다. */
         const vector<EditorAssetReference>& getResultList() const { return _listResult; }
 
     private:
-        string                       _queryID{}; ///< 마지막 질의의 대상 리소스 id
-        vector<EditorAssetReference> _listResult{};
-        bool                         _bDependencyQuery{ false }; ///< 마지막 질의가 Show Dependencies 였다
+        string                       _queryID; ///< 마지막 질의의 대상 리소스 id
+        vector<EditorAssetReference> _listResult;
+        uint8                        _bDependencyQuery : 1; ///< 마지막 질의가 Show Dependencies 였다
     };
 } // namespace sw::editor

@@ -436,7 +436,7 @@ namespace sw
         }
         for ( const TelemetryFieldDef& field : pDef->_listField )
         {
-            if ( field._bRequired == false || event.findValue( field._name ) != nullptr )
+            if ( field._bRequired == SW_FALSE || event.findValue( field._name ) != nullptr )
                 continue;
             ++_stats._rejected;
             SW_LOG_WARNING_ID( "Telemetry.RequiredFieldMissing", "Telemetry event '%#' misses required field '%#' - dropped", event.getID().c_str(), field._name.c_str() );

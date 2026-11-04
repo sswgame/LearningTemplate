@@ -93,13 +93,15 @@ namespace sw
     {
         REFLECT_BODY();
 
-        vector<hashed_string> _listMoveID{};
+        MoveCancelWindow();
+
+        vector<hashed_string> _listMoveID;
         PROPERTY( Name = "from", Min = 0 )
-        int32 _fromFrame{ 0 };
+        int32 _fromFrame;
         PROPERTY( Name = "to", Min = "_fromFrame" )
-        int32 _toFrame{ 0 };
+        int32 _toFrame;
         PROPERTY( Name = "onHit" )
-        bool _bOnHitOnly{ false }; ///< 맞거나 막혔을 때만 캔슬할 수 있다. 헛치면 캔슬할 수 없다(철권과 스트리트 파이터의 일반기 캔슬)
+        uint8 _bOnHitOnly : 1; ///< 맞거나 막혔을 때만 캔슬할 수 있다. 헛치면 캔슬할 수 없다(철권과 스트리트 파이터의 일반기 캔슬)
     };
 } // namespace sw
 
@@ -111,38 +113,40 @@ namespace sw
     {
         REFLECT_BODY();
 
+        MoveFrameData();
+
         PROPERTY( Required )
-        hashed_string _id{};
+        hashed_string _id;
         PROPERTY()
-        string                   _name{};
-        vector<MoveHitbox>       _listHitbox{};
-        vector<MoveCancelWindow> _listCancel{};
+        string                   _name;
+        vector<MoveHitbox>       _listHitbox;
+        vector<MoveCancelWindow> _listCancel;
         PROPERTY()
-        float32 _damage{ 0.0f };
+        float32 _damage;
         PROPERTY( Name = "chip", Min = 0.0 )
-        float32 _chipDamage{ 0.0f }; ///< 가드 피해(막혀도 깎이는 양)
+        float32 _chipDamage; ///< 가드 피해(막혀도 깎이는 양)
         PROPERTY( Min = 1 )
-        int32 _startup{ 1 }; ///< 첫 지속 프레임 번호(1 이상)
+        int32 _startup; ///< 첫 지속 프레임 번호(1 이상)
         PROPERTY( Min = 1 )
-        int32 _active{ 1 };
+        int32 _active;
         PROPERTY( Min = 0 )
-        int32 _recovery{ 0 };
+        int32 _recovery;
         PROPERTY( Min = 0 )
-        int32 _hitstun{ 0 }; ///< 맞은 쪽이 못 움직이는 프레임(맞은 프레임 다음부터)
+        int32 _hitstun; ///< 맞은 쪽이 못 움직이는 프레임(맞은 프레임 다음부터)
         PROPERTY( Min = 0 )
-        int32 _blockstun{ 0 }; ///< 막은 쪽이 못 움직이는 프레임
+        int32 _blockstun; ///< 막은 쪽이 못 움직이는 프레임
         PROPERTY( Min = 0 )
-        int32 _hitstop{ 0 }; ///< 닿은 순간 양쪽이 멈추는 프레임(타격감). 이득 계산에는 넣지 않는다
+        int32 _hitstop; ///< 닿은 순간 양쪽이 멈추는 프레임(타격감). 이득 계산에는 넣지 않는다
         PROPERTY()
-        AttackHeight _height{ AttackHeight::Mid };
+        AttackHeight _height;
         PROPERTY()
-        bool _bLauncher{ false }; ///< 띄운다(콤보 시동)
+        uint8 _bLauncher : 1; ///< 띄운다(콤보 시동)
         PROPERTY()
-        bool _bKnockdown{ false }; ///< 눕힌다
+        uint8 _bKnockdown : 1; ///< 눕힌다
         PROPERTY()
-        bool _bWallSplat{ false }; ///< 벽에 붙인다
+        uint8 _bWallSplat : 1; ///< 벽에 붙인다
         PROPERTY()
-        bool _bUnblockable{ false }; ///< 가드 불가(높이로 피하는 것은 된다)
+        uint8 _bUnblockable : 1; ///< 가드 불가(높이로 피하는 것은 된다)
 
         /** @brief 전체 길이(프레임)입니다. startup - 1 + active + recovery 와 같습니다. */
         int32 getTotalFrames() const { return _startup - 1 + _active + _recovery; }

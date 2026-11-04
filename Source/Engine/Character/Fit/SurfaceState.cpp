@@ -12,6 +12,15 @@
 
 namespace sw
 {
+    SurfaceChannelDef::SurfaceChannelDef()
+        : _name{}
+        , _decayPerSecond{ 0.0f }
+        , _maxValue{ 1.0f }
+        , _maskResolution{ 0 }
+        , _bClip{ SW_FALSE }
+    {
+    }
+
     bool SurfaceChannelTable::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         _listChannel.clear();

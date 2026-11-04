@@ -106,27 +106,29 @@ namespace sw
     {
         REFLECT_BODY();
 
+        InteractionDef();
+
         PROPERTY( Required )
-        hashed_string              _id{};
-        vector<InteractionStepDef> _listStep{};
-        TagContainer               _requiredTags{};  ///< 하는 쪽이 모두 가져야 하는 태그(열쇠, 능력)
-        TagContainer               _forbiddenTags{}; ///< 하는 쪽이 하나라도 가지면 안 되는 태그(기절)
+        hashed_string              _id;
+        vector<InteractionStepDef> _listStep;
+        TagContainer               _requiredTags;  ///< 하는 쪽이 모두 가져야 하는 태그(열쇠, 능력)
+        TagContainer               _forbiddenTags; ///< 하는 쪽이 하나라도 가지면 안 되는 태그(기절)
         PROPERTY( Name = "alignment" )
-        hashed_string _alignmentMarker{}; ///< 하는 쪽이 맞춰 설 마커 이름. 모션 워핑에 쓰며 소켓과 마커 에셋의 이름이다
+        hashed_string _alignmentMarker; ///< 하는 쪽이 맞춰 설 마커 이름. 모션 워핑에 쓰며 소켓과 마커 에셋의 이름이다
         PROPERTY( Min = 0.0, Units = m )
-        float32 _maxDistance{ 2.0f };
+        float32 _maxDistance;
         PROPERTY( Min = 0.0, Max = 3.1416, Units = rad )
-        float32 _maxAngle{ 0.0f }; ///< 시선과 대상 사이의 허용 각(라디안). 0 이면 검사하지 않는다
+        float32 _maxAngle; ///< 시선과 대상 사이의 허용 각(라디안). 0 이면 검사하지 않는다
         PROPERTY( Min = 0.0, Units = s )
-        float32 _cooldown{ 0.0f };
+        float32 _cooldown;
         PROPERTY()
-        InteractionHighlight _highlight{ InteractionHighlight::Outline };
+        InteractionHighlight _highlight;
         PROPERTY()
-        float3 _highlightColor{ 1.0f, 0.85f, 0.3f }; ///< 강조 외곽선 색(RGB, 0..1). XML `highlightColor="r,g,b"`
+        float3 _highlightColor; ///< 강조 외곽선 색(RGB, 0..1). XML `highlightColor="r,g,b"`
         PROPERTY()
-        InteractionAuthority _authority{ InteractionAuthority::Local };
+        InteractionAuthority _authority;
         PROPERTY()
-        bool _bLineOfSight{ true };
+        uint8 _bLineOfSight : 1;
 
         /** @brief 하는 쪽의 태그가 조건을 만족하면 true 입니다. */
         bool allowsInteractor( const TagContainer& interactorTags ) const;

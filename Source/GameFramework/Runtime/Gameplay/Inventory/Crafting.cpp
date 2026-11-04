@@ -68,6 +68,18 @@ namespace sw
 
 namespace sw
 {
+    RecipeDef::RecipeDef()
+        : _id{}
+        , _station{}
+        , _inputs{}
+        , _tools{}
+        , _outputs{}
+        , _time{ 0.0f }
+        , _requiredLevel{ 0 }
+        , _bStartsKnown{ SW_TRUE }
+    {
+    }
+
     // ------------------------------------------------------------------------------
     // RecipeCatalog
     // ------------------------------------------------------------------------------
@@ -126,7 +138,7 @@ namespace sw
     bool Crafter::isLearned( const hashed_string& recipeID ) const
     {
         const RecipeDef* pRecipe = _pCatalog != nullptr ? _pCatalog->find( recipeID ) : nullptr;
-        return pRecipe != nullptr && ( pRecipe->_bStartsKnown || _uniqueLearnedRecipe.find( recipeID ) != _uniqueLearnedRecipe.end() );
+        return pRecipe != nullptr && ( pRecipe->_bStartsKnown == SW_TRUE || _uniqueLearnedRecipe.find( recipeID ) != _uniqueLearnedRecipe.end() );
     }
 
     CraftResult Crafter::evaluate( const hashed_string& recipeID, const Inventory& inventory, const hashed_string& station, int32 level, int32 count ) const
