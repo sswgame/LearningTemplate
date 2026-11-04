@@ -364,21 +364,48 @@
 				<_listComponent>
 					<PropScatterComponent _componentName="PropScatterComponent"
 					                      _bActive="true"
-					                      _materialPath="game/themepark/materials/palette.material"
+					                      _materialPath=""
 					                      _propName="ParkTree"
 					                      _regionMin="-100,0,-45"
 					                      _regionMax="140,0,265"
 					                      _spacing="9"
 					                      _alongJitter="3"
 					                      _inwardJitter="4"
-					                      _scaleMin="3"
-					                      _scaleMax="4.5"
+					                      _scaleMin="1.1"
+					                      _scaleMax="1.5"
 					                      _seed="2654435769"
 					                      _mode="Edge">
 						<_listModel>
-							<PropScatterModel _meshID="game/themepark/models/tree.mesh" _weight="0.45" />
-							<PropScatterModel _meshID="game/themepark/models/tree_large.mesh" _weight="0.35" />
-							<PropScatterModel _meshID="game/themepark/models/flowers.mesh" _weight="0.2" />
+							<PropScatterModel _meshID="common/models/quaternius/nature/commontree_1.mesh" _weight="0.25">
+								<_listSection>
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/commontree_1/materials/bark_normaltree.material" />
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/commontree_1/materials/leaves_normaltree.material" />
+								</_listSection>
+							</PropScatterModel>
+							<PropScatterModel _meshID="common/models/quaternius/nature/commontree_2.mesh" _weight="0.2">
+								<_listSection>
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/commontree_2/materials/bark_normaltree.material" />
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/commontree_2/materials/leaves_normaltree.material" />
+								</_listSection>
+							</PropScatterModel>
+							<PropScatterModel _meshID="common/models/quaternius/nature/commontree_3.mesh" _weight="0.15">
+								<_listSection>
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/commontree_3/materials/bark_normaltree.material" />
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/commontree_3/materials/leaves_normaltree.material" />
+								</_listSection>
+							</PropScatterModel>
+							<PropScatterModel _meshID="common/models/quaternius/nature/pine_1.mesh" _weight="0.1">
+								<_listSection>
+									<PropScatterSection _sectionName="bark_normaltree" _materialPath="common/models/quaternius/nature/pine_1/materials/bark_normaltree.material" />
+									<PropScatterSection _sectionName="leaves_pine" _materialPath="common/models/quaternius/nature/pine_1/materials/leaves_pine.material" />
+								</_listSection>
+							</PropScatterModel>
+							<PropScatterModel _meshID="common/models/quaternius/nature/bush_common_flowers.mesh" _weight="0.3">
+								<_listSection>
+									<PropScatterSection _sectionName="leaves_normaltree" _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/leaves_normaltree.material" />
+									<PropScatterSection _sectionName="flowers" _materialPath="common/models/quaternius/nature/bush_common_flowers/materials/flowers.material" />
+								</_listSection>
+							</PropScatterModel>
 						</_listModel>
 						<_listExclusion>
 							<PropScatterExclusion _center="20,0,-40" _radius="14" />

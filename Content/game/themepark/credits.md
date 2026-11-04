@@ -2,7 +2,8 @@
 
 | 폴더 | 원본 | 라이선스 |
 |------|------|----------|
-| `models_raw/*.glb` · `textures_raw/coaster_colormap.png` | Kenney "Coaster Kit" (<https://kenney.nl/assets/coaster-kit>) — 강철 레일 · 열차 · 승강장 · 기둥 · 매점 · 길 · 입구 · 나무 · 휴지통 · 꽃 | CC0 1.0 |
+| `models_raw/*.glb` · `textures_raw/coaster_colormap.png` | Kenney "Coaster Kit" (<https://kenney.nl/assets/coaster-kit>) — 강철 레일 · 열차 · 승강장 · 기둥 · 매점 · 길 · 입구 · 휴지통 | CC0 1.0 |
+| (공용) `common/models_raw/quaternius/nature/` | 가장자리 나무 · 꽃 덤불(`maps/park.scene.xml` 의 PropScatter)은 공용 Quaternius "Stylized Nature MegaKit" 의 구간 모델이다(출처는 `common/credits.md`) | CC0 1.0 |
 | `sounds/*.ogg` | Kenney "Interface Sounds" (<https://kenney.nl/assets/interface-sounds>) — `confirmation_001` · `error_001` · `select_001` | CC0 1.0 |
 
 - 원본은 `models_raw/` · `textures_raw/` 에 그대로 두고, 엔진이 읽는 `models/*.mesh` · `textures/*.dds` 는 `App --import-models` ·
