@@ -316,16 +316,17 @@ namespace sw
             [[nodiscard]] static bool readNumberList( string_view strView, TElem* pOut )
             {
                 // 칸 수가 정확히 kCount 가 아니면(남거나 모자라면) 거절한다.
-                TElem arrParsed[kCount]{};
-                int32 tokenCount = 0;
-                bool  bParsed    = true;
-                StringUtil::forEachToken( strView, ", 	", [&]( string_view token )
-                {
-                    bParsed = bParsed && tokenCount < kCount && parseScalarValue<TElem>( token, arrParsed[tokenCount] );
-                    ++tokenCount;
-                } );
-                if ( bParsed == false || tokenCount != kCount )
+                // 쉼표가 있으면 쉼표로만 가른다 — 빈 칸(`1,2,3,`)은 칸 수 오류다. 쉼표가 없으면 공백으로 가른다.
+                const bool                bComma    = strView.find( ',' ) != string_view::npos;
+                const vector<string_view> listToken = bComma ? StringUtil::split( strView, "," ) : StringUtil::split( strView, " ", { ._bTrim = true, ._bDropEmpty = true } );
+                if ( listToken.size() != static_cast<size_t>( kCount ) )
                     return false;
+                TElem arrParsed[kCount]{};
+                for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
+                {
+                    if ( parseScalarValue<TElem>( StringUtil::trim( listToken[axisIndex] ), arrParsed[axisIndex] ) == false )
+                        return false;
+                }
                 for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
                 {
                     pOut[axisIndex] = arrParsed[axisIndex];

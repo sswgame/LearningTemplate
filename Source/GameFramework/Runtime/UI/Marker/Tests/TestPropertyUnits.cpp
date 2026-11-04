@@ -15,13 +15,23 @@
 
 namespace
 {
-    /** @brief 각도를 담는 이름인가(대소문자 무시) — 회전 · 각 · 시야각. */
+    /**
+     * @brief 각도를 담는 이름인가 — 회전 · 각 · 시야각이 **낱말로** 들어 있다(이름의 처음, `_` 뒤, 낙타 표기의 대문자 시작).
+     * @details 낱말 경계를 보지 않으면 `triangle_ratio` 의 "angle" 을 각도로 읽었다(캐릭터 LOD 규칙).
+     */
     bool isAngleName( const sw::hashed_string& name )
     {
-        for ( const utf8* pWord : { "angle", "rotation", "fov" } )
+        const sw::string_view text = name.view();
+        for ( const sw::string_view word : { sw::string_view{ "angle" }, sw::string_view{ "rotation" }, sw::string_view{ "fov" } } )
         {
-            if ( sw::StringUtil::stristr( name.c_str(), pWord ) != nullptr )
-                return true;
+            for ( size_t at = 0; at + word.size() <= text.size(); ++at )
+            {
+                if ( sw::StringUtil::equals( text.substr( at, word.size() ), word, true ) == false )
+                    continue;
+                const bool bWordStart = at == 0 || text[at - 1] == '_' || ( 'A' <= text[at] && text[at] <= 'Z' );
+                if ( bWordStart )
+                    return true;
+            }
         }
         return false;
     }
