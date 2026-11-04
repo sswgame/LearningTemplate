@@ -173,6 +173,8 @@ namespace sw
         string                   _blendMode;
         vector<MaterialProperty> _listProperty;
         MaterialPermutationDesc  _permutations;
+        /** @brief 부모 머티리얼(`.material` 루트의 `parent`)입니다. 비어 있지 않으면 위 칸은 부모를 펼친 값이고, 저장은 부모와 다른 칸만 적는다(`MaterialXML::makeParentDelta`). */
+        string _parentPath;
     };
 } // namespace sw
 

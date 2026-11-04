@@ -43,5 +43,22 @@ namespace sw
         [[nodiscard]] static bool parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc );
 
         static void appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationDesc );
+
+        /** @brief 부모 사슬의 최대 길이입니다. 넘으면 순환으로 보고 오류입니다. */
+        static constexpr uint32 kMaxParentDepth = 8;
+        /**
+         * @brief 루트의 `parent="<리소스 경로>"` 를 풀어 부모 칸을 모두 담은 한 벌의 XML 로 펼칩니다(언리얼 Material Instance — 부모 + 바꾼 값만).
+         * @details 규칙: 루트 속성(이름 · 셰이더 · 블렌드)은 자식이 적은 것만 덮는다. `_properties` 는 이름으로 맞춰 자식 줄이 적은 속성만 덮고(자식 줄에
+         *          하위 원소(`_enumEntries`)가 있으면 그 줄을 통째로 바꾼다), 부모에 없는 이름은 뒤에 더한다. `_permutations` 는 자식이 적으면 통째로 바꾼다.
+         *          부모를 읽지 못하거나 사슬이 돌면(`kMaxParentDepth`) 오류를 남기고 false 다 — 부모 없이 자식 칸만으로 읽지 않는다.
+         *          `parent` 가 없으면 원문 그대로다. @p outParentPath 는 바로 위 부모 경로(없으면 빈 글)다.
+         */
+        [[nodiscard]] static bool flattenParent( string_view xmlText, string& outText, string& outParentPath );
+        /**
+         * @brief 펼친 머티리얼 XML(@p fullText)을 부모 @p parentPath 와 다른 칸만 남긴 자식 XML 로 줄입니다(에디터 저장이 부모 구조를 지키게).
+         * @details 같은 줄은 빼고, 다른 줄은 이름 + 다른 속성만 남긴다(하위 원소가 다르면 줄을 통째로). 루트의 셰이더 · 블렌드는 다를 때만, 퍼뮤테이션은 다를 때만 적는다.
+         *          부모를 읽지 못하면 오류를 남기고 false 다.
+         */
+        [[nodiscard]] static bool makeParentDelta( string_view fullText, string_view parentPath, string& outText );
     };
 } // namespace sw

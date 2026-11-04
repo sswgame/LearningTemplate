@@ -99,6 +99,89 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
     SW_EXPECT_EQUAL( shaderPath, material->getShaderPath() );
 }
 
+namespace
+{
+    // 부모 상속 테스트의 부모 — 프로퍼티 둘(색 · 거칠기)과 퍼뮤테이션 하나.
+    constexpr const utf8* kParentMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialDesc formatVersion="0" name="ParentMat" shaderPath="engine/shaders/forward_lit.hlsl" blendMode="Opaque">
+	<_properties>
+		<item name="_color" type="Color" shaderType="Float4" defaultValue="1 1 1 1" displayName="Base Color" group="Surface" bSrgb="1" />
+		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface" />
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDesc>
+)";
+} // namespace
+
+/**
+ * @brief [MaterialXMLTest] 부모를 가리키는 머티리얼은 부모 칸 위에 자식이 적은 값만 덮는다 — 셰이더 · 다른 프로퍼티 · 퍼뮤테이션은 부모 것이다(언리얼 Material Instance)
+ */
+SW_TEST_CASE( MaterialXMLTest, ChildInheritsParentAndOverridesOnlyWrittenValues )
+{
+    const sw::test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "parent.material" ), kParentMaterial ) );
+    const sw::string child = R"(<?xml version="1.0" encoding="utf-8"?>
+<MaterialDesc formatVersion="0" name="ChildMat" parent=")" +
+                             sw::test::ScopedScratchDomain::makeID( "parent.material" ).str() +
+                             R"(">
+	<_properties>
+		<item name="_color" defaultValue="0.2 0.4 0.6 1" />
+	</_properties>
+</MaterialDesc>
+)";
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "child.material" ), child ) );
+
+    sw::shared_ptr<sw::Material> material = sw::Material::create();
+    SW_REQUIRE_TRUE( material->loadFromFile( sw::test::ScopedScratchDomain::makeID( "child.material" ) ) );
+    SW_EXPECT_EQUAL( sw::string( "ChildMat" ), material->getName() );
+    SW_EXPECT_EQUAL( sw::string( "engine/shaders/forward_lit.hlsl" ), material->getShaderPath() );
+    const sw::MaterialProperty* pColor     = material->findProperty( sw::hashed_string( "_color" ) );
+    const sw::MaterialProperty* pRoughness = material->findProperty( sw::hashed_string( "_roughness" ) );
+    SW_REQUIRE_TRUE( pColor != nullptr && pRoughness != nullptr );
+    SW_EXPECT_EQUAL( sw::string( "0.2 0.4 0.6 1" ), pColor->_defaultValue );
+    SW_EXPECT_EQUAL( sw::string( "Base Color" ), pColor->_displayName ); // 자식이 적지 않은 속성은 부모 것
+    SW_EXPECT_TRUE( pColor->_bSRGB == 1 );
+    SW_EXPECT_EQUAL( sw::string( "0.5" ), pRoughness->_defaultValue );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, material->getPermutations()._listAlwaysDefine.size() );
+    SW_EXPECT_EQUAL( sw::string( "MATERIAL_DOMAIN_SURFACE" ), material->getPermutations()._listAlwaysDefine[0] );
+
+    // 저장은 부모와 다른 칸만 적는다 — 다시 읽으면 같은 값이다.
+    const sw::string saved = material->saveToString();
+    SW_EXPECT_TRUE( saved.find( "parent=" ) != sw::string::npos );
+    SW_EXPECT_TRUE( saved.find( "_roughness" ) == sw::string::npos );
+    SW_EXPECT_TRUE( saved.find( "_permutations" ) == sw::string::npos );
+    sw::shared_ptr<sw::Material> reread = sw::Material::create();
+    SW_REQUIRE_TRUE( reread->loadFromXML( saved ) );
+    const sw::MaterialProperty* pRereadColor = reread->findProperty( sw::hashed_string( "_color" ) );
+    SW_REQUIRE_TRUE( pRereadColor != nullptr );
+    SW_EXPECT_EQUAL( sw::string( "0.2 0.4 0.6 1" ), pRereadColor->_defaultValue );
+}
+
+/**
+ * @brief [MaterialXMLTest] 없는 부모 · 돌고 도는 부모 사슬은 자식 칸만으로 읽지 않고 로드 실패다
+ */
+SW_TEST_CASE( MaterialXMLTest, MissingOrCyclicParentFailsToLoad )
+{
+    const sw::test::ScopedScratchDomain domain;
+    const sw::string                    idA = sw::test::ScopedScratchDomain::makeID( "a.material" ).str();
+    const sw::string                    idB = sw::test::ScopedScratchDomain::makeID( "b.material" ).str();
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "a.material" ), "<MaterialDesc formatVersion=\"0\" name=\"A\" parent=\"" + idB + "\"/>" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "b.material" ), "<MaterialDesc formatVersion=\"0\" name=\"B\" parent=\"" + idA + "\"/>" ) );
+    sw::shared_ptr<sw::Material> cyclic = sw::Material::create();
+    SW_EXPECT_LOG( "Material.ParentCycle" );
+    SW_EXPECT_FALSE( cyclic->loadFromFile( sw::test::ScopedScratchDomain::makeID( "a.material" ) ) );
+
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "orphan.material" ),
+                                                  "<MaterialDesc formatVersion=\"0\" name=\"Orphan\" parent=\"" + sw::test::ScopedScratchDomain::makeID( "missing.material" ).str() + "\"/>" ) );
+    sw::shared_ptr<sw::Material> orphan = sw::Material::create();
+    SW_EXPECT_LOG( "Material.ParentNotFound" );
+    SW_EXPECT_FALSE( orphan->loadFromFile( sw::test::ScopedScratchDomain::makeID( "orphan.material" ) ) );
+}
+
 /**
  * @brief [MaterialXMLTest] formatVersion 없는 옛 Material 루트는 자동 변환하지 않고 거부한다
  */

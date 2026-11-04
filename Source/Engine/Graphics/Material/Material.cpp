@@ -1135,13 +1135,28 @@ namespace sw
 
         MaterialXML::appendPermutationNode( root, _desc._permutations );
 
+        // 부모를 가리키는 머티리얼은 부모와 다른 칸만 적는다 — 에디터 저장이 부모 구조를 펼쳐 견본 칸을 다시 베끼지 않게.
+        if ( _desc._parentPath.empty() == false )
+        {
+            string deltaText;
+            if ( MaterialXML::makeParentDelta( doc.saveToString(), _desc._parentPath, deltaText ) )
+                return deltaText;
+            // 모든 칸을 적어 부모를 끊지 않는다 — 빈 글을 돌려 저장이 실패로 드러나게 한다.
+            SW_LOG_ERROR_ID( "Material.SaveParentDeltaFailed", "Material '%#' could not be written as a delta of parent '%#' - it is not saved", _desc._name, _desc._parentPath );
+            return string{};
+        }
         return doc.saveToString();
     }
 
     bool Material::loadFromXML( string_view xmlText )
     {
+        // 부모를 가리키면(`parent="..."`) 부모 칸 위에 자식이 적은 칸만 덮은 한 벌로 펼친 뒤 읽는다 — 손 머티리얼이 견본 칸을 베끼지 않게.
+        string flatText;
+        string parentPath;
+        if ( MaterialXML::flattenParent( xmlText, flatText, parentPath ) == false )
+            return false;
         XMLDocument doc;
-        if ( doc.parse( xmlText ) == false )
+        if ( doc.parse( flatText ) == false )
             return false;
 
         XMLNode root = doc.getRoot( "MaterialDesc" );
@@ -1151,8 +1166,9 @@ namespace sw
         if ( AssetXMLFormat::isCurrentXMLVersion( Material::kAssetType, root ) == false )
             return false;
 
-        _desc       = MaterialDesc{};
-        _desc._name = MaterialXML::fieldText( root, "name" );
+        _desc             = MaterialDesc{};
+        _desc._name       = MaterialXML::fieldText( root, "name" );
+        _desc._parentPath = parentPath;
         setShaderPath( MaterialXML::fieldText( root, "shaderPath" ) );
         // 블렌드 모드는 읽을 때 푼다 — 적지 않으면 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다).
         const string blendModeText = MaterialXML::fieldText( root, "blendMode" );
