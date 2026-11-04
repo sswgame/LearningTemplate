@@ -25,7 +25,24 @@ namespace sw
     class PrimitiveRegistry;
     class TerrainComponent;
 
-    /** @brief 식생 레이어가 고르는 메시 하나입니다. `_meshID` 는 `.mesh` 경로이거나 내장 도형 이름(`GrassClump` 포함)입니다. */
+    /** @brief 식생 메시의 구간 하나와 그 머티리얼입니다(임포터가 glTF 머티리얼마다 구간을 만든다 — 구간 이름이 머티리얼 이름이다). */
+    REFLECT()
+    struct SW_API FoliageSection
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Mesh section name (the imported material name, e.g. leaves_normaltree)" )
+        string _sectionName{};
+        PROPERTY( AssetPath, AssetType = "Material", Tooltip = "A foliage.hlsl material (wind, fade and bend come from the component)" )
+        string _materialPath{};
+    };
+
+    /**
+     * @brief 식생 레이어가 고르는 메시 하나입니다. `_meshID` 는 `.mesh` 경로이거나 내장 도형 이름(`GrassClump` 포함)입니다.
+     * @details 구간이 없는 메시는 메시 전체를 레이어 머티리얼로 그린다. 구간이 있는 메시(나무의 줄기 · 잎)는 `_listSection` 에 구간마다 머티리얼을 적고, 구간마다
+     *          인스턴스 배치 하나로 그린다 — 언리얼 Foliage(HISM)가 메시의 머티리얼 슬롯마다 그리는 것과 같다. 구간을 빠뜨리거나 메시에 없는 구간을 적으면
+     *          그 메시는 그리지 않고 오류다(`FoliageComponent::validateMeshSections`).
+     */
     REFLECT()
     struct SW_API FoliageMesh
     {
@@ -35,6 +52,8 @@ namespace sw
         string _meshID{};
         PROPERTY( Min = 0.0 )
         float32 _weight{ 1.0f };
+        PROPERTY( Tooltip = "Section materials of a multi-material mesh (every mesh section once); empty draws a section-less mesh with the layer material" )
+        vector<FoliageSection> _listSection{};
     };
 } // namespace sw
 
@@ -52,8 +71,8 @@ namespace sw
         PlacementRule _rule{};
         PROPERTY()
         vector<FoliageMesh> _listMesh{};
-        PROPERTY( AssetPath, AssetType = "Material", Tooltip = "foliage.material (casts shadows) or grass.material (no shadows). Empty uses the engine default foliage material" )
-        string _materialPath{}; ///< 비면 엔진 기본 에셋 표의 `_foliageMaterial` 이다
+        PROPERTY( AssetPath, AssetType = "Material", Tooltip = "Material of section-less meshes: foliage.material (casts shadows) or grass.material (no shadows). Empty uses the engine default foliage material" )
+        string _materialPath{}; ///< 구간 없는 메시의 머티리얼. 비면 엔진 기본 에셋 표의 `_foliageMaterial` 이다
         PROPERTY( Tooltip = "Linear RGB tint" )
         float4 _tint{ 1.0f, 1.0f, 1.0f, 1.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Per-instance brightness variation" )
@@ -137,12 +156,19 @@ namespace sw
 
         /** @brief 만든 인스턴스 수(모든 레이어)를 반환합니다. */
         uint32 getInstanceCount() const { return _instanceCount; }
-        /** @brief 셀 배치 수입니다. */
-        uint32 getBatchCount() const { return static_cast<uint32>( _listCell.size() ); }
+        /** @brief 인스턴스 배치 수입니다(셀마다 메시 구간 수 — 구간 없는 메시는 하나). */
+        uint32 getBatchCount() const;
         /** @brief 지금 보이는 셀 배치 수입니다. */
         uint32 getVisibleBatchCount() const;
-        /** @brief 마지막 배치 계산(통째 또는 지형 편집 뒤의 부분)이 새로 만든 셀 배치 수입니다. 바뀌지 않은 셀을 다시 만들지 않는지 테스트가 봅니다. */
+        /** @brief 마지막 배치 계산(통째 또는 지형 편집 뒤의 부분)이 새로 만든 인스턴스 배치 수입니다. 바뀌지 않은 셀을 다시 만들지 않는지 테스트가 봅니다. */
         uint32 getLastRebuiltBatchCount() const { return _lastRebuiltBatchCount; }
+
+        /**
+         * @brief @p foliageMesh 의 구간 목록이 @p mesh 를 그릴 수 있는 모양인지 봅니다. 문제가 있으면 첫 문제를 @p outError 에 담고 false 입니다.
+         * @details 구간 있는 메시는 구간마다 한 번씩(이름 · 머티리얼 필수, 겹침 없음) 적어야 하고, 구간 없는 메시는 목록이 비어야 한다(레이어 머티리얼로 그린다).
+         *          빠뜨린 구간을 그리지 않고 넘어가면 잎 없는 나무가 조용히 남는다 — 그래서 모두 적게 한다.
+         */
+        [[nodiscard]] static bool validateMeshSections( const FoliageMesh& foliageMesh, const Mesh& mesh, string& outError );
 
         void setLayers( const vector<FoliageLayer>& listLayer ) { _listLayer = listLayer; }
         /** @brief 레이어 수입니다. */
@@ -156,15 +182,26 @@ namespace sw
     private:
         friend class FoliageTerrainFollower;
 
-        /** @brief (레이어, 메시, 셀) 하나의 배치입니다. */
+        /** @brief (레이어, 메시, 셀) 하나의 배치들입니다 — 메시 구간마다 하나(구간 없는 메시는 하나). 항목(인스턴스)은 배치마다 같다. */
         struct Cell
         {
-            unique_ptr<MeshInstanceBatch> _batch;
-            float3                        _center{};
-            float32                       _radius{ 0.0f };
-            uint64                        _key{ 0 };         ///< (메시 번호, 셀 x, 셀 z) 키 — 레이어 안에서 하나
-            uint64                        _contentHash{ 0 }; ///< 셀 인스턴스들의 내용 해시 — 같으면 다시 만들지 않는다
-            uint32                        _layerIndex{ 0 };
+            vector<unique_ptr<MeshInstanceBatch>> _listBatch;
+            float3                                _center{};
+            float32                               _radius{ 0.0f };
+            uint64                                _key{ 0 };         ///< (메시 번호, 셀 x, 셀 z) 키 — 레이어 안에서 하나
+            uint64                                _contentHash{ 0 }; ///< 셀 인스턴스들의 내용 해시 — 같으면 다시 만들지 않는다
+            uint32                                _layerIndex{ 0 };
+            uint32                                _instanceCount{ 0 };
+        };
+
+        /**
+         * @brief 레이어 하나의 머티리얼들입니다. 바람 · 페이드 값이 레이어 값이라 레이어마다 자기 인스턴스를 가진다.
+         * @details `_layer` 는 구간 없는 메시가, `_listMeshSection[메시][구간]` 은 그 메시의 `_listSection` 순서대로 구간이 쓴다.
+         */
+        struct LayerMaterials
+        {
+            unique_ptr<EnvironmentMaterial>                 _layer;
+            vector<vector<unique_ptr<EnvironmentMaterial>>> _listMeshSection;
         };
 
         /** @brief 배치를 계산할 평면 사각형을 반환합니다. 크기가 0 이면 아래 지형 전체이고, 지형도 없으면 빈 사각형입니다. */
@@ -189,9 +226,12 @@ namespace sw
         void computeAllLayerInstances( const TerrainComponent* pTerrain, const PlacementRegion* pDirtyArea, vector<vector<PlacementInstance>>& outListLayerInstance );
         /** @brief 레이어 @p layerIndex 의 배치를 셀로 나눠, 내용이 바뀐 셀만 배치를 새로 만들고 없어진 셀은 놓습니다. */
         void applyLayerInstances( uint32 layerIndex, const vector<PlacementInstance>& listInstance );
-        /** @brief 셀 하나(@p listIndex 의 인스턴스들, 모두 메시 @p mesh)의 배치를 만들어 레지스트리에 더합니다. 바운드는 인스턴스 위치 상자에 메시 반지름 × 최대 크기를 더한 구입니다. */
-        Cell makeCell( uint32 layerIndex, uint64 key, uint64 contentHash, const vector<PlacementInstance>& listInstance, const vector<uint32>& listIndex, const shared_ptr<Mesh>& mesh,
-                       float32 meshRadius );
+        /**
+         * @brief 셀 하나(@p listIndex 의 인스턴스들, 모두 레이어 메시 @p meshIndex)의 배치를 만들어 레지스트리에 더합니다 — 구간이 있으면 구간마다 하나다.
+         *        바운드는 인스턴스 위치 상자에 메시 반지름 × 최대 크기를 더한 구입니다.
+         */
+        Cell makeCell( uint32 layerIndex, uint32 meshIndex, uint64 key, uint64 contentHash, const vector<PlacementInstance>& listInstance, const vector<uint32>& listIndex,
+                       const shared_ptr<Mesh>& mesh, float32 meshRadius );
         /** @brief 레이어 @p layerIndex 의 셀 중 @p listKeep 이 참이 아닌 것을 놓습니다(배치의 소멸자가 레지스트리에서 뺀다). 다른 레이어의 셀은 그대로입니다. */
         void releaseLayerCells( uint32 layerIndex, const vector<uint8>& listKeep );
         /** @brief 셀 배치를 모두 레지스트리에서 빼고 놓습니다. */
@@ -214,22 +254,22 @@ namespace sw
         PROPERTY( Category = "Foliage", DisplayName = "Cell Size", Min = 4.0, Units = m, Tooltip = "Culling cell (one instance batch per mesh and cell)" )
         float32 _cellSize;
 
-        vector<Cell>                            _listCell;
-        vector<unique_ptr<EnvironmentMaterial>> _listLayerMaterial;  ///< 레이어마다 하나다(바람 값을 레이어마다 싣는다).
-        vector<vector<PlacementCandidate>>      _listLayerCandidate; ///< 레이어마다 후보의 표면 판정(지형 위일 때만, 지형 편집 뒤 부분 계산용)
-        vector<vector<MeshHandle>>              _listLayerMeshLoad;  ///< 레이어마다 메시 로드(레이어의 `_listMesh` 순서, 내장 도형은 빈 핸들). 준비된 메시를 쥐어 다음 짓기가 다시 읽지 않는다
-        PlacementRegion                         _builtRegion;        ///< 배치를 계산한 영역 — 바뀌면 후보 판정을 버린다
-        PrimitiveRegistry*                      _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리다(구조 링크라 생포인터를 쓴다).
-        float32                                 _time;
-        uint32                                  _terrainSettleFrames; ///< 지형 세대가 마지막으로 바뀐 뒤 지난 프레임 수 — 칠하는 동안 다시 계산하지 않는다
-        uint32                                  _instanceCount;
-        uint32                                  _lastRebuiltBatchCount;  ///< `getLastRebuiltBatchCount`
-        uint32                                  _builtTerrainGeneration; ///< 배치를 계산할 때 지형의 높이장 세대(`TerrainComponent::getHeightfieldGeneration`)
-        uint32                                  _builtSplatRevision;     ///< 배치를 계산할 때 지형의 스플랫 세대(`TerrainComponent::getSplatRevision`)
-        uint32                                  _seenTerrainGeneration;  ///< 지난 틱에 본 높이장 세대
-        uint32                                  _seenSplatRevision;      ///< 지난 틱에 본 스플랫 세대
-        uint8                                   _bBuiltOnTerrain   : 1;  ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
-        uint8                                   _bWaitingForMeshes : 1;  ///< 레이어 메시가 와야 짓는다(`rebuildFoliage`)
-        [[maybe_unused]] uint8                  _reserved          : 6;
+        vector<Cell>                       _listCell;
+        vector<LayerMaterials>             _listLayerMaterial;  ///< 레이어마다 하나다(바람 값을 레이어마다 싣는다).
+        vector<vector<PlacementCandidate>> _listLayerCandidate; ///< 레이어마다 후보의 표면 판정(지형 위일 때만, 지형 편집 뒤 부분 계산용)
+        vector<vector<MeshHandle>>         _listLayerMeshLoad;  ///< 레이어마다 메시 로드(레이어의 `_listMesh` 순서, 내장 도형은 빈 핸들). 준비된 메시를 쥐어 다음 짓기가 다시 읽지 않는다
+        PlacementRegion                    _builtRegion;        ///< 배치를 계산한 영역 — 바뀌면 후보 판정을 버린다
+        PrimitiveRegistry*                 _pPrimitiveRegistry; ///< 등록된 매니저의 레지스트리다(구조 링크라 생포인터를 쓴다).
+        float32                            _time;
+        uint32                             _terrainSettleFrames; ///< 지형 세대가 마지막으로 바뀐 뒤 지난 프레임 수 — 칠하는 동안 다시 계산하지 않는다
+        uint32                             _instanceCount;
+        uint32                             _lastRebuiltBatchCount;  ///< `getLastRebuiltBatchCount`
+        uint32                             _builtTerrainGeneration; ///< 배치를 계산할 때 지형의 높이장 세대(`TerrainComponent::getHeightfieldGeneration`)
+        uint32                             _builtSplatRevision;     ///< 배치를 계산할 때 지형의 스플랫 세대(`TerrainComponent::getSplatRevision`)
+        uint32                             _seenTerrainGeneration;  ///< 지난 틱에 본 높이장 세대
+        uint32                             _seenSplatRevision;      ///< 지난 틱에 본 스플랫 세대
+        uint8                              _bBuiltOnTerrain   : 1;  ///< 마지막 계산이 지형 위였다(아니면 시작 때 지형을 다시 찾는다)
+        uint8                              _bWaitingForMeshes : 1;  ///< 레이어 메시가 와야 짓는다(`rebuildFoliage`)
+        [[maybe_unused]] uint8             _reserved          : 6;
     };
 } // namespace sw

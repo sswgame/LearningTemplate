@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
@@ -99,6 +100,15 @@ namespace sw
         void setSortKey( uint32 sortKey );
         /** @brief 항목 모두의 투명 정렬 키입니다. */
         uint32 getSortKey() const { return _sortKey; }
+        /**
+         * @brief 메시의 구간 하나만 그립니다(빈 이름이면 메시 전체). 바뀌면 항목 모두가 더티입니다.
+         * @details 구간마다 머티리얼이 다른 메시(나무의 줄기 · 잎)를 구간마다 배치 하나로 그리는 자리다 — 언리얼 ISM/HISM 이 메시의 머티리얼 슬롯마다
+         *          그리는 것과 같다. 이름으로 들고 빌더가 수집 때마다 메시에서 범위를 찾는다(`MeshComponent::findDrawSection` 과 같은 규칙 — 메시가 제자리에서
+         *          다시 읽혀도 범위가 낡지 않는다). 메시에 그 이름이 없으면 그리지 않는다. 구간 메시는 GPU LOD 그룹이 아니라(`MeshLODSystem::isGPUSelectable`) LOD 0 의 구간이다.
+         */
+        void setDrawSection( const hashed_string& sectionName );
+        /** @brief 그릴 구간 이름입니다. 비면 메시 전체입니다. */
+        const hashed_string& getDrawSection() const { return _sectionName; }
 
         /**
          * @brief 이 배치를 든 컴포넌트입니다. 그 컴포넌트가 꺼지면(자기 비트 · 소유 오브젝트의 계층 활성 — `Component::isActive`) 빌더가 항목 모두를 뺍니다.
@@ -132,6 +142,7 @@ namespace sw
         shared_ptr<Mesh>             _mesh;
         Material*                    _pMaterial;
         shared_ptr<MaterialInstance> _instance;
+        hashed_string                _sectionName;     ///< 그릴 구간(빈 이름 = 메시 전체) — `setDrawSection`
         const Component*             _pOwnerComponent; ///< 든 컴포넌트(빌림). 꺼지면 빌더가 뺀다. nullptr 이면 늘 그린다
         uint32                       _sortKey;         ///< 항목 모두의 투명 정렬 키(0 = 기본)
         MeshInstanceWriter           _writer;

@@ -16,6 +16,7 @@ namespace sw
         , _mesh{ std::move( mesh ) }
         , _pMaterial{ pMaterial }
         , _instance{ std::move( instance ) }
+        , _sectionName{}
         , _pOwnerComponent{ nullptr }
         , _sortKey{ 0 }
         , _writer{ writer }
@@ -108,6 +109,14 @@ namespace sw
         if ( _sortKey == sortKey )
             return;
         _sortKey = sortKey;
+        markAllEntriesDirty();
+    }
+
+    void MeshInstanceBatch::setDrawSection( const hashed_string& sectionName )
+    {
+        if ( _sectionName == sectionName )
+            return;
+        _sectionName = sectionName;
         markAllEntriesDirty();
     }
 

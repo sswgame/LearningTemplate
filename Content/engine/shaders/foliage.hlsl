@@ -7,6 +7,8 @@
  * 머티리얼은 **정점 셰이더만** 읽는다(GL 은 구조버퍼를 두 단계에서 읽으면 링크를 거절한다) — 색 · 텍스처 인덱스는 사용자 보간 칸으로 넘긴다.
  * 흔들림 무게는 로컬 높이 / swayHeight 의 제곱이라 뿌리는 땅에 붙어 있다. 인스턴스마다 위상은 인스턴스 위치의 해시라 CPU 가 따로 싣지 않는다.
  * 밝기 흔들기는 인스턴스 색 칸(InstanceData::computeTint)이다.
+ * 잎 · 꽃 카드(텍스처 알파로 모양을 내는 판)는 알파 컷오프 머티리얼(MATERIAL_ALPHA_CUTOFF — _alphaCutoff 보다 작은 알파를 버린다)이다 — 깊이 · 그림자 패스도
+ * 같은 표면 훅으로 오린다(뼈대). 컷오프는 머티리얼 값이라 정점이 읽어 보간 칸으로 넘긴다.
  * 흔드는 머티리얼(MATERIAL_VERTEX_DEFORM — 두 머티리얼이 늘 가진다)의 그림자는 이 파일의 그림자 퍼뮤테이션(SW_PASS_SHADOW)이 같은 흔들림으로 빛 행렬에 투영한다 —
  * 정점 스테이지뿐이다(FrameRendererUtil::drawsDepthWithMaterialShader). 깊이 프리패스에서는 빠진다(뼈대가 머티리얼 없는 사용자의 깊이 프리패스에서 뺀다 —
  * 흔들린 정점이 프리패스 깊이와 어긋나지 않게). 풀(grass.material)은 MATERIAL_SHADOW_CAST_OFF 로 그림자를 끈다(그림자 패스에서 shadow_depth.hlsl 이 뺀다).
@@ -30,16 +32,12 @@ SW_MATERIAL_BEGIN
     float4 _influencer2;
     float4 _influencer3;
     uint   _albedoMap;
+    float  _alphaCutoff; // MATERIAL_ALPHA_CUTOFF 일 때 이 값보다 작은 알파를 버린다(잎 · 꽃 카드)
     // 원소 크기를 16 의 배수로 — DX 의 촘촘한 간격과 GL std430 배열 간격이 같아야 한다(ShaderBindingValidator::checkStructuredElementLayouts). 머티리얼 속성이 아니다
     uint _swPad0;
     uint _swPad1;
-    uint _swPad2;
 }
 SW_MATERIAL_END
-
-#if defined( MATERIAL_ALPHA_CUTOFF )
-    #error "foliage.hlsl has no alpha cutoff property (MaterialSurface._alphaCutoff) — add one to the material struct and fill it in computeMaterialSurface"
-#endif
 
 // 훅 선택(material_shader.hlsli) — 머티리얼은 정점에서만 읽고 픽셀이 쓸 값(색 · 텍스처 인덱스)은 사용자 보간 칸으로 넘긴다. 조명은 기본 PBR.
 #define SW_MATERIAL_READ_IN_VERTEX
@@ -49,6 +47,9 @@ struct MaterialVaryings
 {
     float4               _tintedColor : TEXCOORD8; // 정점 색 × 머티리얼 색 × 인스턴스 밝기 × 뿌리 그늘
     nointerpolation uint _albedoMap : TEXCOORD9;   // 머티리얼 텍스처 인덱스(픽셀은 머티리얼을 읽지 않는다)
+#if defined( MATERIAL_ALPHA_CUTOFF )
+    nointerpolation float _alphaCutoff : TEXCOORD10; // 머티리얼 알파 컷오프(픽셀은 머티리얼을 읽지 않는다)
+#endif
 };
 #include "material_shader.hlsli"
 
@@ -130,6 +131,9 @@ MaterialVaryings computeMaterialVaryings( VertexContext context )
     MaterialVaryings varyings;
     varyings._tintedColor = context._input._color * context._material._tint * context._instance.computeTint() * float4( rootShade, rootShade, rootShade, 1.0f );
     varyings._albedoMap   = context._material._albedoMap;
+#if defined( MATERIAL_ALPHA_CUTOFF )
+    varyings._alphaCutoff = context._material._alphaCutoff;
+#endif
     return varyings;
 }
 
@@ -140,6 +144,9 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     surface._normal    = context._normal;
     surface._roughness = kSurfaceRoughness;
     surface._metallic  = kSurfaceMetallic;
+#if defined( MATERIAL_ALPHA_CUTOFF )
+    surface.setAlphaCutoff( context._user._alphaCutoff ); // 깊이 · 본 패스가 같은 값으로 오린다(뼈대가 clip 한다)
+#endif
     return surface;
 }
 

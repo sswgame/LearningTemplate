@@ -69,7 +69,7 @@ namespace sw
 
             /**
              * @brief 레이어의 메시를 로드(@p listLoad — `requestLayerMeshes` 가 다 받았다)에서 얻어 메시마다 원점 반지름과 함께 채웁니다.
-             *        얻지 못한 메시는 nullptr 로 두고(그 인스턴스는 건너뛴다) 경고한다.
+             *        얻지 못한 메시는 nullptr 로 두고(그 인스턴스는 건너뛴다) 경고한다. 구간 목록이 메시와 맞지 않는 메시도 nullptr 로 두고 오류다(`validateMeshSections`).
              */
             static void acquireLayerMeshes( const FoliageLayer& layer, const vector<MeshHandle>& listLoad, vector<shared_ptr<Mesh>>& outListMesh, vector<float32>& outListRadius )
             {
@@ -80,9 +80,24 @@ namespace sw
                     shared_ptr<Mesh>   mesh        = bHasLoad ? listLoad[meshIndex].get() : MeshUtil::acquirePrimitive( foliageMesh._meshID );
                     if ( mesh == nullptr )
                         SW_LOG_WARNING_ID( "FoliageComponent.FoliageLayerMeshCould", "Foliage layer '%#': mesh '%#' could not be acquired - its instances are skipped", layer._name.c_str(), foliageMesh._meshID.c_str() );
+                    string sectionError;
+                    if ( mesh != nullptr && FoliageComponent::validateMeshSections( foliageMesh, *mesh, sectionError ) == false )
+                    {
+                        SW_LOG_ERROR_ID( "FoliageComponent.FoliageMeshSections", "Foliage layer '%#': mesh '%#' is not drawn - %#", layer._name.c_str(), foliageMesh._meshID.c_str(), sectionError.c_str() );
+                        mesh = nullptr;
+                    }
                     outListRadius.push_back( mesh != nullptr ? computeOriginRadius( *mesh ) : 0.0f );
                     outListMesh.push_back( std::move( mesh ) );
                 }
+            }
+
+            /** @brief 머티리얼 @p path 를 잡고 레이어 색을 싣습니다(못 잡으면 씬 기본 머티리얼 — 경고는 안에서). */
+            static unique_ptr<EnvironmentMaterial> makeLayerMaterial( string_view path, const float4& tint )
+            {
+                unique_ptr<EnvironmentMaterial> pMaterial = sw::make_unique<EnvironmentMaterial>();
+                (void)pMaterial->acquire( path );
+                pMaterial->setVector( hashed_string( "_tint" ), tint );
+                return pMaterial;
             }
 
             /** @brief 인스턴스를 메시마다 셀마다 묶습니다. 키는 메시 번호 × 2^48 + 셀 (x, z) 입니다. 메시를 얻지 못한 인스턴스는 뺀다. */
@@ -238,9 +253,66 @@ namespace sw
     {
         for ( Cell& cell : _listCell )
         {
-            if ( cell._batch != nullptr )
-                cell._batch->markAllEntriesDirty();
+            for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
+                pBatch->markAllEntriesDirty();
         }
+    }
+
+    bool FoliageComponent::validateMeshSections( const FoliageMesh& foliageMesh, const Mesh& mesh, string& outError )
+    {
+        const vector<MeshSection>& listMeshSection = mesh.getSections();
+        if ( foliageMesh._listSection.empty() )
+        {
+            if ( listMeshSection.empty() )
+                return true;
+            outError = formatToString( "the mesh has %# sections - list each one with its material (_listSection)", static_cast<uint32>( listMeshSection.size() ) );
+            return false;
+        }
+        if ( listMeshSection.empty() )
+        {
+            outError = "section materials are listed but the mesh has no sections - use the layer material";
+            return false;
+        }
+        for ( size_t index = 0; index < foliageMesh._listSection.size(); ++index )
+        {
+            const FoliageSection& section = foliageMesh._listSection[index];
+            if ( section._sectionName.empty() || section._materialPath.empty() )
+            {
+                outError = formatToString( "section %# needs both a name and a material", static_cast<uint32>( index ) );
+                return false;
+            }
+            for ( size_t earlier = 0; earlier < index; ++earlier )
+            {
+                if ( foliageMesh._listSection[earlier]._sectionName == section._sectionName )
+                {
+                    outError = formatToString( "section '%#' is listed twice", section._sectionName.c_str() );
+                    return false;
+                }
+            }
+            if ( mesh.findSectionIndex( hashed_string( section._sectionName.c_str() ) ) < 0 )
+            {
+                outError = formatToString( "the mesh has no section '%#'", section._sectionName.c_str() );
+                return false;
+            }
+        }
+        // 이름이 모두 메시에 있고 겹치지 않으니 수가 같으면 모든 구간을 적은 것이다.
+        if ( foliageMesh._listSection.size() != listMeshSection.size() )
+        {
+            outError = formatToString( "%# of the mesh's %# sections are listed - list every section", static_cast<uint32>( foliageMesh._listSection.size() ),
+                                       static_cast<uint32>( listMeshSection.size() ) );
+            return false;
+        }
+        return true;
+    }
+
+    uint32 FoliageComponent::getBatchCount() const
+    {
+        uint32 count{ 0 };
+        for ( const Cell& cell : _listCell )
+        {
+            count += static_cast<uint32>( cell._listBatch.size() );
+        }
+        return count;
     }
 
     void FoliageComponent::onTick( float32 deltaTime )
@@ -382,7 +454,8 @@ namespace sw
             listBatch.reserve( _listCell.size() );
             for ( Cell& cell : _listCell )
             {
-                listBatch.push_back( cell._batch.get() );
+                for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
+                    listBatch.push_back( pBatch.get() );
             }
             _pPrimitiveRegistry->removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( listBatch.data(), listBatch.size() ) );
         }
@@ -451,17 +524,22 @@ namespace sw
         if ( pTerrain != nullptr )
             _listLayerCandidate.resize( _listLayer.size() );
 
-        // 레이어 머티리얼은 레이어마다 자기 인스턴스를 가진다(바람 반응과 페이드가 레이어 값이다).
+        // 레이어 머티리얼은 레이어마다 자기 인스턴스를 가진다(바람 반응과 페이드가 레이어 값이다). 구간 머티리얼도 레이어 안에서 자기 인스턴스다.
         _listLayerMaterial.clear();
         _listLayerMaterial.reserve( _listLayer.size() );
         for ( const FoliageLayer& layer : _listLayer )
         {
-            _listLayerMaterial.push_back( sw::make_unique<EnvironmentMaterial>() );
-            EnvironmentMaterial& material = *_listLayerMaterial.back();
+            LayerMaterials materials;
             // 칸이 비면 엔진 기본 풀 · 나무 머티리얼이다(값의 기준은 엔진 기본 에셋 표).
             const string& materialPath = layer._materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._foliageMaterial.get() : layer._materialPath;
-            (void)material.acquire( materialPath ); // 못 잡으면 씬 기본 머티리얼(경고는 안에서)
-            material.setVector( hashed_string( "_tint" ), layer._tint );
+            materials._layer           = FoliageComponentInternal::makeLayerMaterial( materialPath, layer._tint );
+            materials._listMeshSection.resize( layer._listMesh.size() );
+            for ( size_t meshIndex = 0; meshIndex < layer._listMesh.size(); ++meshIndex )
+            {
+                for ( const FoliageSection& section : layer._listMesh[meshIndex]._listSection )
+                    materials._listMeshSection[meshIndex].push_back( FoliageComponentInternal::makeLayerMaterial( section._materialPath, layer._tint ) );
+            }
+            _listLayerMaterial.push_back( std::move( materials ) );
         }
         vector<vector<PlacementInstance>> listLayerInstance;
         computeAllLayerInstances( pTerrain, nullptr, listLayerInstance );
@@ -568,46 +646,62 @@ namespace sw
                 listKeep[iter->second] = SW_TRUE;
                 continue;
             }
-            const size_t meshIndex = static_cast<size_t>( listInstance[listIndex.front()]._entryIndex );
-            listAddedCell.push_back( makeCell( layerIndex, key, contentHash, listInstance, listIndex, listMesh[meshIndex], listMeshRadius[meshIndex] ) );
+            const uint32 meshIndex = static_cast<uint32>( listInstance[listIndex.front()]._entryIndex );
+            listAddedCell.push_back( makeCell( layerIndex, meshIndex, key, contentHash, listInstance, listIndex, listMesh[meshIndex], listMeshRadius[meshIndex] ) );
         }
 
         releaseLayerCells( layerIndex, listKeep );
-        _lastRebuiltBatchCount += static_cast<uint32>( listAddedCell.size() );
         for ( Cell& cell : listAddedCell )
         {
+            _lastRebuiltBatchCount += static_cast<uint32>( cell._listBatch.size() );
             _listCell.push_back( std::move( cell ) );
         }
         _instanceCount = 0;
         for ( const Cell& cell : _listCell )
         {
-            _instanceCount += cell._batch->getCount();
+            _instanceCount += cell._instanceCount;
         }
     }
 
-    FoliageComponent::Cell FoliageComponent::makeCell( uint32 layerIndex, uint64 key, uint64 contentHash, const vector<PlacementInstance>& listInstance, const vector<uint32>& listIndex,
-                                                       const shared_ptr<Mesh>& mesh, float32 meshRadius )
+    FoliageComponent::Cell FoliageComponent::makeCell( uint32 layerIndex, uint32 meshIndex, uint64 key, uint64 contentHash, const vector<PlacementInstance>& listInstance,
+                                                       const vector<uint32>& listIndex, const shared_ptr<Mesh>& mesh, float32 meshRadius )
     {
-        const FoliageLayer&  layer    = _listLayer[layerIndex];
-        EnvironmentMaterial& material = *_listLayerMaterial[layerIndex];
-        Cell                 cell;
-        cell._layerIndex  = layerIndex;
-        cell._key         = key;
-        cell._contentHash = contentHash;
-        cell._batch       = sw::make_unique<MeshInstanceBatch>( mesh, material.getMaterial(), material.getInstance(), static_cast<uint32>( listIndex.size() ), MeshInstanceWriter::CPU );
-        cell._batch->setOwnerComponent( this );
+        const FoliageLayer& layer       = _listLayer[layerIndex];
+        const FoliageMesh&  foliageMesh = layer._listMesh[meshIndex];
+        LayerMaterials&     materials   = _listLayerMaterial[layerIndex];
+        const uint32        entryCount  = static_cast<uint32>( listIndex.size() );
+        Cell                cell;
+        cell._layerIndex    = layerIndex;
+        cell._key           = key;
+        cell._contentHash   = contentHash;
+        cell._instanceCount = entryCount;
+        // 구간 없는 메시는 레이어 머티리얼로 메시 전체를, 구간 있는 메시는 구간마다 자기 머티리얼로 그 구간만(검사는 `acquireLayerMeshes` 가 했다).
+        if ( foliageMesh._listSection.empty() )
+            cell._listBatch.push_back( sw::make_unique<MeshInstanceBatch>( mesh, materials._layer->getMaterial(), materials._layer->getInstance(), entryCount, MeshInstanceWriter::CPU ) );
+        for ( size_t sectionIndex = 0; sectionIndex < foliageMesh._listSection.size(); ++sectionIndex )
+        {
+            const EnvironmentMaterial& material = *materials._listMeshSection[meshIndex][sectionIndex];
+            cell._listBatch.push_back( sw::make_unique<MeshInstanceBatch>( mesh, material.getMaterial(), material.getInstance(), entryCount, MeshInstanceWriter::CPU ) );
+            cell._listBatch.back()->setDrawSection( hashed_string( foliageMesh._listSection[sectionIndex]._sectionName.c_str() ) );
+        }
+        for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
+            pBatch->setOwnerComponent( this );
         float3  minimum{ MathUtil::kMaxFloat, MathUtil::kMaxFloat, MathUtil::kMaxFloat };
         float3  maximum{ MathUtil::kMinFloat, MathUtil::kMinFloat, MathUtil::kMinFloat };
         float32 maxScale{ 0.0f };
-        for ( uint32 entry = 0; entry < listIndex.size(); ++entry )
+        for ( uint32 entry = 0; entry < entryCount; ++entry )
         {
             const PlacementInstance& instance = listInstance[listIndex[entry]];
             const float4x4           world    = PlacementScatter::makeWorldMatrix( instance, float3::Zero );
-            cell._batch->setWorld( entry, world );
-            cell._batch->setBoundsRadius( entry, meshRadius );
             // 밝기 흔들기는 인스턴스 색 필드로 한다(머티리얼을 가르지 않는다).
-            const float32 shade = 1.0f - layer._tintVariation * PlacementScatter::toUnit( instance._hash );
-            cell._batch->setSprite( entry, GPUSpriteInstanceData::make( float4{ 0.0f, 0.0f, 1.0f, 1.0f }, float4{ shade, shade, shade, 1.0f } ) );
+            const float32               shade  = 1.0f - layer._tintVariation * PlacementScatter::toUnit( instance._hash );
+            const GPUSpriteInstanceData sprite = GPUSpriteInstanceData::make( float4{ 0.0f, 0.0f, 1.0f, 1.0f }, float4{ shade, shade, shade, 1.0f } );
+            for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
+            {
+                pBatch->setWorld( entry, world );
+                pBatch->setBoundsRadius( entry, meshRadius );
+                pBatch->setSprite( entry, sprite );
+            }
             const float3 position = world.getTranslation();
             minimum               = float3{ MathUtil::min( minimum._x, position._x ), MathUtil::min( minimum._y, position._y ), MathUtil::min( minimum._z, position._z ) };
             maximum               = float3{ MathUtil::max( maximum._x, position._x ), MathUtil::max( maximum._y, position._y ), MathUtil::max( maximum._z, position._z ) };
@@ -615,7 +709,8 @@ namespace sw
         }
         cell._center = ( minimum + maximum ) * 0.5f;
         cell._radius = ( maximum - minimum ).getLength() * 0.5f + meshRadius * maxScale;
-        _pPrimitiveRegistry->addInstanceBatch( cell._batch.get() );
+        for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
+            _pPrimitiveRegistry->addInstanceBatch( pBatch.get() );
         return cell;
     }
 
@@ -626,8 +721,10 @@ namespace sw
             vector<ScenePrimitiveBatch*> listRemoved;
             for ( size_t cellIndex = 0; cellIndex < _listCell.size(); ++cellIndex )
             {
-                if ( _listCell[cellIndex]._layerIndex == layerIndex && listKeep[cellIndex] != SW_TRUE )
-                    listRemoved.push_back( _listCell[cellIndex]._batch.get() );
+                if ( _listCell[cellIndex]._layerIndex != layerIndex || listKeep[cellIndex] == SW_TRUE )
+                    continue;
+                for ( const unique_ptr<MeshInstanceBatch>& pBatch : _listCell[cellIndex]._listBatch )
+                    listRemoved.push_back( pBatch.get() );
             }
             _pPrimitiveRegistry->removeInstanceBatches( vector_reference<ScenePrimitiveBatch* const>( listRemoved.data(), listRemoved.size() ) );
         }
@@ -651,7 +748,8 @@ namespace sw
         {
             const float32 fadeEnd  = _listLayer[cell._layerIndex]._fadeEnd;
             const float32 distance = ( cell._center - viewPosition ).getLength() - cell._radius;
-            cell._batch->setVisible( distance < fadeEnd );
+            for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
+                pBatch->setVisible( distance < fadeEnd );
         }
 
         GameObject*        pOwner   = getOwner();
@@ -665,18 +763,28 @@ namespace sw
         }
         for ( uint32 layerIndex = 0; layerIndex < _listLayerMaterial.size() && layerIndex < _listLayer.size(); ++layerIndex )
         {
-            const FoliageLayer&  layer    = _listLayer[layerIndex];
-            EnvironmentMaterial& material = *_listLayerMaterial[layerIndex];
-            // 머티리얼 값은 VS 가 읽는다(foliage.hlsl). x 와 y 는 방향, z 는 세기 × 반응, w 는 시간이다.
-            material.setVector( hashed_string( "_windParams" ), float4{ wind._direction._x, wind._direction._y, wind._strength * layer._windResponse, _time } );
-            // x = 흔들림 주파수, y = 돌풍 세기 × 반응, z = 돌풍 주파수, w = 흔들림이 다 차는 높이
-            material.setVector( hashed_string( "_windWave" ), float4{ wind._swayFrequency, wind._gustStrength * layer._windResponse, wind._gustFrequency, layer._swayHeight } );
-            // xyz = 카메라, w = 휘게 하는 세기
-            material.setVector( hashed_string( "_viewParams" ), float4{ viewPosition._x, viewPosition._y, viewPosition._z, layer._bendStrength } );
-            material.setVector( hashed_string( "_fadeParams" ), float4{ layer._fadeStart, layer._fadeEnd, 0.0f, 0.0f } );
-            for ( uint32 slot = 0; slot < FoliageInfluencerComponent::kMaxInfluencerCount; ++slot )
+            const FoliageLayer& layer          = _listLayer[layerIndex];
+            const auto          applyLayerView = [&]( EnvironmentMaterial& material )
             {
-                material.setVector( Internal::getInfluencerName( slot ), arrSphere[slot] );
+                // 머티리얼 값은 VS 가 읽는다(foliage.hlsl). x 와 y 는 방향, z 는 세기 × 반응, w 는 시간이다.
+                material.setVector( hashed_string( "_windParams" ), float4{ wind._direction._x, wind._direction._y, wind._strength * layer._windResponse, _time } );
+                // x = 흔들림 주파수, y = 돌풍 세기 × 반응, z = 돌풍 주파수, w = 흔들림이 다 차는 높이
+                material.setVector( hashed_string( "_windWave" ), float4{ wind._swayFrequency, wind._gustStrength * layer._windResponse, wind._gustFrequency, layer._swayHeight } );
+                // xyz = 카메라, w = 휘게 하는 세기
+                material.setVector( hashed_string( "_viewParams" ), float4{ viewPosition._x, viewPosition._y, viewPosition._z, layer._bendStrength } );
+                material.setVector( hashed_string( "_fadeParams" ), float4{ layer._fadeStart, layer._fadeEnd, 0.0f, 0.0f } );
+                for ( uint32 slot = 0; slot < FoliageInfluencerComponent::kMaxInfluencerCount; ++slot )
+                {
+                    material.setVector( Internal::getInfluencerName( slot ), arrSphere[slot] );
+                }
+            };
+            // 구간 없는 메시의 머티리얼과 구간 머티리얼 모두 — 바람 · 페이드는 레이어 값이다.
+            LayerMaterials& materials = _listLayerMaterial[layerIndex];
+            applyLayerView( *materials._layer );
+            for ( vector<unique_ptr<EnvironmentMaterial>>& listSectionMaterial : materials._listMeshSection )
+            {
+                for ( unique_ptr<EnvironmentMaterial>& pMaterial : listSectionMaterial )
+                    applyLayerView( *pMaterial );
             }
         }
     }
@@ -686,7 +794,8 @@ namespace sw
         uint32 count{ 0 };
         for ( const Cell& cell : _listCell )
         {
-            count += cell._batch->isVisible() ? 1u : 0u;
+            for ( const unique_ptr<MeshInstanceBatch>& pBatch : cell._listBatch )
+                count += pBatch->isVisible() ? 1u : 0u;
         }
         return count;
     }

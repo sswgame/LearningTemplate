@@ -395,6 +395,21 @@ namespace sw
         Mesh* pMesh = pBatch->getRawMesh();
         if ( pMesh == nullptr || pMesh->getVertexCount() == 0 )
             return false;
+        // 그릴 구간 — 이름이 메시에 없으면 그리지 않는다(메시 컴포넌트의 `findDrawSection` 과 같은 규칙). 이름이 없으면 메시 전체(수 0).
+        // 후보 배열은 지난 프레임 값 위에 덮어쓰므로 늘 기록한다.
+        candidate._sectionFirstIndex = 0;
+        candidate._sectionIndexCount = 0;
+        if ( pBatch->getDrawSection().empty() == false )
+        {
+            const int32 sectionIndex = pMesh->findSectionIndex( pBatch->getDrawSection() );
+            if ( sectionIndex < 0 )
+                return false;
+            const MeshSection& section   = pMesh->getSections()[static_cast<size_t>( sectionIndex )];
+            candidate._sectionFirstIndex = section._firstIndex;
+            candidate._sectionIndexCount = section._indexCount;
+            if ( section._indexCount == 0 )
+                return false; // 빈 구간 — (0, 0) 은 "메시 전체" 라 넘기면 안 된다
+        }
         const MeshInstanceBatch::Entry& item = pBatch->getEntry( entry._index );
         candidate._world                     = item._world;
         candidate._localBoundsCenter         = float3{}; // 배치 항목의 반지름은 부르는 쪽이 원점 기준으로 준다(`MeshInstanceBatch::setBoundsRadius`)
