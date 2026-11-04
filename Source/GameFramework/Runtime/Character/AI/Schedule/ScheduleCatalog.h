@@ -17,6 +17,8 @@
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCondition.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -31,36 +33,57 @@ namespace sw
     inline constexpr int32 kScheduleMinutesPerDay = 1440;
 
     /** @brief 일정이 가는 장소 하나입니다. */
-    struct SchedulePlaceDef
+    REFLECT()
+    struct SW_GF_API SchedulePlaceDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
+        PROPERTY()
         hashed_string _area{}; ///< `AreaGraph` 의 방 id. 지역 단위 시뮬레이션이 쓴다
-        float3        _position{};
-        float32       _radius{ 0.0f }; ///< 돌아다니기 범위의 기본값
+        PROPERTY( Required, Units = m )
+        float3 _position{};
+        PROPERTY( Min = 0.0, Units = m )
+        float32 _radius{ 0.0f }; ///< 돌아다니기 범위의 기본값
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 활동 슬롯 하나입니다. 벤치나 작업대 같은 위치이며, 스마트 오브젝트가 없을 때 `ScheduleSpotLocator` 가 나눠 줍니다. */
-    struct ScheduleSpotDef
+    REFLECT()
+    struct SW_GF_API ScheduleSpotDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
+        PROPERTY( Required )
         hashed_string _kind{};
+        PROPERTY()
         hashed_string _area{};
-        float3        _position{};
-        int32         _capacity{ 1 };
+        PROPERTY( Required, Units = m )
+        float3 _position{};
+        PROPERTY( Min = 1 )
+        int32 _capacity{ 1 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 끼어들기 종류(말 걸기, 전투, 경보)입니다. 우선순위가 높은 것이 위에 쌓입니다. */
-    struct ScheduleInterruptDef
+    REFLECT()
+    struct SW_GF_API ScheduleInterruptDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _id{};
-        int32         _priority{ 0 };
-        int32         _timeoutMinutes{ 0 }; ///< 이만큼 지나면 저절로 끝난다. 0 이면 게임이 끝낼 때까지 간다
+        PROPERTY()
+        int32 _priority{ 0 };
+        PROPERTY( Name = "timeout", Min = 0 )
+        int32 _timeoutMinutes{ 0 }; ///< 이만큼 지나면 저절로 끝난다. 0 이면 게임이 끝낼 때까지 간다
     };
 } // namespace sw
 
@@ -85,21 +108,31 @@ namespace sw
 namespace sw
 {
     /** @brief 루틴입니다. 조건이 맞는 날 쓰는 일정 블록의 목록입니다. */
-    struct ScheduleRoutineDef
+    REFLECT()
+    struct SW_GF_API ScheduleRoutineDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string            _id{};
         ScheduleCondition        _condition{};
         vector<ScheduleBlockDef> _listBlock{};
-        int32                    _priority{ 0 };
+        PROPERTY()
+        int32 _priority{ 0 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 아키타입입니다. 여러 NPC 가 함께 쓰는 루틴이며, 부모 아키타입의 루틴을 이어받습니다. */
-    struct ScheduleArchetypeDef
+    REFLECT()
+    struct SW_GF_API ScheduleArchetypeDef
     {
-        hashed_string              _id{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
         hashed_string              _parent{};
         vector<ScheduleRoutineDef> _listRoutine{};
     };
@@ -108,47 +141,67 @@ namespace sw
 namespace sw
 {
     /** @brief NPC 하나입니다. 읽을 때 자기 루틴과 아키타입 체인의 루틴을 모아 둡니다. 같은 id 면 자기 것이 덮어씁니다. */
-    struct ScheduleNPCDef
+    REFLECT()
+    struct SW_GF_API ScheduleNPCDef
     {
+        REFLECT_BODY();
+
         static constexpr float32 kMinUnitsPerMinute = 0.01f; ///< `speed` 의 하한(0 이면 이동이 끝나지 않는다)
 
-        hashed_string              _id{};
-        hashed_string              _archetype{};
-        hashed_string              _home{};
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        hashed_string _archetype{};
+        PROPERTY()
+        hashed_string _home{};
+        PROPERTY( Name = "idle" )
         hashed_string              _idleActivity{}; ///< 어느 블록도 없는 시간의 활동(기본 `StayHome`)
         vector<TagID>              _listTag{};      ///< 처음 태그(직업, 성격)
         vector<ScheduleRoutineDef> _listRoutine{};  ///< 자기 루틴 다음에 아키타입 체인의 루틴이 온다
-        float32                    _unitsPerMinute{ 60.0f };
+        PROPERTY( Name = "speed", Min = 0.01 )
+        float32 _unitsPerMinute{ 60.0f };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 축제나 행사입니다. 조건이 맞는 날 참가자의 그 시간을 덮는 블록입니다. */
-    struct ScheduleEventDef
+    REFLECT()
+    struct SW_GF_API ScheduleEventDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string            _id{};
         ScheduleCondition        _condition{};
         vector<hashed_string>    _listNPC{};       ///< 참가 NPC id
         vector<hashed_string>    _listArchetype{}; ///< 참가 아키타입(체인 어디에 있어도 된다). NPC 와 아키타입이 둘 다 비면 모두 참가한다
         vector<ScheduleBlockDef> _listBlock{};
-        int32                    _priority{ 100 };
+        PROPERTY()
+        int32 _priority{ 100 };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 약속입니다. 두 NPC 이상의 일정이 함께 가리키는 만남(시간과 장소)이며, 참가자는 `Meet` 블록이 이 약속을 가리키는 NPC 입니다. */
-    struct ScheduleAppointmentDef
+    REFLECT()
+    struct SW_GF_API ScheduleAppointmentDef
     {
-        hashed_string         _id{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Required )
         hashed_string         _place{};
         ScheduleCondition     _condition{};
         vector<hashed_string> _listAttendee{}; ///< 읽을 때 채운다(읽은 순서)
         int32                 _startMinute{ 0 };
         int32                 _endMinute{ 0 };
-        int32                 _waitMinutes{ 30 }; ///< 시작 뒤 이만큼 기다려도 모두 오지 않으면 그날 약속은 깨진다
-        int32                 _priority{ 50 };
+        PROPERTY( Name = "wait", Min = 0 )
+        int32 _waitMinutes{ 30 }; ///< 시작 뒤 이만큼 기다려도 모두 오지 않으면 그날 약속은 깨진다
+        PROPERTY()
+        int32 _priority{ 50 };
     };
 } // namespace sw
 

@@ -8,6 +8,7 @@
 
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -19,16 +20,8 @@ namespace sw
     {
         struct ScheduleCatalogInternal
         {
-            static constexpr const utf8* kArrCalendarAttribute[]    = { "days", "seasons", "weathers" };
-            static constexpr const utf8* kArrPlaceAttribute[]       = { "id", "area", "position", "radius" };
-            static constexpr const utf8* kArrSpotAttribute[]        = { "id", "kind", "area", "position", "capacity" };
-            static constexpr const utf8* kArrInterruptAttribute[]   = { "id", "priority", "timeout" };
-            static constexpr const utf8* kArrAppointmentAttribute[] = { "id", "place", "start", "end", "wait", "priority" };
-            static constexpr const utf8* kArrArchetypeAttribute[]   = { "id", "parent" };
-            static constexpr const utf8* kArrNPCAttribute[]         = { "id", "archetype", "home", "speed", "idle", "tags" };
-            static constexpr const utf8* kArrRoutineAttribute[]     = { "id", "priority" };
-            static constexpr const utf8* kArrEventAttribute[]       = { "id", "priority", "npcs", "archetypes" };
-            static constexpr const utf8* kArrBlockAttribute[]       = { "start", "end", "activity", "place", "objectKind", "appointment", "animation", "radius", "every", "overnight" };
+            static constexpr const utf8* kArrCalendarAttribute[] = { "days", "seasons", "weathers" };
+            static constexpr const utf8* kArrBlockAttribute[]    = { "start", "end", "activity", "place", "objectKind", "appointment", "animation", "radius", "every", "overnight" };
             /** @brief 원소를 읽는 바퀴입니다 — 가리켜지는 것을 먼저 읽어 파일 안 순서와 상관없이 이름을 검사한다. */
             struct ElementPass
             {
@@ -205,9 +198,8 @@ namespace sw
             loadCalendar( node, sourceName );
             return 0;
         }
-        const utf8* pID = XMLReadUtil::findRequiredID( node, sourceName );
-        if ( pID == nullptr )
-            return 0;
+        // id 는 원소마다의 칸 구조체가 필수로 읽는다 — 여기서는 오류 문장에 쓸 글만 꺼낸다.
+        const utf8* pID = node.getAttributeText( "id" ).data();
         if ( StringUtil::equals( pName, "Place" ) )
             loadPlace( node, sourceName, pID );
         else if ( StringUtil::equals( pName, "Spot" ) )
@@ -236,18 +228,9 @@ namespace sw
 
     void ScheduleCatalog::loadPlace( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
-        using Internal = ScheduleCatalogInternal;
-        Internal::warnUnknownAttributes( node, Internal::kArrPlaceAttribute, false, sourceName );
         // 위치 없는 장소를 원점에 두지 않는다 — 읽히지 않으면 오류를 알리고 장소를 더하지 않는다(그 장소를 가리키는 약속이 "unknown place" 로 걸러진다).
         SchedulePlaceDef place;
-        float3           position{};
-        const bool       bValidPosition = XMLReadUtil::readRequiredFloat3( node, "position", sourceName, position );
-
-        place._id               = hashed_string( pID );
-        place._area             = hashed_string( node.getAttributeText( "area" ) );
-        place._position         = position;
-        const bool bValidRadius = XMLReadUtil::readOptionalNumber( node, "radius", sourceName, 0.0f, MathUtil::kMaxFloat, place._radius );
-        if ( bValidPosition && bValidRadius )
+        if ( XMLFields::readFields( node, place, sourceName ) )
             (void)_placeCatalog.add( place );
         else
             SW_LOG_ERROR_ID( "ScheduleCatalog.PlaceInvalidFieldsSkipped", "%#: place '%#' has invalid fields - skipped", sourceName, pID );
@@ -255,15 +238,8 @@ namespace sw
 
     void ScheduleCatalog::loadSpot( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
-        using Internal = ScheduleCatalogInternal;
-        Internal::warnUnknownAttributes( node, Internal::kArrSpotAttribute, false, sourceName );
         ScheduleSpotDef spot;
-        spot._id                  = hashed_string( pID );
-        spot._kind                = hashed_string( node.getAttributeText( "kind" ) );
-        spot._area                = hashed_string( node.getAttributeText( "area" ) );
-        const bool bValidCapacity = XMLReadUtil::readOptionalNumber( node, "capacity", sourceName, 1, MathUtil::kMaxInt32, spot._capacity );
-        const bool bValidPosition = XMLReadUtil::readRequiredFloat3( node, "position", sourceName, spot._position );
-        if ( bValidCapacity == false || bValidPosition == false )
+        if ( XMLFields::readFields( node, spot, sourceName ) == false ) // 종류 · 위치 필수, 수용 >= 1
             SW_LOG_ERROR_ID( "ScheduleCatalog.SpotInvalidFieldsSkipped", "%#: spot '%#' has invalid fields - skipped", sourceName, pID );
         else if ( spot._kind.empty() )
             SW_LOG_ERROR_ID( "ScheduleCatalog.SpotNoKindSkipped", "%#: spot '%#' has no kind - skipped", sourceName, pID );
@@ -273,13 +249,8 @@ namespace sw
 
     void ScheduleCatalog::loadInterrupt( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
-        using Internal = ScheduleCatalogInternal;
-        Internal::warnUnknownAttributes( node, Internal::kArrInterruptAttribute, false, sourceName );
         ScheduleInterruptDef interrupt;
-        interrupt._id = hashed_string( pID );
-        bool bValid   = XMLReadUtil::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, interrupt._priority );
-        bValid        = XMLReadUtil::readOptionalNumber( node, "timeout", sourceName, 0, MathUtil::kMaxInt32, interrupt._timeoutMinutes ) && bValid;
-        if ( bValid )
+        if ( XMLFields::readFields( node, interrupt, sourceName ) )
             (void)_interruptCatalog.add( interrupt );
         else
             SW_LOG_ERROR_ID( "ScheduleCatalog.InterruptInvalidFieldsSkipped", "%#: interrupt '%#' has invalid fields - skipped", sourceName, pID );
@@ -288,15 +259,11 @@ namespace sw
     void ScheduleCatalog::loadAppointment( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         using Internal = ScheduleCatalogInternal;
-        Internal::warnUnknownAttributes( node, Internal::kArrAppointmentAttribute, true, sourceName );
         ScheduleAppointmentDef appointment;
-        appointment._id          = hashed_string( pID );
-        appointment._place       = hashed_string( node.getAttributeText( "place" ) );
-        bool bValid              = true;
+        // 시각(H:MM)과 조건 속성은 손으로 읽는다.
+        bool bValid              = XMLFields::readFields( node, appointment, sourceName, { "start", "end" }, &ScheduleCondition::isConditionAttribute );
         appointment._startMinute = Internal::readClock( node, "start", sourceName, pID, bValid ).value_or( -1 );
         appointment._endMinute   = Internal::readClock( node, "end", sourceName, pID, bValid ).value_or( -1 );
-        bValid                   = XMLReadUtil::readOptionalNumber( node, "wait", sourceName, 0, MathUtil::kMaxInt32, appointment._waitMinutes ) && bValid;
-        bValid                   = XMLReadUtil::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, appointment._priority ) && bValid;
         bValid                   = appointment._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
         if ( findPlace( appointment._place ) == nullptr )
         {
@@ -329,11 +296,9 @@ namespace sw
 
     void ScheduleCatalog::loadArchetype( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
-        using Internal = ScheduleCatalogInternal;
-        Internal::warnUnknownAttributes( node, Internal::kArrArchetypeAttribute, false, sourceName );
         ScheduleArchetypeDef archetype;
-        archetype._id     = hashed_string( pID );
-        archetype._parent = hashed_string( node.getAttributeText( "parent" ) );
+        if ( XMLFields::readFields( node, archetype, sourceName ) == false )
+            return;
         readRoutineChildren( node, sourceName, "archetype", pID, archetype._listRoutine );
         (void)_archetypeCatalog.add( archetype );
     }
@@ -341,17 +306,14 @@ namespace sw
     bool ScheduleCatalog::loadNPC( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         using Internal = ScheduleCatalogInternal;
-        Internal::warnUnknownAttributes( node, Internal::kArrNPCAttribute, false, sourceName );
         ScheduleNPCDef npc;
-        npc._id           = hashed_string( pID );
-        npc._archetype    = hashed_string( node.getAttributeText( "archetype" ) );
-        npc._home         = hashed_string( node.getAttributeText( "home" ) );
-        npc._idleActivity = hashed_string( node.findAttribute( "idle" ) != nullptr ? node.getAttributeText( "idle" ) : string_view( "StayHome" ) );
-        if ( XMLReadUtil::readOptionalNumber( node, "speed", sourceName, ScheduleNPCDef::kMinUnitsPerMinute, MathUtil::kMaxFloat, npc._unitsPerMinute ) == false )
+        if ( XMLFields::readFields( node, npc, sourceName, { "tags" } ) == false ) // 속도 >= 0.01 은 PROPERTY 가 본다
         {
-            SW_LOG_ERROR_ID( "ScheduleCatalog.NpcInvalidSpeedSkipped", "%#: npc '%#' has an invalid speed - skipped", sourceName, pID );
+            SW_LOG_ERROR_ID( "ScheduleCatalog.NpcInvalidFieldsSkipped", "%#: npc '%#' has invalid fields - skipped", sourceName, pID );
             return false;
         }
+        if ( npc._idleActivity.empty() )
+            npc._idleActivity = hashed_string( "StayHome" ); // 적지 않으면 집에 머문다
         Internal::parseTagList( node.getAttributeText( "tags" ), npc._listTag );
         if ( npc._home.empty() == false && findPlace( npc._home ) == nullptr )
             SW_LOG_WARNING_ID( "ScheduleCatalog.NpcUnknownHome", "%#: npc '%#' has an unknown home '%#'", sourceName, pID, npc._home.c_str() );
@@ -368,11 +330,8 @@ namespace sw
 
     void ScheduleCatalog::loadEvent( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
-        using Internal = ScheduleCatalogInternal;
-        Internal::warnUnknownAttributes( node, Internal::kArrEventAttribute, true, sourceName );
         ScheduleEventDef event;
-        event._id   = hashed_string( pID );
-        bool bValid = XMLReadUtil::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, event._priority );
+        bool             bValid = XMLFields::readFields( node, event, sourceName, { "npcs", "archetypes" }, &ScheduleCondition::isConditionAttribute );
         ScheduleCondition::parseNameList( node.getAttributeText( "npcs" ), event._listNPC );
         ScheduleCondition::parseNameList( node.getAttributeText( "archetypes" ), event._listArchetype );
         bValid = event._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
@@ -401,10 +360,7 @@ namespace sw
 
     bool ScheduleCatalog::readRoutine( const XMLNode& node, string_view sourceName, string_view ownerName, ScheduleRoutineDef& outRoutine ) const
     {
-        using Internal = ScheduleCatalogInternal;
-        Internal::warnUnknownAttributes( node, Internal::kArrRoutineAttribute, true, sourceName );
-        outRoutine._id = hashed_string( node.getAttributeText( "id" ) );
-        bool bValid    = XMLReadUtil::readOptionalNumber( node, "priority", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, outRoutine._priority );
+        bool bValid = XMLFields::readFields( node, outRoutine, sourceName, {}, &ScheduleCondition::isConditionAttribute );
         if ( outRoutine._id.empty() )
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.RoutineWithoutIdSkipped", "%#: '%#' has a <Routine> without an id - skipped", sourceName, ownerName );
