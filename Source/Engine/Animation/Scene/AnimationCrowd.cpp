@@ -16,6 +16,8 @@
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Profiling/FrameProfiler.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -81,23 +83,11 @@ namespace sw
 
     bool AnimationCrowdSettings::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
-        if ( XMLReadUtil::hasOnlyKnownNames( root, { "variations_per_clip", "bucket_keep_seconds", "vertex_animation_frames_per_second" }, {}, sourceLabel ) == false )
+        // 셋 다 필수다. 범위 밖 값은 자르지 않고 거절한다(칸 · 범위는 PROPERTY 가 정본이다).
+        AnimationCrowdSettings loaded;
+        if ( XMLFields::readFields( root, loaded, sourceLabel ) == false || XMLNameCheck::reportUnknownChildren( root, nullptr, 0, sourceLabel ) == false )
             return false;
-        // 셋 다 필수다. 범위 밖 값은 자르지 않고 거절한다.
-        const std::optional<uint32>  variations            = root.readRequiredAttribute<uint32>( "variations_per_clip" );
-        const std::optional<float32> keep                  = root.readRequiredAttribute<float32>( "bucket_keep_seconds" );
-        const std::optional<float32> frameRate             = root.readRequiredAttribute<float32>( "vertex_animation_frames_per_second" );
-        const bool                   bAllRead              = variations.has_value() && keep.has_value() && frameRate.has_value();
-        const bool                   bInvalidCrowdSettings = bAllRead == false || *variations < 1 || *keep < 0.0f || *frameRate <= 0.0f;
-        if ( bInvalidCrowdSettings )
-        {
-            SW_LOG_ERROR_ID( "AnimationCrowd.AnimationCrowdSettingsVariations", "Animation crowd settings '%#': variations_per_clip (>= 1), bucket_keep_seconds (>= 0) and vertex_animation_frames_per_second (> 0) are required",
-                             sourceLabel );
-            return false;
-        }
-        _variationsPerClip              = *variations;
-        _bucketKeepSeconds              = *keep;
-        _vertexAnimationFramesPerSecond = *frameRate;
+        *this = loaded;
         return true;
     }
 

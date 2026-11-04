@@ -122,15 +122,15 @@ namespace
     };
 
     const BadTileSet kArrBadTileSet[] = {
-        {                                                        "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\" cell=\"4\"/></TileSet>",      "TileSet.Invalid"}, // 아틀라스 밖 칸
-        {                           "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\" cell=\"0\"/><Tile name=\"a\" cell=\"1\"/></TileSet>",      "TileSet.Invalid"}, // 같은 이름 둘
-        {                                          "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\" cell=\"0\" color=\"red\"/></TileSet>", "Xml.UnknownAttribute"}, // 모르는 속성
-        {                                                      "<TileSet columns=\"2\" rows=\"2\"><Sprite name=\"a\" cell=\"0\"/></TileSet>",      "TileSet.Invalid"}, // 모르는 요소
-        {         "<TileSet columns=\"2\" rows=\"2\"><RuleTile name=\"a\" cell=\"0\"><Rule pattern=\"oo\" cell=\"1\"/></RuleTile></TileSet>",      "TileSet.Invalid"}, // 아홉 글자가 아닌 패턴
-        {"<TileSet columns=\"2\" rows=\"2\"><RuleTile name=\"a\" cell=\"0\"><Rule pattern=\"... .z. ...\" cell=\"1\"/></RuleTile></TileSet>",      "TileSet.Invalid"}, // 모르는 패턴 글자
-        {                                                    "<TileSet columns=\"2\" rows=\"2\"><RuleTile name=\"a\" cell=\"0\"/></TileSet>",      "TileSet.Invalid"}, // 규칙 없는 규칙 타일
-        {                                                    "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\" frames=\"0 1\"/></TileSet>",      "TileSet.Invalid"}, // fps 없는 애니메이션
-        {                                                                   "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\"/></TileSet>",      "TileSet.Invalid"}, // 모습 없음
+        {                                                        "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\" cell=\"4\"/></TileSet>",        "TileSet.Invalid"}, // 아틀라스 밖 칸
+        {                           "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\" cell=\"0\"/><Tile name=\"a\" cell=\"1\"/></TileSet>",        "TileSet.Invalid"}, // 같은 이름 둘
+        {                                          "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\" cell=\"0\" color=\"red\"/></TileSet>", "XMLFields.UnknownField"}, // 모르는 속성
+        {                                                      "<TileSet columns=\"2\" rows=\"2\"><Sprite name=\"a\" cell=\"0\"/></TileSet>",        "TileSet.Invalid"}, // 모르는 요소
+        {         "<TileSet columns=\"2\" rows=\"2\"><RuleTile name=\"a\" cell=\"0\"><Rule pattern=\"oo\" cell=\"1\"/></RuleTile></TileSet>",        "TileSet.Invalid"}, // 아홉 글자가 아닌 패턴
+        {"<TileSet columns=\"2\" rows=\"2\"><RuleTile name=\"a\" cell=\"0\"><Rule pattern=\"... .z. ...\" cell=\"1\"/></RuleTile></TileSet>",        "TileSet.Invalid"}, // 모르는 패턴 글자
+        {                                                    "<TileSet columns=\"2\" rows=\"2\"><RuleTile name=\"a\" cell=\"0\"/></TileSet>",        "TileSet.Invalid"}, // 규칙 없는 규칙 타일
+        {                                                    "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\" frames=\"0 1\"/></TileSet>",        "TileSet.Invalid"}, // fps 없는 애니메이션
+        {                                                                   "<TileSet columns=\"2\" rows=\"2\"><Tile name=\"a\"/></TileSet>",        "TileSet.Invalid"}, // 모습 없음
     };
 
     const utf8* const kArrBadTileLayer[] = {

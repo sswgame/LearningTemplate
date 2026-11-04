@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -80,6 +81,54 @@ namespace sw
 
 namespace sw
 {
+    /** @brief `<TileSet>` 루트의 칸입니다. 그림 셀 수(`columns` × `rows`)와 타일 한 칸의 월드 크기(`tileSize`)는 모두 양수다(적지 않으면 1). */
+    REFLECT()
+    struct SW_API TileSetRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _name{};
+        PROPERTY()
+        string _atlas{};
+        PROPERTY()
+        string _normalAtlas{};
+        PROPERTY( Min = 1 )
+        int32 _columns{ 1 };
+        PROPERTY( Min = 1 )
+        int32 _rows{ 1 };
+        PROPERTY( Min = 0.0001 )
+        float32 _tileSize{ 1.0f };
+    };
+
+    /** @brief `<Tile>` · `<RuleTile>` 의 칸입니다. 그림(`cell` · `frames` · `fps`)은 서로 배타라 손으로 읽는다(`TileSetAsset::parseVisual`). */
+    REFLECT()
+    struct SW_API TileBrushFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY()
+        bool _bSolid{ false };
+        /** @brief 길 찾기 이동 비용입니다(255 는 막힘 — `NavGrid`). */
+        PROPERTY( Min = 1, Max = 255 )
+        int32 _navCost{ 1 };
+        /** @brief 이웃 규칙에서 지도 밖을 무엇으로 볼지입니다(`same` · `empty`, 비우면 empty). */
+        PROPERTY()
+        string _outside{};
+    };
+
+    /** @brief `<RuleTile><Rule pattern>` 의 칸입니다. 그림은 브러시와 같이 손으로 읽는다. */
+    REFLECT()
+    struct SW_API TileRuleFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _pattern{};
+    };
+
     /**
      * @class TileSetAsset
      * @brief 아틀라스 하나와 그 셀로 만든 브러시 목록입니다. 유니티의 Tile Palette, Rule Tile, Animated Tile, Godot 의 TileSet(terrain, animation, physics,

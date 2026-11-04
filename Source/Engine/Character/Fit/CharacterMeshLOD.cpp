@@ -13,6 +13,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include <meshoptimizer.h>
@@ -67,27 +68,20 @@ namespace sw
         float32 previousScreen = 1.0f;
         for ( XMLNode level = root.findChild( "Level" ); level.isValid(); level = level.findNextSibling( "Level" ) )
         {
-            if ( XMLReadUtil::hasOnlyKnownNames( level, { "triangle_ratio", "max_error", "screen_size", "lock_border", "permissive", "prune" }, {}, sourceLabel ) == false )
+            CharacterLODLevelRule rule;
+            if ( XMLFields::readFields( level, rule, sourceLabel ) == false )
                 return false;
-            const std::optional<float32> ratio      = level.readRequiredAttribute<float32>( "triangle_ratio" );
-            const std::optional<float32> error      = level.readRequiredAttribute<float32>( "max_error" );
-            const std::optional<float32> screen     = level.readRequiredAttribute<float32>( "screen_size" );
-            const std::optional<bool>    lockBorder = level.readRequiredAttribute<bool>( "lock_border" );
-            const std::optional<bool>    permissive = level.readRequiredAttribute<bool>( "permissive" );
-            const std::optional<bool>    prune      = level.readRequiredAttribute<bool>( "prune" );
-            // 모두 필수다. 단계가 낮아질수록 비율 · 임계값이 작아져야 한다(`Mesh::setLODs` 와 같은 규칙) — 범위 밖 값은 자르지 않고 거절한다.
-            const bool bRead  = ratio.has_value() && error.has_value() && screen.has_value() && lockBorder.has_value() && permissive.has_value() && prune.has_value();
-            const bool bValid = bRead && 0.0f < *ratio && *ratio < previousRatio && *error >= 0.0f && 0.0f < *screen && *screen < previousScreen;
+            // 단계가 낮아질수록 비율 · 임계값이 작아져야 한다(`Mesh::setLODs` 와 같은 규칙) — 칸 · 범위는 PROPERTY 가 보고 여기서는 앞 단계와의 관계만 본다.
+            const bool bValid = 0.0f < rule._triangleRatio && rule._triangleRatio < previousRatio && 0.0f < rule._screenSize && rule._screenSize < previousScreen;
             if ( bValid == false )
             {
-                SW_LOG_ERROR_ID( "CharacterMeshLOD.SettingsLevelInvalid",
-                                 "Character LOD settings '%#': level %# needs triangle_ratio and screen_size in (0, previous level), max_error >= 0 and lock_border / permissive / prune", sourceLabel,
+                SW_LOG_ERROR_ID( "CharacterMeshLOD.SettingsLevelInvalid", "Character LOD settings '%#': level %# needs triangle_ratio and screen_size in (0, previous level)", sourceLabel,
                                  static_cast<uint32>( _listLevel.size() ) + 1u );
                 return false;
             }
-            _listLevel.push_back( CharacterLODLevelRule{ *ratio, *error, *screen, *lockBorder, *permissive, *prune } );
-            previousRatio  = *ratio;
-            previousScreen = *screen;
+            _listLevel.push_back( rule );
+            previousRatio  = rule._triangleRatio;
+            previousScreen = rule._screenSize;
         }
         return true;
     }

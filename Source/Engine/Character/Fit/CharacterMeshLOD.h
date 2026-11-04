@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -20,14 +21,23 @@ namespace sw
     class XMLNode;
 
     /** @brief 단계 하나의 단순화 규칙입니다. 값은 늘 데이터(`engine/character/characterlod.xml`)가 정한다 — 셋 다 필수 속성이라 기본값이 없다. */
-    struct CharacterLODLevelRule
+    REFLECT()
+    struct SW_API CharacterLODLevelRule
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "triangle_ratio", Required, Min = 0.0, Max = 1.0 )
         float32 _triangleRatio{ 0.0f }; ///< LOD 0 삼각형 수 대비 목표 비율(0..1, 단계마다 작아진다)
-        float32 _maxError{ 0.0f };      ///< 허용 오차(메시 크기 대비 비율, `meshopt_simplify` 의 target_error)
-        float32 _screenSize{ 0.0f };    ///< 이 단계로 넘어가는 화면 크기 임계값(0..1, 단계마다 작아진다 — `MeshLODLevel::_screenSize`)
-        bool    _bLockBorder{ false };  ///< 열린 가장자리(소매 · 머리카락 · 숨긴 몸의 경계)를 옮기지 않는다 — 가까운 단계에서 옷과 몸 사이 틈을 막는다(`meshopt_SimplifyLockBorder`)
-        bool    _bPermissive{ false };  ///< 이음매(UV · 각진 모서리의 갈린 정점)를 넘어 줄인다 — 먼 단계에서 정점을 줄인다(`meshopt_SimplifyPermissive`, 법선을 오차에 넣는다)
-        bool    _bPrune{ false };       ///< 작은 떨어진 조각(눈썹 등)을 지운다 — 가장 먼 단계(`meshopt_SimplifyPrune`)
+        PROPERTY( Name = "max_error", Required, Min = 0.0 )
+        float32 _maxError{ 0.0f }; ///< 허용 오차(메시 크기 대비 비율, `meshopt_simplify` 의 target_error)
+        PROPERTY( Name = "screen_size", Required, Min = 0.0, Max = 1.0 )
+        float32 _screenSize{ 0.0f }; ///< 이 단계로 넘어가는 화면 크기 임계값(0..1, 단계마다 작아진다 — `MeshLODLevel::_screenSize`)
+        PROPERTY( Name = "lock_border", Required )
+        bool _bLockBorder{ false }; ///< 열린 가장자리(소매 · 머리카락 · 숨긴 몸의 경계)를 옮기지 않는다 — 가까운 단계에서 옷과 몸 사이 틈을 막는다(`meshopt_SimplifyLockBorder`)
+        PROPERTY( Required )
+        bool _bPermissive{ false }; ///< 이음매(UV · 각진 모서리의 갈린 정점)를 넘어 줄인다 — 먼 단계에서 정점을 줄인다(`meshopt_SimplifyPermissive`, 법선을 오차에 넣는다)
+        PROPERTY( Required )
+        bool _bPrune{ false }; ///< 작은 떨어진 조각(눈썹 등)을 지운다 — 가장 먼 단계(`meshopt_SimplifyPrune`)
     };
 
     /**

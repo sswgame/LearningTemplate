@@ -11,6 +11,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -21,10 +22,14 @@ namespace sw
      * @struct SkeletonBoneLODLevel
      * @brief 본 LOD 한 단계입니다. 화면 크기가 `_maxScreenSize` 이하이면 이 단계와 앞 단계들이 뺀 본(과 그 자손)을 풀지 않습니다.
      */
-    struct SkeletonBoneLODLevel
+    REFLECT()
+    struct SW_API SkeletonBoneLODLevel
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "max_screen_size", Required, Min = 0.0 )
         float32               _maxScreenSize{ 0.0f };
-        vector<hashed_string> _listRemovedBone;
+        vector<hashed_string> _listRemovedBone; ///< `<remove><item>` 자식(칸이 아니다)
     };
 } // namespace sw
 

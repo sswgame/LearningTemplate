@@ -23,6 +23,8 @@
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshVertexAnimation.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
+#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -62,19 +64,16 @@ namespace sw
 
     bool VertexAnimationCookList::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
-        if ( XMLReadUtil::hasOnlyKnownNames( root, { "mesh", "skeleton", "clip_folder" }, { "clips" }, sourceLabel ) == false )
+        static constexpr const utf8* kArrRootChild[] = { "clips" };
+        if ( XMLFields::readFields( root, *this, sourceLabel ) == false || XMLNameCheck::reportUnknownChildren( root, kArrRootChild, sourceLabel ) == false )
             return false;
         const XMLNode clips                 = root.findChild( "clips" );
-        const bool    bInvalidAnimationList = root.findAttribute( "mesh" ) == nullptr || root.findAttribute( "skeleton" ) == nullptr ||
-                                           root.findAttribute( "clip_folder" ) == nullptr || clips.isValid() == false || clips.findChild().isValid() == false;
+        const bool    bInvalidAnimationList = clips.isValid() == false || clips.findChild().isValid() == false;
         if ( bInvalidAnimationList )
         {
-            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListNeeds", "Vertex animation list '%#' needs mesh, skeleton, clip_folder and a non-empty <clips> list", sourceLabel );
+            SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListNeeds", "Vertex animation list '%#' needs a non-empty <clips> list", sourceLabel );
             return false;
         }
-        _meshPath     = string{ root.getAttributeText( "mesh" ) };
-        _skeletonPath = string{ root.getAttributeText( "skeleton" ) };
-        _clipFolder   = string{ root.getAttributeText( "clip_folder" ) };
         for ( XMLNode clip = clips.findChild(); clip.isValid(); clip = clip.findNextSibling() )
         {
             if ( string_view{ clip.getName() } != "item" )

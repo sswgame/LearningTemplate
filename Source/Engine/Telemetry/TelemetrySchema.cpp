@@ -18,10 +18,7 @@ namespace sw
     {
         struct TelemetrySchemaInternal
         {
-            static constexpr const utf8* kRootName           = "TelemetrySchema";
-            static constexpr int32       kUnversionedSchema  = 1;    ///< `version` 을 적지 않은 스키마의 판
-            static constexpr uint32      kMinFileBytes       = 1024; ///< 스풀 파일 하나의 하한 — 사건 한 줄보다 작으면 회전만 한다
-            static constexpr uint32      kMaxBreadcrumbCount = 256;  ///< 크래시 보고에 붙이는 최근 사건 수의 상한
+            static constexpr const utf8* kRootName = "TelemetrySchema";
 
             static constexpr const utf8* kArrRootChild[]  = { "Pipeline", "Event" };
             static constexpr const utf8* kArrEventChild[] = { "Field" };

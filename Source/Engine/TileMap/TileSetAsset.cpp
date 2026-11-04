@@ -7,6 +7,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
@@ -15,7 +16,6 @@ namespace sw
     {
         struct TileSetAssetInternal
         {
-            static constexpr int32 kBlockedNavCost = 255; ///< `NavGrid` 의 막힘 값 — 이동 비용의 상한
 
             static constexpr string_view kFrameListSeparators = " ,\t"; ///< `frames` 정수 목록의 구분 글자
 
@@ -146,25 +146,16 @@ namespace sw
             SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: the root element must be <TileSet>", sourceName );
             return false;
         }
-        static constexpr const utf8* kArrRootAttribute[] = { "name", "atlas", "normalAtlas", "columns", "rows", "tileSize" };
-        if ( XMLNameCheck::reportUnknownAttributes( root, kArrRootAttribute, sourceName ) == false )
+        // 칸 · 범위는 스키마(`TileSetRootFields`)가 정본이다. 깨진 값 · 범위 밖 값은 읽기 실패다.
+        TileSetRootFields rootFields;
+        if ( XMLFields::readFields( root, rootFields, sourceName ) == false )
             return false;
-
         TileSetAsset loaded;
-        loaded._atlasPath       = string( root.getAttributeText( "atlas" ) );
-        loaded._normalAtlasPath = string( root.getAttributeText( "normalAtlas" ) );
-        // 적지 않은 칸은 TileSetAsset 의 초기값이다. 깨진 값은 읽기 실패다.
-        bool bFieldsValid = root.readOptionalAttributeInRange( "columns", MathUtil::kMinInt32, MathUtil::kMaxInt32, loaded._columnCount );
-        bFieldsValid      = root.readOptionalAttributeInRange( "rows", MathUtil::kMinInt32, MathUtil::kMaxInt32, loaded._rowCount ) && bFieldsValid;
-        bFieldsValid      = root.readOptionalAttributeInRange( "tileSize", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, loaded._tileSize ) && bFieldsValid;
-        if ( bFieldsValid == false )
-            return false;
-        const bool bInvalidTileSetSize = loaded._columnCount <= 0 || loaded._rowCount <= 0 || loaded._tileSize <= 0.0f;
-        if ( bInvalidTileSetSize )
-        {
-            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: columns, rows and tileSize must be positive", sourceName );
-            return false;
-        }
+        loaded._atlasPath       = rootFields._atlas;
+        loaded._normalAtlasPath = rootFields._normalAtlas;
+        loaded._columnCount     = rootFields._columns;
+        loaded._rowCount        = rootFields._rows;
+        loaded._tileSize        = rootFields._tileSize;
 
         for ( XMLNode node = root.findChild(); node.isValid(); node = node.findNextSibling() )
         {
@@ -186,18 +177,12 @@ namespace sw
             SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> (Tile, RuleTile)", sourceName, node.getName() );
             return false;
         }
-        static constexpr const utf8* kArrBrushAttribute[] = { "name", "cell", "frames", "fps", "solid", "navCost", "outside" };
-        if ( XMLNameCheck::reportUnknownAttributes( node, kArrBrushAttribute, sourceName ) == false )
+        TileBrushFields fields;
+        if ( XMLFields::readFields( node, fields, sourceName, { "cell", "frames", "fps" } ) == false || fields._name.empty() )
             return false;
-
         TileBrush&        brush = outBrush;
-        const string_view name  = node.getAttributeText( "name" );
-        if ( name.empty() )
-        {
-            SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: a <%#> has no name", sourceName, node.getName() );
-            return false;
-        }
-        brush._name = hashed_string( name );
+        const string_view name  = fields._name.view();
+        brush._name             = fields._name;
         if ( findBrush( brush._name ) >= 0 )
         {
             SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: brush '%#' is listed twice", sourceName, name );
@@ -205,17 +190,9 @@ namespace sw
         }
         if ( parseVisual( node, sourceName, true, brush._defaultVisual ) == false )
             return false;
-        // 적지 않은 칸은 TileBrush 의 초기값이다. 범위 밖 이동 비용은 자르지 않고 오류다.
-        std::optional<bool> bSolid;
-        int32               navCost = brush._navCost;
-        const bool          bBrushFieldsValid =
-            node.readOptionalAttribute( "solid", bSolid ) && node.readOptionalAttributeInRange( "navCost", 1, Internal::kBlockedNavCost, navCost );
-        if ( bBrushFieldsValid == false )
-            return false;
-        if ( bSolid.has_value() )
-            brush._bSolid = *bSolid ? SW_TRUE : SW_FALSE;
-        brush._navCost                        = static_cast<uint8>( navCost );
-        const string_view outside             = node.getAttributeText( "outside" );
+        brush._bSolid                         = fields._bSolid ? SW_TRUE : SW_FALSE;
+        brush._navCost                        = static_cast<uint8>( fields._navCost );
+        const string_view outside             = fields._outside;
         const bool        bInvalidOutsideMode = outside.empty() == false && StringUtil::equals( outside, "same" ) == false && StringUtil::equals( outside, "empty" ) == false;
         if ( bInvalidOutsideMode )
         {
@@ -231,13 +208,13 @@ namespace sw
                 SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: unknown element <%#> in <%#> (only <Rule> inside <RuleTile>)", sourceName, ruleNode.getName(), node.getName() );
                 return false;
             }
-            static constexpr const utf8* kArrRuleAttribute[] = { "pattern", "cell", "frames", "fps" };
-            if ( XMLNameCheck::reportUnknownAttributes( ruleNode, kArrRuleAttribute, sourceName ) == false )
+            TileRuleFields ruleFields;
+            if ( XMLFields::readFields( ruleNode, ruleFields, sourceName, { "cell", "frames", "fps" } ) == false )
                 return false;
             TileRule rule{};
-            if ( Internal::parsePattern( ruleNode.getAttributeText( "pattern" ), rule._arrNeighbor ) == false )
+            if ( Internal::parsePattern( ruleFields._pattern, rule._arrNeighbor ) == false )
             {
-                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleNode.getAttributeText( "pattern" ), name );
+                SW_LOG_ERROR_ID( "TileSet.Invalid", "%#: rule pattern '%#' of '%#' must be nine of . o x", sourceName, ruleFields._pattern.c_str(), name );
                 return false;
             }
             if ( parseVisual( ruleNode, sourceName, true, rule._visual ) == false )

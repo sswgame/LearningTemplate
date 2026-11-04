@@ -20,10 +20,6 @@ namespace sw
     {
         struct UserSettingsSchemaInternal
         {
-            static constexpr int32 kMaxSchemaVersion = 1 << 20; ///< 판 번호의 상한(깨진 큰 수를 거른다)
-            static constexpr int32 kMaxBindIndex     = 15;      ///< 액션 하나의 바인딩 번호 상한
-            static constexpr int32 kMaxCoreCount     = 4096;    ///< 자동 감지 규칙의 코어 수 상한
-            static constexpr int32 kMaxMemoryMb      = 1 << 30; ///< 자동 감지 규칙의 메모리(MB) 상한
 
             /** @brief 키 바인딩 설정이 대상을 적지 않았을 때 쓰는 핸들러입니다(입력 맵 리바인딩). */
             static constexpr utf8 kKeyBindingHandler[] = "input.keyBinding";

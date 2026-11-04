@@ -9,6 +9,7 @@
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 
 namespace sw
@@ -18,29 +19,6 @@ namespace sw
         struct Render2DSettingsInternal
         {
             static constexpr const utf8* kDefaultLayerName = "Default";
-
-            /** @brief 정렬 방식 이름입니다. 모르는 이름은 읽기 오류입니다. */
-            struct SortModeName
-            {
-                const utf8*          _pName;
-                TransparencySortMode _mode;
-            };
-            static constexpr SortModeName kArrSortModeName[] = {
-                {      "Auto",       TransparencySortMode::Auto},
-                {  "Distance",   TransparencySortMode::Distance},
-                {  "ViewAxis",   TransparencySortMode::ViewAxis},
-                {"CustomAxis", TransparencySortMode::CustomAxis},
-            };
-
-            /** @brief "x y z" 를 읽습니다. 숫자 셋이 아니면(넷째 토큰이 숫자든 아니든) false 입니다. */
-            [[nodiscard]] static bool parseFloat3( string_view text, float3& outValue )
-            {
-                float32 arrValue[3]{};
-                if ( StringUtil::parseExactFloats( text, " ,\t", arrValue, 3 ) == false )
-                    return false;
-                outValue = float3{ arrValue[0], arrValue[1], arrValue[2] };
-                return true;
-            }
         };
     } // namespace
 
@@ -126,42 +104,22 @@ namespace sw
 
     bool Render2DSettings::readTransparencySort( const XMLNode& node, string_view sourceName )
     {
-        using Internal                           = Render2DSettingsInternal;
-        static constexpr const utf8* kArrKnown[] = { "mode", "axis" };
-        if ( XMLNameCheck::reportUnknownAttributes( node, kArrKnown, sourceName ) == false )
+        Render2DTransparencySortFields fields;
+        if ( XMLFields::readFields( node, fields, sourceName ) == false || XMLNameCheck::reportUnknownChildren( node, nullptr, 0, sourceName ) == false )
             return false;
-        const string_view modeName = node.getAttributeText( "mode" );
-        bool              bFound   = modeName.empty();
-        for ( const Internal::SortModeName& entry : Internal::kArrSortModeName )
+        if ( fields._axis.getLengthSquared() <= MathUtil::kEpsilon )
         {
-            if ( StringUtil::equals( modeName, entry._pName ) )
-            {
-                _sortMode = entry._mode;
-                bFound    = true;
-            }
-        }
-        if ( bFound == false )
-        {
-            SW_LOG_ERROR_ID( "Render2DSettings.UnknownTransparencySortMode", "%#: unknown transparency sort mode '%#' (Auto, Distance, ViewAxis, CustomAxis)", sourceName, modeName );
+            SW_LOG_ERROR_ID( "Render2DSettings.TransparencySortAxisMust", "%#: transparency sort axis must have a non-zero length", sourceName );
             return false;
         }
-        const string_view axisText = node.getAttributeText( "axis" );
-        if ( axisText.empty() )
-            return true;
-        float3 axis{};
-        if ( Internal::parseFloat3( axisText, axis ) == false || axis.getLengthSquared() <= MathUtil::kEpsilon )
-        {
-            SW_LOG_ERROR_ID( "Render2DSettings.TransparencySortAxisMust", "%#: transparency sort axis '%#' must be three numbers with a non-zero length", sourceName, axisText );
-            return false;
-        }
-        axis.normalize();
-        _sortAxis = axis;
+        _sortMode = fields._mode;
+        _sortAxis = fields._axis;
+        _sortAxis.normalize();
         return true;
     }
 
     bool Render2DSettings::readSortingLayers( const XMLNode& node, string_view sourceName )
     {
-        static constexpr const utf8* kArrKnown[] = { "name" };
         for ( XMLNode layerNode = node.findChild(); layerNode.isValid(); layerNode = layerNode.findNextSibling() )
         {
             if ( StringUtil::equals( layerNode.getName(), "Layer" ) == false )
@@ -169,18 +127,13 @@ namespace sw
                 SW_LOG_ERROR_ID( "Render2DSettings.UnknownElementSortingLayersOnly", "%#: unknown element <%#> in <SortingLayers> (only <Layer name=\"...\"/>)", sourceName, layerNode.getName() );
                 return false;
             }
-            if ( XMLNameCheck::reportUnknownAttributes( layerNode, kArrKnown, sourceName ) == false )
+            Render2DSortingLayerFields fields;
+            if ( XMLFields::readFields( layerNode, fields, sourceName ) == false || fields._name.empty() )
                 return false;
-            const string_view name = layerNode.getAttributeText( "name" );
-            if ( name.empty() )
-            {
-                SW_LOG_ERROR_ID( "Render2DSettings.SortingLayerNoName", "%#: a sorting layer has no name", sourceName );
-                return false;
-            }
-            const hashed_string layerName( name );
+            const hashed_string& layerName = fields._name;
             if ( findSortingLayer( layerName ) >= 0 )
             {
-                SW_LOG_ERROR_ID( "Render2DSettings.SortingLayerListedTwice", "%#: sorting layer '%#' is listed twice", sourceName, name );
+                SW_LOG_ERROR_ID( "Render2DSettings.SortingLayerListedTwice", "%#: sorting layer '%#' is listed twice", sourceName, layerName.c_str() );
                 return false;
             }
             _listSortingLayer.push_back( layerName );

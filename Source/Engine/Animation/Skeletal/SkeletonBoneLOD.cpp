@@ -11,6 +11,7 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
@@ -75,21 +76,20 @@ namespace sw
         size_t levelIndex{ 0 };
         for ( XMLNode level = levels.findChild(); level.isValid(); level = level.findNextSibling(), ++levelIndex )
         {
-            if ( string_view{ level.getName() } != "level" || XMLReadUtil::hasOnlyKnownNames( level, { "max_screen_size" }, { "remove" }, sourceLabel ) == false )
+            SkeletonBoneLODLevel entry{};
+            if ( string_view{ level.getName() } != "level" || XMLFields::readFields( level, entry, sourceLabel ) == false ||
+                 XMLReadUtil::hasOnlyKnownNames( level, { "max_screen_size" }, { "remove" }, sourceLabel ) == false )
             {
                 SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelsHolds", "Bone LOD '%#': <levels> holds only <level> elements", sourceLabel );
                 return false;
             }
-            const XMLNode                removed          = level.findChild( "remove" );
-            const std::optional<float32> maxScreenSize    = level.readRequiredAttribute<float32>( "max_screen_size" );
-            const bool                   bInvalidLODLevel = maxScreenSize.has_value() == false || removed.isValid() == false || removed.findChild().isValid() == false;
+            const XMLNode removed          = level.findChild( "remove" );
+            const bool    bInvalidLODLevel = removed.isValid() == false || removed.findChild().isValid() == false;
             if ( bInvalidLODLevel )
             {
-                SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelNeeds", "Bone LOD '%#': level %# needs 'max_screen_size' (number) and a non-empty <remove> list", sourceLabel, levelIndex );
+                SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelNeeds", "Bone LOD '%#': level %# needs a non-empty <remove> list", sourceLabel, levelIndex );
                 return false;
             }
-            SkeletonBoneLODLevel entry{};
-            entry._maxScreenSize = *maxScreenSize;
             if ( _listLevel.empty() == false && entry._maxScreenSize >= _listLevel.back()._maxScreenSize )
             {
                 SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelMax", "Bone LOD '%#': level %# max_screen_size %# must be smaller than the previous level's", sourceLabel, levelIndex, entry._maxScreenSize );

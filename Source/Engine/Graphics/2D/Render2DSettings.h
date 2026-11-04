@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -20,12 +21,35 @@ namespace sw
      * @enum TransparencySortMode
      * @brief 같은 정렬 레이어와 순서 안에서 투명 물체의 앞뒤를 무엇으로 가를지 정합니다(유니티 `TransparencySortMode`).
      */
+    ENUM()
     enum class TransparencySortMode : uint8
     {
         Auto = 0,   ///< 원근 카메라는 눈까지의 거리, 직교 카메라는 시선 축 깊이를 씁니다(유니티 Default)
         Distance,   ///< 항상 눈까지의 거리를 씁니다(유니티 Perspective)
         ViewAxis,   ///< 항상 시선 축 깊이를 씁니다(유니티 Orthographic)
         CustomAxis, ///< 데이터가 지정한 축 위의 깊이를 씁니다. 탑다운이면 (0, 1, 0) 으로 위쪽 것이 뒤에 그려집니다(유니티 Custom Axis)
+    };
+
+    /** @brief `<TransparencySort mode axis>` 입니다. `axis` 는 `CustomAxis` 의 축이고 길이가 0 이 아니어야 한다(읽은 뒤 정규화한다). */
+    REFLECT()
+    struct SW_API Render2DTransparencySortFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        TransparencySortMode _mode{ TransparencySortMode::Auto };
+        PROPERTY()
+        float3 _axis{ 0.0f, 0.0f, 1.0f };
+    };
+
+    /** @brief `<SortingLayers><Layer name>` 입니다. */
+    REFLECT()
+    struct SW_API Render2DSortingLayerFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
     };
 
     /**

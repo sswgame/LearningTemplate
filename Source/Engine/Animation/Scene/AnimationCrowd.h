@@ -21,6 +21,7 @@
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
@@ -64,10 +65,16 @@ namespace sw
      * @struct AnimationCrowdSettings
      * @brief 군중 공유 설정입니다(데이터 `engine/animation/animationcrowd.xml`): `<AnimationCrowdSettings variations_per_clip="4" bucket_keep_seconds="2" vertex_animation_frames_per_second="15" />`.
      */
+    REFLECT()
     struct SW_API AnimationCrowdSettings
     {
-        uint32  _variationsPerClip{ 4 };                  ///< 클립 하나를 몇 개의 위상으로 나눌지 정한다(많을수록 덜 똑같아 보이지만 묶음과 평가가 늘어난다)
-        float32 _bucketKeepSeconds{ 2.0f };               ///< 멤버가 없는 묶음을 이 시간(초)이 지난 뒤 지운다(상태가 오가며 메시를 다시 만들지 않게 하려는 것이다)
+        REFLECT_BODY();
+
+        PROPERTY( Name = "variations_per_clip", Required, Min = 1 )
+        uint32 _variationsPerClip{ 4 }; ///< 클립 하나를 몇 개의 위상으로 나눌지 정한다(많을수록 덜 똑같아 보이지만 묶음과 평가가 늘어난다)
+        PROPERTY( Name = "bucket_keep_seconds", Required, Min = 0.0, Units = s )
+        float32 _bucketKeepSeconds{ 2.0f }; ///< 멤버가 없는 묶음을 이 시간(초)이 지난 뒤 지운다(상태가 오가며 메시를 다시 만들지 않게 하려는 것이다)
+        PROPERTY( Name = "vertex_animation_frames_per_second", Required, Min = 0.001 )
         float32 _vertexAnimationFramesPerSecond{ 15.0f }; ///< VAT 를 베이크할 프레임 레이트
 
         /** @brief XML 을 읽습니다. 모르는 속성이나 범위 밖 값은 오류이고 false 를 반환합니다(기본값으로 돌아갑니다). */
