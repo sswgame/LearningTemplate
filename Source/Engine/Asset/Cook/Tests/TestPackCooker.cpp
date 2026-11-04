@@ -24,13 +24,13 @@ namespace
         PackExcludeRule& topRule = config._listRule.emplace_back();
         topRule._name            = "editor";
         topRule._listExcludeDirectory.push_back( "editor" );
-        topRule._bRecursive = false;
+        topRule._bRecursive = SW_FALSE;
 
         PackExcludeRule& deepRule = config._listRule.emplace_back();
         deepRule._name            = "sources";
         deepRule._listExcludeDirectory.push_back( "source" );
         deepRule._listExcludePattern.push_back( "docs/*.md" );
-        deepRule._bRecursive = true;
+        deepRule._bRecursive = SW_TRUE;
         return config;
     }
 

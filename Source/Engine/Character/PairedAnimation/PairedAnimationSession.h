@@ -138,7 +138,7 @@ namespace sw
             float32                                     _entryAnchorTime{ 0.0f };
             float32                                     _previousPlayRate{ 1.0f };
             PairedAnimationRoleStage                    _stage{ PairedAnimationRoleStage::Unbound };
-            bool                                        _bWarpOpen{ false };
+            bool                                        _bWarpOpen{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 역할의 애니메이터를 풉니다. 없으면 nullptr 입니다. */
@@ -191,6 +191,6 @@ namespace sw
         float32                              _anchorTime;
         float32                              _predictedAnchorTime; ///< 지난 갱신이 예측한 이번 앵커 시각
         PairedAnimationSessionState          _state;
-        bool                                 _bClockStarted; ///< 첫 갱신에서 앵커 시각을 받았다(그 뒤로 예측과 대조한다)
+        uint8                                _bClockStarted : 1; ///< 첫 갱신에서 앵커 시각을 받았다(그 뒤로 예측과 대조한다)
     };
 } // namespace sw

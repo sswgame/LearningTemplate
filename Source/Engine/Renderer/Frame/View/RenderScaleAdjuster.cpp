@@ -6,6 +6,15 @@
 
 namespace sw
 {
+    RenderScaleAdjuster::RenderScaleAdjuster()
+        : _config{}
+        , _scale{ 1.0f }
+        , _overCount{ 0 }
+        , _underCount{ 0 }
+        , _bConfigured{ SW_FALSE }
+    {
+    }
+
     string RenderScaleAdjuster::validate( const RenderScaleAdjusterConfig& config )
     {
         string reason;
@@ -31,7 +40,7 @@ namespace sw
         if ( validate( config ).empty() == false )
             return false;
         _config      = config;
-        _bConfigured = true;
+        _bConfigured = SW_TRUE;
         reset();
         return true;
     }

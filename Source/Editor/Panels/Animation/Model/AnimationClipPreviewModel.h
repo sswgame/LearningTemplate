@@ -65,6 +65,6 @@ namespace sw::editor
         string           _status;
         GameObjectHandle _body;
         float32          _clipSeconds;
-        bool             _bLoop;
+        bool             _bLoop; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw::editor

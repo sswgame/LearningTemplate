@@ -12,7 +12,7 @@ namespace
     {
     public:
         uint32 _recreateCount;
-        bool   _bRecreateSucceeds;
+        uint8  _bRecreateSucceeds : 1;
         explicit CountingSurface( bool bRecreateSucceeds )
             : _recreateCount{ 0 }
             , _bRecreateSucceeds{ bRecreateSucceeds }

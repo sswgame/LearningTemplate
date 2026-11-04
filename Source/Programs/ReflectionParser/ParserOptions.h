@@ -20,9 +20,9 @@ namespace sw
         string         _moduleName;            ///< --module: 이 대상의 타입이 오르는 런타임 모듈 이름(CMake 가 정한다 - 경로로 추측하지 않는다)
         string         _emitBuiltinsGenPath;   ///< --emit-builtins-gen: ReflectBuiltins.gen.cpp 만 쓰는 모드
         string         _depfilePath;           ///< --depfile: 입력들이 include 한 헤더를 Makefile 꼴 의존 파일로 쓴다(빌드 체계의 DEPFILE)
-        bool           _bDump{ false };        ///< --dump: 최신이어도 다시 파싱하고, 헤더마다 뽑은 것을 사람이 읽는 꼴로 찍는다
-        bool           _bHelp{ false };        ///< --help: 사용법만 찍고 끝낸다
-        bool           _bModuleLocal{ false }; ///< --module-local: 대상(실행 파일 · 게임 모듈)의 타입이 모듈 경계를 넘지 않는다. 버스 본문 타입에 내보내기 매크로를 요구하지 않는다
+        bool           _bDump{ false };        ///< --dump: 최신이어도 다시 파싱하고, 헤더마다 뽑은 것을 사람이 읽는 꼴로 찍는다. NOLINT(sw-bool-flag): 플래그 표가 멤버 포인터(`bool ParserOptions::*`)로 쓴다
+        bool           _bHelp{ false };        ///< --help: 사용법만 찍고 끝낸다. NOLINT(sw-bool-flag): 플래그 표가 멤버 포인터로 쓴다
+        bool           _bModuleLocal{ false }; ///< NOLINT(sw-bool-flag): 플래그 표가 멤버 포인터로 쓴다. --module-local: 대상(실행 파일 · 게임 모듈)의 타입이 모듈 경계를 넘지 않는다. 버스 본문 타입에 내보내기 매크로를 요구하지 않는다
 
         /**
          * @brief argv 를 읽고 모드별 필수 인자를 확인합니다. `@파일` 은 그 파일의 줄마다 인자 하나로 펼칩니다(응답 파일).

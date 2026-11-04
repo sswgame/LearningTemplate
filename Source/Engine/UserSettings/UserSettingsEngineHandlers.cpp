@@ -38,8 +38,8 @@ namespace sw
         , _listBindingInputMap{}
         , _displayRequest{}
         , _listDisplayResolution{}
-        , _bDisplayDirty{ false }
-        , _bResolutionProbed{ false }
+        , _bDisplayDirty{ SW_FALSE }
+        , _bResolutionProbed{ SW_FALSE }
         , _listRegistration{}
     {
     }
@@ -76,7 +76,7 @@ namespace sw
         _listRegistration.clear(); // 핸들러가 가리키는 이 객체의 상태를 비우기 전에 뗀다
         _targets = UserSettingsTargets{};
         _listBindingInputMap.clear();
-        _bDisplayDirty = false;
+        _bDisplayDirty = SW_FALSE;
     }
 
     bool UserSettingsEngineHandlers::addBindingInputMap( InputMap& inputMap )
@@ -117,7 +117,7 @@ namespace sw
     {
         if ( _bDisplayDirty == false )
             return false;
-        _bDisplayDirty = false;
+        _bDisplayDirty = SW_FALSE;
         outRequest     = _displayRequest;
         return true;
     }
@@ -358,7 +358,7 @@ namespace sw
         if ( _bResolutionProbed == false )
         {
             HardwareDetection::probeDisplayResolutions( _listDisplayResolution );
-            _bResolutionProbed = true;
+            _bResolutionProbed = SW_TRUE;
         }
         for ( const int2& resolution : _listDisplayResolution )
         {

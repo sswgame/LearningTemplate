@@ -26,8 +26,8 @@ namespace sw
         const UserSettingDef* _pDef{ nullptr };   ///< 적용하는 설정입니다.
         string_view           _value{};           ///< 정규화한 값
         string_view           _param{};           ///< 스키마의 `param`
-        bool                  _bStartup{ false }; ///< 기동이나 다시 적용(`reapplyAll`)이면 true 이고, 메뉴에서 바꾼 값이면 false 입니다.
-        bool                  _bDefault{ false }; ///< 값이 기본값과 같으면 true(플레이어가 고르지 않은 값)
+        bool                  _bStartup{ false }; ///< 기동이나 다시 적용(`reapplyAll`)이면 true 이고, 메뉴에서 바꾼 값이면 false 입니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                  _bDefault{ false }; ///< 값이 기본값과 같으면 true(플레이어가 고르지 않은 값) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @brief 값을 대상에 넣습니다. 넣지 못하면 false 입니다(경고는 핸들러가 남깁니다). */

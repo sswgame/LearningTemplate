@@ -33,7 +33,7 @@ namespace sw::editor
         : _previewMeshPath{}
         , _status{}
         , _lodChoice{ kAutoLOD }
-        , _bFramed{ false }
+        , _bFramed{ SW_FALSE }
     {
     }
 
@@ -41,7 +41,7 @@ namespace sw::editor
     {
         // 메시는 미리보기 메시 컴포넌트가 읽는다(비동기) — 읽기 실패는 컴포넌트가 로그로 남기고 표가 알린다.
         _previewMeshPath.clear();
-        _bFramed = false;
+        _bFramed = SW_FALSE;
         _status  = "Loaded";
     }
 
@@ -52,7 +52,7 @@ namespace sw::editor
         if ( pSubject != nullptr )
             (void)pSubject->addComponent<MeshComponent>(); // 메시 경로는 문서를 읽은 뒤 건다(syncSubject)
         _previewMeshPath.clear();                          // 새 씬의 메시에는 아직 경로가 없다
-        _bFramed = false;
+        _bFramed = SW_FALSE;
     }
 
     MeshComponent* MeshPreviewModel::findSubject( Scene* pScene )
@@ -71,7 +71,7 @@ namespace sw::editor
         {
             pMesh->setMeshID( assetPath );
             _previewMeshPath = assetPath;
-            _bFramed         = false;
+            _bFramed         = SW_FALSE;
             SW_LOG_INFO_ID( "MeshPreviewPanel.MeshPreviewShowing", "Mesh Preview showing '%#'", _previewMeshPath );
         }
         if ( _bFramed )
@@ -87,7 +87,7 @@ namespace sw::editor
         const float3& boundsMax = pLoaded->getLocalBoundsMax();
         outCenter               = float3{ ( boundsMin._x + boundsMax._x ) * 0.5f, ( boundsMin._y + boundsMax._y ) * 0.5f, ( boundsMin._z + boundsMax._z ) * 0.5f };
         outRadius               = MathUtil::max( pLoaded->getBoundingRadius(), 0.01f ) * MeshPreviewModelInternal::kFrameMargin;
-        _bFramed                = true;
+        _bFramed                = SW_TRUE;
         _status                 = "Loaded";
         return true;
     }

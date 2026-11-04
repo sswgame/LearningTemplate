@@ -235,7 +235,7 @@ namespace sw::editor
                 {
                     string _id;
                     string _title;
-                    bool   _bWasOpen{ false };
+                    bool   _bWasOpen{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 };
                 vector<Item> _listItem;
             };
@@ -838,7 +838,7 @@ namespace sw::editor
                 float32 _baseScale{ 1.0f };
                 float32 _fakeScale{ 1.5f }; ///< 교체한 창 DPI. 현재 배율에 0.5 를 더한 값이며, 이 PC 가 이미 150 % 여도 바뀐다
                 float32 _basePaddingX{ 0.0f };
-                bool    _bFakeInstalled{ false }; ///< 플랫폼 콜백을 `fakeWindowDPIScale` 로 바꿔 둔 동안 true
+                bool    _bFakeInstalled{ false }; ///< 플랫폼 콜백을 `fakeWindowDPIScale` 로 바꿔 둔 동안 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 #if defined( SW_PLATFORM_WINDOWS )
                 RECT _originalRect{};
                 RECT _suggestedRect{};

@@ -62,7 +62,7 @@ namespace sw
             {
                 const utf8* _pFieldName;
                 VFXSimulationTargetSet ( *_pComputeTargets )( const VFXEmitterDef& def );
-                bool _bMayExtendLifetime; ///< 입자 수명을 `_lifetimeMax` 보다 늘릴 수 있다(지금은 없다 — 생기면 GPU 방출기의 "끝났다" 를 다시 정해야 한다)
+                bool _bMayExtendLifetime; ///< 입자 수명을 `_lifetimeMax` 보다 늘릴 수 있다(지금은 없다 — 생기면 GPU 방출기의 "끝났다" 를 다시 정해야 한다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             static VFXSimulationTargetSet everyTarget( const VFXEmitterDef& /*def*/ ) { return VFXSimulationTargetSet::makeAll(); }

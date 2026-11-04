@@ -10,6 +10,26 @@
 
 namespace sw
 {
+    D3D12RHISwapChain::D3D12RHISwapChain()
+        : _swapChain{}
+        , _renderThread{}
+        , _listBackBuffer{}
+        , _listBackBufferRTV{}
+        , _ownedRTVHeap{}
+        , _pBarrierWatcher{ nullptr }
+        , _pHWnd{ nullptr }
+        , _width{ 0 }
+        , _height{ 0 }
+        , _bufferCount{ 2 }
+        , _backBufferIndex{ 0 }
+        , _format{ constant::render::kBackBufferFormat }
+        , _swapChainFlags{ 0 }
+        , _bAllowTearing{ SW_FALSE }
+        , _stateMutex{}
+        , _state{ D3D12_RESOURCE_STATE_PRESENT }
+    {
+    }
+
     bool D3D12RHISwapChain::initialize( IDXGIFactory4* pFactory, ID3D12CommandQueue* pQueue, const RHISwapChainDesc& desc )
     {
         // 이 백엔드는 Win32 전용이다 — 핸들이 Win32 표면의 것이 아니면 HWND 로 읽지 않고(창 없음으로 대신하지도 않고) 오류로 멈춘다.

@@ -50,9 +50,9 @@ namespace sw
         uint32 getMarkerCount() const { return _markerCount; }
 
     private:
-        vector<float4>      _listMarkerRowScratch;  ///< 마커 입력 행의 사본입니다(`canvas_marker.hlsl` 의 kRow* 배치)
-        RHIStructuredBuffer _markerRowBuffer;       ///< 마커 입력 행(float4)입니다. 마커가 있는 프레임마다 다시 올린다.
-        uint32              _markerCount;           ///< 이번 프레임 컴퓨트가 돌릴 마커 기록 수(0 이면 돌리지 않는다)
-        bool                _bMarkerReadsInstances; ///< 이번 프레임 마커 중 GPUScene 인스턴스 칸을 읽는 것이 있다(인스턴스 버퍼를 읽기 상태로 둔다).
+        vector<float4>      _listMarkerRowScratch;      ///< 마커 입력 행의 사본입니다(`canvas_marker.hlsl` 의 kRow* 배치)
+        RHIStructuredBuffer _markerRowBuffer;           ///< 마커 입력 행(float4)입니다. 마커가 있는 프레임마다 다시 올린다.
+        uint32              _markerCount;               ///< 이번 프레임 컴퓨트가 돌릴 마커 기록 수(0 이면 돌리지 않는다)
+        uint8               _bMarkerReadsInstances : 1; ///< 이번 프레임 마커 중 GPUScene 인스턴스 칸을 읽는 것이 있다(인스턴스 버퍼를 읽기 상태로 둔다).
     };
 } // namespace sw

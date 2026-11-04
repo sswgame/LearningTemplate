@@ -87,8 +87,8 @@ namespace sw
         , _arrOpen{}
         , _startSize{ 0 }
         , _depth{ 0 }
-        , _bStartTagOpen{ false }
-        , _bFailed{ false }
+        , _bStartTagOpen{ SW_FALSE }
+        , _bFailed{ SW_FALSE }
     {
     }
 
@@ -98,8 +98,8 @@ namespace sw
         , _arrOpen{}
         , _startSize{ outXML.size() }
         , _depth{ 0 }
-        , _bStartTagOpen{ false }
-        , _bFailed{ false }
+        , _bStartTagOpen{ SW_FALSE }
+        , _bFailed{ SW_FALSE }
     {
     }
 
@@ -150,7 +150,7 @@ namespace sw
         append( "<" );
         _arrOpen[_depth++] = OpenElement{ _pString->size(), static_cast<uint32>( name.size() ) };
         append( name );
-        _bStartTagOpen = true;
+        _bStartTagOpen = SW_TRUE;
     }
 
     void XMLWriter::attribute( string_view name, string_view value )
@@ -197,7 +197,7 @@ namespace sw
         if ( _bStartTagOpen )
         {
             append( "/>" );
-            _bStartTagOpen = false;
+            _bStartTagOpen = SW_FALSE;
             return;
         }
         // 이름은 버퍼 안의 위치로 기억했다. 자기 버퍼에서 덧붙이므로 먼저 자리를 잡아 덧붙이는 동안 버퍼가 옮겨지지 않게 한다.
@@ -267,12 +267,12 @@ namespace sw
         if ( _bStartTagOpen == false )
             return;
         append( ">" );
-        _bStartTagOpen = false;
+        _bStartTagOpen = SW_FALSE;
     }
 
     void XMLWriter::fail()
     {
         SW_ASSERT( false && "XMLWriter: name or call order does not form valid XML" );
-        _bFailed = true;
+        _bFailed = SW_TRUE;
     }
 } // namespace sw

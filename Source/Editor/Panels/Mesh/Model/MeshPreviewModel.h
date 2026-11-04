@@ -53,7 +53,7 @@ namespace sw::editor
     private:
         string _previewMeshPath; ///< 미리보기 메시에 건 경로(비면 다음 `syncSubject` 가 다시 건다)
         string _status;
-        int32  _lodChoice; ///< 고른 LOD 단계(-1 = Auto, 화면 크기로 고른다)
-        bool   _bFramed;   ///< 읽힌 메시로 카메라를 한 번 맞췄다
+        int32  _lodChoice;   ///< 고른 LOD 단계(-1 = Auto, 화면 크기로 고른다)
+        uint8  _bFramed : 1; ///< 읽힌 메시로 카메라를 한 번 맞췄다
     };
 } // namespace sw::editor

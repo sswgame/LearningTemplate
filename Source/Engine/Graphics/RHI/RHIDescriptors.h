@@ -330,7 +330,7 @@ namespace sw
         bool _bFullscreen{ false }; ///< 전체 화면
 
         PROPERTY( Transient )
-        bool _bSoftwareAdapter{ false }; ///< 소프트웨어 래스터라이저로 띄운다(DX12, DX11 WARP, Vulkan CPU 디바이스). CI 러너와 같은 조건을 재현하는 진단 스위치다.
+        bool _bSoftwareAdapter{ SW_FALSE }; ///< 소프트웨어 래스터라이저로 띄운다(DX12, DX11 WARP, Vulkan CPU 디바이스). CI 러너와 같은 조건을 재현하는 진단 스위치다.
         PROPERTY( Transient )
         bool _bPreferMinimumPower{ false }; ///< 하드웨어 어댑터를 저전력 순서로 고른다(하이브리드 노트북의 내장 GPU — 언리얼 -preferIntel 자리). 기본은 고성능 순서(제조사와 무관)
 

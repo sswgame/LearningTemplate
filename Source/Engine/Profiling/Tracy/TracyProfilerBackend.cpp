@@ -82,7 +82,7 @@ namespace sw
              */
             struct TracyClientAPI
             {
-                bool                                          _bLoaded{ false }; ///< 모든 칸이 찼다
+                bool                                          _bLoaded{ SW_FALSE }; ///< 모든 칸이 찼다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 decltype( &___tracy_connected )               _pfnConnected{ nullptr };
                 decltype( &___tracy_emit_zone_begin )         _pfnZoneBegin{ nullptr };
                 decltype( &___tracy_emit_zone_end )           _pfnZoneEnd{ nullptr };

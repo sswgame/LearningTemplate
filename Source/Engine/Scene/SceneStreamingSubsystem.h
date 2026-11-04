@@ -98,9 +98,9 @@ namespace sw
         {
             StreamingCellCoord                     _cell{};
             vector<SceneDocument::SceneObjectNode> _listNode;
-            vector<uint64>                         _listObjectID; ///< 지은 오브젝트(엔티티마다 하나, 부품 제외). 내릴 때 자식까지 지운다
-            bool                                   _bLoaded{ false };
-            bool                                   _bFailed{ false }; ///< 짓다 실패했다 — 다시 시도하지 않는다(프레임마다 같은 오류를 내지 않게)
+            vector<uint64>                         _listObjectID;        ///< 지은 오브젝트(엔티티마다 하나, 부품 제외). 내릴 때 자식까지 지운다
+            bool                                   _bLoaded{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                   _bFailed{ SW_FALSE }; ///< 짓다 실패했다 — 다시 시도하지 않는다(프레임마다 같은 오류를 내지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 셀 좌표의 표 키입니다. */
@@ -119,12 +119,12 @@ namespace sw
         SceneSettings                 _settings;
         StreamingCellGrid             _grid;
         vector<CellSlot>              _listCell;
-        unordered_map<uint64, uint32> _mapCellIndex;       ///< `makeCellKey` → `_listCell` 인덱스
-        vector<float3>                _listExternalSource; ///< `setExternalSources`
-        float3                        _cameraSource;       ///< `setCameraSource`
-        bool                          _bCameraSourceSet;   ///< 카메라 원점을 한 번이라도 받았다
-        bool                          _bExternalSources;   ///< 바깥 원점을 쓴다
-        vector<StreamingCellCoord>    _listScratchCell;    ///< 갱신 중 범위 안 셀(프레임마다 다시 쓴다)
-        vector<uint32>                _listScratchLoad;    ///< 갱신 중 올릴 셀 인덱스
+        unordered_map<uint64, uint32> _mapCellIndex;         ///< `makeCellKey` → `_listCell` 인덱스
+        vector<float3>                _listExternalSource;   ///< `setExternalSources`
+        float3                        _cameraSource;         ///< `setCameraSource`
+        uint8                         _bCameraSourceSet : 1; ///< 카메라 원점을 한 번이라도 받았다
+        uint8                         _bExternalSources : 1; ///< 바깥 원점을 쓴다
+        vector<StreamingCellCoord>    _listScratchCell;      ///< 갱신 중 범위 안 셀(프레임마다 다시 쓴다)
+        vector<uint32>                _listScratchLoad;      ///< 갱신 중 올릴 셀 인덱스
     };
 } // namespace sw

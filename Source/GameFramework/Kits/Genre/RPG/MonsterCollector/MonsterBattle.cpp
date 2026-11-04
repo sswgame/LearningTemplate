@@ -64,7 +64,7 @@ namespace sw
         , _weatherTurns{ 0 }
         , _escapeAttempts{ 0 }
         , _outcome{ MonsterBattleOutcome::Ongoing }
-        , _bWild{ false }
+        , _bWild{ SW_FALSE }
     {
     }
 

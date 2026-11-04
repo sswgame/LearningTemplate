@@ -27,7 +27,7 @@ namespace sw
         , _requestIDAllocator{}
         , _sessionIDAllocator{}
         , _ioThreadCount{ 0 }
-        , _bInitialized{ false }
+        , _bInitialized{ SW_FALSE }
     {
     }
 

@@ -36,7 +36,7 @@ namespace sw::editor
         , _sectionFilterText{}
         , _sectionListGeneration{ 0 }
         , _sectionTypeGeneration{ 0 }
-        , _bSectionListBuilt{ false }
+        , _bSectionListBuilt{ SW_FALSE }
         , _bModifiedOnly{ false }
         , _pSelected{ nullptr }
         , _pendingSaveNanoseconds{ 0 }
@@ -70,7 +70,7 @@ namespace sw::editor
         _sectionFilterText     = pFilterText;
         _sectionListGeneration = listGeneration;
         _sectionTypeGeneration = typeGeneration;
-        _bSectionListBuilt     = true;
+        _bSectionListBuilt     = SW_TRUE;
         return _listVisibleSection;
     }
 

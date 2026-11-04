@@ -68,7 +68,7 @@ namespace sw::editor
         /** @brief @p pScene 의 구가 @p path 의 머티리얼을 쓰게 합니다(경로가 바뀌었을 때만). 문서를 읽지 못했으면 부르는 쪽이 부르지 않는다. */
         void syncPreviewSubject( Scene* pScene, string_view path );
         /** @brief 그리기를 시작한다 — 이번 프레임에 CPU 구를 그리기 전까지 감시 값이 없다(창이 접히면 그대로 없다). */
-        void beginFrame() { _bPreviewDrawn = false; }
+        void beginFrame() { _bPreviewDrawn = SW_FALSE; }
         /** @brief CPU 구 미리보기를 그렸다 — 그 평균 (R - B) 를 감시 값으로 남깁니다. */
         void notePreviewDrawn( float32 redMinusBlue );
         /** @brief 지난 그리기의 미리보기 평균 (R - B)(0..255)입니다. 지난 프레임에 그리지 않았으면 false 입니다. */
@@ -87,6 +87,6 @@ namespace sw::editor
         string                                  _status;
         string                                  _previewMaterialPath; ///< 미리보기 구에 건 머티리얼 경로(비면 다음 `syncPreviewSubject` 가 다시 건다)
         float32                                 _previewRedMinusBlue; ///< 지난 그리기의 미리보기 평균 (R - B)
-        bool                                    _bPreviewDrawn;       ///< 지난 그리기에서 미리보기를 그렸다
+        uint8                                   _bPreviewDrawn : 1;   ///< 지난 그리기에서 미리보기를 그렸다
     };
 } // namespace sw::editor

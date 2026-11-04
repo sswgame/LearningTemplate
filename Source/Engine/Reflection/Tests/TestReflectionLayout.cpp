@@ -403,7 +403,7 @@ SW_TEST_CASE( ReflectionBitfieldTest, BitfieldGetSetValue )
     SW_EXPECT_EQUAL( SW_FALSE, actor._bInvulnerable );
     SW_EXPECT_EQUAL( SW_FALSE, actor._bCanJump );
 
-    // 1) _bActive = true
+    // 1) _bActive = SW_TRUE
     pPropActive->setValue<bool>( &actor, true );
     SW_EXPECT_EQUAL( SW_TRUE, actor._bActive );
     SW_EXPECT_EQUAL( SW_FALSE, actor._bInvulnerable );
@@ -418,7 +418,7 @@ SW_TEST_CASE( ReflectionBitfieldTest, BitfieldGetSetValue )
     SW_EXPECT_EQUAL( SW_TRUE, actor._bCanJump );
     SW_EXPECT_TRUE( pPropCanJump->getValue<bool>( &actor ) );
 
-    // 3) _bActive = false
+    // 3) _bActive = SW_FALSE
     pPropActive->setValue<bool>( &actor, false );
     SW_EXPECT_EQUAL( SW_FALSE, actor._bActive );
     SW_EXPECT_EQUAL( SW_FALSE, actor._bInvulnerable );

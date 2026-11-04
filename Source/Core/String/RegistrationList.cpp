@@ -94,7 +94,7 @@ namespace sw
         : _pListName{ pListName }
         , _pPrev{ nullptr }
         , _pNext{ nullptr }
-        , _bLinked{ true }
+        , _bLinked{ SW_TRUE }
     {
         RegistrationListChainLock lock;
         _pNext = s_chain._pHead;
@@ -122,7 +122,7 @@ namespace sw
             _pNext->_pPrev = _pPrev;
         _pPrev   = nullptr;
         _pNext   = nullptr;
-        _bLinked = false;
+        _bLinked = SW_FALSE;
         --s_chain._count;
     }
 

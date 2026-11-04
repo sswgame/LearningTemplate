@@ -34,7 +34,7 @@ namespace sw::editor
             {
                 size_t _jsonOffset{ 0 };
                 size_t _jsonSize{ 0 };
-                bool   _bGlb{ false };
+                bool   _bGlb{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief JSON 자리를 찾습니다. GLB 인데 첫 청크가 JSON 이 아니거나 범위를 벗어나면 false 입니다(고치지 않고 cgltf 가 알리게 한다). */

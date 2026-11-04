@@ -24,8 +24,8 @@ namespace sw
         string_view _id{};      ///< 줄의 종류 id(`SW_LOG_ERROR_ID`). 비어 있으면 칸을 뺀다
         string_view _file{};
         int32       _line{ 0 };
-        LogContext  _context{}; ///< 요청 추적 id · 계정 id. 있는 칸만 `trace` · `acct` 로 쓴다
-        bool        _bHasClock{ false };
+        LogContext  _context{};          ///< 요청 추적 id · 계정 id. 있는 칸만 `trace` · `acct` 로 쓴다
+        bool        _bHasClock{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         LogClock    _clock{ LogClock::Tick };
         uint64      _clockNumber{ 0 };
     };

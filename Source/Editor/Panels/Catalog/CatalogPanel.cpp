@@ -112,7 +112,7 @@ namespace sw::editor
         , _previousFileText{}
         , _statusText{}
         , _validationState{ ValidationState::None }
-        , _bIndexLoaded{ false }
+        , _bIndexLoaded{ SW_FALSE }
         , _bRawMode{ false }
     {
     }
@@ -145,7 +145,7 @@ namespace sw::editor
         if ( poll == EditorTaskPoll::Ready )
         {
             rebuildFileList( listEntry );
-            _bIndexLoaded = true;
+            _bIndexLoaded = SW_TRUE;
         }
         else if ( _bIndexLoaded == false && poll == EditorTaskPoll::Idle )
         {
@@ -180,7 +180,7 @@ namespace sw::editor
     void CatalogPanel::drawToolbar()
     {
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RefreshFiles" ) ) )
-            _bIndexLoaded = false;
+            _bIndexLoaded = SW_FALSE;
         EditorSelfTestMarks::note( "catalog.refresh" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         ImGui::BeginDisabled( _selectedID.empty() );

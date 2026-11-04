@@ -53,6 +53,6 @@ namespace sw::editor
         AbilityDebugSnapshot     _snapshot;
         vector<GameObjectHandle> _listCandidate;
         GameObjectHandle         _pickedHandle;
-        bool                     _bSnapshotValid{ false }; ///< 지난 그리기에서 `_snapshot` 을 모았다
+        uint8                    _bSnapshotValid : 1; ///< 지난 그리기에서 `_snapshot` 을 모았다
     };
 } // namespace sw::editor

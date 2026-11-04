@@ -23,8 +23,8 @@ namespace
         sw::string                _stringValue;
         float32                   _floatValue;
         int32                     _intValue;
-        bool                      _bValue;
-        bool                      _bAllRegistered;
+        bool                      _bValue; ///< NOLINT(sw-bool-flag): `registerVariable` 이 주소(`bool*`)를 받는다
+        uint8                     _bAllRegistered : 1;
 
         /** @brief 기본값으로 네 변수를 등록합니다. */
         GlobalVariableFixture()
@@ -33,7 +33,7 @@ namespace
             , _floatValue{ 45.0f }
             , _intValue{ 60 }
             , _bValue{ true }
-            , _bAllRegistered{ false }
+            , _bAllRegistered{ SW_FALSE }
         {
             const bool bBoolRegistered   = _manager.registerVariable( "gv_testBool", sw::GlobalVariableType::Boolean, &_bValue, true, "Unit Test Bool Global Variable" );
             const bool bIntRegistered    = _manager.registerVariable( "gv_testInt", sw::GlobalVariableType::Int32, &_intValue, int32{ 60 }, "Unit Test Int32 Global Variable" );

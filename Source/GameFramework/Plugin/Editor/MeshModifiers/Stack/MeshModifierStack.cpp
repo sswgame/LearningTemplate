@@ -355,7 +355,7 @@ namespace sw::editor
 {
     MeshModifierStack::MeshModifierStack()
         : _listModifier{}
-        , _bRecomputeNormals{ false }
+        , _bRecomputeNormals{ SW_FALSE }
     {
     }
 

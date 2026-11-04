@@ -100,7 +100,7 @@ namespace sw
         atomic<const AssetPathTable*>                          _pCurrentTable{ &_initialTable };
         mutex                                                  _publishMutex{};
         vector<unique_ptr<AssetPathTable>> _listPublishedTable SW_GUARDED_BY( _publishMutex ){};
-        bool                                                   _bInitialized{ false }; ///< `initialize()` 가 **성공했는지**(소유자가 직렬 구간에서만 쓴다)
+        bool                                                   _bInitialized{ SW_FALSE }; ///< `initialize()` 가 **성공했는지**(소유자가 직렬 구간에서만 쓴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         // --- 붙인 디스크 도메인 ---
         mutex                                     _diskDomainMutex{};
@@ -517,7 +517,7 @@ namespace sw
         clearPathCache();
 
         // 여기까지 와야 상태가 모두 채워진 것이다.
-        _pState->_bInitialized = true;
+        _pState->_bInitialized = SW_TRUE;
         return true;
     }
 

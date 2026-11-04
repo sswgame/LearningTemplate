@@ -30,7 +30,7 @@ namespace sw
     class SW_API IRHICommandContext : public IRHICommandList
     {
     public:
-        IRHICommandContext()                                       = default;
+        IRHICommandContext();
         ~IRHICommandContext() override                             = default;
         IRHICommandContext( const IRHICommandContext& )            = delete;
         IRHICommandContext& operator=( const IRHICommandContext& ) = delete;
@@ -99,7 +99,7 @@ namespace sw
         [[nodiscard]] bool isDrawAllowed() const;
 
     private:
-        bool _bRenderPassOpen{ false };
-        bool _bRenderPassNoBackBuffer{ false };
+        uint8 _bRenderPassOpen         : 1;
+        uint8 _bRenderPassNoBackBuffer : 1;
     };
 } // namespace sw

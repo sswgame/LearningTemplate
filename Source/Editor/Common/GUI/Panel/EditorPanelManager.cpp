@@ -46,7 +46,7 @@ namespace sw::editor
         , _listRememberedOpenID{}
         , _syncedGeneration{ kNotSynced }
         , _panelTimeFrameCount{ 0 }
-        , _bPanelTimesReported{ false }
+        , _bPanelTimesReported{ SW_FALSE }
     {
     }
 
@@ -241,7 +241,7 @@ namespace sw::editor
 
     void EditorPanelManager::reportPanelTimes()
     {
-        _bPanelTimesReported = true;
+        _bPanelTimesReported = SW_TRUE;
         vector<const EditorPanelEntry*> listEntry;
         for ( const EditorPanelEntry& entry : _listPanel )
         {

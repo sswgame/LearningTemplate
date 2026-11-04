@@ -15,7 +15,7 @@ namespace sw
     CrashHandlerSubsystem::CrashHandlerSubsystem( const CommandLineSubsystem* pCommandLine )
         : _pCommandLine{ pCommandLine }
         , _handler{}
-        , _bCrashReporterRun{ false }
+        , _bCrashReporterRun{ SW_FALSE }
     {
     }
 

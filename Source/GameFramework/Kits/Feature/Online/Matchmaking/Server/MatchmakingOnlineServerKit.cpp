@@ -46,7 +46,7 @@ namespace sw
                 , _agent{}
                 , _maxPartySize{ MatchmakingOnlineServerKitInternal::kDefaultMaxPartySize }
                 , _reconnectGraceMs{ MatchmakingOnlineServerKitInternal::kDefaultReconnectGraceMs }
-                , _bGameServer{ false }
+                , _bGameServer{ SW_FALSE }
             {
             }
 
@@ -166,7 +166,7 @@ namespace sw
             MatchServerAgent            _agent; ///< `gameServer` 일 때만 쓴다 — 배정받은 계정 목록(접속 인증기가 네트워크 스레드에서 묻는다)
             int32                       _maxPartySize;
             int32                       _reconnectGraceMs;
-            bool                        _bGameServer;
+            bool                        _bGameServer; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         };
     } // namespace
 } // namespace sw

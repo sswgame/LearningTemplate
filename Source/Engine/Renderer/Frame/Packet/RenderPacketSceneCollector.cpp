@@ -41,7 +41,7 @@ namespace sw
         : _gpuSceneBuilder{ nullptr }
         , _listLODView{}
         , _listShadowLightIndex{}
-        , _bGPUInstanceLODCapable{ false }
+        , _bGPUInstanceLODCapable{ SW_FALSE }
     {
     }
 

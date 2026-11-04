@@ -69,7 +69,7 @@ namespace sw
             vector<const utf8*> _listArgumentPointer;            ///< `ProcessCommand` 의 글을 가리킨다 — 그 명령이 exec 까지 살아 있어야 한다
             vector<string>      _listEnvironmentText;            ///< 덮어쓴 환경의 `이름=값` 글(`_bOverridesEnvironment` 일 때만 쓴다)
             vector<const utf8*> _listEnvironmentPointer;         ///< `_listEnvironmentText` 를 가리키는 `execve` 의 envp(nullptr 로 끝난다)
-            bool                _bOverridesEnvironment{ false }; ///< false 면 `execv` 로 이 프로세스의 환경을 그대로 물려준다
+            bool                _bOverridesEnvironment{ false }; ///< false 면 `execv` 로 이 프로세스의 환경을 그대로 물려준다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /**

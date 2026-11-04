@@ -69,7 +69,7 @@ namespace sw
 
             private:
                 GameObjectManager& _manager;
-                bool               _bPlanar;
+                uint8              _bPlanar : 1;
             };
         };
     } // namespace

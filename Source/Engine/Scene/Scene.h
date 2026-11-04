@@ -191,9 +191,9 @@ namespace sw
          * @details 저장이 const 라 mutable 입니다 — 새 오브젝트에 id 를 주는 것은 씬의 보이는 상태를 바꾸지 않습니다.
          */
         mutable ObjectSavedIDMap               _mapObjectIDToFileID;
-        vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;       ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
-        bool                                   _bRegistrationHeld{ false }; ///< `holdRegistration` 이 쥔 미루기가 남았다(`finishHeldRegistration` 이 놓는다)
-        TComponentHandle<CameraComponent>      _activeGameCamera;           ///< 마지막 `pickActiveGameCamera` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
-        TComponentHandle<CameraComponent>      _gameCameraOverride;         ///< `setActiveGameCamera` 로 직접 고른 카메라
+        vector<SceneDocument::SceneObjectNode> _listUnresolvedEntity;  ///< 프리팹을 찾지 못한 엔티티(문서 그대로, 저장 때 다시 써 넣는다)
+        uint8                                  _bRegistrationHeld : 1; ///< `holdRegistration` 이 쥔 미루기가 남았다(`finishHeldRegistration` 이 놓는다)
+        TComponentHandle<CameraComponent>      _activeGameCamera;      ///< 마지막 `pickActiveGameCamera` 가 고른 카메라(렌더 쪽이 O(1) 로 읽는다)
+        TComponentHandle<CameraComponent>      _gameCameraOverride;    ///< `setActiveGameCamera` 로 직접 고른 카메라
     };
 } // namespace sw

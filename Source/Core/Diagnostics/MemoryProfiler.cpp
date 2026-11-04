@@ -313,7 +313,7 @@ namespace sw
     }
 
     MemoryProfiler::MemoryProfiler()
-        : _bInitialized{ false }
+        : _bInitialized{ SW_FALSE }
         , _bTrackingEnabled{ true }
         , _bDetailedTrackingEnabled{ false }
         , _shard{}

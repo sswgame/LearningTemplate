@@ -54,7 +54,7 @@ namespace sw
         TaskHandle                                _task; ///< 비어 있으면 인라인으로 이미 돌았다(`isCompleted()` 가 true). 기다림은 줄의 `_bakeStage` 로 한다.
         int32                                     _tileX{ 0 };
         int32                                     _tileZ{ 0 };
-        bool                                      _bSucceeded{ false };
+        bool                                      _bSucceeded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         void run()
         {
@@ -96,9 +96,12 @@ namespace sw
         NavMeshBakeStats              _bakeStats{};
         AABB                          _bounds{};
         float3                        _searchExtent{ 1.0f, 2.0f, 1.0f };
-        bool                          _bFromCooked{ false };
+        uint8                         _bFromCooked : 1;
 
-        NavMeshRuntime()                                   = default;
+        NavMeshRuntime()
+            : _bFromCooked{ SW_FALSE }
+        {
+        }
         NavMeshRuntime( const NavMeshRuntime& )            = delete;
         NavMeshRuntime& operator=( const NavMeshRuntime& ) = delete;
         ~NavMeshRuntime()

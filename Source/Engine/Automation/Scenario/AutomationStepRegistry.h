@@ -45,13 +45,13 @@ namespace sw
         AutomationStepValidateFunction _pValidate;    ///< nullptr 이면 검사하지 않습니다.
         AutomationStepPrepareFunction  _pPrepare;     ///< nullptr 이면 준비하지 않습니다.
         AutomationStepHoldFunction     _pHold;        ///< nullptr 이면 차례가 오면 늘 돌립니다.
-        bool                           _bBeforeInput; ///< 참이면 그 프레임의 입력 재생 전에 돕니다(액션 계층 주입). 거짓이면 씬 틱 뒤에 돕니다.
+        bool                           _bBeforeInput; ///< 참이면 그 프레임의 입력 재생 전에 돕니다(액션 계층 주입). 거짓이면 씬 틱 뒤에 돕니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 참이면 데스크톱 전역 상태(OS 커서 클립 · 전경 창 · 화면)를 읽거나 쓰는 단계입니다(`SW_AUTOMATION_STEP_DESKTOP`).
          * @details 이런 단계는 겹쳐 도는 다른 프로세스의 창과 서로 방해하므로 혼합 입력(`input="mixed"`) 시나리오에서만 쓸 수 있고, 그 시나리오가 `<타깃>_Desktop` 에서 혼자 돈다
          *          (`AutomationStepValidation::validateDesktopSteps`).
          */
-        bool _bUsesDesktop{ false };
+        bool _bUsesDesktop{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 이 단계 하나가 시나리오의 벽시계 상한에 더하는 초입니다(`SW_AUTOMATION_STEP_WITH_WALL_BUDGET`). 0 이면 더하지 않는다.
          * @details 단계 하나가 몇 초씩 드는 종류(백엔드 교체)가 쓴다 — 상한이 그 수에 맞게 는다(`AutomationRunner::computeWallLimitSeconds`).

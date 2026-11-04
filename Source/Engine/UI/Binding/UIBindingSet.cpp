@@ -93,9 +93,9 @@ namespace sw
         , _seenSerial{ 0 }
         , _writeCount{ 0 }
         , _polledCount{ 0 }
-        , _bBound{ false }
-        , _bApplying{ false }
-        , _bSettingsChanged{ false }
+        , _bBound{ SW_FALSE }
+        , _bApplying{ SW_FALSE }
+        , _bSettingsChanged{ SW_FALSE }
     {
     }
 
@@ -118,7 +118,7 @@ namespace sw
     void UIBindingSet::onSettingEvent( const UserSettingEvent& event )
     {
         (void)event; // 어느 설정이든 상관없이 처리한다. 사용 가능 여부(`enabledWhen`)는 다른 설정에 의존하므로 설정 바인딩을 모두 다시 읽는다
-        _bSettingsChanged = true;
+        _bSettingsChanged = SW_TRUE;
     }
 
     void UIBindingSet::setViewModel( UIViewModel* pViewModel )
@@ -129,7 +129,7 @@ namespace sw
         _pViewModel = pViewModel;
         if ( _pViewModel != nullptr )
             _viewModelSubscription = _pViewModel->registerObserver( *this );
-        _bBound = false;
+        _bBound = SW_FALSE;
     }
 
     void UIBindingSet::releaseViewModel()
@@ -143,7 +143,7 @@ namespace sw
         if ( _pViewModel != &viewModel )
             return;
         releaseViewModel();
-        _bBound = false;
+        _bBound = SW_FALSE;
     }
 
     void UIBindingSet::update( const vector<UIBindingDesc>& listBinding, const UIBindingContext& context )
@@ -196,7 +196,7 @@ namespace sw
             }
         }
         _seenSerial       = viewModelSerial;
-        _bSettingsChanged = false;
+        _bSettingsChanged = SW_FALSE;
     }
 
     void UIBindingSet::bind( const vector<UIBindingDesc>& listBinding, const UIBindingContext& context )
@@ -204,7 +204,7 @@ namespace sw
         _listBinding.clear();
         _listError.clear();
         _seenSerial       = _pViewModel != nullptr ? _pViewModel->getChangeSerial() : 0;
-        _bSettingsChanged = false;
+        _bSettingsChanged = SW_FALSE;
         for ( const UIBindingDesc& desc : listBinding )
         {
             string error;
@@ -222,7 +222,7 @@ namespace sw
             bUsesSettings = bUsesSettings || binding._expression._source == UIBindingSource::Setting;
         }
         registerSettingsListener( bUsesSettings ? context._pSettings : nullptr );
-        _bBound = true;
+        _bBound = SW_TRUE;
     }
 
     bool UIBindingSet::bindOne( const UIBindingDesc& desc, const UIBindingContext& context, string& outError )
@@ -231,7 +231,7 @@ namespace sw
         binding._widget     = desc._widget;
         binding._skipSerial = 0;
         binding._bPollKnown = false;
-        binding._bDirty     = false;
+        binding._bDirty     = SW_FALSE;
         if ( UIBindingExpression::parse( desc._expression, binding._expression, outError ) == false )
             return false;
         const Widget* pWidget = _pScreen->getTree().findWidgetByID( desc._widget );
@@ -464,7 +464,7 @@ namespace sw
             return;
         const UIBindingValue value = UIBindingValueUtil::readValue( binding._target, &widget );
         // 결과는 보지 않는다. 보정되었든(Clamped) 거절됐든(Rejected, Disabled) 다음 단계가 설정 값을 다시 읽어 위젯에 쓴다.
-        binding._bDirty = true;
+        binding._bDirty = SW_TRUE;
         switch ( pDef->_type )
         {
             case UserSettingType::Bool:
@@ -511,10 +511,10 @@ namespace sw
         const bool bSetting = binding._expression._source == UIBindingSource::Setting;
         if ( pWidget == nullptr || ( bSetting == false && _pViewModel == nullptr ) )
             return false;
-        _bApplying           = true; // 범위, 선택지, 사용 가능 여부도 쓴다
-        binding._bDirty      = false;
+        _bApplying           = SW_TRUE; // 범위, 선택지, 사용 가능 여부도 쓴다
+        binding._bDirty      = SW_FALSE;
         UIBindingValue value = bSetting ? readSetting( binding, *pWidget, context ) : UIBindingValueUtil::readValue( binding._source, _pViewModel );
-        _bApplying           = false;
+        _bApplying           = SW_FALSE;
         if ( binding._expression._source == UIBindingSource::Poll )
         {
             binding._lastPollText = value.toText();
@@ -524,14 +524,14 @@ namespace sw
             return false;
         if ( value._kind == UIBindingValueKind::Other && binding._target._kind == UIBindingValueKind::Text )
             value._kind = UIBindingValueKind::Text;
-        _bApplying          = true;
+        _bApplying          = SW_TRUE;
         const bool bChanged = UIBindingValueUtil::writeValue( binding._target, pWidget, value );
         if ( bChanged )
         {
             ++_writeCount;
             pWidget->onBoundPropertyChanged( binding._target.getRootProperty() );
         }
-        _bApplying = false;
+        _bApplying = SW_FALSE;
         return bChanged;
     }
 

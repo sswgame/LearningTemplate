@@ -17,12 +17,12 @@ namespace
 
         sw::test::FakeFontServiceFixture _fonts;
         sw::TextLayoutEngine             _layout;
-        bool                             _bInitialized;
+        uint8                            _bInitialized : 1;
 
         TextLayoutTestFixture()
             : _fonts{}
             , _layout{ *_fonts._fontService }
-            , _bInitialized{ false }
+            , _bInitialized{ SW_FALSE }
         {
             sw::test::FakeFontFaceConfig tall{};
             tall.addRange( 0xAC00u, 0xD7A3u );

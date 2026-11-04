@@ -35,6 +35,16 @@ namespace sw
         const wl_buffer_listener s_bufferListener = WaylandShmBufferInternal::makeListener();
     } // namespace
 
+    WaylandShmBuffer::WaylandShmBuffer()
+        : _pBuffer{ nullptr }
+        , _pPixels{ nullptr }
+        , _byteSize{ 0 }
+        , _width{ 0 }
+        , _height{ 0 }
+        , _bBusy{ SW_FALSE }
+    {
+    }
+
     WaylandShmBuffer::~WaylandShmBuffer()
     {
         if ( _pBuffer != nullptr )
@@ -96,7 +106,7 @@ namespace sw
         _byteSize = byteSize;
         _width    = width;
         _height   = height;
-        _bBusy    = false;
+        _bBusy    = SW_FALSE;
         return true;
     }
 

@@ -36,7 +36,7 @@ namespace sw
         , _errorCode{ OnlineError::kOk }
         , _result{ SocialResult::Ok }
         , _state{ FriendListState::Idle }
-        , _bStale{ false }
+        , _bStale{ SW_FALSE }
     {
     }
 
@@ -62,7 +62,7 @@ namespace sw
         _state     = FriendListState::Loading;
         _errorCode = OnlineError::kOk;
         _result    = SocialResult::Ok;
-        _bStale    = false;
+        _bStale    = SW_FALSE;
         ++_revision; // 로딩 표시를 그리게 한다
         // 준비되지 않은 클라이언트는 이 호출 안에서 바로 onLinksReply(오류)로 끝난다.
         (void)_pClient->listLinks( SocialClient::ReplyDelegate::create<&FriendListModel::onLinksReply>( this ) );
@@ -143,7 +143,7 @@ namespace sw
             case SocialNotificationKind::FriendAdded:
             case SocialNotificationKind::FriendRemoved:
             {
-                _bStale = true;
+                _bStale = SW_TRUE;
                 break;
             }
             case SocialNotificationKind::GuildInvited:

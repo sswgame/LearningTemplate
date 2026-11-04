@@ -54,12 +54,12 @@ namespace sw::editor
         [[nodiscard]] bool applyPending( CatalogDocument& inoutDocument );
 
     private:
-        vector<CatalogCurve>    _listCurve;       ///< 곡선 창이 이번 프레임에 그리는 곡선
-        vector<CatalogGradient> _listGradient;    ///< 그 가운데 네 채널이 갖춰진 묶음
-        vector<CatalogCurve>    _listProbeCurve;  ///< 행마다 "곡선이 있나" 를 묻는 재사용 버퍼
-        vector<float32>         _listSample;      ///< 곡선 표본 재사용 버퍼
-        int32                   _curveOwner;      ///< 곡선 창이 보는 원소(-1 이면 닫힘)
-        bool                    _bOpenCurvePopup; ///< 다음 그리기에서 창을 연다
+        vector<CatalogCurve>    _listCurve;           ///< 곡선 창이 이번 프레임에 그리는 곡선
+        vector<CatalogGradient> _listGradient;        ///< 그 가운데 네 채널이 갖춰진 묶음
+        vector<CatalogCurve>    _listProbeCurve;      ///< 행마다 "곡선이 있나" 를 묻는 재사용 버퍼
+        vector<float32>         _listSample;          ///< 곡선 표본 재사용 버퍼
+        int32                   _curveOwner;          ///< 곡선 창이 보는 원소(-1 이면 닫힘)
+        uint8                   _bOpenCurvePopup : 1; ///< 다음 그리기에서 창을 연다
         string                  _editText;
         string                  _pendingColumn;
         string                  _pendingText;

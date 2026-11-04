@@ -15,7 +15,7 @@ namespace sw
     MemoryBudgetSubsystem::MemoryBudgetSubsystem( const CrashHandlerSubsystem& crashHandler )
         : _crashHandler{ crashHandler }
         , _monitor{}
-        , _bBudgetFileRead{ false }
+        , _bBudgetFileRead{ SW_FALSE }
     {
     }
 
@@ -30,7 +30,7 @@ namespace sw
     {
         if ( _bBudgetFileRead == false )
         {
-            _bBudgetFileRead = true;
+            _bBudgetFileRead = SW_TRUE;
             if ( _crashHandler.isCrashReporterRun() == false )
                 (void)_monitor.loadBudgetFile( FileUtil::joinPath( ProcessRoots::get()._project.str(), MemoryBudgetMonitor::kBudgetFile ) ); // 틀린 표는 오류를 남기고 예산 없이 간다
         }

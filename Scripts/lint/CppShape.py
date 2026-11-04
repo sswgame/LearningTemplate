@@ -148,11 +148,11 @@ def classifyStatement(statement: str, className: str) -> str | None:
     text = re.sub(r"\s+", " ", statement).strip()
     # 앞에 붙는 매크로 · 속성(PROPERTY( … ) · SW_API · [[nodiscard]])을 벗긴다
     while True:
-        match = re.match(r"(?:\[\[[^\]]*\]\]|[A-Z][A-Z0-9_]+(?:\s*\((?:[^()]|\([^()]*\))*\))?)\s*", text)
+        match = re.match(r"(?:\[\[[^\]]*\]\]|[A-Z][A-Z0-9_]+\b(?:\s*\((?:[^()]|\([^()]*\))*\))?)\s*", text)
         if match is None or match.end() == 0:
             break
         rest = text[match.end():]
-        if re.match(r"[A-Z][A-Z0-9_]+\s*\(", text) and not rest:
+        if re.match(r"[A-Z][A-Z0-9_]+\b\s*\(", text) and not rest:
             return None  # 매크로 한 줄(REFLECT_BODY() · SW_DECLARE_… )
         text = rest
     if not text:
@@ -330,7 +330,7 @@ def checkBoolFlags(info: ClassInfo, rawLines: list[str]) -> list[tuple[int, str]
         if kind != "var":
             continue
         text = re.sub(r"\s+", " ", statement).strip()
-        text = re.sub(r"^(?:(?:\[\[[^\]]*\]\]|[A-Z][A-Z0-9_]+(?:\s*\((?:[^()]|\([^()]*\))*\))?)\s*)*", "", text)
+        text = re.sub(r"^(?:(?:\[\[[^\]]*\]\]|[A-Z][A-Z0-9_]+\b(?:\s*\((?:[^()]|\([^()]*\))*\))?)\s*)*", "", text)
         match = kBoolMember.match(" " + text + ";")
         if match is None:
             continue

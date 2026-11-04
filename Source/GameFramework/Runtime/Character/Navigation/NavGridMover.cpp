@@ -10,7 +10,7 @@ namespace sw
         : _agent{ agent }
         , _grid{ grid }
         , _pathfinder{ pathfinder }
-        , _bFailed{ false }
+        , _bFailed{ SW_FALSE }
     {
     }
 
@@ -23,7 +23,7 @@ namespace sw
     void NavGridMover::stopMoving()
     {
         _agent.stop();
-        _bFailed = false;
+        _bFailed = SW_FALSE;
     }
 
     NavMoveStatus NavGridMover::getMoveStatus() const

@@ -253,7 +253,7 @@ namespace sw
                     {
                         SW_LOG_ERROR_ID( "Headless.HeadlessTaskRunsClient", "This headless task runs in the client build (App), not in the dedicated server" );
                         inoutState.enterHeadless();
-                        inoutState._bFailed = true;
+                        inoutState._bFailed = SW_TRUE;
                         return true;
                     }
                 }
@@ -271,7 +271,7 @@ namespace sw
                 if ( StandardOutput::write( commandLine.makeUsageText() ) == false )
                 {
                     SW_LOG_ERROR_ID( "Headless.CouldNotWriteHelp", "Could not write the -help text to standard output" );
-                    inoutState._bFailed = true;
+                    inoutState._bFailed = SW_TRUE;
                 }
                 return true;
             }
@@ -305,7 +305,7 @@ namespace sw
                 if ( test::TestRunner::parseShard( shard, options._shardIndex, options._shardCount ) == false )
                 {
                     SW_LOG_ERROR_ID( "Headless.TestShardNotI", "--test-shard=%# is not i/n (0 <= i < n)", shard.c_str() );
-                    inoutState._bFailed = true;
+                    inoutState._bFailed = SW_TRUE;
                     return true;
                 }
                 options._seed          = static_cast<uint32>( seed );
@@ -433,7 +433,7 @@ namespace sw
                 if ( cookedDir.empty() )
                 {
                     SW_LOG_ERROR_ID( "Headless.CookingNeedsCookedDir", "Cooking needs -cooked-dir=<folder> (the staging folder of cooked scenes and prefabs)" );
-                    inoutState._bFailed = true;
+                    inoutState._bFailed = SW_TRUE;
                     return true;
                 }
                 SW_LOG_INFO_ID( "Headless.StartingHeadlessCook", "Starting Headless (Cook%#) -> '%#'...", bCookAll ? "All" : ( bCookPacks ? "Packs" : "Scenes" ), cookedDir );
@@ -445,7 +445,7 @@ namespace sw
                 {
                     if ( cookShadersForPack( commandLine, cookedDir ) == false )
                     {
-                        inoutState._bFailed = true;
+                        inoutState._bFailed = SW_TRUE;
                         return true;
                     }
                 }
@@ -502,6 +502,14 @@ namespace sw
             }
         };
     } // namespace
+
+    HeadlessTaskState::HeadlessTaskState()
+        : _bFailed{ SW_FALSE }
+        , _failureExitCode{ -1 }
+        , _bHeadless{ SW_FALSE }
+    {
+    }
+
 } // namespace sw
 
 namespace sw
@@ -541,7 +549,7 @@ namespace sw
             // 백엔드마다 실행을 시킨 실행은 실행기 없이 결과를 낼 수 없다 — 이유를 남기고 실패로 끝낸다(폴백 없음).
             inoutState.enterHeadless();
             SW_LOG_ERROR_ID( "Headless.ScenarioBackendsNeedsBuild", "-scenario-backends needs a build with SW_ENABLE_AUTOMATION=ON (this build has no automation runtime)" );
-            inoutState._bFailed = true;
+            inoutState._bFailed = SW_TRUE;
             return true;
         }
         pAutomation->runPerBackend( backends, commandLine, inoutState );

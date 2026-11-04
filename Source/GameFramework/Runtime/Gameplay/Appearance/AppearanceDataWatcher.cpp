@@ -11,7 +11,12 @@
 
 namespace sw
 {
-    AppearanceDataWatcher::AppearanceDataWatcher() = default;
+    AppearanceDataWatcher::AppearanceDataWatcher()
+        : _watch{}
+        , _folder{}
+        , _bChanged{ SW_FALSE }
+    {
+    }
 
     AppearanceDataWatcher::~AppearanceDataWatcher()
     {
@@ -28,7 +33,7 @@ namespace sw
         if ( _watch.isActive() == false )
             return false; // 팩 데이터이거나 감시자가 이유를 남겼다
         _folder   = string( folder );
-        _bChanged = false;
+        _bChanged = SW_FALSE;
         return true;
     }
 
@@ -39,14 +44,14 @@ namespace sw
 
     void AppearanceDataWatcher::onFolderChanged()
     {
-        _bChanged = true;
+        _bChanged = SW_TRUE;
     }
 
     void AppearanceDataWatcher::update( AppearanceDatabase& database, const ItemCatalog* pItemCatalog )
     {
         if ( _bChanged == false )
             return;
-        _bChanged = false;
+        _bChanged = SW_FALSE;
         string report;
         if ( database.reloadFromFolder( string_view( _folder ), pItemCatalog, report ) )
             SW_LOG_INFO_ID( "AppearanceDataWatcher.AppearanceDataReloaded", "Appearance data reloaded from '%#'", _folder.c_str() );

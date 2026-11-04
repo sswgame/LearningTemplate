@@ -13,7 +13,7 @@ namespace sw::editor
     {
         if ( choice == EditorUnsavedChoice::None )
             return;
-        _bConfirmClose = false;
+        _bConfirmClose = SW_FALSE;
         if ( EditorSessionPolicy::shouldSaveBeforeAction( choice ) && saveDocumentAndClearDirty() == false )
             return;
         if ( EditorSessionPolicy::shouldClearDirtyWithoutSave( choice ) )
@@ -26,7 +26,7 @@ namespace sw::editor
     {
         if ( _bDocumentDirty == false || asksBeforeClose() == false )
             return false;
-        _bConfirmClose = true;
+        _bConfirmClose = SW_TRUE;
         return true;
     }
 

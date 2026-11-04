@@ -161,7 +161,7 @@ namespace sw
             pActive = &_listActive.back();
         }
         pActive->_time    = MathUtil::clamp( time, 0.0f, pActive->_duration );
-        pActive->_bPaused = true;
+        pActive->_bPaused = SW_TRUE;
         applyAnimation( *pActive );
         return true;
     }

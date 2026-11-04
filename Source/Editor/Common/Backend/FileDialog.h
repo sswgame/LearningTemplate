@@ -33,7 +33,7 @@ namespace sw
         string         _description;                ///< 필터 설명 문자열
         vector<string> _listFilterExtension;        ///< 허용 확장자 목록(예: ".png", "hlsl")
         string         _initialDirectory;           ///< 시작 폴더(비어 있으면 OS 기본값)
-        bool           _bEnableMultiselect{ true }; ///< 다중 선택 허용(열기에서만)
+        bool           _bEnableMultiselect{ true }; ///< 다중 선택 허용(열기에서만) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

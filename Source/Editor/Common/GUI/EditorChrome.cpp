@@ -120,7 +120,7 @@ namespace sw::editor
         , _maxWidth{ 0.0f }
         , _flags{ EditorFloatingBarFlags::AutoResize | EditorFloatingBarFlags::NoMove |
                   EditorFloatingBarFlags::PassThroughWhenDisabled }
-        , _bEnabled{ true }
+        , _bEnabled{ SW_TRUE }
     {
     }
 

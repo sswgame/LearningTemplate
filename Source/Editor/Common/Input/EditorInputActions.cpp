@@ -46,8 +46,8 @@ namespace sw::editor
         , _arrForwardedKey{}
         , _focusBeforeTool{ InputKeyboardFocus::Game }
         , _syncedMapGeneration{ constant::invalid_index::kUint32 }
-        , _bToolOwnsKeyboard{ false }
-        , _bCommandsSuspended{ false }
+        , _bToolOwnsKeyboard{ SW_FALSE }
+        , _bCommandsSuspended{ SW_FALSE }
     {
     }
 
@@ -81,7 +81,7 @@ namespace sw::editor
         releaseForwardedKeys( input );
         if ( _bToolOwnsKeyboard && input.getKeyboardFocus() == InputKeyboardFocus::Tool )
             input.setKeyboardFocus( _focusBeforeTool );
-        _bToolOwnsKeyboard = false;
+        _bToolOwnsKeyboard = SW_FALSE;
         _map.setInputManager( nullptr );
     }
 
@@ -222,7 +222,7 @@ namespace sw::editor
         if ( bEditorOwns && current != InputKeyboardFocus::Tool )
         {
             _focusBeforeTool   = current;
-            _bToolOwnsKeyboard = true;
+            _bToolOwnsKeyboard = SW_TRUE;
             input.setKeyboardFocus( InputKeyboardFocus::Tool );
             return true;
         }
@@ -231,7 +231,7 @@ namespace sw::editor
             // 그동안 다른 주인(콘솔)이 포커스를 바꿨으면 그쪽을 존중하고 돌리지 않는다.
             if ( current == InputKeyboardFocus::Tool )
                 input.setKeyboardFocus( _focusBeforeTool );
-            _bToolOwnsKeyboard = false;
+            _bToolOwnsKeyboard = SW_FALSE;
         }
         return bEditorOwns;
     }

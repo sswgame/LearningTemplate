@@ -61,7 +61,7 @@ namespace sw::editor
         : _layout{}
         , _listRuntime{}
         , _listPlaced{}
-        , _bLoaded{ false }
+        , _bLoaded{ SW_FALSE }
     {
     }
 
@@ -69,7 +69,7 @@ namespace sw::editor
     {
         if ( _bLoaded )
             return;
-        _bLoaded = true;
+        _bLoaded = SW_TRUE;
         // 저장된 값을 먼저 읽고 등록한다 — 등록은 저장된 바를 덮지 않고 기본값만 적는다.
         const string path = EditorPaths::resolveEditorStateFile( EditorViewportOverlaysInternal::kFileName );
         // 처음엔 파일이 없다(Missing). 깨진 파일은 키와 함께 오류를 남기고 기본 배치로 둔다(저장하면 다시 쓴다).
@@ -318,7 +318,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "OverlayGrip" ) );
         if ( ImGui::IsItemActivated() )
         {
-            runtime._bDragging    = true;
+            runtime._bDragging    = SW_TRUE;
             runtime._dragPosition = position;
         }
         if ( runtime._bDragging && ImGui::IsItemActive() )
@@ -330,7 +330,7 @@ namespace sw::editor
         }
         if ( runtime._bDragging && ImGui::IsItemDeactivated() )
         {
-            runtime._bDragging = false;
+            runtime._bDragging = SW_FALSE;
             // 놓은 위치(여백 안쪽 기준)로 붙은 쪽 · 비율을 정한다.
             EditorViewportOverlayLayout::applyDrop( state, float2{ runtime._dragPosition._x - margin, runtime._dragPosition._y - margin }, runtime._lastSize, innerSize,
                                                     EditorViewportOverlaysInternal::kSnapDistance * scale );

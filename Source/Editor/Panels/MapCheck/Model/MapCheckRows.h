@@ -15,8 +15,8 @@ namespace sw::editor
     struct MapCheckFilter
     {
         string _search;                ///< 오브젝트 · 타입 · 프로퍼티 · 메시지에서 찾는 글(`EditorListFilter`)
-        bool   _bShowErrors{ true };   ///< 오류를 보인다
-        bool   _bShowWarnings{ true }; ///< 경고를 보인다
+        bool   _bShowErrors{ true };   ///< 오류를 보인다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bShowWarnings{ true }; ///< 경고를 보인다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

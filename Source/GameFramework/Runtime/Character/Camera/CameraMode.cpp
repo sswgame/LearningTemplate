@@ -32,8 +32,8 @@ namespace sw
                 float3  _aimPoint{};
                 float32 _yaw{ 0.0f };
                 float32 _pitch{ 0.0f };
-                bool    _bArm{ false };     ///< 피벗에서 물러나는 모드(암이 있다)
-                bool    _bCompose{ false }; ///< 프레이밍이 조준을 정하는 모드
+                bool    _bArm{ false };     ///< 피벗에서 물러나는 모드(암이 있다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool    _bCompose{ false }; ///< 프레이밍이 조준을 정하는 모드 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /**

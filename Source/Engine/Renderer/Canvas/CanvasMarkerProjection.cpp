@@ -37,7 +37,7 @@ namespace sw
         : _listMarkerRowScratch{}
         , _markerRowBuffer{}
         , _markerCount{ 0 }
-        , _bMarkerReadsInstances{ false }
+        , _bMarkerReadsInstances{ SW_FALSE }
     {
     }
 
@@ -47,7 +47,7 @@ namespace sw
     {
         using Internal         = CanvasMarkerProjectionInternal;
         _markerCount           = 0;
-        _bMarkerReadsInstances = false;
+        _bMarkerReadsInstances = SW_FALSE;
         if ( frame._listMarker.empty() )
             return;
         // 입력 행 배치는 canvas_marker.hlsl 의 kRow* 와 1:1 이다(뷰 · 투영 4행 · 카메라 · 뷰포트 · 한계 · 여백 1행 뒤에 마커마다 두 행).

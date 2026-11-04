@@ -70,7 +70,7 @@ namespace sw::editor
         EditorAssetIndexJob                     _fileIndexJob;
         fixed_string<constant::buffer::kMax128> _searchBuffer;
         int32                                   _selectedIndex;
-        bool                                    _bJustOpened;
-        bool                                    _bExecuteWhenIndexed; ///< 파일 목록이 오기 전에 Enter 를 눌렀다 — 목록이 오면 첫 줄을 연다
+        bool                                    _bJustOpened;             ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        uint8                                   _bExecuteWhenIndexed : 1; ///< 파일 목록이 오기 전에 Enter 를 눌렀다 — 목록이 오면 첫 줄을 연다
     };
 } // namespace sw::editor

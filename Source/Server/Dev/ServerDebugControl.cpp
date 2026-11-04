@@ -50,7 +50,7 @@ namespace sw
         ServerTickCountDelegate _tickCount;
         unique_ptr<DevParts>    _pDev;                  ///< `startConsole` 이 세우고 `stopConsole` 이 지운다
         uint32                  _pendingStepCount{ 0 }; ///< 일시정지 중 더 돌 틱 수(`step N`)
-        bool                    _bPaused{ false };      ///< 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다)
+        uint8                   _bPaused : 1;           ///< 게임 틱을 멈춘다(콘솔, 종료 신호, 네트워크 스레드는 돈다)
     };
 
     /** @brief `-gv_debugChannelPort=N`: 디버그 채널(개발 명령 원격 실행, 루프백 TCP)을 이 포트에 엽니다(0=끄기). 토큰(`gv_debugChannelToken`)이 있어야 열립니다. Shipping 에는 없습니다. */
@@ -85,6 +85,7 @@ namespace sw
     ServerDebugControl::ServerDebugControl( const ServerTickCountDelegate& tickCount )
         : _tickCount{ tickCount }
         , _pDev{ nullptr }
+        , _bPaused{ SW_FALSE }
     {
     }
 
@@ -100,7 +101,7 @@ namespace sw
         _pDev = make_unique<DevParts>();
         if ( gv_serverStartPaused )
         {
-            _bPaused = true;
+            _bPaused = SW_TRUE;
             SW_LOG_INFO_ID( "Server.ServerStartsPausedTick", "Server starts paused at tick %# (-gv_serverStartPaused)", _tickCount() );
         }
     }
@@ -197,14 +198,14 @@ namespace sw
     {
         if ( command == "pause" )
         {
-            _bPaused          = true;
+            _bPaused          = SW_TRUE;
             _pendingStepCount = 0;
             SW_LOG_INFO_ID( "Server.ServerPausedTick", "Server paused at tick %#", _tickCount() );
             return true;
         }
         if ( command == "resume" )
         {
-            _bPaused          = false;
+            _bPaused          = SW_FALSE;
             _pendingStepCount = 0;
             SW_LOG_INFO_ID( "Server.ServerResumedTick", "Server resumed at tick %#", _tickCount() );
             return true;
@@ -222,7 +223,7 @@ namespace sw
         }
         if ( _bPaused == false )
             SW_LOG_INFO_ID( "Server.ServerPausedTick", "Server paused at tick %#", _tickCount() );
-        _bPaused          = true; // 도는 중에 step 이면 멈추고 그만큼만 돈다.
+        _bPaused          = SW_TRUE; // 도는 중에 step 이면 멈추고 그만큼만 돈다.
         _pendingStepCount = static_cast<uint32>( stepCount );
         return true;
     }

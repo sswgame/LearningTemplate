@@ -323,14 +323,14 @@ namespace sw
             size_t               _depth{ 0 };
             vector<ElementType>  _listElement{};
             sw::unique_ptr<Node> _arrChild[Traits::kChildCount]{};
-            bool                 _bIsDivided{ false };
+            uint8                _bIsDivided : 1;
 
             explicit Node( const BoundsType& bounds, size_t depth = 0 )
                 : _bounds{ bounds }
                 , _depth{ depth }
                 , _listElement{}
                 , _arrChild{}
-                , _bIsDivided{ false }
+                , _bIsDivided{ SW_FALSE }
             {
             }
 
@@ -344,7 +344,7 @@ namespace sw
                     _arrChild[childIndex] = sw::make_unique<Node>( arrChildBound[childIndex], _depth + 1 );
                 }
 
-                _bIsDivided = true;
+                _bIsDivided = SW_TRUE;
 
                 vector<ElementType> listRemaining;
                 for ( const ElementType& element : _listElement )
@@ -444,7 +444,7 @@ namespace sw
                                 }
                                 _arrChild[childIndex].reset();
                             }
-                            _bIsDivided = false;
+                            _bIsDivided = SW_FALSE;
                         }
                         return true;
                     }

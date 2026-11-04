@@ -196,17 +196,17 @@ namespace sw
             const vector<PrimitiveInstanceEntry>* _pListInstanceEntry{ nullptr };
             uint32                                _meshCount{ 0 }; ///< 슬롯 공간에서 메시 컴포넌트 수(그 뒤가 인스턴스 배치 항목)
             uint32                                _slotCount{ 0 };
-            bool                                  _bHasCache{ false };        ///< 지난 프레임 후보가 있다
-            bool                                  _bSetSame{ false };         ///< 프리미티브 집합 세대가 같다
-            bool                                  _bPermutationSame{ false }; ///< 퍼뮤테이션 세대가 같다
+            bool                                  _bHasCache{ false };        ///< 지난 프레임 후보가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                  _bSetSame{ false };         ///< 프리미티브 집합 세대가 같다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                  _bPermutationSame{ false }; ///< 퍼뮤테이션 세대가 같다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /** @brief 수집 결과입니다. 두 수집(부분 · 전체)이 같은 뜻으로 채웁니다. */
         struct MeshCollectResult
         {
             size_t _candidateCount{ 0 };
-            bool   _bPartialDone{ false }; ///< 부분 수집으로 끝났다(false 면 전체 수집이 필요하거나 전체 수집의 결과)
-            bool   _bKeysSame{ false };    ///< 배치 키가 지난 프레임과 같다(부분: 바뀐 후보 기준, 전체: 모든 후보의 키와 자리)
-            bool   _bContentSame{ false }; ///< 내용이 지난 프레임과 같다(부분: 바뀐 후보가 없다, 전체: 모든 후보의 내용과 자리)
+            bool   _bPartialDone{ false }; ///< 부분 수집으로 끝났다(false 면 전체 수집이 필요하거나 전체 수집의 결과) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool   _bKeysSame{ false };    ///< 배치 키가 지난 프레임과 같다(부분: 바뀐 후보 기준, 전체: 모든 후보의 키와 자리) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool   _bContentSame{ false }; ///< 내용이 지난 프레임과 같다(부분: 바뀐 후보가 없다, 전체: 모든 후보의 내용과 자리) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /// 그릴 후보 하나(트랜스폼, 바운드, 메시, 머티리얼, 인스턴스, 블렌드)입니다. populateFromScene 이 배열을 재사용해 프레임당 힙 할당을 줄입니다.

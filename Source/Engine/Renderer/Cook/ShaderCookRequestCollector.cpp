@@ -69,9 +69,9 @@ namespace sw
                 string         _pixelEntryPoint;
                 vector<string> _listPermutation;
                 RenderPassType _passType{ RenderPassType::Invalid };
-                bool           _bUsesMaterialShader{ false };
-                bool           _bAppliesViewMode{ false };
-                bool           _bHasPixelStage{ false };
+                bool           _bUsesMaterialShader{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool           _bAppliesViewMode{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool           _bHasPixelStage{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 메시 패스 하나가 그리는 변형 하나입니다 — 셰이더 경로, define, 픽셀 스테이지 유무(깊이 패스의 알파 컷오프는 패스와 달리 PS 가 있다). */
@@ -79,7 +79,7 @@ namespace sw
             {
                 string         _shaderPath;
                 vector<string> _listDefine;
-                bool           _bHasPixelStage{ false };
+                bool           _bHasPixelStage{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 메시 패스 하나가 이 변형으로 그릴 때의 VS(그리고 픽셀 스테이지가 있으면 PS) 요청을 더합니다. */

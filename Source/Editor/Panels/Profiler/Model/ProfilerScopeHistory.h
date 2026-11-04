@@ -70,7 +70,7 @@ namespace sw::editor
         string             _filterText;                            ///< 이름에 들어 있어야 하는 문자열(대소문자 무시). 비어 있으면 모두 통과한다
         ProfilerScopeKind  _kind{ ProfilerScopeKind::CPU };        ///< 이 종류만 보여 준다
         ProfilerSortColumn _sortColumn{ ProfilerSortColumn::P99 }; ///< 정렬 열
-        bool               _bDescending{ true };                   ///< 큰 값이 위에 온다
+        bool               _bDescending{ true };                   ///< 큰 값이 위에 온다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         uint32             _frameOffset{ 0 };                      ///< "Last" 열이 보여 줄 프레임이다. 0 이 가장 최근이고 1 이 그 앞 프레임이며, 그래프에서 고른 프레임이다
     };
 } // namespace sw::editor

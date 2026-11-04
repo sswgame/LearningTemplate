@@ -84,7 +84,7 @@ namespace sw
             uint32                          _frameCount;
             uint32                          _position;
             uint16                          _channelCount;
-            bool                            _bFloat;
+            uint8                           _bFloat : 1;
         };
     } // namespace
 } // namespace sw

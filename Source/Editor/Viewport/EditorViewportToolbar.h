@@ -23,15 +23,15 @@ namespace sw::editor
         // 뷰 모드(Lit/Unlit/Wireframe)는 여기 없다. 원본은 `FrameRenderer` 다. 같은 값을 두 곳에
         // 두면 반드시 어긋난다(커맨드라인 `-gv_viewMode` 나 코드가 바꾸면 툴바가 틀린 값을 보인다).
         // 툴바는 프레임마다 렌더러에서 읽어 표시하고, 고르면 렌더러에 쓴다.
-        bool _bGridSnap{ false };
-        bool _bRotationSnap{ false };
-        bool _bScaleSnap{ false };
-        bool _bShowHUD{ false }; ///< 씬 뷰의 HUD 상자(`EditorDebugHUDView`)
-        bool _bShowGrid{ true };
-        bool _bShowOrientationCube{ true };
-        bool _bShowRuler{ false };
-        bool _bIs2DMode{ false };
-        bool _bSurfaceSnap{ false };
+        bool _bGridSnap{ false };           ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool _bRotationSnap{ false };       ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool _bScaleSnap{ false };          ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool _bShowHUD{ false };            ///< 씬 뷰의 HUD 상자(`EditorDebugHUDView`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bShowGrid{ true };            ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bShowOrientationCube{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bShowRuler{ false };          ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bIs2DMode{ false };           ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bSurfaceSnap{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

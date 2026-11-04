@@ -70,7 +70,7 @@ namespace sw
         PROPERTY( Min = 1, Tooltip = "Length in bars" )
         uint32 _bars{ 4 };
         PROPERTY( Tooltip = "Loops until a transition; otherwise moves to _next at the end" )
-        bool _bLoop{ true };
+        bool _bLoop{ SW_TRUE };
     };
 } // namespace sw
 

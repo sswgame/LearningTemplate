@@ -298,7 +298,7 @@ namespace sw
         PhysicsQueryFilter     filter;
         filter._ignoreBody       = _body;
         filter._layerMask        = layers.getLayerMask( static_cast<uint8>( _bodyLayer ) );
-        filter._bIncludeTriggers = true;
+        filter._bIncludeTriggers = SW_TRUE;
 
         vector<SweptOverlap2D> listSwept;
 

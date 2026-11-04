@@ -215,7 +215,7 @@ namespace sw
         RenderGraphNode* _pNode{ nullptr };
         IRHICommandList* _pPassCmdList{ nullptr };
         /// @brief 렌더 스레드가 이미 열고 레벨 배리어를 기록한 리스트인지 나타냅니다(레벨의 첫 엔트리입니다).
-        bool _bAlreadyBegun{ false };
+        bool _bAlreadyBegun{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         void record() { recordRenderPass( _pNode, _pPassCmdList, _bAlreadyBegun ); }
     };

@@ -100,7 +100,7 @@ namespace sw
         {
             const ExtensionProgramDesc* _pProgram{ nullptr };
             RHIFormat                   _colorFormat{ RHIFormat::Unknown };
-            bool                        _bDepthTest{ false };
+            bool                        _bDepthTest{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /**
          * @brief 아직 PSO 가 없는 확장 프로그램들의 셰이더를 워커가 한 번에 데웁니다(셋업 — PSO 는 뒤의 `findOrCreateExtensionProgramPSO` 가 차례로 만든다).

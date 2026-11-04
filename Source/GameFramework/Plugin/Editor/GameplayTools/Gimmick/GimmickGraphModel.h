@@ -27,8 +27,8 @@ namespace sw::editor
         string           _params{}; ///< "name=value; name=value" (컴포넌트 저장 형식 그대로)
         GameObjectHandle _target{}; ///< 비면 회로를 가진 오브젝트
         float2           _position{};
-        int32            _graphID{ 0 }; ///< 안정된 번호입니다. 캔버스 노드 id 로 씁니다
-        bool             _bPlaced{ false };
+        int32            _graphID{ 0 };     ///< 안정된 번호입니다. 캔버스 노드 id 로 씁니다
+        bool             _bPlaced{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -41,8 +41,8 @@ namespace sw::editor
         string _toPort{};
         int32  _fromNode{ 0 };
         int32  _toNode{ 0 };
-        int32  _graphID{ 0 }; ///< 캔버스 링크 id 로 씁니다
-        bool   _bInvert{ false };
+        int32  _graphID{ 0 };     ///< 캔버스 링크 id 로 씁니다
+        bool   _bInvert{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

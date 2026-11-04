@@ -89,8 +89,8 @@ namespace sw::editor
         uint32                            _gameIndex;
         uint32                            _targetIndex;
         uint32                            _rhiIndex;
-        bool                              _bSkipBuild;
-        bool                              _bSkipCook;
-        bool                              _bGamesLoaded;
+        bool                              _bSkipBuild; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool                              _bSkipCook;  ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        uint8                             _bGamesLoaded : 1;
     };
 } // namespace sw::editor

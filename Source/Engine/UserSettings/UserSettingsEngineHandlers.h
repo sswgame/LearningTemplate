@@ -47,10 +47,10 @@ namespace sw
         uint32            _width{ 1280 };
         uint32            _height{ 720 };
         WindowDisplayMode _mode{ WindowDisplayMode::Windowed };
-        bool              _bVSync{ false };
-        bool              _bHasResolution{ false };
-        bool              _bHasMode{ false };
-        bool              _bHasVSync{ false };
+        bool              _bVSync{ false };         ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bHasResolution{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bHasMode{ false };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bHasVSync{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -128,8 +128,8 @@ namespace sw
         vector<InputMap*>      _listBindingInputMap; ///< 게임 맵 말고 키 바인딩 설정이 고칠 수 있는 맵(런타임 UI 맵 등)
         DisplaySettingsRequest _displayRequest;
         vector<int2>           _listDisplayResolution; ///< 모니터 모드의 해상도(`collectResolutions` 가 처음 한 번 읽는다)
-        bool                   _bDisplayDirty;
-        bool                   _bResolutionProbed;
+        uint8                  _bDisplayDirty     : 1;
+        uint8                  _bResolutionProbed : 1;
         vector<Subscription>   _listRegistration; ///< 레지스트리에 올린 핸들러 · 공급자의 구독(`initialize` ~ `shutdown`)
     };
 } // namespace sw

@@ -104,9 +104,9 @@ namespace sw
                 float32              _arrPending[2]{}; ///< 이번 프레임까지 받은 최신 값(x, y)
                 uint32               _runStart{ 0 };   ///< 열린 구간이 시작한 녹화 프레임
                 uint8                _pad{ 0 };
-                uint8                _stick{ 0 };        ///< 0 왼쪽, 1 오른쪽
-                bool                 _bChanged{ false }; ///< 이번 프레임에 값이 바뀌었다
-                bool                 _bOpen{ false };    ///< 0 이 아닌 값의 구간이 열려 있다
+                uint8                _stick{ 0 };           ///< 0 왼쪽, 1 오른쪽
+                bool                 _bChanged{ SW_FALSE }; ///< 이번 프레임에 값이 바뀌었다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                 _bOpen{ false };       ///< 0 이 아닌 값의 구간이 열려 있다 NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
             };
 
             /** @brief 바인딩이 쓰는 장치 종류입니다. `ActionAxis` 재생이 `device` 로 바인딩을 고르는 규칙(AutomationActionSteps `getBindingDevice`)과 같다. */
@@ -181,7 +181,7 @@ namespace sw
                 if ( pTrack->_pAction == nullptr )
                     return false;
                 pTrack->_arrPending[axis % 2] = event._payload._gamepadData._axisValue;
-                pTrack->_bChanged             = true;
+                pTrack->_bChanged             = SW_TRUE;
                 return true;
             }
 
@@ -212,7 +212,7 @@ namespace sw
                 {
                     if ( track._bChanged == false )
                         continue;
-                    track._bChanged = false;
+                    track._bChanged = SW_FALSE;
                     closeStickRun( inoutListBody, track, frameIndex, outResult );
                     track._arrValue[0] = track._arrPending[0];
                     track._arrValue[1] = track._arrPending[1];
@@ -265,9 +265,9 @@ namespace sw
                 float32 _deltaY{ 0.0f };
                 float32 _wheelX{ 0.0f };
                 float32 _wheelY{ 0.0f };
-                bool    _bHasPosition{ false };
-                bool    _bHasDelta{ false };
-                bool    _bHasWheel{ false };
+                bool    _bHasPosition{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool    _bHasDelta{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool    _bHasWheel{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 액션 스틱이 아닌 패드 축 이벤트를 `GamepadAxis` 단계로 씁니다. */
@@ -438,10 +438,18 @@ namespace sw
         };
     } // namespace
 
+    ScenarioRecorder::ScenarioRecorder()
+        : _replay{}
+        , _pInputMap{ nullptr }
+        , _lastBeginFrameCount{ 0 }
+        , _bHasLastBeginFrame{ SW_FALSE }
+    {
+    }
+
     void ScenarioRecorder::start()
     {
         _replay.startRecording( "scenario" );
-        _bHasLastBeginFrame = false;
+        _bHasLastBeginFrame = SW_FALSE;
     }
 
     void ScenarioRecorder::update( const InputManager& input, float32 deltaTime )
@@ -450,7 +458,7 @@ namespace sw
             return;
         if ( _bHasLastBeginFrame && input.getBeginFrameCount() == _lastBeginFrameCount )
             return;
-        _bHasLastBeginFrame  = true;
+        _bHasLastBeginFrame  = SW_TRUE;
         _lastBeginFrameCount = input.getBeginFrameCount();
         _pInputMap           = &input.getInputMap();
         _replay.recordFrame( deltaTime, input.getLastFrameEvents() );

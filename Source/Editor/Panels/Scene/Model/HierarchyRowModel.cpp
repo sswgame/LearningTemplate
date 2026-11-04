@@ -45,6 +45,26 @@ namespace sw::editor
         };
     } // namespace
 
+    HierarchyRowModel::HierarchyRowModel()
+        : _listRoot{}
+        , _uniqueFilterMatchID{}
+        , _filterText{}
+        , _pManager{ nullptr }
+        , _structureGeneration{ 0 }
+        , _tagGeneration{ 0 }
+        , _rebuildCount{ 0 }
+        , _bFilterActive{ SW_FALSE }
+        , _listDrawnRow{}
+        , _listPreviousRow{}
+        , _anchorObjectID{ 0 }
+        , _revealObjectID{ 0 }
+        , _lastPrimaryID{ 0 }
+        , _pendingRenameID{ 0 }
+        , _addComponentSearch{}
+        , _bClickedThisFrame{ SW_FALSE }
+    {
+    }
+
     bool HierarchyFilter::matches( const GameObject* pObj, const utf8* pFilter )
     {
         if ( StringUtil::isNullOrEmpty( pFilter ) )
@@ -151,7 +171,7 @@ namespace sw::editor
         if ( bRevealPrimaryObject )
             _revealObjectID = primaryID;
         _lastPrimaryID     = primaryID;
-        _bClickedThisFrame = false;
+        _bClickedThisFrame = SW_FALSE;
     }
 
     int32 HierarchyRowModel::findDrawnRowIndex( uint64 objectID ) const
@@ -168,7 +188,7 @@ namespace sw::editor
     {
         EditorWorkspace& workspace = editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>();
         const uint64     objectID  = pObj->getObjectID();
-        _bClickedThisFrame         = true;
+        _bClickedThisFrame         = SW_TRUE;
         if ( bShift == false || _anchorObjectID == 0 )
         {
             workspace.selectGameObject( pObj, bCtrl ? SelectionMode::Toggle : SelectionMode::Replace );
@@ -236,7 +256,7 @@ namespace sw::editor
             return;
         editor::getSubsystem<EditorContext>().getSubsystem<EditorWorkspace>().selectGameObject( pNext, SelectionMode::Replace );
         _anchorObjectID    = pNext->getObjectID();
-        _bClickedThisFrame = true; // 키로 선택한 것이므로 펼쳐 보이기 대상이 아니다
+        _bClickedThisFrame = SW_TRUE; // 키로 선택한 것이므로 펼쳐 보이기 대상이 아니다
     }
 
     uint64 HierarchyRowModel::takePendingRename()

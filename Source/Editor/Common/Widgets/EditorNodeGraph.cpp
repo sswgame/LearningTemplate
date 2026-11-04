@@ -33,10 +33,10 @@ namespace sw::editor
         struct EditorNodeGraphDrawnState
         {
             uint32 _nodeCount{ 0 };
-            uint32 _autoLinkCount{ 0 };    ///< 핀을 끌어 만든 노드에 이은 링크 수(누적)
-            uint32 _alignedNodeCount{ 0 }; ///< 마지막 정렬이 옮긴 노드 수
-            bool   _bMinimapShown{ false };
-            uint32 _commentCount{ 0 }; ///< 가장 최근에 그린 캔버스의 주석 상자 수
+            uint32 _autoLinkCount{ 0 };     ///< 핀을 끌어 만든 노드에 이은 링크 수(누적)
+            uint32 _alignedNodeCount{ 0 };  ///< 마지막 정렬이 옮긴 노드 수
+            bool   _bMinimapShown{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            uint32 _commentCount{ 0 };      ///< 가장 최근에 그린 캔버스의 주석 상자 수
         };
 
         /** @brief 그래프 복사 버퍼 — 마지막으로 복사한 노드 조각과 그 애셋 종류입니다(유니티처럼 편집기 프로세스 안에 둔다). */
@@ -93,15 +93,15 @@ namespace sw::editor
         , _pinDragSource{ 0 }
         , _autoLinkPin{ 0 }
         , _autoLinkFramesLeft{ 0 }
-        , _bNeedsContentFit{ true }
-        , _bPendingNavigate{ false }
-        , _bOpenAddFromPin{ false }
-        , _bMinimapVisible{ true }
-        , _bAutoLayout{ false }
-        , _bClearSelection{ false }
-        , _bCommentsEnabled{ false }
-        , _bCommentRequested{ false }
-        , _bCommentReady{ false }
+        , _bNeedsContentFit{ SW_TRUE }
+        , _bPendingNavigate{ SW_FALSE }
+        , _bOpenAddFromPin{ SW_FALSE }
+        , _bMinimapVisible{ SW_TRUE }
+        , _bAutoLayout{ SW_FALSE }
+        , _bClearSelection{ SW_FALSE }
+        , _bCommentsEnabled{ SW_FALSE }
+        , _bCommentRequested{ SW_FALSE }
+        , _bCommentReady{ SW_FALSE }
         , _commentPosition{}
         , _commentSize{}
         , _renameCommentID{ 0 }
@@ -179,7 +179,7 @@ namespace sw::editor
         if ( _bClearSelection )
         {
             ed::ClearSelection();
-            _bClearSelection = false;
+            _bClearSelection = SW_FALSE;
         }
         return true;
     }
@@ -315,7 +315,7 @@ namespace sw::editor
                 ed::NavigateToSelection( false, EditorNodeGraphInternal::kNavigateSeconds );
             else
                 ed::NavigateToContent( EditorNodeGraphInternal::kNavigateSeconds, 1.0f );
-            _bPendingNavigate = false;
+            _bPendingNavigate = SW_FALSE;
         }
         if ( _pendingFocusNodeID != 0 )
         {
@@ -439,7 +439,7 @@ namespace sw::editor
             return false;
         outPosition    = _commentPosition;
         outSize        = _commentSize;
-        _bCommentReady = false;
+        _bCommentReady = SW_FALSE;
         return true;
     }
 
@@ -452,7 +452,7 @@ namespace sw::editor
     {
         if ( _bCommentRequested == false )
             return;
-        _bCommentRequested = false;
+        _bCommentRequested = SW_FALSE;
         // 고른 노드(주석 상자 제외)를 여백을 두고 감싼다. 없으면 보이는 가운데에 기본 크기로 둔다(언리얼 C 키 · Godot 프레임 만들기).
         bool   bAny      = false;
         float2 boundsMin = _viewMin;
@@ -479,7 +479,7 @@ namespace sw::editor
             _commentSize        = float2{ EditorNodeGraphInternal::kCommentDefaultWidth, EditorNodeGraphInternal::kCommentDefaultHeight };
             _commentPosition    = center - _commentSize * 0.5f;
         }
-        _bCommentReady = true;
+        _bCommentReady = SW_TRUE;
     }
 
     void EditorNodeGraph::collectMinimap()
@@ -517,7 +517,7 @@ namespace sw::editor
         if ( ImGui::BeginChild( "##graphViewBar", ImVec2{ 0.0f, 0.0f }, childFlags, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings ) )
         {
             if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphFit" ), "Fit" ) ) )
-                _bPendingNavigate = true;
+                _bPendingNavigate = SW_TRUE;
             EditorSelfTestMarks::note( ( _markScope + ".view.fit" ).c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphFitTip" ) );
             if ( _bAutoLayout == false )
@@ -533,7 +533,7 @@ namespace sw::editor
             {
                 ImGui::SameLine();
                 if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphComment" ), "Comment" ) ) )
-                    _bCommentRequested = true;
+                    _bCommentRequested = SW_TRUE;
                 EditorSelfTestMarks::note( ( _markScope + ".view.comment" ).c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphCommentTip" ) );
             }
@@ -656,7 +656,7 @@ namespace sw::editor
         if ( _bOpenAddFromPin )
         {
             // 핀을 빈 곳에 놓았다(언리얼 · 유니티 그래프의 "핀에서 끌어 노드 만들기") — 위치는 놓은 곳(queryNewLink 가 잡았다).
-            _bOpenAddFromPin = false;
+            _bOpenAddFromPin = SW_FALSE;
             _addNodeFilter.clear();
             EditorInputGUI::openPopup( "AddGraphNode" );
         }
@@ -752,7 +752,7 @@ namespace sw::editor
                 const ImVec2 canvasMouse = ImGui::GetMousePos();
                 _addNodePosition         = float2{ canvasMouse.x, canvasMouse.y };
                 _pinDragSource           = static_cast<int32>( pinDropped.Get() );
-                _bOpenAddFromPin         = true;
+                _bOpenAddFromPin         = SW_TRUE;
             }
         }
         ed::EndCreate();
@@ -876,7 +876,7 @@ namespace sw::editor
             return; // 크기가 정해진 다음 프레임에 맞춘다(노드 위치 시드도 그때까지 매 프레임 같은 값으로 걸린다)
 
         ed::NavigateToContent( 0.1f, 1.0f ); // 작은 그래프는 1:1 에서 가운데로 — 맞추기가 노드를 화면 가득 키우지 않는다(오버레이 포트 패치)
-        _bNeedsContentFit = false;
+        _bNeedsContentFit = SW_FALSE;
     }
 
 } // namespace sw::editor

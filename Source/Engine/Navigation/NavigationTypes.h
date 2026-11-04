@@ -129,7 +129,7 @@ namespace sw
         float3  _position{}; ///< 막힌 곳(안 막혔으면 엔드포인트)
         float3  _normal{};   ///< 막은 경계의 바깥쪽 법선(XZ)
         float32 _fraction{ 1.0f };
-        bool    _bHit{ false };
+        bool    _bHit{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -159,9 +159,9 @@ namespace sw
         float32             _collisionQueryRange{ 4.8f }; ///< 이웃과 경계를 모으는 거리다(보통 반지름 × 12).
         float32             _pathOptimizationRange{ 12.0f };
         NavAvoidanceQuality _avoidanceQuality{ NavAvoidanceQuality::Medium };
-        bool                _bAvoidance{ true };
-        bool                _bSeparation{ true };
-        bool                _bAnticipateTurns{ true };
+        bool                _bAvoidance{ true };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                _bSeparation{ true };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                _bAnticipateTurns{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -205,8 +205,8 @@ namespace sw
         float3            _nextCorner{}; ///< 다음 모퉁이(경로가 있으면)
         NavLinkTraversal  _link{};       ///< `_bOnOffMeshLink` 일 때만 뜻이 있다
         NavCrowdMoveState _moveState{ NavCrowdMoveState::Idle };
-        bool              _bOnNavMesh{ false };
-        bool              _bOnOffMeshLink{ false }; ///< 오프 메시 링크를 건너는 중이다(군중이 링크를 따라 옮긴다)
+        bool              _bOnNavMesh{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bOnOffMeshLink{ false }; ///< 오프 메시 링크를 건너는 중이다(군중이 링크를 따라 옮긴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -225,6 +225,6 @@ namespace sw
         float3  _center{};
         float3  _halfExtents{ 0.5f, 0.5f, 0.5f };
         float32 _yaw{ 0.0f };
-        bool    _bCylinder{ false };
+        bool    _bCylinder{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw

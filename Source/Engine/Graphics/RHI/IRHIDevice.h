@@ -603,17 +603,17 @@ namespace sw
         atomic<std::thread::id>           _renderThreadID;
         uint32                            _backBufferWidth;
         uint32                            _backBufferHeight;
-        bool                              _bPreferredVSync;
+        uint8                             _bPreferredVSync : 1;
         /// @brief 프레임 스트림을 자를 때마다 곧바로 제출할지 나타냅니다(setImmediateSubmit 참고).
-        bool _bImmediateSubmit;
+        uint8 _bImmediateSubmit : 1;
         /// @brief 지금이 병렬 패스 기록 구간인지 나타냅니다(setParallelRecording 참고). 렌더 스레드가 쓰고 등록 · 해제를 감시하는 다른 스레드가 읽으므로 atomic 입니다.
         atomic<bool> _bParallelRecording;
         /// @brief 백엔드가 실제로 소프트웨어 어댑터(WARP, CPU Vulkan)를 쓰는지 나타냅니다. 백엔드가 `initializeInternal` 에서 실제 어댑터를 보고 기록합니다.
-        bool _bSoftwareAdapter;
+        uint8 _bSoftwareAdapter : 1;
         /// @brief 마지막 `initialize` 의 결과입니다(getInitResult 참고).
         RHIInitResult _initResult;
         /// @brief `shutdown` 을 끝냈다. 그 뒤에 쌓인 해제는 다음 `shutdown`(백엔드 소멸자)이 단언한다. `initialize` 가 지운다.
-        bool _bShutDown;
+        uint8 _bShutDown : 1;
         /// @brief GPU 자원 추적기입니다(getMemoryTracker 참고). 기반 클래스 멤버이므로 해제 큐를 비우는 백엔드 소멸자보다 오래 삽니다.
         unique_ptr<RHIMemoryTracker> _memoryTracker;
         /// @brief 렌더 스레드가 프레임을 끝낼 때까지 미룬 핸들 반환과, 넘긴 · 끝낸 프레임 수입니다(releaseHandle 참고).

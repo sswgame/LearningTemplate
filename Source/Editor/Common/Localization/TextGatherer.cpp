@@ -38,8 +38,8 @@ namespace sw
                 , _pGatherer{ &gatherer }
                 , _position{ 0 }
                 , _line{ 1 }
-                , _bLineStart{ true }
-                , _bPreprocessorLine{ false }
+                , _bLineStart{ SW_TRUE }
+                , _bPreprocessorLine{ SW_FALSE }
             {
             }
 
@@ -68,7 +68,7 @@ namespace sw
                     }
                     if ( character == '#' && _bLineStart )
                     {
-                        _bPreprocessorLine = true;
+                        _bPreprocessorLine = SW_TRUE;
                         ++_position;
                         continue;
                     }
@@ -78,7 +78,7 @@ namespace sw
                         ++_position;
                         continue;
                     }
-                    _bLineStart              = false;
+                    _bLineStart              = SW_FALSE;
                     const bool bLiteralStart = character == kDoubleQuote || character == kSingleQuote || isRawStringStart();
                     if ( bLiteralStart )
                     {
@@ -126,9 +126,9 @@ namespace sw
                 const bool bContinued = _position > 0 && _text[_position - 1] == '\\';
                 ++_position;
                 ++_line;
-                _bLineStart = true;
+                _bLineStart = SW_TRUE;
                 if ( bContinued == false )
-                    _bPreprocessorLine = false;
+                    _bPreprocessorLine = SW_FALSE;
             }
 
             void skipBlockComment()
@@ -370,8 +370,8 @@ namespace sw
             TextGatherer* _pGatherer;
             size_t        _position;
             uint32        _line;
-            bool          _bLineStart;
-            bool          _bPreprocessorLine;
+            uint8         _bLineStart        : 1;
+            uint8         _bPreprocessorLine : 1;
         };
 
         struct TextGathererInternal

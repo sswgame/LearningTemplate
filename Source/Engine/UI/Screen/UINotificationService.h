@@ -41,7 +41,7 @@ namespace sw
         float32            _durationSeconds{ 4.0f }; ///< 보이는 시간입니다(대기열에서 기다린 시간은 세지 않습니다).
         int32              _priority{ 0 };           ///< 클수록 대기열에서 먼저 나옵니다(같으면 먼저 온 것).
         UINotificationKind _kind{ UINotificationKind::Info };
-        bool               _bMergeSameText{ true }; ///< 같은 텍스트가 보이거나 기다리는 중이면 새로 쌓지 않고 횟수를 셉니다("×2"). 시간은 다시 측정합니다.
+        bool               _bMergeSameText{ true }; ///< 같은 텍스트가 보이거나 기다리는 중이면 새로 쌓지 않고 횟수를 셉니다("×2"). 시간은 다시 측정합니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -106,7 +106,7 @@ namespace sw
             float32            _ageSeconds{ 0.0f };
             uint32             _count{ 1 };
             WidgetID           _widget{ kInvalidWidgetID };
-            bool               _bAnnounced{ false }; ///< 스크린 리더에 읽어 달라고 알렸는지 나타냅니다(보이는 글이 정해진 뒤 한 번).
+            bool               _bAnnounced{ false }; ///< 스크린 리더에 읽어 달라고 알렸는지 나타냅니다(보이는 글이 정해진 뒤 한 번). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @struct FadingEntry @brief 시간이 다 돼 사라지는 중인 항목의 위젯입니다. */

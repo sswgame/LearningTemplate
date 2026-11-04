@@ -66,7 +66,7 @@ namespace sw
         float32        _remainingSeconds{ -1.0f }; ///< 가장 긴 보이스가 끝날 때까지 남은 시간(초)이다. 반복이거나 클립을 아직 모르면 -1 이다.
         uint32         _voiceCount{ 0 };           ///< 인스턴스의 보이스 수다.
         uint32         _virtualVoiceCount{ 0 };    ///< 그중 가상 보이스 수다.
-        bool           _bStopping{ false };        ///< 페이드아웃으로 멈추는 중이다.
+        bool           _bStopping{ false };        ///< 페이드아웃으로 멈추는 중이다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -81,8 +81,8 @@ namespace sw
         float32       _userVolume{ 1.0f }; ///< 사용자 볼륨(선형, [0, 1])
         float32       _gain{ 0.0f };       ///< 페이더 게인(선형) — 데이터 × 사용자 × 스냅샷 × 음소거 · 솔로
         float32       _peak{ 0.0f };       ///< 마지막 블록 출력 피크(절댓값 최대)
-        bool          _bMuted{ false };
-        bool          _bSolo{ false };
+        bool          _bMuted{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool          _bSolo{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -91,11 +91,11 @@ namespace sw
     /** @brief 적응형 음악의 현재 위치입니다. 마지막 블록에서 게시한 값입니다. */
     struct AudioMusicStatus
     {
-        hashed_string _segment{};     ///< 현재 구간이다. 전환을 기다리는 동안은 이전 구간이다.
-        float64       _beat{ 0.0 };   ///< 구간 시작에서 센 박(소수)
-        uint64        _bar{ 0 };      ///< 구간 시작에서 센 마디 수다.
-        float32       _tempo{ 0.0f }; ///< 현재 템포(BPM)다.
-        bool          _bPlaying{ false };
+        hashed_string _segment{};            ///< 현재 구간이다. 전환을 기다리는 동안은 이전 구간이다.
+        float64       _beat{ 0.0 };          ///< 구간 시작에서 센 박(소수)
+        uint64        _bar{ 0 };             ///< 구간 시작에서 센 마디 수다.
+        float32       _tempo{ 0.0f };        ///< 현재 템포(BPM)다.
+        bool          _bPlaying{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

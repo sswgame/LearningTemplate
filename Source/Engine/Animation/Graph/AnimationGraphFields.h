@@ -126,7 +126,7 @@ namespace sw
         PROPERTY( Required )
         AnimationLayerBlend _blend{ AnimationLayerBlend::Override };
         PROPERTY()
-        bool _bLoop{ true };
+        bool _bLoop{ SW_TRUE };
         PROPERTY( Name = "weight_param" )
         hashed_string _weightParam{};
         /** @brief 다시 시작할 때 끊긴 포즈에서 이어 가는 반감기입니다. 0 이면 즉시 새 포즈다. */

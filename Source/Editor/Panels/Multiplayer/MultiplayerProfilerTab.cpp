@@ -176,9 +176,9 @@ namespace sw::editor
         vector<float32>            _listValueScratch;
         vector<NetStatsKindEntry>  _listKindEntryScratch;
         vector<EditorNetKindShare> _listShareScratch;
-        bool                       _bAllProcessKinds; ///< 비중을 대상 대신 모든 프로세스의 합으로 본다
-        bool                       _bSentKinds;       ///< 비중을 받은 메시지 대신 보낸 메시지(큐에 넣은 것)로 본다
-        bool                       _bRecordHidden;    ///< 다른 탭을 보는 동안에도 `net.stats` 를 묻는다(기본 꺼짐 — 자식 로그에 2 Hz 줄이 쌓인다)
+        bool                       _bAllProcessKinds; ///< 비중을 대상 대신 모든 프로세스의 합으로 본다 NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        bool                       _bSentKinds;       ///< 비중을 받은 메시지 대신 보낸 메시지(큐에 넣은 것)로 본다 NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        bool                       _bRecordHidden;    ///< 다른 탭을 보는 동안에도 `net.stats` 를 묻는다(기본 꺼짐 — 자식 로그에 2 Hz 줄이 쌓인다) NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor
 

@@ -62,7 +62,7 @@ namespace sw
          * @details 이 값이 없으면 자식 인스턴스로 프리팹을 만들 때 원래 부모의 이름이 프리팹에 들어가, 그 프리팹을 스폰할 때마다 그 이름의 오브젝트에
          *          붙는다. 핸들도 같다. 프리팹의 런타임 id 는 스폰한 실행에서 엉뚱한 오브젝트를 가리킨다.
          */
-        bool _bOmitExternalParent{ false };
+        uint8 _bOmitExternalParent : 1;
         /**
          * @brief 있으면 이 저장이 가리킨 다른 오브젝트의 런타임 id(0 제외)를 모두 더합니다. 쿠커가 셀을 넘는 참조를 찾는 데 씁니다(`SceneCooker`).
          * @details 참조는 모두 `getSavedObjectID` 를 거치므로 여기서 모으면 부착 · 핸들 PROPERTY 를 타입마다 따로 훑지 않아도 된다.
@@ -70,7 +70,7 @@ namespace sw
         vector<uint64>* _pOutListReferencedID{ nullptr };
         /** @brief 목적 @p purpose 로 저장합니다. 참조는 런타임 id 그대로 적습니다(아래 필드로 바꾼다). */
         explicit ObjectSaveOptions( SerializePurpose purpose )
-            : _purpose{ purpose }
+            : _bOmitExternalParent{ SW_FALSE }, _purpose{ purpose }
         {
         }
 
@@ -113,13 +113,13 @@ namespace sw
         /** @brief 이 상태가 저장될 때 이 오브젝트의 id 입니다. 같은 배치의 다른 상태가 이 값으로 이 오브젝트를 가리킵니다. 0 이면 `_pIdentity` 의 것을 씁니다. */
         uint64 _savedID{ 0 };
         /** @brief false 이면 다른 오브젝트로의 부착을 읽지 않습니다. 프리팹은 루트에 부모가 없으므로 false 입니다. 오브젝트 안의 부착은 그대로 연결합니다. */
-        bool _bExternalParentAllowed{ true };
+        bool _bExternalParentAllowed{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 읽기에 실패하면 오브젝트를 읽기 전 상태로 되돌립니다(기본). 되돌리기 로드만 끕니다.
          * @details 제자리 로드는 컴포넌트를 먼저 비우므로, 되돌리지 않으면 읽기가 실패할 때 **빈 오브젝트**가 남는다. 되돌리기, 복제, 프리팹
          *          되돌리기는 결과를 버리므로 그 빈 오브젝트가 그대로 저장된다.
          */
-        bool _bRestorePreviousOnFailure{ true };
+        uint8 _bRestorePreviousOnFailure : 1;
         /**
          * @brief 목적 @p purpose 로 읽습니다. 나머지는 선택입니다 — @p pIdentity 를 주면 원래 id 를 복원하고(같은 오브젝트를 같은 실행에서 복원할 때),
          *        @p pBatch 를 주면 그 배치에 기록하며, @p savedID 는 이 상태가 저장될 때의 id 입니다.
@@ -128,6 +128,7 @@ namespace sw
             : _pIdentity{ pIdentity }
             , _pBatch{ pBatch }
             , _savedID{ savedID }
+            , _bRestorePreviousOnFailure{ SW_TRUE }
             , _purpose{ purpose }
         {
         }
@@ -241,8 +242,8 @@ namespace sw
             GameObject*                     _pObject{ nullptr };
             uint64                          _savedID{ 0 };
             hashed_string                   _savedName{};
-            bool                            _bExternalParentAllowed{ true };
-            std::optional<SerializePurpose> _loadedPurpose{}; ///< 상태를 읽었으면 그 읽기의 목적이다. `finish` 가 `onPostLoad` 를 부르고 이 목적이 다룬 필드의 핸들을 옮긴다
+            bool                            _bExternalParentAllowed{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            std::optional<SerializePurpose> _loadedPurpose{};                ///< 상태를 읽었으면 그 읽기의 목적이다. `finish` 가 `onPostLoad` 를 부르고 이 목적이 다룬 필드의 핸들을 옮긴다
         };
 
         /** @brief `add` 와 `addLoadedState` 의 본체입니다. */
@@ -273,8 +274,8 @@ namespace sw
         unordered_map<uint64, GameObject*>   _mapSavedIDToObject;
         unordered_map<hashed_string, uint32> _mapSavedNameToEntry;
         ObjectIDSpace                        _idSpace;
-        bool                                 _bFinished;
-        bool                                 _bReferencesResolved; ///< `finish` 의 결과다. 두 번째 호출이 그대로 돌려준다
+        uint8                                _bFinished           : 1;
+        uint8                                _bReferencesResolved : 1; ///< `finish` 의 결과다. 두 번째 호출이 그대로 돌려준다
     };
 } // namespace sw
 

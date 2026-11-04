@@ -55,9 +55,9 @@ namespace sw::editor
         static void setDebugDrawShown( bool bShown );
 
     private:
-        EditorGameViewAspect _aspect;              ///< 이미지 화면 비율(자유 · 16:9)
-        bool                 _bNoCameraHintShown;  ///< 마지막 판정에 카메라가 없었다
-        uint8                _forwardedButtonMask; ///< 보조 창에서 게임으로 누름을 넣은 단추(비트 = 넘기는 단추 표 순서). 패널 밖에서 떼도 뗌을 넣는다
-        DetachedKeyForwarder _keyForwarder;        ///< 보조 창의 키를 게임으로 넣고, 누름을 넣은 채 남은 키를 기억한다
+        EditorGameViewAspect _aspect;                 ///< 이미지 화면 비율(자유 · 16:9)
+        uint8                _bNoCameraHintShown : 1; ///< 마지막 판정에 카메라가 없었다
+        uint8                _forwardedButtonMask;    ///< 보조 창에서 게임으로 누름을 넣은 단추(비트 = 넘기는 단추 표 순서). 패널 밖에서 떼도 뗌을 넣는다
+        DetachedKeyForwarder _keyForwarder;           ///< 보조 창의 키를 게임으로 넣고, 누름을 넣은 채 남은 키를 기억한다
     };
 } // namespace sw::editor

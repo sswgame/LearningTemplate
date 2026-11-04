@@ -16,7 +16,7 @@ namespace sw
         status._beat                = elapsed / framesPerBeat;
         status._bar                 = elapsed <= 0.0 ? 0u : static_cast<uint64>( status._beat ) / _pDesc->getBeatsPerBar( segmentIndex );
         status._tempo               = static_cast<float32>( 60.0 * static_cast<float64>( audio::kSampleRate ) / framesPerBeat );
-        status._bPlaying            = true;
+        status._bPlaying            = SW_TRUE;
         return status;
     }
 

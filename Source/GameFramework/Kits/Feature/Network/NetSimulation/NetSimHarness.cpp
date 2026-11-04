@@ -102,7 +102,7 @@ namespace sw
         , _worldIndex{ worldIndex }
         , _localTick{ 0 }
         , _role{ role }
-        , _bInputFocus{ false }
+        , _bInputFocus{ SW_FALSE }
     {
         _host.initialize( &_counter, hostSettings );
     }
@@ -191,7 +191,7 @@ namespace sw
         , _time{ 0.0 }
         , _tick{ 0 }
         , _nextWorldIndex{ 1 }
-        , _bStepping{ false }
+        , _bStepping{ SW_FALSE }
     {
     }
 
@@ -346,13 +346,13 @@ namespace sw
         if ( worldIndex != -1 && pTarget == nullptr )
             return false;
         if ( _pServer != nullptr )
-            _pServer->_bInputFocus = false;
+            _pServer->_bInputFocus = SW_FALSE;
         for ( unique_ptr<NetSimWorld>& pWorld : _listClient )
         {
-            pWorld->_bInputFocus = false;
+            pWorld->_bInputFocus = SW_FALSE;
         }
         if ( pTarget != nullptr )
-            pTarget->_bInputFocus = true;
+            pTarget->_bInputFocus = SW_TRUE;
         return true;
     }
 
@@ -422,7 +422,7 @@ namespace sw
     {
         if ( _pServer == nullptr )
             return;
-        _bStepping = true;
+        _bStepping = SW_TRUE;
         ++_tick;
         _time                   = static_cast<float64>( _tick ) * _settings._tickInterval;
         const float32 deltaTime = static_cast<float32>( _settings._tickInterval );
@@ -432,7 +432,7 @@ namespace sw
             pWorld->update( deltaTime );
         }
         updateNetwork();
-        _bStepping = false;
+        _bStepping = SW_FALSE;
     }
 
     void NetSimHarness::updateNetwork()

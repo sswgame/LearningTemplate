@@ -12,7 +12,7 @@ namespace sw
         , _password{}
         , _failureText{}
         , _state{ AccountGMLoginState::Idle }
-        , _bAttached{ false }
+        , _bAttached{ SW_FALSE }
     {
     }
 
@@ -26,7 +26,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AccountGMLogin.AccountClientCouldNot", "The account client could not be registered (method range already taken)" );
             return false;
         }
-        _bAttached = true;
+        _bAttached = SW_TRUE;
         return true;
     }
 

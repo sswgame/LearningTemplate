@@ -246,11 +246,12 @@ namespace sw::editor
     MeshModifierSession::MeshModifierSession()
         : _stack{}
         , _gpuPreviewMesh{}
+        , _bGPUPreviewColored{ SW_FALSE }
         , _cpuPreviewMesh{}
         , _originalMesh{}
         , _listGPUProgram{}
         , _gpuBlockingIndex{ -1 }
-        , _bShadedPreview{ true }
+        , _bShadedPreview{ SW_TRUE }
         , _previewMesh{}
         , _stagePreviewMesh{}
         , _prefixMesh{}
@@ -276,11 +277,11 @@ namespace sw::editor
         , _stagePreviewIndex{ -1 }
         , _selectedControlPoint{ -1 }
         , _mirrorAxis{ 0 }
-        , _bPreviewDirty{ true }
-        , _bStagePreviewDirty{ true }
-        , _bInputBoundsDirty{ true }
-        , _bMirrorEditing{ false }
-        , _bPreviewPlaying{ false }
+        , _bPreviewDirty{ SW_TRUE }
+        , _bStagePreviewDirty{ SW_TRUE }
+        , _bInputBoundsDirty{ SW_TRUE }
+        , _bMirrorEditing{ SW_FALSE }
+        , _bPreviewPlaying{ SW_FALSE }
     {
     }
 
@@ -309,7 +310,7 @@ namespace sw::editor
         _sourceBounds = MeshModifierBounds::makeFromPoints( _listSourcePosition );
         (void)loadSidecar();                         // 사이드카가 없으면 빈 스택으로 시작한다
         _savedStackText = _stack.makeJSONText( -1 ); // 사이드카가 없으면 빈 스택이 저장된 상태다
-        _bPreviewDirty  = true;
+        _bPreviewDirty  = SW_TRUE;
         return true;
     }
 
@@ -326,7 +327,7 @@ namespace sw::editor
         if ( _stack.readJSONText( _savedStackText ) == false )
             SW_LOG_ERROR_ID( "MeshModifierSession.MeshModifierStackCould", "Mesh modifier stack of %# could not be restored to its saved state - undo brings the edits back", _meshPath.c_str() );
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
-        _bPreviewDirty = true;
+        _bPreviewDirty = SW_TRUE;
     }
 
     void MeshModifierSession::shutdownSubsystem()
@@ -360,9 +361,9 @@ namespace sw::editor
         _listUndo.clear();
         _listRedo.clear();
         _savedStackText.clear();
-        _bPreviewDirty      = true;
-        _bStagePreviewDirty = true;
-        _bInputBoundsDirty  = true;
+        _bPreviewDirty      = SW_TRUE;
+        _bStagePreviewDirty = SW_TRUE;
+        _bInputBoundsDirty  = SW_TRUE;
     }
 
     GameObject* MeshModifierSession::findTarget() const
@@ -387,7 +388,7 @@ namespace sw::editor
         _listUndo.pop_back();
         (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다. 실패해도 빈 스택이다
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
-        _bPreviewDirty = true;
+        _bPreviewDirty = SW_TRUE;
         return true;
     }
 
@@ -400,7 +401,7 @@ namespace sw::editor
         _listRedo.pop_back();
         (void)_stack.readJSONText( text ); // 스스로 만든 글이라 실패하지 않는다
         _selectedIndex = MathUtil::min( _selectedIndex, _stack.getModifierCount() - 1 );
-        _bPreviewDirty = true;
+        _bPreviewDirty = SW_TRUE;
         return true;
     }
 
@@ -408,8 +409,8 @@ namespace sw::editor
     {
         if ( _bPreviewDirty == false || hasTarget() == false )
             return;
-        _bPreviewDirty      = false;
-        _bStagePreviewDirty = true; // 단계 미리보기도 같은 스택 상태를 따라간다
+        _bPreviewDirty      = SW_FALSE;
+        _bStagePreviewDirty = SW_TRUE; // 단계 미리보기도 같은 스택 상태를 따라간다
         // 구간 이름이 미리보기 비용의 측정 질문(MeshModifierPreviewCost MM2)이 읽는 자리다: 스택 적용(CPU) → 셰이딩 미리보기 갱신(GPU 프로그램 또는 CPU 결과 메시).
         SW_PROFILE_SCOPE( "Editor.MeshModifiers.Refresh" );
         MeshModifierEvaluation evaluation = makeEvaluation();
@@ -462,8 +463,8 @@ namespace sw::editor
         prefixEvaluation._pListInputBounds      = &_listPrefixInputBounds;
         prefixEvaluation._pListInputWeight      = &_listPrefixInputWeight;
         _stack.applyRange( _prefixMesh, prefixEvaluation, 0, prefixEnd );
-        _bInputBoundsDirty  = true;
-        _bStagePreviewDirty = true;
+        _bInputBoundsDirty  = SW_TRUE;
+        _bStagePreviewDirty = SW_TRUE;
     }
 
     void MeshModifierSession::setShadedPreviewEnabled( bool bEnabled )
@@ -471,7 +472,7 @@ namespace sw::editor
         if ( _bShadedPreview == bEnabled )
             return;
         _bShadedPreview = bEnabled;
-        _bPreviewDirty  = true; // 다음 refreshPreview 가 끼우거나 되돌린다
+        _bPreviewDirty  = SW_TRUE; // 다음 refreshPreview 가 끼우거나 되돌린다
         if ( bEnabled == false )
             restoreOriginalMesh();
     }
@@ -562,7 +563,7 @@ namespace sw::editor
         updatePrefixCache( evaluation, false ); // 고른 번호만 바뀌었으면 앞부분 캐시를 그 번호로 옮긴다
         if ( _bStagePreviewDirty || _stagePreviewIndex != lastIndex )
         {
-            _bStagePreviewDirty = false;
+            _bStagePreviewDirty = SW_FALSE;
             _stagePreviewIndex  = lastIndex;
             // 앞부분 캐시(고른 것 앞까지)에 고른 모디파이어 하나만 더 건다. 법선 재계산은 위치에 영향이 없어 건너뛴다(선만 그린다)
             _stagePreviewMesh = _prefixMesh;
@@ -582,7 +583,7 @@ namespace sw::editor
         updatePrefixCache( makeEvaluation(), false );
         if ( _bInputBoundsDirty )
         {
-            _bInputBoundsDirty = false;
+            _bInputBoundsDirty = SW_FALSE;
             _inputBounds       = MeshModifierBounds::makeFromPoints( _prefixMesh._listPosition );
         }
         return _inputBounds.isValid() ? _inputBounds : _sourceBounds;
@@ -654,7 +655,7 @@ namespace sw::editor
         }
         _savedStackText = _stack.makeJSONText( -1 );
         _selectedIndex  = _stack.getModifierCount() > 0 ? 0 : -1;
-        _bPreviewDirty  = true;
+        _bPreviewDirty  = SW_TRUE;
         return true;
     }
 
@@ -698,7 +699,7 @@ namespace sw::editor
         if ( MathUtil::isFinite( time ) == false || time == _previewTime )
             return;
         _previewTime   = time;
-        _bPreviewDirty = true;
+        _bPreviewDirty = SW_TRUE;
     }
 
     void MeshModifierSession::advancePreviewTime( float32 deltaSeconds )

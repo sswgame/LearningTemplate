@@ -55,6 +55,7 @@ namespace
 
         ScopedCascadeDomain()
             : _folder{ sw::FileUtil::normalizeSeparators( sw::test::makeScratchPath( kDomain ) ) }
+            , _bMounted{ SW_FALSE }
         {
             _bMounted = sw::FileUtil::ensureDirectoryExists( _folder ) && sw::editor::getSubsystem<sw::AssetPaths>().mountDiskDomain( kDomain, _folder );
             SW_EXPECT_TRUE( _bMounted );
@@ -72,7 +73,7 @@ namespace
 
     private:
         sw::string _folder;
-        bool       _bMounted{ false };
+        uint8      _bMounted : 1;
     };
 
     sw::string makeMaterialText( const char* pName, const sw::string& parentID, const char* pRoughness )

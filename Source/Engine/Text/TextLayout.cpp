@@ -141,7 +141,7 @@ namespace sw
             {
                 uint32 _begin{ 0 };
                 uint32 _end{ 0 };
-                bool   _bEllipsis{ false };
+                bool   _bEllipsis{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 줄 하나의 가장 큰 면 메트릭을 모읍니다. 대체 면이 섞인 줄이 겹치지 않게 합니다. */
@@ -150,7 +150,7 @@ namespace sw
                 float32 _maxAscender{ 0.0f };
                 float32 _minDescender{ 0.0f };
                 float32 _maxLineGap{ 0.0f };
-                bool    _bHasMetrics{ false };
+                bool    _bHasMetrics{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
                 /** @brief 면 하나를 그 폰트 크기로 더합니다(값은 UI 단위). */
                 void accumulate( const IFontRasterizer& rasterizer, FontFaceID face, float32 fontSize )
@@ -412,7 +412,7 @@ namespace sw
                 LineFit          _fit{};
                 uint32           _lineGlyphCount{ 0 };
                 float32          _baseline{ 0.0f };
-                bool             _bReorder{ false };
+                bool             _bReorder{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 uint8            _paragraphLevel{ 0 };
             };
 

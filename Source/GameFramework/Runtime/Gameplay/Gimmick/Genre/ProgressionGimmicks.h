@@ -45,7 +45,7 @@ namespace sw
         PROPERTY( Category = "Gate", DisplayName = "Planar", Tooltip = "2D distance (ignore Z)" )
         bool _bPlanar;
         PROPERTY( RuntimeState, Category = "Gate", DisplayName = "Open", Tooltip = "Runtime / progress" )
-        bool _bOpen;
+        bool _bOpen; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
 
         FixedStepTimer      _clock;
         vector<GameObject*> _listTagged; ///< 스텝마다 태그 색인의 답을 받는 버퍼(용량 재사용, `TagIndex::findObjectsWithTags`)

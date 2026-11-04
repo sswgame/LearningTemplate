@@ -44,10 +44,10 @@ namespace sw::editor
                 GameObjectHandle       _object{};
                 ObjectSnapshot         _undoBefore{};
                 ColliderHandle         _active{};
-                vector<ColliderHandle> _listHandle{}; ///< 프레임마다 지우고 다시 채우는 손잡이 재사용 버퍼(UI 스레드 하나만 쓴다)
-                bool                   _bDragging{ false };
-                bool                   _bChanged{ false };
-                bool                   _bCapturing{ false };
+                vector<ColliderHandle> _listHandle{};          ///< 프레임마다 지우고 다시 채우는 손잡이 재사용 버퍼(UI 스레드 하나만 쓴다)
+                bool                   _bDragging{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                   _bChanged{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                   _bCapturing{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 int32                  _frame{ -1 };
                 uint32                 _commitCount{ 0 };
                 uint32                 _drawnHandleCount{ 0 };
@@ -71,8 +71,8 @@ namespace sw::editor
                 }
                 state._object     = GameObjectHandle{};
                 state._undoBefore = ObjectSnapshot{};
-                state._bDragging  = false;
-                state._bChanged   = false;
+                state._bDragging  = SW_FALSE;
+                state._bChanged   = SW_FALSE;
             }
 
             /** @brief 시나리오가 손잡이를 누를 수 있도록 화면 사각형을 기록합니다(`collider.handle.<셰이프>.<축><부호>`). */
@@ -223,8 +223,8 @@ namespace sw::editor
                 state._active     = *pHovered;
                 state._object     = pObject->getHandle();
                 state._undoBefore = EditorTransaction::captureSnapshot( pObject );
-                state._bDragging  = true;
-                state._bChanged   = false;
+                state._bDragging  = SW_TRUE;
+                state._bChanged   = SW_FALSE;
             }
         }
     }

@@ -29,6 +29,8 @@ namespace sw
     class SW_API AutomationFrameStats
     {
     public:
+        AutomationFrameStats();
+
         /** @brief 이 프레임부터 기록합니다(앞 기록은 버린다). */
         void begin();
         /** @brief 기록을 멈추고 요약합니다. 기록 중이 아니었으면 false 입니다. */
@@ -43,8 +45,8 @@ namespace sw
         static string toJSON( const FrameStatsSummary& summary, string_view scenarioName );
 
     private:
-        vector<float64> _listFrameMilliseconds{};
-        int64           _lastFrameEndNanoseconds{ 0 };
-        bool            _bRecording{ false };
+        vector<float64> _listFrameMilliseconds;
+        int64           _lastFrameEndNanoseconds;
+        uint8           _bRecording : 1;
     };
 } // namespace sw

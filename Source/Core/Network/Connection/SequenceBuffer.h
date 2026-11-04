@@ -103,6 +103,7 @@ namespace sw
         static constexpr uint32 kEmpty = constant::invalid_index::kUint32;
 
         SequenceBuffer()
+            : _bHasNewest{ SW_FALSE }
         {
             _listEntry.resize( kSize );
             _listSequence.assign( kSize, kEmpty );
@@ -125,7 +126,7 @@ namespace sw
                     }
                 }
                 _newest     = sequence;
-                _bHasNewest = true;
+                _bHasNewest = SW_TRUE;
             }
             const size_t index   = computeIndex( sequence );
             _listSequence[index] = sequence;
@@ -157,7 +158,7 @@ namespace sw
         void reset()
         {
             _listSequence.assign( kSize, kEmpty );
-            _bHasNewest = false;
+            _bHasNewest = SW_FALSE;
             _newest     = 0;
         }
 
@@ -171,6 +172,6 @@ namespace sw
         vector<T>      _listEntry{};
         vector<uint32> _listSequence{};
         uint16         _newest{ 0 };
-        bool           _bHasNewest{ false };
+        uint8          _bHasNewest : 1;
     };
 } // namespace sw

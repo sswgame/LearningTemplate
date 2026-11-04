@@ -16,7 +16,7 @@ namespace
         {
             sw::AudioListenerState listener;
             listener._position = position;
-            listener._bActive  = true;
+            listener._bActive  = SW_TRUE;
             return listener;
         }
     };

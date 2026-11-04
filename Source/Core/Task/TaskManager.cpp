@@ -209,7 +209,7 @@ namespace sw
     // 1) 수명 — 생성 · 초기화 · 종료 · 강제 정리
     // ------------------------------------------------------------------------------
     TaskManager::TaskManager()
-        : _bInitialized{ false }
+        : _bInitialized{ SW_FALSE }
         , _mainThreadID{}
         , _bStop{ false }
         , _runningWorkerCount{ 0 }
@@ -278,7 +278,7 @@ namespace sw
             std::as_const( _listWorkerSlot )[workerIndex]->_thread = sw::thread( &TaskManager::workerLoop, this, workerIndex );
         }
 
-        _bInitialized = true;
+        _bInitialized = SW_TRUE;
         SW_LOG_INFO_ID( "TaskManager.InitializedWorkerThreads", "Initialized with %# worker threads.", threadCount );
         return true;
     }
@@ -313,7 +313,7 @@ namespace sw
         {
             clear();
             _mainThreadID = {};
-            _bInitialized = false;
+            _bInitialized = SW_FALSE;
         }
         SW_LOG_INFO_ID( "TaskManager.ShutdownCleanly", "Shutdown cleanly." );
     }

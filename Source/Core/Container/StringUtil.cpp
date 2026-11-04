@@ -141,7 +141,7 @@ namespace sw
             {
                 uint32 _codepoint;
                 size_t _byteCount; ///< 이 글자로 소비한 바이트 수. 잘못된 입력이어도 1 이상입니다.
-                bool   _bValid;    ///< 올바른 UTF-8 이었으면 true. false 면 `_codepoint` 는 U+FFFD 입니다.
+                bool   _bValid;    ///< 올바른 UTF-8 이었으면 true. false 면 `_codepoint` 는 U+FFFD 입니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /**

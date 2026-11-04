@@ -113,7 +113,7 @@ namespace sw::editor
         , _run{}
         , _nextVolumeIndex{ 0 }
         , _bakedCount{ 0 }
-        , _bJobActive{ false }
+        , _bJobActive{ SW_FALSE }
     {
     }
 
@@ -140,7 +140,7 @@ namespace sw::editor
         _nextVolumeIndex = 0;
         _bakedCount      = 0;
         _lastError.clear();
-        _bJobActive = false;
+        _bJobActive = SW_FALSE;
         _run.begin( sceneManager.getSceneGeneration() );
         if ( _listObjectID.empty() )
             finish( false );
@@ -202,13 +202,13 @@ namespace sw::editor
             reportFailure( error );
             return false;
         }
-        _bJobActive = true;
+        _bJobActive = SW_TRUE;
         return true;
     }
 
     void EditorLightProbeBakeSession::completeVolume( const Scene& scene )
     {
-        _bJobActive                        = false;
+        _bJobActive                        = SW_FALSE;
         LightProbeVolumeComponent* pVolume = EditorLightProbeBakeSessionInternal::findVolume( _listObjectID[getVolumeIndex()] );
         LightProbeGrid             grid{};
         if ( pVolume == nullptr || _job.takeGrid( grid ) == false )
@@ -253,7 +253,7 @@ namespace sw::editor
 
     void EditorLightProbeBakeSession::finish( bool bCanceled )
     {
-        _bJobActive = false;
+        _bJobActive = SW_FALSE;
         _job        = LightProbeBakeJob{};
         _pOccluders.reset(); // 작업이 빌리던 가림 씬 — 작업을 비운 뒤에 놓는다
         _run.end();

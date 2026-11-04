@@ -39,6 +39,8 @@ namespace sw
     class SW_API RenderScaleAdjuster
     {
     public:
+        RenderScaleAdjuster();
+
         /** @brief 설정이 올바른지 봅니다. 올바르면 빈 문자열, 틀리면 이유입니다. */
         [[nodiscard]] static string validate( const RenderScaleAdjusterConfig& config );
         /** @brief 설정을 넣고 배율을 1 로 되돌립니다. 설정이 틀리면 false 이고 상태는 그대로입니다. */
@@ -50,10 +52,10 @@ namespace sw
         float32 getScale() const { return _scale; }
 
     private:
-        RenderScaleAdjusterConfig _config{};
-        float32                   _scale{ 1.0f };
-        uint32                    _overCount{ 0 };
-        uint32                    _underCount{ 0 };
-        bool                      _bConfigured{ false };
+        RenderScaleAdjusterConfig _config;
+        float32                   _scale;
+        uint32                    _overCount;
+        uint32                    _underCount;
+        uint8                     _bConfigured : 1;
     };
 } // namespace sw

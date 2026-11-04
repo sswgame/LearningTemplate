@@ -19,7 +19,7 @@ namespace sw
     class WaylandShmBuffer
     {
     public:
-        WaylandShmBuffer() = default;
+        WaylandShmBuffer();
         ~WaylandShmBuffer();
 
         WaylandShmBuffer( const WaylandShmBuffer& )            = delete;
@@ -36,17 +36,17 @@ namespace sw
         /** @brief 컴포지터에 넘겨 아직 `release` 가 오지 않았으면 true 입니다. */
         bool isBusy() const { return _bBusy; }
         /** @brief 이 버퍼를 `wl_surface_attach` 한 직후 부릅니다. */
-        void markBusy() { _bBusy = true; }
+        void markBusy() { _bBusy = SW_TRUE; }
         /** @brief 컴포지터의 `release` 가 부릅니다(리스너 전용). */
-        void clearBusy() { _bBusy = false; }
+        void clearBusy() { _bBusy = SW_FALSE; }
 
     private:
-        wl_buffer*              _pBuffer{ nullptr };
-        uint32*                 _pPixels{ nullptr };
-        [[maybe_unused]] size_t _byteSize{ 0 }; ///< munmap 크기 — Wayland 가 없는 빌드의 빈 구현은 읽지 않는다
-        uint32                  _width{ 0 };
-        uint32                  _height{ 0 };
-        bool                    _bBusy{ false };
+        wl_buffer*              _pBuffer;
+        uint32*                 _pPixels;
+        [[maybe_unused]] size_t _byteSize; ///< munmap 크기 — Wayland 가 없는 빌드의 빈 구현은 읽지 않는다
+        uint32                  _width;
+        uint32                  _height;
+        uint8                   _bBusy : 1;
     };
 } // namespace sw
 

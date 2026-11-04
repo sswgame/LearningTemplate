@@ -9,7 +9,7 @@
 namespace sw
 {
     NamePoolSubsystem::NamePoolSubsystem()
-        : _bInitialized{ false }
+        : _bInitialized{ SW_FALSE }
     {
     }
 
@@ -22,7 +22,7 @@ namespace sw
     SubsystemInitResult NamePoolSubsystem::initializeSubsystem()
     {
         HashedStringPool::initialize();
-        _bInitialized = true;
+        _bInitialized = SW_TRUE;
         return SubsystemInitResult::Succeeded;
     }
 

@@ -117,16 +117,16 @@ namespace sw::editor
         void finishSlotField( Widget& widget, const PropertyInfo& slotProp, const string& frameText, bool bChanged, bool bImmediate );
 
     private:
-        UIPreviewModel     _model;             ///< 상태와 명령(ImGui 없음)
-        EditorPropertyGrid _grid;              ///< 고른 위젯의 프로퍼티 그리드
-        string             _paletteFilter;     ///< 팔레트 검색어
-        string             _slotDragBaseline;  ///< 슬롯 손잡이를 끌기 시작할 때의 `_slot` 텍스트
-        string             _slotFieldBaseline; ///< Slot 필드 컨트롤을 끌기 시작할 때의 `_slot` 텍스트
-        void*              _pTextureID;        ///< ImGui 텍스처 id(이 패널 소유)
-        uint64             _texture;           ///< 그 id 의 RHI 텍스처
-        uint32             _slotDragOrdinal;   ///< 슬롯 손잡이를 끄는 위젯의 문서 순서 번호
-        bool               _bShowLayout;       ///< 레이아웃 사각형을 겹쳐 그린다
-        bool               _bSlotDragging;     ///< 슬롯 손잡이를 끄는 중인지
-        bool               _bLayoutDragging;   ///< 상자 · 격자 옮기기 손잡이를 끄는 중인지
+        UIPreviewModel     _model;               ///< 상태와 명령(ImGui 없음)
+        EditorPropertyGrid _grid;                ///< 고른 위젯의 프로퍼티 그리드
+        string             _paletteFilter;       ///< 팔레트 검색어
+        string             _slotDragBaseline;    ///< 슬롯 손잡이를 끌기 시작할 때의 `_slot` 텍스트
+        string             _slotFieldBaseline;   ///< Slot 필드 컨트롤을 끌기 시작할 때의 `_slot` 텍스트
+        void*              _pTextureID;          ///< ImGui 텍스처 id(이 패널 소유)
+        uint64             _texture;             ///< 그 id 의 RHI 텍스처
+        uint32             _slotDragOrdinal;     ///< 슬롯 손잡이를 끄는 위젯의 문서 순서 번호
+        bool               _bShowLayout;         ///< 레이아웃 사각형을 겹쳐 그린다 NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        uint8              _bSlotDragging   : 1; ///< 슬롯 손잡이를 끄는 중인지
+        uint8              _bLayoutDragging : 1; ///< 상자 · 격자 옮기기 손잡이를 끄는 중인지
     };
 } // namespace sw::editor

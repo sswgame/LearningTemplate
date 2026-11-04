@@ -87,8 +87,8 @@ namespace sw
         int32             _shardCount{ 1 }; ///< 서버 — 포트 샤드 수(샤드마다 소켓 · 호스트 · 스레드). 클라이언트는 1
         uint16            _listenPort{ 0 }; ///< 서버 — 열 UDP 포트(샤드 여럿이면 첫 샤드의 포트, 나머지는 이어서)
         GameNetRole       _role{ GameNetRole::None };
-        bool              _bLoopbackOnly{ true };     ///< 서버 — 이 기계의 상대만 받는다(설정 `_listenAddress` 또는 `gv_netLoopbackOnly`). 클라이언트는 서버 주소가 정해 읽지 않는다
-        bool              _bShardsSharePort{ false }; ///< 서버(리눅스) — 샤드가 연이은 포트 대신 한 포트를 `SO_REUSEPORT` 로 나눈다(`ServerConfig::_bGamePortReuse`)
+        bool              _bLoopbackOnly{ true };     ///< 서버 — 이 기계의 상대만 받는다(설정 `_listenAddress` 또는 `gv_netLoopbackOnly`). 클라이언트는 서버 주소가 정해 읽지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bShardsSharePort{ false }; ///< 서버(리눅스) — 샤드가 연이은 포트 대신 한 포트를 `SO_REUSEPORT` 로 나눈다(`ServerConfig::_bGamePortReuse`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 클라이언트 — 연결 때 내미는 접속 티켓입니다. 비어 있지 않으면 `_hostSettings._security` 가 암호화여야 합니다(`GameNetSession::makeTicketClientParams` 가 둘을 함께 채운다).
          * @details 티켓을 내미는 클라이언트와 받는 서버는 프로토콜 id 의 기능 비트가 같아야 붙는다 — 자격 없이 붙는 클라이언트는 티켓 서버에 `SecurityMismatch` 로 거절된다.

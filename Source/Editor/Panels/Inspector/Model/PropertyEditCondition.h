@@ -37,8 +37,8 @@ namespace sw
         const PropertyInfo* _pSubject{ nullptr }; ///< 조건이 보는 프로퍼티
         const EnumInfo*     _pEnum{ nullptr };    ///< 그 프로퍼티가 열거형이면 그 표
         int64               _compareValue{ 0 };   ///< `==` · `!=` 의 오른쪽 값
-        bool                _bNegate{ false };    ///< `!name` · `!=`
-        bool                _bCompare{ false };   ///< `==` · `!=` 꼴
+        bool                _bNegate{ SW_FALSE }; ///< `!name` · `!=` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                _bCompare{ false };   ///< `==` · `!=` 꼴 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

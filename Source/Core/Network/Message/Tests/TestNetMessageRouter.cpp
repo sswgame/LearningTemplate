@@ -233,7 +233,7 @@ SW_TEST_CASE( NetMessageRouterTest, RouterTellsHandlersAboutConnectionsBeforeThe
         }
 
         string _log;
-        bool   _bOpen{ false };
+        bool   _bOpen{ false }; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 
     test::LoopbackCluster pair( 77u );

@@ -43,14 +43,14 @@ namespace sw::editor
      */
     struct UIPreviewProbe
     {
-        bool    _bValid{ false };
-        bool    _bDirty{ false };
-        bool    _bRightToLeft{ false };      ///< 루트 위젯이 오른쪽에서 왼쪽 흐름으로 배치됐는지
-        bool    _bHoveredFocusable{ false }; ///< 포인터 아래 위젯이 포커스를 받는 종류(버튼 …)인지
-        bool    _bSelectedValid{ false };    ///< 고른 위젯이 있는지
-        bool    _bAnimationPlaying{ false };
-        bool    _bTextureReady{ false };      ///< 렌더 텍스처가 ImGui 에 등록돼 이미지가 보이는지
-        bool    _bReloadedAfterSave{ false }; ///< 저장한 뒤 핫 리로드가 문서를 다시 읽어 트리를 새로 지었는지(저장이 파일까지 갔다는 증거)
+        bool    _bValid{ false };             ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bDirty{ SW_FALSE };          ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bRightToLeft{ SW_FALSE };    ///< 루트 위젯이 오른쪽에서 왼쪽 흐름으로 배치됐는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bHoveredFocusable{ false };  ///< 포인터 아래 위젯이 포커스를 받는 종류(버튼 …)인지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bSelectedValid{ false };     ///< 고른 위젯이 있는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bAnimationPlaying{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bTextureReady{ false };      ///< 렌더 텍스처가 ImGui 에 등록돼 이미지가 보이는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bReloadedAfterSave{ false }; ///< 저장한 뒤 핫 리로드가 문서를 다시 읽어 트리를 새로 지었는지(저장이 파일까지 갔다는 증거) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         uint32  _widgetCount{ 0 };
         uint32  _firstTextBytes{ 0 };        ///< 문서 순서로 첫 글 위젯의 화면 글자 UTF-8 바이트 수(언어를 바꾸면 길이가 달라진다)
         int32   _hoveredOrdinal{ -1 };       ///< 포인터 아래 위젯의 문서 순서 번호, 없으면 -1
@@ -58,7 +58,7 @@ namespace sw::editor
         float32 _selectedOpacity{ 0.0f };    ///< 고른 위젯의 불투명도
         float32 _animationTime{ 0.0f };      ///< 고른 애니메이션의 지금 시각(재생 중이 아니면 0)
         uint32  _languageIndex{ 0 };         ///< 언어 콤보에서 고른 줄(0 = 게임 언어)
-        bool    _bSlotEditable{ false };     ///< 고른 위젯의 슬롯을 손잡이로 고칠 수 있는지(부모가 캔버스 패널)
+        bool    _bSlotEditable{ false };     ///< 고른 위젯의 슬롯을 손잡이로 고칠 수 있는지(부모가 캔버스 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         float32 _selectedOffsetMinX{ 0.0f }; ///< 고른 위젯의 슬롯 `_offsetMin._x`(손잡이로 옮기면 바뀐다)
         uint32  _paletteCount{ 0 };          ///< 팔레트가 보이는 위젯 타입 수
         uint32  _slotEditCount{ 0 };         ///< 적용된 슬롯 편집 수(캔버스 손잡이 · Slot 필드 · 상자 순서 · 격자 셀 손잡이, 되돌리기 항목 하나가 하나)
@@ -74,7 +74,7 @@ namespace sw::editor
 
         float2  _position{};                  ///< UI 단위 포인터 위치
         float32 _wheel{ 0.0f };               ///< 이번 프레임의 휠
-        bool    _bHovered{ false };           ///< 포인터가 이미지 위에 있다
+        bool    _bHovered{ false };           ///< 포인터가 이미지 위에 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool    _arrPressed[kButtonCount]{};  ///< 이번 프레임에 누른 버튼
         bool    _arrReleased[kButtonCount]{}; ///< 이번 프레임에 뗀 버튼
     };
@@ -237,7 +237,7 @@ namespace sw::editor
         void setDirty( bool bDirty );
         void notifyTargetReleasing();
         /** @brief 입력 흉내나 애니메이션이 트리 값을 바꿨음을 기록합니다(저장을 막고 Reload 로 되찾게 합니다). */
-        void markPreviewMutated() { _bMutated = true; }
+        void markPreviewMutated() { _bMutated = SW_TRUE; }
         void setNavigationMode( bool bNavigation );
         void captureBaseline( const Widget& widget );
         /** @brief 프로퍼티 편집 하나를 되돌리기 항목으로 남깁니다(인스펙터와 슬롯 편집이 함께 씁니다). */
@@ -292,21 +292,21 @@ namespace sw::editor
         uint32                          _slotEditCount;   ///< 적용된 슬롯 편집 수(감시 값)
         UIResolutionPresetTable         _resolutionTable; ///< 해상도 견본 — 처음 쓸 때 한 번 읽는다
         uint32                          _resolutionIndex;
-        bool                            _bResolutionTableAttempted; ///< 테이블을 읽어 봤다(실패도 한 번만 알린다)
+        uint8                           _bResolutionTableAttempted : 1; ///< 테이블을 읽어 봤다(실패도 한 번만 알린다)
         float32                         _uiScale;
         float32                         _textScale;
         float32                         _safeZone;
-        float32                         _animationScrub;  ///< 시간 막대 값(초)
-        float2                          _lastPointer;     ///< 마지막으로 보낸 포인터 위치(UI 단위)
-        bool                            _bInteract;       ///< 입력 흉내를 켰는지(이미지 위 클릭이 선택 대신 UI 로 간다)
-        bool                            _bNavigationMode; ///< 탐색 방식으로 보이는지(포커스 테두리)
-        bool                            _bMutated;        ///< 입력 흉내나 애니메이션이 트리 값을 바꿨는지
-        bool                            _bAnimationPaused;
-        bool                            _bAnimationLoop;
-        bool                            _bPointerInside;
-        bool                            _bPointerPressed;    ///< 포인터 버튼을 누른 채인지(이미지 밖에서 놓아도 Up 을 보낸다)
-        bool                            _bApplyLocalization; ///< 화면에 문화권 관리자를 다시 등록해야 하는지(화면을 새로 열었거나 언어를 바꿨다)
-        bool                            _bAwaitReload;       ///< 저장했고 핫 리로드가 트리를 다시 만들기를 기다리는지
-        bool                            _bReloadedAfterSave; ///< 그 뒤 트리가 새로 지어졌는지(감시 값)
+        float32                         _animationScrub;       ///< 시간 막대 값(초)
+        float2                          _lastPointer;          ///< 마지막으로 보낸 포인터 위치(UI 단위)
+        uint8                           _bInteract        : 1; ///< 입력 흉내를 켰는지(이미지 위 클릭이 선택 대신 UI 로 간다)
+        uint8                           _bNavigationMode  : 1; ///< 탐색 방식으로 보이는지(포커스 테두리)
+        uint8                           _bMutated         : 1; ///< 입력 흉내나 애니메이션이 트리 값을 바꿨는지
+        uint8                           _bAnimationPaused : 1;
+        bool                            _bAnimationLoop; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        uint8                           _bPointerInside     : 1;
+        uint8                           _bPointerPressed    : 1; ///< 포인터 버튼을 누른 채인지(이미지 밖에서 놓아도 Up 을 보낸다)
+        uint8                           _bApplyLocalization : 1; ///< 화면에 문화권 관리자를 다시 등록해야 하는지(화면을 새로 열었거나 언어를 바꿨다)
+        uint8                           _bAwaitReload       : 1; ///< 저장했고 핫 리로드가 트리를 다시 만들기를 기다리는지
+        bool                            _bReloadedAfterSave;     ///< 그 뒤 트리가 새로 지어졌는지(감시 값) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor

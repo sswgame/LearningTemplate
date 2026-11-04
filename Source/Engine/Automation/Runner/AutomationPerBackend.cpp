@@ -78,8 +78,8 @@ namespace sw
                 thread         _drainThread{};
                 Deadline       _killDeadline = Deadline::afterMilliseconds( 0 ); ///< 띄운 때부터 센 프로세스 시한(띄울 때 다시 정한다)
                 int32          _exitCode{ -1 };
-                bool           _bLaunched{ false };
-                bool           _bPending{ false }; ///< 아직 띄우지 않았다(맡은 시나리오가 있다)
+                bool           _bLaunched{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool           _bPending{ false };  ///< 아직 띄우지 않았다(맡은 시나리오가 있다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 인자 한 줄의 키(앞 하이픈 · `=` 뒤를 뗀 것)입니다. */

@@ -167,7 +167,7 @@ namespace sw
         PROPERTY( Tooltip = "Channels the bus mixes in: the output layout, or always stereo (front pair; folds down from wider buses)" )
         AudioBusChannels _channels{ AudioBusChannels::Output };
         PROPERTY( Tooltip = "Starts muted" )
-        bool _bMuted{ false };
+        bool _bMuted{ SW_FALSE };
         PROPERTY( Tooltip = "Starts soloed (every bus that is not on a soloed path goes silent)" )
         bool _bSolo{ false };
     };

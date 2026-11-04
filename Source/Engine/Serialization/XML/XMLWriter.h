@@ -86,7 +86,7 @@ namespace sw
         OpenElement _arrOpen[kMaxDepth];
         size_t      _startSize;
         uint32      _depth;
-        bool        _bStartTagOpen;
-        bool        _bFailed;
+        uint8       _bStartTagOpen : 1;
+        uint8       _bFailed       : 1;
     };
 } // namespace sw

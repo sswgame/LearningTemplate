@@ -8,14 +8,26 @@
 
 namespace sw
 {
+    VirtualCursor::VirtualCursor()
+        : _settings{}
+        , _position{ 0.0f, 0.0f }
+        , _lastEmitted{ 0, 0 }
+        , _bEnabled{ SW_FALSE }
+        , _bHasEmitted{ SW_FALSE }
+        , _bPrimaryDown{ SW_FALSE }
+        , _bSecondaryDown{ SW_FALSE }
+        , _bEmittedLastFrame{ SW_FALSE }
+    {
+    }
+
     void VirtualCursor::setEnabled( bool bEnabled )
     {
         _bEnabled          = bEnabled;
-        _bEmittedLastFrame = false;
+        _bEmittedLastFrame = SW_FALSE;
         // 켜고 끌 때 위치와 버튼 상태를 새로 잡는다. 꺼진 동안 누른 패드 버튼이 켜는 순간 "눌림" 으로 나오지 않게 한다.
-        _bHasEmitted    = false;
-        _bPrimaryDown   = false;
-        _bSecondaryDown = false;
+        _bHasEmitted    = SW_FALSE;
+        _bPrimaryDown   = SW_FALSE;
+        _bSecondaryDown = SW_FALSE;
     }
 
     float2 VirtualCursor::computeVelocity( float2 stick ) const
@@ -34,7 +46,7 @@ namespace sw
 
     void VirtualCursor::emitFrame( const GamepadDevice* pPad, int2 mousePosition, const InputViewRect& view, float32 deltaSeconds, vector<RawInputEvent>& outListEvent )
     {
-        _bEmittedLastFrame         = false;
+        _bEmittedLastFrame         = SW_FALSE;
         const bool bCursorInactive = _bEnabled == false || pPad == nullptr || pPad->isConnected() == false || view.isEmpty();
         if ( bCursorInactive )
             return;
@@ -73,7 +85,7 @@ namespace sw
         }
 
         _lastEmitted       = target;
-        _bHasEmitted       = true;
+        _bHasEmitted       = SW_TRUE;
         _bEmittedLastFrame = outListEvent.size() > eventCountBefore;
     }
 } // namespace sw

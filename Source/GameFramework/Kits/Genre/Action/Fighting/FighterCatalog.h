@@ -57,7 +57,7 @@ namespace sw
         PROPERTY()
         bool _bScrew{ false }; ///< 스크류(토네이도)다. 공중 상대를 다시 띄워 멀리 밀어낸다(한 콤보에 한 번)
         PROPERTY()
-        bool _bBound{ false }; ///< 바운드다. 공중 상대를 바닥에 튕긴다(한 콤보에 한 번)
+        bool _bBound{ SW_FALSE }; ///< 바운드다. 공중 상대를 바닥에 튕긴다(한 콤보에 한 번)
         PROPERTY()
         bool _bGroundHit{ false }; ///< 다운된 상대만 고를 수 있고 다운된 상대를 때린다
         PROPERTY()

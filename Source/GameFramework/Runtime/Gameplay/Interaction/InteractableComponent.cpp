@@ -28,7 +28,7 @@ namespace sw
         , _lastInteractor{}
         , _cooldownRemaining{ 0.0f }
         , _priority{ 0 }
-        , _bEnabled{ true }
+        , _bEnabled{ SW_TRUE }
         , _overrideDef{}
         , _pDef{ nullptr }
         , _seenCatalogReloadCount{ 0 }

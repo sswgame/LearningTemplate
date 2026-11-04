@@ -103,7 +103,7 @@ namespace sw
         string               _logFilePath;                 ///< log.txt 로 복사할 이 프로세스의 로그 파일(`ILogSink::getLogFilePath`). 비면 건너뛴다
         SceneManager*        _pSceneManager{ nullptr };    ///< 활성 씬 사본을 저장할 씬 관리자. 활성 씬이 없으면 null
         const FrameProfiler* _pFrameProfiler{ nullptr };   ///< 최근 프레임 trace 를 담을 프로파일러. null 이면 건너뛴다
-        bool                 _bEditor{ false };            ///< 재현 명령에 `-EnableEditor` 를 붙인다
-        bool                 _bRequestScreenshot{ false }; ///< 다음 프레임 스크린샷을 렌더 스레드에 요청한다
+        bool                 _bEditor{ false };            ///< 재현 명령에 `-EnableEditor` 를 붙인다 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool                 _bRequestScreenshot{ false }; ///< 다음 프레임 스크린샷을 렌더 스레드에 요청한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw

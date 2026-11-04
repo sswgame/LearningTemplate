@@ -87,14 +87,14 @@ namespace sw
             struct FormatResult
             {
                 ShaderReflectionData _reflection;
-                vector<string>       _listIncludedFile;    ///< 이 작업의 소스가 연 헤더(컴파일 성공 또는 최신일 때만 채운다 — 작업 스레드는 자기 칸에만 쓴다)
-                int64                _compileNanos{ 0 };   ///< 최신 판정과 컴파일에 쓴 시간
-                int64                _reflectNanos{ 0 };   ///< 바이너리 읽기 · 리플렉션 · 계약 검사에 쓴 시간
-                uint32               _violationCount{ 0 }; ///< 계약 검사가 센 위반 수(매니페스트에 넣을 때만 더한다)
-                bool                 _bCooked{ false };    ///< 낡아서 새로 컴파일해 썼다
-                bool                 _bCompileFailed{ false };
-                bool                 _bReflected{ false };  ///< 바이너리를 읽어 `_reflection` 을 채웠다
-                bool                 _bUnreadable{ false }; ///< 컴파일은 성공(또는 최신)인데 바이너리를 읽지 못했다
+                vector<string>       _listIncludedFile;        ///< 이 작업의 소스가 연 헤더(컴파일 성공 또는 최신일 때만 채운다 — 작업 스레드는 자기 칸에만 쓴다)
+                int64                _compileNanos{ 0 };       ///< 최신 판정과 컴파일에 쓴 시간
+                int64                _reflectNanos{ 0 };       ///< 바이너리 읽기 · 리플렉션 · 계약 검사에 쓴 시간
+                uint32               _violationCount{ 0 };     ///< 계약 검사가 센 위반 수(매니페스트에 넣을 때만 더한다)
+                bool                 _bCooked{ false };        ///< 낡아서 새로 컴파일해 썼다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                 _bCompileFailed{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                 _bReflected{ false };     ///< 바이너리를 읽어 `_reflection` 을 채웠다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                 _bUnreadable{ false };    ///< 컴파일은 성공(또는 최신)인데 바이너리를 읽지 못했다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /**
@@ -108,7 +108,7 @@ namespace sw
                 const vector<FormatTask>*     _pListTask{ nullptr };
                 const vector<vector<uint32>>* _pListChain{ nullptr };
                 FormatResult*                 _pListResult{ nullptr }; ///< 작업 수만큼. 작업 `i` 는 `_pListResult[i]` 에만 쓴다
-                bool                          _bForceAll{ false };
+                bool                          _bForceAll{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
                 /** @brief 사슬 [start, end) 를 돕니다. 사슬 안은 직렬 쿠킹의 순서 그대로 돕니다. */
                 void runRange( uint32 start, uint32 end )

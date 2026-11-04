@@ -73,14 +73,14 @@ namespace sw
         struct CloseOutcome
         {
             TradeResult _result{ TradeResult::Ok };
-            bool        _bRetry{ false };
+            bool        _bRetry{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 정산을 붙인 트랜잭션이 커밋에서 충돌했을 때 분개로 확인하려고 남기는 값입니다. */
         struct SettlementStage
         {
             LedgerTransferRequest _request{};
-            bool                  _bStaged{ false }; ///< 이 시도가 분개를 새로 붙였으면 true 이다(이미 있던 분개를 되풀이한 것이면 false)
+            bool                  _bStaged{ false }; ///< 이 시도가 분개를 새로 붙였으면 true 이다(이미 있던 분개를 되풀이한 것이면 false) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         TradeResult readSession( uint64 tradeID, SessionRead& outSession );

@@ -153,7 +153,7 @@ namespace sw
                     {
                         // 섹션이 있으면 켜진다 — `enabled` 를 따로 적지 않는다.
                         bValid                        = XMLFields::readFields( child, inoutDef._collision, sourceName ) && bValid;
-                        inoutDef._collision._bEnabled = true;
+                        inoutDef._collision._bEnabled = SW_TRUE;
                     }
                     else if ( StringUtil::equals( pName, "Noise" ) )
                     {

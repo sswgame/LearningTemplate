@@ -22,7 +22,7 @@ namespace sw
         , _resolver{}
         , _requestIDAllocator{}
         , _ioThreadCount{ 0 }
-        , _bInitialized{ false }
+        , _bInitialized{ SW_FALSE }
     {
     }
 

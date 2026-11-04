@@ -1161,8 +1161,8 @@ namespace sw
         uint64                               _bakeKey{ 0 };
         uint64                               _mergedKey{ 0 };
         int32                                _bodyPart{ -1 };
-        bool                                 _bPreview{ false };
-        bool                                 _bBakeCached{ false }; ///< 구운 메시를 캐시에서 받았다(굽지 않는다)
+        bool                                 _bPreview{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                                 _bBakeCached{ false }; ///< 구운 메시를 캐시에서 받았다(굽지 않는다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         // 입력이자 결과
         string                   _report{};    ///< 읽기 · 굽기 실패의 까닭
         vector<shared_ptr<Mesh>> _listBaked{}; ///< 로드마다 베이크한 사본(원본을 그리면 nullptr)
@@ -1170,8 +1170,8 @@ namespace sw
         // 결과(워커가 채운다)
         FitResult             _fitResult{};          ///< 미리보기가 푼 피팅 결과
         vector<MeshMergePart> _listMergePart{};      ///< `_listMergeLoad` 마다 병합 조각 — 몸 유닛 · 구간 컴포넌트가 이름을 읽는다
-        bool                  _bBakeBuilt{ false };  ///< 이번에 구웠다(캐시에 남긴다)
-        bool                  _bMergeBuilt{ false }; ///< 이번에 합쳤다(캐시에 남긴다)
+        bool                  _bBakeBuilt{ false };  ///< 이번에 구웠다(캐시에 남긴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                  _bMergeBuilt{ false }; ///< 이번에 합쳤다(캐시에 남긴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         atomic<bool>          _bDone{ false };
 
         /** @brief 워커에서 굽고 합치고 LOD 를 만듭니다(끝나면 태스크가 `_bDone` 을 건다). */

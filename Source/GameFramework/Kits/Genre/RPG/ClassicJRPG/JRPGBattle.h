@@ -90,7 +90,7 @@ namespace sw
         int32   _comboMax{ 9 };
         int32   _innerPerAttack{ 10 }; ///< 무협 옵션에서 기본 공격 한 타마다 얻는 내공
         int32   _innerPerHitTaken{ 5 };
-        bool    _bWuxia{ false }; ///< 무협 옵션이다(내공 게이지와 초식 내공 비용을 쓴다)
+        bool    _bWuxia{ false }; ///< 무협 옵션이다(내공 게이지와 초식 내공 비용을 쓴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -156,7 +156,7 @@ namespace sw
         int32         _target{ -1 };
         int32         _value{ 0 };
         Kind          _kind{ Kind::Attack };
-        bool          _bEnemyActor{ false };
+        bool          _bEnemyActor{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

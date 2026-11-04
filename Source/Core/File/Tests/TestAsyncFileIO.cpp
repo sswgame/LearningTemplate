@@ -76,7 +76,7 @@ namespace
      */
     struct IOGate
     {
-        sw::atomic<bool> _bEntered{ false };
+        sw::atomic<bool> _bEntered{ SW_FALSE };
         sw::atomic<bool> _bOpen{ false };
 
         /** @brief IO 스레드가 콜백에 들어왔음을 알리고 문이 열릴 때까지 기다립니다. */

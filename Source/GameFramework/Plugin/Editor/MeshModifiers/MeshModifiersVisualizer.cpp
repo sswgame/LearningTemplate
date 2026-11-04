@@ -97,8 +97,8 @@ namespace sw::editor
                 float32       _startParameter{ 0.0f };
                 int32         _modifierIndex{ -1 };
                 int32         _pointIndex{ -1 };
-                bool          _bDragging{ false };
-                bool          _bUndoRecorded{ false };
+                bool          _bDragging{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool          _bUndoRecorded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 고른 모디파이어 한 프레임의 공간 정보입니다. */
@@ -639,7 +639,7 @@ namespace sw::editor
                 endDrag( state );
                 // 핸들을 집는 순간부터 놓을 때까지 뷰포트 선택 · 카메라가 마우스를 가져가지 않게 한다(호버만으로는 잡지 않는다)
                 EditorViewportMouseClaim::acquire( getMouseClaimOwner() );
-                state._bDragging     = true;
+                state._bDragging     = SW_TRUE;
                 state._handle        = handle;
                 state._startRay      = ray;
                 state._modifierIndex = modifierIndex;

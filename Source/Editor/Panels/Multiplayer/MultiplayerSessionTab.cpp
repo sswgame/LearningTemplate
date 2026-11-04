@@ -61,7 +61,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax256> _clientArguments; ///< 클라이언트마다 붙일 인자(편집 필드)
         int32                                   _stepTickCount;   ///< "Step" 이 서버를 돌릴 틱 수
         int32                                   _logSource;       ///< 로그 거르기 — -1 이면 모두, 아니면 프로세스 번호
-        bool                                    _bFollowLog;      ///< 새 줄이 오면 끝으로 스크롤
+        bool                                    _bFollowLog;      ///< 새 줄이 오면 끝으로 스크롤 NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor
 

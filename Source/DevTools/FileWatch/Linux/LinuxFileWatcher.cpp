@@ -38,7 +38,7 @@ namespace sw
         , _inotifyFd{ -1 }
         , _wakeFd{ -1 }
         , _bIsWatching{ false }
-        , _bRecursive{ true }
+        , _bRecursive{ SW_TRUE }
     {
     }
 

@@ -24,7 +24,7 @@ namespace sw
     {
         string  _text{};
         float64 _number{ 0.0 };
-        bool    _bText{ false };
+        bool    _bText{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         void setNumber( float64 number )
         {
@@ -113,9 +113,9 @@ namespace sw
         const utf8*                  _pTooltip;       ///< 무엇을 측정하는지 설명합니다.
         AutomationWatchFunction      _pFunction;      ///< 씬 감시 값(인자 없음, 수)
         AutomationQueryWatchFunction _pQueryFunction; ///< 질의 감시 값(`target` · `key`, 수 또는 글)
-        bool                         _bNeedsTarget;   ///< 단계에 `target` 이 꼭 있어야 합니다.
-        bool                         _bNeedsKey;      ///< 단계에 `key` 가 꼭 있어야 합니다.
-        bool                         _bWallClock;     ///< 값이 엔진 프레임이 아니라 바깥 일(자식 프로세스 · 컴파일러 · OS 파일 감시)을 따라 바뀝니다 — `WaitUntil` 은 `timeoutWallSeconds` 만 받는다.
+        bool                         _bNeedsTarget;   ///< 단계에 `target` 이 꼭 있어야 합니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                         _bNeedsKey;      ///< 단계에 `key` 가 꼭 있어야 합니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                         _bWallClock;     ///< 값이 엔진 프레임이 아니라 바깥 일(자식 프로세스 · 컴파일러 · OS 파일 감시)을 따라 바뀝니다 — `WaitUntil` 은 `timeoutWallSeconds` 만 받는다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

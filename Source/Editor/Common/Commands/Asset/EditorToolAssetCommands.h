@@ -34,7 +34,7 @@ namespace sw::editor
         string _propertyLabel; ///< 화면에 보이는 이름이다. `DisplayName` 메타를 쓰고, 없으면 프로퍼티 이름을 다듬어 쓴다(`EditorDisplayNameUtil`). 인스펙터와 같다
         string _defaultValue;
         string _overriddenValue;
-        bool   _bModified{ false };
+        bool   _bModified{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

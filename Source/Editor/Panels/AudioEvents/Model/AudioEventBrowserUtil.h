@@ -41,10 +41,10 @@ namespace sw::editor
         uint32  _instanceCount{ 0 };
         uint64  _playedEventCount{ 0 };
         uint64  _droppedEventCount{ 0 };
-        float32 _realUsage{ 0.0f };  ///< 실제 보이스 수 / 실제 상한([0, 1]로 자른다).
-        float32 _voiceUsage{ 0.0f }; ///< 보이스 수 / 보이스 상한([0, 1]로 자른다).
-        bool    _bRealLimitReached{ false };
-        bool    _bVoiceLimitReached{ false };
+        float32 _realUsage{ 0.0f };           ///< 실제 보이스 수 / 실제 상한([0, 1]로 자른다).
+        float32 _voiceUsage{ 0.0f };          ///< 보이스 수 / 보이스 상한([0, 1]로 자른다).
+        bool    _bRealLimitReached{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bVoiceLimitReached{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

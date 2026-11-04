@@ -33,8 +33,8 @@ namespace sw
             FileKind _kind{ FileKind::Other };
             uint64   _size{ 0 };
             int64    _writeTicks{ 0 };
-            bool     _bReadOnly{ false }; ///< 쓰기 권한이 없다(Windows 읽기 전용 속성, POSIX 소유자 쓰기 비트 없음)
-            bool     _bLink{ false };     ///< 경로 자체가 링크(심볼릭 링크 · Windows 정션)다. 나머지 필드는 가리키는 쪽의 것이다
+            bool     _bReadOnly{ false }; ///< 쓰기 권한이 없다(Windows 읽기 전용 속성, POSIX 소유자 쓰기 비트 없음) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool     _bLink{ false };     ///< 경로 자체가 링크(심볼릭 링크 · Windows 정션)다. 나머지 필드는 가리키는 쪽의 것이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief `forEachChild` 의 콜백입니다. @p name 은 폴더 안의 이름이고, 링크이면 @p bLink 입니다(@p bDirectory 는 링크를 따라간 결과). false 를 돌려주면 멈춥니다. */

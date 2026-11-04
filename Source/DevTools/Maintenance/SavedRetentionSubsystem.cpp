@@ -28,8 +28,8 @@ namespace sw
             {
                 string         _folder;
                 uint32         _keepCount{ 0 };
-                bool           _bPerChild{ false };
-                vector<string> _listSkipChild; ///< 실행 산출물이 아니라 상태인 하위 폴더(`_bPerChild` 일 때)
+                bool           _bPerChild{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                vector<string> _listSkipChild;      ///< 실행 산출물이 아니라 상태인 하위 폴더(`_bPerChild` 일 때)
             };
             struct Settings
             {
@@ -89,7 +89,7 @@ namespace sw
             {
                 string _path;
                 int64  _writeTicks{ 0 };
-                bool   _bDirectory{ false };
+                bool   _bDirectory{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief @p folder 바로 아래 항목을 새것부터 줄 세웁니다. */

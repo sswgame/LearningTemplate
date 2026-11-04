@@ -115,7 +115,7 @@ namespace sw::editor
         , _signature{ 0 }
         , _editID{ 0 }
         , _selectedNode{ 0 }
-        , _bSeedComments{ false }
+        , _bSeedComments{ SW_FALSE }
     {
         _nodeGraph.setCommentsEnabled( true ); // 주석 상자는 컴포넌트에 실린다(`GimmickCircuitComponent::_listComment`)
     }
@@ -157,7 +157,7 @@ namespace sw::editor
         {
             node._bPlaced = false;
         }
-        _bSeedComments = true;
+        _bSeedComments = SW_TRUE;
         _signature     = _model.computeSignature();
         if ( _model.findNodeIndex( _selectedNode ) < 0 )
             _selectedNode = 0;
@@ -176,7 +176,7 @@ namespace sw::editor
         // 컴포넌트는 커밋 전까지 그대로라 "고치기 전" 스냅숏은 커밋할 때 찍어도 된다.
         vector<GraphCommentBox>& listComment = _model.getMutableComments();
         const bool               bRenamed    = _nodeGraph.drawComments( listComment, _bSeedComments || _nodeGraph.needsContentFit() );
-        _bSeedComments                       = false;
+        _bSeedComments                       = SW_FALSE;
         if ( bRenamed )
             commitEdit( circuit, beginEdit( circuit ), "Rename Gimmick Comment" );
         GraphCommentBox comment{};

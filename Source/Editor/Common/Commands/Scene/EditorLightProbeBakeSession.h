@@ -77,6 +77,6 @@ namespace sw::editor
         EditorBakeRunState          _run; ///< 돌고 있는가 · 편집 잠금 · 멈출 이유 · 끝난 횟수 (반사 프로브 세션과 같은 틀)
         uint32                      _nextVolumeIndex;
         uint32                      _bakedCount;
-        bool                        _bJobActive;
+        uint8                       _bJobActive : 1;
     };
 } // namespace sw::editor

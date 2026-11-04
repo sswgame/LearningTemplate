@@ -125,7 +125,7 @@ namespace sw
         PROPERTY( Min = 1.0, Units = m )
         float32 _farPlane{ 100.0f };
         PROPERTY()
-        bool _bOrthographic{ false };
+        bool _bOrthographic{ SW_FALSE };
         PROPERTY( Min = 0.0, Tooltip = "Focal length; 0 uses the field of view instead", Units = mm )
         float32 _focalLength{ 0.0f };
         PROPERTY( Tooltip = "Sensor (filmback) width and height; 36 x 24 is full frame", Units = mm )
@@ -269,7 +269,7 @@ namespace sw
         PROPERTY( Min = 0.0, Tooltip = "Time constant of easing back out once the way is clear", Units = s )
         float32 _recoverTime{ 0.3f };
         PROPERTY( Tooltip = "Sweep the arm against the scene" )
-        bool _bEnabled{ false };
+        bool _bEnabled{ SW_FALSE };
     };
 } // namespace sw
 

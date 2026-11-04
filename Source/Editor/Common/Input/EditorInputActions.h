@@ -162,8 +162,8 @@ namespace sw::editor
         bool                  _arrForwardedKey[static_cast<size_t>( Key::Count )]; ///< 에디터 창에서 넣은 눌린 키(키보드를 놓으면 놓는다)
         InputKeyboardFocus    _focusBeforeTool;                                    ///< `Tool` 로 바꾸기 전의 키보드 주인
         uint32                _syncedMapGeneration;                                ///< 마지막으로 더한 확장 맵 등록 세대
-        bool                  _bToolOwnsKeyboard;                                  ///< 이 서브시스템이 키보드 포커스를 `Tool` 로 둔 중이면 true
-        bool                  _bCommandsSuspended;                                 ///< 재배치 창이 키를 받는 중이면 true
+        uint8                 _bToolOwnsKeyboard  : 1;                             ///< 이 서브시스템이 키보드 포커스를 `Tool` 로 둔 중이면 true
+        uint8                 _bCommandsSuspended : 1;                             ///< 재배치 창이 키를 받는 중이면 true
     };
 } // namespace sw::editor
 

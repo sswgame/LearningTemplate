@@ -46,8 +46,8 @@ namespace sw
         const utf8*                    _pName{ nullptr };
         const AudioGraphParameterInfo* _pParameter{ nullptr };
         uint32                         _parameterCount{ 0 };
-        bool                           _bSource{ false };    ///< 입력을 받지 않고 소리를 만든다(오실레이터 · 노이즈 · 그래뉼러).
-        bool                           _bNeedsClip{ false }; ///< 클립(`AudioGraphNodeDesc::_clip`)이 필수다(그래뉼러).
+        bool                           _bSource{ false };    ///< 입력을 받지 않고 소리를 만든다(오실레이터 · 노이즈 · 그래뉼러). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                           _bNeedsClip{ false }; ///< 클립(`AudioGraphNodeDesc::_clip`)이 필수다(그래뉼러). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -166,7 +166,7 @@ namespace sw
             float32           _gain{ 0.0f };             ///< 지난 블록 끝의 게인(램프 시작점)이다.
             float32           _filterHz{ 0.0f };         ///< 지금 계수를 구한 주파수다(0 = 아직 없음).
             float32           _filterQ{ 0.0f };          ///< 지금 계수를 구한 Q 다.
-            bool              _bFirstBlock{ true };      ///< 처음 처리하는 블록이다. 게인을 램프하지 않는다.
+            bool              _bFirstBlock{ true };      ///< 처음 처리하는 블록이다. 게인을 램프하지 않는다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 처리 순서대로 노드를 돌며 @p frameCount(블록 길이 이하) 프레임을 렌더해 @p pOut 에 씁니다. */

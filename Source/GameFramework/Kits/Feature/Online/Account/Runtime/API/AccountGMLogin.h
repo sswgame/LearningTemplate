@@ -56,6 +56,6 @@ namespace sw
         string              _password;
         string              _failureText;
         AccountGMLoginState _state;
-        bool                _bAttached;
+        uint8               _bAttached : 1;
     };
 } // namespace sw

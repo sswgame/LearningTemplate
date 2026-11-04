@@ -189,9 +189,9 @@ namespace sw
         , _listLaneJob{}
         , _listRetiredFrameSystem{}
         , _services{ services }
-        , _bRunningFrameSystems{ false }
+        , _bRunningFrameSystems{ SW_FALSE }
         , _updateSerial{ 0 }
-        , _bPhysicsStepEnabled{ true }
+        , _bPhysicsStepEnabled{ SW_TRUE }
         , _deferredRegistrationDepth{ 0 }
         , _listDeferredRegister{}
         , _listDeferredPostLoad{}
@@ -448,7 +448,7 @@ namespace sw
             return;
         SW_PROFILE_SCOPE( "GT.Scene.tick.frameSystems" );
         // 시스템이 시스템을 붙이거나 뗄 수 있다 — 붙인 것은 다음 프레임부터(개수를 먼저 센다), 뗀 것은 빈 칸으로 남았다가 끝에 걷힌다.
-        _bRunningFrameSystems = true;
+        _bRunningFrameSystems = SW_TRUE;
         const size_t count    = _listFrameSystem.size();
         // 파도 계획 — 붙인 순서를 지키되 접근이 겹치지 않는 시스템끼리 한 파도에 묶는다(`FrameSystemLanePlan`). 뗀 칸은 빈 접근이라 아무와도 겹치지 않는다.
         // 언리얼 Task Graph 의 선행 있는 태스크, 유니티 Job System 의 JobHandle 의존과 같다. 파도는 차례로 돌고, 같은 파도의 `_bLaneSafe` 시스템은 `TaskManager` 가 병렬로 돌린다.
@@ -493,7 +493,7 @@ namespace sw
             FrameSystemLaneJob job{ this, _listLaneJob.data(), deltaTime };
             engine::runParallel( static_cast<uint32>( _listLaneJob.size() ), 2, SW_DELEGATE_METHOD( ParallelBlockDelegate, &FrameSystemLaneJob::runRange, &job ) );
         }
-        _bRunningFrameSystems = false;
+        _bRunningFrameSystems = SW_FALSE;
         if ( _listRetiredFrameSystem.empty() )
             return;
         size_t keptCount = 0;

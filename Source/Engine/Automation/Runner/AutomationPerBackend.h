@@ -28,7 +28,7 @@ namespace sw
         string         _logFilePath{};             ///< 부모의 `-log-file`(비면 기본 폴더)
         string         _reportPath{};              ///< 부모의 `-scenario-report`(비면 쓰지 않는다)
         int32          _splitOffset{ -1 };         ///< `-scenario-backend-split-offset` — 나눌 때 첫 시나리오를 맡을 백엔드. -1 이면 `run` 이 UTC 날짜로 정한다
-        bool           _bSplitScenarios{ false };  ///< `-scenario-backend-split` — 그림을 견주지 않는 시나리오는 백엔드 하나에만 준다(`assignScenarios`)
+        bool           _bSplitScenarios{ false };  ///< `-scenario-backend-split` — 그림을 견주지 않는 시나리오는 백엔드 하나에만 준다(`assignScenarios`) NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         int32          _slotCount{ 0 };            ///< `-scenario-backend-slots` — 동시에 도는 자식 수의 상한. 0 이면 모두 함께 띄운다
     };
 

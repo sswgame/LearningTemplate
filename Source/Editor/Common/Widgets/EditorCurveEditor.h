@@ -37,8 +37,8 @@ namespace sw::editor
         float32         _menuTime{ 0.0f };                                ///< 오른쪽 클릭한 위치(커브 좌표)
         float32         _menuValue{ 0.0f };
         EditorCurveDrag _drag{ EditorCurveDrag::None };
-        bool            _bDragMoved{ false }; ///< 드래그하는 동안 실제로 움직였으면 true 다. 놓을 때만 편집으로 남긴다
-        bool            _bFitPending{ true }; ///< 다음 그리기에서 화면을 커브에 맞춘다. 처음 열 때와 F 키를 눌렀을 때 켠다
+        bool            _bDragMoved{ false }; ///< 드래그하는 동안 실제로 움직였으면 true 다. 놓을 때만 편집으로 남긴다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool            _bFitPending{ true }; ///< 다음 그리기에서 화면을 커브에 맞춘다. 처음 열 때와 F 키를 눌렀을 때 켠다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

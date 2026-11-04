@@ -63,9 +63,9 @@ namespace sw
     struct InputBindingSample
     {
         int2 _mousePos{};             ///< 이번 프레임 포인터 위치(연타 거리 · 끌기 문턱)
-        bool _bDown{ false };         ///< 게임이 보는 눌림(레이어가 켜져 있고 가리지 않은 입력)
-        bool _bPhysicalDown{ false }; ///< 가림과 상관없는 장치 눌림
-        bool _bLive{ false };         ///< 바인딩이 보이는지(레이어가 켜져 있고, 콘솔이 눌린 키를 가리지 않음)
+        bool _bDown{ false };         ///< 게임이 보는 눌림(레이어가 켜져 있고 가리지 않은 입력) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bPhysicalDown{ false }; ///< 가림과 상관없는 장치 눌림 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bLive{ false };         ///< 바인딩이 보이는지(레이어가 켜져 있고, 콘솔이 눌린 키를 가리지 않음) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /**

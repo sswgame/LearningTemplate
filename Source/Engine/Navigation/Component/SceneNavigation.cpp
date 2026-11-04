@@ -79,8 +79,8 @@ namespace sw
         , _debugView{}
         , _pManager{ &manager }
         , _waitingMeshCount{ 0 }
-        , _bSettingsLoaded{ false }
-        , _bIgnoreCooked{ false }
+        , _bSettingsLoaded{ SW_FALSE }
+        , _bIgnoreCooked{ SW_FALSE }
     {
     }
 
@@ -112,7 +112,7 @@ namespace sw
     {
         onSceneCleared();
         _settings        = settings;
-        _bSettingsLoaded = true;
+        _bSettingsLoaded = SW_TRUE;
         _listFailedAgentType.clear();
     }
 
@@ -120,7 +120,7 @@ namespace sw
     {
         if ( _bSettingsLoaded == false )
         {
-            _bSettingsLoaded = true;
+            _bSettingsLoaded = SW_TRUE;
             const AssetID settingsID{ engine::getSubsystem<EngineDefaultAssets>()._navMeshSettings.get() };
             if ( AssetIO::hasAsset( settingsID ) == false || _settings.loadFromAsset( settingsID ) == false )
                 _settings = NavMeshSettings{}; // 코드가 표를 채우지 않는다 - 빈 표는 굽기 전에 validate 가 거절한다(DataDriven)
@@ -328,7 +328,7 @@ namespace sw
             return false;
         }
         runtime._bounds                     = pEntry->_bounds;
-        runtime._bFromCooked                = true;
+        runtime._bFromCooked                = SW_TRUE;
         runtime._bakeStats                  = NavMeshBakeStats{};
         runtime._bakeStats._milliseconds    = static_cast<float64>( stopwatch.getElapsedMicroseconds() ) / constant::time::kMicrosecondsPerMillisecond;
         runtime._bakeStats._tileCount       = static_cast<uint32>( runtime._pNavMesh->getTileGrid().getTileCount() );
@@ -466,12 +466,12 @@ namespace sw
         }
         onSceneCleared();
         _listFailedAgentType.clear();
-        _bIgnoreCooked = true;
+        _bIgnoreCooked = SW_TRUE;
         for ( const hashed_string& agentType : listAgentType )
         {
             (void)ensureNavMesh( agentType ); // 모르는 종류 · 기하 없음은 ensureNavMesh 가 이미 남긴다 — 센 수가 말해 준다
         }
-        _bIgnoreCooked = false;
+        _bIgnoreCooked = SW_FALSE;
         return static_cast<uint32>( _listRuntime.size() );
     }
 

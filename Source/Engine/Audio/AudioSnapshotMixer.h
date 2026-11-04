@@ -56,7 +56,7 @@ namespace sw
             const AudioSnapshotDesc* _pDesc{ nullptr };
             float32                  _intensity{ 0.0f };
             float32                  _target{ 0.0f };
-            bool                     _bDriven{ false }; ///< 게임이 세기를 직접 정한다.
+            bool                     _bDriven{ false }; ///< 게임이 세기를 직접 정한다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 버스 이름에 남는 사용자 상태입니다. 그래프를 바꾸면 다시 적용합니다. */
@@ -64,8 +64,8 @@ namespace sw
         {
             hashed_string _bus{};
             float32       _volume{ 1.0f };
-            bool          _bMuted{ false };
-            bool          _bSolo{ false };
+            bool          _bMuted{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool          _bSolo{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 이름에 해당하는 스냅샷 슬롯을 반환합니다. 없으면 만들고, 그래프에 없는 이름이면 nullptr 를 반환합니다. */

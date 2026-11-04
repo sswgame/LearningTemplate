@@ -99,7 +99,7 @@ namespace sw
         PROPERTY( Tooltip = "Name of the module to turn on or off" )
         string _name;
         PROPERTY( Tooltip = "true turns the module on, false turns it off" )
-        bool _bEnabled{ true };
+        bool _bEnabled{ SW_TRUE };
     };
 } // namespace sw
 
@@ -149,7 +149,7 @@ namespace sw
         PROPERTY( Tooltip = "Executables that load the module: Client, Server (at least one)" )
         vector<ModuleTarget> _listTarget;
         PROPERTY( Tooltip = "Whether the module is on unless the project turns it off" )
-        bool _bEnabledByDefault{ true };
+        bool _bEnabledByDefault{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         PROPERTY( Tooltip = "Only the Game module (the project) lists these: modules it turns on or off" )
         vector<ModuleOverride> _listModuleOverride;
     };
@@ -167,10 +167,10 @@ namespace sw
         vector<ModuleOverride>   _listModuleOverride; ///< 프로젝트(게임 모듈)만 쓴다. 다른 모듈의 켜짐을 바꾼다
         ModuleVersion            _version;
         ModuleKind               _kind{ ModuleKind::Kit };
-        uint8                    _platformMask{ 0 };      ///< `ModulePlatform` 비트
-        uint8                    _configurationMask{ 0 }; ///< `ModuleConfiguration` 비트
-        uint8                    _targetMask{ 0 };        ///< `ModuleTarget` 비트
-        bool                     _bEnabledByDefault{ true };
+        uint8                    _platformMask{ 0 };         ///< `ModulePlatform` 비트
+        uint8                    _configurationMask{ 0 };    ///< `ModuleConfiguration` 비트
+        uint8                    _targetMask{ 0 };           ///< `ModuleTarget` 비트
+        bool                     _bEnabledByDefault{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

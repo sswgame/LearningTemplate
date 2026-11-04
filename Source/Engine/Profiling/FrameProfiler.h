@@ -68,7 +68,7 @@ namespace sw
         uint64 _slowEndNanos{ 0 };
         uint32 _slowFramesUntilSave{ 0 }; ///< 0 이면 저장 대기 없음
         uint32 _slowSavedFileCount{ 0 };
-        bool   _bSlowRecordingByCapture{ false }; ///< 느린 틱 캡처가 링 버퍼 기록을 켰다 — 끌 때 되돌린다
+        bool   _bSlowRecordingByCapture{ false }; ///< 느린 틱 캡처가 링 버퍼 기록을 켰다 — 끌 때 되돌린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -233,7 +233,7 @@ namespace sw
         ProfilerTraceSession _traceSession; ///< 트레이스 저장의 긴 캡처 · 느린 틱 캡처 상태
         atomic<uint32>       _scopeCount{ 0 };
         atomic<uint64>       _frameCount{ 0 };
-        atomic<bool>         _bEnabled{ false };
+        atomic<bool>         _bEnabled{ SW_FALSE };
     };
 } // namespace sw
 

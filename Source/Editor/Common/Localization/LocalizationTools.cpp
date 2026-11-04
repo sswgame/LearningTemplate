@@ -144,7 +144,7 @@ namespace sw
                     if ( entry._sourceHash == 0 )
                     {
                         entry._sourceHash            = LocalizationTextUtil::computeSourceHash( sourceIt->second->_source );
-                        inoutCultureReport._bChanged = true;
+                        inoutCultureReport._bChanged = SW_TRUE;
                     }
                     if ( inoutTranslation.computeState( key, sourceIt->second ) == TranslationState::Current )
                         (void)inoutMemory.addPair( sourceIt->second->_source, entry._text );
@@ -153,7 +153,7 @@ namespace sw
                 {
                     (void)inoutTranslation.removeEntry( key ); // 번역이 없던 고아 키면 false — 할 일이 없다
                     ++inoutCultureReport._orphanCount;
-                    inoutCultureReport._bChanged = true;
+                    inoutCultureReport._bChanged = SW_TRUE;
                 }
             }
 
@@ -175,7 +175,7 @@ namespace sw
                     entry._text                  = match._text;
                     entry._sourceHash            = LocalizationTextUtil::computeSourceHash( pSource->_source );
                     entry._bReview               = match._bExact == false;
-                    inoutCultureReport._bChanged = true;
+                    inoutCultureReport._bChanged = SW_TRUE;
                     if ( match._bExact )
                         ++inoutCultureReport._prefilledExact;
                     else
@@ -253,7 +253,7 @@ namespace sw
                 const bool bMemoryChanged = memory.toXMLText() != memoryBefore;
                 if ( cultureReport._bChanged == false && bMemoryChanged == false )
                     return;
-                cultureReport._bChanged = true;
+                cultureReport._bChanged = SW_TRUE;
                 if ( bWrite == false )
                 {
                     inoutResult._bOutOfDate = true;

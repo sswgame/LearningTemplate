@@ -68,7 +68,7 @@ namespace sw
     {
 
         const BehaviorTaskEntry* _pEntry;
-        bool                     _bRegistered;
+        uint8                    _bRegistered : 1;
         explicit BehaviorTaskRegistrar( const BehaviorTaskEntry* pEntry );
         ~BehaviorTaskRegistrar();
         BehaviorTaskRegistrar( const BehaviorTaskRegistrar& )            = delete;

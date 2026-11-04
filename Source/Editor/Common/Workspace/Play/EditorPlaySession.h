@@ -55,7 +55,7 @@ namespace sw::editor
              * @details 레지스트리는 놓인 오브젝트의 표시를 제거하므로, 플레이 중에 지워진 부품을 원래 id 로 복원할 때 이 값으로 다시 기록한다.
              */
             PrefabNestedPart _nestedPart;
-            bool             _bNestedPart{ false };
+            bool             _bNestedPart{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             /**
              * @brief 프로퍼티 밖에 있는 저장하지 않은 지형 편집(`TerrainComponent::writeState`)입니다. 없으면 비어 있습니다.
              * @details 되돌리기는 컴포넌트를 다시 만들고 지형이 디스크 에셋을 다시 읽으므로, 플레이 전에 칠한 것은 이것으로만 돌아온다.

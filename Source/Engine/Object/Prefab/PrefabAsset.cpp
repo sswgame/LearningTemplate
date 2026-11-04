@@ -516,7 +516,7 @@ namespace sw
                         continue;
                     }
                     ObjectSaveOptions options{ SerializePurpose::Authoring };
-                    options._bOmitExternalParent = true; // 부모는 노드의 자리(부모 노드 · attach)가 적는다
+                    options._bOmitExternalParent = SW_TRUE; // 부모는 노드의 자리(부모 노드 · attach)가 적는다
                     // 부품 아래 부품(원본이 스폰하는 것)을 고친 것은 노드의 `<Part>` 로 싣는다 — 노드로 담지 않으므로 싣지 않으면 Apply 가 버린다.
                     vector<PrefabPartOverride> listDeepPart;
                     string                     overridesError;
@@ -909,7 +909,7 @@ namespace sw
         // 프리팹 루트에는 부모가 없다 — 자식 인스턴스로 프리팹을 만들어도 원래 부모를 싣지 않는다. 실으면 그 프리팹을 스폰할 때마다
         // 그 이름의 오브젝트에 붙는다(언리얼 · 유니티의 프리팹 루트도 부모를 들지 않는다).
         ObjectSaveOptions options{ SerializePurpose::Authoring };
-        options._bOmitExternalParent = true;
+        options._bOmitExternalParent = SW_TRUE;
         _name                        = pGameObject->getName().c_str();
         _stateData                   = ObjectStateSerializer::saveToXMLString( pGameObject, options );
         _stateFormat                 = PrefabStateFormat::XML;
@@ -1460,7 +1460,7 @@ namespace sw
         vector<uint64>                listScratchPartID;
         PrefabAssetInternal::collectPartTree( scratchRegistry, pScratchRoot->getObjectID(), listScratchPartID );
         ObjectSaveOptions options{ SerializePurpose::Authoring };
-        options._bOmitExternalParent = true; // 부모는 노드의 자리가 정한다
+        options._bOmitExternalParent = SW_TRUE; // 부모는 노드의 자리가 정한다
         unordered_map<string, string> mapBaseState;
         for ( const uint64 scratchPartID : listScratchPartID )
         {

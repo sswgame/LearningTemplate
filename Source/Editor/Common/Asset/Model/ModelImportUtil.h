@@ -60,7 +60,7 @@ namespace sw::editor
             float4  _color{ 1.0f, 1.0f, 1.0f, 1.0f };
             uint16  _arrJoint[kInfluenceCount]{ 0, 0, 0, 0 };
             float32 _arrWeight[kInfluenceCount]{ 1.0f, 0.0f, 0.0f, 0.0f };
-            bool    _bHasNormal{ false };
+            bool    _bHasNormal{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 여러 프리미티브를 합친 인덱스 메시입니다. 모프 타깃은 이름이 같은 것끼리 합치고, 타깃마다 정점별 차이를 보관합니다(없는 정점은 0). */
@@ -78,7 +78,7 @@ namespace sw::editor
             uint32                    _skippedPrimitiveCount{ 0 };
             string                    _baseColorTextureURI;
             /** @brief 머티리얼의 baseColorFactor 를 정점 색에 곱할지 정합니다. VRM 은 머티리얼이 색을 가지고 있으므로 끕니다. 두 번 곱하지 않기 위해서입니다. */
-            bool _bBakeMaterialColor{ true };
+            bool _bBakeMaterialColor{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /**

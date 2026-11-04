@@ -93,6 +93,6 @@ namespace sw::editor
         virtual void onClose() {}
 
     protected:
-        bool _bOpen;
+        bool _bOpen; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor

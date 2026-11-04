@@ -33,11 +33,11 @@ namespace sw::editor
         float3  _lightColor{ 1.0f, 0.97f, 0.92f };
         float32 _lightIntensity{ 2.0f };
         float32 _ambient{ 0.35f };
-        float32 _floorSize{ 6.0f };    ///< 바닥 평면 한 변(미터)
-        float32 _floorHeight{ -0.5f }; ///< 바닥 높이. 지름 1 의 내장 도형을 원점에 두면 바닥에 닿는다
-        bool    _bDirectionalLight{ true };
-        bool    _bFloor{ true };
-        bool    _bSky{ true }; ///< 하늘(`SkyComponent`) — 빈 곳을 그러데이션으로 칠한다
+        float32 _floorSize{ 6.0f };         ///< 바닥 평면 한 변(미터)
+        float32 _floorHeight{ -0.5f };      ///< 바닥 높이. 지름 1 의 내장 도형을 원점에 두면 바닥에 닿는다
+        bool    _bDirectionalLight{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bFloor{ true };            ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bSky{ true };              ///< 하늘(`SkyComponent`) — 빈 곳을 그러데이션으로 칠한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -106,7 +106,7 @@ namespace sw::editor
          */
         void setFreeCamera( const float3& eye, float32 yaw, float32 pitch, float32 fieldOfViewY );
         /** @brief 자유 카메라를 끄고 오빗 카메라로 돌아갑니다(대상 · 거리는 마지막 오빗 값이다). */
-        void clearFreeCamera() { _bFreeCamera = false; }
+        void clearFreeCamera() { _bFreeCamera = SW_FALSE; }
         bool isFreeCamera() const { return _bFreeCamera; }
         /** @brief 반지름 @p radius 의 구가 화면에 들어오게 거리를 맞추고 대상을 @p center 로 둡니다. */
         void frameSphere( const float3& center, float32 radius );
@@ -150,7 +150,7 @@ namespace sw::editor
         uint32  _sceneKey;
         uint32  _targetID;
         uint32  _submittedFrameCount;
-        bool    _bFreeCamera; ///< 자유 카메라 모드다(`setFreeCamera`)
-        bool    _bOwnsScene;  ///< `initialize` 가 만든 씬이다(`attachScene` 으로 붙인 씬은 거짓 — 내리지 않는다)
+        uint8   _bFreeCamera : 1; ///< 자유 카메라 모드다(`setFreeCamera`)
+        uint8   _bOwnsScene  : 1; ///< `initialize` 가 만든 씬이다(`attachScene` 으로 붙인 씬은 거짓 — 내리지 않는다)
     };
 } // namespace sw::editor

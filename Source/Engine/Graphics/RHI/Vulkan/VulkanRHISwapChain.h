@@ -61,7 +61,7 @@ namespace sw
     class VulkanRHISwapChain final : public IRHISwapChain
     {
     public:
-        VulkanRHISwapChain()                                       = default;
+        VulkanRHISwapChain();
         ~VulkanRHISwapChain() override                             = default;
         VulkanRHISwapChain( const VulkanRHISwapChain& )            = delete;
         VulkanRHISwapChain& operator=( const VulkanRHISwapChain& ) = delete;
@@ -158,8 +158,8 @@ namespace sw
         [[nodiscard]] bool createImageViews( VkDevice device );
 
     private:
-        VkSurfaceKHR   _surface{ nullptr };
-        VkSwapchainKHR _swapChain{ nullptr };
+        VkSurfaceKHR   _surface;
+        VkSwapchainKHR _swapChain;
 
         vector<VkImage>       _listImage;
         vector<VkImageView>   _listImageView;
@@ -172,24 +172,24 @@ namespace sw
         /// @brief 이미지 인덱스별로, 그 이미지를 마지막으로 쓴 디바이스 인플라이트 펜스입니다(소유하지 않는 사본).
         vector<VkFence> _listImageFence;
         /// @brief 방금 획득해 이 프레임의 첫 제출이 기다릴 세마포어입니다(`takeAcquireWait`).
-        VkSemaphore _acquireWait{ nullptr };
+        VkSemaphore _acquireWait;
 
-        uint32 _imageFormat{ 0 };
-        uint32 _extentWidth{ 0 };
-        uint32 _extentHeight{ 0 };
-        uint32 _imageIndex{ 0 };
+        uint32 _imageFormat;
+        uint32 _extentWidth;
+        uint32 _extentHeight;
+        uint32 _imageIndex;
 
         /// @brief 요청한 백버퍼 포맷입니다(계약값 `constant::render::kBackBufferFormat`).
-        RHIFormat _requestedFormat{ constant::render::kBackBufferFormat };
+        RHIFormat _requestedFormat;
         /// @brief 실제로 채택된 포맷입니다. 요청과 다르면 `IRHIDevice::getBackBufferFormat` 으로 드러납니다.
-        RHIFormat _actualBackBufferFormat{ constant::render::kBackBufferFormat };
+        RHIFormat _actualBackBufferFormat;
         /// @brief 요청한 백버퍼 개수입니다. 0 이면 서피스 최소값 + 1 을 씁니다.
-        uint32 _requestedBufferCount{ 0 };
+        uint32 _requestedBufferCount;
         /// @brief 요청한 VSync 입니다. Vulkan 에서는 present 모드가 이 역할을 합니다(FIFO = 켬).
-        bool _bRequestedVSync{ true };
+        uint8 _bRequestedVSync : 1;
         /// @brief 마지막 `create` 가 서피스 크기 0 이라 물러났는지입니다. `create` 가 매번 다시 정합니다.
-        bool _bSurfaceEmpty{ false };
+        uint8 _bSurfaceEmpty : 1;
         /// @brief 획득했지만 아직 표시하지 않은 이미지를 쥐고 있는가입니다. `present` · `destroy` 가 내린다.
-        bool _bImageHeld{ false };
+        uint8 _bImageHeld : 1;
     };
 } // namespace sw

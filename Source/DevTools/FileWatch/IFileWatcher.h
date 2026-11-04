@@ -49,7 +49,7 @@ namespace sw
     struct [[nodiscard]] FileWatchPollResult
     {
         uint32 _eventCount{ 0 };     ///< 꺼낸 이벤트 수(합성 리스캔 포함)
-        bool   _bWatchLost{ false }; ///< 워커가 오류로 멈췄다 — 이 뒤로는 변경이 오지 않는다. 받는 쪽이 감시를 내리고 오류로 알린다
+        bool   _bWatchLost{ false }; ///< 워커가 오류로 멈췄다 — 이 뒤로는 변경이 오지 않는다. 받는 쪽이 감시를 내리고 오류로 알린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -147,6 +147,6 @@ namespace sw
         bool _bEventQueueOverflowed SW_GUARDED_BY( _eventMutex ){ false };
 
         /** @brief 워커가 감시를 잃었다는 표시입니다(`reportWatchLost`). 다음 폴링이 한 번 알리고 내립니다. */
-        bool _bWatchLost SW_GUARDED_BY( _eventMutex ){ false };
+        bool _bWatchLost SW_GUARDED_BY( _eventMutex ){ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw

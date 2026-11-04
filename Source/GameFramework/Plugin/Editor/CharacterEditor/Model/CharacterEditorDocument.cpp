@@ -68,13 +68,13 @@ namespace sw::editor
         , _packDataMessage{}
         , _previewPresetID{}
         , _packDataState{ PackDataState::Unread }
-        , _bClipNamesLoaded{ false }
-        , _bKindTableReady{ false }
-        , _bDatabaseLoaded{ false }
-        , _bHasFit{ false }
-        , _bExternalChange{ false }
-        , _bPreviewValid{ false }
-        , _bStagedSelection{ false }
+        , _bClipNamesLoaded{ SW_FALSE }
+        , _bKindTableReady{ SW_FALSE }
+        , _bDatabaseLoaded{ SW_FALSE }
+        , _bHasFit{ SW_FALSE }
+        , _bExternalChange{ SW_FALSE }
+        , _bPreviewValid{ SW_FALSE }
+        , _bStagedSelection{ SW_FALSE }
     {
         _paths._presetName = CharacterEditorDocumentInternal::kDefaultPresetName;
         _paths._exportID   = CharacterEditorDocumentInternal::kDefaultExportID;
@@ -114,7 +114,7 @@ namespace sw::editor
         _paths._appearanceFolder = data._appearanceFolder;
         _paths._clipFolder       = data._clipFolder;
         _paths._rigPath          = data._rigPath;
-        _bClipNamesLoaded        = false; // 팩 데이터가 바뀌면 클립 목록을 다시 모은다
+        _bClipNamesLoaded        = SW_FALSE; // 팩 데이터가 바뀌면 클립 목록을 다시 모은다
         _selectedClip            = hashed_string{};
         _previewPresetID         = hashed_string( string_view( data._previewPresetID ) );
         // 프리셋 내보내기 폴더는 외형 폴더에서 파생한다(기준은 팩 데이터의 외형 폴더 하나).
@@ -127,7 +127,7 @@ namespace sw::editor
     {
         if ( _bKindTableReady )
             return;
-        _bKindTableReady = true;
+        _bKindTableReady = SW_TRUE;
         _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
         SocketKindTable kinds;
         if ( kinds.loadDefault() == false )
@@ -158,7 +158,7 @@ namespace sw::editor
         }
         _status.clear();
         _selectedSocket  = hashed_string{};
-        _bExternalChange = false;
+        _bExternalChange = SW_FALSE;
         _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
         return true;
     }
@@ -166,13 +166,13 @@ namespace sw::editor
     void CharacterEditorDocument::pollExternalChange( float64 nowSeconds )
     {
         if ( _reloadGuard.pollExternalChange( SharedAssetCache<SocketSet>::getReloadCount(), nowSeconds ) )
-            _bExternalChange = true;
+            _bExternalChange = SW_TRUE;
         if ( _bExternalChange && _paths._socketPath.empty() )
-            _bExternalChange = false; // 열어 둔 소켓 파일이 없으면 반영할 모델이 없다
+            _bExternalChange = SW_FALSE; // 열어 둔 소켓 파일이 없으면 반영할 모델이 없다
         // 고치지 않은 모델은 바뀐 파일을 바로 다시 읽는다. 읽기가 실패하면 표시가 남고 화면이 다시 읽기 단추를 낸다.
         const bool bCanAutoReload = _bExternalChange && _sockets.isDirty() == false;
         if ( bCanAutoReload && loadSocketFile() )
-            _bExternalChange = false;
+            _bExternalChange = SW_FALSE;
     }
 
     bool CharacterEditorDocument::saveFiles( float64 nowSeconds )
@@ -293,8 +293,8 @@ namespace sw::editor
 
     void CharacterEditorDocument::loadAppearanceData()
     {
-        _bDatabaseLoaded = false;
-        _bPreviewValid   = false;
+        _bDatabaseLoaded = SW_FALSE;
+        _bPreviewValid   = SW_FALSE;
         _database.clear();
         _pItems = make_unique<ItemCatalog>();
         if ( _pItems->loadFromAsset( AssetID{ string_view( _paths._itemsPath.c_str() ) } ) == false )
@@ -308,7 +308,7 @@ namespace sw::editor
             return;
         }
         _status.clear();
-        _bDatabaseLoaded = true;
+        _bDatabaseLoaded = SW_TRUE;
     }
 
     CharacterEditorLocalStore* CharacterEditorDocument::findLocalStore()
@@ -524,7 +524,7 @@ namespace sw::editor
         _previewReport = AppearanceSelectionReport{};
         _appearance.previewResolved( _database, _preview, _previewReport );
         _previewRevision = _appearance.getRevision();
-        _bPreviewValid   = true;
+        _bPreviewValid   = SW_TRUE;
     }
 
     uint32 CharacterEditorDocument::countEquippedSlots() const
@@ -541,7 +541,7 @@ namespace sw::editor
     void CharacterEditorDocument::setFitResult( const FitResult& result )
     {
         _fit     = FitCheckSummary::fromResult( result );
-        _bHasFit = true;
+        _bHasFit = SW_TRUE;
     }
 
     const vector<hashed_string>& CharacterEditorDocument::getClipNames()
@@ -554,7 +554,7 @@ namespace sw::editor
     void CharacterEditorDocument::loadClipNames()
     {
         _listClipName.clear();
-        _bClipNamesLoaded = true;
+        _bClipNamesLoaded = SW_TRUE;
         if ( _paths._clipFolder.empty() )
             return;
         // 클립 목록은 나열 규칙 하나로 얻는다(`AssetIO::collectAssets` - 도메인 없는 폴더는 모든 도메인의 합집합). 예전에는 이긴 도메인 폴더 하나만 디스크에서 훑었다.

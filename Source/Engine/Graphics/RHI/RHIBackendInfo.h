@@ -23,7 +23,7 @@ namespace sw
         const utf8*         _pName;        ///< 로그와 설정에 쓰는 이름(RHIBackend 열거자와 같다)
         ShaderTargetFormat  _shaderTarget; ///< 이 백엔드가 읽는 셰이더 바이트코드
         const utf8*         _pModuleName;  ///< 개발 빌드가 로드하는 장치 모듈 이름(`Bin/Modules/<이름>`)
-        bool                _bWindowsOnly; ///< Windows 에서만 만들 수 있다(D3D)
+        bool                _bWindowsOnly; ///< Windows 에서만 만들 수 있다(D3D) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         ProfilerGraphicsAPI _profilerAPI;  ///< 외부 프로파일러에 알리는 GPU API 종류
         RHICapabilities     _capabilities; ///< 정적 능력 테이블. 디바이스가 있으면 `IRHIDevice::getCapabilities` 가 런타임 값으로 덮을 수 있다
     };

@@ -49,9 +49,9 @@ namespace sw
         {
             uint32  _timeoutFrames{ AutomationTimeLimits::kDefaultWaitTimeoutFrames };
             float32 _timeoutSeconds{ 0.0f };
-            bool    _bSeconds{ false };
+            bool    _bSeconds{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             float32 _timeoutWallSeconds{ 0.0f };
-            bool    _bWallSeconds{ false };
+            bool    _bWallSeconds{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief `ExpectLog` 의 인자입니다. */
@@ -59,7 +59,7 @@ namespace sw
         {
             uint32 _since{ 0 };
             uint32 _expected{ 0 };
-            bool   _bExactCount{ false }; ///< 참이면 `count`(같아야 한다), 거짓이면 `atLeast`
+            bool   _bExactCount{ false }; ///< 참이면 `count`(같아야 한다), 거짓이면 `atLeast` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief `ExpectImage` 의 기본 허용 — 다른 화소(`AutomationImageMetric::kDifferingMinDistance`)의 비율 상한입니다. */

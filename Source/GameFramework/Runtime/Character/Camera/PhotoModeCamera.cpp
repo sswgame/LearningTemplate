@@ -27,8 +27,8 @@ namespace sw
         , _fieldOfViewY{ 0.0f }
         , _orthoHeight{ 0.0f }
         , _exposureOffset{ 0.0f }
-        , _bOrthographic{ false }
-        , _bActive{ false }
+        , _bOrthographic{ SW_FALSE }
+        , _bActive{ SW_FALSE }
     {
     }
 
@@ -45,12 +45,12 @@ namespace sw
         _yaw               = euler._y;
         _roll              = euler._z;
         _exposureOffset    = 0.0f;
-        _bActive           = true;
+        _bActive           = SW_TRUE;
     }
 
     void PhotoModeCamera::end()
     {
-        _bActive = false;
+        _bActive = SW_FALSE;
     }
 
     void PhotoModeCamera::applyInput( const PhotoModeInput& input, float32 deltaTime )

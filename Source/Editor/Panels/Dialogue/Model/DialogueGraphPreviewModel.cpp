@@ -9,10 +9,17 @@
 
 namespace sw::editor
 {
+    DialogueGraphPreviewModel::DialogueGraphPreviewModel()
+        : _holdSeconds{ 0.0f }
+        , _nodeID{ 0 }
+        , _bPlaying{ SW_FALSE }
+    {
+    }
+
     void DialogueGraphPreviewModel::play( const DialogueGraphAsset& graph )
     {
         const DialogueAssetNode* pStart = graph.findStartNode();
-        _bPlaying                       = true;
+        _bPlaying                       = SW_TRUE;
         enterNode( graph, pStart != nullptr ? pStart->_id : 0 );
     }
 
@@ -30,7 +37,7 @@ namespace sw::editor
 
     void DialogueGraphPreviewModel::stop()
     {
-        _bPlaying    = false;
+        _bPlaying    = SW_FALSE;
         _nodeID      = 0;
         _holdSeconds = 0.0f;
     }
@@ -43,7 +50,7 @@ namespace sw::editor
         const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
         if ( pInfo == nullptr )
         {
-            _bPlaying = false;
+            _bPlaying = SW_FALSE;
             return;
         }
 
@@ -64,7 +71,7 @@ namespace sw::editor
             }
             case DialogueNodeFlow::Finish:
             {
-                _bPlaying = false;
+                _bPlaying = SW_FALSE;
                 return;
             }
             case DialogueNodeFlow::WaitChoice: // 사람이 툴바 버튼으로 선택한다
@@ -82,7 +89,7 @@ namespace sw::editor
         const DialogueNodeInfo*  pInfo = pNode != nullptr ? DialogueGraphAsset::findNodeInfo( pNode->_type ) : nullptr;
         if ( pInfo == nullptr )
         {
-            _bPlaying = false;
+            _bPlaying = SW_FALSE;
             return;
         }
 
@@ -91,6 +98,6 @@ namespace sw::editor
         if ( pInfo->_flow == DialogueNodeFlow::WaitAdvance || pInfo->_flow == DialogueNodeFlow::WaitChoice )
             EditorViewportPreview::applyDialogueLine( pNode->_speaker, pNode->_text );
         if ( pInfo->_flow == DialogueNodeFlow::Finish )
-            _bPlaying = false;
+            _bPlaying = SW_FALSE;
     }
 } // namespace sw::editor

@@ -54,7 +54,7 @@ namespace sw::editor
         /** @brief 누른 채 드래그해 @p rowIndex 까지 넓힙니다. 누르고 있지 않으면 아무 일도 하지 않습니다. */
         void dragTo( uint32 rowIndex );
         /** @brief 마우스를 뗍니다. 선택은 남습니다. */
-        void release() { _bDragging = false; }
+        void release() { _bDragging = SW_FALSE; }
         /** @brief 선택을 지웁니다. */
         void clear();
         /** @brief 행 수가 @p rowCount 로 줄었을 때 범위를 그 안으로 자릅니다. 범위가 모두 밖이면 지웁니다. */
@@ -76,7 +76,7 @@ namespace sw::editor
     private:
         uint32 _anchorRow;
         uint32 _activeRow;
-        bool   _bHasSelection;
-        bool   _bDragging;
+        uint8  _bHasSelection : 1;
+        uint8  _bDragging     : 1;
     };
 } // namespace sw::editor

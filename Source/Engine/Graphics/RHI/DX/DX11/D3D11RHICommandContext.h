@@ -105,7 +105,7 @@ namespace sw
         D3D11RecordingState* _pState;
         /** @brief _pContext 가 사는 동안 바뀌지 않아 첫 QueryInterface 결과를 다시 씁니다(마커마다 QI 하지 않습니다). */
         Microsoft::WRL::ComPtr<ID3DUserDefinedAnnotation> _annotation;
-        bool                                              _bAnnotationQueried;
+        uint8                                             _bAnnotationQueried : 1;
     };
 } // namespace sw
 #endif

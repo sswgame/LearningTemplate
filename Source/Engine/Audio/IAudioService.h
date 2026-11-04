@@ -241,10 +241,10 @@ namespace sw
         float32                 _musicVolume;      /**< 배경음악 볼륨 [0,1] 입니다. */
         float32                 _sfxVolume;        /**< 효과음 볼륨 [0,1] 입니다. */
         AudioSpeakerMode        _speakerMode;      /**< 사용자가 고른 스피커 모드입니다. */
-        bool                    _bMuted;           /**< 음소거 상태입니다. */
-        bool                    _bDeviceOpen;      /**< 장치를 열었는지입니다. */
-        bool                    _bOutputOpen;      /**< 장치가 엔진을 당기고 있는지입니다. */
-        bool                    _bInitialized;     /**< initialize 가 끝났는지입니다. */
+        uint8                   _bMuted       : 1; /**< 음소거 상태입니다. */
+        uint8                   _bDeviceOpen  : 1; /**< 장치를 열었는지입니다. */
+        uint8                   _bOutputOpen  : 1; /**< 장치가 엔진을 당기고 있는지입니다. */
+        uint8                   _bInitialized : 1; /**< initialize 가 끝났는지입니다. */
     };
 } // namespace sw
 

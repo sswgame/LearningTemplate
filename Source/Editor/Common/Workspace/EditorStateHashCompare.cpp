@@ -21,8 +21,8 @@ namespace sw::editor
         , _lastError{}
         , _hashChannel{ StateHashHistory::kSceneChannelName }
         , _objectTick{ 0 }
-        , _bComparisonCurrent{ false }
-        , _bObjectComparison{ false }
+        , _bComparisonCurrent{ SW_FALSE }
+        , _bObjectComparison{ SW_FALSE }
     {
     }
 
@@ -34,7 +34,7 @@ namespace sw::editor
             return false;
         }
         _hashChannel        = string( channelName );
-        _bComparisonCurrent = false;
+        _bComparisonCurrent = SW_FALSE;
         return true;
     }
 
@@ -76,8 +76,8 @@ namespace sw::editor
         source._listSample.swap( listSample );
         _arrChannel[sourceIndex]       = ChannelOrigin{}; // 채널에서 읽었으면 loadFromChannel 이 곧 다시 채운다
         _arrClientProcess[sourceIndex] = -1;              // 클라이언트에서 읽었으면 탭이 setClientOrigin 으로 다시 적는다
-        _bComparisonCurrent            = false;
-        _bObjectComparison             = false;
+        _bComparisonCurrent            = SW_FALSE;
+        _bObjectComparison             = SW_FALSE;
         return true;
     }
 
@@ -193,7 +193,7 @@ namespace sw::editor
         static_cast<void>( SceneStateHash::findDifferingObjects( listLeft, listRight, listName ) );
         _listDifferingObject = std::move( listName );
         _objectTick          = leftTick;
-        _bObjectComparison   = true;
+        _bObjectComparison   = SW_TRUE;
         return true;
     }
 
@@ -230,8 +230,8 @@ namespace sw::editor
         _arrSource[sourceIndex]        = EditorStateHashSource{};
         _arrChannel[sourceIndex]       = ChannelOrigin{};
         _arrClientProcess[sourceIndex] = -1;
-        _bComparisonCurrent            = false;
-        _bObjectComparison             = false;
+        _bComparisonCurrent            = SW_FALSE;
+        _bObjectComparison             = SW_FALSE;
     }
 
     bool EditorStateHashCompare::compare()
@@ -247,7 +247,7 @@ namespace sw::editor
         comparison._commonTickCount = countCommonTicks( listLeft, listRight );
         comparison._bDiverged       = StateHashHistory::findFirstDivergence( listLeft, listRight, comparison._firstDivergentTick );
         _comparison                 = comparison;
-        _bComparisonCurrent         = true;
+        _bComparisonCurrent         = SW_TRUE;
         return true;
     }
 

@@ -137,13 +137,13 @@ namespace sw::editor
         EditorPreviewViewport _viewport;
         CommandStack          _commandStack;
         EditorSelection       _selection;
-        bool                  _bFocusApplied;    ///< 이 창이 초점 씬과 스택을 등록해 두었다
-        size_t                _seenCommandCount; ///< 지난 그리기의 창 Undo 스택 길이. 달라지면 문서를 고친 것이다
-        float2                _previewBarSize;   ///< 앞 프레임 재생 막대 크기
-        uint32                _speedIndex;       ///< 재생 속도 칸(`kArrPreviewSpeed` 의 번호)
-        uint32                _stepFramesLeft;   ///< 멈춘 채 한 프레임 나아가기 — 남은 프레임만큼 속도로 돈다
-        bool                  _bPreviewPaused;   ///< 재생 막대의 멈춤
-        bool                  _bFloorShown;      ///< 바닥을 보인다
-        bool                  _bAxesShown;       ///< 축 방향 표시를 그린다
+        uint8                 _bFocusApplied : 1;  ///< 이 창이 초점 씬과 스택을 등록해 두었다
+        size_t                _seenCommandCount;   ///< 지난 그리기의 창 Undo 스택 길이. 달라지면 문서를 고친 것이다
+        float2                _previewBarSize;     ///< 앞 프레임 재생 막대 크기
+        uint32                _speedIndex;         ///< 재생 속도 칸(`kArrPreviewSpeed` 의 번호)
+        uint32                _stepFramesLeft;     ///< 멈춘 채 한 프레임 나아가기 — 남은 프레임만큼 속도로 돈다
+        uint8                 _bPreviewPaused : 1; ///< 재생 막대의 멈춤
+        uint8                 _bFloorShown    : 1; ///< 바닥을 보인다
+        uint8                 _bAxesShown     : 1; ///< 축 방향 표시를 그린다
     };
 } // namespace sw::editor

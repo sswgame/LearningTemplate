@@ -41,7 +41,7 @@ SW_TEST_CASE( PropertyEditConditionTest, EditConditionFollowsTheOtherProperty )
     SW_EXPECT_TRUE( getState( type, actor, "_blend" ) == sw::PropertyEditState::Disabled );
     SW_EXPECT_TRUE( getState( type, actor, "_height" ) == sw::PropertyEditState::Enabled );
 
-    actor._bEnabled = true;
+    actor._bEnabled = SW_TRUE;
     actor._mode     = sw::DisplayMetaMode::Orbit;
     SW_EXPECT_TRUE( getState( type, actor, "_speed" ) == sw::PropertyEditState::Enabled );
     SW_EXPECT_TRUE( getState( type, actor, "_fallback" ) == sw::PropertyEditState::Hidden );

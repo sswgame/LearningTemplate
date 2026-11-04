@@ -31,7 +31,7 @@ namespace sw::editor
         /** @brief 줄을 다시 읽어야 하면(처음 · 모은 뒤 · Refresh) `Saved/BugReports` 아래 폴더를 다시 읽습니다. 패널이 그리기마다 부릅니다. */
         void refreshIfDirty();
         /** @brief 다음 `refreshIfDirty` 가 줄을 다시 읽게 합니다(Refresh 단추). */
-        void markDirty() { _bRowsDirty = true; }
+        void markDirty() { _bRowsDirty = SW_TRUE; }
 
         /** @brief 메모 칸이 직접 고치는 글입니다. */
         string&                     editNote() { return _note; }
@@ -50,6 +50,6 @@ namespace sw::editor
     private:
         vector<BugReportRow> _listRow;
         string               _note;
-        bool                 _bRowsDirty;
+        uint8                _bRowsDirty : 1;
     };
 } // namespace sw::editor

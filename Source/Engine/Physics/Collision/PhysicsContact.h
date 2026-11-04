@@ -64,8 +64,8 @@ namespace sw
     {
         PhysicsBodyHandle _body{};
         uint64            _userData{ 0 };
-        bool              _bTrigger{ false };
-        bool              _bOverlapOnly{ false }; ///< 막지 않는 겹침 전용 바디다(트리거가 아닌 센서, `PhysicsBodyDesc::_bOverlapOnly`).
+        bool              _bTrigger{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bOverlapOnly{ false }; ///< 막지 않는 겹침 전용 바디다(트리거가 아닌 센서, `PhysicsBodyDesc::_bOverlapOnly`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -214,9 +214,9 @@ namespace sw
             Vector             _normal{};
             float32            _impulse{ 0.0f };
             int32              _subContactCount{ 0 };
-            bool               _bWasActive{ false };       ///< 지난 step 끝에 닿아 있었는지 나타낸다.
-            bool               _bTouchedThisStep{ false }; ///< 이번 step 에 새로 닿은 셰이프 쌍이 있었는지 나타낸다.
-            bool               _bBodyRemoved{ false };
+            bool               _bWasActive{ false };       ///< 지난 step 끝에 닿아 있었는지 나타낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool               _bTouchedThisStep{ false }; ///< 이번 step 에 새로 닿은 셰이프 쌍이 있었는지 나타낸다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool               _bBodyRemoved{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         using PairMap = unordered_map<PairKey, PairState, PairKeyHash>;

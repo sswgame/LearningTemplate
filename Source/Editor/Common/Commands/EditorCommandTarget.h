@@ -45,7 +45,7 @@ namespace sw::editor
         vector<uint64>          _listSelectedID{};           ///< 선택 스냅숏(같은 종류의 id)
         uint64                  _hoveredID{ 0 };             ///< 커서 아래 항목 id. 0 이면 빈 곳이다
         float3                  _worldPosition{};            ///< 뷰포트: 누른 레이가 바닥 평면과 만난 점
-        bool                    _bHasWorldPosition{ false }; ///< `_worldPosition` 이 채워졌으면 true
+        bool                    _bHasWorldPosition{ false }; ///< `_worldPosition` 이 채워졌으면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief 대상이 없는 실행(메뉴바 · 팔레트 · 전역 단축키)에 넘기는 빈 대상입니다. */
         static const EditorCommandTarget& none()

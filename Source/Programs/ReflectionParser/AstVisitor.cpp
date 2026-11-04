@@ -1302,7 +1302,7 @@ namespace sw
                 const vector<string>* _pListPart;
                 size_t                _partIndex;
                 CXCursor              _found;
-                bool                  _bFound;
+                bool                  _bFound; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             static CXChildVisitResult constantSearchVisitor( CXCursor cursor, CXCursor, CXClientData data )
@@ -2230,7 +2230,7 @@ namespace sw
             struct ComponentSearch
             {
                 const ParserConfig* _pConfig;
-                bool                _bDerives;
+                bool                _bDerives; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief Component / SceneComponent 파생인지 베이스 체인을 검사합니다. */

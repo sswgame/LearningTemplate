@@ -19,7 +19,7 @@ namespace sw
         : _requiredTags{}
         , _openRadius{ 2.0f }
         , _bStaysOpen{ true }
-        , _bPlanar{ false }
+        , _bPlanar{ SW_FALSE }
         , _bOpen{ false }
         , _clock{ GenreGimmickUtil::makeClock() }
         , _listTagged{}

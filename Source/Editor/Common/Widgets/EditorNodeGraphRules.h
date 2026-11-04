@@ -27,7 +27,7 @@ namespace sw::editor
     struct EditorGraphPinInfo
     {
         uint32 _type{ 0 };       ///< 핀 타입이다. 패널이 정한 번호이며 색 테이블의 인덱스다. `kWildcardPinType` 은 무엇과도 맞는다
-        bool   _bInput{ false }; ///< 들어오는 핀이면 true
+        bool   _bInput{ false }; ///< 들어오는 핀이면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

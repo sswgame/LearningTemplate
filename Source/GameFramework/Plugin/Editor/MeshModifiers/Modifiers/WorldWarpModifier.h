@@ -46,8 +46,8 @@ namespace sw::editor
     private:
         mutable MeshModifierStack _warpStack;
         mutable string            _loadedPath;
-        mutable bool              _bLoadTried;
-        mutable bool              _bLoaded;
+        mutable uint8             _bLoadTried : 1;
+        mutable uint8             _bLoaded    : 1;
         uint32                    _fileParam;
     };
 } // namespace sw::editor

@@ -78,7 +78,7 @@ namespace sw
         , _stepCount{ 0 }
         , _debrisBodyCount{ 0 }
         , _fixedStepOverride{ 0.0f }
-        , _bConfigured{ false }
+        , _bConfigured{ SW_FALSE }
     {
     }
 
@@ -185,7 +185,7 @@ namespace sw
         // 쌓인 시간은 그대로 두고 스텝과 프레임당 상한(스텝 수 × 스텝 길이)만 바꾼다.
         _stepTimer._step         = fixedStep / static_cast<float32>( subStepCount );
         _stepTimer._maxFrameTime = _stepTimer._step * static_cast<float32>( engineConfig._maxFixedStepPerFrame * subStepCount );
-        _bConfigured             = true;
+        _bConfigured             = SW_TRUE;
     }
 
     void ScenePhysics::setFixedStepOverride( float32 seconds )
@@ -196,7 +196,7 @@ namespace sw
             return;
         }
         _fixedStepOverride = seconds;
-        _bConfigured       = false; // 다음 스텝 전에 누적기를 이 스텝으로 다시 맞춘다
+        _bConfigured       = SW_FALSE; // 다음 스텝 전에 누적기를 이 스텝으로 다시 맞춘다
     }
 
     IPhysicsScene3D* ScenePhysics::getScene3D()

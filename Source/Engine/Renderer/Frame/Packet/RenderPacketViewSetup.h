@@ -85,8 +85,8 @@ namespace sw
         float64 _renderViewClock;
         /** @brief 주 시점 자동 렌더 배율 조정기입니다(`gv_autoRenderScale`). 처음 켤 때 만듭니다. */
         unique_ptr<RenderScaleAdjuster> _renderScaleAdjuster;
-        bool                            _bAutoRenderScaleActive;
+        uint8                           _bAutoRenderScaleActive : 1;
         /** @brief 활성 씬에 쓸 카메라가 없다는 오류를 이미 알렸는지입니다. 카메라가 생기면 다시 알릴 수 있게 내립니다. */
-        bool _bMissingCameraReported;
+        uint8 _bMissingCameraReported : 1;
     };
 } // namespace sw

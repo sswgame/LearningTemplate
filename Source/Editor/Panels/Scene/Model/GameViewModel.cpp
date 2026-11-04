@@ -34,7 +34,7 @@ namespace sw::editor
 
     GameViewModel::GameViewModel()
         : _aspect{ EditorGameViewAspect::Free }
-        , _bNoCameraHintShown{ false }
+        , _bNoCameraHintShown{ SW_FALSE }
         , _forwardedButtonMask{ 0 }
         , _keyForwarder{}
     {

@@ -60,6 +60,6 @@ namespace sw::editor
         string               _previewStateName; ///< 지난번 미리보기 상태다. 전이 흐름을 표시하는 데 쓴다
         float32              _holdSeconds;      ///< 지금 상태에 머문 시간
         int32                _flowLinkID;       ///< 다음 캔버스에서 흐름을 보여 줄 전이다. 0 이면 없다
-        bool                 _bPlaying;
+        uint8                _bPlaying : 1;
     };
 } // namespace sw::editor

@@ -32,8 +32,8 @@ namespace sw::editor
         struct EditorPreviewBarState
         {
             float32 _timeScale{ 1.0f };
-            bool    _bFloorShown{ true };
-            bool    _bAxesShown{ true };
+            bool    _bFloorShown{ SW_TRUE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool    _bAxesShown{ SW_TRUE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         struct EditorPreviewPanelInternal
@@ -90,14 +90,14 @@ namespace sw::editor
         , _viewport{}
         , _commandStack{}
         , _selection{}
-        , _bFocusApplied{ false }
+        , _bFocusApplied{ SW_FALSE }
         , _seenCommandCount{ 0 }
         , _previewBarSize{}
         , _speedIndex{ EditorPreviewPanelInternal::kDefaultSpeedIndex }
         , _stepFramesLeft{ 0 }
-        , _bPreviewPaused{ false }
-        , _bFloorShown{ true }
-        , _bAxesShown{ true }
+        , _bPreviewPaused{ SW_FALSE }
+        , _bFloorShown{ SW_TRUE }
+        , _bAxesShown{ SW_TRUE }
     {
     }
 
@@ -262,7 +262,7 @@ namespace sw::editor
                 EditorChrome::setNextItemWidthColumns( 16.0f );
                 if ( ImGui::SliderFloat( "##previewScrub", &time, 0.0f, duration, "%.2f s" ) )
                 {
-                    _bPreviewPaused = true; // 문지르는 동안은 멈춘다(언리얼 Persona 타임라인과 같다)
+                    _bPreviewPaused = SW_TRUE; // 문지르는 동안은 멈춘다(언리얼 Persona 타임라인과 같다)
                     seekPreviewTimeline( time );
                 }
                 EditorSelfTestMarks::note( ( scope + ".scrub" ).c_str() );
@@ -333,7 +333,7 @@ namespace sw::editor
             setFocusedCommandStack( &_commandStack );
             if ( _selection.isPreviewScope() )
                 setFocusedSelection( &_selection ); // 포커스를 잃어도 남는다 — 인스펙터가 이 선택을 고친다(`getFocusedSelection`)
-            _bFocusApplied = true;
+            _bFocusApplied = SW_TRUE;
             return;
         }
         if ( _bFocusApplied == false )
@@ -346,6 +346,6 @@ namespace sw::editor
         const bool    bOwnSceneFocused = pSceneManager != nullptr && pScene != nullptr && pSceneManager->getFocusedScene() == pScene;
         if ( bOwnSceneFocused )
             pSceneManager->clearSceneFocus();
-        _bFocusApplied = false;
+        _bFocusApplied = SW_FALSE;
     }
 } // namespace sw::editor

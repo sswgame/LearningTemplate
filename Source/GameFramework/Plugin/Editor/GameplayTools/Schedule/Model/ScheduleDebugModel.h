@@ -74,7 +74,7 @@ namespace sw::editor
         hashed_string                 _selectedNPC;
         int32                         _systemIndex;
         int32                         _previewMinute;
-        bool                          _bFollowClock;
-        ScheduleDebugPublished        _published; ///< 감시 값이 읽는 게시 값
+        bool                          _bFollowClock; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        ScheduleDebugPublished        _published;    ///< 감시 값이 읽는 게시 값
     };
 } // namespace sw::editor

@@ -19,7 +19,7 @@ namespace sw
     /** @brief 가상 커서의 설정입니다. */
     struct VirtualCursorSettings
     {
-        bool          _bRightStick{ true };                 ///< true 면 오른쪽 스틱, false 면 왼쪽 스틱으로 커서를 움직인다.
+        bool          _bRightStick{ true };                 ///< true 면 오른쪽 스틱, false 면 왼쪽 스틱으로 커서를 움직인다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         uint8         _padIndex{ 0 };                       ///< 읽는 게임패드 번호
         float32       _speed{ 900.0f };                     ///< 스틱을 끝까지 밀었을 때의 속도(픽셀/초)
         float32       _deadzone{ 0.2f };                    ///< 스틱 안쪽 데드존(반경)
@@ -40,6 +40,8 @@ namespace sw
     class SW_API VirtualCursor
     {
     public:
+        VirtualCursor();
+
         void                         setEnabled( bool bEnabled );
         bool                         isEnabled() const { return _bEnabled; }
         void                         setSettings( const VirtualCursorSettings& settings ) { _settings = settings; }
@@ -64,13 +66,13 @@ namespace sw
         bool didEmitLastFrame() const { return _bEmittedLastFrame; }
 
     private:
-        VirtualCursorSettings _settings{};
-        float2                _position{ 0.0f, 0.0f };
-        int2                  _lastEmitted{ 0, 0 };
-        bool                  _bEnabled{ false };
-        bool                  _bHasEmitted{ false };
-        bool                  _bPrimaryDown{ false };
-        bool                  _bSecondaryDown{ false };
-        bool                  _bEmittedLastFrame{ false };
+        VirtualCursorSettings _settings;
+        float2                _position;
+        int2                  _lastEmitted;
+        uint8                 _bEnabled          : 1;
+        uint8                 _bHasEmitted       : 1;
+        uint8                 _bPrimaryDown      : 1;
+        uint8                 _bSecondaryDown    : 1;
+        uint8                 _bEmittedLastFrame : 1;
     };
 } // namespace sw

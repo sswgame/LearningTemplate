@@ -60,7 +60,7 @@ namespace sw
         PROPERTY( Min = 0.0, Max = "_maxBudget" )
         float32 _startBudget{ 0.0f };
         PROPERTY()
-        bool _bRefund{ false };
+        bool _bRefund{ SW_FALSE };
     };
 
     /**

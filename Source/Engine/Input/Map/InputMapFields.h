@@ -56,7 +56,7 @@ namespace sw
         PROPERTY()
         int32 _priority{ 0 };
         PROPERTY()
-        bool _bEnabled{ true };
+        bool _bEnabled{ SW_TRUE };
         PROPERTY()
         bool _bBlockLower{ false };
         PROPERTY()
@@ -91,7 +91,7 @@ namespace sw
         PROPERTY( Min = 0.0, Units = s )
         float32 _time{ 0.0f };
         PROPERTY()
-        bool _bNegate{ false };
+        bool _bNegate{ SW_FALSE };
         /** @brief MultiTap 의 누름 수입니다(`InputMapXMLUtil::kMinTapCount` .. `kMaxTapCount`). */
         PROPERTY( Min = 2, Max = 255 )
         int32 _taps{ 2 };
@@ -123,7 +123,7 @@ namespace sw
         PROPERTY( Min = 0.0, Units = s )
         float32 _time{ 0.0f };
         PROPERTY()
-        bool _bNegate{ false };
+        bool _bNegate{ SW_FALSE };
         /** @brief MultiTap 의 누름 수입니다(`InputMapXMLUtil::kMinTapCount` .. `kMaxTapCount`). */
         PROPERTY( Min = 2, Max = 255 )
         int32 _taps{ 2 };
@@ -151,7 +151,7 @@ namespace sw
         PROPERTY( Min = 0.0, Units = s )
         float32 _time{ 0.0f };
         PROPERTY()
-        bool _bNegate{ false };
+        bool _bNegate{ SW_FALSE };
         /** @brief MultiTap 의 누름 수입니다(`InputMapXMLUtil::kMinTapCount` .. `kMaxTapCount`). */
         PROPERTY( Min = 2, Max = 255 )
         int32 _taps{ 2 };
@@ -204,7 +204,7 @@ namespace sw
         PROPERTY()
         float32 _scaleY{ 1.0f };
         PROPERTY()
-        bool _bScaleByDelta{ false };
+        bool _bScaleByDelta{ SW_FALSE };
         PROPERTY()
         GamepadStickAxis _axis{ GamepadStickAxis::Both };
         PROPERTY()

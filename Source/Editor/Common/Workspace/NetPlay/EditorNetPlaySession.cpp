@@ -53,10 +53,10 @@ namespace sw::editor
         uint64                  _objectHashMinTick{ 0 };    ///< `requestObjectHashes` 가 바란 가장 이른 틱 — 이보다 이른 답은 받지 않고 다시 묻는다
         uint32                  _objectHashReaskCount{ 0 }; ///< 그 요청에서 다시 물은 수(`kMaxObjectHashReask` 에서 멈춘다)
         atomic<int32>           _exitCode{ 0 };
-        atomic<uint32>          _exited{ 0 };    ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
-        int32                   _processID{ 0 }; ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
-        bool                    _bExitReported{ false };
-        bool                    _bConnected{ false }; ///< 클라이언트가 서버에 연결됐다는 줄을 남겼다
+        atomic<uint32>          _exited{ 0 };            ///< 읽기 스레드가 파이프 끝을 보고 종료 코드를 거뒀다
+        int32                   _processID{ 0 };         ///< 띄울 때의 pid(회수한 뒤에도 패널에 보인다)
+        bool                    _bExitReported{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                    _bConnected{ false };    ///< 클라이언트가 서버에 연결됐다는 줄을 남겼다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -250,8 +250,8 @@ namespace sw::editor
         , _port{ 0 }
         , _debugChannelPort{ 0 }
         , _stopPhase{ StopPhase::Idle }
-        , _bReplayServer{ false }
-        , _bMergedTraceUnopened{ false }
+        , _bReplayServer{ SW_FALSE }
+        , _bMergedTraceUnopened{ SW_FALSE }
     {
     }
 
@@ -273,7 +273,7 @@ namespace sw::editor
     {
         stopAndWait(); // 다음 단계는 새 프로세스와 같은 자리다 - 남은 멈춤까지 끝낸다. 합친 트레이스는 아래에서 버린다
         _pendingSettings      = EditorNetPlaySettings{};
-        _bMergedTraceUnopened = false;
+        _bMergedTraceUnopened = SW_FALSE;
         _mergedTracePath.clear();
     }
 
@@ -281,7 +281,7 @@ namespace sw::editor
     {
         if ( _bMergedTraceUnopened == false )
             return {};
-        _bMergedTraceUnopened = false;
+        _bMergedTraceUnopened = SW_FALSE;
         return _mergedTracePath;
     }
 
@@ -384,9 +384,9 @@ namespace sw::editor
         EditorNetPlaySettings settings = _pendingSettings;
         settings._mode                 = EditorNetMode::DedicatedServer;
         settings._clientCount          = 0; // 클라이언트 없이 서버 하나만 — 의도 재생이 폰을 움직이고 에디터는 그 서버만 본다
-        _bReplayServer                 = true;
+        _bReplayServer                 = SW_TRUE;
         const bool bStarted            = start( settings );
-        _bReplayServer                 = false;
+        _bReplayServer                 = SW_FALSE;
         if ( bStarted == false )
             return false;
         // 서버는 멈춘 채 떴다(`-gv_serverStartPaused`). 틱 0 에서 재생을 건다 — 다음 `step N` 이 목표 틱까지 정확히 진행한다.
@@ -422,7 +422,7 @@ namespace sw::editor
         _settings = settings;
         _listLogLine.clear();
         _mergedTracePath.clear();
-        _bMergedTraceUnopened = false;
+        _bMergedTraceUnopened = SW_FALSE;
         _traceDirectory.clear();
         _port = settings._port != 0 ? settings._port : findFreeUDPPort();
         if ( _port == 0 )

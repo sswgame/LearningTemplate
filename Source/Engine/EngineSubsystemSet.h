@@ -37,8 +37,8 @@ namespace sw
         {
             int32  _argc{ 0 };
             utf8** _ppArgv{ nullptr };
-            bool   _bDiagnostics{ false };  ///< 교착 감지기 · 메모리 프로파일러를 켠다(엔진 루프는 Debug, 테스트 실행 파일은 늘)
-            bool   _bMemoryBudget{ false }; ///< 메모리 예산을 둔다 — 하네스는 진단 구성의 추적을 그대로 둔다
+            bool   _bDiagnostics{ SW_FALSE }; ///< 교착 감지기 · 메모리 프로파일러를 켠다(엔진 루프는 Debug, 테스트 실행 파일은 늘) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool   _bMemoryBudget{ false };   ///< 메모리 예산을 둔다 — 하네스는 진단 구성의 추적을 그대로 둔다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
     } // namespace engine
 

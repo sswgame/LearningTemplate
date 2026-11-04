@@ -19,9 +19,9 @@ namespace sw
         vector<unique_ptr<FileWatchDispatcher>> _listDispatcher{};
         vector<Subscription>                    _listMatch{};
         ChangedDelegate                         _onChanged{};
-        bool                                    _bChanged{ false };
+        bool                                    _bChanged{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
-        void onFileChanged( const FileChangeEvent& /*changeEvent*/ ) { _bChanged = true; } // 확장자는 분배기가 거른다 — 바뀌었다는 사실만 쓴다
+        void onFileChanged( const FileChangeEvent& /*changeEvent*/ ) { _bChanged = SW_TRUE; } // 확장자는 분배기가 거른다 — 바뀌었다는 사실만 쓴다
     };
 
     ContentFolderWatchService::ContentFolderWatchService()
@@ -68,7 +68,7 @@ namespace sw
             }
             if ( watch._bChanged == false )
                 continue;
-            watch._bChanged = false;
+            watch._bChanged = SW_FALSE;
             if ( watch._onChanged.isBound() )
                 watch._onChanged(); // 알림 안에서 구독을 놓아도 된다 — 지우기는 releaseWatch 가 한다(인덱스로 돈다)
         }

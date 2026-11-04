@@ -25,7 +25,7 @@ namespace sw
     struct FixedStringWarningGuard
     {
 
-        bool _bEntered;
+        uint8 _bEntered : 1;
         FixedStringWarningGuard()
             : _bEntered{ getWarningFlag() == false }
         {

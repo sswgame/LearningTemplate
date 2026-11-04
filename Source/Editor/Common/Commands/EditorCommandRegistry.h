@@ -128,7 +128,7 @@ namespace sw::editor
         EditorCommandEdit                            _edit{ EditorCommandEdit::NoScene }; ///< `Scene` 이면 편집 허용 답도 묻는다(`EditorCommandEdit`)
         /** @brief 이 커맨드가 놓일 메뉴 경로(`"MainMenu/File"`)입니다. 비어 있으면 어느 메뉴에도 나오지 않습니다. */
         string _menuPath;
-        bool   _bPaletteVisible{ true };
+        bool   _bPaletteVisible{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 이 커맨드가 놓일 맥락(우클릭) 메뉴의 종류입니다. `None` 이면 어느 맥락 메뉴에도 나오지 않습니다.
          * @details 메뉴 종류는 대상 종류다 — 같은 종류는 어느 패널에서 열어도 같은 메뉴다(`EditorUI.md` R5). 순서 · 구분선 규칙은 메뉴바와 같다(`_contextMenuOrder`).
@@ -150,7 +150,7 @@ namespace sw::editor
     struct EditorMenuItem
     {
         uint32 _commandIndex;     ///< `EditorCommandRegistry::getCommands()` 의 인덱스
-        bool   _bSeparatorBefore; ///< 앞 항목과 그룹이 달라 사이에 구분선을 그린다
+        bool   _bSeparatorBefore; ///< 앞 항목과 그룹이 달라 사이에 구분선을 그린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

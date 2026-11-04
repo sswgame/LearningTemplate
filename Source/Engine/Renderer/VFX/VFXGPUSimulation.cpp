@@ -117,8 +117,8 @@ namespace sw
         , _particleBuffer{}
         , _argsBuffer{}
         , _drawSource{}
-        , _bNeedsReset{ true }
-        , _bSeen{ false }
+        , _bNeedsReset{ SW_TRUE }
+        , _bSeen{ SW_FALSE }
     {
     }
 
@@ -132,9 +132,9 @@ namespace sw
         , _listLightRange{}
         , _frameInput{}
         , _paramBuffer{}
-        , _bPipelineMissingLogged{ false }
-        , _bMeshPipelineMissingLogged{ false }
-        , _bLightOverflowLogged{ false }
+        , _bPipelineMissingLogged{ SW_FALSE }
+        , _bMeshPipelineMissingLogged{ SW_FALSE }
+        , _bLightOverflowLogged{ SW_FALSE }
     {
     }
 
@@ -180,7 +180,7 @@ namespace sw
         for ( auto& [runID, pState] : _mapState )
         {
             (void)runID;
-            pState->_bSeen = false;
+            pState->_bSeen = SW_FALSE;
         }
 
         bool bAnyGPUBatch = listMeshEmitter.empty() == false;
@@ -211,7 +211,7 @@ namespace sw
         {
             // 대신 CPU 로 그리지 않는다 — 시뮬레이션 대상은 데이터와 빌드가 정했고, 바꿔 그리면 CPU 와 GPU 를 비교하는 화면이 거짓이 된다.
             SW_LOG_ERROR_ID( "VFXGPUSimulation.VFXSimulationComputePSO", "The VFX simulation compute PSO is missing - GPU-simulated emitters are not drawn" );
-            _bPipelineMissingLogged = true;
+            _bPipelineMissingLogged = SW_TRUE;
         }
     }
 
@@ -231,7 +231,7 @@ namespace sw
             }
             else if ( assignment._overflowEmitterCount > 0 && _bLightOverflowLogged == false )
             {
-                _bLightOverflowLogged = true;
+                _bLightOverflowLogged = SW_TRUE;
                 SW_LOG_ERROR_ID( "VFXGPUSimulation.VFXEmittersAskedMore", "%# VFX emitters asked for more particle light slots than the GPU section holds (%#) - they have no lights", assignment._overflowEmitterCount,
                                  GPULightBuffer::kMaxGPULight );
             }
@@ -263,7 +263,7 @@ namespace sw
         if ( bReportMissingMesh )
         {
             SW_LOG_ERROR_ID( "VFXGPUSimulation.GPUMeshParticlesNeed", "GPU mesh particles need the VFX mesh instance PSO and a GPUScene instance UAV - GPU mesh emitters are not drawn" );
-            _bMeshPipelineMissingLogged = true;
+            _bMeshPipelineMissingLogged = SW_TRUE;
         }
         for ( size_t meshIndex = 0; meshIndex < listMeshEmitter.size(); ++meshIndex )
         {
@@ -326,7 +326,7 @@ namespace sw
         if ( found == _mapState.end() )
             found = _mapState.emplace( request._runID, sw::make_unique<EmitterState>( request._pDef, request._spawnScale ) ).first;
         EmitterState& state = *found->second;
-        state._bSeen        = true;
+        state._bSeen        = SW_TRUE;
 
         const VFXEmitterDef&     def         = state._clock.getDef();
         constexpr RHIBufferUsage kStateUsage = RHIBufferUsage::Structured | RHIBufferUsage::ShaderResource | RHIBufferUsage::UnorderedAccess;
@@ -375,7 +375,7 @@ namespace sw
         dispatch._bLights   = bLights;
         dispatch._bReset    = state._bNeedsReset;
         dispatch._stepCount = stepCount;
-        state._bNeedsReset  = false;
+        state._bNeedsReset  = SW_FALSE;
     }
 
     uint32 VFXGPUSimulation::appendParams( EmitterState& state, uint64 seed, uint64 targetStepCount, const float4x4& world, bool bRibbon, const VFXGPULightRange& lightRange )

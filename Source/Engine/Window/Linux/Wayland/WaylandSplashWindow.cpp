@@ -30,10 +30,10 @@ namespace sw
         xdg_surface*   _pXdgSurface{ nullptr };
         xdg_toplevel*  _pToplevel{ nullptr };
 
-        unique_ptr<WaylandShmBufferPool> _pPool;   ///< 그리기 버퍼(연결이 살아 있는 동안 지운다)
-        WaylandTextPainter               _painter; ///< 상태 글을 그린다
-        bool                             _bPainterReady{ false };
-        bool                             _bConfigured{ false };
+        unique_ptr<WaylandShmBufferPool> _pPool;                   ///< 그리기 버퍼(연결이 살아 있는 동안 지운다)
+        WaylandTextPainter               _painter;                 ///< 상태 글을 그린다
+        bool                             _bPainterReady{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                             _bConfigured{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

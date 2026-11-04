@@ -41,7 +41,7 @@ namespace sw
     struct DirectoryEntry
     {
         string_view _path;                ///< 순회 루트로 시작하는 `/` 구분 UTF-8 경로(대소문자는 디스크 그대로)
-        bool        _bDirectory{ false }; ///< 디렉터리면 true(링크는 가리키는 쪽 기준)
+        bool        _bDirectory{ false }; ///< 디렉터리면 true(링크는 가리키는 쪽 기준) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @brief `FileUtil::readOptionalTextFile` 의 결과입니다. */

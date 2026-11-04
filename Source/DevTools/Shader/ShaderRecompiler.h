@@ -68,6 +68,6 @@ namespace sw
         vector<ShaderCompileDesc> _listPendingReload SW_GUARDED_BY( _mutex );
         DelegateSlot<ShaderRecompiledDelegate>       _onAnyRecompiled;
         string                                       _label;
-        atomic<bool>                                 _bInitialized{ false }; ///< 시작 · 종료가 쓰고 update 가 잠금 없이 읽는다 — 원자값
+        atomic<bool>                                 _bInitialized{ SW_FALSE }; ///< 시작 · 종료가 쓰고 update 가 잠금 없이 읽는다 — 원자값
     };
 } // namespace sw

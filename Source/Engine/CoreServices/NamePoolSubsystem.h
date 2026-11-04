@@ -30,6 +30,6 @@ namespace sw
         span<const utf8* const> getSubsystemDependencies() const override;
 
     private:
-        bool _bInitialized; ///< 풀을 세웠다(= 소멸자가 내릴 것이 있다)
+        uint8 _bInitialized : 1; ///< 풀을 세웠다(= 소멸자가 내릴 것이 있다)
     };
 } // namespace sw

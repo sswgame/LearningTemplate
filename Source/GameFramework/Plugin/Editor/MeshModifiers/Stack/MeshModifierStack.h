@@ -85,6 +85,6 @@ namespace sw::editor
 
     private:
         vector<unique_ptr<MeshModifier>> _listModifier;
-        bool                             _bRecomputeNormals;
+        uint8                            _bRecomputeNormals : 1;
     };
 } // namespace sw::editor

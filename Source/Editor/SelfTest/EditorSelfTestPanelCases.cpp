@@ -282,7 +282,7 @@ namespace sw::editor
             /** @brief 테스트 앞의 "All packs" 스위치 상태입니다. 끝나면 되돌립니다. */
             struct ActivePackProbe
             {
-                bool _bWasShowingAllPacks{ false };
+                bool _bWasShowingAllPacks{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             static EditorSelfTestStep runShowsActivePackOnly( EditorSelfTestContext& context )
@@ -465,7 +465,7 @@ namespace sw::editor
             {
                 uint32 _panelIndex{ 0 };
                 uint32 _openStep{ 0 };
-                bool   _bWasOpen{ false };
+                bool   _bWasOpen{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             static EditorSelfTestStep runToolWindowsOpenAtAUsableSize( EditorSelfTestContext& context )

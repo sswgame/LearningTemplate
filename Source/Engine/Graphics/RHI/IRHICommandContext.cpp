@@ -6,6 +6,12 @@
 
 namespace sw
 {
+    IRHICommandContext::IRHICommandContext()
+        : _bRenderPassOpen{ SW_FALSE }
+        , _bRenderPassNoBackBuffer{ SW_FALSE }
+    {
+    }
+
     void IRHICommandContext::beginRenderPass( const RHIRenderPassBeginInfo& beginInfo )
     {
         endRenderPass(); // 패스는 겹치지 않는다
@@ -19,7 +25,7 @@ namespace sw
         if ( _bRenderPassOpen == false )
             return;
         endRenderPassNative();
-        _bRenderPassOpen = false;
+        _bRenderPassOpen = SW_FALSE;
     }
 
     bool IRHICommandContext::isDrawAllowed() const

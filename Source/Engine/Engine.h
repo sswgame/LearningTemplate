@@ -241,7 +241,7 @@ namespace sw
         EngineHostRole _hostRole;
         /** @brief 헤드리스 작업의 결과입니다(서브시스템 `Headless` 가 적는다 · 크래시 보고 프로세스도 헤드리스다). */
         HeadlessTaskState _headlessState;
-        bool              _bQuitRequested; ///< 창 닫힘 관찰자 · 종료 뒤로 옮겨 둔 요청(`shutdown`)이 정한 끝이다. 그 밖의 요청은 `_pQuitRequest`
+        uint8             _bQuitRequested : 1; ///< 창 닫힘 관찰자 · 종료 뒤로 옮겨 둔 요청(`shutdown`)이 정한 끝이다. 그 밖의 요청은 `_pQuitRequest`
         /** @brief RHI 기동 단계의 결과입니다(getRHIInitResult 참고). */
         RHIInitResult _rhiInitResult;
         /** @brief 이번 프레임 씬이 흘린 시간(초)입니다. 씬을 틱하지 않은 프레임은 0 — 디버그 드로우의 지속 시간이 이 값으로 흐릅니다. */

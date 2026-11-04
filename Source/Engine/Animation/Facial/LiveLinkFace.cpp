@@ -23,7 +23,7 @@ namespace sw
                     : _pData{ pData }
                     , _size{ size }
                     , _offset{ 0 }
-                    , _bFailed{ false }
+                    , _bFailed{ SW_FALSE }
                 {
                 }
 
@@ -54,7 +54,7 @@ namespace sw
                     const bool  bUnreadable = _bFailed || length < 0; // 음수 길이는 UTF-16 문자열이다
                     if ( bUnreadable || require( static_cast<size_t>( length ) ) == false )
                     {
-                        _bFailed = true;
+                        _bFailed = SW_TRUE;
                         return string{};
                     }
                     const bool   bNullTerminated = length > 0 && _pData[_offset + static_cast<size_t>( length ) - 1] == 0;
@@ -79,7 +79,7 @@ namespace sw
                 {
                     if ( _bFailed || _size - _offset < count )
                     {
-                        _bFailed = true;
+                        _bFailed = SW_TRUE;
                         return false;
                     }
                     return true;
@@ -89,7 +89,7 @@ namespace sw
                 const uint8* _pData;
                 size_t       _size;
                 size_t       _offset;
-                bool         _bFailed;
+                uint8        _bFailed : 1;
             };
             /** @brief 32비트 값을 빅 엔디안으로 덧붙입니다. */
             static void appendUint32( vector<uint8>& outBytes, uint32 value )
@@ -109,6 +109,14 @@ namespace sw
             }
         };
     } // namespace
+
+    LiveLinkFaceSource::LiveLinkFaceSource()
+        : _listExpression{}
+        , _channelCount{ 0 }
+        , _bHasFrame{ SW_FALSE }
+    {
+    }
+
 } // namespace sw
 
 namespace sw
@@ -298,7 +306,7 @@ namespace sw
     {
         _listExpression.clear();
         _channelCount = static_cast<uint32>( layout._listChannel.size() );
-        _bHasFrame    = false;
+        _bHasFrame    = SW_FALSE;
         for ( const LiveLinkFaceExpression& expression : mapping._listExpression )
         {
             ExpressionInput input{};
@@ -324,7 +332,7 @@ namespace sw
                 input._value += frame._listValue[static_cast<size_t>( input._listChannelIndex[index] )] * input._listScale[index];
             }
         }
-        _bHasFrame = true;
+        _bHasFrame = SW_TRUE;
     }
 
     bool LiveLinkFaceSource::tryGetChannel( const hashed_string& channel, float32& outWeight ) const

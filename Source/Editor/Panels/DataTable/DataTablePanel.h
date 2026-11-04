@@ -71,6 +71,6 @@ namespace sw::editor
         CatalogTableEditor _gameDataTable;
         /** @brief 표 편집기가 본 모델의 게임 데이터 읽기 횟수입니다. 다르면 표 편집기 상태(고른 칸 · 되돌리기 위치)를 지운다. */
         uint32 _seenGameDataLoadCount;
-        bool   _bGameDataRaw;
+        bool   _bGameDataRaw; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor

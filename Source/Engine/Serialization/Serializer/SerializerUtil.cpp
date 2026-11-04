@@ -405,7 +405,7 @@ namespace sw
                 ContainerWriter( vector<uint8>& buffer, const SerializeContext& context )
                     : _listBuffer{ buffer }
                     , _context{ context }
-                    , _bAllWritten{ true }
+                    , _bAllWritten{ SW_TRUE }
                 {
                 }
 
@@ -440,13 +440,13 @@ namespace sw
                 void recordWritten( const bool bWritten )
                 {
                     if ( bWritten == false )
-                        _bAllWritten = false;
+                        _bAllWritten = SW_FALSE;
                 }
 
             private:
                 vector<uint8>&          _listBuffer;
                 const SerializeContext& _context;
-                bool                    _bAllWritten;
+                uint8                   _bAllWritten : 1;
             };
 
             /** @brief 바이너리 컨테이너를 읽습니다. 신뢰할 수 없는 바이트의 경계 검사가 이 안에 있습니다(원소 수, 값, 소유 포인터 본문). */
@@ -1123,7 +1123,7 @@ namespace sw
         : _bytes{}
         , _pOwnerType{ nullptr }
         , _pProperty{ nullptr }
-        , _bOwnedPointerList{ false }
+        , _bOwnedPointerList{ SW_FALSE }
     {
     }
 

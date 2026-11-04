@@ -26,7 +26,7 @@ namespace sw
         /** @brief 빈 블록(`isValid()` 가 거짓)입니다. */
         MemoryBlock() noexcept
             : _pData{ nullptr }
-            , _bAligned{ false }
+            , _bAligned{ SW_FALSE }
         {
         }
 
@@ -43,7 +43,7 @@ namespace sw
             , _bAligned{ other._bAligned }
         {
             other._pData    = nullptr;
-            other._bAligned = false;
+            other._bAligned = SW_FALSE;
         }
 
         /** @brief 가진 블록을 풀고 @p other 의 블록을 넘겨받습니다. */
@@ -55,7 +55,7 @@ namespace sw
                 _pData          = other._pData;
                 _bAligned       = other._bAligned;
                 other._pData    = nullptr;
-                other._bAligned = false;
+                other._bAligned = SW_FALSE;
             }
             return *this;
         }
@@ -90,7 +90,7 @@ namespace sw
         {
             void* pData = _pData;
             _pData      = nullptr;
-            _bAligned   = false;
+            _bAligned   = SW_FALSE;
             return pData;
         }
 
@@ -104,7 +104,7 @@ namespace sw
             else
                 Memory::free( _pData );
             _pData    = nullptr;
-            _bAligned = false;
+            _bAligned = SW_FALSE;
         }
 
     private:
@@ -116,6 +116,6 @@ namespace sw
 
     private:
         void* _pData;
-        bool  _bAligned;
+        uint8 _bAligned : 1;
     };
 } // namespace sw

@@ -316,8 +316,8 @@ namespace sw::editor
                 float2 _pressAt{};
                 uint32 _viewportID{ 0 }; ///< 씬 뷰 캔버스의 뷰포트. 마우스를 움직일 때마다 함께 알린다. 플랫폼이 실제 커서의 뷰포트를 넣기 때문이다
                 float3 _startPosition{};
-                bool   _bWasOver{ false };
-                bool   _bWasUsing{ false };
+                bool   _bWasOver{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool   _bWasUsing{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             static void finishGizmo( GameObjectManager* pManager, const GizmoProbe& probe )

@@ -171,7 +171,7 @@ namespace sw
         PROPERTY( Tooltip = "What to do when inaudible or out of real voices" )
         AudioVirtualMode _virtual{ AudioVirtualMode::Virtualize };
         PROPERTY( Tooltip = "Loop until stopped" )
-        bool _bLoop{ false };
+        bool _bLoop{ SW_FALSE };
         PROPERTY( Tooltip = "Random container avoids repeating the previous clip" )
         bool _bAvoidRepeat{ true };
     };

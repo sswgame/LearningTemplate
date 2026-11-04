@@ -144,7 +144,7 @@ namespace sw::editor
         AccountID                        _lookupAccountID;
         AdminResult                      _lastResult;
         uint16                           _lastMethod;
-        bool                             _bHasLookup;
-        bool                             _bLastReplayed;
+        uint8                            _bHasLookup    : 1;
+        uint8                            _bLastReplayed : 1;
     };
 } // namespace sw::editor

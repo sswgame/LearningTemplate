@@ -9,7 +9,7 @@
 namespace sw
 {
     DeadlockDetector::DeadlockDetector()
-        : _bInitialized{ false }
+        : _bInitialized{ SW_FALSE }
         , _mutex{}
         , _mapThreadState{}
         , _mapLockOwner{}

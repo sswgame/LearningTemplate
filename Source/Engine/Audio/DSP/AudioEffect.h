@@ -23,7 +23,7 @@ namespace sw
         float32     _defaultValue{ 0.0f };
         float32     _minValue{ 0.0f };
         float32     _maxValue{ 1.0f };
-        bool        _bLogarithmic{ false }; ///< 스냅샷 블렌드를 로그 축에서 한다(주파수)
+        bool        _bLogarithmic{ false }; ///< 스냅샷 블렌드를 로그 축에서 한다(주파수) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

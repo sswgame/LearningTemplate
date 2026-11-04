@@ -166,7 +166,7 @@ namespace sw
     {
 
         const DebugHUDSectionRegistration* _pRegistration;
-        bool                               _bRegistered;
+        uint8                              _bRegistered : 1;
         explicit DebugHUDSectionRegistrar( const DebugHUDSectionRegistration* pRegistration );
         ~DebugHUDSectionRegistrar();
         DebugHUDSectionRegistrar( const DebugHUDSectionRegistrar& )            = delete;

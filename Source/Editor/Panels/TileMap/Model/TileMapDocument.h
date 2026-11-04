@@ -26,9 +26,9 @@ namespace sw::editor
     struct TileMapToolInput
     {
         int2 _hoverCell{};          ///< 커서 아래 셀(맵 밖일 수 있다)
-        bool _bClicked{ false };    ///< 캔버스 위에서 이번 프레임에 눌렀다
-        bool _bPainting{ false };   ///< 캔버스를 누른 채 끌고 있다(Brush 도구)
-        bool _bButtonDown{ false }; ///< 왼쪽 버튼이 눌려 있다(Rect 도구가 놓은 때를 본다)
+        bool _bClicked{ false };    ///< 캔버스 위에서 이번 프레임에 눌렀다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bPainting{ false };   ///< 캔버스를 누른 채 끌고 있다(Brush 도구) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bButtonDown{ false }; ///< 왼쪽 버튼이 눌려 있다(Rect 도구가 놓은 때를 본다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /**
@@ -204,8 +204,8 @@ namespace sw::editor
         PaintLayer                              _layer;
         TileFlagLayer                           _flagLayer;
         PaintTool                               _tool;
-        bool                                    _bErase;
-        bool                                    _bStrokeActive; ///< 지난 프레임에 칠하고 있었다. 이번 프레임은 `_lastPaintCell` 에서 이어서 칠한다
-        bool                                    _bRectActive;   ///< Rect 도구로 누른 채 드래그하고 있다
+        bool                                    _bErase;            ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        uint8                                   _bStrokeActive : 1; ///< 지난 프레임에 칠하고 있었다. 이번 프레임은 `_lastPaintCell` 에서 이어서 칠한다
+        uint8                                   _bRectActive   : 1; ///< Rect 도구로 누른 채 드래그하고 있다
     };
 } // namespace sw::editor

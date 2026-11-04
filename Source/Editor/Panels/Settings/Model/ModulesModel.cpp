@@ -43,8 +43,8 @@ namespace sw::editor
         , _stateFilter{ ModuleStateFilter::All }
         , _listNewlyInactive{}
         , _listNewlyActive{}
-        , _bPendingEnabled{ false }
-        , _bChangedSinceStart{ false }
+        , _bPendingEnabled{ SW_FALSE }
+        , _bChangedSinceStart{ SW_FALSE }
     {
     }
 
@@ -139,7 +139,7 @@ namespace sw::editor
     void ModulesModel::applyPending()
     {
         if ( writeProjectOverride() )
-            _bChangedSinceStart = true;
+            _bChangedSinceStart = SW_TRUE;
         _pendingModule.clear();
     }
 

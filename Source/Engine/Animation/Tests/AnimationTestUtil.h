@@ -35,7 +35,7 @@ namespace sw::test
     private:
         sw::AnimationNotifyTrack _notifyTrack;
         float32                  _playLength;
-        bool                     _bLoop;
+        uint8                    _bLoop : 1;
     };
 } // namespace sw::test
 

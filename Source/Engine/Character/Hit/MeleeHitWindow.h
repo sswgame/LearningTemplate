@@ -42,7 +42,7 @@ namespace sw
         float32       _damage{ 0.0f };                    ///< 기본 피해다
         float32       _impulse{ 0.0f };                   ///< 맞은 바디에 줄 충격량이다
         uint32        _layerMask{ MathUtil::kMaxUInt32 }; ///< 볼 레이어 비트다
-        bool          _bIs2D{ false };                    ///< 2D 물리 씬을 쓸면 true 다
+        bool          _bIs2D{ false };                    ///< 2D 물리 씬을 쓸면 true 다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

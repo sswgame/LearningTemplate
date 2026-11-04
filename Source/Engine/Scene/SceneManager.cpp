@@ -46,7 +46,7 @@ namespace sw
         , _listPreviewScene{}
         , _pFocusedScene{ nullptr }
         , _nextPreviewKey{ 1 }
-        , _bWorldPlaying{ false }
+        , _bWorldPlaying{ SW_FALSE }
         , _sceneGeneration{ 0 }
         , _pRHIDevice{ nullptr }
         , _services{ SceneEngineServices::makeFromBoundEngine() }
@@ -60,7 +60,7 @@ namespace sw
         , _onSceneObjectsInvalidated{}
         , _onSceneLoadRequested{}
         , _netLink{}
-        , _bInitialized{ false }
+        , _bInitialized{ SW_FALSE }
         , _pScenePreload{}
         , _preloadHeldFrames{ 0 }
         , _leakProbe{}
@@ -90,7 +90,7 @@ namespace sw
         }
         _bLoadInFlight = false;
         _queuedPath.clear();
-        _bInitialized = true;
+        _bInitialized = SW_TRUE;
 
         SW_LOG_INFO_ID( "SceneManager.Initialized", "Initialized." );
         return SubsystemInitResult::Succeeded;
@@ -109,7 +109,7 @@ namespace sw
         if ( _bInitialized == false )
             return;
 
-        _bInitialized = false;
+        _bInitialized = SW_FALSE;
         _pScenePreload.reset(); // 붙든 에셋을 에셋 매니저가 살아 있는 동안 놓는다
         if ( _queuedPath.empty() == false )
         {
@@ -142,7 +142,7 @@ namespace sw
         _pFocusedScene = nullptr;
         // 활성을 **씬을 내리기 전에** 비운다 — 플레이 중이면 여기서 활성 씬의 플레이가 끝난다(onEndPlay 가 살아 있는 씬을 본다).
         activateScene( nullptr );
-        _bWorldPlaying = false;
+        _bWorldPlaying = SW_FALSE;
         // 씬 정리는 소멸자 한 곳이 한다. 자리를 먼저 비운 채 소멸시켜, 소멸 중의 조회가 지우는 중인 목록을 보지 않게 한다.
         for ( unique_ptr<Scene>& scene : _listLoadedScene )
         {

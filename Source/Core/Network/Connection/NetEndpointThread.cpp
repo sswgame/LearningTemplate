@@ -14,7 +14,7 @@ namespace sw
         , _pHost{ nullptr }
         , _settings{}
         , _updateCount{ 0 }
-        , _bRunning{ false }
+        , _bRunning{ SW_FALSE }
     {
     }
 

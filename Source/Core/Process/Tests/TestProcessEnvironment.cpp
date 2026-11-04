@@ -32,7 +32,7 @@ namespace
     private:
         string _name;
         string _previous;
-        bool   _bHadValue;
+        uint8  _bHadValue : 1;
     };
 
     constexpr const utf8* kProcessEnvironmentTestVariable = "SW_TEST_PROCESS_ENVIRONMENT_VARIABLE";

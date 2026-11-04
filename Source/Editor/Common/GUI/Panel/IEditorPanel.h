@@ -129,8 +129,8 @@ namespace sw::editor
         /** @brief 기본 열림 상태로 에디터 패널을 만듭니다. */
         explicit IEditorPanel( bool bOpenByDefault = true )
             : _bOpen{ bOpenByDefault }
-            , _bWindowFocused{ false }
-            , _bContentDrawn{ false }
+            , _bWindowFocused{ SW_FALSE }
+            , _bContentDrawn{ SW_FALSE }
             , _contentLineCount{ 0.0f }
             , _contentColumnCount{ 0.0f }
         {
@@ -166,9 +166,9 @@ namespace sw::editor
         }
 
     private:
-        bool    _bOpen;
-        bool    _bWindowFocused;
-        bool    _bContentDrawn;      ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
+        bool    _bOpen; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        uint8   _bWindowFocused : 1;
+        uint8   _bContentDrawn  : 1; ///< 마지막 draw 에서 내용을 그렸다(접히거나 가려지지 않았다)
         float32 _contentLineCount;   ///< 마지막으로 그린 draw 의 내용 영역 높이 / 글자 줄 높이
         float32 _contentColumnCount; ///< 마지막으로 그린 draw 의 내용 영역 폭 / 숫자 "0" 너비
     };

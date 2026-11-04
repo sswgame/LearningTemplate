@@ -85,7 +85,7 @@ namespace sw::editor
         , _grid{}
         , _pSelected{ nullptr }
         , _statusText{}
-        , _bCatalogLoaded{ false }
+        , _bCatalogLoaded{ SW_FALSE }
     {
     }
 
@@ -108,7 +108,7 @@ namespace sw::editor
 
     void ProjectSettingsPanel::reloadCatalog()
     {
-        _bCatalogLoaded = true;
+        _bCatalogLoaded = SW_TRUE;
         _listPage.clear();
         _pSelected                   = nullptr;
         const TypeRegistry& registry = editor::getSubsystem<TypeRegistry>();
@@ -162,7 +162,7 @@ namespace sw::editor
         }
         if ( page._document.open( *pType, page._absolutePath, page._entry._elementName ) == ConfigReadResult::Invalid )
             SW_LOG_WARNING_ID( "ProjectSettingsPanel.ProjectSettingsCouldNot", "Project settings: %# could not be opened - see the errors above", page._absolutePath.c_str() );
-        page._bDirty = false;
+        page._bDirty = SW_FALSE;
     }
 
     void ProjectSettingsPanel::onPropertyEdited( const PropertyInfo& /*prop*/ )
@@ -190,7 +190,7 @@ namespace sw::editor
         outApplied = false;
         if ( page._document.save() == false )
             return false;
-        page._bDirty = false;
+        page._bDirty = SW_FALSE;
         // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다. 팩 설정이나 모르는 파일은 NotTracked — 다음 실행부터 반영된다.
         // 방금 쓴 파일을 다시 읽지 못하면(Failed) 읽는 쪽이 오류를 남겼다 — 적용하지 않은 것으로 알린다.
         ConfigReloadSubsystem* pConfigReload = editor::findSubsystem<ConfigReloadSubsystem>();
@@ -218,7 +218,7 @@ namespace sw::editor
             if ( pPage->_bDirty == false )
                 continue;
             (void)pPage->_document.revert(); // 결과는 창의 상태 줄이 파일 상태로 보인다
-            pPage->_bDirty = false;
+            pPage->_bDirty = SW_FALSE;
         }
     }
 
@@ -290,7 +290,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Undo" ), SW_LOCKEY( "EdVerb", "Revert" ), "Revert" ) ) )
         {
             (void)document.revert(); // 결과는 아래 칩과 오류 줄이 보인다
-            page._bDirty = false;
+            page._bDirty = SW_FALSE;
             refreshDirtyState();
             _statusText = "Reverted to the file";
         }
@@ -340,7 +340,7 @@ namespace sw::editor
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "NoSettingsFileWasLoadedFromConfigOr" ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "ReloadList" ) ) )
-                _bCatalogLoaded = false;
+                _bCatalogLoaded = SW_FALSE;
             return;
         }
 

@@ -583,11 +583,11 @@ namespace sw
     struct ScopedOpenGLContext
     {
         OpenGLRHIDevice* const _pDevice; ///< 생성자에서 받는다
-        bool                   _bNeedsUnbind{ false };
+        uint8                  _bNeedsUnbind : 1;
 
         explicit ScopedOpenGLContext( OpenGLRHIDevice* pDevice )
             : _pDevice{ pDevice }
-            , _bNeedsUnbind{ false }
+            , _bNeedsUnbind{ SW_FALSE }
         {
             const bool bNeedsContextAcquire = _pDevice != nullptr && _pDevice->requiresExclusiveContextThread() && _pDevice->isGraphicsContextCurrent() == false;
             if ( bNeedsContextAcquire )

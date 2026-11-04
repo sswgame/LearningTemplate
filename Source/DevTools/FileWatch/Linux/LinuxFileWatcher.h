@@ -65,6 +65,6 @@ namespace sw
         int32                                        _inotifyFd;
         int32                                        _wakeFd;
         atomic<bool>                                 _bIsWatching;
-        bool                                         _bRecursive;
+        uint8                                        _bRecursive : 1;
     };
 } // namespace sw

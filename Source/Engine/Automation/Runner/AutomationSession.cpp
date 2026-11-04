@@ -57,6 +57,7 @@ namespace sw
         , _listStartVariable{}
         , _reproduceInput{}
         , _screenshotBaseline{ 0 }
+        , _bUnattended{ SW_FALSE }
         , _runtime{ *this }
     {
     }
@@ -497,7 +498,7 @@ namespace sw
         if ( options._scenarioPath.empty() || AutomationPerBackend::parseBackendList( backends, options._listBackend, error ) == false )
         {
             SW_LOG_ERROR_ID( "AutomationSession.BackendsOptionInvalid", "%#", options._scenarioPath.empty() ? "-scenario-backends needs -scenario=<path>" : error.c_str() );
-            inoutState._bFailed         = true;
+            inoutState._bFailed         = SW_TRUE;
             inoutState._failureExitCode = getAutomationExitCode( AutomationOutcome::LoadError );
             return;
         }

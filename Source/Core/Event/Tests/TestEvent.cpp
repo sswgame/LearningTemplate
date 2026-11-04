@@ -32,9 +32,14 @@ namespace
     /** @brief 불리언 하나를 싣는 고정 ID 이벤트입니다. */
     struct ActivateProbeEvent final : sw::IEvent
     {
-        bool _bActive{ false };
+        uint8 _bActive : 1;
 
-        SW_REGISTER_EVENT_ID( kActivateProbeEventID );
+        ActivateProbeEvent()
+            : _bActive{ SW_FALSE }
+        {
+        }
+
+        SW_REGISTER_EVENT_ID( kActivateProbeEventID ); // 매크로가 private: 로 끝난다 — 생성자는 그 앞에 둔다
     };
 
     int32 s_LastResizeWidth{ 0 };
@@ -129,7 +134,7 @@ SW_TEST_CASE( EventTest, DispatcherCloseAndActivateEvents )
 
     CloseProbeEvent    closeEvt;
     ActivateProbeEvent activateEvt;
-    activateEvt._bActive = true;
+    activateEvt._bActive = SW_TRUE;
 
     dispatcher.publish( closeEvt );
     dispatcher.publish( activateEvt );

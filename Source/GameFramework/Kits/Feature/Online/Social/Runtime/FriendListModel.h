@@ -86,6 +86,6 @@ namespace sw
         uint16                     _errorCode;
         SocialResult               _result;
         FriendListState            _state;
-        bool                       _bStale; ///< 목록을 다시 물어야 한다(친구가 바뀌었다는 알림을 받았다)
+        uint8                      _bStale : 1; ///< 목록을 다시 물어야 한다(친구가 바뀌었다는 알림을 받았다)
     };
 } // namespace sw

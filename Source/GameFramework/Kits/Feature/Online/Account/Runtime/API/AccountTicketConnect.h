@@ -71,6 +71,6 @@ namespace sw
         unique_ptr<IStreamTransport> _pTransport;
         OnlineServiceClient          _client;
         AccountClient                _account;
-        bool                         _bServiceRegistered;
+        uint8                        _bServiceRegistered : 1;
     };
 } // namespace sw

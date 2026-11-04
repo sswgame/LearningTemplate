@@ -59,7 +59,7 @@ namespace sw
             {
                 const AnimationComponentSet* _pComponent{ nullptr };
                 const uint32*                _pCounterSlot{ nullptr }; ///< `kArrPosePhase` 와 같은 순서의 프로파일 카운터 칸이다(`_bTiming` 일 때만 쓴다)
-                bool                         _bTiming{ false };
+                bool                         _bTiming{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
                 void runRange( uint32 start, uint32 end )
                 {

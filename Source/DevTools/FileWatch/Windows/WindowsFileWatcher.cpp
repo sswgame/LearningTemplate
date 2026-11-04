@@ -46,7 +46,7 @@ namespace sw
         , _hCompletionPort{ nullptr }
         , _workerThread{}
         , _bIsWatching{ false }
-        , _bRecursive{ true }
+        , _bRecursive{ SW_TRUE }
     {
     }
 

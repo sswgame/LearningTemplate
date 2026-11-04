@@ -43,7 +43,7 @@ namespace sw
     {
         wl_output* _pOutput{ nullptr };
         int32      _scale{ 1 };
-        bool       _bEntered{ false };
+        bool       _bEntered{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -90,21 +90,21 @@ namespace sw
         wp_cursor_shape_device_v1*       _pCursorShapeDevice{ nullptr };              ///< 포인터 장치가 생길 때 만든다
         CursorShape                      _cursorShape{ CursorShape::Arrow };          ///< 기억해 둔 모양(들어올 때 · 보일 때 적용한다)
         WindowPointerLock                _pointerLock{ WindowPointerLock::Released }; ///< 걸어 둔 방식
-        bool                             _bPointerLocked{ false };                    ///< 컴포지터가 잠금을 켰다(`locked`) — 이 동안 포인터 움직임 대신 상대 이동이 온다
+        bool                             _bPointerLocked{ false };                    ///< 컴포지터가 잠금을 켰다(`locked`) — 이 동안 포인터 움직임 대신 상대 이동이 온다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         vector<WaylandOutput>     _listOutput;                   ///< 바인드한 출력과 그 배율
         vector<WaylandInputEvent> _listPendingInput;             ///< 리스너가 쌓고 `processMessages` 가 넘긴다
         uint32                    _inputSerial{ 0 };             ///< 마지막 키 · 버튼 · 들어옴의 일련번호(선택을 내놓을 때 컴포지터가 요구한다)
-        bool                      _bIntroducedHasUTF8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지
-        bool                      _bIntroducedHasPlain{ false }; ///< 위와 같이 text/plain
-        bool                      _bSelectionHasUTF8{ false };   ///< `_pSelectionOffer` 가 내놓는 형식(선택이 된 순간 소개 때 모은 값을 옮긴다)
-        bool                      _bSelectionHasPlain{ false };
-        uint32                    _pointerSerial{ 0 };   ///< 마지막 포인터 들어옴의 일련번호(커서를 바꿀 때 쓴다)
-        int32                     _configuredWidth{ 0 }; ///< 컴포지터가 정한 크기(0 이면 클라이언트가 정한다)
+        bool                      _bIntroducedHasUTF8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                      _bIntroducedHasPlain{ false }; ///< 위와 같이 text/plain NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                      _bSelectionHasUTF8{ false };   ///< `_pSelectionOffer` 가 내놓는 형식(선택이 된 순간 소개 때 모은 값을 옮긴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                      _bSelectionHasPlain{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint32                    _pointerSerial{ 0 };           ///< 마지막 포인터 들어옴의 일련번호(커서를 바꿀 때 쓴다)
+        int32                     _configuredWidth{ 0 };         ///< 컴포지터가 정한 크기(0 이면 클라이언트가 정한다)
         int32                     _configuredHeight{ 0 };
-        bool                      _bConfigured{ false };
-        bool                      _bCloseRequested{ false };
-        bool                      _bCursorVisible{ true };
+        bool                      _bConfigured{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                      _bCloseRequested{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                      _bCursorVisible{ true };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         void pushInput( const WaylandInputEvent& event ) { _listPendingInput.push_back( event ); }
 
@@ -299,7 +299,7 @@ namespace sw
                 State&         state  = *static_cast<State*>( pData );
                 WaylandOutput* pEntry = state.findOutput( pOutput );
                 if ( pEntry != nullptr )
-                    pEntry->_bEntered = true;
+                    pEntry->_bEntered = SW_TRUE;
             }
 
             static void onSurfaceLeave( void* pData, wl_surface* pSurface, wl_output* pOutput )
@@ -308,7 +308,7 @@ namespace sw
                 State&         state  = *static_cast<State*>( pData );
                 WaylandOutput* pEntry = state.findOutput( pOutput );
                 if ( pEntry != nullptr )
-                    pEntry->_bEntered = false;
+                    pEntry->_bEntered = SW_FALSE;
             }
 
             static void onDataOfferMime( void* pData, wl_data_offer* pOffer, const utf8* pMime )

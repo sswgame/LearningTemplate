@@ -22,8 +22,8 @@ namespace sw
         , _mapCellIndex{}
         , _listExternalSource{}
         , _cameraSource{}
-        , _bCameraSourceSet{ false }
-        , _bExternalSources{ false }
+        , _bCameraSourceSet{ SW_FALSE }
+        , _bExternalSources{ SW_FALSE }
         , _listScratchCell{}
         , _listScratchLoad{}
     {
@@ -84,25 +84,25 @@ namespace sw
         _listCell.clear();
         _mapCellIndex.clear();
         _pScene           = nullptr;
-        _bCameraSourceSet = false;
+        _bCameraSourceSet = SW_FALSE;
     }
 
     void SceneStreamingSubsystem::setCameraSource( const float3& position )
     {
         _cameraSource     = position;
-        _bCameraSourceSet = true;
+        _bCameraSourceSet = SW_TRUE;
     }
 
     void SceneStreamingSubsystem::setExternalSources( span<const float3> listSource )
     {
         _listExternalSource.assign( listSource.begin(), listSource.end() );
-        _bExternalSources = true;
+        _bExternalSources = SW_TRUE;
     }
 
     void SceneStreamingSubsystem::clearExternalSources()
     {
         _listExternalSource.clear();
-        _bExternalSources = false;
+        _bExternalSources = SW_FALSE;
     }
 
     uint32 SceneStreamingSubsystem::getLoadedCellCount() const
@@ -204,10 +204,10 @@ namespace sw
             // 반쯤 지은 것을 남기지 않는다.
             _pScene->unloadCell( slot._listObjectID );
             slot._listObjectID.clear();
-            slot._bFailed = true;
+            slot._bFailed = SW_TRUE;
             return;
         }
-        slot._bLoaded = true;
+        slot._bLoaded = SW_TRUE;
     }
 
     void SceneStreamingSubsystem::unloadCell( CellSlot& slot )
@@ -216,6 +216,6 @@ namespace sw
             return;
         _pScene->unloadCell( slot._listObjectID );
         slot._listObjectID.clear();
-        slot._bLoaded = false;
+        slot._bLoaded = SW_FALSE;
     }
 } // namespace sw

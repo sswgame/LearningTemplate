@@ -135,7 +135,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax512> _commandBuffer;
         bool                                    _arrLevelEnabled[4];
         bool                                    _arrCachedLevelEnabled[4];
-        bool                                    _bAutoScroll;
+        bool                                    _bAutoScroll; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         uint8                                   _bHasNewLogs   : 1 SW_GUARDED_BY( _entriesMutex );
         uint8                                   _bCollapse     : 1; ///< 같은 행을 한 행으로 접는다(유니티의 Collapse)
         uint8                                   _bClearOnPlay  : 1; ///< Play 를 시작하면 지운다

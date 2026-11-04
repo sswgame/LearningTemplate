@@ -19,19 +19,19 @@ namespace sw
     struct X11ClipboardIncrTransfer
     {
 
-        uint64   _requestor; ///< 붙여넣는 프로그램의 창
-        uint64   _property;  ///< 조각을 적는 그 창의 속성
-        string   _text;      ///< 보낼 글(UTF-8)
-        size_t   _offset;    ///< 다음에 보낼 바이트 자리
-        Deadline _deadline;  ///< 상대가 이 시각까지 다음 조각을 청하지 않으면 건을 버린다
-        bool     _bFinished; ///< 길이 0 조각(끝 신호)을 적었다. 상대가 그것을 지우면 건이 끝난다
+        uint64   _requestor;     ///< 붙여넣는 프로그램의 창
+        uint64   _property;      ///< 조각을 적는 그 창의 속성
+        string   _text;          ///< 보낼 글(UTF-8)
+        size_t   _offset;        ///< 다음에 보낼 바이트 자리
+        Deadline _deadline;      ///< 상대가 이 시각까지 다음 조각을 청하지 않으면 건을 버린다
+        uint8    _bFinished : 1; ///< 길이 0 조각(끝 신호)을 적었다. 상대가 그것을 지우면 건이 끝난다
         X11ClipboardIncrTransfer( uint64 requestor, uint64 property, string text, Deadline deadline )
             : _requestor{ requestor }
             , _property{ property }
             , _text{ std::move( text ) }
             , _offset{ 0 }
             , _deadline{ deadline }
-            , _bFinished{ false }
+            , _bFinished{ SW_FALSE }
         {
         }
     };

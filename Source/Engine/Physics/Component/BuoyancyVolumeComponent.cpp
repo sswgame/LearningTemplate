@@ -53,7 +53,7 @@ namespace sw
         box._halfExtents = _halfExtents;
         PhysicsQueryFilter filter;
         filter._layerMask        = _layerMask;
-        filter._bIncludeTriggers = false;
+        filter._bIncludeTriggers = SW_FALSE;
         _listOverlapBody.clear();
         (void)pScene->overlapShape( box, center, rotation, filter, _listOverlapBody ); // 수는 목록이 말한다
 

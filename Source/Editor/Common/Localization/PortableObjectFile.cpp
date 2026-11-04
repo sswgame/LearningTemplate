@@ -83,8 +83,8 @@ namespace sw
             string                      _language;
             string                      _projectName;
             PortableObjectField         _field{ PortableObjectField::None };
-            bool                        _bHasSource{ false };
-            bool                        _bHasTranslation{ false };
+            bool                        _bHasSource{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                        _bHasTranslation{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
             /** @brief 항목 하나를 마칩니다. 머리 항목(msgid "")은 Language 와 프로젝트 이름만 읽습니다. */
             void flush()

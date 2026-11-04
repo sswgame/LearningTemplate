@@ -66,7 +66,7 @@ namespace sw
         , _kind{}
         , _pModel{ nullptr }
         , _shownRevision{ 0 }
-        , _bBuilt{ false }
+        , _bBuilt{ SW_FALSE }
     {
     }
 
@@ -148,7 +148,7 @@ namespace sw
         if ( pServers == nullptr || pStatus == nullptr )
         {
             SW_LOG_ERROR_ID( "ServerPickerScreen.ServerPickerDocumentNeeds", "Server picker document %# needs a '%#' panel and a '%#' text", getDocumentPath().c_str(), Internal::kServersName, Internal::kStatusName );
-            _bBuilt = true; // 문서가 틀렸다 — 프레임마다 같은 오류를 되풀이하지 않는다
+            _bBuilt = SW_TRUE; // 문서가 틀렸다 — 프레임마다 같은 오류를 되풀이하지 않는다
             return;
         }
         pServers->clearChildren();
@@ -188,6 +188,6 @@ namespace sw
             }
         }
         _shownRevision = _pModel->getRevision();
-        _bBuilt        = true;
+        _bBuilt        = SW_TRUE;
     }
 } // namespace sw

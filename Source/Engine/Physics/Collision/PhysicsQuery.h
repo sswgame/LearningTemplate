@@ -24,7 +24,7 @@ namespace sw
         PhysicsBodyHandle _ignoreBody{};        ///< 이 바디는 보지 않는다(쏘는 쪽 자신).
         uint64            _ignoreUserData{ 0 }; ///< 0 이 아니면 사용자 값이 이것인 바디는 모두 보지 않는다(쏘는 오브젝트의 래그돌 뼈와 무기 전부).
         uint32            _layerMask{ MathUtil::kMaxUInt32 };
-        bool              _bIncludeTriggers{ false };
+        bool              _bIncludeTriggers{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief 레이어가 마스크에 포함되는지 반환합니다. */
         bool acceptsLayer( uint8 layer ) const { return layer < 32 && ( _layerMask & ( 1u << layer ) ) != 0; }

@@ -68,9 +68,9 @@ namespace sw
         int32   _defense{ 1 };
         int32   _power{ 0 };
         int32   _randomPercent{ 100 }; ///< 85..100
-        bool    _bStab{ false };
-        bool    _bCritical{ false };
-        bool    _bBurned{ false }; ///< 화상이고 물리 기술이면 절반이 된다
+        bool    _bStab{ false };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bCritical{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bBurned{ false };     ///< 화상이고 물리 기술이면 절반이 된다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -82,7 +82,7 @@ namespace sw
         int32 _catchValue{ 0 };  ///< 보정 포획률 a(255 이상이면 반드시 잡힌다)
         int32 _shakeChance{ 0 }; ///< 흔들림 한 번의 기준 b(0..65535 와 비교한다)
         int32 _shakes{ 0 };      ///< 흔들린 횟수(0..3, 화면 연출에 쓴다)
-        bool  _bCaught{ false };
+        bool  _bCaught{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -220,7 +220,7 @@ namespace sw
             int32                   _arrStage[kMonsterStatCount]{ 0, 0, 0, 0, 0, 0 };
             MonsterAction           _action{};
             int32                   _activeIndex{ 0 };
-            bool                    _bNeedsSwitch{ false };
+            bool                    _bNeedsSwitch{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         MonsterInstance& getActiveMutable( int32 side ) { return _arrSide[side]._listMonster[static_cast<size_t>( _arrSide[side]._activeIndex )]; }
@@ -255,6 +255,6 @@ namespace sw
         int32                           _weatherTurns;
         int32                           _escapeAttempts;
         MonsterBattleOutcome            _outcome;
-        bool                            _bWild;
+        bool                            _bWild; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw

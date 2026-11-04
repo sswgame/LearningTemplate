@@ -122,9 +122,9 @@ namespace sw::editor
     struct EditorSelfTestResult
     {
         string _id;
-        string _reason;          ///< 실패 이유. 통과했으면 빈 문자열이다
-        uint32 _frameCount{ 0 }; ///< 걸린 에디터 프레임 수
-        bool   _bPassed{ false };
+        string _reason;           ///< 실패 이유. 통과했으면 빈 문자열이다
+        uint32 _frameCount{ 0 };  ///< 걸린 에디터 프레임 수
+        bool   _bPassed{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

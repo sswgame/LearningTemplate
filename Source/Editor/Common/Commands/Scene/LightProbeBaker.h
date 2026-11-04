@@ -92,6 +92,8 @@ namespace sw
     class LightProbeBakeJob
     {
     public:
+        LightProbeBakeJob();
+
         /**
          * @brief 격자 @p layout 을 @p input 으로 베이크 시작합니다. 지난 진행은 버립니다.
          * @return 입력이 모자라면(물리 씬이 없거나 레이 수가 0 이거나 프로브가 없다) false 이고 이유를 @p pOutError 에 적습니다.
@@ -109,11 +111,11 @@ namespace sw
         [[nodiscard]] bool takeGrid( LightProbeGrid& outGrid );
 
     private:
-        LightProbeBakeInput _input{};
-        LightProbeGrid      _grid{};
+        LightProbeBakeInput _input;
+        LightProbeGrid      _grid;
         vector<float3>      _listDirection;
-        float32             _weight{ 0.0f };
-        uint32              _nextProbeIndex{ 0 };
-        bool                _bBegun{ false };
+        float32             _weight;
+        uint32              _nextProbeIndex;
+        uint8               _bBegun : 1;
     };
 } // namespace sw

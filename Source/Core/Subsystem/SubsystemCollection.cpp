@@ -60,7 +60,7 @@ namespace sw
         , _listInitTiming{}
         , _listShutdownTiming{}
         , _error{}
-        , _bSorted{ false }
+        , _bSorted{ SW_FALSE }
         , _pClockNanos{ nullptr }
     {
     }
@@ -73,12 +73,12 @@ namespace sw
     void SubsystemCollection::addInternal( const Entry& entry )
     {
         _listEntry.push_back( entry );
-        _bSorted = false;
+        _bSorted = SW_FALSE;
     }
 
     bool SubsystemCollection::sort()
     {
-        _bSorted = true;
+        _bSorted = SW_TRUE;
         _error.clear();
         _listOrder.clear();
         _listDependency.clear();
@@ -218,7 +218,7 @@ namespace sw
         _listInitTiming.shrink_to_fit();
         _listShutdownTiming.clear();
         _listShutdownTiming.shrink_to_fit();
-        _bSorted = false;
+        _bSorted = SW_FALSE;
     }
 
     void SubsystemCollection::shutdownDependentsOf( const ISubsystem& subsystem )

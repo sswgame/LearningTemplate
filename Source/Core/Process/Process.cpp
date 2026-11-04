@@ -41,6 +41,14 @@ namespace sw
             inoutLine += '"';
         }
     } // namespace
+
+    ProcessCommand::ProcessCommand()
+        : _executable{}
+        , _listArgument{}
+        , _bSearchPath{ SW_FALSE }
+    {
+    }
+
 } // namespace sw
 
 namespace sw
@@ -50,7 +58,7 @@ namespace sw
         ProcessCommand command;
         command._executable   = executable.str();
         command._listArgument = std::move( listArgument );
-        command._bSearchPath  = false;
+        command._bSearchPath  = SW_FALSE;
         return command;
     }
 
@@ -59,7 +67,7 @@ namespace sw
         ProcessCommand command;
         command._executable   = string{ executableName };
         command._listArgument = std::move( listArgument );
-        command._bSearchPath  = true;
+        command._bSearchPath  = SW_TRUE;
         return command;
     }
 

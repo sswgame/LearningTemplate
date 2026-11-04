@@ -313,7 +313,7 @@ namespace sw
         int32                      _worldIndex;
         uint32                     _localTick;
         NetSimRole                 _role;
-        bool                       _bInputFocus;
+        uint8                      _bInputFocus : 1;
     };
 } // namespace sw
 
@@ -414,6 +414,6 @@ namespace sw
         float64                         _time;
         uint32                          _tick;
         int32                           _nextWorldIndex;
-        bool                            _bStepping;
+        uint8                           _bStepping : 1;
     };
 } // namespace sw

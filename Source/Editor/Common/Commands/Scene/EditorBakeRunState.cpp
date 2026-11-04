@@ -15,7 +15,7 @@ namespace sw::editor
         , _finishedRunSceneGeneration{ 0 }
         , _heldEditCount{ 0 }
         , _finishedRunCount{ 0 }
-        , _bRunning{ false }
+        , _bRunning{ SW_FALSE }
     {
     }
 
@@ -29,13 +29,13 @@ namespace sw::editor
     {
         _sceneGeneration = sceneGeneration;
         _heldEditCount   = EditorPlaySession::getHeldSceneEditCount();
-        _bRunning        = true;
+        _bRunning        = SW_TRUE;
         EditorPlaySession::holdSceneEdits();
     }
 
     void EditorBakeRunState::end()
     {
-        _bRunning = false;
+        _bRunning = SW_FALSE;
         if ( _finishedRunSceneGeneration != _sceneGeneration )
         {
             _finishedRunSceneGeneration = _sceneGeneration;

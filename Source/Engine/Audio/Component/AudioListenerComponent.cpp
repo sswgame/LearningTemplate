@@ -43,7 +43,7 @@ namespace sw
         state._velocity        = float3{};
         state._mode            = _mode;
         state._screenHalfWidth = _screenHalfWidth;
-        state._bActive         = true;
+        state._bActive         = SW_TRUE;
         return state;
     }
 

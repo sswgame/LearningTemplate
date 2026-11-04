@@ -112,7 +112,7 @@ namespace sw
             uint32              _uncompressedSize{ 0 };
             uint32              _crc32{ 0 };
             PackCompressionType _compression{ PackCompressionType::None };
-            bool                _bVerifyCRC{ false };
+            bool                _bVerifyCRC{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
             /** @brief 디스크에서 읽을 바이트 수입니다(비압축이면 원본 크기). */
             uint32 getStoredSize() const { return _compression == PackCompressionType::None ? _uncompressedSize : _compressedSize; }

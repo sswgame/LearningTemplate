@@ -39,7 +39,7 @@ namespace sw
         float32 _arrAnalog[kAnalogCount]{}; ///< 스키마가 이름을 준 아날로그(가속 페달, 브레이크, 조준 줌 …), -1..1
         uint32  _buttonDown{ 0 };           ///< 누르고 있음(비트 = 스키마 순서)
         uint32  _buttonTriggered{ 0 };      ///< 이번 틱에 발동(플레이어는 입력 맵 trigger 규칙, AI 는 한 번 누름)
-        bool    _bTriggerLook{ false };     ///< `_triggerYaw` · `_triggerPitch` 가 채워졌다(서브틱 입력 — 발동한 순간의 시선을 아는 조종자만 채운다)
+        bool    _bTriggerLook{ false };     ///< `_triggerYaw` · `_triggerPitch` 가 채워졌다(서브틱 입력 — 발동한 순간의 시선을 아는 조종자만 채운다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         float32 _triggerYaw{ 0.0f };        ///< 폰이 지정한 발동 버튼(`PawnComponent::getTriggerLookButton`)이 눌린 순간의 조종 요. `_bTriggerLook` 이 거짓이면 0
         float32 _triggerPitch{ 0.0f };      ///< 같은 순간의 조종 피치. `_bTriggerLook` 이 거짓이면 0
 

@@ -162,8 +162,8 @@ namespace sw::editor
             {
                 string     _problem;            ///< 비어 있지 않으면 `AssetImportSummary::_listProblem` 에 더할 한 줄
                 StampEntry _current;            ///< `_bStamped` 일 때 스탬프에 쓸 줄
-                bool       _bStamped{ false };  ///< 맞거나 방금 임포트해 스탬프 표에 넣는다
-                bool       _bImported{ false }; ///< 이번에 임포트했다
+                bool       _bStamped{ false };  ///< 맞거나 방금 임포트해 스탬프 표에 넣는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool       _bImported{ false }; ///< 이번에 임포트했다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /**

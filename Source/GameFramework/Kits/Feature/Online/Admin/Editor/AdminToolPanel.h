@@ -65,6 +65,6 @@ namespace sw::editor
         int64               _noticeID;
         int32               _noticePriority;
         ServiceSanctionKind _sanctionKind;
-        bool                _bRefund;
+        bool                _bRefund; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor

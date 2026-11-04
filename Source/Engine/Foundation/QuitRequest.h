@@ -20,6 +20,8 @@ namespace sw
     public:
         static constexpr const utf8* kSubsystemName = "QuitRequest";
 
+        QuitRequest();
+
         SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
@@ -31,7 +33,7 @@ namespace sw
         int32 getExitCode() const { return _exitCode; }
 
     private:
-        int32 _exitCode{ 0 };
-        bool  _bRequested{ false };
+        int32 _exitCode;
+        uint8 _bRequested : 1;
     };
 } // namespace sw

@@ -58,12 +58,12 @@ namespace sw::editor
         void requestSave();
 
     private:
-        vector<const EditorSettingsRegistration*> _listVisibleSection;    ///< 검색 글에 맞는 섹션(등록 순서)
-        string                                    _sectionFilterText;     ///< 목록을 지은 때의 검색 글
-        uint32                                    _sectionListGeneration; ///< 목록을 지은 때의 섹션 등록 세대
-        uint32                                    _sectionTypeGeneration; ///< 목록을 지은 때의 타입 레지스트리 세대
-        bool                                      _bSectionListBuilt;     ///< 한 번이라도 지었는지(세대가 0 부터라 첫 프레임을 세대로 가를 수 없다)
-        bool                                      _bModifiedOnly;
+        vector<const EditorSettingsRegistration*> _listVisibleSection;     ///< 검색 글에 맞는 섹션(등록 순서)
+        string                                    _sectionFilterText;      ///< 목록을 지은 때의 검색 글
+        uint32                                    _sectionListGeneration;  ///< 목록을 지은 때의 섹션 등록 세대
+        uint32                                    _sectionTypeGeneration;  ///< 목록을 지은 때의 타입 레지스트리 세대
+        uint8                                     _bSectionListBuilt : 1;  ///< 한 번이라도 지었는지(세대가 0 부터라 첫 프레임을 세대로 가를 수 없다)
+        bool                                      _bModifiedOnly;          ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         const EditorSettingsRegistration*         _pSelected;              ///< 늘 `_listVisibleSection` 안의 항목이거나 nullptr 다(`refreshVisibleSections` 가 맞춘다)
         int64                                     _pendingSaveNanoseconds; ///< 저장을 기다리는 첫 편집 시각(0 이면 기다리지 않는다)
     };

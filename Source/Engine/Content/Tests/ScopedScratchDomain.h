@@ -29,6 +29,7 @@ namespace sw::test
 
         ScopedScratchDomain()
             : _folder{ FileUtil::normalizeSeparators( makeScratchPath( kDomain ) ) }
+            , _bMounted{ SW_FALSE }
         {
             _bMounted = FileUtil::ensureDirectoryExists( _folder ) && engine::getSubsystem<AssetPaths>().mountDiskDomain( kDomain, _folder );
             if ( _bMounted == false )
@@ -69,6 +70,6 @@ namespace sw::test
 
     private:
         string _folder;
-        bool   _bMounted{ false };
+        uint8  _bMounted : 1;
     };
 } // namespace sw::test

@@ -185,7 +185,7 @@ namespace sw
         _overrideDef._lens._nearPlane    = CameraDirectorComponentInternal::kOverrideNearPlane;
         SW_ASSERT( farPlane >= CameraDirectorComponentInternal::kOverrideNearPlane * 2.0f ); // 호출부 속성(`Far Plane`)의 범위가 지킨다. 올려 맞추지 않는다
         _overrideDef._lens._farPlane      = farPlane;
-        _overrideDef._lens._bOrthographic = false;
+        _overrideDef._lens._bOrthographic = SW_FALSE;
         // 덮어쓰는 동안에는 값만 바꾼다 — 매 프레임 블렌드를 새로 시작하면 영영 도착하지 못한다.
         if ( _bViewOverride )
         {

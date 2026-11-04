@@ -186,11 +186,11 @@ namespace sw
             /** @brief 재귀 순회가 폴더마다 쓰는 상태입니다. */
             struct WalkContext
             {
-                string                _directory; ///< `/` 구분, 끝에 구분자 없음
-                bool                  _bRecursive{ false };
+                string                _directory;              ///< `/` 구분, 끝에 구분자 없음
+                bool                  _bRecursive{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 DirectoryEntryVisitFn _visit{ nullptr };
                 void*                 _pContext{ nullptr };
-                bool                  _bStopped{ false }; ///< 콜백이 멈췄다
+                bool                  _bStopped{ SW_FALSE }; ///< 콜백이 멈췄다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 폴더 안 이름들을 모으는 상태입니다. */
@@ -299,21 +299,21 @@ namespace sw
                 const DirectoryEntry entry{ string_view{ path }, bDirectory };
                 if ( walk._visit( walk._pContext, entry ) == false )
                 {
-                    walk._bStopped = true;
+                    walk._bStopped = SW_TRUE;
                     return false;
                 }
                 if ( walk._bRecursive && bDirectory && bLink == false )
                 {
                     WalkContext child;
                     child._directory  = path;
-                    child._bRecursive = true;
+                    child._bRecursive = SW_TRUE;
                     child._visit      = walk._visit;
                     child._pContext   = walk._pContext;
                     // 들어갈 수 없는 하위 폴더는 멈추지 않고 건너뛴다(권한 없음).
                     (void)PlatformFileSystem::forEachChild( path, walkChild, &child );
                     if ( child._bStopped )
                     {
-                        walk._bStopped = true;
+                        walk._bStopped = SW_TRUE;
                         return false;
                     }
                 }

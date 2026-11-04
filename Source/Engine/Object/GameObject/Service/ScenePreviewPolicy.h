@@ -26,9 +26,9 @@ namespace sw
     {
         ScenePreviewTick _tick{ ScenePreviewTick::WhenDrawn }; ///< 누가 언제 틱하는지
         float32          _timeScale{ 1.0f };                   ///< 이 씬의 시간 배율(틱 델타에 곱한다). 0 이면 틱은 돌되 시간은 멈춘다
-        bool             _bPhysics{ false };                   ///< 물리 단계를 돌릴지
-        bool             _bAudio{ false };                     ///< 오디오 엔진에 리스너 · 에미터를 넣을지(보통 끈다)
-        bool             _bPlay{ false };                      ///< 만들 때 `beginPlay`, 내릴 때 `endPlay` 를 부를지(컴포넌트의 `onBeginPlay` 에 기대는 창)
+        bool             _bPhysics{ false };                   ///< 물리 단계를 돌릴지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bAudio{ false };                     ///< 오디오 엔진에 리스너 · 에미터를 넣을지(보통 끈다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bPlay{ false };                      ///< 만들 때 `beginPlay`, 내릴 때 `endPlay` 를 부를지(컴포넌트의 `onBeginPlay` 에 기대는 창) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 이 씬 물리의 고정 스텝(초)입니다. 0 이면 엔진 설정의 고정 스텝(`EngineConfig::_fixedDeltaTime`)을 쓴다 — 정책의 기본값이지 빠진 값의 대체가 아니다.
          * @details 래그돌 · 물리 에셋 창이 관절 한계를 촘촘한 스텝으로 보려고 쓴다(`ScenePhysics::setFixedStepOverride`). 음수는 오류다.

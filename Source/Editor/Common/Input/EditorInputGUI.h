@@ -84,10 +84,10 @@ namespace sw::editor
         vector<uint64>           _listSelectedID{};                      ///< 지금 선택(같은 종류의 id)
         Delegate<void( uint64 )> _selectOnly{};                          ///< 선택 밖 항목에서 열 때 그 항목만 고른다(R2). 빈 곳 메뉴는 부르지 않는다
         float3                   _worldPosition{};                       ///< 뷰포트: 누른 레이가 바닥 평면과 만난 점
-        bool                     _bHasWorldPosition{ false };
+        bool                     _bHasWorldPosition{ false };            ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /** @brief 자리 판정을 부른 쪽이 한다(뷰포트처럼 항목이 아닌 캔버스 — 비행과 메뉴를 그쪽이 가른다). true 면 `_bOpenRequested` 만 본다. */
-        bool _bCallerDecidesOpen{ false };
-        bool _bOpenRequested{ false }; ///< `_bCallerDecidesOpen` 일 때 이번 프레임에 연다
+        bool _bCallerDecidesOpen{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bOpenRequested{ false };     ///< `_bCallerDecidesOpen` 일 때 이번 프레임에 연다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

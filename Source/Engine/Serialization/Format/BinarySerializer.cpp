@@ -159,10 +159,10 @@ namespace sw
                 size_t                     _dataSize;
                 const SerializeContext&    _context;
                 vector<SchemaOrphanValue>* _pOutListOrphan;
-                bool                       _bStrict;
+                bool                       _bStrict; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 /// 읽지 못한 필드를 넘기고 이어 읽는 읽기(소프트, 오브젝트 상태의 엄격)는 그 필드를 **읽기 전 값**으로 남긴다. 컨테이너 · 구조체는 원소와 필드를
                 /// 채운 뒤 끝에서 실패하므로 읽다 만 값이 남는다. 그래서 읽기 전에 값을 바이트로 담아 두고 실패하면 되돌린다. 실패하면 객체째 버리는 엄격 읽기는 담지 않는다.
-                bool                  _bContinuesAfterUnreadable;
+                bool                  _bContinuesAfterUnreadable; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 BinaryWireVersion     _wireVersion;
                 uint64                _matchedBitmask{ 0 };
                 unordered_set<uint32> _uniqueMatchedPropHashes{};

@@ -23,6 +23,8 @@ namespace sw
     class SW_API AutomationScenarioChain
     {
     public:
+        AutomationScenarioChain();
+
         /** @brief `a,b,c` 를 경로 목록으로 가릅니다. 각 경로의 앞뒤 공백을 떼고 빈 항목은 버립니다. */
         static vector<string> splitList( string_view text );
         /** @brief 단계 @p stageIndex(0 부터)의 보고 경로입니다. 단계가 하나면 @p reportPath 그대로이고, 여럿이면 확장자 앞에 `.<번호>`(1 부터)를 붙입니다. 빈 경로는 빈 채로 둡니다. */
@@ -62,14 +64,14 @@ namespace sw
 
     private:
         vector<string>    _listPath;
-        size_t            _stageIndex{ 0 };
-        size_t            _skippedStageCount{ 0 };
-        size_t            _failedStageCount{ 0 };
-        size_t            _skippedResultCount{ 0 };
-        AutomationOutcome _firstNonPassResult{ AutomationOutcome::Passed }; ///< 처음 통과하지 못한 단계의 결과(없으면 Passed)
-        AutomationOutcome _finalResult{ AutomationOutcome::Running };
-        bool              _bKeepGoing{ false };
-        bool              _bBegun{ false };
-        bool              _bFinished{ false };
+        size_t            _stageIndex;
+        size_t            _skippedStageCount;
+        size_t            _failedStageCount;
+        size_t            _skippedResultCount;
+        AutomationOutcome _firstNonPassResult; ///< 처음 통과하지 못한 단계의 결과(없으면 Passed)
+        AutomationOutcome _finalResult;
+        uint8             _bKeepGoing : 1;
+        uint8             _bBegun     : 1;
+        uint8             _bFinished  : 1;
     };
 } // namespace sw

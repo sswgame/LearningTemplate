@@ -280,7 +280,7 @@ namespace sw
         uint32                       _renderTargetWidth;
         uint32                       _renderTargetHeight;
         Source                       _source;
-        TextureResidency             _residency;       ///< 파일을 업로드할 밉 범위 — 비동기 로드는 아래쪽 밉부터(`TextureCache::request`)
-        bool                         _bHoldsReference; ///< 항목의 참조 하나를 쥐었는가(완료에 성공했거나 캐시 적중)
+        TextureResidency             _residency;           ///< 파일을 업로드할 밉 범위 — 비동기 로드는 아래쪽 밉부터(`TextureCache::request`)
+        uint8                        _bHoldsReference : 1; ///< 항목의 참조 하나를 쥐었는가(완료에 성공했거나 캐시 적중)
     };
 } // namespace sw

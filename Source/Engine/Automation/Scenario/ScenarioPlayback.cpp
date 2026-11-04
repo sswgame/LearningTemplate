@@ -44,7 +44,7 @@ namespace sw
             {
                 const string& flag = listArgument[index];
                 if ( flag == "loop" )
-                    options._bLoop = true;
+                    options._bLoop = SW_TRUE;
                 else if ( flag == "demo" )
                     options._bStopOnHumanInput = true;
                 else if ( flag == "fixed" )

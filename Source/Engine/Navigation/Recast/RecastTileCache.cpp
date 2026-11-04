@@ -213,7 +213,7 @@ namespace sw
         RecastTileCacheStoreCompressor _compressor;
         RecastTileCacheMeshProcess     _meshProcess;
         uint32                         _pendingRequestCount{ 0 }; ///< 다음 `update` 가 처리할 장애물 요청 수
-        bool                           _bUpToDate{ true };        ///< 지난 `update` 가 할 일을 다 끝냈다
+        bool                           _bUpToDate{ true };        ///< 지난 `update` 가 할 일을 다 끝냈다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

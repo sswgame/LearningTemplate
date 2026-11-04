@@ -39,7 +39,7 @@ namespace sw
         float32              _textScale{ 1.0f };
         /// 이 화면의 글을 해석하는 문화권입니다(소유하지 않는다 — 부르는 쪽이 화면보다 오래 둡니다). nullptr 이면 게임 UI 와 같은 문화권입니다.
         const LocalizationManager* _pLocalization{ nullptr };
-        bool                       _bNavigationMode{ false }; ///< 탐색 방식이면 포커스 테두리(`:focus-visible`)를 보입니다(미리보기의 탐색 흉내).
+        bool                       _bNavigationMode{ SW_FALSE }; ///< 탐색 방식이면 포커스 테두리(`:focus-visible`)를 보입니다(미리보기의 탐색 흉내). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

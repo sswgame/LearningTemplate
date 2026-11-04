@@ -32,7 +32,7 @@ namespace sw
     struct AllocationRecord
     {
         uint64 _callStackHash{ 0 }; ///< 해제 때 그대로 돌려받는 콜 스택 해시(세부 추적이 꺼져 있으면 0)
-        bool   _bCounted{ false };  ///< 기록기가 이 블록을 세었으면 true. 그때만 해제를 기록기에 알린다
+        bool   _bCounted{ false };  ///< 기록기가 이 블록을 세었으면 true. 그때만 해제를 기록기에 알린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 기록기가 이 블록에 붙인 스탬프입니다(0 이면 없음). 할당기는 뜻을 모르고 블록 헤더에 적어 두었다가 해제 때 그대로 돌려줍니다.
          * @details 기록기는 이것으로 "측정 창 안에서 태어난 블록인가" 를 가립니다(`MemoryProfiler::beginLeakWindow`). 창 밖에서 태어난 오래된 블록의

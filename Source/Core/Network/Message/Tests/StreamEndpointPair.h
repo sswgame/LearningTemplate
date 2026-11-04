@@ -27,7 +27,7 @@ namespace sw::test
         StreamMessageEndpoint        _server;
         StreamMessageEndpoint        _client;
         StreamConnectionHandle       _clientHandle;
-        bool                         _bReady{ false }; ///< 준비(초기화 · listen)가 모두 됐다 — 케이스가 처음에 `SW_REQUIRE_TRUE` 로 본다
+        uint8                        _bReady : 1; ///< 준비(초기화 · listen)가 모두 됐다 — 케이스가 처음에 `SW_REQUIRE_TRUE` 로 본다
         StreamEndpointPair( IStreamEndpointListener& serverListener, IStreamEndpointListener& clientListener, const StreamEndpointConfig& endpointSettings,
                             const LoopbackStreamConditions& conditions )
             : StreamEndpointPair( serverListener, clientListener, endpointSettings, endpointSettings, conditions )
@@ -43,6 +43,7 @@ namespace sw::test
             , _server{}
             , _client{}
             , _clientHandle{}
+            , _bReady{ SW_FALSE }
             , _pServerListener{ &serverListener }
             , _pClientListener{ &clientListener }
         {

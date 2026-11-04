@@ -20,7 +20,7 @@ namespace sw
             /** @brief 덤프 기록입니다. 한 번만 찍고 이후 프레임에서 다시 찍지 않도록 기억한다. 에디터 범위의 상태 저장소가 소유한다. */
             struct DumpState
             {
-                bool _bDumped{ false };
+                bool _bDumped{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /**

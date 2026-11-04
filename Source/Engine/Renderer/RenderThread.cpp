@@ -181,9 +181,12 @@ namespace sw
         IRHIResourceFactory* _pFactory{ nullptr };
         RHITransferTicket    _ticket{};   ///< 제출했으면 유효하다(`Busy` 로 아직 못 냈으면 무효)
         RenderTargetReadback _readback{}; ///< 요청의 텍스처 · 번호와, 제출할 때 받은 행 배치
-        bool                 _bSubmitted{ false };
+        uint8                _bSubmitted : 1;
 
-        PendingRenderTargetRead() = default;
+        PendingRenderTargetRead()
+            : _bSubmitted{ SW_FALSE }
+        {
+        }
         ~PendingRenderTargetRead() { discardTicket(); }
         PendingRenderTargetRead( const PendingRenderTargetRead& )            = delete;
         PendingRenderTargetRead& operator=( const PendingRenderTargetRead& ) = delete;
@@ -207,10 +210,10 @@ namespace sw
         , _postPresentHook{}
         , _beginFrameHook{}
         , _thread{}
-        , _bRunning{ false }
+        , _bRunning{ SW_FALSE }
         , _stop{}
         , _bContextBound{ false }
-        , _bLastImmediateSubmit{ false }
+        , _bLastImmediateSubmit{ SW_FALSE }
         , _bScreenshotTaken{ SW_FALSE }
         , _screenshotFrameCounter{ 0 }
         , _screenshotShotCount{ 0 }
@@ -275,7 +278,7 @@ namespace sw
         RenderThreadInternal::unbindGraphicsContext( pDevice );
 
         _stop     = StopSource{};
-        _bRunning = true;
+        _bRunning = SW_TRUE;
         _thread   = sw::thread( &RenderThread::threadMain, this );
         // 다른 스레드가 장치 대기를 부르면 이 스레드가 받은 작업을 먼저 끝내게 한다(`IRHIDevice::waitIdle`).
         if ( pDevice != nullptr )
@@ -1069,7 +1072,7 @@ namespace sw
                 return;
             }
             pending._ticket     = submit._ticket;
-            pending._bSubmitted = true;
+            pending._bSubmitted = SW_TRUE;
             return; // 끝남은 이후 프레임이 폴링한다(요청한 프레임에는 기다리지 않는다)
         }
 

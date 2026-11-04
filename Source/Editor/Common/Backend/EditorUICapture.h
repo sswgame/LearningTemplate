@@ -52,7 +52,7 @@ namespace sw::editor
         uint32 _ticket{ 0 };                   ///< `request` 가 돌려준 번호
         uint32 _clippedWindowCount{ 0 };       ///< 내용이 창보다 큰데 그 방향 스크롤바가 없는 창 수입니다(내용이 잘려 보이지 않는다)
         uint32 _windowCount{ 0 };              ///< 그린 창 수(자식 창 포함)
-        bool   _bFromStartupArgument{ false }; ///< `-gv_screenshotEditor` 가 요청한 건이다(`-gv_screenshotQuit` 이 이 건의 결과로 앱을 끝낸다).
+        bool   _bFromStartupArgument{ false }; ///< `-gv_screenshotEditor` 가 요청한 건이다(`-gv_screenshotQuit` 이 이 건의 결과로 앱을 끝낸다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

@@ -30,7 +30,7 @@ namespace sw
         float3            _normal{};
         hashed_string     _material{}; ///< 맞은 셰이프의 물리 재질 이름이다.
         float32           _distance{ 0.0f };
-        bool              _bIs2D{ false };
+        bool              _bIs2D{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

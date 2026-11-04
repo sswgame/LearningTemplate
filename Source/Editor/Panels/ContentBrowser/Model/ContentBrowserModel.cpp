@@ -29,12 +29,22 @@
 // ContentBrowserTypeFilter
 namespace sw::editor
 {
+    ContentBrowserTypeFilter::ContentBrowserTypeFilter()
+        : _listFilter{}
+        , _selectedKind{}
+        , _selectedIndex{ 0 }
+        , _generation{ 0 }
+        , _bSelectedOther{ SW_FALSE }
+        , _bBuilt{ SW_FALSE }
+    {
+    }
+
     void ContentBrowserTypeFilter::sync()
     {
         const uint32 generation = EditorAssetTypeRegistry::getGeneration();
         if ( _bBuilt && generation == _generation )
             return;
-        _bBuilt     = true;
+        _bBuilt     = SW_TRUE;
         _generation = generation;
         EditorAssetTypeRegistry::collectBrowserFilters( _listFilter );
 
@@ -50,7 +60,7 @@ namespace sw::editor
             }
         }
         _selectedKind   = EditorAssetType{};
-        _bSelectedOther = false;
+        _bSelectedOther = SW_FALSE;
     }
 
     const utf8* ContentBrowserTypeFilter::getSelectedLabel() const
@@ -144,11 +154,11 @@ namespace sw::editor
         , _folderJob{}
         , _folderCache{ &EditorFolderListing::collectChildFolders }
         , _seenContentChangeSerial{ 0 }
-        , _bRootsDirty{ true }
-        , _bFolderDirty{ true }
-        , _bShowAllPacks{ false }
-        , _bShowAllPacksInitialized{ false }
-        , _bListingRecursive{ false }
+        , _bRootsDirty{ SW_TRUE }
+        , _bFolderDirty{ SW_TRUE }
+        , _bShowAllPacks{ SW_FALSE }
+        , _bShowAllPacksInitialized{ SW_FALSE }
+        , _bListingRecursive{ SW_FALSE }
     {
     }
 
@@ -157,7 +167,7 @@ namespace sw::editor
         if ( bSearchActive != _bListingRecursive )
         {
             _bListingRecursive = bSearchActive;
-            _bFolderDirty      = true;
+            _bFolderDirty      = SW_TRUE;
         }
 
         if ( _bRootsDirty )
@@ -199,7 +209,7 @@ namespace sw::editor
         if ( _bShowAllPacksInitialized == false )
         {
             _bShowAllPacks            = getPreferences<EditorContentBrowserPreferences>()._bShowAllPacksByDefault;
-            _bShowAllPacksInitialized = true;
+            _bShowAllPacksInitialized = SW_TRUE;
         }
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         if ( packRoot.empty() == false )
@@ -230,14 +240,14 @@ namespace sw::editor
         if ( ( selectedFolder.empty() || bInHiddenGamePack ) && _listRoot.empty() == false )
             openFolder( _listRoot.front()._absolutePath );
 
-        _bRootsDirty = false;
+        _bRootsDirty = SW_FALSE;
     }
 
     void ContentBrowserModel::setShowAllPacks( bool bShowAllPacks )
     {
         _bShowAllPacks            = bShowAllPacks;
-        _bShowAllPacksInitialized = true;
-        _bRootsDirty              = true;
+        _bShowAllPacksInitialized = SW_TRUE;
+        _bRootsDirty              = SW_TRUE;
     }
 
     uint32 ContentBrowserModel::getGameRootCount() const
@@ -260,7 +270,7 @@ namespace sw::editor
     void ContentBrowserModel::refreshCurrentFolder()
     {
         _folderJob.request( _selectedFolderAbs, _bListingRecursive );
-        _bFolderDirty = false;
+        _bFolderDirty = SW_FALSE;
     }
 
     void ContentBrowserModel::applyFolderListing( vector<EditorFolderListingEntry>& listEntry )
@@ -280,7 +290,7 @@ namespace sw::editor
         if ( serial == _seenContentChangeSerial )
             return;
         _seenContentChangeSerial = serial;
-        _bFolderDirty            = true;
+        _bFolderDirty            = SW_TRUE;
         _folderCache.clear();
     }
 
@@ -301,7 +311,7 @@ namespace sw::editor
         _selectedFolderAbs = normalizedPath;
         _listCrumb         = listCrumb;
         _selectedAssetAbs.clear();
-        _bFolderDirty = true;
+        _bFolderDirty = SW_TRUE;
     }
 
     void ContentBrowserModel::selectCrumb( size_t crumbIndex )
@@ -400,7 +410,7 @@ namespace sw::editor
     {
         // 감시도 같은 변경을 알리지만 한두 프레임 늦다. 결과를 아는 위치에서 바로 다시 읽는다.
         _selectedAssetAbs = FileUtil::normalizeSeparators( absolutePath );
-        _bFolderDirty     = true;
+        _bFolderDirty     = SW_TRUE;
         _folderCache.clear();
         // 이 변경 전에 시작한 스캔은 이동이 고친 색인을 오래된 결과로 덮어쓴다. 그 결과를 버리고 새로 스캔한다.
         ContentBrowserModelInternal::getHotReload().restartPendingReferenceScan();
@@ -499,7 +509,7 @@ namespace sw::editor
             return false;
         // 지운 파일이 목록과 선택에 남지 않도록 지금 폴더를 다시 읽는다. 파일 감시도 같은 변경을 알리지만 한두 프레임 늦다.
         _selectedAssetAbs.clear();
-        _bFolderDirty = true;
+        _bFolderDirty = SW_TRUE;
         _folderCache.clear();
         return true;
     }
@@ -525,7 +535,7 @@ namespace sw::editor
             return;
         }
         if ( EditorAssetFileCommands::importFiles( _selectedFolderAbs, listPath ) > 0 )
-            _bFolderDirty = true;
+            _bFolderDirty = SW_TRUE;
     }
 
     bool ContentBrowserModel::isReferenceIndexCurrent() const

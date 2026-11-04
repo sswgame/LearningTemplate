@@ -309,7 +309,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY()
-        bool _bEnabled = false;
+        bool _bEnabled = SW_FALSE;
 
         PROPERTY()
         DisplayMetaMode _mode = DisplayMetaMode::Off;

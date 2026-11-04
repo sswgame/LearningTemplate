@@ -12,7 +12,7 @@ namespace sw::editor
         , _previewStateName{}
         , _holdSeconds{ 0.0f }
         , _flowLinkID{ 0 }
-        , _bPlaying{ false }
+        , _bPlaying{ SW_FALSE }
     {
     }
 
@@ -22,14 +22,14 @@ namespace sw::editor
         _previewStateName.clear();
         _holdSeconds = 0.0f;
         _flowLinkID  = 0;
-        _bPlaying    = false;
+        _bPlaying    = SW_FALSE;
     }
 
     void AnimationGraphPreviewModel::play( const AnimationGraphAsset& graph, string_view graphPath )
     {
         syncGraph( graph );
         (void)_previewPlayer.play( hashed_string{}, false, 0.0f ); // 클립이 없어 재생은 비고 상태 이름만 옮긴다
-        _bPlaying    = true;
+        _bPlaying    = SW_TRUE;
         _holdSeconds = 0.0f;
         EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), graphPath );
         noteTransition();
@@ -44,7 +44,7 @@ namespace sw::editor
     void AnimationGraphPreviewModel::stop()
     {
         _previewPlayer.stop();
-        _bPlaying = false;
+        _bPlaying = SW_FALSE;
     }
 
     void AnimationGraphPreviewModel::update( float32 deltaSeconds, string_view graphPath )
@@ -80,7 +80,7 @@ namespace sw::editor
     void AnimationGraphPreviewModel::step( string_view graphPath )
     {
         if ( _previewPlayer.advance() == false )
-            _bPlaying = false;
+            _bPlaying = SW_FALSE;
         else
             EditorViewportPreview::applyAnimationNode( _previewPlayer.getCurrentStateName().c_str(), graphPath );
         noteTransition();

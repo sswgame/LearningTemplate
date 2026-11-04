@@ -111,9 +111,9 @@ namespace sw::editor
         int32                     _selectedGameDataIndex;
         int32                     _selectedProjectIndex;
         uint32                    _gameDataLoadCount;
-        bool                      _bLocalizationLoaded;
-        bool                      _bGameDataLoaded;
-        bool                      _bLocalizationDirty;
-        bool                      _bGameDataDirty;
+        uint8                     _bLocalizationLoaded : 1;
+        uint8                     _bGameDataLoaded     : 1;
+        uint8                     _bLocalizationDirty  : 1;
+        uint8                     _bGameDataDirty      : 1;
     };
 } // namespace sw::editor

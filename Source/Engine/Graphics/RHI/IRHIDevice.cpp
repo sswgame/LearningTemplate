@@ -349,12 +349,12 @@ namespace sw
         , _renderThreadID{ std::thread::id{} }
         , _backBufferWidth{ 0 }
         , _backBufferHeight{ 0 }
-        , _bPreferredVSync{ false }
-        , _bImmediateSubmit{ false }
+        , _bPreferredVSync{ SW_FALSE }
+        , _bImmediateSubmit{ SW_FALSE }
         , _bParallelRecording{ false }
-        , _bSoftwareAdapter{ false }
+        , _bSoftwareAdapter{ SW_FALSE }
         , _initResult{ RHIInitResult::NotStarted }
-        , _bShutDown{ false }
+        , _bShutDown{ SW_FALSE }
         , _memoryTracker{ make_unique<RHIMemoryTracker>() }
         , _pDeferredHandleQueue{ make_unique<RHIDeferredHandleQueue>() }
     {
@@ -393,7 +393,7 @@ namespace sw
     {
         // 백엔드가 이유를 좁히지 않고 물러나면 결함일 수 있는 실패다. 환경 탓이면 백엔드가 initializeInternal 안에서 고쳐 적는다.
         _initResult = RHIInitResult::Failed;
-        _bShutDown  = false;
+        _bShutDown  = SW_FALSE;
         if ( _pSurface == nullptr )
             return false;
 
@@ -448,7 +448,7 @@ namespace sw
             swapChainDesc._bSoftwareAdapter    = gv_rhiSoftwareAdapter || bSoftwareEnv;
             swapChainDesc._bPreferMinimumPower = gv_rhiPreferMinimumPower;
         }
-        _bSoftwareAdapter = false;
+        _bSoftwareAdapter = SW_FALSE;
         if ( engine::areEngineServicesBound() )
         {
             bool bCLIVSync{ false };
@@ -536,6 +536,6 @@ namespace sw
         // 3 · 4 단계가 넣은 해제는 부를 단계가 남지 않았다 — 네이티브 디바이스가 사라진 뒤 해제 큐의 소멸자에서 불린다.
         SW_LOG_ASSERT( getPendingReleaseCount() == 0, "%# queued %# GPU releases while shutting down - release them before the native device goes",
                        getBackendName(), getPendingReleaseCount() );
-        _bShutDown = true;
+        _bShutDown = SW_TRUE;
     }
 } // namespace sw

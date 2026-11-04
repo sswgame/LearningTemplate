@@ -66,7 +66,7 @@ namespace sw
         , _anchorTime{ 0.0f }
         , _predictedAnchorTime{ 0.0f }
         , _state{ PairedAnimationSessionState::Idle }
-        , _bClockStarted{ false }
+        , _bClockStarted{ SW_FALSE }
     {
         SW_ASSERT( _def != nullptr );
     }
@@ -654,7 +654,7 @@ namespace sw
             end( manager, PairedAnimationSessionState::Aborted );
             return;
         }
-        _bClockStarted = true;
+        _bClockStarted = SW_TRUE;
         _anchorTime    = anchorTime;
 
         // 3) 다른 역할의 시각 — 진입 때 앵커 시각만큼 뒤에서 같은 속도로 흐른다.

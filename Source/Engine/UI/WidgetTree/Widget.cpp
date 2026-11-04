@@ -55,8 +55,8 @@ namespace sw
         , _visibility{ WidgetVisibility::Visible }
         , _flowDirection{ UIFlowDirection::Inherit }
         , _cursorShape{ UICursorShape::Inherit }
-        , _bEnabled{ true }
-        , _bRightToLeft{ false }
+        , _bEnabled{ SW_TRUE }
+        , _bRightToLeft{ SW_FALSE }
         , _bHovered{ false }
     {
     }

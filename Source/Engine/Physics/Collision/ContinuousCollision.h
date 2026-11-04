@@ -13,7 +13,7 @@ namespace sw
      */
     struct SweepHit
     {
-        bool       _bHit{ false };
+        bool       _bHit{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         float32    _hitFraction{ 1.0f };
         float3     _hitPoint{ 0.0f, 0.0f, 0.0f };
         float3     _hitNormal{ 0.0f, 0.0f, 0.0f };

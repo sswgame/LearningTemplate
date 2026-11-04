@@ -48,6 +48,6 @@ namespace sw::editor
         uint64 _finishedRunSceneGeneration; ///< `_finishedRunCount` 를 센 씬 세대
         uint32 _heldEditCount;              ///< 시작할 때의 `EditorPlaySession::getHeldSceneEditCount` — 바뀌면(잠금을 지나친 편집) 멈춘다
         uint32 _finishedRunCount;
-        bool   _bRunning;
+        uint8  _bRunning : 1;
     };
 } // namespace sw::editor

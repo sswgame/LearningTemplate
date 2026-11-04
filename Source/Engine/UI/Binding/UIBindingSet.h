@@ -32,7 +32,7 @@ namespace sw
         const LocalizationManager*        _pLocalization{ nullptr };      ///< 형식 바인딩의 메시지 패턴입니다(없으면 값 텍스트를 그대로 씁니다).
         const UIBindingConverterRegistry* _pConverters{ nullptr };        ///< 변환기 레지스트리입니다(없으면 변환기를 쓴 바인딩은 오류입니다).
         UserSettingsManager*              _pSettings{ nullptr };          ///< 설정 바인딩의 소스입니다(없으면 설정 바인딩은 오류입니다).
-        bool                              _bTextRevisionChanged{ false }; ///< 이번 프레임에 텍스트 버전이 바뀌었는지 나타냅니다. 바뀌었으면 형식 바인딩을 다시 씁니다.
+        bool                              _bTextRevisionChanged{ false }; ///< 이번 프레임에 텍스트 버전이 바뀌었는지 나타냅니다. 바뀌었으면 형식 바인딩을 다시 씁니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -67,7 +67,7 @@ namespace sw
         void         setViewModel( UIViewModel* pViewModel );
         UIViewModel* getViewModel() const { return _pViewModel; }
         /** @brief 다음 `update` 가 바인딩을 다시 연결하게 합니다(식이 추가됐거나 변환기 레지스트리가 바뀌었을 때). */
-        void markRebind() { _bBound = false; }
+        void markRebind() { _bBound = SW_FALSE; }
 
         /**
          * @brief 바인딩 단계입니다. 연결되지 않았으면 연결하고 모든 필드를 쓰며, 연결되어 있으면 바뀐 소스의 필드만 씁니다.
@@ -106,8 +106,8 @@ namespace sw
             hashed_string       _sourceField;  ///< 뷰모델의 맨 위 필드 이름입니다(알림 단위). 설정 바인딩이면 설정 id 입니다.
             uint64              _skipSerial;   ///< 양방향에서 이 바인딩이 되쓰며 낸 알림 번호입니다. 그 알림으로는 위젯에 다시 쓰지 않습니다.
             WidgetID            _widget;
-            bool                _bPollKnown; ///< 폴링에서 `_lastPollText` 가 유효한지 나타냅니다.
-            bool                _bDirty;     ///< 설정에서 되쓴 뒤 다시 읽어야 하는지 나타냅니다(보정되거나 거절된 경우).
+            bool                _bPollKnown; ///< 폴링에서 `_lastPollText` 가 유효한지 나타냅니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                _bDirty;     ///< 설정에서 되쓴 뒤 다시 읽어야 하는지 나타냅니다(보정되거나 거절된 경우). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 식을 모두 해석해 연결합니다. 오류는 `_listError` 와 로그에 남깁니다. */
@@ -141,8 +141,8 @@ namespace sw
         uint64                _seenSerial;            ///< 마지막 `update` 가 본 뷰모델 알림 번호입니다.
         uint32                _writeCount;
         uint32                _polledCount;
-        bool                  _bBound;           ///< 식을 해석해 연결했는지 나타냅니다(뷰모델이나 식이 바뀌면 다시 연결합니다).
-        bool                  _bApplying;        ///< 위젯 필드에 쓰는 중인지 나타냅니다. 그 사이의 사용자 입력 알림은 되쓰지 않습니다.
-        bool                  _bSettingsChanged; ///< 설정 변경 통보를 받았는지 나타냅니다. 받았으면 설정 바인딩을 모두 다시 읽습니다.
+        uint8                 _bBound           : 1; ///< 식을 해석해 연결했는지 나타냅니다(뷰모델이나 식이 바뀌면 다시 연결합니다).
+        uint8                 _bApplying        : 1; ///< 위젯 필드에 쓰는 중인지 나타냅니다. 그 사이의 사용자 입력 알림은 되쓰지 않습니다.
+        uint8                 _bSettingsChanged : 1; ///< 설정 변경 통보를 받았는지 나타냅니다. 받았으면 설정 바인딩을 모두 다시 읽습니다.
     };
 } // namespace sw

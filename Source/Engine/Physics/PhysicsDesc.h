@@ -89,18 +89,18 @@ namespace sw
         float32            _gravityFactor{ 1.0f };   ///< 중력 배율(0 이면 떠 있다)
         PhysicsBodyType    _type{ PhysicsBodyType::Dynamic };
         uint8              _layer{ 0 };        ///< 충돌 레이어 번호다(`PhysicsSettings::findLayerIndex`).
-        bool               _bTrigger{ false }; ///< 감지만 하고 막지 않는다(유니티 isTrigger, Jolt sensor, Box2D sensor).
+        bool               _bTrigger{ false }; ///< 감지만 하고 막지 않는다(유니티 isTrigger, Jolt sensor, Box2D sensor). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 막지 않고 겹침만 낸다(Box2D 센서)는 표시입니다. `_bTrigger` 와 달리 이벤트 · 질의에서 트리거로 치지 않습니다.
          * @details 막는 콜라이더도 겹침만 측정하는 2D 콜라이더(`BoxCollider2DComponent`)가 쓴다 — 막는 것과 트리거가 모두 센서여야 키네마틱끼리도 겹침이 난다.
          *          이 쌍의 이벤트는 겹침(`PhysicsContactEvent::isOverlap`)이고, 트리거를 빼는 질의(`PhysicsQueryFilter::_bIncludeTriggers`)에도 보인다.
          *          Jolt 는 센서로 만들지만 이벤트에 트리거로 알린다(3D 에서 쓰는 곳이 없다).
          */
-        bool _bOverlapOnly{ false };
-        bool _bContinuous{ false };      ///< 빠른 바디가 얇은 바디를 지나치지 않도록 연속 충돌로 측정한다(Jolt LinearCast, Box2D bullet).
-        bool _bAllowSleep{ true };       ///< 멈추면 잠들어 시뮬레이션 비용을 내지 않는다.
-        bool _bAllowTypeChange{ false }; ///< Static 으로 만든 바디를 나중에 Kinematic 이나 Dynamic 으로 바꿀 수 있게 한다(Jolt 는 만들 때 정한다).
-        bool _bLockRotation{ false };    ///< 회전하지 않는다(2D 캐릭터, 3D 는 관성을 무한으로 둔다).
+        bool _bOverlapOnly{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bContinuous{ false };      ///< 빠른 바디가 얇은 바디를 지나치지 않도록 연속 충돌로 측정한다(Jolt LinearCast, Box2D bullet). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bAllowSleep{ true };       ///< 멈추면 잠들어 시뮬레이션 비용을 내지 않는다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bAllowTypeChange{ false }; ///< Static 으로 만든 바디를 나중에 Kinematic 이나 Dynamic 으로 바꿀 수 있게 한다(Jolt 는 만들 때 정한다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bLockRotation{ false };    ///< 회전하지 않는다(2D 캐릭터, 3D 는 관성을 무한으로 둔다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     using PhysicsBodyDesc3D = PhysicsBodyDesc<PhysicsDimension3D>;
@@ -132,8 +132,8 @@ namespace sw
         float32           _swingLimitNormal{ 0.0f }; ///< Cone 만 쓴다. `_normalAxis` 둘레 스윙 반각이다(라디안).
         float32           _swingLimitPlane{ 0.0f };  ///< Cone 만 쓴다. 나머지 축 둘레 스윙 반각이다(라디안).
         PhysicsJointType  _type{ PhysicsJointType::Fixed };
-        bool              _bLimitsEnabled{ false };          ///< Hinge, Slider, Distance 에서 한계를 적용한다(Cone 은 항상 적용한다).
-        bool              _bCollideConnectedBodies{ false }; ///< 연결된 두 바디끼리 충돌한다(기본은 false 이며, 래그돌 이웃 뼈가 그렇다).
+        bool              _bLimitsEnabled{ false };          ///< Hinge, Slider, Distance 에서 한계를 적용한다(Cone 은 항상 적용한다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bCollideConnectedBodies{ false }; ///< 연결된 두 바디끼리 충돌한다(기본은 false 이며, 래그돌 이웃 뼈가 그렇다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     using PhysicsJointDesc3D = PhysicsJointDesc<PhysicsDimension3D>;
@@ -165,7 +165,7 @@ namespace sw
          * @brief 캐릭터를 따라다니는 속 바디(키네마틱, 같은 캡슐)를 둔다(3D, Jolt `mInnerBodyShape`). 천 · 헤어 같은 소프트 바디와 센서가 캐릭터를 몸으로 느낀다.
          * @details 끄면(기본) 캐릭터는 이동 질의로만 세계와 닿아 소프트 바디가 몸을 뚫고 지나간다. 켜면 속 바디가 다른 움직이는 바디를 더 세게 밀 수 있어 쓰는 게임이 고른다.
          */
-        bool _bInnerBody{ false };
+        bool _bInnerBody{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     using PhysicsCharacterDesc3D = PhysicsCharacterDesc<PhysicsDimension3D>;
@@ -187,7 +187,7 @@ namespace sw
         /// 이번 이동에서 바닥이 실어 나른 속도(`_velocity` 에서 뺀 몫)다. 바닥을 떠나는 스텝에 컴포넌트가 이것을 관성으로 잇는다.
         Vector  _carriedVelocity{};
         float32 _groundYawRate{ 0.0f }; ///< 디딘 바닥이 위 축(3D Y, 2D Z) 둘레로 도는 각속도(rad/s)다. 3D 컴포넌트가 캐릭터 방향을 따라 돌린다.
-        bool    _bGrounded{ false };
+        bool    _bGrounded{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     using PhysicsCharacterState3D = PhysicsCharacterState<PhysicsDimension3D>;

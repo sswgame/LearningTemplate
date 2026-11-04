@@ -431,9 +431,9 @@ namespace sw
             vector<ShaderBindingValidatorIssue>* _pOutIssue{ nullptr };
             string_view                          _shaderLabel;
             ShaderTargetFormat                   _targetFormat{};
-            bool                                 _bVulkan{ false };
-            bool                                 _bOpenGl{ false };
-            bool                                 _bDx12{ false };
+            bool                                 _bVulkan{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                 _bOpenGl{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                                 _bDx12{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             uint32                               _issueCount{ 0 };
 
             void report( const string& resource, string&& message ) { Internal::report( _pOutIssue, _shaderLabel, resource, std::move( message ), _issueCount ); }

@@ -63,7 +63,7 @@ namespace sw::editor
     struct [[nodiscard]] AssetImportRuleMatch
     {
         Rule   _rule{};            ///< 맞는 규칙. 맞는 규칙이 없거나 오류이면 기본 규칙
-        bool   _bMatched{ false }; ///< 규칙 하나가 맞았다
+        bool   _bMatched{ false }; ///< 규칙 하나가 맞았다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         string _error{};           ///< 한 원본에 규칙이 둘 이상 맞을 때의 설명(영어 로그 문장). 비어 있지 않으면 이 원본은 임포트할 수 없다
 
         bool hasError() const { return _error.empty() == false; }

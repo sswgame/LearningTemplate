@@ -24,7 +24,7 @@ namespace sw::editor
         , _status{}
         , _body{}
         , _clipSeconds{ 0.0f }
-        , _bLoop{ true }
+        , _bLoop{ SW_TRUE }
     {
     }
 

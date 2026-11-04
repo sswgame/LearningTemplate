@@ -245,12 +245,12 @@ namespace sw::editor
         string                    _packDataMessage; ///< `Invalid` 의 이유
         hashed_string             _previewPresetID; ///< 팩 데이터의 미리보기 몸 프리셋(선택에 기준 프리셋이 없을 때)
         PackDataState             _packDataState;
-        bool                      _bClipNamesLoaded; ///< 클립 이름을 한 번 모았다(팩 데이터가 바뀌면 다시 모은다)
-        bool                      _bKindTableReady;
-        bool                      _bDatabaseLoaded;
-        bool                      _bHasFit;
-        bool                      _bExternalChange;
-        bool                      _bPreviewValid;
-        bool                      _bStagedSelection;
+        uint8                     _bClipNamesLoaded : 1; ///< 클립 이름을 한 번 모았다(팩 데이터가 바뀌면 다시 모은다)
+        uint8                     _bKindTableReady  : 1;
+        uint8                     _bDatabaseLoaded  : 1;
+        uint8                     _bHasFit          : 1;
+        uint8                     _bExternalChange  : 1;
+        uint8                     _bPreviewValid    : 1;
+        uint8                     _bStagedSelection : 1;
     };
 } // namespace sw::editor

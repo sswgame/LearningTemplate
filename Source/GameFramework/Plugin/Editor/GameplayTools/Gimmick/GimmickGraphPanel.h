@@ -106,6 +106,6 @@ namespace sw::editor
         uint64                    _signature;
         uint32                    _editID;
         int32                     _selectedNode;
-        bool                      _bSeedComments; ///< 다음 그리기에서 주석 상자 자리를 데이터에서 캔버스로 넣는다(다시 읽은 뒤)
+        uint8                     _bSeedComments : 1; ///< 다음 그리기에서 주석 상자 자리를 데이터에서 캔버스로 넣는다(다시 읽은 뒤)
     };
 } // namespace sw::editor

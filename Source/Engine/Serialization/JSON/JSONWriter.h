@@ -101,8 +101,8 @@ namespace sw
         /** @brief 열린 객체 · 배열 하나입니다. */
         struct Scope
         {
-            bool _bObject{ false };
-            bool _bHasItem{ false };
+            bool _bObject{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool _bHasItem{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         void append( string_view text );
@@ -127,8 +127,8 @@ namespace sw
         size_t  _writtenSize;
         Scope   _arrScope[kMaxDepth];
         uint32  _depth;
-        bool    _bAfterKey;
-        bool    _bRootWritten;
-        bool    _bFailed;
+        uint8   _bAfterKey    : 1;
+        uint8   _bRootWritten : 1;
+        uint8   _bFailed      : 1;
     };
 } // namespace sw

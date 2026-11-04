@@ -132,6 +132,8 @@ namespace sw
     class SW_API LiveLinkFaceSource final : public IFacialLiveSource
     {
     public:
+        LiveLinkFaceSource();
+
         /** @brief 연결 표를 채널 번호로 풀어 둡니다(표는 이미 배치 표와 대조됐다). */
         void initialize( const LiveLinkFaceLayout& layout, const LiveLinkFaceMapping& mapping );
         /** @brief 받은 프레임을 표정 값으로 옮깁니다. 값 수가 배치 표와 다르면(풀기가 이미 거른다) 무시합니다. */
@@ -151,7 +153,7 @@ namespace sw
         };
 
         vector<ExpressionInput> _listExpression;
-        uint32                  _channelCount{ 0 };
-        bool                    _bHasFrame{ false };
+        uint32                  _channelCount;
+        uint8                   _bHasFrame : 1;
     };
 } // namespace sw

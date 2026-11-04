@@ -102,10 +102,10 @@ namespace sw
             float32               _time{ 0.0f };
             float32               _duration{ 0.0f };
             float32               _speed{ 1.0f };
-            uint32                _remainingLoops{ 1 }; ///< 0 이면 끝없이 반복합니다.
-            bool                  _bReverse{ false };
-            bool                  _bPaused{ false };   ///< 멈춘 동안은 시간이 가지 않고 값만 씁니다(`seek`).
-            bool                  _bFinished{ false }; ///< `update` 가 이번 갱신에서 끝났다고 표시합니다. 같은 갱신의 `VectorUtil::removeIf` 가 한 번에 지웁니다.
+            uint32                _remainingLoops{ 1 };   ///< 0 이면 끝없이 반복합니다.
+            bool                  _bReverse{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                  _bPaused{ SW_FALSE };   ///< 멈춘 동안은 시간이 가지 않고 값만 씁니다(`seek`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                  _bFinished{ SW_FALSE }; ///< `update` 가 이번 갱신에서 끝났다고 표시합니다. 같은 갱신의 `VectorUtil::removeIf` 가 한 번에 지웁니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 코드 트윈 하나입니다. */
@@ -119,7 +119,7 @@ namespace sw
             float32            _duration{ 0.0f };
             WidgetID           _widget{ kInvalidWidgetID };
             BlendCurve         _curve{ BlendCurve::EaseOut };
-            bool               _bFinished{ false }; ///< `update` 가 이번 갱신에서 끝났다고 표시합니다. 같은 갱신의 `VectorUtil::removeIf` 가 한 번에 지웁니다.
+            bool               _bFinished{ SW_FALSE }; ///< `update` 가 이번 갱신에서 끝났다고 표시합니다. 같은 갱신의 `VectorUtil::removeIf` 가 한 번에 지웁니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 보낼 이벤트 하나입니다(진행이 끝난 뒤 보냅니다). */

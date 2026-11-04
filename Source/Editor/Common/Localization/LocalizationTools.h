@@ -28,11 +28,11 @@ namespace sw
         uint32 _staleCount{ 0 };
         uint32 _reviewCount{ 0 };
         uint32 _missingCount{ 0 };
-        uint32 _orphanCount{ 0 };    ///< 원문 테이블에 없는 키의 번역이다. 번역 테이블에서 뺀다
-        uint32 _prefilledExact{ 0 }; ///< 번역 메모리의 같은 원문으로 채웠다
-        uint32 _prefilledFuzzy{ 0 }; ///< 번역 메모리의 비슷한 원문으로 채웠다(검토 표시)
-        bool   _bChanged{ false };   ///< 번역 테이블이나 번역 메모리를 고쳤다
-        bool   _bStaged{ false };    ///< 프로젝트의 `stagedCultures` 에 있다 — 출시하는 문화권이라 확인 모드에서 빠지거나 낡은 번역을 허용하지 않는다
+        uint32 _orphanCount{ 0 };     ///< 원문 테이블에 없는 키의 번역이다. 번역 테이블에서 뺀다
+        uint32 _prefilledExact{ 0 };  ///< 번역 메모리의 같은 원문으로 채웠다
+        uint32 _prefilledFuzzy{ 0 };  ///< 번역 메모리의 비슷한 원문으로 채웠다(검토 표시)
+        bool   _bChanged{ SW_FALSE }; ///< 번역 테이블이나 번역 메모리를 고쳤다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bStaged{ false };     ///< 프로젝트의 `stagedCultures` 에 있다 — 출시하는 문화권이라 확인 모드에서 빠지거나 낡은 번역을 허용하지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief 빠졌거나 낡았거나 검토가 남은 번역 수입니다. */
         uint32 countIncomplete() const { return _staleCount + _reviewCount + _missingCount; }
@@ -49,8 +49,8 @@ namespace sw
         TextGatherReport                  _report;
         vector<LocalizationCultureReport> _listCulture;
         uint32                            _fileCount{ 0 };
-        bool                              _bOutOfDate{ false }; ///< 디스크의 테이블이 수집 결과와 다르다. 확인 모드의 실패 이유다
-        bool                              _bWritten{ false };
+        bool                              _bOutOfDate{ false }; ///< 디스크의 테이블이 수집 결과와 다르다. 확인 모드의 실패 이유다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                              _bWritten{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

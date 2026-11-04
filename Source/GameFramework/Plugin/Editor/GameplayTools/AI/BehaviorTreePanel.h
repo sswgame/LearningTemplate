@@ -94,7 +94,7 @@ namespace sw::editor
         vector<string>                _listTaskName;
         string                        _statusText;
         int32                         _selectedID;
-        bool                          _bLayoutPending;
-        bool                          _bSelectPending;
+        uint8                         _bLayoutPending : 1;
+        uint8                         _bSelectPending : 1;
     };
 } // namespace sw::editor

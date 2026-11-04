@@ -55,7 +55,7 @@ namespace sw
         , _listProcessingDestroyObject{}
         , _listProcessingDestroyComponent{}
         , _mutex{}
-        , _bProcessingDestruction{ false }
+        , _bProcessingDestruction{ SW_FALSE }
         , _listPlayWalk{}
         , _bHasBegunPlay{ false }
         , _beginPlayMutex{}
@@ -451,7 +451,7 @@ namespace sw
             _listProcessingDestroyObject.swap( _listPendingDestroyObject );
             _listProcessingDestroyComponent.swap( _listPendingDestroyComponent );
         }
-        _bProcessingDestruction = true;
+        _bProcessingDestruction = SW_TRUE;
 
         for ( const ComponentHandle handle : _listProcessingDestroyComponent )
         {
@@ -518,7 +518,7 @@ namespace sw
         }
         _listProcessingDestroyObject.clear();
         _listProcessingDestroyComponent.clear();
-        _bProcessingDestruction = false;
+        _bProcessingDestruction = SW_FALSE;
     }
 
     void GameObjectStore::clear()

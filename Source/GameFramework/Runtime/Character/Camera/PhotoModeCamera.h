@@ -92,7 +92,7 @@ namespace sw
         float32           _fieldOfViewY;
         float32           _orthoHeight;
         float32           _exposureOffset;
-        bool              _bOrthographic;
-        bool              _bActive;
+        uint8             _bOrthographic : 1;
+        uint8             _bActive       : 1;
     };
 } // namespace sw

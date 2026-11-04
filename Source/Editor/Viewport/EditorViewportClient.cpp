@@ -146,7 +146,7 @@ namespace sw::editor
         , _visualizerStats{}
         , _contextMenuObjectID{ 0 }
         , _contextMenuWorldPosition{}
-        , _bContextMenuHasWorldPosition{ false }
+        , _bContextMenuHasWorldPosition{ SW_FALSE }
         , _bMaximized{ SW_FALSE }
         , _reserved{ 0 }
     {

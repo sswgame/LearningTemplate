@@ -122,23 +122,23 @@ namespace sw
         void updateReverbZones( AudioEngine& audioEngine ) SW_REQUIRES_LOCK( _mutex );
 
     private:
-        RegistrationList<AudioListenerComponent> _listener SW_GUARDED_BY( _mutex );  /**< 리스너 컴포넌트입니다(구독으로 올린다). 화면 분할 칸마다 하나라 많아야 한 자릿수이므로 선형 등록 목록으로 충분하다. */
-        IndexedPtrList<AudioEmitterComponent> _emitter     SW_GUARDED_BY( _mutex );  /**< 에미터 컴포넌트입니다. 수가 많고 씬 중에 자주 오르내려 넣기 · 빼기가 O(1) 이다(순회 순서는 보존되지 않는다 — 가림 측정이 도는 순서만 달라진다). */
-        RegistrationList<AudioReverbZoneComponent> _zone   SW_GUARDED_BY( _mutex );  /**< 리버브 존입니다(구독으로 올린다). 레벨 디자이너가 방 · 구역마다 손으로 놓아 많아야 수십 개이고 씬 중에 오르내리지 않으므로 선형 등록 목록으로 충분하다(수천 개로 자라면 `IndexedPtrList`). */
-        vector<AudioEmitterComponent*>                     _listEmitterSnapshot;     /**< 프레임마다 잠금 밖에서 도는 에미터 사본입니다. */
-        vector<ZoneValue>                                  _listZoneValue;           /**< 지난 프레임의 스냅샷 세기입니다. */
-        vector<ZoneValue>                                  _listZoneCurrent;         /**< 이번 프레임의 스냅샷 세기(작업 목록)입니다. */
-        GameObjectManager&                                 _manager;                 /**< 이 서비스를 가진 씬의 매니저입니다(카메라 · 물리 서비스를 찾는다). */
-        IAudioService*                                     _pAudioService;           /**< 생성자로 받은 오디오 서비스(빌림)입니다. */
-        AudioEngine*                                       _pEngineOverride;         /**< 테스트가 정한 엔진입니다. */
-        const IAudioOcclusionQuery*                        _pOcclusionOverride;      /**< 바꾼 가림 질의입니다. */
-        float3                                             _primaryListenerPosition; /**< 첫 리스너 자리입니다. */
-        float3                                             _lastCameraPosition;      /**< 카메라 리스너의 지난 자리입니다(속도). */
-        mutable mutex                                      _mutex;                   /**< 등록 목록을 지킵니다(비동기 씬 로드는 워커에서 등록한다). */
-        uint32                                             _occlusionCursor;         /**< 가림을 측정할 다음 에미터 자리입니다. */
-        uint32                                             _activeListenerMask;      /**< 지난 프레임에 켠 리스너 칸입니다. */
-        bool                                               _bHasLastCameraPosition;  /**< `_lastCameraPosition` 이 유효한지입니다. */
-        bool                                               _bUpdateEnabled;          /**< 미리보기 정책이 끄면 false 입니다(`applyPreviewPolicy`). */
+        RegistrationList<AudioListenerComponent> _listener SW_GUARDED_BY( _mutex );     /**< 리스너 컴포넌트입니다(구독으로 올린다). 화면 분할 칸마다 하나라 많아야 한 자릿수이므로 선형 등록 목록으로 충분하다. */
+        IndexedPtrList<AudioEmitterComponent> _emitter     SW_GUARDED_BY( _mutex );     /**< 에미터 컴포넌트입니다. 수가 많고 씬 중에 자주 오르내려 넣기 · 빼기가 O(1) 이다(순회 순서는 보존되지 않는다 — 가림 측정이 도는 순서만 달라진다). */
+        RegistrationList<AudioReverbZoneComponent> _zone   SW_GUARDED_BY( _mutex );     /**< 리버브 존입니다(구독으로 올린다). 레벨 디자이너가 방 · 구역마다 손으로 놓아 많아야 수십 개이고 씬 중에 오르내리지 않으므로 선형 등록 목록으로 충분하다(수천 개로 자라면 `IndexedPtrList`). */
+        vector<AudioEmitterComponent*>                     _listEmitterSnapshot;        /**< 프레임마다 잠금 밖에서 도는 에미터 사본입니다. */
+        vector<ZoneValue>                                  _listZoneValue;              /**< 지난 프레임의 스냅샷 세기입니다. */
+        vector<ZoneValue>                                  _listZoneCurrent;            /**< 이번 프레임의 스냅샷 세기(작업 목록)입니다. */
+        GameObjectManager&                                 _manager;                    /**< 이 서비스를 가진 씬의 매니저입니다(카메라 · 물리 서비스를 찾는다). */
+        IAudioService*                                     _pAudioService;              /**< 생성자로 받은 오디오 서비스(빌림)입니다. */
+        AudioEngine*                                       _pEngineOverride;            /**< 테스트가 정한 엔진입니다. */
+        const IAudioOcclusionQuery*                        _pOcclusionOverride;         /**< 바꾼 가림 질의입니다. */
+        float3                                             _primaryListenerPosition;    /**< 첫 리스너 자리입니다. */
+        float3                                             _lastCameraPosition;         /**< 카메라 리스너의 지난 자리입니다(속도). */
+        mutable mutex                                      _mutex;                      /**< 등록 목록을 지킵니다(비동기 씬 로드는 워커에서 등록한다). */
+        uint32                                             _occlusionCursor;            /**< 가림을 측정할 다음 에미터 자리입니다. */
+        uint32                                             _activeListenerMask;         /**< 지난 프레임에 켠 리스너 칸입니다. */
+        uint8                                              _bHasLastCameraPosition : 1; /**< `_lastCameraPosition` 이 유효한지입니다. */
+        uint8                                              _bUpdateEnabled         : 1; /**< 미리보기 정책이 끄면 false 입니다(`applyPreviewPolicy`). */
         /** @brief 에미터 등록의 구독입니다(에미터는 O(1) 목록이라 `RegistrationList::addSubscribed` 가 아니다). 풀리면 `releaseEmitter` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<AudioEmitterComponent> _emitterSubscriptions{ ItemSubscriptionList<AudioEmitterComponent>::ReleaseFunction::create<&SceneAudio::releaseEmitter>( this ) };
     };

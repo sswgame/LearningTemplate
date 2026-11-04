@@ -67,6 +67,6 @@ namespace sw::editor
         vector<CommandPaletteEntry>             _listAllCommand;
         fixed_string<constant::buffer::kMax128> _searchBuffer;
         int32                                   _selectedIndex;
-        bool                                    _bJustOpened;
+        bool                                    _bJustOpened; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor

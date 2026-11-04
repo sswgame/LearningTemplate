@@ -371,11 +371,11 @@ namespace sw
                 IXMLBackend&               _backend;
                 const SerializeContext&    _context;
                 vector<SchemaOrphanValue>* _pOutListOrphan;
-                bool                       _bContinuesAfterUnreadable;
+                bool                       _bContinuesAfterUnreadable; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 PropertyReadRollback       _rollback{};
-                bool                       _bFieldError{ false };
-                bool                       _bForbiddenField{ false };
-                bool                       _bObjectFailed{ false };
+                bool                       _bFieldError{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                       _bForbiddenField{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                       _bObjectFailed{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 프로퍼티 이름 요소 안에 든 컨테이너 필드를 읽습니다. 요소가 없으면 기본값을 채웁니다. */

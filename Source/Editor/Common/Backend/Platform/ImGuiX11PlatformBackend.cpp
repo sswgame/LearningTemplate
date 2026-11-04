@@ -62,7 +62,7 @@ namespace sw::editor
 
             ViewportData* pMainData         = IM_NEW( ViewportData )();
             pMainData->_windowHandle        = window;
-            pMainData->_bOwned              = false;
+            pMainData->_bOwned              = SW_FALSE;
             pMainViewport->PlatformUserData = pMainData;
 
             ImGuiPlatformIO& platformIO            = ImGui::GetPlatformIO();
@@ -218,7 +218,7 @@ namespace sw::editor
         struct ViewportData
         {
             Window _windowHandle{ 0 };
-            bool   _bOwned{ false };
+            bool   _bOwned{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 지금 ImGui 컨텍스트에 걸린 이 백엔드입니다(`initialize` 가 `BackendPlatformUserData` 에 건다). 걸려 있지 않으면 nullptr 입니다. */
@@ -305,7 +305,7 @@ namespace sw::editor
                 return;
 
             ViewportData* pData         = IM_NEW( ViewportData )();
-            pData->_bOwned              = true;
+            pData->_bOwned              = SW_TRUE;
             pViewport->PlatformUserData = pData;
 
             const int32 width    = static_cast<int32>( pViewport->Size.x ) > 0 ? static_cast<int32>( pViewport->Size.x ) : 1;

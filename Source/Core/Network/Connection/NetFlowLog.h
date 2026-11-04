@@ -31,7 +31,7 @@ namespace sw
         uint64 _nanos{ 0 }; ///< 단조 시계 나노초
         uint64 _id{ 0 };
         uint8  _kind{ 0 };         ///< 메시지 종류(첫 바이트)
-        bool   _bReceive{ false }; ///< 참이면 받은 곳(`f`), 거짓이면 보낸 곳(`s`)
+        bool   _bReceive{ false }; ///< 참이면 받은 곳(`f`), 거짓이면 보낸 곳(`s`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

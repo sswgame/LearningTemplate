@@ -74,7 +74,7 @@ namespace sw::editor
         AdminClient                  _admin;
         DelegateSlot<LoginHook>      _onReady;
         AdminToolConnectionState     _state;
-        bool                         _bServiceRegistered;
-        bool                         _bReadyReported;
+        uint8                        _bServiceRegistered : 1;
+        uint8                        _bReadyReported     : 1;
     };
 } // namespace sw::editor

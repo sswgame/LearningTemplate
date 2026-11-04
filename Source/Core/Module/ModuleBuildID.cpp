@@ -41,8 +41,8 @@ namespace sw
             {
                 uintptr_t     _address{ 0 };
                 ModuleBuildID _result{};
-                bool          _bMain{ false };
-                bool          _bFound{ false };
+                bool          _bMain{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool          _bFound{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 라이브러리가 주소를 담는가(첫 라이브러리 — 실행 파일 — 를 찾을 때는 늘 참). */

@@ -75,6 +75,6 @@ namespace sw::editor
         uint64                      _listGeneration;     ///< 목록을 지은 때의 등록 세대(0 이면 아직 짓지 않았다 — 세대는 1 부터)
         uint32                      _totalVariableCount; ///< 테스트용을 뺀 변수 수(필터 전)
         uint32                      _listRebuildCount;
-        bool                        _bPresetListDirty;
+        uint8                       _bPresetListDirty : 1;
     };
 } // namespace sw::editor

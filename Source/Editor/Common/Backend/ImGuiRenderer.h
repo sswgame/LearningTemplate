@@ -113,8 +113,8 @@ namespace sw::editor
         {
             RHITextureHandle   _texture{ 0 };
             RHIDescriptorIndex _srv{ kInvalidDescriptorIndex }; ///< 렌더 스레드가 등록한 bindless 번호(아직이면 무효)
-            bool               _bInUse{ false };
-            bool               _bOwned{ false }; ///< ImGui 동적 텍스처라 RHI 텍스처도 이 렌더러가 만들고 놓는다
+            bool               _bInUse{ false };                ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool               _bOwned{ SW_FALSE };             ///< ImGui 동적 텍스처라 RHI 텍스처도 이 렌더러가 만들고 놓는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /** @brief UI 스레드가 낸 ImGui 동적 텍스처 연산 하나입니다(`queueTextureUpdates`). 픽셀은 RGBA8 로 넓혀 복사해 두었다. */
         struct TextureOp
@@ -152,13 +152,13 @@ namespace sw::editor
 
     private:
         IRHIDevice*                                _pDevice;
-        const DrawSnapshotHandoff*                 _pDrawHandoff;    ///< 보조 창 스왑체인을 바꾸기 전에 낸 스냅샷이 다 그려지기를 기다린다
-        RHIPipelineStateHandle                     _pso;             ///< 백버퍼 포맷의 PSO(캡처 텍스처 · 보조 창도 같은 포맷이다)
-        RHIStructuredBuffer                        _wordBuffer;      ///< 이번 프레임의 정점 · 인덱스(uint 칸)
-        vector<uint32>                             _listWord;        ///< 올릴 칸 모으기(프레임마다 비운다)
-        unordered_map<const ImDrawList*, ListBase> _mapListBase;     ///< 이번 프레임에 올린 목록의 시작 칸
-        vector<RHIDescriptorIndex>                 _listFrameSRV;    ///< 이번 프레임의 칸별 bindless 번호(그리기가 잠금 없이 읽는다 — `prepareFrame` 이 채운다)
-        bool                                       _bNativeBindless; ///< DX12 · Vulkan 이면 bindless 번호로, 아니면 서수로 텍스처를 건다
+        const DrawSnapshotHandoff*                 _pDrawHandoff;        ///< 보조 창 스왑체인을 바꾸기 전에 낸 스냅샷이 다 그려지기를 기다린다
+        RHIPipelineStateHandle                     _pso;                 ///< 백버퍼 포맷의 PSO(캡처 텍스처 · 보조 창도 같은 포맷이다)
+        RHIStructuredBuffer                        _wordBuffer;          ///< 이번 프레임의 정점 · 인덱스(uint 칸)
+        vector<uint32>                             _listWord;            ///< 올릴 칸 모으기(프레임마다 비운다)
+        unordered_map<const ImDrawList*, ListBase> _mapListBase;         ///< 이번 프레임에 올린 목록의 시작 칸
+        vector<RHIDescriptorIndex>                 _listFrameSRV;        ///< 이번 프레임의 칸별 bindless 번호(그리기가 잠금 없이 읽는다 — `prepareFrame` 이 채운다)
+        uint8                                      _bNativeBindless : 1; ///< DX12 · Vulkan 이면 bindless 번호로, 아니면 서수로 텍스처를 건다
         /// @brief 패널이 등록한(이 렌더러가 만들지 않은) 텍스처마다 한 번 받은 bindless 번호입니다(렌더 스레드 전용). 번호는 텍스처 주인의 파괴가 놓는다 — 이 렌더러는
         ///        해제하지 않는다(늦은 해제가 다시 발급된 번호를 놓지 않게). 핸들은 세대가 있어 다시 쓰이지 않으므로 사라진 텍스처의 항목은 읽히지 않는다.
         unordered_map<RHITextureHandle, RHIDescriptorIndex> _mapForeignSRV;

@@ -400,7 +400,7 @@ namespace sw
             size_t _pos = string_view::npos;
             size_t _len{ 0 };
             Format _overrideFormat{};
-            bool   _bHasOverrideFormat{ false };
+            bool   _bHasOverrideFormat{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief printf 서식의 플래그(`-` `+` `0`)를 @p cursor 부터 읽어 Format 에 켭니다. 순서는 상관없고 여러 개가 올 수 있습니다. */

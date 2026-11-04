@@ -227,8 +227,8 @@ namespace sw
         {
             uint64 _typeHash;            ///< 걸린 타입의 해시
             void*  _pObject;             ///< 걸린 객체(그 타입으로 바꾼 주소)
-            bool   _bOwned;              ///< 이 범위의 컬렉션이 소유한 서브시스템이면 true
-            bool   _bPublished{ false }; ///< 매단 부모 범위의 조회에도 보이면 true(`publish`)
+            bool   _bOwned;              ///< 이 범위의 컬렉션이 소유한 서브시스템이면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool   _bPublished{ false }; ///< 매단 부모 범위의 조회에도 보이면 true(`publish`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 매단 자식 범위 하나입니다(이 범위가 소유한다). */

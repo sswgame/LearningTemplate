@@ -197,9 +197,9 @@ namespace sw::editor
         /** @brief 힌트 글 입력 칸 하나의 결과입니다. */
         struct HintFieldResult
         {
-            bool _bChanged{ false };              ///< 이번 프레임에 글이 바뀌었다(끌어 놓기 포함)
-            bool _bSubmitted{ false };            ///< Enter 로 냈다(`bSubmitOnEnter` 일 때만)
-            bool _bDeactivatedAfterEdit{ false }; ///< 고친 뒤 칸을 떠났거나 끌어 놓았다(그때 적용하는 칸)
+            bool _bChanged{ SW_FALSE };           ///< 이번 프레임에 글이 바뀌었다(끌어 놓기 포함) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool _bSubmitted{ SW_FALSE };         ///< Enter 로 냈다(`bSubmitOnEnter` 일 때만) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool _bDeactivatedAfterEdit{ false }; ///< 고친 뒤 칸을 떠났거나 끌어 놓았다(그때 적용하는 칸) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /**
          * @brief 힌트가 있는 한 줄 입력 칸을 그립니다(검색 팝업 · 새 경로 · 주소). 폭은 부르는 쪽이 `SetNextItemWidth` 로 정합니다.

@@ -30,8 +30,8 @@ namespace sw
         : _renderViewScheduler{ nullptr }
         , _renderViewClock{ 0.0 }
         , _renderScaleAdjuster{ nullptr }
-        , _bAutoRenderScaleActive{ false }
-        , _bMissingCameraReported{ false }
+        , _bAutoRenderScaleActive{ SW_FALSE }
+        , _bMissingCameraReported{ SW_FALSE }
     {
     }
 
@@ -55,7 +55,7 @@ namespace sw
             if ( _bAutoRenderScaleActive )
             {
                 _renderScaleAdjuster->reset();
-                _bAutoRenderScaleActive = false;
+                _bAutoRenderScaleActive = SW_FALSE;
             }
             return 1.0f;
         }
@@ -76,7 +76,7 @@ namespace sw
             }
             if ( _renderScaleAdjuster->configure( config ) == false )
                 return 1.0f; // validate 가 통과했으니 오지 않는 길
-            _bAutoRenderScaleActive = true;
+            _bAutoRenderScaleActive = SW_TRUE;
         }
         const float32 before = _renderScaleAdjuster->getScale();
         const float32 scale  = _renderScaleAdjuster->update( deltaTime * 1000.0f );
@@ -109,13 +109,13 @@ namespace sw
             // 주 시점의 출력 설정(사각형 · 배율 · 끌 기능)과 컷 표시. 비율은 사각형의 것이다(분할 화면의 한 칸).
             packet._mainView = RenderViewCollector::makeMainSettings( pCam, autoRenderScale );
             packet.setMainView( pCam->getViewProjectionMatrix( RenderViewCollector::computeAspect( packet._mainView, outputWidth, outputHeight ) ), pCam->getCameraPosition() );
-            _bMissingCameraReported = false;
+            _bMissingCameraReported = SW_FALSE;
         }
         else if ( _bMissingCameraReported == false )
         {
             // 주 시점이 없는 패킷은 렌더러가 그리지 않는다(기본 카메라로 대신 그리지 않는다). 씬 데이터의 결함이므로 한 번 알린다.
             SW_LOG_ERROR_ID( "RenderPacketBuilder.ActiveSceneNoUsable", "Active scene '%#' has no usable camera - the main view is not drawn", activeScene.getName() );
-            _bMissingCameraReported = true;
+            _bMissingCameraReported = SW_TRUE;
         }
         // 보기 모드는 뷰마다다 — 씬 뷰(호스트 타깃 뷰든 주 출력이든)는 씬 뷰 툴바의 모드, 게임 화면은 주 출력 모드(-gv_viewMode, 기본 Lit).
         const RenderViewMode sceneViewMode = pFrameRenderer != nullptr ? pFrameRenderer->getSceneViewMode() : RenderViewMode::Lit;

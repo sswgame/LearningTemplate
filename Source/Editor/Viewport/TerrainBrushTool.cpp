@@ -106,10 +106,10 @@ namespace sw::editor
                 GameObjectHandle           _lastEdited{};
                 GameObjectHandle           _lastHovered{};         ///< 마지막으로 브러시 레이가 닿은 지형(크기 바꾸기 대상의 다음 후보)
                 uint32                     _resizeResolution{ 0 }; ///< 설정 창이 고른 새 해상도(0 이면 지금 해상도를 보인다)
-                bool                       _bStroking{ false };
-                bool                       _bUnsaved{ false };
-                bool                       _bHit{ false };
-                int32                      _activeFrame{ -1 }; ///< 도구가 마지막으로 돈 ImGui 프레임(감시 값 `Editor.TerrainBrushToolActive`)
+                bool                       _bStroking{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                       _bUnsaved{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                       _bHit{ false };         ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                int32                      _activeFrame{ -1 };     ///< 도구가 마지막으로 돈 ImGui 프레임(감시 값 `Editor.TerrainBrushToolActive`)
                 uint32                     _strokeCount{ 0 };
             };
 

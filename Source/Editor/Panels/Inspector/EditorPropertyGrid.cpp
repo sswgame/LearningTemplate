@@ -224,7 +224,7 @@ namespace sw::editor
         , _propertyDrawDepth{ 0 }
         , _pFavorites{ nullptr }
         , _openAllRequest{ 0 }
-        , _bFavoritesOnly{ false }
+        , _bFavoritesOnly{ SW_FALSE }
         , _bShowModifiedOnly{ false }
         , _layoutCache{}
         , _scratchDisplay{}
@@ -286,9 +286,9 @@ namespace sw::editor
             return;
         // 본문 그리드와 같은 카테고리 · 프로퍼티 id 를 쓰므로 id 공간을 나눈다.
         ImGui::PushID( "##favorites" );
-        _bFavoritesOnly = true;
+        _bFavoritesOnly = SW_TRUE;
         drawProperties( target, nullptr, {} );
-        _bFavoritesOnly = false;
+        _bFavoritesOnly = SW_FALSE;
         ImGui::PopID();
     }
 
@@ -349,7 +349,7 @@ namespace sw::editor
 
         // 즐겨찾기 거르기는 이번 한 번만이다. 중첩 그리기가 다시 들어와도 거르지 않게 먼저 지운다.
         const bool bFavoritesOnly = _bFavoritesOnly && _pFavorites != nullptr;
-        _bFavoritesOnly           = false;
+        _bFavoritesOnly           = SW_FALSE;
         if ( pInstance == nullptr || pTypeInfo == nullptr )
             return;
 

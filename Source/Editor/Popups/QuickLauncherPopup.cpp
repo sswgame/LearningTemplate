@@ -201,7 +201,7 @@ namespace sw::editor
         , _searchBuffer{}
         , _selectedIndex{ 0 }
         , _bJustOpened{ false }
-        , _bExecuteWhenIndexed{ false }
+        , _bExecuteWhenIndexed{ SW_FALSE }
     {
     }
 
@@ -241,7 +241,7 @@ namespace sw::editor
     {
         _bJustOpened         = true;
         _selectedIndex       = 0;
-        _bExecuteWhenIndexed = false;
+        _bExecuteWhenIndexed = SW_FALSE;
         _searchBuffer.clear();
         rebuildIndex();
     }
@@ -360,14 +360,14 @@ namespace sw::editor
         const bool bEnterPressed         = EditorInputGUI::wasEditKeyPressed( EditorEditKey::Enter ); // 글을 치는 동안 듣는 편집 키(입력 맵 밖)
         const bool bExecuteAfterIndexing = bEnterPressed && filteredCount == 0 && bIndexOutstanding;
         if ( bExecuteAfterIndexing )
-            _bExecuteWhenIndexed = true;
+            _bExecuteWhenIndexed = SW_TRUE;
         if ( _bExecuteWhenIndexed && filteredCount > 0 )
         {
-            _bExecuteWhenIndexed = false;
+            _bExecuteWhenIndexed = SW_FALSE;
             bExecute             = true;
         }
         if ( _bExecuteWhenIndexed && bIndexOutstanding == false )
-            _bExecuteWhenIndexed = false; // 목록이 왔는데도 맞는 것이 없다
+            _bExecuteWhenIndexed = SW_FALSE; // 목록이 왔는데도 맞는 것이 없다
         return bExecute;
     }
 

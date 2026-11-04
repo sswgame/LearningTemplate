@@ -187,8 +187,8 @@ namespace sw::editor
         uint32                                                         _propertyDrawDepth;    ///< 중첩과 컨테이너의 재귀 깊이. 알림은 가장 바깥에서 한 번만 보낸다
         InspectorFavorites*                                            _pFavorites;           ///< 즐겨찾기 집합. nullptr 이면 즐겨찾기를 쓰지 않는다
         int32                                                          _openAllRequest;       ///< 이번 프레임의 모두 펼치기(1) · 접기(-1) 요청. 0 이면 없다
-        bool                                                           _bFavoritesOnly;       ///< 다음 `drawTypeProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
-        bool                                                           _bShowModifiedOnly;    ///< 기본값과 다른 프로퍼티만 그린다(언리얼 Show Only Modified Properties)
+        uint8                                                          _bFavoritesOnly : 1;   ///< 다음 `drawTypeProperties` 한 번만 즐겨찾기 프로퍼티로 거른다
+        bool                                                           _bShowModifiedOnly;    ///< 기본값과 다른 프로퍼티만 그린다(언리얼 Show Only Modified Properties) NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
         InspectorLayoutCache                                           _layoutCache;          ///< 타입 · 확장이 그린 이름 · 검색 글 · 레지스트리 세대마다 지은 묶음과 프로퍼티별 표시 정보
         InspectorPropertyDisplay                                       _scratchDisplay;       ///< 묶음 밖 임시 프로퍼티(컨테이너 원소)의 표시 정보 — 주소가 매번 달라 캐시하지 않고 부를 때마다 다시 채운다
         uint32                                                         _layoutUseDepth;       ///< 돌려받은 묶음을 도는 `drawTypeProperties` 의 겹 수. 0 일 때만 캐시가 묶음을 비울 수 있다

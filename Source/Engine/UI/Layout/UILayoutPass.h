@@ -37,7 +37,7 @@ namespace sw
         float2                     _viewportSize{};           ///< 뷰포트 크기입니다(UI 단위). 트리 루트가 놓이는 사각형입니다.
         float32                    _uiScale{ 1.0f };          ///< UI 단위에서 물리 픽셀로의 배율입니다. 픽셀 맞춤에 씁니다.
         float32                    _textScale{ 1.0f };        ///< 글자 크기 배율입니다(gv_uiTextScale). 텍스트 측정에만 곱합니다.
-        bool                       _bRightToLeft{ false };    ///< 문화권이 오른쪽에서 왼쪽인지 나타냅니다(`UILayoutPass::isCultureRightToLeft`). 루트의 Inherit 이 이 값을 따릅니다.
+        bool                       _bRightToLeft{ SW_FALSE }; ///< 문화권이 오른쪽에서 왼쪽인지 나타냅니다(`UILayoutPass::isCultureRightToLeft`). 루트의 Inherit 이 이 값을 따릅니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         const LocalizationManager* _pLocalization{ nullptr }; ///< 텍스트 위젯이 키를 해석하는 문화권입니다(없으면 텍스트 그대로).
         uint32                     _textRevision{ 0 };        ///< 그 문화권의 텍스트 버전입니다(`getTextRevision`). 텍스트 위젯의 해석 캐시 키입니다.
         const UIActionGlyphSource* _pActionGlyphs{ nullptr }; ///< `[action=이름]` 태그의 글리프 출처입니다(없으면 태그를 해석하지 않습니다).

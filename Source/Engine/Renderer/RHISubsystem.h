@@ -50,6 +50,6 @@ namespace sw
     private:
         unique_ptr<RHI> _rhi;
         RHIInitResult   _initResult;
-        bool            _bReady;
+        uint8           _bReady : 1;
     };
 } // namespace sw

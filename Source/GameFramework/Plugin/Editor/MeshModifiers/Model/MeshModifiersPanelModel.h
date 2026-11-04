@@ -43,7 +43,7 @@ namespace sw::editor
         int32  getNestedSelectedIndex() const { return _nestedSelectedIndex; }
         void   setNestedSelectedIndex( int32 index ) { _nestedSelectedIndex = index; }
         /** @brief 이번 프레임 끝(`applyNestedRequest`)에 한 단계 나오게 합니다. */
-        void requestLeaveNested() { _bLeaveRequested = true; }
+        void requestLeaveNested() { _bLeaveRequested = SW_TRUE; }
         /** @brief 이번 프레임 끝에 보이는 스택의 @p index 번 묶음으로 들어가게 합니다. */
         void requestEnterNested( int32 index ) { _enterRequest = index; }
         /** @brief 이번 프레임에 요청이 있었으면 true 입니다(고른 하위 모디파이어를 그리지 않는다 — 그 번호는 곧 다른 스택의 것이다). */
@@ -80,20 +80,20 @@ namespace sw::editor
         /** @brief 입력칸이 값을 바꿨다 — 끌기의 첫 변경이면 되돌리기 기록을 남기고, 미리보기를 다시 걸게 합니다. @p bItemActive 는 그 칸이 아직 끌리는지입니다. */
         void noteEdit( MeshModifierSession& session, bool bItemActive );
         /** @brief 입력칸을 놓았다 — 다음 편집이 새 기록을 남기게 합니다. */
-        void finishEdit() { _bEditing = false; }
+        void finishEdit() { _bEditing = SW_FALSE; }
 
     private:
         vector<int32> _listNestedPath;      ///< 묶음의 하위 스택에서 들어간 묶음들의 번호 경로(비면 고른 묶음 자신의 하위 스택)
         uint64        _nestedRootID;        ///< 하위 스택 편집을 연 묶음의 인스턴스 번호(0 이면 없음)
         int32         _nestedSelectedIndex; ///< 보이는 하위 스택에서 고른 번호(-1 이면 없음)
         int32         _enterRequest;        ///< 이번 프레임 끝에 들어갈 묶음 번호(-1 이면 없음)
-        bool          _bLeaveRequested;     ///< 이번 프레임 끝에 한 단계 나온다
+        uint8         _bLeaveRequested : 1; ///< 이번 프레임 끝에 한 단계 나온다
         uint64        _curveModifierID;     ///< 곡선 팝업을 연 모디파이어의 인스턴스 번호(0 이면 없음)
         uint32        _curveParamIndex;     ///< 곡선 팝업을 연 매개변수 번호
         int32         _curveItemIndex;      ///< 곡선 팝업을 연 목록 항목 번호(단일 곡선이면 -1)
         string        _descriptionID;       ///< 설명을 만들어 둔 등록 id
         string        _description;         ///< `_descriptionID` 모디파이어의 설명
         string        _warpExportPath;      ///< 보이는 하위 스택을 내보낼 워프 정의 파일 경로(`.mfwarp`, `WorldWarpModifier::writeWarpFile`)
-        bool          _bEditing;            ///< 끌기 중인 입력칸이 이미 되돌리기 기록을 남겼다
+        uint8         _bEditing : 1;        ///< 끌기 중인 입력칸이 이미 되돌리기 기록을 남겼다
     };
 } // namespace sw::editor

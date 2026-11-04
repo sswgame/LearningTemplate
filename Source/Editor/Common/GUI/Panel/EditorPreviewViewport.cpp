@@ -70,8 +70,8 @@ namespace sw::editor
         , _sceneKey{ kInvalidSceneKey }
         , _targetID{ 0 }
         , _submittedFrameCount{ 0 }
-        , _bFreeCamera{ false }
-        , _bOwnsScene{ false }
+        , _bFreeCamera{ SW_FALSE }
+        , _bOwnsScene{ SW_FALSE }
     {
     }
 
@@ -89,7 +89,7 @@ namespace sw::editor
         if ( _pScene == nullptr )
             return false;
         _sceneKey   = sceneManager.getPreviewSceneKey( _pScene );
-        _bOwnsScene = true;
+        _bOwnsScene = SW_TRUE;
         (void)spawnEnvironment( *_pScene, environment ); // 환경이 없어도 씬은 그려진다(키 라이트 폴백)
 
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
@@ -103,7 +103,7 @@ namespace sw::editor
             return false;
         _pScene                      = &scene;
         _sceneKey                    = sceneKey;
-        _bOwnsScene                  = false;
+        _bOwnsScene                  = SW_FALSE;
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         _targetID                    = editorContext.getSubsystem<EditorRenderViews>().allocatePreviewTarget();
         return true;
@@ -121,7 +121,7 @@ namespace sw::editor
         if ( bDestroyOwnedScene )
             (void)pSceneManager->destroyPreviewScene( _pScene ); // 매니저가 먼저 종료했으면 그 shutdown 이 이미 정리했다
         _pScene              = nullptr;
-        _bOwnsScene          = false;
+        _bOwnsScene          = SW_FALSE;
         _sceneKey            = kInvalidSceneKey;
         _submittedFrameCount = 0;
     }
@@ -137,7 +137,7 @@ namespace sw::editor
 
     void EditorPreviewViewport::setOrbit( const float3& target, float32 distance, float32 yaw, float32 pitch )
     {
-        _bFreeCamera   = false;
+        _bFreeCamera   = SW_FALSE;
         _orbitTarget   = target;
         _orbitDistance = MathUtil::max( EditorPreviewViewportInternal::kMinDistance, distance );
         _orbitYaw      = yaw;
@@ -146,7 +146,7 @@ namespace sw::editor
 
     void EditorPreviewViewport::setFreeCamera( const float3& eye, float32 yaw, float32 pitch, float32 fieldOfViewY )
     {
-        _bFreeCamera = true;
+        _bFreeCamera = SW_TRUE;
         _freeEye     = eye;
         _orbitYaw    = yaw;
         _orbitPitch  = MathUtil::clamp( pitch, -EditorPreviewViewportInternal::kMaxPitch, EditorPreviewViewportInternal::kMaxPitch );

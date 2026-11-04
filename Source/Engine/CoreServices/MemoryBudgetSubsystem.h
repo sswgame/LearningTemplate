@@ -44,6 +44,6 @@ namespace sw
     private:
         const CrashHandlerSubsystem& _crashHandler;
         MemoryBudgetMonitor          _monitor;
-        bool                         _bBudgetFileRead; ///< 예산 표를 읽었는가(첫 프레임 끝에 한 번)
+        uint8                        _bBudgetFileRead : 1; ///< 예산 표를 읽었는가(첫 프레임 끝에 한 번)
     };
 } // namespace sw

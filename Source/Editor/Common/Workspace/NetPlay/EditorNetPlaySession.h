@@ -78,8 +78,8 @@ namespace sw::editor
         uint32                  _objectHashReportCount{ 0 }; ///< 받은 오브젝트 해시 답 수 — 새 답이 왔는지 이 값으로 본다
         int32                   _processID{ 0 };
         int32                   _exitCode{ 0 };
-        bool                    _bRunning{ false };
-        bool                    _bConnected{ false }; ///< 클라이언트가 서버에 연결되었다는 줄(`Net session connected to`)을 남겼다
+        bool                    _bRunning{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                    _bConnected{ false };  ///< 클라이언트가 서버에 연결되었다는 줄(`Net session connected to`)을 남겼다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -260,7 +260,7 @@ namespace sw::editor
         uint16                           _port;
         uint16                           _debugChannelPort; ///< 전용 서버의 디버그 채널 TCP 포트. 채널이 없으면 0
         StopPhase                        _stopPhase;
-        bool                             _bReplayServer;        ///< `startReplayServer` 가 `start` 를 부르는 동안만 참 — 클라이언트 0 을 허용하고 서버를 멈춘 채 띄운다
-        bool                             _bMergedTraceUnopened; ///< `_mergedTracePath` 를 아직 `takeUnopenedMergedTrace` 가 내주지 않았다
+        uint8                            _bReplayServer        : 1; ///< `startReplayServer` 가 `start` 를 부르는 동안만 참 — 클라이언트 0 을 허용하고 서버를 멈춘 채 띄운다
+        uint8                            _bMergedTraceUnopened : 1; ///< `_mergedTracePath` 를 아직 `takeUnopenedMergedTrace` 가 내주지 않았다
     };
 } // namespace sw::editor

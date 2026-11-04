@@ -59,6 +59,7 @@ namespace sw
         , _waitFrameCount{ 0 }
         , _screenshotRequestedCount{ 0 }
         , _screenshotCompletedCount{ 0 }
+        , _bFinishWaiting{ SW_FALSE }
         , _assetSettledFrameCount{ 0 }
         , _pHeldStepState{}
         , _pHeldStateStep{ nullptr }
@@ -139,6 +140,7 @@ namespace sw
         , _wallProfile{}
         , _outputDirectory{}
         , _finishReason{}
+        , _bSkippedByBuild{ SW_FALSE }
         , _startedAt{}
         , _reproduceInput{}
         , _hangPayload{}
@@ -296,14 +298,14 @@ namespace sw
         {
             if ( pModuleLoader != nullptr && pModuleLoader->isModuleActive( moduleName ) )
                 continue;
-            _bSkippedByBuild = true;
+            _bSkippedByBuild = SW_TRUE;
             finish( AutomationOutcome::Skipped, "requiresModule: " + moduleName + " is not loaded in this build" );
             return true;
         }
         const AutomationStep* pMissingStep = AutomationRunnerInternal::findStepMissingFromThisBuild( _scenario );
         if ( pMissingStep == nullptr )
             return false;
-        _bSkippedByBuild = true;
+        _bSkippedByBuild = SW_TRUE;
         finish( AutomationOutcome::Skipped, pMissingStep->describe() + ": dev commands are compiled out of this build" );
         return true;
     }

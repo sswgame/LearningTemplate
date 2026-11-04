@@ -30,18 +30,23 @@ namespace
             float32  _elapsed{ 0.0f };
             int32    _beginCount{ 0 };
             int32    _endCount{ 0 };
-            bool     _bRunning{ false };
-            void     beginPhysics( const float4x4& worldTransform, const float3& linearVelocity ) override
+            uint8    _bRunning : 1;
+
+            FakePhysicsBody()
+                : _bRunning{ SW_FALSE }
+            {
+            }
+            void beginPhysics( const float4x4& worldTransform, const float3& linearVelocity ) override
             {
                 _startWorld = worldTransform;
                 _velocity   = linearVelocity;
                 _elapsed    = 0.0f;
-                _bRunning   = true;
+                _bRunning   = SW_TRUE;
                 ++_beginCount;
             }
             void endPhysics() override
             {
-                _bRunning = false;
+                _bRunning = SW_FALSE;
                 ++_endCount;
             }
             [[nodiscard]] bool findBodyWorldTransform( float4x4& outWorldTransform ) const override

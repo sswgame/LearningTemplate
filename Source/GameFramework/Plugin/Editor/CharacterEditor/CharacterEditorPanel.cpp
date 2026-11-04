@@ -223,15 +223,15 @@ namespace sw::editor
         , _previewBody{}
         , _previewBodyRevision{ 0 }
         , _previewDatabaseRevision{ 0 }
-        , _bPreviewBodyDressed{ false }
-        , _bModelsWereDirty{ false }
-        , _bCustomizationOpen{ true }
-        , _bCustomizationActive{ false }
+        , _bPreviewBodyDressed{ SW_FALSE }
+        , _bModelsWereDirty{ SW_FALSE }
+        , _bCustomizationOpen{ SW_TRUE }
+        , _bCustomizationActive{ SW_FALSE }
         , _seenFitRevision{ 0 }
         , _gizmo{}
         , _boneGizmoTarget{}
         , _placedBoneWorld{}
-        , _bBoneGizmoPlaced{ false }
+        , _bBoneGizmoPlaced{ SW_FALSE }
         , _bRigPreview{ false }
         , _published{}
         , _thumbnailCapturePath{}
@@ -373,7 +373,7 @@ namespace sw::editor
     {
         (void)scene; // 몸은 외형 데이터를 읽은 뒤에 세운다(`syncPreviewBody`)
         _previewBody         = GameObjectHandle{};
-        _bPreviewBodyDressed = false;
+        _bPreviewBodyDressed = SW_FALSE;
     }
 
     void CharacterEditorPanel::drawPreviewTab()
@@ -426,7 +426,7 @@ namespace sw::editor
         if ( _bCustomizationOpen )
             drawCustomizationSliders( selection );
         else
-            _bCustomizationActive = false;
+            _bCustomizationActive = SW_FALSE;
     }
 
     void CharacterEditorPanel::syncBoneGizmo()
@@ -443,7 +443,7 @@ namespace sw::editor
             if ( pTarget != nullptr )
                 pManager->destroyObject( pTarget );
             _boneGizmoTarget            = GameObjectHandle{};
-            _bBoneGizmoPlaced           = false;
+            _bBoneGizmoPlaced           = SW_FALSE;
             _published._boneGizmoPlaced = 0;
             return;
         }
@@ -474,7 +474,7 @@ namespace sw::editor
                 return;
             }
             _boneGizmoTarget  = pTarget->getHandle();
-            _bBoneGizmoPlaced = false;
+            _bBoneGizmoPlaced = SW_FALSE;
         }
         SceneComponent* pScene = pTarget->getPrimarySceneComponent();
         if ( pScene == nullptr )
@@ -514,7 +514,7 @@ namespace sw::editor
         {
             _placedBoneWorld = currentWorld; // 다음 그리기는 모델 값으로 다시 놓는다(위 `bMoved == false` 경로가 desired 로 맞춘다)
         }
-        _bBoneGizmoPlaced           = true;
+        _bBoneGizmoPlaced           = SW_TRUE;
         _published._boneGizmoPlaced = 1;
     }
 
@@ -668,7 +668,7 @@ namespace sw::editor
             }
             pAnimator->setClipFolder( string_view( _document.getPaths()._clipFolder.c_str() ) );
             _previewBody         = pBody->getHandle();
-            _bPreviewBodyDressed = false;
+            _bPreviewBodyDressed = SW_FALSE;
         }
         CharacterAppearanceComponent* pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
         const AppearanceEditModel&    appearance  = _document.getAppearanceModel();
@@ -683,7 +683,7 @@ namespace sw::editor
         pAppearance->previewSelection( _document.makePreviewSelection(), database );
         _previewBodyRevision     = appearance.getRevision();
         _previewDatabaseRevision = database.getRevision();
-        _bPreviewBodyDressed     = true;
+        _bPreviewBodyDressed     = SW_TRUE;
     }
 
     void CharacterEditorPanel::drawAnimationControls( SkeletalAnimatorComponent& animator )
@@ -1206,7 +1206,7 @@ namespace sw::editor
         const CustomizationSchemaDef* pSchema    = _document.findCustomizationSchema( selection );
         if ( pSchema == nullptr )
         {
-            _bCustomizationActive = false;
+            _bCustomizationActive = SW_FALSE;
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "NoCustomizationSchemaForThisSelectionLoadThe" ) );
             return;
         }

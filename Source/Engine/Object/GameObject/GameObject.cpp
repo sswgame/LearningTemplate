@@ -75,7 +75,7 @@ namespace sw
         : _objectID{ 0 }
         , _name{ name }
         , _pOwnerManager{ nullptr }
-        , _bActive{ true }
+        , _bActive{ SW_TRUE }
         , _bIsActiveInHierarchy{ true }
         , _bIsPendingDestroy{ false }
         , _bRenderHidden{ false }

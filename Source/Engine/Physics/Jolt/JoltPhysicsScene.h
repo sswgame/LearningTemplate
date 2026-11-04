@@ -256,10 +256,10 @@ namespace sw
             JPH::BodyID                     _bodyID{};
             PhysicsBodyType                 _type{ PhysicsBodyType::Dynamic };
             uint8                           _layer{ 0 };
-            bool                            _bTrigger{ false };
-            bool                            _bEnabled{ true };
+            bool                            _bTrigger{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                            _bEnabled{ SW_TRUE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             /// 캐릭터의 속 바디다(`PhysicsCharacterDesc::_bInnerBody`). Jolt 가 캐릭터와 함께 만들고 지우므로 `destroyBody` · 소멸자는 지우지 않고 `destroyCharacter` 가 표에서만 뺀다.
-            bool _bCharacterInner{ false };
+            bool _bCharacterInner{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         struct JointRecord
@@ -270,7 +270,7 @@ namespace sw
             float3                           _anchorA{}; ///< Distance 의 현재 길이를 측정하는 A 쪽 로컬 점이다.
             float3                           _anchorB{};
             PhysicsJointType                 _type{ PhysicsJointType::Fixed };
-            bool                             _bPairFilterSet{ false }; ///< 만들 때 두 바디 쌍의 충돌을 껐다. 지울 때 되돌린다.
+            bool                             _bPairFilterSet{ false }; ///< 만들 때 두 바디 쌍의 충돌을 껐다. 지울 때 되돌린다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         struct CharacterRecord

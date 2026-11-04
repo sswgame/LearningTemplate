@@ -119,6 +119,6 @@ namespace sw
         /** @brief 그림자를 켠 점광과 스폿의 라이트 원소 번호입니다(`collectSceneLights` → `ShadowSetupUtil::populateFrame`). 프레임마다 재사용합니다. */
         vector<uint32> _listShadowLightIndex;
         /** @brief 디바이스가 GPU 컬링 컴퓨트를 돌릴 수 있어 인스턴스 LOD 를 GPU 가 고를 수 있는지입니다(`initialize` 가 정한다). `fillSceneView` 는 쓰지 않는다. */
-        bool _bGPUInstanceLODCapable;
+        uint8 _bGPUInstanceLODCapable : 1;
     };
 } // namespace sw

@@ -49,9 +49,9 @@ namespace sw
         PhysicsBodyHandle _otherBody{};
         uint64            _selfUserData{ 0 };
         uint64            _otherUserData{ 0 };
-        float32           _hitFraction{ 1.0f }; ///< 쓸린 길에서 닿은 시점(0..1)
-        bool              _bSelfTrigger{ false };
-        bool              _bOtherTrigger{ false };
+        float32           _hitFraction{ 1.0f };    ///< 쓸린 길에서 닿은 시점(0..1)
+        bool              _bSelfTrigger{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bOtherTrigger{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -206,6 +206,6 @@ namespace sw
         uint64                          _stepCount;
         uint32                          _debrisBodyCount;
         float32                         _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
-        bool                            _bConfigured;
+        uint8                           _bConfigured : 1;
     };
 } // namespace sw

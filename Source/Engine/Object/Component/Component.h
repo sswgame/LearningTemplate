@@ -237,7 +237,7 @@ namespace sw
         float3            _point{};           ///< 대표 접촉점(월드)
         float3            _normal{};          ///< 이 오브젝트에서 상대를 향하는 법선(월드)
         float32           _impulse{ 0.0f };   ///< 접촉 충격량 크기(뉴턴초)
-        bool              _bIs2D{ false };    ///< 2D 물리 씬의 접촉이면 true
+        bool              _bIs2D{ false };    ///< 2D 물리 씬의 접촉이면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -262,8 +262,8 @@ namespace sw
         float32           _damageMultiplier{ 1.0f }; ///< 히트 존 배율
         float32           _impulse{ 0.0f };          ///< 맞은 바디에 줄 충격량 크기(뉴턴초)
         int32             _bodyIndex{ -1 };          ///< 래그돌이나 히트박스의 바디 번호(물리 에셋 순서). 없으면 -1
-        bool              _bIs2D{ false };           ///< 2D 물리 씬에서 맞았으면 true
-        bool              _bFatal{ false };          ///< 때린 쪽이 이 타격으로 죽는다고 판정했다는 뜻이다(절단과 래그돌 전환의 신호)
+        bool              _bIs2D{ false };           ///< 2D 물리 씬에서 맞았으면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool              _bFatal{ false };          ///< 때린 쪽이 이 타격으로 죽는다고 판정했다는 뜻이다(절단과 래그돌 전환의 신호) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

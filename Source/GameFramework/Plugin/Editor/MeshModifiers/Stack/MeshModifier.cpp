@@ -275,8 +275,8 @@ namespace sw::editor
         , _spaceReference{}
         , _gizmo{}
         , _instanceID{ MeshModifierInternal::allocateInstanceID() }
-        , _bEnabled{ true }
-        , _bWorldSpace{ false }
+        , _bEnabled{ SW_TRUE }
+        , _bWorldSpace{ SW_FALSE }
     {
     }
 

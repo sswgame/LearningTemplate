@@ -18,18 +18,25 @@
 
 namespace sw
 {
+    AutomationFrameStats::AutomationFrameStats()
+        : _listFrameMilliseconds{}
+        , _lastFrameEndNanoseconds{ 0 }
+        , _bRecording{ SW_FALSE }
+    {
+    }
+
     void AutomationFrameStats::begin()
     {
         _listFrameMilliseconds.clear();
         _lastFrameEndNanoseconds = MonotonicClock::nowNanoseconds();
-        _bRecording              = true;
+        _bRecording              = SW_TRUE;
     }
 
     bool AutomationFrameStats::end( FrameStatsSummary& outSummary )
     {
         if ( _bRecording == false )
             return false;
-        _bRecording = false;
+        _bRecording = SW_FALSE;
         outSummary  = summarize( std::move( _listFrameMilliseconds ) );
         _listFrameMilliseconds.clear();
         return true;

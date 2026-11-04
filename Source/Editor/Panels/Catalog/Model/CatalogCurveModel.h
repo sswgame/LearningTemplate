@@ -25,7 +25,7 @@ namespace sw::editor
         float32 _time{ 0.0f };
         float32 _value{ 0.0f };
         string  _interpolation{};
-        bool    _bValid{ false };
+        bool    _bValid{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

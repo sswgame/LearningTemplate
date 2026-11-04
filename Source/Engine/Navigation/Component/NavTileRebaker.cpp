@@ -33,8 +33,8 @@ namespace sw
         , _listObstacleArea{}
         , _rebakedTileCount{ 0 }
         , _dirtyLock{}
-        , _bGeometryDirty{ false }
-        , _bObstacleVolumeDirty{ false }
+        , _bGeometryDirty{ SW_FALSE }
+        , _bObstacleVolumeDirty{ SW_FALSE }
     {
     }
 
@@ -42,10 +42,10 @@ namespace sw
     {
         _dirtyLock.lock();
         _listDirtyArea.clear();
-        _bGeometryDirty = false;
+        _bGeometryDirty = SW_FALSE;
         _dirtyLock.unlock();
         _listObstacleArea.clear();
-        _bObstacleVolumeDirty = false;
+        _bObstacleVolumeDirty = SW_FALSE;
     }
 
     void NavTileRebaker::invalidateArea( const AABB& bounds, bool bGeometryChanged )
@@ -88,7 +88,7 @@ namespace sw
         if ( obstacle._bCarved == SW_TRUE )
         {
             invalidateObstacleArea( obstacle._carvedBounds );
-            _bObstacleVolumeDirty = true;
+            _bObstacleVolumeDirty = SW_TRUE;
         }
         for ( const unique_ptr<NavMeshRuntime>& pRuntime : listRuntime )
         {
@@ -156,7 +156,7 @@ namespace sw
             pObstacle->_carvedYaw      = yaw;
             pObstacle->_bCarved        = SW_TRUE;
             pObstacle->_bShapeDirty    = SW_FALSE;
-            _bObstacleVolumeDirty      = true;
+            _bObstacleVolumeDirty      = SW_TRUE;
             // 캐시 종류 — 옛 장애물을 빼고 새 자세로 넣는다(타일은 다음 `updateObstacleCaches` 가 층에서 다시 짓는다).
             NavCacheObstacleDesc desc;
             const bool           bHasDesc = pObstacle->makeCacheObstacle( desc );
@@ -180,13 +180,13 @@ namespace sw
         _dirtyLock.lock();
         listArea.swap( _listDirtyArea );
         const bool bGeometryDirty = _bGeometryDirty;
-        _bGeometryDirty           = false;
+        _bGeometryDirty           = SW_FALSE;
         _dirtyLock.unlock();
         vector<AABB> listObstacleArea;
         listObstacleArea.swap( _listObstacleArea );
         if ( listRuntime.empty() )
         {
-            _bObstacleVolumeDirty = false;
+            _bObstacleVolumeDirty = SW_FALSE;
             return;
         }
         const bool bNothingChanged = listArea.empty() && listObstacleArea.empty() && _bObstacleVolumeDirty == false;
@@ -203,7 +203,7 @@ namespace sw
                 if ( pRuntime->usesObstacleCache() == false )
                     pRuntime->_pVolume = pVolume;
             }
-            _bObstacleVolumeDirty = false;
+            _bObstacleVolumeDirty = SW_FALSE;
         }
         if ( bGeometryDirty )
         {
@@ -221,7 +221,7 @@ namespace sw
                 // 새로 놓인 메시를 아직 읽는 중이다 — 덜 모인 기하로 굽지 않는다. 옛 기하 · 타일을 그대로 두고 알린 것을 모두 다음 갱신으로 넘긴다.
                 _dirtyLock.lock();
                 _listDirtyArea.insert( _listDirtyArea.end(), listArea.begin(), listArea.end() );
-                _bGeometryDirty = true;
+                _bGeometryDirty = SW_TRUE;
                 _dirtyLock.unlock();
                 _listObstacleArea.insert( _listObstacleArea.end(), listObstacleArea.begin(), listObstacleArea.end() );
                 return;

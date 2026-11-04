@@ -35,7 +35,7 @@ namespace sw
     RHISubsystem::RHISubsystem()
         : _rhi{ nullptr }
         , _initResult{ RHIInitResult::NotStarted }
-        , _bReady{ false }
+        , _bReady{ SW_FALSE }
     {
         SW_MEMORY_SCOPE( RenderCPU );
         _rhi = make_unique<RHI>();
@@ -87,7 +87,7 @@ namespace sw
         _initResult       = _rhi->getInitResult();
         if ( bReady == false )
             return SubsystemInitResult::Failed;
-        _bReady = true;
+        _bReady = SW_TRUE;
         // 백엔드가 정해졌으니 크래시 리포트에 남긴다. "어느 백엔드에서 났는가"가 범위를 좁히는 첫 질문이다.
         engine::getSubsystem<CrashHandler>().setContextValue( "RHI", _rhi->getDevice().getBackendName() );
         // `-gv_crashTest=1`: 크래시 리포트 경로를 실제로 확인하는 유일한 방법이다(리포트는 크래시가 나야만 만들어진다).
@@ -102,7 +102,7 @@ namespace sw
         if ( _rhi->hasDevice() )
             _rhi->getDevice().waitIdle( RHIWaitIdleReason::Shutdown );
         _rhi->shutdown();
-        _bReady = false;
+        _bReady = SW_FALSE;
     }
 
     span<const utf8* const> RHISubsystem::getSubsystemDependencies() const

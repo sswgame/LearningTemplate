@@ -151,7 +151,7 @@ namespace sw
         vector<hashed_string>    _listInput;        ///< 입력으로 읽는 자원 해시 목록
         vector<hashed_string>    _listOutput;       ///< 출력으로 만드는 자원 해시 목록
         RenderGraphPassExecuteFn _execute;          ///< 컴파일된 순서대로 부르는 패스 콜백(선택)
-        bool                     _bCulled{ false }; ///< 쓰이지 않아 컬링되었는지 여부
+        bool                     _bCulled{ false }; ///< 쓰이지 않아 컬링되었는지 여부 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -166,8 +166,8 @@ namespace sw
         hashed_string _name;
         size_t        _firstPassIndex{ 0 };
         size_t        _lastPassIndex{ 0 };
-        bool          _bWritten{ false };
-        bool          _bRead{ false };
+        bool          _bWritten{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool          _bRead{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

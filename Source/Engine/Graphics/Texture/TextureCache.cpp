@@ -102,10 +102,10 @@ namespace sw
             unique_ptr<Texture2D>          _texture;
             weak_ptr<TextureLoadOperation> _pLoadOperation; ///< 진행 중인 로드(`request`) — 같은 경로의 요청은 이 로드 작업을 받는다
             uint32                         _refCount{ 0 };
-            bool                           _bLoading{ false };   ///< 잠금 밖에서 올리는 중(로드 작업 · `reload` · `resizeRenderTarget`) — 로드 작업이 없으면 다른 스레드는 `_cvLoaded` 로 기다린다
-            bool                           _bPublished{ false }; ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다
-            bool                           _bPinned{ false };    ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다
-            bool                           _bUpgrading{ false }; ///< 렌더 스레드가 위쪽 밉을 업로드하는 중(`updateStreaming`) — 참조가 0 이어도 지우지 않고, 다시 읽기는 기다린다
+            bool                           _bLoading{ false };   ///< 잠금 밖에서 올리는 중(로드 작업 · `reload` · `resizeRenderTarget`) — 로드 작업이 없으면 다른 스레드는 `_cvLoaded` 로 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                           _bPublished{ false }; ///< 한 번이라도 올라왔는가 — `find` 는 이것만 내준다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                           _bPinned{ false };    ///< CPU 텍스처 — `releaseCPUTexture` 전에는 참조가 0 이어도 지우지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                           _bUpgrading{ false }; ///< 렌더 스레드가 위쪽 밉을 업로드하는 중(`updateStreaming`) — 참조가 0 이어도 지우지 않고, 다시 읽기는 기다린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /** @brief 위쪽 밉을 기다리는 텍스처 하나입니다 — 로드 단계가 읽은 DDS 이미지를 보관한다(다시 읽지 않는다). */
         struct StreamingUpgrade
@@ -127,7 +127,7 @@ namespace sw
             uint32        _width{ 0 };
             uint32        _height{ 0 };
             vector<uint8> _rgbaBytes;
-            bool          _bSwappedToBgra{ false }; ///< `_rgbaBytes` 를 이미 BGRA 순서로 바꿨다(`Busy` 로 미룬 갱신을 다시 낼 때 두 번 바꾸지 않게)
+            bool          _bSwappedToBgra{ false }; ///< `_rgbaBytes` 를 이미 BGRA 순서로 바꿨다(`Busy` 로 미룬 갱신을 다시 낼 때 두 번 바꾸지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         unordered_map<string, Entry> _mapEntry  SW_GUARDED_BY( _mutex );
         vector<RegionUpdate>                    _listPendingRegion;  ///< 게임 스레드가 쌓고 렌더 스레드가 비운다(`_regionMutex`)
@@ -395,7 +395,7 @@ namespace sw
                 // 캐시 적중 — 단계를 거치지 않고 참조를 쥔 `Ready` 로드 작업을 준다.
                 ++entry._refCount;
                 shared_ptr<TextureLoadOperation> pReady = sw::make_shared<TextureLoadOperation>( key, pDevice, TextureLoadOperation::Source::File, entry._texture.get(), _impl );
-                pReady->_bHoldsReference                = true;
+                pReady->_bHoldsReference                = SW_TRUE;
                 pReady->markReadyWithoutLoad();
                 getTextureCacheStats().recordHit();
                 return TextureHandle{ std::move( pReady ) };
@@ -964,7 +964,7 @@ namespace sw
         , _renderTargetHeight{ TextureCache::kDefaultRenderTargetSize }
         , _source{ source }
         , _residency{ TextureResidency::Full }
-        , _bHoldsReference{ false }
+        , _bHoldsReference{ SW_FALSE }
     {
     }
 
@@ -1067,7 +1067,7 @@ namespace sw
             outError = _loadError;
             return AssetCompletionStep::Failed;
         }
-        _bHoldsReference = true;
+        _bHoldsReference = SW_TRUE;
         return AssetCompletionStep::Done;
     }
 

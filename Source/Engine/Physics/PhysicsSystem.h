@@ -80,6 +80,6 @@ namespace sw
 
     private:
         PhysicsSettings _settings;
-        bool            _bInitialized;
+        uint8           _bInitialized : 1;
     };
 } // namespace sw

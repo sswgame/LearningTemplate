@@ -177,10 +177,10 @@ namespace sw::editor
         void drawConsole();
 
     private:
-        fixed_string<constant::buffer::kMax64>  _address;             ///< 주소로 붙기 — `127.0.0.1:<포트>`(편집 필드)
-        fixed_string<constant::buffer::kMax128> _token;               ///< 주소로 붙기 — 토큰(편집 필드)
-        fixed_string<constant::buffer::kMax512> _commandLine;         ///< 입력줄(편집 필드)
-        bool                                    _bScrollConsoleToEnd; ///< 새 결과가 왔으니 다음 그리기에서 끝으로 스크롤
+        fixed_string<constant::buffer::kMax64>  _address;                 ///< 주소로 붙기 — `127.0.0.1:<포트>`(편집 필드)
+        fixed_string<constant::buffer::kMax128> _token;                   ///< 주소로 붙기 — 토큰(편집 필드)
+        fixed_string<constant::buffer::kMax512> _commandLine;             ///< 입력줄(편집 필드)
+        uint8                                   _bScrollConsoleToEnd : 1; ///< 새 결과가 왔으니 다음 그리기에서 끝으로 스크롤
     };
 } // namespace sw::editor
 
@@ -190,7 +190,7 @@ namespace sw::editor
         : _address{}
         , _token{}
         , _commandLine{}
-        , _bScrollConsoleToEnd{ false }
+        , _bScrollConsoleToEnd{ SW_FALSE }
     {
     }
 
@@ -311,7 +311,7 @@ namespace sw::editor
             }
             if ( _bScrollConsoleToEnd )
                 ImGui::SetScrollHereY( 1.0f );
-            _bScrollConsoleToEnd = false;
+            _bScrollConsoleToEnd = SW_FALSE;
         }
         ImGui::EndChild();
         constexpr ImGuiInputTextFlags kFlags = ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CallbackCompletion;
@@ -322,7 +322,7 @@ namespace sw::editor
         {
             (void)inspector.execute( _commandLine.c_str() ); // 결과(오류 포함)는 결과 줄에 남는다
             _commandLine.clear();
-            _bScrollConsoleToEnd = true;
+            _bScrollConsoleToEnd = SW_TRUE;
             ImGui::SetKeyboardFocusHere( -1 );
         }
     }

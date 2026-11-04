@@ -87,9 +87,9 @@ namespace sw::editor
         string                        _status;
         GameObjectHandle              _body;
         float32                       _impulse;
-        int32                         _selectedBody; ///< 표에서 고른 바디 번호(-1 이면 없음)
-        bool                          _bDrawSkeleton;
-        bool                          _bDrawBodies;
-        bool                          _bDrawJoints;
+        int32                         _selectedBody;  ///< 표에서 고른 바디 번호(-1 이면 없음)
+        bool                          _bDrawSkeleton; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool                          _bDrawBodies;   ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool                          _bDrawJoints;   ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw::editor

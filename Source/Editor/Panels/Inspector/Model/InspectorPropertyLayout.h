@@ -50,11 +50,11 @@ namespace sw::editor
         float64 _widgetMax{ 0.0 };
         float64 _clampMin{ 0.0 };
         float64 _clampMax{ 0.0 };
-        bool    _bHasWidgetMin{ false };
-        bool    _bHasWidgetMax{ false };
-        bool    _bHasClampMin{ false };
-        bool    _bHasClampMax{ false };
-        bool    _bSlider{ false }; ///< 슬라이더로 그린다. UIMin 과 UIMax 가 모두 있거나, Min 과 Max 가 모두 있고 `Meta = "Slider"` 일 때다
+        bool    _bHasWidgetMin{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bHasWidgetMax{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bHasClampMin{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bHasClampMax{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bSlider{ false };       ///< 슬라이더로 그린다. UIMin 과 UIMax 가 모두 있거나, Min 과 Max 가 모두 있고 `Meta = "Slider"` 일 때다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

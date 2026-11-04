@@ -158,7 +158,7 @@ namespace sw
         vector<pair<string, string>>        _listStartVariable;        ///< 세션 시작 때의 전역 변수(이름, 값 글) — 둘째 단계부터 이 값에서 시작한다
         AutomationReproduceInput            _reproduceInput;           ///< 재현 명령 재료(게임 · 시작 때 백엔드 · 에디터 · 시나리오 목록) — 단계마다 실행기에 넘긴다
         uint32                              _screenshotBaseline;       ///< 단계가 시작할 때 렌더 스레드가 이미 쓴 스크린샷 수
-        bool                                _bUnattended{ false };     ///< `-unattended` — 보는 사람이 없다. 시나리오가 `present="true"` 가 아니면 내보내지 않는다(`applyPresentPolicy`)
+        uint8                               _bUnattended : 1;          ///< `-unattended` — 보는 사람이 없다. 시나리오가 `present="true"` 가 아니면 내보내지 않는다(`applyPresentPolicy`)
         RenderThread*                       _pRenderThread{ nullptr }; ///< 사진을 실은 패킷을 단계 앞에서 비운다(`onFrameEnd`). `Runtime::start` 가 건다, 없으면(헤드리스) 비울 것이 없다
         Runtime                             _runtime;                  ///< 바깥 창구(`getPublishedPart`)
         AutomationRunTitleTracker           _runTitle;                 ///< 창 제목의 실행 정보(시나리오 · 백엔드 · 단계 · 프레임)

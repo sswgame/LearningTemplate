@@ -140,7 +140,7 @@ namespace sw
         , _pPrimitiveRegistry{ nullptr }
         , _seed{ 0 }
         , _bPlayOnBegin{ true }
-        , _bPlaying{ false }
+        , _bPlaying{ SW_FALSE }
     {
         setCanEverTick( true );
     }
@@ -242,7 +242,7 @@ namespace sw
     void VFXComponent::stop()
     {
         restartSimulations();
-        _bPlaying = false;
+        _bPlaying = SW_FALSE;
         publishParticles();
     }
 
@@ -360,7 +360,7 @@ namespace sw
         _listSimulation.clear();
         _listPublished.clear();
         _listGPURequest.clear();
-        _bPlaying = false;
+        _bPlaying = SW_FALSE;
         if ( _effectPath.empty() )
             return;
         VFXEffectDef effect;

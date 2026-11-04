@@ -27,9 +27,9 @@ namespace sw
     /// @brief 예약 리소스가 한 백엔드에서 있어야 할 위치입니다. `_bDeclared == false` 면 그 백엔드에는 선언 자체가 없어야 합니다.
     struct ShaderReservedLocation
     {
-        uint32 _space{ 0 }; ///< DX: register space / Vulkan: descriptor set / GL: 항상 0
-        uint32 _bind{ 0 };  ///< DX: register 번호 / Vulkan: binding / GL: binding(UBO, 텍스처 유닛, SSBO)
-        bool   _bDeclared{ false };
+        uint32 _space{ 0 };         ///< DX: register space / Vulkan: descriptor set / GL: 항상 0
+        uint32 _bind{ 0 };          ///< DX: register 번호 / Vulkan: binding / GL: binding(UBO, 텍스처 유닛, SSBO)
+        bool   _bDeclared{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

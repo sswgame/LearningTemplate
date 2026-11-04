@@ -42,6 +42,18 @@
 // InputAccessibilitySettings
 namespace sw
 {
+    InputAccessibilitySettings::InputAccessibilitySettings()
+        : _mouseSensitivity{ 1.0f, 1.0f }
+        , _gamepadSensitivity{ 1.0f, 1.0f }
+        , _stickDeadzoneOverride{ -1.0f }
+        , _deadzoneShape{ DeadzoneShape::Radial }
+        , _digitalNormalization{ DigitalNormalization::Circular }
+        , _bInvertX{ SW_FALSE }
+        , _bInvertY{ SW_FALSE }
+        , _listToggleAction{}
+    {
+    }
+
     void InputAccessibilitySettings::setToggleAction( const hashed_string& action, bool bToggle )
     {
         if ( action.empty() )
@@ -78,7 +90,7 @@ namespace sw
             const utf8* _pXMLName;          ///< XML `kind` 특성에 적는 이름입니다.
             uint32      _conflictSlotCount; ///< 키 충돌 검사가 훑을 슬롯 수입니다(0 이면 특정 키를 점유하지 않음).
             uint32      _rebindSlotIndex;   ///< 키 하나로 다시 잡을 때 바뀌는 슬롯입니다(`BindingKinds::kNoRebindSlot` 이면 키 하나로는 못 바꿈).
-            bool        _bRelative;         ///< 이번 프레임의 이동량인지 나타냅니다. 묶지 않고, 액션 값 단계에서 반전하지 않습니다(`BindingKinds::isRelative`).
+            bool        _bRelative;         ///< 이번 프레임의 이동량인지 나타냅니다. 묶지 않고, 액션 값 단계에서 반전하지 않습니다(`BindingKinds::isRelative`). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         constexpr uint32 kNoRebind = BindingKinds::kNoRebindSlot;
@@ -1542,7 +1554,7 @@ namespace sw
 
         if ( bActivationDown == false )
         {
-            binding._bJoystickAnchored = false;
+            binding._bJoystickAnchored = SW_FALSE;
             return false;
         }
 
@@ -1553,7 +1565,7 @@ namespace sw
         if ( binding._bJoystickAnchored == false )
         {
             binding._joystickAnchor    = curPos;
-            binding._bJoystickAnchored = true;
+            binding._bJoystickAnchored = SW_TRUE;
         }
 
         outValue = VirtualJoystick::computeVector( binding._joystickAnchor, curPos, binding._scale, binding._deadzone, binding._outerDeadzone );

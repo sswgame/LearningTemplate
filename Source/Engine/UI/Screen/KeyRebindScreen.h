@@ -65,7 +65,7 @@ namespace sw
         uint32               _openFrame;         ///< 연 프레임의 입력 번호입니다(`InputManager::getBeginFrameCount`). 창을 연 입력을 받지 않게 하기 위한 값입니다.
         float32              _escapeHeldSeconds; ///< Esc 를 누르고 있는 시간입니다(0 이면 누르지 않음).
         float32              _listenSeconds;     ///< 키를 기다린 시간입니다(`kListenTimeoutSeconds` 에 닿으면 취소).
-        bool                 _bListening;
-        bool                 _bEscapeHeld;
+        uint8                _bListening  : 1;
+        uint8                _bEscapeHeld : 1;
     };
 } // namespace sw

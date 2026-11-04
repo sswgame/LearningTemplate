@@ -174,19 +174,19 @@ namespace sw::editor
         , _uniqueSetQueuedImportKey{}
         , _uniqueSetRunningImportKey{}
         , _uniqueSetDeferredFile{}
-        , _bImportInFlight{ false }
+        , _bImportInFlight{ SW_FALSE }
         , _finishedImportCount{ 0 }
         , _fenceImportDeadlineNanoseconds{ 0 }
         , _resourceWatch{}
         , _contentWatch{}
         , _contentChangeSerial{ 0 }
         , _listChangedPath{}
-        , _bChangedPathsUnknown{ false }
+        , _bChangedPathsUnknown{ SW_FALSE }
         , _fencePrepareCount{ AutomationScratch::getPrepareCount() }
         , _fenceArmedCount{ 0 }
         , _fenceDeadlineNanoseconds{ 0 }
-        , _bFenceWaiting{ false }
-        , _bFenceSeen{ false }
+        , _bFenceWaiting{ SW_FALSE }
+        , _bFenceSeen{ SW_FALSE }
     {
     }
 
@@ -241,7 +241,7 @@ namespace sw::editor
         _uniqueSetRunningImportKey.clear();
         _listDeferredFile.clear();
         _uniqueSetDeferredFile.clear();
-        _bImportInFlight = false;
+        _bImportInFlight = SW_FALSE;
 
         if ( _pFileWatchDispatcher == nullptr )
             return;
@@ -297,7 +297,7 @@ namespace sw::editor
         if ( AssetHotReloadInternal::isFenceMarkerEvent( changeEvent, bOwnFence ) )
         {
             if ( bOwnFence )
-                _bFenceSeen = true; // 울타리 표지 — 바뀐 파일로 세지 않는다(다른 에디터의 표지도 세지 않지만 울타리는 풀지 않는다)
+                _bFenceSeen = SW_TRUE; // 울타리 표지 — 바뀐 파일로 세지 않는다(다른 에디터의 표지도 세지 않지만 울타리는 풀지 않는다)
             return;
         }
         if ( _bChangedPathsUnknown )
@@ -307,13 +307,13 @@ namespace sw::editor
         if ( extension.empty() )
         {
             if ( changeEvent._action != FileWatcherAction::Modified )
-                _bChangedPathsUnknown = true;
+                _bChangedPathsUnknown = SW_TRUE;
             return;
         }
         const string& assetID = eventAssetID;
         if ( assetID.empty() || _listChangedPath.size() >= kMaxTrackedChangedPaths )
         {
-            _bChangedPathsUnknown = true;
+            _bChangedPathsUnknown = SW_TRUE;
             return;
         }
         // 목록 크기가 `kMaxTrackedChangedPaths` 로 막혀 있어 선형 검색이 O(256) 으로 끝난다(넘으면 위에서 "모름" 으로 돌아간다).
@@ -328,14 +328,14 @@ namespace sw::editor
         if ( bKnown )
             outListPath = std::move( _listChangedPath );
         _listChangedPath.clear();
-        _bChangedPathsUnknown = false;
+        _bChangedPathsUnknown = SW_FALSE;
         return bKnown;
     }
 
     void AssetHotReload::discardChangedPaths()
     {
         _listChangedPath.clear();
-        _bChangedPathsUnknown = false;
+        _bChangedPathsUnknown = SW_FALSE;
     }
 
     bool AssetHotReload::pollContentWatchFence()
@@ -351,14 +351,14 @@ namespace sw::editor
                 return false;
             // 사본을 새로 만들었다 — 감시 트리에 표지를 쓰고 그 사건이 오기를 기다린다.
             _fenceArmedCount = prepareCount;
-            _bFenceSeen      = false;
+            _bFenceSeen      = SW_FALSE;
             if ( FileUtil::writeTextFile( markerPath, "fence" ) == false )
             {
                 SW_LOG_ERROR_ID( "AssetHotReload.CouldNotWriteFence", "[ContentWatchFence] could not write the fence marker %# - the content index may be read before the file watch reports the scratch copy", markerPath );
                 _fencePrepareCount = prepareCount;
                 return false;
             }
-            _bFenceWaiting            = true;
+            _bFenceWaiting            = SW_TRUE;
             _fenceDeadlineNanoseconds = MonotonicClock::nowNanoseconds() + Internal::kFenceTimeoutMilliseconds * constant::time::kNanosecondsPerMillisecond;
             return true;
         }
@@ -379,7 +379,7 @@ namespace sw::editor
         }
         _fenceImportDeadlineNanoseconds = 0;
         (void)FileUtil::removeFile( markerPath ); // 표지는 한 번 쓰고 지운다 — 못 지워도 다음 울타리가 덮어쓴다
-        _bFenceWaiting     = false;
+        _bFenceWaiting     = SW_FALSE;
         _fencePrepareCount = _fenceArmedCount;
         return false;
     }
@@ -553,7 +553,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "AssetHotReload.AssetImportJobLost", "Asset import job lost its result - dropping the %# running source(s)", _listRunningImport.size() );
             _listRunningImport.clear();
             _uniqueSetRunningImportKey.clear();
-            _bImportInFlight = false;
+            _bImportInFlight = SW_FALSE;
         }
 
         if ( _listQueuedImport.empty() == false )
@@ -580,13 +580,13 @@ namespace sw::editor
         _listQueuedImport.clear();
         _uniqueSetRunningImportKey = std::move( _uniqueSetQueuedImportKey );
         _uniqueSetQueuedImportKey.clear();
-        _bImportInFlight = true;
+        _bImportInFlight = SW_TRUE;
         SW_LOG_INFO_ID( "AssetHotReload.AssetImportStartedChanged", "Asset import started: %# changed source(s)", sourceCount );
     }
 
     void AssetHotReload::finishImport( EditorAssetImportResult& result )
     {
-        _bImportInFlight = false;
+        _bImportInFlight = SW_FALSE;
         size_t skippedCount{ 0 };
         for ( size_t index = 0; index < result._listItem.size(); ++index )
         {

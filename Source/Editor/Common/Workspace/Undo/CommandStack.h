@@ -168,8 +168,8 @@ namespace sw
         size_t                           _parkedIndex; ///< 보관한 내역의 위치
         /** @brief 중첩 트랜잭션 깊이입니다. 가장 바깥(0 으로 돌아올 때)에서만 하나의 복합 커맨드로 커밋합니다. */
         uint32 _transactionDepth;
-        bool   _bIsExecuting;
-        bool   _bHistoryParked; ///< 보관한 내역이 있다
+        uint8  _bIsExecuting   : 1;
+        uint8  _bHistoryParked : 1; ///< 보관한 내역이 있다
         /** @struct OwnerWatch @brief 코드 단계를 받은 주인 하나의 사라짐 구독입니다. */
         struct OwnerWatch
         {

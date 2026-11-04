@@ -35,12 +35,12 @@ namespace sw
         {
             mutable mutex                       _mutex;
             mutable std::condition_variable_any _cv;
-            atomic<bool>                        _bReady{ false };
+            atomic<bool>                        _bReady{ SW_FALSE };
 
             SharedFutureSignal()
                 : _mutex{}
                 , _cv{}
-                , _bReady{ false }
+                , _bReady{ SW_FALSE }
             {
             }
 

@@ -80,6 +80,10 @@ namespace
     public:
         static constexpr const utf8* kName = "test.consumer";
 
+        ConsumerTestKit()
+            : _bFailStart{ SW_FALSE }
+        {
+        }
         [[nodiscard]] bool initialize( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError ) override
         {
             (void)context;
@@ -118,7 +122,7 @@ namespace
         }
 
     private:
-        bool _bFailStart{ false };
+        uint8 _bFailStart : 1;
     };
 
     /** @brief 케이스마다 두 테스트 키트를 레지스트리에 올리고 사건 줄을 비웁니다. 소멸자가 둘 다 되돌립니다. */

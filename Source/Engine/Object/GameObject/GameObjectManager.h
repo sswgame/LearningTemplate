@@ -679,11 +679,11 @@ namespace sw
         /** @brief 생성자로 받은 엔진 서비스 묶음(빌린 포인터들)입니다(`getSceneEngineServices` · `findAssetManager`). */
         SceneEngineServices _services;
         /** @brief `FrameSystems` 단계가 도는 중이면 true 입니다. */
-        bool _bRunningFrameSystems;
+        uint8 _bRunningFrameSystems : 1;
         /** @brief `update` 를 시작한 횟수입니다(`getUpdateSerial`). */
         uint64 _updateSerial;
         /** @brief false 면 `Physics` 단계를 건너뜁니다(`setPhysicsStepEnabled`). */
-        bool _bPhysicsStepEnabled;
+        uint8 _bPhysicsStepEnabled : 1;
         /** @brief `beginDeferredRegistration` 의 중첩 깊이입니다. 0 이 아니면 등록 · 로드 뒤 처리를 줄에 세웁니다. */
         uint32 _deferredRegistrationDepth;
         /** @brief 미룬 등록 · 로드 뒤 처리입니다(붙은 순서). 핸들로 들어 그 사이 해체돼도 안전합니다. */

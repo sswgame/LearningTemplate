@@ -46,9 +46,9 @@ namespace sw
         , _writtenSize{ 0 }
         , _arrScope{}
         , _depth{ 0 }
-        , _bAfterKey{ false }
-        , _bRootWritten{ false }
-        , _bFailed{ false }
+        , _bAfterKey{ SW_FALSE }
+        , _bRootWritten{ SW_FALSE }
+        , _bFailed{ SW_FALSE }
     {
     }
 
@@ -61,9 +61,9 @@ namespace sw
         , _writtenSize{ 0 }
         , _arrScope{}
         , _depth{ 0 }
-        , _bAfterKey{ false }
-        , _bRootWritten{ false }
-        , _bFailed{ false }
+        , _bAfterKey{ SW_FALSE }
+        , _bRootWritten{ SW_FALSE }
+        , _bFailed{ SW_FALSE }
     {
     }
 
@@ -76,15 +76,15 @@ namespace sw
         , _writtenSize{ 0 }
         , _arrScope{}
         , _depth{ 0 }
-        , _bAfterKey{ false }
-        , _bRootWritten{ false }
-        , _bFailed{ false }
+        , _bAfterKey{ SW_FALSE }
+        , _bRootWritten{ SW_FALSE }
+        , _bFailed{ SW_FALSE }
     {
         SW_ASSERT( pBuffer != nullptr && capacity > 0 );
         if ( _pBuffer != nullptr && _capacity > 0 )
             _pBuffer[0] = '\0';
         else
-            _bFailed = true;
+            _bFailed = SW_TRUE;
     }
 
     void JSONWriter::beginObject()
@@ -135,7 +135,7 @@ namespace sw
         appendChar( '"' );
         appendEscaped( name );
         append( _indent >= 0 ? string_view{ "\": " } : string_view{ "\":" } );
-        _bAfterKey = true;
+        _bAfterKey = SW_TRUE;
     }
 
     void JSONWriter::valueString( string_view value )
@@ -180,7 +180,7 @@ namespace sw
         {
             // JSON 에는 NaN · 무한대가 없다 — 구조는 지키려고 null 을 쓰되 실패로 남겨 부르는 쪽이 알게 한다.
             append( "null" );
-            _bFailed = true;
+            _bFailed = SW_TRUE;
             return;
         }
         utf8                       arrText[JSONWriterInternal::kNumberBufferSize];
@@ -244,7 +244,7 @@ namespace sw
         SW_ASSERT( bOwnsBuffer );
         if ( bOwnsBuffer == false || isComplete() == false )
             return std::nullopt;
-        _bFailed = true; // 꺼낸 뒤에는 쓰지 않는다 — 이어 쓰면 빈 버퍼에 조각이 생긴다
+        _bFailed = SW_TRUE; // 꺼낸 뒤에는 쓰지 않는다 — 이어 쓰면 빈 버퍼에 조각이 생긴다
         return JSONText{ std::move( _ownedText ) };
     }
 
@@ -264,7 +264,7 @@ namespace sw
         _writtenSize += count;
         _pBuffer[_writtenSize] = '\0';
         if ( count < text.size() )
-            _bFailed = true; // 넘쳤다 — 잘린 글은 올바른 JSON 이 아니다
+            _bFailed = SW_TRUE; // 넘쳤다 — 잘린 글은 올바른 JSON 이 아니다
     }
 
     void JSONWriter::appendChar( utf8 character )
@@ -314,7 +314,7 @@ namespace sw
                 fail();
                 return false;
             }
-            _bRootWritten = true;
+            _bRootWritten = SW_TRUE;
             return true;
         }
         if ( _arrScope[_depth - 1]._bObject )
@@ -324,7 +324,7 @@ namespace sw
                 fail();
                 return false;
             }
-            _bAfterKey = false;
+            _bAfterKey = SW_FALSE;
             return true;
         }
         writeItemSeparator();
@@ -349,6 +349,6 @@ namespace sw
     void JSONWriter::fail()
     {
         SW_ASSERT( false && "JSONWriter: call order does not form valid JSON" );
-        _bFailed = true;
+        _bFailed = SW_TRUE;
     }
 } // namespace sw

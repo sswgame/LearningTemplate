@@ -41,7 +41,7 @@ namespace sw::editor
     {
         string _oldPath;
         string _newPath;
-        bool   _bPrefix{ false };
+        bool   _bPrefix{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @brief 있는 리소스 id(소문자)와 그 폴더들입니다 — 파일 또는 폴더를 가리키는 참조가 있는지 봅니다. */
@@ -64,7 +64,7 @@ namespace sw::editor
         string         _folder;
         string         _sourceFolder;
         vector<string> _listSourceExtension;
-        bool           _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다
+        bool           _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /**

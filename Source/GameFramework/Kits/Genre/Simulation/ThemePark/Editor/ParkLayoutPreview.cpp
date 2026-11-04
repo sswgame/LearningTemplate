@@ -60,15 +60,15 @@ namespace sw::editor
         , _gatePosition{}
         , _layoutPath{}
         , _contentHash{ 0 }
-        , _bLoaded{ false }
-        , _bMissing{ false }
-        , _bWarned{ false }
+        , _bLoaded{ SW_FALSE }
+        , _bMissing{ SW_FALSE }
+        , _bWarned{ SW_FALSE }
     {
     }
 
     void ParkLayoutPreview::clearPreview( bool bMissing )
     {
-        _bLoaded  = false;
+        _bLoaded  = SW_FALSE;
         _bMissing = bMissing;
         _listRide.clear();
         _listTrackPoint.clear();
@@ -84,7 +84,7 @@ namespace sw::editor
         {
             if ( _bWarned == false )
                 SW_LOG_ERROR_ID( "ParkLayoutPreview.ParkLayoutPreviewNo", "The park layout preview has no path in pack '%#': %#", packRoot.c_str(), error.c_str() );
-            _bWarned    = true;
+            _bWarned    = SW_TRUE;
             _layoutPath = error;
             clearPreview( false );
             return false;
@@ -99,7 +99,7 @@ namespace sw::editor
         {
             if ( _bWarned == false )
                 SW_LOG_WARNING_ID( "ParkLayoutPreview.CouldNotReadPark", "%# could not be read - the park layout preview is empty", _layoutPath.c_str() );
-            _bWarned = true;
+            _bWarned = SW_TRUE;
             clearPreview( false );
             return false;
         }
@@ -155,9 +155,9 @@ namespace sw::editor
             }
             _listTrackPoint.push_back( std::move( listPoint ) );
         }
-        _bLoaded  = true;
-        _bMissing = false;
-        _bWarned  = false;
+        _bLoaded  = SW_TRUE;
+        _bMissing = SW_FALSE;
+        _bWarned  = SW_FALSE;
         SW_LOG_INFO_ID( "ParkLayoutPreview.ParkLayoutPreviewLoaded", "Park layout preview loaded %# rides from %#", static_cast<uint32>( _listRide.size() ), _layoutPath.c_str() );
         return true;
     }

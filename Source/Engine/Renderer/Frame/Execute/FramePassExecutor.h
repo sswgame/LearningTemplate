@@ -164,7 +164,7 @@ namespace sw
             const RenderGraphPassDesc&                             _passDesc;          ///< 패스 서술
             const vector<RenderGraphPassDesc::ResolvedAttachment>& _declaredColor;     ///< 선언한 컬러 출력(선언 순서). kDrawsDeclaredColor 패스는 비어 있지 않다
             hashed_string                                          _passDepth;         ///< 바인딩할 뎁스. 선언이 없거나 이번 프레임에 없으면 빈 이름
-            bool                                                   _bTransparentBatch; ///< 이 패스가 투명 배치를 그리는지(테이블 플래그)
+            bool                                                   _bTransparentBatch; ///< 이 패스가 투명 배치를 그리는지(테이블 플래그) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /** @brief `drawGPUBatches` 가 한 패스 동안 들고 가는 값입니다 — 그릴 배치 · 입자 자리, 지금 걸린 PSO · 정점 버퍼, 입자 커서, 그린 호출 수. */
         struct BatchDrawState
@@ -181,7 +181,7 @@ namespace sw
             uint32                                             _batchOffset{ 0 }; ///< 간접 인자 슬롯의 시작(불투명 다음 투명)
             uint32                                             _particleSlotCursor{ 0 };
             uint32                                             _drawCallCount{ 0 };
-            bool                                               _bMerge{ false }; ///< 연속 배치를 멀티 드로우 한 번으로 묶는지
+            bool                                               _bMerge{ false }; ///< 연속 배치를 멀티 드로우 한 번으로 묶는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         // ------------------------------------------------------------------------------

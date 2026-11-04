@@ -407,7 +407,7 @@ namespace sw
                 float32 _multiplyBonus{ 0.0f };
                 float32 _divideBonus{ 0.0f };
                 float32 _overrideValue{ 0.0f };
-                bool    _bHasOverride{ false };
+                bool    _bHasOverride{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 변경 하나를 스택 @p stackScale 만큼 집계에 반영합니다. */

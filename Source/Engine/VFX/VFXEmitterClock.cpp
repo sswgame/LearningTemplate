@@ -15,8 +15,8 @@ namespace sw
         , _spawnCarry{ 0.0f }
         , _spawnScale{ spawnScale }
         , _pendingSeconds{ 0.0f }
-        , _bEmitting{ true }
-        , _bWarnedStepLimit{ false }
+        , _bEmitting{ SW_TRUE }
+        , _bWarnedStepLimit{ SW_FALSE }
     {
         if ( _pDef == nullptr )
             ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
@@ -38,7 +38,7 @@ namespace sw
         if ( _bWarnedStepLimit == false )
         {
             SW_LOG_WARNING_ID( "VFX.StepsDropped", "VFX emitter '%#': frame time %# s needs %# steps, running %# and dropping the rest", _pDef->_name, deltaSeconds, dueStepCount, kMaxStepsPerUpdate );
-            _bWarnedStepLimit = true;
+            _bWarnedStepLimit = SW_TRUE;
         }
         return kMaxStepsPerUpdate;
     }
@@ -84,7 +84,7 @@ namespace sw
             }
             else
             {
-                _bEmitting = false;
+                _bEmitting = SW_FALSE;
             }
         }
         return spawn;
@@ -97,7 +97,7 @@ namespace sw
         _emitterSeconds = 0.0f;
         _spawnCarry     = 0.0f;
         _pendingSeconds = 0.0f;
-        _bEmitting      = true;
+        _bEmitting      = SW_TRUE;
         // 이미 낸 경고(단계 상한)는 다시 켜지 않는다 — 다시 시작해도 같은 데이터 문제다.
     }
 } // namespace sw

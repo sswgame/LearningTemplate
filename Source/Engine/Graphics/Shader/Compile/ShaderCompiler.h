@@ -177,7 +177,7 @@ namespace sw
         vector<string> _listIncludedFile;
         /** @brief 컴파일한 주 소스의 절대 경로입니다(해석기 `ShaderSourceResolver` 의 답). 메모리 캐시가 이것과 `_listIncludedFile` 로 낡음을 본다. 쿠킹본에서 읽은 결과는 비어 있다. */
         string _sourceFile;
-        bool   _bSuccess{ false }; ///< 컴파일 성공 여부
+        bool   _bSuccess{ false }; ///< 컴파일 성공 여부 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw
 

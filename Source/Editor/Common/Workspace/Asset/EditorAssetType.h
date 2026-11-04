@@ -211,17 +211,17 @@ namespace sw::editor
     {
         static constexpr const utf8* kKindName = "AssetType";
 
-        const utf8*                    _pDisplayName;      ///< 단수 이름. 퀵 런처 분류와 배지에 쓴다
-        const utf8*                    _pBrowserLabel;     ///< 콘텐츠 브라우저 필터와 리소스 카탈로그의 라벨
-        const utf8*                    _pPanelTitle;       ///< 전용 도구 패널 제목. nullptr 이면 패널이 없다
-        EditorIconName                 _pIconName;         ///< 에디터 아이콘 이름(`SW_EDITORICON_NAME`) — 그릴 때 아이콘 표에서 찾는다
-        const utf8*                    _pColorKey;         ///< 목록과 배지의 테마 색 키(`SW_THEMECOLOR_KEY( "Asset", … )`, 액센트 종류는 `Base.Accent`)
-        bool                           _bOtherExcluded;    ///< 브라우저 "Other" 필터에서 뺄지 정한다
-        bool                           _bImportable;       ///< 임포트 대화상자의 확장자 목록에 넣을지 정한다
-        const EditorAssetMatchRule*    _pRule;             ///< 판정 규칙. 하나 이상이어야 한다(없으면 어떤 경로에도 맞지 않는다)
-        uint32                         _ruleCount;         ///< `_pRule` 의 수
-        const EditorNewAssetTemplate*  _pNewAssetTemplate; ///< Add 메뉴의 새 에셋 틀. nullptr 이면 Add 메뉴에 없다
-        const IEditorAssetTypeActions* _pActions;          ///< 썸네일 · 열기 · 뷰포트 드롭 동작. nullptr 이면 일반 동작이다
+        const utf8*                    _pDisplayName;       ///< 단수 이름. 퀵 런처 분류와 배지에 쓴다
+        const utf8*                    _pBrowserLabel;      ///< 콘텐츠 브라우저 필터와 리소스 카탈로그의 라벨
+        const utf8*                    _pPanelTitle;        ///< 전용 도구 패널 제목. nullptr 이면 패널이 없다
+        EditorIconName                 _pIconName;          ///< 에디터 아이콘 이름(`SW_EDITORICON_NAME`) — 그릴 때 아이콘 표에서 찾는다
+        const utf8*                    _pColorKey;          ///< 목록과 배지의 테마 색 키(`SW_THEMECOLOR_KEY( "Asset", … )`, 액센트 종류는 `Base.Accent`)
+        uint8                          _bOtherExcluded : 1; ///< 브라우저 "Other" 필터에서 뺄지 정한다
+        uint8                          _bImportable    : 1; ///< 임포트 대화상자의 확장자 목록에 넣을지 정한다
+        const EditorAssetMatchRule*    _pRule;              ///< 판정 규칙. 하나 이상이어야 한다(없으면 어떤 경로에도 맞지 않는다)
+        uint32                         _ruleCount;          ///< `_pRule` 의 수
+        const EditorNewAssetTemplate*  _pNewAssetTemplate;  ///< Add 메뉴의 새 에셋 틀. nullptr 이면 Add 메뉴에 없다
+        const IEditorAssetTypeActions* _pActions;           ///< 썸네일 · 열기 · 뷰포트 드롭 동작. nullptr 이면 일반 동작이다
 
         /** @brief 이 종류를 가리키는 값입니다. */
         EditorAssetType getType() const { return EditorAssetType{ string_view{ _pID } }; }
@@ -248,7 +248,7 @@ namespace sw::editor
          */
         const utf8*     _pLabel;
         EditorAssetType _kind;
-        bool            _bOther;
+        bool            _bOther; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

@@ -130,9 +130,9 @@ namespace sw
             b2BodyId                        _bodyID{};
             PhysicsBodyType                 _type{ PhysicsBodyType::Dynamic };
             uint8                           _layer{ 0 };
-            bool                            _bTrigger{ false };
-            bool                            _bOverlapOnly{ false }; ///< 트리거가 아닌 센서다(`PhysicsBodyDesc::_bOverlapOnly`)
-            bool                            _bEnabled{ true };
+            bool                            _bTrigger{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                            _bOverlapOnly{ false }; ///< 트리거가 아닌 센서다(`PhysicsBodyDesc::_bOverlapOnly`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                            _bEnabled{ SW_TRUE };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
             /** @brief Box2D 센서 셰이프로 만드는지입니다(트리거이거나 겹침 전용). */
             bool isSensor() const { return _bTrigger || _bOverlapOnly; }

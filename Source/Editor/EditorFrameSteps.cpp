@@ -51,9 +51,14 @@ namespace sw::editor
             string      _gameTitle{};
             string      _title{};
             const utf8* _pPlayState{ nullptr };
-            bool        _bDirty{ false };
-            bool        _bBuilt{ false }; ///< 한 번이라도 지었는지(첫 프레임은 입력이 기본값과 같아도 짓는다)
+            uint8       _bDirty : 1;
+            uint8       _bBuilt : 1; ///< 한 번이라도 지었는지(첫 프레임은 입력이 기본값과 같아도 짓는다)
 
+            EditorWindowTitleState()
+                : _bDirty{ SW_FALSE }
+                , _bBuilt{ SW_FALSE }
+            {
+            }
             const utf8* getSubsystemName() const override { return kSubsystemName; }
         };
 
@@ -125,7 +130,7 @@ namespace sw::editor
                 state._gameTitle  = pPackSettings->_windowTitle;
                 state._pPlayState = pPlayState;
                 state._bDirty     = bDirty;
-                state._bBuilt     = true;
+                state._bBuilt     = SW_TRUE;
                 state._title      = EditorWindowTitleUtil::makeTitle( pPackSettings->_windowTitle, scenePath, bDirty, pPlayState );
                 pWindowHost->setBaseTitle( state._title ); // 창에 거는 일은 엔진이 한다 — 시나리오 실행 정보를 이 제목 뒤에 붙여 건다(AutomationRunTitleTracker)
             }

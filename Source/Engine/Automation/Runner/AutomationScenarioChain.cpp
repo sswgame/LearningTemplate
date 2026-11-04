@@ -22,6 +22,20 @@ namespace sw
         };
     } // namespace
 
+    AutomationScenarioChain::AutomationScenarioChain()
+        : _listPath{}
+        , _stageIndex{ 0 }
+        , _skippedStageCount{ 0 }
+        , _failedStageCount{ 0 }
+        , _skippedResultCount{ 0 }
+        , _firstNonPassResult{ AutomationOutcome::Passed }
+        , _finalResult{ AutomationOutcome::Running }
+        , _bKeepGoing{ SW_FALSE }
+        , _bBegun{ SW_FALSE }
+        , _bFinished{ SW_FALSE }
+    {
+    }
+
     vector<string> AutomationScenarioChain::splitList( string_view text )
     {
         vector<string> listPath;
@@ -45,7 +59,7 @@ namespace sw
         *this        = AutomationScenarioChain{};
         _listPath    = std::move( listPath );
         _bKeepGoing  = bKeepGoing;
-        _bBegun      = true;
+        _bBegun      = SW_TRUE;
         _bFinished   = _listPath.empty();
         _finalResult = _listPath.empty() ? AutomationOutcome::Passed : AutomationOutcome::Running;
     }
@@ -71,7 +85,7 @@ namespace sw
                 _firstNonPassResult = result;
             if ( _bKeepGoing == false || bHasNext == false )
             {
-                _bFinished         = true;
+                _bFinished         = SW_TRUE;
                 _finalResult       = _firstNonPassResult;
                 _skippedStageCount = _listPath.size() - _stageIndex - 1;
                 return false;
@@ -82,7 +96,7 @@ namespace sw
             ++_stageIndex;
             return true;
         }
-        _bFinished = true;
+        _bFinished = SW_TRUE;
         // 실패가 없고 모든 단계가 건너뜀이면 체인도 건너뜀이다(돌린 것이 하나도 없다).
         _finalResult = _firstNonPassResult != AutomationOutcome::Passed ? _firstNonPassResult
                      : _skippedResultCount == _listPath.size()          ? AutomationOutcome::Skipped

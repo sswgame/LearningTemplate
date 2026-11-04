@@ -41,7 +41,7 @@ namespace sw::editor
         , _rhiIndex{ 0 }
         , _bSkipBuild{ false }
         , _bSkipCook{ false }
-        , _bGamesLoaded{ false }
+        , _bGamesLoaded{ SW_FALSE }
     {
     }
 
@@ -110,7 +110,7 @@ namespace sw::editor
                 _gameIndex = static_cast<uint32>( _listGame.size() );
             _listGame.push_back( FileUtil::removeExtension( FileUtil::getFileNamePart( filePath ) ) );
         }
-        _bGamesLoaded = true;
+        _bGamesLoaded = SW_TRUE;
     }
 
     ProcessCommand PackagingModel::makeCommand() const

@@ -84,8 +84,8 @@ namespace sw
         vector<AABB>     _listDirtyArea;    ///< `_dirtyLock` 아래
         vector<AABB>     _listObstacleArea; ///< 장애물이 바꾼 자리(게임 스레드만 — 다시 베이크 종류에만 닿는다)
         uint32           _rebakedTileCount;
-        mutable SpinLock _dirtyLock;      ///< `invalidateArea` 가 아무 스레드에서 온다
-        bool             _bGeometryDirty; ///< `_dirtyLock` 아래
-        bool             _bObstacleVolumeDirty;
+        mutable SpinLock _dirtyLock;                ///< `invalidateArea` 가 아무 스레드에서 온다
+        uint8            _bGeometryDirty       : 1; ///< `_dirtyLock` 아래
+        uint8            _bObstacleVolumeDirty : 1;
     };
 } // namespace sw

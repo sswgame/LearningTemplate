@@ -27,6 +27,8 @@ namespace sw::editor
     class ContentBrowserTypeFilter
     {
     public:
+        ContentBrowserTypeFilter();
+
         /** @brief 종류 등록이 바뀌었으면 목록을 다시 만듭니다. 그리기 전에 부릅니다. */
         void sync();
 
@@ -44,11 +46,11 @@ namespace sw::editor
 
     private:
         vector<EditorAssetBrowserFilter> _listFilter;
-        EditorAssetType                  _selectedKind{};          ///< 고른 종류. All · Other 는 빈 값이다
-        uint32                           _selectedIndex{ 0 };      ///< `_listFilter` 안의 순번
-        uint32                           _generation{ 0 };         ///< 목록을 만든 종류 등록의 세대
-        bool                             _bSelectedOther{ false }; ///< Other 를 골랐다
-        bool                             _bBuilt{ false };         ///< 목록을 한 번이라도 만들었다
+        EditorAssetType                  _selectedKind;       ///< 고른 종류. All · Other 는 빈 값이다
+        uint32                           _selectedIndex;      ///< `_listFilter` 안의 순번
+        uint32                           _generation;         ///< 목록을 만든 종류 등록의 세대
+        uint8                            _bSelectedOther : 1; ///< Other 를 골랐다
+        uint8                            _bBuilt         : 1; ///< 목록을 한 번이라도 만들었다
     };
 } // namespace sw::editor
 
@@ -240,7 +242,7 @@ namespace sw::editor
         /** @brief 역색인을 기다리는 옮기기 하나 — 이름 바꾸기면 `_newName`, 폴더로 옮기기면 `_sourceAbs` · `_folderAbs` 다. */
         struct PendingMove
         {
-            bool   _bRename{ false };
+            bool   _bRename{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             string _newName{};
             string _sourceAbs{};
             string _folderAbs{};
@@ -261,10 +263,10 @@ namespace sw::editor
         EditorFolderListingJob        _folderJob;
         ContentBrowserFolderCache     _folderCache;             /**< 폴더 트리의 하위 폴더. 그릴 때마다 디스크를 읽지 않도록 캐시한다 */
         uint64                        _seenContentChangeSerial; /**< 마지막으로 반영한 `AssetHotReload::getContentChangeSerial` */
-        bool                          _bRootsDirty;
-        bool                          _bFolderDirty;
-        bool                          _bShowAllPacks;            /**< 게임 팩을 모두 보인다. 끄면 활성 팩 하나만 보인다 */
-        bool                          _bShowAllPacksInitialized; /**< 환경설정의 기본값을 한 번 읽었다. 그 뒤에는 툴바가 정한다 */
-        bool                          _bListingRecursive;        /**< 지금 목록에 하위 폴더의 파일까지 포함한다(검색 중) */
+        uint8                         _bRootsDirty              : 1;
+        uint8                         _bFolderDirty             : 1;
+        uint8                         _bShowAllPacks            : 1; /**< 게임 팩을 모두 보인다. 끄면 활성 팩 하나만 보인다 */
+        uint8                         _bShowAllPacksInitialized : 1; /**< 환경설정의 기본값을 한 번 읽었다. 그 뒤에는 툴바가 정한다 */
+        uint8                         _bListingRecursive        : 1; /**< 지금 목록에 하위 폴더의 파일까지 포함한다(검색 중) */
     };
 } // namespace sw::editor

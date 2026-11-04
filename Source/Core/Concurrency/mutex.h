@@ -172,7 +172,7 @@ namespace sw
     struct MutexReentryGuard
     {
 
-        bool _bEntered;
+        uint8 _bEntered : 1;
         MutexReentryGuard()
             : _bEntered{ _s_bInHook == false }
         {

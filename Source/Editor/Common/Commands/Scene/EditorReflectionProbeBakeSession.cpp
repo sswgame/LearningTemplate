@@ -120,7 +120,7 @@ namespace sw::editor
         string               _error{};
         string               _assetPath{};
         uint64               _objectID{ 0 };
-        bool                 _bSucceeded{ false };
+        bool                 _bSucceeded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /**
@@ -181,7 +181,7 @@ namespace sw::editor
         , _run{}
         , _nextProbeIndex{ 0 }
         , _bakedCount{ 0 }
-        , _bDeferFirstSlice{ false }
+        , _bDeferFirstSlice{ SW_FALSE }
     {
     }
 
@@ -216,7 +216,7 @@ namespace sw::editor
         _nextProbeIndex = 0;
         _bakedCount     = 0;
         _lastError.clear();
-        _bDeferFirstSlice = true;
+        _bDeferFirstSlice = SW_TRUE;
         _run.begin( sceneManager.getSceneGeneration() );
         if ( _listObjectID.empty() )
             finish( false );
@@ -243,7 +243,7 @@ namespace sw::editor
         // 시작한 프레임에는 굽지 않는다 — 찍기가 프레임을 멈추게 하므로, 상태줄이 "0/N" 을 한 번 그린 뒤에 첫 프로브를 찍는다.
         if ( _bDeferFirstSlice )
         {
-            _bDeferFirstSlice = false;
+            _bDeferFirstSlice = SW_FALSE;
             return;
         }
         // 앞 프로브의 접기 · 쓰기(워커)가 끝났으면 넘기고, 아직이면 이 프레임은 기다린다 - 잡은 한 번에 하나다.

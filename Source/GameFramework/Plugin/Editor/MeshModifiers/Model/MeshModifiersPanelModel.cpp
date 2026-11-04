@@ -20,21 +20,21 @@ namespace sw::editor
         , _nestedRootID{ 0 }
         , _nestedSelectedIndex{ -1 }
         , _enterRequest{ -1 }
-        , _bLeaveRequested{ false }
+        , _bLeaveRequested{ SW_FALSE }
         , _curveModifierID{ 0 }
         , _curveParamIndex{ 0 }
         , _curveItemIndex{ -1 }
         , _descriptionID{}
         , _description{}
         , _warpExportPath{}
-        , _bEditing{ false }
+        , _bEditing{ SW_FALSE }
     {
     }
 
     MeshModifierStack& MeshModifiersPanelModel::resolveNestedStack( DeformableModifier& root )
     {
         _enterRequest    = -1;
-        _bLeaveRequested = false;
+        _bLeaveRequested = SW_FALSE;
         if ( _nestedRootID != root.getInstanceID() )
         {
             // 다른 묶음을 골랐다(되돌리기로 다시 지은 같은 묶음도 새 인스턴스다) - 하위 스택의 고른 자리를 처음으로 되돌린다
@@ -67,7 +67,7 @@ namespace sw::editor
             _listNestedPath.pop_back();
         }
         _enterRequest    = -1;
-        _bLeaveRequested = false;
+        _bLeaveRequested = SW_FALSE;
     }
 
     void MeshModifiersPanelModel::openCurvePopup( const MeshModifier& modifier, uint32 paramIndex, int32 itemIndex )

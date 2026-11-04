@@ -153,7 +153,7 @@ namespace sw
         vector<DeferredAtMostCheck> _listDeferredAtMost;     ///< 시나리오 끝에서 판정할 값 상한(편집기 UI 캡처의 마젠타 비율)
         string                      _goldenFolderID;         ///< 골든 폴더(시나리오 파일 옆 `golden/`, 리소스 id)
         string                      _goldenPrefix;           ///< 골든 파일 이름의 앞머리(시나리오 이름)
-        bool                        _bUpdateGolden{ false }; ///< `-scenario-update-golden` — 없거나 다른 골든을 지금 그림으로 쓴다
+        bool                        _bUpdateGolden{ false }; ///< `-scenario-update-golden` — 없거나 다른 골든을 지금 그림으로 쓴다 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         vector<string>              _listUnhandledLog;       ///< 로그 게이트가 처리하지 않았다고 본 줄(`[Warning] [호출자] (id=…) 본문`)
         vector<string>              _listAllowedLogID;       ///< 이 실행에서 허용 항목이 맞은 로그 id
         vector<string>              _listMetricLine;         ///< 보고에 적는 지표 값

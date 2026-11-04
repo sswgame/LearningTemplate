@@ -66,18 +66,18 @@ namespace sw
     /** @brief 노드 종류 하나의 특성입니다. 이름, 핀, 진행 방식, 편집 필드, 기본값이 모두 이 항목에 있습니다. */
     struct DialogueNodeInfo
     {
-        const utf8*           _pName;              /**< 화면 이름입니다(파일의 종류 이름은 열거자 이름이다). */
-        const utf8*           _pDefaultSpeaker;    /**< 새 노드의 화자입니다. */
-        const utf8*           _pDefaultBody;       /**< 새 노드의 본문입니다. `_body` 필드에 들어갑니다. */
-        float4                _color;              /**< 그래프 노드 머리 색입니다. */
-        DialogueAssetNodeType _type;               /**< 노드 타입입니다. 테이블의 순번과 같아야 합니다. */
-        DialogueNodeFlow      _flow;               /**< 다음으로 넘어가는 방식입니다. */
-        DialogueNodeOutput    _output;             /**< 출력 핀 형태입니다. */
-        DialogueNodeBody      _body;               /**< 편집하는 본문 필드입니다. */
-        bool                  _bHasInputPin;       /**< 입력 핀이 있는지입니다. */
-        bool                  _bHasSpeaker;        /**< 화자 필드를 편집하는지입니다. */
-        bool                  _bAddable;           /**< 에디터 추가 메뉴에 보이는지입니다. Start 는 그래프마다 하나뿐이라 보이지 않습니다. */
-        uint8                 _defaultChoiceCount; /**< 새 노드에 넣을 선택지 수입니다. */
+        const utf8*           _pName;                                                                                               /**< 화면 이름입니다(파일의 종류 이름은 열거자 이름이다). */
+        const utf8*           _pDefaultSpeaker;                                                                                     /**< 새 노드의 화자입니다. */
+        const utf8*           _pDefaultBody;                                                                                        /**< 새 노드의 본문입니다. `_body` 필드에 들어갑니다. */
+        float4                _color;                                                                                               /**< 그래프 노드 머리 색입니다. */
+        DialogueAssetNodeType _type;                                                                                                /**< 노드 타입입니다. 테이블의 순번과 같아야 합니다. */
+        DialogueNodeFlow      _flow;                                                                                                /**< 다음으로 넘어가는 방식입니다. */
+        DialogueNodeOutput    _output;                                                                                              /**< 출력 핀 형태입니다. */
+        DialogueNodeBody      _body;                                                                                                /**< 편집하는 본문 필드입니다. */
+        bool                  _bHasInputPin; /**< 입력 핀이 있는지입니다. */                                                        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                  _bHasSpeaker; /**< 화자 필드를 편집하는지입니다. */                                                   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                  _bAddable; /**< 에디터 추가 메뉴에 보이는지입니다. Start 는 그래프마다 하나뿐이라 보이지 않습니다. */ ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint8                 _defaultChoiceCount;                                                                                  /**< 새 노드에 넣을 선택지 수입니다. */
     };
 } // namespace sw
 

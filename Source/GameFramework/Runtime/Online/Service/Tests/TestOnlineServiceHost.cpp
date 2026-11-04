@@ -69,11 +69,13 @@ namespace
         int32                      _handledCount{ 0 };
         int32                      _hostShutdownCount{ 0 };
         int32                      _cacheReplyCountAtHostShutdown{ -1 }; ///< 호스트가 내려간다고 알릴 때 이미 받은 캐시 답 수(-1 = 아직 안 알림)
-        bool                       _bReadCacheOnTick{ false };
-        bool                       _bHoldLateAnswers{ false }; ///< 켜면 늦은 요청에 답하지 않고 토큰만 든다
+        uint8                      _bReadCacheOnTick : 1;
+        uint8                      _bHoldLateAnswers : 1; ///< 켜면 늦은 요청에 답하지 않고 토큰만 든다
         explicit FakeOnlineService( const OnlineProtocolEntry& protocol )
             : _pProtocol{ &protocol }
             , _range{ protocol.getMethodRange() }
+            , _bReadCacheOnTick{ SW_FALSE }
+            , _bHoldLateAnswers{ SW_FALSE }
         {
         }
 
@@ -134,7 +136,7 @@ namespace
             _listLateToken.clear();
             if ( _bReadCacheOnTick && host.getEphemeralRouter() != nullptr )
             {
-                _bReadCacheOnTick = false;
+                _bReadCacheOnTick = SW_FALSE;
                 _cacheReplyOwner  = host.getEphemeralRouter()->openReplyOwner();
                 (void)host.getEphemeralRouter()->submit( EphemeralRequest::makeGet( _cacheKeyToRead ),
                                                          EphemeralStoreRouter::ReplyDelegate::create<&FakeOnlineService::onCacheReply>( this ), _cacheReplyOwner );
@@ -200,7 +202,7 @@ namespace
         vector<uint8>    _bodyBytes{};
         uint16           _errorCode{ 0 };
         NetRequestStatus _status{ NetRequestStatus::Ok };
-        bool             _bAnswered{ false };
+        bool             _bAnswered{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         void onResponse( const OnlineResponse& response )
         {
@@ -315,7 +317,7 @@ namespace
         StreamConnectionHandle       _handle;
         NetResponse                  _lastResponse;
         vector<uint8>                _lastBodyBytes;
-        bool                         _bAnswered;
+        bool                         _bAnswered; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         RawClientSide( LoopbackStreamNetwork& network, uint16 port )
             : _transport{ network.createTransport() }
@@ -812,7 +814,7 @@ SW_TEST_CASE( OnlineServiceHostTest, LateAnswersUseTheTokenAndAnswersAfterCloseA
     SW_EXPECT_EQUAL( SW_TRUE, rig._serviceA._listLateAnswer[0] );
 
     // 답하기 전에 연결이 닫히면 그 답은 버려진다.
-    rig._serviceA._bHoldLateAnswers = true;
+    rig._serviceA._bHoldLateAnswers = SW_TRUE;
     ResponseRecord orphan;
     (void)client._client.sendRequest( Internal::kRangeA + Internal::kLate, BitWriter{}, NetRequestOptions{}, OnlineResponseDelegate::create<&ResponseRecord::onResponse>( &orphan ) );
     rig.step( 6 );
@@ -906,8 +908,8 @@ SW_TEST_CASE( OnlineServiceHostTest, EphemeralRepliesReachOnlyTheSubmittingServi
     (void)writer.submit( EphemeralRequest::makeSet( "b", vector<uint8>{ 2, 2 }, 0 ) ); // 요청 id 는 쓰지 않는다 — 결과는 답(완료)으로 받는다
     rig._serviceA._cacheKeyToRead   = "a";
     rig._serviceB._cacheKeyToRead   = "b";
-    rig._serviceA._bReadCacheOnTick = true;
-    rig._serviceB._bReadCacheOnTick = true;
+    rig._serviceA._bReadCacheOnTick = SW_TRUE;
+    rig._serviceB._bReadCacheOnTick = SW_TRUE;
     rig.step( 2 );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._serviceA._listCacheReply.size() );
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._serviceB._listCacheReply.size() );

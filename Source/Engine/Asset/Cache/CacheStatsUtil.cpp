@@ -27,9 +27,9 @@ namespace sw
                 uint64 _missCount{ 0 };
                 uint64 _clearCount{ 0 };
                 int64  _itemCount{ 0 };
-                bool   _bItemCountKnown{ false };
-                bool   _bCounted{ false };
-                string _uncountedReason{}; ///< `_bCounted` 가 아닐 때 캐시가 선언한 사유(`CacheTracking::uncounted`). 칸이 없는데 선언도 없으면 비어 있다(오류)
+                bool   _bItemCountKnown{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool   _bCounted{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                string _uncountedReason{};        ///< `_bCounted` 가 아닐 때 캐시가 선언한 사유(`CacheTracking::uncounted`). 칸이 없는데 선언도 없으면 비어 있다(오류)
             };
 
             static bool isNameBefore( const Row& lhs, const Row& rhs ) { return lhs._name < rhs._name; }

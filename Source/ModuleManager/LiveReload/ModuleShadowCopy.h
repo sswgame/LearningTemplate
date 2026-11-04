@@ -44,7 +44,7 @@ namespace sw
         string_view _moduleName;
         string_view _originalModulePath;
         uint64      _sourceMtime{ 0 };
-        bool        _bReplacingLoadedLibrary{ false }; ///< 이미 올라온 라이브러리를 바꾸는 리로드다(거절 로그의 안내 문구만 바뀐다)
+        bool        _bReplacingLoadedLibrary{ false }; ///< 이미 올라온 라이브러리를 바꾸는 리로드다(거절 로그의 안내 문구만 바뀐다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /** @brief 이 모듈이 의존하는 모듈 가운데 이 매니저가 올린 것입니다. 복사본의 import · NEEDED 를 그 의존의 지금 이름으로 바꿉니다. */
         vector<ShadowCopyModuleLibrary> _listDependencyLibrary;
         /** @brief 이 매니저에 등록된 모든 모듈입니다(자기 포함). Windows 에서 의존 목록에 없이 등록된 모듈을 import 하는지 봅니다. */

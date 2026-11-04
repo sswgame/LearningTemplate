@@ -44,7 +44,7 @@ namespace sw
         , _postProcess{}
         , _depthOfField{}
         , _lensShift{ 0.0f, 0.0f }
-        , _bOrthographic{ false }
+        , _bOrthographic{ SW_FALSE }
         , _cutFrame{ 0 }
         , _cutStamp{ 0 }
         , _arrCutSeenStamp{}

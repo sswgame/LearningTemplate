@@ -44,7 +44,7 @@ namespace sw
             void ( *_pClone )( const void* pSrc, void* pDst ); ///< 복사 생성 함수
             void ( *_pMove )( void* pSrc, void* pDst );        ///< 이동 생성 함수
             size_t _typeSize{ 0 };
-            bool   _bIsInline{ false };
+            bool   _bIsInline{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         template <typename T>

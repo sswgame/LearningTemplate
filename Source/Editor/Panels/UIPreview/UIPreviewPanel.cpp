@@ -301,8 +301,8 @@ namespace sw::editor
         , _texture{ 0 }
         , _slotDragOrdinal{ UIPreviewLogic::kNoOrdinal }
         , _bShowLayout{ true }
-        , _bSlotDragging{ false }
-        , _bLayoutDragging{ false }
+        , _bSlotDragging{ SW_FALSE }
+        , _bLayoutDragging{ SW_FALSE }
     {
         _model.setDirtyListener( SW_DELEGATE_METHOD( Delegate<void( bool )>, &UIPreviewPanel::setDocumentDirty, this ) );
         _model.setTargetReleaseListener( SW_DELEGATE_METHOD( Delegate<void()>, &UIPreviewPanel::releaseTexture, this ) );
@@ -666,7 +666,7 @@ namespace sw::editor
                                                        EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) ) );
             if ( ImGui::IsItemActivated() )
             {
-                _bSlotDragging    = true;
+                _bSlotDragging    = SW_TRUE;
                 _slotDragOrdinal  = _model.getSelectedOrdinal();
                 _slotDragBaseline = UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp );
             }
@@ -679,7 +679,7 @@ namespace sw::editor
             }
             if ( ImGui::IsItemDeactivated() && _bSlotDragging )
             {
-                _bSlotDragging = false;
+                _bSlotDragging = SW_FALSE;
                 (void)_model.commitSlotEdit( _slotDragOrdinal, _slotDragBaseline, UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp ) ); // 같으면 남기지 않는다
             }
             ImGui::PopID();
@@ -710,14 +710,14 @@ namespace sw::editor
         Internal::noteMark( "uipreview.handle", "reorder" );
         ImGui::GetWindowDrawList()->AddCircleFilled( center, half, color );
         if ( ImGui::IsItemActivated() )
-            _bLayoutDragging = true;
+            _bLayoutDragging = SW_TRUE;
         if ( ImGui::IsItemActive() && _bLayoutDragging )
             ImGui::GetWindowDrawList()->AddLine( center, ImGui::GetMousePos(), color, 2.0f ); // 놓일 위치 — 놓을 때까지 트리는 그대로다
         const bool bDropped = ImGui::IsItemDeactivated() && _bLayoutDragging;
         ImGui::PopID();
         if ( bDropped == false )
             return;
-        _bLayoutDragging   = false;
+        _bLayoutDragging   = SW_FALSE;
         const ImVec2 mouse = ImGui::GetMousePos();
         const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, viewport );
         if ( pBox != nullptr )
@@ -781,7 +781,7 @@ namespace sw::editor
         const PropertyInfo& _slotProp;
         EditorListFilter    _filter;
         WidgetLayoutSlot    _slot;            ///< 컨트롤 하나가 고치는 슬롯 사본. 컨트롤마다 위젯의 현재 슬롯으로 다시 채운다
-        bool                _bDrawn{ false }; ///< 바로 앞 field 를 그렸다 — 그리지 않았으면 뒤의 툴팁이 남의 위젯에 붙지 않게 건너뛴다
+        bool                _bDrawn{ false }; ///< 바로 앞 field 를 그렸다 — 그리지 않았으면 뒤의 툴팁이 남의 위젯에 붙지 않게 건너뛴다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief 컨트롤 하나 = 슬롯 사본을 @p draw 가 고치고(고쳤으면 true), 바뀌면 바로 위젯에 넣고(레이아웃이 따라 움직인다), 편집을 맺는다. */
         template <typename Draw>

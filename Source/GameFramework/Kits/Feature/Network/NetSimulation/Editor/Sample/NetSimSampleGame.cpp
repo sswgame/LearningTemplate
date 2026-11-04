@@ -203,7 +203,7 @@ namespace sw
                 int32  _connectionID{ -1 };
                 uint32 _clientTick{ 0 };
                 float2 _move{ 0.0f, 0.0f };
-                bool   _bHasInput{ false };
+                bool   _bHasInput{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             PendingMove* findPendingMove( int32 connectionID )
@@ -283,7 +283,7 @@ namespace sw
                 , _inputWriter{}
                 , _nextInputTick{ 0 }
                 , _lastStateTick{ 0 }
-                , _bHasState{ false }
+                , _bHasState{ SW_FALSE }
                 , _messageHandler{ *this }
                 , _routerSubscription{}
             {
@@ -314,7 +314,7 @@ namespace sw
                 // 비신뢰 채널이라 순서가 뒤바뀔 수 있다 — 더 낡은 틱의 목록은 버린다.
                 if ( _bHasState && serverTick <= _lastStateTick )
                     return NetHandleResult::Handled;
-                _bHasState     = true;
+                _bHasState     = SW_TRUE;
                 _lastStateTick = serverTick;
                 _listTarget    = std::move( listParsed );
                 return NetHandleResult::Handled;
@@ -430,7 +430,7 @@ namespace sw
             NetMessageWriter     _inputWriter;
             uint32               _nextInputTick;
             uint32               _lastStateTick;
-            bool                 _bHasState;
+            uint8                _bHasState : 1;
             MessageHandler       _messageHandler;     ///< 라우터에 거는 처리기. 등록(`_routerSubscription`)보다 앞에 두어 등록이 먼저 떨어진다
             Subscription         _routerSubscription; ///< 월드 라우터에 단 이 세션의 등록. 세션이 사라지면 뗀다
         };

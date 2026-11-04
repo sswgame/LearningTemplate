@@ -59,8 +59,8 @@ namespace sw::editor
     ConsoleLogSelection::ConsoleLogSelection()
         : _anchorRow{ 0 }
         , _activeRow{ 0 }
-        , _bHasSelection{ false }
-        , _bDragging{ false }
+        , _bHasSelection{ SW_FALSE }
+        , _bDragging{ SW_FALSE }
     {
     }
 
@@ -69,8 +69,8 @@ namespace sw::editor
         if ( bExtend == false || _bHasSelection == false )
             _anchorRow = rowIndex;
         _activeRow     = rowIndex;
-        _bHasSelection = true;
-        _bDragging     = true;
+        _bHasSelection = SW_TRUE;
+        _bDragging     = SW_TRUE;
     }
 
     void ConsoleLogSelection::dragTo( uint32 rowIndex )
@@ -83,8 +83,8 @@ namespace sw::editor
     {
         _anchorRow     = 0;
         _activeRow     = 0;
-        _bHasSelection = false;
-        _bDragging     = false;
+        _bHasSelection = SW_FALSE;
+        _bDragging     = SW_FALSE;
     }
 
     void ConsoleLogSelection::clampTo( uint32 rowCount )

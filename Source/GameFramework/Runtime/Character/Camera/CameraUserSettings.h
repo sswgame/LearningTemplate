@@ -24,7 +24,7 @@ namespace sw
     {
         float32 _fieldOfViewScale{ 1.0f }; ///< tan(사용자 시야각 / 2) ÷ tan(기본 시야각 / 2). 1인칭 · 3인칭 시야각 반각의 tan 에 곱한다
         float32 _shakeScale{ 1.0f };       ///< 흔들림(손떨림 잡음 · 충격) 오프셋에 곱한다. 0 이면 끔
-        bool    _bHeadBob{ true };         ///< 걷기 머리 흔들림(`<HeadBob>`)을 켠다
+        bool    _bHeadBob{ true };         ///< 걷기 머리 흔들림(`<HeadBob>`)을 켠다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /**
          * @brief 엔진 전역 변수에서 읽습니다. 시야각 비율의 기준은 `gv_cameraFieldOfView` 의 기본값입니다.

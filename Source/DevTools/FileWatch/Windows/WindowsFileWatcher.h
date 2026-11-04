@@ -54,7 +54,7 @@ namespace sw
         HANDLE       _hCompletionPort;
         sw::thread   _workerThread;
         atomic<bool> _bIsWatching;
-        bool         _bRecursive;
+        uint8        _bRecursive : 1;
     };
 
 } // namespace sw

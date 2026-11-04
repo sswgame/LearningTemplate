@@ -55,6 +55,6 @@ namespace sw::editor
         string                     _lastScanKey; ///< 지난 훑기의 포커스 열쇠(`EditorAssetTypeRegistry::consumeWorkspaceFocusKey`)
         vector<PrefabOverrideItem> _listOverride;
         vector<string>             _listNestedPrefab;
-        bool                       _bShowOnlyModified;
+        bool                       _bShowOnlyModified; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw::editor

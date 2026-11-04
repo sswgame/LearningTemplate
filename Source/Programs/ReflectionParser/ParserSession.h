@@ -28,6 +28,6 @@ namespace sw
         ContainerTypeMap  _containerTypeMap;      ///< 컨테이너 판별 규칙
         AnnotationMeta    _annotationMeta;        ///< 어노테이션 별칭 → 정규 필드명
         EmitTemplateStore _emitTemplateStore;     ///< 코드 방출 템플릿
-        bool              _bModuleLocal{ false }; ///< `--module-local`: 대상의 타입이 모듈 경계를 넘지 않아 버스 본문 타입의 내보내기 검사를 하지 않는다(`AstVisitor`)
+        bool              _bModuleLocal{ false }; ///< `--module-local`: 대상의 타입이 모듈 경계를 넘지 않아 버스 본문 타입의 내보내기 검사를 하지 않는다(`AstVisitor`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw

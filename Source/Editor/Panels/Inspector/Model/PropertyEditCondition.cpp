@@ -64,7 +64,7 @@ namespace sw
         }
         else if ( text.front() == '!' )
         {
-            outExpr._bNegate = true;
+            outExpr._bNegate = SW_TRUE;
             subjectName      = StringUtil::trim( text.substr( 1 ) );
         }
 

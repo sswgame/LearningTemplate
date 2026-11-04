@@ -126,7 +126,7 @@ namespace sw
         , _warnedOnce{}
         , _systemFontLocator{}
         , _pLocalization{ pLocalization }
-        , _bInitialized{ false }
+        , _bInitialized{ SW_FALSE }
     {
     }
 
@@ -164,7 +164,7 @@ namespace sw
             SW_LOG_ERROR_ID( "FontService.DefaultFontFamilyCould", "[Text] The default font family '%#' could not be opened - no text can be drawn", _catalog._defaultFamily.c_str() );
             return false;
         }
-        _bInitialized = true;
+        _bInitialized = SW_TRUE;
         return true;
     }
 
@@ -197,7 +197,7 @@ namespace sw
         _mapChain.clear();
         _warnedOnce.clear();
         _catalog      = FontCatalogDesc{};
-        _bInitialized = false;
+        _bInitialized = SW_FALSE;
     }
 
     void FontService::registerMemoryFontFile( string_view path, vector<uint8> bytes )

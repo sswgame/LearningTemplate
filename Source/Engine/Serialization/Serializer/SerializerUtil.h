@@ -327,6 +327,6 @@ namespace sw
         vector<uint8>       _bytes;
         const TypeInfo*     _pOwnerType;
         const PropertyInfo* _pProperty;
-        bool                _bOwnedPointerList;
+        uint8               _bOwnedPointerList : 1;
     };
 } // namespace sw

@@ -52,8 +52,8 @@ namespace sw::editor
         , _lookupAccountID{ kInvalidAccountID }
         , _lastResult{ AdminResult::Ok }
         , _lastMethod{ 0 }
-        , _bHasLookup{ false }
-        , _bLastReplayed{ false }
+        , _bHasLookup{ SW_FALSE }
+        , _bLastReplayed{ SW_FALSE }
     {
     }
 
@@ -259,7 +259,7 @@ namespace sw::editor
         {
             _lookup          = reply._reply;
             _lookupAccountID = reply._reply._identity._accountID; // 실패한 조회는 보이는 계정을 바꾸지 않는다
-            _bHasLookup      = true;
+            _bHasLookup      = SW_TRUE;
         }
         else if ( reply._method == AdminMethod::kListAudit )
         {

@@ -65,8 +65,8 @@ namespace sw
         float32              _warpEndSeconds{ 0.0f };   ///< `Warp` 창 끝(역할 클립 시각)
         float32              _maxAlignDistance{ 0.0f }; ///< 진입 조건 — 시작 때 루트와 목표의 거리 상한(m)
         PairedAnimationAlign _align{ PairedAnimationAlign::None };
-        bool                 _bRequired{ false };
-        bool                 _bAnchor{ false };
+        bool                 _bRequired{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                 _bAnchor{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -128,9 +128,9 @@ namespace sw
         PROPERTY()
         string _skeleton{};
         PROPERTY( Required )
-        bool _bRequired{ false };
+        bool _bRequired{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         PROPERTY()
-        bool _bAnchor{ false };
+        bool _bAnchor{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         PROPERTY( Units = s )
         float32 _start{ 0.0f };
         PROPERTY( Required, Units = s )
@@ -190,7 +190,7 @@ namespace sw
         vector<PairedAnimationNotifyDef> _listNotify{};
         PairedAnimationSelectDef         _select{};
         float32                          _duration{ 0.0f };
-        bool                             _bHasSelect{ false };
+        bool                             _bHasSelect{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

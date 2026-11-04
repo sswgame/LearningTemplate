@@ -19,7 +19,7 @@ namespace sw
         , _pTypeInfo{ nullptr }
         , _pPoolEntry{ nullptr }
         , _subTickActiveMask{ 0 }
-        , _bActive{ true }
+        , _bActive{ SW_TRUE }
         , _bIsPendingDestroy{ false }
         , _tickGroup{ TickGroup::DuringPhysics }
         , _bCanEverTick{ SW_TRUE }

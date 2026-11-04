@@ -25,11 +25,11 @@ namespace sw::test
     class FakeRHICommandList final : public IRHICommandList
     {
     public:
-        uint32        _creationIndex;   /**< 디바이스가 몇 번째로 만든 리스트인지(0 부터) */
-        uint32        _beginCount{ 0 }; /**< `beginCommandList` 횟수 */
-        uint32        _endCount{ 0 };   /**< `endCommandList` 횟수 */
-        bool          _bOpen{ false };  /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */
-        hashed_string _passName;        /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
+        uint32        _creationIndex;                                                                 /**< 디바이스가 몇 번째로 만든 리스트인지(0 부터) */
+        uint32        _beginCount{ 0 };                                                               /**< `beginCommandList` 횟수 */
+        uint32        _endCount{ 0 };                                                                 /**< `endCommandList` 횟수 */
+        bool          _bOpen{ false }; /**< 열려 있는가(닫지 않고 제출하면 실제 백엔드는 실패한다) */ ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        hashed_string _passName;                                                                      /**< 이 리스트에 기록한 패스 — 테스트의 패스 콜백이 적는다 */
         /** @brief 디바이스가 몇 번째로 만든 리스트인지와 함께 만듭니다. */
         explicit FakeRHICommandList( uint32 creationIndex )
             : _creationIndex{ creationIndex }

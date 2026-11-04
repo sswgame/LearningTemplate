@@ -51,8 +51,8 @@ namespace sw
     {
         float64 _min{ 0.0 };
         float64 _max{ 0.0 };
-        bool    _bHasMin{ false };
-        bool    _bHasMax{ false };
+        bool    _bHasMin{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bHasMax{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief @p value 가 적힌 경계 안이면 true 입니다. 경계가 없으면 늘 true 입니다. */
         bool contains( const float64 value ) const noexcept

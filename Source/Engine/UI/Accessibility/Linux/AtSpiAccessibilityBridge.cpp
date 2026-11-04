@@ -51,7 +51,7 @@ namespace sw
             /** @brief 객체 경로 → 대상. 루트는 `bRoot`, 그 밖은 접근성 트리 노드입니다. */
             struct Target
             {
-                bool  _bRoot{ false };
+                bool  _bRoot{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 int32 _node{ -1 };
             };
 
@@ -150,6 +150,8 @@ namespace sw
             Bridge( UISystem& ui, IWindow& window )
                 : _ui{ ui }
                 , _window{ window }
+                , _bReaderOn{ SW_FALSE }
+                , _bSnapshotValid{ SW_FALSE }
             {
             }
 
@@ -232,7 +234,7 @@ namespace sw
 
             void onUIUpdated() override
             {
-                _bSnapshotValid = false;
+                _bSnapshotValid = SW_FALSE;
                 pump();
             }
 
@@ -291,7 +293,7 @@ namespace sw
                 if ( _bSnapshotValid == false )
                 {
                     UIAccessibilityService::populateSnapshot( _ui, _snapshot );
-                    _bSnapshotValid = true;
+                    _bSnapshotValid = SW_TRUE;
                 }
                 return &_snapshot;
             }
@@ -426,7 +428,7 @@ namespace sw
             {
                 if ( string( pPath ) == AtSpiInternal::kRootPath )
                 {
-                    outTarget._bRoot = true;
+                    outTarget._bRoot = SW_TRUE;
                     return true;
                 }
                 uint32 screen = 0;
@@ -437,7 +439,7 @@ namespace sw
                 const int32                    index     = pSnapshot->findNode( screen, widget );
                 if ( index < 0 )
                     return false;
-                outTarget._bRoot = false;
+                outTarget._bRoot = SW_FALSE;
                 outTarget._node  = index;
                 return true;
             }
@@ -833,9 +835,9 @@ namespace sw
             DBusConnection*         _pSession{ nullptr }; ///< 세션 버스(접근성 버스 주소와 스크린 리더 켜짐 신호를 받는다)
             DBusConnection*         _pBus{ nullptr };     ///< 접근성 버스(객체를 내보내는 연결)
             string                  _busName{};           ///< 접근성 버스에서의 이 앱 고유 이름
-            bool                    _bReaderOn{ false };
+            uint8                   _bReaderOn : 1;
             UIAccessibilitySnapshot _snapshot{};
-            bool                    _bSnapshotValid{ false };
+            uint8                   _bSnapshotValid : 1;
         };
     } // namespace
 

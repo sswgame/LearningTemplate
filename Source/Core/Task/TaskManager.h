@@ -381,7 +381,7 @@ namespace sw
         {
             uint32 _spinCount{ 0 };         ///< 이번 스핀 예산에서 쓴 `cpuPause` 수
             uint32 _observedWorkEpoch{ 0 }; ///< 마지막으로 큐를 볼 때 읽은 `_workEpoch`
-            bool   _bQueueCheckDue{ true }; ///< 세대와 상관없이 다음 걸음에 큐를 봐야 하면 true(처음 · 일을 하나 한 뒤 · 잠들었다 깬 뒤)
+            bool   _bQueueCheckDue{ true }; ///< 세대와 상관없이 다음 걸음에 큐를 봐야 하면 true(처음 · 일을 하나 한 뒤 · 잠들었다 깬 뒤) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
         /**
          * @brief 기다리는 동안의 한 걸음입니다. 메인이면 메인 작업을 돌리고, 세대가 바뀌었으면 준비된 일을 하나 돕고, 아니면 잠깐 스핀합니다.
@@ -453,9 +453,9 @@ namespace sw
         /** @brief 유휴 비트마스크가 담을 수 있는 워커 수입니다. `initialize` 가 이 수로 제한합니다. */
         static constexpr uint32 kMaxWorkerCount = 64;
 
-        bool            _bInitialized; ///< 매니저를 초기화했는지 여부
-        std::thread::id _mainThreadID; ///< 메인 스레드의 ID
-        atomic<bool>    _bStop;        ///< 워커 스레드 종료 플래그. `StopSource` 가 아닌 이유: 깨우기 프로토콜이 이 칸을 seq_cst 로 쓰고 읽는다(잠들기 직전 재확인과 짝)
+        uint8           _bInitialized : 1; ///< 매니저를 초기화했는지 여부
+        std::thread::id _mainThreadID;     ///< 메인 스레드의 ID
+        atomic<bool>    _bStop;            ///< 워커 스레드 종료 플래그. `StopSource` 가 아닌 이유: 깨우기 프로토콜이 이 칸을 seq_cst 로 쓰고 읽는다(잠들기 직전 재확인과 짝)
         /** @brief `workerLoop` 에 들어가 아직 나오지 않은 워커 수입니다. `shutdown` 이 시간 제한 있는 join 대신 이 수가 0 이 되기를 기다립니다(`std::thread::join` 은 시간 제한이 없다). */
         atomic<uint32>                 _runningWorkerCount;
         vector<unique_ptr<WorkerSlot>> _listWorkerSlot; ///< 워커마다 데크 + 잠드는 워드 + 스레드. 워커가 도는 동안 크기가 바뀌지 않는다

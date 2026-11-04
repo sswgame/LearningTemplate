@@ -85,8 +85,8 @@ namespace sw::editor
                 string               _lastLayoutChange;               ///< 서명이 마지막으로 바뀐 까닭(창 이름 · 메인 뷰포트 · 팝업, `describeLastLayoutChange`)
                 float2               _heldMousePosition{};
                 uint32               _heldMouseViewportID{ 0 };
-                bool                 _bHoldMouse{ false }; ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게)
-                bool                 _bEnabled{ false };
+                bool                 _bHoldMouse{ false };  ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                 _bEnabled{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /**

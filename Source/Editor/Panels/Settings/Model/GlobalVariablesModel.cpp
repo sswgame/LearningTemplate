@@ -42,7 +42,7 @@ namespace sw::editor
         , _listGeneration{ 0 }
         , _totalVariableCount{ 0 }
         , _listRebuildCount{ 0 }
-        , _bPresetListDirty{ true }
+        , _bPresetListDirty{ SW_TRUE }
     {
     }
 
@@ -98,7 +98,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "GlobalVariablesPanel.CouldNotSavePreset", "Could not save preset '%#'", presetPath.c_str() );
             return false;
         }
-        _bPresetListDirty = true;
+        _bPresetListDirty = SW_TRUE;
         return true;
     }
 
@@ -116,7 +116,7 @@ namespace sw::editor
         if ( presetPoll == EditorTaskPoll::Ready )
         {
             _listPresetFile   = std::move( listNewPresetFile );
-            _bPresetListDirty = false;
+            _bPresetListDirty = SW_FALSE;
         }
 
         bool bPresetScanning = presetPoll == EditorTaskPoll::Running;

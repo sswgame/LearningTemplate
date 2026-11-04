@@ -78,7 +78,7 @@ namespace sw
         vector<string> _listExcludePattern; ///< 뺄 파일 패턴(빈 목록이면 패턴 제외 없음)
 
         PROPERTY( Required )
-        bool _bRecursive{ false }; ///< 참이면 어느 깊이의 폴더든, 거짓이면 도메인 바로 아래 폴더만 뺀다
+        bool _bRecursive{ SW_FALSE }; ///< 참이면 어느 깊이의 폴더든, 거짓이면 도메인 바로 아래 폴더만 뺀다
     };
 } // namespace sw
 

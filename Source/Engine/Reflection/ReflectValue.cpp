@@ -30,9 +30,9 @@ namespace sw
                 string  _text;
                 float64 _floatValue{ 0.0 };
                 int64   _intValue{ 0 };
-                bool    _bNumber{ false };
-                bool    _bInteger{ false }; ///< 정수 타입에서 왔다(또는 소수부가 없다) — 정수 타입으로 바꿀 수 있다
-                bool    _bText{ false };
+                bool    _bNumber{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool    _bInteger{ false }; ///< 정수 타입에서 왔다(또는 소수부가 없다) — 정수 타입으로 바꿀 수 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool    _bText{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             static constexpr const utf8* kArrBuiltinTypeName[] = {

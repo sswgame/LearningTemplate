@@ -25,6 +25,8 @@ namespace sw::editor
         /** @brief 재생 중 대사 노드에 머무는 시간(초)입니다. 지나면 다음 노드로 넘긴다. */
         static constexpr float32 kHoldSeconds = 0.9f;
 
+        DialogueGraphPreviewModel();
+
         /** @brief 다른 문서를 읽었다 — 재생을 멈추고 지금 노드를 잊습니다(옛 문서의 노드 id 로 새 문서를 걷지 않는다). */
         void resetForDocument() { stop(); }
         /** @brief @p graph 의 시작 노드부터 재생합니다. */
@@ -43,8 +45,8 @@ namespace sw::editor
         void enterNode( const DialogueGraphAsset& graph, int32 nodeID );
 
     private:
-        float32 _holdSeconds{ 0.0f }; ///< 지금 노드에 머문 시간
-        int32   _nodeID{ 0 };
-        bool    _bPlaying{ false };
+        float32 _holdSeconds; ///< 지금 노드에 머문 시간
+        int32   _nodeID;
+        uint8   _bPlaying : 1;
     };
 } // namespace sw::editor

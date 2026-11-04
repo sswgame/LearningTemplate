@@ -40,6 +40,17 @@ namespace sw
             }
         };
     } // namespace
+
+    LightProbeBakeJob::LightProbeBakeJob()
+        : _input{}
+        , _grid{}
+        , _listDirection{}
+        , _weight{ 0.0f }
+        , _nextProbeIndex{ 0 }
+        , _bBegun{ SW_FALSE }
+    {
+    }
+
 } // namespace sw
 
 namespace sw
@@ -100,7 +111,7 @@ namespace sw
         _grid._layout = layout;
         _grid._listProbe.assign( layout.getProbeCount(), SH9Color{} );
         _nextProbeIndex = 0;
-        _bBegun         = true;
+        _bBegun         = SW_TRUE;
         return true;
     }
 
@@ -141,7 +152,7 @@ namespace sw
             return false;
         outGrid = std::move( _grid );
         _grid.clear();
-        _bBegun = false;
+        _bBegun = SW_FALSE;
         return true;
     }
 

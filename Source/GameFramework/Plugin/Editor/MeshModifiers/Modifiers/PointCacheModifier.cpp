@@ -32,7 +32,7 @@ namespace sw::editor
             uint32         _vertexCount{ 0 };
             uint32         _frameCount{ 0 };
             float32        _fps{ 0.0f };
-            bool           _bValid{ false };
+            bool           _bValid{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         struct PointCacheModifierInternal
@@ -84,7 +84,7 @@ namespace sw::editor
             : MeshModifier()
             , _cache{
         }
-            , _bCacheTried{ false }
+            , _bCacheTried{ SW_FALSE }
             , _fileParam{ addParam( MeshModifierParamDef{ "Cache File", MeshModifierParamKind::AssetPath, 0.0f, 1.0f, float3{ 0.0f, 0.0f, 0.0f }, 1, "Point cache file (u32 vertices, u32 frames, f32 fps, float3 frames)" }.withLayout( "Cache", "Binary point cache file with per-frame vertex positions in mesh space" )
                                         // 캐시 파일 확장자는 이 모디파이어가 정한 .mfpc(mesh-modifier point cache)다 — load() 위 주석과 같다.
                                         .withAssetFilter( ".mfpc" ) ) },
@@ -132,7 +132,7 @@ namespace sw::editor
         void onParamsChanged() override
         {
             if ( _cache._path != getText( _fileParam ) )
-                _bCacheTried = false;
+                _bCacheTried = SW_FALSE;
         }
 
     private:
@@ -189,7 +189,7 @@ namespace sw::editor
         {
             if ( _bCacheTried == false || _cache._path != path )
             {
-                _bCacheTried = true;
+                _bCacheTried = SW_TRUE;
                 if ( PointCacheModifierInternal::load( path, _cache ) == false )
                     SW_LOG_WARNING_ID( "PointCacheModifier.PointCacheCouldNot", "Point cache '%#' could not be read or is malformed - skipped", path.c_str() );
             }
@@ -198,7 +198,7 @@ namespace sw::editor
 
     private:
         mutable PointCacheData _cache;
-        mutable bool           _bCacheTried;
+        mutable uint8          _bCacheTried : 1;
         uint32                 _fileParam;
         uint32                 _speedParam;
         uint32                 _timeOffsetParam;

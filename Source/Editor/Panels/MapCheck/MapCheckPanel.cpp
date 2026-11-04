@@ -46,9 +46,9 @@ namespace sw::editor
             /** @brief 상태줄 항목이 프레임 사이에 기억하는 값입니다. 패널이 닫혀도 상태줄은 그려지므로 패널 멤버가 아니라 에디터 범위의 상태 저장소가 소유한다. */
             struct State
             {
-                MapCheckCounts _statusCounts{};         ///< 상태줄 맵 검사 수 - 결과 번호가 바뀔 때만 다시 센다
-                uint64         _statusRevisionKey{ 0 }; ///< `makeRevisionKey` — 씬이 바뀌어도 다시 센다
-                bool           _bStatusCounted{ false };
+                MapCheckCounts _statusCounts{};            ///< 상태줄 맵 검사 수 - 결과 번호가 바뀔 때만 다시 센다
+                uint64         _statusRevisionKey{ 0 };    ///< `makeRevisionKey` — 씬이 바뀌어도 다시 센다
+                bool           _bStatusCounted{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 uint64         _toastSceneGeneration{ 0 }; ///< 씬을 열었을 때 한 번 띄우는 "Map Check: N errors" 토스트의 기준 씬이다(이름이 바뀌면 새 씬이다)
             };
 

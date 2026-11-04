@@ -42,7 +42,7 @@ namespace sw
         Ear     _right{};                        ///< 오른쪽 귀다.
         float32 _focus{ 1.0f };                  ///< 방향 길이(0 = 머리 안, 두 귀 같음)다.
         uint32  _writeIndex{ 0 };                ///< 다음에 쓸 지연선 자리다.
-        bool    _bPrimed{ false };               ///< 방향을 한 번이라도 받았는지다(첫 블록은 지연을 옮기지 않는다).
+        bool    _bPrimed{ false };               ///< 방향을 한 번이라도 받았는지다(첫 블록은 지연을 옮기지 않는다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief 상태를 비웁니다(새 소리를 시작하거나 바이노럴로 처음 바뀔 때). */
         void reset();

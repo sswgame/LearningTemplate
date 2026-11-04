@@ -36,7 +36,7 @@ namespace sw::editor
         : _catalog{}
         , _selectedIndex{ -1 }
         , _targetYawDegrees{ 0.0f }
-        , _bViewportDirty{ false }
+        , _bViewportDirty{ SW_FALSE }
         , _status{}
     {
     }
@@ -52,7 +52,7 @@ namespace sw::editor
         }
         if ( _catalog.isEmpty() == false )
             _selectedIndex = 0;
-        _bViewportDirty = true;
+        _bViewportDirty = SW_TRUE;
         _status         = "Loaded";
         return ToolAssetLoadResult::Loaded;
     }
@@ -68,7 +68,7 @@ namespace sw::editor
             pMesh->setLocalPosition( float3{ 0.0f, CameraPresetModelInternal::kFloorHeight + CameraPresetModelInternal::kSubjectHeight * 0.5f, 0.0f } ); // 바닥에 선다
             pMesh->setLocalScale( float3{ 0.5f, CameraPresetModelInternal::kSubjectHeight * 0.5f, 0.5f } );
         }
-        _bViewportDirty = true; // 새 씬의 카메라를 프리셋 자리에 다시 놓는다
+        _bViewportDirty = SW_TRUE; // 새 씬의 카메라를 프리셋 자리에 다시 놓는다
     }
 
     const CameraPresetDef* CameraPresetModel::findSelectedPreset() const
@@ -83,7 +83,7 @@ namespace sw::editor
         if ( presetIndex >= _catalog.getCount() )
             return;
         _selectedIndex  = static_cast<int32>( presetIndex );
-        _bViewportDirty = true;
+        _bViewportDirty = SW_TRUE;
     }
 
     bool CameraPresetModel::takeViewportPose( const float2& imageSize, CameraPresetViewportPose& outPose )
@@ -91,7 +91,7 @@ namespace sw::editor
         const CameraPresetDef* pPreset = findSelectedPreset();
         if ( _bViewportDirty == false || pPreset == nullptr )
             return false;
-        _bViewportDirty = false;
+        _bViewportDirty = SW_FALSE;
 
         CameraTarget target{};
         target._focus = float3{ 0.0f, CameraPresetModelInternal::kFloorHeight + CameraPresetModelInternal::kFocusHeight, 0.0f };

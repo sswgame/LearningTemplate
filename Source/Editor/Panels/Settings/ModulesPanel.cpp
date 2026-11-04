@@ -24,7 +24,7 @@ namespace sw::editor
     ModulesPanel::ModulesPanel()
         : IEditorPanel( false )
         , _model{}
-        , _bOpenPreview{ false }
+        , _bOpenPreview{ SW_FALSE }
         , _filter{}
     {
     }
@@ -115,7 +115,7 @@ namespace sw::editor
         if ( _bOpenPreview )
         {
             EditorInputGUI::openPopup( "Confirm Module Change" );
-            _bOpenPreview = false;
+            _bOpenPreview = SW_FALSE;
         }
         drawPreview();
     }
@@ -262,7 +262,7 @@ namespace sw::editor
     void ModulesPanel::requestToggle( const string& moduleName, bool bEnabled )
     {
         if ( _model.requestToggle( moduleName, bEnabled ) )
-            _bOpenPreview = true; // 그래프가 깨지면 모델이 로그를 남기고 묻지 않는다
+            _bOpenPreview = SW_TRUE; // 그래프가 깨지면 모델이 로그를 남기고 묻지 않는다
     }
 
     uint32 ModulesPanel::getPreviewNewlyInactiveCount()

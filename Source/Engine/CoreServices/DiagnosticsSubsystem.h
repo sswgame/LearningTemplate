@@ -45,6 +45,6 @@ namespace sw
     private:
         unique_ptr<MemoryProfiler>   _memoryProfiler;   ///< 배포본이 아니면 있다
         unique_ptr<DeadlockDetector> _deadlockDetector; ///< 진단 구성에서만 있다
-        bool                         _bDiagnostics;     ///< 만들 때 받은 진단 구성 여부
+        uint8                        _bDiagnostics : 1; ///< 만들 때 받은 진단 구성 여부
     };
 } // namespace sw

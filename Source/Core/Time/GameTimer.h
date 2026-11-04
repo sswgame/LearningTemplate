@@ -60,7 +60,7 @@ namespace sw
         int64 _prevTime;
         int64 _currentTime;
 
-        bool _bStopped;
+        uint8 _bStopped : 1;
     };
 } // namespace sw
 

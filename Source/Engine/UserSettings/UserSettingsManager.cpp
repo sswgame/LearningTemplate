@@ -114,8 +114,8 @@ namespace sw
         , _onEvent{}
         , _userFilePath{}
         , _confirmSecondsLeft{ 0.0f }
-        , _bUserFileLoaded{ false }
-        , _bStartupApplied{ false }
+        , _bUserFileLoaded{ SW_FALSE }
+        , _bStartupApplied{ SW_FALSE }
     {
     }
 
@@ -135,8 +135,8 @@ namespace sw
         _onEvent.clear();
         _userFilePath.clear();
         _confirmSecondsLeft = 0.0f;
-        _bUserFileLoaded    = false;
-        _bStartupApplied    = false;
+        _bUserFileLoaded    = SW_FALSE;
+        _bStartupApplied    = SW_FALSE;
     }
 
     Subscription UserSettingsManager::addKeyBindingInputMap( InputMap& inputMap )
@@ -305,7 +305,7 @@ namespace sw
             refreshScalabilityGroup( group, true );
         }
 
-        _bUserFileLoaded = true;
+        _bUserFileLoaded = SW_TRUE;
         broadcast( {}, UserSettingEventKind::Loaded );
         return true;
     }
@@ -401,7 +401,7 @@ namespace sw
                 state._startupValue = state._committedValue;
             (void)applyToTarget( settingIndex, state._startupValue, true ); // 대상이 없는 설정(이 실행에 없는 변수나 핸들러)은 건너뛴다. 값은 저장된 그대로다
         }
-        _bStartupApplied = true;
+        _bStartupApplied = SW_TRUE;
     }
 
     // ------------------------------------------------------------------------------

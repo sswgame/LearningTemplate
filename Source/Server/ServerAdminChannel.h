@@ -23,7 +23,7 @@ namespace sw
     {
         uint64 _tickCount{ 0 };
         int32  _connectionCount{ 0 }; ///< 서버 서비스가 받고 있는 연결 수
-        bool   _bDraining{ false };   ///< 종료 요청을 받아 드레인 중이다 — 점검 모드를 바꿀 수 없다
+        bool   _bDraining{ false };   ///< 종료 요청을 받아 드레인 중이다 — 점검 모드를 바꿀 수 없다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
     using ServerAdminStatusDelegate = Delegate<ServerAdminStatus()>;
 
@@ -59,6 +59,6 @@ namespace sw
         unique_ptr<DebugChannel>     _channel;   ///< 관리 채널(`_adminChannelPort` 가 0 이 아닐 때만)
         ServiceHealthRegistry*       _pHealthRegistry;
         ServerAdminStatusDelegate    _status;
-        bool                         _bMaintenance; ///< 점검 모드 - `/readyz` 가 503 이라 부하 분산기가 새 접속을 보내지 않는다(종료 드레인과 달리 서버는 계속 돈다)
+        uint8                        _bMaintenance : 1; ///< 점검 모드 - `/readyz` 가 503 이라 부하 분산기가 새 접속을 보내지 않는다(종료 드레인과 달리 서버는 계속 돈다)
     };
 } // namespace sw

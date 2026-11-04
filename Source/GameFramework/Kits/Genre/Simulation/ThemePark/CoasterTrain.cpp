@@ -36,7 +36,7 @@ namespace sw
             {
                 float32 _peakHeight{ 0.0f };
                 float32 _valleyHeight{ 0.0f };
-                bool    _bFalling{ false };
+                bool    _bFalling{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
                 /** @brief 이번 걸음의 높이를 보탭니다. 낙하가 끝났으면 @p inoutStats 에 셉니다. */
                 void observe( float32 height, CoasterRideStats& inoutStats )

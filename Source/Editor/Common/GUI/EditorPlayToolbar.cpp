@@ -59,9 +59,9 @@ namespace sw::editor
             {
                 int32          _stepFrameCount{ 10 }; ///< "Step N" 이 진행할 프레임 수
                 PendingSession _pendingSession{ PendingSession::Play };
-                bool           _bConfirmUnsavedPlay{ false };
-                bool           _bStartAtCamera{ false };                                  ///< Play 를 에디터 카메라 위치에서 시작한다
-                bool           _bAutoplayOffered{ false };                                ///< 마지막 프레임에 자동 플레이 단추를 내놓았다(줄에 그렸거나 ">>" 펼침 안에 있다)
+                bool           _bConfirmUnsavedPlay{ false };                             ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool           _bStartAtCamera{ false };                                  ///< Play 를 에디터 카메라 위치에서 시작한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool           _bAutoplayOffered{ false };                                ///< 마지막 프레임에 자동 플레이 단추를 내놓았다(줄에 그렸거나 ">>" 펼침 안에 있다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 float32        _arrSectionWidth[static_cast<size_t>( Section::Count )]{}; ///< 묶음마다 마지막으로 그린 폭(넘침 판정)
             };
 

@@ -218,8 +218,8 @@ namespace sw
         , _lastStepKind{}
         , _frame{ 0 }
         , _lastStepNumber{ 0 }
-        , _bInitialized{ false }
-        , _bRunShown{ false }
+        , _bInitialized{ SW_FALSE }
+        , _bRunShown{ SW_FALSE }
     {
     }
 
@@ -235,8 +235,8 @@ namespace sw
         }
         _frame          = 0;
         _lastStepNumber = 0;
-        _bInitialized   = false;
-        _bRunShown      = false;
+        _bInitialized   = SW_FALSE;
+        _bRunShown      = SW_FALSE;
     }
 
     void AutomationRunTitleTracker::onFrameEnd( IWindowTitleTarget* pTitleTarget, const CommandLineManager* pCommandLine, string_view backendName,
@@ -244,7 +244,7 @@ namespace sw
     {
         if ( _bInitialized == false )
         {
-            _bInitialized = true;
+            _bInitialized = SW_TRUE;
             if ( pCommandLine != nullptr )
             {
                 vector<string> listPair;
@@ -287,7 +287,7 @@ namespace sw
                 pTitleTarget->applyWindowTitle( baseTitle.c_str() ); // 시나리오가 없거나 끝났다 — 평소 제목 그대로다
                 _lastBase = baseTitle;
                 _lastStepKind.clear();
-                _bRunShown = false;
+                _bRunShown = SW_FALSE;
             }
             return;
         }
@@ -306,7 +306,7 @@ namespace sw
         input._frame        = frame;
         _lastStepNumber     = stepNumber;
         _lastStepKind       = stepKind;
-        _bRunShown          = true;
+        _bRunShown          = SW_TRUE;
         pTitleTarget->applyWindowTitle( AutomationRunTitleUtil::makeWindowTitle( input ).c_str() );
     }
 

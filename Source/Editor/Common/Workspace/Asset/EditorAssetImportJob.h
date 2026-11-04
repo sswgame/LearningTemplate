@@ -43,8 +43,8 @@ namespace sw::editor
     struct EditorAssetImportItemResult
     {
         string _relativePath;
-        bool   _bRan{ false };     ///< 임포터를 불렀다(취소로 건너뛰었으면 false)
-        bool   _bHandled{ false }; ///< 임포터가 원본으로 처리했다(false 면 호출한 쪽이 캐시를 다시 읽어야 한다)
+        bool   _bRan{ false };     ///< 임포터를 불렀다(취소로 건너뛰었으면 false) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bHandled{ false }; ///< 임포터가 원본으로 처리했다(false 면 호출한 쪽이 캐시를 다시 읽어야 한다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -54,7 +54,7 @@ namespace sw::editor
     struct EditorAssetImportResult
     {
         vector<EditorAssetImportItemResult> _listItem;
-        bool                                _bCanceled{ false }; ///< 취소를 만나 남은 원본을 건너뛰었다
+        bool                                _bCanceled{ false }; ///< 취소를 만나 남은 원본을 건너뛰었다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

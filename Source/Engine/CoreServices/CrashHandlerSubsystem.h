@@ -46,6 +46,6 @@ namespace sw
     private:
         const CommandLineSubsystem* _pCommandLine;
         CrashHandler                _handler;
-        bool                        _bCrashReporterRun; ///< 명령줄이 크래시 보고 프로세스였다
+        uint8                       _bCrashReporterRun : 1; ///< 명령줄이 크래시 보고 프로세스였다
     };
 } // namespace sw

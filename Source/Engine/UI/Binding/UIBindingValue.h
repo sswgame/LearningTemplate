@@ -47,8 +47,8 @@ namespace sw
         string             _text{}; ///< Text 의 값입니다(Other 를 텍스트로 바꾼 것도 여기에 담습니다).
         float64            _number{ 0.0 };
         UIBindingValueKind _kind{ UIBindingValueKind::None };
-        bool               _bValue{ false };
-        bool               _bInteger{ false }; ///< Number 가 정수 타입에서 왔는지 나타냅니다(형식 인자와 텍스트 표기에서 소수점을 쓰지 않습니다).
+        bool               _bValue{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool               _bInteger{ false }; ///< Number 가 정수 타입에서 왔는지 나타냅니다(형식 인자와 텍스트 표기에서 소수점을 쓰지 않습니다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         static UIBindingValue makeBool( bool bValue );
         static UIBindingValue makeNumber( float64 number, bool bInteger );

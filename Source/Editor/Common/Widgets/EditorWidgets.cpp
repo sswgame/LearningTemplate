@@ -747,7 +747,7 @@ namespace sw::editor
         if ( bDropped )
         {
             Memory::copy( pBuffer, droppedPath.c_str(), droppedPath.size() + 1 );
-            result._bChanged              = true;
+            result._bChanged              = SW_TRUE;
             result._bDeactivatedAfterEdit = true;
         }
         if ( pMark != nullptr )

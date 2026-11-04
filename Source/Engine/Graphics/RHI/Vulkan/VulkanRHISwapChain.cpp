@@ -131,6 +131,29 @@ namespace sw
 #endif
     } // namespace
 
+    VulkanRHISwapChain::VulkanRHISwapChain()
+        : _surface{ nullptr }
+        , _swapChain{ nullptr }
+        , _listImage{}
+        , _listImageView{}
+        , _listFramebuffer{}
+        , _listImageAvailableSemaphore{}
+        , _listRenderFinishedSemaphore{}
+        , _listImageFence{}
+        , _acquireWait{ nullptr }
+        , _imageFormat{ 0 }
+        , _extentWidth{ 0 }
+        , _extentHeight{ 0 }
+        , _imageIndex{ 0 }
+        , _requestedFormat{ constant::render::kBackBufferFormat }
+        , _actualBackBufferFormat{ constant::render::kBackBufferFormat }
+        , _requestedBufferCount{ 0 }
+        , _bRequestedVSync{ SW_TRUE }
+        , _bSurfaceEmpty{ SW_FALSE }
+        , _bImageHeld{ SW_FALSE }
+    {
+    }
+
     bool VulkanRHISwapChain::createSurface( VkInstance instance, void* pWindowHandle, void* pDisplayHandle, VulkanWsiKind wsiKind )
     {
 #if defined( SW_PLATFORM_WINDOWS )
@@ -213,7 +236,7 @@ namespace sw
     // 길이 유지(긴 함수 정리 기준): 표면 능력 조회 · 형식 고르기 · 스왑체인 · 이미지 뷰 생성의 순서가 곧 의미라 나누지 않는다.
     bool VulkanRHISwapChain::create( VkPhysicalDevice physicalDevice, VkDevice device, uint32 width, uint32 height )
     {
-        _bSurfaceEmpty = false;
+        _bSurfaceEmpty = SW_FALSE;
         // 서피스 질의가 실패하면(서피스 분실 · 메모리 부족) 쓰레기 능력 · 빈 포맷 목록으로 스왑체인을 고르지 않고 실패로 돌려준다(재생성 경로가 다시 부른다).
         VkSurfaceCapabilitiesKHR capabilities{};
         if ( isVkSuccess( vkGetPhysicalDeviceSurfaceCapabilitiesKHR( physicalDevice, _surface, &capabilities ), "vkGetPhysicalDeviceSurfaceCapabilitiesKHR" ) == false )
@@ -304,7 +327,7 @@ namespace sw
         {
             SW_LOG_TRACE_ID( "Vulkan.CreateSwapChainSurfaceSizeX", "createSwapChain: surface size is 0 (%#x%#) - the window is minimizing or closing. Skipping swap chain creation.",
                              extent.width, extent.height );
-            _bSurfaceEmpty = true;
+            _bSurfaceEmpty = SW_TRUE;
             return false;
         }
 
@@ -508,7 +531,7 @@ namespace sw
         _listImage.clear();
         _listImageFence.clear();
         _imageIndex  = 0;
-        _bImageHeld  = false;
+        _bImageHeld  = SW_FALSE;
         _acquireWait = nullptr;
     }
 
@@ -527,7 +550,7 @@ namespace sw
         // Suboptimal 도 이미지를 넘겨준 것이다 — 쥐고, 그 신호를 기다린다.
         if ( status == VulkanSwapChainStatus::Success || status == VulkanSwapChainStatus::Suboptimal )
         {
-            _bImageHeld  = true;
+            _bImageHeld  = SW_TRUE;
             _acquireWait = _listImageAvailableSemaphore[frameSlot];
         }
         return status;
@@ -578,7 +601,7 @@ namespace sw
 
         const VkResult result = vkQueuePresentKHR( queue, &presentInfo );
         // 성공이든 OutOfDate 든 이미지는 프레젠테이션 엔진으로 넘어갔다. 재생성 경로에서도 이미지 자체가 사라진다.
-        _bImageHeld = false;
+        _bImageHeld = SW_FALSE;
         if ( toSwapChainStatus( result ) == VulkanSwapChainStatus::Failed )
             SW_LOG_ERROR_ONCE_ID( "Vulkan.VkQueuePresentKHRFailedErrorCode", "vkQueuePresentKHR failed! Error code: %#", static_cast<int32>( result ) );
         return toSwapChainStatus( result );

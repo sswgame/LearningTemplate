@@ -111,7 +111,7 @@ namespace sw::editor
         vector<EditorNetReplicaRate> _listReplicaRate{}; ///< 마지막 두 보고의 복제 셈 차(앞 보고가 없으면 비어 있다)
         float64                      _lastTimeSeconds{ 0.0 };
         uint32                       _seenReportCount{ 0 }; ///< 세션이 받은 보고 수 가운데 이미 넣은 것(`EditorNetPlayProcessStatus::_statsReportCount`)
-        bool                         _bHasReport{ false };
+        bool                         _bHasReport{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -176,7 +176,7 @@ namespace sw::editor
     private:
         vector<EditorNetProfilerTrack> _listTrack;
         float64                        _lastQuerySeconds;
-        uint16                         _sessionPort; ///< `_listTrack` 이 맞춰진 세션(포트)
-        bool                           _bQueried;    ///< 이 세션에 한 번이라도 물었다
+        uint16                         _sessionPort;  ///< `_listTrack` 이 맞춰진 세션(포트)
+        uint8                          _bQueried : 1; ///< 이 세션에 한 번이라도 물었다
     };
 } // namespace sw::editor

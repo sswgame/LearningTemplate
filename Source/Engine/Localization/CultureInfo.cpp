@@ -624,7 +624,7 @@ namespace sw
         , _pOrdinalRule{ CultureInfoInternal::findOrdinalRule( "none" ) }
         , _numeralSystem{ NumeralSystem::Latin }
         , _pseudoMode{ PseudoLocaleMode::None }
-        , _bRightToLeft{ false }
+        , _bRightToLeft{ SW_FALSE }
     {
     }
 

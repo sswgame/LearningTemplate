@@ -633,9 +633,10 @@ namespace
     public:
         sw::string             _blockedFolder;
         sw::vector<sw::string> _listFormatted;
-        bool                   _bFolderReady{ true };
+        uint8                  _bFolderReady : 1;
         explicit BlockedFolderLogOutput( sw::string blockedFolder )
             : _blockedFolder{ std::move( blockedFolder ) }
+            , _bFolderReady{ SW_TRUE }
         {
         }
 
@@ -654,8 +655,8 @@ namespace
     public:
         uint32 _openCount{ 0 };
         uint32 _writeCount{ 0 };
-        bool   _bLogInOpen;
-        bool   _bLogInWrite;
+        uint8  _bLogInOpen  : 1;
+        uint8  _bLogInWrite : 1;
         SelfLoggingLogOutput( bool bLogInOpen, bool bLogInWrite )
             : _bLogInOpen{ bLogInOpen }
             , _bLogInWrite{ bLogInWrite }

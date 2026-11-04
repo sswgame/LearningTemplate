@@ -15,7 +15,7 @@ namespace sw
 {
     PhysicsSystem::PhysicsSystem()
         : _settings{}
-        , _bInitialized{ false }
+        , _bInitialized{ SW_FALSE }
     {
     }
 
@@ -54,7 +54,7 @@ namespace sw
 
         if ( PhysicsBackend::initialize3D() == false )
             return false;
-        _bInitialized = true;
+        _bInitialized = SW_TRUE;
         SW_LOG_INFO_ID( "PhysicsSystem.PhysicsReadyLayersMaterials", "Physics ready: %# layers, %# materials, %# sub-steps per fixed step", _settings._listLayer.size(), _settings._listMaterial.size(), _settings._subStepCount );
         return true;
     }
@@ -64,7 +64,7 @@ namespace sw
         if ( _bInitialized == false )
             return;
         PhysicsBackend::shutdown3D();
-        _bInitialized = false;
+        _bInitialized = SW_FALSE;
     }
 
     unique_ptr<IPhysicsScene3D> PhysicsSystem::createScene3D() const

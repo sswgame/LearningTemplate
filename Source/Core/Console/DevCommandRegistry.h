@@ -99,7 +99,7 @@ namespace sw
     {
 
         const DevCommandRegistration* _pRegistration;
-        bool                          _bRegistered;
+        uint8                         _bRegistered : 1;
         explicit DevCommandRegistrar( const DevCommandRegistration* pRegistration );
         ~DevCommandRegistrar();
         DevCommandRegistrar( const DevCommandRegistrar& )            = delete;

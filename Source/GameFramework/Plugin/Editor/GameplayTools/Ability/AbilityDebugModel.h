@@ -33,7 +33,7 @@ namespace sw::editor
         string  _name{};
         float32 _remainingTime{ 0.0f }; ///< 무한 이펙트이면 0
         int32   _stackCount{ 1 };
-        bool    _bInfinite{ false };
+        bool    _bInfinite{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -54,7 +54,7 @@ namespace sw::editor
     {
         string  _name{};
         float32 _cooldownRemaining{ 0.0f }; ///< 쿨다운이 없으면 0
-        bool    _bActive{ false };
+        bool    _bActive{ SW_FALSE };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

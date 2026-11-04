@@ -37,12 +37,12 @@ namespace sw
     {
         vector<string> _listOriginalArgument{}; ///< 프로그램 이름을 뺀 원본 인자(앞의 `-` 까지 든 글)
 
-        string         _game{};              ///< `-game=` 값. 비면 적지 않는다
-        string         _backendName{};       ///< RHI 백엔드 이름(`DirectX12` · `Vulkan` …, `-gv_rhiBackend=` 값). 비면 적지 않는다(창 없는 호스트)
-        string         _scenarioArgument{};  ///< `-scenario=` 값(쉼표 목록 그대로). 비면 재현 명령을 만들지 않는다
-        vector<string> _listExtraArgument{}; ///< `-gv_name=value` 처럼 앞의 `-` 까지 든 인자
-        bool           _bEditor{ false };
-        bool           _bKeepGoing{ false };
+        string         _game{};                 ///< `-game=` 값. 비면 적지 않는다
+        string         _backendName{};          ///< RHI 백엔드 이름(`DirectX12` · `Vulkan` …, `-gv_rhiBackend=` 값). 비면 적지 않는다(창 없는 호스트)
+        string         _scenarioArgument{};     ///< `-scenario=` 값(쉼표 목록 그대로). 비면 재현 명령을 만들지 않는다
+        vector<string> _listExtraArgument{};    ///< `-gv_name=value` 처럼 앞의 `-` 까지 든 인자
+        bool           _bEditor{ false };       ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        bool           _bKeepGoing{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -122,7 +122,7 @@ namespace sw
         string _lastStepKind;
         uint32 _frame;
         uint32 _lastStepNumber;
-        bool   _bInitialized;
-        bool   _bRunShown; ///< 지금 창 제목에 실행 정보가 붙어 있다
+        uint8  _bInitialized : 1;
+        uint8  _bRunShown    : 1; ///< 지금 창 제목에 실행 정보가 붙어 있다
     };
 } // namespace sw

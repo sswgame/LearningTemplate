@@ -104,6 +104,6 @@ namespace sw
          * @details 같은 파도(`FrameSystemLanePlan`)에 든 시스템 중 이것이 true 인 것만 `TaskManager` 로 보냅니다. true 의 조건: 선언한 종류 밖의 공유 가변 상태(싱글턴 · 입력 ·
          *          그리기 큐 · 게임 스레드 전용 API)를 만지지 않고, 프레임 시스템을 붙이거나 떼지 않는다. 확신이 없으면 false 로 둔다(조용한 데이터 경합보다 직렬이 낫다).
          */
-        bool _bLaneSafe{ false };
+        bool _bLaneSafe{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw

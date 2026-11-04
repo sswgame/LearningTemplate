@@ -17,8 +17,8 @@ namespace sw::editor
         , _admin{}
         , _onReady{}
         , _state{ AdminToolConnectionState::Disconnected }
-        , _bServiceRegistered{ false }
-        , _bReadyReported{ false }
+        , _bServiceRegistered{ SW_FALSE }
+        , _bReadyReported{ SW_FALSE }
     {
     }
 
@@ -53,7 +53,7 @@ namespace sw::editor
                 _state   = AdminToolConnectionState::Failed;
                 return false;
             }
-            _bServiceRegistered = true;
+            _bServiceRegistered = SW_TRUE;
         }
         _tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), tlsTrustFile, "", outError );
         if ( _tlsContext == nullptr )
@@ -70,7 +70,7 @@ namespace sw::editor
             _state = AdminToolConnectionState::Failed;
             return false;
         }
-        _bReadyReported = false;
+        _bReadyReported = SW_FALSE;
         _state          = AdminToolConnectionState::Connecting;
         return true;
     }
@@ -80,7 +80,7 @@ namespace sw::editor
         _client.shutdown();
         _pTransport.reset();
         _tlsContext.reset();
-        _bReadyReported = false;
+        _bReadyReported = SW_FALSE;
         _state          = AdminToolConnectionState::Disconnected;
     }
 
@@ -98,13 +98,13 @@ namespace sw::editor
         if ( _client.isReady() == false )
         {
             _state          = AdminToolConnectionState::Connecting;
-            _bReadyReported = false; // 끊겼다 다시 붙으면 로그인을 다시 한다
+            _bReadyReported = SW_FALSE; // 끊겼다 다시 붙으면 로그인을 다시 한다
             return;
         }
         _state = AdminToolConnectionState::Ready;
         if ( _bReadyReported == false )
         {
-            _bReadyReported = true;
+            _bReadyReported = SW_TRUE;
             if ( _onReady.isBound() )
                 _onReady.get()( _client );
         }

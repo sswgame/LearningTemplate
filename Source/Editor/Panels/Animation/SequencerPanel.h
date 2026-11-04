@@ -88,6 +88,6 @@ namespace sw::editor
         int32                                   _selectedTrack; ///< 고른 키 트랙(-1 이면 없음)
         int32                                   _curveTrack;    ///< 커브 편집기가 보는 트랙(-1 이면 닫힘)
         int32                                   _curveChannel;  ///< 커브 편집기가 보는 채널
-        bool                                    _bExpanded;
+        bool                                    _bExpanded;     ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor

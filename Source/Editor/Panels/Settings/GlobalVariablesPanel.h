@@ -68,6 +68,6 @@ namespace sw::editor
         GlobalVariablesModel                    _model;
         fixed_string<constant::buffer::kMax128> _searchFilter;
         fixed_string<constant::buffer::kMax64>  _presetNameBuf;
-        bool                                    _bGroupByModule;
+        bool                                    _bGroupByModule; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor

@@ -43,7 +43,7 @@ namespace sw
         , _authoredSpeakerFontSize{ 0.0f }
         , _screen{ kInvalidUIScreenHandle }
         , _lineIDAllocator{}
-        , _bDocumentFailed{ false }
+        , _bDocumentFailed{ SW_FALSE }
     {
     }
 
@@ -166,7 +166,7 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "UISubtitle.SubtitleScreenCouldNot", "[UI] Subtitle screen '%#' could not be opened - subtitles are not shown", documentPath.c_str() );
             _screen          = kInvalidUIScreenHandle;
-            _bDocumentFailed = true;
+            _bDocumentFailed = SW_TRUE;
             return false;
         }
         // 문서에 적힌 크기와 바탕이 기준이다(설정이 곱하고 알파를 바꾼다). 슬롯 0 의 값을 모든 슬롯에 쓴다.
@@ -179,7 +179,7 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "UISubtitle.SubtitleScreenLacksLine0", "[UI] Subtitle screen '%#' lacks Line0 / Speaker0 / Text0 - subtitles are not shown", documentPath.c_str() );
             closeScreen();
-            _bDocumentFailed = true;
+            _bDocumentFailed = SW_TRUE;
             return false;
         }
         _authoredBackground      = pLine->getBackground();

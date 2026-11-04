@@ -157,7 +157,7 @@ namespace sw
         vector<SubsystemTiming> _listInitTiming;     ///< `initializeAll` 이 잰 초기화 시간(`getInitTimings`)
         vector<SubsystemTiming> _listShutdownTiming; ///< `shutdownAll` 이 잰 종료 시간(`getShutdownTimings`)
         string                  _error;              ///< 정렬 오류 · 초기화 실패
-        bool                    _bSorted;            ///< 마지막 추가 뒤에 정렬했는가
+        uint8                   _bSorted : 1;        ///< 마지막 추가 뒤에 정렬했는가
         int64 ( *_pClockNanos )() noexcept;          ///< `setTimingClock` 의 시계. nullptr 이면 시간을 재지 않는다
     };
 } // namespace sw

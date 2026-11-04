@@ -21,10 +21,10 @@ namespace sw
     /** @brief 번역 메모리에서 찾은 것입니다. */
     struct TranslationMemoryMatch
     {
-        string  _text;          ///< 이전 번역입니다.
-        string  _matchedSource; ///< 그 번역의 원문입니다.
-        float32 _score{ 0.0f }; ///< 1 이면 정확히 같습니다.
-        bool    _bExact{ false };
+        string  _text;            ///< 이전 번역입니다.
+        string  _matchedSource;   ///< 그 번역의 원문입니다.
+        float32 _score{ 0.0f };   ///< 1 이면 정확히 같습니다.
+        bool    _bExact{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

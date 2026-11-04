@@ -73,8 +73,8 @@ namespace sw
         , _mutex{}
         , _occlusionCursor{ 0 }
         , _activeListenerMask{ 0 }
-        , _bHasLastCameraPosition{ false }
-        , _bUpdateEnabled{ true }
+        , _bHasLastCameraPosition{ SW_FALSE }
+        , _bUpdateEnabled{ SW_TRUE }
     {
     }
 
@@ -203,9 +203,9 @@ namespace sw
                 state._mode            = AudioSpatialMode::Screen2D;
                 state._screenHalfWidth = pCamera->getOrthoHeight() * SceneAudioInternal::kAssumedAspect * 0.5f;
             }
-            state._bActive           = true;
+            state._bActive           = SW_TRUE;
             _lastCameraPosition      = state._position;
-            _bHasLastCameraPosition  = true;
+            _bHasLastCameraPosition  = SW_TRUE;
             _primaryListenerPosition = state._position;
             audioEngine.setListener( 0, state );
             listenerMask = 1u;

@@ -164,6 +164,10 @@ namespace sw::editor
     public:
         static constexpr uint32 kLeafSize = 4;
 
+        ConformGPUTable()
+            : _bBuilt{ SW_FALSE }
+        {
+        }
         /** @brief 목록을 넘깁니다. 지난번과 같으면 그대로 두고 false, 다시 지었으면 true 입니다. */
         bool assign( const vector<float3>& listTriangle )
         {
@@ -171,7 +175,7 @@ namespace sw::editor
             if ( _bBuilt && listTriangle.size() == _listSource.size() && std::memcmp( listTriangle.data(), _listSource.data(), byteCount ) == 0 )
                 return false;
             _listSource = listTriangle;
-            _bBuilt     = true;
+            _bBuilt     = SW_TRUE;
             build();
             return true;
         }
@@ -283,6 +287,6 @@ namespace sw::editor
         vector<float4> _listPacked;
         uint32         _triangleCount{ 0 };
         uint32         _nodeCount{ 0 };
-        bool           _bBuilt{ false };
+        uint8          _bBuilt : 1;
     };
 } // namespace sw::editor

@@ -36,7 +36,7 @@ namespace sw::editor
     BugReportModel::BugReportModel()
         : _listRow{}
         , _note{}
-        , _bRowsDirty{ true }
+        , _bRowsDirty{ SW_TRUE }
     {
     }
 
@@ -44,7 +44,7 @@ namespace sw::editor
     {
         string     directory;
         const bool bCaptured         = BugReport::capture( BugReport::makeInputs( _note ), directory );
-        _bRowsDirty                  = true;
+        _bRowsDirty                  = SW_TRUE;
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( bCaptured )
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationType::Success );
@@ -59,7 +59,7 @@ namespace sw::editor
     {
         if ( _bRowsDirty == false )
             return;
-        _bRowsDirty = false;
+        _bRowsDirty = SW_FALSE;
         _listRow.clear();
         vector<string> listFolder;
         if ( FileUtil::collectFolders( BugReportModelInternal::makeRoot(), listFolder, false ) == false )

@@ -72,7 +72,7 @@ namespace sw
         float32                         _spawnCarry;
         float32                         _spawnScale; ///< 생성률 · 버스트 수에 곱한다(이펙트 품질)
         float32                         _pendingSeconds;
-        bool                            _bEmitting;
-        bool                            _bWarnedStepLimit;
+        uint8                           _bEmitting        : 1;
+        uint8                           _bWarnedStepLimit : 1;
     };
 } // namespace sw

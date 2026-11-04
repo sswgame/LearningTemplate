@@ -168,7 +168,7 @@ namespace sw
         uint64 _missCount{ 0 };
         uint64 _clearCount{ 0 };
         int64  _itemCount{ 0 };           ///< `_bItemCountKnown` 일 때만 뜻이 있다.
-        bool   _bItemCountKnown{ false }; ///< 캐시가 항목 수를 이 레지스트리에 알렸는가(`addItemCount`). 아니면 보고하는 쪽이 캐시 자신에게 묻는다.
+        bool   _bItemCountKnown{ false }; ///< 캐시가 항목 수를 이 레지스트리에 알렸는가(`addItemCount`). 아니면 보고하는 쪽이 캐시 자신에게 묻는다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

@@ -266,10 +266,10 @@ namespace sw::editor
         vector<ProcessLink>     _listLink;
         NetEmulationPresetTable _presetTable; ///< 프리셋 단추 — 탭을 처음 그릴 때 한 번 읽는다
         float32                 _spikeSeconds;
-        uint16                  _sessionPort;           ///< `_listLink` 가 맞춰진 세션(포트) — 바뀌면 지운다
-        bool                    _bApplyToAll;           ///< 대상 대신 모든 프로세스에 보낸다
-        bool                    _bPresetTableAttempted; ///< 테이블을 읽어 봤다(실패도 한 번만 알린다)
-        bool                    _bPresetTableFailed;    ///< 테이블을 읽지 못했다 — 단추 위치에 그렇다고 적는다
+        uint16                  _sessionPort;               ///< `_listLink` 가 맞춰진 세션(포트) — 바뀌면 지운다
+        bool                    _bApplyToAll;               ///< 대상 대신 모든 프로세스에 보낸다 NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        uint8                   _bPresetTableAttempted : 1; ///< 테이블을 읽어 봤다(실패도 한 번만 알린다)
+        uint8                   _bPresetTableFailed    : 1; ///< 테이블을 읽지 못했다 — 단추 위치에 그렇다고 적는다
     };
 } // namespace sw::editor
 
@@ -281,8 +281,8 @@ namespace sw::editor
         , _spikeSeconds{ EditorNetConditionsUtil::kDefaultSpikeSeconds }
         , _sessionPort{ 0 }
         , _bApplyToAll{ false }
-        , _bPresetTableAttempted{ false }
-        , _bPresetTableFailed{ false }
+        , _bPresetTableAttempted{ SW_FALSE }
+        , _bPresetTableFailed{ SW_FALSE }
     {
     }
 
@@ -357,7 +357,7 @@ namespace sw::editor
         if ( _bPresetTableAttempted == false )
         {
             // 테이블 경로는 엔진 기본 에셋 테이블이 원본이다. 읽지 못하면(이유는 테이블이 알린다) 단추가 없을 뿐 슬라이더는 그대로 쓴다 — 실패 표시를 남긴다.
-            _bPresetTableAttempted = true;
+            _bPresetTableAttempted = SW_TRUE;
             _bPresetTableFailed    = _presetTable.loadFromAsset( AssetID{ editor::getSubsystem<const EngineDefaultAssets>()._netEmulationPresets.get() } ) == false;
         }
         if ( _bPresetTableFailed )

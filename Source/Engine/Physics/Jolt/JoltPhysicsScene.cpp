@@ -138,7 +138,7 @@ namespace sw
                 const JoltPhysicsScene& _scene;
                 JPH::BodyID             _ignoreBody;
                 uint64                  _ignoreUserData;
-                bool                    _bIncludeTriggers;
+                uint8                   _bIncludeTriggers : 1;
             };
 
             /** @brief 캐릭터는 트리거에 막히지 않습니다. */
@@ -748,7 +748,7 @@ namespace sw
         record._type     = desc._type;
         record._layer    = desc._layer;
         record._bTrigger = desc._bTrigger;
-        record._bEnabled = true;
+        record._bEnabled = SW_TRUE;
         handle           = PhysicsBodyHandle::fromSlot( _bodies.insert( std::move( record ) ) );
         pBody->SetUserData( handle.packed() );
         setHandle( pBody->GetID(), handle );

@@ -35,7 +35,7 @@ namespace sw
         , _hoverOwner{ kInvalidWidgetID }
         , _shownOwner{ kInvalidWidgetID }
         , _hoverSeconds{ 0.0f }
-        , _bDocumentFailed{ false }
+        , _bDocumentFailed{ SW_FALSE }
     {
     }
 
@@ -173,7 +173,7 @@ namespace sw
             {
                 SW_LOG_ERROR_ID( "UITooltipService.TooltipScreenCouldNot", "[UI] Tooltip screen '%#' could not be opened - tooltips are not shown", documentPath.c_str() );
                 _screen          = kInvalidUIScreenHandle;
-                _bDocumentFailed = true;
+                _bDocumentFailed = SW_TRUE;
                 return;
             }
         }
@@ -189,7 +189,7 @@ namespace sw
         if ( pBody == nullptr || pText == nullptr )
         {
             SW_LOG_ERROR_ID( "UITooltipService.TooltipScreenNoWidget", "[UI] Tooltip screen has no '%#' or '%#' widget - tooltips are not shown", UITooltipServiceInternal::kBodyName, UITooltipServiceInternal::kTextName );
-            _bDocumentFailed = true;
+            _bDocumentFailed = SW_TRUE;
             hide();
             return;
         }

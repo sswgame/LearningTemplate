@@ -284,7 +284,7 @@ namespace sw::editor
         uint32 _vertexIndex{ 0 };
         /** @brief 스택 입력(변형 전 원본) 위치를 모디파이어 공간으로 옮긴 값입니다. `_bHasOriginalPosition` 이 false 면 쓰지 않습니다. */
         float3 _originalPosition{ 0.0f, 0.0f, 0.0f };
-        bool   _bHasOriginalPosition{ false }; ///< `needsOriginalPosition` 이 true 인 모디파이어에만 모디파이어 스택이 채운다
+        bool   _bHasOriginalPosition{ false }; ///< `needsOriginalPosition` 이 true 인 모디파이어에만 모디파이어 스택이 채운다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -454,8 +454,8 @@ namespace sw::editor
         string                         _spaceReference; ///< 월드 공간일 때 기준 오브젝트 이름(비면 월드 원점)
         MeshModifierGizmo              _gizmo;
         uint64                         _instanceID; ///< `getInstanceID`. 만들 때 정한다
-        bool                           _bEnabled;
-        bool                           _bWorldSpace;
+        uint8                          _bEnabled    : 1;
+        uint8                          _bWorldSpace : 1;
     };
 } // namespace sw::editor
 

@@ -150,7 +150,7 @@ namespace sw
         , _mutex{}
         , _cvMutex{}
         , _bIsRunning{ false }
-        , _bInitialized{ false }
+        , _bInitialized{ SW_FALSE }
         , _bWantsStructured{ false }
         , _bJSONLinesEnabled{ false }
         , _bWorkerSleeping{ false }
@@ -194,7 +194,7 @@ namespace sw
 
         _bIsRunning.store( true, std::memory_order_release );
         _workerThread = sw::thread( &AsyncLogSink::workerLoop, this );
-        _bInitialized = true;
+        _bInitialized = SW_TRUE;
     }
 
     /**
@@ -222,7 +222,7 @@ namespace sw
         }
 
         _onLogWritten.removeAll(); // 남은 구독도 무효로 — 뒤늦은 해제가 비운 목록을 찾지 않는다
-        _bInitialized = false;
+        _bInitialized = SW_FALSE;
     }
 
     /**

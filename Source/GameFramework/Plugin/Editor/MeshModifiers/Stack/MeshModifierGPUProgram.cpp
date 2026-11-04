@@ -50,7 +50,7 @@ namespace sw::editor
                 size_t                            _cursor{ 0 };
                 uint32                            _vertexCount{ 0 };
                 uint32                            _recordCount{ 0 };
-                bool                              _bNeedsUV{ false };
+                bool                              _bNeedsUV{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 스택(과 그 안의 묶음)이 GPU 로 옮겨지는지 봅니다. 막는 첫 최상위 번호를 받습니다(하위가 막으면 그 묶음 번호). */

@@ -39,7 +39,7 @@ namespace sw
     struct SW_GF_API SaveGameSavedEvent final : IEvent
     {
         string _slot;             ///< 쓴(쓰려 한) 로컬 저장 슬롯 이름
-        bool   _bSuccess{ true }; ///< 슬롯을 끝까지 썼으면 true
+        bool   _bSuccess{ true }; ///< 슬롯을 끝까지 썼으면 true NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         SW_DECLARE_GAMEPLAY_EVENT( SaveGameSavedEvent );
     };
 } // namespace sw
@@ -50,7 +50,7 @@ namespace sw
     struct SW_GF_API SaveGameLoadedEvent final : IEvent
     {
         string _slot;             ///< 읽은(읽으려 한) 로컬 저장 슬롯 이름
-        bool   _bSuccess{ true }; ///< 씬과 상태를 모두 복원했으면 true
+        bool   _bSuccess{ true }; ///< 씬과 상태를 모두 복원했으면 true NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         SW_DECLARE_GAMEPLAY_EVENT( SaveGameLoadedEvent );
     };
 } // namespace sw
@@ -74,7 +74,7 @@ namespace sw
     struct SW_GF_API SceneLoadCompletedEvent final : IEvent
     {
         string _levelName;        ///< 요청했던 씬 경로
-        bool   _bSuccess{ true }; ///< 활성 씬이 되었으면 true. 읽지 못했거나 뒤 요청에 밀렸으면 false
+        bool   _bSuccess{ true }; ///< 활성 씬이 되었으면 true. 읽지 못했거나 뒤 요청에 밀렸으면 false NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         SW_DECLARE_GAMEPLAY_EVENT( SceneLoadCompletedEvent );
     };
 } // namespace sw

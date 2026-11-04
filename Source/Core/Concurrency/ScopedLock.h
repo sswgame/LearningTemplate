@@ -83,14 +83,14 @@ namespace sw
     public:
         explicit UniqueLock( TLock& lock ) SW_ACQUIRE_LOCK( lock ) SW_NO_THREAD_SAFETY_ANALYSIS
             : _lock{ lock },
-              _bOwned{ true }
+              _bOwned{ SW_TRUE }
         {
             _lock.lock();
         }
 
         UniqueLock( TLock& lock, std::defer_lock_t ) SW_EXCLUDES_LOCK( lock ) SW_NO_THREAD_SAFETY_ANALYSIS
             : _lock{ lock },
-              _bOwned{ false }
+              _bOwned{ SW_FALSE }
         {
         }
 
@@ -106,7 +106,7 @@ namespace sw
         void lock() SW_ACQUIRE_LOCK() SW_NO_THREAD_SAFETY_ANALYSIS
         {
             _lock.lock();
-            _bOwned = true;
+            _bOwned = SW_TRUE;
         }
 
         [[nodiscard]] bool try_lock() SW_TRY_ACQUIRE_LOCK( true ) SW_NO_THREAD_SAFETY_ANALYSIS
@@ -117,7 +117,7 @@ namespace sw
 
         void unlock() SW_RELEASE_LOCK() SW_NO_THREAD_SAFETY_ANALYSIS
         {
-            _bOwned = false;
+            _bOwned = SW_FALSE;
             _lock.unlock();
         }
 
@@ -125,7 +125,7 @@ namespace sw
 
     private:
         TLock& _lock;
-        bool   _bOwned;
+        uint8  _bOwned : 1;
     };
 } // namespace sw
 

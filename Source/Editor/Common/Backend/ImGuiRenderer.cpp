@@ -140,7 +140,7 @@ namespace sw::editor
         , _listWord{}
         , _mapListBase{}
         , _listFrameSRV{}
-        , _bNativeBindless{ false }
+        , _bNativeBindless{ SW_FALSE }
     {
     }
 

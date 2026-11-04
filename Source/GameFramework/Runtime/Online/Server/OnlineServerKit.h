@@ -103,7 +103,7 @@ namespace sw
     {
     public:
         IOnlineServerKit()
-            : _bStarted{ false }
+            : _bStarted{ SW_FALSE }
         {
         }
         virtual ~IOnlineServerKit() = default;
@@ -165,7 +165,7 @@ namespace sw
     private:
         static void reportInterfaceTaken( const OnlineServerKitEntry& entry, string& outError );
 
-        bool _bStarted;
+        uint8 _bStarted : 1;
     };
 } // namespace sw
 

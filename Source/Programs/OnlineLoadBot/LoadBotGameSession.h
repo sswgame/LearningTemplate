@@ -49,6 +49,6 @@ namespace sw
         vector<NetEndpointEvent> _listEvent{};
         NetDisconnectReason      _failReason{ NetDisconnectReason::None };
         State                    _state{ State::Idle };
-        bool                     _bOpen{ false };
+        bool                     _bOpen{ false }; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw

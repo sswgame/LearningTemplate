@@ -103,7 +103,7 @@ namespace sw
         uint32  _clientCount{ 0 };        ///< 동시 클라이언트 수(봇 · 클러스터). App 하나는 0
         uint32  _meshCount{ 0 };          ///< 벤치 메시 수(`-gv_stressTestMeshes`), 0 이면 건드리지 않는다
         uint32  _moverCount{ 0 };         ///< 메시마다 틱에서 움직이는 컴포넌트 수(`-gv_stressTestTickMovers`) — 틱 오브젝트 수 = 메시 × 이 값
-        bool    _bDeclared{ false };      ///< 시나리오에 `<Load>` 가 있으면 true 입니다
+        bool    _bDeclared{ false };      ///< 시나리오에 `<Load>` 가 있으면 true 입니다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -123,18 +123,18 @@ namespace sw
         vector<string>                  _listRequiredModule{}; ///< 루트 `requiresModule="A,B"` — 이 모듈이 모두 켜진 빌드에서만 돈다. 하나라도 없으면 건너뜀이다(언리얼에서 끈 플러그인의 테스트가 없는 것과 같다)
         AutomationLoad                  _load{};               ///< 부하 선언(`<Load>`). 부하 시나리오는 `<Pass/>` 를 두지 않고 측정 창이 끝내며 `timeoutFrames` 를 보지 않는다
         /** @brief 에디터를 켠 실행(`-EnableEditor`)에서 도는 시나리오입니다(루트 `editor="true"`). 테스트(`AppScenarioTest`)가 인자를 고른다. `engine/automation/editor/` 의 시나리오는 폴더가 이미 에디터 실행이라 적지 않는다. */
-        bool _bRequiresEditor{ false };
+        bool _bRequiresEditor{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         /**
          * @brief 무인 실행(`-unattended`)에서도 그린 프레임을 화면에 내보내는 시나리오입니다(루트 `present="true"`). 표시 경로 자체(스왑체인 획득 · 표시 · 크기 · 최소화)를 보는 시나리오가 쓴다.
          * @details 무인 실행은 기본으로 내보내지 않는다(`RenderThread::setPresentSkipped` — 언리얼 -RenderOffScreen 자리). 그 길만 도는 체인은 표시 경로를 한 번도 지나지 않는다.
          */
-        bool _bPresents{ false };
+        bool _bPresents{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         /**
          * @brief 창이 전경이어야 도는 시나리오입니다(루트 `requireForeground="true"` — 실제 커서 클립 · 화면 복사를 본다. 데스크톱 전역 상태라 `input="mixed"` 시나리오에서만 쓸 수 있다).
          * @details 실행기가 시작 조건을 기다리는 프레임부터 창을 전경으로 가져온다. 시작하는 프레임까지 전경을 얻지 못하면 건너뜀(13)으로 끝낸다.
          *          단계가 아니라 루트 속성인 이유: 시작 뒤의 단계는 게임의 첫 틱보다 늦다.
          */
-        bool _bRequiresForeground{ false };
+        bool _bRequiresForeground{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
 
         /** @brief `_listLaunchVariable` 을 명령줄 인자(`-gv_a=1 -gv_b=x`)로 씁니다. 선언이 없으면 빈 글입니다. 띄우는 쪽(`AppScenarioTest`, 손 실행)이 명령줄에 붙이고, 실행기는 시작할 때 값이 같은지 보고 다르면 읽기 오류로 멈춘다. */
         string makeLaunchArguments() const;

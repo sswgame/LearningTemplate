@@ -27,15 +27,15 @@ namespace sw::editor
             {
                 hashed_string _iconName;
                 hashed_string _colorKey;
-                bool          _bBillboard{ false };
+                bool          _bBillboard{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 타입 → 줄 캐시입니다. 뷰포트 빌보드가 프레임마다 모든 컴포넌트를 묻는다(오브젝트 8000 개면 메타 조회가 수백만 번). 타입 테이블 세대가 바뀌면 비운다. */
             struct RowCache
             {
                 unordered_map<const TypeInfo*, NamedRow> _mapRow;
-                NamedRow                                 _objectRow; ///< 빌보드 컴포넌트가 없는 오브젝트 줄 — 계층 패널이 줄마다 묻는다(색 키를 줄마다 이어 붙이지 않게)
-                bool                                     _bObjectRow{ false };
+                NamedRow                                 _objectRow;           ///< 빌보드 컴포넌트가 없는 오브젝트 줄 — 계층 패널이 줄마다 묻는다(색 키를 줄마다 이어 붙이지 않게)
+                bool                                     _bObjectRow{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 uint32                                   _generation{ constant::invalid_index::kUint32 };
             };
 

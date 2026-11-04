@@ -137,7 +137,7 @@ namespace sw::editor
     public:
         explicit EditorExtensionRegistrar( const TRegistration& registration )
             : _registration{ registration }
-            , _bRegistered{ false }
+            , _bRegistered{ SW_FALSE }
         {
             (void)EditorExtensionRegistry<TRegistration>::getList(); // 목록을 먼저 세운다 — 같은 이미지의 목록이 이 등록자보다 먼저 사라지지 않게(정적 소멸은 역순)
         }
@@ -162,7 +162,7 @@ namespace sw::editor
             if ( _bRegistered == false )
                 return;
             TRegistration::onDetaching( _registration );
-            _bRegistered = false;
+            _bRegistered = SW_FALSE;
             EditorExtensionRegistry<TRegistration>::getList().removeRegistration( _registration );
         }
         uint32 getDetachPass() const override { return TRegistration::kDetachPass; }
@@ -173,7 +173,7 @@ namespace sw::editor
 
     private:
         TRegistration _registration;
-        bool          _bRegistered;
+        uint8         _bRegistered : 1;
     };
 } // namespace sw::editor
 

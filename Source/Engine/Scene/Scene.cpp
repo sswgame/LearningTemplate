@@ -468,6 +468,7 @@ namespace sw
         , _services{ services }
         , _objectManager{ make_unique<GameObjectManager>( services ) }
         , _pMaterial{ nullptr }
+        , _bRegistrationHeld{ SW_FALSE }
         , _activeGameCamera{}
         , _gameCameraOverride{}
     {
@@ -547,14 +548,14 @@ namespace sw
         if ( _objectManager == nullptr || _bRegistrationHeld )
             return;
         _objectManager->beginDeferredRegistration();
-        _bRegistrationHeld = true;
+        _bRegistrationHeld = SW_TRUE;
     }
 
     void Scene::finishHeldRegistration()
     {
         if ( _bRegistrationHeld == false )
             return;
-        _bRegistrationHeld = false;
+        _bRegistrationHeld = SW_FALSE;
         ScopedTimer registerTimer{ "Scene.load.register" }; // 받는 프레임에 드는 비용 — 길어지면 `endDeferredRegistration` 을 프레임마다 나눈다
         _objectManager->endDeferredRegistration();
     }

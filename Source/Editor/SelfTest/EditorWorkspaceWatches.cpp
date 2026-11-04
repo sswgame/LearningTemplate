@@ -171,7 +171,7 @@ namespace sw::editor
                 return false;
             vector<pair<string, uint64>> listEntry;
             ObjectSaveOptions            options{ SerializePurpose::Authoring };
-            options._bOmitExternalParent = true;
+            options._bOmitExternalParent = SW_TRUE;
             pActive->forEachGameObject( [&listEntry, &options]( const GameObject* pObject )
             {
                 if ( pObject == nullptr || pObject->isPendingDestroy() )

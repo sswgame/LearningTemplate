@@ -106,7 +106,7 @@ namespace sw
         , _pTransport{}
         , _client{}
         , _account{}
-        , _bServiceRegistered{ false }
+        , _bServiceRegistered{ SW_FALSE }
     {
     }
 
@@ -155,7 +155,7 @@ namespace sw
                 outError = "the account client could not be registered (method range already taken)";
                 return false;
             }
-            _bServiceRegistered = true;
+            _bServiceRegistered = SW_TRUE;
         }
         // 서버의 서비스 스트림은 늘 TLS 1.3 이다 — 평문으로 붙으면 핸드셰이크가 닫힌다.
         _tlsContext = NetSecurity::createClientTLSContext( game::getSubsystem<INetSecurityProvider>(), request._tlsTrustFile, "", outError );

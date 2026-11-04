@@ -50,7 +50,7 @@ namespace sw::editor
             /** @brief 메뉴바가 프레임 사이에 들고 있는 상태입니다. 에디터 범위의 상태 저장소가 소유해 에디터마다(테스트마다) 따로이다. */
             struct MenuBarState
             {
-                bool                                   _bShowThemeSettings{ false };
+                bool                                   _bShowThemeSettings{ false };                ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
                 float32                                _statusAreaWidth{ 0.0f };                    ///< 지난 프레임에 측정한 상태 영역 너비(0 = 아직 모름)
                 fixed_string<constant::buffer::kMax64> _layoutName{};                               ///< 이름 붙인 레이아웃 저장 칸의 글
                 BuildState                             _lastObservedBuildState{ BuildState::Idle }; ///< 지난 프레임에 본 빌드 상태(컴파일이 끝나는 순간을 잡는다)

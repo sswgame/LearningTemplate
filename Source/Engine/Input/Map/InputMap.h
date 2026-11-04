@@ -52,15 +52,17 @@ namespace sw
     class SW_API InputAccessibilitySettings
     {
     public:
-        float2               _mouseSensitivity{ 1.0f, 1.0f };
-        float2               _gamepadSensitivity{ 1.0f, 1.0f };
-        float32              _stickDeadzoneOverride{ -1.0f }; ///< 게임패드 스틱 바인딩의 안쪽 데드존을 덮어쓴다. 0 미만이면 바인딩마다의 값(`ActionBinding::_deadzone`)
-        DeadzoneShape        _deadzoneShape{ DeadzoneShape::Radial };
-        DigitalNormalization _digitalNormalization{ DigitalNormalization::Circular };
-        bool                 _bInvertX{ false };
-        bool                 _bInvertY{ false };
+        float2               _mouseSensitivity;
+        float2               _gamepadSensitivity;
+        float32              _stickDeadzoneOverride; ///< 게임패드 스틱 바인딩의 안쪽 데드존을 덮어쓴다. 0 미만이면 바인딩마다의 값(`ActionBinding::_deadzone`)
+        DeadzoneShape        _deadzoneShape;
+        DigitalNormalization _digitalNormalization;
+        uint8                _bInvertX : 1;
+        uint8                _bInvertY : 1;
 
     public:
+        InputAccessibilitySettings();
+
         /**
          * @brief 액션 @p action 을 토글 액션(한 번 눌러 켜고 다시 눌러 끈다 — 조준 · 달리기)으로 두거나 뺍니다.
          * @details 액션이 아직 없어도 된다. 맵이 그 이름의 액션을 만들면 그때부터 토글로 평가한다(`InputMap::isActionToggled`).
@@ -464,11 +466,11 @@ namespace sw
         /** @brief 한 프레임 동안 액션 하나의 바인딩들을 합산한 값입니다. */
         struct ActionFrameAccum
         {
-            bool    _bAnyDown{ false };
-            bool    _bAnyPressed{ false };
-            bool    _bAnyReleased{ false };
-            bool    _bAnyTriggered{ false };
-            bool    _bAnyHoldReached{ false }; ///< 어떤 바인딩이든 자기 홀드 시간을 채웠는지입니다.
+            bool    _bAnyDown{ false };        ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool    _bAnyPressed{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool    _bAnyReleased{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool    _bAnyTriggered{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool    _bAnyHoldReached{ false }; ///< 어떤 바인딩이든 자기 홀드 시간을 채웠는지입니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             float32 _maxHold{ 0.0f };
             float2  _totalValue{ 0.0f, 0.0f };
             float2  _relativeValue{ 0.0f, 0.0f }; ///< 마우스 이동량입니다. 묶지 않습니다.

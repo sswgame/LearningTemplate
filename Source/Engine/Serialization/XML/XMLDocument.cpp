@@ -265,7 +265,7 @@ namespace sw
 {
     struct XMLDocument::Impl
     {
-        bool               _bSwAllocator{ XMLDocumentInternal::installSwAllocator() }; ///< `doc` 보다 먼저 선다(할당 함수를 먼저 바꾼다)
+        bool               _bSwAllocator{ XMLDocumentInternal::installSwAllocator() }; ///< `doc` 보다 먼저 선다(할당 함수를 먼저 바꾼다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         pugi::xml_document doc;
     };
 
@@ -524,7 +524,7 @@ namespace sw
 
     XMLDocument::XMLDocument()
         : _impl{ make_unique<Impl>() }
-        , _bLastErrorNotFound{ false }
+        , _bLastErrorNotFound{ SW_FALSE }
     {
     }
 
@@ -562,7 +562,7 @@ namespace sw
             _impl = make_unique<Impl>();
         _impl->doc.reset();
         _lastError.clear();
-        _bLastErrorNotFound      = false;
+        _bLastErrorNotFound      = SW_FALSE;
         const string_view source = sourceName.empty() ? string_view{ "<memory>" } : sourceName;
         if ( xmlText.empty() )
         {
@@ -614,7 +614,7 @@ namespace sw
         if ( relativePath.empty() )
         {
             _lastError          = "empty path";
-            _bLastErrorNotFound = false;
+            _bLastErrorNotFound = SW_FALSE;
             return false;
         }
         string text;
@@ -622,7 +622,7 @@ namespace sw
         if ( AssetIO::readTextAsset( assetID, text, &absPath ) == false )
         {
             _lastError          = string( relativePath ) + ": not found (no file at that path and no resource by that name)";
-            _bLastErrorNotFound = true;
+            _bLastErrorNotFound = SW_TRUE;
             return false;
         }
         if ( pOutAbsPath != nullptr )

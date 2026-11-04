@@ -115,8 +115,8 @@ namespace sw::editor
         , _listTaskName{}
         , _statusText{}
         , _selectedID{ -1 }
-        , _bLayoutPending{ true }
-        , _bSelectPending{ false }
+        , _bLayoutPending{ SW_TRUE }
+        , _bSelectPending{ SW_FALSE }
     {
         _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Base", "Text" ) } ); // 부모 → 자식 흐름 핀 하나
         _nodeGraph.setAutoLayout( true );                                   // 노드 자리는 트리 배치(layoutTree)가 정한다 — 정렬 메뉴를 감춘다(언리얼 BT 에디터도 자동 배치)
@@ -140,7 +140,7 @@ namespace sw::editor
 
         _model.clear();
         _selectedID     = -1;
-        _bLayoutPending = true;
+        _bLayoutPending = SW_TRUE;
         _nodeGraph.requestContentFit();
         const std::optional<AbsolutePath> diskPath = getDocumentDiskPath();
         string                            text;
@@ -200,7 +200,7 @@ namespace sw::editor
             return;
         }
         _selectedID     = -1;
-        _bLayoutPending = true;
+        _bLayoutPending = SW_TRUE;
         _nodeGraph.requestContentFit();
     }
 
@@ -334,13 +334,13 @@ namespace sw::editor
             {
                 ed::SetNodePosition( toNodeID( placement._id ), ImVec2{ placement._position._x, placement._position._y } );
             }
-            _bLayoutPending = false;
+            _bLayoutPending = SW_FALSE;
             _nodeGraph.requestContentFit();
         }
         if ( _bSelectPending )
         {
             ed::SelectNode( toNodeID( _selectedID ), false );
-            _bSelectPending = false;
+            _bSelectPending = SW_FALSE;
         }
 
         vector<EditorGraphNodeIssue> listNodeIssue;
@@ -505,7 +505,7 @@ namespace sw::editor
             return;
         }
         _selectedID     = newID;
-        _bSelectPending = true;
+        _bSelectPending = SW_TRUE;
         markStructureChanged( pLabel );
     }
 
@@ -583,14 +583,14 @@ namespace sw::editor
             return -1;
         }
         _selectedID     = id;
-        _bSelectPending = true;
+        _bSelectPending = SW_TRUE;
         markStructureChanged( "Add Behavior Node" );
         return id;
     }
 
     void BehaviorTreePanel::markStructureChanged( const utf8* pLabel )
     {
-        _bLayoutPending = true;
+        _bLayoutPending = SW_TRUE;
         _statusText.clear();
         notifyDocumentEdited( pLabel );
     }

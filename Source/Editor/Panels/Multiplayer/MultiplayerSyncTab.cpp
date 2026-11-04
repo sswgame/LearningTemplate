@@ -274,7 +274,7 @@ namespace sw::editor
         fixed_string<constant::buffer::kMax128>    _arrToken[EditorStateHashCompare::kSourceCount];                ///< 슬롯마다 채널 토큰(편집 필드)
         int32                                      _arrPendingProcess[EditorStateHashCompare::kSourceCount];       ///< 슬롯마다 답을 기다리는 클라이언트 프로세스 번호(-1 이면 없다)
         uint32                                     _arrPendingReportCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 이력 답 수 — 늘면 새 답이다
-        bool                                       _bObjectRequest;                                                ///< "Which objects differ" 가 클라이언트 답을 기다리는 중이다
+        uint8                                      _bObjectRequest : 1;                                            ///< "Which objects differ" 가 클라이언트 답을 기다리는 중이다
         int32                                      _arrObjectPendingProcess[EditorStateHashCompare::kSourceCount]; ///< 슬롯마다 오브젝트 해시 답을 기다리는 클라이언트 프로세스 번호(-1 이면 안 기다린다)
         uint32                                     _arrObjectPendingCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 오브젝트 해시 답 수
         uint64                                     _arrObjectTick[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트 해시의 틱
@@ -296,7 +296,7 @@ namespace sw::editor
         , _arrToken{}
         , _arrPendingProcess{ -1, -1 }
         , _arrPendingReportCount{}
-        , _bObjectRequest{ false }
+        , _bObjectRequest{ SW_FALSE }
         , _arrObjectPendingProcess{ -1, -1 }
         , _arrObjectPendingCount{}
         , _arrObjectTick{}
@@ -383,7 +383,7 @@ namespace sw::editor
     {
         EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
         EditorNetPlaySession&   session = MultiplayerSyncTabInternal::getSession();
-        _bObjectRequest                 = false;
+        _bObjectRequest                 = SW_FALSE;
         bool   bWaiting                 = false;
         uint64 channelTick              = 0;
         // 채널(서버) 칸을 먼저 읽어 그 틱을 안다 — 클라이언트에는 그 틱 이상의 답만 받는다(멈춘 서버를 클라이언트가 아직 따라오는 중일 수 있다).
@@ -415,7 +415,7 @@ namespace sw::editor
             _arrObjectPendingCount[sourceIndex]   = reportCount;
             bWaiting                              = true;
         }
-        _bObjectRequest = true;
+        _bObjectRequest = SW_TRUE;
         _errorText.clear();
         _objectWatch.restart();
         if ( bWaiting == false )
@@ -435,7 +435,7 @@ namespace sw::editor
                 continue;
             if ( session.isRunning() == false )
             {
-                _bObjectRequest = false; // 세션이 끝났다 - 답이 올 곳이 없다
+                _bObjectRequest = SW_FALSE; // 세션이 끝났다 - 답이 올 곳이 없다
                 return;
             }
             const EditorNetPlayProcessStatus status = session.getProcessStatus( processIndex );
@@ -452,7 +452,7 @@ namespace sw::editor
         {
             if ( _objectWatch.getElapsedMilliseconds() >= MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() )
             {
-                _bObjectRequest = false;
+                _bObjectRequest = SW_FALSE;
                 for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
                 {
                     _arrObjectPendingProcess[sourceIndex] = -1;
@@ -462,7 +462,7 @@ namespace sw::editor
             }
             return;
         }
-        _bObjectRequest                 = false;
+        _bObjectRequest                 = SW_FALSE;
         EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
         if ( compare.compareObjects( _arrObjectTick[0], _arrObjectList[0], _arrObjectTick[1], _arrObjectList[1] ) == false )
             SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotCompare", "Sync could not compare objects: %#", compare.getLastError() );

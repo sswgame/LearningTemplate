@@ -59,7 +59,7 @@ namespace sw
             , _pSnapshot{}
             , _arrInFlight{}
             , _epoch{ 0 }
-            , _bBound{ false }
+            , _bBound{ SW_FALSE }
         {
         }
         ~LockedMulticastDelegate() override = default;

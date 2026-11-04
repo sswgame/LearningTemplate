@@ -92,7 +92,7 @@ namespace sw::editor
          */
         EditorGraphEditCommand queryEditCommand( vector<int32>& outListNodeID, float2& outPastePosition );
         /** @brief 다음 캔버스를 열 때 고른 노드를 비웁니다 — 붙여 넣은 노드만 고른 채로 두려고 붙이기 전에 부릅니다. */
-        void clearSelectionOnNextDraw() { _bClearSelection = true; }
+        void clearSelectionOnNextDraw() { _bClearSelection = SW_TRUE; }
         /** @brief 그래프 복사 버퍼에 애셋 종류 @p kind 의 조각 @p text 를 둡니다. 편집기 프로세스 안의 버퍼라 OS 클립보드를 건드리지 않습니다. */
         static void storeClipboard( string_view kind, string text );
         /** @brief 복사 버퍼가 종류 @p kind 의 조각이면 @p outText 에 담고 true 입니다. 비었거나 다른 종류면 false 입니다. */
@@ -171,7 +171,7 @@ namespace sw::editor
         /** @brief 다음 Begin 에서 노드 위치를 초기화하고 뷰를 맞출지 정합니다. */
         bool needsContentFit() const { return _bNeedsContentFit; }
         /** @brief 다음 캔버스에서 콘텐츠에 맞게 줌과 팬을 하도록 요청합니다. */
-        void requestContentFit() { _bNeedsContentFit = true; }
+        void requestContentFit() { _bNeedsContentFit = SW_TRUE; }
         /**
          * @brief 요청이 있으면 캔버스 안에서 NavigateToContent 를 한 번 호출합니다. 캔버스 크기가 앞 프레임과 같을 때만 호출하며, 아니면 요청을 남겨 다음 프레임에 처리합니다.
          * @details 캔버스 크기가 막 정해진 프레임(처음 열 때, Reload 와 함께 옆 인스펙터가 붙거나 떨어질 때)에 맞추면 노드 편집기가 이전 크기의 보이는
@@ -242,19 +242,19 @@ namespace sw::editor
         int32                                  _pinDragSource;      ///< 빈 곳에 놓은 끌기의 시작 핀. 노드 검색 팝업이 열려 있는 동안 남는다
         int32                                  _autoLinkPin;        ///< 새 노드에 이을 핀. 0 이면 없다
         uint32                                 _autoLinkFramesLeft; ///< 새 노드를 기다릴 남은 프레임 — 노드를 넣지 못했으면 요청을 버린다
-        bool                                   _bNeedsContentFit;
-        bool                                   _bPendingNavigate; ///< 다음 프레임에 보기를 맞춘다(고른 노드가 있으면 그 노드에)
-        bool                                   _bOpenAddFromPin;  ///< 다음 `drawAddNodePopup` 이 노드 검색 팝업을 연다(핀 끌기)
-        bool                                   _bMinimapVisible;
-        bool                                   _bAutoLayout;       ///< 노드 위치를 그래프가 정한다 — 정렬 메뉴를 감춘다
-        bool                                   _bClearSelection;   ///< 다음 캔버스를 열 때 고른 노드를 비운다(붙여 넣기)
-        bool                                   _bCommentsEnabled;  ///< 보기 막대에 주석 단추를 둔다
-        bool                                   _bCommentRequested; ///< 주석 단추를 눌렀다 — 다음 캔버스를 닫기 전에 자리를 잰다
-        bool                                   _bCommentReady;     ///< 잰 자리가 있다(takeCommentRequest 가 가져간다)
-        float2                                 _commentPosition;   ///< 새 주석 상자의 왼쪽 위(캔버스 좌표)
-        float2                                 _commentSize;       ///< 새 주석 상자의 영역 크기
-        int32                                  _renameCommentID;   ///< 이름을 바꾸는 주석 id. 0 이면 없다
-        fixed_string<constant::buffer::kMax64> _renameText;        ///< 이름 바꾸기 칸의 글
-        vector<int32>                          _listSeededComment; ///< 자리 · 크기를 캔버스에 넣은 주석 id
+        uint8                                  _bNeedsContentFit  : 1;
+        uint8                                  _bPendingNavigate  : 1; ///< 다음 프레임에 보기를 맞춘다(고른 노드가 있으면 그 노드에)
+        uint8                                  _bOpenAddFromPin   : 1; ///< 다음 `drawAddNodePopup` 이 노드 검색 팝업을 연다(핀 끌기)
+        uint8                                  _bMinimapVisible   : 1;
+        uint8                                  _bAutoLayout       : 1; ///< 노드 위치를 그래프가 정한다 — 정렬 메뉴를 감춘다
+        uint8                                  _bClearSelection   : 1; ///< 다음 캔버스를 열 때 고른 노드를 비운다(붙여 넣기)
+        uint8                                  _bCommentsEnabled  : 1; ///< 보기 막대에 주석 단추를 둔다
+        uint8                                  _bCommentRequested : 1; ///< 주석 단추를 눌렀다 — 다음 캔버스를 닫기 전에 자리를 잰다
+        uint8                                  _bCommentReady     : 1; ///< 잰 자리가 있다(takeCommentRequest 가 가져간다)
+        float2                                 _commentPosition;       ///< 새 주석 상자의 왼쪽 위(캔버스 좌표)
+        float2                                 _commentSize;           ///< 새 주석 상자의 영역 크기
+        int32                                  _renameCommentID;       ///< 이름을 바꾸는 주석 id. 0 이면 없다
+        fixed_string<constant::buffer::kMax64> _renameText;            ///< 이름 바꾸기 칸의 글
+        vector<int32>                          _listSeededComment;     ///< 자리 · 크기를 캔버스에 넣은 주석 id
     };
 } // namespace sw::editor

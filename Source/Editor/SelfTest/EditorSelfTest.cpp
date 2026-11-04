@@ -48,15 +48,19 @@ namespace sw::editor
                 uint32                          _cursor{ 0 };
                 uint32                          _passedCount{ 0 };
                 uint32                          _failedCount{ 0 };
-                bool                            _bActive{ false }; ///< 실행이 있다(시작 전 워밍업 포함)
-                bool                            _bStarted{ false };
-                bool                            _bQuitWhenDone{ false };
-                bool                            _bMarksWereEnabled{ false }; ///< 시작 전 레이블 기록 상태(끝나면 되돌린다)
+                bool                            _bActive{ SW_FALSE };        ///< 실행이 있다(시작 전 워밍업 포함) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                            _bStarted{ SW_FALSE };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                            _bQuitWhenDone{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+                bool                            _bMarksWereEnabled{ false }; ///< 시작 전 레이블 기록 상태(끝나면 되돌린다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             RunState _run;
-            bool     _bCommandLineConsumed{ false }; ///< `-gv_editorSelfTest` 를 한 번 실행으로 바꿨다. 실행을 비워도 남는다
+            uint8    _bCommandLineConsumed : 1; ///< `-gv_editorSelfTest` 를 한 번 실행으로 바꿨다. 실행을 비워도 남는다
 
+            EditorSelfTestSession()
+                : _bCommandLineConsumed{ SW_FALSE }
+            {
+            }
             const utf8* getSubsystemName() const override { return kSubsystemName; }
         };
 
@@ -191,7 +195,7 @@ namespace sw::editor
         state                                   = EditorSelfTestInternal::RunState{};
         state._pattern                          = string( pattern );
         state._bQuitWhenDone                    = bQuitWhenDone;
-        state._bActive                          = true;
+        state._bActive                          = SW_TRUE;
         // 첫 테스트 앞에서 에디터가 멈추기를 기다린다(기동 직후 패널이 처음 그려지고 기본 도킹이 자리 잡는다) — 예전의 워밍업 5 프레임을 대신한다.
         state._settleWait.emplace();
         return true;
@@ -241,7 +245,7 @@ namespace sw::editor
         EditorSelfTestInternal::RunState& state = pSession->_run;
         if ( pSession->_bCommandLineConsumed == false )
         {
-            pSession->_bCommandLineConsumed = true;
+            pSession->_bCommandLineConsumed = SW_TRUE;
             if ( gv_editorSelfTest.empty() == false )
                 (void)requestRun( gv_editorSelfTest, true ); // 기동 직후라 도는 실행이 없다
         }
@@ -251,7 +255,7 @@ namespace sw::editor
         using Registry = EditorExtensionRegistry<EditorSelfTestRegistration>;
         if ( state._bStarted == false )
         {
-            state._bStarted = true;
+            state._bStarted = SW_TRUE;
             // 테스트가 도는 동안 패널이 누를 위젯의 레이블을 적는다(EditorSelfTestMarks::note). 끝나면 시작 전 상태로 되돌린다.
             state._bMarksWereEnabled = EditorSelfTestMarks::isEnabled();
             (void)EditorSelfTestMarks::setEnabled( true ); // 세션이 있으니 에디터 컨텍스트도 있다
@@ -295,7 +299,7 @@ namespace sw::editor
         }
 
         // 모두 끝났다. 하나도 맞지 않은 패턴은 실패다 — 이름을 잘못 적은 실행이 초록으로 보이면 안 된다.
-        state._bActive = false;
+        state._bActive = SW_FALSE;
         (void)EditorSelfTestMarks::setEnabled( state._bMarksWereEnabled ); // 세션이 있으니 에디터 컨텍스트도 있다
         if ( state._listSelectedIndex.empty() )
             ++state._failedCount;

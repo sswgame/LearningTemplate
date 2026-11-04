@@ -103,7 +103,7 @@ namespace sw::editor
         ModuleStateFilter           _stateFilter;
         vector<ModuleInactiveEntry> _listNewlyInactive;
         vector<string>              _listNewlyActive;
-        bool                        _bPendingEnabled;
-        bool                        _bChangedSinceStart; ///< 이 실행에서 매니페스트를 고쳤다 — 빌드 · 다시 시작 띠를 보인다
+        uint8                       _bPendingEnabled    : 1;
+        uint8                       _bChangedSinceStart : 1; ///< 이 실행에서 매니페스트를 고쳤다 — 빌드 · 다시 시작 띠를 보인다
     };
 } // namespace sw::editor

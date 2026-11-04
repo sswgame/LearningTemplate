@@ -26,11 +26,11 @@ namespace sw
     struct SW_API ProcessCommand
     {
 
-        string         _executable{};
-        vector<string> _listArgument{};
-        bool           _bSearchPath{ false }; ///< true 면 `_executable` 은 검색 경로에서 찾을 이름, false 면 절대 경로다
+        string         _executable;
+        vector<string> _listArgument;
+        uint8          _bSearchPath : 1; ///< true 면 `_executable` 은 검색 경로에서 찾을 이름, false 면 절대 경로다
         /** @brief 빈 명령입니다(띄우면 실패한다). */
-        ProcessCommand() = default;
+        ProcessCommand();
 
         /** @brief 절대 경로 @p executable 을 그대로 띄우는 명령입니다(검색하지 않는다). 인자 목록을 반드시 함께 받는다 - `launch( "a b c" )` 가 컴파일되지 않게. */
         [[nodiscard]] static ProcessCommand at( const AbsolutePath& executable, vector<string> listArgument );
@@ -73,14 +73,14 @@ namespace sw
     struct ProcessOptions
     {
         string _workingDirectory{};
-        bool   _bCreateWindow{ false };
+        bool   _bCreateWindow{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /** @brief 자식의 표준 입력을 파이프로 연결합니다 — `writeInput` · `closeInput` 으로 씁니다. 끄면 자식의 표준 입력은 비어 있다(NUL · /dev/null). */
-        bool _bPipeStandardInput{ false };
+        bool _bPipeStandardInput{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief Windows 에서 자식을 새 프로세스 그룹으로 띄웁니다(`CREATE_NEW_PROCESS_GROUP`) — `requestStop` 이 그 그룹에 Ctrl+Break 를 보낼 수 있게.
          * @details 모든 자식에 걸면 터미널의 Ctrl+C 가 자식(빌드 중인 컴파일러)에 닿지 않으므로 옵션이다. POSIX 는 늘 자기 그룹이라 무시합니다.
          */
-        bool _bNewProcessGroup{ false };
+        bool _bNewProcessGroup{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 이 프로세스의 환경에 덮어써서 자식에게 줄 환경 변수들입니다. 비면 환경을 그대로 물려줍니다.
          * @details `launch` 만 받는다 — `launchDetached` 는 비어 있지 않으면 거절한다(조용히 무시하지 않는다). 이름이 비었거나 `=` 를 품으면 launch 가 실패합니다.
@@ -265,6 +265,6 @@ namespace sw
          *        두 스레드의 쓰기를 짚는다).
          */
         atomic<int32> _processID;
-        bool          _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows)
+        bool          _bNewProcessGroup; ///< `requestStop` 이 보낼 수 있는 자식인가(Windows) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw

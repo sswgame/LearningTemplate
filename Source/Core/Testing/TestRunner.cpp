@@ -73,8 +73,8 @@ namespace sw::test
                 string                      _scratchFolder;
                 string                      _childArgument; ///< 자식 역할로 띄워졌을 때 `--test-child-arg` 의 값
                 uint32                      _assertionCount{ 0 };
-                bool                        _bUpdateSnapshots{ false };
-                bool                        _bActive{ false };
+                bool                        _bUpdateSnapshots{ false }; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+                bool                        _bActive{ SW_FALSE };       ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 케이스 등록표입니다. 정적 초기화(모듈 이미지 로드)에서 채우고 내릴 때 뺀다 — 함수 안 정적이다(초기화 순서). */
@@ -235,7 +235,7 @@ namespace sw::test
 {
     TestCaseRegistrar::TestCaseRegistrar( const TestCaseRegistration* pRegistration )
         : _pRegistration{ pRegistration }
-        , _bRegistered{ false }
+        , _bRegistered{ SW_FALSE }
     {
         TestRunnerInternal::Registry& registry = TestRunnerInternal::getRegistry();
         RegistrationResult            result   = RegistrationResult::Added;
@@ -670,7 +670,7 @@ namespace sw::test
                     state._bUpdateSnapshots = options._bUpdateSnapshots;
                     state._scratchFolder    = FileUtil::joinPath( FileUtil::joinPath( scratchRoot, Internal::toFileName( pCase->_pName ) ), to_string( roundIndex ) );
                     state._childArgument    = options._childArgument;
-                    state._bActive          = true;
+                    state._bActive          = SW_TRUE;
                 }
                 LogOnce::beginScope(); // 한 번만 알리는 로그(`LogOnce`)도 케이스마다 처음이다 — 앞 케이스 · 앞 회차가 알렸다고 기대 로그가 사라지지 않게
                 Internal::writeLine( string( "[ RUN      ] " ) + pCase->_pName );
@@ -693,7 +693,7 @@ namespace sw::test
                 vector<string> listLateFailure;
                 {
                     ScopedLock<mutex> lock{ state._mutex };
-                    state._bActive = false;
+                    state._bActive = SW_FALSE;
                     if ( state._assertionCount == 0 )
                         listLateFailure.push_back( formatToString( "%#(%#): error: the case made no assertion - a case that checks nothing is not a pass", string( pCase->_pFile ), pCase->_line ) );
                     for ( const TestRunnerInternal::ExpectedLog& expected : state._listExpectedLog )

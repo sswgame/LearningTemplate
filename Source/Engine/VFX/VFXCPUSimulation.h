@@ -110,6 +110,6 @@ namespace sw
         VFXEmitterClock  _clock;
         uint64           _seed;
         vector<Particle> _listParticle;
-        bool             _bWarnedPoolFull;
+        uint8            _bWarnedPoolFull : 1;
     };
 } // namespace sw

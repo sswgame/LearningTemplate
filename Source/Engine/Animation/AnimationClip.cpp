@@ -50,14 +50,14 @@ namespace sw
                 const uint8* _pData;
                 size_t       _size;
                 size_t       _offset;
-                bool         _bFailed;
+                bool         _bFailed; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
                 /** @brief 읽습니다. 실패는 `_bFailed` 에 남고 값은 0 입니다 — 호출자가 읽기를 마친 뒤 `_bFailed` 를 확인한다(결과를 돌려주는 길이 없다). */
                 void readRaw( void* pOut, size_t size )
                 {
                     if ( _bFailed || _offset + size > _size )
                     {
-                        _bFailed = true;
+                        _bFailed = SW_TRUE;
                         Memory::set( pOut, 0, size );
                         return;
                     }
@@ -83,7 +83,7 @@ namespace sw
                     readRaw( &value, sizeof( value ) );
                     if ( MathUtil::isFinite( value ) )
                         return value;
-                    _bFailed = true;
+                    _bFailed = SW_TRUE;
                     return 0.0f;
                 }
                 string readString()
@@ -91,7 +91,7 @@ namespace sw
                     const uint32 length = readUint();
                     if ( length > kMaxStringLength || _offset + length > _size )
                     {
-                        _bFailed = true;
+                        _bFailed = SW_TRUE;
                         return {};
                     }
                     string text( reinterpret_cast<const utf8*>( _pData + _offset ), length );
@@ -102,7 +102,7 @@ namespace sw
                 bool canHold( uint32 count, size_t minElementSize )
                 {
                     if ( _bFailed || static_cast<uint64>( count ) * minElementSize > _size - _offset )
-                        _bFailed = true;
+                        _bFailed = SW_TRUE;
                     return _bFailed == false;
                 }
             };

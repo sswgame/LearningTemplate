@@ -119,8 +119,8 @@ namespace sw
         , _index{ 0 }
         , _parkedIndex{ 0 }
         , _transactionDepth{ 0 }
-        , _bIsExecuting{ false }
-        , _bHistoryParked{ false }
+        , _bIsExecuting{ SW_FALSE }
+        , _bHistoryParked{ SW_FALSE }
         , _listOwnerWatch{}
     {
     }
@@ -284,9 +284,9 @@ namespace sw
         if ( canUndo() == false || _bIsExecuting )
             return;
         --_index;
-        _bIsExecuting = true;
+        _bIsExecuting = SW_TRUE;
         execute( _listCommand[_index], true );
-        _bIsExecuting = false;
+        _bIsExecuting = SW_FALSE;
     }
 
     void CommandStack::redo()
@@ -296,9 +296,9 @@ namespace sw
             return;
         const size_t targetIndex = _index;
         ++_index;
-        _bIsExecuting = true;
+        _bIsExecuting = SW_TRUE;
         execute( _listCommand[targetIndex], false );
-        _bIsExecuting = false;
+        _bIsExecuting = SW_FALSE;
     }
 
     void CommandStack::notifyObjectEdit( const ObjectEditNotice& notice ) const
@@ -420,7 +420,7 @@ namespace sw
         clear();
         _listParkedCommand.clear();
         _parkedIndex    = 0;
-        _bHistoryParked = false;
+        _bHistoryParked = SW_FALSE;
         uint32 version{ 0 };
         archive >> version;
         bool       bParked{ false };
@@ -458,7 +458,7 @@ namespace sw
     {
         _listParkedCommand = std::move( _listCommand );
         _parkedIndex       = _index;
-        _bHistoryParked    = true;
+        _bHistoryParked    = SW_TRUE;
         clear();
     }
 
@@ -471,7 +471,7 @@ namespace sw
         _index       = _parkedIndex;
         _listParkedCommand.clear();
         _parkedIndex    = 0;
-        _bHistoryParked = false;
+        _bHistoryParked = SW_FALSE;
     }
 
     const string& CommandStack::peekUndoLabel() const

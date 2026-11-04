@@ -117,7 +117,7 @@ namespace sw::editor
 
     void AbilityDebugPanel::drawContent()
     {
-        _bSnapshotValid           = false;
+        _bSnapshotValid           = SW_FALSE;
         AbilityComponent* pTarget = findTarget();
         drawTargetPicker( pTarget );
 
@@ -135,7 +135,7 @@ namespace sw::editor
         }
 
         AbilityDebugModel::collect( *pTarget, _snapshot );
-        _bSnapshotValid = true;
+        _bSnapshotValid = SW_TRUE;
         ImGui::TextDisabled( "t = %.2f", static_cast<float64>( _snapshot._time ) );
         drawSnapshot();
     }

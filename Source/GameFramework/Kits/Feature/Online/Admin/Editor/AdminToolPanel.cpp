@@ -109,7 +109,7 @@ namespace sw::editor
         , _noticeID{ 1 }
         , _noticePriority{ 0 }
         , _sanctionKind{ ServiceSanctionKind::ChatMute }
-        , _bRefund{ false }
+        , _bRefund{ SW_FALSE }
     {
         _accountText = "100"; // 메모리 제공자의 첫 계정(`FakeAdminProvider::kSeedPlayerID`)이다
     }

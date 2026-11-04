@@ -264,8 +264,8 @@ namespace sw
         NavDebugView                         _debugView;
         GameObjectManager*                   _pManager;
         uint32                               _waitingMeshCount; ///< 이번 갱신에 마련을 미룬(`NavMeshArrival::Defer`) 모으기들이 센, 아직 읽는 중인 메시 수. 갱신 첫머리에 0 으로 돌린다
-        bool                                 _bSettingsLoaded;
-        bool                                 _bIgnoreCooked; ///< 다시 베이크하는 동안 쿠킹본을 읽지 않는다(`rebakeAllNavMeshes`)
+        uint8                                _bSettingsLoaded : 1;
+        uint8                                _bIgnoreCooked   : 1; ///< 다시 베이크하는 동안 쿠킹본을 읽지 않는다(`rebakeAllNavMeshes`)
         // 슬롯 색인(`_navIndex`)으로 O(1) 빼는 목록 넷의 등록 구독입니다. 풀리면 그 종류의 `unregister…` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다.
         ItemSubscriptionList<NavMeshAgentComponent>    _agentSubscriptions{ ItemSubscriptionList<NavMeshAgentComponent>::ReleaseFunction::create<&SceneNavigation::unregisterAgent>( this ) };
         ItemSubscriptionList<NavMeshSurfaceComponent>  _surfaceSubscriptions{ ItemSubscriptionList<NavMeshSurfaceComponent>::ReleaseFunction::create<&SceneNavigation::unregisterSurface>( this ) };

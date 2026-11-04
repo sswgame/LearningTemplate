@@ -51,7 +51,7 @@ namespace sw
                 UISystem*               _pUI{ nullptr };
                 IWindow*                _pWindow{ nullptr };
                 UIAccessibilitySnapshot _snapshot{};
-                bool                    _bSnapshotValid{ false };
+                bool                    _bSnapshotValid{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 LONG                    _refCount{ 1 };
 
                 void addRef() { InterlockedIncrement( &_refCount ); }
@@ -69,7 +69,7 @@ namespace sw
                     if ( _bSnapshotValid == false )
                     {
                         UIAccessibilityService::populateSnapshot( *_pUI, _snapshot );
-                        _bSnapshotValid = true;
+                        _bSnapshotValid = SW_TRUE;
                     }
                     return &_snapshot;
                 }
@@ -565,7 +565,7 @@ namespace sw
                 uint32   _screen;
                 WidgetID _widget;
                 LONG     _refCount;
-                bool     _bRoot;
+                uint8    _bRoot : 1;
             };
 
             /** @brief `IUIAccessibilityBridge` 구현입니다. 창의 `WM_GETOBJECT` 훅과 알림 보내기를 맡는다. */
@@ -598,7 +598,7 @@ namespace sw
 
                 bool isClientActive() const override { return UiaClientsAreListening() != FALSE; }
 
-                void onUIUpdated() override { _pCore->_bSnapshotValid = false; }
+                void onUIUpdated() override { _pCore->_bSnapshotValid = SW_FALSE; }
 
                 void notifyFocusChanged( uint32 screen, WidgetID widget ) override
                 {

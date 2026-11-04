@@ -101,7 +101,7 @@ namespace sw
         struct CompletedItem
         {
             string                          _path;
-            bool                            _bSuccess;
+            bool                            _bSuccess; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
             vector<uint8>                   _bytes;
             OnStreamingCompleteDelegate     _callback;
             OnStreamingDataCompleteDelegate _dataCallback;

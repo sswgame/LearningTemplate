@@ -27,7 +27,7 @@ namespace sw
                 : IAudioEffect{ typeInfo, layout }
                 , _filter{}
                 , _type{ type }
-                , _bBypass{ false }
+                , _bBypass{ SW_FALSE }
             {
                 onParameterChanged();
             }
@@ -51,9 +51,9 @@ namespace sw
             }
 
         private:
-            AudioBiquadFilter _filter;  /**< 필터 상태입니다(채널마다). */
-            AudioBiquadType   _type;    /**< 필터 형태입니다. */
-            bool              _bBypass; /**< 걸러도 같은 신호라 건너뜁니다. */
+            AudioBiquadFilter _filter;      /**< 필터 상태입니다(채널마다). */
+            AudioBiquadType   _type;        /**< 필터 형태입니다. */
+            uint8             _bBypass : 1; /**< 걸러도 같은 신호라 건너뜁니다. */
         };
 
         /**

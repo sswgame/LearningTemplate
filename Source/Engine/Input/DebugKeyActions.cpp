@@ -98,7 +98,7 @@ namespace sw
     DebugKeyActions::DebugKeyActions()
         : _mapDebugAction{ nullptr }
         , _userBindingsPath{}
-        , _bBound{ false }
+        , _bBound{ SW_FALSE }
     {
     }
 
@@ -109,7 +109,7 @@ namespace sw
         if ( _bBound == false )
         {
             _mapDebugAction = createInputMap( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._debugKeyInputMap.get() } );
-            _bBound         = true;
+            _bBound         = SW_TRUE;
             // 플레이어가 디버그 키(콘솔 여는 키 …)를 바꿨으면 리소스의 기본 위에 입힌다. 읽지 못한 파일은 로그가 알리고 기본 키로 돈다.
             if ( _userBindingsPath.empty() == false )
                 (void)loadUserBindings( *_mapDebugAction, _userBindingsPath ); // 실패는 loadUserBindings 가 경고로 남긴다
@@ -126,7 +126,7 @@ namespace sw
     void DebugKeyActions::reset()
     {
         _mapDebugAction.reset();
-        _bBound = false;
+        _bBound = SW_FALSE;
     }
 
     unique_ptr<InputMap> DebugKeyActions::createInputMap( const AssetID& assetID )

@@ -177,7 +177,7 @@ namespace sw::editor
         : _listTrack{}
         , _lastQuerySeconds{ 0.0 }
         , _sessionPort{ 0 }
-        , _bQueried{ false }
+        , _bQueried{ SW_FALSE }
     {
     }
 
@@ -206,7 +206,7 @@ namespace sw::editor
         const bool bQueryDue = _bQueried == false || EditorNetProfilerUtil::kQueryIntervalSeconds <= nowSeconds - _lastQuerySeconds;
         if ( bQueryDue == false )
             return;
-        _bQueried         = true;
+        _bQueried         = SW_TRUE;
         _lastQuerySeconds = nowSeconds;
         for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
         {
@@ -235,7 +235,7 @@ namespace sw::editor
         _listTrack.clear();
         _lastQuerySeconds = 0.0;
         _sessionPort      = 0;
-        _bQueried         = false;
+        _bQueried         = SW_FALSE;
     }
 
     const EditorNetProfilerTrack* EditorNetProfilerHistory::findTrack( int32 processIndex ) const

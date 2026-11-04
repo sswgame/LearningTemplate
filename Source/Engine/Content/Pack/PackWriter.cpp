@@ -52,8 +52,8 @@ namespace sw
         vector<uint8> _listPayload;          ///< 코덱이 낸 바이트. 압축을 거치지 않은 항목(`None` · 빈 항목)은 비어 있고 원본을 그대로 담는다
         int64         _nanos{ 0 };           ///< 이 항목의 압축 · CRC 에 쓴 시간
         uint32        _crc32{ 0 };           ///< 원본의 CRC32
-        bool          _bCompressed{ false }; ///< `_listPayload` 가 압축 결과다
-        bool          _bFailed{ false };     ///< 코덱이 실패했다(이유는 오류 로그로 이미 남았다)
+        bool          _bCompressed{ false }; ///< `_listPayload` 가 압축 결과다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool          _bFailed{ SW_FALSE };  ///< 코덱이 실패했다(이유는 오류 로그로 이미 남았다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /**

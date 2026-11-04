@@ -28,15 +28,15 @@ namespace sw::editor
         if ( bVisible )
         {
             _bWindowFocused     = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
-            _bContentDrawn      = true;
+            _bContentDrawn      = SW_TRUE;
             _contentLineCount   = ImGui::GetContentRegionAvail().y / ImGui::GetTextLineHeightWithSpacing();
             _contentColumnCount = ImGui::GetContentRegionAvail().x / ImGui::CalcTextSize( "0" ).x;
             drawContent();
         }
         else
         {
-            _bWindowFocused = false;
-            _bContentDrawn  = false;
+            _bWindowFocused = SW_FALSE;
+            _bContentDrawn  = SW_FALSE;
             onPanelCollapsed();
         }
         EditorChrome::endPanel();

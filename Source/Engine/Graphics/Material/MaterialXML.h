@@ -114,7 +114,7 @@ namespace sw
         PROPERTY()
         string _keywordOff{};
         PROPERTY( Name = "bEnabled" )
-        bool _bEnabled{ false };
+        bool _bEnabled{ SW_FALSE };
         PROPERTY( Name = "bShaderFeature" )
         bool _bShaderFeature{ true };
     };
@@ -166,7 +166,7 @@ namespace sw
         PROPERTY( Required )
         string _name{};
         PROPERTY( Name = "bEnabled" )
-        bool _bEnabled{ true };
+        bool _bEnabled{ SW_TRUE };
     };
 } // namespace sw
 

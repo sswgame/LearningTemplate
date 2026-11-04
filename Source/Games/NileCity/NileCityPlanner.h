@@ -74,7 +74,7 @@ namespace sw
     /** @brief 자동 계획 파일의 한 단계 — 원소 이름(`Road` · `Building`)과 그 칸입니다. */
     struct NileAutoPlanStep
     {
-        bool                _bRoad{ false };
+        bool                _bRoad{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         NileAutoPlanStepDef _def{};
     };
 } // namespace sw

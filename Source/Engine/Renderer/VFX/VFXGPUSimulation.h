@@ -50,9 +50,9 @@ namespace sw
         RHIDescriptorIndex   _lightUAV{ kInvalidDescriptorIndex }; ///< 라이트 버퍼의 UAV. GPU 구간이 없는 프레임은 invalid 다
         uint32               _lightBase{ 0 };                      ///< GPU 구간의 첫 라이트 번호(`GPULightBuffer::getGPULightBase`)
         uint32               _lightSlotCount{ 0 };                 ///< 받은 GPU 구간의 슬롯 수 — 0 이면 이번 프레임에 파티클 라이트를 쓰지 않는다
-        bool                 _bSimulationPipelineReady{ false };   ///< vfx_simulate.hlsl PSO 가 있다
-        bool                 _bMeshPipelineReady{ false };         ///< vfx_mesh_instance.hlsl PSO 가 있다
-        bool                 _bNativeBindless{ false };            ///< DX12 · Vulkan 이면 true(RW 텍스처를 번호로 고른다)
+        bool                 _bSimulationPipelineReady{ false };   ///< vfx_simulate.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                 _bMeshPipelineReady{ false };         ///< vfx_mesh_instance.hlsl PSO 가 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                 _bNativeBindless{ SW_FALSE };         ///< DX12 · Vulkan 이면 true(RW 텍스처를 번호로 고른다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -142,8 +142,8 @@ namespace sw
             RHIStructuredBuffer _particleBuffer; ///< 렌더 입력(풀 크기)
             RHIStructuredBuffer _argsBuffer;     ///< 간접 인자 · 살아 있는 수 · 버린 수(SW_VFX_ARGS_WORD_COUNT 단어)
             DrawSource          _drawSource;
-            bool                _bNeedsReset; ///< 아직 한 번도 디스패치하지 않았다
-            bool                _bSeen;       ///< 이번 프레임 목록에 있었다
+            uint8               _bNeedsReset : 1; ///< 아직 한 번도 디스패치하지 않았다
+            uint8               _bSeen       : 1; ///< 이번 프레임 목록에 있었다
             EmitterState( shared_ptr<const VFXEmitterDef> pDef, float32 spawnScale );
         };
 
@@ -152,8 +152,8 @@ namespace sw
         {
             const EmitterState* _pState{ nullptr }; ///< 이번 프레임 안에서만 빌린다(`_mapState` 가 소유)
             uint32              _paramRow{ 0 };
-            bool                _bLights{ false }; ///< 파티클 라이트를 GPU 구간에 쓴다(u3 에 라이트 버퍼를 건다)
-            bool                _bReset{ false };  ///< 재생 시작(다중 그룹 경로가 시작 패스를 돈다)
+            bool                _bLights{ false }; ///< 파티클 라이트를 GPU 구간에 쓴다(u3 에 라이트 버퍼를 건다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                _bReset{ false };  ///< 재생 시작(다중 그룹 경로가 시작 패스를 돈다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             uint32              _stepCount{ 0 };   ///< 이번 디스패치가 도는 단계 수(다중 그룹 경로가 단계마다 패스 셋을 기록한다)
         };
 
@@ -203,8 +203,8 @@ namespace sw
         vector<VFXGPULightRange>                        _listLightRange; ///< 이번 프레임의 방출기별 파티클 라이트 슬롯 범위(`assignLightRanges`)
         VFXSimulationFrameInput                         _frameInput;     ///< 이번 프레임 입력(기록이 깊이 히스토리 · 인스턴스 버퍼 · 라이트 버퍼를 건다)
         RHIStructuredBuffer                             _paramBuffer;
-        bool                                            _bPipelineMissingLogged;
-        bool                                            _bMeshPipelineMissingLogged;
-        bool                                            _bLightOverflowLogged;
+        uint8                                           _bPipelineMissingLogged     : 1;
+        uint8                                           _bMeshPipelineMissingLogged : 1;
+        uint8                                           _bLightOverflowLogged       : 1;
     };
 } // namespace sw

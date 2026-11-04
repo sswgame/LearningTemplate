@@ -59,6 +59,6 @@ namespace sw
         Subscription                  _recompiledSubscription; ///< 재컴파일 알림 칸 구독(재컴파일기가 먼저 사라지면 무효가 된다)
         const FrameRendererSubsystem& _frameRendererSubsystem;
         const RenderThreadSubsystem&  _renderThreadSubsystem;
-        bool                          _bReady;
+        uint8                         _bReady : 1;
     };
 } // namespace sw

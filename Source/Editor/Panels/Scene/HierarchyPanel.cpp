@@ -553,7 +553,7 @@ namespace sw::editor
         , _visibleRootCount{ 0 }
         , _drawnRootCount{ 0 }
         , _bFocusRenameInput{ false }
-        , _bSkipOffscreenRows{ true }
+        , _bSkipOffscreenRows{ SW_TRUE }
     {
     }
 

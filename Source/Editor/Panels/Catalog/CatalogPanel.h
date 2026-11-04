@@ -80,7 +80,7 @@ namespace sw::editor
         string                                  _previousFileText;
         string                                  _statusText;
         ValidationState                         _validationState;
-        bool                                    _bIndexLoaded;
-        bool                                    _bRawMode;
+        uint8                                   _bIndexLoaded : 1;
+        bool                                    _bRawMode; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor

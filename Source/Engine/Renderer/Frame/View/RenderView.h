@@ -103,14 +103,14 @@ namespace sw
     {
         const utf8* _pName;
         const utf8* _pShaderDefine;    ///< nullptr 이면 셰이더를 바꾸지 않는다(Lit, Wireframe). `.hlsl` 의 `#if defined(...)` 와 이름이 같아야 한다.
-        bool        _bWireframe;       ///< 채우기 모드를 와이어프레임으로 하고 컬링을 끈다.
-        bool        _bAdditiveNoDepth; ///< Overdraw 용이다. 더하기 블렌드(알파 0 의 프리멀티플라이), 깊이 쓰기 끔(클리어 값 1이 남아 모든 면이 통과), 컬링 끔
-        bool        _bShowsBuffer;     ///< 표면 값을 그대로 보인다(Normals, Depth, Overdraw). 후처리, 톤맵, 외곽선 껍질을 건너뛴다.
+        bool        _bWireframe;       ///< 채우기 모드를 와이어프레임으로 하고 컬링을 끈다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool        _bAdditiveNoDepth; ///< Overdraw 용이다. 더하기 블렌드(알파 0 의 프리멀티플라이), 깊이 쓰기 끔(클리어 값 1이 남아 모든 면이 통과), 컬링 끔 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool        _bShowsBuffer;     ///< 표면 값을 그대로 보인다(Normals, Depth, Overdraw). 후처리, 톤맵, 외곽선 껍질을 건너뛴다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
          * @brief 겹침 모드다(ShadedWireframe). 배치를 Lit PSO 로 먼저 그리고, 이 모드의 PSO 로 한 번 더 그린다.
          * @details 이 모드의 PSO 는 깊이 쓰기를 끄고 카메라 쪽 깊이 바이어스를 걸어(`FramePSOManager.cpp` applyViewModeToDesc) 같은 삼각형 위에서 선이 LessEqual 을 통과한다.
          */
-        bool _bOverlay;
+        bool _bOverlay; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @brief 보기 모드 테이블입니다. 쿠커, PSO 변형, 툴바, 로그가 모두 이것을 읽습니다. 항목 순서가 열거값입니다. */

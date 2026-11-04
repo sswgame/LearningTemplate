@@ -17,7 +17,7 @@ namespace sw
         , _onRequest{}
         , _ioThreadCount{ 0 }
         , _handledCount{ 0 }
-        , _bInitialized{ false }
+        , _bInitialized{ SW_FALSE }
     {
     }
 

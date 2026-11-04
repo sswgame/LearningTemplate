@@ -33,6 +33,7 @@ namespace sw
     public:
         /** @brief @p capacity 틱의 기록을 둡니다. 2보다 작으면 다시 시뮬레이션할 틱이 남지 않으므로 받지 않습니다. */
         explicit ClientPrediction( int32 capacity = 128 )
+            : _bHasRecord{ SW_FALSE }
         {
             SW_ASSERT( capacity >= 2 && "ClientPrediction needs room for the server tick and at least one predicted tick" );
             _listEntry.initialize( capacity );
@@ -51,7 +52,7 @@ namespace sw
             entry._input      = input;
             entry._stateAfter = stateAfter;
             _latestTick       = tick;
-            _bHasRecord       = true;
+            _bHasRecord       = SW_TRUE;
             return true;
         }
 
@@ -100,6 +101,6 @@ namespace sw
         TickRingBuffer<Entry> _listEntry{};
         uint32                _latestTick{ 0 }; ///< 마지막으로 기록한 틱. 다시 시뮬레이션하는 범위가 여기까지이다
         uint32                _correctionCount{ 0 };
-        bool                  _bHasRecord{ false };
+        uint8                 _bHasRecord : 1;
     };
 } // namespace sw

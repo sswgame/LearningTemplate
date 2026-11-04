@@ -169,7 +169,7 @@ namespace sw
         uint32                 _globalVariableTypeMask; ///< 대상으로 받을 수 있는 전역 변수 타입 비트(`SW_BIT( GlobalVariableType )`)입니다.
         UserSettingType        _type;
         UserSettingStorageKind _storageKind;
-        bool                   _bNumeric; ///< min · max · step 이 있습니다.
+        bool                   _bNumeric; ///< min · max · step 이 있습니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

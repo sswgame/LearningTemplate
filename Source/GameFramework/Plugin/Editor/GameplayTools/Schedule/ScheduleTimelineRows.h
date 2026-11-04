@@ -24,8 +24,8 @@ namespace sw::editor
         string _activity{}; ///< 활동 이름
         string _source{};   ///< "Routine 'work'"
         int32  _segmentIndex{ -1 };
-        bool   _bActive{ false }; ///< 미리 보는 시각을 덮는 칸
-        bool   _bPast{ false };   ///< 계획을 세운 시각보다 앞에 끝난 칸
+        bool   _bActive{ SW_FALSE }; ///< 미리 보는 시각을 덮는 칸 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bPast{ false };      ///< 계획을 세운 시각보다 앞에 끝난 칸 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

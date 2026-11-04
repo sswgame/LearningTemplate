@@ -189,7 +189,7 @@ namespace sw::editor
             , _timer{}
             , _clipboardText{}
             , _lastCursor{ CursorShape::Arrow }
-            , _bCursorKnown{ false }
+            , _bCursorKnown{ SW_FALSE }
         {
         }
 
@@ -361,7 +361,7 @@ namespace sw::editor
             if ( _pWindow->setCursorShape( shape ) )
             {
                 _lastCursor   = shape;
-                _bCursorKnown = true;
+                _bCursorKnown = SW_TRUE;
             }
         }
 
@@ -384,7 +384,7 @@ namespace sw::editor
         GameTimer   _timer;
         string      _clipboardText; ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
         CursorShape _lastCursor;
-        bool        _bCursorKnown;
+        uint8       _bCursorKnown : 1;
     };
 
     unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackendFor( const IWindow& window )

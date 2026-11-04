@@ -145,7 +145,7 @@ namespace sw
         float3  _apparentPosition{};   ///< `_bRedirected` 일 때 소리가 오는 겉보기 위치다.
         float32 _occlusion{ 0.0f };    ///< 가림(0 = 열림, 1 = 막힘)이다.
         float32 _diffraction{ 0.0f };  ///< 꺾인 정도(0 = 곧게, 1 = 180°)다.
-        bool    _bRedirected{ false }; ///< 소리가 에미터 위치가 아니라 `_apparentPosition` 에서 온다.
+        bool    _bRedirected{ false }; ///< 소리가 에미터 위치가 아니라 `_apparentPosition` 에서 온다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief 가림만 있는 결과입니다(레이캐스트 질의, 테스트). */
         static AudioPropagation makeOcclusion( float32 occlusion )
@@ -168,7 +168,7 @@ namespace sw
         float3           _velocity{};                  ///< m/s(도플러)
         float32          _screenHalfWidth{ 10.0f };    ///< Screen2D 에서 팬이 끝(±1)에 닿는 가로 거리다.
         AudioSpatialMode _mode{ AudioSpatialMode::World3D };
-        bool             _bActive{ false };
+        bool             _bActive{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -184,7 +184,7 @@ namespace sw
         float32 _occlusion{ 0.0f };         ///< 엔진이 따라간 값이다.
         float32 _diffractionTarget{ 0.0f }; ///< 게임이 넣은 회절(0..1)이다.
         float32 _diffraction{ 0.0f };       ///< 엔진이 따라간 회절이다.
-        bool    _bRedirected{ false };      ///< 방향 · 거리를 `_apparentPosition` 으로 정한다.
+        bool    _bRedirected{ false };      ///< 방향 · 거리를 `_apparentPosition` 으로 정한다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

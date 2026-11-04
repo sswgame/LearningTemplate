@@ -53,8 +53,8 @@ namespace sw
     /** @brief 패스를 실행하는 뷰의 정보입니다(그래프는 뷰마다 같은 패스를 실행한다). */
     struct ExtensionViewInfo
     {
-        bool   _bMainView{ true };
-        uint32 _width{ 0 }; ///< 이 뷰의 트랜지언트 풀 크기입니다.
+        bool   _bMainView{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint32 _width{ 0 };        ///< 이 뷰의 트랜지언트 풀 크기입니다.
         uint32 _height{ 0 };
     };
 
@@ -78,9 +78,9 @@ namespace sw
     struct ExtensionProgramDesc
     {
         string _shaderPath{};
-        bool   _bCullBack{ false }; ///< 메시를 그리는 패스가 후면 컬링을 쓰는지(풀스크린은 false)
-        bool   _bDepthWrite{ false };
-        bool   _bBlend{ false }; ///< 프리멀티플라이 알파 블렌드(색 One / InvSrcAlpha)입니다.
+        bool   _bCullBack{ false };   ///< 메시를 그리는 패스가 후면 컬링을 쓰는지(풀스크린은 false) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bDepthWrite{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool   _bBlend{ false };      ///< 프리멀티플라이 알파 블렌드(색 One / InvSrcAlpha)입니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @brief 패스가 읽는 첨부 하나입니다 — 첨부 이름과, 셰이더가 읽는 역할(`g_<Role>Index`)입니다. */

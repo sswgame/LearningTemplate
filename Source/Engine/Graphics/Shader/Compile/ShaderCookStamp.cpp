@@ -50,9 +50,9 @@ namespace sw
         struct Info
         {
             /// @brief 첫 줄이 지금 판(`kCookStampHeader`)인가. 아니면 아래는 모두 비어 있다.
-            bool _bVersionKnown{ false };
+            bool _bVersionKnown{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             /// @brief 도구 지문 줄이 있었는가.
-            bool _bHasToolchain{ false };
+            bool _bHasToolchain{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             /// @brief 도구 지문 줄의 값입니다.
             uint64 _toolchain{ 0 };
             /// @brief 소스 키(소문자 상대 경로)에서 그 소스의 내용 해시를 찾는 맵입니다.

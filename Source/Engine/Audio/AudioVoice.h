@@ -104,32 +104,32 @@ namespace sw
         void advancePosition( uint32 frameCount );
 
     private:
-        shared_ptr<const AudioClipData> _pClip;                                  /**< 재생하는 클립입니다. */
-        AudioBiquadFilter               _lowPass;                                /**< 보이스 로우패스입니다(소스 채널에 겁니다). */
-        AudioBinauralFilter             _binaural;                               /**< 바이노럴 레이아웃에서 3D 모노 소리를 두 귀로 바꾸는 상태입니다. */
-        AudioStreamWindow               _stream;                                 /**< 스트리밍 클립의 디코더와 창입니다. 소리 그래프도 이 창으로 읽습니다. */
-        AudioGraphInstance*             _pGraph;                                 /**< `_stream` 이 가진 그래프 실행 상태입니다(빌린 포인터, 그래프 클립이 아니면 nullptr). */
-        float32                         _firstFrameLeft;                         /**< 스트리밍 루프 이음매 보간에 쓰는 클립 첫 프레임(왼쪽)입니다. */
-        float32                         _firstFrameRight;                        /**< 같은 첫 프레임의 오른쪽입니다. */
-        bool                            _bHaveFirstFrame;                        /**< 첫 프레임을 읽어 두었는지입니다. */
-        float64                         _position;                               /**< 클립 안의 위치(프레임, 소수)입니다. */
-        float64                         _rate;                                   /**< 출력 프레임당 진행하는 클립 프레임입니다. */
-        float32                         _arrGain[audio::kMaxChannelCount];       /**< 출력 채널마다 지금 게인입니다(램프 중). */
-        float32                         _arrTargetGain[audio::kMaxChannelCount]; /**< 출력 채널마다 이 블록의 목표 게인입니다. */
-        uint32                          _gainChannelCount;                       /**< 목표 게인을 구한 레이아웃의 채널 수입니다(0 = 아직 없음). */
-        float32                         _lowPassHz;                              /**< 로우패스 컷오프(Hz)입니다. */
-        float32                         _fadeGain;                               /**< 페이드 게인입니다. */
-        float32                         _fadeTarget;                             /**< 페이드 목표입니다. */
-        float32                         _fadeStep;                               /**< 프레임마다 페이드 게인이 움직이는 양입니다(절댓값). */
-        uint32                          _fadeDelayFrames;                        /**< 페이드가 시작되기까지 남은 프레임입니다. */
-        uint32                          _startDelayFrames;                       /**< 소리가 시작되기까지 남은 프레임입니다. */
-        uint8                           _bLoop         : 1;                      /**< 끝에서 처음으로 돌아갑니다. */
-        uint8                           _bFinished     : 1;                      /**< 재생이 끝났습니다. */
-        uint8                           _bPaused       : 1;                      /**< 일시정지 중입니다. */
-        uint8                           _bStopAtFade   : 1;                      /**< 페이드가 목표에 닿으면 끝냅니다. */
-        uint8                           _bFirstBlock   : 1;                      /**< 아직 한 번도 섞지 않았습니다. 게인을 0 에서 램프합니다. */
-        uint8                           _bRampIn       : 1;                      /**< 첫 블록에서 게인을 0 에서 램프합니다. */
-        uint8                           _bBinaural     : 1;                      /**< 이번 블록은 바이노럴(HRTF)로 낸다(바이노럴 레이아웃 · 모노 · 3D 방향). */
-        [[maybe_unused]] uint8          _reservedVoice : 1;                      /**< 비트필드 패딩입니다. */
+        shared_ptr<const AudioClipData> _pClip;                                                    /**< 재생하는 클립입니다. */
+        AudioBiquadFilter               _lowPass;                                                  /**< 보이스 로우패스입니다(소스 채널에 겁니다). */
+        AudioBinauralFilter             _binaural;                                                 /**< 바이노럴 레이아웃에서 3D 모노 소리를 두 귀로 바꾸는 상태입니다. */
+        AudioStreamWindow               _stream;                                                   /**< 스트리밍 클립의 디코더와 창입니다. 소리 그래프도 이 창으로 읽습니다. */
+        AudioGraphInstance*             _pGraph;                                                   /**< `_stream` 이 가진 그래프 실행 상태입니다(빌린 포인터, 그래프 클립이 아니면 nullptr). */
+        float32                         _firstFrameLeft;                                           /**< 스트리밍 루프 이음매 보간에 쓰는 클립 첫 프레임(왼쪽)입니다. */
+        float32                         _firstFrameRight;                                          /**< 같은 첫 프레임의 오른쪽입니다. */
+        bool                            _bHaveFirstFrame; /**< 첫 프레임을 읽어 두었는지입니다. */ ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        float64                         _position;                                                 /**< 클립 안의 위치(프레임, 소수)입니다. */
+        float64                         _rate;                                                     /**< 출력 프레임당 진행하는 클립 프레임입니다. */
+        float32                         _arrGain[audio::kMaxChannelCount];                         /**< 출력 채널마다 지금 게인입니다(램프 중). */
+        float32                         _arrTargetGain[audio::kMaxChannelCount];                   /**< 출력 채널마다 이 블록의 목표 게인입니다. */
+        uint32                          _gainChannelCount;                                         /**< 목표 게인을 구한 레이아웃의 채널 수입니다(0 = 아직 없음). */
+        float32                         _lowPassHz;                                                /**< 로우패스 컷오프(Hz)입니다. */
+        float32                         _fadeGain;                                                 /**< 페이드 게인입니다. */
+        float32                         _fadeTarget;                                               /**< 페이드 목표입니다. */
+        float32                         _fadeStep;                                                 /**< 프레임마다 페이드 게인이 움직이는 양입니다(절댓값). */
+        uint32                          _fadeDelayFrames;                                          /**< 페이드가 시작되기까지 남은 프레임입니다. */
+        uint32                          _startDelayFrames;                                         /**< 소리가 시작되기까지 남은 프레임입니다. */
+        uint8                           _bLoop         : 1;                                        /**< 끝에서 처음으로 돌아갑니다. */
+        uint8                           _bFinished     : 1;                                        /**< 재생이 끝났습니다. */
+        uint8                           _bPaused       : 1;                                        /**< 일시정지 중입니다. */
+        uint8                           _bStopAtFade   : 1;                                        /**< 페이드가 목표에 닿으면 끝냅니다. */
+        uint8                           _bFirstBlock   : 1;                                        /**< 아직 한 번도 섞지 않았습니다. 게인을 0 에서 램프합니다. */
+        uint8                           _bRampIn       : 1;                                        /**< 첫 블록에서 게인을 0 에서 램프합니다. */
+        uint8                           _bBinaural     : 1;                                        /**< 이번 블록은 바이노럴(HRTF)로 낸다(바이노럴 레이아웃 · 모노 · 3D 방향). */
+        [[maybe_unused]] uint8          _reservedVoice : 1;                                        /**< 비트필드 패딩입니다. */
     };
 } // namespace sw

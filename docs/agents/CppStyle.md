@@ -23,6 +23,8 @@
 - Header defaults are kept in three cases: a default constructor that is `= default` or defined inline in the header, a delegating constructor, a type with no constructor.
 - A field that default-initialization leaves indeterminate (integer, float, `bool`, enum, pointer, array of those, `atomic<scalar>`, bit-field) gets its value **somewhere**: every constructor with an initializer list (copy and move included) lists it, or it has a header default. A bit-field cannot have a header default before C++20, so such a class writes its constructor. Byte buffers (`utf8 _arrStaticBuffer[N]`) are exempt.
 - Arrange fields to minimize padding; use bit packing where appropriate.
+- A flag field is `uint8 _bX : 1` (compare and assign with `SW_TRUE` / `SW_FALSE`). `CppShape` checks it. It stays `bool` with `NOLINT(sw-bool-flag): <reason>` on the line only when a bit-field cannot work: its address or a `bool&` is taken (ImGui `&_bOpen`, `getArgument( …, bool& )`, `archive >>`), it is atomic, or its type is an aggregate.
+- An aggregate is built only by braces, such as `T{ a, b }`, `{ ._x = … }` or a `constexpr` table. It keeps no constructor, since a constructor would stop it being an aggregate, and its flags stay `bool _bX{ false }`. A C++17 bit-field cannot have a default member initializer, so `T x;`, a derived type or a member of another aggregate would leave the bit indeterminate. This happened on 2026-11-05: `PhysicsShapeDesc3D box;` turned the shape into a trigger. Any other type with a flag writes the constructor the rule above asks for. A nested class or a class inside a `.cpp` defines that constructor inline in its body.
 
 ### Types, strings, functions
 

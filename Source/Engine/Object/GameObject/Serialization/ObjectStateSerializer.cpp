@@ -514,7 +514,7 @@ namespace sw
             SW_LOG_WARNING_ID( "ObjectStateSerializer.StateCouldNotRead", "State of '%#' could not be read - it is restored to what it was before the load", oldName.c_str() );
             ObjectLoadContext restoreContext{ SerializePurpose::Snapshot };
             restoreContext._pIdentity                 = &previousIdentity;
-            restoreContext._bRestorePreviousOnFailure = false;
+            restoreContext._bRestorePreviousOnFailure = SW_FALSE;
             if ( loadFromBinaryBuffer( pGameObject, previousBytes.data(), previousBytes.size(), restoreContext ) == 0 )
                 SW_LOG_ERROR_ID( "ObjectStateSerializer.StateCouldNotRestored", "State of '%#' could not be restored either - the object is left empty", oldName.c_str() );
         }
@@ -693,8 +693,8 @@ namespace sw
         , _mapSavedIDToObject{}
         , _mapSavedNameToEntry{}
         , _idSpace{ idSpace }
-        , _bFinished{ false }
-        , _bReferencesResolved{ true }
+        , _bFinished{ SW_FALSE }
+        , _bReferencesResolved{ SW_TRUE }
     {
     }
 
@@ -734,7 +734,7 @@ namespace sw
     {
         if ( _bFinished )
             return _bReferencesResolved;
-        _bFinished = true;
+        _bFinished = SW_TRUE;
 
         // 1) 이름. 읽는 동안 다른 오브젝트가 잠시 차지하고 있던 저장된 이름이 이제 비었으면 되찾는다. 플레이 중 이름을 서로 바꾼 오브젝트를
         //    되돌리면 앞의 것이 뒤의 것 이름을 잠시 차지하고 있어서, 이 단계가 없으면 앞의 것이 영영 `Left_2` 로 남는다. 아직 차지한 오브젝트가 있으면 그대로 둔다.

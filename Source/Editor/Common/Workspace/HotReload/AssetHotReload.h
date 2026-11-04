@@ -230,18 +230,18 @@ namespace sw::editor
         unordered_set<string>             _uniqueSetQueuedImportKey;       ///< `_listQueuedImport` 의 중복 검사 키(소문자 경로). 목록과 같이 바꾼다
         unordered_set<string>             _uniqueSetRunningImportKey;      ///< `_listRunningImport` 의 중복 검사 키
         unordered_set<string>             _uniqueSetDeferredFile;          ///< `_listDeferredFile` 의 중복 검사 집합
-        bool                              _bImportInFlight;                ///< 잡을 시작했고 결과를 아직 안 가져왔다
+        uint8                             _bImportInFlight : 1;            ///< 잡을 시작했고 결과를 아직 안 가져왔다
         uint64                            _finishedImportCount;            ///< 끝난 원본 임포트의 누적 수
         int64                             _fenceImportDeadlineNanoseconds; ///< 울타리가 임포트를 기다리다 포기하는 단조 시계 시각(기다리지 않으면 0)
         Subscription                      _resourceWatch;                  ///< 리소스 종류 감시 구독
         Subscription                      _contentWatch;                   ///< 확장자와 무관한 감시 구독이다. 변경 번호와 바뀐 파일을 모은다
         uint64                            _contentChangeSerial;
         vector<string>                    _listChangedPath;          ///< 마지막 `takeChangedPaths` 뒤 바뀐 파일의 리소스 id(소문자, 중복 없음)
-        bool                              _bChangedPathsUnknown;     ///< 개별 파일을 모르는 변경이 있었다(폴더 변경 · 한도 초과 · id 변환 실패)
+        uint8                             _bChangedPathsUnknown : 1; ///< 개별 파일을 모르는 변경이 있었다(폴더 변경 · 한도 초과 · id 변환 실패)
         uint64                            _fencePrepareCount;        ///< 울타리를 마친(또는 포기한) 때의 `AutomationScratch::getPrepareCount`
         uint64                            _fenceArmedCount;          ///< 지금 세운 울타리가 본 `AutomationScratch::getPrepareCount`
         int64                             _fenceDeadlineNanoseconds; ///< 울타리를 포기하는 단조 시계 시각
-        bool                              _bFenceWaiting;            ///< 표지 사건을 기다리는 중이다
-        bool                              _bFenceSeen;               ///< 표지 파일의 사건이 왔다
+        uint8                             _bFenceWaiting : 1;        ///< 표지 사건을 기다리는 중이다
+        uint8                             _bFenceSeen    : 1;        ///< 표지 파일의 사건이 왔다
     };
 } // namespace sw::editor

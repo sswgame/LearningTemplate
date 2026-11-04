@@ -23,7 +23,7 @@ namespace sw::editor
         int32   _buildCost{ 0 };
         int32   _capacity{ 0 };
         float32 _loadTime{ 0.0f };
-        bool    _bCoaster{ false };
+        bool    _bCoaster{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 
@@ -70,8 +70,8 @@ namespace sw::editor
         float3                  _gatePosition;
         string                  _layoutPath; ///< 활성 팩의 배치 파일(`ParkLayout::kDataKind`)
         uint64                  _contentHash;
-        bool                    _bLoaded;
-        bool                    _bMissing;
-        bool                    _bWarned;
+        uint8                   _bLoaded  : 1;
+        uint8                   _bMissing : 1;
+        uint8                   _bWarned  : 1;
     };
 } // namespace sw::editor

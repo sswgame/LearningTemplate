@@ -35,7 +35,7 @@ namespace sw
             , _listTick{}
             , _count{ 0 }
             , _newestTick{ 0 }
-            , _bHasNewest{ false }
+            , _bHasNewest{ SW_FALSE }
         {
         }
 
@@ -47,7 +47,7 @@ namespace sw
             _listTick.assign( size, kEmpty );
             _count      = 0;
             _newestTick = 0;
-            _bHasNewest = false;
+            _bHasNewest = SW_FALSE;
         }
 
         /** @brief 넣은 틱을 모두 잊습니다. 값(버퍼 용량)은 슬롯에 남아 다음 `acquire` 가 다시 씁니다. */
@@ -56,7 +56,7 @@ namespace sw
             _listTick.assign( _listTick.size(), kEmpty );
             _count      = 0;
             _newestTick = 0;
-            _bHasNewest = false;
+            _bHasNewest = SW_FALSE;
         }
 
         /**
@@ -74,7 +74,7 @@ namespace sw
             if ( _bHasNewest == false || tick > _newestTick )
             {
                 _newestTick = tick;
-                _bHasNewest = true;
+                _bHasNewest = SW_TRUE;
             }
             return _listEntry[index];
         }
@@ -123,6 +123,6 @@ namespace sw
         vector<uint32> _listTick; ///< 슬롯마다 들어 있는 틱(`kEmpty` 는 빈 슬롯).
         int32          _count;
         uint32         _newestTick;
-        bool           _bHasNewest;
+        uint8          _bHasNewest : 1;
     };
 } // namespace sw

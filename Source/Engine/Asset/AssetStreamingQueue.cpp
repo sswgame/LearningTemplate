@@ -27,7 +27,7 @@ namespace sw
         , _listDetachedIO{}
         , _completedMutex{}
         , _listCompleted{}
-        , _bInitialized{ false }
+        , _bInitialized{ SW_FALSE }
     {
     }
 
@@ -39,7 +39,7 @@ namespace sw
     void AssetStreamingQueue::initialize()
     {
         ScopedLock<mutex> lock{ _mutex };
-        _bInitialized = true;
+        _bInitialized = SW_TRUE;
     }
 
     void AssetStreamingQueue::waitForOwnTasks( const string_view owner )
@@ -100,7 +100,7 @@ namespace sw
             _mapRequestGeneration.clear();
             _mapInFlightIO.clear();
             _listDetachedIO.clear();
-            _bInitialized = false;
+            _bInitialized = SW_FALSE;
         }
         ScopedLock<mutex> completedLock{ _completedMutex };
         _listCompleted.clear();

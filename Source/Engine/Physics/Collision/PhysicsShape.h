@@ -101,6 +101,6 @@ namespace sw
         PROPERTY( Tooltip = "Physics material name (empty: the body's material)" )
         hashed_string _material{};
         PROPERTY( Tooltip = "Chain: connect the last point back to the first" )
-        bool _bLoop{ false };
+        bool _bLoop{ SW_FALSE };
     };
 } // namespace sw

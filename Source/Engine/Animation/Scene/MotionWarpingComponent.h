@@ -39,11 +39,11 @@ namespace sw
     {
         hashed_string             _target{};
         const IAnimationPlayable* _pClip{ nullptr };
-        float32                   _endTime{ 0.0f }; ///< 클립 시각(초)
-        bool                      _bTranslation{ true };
-        bool                      _bRotation{ true };
-        bool                      _bVertical{ false };
-        bool                      _bEnding{ false }; ///< 구간 끝이 울렸다 — 이번 프레임의 루트 모션까지 휜 뒤 닫는다(끝 프레임이 비율 1 을 받는다)
+        float32                   _endTime{ 0.0f };      ///< 클립 시각(초)
+        bool                      _bTranslation{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                      _bRotation{ true };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                      _bVertical{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                      _bEnding{ false };     ///< 구간 끝이 울렸다 — 이번 프레임의 루트 모션까지 휜 뒤 닫는다(끝 프레임이 비율 1 을 받는다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

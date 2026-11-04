@@ -24,10 +24,10 @@ namespace sw
     struct ObjectCopyEntry
     {
         hashed_string _name;
-        uint64        _savedID{ 0 };   ///< 복사한 때의 오브젝트 id(붙여 넣을 때 사본끼리 잇는 열쇠)
-        vector<uint8> _stateBytes;     ///< `ObjectStateSerializer::saveToBinaryBuffer` 결과
-        string        _prefabPath;     ///< 프리팹 인스턴스였으면 그 경로
-        bool          _bRoot{ false }; ///< 복사한 루트(붙여 넣을 때 씬의 루트로 둔다)
+        uint64        _savedID{ 0 };      ///< 복사한 때의 오브젝트 id(붙여 넣을 때 사본끼리 잇는 열쇠)
+        vector<uint8> _stateBytes;        ///< `ObjectStateSerializer::saveToBinaryBuffer` 결과
+        string        _prefabPath;        ///< 프리팹 인스턴스였으면 그 경로
+        bool          _bRoot{ SW_FALSE }; ///< 복사한 루트(붙여 넣을 때 씬의 루트로 둔다) NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw
 

@@ -48,7 +48,7 @@ namespace sw
         /** @brief 예산(바이트)입니다. 0 이면 예산이 없다. 데이터(`Config/Engine/MemoryBudget.json`)가 정한다. */
         uint64 _budgetBytes{ 0 };
         /** @brief 지금 예산을 넘은 상태로 알렸으면 true 입니다(경고는 넘을 때 한 번, 90 % 아래로 내려가면 다시 켠다). */
-        bool _bOverBudget{ false };
+        bool _bOverBudget{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -131,7 +131,7 @@ namespace sw
      */
     struct LeakWindowReport
     {
-        bool                    _bValid{ false }; ///< 창이 열려 있었으면 true. 창 없이 `endLeakWindow` 를 부른 보고서는 false 이고 아래 값이 모두 비어 있다
+        bool                    _bValid{ false }; ///< 창이 열려 있었으면 true. 창 없이 `endLeakWindow` 를 부른 보고서는 false 이고 아래 값이 모두 비어 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         LeakWindowDetail        _detail{ LeakWindowDetail::TagTotals };
         uint32                  _roundCount{ 0 };              ///< 창 안에서 지난 회차 수(`beginLeakWindow` 가 첫 회차)
         uint64                  _totalBytes{ 0 };              ///< 모든 줄의 바이트 합
@@ -176,8 +176,8 @@ namespace sw
     /** @brief `MemoryProfiler::judgeLeakCurve` 의 판정입니다. */
     struct LeakCurveVerdict
     {
-        bool    _bValid{ false };          ///< 워밍업을 뺀 점이 둘 이상이어야 기울기를 낼 수 있다. false 이면 아래 값은 0 이고 평평하다고 말하지 않는다
-        bool    _bFlat{ false };           ///< 두 기울기가 모두 허용치 이하이면 true
+        bool    _bValid{ false };          ///< 워밍업을 뺀 점이 둘 이상이어야 기울기를 낼 수 있다. false 이면 아래 값은 0 이고 평평하다고 말하지 않는다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _bFlat{ false };           ///< 두 기울기가 모두 허용치 이하이면 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         uint32  _sampleCount{ 0 };         ///< 기울기에 쓴 점 수(워밍업 제외)
         float64 _slopeBytesPerRound{ 0 };  ///< 회차에 대한 바이트의 최소제곱 기울기
         float64 _slopeBlocksPerRound{ 0 }; ///< 회차에 대한 블록 수의 최소제곱 기울기

@@ -41,7 +41,7 @@ namespace sw
         : _clock{ std::move( pDef ), spawnScale }
         , _seed{ seed }
         , _listParticle{}
-        , _bWarnedPoolFull{ false }
+        , _bWarnedPoolFull{ SW_FALSE }
     {
         SW_ASSERT( getDef()._maxParticles >= 1 );
         SW_ASSERT( getDef().computeSupportedTargets().has( VFXSimulationTarget::CPU ) ); // 깊이 충돌 같은 GPU 전용 모듈은 여기 오지 않는다
@@ -79,7 +79,7 @@ namespace sw
         if ( spawnCount < spawn._count && _bWarnedPoolFull == false )
         {
             SW_LOG_WARNING_ID( "VFX.PoolFull", "VFX emitter '%#': pool of %# particles is full, dropping new particles", def._name, def._maxParticles );
-            _bWarnedPoolFull = true;
+            _bWarnedPoolFull = SW_TRUE;
         }
 
         // 풀이 차서 못 만든 입자(뒤쪽 번호)도 시계가 번호를 이미 썼다 — 풀 상태가 나머지 입자의 난수를 바꾸지 않게 한다.

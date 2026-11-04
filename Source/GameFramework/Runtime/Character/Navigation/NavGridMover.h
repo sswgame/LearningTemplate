@@ -37,6 +37,6 @@ namespace sw
         NavAgent&       _agent;
         const NavGrid&  _grid;
         GridPathfinder& _pathfinder;
-        bool            _bFailed;
+        uint8           _bFailed : 1;
     };
 } // namespace sw

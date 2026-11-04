@@ -62,7 +62,7 @@ namespace sw
         , _blockCursor{ audio::kBlockFrameCount }
         , _layout{ AudioChannelLayout::Stereo }
         , _published{}
-        , _bInitialized{ false }
+        , _bInitialized{ SW_FALSE }
     {
     }
 

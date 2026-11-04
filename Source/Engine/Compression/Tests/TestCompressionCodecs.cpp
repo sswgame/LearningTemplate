@@ -45,7 +45,7 @@ namespace
     struct CodecRoundTrip
     {
         size_t _compressedSize{ 0 };
-        bool   _bRoundTripOk{ false };
+        bool   _bRoundTripOk{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     CodecRoundTrip roundTrip( sw::ICompressionCodec& codec, const sw::vector<uint8>& listOriginal )

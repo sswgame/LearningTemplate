@@ -230,7 +230,7 @@ namespace sw
         static constexpr uint32 kInlineCapacity = 4;
 
         uint32                        _count{ 0 };
-        bool                          _bClosed{ false }; ///< 이 태스크가 끝나 후속을 이미 풀었다. 더 붙일 수 없다(`tryPushBack` 이 false)
+        bool                          _bClosed{ false }; ///< 이 태스크가 끝나 후속을 이미 풀었다. 더 붙일 수 없다(`tryPushBack` 이 false) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         TaskNode*                     _arrInlineNode[kInlineCapacity]{};
         unique_ptr<vector<TaskNode*>> _pOverflow;
         mutable SpinLock              _lock;

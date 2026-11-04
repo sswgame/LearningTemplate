@@ -29,7 +29,7 @@ namespace sw
         , _channel{ nullptr }
         , _pHealthRegistry{ nullptr }
         , _status{}
-        , _bMaintenance{ false }
+        , _bMaintenance{ SW_FALSE }
     {
     }
 

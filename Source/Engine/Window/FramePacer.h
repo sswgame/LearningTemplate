@@ -45,11 +45,11 @@ namespace sw
     /** @brief 상태를 정하는 프레임 입력입니다. 앱 루프가 프레임마다 채운다. */
     struct FramePacingInputs
     {
-        bool _bAutomationRun{ false }; ///< `-scenario`(녹화 포함) · `-gv_profileFrames` · `-gv_profileSeconds` 실행이다.
-        bool _bListenHost{ false };    ///< 이 프로세스의 넷 세션이 서버다.
-        bool _bMinimized{ false };     ///< `IWindow::isMinimized`
-        bool _bFocused{ false };       ///< `IWindow::hasFocus`
-        bool _bEditorQuiet{ false };   ///< 에디터가 이번 프레임에 다시 그릴 까닭이 없다(`ModuleFrameState::_bEditorQuiet`). 에디터가 없으면 false.
+        bool _bAutomationRun{ false }; ///< `-scenario`(녹화 포함) · `-gv_profileFrames` · `-gv_profileSeconds` 실행이다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bListenHost{ false };    ///< 이 프로세스의 넷 세션이 서버다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bMinimized{ false };     ///< `IWindow::isMinimized` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bFocused{ false };       ///< `IWindow::hasFocus` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bEditorQuiet{ false };   ///< 에디터가 이번 프레임에 다시 그릴 까닭이 없다(`ModuleFrameState::_bEditorQuiet`). 에디터가 없으면 false. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

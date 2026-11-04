@@ -20,8 +20,8 @@ namespace sw
         , _openFrame{ 0 }
         , _escapeHeldSeconds{ 0.0f }
         , _listenSeconds{ 0.0f }
-        , _bListening{ true }
-        , _bEscapeHeld{ false }
+        , _bListening{ SW_TRUE }
+        , _bEscapeHeld{ SW_FALSE }
     {
     }
 
@@ -96,7 +96,7 @@ namespace sw
         }
         if ( slot == InputSlot::fromKey( Key::Escape ) )
         {
-            _bEscapeHeld       = true;
+            _bEscapeHeld       = SW_TRUE;
             _escapeHeldSeconds = 0.0f;
             pUI->getInputRouter().getConsumption().consumeSlot( slot );
             return;
@@ -110,7 +110,7 @@ namespace sw
         if ( pUI != nullptr )
             pUI->getInputRouter().getConsumption().consumeSlot( slot );
         _capturedSlotText = InputSlotUtil::toText( slot );
-        _bListening       = false;
+        _bListening       = SW_FALSE;
         UserSettingBindingConflict conflict{};
         if ( _pSettings->findBindingConflict( _settingID, _capturedSlotText, conflict ) )
         {

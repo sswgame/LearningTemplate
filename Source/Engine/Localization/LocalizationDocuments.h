@@ -93,7 +93,7 @@ namespace sw
         string _text;              ///< 번역(ICU MessageFormat 패턴)
         string _translatorComment; ///< 번역가 메모입니다(PO `# `). 왕복에서 유지합니다.
         uint64 _sourceHash{ 0 };   ///< 번역할 때의 원문 해시입니다. 0 이면 확인하지 않습니다(손으로 넣은 테이블).
-        bool   _bReview{ false };  ///< 검토가 필요한지 나타냅니다(번역 메모리의 근사 일치, PO `#, fuzzy`). 화면에 나오지 않습니다.
+        bool   _bReview{ false };  ///< 검토가 필요한지 나타냅니다(번역 메모리의 근사 일치, PO `#, fuzzy`). 화면에 나오지 않습니다. NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
     };
 } // namespace sw
 
@@ -165,7 +165,7 @@ namespace sw
         vector<string> _listElement;
         string         _attribute;
         string         _context;
-        bool           _bKeyReference{ false };
+        bool           _bKeyReference{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

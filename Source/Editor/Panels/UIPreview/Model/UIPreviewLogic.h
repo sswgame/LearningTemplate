@@ -77,11 +77,11 @@ namespace sw::editor
      */
     struct UIPreviewSlotFields
     {
-        bool _bPaddingAlignment{ false }; ///< 여백 · 가로/세로 정렬(캔버스 밖의 모든 패널)
-        bool _bBoxSize{ false };          ///< 크기 규칙 · 채우기 비율(상자 패널)
-        bool _bGrid{ false };             ///< 행 · 열 · 넓이(격자 패널)
-        bool _bCanvas{ false };           ///< 앵커 · 오프셋 · 자동 크기 · 커지는 쪽 · z 순서(캔버스 패널)
-        bool _bSizeOverride{ false };     ///< 크기 덮어쓰기 · 최소 · 최대(부모가 있으면 모두)
+        bool _bPaddingAlignment{ false }; ///< 여백 · 가로/세로 정렬(캔버스 밖의 모든 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bBoxSize{ false };          ///< 크기 규칙 · 채우기 비율(상자 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bGrid{ false };             ///< 행 · 열 · 넓이(격자 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bCanvas{ false };           ///< 앵커 · 오프셋 · 자동 크기 · 커지는 쪽 · z 순서(캔버스 패널) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bSizeOverride{ false };     ///< 크기 덮어쓰기 · 최소 · 최대(부모가 있으면 모두) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

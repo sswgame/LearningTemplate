@@ -23,7 +23,7 @@ namespace sw::editor
     {
         const utf8* _pGlyph{ nullptr };   ///< 아이콘 글리프(`EditorIconUtil`)
         Color       _color{};             ///< 뷰포트 빌보드 · 카드 아이콘 색(테마 키 `Component.<이름>`)
-        bool        _bBillboard{ false }; ///< 메시가 없어 뷰포트에 빌보드로 보이는 종류(빛 · 카메라 · 오디오 …)
+        bool        _bBillboard{ false }; ///< 메시가 없어 뷰포트에 빌보드로 보이는 종류(빛 · 카메라 · 오디오 …) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

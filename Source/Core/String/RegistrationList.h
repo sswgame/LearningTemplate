@@ -92,7 +92,7 @@ namespace sw
         const utf8*           _pListName;
         RegistrationListBase* _pPrev;
         RegistrationListBase* _pNext;
-        bool                  _bLinked;
+        uint8                 _bLinked : 1;
     };
 } // namespace sw
 
@@ -542,18 +542,18 @@ namespace sw
         }
 
     private:
-        vector<T*>        _listItem;        ///< 항목(순서대로). 훑기가 이것만 읽는다
-        vector<string>    _listName;        ///< 항목마다 올릴 때 복사한 이름(같은 인덱스)
-        vector<int32>     _listOrder;       ///< 항목마다 정렬 값(같은 인덱스)
-        vector<T*>        _listKeptItem;    ///< 키우기 전 저장소(`keepStorageBeforeGrowth`). 보관 중이 아니면 비고 용량도 없다
-        vector<string>    _listKeptName;    ///< 키우기 전 저장소의 이름
-        vector<int32>     _listKeptOrder;   ///< 키우기 전 저장소의 정렬 값
-        vector<T*>        _listShadowItem;  ///< 리로드의 교체 등록에 이름을 내준 옛 항목(옛 이미지가 내려갈 때까지 보관)
-        vector<string>    _listShadowName;  ///< 그림자 항목의 이름
-        vector<int32>     _listShadowOrder; ///< 그림자 항목의 정렬 값
-        RegistrationOrder _order;           ///< 늘어놓는 순서
-        NameCase          _nameCase;        ///< 이름 비교가 대소문자를 보는지
-        bool              _bRequireName;    ///< 이름 없는 등록을 거절하는지
+        vector<T*>        _listItem;         ///< 항목(순서대로). 훑기가 이것만 읽는다
+        vector<string>    _listName;         ///< 항목마다 올릴 때 복사한 이름(같은 인덱스)
+        vector<int32>     _listOrder;        ///< 항목마다 정렬 값(같은 인덱스)
+        vector<T*>        _listKeptItem;     ///< 키우기 전 저장소(`keepStorageBeforeGrowth`). 보관 중이 아니면 비고 용량도 없다
+        vector<string>    _listKeptName;     ///< 키우기 전 저장소의 이름
+        vector<int32>     _listKeptOrder;    ///< 키우기 전 저장소의 정렬 값
+        vector<T*>        _listShadowItem;   ///< 리로드의 교체 등록에 이름을 내준 옛 항목(옛 이미지가 내려갈 때까지 보관)
+        vector<string>    _listShadowName;   ///< 그림자 항목의 이름
+        vector<int32>     _listShadowOrder;  ///< 그림자 항목의 정렬 값
+        RegistrationOrder _order;            ///< 늘어놓는 순서
+        NameCase          _nameCase;         ///< 이름 비교가 대소문자를 보는지
+        uint8             _bRequireName : 1; ///< 이름 없는 등록을 거절하는지
         /** @brief `addSubscribed` 가 낸 구독입니다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<T> _subscriptions;
     };

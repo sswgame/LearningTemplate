@@ -8,11 +8,17 @@
 
 namespace sw
 {
+    QuitRequest::QuitRequest()
+        : _exitCode{ 0 }
+        , _bRequested{ SW_FALSE }
+    {
+    }
+
     void QuitRequest::request( int32 exitCode )
     {
         if ( _bRequested )
             return;
-        _bRequested = true;
+        _bRequested = SW_TRUE;
         _exitCode   = exitCode;
         SW_LOG_INFO_ID( "Engine.QuitRequestedExitCode", "Quit requested (exit code %#)", exitCode );
     }

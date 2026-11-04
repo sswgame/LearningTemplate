@@ -122,21 +122,21 @@ namespace sw::editor
         , _slotEditCount{ 0 }
         , _resolutionTable{}
         , _resolutionIndex{ 0 }
-        , _bResolutionTableAttempted{ false }
+        , _bResolutionTableAttempted{ SW_FALSE }
         , _uiScale{ 1.0f }
         , _textScale{ 1.0f }
         , _safeZone{ 0.0f }
         , _animationScrub{ 0.0f }
         , _lastPointer{}
-        , _bInteract{ false }
-        , _bNavigationMode{ false }
-        , _bMutated{ false }
-        , _bAnimationPaused{ false }
+        , _bInteract{ SW_FALSE }
+        , _bNavigationMode{ SW_FALSE }
+        , _bMutated{ SW_FALSE }
+        , _bAnimationPaused{ SW_FALSE }
         , _bAnimationLoop{ false }
-        , _bPointerInside{ false }
-        , _bPointerPressed{ false }
-        , _bApplyLocalization{ false }
-        , _bAwaitReload{ false }
+        , _bPointerInside{ SW_FALSE }
+        , _bPointerPressed{ SW_FALSE }
+        , _bApplyLocalization{ SW_FALSE }
+        , _bAwaitReload{ SW_FALSE }
         , _bReloadedAfterSave{ false }
     {
         _pSession->_pModel = this;
@@ -187,7 +187,7 @@ namespace sw::editor
         if ( _bResolutionTableAttempted == false )
         {
             // 테이블 경로는 엔진 기본 에셋 테이블이 원본이다. 읽지 못하면(이유는 테이블이 알린다) 목록이 비어 미리보기를 세우지 않는다.
-            _bResolutionTableAttempted                = true;
+            _bResolutionTableAttempted                = SW_TRUE;
             const EngineDefaultAssets* pDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
             if ( pDefaultAssets == nullptr )
             {
@@ -225,11 +225,11 @@ namespace sw::editor
         _selectedOrdinal    = UIPreviewLogic::kNoOrdinal;
         _seenRootID         = kInvalidWidgetID;
         _baselineWidget     = kInvalidWidgetID;
-        _bMutated           = false;
-        _bPointerInside     = false;
-        _bPointerPressed    = false;
-        _bNavigationMode    = false;
-        _bApplyLocalization = true;
+        _bMutated           = SW_FALSE;
+        _bPointerInside     = SW_FALSE;
+        _bPointerPressed    = SW_FALSE;
+        _bNavigationMode    = SW_FALSE;
+        _bApplyLocalization = SW_TRUE;
         ++_generation;
         _listBaseline.clear();
         setDirty( false );
@@ -265,7 +265,7 @@ namespace sw::editor
             _openedDocument     = documentPath;
             _targetPath         = targetPath;
             _error              = _screen == kInvalidUIScreenHandle ? SW_LOCKEY( "EditorUIPreview", "BuildFailed" ) : "";
-            _bApplyLocalization = true;
+            _bApplyLocalization = SW_TRUE;
         }
         else if ( _targetPath != targetPath )
         {
@@ -294,8 +294,8 @@ namespace sw::editor
         _seenRootID         = rootID;
         _pointer.forgetTree( tree );
         _focus.forgetTree( tree );
-        _bPointerInside  = false;
-        _bPointerPressed = false;
+        _bPointerInside  = SW_FALSE;
+        _bPointerPressed = SW_FALSE;
         ++_generation;
         _listBaseline.clear();
         _baselineWidget = kInvalidWidgetID;
@@ -303,11 +303,11 @@ namespace sw::editor
         if ( bRebuilt )
         {
             // 다시 만든 트리는 디스크 문서 그대로다 — 고친 값과 입력 흉내의 흔적이 모두 사라졌다.
-            _bMutated = false;
+            _bMutated = SW_FALSE;
             setDirty( false );
             if ( _bAwaitReload )
             {
-                _bAwaitReload       = false;
+                _bAwaitReload       = SW_FALSE;
                 _bReloadedAfterSave = true;
             }
         }
@@ -331,7 +331,7 @@ namespace sw::editor
             {
                 offscreen.setLocalization( _screen, nullptr );
             }
-            _bApplyLocalization = false;
+            _bApplyLocalization = SW_FALSE;
             return;
         }
 
@@ -344,17 +344,17 @@ namespace sw::editor
                 _pLocalization = sw::make_unique<LocalizationManager>();
             _pLocalization->copyStateFrom( *pGame );
             _gameTextRevision   = gameRevision;
-            _bApplyLocalization = true;
+            _bApplyLocalization = SW_TRUE;
         }
         if ( _pLocalization->getCurrentLanguage() != _language )
         {
             (void)_pLocalization->setCurrentLanguage( _language );
-            _bApplyLocalization = true;
+            _bApplyLocalization = SW_TRUE;
         }
         if ( _bApplyLocalization && _screen != kInvalidUIScreenHandle )
         {
             offscreen.setLocalization( _screen, _pLocalization.get() );
-            _bApplyLocalization = false;
+            _bApplyLocalization = SW_FALSE;
         }
     }
 
@@ -398,7 +398,7 @@ namespace sw::editor
             return false;
         }
         SW_LOG_INFO_ID( "UIPreviewModel.UIPreviewSaved", "UI Preview: saved '%#'", _openedDocument.c_str() );
-        _bAwaitReload       = true;
+        _bAwaitReload       = SW_TRUE;
         _bReloadedAfterSave = false;
         return true;
     }
@@ -520,7 +520,7 @@ namespace sw::editor
         // 위젯이 붙거나 떨어졌다 — 호버 경로가 옛 위젯 번호를 보관하고 있을 수 있어 비우고, 고름과 기준 값을 새 구조에 맞춘다.
         WidgetTree& tree = screen.getTree();
         _pointer.clearHover();
-        _bPointerInside  = false;
+        _bPointerInside  = SW_FALSE;
         _baselineWidget  = kInvalidWidgetID;
         _selectedOrdinal = selectedOrdinal;
         _selected        = selectedOrdinal != UIPreviewLogic::kNoOrdinal ? UIPreviewLogic::findWidgetByOrdinal( tree, selectedOrdinal ) : kInvalidWidgetID;
@@ -780,7 +780,7 @@ namespace sw::editor
                 (void)_pointer.process( tree, event );
                 _lastPointer = event._position;
             }
-            _bPointerInside = true;
+            _bPointerInside = SW_TRUE;
             if ( input._wheel != 0.0f )
             {
                 event._kind  = UIPointerEventKind::Wheel;
@@ -793,7 +793,7 @@ namespace sw::editor
         {
             if ( _bPointerPressed == false )
                 _pointer.clearHover();
-            _bPointerInside = false;
+            _bPointerInside = SW_FALSE;
         }
 
         for ( uint32 buttonIndex = 0; buttonIndex < UIPreviewPointerInput::kButtonCount; ++buttonIndex )
@@ -805,7 +805,7 @@ namespace sw::editor
                 const UIPointerResult result = _pointer.process( tree, event );
                 if ( result._focusRequest != kInvalidWidgetID )
                     (void)_focus.setFocus( tree, result._focusRequest );
-                _bPointerPressed = true;
+                _bPointerPressed = SW_TRUE;
                 markPreviewMutated();
             }
             // 이미지 밖에서 놓은 버튼도 위젯이 잡고 있으면 Up 을 보낸다(슬라이더를 끌다가 바깥에서 놓는 경우).
@@ -813,7 +813,7 @@ namespace sw::editor
             {
                 event._kind = UIPointerEventKind::Up;
                 (void)_pointer.process( tree, event );
-                _bPointerPressed = false;
+                _bPointerPressed = SW_FALSE;
                 markPreviewMutated();
             }
         }
@@ -837,7 +837,7 @@ namespace sw::editor
 
     void UIPreviewModel::playAnimation( UIAnimationPlayer& player )
     {
-        _bAnimationPaused = false;
+        _bAnimationPaused = SW_FALSE;
         (void)player.play( _animation, 1.0f, _bAnimationLoop ? 0u : 1u );
         markPreviewMutated();
     }
@@ -851,7 +851,7 @@ namespace sw::editor
     void UIPreviewModel::stopAnimation( UIAnimationPlayer& player )
     {
         player.stop( _animation );
-        _bAnimationPaused = false;
+        _bAnimationPaused = SW_FALSE;
     }
 
     bool UIPreviewModel::readAnimationTime( const UIAnimationPlayer& player, float32& outTime, float32& outDuration )
@@ -873,7 +873,7 @@ namespace sw::editor
     void UIPreviewModel::scrubAnimation( UIAnimationPlayer& player, float32 seconds )
     {
         _animationScrub   = seconds;
-        _bAnimationPaused = true;
+        _bAnimationPaused = SW_TRUE;
         (void)player.seek( _animation, seconds );
         markPreviewMutated();
     }

@@ -69,9 +69,9 @@ namespace sw::editor
         uint64                                  _lastDrawnRootID; ///< 마지막 프레임에 그린 마지막 루트(`getLastDrawnRootID`)
         fixed_string<constant::buffer::kMax128> _filterBuffer;
         fixed_string<constant::buffer::kMax256> _renameBuffer;
-        uint32                                  _visibleRootCount; ///< 마지막 프레임에 보인 루트 수(`getVisibleRootCount`)
-        uint32                                  _drawnRootCount;   ///< 마지막 프레임에 실제로 그린 루트 수(`getDrawnRootCount`)
-        bool                                    _bFocusRenameInput;
-        bool                                    _bSkipOffscreenRows; ///< 화면 밖의 접힌 루트를 빈 공간으로 둔다(`setOffscreenRowSkipEnabled`)
+        uint32                                  _visibleRootCount;       ///< 마지막 프레임에 보인 루트 수(`getVisibleRootCount`)
+        uint32                                  _drawnRootCount;         ///< 마지막 프레임에 실제로 그린 루트 수(`getDrawnRootCount`)
+        bool                                    _bFocusRenameInput;      ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+        uint8                                   _bSkipOffscreenRows : 1; ///< 화면 밖의 접힌 루트를 빈 공간으로 둔다(`setOffscreenRowSkipEnabled`)
     };
 } // namespace sw::editor

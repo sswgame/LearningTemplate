@@ -31,9 +31,9 @@ namespace sw
     /** @struct ScenarioPlayOptions @brief 재생 하나의 선택입니다. */
     struct ScenarioPlayOptions
     {
-        bool                         _bLoop{ false };             ///< 끝까지 돌면 처음부터 다시(어트랙트 루프). 실패하면 멈춘다
-        bool                         _bStopOnHumanInput{ false }; ///< 사람이 키보드 · 마우스를 건드리면 멈춘다(데모 · 어트랙트)
-        bool                         _bFixedDelta{ false };       ///< 시나리오의 `fixedDelta` 로 고정 프레임 시간을 건다(벤치마크 · 결정적 재생). 끄면 벽시계로 돈다
+        bool                         _bLoop{ SW_FALSE };          ///< 끝까지 돌면 처음부터 다시(어트랙트 루프). 실패하면 멈춘다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                         _bStopOnHumanInput{ false }; ///< 사람이 키보드 · 마우스를 건드리면 멈춘다(데모 · 어트랙트) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                         _bFixedDelta{ false };       ///< 시나리오의 `fixedDelta` 로 고정 프레임 시간을 건다(벤치마크 · 결정적 재생). 끄면 벽시계로 돈다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         ScenarioPlayFinishedDelegate _onFinished{};               ///< 끝날 때 한 번(반복 중에는 멈출 때)
     };
 

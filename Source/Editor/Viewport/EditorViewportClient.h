@@ -106,8 +106,8 @@ namespace sw::editor
         EditorVisualizerStats       _visualizerStats;          ///< 시각화가 마지막으로 그린 양(그리기 인자로 시각화에 넘긴다)
         uint64                      _contextMenuObjectID;      ///< 우클릭 메뉴를 연 순간 맞은 오브젝트 id. 0 이면 빈 곳. 메뉴가 열린 동안 프레임마다 다시 찾는다
         float3                      _contextMenuWorldPosition; ///< 우클릭 메뉴를 연 순간의 바닥 평면 교점
-        bool                        _bContextMenuHasWorldPosition;
-        uint8                       _bMaximized : 1;
-        [[maybe_unused]] uint8      _reserved   : 7;
+        uint8                       _bContextMenuHasWorldPosition : 1;
+        uint8                       _bMaximized                   : 1;
+        [[maybe_unused]] uint8      _reserved                     : 7;
     };
 } // namespace sw::editor

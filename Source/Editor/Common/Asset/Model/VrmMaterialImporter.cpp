@@ -87,7 +87,7 @@ namespace sw::editor
             {
                 string_view _key;
                 float32     _neutral;
-                bool        _bAlwaysSilent;
+                bool        _bAlwaysSilent; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
             static constexpr IgnoredFloat kArrVrm0IgnoredFloat[] = {
                 {      "_ShadingGradeRate", 1.0f,  true}, // 셰이딩 그레이드 텍스처가 없으면 효과가 없다

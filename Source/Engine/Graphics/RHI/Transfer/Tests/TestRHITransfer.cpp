@@ -30,12 +30,16 @@ namespace
         uint32            _busyCountBeforeAccept{ 0 };
         uint32            _pendingCountBeforeFinal{ 0 };
         RHITransferStatus _finalStatus{ RHITransferStatus::Complete };
-        bool              _bRejectSubmit{ false };
+        uint8             _bRejectSubmit : 1;
         uint32            _submitCount{ 0 };
         uint32            _pollCount{ 0 };
         uint32            _takeCount{ 0 };
         uint32            _discardCount{ 0 };
 
+        FakeTransferFactory()
+            : _bRejectSubmit{ SW_FALSE }
+        {
+        }
         RHITransferSubmit submit()
         {
             ++_submitCount;
@@ -374,7 +378,7 @@ SW_TEST_CASE( RHITransferTest, AndWaitHelpersRetryBusyAndPairTakeOrDiscard )
     SW_EXPECT_TRUE( RHITransferUtil::uploadTexture2DRegionAndWait( uploadFactory, 1, regionDesc ) );
 
     FakeTransferFactory rejectFactory;
-    rejectFactory._bRejectSubmit = true;
+    rejectFactory._bRejectSubmit = SW_TRUE;
     SW_EXPECT_FALSE( RHITransferUtil::uploadTexture2DAndWait( rejectFactory, 1, uploadDesc ) );
     SW_EXPECT_EQUAL( 1u, rejectFactory._submitCount ); // 거절은 다시 시도하지 않는다
     SW_EXPECT_EQUAL( 0u, rejectFactory._pollCount );

@@ -34,7 +34,7 @@ namespace sw
         , _minValue{ 0.0f }
         , _maxValue{ 1.0f }
         , _step{ 0.0f }
-        , _bDragging{ false }
+        , _bDragging{ SW_FALSE }
     {
     }
 
@@ -116,7 +116,7 @@ namespace sw
             {
                 if ( event._button != MouseButton::Left )
                     return UIReply::makeUnhandled();
-                _bDragging = true;
+                _bDragging = SW_TRUE;
                 setValueFromUser( computeValueAt( event._position ) );
                 return UIReply::makeHandled().capturePointer().requestFocus( getID() );
             }
@@ -131,7 +131,7 @@ namespace sw
             {
                 if ( _bDragging == false || event._button != MouseButton::Left )
                     return UIReply::makeUnhandled();
-                _bDragging = false;
+                _bDragging = SW_FALSE;
                 return UIReply::makeHandled().releasePointer();
             }
             case UIPointerEventKind::Wheel:

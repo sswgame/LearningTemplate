@@ -66,7 +66,7 @@ namespace sw
         , _frameWriteCount{ 0 }
         , _threadCount{ 0 }
         , _generation{ ProfilerTimelineInternal::allocateGeneration() }
-        , _bRecording{ false }
+        , _bRecording{ SW_FALSE }
 #if SW_PROFILER_TRACE_ENABLED
         , _longLimit{ 0 }
         , _longEpoch{ 0 }

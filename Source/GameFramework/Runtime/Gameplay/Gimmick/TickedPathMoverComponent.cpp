@@ -19,7 +19,7 @@ namespace sw
         , _bPingPong{ true }
         , _startPosition{}
         , _tickOffset{ 0 }
-        , _bStarted{ false }
+        , _bStarted{ SW_FALSE }
         , _bWarnedNoTick{ false }
     {
     }

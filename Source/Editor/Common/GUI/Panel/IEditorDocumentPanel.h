@@ -71,8 +71,8 @@ namespace sw::editor
         /** @brief 기본 열림 상태로 문서 패널을 만듭니다. */
         explicit IEditorDocumentPanel( bool bOpenByDefault = true )
             : IEditorPanel{ bOpenByDefault }
-            , _bDocumentDirty{ false }
-            , _bConfirmClose{ false }
+            , _bDocumentDirty{ SW_FALSE }
+            , _bConfirmClose{ SW_FALSE }
         {
         }
 
@@ -87,9 +87,9 @@ namespace sw::editor
          */
         virtual void syncDocumentDirty() {}
         /** @brief 편집이 생겼음을 알립니다. 제목의 미저장 표시와 종료 확인이 이 값을 봅니다. */
-        void markDocumentDirty() { _bDocumentDirty = true; }
+        void markDocumentDirty() { _bDocumentDirty = SW_TRUE; }
         /** @brief 저장이나 되돌리기 직후 dirty 를 지웁니다. */
-        void clearDocumentDirty() { _bDocumentDirty = false; }
+        void clearDocumentDirty() { _bDocumentDirty = SW_FALSE; }
         /** @brief 문서를 디스크에 씁니다. 성공하면 true 입니다. */
         [[nodiscard]] virtual bool saveDocument() = 0;
         /**
@@ -112,7 +112,7 @@ namespace sw::editor
         void drawCloseConfirm();
 
     private:
-        bool _bDocumentDirty;
-        bool _bConfirmClose; ///< 닫으려다 미저장 확인을 기다리는 중
+        uint8 _bDocumentDirty : 1;
+        uint8 _bConfirmClose  : 1; ///< 닫으려다 미저장 확인을 기다리는 중
     };
 } // namespace sw::editor

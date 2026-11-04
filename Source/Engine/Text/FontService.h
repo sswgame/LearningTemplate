@@ -156,6 +156,6 @@ namespace sw
         OnceKeySet                              _warnedOnce;          ///< 한 번 경고한 항목입니다(패밀리, 코드 포인트 — 원문 키의 해시).
         SystemFontLocator                       _systemFontLocator;   ///< 시스템 패밀리의 파일 찾기(리눅스는 하위 폴더 색인을 든다)
         const LocalizationManager*              _pLocalization;       ///< 문화권 출처(생성자 주입, 엔진 서브시스템은 `initializeSubsystem` 이 한 번 받음. nullptr = 대체 없음)
-        bool                                    _bInitialized;        ///< 기본 패밀리를 열었는지 나타냅니다.
+        uint8                                   _bInitialized : 1;    ///< 기본 패밀리를 열었는지 나타냅니다.
     };
 } // namespace sw

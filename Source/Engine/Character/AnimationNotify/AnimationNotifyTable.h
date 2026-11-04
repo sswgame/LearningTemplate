@@ -59,9 +59,9 @@ namespace sw
     {
         const utf8*              _pName{ nullptr };
         AnimationNotifyParamKind _kind{ AnimationNotifyParamKind::Name };
-        bool                     _bRequired{ false };
+        bool                     _bRequired{ false };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         float32                  _absentNumber{ 0.0f }; ///< 적지 않은 선택 실수 인자의 값
-        bool                     _bAbsentBool{ false }; ///< 적지 않은 선택 참거짓 인자의 값
+        bool                     _bAbsentBool{ false }; ///< 적지 않은 선택 참거짓 인자의 값 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -76,7 +76,7 @@ namespace sw
         float3                   _vector{};
         float32                  _number{ 0.0f };
         AnimationNotifyParamKind _kind{ AnimationNotifyParamKind::Name };
-        bool                     _bValue{ false };
+        bool                     _bValue{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

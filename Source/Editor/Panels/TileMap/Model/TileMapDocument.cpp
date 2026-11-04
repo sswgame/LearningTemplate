@@ -45,8 +45,8 @@ namespace sw::editor
         , _flagLayer{ TileFlagLayer::Walkable }
         , _tool{ PaintTool::Brush }
         , _bErase{ false }
-        , _bStrokeActive{ false }
-        , _bRectActive{ false }
+        , _bStrokeActive{ SW_FALSE }
+        , _bRectActive{ SW_FALSE }
     {
         const EditorToolDefaults& editorToolDefaults = editor::getEditorToolDefaults();
         if ( editorToolDefaults._defaultMap.isSet() )
@@ -122,11 +122,11 @@ namespace sw::editor
                 if ( input._bClicked )
                 {
                     _rectStartCell = hoverCell;
-                    _bRectActive   = true;
+                    _bRectActive   = SW_TRUE;
                 }
                 if ( _bRectActive && input._bButtonDown == false )
                 {
-                    _bRectActive = false;
+                    _bRectActive = SW_FALSE;
                     TileMapPaintUtil::collectRectCells( _rectStartCell, hoverCell, _map._width, _map._height, _listStrokeCell );
                     bEdited = paintStrokeCells();
                 }

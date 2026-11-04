@@ -197,8 +197,12 @@ namespace
     {
     public:
         uint64 _hash{ 0 };
-        bool   _bReady{ true };
+        uint8  _bReady : 1;
 
+        FakeStateHashProvider()
+            : _bReady{ SW_TRUE }
+        {
+        }
         [[nodiscard]] bool sampleStateHash( uint64 hostTick, StateHashSample& outSample ) const override
         {
             outSample = StateHashSample{ hostTick * 2, _hash };
@@ -236,9 +240,9 @@ SW_TEST_CASE( StateHashReportLineTest, KitChannelsRecordPerHostTickAndKeepHistor
         history.recordChannels( 1 );
         provider._hash = 0xBBu;
         history.recordChannels( 2 );
-        provider._bReady = false;
+        provider._bReady = SW_FALSE;
         history.recordChannels( 3 ); // 제공자가 남길 것이 없다고 하면 그 틱은 비어 있다
-        provider._bReady = true;
+        provider._bReady = SW_TRUE;
         history.recordChannels( 4 );
 
         vector<StateHashSample> list;

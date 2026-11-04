@@ -66,7 +66,7 @@ namespace sw::editor
         , _listProbeCurve{}
         , _listSample{}
         , _curveOwner{ -1 }
-        , _bOpenCurvePopup{ false }
+        , _bOpenCurvePopup{ SW_FALSE }
         , _editText{}
         , _pendingColumn{}
         , _pendingText{}
@@ -86,7 +86,7 @@ namespace sw::editor
         _pendingElement  = -1;
         _pendingKind     = PendingKind::None;
         _curveOwner      = -1;
-        _bOpenCurvePopup = false;
+        _bOpenCurvePopup = SW_FALSE;
     }
 
     bool CatalogTableEditor::draw( CatalogDocument& inoutDocument )
@@ -182,7 +182,7 @@ namespace sw::editor
                 if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Curves" ) ) )
                 {
                     _curveOwner      = elementIndex;
-                    _bOpenCurvePopup = true;
+                    _bOpenCurvePopup = SW_TRUE;
                 }
                 if ( inoutbFirstCurveButton )
                     EditorSelfTestMarks::note( "catalog.curves.open" );
@@ -415,7 +415,7 @@ namespace sw::editor
         if ( _bOpenCurvePopup )
         {
             EditorInputGUI::openPopup( kPopupName );
-            _bOpenCurvePopup = false;
+            _bOpenCurvePopup = SW_FALSE;
         }
         EditorChrome::setNextWindowExtent( EditorTextExtent::ofText( 75.0f, 27.0f ), false );
         bool bOpen = true;

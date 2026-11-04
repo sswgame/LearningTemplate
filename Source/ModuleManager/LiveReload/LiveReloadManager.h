@@ -280,9 +280,9 @@ namespace sw
         struct BuildNotice
         {
             string _targetName;                ///< 끝난 빌드의 타깃(비면 전체 빌드)
-            bool   _bInProgress{ false };      ///< 빌드가 도는 중이다
-            bool   _bFinishedPending{ false }; ///< 끝났는데 `update` 가 아직 처리하지 않았다
-            bool   _bSucceeded{ false };       ///< 끝난 빌드가 성공했다
+            bool   _bInProgress{ false };      ///< 빌드가 도는 중이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool   _bFinishedPending{ false }; ///< 끝났는데 `update` 가 아직 처리하지 않았다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool   _bSucceeded{ false };       ///< 끝난 빌드가 성공했다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
     protected:

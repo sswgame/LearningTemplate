@@ -108,10 +108,10 @@ namespace sw
         , _musicVolume{ 1.0f }
         , _sfxVolume{ 1.0f }
         , _speakerMode{ AudioSpeakerMode::Auto }
-        , _bMuted{ false }
-        , _bDeviceOpen{ false }
-        , _bOutputOpen{ false }
-        , _bInitialized{ false }
+        , _bMuted{ SW_FALSE }
+        , _bDeviceOpen{ SW_FALSE }
+        , _bOutputOpen{ SW_FALSE }
+        , _bInitialized{ SW_FALSE }
     {
     }
 
@@ -143,7 +143,7 @@ namespace sw
                              Fmt( _device._channelMask, Format().hex() ) );
             if ( _bDeviceOpen )
                 closeDevice();
-            _bDeviceOpen = false;
+            _bDeviceOpen = SW_FALSE;
             return false;
         }
         if ( _pEngine->initialize( mixerDesc, layout ) == false )
@@ -151,7 +151,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioService.AudioEngineRejectedMixer", "Audio engine rejected the mixer graph '%#' for %# output channels", kDefaultMixerPath, AudioChannelLayoutUtil::getChannelCount( layout ) );
             if ( _bDeviceOpen )
                 closeDevice();
-            _bDeviceOpen = false;
+            _bDeviceOpen = SW_FALSE;
             return false;
         }
 
@@ -172,10 +172,10 @@ namespace sw
         if ( _bDeviceOpen && _bOutputOpen == false )
         {
             closeDevice();
-            _bDeviceOpen = false;
+            _bDeviceOpen = SW_FALSE;
             _device      = AudioOutputDevice{};
         }
-        _bInitialized = true;
+        _bInitialized = SW_TRUE;
         SW_LOG_INFO_ID( "AudioService.InitializedChannels", "Initialized (%#, %# channels).", _bOutputOpen ? "device output" : "offline - no device", AudioChannelLayoutUtil::getChannelCount( layout ) );
         return true;
     }
@@ -254,7 +254,7 @@ namespace sw
         // 레이아웃은 장치가 엔진을 당기지 않을 때만 바꾼다. 스트림을 닫고, 바꾸고, 엔진의 (새 또는 그대로인) 레이아웃으로 다시 연다.
         if ( _bOutputOpen )
             stopOutput();
-        _bOutputOpen = false;
+        _bOutputOpen = SW_FALSE;
         _pEngine->releaseAudioThread(); // 장치 스레드가 끝났다 — 다음 렌더 스레드(오프라인 · 종료)가 받는다
         // 덤프 파일은 채널 수가 하나다. 옛 레이아웃으로 쌓은 것을 먼저 쓴다.
         writeOfflineDump();
@@ -270,7 +270,7 @@ namespace sw
             if ( _bOutputOpen == false )
             {
                 closeDevice();
-                _bDeviceOpen = false;
+                _bDeviceOpen = SW_FALSE;
                 _device      = AudioOutputDevice{};
                 SW_LOG_WARNING_ID( "AudioService.CouldNotReopenOutput", "Could not reopen the output stream - rendering offline." );
             }
@@ -307,17 +307,17 @@ namespace sw
                         stats._peakRealVoiceCount, stats._renderedFrameCount / audio::kSampleRate );
         if ( _bOutputOpen )
             stopOutput();
-        _bOutputOpen = false;
+        _bOutputOpen = SW_FALSE;
         _pEngine->releaseAudioThread(); // 장치 스레드가 끝났다 — 다음 렌더 스레드(오프라인 · 종료)가 받는다
         if ( _bDeviceOpen )
             closeDevice();
-        _bDeviceOpen = false;
+        _bDeviceOpen = SW_FALSE;
         _device      = AudioOutputDevice{};
         writeOfflineDump();
         _pEngine->shutdown();
         _musicPath.clear();
         _musicPlayingID = 0;
-        _bInitialized   = false;
+        _bInitialized   = SW_FALSE;
         SW_LOG_INFO_ID( "AudioService.ShutDown", "Shut down." );
     }
 
@@ -384,7 +384,7 @@ namespace sw
         }
 
         AudioClipPlayParams params;
-        params._bLoop         = true;
+        params._bLoop         = SW_TRUE;
         params._fadeInSeconds = bCrossfade ? IAudioServiceInternal::kMusicCrossfadeSeconds : 0.0f;
         _musicPath            = string( path );
         _musicPlayingID       = _pEngine->playClip( hashed_string( path ), hashed_string( AudioBusNames::kMusic ), params );

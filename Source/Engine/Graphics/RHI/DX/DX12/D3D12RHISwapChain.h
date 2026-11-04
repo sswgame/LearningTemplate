@@ -28,7 +28,7 @@ namespace sw
     class D3D12RHISwapChain final : public IRHISwapChain
     {
     public:
-        D3D12RHISwapChain()                                      = default;
+        D3D12RHISwapChain();
         ~D3D12RHISwapChain() override                            = default;
         D3D12RHISwapChain( const D3D12RHISwapChain& )            = delete;
         D3D12RHISwapChain& operator=( const D3D12RHISwapChain& ) = delete;
@@ -134,19 +134,19 @@ namespace sw
         Microsoft::WRL::ComPtr<ID3D12DescriptorHeap>                   _ownedRTVHeap; ///< 다른 창의 백버퍼 RTV 힙입니다(`createOwnedRTVHeap`). 메인 창은 비어 있다
 
         /// @brief 소유하지 않는 감시자입니다(setBarrierWatcher 참고).
-        const IRHIDevice* _pBarrierWatcher{ nullptr };
+        const IRHIDevice* _pBarrierWatcher;
 
-        HWND                    _pHWnd{ nullptr };
-        uint32                  _width{ 0 };
-        uint32                  _height{ 0 };
-        uint32                  _bufferCount{ 2 };
+        HWND                    _pHWnd;
+        uint32                  _width;
+        uint32                  _height;
+        uint32                  _bufferCount;
         uint32 _backBufferIndex SW_GUARDED_BY( _renderThread ){ 0 };
         /// @brief 백버퍼 포맷입니다(요청값 = 실제값).
-        RHIFormat _format{ constant::render::kBackBufferFormat };
+        RHIFormat _format;
         /// @brief 생성할 때 쓴 DXGI 플래그입니다. `ResizeBuffers` 가 같은 값을 다시 넘겨야 합니다.
-        uint32 _swapChainFlags{ 0 };
+        uint32 _swapChainFlags;
         /// @brief 티어링 허용으로 만들었는지입니다. Present 플래그와 짝입니다.
-        bool _bAllowTearing{ false };
+        uint8 _bAllowTearing : 1;
 
         /// @brief 현재 백버퍼의 실제 리소스 상태입니다. `transitionTo` 만 이 값을 바꿉니다.
         /// @details `_stateMutex` 로 보호합니다. RenderGraph::executeParallel 이 같은 레벨의 패스
@@ -155,7 +155,7 @@ namespace sw
         ///          "아직 RENDER_TARGET 이 아니다" 를 보고 각자 배리어를 기록해서, 두 번째 것이
         ///          before==after 가 됩니다(D3D12 검증 오류 → 디바이스 제거).
         mutable mutex         _stateMutex;
-        D3D12_RESOURCE_STATES _state{ D3D12_RESOURCE_STATE_PRESENT };
+        D3D12_RESOURCE_STATES _state;
     };
 } // namespace sw
 #endif

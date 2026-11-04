@@ -109,7 +109,7 @@ namespace sw
         SceneSettings           _sceneSettings{};     ///< 씬 파일의 `<SceneSettings>`(형식 판 2부터 필수)
         vector<SceneObjectNode> _listSceneObjectNode; ///< 늘 올라 있는 엔티티. 스트리밍하지 않는 씬은 모든 엔티티다
         vector<StreamingCell>   _listStreamingCell;   ///< 셀로 나눈 엔티티(쿠킹본에만, z · x 오름차순). XML 로는 쓰지 않는다
-        bool                    _bValid{ false };
+        bool                    _bValid{ false };     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
         /** @brief 빌드(Shipping/Dev)와 파일 존재 여부에 따라 알맞은 포맷(바이너리 우선)으로 로드합니다. */
         [[nodiscard]] SW_API bool load( const AssetID& assetID );

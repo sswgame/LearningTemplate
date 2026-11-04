@@ -36,7 +36,7 @@ namespace sw
                 bool isOpen() const { return _bOpen; }
 
             private:
-                bool _bOpen;
+                bool _bOpen; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
             };
 
             /** @brief 클립보드 주인으로 둘 창입니다(활성 창). 없으면 nullptr 입니다. */

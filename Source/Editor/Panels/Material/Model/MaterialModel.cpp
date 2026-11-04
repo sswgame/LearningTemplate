@@ -31,7 +31,7 @@ namespace sw::editor
         , _status{}
         , _previewMaterialPath{}
         , _previewRedMinusBlue{ 0.0f }
-        , _bPreviewDrawn{ false }
+        , _bPreviewDrawn{ SW_FALSE }
     {
     }
 
@@ -134,7 +134,7 @@ namespace sw::editor
     void MaterialModel::notePreviewDrawn( float32 redMinusBlue )
     {
         _previewRedMinusBlue = redMinusBlue;
-        _bPreviewDrawn       = true;
+        _bPreviewDrawn       = SW_TRUE;
     }
 
     bool MaterialModel::findPreviewRedMinusBlue( float32& outValue ) const

@@ -124,11 +124,11 @@ namespace sw::editor
         , _editEvent{}
         , _filter{}
         , _bOnlySelectedEvent{ false }
-        , _bEditDirty{ false }
+        , _bEditDirty{ SW_FALSE }
         , _pEventNameEngine{ nullptr }
         , _eventNameGeneration{ 0 }
         , _visibleEventFilter{}
-        , _bVisibleEventStale{ true }
+        , _bVisibleEventStale{ SW_TRUE }
     {
     }
 
@@ -142,7 +142,7 @@ namespace sw::editor
         }
         _editLibraryName = _selectedLibrary;
         _editEvent       = _selectedEvent;
-        _bEditDirty      = false;
+        _bEditDirty      = SW_FALSE;
     }
 
     void AudioEventBrowserPanel::endEditing()
@@ -150,12 +150,12 @@ namespace sw::editor
         _editLibrary     = AudioEventLibrary{};
         _editLibraryName = hashed_string{};
         _editEvent       = hashed_string{};
-        _bEditDirty      = false;
+        _bEditDirty      = SW_FALSE;
     }
 
     void AudioEventBrowserPanel::onEventEdited( const PropertyInfo& /*prop*/ )
     {
-        _bEditDirty = true;
+        _bEditDirty = SW_TRUE;
     }
 
     bool AudioEventBrowserPanel::saveDocument()
@@ -164,7 +164,7 @@ namespace sw::editor
         const std::optional<AbsolutePath> libraryFile = editor::getSubsystem<AssetPaths>().toDiskPath( _editLibraryName.view() );
         if ( libraryFile.has_value() == false || _bEditDirty == false || _editLibrary.saveToAsset( *libraryFile ) == false )
             return false;
-        _bEditDirty = false;
+        _bEditDirty = SW_FALSE;
         return true;
     }
 
@@ -213,7 +213,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "DuplicateEvent" ) ) )
         {
             _editEvent  = AudioEventBrowserUtil::duplicateEvent( _editLibrary, _editEvent );
-            _bEditDirty = true;
+            _bEditDirty = SW_TRUE;
             pEvent      = _editLibrary.findEvent( _editEvent ); // 목록이 다시 잡혔을 수 있다
         }
         EditorSelfTestMarks::note( "audioevents.duplicate" );
@@ -221,7 +221,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "DeleteEvent" ) ) && AudioEventBrowserUtil::removeEvent( _editLibrary, _editEvent ) )
         {
             _editEvent  = _editLibrary._listEvent.empty() ? hashed_string{} : _editLibrary._listEvent.front()._name;
-            _bEditDirty = true;
+            _bEditDirty = SW_TRUE;
             pEvent      = _editLibrary.findEvent( _editEvent );
         }
         EditorSelfTestMarks::note( "audioevents.delete" );
@@ -260,7 +260,7 @@ namespace sw::editor
         {
             AudioEventBrowserUtil::filterEventNames( _listEventName, string_view{ _filter.c_str() }, _listVisibleEvent );
             _visibleEventFilter = _filter.c_str();
-            _bVisibleEventStale = false;
+            _bVisibleEventStale = SW_FALSE;
         }
         if ( _listEventName.empty() )
         {
@@ -431,7 +431,7 @@ namespace sw::editor
             _pEventNameEngine    = &engine;
             _eventNameGeneration = engine.getEventLibraryGeneration();
             engine.collectEventNames( _listEventName );
-            _bVisibleEventStale = true;
+            _bVisibleEventStale = SW_TRUE;
         }
         engine.getInstanceStatuses( _listInstanceStatus );
         const AudioEngineStats stats = engine.getStats();

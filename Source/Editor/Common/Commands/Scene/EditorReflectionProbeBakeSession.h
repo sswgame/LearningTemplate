@@ -75,6 +75,6 @@ namespace sw::editor
         EditorBakeRunState                         _run;        ///< 돌고 있는가 · 편집 잠금 · 멈출 이유 · 끝난 횟수 (라이트 프로브 세션과 같은 틀)
         uint32                                     _nextProbeIndex;
         uint32                                     _bakedCount;
-        bool                                       _bDeferFirstSlice; ///< 시작한 프레임의 `update` 는 굽지 않고 넘긴다(상태줄이 먼저 그려지게)
+        uint8                                      _bDeferFirstSlice : 1; ///< 시작한 프레임의 `update` 는 굽지 않고 넘긴다(상태줄이 먼저 그려지게)
     };
 } // namespace sw::editor

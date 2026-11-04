@@ -21,7 +21,7 @@ namespace sw
         //
         // 중지 상태로 두면 `startTimer()` 가 제 역할을 한다. `_pausedTime += ( 시작 시각 - _stopTime(0) )` 이 기준을
         // 시작 시각으로 옮겨 주므로, reset 없이 만들어 바로 start 해도 누적과 델타가 맞는다.
-        , _bStopped{ true }
+        , _bStopped{ SW_TRUE }
     {
     }
 
@@ -60,7 +60,7 @@ namespace sw
         _currentTime         = currTime;
         _stopTime            = 0;
         _pausedTime          = 0;
-        _bStopped            = false;
+        _bStopped            = SW_FALSE;
     }
 
     void GameTimer::startTimer() noexcept
@@ -72,7 +72,7 @@ namespace sw
             _prevTime    = startTime;
             _currentTime = startTime;
             _stopTime    = 0;
-            _bStopped    = false;
+            _bStopped    = SW_FALSE;
         }
     }
 
@@ -81,7 +81,7 @@ namespace sw
         if ( _bStopped == false )
         {
             _stopTime = MonotonicClock::readCounter();
-            _bStopped = true;
+            _bStopped = SW_TRUE;
         }
     }
 

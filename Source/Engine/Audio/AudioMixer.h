@@ -114,8 +114,8 @@ namespace sw
         {
             uint32  _targetIndex{ 0 };
             float32 _levelDb{ 0.0f };
-            float32 _gain{ 1.0f }; ///< 지금 램프 중인 선형 레벨이다.
-            bool    _bPreFader{ false };
+            float32 _gain{ 1.0f };       ///< 지금 램프 중인 선형 레벨이다.
+            bool    _bPreFader{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 사이드체인 덕 하나의 실행 상태입니다. */

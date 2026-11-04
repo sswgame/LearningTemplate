@@ -79,7 +79,7 @@ namespace sw
 {
     BehaviorTaskRegistrar::BehaviorTaskRegistrar( const BehaviorTaskEntry* pEntry )
         : _pEntry{ pEntry }
-        , _bRegistered{ false }
+        , _bRegistered{ SW_FALSE }
     {
         _bRegistered = BehaviorTaskRegistry::get().registerTask( pEntry );
     }

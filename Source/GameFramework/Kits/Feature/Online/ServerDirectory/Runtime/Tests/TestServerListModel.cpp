@@ -29,8 +29,12 @@ namespace
         static constexpr const utf8* kKnownKind = "dedicated";
 
         int32 _requestCount{ 0 };
-        bool  _bHoldAnswers{ false };
+        uint8 _bHoldAnswers : 1;
 
+        FakeServerDirectoryService()
+            : _bHoldAnswers{ SW_FALSE }
+        {
+        }
         const OnlineProtocolEntry& getProtocol() const override { return ServerDirectoryProtocol::kOnlineEntry; }
         bool                       isAnonymousMethod( uint16 method ) const override { return method == ServerDirectoryMethod::kListServers; }
 
@@ -111,9 +115,10 @@ namespace
         ServerDirectoryClient      _directoryClient{};
         test::OnlineTestRig        _rig{ false };
         ServerListModel            _model{};
-        bool                       _bReady{ false };
+        uint8                      _bReady : 1;
 
         ServerListRig()
+            : _bReady{ SW_FALSE }
         {
             SW_EXPECT_TRUE( _rig._server._host.registerServerService( &_service ) );
             _rig._server.start();
@@ -208,7 +213,7 @@ SW_TEST_CASE( ServerListModelTest, OverlappingRefreshIsRejectedWhileLoading )
 {
     ServerListRig rig;
     SW_REQUIRE_TRUE( rig._bReady );
-    rig._service._bHoldAnswers = true;
+    rig._service._bHoldAnswers = SW_TRUE;
 
     SW_EXPECT_TRUE( rig._model.refresh( FakeServerDirectoryService::kKnownKind ) );
     rig.pump(); // 서버가 받고 답을 붙잡는다
@@ -220,7 +225,7 @@ SW_TEST_CASE( ServerListModelTest, OverlappingRefreshIsRejectedWhileLoading )
     rig.pump();
     SW_EXPECT_EQUAL( 1, rig._service._requestCount ); // 겹친 요청은 나가지 않았다
 
-    rig._service._bHoldAnswers = false;
+    rig._service._bHoldAnswers = SW_FALSE;
     rig.pump();
     SW_EXPECT_TRUE( rig._model.getState() == ServerListState::Loaded );
     SW_EXPECT_EQUAL( uint64{ 2 }, rig._model.getRevision() );

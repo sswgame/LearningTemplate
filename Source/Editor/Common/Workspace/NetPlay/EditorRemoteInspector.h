@@ -27,11 +27,11 @@ namespace sw::editor
     /** @brief `scene.tree` 답의 오브젝트 한 줄입니다. */
     struct EditorRemoteObjectRow
     {
-        string _name;          ///< 이름(`<unnamed>` 이면 `object.dump` 로 읽을 수 없다)
-        string _parentName;    ///< 부모 이름, 없으면 `-`
-        string _components;    ///< 쉼표로 이은 컴포넌트 형식 이름
-        uint64 _objectID{ 0 }; ///< 서버 프로세스 안의 오브젝트 ID
-        bool   _bActive{ false };
+        string _name;                ///< 이름(`<unnamed>` 이면 `object.dump` 로 읽을 수 없다)
+        string _parentName;          ///< 부모 이름, 없으면 `-`
+        string _components;          ///< 쉼표로 이은 컴포넌트 형식 이름
+        uint64 _objectID{ 0 };       ///< 서버 프로세스 안의 오브젝트 ID
+        bool   _bActive{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

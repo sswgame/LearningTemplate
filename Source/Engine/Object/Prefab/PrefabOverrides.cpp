@@ -42,7 +42,7 @@ namespace sw
             {
                 XMLNode _node;
                 string  _key;
-                bool    _bUsed{ false };
+                bool    _bUsed{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
 
             /** @brief 원소 노드인지 봅니다(글 · 주석 노드는 이름이 비어 있다). */
@@ -348,7 +348,7 @@ namespace sw
             return false;
 
         ObjectSaveOptions options{ SerializePurpose::Authoring };
-        options._bOmitExternalParent = true;
+        options._bOmitExternalParent = SW_TRUE;
         outStateXML                  = ObjectStateSerializer::saveToXMLString( pBase, options );
         return outStateXML.empty() == false;
     }

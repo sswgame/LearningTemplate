@@ -142,7 +142,7 @@ namespace sw
             int64        _shiftNanos{ 0 };
             int64        _sourcePID{ 0 };
             int64        _outputPID{ 0 };
-            bool         _bHasClock{ false };
+            bool         _bHasClock{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
         /** @brief 트레이스를 읽을 때 들고 가는 상태입니다 — 스레드 키(pid, tid) 목록과 프로세스 이름 목록. 스레드 번호는 `ProfilerLoadedTrace::_listThread` 와 같은 순서다. */

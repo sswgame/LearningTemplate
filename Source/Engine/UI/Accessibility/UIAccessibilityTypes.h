@@ -50,8 +50,8 @@ namespace sw
         float32        _rangeMax{ 0.0f };   ///< 범위 값의 최댓값입니다.
         float32        _rangeValue{ 0.0f }; ///< 범위 값입니다.
         float32        _rangeStep{ 0.0f };  ///< 한 번에 바꾸는 크기입니다(0 이면 정하지 않았다).
-        bool           _bHasRange{ false }; ///< 범위 값을 가졌는지 나타냅니다(슬라이더 · 진행 막대).
-        bool           _bLeaf{ false };     ///< 안의 위젯을 따로 읽지 않는지 나타냅니다(단추 안의 글은 단추의 이름이다).
+        bool           _bHasRange{ false }; ///< 범위 값을 가졌는지 나타냅니다(슬라이더 · 진행 막대). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool           _bLeaf{ false };     ///< 안의 위젯을 따로 읽지 않는지 나타냅니다(단추 안의 글은 단추의 이름이다). NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /** @brief 알림(`UIAccessibilityService::announce`)이 끼어드는 정도입니다. */

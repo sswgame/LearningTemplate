@@ -133,7 +133,7 @@ namespace sw
         , _startupExtension{}
         , _hostRole{ EngineHostRole::Client }
         , _headlessState{}
-        , _bQuitRequested{ false }
+        , _bQuitRequested{ SW_FALSE }
         , _rhiInitResult{ RHIInitResult::NotStarted }
         , _sceneDeltaSeconds{ 0.0f }
         , _frameDeltaSeconds{ 0.0f }
@@ -358,7 +358,7 @@ namespace sw
         // 종료 코드는 서비스가 내려간 뒤에도 읽는다 — 요청을 엔진 칸으로 옮기고 빌린 포인터를 놓는다.
         if ( _bQuitRequested == false && _pQuitRequest != nullptr && _pQuitRequest->isRequested() )
         {
-            _bQuitRequested = true;
+            _bQuitRequested = SW_TRUE;
             _exitCode       = _pQuitRequest->getExitCode();
         }
         _pQuitRequest = nullptr;
@@ -414,7 +414,7 @@ namespace sw
         // 서비스가 서기 전(기동 실패 경로)이다.
         if ( _bQuitRequested )
             return;
-        _bQuitRequested = true;
+        _bQuitRequested = SW_TRUE;
         _exitCode       = exitCode;
     }
 
@@ -438,7 +438,7 @@ namespace sw
         if ( observerExitCode == kEngineFrameRunning )
             return;
         _exitCode       = observerExitCode;
-        _bQuitRequested = true;
+        _bQuitRequested = SW_TRUE;
     }
 
     void Engine::beginFrame( float32 deltaSeconds, float32 unscaledDeltaSeconds )

@@ -60,9 +60,9 @@ namespace sw::editor
             ProjectSettingsEntry    _entry;
             ProjectSettingsDocument _document;
             string                  _absolutePath;
-            bool                    _bOpened{ false };
-            bool                    _bTypeFound{ false };
-            bool                    _bDirty{ false };
+            bool                    _bOpened{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                    _bTypeFound{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            bool                    _bDirty{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
     private:
@@ -80,6 +80,6 @@ namespace sw::editor
         EditorPropertyGrid       _grid;
         Page*                    _pSelected;
         string                   _statusText;
-        bool                     _bCatalogLoaded;
+        uint8                    _bCatalogLoaded : 1;
     };
 } // namespace sw::editor

@@ -18,7 +18,7 @@ namespace sw
         , _recompiledSubscription{}
         , _frameRendererSubsystem{ frameRendererSubsystem }
         , _renderThreadSubsystem{ renderThreadSubsystem }
-        , _bReady{ false }
+        , _bReady{ SW_FALSE }
     {
     }
 
@@ -27,7 +27,7 @@ namespace sw
     SubsystemInitResult LiveShaderSubsystem::initializeSubsystem()
     {
 #if defined( SW_DEBUG )
-        _bReady = false;
+        _bReady = SW_FALSE;
         if ( _shaderRecompiler == nullptr )
         {
             SW_MEMORY_SCOPE( Shader );
@@ -39,7 +39,7 @@ namespace sw
             return SubsystemInitResult::Succeeded; // 개발 도구 하나 때문에 기동을 멈추지 않는다
         }
         _recompiledSubscription = _shaderRecompiler->bindOnAnyShaderRecompiled( SW_DELEGATE_METHOD( ShaderRecompiledDelegate, &LiveShaderSubsystem::onShaderRecompiled, this ) );
-        _bReady                 = true;
+        _bReady                 = SW_TRUE;
 #endif
         return SubsystemInitResult::Succeeded;
     }
@@ -49,7 +49,7 @@ namespace sw
         _recompiledSubscription.reset(); // 백엔드 교체로 다시 서면 다시 건다
         if ( _shaderRecompiler != nullptr )
             _shaderRecompiler->shutdown();
-        _bReady = false;
+        _bReady = SW_FALSE;
     }
 
     void LiveShaderSubsystem::onShaderRecompiled( string_view shaderPath, const ShaderCompileResult& result )

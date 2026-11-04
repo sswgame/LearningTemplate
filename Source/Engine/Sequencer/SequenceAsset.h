@@ -49,15 +49,15 @@ namespace sw
     /** @brief 항목 종류 하나가 타임라인에 무엇을 하는지입니다. */
     struct SequenceItemKindInfo
     {
-        SequenceItemKind _kind;           /**< 종류입니다. 테이블의 순번과 같아야 합니다. */
-        uint32           _defaultColor;   /**< 에디터에서 새 항목에 칠하는 색(0xAABBGGRR)입니다. */
-        bool             _bDrivesTarget;  /**< 구간 동안 대상 오브젝트의 활성 상태와 트랜스폼을 정하는지 나타냅니다. */
-        bool             _bFiresOnCross;  /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */
-        bool             _bCutsCamera;    /**< 구간 동안 대상의 카메라를 게임 카메라로 고르는지입니다. */
-        bool             _bShakesCamera;  /**< 시작 프레임을 지날 때 대상 카메라에 흔들림 신호를 내는지입니다. */
-        bool             _bSpawns;        /**< 프리팹을 스폰해 구간 동안 켜는지입니다(`SequenceTimelineUtil::applySpawns`). 대상은 시퀀스가 만든 오브젝트입니다. */
-        bool             _bNeedsPreset;   /**< `_preset` 이 비어 있으면 안 되는 종류인지입니다(읽을 때 검사합니다). 카메라 컷은 비우면 카메라를 그대로 씁니다. */
-        bool             _bPlaysScenario; /**< 시작 프레임을 지날 때 `_scenario` 를 재생하는지입니다(`SequencePlayerComponent`). 비어 있으면 읽기 오류입니다. */
+        SequenceItemKind _kind;                                                                                                                                  /**< 종류입니다. 테이블의 순번과 같아야 합니다. */
+        uint32           _defaultColor;                                                                                                                          /**< 에디터에서 새 항목에 칠하는 색(0xAABBGGRR)입니다. */
+        bool             _bDrivesTarget; /**< 구간 동안 대상 오브젝트의 활성 상태와 트랜스폼을 정하는지 나타냅니다. */                                           ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bFiresOnCross; /**< 시작 프레임을 지날 때 이벤트로 알리는지입니다. */                                                                  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bCutsCamera; /**< 구간 동안 대상의 카메라를 게임 카메라로 고르는지입니다. */                                                           ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bShakesCamera; /**< 시작 프레임을 지날 때 대상 카메라에 흔들림 신호를 내는지입니다. */                                                 ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bSpawns; /**< 프리팹을 스폰해 구간 동안 켜는지입니다(`SequenceTimelineUtil::applySpawns`). 대상은 시퀀스가 만든 오브젝트입니다. */     ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bNeedsPreset; /**< `_preset` 이 비어 있으면 안 되는 종류인지입니다(읽을 때 검사합니다). 카메라 컷은 비우면 카메라를 그대로 씁니다. */  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool             _bPlaysScenario; /**< 시작 프레임을 지날 때 `_scenario` 를 재생하는지입니다(`SequencePlayerComponent`). 비어 있으면 읽기 오류입니다. */ ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
     /**

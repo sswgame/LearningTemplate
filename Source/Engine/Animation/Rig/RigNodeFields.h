@@ -24,7 +24,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Name = "planar" )
-        bool _bPlanar{ false };
+        bool _bPlanar{ SW_FALSE };
     };
 
     /** @brief 대상(`<targets><item …/>`) 하나의 칸입니다. `bone` · `socket` · `object` 중 하나만 적는다(`RigAsset::parseTarget` 이 본다). */
@@ -68,7 +68,7 @@ namespace sw
         PROPERTY( Name = "min_screen_size", Min = 0.0 )
         float32 _minScreenSize{ 0.0f };
         PROPERTY( Name = "enabled" )
-        bool _bEnabled{ true }; ///< 적지 않으면 켜짐(에디터가 끈 노드만 `enabled="false"` 를 쓴다)
+        bool _bEnabled{ SW_TRUE }; ///< 적지 않으면 켜짐(에디터가 끈 노드만 `enabled="false"` 를 쓴다)
     };
 } // namespace sw
 

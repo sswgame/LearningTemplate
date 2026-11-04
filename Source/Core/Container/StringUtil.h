@@ -39,8 +39,8 @@ namespace sw
     /** @brief `StringUtil::split` 의 선택입니다. 기본은 아무것도 바꾸지 않는다(빈 토큰도 남는다 — `"a,,b"` → `a` · 빈 글 · `b`). */
     struct StringSplitOptions
     {
-        bool _bTrim{ false };      ///< 토큰마다 앞뒤 공백을 뗀다
-        bool _bDropEmpty{ false }; ///< (자른 뒤) 빈 토큰을 버린다
+        bool _bTrim{ false };      ///< 토큰마다 앞뒤 공백을 뗀다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool _bDropEmpty{ false }; ///< (자른 뒤) 빈 토큰을 버린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 

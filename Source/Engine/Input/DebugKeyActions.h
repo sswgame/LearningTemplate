@@ -116,6 +116,6 @@ namespace sw
     private:
         unique_ptr<InputMap> _mapDebugAction;
         string               _userBindingsPath; ///< 맵을 만들 때 정한 사용자 바인딩 파일 경로입니다(빈 값 = 저장하지 않는다).
-        bool                 _bBound;
+        uint8                _bBound : 1;
     };
 } // namespace sw
