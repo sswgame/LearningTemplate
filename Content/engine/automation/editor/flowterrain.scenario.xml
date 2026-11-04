@@ -5,6 +5,7 @@
   되돌리기 스택이 같으며(Editor.UndoState), 마지막에 Ctrl+Z 한 번이 그 붓질을 되돌려 그림이 편집 전으로 돌아온다.
   처음에 한 번 건너는 것은 도킹 배치를 안정시키기 위해서다(rhiswap/terrainedits 와 같은 까닭 — 첫 리로드에서 씬 뷰 너비가 1 픽셀 바뀔 수 있다).
   실행: App -EnableEditor -scenario=engine/automation/editor/flowterrain.scenario.xml -unattended
+  사진마다 앞에서 Assets.Pending 을 기다린다 — 식생 머티리얼이 텍스처를 쓰고(Quaternius), 씬 열기 · 백엔드 교체 뒤 텍스처가 스트리밍되는 동안은 회색 로드 중 텍스처다.
 -->
 <Scenario name="editor.flowterrain" fixedDelta="0.0166667" timeoutFrames="4000" startAfter="Immediately" input="exclusive">
 	<EditorWaitSettled/>
@@ -41,6 +42,7 @@
 	<EditorWaitSettled/>
 	<Expect watch="Terrain.WrittenEditCount" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="flowterrain_before.ppm"/>
 	<!-- 높이를 올린다 — 붓질 하나가 되돌리기 하나 -->
 	<EditorWaitSettled/>
@@ -51,6 +53,7 @@
 	<Expect watch="Terrain.WrittenEditCount" equals="1"/>
 	<Expect watch="Editor.UndoCount" equals="1"/>
 	<Remember watch="Editor.UndoState" as="editedUndo"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="flowterrain_edited.ppm"/>
 	<EditorWaitSettled/>
 	<ExpectImage file="flowterrain_edited.ppm" golden="flowterrain_edited"/>
@@ -70,6 +73,7 @@
 	<Expect watch="Terrain.WrittenEditCount" equals="1"/>
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<Expect watch="Editor.SceneViewCameraY" near="70" tolerance="0.5"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="flowterrain_afterplay.ppm"/>
 	<EditorWaitSettled/>
 	<ExpectImage file="flowterrain_afterplay.ppm" golden="flowterrain_afterplay"/>
@@ -91,6 +95,7 @@
 	<Expect watch="Terrain.WrittenEditCount" equals="1"/>
 	<Expect watch="Editor.UndoState" sameAs="editedUndo"/>
 	<Expect watch="Editor.SceneViewCameraY" near="70" tolerance="0.5"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="flowterrain_swapped.ppm"/>
 	<EditorWaitSettled/>
 	<ExpectImage file="flowterrain_swapped.ppm" golden="flowterrain_swapped"/>
@@ -100,6 +105,7 @@
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+Z"/>
 	<WaitUntil watch="Editor.UndoIndex" equals="0" timeoutFrames="120"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Screenshot file="flowterrain_undone.ppm"/>
 	<EditorWaitSettled/>
 	<ExpectImage file="flowterrain_undone.ppm" golden="flowterrain_undone"/>
