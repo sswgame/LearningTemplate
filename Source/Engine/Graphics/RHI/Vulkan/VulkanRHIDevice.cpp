@@ -11,6 +11,7 @@
 #include "Core/Process/ProcessEnvironment.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
 #include "Engine/Graphics/RHI/Backend/RHILiveCommandListUtil.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
@@ -32,16 +33,16 @@
 
     #include "Core/Foundation/X11MacroUndef.h"
 #endif
-#include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
+#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
+#include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIRequiredVersion.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHISamplerPreset.h"
-#include "Engine/Graphics/RHI/Diagnostics/RHITimestamp.h"
-#include "Engine/Graphics/RHI/Vulkan/VulkanOneShotCommands.h"
-#include "Engine/Graphics/RHI/Transfer/RHIStagingRingUtil.h"
+#include "Engine/Graphics/RHI/Vulkan/VulkanRHIUtil.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 
 namespace sw
@@ -1021,7 +1022,7 @@ namespace sw
             formatstring( arrGPU, constant::buffer::kMax256, "%# (driver %#, api %#.%#.%#)", properties.deviceName,
                           properties.driverVersion, VK_VERSION_MAJOR( properties.apiVersion ),
                           VK_VERSION_MINOR( properties.apiVersion ), VK_VERSION_PATCH( properties.apiVersion ) );
-            CrashHandler::setContextValue( "GPU", arrGPU );
+            engine::getSubsystem<CrashHandler>().setContextValue( "GPU", arrGPU );
             _bSoftwareAdapter = properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_CPU;
         }
         if ( _physicalDevice == nullptr && bSoftwareAdapter )

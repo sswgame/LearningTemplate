@@ -176,7 +176,6 @@ namespace sw
 
     void ApnsPushProvider::finishSend( uint64 deliveryID, const HTTPClientResponse& response )
     {
-        using Internal                        = ApnsPushProviderInternal;
         const PushDeliveryStatus status       = mapStatus( response._statusCode, response._bTransportFailed == SW_TRUE );
         int64                    retryAfterMs = 0;
         if ( const HTTPHeader* pRetryAfter = response.findHeader( "retry-after" ) )

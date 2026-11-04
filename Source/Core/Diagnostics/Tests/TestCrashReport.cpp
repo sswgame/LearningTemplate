@@ -1,13 +1,13 @@
-// 크래시 보고 — 크래시 경로에서 할당 없이 미리 담아 둔 문맥(키-값 · 빵부스러기)과 세 플랫폼이 함께 쓰는 보고 본문. 앞 절은 보고를 만드는 조각을 직접 부르고,
-// 선 엔진의 전역 상태(보고 폴더 · 문맥 저장소 · 빵부스러기)를 케이스마다 저장했다가 되돌린다(픽스처). 끝 절은 자식 역할(`SW_TEST_CHILD_ROLE`)을 띄워 진짜로 죽인다.
+// 크래시 보고 — 크래시 경로에서 할당 없이 미리 담아 둔 문맥(키-값 · 빵부스러기)과 세 플랫폼이 함께 쓰는 보고 본문. 앞 절은 케이스마다 제 처리기(설치하지 않은
+// `CrashHandler`)를 만들어 보고 조각을 직접 부른다 — 앱의 처리기는 건드리지 않는다. 끝 절은 자식 역할(`SW_TEST_CHILD_ROLE`)을 띄워 진짜로 죽인다.
 #include "pch.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Process/ProcessSession.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -15,45 +15,35 @@ using namespace sw;
 
 namespace
 {
-    /** @brief 케이스가 바꾸는 크래시 보고 전역 상태를 저장했다가 되돌리고, 보고 폴더를 케이스 폴더로 돌립니다. */
+    /** @brief 케이스의 처리기(설치하지 않는다)와 그 보고 폴더입니다. */
     struct CrashReportTest
     {
         CrashReportTest()
-            : _previousFolder{ getCrashReportFolder() }
-            , _savedContext{ CrashContextStore::get() }
-            , _savedBreadcrumb{ CrashBreadcrumbStore::get() }
+            : _handler{}
         {
-        }
-        ~CrashReportTest()
-        {
-            setCrashReportFolder( _previousFolder );
-            CrashContextStore::get()    = _savedContext;
-            CrashBreadcrumbStore::get() = _savedBreadcrumb;
         }
         CrashReportTest( const CrashReportTest& )            = delete;
         CrashReportTest& operator=( const CrashReportTest& ) = delete;
 
-        /** @brief 케이스 폴더 아래 @p name 폴더를 만들어 보고 폴더로 정하고 그 경로를 돌려줍니다(못 만들면 빈 글). */
-        string useReportFolder( string_view name ) const
+        /** @brief 케이스 폴더 아래 @p name 폴더를 만들어 이 처리기의 보고 폴더로 정하고 그 경로를 돌려줍니다(못 만들면 빈 글). */
+        string useReportFolder( string_view name )
         {
             const string folder = test::makeScratchPath( name );
             if ( FileUtil::ensureDirectoryExists( folder ) == false )
                 return {};
-            setCrashReportFolder( folder );
+            _handler.setReportFolder( folder );
             return folder;
         }
 
         /** @brief 세션 ID 로 만들어지는 보고 파일 하나를 읽습니다. */
-        [[nodiscard]] static bool readReportFile( const utf8* pExtension, string& outText )
+        [[nodiscard]] bool readReportFile( const utf8* pExtension, string& outText ) const
         {
             utf8 arrPath[constant::buffer::kMax1024]{};
-            makeCrashReportPath( arrPath, constant::buffer::kMax1024, pExtension );
+            _handler.makeReportPath( arrPath, constant::buffer::kMax1024, pExtension );
             return FileUtil::readTextFile( arrPath, outText );
         }
 
-        string               _previousFolder;
-        CrashContextStore    _savedContext;
-        CrashBreadcrumbStore _savedBreadcrumb;
+        CrashHandler _handler;
     };
 } // namespace
 
@@ -64,10 +54,10 @@ SW_TEST_CASE_F( CrashReportTest, RegisteredContextReachesTheContextFile )
 {
     SW_REQUIRE_FALSE( useReportFolder( "reports" ).empty() );
 
-    CrashHandler::setContextValue( "RHI", "DX12" );
-    CrashHandler::setContextValue( "Build", "CrashReportTest" );
+    _handler.setContextValue( "RHI", "DX12" );
+    _handler.setContextValue( "Build", "CrashReportTest" );
 
-    writeCrashContextFile( "unit test reason", reinterpret_cast<const void*>( 0xDEADBEEFull ), 4242, 8484 );
+    _handler.writeContextFile( "unit test reason", reinterpret_cast<const void*>( 0xDEADBEEFull ), 4242, 8484 );
 
     string text;
     SW_REQUIRE_TRUE( readReportFile( "txt", text ) );
@@ -78,7 +68,7 @@ SW_TEST_CASE_F( CrashReportTest, RegisteredContextReachesTheContextFile )
     SW_EXPECT_TRUE( text.find( "8484" ) != string::npos );
     SW_EXPECT_TRUE( text.find( "DX12" ) != string::npos );
     SW_EXPECT_TRUE( text.find( "CrashReportTest" ) != string::npos );
-    SW_EXPECT_TRUE( text.find( CrashHandler::getSessionID() ) != string::npos );
+    SW_EXPECT_TRUE( text.find( ProcessSession::getID() ) != string::npos );
 }
 
 /**
@@ -88,12 +78,13 @@ SW_TEST_CASE_F( CrashReportTest, ReportFolderWithANonAsciiNameReceivesTheFiles )
 {
     SW_REQUIRE_FALSE( useReportFolder( "SwCrashReport_한글 폴더" ).empty() );
 
-    writeCrashContextFile( "non-ascii folder", nullptr, 1, 2 );
-    writeCrashStackFile( "frame 0" );
+    SW_EXPECT_LOG( "Crash.Report" ); // 보고 본문은 오류 로그로도 남는다
+    _handler.writeContextFile( "non-ascii folder", nullptr, 1, 2 );
+    _handler.writeReport( "non-ascii fault", nullptr, nullptr, false );
 
     string text;
     SW_EXPECT_TRUE( readReportFile( "txt", text ) && text.find( "non-ascii folder" ) != string::npos );
-    SW_EXPECT_TRUE( readReportFile( "stack.txt", text ) && text.find( "frame 0" ) != string::npos );
+    SW_EXPECT_TRUE( readReportFile( "stack.txt", text ) && text.find( "non-ascii fault" ) != string::npos );
 }
 
 /**
@@ -101,8 +92,7 @@ SW_TEST_CASE_F( CrashReportTest, ReportFolderWithANonAsciiNameReceivesTheFiles )
  */
 SW_TEST_CASE_F( CrashReportTest, ContextStoreOverwritesKeyAndDropsOverflowSafely )
 {
-    CrashContextStore& store = CrashContextStore::get();
-    store._entryCount        = 0;
+    CrashContextStore store;
 
     store.set( "RHI", "Vulkan" );
     store.set( "RHI", "DX11" );
@@ -110,9 +100,9 @@ SW_TEST_CASE_F( CrashReportTest, ContextStoreOverwritesKeyAndDropsOverflowSafely
     SW_EXPECT_TRUE( store._arrEntry[0]._value.view() == string_view( "DX11" ) );
 
     // 정원을 넘겨 본다. 개수는 정원에서 멈추고 첫 항목은 그대로여야 한다.
-    for ( uint32 index = 0; index < CrashHandler::kMaxContextEntry + 8; ++index )
+    for ( uint32 index = 0; index < CrashContextStore::kMaxEntry + 8; ++index )
         store.set( formatToString( "Key%#", index ), "value" );
-    SW_EXPECT_EQUAL( CrashHandler::kMaxContextEntry, store._entryCount );
+    SW_EXPECT_EQUAL( CrashContextStore::kMaxEntry, store._entryCount );
     SW_EXPECT_TRUE( store._arrEntry[0]._value.view() == string_view( "DX11" ) );
 
     // 빈 키는 아무 일도 하지 않는다.
@@ -132,12 +122,12 @@ SW_TEST_CASE_F( CrashReportTest, ReportListsFilesToSendAndSkipsTheDumpWhenThereI
     utf8 arrContextPath[constant::buffer::kMax1024]{};
     utf8 arrStackPath[constant::buffer::kMax1024]{};
     utf8 arrDumpPath[constant::buffer::kMax1024]{};
-    makeCrashReportPath( arrContextPath, constant::buffer::kMax1024, "txt" );
-    makeCrashReportPath( arrStackPath, constant::buffer::kMax1024, "stack.txt" );
-    makeCrashReportPath( arrDumpPath, constant::buffer::kMax1024, "dmp" );
+    _handler.makeReportPath( arrContextPath, constant::buffer::kMax1024, "txt" );
+    _handler.makeReportPath( arrStackPath, constant::buffer::kMax1024, "stack.txt" );
+    _handler.makeReportPath( arrDumpPath, constant::buffer::kMax1024, "dmp" );
 
     // 1) 덤프가 없을 때 — 문맥과 스택 파일만 적혀야 한다.
-    writeCrashReport( "unit test fault", reinterpret_cast<const void*>( 0x1234ull ), nullptr, false );
+    _handler.writeReport( "unit test fault", reinterpret_cast<const void*>( 0x1234ull ), nullptr, false );
 
     string text;
     SW_REQUIRE_TRUE( readReportFile( "stack.txt", text ) );
@@ -149,7 +139,7 @@ SW_TEST_CASE_F( CrashReportTest, ReportListsFilesToSendAndSkipsTheDumpWhenThereI
     SW_EXPECT_TRUE_MSG( text.find( arrDumpPath ) == string::npos, "the list names a minidump that was never written" );
 
     // 2) 덤프를 썼을 때 — 그때만 덤프 경로가 붙는다.
-    writeCrashReport( "unit test fault", reinterpret_cast<const void*>( 0x1234ull ), nullptr, true );
+    _handler.writeReport( "unit test fault", reinterpret_cast<const void*>( 0x1234ull ), nullptr, true );
 
     SW_REQUIRE_TRUE( readReportFile( "stack.txt", text ) );
     SW_EXPECT_TRUE( text.find( arrDumpPath ) != string::npos );
@@ -160,8 +150,8 @@ SW_TEST_CASE_F( CrashReportTest, ReportListsFilesToSendAndSkipsTheDumpWhenThereI
  */
 SW_TEST_CASE_F( CrashReportTest, SessionIDIsStableAndAppearsInReportPaths )
 {
-    const utf8* pFirst  = CrashHandler::getSessionID();
-    const utf8* pSecond = getCrashSessionID();
+    const utf8* pFirst  = ProcessSession::getID();
+    const utf8* pSecond = ProcessSession::getID();
 
     SW_REQUIRE_NOT_NULL( pFirst );
     SW_EXPECT_EQUAL( string( pFirst ), string( pSecond ) );
@@ -170,7 +160,7 @@ SW_TEST_CASE_F( CrashReportTest, SessionIDIsStableAndAppearsInReportPaths )
     SW_REQUIRE_FALSE( folder.empty() );
 
     utf8 arrPath[constant::buffer::kMax1024]{};
-    makeCrashReportPath( arrPath, constant::buffer::kMax1024, "dmp" );
+    _handler.makeReportPath( arrPath, constant::buffer::kMax1024, "dmp" );
 
     const string path{ arrPath };
     SW_EXPECT_TRUE( path.find( folder ) != string::npos );
@@ -184,14 +174,14 @@ SW_TEST_CASE_F( CrashReportTest, SessionIDIsStableAndAppearsInReportPaths )
 SW_TEST_CASE_F( CrashReportTest, BreadcrumbsKeepTheLatestLinesInOrder )
 {
     SW_REQUIRE_FALSE( useReportFolder( "reports" ).empty() );
-    const CrashBreadcrumbStore& store = CrashBreadcrumbStore::get();
+    const CrashBreadcrumbStore& store = _handler.getBreadcrumbStore();
     for ( uint32 index = 0; index < 40; ++index )
     {
         StringBuilder<constant::buffer::kMax64> line;
         line.appendFormat( "event %#", index );
-        CrashHandler::addBreadcrumb( line.view() );
+        _handler.addBreadcrumb( line.view() );
     }
-    CrashHandler::addBreadcrumb( string( 400, 'z' ) );
+    _handler.addBreadcrumb( string( 400, 'z' ) );
 
     utf8         arrText[CrashBreadcrumbStore::kMaxBreadcrumb * CrashBreadcrumbStore::kMaxLength]{};
     const uint32 length = store.writeText( arrText, static_cast<uint32>( sizeof( arrText ) ) );
@@ -207,7 +197,7 @@ SW_TEST_CASE_F( CrashReportTest, BreadcrumbsKeepTheLatestLinesInOrder )
         lineCount += character == '\n' ? 1u : 0u;
     SW_EXPECT_EQUAL( CrashBreadcrumbStore::kMaxBreadcrumb, lineCount );
 
-    writeCrashContextFile( "breadcrumb test", nullptr, 1, 2 );
+    _handler.writeContextFile( "breadcrumb test", nullptr, 1, 2 );
     string fileText;
     SW_REQUIRE_TRUE( readReportFile( "breadcrumbs.txt", fileText ) );
     SW_EXPECT_TRUE( fileText == text );
@@ -215,7 +205,7 @@ SW_TEST_CASE_F( CrashReportTest, BreadcrumbsKeepTheLatestLinesInOrder )
 
 // 진짜 크래시 — 이 실행 파일을 자식 역할로 띄워 죽게 하고 보고가 남았는지 본다. 위 케이스처럼 조각을 직접 부르면 "그 방식으로 죽으면 핸들러에 들어오기는
 // 하는가 · 들어와서 쓸 스택이 남아 있는가" 를 볼 수 없다(스택 오버플로의 0 바이트 덤프, abort · 순수 가상 호출의 필터 미진입이 그렇게 샌다).
-// 보고는 부모가 준 케이스 쓰기 폴더에만 쓴다 — 자식이 보고 폴더를 그리로 돌린 뒤 죽고, 자식의 로그(`-log-file`)도 부모 케이스 폴더라 기동 때 정해지는 보고 폴더도 거기다.
+// 보고는 부모가 준 케이스 쓰기 폴더에만 쓴다 — 자식은 그 폴더를 쓰는 제 처리기를 앱의 처리기 위에 설치하고 죽는다(나중에 설치한 처리기가 보고한다).
 // 새니타이저는 치명 시그널을 제가 쥐고 보고한다 — 그 구성에서는 짓지 않는다.
 #if !defined( SW_SANITIZER_ADDRESS ) && !defined( SW_SANITIZER_THREAD )
 namespace
@@ -289,13 +279,15 @@ SW_TEST_CHILD_ROLE( CrashReportTest, ChildCrashesAsRequested )
     const vector<string_view> listPart = StringUtil::split( argument, "|" );
     int32                     kindCode = 0;
     SW_REQUIRE_TRUE_MSG( listPart.size() >= 2 && StringUtil::parseInt( listPart[0], kindCode ), argument );
-    setCrashReportFolder( string( listPart[1] ) );
+    CrashHandler handler;
+    handler.setReportFolder( listPart[1] );
     if ( listPart.size() >= 3 )
     {
         uint64 deadlineSeconds = 0;
         SW_REQUIRE_TRUE_MSG( StringUtil::parseUint64( listPart[2], deadlineSeconds ) && deadlineSeconds <= 600, argument );
-        CrashHandler::setReportDeadline( static_cast<uint32>( deadlineSeconds ) );
+        handler.setReportDeadline( static_cast<uint32>( deadlineSeconds ) );
     }
+    handler.install();
     #if defined( SW_PLATFORM_WINDOWS )
     // 오류 보고 창(WER)이 떠서 부모가 시한까지 기다리지 않게 한다 — 핸들러가 처리하면 원래 뜨지 않는다(처리하지 못했을 때를 위한 것).
     ::SetErrorMode( SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX );

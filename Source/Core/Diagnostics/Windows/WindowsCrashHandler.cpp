@@ -3,12 +3,11 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CallStackCapture.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
+#include "Core/Diagnostics/CrashHandlerProcessHook.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleLibraryUtil.h"
-#include "Core/Process/ThreadCrashStack.h"
 #include "Core/String/fixed_string.h"
 
 #include <cstdio>
@@ -24,7 +23,6 @@ namespace sw
 {
     namespace
     {
-        atomic<bool> s_bInstalled{ false };
         /**
          * @brief 지금 리포트를 쓰는 스레드의 ID 입니다(0 이면 아무도 쓰지 않습니다).
          * @details bool 로 두면 두 스레드가 거의 동시에 죽을 때 두 번째 스레드가 "이미 보고 중"임을 보고 곧장 필터를 빠져나가 프로세스를
@@ -32,6 +30,7 @@ namespace sw
          */
         atomic<uint32> s_reportingThreadID{ 0 };
 
+        // 훅을 걸기 전의 OS · CRT 처리기들 — 훅을 뗄 때 되돌린다. OS 가 프로세스에 하나씩만 두는 것이라 이 파일의 상태도 프로세스에 하나다.
         LPTOP_LEVEL_EXCEPTION_FILTER s_pPreviousFilter{ nullptr };
         _crt_signal_t                s_pPreviousAbortHandler{ SIG_DFL };
         _purecall_handler            s_pPreviousPureCallHandler{ nullptr };
@@ -39,22 +38,12 @@ namespace sw
         uint32                       s_previousAbortBehavior{ 0 };
 
         /**
-         * @brief CRT 가 예외 필터를 건너뛰고 종료하는 경로를 우리 필터로 돌리는 사용자 예외 코드입니다(0xE0 은 사용자 정의 치명 오류).
-         * @details abort(), 순수 가상 호출, 잘못된 CRT 인자는 CRT 가 `__fastfail` 로 프로세스를 끝낸다. `__fastfail` 은 **예외 필터를 거치지
-         *          않으므로**, 훅이 없으면 이 셋으로 종료할 때 덤프도 스택도 남지 않는다(종료 코드 0xC0000409, 필터 미진입). 엔진의 치명 경로가
-         *          "로그 + std::abort" 라서 가장 흔한 종료 원인이다. 훅에서 이 코드로 예외를 발생시켜 접근 위반과 같은 경로를 타게 한다.
-         */
-        constexpr DWORD kExceptionCodeAbort            = 0xE0535701;
-        constexpr DWORD kExceptionCodePureCall         = 0xE0535702;
-        constexpr DWORD kExceptionCodeInvalidParameter = 0xE0535703;
-
-        /**
-         * @brief 크래시 보고를 맡는 스레드입니다. 설치할 때 미리 띄워 두고 신호를 기다립니다.
+         * @brief 크래시 보고를 맡는 스레드입니다. 훅을 걸 때 미리 띄워 두고 신호를 기다립니다.
          * @details **죽은 스레드에서 덤프를 쓰지 않는다.** 스택 오버플로는 넘친 스택의 보증 공간(64KB)만으로 필터를 돈다. 그 위에서
          *          `MiniDumpWriteDump` 와 심볼 변환을 하면 크래시 자식 프로세스가 **간헐적으로 멈춘다**(하나씩은 드물고, 여럿을 겹쳐 돌리면 수백 번에
          *          몇 번 정도). 브레이크패드와 언리얼(`FCrashReportingThread`)도 같은 이유로 미리 시작한 스레드에서 보고한다. 그 스레드는
          *          멀쩡한 스택을 가지고 있다.
-         *          폴트 스레드는 **시한까지만**(`CrashHandler::setReportDeadline`) 기다린다. 보고가 어디서 멈추든(힙이나 stdio 락)
+         *          폴트 스레드는 진척이 멈출 때까지만(`CrashHandler::setReportDeadline`) 기다린다. 보고가 어디서 멈추든(힙이나 stdio 락)
          *          프로세스는 끝난다. 크래시가 난 게임이 창을 띄운 채 서 있는 것보다 보고 없이 끝나는 편이 낫다.
          */
         HANDLE       s_hReportThread{ nullptr };
@@ -63,9 +52,10 @@ namespace sw
         DWORD        s_reportThreadID{ 0 };
         atomic<bool> s_bStopReportThread{ false };
 
-        /** @brief 보고 스레드에 넘기는 크래시 하나입니다. 폴트 스레드가 시한까지 기다리는 동안만 유효하며, 그 스레드의 스택을 가리킵니다. */
+        /** @brief 보고 스레드에 넘기는 크래시 하나입니다. 폴트 스레드가 기다리는 동안만 유효하며, 그 스레드의 스택을 가리킵니다. */
         struct PendingCrash
         {
+            CrashHandler*       _pHandler{ nullptr };
             const utf8*         _pReason{ nullptr };
             const void*         _pFaultAddress{ nullptr };
             void*               _pPlatformContext{ nullptr };
@@ -75,349 +65,361 @@ namespace sw
         PendingCrash s_pendingCrash{};
 
         /**
-         * @brief 크래시 순간에 부를 `MiniDumpWriteDump` 입니다. **설치할 때** 미리 찾아 둡니다.
+         * @brief 크래시 순간에 부를 `MiniDumpWriteDump` 입니다. **훅을 걸 때** 미리 찾아 둡니다.
          * @details dbghelp 의 `MiniDumpWriteDump` 는 구현(dbgcore.dll)을 **처음 부를 때** `LoadLibrary` 로 로드한다. 크래시 순간에 할 일을 하나
          *          줄이려고 그 로드를 설치 시점으로 당겼다. 덤프 구현은 안에서 또 `LoadLibraryExA` 를 부르므로 이것만으로 로더 대기가
-         *          사라지지는 않는다. 그 대기가 영영 풀리지 않는 원인(정지된 스레드)은 kSnapshotFlags 가 없앤다.
+         *          사라지지는 않는다. 그 대기가 영영 풀리지 않는 원인(정지된 스레드)은 `kSnapshotFlags` 가 없앤다.
          */
         using PfnMiniDumpWriteDump = BOOL( WINAPI* )( HANDLE, DWORD, HANDLE, MINIDUMP_TYPE, PMINIDUMP_EXCEPTION_INFORMATION,
                                                       PMINIDUMP_USER_STREAM_INFORMATION, PMINIDUMP_CALLBACK_INFORMATION );
         HMODULE              s_hDumpModule{ nullptr };
         PfnMiniDumpWriteDump s_pfnMiniDumpWriteDump{ nullptr };
 
-        /** @brief 남길 덤프 종류입니다. 언리얼의 기본값과 비슷한 수준(스택, 간접 참조 메모리, 스레드 정보)입니다. */
-        constexpr MINIDUMP_TYPE kMiniDumpType = static_cast<MINIDUMP_TYPE>( MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs |
-                                                                            MiniDumpWithThreadInfo | MiniDumpWithHandleData );
+        /** @brief 덤프 중인 처리기입니다 — 덤프 콜백(사용자 인자가 없는 경로도 있다)이 진척을 이 처리기에 센다. 덤프하는 동안만 칸이 찬다. */
+        atomic<CrashHandler*> s_pDumpingHandler{ nullptr };
 
-        /**
-         * @brief 덤프할 프로세스 스냅샷(`PssCaptureSnapshot`)에 담을 항목입니다. 주소 공간 복제, 스레드 컨텍스트, 핸들이 해당합니다.
-         * @details **살아 있는 프로세스를 덤프하면 `MiniDumpWriteDump` 가 다른 스레드를 모두 정지시킨다.** 정지된 스레드 하나가 막 시작하던
-         *          중이라(`LdrInitializeThunk`) 로더를 쥐고 있으면, 덤프가 안에서 부르는 `LoadLibraryExA` 가 그 스레드를 영영 기다린다.
-         *          dbgcore 를 미리 로드하거나 같은 종류의 덤프를 설치할 때 한 번 돌려 두어도 그 호출은 막지 못한다.
-         *          정지된 스레드에는 시한을 기다리던 폴트 스레드도 있어서, **시한도 듣지 않는다**. 스냅샷은
-         *          커널이 스레드 컨텍스트를 잠깐 저장하고 주소 공간을 복제한 것이라, 덤프는 복제본을 읽고 살아 있는 스레드는 정지시키지 않는다.
-         *          로더를 쥔 스레드는 제 일을 마치고 놓는다. 마이크로소프트가 자기 프로세스를 덤프할 때 권하는 방법이다.
-         */
-        constexpr PSS_CAPTURE_FLAGS kSnapshotFlags = static_cast<PSS_CAPTURE_FLAGS>(
-            PSS_CAPTURE_VA_CLONE | PSS_CAPTURE_HANDLES | PSS_CAPTURE_HANDLE_NAME_INFORMATION | PSS_CAPTURE_HANDLE_BASIC_INFORMATION |
-            PSS_CAPTURE_HANDLE_TYPE_SPECIFIC_INFORMATION | PSS_CAPTURE_THREADS | PSS_CAPTURE_THREAD_CONTEXT | PSS_CAPTURE_THREAD_CONTEXT_EXTENDED |
-            PSS_CREATE_BREAKAWAY | PSS_CREATE_BREAKAWAY_OPTIONAL | PSS_CREATE_USE_VM_ALLOCATIONS | PSS_CREATE_RELEASE_SECTION );
-
-        /**
-         * @brief 넘긴 핸들이 스냅샷이라고 덤프에 알립니다(`IsProcessSnapshotCallback` 에 S_FALSE). 나머지 질문은 기본값 그대로 둡니다.
-         * @details 덤프는 스레드 · 모듈 · 메모리 구간마다 이 콜백을 부른다 — 그때마다 보고의 진척으로 센다(긴 덤프가 시한에 끊기지 않게).
-         */
-        BOOL CALLBACK onSnapshotDumpCallbackInternal( PVOID, const PMINIDUMP_CALLBACK_INPUT pInput, PMINIDUMP_CALLBACK_OUTPUT pOutput )
+        /** @brief Windows 훅의 도우미입니다. OS · CRT 가 부르는 콜백과 그 뒤의 덤프 · 보고 단계입니다(주인 타입은 크로스 플랫폼이라 Windows 형식을 들 수 없다). */
+        struct WindowsCrashHandlerInternal
         {
-            noteCrashReportProgress();
-            const bool bSnapshotCallbackForProcess = pInput != nullptr && pOutput != nullptr && pInput->CallbackType == IsProcessSnapshotCallback;
-            if ( bSnapshotCallbackForProcess )
-                pOutput->Status = S_FALSE;
-            return TRUE;
-        }
+            /**
+             * @brief CRT 가 예외 필터를 건너뛰고 종료하는 경로를 우리 필터로 돌리는 사용자 예외 코드입니다(0xE0 은 사용자 정의 치명 오류).
+             * @details abort(), 순수 가상 호출, 잘못된 CRT 인자는 CRT 가 `__fastfail` 로 프로세스를 끝낸다. `__fastfail` 은 **예외 필터를 거치지
+             *          않으므로**, 훅이 없으면 이 셋으로 종료할 때 덤프도 스택도 남지 않는다(종료 코드 0xC0000409, 필터 미진입). 엔진의 치명 경로가
+             *          "로그 + std::abort" 라서 가장 흔한 종료 원인이다. 훅에서 이 코드로 예외를 발생시켜 접근 위반과 같은 경로를 타게 한다.
+             */
+            static constexpr DWORD kExceptionCodeAbort            = 0xE0535701;
+            static constexpr DWORD kExceptionCodePureCall         = 0xE0535702;
+            static constexpr DWORD kExceptionCodeInvalidParameter = 0xE0535703;
 
-        void __cdecl onAbortSignalInternal( int32 )
-        {
-            RaiseException( kExceptionCodeAbort, EXCEPTION_NONCONTINUABLE, 0, nullptr );
-        }
+            /** @brief 남길 덤프 종류입니다. 언리얼의 기본값과 비슷한 수준(스택, 간접 참조 메모리, 스레드 정보)입니다. */
+            static constexpr MINIDUMP_TYPE kMiniDumpType =
+                static_cast<MINIDUMP_TYPE>( MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithDataSegs | MiniDumpWithThreadInfo | MiniDumpWithHandleData );
 
-        void __cdecl onPureCallInternal()
-        {
-            RaiseException( kExceptionCodePureCall, EXCEPTION_NONCONTINUABLE, 0, nullptr );
-        }
+            /**
+             * @brief 덤프할 프로세스 스냅샷(`PssCaptureSnapshot`)에 담을 항목입니다. 주소 공간 복제, 스레드 컨텍스트, 핸들이 해당합니다.
+             * @details **살아 있는 프로세스를 덤프하면 `MiniDumpWriteDump` 가 다른 스레드를 모두 정지시킨다.** 정지된 스레드 하나가 막 시작하던
+             *          중이라(`LdrInitializeThunk`) 로더를 쥐고 있으면, 덤프가 안에서 부르는 `LoadLibraryExA` 가 그 스레드를 영영 기다린다.
+             *          dbgcore 를 미리 로드하거나 같은 종류의 덤프를 설치할 때 한 번 돌려 두어도 그 호출은 막지 못한다.
+             *          정지된 스레드에는 시한을 기다리던 폴트 스레드도 있어서, **시한도 듣지 않는다**. 스냅샷은
+             *          커널이 스레드 컨텍스트를 잠깐 저장하고 주소 공간을 복제한 것이라, 덤프는 복제본을 읽고 살아 있는 스레드는 정지시키지 않는다.
+             *          로더를 쥔 스레드는 제 일을 마치고 놓는다. 마이크로소프트가 자기 프로세스를 덤프할 때 권하는 방법이다.
+             */
+            static constexpr PSS_CAPTURE_FLAGS kSnapshotFlags = static_cast<PSS_CAPTURE_FLAGS>(
+                PSS_CAPTURE_VA_CLONE | PSS_CAPTURE_HANDLES | PSS_CAPTURE_HANDLE_NAME_INFORMATION | PSS_CAPTURE_HANDLE_BASIC_INFORMATION |
+                PSS_CAPTURE_HANDLE_TYPE_SPECIFIC_INFORMATION | PSS_CAPTURE_THREADS | PSS_CAPTURE_THREAD_CONTEXT | PSS_CAPTURE_THREAD_CONTEXT_EXTENDED |
+                PSS_CREATE_BREAKAWAY | PSS_CREATE_BREAKAWAY_OPTIONAL | PSS_CREATE_USE_VM_ALLOCATIONS | PSS_CREATE_RELEASE_SECTION );
 
-        void __cdecl onInvalidParameterInternal( const utf16*, const utf16*, const utf16*, uint32, uintptr_t )
-        {
-            RaiseException( kExceptionCodeInvalidParameter, EXCEPTION_NONCONTINUABLE, 0, nullptr );
-        }
-
-        /**
-         * @brief 미니덤프를 씁니다.
-         * @details 최적화된 배포 빌드는 인라인과 꼬리 호출로 프레임이 합쳐지고 지역 변수도 남지 않습니다. 텍스트 콜 스택만으로는
-         *          원인을 좁히기 어렵습니다. 덤프가 있어야 디버거로 그 순간을 열어 볼 수 있습니다. 덤프 종류는 언리얼의 기본값과
-         *          비슷한 수준(스택, 간접 참조 메모리, 스레드 정보)으로 고릅니다. Full 덤프는 수백 MB 가 되어 사용자가 보내 주지
-         *          못합니다.
-         */
-        [[nodiscard]] bool writeMiniDump( EXCEPTION_POINTERS* pInfo, DWORD faultThreadID )
-        {
-            utf8 arrPath[constant::buffer::kMax1024]{};
-            makeCrashReportPath( arrPath, constant::buffer::kMax1024, "dmp" );
-
-            // 할당 없이 연다(경로 변환도 스택에서). 덤프 함수는 OS 핸들을 받는다.
-            const NativeFileHandle fileHandle = PlatformFileUtil::createNativeFileForWrite( arrPath );
-            if ( fileHandle == kInvalidNativeFileHandle )
-                return false;
-            const HANDLE hFile = reinterpret_cast<HANDLE>( static_cast<intptr_t>( fileHandle ) );
-
-            MINIDUMP_EXCEPTION_INFORMATION exceptionInfo{};
-            exceptionInfo.ThreadId          = faultThreadID;
-            exceptionInfo.ExceptionPointers = pInfo;
-            exceptionInfo.ClientPointers    = FALSE;
-
-            const PfnMiniDumpWriteDump      pfnWrite   = ( s_pfnMiniDumpWriteDump != nullptr ) ? s_pfnMiniDumpWriteDump : &MiniDumpWriteDump;
-            PMINIDUMP_EXCEPTION_INFORMATION pException = ( pInfo != nullptr ) ? &exceptionInfo : nullptr;
-
-            // 살아 있는 프로세스가 아니라 **스냅샷**을 덤프한다(kSnapshotFlags 설명). 스냅샷을 만들지 못하면 살아 있는 프로세스를 덤프한다.
-            BOOL       bWritten = FALSE;
-            HPSS       hSnapshot{ nullptr };
-            const bool bSnapshot = PssCaptureSnapshot( GetCurrentProcess(), kSnapshotFlags, CONTEXT_ALL, &hSnapshot ) == ERROR_SUCCESS;
-            if ( bSnapshot )
+            /**
+             * @brief 넘긴 핸들이 스냅샷이라고 덤프에 알립니다(`IsProcessSnapshotCallback` 에 S_FALSE). 나머지 질문은 기본값 그대로 둡니다.
+             * @details 덤프는 스레드 · 모듈 · 메모리 구간마다 이 콜백을 부른다 — 그때마다 보고의 진척으로 센다(긴 덤프가 시한에 끊기지 않게).
+             */
+            static BOOL CALLBACK onDumpCallback( PVOID, const PMINIDUMP_CALLBACK_INPUT pInput, PMINIDUMP_CALLBACK_OUTPUT pOutput )
             {
+                CrashHandler* const pHandler = s_pDumpingHandler.load();
+                if ( pHandler != nullptr )
+                    pHandler->noteProgress();
+                const bool bSnapshotCallbackForProcess = pInput != nullptr && pOutput != nullptr && pInput->CallbackType == IsProcessSnapshotCallback;
+                if ( bSnapshotCallbackForProcess )
+                    pOutput->Status = S_FALSE;
+                return TRUE;
+            }
+
+            static void __cdecl onAbortSignal( int32 ) { RaiseException( kExceptionCodeAbort, EXCEPTION_NONCONTINUABLE, 0, nullptr ); }
+
+            static void __cdecl onPureCall() { RaiseException( kExceptionCodePureCall, EXCEPTION_NONCONTINUABLE, 0, nullptr ); }
+
+            static void __cdecl onInvalidParameter( const utf16*, const utf16*, const utf16*, uint32, uintptr_t )
+            {
+                RaiseException( kExceptionCodeInvalidParameter, EXCEPTION_NONCONTINUABLE, 0, nullptr );
+            }
+
+            /**
+             * @brief @p handler 의 폴더에 미니덤프를 씁니다.
+             * @details 최적화된 배포 빌드는 인라인과 꼬리 호출로 프레임이 합쳐지고 지역 변수도 남지 않습니다. 텍스트 콜 스택만으로는
+             *          원인을 좁히기 어렵습니다. 덤프가 있어야 디버거로 그 순간을 열어 볼 수 있습니다. 덤프 종류는 언리얼의 기본값과
+             *          비슷한 수준(스택, 간접 참조 메모리, 스레드 정보)으로 고릅니다. Full 덤프는 수백 MB 가 되어 사용자가 보내 주지
+             *          못합니다.
+             */
+            [[nodiscard]] static bool writeMiniDump( CrashHandler& handler, EXCEPTION_POINTERS* pInfo, DWORD faultThreadID )
+            {
+                utf8 arrPath[constant::buffer::kMax1024]{};
+                handler.makeReportPath( arrPath, constant::buffer::kMax1024, "dmp" );
+
+                // 할당 없이 연다(경로 변환도 스택에서). 덤프 함수는 OS 핸들을 받는다.
+                const NativeFileHandle fileHandle = PlatformFileUtil::createNativeFileForWrite( arrPath );
+                if ( fileHandle == kInvalidNativeFileHandle )
+                    return false;
+                const HANDLE hFile = reinterpret_cast<HANDLE>( static_cast<intptr_t>( fileHandle ) );
+
+                MINIDUMP_EXCEPTION_INFORMATION exceptionInfo{};
+                exceptionInfo.ThreadId          = faultThreadID;
+                exceptionInfo.ExceptionPointers = pInfo;
+                exceptionInfo.ClientPointers    = FALSE;
+
+                const PfnMiniDumpWriteDump      pfnWrite   = ( s_pfnMiniDumpWriteDump != nullptr ) ? s_pfnMiniDumpWriteDump : &MiniDumpWriteDump;
+                PMINIDUMP_EXCEPTION_INFORMATION pException = ( pInfo != nullptr ) ? &exceptionInfo : nullptr;
+
+                // 살아 있는 프로세스가 아니라 **스냅샷**을 덤프한다(kSnapshotFlags 설명). 스냅샷을 만들지 못하면 살아 있는 프로세스를 덤프한다.
+                // 어느 쪽이든 콜백이 항목마다 진척을 센다(스냅샷 질문은 스냅샷일 때만 온다).
                 MINIDUMP_CALLBACK_INFORMATION callbackInfo{};
-                callbackInfo.CallbackRoutine = &onSnapshotDumpCallbackInternal;
-                bWritten                     = pfnWrite( static_cast<HANDLE>( hSnapshot ), GetCurrentProcessId(), hFile, kMiniDumpType, pException, nullptr, &callbackInfo );
-                PssFreeSnapshot( GetCurrentProcess(), hSnapshot );
+                callbackInfo.CallbackRoutine = &onDumpCallback;
+                s_pDumpingHandler.store( &handler );
+                BOOL       bWritten = FALSE;
+                HPSS       hSnapshot{ nullptr };
+                const bool bSnapshot = PssCaptureSnapshot( GetCurrentProcess(), kSnapshotFlags, CONTEXT_ALL, &hSnapshot ) == ERROR_SUCCESS;
+                if ( bSnapshot )
+                {
+                    bWritten = pfnWrite( static_cast<HANDLE>( hSnapshot ), GetCurrentProcessId(), hFile, kMiniDumpType, pException, nullptr, &callbackInfo );
+                    PssFreeSnapshot( GetCurrentProcess(), hSnapshot );
+                }
+                else
+                {
+                    bWritten = pfnWrite( GetCurrentProcess(), GetCurrentProcessId(), hFile, kMiniDumpType, pException, nullptr, &callbackInfo );
+                }
+                s_pDumpingHandler.store( nullptr );
+                const DWORD dumpError = ( bWritten != FALSE ) ? ERROR_SUCCESS : GetLastError();
+                PlatformFileUtil::closeNativeFile( fileHandle );
+                if ( bWritten == FALSE )
+                {
+                    // 실패 원인을 크래시 출력에 남긴다(stdio 를 거치지 않는다 — reportCrash 의 시한 메시지와 같은 이유).
+                    fixed_string<constant::buffer::kMax256> message;
+                    formatstring( message.data(), message.capacity(), "\n[CrashHandler] MiniDumpWriteDump failed (snapshot %#, error 0x%#)\n", bSnapshot ? 1 : 0,
+                                  Fmt( static_cast<uint32>( dumpError ), Format( 8, Format::Padding::Zero ).hex() ) );
+                    DWORD written = 0;
+                    WriteFile( GetStdHandle( STD_ERROR_HANDLE ), message.c_str(), static_cast<DWORD>( message.size() ), &written, nullptr );
+                }
+                return bWritten != FALSE;
             }
-            else
+
+            /**
+             * @brief 덤프, 컨텍스트, 리포트를 씁니다(보고 스레드에서 쓰며, 그 스레드가 없으면 폴트 스레드에서 씁니다).
+             * @param hFaultThread 스택을 따라갈 폴트 스레드. nullptr 이면 지금 스레드입니다.
+             */
+            static void writeReport( const PendingCrash& crash, HANDLE hFaultThread )
             {
-                MINIDUMP_CALLBACK_INFORMATION callbackInfo{};
-                callbackInfo.CallbackRoutine = &onSnapshotDumpCallbackInternal; // 스냅샷 질문은 오지 않는다 — 진척만 센다
-                bWritten                     = pfnWrite( GetCurrentProcess(), GetCurrentProcessId(), hFile, kMiniDumpType, pException, nullptr, &callbackInfo );
+                // 덤프와 컨텍스트를 **먼저** 쓴다. 이 순서는 취향이 아니라 안전장치다.
+                //
+                // 크래시 지점에서 안전한 것과 그렇지 않은 것:
+                //  - formatstring : 호출하는 쪽의 버퍼에 쓰고 할당하지 않는다(noexcept). 안전하다.
+                //  - fixed_string : 크기가 고정이라 안전하다. 컨텍스트 값을 여기에 미리 담아 두는 이유다.
+                //  - StringBuilder: 스택 버퍼로 시작하지만 **넘치면 힙으로 늘어난다.** 스택이 깊으면 넘친다.
+                //  - symbolize()  : sw::string 을 값으로 반환하므로 **반드시 할당**한다. 가장 위험하다.
+                //
+                // 힙이 이미 깨져서 죽은 경우라면 아래 심볼 변환에서 다시 죽을 수 있다. 그래서 할당이 없는 덤프 · 컨텍스트를 먼저
+                // 확보한다. 심볼 변환이 실패해도 덤프는 남고, 덤프만 있어도 디버거로 그 순간을 열 수 있다.
+                // **이 두 줄을 아래로 옮기지 말 것.**
+                CrashHandler& handler          = *crash._pHandler;
+                const bool    bMiniDumpWritten = writeMiniDump( handler, crash._pExceptionInfo, crash._faultThreadID );
+                handler.noteProgress();
+                handler.writeContextFile( crash._pReason, crash._pFaultAddress, GetCurrentProcessId(), crash._faultThreadID );
+
+                // 본문은 세 플랫폼이 함께 쓴다(CrashHandler.cpp).
+                handler.writeReport( crash._pReason, crash._pFaultAddress, crash._pPlatformContext, bMiniDumpWritten, hFaultThread );
             }
-            const DWORD dumpError = ( bWritten != FALSE ) ? ERROR_SUCCESS : GetLastError();
-            PlatformFileUtil::closeNativeFile( fileHandle );
-            if ( bWritten == FALSE )
+
+            /** @brief 보고 스레드입니다. 신호가 오면 그 크래시를 쓰고 끝났다고 알립니다. */
+            static DWORD WINAPI reportThreadMain( LPVOID )
             {
-                // 실패 원인을 크래시 출력에 남긴다(stdio 를 거치지 않는다 — reportCrash 의 시한 메시지와 같은 이유).
-                fixed_string<constant::buffer::kMax256> message;
-                formatstring( message.data(), message.capacity(), "\n[CrashHandler] MiniDumpWriteDump failed (snapshot %#, error 0x%#)\n", bSnapshot ? 1 : 0,
-                              Fmt( static_cast<uint32>( dumpError ), Format( 8, Format::Padding::Zero ).hex() ) );
-                DWORD written = 0;
-                WriteFile( GetStdHandle( STD_ERROR_HANDLE ), message.c_str(), static_cast<DWORD>( message.size() ), &written, nullptr );
+                while ( true )
+                {
+                    WaitForSingleObject( s_hReportRequested, INFINITE );
+                    if ( s_bStopReportThread.load() )
+                        return 0;
+
+                    const HANDLE hFaultThread = OpenThread( THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME, FALSE, s_pendingCrash._faultThreadID );
+                    writeReport( s_pendingCrash, hFaultThread );
+                    if ( hFaultThread != nullptr )
+                        CloseHandle( hFaultThread );
+                    SetEvent( s_hReportFinished );
+                }
             }
-            return bWritten != FALSE;
-        }
 
-        /**
-         * @brief 덤프, 컨텍스트, 리포트를 씁니다(보고 스레드에서 쓰며, 그 스레드가 없으면 폴트 스레드에서 씁니다).
-         * @param hFaultThread 스택을 따라갈 폴트 스레드. nullptr 이면 지금 스레드입니다.
-         */
-        void writeReportInternal( const PendingCrash& crash, HANDLE hFaultThread )
-        {
-            // 덤프와 컨텍스트를 **먼저** 쓴다. 이 순서는 취향이 아니라 안전장치다.
-            //
-            // 크래시 지점에서 안전한 것과 그렇지 않은 것:
-            //  - formatstring : 호출하는 쪽의 버퍼에 쓰고 할당하지 않는다(noexcept). 안전하다.
-            //  - fixed_string : 크기가 고정이라 안전하다. 컨텍스트 값을 여기에 미리 담아 두는 이유다.
-            //  - StringBuilder: 스택 버퍼로 시작하지만 **넘치면 힙으로 늘어난다.** 스택이 깊으면 넘친다.
-            //  - symbolize()  : sw::string 을 값으로 반환하므로 **반드시 할당**한다. 가장 위험하다.
-            //
-            // 힙이 이미 깨져서 죽은 경우라면 아래 심볼 변환에서 다시 죽을 수 있다. 그래서 할당이 없는 덤프 · 컨텍스트를 먼저
-            // 확보한다. 심볼 변환이 실패해도 덤프는 남고, 덤프만 있어도 디버거로 그 순간을 열 수 있다.
-            // **이 두 줄을 아래로 옮기지 말 것.**
-            const bool bMiniDumpWritten = writeMiniDump( crash._pExceptionInfo, crash._faultThreadID );
-            noteCrashReportProgress();
-            writeCrashContextFile( crash._pReason, crash._pFaultAddress, GetCurrentProcessId(), crash._faultThreadID );
-
-            // 본문은 세 플랫폼이 함께 쓴다(CrashContext.cpp).
-            writeCrashReport( crash._pReason, crash._pFaultAddress, crash._pPlatformContext, bMiniDumpWritten, hFaultThread );
-        }
-
-        /** @brief 보고 스레드입니다. 신호가 오면 그 크래시를 쓰고 끝났다고 알립니다. */
-        DWORD WINAPI reportThreadMainInternal( LPVOID )
-        {
-            while ( true )
+            /**
+             * @brief (폴트 스레드에서) 크래시를 보고 스레드에 맡기고, 보고가 나아가는 동안 기다립니다.
+             * @param pPlatformContext 있으면 그 지점부터 스택을 따라갑니다(Windows 는 CONTEXT*). nullptr 이면 현재 스레드의 스택을 캡처합니다.
+             */
+            static void reportCrash( CrashHandler& handler, const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, EXCEPTION_POINTERS* pExceptionInfo )
             {
-                WaitForSingleObject( s_hReportRequested, INFINITE );
-                if ( s_bStopReportThread.load() )
-                    return 0;
-
-                const HANDLE hFaultThread = OpenThread( THREAD_GET_CONTEXT | THREAD_QUERY_INFORMATION | THREAD_SUSPEND_RESUME, FALSE,
-                                                        s_pendingCrash._faultThreadID );
-                writeReportInternal( s_pendingCrash, hFaultThread );
-                if ( hFaultThread != nullptr )
-                    CloseHandle( hFaultThread );
-                SetEvent( s_hReportFinished );
-            }
-        }
-
-        /**
-         * @brief (폴트 스레드에서) 크래시를 보고 스레드에 맡기고 시한까지 기다립니다.
-         * @param pPlatformContext 있으면 그 지점부터 스택을 따라갑니다(Windows 는 CONTEXT*). nullptr 이면 현재 스레드의 스택을
-         *                         캡처합니다.
-         */
-        void reportCrash( const utf8* pReason, const void* pFaultAddress, void* pPlatformContext, EXCEPTION_POINTERS* pExceptionInfo )
-        {
-            // 보고 스레드 자신이 보고하다 죽었다. 더 할 수 있는 것이 없다. 폴트 스레드는 시한이 지나면 스스로 끝난다.
-            if ( s_reportThreadID != 0 && GetCurrentThreadId() == s_reportThreadID )
-                return;
-
-            const uint32 selfThreadID = static_cast<uint32>( GetCurrentThreadId() );
-            uint32       expectedID   = 0;
-            if ( s_reportingThreadID.compare_exchange_strong( expectedID, selfThreadID ) == false )
-            {
-                // 같은 스레드가 보고하다 또 죽었다. 더 할 수 있는 것이 없다.
-                if ( expectedID == selfThreadID )
+                // 보고 스레드 자신이 보고하다 죽었다. 더 할 수 있는 것이 없다. 폴트 스레드는 진척이 멈추면 스스로 끝난다.
+                if ( s_reportThreadID != 0 && GetCurrentThreadId() == s_reportThreadID )
                     return;
-                // 다른 스레드가 보고 중이다. 그 스레드가 덤프를 다 쓰고 프로세스를 끝낼 때까지 기다린다(보고가 멈춘 경우를 위해 상한을 둔다).
-                for ( uint32 waitIndex = 0; waitIndex < 3000 && s_reportingThreadID.load() != 0; ++waitIndex )
-                {
-                    Sleep( 10 );
-                }
-                return;
-            }
 
-            PendingCrash crash{};
-            crash._pReason          = pReason;
-            crash._pFaultAddress    = pFaultAddress;
-            crash._pPlatformContext = pPlatformContext;
-            crash._pExceptionInfo   = pExceptionInfo;
-            crash._faultThreadID    = GetCurrentThreadId();
-
-            if ( s_hReportThread != nullptr )
-            {
-                // 보고 스레드에 맡기고 기다린다(이 스레드의 스택과 예외 정보는 그동안 그대로다). 시한은 **진척이 멈춘 시간**이다 —
-                // 시한마다 진척 수를 보고, 그동안 한 걸음도 나아가지 않았을 때만 버린다(바쁜 기계의 긴 덤프는 끝까지 쓴다).
-                s_pendingCrash = crash;
-                SetEvent( s_hReportRequested );
-                const DWORD deadlineMs     = static_cast<DWORD>( getCrashReportDeadlineSeconds() * constant::time::kMillisecondsPerSecond );
-                uint32      seenProgress   = getCrashReportProgress();
-                bool        bReportStalled = false;
-                while ( WaitForSingleObject( s_hReportFinished, deadlineMs ) != WAIT_OBJECT_0 )
+                const uint32 selfThreadID = static_cast<uint32>( GetCurrentThreadId() );
+                uint32       expectedID   = 0;
+                if ( s_reportingThreadID.compare_exchange_strong( expectedID, selfThreadID ) == false )
                 {
-                    const uint32 progress = getCrashReportProgress();
-                    if ( progress == seenProgress )
+                    // 같은 스레드가 보고하다 또 죽었다. 더 할 수 있는 것이 없다.
+                    if ( expectedID == selfThreadID )
+                        return;
+                    // 다른 스레드가 보고 중이다. 그 스레드가 덤프를 다 쓰고 프로세스를 끝낼 때까지 기다린다(보고가 멈춘 경우를 위해 상한을 둔다).
+                    for ( uint32 waitIndex = 0; waitIndex < 3000 && s_reportingThreadID.load() != 0; ++waitIndex )
                     {
-                        bReportStalled = true;
-                        break;
+                        Sleep( 10 );
                     }
-                    seenProgress = progress;
+                    return;
                 }
-                if ( bReportStalled )
+
+                PendingCrash crash{};
+                crash._pHandler         = &handler;
+                crash._pReason          = pReason;
+                crash._pFaultAddress    = pFaultAddress;
+                crash._pPlatformContext = pPlatformContext;
+                crash._pExceptionInfo   = pExceptionInfo;
+                crash._faultThreadID    = GetCurrentThreadId();
+
+                if ( s_hReportThread != nullptr )
                 {
-                    // **stdio 를 거치지 않는다.** 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashTestKind::StderrHeld). fputs 로
-                    // 쓰면 시한이 지나도 여기서 다시 막힌다. 그리고 이전 필터에 넘기지 않고 여기서 끝낸다. 그 필터도
-                    // 같은 락에서 막힐 수 있고, 시한은 "여기서 끝난다"는 약속이어야 하기 때문이다.
-                    constexpr utf8 kMessage[] = "\n[CrashHandler] crash report made no progress before its deadline - exiting without it\n";
-                    DWORD          written    = 0;
-                    WriteFile( GetStdHandle( STD_ERROR_HANDLE ), kMessage, sizeof( kMessage ) - 1, &written, nullptr );
-                    const UINT exitCode = ( pExceptionInfo != nullptr && pExceptionInfo->ExceptionRecord != nullptr )
-                                            ? static_cast<UINT>( pExceptionInfo->ExceptionRecord->ExceptionCode )
-                                            : 1u;
-                    TerminateProcess( GetCurrentProcess(), exitCode );
+                    // 보고 스레드에 맡기고 기다린다(이 스레드의 스택과 예외 정보는 그동안 그대로다). 시한은 **진척이 멈춘 시간**이다 —
+                    // 시한마다 진척 수를 보고, 그동안 한 걸음도 나아가지 않았을 때만 버린다(바쁜 기계의 긴 덤프는 끝까지 쓴다).
+                    s_pendingCrash = crash;
+                    SetEvent( s_hReportRequested );
+                    const DWORD deadlineMs     = static_cast<DWORD>( handler.getReportDeadlineSeconds() * constant::time::kMillisecondsPerSecond );
+                    uint32      seenProgress   = handler.getProgress();
+                    bool        bReportStalled = false;
+                    while ( WaitForSingleObject( s_hReportFinished, deadlineMs ) != WAIT_OBJECT_0 )
+                    {
+                        const uint32 progress = handler.getProgress();
+                        if ( progress == seenProgress )
+                        {
+                            bReportStalled = true;
+                            break;
+                        }
+                        seenProgress = progress;
+                    }
+                    if ( bReportStalled )
+                    {
+                        // **stdio 를 거치지 않는다.** 보고가 막힌 지점이 바로 stderr 의 락일 수 있다(CrashTestKind::StderrHeld). fputs 로
+                        // 쓰면 시한이 지나도 여기서 다시 막힌다. 그리고 이전 필터에 넘기지 않고 여기서 끝낸다. 그 필터도
+                        // 같은 락에서 막힐 수 있고, 시한은 "여기서 끝난다"는 약속이어야 하기 때문이다.
+                        constexpr utf8 kMessage[] = "\n[CrashHandler] crash report made no progress before its deadline - exiting without it\n";
+                        DWORD          written    = 0;
+                        WriteFile( GetStdHandle( STD_ERROR_HANDLE ), kMessage, sizeof( kMessage ) - 1, &written, nullptr );
+                        const UINT exitCode = ( pExceptionInfo != nullptr && pExceptionInfo->ExceptionRecord != nullptr )
+                                                ? static_cast<UINT>( pExceptionInfo->ExceptionRecord->ExceptionCode )
+                                                : 1u;
+                        TerminateProcess( GetCurrentProcess(), exitCode );
+                    }
                 }
-            }
-            else
-            {
-                // 보고 스레드를 띄우지 못했다. 이 스레드에서 직접 쓴다.
-                writeReportInternal( crash, nullptr );
-            }
-
-            s_reportingThreadID.store( 0 );
-        }
-
-        /** @brief 예외 코드를 사람이 읽을 수 있는 이름으로 바꿉니다. */
-        const utf8* exceptionCodeName( DWORD code )
-        {
-            switch ( code )
-            {
-                case EXCEPTION_ACCESS_VIOLATION:
-                    return "EXCEPTION_ACCESS_VIOLATION (segfault)";
-                case EXCEPTION_STACK_OVERFLOW:
-                    return "EXCEPTION_STACK_OVERFLOW";
-                case EXCEPTION_ILLEGAL_INSTRUCTION:
-                    return "EXCEPTION_ILLEGAL_INSTRUCTION";
-                case EXCEPTION_INT_DIVIDE_BY_ZERO:
-                    return "EXCEPTION_INT_DIVIDE_BY_ZERO";
-                case EXCEPTION_FLT_DIVIDE_BY_ZERO:
-                    return "EXCEPTION_FLT_DIVIDE_BY_ZERO";
-                case EXCEPTION_DATATYPE_MISALIGNMENT:
-                    return "EXCEPTION_DATATYPE_MISALIGNMENT";
-                case EXCEPTION_IN_PAGE_ERROR:
-                    return "EXCEPTION_IN_PAGE_ERROR";
-                case EXCEPTION_PRIV_INSTRUCTION:
-                    return "EXCEPTION_PRIV_INSTRUCTION";
-                case kExceptionCodeAbort:
-                    return "std::abort() called";
-                case kExceptionCodePureCall:
-                    return "pure virtual function call";
-                case kExceptionCodeInvalidParameter:
-                    return "invalid parameter passed to a CRT function";
-                default:
-                    return "unhandled SEH exception";
-            }
-        }
-
-        /**
-         * @brief 접근 위반이면 이유 글에 **무엇을 어떻게 접근하려 했는지**(읽기 · 쓰기 · 실행과 대상 주소)와 폴트가 난 코드가 든 모듈(이름 + 오프셋)을 덧붙입니다.
-         * @details 보고의 "at address" 는 폴트가 난 **명령어**의 주소라서, 그 명령어가 건드리려던 데이터 주소와 모듈 없이는 "어느 포인터가 죽었나" · "해제된 이미지의 코드인가" 를
-         *          알 수 없다. 크래시 순간이라 힙을 쓰지 않고 정적 버퍼에 쓴다.
-         */
-        const utf8* describeAccessViolationInternal( const EXCEPTION_RECORD& record, const utf8* pBaseReason )
-        {
-            static utf8 s_arrReason[512];
-            const utf8* pAccess  = "access";
-            uint64      dataAddr = 0;
-            if ( record.NumberParameters >= 2 )
-            {
-                pAccess  = record.ExceptionInformation[0] == 0 ? "read" : ( record.ExceptionInformation[0] == 1 ? "write" : "execute" );
-                dataAddr = static_cast<uint64>( record.ExceptionInformation[1] );
-            }
-            utf8        arrModule[260]{};
-            HMODULE     hModule = nullptr;
-            uint64      offset  = 0;
-            const utf8* pName   = "?";
-            utf16       arrWideModule[260]{};
-            const bool  bModuleResolved = GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCWSTR>( record.ExceptionAddress ), &hModule ) &&
-                                         GetModuleFileNameW( hModule, arrWideModule, static_cast<DWORD>( sizeof( arrWideModule ) / sizeof( arrWideModule[0] ) ) ) > 0 &&
-                                         WideCharToMultiByte( CP_UTF8, 0, arrWideModule, -1, arrModule, static_cast<int32>( sizeof( arrModule ) - 1 ), nullptr, nullptr ) > 0;
-            if ( bModuleResolved )
-            {
-                offset = reinterpret_cast<uint64>( record.ExceptionAddress ) - reinterpret_cast<uint64>( hModule );
-                pName  = arrModule;
-                for ( const utf8* pChar = arrModule; *pChar != '\0'; ++pChar )
+                else
                 {
-                    if ( *pChar == '\\' || *pChar == '/' )
-                        pName = pChar + 1;
+                    // 보고 스레드를 띄우지 못했다. 이 스레드에서 직접 쓴다.
+                    writeReport( crash, nullptr );
+                }
+
+                s_reportingThreadID.store( 0 );
+            }
+
+            /** @brief 예외 코드를 사람이 읽을 수 있는 이름으로 바꿉니다. */
+            static const utf8* exceptionCodeName( DWORD code )
+            {
+                switch ( code )
+                {
+                    case EXCEPTION_ACCESS_VIOLATION:
+                        return "EXCEPTION_ACCESS_VIOLATION (segfault)";
+                    case EXCEPTION_STACK_OVERFLOW:
+                        return "EXCEPTION_STACK_OVERFLOW";
+                    case EXCEPTION_ILLEGAL_INSTRUCTION:
+                        return "EXCEPTION_ILLEGAL_INSTRUCTION";
+                    case EXCEPTION_INT_DIVIDE_BY_ZERO:
+                        return "EXCEPTION_INT_DIVIDE_BY_ZERO";
+                    case EXCEPTION_FLT_DIVIDE_BY_ZERO:
+                        return "EXCEPTION_FLT_DIVIDE_BY_ZERO";
+                    case EXCEPTION_DATATYPE_MISALIGNMENT:
+                        return "EXCEPTION_DATATYPE_MISALIGNMENT";
+                    case EXCEPTION_IN_PAGE_ERROR:
+                        return "EXCEPTION_IN_PAGE_ERROR";
+                    case EXCEPTION_PRIV_INSTRUCTION:
+                        return "EXCEPTION_PRIV_INSTRUCTION";
+                    case kExceptionCodeAbort:
+                        return "std::abort() called";
+                    case kExceptionCodePureCall:
+                        return "pure virtual function call";
+                    case kExceptionCodeInvalidParameter:
+                        return "invalid parameter passed to a CRT function";
+                    default:
+                        return "unhandled SEH exception";
                 }
             }
-            // 폴트가 난 스레드의 이름(`SetThreadDescription` 으로 붙인 것 — 렌더 스레드 · 워커 · 게임 스레드를 가른다). 없으면 번호만 적는다.
-            utf8  arrThreadName[96]{};
-            PWSTR pWideName = nullptr;
-            if ( SUCCEEDED( GetThreadDescription( GetCurrentThread(), &pWideName ) ) && pWideName != nullptr )
-            {
-                (void)WideCharToMultiByte( CP_UTF8, 0, pWideName, -1, arrThreadName, static_cast<int32>( sizeof( arrThreadName ) - 1 ), nullptr, nullptr );
-                LocalFree( pWideName );
-            }
-            formatstring( s_arrReason, sizeof( s_arrReason ), "%# - %# of 0x%#, in %#+0x%#, thread %# '%#'", pBaseReason, pAccess, Fmt( static_cast<uint64>( dataAddr ), Format().hex() ), pName,
-                          Fmt( static_cast<uint64>( offset ), Format().hex() ), static_cast<uint64>( GetCurrentThreadId() ), arrThreadName );
-            return s_arrReason;
-        }
 
-        LONG WINAPI onUnhandledException( EXCEPTION_POINTERS* pInfo )
-        {
-            const void* pFaultAddress = nullptr;
-            const utf8* pReason       = "unhandled SEH exception";
-            if ( pInfo != nullptr && pInfo->ExceptionRecord != nullptr )
+            /**
+             * @brief 접근 위반이면 이유 글에 **무엇을 어떻게 접근하려 했는지**(읽기 · 쓰기 · 실행과 대상 주소)와 폴트가 난 코드가 든 모듈(이름 + 오프셋)을 덧붙입니다.
+             * @details 보고의 "at address" 는 폴트가 난 **명령어**의 주소라서, 그 명령어가 건드리려던 데이터 주소와 모듈 없이는 "어느 포인터가 죽었나" · "해제된 이미지의 코드인가" 를
+             *          알 수 없다. 크래시 순간이라 힙을 쓰지 않고 정적 버퍼에 쓴다.
+             */
+            static const utf8* describeAccessViolation( const EXCEPTION_RECORD& record, const utf8* pBaseReason )
             {
-                pReason       = exceptionCodeName( pInfo->ExceptionRecord->ExceptionCode );
-                pFaultAddress = pInfo->ExceptionRecord->ExceptionAddress;
-                if ( pInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION || pInfo->ExceptionRecord->ExceptionCode == EXCEPTION_IN_PAGE_ERROR )
-                    pReason = describeAccessViolationInternal( *pInfo->ExceptionRecord, pReason );
+                static utf8 s_arrReason[512];
+                const utf8* pAccess  = "access";
+                uint64      dataAddr = 0;
+                if ( record.NumberParameters >= 2 )
+                {
+                    pAccess  = record.ExceptionInformation[0] == 0 ? "read" : ( record.ExceptionInformation[0] == 1 ? "write" : "execute" );
+                    dataAddr = static_cast<uint64>( record.ExceptionInformation[1] );
+                }
+                utf8        arrModule[260]{};
+                HMODULE     hModule = nullptr;
+                uint64      offset  = 0;
+                const utf8* pName   = "?";
+                utf16       arrWideModule[260]{};
+                const bool  bModuleResolved =
+                    GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT, static_cast<LPCWSTR>( record.ExceptionAddress ), &hModule ) &&
+                    GetModuleFileNameW( hModule, arrWideModule, static_cast<DWORD>( sizeof( arrWideModule ) / sizeof( arrWideModule[0] ) ) ) > 0 &&
+                    WideCharToMultiByte( CP_UTF8, 0, arrWideModule, -1, arrModule, static_cast<int32>( sizeof( arrModule ) - 1 ), nullptr, nullptr ) > 0;
+                if ( bModuleResolved )
+                {
+                    offset = reinterpret_cast<uint64>( record.ExceptionAddress ) - reinterpret_cast<uint64>( hModule );
+                    pName  = arrModule;
+                    for ( const utf8* pChar = arrModule; *pChar != '\0'; ++pChar )
+                    {
+                        if ( *pChar == '\\' || *pChar == '/' )
+                            pName = pChar + 1;
+                    }
+                }
+                // 폴트가 난 스레드의 이름(`SetThreadDescription` 으로 붙인 것 — 렌더 스레드 · 워커 · 게임 스레드를 가른다). 없으면 번호만 적는다.
+                utf8  arrThreadName[96]{};
+                PWSTR pWideName = nullptr;
+                if ( SUCCEEDED( GetThreadDescription( GetCurrentThread(), &pWideName ) ) && pWideName != nullptr )
+                {
+                    (void)WideCharToMultiByte( CP_UTF8, 0, pWideName, -1, arrThreadName, static_cast<int32>( sizeof( arrThreadName ) - 1 ), nullptr, nullptr );
+                    LocalFree( pWideName );
+                }
+                formatstring( s_arrReason, sizeof( s_arrReason ), "%# - %# of 0x%#, in %#+0x%#, thread %# '%#'", pBaseReason, pAccess, Fmt( static_cast<uint64>( dataAddr ), Format().hex() ), pName,
+                              Fmt( static_cast<uint64>( offset ), Format().hex() ), static_cast<uint64>( GetCurrentThreadId() ), arrThreadName );
+                return s_arrReason;
             }
-            reportCrash( pReason, pFaultAddress, ( pInfo != nullptr ) ? pInfo->ContextRecord : nullptr, pInfo );
 
-            if ( s_pPreviousFilter != nullptr )
-                return s_pPreviousFilter( pInfo );
-            return EXCEPTION_EXECUTE_HANDLER;
-        }
+            /** @brief 처리되지 않은 SEH 예외 필터입니다. 가장 안쪽 처리기가 보고하고, 이전 필터가 있으면 넘깁니다. */
+            static LONG WINAPI onUnhandledException( EXCEPTION_POINTERS* pInfo )
+            {
+                const void* pFaultAddress = nullptr;
+                const utf8* pReason       = "unhandled SEH exception";
+                if ( pInfo != nullptr && pInfo->ExceptionRecord != nullptr )
+                {
+                    pReason       = exceptionCodeName( pInfo->ExceptionRecord->ExceptionCode );
+                    pFaultAddress = pInfo->ExceptionRecord->ExceptionAddress;
+                    if ( pInfo->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION || pInfo->ExceptionRecord->ExceptionCode == EXCEPTION_IN_PAGE_ERROR )
+                        pReason = describeAccessViolation( *pInfo->ExceptionRecord, pReason );
+                }
+                CrashHandler* const pHandler = CrashHandlerProcessHook::findInstalled();
+                if ( pHandler != nullptr )
+                    reportCrash( *pHandler, pReason, pFaultAddress, ( pInfo != nullptr ) ? pInfo->ContextRecord : nullptr, pInfo );
+
+                if ( s_pPreviousFilter != nullptr )
+                    return s_pPreviousFilter( pInfo );
+                return EXCEPTION_EXECUTE_HANDLER;
+            }
+        };
     } // namespace
 
-    void CrashHandler::reportHang( const utf8* pReason )
+    void CrashHandlerProcessHook::writeHangDump( CrashHandler& handler )
     {
         // 예외도 폴트 스레드도 없다 — 덤프는 스냅샷의 모든 스레드를 담고, 디버거가 멈춘 스레드를 연다.
-        (void)writeMiniDump( nullptr, 0 );
-        writeCrashContextFile( pReason, nullptr, GetCurrentProcessId(), 0 );
+        (void)WindowsCrashHandlerInternal::writeMiniDump( handler, nullptr, 0 );
     }
 
-    void CrashHandler::initialize()
+    void CrashHandlerProcessHook::install()
     {
-        if ( s_bInstalled.exchange( true ) )
-            return;
-
-        (void)getCrashSessionID(); // 크래시 경로에서 만들지 않게 지금 만든다(makeSessionID 설명)
         CallStackCapture::initialize();
-        ThreadCrashStack::initializeCurrentThread();
 
         // 덤프 구현을 지금 로드한다(s_pfnMiniDumpWriteDump 설명). dbgcore 가 없는 옛 Windows 는 dbghelp 의 것을 쓴다.
         s_hDumpModule = static_cast<HMODULE>( ModuleLibraryUtil::loadSystemLibrary( "dbgcore.dll" ) );
@@ -429,24 +431,21 @@ namespace sw
         s_hReportRequested = CreateEventW( nullptr, FALSE, FALSE, nullptr );
         s_hReportFinished  = CreateEventW( nullptr, FALSE, FALSE, nullptr );
         if ( s_hReportRequested != nullptr && s_hReportFinished != nullptr )
-            s_hReportThread = CreateThread( nullptr, constant::memory::kBytesPerMegabyte, &reportThreadMainInternal, nullptr, STACK_SIZE_PARAM_IS_A_RESERVATION, &s_reportThreadID );
+            s_hReportThread = CreateThread( nullptr, constant::memory::kBytesPerMegabyte, &WindowsCrashHandlerInternal::reportThreadMain, nullptr, STACK_SIZE_PARAM_IS_A_RESERVATION, &s_reportThreadID );
         if ( s_hReportThread == nullptr )
             SW_LOG_WARNING_ID( "WindowsCrashHandler.CrashReportThreadCould", "Crash report thread could not be created - reports will be written on the faulting thread." );
 
-        s_pPreviousFilter = SetUnhandledExceptionFilter( &onUnhandledException );
+        s_pPreviousFilter = SetUnhandledExceptionFilter( &WindowsCrashHandlerInternal::onUnhandledException );
         // CRT 가 필터를 건너뛰는 경로 셋을 우리 필터로 돌린다(kExceptionCodeAbort 설명). abort 메시지 창도 끈다. 리포트는 우리가 쓴다.
-        s_pPreviousAbortHandler            = std::signal( SIGABRT, &onAbortSignalInternal );
-        s_pPreviousPureCallHandler         = _set_purecall_handler( &onPureCallInternal );
-        s_pPreviousInvalidParameterHandler = _set_invalid_parameter_handler( &onInvalidParameterInternal );
+        s_pPreviousAbortHandler            = std::signal( SIGABRT, &WindowsCrashHandlerInternal::onAbortSignal );
+        s_pPreviousPureCallHandler         = _set_purecall_handler( &WindowsCrashHandlerInternal::onPureCall );
+        s_pPreviousInvalidParameterHandler = _set_invalid_parameter_handler( &WindowsCrashHandlerInternal::onInvalidParameter );
         s_previousAbortBehavior            = _set_abort_behavior( 0, _WRITE_ABORT_MSG );
         SW_LOG_TRACE_ID( "WindowsCrashHandler.CrashHandlerInstalled", "Crash handler installed." );
     }
 
-    void CrashHandler::shutdown()
+    void CrashHandlerProcessHook::uninstall()
     {
-        if ( s_bInstalled.exchange( false ) == false )
-            return;
-
         SetUnhandledExceptionFilter( s_pPreviousFilter );
         s_pPreviousFilter = nullptr;
         std::signal( SIGABRT, s_pPreviousAbortHandler );
@@ -479,7 +478,7 @@ namespace sw
             s_hDumpModule = nullptr;
         }
 
-        // initialize 에서 잡은 심볼 참조를 돌려준다(참조 카운트의 짝을 맞춘다).
+        // install 에서 잡은 심볼 참조를 돌려준다(참조 카운트의 짝을 맞춘다).
         CallStackCapture::shutdown();
     }
 } // namespace sw

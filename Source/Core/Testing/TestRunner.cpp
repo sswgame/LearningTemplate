@@ -674,7 +674,8 @@ namespace sw::test
                 }
                 LogOnce::beginScope(); // 한 번만 알리는 로그(`LogOnce`)도 케이스마다 처음이다 — 앞 케이스 · 앞 회차가 알렸다고 기대 로그가 사라지지 않게
                 Internal::writeLine( string( "[ RUN      ] " ) + pCase->_pName );
-                CrashHandler::setContextValue( "TestCase", pCase->_pName ); // 크래시 보고에 어느 케이스였는지 남는다
+                if ( options._pCrashHandler != nullptr )
+                    options._pCrashHandler->setContextValue( "TestCase", pCase->_pName ); // 크래시 보고에 어느 케이스였는지 남는다
                 const float32       timeoutSeconds = pCase->_options._timeoutSeconds > 0.0f ? pCase->_options._timeoutSeconds : kDefaultCaseTimeoutSeconds;
                 const int64         timeoutNanos   = static_cast<int64>( static_cast<float64>( timeoutSeconds ) * 1.0e9 );
                 const int64         caseStart      = MonotonicClock::nowNanoseconds();
@@ -737,7 +738,8 @@ namespace sw::test
         }
         logListener.reset();
         watchThread = thread{}; // 감시를 세우고 합류한다
-        CrashHandler::setContextValue( "TestCase", "" );
+        if ( options._pCrashHandler != nullptr )
+            options._pCrashHandler->setContextValue( "TestCase", "" );
 
         const int64 runMilliseconds = ( MonotonicClock::nowNanoseconds() - runStart ) / constant::time::kNanosecondsPerMillisecond;
         formatstring( arrBuffer, constant::buffer::kMax1024, "[==========] %# case run(s) (%# ms), %# passed, %# failed, seed %#", ranCount, runMilliseconds, ranCount - failedCount, failedCount, baseSeed );

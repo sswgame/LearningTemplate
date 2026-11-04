@@ -35,6 +35,7 @@ namespace sw::engine
         (void)coreScope.bind( parts._pCommandLine->findCommandLine() );
         (void)coreScope.bind( parts._pCommandLine->findGlobalVariables() ); // 새 범위라 같은 타입이 걸려 있지 않다(위 설명)
         (void)coreScope.bind( &parts._pContentRoot->getAssetPaths() );      // 리소스 경로 상태 — 주인은 리소스 루트 서브시스템 하나다
+        (void)coreScope.bind( &parts._pCrashHandler->getHandler() );        // 크래시 처리기 — 주인은 크래시 서브시스템 하나다
         return parts;
     }
 

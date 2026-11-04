@@ -89,7 +89,7 @@ namespace sw
             return SubsystemInitResult::Failed;
         _bReady = true;
         // 백엔드가 정해졌으니 크래시 리포트에 남긴다. "어느 백엔드에서 났는가"가 범위를 좁히는 첫 질문이다.
-        CrashHandler::setContextValue( "RHI", _rhi->getDevice().getBackendName() );
+        engine::getSubsystem<CrashHandler>().setContextValue( "RHI", _rhi->getDevice().getBackendName() );
         // `-gv_crashTest=1`: 크래시 리포트 경로를 실제로 확인하는 유일한 방법이다(리포트는 크래시가 나야만 만들어진다).
         if ( gv_crashTest != 0 )
             CrashHandler::crashForTest( static_cast<CrashTestKind>( gv_crashTest ) );

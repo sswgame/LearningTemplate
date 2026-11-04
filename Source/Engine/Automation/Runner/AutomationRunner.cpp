@@ -4,7 +4,6 @@
 
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -454,7 +453,7 @@ namespace sw
                     _run._currentStepNumber = step._orderInFile;
                     const string stepLine   = AutomationRunTitleUtil::makeStepLogLine( _scenario.getName(), _run._currentStepNumber, _run._currentStepKind, _run._frameIndex );
                     SW_LOG_INFO_ID( "Automation.Step", "%#", stepLine.c_str() );
-                    CrashHandler::addBreadcrumb( stepLine ); // 크래시 보고에 최근 단계 전환이 남는다
+                    engine::getSubsystem<CrashHandler>().addBreadcrumb( stepLine ); // 크래시 보고에 최근 단계 전환이 남는다
                     updateCrashContext();
                 }
                 if ( pRegistration == nullptr || ( bRunsNow && pRegistration->_pRun( *this, step ) == false ) )
@@ -623,7 +622,7 @@ namespace sw
             text += ')';
         }
         // 키 하나가 시나리오 · 백엔드 · 단계 · 프레임을 든다. 값 길이를 넘으면 글자 경계에서 자른다(저장소가 조용히 자르면 UTF-8 중간이 깨진다).
-        CrashHandler::setContextValue( "Scenario", AutomationRunTitleUtil::truncateUTF8( text, CrashContextStore::kMaxValueLength - 1 ) );
+        engine::getSubsystem<CrashHandler>().setContextValue( "Scenario", AutomationRunTitleUtil::truncateUTF8( text, CrashContextStore::kMaxValueLength - 1 ) );
         publishHangSnapshot( position ); // 행 감시 스레드가 읽을 같은 자리(단계 전환 때와 30 프레임마다)
     }
 
@@ -658,10 +657,11 @@ namespace sw
             (void)FileUtil::ensureDirectoryExists( reportDirectory ); // 못 만들면 행 보고만 못 쓴다 — 정상 종료의 보고는 자기 쓰기가 알린다
         _hangWatchdog.publish( _hangPayload );                        // 감시가 뜨기 전에 한 번 채운다
         AutomationHangWatchdog::Settings settings;
-        settings._startSeconds = _run._wallStartSeconds;
-        settings._limitSeconds = _wallLimitSeconds;
-        settings._graceSeconds = AutomationTimeLimits::kHangGraceSeconds;
-        settings._exitCode     = getAutomationExitCode( AutomationOutcome::TimedOut );
+        settings._startSeconds  = _run._wallStartSeconds;
+        settings._limitSeconds  = _wallLimitSeconds;
+        settings._graceSeconds  = AutomationTimeLimits::kHangGraceSeconds;
+        settings._exitCode      = getAutomationExitCode( AutomationOutcome::TimedOut );
+        settings._pCrashHandler = &engine::getSubsystem<CrashHandler>();
         _hangWatchdog.start( settings );
     }
 

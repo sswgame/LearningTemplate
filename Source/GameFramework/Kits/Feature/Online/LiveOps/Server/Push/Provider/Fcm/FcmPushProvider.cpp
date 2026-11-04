@@ -116,7 +116,6 @@ namespace sw
 
     PushDeliveryStatus FcmPushProvider::mapStatus( int32 statusCode, bool bTransportFailed, string_view body )
     {
-        using Internal = FcmPushProviderInternal;
         if ( bTransportFailed )
             return PushDeliveryStatus::Transient;
         if ( 200 <= statusCode && statusCode <= 299 )
@@ -190,7 +189,6 @@ namespace sw
 
     void FcmPushProvider::finishSend( uint64 deliveryID, const HTTPClientResponse& response )
     {
-        using Internal                        = FcmPushProviderInternal;
         const PushDeliveryStatus status       = mapStatus( response._statusCode, response._bTransportFailed == SW_TRUE, response.getBodyText() );
         int64                    retryAfterMs = 0;
         if ( const HTTPHeader* pRetryAfter = response.findHeader( "Retry-After" ) )

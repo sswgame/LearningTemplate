@@ -3,11 +3,11 @@
 #include "Core/Log/Sink/FileLogOutput.h"
 
 #include "Core/Container/formatString.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/PlatformFileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
+#include "Core/Process/ProcessSession.h"
 #include "Core/String/fixed_string.h"
 
 namespace sw
@@ -60,11 +60,6 @@ namespace sw
         _currentLogFileName = fixedAbsPath;
         if ( bFolderReady == false )
             return false; // 오류는 `ensureDirectoryExists` 가 남겼다. 열린 것이 아니므로 `write` 는 줄을 버린다
-        // 크래시 덤프와 리포트도 같은 폴더에 둔다. 사용자가 폴더 하나만 보내면 되도록.
-        setCrashReportFolder( _logFolderPath );
-        if ( fixedAbsPath.empty() == false )
-            CrashContextStore::get().set( CrashContextStore::kLogFileKey, fixedAbsPath );
-
         _bOpened = true;
         return true;
     }
@@ -108,7 +103,7 @@ namespace sw
             _lastLogHour = record._hour;
             fixed_string<constant::buffer::kMax128> expectedFileName{};
             formatstring( expectedFileName.data(), expectedFileName.capacity(), "LOG_%#-%#-%#-%#_%#.txt",
-                          record._year, record._month, record._day, record._hour, getCrashSessionID() );
+                          record._year, record._month, record._day, record._hour, ProcessSession::getID() );
             _currentLogFileName = expectedFileName.c_str();
 
             const string logPath = FileUtil::joinPath( _logFolderPath, _currentLogFileName );

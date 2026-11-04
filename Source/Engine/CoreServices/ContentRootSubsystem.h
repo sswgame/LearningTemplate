@@ -26,7 +26,7 @@ namespace sw
         static constexpr const utf8* kSubsystemName = "ContentRoot";
 
         /** @brief 둘 다 같은 범위의 것이다(이것보다 먼저 서고 나중에 사라진다). */
-        ContentRootSubsystem( const CommandLineSubsystem& commandLine, const CrashHandlerSubsystem& crashHandler );
+        ContentRootSubsystem( const CommandLineSubsystem& commandLine, CrashHandlerSubsystem& crashHandler );
 
         ContentRootSubsystem( const ContentRootSubsystem& )            = delete;
         ContentRootSubsystem& operator=( const ContentRootSubsystem& ) = delete;
@@ -42,8 +42,8 @@ namespace sw
         const AssetPaths& getAssetPaths() const { return _assetPaths; }
 
     private:
-        const CommandLineSubsystem&  _commandLine;
-        const CrashHandlerSubsystem& _crashHandler;
-        AssetPaths                   _assetPaths; ///< 경로 상태 전부 — 이 프로세스의 엔진에서 하나다
+        const CommandLineSubsystem& _commandLine;
+        CrashHandlerSubsystem&      _crashHandler;
+        AssetPaths                  _assetPaths; ///< 경로 상태 전부 — 이 프로세스의 엔진에서 하나다
     };
 } // namespace sw

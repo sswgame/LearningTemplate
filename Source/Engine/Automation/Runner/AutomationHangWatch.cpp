@@ -6,8 +6,8 @@
 #include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Process/Process.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
@@ -255,10 +255,13 @@ namespace sw
         utf8         arrReport[Internal::kReportCapacity]{};
         const uint32 length = AutomationHangReport::format( payload, elapsedMilliseconds, arrReport, Internal::kReportCapacity );
         if ( payload._reportPath[0] != '\0' )
-            writeFileWithoutAllocation( payload._reportPath, arrReport, length );
+            (void)FileUtil::writeCrashFile( payload._reportPath, arrReport, length ); // 행 경로 — 못 써도 문맥 · 덤프를 이어 남긴다
         // 크래시와 같은 할당 없는 기록 — 컨텍스트 파일(`Scenario` 키)과 빵부스러기 파일.
-        CrashBreadcrumbStore::get().add( "[Scenario] hang watchdog fired" );
-        CrashHandler::reportHang( "ScenarioHang" ); // 컨텍스트 + (Windows) 모든 스레드의 미니덤프 — 어디서 멈췄는지는 덤프가 말한다
+        if ( _settings._pCrashHandler != nullptr )
+        {
+            _settings._pCrashHandler->addBreadcrumb( "[Scenario] hang watchdog fired" );
+            _settings._pCrashHandler->reportHang( "ScenarioHang" ); // 컨텍스트 + (Windows) 모든 스레드의 미니덤프 — 어디서 멈췄는지는 덤프가 말한다
+        }
         // 로거를 거치지 않는다(비동기 로거는 크래시 직전 줄을 잃는다) — stderr 에 직접 적고 비운다.
         std::fputs( "\n[Scenario] ERROR hang watchdog: the runner did not end the scenario in time - report written, exiting. Last position: ", stderr );
         std::fputs( payload._lastStep, stderr );

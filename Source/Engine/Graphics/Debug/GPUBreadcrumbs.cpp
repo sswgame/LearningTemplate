@@ -3,7 +3,7 @@
 #include "Engine/Graphics/Debug/GPUBreadcrumbs.h"
 
 #include "Core/Container/formatString.h"
-#include "Core/Diagnostics/CrashContext.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
@@ -94,8 +94,10 @@ namespace sw
         if ( pLog != nullptr && pLog->claimLostReport() == false )
             return;
         const utf8* pBackendName = pBackend != nullptr ? pBackend : "unknown";
-        utf8        arrLine[constant::buffer::kMax256];
-        utf8        arrName[constant::buffer::kMax64];
+        // 크래시 문맥 · 빵부스러기는 엔진 서비스의 처리기에 남긴다. 엔진 없는 도구면 처리기가 없다 — 로그만 남는다.
+        CrashHandler* const pCrashHandler = engine::findSubsystem<CrashHandler>();
+        utf8                arrLine[constant::buffer::kMax256];
+        utf8                arrName[constant::buffer::kMax64];
 
         // GPU 가 닿은 표지 - 이름으로 푼다. 쓰지 못한 백엔드는 없다.
         uint32 reported = 0;
@@ -110,10 +112,13 @@ namespace sw
             ++reported;
             SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostGPULast", "Device lost (%#): the GPU last reached the pass '%#' (breadcrumb %#)", pBackendName, arrName, pGPUID[index] );
             formatstring( arrLine, sizeof( arrLine ), "gpu device lost (%#) - GPU last reached pass '%#'", pBackendName, arrName );
-            CrashBreadcrumbStore::get().add( arrLine );
             // 크래시 문맥은 키 하나에 값 하나다 - 첫 표지를 마지막 패스로 싣는다(Vulkan 은 단계마다 하나씩 와도 모두 빵부스러기에 남는다).
-            if ( reported == 1 )
-                CrashContextStore::get().set( "gpu_last_pass", arrName );
+            if ( pCrashHandler != nullptr )
+            {
+                pCrashHandler->addBreadcrumb( arrLine );
+                if ( reported == 1 )
+                    pCrashHandler->setContextValue( "gpu_last_pass", arrName );
+            }
         }
         if ( reported == 0 )
             SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostBackendLeaves", "Device lost (%#): this backend leaves no GPU-side breadcrumb (or none was written)", pBackendName );
@@ -123,10 +128,14 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "GPUBreadcrumbs.DeviceLostLastPass", "Device lost (%#): the last pass recorded on the CPU was '%#'", pBackendName, arrName );
             formatstring( arrLine, sizeof( arrLine ), "gpu device lost (%#) - last pass recorded on the CPU '%#'", pBackendName, arrName );
-            CrashBreadcrumbStore::get().add( arrLine );
-            CrashContextStore::get().set( "gpu_last_recorded_pass", arrName );
+            if ( pCrashHandler != nullptr )
+            {
+                pCrashHandler->addBreadcrumb( arrLine );
+                pCrashHandler->setContextValue( "gpu_last_recorded_pass", arrName );
+            }
         }
-        CrashContextStore::get().set( "gpu_lost_backend", pBackendName );
+        if ( pCrashHandler != nullptr )
+            pCrashHandler->setContextValue( "gpu_lost_backend", pBackendName );
     }
 } // namespace sw
 

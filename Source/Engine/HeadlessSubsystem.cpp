@@ -3,6 +3,7 @@
 #include "Engine/HeadlessSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -307,9 +308,10 @@ namespace sw
                     inoutState._bFailed = true;
                     return true;
                 }
-                options._seed        = static_cast<uint32>( seed );
-                options._repeatCount = repeatCount > 0 ? static_cast<uint32>( repeatCount ) : 1u;
-                inoutState._bFailed  = test::TestRunner::run( options ) == false;
+                options._seed          = static_cast<uint32>( seed );
+                options._repeatCount   = repeatCount > 0 ? static_cast<uint32>( repeatCount ) : 1u;
+                options._pCrashHandler = &engine::getSubsystem<CrashHandler>();
+                inoutState._bFailed    = test::TestRunner::run( options ) == false;
                 return true;
 #else
                 (void)commandLine;

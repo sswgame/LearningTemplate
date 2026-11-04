@@ -94,7 +94,7 @@ namespace sw
         CrashReportService& operator=( const CrashReportService& ) = delete;
 
         /**
-         * @brief 크래시 파일 폴더(`getCrashReportFolder` — 로그 폴더), 묶음 폴더, 지금 세션 id 를 정합니다. 지금 세션의 파일은 묶지 않습니다(살아 있다).
+         * @brief 크래시 파일 폴더(`CrashHandler::getReportFolder` — 로그 폴더), 묶음 폴더, 지금 세션 id 를 정합니다. 지금 세션의 파일은 묶지 않습니다(살아 있다).
          */
         void initialize( string_view crashFolder, string_view reportsFolder, string_view currentSessionID );
         void shutdown();

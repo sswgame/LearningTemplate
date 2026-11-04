@@ -4,7 +4,6 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -12,6 +11,7 @@
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Module/ModuleBuildID.h"
+#include "Core/Process/ProcessSession.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Asset/PackEngineSettingsSubsystem.h"
@@ -288,7 +288,7 @@ namespace sw
         UserSettingsManager&      userSettings = engine::getSubsystem<UserSettingsManager>();
         const string&             engineSchema = engine::getSubsystem<EngineDefaultAssets>()._telemetrySchema.get();
         TelemetryContext          context;
-        context._sessionID   = CrashHandler::getSessionID();
+        context._sessionID   = ProcessSession::getID();
         context._buildConfig = build::kConfigName;
         context._platform    = build::kPlatformName;
         context._buildID     = ModuleBuildID::find( nullptr )._id;
@@ -309,13 +309,13 @@ namespace sw
         bindConsentSetting( userSettings );
 
         // 지난 실행의 크래시를 묶는다(덤프 · 로그 폴더 옆의 Saved/CrashReports). 기본 동의(local)는 묶기만 하고, 보낼 것이 있을 때만 보고 프로세스를 띄운다.
-        const string crashFolder = getCrashReportFolder();
+        const string crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
         if ( crashFolder.empty() == false )
         {
             CrashReportService& crashReports = engine::getSubsystem<CrashReportService>();
             const string        reportsFolder =
                 FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), CrashReportService::kReportsFolderName );
-            crashReports.initialize( crashFolder, reportsFolder, CrashHandler::getSessionID() );
+            crashReports.initialize( crashFolder, reportsFolder, ProcessSession::getID() );
             crashReports.bindConsentSetting( userSettings );
             crashReports.setReporterExecutable( FileUtil::getExecutablePath() ); // App 이 -crash-reporter 를 알아듣는다(App::initialize 헤드리스 분기)
             (void)crashReports.collectNewCrashes();                              // 모은 수는 쓰지 않는다 — 보고 프로세스가 폴더를 다시 본다
@@ -526,7 +526,7 @@ namespace sw
             TelemetryServiceInternal::appendValueText( text, value );
         }
         // 크래시 때 덤프 옆에 쓰이는 고정 고리에도 — 크래시 보고가 묶는다.
-        CrashHandler::addBreadcrumb( text.view() );
+        engine::getSubsystem<CrashHandler>().addBreadcrumb( text.view() );
         if ( _listBreadcrumb.size() < capacity )
         {
             _listBreadcrumb.push_back( text.c_str() );

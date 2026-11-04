@@ -6,8 +6,10 @@
  */
 #include "pch.h"
 
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Testing/TestRunner.h"
 
+#include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTest.h"
 
 namespace sw::editor
@@ -26,7 +28,8 @@ namespace sw::editor
             static EditorSelfTestStep runEditorUnitTests( EditorSelfTestContext& context )
             {
                 test::TestRunOptions options;
-                options._sourceFolder = "Source/Editor/";
+                options._sourceFolder  = "Source/Editor/";
+                options._pCrashHandler = editor::findSubsystem<CrashHandler>(); // 크래시 보고에 도는 케이스가 남는다
                 vector<string> listFailure;
                 if ( test::TestRunner::run( options, &listFailure ) )
                     return EditorSelfTestStep::Done;

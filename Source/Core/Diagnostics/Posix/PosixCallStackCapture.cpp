@@ -3,7 +3,6 @@
 #include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Diagnostics/CallStackCapture.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -40,51 +39,6 @@ namespace sw
     #elif defined( SW_ARM64 )
             return reinterpret_cast<void*>( pContext->uc_mcontext.pc );
     #endif
-        }
-
-        string symbolizeFrames( void* const* ppFrame, uint32 frameCount )
-        {
-            if ( ppFrame == nullptr || frameCount == 0 )
-                return kEmptyCallStackText;
-
-            // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼 변환 중이면 교착 대신 주소만 출력한다
-            // (맵 파일로 나중에 풀 수 있다). **이 관문은 플랫폼 공통**이고, 그 아래 본체만 플랫폼마다 완전히 다르다
-            // (DbgHelp 와 backtrace_symbols).
-            UniqueLock<mutex> lock{ s_symbolMutex, std::defer_lock };
-            if ( lock.try_lock() == false )
-                return formatRawCallStackFrames( ppFrame, frameCount );
-
-            StringBuilder<constant::buffer::kMax8192> sb;
-
-            utf8** ppSymbol = backtrace_symbols( ppFrame, frameCount );
-            for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-            {
-                noteCrashReportProgress(); // 크래시 보고의 시한은 진척 없는 시간이다 — 느린 프레임이 있어도 끊기지 않게
-                string symbolName = ( ppSymbol != nullptr ) ? ppSymbol[frameIndex] : "??";
-
-                // dladdr 로 더 정확한 심볼 정보를 얻어 본다
-                Dl_info    info{};
-                const bool bResolved = ( dladdr( ppFrame[frameIndex], &info ) != 0 && info.dli_sname != nullptr );
-                if ( bResolved )
-                {
-                    int32 status     = 0;
-                    utf8* pDemangled = abi::__cxa_demangle( info.dli_sname, nullptr, nullptr, &status );
-                    symbolName       = ( status == 0 && pDemangled != nullptr ) ? pDemangled : info.dli_sname;
-                    free( pDemangled );
-                }
-
-                sb.appendFormat( "  [%#] %#", frameIndex, symbolName.c_str() );
-                if ( bResolved && info.dli_saddr != nullptr )
-                {
-                    const ptrdiff_t frameOffset =
-                        static_cast<const utf8*>( ppFrame[frameIndex] ) - static_cast<const utf8*>( info.dli_saddr );
-                    sb.appendFormat( " + 0x%#", Fmt( static_cast<uint64>( frameOffset ), Format().hex() ) );
-                }
-                sb.append( "\n" );
-            }
-            free( ppSymbol );
-
-            return string( sb.view() );
         }
     } // namespace
 
@@ -184,14 +138,60 @@ namespace sw
         }
     }
 
-    string CallStackCapture::symbolize( const CallStack& stack )
+    string CallStackCapture::symbolizeFrames( void* const* ppFrame, uint32 frameCount, atomic<uint32>* pFrameProgress )
     {
-        return symbolizeFrames( stack._arrFrame, stack._frameCount );
+        if ( ppFrame == nullptr || frameCount == 0 )
+            return kEmptyCallStackText;
+
+        // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼 변환 중이면 교착 대신 주소만 출력한다
+        // (맵 파일로 나중에 풀 수 있다). **이 관문은 플랫폼 공통**이고, 그 아래 본체만 플랫폼마다 완전히 다르다
+        // (DbgHelp 와 backtrace_symbols).
+        UniqueLock<mutex> lock{ s_symbolMutex, std::defer_lock };
+        if ( lock.try_lock() == false )
+            return formatRawCallStackFrames( ppFrame, frameCount );
+
+        StringBuilder<constant::buffer::kMax8192> sb;
+
+        utf8** ppSymbol = backtrace_symbols( ppFrame, frameCount );
+        for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
+            if ( pFrameProgress != nullptr )
+                pFrameProgress->fetch_add( 1 ); // 크래시 보고의 시한은 진척 없는 시간이다 — 기호 파일을 처음 읽는 느린 프레임에서 끊기지 않게
+            string symbolName = ( ppSymbol != nullptr ) ? ppSymbol[frameIndex] : "??";
+
+            // dladdr 로 더 정확한 심볼 정보를 얻어 본다
+            Dl_info    info{};
+            const bool bResolved = ( dladdr( ppFrame[frameIndex], &info ) != 0 && info.dli_sname != nullptr );
+            if ( bResolved )
+            {
+                int32 status     = 0;
+                utf8* pDemangled = abi::__cxa_demangle( info.dli_sname, nullptr, nullptr, &status );
+                symbolName       = ( status == 0 && pDemangled != nullptr ) ? pDemangled : info.dli_sname;
+                free( pDemangled );
+            }
+
+            sb.appendFormat( "  [%#] %#", frameIndex, symbolName.c_str() );
+            if ( bResolved && info.dli_saddr != nullptr )
+            {
+                const ptrdiff_t frameOffset =
+                    static_cast<const utf8*>( ppFrame[frameIndex] ) - static_cast<const utf8*>( info.dli_saddr );
+                sb.appendFormat( " + 0x%#", Fmt( static_cast<uint64>( frameOffset ), Format().hex() ) );
+            }
+            sb.append( "\n" );
+        }
+        free( ppSymbol );
+
+        return string( sb.view() );
     }
 
-    string CallStackCapture::symbolize( const DeepCallStack& stack )
+    string CallStackCapture::symbolize( const CallStack& stack )
     {
-        return symbolizeFrames( stack._arrFrame, stack._frameCount );
+        return symbolizeFrames( stack._arrFrame, stack._frameCount, nullptr );
+    }
+
+    string CallStackCapture::symbolize( const DeepCallStack& stack, atomic<uint32>* pFrameProgress )
+    {
+        return symbolizeFrames( stack._arrFrame, stack._frameCount, pFrameProgress );
     }
 
 } // namespace sw

@@ -2,12 +2,12 @@
 
 #include "Server/ServerObservability.h"
 
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
+#include "Core/Process/ProcessSession.h"
 #include "Core/Time/MonotonicClock.h"
 #include "Core/Time/WallClock.h"
 
@@ -40,7 +40,7 @@ namespace sw
             /** @brief 크래시 문맥 파일 끝에 싣는 최근 틱 수입니다(문맥 파일 버퍼 8KB 안에서 — 한 줄 70 바이트쯤). */
             static constexpr uint32 kCrashTailTicks = 40;
 
-            /** @brief 크래시 핸들러가 부르는 글쓰기(`bindCrashExtraTextWriter`)입니다. 이력 링 버퍼를 직접 읽는다 — 할당 · 잠금 없음. */
+            /** @brief 크래시 핸들러가 부르는 글쓰기(`CrashHandler::bindExtraTextWriter`)입니다. 이력 링 버퍼를 직접 읽는다 — 할당 · 잠금 없음. */
             static uint32 writeFrameCrashTail( void* pUser, utf8* pOutText, uint32 capacity )
             {
                 const ServerFrameHistory* pHistory = static_cast<const ServerFrameHistory*>( pUser );
@@ -86,7 +86,7 @@ namespace sw
         _frameHistory->initialize( static_cast<uint32>( config._frameHistoryTicks ) );
         // 크래시 때 이력을 새 파일로 쓰지 않고, 크래시 핸들러가 문맥 파일을 쓰며 이 링 버퍼를 읽어 끝에 싣는다(풀기는 `shutdown`).
         if ( _frameHistory->getCapacity() > 0 )
-            _crashExtraTextSubscription = bindCrashExtraTextWriter( &ServerObservabilityInternal::writeFrameCrashTail, _frameHistory.get() );
+            _crashExtraTextSubscription = engine::getSubsystem<CrashHandler>().bindExtraTextWriter( &ServerObservabilityInternal::writeFrameCrashTail, _frameHistory.get() );
         _processMetrics = make_unique<ProcessMetrics>();
         _processMetrics->initialize( _metricRegistry.get(), WallClock::nowUnixMilliseconds().count() - ( MonotonicClock::nowNanoseconds() - processStartNanoseconds ) / constant::time::kNanosecondsPerMillisecond );
         if ( config._opsPort == 0 )
@@ -179,7 +179,7 @@ namespace sw
     {
         if ( _frameHistory == nullptr || _frameHistory->getCount() == 0 )
             return;
-        const string crashFolder = getCrashReportFolder();
+        const string crashFolder = engine::getSubsystem<CrashHandler>().getReportFolder();
         if ( crashFolder.empty() )
             return; // 로그 폴더가 서지 않았다 — 덤프를 놓을 곳이 없다
         const string reportsFolder = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( crashFolder ) ), ServerObservabilityInternal::kServerReportsFolderName );
@@ -190,9 +190,9 @@ namespace sw
         if ( pNetSession != nullptr )
             netStatsLine = pNetSession->makeStatsReport().makeLine(); // 메시지 종류별 누적 셈 — 덤프 순간 한 번만 읽는다(틱마다 읽으면 Profiler 탭의 "지난 보고" 상태를 건드린다)
         string text;
-        _frameHistory->writeReport( text, pReason, CrashHandler::getSessionID(), netStatsLine );
+        _frameHistory->writeReport( text, pReason, ProcessSession::getID(), netStatsLine );
         string fileName{ "frames_" };
-        fileName.append( CrashHandler::getSessionID() ).append( "_tick" ).append( to_string( tickCount ) ).append( "_" ).append( pReason ).append( ".txt" );
+        fileName.append( ProcessSession::getID() ).append( "_tick" ).append( to_string( tickCount ) ).append( "_" ).append( pReason ).append( ".txt" );
         const string path = FileUtil::joinPath( reportsFolder, fileName );
         if ( FileUtil::writeTextFile( path, text ) == false )
         {

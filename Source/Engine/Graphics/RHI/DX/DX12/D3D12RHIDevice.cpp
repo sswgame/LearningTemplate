@@ -570,7 +570,7 @@ namespace sw
             const string name = StringUtil::utf16ToUTF8( adapterDesc.Description );
             formatstring( arrName, constant::buffer::kMax256, "%# (vendor %#, device %#, VRAM %# MB)", name.c_str(), adapterDesc.VendorId, adapterDesc.DeviceId,
                           static_cast<uint32>( adapterDesc.DedicatedVideoMemory / constant::memory::kBytesPerMegabyte ) );
-            CrashHandler::setContextValue( "GPU", arrName );
+            engine::getSubsystem<CrashHandler>().setContextValue( "GPU", arrName );
             SW_LOG_INFO_ID( "D3D12.AdapterSelected", "Direct3D 12 adapter: %#", arrName );
         }
 

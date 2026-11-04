@@ -16,6 +16,8 @@
 
 namespace sw
 {
+    class CrashHandler;
+
     /**
      * @struct AutomationHangPayload
      * @brief 행 보고를 쓰는 데 필요한 값을 담은 고정 크기 평범한 자료입니다(복사 가능, 할당 없음). 글은 끝에 0 이 붙는 고정 배열입니다.
@@ -99,7 +101,7 @@ namespace sw
     /**
      * @class AutomationHangWatchdog
      * @brief 시나리오가 시작되면 하나 띄우고 끝나면 내리는 감시 스레드입니다. 시한이 지나도 `stop` 이 불리지 않으면 행으로 보고 보고를 쓰고 프로세스를 끝냅니다.
-     * @details 행 처리는 할당 · 잠금 없이 한다 — 스냅샷을 읽어 보고를 OS 원시 호출로 쓰고, 크래시 컨텍스트 · 빵부스러기 파일(`writeCrashContextFile`)을 남기고, stderr 에 한 줄 적은 뒤
+     * @details 행 처리는 할당 · 잠금 없이 한다 — 스냅샷을 읽어 보고를 OS 원시 호출로 쓰고, 크래시 컨텍스트 · 빵부스러기 파일(`CrashHandler::reportHang`)을 남기고, stderr 에 한 줄 적은 뒤
      *          종료 함수(기본은 `Process::exitImmediately`)를 부른다. 로거를 거치지 않는다 — 비동기 로거는 크래시 직전 줄을 잃고 락을 쥔 게임 스레드와 얽힐 수 있다.
      */
     class SW_API AutomationHangWatchdog
@@ -111,11 +113,12 @@ namespace sw
         /** @struct Settings @brief 감시 한 번의 조건입니다. */
         struct Settings
         {
-            float64           _startSeconds{ 0.0 };   ///< 단조 시계 초 — 실행기가 시작한 때
-            float32           _limitSeconds{ 0.0f };  ///< 시나리오의 벽시계 상한
-            float32           _graceSeconds{ 0.0f };  ///< 상한 뒤 더 기다리는 유예
-            int32             _exitCode{ 0 };         ///< 행으로 끝낼 때의 종료 코드
-            TerminateFunction _pTerminate{ nullptr }; ///< nullptr 이면 `Process::exitImmediately`
+            float64           _startSeconds{ 0.0 };      ///< 단조 시계 초 — 실행기가 시작한 때
+            float32           _limitSeconds{ 0.0f };     ///< 시나리오의 벽시계 상한
+            float32           _graceSeconds{ 0.0f };     ///< 상한 뒤 더 기다리는 유예
+            int32             _exitCode{ 0 };            ///< 행으로 끝낼 때의 종료 코드
+            TerminateFunction _pTerminate{ nullptr };    ///< nullptr 이면 `Process::exitImmediately`
+            CrashHandler*     _pCrashHandler{ nullptr }; ///< 행을 문맥 · 빵부스러기 · 덤프로 남길 처리기(감시를 띄울 때 받아 둔다 — 행에서는 서비스 표를 찾지 않는다). nullptr 이면 남기지 않는다
         };
 
         AutomationHangWatchdog();

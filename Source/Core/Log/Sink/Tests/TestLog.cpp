@@ -8,7 +8,6 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/Subscription.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogTypes.h"
 #include "Core/Log/Logger.h"
@@ -17,6 +16,7 @@
 #include "Core/Log/Sink/FileLogOutput.h"
 #include "Core/Log/Sink/ILogOutput.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Process/ProcessSession.h"
 #include "Core/Testing/ScopedAssertCapture.h"
 #include "Core/Testing/TestFramework.h"
 
@@ -558,20 +558,19 @@ namespace
     }
 
     /**
-     * @brief `FileLogOutput` 의 시간별 파일을 보는 픽스처 — `open` 이 바꾸는 크래시 보고 폴더를 되돌리고, 케이스가 만든 2099 년 파일을 지운다.
+     * @brief `FileLogOutput` 의 시간별 파일을 보는 픽스처 — 케이스가 만든 2099 년 파일을 지운다.
      * @details shortcut: 시간별 파일은 `Saved/Logs` 에만 열린다(장치가 폴더를 받지 않는다) — 케이스 폴더 밖에 잠깐 쓰고 지운다. 다른 장치도 폴더를 받게 되면 `makeScratchPath` 로 옮긴다.
      */
     struct FileLogOutputTest
     {
         FileLogOutputTest()
-            : _previousCrashFolder{ sw::getCrashReportFolder() }
+            : _listProbePath{}
         {
         }
         ~FileLogOutputTest()
         {
             for ( const sw::string& path : _listProbePath )
                 (void)sw::FileUtil::tryRemoveFile( path ); // 열기 전에 끝난 케이스는 만들지 않았다
-            sw::setCrashReportFolder( _previousCrashFolder );
         }
         FileLogOutputTest( const FileLogOutputTest& )            = delete;
         FileLogOutputTest& operator=( const FileLogOutputTest& ) = delete;
@@ -579,12 +578,11 @@ namespace
         /** @brief 그 시각에 쓰는 파일의 경로(`LOG_<연>-<월>-<일>-<시>_<세션>.txt`)이고, 소멸자가 지울 목록에 넣는다. */
         sw::string makeProbeLogPath( const sw::FileLogOutput& output, int32 hour )
         {
-            sw::string path = sw::FileUtil::joinPath( output.getLogFolderPath(), "LOG_2099-1-2-" + sw::to_string( hour ) + "_" + sw::getCrashSessionID() + ".txt" );
+            sw::string path = sw::FileUtil::joinPath( output.getLogFolderPath(), "LOG_2099-1-2-" + sw::to_string( hour ) + "_" + sw::ProcessSession::getID() + ".txt" );
             _listProbePath.push_back( path );
             return path;
         }
 
-        sw::string             _previousCrashFolder;
         sw::vector<sw::string> _listProbePath;
     };
 } // namespace

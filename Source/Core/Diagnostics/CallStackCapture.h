@@ -3,6 +3,7 @@
  * @brief 크로스 플랫폼 콜 스택 캡처와 심볼 변환 유틸리티입니다.
  */
 #pragma once
+#include "Core/Concurrency/atomic.h"
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
@@ -133,7 +134,17 @@ namespace sw
          *          주소만 출력합니다.
          */
         static string symbolize( const CallStack& stack );
-        /** @brief 깊은 콜 스택(크래시 리포트용)을 심볼 문자열로 바꿉니다. */
-        static string symbolize( const DeepCallStack& stack );
+        /**
+         * @brief 깊은 콜 스택(크래시 리포트용)을 심볼 문자열로 바꿉니다.
+         * @param pFrameProgress 프레임 하나를 풀 때마다 1 을 더할 칸(크래시 보고의 진척 — `CrashHandler::noteProgress`). 없으면 nullptr
+         */
+        static string symbolize( const DeepCallStack& stack, atomic<uint32>* pFrameProgress = nullptr );
+
+    private:
+        /**
+         * @brief `CallStack` · `DeepCallStack` 이 함께 쓰는 심볼 변환 본체입니다(플랫폼 파일).
+         * @details 크래시 경로에서도 불리므로 막히지 않는다 — 다른 스레드가 심볼 변환 중이면 교착 대신 주소만 낸다.
+         */
+        static string symbolizeFrames( void* const* ppFrame, uint32 frameCount, atomic<uint32>* pFrameProgress );
     };
 } // namespace sw

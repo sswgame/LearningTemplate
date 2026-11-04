@@ -4,7 +4,6 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CallStackCapture.h"
-#include "Core/Diagnostics/CrashContext.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Hash/HashUtil.h"
@@ -54,59 +53,6 @@ namespace sw
                 wcscat_s( arrSearchPath, constant::buffer::kMax4096, symbolFolder.c_str() );
             }
             (void)SymSetSearchPathW( process, arrSearchPath );
-        }
-
-        /** @brief CallStack / DeepCallStack 이 함께 쓰는 심볼 변환 본체입니다. */
-        string symbolizeFrames( void* const* ppFrame, uint32 frameCount )
-        {
-            if ( ppFrame == nullptr || frameCount == 0 )
-                return kEmptyCallStackText;
-
-            // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼 변환 중이면 교착 대신 주소만 출력한다
-            // (맵 파일로 나중에 풀 수 있다). **이 관문은 플랫폼 공통**이고, 그 아래 본체만 플랫폼마다 완전히 다르다
-            // (DbgHelp 와 backtrace_symbols).
-            UniqueLock<mutex> lock{ s_symbolMutex, std::defer_lock };
-            if ( lock.try_lock() == false )
-                return formatRawCallStackFrames( ppFrame, frameCount );
-
-            // 32프레임 × (심볼 + 전체 파일 경로 + 줄 번호)는 2KB 를 쉽게 넘긴다.
-            StringBuilder<constant::buffer::kMax8192> sb;
-
-            HANDLE process = GetCurrentProcess();
-            // 나중에 로드된 모듈(RHI_*.dll 같은 MODULE)도 심볼 변환되도록 모듈 목록을 새로 읽는다. 초기화 때 한 번만 읽으면
-            // 그 뒤에 로드된 DLL 의 프레임은 주소로만 남는다(크래시 지점인 [0] 이 비기 쉽다).
-            SymRefreshModuleList( process );
-            alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];
-            SYMBOL_INFO*                pSymbol = reinterpret_cast<SYMBOL_INFO*>( symbolBuffer );
-            pSymbol->SizeOfStruct               = sizeof( SYMBOL_INFO );
-            pSymbol->MaxNameLen                 = MAX_SYM_NAME;
-
-            for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
-            {
-                noteCrashReportProgress(); // 크래시 보고의 시한은 진척 없는 시간이다 — 기호 파일을 처음 읽는 프레임이 길어도 끊기지 않게
-                DWORD64 address = reinterpret_cast<DWORD64>( ppFrame[frameIndex] );
-                if ( address == 0 )
-                    continue;
-
-                DWORD64 displacement = 0;
-                if ( SymFromAddr( process, address, &displacement, pSymbol ) )
-                {
-                    DWORD           displacementLine = 0;
-                    IMAGEHLP_LINE64 lineInfo         = {};
-                    lineInfo.SizeOfStruct            = sizeof( IMAGEHLP_LINE64 );
-
-                    if ( SymGetLineFromAddr64( process, address, &displacementLine, &lineInfo ) )
-                        sb.appendFormat( "  [%#] %# (%#:%#)\n", frameIndex, pSymbol->Name, lineInfo.FileName, lineInfo.LineNumber );
-                    else
-                        sb.appendFormat( "  [%#] %#\n", frameIndex, pSymbol->Name );
-                }
-                else
-                {
-                    sb.appendFormat( "  [%#] 0x%#\n", frameIndex, Fmt( address, Format().hex() ) );
-                }
-            }
-
-            return string( sb.view() );
         }
     } // namespace
 
@@ -198,14 +144,67 @@ namespace sw
         }
     }
 
-    string CallStackCapture::symbolize( const CallStack& stack )
+    string CallStackCapture::symbolizeFrames( void* const* ppFrame, uint32 frameCount, atomic<uint32>* pFrameProgress )
     {
-        return symbolizeFrames( stack._arrFrame, stack._frameCount );
+        if ( ppFrame == nullptr || frameCount == 0 )
+            return kEmptyCallStackText;
+
+        // 크래시 경로에서도 불리므로 절대 막히면 안 된다. 다른 스레드가 심볼 변환 중이면 교착 대신 주소만 출력한다
+        // (맵 파일로 나중에 풀 수 있다). **이 관문은 플랫폼 공통**이고, 그 아래 본체만 플랫폼마다 완전히 다르다
+        // (DbgHelp 와 backtrace_symbols).
+        UniqueLock<mutex> lock{ s_symbolMutex, std::defer_lock };
+        if ( lock.try_lock() == false )
+            return formatRawCallStackFrames( ppFrame, frameCount );
+
+        // 32프레임 × (심볼 + 전체 파일 경로 + 줄 번호)는 2KB 를 쉽게 넘긴다.
+        StringBuilder<constant::buffer::kMax8192> sb;
+
+        HANDLE process = GetCurrentProcess();
+        // 나중에 로드된 모듈(RHI_*.dll 같은 MODULE)도 심볼 변환되도록 모듈 목록을 새로 읽는다. 초기화 때 한 번만 읽으면
+        // 그 뒤에 로드된 DLL 의 프레임은 주소로만 남는다(크래시 지점인 [0] 이 비기 쉽다).
+        SymRefreshModuleList( process );
+        alignas( SYMBOL_INFO ) utf8 symbolBuffer[sizeof( SYMBOL_INFO ) + MAX_SYM_NAME * sizeof( TCHAR )];
+        SYMBOL_INFO*                pSymbol = reinterpret_cast<SYMBOL_INFO*>( symbolBuffer );
+        pSymbol->SizeOfStruct               = sizeof( SYMBOL_INFO );
+        pSymbol->MaxNameLen                 = MAX_SYM_NAME;
+
+        for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
+        {
+            if ( pFrameProgress != nullptr )
+                pFrameProgress->fetch_add( 1 ); // 크래시 보고의 시한은 진척 없는 시간이다 — 기호 파일을 처음 읽는 느린 프레임에서 끊기지 않게
+            DWORD64 address = reinterpret_cast<DWORD64>( ppFrame[frameIndex] );
+            if ( address == 0 )
+                continue;
+
+            DWORD64 displacement = 0;
+            if ( SymFromAddr( process, address, &displacement, pSymbol ) )
+            {
+                DWORD           displacementLine = 0;
+                IMAGEHLP_LINE64 lineInfo         = {};
+                lineInfo.SizeOfStruct            = sizeof( IMAGEHLP_LINE64 );
+
+                if ( SymGetLineFromAddr64( process, address, &displacementLine, &lineInfo ) )
+                    sb.appendFormat( "  [%#] %# (%#:%#)\n", frameIndex, pSymbol->Name, lineInfo.FileName, lineInfo.LineNumber );
+                else
+                    sb.appendFormat( "  [%#] %#\n", frameIndex, pSymbol->Name );
+            }
+            else
+            {
+                sb.appendFormat( "  [%#] 0x%#\n", frameIndex, Fmt( address, Format().hex() ) );
+            }
+        }
+
+        return string( sb.view() );
     }
 
-    string CallStackCapture::symbolize( const DeepCallStack& stack )
+    string CallStackCapture::symbolize( const CallStack& stack )
     {
-        return symbolizeFrames( stack._arrFrame, stack._frameCount );
+        return symbolizeFrames( stack._arrFrame, stack._frameCount, nullptr );
+    }
+
+    string CallStackCapture::symbolize( const DeepCallStack& stack, atomic<uint32>* pFrameProgress )
+    {
+        return symbolizeFrames( stack._arrFrame, stack._frameCount, pFrameProgress );
     }
 
 } // namespace sw

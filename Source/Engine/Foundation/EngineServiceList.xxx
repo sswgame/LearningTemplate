@@ -38,6 +38,8 @@ SW_ENGINE_SERVICE( class, AsyncFileIO, Required, HostOnly )
 // 리소스 경로 상태(경로 표 · 검색 우선순위 · 붙인 디스크 도메인 · 해석 캐시). 코어 범위의 리소스 루트 서브시스템(`ContentRootSubsystem`)이 소유해 그 타입으로 건다.
 // 워커(디코드 · 쿠킹)도 경로를 풀므로 칸으로 읽는다.
 SW_ENGINE_SERVICE( class, AssetPaths, Required, GameVisible )
+// 크래시 처리기(문맥 값 · 빵부스러기 · 행 보고). 코어 범위의 크래시 서브시스템(`CrashHandlerSubsystem`)이 소유해 그 타입으로 건다. 게임도 빵부스러기를 남긴다.
+SW_ENGINE_SERVICE( class, CrashHandler, Required, GameVisible )
 SW_ENGINE_SERVICE( class, AssetManager, Required, GameVisible )
 // 데이터 파일 종류(카탈로그 계약) 레지스트리. 서비스 범위가 소유하고, 모듈을 올리고 내리는 길(`engine::registerModuleTypes`)이 정적 등록자를 걷어 올리고 뺀다.
 SW_ENGINE_SERVICE( class, AssetDataKindRegistry, Required, GameVisible )
