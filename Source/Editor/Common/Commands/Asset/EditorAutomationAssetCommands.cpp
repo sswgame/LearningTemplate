@@ -148,6 +148,38 @@ namespace sw::editor
             }
 
             /**
+             * @brief 사본 폴더(`scratch/…`)의 파일 하나의 글을 다른 사본 파일에 덮어씁니다 — 바깥 편집기(텍스트 편집기 · git)의 저장과 같은 길(원자적 쓰기 → 파일 감시)을 시나리오가 밟게 한다.
+             * @details 두 id 모두 `scratch/` 아래만 받는다 — 추적 중인 원본을 고치는 길을 형식으로 막는다(`asset.openScratch` 와 같다). 연쇄 리로드 시나리오(assetcascade)가 부모 머티리얼을 바꾼다.
+             */
+            static bool runOverwriteScratchAsset( const vector<string>& listArgument, string& outReply )
+            {
+                const string scratchPrefix = string( AutomationScratch::kScratchDomain ) + "/";
+                const auto   isScratchID   = [&scratchPrefix]( const string& id )
+                { return StringUtil::startsWith( id, scratchPrefix ) && AssetPaths::hasParentDirectoryComponent( id ) == false; };
+                if ( listArgument.size() != 2 || isScratchID( listArgument[0] ) == false || isScratchID( listArgument[1] ) == false )
+                {
+                    outReply = "asset.overwriteScratch takes two resource ids under " + scratchPrefix + " (source, target)";
+                    return false;
+                }
+                const AssetPaths&                 assetPaths = editor::getSubsystem<AssetPaths>();
+                const std::optional<AbsolutePath> sourcePath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[0] ) );
+                const std::optional<AbsolutePath> targetPath = assetPaths.findLooseFile( FileUtil::normalizePath( listArgument[1] ) );
+                string                            text;
+                if ( sourcePath.has_value() == false || targetPath.has_value() == false || FileUtil::readTextFile( sourcePath->str(), text ) == false )
+                {
+                    outReply = "no scratch asset '" + listArgument[0] + "' or '" + listArgument[1] + "' (does the scenario declare <Scratch>?)";
+                    return false;
+                }
+                if ( FileUtil::writeTextFile( targetPath->str(), text ) == false )
+                {
+                    outReply = "could not write '" + targetPath->str() + "'";
+                    return false;
+                }
+                outReply = "overwrote " + listArgument[1] + " with " + listArgument[0];
+                return true;
+            }
+
+            /**
              * @brief 임시 폴더(`Saved/Automation/` 아래)를 만듭니다. 이미 있으면 성공입니다.
              * @details 에디터 저장은 없는 폴더를 만들지 않고 오류로 멈춘다(`FileUtil::writeTextFile`). 패널이 문서를 열지 않고 쓸 곳을 먼저 마련해야 하는 시나리오(타일맵 저장 왕복)가 쓴다.
              */
@@ -334,6 +366,9 @@ namespace sw::editor
     SW_DEV_COMMAND( OpenScratchAsset, "asset.openScratch", "asset.openScratch <scratch/...resource id>",
                     "Open an asset of a scenario's <Scratch> copy in its editor panel by resource id (Quick Open matches by file name and can pick the original)",
                     &EditorAutomationAssetCommandsInternal::runOpenScratchAsset );
+    SW_DEV_COMMAND( OverwriteScratchAsset, "asset.overwriteScratch", "asset.overwriteScratch <scratch/...source id> <scratch/...target id>",
+                    "Overwrite a scratch asset with another scratch file's text the way an outside editor saves (atomic write, the file watch reports it)",
+                    &EditorAutomationAssetCommandsInternal::runOverwriteScratchAsset );
     SW_DEV_COMMAND( MakeTempFolder, "asset.makeTempFolder", "asset.makeTempFolder <folder>", "Create a temp folder under Saved/Automation/ (editor saves do not create missing folders)",
                     &EditorAutomationAssetCommandsInternal::runMakeTempFolder );
     SW_DEV_COMMAND( RemoveTempAsset, "asset.removeTemp", "asset.removeTemp <path>", "Remove a temp asset file under Saved/Automation/",

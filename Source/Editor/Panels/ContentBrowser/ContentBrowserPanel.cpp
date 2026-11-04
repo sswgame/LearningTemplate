@@ -26,6 +26,7 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/Common/Workspace/HotReload/AssetHotReload.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
@@ -113,12 +114,13 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 감시 값 `Editor.ReferenceIndexReady` — 색인은 에디터 전역(`AssetHotReload`)이라 패널이 닫혀 있어도 값을 낸다. 에디터 컨텍스트가 없으면 값이 없다. */
             [[nodiscard]] static bool readReferenceIndexReady( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                const ContentBrowserPanel* pPanel = findPanel();
-                if ( pPanel == nullptr )
+                const EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
                     return false;
-                outValue = pPanel->isReferenceIndexCurrent() ? 1.0 : 0.0;
+                outValue = pContext->getSubsystem<AssetHotReload>().isReferenceIndexCurrent() ? 1.0 : 0.0;
                 return true;
             }
 
@@ -309,7 +311,7 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorContentGameRootCount, "Editor.ContentGameRootCount", "Game pack roots the Content Browser lists (1 = active pack only)",
                          &ContentBrowserPanelInternal::readGameRootCount );
     SW_AUTOMATION_WALL_WATCH( editorReferenceIndexReady, "Editor.ReferenceIndexReady",
-                              "1 when the Content Browser reference index reflects the last Content/ change the editor saw (built, no scan in flight)",
+                              "1 when the editor reference index reflects the last Content/ change the editor saw (built, no scan in flight)",
                               &ContentBrowserPanelInternal::readReferenceIndexReady );
     SW_AUTOMATION_CLOCK_HOLDER( contentBrowserReferenceIndex, "ContentBrowserReferenceIndex", &ContentBrowserPanelInternal::isWaitingForReferenceIndex );
     SW_AUTOMATION_WATCH( editorReferenceResultCount, "Editor.ReferenceResultCount", "Rows of the last Find References or Show Dependencies query",

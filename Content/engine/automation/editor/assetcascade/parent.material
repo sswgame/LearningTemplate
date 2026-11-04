@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 조부모(grand)를 펼쳐 넣고 색만 바꾼다 -->
+<MaterialDesc formatVersion="0" name="CascadeParent" parent="engine/automation/editor/assetcascade/grand.material">
+	<_properties>
+		<item name="_color" defaultValue="0.8 0.2 0.2 1.0"/>
+	</_properties>
+</MaterialDesc>
