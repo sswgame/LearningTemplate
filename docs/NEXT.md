@@ -27,10 +27,6 @@
    - Shooter3D 적 생물(QuadShell · Trilobite — `prefabs/quadshell` · `trilobite`)의 맞음 상자 · 소켓은 구로 잡은 어림값이다(`characters/<생물>/<생물>.physics.xml`) — 가까운 사진으로 다리 · 몸 구를 맞춘다.
    - Empty 쇼케이스 · MeadowVillage · StarSkirmish 의 소품.
    - 손 머티리얼 중 Shooter3D cover · floor · wall · cctvmonitor 는 부모에 있는 속성이 자식 줄에 없어 차이로 적을 수 없어 통째로 남았다 — 그 값으로 맞춘 기준 머티리얼을 하나 두면 옮겨진다.
-5. **상용 엔진 기준 구조 점검 — 남은 것** (사용자 지시: "상용 엔진과 비교해 우리 구조의 차이와 결함을 Source 전체에서 찾아 고친다"). 판단 기준 ·
-   끝낸 경계는 StructureRefactor 9 절(GPU 자원은 프록시 / 한 번 만들기 / 게시, 스레드 경계 표). 끝낸 경계: 머티리얼 · 메시 · 텍스처 · 에디터 텍스처 · 오디오 ·
-   애니메이션 · 물리 입력 · 내비 · 네트워크 · 에셋 도착. 남은 것:
-   1. 남은 경계를 같은 기준(9 절 표)으로 Source 전체에서 찾는다.
 
 ### 2. 테스트 · 시나리오 공백
 

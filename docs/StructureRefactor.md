@@ -243,7 +243,7 @@
 - **근본 원인(한 줄)**: 7 · 8 절 점검은 글자(함수 이름 겹침 · include 층 · 파일 크기)만 봤다 — 스레드 소유는 형식에 없어 보이지 않았고, 같은 일은 이름이 달라 겹침 검사에 걸리지 않았고, 실행되지 않는 길은 결함이 드러나지 않았다.
 - **바꾼 형식**: 머티리얼은 게임 스레드 객체 + 렌더 프록시(`MaterialRenderProxy`), 다른 스레드의 렌더 일은 `RenderThread::executeAndWait`, 디바이스 프레임(`beginFrame` · `endFrame`) ·
   `GPUScene` · 프록시 진입은 렌더 스레드 역할을 확인한다(Debug). 화면 밖 그리기는 `FrameRenderer::executeOffscreenPacket` 한 길.
-- **소유 지도(진행 중, 2026-11-01)**:
+- **소유 지도(2026-11-01, 남은 경계 훑기 2026-11-04 — 끝)**:
 
   | 객체 | 고치는 스레드 | 모양 | 판단 |
   |---|---|---|---|
@@ -253,6 +253,17 @@
   | 캡처 · 미리보기 하위 렌더러 | 렌더 스레드만(`executeOffscreenPacket`) | 렌더 스레드 명령 | 끝 |
   | 씬 → 패킷 채우기 | 게임 스레드, 씬마다 `RenderPacketSceneCollector` 하나 | 한 벌 | 끝 |
   | 컴포넌트 훅(`onRegister` · `onPostLoad`) | 게임 스레드만 — 비동기 로드 워커는 생성 · 직렬화만, 씬을 짓는 배치가 훅을 배치 끝으로 미루고 비동기 로드는 `adoptScene` 까지 쥔다 | 형식(`GameObjectManager::beginDeferredRegistration` · `Component::dispatchRegister`) | 끝 |
+  | 렌더 스레드 훅(에디터 준비 · 그리기 · Present 뒤, 개발 도구 프레임 시작) | 게임 스레드가 걸고 렌더 스레드가 부른다 | 세터가 받은 패킷을 다 끝낸 뒤(`drainPackets`) 패킷 실행 역할(`_packetThread`)을 빌려 바꾼다, 에디터 훅은 모듈 매니저가 사는 동안만(`App::bindEditorRenderHooks`) — 언리얼 `FlushRenderingCommands` 뒤 교체 | 끝 |
+  | 렌더 스레드가 쥐는 렌더 쪽 객체(디바이스 · 주 렌더러 · 화면 밖 씬 렌더러) | 붙일 때 한 번 | `RenderThread::attach` 인자 셋 — 도는 중에 바꾸는 세터 없음 | 끝 |
+  | 입자(VFX) | 게임 스레드가 단계마다 새 배열, GPU 방출기는 누적 단계 요청 | 불변 공유 배열(`shared_ptr<const vector<GPUParticle>>`) · 값 요청(`VFXGPUEmitterRequest`, 정의는 불변 공유) — 한 번 만들기 | 끝 |
+  | 지형 청크 메시 | 게임 스레드(정점은 병렬 잡) | 고칠 때마다 새 `Mesh` 로 배치 교체 — 한 번 만들기(메시 행과 같다) | 끝 |
+  | 글리프 아틀라스 · UI 그리기 목록 | 게임 스레드 | 패킷의 값 목록 + 구간 바이트 사본(차분, 받는 즉시 옮김) · 놓치면 원자 표시(`requestFullUpload`) | 끝 |
+  | 조명 · 그림자 · 프로브 · 쿠키 | 게임 스레드가 모으고 렌더러가 아틀라스 · 맵을 소유 | 패킷 값(빛 목록 · 그림자 배치), 복셀 격자는 불변 공유, 쿠키는 경로 | 끝 |
+  | 렌더 타깃(게임 · 에디터 RT, 트랜지언트 목록) | RT 텍스처는 디바이스 스레드(`TextureCache::resizeRenderTarget`), 트랜지언트는 렌더 스레드 | 텍스처 행과 같은 게시, 목록 · 읽기 결과는 사본(`RenderTargetRegistry`) | 끝 |
+  | 잡 결과 · 바깥 알림(에디터 백그라운드 잡, PSO 빌더, 물리 접촉 보고, 라이브 리로드 빌드 알림) | 워커가 적고 게임 스레드가 꺼낸다 | 잠금 아래 칸 + 세대 번호 — 잠금 계약을 형식으로(`SW_GUARDED_BY`, clang `-Wthread-safety`). 접촉 보고의 스텝 뒤 비우기도 같은 잠금 | 끝 |
+  | 워커가 날 `this` 로 객체를 고치는 비동기 읽기(`Material` · `RenderPassAsset` · `RenderPipelineAsset::load…Async`) | 워커 | 지움 — 비동기 읽기는 에셋 도착 길 하나(워커는 바이트, 객체는 게임 스레드) | 끝 |
+  | 로그 리스너 · 파일 감시 | 로그를 쓴 아무 스레드 · 감시 워커 | 리스너는 잠근 다중 델리게이트(해제가 진행 중 방송을 기다린다) + 받는 쪽 잠금 칸, 감시는 큐 → 게임 스레드 `pollEvents` | 끝 |
+  | 씬 장부(`ComponentRegistry` · `CameraRegistry` · `TagIndex`) | 씬마다 한 스레드(짓는 동안 워커, 받은 뒤 게임 스레드), 쓰기는 잠금 | 읽기 창은 등록 · 해제가 없는 구간에만 쓴다(`ComponentRegistry::View`) — 태그 색인은 읽기도 공유 잠금 | 유지 |
 - **로드 스레드 판단 기준**(언리얼 비동기 로딩: 로딩 스레드 Serialize, 게임 스레드 PostLoad · OnRegister / 유니티 Awake 도 메인 스레드): 워커가 짓는 동안 부르는 코드는 엔진 장부(트랜스폼 계층 ·
   타입 버킷)뿐이고, 컴포넌트가 쓰는 훅은 게임 스레드에서 돈다 — 훅을 쓰는 쪽(게임 모듈 포함)이 스레드를 생각하지 않게 한다. 예전 모양(워커가 훅까지)은 컴포넌트가 데이터뿐이던
   2026-08 의 비동기 로드에 2026-09 등록제 훅이 더해지며 다시 보지 않은 것이다(의도된 근거 없음). 받는 프레임의 등록 비용은 `endDeferredRegistration` 한 곳에서 나눌 수 있다.
