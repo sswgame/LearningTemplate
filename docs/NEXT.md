@@ -10,7 +10,7 @@
 - **테스트마다 로그의 Error · Warning 을 모두 분류한다** — `build/Ninja-Debug/Testing/Logs/*.log`, id 없는 줄과 `[id:…]` 줄을 나눠 테스트가 선언한 것인지 본다. 통과만 보지 않는다.
 - 느린 곳은 새로 재지 말고 로그의 `[Scenario] … timeline:` · `stage reset took` · `Backend swap took` 줄을 모은다(`Test/README.md` 의 시간 기록).
 - 규칙: 구조로 푼다 · 폴백 없음 · 게이트는 최후 · 구성 차이는 크기대로(`docs/agents/BuildConfigSwitch.md`) · 용어는 `docs/agents/NamingCpp.md` 의 표. 시나리오 체계는 `Test/README.md` 가 정본.
-- Linux 는 WSL 클론(`~/LT-linux`, `git fetch origin main` 뒤 `~/lt-scripts/build.sh`)에서 Linux-Debug 전체 빌드 · 단위 테스트(`Bin/App --test`)를 돌린다(2026-11-02 통과). 시나리오는 WSLg 에서 Vulkan 만 돈다 — GL 은 WSLg 드라이버에 `GL_ARB_gl_spirv` 가 없어 기동이 물러나고(77), 창 관리자(Weston XWayland)가 아이콘화 요청을 무시해 `engine/automation/windowpresent` 의 최소화 단계가 진다.
+- Linux 는 WSL 클론(`~/LT-linux`, `git fetch origin main` 뒤 `~/lt-scripts/build.sh`)에서 Linux-Debug 전체 빌드 · 단위 테스트(`Bin/App --test`)를 돌린다(2026-11-02 통과). 매니페스트에서 포트가 빠지면(2026-11-05 `vulkan`) 공유 설치본 보호 장치가 설치를 건너뛰어 오버레이 패치(imgui-node-editor 의 `NavigateToRect` · `GetGroupSize`)가 들어가지 않는다 — 혼자 쓰는 클론이라 한 번 `-DSW_VCPKG_FORCE_INSTALL=ON` 으로 구성한다. 시나리오는 WSLg 에서 Vulkan 만 돈다 — GL 은 WSLg 드라이버에 `GL_ARB_gl_spirv` 가 없어 기동이 물러나고(77), 창 관리자(Weston XWayland)가 아이콘화 요청을 무시해 `engine/automation/windowpresent` 의 최소화 단계가 진다.
   Wayland 창 층(`SW_ENABLE_WAYLAND`)은 기본 클론 빌드에 없다 — `~/lt-deps/root` 에 sudo 없이 푼 `libxkbcommon-dev` · `wayland-protocols`(`apt-get download` + `dpkg -x`, .pc 의 prefix 를 그 폴더로)를 `PKG_CONFIG_PATH` 로 주고 `cmake --preset Linux-Debug -B build/Linux-Wayland -DSW_ENABLE_WAYLAND=ON` 로 짓는다. 실행은 `SW_WINDOW_BACKEND=wayland`.
 
 ## 남은 일
@@ -43,7 +43,7 @@
 | 일 | 내용 |
 |---|---|
 | 주인 우선(Helpers.md) — 다른 헤더 | 같은 헤더의 `X` + `XUtil` 은 끝났고 린트가 막는다. 남은 것: 다른 헤더에 있는 `XxxUtil` 가운데 함수 대부분이 한 타입만 받는 것, 주인이 있는데 `XxxInternal` · 자유 함수로 빠진 것 — 린트가 못 보는 자리라 셈 스크립트로 후보를 뽑아 하나씩 본다 |
-| 정적 상태 | 크래시 처리기는 끝났고 `GPUBreadcrumbs` 는 상태가 없는 창구(상태는 `GPUBreadcrumbLog` 서브시스템)다. 남은 것: .cpp 전역 가변 변수(`s_*` — 대입까지 센 어림 310, 선언만 다시 뽑는다)를 하나씩 판정한다. 그대로 두는 것: OS 진입점(신호 · 예외 처리기 · `ShutdownSignal`), 모듈 경계 창구(`s_gameServiceState` · `s_editorScope` — 언리얼 `GEngine` 자리), 프로세스 하나인 자원의 번호(`FileUtil` 의 `s_writeCounters`). 나머지(캐시 · 레지스트리 · 함수 지역 정적 저장소)는 그 상태를 쓰는 서브시스템이나 소유자 인스턴스로 |
+| 정적 상태 — 레지스트리 싱글턴 | 2026-11-05 .cpp 가변 전역 선언 104(이름공간 71 · 함수 안 static 33)를 판정했다. 그대로 두는 것: 원자 id 번호, 정적 등록 연결 목록(`s_pHead`), 로거 기동 전 백로그, 단언 · 잠금 관찰자 훅, OS 처리기 · `ShutdownSignal`, 모듈 경계 창구(`s_gameServiceState` · `s_editorScope`), 스레드 하나 전용이라 적힌 번호(`UILayoutPass` · `UndoStep`), 정적 감시값 읽기(`CatalogPanel` — 감시 API 가 인스턴스를 받아야 옮긴다). 남은 것: 함수 안 static 레지스트리 싱글턴(`DevCommandRegistry` · `DebugHUDRegistry` · `BehaviorTaskRegistry` · `RigNodeRegistry` · `AnimationNotifyHandlerRegistry` · `EngineCodecRegistry` · `EditorExtensionRegistry` · SQL 드라이버 둘 · `FileDialog` 의 `s_pOpenDialog`)을 서브시스템(범위가 소유)으로 — 목록은 `globals.py` 식으로 다시 뽑는다 |
 | JSON 손 스키마 | `ConfigKeyDoc`(키 · 형식 · 기본값 · 설명의 손 표)을 지우고 텍스처 · 모델 임포트 규칙을 리플렉션 구조체로(F 묶음의 첫 일). JSON 에는 XMLFields 에 해당하는 읽기(적은 칸만 · 모르는 키를 이름으로 알림)가 없다 — 먼저 세운다. `readObject` 는 적지 않은 칸을 기본값으로 되돌려 프리셋 상속을 담지 못한다 |
 | 리눅스 빌드 | 크래시 처리기 인스턴스화(748605fe5e)의 POSIX 파일 · `CallStackCapture` 는 이 기계에서 짓지 못했다 — WSL 에서 빌드 · 크래시 테스트 |
 
