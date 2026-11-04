@@ -17,15 +17,10 @@ namespace sw
     {
         struct EquipSetCatalogInternal
         {
-            static constexpr const utf8* kArrSetAttribute[]      = { "id" };
-            static constexpr const utf8* kArrPieceAttribute[]    = { "slot", "items" };
-            static constexpr const utf8* kArrVariantAttribute[]  = { "bodyType" };
-            static constexpr const utf8* kArrCompleteAttribute[] = { "visual", "slots" };
 
             [[nodiscard]] static bool readPiece( const XMLNode& node, EquipSetPieceDef& outPiece, AppearanceLoadReport& report, string_view sourceName, const hashed_string& setID )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrPieceAttribute, report, sourceName );
-                outPiece._slot = AppearanceXMLUtil::readRequiredName( node, "slot", report, sourceName );
+                (void)AppearanceXMLUtil::readFields( node, outPiece, report, sourceName, { "items" } ); // 오류는 보고서에 쌓인다
                 AppearanceXMLUtil::readNameList( node, "items", outPiece._listItem );
                 if ( outPiece._slot.empty() || outPiece._listItem.empty() )
                 {
@@ -57,9 +52,8 @@ namespace sw
                 AppearanceXMLUtil::reportUnknownChild( root, setNode, report, sourceName );
                 continue;
             }
-            (void)AppearanceXMLUtil::reportUnknownAttributes( setNode, EquipSetCatalogInternal::kArrSetAttribute, report, sourceName );
             EquipSetDef def;
-            def._id = AppearanceXMLUtil::readRequiredName( setNode, "id", report, sourceName );
+            (void)AppearanceXMLUtil::readFields( setNode, def, report, sourceName );
             if ( def._id.empty() )
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
             if ( findSet( def._id ) != nullptr )
@@ -82,9 +76,8 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "Variant" ) )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, EquipSetCatalogInternal::kArrVariantAttribute, report, sourceName );
                     EquipSetVariantDef variant;
-                    variant._bodyType = AppearanceXMLUtil::readRequiredName( child, "bodyType", report, sourceName );
+                    (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName );
                     if ( variant._bodyType.empty() )
                         report.addErrorWithID( "Appearance.SetVariantNoBodyType", "%#: set '%#' <Variant> without a bodyType", sourceName, def._id.c_str() );
                     for ( XMLNode pieceNode = child.findChild(); pieceNode; pieceNode = pieceNode.findNextSibling() )
@@ -99,8 +92,9 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "Complete" ) )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, EquipSetCatalogInternal::kArrCompleteAttribute, report, sourceName );
-                    def._completeVisual = AppearanceXMLUtil::readRequiredName( child, "visual", report, sourceName );
+                    EquipSetCompleteFields complete;
+                    (void)AppearanceXMLUtil::readFields( child, complete, report, sourceName, { "slots" } );
+                    def._completeVisual = complete._visual;
                     AppearanceXMLUtil::readNameList( child, "slots", def._listCompleteSlot );
                     if ( def._completeVisual.empty() || def._listCompleteSlot.empty() )
                         report.addErrorWithID( "Appearance.SetCompleteShape", "%#: set '%#' <Complete> needs a visual and slots", sourceName, def._id.c_str() );

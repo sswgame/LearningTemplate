@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/EquipCondition.h"
 
@@ -18,33 +20,55 @@ namespace sw
     class XMLNode;
 
     /** @brief 세트 조각입니다. 슬롯 하나와, 그 슬롯에서 조각으로 인정하는 아이템 목록을 담습니다. 목록의 첫 아이템이 세트를 입힐 때 고르는 아이템입니다. */
-    struct EquipSetPieceDef
+    REFLECT()
+    struct SW_GF_API EquipSetPieceDef
     {
-        vector<hashed_string> _listItem{};
-        hashed_string         _slot{};
+        REFLECT_BODY();
+
+        vector<hashed_string> _listItem{}; ///< `items="a,b"` — 이름 목록은 손으로 푼다
+        PROPERTY( Required )
+        hashed_string _slot{};
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 몸 종류 변형입니다. 같은 슬롯의 조각을 바꿉니다. */
-    struct EquipSetVariantDef
+    REFLECT()
+    struct SW_GF_API EquipSetVariantDef
     {
+        REFLECT_BODY();
+
         vector<EquipSetPieceDef> _listPiece{};
-        hashed_string            _bodyType{};
+        PROPERTY( Required )
+        hashed_string _bodyType{};
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 세트 하나입니다. */
-    struct EquipSetDef
+    REFLECT()
+    struct SW_GF_API EquipSetDef
     {
+        REFLECT_BODY();
+
         vector<EquipSetPieceDef>   _listPiece{};
         vector<EquipSetVariantDef> _listVariant{};
         vector<hashed_string>      _listCompleteSlot{}; ///< 세트 완성 표현이 대신하는 슬롯(첫 슬롯이 그 외형을 가진다)
-        hashed_string              _id{};
-        hashed_string              _completeVisual{}; ///< 세트 완성 표현의 외형. 비어 있으면 없음
+        PROPERTY( Required )
+        hashed_string _id{};
+        hashed_string _completeVisual{}; ///< 세트 완성 표현의 외형. 비어 있으면 없음(`<Complete visual slots>`)
+    };
+
+    /** @brief 세트 완성 표현(`<Complete visual slots/>`)의 칸입니다. 슬롯 목록은 손으로 푼다. */
+    REFLECT()
+    struct SW_GF_API EquipSetCompleteFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _visual{};
     };
 } // namespace sw
 
