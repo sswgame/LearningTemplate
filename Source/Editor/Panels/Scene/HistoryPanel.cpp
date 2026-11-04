@@ -127,7 +127,7 @@ namespace sw::editor
                             ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HistoryPanelInternal::getUndoneText() ) );
 
                         ImGui::PushID( static_cast<int32>( stepNum ) );
-                        if ( ImGui::Selectable( "##step", bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowOverlap ) )
+                        if ( ImGui::Selectable( "##step", bIsActiveHead, ImGuiSelectableFlags_SpanAllColumns ) )
                             cmdStack.jumpTo( stepNum );
                         fixed_string<constant::buffer::kMax32> mark;
                         formatstring( mark.data(), mark.capacity(), "history.step.%#", stepNum );
