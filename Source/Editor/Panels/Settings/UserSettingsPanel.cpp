@@ -3,6 +3,7 @@
 #include "Editor/Panels/Settings/UserSettingsPanel.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/StringBuilder.h"
 
@@ -11,7 +12,9 @@
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/EditorService.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
@@ -28,6 +31,24 @@ namespace sw::editor
             /** @brief 스키마의 현지화 키(`text`)가 가리키는 이름입니다. 키가 없는 항목은 id 를 그대로 보인다(게임 옵션 메뉴와 같은 규칙 — `OptionsMenuScreen`). */
             static const utf8* resolveText( const string& textKey, const hashed_string& id ) { return textKey.empty() ? id.c_str() : LocalizedText::find( textKey, textKey.c_str() ); }
             static const utf8* resolveText( const string& textKey, const string& value ) { return textKey.empty() ? value.c_str() : LocalizedText::find( textKey, textKey.c_str() ); }
+
+            /** @brief 적용 · 되돌리기를 기다리는 보류 값이 있으면 1 입니다(감시 값 `Editor.UserSettingsPending`). 설정 매니저가 없으면 값을 내지 않는다. */
+            [[nodiscard]] static bool readPending( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const UserSettingsManager* pSettings = editor::findSubsystem<UserSettingsManager>();
+                if ( pSettings == nullptr )
+                    return false;
+                outValue = pSettings->hasPendingChanges() ? 1.0 : 0.0;
+                return true;
+            }
+
+            /** @brief @p pPrefix 뒤에 @p id 를 붙인 표식을 남깁니다(시나리오가 탭 · 설정 칸을 누른다). */
+            static void noteMark( const utf8* pPrefix, const utf8* pID )
+            {
+                fixed_string<constant::buffer::kMax128> mark;
+                formatstring( mark.data(), mark.capacity(), "%#%#", pPrefix, pID );
+                EditorSelfTestMarks::note( mark.c_str() );
+            }
         };
     } // namespace
 } // namespace sw::editor
@@ -35,6 +56,8 @@ namespace sw::editor
 namespace sw::editor
 {
     SW_EDITOR_PANEL( UserSettingsPanel, UserSettingsPanel::kPanelID, EditorPanelCategory::Tool, 1900 );
+    SW_AUTOMATION_WATCH( editorUserSettingsPending, "Editor.UserSettingsPending", "1 while user settings hold pending values that Apply or Revert has not settled",
+                         &UserSettingsPanelInternal::readPending );
 
     UserSettingsPanel::UserSettingsPanel()
         : IEditorPanel( false ) // 필요할 때 여는 도구라 닫힌 채 시작한다
@@ -63,7 +86,9 @@ namespace sw::editor
             const UserSettingCategoryDef& category = listCategory[categoryIndex];
             // 이름은 게임 옵션 메뉴와 같은 데이터(스키마의 `text` 현지화 키)다 — 예전에는 id(`display`)를 그대로 보였다. id 는 탭 ID 로 남는다.
             const string tabLabel = string( getCategoryLabel( category ) ) + "###" + category._id.c_str();
-            if ( ImGui::BeginTabItem( tabLabel.c_str() ) == false )
+            const bool   bTabOpen = ImGui::BeginTabItem( tabLabel.c_str() );
+            UserSettingsPanelInternal::noteMark( "userSettings.tab.", category._id.c_str() );
+            if ( bTabOpen == false )
                 continue;
             _selectedCategory = categoryIndex;
             settings.collectSettings( category._id, listSetting );
@@ -91,9 +116,11 @@ namespace sw::editor
                 ImGui::BeginDisabled();
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Apply" ) ) )
                 _lastRejectedCount = settings.applyPending()._failedCount; // 저장 실패 · 거절된 설정 이름은 매니저가 경고로 남긴다
+            EditorSelfTestMarks::note( "userSettings.apply" );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Revert" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Revert" ) ) )
                 settings.revertPending();
+            EditorSelfTestMarks::note( "userSettings.revert" );
             if ( bPending == false )
                 ImGui::EndDisabled();
 
@@ -101,6 +128,7 @@ namespace sw::editor
             const vector<UserSettingCategoryDef>& listCategory = settings.getCategories();
             if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetTab" ) ) && _selectedCategory < static_cast<uint32>( listCategory.size() ) )
                 settings.resetCategoryToDefaults( listCategory[_selectedCategory]._id );
+            EditorSelfTestMarks::note( "userSettings.resetTab" );
 
             if ( settings.isRestartRequired() )
             {
@@ -235,6 +263,7 @@ namespace sw::editor
             }
         }
 
+        UserSettingsPanelInternal::noteMark( "userSettings.value.", def._id.c_str() ); // 값 칸(종류별 위젯)의 자리
         if ( bEnabled == false )
             ImGui::EndDisabled();
         ImGui::PopID();
