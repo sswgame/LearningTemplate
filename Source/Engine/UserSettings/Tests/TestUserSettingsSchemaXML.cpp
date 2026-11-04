@@ -1,0 +1,74 @@
+// UserSettingsSchema · TelemetrySchema — 정의 구조체를 스키마로 읽기: 이름 · 열거자 · 기본값 · 작은 문법 칸 · 칸 오류(nogpu).
+#include "pch.h"
+
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Telemetry/TelemetrySchema.h"
+#include "Engine/UserSettings/UserSettingsSchema.h"
+
+/**
+ * @brief [UserSettingsSchemaXMLTest] 설정 · 선택지 · 품질 번들 · 판 올림을 정의 구조체의 PROPERTY 로 읽는다(작은 문법 칸 target · enabledWhen · platforms 는 손으로)
+ */
+SW_TEST_CASE( UserSettingsSchemaXMLTest, ReadsDefinitionsThroughSchemas )
+{
+    sw::UserSettingsSchema schema;
+    SW_REQUIRE_TRUE( schema.loadFromXMLText( "<UserSettingsSchema version=\"3\">"
+                                             "<Category id=\"audio\" text=\"Menu.Audio\"/>"
+                                             "<Setting id=\"audio.master\" category=\"audio\" type=\"Float\" default=\"0.50\" min=\"0\" max=\"1\" step=\"0.1\" apply=\"Immediate\"/>"
+                                             "<Setting id=\"audio.mode\" category=\"audio\" type=\"Enum\" default=\"stereo\" enabledWhen=\"audio.master!=0\" platforms=\"windows\">"
+                                             "<Option value=\"stereo\" text=\"Menu.Stereo\"/><Option value=\"surround\"/></Setting>"
+                                             "<Upgrade version=\"2\" op=\"Rename\" key=\"audio.volume\" to=\"audio.master\"/>"
+                                             "</UserSettingsSchema>",
+                                             "test" ) );
+    SW_EXPECT_EQUAL( uint32{ 3 }, schema.getVersion() );
+    const sw::UserSettingDef* pMaster = schema.findSetting( sw::hashed_string( "audio.master" ) );
+    SW_REQUIRE_TRUE( pMaster != nullptr );
+    SW_EXPECT_TRUE( pMaster->_type == sw::UserSettingType::Float && pMaster->_applyTiming == sw::UserSettingApplyTiming::Immediate );
+    SW_EXPECT_EQUAL( sw::string( "0.5" ), pMaster->_defaultValue ); // 기본값은 정규화된다
+    SW_EXPECT_EQUAL( 0.1, pMaster->_step );
+    const sw::UserSettingDef* pMode = schema.findSetting( sw::hashed_string( "audio.mode" ) );
+    SW_REQUIRE_TRUE( pMode != nullptr );
+    SW_EXPECT_EQUAL( size_t{ 2 }, pMode->_listOption.size() );
+    SW_EXPECT_EQUAL( size_t{ 1 }, pMode->_listEnabledCondition.size() );
+    SW_EXPECT_EQUAL( uint8{ sw::UserSettingsPlatform::kWindows }, pMode->_platformMask );
+    SW_EXPECT_TRUE( pMode->_applyTiming == sw::UserSettingApplyTiming::OnConfirm ); // 적지 않은 칸은 정의 구조체의 초기값
+    SW_REQUIRE_EQUAL( size_t{ 1 }, schema.getUpgradeSteps().size() );
+    SW_EXPECT_TRUE( schema.getUpgradeSteps()[0]._operation == sw::UserSettingsUpgradeOperation::Rename );
+    SW_EXPECT_EQUAL( sw::string( "audio.master" ), schema.getUpgradeSteps()[0]._newKey );
+}
+
+/**
+ * @brief [UserSettingsSchemaXMLTest] 모르는 속성 · 모르는 열거 이름 · 빠진 필수는 스키마를 받지 않는다
+ */
+SW_TEST_CASE( UserSettingsSchemaXMLTest, RejectsFieldErrors )
+{
+    SW_EXPECT_LOG( "XMLFields.UnknownField" );
+    SW_EXPECT_LOG( "XMLFields.ValueUnreadable" );
+    SW_EXPECT_LOG( "Serialization.UnknownEnumerator" );
+    SW_EXPECT_LOG( "XMLFields.RequiredFieldMissing" );
+    sw::UserSettingsSchema schema;
+    SW_EXPECT_FALSE( schema.loadFromXMLText( "<UserSettingsSchema><Setting id=\"a\" type=\"Bool\" colour=\"red\"/></UserSettingsSchema>", "test" ) );
+    SW_EXPECT_FALSE( schema.loadFromXMLText( "<UserSettingsSchema><Setting id=\"b\" type=\"bool\"/></UserSettingsSchema>", "test" ) );
+    SW_EXPECT_FALSE( schema.loadFromXMLText( "<UserSettingsSchema><Setting type=\"Bool\"/></UserSettingsSchema>", "test" ) );
+}
+
+/**
+ * @brief [UserSettingsSchemaXMLTest] 텔레메트리 스키마의 파이프라인 · 사건 · 칸을 정의 구조체로 읽고, 범위 밖 값은 파일을 받지 않는다
+ */
+SW_TEST_CASE( UserSettingsSchemaXMLTest, TelemetryReadsThroughSchemas )
+{
+    sw::TelemetrySchema schema;
+    SW_REQUIRE_TRUE( schema.loadFromXMLText( "<TelemetrySchema version=\"2\"><Pipeline batchEvents=\"8\" sessionSample=\"0.5\" maxTotalBytes=\"4096\"/>"
+                                             "<Event id=\"match.end\" sample=\"0.25\"><Field name=\"score\" type=\"Int\" required=\"true\"/></Event></TelemetrySchema>" ) );
+    SW_EXPECT_EQUAL( 2, schema.getVersion() );
+    SW_EXPECT_EQUAL( uint32{ 8 }, schema.getSettings()._batchEvents );
+    SW_EXPECT_EQUAL( uint64{ 4096 }, schema.getSettings()._maxTotalBytes );
+    const sw::TelemetryEventDef* pEvent = schema.findEvent( sw::hashed_string( "match.end" ) );
+    SW_REQUIRE_TRUE( pEvent != nullptr && pEvent->_listField.size() == 1 );
+    SW_EXPECT_TRUE( pEvent->_listField[0]._type == sw::TelemetryFieldType::Int && pEvent->_listField[0]._bRequired );
+
+    SW_EXPECT_LOG( "XMLFields.ValueOutOfRange" );
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
+    sw::TelemetrySchema broken;
+    SW_EXPECT_FALSE( broken.loadFromXMLText( "<TelemetrySchema><Pipeline sessionSample=\"2\"/></TelemetrySchema>" ) );
+}

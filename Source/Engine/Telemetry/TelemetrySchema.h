@@ -13,12 +13,14 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
     class XMLNode;
 
     /** @brief 필드 값의 타입입니다. */
+    ENUM()
     enum class TelemetryFieldType : uint8
     {
         Bool = 0,
@@ -28,28 +30,50 @@ namespace sw
     };
 
     SW_API const utf8* toString( TelemetryFieldType type );
+
+    /** @brief 스키마 파일 루트(`<TelemetrySchema version>`)의 칸입니다. 적지 않으면 판 1 이다. */
+    REFLECT()
+    struct SW_API TelemetrySchemaRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1 )
+        int32 _version{ 1 };
+    };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 사건 필드 하나입니다. */
-    struct TelemetryFieldDef
+    REFLECT()
+    struct SW_API TelemetryFieldDef
     {
-        hashed_string      _name{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY( Required )
         TelemetryFieldType _type{ TelemetryFieldType::String };
-        uint8              _bRequired{ SW_FALSE };
+        PROPERTY()
+        bool _bRequired{ false }; ///< 적지 않으면 선택 칸이다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 사건 종류 하나입니다. */
+    REFLECT()
     struct SW_API TelemetryEventDef
     {
-        vector<TelemetryFieldDef> _listField{};
-        hashed_string             _id{};
-        hashed_string             _category{};
-        float32                   _sampleRate{ 1.0f }; ///< 이 사건을 남길 비율(0..1) — 줄에 `sample` 로 적혀 받는 쪽이 1 / 비율로 무게를 준다
+        REFLECT_BODY();
+
+        vector<TelemetryFieldDef> _listField{}; ///< `<Field>` 자식(칸이 아니다)
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        hashed_string _category{};
+        PROPERTY( Name = "sample", Min = 0.0, Max = 1.0 )
+        float32 _sampleRate{ 1.0f }; ///< 이 사건을 남길 비율(0..1) — 줄에 `sample` 로 적혀 받는 쪽이 1 / 비율로 무게를 준다
 
         const TelemetryFieldDef* findField( const hashed_string& name ) const;
     };
@@ -58,15 +82,25 @@ namespace sw
 namespace sw
 {
     /** @brief 파이프라인 설정입니다(`<Pipeline>`). */
-    struct TelemetryPipelineConfig
+    REFLECT()
+    struct SW_API TelemetryPipelineConfig
     {
-        uint64  _maxTotalBytes{ 2 * constant::memory::kBytesPerMegabyte }; ///< 보내지 못한 스풀 전체 상한 — 넘으면 가장 오래된 닫힌 파일부터 지운다
-        float32 _flushSeconds{ 30.0f };                                    ///< 이만큼 지나면 모인 사건을 쓴다
-        float32 _sessionSampleRate{ 1.0f };                                ///< 이 비율의 세션만 무엇이든 남긴다(세션 id 해시로 정한다)
-        uint32  _batchEvents{ 32 };                                        ///< 이만큼 모이면 바로 쓴다
-        uint32  _maxFileBytes{ 256u * 1024u };                             ///< 파일 하나의 상한 — 넘으면 닫고(올릴 대상) 새 파일로 회전
-        uint32  _maxFiles{ 16 };                                           ///< 스풀 파일 수 상한
-        uint32  _breadcrumbCount{ 32 };                                    ///< 크래시 보고에 붙일 최근 사건 수
+        REFLECT_BODY();
+
+        PROPERTY( Min = 1024 )
+        uint64 _maxTotalBytes{ 2 * constant::memory::kBytesPerMegabyte }; ///< 보내지 못한 스풀 전체 상한 — 넘으면 가장 오래된 닫힌 파일부터 지운다
+        PROPERTY( Min = 0.0, Units = s )
+        float32 _flushSeconds{ 30.0f }; ///< 이만큼 지나면 모인 사건을 쓴다
+        PROPERTY( Name = "sessionSample", Min = 0.0, Max = 1.0 )
+        float32 _sessionSampleRate{ 1.0f }; ///< 이 비율의 세션만 무엇이든 남긴다(세션 id 해시로 정한다)
+        PROPERTY( Min = 1 )
+        uint32 _batchEvents{ 32 }; ///< 이만큼 모이면 바로 쓴다
+        PROPERTY( Min = 1024 )
+        uint32 _maxFileBytes{ 256u * 1024u }; ///< 파일 하나의 상한 — 넘으면 닫고(올릴 대상) 새 파일로 회전
+        PROPERTY( Min = 1 )
+        uint32 _maxFiles{ 16 }; ///< 스풀 파일 수 상한
+        PROPERTY( Name = "breadcrumbs", Max = 256 )
+        uint32 _breadcrumbCount{ 32 }; ///< 크래시 보고에 붙일 최근 사건 수
     };
 } // namespace sw
 

@@ -10,6 +10,7 @@
 
 #include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/UserSettings/UserSettingsHandlerRegistry.h"
 
@@ -35,59 +36,17 @@ namespace sw
 
             /** @brief 설정 종류의 성질 표입니다. 열거자 순서대로 한 줄씩 둡니다 — 아래 static_assert 가 순서와 줄 수를 지킵니다. */
             static constexpr UserSettingTypeTraits kArrTypeTraits[] = {
-                {      "bool",                                                  kBooleanVariable,       UserSettingType::Bool,   UserSettingStorageKind::Bool, false},
-                {       "int",                                    kInt32Variable | kEnumVariable,        UserSettingType::Int, UserSettingStorageKind::Number,  true},
-                {     "float",                                                    kFloatVariable,      UserSettingType::Float, UserSettingStorageKind::Number,  true},
-                {      "enum", kInt32Variable | kEnumVariable | kStringVariable | kFloatVariable,       UserSettingType::Enum,   UserSettingStorageKind::Text, false},
-                {"keyBinding",                                                                 0, UserSettingType::KeyBinding,   UserSettingStorageKind::Text, false},
-                {    "string",                                                   kStringVariable,     UserSettingType::String,   UserSettingStorageKind::Text, false},
-            };
-            static constexpr NamedValue<UserSettingApplyTiming> kArrTimingName[] = {
-                {"immediate",    UserSettingApplyTiming::Immediate},
-                {  "confirm",    UserSettingApplyTiming::OnConfirm},
-                {  "restart", UserSettingApplyTiming::NeedsRestart},
-            };
-            static constexpr NamedValue<UserSettingsUpgradeOperation> kArrUpgradeName[] = {
-                {  "rename",   UserSettingsUpgradeOperation::Rename},
-                {  "remove",   UserSettingsUpgradeOperation::Remove},
-                {"mapValue", UserSettingsUpgradeOperation::MapValue},
-                {   "scale",    UserSettingsUpgradeOperation::Scale},
+                {                                                 kBooleanVariable,       UserSettingType::Bool,   UserSettingStorageKind::Bool, false},
+                {                                   kInt32Variable | kEnumVariable,        UserSettingType::Int, UserSettingStorageKind::Number,  true},
+                {                                                   kFloatVariable,      UserSettingType::Float, UserSettingStorageKind::Number,  true},
+                {kInt32Variable | kEnumVariable | kStringVariable | kFloatVariable,       UserSettingType::Enum,   UserSettingStorageKind::Text, false},
+                {                                                                0, UserSettingType::KeyBinding,   UserSettingStorageKind::Text, false},
+                {                                                  kStringVariable,     UserSettingType::String,   UserSettingStorageKind::Text, false},
             };
             static constexpr NamedValue<uint8> kArrPlatformName[] = {
                 {"windows", UserSettingsPlatform::kWindows},
                 {  "linux",   UserSettingsPlatform::kLinux},
             };
-
-            static constexpr const utf8* kArrCategoryAttribute[]    = { "id", "text" };
-            static constexpr const utf8* kArrSettingAttribute[]     = { "id", "category", "type", "default", "apply", "confirmSeconds", "target", "param",
-                                                                        "text", "description", "min", "max", "step", "enabledWhen", "platforms", "action",
-                                                                        "bindIndex", "context", "optionsFrom" };
-            static constexpr const utf8* kArrOptionAttribute[]      = { "value", "text", "targetValue" };
-            static constexpr const utf8* kArrScalabilityAttribute[] = { "setting", "custom", "autoDetectFallback" };
-            static constexpr const utf8* kArrPresetAttribute[]      = { "name" };
-            static constexpr const utf8* kArrValueAttribute[]       = { "setting", "value" };
-            static constexpr const utf8* kArrAutoDetectAttribute[]  = { "preset", "minCores", "minMemoryMb", "minGPUMemoryMb" };
-            static constexpr const utf8* kArrUpgradeAttribute[]     = { "version", "op", "key", "to", "valueFrom", "valueTo", "scale" };
-            static constexpr const utf8* kArrRootAttribute[]        = { "version" };
-
-            /**
-             * @brief 실수 하나를 읽습니다. 속성이 없으면 @p inoutValue 를 두고 true 입니다(기본값은 정의 구조체의 초기값 — 여기서 정하지 않는다).
-             * @details 텍스트가 숫자가 아니면 오류를 알리고 false 이며 @p inoutValue 는 그대로입니다.
-             */
-            [[nodiscard]] static bool readNumberAttribute( const XMLNode& node, const utf8* pName, float64& inoutValue, string_view sourceName )
-            {
-                const string_view text = node.getAttributeText( pName );
-                if ( text.empty() )
-                    return true;
-                float64 value{};
-                if ( StringUtil::parseDouble( text, value ) )
-                {
-                    inoutValue = value;
-                    return true;
-                }
-                SW_LOG_ERROR_ID( "UserSettingsSchema.AttributeNotNumber", "%#: <%#> attribute '%#' is not a number: '%#'", sourceName, node.getName(), pName, text );
-                return false;
-            }
 
             /** @brief `gv:name` 과 `handler:name` 을 읽습니다. 비어 있으면 대상 없음입니다. */
             [[nodiscard]] static bool parseTarget( string_view text, UserSettingDef& inoutDef, string_view sourceName )
@@ -197,20 +156,6 @@ namespace sw
                 return MathUtil::abs( inoutValue - original ) > 1.0e-6;
             }
 
-            /** @brief 스키마 XML 의 `type` 값(철자 그대로)으로 설정 종류를 찾습니다. */
-            [[nodiscard]] static bool findTypeByName( string_view name, UserSettingType& outType )
-            {
-                for ( const UserSettingTypeTraits& traits : kArrTypeTraits )
-                {
-                    if ( StringUtil::equals( name, traits._pName ) )
-                    {
-                        outType = traits._type;
-                        return true;
-                    }
-                }
-                return false;
-            }
-
             /** @brief 표 순서가 열거자 순서와 같은지 봅니다(`getTypeTraits` 가 열거자 값으로 줄을 고른다). */
             static constexpr bool isTypeTraitsInEnumOrder()
             {
@@ -226,89 +171,41 @@ namespace sw
             // 스키마 읽기 — `loadRoot` 가 요소마다 부른다. 반환값은 "오류 없음"이다(false 여도 읽기는 이어 가 모든 오류를 로그로 보인다).
             // ------------------------------------------------------------------------------
 
-            /** @brief `<Category>` 하나를 읽습니다. id 가 비면 false 이며 @p outCategory 의 id 가 비어 있어 호출한 쪽이 목록에 넣지 않습니다. */
+            /** @brief 원소 하나를 스키마 @p T(정의 구조체 자체)로 읽고, 자식이 @p pChild(없으면 자식 없음)뿐인지 봅니다. */
+            template <typename T>
+            [[nodiscard]] static bool readElement( const XMLNode& node, T& outDef, string_view sourceName, const utf8* pChild, std::initializer_list<string_view> listHandRead = {} )
+            {
+                bool bOk = XMLFields::readFields( node, outDef, sourceName, listHandRead );
+                for ( XMLNode child = node.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    if ( pChild != nullptr && StringUtil::equals( child.getName(), pChild ) )
+                        continue;
+                    SW_LOG_ERROR_ID( "UserSettingsSchema.UnknownChild", "%#: <%#> has an unknown child <%#>", sourceName, node.getName(), child.getName() );
+                    bOk = false;
+                }
+                return bOk;
+            }
+
+            /** @brief `<Category>` 하나를 읽습니다. id 가 비면 @p outCategory 의 id 가 비어 있어 호출한 쪽이 목록에 넣지 않습니다. */
             [[nodiscard]] static bool readCategory( const XMLNode& node, uint32 order, string_view sourceName, UserSettingCategoryDef& outCategory )
             {
-                const bool bKnownAttributes = XMLNameCheck::reportUnknownAttributes( node, kArrCategoryAttribute, sourceName );
-                outCategory._id             = hashed_string( node.getAttributeText( "id" ) );
-                outCategory._textKey        = string( node.getAttributeText( "text" ) );
-                outCategory._order          = order;
-                if ( outCategory._id.empty() )
-                {
-                    SW_LOG_ERROR_ID( "UserSettingsSchema.CategoryWithoutId", "%#: <Category> without an id", sourceName );
-                    return false;
-                }
-                return bKnownAttributes;
+                outCategory._order = order;
+                return readElement( node, outCategory, sourceName, nullptr );
             }
 
-            /** @brief `<Setting>` 아래 `<Option>` 들을 읽습니다. 다른 자식은 오류입니다. */
-            [[nodiscard]] static bool readOptions( const XMLNode& node, string_view sourceName, UserSettingDef& inoutDef )
-            {
-                bool bOk = true;
-                for ( XMLNode optionNode = node.findChild(); optionNode.isValid(); optionNode = optionNode.findNextSibling() )
-                {
-                    if ( StringUtil::equals( optionNode.getName(), "Option" ) == false )
-                    {
-                        SW_LOG_ERROR_ID( "UserSettingsSchema.SettingUnknownChild", "%#: setting '%#' has an unknown child <%#>", sourceName, inoutDef._id.c_str(), optionNode.getName() );
-                        bOk = false;
-                        continue;
-                    }
-                    bOk = XMLNameCheck::reportUnknownAttributes( optionNode, kArrOptionAttribute, sourceName ) && bOk;
-                    UserSettingOption option;
-                    option._value       = string( optionNode.getAttributeText( "value" ) );
-                    option._textKey     = string( optionNode.getAttributeText( "text" ) );
-                    option._targetValue = string( optionNode.getAttributeText( "targetValue" ) );
-                    inoutDef._listOption.push_back( option );
-                }
-                return bOk;
-            }
-
-            /** @brief 설정의 숫자 칸(min · max · step · confirmSeconds · bindIndex)을 읽습니다. 적지 않은 칸은 UserSettingDef 의 초기값입니다. */
-            [[nodiscard]] static bool readNumberFields( const XMLNode& node, string_view sourceName, UserSettingDef& inoutDef )
-            {
-                float64 confirmSeconds   = static_cast<float64>( inoutDef._confirmSeconds );
-                bool    bOk              = readNumberAttribute( node, "min", inoutDef._minValue, sourceName );
-                bOk                      = readNumberAttribute( node, "max", inoutDef._maxValue, sourceName ) && bOk;
-                bOk                      = readNumberAttribute( node, "step", inoutDef._step, sourceName ) && bOk;
-                bOk                      = readNumberAttribute( node, "confirmSeconds", confirmSeconds, sourceName ) && bOk;
-                inoutDef._confirmSeconds = static_cast<float32>( confirmSeconds );
-                int32 bindIndex          = static_cast<int32>( inoutDef._bindIndex );
-                if ( node.readOptionalAttributeInRange( "bindIndex", 0, kMaxBindIndex, bindIndex ) == false )
-                    bOk = false;
-                inoutDef._bindIndex = static_cast<uint32>( bindIndex );
-                return bOk;
-            }
-
-            /** @brief `<Setting>` 하나를 읽습니다. id 가 비면 false 이며 @p outDef 는 목록에 넣지 않습니다. 기본값은 정규화해 둡니다. */
+            /**
+             * @brief `<Setting>` 하나(`<Option>` 자식 포함)를 읽습니다. id 가 비면 @p outDef 는 목록에 넣지 않습니다. 기본값은 정규화해 둡니다.
+             * @details 칸은 `UserSettingDef` 의 PROPERTY 가 정한다. 작은 문법이 있는 셋(`target` · `enabledWhen` · `platforms`)만 글을 받아 푼다.
+             */
             [[nodiscard]] static bool readSetting( const XMLNode& node, uint32 order, string_view sourceName, UserSettingDef& outDef )
             {
-                bool bOk               = XMLNameCheck::reportUnknownAttributes( node, kArrSettingAttribute, sourceName );
-                outDef._id             = hashed_string( node.getAttributeText( "id" ) );
-                outDef._category       = hashed_string( node.getAttributeText( "category" ) );
-                outDef._textKey        = string( node.getAttributeText( "text" ) );
-                outDef._descriptionKey = string( node.getAttributeText( "description" ) );
-                outDef._defaultValue   = string( node.getAttributeText( "default" ) );
-                outDef._targetParam    = string( node.getAttributeText( "param" ) );
-                outDef._optionProvider = hashed_string( node.getAttributeText( "optionsFrom" ) );
-                outDef._action         = hashed_string( node.getAttributeText( "action" ) );
-                outDef._context        = hashed_string( node.getAttributeText( "context" ) );
-                outDef._order          = order;
-                if ( outDef._id.empty() )
+                outDef._order = order;
+                bool bOk      = readElement( node, outDef, sourceName, "Option", { "target", "enabledWhen", "platforms" } );
+                for ( XMLNode optionNode = node.findChild( "Option" ); optionNode.isValid(); optionNode = optionNode.findNextSibling( "Option" ) )
                 {
-                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingWithoutId", "%#: <Setting> without an id", sourceName );
-                    return false;
-                }
-
-                if ( findTypeByName( node.getAttributeText( "type" ), outDef._type ) == false )
-                {
-                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingUnknownType", "%#: setting '%#' has an unknown type '%#'", sourceName, outDef._id.c_str(), node.getAttributeText( "type" ) );
-                    bOk = false;
-                }
-                const string_view timingText = node.getAttributeText( "apply" );
-                if ( timingText.empty() == false && NamedValueUtil::find( kArrTimingName, timingText, outDef._applyTiming ) == false )
-                {
-                    SW_LOG_ERROR_ID( "UserSettingsSchema.SettingUnknownApplyTiming", "%#: setting '%#' has an unknown apply timing '%#'", sourceName, outDef._id.c_str(), timingText );
-                    bOk = false;
+                    UserSettingOption option;
+                    bOk = readElement( optionNode, option, sourceName, nullptr ) && bOk;
+                    outDef._listOption.push_back( option );
                 }
                 bOk = parseTarget( node.getAttributeText( "target" ), outDef, sourceName ) && bOk;
                 if ( outDef._type == UserSettingType::KeyBinding && outDef._targetKind == UserSettingTargetKind::None )
@@ -318,8 +215,6 @@ namespace sw
                 }
                 bOk = parseConditions( node.getAttributeText( "enabledWhen" ), outDef, sourceName ) && bOk;
                 bOk = parsePlatforms( node.getAttributeText( "platforms" ), outDef._platformMask, sourceName, outDef._id ) && bOk;
-                bOk = readNumberFields( node, sourceName, outDef ) && bOk;
-                bOk = readOptions( node, sourceName, outDef ) && bOk;
 
                 // 기본값을 정규화해 둔다(`0.50` → `0.5`). 범위 밖이나 형식 오류는 그대로 두어 검사(`validate`)가 알린다.
                 string normalized;
@@ -328,89 +223,35 @@ namespace sw
                 return bOk;
             }
 
-            /** @brief `<Scalability>` 아래 `<Preset>` 하나를 읽습니다. */
-            [[nodiscard]] static bool readPreset( const XMLNode& node, string_view sourceName, ScalabilityPresetDef& outPreset )
-            {
-                bool bOk        = XMLNameCheck::reportUnknownAttributes( node, kArrPresetAttribute, sourceName );
-                outPreset._name = hashed_string( node.getAttributeText( "name" ) );
-                for ( XMLNode valueNode = node.findChild(); valueNode.isValid(); valueNode = valueNode.findNextSibling() )
-                {
-                    if ( StringUtil::equals( valueNode.getName(), "Value" ) == false )
-                    {
-                        SW_LOG_ERROR_ID( "UserSettingsSchema.PresetUnknownChild", "%#: preset '%#' has an unknown child <%#>", sourceName, outPreset._name.c_str(), valueNode.getName() );
-                        bOk = false;
-                        continue;
-                    }
-                    bOk = XMLNameCheck::reportUnknownAttributes( valueNode, kArrValueAttribute, sourceName ) && bOk;
-                    outPreset._listValue.push_back( ScalabilityPresetValue{ hashed_string( valueNode.getAttributeText( "setting" ) ), string( valueNode.getAttributeText( "value" ) ) } );
-                }
-                return bOk;
-            }
-
-            /** @brief `<Scalability>` 아래 `<AutoDetect>` 하나를 읽어 규칙 목록에 더합니다. */
-            [[nodiscard]] static bool readAutoDetect( const XMLNode& node, string_view sourceName, ScalabilityGroupDef& inoutGroup )
-            {
-                bool  bOk = XMLNameCheck::reportUnknownAttributes( node, kArrAutoDetectAttribute, sourceName );
-                int32 minCores{ 0 };
-                int32 minMemoryMb{ 0 };
-                int32 minGPUMemoryMb{ 0 };
-                bOk = node.readOptionalAttributeInRange( "minCores", 0, kMaxCoreCount, minCores ) && bOk;
-                bOk = node.readOptionalAttributeInRange( "minMemoryMb", 0, kMaxMemoryMb, minMemoryMb ) && bOk;
-                bOk = node.readOptionalAttributeInRange( "minGPUMemoryMb", 0, kMaxMemoryMb, minGPUMemoryMb ) && bOk;
-                inoutGroup._listAutoDetectRule.push_back( ScalabilityAutoDetectRule{ hashed_string( node.getAttributeText( "preset" ) ), static_cast<uint32>( minCores ),
-                                                                                     static_cast<uint32>( minMemoryMb ), static_cast<uint32>( minGPUMemoryMb ) } );
-                return bOk;
-            }
-
             /** @brief `<Scalability>` 하나(`<Preset>` · `<AutoDetect>` 자식 포함)를 읽습니다. */
             [[nodiscard]] static bool readScalability( const XMLNode& node, string_view sourceName, ScalabilityGroupDef& outGroup )
             {
-                bool bOk                     = XMLNameCheck::reportUnknownAttributes( node, kArrScalabilityAttribute, sourceName );
-                outGroup._settingID          = hashed_string( node.getAttributeText( "setting" ) );
-                outGroup._customValue        = string( node.getAttributeText( "custom" ) );
-                outGroup._autoDetectFallback = hashed_string( node.getAttributeText( "autoDetectFallback" ) );
+                bool bOk = XMLFields::readFields( node, outGroup, sourceName );
                 for ( XMLNode groupChild = node.findChild(); groupChild.isValid(); groupChild = groupChild.findNextSibling() )
                 {
                     if ( StringUtil::equals( groupChild.getName(), "Preset" ) )
                     {
                         ScalabilityPresetDef preset;
-                        bOk = readPreset( groupChild, sourceName, preset ) && bOk;
+                        bOk = readElement( groupChild, preset, sourceName, "Value" ) && bOk;
+                        for ( XMLNode valueNode = groupChild.findChild( "Value" ); valueNode.isValid(); valueNode = valueNode.findNextSibling( "Value" ) )
+                        {
+                            ScalabilityPresetValue value;
+                            bOk = readElement( valueNode, value, sourceName, nullptr ) && bOk;
+                            preset._listValue.push_back( value );
+                        }
                         outGroup._listPreset.push_back( preset );
                     }
                     else if ( StringUtil::equals( groupChild.getName(), "AutoDetect" ) )
                     {
-                        bOk = readAutoDetect( groupChild, sourceName, outGroup ) && bOk;
+                        ScalabilityAutoDetectRule rule;
+                        bOk = readElement( groupChild, rule, sourceName, nullptr ) && bOk;
+                        outGroup._listAutoDetectRule.push_back( rule );
                     }
                     else
                     {
                         SW_LOG_ERROR_ID( "UserSettingsSchema.ScalabilityUnknownChild", "%#: <Scalability> has an unknown child <%#>", sourceName, groupChild.getName() );
                         bOk = false;
                     }
-                }
-                return bOk;
-            }
-
-            /** @brief `<Upgrade>` 하나를 읽습니다. */
-            [[nodiscard]] static bool readUpgrade( const XMLNode& node, string_view sourceName, UserSettingsUpgradeStep& outStep )
-            {
-                bool  bOk = XMLNameCheck::reportUnknownAttributes( node, kArrUpgradeAttribute, sourceName );
-                int32 fromVersion{ 0 };
-                bOk                  = node.readOptionalAttributeInRange( "version", 0, kMaxSchemaVersion, fromVersion ) && bOk;
-                outStep._fromVersion = static_cast<uint32>( fromVersion );
-                outStep._key         = string( node.getAttributeText( "key" ) );
-                outStep._newKey      = string( node.getAttributeText( "to" ) );
-                outStep._fromValue   = string( node.getAttributeText( "valueFrom" ) );
-                outStep._toValue     = string( node.getAttributeText( "valueTo" ) );
-                bOk                  = readNumberAttribute( node, "scale", outStep._scale, sourceName ) && bOk;
-                if ( NamedValueUtil::find( kArrUpgradeName, node.getAttributeText( "op" ), outStep._operation ) == false )
-                {
-                    SW_LOG_ERROR_ID( "UserSettingsSchema.UpgradeUnknownOp", "%#: <Upgrade> has an unknown op '%#'", sourceName, node.getAttributeText( "op" ) );
-                    bOk = false;
-                }
-                if ( outStep._key.empty() )
-                {
-                    SW_LOG_ERROR_ID( "UserSettingsSchema.UpgradeWithoutKey", "%#: <Upgrade> without a key", sourceName );
-                    bOk = false;
                 }
                 return bOk;
             }
@@ -736,12 +577,10 @@ namespace sw
         }
 
         // 다 읽은 뒤에만 합친다. 반쯤 읽은 덧붙이기가 남으면 다음 검사가 엉뚱한 줄을 탓하기 때문이다.
-        UserSettingsSchema overlay;
-        bool               bOk = XMLNameCheck::reportUnknownAttributes( root, Internal::kArrRootAttribute, sourceName );
-        int32              version{ 0 }; // 적지 않으면 판 0 이다
-        if ( root.readOptionalAttributeInRange( "version", 0, Internal::kMaxSchemaVersion, version ) == false )
-            bOk = false;
-        overlay._version = static_cast<uint32>( version );
+        UserSettingsSchema           overlay;
+        UserSettingsSchemaRootFields rootFields;
+        bool                         bOk = XMLFields::readFields( root, rootFields, sourceName );
+        overlay._version                 = rootFields._version;
 
         const uint32 orderBase = static_cast<uint32>( _listSetting.size() );
         for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
@@ -770,7 +609,7 @@ namespace sw
             else if ( StringUtil::equals( pName, "Upgrade" ) )
             {
                 UserSettingsUpgradeStep step;
-                bOk = Internal::readUpgrade( child, sourceName, step ) && bOk;
+                bOk = Internal::readElement( child, step, sourceName, nullptr ) && bOk;
                 overlay._listUpgradeStep.push_back( step );
             }
             else

@@ -27,6 +27,7 @@
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Profiling/FrameProfiler.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsFile.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -855,8 +856,8 @@ namespace sw
         const UserSettingType actualType = _schema.getSettings()[settingIndex]._type;
         if ( actualType != expectedType )
         {
-            SW_LOG_ERROR_ID( "UserSettings.KeyUnresolved", "User setting '%#' is '%#', not '%#'", settingID.c_str(), UserSettingsSchema::getTypeTraits( actualType )._pName,
-                             UserSettingsSchema::getTypeTraits( expectedType )._pName );
+            SW_LOG_ERROR_ID( "UserSettings.KeyUnresolved", "User setting '%#' is '%#', not '%#'", settingID.c_str(), getEnumName( actualType ),
+                             getEnumName( expectedType ) );
             return constant::invalid_index::kUint32;
         }
         return settingIndex;

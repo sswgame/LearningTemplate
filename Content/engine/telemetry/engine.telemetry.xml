@@ -19,17 +19,17 @@
 	<!-- 세션 — 문맥(세션 id · 빌드 · 플랫폼 · 빌드 id · 게임)은 파일마다 첫 줄에 있다. -->
 	<Event id="session.start" category="session"/>
 	<Event id="session.end" category="session">
-		<Field name="seconds" type="float" required="true"/>
+		<Field name="seconds" type="Float" required="true"/>
 	</Event>
 
 	<!-- 성능 — 장면이 바뀌거나 세션이 끝날 때 그 장면의 프레임 시간 요약 하나. -->
 	<Event id="perf.sceneSummary" category="perf">
-		<Field name="scene" type="string" required="true"/>
-		<Field name="frames" type="int" required="true"/>
-		<Field name="seconds" type="float"/>
-		<Field name="avgMs" type="float"/>
-		<Field name="p50Ms" type="float" required="true"/>
-		<Field name="p99Ms" type="float" required="true"/>
-		<Field name="maxMs" type="float"/>
+		<Field name="scene" type="String" required="true"/>
+		<Field name="frames" type="Int" required="true"/>
+		<Field name="seconds" type="Float"/>
+		<Field name="avgMs" type="Float"/>
+		<Field name="p50Ms" type="Float" required="true"/>
+		<Field name="p99Ms" type="Float" required="true"/>
+		<Field name="maxMs" type="Float"/>
 	</Event>
 </TelemetrySchema>

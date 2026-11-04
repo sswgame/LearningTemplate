@@ -308,20 +308,24 @@ namespace sw
                 return string{ sb.c_str(), sb.size() };
             }
 
-            /** @brief 쉼표로 이은 글에서 원소 정확히 @p kCount 개를 읽습니다. 모자라거나 남거나 숫자가 아니면 false 이고 @p pOut 은 그대로입니다(다 읽은 뒤에만 씁니다). */
+            /**
+             * @brief 쉼표나 공백으로 가른 글에서 원소 정확히 @p kCount 개를 읽습니다. 모자라거나 남거나 숫자가 아니면 false 이고 @p pOut 은 그대로입니다(다 읽은 뒤에만 씁니다).
+             * @details 쓰기는 쉼표다(`writeNumberList`). 손으로 쓰는 데이터는 공백(`axis="0 0 1"`)도 흔해 읽기는 둘 다 받는다 — 벡터 글 문법이 엔진에 하나다(캐릭터 데이터 읽기와 같다).
+             */
             template <typename TElem, int32 kCount>
             [[nodiscard]] static bool readNumberList( string_view strView, TElem* pOut )
             {
                 // 칸 수가 정확히 kCount 가 아니면(남거나 모자라면) 거절한다.
-                const vector<string_view> listToken = StringUtil::split( strView, "," );
-                if ( listToken.size() != static_cast<size_t>( kCount ) )
-                    return false;
                 TElem arrParsed[kCount]{};
-                for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
+                int32 tokenCount = 0;
+                bool  bParsed    = true;
+                StringUtil::forEachToken( strView, ", 	", [&]( string_view token )
                 {
-                    if ( parseScalarValue<TElem>( listToken[axisIndex], arrParsed[axisIndex] ) == false )
-                        return false;
-                }
+                    bParsed = bParsed && tokenCount < kCount && parseScalarValue<TElem>( token, arrParsed[tokenCount] );
+                    ++tokenCount;
+                } );
+                if ( bParsed == false || tokenCount != kCount )
+                    return false;
                 for ( int32 axisIndex = 0; axisIndex < kCount; ++axisIndex )
                 {
                     pOut[axisIndex] = arrParsed[axisIndex];

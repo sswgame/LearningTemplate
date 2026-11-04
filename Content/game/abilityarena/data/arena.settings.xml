@@ -3,8 +3,8 @@
      조작 탭의 키 바인딩: 입력 맵(data/arena.input.xml)의 액션마다 첫 바인딩을 다시 잡을 수 있다. 빈 default 는 "입력 맵의 기본 바인딩"이다.
      text 를 적지 않았으므로 메뉴는 설정 id 를 보인다(표시 이름은 로컬라이제이션 수집 뒤에 text 키로 더한다). -->
 <UserSettingsSchema version="1">
-	<Setting id="controls.arenaMelee" category="controls" type="keyBinding" action="Arena.Melee" bindIndex="0" default=""/>
-	<Setting id="controls.arenaFireball" category="controls" type="keyBinding" action="Arena.Fireball" bindIndex="0" default=""/>
-	<Setting id="controls.arenaHeal" category="controls" type="keyBinding" action="Arena.Heal" bindIndex="0" default=""/>
-	<Setting id="controls.arenaDash" category="controls" type="keyBinding" action="Arena.Dash" bindIndex="0" default=""/>
+	<Setting id="controls.arenaMelee" category="controls" type="KeyBinding" action="Arena.Melee" bindIndex="0" default=""/>
+	<Setting id="controls.arenaFireball" category="controls" type="KeyBinding" action="Arena.Fireball" bindIndex="0" default=""/>
+	<Setting id="controls.arenaHeal" category="controls" type="KeyBinding" action="Arena.Heal" bindIndex="0" default=""/>
+	<Setting id="controls.arenaDash" category="controls" type="KeyBinding" action="Arena.Dash" bindIndex="0" default=""/>
 </UserSettingsSchema>

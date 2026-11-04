@@ -6,13 +6,13 @@
 -->
 <UserSettingsSchema version="1">
 	<Category id="debug" text="settings.category.debug"/>
-	<Setting id="debug.hud" category="debug" type="bool" default="false" apply="immediate" target="gv:gv_debugHUD"/>
-	<Setting id="debug.hudSections" category="debug" type="string" default="" apply="immediate" target="gv:gv_debugHUDSections"/>
-	<Setting id="debug.hudCorner" category="debug" type="enum" default="topLeft" apply="immediate" target="gv:gv_debugHUDCorner">
+	<Setting id="debug.hud" category="debug" type="Bool" default="false" apply="Immediate" target="gv:gv_debugHUD"/>
+	<Setting id="debug.hudSections" category="debug" type="String" default="" apply="Immediate" target="gv:gv_debugHUDSections"/>
+	<Setting id="debug.hudCorner" category="debug" type="Enum" default="topLeft" apply="Immediate" target="gv:gv_debugHUDCorner">
 		<Option value="topLeft"/>
 		<Option value="topRight"/>
 		<Option value="bottomLeft"/>
 		<Option value="bottomRight"/>
 	</Setting>
-	<Setting id="debug.hudOpacity" category="debug" type="float" default="0.85" min="0.2" max="1" step="0.05" apply="immediate" target="gv:gv_debugHUDOpacity"/>
+	<Setting id="debug.hudOpacity" category="debug" type="Float" default="0.85" min="0.2" max="1" step="0.05" apply="Immediate" target="gv:gv_debugHUDOpacity"/>
 </UserSettingsSchema>

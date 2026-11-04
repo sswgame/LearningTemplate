@@ -3,14 +3,14 @@
      ShooterDirectorComponent 가 남긴다: 새 웨이브에 들어설 때, 판이 끝날 때(쓰러짐). -->
 <TelemetrySchema version="1">
 	<Event id="progression.waveReached" category="progression">
-		<Field name="wave" type="int" required="true"/>
-		<Field name="kills" type="int" required="true"/>
-		<Field name="seconds" type="float"/>
+		<Field name="wave" type="Int" required="true"/>
+		<Field name="kills" type="Int" required="true"/>
+		<Field name="seconds" type="Float"/>
 	</Event>
 	<Event id="progression.roundEnded" category="progression">
-		<Field name="wave" type="int" required="true"/>
-		<Field name="kills" type="int" required="true"/>
-		<Field name="seconds" type="float"/>
-		<Field name="accuracy" type="float"/>
+		<Field name="wave" type="Int" required="true"/>
+		<Field name="kills" type="Int" required="true"/>
+		<Field name="seconds" type="Float"/>
+		<Field name="accuracy" type="Float"/>
 	</Event>
 </TelemetrySchema>
