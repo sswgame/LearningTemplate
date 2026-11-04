@@ -18,8 +18,11 @@
 	<EditorExpectObject name="TestKnight" component="SkeletalAnimatorComponent" selected="1"/>
 	<DevCommand line="panel.focus animation_rewind"/>
 	<EditorWaitSettled/>
-	<DevCommand line="editor play.start"/>
-	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="60"/>
+	<!-- 새 씬은 저장하지 않았다 — 툴바 Play 가 묻고 Play Anyway 로 띄운다(undosurvivesplay 와 같다) -->
+	<EditorClick mark="toolbar.play"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="toolbar.playAnyway"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.AnimationRewindTrackCount" equals="0"/>
 	<!-- Record — 트랙이 생기고 기록이 쌓인다 -->

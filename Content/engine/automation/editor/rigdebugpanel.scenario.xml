@@ -19,7 +19,12 @@
 	<EditorExpectObject name="TestKnight" component="PoseModifierComponent" selected="1"/>
 	<DevCommand line="panel.focus rig_debug"/>
 	<EditorWaitSettled/>
-	<DevCommand line="editor play.start"/>
+	<!-- 새 씬은 저장하지 않았다 — 툴바 Play 가 묻고 Play Anyway 로 띄운다(undosurvivesplay 와 같다) -->
+	<EditorClick mark="toolbar.play"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="toolbar.playAnyway"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="90"/>
+	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.RigDebugNodeCount" equals="2" timeoutFrames="120"/>
 	<Expect watch="Editor.RigDebugEnabledNodeCount" equals="2"/>
 	<Expect watch="Editor.RigDebugWeightSum" near="1.5" tolerance="0.001"/>
