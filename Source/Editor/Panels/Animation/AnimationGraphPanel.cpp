@@ -170,29 +170,36 @@ namespace sw::editor
     {
         if ( EditorChrome::beginToolbar( "##AnimationGraphToolbar" ) )
         {
-            if ( ImGui::Button( SW_LOCKEY( "EdText", "AddIdle" ) ) )
+            // 상태 종류마다 단추 하나씩이던 줄을 메뉴 하나로(언리얼 AnimBP 상태 기계 · 유니티 Animator 의 "상태 만들기" 메뉴).
+            if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphAddNode" ), "AddNode" ) ) )
+                EditorInputGUI::openPopup( "##animationAddNode" );
+            EditorSelfTestMarks::note( "animationGraph.addMenu" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphAddNodeTip" ) );
+            if ( ImGui::BeginPopup( "##animationAddNode" ) )
             {
-                addNamedNode( "Idle" );
-                notifyDocumentEdited( "Add Animation Graph Node" );
+                struct AddItem
+                {
+                    const utf8* _pName;
+                    const utf8* _pMark;
+                    const utf8* _pTip;
+                };
+                const AddItem arrItem[] = {
+                    {  "Idle",   "animationGraph.add.Idle", SW_LOCKEY( "EditorAnimationGraph",   "AddIdleTip" )},
+                    {  "Walk",   "animationGraph.add.Walk", SW_LOCKEY( "EditorAnimationGraph",   "AddWalkTip" )},
+                    {"Attack", "animationGraph.add.Attack", SW_LOCKEY( "EditorAnimationGraph", "AddAttackTip" )},
+                };
+                for ( const AddItem& item : arrItem )
+                {
+                    if ( ImGui::MenuItem( item._pName ) )
+                    {
+                        addNamedNode( item._pName );
+                        notifyDocumentEdited( "Add Animation Graph Node" );
+                    }
+                    EditorSelfTestMarks::note( item._pMark );
+                    EditorWidgets::drawTooltip( item._pTip );
+                }
+                ImGui::EndPopup();
             }
-            EditorSelfTestMarks::note( "animationGraph.add.Idle" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddIdleTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "AddWalk" ) ) );
-            if ( ImGui::Button( SW_LOCKEY( "EdText", "AddWalk" ) ) )
-            {
-                addNamedNode( "Walk" );
-                notifyDocumentEdited( "Add Animation Graph Node" );
-            }
-            EditorSelfTestMarks::note( "animationGraph.add.Walk" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddWalkTip" ) );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "AddAttack" ) ) );
-            if ( ImGui::Button( SW_LOCKEY( "EdText", "AddAttack" ) ) )
-            {
-                addNamedNode( "Attack" );
-                notifyDocumentEdited( "Add Animation Graph Node" );
-            }
-            EditorSelfTestMarks::note( "animationGraph.add.Attack" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddAttackTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "LinkSelected" ) ) );
             // 고른 노드 둘(고른 순서)을 잇는다 — 캔버스에서 노드를 누르고 Ctrl 로 둘째를 고른다.
             if ( ImGui::Button( SW_LOCKEY( "EdText", "LinkSelected" ) ) )

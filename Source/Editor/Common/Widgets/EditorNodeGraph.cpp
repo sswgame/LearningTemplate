@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Config/EditorPaths.h"
@@ -295,6 +296,14 @@ namespace sw::editor
     void EditorNodeGraph::endPin()
     {
         ed::EndPin();
+        if ( EditorSelfTestMarks::isEnabled() == false || _listFramePin.empty() )
+            return;
+        // 캔버스 안의 항목 좌표는 캔버스 좌표다 — 화면 좌표로 바꿔 적는다(시나리오가 핀을 빈 곳으로 끈다).
+        const ImVec2                           pinMin = ed::CanvasToScreen( ImGui::GetItemRectMin() );
+        const ImVec2                           pinMax = ed::CanvasToScreen( ImGui::GetItemRectMax() );
+        fixed_string<constant::buffer::kMax64> markName;
+        formatstring( markName.data(), markName.capacity(), "%#.pin.%#", _markScope.c_str(), _listFramePin.back()._pinID );
+        EditorSelfTestMarks::noteRect( markName.c_str(), float2{ pinMin.x, pinMin.y }, float2{ pinMax.x, pinMax.y } );
     }
 
     void EditorNodeGraph::applyViewRequests()

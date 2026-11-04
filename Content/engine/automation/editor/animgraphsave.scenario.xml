@@ -22,6 +22,8 @@
 	<Expect watch="Editor.TempAssetExists" equals="0"/>
 	<Expect watch="Editor.GraphNodeCount" equals="2"/>
 	<EditorWaitSettled/>
+	<EditorClick mark="animationGraph.addMenu"/>
+	<EditorWaitSettled/>
 	<EditorClick mark="animationGraph.add.Attack"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
 	<EditorWaitSettled/>
@@ -31,6 +33,8 @@
 	<EditorWaitSettled/>
 	<DevCommand line="asset.removeTemp {out}/temp.animgraph.xml"/>
 	<WaitUntil watch="Editor.TempAssetExists" equals="0" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="animationGraph.addMenu"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="animationGraph.add.Idle"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="1" timeoutFrames="60"/>
