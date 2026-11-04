@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  AbilityArena 에디터 시나리오 — 어빌리티 디버거 창(ability_debugger). 어빌리티 세트(체력 · 공격력 어트리뷰트, 화염구 등)는 이 게임의 카탈로그가 주므로
+  엔진 에디터 체인(Empty)에서는 대상이 없다.
+  ① 창을 열고 플레이를 시작한다. ② 대상 콤보를 펼쳐 ArenaPlayer 를 고르면 그 AbilityComponent 의 어트리뷰트와 어빌리티 줄이 뜬다(언리얼 showdebug abilitysystem).
+  ③ 플레이를 멈춘다. 에디터 단계를 쓰므로 게임 체인이 줍지 않게 하위 폴더 editor/ 에 둔다.
+  감시 값: Editor.AbilityDebugAttributeCount · Editor.AbilityDebugAbilityCount(창이 지난 그리기에서 모은 대상의 상태) · Editor.PlayState.
+  실행: App -EnableEditor -game=AbilityArena -scenario=game/abilityarena/automation/editor/abilitydebugger.scenario.xml -unattended
+-->
+<Scenario name="game.abilityarena.abilitydebugger" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutFrames="900"/>
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_arenaAutoPlay" value="0"/>
+	<EditorWaitSettled/>
+	<DevCommand line="layout.reset"/>
+	<EditorWaitSettled/>
+	<!-- ① 창 · 플레이 -->
+	<DevCommand line="panel.focus ability_debugger"/>
+	<EditorWaitSettled/>
+	<DevCommand line="play"/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<EditorWaitSettled/>
+	<!-- ② 대상 고르기 — 어트리뷰트 · 어빌리티 줄 -->
+	<EditorClick mark="abilityDebug.target"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="abilityDebug.candidate.ArenaPlayer"/>
+	<WaitUntil watch="Editor.AbilityDebugAttributeCount" atLeast="2" timeoutFrames="60"/>
+	<Expect watch="Editor.AbilityDebugAbilityCount" atLeast="1"/>
+	<EditorWaitSettled/>
+	<!-- ③ 멈춤 -->
+	<DevCommand line="stop"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

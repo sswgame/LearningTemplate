@@ -41,6 +41,8 @@ namespace sw::editor
         bool             isToolPanel() const override { return true; }
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 69.0f, 34.0f ); }
         void             drawContent() override;
+        /** @brief 지난 그리기가 모은 대상의 상태입니다. 플레이 중이 아니었거나 대상이 없었으면 nullptr 입니다(감시 값 `Editor.AbilityDebug*`). */
+        const AbilityDebugSnapshot* findSnapshot() const { return _bSnapshotValid ? &_snapshot : nullptr; }
 
     private:
         AbilityComponent* findTarget();
@@ -50,5 +52,6 @@ namespace sw::editor
         AbilityDebugSnapshot     _snapshot;
         vector<GameObjectHandle> _listCandidate;
         GameObjectHandle         _pickedHandle;
+        bool                     _bSnapshotValid{ false }; ///< 지난 그리기에서 `_snapshot` 을 모았다
     };
 } // namespace sw::editor

@@ -9,7 +9,9 @@
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+#include "Editor/SelfTest/EditorSelfTestInput.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -20,6 +22,40 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct AbilityDebugPanelInternal
+        {
+            /** @brief 열린 어빌리티 디버거가 지난 그리기에서 모은 상태입니다. 창이 닫혔거나 모으지 않았으면 nullptr 입니다. */
+            [[nodiscard]] static const AbilityDebugSnapshot* findOpenSnapshot()
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
+                    return nullptr;
+                const AbilityDebugPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<AbilityDebugPanel>();
+                return pPanel != nullptr && pPanel->isOpen() ? pPanel->findSnapshot() : nullptr;
+            }
+
+            [[nodiscard]] static bool readAttributeCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AbilityDebugSnapshot* pSnapshot = findOpenSnapshot();
+                if ( pSnapshot == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pSnapshot->_listAttribute.size() );
+                return true;
+            }
+
+            [[nodiscard]] static bool readAbilityCount( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const AbilityDebugSnapshot* pSnapshot = findOpenSnapshot();
+                if ( pSnapshot == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pSnapshot->_listAbility.size() );
+                return true;
+            }
+        };
+    } // namespace
+
     AbilityComponent* AbilityDebugPanel::findTarget()
     {
         // 선택한 오브젝트에 컴포넌트가 있으면 그것을 본다 — 도는 월드(메인 씬)를 디버그하는 창이라 메인 씬의 선택이다
@@ -50,7 +86,9 @@ namespace sw::editor
 
         const GameObject* pCurrentOwner = pCurrent != nullptr ? pCurrent->getOwner() : nullptr;
         const utf8*       pPreview      = pCurrentOwner != nullptr ? pCurrentOwner->getName().c_str() : SW_LOCKEY( "EdAbilityDebug", "PickTarget" );
-        if ( ImGui::BeginCombo( "##AbilityTarget", pPreview ) == false )
+        const bool        bOpen         = ImGui::BeginCombo( "##AbilityTarget", pPreview );
+        EditorSelfTestMarks::note( "abilityDebug.target" );
+        if ( bOpen == false )
             return;
 
         // 펼칠 때만 씬을 훑는다
@@ -71,12 +109,15 @@ namespace sw::editor
             if ( ImGui::Selectable( pObject->getName().c_str(), pObject == pCurrentOwner ) )
                 _pickedHandle = handle;
             ImGui::PopID();
+            const string mark = string( "abilityDebug.candidate." ) + pObject->getName().c_str();
+            EditorSelfTestMarks::note( mark.c_str() ); // 시나리오가 대상을 고른다(펼칠 때만 그려진다)
         }
         ImGui::EndCombo();
     }
 
     void AbilityDebugPanel::drawContent()
     {
+        _bSnapshotValid           = false;
         AbilityComponent* pTarget = findTarget();
         drawTargetPicker( pTarget );
 
@@ -94,6 +135,7 @@ namespace sw::editor
         }
 
         AbilityDebugModel::collect( *pTarget, _snapshot );
+        _bSnapshotValid = true;
         ImGui::TextDisabled( "t = %.2f", static_cast<float64>( _snapshot._time ) );
         drawSnapshot();
     }
@@ -195,4 +237,9 @@ namespace sw::editor
     }
 
     SW_EDITOR_PANEL( AbilityDebugPanel, AbilityDebugPanel::kPanelID, EditorPanelCategory::Custom, 9310 );
+    SW_AUTOMATION_WATCH( editorAbilityDebugAttributeCount, "Editor.AbilityDebugAttributeCount",
+                         "Attributes of the Ability Debugger's target as it last drew (fails while closed, stopped or without a target)",
+                         &AbilityDebugPanelInternal::readAttributeCount );
+    SW_AUTOMATION_WATCH( editorAbilityDebugAbilityCount, "Editor.AbilityDebugAbilityCount", "Granted abilities of the Ability Debugger's target as it last drew",
+                         &AbilityDebugPanelInternal::readAbilityCount );
 } // namespace sw::editor
