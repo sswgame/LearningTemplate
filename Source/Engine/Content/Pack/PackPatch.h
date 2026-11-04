@@ -13,6 +13,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     class INetSecurityProvider;
@@ -67,6 +69,51 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 패치 목록 루트(`<PackPatch from to pack [packSHA256 signature]>`)의 칸입니다. 해시와 서명은 함께 있거나 함께 없다(`PackPatchUtil::parseManifest` 가 본다). */
+    REFLECT()
+    struct SW_API PackPatchManifestFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _from{};
+        PROPERTY( Required )
+        string _to{};
+        PROPERTY( Required )
+        string _pack{};
+        PROPERTY()
+        string _packSHA256{};
+        PROPERTY()
+        string _signature{};
+    };
+
+    /**
+     * @brief 빌드 기록 루트(`<PackBuild patching [build]>`)의 칸입니다. `none` 은 번호 · 내용 목록을 갖지 않는다.
+     * @details `patching` 의 철자(`chain` · `none`)는 설치된 게임과 지난 릴리스의 패치 빌더가 읽는 바깥 계약이라 열거자 이름으로 바꾸지 않는다 — 글로 받아 `PackPatchUtil` 이 푼다.
+     */
+    REFLECT()
+    struct SW_API PackBuildRecordFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _patching{};
+        PROPERTY()
+        string _build{};
+    };
+
+    /** @brief 패치 목록의 `<Removed path>` · 빌드 기록의 `<Entry path hash>` 입니다(`hash` 는 기록에만 — 16 진 16 자). */
+    REFLECT()
+    struct SW_API PackPathFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _path{};
+        PROPERTY()
+        string _hash{};
+    };
+
     /**
      * @brief 패치 목록 파일 하나(`<PackPatch from="…" to="…" pack="…" [packSHA256="…" signature="…"]><Removed path="…"/></PackPatch>`)입니다.
      * @details `packSHA256`(패치 팩 파일의 SHA-256, 소문자 16 진 64 자)과 `signature`(ES256 r ‖ s, 소문자 16 진 128 자)는 둘이 함께 있거나 함께 없다. 서명은 목록의
