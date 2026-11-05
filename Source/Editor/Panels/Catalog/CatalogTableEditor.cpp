@@ -126,13 +126,14 @@ namespace sw::editor
         const ImVec2              outerSize{ 0.0f, CatalogTableEditorInternal::computeOuterHeight( _listVisibleRow.size() ) };
         if ( ImGui::BeginTable( "##CatalogRows", columnCount, kTableFlags, outerSize ) )
         {
+            // 동작 칸은 맨 앞에 고정한다 - 맨 뒤면 칸이 많은 표에서 가로 스크롤 밖으로 밀려 행을 복사 · 삭제하지 못한다.
+            ImGui::TableSetupColumn( "##actions", ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kActionColumnWidth * dpiScale );
             for ( const string& column : group._listColumn )
             {
                 ImGui::TableSetupColumn( column.c_str(), ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kColumnWidth * dpiScale );
             }
             ImGui::TableSetupColumn( "children", ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kChildColumnWidth * dpiScale );
-            ImGui::TableSetupColumn( "##actions", ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kActionColumnWidth * dpiScale );
-            ImGui::TableSetupScrollFreeze( 0, 1 );
+            ImGui::TableSetupScrollFreeze( 1, 1 );
             ImGui::TableHeadersRow();
 
             ImGuiListClipper clipper;
@@ -161,15 +162,26 @@ namespace sw::editor
     {
         ImGui::PushID( elementIndex );
         ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex( 0 );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "Duplicate" ) ) )
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::DuplicateRow, elementIndex, string(), string() };
+        if ( rowPosition == 0 && bFirstGroup )
+            EditorSelfTestMarks::note( "catalog.row.duplicate.first" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::RemoveRow, elementIndex, string(), string() };
+        if ( rowPosition == 0 && bFirstGroup )
+            EditorSelfTestMarks::note( "catalog.row.remove.first" );
+
         for ( size_t columnIndex = 0; columnIndex < group._listColumn.size(); ++columnIndex )
         {
-            ImGui::TableSetColumnIndex( static_cast<int32>( columnIndex ) );
+            ImGui::TableSetColumnIndex( static_cast<int32>( columnIndex ) + 1 );
             drawCell( document, elementIndex, group._listColumn[columnIndex], inoutbFirstCell, -1.0f );
             inoutbFirstCell = false;
         }
 
         const CatalogXMLElement& element = document.getParsed().getElement( elementIndex );
-        ImGui::TableSetColumnIndex( static_cast<int32>( group._listColumn.size() ) );
+        ImGui::TableSetColumnIndex( static_cast<int32>( group._listColumn.size() ) + 1 );
         if ( element._listChild.empty() )
             ImGui::TextDisabled( "-" );
         else
@@ -201,17 +213,6 @@ namespace sw::editor
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "EditNestedElementsInTheRawTextView" ) );
             ImGui::EndTooltip();
         }
-
-        ImGui::TableSetColumnIndex( static_cast<int32>( group._listColumn.size() ) + 1 );
-        if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "Duplicate" ) ) )
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::DuplicateRow, elementIndex, string(), string() };
-        if ( rowPosition == 0 && bFirstGroup )
-            EditorSelfTestMarks::note( "catalog.row.duplicate.first" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
-        if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
-            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::RemoveRow, elementIndex, string(), string() };
-        if ( rowPosition == 0 && bFirstGroup )
-            EditorSelfTestMarks::note( "catalog.row.remove.first" );
         ImGui::PopID();
     }
 
