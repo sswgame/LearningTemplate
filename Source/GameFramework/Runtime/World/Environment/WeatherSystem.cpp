@@ -122,8 +122,17 @@ namespace sw
 
     bool WeatherSystem::update( float32 gameSeconds, const hashed_string& season )
     {
-        if ( _pCurrent == nullptr || gameSeconds <= 0.0f )
+        if ( gameSeconds <= 0.0f )
             return false;
+        if ( _pCurrent == nullptr )
+        {
+            // 시작 계절에 올 날씨가 없었다. 올 수 있는 계절이 되면 전환 없이 시작한다.
+            _pCurrent = pickWeather( season, _random, nullptr );
+            if ( _pCurrent == nullptr )
+                return false;
+            _remaining = pickDuration( *_pCurrent, _random );
+            return true;
+        }
         _transitionElapsed += gameSeconds;
         _remaining -= gameSeconds;
         if ( _remaining > 0.0f )

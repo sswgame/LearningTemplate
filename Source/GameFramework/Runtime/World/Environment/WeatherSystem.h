@@ -105,7 +105,7 @@ namespace sw
         WeatherSystem();
 
         void initialize( const WeatherCatalog* pCatalog, uint32 seed, const hashed_string& season );
-        /** @brief 시간을 흘립니다. 날씨가 바뀌었으면 true 입니다. */
+        /** @brief 시간을 흘립니다. 날씨가 바뀌었으면(날씨 없음에서 시작한 경우 포함) true 입니다. */
         bool update( float32 gameSeconds, const hashed_string& season );
         /** @brief 날씨를 정합니다. 이벤트와 퀘스트가 씁니다. @p duration 이 0 이면 정의의 범위에서 고릅니다. */
         void forceWeather( const hashed_string& weatherID, float32 duration = 0.0f, bool bImmediate = false );
