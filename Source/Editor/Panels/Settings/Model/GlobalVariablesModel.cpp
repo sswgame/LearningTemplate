@@ -20,7 +20,7 @@ namespace sw::editor
             /// @brief 프리셋 파일의 접미사입니다.
             static constexpr string_view kPresetSuffix = ".gvpreset.xml";
             /// @brief 프리셋 이름에 쓸 수 없는 경로 글자입니다(폴더 구분자와 Windows 드라이브 · 스트림 구분자).
-            static constexpr string_view kPresetNamePathChars = "/\:";
+            static constexpr string_view kPresetNamePathChars = "/\\:";
 
             static bool compareVariableInfo( const GlobalVariableInfo* pLeft, const GlobalVariableInfo* pRight )
             {
