@@ -33,12 +33,13 @@ namespace sw
         return true;
     }
 
-    int32 FarmShippingBin::settleShipping( const CropCatalog& catalog, Wallet& inoutWallet )
+    int64 FarmShippingBin::settleShipping( const CropCatalog& catalog, Wallet& inoutWallet )
     {
-        int32 earned = 0;
+        // 개수는 상태 바이트에서 int32 상한까지 온다 — 값은 지갑과 같은 64 비트로 더한다.
+        int64 earned = 0;
         for ( const auto& [itemID, count] : _bin.getItems() )
         {
-            earned += catalog.findSellPrice( itemID ) * count;
+            earned += static_cast<int64>( catalog.findSellPrice( itemID ) ) * count;
         }
         _bin.clear();
         if ( 0 < earned )

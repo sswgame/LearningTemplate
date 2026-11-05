@@ -68,15 +68,31 @@ namespace sw
                 return false;
             archive >> tile._growth;
             archive >> flags;
-            if ( archive.isError() || tile._growth < 0 )
+            if ( archive.isError() || flags > 15u || tile._growth < 0 )
                 return false;
             tile._bTilled   = ( flags & 1u ) != 0 ? SW_TRUE : SW_FALSE;
             tile._bWatered  = ( flags & 2u ) != 0 ? SW_TRUE : SW_FALSE;
             tile._bReady    = ( flags & 4u ) != 0 ? SW_TRUE : SW_FALSE;
             tile._bWithered = ( flags & 8u ) != 0 ? SW_TRUE : SW_FALSE;
+            if ( isTileValid( tile ) == false )
+                return false;
         }
         _listTile = std::move( listTile );
         return true;
+    }
+
+    bool FarmField::isTileValid( const FarmTile& tile ) const
+    {
+        // 물은 간 땅에만 준다(비도 같다).
+        if ( tile._bWatered == SW_TRUE && tile._bTilled == SW_FALSE )
+            return false;
+        if ( tile.hasCrop() == false )
+            return tile._growth == 0 && tile._bReady == SW_FALSE && tile._bWithered == SW_FALSE;
+        // 모르는 작물은 `advanceDay` 가 건너뛰고 `harvest` 가 거절해 타일이 영영 막힌다. 다 자란 표시는 자란 날로 번다.
+        const CropDef* pCrop = findCropDef( tile );
+        if ( pCrop == nullptr || tile._bTilled == SW_FALSE || tile._growth > pCrop->_growthDays )
+            return false;
+        return tile._bReady == SW_FALSE || ( tile._bWithered == SW_FALSE && tile._growth >= pCrop->_growthDays );
     }
 
     FarmActionResult FarmField::till( int32 x, int32 y )

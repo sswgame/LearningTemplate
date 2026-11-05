@@ -105,12 +105,14 @@ namespace sw
 
         /** @brief 타일마다 작물, 자람, 상태를 씁니다(핫 리로드와 세이브용). */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 타일을 복원합니다. 밭 크기가 다르거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다(카탈로그는 `initialize` 에서 받은 것을 씁니다). */
+        /** @brief `writeState` 가 쓴 바이트로 타일을 복원합니다. 밭 크기가 다르거나, 카탈로그에 없는 작물, 규칙으로 나올 수 없는 타일이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다(카탈로그는 `initialize` 에서 받은 것을 씁니다). */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
-        FarmTile*      findTileMutable( int32 x, int32 y );
-        const CropDef* findCropDef( const FarmTile& tile ) const;
+        FarmTile* findTileMutable( int32 x, int32 y );
+        /** @brief 읽은 타일이 규칙으로 나올 수 있는 타일인지 반환합니다. 작물은 카탈로그에 있고, 자람은 다 자란 날을 넘지 않습니다. */
+        [[nodiscard]] bool isTileValid( const FarmTile& tile ) const;
+        const CropDef*     findCropDef( const FarmTile& tile ) const;
 
     private:
         vector<FarmTile>   _listTile; ///< 타일마다의 상태이다(`_topology` 의 타일 번호)

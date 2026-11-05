@@ -7,6 +7,7 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmShippingBin.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -28,6 +29,26 @@ namespace
     const sw::hashed_string kTurnipSeed{ "turnip_seed" };
     const sw::hashed_string kTomato{ "tomato" };
     const sw::hashed_string kTomatoSeed{ "tomato_seed" };
+
+    /** @brief `FarmField::writeState` 의 타일 한 칸짜리 밭을 꾸밉니다. 깃발은 갈았음 1, 물 2, 다 자람 4, 시듦 8 입니다. */
+    struct FarmForgedTile
+    {
+        sw::hashed_string _cropID{};
+        int32             _growth{ 0 };
+        uint8             _flags{ 1 };
+
+        bool readInto( sw::FarmField& inoutField ) const
+        {
+            sw::Archive written;
+            written << static_cast<int32>( 1 );
+            written << static_cast<int32>( 1 );
+            sw::StateArchiveUtil::writeName( written, _cropID );
+            written << _growth;
+            written << _flags;
+            sw::Archive reading( written.getData(), written.getSize() );
+            return inoutField.readState( reading );
+        }
+    };
 } // namespace
 
 /**
@@ -218,9 +239,69 @@ SW_TEST_CASE( FarmingTest, ShippingBinSellsAtCatalogPrices )
     SW_EXPECT_EQUAL( 0, bag.getItemCount( kTurnip ) );
 
     sw::Wallet wallet;
-    SW_EXPECT_EQUAL( 3 * 60 + 2 * 10, bin.settleShipping( catalog, wallet ) );
+    SW_EXPECT_EQUAL( int64( 3 * 60 + 2 * 10 ), bin.settleShipping( catalog, wallet ) );
     SW_EXPECT_EQUAL( int64( 200 ), wallet.getBalance( sw::Wallet::getDefaultCurrency() ) );
     SW_EXPECT_EQUAL( 0, bin.getShippedItemCount() );
-    SW_EXPECT_EQUAL( 0, bin.settleShipping( catalog, wallet ) );
+    SW_EXPECT_EQUAL( int64( 0 ), bin.settleShipping( catalog, wallet ) );
     SW_EXPECT_EQUAL( 0, catalog.findSellPrice( sw::hashed_string( "rock" ) ) );
+}
+
+/**
+ * @brief [FarmingTest] 결함: 밭 상태가 음수 자람만 보았다. 모르는 작물(타일이 영영 막힌다), 자란 날 없이 다 자란 표시, 다 자란 날을 넘는 자람, 갈지 않은 땅의 작물 · 물, 작물 없는 표시, 모르는 깃발을 거절하고 밭을 둔다
+ */
+SW_TEST_CASE( FarmingTest, FieldStateRefusesImpossibleTiles )
+{
+    sw::CropCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCropXML, "FarmingTest" ) );
+    sw::FarmField field;
+    field.initialize( 1, 1, &catalog );
+
+    SW_REQUIRE_TRUE( ( FarmForgedTile{ kTurnip, 1, 1 } ).readInto( field ) ); // 형식은 맞다
+    SW_EXPECT_EQUAL( 1, field.findTile( 0, 0 )->_growth );
+    SW_REQUIRE_TRUE( ( FarmForgedTile{ kTurnip, 2, 1 | 4 } ).readInto( field ) ); // 다 자랐다
+    SW_REQUIRE_TRUE( ( FarmForgedTile{ kTurnip, 1, 1 } ).readInto( field ) );
+
+    SW_EXPECT_FALSE( ( FarmForgedTile{ sw::hashed_string( "rock" ), 0, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, -1, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 3, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 1, 1 | 4 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 2, 1 | 4 | 8 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmForgedTile{ kTurnip, 1, 0 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 0, 2 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 1, 1 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 0, 1 | 4 } ).readInto( field ) );
+    SW_EXPECT_FALSE( ( FarmForgedTile{ {}, 0, 16 } ).readInto( field ) );
+    SW_EXPECT_EQUAL( kTurnip, field.findTile( 0, 0 )->_cropID );
+    SW_EXPECT_EQUAL( 1, field.findTile( 0, 0 )->_growth );
+}
+
+/**
+ * @brief [FarmingTest] 결함: 출하함이 같은 아이템의 줄 둘을 합쳐 int32 를 넘겼고, 정산이 값 x 개수를 32 비트로 곱해 넘쳤다. 겹친 줄은 거절하고 큰 개수는 64 비트로 정산한다
+ */
+SW_TEST_CASE( FarmingTest, ShippingBinStateRefusesRepeatedItemsAndSettlesLargeCounts )
+{
+    sw::CropCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kCropXML, "FarmingTest" ) );
+    sw::FarmShippingBin bin;
+
+    sw::Archive repeated;
+    repeated << static_cast<uint32>( 2 );
+    sw::StateArchiveUtil::writeName( repeated, kTurnip );
+    repeated << static_cast<int32>( 0x7FFFFFFF );
+    sw::StateArchiveUtil::writeName( repeated, kTurnip );
+    repeated << static_cast<int32>( 1 );
+    sw::Archive readingRepeated( repeated.getData(), repeated.getSize() );
+    SW_EXPECT_FALSE( bin.readState( readingRepeated ) );
+    SW_EXPECT_EQUAL( 0, bin.getShippedItemCount() );
+
+    sw::Archive large;
+    large << static_cast<uint32>( 1 );
+    sw::StateArchiveUtil::writeName( large, kTurnip );
+    large << static_cast<int32>( 0x7FFFFFFF );
+    sw::Archive readingLarge( large.getData(), large.getSize() );
+    SW_REQUIRE_TRUE( bin.readState( readingLarge ) );
+    sw::Wallet  wallet;
+    const int64 expected = int64( 0x7FFFFFFF ) * 60;
+    SW_EXPECT_EQUAL( expected, bin.settleShipping( catalog, wallet ) );
+    SW_EXPECT_EQUAL( expected, wallet.getBalance( sw::Wallet::getDefaultCurrency() ) );
 }

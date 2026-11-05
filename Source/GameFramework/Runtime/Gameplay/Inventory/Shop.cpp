@@ -562,7 +562,14 @@ namespace sw
             archive >> saved._buyModifier;
             archive >> saved._sellModifier;
             archive >> saved._daysSinceRestock;
-            if ( archive.isError() )
+            // `setPriceModifier` 가 음수 배율을 거절한다 — 상태 바이트도 같다. 음수 값은 팔 때 돈을 내게 하고 살 때 돈을 준다.
+            bool bSellFactorValid = true;
+            for ( const float32 sellFactor : saved._listSellFactor )
+            {
+                bSellFactorValid = bSellFactorValid && 0.0f <= sellFactor;
+            }
+            const bool bPriceValid = 0.0f <= saved._buyModifier && 0.0f <= saved._sellModifier && bSellFactorValid && 0 <= saved._daysSinceRestock;
+            if ( archive.isError() || bPriceValid == false )
                 return false;
             // 카탈로그에서 지운 가게는 버리고, 재고 항목 수가 바뀐 가게는 깨진 것으로 본다. 재고는 정의 순서로 짝지어 복원한다
             for ( ShopRuntime& runtime : listRuntime )

@@ -243,7 +243,7 @@ namespace sw
          *        도착 누적, 미룬 폐기비, 다음 손님 번호, 영업 중 여부를 씁니다. 카탈로그, 설정, 빌린 지갑, 시계, 평판, 주방 창고는 저장하지 않고, 이벤트는 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그와 설정으로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 메뉴 수가 다르면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그와 설정으로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나, 메뉴 수가 다르거나, 음수 · 범위 밖 값, 없는 손님 · 요리 · 직원, 겹친 줄이나 자리가 있으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 지금 주문할 수 있는 요리인지 반환합니다(메뉴, 레시피, 스테이션, 레벨, 재료를 확인합니다). */
@@ -292,6 +292,8 @@ namespace sw
         void pushSatisfaction( float32 satisfaction );
         void grantXP( StaffMember& staff, int64 amount );
         void rollMarketPrices();
+        /** @brief 읽은 상태의 손님, 주문, 직원, 메뉴, 자리가 서로와 카탈로그에 맞는지 반환합니다. `readState` 가 사본에 부릅니다. */
+        [[nodiscard]] bool areLinksValid() const;
 
         int32            findCustomerIndex( int32 customerID ) const;
         int32            findIdleStaff( StaffRole role ) const;

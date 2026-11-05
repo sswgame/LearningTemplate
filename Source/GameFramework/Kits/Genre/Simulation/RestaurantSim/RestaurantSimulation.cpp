@@ -58,6 +58,14 @@ namespace sw
                 archive >> outToday._unservedAtClose;
             }
 
+            /** @brief 읽은 결산의 돈과 사람 수가 음수가 아닌지 봅니다(이익만 음수가 될 수 있습니다). */
+            static bool isDaySummaryValid( const RestaurantDaySummary& today )
+            {
+                const bool bMoneyValid  = 0 <= today._revenue && 0 <= today._tips && 0 <= today._ingredientCost && 0 <= today._wages && 0 <= today._spoilageCost;
+                const bool bPeopleValid = 0 <= today._arrivals && 0 <= today._served && 0 <= today._walkouts && 0 <= today._noChoice && 0 <= today._unservedAtClose;
+                return bMoneyValid && bPeopleValid && 0.0f <= today._rating && today._rating <= 5.0f;
+            }
+
             /** @brief `writeState` 가 쓴 직원 하나를 읽습니다. 역할이 범위 밖이거나 플래그가 깨졌으면 false 입니다. */
             [[nodiscard]] static bool readStaff( Archive& archive, StaffMember& outStaff )
             {
@@ -69,7 +77,8 @@ namespace sw
                 archive >> outStaff._taskCustomer;
                 archive >> role;
                 archive >> outStaff._bHired;
-                const bool bInvalidStaffData = archive.isError() || role > static_cast<uint8>( StaffRole::Cashier ) || outStaff._bHired > SW_TRUE;
+                const bool bValuesValid      = 0.0f <= outStaff._busyMinutes && 0 <= outStaff._dailyWage && -1 <= outStaff._taskCustomer;
+                const bool bInvalidStaffData = archive.isError() || role > static_cast<uint8>( StaffRole::Cashier ) || outStaff._bHired > SW_TRUE || bValuesValid == false;
                 if ( bInvalidStaffData )
                     return false;
                 outStaff._role = static_cast<StaffRole>( role );
@@ -92,12 +101,14 @@ namespace sw
                 archive >> state;
                 archive >> outCustomer._bServing;
                 archive >> outCustomer._bCheckingOut;
-                const bool bValid = archive.isOk() && state <= static_cast<uint8>( CustomerState::Left ) && -1 <= outCustomer._seat && outCustomer._seat < seatCount &&
-                                    outCustomer._bServing <= SW_TRUE && outCustomer._bCheckingOut <= SW_TRUE;
+                const bool bValuesValid = 0.0f <= outCustomer._waited && 0.0f <= outCustomer._patience && 0 <= outCustomer._price && 0 < outCustomer._id && 0 <= outCustomer._quality;
+                const bool bValid       = archive.isOk() && state <= static_cast<uint8>( CustomerState::Left ) && -1 <= outCustomer._seat && outCustomer._seat < seatCount &&
+                                    outCustomer._bServing <= SW_TRUE && outCustomer._bCheckingOut <= SW_TRUE && bValuesValid;
                 if ( bValid == false )
                     return false;
                 outCustomer._state = static_cast<CustomerState>( state );
-                return true;
+                // 앉은 손님만 자리를 가진다(`leaveCustomer`, `settlePayment` 가 비운다).
+                return isSeated( outCustomer ) == ( outCustomer._seat >= 0 );
             }
 
             /** @brief `writeState` 가 쓴 주문 하나를 읽습니다. 요리사 번호가 @p staffCount 밖이면 false 입니다. */
@@ -110,7 +121,9 @@ namespace sw
                 archive >> outOrder._cook;
                 archive >> outOrder._quality;
                 archive >> outOrder._bReady;
-                return archive.isOk() && -1 <= outOrder._cook && outOrder._cook < staffCount && outOrder._bReady <= SW_TRUE;
+                // 기다리는 주문과 조리 중인 주문의 남은 시간은 음수가 아니다. 다 된 주문만 걸음만큼 넘긴 값이 남는다. 다 되면 요리사를 풀어 준다.
+                const bool bProgressValid = outOrder._bReady == SW_FALSE ? 0.0f <= outOrder._remaining : outOrder._cook < 0;
+                return archive.isOk() && -1 <= outOrder._cook && outOrder._cook < staffCount && outOrder._bReady <= SW_TRUE && 0 <= outOrder._quality && bProgressValid;
             }
         };
     } // namespace
@@ -516,7 +529,8 @@ namespace sw
                 return false;
             archive >> entry._price;
             archive >> entry._bOnMenu;
-            if ( archive.isError() || entry._bOnMenu > SW_TRUE )
+            // `setMenuPrice` 처럼 가격은 1 이상이다. 음수 가격은 손님이 낼 때 지갑에서 돈을 뺀다.
+            if ( archive.isError() || entry._bOnMenu > SW_TRUE || entry._price < 1 )
                 return false;
         }
 
@@ -529,6 +543,8 @@ namespace sw
             if ( StateArchiveUtil::readName( archive, slot._station ) == false )
                 return false;
             archive >> slot._count;
+            if ( slot._station.empty() || slot._count < 0 )
+                return false;
         }
         if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false )
             return false;
@@ -536,6 +552,8 @@ namespace sw
         for ( float32& satisfaction : restored._listSatisfaction )
         {
             archive >> satisfaction;
+            if ( satisfaction < 0.0f || 1.0f < satisfaction )
+                return false;
         }
 
         const bool bPartRead = archive.isOk() && restored._stock.readState( archive ) && restored._crafter.readState( archive ) && restored._market.readState( archive );
@@ -549,24 +567,73 @@ namespace sw
         archive >> restored._pendingSpoilageCost;
         archive >> restored._nextCustomerID;
         archive >> restored._bOpen;
-        const bool bInvalidRestaurantState = bTailRead == false || bArrivalRead == false || archive.isError() || restored._bOpen > SW_TRUE;
-        if ( bInvalidRestaurantState )
+        const bool bValuesValid            = 0.0f <= restored._minutes && 0 <= restored._pendingSpoilageCost && 0 < restored._nextCustomerID && RestaurantSimulationInternal::isDaySummaryValid( restored._today );
+        const bool bInvalidRestaurantState = bTailRead == false || bArrivalRead == false || archive.isError() || restored._bOpen > SW_TRUE || bValuesValid == false;
+        if ( bInvalidRestaurantState || restored.areLinksValid() == false )
             return false;
-
-        // 직원이 맡은 손님과 주문의 손님은 있는 손님이어야 한다.
-        for ( const StaffMember& staff : restored._listStaff )
-        {
-            if ( staff._taskCustomer >= 0 && restored.findCustomerIndex( staff._taskCustomer ) < 0 )
-                return false;
-        }
-        for ( const KitchenOrder& order : restored._listOrder )
-        {
-            if ( restored.findCustomerIndex( order._customerID ) < 0 )
-                return false;
-        }
         restored._eventBuffer.clear();
         restored._listSpoilageScratch.clear();
         *this = std::move( restored );
+        return true;
+    }
+
+    bool RestaurantSimulation::areLinksValid() const
+    {
+        if ( _pCatalog == nullptr && ( _listCustomer.empty() == false || _listOrder.empty() == false ) )
+            return false; // 카탈로그 없이는 손님을 받지 못한다(`admitCustomer`)
+        // 메뉴와 스테이션은 요리와 이름마다 한 줄이다. 찾기는 앞의 것만 돌려주어 뒤의 줄은 쓰이지 않는다.
+        for ( const MenuEntry& entry : _listMenu )
+        {
+            if ( _pCatalog == nullptr || _pCatalog->findDish( entry._dishID ) == nullptr )
+                return false;
+        }
+        const bool bRepeatedLine = VectorUtil::findDuplicateBy<&MenuEntry::_dishID>( _listMenu ) != nullptr || VectorUtil::findDuplicateBy<&StationSlot::_station>( _listStation ) != nullptr;
+        // 별점 창보다 많은 만족도는 `pushSatisfaction` 이 남기지 않는다.
+        const size_t ratingWindow = static_cast<size_t>( _pCatalog != nullptr ? _pCatalog->getRatingWindow() : 10 );
+        if ( bRepeatedLine || _listSatisfaction.size() > ratingWindow || VectorUtil::findDuplicateBy<&RestaurantCustomer::_id>( _listCustomer ) != nullptr )
+            return false;
+
+        vector<uint8> listSeatTaken( static_cast<size_t>( MathUtil::max( 0, _settings._seatCount ) ), SW_FALSE );
+        for ( const RestaurantCustomer& customer : _listCustomer )
+        {
+            const DishDef* pDish      = customer._dishID.empty() ? nullptr : _pCatalog->findDish( customer._dishID );
+            const bool     bDishKnown = customer._dishID.empty() || pDish != nullptr;
+            const bool     bTypeKnown = _pCatalog->findCustomerType( customer._typeID ) != nullptr;
+            // 품질은 그 요리의 최대를 넘지 못하고, 앉은 손님은 고른 요리가 있다(`placeOrder`).
+            const bool bQualityValid = pDish != nullptr ? customer._quality <= pDish->getMaxQuality() : customer._quality == 0;
+            const bool bSeated       = RestaurantSimulationInternal::isSeated( customer );
+            if ( customer._id >= _nextCustomerID || bDishKnown == false || bTypeKnown == false || bQualityValid == false || ( bSeated && pDish == nullptr ) )
+                return false;
+            if ( bSeated == false )
+                continue;
+            uint8& bTaken = listSeatTaken[static_cast<size_t>( customer._seat )];
+            if ( bTaken != SW_FALSE )
+                return false; // 앉은 손님 둘이 한 자리에 있으면 그 자리가 비어도 빈 줄 모른다
+            bTaken = SW_TRUE;
+        }
+        for ( const StaffMember& staff : _listStaff )
+        {
+            // 맡은 일이 있는 직원은 고용 중이고 그 손님이 있다(`fireStaff` 가 풀어 준다). 레벨은 곡선 안이다.
+            const bool bTaskValid  = staff._taskCustomer < 0 || ( staff._bHired != SW_FALSE && findCustomerIndex( staff._taskCustomer ) >= 0 );
+            const bool bLevelValid = _pStaffCurve == nullptr || staff._level.getLevel() <= _pStaffCurve->getMaxLevel();
+            if ( bTaskValid == false || bLevelValid == false )
+                return false;
+        }
+        for ( const KitchenOrder& order : _listOrder )
+        {
+            // 주문은 요리를 기다리는 손님의 것이다. 계산이 끝난 손님의 주문은 나르면 먹기로 되돌아가 또 계산한다.
+            const int32 customerIndex = findCustomerIndex( order._customerID );
+            if ( customerIndex < 0 || _listCustomer[static_cast<size_t>( customerIndex )]._state != CustomerState::WaitingFood )
+                return false;
+            const DishDef* pDish = _pCatalog->findDish( order._dishID );
+            if ( pDish == nullptr || order._quality > pDish->getMaxQuality() )
+                return false;
+            if ( order._cook < 0 )
+                continue;
+            const StaffMember& cook = _listStaff[static_cast<size_t>( order._cook )];
+            if ( cook._bHired == SW_FALSE || cook._role != StaffRole::Cook )
+                return false;
+        }
         return true;
     }
 

@@ -781,7 +781,7 @@ namespace sw
         if ( pState == nullptr )
             return;
         WorldClock&                  clock        = pState->getClock();
-        [[maybe_unused]] const int32 earned       = _shipment.settleShipping( _cropCatalog, pState->getWallet() );
+        [[maybe_unused]] const int64 earned       = _shipment.settleShipping( _cropCatalog, pState->getWallet() );
         const hashed_string          seasonBefore = clock.getSeasonName();
         clock.advanceToHour( _wakeHour ); // 수면. 다음 날 아침이 된다.
         _dayStarted                               = clock.getDay();

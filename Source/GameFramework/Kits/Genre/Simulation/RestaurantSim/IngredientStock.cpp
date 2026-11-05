@@ -192,7 +192,9 @@ namespace sw
             archive >> batch._unitCost;
             archive >> batch._count;
             archive >> batch._daysLeft;
-            if ( archive.isError() || batch._count < 0 )
+            // 남은 날은 -1(상하지 않는다)이거나 양수이다. `advanceDay` 가 0 을 하루 줄이면 -1 이 되어 상하지 않는 배치로 바뀐다.
+            const bool bDaysValid = batch._daysLeft == -1 || batch._daysLeft > 0;
+            if ( archive.isError() || batch._itemID.empty() || batch._unitCost < 0 || batch._count < 0 || bDaysValid == false )
                 return false;
         }
         _listBatch = std::move( listBatch );

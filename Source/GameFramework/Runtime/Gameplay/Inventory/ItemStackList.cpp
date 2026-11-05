@@ -43,7 +43,8 @@ namespace sw
             if ( StateArchiveUtil::readName( archive, itemID ) == false )
                 return false;
             archive >> itemCount;
-            const bool bInvalidStackRecord = archive.isError() || itemID.empty() || itemCount <= 0;
+            // `writeState` 는 아이템마다 한 줄을 쓴다. 겹친 줄을 합치면 int32 를 넘겨 음수 개수가 된다.
+            const bool bInvalidStackRecord = archive.isError() || itemID.empty() || itemCount <= 0 || list.getItemCount( itemID ) > 0;
             if ( bInvalidStackRecord )
                 return false;
             list.addItem( itemID, itemCount );

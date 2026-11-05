@@ -38,7 +38,7 @@ namespace sw
         [[nodiscard]] bool shipItem( Inventory& inoutBag, const hashed_string& itemID, int32 count );
         int32              getShippedItemCount() const { return _bin.getTotalCount(); }
         /** @brief 하루 끝에 정산합니다. 카탈로그 가격으로 팔아 @p inoutWallet 에 더하고 비운 뒤, 번 돈을 반환합니다(가격을 모르는 아이템은 0 으로 팝니다). */
-        int32 settleShipping( const CropCatalog& catalog, Wallet& inoutWallet );
+        int64 settleShipping( const CropCatalog& catalog, Wallet& inoutWallet );
 
         /** @brief 출하함에 든 것을 씁니다(핫 리로드와 세이브용). 통화는 설정이므로 저장하지 않습니다. */
         void writeState( Archive& outArchive ) const { _bin.writeState( outArchive ); }
