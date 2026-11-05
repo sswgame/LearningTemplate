@@ -118,7 +118,7 @@ namespace sw::editor
             if ( FileUtil::tryMakePathUnderRoot( root, filePath, relative ) == false )
                 continue;
             const bool bScenario = StringUtil::endsWith( relative, EditorTestSelectionInternal::kScenarioSuffix ) &&
-                                   relative.find( EditorTestSelectionInternal::kAutomationFolder ) != string::npos;
+                                   string_view( relative ).find( EditorTestSelectionInternal::kAutomationFolder ) != string_view::npos;
             if ( bScenario )
                 _listPath.push_back( relative );
         }

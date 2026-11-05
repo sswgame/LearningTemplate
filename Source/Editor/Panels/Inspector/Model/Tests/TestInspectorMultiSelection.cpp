@@ -11,6 +11,7 @@
 #include "Editor/Panels/Inspector/Model/InspectorMultiSelection.h"
 
 #include "Engine/Object/Component/CameraComponent.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/Component/TagComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -81,6 +82,8 @@ SW_TEST_CASE( InspectorMultiSelectionTest, ActiveStateReadsTheSelfBitNotTheHiera
     SW_REQUIRE_NOT_NULL( pParent );
     SW_REQUIRE_NOT_NULL( pChild );
     SW_REQUIRE_NOT_NULL( pOther );
+    (void)pParent->addComponent<sw::SceneComponent>(); // 부모 붙이기는 장면 컴포넌트끼리의 일이다
+    (void)pChild->addComponent<sw::SceneComponent>();
     SW_REQUIRE_TRUE( pChild->attachToParent( pParent ) );
     SW_REQUIRE_FALSE( pChild->isActiveInHierarchy() );
 
