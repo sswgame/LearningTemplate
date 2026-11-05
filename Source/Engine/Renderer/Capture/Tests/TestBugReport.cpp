@@ -11,5 +11,5 @@ using namespace sw;
 SW_TEST_CASE( BugReportTest, ReportThatVanishedIsNotAnError )
 {
     BugReport report;
-    SW_EXPECT_FALSE( BugReport::readInfo( FileUtil::joinPath( FileUtil::getTempDirectory(), "SwNoSuchBugReport" ), report ) );
+    SW_EXPECT_FALSE( BugReport::readInfo( test::makeScratchPath( "SwNoSuchBugReport" ), report ) );
 }

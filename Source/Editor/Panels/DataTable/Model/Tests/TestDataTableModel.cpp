@@ -20,9 +20,9 @@ namespace
         DataTableTestFiles()
         {
             _first._fileName      = "SwDataTableFirst.xml";
-            _first._absolutePath  = FileUtil::joinPath( FileUtil::getTempDirectory(), _first._fileName );
+            _first._absolutePath  = test::makeScratchPath( _first._fileName );
             _second._fileName     = "SwDataTableSecond.xml";
-            _second._absolutePath = FileUtil::joinPath( FileUtil::getTempDirectory(), _second._fileName );
+            _second._absolutePath = test::makeScratchPath( _second._fileName );
             SW_REQUIRE_TRUE( FileUtil::writeTextFile( _first._absolutePath, "<First a=\"1\"/>" ) );
             SW_REQUIRE_TRUE( FileUtil::writeTextFile( _second._absolutePath, "<Second b=\"2\"/>" ) );
         }
@@ -177,7 +177,7 @@ SW_TEST_CASE( DataTableModelTest, UnreadableFileIsNotSelected )
     const DataTableTestFiles files;
     GameDataFileEntry        missing;
     missing._fileName     = "SwDataTableMissing.xml";
-    missing._absolutePath = FileUtil::joinPath( FileUtil::getTempDirectory(), missing._fileName );
+    missing._absolutePath = test::makeScratchPath( missing._fileName );
     DataTableModel model;
     model.setGameDataFiles( { files._first, missing } );
     model.selectGameDataFile( 0 );
@@ -327,7 +327,7 @@ SW_TEST_CASE( DataTableModelTest, ConfirmOnlyTouchesStaleAndReview )
 // 결함: 원문이 바뀐 뒤 번역이 그대로 맞아도 낡음 표시를 걷을 길이 없었다(글이 같으면 저장이 해시를 건드리지 않았다).
 SW_TEST_CASE( DataTableModelTest, ConfirmedTranslationIsSavedAsCurrent )
 {
-    const string folder      = FileUtil::joinPath( FileUtil::getTempDirectory(), "SwDataTableConfirm" );
+    const string folder      = test::makeScratchPath( "SwDataTableConfirm" );
     const string projectPath = FileUtil::joinPath( folder, "t.locproject.xml" );
     const string oldHash     = SourceTextEntry::formatSourceHash( SourceTextEntry::computeSourceHash( "Older" ) );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) );

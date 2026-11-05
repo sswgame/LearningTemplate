@@ -577,7 +577,7 @@ SW_TEST_CASE( TileMapDocumentTest, MissingFileStartsANewMap )
     SW_REQUIRE_TRUE( document.applyInputSize() );
     SW_REQUIRE_TRUE( document.addDataLayer( "Depth", 0 ) );
 
-    const string missingPath = FileUtil::joinPath( FileUtil::getTempDirectory(), "SwTileMapDocumentMissing.tilemap.xml" );
+    const string missingPath = test::makeScratchPath( "SwTileMapDocumentMissing.tilemap.xml" );
     SW_EXPECT_TRUE( document.loadXML( missingPath ) == ToolAssetLoadResult::Missing );
     SW_EXPECT_EQUAL( TileMapDocument::kNewMapSide, document.getMap()._width );
     SW_EXPECT_TRUE( document.getMap()._listDataLayer.empty() );
@@ -586,7 +586,7 @@ SW_TEST_CASE( TileMapDocumentTest, MissingFileStartsANewMap )
 
 SW_TEST_CASE( TileMapDocumentTest, SaveAndLoadRoundTripWithStatus )
 {
-    const string path = FileUtil::joinPath( FileUtil::getTempDirectory(), "SwTileMapDocumentRoundTrip.tilemap.xml" );
+    const string path = test::makeScratchPath( "SwTileMapDocumentRoundTrip.tilemap.xml" );
     {
         TileMapDocument document;
         document.editPath()  = path.c_str();

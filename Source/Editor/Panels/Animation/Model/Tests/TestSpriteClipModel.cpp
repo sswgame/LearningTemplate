@@ -118,7 +118,7 @@ SW_TEST_CASE( SpriteClipModelTest, MissingFileStartsANewClip )
     SpriteClipModel model;
     Util::fillFrames( model, 3 );
     SW_REQUIRE_TRUE( model.addAnimation() );
-    const string missingPath = FileUtil::joinPath( FileUtil::getTempDirectory(), "SwSpriteClipModelMissing.sprite.xml" );
+    const string missingPath = test::makeScratchPath( "SwSpriteClipModelMissing.sprite.xml" );
     SW_EXPECT_TRUE( model.loadDocument( missingPath ) == ToolAssetLoadResult::Missing );
     SW_EXPECT_EQUAL( size_t{ 1 }, model.getFrames().size() );
     SW_EXPECT_TRUE( model.getAnimations().empty() );
@@ -127,7 +127,7 @@ SW_TEST_CASE( SpriteClipModelTest, MissingFileStartsANewClip )
 
 SW_TEST_CASE( SpriteClipModelTest, SaveAndLoadRoundTrip )
 {
-    const string path = FileUtil::joinPath( FileUtil::getTempDirectory(), "SwSpriteClipModelRoundTrip.sprite.xml" );
+    const string path = test::makeScratchPath( "SwSpriteClipModelRoundTrip.sprite.xml" );
     {
         SpriteClipModel model;
         Util::fillFrames( model, 2 );

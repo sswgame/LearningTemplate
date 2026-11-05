@@ -540,7 +540,7 @@ SW_TEST_CASE( IntentPlaybackTest, MissingFileReportsAnError )
     ControlRig rig;
     string     error;
     uint32     started = 9;
-    SW_EXPECT_FALSE( IntentPlayback::startFromFile( rig._manager, FileUtil::joinPath( FileUtil::getTempDirectory(), "SwNoSuchIntentFile.swintent" ), false, error, &started ) );
+    SW_EXPECT_FALSE( IntentPlayback::startFromFile( rig._manager, test::makeScratchPath( "SwNoSuchIntentFile.swintent" ), false, error, &started ) );
     SW_EXPECT_EQUAL( 0u, started );
     SW_EXPECT_FALSE( error.empty() );
 }

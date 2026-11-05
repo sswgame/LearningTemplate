@@ -55,7 +55,7 @@ namespace
             SW_EXPECT_TRUE( history.capture( profiler ) );
         }
 
-        static string makeTempPath( const utf8* pName ) { return FileUtil::joinPath( FileUtil::getTempDirectory(), pName ); }
+        static string makeTempPath( const utf8* pName ) { return test::makeScratchPath( pName ); }
     };
     using Util = ProfilerModelTestUtil;
 } // namespace

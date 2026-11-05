@@ -75,7 +75,7 @@ namespace
         string _path;
 
         PackTestFile()
-            : _path{ FileUtil::joinPath( FileUtil::getTempDirectory(), "SwPackReaderTest.pack" ) }
+            : _path{ test::makeScratchPath( "SwPackReaderTest.pack" ) }
         {
         }
         ~PackTestFile() { (void)FileUtil::removeFile( _path ); }
@@ -210,7 +210,7 @@ SW_TEST_CASE( PackReaderTest, MissingFileIsAnError )
 {
     SW_EXPECT_LOG( "PackReader.FailedOpenResourcePack" );
     PackReader reader;
-    SW_EXPECT_FALSE( reader.open( FileUtil::joinPath( FileUtil::getTempDirectory(), "SwNoSuchPack.pack" ) ) );
+    SW_EXPECT_FALSE( reader.open( test::makeScratchPath( "SwNoSuchPack.pack" ) ) );
     SW_EXPECT_FALSE( reader.open( "" ) );
     SW_EXPECT_FALSE( reader.isOpen() );
 }

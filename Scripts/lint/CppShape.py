@@ -421,6 +421,16 @@ def checkIncludesInsideBraces(raw: str, code: str) -> list[tuple[int, str]]:
     return problems
 
 
+def checkSharedTempInTests(code: str, relative: str) -> list[tuple[int, str]]:
+    """테스트의 임시 파일은 케이스별 폴더에 둔다 — 공용 임시 폴더의 고정 이름은 백엔드별 자식 프로세스끼리 부딪힌다."""
+    if "/Tests/" not in relative.replace("\\", "/"):
+        return []
+    index = code.find("getTempDirectory")
+    if index < 0:
+        return []
+    return [(lineOf(code, index), "테스트는 공용 임시 폴더 대신 test::makeScratchPath 를 쓴다")]
+
+
 def inspectFile(path: Path, relative: str) -> list[str]:
     raw = path.read_text(encoding="utf-8-sig", errors="ignore")
     code = stripCode(raw)
@@ -434,6 +444,7 @@ def inspectFile(path: Path, relative: str) -> list[str]:
         listProblem += checkAnonymousNamespaces(code)
     listProblem += checkUtilBesideOwner(code, relative)
     listProblem += checkIncludesInsideBraces(raw, code)
+    listProblem += checkSharedTempInTests(code, relative)
     return [f"{relative}:{line}: {message}" for line, message in sorted(set(listProblem))]
 
 

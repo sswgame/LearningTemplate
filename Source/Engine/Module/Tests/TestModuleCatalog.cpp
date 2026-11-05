@@ -341,6 +341,6 @@ SW_TEST_CASE( ModuleCatalogTest, MissingFolderIsAnError )
 {
     ModuleCatalog catalog;
     string        error;
-    SW_EXPECT_FALSE( catalog.loadDirectory( FileUtil::joinPath( FileUtil::getTempDirectory(), "SwNoSuchModuleFolder" ), error ) );
+    SW_EXPECT_FALSE( catalog.loadDirectory( test::makeScratchPath( "SwNoSuchModuleFolder" ), error ) );
     SW_EXPECT_TRUE( error.find( "does not exist" ) != string::npos );
 }
