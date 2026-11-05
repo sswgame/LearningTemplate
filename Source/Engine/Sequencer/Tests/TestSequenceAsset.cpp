@@ -99,6 +99,35 @@ SW_TEST_CASE( SequencerTest, OutOfRangeFrameNumbersAreRejected )
     SW_EXPECT_EQUAL( 100, asset._frameMax );
 }
 
+// 글 칸의 규칙은 파일 읽기와 에디터가 함께 본다 - 종류마다 어떤 칸이 필수인지를 못 박는다.
+SW_TEST_CASE( SequencerTest, FieldIssueFollowsTheItemKind )
+{
+    SequenceTrackItem item{};
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::None ); // 클립은 빈 칸으로도 된다
+
+    item._scenario = "a.scenario.xml";
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::ScenarioNotAllowed );
+    item._kind = SequenceItemKind::Scenario;
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::None );
+    item._scenario.clear();
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::ScenarioMissing );
+
+    item._kind = SequenceItemKind::Spawn;
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::SpawnFields );
+    item._prefab = "a.prefab.xml";
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::SpawnFields ); // 이름도 필수다
+    item._targetObject = "Spawned";
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::None );
+
+    item._kind = SequenceItemKind::Appearance;
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::PresetFields );
+    item._preset = "wet";
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::None );
+
+    item._kind = SequenceItemKind::Count;
+    SW_EXPECT_TRUE( item.findFieldIssue() == SequenceItemFieldIssue::UnknownKind );
+}
+
 /**
  * @brief [SequencerTest] 시나리오 항목은 `_scenario` 가 있어야 읽히고, 다른 종류는 `_scenario` 를 가질 수 없다
  * @details 시나리오 항목은 시작 프레임을 지날 때 `ScenarioPlayback::play` 로 재생한다(`SequencePlayerComponent`). 빈 칸이면 연출이 조용히 아무것도 부르지 않으므로 읽기 오류다.

@@ -110,6 +110,17 @@ namespace sw
     static_assert( SW_COUNT_OF( kArrSequenceItemKindInfo ) == static_cast<size_t>( SequenceItemKind::Count ),
                    "SequenceItemKind 를 늘렸으면 kArrSequenceItemKindInfo 에도 줄을 더할 것" );
 
+    /** @brief 항목의 글 칸이 종류의 규칙과 어긋난 모양입니다(`SequenceTrackItem::findFieldIssue`). */
+    enum class SequenceItemFieldIssue : uint8
+    {
+        None = 0,           /**< 어긋나지 않았습니다. */
+        UnknownKind,        /**< 종류 표에 없는 종류입니다. */
+        SpawnFields,        /**< 스폰인데 `_prefab` 이나 `_targetObject` 가 비었습니다. */
+        PresetFields,       /**< 프리셋이 필수인 종류인데 `_preset` 이나 `_targetObject` 가 비었습니다. */
+        ScenarioMissing,    /**< 시나리오 항목인데 `_scenario` 가 비었습니다. */
+        ScenarioNotAllowed, /**< 시나리오 항목이 아닌데 `_scenario` 가 있습니다. */
+    };
+
     /** @brief 시퀀서 트랙 항목입니다(클립, 이벤트, 카메라 컷, 카메라 흔들림, 스폰). 구간 하나를 나타냅니다. */
     REFLECT()
     struct SW_API SequenceTrackItem
@@ -146,6 +157,12 @@ namespace sw
         uint32 _color{ 0xFFAA8080 };
         PROPERTY( Tooltip = "Item kind" )
         SequenceItemKind _kind{ SequenceItemKind::Clip };
+
+        /**
+         * @brief 글 칸이 종류의 규칙과 어긋난 첫 모양입니다.
+         * @details 규칙은 여기 한 곳이다 — 파일 읽기(`SequenceAsset::validateFile`)와 에디터의 필수 칸 검사가 같은 답을 본다.
+         */
+        [[nodiscard]] SequenceItemFieldIssue findFieldIssue() const;
     };
 } // namespace sw
 

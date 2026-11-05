@@ -4140,6 +4140,7 @@
 				<item>Source/Editor/Common/GUI/Status/EditorLightProbeBakeStatus.cpp</item>
 				<item>Source/Editor/Common/GUI/Status/EditorReflectionProbeBakeStatus.cpp</item>
 				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 				<item>Source/Editor/Panels/Settings/ModulesPanel.cpp</item>
@@ -4596,12 +4597,14 @@
 		</entry>
 		<entry key="EdWidget.Prefab" source="Prefab">
 			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.Preset" source="Preset">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdWidget.Preview" source="Preview">
@@ -7096,8 +7099,24 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.CancelItemTip" source="Discard the new item.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.CinematicNoteTip"
 		       source="Free-form notes saved with the sequence. It does not affect playback.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.CreateItemButton" source="Create item">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.CreateItemTip"
+		       source="Add the item to the timeline. Every required field must be filled in.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7122,7 +7141,12 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.ItemTargetTip" source="Name of the scene object this clip, event or camera cut acts on.">
+		<entry key="EditorSequencer.DraftHint" source="Fill in the required fields to create the item.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ItemTargetTip" source="Name of the scene object this item acts on.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7165,6 +7189,17 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.PrefabTip"
+		       source="Prefab spawned for this span. Type its resource id or drop it from the content browser.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.PresetTip" source="Id of the appearance preset the target object wears.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.PreviousKeyTip" source="Go to the previous key">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
@@ -7182,6 +7217,12 @@
 			</origins>
 		</entry>
 		<entry key="EditorSequencer.PropertyTargetNotFound" source="Target or numeric property not found">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.RequiredFieldHint"
+		       source="A required field is empty. Leaving it empty restores the previous value.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
@@ -7207,13 +7248,29 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSequencer.ScenarioLabel" source="Scenario">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.ScenarioTip"
+		       source="Scenario played when the start frame is crossed. Type its resource id or drop it from the content browser.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSequencer.ScrubTip"
 		       source="Drag to move the current frame; the viewport follows so you can check any moment of the sequence.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSequencer.SelectItemHint" source="Select a clip, event or camera cut on the timeline to edit it.">
+		<entry key="EditorSequencer.SelectItemHint" source="Select an item on the timeline to edit it.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSequencer.SpawnNameTip" source="Name the spawned object gets.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>

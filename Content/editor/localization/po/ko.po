@@ -3939,6 +3939,7 @@ msgstr "적용"
 #: Source/Editor/Common/GUI/Status/EditorLightProbeBakeStatus.cpp
 #: Source/Editor/Common/GUI/Status/EditorReflectionProbeBakeStatus.cpp
 #: Source/Editor/Common/Widgets/EditorWidgets.cpp
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 #: Source/Editor/Panels/Settings/ModulesPanel.cpp
@@ -4396,12 +4397,14 @@ msgctxt "EdWidget.Playing"
 msgid "Playing"
 msgstr "플레이 중"
 
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdWidget.Prefab"
 msgid "Prefab"
 msgstr "프리팹"
 
 #: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EdWidget.Preset"
 msgid "Preset"
 msgstr "프리셋"
@@ -6734,9 +6737,24 @@ msgid "Add a track that keys the selected object's position, rotation and scale.
 msgstr "고른 오브젝트의 이동 · 회전 · 크기를 키로 모는 트랙을 더합니다"
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CancelItemTip"
+msgid "Discard the new item."
+msgstr "새 항목을 버립니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.CinematicNoteTip"
 msgid "Free-form notes saved with the sequence. It does not affect playback."
 msgstr "시퀀스와 함께 저장되는 자유 메모입니다. 재생에는 영향을 주지 않습니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CreateItemButton"
+msgid "Create item"
+msgstr "항목 만들기"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.CreateItemTip"
+msgid "Add the item to the timeline. Every required field must be filled in."
+msgstr "항목을 타임라인에 더합니다. 필수 칸을 모두 채워야 합니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.CurveButton"
@@ -6759,9 +6777,14 @@ msgid "Remove the selected key track and all of its keys."
 msgstr "선택한 키 트랙과 그 키를 모두 지웁니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.DraftHint"
+msgid "Fill in the required fields to create the item."
+msgstr "필수 칸을 채우면 항목을 만들 수 있습니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.ItemTargetTip"
-msgid "Name of the scene object this clip, event or camera cut acts on."
-msgstr "이 클립 · 이벤트 · 카메라 컷이 작용하는 씬 오브젝트의 이름입니다."
+msgid "Name of the scene object this item acts on."
+msgstr "이 항목이 작용하는 씬 오브젝트의 이름입니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.KeyButton"
@@ -6799,6 +6822,16 @@ msgid "Play the sequence in the viewport from the current frame, looping at the 
 msgstr "현재 프레임부터 뷰포트에서 시퀀스를 재생하고, 끝에 닿으면 처음부터 반복합니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.PrefabTip"
+msgid "Prefab spawned for this span. Type its resource id or drop it from the content browser."
+msgstr "이 구간 동안 스폰할 프리팹입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.PresetTip"
+msgid "Id of the appearance preset the target object wears."
+msgstr "대상 오브젝트가 입을 외형 프리셋의 id 입니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.PreviousKeyTip"
 msgid "Go to the previous key"
 msgstr "앞 키로"
@@ -6817,6 +6850,11 @@ msgstr "<컴포넌트 타입>.<프로퍼티> — float32 · int32 프로퍼티(�
 msgctxt "EditorSequencer.PropertyTargetNotFound"
 msgid "Target or numeric property not found"
 msgstr "대상이나 숫자 프로퍼티를 찾을 수 없습니다"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.RequiredFieldHint"
+msgid "A required field is empty. Leaving it empty restores the previous value."
+msgstr "필수 칸이 비었습니다. 비운 채 떠나면 이전 값으로 돌아갑니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.RigSlotLabel"
@@ -6839,14 +6877,29 @@ msgid "Write the sequence to the focused .seq file."
 msgstr "시퀀스를 포커스된 .seq 파일에 씁니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ScenarioLabel"
+msgid "Scenario"
+msgstr "시나리오"
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.ScenarioTip"
+msgid "Scenario played when the start frame is crossed. Type its resource id or drop it from the content browser."
+msgstr "시작 프레임을 지날 때 재생할 시나리오입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.ScrubTip"
 msgid "Drag to move the current frame; the viewport follows so you can check any moment of the sequence."
 msgstr "끌어서 현재 프레임을 옮깁니다. 뷰포트가 따라오므로 시퀀스의 어느 순간이든 확인할 수 있습니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.SelectItemHint"
-msgid "Select a clip, event or camera cut on the timeline to edit it."
-msgstr "편집하려면 타임라인에서 클립, 이벤트, 카메라 컷 중 하나를 선택합니다."
+msgid "Select an item on the timeline to edit it."
+msgstr "편집하려면 타임라인에서 항목을 선택합니다."
+
+#: Source/Editor/Panels/Animation/SequencerPanel.cpp
+msgctxt "EditorSequencer.SpawnNameTip"
+msgid "Name the spawned object gets."
+msgstr "스폰한 오브젝트가 받을 이름입니다."
 
 #: Source/Editor/Panels/Animation/SequencerPanel.cpp
 msgctxt "EditorSequencer.StopTip"

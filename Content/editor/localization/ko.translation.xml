@@ -2529,9 +2529,18 @@
 		<entry key="EditorSequencer.AddTransformTrackTip"
 		       text="고른 오브젝트의 이동 · 회전 · 크기를 키로 모는 트랙을 더합니다"
 		       sourceHash="0a22f5584fe08e9e" />
+		<entry key="EditorSequencer.CancelItemTip"
+		       text="새 항목을 버립니다."
+		       sourceHash="9f6b9e10ef5b67af" />
 		<entry key="EditorSequencer.CinematicNoteTip"
 		       text="시퀀스와 함께 저장되는 자유 메모입니다. 재생에는 영향을 주지 않습니다."
 		       sourceHash="10888390b009288d" />
+		<entry key="EditorSequencer.CreateItemButton"
+		       text="항목 만들기"
+		       sourceHash="40462b2baa211920" />
+		<entry key="EditorSequencer.CreateItemTip"
+		       text="항목을 타임라인에 더합니다. 필수 칸을 모두 채워야 합니다."
+		       sourceHash="591d213dd75a37ba" />
 		<entry key="EditorSequencer.CurveButton" text="커브" sourceHash="c341553c3556d2b4" />
 		<entry key="EditorSequencer.DeleteKeyButton" text="키 지우기" sourceHash="9c0aca1551241c65" />
 		<entry key="EditorSequencer.DeleteKeyTip"
@@ -2540,9 +2549,12 @@
 		<entry key="EditorSequencer.DeleteTrackTip"
 		       text="선택한 키 트랙과 그 키를 모두 지웁니다."
 		       sourceHash="2ff5f20c5adced56" />
+		<entry key="EditorSequencer.DraftHint"
+		       text="필수 칸을 채우면 항목을 만들 수 있습니다."
+		       sourceHash="c98782582a54e3a9" />
 		<entry key="EditorSequencer.ItemTargetTip"
-		       text="이 클립 · 이벤트 · 카메라 컷이 작용하는 씬 오브젝트의 이름입니다."
-		       sourceHash="6d0e0586825466c1" />
+		       text="이 항목이 작용하는 씬 오브젝트의 이름입니다."
+		       sourceHash="bf2c3dcae8da0cd0" />
 		<entry key="EditorSequencer.KeyButton" text="키" sourceHash="506b6a19d12f414c" />
 		<entry key="EditorSequencer.LoadTip"
 		       text="저장하지 않은 편집을 버리고 포커스된 .seq 파일을 디스크에서 다시 읽습니다."
@@ -2560,6 +2572,12 @@
 		<entry key="EditorSequencer.PlayTip"
 		       text="현재 프레임부터 뷰포트에서 시퀀스를 재생하고, 끝에 닿으면 처음부터 반복합니다."
 		       sourceHash="9cc849680d919b0b" />
+		<entry key="EditorSequencer.PrefabTip"
+		       text="이 구간 동안 스폰할 프리팹입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+		       sourceHash="96f837eff09a3e8a" />
+		<entry key="EditorSequencer.PresetTip"
+		       text="대상 오브젝트가 입을 외형 프리셋의 id 입니다."
+		       sourceHash="8925b878bba0302e" />
 		<entry key="EditorSequencer.PreviousKeyTip" text="앞 키로" sourceHash="99a63e0a91e9cd8b" />
 		<entry key="EditorSequencer.PropertyLabel" text="프로퍼티" sourceHash="0d5b7fee0311db68" />
 		<entry key="EditorSequencer.PropertyPathTip"
@@ -2568,6 +2586,9 @@
 		<entry key="EditorSequencer.PropertyTargetNotFound"
 		       text="대상이나 숫자 프로퍼티를 찾을 수 없습니다"
 		       sourceHash="851e7b1e73d27166" />
+		<entry key="EditorSequencer.RequiredFieldHint"
+		       text="필수 칸이 비었습니다. 비운 채 떠나면 이전 값으로 돌아갑니다."
+		       sourceHash="e896e9e8f115b6ba" />
 		<entry key="EditorSequencer.RigSlotLabel" text="리그 칸" sourceHash="b383a8abee4b6ed7" />
 		<entry key="EditorSequencer.RigSlotTargetNotFound"
 		       text="대상에 Pose Modifier 가 없습니다"
@@ -2578,12 +2599,21 @@
 		<entry key="EditorSequencer.SaveTip"
 		       text="시퀀스를 포커스된 .seq 파일에 씁니다."
 		       sourceHash="f8231dd1b7e0f570" />
+		<entry key="EditorSequencer.ScenarioLabel"
+		       text="시나리오"
+		       sourceHash="8a0834f3db621caf" />
+		<entry key="EditorSequencer.ScenarioTip"
+		       text="시작 프레임을 지날 때 재생할 시나리오입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다."
+		       sourceHash="4698e99a85e6a8d3" />
 		<entry key="EditorSequencer.ScrubTip"
 		       text="끌어서 현재 프레임을 옮깁니다. 뷰포트가 따라오므로 시퀀스의 어느 순간이든 확인할 수 있습니다."
 		       sourceHash="0de61ae871e9fc8a" />
 		<entry key="EditorSequencer.SelectItemHint"
-		       text="편집하려면 타임라인에서 클립, 이벤트, 카메라 컷 중 하나를 선택합니다."
-		       sourceHash="42c263f8a09ce97f" />
+		       text="편집하려면 타임라인에서 항목을 선택합니다."
+		       sourceHash="a4d100ffc931f778" />
+		<entry key="EditorSequencer.SpawnNameTip"
+		       text="스폰한 오브젝트가 받을 이름입니다."
+		       sourceHash="873321dc60f62fdf" />
 		<entry key="EditorSequencer.StopTip"
 		       text="재생을 멈추고 첫 프레임으로 돌아가며, 카메라 컷이 가져간 카메라를 돌려줍니다."
 		       sourceHash="5cc090cc2d6ab53d" />

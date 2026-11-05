@@ -145,32 +145,37 @@ namespace sw
                 SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemPrerollFramesMust", "Sequence '%#': item '%#' _prerollFrames %# must be 0 or more (-1: the sequence value)", sourceLabel, item._name, item._prerollFrames );
                 bValid = false;
             }
-            const SequenceItemKindInfo* pKindInfo = findItemKindInfo( item._kind );
-            if ( pKindInfo == nullptr )
+            const SequenceItemFieldIssue issue = item.findFieldIssue();
+            switch ( issue )
             {
-                SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNoItem", "Sequence '%#': item '%#' has no item kind", sourceLabel, item._name );
-                bValid = false;
-                continue;
+                case SequenceItemFieldIssue::None:
+                {
+                    break;
+                }
+                case SequenceItemFieldIssue::UnknownKind:
+                {
+                    SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNoItem", "Sequence '%#': item '%#' has no item kind", sourceLabel, item._name );
+                    break;
+                }
+                case SequenceItemFieldIssue::SpawnFields:
+                {
+                    SW_LOG_ERROR_ID( "SequenceAsset.SequenceSpawnItemNeeds", "Sequence '%#': spawn item '%#' needs both _prefab and _targetObject", sourceLabel, item._name );
+                    break;
+                }
+                case SequenceItemFieldIssue::PresetFields:
+                {
+                    SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNeedsBoth", "Sequence '%#': item '%#' needs both a target object and a preset for its kind", sourceLabel, item._name );
+                    break;
+                }
+                case SequenceItemFieldIssue::ScenarioMissing:
+                case SequenceItemFieldIssue::ScenarioNotAllowed:
+                {
+                    SW_LOG_ERROR_ID( "SequenceAsset.SequenceScenarioField", "Sequence '%#': item '%#' - _scenario is %# for its kind", sourceLabel, item._name,
+                                     issue == SequenceItemFieldIssue::ScenarioMissing ? "required" : "not allowed" );
+                    break;
+                }
             }
-            // 스폰은 무엇을 어떤 이름으로 만들지가 필수다 — 빈 채로 두면 재생이 조용히 아무것도 만들지 않는다.
-            const bool bSpawnNeedsFields = pKindInfo->_bSpawns && ( item._prefab.empty() || item._targetObject.empty() );
-            if ( bSpawnNeedsFields )
-            {
-                SW_LOG_ERROR_ID( "SequenceAsset.SequenceSpawnItemNeeds", "Sequence '%#': spawn item '%#' needs both _prefab and _targetObject", sourceLabel, item._name );
-                bValid = false;
-            }
-            else if ( pKindInfo->_bNeedsPreset && ( item._preset.empty() || item._targetObject.empty() ) )
-            {
-                SW_LOG_ERROR_ID( "SequenceAsset.SequenceItemNeedsBoth", "Sequence '%#': item '%#' needs both a target object and a preset for its kind", sourceLabel, item._name );
-                bValid = false;
-            }
-            // 시나리오 항목은 무엇을 재생할지가 필수다 — 빈 채로 두면 연출이 조용히 아무것도 부르지 않는다.
-            if ( pKindInfo->_bPlaysScenario != ( item._scenario.empty() == false ) )
-            {
-                SW_LOG_ERROR_ID( "SequenceAsset.SequenceScenarioField", "Sequence '%#': item '%#' - _scenario is %# for its kind", sourceLabel, item._name,
-                                 pKindInfo->_bPlaysScenario ? "required" : "not allowed" );
-                bValid = false;
-            }
+            bValid = issue == SequenceItemFieldIssue::None && bValid;
         }
         for ( const SequenceKeyTrack& track : _listTrack )
         {
@@ -190,6 +195,24 @@ namespace sw
             }
         }
         return bValid;
+    }
+
+    SequenceItemFieldIssue SequenceTrackItem::findFieldIssue() const
+    {
+        const SequenceItemKindInfo* pKindInfo = SequenceAsset::findItemKindInfo( _kind );
+        if ( pKindInfo == nullptr )
+            return SequenceItemFieldIssue::UnknownKind;
+        // 스폰은 무엇을 어떤 이름으로 만들지가 필수다 — 빈 채로 두면 재생이 조용히 아무것도 만들지 않는다.
+        if ( pKindInfo->_bSpawns && ( _prefab.empty() || _targetObject.empty() ) )
+            return SequenceItemFieldIssue::SpawnFields;
+        if ( pKindInfo->_bNeedsPreset && ( _preset.empty() || _targetObject.empty() ) )
+            return SequenceItemFieldIssue::PresetFields;
+        // 시나리오 항목은 무엇을 재생할지가 필수다 — 빈 채로 두면 연출이 조용히 아무것도 부르지 않는다.
+        if ( pKindInfo->_bPlaysScenario && _scenario.empty() )
+            return SequenceItemFieldIssue::ScenarioMissing;
+        if ( pKindInfo->_bPlaysScenario == false && _scenario.empty() == false )
+            return SequenceItemFieldIssue::ScenarioNotAllowed;
+        return SequenceItemFieldIssue::None;
     }
 
     string SequenceAsset::toXML() const

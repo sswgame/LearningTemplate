@@ -22,11 +22,12 @@ namespace sw::editor
     struct ClipSequence;
 
     /**
-     * @brief 구간 항목(클립 · 이벤트 · 카메라 컷) 타임라인과 키 트랙(트랜스폼 · 프로퍼티)을 편집하는 시퀀서입니다. SequenceAsset JSON 을 읽고 씁니다.
+     * @brief 구간 항목(클립 · 이벤트 · 카메라 · 스폰 · 외형 · 시나리오) 타임라인과 키 트랙(트랜스폼 · 프로퍼티)을 편집하는 시퀀서입니다. SequenceAsset JSON 을 읽고 씁니다.
      * @details 시간 막대를 옮기면(끄는 동안에도) 그 프레임을 씬에 바로 적용합니다(뷰포트 미리보기). 키 트랙 채널 값을 고치면 지금 프레임에
      *          그 채널의 키가 생기고(언리얼 Sequencer 의 자동 키), Key 단추는 대상의 지금 상태를 모든 채널의 키로 찍습니다.
      *          이름: 시간 막대 `sequencer.scrub`, 트랙 줄 `sequencer.track.<n>`, `sequencer.addKey`, 채널 값 `sequencer.channel.<n>`,
-     *          커브 단추 `sequencer.curve.<n>`, 트랙 더하기 `sequencer.addTransformTrack` · `sequencer.addPropertyTrack`.
+     *          커브 단추 `sequencer.curve.<n>`, 트랙 더하기 `sequencer.addTransformTrack` · `sequencer.addPropertyTrack`,
+     *          항목 칸 `sequencer.item.name` · `.target` · `.prefab` · `.preset` · `.scenario`, 초안 단추 `sequencer.item.create` · `.cancel`.
      */
     class SequencerPanel : public EditorDocumentPanel
     {
@@ -56,8 +57,10 @@ namespace sw::editor
         void                updatePreview( float32 deltaSeconds );
         /** @brief 지금 프레임을 씬에 적용합니다(뷰포트 미리보기). */
         void previewCurrentFrame();
-        /** @brief 고른 구간 항목의 이름 · 대상 칸을 그립니다. */
+        /** @brief 구간 항목의 칸을 그립니다 — 이름 · 대상과 종류의 필수 칸(프리팹 · 프리셋 · 시나리오)입니다. 초안이 열려 있으면 초안을, 아니면 고른 항목을 고칩니다. */
         void drawItemFields();
+        /** @brief 초안의 만들기 · 취소 단추와 안내입니다. 만들기는 필수 칸이 찰 때까지 꺼져 있습니다. */
+        void drawItemDraftButtons();
         /** @brief 키 트랙 목록 · 고른 트랙의 채널 값 · 커브 편집기를 그립니다. */
         void drawKeyTracks();
         /** @brief 트랙 줄 오른쪽의 키 띠(키 위치 · 지금 프레임)를 그립니다. 띠를 누르면 그 트랙을 고르고 그 프레임으로 갑니다. */

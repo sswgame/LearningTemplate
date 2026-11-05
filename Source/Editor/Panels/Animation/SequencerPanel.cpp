@@ -12,6 +12,7 @@
 #include "Editor/Common/Commands/Scene/EditorViewportPreview.h"
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
+#include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -40,16 +41,20 @@ namespace sw::editor
 
     /**
      * @brief ImSequencer 가 보는 시퀀스입니다. 항목은 문서의 `SequenceTrackItem` 그대로이고, 더하기 · 지우기 · 사본은 문서의 명령입니다.
-     * @details 위젯의 종류 번호는 만들 수 있는 종류의 순번입니다(`SequenceDocument::getAddableItemKind`) — 위젯은 그 번호를 더하기 목록에만 씁니다.
+     * @details 위젯의 종류 번호는 `SequenceItemKind` 값입니다.
      */
     struct ClipSequence : ImSequencer::SequenceInterface
     {
-        SequenceDocument& _document;
-        mutable string    _labelScratch;
+        SequenceDocument&      _document;
+        mutable string         _labelScratch;
+        uint8                  _bDraftOpened : 1; ///< 이번 `Add` 가 항목 대신 초안을 열었다 — 패널이 위젯의 "끝 항목 고르기" 를 버릴지 본다
+        [[maybe_unused]] uint8 _reserved     : 7;
 
         explicit ClipSequence( SequenceDocument& document )
             : _document{ document }
             , _labelScratch{}
+            , _bDraftOpened{ SW_FALSE }
+            , _reserved{ 0 }
         {
         }
 
@@ -67,11 +72,11 @@ namespace sw::editor
         }
         int32 GetItemTypeCount() const override
         {
-            return static_cast<int32>( SequenceDocument::getAddableItemKindCount() );
+            return static_cast<int32>( SequenceItemKind::Count );
         }
         const utf8* GetItemTypeName( int32 typeIndex ) const override
         {
-            const utf8* pName = editor::getSubsystem<TypeRegistry>().enumToString( SequenceDocument::getAddableItemKind( static_cast<uint32>( typeIndex ) ) );
+            const utf8* pName = editor::getSubsystem<TypeRegistry>().enumToString( static_cast<SequenceItemKind>( typeIndex ) );
             return pName != nullptr ? pName : "?"; // 라이브러리가 const utf8* 를 요구해 사유 문자열을 줄 수 없다
         }
         const utf8* GetItemLabel( int32 itemIndex ) const override
@@ -100,7 +105,8 @@ namespace sw::editor
 
         void Add( int32 type ) override
         {
-            (void)_document.addItem( SequenceDocument::getAddableItemKind( static_cast<uint32>( type ) ), GetItemTypeName( type ) );
+            (void)_document.addItem( static_cast<SequenceItemKind>( type ), GetItemTypeName( type ) );
+            _bDraftOpened = _document.isDraftingItem() ? SW_TRUE : SW_FALSE;
         }
 
         void Del( int32 itemIndex ) override
@@ -133,6 +139,27 @@ namespace sw::editor
             {
                 GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                 return pObject != nullptr ? string{ pObject->getName().c_str() } : string{};
+            }
+
+            /**
+             * @brief 항목의 글 칸 하나입니다. 칸을 떠나며 고쳤거나 애셋을 끌어 놓았으면 true 입니다.
+             * @param pExpectedExt 끌어 놓기로 받을 애셋의 확장자입니다. nullptr 이면 끌어 놓기를 받지 않습니다(이름 · 프리셋 id).
+             * @param pMark 자체 시험 표시입니다.
+             */
+            [[nodiscard]] static bool drawItemField( const utf8* pLabel, string& text, const utf8* pTooltip, const utf8* pExpectedExt, const utf8* pMark )
+            {
+                (void)EditorWidgets::drawTextField( pLabel, text ); // 적용은 칸을 떠날 때다 — 치는 동안 비는 값은 사본에만 있다
+                bool   bEdited = ImGui::IsItemDeactivatedAfterEdit();
+                string droppedPath;
+                if ( pExpectedExt != nullptr && EditorWidgets::acceptAssetDrop( droppedPath, pExpectedExt ) )
+                {
+                    text    = droppedPath;
+                    bEdited = true;
+                }
+                EditorSelfTestMarks::note( pMark );
+                if ( pTooltip != nullptr )
+                    EditorWidgets::drawTooltip( pTooltip );
+                return bEdited;
             }
         };
     } // namespace
@@ -229,10 +256,12 @@ namespace sw::editor
         const int32  frameBefore     = _currentFrame;
         const size_t itemCountBefore = listItem.size();
         int32        selectedItem    = _document._selectedItem;
+        _sequence->_bDraftOpened     = SW_FALSE;
         ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &selectedItem, &_firstFrame,
                                 ImSequencer::SEQUENCER_EDIT_STARTEND | ImSequencer::SEQUENCER_ADD | ImSequencer::SEQUENCER_DEL | ImSequencer::SEQUENCER_CHANGE_FRAME );
         // 위젯은 지운 항목 뒤의 선택을 당겨 주지 않는다(이름 칸이 옆 항목을 고친다) — 지웠으면 문서(`removeItem`)가 맞춘 번호를 쓴다.
-        if ( listItem.size() >= itemCountBefore )
+        // 더하기 뒤에는 끝 항목을 고르는데, 초안을 열었으면 새 항목이 아니라 앞 항목이다 — 그 선택도 버린다.
+        if ( listItem.size() >= itemCountBefore && _sequence->_bDraftOpened == SW_FALSE )
             _document._selectedItem = selectedItem;
         if ( SequenceClipTiming::hasTimingChanged( _listTimingBefore, listItem ) )
             notifyDocumentEdited( "Edit Sequence Timeline", "sequence-timeline" );
@@ -248,29 +277,71 @@ namespace sw::editor
 
     void SequencerPanel::drawItemFields()
     {
-        constexpr float32 kClipFieldRowCount = 2.0f; // 이름 · 대상
+        constexpr float32 kClipFieldRowCount = 4.0f; // 이름 · 대상 · 종류의 필수 칸 · 안내(초안이면 만들기 단추)
         // 고른 항목의 편집 필드는 늘 같은 높이의 구역에 그린다 — 고를 때만 필드가 생기면 그만큼 타임라인이 밀려 내려간다.
         EditorSectionDesc clipDesc{};
         clipDesc._pID       = "##sequence_clip";
         clipDesc._kind      = EditorSectionKind::Child;
         clipDesc._childSize = float2{ 0.0f, ImGui::GetFrameHeightWithSpacing() * kClipFieldRowCount };
         EditorChrome::beginSection( clipDesc );
-        if ( 0 <= _document._selectedItem && _document._selectedItem < static_cast<int32>( _document._asset._listItem.size() ) )
-        {
-            SequenceTrackItem& item = _document._asset._listItem[static_cast<size_t>( _document._selectedItem )];
-            EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "ItemName" ), "Item Name" ), item._name );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
-            EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "TargetObject" ), "Target Object" ), item._targetObject );
-            if ( ImGui::IsItemDeactivatedAfterEdit() )
-                notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
-            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "ItemTargetTip" ) );
-        }
-        else
+        // 입력 중이 아니면 문서에서 다시 뜬다(되돌리기 · 선택 변경이 칸에 보인다) — 커브 편집기의 사본과 같은 규칙이다.
+        if ( ImGui::IsAnyItemActive() == false )
+            _document.syncItemEdit();
+        const SequenceItemKindInfo* pKindInfo = _document.hasEditedItem() ? SequenceAsset::findItemKindInfo( _document._itemEdit._kind ) : nullptr;
+        if ( pKindInfo == nullptr )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSequencer", "SelectItemHint" ) );
         }
+        else
+        {
+            SequenceTrackItem& edit    = _document._itemEdit;
+            bool               bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "ItemName" ), "Item Name" ), edit._name, nullptr, nullptr, "sequencer.item.name" );
+            bEdited                    = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "TargetObject" ), "Target Object" ), edit._targetObject,
+                                                             pKindInfo->_bSpawns ? SW_LOCKEY( "EditorSequencer", "SpawnNameTip" ) : SW_LOCKEY( "EditorSequencer", "ItemTargetTip" ), nullptr, "sequencer.item.target" ) ||
+                      bEdited;
+            if ( pKindInfo->_bSpawns )
+                bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Prefab" ), "Prefab" ), edit._prefab, SW_LOCKEY( "EditorSequencer", "PrefabTip" ), ".prefab.xml", "sequencer.item.prefab" ) || bEdited;
+            if ( pKindInfo->_bNeedsPreset )
+                bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Preset" ), "Preset" ), edit._preset, SW_LOCKEY( "EditorSequencer", "PresetTip" ), nullptr, "sequencer.item.preset" ) || bEdited;
+            if ( pKindInfo->_bPlaysScenario )
+                bEdited = SequencerPanelInternal::drawItemField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EditorSequencer", "ScenarioLabel" ), "Scenario" ), edit._scenario, SW_LOCKEY( "EditorSequencer", "ScenarioTip" ), ".scenario.xml", "sequencer.item.scenario" ) || bEdited;
+
+            if ( _document.isDraftingItem() )
+            {
+                drawItemDraftButtons();
+            }
+            else
+            {
+                // 거절되면 칸이 항목의 값으로 돌아간다. 비운 채 치는 동안에는 아래 안내가 그 사실을 미리 알린다.
+                if ( bEdited && _document.commitItemEdit() )
+                    notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
+                if ( edit.findFieldIssue() != SequenceItemFieldIssue::None )
+                    ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEY( "EditorSequencer", "RequiredFieldHint" ) );
+            }
+        }
         EditorChrome::endSection();
+    }
+
+    void SequencerPanel::drawItemDraftButtons()
+    {
+        const utf8* const pCreate = SW_LOCKEY( "EditorSequencer", "CreateItemButton" );
+        ImGui::BeginDisabled( _document._itemEdit.findFieldIssue() != SequenceItemFieldIssue::None );
+        if ( ImGui::Button( pCreate ) && _document.commitItemDraft() >= 0 )
+            notifyDocumentEdited( "Add Sequence Item" );
+        ImGui::EndDisabled();
+        EditorSelfTestMarks::note( "sequencer.item.create" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CreateItemTip" ) );
+        const utf8* const pCancel = SW_LOCKEY( "EdVerb", "Cancel" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pCancel ) );
+        if ( ImGui::Button( pCancel ) )
+            _document.cancelItemDraft();
+        EditorSelfTestMarks::note( "sequencer.item.cancel" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CancelItemTip" ) );
+        if ( _document.isDraftingItem() )
+        {
+            ImGui::SameLine();
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorSequencer", "DraftHint" ) );
+        }
     }
 
     void SequencerPanel::drawKeyTracks()

@@ -26,6 +26,8 @@
 		       text="자체 테스트과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다" />
 		<entry source="A recommended accent color. Click to apply it."
 		       text="추천 액센트 색상 팔레트입니다. 클릭하면 적용됩니다." />
+		<entry source="A required field is empty. Leaving it empty restores the previous value."
+		       text="필수 칸이 비었습니다. 비운 채 떠나면 이전 값으로 돌아갑니다." />
 		<entry source="Ability Debugger" text="어빌리티 디버거" />
 		<entry source="Accent Color" text="강조색" />
 		<entry source="Accent Swatches:" text="강조색 견본:" />
@@ -85,6 +87,8 @@
 		       text="고른 위젯 종류를 선택한 패널 안에 더합니다(패널이 아니면 선택한 위젯 뒤에). 자리를 고르려면 항목을 트리 줄이나 그림에 끌어 놓습니다." />
 		<entry source="Add the copied component to the selected object"
 		       text="복사한 컴포넌트를 선택한 오브젝트에 더합니다" />
+		<entry source="Add the item to the timeline. Every required field must be filled in."
+		       text="항목을 타임라인에 더합니다. 필수 칸을 모두 채워야 합니다." />
 		<entry source="Add to Favorites" text="즐겨찾기에 추가" />
 		<entry source="Add up the message kinds every process received instead of only the selected one"
 		       text="고른 프로세스 대신 모든 프로세스가 받은 메시지 종류를 합쳐 봅니다" />
@@ -383,6 +387,7 @@
 		       text="지금 폴더에 새 폴더 또는 새 에셋(머티리얼, 씬, 프리팹)을 만듭니다" />
 		<entry source="Create an organizing folder under the selection"
 		       text="선택 아래에 정리용 폴더를 만듭니다" />
+		<entry source="Create item" text="항목 만들기" />
 		<entry source="Creates a new empty scene" text="새로운 빈 씬을 생성합니다" />
 		<entry source="Creates an organizing folder under the selected object (or the root)"
 		       text="고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다" />
@@ -435,6 +440,7 @@
 		       text="이 인스턴스의 모든 오버라이드를 버리고 프리팹 템플릿과 맞춥니다" />
 		<entry source="Discard the edits and read the file from disk again."
 		       text="편집을 버리고 디스크에서 파일을 다시 읽습니다." />
+		<entry source="Discard the new item." text="새 항목을 버립니다." />
 		<entry source="Disconnect" text="연결 끊기" />
 		<entry source="Display name stored in the map file." text="맵 파일에 저장되는 표시 이름입니다." />
 		<entry source="Display name stored in the material file."
@@ -561,6 +567,8 @@
 		<entry source="File" text="파일" />
 		<entry source="File: {file}" text="파일: {file}" />
 		<entry source="Fill Weight" text="채우기 비율" />
+		<entry source="Fill in the required fields to create the item."
+		       text="필수 칸을 채우면 항목을 만들 수 있습니다." />
 		<entry source="Filter (tag / message / file)" text="필터 (태그 / 메시지 / 파일)" />
 		<entry source="Filter actions..." text="액션 필터..." />
 		<entry source="Filter assets by name or extension"
@@ -699,6 +707,8 @@
 		       text="파라미터를 Value 와 비교하는 방식입니다. (on finish) 는 클립이 끝나면 넘어가고, Trigger 는 파라미터가 설정될 때 한 번 발동합니다." />
 		<entry source="ID: {componentID}" text="ID: {componentID}" />
 		<entry source="Icons" text="아이콘" />
+		<entry source="Id of the appearance preset the target object wears."
+		       text="대상 오브젝트가 입을 외형 프리셋의 id 입니다." />
 		<entry source="Import external files (textures, shaders, sounds, ...) into the current folder"
 		       text="외부 파일(텍스처, 셰이더, 사운드 등)을 현재 폴더로 가져옵니다" />
 		<entry source="Import..." text="가져오기..." />
@@ -914,10 +924,10 @@
 		       text="게임 코드가 새 액션을 조회할 때 쓰는 이름입니다(예: Jump, Move)." />
 		<entry source="Name of the new data layer. The game reads the layer by this name."
 		       text="새 데이터 레이어의 이름입니다. 게임은 이 이름으로 레이어를 읽습니다." />
-		<entry source="Name of the scene object this clip, event or camera cut acts on."
-		       text="이 클립 · 이벤트 · 카메라 컷이 작용하는 씬 오브젝트의 이름입니다." />
+		<entry source="Name of the scene object this item acts on." text="이 항목이 작용하는 씬 오브젝트의 이름입니다." />
 		<entry source="Name shown as the speaker of this line."
 		       text="이 대사의 화자로 표시되는 이름입니다." />
+		<entry source="Name the spawned object gets." text="스폰한 오브젝트가 받을 이름입니다." />
 		<entry source="Nav" text="내비" />
 		<entry source="Near Plane" text="가까운 평면" />
 		<entry source="Near and far clip planes of the camera that rendered the depth, in world units. Match them to that camera for correct distances."
@@ -1253,6 +1263,8 @@
 		<entry source="Prefab Overrides" text="프리팹 덮어쓰기" />
 		<entry source="Prefab Window" text="프리팹 창" />
 		<entry source="Prefab Window: {prefabPath}" text="프리팹 창: {prefabPath}" />
+		<entry source="Prefab spawned for this span. Type its resource id or drop it from the content browser."
+		       text="이 구간 동안 스폰할 프리팹입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다." />
 		<entry source="Preferences" text="환경설정" />
 		<entry source="Preferences..." text="환경설정..." />
 		<entry source="Preset" text="프리셋" />
@@ -1614,6 +1626,9 @@
 		       text="인스턴스의 오버라이드를 다시 검사합니다" />
 		<entry source="Scanning Resource..." text="리소스를 훑는 중..." />
 		<entry source="Scanning presets..." text="프리셋을 찾는 중..." />
+		<entry source="Scenario" text="시나리오" />
+		<entry source="Scenario played when the start frame is crossed. Type its resource id or drop it from the content browser."
+		       text="시작 프레임을 지날 때 재생할 시나리오입니다. 리소스 id 를 치거나 콘텐츠 브라우저에서 끌어다 놓습니다." />
 		<entry source="Scenarios" text="시나리오" />
 		<entry source="Scene" text="씬" />
 		<entry source="Scene edits locked until Stop." text="Stop 할 때까지 씬 편집이 잠깁니다." />
@@ -1650,8 +1665,6 @@
 		<entry source="Select Owner GameObject" text="소유 GameObject 선택" />
 		<entry source="Select a character (Hierarchy or Scene view) to see its recorded state."
 		       text="기록된 상태를 보려면 캐릭터를 선택합니다(Hierarchy 또는 Scene 뷰)." />
-		<entry source="Select a clip, event or camera cut on the timeline to edit it."
-		       text="편집하려면 타임라인에서 클립, 이벤트, 카메라 컷 중 하나를 선택합니다." />
 		<entry source="Select a component first" text="먼저 컴포넌트를 고르십시오" />
 		<entry source="Select a folder" text="폴더를 선택하세요" />
 		<entry source="Select a node to edit its settings" text="설정을 편집할 노드를 고르세요" />
@@ -1665,6 +1678,7 @@
 		<entry source="Select an action to edit its bindings and triggers."
 		       text="바인딩과 트리거를 편집할 액션을 선택합니다." />
 		<entry source="Select an event on the left" text="왼쪽에서 이벤트를 고르세요" />
+		<entry source="Select an item on the timeline to edit it." text="편집하려면 타임라인에서 항목을 선택합니다." />
 		<entry source="Select an object first" text="먼저 오브젝트를 고르십시오" />
 		<entry source="Select an object with a Pose Modifier component"
 		       text="Pose Modifier 컴포넌트가 있는 오브젝트를 고르세요" />

@@ -24,37 +24,46 @@ namespace sw::editor
      * @class SequenceDocument
      * @brief 애셋을 통째로 들고 고칩니다.
      * @details 칸을 패널로 하나씩 옮겨 두면 옮기지 않은 칸(카메라 블렌드 · 프리롤)이 저장 때 기본값으로 돌아갑니다.
+     *          설계: `_asset` 에는 필수 칸이 빈 항목이 들어가지 않는다 — 칸은 사본(`_itemEdit`)을 고치고 값이 찬 뒤에만 적용한다(언리얼 Sequencer 가 고른 대상으로 스폰 트랙을 만드는 것과 같다). 스냅숏이 편집 중 상태를 받게 하면 저장 · 재생과 읽기 규칙이 갈라진다.
      */
     class SequenceDocument
     {
     public:
-        SequenceAsset _asset;
-        int32         _selectedItem;  ///< 고른 구간 항목(-1 이면 없음). 타임라인 위젯이 고칩니다
-        int32         _selectedTrack; ///< 고른 키 트랙(-1 이면 없음)
-        int32         _curveTrack;    ///< 커브 편집기가 보는 트랙(-1 이면 닫힘)
-        int32         _curveChannel;  ///< 커브 편집기가 보는 채널
+        SequenceAsset     _asset;
+        SequenceTrackItem _itemEdit;      ///< 항목 칸이 고치는 사본(초안 또는 고른 항목). 문서 · 되돌리기 스냅숏에 들어가지 않습니다
+        int32             _selectedItem;  ///< 고른 구간 항목(-1 이면 없음). 타임라인 위젯이 고칩니다
+        int32             _selectedTrack; ///< 고른 키 트랙(-1 이면 없음)
+        int32             _curveTrack;    ///< 커브 편집기가 보는 트랙(-1 이면 닫힘)
+        int32             _curveChannel;  ///< 커브 편집기가 보는 채널
 
         SequenceDocument();
 
         // 문서 교체
         /** @brief 되돌리기가 준 애셋으로 바꿉니다. 없어진 항목 · 트랙을 가리키지 않게 고른 번호를 맞춥니다. */
         void restoreAsset( const SequenceAsset& asset );
-        /** @brief 새로 연 문서의 선택입니다 — 항목은 없음, 트랙은 첫 트랙, 커브 편집기는 닫힘입니다. */
+        /** @brief 새로 연 문서의 선택입니다 — 항목은 없음, 트랙은 첫 트랙, 커브 편집기와 초안은 닫힘입니다. */
         void resetSelection();
 
         // 구간 항목
         /**
-         * @brief 패널이 새로 만들어 줄 수 있는 종류면 true 입니다.
-         * @details 스폰 · 외형 · 시나리오는 프리팹 · 프리셋 · 시나리오 칸이 있어야 읽히는데 패널에 그 칸이 없습니다. 만들면 저장한 파일이
-         *          읽기 오류가 되고, 되돌리기 스냅숏도 읽지 못합니다. 그런 항목은 파일에서 오면 그대로 보존합니다.
+         * @brief 항목을 타임라인 앞에 더하고 번호를 돌려줍니다(이름은 @p kindName 과 겹치지 않는 번호, 길이는 타임라인 안). 열려 있던 초안은 닫습니다.
+         * @details 필수 칸이 있는 종류(스폰 · 외형 · 시나리오)는 아직 만들지 않고 초안을 열어 -1 을 돌려줍니다(`isDraftingItem`). 표에 없는 종류도 -1 입니다.
          */
-        [[nodiscard]] static bool canAddItemKind( SequenceItemKind kind );
-        /** @brief 새로 만들 수 있는 종류의 수입니다. */
-        [[nodiscard]] static uint32 getAddableItemKindCount();
-        /** @brief 새로 만들 수 있는 종류 가운데 @p addableIndex 번째입니다. 범위 밖이면 `SequenceItemKind::Count` 입니다. */
-        [[nodiscard]] static SequenceItemKind getAddableItemKind( uint32 addableIndex );
-        /** @brief 항목을 타임라인 앞에 더하고 번호를 돌려줍니다(이름은 @p kindName 과 겹치지 않는 번호, 길이는 타임라인 안). 만들 수 없는 종류면 -1 입니다. */
         int32 addItem( SequenceItemKind kind, string_view kindName );
+        /** @brief 초안이 열려 있으면 true 입니다. 칸(`_itemEdit`)은 고른 항목이 아니라 초안을 고칩니다. */
+        [[nodiscard]] bool isDraftingItem() const;
+        /** @brief 초안의 필수 칸이 찼으면 항목으로 더하고 고른 뒤 번호를 돌려줍니다. 모자라면 초안을 그대로 두고 -1 입니다. */
+        int32 commitItemDraft();
+        /** @brief 초안을 버립니다. 문서는 바뀌지 않습니다. */
+        void cancelItemDraft();
+
+        // 항목의 글 칸
+        /** @brief 칸이 보일 항목(초안 또는 고른 항목)이 있으면 true 입니다. */
+        [[nodiscard]] bool hasEditedItem() const;
+        /** @brief 칸의 사본을 고른 항목에서 다시 뜹니다(되돌리기 · 선택 변경이 보인다). 초안이 열려 있거나 고른 항목이 없으면 그대로 둡니다. */
+        void syncItemEdit();
+        /** @brief 칸의 글을 고른 항목에 적용합니다. 필수 칸이 비면 거절하고 칸을 항목의 값으로 되돌려 false 입니다. 구간 · 색 · 종류는 건드리지 않습니다. */
+        [[nodiscard]] bool commitItemEdit();
         /** @brief 항목을 지웁니다. 뒤의 항목을 고르고 있었으면 같은 항목을 계속 가리키게 당깁니다. 범위 밖이면 false 입니다. */
         bool removeItem( int32 itemIndex );
         /** @brief 항목의 사본을 끝에 더하고 번호를 돌려줍니다. 범위 밖이면 -1 입니다. */
@@ -103,5 +112,11 @@ namespace sw::editor
         [[nodiscard]] std::optional<int32> findTimelineFrame( float32 keyFrame ) const;
         /** @brief 타임라인 길이(프레임)입니다. 1 이상입니다. */
         [[nodiscard]] int32 getFrameSpan() const;
+        /** @brief `_selectedItem` 이 있는 항목을 가리키면 true 입니다. */
+        [[nodiscard]] bool hasSelectedItem() const;
+
+    private:
+        uint8                  _bItemDraft : 1; ///< `_itemEdit` 이 아직 문서에 없는 초안입니다
+        [[maybe_unused]] uint8 _reserved   : 7;
     };
 } // namespace sw::editor

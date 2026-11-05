@@ -32,6 +32,28 @@ namespace
             track.collectKeyFrames( listKeyFrame );
             return listKeyFrame;
         }
+
+        /** @brief 항목 종류가 요구하는 글 칸을 채웁니다. */
+        static void fillRequiredFields( SequenceTrackItem& item )
+        {
+            const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
+            item._targetObject                = "Hero";
+            if ( pInfo->_bSpawns )
+                item._prefab = "a.prefab.xml";
+            if ( pInfo->_bNeedsPreset )
+                item._preset = "wet";
+            if ( pInfo->_bPlaysScenario )
+                item._scenario = "a.scenario.xml";
+        }
+
+        /** @brief 필수 칸을 채운 항목입니다(파일에서 온 항목처럼 문서에 바로 넣는다). */
+        static SequenceTrackItem makeFilledItem( SequenceItemKind kind )
+        {
+            SequenceTrackItem item{};
+            item._kind = kind;
+            fillRequiredFields( item );
+            return item;
+        }
     };
 } // namespace
 
@@ -88,29 +110,167 @@ SW_TEST_CASE( SequenceDocumentTest, ResetSelectionPicksTheFirstTrack )
     SW_EXPECT_EQUAL( -1, document._curveTrack );
 }
 
-// 스폰 · 외형 · 시나리오는 패널에 없는 칸이 필수라, 만들면 저장한 파일과 되돌리기 스냅숏이 읽기 오류가 됐다.
-SW_TEST_CASE( SequenceDocumentTest, EveryAddableKindSurvivesSaveAndLoad )
+// 스폰 · 외형 · 시나리오는 필수 칸이 빈 채 문서에 들어가면 저장한 파일과 되돌리기 스냅숏이 읽기 오류가 됐다 - 칸을 채운 뒤에만 항목이 된다.
+SW_TEST_CASE( SequenceDocumentTest, EveryKindCanBeCreatedAndSurvivesSaveAndLoad )
 {
     SequenceDocument document;
-    const uint32     addableCount = SequenceDocument::getAddableItemKindCount();
-    SW_REQUIRE_TRUE( addableCount > 0 );
-    for ( uint32 addableIndex = 0; addableIndex < addableCount; ++addableIndex )
+    for ( const SequenceItemKindInfo& info : kArrSequenceItemKindInfo )
     {
-        SW_EXPECT_TRUE( document.addItem( SequenceDocument::getAddableItemKind( addableIndex ), "Kind" ) >= 0 );
+        if ( document.addItem( info._kind, "Kind" ) >= 0 )
+            continue;
+        SW_REQUIRE_TRUE( document.isDraftingItem() );
+        SequenceDocumentTestUtil::fillRequiredFields( document._itemEdit );
+        SW_EXPECT_TRUE( document.commitItemDraft() >= 0 );
     }
+    SW_REQUIRE_EQUAL( SW_COUNT_OF( kArrSequenceItemKindInfo ), document._asset._listItem.size() );
     SequenceAsset readBack;
-    SW_EXPECT_TRUE( readBack.parseXML( document._asset.toXML() ) ); // 더할 수 있는 종류는 빈 칸으로도 다시 읽힌다
-    SW_EXPECT_TRUE( SequenceDocument::getAddableItemKind( addableCount ) == SequenceItemKind::Count );
+    SW_REQUIRE_TRUE( readBack.parseXML( document._asset.toXML() ) );
+    const SequenceTrackItem& spawn = readBack._listItem[static_cast<size_t>( SequenceItemKind::Spawn )];
+    SW_EXPECT_TRUE( spawn._kind == SequenceItemKind::Spawn );
+    SW_EXPECT_TRUE( spawn._prefab == "a.prefab.xml" );
+    SW_EXPECT_TRUE( readBack._listItem[static_cast<size_t>( SequenceItemKind::Appearance )]._preset == "wet" );
+    SW_EXPECT_TRUE( readBack._listItem[static_cast<size_t>( SequenceItemKind::Scenario )]._scenario == "a.scenario.xml" );
 }
 
-SW_TEST_CASE( SequenceDocumentTest, KindsThatNeedMissingFieldsAreNotAdded )
+SW_TEST_CASE( SequenceDocumentTest, KindsThatNeedFieldsOpenADraftInsteadOfAnItem )
 {
     SequenceDocument document;
-    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Spawn, "Spawn" ) );
-    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Appearance, "Appearance" ) );
-    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
-    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Count, "Count" ) );
+    for ( const SequenceItemKind kind : { SequenceItemKind::Spawn, SequenceItemKind::Appearance, SequenceItemKind::Scenario } )
+    {
+        SW_EXPECT_EQUAL( -1, document.addItem( kind, "Kind" ) );
+        SW_EXPECT_TRUE( document.isDraftingItem() );
+        SW_EXPECT_TRUE( document._itemEdit._kind == kind );
+    }
     SW_EXPECT_TRUE( document._asset._listItem.empty() );
+
+    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Count, "Count" ) );
+    SW_EXPECT_FALSE( document.isDraftingItem() );
+    SW_EXPECT_TRUE( document._asset._listItem.empty() );
+}
+
+// 초안이 열려 있어도 문서는 언제나 저장 · 되돌리기 스냅숏으로 읽힌다 - 이 불변식이 설계의 전부다.
+SW_TEST_CASE( SequenceDocumentTest, DraftWithEmptyFieldsNeverEntersTheDocument )
+{
+    SequenceDocument document;
+    document._asset._frameMin = 5;
+    document._asset._frameMax = 8;
+    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Spawn, "Spawn" ) );
+    const string snapshot = document._asset.toXML();
+
+    SW_EXPECT_EQUAL( -1, document.commitItemDraft() );
+    document._itemEdit._prefab = "a.prefab.xml";
+    SW_EXPECT_EQUAL( -1, document.commitItemDraft() ); // 스폰은 이름도 필수다
+    SW_EXPECT_TRUE( document.isDraftingItem() );
+    SW_EXPECT_TRUE( document._asset.toXML() == snapshot );
+    SequenceAsset readBack;
+    SW_EXPECT_TRUE( readBack.parseXML( document._asset.toXML() ) );
+
+    document._itemEdit._targetObject = "Spawned";
+    SW_REQUIRE_EQUAL( 0, document.commitItemDraft() );
+    SW_EXPECT_FALSE( document.isDraftingItem() );
+    SW_EXPECT_EQUAL( 0, document._selectedItem );
+    const SequenceTrackItem& item = document._asset._listItem[0];
+    SW_EXPECT_TRUE( item._name == "Spawn 0" );
+    SW_EXPECT_TRUE( item._kind == SequenceItemKind::Spawn );
+    SW_EXPECT_EQUAL( 5, item._start );
+    SW_EXPECT_EQUAL( 8, item._end );
+    SW_EXPECT_EQUAL( kArrSequenceItemKindInfo[static_cast<size_t>( SequenceItemKind::Spawn )]._defaultColor, item._color );
+    SW_EXPECT_EQUAL( -1, document.commitItemDraft() ); // 닫힌 초안을 두 번 더하지 않는다
+    SW_EXPECT_EQUAL( size_t{ 1 }, document._asset._listItem.size() );
+}
+
+SW_TEST_CASE( SequenceDocumentTest, DraftClosesOnCancelPlainAddAndNewDocument )
+{
+    SequenceDocument document;
+    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
+    document.cancelItemDraft();
+    SW_EXPECT_FALSE( document.isDraftingItem() );
+    SW_EXPECT_TRUE( document._asset._listItem.empty() );
+
+    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
+    SW_EXPECT_EQUAL( 0, document.addItem( SequenceItemKind::Clip, "Clip" ) );
+    SW_EXPECT_FALSE( document.isDraftingItem() );
+
+    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
+    document.resetSelection();
+    SW_EXPECT_FALSE( document.isDraftingItem() );
+}
+
+// 되돌리기는 문서만 바꾼다 - 치던 초안을 잃지 않고, 사본이 고른 항목으로 덮이지도 않는다.
+SW_TEST_CASE( SequenceDocumentTest, UndoKeepsTheOpenDraft )
+{
+    SequenceDocument document;
+    (void)document.addItem( SequenceItemKind::Clip, "Clip" );
+    document._selectedItem = 0;
+    SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
+    document._itemEdit._scenario = "a.scenario.xml";
+
+    document.restoreAsset( document._asset );
+    document.syncItemEdit();
+    SW_EXPECT_TRUE( document.isDraftingItem() );
+    SW_EXPECT_TRUE( document._itemEdit._kind == SequenceItemKind::Scenario );
+    SW_EXPECT_TRUE( document._itemEdit._scenario == "a.scenario.xml" );
+    SW_EXPECT_FALSE( document.commitItemEdit() ); // 초안은 고른 항목에 적용되지 않는다
+    SW_EXPECT_TRUE( document._asset._listItem[0]._scenario.empty() );
+}
+
+// 결함: 파일에서 온 스폰 항목의 대상 칸을 패널에서 비우면 문서가 그대로 비어 저장 · 되돌리기 스냅숏이 읽기 오류가 됐다.
+SW_TEST_CASE( SequenceDocumentTest, ClearingARequiredFieldIsRefusedAndRestored )
+{
+    SequenceDocument document;
+    document._asset._listItem.push_back( SequenceDocumentTestUtil::makeFilledItem( SequenceItemKind::Spawn ) );
+    document._selectedItem = 0;
+    document.syncItemEdit();
+
+    document._itemEdit._targetObject.clear();
+    SW_EXPECT_FALSE( document.commitItemEdit() );
+    SW_EXPECT_TRUE( document._asset._listItem[0]._targetObject == "Hero" );
+    SW_EXPECT_TRUE( document._itemEdit._targetObject == "Hero" ); // 칸이 앞 값으로 돌아온다
+
+    document._itemEdit._prefab.clear();
+    SW_EXPECT_FALSE( document.commitItemEdit() );
+    SW_EXPECT_TRUE( document._asset._listItem[0]._prefab == "a.prefab.xml" );
+
+    document._itemEdit._prefab = "b.prefab.xml";
+    SW_EXPECT_TRUE( document.commitItemEdit() );
+    SW_EXPECT_TRUE( document._asset._listItem[0]._prefab == "b.prefab.xml" );
+    SequenceAsset readBack;
+    SW_EXPECT_TRUE( readBack.parseXML( document._asset.toXML() ) );
+}
+
+// 사본은 글 칸만 적용한다 - 칸을 고치는 사이 타임라인이 옮긴 구간을 옛 값으로 덮지 않는다.
+SW_TEST_CASE( SequenceDocumentTest, ItemEditKeepsTheTimelineSpan )
+{
+    SequenceDocument document;
+    (void)document.addItem( SequenceItemKind::Event, "Event" );
+    document._selectedItem = 0;
+    document.syncItemEdit();
+    document._asset._listItem[0]._start = 3;
+    document._asset._listItem[0]._end   = 7;
+    document._itemEdit._name            = "Cut";
+    SW_EXPECT_TRUE( document.commitItemEdit() );
+    SW_EXPECT_TRUE( document._asset._listItem[0]._name == "Cut" );
+    SW_EXPECT_EQUAL( 3, document._asset._listItem[0]._start );
+    SW_EXPECT_EQUAL( 7, document._asset._listItem[0]._end );
+}
+
+SW_TEST_CASE( SequenceDocumentTest, ItemEditFollowsTheSelection )
+{
+    SequenceDocument document;
+    SW_EXPECT_FALSE( document.hasEditedItem() );
+    SW_EXPECT_FALSE( document.commitItemEdit() );
+
+    (void)document.addItem( SequenceItemKind::Clip, "A" );
+    (void)document.addItem( SequenceItemKind::Event, "B" );
+    document._selectedItem = 1;
+    document.syncItemEdit();
+    SW_EXPECT_TRUE( document.hasEditedItem() );
+    SW_EXPECT_TRUE( document._itemEdit._name == "B 1" );
+
+    document._selectedItem = 5; // 위젯이 준 번호가 범위 밖이어도 없는 항목을 읽지 않는다
+    SW_EXPECT_FALSE( document.hasEditedItem() );
+    document.syncItemEdit();
+    SW_EXPECT_FALSE( document.commitItemEdit() );
 }
 
 // 위젯이 주던 고정 길이 10 은 짧은 타임라인을 넘어 띠 밖으로 나갔다.

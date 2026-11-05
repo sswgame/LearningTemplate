@@ -253,6 +253,8 @@ namespace sw::editor
          * @brief 현재 아이템을 애셋 드롭 타깃으로 만들고, 애셋이 놓였으면 그 상대 경로를 @p outPath 에 담고 true 입니다.
          */
         [[nodiscard]] static bool acceptAssetDrop( string& outPath );
+        /** @brief `acceptAssetDrop` 에 @p pExpectedExt 거르개(`drawAssetSlot` 과 같은 규칙)를 더합니다. 맞지 않는 애셋은 받지 않습니다. 글 칸에 끌어 놓기를 붙일 때 씁니다. */
+        [[nodiscard]] static bool acceptAssetDrop( string& outPath, const utf8* pExpectedExt );
         /**
          * @brief 화면 사각형 [@p minPos, @p maxPos] 를 애셋 드롭 타깃으로 만들고 경로를 받습니다. @p pTargetID 는 창 안에서 타깃을 가리는 이름입니다.
          * @details 뷰포트 캔버스처럼 위에 오버레이 · 기즈모 · HUD 가 그려지는 영역에 씁니다 — "마지막 아이템" 을 타깃으로 잡는 `acceptAssetDrop` 은

@@ -742,8 +742,7 @@ namespace sw::editor
     {
         HintFieldResult result = drawHintField( pID, pBuffer, bufferBytes, pHint, nullptr );
         string          droppedPath;
-        const bool      bDropped = pBuffer != nullptr && acceptAssetDrop( droppedPath ) &&
-                              ( StringUtil::isNullOrEmpty( pExpectedExt ) || EditorAssetFilter::matches( droppedPath, pExpectedExt ) ) && droppedPath.size() < bufferBytes;
+        const bool      bDropped = pBuffer != nullptr && acceptAssetDrop( droppedPath, pExpectedExt ) && droppedPath.size() < bufferBytes;
         if ( bDropped )
         {
             Memory::copy( pBuffer, droppedPath.c_str(), droppedPath.size() + 1 );
@@ -775,15 +774,11 @@ namespace sw::editor
         drawTooltip( SW_LOCKEY( "EdCommon", "AssetSlotDrop" ) );
 
         string droppedPath;
-        if ( acceptAssetDrop( droppedPath ) )
+        // 필터는 쉼표 · 공백으로 나눈 여러 확장자다(".png,.jpg"). 한 개짜리도 같은 규칙이다.
+        if ( acceptAssetDrop( droppedPath, pExpectedExt ) )
         {
-            // 필터는 쉼표 · 공백으로 나눈 여러 확장자다(".png,.jpg"). 한 개짜리도 같은 규칙이다.
-            const bool bAccept = StringUtil::isNullOrEmpty( pExpectedExt ) || EditorAssetFilter::matches( droppedPath, pExpectedExt );
-            if ( bAccept )
-            {
-                assetPath = droppedPath;
-                bChanged  = true;
-            }
+            assetPath = droppedPath;
+            bChanged  = true;
         }
 
         if ( assetPath.empty() == false )
@@ -848,6 +843,11 @@ namespace sw::editor
         EditorDragPayload payload{};
         return EditorInputGUI::acceptDrop( EditorPayloadKindSet{ EditorPayloadKind::Asset }, payload ) &&
                EditorInputGUI::findPayloadName( EditorPayloadKind::Asset, payload._id, outPath );
+    }
+
+    bool EditorWidgets::acceptAssetDrop( string& outPath, const utf8* pExpectedExt )
+    {
+        return acceptAssetDrop( outPath ) && ( StringUtil::isNullOrEmpty( pExpectedExt ) || EditorAssetFilter::matches( outPath, pExpectedExt ) );
     }
 
     bool EditorWidgets::acceptAssetDropInRect( const float2& minPos, const float2& maxPos, const utf8* pTargetID, string& outPath )

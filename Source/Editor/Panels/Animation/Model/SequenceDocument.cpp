@@ -60,10 +60,13 @@ namespace sw::editor
 
     SequenceDocument::SequenceDocument()
         : _asset{}
+        , _itemEdit{}
         , _selectedItem{ -1 }
         , _selectedTrack{ -1 }
         , _curveTrack{ -1 }
         , _curveChannel{ 0 }
+        , _bItemDraft{ SW_FALSE }
+        , _reserved{ 0 }
     {
     }
 
@@ -81,51 +84,80 @@ namespace sw::editor
         _selectedItem  = -1;
         _selectedTrack = _asset._listTrack.empty() ? -1 : 0;
         _curveTrack    = -1;
-    }
-
-    bool SequenceDocument::canAddItemKind( SequenceItemKind kind )
-    {
-        const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( kind );
-        return pInfo != nullptr && pInfo->_bSpawns == false && pInfo->_bNeedsPreset == false && pInfo->_bPlaysScenario == false;
-    }
-
-    uint32 SequenceDocument::getAddableItemKindCount()
-    {
-        uint32 count = 0;
-        for ( const SequenceItemKindInfo& info : kArrSequenceItemKindInfo )
-        {
-            if ( canAddItemKind( info._kind ) )
-                ++count;
-        }
-        return count;
-    }
-
-    SequenceItemKind SequenceDocument::getAddableItemKind( uint32 addableIndex )
-    {
-        uint32 remaining = addableIndex;
-        for ( const SequenceItemKindInfo& info : kArrSequenceItemKindInfo )
-        {
-            if ( canAddItemKind( info._kind ) == false )
-                continue;
-            if ( remaining == 0 )
-                return info._kind;
-            --remaining;
-        }
-        return SequenceItemKind::Count;
+        _bItemDraft    = SW_FALSE;
     }
 
     int32 SequenceDocument::addItem( SequenceItemKind kind, string_view kindName )
     {
-        if ( canAddItemKind( kind ) == false )
+        _bItemDraft                       = SW_FALSE;
+        const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( kind );
+        if ( pInfo == nullptr )
             return -1;
         SequenceTrackItem item{};
         item._kind  = kind;
         item._start = _asset._frameMin;
         item._end   = MathUtil::min( _asset._frameMin + SequenceDocumentInternal::kNewItemFrameLength, _asset._frameMax );
-        item._color = SequenceAsset::findItemKindInfo( kind )->_defaultColor;
+        item._color = pInfo->_defaultColor;
         item._name  = SequenceDocumentInternal::makeNumberedName( _asset._listItem, kindName );
+        if ( item.findFieldIssue() != SequenceItemFieldIssue::None )
+        {
+            _itemEdit   = std::move( item );
+            _bItemDraft = SW_TRUE;
+            return -1;
+        }
         _asset._listItem.push_back( std::move( item ) );
         return static_cast<int32>( _asset._listItem.size() ) - 1;
+    }
+
+    bool SequenceDocument::isDraftingItem() const
+    {
+        return _bItemDraft == SW_TRUE;
+    }
+
+    int32 SequenceDocument::commitItemDraft()
+    {
+        if ( isDraftingItem() == false || _itemEdit.findFieldIssue() != SequenceItemFieldIssue::None )
+            return -1;
+        _asset._listItem.push_back( _itemEdit );
+        _bItemDraft   = SW_FALSE;
+        _selectedItem = static_cast<int32>( _asset._listItem.size() ) - 1;
+        return _selectedItem;
+    }
+
+    void SequenceDocument::cancelItemDraft()
+    {
+        _bItemDraft = SW_FALSE;
+    }
+
+    bool SequenceDocument::hasEditedItem() const
+    {
+        return isDraftingItem() || hasSelectedItem();
+    }
+
+    void SequenceDocument::syncItemEdit()
+    {
+        if ( isDraftingItem() == false && hasSelectedItem() )
+            _itemEdit = _asset._listItem[static_cast<size_t>( _selectedItem )];
+    }
+
+    bool SequenceDocument::commitItemEdit()
+    {
+        if ( isDraftingItem() || hasSelectedItem() == false )
+            return false;
+        SequenceTrackItem& item      = _asset._listItem[static_cast<size_t>( _selectedItem )];
+        SequenceTrackItem  candidate = item;
+        candidate._name              = _itemEdit._name;
+        candidate._targetObject      = _itemEdit._targetObject;
+        candidate._prefab            = _itemEdit._prefab;
+        candidate._preset            = _itemEdit._preset;
+        candidate._scenario          = _itemEdit._scenario;
+        if ( candidate.findFieldIssue() != SequenceItemFieldIssue::None )
+        {
+            _itemEdit = item;
+            return false;
+        }
+        item = std::move( candidate );
+        return true;
     }
 
     bool SequenceDocument::removeItem( int32 itemIndex )
@@ -313,5 +345,10 @@ namespace sw::editor
     int32 SequenceDocument::getFrameSpan() const
     {
         return MathUtil::max( _asset._frameMax - _asset._frameMin, 1 );
+    }
+
+    bool SequenceDocument::hasSelectedItem() const
+    {
+        return 0 <= _selectedItem && _selectedItem < static_cast<int32>( _asset._listItem.size() );
     }
 } // namespace sw::editor
