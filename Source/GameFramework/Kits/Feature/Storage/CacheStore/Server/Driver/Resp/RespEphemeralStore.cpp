@@ -266,21 +266,36 @@ namespace sw
         (void)remote;
         (void)bAccepted;
         ScopedLock<mutex> lock{ _mutex };
-        if ( _commandConnection.handleOpened( *_transport.get(), handle ) )
-        {
-            _commandBackoff.reset();
-            return;
-        }
-        if ( _subscribeConnection.handleOpened( *_transport.get(), handle ) )
-            _subscribeBackoff.reset();
+        // 물러섬은 여기서 풀지 않는다 - 연결만 받고 AUTH 를 거절하거나 바로 닫는 서버를 대기 없이 두드리게 된다. 답을 받으면(`onStreamReceived`) 푼다.
+        if ( _commandConnection.handleOpened( *_transport.get(), handle ) == false )
+            (void)_subscribeConnection.handleOpened( *_transport.get(), handle );
     }
 
     void RespEphemeralStore::onStreamReceived( StreamConnectionHandle handle, const uint8* pData, int32 size )
     {
+        _ownerThread.assumeHeld(); // 저장소는 소유 스레드 하나가 부르고 펌프한다
         ScopedLock<mutex> lock{ _mutex };
+        // 받다가 연결을 끊은 경우(AUTH 거절 · 깨진 답)도 물러선다 - 닫힘 콜백은 이미 비운 손잡이로 와서 물러섬을 잡지 못한다. 안 그러면 구독 연결은 폴링마다 다시 접속한다.
+        const int64 nowNanoseconds = _clock.nowNanoseconds();
         if ( _commandConnection.handleReceived( *_transport.get(), handle, pData, size ) )
+        {
+            if ( _commandConnection.getState() == RespConnectionState::Closed )
+                _nextCommandConnectNanoseconds = nowNanoseconds + _commandBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+            else
+                _commandBackoff.reset();
             return;
-        (void)_subscribeConnection.handleReceived( *_transport.get(), handle, pData, size );
+        }
+        if ( _subscribeConnection.handleReceived( *_transport.get(), handle, pData, size ) == false )
+            return;
+        if ( _subscribeConnection.getState() == RespConnectionState::Closed )
+        {
+            _subscriptionAckCount            = _subscriptionSentCount; // 오지 않을 확인은 기다리지 않는다
+            _nextSubscribeConnectNanoseconds = nowNanoseconds + _subscribeBackoff.takeDelayMs( _settings->_maxBackoffMs ) * constant::time::kNanosecondsPerMillisecond;
+        }
+        else
+        {
+            _subscribeBackoff.reset();
+        }
     }
 
     void RespEphemeralStore::onStreamClosed( StreamConnectionHandle handle, StreamCloseReason reason )
@@ -535,7 +550,11 @@ namespace sw
                     EphemeralScoredMember& member = reply._listMember.emplace_back();
                     member._member                = string( value._listElement[index].getText() );
                     if ( value._listElement[index + 1].tryReadIntegerText( member._score ) == false )
+                    {
                         reply._result = EphemeralResult::Invalid;
+                        reply._listMember.clear();
+                        break;
+                    }
                 }
                 break;
             }

@@ -287,6 +287,9 @@ namespace sw
                 return fail( "RESP line has a CR without LF" );
             if ( index == offset )
                 return fail( "RESP line is empty" );
+            // 아래 검사는 줄 끝을 못 봤을 때뿐이다 - 줄이 한 번에 와도 같은 상한을 지킨다.
+            if ( static_cast<int64>( index - offset ) > kMaxLineSize )
+                return fail( "RESP line exceeds the size limit" );
             outLineBegin = offset;
             outLineEnd   = index;
             return RespParseResult::Complete;
