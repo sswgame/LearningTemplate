@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/TagSystem.h"
+#include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/CustomizationValueSet.h"
@@ -53,20 +54,29 @@ namespace sw
 namespace sw
 {
     /** @brief 프리셋 하나입니다. 파일에 적힌 그대로이며 부모와 합치기 전의 상태입니다. */
+    REFLECT()
     struct CharacterAppearanceDef
     {
+        REFLECT_BODY();
+
         vector<CharacterAppearanceValueDef> _listValue{};
         vector<CharacterAppearanceSlotDef>  _listSlot{};
         vector<AppearanceSocketOverride>    _listSocketOverride{};
         vector<hashed_string>               _listSet{};
-        vector<hashed_string>               _listBodyType{};  ///< 후보
-        vector<hashed_string>               _listBodyShape{}; ///< 후보
-        vector<hashed_string>               _listFace{};      ///< 후보
-        vector<hashed_string>               _listBody{};      ///< 몸 외형(ItemVisual id) 후보
-        TagContainer                        _tags{};
-        hashed_string                       _id{};
-        hashed_string                       _parent{};
-        hashed_string                       _schema{};
+        PROPERTY( Name = "bodyType" )
+        vector<hashed_string> _listBodyType{}; ///< 후보
+        PROPERTY( Name = "bodyShape" )
+        vector<hashed_string> _listBodyShape{}; ///< 후보
+        PROPERTY( Name = "face" )
+        vector<hashed_string> _listFace{}; ///< 후보
+        PROPERTY( Name = "body" )
+        vector<hashed_string> _listBody{}; ///< 몸 외형(ItemVisual id) 후보
+        TagContainer          _tags{};
+        hashed_string         _id{};
+        PROPERTY()
+        hashed_string _parent{};
+        PROPERTY()
+        hashed_string _schema{};
     };
 } // namespace sw
 

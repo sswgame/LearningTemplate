@@ -21,7 +21,6 @@ namespace sw
     {
         struct CharacterAppearanceInternal
         {
-            static constexpr const utf8* kArrPresetAttribute[]    = { "id", "parent", "schema", "bodyType", "bodyShape", "face", "body", "tags" };
             static constexpr const utf8* kArrValueAttribute[]     = { "name", "value", "min", "max", "color", "colors", "option", "options" };
             static constexpr const utf8* kArrItemValueAttribute[] = { "name", "value", "color", "option" };
             static constexpr const utf8* kArrEquipAttribute[]     = { "set", "slot", "item", "items", "visible", "state", "damage" };
@@ -157,13 +156,7 @@ namespace sw
 
             static void readPreset( const XMLNode& node, CharacterAppearanceDef& outDef, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrPresetAttribute, report, sourceName );
-                outDef._parent = XMLReadUtil::readOptionalName( node, "parent" );
-                outDef._schema = XMLReadUtil::readOptionalName( node, "schema" ); // 부모에서 이어받을 수 있다
-                AppearanceXMLUtil::readNameList( node, "bodyType", outDef._listBodyType );
-                AppearanceXMLUtil::readNameList( node, "bodyShape", outDef._listBodyShape );
-                AppearanceXMLUtil::readNameList( node, "face", outDef._listFace );
-                AppearanceXMLUtil::readNameList( node, "body", outDef._listBody );
+                (void)AppearanceXMLUtil::readFields( node, outDef, report, sourceName, { "id", "tags" } ); // 적지 않은 칸은 부모에서 이어받는다
                 AppearanceXMLUtil::readTags( node, "tags", outDef._tags );
                 for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
                 {

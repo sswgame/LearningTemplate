@@ -6,6 +6,7 @@
 
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
 
@@ -33,19 +34,6 @@ namespace sw::editor
                     return false;
                 }
                 outValue = skeletonPath.substr( 0, skeletonPath.size() - skeletonExtension.size() ) + kRefPoseExtension;
-                return true;
-            }
-
-            /** @brief 속성 @p pName 을 필수 칸으로 읽습니다. 없거나 비면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool readRequired( const XMLNode& root, const utf8* pName, string& outValue, string_view sourceName )
-            {
-                const string_view text = root.getAttributeText( pName );
-                if ( text.empty() )
-                {
-                    SW_LOG_ERROR_ID( "CharacterEditorPackData.NeedsAttribute", "%#: <%#> needs the '%#' attribute", sourceName, kRootName, pName );
-                    return false;
-                }
-                outValue = string( text );
                 return true;
             }
         };
@@ -80,29 +68,12 @@ namespace sw::editor
     {
         using Internal = CharacterEditorPackDataInternal;
         bool bOk       = true;
-        for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
-        {
-            const utf8* pName  = attribute.getName();
-            const bool  bKnown = StringUtil::equals( pName, "sockets" ) || StringUtil::equals( pName, "skeleton" ) || StringUtil::equals( pName, "items" ) || StringUtil::equals( pName, "appearance" ) ||
-                                StringUtil::equals( pName, "clipFolder" ) || StringUtil::equals( pName, "previewPreset" ) || StringUtil::equals( pName, "rig" );
-            if ( bKnown == false )
-            {
-                SW_LOG_ERROR_ID( "CharacterEditorPackData.UnknownAttribute", "%#: unknown attribute '%#' on <%#>", sourceName, pName, Internal::kRootName );
-                bOk = false;
-            }
-        }
+        bOk            = XMLFields::readFields( root, *this, sourceName ) && bOk;
         if ( root.findChild().isValid() )
         {
             SW_LOG_ERROR_ID( "CharacterEditorPackData.TakesAttributesOnly", "%#: <%#> takes attributes only", sourceName, Internal::kRootName );
             bOk = false;
         }
-        bOk      = Internal::readRequired( root, "sockets", _socketPath, sourceName ) && bOk;
-        bOk      = Internal::readRequired( root, "skeleton", _skeletonPath, sourceName ) && bOk;
-        bOk      = Internal::readRequired( root, "items", _itemsPath, sourceName ) && bOk;
-        bOk      = Internal::readRequired( root, "appearance", _appearanceFolder, sourceName ) && bOk;
-        bOk      = Internal::readRequired( root, "clipFolder", _clipFolder, sourceName ) && bOk;
-        bOk      = Internal::readRequired( root, "previewPreset", _previewPresetID, sourceName ) && bOk;
-        _rigPath = string( root.getAttributeText( "rig" ) ); // 선택 칸 — 비면 게임에 미리볼 제약 리그가 없다(창에 리그 단추가 없다)
         if ( _skeletonPath.empty() == false )
             bOk = Internal::makeRefPosePath( _skeletonPath, _refPosePath, sourceName ) && bOk;
         return bOk;
