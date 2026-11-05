@@ -19,9 +19,9 @@
 	<DevCommand line="panel.focus profiler"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.ProfilerTimelineThreadCount" equals="0"/>
-	<EditorClick mark="profiler.timeline.tab" state="down"/>
+	<EditorClick mark="profiler.timeline.tab" state="Down"/>
 	<Wait frames="3"/>
-	<EditorClick mark="profiler.timeline.tab" state="up"/>
+	<EditorClick mark="profiler.timeline.tab" state="Up"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="profiler.timeline.record"/>
 	<WaitUntil watch="Editor.ProfilerTimelineThreadCount" atLeast="2" timeoutFrames="180"/>

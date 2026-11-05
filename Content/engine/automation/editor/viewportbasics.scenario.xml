@@ -12,7 +12,7 @@
 	<EditorWaitSettled/>
 	<DevCommand line="select.type MeshComponent"/>
 	<EditorWaitSettled/>
-	<EditorClick mark="sceneView.canvas" button="2" anchor="0.05,0.95" state="down"/>
+	<EditorClick mark="sceneView.canvas" button="2" anchor="0.05,0.95" state="Down"/>
 	<WaitUntil watch="Editor.SelectionOutlineBoxes" atLeast="1" timeoutFrames="60"/>
 	<Variable name="gv_editorWatchPanel" value="hierarchy"/>
 	<EditorWaitSettled/>
@@ -35,13 +35,13 @@
 	<WaitUntil watch="Editor.SceneViewMaximized" equals="1" timeoutFrames="60"/>
 	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<Wait frames="5"/>
-	<EditorClick mark="sceneView.canvas" button="2" state="up"/>
+	<EditorClick mark="sceneView.canvas" button="2" state="Up"/>
 	<EditorWaitSettled/>
-	<EditorClick mark="sceneView.canvas" button="2" anchor="0.05,0.95" state="down"/>
+	<EditorClick mark="sceneView.canvas" button="2" anchor="0.05,0.95" state="Down"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Shift+Space"/>
 	<Wait frames="5"/>
-	<EditorClick mark="toolbar.play" button="2" state="up"/>
+	<EditorClick mark="toolbar.play" button="2" state="Up"/>
 	<Wait frames="20"/>
 	<Expect watch="Editor.SceneViewMaximized" equals="0"/>
 	<Expect watch="Editor.PanelOpen" equals="1"/>

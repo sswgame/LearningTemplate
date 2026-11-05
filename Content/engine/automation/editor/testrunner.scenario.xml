@@ -17,13 +17,13 @@
 	<EditorText value="hierarchy.tagFilter"/>
 	<!-- 체크 · 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<EditorWaitSettled/>
-	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="down"/>
+	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="Down"/>
 	<Wait frames="3"/>
-	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="up"/>
+	<EditorClick mark="testRunner.select.hierarchy.tagFilter" state="Up"/>
 	<EditorWaitSettled/>
-	<EditorClick mark="testRunner.runSelected" state="down"/>
+	<EditorClick mark="testRunner.runSelected" state="Down"/>
 	<Wait frames="3"/>
-	<EditorClick mark="testRunner.runSelected" state="up"/>
+	<EditorClick mark="testRunner.runSelected" state="Up"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.TestRunnerPassCount" equals="1"/>
 	<EditorWaitSettled/>

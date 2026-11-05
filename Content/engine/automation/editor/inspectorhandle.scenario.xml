@@ -68,9 +68,9 @@
 	<WaitUntil watch="Editor.SelectedHandle" is="(none)" timeoutFrames="60"/>
 	<!-- ⑤ 행 메뉴의 Paste Value 는 비활성 -->
 	<EditorWaitSettled/>
-	<EditorClick mark="inspector.label.TypedHandleTestComponent._target" button="1" state="down"/>
+	<EditorClick mark="inspector.label.TypedHandleTestComponent._target" button="1" state="Down"/>
 	<Wait frames="3"/>
-	<EditorClick mark="inspector.label.TypedHandleTestComponent._target" button="1" state="up"/>
+	<EditorClick mark="inspector.label.TypedHandleTestComponent._target" button="1" state="Up"/>
 	<EditorWaitSettled/>
 	<CaptureEditorUI file="inspectorhandle/menu.png"/>
 	<EditorWaitSettled/>

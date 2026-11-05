@@ -40,11 +40,8 @@ namespace sw::editor
             /** @brief 창과 도크 사각형을 비교할 때의 픽셀 허용치입니다. */
             static constexpr float32 kPixelTolerance = 1.0f;
 
-            using Validation       = EditorScenarioStepValidation;
-            using PressState       = EditorPressState;
-            using ClickArgs        = EditorClickArgs;
-            using DragArgs         = EditorDragArgs;
-            using ExpectObjectArgs = EditorExpectObjectArgs;
+            using Validation = EditorScenarioStepValidation;
+            using PressState = EditorPressState;
 
             /**
              * @brief 위젯 레이블 기록을 시작합니다(모든 에디터 단계의 준비 함수). 레이블은 기록을 켠 뒤에 그린 위젯만 기록됩니다.
@@ -102,11 +99,11 @@ namespace sw::editor
                 inoutSettled              = inoutSettled && bDrawn && found.isSettled();
             }
 
-            /** @brief 누른 채 둔 버튼 · 키를 놓는 단계(`state="up"`)면 true 입니다 — 기다리면 누른 시간이 길어진다(뷰포트 비행이 더 간다). */
+            /** @brief 누른 채 둔 버튼 · 키를 놓는 단계(`state="Up"`)면 true 입니다 — 기다리면 누른 시간이 길어진다(뷰포트 비행이 더 간다). */
             [[nodiscard]] static bool isRelease( const AutomationStep& step )
             {
                 const string* pState = step.findAttribute( "state" );
-                return pState != nullptr && *pState == "up";
+                return pState != nullptr && *pState == "Up";
             }
 
             /**
@@ -166,7 +163,7 @@ namespace sw::editor
 
             /**
              * @brief 키 · 글 단계는 받을 곳(키보드 초점)이 두 프레임 연속 같고 앞 단계의 입력이 다 들어갈 때까지 시나리오 시계를 붙잡습니다(최대 `kSettleWaitFrames`).
-             * @details 클릭이 연 입력 칸 · 팝업이 초점을 잡는 데 한두 프레임이 걸려, 예전에는 시나리오가 키 앞에 고정 대기를 두었다. 놓기(`state="up"`)는 기다리지 않는다.
+             * @details 클릭이 연 입력 칸 · 팝업이 초점을 잡는 데 한두 프레임이 걸려, 예전에는 시나리오가 키 앞에 고정 대기를 두었다. 놓기(`state="Up"`)는 기다리지 않는다.
              */
             static AutomationStepHold holdUntilKeyboardSettled( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
             {
@@ -182,18 +179,14 @@ namespace sw::editor
             /** @brief 레이블 가운데(또는 `anchor` 위치)로 마우스를 옮기고 누른 뒤 뗍니다. ImGui 입력 큐가 누름과 뗌을 프레임에 나눠 넣습니다. 레이블이 없으면 실패를 기록합니다. */
             static bool runClick( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string& mark = *step.findAttribute( "mark" );
-                ClickArgs     args;
-                string        error;
-                if ( Validation::parseClick( step, args, error ) == false )
-                {
-                    runner.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
-                    return true;
-                }
-                const int32         button       = args._button;
-                const float2        anchor       = args._anchor;
-                const vector<int32> listModifier = makeImGuiModifiers( args._modifierMask );
-                const PressState    state        = args._state;
+                const EditorClickFields fields = step.readValidatedFields<EditorClickFields>();
+                const string&           mark   = fields._mark;
+                uint8                   modifierMask{ 0 };
+                (void)Validation::parseModifiers( fields._mods, modifierMask ); // 시작 때 검사했다
+                const int32         button       = fields._button;
+                const float2        anchor       = fields._anchor;
+                const vector<int32> listModifier = makeImGuiModifiers( modifierMask );
+                const PressState    state        = fields._state;
                 if ( reportClippedMark( runner, step, mark ) )
                     return true;
                 if ( EditorSelfTestInput::moveMouseToMark( mark, anchor ) == false )
@@ -203,7 +196,7 @@ namespace sw::editor
                 }
                 // 누름과 뗌을 두 프레임으로 나누고, 뗌 앞에서 다시 레이블 위로 옮긴다. 그 사이에 플랫폼이 실제 커서를 넣기 때문이다.
                 // 수정자(Ctrl+클릭 다중 선택 등)는 누르기 전에 누르고, 놓은 뒤에 해제한다.
-                // state="down" 은 누른 채로 두고(드래그, 뷰포트 비행), state="up" 은 그 버튼을 놓는다. 그 사이 프레임에 다른 단계(키를 누른 채)를 넣을 수 있다.
+                // state="Down" 은 누른 채로 두고(드래그, 뷰포트 비행), state="Up" 은 그 버튼을 놓는다. 그 사이 프레임에 다른 단계(키를 누른 채)를 넣을 수 있다.
                 if ( state == PressState::Up )
                 {
                     EditorSelfTestInput::setMouseButton( button, false );
@@ -245,8 +238,9 @@ namespace sw::editor
              */
             static bool runDrag( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string&      mark = *step.findAttribute( "mark" );
-                EditorSelfTestMark found{};
+                const EditorDragFields fields = step.readValidatedFields<EditorDragFields>();
+                const string&          mark   = fields._mark;
+                EditorSelfTestMark     found{};
                 if ( EditorSelfTestMarks::find( mark, found ) == false )
                 {
                     runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
@@ -254,26 +248,21 @@ namespace sw::editor
                 }
                 if ( reportClippedMark( runner, step, mark ) )
                     return true;
-                DragArgs args;
-                string   error;
-                if ( Validation::parseDrag( step, args, error ) == false )
-                {
-                    runner.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
-                    return true;
-                }
-                float64             deltaX       = args._deltaX;
-                float64             deltaY       = args._deltaY;
-                const int32         button       = static_cast<int32>( args._buttonNumber );
-                const vector<int32> listModifier = makeImGuiModifiers( args._modifierMask );
+                uint8 modifierMask{ 0 };
+                (void)Validation::parseModifiers( fields._mods, modifierMask ); // 시작 때 검사했다
+                float64             deltaX       = static_cast<float64>( fields._dx );
+                float64             deltaY       = static_cast<float64>( fields._dy );
+                const int32         button       = fields._button;
+                const vector<int32> listModifier = makeImGuiModifiers( modifierMask );
                 // `anchor` 는 누르기 시작할 자리를 레이블 안 비율로 잡는다 — 넓은 캔버스(씬 뷰)의 빈 구석에서 끄는 상자 선택처럼 가운데가 아닌 곳에서 시작할 때.
-                const float2 start{ found._min._x + ( found._max._x - found._min._x ) * args._anchor._x, found._min._y + ( found._max._y - found._min._y ) * args._anchor._y };
+                const float2 start{ found._min._x + ( found._max._x - found._min._x ) * fields._anchor._x, found._min._y + ( found._max._y - found._min._y ) * fields._anchor._y };
                 // `toMark` 는 끝을 다른 위젯의 가운데로 잡는다 — 끌어 놓기(Hierarchy 행을 다른 행에, 에셋을 슬롯에)의 받는 쪽을 픽셀 거리로 세지 않는다.
-                if ( const string* pToMark = step.findAttribute( "toMark" ); pToMark != nullptr )
+                if ( fields._toMark.empty() == false )
                 {
                     EditorSelfTestMark target{};
-                    if ( EditorSelfTestMarks::find( *pToMark, target ) == false )
+                    if ( EditorSelfTestMarks::find( fields._toMark, target ) == false )
                     {
-                        runner.recordFailure( step, "no editor widget is marked '" + *pToMark + "' (was it drawn in the last frame?)" );
+                        runner.recordFailure( step, "no editor widget is marked '" + fields._toMark + "' (was it drawn in the last frame?)" );
                         return true;
                     }
                     deltaX = static_cast<float64>( ( target._min._x + target._max._x ) * 0.5f - start._x );
@@ -314,13 +303,9 @@ namespace sw::editor
                     EditorSelfTestInput::releaseMouseHold();
                     return true;
                 }
-                const string& mark = *step.findAttribute( "mark" );
-                float2        anchor{ 0.5f, 0.5f }; // 적지 않으면 가운데
-                if ( Validation::readAnchor( step, anchor ) == false )
-                {
-                    runner.recordFailure( step, "anchor must be 'x,y' in 0..1" ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
-                    return true;
-                }
+                const EditorHoverFields fields = step.readValidatedFields<EditorHoverFields>( { "release" } );
+                const string&           mark   = fields._mark;
+                const float2            anchor = fields._anchor;
                 if ( EditorSelfTestInput::holdMouseAtMark( mark, anchor ) == false )
                     runner.recordFailure( step, "no editor widget is marked '" + mark + "' (was it drawn in the last frame?)" );
                 return true;
@@ -328,7 +313,7 @@ namespace sw::editor
 
             static bool runText( AutomationStepContext& /*runner*/, const AutomationStep& step )
             {
-                EditorSelfTestInput::typeText( *step.findAttribute( "value" ) );
+                EditorSelfTestInput::typeText( step.readValidatedFields<EditorTextFields>()._value );
                 return true;
             }
 
@@ -358,17 +343,13 @@ namespace sw::editor
 
             [[nodiscard]] static bool parseKey( const AutomationStep& step, KeyArgs& outArgs, string& outError )
             {
-                const string* pKey = step.requireAttribute( "key", outError );
-                if ( pKey == nullptr )
+                EditorKeyFields fields;
+                if ( step.readFields( fields, outError ) == false )
                     return false;
-                if ( Validation::readPressState( step, outArgs._state ) == false )
+                outArgs._state = fields._state;
+                if ( parseKeyChord( fields._key, outArgs._listKey ) == false )
                 {
-                    outError = step.describe() + ": state must be down or up, got '" + *step.findAttribute( "state" ) + "'";
-                    return false;
-                }
-                if ( parseKeyChord( *pKey, outArgs._listKey ) == false )
-                {
-                    outError = step.describe() + ": unknown key '" + *pKey + "' (ImGui key names, e.g. Enter · Escape · F5 · Ctrl+Z)";
+                    outError = step.describe() + ": unknown key '" + fields._key + "' (ImGui key names, e.g. Enter · Escape · F5 · Ctrl+Z)";
                     return false;
                 }
                 return true;
@@ -417,12 +398,12 @@ namespace sw::editor
             {
                 if ( prepareMarks( runner, step, outError ) == false )
                     return false;
-                const string* pComponent = step.findAttribute( "component" );
-                if ( pComponent == nullptr )
+                const string component = step.readValidatedFields<EditorExpectObjectFields>()._component;
+                if ( component.empty() )
                     return true;
-                if ( editor::getSubsystem<TypeRegistry>().findType( hashed_string( *pComponent ) ) == nullptr )
+                if ( editor::getSubsystem<TypeRegistry>().findType( hashed_string( component ) ) == nullptr )
                 {
-                    outError = step.describe() + ": unknown component type '" + *pComponent + "'";
+                    outError = step.describe() + ": unknown component type '" + component + "'";
                     return false;
                 }
                 return true;
@@ -430,17 +411,11 @@ namespace sw::editor
 
             static bool runExpectObject( AutomationStepContext& runner, const AutomationStep& step )
             {
-                ExpectObjectArgs args;
-                string           error;
-                if ( Validation::parseExpectObject( step, args, error ) == false )
-                {
-                    runner.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
-                    return true;
-                }
-                const uint32        expectedCount = args._expectedCount;
-                const uint32        bSelected     = args._selected;
-                const hashed_string name( *step.findAttribute( "name" ) );
-                GameObjectManager*  pManager = editor::getActiveObjectManager();
+                const EditorExpectObjectFields fields        = step.readValidatedFields<EditorExpectObjectFields>();
+                const uint32                   expectedCount = fields._count;
+                const uint32                   bSelected     = fields._selected;
+                const hashed_string            name( fields._name );
+                GameObjectManager*             pManager = editor::getActiveObjectManager();
                 if ( pManager == nullptr )
                 {
                     runner.recordFailure( step, "no active scene" );
@@ -448,9 +423,8 @@ namespace sw::editor
                 }
 
                 vector<GameObject*> listObject;
-                const string*       pComponent = step.findAttribute( "component" );
-                if ( pComponent != nullptr )
-                    EditorSceneCommands::collectObjectsWithComponent( *pManager, editor::getSubsystem<TypeRegistry>().findType( hashed_string( *pComponent ) ), listObject );
+                if ( fields._component.empty() == false )
+                    EditorSceneCommands::collectObjectsWithComponent( *pManager, editor::getSubsystem<TypeRegistry>().findType( hashed_string( fields._component ) ), listObject );
                 else
                     pManager->getAllGameObjects( listObject );
 
@@ -508,13 +482,8 @@ namespace sw::editor
 
             static bool runDockLayout( AutomationStepContext& runner, const AutomationStep& step )
             {
-                uint32 minNodeSide = 0; // 적지 않으면 아래의 기본 최소 변
-                if ( Validation::readCount( step, "minNodeSize", minNodeSide ) == false )
-                {
-                    runner.recordFailure( step, "minNodeSize must be pixels" ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
-                    return true;
-                }
-                const float32 minSide = minNodeSide > 0 ? static_cast<float32>( minNodeSide ) : kDefaultMinDockNodeSide;
+                const uint32  minNodeSide = step.readValidatedFields<EditorDockLayoutFields>()._minNodeSize; // 0 이면 아래의 기본 최소 변
+                const float32 minSide     = minNodeSide > 0 ? static_cast<float32>( minNodeSide ) : kDefaultMinDockNodeSide;
 
                 const MainWindowSubsystem* pWindowHost = editor::findSubsystem<MainWindowSubsystem>();
                 const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
@@ -576,7 +545,7 @@ namespace sw::editor
             {
                 if ( s_pRequestedSelfTestStep != &step )
                 {
-                    if ( EditorSelfTestRunner::requestRun( *step.findAttribute( "pattern" ), false ) == false )
+                    if ( EditorSelfTestRunner::requestRun( step.readValidatedFields<EditorSelfTestFields>()._pattern, false ) == false )
                         return AutomationStepHold::Run; // 에디터가 없거나 다른 실행(Test Runner 창)이 돈다 - 단계가 결과 없음으로 진다
                     s_pRequestedSelfTestStep = &step;
                 }
@@ -591,7 +560,7 @@ namespace sw::editor
                 const vector_reference<const EditorSelfTestResult> listResult = EditorSelfTestRunner::getResults();
                 if ( bRequested == false || listResult.empty() )
                 {
-                    runner.recordFailure( step, "no editor self test ran for pattern '" + *step.findAttribute( "pattern" ) + "' (no editor, a run already active, or no match)" );
+                    runner.recordFailure( step, "no editor self test ran for pattern '" + step.readValidatedFields<EditorSelfTestFields>()._pattern + "' (no editor, a run already active, or no match)" );
                     return true;
                 }
                 for ( const EditorSelfTestResult& result : listResult )

@@ -11,15 +11,15 @@
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewDrawn" equals="1"/>
 	<!-- 오른쪽 단추 + D 로 날아가는 한가운데서 포커스를 잃었다가 얻는다 -->
-	<EditorClick mark="sceneView.canvas" button="1" state="down"/>
-	<EditorKey key="D" state="down"/>
+	<EditorClick mark="sceneView.canvas" button="1" state="Down"/>
+	<EditorKey key="D" state="Down"/>
 	<Wait frames="20"/>
 	<PostWindowMessage message="KillFocus"/>
 	<Wait frames="2"/>
 	<PostWindowMessage message="SetFocus"/>
 	<Wait frames="20"/>
-	<EditorKey key="D" state="up"/>
-	<EditorClick mark="sceneView.canvas" button="1" state="up"/>
+	<EditorKey key="D" state="Up"/>
+	<EditorClick mark="sceneView.canvas" button="1" state="Up"/>
 	<EditorWaitSettled/>
 	<Expect watch="Editor.SceneViewCameraX" atLeast="3"/>
 	<EditorWaitSettled/>

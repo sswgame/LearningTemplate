@@ -55,9 +55,9 @@
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="1" timeoutFrames="120"/>
 	<ExpectLog id="Profiler.SpikePaused" atLeast="1"/>
 	<!-- 4) Call Tree -->
-	<EditorClick mark="profiler.callTree.tab" state="down"/>
+	<EditorClick mark="profiler.callTree.tab" state="Down"/>
 	<Wait frames="3"/>
-	<EditorClick mark="profiler.callTree.tab" state="up"/>
+	<EditorClick mark="profiler.callTree.tab" state="Up"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="profiler.callTree.record"/>
 	<WaitUntil watch="Editor.ProfilerCallTreeNodes" atLeast="3" timeoutFrames="225"/>

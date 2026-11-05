@@ -24,9 +24,9 @@
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus charactereditor.main"/>
 	<EditorWaitSettled/>
-	<EditorClick mark="charactereditor.tab.appearance" state="down"/>
+	<EditorClick mark="charactereditor.tab.appearance" state="Down"/>
 	<Wait frames="1"/>
-	<EditorClick mark="charactereditor.tab.appearance" state="up"/>
+	<EditorClick mark="charactereditor.tab.appearance" state="Up"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="charactereditor.loadData"/>
 	<EditorWaitSettled/>

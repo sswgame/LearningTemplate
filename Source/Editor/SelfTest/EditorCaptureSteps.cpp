@@ -147,7 +147,7 @@ namespace sw::editor
                         const bool bGaveUp = ++pPending->_phaseFrameCount >= kCaptureWaitFrames;
                         return runner.holdUntilReady( step, input, bGaveUp, std::numeric_limits<uint32>::max(), "the editor window contents to hold still before the UI capture" );
                     }
-                    pPending->_ticket          = pCapture->request( runner.resolveOutputPath( *step.findAttribute( "file" ) ) );
+                    pPending->_ticket          = pCapture->request( runner.resolveOutputPath( step.readValidatedFields<EditorCaptureFields>()._file ) );
                     pPending->_bRequested      = SW_TRUE;
                     pPending->_phaseFrameCount = 0;
                 }
@@ -163,7 +163,7 @@ namespace sw::editor
              */
             static bool readLimit( const AutomationStep& step, string_view attributeName, string_view defaultLimit, float64& outLimit, string& outDescription )
             {
-                const string* pAttribute = step.findAttribute( attributeName );
+                const string* pAttribute = step.findAttribute( attributeName ); // 상한의 글을 실패 줄에 그대로 적는다(값은 스키마가 이미 봤다)
                 const string  limitText  = pAttribute != nullptr ? *pAttribute : string( defaultLimit );
                 float32       limit{ 0.0f };
                 if ( limitText.empty() || StringUtil::parseFloat( limitText, limit ) == false )

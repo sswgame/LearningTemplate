@@ -16,9 +16,9 @@
 	<Expect watch="Editor.UserSettingsPending" equals="0"/>
 	<ExpectVariable name="gv_debugHUD" value="false"/>
 	<!-- 탭은 누른 채 한 프레임을 지나야 고른다 — 누르고(state="down") 다음 프레임에 그 자리에서 뗀다(state="up") -->
-	<EditorClick mark="userSettings.tab.debug" state="down"/>
+	<EditorClick mark="userSettings.tab.debug" state="Down"/>
 	<Wait frames="1"/>
-	<EditorClick mark="userSettings.tab.debug" state="up"/>
+	<EditorClick mark="userSettings.tab.debug" state="Up"/>
 	<EditorWaitSettled/>
 	<!-- 바꾸면 보류 — 즉시 적용 설정이라 대상이 미리 바뀐다 -->
 	<EditorClick mark="userSettings.value.debug.hud"/>

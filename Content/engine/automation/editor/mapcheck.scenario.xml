@@ -16,14 +16,14 @@
 	<ExpectLog id="ObjectValidation.Issue" atLeast="1"/>
 	<!-- 단추는 누름과 뗌을 다른 프레임에 나눠야 눌린다 -->
 	<EditorWaitSettled/>
-	<EditorClick mark="statusBar.mapCheck" state="down"/>
+	<EditorClick mark="statusBar.mapCheck" state="Down"/>
 	<Wait frames="3"/>
-	<EditorClick mark="statusBar.mapCheck" state="up"/>
+	<EditorClick mark="statusBar.mapCheck" state="Up"/>
 	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="66"/>
 	<EditorWaitSettled/>
-	<EditorClick mark="mapCheck.row.0" state="down"/>
+	<EditorClick mark="mapCheck.row.0" state="Down"/>
 	<Wait frames="3"/>
-	<EditorClick mark="mapCheck.row.0" state="up"/>
+	<EditorClick mark="mapCheck.row.0" state="Up"/>
 	<WaitUntil watch="Editor.SelectionCount" equals="1" timeoutFrames="60"/>
 	<EditorExpectObject name="ZeroRadiusLight" selected="1"/>
 	<CaptureEditorUI file="mapcheck.png"/>

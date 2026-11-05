@@ -14,6 +14,10 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Editor/Common/EditorExports.h"
+
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     struct AutomationStep;
@@ -21,7 +25,8 @@ namespace sw
 
 namespace sw::editor
 {
-    /** @brief `state` 속성("down", "up")이 가리키는 누름 방식입니다. 없으면 누르고 놓는 한 번(`Tap`)입니다. */
+    /** @brief `state` 속성(`Down` · `Up`)이 가리키는 누름 방식입니다. 적지 않으면 누르고 놓는 한 번(`Tap`)입니다. */
+    ENUM()
     enum class EditorPressState : uint8
     {
         Tap,
@@ -38,35 +43,137 @@ namespace sw::editor
     } // namespace EditorModifierBit
 
     /** @brief `EditorClick` 의 인자입니다. */
-    struct EditorClickArgs
+    REFLECT()
+    struct SW_EDITOR_API EditorClickFields
     {
-        uint8            _modifierMask{ 0 };
-        float2           _anchor{ 0.5f, 0.5f }; ///< 레이블 안의 위치(0..1) — 적지 않으면 가운데
-        int32            _button{ 0 };
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _mark{};
+        PROPERTY()
+        float2 _anchor{ 0.5f, 0.5f }; ///< 레이블 안의 위치(0..1) — 적지 않으면 가운데
+        PROPERTY( Min = 0, Max = 4 )
+        int32 _button{ 0 };
+        PROPERTY()
+        string _mods{}; ///< 수정자(`ctrl+shift`) — `parseModifiers`
+        PROPERTY()
         EditorPressState _state{ EditorPressState::Tap };
     };
-} // namespace sw::editor
 
-namespace sw::editor
-{
-    /** @brief `EditorDrag` 의 인자입니다. 없는 이동량 · 버튼은 0 입니다. */
-    struct EditorDragArgs
+    /** @brief `EditorDrag` 의 인자입니다. 끝은 `toMark` 또는 이동량(`dx` · `dy`) 하나로 적습니다. */
+    REFLECT()
+    struct SW_EDITOR_API EditorDragFields
     {
-        uint8   _modifierMask{ 0 };
-        float64 _deltaX{ 0.0 };
-        float64 _deltaY{ 0.0 };
-        float64 _buttonNumber{ 0.0 };
-        float2  _anchor{ 0.5f, 0.5f }; ///< 누르기 시작할 레이블 안 위치(0..1). 적지 않으면 가운데
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _mark{};
+        PROPERTY()
+        float2 _anchor{ 0.5f, 0.5f }; ///< 누르기 시작할 레이블 안 위치(0..1). 적지 않으면 가운데
+        PROPERTY()
+        string _toMark{};
+        PROPERTY()
+        float32 _dx{ 0.0f };
+        PROPERTY()
+        float32 _dy{ 0.0f };
+        PROPERTY( Min = 0, Max = 4 )
+        int32 _button{ 0 };
+        PROPERTY()
+        string _mods{};
     };
-} // namespace sw::editor
 
-namespace sw::editor
-{
-    /** @brief `EditorExpectObject` 의 인자입니다. 적지 않으면 한 개, 선택 검사 없음입니다. */
-    struct EditorExpectObjectArgs
+    /** @brief `EditorHover` 의 인자입니다. `mark` 또는 `release` 하나를 적습니다(`release` 는 적었는지가 뜻입니다). */
+    REFLECT()
+    struct SW_EDITOR_API EditorHoverFields
     {
-        uint32 _expectedCount{ 1 };
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _mark{};
+        PROPERTY()
+        float2 _anchor{ 0.5f, 0.5f };
+    };
+
+    /** @brief `EditorText` 의 인자입니다. */
+    REFLECT()
+    struct SW_EDITOR_API EditorTextFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _value{};
+    };
+
+    /** @brief `EditorSelfTest` 의 인자입니다. */
+    REFLECT()
+    struct SW_EDITOR_API EditorSelfTestFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _pattern{};
+    };
+
+    /** @brief `EditorKey` 의 인자입니다. */
+    REFLECT()
+    struct SW_EDITOR_API EditorKeyFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _key{};
+        PROPERTY()
+        EditorPressState _state{ EditorPressState::Tap };
+    };
+
+    /** @brief `EditorExpectObject` 의 인자입니다. 적지 않으면 한 개, 선택 검사 없음입니다. */
+    REFLECT()
+    struct SW_EDITOR_API EditorExpectObjectFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY()
+        uint32 _count{ 1 };
+        PROPERTY()
+        string _component{};
+        PROPERTY( Max = 1 )
         uint32 _selected{ 0 }; ///< 1 이면 그 오브젝트가 선택돼 있어야 한다
+    };
+
+    /** @brief `EditorExpectDockLayout` 의 인자입니다. 0 이면 기본 최소 변입니다. */
+    REFLECT()
+    struct SW_EDITOR_API EditorDockLayoutFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        uint32 _minNodeSize{ 0 };
+    };
+
+    /** @brief `CaptureEditorUI` 칸의 "상한을 적지 않음" 입니다 — `Min` 은 적힌 값만 보므로 음수 초기값이 곧 적지 않음입니다. */
+    inline constexpr float32 kEditorCaptureNoLimit = -1.0f;
+
+    /** @brief `CaptureEditorUI` 의 인자입니다. */
+    REFLECT()
+    struct SW_EDITOR_API EditorCaptureFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _file{};
+        PROPERTY( Min = 0 )
+        float32 _maxMagentaFraction{ kEditorCaptureNoLimit };
+        PROPERTY( Min = 0 )
+        float32 _maxClippedWindows{ kEditorCaptureNoLimit };
+    };
+
+    /** @brief 인자가 없는 에디터 단계의 스키마입니다. */
+    REFLECT()
+    struct SW_EDITOR_API EditorNoFields
+    {
+        REFLECT_BODY();
     };
 } // namespace sw::editor
 
@@ -93,20 +200,10 @@ namespace sw::editor
          */
         static constexpr float32 kCaptureWallSeconds = 4.0f;
 
-        /** @brief 음이 아닌 정수 속성을 읽습니다. 없으면 @p inoutValue 를 둡니다. 형식이 틀리면 false 이고 값은 그대로입니다. */
-        [[nodiscard]] static bool readCount( const AutomationStep& step, string_view name, uint32& inoutValue );
-        /** @brief `anchor="x,y"`(레이블 안의 위치 0..1)를 읽습니다. 없으면 @p outAnchor 를 두고 true 를 반환하며, 형식이 틀리면 false 입니다. */
-        [[nodiscard]] static bool readAnchor( const AutomationStep& step, float2& outAnchor );
-        /** @brief `state` 속성을 읽습니다. 없으면 @p inoutState 를 두고 true 이며, 모르는 값이면 false 입니다. */
-        [[nodiscard]] static bool readPressState( const AutomationStep& step, EditorPressState& inoutState );
-        /** @brief `mods` 속성("ctrl", "shift", "ctrl+shift" 등)을 `EditorModifierBit` 마스크로 읽습니다. 없으면 0 이고, 모르는 이름이면 false 입니다. */
-        [[nodiscard]] static bool parseModifiers( const AutomationStep& step, uint8& outMask );
+        /** @brief 수정자 글(`ctrl` · `shift` · `ctrl+shift` 등)을 `EditorModifierBit` 마스크로 읽습니다. 비면 0 이고, 모르는 낱말이면 false 입니다. */
+        [[nodiscard]] static bool parseModifiers( string_view mods, uint8& outMask );
         /** @brief "Ctrl+Z" 를 '+' 로 갈라 낱말로 나눕니다(낱말은 @p chord 의 조각입니다). 빈 낱말이 있거나 비었으면 false 입니다. 낱말이 키 이름인지는 보지 않습니다. */
         [[nodiscard]] static bool splitKeyChord( string_view chord, vector<string_view>& outListToken );
-
-        [[nodiscard]] static bool parseClick( const AutomationStep& step, EditorClickArgs& outArgs, string& outError );
-        [[nodiscard]] static bool parseDrag( const AutomationStep& step, EditorDragArgs& outArgs, string& outError );
-        [[nodiscard]] static bool parseExpectObject( const AutomationStep& step, EditorExpectObjectArgs& outArgs, string& outError );
 
         // 단계 등록의 검사 함수(`AutomationStepValidateFunction`)입니다.
         static bool validateClick( const AutomationStep& step, string& outError );

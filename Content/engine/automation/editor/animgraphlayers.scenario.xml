@@ -22,9 +22,9 @@
 	<WaitUntil watch="Editor.AnimationGraphBoneMaskCount" equals="1" timeoutFrames="90"/>
 	<Expect watch="Editor.AnimationGraphLinkCount" equals="1"/>
 	<EditorWaitSettled/>
-	<EditorClick mark="animationGraph.tab.layers" state="down"/>
+	<EditorClick mark="animationGraph.tab.layers" state="Down"/>
 	<Wait frames="1"/>
-	<EditorClick mark="animationGraph.tab.layers" state="up"/>
+	<EditorClick mark="animationGraph.tab.layers" state="Up"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="animationGraph.layer.add"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="2" timeoutFrames="60"/>

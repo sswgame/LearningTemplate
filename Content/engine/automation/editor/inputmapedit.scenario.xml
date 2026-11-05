@@ -30,9 +30,9 @@
 	<EditorClick mark="inputMap.reload"/>
 	<WaitUntil watch="Editor.InputMapSelectedTrigger" equals="0" timeoutFrames="60"/>
 	<EditorWaitSettled/>
-	<EditorClick mark="inputMap.tab.debug" state="down"/>
+	<EditorClick mark="inputMap.tab.debug" state="Down"/>
 	<Wait frames="3"/>
-	<EditorClick mark="inputMap.tab.debug" state="up"/>
+	<EditorClick mark="inputMap.tab.debug" state="Up"/>
 	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
