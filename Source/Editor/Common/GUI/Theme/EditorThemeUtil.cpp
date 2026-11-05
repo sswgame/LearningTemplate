@@ -11,7 +11,6 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
-#include "Editor/Common/GUI/Theme/Model/EditorThemeConfigUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -270,7 +269,7 @@ namespace sw::editor
 
     bool EditorThemeUtil::applyThemeByName( string_view name )
     {
-        const EditorThemeConfig* pTheme = EditorThemeConfigUtil::findByName( EditorThemeInternal::availableThemes(), name );
+        const EditorThemeConfig* pTheme = EditorThemeConfig::findByName( EditorThemeInternal::availableThemes(), name );
         if ( pTheme == nullptr )
             return false;
         applyTheme( *pTheme );
@@ -328,7 +327,7 @@ namespace sw::editor
         // 테마 이름의 원본은 설정(`EditorConfig::_themeName`)이다. 그 벌이 없으면 다른 벌로 바꿔 끼우지 않는다 — 고친 이름이 무시된 것을 아무도 모른다.
         const EditorConfig& editorConfig = getPreferences<EditorConfig>();
         EditorThemeConfig   themeConfig{};
-        if ( EditorThemeConfigUtil::buildFromSaved( EditorThemeInternal::availableThemes(), editorConfig, themeConfig ) == false )
+        if ( EditorThemeConfig::buildFromSaved( EditorThemeInternal::availableThemes(), editorConfig, themeConfig ) == false )
         {
             SW_LOG_ERROR_ID( "EditorThemeUtil.EditorThemeEditorAppearance", "Editor theme '%#' (Editor/Appearance) has no token file under %#", editorConfig._themeName.c_str(), EditorThemeTokens::getFolderPath().c_str() );
             return false;
@@ -340,14 +339,14 @@ namespace sw::editor
 
     void EditorThemeUtil::saveToConfig()
     {
-        EditorThemeConfigUtil::writeSaved( EditorThemeInternal::activeTheme(), EditorThemeInternal::editAppearance() );
+        EditorThemeConfig::writeSaved( EditorThemeInternal::activeTheme(), EditorThemeInternal::editAppearance() );
         EditorConfig::saveToPreferences();
     }
 
     void EditorThemeUtil::setAccentColor( const Color& accentColor )
     {
         EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
-        EditorThemeConfigUtil::overrideAccent( accentColor, editorConfig );
+        EditorThemeConfig::overrideAccent( accentColor, editorConfig );
         applyTheme( editorConfig );
         saveToConfig();
     }
@@ -537,7 +536,7 @@ namespace sw::editor
 
             if ( bMetricsChanged )
             {
-                EditorThemeConfigUtil::overrideRadius( windowRadius, frameRadius, tabRadius, editorConfig );
+                EditorThemeConfig::overrideRadius( windowRadius, frameRadius, tabRadius, editorConfig );
                 applyTheme( editorConfig );
                 saveToConfig();
             }
