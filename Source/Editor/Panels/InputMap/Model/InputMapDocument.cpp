@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/Config/EditorToolDefaults.h"
+#include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -13,6 +14,8 @@
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/KeyCodeUtil.h"
+#include "Engine/Input/Map/InputGlyphResolver.h"
+#include "Engine/Input/Map/InputRemapSerializer.h"
 
 namespace sw::editor
 {
@@ -26,8 +29,10 @@ namespace sw::editor
         , _plot{}
         , _recordedBeginFrameCount{ 0 }
         , _capturingBindIndex{ 0 }
+        , _pendingCaptureModifier{ Key::Unknown }
         , _bLoaded{ SW_FALSE }
         , _bCapturingKey{ SW_FALSE }
+        , _bCaptureNewBinding{ SW_FALSE }
         , _bPlotPaused{ SW_FALSE }
         , _bDirty{ SW_FALSE }
         , _reserved{ 0 }
@@ -54,6 +59,15 @@ namespace sw::editor
         const bool bReplayFinished = input.getVirtualInput() == &_replay && _replay.isFinished( input.getVirtualFrameIndex() );
         if ( bReplayFinished )
             input.detachVirtualInput();
+    }
+
+    void InputMapDocument::releaseInput()
+    {
+        _replay.stopRecording();
+        cancelKeyCapture();
+        InputManager* pInput = _inputMap.getInputManager();
+        if ( pInput != nullptr && pInput->getVirtualInput() == &_replay )
+            pInput->detachVirtualInput();
     }
 
     void InputMapDocument::sampleInput( InputManager& input )
@@ -93,6 +107,10 @@ namespace sw::editor
             return false;
         }
         SW_LOG_INFO_ID( "InputMapDocument.ReloadedInputMap", "Reloaded InputMap from %#", _inputMapPath.c_str() );
+        cancelKeyCapture();
+        // 새 맵에 없는 액션을 든 채면 오른쪽 칸이 없는 액션의 "바인딩 없음" 을 보여 준다.
+        if ( _inputMap.hasAction( hashed_string( _selectedAction.c_str() ) ) == false )
+            _selectedAction.clear();
         _bDirty = SW_FALSE;
         return true;
     }
@@ -112,6 +130,12 @@ namespace sw::editor
         return true;
     }
 
+    bool InputMapDocument::noteEdit( bool bChanged )
+    {
+        _bDirty = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
+        return bChanged;
+    }
+
     void InputMapDocument::resetAllBindingsToDefault()
     {
         _inputMap.resetAllBindingsToDefault();
@@ -120,87 +144,280 @@ namespace sw::editor
 
     bool InputMapDocument::resetActionToDefault( const hashed_string& action )
     {
-        const bool bChanged = _inputMap.resetActionToDefault( action );
-        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
-        return bChanged;
+        return noteEdit( _inputMap.resetActionToDefault( action ) );
     }
 
-    void InputMapDocument::setLayerEnabled( const hashed_string& layer, bool bEnabled )
+    bool InputMapDocument::setLayerEnabled( const hashed_string& layer, bool bEnabled )
     {
+        if ( _inputMap.hasLayer( layer ) == false || _inputMap.isLayerEnabled( layer ) == bEnabled )
+            return false;
         _inputMap.setLayerEnabled( layer, bEnabled );
-        _bDirty = SW_TRUE;
+        return noteEdit( true );
+    }
+
+    bool InputMapDocument::savesTriggerFields( BindingKind kind )
+    {
+        return kind == BindingKind::SingleSlot || kind == BindingKind::Shortcut || kind == BindingKind::Axis1DComposite || kind == BindingKind::Chord;
+    }
+
+    bool InputMapDocument::canEditTriggerFields( const hashed_string& action, uint32 bindIndex ) const
+    {
+        const ActionBinding* pBinding = _inputMap.getBinding( action, bindIndex );
+        return pBinding != nullptr && savesTriggerFields( pBinding->_kind );
     }
 
     bool InputMapDocument::setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger )
     {
-        const bool bChanged = _inputMap.setBindingTrigger( action, bindIndex, trigger );
-        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
-        return bChanged;
+        return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingTrigger( action, bindIndex, trigger ) );
     }
 
     bool InputMapDocument::setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds )
     {
-        const bool bChanged = _inputMap.setBindingTriggerTime( action, bindIndex, seconds );
-        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
-        return bChanged;
+        return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingTriggerTime( action, bindIndex, seconds ) );
     }
 
     bool InputMapDocument::setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate )
     {
-        const bool bChanged = _inputMap.setBindingNegate( action, bindIndex, bNegate );
-        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
-        return bChanged;
+        return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingNegate( action, bindIndex, bNegate ) );
     }
 
     bool InputMapDocument::setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount )
     {
-        const bool bChanged = _inputMap.setBindingTapCount( action, bindIndex, tapCount );
-        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
-        return bChanged;
+        return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingTapCount( action, bindIndex, tapCount ) );
     }
 
-    bool InputMapDocument::unbind( const hashed_string& action, uint32 bindIndex )
+    bool InputMapDocument::setBindingLayer( const hashed_string& action, uint32 bindIndex, const hashed_string& layer )
     {
-        const bool bChanged = _inputMap.rebindKey( action, Key::Unknown, bindIndex );
-        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
-        return bChanged;
+        return noteEdit( _inputMap.setBindingLayer( action, bindIndex, layer ) );
     }
 
-    bool InputMapDocument::createAction( string_view name, int32 valueTypeIndex )
+    bool InputMapDocument::removeBinding( const hashed_string& action, uint32 bindIndex )
     {
-        if ( name.empty() )
+        return noteEdit( _inputMap.removeBinding( action, bindIndex ) );
+    }
+
+    bool InputMapDocument::canCreateAction( string_view name ) const
+    {
+        return name.empty() == false && _inputMap.hasAction( hashed_string( string( name ).c_str() ) ) == false;
+    }
+
+    bool InputMapDocument::createAction( string_view name, InputActionValueType valueType )
+    {
+        // 있는 이름을 다시 만들면 엔진은 그 액션을 돌려준다. 그대로 두면 아무것도 만들지 않고 "만들었다" 고 입력칸을 비운다.
+        if ( canCreateAction( name ) == false )
             return false;
-        static constexpr InputActionValueType kArrValueType[] = { InputActionValueType::Boolean, InputActionValueType::Axis1D, InputActionValueType::Axis2D };
-        const InputActionValueType            valueType       = kArrValueType[MathUtil::clamp( valueTypeIndex, 0, 2 )];
         _inputMap.createAction( sw::hashed_string( string( name ).c_str() ), valueType );
-        _bDirty = SW_TRUE;
-        return true;
+        _selectedAction = name; // 만들자마자 바인딩을 더할 수 있게 고른다
+        return noteEdit( true );
+    }
+
+    bool InputMapDocument::deleteAction( const hashed_string& action )
+    {
+        if ( _inputMap.removeAction( action ) == false )
+            return false;
+        if ( _selectedAction == action.view() )
+            _selectedAction.clear();
+        return noteEdit( true );
+    }
+
+    bool InputMapDocument::canCreateLayer( string_view name ) const
+    {
+        return name.empty() == false && _inputMap.hasLayer( hashed_string( string( name ).c_str() ) ) == false;
+    }
+
+    bool InputMapDocument::createLayer( string_view name, int32 priority )
+    {
+        if ( canCreateLayer( name ) == false )
+            return false;
+        _inputMap.registerLayer( hashed_string( string( name ).c_str() ), priority );
+        return noteEdit( true );
+    }
+
+    void InputMapDocument::collectVisibleActions( const EditorListFilter& filter, vector<hashed_string>& outListVisibleAction ) const
+    {
+        // 호출한 쪽이 멤버 버퍼를 다시 쓴다. 키 표기로도 찾는다 — "Space 에 뭐가 묶였나" 를 묻는 일이 많다(Godot 입력 맵의 이벤트 검색).
+        outListVisibleAction.clear();
+        for ( const hashed_string& action : _inputMap.getActionNames() )
+        {
+            if ( filter.isActive() == false || filter.matchesAny( { action.view(), string_view{ InputGlyphResolver::findActionGlyph( _inputMap, action ) } } ) )
+                outListVisibleAction.push_back( action );
+        }
+    }
+
+    const utf8* InputMapDocument::describeActionState( const hashed_string& action ) const
+    {
+        if ( _inputMap.wasActionTriggered( action ) )
+            return "triggered";
+        if ( _inputMap.isActionDown( action ) )
+            return "down";
+        return _inputMap.getActionPhase( action ) != ActionPhase::None ? "ongoing" : "idle";
+    }
+
+    string InputMapDocument::describeBinding( const hashed_string& action, uint32 bindIndex ) const
+    {
+        const ActionBinding* pBinding = _inputMap.getBinding( action, bindIndex );
+        if ( pBinding == nullptr )
+            return string{};
+        // 슬롯 하나만 보이면 Ctrl+S 가 S 로 읽혀, 다른 액션의 S 와 부딪히는 것처럼 보인다.
+        const InputGlyphStyle style = InputGlyphStyle::KeyboardMouse;
+        if ( pBinding->_kind == BindingKind::Shortcut )
+            return InputRemapSerializer::formatModifierNames( pBinding->_modifierMask ) + " + " + InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[0], style );
+        if ( pBinding->_kind == BindingKind::Chord )
+            return InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[0], style ) + " + " + InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[1], style );
+        if ( pBinding->_kind == BindingKind::SingleSlot )
+            return InputGlyphResolver::makeSlotGlyph( pBinding->_arrSlot[0], style );
+        return string{ BindingKinds::toName( pBinding->_kind ) };
     }
 
     void InputMapDocument::beginKeyCapture( uint32 bindIndex )
     {
-        _capturingBindIndex = bindIndex;
-        _bCapturingKey      = SW_TRUE;
+        _capturingBindIndex     = bindIndex;
+        _pendingCaptureModifier = Key::Unknown;
+        _bCaptureNewBinding     = SW_FALSE;
+        _bCapturingKey          = SW_TRUE;
     }
 
-    bool InputMapDocument::finishKeyCapture( Key newKey )
+    void InputMapDocument::beginNewBindingCapture()
     {
-        _bCapturingKey = SW_FALSE;
-        // 어느 레이어에서 충돌을 따져야 하는지는 그 바인딩이 직접 안다.
-        const sw::ActionBinding* pBinding = _inputMap.getBinding( sw::hashed_string( _selectedAction.c_str() ), _capturingBindIndex );
-        const string_view        layer    = ( pBinding != nullptr ) ? pBinding->_layer.view() : string_view{};
+        if ( _inputMap.hasAction( hashed_string( _selectedAction.c_str() ) ) == false )
+            return;
+        beginKeyCapture( 0 );
+        _bCaptureNewBinding = SW_TRUE;
+    }
 
-        sw::string conflictingAction;
-        if ( _inputMap.hasBindingConflict( sw::InputSlot::fromKey( newKey ), sw::hashed_string( layer ), conflictingAction ) && conflictingAction != _selectedAction )
+    void InputMapDocument::cancelKeyCapture()
+    {
+        _bCapturingKey          = SW_FALSE;
+        _bCaptureNewBinding     = SW_FALSE;
+        _pendingCaptureModifier = Key::Unknown;
+    }
+
+    void InputMapDocument::advanceKeyCapture( const InputMapCaptureFrame& frame )
+    {
+        if ( _bCapturingKey == SW_FALSE )
+            return;
+        // Esc 는 그만두기다(언리얼 키 선택기와 같다). Esc 를 묶으려면 버튼 격자에서 고른다.
+        if ( frame._chordKey == Key::Escape && frame._modifierMask == ModifierKey::None )
         {
-            SW_LOG_WARNING_ID( "InputMapDocument.BindingConflictsSameLayer", "Binding '%#' to %# - conflicts with '%#' on the same layer.",
-                               _selectedAction.c_str(), sw::KeyCodeUtil::toName( newKey ), conflictingAction.c_str() );
+            cancelKeyCapture();
+            return;
         }
+        if ( frame._chordKey != Key::Unknown )
+        {
+            (void)finishKeyCapture( frame._chordKey, frame._modifierMask );
+            return;
+        }
+        // 수식 키는 눌린 순간 알 수 없다 — 뒤이어 다른 키가 오면 조합이고, 그냥 떼면 그 키 자신(달리기의 Shift)이다.
+        if ( frame._pressedKey != Key::Unknown )
+            _pendingCaptureModifier = frame._pressedKey;
+        else if ( _pendingCaptureModifier != Key::Unknown && frame._bPendingModifierDown == false )
+            (void)finishKeyCapture( _pendingCaptureModifier, ModifierKey::None );
+    }
 
+    bool InputMapDocument::bindCapturedKey( const hashed_string& action, Key key, uint8 modifierMask, uint32& outBindIndex )
+    {
+        const uint32        countBefore = _inputMap.getBindingCount( action );
+        const hashed_string layer       = findNewBindingLayer( action );
+        if ( modifierMask == ModifierKey::None )
+            _inputMap.bind( action, key, ActionTrigger::Pressed, layer );
+        else
+            _inputMap.bindShortcut( action, key, modifierMask, ActionTrigger::Pressed, layer );
+        outBindIndex = countBefore;
+        return _inputMap.getBindingCount( action ) > countBefore; // 키가 없으면 엔진이 묶지 않는다
+    }
+
+    bool InputMapDocument::rebindCapturedKey( const hashed_string& action, uint32 bindIndex, Key key, uint8 modifierMask )
+    {
+        const ActionBinding* pBinding = _inputMap.getBinding( action, bindIndex );
+        if ( pBinding == nullptr )
+            return false;
+        const bool bKeyOrShortcut = pBinding->_kind == BindingKind::SingleSlot || pBinding->_kind == BindingKind::Shortcut;
+        const bool bKeyboardSlot  = pBinding->_arrSlot[0]._deviceKind == InputDeviceKind::Keyboard;
+        if ( bKeyOrShortcut && bKeyboardSlot )
+            return _inputMap.rebindKeyShortcut( action, bindIndex, key, modifierMask );
+        // 패드 · 마우스 단일 바인딩은 먼저 키보드 슬롯으로 바꾼 뒤 수식 키를 얹는다. Chord 의 방아쇠와 키 하나로 못 바꾸는 종류는 엔진의 규칙(`rebindKey`)을 따른다.
+        if ( _inputMap.rebindKey( action, key, bindIndex ) == false )
+            return false;
+        return modifierMask == ModifierKey::None || bKeyOrShortcut == false || _inputMap.rebindKeyShortcut( action, bindIndex, key, modifierMask );
+    }
+
+    hashed_string InputMapDocument::findNewBindingLayer( const hashed_string& action ) const
+    {
+        const uint32 bindingCount = _inputMap.getBindingCount( action );
+        return bindingCount > 0 ? _inputMap.findBindingLayer( action, bindingCount - 1 ) : _inputMap.getDefaultLayerName();
+    }
+
+    bool InputMapDocument::noteCapturedBinding( const hashed_string& action, uint32 bindIndex )
+    {
+        // 겹침 규칙은 충돌 칸과 한 벌이다. 그대로 두는 것은 덮어쓰기를 원할 수 있어서이고, 충돌 칸이 다시 잡기 · 지우기를 준다.
+        refreshConflicts();
+        if ( InputMapConflicts::involves( _listConflict, action, bindIndex ) )
+            SW_LOG_WARNING_ID( "InputMapDocument.BindingConflictsSameLayer", "Binding %# of '%#' now fires together with another action on the same layer - see Conflicts", bindIndex, action.c_str() );
+        return noteEdit( true );
+    }
+
+    bool InputMapDocument::finishKeyCapture( Key newKey, uint8 modifierMask )
+    {
+        if ( _bCapturingKey == SW_FALSE )
+            return false;
+        const bool          bNewBinding = _bCaptureNewBinding == SW_TRUE;
+        uint32              bindIndex   = _capturingBindIndex;
+        const hashed_string action( _selectedAction.c_str() );
+        cancelKeyCapture();
         // 키 하나로 바꿀 수 없는 바인딩(합성 축, 스틱)이면 바뀌지 않는다. 경고는 InputMap 이 남긴다. 이때는 문서를 dirty 로 표시하지 않는다.
-        const bool bChanged = _inputMap.rebindKey( sw::hashed_string( _selectedAction.c_str() ), newKey, _capturingBindIndex );
-        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
-        return bChanged;
+        const bool bChanged = bNewBinding ? bindCapturedKey( action, newKey, modifierMask, bindIndex ) : rebindCapturedKey( action, bindIndex, newKey, modifierMask );
+        return bChanged && noteCapturedBinding( action, bindIndex );
+    }
+
+    bool InputMapDocument::canCaptureSlot() const
+    {
+        if ( _bCapturingKey == SW_FALSE )
+            return false;
+        if ( _bCaptureNewBinding == SW_TRUE )
+            return true;
+        // Shortcut · Chord 는 키보드 조합이다. 패드 버튼을 넣으면 파일이 이름 붙이지 못한다.
+        const ActionBinding* pBinding = _inputMap.getBinding( hashed_string( _selectedAction.c_str() ), _capturingBindIndex );
+        return pBinding != nullptr && pBinding->_kind == BindingKind::SingleSlot;
+    }
+
+    bool InputMapDocument::finishSlotCapture( const InputSlot& slot )
+    {
+        if ( canCaptureSlot() == false )
+            return false;
+        const bool          bNewBinding = _bCaptureNewBinding == SW_TRUE;
+        uint32              bindIndex   = _capturingBindIndex;
+        const hashed_string action( _selectedAction.c_str() );
+        cancelKeyCapture();
+        if ( bNewBinding )
+        {
+            bindIndex = _inputMap.getBindingCount( action );
+            _inputMap.bind( action, slot, ActionTrigger::Pressed, findNewBindingLayer( action ) );
+            // 다시 묶기가 맵 읽기와 같은 검사(가상 커서가 마우스로 바꾸는 버튼)를 한다. 묶지 못할 버튼이면 파일이 다음 읽기에서 거절되므로 지운다.
+            if ( _inputMap.rebindSlot( action, slot, bindIndex ) == false )
+            {
+                (void)_inputMap.removeBinding( action, bindIndex );
+                return false;
+            }
+        }
+        else if ( _inputMap.rebindSlot( action, slot, bindIndex ) == false )
+            return false;
+        return noteCapturedBinding( action, bindIndex );
+    }
+
+    void InputMapDocument::pollGamepadCapture( InputManager& input )
+    {
+        GamepadDevice* pGamepad = input.getGamepad( 0 );
+        if ( canCaptureSlot() == false || pGamepad == nullptr || pGamepad->isConnected() == false )
+            return;
+        for ( uint32 buttonIndex = 0; buttonIndex < static_cast<uint32>( GamepadButton::Count ); ++buttonIndex )
+        {
+            const GamepadButton button = static_cast<GamepadButton>( buttonIndex );
+            if ( pGamepad->wasButtonPressed( button ) )
+            {
+                (void)finishSlotCapture( InputSlot::fromGamepadButton( button, 0 ) );
+                return;
+            }
+        }
     }
 
     void InputMapDocument::refreshConflicts()
@@ -258,6 +475,7 @@ namespace sw::editor
     {
         if ( input.getVirtualInput() == &_replay )
             input.detachVirtualInput();
+        _replay.stopRecording(); // 녹화 중이면 읽은 프레임 뒤에 이어 적는다
         const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
         if ( diskPath.has_value() == false )
             SW_LOG_ERROR_ID( "InputMapDocument.CouldNotLoadInput", "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );

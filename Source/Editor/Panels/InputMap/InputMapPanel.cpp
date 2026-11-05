@@ -129,12 +129,16 @@ namespace sw::editor
         : IEditorDocumentPanel( false ) // 필요할 때 여는 도구이므로 닫힌 채 시작한다. 열린 채 시작하면 떠 있는 창이 화면 가운데를 덮는다
         , _document{}
         , _newActionName{ "" }
+        , _newLayerName{ "" }
         , _arrActionFilter{}
+        , _listVisibleAction{}
+        , _listActionConflictView{}
         , _testComboPattern{ "236P" }
         , _testVibLeft{ 0.5f }
         , _testVibRight{ 0.5f }
         , _simStick{}
         , _newActionValueType{ 0 }
+        , _newLayerPriority{ 0 }
         , _simKeyToInject{ 1 }
         , _bSelectFirstTab{ SW_TRUE }
         , _reserved{ 0 }
@@ -174,6 +178,11 @@ namespace sw::editor
             ImGui::EndTabBar();
         }
         drawCaptureModal();
+    }
+
+    void InputMapPanel::onPanelCollapsed()
+    {
+        _document.tick( editor::getSubsystem<InputManager>(), ImGui::GetIO().DeltaTime );
     }
 
     void InputMapPanel::drawMappingsTab()
@@ -233,10 +242,16 @@ namespace sw::editor
         EditorSelfTestMarks::note( "inputMap.filter" );
         const EditorListFilter filter{ string_view( _arrActionFilter ) };
         const InputMap&        inputMap = _document.getInputMap();
-        for ( const hashed_string& actionName : inputMap.getActionNames() )
+        _document.collectVisibleActions( filter, _listVisibleAction );
+        if ( _listVisibleAction.empty() )
         {
-            if ( filter.matches( actionName.view() ) == false )
-                continue;
+            if ( filter.isActive() )
+                EditorWidgets::drawNoSearchResultHint( filter.getText() );
+            else
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "NoActionsHint" ) );
+        }
+        for ( const hashed_string& actionName : _listVisibleAction )
+        {
             const bool bConflict = InputMapConflicts::involves( _document.getConflicts(), actionName );
             const bool bDown     = inputMap.isActionDown( actionName );
             ImGui::PushID( actionName.c_str() );
@@ -272,44 +287,61 @@ namespace sw::editor
         const InputMap&     inputMap = _document.getInputMap();
         const hashed_string action( selectedAction.c_str() );
         ImGui::SeparatorText( selectedAction.c_str() );
-        const ActionPhase phase = inputMap.getActionPhase( action );
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateHoldS", TextArgumentList().addText( "phase", inputMap.wasActionTriggered( action ) ? "triggered" : ( inputMap.isActionDown( action ) ? "down" : ( phase != ActionPhase::None ? "ongoing" : "idle" ) ) ).addDecimal( "holdSeconds", static_cast<float64>( inputMap.getActionHoldDuration( action ) ), 2 ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateHoldS", TextArgumentList().addText( "phase", _document.describeActionState( action ) ).addDecimal( "holdSeconds", static_cast<float64>( inputMap.getActionHoldDuration( action ) ), 2 ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) )
             (void)_document.resetActionToDefault( action );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ResetActionTip" ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorInputMap", "DeleteAction" ) ) );
+        const bool bDeleteAction = ImGui::SmallButton( SW_LOCKEY( "EditorInputMap", "DeleteAction" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "DeleteActionTip" ) );
 
-        // 바인딩마다 키(글리프), 레이어, 발화 규칙(트리거), 다시 잡기 버튼을 둔다.
+        // 바인딩마다 키(글리프), 레이어, 발화 규칙(트리거), 다시 잡기 · 지우기 버튼을 둔다.
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Bindings" ) );
         const uint32 bindingCount = inputMap.getBindingCount( action );
+        int32        removeIndex  = -1;
         for ( uint32 bindIndex = 0; bindIndex < bindingCount; ++bindIndex )
         {
             const ActionBinding* pBinding = inputMap.getBinding( action, bindIndex );
             if ( pBinding == nullptr )
                 continue;
             ImGui::PushID( static_cast<int32>( bindIndex ) );
-            drawBindingRow( action, bindIndex, *pBinding );
+            if ( drawBindingRow( action, bindIndex, *pBinding ) )
+                removeIndex = static_cast<int32>( bindIndex );
             ImGui::PopID();
         }
         if ( bindingCount == 0 )
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorInputMap", "NoBindings" ) );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EditorInputMap", "AddBinding" ) ) )
+            _document.beginNewBindingCapture();
+        EditorSelfTestMarks::note( "inputMap.addBinding" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "AddBindingTip" ) );
 
         drawActionConflicts( action );
         drawPromptGlyphs( action );
+
+        // 그리는 동안 바인딩 목록과 고른 액션(`selectedAction` 은 그 참조다)을 건드리지 않는다.
+        if ( removeIndex >= 0 )
+            (void)_document.removeBinding( action, static_cast<uint32>( removeIndex ) );
+        if ( bDeleteAction )
+            (void)_document.deleteAction( action );
     }
 
-    void InputMapPanel::drawBindingRow( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding )
+    bool InputMapPanel::drawBindingRow( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding )
     {
         const float32   rightEdgeX = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x; // 이 줄이 그릴 수 있는 오른쪽 끝(화면 좌표)
         InputSlot       slot{};
         const InputMap& inputMap    = _document.getInputMap();
         const bool      bRebindable = inputMap.findRebindSlot( action, bindIndex, slot );
-        const string    slotGlyph   = bRebindable ? InputGlyphResolver::makeSlotGlyph( slot, InputGlyphStyle::KeyboardMouse ) : string{ BindingKinds::toName( binding._kind ) };
-        ImGui::Text( "%u  %s", bindIndex, slotGlyph.c_str() );
+        ImGui::Text( "%u  %s", bindIndex, _document.describeBinding( action, bindIndex ).c_str() );
         ImGui::SameLine( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "InputMapLayerColumnEm" ) );
-        ImGui::TextDisabled( "%s", inputMap.findBindingLayer( action, bindIndex ).c_str() );
-        ImGui::SameLine( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "InputMapActionColumnEm" ) );
-        drawTriggerCombo( action, bindIndex );
+        drawBindingLayerCombo( action, bindIndex );
+        const bool bTriggerFields = InputMapDocument::savesTriggerFields( binding._kind ); // 파일에 남지 않는 칸은 보이지 않는다
+        if ( bTriggerFields )
+        {
+            ImGui::SameLine( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "InputMapActionColumnEm" ) );
+            drawTriggerCombo( action, bindIndex );
+        }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Rebind" ) ) );
         ImGui::BeginDisabled( bRebindable == false );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Rebind" ) ) )
@@ -319,7 +351,30 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NotRebindableTip" ) );
         else
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindTip" ) );
-        drawTriggerOptions( action, bindIndex, binding, rightEdgeX );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
+        const bool bRemove = ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RemoveBindingTip" ) );
+        if ( bTriggerFields )
+            drawTriggerOptions( action, bindIndex, binding, rightEdgeX );
+        return bRemove;
+    }
+
+    void InputMapPanel::drawBindingLayerCombo( const hashed_string& action, uint32 bindIndex )
+    {
+        const InputMap&     inputMap = _document.getInputMap();
+        const hashed_string current  = inputMap.findBindingLayer( action, bindIndex );
+        // 레이어 열과 다음 열 사이를 채운다. 다음 열 앞에 한 칸을 띄운다.
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * ( SW_THEMEMETRIC( "Layout", "InputMapActionColumnEm" ) - SW_THEMEMETRIC( "Layout", "InputMapLayerColumnEm" ) - 0.5f ) );
+        const bool bOpen = ImGui::BeginCombo( "##layer", current.c_str() );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "BindingLayerTip" ) );
+        if ( bOpen == false )
+            return;
+        for ( const hashed_string& layer : inputMap.getLayerNames() )
+        {
+            if ( ImGui::Selectable( layer.c_str(), layer == current ) && layer != current )
+                (void)_document.setBindingLayer( action, bindIndex, layer );
+        }
+        ImGui::EndCombo();
     }
 
     void InputMapPanel::drawTriggerCombo( const hashed_string& action, uint32 bindIndex )
@@ -393,31 +448,26 @@ namespace sw::editor
 
     void InputMapPanel::drawActionConflicts( const hashed_string& action )
     {
-        // 충돌은 같은 레이어에서 같은 키를 쓰는 다른 액션이다. 이쪽을 다시 잡거나 저쪽 바인딩을 비운다.
-        const vector<InputMapConflict>& listConflict = _document.getConflicts();
-        if ( InputMapConflicts::involves( listConflict, action ) == false )
+        // 충돌은 같은 레이어에서 한 입력에 함께 발화하는 다른 액션이다. 이쪽을 다시 잡거나 저쪽 바인딩을 지운다.
+        InputMapConflicts::collectFor( _document.getConflicts(), action, _listActionConflictView );
+        if ( _listActionConflictView.empty() )
             return;
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Conflicts" ) );
-        for ( size_t index = 0; index < listConflict.size(); ++index )
+        for ( size_t index = 0; index < _listActionConflictView.size(); ++index )
         {
-            const InputMapConflict& conflict = listConflict[index];
-            const bool              bIsA     = conflict._actionA == action;
-            if ( bIsA == false && conflict._actionB != action )
-                continue;
-            const hashed_string& other      = bIsA ? conflict._actionB : conflict._actionA;
-            const uint32         otherIndex = bIsA ? conflict._bindIndexB : conflict._bindIndexA;
+            const InputMapConflictView& view = _listActionConflictView[index];
             ImGui::PushID( static_cast<int32>( index ) );
             fixed_string<constant::buffer::kMax256> conflictText;
-            formatstring( conflictText.data(), conflictText.capacity(), "%# on %# (layer %#)", InputGlyphResolver::makeSlotGlyph( conflict._slot, InputGlyphStyle::KeyboardMouse ).c_str(),
-                          other.c_str(), conflict._layer.c_str() );
+            formatstring( conflictText.data(), conflictText.capacity(), "%# on %# (layer %#)", InputGlyphResolver::makeSlotGlyph( view._slot, InputGlyphStyle::KeyboardMouse ).c_str(),
+                          view._otherAction.c_str(), view._layer.c_str() );
             EditorThemeUtil::textError( conflictText.c_str() );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RebindThis" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "RebindThis" ) ) )
-                _document.beginKeyCapture( bIsA ? conflict._bindIndexA : conflict._bindIndexB );
+                _document.beginKeyCapture( view._bindIndex );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindThisTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "UnbindOther" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "UnbindOther" ) ) )
-                (void)_document.unbind( other, otherIndex );
+                (void)_document.removeBinding( view._otherAction, view._otherBindIndex ); // 한 프레임에 눌리는 단추는 하나다. 번호가 당겨진 충돌 표는 다음 프레임에 다시 모은다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "UnbindOtherTip" ) );
             ImGui::PopID();
         }
@@ -519,11 +569,28 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewActionTypeTip" ) );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "CreateAction" ) ) );
-            if ( ImGui::Button( SW_LOCKEY( "EdText", "CreateAction" ) ) && _document.createAction( _newActionName, _newActionValueType ) )
+            ImGui::BeginDisabled( _document.canCreateAction( _newActionName ) == false ); // 빈 이름 · 있는 이름은 만들 수 없다 — 눌러도 아무 일이 없는 단추로 두지 않는다
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "CreateAction" ) ) && _document.createAction( _newActionName, static_cast<InputActionValueType>( _newActionValueType ) ) )
             {
                 _newActionName = "";
             }
+            ImGui::EndDisabled();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "CreateActionTip" ) );
+
+            EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "NewLayerName" ), "New Layer Name" ), _newLayerName, 200.0f );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "NewLayerNameTip" ) );
+            ImGui::SameLine();
+            EditorWidgets::drawInlineLabel( SW_LOCKEY( "EdField", "Priority" ) );
+            EditorChrome::setNextItemWidthColumns( 8.0f );
+            ImGui::InputInt( "##LayerPriority", &_newLayerPriority );
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "CreateLayer" ) ) );
+            ImGui::BeginDisabled( _document.canCreateLayer( _newLayerName ) == false );
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "CreateLayer" ) ) && _document.createLayer( _newLayerName, _newLayerPriority ) )
+            {
+                _newLayerName = "";
+            }
+            ImGui::EndDisabled();
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "CreateLayerTip" ) );
         }
     }
 
@@ -541,14 +608,17 @@ namespace sw::editor
 
             // 실시간 활성 입력 감지. 바인딩 창은 ImGui 모달이라 떠 있는 동안 ImGui 가 키보드를 가져가고(`WantCaptureKeyboard`),
             // 에디터는 그 키를 게임 입력으로 넘기지 않는다(`ImGuiEditor::processEvent`). 그래서 키는 창이 받은 곳(ImGui)에서 읽는다.
-            const Key pressedKey = ImGuiKeyForward::findPressedKey();
-            if ( pressedKey != Key::Unknown )
-            {
-                (void)_document.finishKeyCapture( pressedKey );
+            // 판단(조합 · Esc · 수식 키 하나)은 문서가 한다. 패드 버튼은 게임 입력에 그대로 닿는다.
+            InputMapCaptureFrame captureFrame{};
+            (void)ImGuiKeyForward::findPressedChord( captureFrame._chordKey, captureFrame._modifierMask ); // 없으면 칸이 비어 있다
+            captureFrame._pressedKey           = ImGuiKeyForward::findPressedKey();
+            captureFrame._bPendingModifierDown = ImGuiKeyForward::isKeyDown( _document.getPendingCaptureModifier() );
+            _document.advanceKeyCapture( captureFrame );
+            _document.pollGamepadCapture( editor::getSubsystem<InputManager>() );
+            if ( _document.isCapturingKey() == false )
                 ImGui::CloseCurrentPopup();
-            }
 
-            // 버튼 리스트 폴백
+            // 키를 누를 수 없는 키(Esc · 창이 먼저 받는 키)는 버튼 목록으로 고른다
             ImGui::BeginChild( "KeyGrid", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 60.0f, 11.0f ) ), true );
             for ( int32 keyIndex = 1; keyIndex < static_cast<int32>( Key::Count ); ++keyIndex )
             {

@@ -50,6 +50,15 @@ namespace sw::editor
         /** @brief 프로브용입니다. 지난 프레임에 찾은 바인딩 충돌 수를 반환합니다. */
         uint32 getConflictCount() const { return static_cast<uint32>( _document.getConflicts().size() ); }
 
+        /** @brief 패널이 내려갈 때 재생 중인 리플레이를 입력에서 뗍니다(`InputMapDocument::releaseInput`). */
+        void shutdown() override { _document.releaseInput(); }
+
+    protected:
+        /** @brief 탭이 가려져도 녹화 · 재생은 이어진다 — 게임 뷰를 앞에 두고 녹화한다. 그래서 문서는 가려진 프레임에도 돈다. */
+        void onPanelCollapsed() override;
+        /** @brief 닫으면 녹화를 끝내고 재생 중인 리플레이를 뗍니다. 닫힌 패널은 `tick` 이 돌지 않아 끝난 재생을 뗄 사람이 없다. */
+        void onPanelClosed() override { _document.releaseInput(); }
+
     private:
         /** @brief Mappings 탭을 그립니다. 왼쪽은 레이어와 액션 목록이고 오른쪽은 선택한 액션의 바인딩, 발화 규칙, 충돌, 글리프입니다. 언리얼 Enhanced Input 의 한 화면에 해당합니다. */
         void drawMappingsTab();
@@ -57,8 +66,10 @@ namespace sw::editor
         void drawActionList();
         /** @brief 선택한 액션의 바인딩, 발화 규칙, 충돌, 플랫폼 글리프를 그립니다. */
         void drawActionDetails();
-        /** @brief 바인딩 한 줄(키 글리프 · 레이어 · 트리거 콤보 · 다시 잡기 · 시간 · 횟수 · Negate)을 그립니다. */
-        void drawBindingRow( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding );
+        /** @brief 바인딩 한 줄(키 글리프 · 레이어 · 트리거 콤보 · 다시 잡기 · 지우기 · 시간 · 횟수 · Negate)을 그립니다. 지우기를 눌렀으면 true 입니다(부르는 쪽이 줄을 다 그린 뒤 지운다). */
+        [[nodiscard]] bool drawBindingRow( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding );
+        /** @brief 바인딩을 옮길 레이어 콤보입니다. */
+        void drawBindingLayerCombo( const hashed_string& action, uint32 bindIndex );
         /** @brief 바인딩의 발화 규칙(트리거) 콤보입니다. */
         void drawTriggerCombo( const hashed_string& action, uint32 bindIndex );
         /** @brief 트리거 콤보 뒤의 발화 시간 · 누름 횟수 · Negate 필드입니다. 오른쪽 끝 @p rightEdgeX 에 안 들어가면 다음 줄로 내립니다. */
@@ -100,16 +111,20 @@ namespace sw::editor
         [[nodiscard]] bool saveToFile();
 
     private:
-        InputMapDocument       _document; ///< 편집하는 InputMap · 리플레이와 명령
-        string                 _newActionName;
-        utf8                   _arrActionFilter[constant::buffer::kMax64]; ///< 액션 목록의 검색어
-        string                 _testComboPattern;
-        float32                _testVibLeft;
-        float32                _testVibRight;
-        float2                 _simStick;
-        int32                  _newActionValueType;
-        int32                  _simKeyToInject;
-        uint8                  _bSelectFirstTab : 1; ///< 새 인스턴스의 첫 그리기 — ImGui 가 탭 막대 id 로 기억한 앞 인스턴스의 탭이 아니라 Mappings 로 연다
-        [[maybe_unused]] uint8 _reserved        : 7;
+        InputMapDocument             _document; ///< 편집하는 InputMap · 리플레이와 명령
+        string                       _newActionName;
+        string                       _newLayerName;
+        utf8                         _arrActionFilter[constant::buffer::kMax64]; ///< 액션 목록의 검색어
+        vector<hashed_string>        _listVisibleAction;                         ///< 필터를 지난 액션. 프레임마다 다시 채우는 재사용 버퍼
+        vector<InputMapConflictView> _listActionConflictView;                    ///< 고른 액션의 충돌 줄. 프레임마다 다시 채우는 재사용 버퍼
+        string                       _testComboPattern;
+        float32                      _testVibLeft;
+        float32                      _testVibRight;
+        float2                       _simStick;
+        int32                        _newActionValueType; ///< 콤보 번호 — `InputActionValueType` 과 같은 순서다
+        int32                        _newLayerPriority;
+        int32                        _simKeyToInject;
+        uint8                        _bSelectFirstTab : 1; ///< 새 인스턴스의 첫 그리기 — ImGui 가 탭 막대 id 로 기억한 앞 인스턴스의 탭이 아니라 Mappings 로 연다
+        [[maybe_unused]] uint8       _reserved        : 7;
     };
 } // namespace sw::editor

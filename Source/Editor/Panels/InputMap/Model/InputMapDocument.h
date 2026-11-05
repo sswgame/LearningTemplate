@@ -24,6 +24,17 @@ namespace sw
 
 namespace sw::editor
 {
+    class EditorListFilter;
+
+    /** @brief 키 잡기가 한 프레임에 본 키보드 입력입니다. 읽기는 패널이(ImGui), 판단은 문서가 한다. */
+    struct InputMapCaptureFrame
+    {
+        Key   _chordKey{ Key::Unknown };      ///< 이번 프레임에 새로 눌린 수식 키가 아닌 키
+        uint8 _modifierMask{ 0 };             ///< 그때 누른 수식 키(`ModifierKey`)
+        Key   _pressedKey{ Key::Unknown };    ///< 이번 프레임에 새로 눌린 아무 키(`_chordKey` 가 없으면 수식 키다)
+        bool  _bPendingModifierDown{ false }; ///< `getPendingCaptureModifier` 의 키가 아직 눌려 있다. NOLINT(sw-bool-flag): 집합체다
+    };
+
     /**
      * @struct InputMapPlotSamples
      * @brief Debug 탭 그래프의 최근 표본입니다(고리 버퍼, `_offset` 이 다음에 쓸 칸).
@@ -56,6 +67,11 @@ namespace sw::editor
          * @details ActionPhase 상태 머신 · 커맨드 히스토리 · 버퍼 만료 타이머는 `InputMap::update` 안에서만 갱신되므로 프레임마다 불러야 액션 표 · 콤보 테스터가 동작한다.
          */
         void tick( InputManager& input, float32 deltaTime );
+        /**
+         * @brief 패널이 닫히거나 내려갈 때 부릅니다. 녹화를 끝내고, 재생 중인 리플레이를 입력에서 떼고, 키 잡기를 그만둡니다.
+         * @details 닫힌 패널은 `tick` 이 돌지 않는다. 그대로 두면 끝난 재생을 뗄 사람이 없어 입력이 독점(`Exclusive`)된 채 멈추고, 패널이 사라지면 입력이 해제된 리플레이를 가리킨다.
+         */
+        void releaseInput();
 
         // ------------------------------------------------------------------------------
         // 1) 파일 — 성공하면 true(저장하지 않은 표시가 내려간다). 실패는 로그로 알린다
@@ -80,30 +96,61 @@ namespace sw::editor
          *  @{ */
         void resetAllBindingsToDefault();
         bool resetActionToDefault( const hashed_string& action );
-        void setLayerEnabled( const hashed_string& layer, bool bEnabled );
+        bool setLayerEnabled( const hashed_string& layer, bool bEnabled );
         bool setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger );
         bool setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds );
         bool setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate );
         bool setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount );
-        bool unbind( const hashed_string& action, uint32 bindIndex );
+        /** @brief 바인딩을 이미 있는 레이어로 옮깁니다. */
+        bool setBindingLayer( const hashed_string& action, uint32 bindIndex, const hashed_string& layer );
+        /** @brief 바인딩을 지웁니다(충돌 칸의 "상대 비우기"도 이것이다 — 키만 비우면 파일이 이름 붙이지 못하는 코드가 저장되어 다음 읽기가 맵 전체를 거절한다). */
+        bool removeBinding( const hashed_string& action, uint32 bindIndex );
+        /** @brief 새 액션을 만들고 고릅니다. 이름이 비었거나 이미 있으면 false 입니다. */
+        bool createAction( string_view name, InputActionValueType valueType );
+        /** @brief 액션을 지웁니다. 고른 액션이면 고름도 풉니다. */
+        bool deleteAction( const hashed_string& action );
+        /** @brief 새 레이어를 만듭니다. 이름이 비었거나 이미 있으면 false 입니다. */
+        bool createLayer( string_view name, int32 priority );
         /** @} */
+
+        /** @brief 이 이름으로 액션 · 레이어를 만들 수 있으면 true 입니다. 패널은 이것으로 만들기 단추를 끈다. */
+        bool canCreateAction( string_view name ) const;
+        bool canCreateLayer( string_view name ) const;
+        /**
+         * @brief 이 종류의 바인딩이 발화 규칙 · 시간 · 횟수 · Negate 를 파일에 쓰면 true 입니다.
+         * @details 2D 합성 · 스틱 · 마우스 축 · 가상 조이스틱 · AnyKey 는 매 프레임 읽는 값이라 형식에 이 칸이 없다(`InputMapXML`). 고치게 두면 저장 뒤 말없이 사라진다.
+         */
+        static bool savesTriggerFields( BindingKind kind );
 
         const string& getSelectedAction() const { return _selectedAction; }
         void          selectAction( string_view action ) { _selectedAction = action; }
-        /** @brief 새 액션을 만듭니다. @p valueTypeIndex 는 0 Boolean, 1 Axis1D, 2 Axis2D 입니다. 이름이 비면 false 입니다. */
-        bool createAction( string_view name, int32 valueTypeIndex );
+        /** @brief 필터를 지난 액션을 모읍니다. 이름과 키 표기를 봅니다(@p outListVisibleAction 은 호출한 쪽이 재사용하는 버퍼). */
+        void collectVisibleActions( const EditorListFilter& filter, vector<hashed_string>& outListVisibleAction ) const;
+        /** @brief 액션의 지금 상태 글입니다(triggered · down · ongoing · idle). */
+        const utf8* describeActionState( const hashed_string& action ) const;
+        /** @brief 바인딩의 표기입니다. 단축키 · 조합은 수식 키까지, 키 하나로 못 나타내는 종류는 종류 이름입니다. 바인딩이 없으면 빈 글입니다. */
+        string describeBinding( const hashed_string& action, uint32 bindIndex ) const;
 
         /** @brief 선택한 액션의 @p bindIndex 바인딩을 다음에 누를 키로 다시 잡기 시작합니다(키 잡기 창이 열린다). */
         void beginKeyCapture( uint32 bindIndex );
+        /** @brief 선택한 액션에 다음에 누를 키로 새 바인딩을 더하기 시작합니다. 새 바인딩은 그 액션의 마지막 바인딩의 레이어(없으면 맵의 기본 레이어)에 듭니다. 고른 액션이 없으면 시작하지 않습니다. */
+        void beginNewBindingCapture();
         /** @brief 키 잡기를 그만둡니다. */
-        void cancelKeyCapture() { _bCapturingKey = SW_FALSE; }
+        void cancelKeyCapture();
         bool isCapturingKey() const { return _bCapturingKey == SW_TRUE; }
+        /** @brief 키 잡기 중 혼자 눌려 있는 수식 키입니다. 패널이 지금도 눌렸는지 물어 `advanceKeyCapture` 에 넘깁니다. 없으면 `Key::Unknown` 입니다. */
+        Key getPendingCaptureModifier() const { return _pendingCaptureModifier; }
+        /** @brief 이번 프레임의 키 입력으로 키 잡기를 진행합니다. 조합이 오면 끝내고, Esc 면 그만두고, 수식 키를 혼자 눌렀다 떼면 그 키로 끝냅니다. */
+        void advanceKeyCapture( const InputMapCaptureFrame& frame );
         /**
-         * @brief 잡은 키로 선택한 액션의 바인딩을 바꾸고 키 잡기를 끝냅니다. 바꿨으면 true 입니다.
-         * @details 키 감지와 버튼 격자가 모두 이 함수를 거친다. 이미 다른 액션이 쓰는 키이면(`InputMap::hasBindingConflict`) 되돌리지는 않고
-         *          무엇과 부딪히는지 알린다. 덮어쓰기를 원할 수 있기 때문이다.
+         * @brief 잡은 키 + 수식 키로 끝냅니다. 바꿨으면 true 입니다. 수식 키가 없으면 단일 키, 있으면 단축키입니다(Chord 는 방아쇠만 바뀐다).
+         * @details 키 감지와 버튼 격자가 모두 이 함수를 거친다. 다른 액션과 겹치면 되돌리지는 않고 경고한다. 덮어쓰기를 원할 수 있고, 충돌 칸이 고칠 길을 준다.
          */
-        bool finishKeyCapture( Key newKey );
+        bool finishKeyCapture( Key newKey, uint8 modifierMask = ModifierKey::None );
+        /** @brief 잡은 슬롯(패드 버튼)으로 끝냅니다. 단일 바인딩과 새 바인딩만 받습니다. 받지 않으면 잡기를 이어 가고 false 입니다. */
+        bool finishSlotCapture( const InputSlot& slot );
+        /** @brief 키 잡기 중 0 번 패드에서 새로 눌린 버튼이 있으면 그것으로 끝냅니다. 패널이 키 잡기 창을 그리는 동안 프레임마다 부릅니다. */
+        void pollGamepadCapture( InputManager& input );
 
         /** @brief 바인딩 충돌을 다시 모읍니다. Mappings 탭이 그리기 전에 부릅니다. */
         void                            refreshConflicts();
@@ -142,6 +189,20 @@ namespace sw::editor
     private:
         /** @brief 이번 프레임의 스틱 · 트리거 · 마우스 변화량을 그래프 고리 버퍼에 담습니다. */
         void sampleInput( InputManager& input );
+        /** @brief 저장하지 않은 표시를 @p bChanged 면 켜고 그대로 돌려줍니다. */
+        bool noteEdit( bool bChanged );
+        /** @brief 이 바인딩의 발화 칸을 고쳐도 저장에 남으면 true 입니다(`savesTriggerFields`). */
+        bool canEditTriggerFields( const hashed_string& action, uint32 bindIndex ) const;
+        /** @brief 지금 키 잡기가 패드 버튼을 받을 수 있으면 true 입니다. */
+        bool canCaptureSlot() const;
+        /** @brief 새 바인딩이 들어갈 레이어입니다. 마지막 바인딩의 레이어, 없으면 맵의 기본 레이어입니다. */
+        hashed_string findNewBindingLayer( const hashed_string& action ) const;
+        /** @brief 잡은 키로 새 바인딩을 더합니다. @p outBindIndex 는 새 번호입니다. */
+        bool bindCapturedKey( const hashed_string& action, Key key, uint8 modifierMask, uint32& outBindIndex );
+        /** @brief 잡은 키로 바인딩 @p bindIndex 를 바꿉니다. */
+        bool rebindCapturedKey( const hashed_string& action, uint32 bindIndex, Key key, uint8 modifierMask );
+        /** @brief 잡기로 바뀐 바인딩의 겹침을 알리고 저장하지 않은 표시를 켭니다. */
+        bool noteCapturedBinding( const hashed_string& action, uint32 bindIndex );
 
     private:
         InputMap                 _inputMap;
@@ -152,11 +213,13 @@ namespace sw::editor
         string                   _selectedAction;
         InputMapPlotSamples      _plot;
         uint32                   _recordedBeginFrameCount; ///< 마지막으로 녹화한 입력 프레임(`InputManager::getBeginFrameCount`)이다. 같은 프레임을 두 번 기록하지 않는다
-        uint32                   _capturingBindIndex;      ///< 키 잡기 중인 바인딩 번호. `_bCapturingKey` 일 때만 의미가 있다
-        uint8                    _bLoaded       : 1;
-        uint8                    _bCapturingKey : 1;
-        uint8                    _bPlotPaused   : 1;
-        uint8                    _bDirty        : 1;
-        [[maybe_unused]] uint8   _reserved      : 4;
+        uint32                   _capturingBindIndex;      ///< 키 잡기 중인 바인딩 번호. `_bCapturingKey` 이고 새 바인딩이 아닐 때만 의미가 있다
+        Key                      _pendingCaptureModifier;  ///< 키 잡기 중 혼자 눌린 수식 키. 없으면 `Key::Unknown`
+        uint8                    _bLoaded            : 1;
+        uint8                    _bCapturingKey      : 1;
+        uint8                    _bCaptureNewBinding : 1; ///< 키 잡기가 있는 바인딩을 바꾸지 않고 새 바인딩을 더한다
+        uint8                    _bPlotPaused        : 1;
+        uint8                    _bDirty             : 1;
+        [[maybe_unused]] uint8   _reserved           : 3;
     };
 } // namespace sw::editor
