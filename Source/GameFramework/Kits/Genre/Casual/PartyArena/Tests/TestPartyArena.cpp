@@ -1016,6 +1016,7 @@ SW_TEST_CASE( PartyArenaTest, SeriesTiesGoToSuddenDeath )
  */
 SW_TEST_CASE( PartyArenaTest, SeriesLoadsXMLAllOrNothing )
 {
+    SW_EXPECT_LOG( "Xml.AttributeTypeMismatch" );
     SW_EXPECT_LOG( "PartyRoundSeries.WinScoreNotNumber" );
     SW_EXPECT_LOG( "PartyRoundSeries.WinScoreNeedsMore" );
     SW_EXPECT_LOG( "PartyRoundSeries.PlacementPointsNeedsIntegersMore" );
