@@ -1,0 +1,162 @@
+#include "pch.h"
+
+#include "Core/Testing/TestFramework.h"
+
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserLogic.h"
+
+using namespace sw;
+using namespace sw::editor;
+
+namespace
+{
+    struct ContentBrowserLogicTestUtil
+    {
+        static inline uint32 s_scanCount = 0;
+
+        static void scanFolders( string_view folderAbs, vector<string>& outListChild )
+        {
+            (void)folderAbs;
+            ++s_scanCount;
+            outListChild = { "zeta", "alpha" };
+        }
+    };
+    using Util = ContentBrowserLogicTestUtil;
+} // namespace
+
+SW_TEST_CASE( ContentBrowserLogicTest, FolderTrailHasOneCrumbPerFolderBelowTheRoot )
+{
+    vector<ContentBrowserCrumb> listCrumb;
+    ContentBrowserLogic::makeFolderTrail( "Content", "D:/Project/Content/", "D:\\Project\\Content\\game\\maps", listCrumb );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listCrumb.size() );
+    SW_EXPECT_TRUE( listCrumb[0]._label == "Content" );
+    SW_EXPECT_TRUE( listCrumb[0]._absolutePath == "D:/Project/Content" );
+    SW_EXPECT_TRUE( listCrumb[1]._label == "game" );
+    SW_EXPECT_TRUE( listCrumb[1]._absolutePath == "D:/Project/Content/game" );
+    SW_EXPECT_TRUE( listCrumb[2]._label == "maps" );
+    SW_EXPECT_TRUE( listCrumb[2]._absolutePath == "D:/Project/Content/game/maps" );
+}
+
+SW_TEST_CASE( ContentBrowserLogicTest, TheRootItselfIsOneCrumb )
+{
+    vector<ContentBrowserCrumb> listCrumb;
+    ContentBrowserLogic::makeFolderTrail( "Content", "D:/Project/Content", "D:/Project/Content/", listCrumb );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listCrumb.size() );
+    SW_EXPECT_TRUE( listCrumb[0]._label == "Content" );
+}
+
+// 이름 앞부분만 같은 형제 폴더는 루트 아래가 아니다.
+SW_TEST_CASE( ContentBrowserLogicTest, FolderOutsideTheRootIsASingleCrumb )
+{
+    vector<ContentBrowserCrumb> listCrumb;
+    ContentBrowserLogic::makeFolderTrail( "Content", "D:/Project/Content", "D:/Project/Content2/x", listCrumb );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listCrumb.size() );
+    SW_EXPECT_TRUE( listCrumb[0]._label == "x" );
+    SW_EXPECT_TRUE( listCrumb[0]._absolutePath == "D:/Project/Content2/x" );
+
+    ContentBrowserLogic::makeFolderTrail( "Content", "", "D:/Project/y", listCrumb );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listCrumb.size() );
+    SW_EXPECT_TRUE( listCrumb[0]._label == "y" );
+}
+
+SW_TEST_CASE( ContentBrowserLogicTest, FavoriteTrailStartsWithAnInertGroup )
+{
+    vector<ContentBrowserCrumb> listCrumb;
+    ContentBrowserLogic::makeFavoriteTrail( "Maps", "D:/Project/Content/maps/", listCrumb );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listCrumb.size() );
+    SW_EXPECT_TRUE( listCrumb[0]._absolutePath.empty() ); // 누를 수 없다
+    SW_EXPECT_TRUE( listCrumb[1]._label == "Maps" );
+    SW_EXPECT_TRUE( listCrumb[1]._absolutePath == "D:/Project/Content/maps" );
+
+    ContentBrowserLogic::appendChildCrumb( "D:\\Project\\Content\\maps\\town\\", listCrumb );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listCrumb.size() );
+    SW_EXPECT_TRUE( listCrumb[2]._label == "town" );
+    SW_EXPECT_TRUE( listCrumb[2]._absolutePath == "D:/Project/Content/maps/town" );
+}
+
+SW_TEST_CASE( ContentBrowserFolderCacheTest, ScansOncePerFolderAndSortsChildren )
+{
+    Util::s_scanCount = 0;
+    ContentBrowserFolderCache cache{ &Util::scanFolders };
+    const vector<string>&     listChild = cache.getOrScanChildFolders( "D:/a" );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listChild.size() );
+    SW_EXPECT_TRUE( listChild[0] == "alpha" );
+    SW_EXPECT_EQUAL( 1u, Util::s_scanCount );
+
+    (void)cache.getOrScanChildFolders( "D:/a/" ); // 같은 폴더다
+    SW_EXPECT_EQUAL( 1u, Util::s_scanCount );
+    SW_EXPECT_EQUAL( 1u, cache.getCachedFolderCount() );
+
+    const vector<string>& listOther = cache.getOrScanChildFolders( "D:/b" );
+    SW_EXPECT_EQUAL( 2u, Util::s_scanCount );
+    SW_EXPECT_EQUAL( size_t{ 2 }, listChild.size() ); // 표가 늘어도 앞서 받은 참조가 유효하다
+    SW_EXPECT_EQUAL( size_t{ 2 }, listOther.size() );
+
+    cache.clear();
+    (void)cache.getOrScanChildFolders( "D:/a" );
+    SW_EXPECT_EQUAL( 3u, Util::s_scanCount );
+
+    ContentBrowserFolderCache noScan{ nullptr };
+    SW_EXPECT_TRUE( noScan.getOrScanChildFolders( "D:/a" ).empty() );
+}
+
+SW_TEST_CASE( ContentBrowserHistoryTest, BackAndForwardWalkTheVisits )
+{
+    ContentBrowserHistory history;
+    SW_EXPECT_FALSE( history.canNavigateBack() );
+    SW_EXPECT_TRUE( history.stepBack() == nullptr );
+    SW_EXPECT_TRUE( history.stepForward() == nullptr );
+
+    history.record( "D:/a", {} );
+    SW_EXPECT_FALSE( history.canNavigateBack() ); // 지금 자리뿐이다
+    history.record( "D:/b", {} );
+    history.record( "D:/c", {} );
+    const ContentBrowserHistoryEntry* pBack = history.stepBack();
+    SW_REQUIRE_NOT_NULL( pBack );
+    SW_EXPECT_TRUE( pBack->_folderPathAbs == "D:/b" );
+    SW_EXPECT_TRUE( history.canNavigateForward() );
+    const ContentBrowserHistoryEntry* pForward = history.stepForward();
+    SW_REQUIRE_NOT_NULL( pForward );
+    SW_EXPECT_TRUE( pForward->_folderPathAbs == "D:/c" );
+    SW_EXPECT_FALSE( history.canNavigateForward() );
+}
+
+SW_TEST_CASE( ContentBrowserHistoryTest, SameFolderIsNotRecordedTwice )
+{
+    ContentBrowserHistory history;
+    history.record( "D:/a", {} );
+    history.record( "D:\\a\\", {} );
+    SW_EXPECT_FALSE( history.canNavigateBack() );
+}
+
+// 뒤로 간 뒤 새로 가면 앞으로 갈 길은 사라진다(브라우저와 같다).
+SW_TEST_CASE( ContentBrowserHistoryTest, NewVisitDropsTheForwardPath )
+{
+    ContentBrowserHistory history;
+    history.record( "D:/a", {} );
+    history.record( "D:/b", {} );
+    (void)history.stepBack();
+    history.record( "D:/c", {} );
+    SW_EXPECT_FALSE( history.canNavigateForward() );
+    const ContentBrowserHistoryEntry* pBack = history.stepBack();
+    SW_REQUIRE_NOT_NULL( pBack );
+    SW_EXPECT_TRUE( pBack->_folderPathAbs == "D:/a" );
+}
+
+SW_TEST_CASE( ContentBrowserHistoryTest, OldestVisitsFallOffTheEnd )
+{
+    ContentBrowserHistory history;
+    for ( size_t index = 0; index < ContentBrowserHistory::kMaxEntryCount + 10; ++index )
+    {
+        history.record( "D:/f" + to_string( static_cast<uint64>( index ) ), {} );
+    }
+    size_t                            backCount = 0;
+    const ContentBrowserHistoryEntry* pEntry    = nullptr;
+    while ( history.canNavigateBack() )
+    {
+        pEntry = history.stepBack();
+        ++backCount;
+    }
+    SW_EXPECT_EQUAL( ContentBrowserHistory::kMaxEntryCount - 1, backCount );
+    SW_REQUIRE_NOT_NULL( pEntry );
+    SW_EXPECT_TRUE( pEntry->_folderPathAbs == "D:/f10" );
+}
