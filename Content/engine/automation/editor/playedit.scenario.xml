@@ -3,6 +3,7 @@
   에디터 시나리오 — 플레이 옵션(N6).
   1) 플레이 중 인스펙터로 GameCamera 의 _priority 를 7 로 바꾸면 바로 들어가고(감시 값 Editor.SelectedProperty), Stop 이 0 으로 되돌린다.
   2) (3 · 4 뒤에) 다시 플레이해 7 로 바꾸고 Play > Keep Simulation Changes 를 쓰면 Stop 뒤에도 7 이고, 그 남김은 되돌리기 하나다(Ctrl+Z 로 0).
+  1-1) 플레이 중 여러 오브젝트를 골라도 편집이 막히지 않는다.
   3) F8 은 조종을 놓고(Simulate, 씬 뷰) 다시 F8 이 조종으로 돌아온다(Editor.PlaySimulating).
   4) 게임 뷰 툴바의 Max(Maximize On Play)를 켜고 플레이하면 인스펙터가 닫히고(Editor.PanelOpen), Stop 하면 배치가 돌아온다.
   실행: App -EnableEditor -scenario=engine/automation/editor/playedit.scenario.xml -unattended
@@ -37,6 +38,30 @@
 	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
 	<Expect watch="Editor.SelectedProperty" equals="0"/>
 	<Expect watch="Editor.UndoCount" equals="0"/>
+	<!-- 1-1) 플레이 중 여러 오브젝트를 골라도 편집이 막히지 않는다(예전에는 단일 선택만 풀려 있었다). 값은 Stop 이 되돌린다. -->
+	<EditorClick mark="hierarchy.row.GameCamera"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="hierarchy.row.TestGameCamera" mods="ctrl"/>
+	<WaitUntil watch="Editor.SelectionCount" equals="2" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<DevCommand line="editor play.start"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="120"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="inspector.property.CameraComponent._priority" mods="ctrl"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitSettled/>
+	<EditorText value="5"/>
+	<EditorWaitSettled/>
+	<EditorKey key="Enter"/>
+	<WaitUntil watch="Editor.SelectedPropertySum" equals="10" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="toolbar.stop"/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="75"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="hierarchy.row.GameCamera"/>
+	<EditorWaitSettled/>
 	<!-- 3) F8 Eject / Possess -->
 	<EditorWaitSettled/>
 	<DevCommand line="editor play.start"/>

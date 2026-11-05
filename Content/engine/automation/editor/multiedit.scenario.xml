@@ -30,6 +30,19 @@
 	<DevCommand line="editor edit.undo"/>
 	<WaitUntil watch="Editor.SelectedPropertySum" equals="0" timeoutFrames="60"/>
 	<EditorWaitSettled/>
+	<!-- 기본값 되돌리기도 선택 전부를 되돌린다(예전에는 주 선택만 찍어 Ctrl+Z 뒤 합이 5 였다). -->
+	<DevCommand line="editor edit.redo"/>
+	<WaitUntil watch="Editor.SelectedPropertySum" equals="10" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="inspector.reset.CameraComponent._priority"/>
+	<WaitUntil watch="Editor.SelectedPropertySum" equals="0" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<DevCommand line="editor edit.undo"/>
+	<WaitUntil watch="Editor.SelectedPropertySum" equals="10" timeoutFrames="60"/>
+	<EditorWaitSettled/>
+	<DevCommand line="editor edit.undo"/>
+	<WaitUntil watch="Editor.SelectedPropertySum" equals="0" timeoutFrames="60"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>
