@@ -487,6 +487,7 @@ msgid "Package"
 msgstr "패키지"
 
 #: Source/Editor/Common/GUI/EditorPlayToolbar.cpp
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EdButton.Pause"
 msgid "Pause"
 msgstr "일시 정지"
@@ -3496,6 +3497,7 @@ msgstr "이전 파일 되살리기"
 
 #: Source/Editor/Panels/Animation/AnimationRewindPanel.cpp
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EdText.Resume"
 msgid "Resume"
 msgstr "이어 하기"
@@ -7847,9 +7849,39 @@ msgid "Enter a UI document path (*.ui.xml)."
 msgstr "UI 문서 경로(*.ui.xml)를 입력합니다."
 
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.GameLanguage"
+msgid "(game language)"
+msgstr "(게임 언어)"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.GameTheme"
+msgid "(game theme)"
+msgstr "(게임 테마)"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EditorUIPreview.LayoutRectsTip"
 msgid "Outline every visible widget's layout rectangle over the preview."
 msgstr "보이는 모든 위젯의 레이아웃 사각형을 미리보기 위에 그립니다."
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.MoveEarlierTip"
+msgid "Move the selected widget one place earlier among its siblings"
+msgstr "고른 위젯을 형제 사이에서 한 칸 앞으로 옮깁니다"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.MoveLaterTip"
+msgid "Move the selected widget one place later among its siblings"
+msgstr "고른 위젯을 형제 사이에서 한 칸 뒤로 옮깁니다"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.NoAnimations"
+msgid "(no animations)"
+msgstr "(애니메이션 없음)"
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.PseudoLanguage"
+msgid "{code} (pseudo)"
+msgstr "{code} (의사 문화권)"
 
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EditorUIPreview.ReloadTip"
@@ -8030,6 +8062,11 @@ msgstr "런타임 UI 가 돌고 있지 않습니다."
 msgctxt "EditorUIPreview.UIScaleTip"
 msgid "Player UI scale setting to simulate, 0.5 to 2."
 msgstr "흉내 낼 플레이어 UI 배율 설정(0.5~2)입니다."
+
+#: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
+msgctxt "EditorUIPreview.Unnamed"
+msgid "(unnamed)"
+msgstr "(이름 없음)"
 
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EditorUIPreview.WaitingForTexture"

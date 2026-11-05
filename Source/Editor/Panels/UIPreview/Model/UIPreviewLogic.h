@@ -9,6 +9,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/UI/WidgetTree/UIEvents.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
 
 namespace sw
@@ -19,6 +20,7 @@ namespace sw
     struct UIScaleSettings;
     struct WidgetLayoutSlot;
 
+    class BoxPanel;
     class GridPanel;
     class PanelWidget;
     class TypeRegistry;
@@ -98,6 +100,58 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    class EditorListFilter;
+
+    /**
+     * @struct UIPreviewPointerInput
+     * @brief 입력 흉내 한 프레임의 포인터 입력입니다. 뷰가 에디터 입력에서 읽어 UI 단위로 옮겨 넘깁니다(모델은 에디터 입력을 모른다).
+     */
+    struct UIPreviewPointerInput
+    {
+        static constexpr uint32 kButtonCount = 3; ///< 왼쪽 · 오른쪽 · 가운데 순서
+
+        float2  _position{};                  ///< UI 단위 포인터 위치
+        float32 _wheel{ 0.0f };               ///< 이번 프레임의 휠
+        bool    _bHovered{ false };           ///< 포인터가 이미지 위에 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool    _arrPressed[kButtonCount]{};  ///< 이번 프레임에 누른 버튼
+        bool    _arrReleased[kButtonCount]{}; ///< 이번 프레임에 뗀 버튼
+    };
+
+    /** @brief 입력 흉내 한 프레임에 트리로 보낼 것입니다(`UIPreviewPointerTracker::step` 의 결과). */
+    struct UIPreviewPointerPlan
+    {
+        vector<UIPointerEvent> _listEvent{};          ///< 차례대로 보낼 이벤트
+        bool                   _bMoved{ false };      ///< 포인터가 움직였다(탐색 방식을 끈다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                   _bClearHover{ false }; ///< 이벤트를 보낸 뒤 호버를 비운다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                   _bMutates{ false };    ///< 위젯 값을 바꿀 수 있는 입력이다(누름 · 뗌 · 휠 — 저장을 막는다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+
+    /**
+     * @class UIPreviewPointerTracker
+     * @brief 입력 흉내의 포인터 판단입니다 — 에디터 포인터 한 프레임을 UI 포인터 이벤트로 옮깁니다(트리를 모른다).
+     * @details 게임 창의 포인터와 같은 규칙이다. 미리보기에서 누른 버튼만 Up 을 보내고(다른 패널에서 누른 채 이미지 위에서 놓으면 위젯은 Up 을 받지 않고 저장도 막히지 않는다),
+     *          누른 동안은 이미지 밖에서도 위치를 보내며(슬라이더를 끌다 벗어나도 따라온다), 밖에서 놓으면 호버를 비운다.
+     */
+    class UIPreviewPointerTracker
+    {
+    public:
+        UIPreviewPointerTracker();
+
+        /** @brief 한 프레임의 입력을 받아 보낼 이벤트를 돌려줍니다. */
+        [[nodiscard]] UIPreviewPointerPlan step( const UIPreviewPointerInput& input );
+        /** @brief 누름 · 안에 있음을 잊습니다(트리를 새로 지었거나 입력 흉내를 껐다). */
+        void reset();
+        /** @brief 포인터가 안에 있음만 잊습니다 — 다음 프레임이 Move 를 다시 보내 호버를 새 구조로 다시 잡습니다(위젯이 붙거나 떨어졌다). */
+        void forgetInside() { _bInside = SW_FALSE; }
+        /** @brief 포인터를 @p position 으로 옮겼다고 적습니다(확인 입력 흉내가 포커스 위젯 가운데로 옮겼다). */
+        void notePosition( const float2& position ) { _lastPosition = position; }
+
+    private:
+        float2 _lastPosition; ///< 마지막으로 보낸 위치(UI 단위)
+        uint8  _pressedMask;  ///< 미리보기에서 누른 채인 버튼(비트 — `UIPreviewPointerInput` 순서)
+        uint8  _bInside : 1;  ///< 포인터가 이미지 위에 있었다
+    };
+
     /**
      * @struct UIPreviewLogic
      * @brief 미리보기 패널이 부르는 순수 함수들입니다(유니티 UI Builder · UMG 디자이너의 미리보기 해상도 · 위젯 계층 창에 해당합니다).
@@ -117,8 +171,18 @@ namespace sw::editor
         static UIRect mapUIToImage( const UIRect& rect, const float2& drawSize, const UIViewport& viewport );
         /** @brief 트리의 위젯을 문서 순서로 한 줄씩(깊이 · "타입 #이름") 모읍니다. */
         static void collectWidgetRows( const WidgetTree& tree, vector<UIPreviewWidgetRow>& outListRow );
+        /**
+         * @brief 검색어 @p filter 에 맞는 줄과 그 조상 줄의 번호(문서 순서)를 @p outListOrdinal 에 담습니다. 조상을 남겨 깊이가 유지됩니다(UMG 계층 창의 검색과 같다).
+         */
+        static void filterWidgetRows( const vector<UIPreviewWidgetRow>& listRow, const EditorListFilter& filter, vector<uint32>& outListOrdinal );
         /** @brief UI 점 @p point 아래의 맨 위(문서 순서로 마지막) 보이는 위젯입니다. 없으면 무효입니다. */
         static WidgetID findWidgetAt( const WidgetTree& tree, const float2& point );
+        /** @brief 위젯과 조상이 모두 보이면 true 입니다. 접힌 조상 아래의 기하는 지난 배치라 고르거나 그리지 않습니다. */
+        static bool isVisibleInTree( const Widget& widget );
+        /** @brief 보이는 위젯의 화면 사각형(UI 단위, 문서 순서)을 모읍니다 — 레이아웃 사각형 겹쳐 그리기입니다. */
+        static void collectVisibleBounds( const WidgetTree& tree, vector<UIRect>& outListBounds );
+        /** @brief 안전 영역 사각형(UI 단위)입니다. 여백이 없으면 false 입니다. */
+        [[nodiscard]] static bool findSafeZoneRect( const UIViewport& viewport, UIRect& outRect );
         /** @brief 미리보기 렌더 텍스처 경로입니다 — 크기마다 다르다(렌더 텍스처 크기는 처음 만들 때 정해진다). */
         static string makeTargetPath( const UIViewport& viewport );
 
@@ -183,6 +247,12 @@ namespace sw::editor
          * @return 슬롯이 바뀌었으면 true 입니다.
          */
         [[nodiscard]] static bool applySlotDrag( WidgetLayoutSlot& inoutSlot, UIPreviewSlotHandle handle, const float2& deltaUI );
+        /** @brief 사각형 @p box 위 손잡이 @p handle 의 가운데입니다. 옮기기는 사각형 가운데, 나머지는 그 변의 가운데입니다. */
+        static float2 getSlotHandleCenter( UIPreviewSlotHandle handle, const UIRect& box );
+        /** @brief 슬롯의 앵커와 똑같은 프리셋입니다. 맞는 것이 없으면 `UIPreviewAnchorPreset::Count` 입니다. */
+        static UIPreviewAnchorPreset findAnchorPreset( const WidgetLayoutSlot& slot );
+        /** @brief 위젯의 지금 사각형을 부모 왼쪽 위 원점으로 옮깁니다(`applyAnchorPreset` 의 입력). 부모가 있어야 합니다. */
+        static UIRect makeParentLocalRect( const Widget& widget );
         /** @brief 앵커 프리셋 @p preset 의 앵커 값입니다. 범위 밖이면 좌상(0, 0)입니다. */
         static UIPreviewAnchorValues getAnchorPreset( UIPreviewAnchorPreset preset );
         /** @brief 앵커 프리셋 @p preset 의 자동화 표식 이름입니다("topleft" 등). */
@@ -221,6 +291,24 @@ namespace sw::editor
          * @return 렌더 변환이 퇴화해 로컬로 되돌릴 수 없으면 false 입니다.
          */
         [[nodiscard]] static bool findGridCell( const GridPanel& grid, const float2& screenPoint, uint32& outRow, uint32& outColumn );
+        /** @brief 위젯의 부모가 상자나 격자라 옮기기 손잡이(끌어 놓기로 순서 · 칸을 바꾼다)를 띄울 수 있으면 true 입니다. */
+        static bool canEditLayoutByHandle( const Widget& widget );
+        /**
+         * @brief 상자 @p box 의 자식 @p child 를 점 @p point(화면 UI 단위)에 놓을 때의 번호입니다. 자식 사각형의 상자 축 가운데와 비교합니다.
+         * @return 순서가 바뀌면 true 입니다. 자식이 아니거나 제자리면 false 입니다.
+         */
+        [[nodiscard]] static bool findBoxReorder( const BoxPanel& box, const Widget& child, const float2& point, uint32& outFromIndex, uint32& outToIndex );
+        /** @brief 점 @p point(화면 UI 단위)가 놓인 격자 칸을 슬롯에 씁니다. 슬롯이 바뀌면 true 입니다. */
+        [[nodiscard]] static bool applyGridDrop( const GridPanel& grid, WidgetLayoutSlot& inoutSlot, const float2& point );
+        /**
+         * @brief 위젯을 형제 사이에서 @p delta 칸 옮길 번호입니다(계층 창의 위 · 아래 옮기기).
+         * @return 옮길 수 있으면 true 입니다. 루트이거나 형제 끝을 넘으면 false 입니다.
+         */
+        [[nodiscard]] static bool findSiblingMove( const Widget& widget, int32 delta, uint32& outFromIndex, uint32& outToIndex );
+        /**
+         * @brief 인스펙터 끌기의 되돌리기 항목을 합치는 키입니다. 세대가 들어 있어야 한다 — 트리를 새로 지은 뒤의 편집이 옛 세대 항목과 합쳐지면, 되돌리기가 끊긴 옛 항목을 불러 아무 일도 하지 않는다.
+         */
+        static string makeEditCoalesceKey( uint32 generation, uint32 ordinal, string_view propertyName );
         /** @brief 시간 막대 줄입니다 — "0.25 / 1.00 s". */
         static string makeTimeLabel( float32 time, float32 duration );
     };

@@ -22,6 +22,8 @@
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Document/UIDocumentCache.h"
+#include "Engine/UI/Layout/BoxPanel.h"
+#include "Engine/UI/Layout/GridPanel.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/UISystem.h"
@@ -75,16 +77,6 @@ namespace sw::editor
         unique_ptr<Widget> _pWidget{};
     };
 
-    namespace
-    {
-        struct UIPreviewModelInternal
-        {
-            static constexpr uint32 kPaletteRefreshFrames = 180; ///< 팔레트를 다시 모으는 간격(게임 모듈이 위젯 타입을 더하거나 뺄 수 있다)
-            /** @brief 입력 흉내 버튼 순서(`UIPreviewPointerInput` 의 배열 순서)의 UI 버튼입니다. */
-            static constexpr MouseButton kArrButton[UIPreviewPointerInput::kButtonCount] = { MouseButton::Left, MouseButton::Right, MouseButton::Middle };
-        };
-    } // namespace
-
     UIPreviewModel::UIPreviewModel( const DataPath& initialDocument )
         : _undoOwner{}
         , _onDirtyChanged{}
@@ -106,6 +98,7 @@ namespace sw::editor
         , _animation{}
         , _viewport{}
         , _pointer{}
+        , _pointerTracker{}
         , _focus{}
         , _pLocalization{}
         , _pSession{ sw::make_shared<EditSession>() }
@@ -118,7 +111,7 @@ namespace sw::editor
         , _generation{ 0 }
         , _gameTextRevision{ 0 }
         , _languageIndex{ 0 }
-        , _paletteFrame{ 0 }
+        , _paletteGeneration{ 0 }
         , _slotEditCount{ 0 }
         , _resolutionTable{}
         , _resolutionIndex{ 0 }
@@ -127,15 +120,12 @@ namespace sw::editor
         , _bNavigationMode{ SW_FALSE }
         , _bMutated{ SW_FALSE }
         , _bAnimationPaused{ SW_FALSE }
-        , _bPointerInside{ SW_FALSE }
-        , _bPointerPressed{ SW_FALSE }
         , _bApplyLocalization{ SW_FALSE }
         , _bAwaitReload{ SW_FALSE }
         , _uiScale{ 1.0f }
         , _textScale{ 1.0f }
         , _safeZone{ 0.0f }
         , _animationScrub{ 0.0f }
-        , _lastPointer{}
         , _bAnimationLoop{ false }
         , _bReloadedAfterSave{ false }
     {
@@ -226,12 +216,16 @@ namespace sw::editor
         _seenRootID         = kInvalidWidgetID;
         _baselineWidget     = kInvalidWidgetID;
         _bMutated           = SW_FALSE;
-        _bPointerInside     = SW_FALSE;
-        _bPointerPressed    = SW_FALSE;
         _bNavigationMode    = SW_FALSE;
         _bApplyLocalization = SW_TRUE;
         _bAwaitReload       = SW_FALSE; // 닫은 화면의 저장을 기다리지 않는다 - 새 화면의 핫 리로드를 "저장 뒤 다시 읽음" 으로 세지 않게
         _bAnimationPaused   = SW_FALSE; // 재생기는 화면과 함께 사라졌다 - 멈춤 표시만 남지 않게
+        _animationScrub     = 0.0f;
+        _pointerTracker.reset();
+        // 새 화면의 트리가 같은 주소 · 같은 구조 세대로 올 수 있다(세대는 트리마다 1 부터다) — 주소로 비교하는 행 캐시가 옛 문서의 줄을 보이지 않게 비운다.
+        _listRow.clear();
+        _pRowTree          = nullptr;
+        _rowTreeGeneration = 0;
         ++_generation;
         _listBaseline.clear();
         setDirty( false );
@@ -284,7 +278,7 @@ namespace sw::editor
         }
     }
 
-    void UIPreviewModel::syncTree( UIScreen& screen )
+    void UIPreviewModel::syncTree( UIScreen& screen, bool bDirty )
     {
         // 문서를 다시 읽으면(저장, 에디터 밖 편집) 핫 리로드가 트리를 새로 지어 위젯 번호가 모두 바뀐다 — 고른 위젯은 문서 순서 번호로 이어 간다.
         WidgetTree&    tree   = screen.getTree();
@@ -296,16 +290,19 @@ namespace sw::editor
         _seenRootID         = rootID;
         _pointer.forgetTree( tree );
         _focus.forgetTree( tree );
-        _bPointerInside  = SW_FALSE;
-        _bPointerPressed = SW_FALSE;
+        _pointerTracker.reset();
         ++_generation;
         _listBaseline.clear();
         _baselineWidget = kInvalidWidgetID;
         _selected       = _selectedOrdinal != UIPreviewLogic::kNoOrdinal ? UIPreviewLogic::findWidgetByOrdinal( tree, _selectedOrdinal ) : kInvalidWidgetID;
         if ( bRebuilt )
         {
-            // 다시 만든 트리는 디스크 문서 그대로다 — 고친 값과 입력 흉내의 흔적이 모두 사라졌다.
-            _bMutated = SW_FALSE;
+            // 다시 만든 트리는 디스크 문서 그대로다 — 고친 값과 입력 흉내의 흔적이 모두 사라졌다. 재생기도 새것이라 멈춤 표시를 남기지 않는다.
+            if ( bDirty )
+                SW_LOG_WARNING_ID( "UIPreview.UnsavedEditsDiscarded", "UI Preview: unsaved edits of '%#' are discarded because the file changed on disk", _openedDocument.c_str() );
+            _bMutated         = SW_FALSE;
+            _bAnimationPaused = SW_FALSE;
+            _animationScrub   = 0.0f;
             setDirty( false );
             if ( _bAwaitReload )
             {
@@ -483,7 +480,7 @@ namespace sw::editor
             const string oldText = baseline._text;
             baseline._text       = newText;
             // 끌어 바꾸는 값은 프레임마다 알려 온다 — 같은 위젯 · 같은 프로퍼티의 연속 편집은 되돌리기 항목 하나로 합친다.
-            pushPropertyEdit( _selectedOrdinal, name, oldText, newText, formatToString( "uipreview.%#.%#", _selectedOrdinal, name ) );
+            pushPropertyEdit( _selectedOrdinal, name, oldText, newText, UIPreviewLogic::makeEditCoalesceKey( _generation, _selectedOrdinal, name ) );
             return;
         }
     }
@@ -522,20 +519,21 @@ namespace sw::editor
         // 위젯이 붙거나 떨어졌다 — 호버 경로가 옛 위젯 번호를 보관하고 있을 수 있어 비우고, 고름과 기준 값을 새 구조에 맞춘다.
         WidgetTree& tree = screen.getTree();
         _pointer.clearHover();
-        _bPointerInside  = SW_FALSE;
+        _pointerTracker.forgetInside();
         _baselineWidget  = kInvalidWidgetID;
         _selectedOrdinal = selectedOrdinal;
         _selected        = selectedOrdinal != UIPreviewLogic::kNoOrdinal ? UIPreviewLogic::findWidgetByOrdinal( tree, selectedOrdinal ) : kInvalidWidgetID;
         setDirty( true );
     }
 
-    void UIPreviewModel::refreshPalette( uint32 frame )
+    void UIPreviewModel::refreshPalette()
     {
-        TypeRegistry* pRegistry = editor::findSubsystem<TypeRegistry>();
-        if ( pRegistry != nullptr && ( _listPaletteType.empty() || frame - _paletteFrame > UIPreviewModelInternal::kPaletteRefreshFrames ) )
+        TypeRegistry* pRegistry  = editor::findSubsystem<TypeRegistry>();
+        const uint32  generation = TypeRegistry::getGeneration();
+        if ( pRegistry != nullptr && ( _listPaletteType.empty() || generation != _paletteGeneration ) )
         {
             UIPreviewLogic::collectPaletteTypes( *pRegistry, _listPaletteType );
-            _paletteFrame = frame;
+            _paletteGeneration = generation;
         }
     }
 
@@ -614,9 +612,8 @@ namespace sw::editor
 
     void UIPreviewModel::reorderChild( uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex )
     {
-        if ( fromIndex == toIndex )
-            return;
-        applyMove( _generation, parentOrdinal, fromIndex, toIndex );
+        if ( applyMove( _generation, parentOrdinal, fromIndex, toIndex ) == false )
+            return; // 옮기지 못했으면 되돌릴 것도 없다 — 항목을 남기면 Undo 가 빈 일을 하고 dirty 가 어긋난다
         ++_slotEditCount;
         const uint32                  generation = _generation;
         const shared_ptr<EditSession> pSession   = _pSession;
@@ -631,6 +628,49 @@ namespace sw::editor
         } ),
                                                           _undoOwner ),
                                  "Reorder UI Widget" );
+    }
+
+    bool UIPreviewModel::canMoveSelected( const WidgetTree& tree, int32 delta ) const
+    {
+        const Widget* pWidget = tree.findWidgetByID( _selected );
+        uint32        fromIndex{ 0 };
+        uint32        toIndex{ 0 };
+        return pWidget != nullptr && UIPreviewLogic::findSiblingMove( *pWidget, delta, fromIndex, toIndex );
+    }
+
+    void UIPreviewModel::moveSelected( WidgetTree& tree, int32 delta )
+    {
+        const Widget* pWidget = tree.findWidgetByID( _selected );
+        uint32        fromIndex{ 0 };
+        uint32        toIndex{ 0 };
+        if ( pWidget == nullptr || UIPreviewLogic::findSiblingMove( *pWidget, delta, fromIndex, toIndex ) == false )
+            return;
+        reorderChild( UIPreviewLogic::findWidgetOrdinal( tree, pWidget->getParent()->getID() ), fromIndex, toIndex );
+    }
+
+    void UIPreviewModel::dropLayoutHandle( WidgetTree& tree, Widget& widget, const float2& point )
+    {
+        PanelWidget* pParent = widget.getParent();
+        if ( const BoxPanel* pBox = castTo<const BoxPanel>( pParent ) )
+        {
+            // 상자: 분리해 다시 끼운다 — 구조 편집이라 부모 번호와 자식 번호로 되돌린다.
+            uint32 fromIndex{ 0 };
+            uint32 toIndex{ 0 };
+            if ( UIPreviewLogic::findBoxReorder( *pBox, widget, point, fromIndex, toIndex ) )
+                reorderChild( UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() ), fromIndex, toIndex );
+            return;
+        }
+        const GridPanel*    pGrid     = castTo<const GridPanel>( pParent );
+        const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( widget, "_slot" );
+        if ( pGrid == nullptr || pSlotProp == nullptr )
+            return;
+        // 격자: 슬롯 편집이라 캔버스 손잡이와 같이 `_slot` 텍스트 전후를 남긴다.
+        const string     oldText = UIPreviewLogic::formatWidgetProperty( widget, *pSlotProp );
+        WidgetLayoutSlot slot    = widget.getLayoutSlot();
+        if ( UIPreviewLogic::applyGridDrop( *pGrid, slot, point ) == false )
+            return;
+        widget.setLayoutSlot( slot );
+        (void)commitSlotEdit( _selectedOrdinal, oldText, UIPreviewLogic::formatWidgetProperty( widget, *pSlotProp ) ); // 같으면 남기지 않는다
     }
 
     void UIPreviewModel::applyInsert( uint32 generation, const hashed_string& typeName, uint32 parentOrdinal, uint32 index )
@@ -670,20 +710,22 @@ namespace sw::editor
             afterStructureEdit( *pScreen, UIPreviewLogic::findWidgetOrdinal( pScreen->getTree(), pAttached->getID() ) );
     }
 
-    void UIPreviewModel::applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex )
+    bool UIPreviewModel::applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex )
     {
         UIScreen* pScreen = generation == _generation ? findPreviewScreen() : nullptr;
         if ( pScreen == nullptr || fromIndex == toIndex )
-            return;
+            return false;
         // 자식을 분리하고 끼워도 부모의 문서 순서 번호는 그대로다(부모가 자식보다 앞에 온다).
         WidgetTree& tree = pScreen->getTree();
         _pointer.clearHover();
         unique_ptr<Widget> moved = UIPreviewLogic::detachWidget( tree, parentOrdinal, fromIndex );
         if ( moved == nullptr )
-            return;
+            return false;
         Widget* pAttached = UIPreviewLogic::attachWidget( tree, std::move( moved ), parentOrdinal, toIndex );
-        if ( pAttached != nullptr )
-            afterStructureEdit( *pScreen, UIPreviewLogic::findWidgetOrdinal( tree, pAttached->getID() ) );
+        if ( pAttached == nullptr )
+            return false;
+        afterStructureEdit( *pScreen, UIPreviewLogic::findWidgetOrdinal( tree, pAttached->getID() ) );
+        return true;
     }
 
     void UIPreviewModel::applyEditedText( uint32 generation, uint32 ordinal, const string& propertyName, const string& text )
@@ -726,7 +768,10 @@ namespace sw::editor
         _bInteract = bInteract;
         setNavigationMode( false );
         if ( bInteract == false )
+        {
             _pointer.clearHover();
+            _pointerTracker.reset();
+        }
     }
 
     bool UIPreviewModel::navigateFocus( UIScreen& screen, uint32 direction )
@@ -752,73 +797,34 @@ namespace sw::editor
         const Widget* pFocused = tree.findWidgetByID( tree.getFocusedWidget() );
         if ( pFocused == nullptr )
             return;
-        const UIRect   bounds = pFocused->getGeometry().computeScreenBounds();
         UIPointerEvent event{};
-        event._position = float2{ ( bounds._left + bounds._right ) * 0.5f, ( bounds._top + bounds._bottom ) * 0.5f };
+        event._position = pFocused->getGeometry().computeScreenBounds().getCenter();
         event._kind     = UIPointerEventKind::Move;
         (void)_pointer.process( tree, event );
         event._kind = UIPointerEventKind::Down;
         (void)_pointer.process( tree, event );
         event._kind = UIPointerEventKind::Up;
         (void)_pointer.process( tree, event );
-        _lastPointer = event._position;
+        _pointerTracker.notePosition( event._position );
         markPreviewMutated();
     }
 
     void UIPreviewModel::feedPointer( UIScreen& screen, const UIPreviewPointerInput& input )
     {
-        WidgetTree&    tree = screen.getTree();
-        UIPointerEvent event{};
-        event._position = input._position;
-        event._delta    = float2{ event._position._x - _lastPointer._x, event._position._y - _lastPointer._y };
-        if ( input._bHovered )
+        const UIPreviewPointerPlan plan = _pointerTracker.step( input );
+        if ( plan._bMoved && _bNavigationMode )
+            setNavigationMode( false ); // 마우스를 움직이면 포인터 방식으로 돌아간다(포커스 테두리를 숨긴다)
+        WidgetTree& tree = screen.getTree();
+        for ( const UIPointerEvent& event : plan._listEvent )
         {
-            const bool bPointerEnteredOrMoved = _bPointerInside == false || event._delta._x != 0.0f || event._delta._y != 0.0f;
-            if ( bPointerEnteredOrMoved )
-            {
-                if ( _bNavigationMode )
-                    setNavigationMode( false ); // 마우스를 움직이면 포인터 방식으로 돌아간다(포커스 테두리를 숨긴다)
-                event._kind = UIPointerEventKind::Move;
-                (void)_pointer.process( tree, event );
-                _lastPointer = event._position;
-            }
-            _bPointerInside = SW_TRUE;
-            if ( input._wheel != 0.0f )
-            {
-                event._kind  = UIPointerEventKind::Wheel;
-                event._wheel = input._wheel;
-                (void)_pointer.process( tree, event );
-                markPreviewMutated();
-            }
+            const UIPointerResult result = _pointer.process( tree, event );
+            if ( event._kind == UIPointerEventKind::Down && result._focusRequest != kInvalidWidgetID )
+                (void)_focus.setFocus( tree, result._focusRequest );
         }
-        else if ( _bPointerInside )
-        {
-            if ( _bPointerPressed == false )
-                _pointer.clearHover();
-            _bPointerInside = SW_FALSE;
-        }
-
-        for ( uint32 buttonIndex = 0; buttonIndex < UIPreviewPointerInput::kButtonCount; ++buttonIndex )
-        {
-            event._button = UIPreviewModelInternal::kArrButton[buttonIndex];
-            if ( input._bHovered && input._arrPressed[buttonIndex] )
-            {
-                event._kind                  = UIPointerEventKind::Down;
-                const UIPointerResult result = _pointer.process( tree, event );
-                if ( result._focusRequest != kInvalidWidgetID )
-                    (void)_focus.setFocus( tree, result._focusRequest );
-                _bPointerPressed = SW_TRUE;
-                markPreviewMutated();
-            }
-            // 이미지 밖에서 놓은 버튼도 위젯이 잡고 있으면 Up 을 보낸다(슬라이더를 끌다가 바깥에서 놓는 경우).
-            if ( input._arrReleased[buttonIndex] && ( input._bHovered || _bPointerPressed ) )
-            {
-                event._kind = UIPointerEventKind::Up;
-                (void)_pointer.process( tree, event );
-                _bPointerPressed = SW_FALSE;
-                markPreviewMutated();
-            }
-        }
+        if ( plan._bClearHover )
+            _pointer.clearHover();
+        if ( plan._bMutates )
+            markPreviewMutated();
     }
 
     const hashed_string& UIPreviewModel::syncAnimation( UIAnimationPlayer& player )
@@ -834,7 +840,9 @@ namespace sw::editor
     void UIPreviewModel::chooseAnimation( UIAnimationPlayer& player, const hashed_string& name )
     {
         player.stopAll();
-        _animation = name;
+        _animation        = name;
+        _bAnimationPaused = SW_FALSE; // 앞 애니메이션의 멈춤 · 시각을 새 애니메이션으로 끌고 가지 않는다
+        _animationScrub   = 0.0f;
     }
 
     void UIPreviewModel::playAnimation( UIAnimationPlayer& player )
@@ -844,8 +852,17 @@ namespace sw::editor
         markPreviewMutated();
     }
 
+    bool UIPreviewModel::isAnimationActive( const UIAnimationPlayer& player ) const
+    {
+        float32 time{ 0.0f };
+        float32 duration{ 0.0f };
+        return player.getPlaybackTime( _animation, time, duration );
+    }
+
     void UIPreviewModel::togglePauseAnimation( UIAnimationPlayer& player )
     {
+        if ( isAnimationActive( player ) == false )
+            return; // 떠 있지 않은 애니메이션에는 멈출 것이 없다 — 표시만 "Resume" 으로 바뀌었다
         _bAnimationPaused = !_bAnimationPaused;
         player.setPaused( _animation, _bAnimationPaused );
     }

@@ -2997,9 +2997,15 @@
 		<entry key="EditorUIPreview.EnterPathHint"
 		       text="UI 문서 경로(*.ui.xml)를 입력합니다."
 		       sourceHash="7759119c25d5a622" />
+		<entry key="EditorUIPreview.GameLanguage" text="(게임 언어)" sourceHash="d75b5c1f1c9e63c0" />
+		<entry key="EditorUIPreview.GameTheme" text="(게임 테마)" sourceHash="0908aef7a2cb04d3" />
 		<entry key="EditorUIPreview.LayoutRectsTip"
 		       text="보이는 모든 위젯의 레이아웃 사각형을 미리보기 위에 그립니다."
 		       sourceHash="868e901921a598c0" />
+		<entry key="EditorUIPreview.MoveEarlierTip" text="고른 위젯을 형제 사이에서 한 칸 앞으로 옮깁니다" sourceHash="cf926e658be4c9f0" />
+		<entry key="EditorUIPreview.MoveLaterTip" text="고른 위젯을 형제 사이에서 한 칸 뒤로 옮깁니다" sourceHash="84b4f28f2a35a8de" />
+		<entry key="EditorUIPreview.NoAnimations" text="(애니메이션 없음)" sourceHash="e7333aee4dc15c1e" />
+		<entry key="EditorUIPreview.PseudoLanguage" text="{code} (의사 문화권)" sourceHash="f2598f40d5aef557" />
 		<entry key="EditorUIPreview.ReloadTip"
 		       text="파일에서 미리보기를 다시 만듭니다. 에디터 밖에서 XML 을 고친 뒤에 씁니다."
 		       sourceHash="81469ff2dd216110" />
@@ -3058,6 +3064,7 @@
 		<entry key="EditorUIPreview.UIScaleTip"
 		       text="흉내 낼 플레이어 UI 배율 설정(0.5~2)입니다."
 		       sourceHash="f8e124126bf98515" />
+		<entry key="EditorUIPreview.Unnamed" text="(이름 없음)" sourceHash="de7d634aa4ffb52c" />
 		<entry key="EditorUIPreview.WaitingForTexture"
 		       text="렌더 스레드가 미리보기 텍스처를 만들기를 기다리는 중..."
 		       sourceHash="98fcdf13e55ddd57" />

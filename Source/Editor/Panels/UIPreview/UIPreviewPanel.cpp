@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/UIPreview/UIPreviewPanel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/Math/MathUtil.h"
@@ -29,12 +28,9 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/UI/Animation/UIAnimationPlayer.h"
 #include "Engine/UI/Document/UIDocument.h"
-#include "Engine/UI/Layout/BoxPanel.h"
-#include "Engine/UI/Layout/GridPanel.h"
 #include "Engine/UI/Layout/WidgetLayoutSlot.h"
 #include "Engine/UI/Screen/UIOffscreenScreens.h"
 #include "Engine/UI/Style/UIThemeController.h"
@@ -295,6 +291,9 @@ namespace sw::editor
         , _model{ getEditorToolDefaults()._uiPreviewDocument } // 처음 여는 문서 — 원본은 editortooldefaults.json
         , _grid{}
         , _paletteFilter{}
+        , _listTreeRow{}
+        , _listLayoutRect{}
+        , _treeFilter{}
         , _slotDragBaseline{}
         , _slotFieldBaseline{}
         , _pTextureID{ nullptr }
@@ -385,7 +384,7 @@ namespace sw::editor
     void UIPreviewPanel::drawLanguageCombo()
     {
         const string& language = _model.getLanguage();
-        const string  preview  = language.empty() ? string( "(game language)" ) : language;
+        const string  preview  = language.empty() ? string( SW_LOCKEY( "EditorUIPreview", "GameLanguage" ) ) : language;
         EditorChrome::setNextItemWidthColumns( UIPreviewPanelInternal::kLanguageComboColumns );
         const bool bOpen = ImGui::BeginCombo( "##uipreviewlang", preview.c_str() );
         UIPreviewPanelInternal::noteMark( "uipreview", "language" );
@@ -396,9 +395,9 @@ namespace sw::editor
         for ( uint32 index = 0; index < listLanguage.size(); ++index )
         {
             const string& code  = listLanguage[index];
-            string        label = code.empty() ? string( "(game language)" ) : code;
+            string        label = code.empty() ? string( SW_LOCKEY( "EditorUIPreview", "GameLanguage" ) ) : code;
             if ( UIPreviewLogic::isPseudoLanguage( code ) )
-                label += "  [pseudo]";
+                label = SW_LOCKEYFORMAT( "EditorUIPreview", "PseudoLanguage", TextArgumentList().addText( "code", code ) );
             if ( ImGui::Selectable( label.c_str(), code == language ) )
                 _model.selectLanguage( index );
             UIPreviewPanelInternal::noteMark( "uipreview.language", code.empty() ? "game" : code.c_str() );
@@ -445,11 +444,11 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureColumns( 20.0f ) );
         EditorChrome::setNextItemWidthColumns( 20.0f );
         const hashed_string& chosenTheme = _model.getTheme();
-        const bool           bThemeOpen  = ImGui::BeginCombo( "##uipreviewtheme", chosenTheme.empty() ? "(game theme)" : chosenTheme.c_str() );
+        const bool           bThemeOpen  = ImGui::BeginCombo( "##uipreviewtheme", chosenTheme.empty() ? SW_LOCKEY( "EditorUIPreview", "GameTheme" ) : chosenTheme.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorUIPreview", "ThemeTip" ) );
         if ( bThemeOpen )
         {
-            if ( ImGui::Selectable( "(game theme)", chosenTheme.empty() ) )
+            if ( ImGui::Selectable( SW_LOCKEY( "EditorUIPreview", "GameTheme" ), chosenTheme.empty() ) )
                 _model.setTheme( hashed_string{} );
             for ( const UIThemeDesc& theme : themes.getCatalog()._listTheme )
             {
@@ -523,7 +522,7 @@ namespace sw::editor
         if ( listAnimation.empty() )
         {
             ImGui::SameLine();
-            ImGui::TextDisabled( "(no animations)" );
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorUIPreview", "NoAnimations" ) );
             return;
         }
         const hashed_string chosen = _model.syncAnimation( player );
@@ -547,10 +546,12 @@ namespace sw::editor
             _model.playAnimation( player );
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "play" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "PlayTheChosenAnimationFromTheStart" ) );
-        const utf8* pPauseLabel = _model.isAnimationPaused() ? "Resume" : "Pause";
+        const utf8* pPauseLabel = _model.isAnimationPaused() ? SW_LOCKEY( "EdText", "Resume" ) : SW_LOCKEY( "EdButton", "Pause" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pPauseLabel ) );
-        if ( ImGui::Button( pPauseLabel ) )
+        ImGui::BeginDisabled( _model.isAnimationActive( player ) == false );
+        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( pPauseLabel, "uipreviewpause" ) ) ) // 글이 Pause · Resume 으로 바뀌어도 같은 단추다
             _model.togglePauseAnimation( player );
+        ImGui::EndDisabled();
         UIPreviewPanelInternal::noteMark( "uipreview.animation", "pause" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Stop" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
@@ -583,7 +584,7 @@ namespace sw::editor
     void UIPreviewPanel::drawPalette( UIScreen& screen )
     {
         using Internal = UIPreviewPanelInternal;
-        _model.refreshPalette( static_cast<uint32>( ImGui::GetFrameCount() ) );
+        _model.refreshPalette();
         Widget*    pSelected = screen.getTree().findWidgetByID( _model.getSelected() );
         const bool bCanAdd   = _model.getPaletteType().empty() == false;
         ImGui::BeginDisabled( bCanAdd == false );
@@ -600,16 +601,41 @@ namespace sw::editor
         ImGui::EndDisabled();
         Internal::noteMark( "uipreview", "delete" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "RemoveTheSelectedWidgetAndItsChildren" ) );
+        // 형제 사이 옮기기(UMG 계층 창의 위 · 아래 옮기기) — 끌기 손잡이가 없는 부모(겹침 · 캔버스)에서도 순서를 바꾼다.
+        struct MoveButton
+        {
+            const utf8* _pMark;
+            ImGuiDir    _dir;
+            int32       _delta;
+            const utf8* _pTip;
+        };
+        const MoveButton arrMove[] = {
+            {  "moveup",   ImGuiDir_Up, -1, SW_LOCKEY( "EditorUIPreview", "MoveEarlierTip" )},
+            {"movedown", ImGuiDir_Down,  1, SW_LOCKEY( "EditorUIPreview",   "MoveLaterTip" )},
+        };
+        for ( const MoveButton& button : arrMove )
+        {
+            ImGui::SameLine();
+            ImGui::BeginDisabled( _model.canMoveSelected( screen.getTree(), button._delta ) == false );
+            ImGui::PushID( button._pMark );
+            if ( ImGui::ArrowButton( "##uipreviewmove", button._dir ) )
+                _model.moveSelected( screen.getTree(), button._delta );
+            ImGui::PopID();
+            ImGui::EndDisabled();
+            Internal::noteMark( "uipreview", button._pMark );
+            EditorWidgets::drawTooltip( button._pTip );
+        }
         ImGui::SameLine();
         ImGui::SetNextItemWidth( -1.0f );
         (void)EditorWidgets::drawTextField( "##uipreviewpalettefilter", _paletteFilter );
         Internal::noteMark( "uipreview.palette", "filter" );
 
+        const EditorListFilter paletteFilter{ string_view{ _paletteFilter } };
         ImGui::BeginChild( "##uipreviewpalettelist", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_None );
         for ( const TypeInfo* pType : _model.getPaletteTypes() )
         {
             const utf8* pName = pType->_name.c_str();
-            if ( _paletteFilter.empty() == false && StringUtil::stristr( pName, _paletteFilter.c_str() ) == nullptr )
+            if ( paletteFilter.matches( pName ) == false )
                 continue;
             const bool bChosen = _model.getPaletteType() == pType->_name;
             if ( ImGui::Selectable( pName, bChosen, ImGuiSelectableFlags_AllowDoubleClick ) )
@@ -639,31 +665,27 @@ namespace sw::editor
         const UIViewport& viewport = _model.getViewport();
         const UIRect      box      = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, viewport );
         const float32     half     = Internal::kHandleSize * EditorThemeUtil::getDPIScale() * 0.5f;
-        const float2      center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
         struct HandleRow
         {
             UIPreviewSlotHandle _handle;
             const utf8*         _pMark;
-            float2              _center;
         };
-        const HandleRow arrHandle[] = {
-            {  UIPreviewSlotHandle::Move,   "move",                                       center},
-            {  UIPreviewSlotHandle::Left,   "left",   float2{ origin._x + box._left, center._y }},
-            {   UIPreviewSlotHandle::Top,    "top",    float2{ center._x, origin._y + box._top }},
-            { UIPreviewSlotHandle::Right,  "right",  float2{ origin._x + box._right, center._y }},
-            {UIPreviewSlotHandle::Bottom, "bottom", float2{ center._x, origin._y + box._bottom }},
+        static constexpr HandleRow kArrHandle[] = {
+            {  UIPreviewSlotHandle::Move,   "move"},
+            {  UIPreviewSlotHandle::Left,   "left"},
+            {   UIPreviewSlotHandle::Top,    "top"},
+            { UIPreviewSlotHandle::Right,  "right"},
+            {UIPreviewSlotHandle::Bottom, "bottom"},
         };
-        // 마우스 이동량(화면 픽셀)을 UI 단위로 옮기는 배율 — 이미지가 뷰포트보다 작게 그려진다.
-        const float32 toUIX = viewport._size._x / drawSize._x;
-        const float32 toUIY = viewport._size._y / drawSize._y;
-        for ( const HandleRow& row : arrHandle )
+        for ( const HandleRow& row : kArrHandle )
         {
-            ImGui::SetCursorScreenPos( ImVec2{ row._center._x - half, row._center._y - half } );
+            const float2 center = UIPreviewLogic::getSlotHandleCenter( row._handle, box );
+            const ImVec2 corner{ origin._x + center._x - half, origin._y + center._y - half };
+            ImGui::SetCursorScreenPos( corner );
             ImGui::PushID( row._pMark );
             ImGui::InvisibleButton( "##handle", ImVec2{ half * 2.0f, half * 2.0f } );
             Internal::noteMark( "uipreview.handle", row._pMark );
-            ImGui::GetWindowDrawList()->AddRectFilled( ImVec2{ row._center._x - half, row._center._y - half }, ImVec2{ row._center._x + half, row._center._y + half },
-                                                       EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) ) );
+            ImGui::GetWindowDrawList()->AddRectFilled( corner, ImVec2{ corner.x + half * 2.0f, corner.y + half * 2.0f }, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) ) );
             if ( ImGui::IsItemActivated() )
             {
                 _bSlotDragging    = SW_TRUE;
@@ -672,9 +694,9 @@ namespace sw::editor
             }
             if ( ImGui::IsItemActive() && _bSlotDragging )
             {
-                const float2     mouseDelta = EditorInputGUI::readPointer()._delta;
-                WidgetLayoutSlot slot       = pWidget->getLayoutSlot();
-                if ( UIPreviewLogic::applySlotDrag( slot, row._handle, float2{ mouseDelta._x * toUIX, mouseDelta._y * toUIY } ) )
+                // 마우스 이동량(화면 픽셀)을 UI 단위로 옮긴다 — 이미지가 뷰포트보다 작게 그려진다.
+                WidgetLayoutSlot slot = pWidget->getLayoutSlot();
+                if ( UIPreviewLogic::applySlotDrag( slot, row._handle, UIPreviewLogic::mapImageToUI( EditorInputGUI::readPointer()._delta, drawSize, viewport ) ) )
                     pWidget->setLayoutSlot( slot );
             }
             if ( ImGui::IsItemDeactivated() && _bSlotDragging )
@@ -691,13 +713,8 @@ namespace sw::editor
         using Internal                = UIPreviewPanelInternal;
         WidgetTree& tree              = screen.getTree();
         Widget*     pWidget           = tree.findWidgetByID( _model.getSelected() );
-        const bool  bCannotEditLayout = pWidget == nullptr || drawSize._x <= 0.0f || drawSize._y <= 0.0f;
+        const bool  bCannotEditLayout = pWidget == nullptr || UIPreviewLogic::canEditLayoutByHandle( *pWidget ) == false || drawSize._x <= 0.0f || drawSize._y <= 0.0f;
         if ( bCannotEditLayout )
-            return;
-        PanelWidget*     pParent = pWidget->getParent();
-        const BoxPanel*  pBox    = castTo<const BoxPanel>( pParent );
-        const GridPanel* pGrid   = castTo<const GridPanel>( pParent );
-        if ( pParent == nullptr || ( pBox == nullptr && pGrid == nullptr ) )
             return;
         const UIViewport& viewport = _model.getViewport();
         const UIRect      box      = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, viewport );
@@ -719,44 +736,7 @@ namespace sw::editor
             return;
         _bLayoutDragging   = SW_FALSE;
         const ImVec2 mouse = ImGui::GetMousePos();
-        const float2 point = UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, viewport );
-        if ( pBox != nullptr )
-        {
-            // 상자: 자식 가운데(상자 축)와 놓은 점을 비교해 사이 위치를 고르고, 분리해 다시 끼운다 — 구조 편집이라 부모 번호와 자식 번호로 되돌린다.
-            const bool      bVertical = pBox->getOrientation() == UIOrientation::Vertical;
-            vector<float32> listCenter;
-            for ( uint32 childIndex = 0; childIndex < pParent->getChildCount(); ++childIndex )
-            {
-                const float2 childCenter = pParent->getChild( childIndex )->getGeometry().computeScreenBounds().getCenter();
-                listCenter.push_back( bVertical ? childCenter._y : childCenter._x );
-            }
-            const uint32 fromIndex = pParent->findChildIndex( pWidget );
-            if ( fromIndex == constant::invalid_index::kUint32 )
-                return;
-            const uint32 toIndex = UIPreviewLogic::findReorderIndex( fromIndex, UIPreviewLogic::findBoxInsertIndex( listCenter, bVertical ? point._y : point._x ) );
-            if ( toIndex == fromIndex )
-                return;
-            _model.reorderChild( UIPreviewLogic::findWidgetOrdinal( tree, pParent->getID() ), fromIndex, toIndex );
-            return;
-        }
-        // 격자: 놓은 점이 속한 행 · 열(배치가 정한 줄)을 슬롯에 쓴다 — 슬롯 편집이라 캔버스 손잡이와 같이 `_slot` 텍스트 전후를 남긴다.
-        const PropertyInfo* pSlotProp = UIPreviewLogic::findWidgetProperty( *pWidget, "_slot" );
-        if ( pSlotProp == nullptr )
-            return;
-        uint32 gridRow{ 0 };
-        uint32 gridColumn{ 0 };
-        if ( UIPreviewLogic::findGridCell( *pGrid, point, gridRow, gridColumn ) == false )
-            return;
-        const uint32     row    = MathUtil::min( gridRow, 0xFFFFu );
-        const uint32     column = MathUtil::min( gridColumn, 0xFFFFu );
-        WidgetLayoutSlot slot   = pWidget->getLayoutSlot();
-        if ( slot._row == row && slot._column == column )
-            return;
-        const string oldText = UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp );
-        slot._row            = static_cast<uint16>( row );
-        slot._column         = static_cast<uint16>( column );
-        pWidget->setLayoutSlot( slot );
-        (void)_model.commitSlotEdit( _model.getSelectedOrdinal(), oldText, UIPreviewLogic::formatWidgetProperty( *pWidget, *pSlotProp ) ); // 같으면 남기지 않는다
+        _model.dropLayoutHandle( tree, *pWidget, UIPreviewLogic::mapImageToUI( float2{ mouse.x - origin._x, mouse.y - origin._y }, drawSize, viewport ) );
     }
 
     void UIPreviewPanel::finishSlotField( Widget& widget, const PropertyInfo& slotProp, const string& frameText, bool bChanged, bool bImmediate )
@@ -874,25 +854,11 @@ namespace sw::editor
                 };
                 constexpr int32 kPresetCount = static_cast<int32>( UIPreviewAnchorPreset::Count );
                 static_assert( sizeof( arrPresetName ) / sizeof( arrPresetName[0] ) == static_cast<size_t>( kPresetCount ), "anchor preset name count" );
-                int32 picked = -1;
-                for ( int32 index = 0; index < kPresetCount; ++index )
-                {
-                    const UIPreviewAnchorValues values               = UIPreviewLogic::getAnchorPreset( static_cast<UIPreviewAnchorPreset>( index ) );
-                    const bool                  bMatchesAnchorPreset = values._anchorMin._x == s._anchorMin._x && values._anchorMin._y == s._anchorMin._y && values._anchorMax._x == s._anchorMax._x && values._anchorMax._y == s._anchorMax._y;
-                    if ( bMatchesAnchorPreset )
-                    {
-                        picked = index;
-                        break;
-                    }
-                }
+                const UIPreviewAnchorPreset current = UIPreviewLogic::findAnchorPreset( s );
+                int32                       picked  = current == UIPreviewAnchorPreset::Count ? -1 : static_cast<int32>( current );
                 if ( ImGui::Combo( pLabel, &picked, arrPresetName, kPresetCount ) == false || picked < 0 )
                     return false;
-                const WidgetGeometry& geometry       = _widget.getGeometry();
-                const WidgetGeometry& parentGeometry = _widget.getParent()->getGeometry();
-                const float32         left           = geometry._position._x - parentGeometry._position._x;
-                const float32         top            = geometry._position._y - parentGeometry._position._y;
-                const UIRect          localRect      = UIRect::makeFromPositionSize( left, top, geometry._size._x, geometry._size._y );
-                return UIPreviewLogic::applyAnchorPreset( s, static_cast<UIPreviewAnchorPreset>( picked ), localRect, parentGeometry._size );
+                return UIPreviewLogic::applyAnchorPreset( s, static_cast<UIPreviewAnchorPreset>( picked ), UIPreviewLogic::makeParentLocalRect( _widget ), _widget.getParent()->getGeometry()._size );
             } );
             tooltip( SW_LOCKEY( "EditorUIPreview", "SlotAnchorPresetTip" ) );
         }
@@ -965,7 +931,13 @@ namespace sw::editor
     {
         using Internal                            = UIPreviewPanelInternal;
         const vector<UIPreviewWidgetRow>& listRow = _model.getWidgetRows( screen.getTree() );
-        for ( uint32 ordinal = 0; ordinal < listRow.size(); ++ordinal )
+        const EditorListFilter            filter{ _treeFilter.c_str() };
+        UIPreviewLogic::filterWidgetRows( listRow, filter, _listTreeRow );
+        (void)EditorWidgets::drawFilterBar( "##uipreviewtreefilter", _treeFilter, nullptr, static_cast<uint32>( _listTreeRow.size() ), static_cast<uint32>( listRow.size() ), nullptr );
+        Internal::noteMark( "uipreview.tree", "filter" );
+        if ( _listTreeRow.empty() )
+            EditorWidgets::drawNoSearchResultHint( filter.getText() );
+        for ( const uint32 ordinal : _listTreeRow )
         {
             const UIPreviewWidgetRow& row = listRow[ordinal];
             ImGui::PushID( static_cast<int32>( row._widget ) );
@@ -1033,7 +1005,7 @@ namespace sw::editor
         if ( pSelected != nullptr )
         {
             const UIRect bounds = pSelected->getGeometry().computeScreenBounds();
-            ImGui::Text( "%s  (%.0f, %.0f)  %.0f x %.0f", pSelected->getName().empty() ? "(unnamed)" : pSelected->getName().c_str(),
+            ImGui::Text( "%s  (%.0f, %.0f)  %.0f x %.0f", pSelected->getName().empty() ? SW_LOCKEY( "EditorUIPreview", "Unnamed" ) : pSelected->getName().c_str(),
                          static_cast<float64>( bounds._left ), static_cast<float64>( bounds._top ), static_cast<float64>( bounds._right - bounds._left ),
                          static_cast<float64>( bounds._bottom - bounds._top ) );
         }
@@ -1085,22 +1057,22 @@ namespace sw::editor
         };
         if ( _bShowLayout )
         {
-            vector<Widget*> listWidget;
-            screen.getTree().collectWidgetsInDocumentOrder( listWidget );
-            for ( const Widget* pWidget : listWidget )
+            UIPreviewLogic::collectVisibleBounds( screen.getTree(), _listLayoutRect );
+            for ( const UIRect& bounds : _listLayoutRect )
             {
-                if ( pWidget->isVisible() )
-                    drawBox( UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, viewport ), EditorColorUtil::toImU32( Internal::getLayoutColor() ), 1.0f );
+                drawBox( UIPreviewLogic::mapUIToImage( bounds, drawSize, viewport ), EditorColorUtil::toImU32( Internal::getLayoutColor() ), 1.0f );
             }
         }
         if ( pSelected != nullptr )
             drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, viewport ), EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) ), 2.0f );
-        const float4& insets         = viewport._safeInsets;
-        const bool    bHasSafeInsets = insets._x > 0.0f || insets._y > 0.0f || insets._z > 0.0f || insets._w > 0.0f;
-        if ( bHasSafeInsets )
+        UIRect safeZone{};
+        if ( UIPreviewLogic::findSafeZoneRect( viewport, safeZone ) )
+            drawBox( UIPreviewLogic::mapUIToImage( safeZone, drawSize, viewport ), EditorColorUtil::toImU32( Internal::getSafeZoneColor() ), 1.0f );
+        // 끄는 도중 선택이 바뀌거나(Undo · 핫 리로드) 입력 흉내를 켜면 손잡이가 그려지지 않아 끝을 알 수 없다 — 깃발이 남으면 이미지 클릭 고르기가 영영 꺼진다. 아무것도 잡고 있지 않으면 내린다.
+        if ( ImGui::IsAnyItemActive() == false )
         {
-            const UIRect safe{ insets._x, insets._y, viewport._size._x - insets._z, viewport._size._y - insets._w };
-            drawBox( UIPreviewLogic::mapUIToImage( safe, drawSize, viewport ), EditorColorUtil::toImU32( Internal::getSafeZoneColor() ), 1.0f );
+            _bSlotDragging   = SW_FALSE;
+            _bLayoutDragging = SW_FALSE;
         }
         // 캔버스 자식의 슬롯 손잡이(옮기기 · 네 변) — 끌면 슬롯의 오프셋이 바뀌고 놓으면 되돌리기 항목 하나가 쌓인다. 입력 흉내 중에는 숨긴다(포인터를 가로채지 않게).
         if ( bInteract == false )
@@ -1136,7 +1108,7 @@ namespace sw::editor
         UIScreen* pScreen = _model.findPreviewScreen();
         if ( pScreen != nullptr )
         {
-            _model.syncTree( *pScreen );
+            _model.syncTree( *pScreen, isDocumentDirty() );
             drawInteractionBar( *pScreen );
             drawAnimationBar( *pScreen );
         }

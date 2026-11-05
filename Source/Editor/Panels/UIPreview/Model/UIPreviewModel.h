@@ -64,20 +64,6 @@ namespace sw::editor
         uint32  _slotEditCount{ 0 };         ///< 적용된 슬롯 편집 수(캔버스 손잡이 · Slot 필드 · 상자 순서 · 격자 셀 손잡이, 되돌리기 항목 하나가 하나)
     };
 
-    /**
-     * @struct UIPreviewPointerInput
-     * @brief 입력 흉내 한 프레임의 포인터 입력입니다. 뷰가 에디터 입력에서 읽어 UI 단위로 옮겨 넘깁니다(모델은 에디터 입력을 모른다).
-     */
-    struct UIPreviewPointerInput
-    {
-        static constexpr uint32 kButtonCount = 3; ///< 왼쪽 · 오른쪽 · 가운데 순서
-
-        float2  _position{};                  ///< UI 단위 포인터 위치
-        float32 _wheel{ 0.0f };               ///< 이번 프레임의 휠
-        bool    _bHovered{ false };           ///< 포인터가 이미지 위에 있다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool    _arrPressed[kButtonCount]{};  ///< 이번 프레임에 누른 버튼
-        bool    _arrReleased[kButtonCount]{}; ///< 이번 프레임에 뗀 버튼
-    };
 } // namespace sw::editor
 
 namespace sw::editor
@@ -114,8 +100,8 @@ namespace sw::editor
         void syncPreview( const UISystem& ui, UIOffscreenScreens& offscreen );
         /** @brief 고른 언어에 맞는 문화권 관리자 사본을 만들고(게임 텍스트가 바뀌면 다시) 화면에 겁니다. */
         void syncLanguage( UIOffscreenScreens& offscreen );
-        /** @brief 화면 트리가 새로 지어졌으면(핫 리로드) 고른 위젯 · 포인터 · 포커스를 새 트리로 이어 갑니다. */
-        void syncTree( UIScreen& screen );
+        /** @brief 화면 트리가 새로 지어졌으면(핫 리로드) 고른 위젯 · 포인터 · 포커스를 새 트리로 이어 갑니다. 고친 값이 있었으면(@p bDirty) 버렸다고 알립니다. */
+        void syncTree( UIScreen& screen, bool bDirty );
         /** @brief 미리보기 화면을 닫습니다(포인터 · 포커스를 놓고 되돌리기 세대를 올린다). */
         void closePreview();
         /** @brief 화면을 닫고 문화권 사본과 감시 값을 놓습니다(패널 종료). */
@@ -176,8 +162,11 @@ namespace sw::editor
         bool commitSlotEdit( uint32 ordinal, const string& oldText, const string& newText );
 
         // --- 디자이너: 팔레트 · 구조 편집 ---------------------------------------------------------------
-        /** @brief 팔레트(위젯 타입 목록)를 처음이거나 @p frame 이 지난번보다 충분히 지났으면 다시 모읍니다(게임 모듈이 위젯 타입을 더하거나 뺄 수 있다). */
-        void                           refreshPalette( uint32 frame );
+        /**
+         * @brief 팔레트(위젯 타입 목록)를 처음이거나 타입 표가 바뀌었으면(`TypeRegistry::getGeneration`) 다시 모읍니다.
+         * @details 게임 모듈이 내려가면 목록의 타입 포인터가 끊긴다 — 프레임 간격으로 모으면 그 사이에 끊긴 포인터를 읽는다.
+         */
+        void                           refreshPalette();
         const vector<const TypeInfo*>& getPaletteTypes() const { return _listPaletteType; }
         const hashed_string&           getPaletteType() const { return _paletteType; }
         void                           setPaletteType( const hashed_string& typeName ) { _paletteType = typeName; }
@@ -189,6 +178,12 @@ namespace sw::editor
         [[nodiscard]] bool deleteSelected( UIScreen& screen );
         /** @brief 문서 순서 번호 @p parentOrdinal 인 상자 패널의 @p fromIndex 번째 자식을 @p toIndex 번째로 옮기고 되돌리기 항목을 남깁니다. */
         void reorderChild( uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex );
+        /** @brief 고른 위젯을 형제 사이에서 @p delta 칸 옮길 수 있으면 true 입니다. */
+        bool canMoveSelected( const WidgetTree& tree, int32 delta ) const;
+        /** @brief 고른 위젯을 형제 사이에서 @p delta 칸 옮기고 되돌리기 항목을 남깁니다. */
+        void moveSelected( WidgetTree& tree, int32 delta );
+        /** @brief 옮기기 손잡이를 점 @p point(화면 UI 단위)에 놓았습니다 — 부모가 상자면 자식 순서를, 격자면 행 · 열을 바꾸고 되돌리기 항목 하나를 남깁니다. */
+        void dropLayoutHandle( WidgetTree& tree, Widget& widget, const float2& point );
 
         // --- 입력 흉내 ---------------------------------------------------------------
         bool isInteracting() const { return _bInteract; }
@@ -207,9 +202,12 @@ namespace sw::editor
         void                 chooseAnimation( UIAnimationPlayer& player, const hashed_string& name );
         void                 playAnimation( UIAnimationPlayer& player );
         bool                 isAnimationPaused() const { return _bAnimationPaused; }
-        void                 togglePauseAnimation( UIAnimationPlayer& player );
-        void                 stopAnimation( UIAnimationPlayer& player );
-        bool&                editAnimationLoop() { return _bAnimationLoop; }
+        /** @brief 고른 애니메이션이 재생기에 떠 있으면 true 입니다(멈춤 단추는 이때만 뜻이 있다). */
+        bool isAnimationActive( const UIAnimationPlayer& player ) const;
+        /** @brief 떠 있는 애니메이션을 멈추거나 잇습니다. 떠 있지 않으면 아무것도 하지 않습니다. */
+        void  togglePauseAnimation( UIAnimationPlayer& player );
+        void  stopAnimation( UIAnimationPlayer& player );
+        bool& editAnimationLoop() { return _bAnimationLoop; }
         /** @brief 시간 막대에 보일 시각과 길이입니다. 재생 중이면 지금 시각을 따라가고 true 입니다. */
         bool readAnimationTime( const UIAnimationPlayer& player, float32& outTime, float32& outDuration );
         /** @brief 시간 막대를 끌었습니다 — 그 시각에서 멈춘 채 값을 보입니다(이벤트는 보내지 않는다). */
@@ -252,8 +250,8 @@ namespace sw::editor
         void applyDetach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder );
         /** @brief @p pHolder 가 가진 위젯을 그 위치에 다시 끼웁니다(지우기를 되돌리기). */
         void applyReattach( uint32 generation, uint32 parentOrdinal, uint32 index, const shared_ptr<RemovedWidget>& pHolder );
-        /** @brief 패널 @p parentOrdinal 의 @p fromIndex 번째 자식을 @p toIndex 번째로 옮깁니다. 다른 세대의 항목이면 버립니다. */
-        void applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex );
+        /** @brief 패널 @p parentOrdinal 의 @p fromIndex 번째 자식을 @p toIndex 번째로 옮깁니다. 다른 세대의 항목이면 버립니다. 옮겼으면 true 입니다. */
+        bool applyMove( uint32 generation, uint32 parentOrdinal, uint32 fromIndex, uint32 toIndex );
 
     private:
         UndoStepOwner                   _undoOwner;         ///< 이 미리보기가 남긴 코드 되돌리기 단계의 주인(모델이 사라지면 그 명령이 빠진다)
@@ -275,10 +273,11 @@ namespace sw::editor
         hashed_string                   _theme;             ///< 빈 이름 = 게임의 지금 테마
         hashed_string                   _animation;         ///< 고른 애니메이션(빈 이름 = 없음)
         UIViewport                      _viewport;
-        UIPointerState                  _pointer;       ///< 입력 흉내의 포인터 상태(미리보기 트리 하나만 본다)
-        UIFocusManager                  _focus;         ///< 입력 흉내의 포커스(탐색 방향)
-        unique_ptr<LocalizationManager> _pLocalization; ///< 이 미리보기의 문화권 관리자 사본(언어를 골랐을 때만)
-        shared_ptr<EditSession>         _pSession;      ///< 되돌리기 항목이 모델을 가리키는 길
+        UIPointerState                  _pointer;        ///< 입력 흉내의 포인터 상태(미리보기 트리 하나만 본다)
+        UIPreviewPointerTracker         _pointerTracker; ///< 입력 흉내의 포인터 판단(누른 버튼 · 안에 있음 · 마지막 위치)
+        UIFocusManager                  _focus;          ///< 입력 흉내의 포커스(탐색 방향)
+        unique_ptr<LocalizationManager> _pLocalization;  ///< 이 미리보기의 문화권 관리자 사본(언어를 골랐을 때만)
+        shared_ptr<EditSession>         _pSession;       ///< 되돌리기 항목이 모델을 가리키는 길
         UIPreviewProbe                  _probe;
         UIScreenHandle                  _screen;
         WidgetID                        _selected;
@@ -288,24 +287,21 @@ namespace sw::editor
         uint32                          _generation;       ///< 트리가 새로 지어질 때마다 오른다(옛 되돌리기 항목을 끊는다)
         uint32                          _gameTextRevision; ///< 사본을 만들 때 본 게임 텍스트 버전
         uint32                          _languageIndex;
-        uint32                          _paletteFrame;    ///< 팔레트를 마지막으로 모은 프레임
-        uint32                          _slotEditCount;   ///< 적용된 슬롯 편집 수(감시 값)
-        UIResolutionPresetTable         _resolutionTable; ///< 해상도 견본 — 처음 쓸 때 한 번 읽는다
+        uint32                          _paletteGeneration; ///< 팔레트를 모은 때의 타입 표 세대(`TypeRegistry::getGeneration`)
+        uint32                          _slotEditCount;     ///< 적용된 슬롯 편집 수(감시 값)
+        UIResolutionPresetTable         _resolutionTable;   ///< 해상도 견본 — 처음 쓸 때 한 번 읽는다
         uint32                          _resolutionIndex;
         uint8                           _bResolutionTableAttempted : 1; ///< 테이블을 읽어 봤다(실패도 한 번만 알린다)
         uint8                           _bInteract                 : 1; ///< 입력 흉내를 켰는지(이미지 위 클릭이 선택 대신 UI 로 간다)
         uint8                           _bNavigationMode           : 1; ///< 탐색 방식으로 보이는지(포커스 테두리)
         uint8                           _bMutated                  : 1; ///< 입력 흉내나 애니메이션이 트리 값을 바꿨는지
         uint8                           _bAnimationPaused          : 1;
-        uint8                           _bPointerInside            : 1;
-        uint8                           _bPointerPressed           : 1; ///< 포인터 버튼을 누른 채인지(이미지 밖에서 놓아도 Up 을 보낸다)
         uint8                           _bApplyLocalization        : 1; ///< 화면에 문화권 관리자를 다시 등록해야 하는지(화면을 새로 열었거나 언어를 바꿨다)
         uint8                           _bAwaitReload              : 1; ///< 저장했고 핫 리로드가 트리를 다시 만들기를 기다리는지
         float32                         _uiScale;
         float32                         _textScale;
         float32                         _safeZone;
         float32                         _animationScrub;     ///< 시간 막대 값(초)
-        float2                          _lastPointer;        ///< 마지막으로 보낸 포인터 위치(UI 단위)
         bool                            _bAnimationLoop;     ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         bool                            _bReloadedAfterSave; ///< 그 뒤 트리가 새로 지어졌는지(감시 값) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };

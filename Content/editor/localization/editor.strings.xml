@@ -446,6 +446,7 @@
 		<entry key="EdButton.Pause" source="Pause">
 			<origins>
 				<item>Source/Editor/Common/GUI/EditorPlayToolbar.cpp</item>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdButton.PauseServer" source="Pause server">
@@ -3681,6 +3682,7 @@
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationRewindPanel.cpp</item>
 				<item>Source/Editor/Panels/Profiler/ProfilerPanel.cpp</item>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.RevertAllOverrides" source="Revert All Overrides">
@@ -8274,8 +8276,38 @@
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorUIPreview.GameLanguage" source="(game language)">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.GameTheme" source="(game theme)">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorUIPreview.LayoutRectsTip"
 		       source="Outline every visible widget's layout rectangle over the preview.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.MoveEarlierTip" source="Move the selected widget one place earlier among its siblings">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.MoveLaterTip" source="Move the selected widget one place later among its siblings">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.NoAnimations" source="(no animations)">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.PseudoLanguage" source="{code} (pseudo)">
 			<origins>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>
@@ -8464,6 +8496,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorUIPreview.UIScaleTip" source="Player UI scale setting to simulate, 0.5 to 2.">
+			<origins>
+				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorUIPreview.Unnamed" source="(unnamed)">
 			<origins>
 				<item>Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp</item>
 			</origins>

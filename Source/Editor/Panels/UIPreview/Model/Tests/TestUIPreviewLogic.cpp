@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Common/Widgets/Model/EditorListFilter.h"
 #include "Editor/Panels/MapCheck/Model/MapCheckRows.h"
 #include "Editor/Panels/UIPreview/Model/UIPreviewLogic.h"
 
@@ -318,6 +319,328 @@ SW_TEST_CASE( UIPreviewLogicTest, GridCellFollowsMirroredLayout )
 SW_TEST_CASE( UIPreviewLogicTest, TimeLabelShowsBothTimes )
 {
     SW_EXPECT_TRUE( UIPreviewLogic::makeTimeLabel( 1.5f, 3.0f ) == "1.50 / 3.00 s" );
+}
+
+SW_TEST_CASE( UIPreviewLogicTest, BoxReorderMovesPastTheCentersItCrosses )
+{
+    WidgetTree tree;
+    BoxPanel&  box = UITestUtil::setRoot<BoxPanel>( tree );
+    box.setOrientation( UIOrientation::Vertical );
+    UITestLeaf& first  = UITestUtil::addLeaf( box, float2{ 10.0f, 10.0f } );
+    UITestLeaf& second = UITestUtil::addLeaf( box, float2{ 10.0f, 10.0f } );
+    (void)UITestUtil::addLeaf( box, float2{ 10.0f, 10.0f } );
+    (void)UITestUtil::layout( tree, float2{ 100.0f, 100.0f } );
+
+    uint32       fromIndex = 99;
+    uint32       toIndex   = 99;
+    const float2 pastSecond{ 5.0f, second.getGeometry().computeScreenBounds().getCenter()._y + 1.0f };
+    SW_REQUIRE_TRUE( UIPreviewLogic::findBoxReorder( box, first, pastSecond, fromIndex, toIndex ) );
+    SW_EXPECT_EQUAL( 0u, fromIndex );
+    SW_EXPECT_EQUAL( 1u, toIndex );
+
+    const float2 onItself = first.getGeometry().computeScreenBounds().getCenter();
+    SW_EXPECT_FALSE( UIPreviewLogic::findBoxReorder( box, first, onItself, fromIndex, toIndex ) ); // 제자리다
+
+    WidgetTree other;
+    SW_EXPECT_FALSE( UIPreviewLogic::findBoxReorder( box, UITestUtil::setRoot<BoxPanel>( other ), pastSecond, fromIndex, toIndex ) ); // 자식이 아니다
+}
+
+SW_TEST_CASE( UIPreviewLogicTest, GridDropWritesTheCellOnlyWhenItChanges )
+{
+    WidgetTree tree;
+    GridPanel& grid = UITestUtil::setRoot<GridPanel>( tree );
+    grid.setColumns( {
+        UIGridTrack{UIGridTrackKind::Fixed, 30.0f},
+        UIGridTrack{UIGridTrackKind::Fixed, 70.0f}
+    } );
+    grid.setRows( {
+        UIGridTrack{UIGridTrackKind::Fixed, 10.0f},
+        UIGridTrack{UIGridTrackKind::Fixed, 90.0f}
+    } );
+    (void)UITestUtil::layout( tree, float2{ 100.0f, 100.0f } );
+
+    WidgetLayoutSlot slot;
+    SW_EXPECT_TRUE( UIPreviewLogic::applyGridDrop( grid, slot, float2{ 40.0f, 50.0f } ) );
+    SW_EXPECT_TRUE( slot._row == 1 );
+    SW_EXPECT_TRUE( slot._column == 1 );
+    SW_EXPECT_FALSE( UIPreviewLogic::applyGridDrop( grid, slot, float2{ 40.0f, 50.0f } ) );
+}
+
+SW_TEST_CASE( UIPreviewLogicTest, SiblingMoveStopsAtTheEndsAndAtTheRoot )
+{
+    WidgetTree   tree;
+    CanvasPanel& root      = UITestUtil::setRoot<CanvasPanel>( tree );
+    UITestLeaf&  first     = UITestUtil::addLeaf( root, float2{} );
+    UITestLeaf&  second    = UITestUtil::addLeaf( root, float2{} );
+    uint32       fromIndex = 99;
+    uint32       toIndex   = 99;
+
+    SW_REQUIRE_TRUE( UIPreviewLogic::findSiblingMove( first, 1, fromIndex, toIndex ) );
+    SW_EXPECT_EQUAL( 0u, fromIndex );
+    SW_EXPECT_EQUAL( 1u, toIndex );
+    SW_EXPECT_FALSE( UIPreviewLogic::findSiblingMove( first, -1, fromIndex, toIndex ) );
+    SW_EXPECT_FALSE( UIPreviewLogic::findSiblingMove( second, 1, fromIndex, toIndex ) );
+    SW_EXPECT_FALSE( UIPreviewLogic::findSiblingMove( first, 0, fromIndex, toIndex ) );
+    SW_EXPECT_FALSE( UIPreviewLogic::findSiblingMove( root, 1, fromIndex, toIndex ) );
+}
+
+// ---------------------------------------------------------------------- 겹쳐 그리기 · 손잡이
+
+// 접힌 조상 아래의 기하는 지난 배치다 — 고르기만 걸러 레이아웃 사각형은 사라진 자리에 그대로 그려졌다.
+SW_TEST_CASE( UIPreviewLogicTest, LayoutRectsSkipWidgetsUnderACollapsedAncestor )
+{
+    WidgetTree   tree;
+    CanvasPanel& root  = UITestUtil::setRoot<CanvasPanel>( tree );
+    CanvasPanel& group = UITestUtil::addPanel<CanvasPanel>( root, UITestUtil::makeCanvasSlot( 0.0f, 0.0f, 50.0f, 50.0f ) );
+    UITestLeaf&  leaf  = UITestUtil::addLeaf( group, float2{}, UITestUtil::makeCanvasSlot( 0.0f, 0.0f, 50.0f, 50.0f ) );
+    (void)UITestUtil::layout( tree, float2{ 100.0f, 100.0f } );
+
+    vector<UIRect> listBounds;
+    UIPreviewLogic::collectVisibleBounds( tree, listBounds );
+    SW_EXPECT_EQUAL( size_t{ 3 }, listBounds.size() );
+
+    group.setVisibility( WidgetVisibility::Collapsed );
+    SW_EXPECT_TRUE( leaf.isVisible() );
+    SW_EXPECT_FALSE( UIPreviewLogic::isVisibleInTree( leaf ) );
+    UIPreviewLogic::collectVisibleBounds( tree, listBounds );
+    SW_EXPECT_EQUAL( size_t{ 1 }, listBounds.size() );
+}
+
+SW_TEST_CASE( UIPreviewLogicTest, SafeZoneRectIsTheViewportMinusItsInsets )
+{
+    UIViewport viewport = Util::makeViewport( 100.0f, 50.0f );
+    UIRect     rect{};
+    SW_EXPECT_FALSE( UIPreviewLogic::findSafeZoneRect( viewport, rect ) );
+    viewport._safeInsets = float4{ 1.0f, 2.0f, 3.0f, 4.0f };
+    SW_REQUIRE_TRUE( UIPreviewLogic::findSafeZoneRect( viewport, rect ) );
+    SW_EXPECT_EQUAL( 1.0f, rect._left );
+    SW_EXPECT_EQUAL( 2.0f, rect._top );
+    SW_EXPECT_EQUAL( 97.0f, rect._right );
+    SW_EXPECT_EQUAL( 46.0f, rect._bottom );
+}
+
+SW_TEST_CASE( UIPreviewLogicTest, SlotHandlesSitOnTheEdgeCenters )
+{
+    const UIRect box{ 10.0f, 20.0f, 30.0f, 60.0f };
+    SW_EXPECT_EQUAL( 20.0f, UIPreviewLogic::getSlotHandleCenter( UIPreviewSlotHandle::Move, box )._x );
+    SW_EXPECT_EQUAL( 40.0f, UIPreviewLogic::getSlotHandleCenter( UIPreviewSlotHandle::Move, box )._y );
+    SW_EXPECT_EQUAL( 10.0f, UIPreviewLogic::getSlotHandleCenter( UIPreviewSlotHandle::Left, box )._x );
+    SW_EXPECT_EQUAL( 40.0f, UIPreviewLogic::getSlotHandleCenter( UIPreviewSlotHandle::Left, box )._y );
+    SW_EXPECT_EQUAL( 20.0f, UIPreviewLogic::getSlotHandleCenter( UIPreviewSlotHandle::Top, box )._y );
+    SW_EXPECT_EQUAL( 30.0f, UIPreviewLogic::getSlotHandleCenter( UIPreviewSlotHandle::Right, box )._x );
+    SW_EXPECT_EQUAL( 60.0f, UIPreviewLogic::getSlotHandleCenter( UIPreviewSlotHandle::Bottom, box )._y );
+}
+
+SW_TEST_CASE( UIPreviewLogicTest, AnchorPresetIsFoundFromTheSlotOrNotAtAll )
+{
+    WidgetLayoutSlot slot = UITestUtil::makeCanvasSlot( 0.0f, 0.0f, 10.0f, 10.0f );
+    SW_EXPECT_TRUE( UIPreviewLogic::findAnchorPreset( slot ) == UIPreviewAnchorPreset::TopLeft );
+    slot._anchorMax = float2{ 1.0f, 1.0f };
+    SW_EXPECT_TRUE( UIPreviewLogic::findAnchorPreset( slot ) == UIPreviewAnchorPreset::StretchAll );
+    slot._anchorMin = float2{ 0.25f, 0.25f };
+    SW_EXPECT_TRUE( UIPreviewLogic::findAnchorPreset( slot ) == UIPreviewAnchorPreset::Count );
+}
+
+SW_TEST_CASE( UIPreviewLogicTest, ParentLocalRectSubtractsTheParentPosition )
+{
+    WidgetTree   tree;
+    CanvasPanel& root  = UITestUtil::setRoot<CanvasPanel>( tree );
+    CanvasPanel& group = UITestUtil::addPanel<CanvasPanel>( root, UITestUtil::makeCanvasSlot( 20.0f, 30.0f, 50.0f, 50.0f ) );
+    UITestLeaf&  leaf  = UITestUtil::addLeaf( group, float2{}, UITestUtil::makeCanvasSlot( 5.0f, 6.0f, 10.0f, 12.0f ) );
+    (void)UITestUtil::layout( tree, float2{ 100.0f, 100.0f } );
+
+    const UIRect local = UIPreviewLogic::makeParentLocalRect( leaf );
+    SW_EXPECT_EQUAL( 5.0f, local._left );
+    SW_EXPECT_EQUAL( 6.0f, local._top );
+    SW_EXPECT_EQUAL( 15.0f, local._right );
+    SW_EXPECT_EQUAL( 18.0f, local._bottom );
+}
+
+// ---------------------------------------------------------------------- 위젯 목록 검색
+
+SW_TEST_CASE( UIPreviewLogicTest, TreeFilterKeepsMatchesAndTheirAncestors )
+{
+    const auto makeRow = []( const utf8* pLabel, uint32 depth )
+    {
+        UIPreviewWidgetRow row{};
+        row._label = pLabel;
+        row._depth = depth;
+        return row;
+    };
+    const vector<UIPreviewWidgetRow> listRow = {
+        makeRow( "Canvas", 0 ),      // 0
+        makeRow( "Box #Menu", 1 ),   // 1
+        makeRow( "Button #Ok", 2 ),  // 2
+        makeRow( "Button #No", 2 ),  // 3
+        makeRow( "Box #Footer", 1 ), // 4
+        makeRow( "Text #Hint", 2 ),  // 5
+    };
+    vector<uint32> listOrdinal;
+
+    UIPreviewLogic::filterWidgetRows( listRow, EditorListFilter{ "" }, listOrdinal );
+    SW_EXPECT_EQUAL( size_t{ 6 }, listOrdinal.size() );
+
+    UIPreviewLogic::filterWidgetRows( listRow, EditorListFilter{ "#ok" }, listOrdinal );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listOrdinal.size() );
+    SW_EXPECT_EQUAL( 0u, listOrdinal[0] );
+    SW_EXPECT_EQUAL( 1u, listOrdinal[1] );
+    SW_EXPECT_EQUAL( 2u, listOrdinal[2] );
+
+    // 뒤 가지만 맞으면 앞 가지는 남지 않는다.
+    UIPreviewLogic::filterWidgetRows( listRow, EditorListFilter{ "hint" }, listOrdinal );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listOrdinal.size() );
+    SW_EXPECT_EQUAL( 0u, listOrdinal[0] );
+    SW_EXPECT_EQUAL( 4u, listOrdinal[1] );
+    SW_EXPECT_EQUAL( 5u, listOrdinal[2] );
+
+    // 두 가지가 모두 맞으면 저마다의 조상이 남는다 — 맞지 않는 Canvas · Box #Menu 도 조상이라 보인다.
+    UIPreviewLogic::filterWidgetRows( listRow, EditorListFilter{ "t" }, listOrdinal );
+    SW_EXPECT_EQUAL( size_t{ 6 }, listOrdinal.size() );
+
+    UIPreviewLogic::filterWidgetRows( listRow, EditorListFilter{ "없는 이름" }, listOrdinal );
+    SW_EXPECT_TRUE( listOrdinal.empty() );
+}
+
+// 트리를 새로 지은 뒤의 편집이 옛 세대 항목과 합쳐지면 Undo 가 끊긴 항목을 불러 아무 일도 하지 않는다.
+SW_TEST_CASE( UIPreviewLogicTest, CoalesceKeyDiffersAcrossGenerations )
+{
+    SW_EXPECT_TRUE( UIPreviewLogic::makeEditCoalesceKey( 1, 2, "_opacity" ) == UIPreviewLogic::makeEditCoalesceKey( 1, 2, "_opacity" ) );
+    SW_EXPECT_FALSE( UIPreviewLogic::makeEditCoalesceKey( 1, 2, "_opacity" ) == UIPreviewLogic::makeEditCoalesceKey( 2, 2, "_opacity" ) );
+    SW_EXPECT_FALSE( UIPreviewLogic::makeEditCoalesceKey( 1, 2, "_opacity" ) == UIPreviewLogic::makeEditCoalesceKey( 1, 3, "_opacity" ) );
+}
+
+// ---------------------------------------------------------------------- 입력 흉내
+
+SW_TEST_CASE( UIPreviewPointerTrackerTest, EnteringSendsAMoveEvenWithoutMotionAndNoMoreAfterThat )
+{
+    UIPreviewPointerTracker tracker;
+    UIPreviewPointerInput   input{};
+    input._bHovered = true;
+
+    const UIPreviewPointerPlan entered = tracker.step( input );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, entered._listEvent.size() );
+    SW_EXPECT_TRUE( entered._listEvent[0]._kind == UIPointerEventKind::Move );
+    SW_EXPECT_TRUE( entered._bMoved );
+    SW_EXPECT_FALSE( entered._bMutates ); // 호버만으로는 저장을 막지 않는다
+
+    SW_EXPECT_TRUE( tracker.step( input )._listEvent.empty() );
+
+    input._position                  = float2{ 3.0f, 4.0f };
+    const UIPreviewPointerPlan moved = tracker.step( input );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, moved._listEvent.size() );
+    SW_EXPECT_EQUAL( 3.0f, moved._listEvent[0]._delta._x );
+    SW_EXPECT_EQUAL( 4.0f, moved._listEvent[0]._delta._y );
+}
+
+SW_TEST_CASE( UIPreviewPointerTrackerTest, LeavingClearsTheHover )
+{
+    UIPreviewPointerTracker tracker;
+    UIPreviewPointerInput   input{};
+    input._bHovered = true;
+    (void)tracker.step( input );
+
+    input._bHovered                 = false;
+    const UIPreviewPointerPlan left = tracker.step( input );
+    SW_EXPECT_TRUE( left._bClearHover );
+    SW_EXPECT_FALSE( tracker.step( input )._bClearHover ); // 한 번이다
+}
+
+// 예전에는 다른 패널에서 누른 버튼을 이미지 위에서 놓아도 Up 을 보내고 값이 바뀐 것으로 쳐 Reload 전까지 저장이 막혔다.
+SW_TEST_CASE( UIPreviewPointerTrackerTest, ReleaseWithoutPressInThePreviewIsIgnored )
+{
+    UIPreviewPointerTracker tracker;
+    UIPreviewPointerInput   input{};
+    input._bHovered = true;
+    (void)tracker.step( input );
+
+    input._arrReleased[0]           = true;
+    const UIPreviewPointerPlan plan = tracker.step( input );
+    SW_EXPECT_TRUE( plan._listEvent.empty() );
+    SW_EXPECT_FALSE( plan._bMutates );
+}
+
+SW_TEST_CASE( UIPreviewPointerTrackerTest, PressOutsideTheImageIsIgnored )
+{
+    UIPreviewPointerTracker tracker;
+    UIPreviewPointerInput   input{};
+    input._arrPressed[0]            = true;
+    const UIPreviewPointerPlan plan = tracker.step( input );
+    SW_EXPECT_TRUE( plan._listEvent.empty() );
+    SW_EXPECT_FALSE( plan._bMutates );
+}
+
+// 슬라이더를 끌다 이미지를 벗어나도 따라오고, 밖에서 놓으면 Up 이 가고 호버가 비워진다.
+SW_TEST_CASE( UIPreviewPointerTrackerTest, PressKeepsTrackingOutsideAndReleasingThereClearsTheHover )
+{
+    UIPreviewPointerTracker tracker;
+    UIPreviewPointerInput   input{};
+    input._bHovered = true;
+    (void)tracker.step( input );
+    input._arrPressed[0]            = true;
+    const UIPreviewPointerPlan down = tracker.step( input );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, down._listEvent.size() );
+    SW_EXPECT_TRUE( down._listEvent[0]._kind == UIPointerEventKind::Down );
+    SW_EXPECT_TRUE( down._bMutates );
+
+    input._arrPressed[0]            = false;
+    input._bHovered                 = false;
+    input._position                 = float2{ 500.0f, 0.0f };
+    const UIPreviewPointerPlan drag = tracker.step( input );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, drag._listEvent.size() );
+    SW_EXPECT_TRUE( drag._listEvent[0]._kind == UIPointerEventKind::Move );
+    SW_EXPECT_FALSE( drag._bClearHover ); // 잡은 동안은 호버를 둔다
+
+    input._arrReleased[0]              = true;
+    const UIPreviewPointerPlan release = tracker.step( input );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, release._listEvent.size() );
+    SW_EXPECT_TRUE( release._listEvent[0]._kind == UIPointerEventKind::Up );
+    SW_EXPECT_TRUE( release._bClearHover );
+    SW_EXPECT_TRUE( release._bMutates );
+}
+
+// 두 버튼을 함께 누르면 예전에는 먼저 뗀 버튼이 "누른 채" 를 지워, 밖에서 뗀 둘째 버튼의 Up 이 가지 않았다.
+SW_TEST_CASE( UIPreviewPointerTrackerTest, EachButtonIsTrackedOnItsOwn )
+{
+    UIPreviewPointerTracker tracker;
+    UIPreviewPointerInput   input{};
+    input._bHovered      = true;
+    input._arrPressed[0] = true;
+    input._arrPressed[1] = true;
+    SW_EXPECT_EQUAL( size_t{ 3 }, tracker.step( input )._listEvent.size() ); // Move, Down, Down
+
+    input                 = UIPreviewPointerInput{};
+    input._bHovered       = true;
+    input._arrReleased[0] = true;
+    SW_REQUIRE_EQUAL( size_t{ 1 }, tracker.step( input )._listEvent.size() );
+
+    input                              = UIPreviewPointerInput{};
+    input._arrReleased[1]              = true;
+    const UIPreviewPointerPlan outside = tracker.step( input );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, outside._listEvent.size() );
+    SW_EXPECT_TRUE( outside._listEvent[0]._button == MouseButton::Right );
+    SW_EXPECT_TRUE( outside._listEvent[0]._kind == UIPointerEventKind::Up );
+}
+
+SW_TEST_CASE( UIPreviewPointerTrackerTest, WheelMutatesAndResetForgetsThePress )
+{
+    UIPreviewPointerTracker tracker;
+    UIPreviewPointerInput   input{};
+    input._bHovered = true;
+    (void)tracker.step( input );
+    input._wheel                     = 1.0f;
+    const UIPreviewPointerPlan wheel = tracker.step( input );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, wheel._listEvent.size() );
+    SW_EXPECT_TRUE( wheel._listEvent[0]._kind == UIPointerEventKind::Wheel );
+    SW_EXPECT_TRUE( wheel._bMutates );
+
+    input                = UIPreviewPointerInput{};
+    input._bHovered      = true;
+    input._arrPressed[0] = true;
+    (void)tracker.step( input );
+    tracker.reset();
+    input                 = UIPreviewPointerInput{};
+    input._arrReleased[0] = true;
+    SW_EXPECT_TRUE( tracker.step( input )._listEvent.empty() ); // 트리를 새로 지었으면 옛 누름의 Up 을 보내지 않는다
 }
 
 // ---------------------------------------------------------------------- 맵 점검
