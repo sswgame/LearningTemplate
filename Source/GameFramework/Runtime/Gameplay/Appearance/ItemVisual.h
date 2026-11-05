@@ -30,10 +30,15 @@ namespace sw
     };
 
     /** @brief 이름 붙은 변형입니다. 메시(또는 스프라이트)와 머티리얼을 바꿉니다. 비워 둔 항목은 기본값을 씁니다. */
+    REFLECT()
     struct AppearancePartVariantDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _name{};
         hashed_string _asset{};
+        PROPERTY()
         hashed_string _material{};
     };
 } // namespace sw
@@ -41,20 +46,30 @@ namespace sw
 namespace sw
 {
     /** @brief 모프 가중치 하나입니다. */
+    REFLECT()
     struct AppearanceMorphDef
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _name{};
-        float32       _weight{ 1.0f }; ///< `weight` 를 적지 않으면 모프를 다 건다
+        PROPERTY()
+        float32 _weight{ 1.0f }; ///< `weight` 를 적지 않으면 모프를 다 건다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 머티리얼 값 하나입니다. 스칼라이면 x 만 씁니다. */
+    REFLECT()
     struct AppearanceMaterialValueDef
     {
-        float4        _value{};
+        REFLECT_BODY();
+
+        float4 _value{};
+        PROPERTY()
         hashed_string _part{}; ///< 피해 단계의 대상 부품(비어 있으면 아이템의 모든 부품)
+        PROPERTY( Required )
         hashed_string _name{};
     };
 } // namespace sw
@@ -62,8 +77,11 @@ namespace sw
 namespace sw
 {
     /** @brief 부품 하나입니다. */
+    REFLECT()
     struct SW_GF_API AppearancePartDef
     {
+        REFLECT_BODY();
+
         vector<AppearancePartVariantDef> _listVariant{};         ///< 메시 변형(기본, 짧은 소매, 모자 밑 머리, 망토 구멍)
         vector<AppearancePartVariantDef> _listMaterialVariant{}; ///< 머티리얼 변형(위장, 사막)
         /**
@@ -77,20 +95,31 @@ namespace sw
         vector<hashed_string>              _listHiddenRegion{};  ///< 몸 수정: 숨길 몸 영역
         AppearancePlacement                _placement{};         ///< 소켓 부착과 스프라이트의 기본 배치
         float3                             _breakImpulse{};      ///< 떨어져 나갈 때의 충격 힌트(부품 로컬)
-        hashed_string                      _name{};
-        hashed_string                      _asset{};      ///< 메시, 프리팹, 스프라이트 경로
-        hashed_string                      _material{};   ///< 비어 있으면 메시의 것
-        hashed_string                      _skeleton{};   ///< 자기 스켈레톤. 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
-        hashed_string                      _socketSet{};  ///< 부품의 소켓 에셋(`*.sockets.xml`)
-        hashed_string                      _rig{};        ///< 스킨드 부품의 자기 후처리 리그(`*.rig.xml`). 있으면 몸을 리더로 따르지 않고 자기 스켈레톤을 리그가 움직인다(스프링 망토)
-        hashed_string                      _fit{};        ///< 스킨드 부품의 피팅 데이터(`*.partfit.xml` — 겹 · 프로필 · 숨김 영역). 있으면 몸과 함께 피팅해 베이크한 메시를 그린다
-        hashed_string                      _fitTables{};  ///< 몸 부품의 피팅 표(`*.fit.xml` — 겹 · 영역 · 프로필 · 상호작용). 몸에만 적는다
-        hashed_string                      _bodyShapes{}; ///< 몸 부품의 체형 축 데이터(`*.bodyshape.xml`). 꾸미기의 `BoneProportion` 대상 이름이 이 축 이름이다. 몸에만 적는다
-        hashed_string                      _breakStage{}; ///< 이 피해 단계에 이르면 저절로 떨어진다. 비어 있으면 맞아서만 떨어진다
-        int32                              _layer{ 0 };   ///< 스프라이트 그리기 순서
-        AppearancePartKind                 _kind{ AppearancePartKind::Skinned };
-        uint8                              _bDeforms{ SW_TRUE };    ///< 스킨드로 휘는지 여부(아니면 본 하나를 따르는 단단한 조각)
-        uint8                              _bBreakable{ SW_FALSE }; ///< 떨어져 나갈 수 있는지 여부(맞아서, 또는 피해 단계로)
+        PROPERTY( Required )
+        hashed_string _name{};
+        hashed_string _asset{}; ///< 메시, 프리팹, 스프라이트 경로
+        PROPERTY()
+        hashed_string _material{}; ///< 비어 있으면 메시의 것
+        PROPERTY()
+        hashed_string _skeleton{}; ///< 자기 스켈레톤. 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
+        PROPERTY( Name = "sockets" )
+        hashed_string _socketSet{}; ///< 부품의 소켓 에셋(`*.sockets.xml`)
+        PROPERTY()
+        hashed_string _rig{}; ///< 스킨드 부품의 자기 후처리 리그(`*.rig.xml`). 있으면 몸을 리더로 따르지 않고 자기 스켈레톤을 리그가 움직인다(스프링 망토)
+        PROPERTY()
+        hashed_string _fit{}; ///< 스킨드 부품의 피팅 데이터(`*.partfit.xml` — 겹 · 프로필 · 숨김 영역). 있으면 몸과 함께 피팅해 베이크한 메시를 그린다
+        PROPERTY()
+        hashed_string _fitTables{}; ///< 몸 부품의 피팅 표(`*.fit.xml` — 겹 · 영역 · 프로필 · 상호작용). 몸에만 적는다
+        PROPERTY()
+        hashed_string _bodyShapes{}; ///< 몸 부품의 체형 축 데이터(`*.bodyshape.xml`). 꾸미기의 `BoneProportion` 대상 이름이 이 축 이름이다. 몸에만 적는다
+        PROPERTY()
+        hashed_string _breakStage{}; ///< 이 피해 단계에 이르면 저절로 떨어진다. 비어 있으면 맞아서만 떨어진다
+        PROPERTY()
+        int32 _layer{ 0 }; ///< 스프라이트 그리기 순서
+        PROPERTY( Required )
+        AppearancePartKind _kind{ AppearancePartKind::Skinned };
+        uint8              _bDeforms{ SW_TRUE };    ///< 스킨드로 휘는지 여부(아니면 본 하나를 따르는 단단한 조각)
+        uint8              _bBreakable{ SW_FALSE }; ///< 떨어져 나갈 수 있는지 여부(맞아서, 또는 피해 단계로)
 
         const AppearancePartVariantDef* findVariant( const hashed_string& name ) const;
         const AppearancePartVariantDef* findMaterialVariant( const hashed_string& name ) const;
@@ -117,8 +146,11 @@ namespace sw
 namespace sw
 {
     /** @brief 피해 단계 하나입니다(멀쩡, 상함, 부서짐). 피해가 임계값 이상이면 이 단계입니다. 부품마다 메시 변형과 머티리얼 값(먼지, 녹, 찢김)을 고릅니다. */
+    REFLECT()
     struct AppearanceDamageStageDef
     {
+        REFLECT_BODY();
+
         struct PartVariant
         {
             hashed_string _part{};
@@ -127,24 +159,32 @@ namespace sw
 
         vector<PartVariant>                _listVariant{};
         vector<AppearanceMaterialValueDef> _listMaterialValue{};
-        hashed_string                      _name{};
-        float32                            _threshold{ 0.0f };
+        PROPERTY( Required )
+        hashed_string _name{};
+        PROPERTY( Required, Max = 1 )
+        float32 _threshold{ 0.0f };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 아이템 외형 하나입니다. */
+    REFLECT()
     struct SW_GF_API ItemVisualDef
     {
+        REFLECT_BODY();
+
         vector<AppearancePartDef>        _listPart{};
         vector<AppearanceStateDef>       _listState{};
         vector<AppearanceDamageStageDef> _listDamageStage{}; ///< 임계값 오름차순
         TagContainer                     _tags{};            ///< 외형 규칙이 참조하는 태그(`Helmet.FullFace`, `Sleeve.Long`). 형상 변경이면 보이는 외형의 태그를 쓴다
         hashed_string                    _id{};
-        hashed_string                    _occupancy{};     ///< `SlotTable` 의 슬롯 점유 그룹. 비어 있으면 자기 슬롯만 차지한다
-        hashed_string                    _customization{}; ///< 꾸미기 스키마 id. 비어 있으면 꾸미기 없음
-        hashed_string                    _defaultState{};  ///< 비어 있으면 첫 상태. 상태가 없으면 기본 배치
+        PROPERTY()
+        hashed_string _occupancy{}; ///< `SlotTable` 의 슬롯 점유 그룹. 비어 있으면 자기 슬롯만 차지한다
+        PROPERTY()
+        hashed_string _customization{}; ///< 꾸미기 스키마 id. 비어 있으면 꾸미기 없음
+        PROPERTY()
+        hashed_string _defaultState{}; ///< 비어 있으면 첫 상태. 상태가 없으면 기본 배치
 
         const AppearancePartDef*        findPart( const hashed_string& name ) const;
         const AppearanceStateDef*       findState( const hashed_string& name ) const;

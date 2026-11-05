@@ -18,35 +18,11 @@ namespace sw
     {
         struct ItemVisualInternal
         {
-            static constexpr const utf8* kArrVisualAttribute[]          = { "id", "occupancy", "customization", "tags", "defaultState" };
-            static constexpr const utf8* kArrPartAttribute[]            = { "name", "kind", "mesh", "prefab", "sprite", "material", "skeleton", "sockets", "rig",
-                                                                            "fit", "fitTables", "bodyShapes", "socket", "offset", "rotation", "deforms", "layer", "breakable", "breakStage", "impulse" };
-            static constexpr const utf8* kArrVariantAttribute[]         = { "name", "mesh", "prefab", "sprite", "material" };
-            static constexpr const utf8* kArrMaterialVariantAttribute[] = { "name", "material" };
-            static constexpr const utf8* kArrSectionAttribute[]         = { "name", "material" };
-            static constexpr const utf8* kArrMorphAttribute[]           = { "name", "weight" };
-            static constexpr const utf8* kArrMaterialAttribute[]        = { "name", "value" };
-            static constexpr const utf8* kArrRegionAttribute[]          = { "name" };
-            static constexpr const utf8* kArrStateAttribute[]           = { "name" };
-            static constexpr const utf8* kArrPlaceAttribute[]           = { "part", "socket", "offset", "rotation" };
-            static constexpr const utf8* kArrHidePartAttribute[]        = { "part" };
-            static constexpr const utf8* kArrStageAttribute[]           = { "name", "threshold" };
-            static constexpr const utf8* kArrStageVariantAttribute[]    = { "part", "name" };
-            static constexpr const utf8* kArrStageMaterialAttribute[]   = { "part", "name", "value" };
-
-            [[nodiscard]] static bool parseKind( string_view text, AppearancePartKind& outKind )
-            {
-                constexpr AppearancePartKind kArrKind[] = { AppearancePartKind::Skinned, AppearancePartKind::SocketPrefab, AppearancePartKind::BodyModification, AppearancePartKind::Sprite };
-                for ( const AppearancePartKind kind : kArrKind )
-                {
-                    if ( StringUtil::equals( text, string_view( getEnumName( kind ) ) ) )
-                    {
-                        outKind = kind;
-                        return true;
-                    }
-                }
-                return false;
-            }
+            static constexpr const utf8* kArrRegionAttribute[]       = { "name" };
+            static constexpr const utf8* kArrStateAttribute[]        = { "name" };
+            static constexpr const utf8* kArrPlaceAttribute[]        = { "part", "socket", "offset", "rotation" };
+            static constexpr const utf8* kArrHidePartAttribute[]     = { "part" };
+            static constexpr const utf8* kArrStageVariantAttribute[] = { "part", "name" };
 
             /** @brief 부품 종류가 쓰는 에셋 속성 이름입니다. 몸 수정에는 없습니다. */
             static const utf8* getAssetAttribute( AppearancePartKind kind )
@@ -91,12 +67,10 @@ namespace sw
                 const bool  bModification = inoutPart._kind == AppearancePartKind::BodyModification;
                 if ( StringUtil::equals( pName, "Variant" ) && bModification == false )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrVariantAttribute, report, sourceName );
                     reportMisplacedAssetAttributes( child, inoutPart._kind, report, sourceName, visualID );
                     AppearancePartVariantDef variant;
-                    variant._name     = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
-                    variant._asset    = XMLReadUtil::readOptionalName( child, getAssetAttribute( inoutPart._kind ) );
-                    variant._material = XMLReadUtil::readOptionalName( child, "material" );
+                    (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName, { "mesh", "prefab", "sprite" } ); // 에셋 속성은 부품 종류가 정한다
+                    variant._asset = XMLReadUtil::readOptionalName( child, getAssetAttribute( inoutPart._kind ) );
                     if ( variant._name.empty() || inoutPart.findVariant( variant._name ) != nullptr )
                         report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a variant without a name or a duplicate '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
@@ -104,10 +78,8 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "MaterialVariant" ) && bModification == false )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMaterialVariantAttribute, report, sourceName );
                     AppearancePartVariantDef variant;
-                    variant._name              = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
-                    variant._material          = AppearanceXMLUtil::readRequiredName( child, "material", report, sourceName );
+                    (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName, {} );
                     const bool bInvalidVariant = variant._name.empty() || variant._material.empty() || inoutPart.findMaterialVariant( variant._name ) != nullptr;
                     if ( bInvalidVariant )
                         report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a bad or duplicate material variant '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
@@ -116,10 +88,8 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "Section" ) && inoutPart._kind == AppearancePartKind::Skinned )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrSectionAttribute, report, sourceName );
                     AppearancePartVariantDef section;
-                    section._name                = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
-                    section._material            = AppearanceXMLUtil::readRequiredName( child, "material", report, sourceName );
+                    (void)AppearanceXMLUtil::readFields( child, section, report, sourceName, {} );
                     const bool bDuplicateSection = VectorUtil::containsIf( inoutPart._listSection, [&]( const AppearancePartVariantDef& other )
                     { return other._name == section._name; } );
                     if ( section._name.empty() || section._material.empty() || bDuplicateSection )
@@ -130,17 +100,14 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "Morph" ) && bModification )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMorphAttribute, report, sourceName );
                     AppearanceMorphDef morph;
-                    morph._name = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
-                    AppearanceXMLUtil::readOptionalFloat( child, "weight", -MathUtil::kMaxFloat, MathUtil::kMaxFloat, morph._weight, report, sourceName );
+                    (void)AppearanceXMLUtil::readFields( child, morph, report, sourceName, {} );
                     inoutPart._listMorph.push_back( morph );
                 }
                 else if ( StringUtil::equals( pName, "Material" ) && bModification )
                 {
-                    (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrMaterialAttribute, report, sourceName );
                     AppearanceMaterialValueDef value;
-                    value._name = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
+                    (void)AppearanceXMLUtil::readFields( child, value, report, sourceName, { "value" } ); // 값은 스칼라 · 벡터 네 모양이다(`readRequiredShaderValue`)
                     AppearanceXMLUtil::readRequiredShaderValue( child, "value", value._value, report, sourceName );
                     inoutPart._listMaterialValue.push_back( value );
                 }
@@ -159,14 +126,10 @@ namespace sw
 
             static void readPart( const XMLNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrPartAttribute, report, sourceName );
                 AppearancePartDef part;
-                part._name = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
-                if ( parseKind( node.getAttributeText( "kind" ), part._kind ) == false )
-                {
-                    report.addErrorWithID( "Appearance.PartKindUnknown", "%#: visual '%#' part '%#' has unknown kind '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), node.getAttributeText( "kind" ) );
+                // 에셋은 종류가 속성을 정하고, 배치 · 충격 · 깃발은 적었는지가 기본값을 가른다.
+                if ( AppearanceXMLUtil::readFields( node, part, report, sourceName, { "mesh", "prefab", "sprite", "socket", "offset", "rotation", "deforms", "breakable", "impulse" } ) == false )
                     return;
-                }
                 if ( part._name.empty() || inoutVisual.findPart( part._name ) != nullptr )
                 {
                     report.addErrorWithID( "Appearance.PartNameInvalid", "%#: visual '%#' has a part without a name or a duplicate '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
@@ -175,29 +138,20 @@ namespace sw
                 reportMisplacedAssetAttributes( node, part._kind, report, sourceName, inoutVisual._id );
                 const utf8* pAssetAttribute = getAssetAttribute( part._kind );
                 part._asset                 = pAssetAttribute != nullptr ? XMLReadUtil::readOptionalName( node, pAssetAttribute ) : hashed_string{};
-                part._material              = XMLReadUtil::readOptionalName( node, "material" );
-                part._skeleton              = XMLReadUtil::readOptionalName( node, "skeleton" );
-                part._socketSet             = XMLReadUtil::readOptionalName( node, "sockets" );
-                part._rig                   = XMLReadUtil::readOptionalName( node, "rig" );
-                part._breakStage            = XMLReadUtil::readOptionalName( node, "breakStage" );
                 // 자기 리그는 자기 뼈를 움직인다 — 스킨드 부품이고 몸과 다른 자기 스켈레톤을 적어야 한다(몸 스켈레톤을 빌리면 몸 리더 포즈와 다툰다).
                 const bool bRigWithoutOwnSkeleton = part._rig.empty() == false && ( part._kind != AppearancePartKind::Skinned || part._skeleton.empty() );
                 if ( bRigWithoutOwnSkeleton )
                     report.addErrorWithID( "Appearance.PartRigNeedsSkeleton", "%#: visual '%#' part '%#' has a 'rig' but is not a Skinned part with its own 'skeleton'", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
-                part._fit                  = XMLReadUtil::readOptionalName( node, "fit" );
-                part._fitTables            = XMLReadUtil::readOptionalName( node, "fitTables" );
                 const bool bFitOnRigidPart = ( part._fit.empty() == false || part._fitTables.empty() == false ) && part._kind != AppearancePartKind::Skinned;
                 if ( bFitOnRigidPart )
                     report.addErrorWithID( "Appearance.PartFitNotAllowed", "%#: visual '%#' part '%#' of kind %# cannot have 'fit' or 'fitTables' (only Skinned parts are fitted)", sourceName, inoutVisual._id.c_str(),
                                            part._name.c_str(), getEnumName( part._kind ) );
-                part._bodyShapes = XMLReadUtil::readOptionalName( node, "bodyShapes" );
                 if ( part._bodyShapes.empty() == false && part._kind != AppearancePartKind::Skinned )
                     report.addErrorWithID( "Appearance.PartFitNotAllowed", "%#: visual '%#' part '%#' of kind %# cannot have 'bodyShapes' (only the Skinned body has body shape axes)", sourceName, inoutVisual._id.c_str(),
                                            part._name.c_str(), getEnumName( part._kind ) );
                 // 적지 않으면 스킨 파츠만 변형하고, 부서지는 단계를 적은 파츠만 떨어진다(이 파츠의 데이터에서 온 값).
                 part._bDeforms   = part._kind == AppearancePartKind::Skinned ? SW_TRUE : SW_FALSE;
                 part._bBreakable = part._breakStage.empty() == false ? SW_TRUE : SW_FALSE;
-                AppearanceXMLUtil::readOptionalInt( node, "layer", MathUtil::kMinInt32, MathUtil::kMaxInt32, part._layer, report, sourceName );
                 if ( XMLReadUtil::readOptionalFlag( node, "deforms", part._bDeforms ) == false || XMLReadUtil::readOptionalFlag( node, "breakable", part._bBreakable ) == false )
                     report.addErrorWithID( "Appearance.PartDeformsInvalid", "%#: visual '%#' part '%#' has an invalid deforms / breakable", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                 AppearanceXMLUtil::readOptionalFloat3( node, "impulse", part._breakImpulse, report, sourceName );
@@ -256,16 +210,9 @@ namespace sw
 
             static void readDamageStage( const XMLNode& node, ItemVisualDef& inoutVisual, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrStageAttribute, report, sourceName );
                 AppearanceDamageStageDef stage;
-                stage._name                            = AppearanceXMLUtil::readRequiredName( node, "name", report, sourceName );
-                const std::optional<float32> threshold = node.readRequiredAttribute<float32>( "threshold" );
-                if ( threshold.has_value() == false )
-                {
-                    report.addErrorWithID( "Appearance.DamageStageThreshold", "%#: visual '%#' damage stage '%#' needs a threshold", sourceName, inoutVisual._id.c_str(), stage._name.c_str() );
+                if ( AppearanceXMLUtil::readFields( node, stage, report, sourceName, {} ) == false )
                     return;
-                }
-                stage._threshold                  = *threshold;
                 const float32 previous            = inoutVisual._listDamageStage.empty() ? 0.0f : inoutVisual._listDamageStage.back()._threshold;
                 const bool    bOrdered            = previous < stage._threshold && stage._threshold <= 1.0f;
                 const bool    bInvalidDamageStage = stage._name.empty() || inoutVisual.findDamageStage( stage._name ) != nullptr || bOrdered == false;
@@ -291,10 +238,8 @@ namespace sw
                     }
                     else if ( StringUtil::equals( child.getName(), "Material" ) )
                     {
-                        (void)AppearanceXMLUtil::reportUnknownAttributes( child, kArrStageMaterialAttribute, report, sourceName );
                         AppearanceMaterialValueDef value;
-                        value._part = XMLReadUtil::readOptionalName( child, "part" );
-                        value._name = AppearanceXMLUtil::readRequiredName( child, "name", report, sourceName );
+                        (void)AppearanceXMLUtil::readFields( child, value, report, sourceName, { "value" } );
                         AppearanceXMLUtil::readRequiredShaderValue( child, "value", value._value, report, sourceName );
                         if ( value._part.empty() || hasPart( inoutVisual, value._part, report, sourceName, "damage <Material>" ) )
                             stage._listMaterialValue.push_back( value );
@@ -309,10 +254,7 @@ namespace sw
 
             static void readVisual( const XMLNode& node, ItemVisualDef& outVisual, AppearanceLoadReport& report, string_view sourceName )
             {
-                (void)AppearanceXMLUtil::reportUnknownAttributes( node, kArrVisualAttribute, report, sourceName );
-                outVisual._occupancy     = XMLReadUtil::readOptionalName( node, "occupancy" );
-                outVisual._customization = XMLReadUtil::readOptionalName( node, "customization" );
-                outVisual._defaultState  = XMLReadUtil::readOptionalName( node, "defaultState" );
+                (void)AppearanceXMLUtil::readFields( node, outVisual, report, sourceName, { "id", "tags" } );
                 AppearanceXMLUtil::readTags( node, "tags", outVisual._tags );
                 // 부품을 먼저 모두 읽는다. 상태와 피해 단계가 파일 안의 순서와 상관없이 부품을 가리킬 수 있게 하기 위해서다.
                 for ( XMLNode child = node.findChild( "Part" ); child; child = child.findNextSibling( "Part" ) )
