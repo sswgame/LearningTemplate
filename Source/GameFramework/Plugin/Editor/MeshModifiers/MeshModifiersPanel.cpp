@@ -352,9 +352,8 @@ namespace sw::editor
             bool bEnabled = pModifier->isEnabled();
             if ( ImGui::Checkbox( "##Enabled", &bEnabled ) )
             {
-                session.recordUndo();
-                pModifier->setEnabled( bEnabled );
-                session.markDirty();
+                session.applyEdit( [&]
+                { pModifier->setEnabled( bEnabled ); } );
             }
             ImGui::SameLine();
             if ( ImGui::Selectable( pModifier->getName().c_str(), selected == index, ImGuiSelectableFlags_None, ImVec2{ ImGui::GetContentRegionAvail().x - buttonWidth, 0.0f } ) )
@@ -383,24 +382,27 @@ namespace sw::editor
         // 목록을 다 그린 뒤 바꾼다(그리는 도중에 지우면 포인터가 무효가 된다)
         if ( upIndex >= 0 )
         {
-            session.recordUndo();
-            if ( stack.moveUp( upIndex ) )
-                selected = upIndex - 1;
-            session.markDirty();
+            session.applyEdit( [&]
+            {
+                if ( stack.moveUp( upIndex ) )
+                    selected = upIndex - 1;
+            } );
         }
         if ( downIndex >= 0 )
         {
-            session.recordUndo();
-            if ( stack.moveDown( downIndex ) )
-                selected = downIndex + 1;
-            session.markDirty();
+            session.applyEdit( [&]
+            {
+                if ( stack.moveDown( downIndex ) )
+                    selected = downIndex + 1;
+            } );
         }
         if ( removeIndex >= 0 )
         {
-            session.recordUndo();
-            (void)stack.removeModifier( removeIndex ); // 방금 그린 번호라 범위 안이다
-            selected = MathUtil::min( selected, stack.getModifierCount() - 1 );
-            session.markDirty();
+            session.applyEdit( [&]
+            {
+                (void)stack.removeModifier( removeIndex ); // 방금 그린 번호라 범위 안이다
+                selected = MathUtil::min( selected, stack.getModifierCount() - 1 );
+            } );
         }
         return selected;
     }
@@ -496,13 +498,14 @@ namespace sw::editor
                     drawRegistrationTooltip( *listRegistration[item] );
                     if ( bClicked == false )
                         continue;
-                    session.recordUndo();
-                    const int32   newIndex = stack.addModifier( listRegistration[item]->_pID );
-                    MeshModifier* pAdded   = stack.findModifier( newIndex );
-                    if ( pAdded != nullptr )
-                        pAdded->fitToBounds( session.getSourceBounds() ); // 하위 스택이면 묶음 공간과 다를 수 있다 - 맞추기 단추로 다시 맞춘다
-                    addedIndex = newIndex;
-                    session.markDirty();
+                    session.applyEdit( [&]
+                    {
+                        const int32   newIndex = stack.addModifier( listRegistration[item]->_pID );
+                        MeshModifier* pAdded   = stack.findModifier( newIndex );
+                        if ( pAdded != nullptr )
+                            pAdded->fitToBounds( session.getSourceBounds() ); // 하위 스택이면 묶음 공간과 다를 수 있다 - 맞추기 단추로 다시 맞춘다
+                        addedIndex = newIndex;
+                    } );
                 }
                 ImGui::EndMenu();
             }
@@ -566,16 +569,14 @@ namespace sw::editor
         int32 axis = static_cast<int32>( gizmo._axisIndex );
         if ( ImGui::Combo( SW_LOCKEY( "EdMeshModifiers", "Axis" ), &axis, MeshModifiersPanelInternal::kAxisNames ) )
         {
-            session.recordUndo();
-            gizmo._axisIndex = static_cast<uint32>( MathUtil::clamp( axis, 0, 2 ) );
-            session.markDirty();
+            session.applyEdit( [&]
+            { gizmo._axisIndex = static_cast<uint32>( MathUtil::clamp( axis, 0, 2 ) ); } );
         }
         bool bWorldSpace = modifier.isWorldSpace();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "WorldSpace" ), &bWorldSpace ) )
         {
-            session.recordUndo();
-            modifier.setWorldSpace( bWorldSpace );
-            session.markDirty();
+            session.applyEdit( [&]
+            { modifier.setWorldSpace( bWorldSpace ); } );
         }
         if ( modifier.isWorldSpace() )
         {
@@ -589,16 +590,14 @@ namespace sw::editor
         }
         if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "FitBounds" ) ) )
         {
-            session.recordUndo();
-            modifier.fitToBounds( session.getSourceBounds() );
-            session.markDirty();
+            session.applyEdit( [&]
+            { modifier.fitToBounds( session.getSourceBounds() ); } );
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdMeshModifiers", "ResetParams" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "ResetParams" ) ) )
         {
-            session.recordUndo();
-            modifier.resetParams();
-            session.markDirty();
+            session.applyEdit( [&]
+            { modifier.resetParams(); } );
         }
     }
 
@@ -662,10 +661,11 @@ namespace sw::editor
                 bool bValue = modifier.getBool( paramIndex );
                 if ( ImGui::Checkbox( def._pName, &bValue ) )
                 {
-                    session.recordUndo();
-                    modifier.setScalar( paramIndex, bValue ? 1.0f : 0.0f );
-                    modifier.onParamsChanged();
-                    session.markDirty();
+                    session.applyEdit( [&]
+                    {
+                        modifier.setScalar( paramIndex, bValue ? 1.0f : 0.0f );
+                        modifier.onParamsChanged();
+                    } );
                 }
                 MeshModifiersPanelInternal::drawItemTooltip( def._pTooltip );
                 break;
@@ -675,10 +675,11 @@ namespace sw::editor
                 int32 axis = static_cast<int32>( modifier.getAxisIndex( paramIndex ) );
                 if ( ImGui::Combo( def._pName, &axis, MeshModifiersPanelInternal::kAxisNames ) )
                 {
-                    session.recordUndo();
-                    modifier.setScalar( paramIndex, static_cast<float32>( axis ) );
-                    modifier.onParamsChanged();
-                    session.markDirty();
+                    session.applyEdit( [&]
+                    {
+                        modifier.setScalar( paramIndex, static_cast<float32>( axis ) );
+                        modifier.onParamsChanged();
+                    } );
                 }
                 MeshModifiersPanelInternal::drawItemTooltip( def._pTooltip );
                 break;
@@ -713,10 +714,11 @@ namespace sw::editor
                 string text = modifier.getText( paramIndex );
                 if ( EditorWidgets::drawAssetSlot( def._pName, text, def._pAssetFilterHint ) )
                 {
-                    session.recordUndo();
-                    modifier.setText( paramIndex, text );
-                    modifier.onParamsChanged();
-                    session.markDirty();
+                    session.applyEdit( [&]
+                    {
+                        modifier.setText( paramIndex, text );
+                        modifier.onParamsChanged();
+                    } );
                 }
                 MeshModifiersPanelInternal::drawItemTooltip( def._pTooltip != nullptr ? def._pTooltip : def._pHint );
                 break;
@@ -784,10 +786,11 @@ namespace sw::editor
                     value._curve = _curveState._working;
                 else if ( static_cast<size_t>( itemIndex ) < value._listCurve.size() )
                     value._listCurve[static_cast<size_t>( itemIndex )] = _curveState._working;
-                session.recordUndo();
-                modifier.setParamValue( paramIndex, value );
-                modifier.onParamsChanged();
-                session.markDirty();
+                session.applyEdit( [&]
+                {
+                    modifier.setParamValue( paramIndex, value );
+                    modifier.onParamsChanged();
+                } );
             }
         }
         else
@@ -842,10 +845,11 @@ namespace sw::editor
         if ( MeshModifierParamEdit::applyListAction( action, value._listCurve, limit ) )
         {
             _model.closeCurvePopup(); // 항목 번호가 바뀌었으니 열린 곡선 팝업은 닫는다
-            session.recordUndo();
-            modifier.setParamValue( paramIndex, value );
-            modifier.onParamsChanged();
-            session.markDirty();
+            session.applyEdit( [&]
+            {
+                modifier.setParamValue( paramIndex, value );
+                modifier.onParamsChanged();
+            } );
         }
     }
 
@@ -986,10 +990,11 @@ namespace sw::editor
         string                      picked  = current;
         if ( MeshModifiersPanelInternal::drawReferencePicker( def, def._pName, current, picked, "meshmodifiers.reference" ) && string_view( picked ) != string_view( current ) )
         {
-            session.recordUndo();
-            modifier.setText( paramIndex, picked );
-            modifier.onParamsChanged();
-            session.markDirty();
+            session.applyEdit( [&]
+            {
+                modifier.setText( paramIndex, picked );
+                modifier.onParamsChanged();
+            } );
         }
     }
 
@@ -1037,10 +1042,11 @@ namespace sw::editor
         }
         if ( MeshModifierParamEdit::applyListAction( action, value._listText, limit ) || bChange )
         {
-            session.recordUndo();
-            modifier.setParamValue( paramIndex, value );
-            modifier.onParamsChanged();
-            session.markDirty();
+            session.applyEdit( [&]
+            {
+                modifier.setParamValue( paramIndex, value );
+                modifier.onParamsChanged();
+            } );
         }
     }
 
@@ -1059,9 +1065,8 @@ namespace sw::editor
         ImGui::SeparatorText( SW_LOCKEY( "EdMeshModifiers", "ControlPoints" ) );
         if ( ImGui::Button( SW_LOCKEY( "EdMeshModifiers", "ResetLattice" ) ) )
         {
-            session.recordUndo();
-            lattice.resetToIdentity();
-            session.markDirty();
+            session.applyEdit( [&]
+            { lattice.resetToIdentity(); } );
         }
         // 고른 점 · 대칭은 세션 상태다 — 뷰포트에서 점을 고르면 이 칸이 따라가고, 대칭 설정은 뷰포트 끌기에도 걸린다
         bool bMirror = session.isMirrorEditing();
@@ -1105,9 +1110,8 @@ namespace sw::editor
         bool               bRecompute = stack.isRecomputingNormals();
         if ( ImGui::Checkbox( SW_LOCKEY( "EdMeshModifiers", "RecomputeNormals" ), &bRecompute ) )
         {
-            session.recordUndo();
-            stack.setRecomputingNormals( bRecompute );
-            session.markDirty();
+            session.applyEdit( [&]
+            { stack.setRecomputingNormals( bRecompute ); } );
         }
         // 셰이딩 미리보기 - 켜진 모디파이어가 모두 GPU 표에 있으면 GPU 모프로, 아니면 CPU 결과 정점으로 셰이딩해 보인다. CPU 로 내려가면 무엇 때문인지 알린다
         bool bShadedPreview = session.isShadedPreviewEnabled();

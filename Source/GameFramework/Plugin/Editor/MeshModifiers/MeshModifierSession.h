@@ -73,6 +73,14 @@ namespace sw::editor
 
         /** @brief 스택이 바뀌었다고 알립니다. 다음 `refreshPreview` 가 다시 겁니다. */
         void markDirty() { _bPreviewDirty = SW_TRUE; }
+        /** @brief 되돌리기 기록 → 편집 → 미리보기 표시를 한 동작으로 합니다. 패널이 순서를 쓰지 않으므로 어느 단계도 빠뜨릴 수 없습니다. */
+        template <typename TEdit>
+        void applyEdit( TEdit&& edit )
+        {
+            recordUndo();
+            edit();
+            markDirty();
+        }
         /**
          * @brief 바뀌었으면 원본 정점에 스택을 다시 겁니다(CPU 기준 경로). GPU 미리보기가 켜져 있으면 같은 적용에서 모은 입력 상자로 변형 프로그램도 다시 겁니다.
          * @details 고른 모디파이어 앞까지 건 결과(앞부분 캐시)를 들고, 앞부분 모디파이어의 저장 글 · 시간 · 메시 변환이 그대로면 고른 것부터만 다시 건다.
