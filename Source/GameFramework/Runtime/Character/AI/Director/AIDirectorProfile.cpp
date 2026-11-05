@@ -209,7 +209,7 @@ namespace sw
         for ( XMLNode child = node.findChild( "Encounter" ); child; child = child.findNextSibling( "Encounter" ) )
         {
             AIDirectorEncounterDef encounter;
-            if ( XMLFields::readFields( child, encounter, sourceName, { "pacing" }, &ScheduleCondition::isConditionAttribute ) == false )
+            if ( XMLFields::readFields( child, encounter, sourceName, {}, &ScheduleCondition::isConditionAttribute ) == false )
             {
                 bValid = false;
                 continue;

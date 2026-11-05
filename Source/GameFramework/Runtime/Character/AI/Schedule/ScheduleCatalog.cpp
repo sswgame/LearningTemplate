@@ -331,7 +331,7 @@ namespace sw
     void ScheduleCatalog::loadEvent( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         ScheduleEventDef event;
-        bool             bValid = XMLFields::readFields( node, event, sourceName, { "archetypes" }, &ScheduleCondition::isConditionAttribute );
+        bool             bValid = XMLFields::readFields( node, event, sourceName, {}, &ScheduleCondition::isConditionAttribute );
         bValid                  = event._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
         if ( bValid == false )
         {

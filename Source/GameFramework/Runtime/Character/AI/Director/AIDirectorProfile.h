@@ -140,17 +140,18 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 풀의 항목 하나(`<Encounter>`)입니다. 조우, 이벤트, 보상 중 하나이며 id 의 뜻은 게임이 압니다. `areas` · `pacing` 과 일정 조건 속성은 손으로 읽습니다. */
+    /** @brief 풀의 항목 하나(`<Encounter>`)입니다. 조우, 이벤트, 보상 중 하나이며 id 의 뜻은 게임이 압니다. 일정 조건 속성은 손으로 읽습니다. */
     REFLECT()
     struct SW_GF_API AIDirectorEncounterDef
     {
         REFLECT_BODY();
 
         PROPERTY( Required )
-        hashed_string         _id{};
-        ScheduleCondition     _condition{}; ///< 요일, 계절, 날씨, 하루의 때(`phases`), 플래그 식, 태그(플레이어 상태), 확률
-        vector<hashed_string> _listArea{};  ///< 지금 지역 태그 중 하나가 이것이어야 한다. 비면 어디서나
+        hashed_string     _id{};
+        ScheduleCondition _condition{}; ///< 요일, 계절, 날씨, 하루의 때(`phases`), 플래그 식, 태그(플레이어 상태), 확률
         PROPERTY( Name = "areas" )
+        vector<hashed_string> _listArea{}; ///< 지금 지역 태그 중 하나가 이것이어야 한다. 비면 어디서나
+        PROPERTY( Name = "pacing" )
         vector<hashed_string> _listPacing{}; ///< 이 페이싱 단계에서만. 비면 늘
         PROPERTY( Min = 0.0 )
         float32 _weight{ 1.0f };
