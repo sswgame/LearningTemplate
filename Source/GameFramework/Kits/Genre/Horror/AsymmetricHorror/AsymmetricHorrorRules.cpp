@@ -13,23 +13,6 @@
 
 namespace sw
 {
-    namespace
-    {
-        struct AsymmetricHorrorRulesInternal
-        {
-            /** @brief `scales` 가 있는 설정 원소를 읽습니다. `scales="1,1.7,2.1"` 는 적었으면 모두 0 이상의 수여야 합니다(적지 않으면 빈 목록). */
-            template <typename TDef>
-            [[nodiscard]] static bool readScaledSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
-            {
-                TDef       def;
-                const bool bValid = XMLFields::readFields( node, def, sourceName );
-                if ( bValid )
-                    outSetting = def;
-                return bValid;
-            }
-        };
-    } // namespace
-
     AsymmetricHorrorRulesCatalog::AsymmetricHorrorRulesCatalog()
         : _rules{}
         , _judge{}
@@ -63,11 +46,10 @@ namespace sw
 
     bool AsymmetricHorrorRulesCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
-        using Internal = AsymmetricHorrorRulesInternal;
         if ( XMLReadUtil::isElement( name, "Generator" ) )
-            return Internal::readScaledSetting( node, sourceName, _rules._generator );
+            return GameDataXML::readSetting( node, sourceName, _rules._generator );
         if ( XMLReadUtil::isElement( name, "Heal" ) )
-            return Internal::readScaledSetting( node, sourceName, _rules._heal );
+            return GameDataXML::readSetting( node, sourceName, _rules._heal );
         if ( XMLReadUtil::isElement( name, "SkillCheck" ) )
             return loadSkillCheck( node, sourceName );
         if ( XMLReadUtil::isElement( name, "Hook" ) )
@@ -81,18 +63,17 @@ namespace sw
         if ( XMLReadUtil::isElement( name, "Endgame" ) )
             return GameDataXML::readSetting( node, sourceName, _rules._endgame );
         if ( XMLReadUtil::isElement( name, "Killer" ) )
-        {
-            HorrorKillerDef killer;
-            if ( XMLFields::readFields( node, killer, sourceName ) == false )
-                return false;
-            (void)_catalogKiller.add( killer ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-            return true;
-        }
+            return GameDataXML::readInto( node, sourceName, _catalogKiller );
         if ( XMLReadUtil::isElement( name, "Category" ) )
         {
             HorrorScoreCategoryDef category;
             if ( XMLFields::readFields( node, category, sourceName ) == false )
                 return false;
+            if ( _categoryCap.findValue( category._id ).has_value() )
+            {
+                SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.DuplicateCategory", "%#: category '%#' is defined twice", sourceName, category._id.c_str() );
+                return false;
+            }
             _categoryCap.setValue( category._id, category._cap );
             return true;
         }
@@ -101,6 +82,12 @@ namespace sw
             HorrorScoreRule rule;
             if ( XMLFields::readFields( node, rule, sourceName ) == false )
                 return false;
+            // 찾기는 앞의 규칙을 돌려주므로, 겹친 뒤 규칙은 말없이 쓰이지 않는다.
+            if ( findScoreRule( rule._action ) != nullptr )
+            {
+                SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.DuplicateScoreRule", "%#: score of action '%#' is defined twice", sourceName, rule._action.c_str() );
+                return false;
+            }
             _listScoreRule.push_back( rule );
             return true;
         }
@@ -128,7 +115,10 @@ namespace sw
         }
         if ( bValid == false )
             return false;
-        if ( _judge.loadFromNode( node, sourceName ) == false )
+        // `bonus` 는 위에서 읽었다. 판정기가 모르는 이름으로 거절하면 `<SkillCheck>` 가 통째로 빠진다.
+        const auto isBonus = []( const utf8* pName )
+        { return StringUtil::equals( string_view( pName ), string_view( "bonus" ) ); };
+        if ( _judge.loadFromNode( node, sourceName, isBonus ) == false )
             return false;
         _rules._skillCheck = skillCheck;
         return true;

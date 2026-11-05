@@ -318,7 +318,7 @@ namespace sw
         void writeState( Archive& outArchive ) const;
         /**
          * @brief `writeState( Archive& )` 가 쓴 바이트를 읽어 상태를 복원합니다. 무대와 생존자는 바이트가 정하고, 규칙은 `initialize` 의 카탈로그를 씁니다.
-         *        `initialize` 하지 않았거나, 살인마 id 가 지금 설정과 다르거나, 바이트가 깨졌으면 false 를 반환하고 상태는 그대로입니다.
+         *        `initialize` 하지 않았거나, 살인마 id 가 지금 설정과 다르거나, 바이트가 깨졌거나, 값이 범위 밖이거나 서로 맞지 않으면(`isStateConsistent`) false 를 반환하고 상태는 그대로입니다.
          */
         [[nodiscard]] bool readState( Archive& archive );
         void               drainEvents( vector<AsymmetricHorrorEvent>& outListEvent );
@@ -348,9 +348,16 @@ namespace sw
         void stepSurvivor( int32 survivor, float32 deltaTime );
         void stepGenerators( float32 deltaTime );
         void stepGates( float32 deltaTime );
+        void stepWindows( float32 deltaTime );
         void stepEndgame( float32 deltaTime );
         /** @brief 진행 도구의 이벤트를 꺼내 스킬 체크, 소음, 점수로 옮깁니다. 이번에 끝났으면 true 를 반환합니다. */
-        bool                 drainProgress( InteractionProgress& progress, const float3& position );
+        bool drainProgress( InteractionProgress& progress, const float3& position );
+        /** @brief 발전기 진행의 이벤트를 처리합니다. 끝났으면 고치던 사람을 떼고 완료 수와 전원을 처리합니다. 스킬 체크 응답은 걸음 사이에 오므로 응답에서도 부릅니다. */
+        void settleGenerator( int32 generator );
+        /** @brief 치료 진행의 이벤트를 처리합니다. 끝났으면 치료를 마칩니다. 스킬 체크 응답은 걸음 사이에 오므로 응답에서도 부릅니다. */
+        void settleHealing( int32 patient );
+        /** @brief @p patient 에게서 치료 거리를 벗어난 치료자를 뗍니다. 환자가 움직이면 부릅니다. */
+        void                 releaseFarHealers( int32 patient );
         InteractionProgress* findActivityProgressMutable( int32 survivor );
         void                 releaseHealers( int32 patient, bool bResetProgress );
         void                 finishHeal( int32 patient );
@@ -374,6 +381,11 @@ namespace sw
         [[nodiscard]] bool readStage( Archive& archive, uint32& outPalletCount );
         /** @brief 살인마 상태를 읽어 덮습니다. 든 생존자 · 부수는 판자 번호가 @p survivorCount · @p palletCount 밖이면 false 입니다. */
         [[nodiscard]] bool readKiller( Archive& archive, uint32 survivorCount, uint32 palletCount );
+        /**
+         * @brief 읽은 상태가 스스로 맞는지 봅니다. 판과 팀 번호, 완료 수와 전원, 해치, 창틀, 생존자의 상태와 체력과 갈고리 단계, 하던 일과 그 진행의 참가자,
+         *        사물함 짝, 들린 생존자 짝, 부수는 판자를 봅니다. 어긋난 짝은 범위 안 번호여도 판을 멈추거나(들린 채 내려오지 못함) 없는 사람이 일을 잇게 합니다.
+         */
+        [[nodiscard]] bool isStateConsistent() const;
         void               makeNoise( int32 survivor, float32 radius, const float3& position );
         void               pushEvent( AsymmetricHorrorEvent::Kind kind, int32 actor, int32 target, float32 value, const float3& position );
 

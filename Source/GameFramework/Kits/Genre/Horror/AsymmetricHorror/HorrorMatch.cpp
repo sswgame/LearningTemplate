@@ -154,7 +154,7 @@ namespace sw
         HorrorSurvivor survivor;
         if ( survivor._vitality.initialize( vitality ) == false )
             return -1;
-        if ( survivor._healing.initialize( heal, &_pCatalog->getJudge(), _settings._seed ^ ( static_cast<uint32>( index + 1 ) * HorrorMatchInternal::kHealSeedMix ) ) == false )
+        if ( survivor._healing.initialize( heal, &_pCatalog->getJudge(), GameRandom::deriveSeed( _settings._seed, static_cast<uint32>( index + 1 ) * HorrorMatchInternal::kHealSeedMix ) ) == false )
             return -1;
         survivor._position = float3{ position._x, 0.0f, position._z };
         _listSurvivor.push_back( survivor );
@@ -221,7 +221,7 @@ namespace sw
         HorrorGate gate;
         gate._position    = float3{ position._x, 0.0f, position._z };
         const int32 index = static_cast<int32>( _listGate.size() );
-        if ( gate._progress.initialize( config, nullptr, _settings._seed ^ ( static_cast<uint32>( index + 1 ) * HorrorMatchInternal::kGateSeedMix ) ) == false )
+        if ( gate._progress.initialize( config, nullptr, GameRandom::deriveSeed( _settings._seed, static_cast<uint32>( index + 1 ) * HorrorMatchInternal::kGateSeedMix ) ) == false )
             return -1; // 규칙의 문 시간이 범위 밖이다 - initialize 가 이유를 남겼다
         _listGate.push_back( gate );
         return index;
@@ -394,6 +394,7 @@ namespace sw
         const float32 speed = computeSurvivorSpeed( survivor );
         target._position += move * ( speed * deltaTime );
         target._lastMoveSpeed = length * speed;
+        releaseFarHealers( survivor );
     }
 
     bool HorrorMatch::startRepair( int32 survivor, int32 generator )
@@ -473,7 +474,15 @@ namespace sw
     bool HorrorMatch::respondSkillCheck( int32 survivor, float32 pressTime )
     {
         InteractionProgress* pProgress = findActivityProgressMutable( survivor );
-        return pProgress != nullptr && pProgress->respondSkillCheck( static_cast<uint32>( survivor ), pressTime );
+        if ( pProgress == nullptr || pProgress->respondSkillCheck( static_cast<uint32>( survivor ), pressTime ) == false )
+            return false;
+        // 보너스로 끝날 수 있다. 다음 걸음으로 미루면 끝난 발전기를 건너뛰어 완료 수가 오르지 않았고, 그 사이의 세이브는 완료 이벤트를 잃는다. 탈출구에는 판정기가 없다.
+        const HorrorSurvivor& actor = _listSurvivor[static_cast<size_t>( survivor )];
+        if ( actor._activity == SurvivorActivity::Repairing )
+            settleGenerator( actor._activityTarget );
+        else if ( actor._activity == SurvivorActivity::Healing )
+            settleHealing( actor._activityTarget );
+        return true;
     }
 
     bool HorrorMatch::rescue( int32 rescuer, int32 hooked )
@@ -900,6 +909,18 @@ namespace sw
         target._healing.drainEvents( _listInteractionScratch );
     }
 
+    void HorrorMatch::releaseFarHealers( int32 patient )
+    {
+        const float3& position = _listSurvivor[static_cast<size_t>( patient )]._position;
+        for ( int32 healer = 0; healer < getSurvivorCount(); ++healer )
+        {
+            const HorrorSurvivor& doctor  = _listSurvivor[static_cast<size_t>( healer )];
+            const bool            bTooFar = doctor._activity == SurvivorActivity::Healing && doctor._activityTarget == patient && isNear( doctor._position, position, _pCatalog->getRules()._interactRange ) == false;
+            if ( bTooFar )
+                leaveActivity( healer );
+        }
+    }
+
     void HorrorMatch::finishHeal( int32 patient )
     {
         HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( patient )];
@@ -1101,7 +1122,7 @@ namespace sw
         HorrorGenerator& target   = _listGenerator[static_cast<size_t>( generator )];
         const float32    progress = target._progress.getProgress();
         if ( target._progress.initialize( config, &_pCatalog->getJudge(),
-                                          _settings._seed ^ ( static_cast<uint32>( generator + 1 ) * HorrorMatchInternal::kGeneratorSeedMix ) ^ _tick ) == false )
+                                          GameRandom::deriveSeed( _settings._seed, ( static_cast<uint32>( generator + 1 ) * HorrorMatchInternal::kGeneratorSeedMix ) ^ _tick ) ) == false )
             return false;
         target._progress.setProgress( progress );
         _listInteractionScratch.clear();
@@ -1335,18 +1356,171 @@ namespace sw
             if ( survivor < 0 || restored.readSurvivor( archive, restored._listSurvivor[static_cast<size_t>( survivor )] ) == false )
                 return false;
         }
-        for ( const int32 occupant : restored._listLockerOccupant )
-        {
-            if ( occupant < -1 || occupant >= static_cast<int32>( survivorCount ) )
-                return false;
-        }
-
         if ( restored.readKiller( archive, survivorCount, palletCount ) == false )
             return false;
 
         restored._bStarted = bStarted;
+        if ( restored.isStateConsistent() == false )
+            return false;
         restored._eventBuffer.clear();
         *this = std::move( restored );
+        return true;
+    }
+
+    bool HorrorMatch::isStateConsistent() const
+    {
+        const AsymmetricHorrorRules& rules = _pCatalog->getRules();
+        // 판. 시작 전이면 번호가 없고, 시작했으면 팀과 참가자가 맞으며, 결과를 알린 것과 판이 끝난 것이 같다.
+        const bool              bStarted        = _bStarted == SW_TRUE;
+        const MatchParticipant* pKillerEntry    = _match.findParticipant( _killer._participant );
+        const bool              bMatchInvalid   = bStarted ? ( _match.findTeam( _survivorTeam ) == nullptr || _match.findTeam( _killerTeam ) == nullptr || _survivorTeam == _killerTeam || pKillerEntry == nullptr || pKillerEntry->_team != _killerTeam ||
+                                                ( _bEndReported == SW_TRUE ) != isEnded() )
+                                                           : ( _survivorTeam != -1 || _killerTeam != -1 || _killer._participant != -1 || _bEndReported == SW_TRUE );
+        const bool              bEndgameInvalid = ( _bHatchOpen == SW_TRUE && ( _bHatchPlaced == SW_FALSE || _bHatchClosed == SW_TRUE ) ) || ( _bCollapseStarted == SW_FALSE && _collapseRemaining.isActive() );
+        if ( bMatchInvalid || bEndgameInvalid )
+            return false;
+
+        // 발전기. 완료 수는 끝난 발전기의 수이고, 그만큼 고쳤으면 전원이 들어와 있고, 막힘은 전원 뒤에 끝나지 않은 발전기에만 있다.
+        int32 completedCount = 0;
+        for ( const HorrorGenerator& generator : _listGenerator )
+        {
+            const bool bCompleted = generator._progress.isCompleted();
+            completedCount += bCompleted ? 1 : 0;
+            if ( generator._bBlocked == SW_TRUE && ( _bGatesPowered == SW_FALSE || bCompleted ) )
+                return false;
+        }
+        if ( completedCount != _completedGeneratorCount || ( completedCount >= rules._generatorsRequired && _bGatesPowered == SW_FALSE ) )
+            return false;
+
+        for ( const HorrorWindow& window : _listWindow )
+        {
+            if ( window._blockedRemaining < 0.0f || window._chaseVaultCount < 0 || window._chaseVaultCount >= rules._window._blockCount )
+                return false;
+        }
+        const bool bBreakingInvalid = _killer._breakingPallet >= 0 && _listPalletState[static_cast<size_t>( _killer._breakingPallet )] != PalletState::Dropped;
+        if ( bBreakingInvalid )
+            return false;
+
+        // 생존자마다 상태 · 체력 · 갈고리 · 하던 일. 진행의 참가자는 그 일을 하는 사람이고, 들린 사람은 살인마가 든 사람이다.
+        vector<int32> listRepairer( _listGenerator.size(), 0 );
+        vector<int32> listOpener( _listGate.size(), 0 );
+        vector<int32> listHealer( _listSurvivor.size(), 0 );
+        for ( int32 index = 0; index < getSurvivorCount(); ++index )
+        {
+            const HorrorSurvivor& survivor   = _listSurvivor[static_cast<size_t>( index )];
+            const Vitality&       vitality   = survivor._vitality;
+            bool                  bBodyValid = false;
+            switch ( survivor._state )
+            {
+                case SurvivorState::Healthy:
+                    bBodyValid = vitality.isAlive() && vitality.getHealth() >= 2.0f;
+                    break;
+                case SurvivorState::Injured:
+                    bBodyValid = vitality.isAlive() && vitality.getHealth() < 2.0f;
+                    break;
+                case SurvivorState::Dying:
+                case SurvivorState::Carried:
+                    bBodyValid = vitality.isDowned();
+                    break;
+                case SurvivorState::Hooked:
+                    bBodyValid = vitality.isDowned() && 1 <= survivor._hookStage && survivor._hookStage < rules._hook._stages;
+                    break;
+                case SurvivorState::Sacrificed:
+                    bBodyValid = vitality.isDead();
+                    break;
+                case SurvivorState::Escaped:
+                    bBodyValid = vitality.isAlive();
+                    break;
+            }
+            const MatchParticipant* pEntry        = _match.findParticipant( survivor._participant );
+            const bool              bEntryInvalid = bStarted ? ( pEntry == nullptr || pEntry->_team != _survivorTeam ) : survivor._participant != -1;
+            const bool              bCarryInvalid = ( survivor._state == SurvivorState::Carried ) != ( _killer._carrying == index );
+            if ( bBodyValid == false || bEntryInvalid || bCarryInvalid || survivor._hookStage > rules._hook._stages )
+                return false;
+
+            const int32 target = survivor._activityTarget;
+            if ( survivor._activity == SurvivorActivity::None )
+            {
+                if ( target != -1 )
+                    return false;
+                continue;
+            }
+            // 하던 일은 움직일 수 있는 상태에서만 있다. 맞거나 들리면 `leaveActivity` 가 뗀다.
+            if ( survivor._state != SurvivorState::Healthy && survivor._state != SurvivorState::Injured )
+                return false;
+            const uint32 actor = static_cast<uint32>( index );
+            switch ( survivor._activity )
+            {
+                case SurvivorActivity::Repairing:
+                {
+                    const bool bInvalid = target < 0 || target >= static_cast<int32>( _listGenerator.size() ) || _listGenerator[static_cast<size_t>( target )]._progress.isCompleted() || _listGenerator[static_cast<size_t>( target )]._progress.hasParticipant( actor ) == false;
+                    if ( bInvalid )
+                        return false;
+                    ++listRepairer[static_cast<size_t>( target )];
+                    break;
+                }
+                case SurvivorActivity::Healing:
+                {
+                    const bool bInvalid = isValidSurvivor( target ) == false || target == index || _listSurvivor[static_cast<size_t>( target )]._healing.hasParticipant( actor ) == false;
+                    if ( bInvalid )
+                        return false;
+                    ++listHealer[static_cast<size_t>( target )];
+                    break;
+                }
+                case SurvivorActivity::OpeningGate:
+                {
+                    const bool bInvalid = target < 0 || target >= static_cast<int32>( _listGate.size() ) || _listGate[static_cast<size_t>( target )]._progress.isCompleted() || _listGate[static_cast<size_t>( target )]._progress.hasParticipant( actor ) == false;
+                    if ( bInvalid )
+                        return false;
+                    ++listOpener[static_cast<size_t>( target )];
+                    break;
+                }
+                case SurvivorActivity::Vaulting:
+                {
+                    if ( target < 0 || target >= static_cast<int32>( _listWindow.size() ) )
+                        return false;
+                    break;
+                }
+                case SurvivorActivity::InLocker:
+                {
+                    if ( target < 0 || target >= static_cast<int32>( _listLocker.size() ) || _listLockerOccupant[static_cast<size_t>( target )] != index )
+                        return false;
+                    break;
+                }
+                case SurvivorActivity::None:
+                {
+                    break;
+                }
+            }
+        }
+
+        // 거꾸로도 본다. 끝난 진행에는 떠나지 않은 참가자가 남아 있고, 그 밖의 참가자는 위에서 센 사람뿐이다.
+        for ( size_t index = 0; index < _listGenerator.size(); ++index )
+        {
+            const InteractionProgress& progress = _listGenerator[index]._progress;
+            if ( progress.isCompleted() == false && progress.getParticipantCount() != listRepairer[index] )
+                return false;
+        }
+        for ( size_t index = 0; index < _listGate.size(); ++index )
+        {
+            const InteractionProgress& progress = _listGate[index]._progress;
+            if ( progress.isCompleted() == false && progress.getParticipantCount() != listOpener[index] )
+                return false;
+        }
+        for ( size_t index = 0; index < _listSurvivor.size(); ++index )
+        {
+            if ( _listSurvivor[index]._healing.getParticipantCount() != listHealer[index] )
+                return false;
+        }
+        for ( size_t index = 0; index < _listLockerOccupant.size(); ++index )
+        {
+            const int32 occupant = _listLockerOccupant[index];
+            if ( occupant == -1 )
+                continue;
+            const bool bInvalid = isValidSurvivor( occupant ) == false || _listSurvivor[static_cast<size_t>( occupant )]._activity != SurvivorActivity::InLocker || _listSurvivor[static_cast<size_t>( occupant )]._activityTarget != static_cast<int32>( index );
+            if ( bInvalid )
+                return false;
+        }
         return true;
     }
 
@@ -1381,10 +1555,11 @@ namespace sw
         archive >> outSurvivor._bStruggling;
         archive >> outSurvivor._bWiggling;
         archive >> outSurvivor._bBledOut;
-        const uint8 flags  = static_cast<uint8>( outSurvivor._bStruggling | outSurvivor._bWiggling | outSurvivor._bBledOut );
-        const bool  bValid = bHasteRead && bVaultRead && bNoiseRead && archive.isOk() && state <= static_cast<uint8>( SurvivorState::Escaped ) &&
-                            activity <= static_cast<uint8>( SurvivorActivity::InLocker ) && 0 <= outSurvivor._hookStage && -1 <= outSurvivor._activityTarget &&
-                            flags <= SW_TRUE;
+        const uint8 flags          = static_cast<uint8>( outSurvivor._bStruggling | outSurvivor._bWiggling | outSurvivor._bBledOut );
+        const bool  bFieldsInRange = 0.0f <= outSurvivor._lastMoveSpeed && 0.0f <= outSurvivor._hookTimer && 0.0f <= outSurvivor._struggleIdle && 0.0f <= outSurvivor._wiggleProgress && outSurvivor._wiggleProgress < 1.0f &&
+                                    0.0f <= outSurvivor._noiseRadius && 0 <= outSurvivor._hookStage;
+        const bool bValid = bHasteRead && bVaultRead && bNoiseRead && archive.isOk() && state <= static_cast<uint8>( SurvivorState::Escaped ) &&
+                            activity <= static_cast<uint8>( SurvivorActivity::InLocker ) && bFieldsInRange && flags <= SW_TRUE;
         if ( bValid == false )
             return false;
         outSurvivor._state    = static_cast<SurvivorState>( state );
@@ -1469,7 +1644,7 @@ namespace sw
             if ( archive.isError() )
                 return false;
             const int32 gate = addGate( position );
-            if ( _listGate[static_cast<size_t>( gate )]._progress.readState( archive ) == false )
+            if ( gate < 0 || _listGate[static_cast<size_t>( gate )]._progress.readState( archive ) == false )
                 return false;
         }
         return true;
@@ -1508,6 +1683,7 @@ namespace sw
             }
             stepGenerators( deltaTime );
             stepGates( deltaTime );
+            stepWindows( deltaTime );
             stepEndgame( deltaTime );
             resolveEnd();
         }
@@ -1557,6 +1733,7 @@ namespace sw
                 survivor._position       = survivor._vaultExit;
                 survivor._activity       = SurvivorActivity::None;
                 survivor._activityTarget = -1;
+                releaseFarHealers( survivorIndex );
             }
         }
 
@@ -1626,15 +1803,20 @@ namespace sw
         if ( survivor._healing.getParticipantCount() > 0 )
         {
             survivor._healing.update( deltaTime );
-            if ( drainProgress( survivor._healing, survivor._position ) )
-                finishHeal( survivorIndex );
+            settleHealing( survivorIndex );
         }
         survivor._lastMoveSpeed = 0.0f; // 이동은 걸음 사이에 들어오므로, 다음 걸음까지만 빠른 넘기 판정에 쓴다
     }
 
+    void HorrorMatch::settleHealing( int32 patient )
+    {
+        HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( patient )];
+        if ( drainProgress( target._healing, target._position ) )
+            finishHeal( patient );
+    }
+
     void HorrorMatch::stepGenerators( float32 deltaTime )
     {
-        const AsymmetricHorrorRules& rules = _pCatalog->getRules();
         for ( int32 index = 0; index < static_cast<int32>( _listGenerator.size() ); ++index )
         {
             HorrorGenerator& generator = _listGenerator[static_cast<size_t>( index )];
@@ -1653,41 +1835,47 @@ namespace sw
                         awardScore( target._score, "Repair", gained / static_cast<float32>( MathUtil::max( 1, participantCount ) ) );
                 }
             }
+            // 다 줄면 퇴행 규칙도 내린다. 표시만 내리면 다음에 고치다 손을 뗄 때 걷어차지 않아도 줄었다.
             if ( generator._bKicked == SW_TRUE && generator._progress.getProgress() <= 0.0f )
-                generator._bKicked = SW_FALSE;
-            if ( drainProgress( generator._progress, generator._position ) == false )
-                continue;
+                (void)configureGenerator( index, false ); // 같은 규칙을 `addGenerator` 가 이미 받았다
+            settleGenerator( index );
+        }
+    }
 
-            // 다 고쳤다. 고치던 사람은 손을 뗀다.
-            for ( int32 survivor = 0; survivor < getSurvivorCount(); ++survivor )
+    void HorrorMatch::settleGenerator( int32 generatorIndex )
+    {
+        HorrorGenerator& generator = _listGenerator[static_cast<size_t>( generatorIndex )];
+        if ( drainProgress( generator._progress, generator._position ) == false )
+            return;
+
+        // 다 고쳤다. 고치던 사람은 손을 뗀다.
+        for ( int32 survivor = 0; survivor < getSurvivorCount(); ++survivor )
+        {
+            HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( survivor )];
+            if ( target._activity == SurvivorActivity::Repairing && target._activityTarget == generatorIndex )
             {
-                HorrorSurvivor& target = _listSurvivor[static_cast<size_t>( survivor )];
-                if ( target._activity == SurvivorActivity::Repairing && target._activityTarget == index )
-                {
-                    target._activity       = SurvivorActivity::None;
-                    target._activityTarget = -1;
-                }
-            }
-            generator._bKicked = SW_FALSE;
-            ++_completedGeneratorCount;
-            pushEvent( AsymmetricHorrorEvent::Kind::GeneratorCompleted, -1, index, static_cast<float32>( _completedGeneratorCount ), generator._position );
-            if ( _completedGeneratorCount >= rules._generatorsRequired && _bGatesPowered == SW_FALSE )
-            {
-                _bGatesPowered = SW_TRUE;
-                for ( int32 other = 0; other < static_cast<int32>( _listGenerator.size() ); ++other )
-                {
-                    HorrorGenerator& rest = _listGenerator[static_cast<size_t>( other )];
-                    if ( rest._progress.isCompleted() == false )
-                        rest._bBlocked = SW_TRUE;
-                }
-                for ( int32 survivor = 0; survivor < getSurvivorCount(); ++survivor )
-                {
-                    if ( _listSurvivor[static_cast<size_t>( survivor )]._activity == SurvivorActivity::Repairing )
-                        leaveActivity( survivor );
-                }
-                pushEvent( AsymmetricHorrorEvent::Kind::GatesPowered, -1, -1, 0.0f, generator._position );
+                target._activity       = SurvivorActivity::None;
+                target._activityTarget = -1;
             }
         }
+        generator._bKicked = SW_FALSE;
+        ++_completedGeneratorCount;
+        pushEvent( AsymmetricHorrorEvent::Kind::GeneratorCompleted, -1, generatorIndex, static_cast<float32>( _completedGeneratorCount ), generator._position );
+        if ( _completedGeneratorCount < _pCatalog->getRules()._generatorsRequired || _bGatesPowered == SW_TRUE )
+            return;
+        _bGatesPowered = SW_TRUE;
+        for ( int32 other = 0; other < static_cast<int32>( _listGenerator.size() ); ++other )
+        {
+            HorrorGenerator& rest = _listGenerator[static_cast<size_t>( other )];
+            if ( rest._progress.isCompleted() == false )
+                rest._bBlocked = SW_TRUE;
+        }
+        for ( int32 survivor = 0; survivor < getSurvivorCount(); ++survivor )
+        {
+            if ( _listSurvivor[static_cast<size_t>( survivor )]._activity == SurvivorActivity::Repairing )
+                leaveActivity( survivor );
+        }
+        pushEvent( AsymmetricHorrorEvent::Kind::GatesPowered, -1, -1, 0.0f, generator._position );
     }
 
     void HorrorMatch::stepGates( float32 deltaTime )
@@ -1711,6 +1899,14 @@ namespace sw
             }
             pushEvent( AsymmetricHorrorEvent::Kind::GateOpened, -1, index, 0.0f, gate._position );
             startCollapse();
+        }
+    }
+
+    void HorrorMatch::stepWindows( float32 deltaTime )
+    {
+        for ( HorrorWindow& window : _listWindow )
+        {
+            window._blockedRemaining = MathUtil::max( 0.0f, window._blockedRemaining - deltaTime );
         }
     }
 
