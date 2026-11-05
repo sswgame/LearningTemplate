@@ -21,12 +21,9 @@
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
-#include "Engine/Reflection/ReflectValue.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Sequencer/SequenceAsset.h"
@@ -42,43 +39,47 @@ namespace sw::editor
     SW_EDITOR_PANEL( SequencerPanel, SequencerPanel::kPanelID, EditorPanelCategory::Tool, 1000 );
 
     /**
-     * @brief ImSequencer 가 보는 시퀀스입니다. 항목은 애셋의 `SequenceTrackItem` 그대로입니다.
-     * @details 패널 전용 항목 타입을 따로 두지 않습니다 — 저장 · 복원 때마다 필드를 하나씩 옮기면, 애셋에 필드가 늘 때
-     *          빠뜨린 필드만 조용히 저장되지 않습니다.
+     * @brief ImSequencer 가 보는 시퀀스입니다. 항목은 문서의 `SequenceTrackItem` 그대로이고, 더하기 · 지우기 · 사본은 문서의 명령입니다.
+     * @details 위젯의 종류 번호는 만들 수 있는 종류의 순번입니다(`SequenceDocument::getAddableItemKind`) — 위젯은 그 번호를 더하기 목록에만 씁니다.
      */
     struct ClipSequence : ImSequencer::SequenceInterface
     {
-        int32                     _frameMin{ 0 };
-        int32                     _frameMax{ 100 };
-        vector<SequenceTrackItem> _listItem;
-        mutable string            _labelScratch;
+        SequenceDocument& _document;
+        mutable string    _labelScratch;
+
+        explicit ClipSequence( SequenceDocument& document )
+            : _document{ document }
+            , _labelScratch{}
+        {
+        }
 
         int32 GetFrameMin() const override
         {
-            return _frameMin;
+            return _document._asset._frameMin;
         }
         int32 GetFrameMax() const override
         {
-            return _frameMax;
+            return _document._asset._frameMax;
         }
         int32 GetItemCount() const override
         {
-            return static_cast<int32>( _listItem.size() );
+            return static_cast<int32>( _document._asset._listItem.size() );
         }
         int32 GetItemTypeCount() const override
         {
-            return static_cast<int32>( SequenceItemKind::Count );
+            return static_cast<int32>( SequenceDocument::getAddableItemKindCount() );
         }
         const utf8* GetItemTypeName( int32 typeIndex ) const override
         {
-            const utf8* pName = editor::getSubsystem<TypeRegistry>().enumToString( static_cast<SequenceItemKind>( typeIndex ) );
+            const utf8* pName = editor::getSubsystem<TypeRegistry>().enumToString( SequenceDocument::getAddableItemKind( static_cast<uint32>( typeIndex ) ) );
             return pName != nullptr ? pName : "?"; // 라이브러리가 const utf8* 를 요구해 사유 문자열을 줄 수 없다
         }
         const utf8* GetItemLabel( int32 itemIndex ) const override
         {
-            const bool bHasItemName = 0 <= itemIndex && itemIndex < static_cast<int32>( _listItem.size() ) && _listItem[static_cast<size_t>( itemIndex )]._name.empty() == false;
+            const vector<SequenceTrackItem>& listItem     = _document._asset._listItem;
+            const bool                       bHasItemName = 0 <= itemIndex && itemIndex < static_cast<int32>( listItem.size() ) && listItem[static_cast<size_t>( itemIndex )]._name.empty() == false;
             if ( bHasItemName )
-                return _listItem[static_cast<size_t>( itemIndex )]._name.c_str();
+                return listItem[static_cast<size_t>( itemIndex )]._name.c_str();
             _labelScratch = "Item ";
             _labelScratch += to_string( itemIndex );
             return _labelScratch.c_str();
@@ -86,7 +87,7 @@ namespace sw::editor
 
         void Get( int32 itemIndex, int32** ppStart, int32** ppEnd, int32* pType, uint32* pColor ) override
         {
-            SequenceTrackItem& item = _listItem[static_cast<size_t>( itemIndex )];
+            SequenceTrackItem& item = _document._asset._listItem[static_cast<size_t>( itemIndex )];
             if ( ppStart != nullptr )
                 *ppStart = &item._start;
             if ( ppEnd != nullptr )
@@ -99,31 +100,17 @@ namespace sw::editor
 
         void Add( int32 type ) override
         {
-            SequenceTrackItem item{};
-            item._kind                        = static_cast<SequenceItemKind>( type );
-            item._start                       = _frameMin;
-            item._end                         = _frameMin + 10;
-            const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( item._kind );
-            if ( pInfo != nullptr )
-                item._color = pInfo->_defaultColor;
-            item._name = formatToString( "%# %#", string( GetItemTypeName( type ) ), _listItem.size() );
-            _listItem.push_back( item );
+            (void)_document.addItem( SequenceDocument::getAddableItemKind( static_cast<uint32>( type ) ), GetItemTypeName( type ) );
         }
 
         void Del( int32 itemIndex ) override
         {
-            if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItem.size() ) )
-                _listItem.erase( _listItem.begin() + itemIndex );
+            (void)_document.removeItem( itemIndex );
         }
 
         void Duplicate( int32 itemIndex ) override
         {
-            if ( 0 <= itemIndex && itemIndex < static_cast<int32>( _listItem.size() ) )
-            {
-                SequenceTrackItem copy = _listItem[static_cast<size_t>( itemIndex )];
-                copy._name += " Copy";
-                _listItem.push_back( std::move( copy ) );
-            }
+            (void)_document.duplicateItem( itemIndex );
         }
     };
 
@@ -138,12 +125,6 @@ namespace sw::editor
             /** @brief 키 마름모의 반지름(픽셀, DPI 전)입니다. */
             static constexpr float32 kKeyMarkerRadius = 4.0f;
 
-            /** @brief 트랜스폼 트랙의 회전 채널이면 true 입니다 — 값 필드는 도로 보이고 고친다(저장은 라디안, 인스펙터와 같은 규칙). */
-            static bool isRotationChannel( const SequenceKeyTrack& track, uint32 channelIndex )
-            {
-                return track._kind == SequenceTrackKind::Transform && channelIndex >= 3 && channelIndex < 6;
-            }
-
             /**
              * @brief 에디터에서 고른 오브젝트의 이름입니다. 고른 것이 없으면 빈 문자열입니다.
              * @details 트랙은 이름으로 레벨의 오브젝트에 묶여 레벨에서 재생된다 — 메인 씬의 선택이다(언리얼 시퀀서도 레벨 선택의 액터를 트랙에 더한다).
@@ -153,78 +134,29 @@ namespace sw::editor
                 GameObject* pObject = editor::getMainSceneSelection().getPrimaryObject();
                 return pObject != nullptr ? string{ pObject->getName().c_str() } : string{};
             }
-
-            /**
-             * @brief 키 트랙 대상의 지금 값을 채널 순서로 읽습니다(트랜스폼은 로컬 이동, 회전(라디안), 크기이고, 리그 슬롯은 가중치, 프로퍼티는 그 값입니다).
-             * @details 키 찍기(지금 상태를 키로)만 쓰는 읽기라 에디터에 둔다 — 대상 · 프로퍼티 묶기는 재생과 같은 런타임 규칙(`SequenceTimelineUtil::findTarget` · `findTrackProperty`)을 쓴다.
-             * @return 대상, 컴포넌트, 숫자 프로퍼티를 찾지 못하면 false 입니다.
-             */
-            [[nodiscard]] static bool readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity )
-            {
-                GameObject* pTarget               = SequenceTimelineUtil::findTarget( pManager, track._targetObject );
-                const bool  bInvalidSampleRequest = pTarget == nullptr || pOutArrValue == nullptr || valueCapacity < SequenceKeyTrack::getChannelCount( track._kind );
-                if ( bInvalidSampleRequest )
-                    return false;
-                if ( track._kind == SequenceTrackKind::Transform )
-                {
-                    const SceneComponent* pScene = pTarget->getPrimarySceneComponent();
-                    if ( pScene == nullptr )
-                        return false;
-                    const float3 arrValue[3] = { pScene->getLocalPosition(), pScene->getLocalRotation(), pScene->getLocalScale() };
-                    for ( uint32 groupIndex = 0; groupIndex < 3; ++groupIndex )
-                    {
-                        pOutArrValue[groupIndex * 3 + 0] = arrValue[groupIndex]._x;
-                        pOutArrValue[groupIndex * 3 + 1] = arrValue[groupIndex]._y;
-                        pOutArrValue[groupIndex * 3 + 2] = arrValue[groupIndex]._z;
-                    }
-                    return true;
-                }
-                if ( track._kind == SequenceTrackKind::RigSlot )
-                {
-                    const PoseModifierComponent* pModifier = pTarget->getComponent<PoseModifierComponent>();
-                    if ( pModifier == nullptr )
-                        return false;
-                    pOutArrValue[0] = pModifier->getSlotWeight( hashed_string( track._propertyPath.c_str() ) );
-                    return true;
-                }
-                if ( track._kind != SequenceTrackKind::Property )
-                    return false;
-                Component*          pComponent{ nullptr };
-                const PropertyInfo* pProperty{ nullptr };
-                if ( SequenceTimelineUtil::findTrackProperty( pTarget, track, pComponent, pProperty ) == false )
-                    return false;
-                float64 number{ 0.0 };
-                if ( ReflectValueUtil::readNumber( ReflectValueUtil::findBuiltinIndex( pProperty->_typeName ), pProperty->getRawPtr( static_cast<const void*>( pComponent ) ), number ) == false )
-                    return false;
-                pOutArrValue[0] = static_cast<float32>( number );
-                return true;
-            }
         };
     } // namespace
 
     SequencerPanel::SequencerPanel()
         : EditorDocumentPanel{ EditorAssetType{ SequenceAsset::kAssetType }, false }
         , _cinematicNote{ "Cinematic notes (not a clip track)." }
-        , _sequence{ make_unique<ClipSequence>() }
+        , _document{}
+        , _sequence{ make_unique<ClipSequence>( _document ) }
         , _previewPlayer{ make_unique<sw::SequencePlayer>() }
         , _listTimingBefore{}
-        , _listTrack{}
         , _listKeyFrame{}
         , _curveState{}
         , _currentFrame{ 0 }
-        , _selected{ -1 }
         , _firstFrame{ 0 }
-        , _selectedTrack{ -1 }
-        , _curveTrack{ -1 }
-        , _curveChannel{ 0 }
         , _bExpanded{ true }
     {
-        _sequence->Add( static_cast<int32>( SequenceItemKind::Clip ) );
-        _sequence->Add( static_cast<int32>( SequenceItemKind::Event ) );
-        _sequence->_listItem[0]._name  = "Intro";
-        _sequence->_listItem[1]._name  = "Cut";
-        _sequence->_listItem[1]._start = 20;
-        _sequence->_listItem[1]._end   = 40;
+        (void)_document.addItem( SequenceItemKind::Clip, "Clip" );
+        (void)_document.addItem( SequenceItemKind::Event, "Event" );
+        vector<SequenceTrackItem>& listItem = _document._asset._listItem;
+        listItem[0]._name                   = "Intro";
+        listItem[1]._name                   = "Cut";
+        listItem[1]._start                  = 20;
+        listItem[1]._end                    = 40;
     }
 
     SequencerPanel::~SequencerPanel() = default;
@@ -259,7 +191,7 @@ namespace sw::editor
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Stop" ) ) )
             {
                 _previewPlayer->stop();
-                _currentFrame = _sequence != nullptr ? _sequence->_frameMin : 0;
+                _currentFrame = _document._asset._frameMin;
                 previewCurrentFrame();
                 SequenceTimelineUtil::releaseCameraCut( editor::getActiveObjectManager(), _previewPlayer->getAsset() );
             }
@@ -276,7 +208,7 @@ namespace sw::editor
 
         // 끄는 동안에도 적용한다 — 시간 막대를 옮기면 뷰포트가 따라온다(언리얼 Sequencer · 유니티 Timeline 의 스크럽).
         ImGui::SetNextItemWidth( -1.0f );
-        if ( ImGui::SliderInt( "##ScrubFrame", &_currentFrame, _sequence->_frameMin, _sequence->_frameMax, "Frame %d" ) )
+        if ( ImGui::SliderInt( "##ScrubFrame", &_currentFrame, _document._asset._frameMin, _document._asset._frameMax, "Frame %d" ) )
         {
             if ( _previewPlayer->isPlaying() )
                 _previewPlayer->seekToFrame( _currentFrame );
@@ -292,11 +224,17 @@ namespace sw::editor
         drawItemFields();
 
         // ImSequencer 는 여러 항목을 그리는 위젯이라 IsItemEdited("마지막 항목")가 클립 끌기 · 더하기 · 지우기를 뜻하지 않는다 — 부르기 전후의 배치를 비교한다.
-        SequenceClipTiming::captureTiming( _sequence->_listItem, _listTimingBefore );
-        const int32 frameBefore = _currentFrame;
-        ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &_selected, &_firstFrame,
+        const vector<SequenceTrackItem>& listItem = _document._asset._listItem;
+        SequenceClipTiming::captureTiming( listItem, _listTimingBefore );
+        const int32  frameBefore     = _currentFrame;
+        const size_t itemCountBefore = listItem.size();
+        int32        selectedItem    = _document._selectedItem;
+        ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &selectedItem, &_firstFrame,
                                 ImSequencer::SEQUENCER_EDIT_STARTEND | ImSequencer::SEQUENCER_ADD | ImSequencer::SEQUENCER_DEL | ImSequencer::SEQUENCER_CHANGE_FRAME );
-        if ( SequenceClipTiming::hasTimingChanged( _listTimingBefore, _sequence->_listItem ) )
+        // 위젯은 지운 항목 뒤의 선택을 당겨 주지 않는다(이름 칸이 옆 항목을 고친다) — 지웠으면 문서(`removeItem`)가 맞춘 번호를 쓴다.
+        if ( listItem.size() >= itemCountBefore )
+            _document._selectedItem = selectedItem;
+        if ( SequenceClipTiming::hasTimingChanged( _listTimingBefore, listItem ) )
             notifyDocumentEdited( "Edit Sequence Timeline", "sequence-timeline" );
         if ( _currentFrame != frameBefore )
             previewCurrentFrame();
@@ -317,9 +255,9 @@ namespace sw::editor
         clipDesc._kind      = EditorSectionKind::Child;
         clipDesc._childSize = float2{ 0.0f, ImGui::GetFrameHeightWithSpacing() * kClipFieldRowCount };
         EditorChrome::beginSection( clipDesc );
-        if ( 0 <= _selected && _selected < static_cast<int32>( _sequence->_listItem.size() ) )
+        if ( 0 <= _document._selectedItem && _document._selectedItem < static_cast<int32>( _document._asset._listItem.size() ) )
         {
-            SequenceTrackItem& item = _sequence->_listItem[static_cast<size_t>( _selected )];
+            SequenceTrackItem& item = _document._asset._listItem[static_cast<size_t>( _document._selectedItem )];
             EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "ItemName" ), "Item Name" ), item._name );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
                 notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
@@ -352,34 +290,29 @@ namespace sw::editor
             addKeyTrack( SequenceTrackKind::RigSlot );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "AddRigSlotTrackTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "DeleteTrack" ) ) );
-        ImGui::BeginDisabled( _selectedTrack < 0 );
-        const bool bDeleteTrackRequested = ImGui::Button( SW_LOCKEY( "EdText", "DeleteTrack" ) ) && 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _listTrack.size() );
-        if ( bDeleteTrackRequested )
-        {
-            _listTrack.erase( _listTrack.begin() + _selectedTrack );
-            _selectedTrack = -1;
-            _curveTrack    = -1;
+        ImGui::BeginDisabled( _document._selectedTrack < 0 );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "DeleteTrack" ) ) && _document.removeSelectedTrack() )
             notifyDocumentEdited( "Delete Sequence Track" );
-        }
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "DeleteTrackTip" ) );
 
-        if ( _listTrack.empty() )
+        const vector<SequenceKeyTrack>& listTrack = _document._asset._listTrack;
+        if ( listTrack.empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorSequencer", "NoKeyTracksHint" ) );
             return;
         }
 
         const float32 labelWidth = SequencerPanelInternal::kTrackLabelWidth * EditorThemeUtil::getDPIScale();
-        for ( int32 trackIndex = 0; trackIndex < static_cast<int32>( _listTrack.size() ); ++trackIndex )
+        for ( int32 trackIndex = 0; trackIndex < static_cast<int32>( listTrack.size() ); ++trackIndex )
         {
-            const SequenceKeyTrack& track = _listTrack[static_cast<size_t>( trackIndex )];
+            const SequenceKeyTrack& track = listTrack[static_cast<size_t>( trackIndex )];
             ImGui::PushID( trackIndex );
             fixed_string<constant::buffer::kMax256> label;
             formatstring( label.data(), label.capacity(), "%# (%#)", track._name.empty() ? "Track" : track._name.c_str(),
                           track._targetObject.empty() ? "no target" : track._targetObject.c_str() );
-            if ( ImGui::Selectable( label.c_str(), trackIndex == _selectedTrack, ImGuiSelectableFlags_None, ImVec2( labelWidth, 0.0f ) ) )
-                _selectedTrack = trackIndex;
+            if ( ImGui::Selectable( label.c_str(), trackIndex == _document._selectedTrack, ImGuiSelectableFlags_None, ImVec2( labelWidth, 0.0f ) ) )
+                _document._selectedTrack = trackIndex;
             fixed_string<constant::buffer::kMax64> mark;
             formatstring( mark.data(), mark.capacity(), "sequencer.track.%#", trackIndex );
             EditorSelfTestMarks::note( mark.c_str() );
@@ -388,8 +321,9 @@ namespace sw::editor
             ImGui::PopID();
         }
 
-        if ( 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _listTrack.size() ) )
-            drawSelectedTrack( _listTrack[static_cast<size_t>( _selectedTrack )] );
+        SequenceKeyTrack* pSelectedTrack = _document.findSelectedTrack();
+        if ( pSelectedTrack != nullptr )
+            drawSelectedTrack( *pSelectedTrack );
         drawChannelCurve();
     }
 
@@ -398,12 +332,10 @@ namespace sw::editor
         const float32 height = ImGui::GetTextLineHeight();
         const float32 width  = MathUtil::max( ImGui::GetContentRegionAvail().x, 1.0f );
         const ImVec2  origin = ImGui::GetCursorScreenPos();
-        const int32   span   = MathUtil::max( _sequence->_frameMax - _sequence->_frameMin, 1 );
         if ( ImGui::InvisibleButton( "##keyStrip", ImVec2( width, height ) ) )
         {
-            const float32 ratio = MathUtil::clamp( ( EditorInputGUI::readPointer()._position._x - origin.x ) / width, 0.0f, 1.0f );
-            _selectedTrack      = trackIndex;
-            _currentFrame       = _sequence->_frameMin + static_cast<int32>( MathUtil::round( ratio * static_cast<float32>( span ) ) );
+            _document._selectedTrack = trackIndex;
+            _currentFrame            = _document.findFrameAtRatio( ( EditorInputGUI::readPointer()._position._x - origin.x ) / width );
             previewCurrentFrame();
         }
 
@@ -414,11 +346,11 @@ namespace sw::editor
         track.collectKeyFrames( _listKeyFrame );
         for ( const float32 keyFrame : _listKeyFrame )
         {
-            const float32 x = origin.x + ( keyFrame - static_cast<float32>( _sequence->_frameMin ) ) / static_cast<float32>( span ) * width;
+            const float32 x = origin.x + _document.computeRatioAtFrame( keyFrame ) * width;
             pDrawList->AddQuadFilled( ImVec2( x, centerY - radius ), ImVec2( x + radius, centerY ), ImVec2( x, centerY + radius ), ImVec2( x - radius, centerY ),
                                       ImGui::GetColorU32( ImGuiCol_PlotHistogram ) );
         }
-        const float32 cursorX = origin.x + static_cast<float32>( _currentFrame - _sequence->_frameMin ) / static_cast<float32>( span ) * width;
+        const float32 cursorX = origin.x + _document.computeRatioAtFrame( static_cast<float32>( _currentFrame ) ) * width;
         pDrawList->AddLine( ImVec2( cursorX, origin.y ), ImVec2( cursorX, origin.y + height ), ImGui::GetColorU32( ImGuiCol_CheckMark ) );
     }
 
@@ -451,7 +383,7 @@ namespace sw::editor
         GameObjectManager* pManager = editor::getActiveObjectManager();
         const float32      frame    = static_cast<float32>( _currentFrame );
         float32            arrCurrent[kSequenceTransformChannelCount]{};
-        const bool         bTargetFound = SequencerPanelInternal::readTrackValues( pManager, track, arrCurrent, kSequenceTransformChannelCount );
+        const bool         bTargetFound = SequenceDocument::readTrackValues( pManager, track, arrCurrent, kSequenceTransformChannelCount );
 
         drawKeyButtons( track, frame, arrCurrent, bTargetFound );
         drawChannelRows( track, frame, arrCurrent );
@@ -482,28 +414,22 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         if ( ImGui::ArrowButton( "##previousKey", ImGuiDir_Left ) )
         {
-            for ( auto it = _listKeyFrame.rbegin(); it != _listKeyFrame.rend(); ++it )
+            const std::optional<int32> previousFrame = _document.findPreviousKeyFrame( _listKeyFrame, _currentFrame );
+            if ( previousFrame.has_value() )
             {
-                if ( *it < frame - kSequenceKeyFrameTolerance )
-                {
-                    _currentFrame = static_cast<int32>( MathUtil::round( *it ) );
-                    previewCurrentFrame();
-                    break;
-                }
+                _currentFrame = *previousFrame;
+                previewCurrentFrame();
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "PreviousKeyTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         if ( ImGui::ArrowButton( "##nextKey", ImGuiDir_Right ) )
         {
-            for ( const float32 keyFrame : _listKeyFrame )
+            const std::optional<int32> nextFrame = _document.findNextKeyFrame( _listKeyFrame, _currentFrame );
+            if ( nextFrame.has_value() )
             {
-                if ( keyFrame > frame + kSequenceKeyFrameTolerance )
-                {
-                    _currentFrame = static_cast<int32>( MathUtil::round( keyFrame ) );
-                    previewCurrentFrame();
-                    break;
-                }
+                _currentFrame = *nextFrame;
+                previewCurrentFrame();
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "NextKeyTip" ) );
@@ -526,12 +452,10 @@ namespace sw::editor
         {
             ImGui::PushID( static_cast<int32>( channelIndex ) );
             const bool bKeyed    = track.findChannelKey( channelIndex, frame ) != constant::invalid_index::kUint32;
-            const bool bRotation = SequencerPanelInternal::isRotationChannel( track, channelIndex );
+            const bool bRotation = SequenceDocument::isRotationChannel( track, channelIndex );
             // 키가 없는 채널은 대상의 지금 값을 보인다(트랜스폼 채널만 지금 값이 있다).
-            const float32                currentValue = channelIndex < kSequenceTransformChannelCount ? pArrCurrent[channelIndex] : 0.0f;
-            const float32                displayMul   = bRotation ? MathUtil::kRadianToDegree : 1.0f;
-            const std::optional<float32> keyedValue   = track.evaluateChannel( channelIndex, frame );
-            float32                      value        = ( keyedValue.has_value() ? *keyedValue : currentValue ) * displayMul;
+            const float32 currentValue = channelIndex < kSequenceTransformChannelCount ? pArrCurrent[channelIndex] : 0.0f;
+            float32       value        = SequenceDocument::computeChannelDisplayValue( track, channelIndex, frame, currentValue );
             // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모에 해당한다.
             ImGui::TextColored( bKeyed ? ImGui::GetStyleColorVec4( ImGuiCol_CheckMark ) : ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ), bKeyed ? "<>" : "--" );
             ImGui::SameLine();
@@ -542,7 +466,7 @@ namespace sw::editor
             const float32 speed = bRotation ? InspectorPropertyLayout::kAngleDragSpeed : 0.05f;
             if ( ImGui::DragFloat( "##value", &value, speed, 0.0f, 0.0f, bRotation ? "%.2f deg" : "%.3f" ) )
             {
-                (void)track.setChannelKey( channelIndex, frame, value / displayMul );
+                (void)SequenceDocument::setChannelDisplayValue( track, channelIndex, frame, value );
                 previewCurrentFrame();
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -553,8 +477,8 @@ namespace sw::editor
             ImGui::SameLine();
             if ( ImGui::SmallButton( pCurve ) )
             {
-                _curveTrack              = _selectedTrack;
-                _curveChannel            = static_cast<int32>( channelIndex );
+                _document._curveTrack    = _document._selectedTrack;
+                _document._curveChannel  = static_cast<int32>( channelIndex );
                 _curveState              = EditorCurveEditorState{};
                 _curveState._working     = track._listChannel[channelIndex];
                 _curveState._bFitPending = true;
@@ -568,19 +492,18 @@ namespace sw::editor
 
     void SequencerPanel::drawChannelCurve()
     {
-        if ( _curveTrack < 0 || _curveTrack >= static_cast<int32>( _listTrack.size() ) )
+        FloatCurve* pChannel = _document.findCurveChannel();
+        if ( pChannel == nullptr )
             return;
-        SequenceKeyTrack& track = _listTrack[static_cast<size_t>( _curveTrack )];
-        if ( _curveChannel < 0 || _curveChannel >= static_cast<int32>( track._listChannel.size() ) )
-            return;
-        FloatCurve& channel = track._listChannel[static_cast<size_t>( _curveChannel )];
+        const SequenceKeyTrack& track   = *_document.findCurveTrack();
+        FloatCurve&             channel = *pChannel;
 
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Curve" ) );
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Frames", TextArgumentList().addText( "name", track._name.c_str() ).addText( "curveChannel", track.getChannelName( static_cast<uint32>( _curveChannel ) ) ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "Frames", TextArgumentList().addText( "name", track._name.c_str() ).addText( "curveChannel", track.getChannelName( static_cast<uint32>( _document._curveChannel ) ) ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Close" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "Close" ) ) )
         {
-            _curveTrack = -1;
+            _document._curveTrack = -1;
             return;
         }
         // 끄는 중 · 필드 입력 중이 아니면 채널에서 다시 뜬다(되돌리기 · 값 필드의 편집이 편집기에 보인다).
@@ -600,27 +523,17 @@ namespace sw::editor
 
     void SequencerPanel::addKeyTrack( SequenceTrackKind kind )
     {
-        SequenceKeyTrack track{};
-        track._kind         = kind;
-        track._targetObject = SequencerPanelInternal::findSelectedObjectName();
-        const utf8* pPrefix = "Property ";
-        if ( kind == SequenceTrackKind::Transform )
-            pPrefix = "Transform ";
-        else if ( kind == SequenceTrackKind::RigSlot )
-            pPrefix = "Rig Slot ";
-        track._name = string{ pPrefix } + to_string( _listTrack.size() );
-        track.fitChannelsToKind();
-        _listTrack.push_back( std::move( track ) );
-        _selectedTrack = static_cast<int32>( _listTrack.size() ) - 1;
+        _document.addTrack( kind, SequencerPanelInternal::findSelectedObjectName() );
         notifyDocumentEdited( "Add Sequence Track" );
     }
 
     bool SequencerPanel::findSelectedTrackKeyFrameCount( uint32& outCount ) const
     {
-        if ( _selectedTrack < 0 || _selectedTrack >= static_cast<int32>( _listTrack.size() ) )
+        const SequenceKeyTrack* pTrack = _document.findSelectedTrack();
+        if ( pTrack == nullptr )
             return false;
         vector<float32> listFrame;
-        _listTrack[static_cast<size_t>( _selectedTrack )].collectKeyFrames( listFrame );
+        pTrack->collectKeyFrames( listFrame );
         outCount = static_cast<uint32>( listFrame.size() );
         return true;
     }
@@ -632,8 +545,6 @@ namespace sw::editor
 
     ToolAssetLoadResult SequencerPanel::loadDocument()
     {
-        if ( _sequence == nullptr )
-            return ToolAssetLoadResult::Missing;
         const string path = acceptDocumentToLoad();
         if ( path.empty() )
             return ToolAssetLoadResult::Missing;
@@ -646,17 +557,18 @@ namespace sw::editor
         if ( result == ToolAssetLoadResult::Loaded )
         {
             applyAsset( asset );
-            _selected      = -1;
-            _selectedTrack = _listTrack.empty() ? -1 : 0;
-            _curveTrack    = -1;
-            _currentFrame  = asset._frameMin;
+            _document.resetSelection();
+            _currentFrame = asset._frameMin;
         }
         return result;
     }
 
     void SequencerPanel::saveToLoadedPath()
     {
-        if ( getLoadedAssetPath().empty() || _sequence == nullptr )
+        if ( getLoadedAssetPath().empty() )
+            return;
+        // 다시 읽지 못할 내용으로 멀쩡한 파일을 덮지 않는다 — 문서는 고친 상태(dirty)로 남고, 이유는 읽기 검사의 로그에 있다.
+        if ( _document.canReadBack() == false )
             return;
         if ( EditorToolAssetCommands::saveSequence( captureAsset(), getLoadedAssetPath() ) == false )
             return;
@@ -674,31 +586,15 @@ namespace sw::editor
 
     SequenceAsset SequencerPanel::captureAsset() const
     {
-        SequenceAsset asset;
-        if ( _sequence == nullptr )
-            return asset;
-        asset._frameMin  = _sequence->_frameMin;
-        asset._frameMax  = _sequence->_frameMax;
-        asset._note      = _cinematicNote.c_str();
-        asset._listItem  = _sequence->_listItem;
-        asset._listTrack = _listTrack;
+        SequenceAsset asset = _document._asset;
+        asset._note         = _cinematicNote.c_str();
         return asset;
     }
 
     void SequencerPanel::applyAsset( const SequenceAsset& asset )
     {
-        if ( _sequence == nullptr )
-            return;
-        _sequence->_frameMin = asset._frameMin;
-        _sequence->_frameMax = asset._frameMax;
-        _cinematicNote       = asset._note.c_str();
-        _sequence->_listItem = asset._listItem;
-        _listTrack           = asset._listTrack;
-        // 되돌리기가 트랙을 줄였으면 고른 위치를 맞춘다(지운 트랙을 가리키지 않게).
-        if ( _selectedTrack >= static_cast<int32>( _listTrack.size() ) )
-            _selectedTrack = static_cast<int32>( _listTrack.size() ) - 1;
-        if ( _curveTrack >= static_cast<int32>( _listTrack.size() ) )
-            _curveTrack = -1;
+        _document.restoreAsset( asset );
+        _cinematicNote = asset._note.c_str();
     }
 
     string SequencerPanel::captureDocumentText() const
@@ -709,8 +605,12 @@ namespace sw::editor
     void SequencerPanel::applyDocumentText( string_view text )
     {
         SequenceAsset restored;
+        // 읽지 못한 스냅숏으로 문서를 비우면 다음 저장이 내용을 잃는다 — 지금 문서를 그대로 둔다.
         if ( text.empty() == false && restored.parseXML( text ) == false )
-            SW_LOG_WARNING_ID( "SequencerPanel.SequenceUndoSnapshotCould", "Sequence undo snapshot could not be read - showing an empty sequence" );
+        {
+            SW_LOG_WARNING_ID( "SequencerPanel.SequenceUndoSnapshotCould", "Sequence undo snapshot could not be read - keeping the current sequence" );
+            return;
+        }
         applyAsset( restored );
     }
 

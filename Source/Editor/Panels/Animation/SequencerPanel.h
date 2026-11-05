@@ -8,6 +8,7 @@
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"
 #include "Editor/Panels/Animation/Model/SequenceClipTiming.h"
+#include "Editor/Panels/Animation/Model/SequenceDocument.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 
@@ -76,18 +77,14 @@ namespace sw::editor
 
     private:
         fixed_string<constant::buffer::kMax512> _cinematicNote;
+        SequenceDocument                        _document; ///< 애셋 · 고른 번호(`_sequence` 가 참조하므로 먼저 선언한다)
         unique_ptr<ClipSequence>                _sequence;
         unique_ptr<sw::SequencePlayer>          _previewPlayer;
         vector<SequenceClipTiming>              _listTimingBefore; ///< 타임라인 위젯을 부르기 전 배치(멤버라 프레임마다 할당하지 않는다)
-        vector<SequenceKeyTrack>                _listTrack;        ///< 키 트랙(트랜스폼 · 프로퍼티)
         vector<float32>                         _listKeyFrame;     ///< 키 띠가 쓰는 키 프레임(멤버라 프레임마다 할당하지 않는다)
         EditorCurveEditorState                  _curveState;       ///< 커브 단추로 연 채널의 편집기 상태
         int32                                   _currentFrame;
-        int32                                   _selected;
         int32                                   _firstFrame;
-        int32                                   _selectedTrack; ///< 고른 키 트랙(-1 이면 없음)
-        int32                                   _curveTrack;    ///< 커브 편집기가 보는 트랙(-1 이면 닫힘)
-        int32                                   _curveChannel;  ///< 커브 편집기가 보는 채널
-        bool                                    _bExpanded;     ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        bool                                    _bExpanded; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor
