@@ -360,6 +360,18 @@ namespace sw
         [[nodiscard]] bool setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate );
         /** @brief 바인딩 @p bindIndex 의 MultiTap 횟수(`ActionBinding::_tapCount`)를 바꿉니다. 2 미만은 2 로 올린다. 기본 바인딩에도 같이 적습니다. */
         [[nodiscard]] bool setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount );
+        /** @brief 바인딩 @p bindIndex 를 이미 있는 레이어 @p layer 로 옮깁니다. 기본 바인딩에도 같이 적습니다. 액션 · 바인딩 · 레이어가 없으면 false 입니다. */
+        [[nodiscard]] bool setBindingLayer( const hashed_string& action, uint32 bindIndex, const hashed_string& layer );
+        /**
+         * @brief 바인딩 @p bindIndex 를 지웁니다. 뒤 바인딩의 번호가 당겨집니다. 없으면 false 입니다.
+         * @details 맵 정의를 고치는 일이라 현재 · 기본 · 상태 세 목록에서 함께 지운다(`commitBinding` 의 짝). 키만 비우면 파일이 이름 붙이지 못하는 `Unknown` 코드가 저장되어 다음 읽기가 맵 전체를 거절한다.
+         */
+        [[nodiscard]] bool removeBinding( const hashed_string& action, uint32 bindIndex );
+        /**
+         * @brief 액션을 지웁니다. 없으면 false 입니다.
+         * @details 저장소 칸은 번호가 안정되도록 빈 채로 남기고 세대를 올린다 — 들고 있던 `ActionHandle` 은 무효가 되고, 같은 이름을 다시 만들면 새 칸을 쓴다.
+         */
+        [[nodiscard]] bool removeAction( const hashed_string& action );
         /** @brief 바인딩의 트리거가 실제로 쓰는 시간(초)입니다. 바인딩 값이 0 이면 트리거별 맵 값입니다. 시간을 쓰지 않는 트리거는 0 입니다. */
         float32              getEffectiveTriggerTime( const ActionBinding& binding ) const { return _triggerRules.getEffectiveTriggerTime( binding ); }
         uint32               getBindingCount( const hashed_string& action ) const;

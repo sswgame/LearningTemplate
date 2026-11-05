@@ -68,3 +68,62 @@ SW_TEST_CASE( InputMapRebindTest, SwapChangesNothingWhenOneSideCannotChange )
     SW_REQUIRE_NOT_NULL( pPad );
     SW_EXPECT_TRUE( pPad->_arrSlot[0]._deviceKind == InputDeviceKind::Gamepad );
 }
+
+// 지우기는 세 목록(현재 · 기본 · 상태)에서 함께 지운다. 기본 목록이 어긋나면 되돌리기가 다른 바인딩을 살린다.
+SW_TEST_CASE( InputMapRebindTest, RemoveBindingKeepsTheListsAligned )
+{
+    InputMap            map;
+    const hashed_string action( "Jump" );
+    map.bind( action, Key::A );
+    map.bind( action, Key::B );
+    map.bind( action, Key::C );
+
+    SW_EXPECT_FALSE( map.removeBinding( action, 3 ) );
+    SW_EXPECT_FALSE( map.removeBinding( hashed_string( "Nobody" ), 0 ) );
+    SW_REQUIRE_TRUE( map.removeBinding( action, 1 ) );
+
+    SW_REQUIRE_EQUAL( uint32{ 2 }, map.getBindingCount( action ) );
+    SW_EXPECT_TRUE( Util::hasChord( map, "Jump", 1, Key::C, 0 ) );
+    const ActionBinding* pDefault = map.getDefaultBinding( action, 1 );
+    SW_REQUIRE_NOT_NULL( pDefault );
+    SW_EXPECT_TRUE( pDefault->_arrSlot[0] == InputSlot::fromKey( Key::C ) );
+}
+
+// 지운 액션의 핸들은 무효이고, 같은 이름을 다시 만들면 비어 있는 새 액션이다. 남은 액션의 순서(저장 순서)는 그대로다.
+SW_TEST_CASE( InputMapRebindTest, RemoveActionInvalidatesHandlesAndKeepsOrder )
+{
+    InputMap map;
+    map.bind( hashed_string( "A" ), Key::A );
+    map.bind( hashed_string( "B" ), Key::B );
+    map.bind( hashed_string( "C" ), Key::C );
+    const ActionHandle handle = map.getActionHandle( hashed_string( "B" ) );
+
+    SW_EXPECT_FALSE( map.removeAction( hashed_string( "Nobody" ) ) );
+    SW_REQUIRE_TRUE( map.removeAction( hashed_string( "B" ) ) );
+
+    SW_EXPECT_FALSE( map.hasAction( hashed_string( "B" ) ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, map.getActionNames().size() );
+    SW_EXPECT_TRUE( map.getActionNames()[0] == hashed_string( "A" ) );
+    SW_EXPECT_TRUE( map.getActionNames()[1] == hashed_string( "C" ) );
+    SW_EXPECT_FALSE( map.isActionDown( handle ) );
+
+    map.createAction( hashed_string( "B" ) );
+    SW_EXPECT_EQUAL( uint32{ 0 }, map.getBindingCount( hashed_string( "B" ) ) );
+    SW_EXPECT_TRUE( map.getActionHandle( hashed_string( "B" ) )._generation != handle._generation );
+}
+
+// 레이어 옮기기는 이미 있는 레이어로만 간다. 기본 바인딩도 함께 옮겨 되돌려도 다른 레이어로 돌아가지 않는다.
+SW_TEST_CASE( InputMapRebindTest, SetBindingLayerNeedsAnExistingLayer )
+{
+    InputMap            map;
+    const hashed_string action( "Jump" );
+    map.bind( action, Key::A );
+    map.registerLayer( hashed_string( "Menu" ) );
+
+    SW_EXPECT_FALSE( map.setBindingLayer( action, 0, hashed_string( "Nowhere" ) ) );
+    SW_EXPECT_FALSE( map.setBindingLayer( action, 1, hashed_string( "Menu" ) ) );
+    SW_REQUIRE_TRUE( map.setBindingLayer( action, 0, hashed_string( "Menu" ) ) );
+    SW_EXPECT_TRUE( map.findBindingLayer( action, 0 ) == hashed_string( "Menu" ) );
+    SW_EXPECT_TRUE( map.resetActionToDefault( action ) );
+    SW_EXPECT_TRUE( map.findBindingLayer( action, 0 ) == hashed_string( "Menu" ) );
+}

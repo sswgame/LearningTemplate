@@ -1003,6 +1003,50 @@ namespace sw
         return true;
     }
 
+    bool InputMap::setBindingLayer( const hashed_string& action, uint32 bindIndex, const hashed_string& layer )
+    {
+        ActionEntry* pEntry  = findAction( action );
+        const auto   itLayer = _mapLayer.find( layer );
+        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() || itLayer == _mapLayer.end() )
+            return false;
+        pEntry->_listBinding[bindIndex]._layer            = layer;
+        pEntry->_listBinding[bindIndex]._cachedLayerIndex = itLayer->second;
+        if ( bindIndex < pEntry->_listDefaultBinding.size() )
+        {
+            pEntry->_listDefaultBinding[bindIndex]._layer            = layer;
+            pEntry->_listDefaultBinding[bindIndex]._cachedLayerIndex = itLayer->second;
+        }
+        reseedBindingState( *pEntry, bindIndex );
+        return true;
+    }
+
+    bool InputMap::removeBinding( const hashed_string& action, uint32 bindIndex )
+    {
+        ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr || bindIndex >= pEntry->_listBinding.size() )
+            return false;
+        pEntry->_listBinding.erase( pEntry->_listBinding.begin() + bindIndex );
+        pEntry->_listBindingState.erase( pEntry->_listBindingState.begin() + bindIndex );
+        if ( bindIndex < pEntry->_listDefaultBinding.size() )
+            pEntry->_listDefaultBinding.erase( pEntry->_listDefaultBinding.begin() + bindIndex );
+        return true;
+    }
+
+    bool InputMap::removeAction( const hashed_string& action )
+    {
+        const auto it = _mapAction.find( action );
+        if ( it == _mapAction.end() )
+            return false;
+        ActionEntry& entry = _listActionEntry[it->second];
+        entry._listBinding.clear();
+        entry._listBindingState.clear();
+        entry._listDefaultBinding.clear();
+        entry._generation = ++_nextGeneration;
+        _mapAction.erase( it );
+        (void)VectorUtil::removeFirst( _listActionName, action ); // 목록 순서가 저장 순서라 순서를 지키며 지운다
+        return true;
+    }
+
     uint32 InputMap::getBindingCount( const hashed_string& action ) const
     {
         const ActionEntry* pEntry = findAction( action );
