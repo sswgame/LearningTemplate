@@ -87,8 +87,8 @@ namespace sw
         float32 _health{ 30.0f };
         PROPERTY( Min = 0.0 )
         float32 _damage{ 5.0f };
-        PROPERTY( Min = 0.1 )
-        float32 _range{ 1.0f }; ///< 1.5 이하이면 근접, 더 길면 원거리이다
+        PROPERTY( Min = 0.5 )
+        float32 _range{ 1.0f }; ///< 1.5 이하이면 근접, 더 길면 원거리이다. 성문 앞 0.5 에서 멈추므로 그보다 짧으면 성문을 영원히 때리지 못한다
         PROPERTY( Min = 0.05 )
         float32 _attackInterval{ 1.0f };
         PROPERTY( Min = 0.0 )
@@ -176,8 +176,8 @@ namespace sw
         float32 _commanderDamage{ 8.0f };
         PROPERTY( Min = 0.0 )
         float32 _commanderStructureRate{ 0.25f }; ///< 지휘관이 성문과 성벽에 주는 피해 배율
-        PROPERTY( Min = 0.1 )
-        float32 _commanderRange{ 1.5f };
+        PROPERTY( Min = 0.5 )
+        float32 _commanderRange{ 1.5f }; ///< 병종 사거리와 같은 하한이다(성문 앞 0.5)
         PROPERTY( Min = 0.0 )
         float32 _commanderSpeed{ 4.0f };
         PROPERTY( Min = 0.05 )

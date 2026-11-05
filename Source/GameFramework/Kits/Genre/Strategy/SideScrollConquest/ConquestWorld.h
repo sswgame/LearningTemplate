@@ -177,7 +177,8 @@ namespace sw
          * @return 병사 번호이다. 모르는 병종이면 -1 이다.
          */
         int32 spawnUnit( const hashed_string& unitID, ConquestTeam team, float32 x, ConquestOrder order );
-        void  addResource( const hashed_string& resource, float32 amount ) { _resource.addValue( resource, amount ); }
+        /** @brief 자원을 더합니다. 음수이면 오류를 남기고 더하지 않습니다(쓰기는 비용으로만 합니다 — 음수 자원은 세이브가 거절합니다). */
+        void addResource( const hashed_string& resource, float32 amount );
 
         /** @brief 이벤트를 꺼낼 쪽을 정합니다(둘째 쪽은 false). 꺼내기는 이 표가 있어야 한다 — 같은 월드를 붙인 화면 · 시스템이 서로의 이벤트를 가져가지 못한다. */
         [[nodiscard]] bool claimEvents( DrainLease& outLease ) { return _eventBuffer.claim( outLease ); }
@@ -188,7 +189,7 @@ namespace sw
          *        다음 병사 번호, 승패를 씁니다. 정의는 id 로 저장하고 읽을 때 카탈로그에서 찾습니다. 이벤트는 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 없는 정의가 있으면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 없는 정의가 있거나 값이 범위 밖이면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         int32 getResource( const hashed_string& resource ) const;
@@ -223,23 +224,27 @@ namespace sw
             bool isValid() const { return _unitIndex >= 0 || _siteIndex >= 0 || _bCommander == SW_TRUE; }
         };
 
-        void    step( float32 deltaTime );
-        void    stepCommander( float32 deltaTime );
-        void    stepUnit( int32 unitIndex, float32 deltaTime );
-        void    stepCapture( float32 deltaTime );
-        void    stepEconomy( float32 deltaTime );
-        void    stepWaves( float32 deltaTime );
-        void    refreshSquadSlots();
-        void    refreshOutcome();
-        Target  findNearestTarget( ConquestTeam team, float32 x, float32 maxDistance, bool bUnits, bool bStructures ) const;
-        float32 computeGateX( const ConquestSite& site, ConquestTeam attacker ) const;
-        bool    isLaddered( int32 siteIndex, ConquestTeam attacker ) const;
-        float32 clampMove( ConquestTeam team, float32 fromX, float32 toX ) const;
-        float32 computeFormationX( const ConquestUnit& unit ) const;
-        float32 computeMoraleScale( ConquestTeam team, float32 x ) const;
-        void    applyAttack( ConquestTeam attacker, float32 baseDamage, float32 structureScale, const Target& target, float32& inoutDealt );
-        int32   findHomeSiteIndex() const;
-        void    pushEvent( ConquestEvent::Kind kind, const hashed_string& id, int32 value = 0, ConquestTeam team = ConquestTeam::Neutral );
+        void step( float32 deltaTime );
+        void stepCommander( float32 deltaTime );
+        void stepUnit( int32 unitIndex, float32 deltaTime );
+        void stepCapture( float32 deltaTime );
+        void stepEconomy( float32 deltaTime );
+        void stepWaves( float32 deltaTime );
+        void refreshSquadSlots();
+        /** @brief 거점을 잃어 일꾼이 모자라면 뒤에 지은 건물부터 모자란 만큼 일꾼을 뺍니다. */
+        void releaseExcessWorkers();
+        /** @brief 읽은 상태 전체가 서로 맞는지입니다(건물 슬롯 · 일꾼 · 병사 번호 · 음수 자원 · 지휘관). 칸 하나로 볼 수 없는 것을 여기서 봅니다. */
+        [[nodiscard]] bool isStateConsistent() const;
+        void               refreshOutcome();
+        Target             findNearestTarget( ConquestTeam team, float32 x, float32 maxDistance, bool bUnits, bool bStructures ) const;
+        float32            computeGateX( const ConquestSite& site, ConquestTeam attacker ) const;
+        bool               isLaddered( int32 siteIndex, ConquestTeam attacker ) const;
+        float32            clampMove( ConquestTeam team, float32 fromX, float32 toX ) const;
+        float32            computeFormationX( const ConquestUnit& unit ) const;
+        float32            computeMoraleScale( ConquestTeam team, float32 x ) const;
+        void               applyAttack( ConquestTeam attacker, float32 baseDamage, float32 structureScale, const Target& target, float32& inoutDealt );
+        int32              findHomeSiteIndex() const;
+        void               pushEvent( ConquestEvent::Kind kind, const hashed_string& id, int32 value = 0, ConquestTeam team = ConquestTeam::Neutral );
 
     private:
         vector<ConquestSite>       _listSite;

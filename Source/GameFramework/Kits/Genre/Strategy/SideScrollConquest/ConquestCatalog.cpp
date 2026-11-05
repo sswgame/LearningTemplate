@@ -14,12 +14,34 @@ namespace sw
     {
         struct ConquestCatalogInternal
         {
-            /** @brief 자식 원소(`<Cost>` · `<Income>`)의 속성을 자원 이름과 양으로 읽습니다. 자식이 없으면 비어 있습니다. */
-            static void loadStatChild( const XMLNode& node, const utf8* pChildName, StatBlock& outStats )
+            /**
+             * @brief 원소의 속성을 자원 이름과 양으로 읽습니다. 양은 0 이상의 숫자입니다.
+             * @details 모든 속성이 자원이다. `StatBlock::addAttributes` 처럼 숫자가 아닌 값을 건너뛰면 `gold="1O"` 가 공짜 건물이 되고, 음수 비용은 쓸수록 돈을 준다.
+             */
+            [[nodiscard]] static bool readResources( const XMLNode& node, string_view sourceName, StatBlock& outStats )
             {
                 outStats.clear();
-                if ( const XMLNode child = node.findChild( pChildName ) )
-                    outStats.addAttributes( child ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
+                bool bValid = true;
+                for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                {
+                    float32 amount = 0.0f;
+                    if ( StringUtil::parseFloat( string_view( attribute.getValue() ), amount ) && amount >= 0.0f )
+                    {
+                        outStats.addValue( hashed_string( attribute.getName() ), amount );
+                        continue;
+                    }
+                    SW_LOG_ERROR_ID( "ConquestCatalog.ResourceNeedsAmount", "%#: <%# %#=\"%#\"> needs an amount of 0 or more", sourceName, node.getName(), attribute.getName(), attribute.getValue() );
+                    bValid = false;
+                }
+                return bValid;
+            }
+
+            /** @brief 자식 원소(`<Cost>` · `<Income>`)를 자원으로 읽습니다. 자식이 없으면 비어 있습니다. */
+            [[nodiscard]] static bool readResourceChild( const XMLNode& node, const utf8* pChildName, string_view sourceName, StatBlock& outStats )
+            {
+                outStats.clear();
+                const XMLNode child = node.findChild( pChildName );
+                return child ? readResources( child, sourceName, outStats ) : true;
             }
 
             /** @brief "spearman:3,archer:2" 를 읽습니다. 개수를 빼면 하나이고, 깨진 개수는 오류입니다. */
@@ -102,9 +124,7 @@ namespace sw
         }
         if ( name == "Start" )
         {
-            _rules._startResources.clear();
-            _rules._startResources.addAttributes( node ); // 반환값은 읽은 개수이다. 숫자가 아닌 속성은 건너뛰면 되므로 무시한다
-            return true;
+            return ConquestCatalogInternal::readResources( node, sourceName, _rules._startResources );
         }
         if ( name == "Unit" )
             return loadUnit( node, sourceName );
@@ -121,9 +141,7 @@ namespace sw
         ConquestUnitDef unit;
         if ( XMLFields::readFields( node, unit, sourceName ) == false )
             return false;
-        ConquestCatalogInternal::loadStatChild( node, "Cost", unit._cost );
-        (void)_unitCatalog.add( unit ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return true;
+        return ConquestCatalogInternal::readResourceChild( node, "Cost", sourceName, unit._cost ) && GameDataXML::addUnique( unit, sourceName, _unitCatalog );
     }
 
     bool ConquestCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
@@ -131,9 +149,7 @@ namespace sw
         ConquestBuildingDef building;
         if ( XMLFields::readFields( node, building, sourceName ) == false )
             return false;
-        ConquestCatalogInternal::loadStatChild( node, "Cost", building._cost );
-        (void)_buildingCatalog.add( building ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return true;
+        return ConquestCatalogInternal::readResourceChild( node, "Cost", sourceName, building._cost ) && GameDataXML::addUnique( building, sourceName, _buildingCatalog );
     }
 
     bool ConquestCatalog::loadSite( const XMLNode& node, string_view sourceName )
@@ -141,10 +157,14 @@ namespace sw
         ConquestSiteDef site;
         bool            bValid = XMLFields::readFields( node, site, sourceName, { "garrison" } );
         bValid                 = ConquestCatalogInternal::readGarrison( node.getAttributeText( "garrison" ), site._listGarrison, sourceName, site._id ) && bValid;
+        // 판이 중립 병사를 만들지 않는다(`spawnUnit`) — 중립 거점의 주둔군은 말없이 사라진다.
+        if ( site._owner == ConquestTeam::Neutral && site._listGarrison.empty() == false )
+        {
+            SW_LOG_ERROR_ID( "ConquestCatalog.NeutralSiteGarrison", "%#: neutral site '%#' cannot have a garrison", sourceName, site._id.c_str() );
+            bValid = false;
+        }
         if ( bValid == false )
             return false;
-        ConquestCatalogInternal::loadStatChild( node, "Income", site._income );
-        (void)_siteCatalog.add( site ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return true;
+        return ConquestCatalogInternal::readResourceChild( node, "Income", sourceName, site._income ) && GameDataXML::addUnique( site, sourceName, _siteCatalog );
     }
 } // namespace sw

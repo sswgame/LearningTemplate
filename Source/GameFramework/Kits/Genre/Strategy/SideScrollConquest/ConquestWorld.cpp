@@ -36,22 +36,22 @@ namespace sw
                 return targetX - side * range * kApproachRatio;
             }
 
-            /** @brief `writeState` 가 쓴 거점 하나를 읽습니다. 카탈로그에 없는 거점이거나 편이 범위 밖이면 false 입니다. */
+            /** @brief `writeState` 가 쓴 거점 하나를 읽습니다. @p outSite 는 `initialize` 가 둔 그 자리의 거점입니다. 다른 거점이거나 편 · 체력 · 점령 진행이 범위 밖이면 false 입니다. */
             [[nodiscard]] static bool readSite( Archive& archive, const ConquestCatalog& catalog, ConquestSite& outSite )
             {
                 hashed_string siteID;
                 uint8         owner       = 0;
                 uint8         captureTeam = 0;
-                if ( StateArchiveUtil::readName( archive, siteID ) == false )
+                if ( StateArchiveUtil::readName( archive, siteID ) == false || catalog.findSite( siteID ) != outSite._pDef )
                     return false;
-                outSite._pDef = catalog.findSite( siteID );
                 archive >> outSite._gateHealth;
                 archive >> outSite._wallHealth;
                 archive >> outSite._captureProgress;
                 archive >> owner;
                 archive >> captureTeam;
-                const bool bValid = archive.isOk() && outSite._pDef != nullptr && owner <= static_cast<uint8>( ConquestTeam::Enemy ) &&
-                                    captureTeam <= static_cast<uint8>( ConquestTeam::Enemy );
+                const bool bValid = archive.isOk() && owner <= static_cast<uint8>( ConquestTeam::Enemy ) && captureTeam <= static_cast<uint8>( ConquestTeam::Enemy ) &&
+                                    0.0f <= outSite._gateHealth && outSite._gateHealth <= outSite._pDef->_gateHealth && 0.0f <= outSite._wallHealth && outSite._wallHealth <= outSite._pDef->_wallHealth &&
+                                    0.0f <= outSite._captureProgress && outSite._captureProgress <= catalog.getRules()._captureTime;
                 if ( bValid == false )
                     return false;
                 outSite._owner       = static_cast<ConquestTeam>( owner );
@@ -59,7 +59,7 @@ namespace sw
                 return true;
             }
 
-            /** @brief `writeState` 가 쓴 건물 하나를 읽습니다. 카탈로그에 없는 건물 · 병사이거나 거점 번호가 @p siteCount 밖이면 false 입니다. */
+            /** @brief `writeState` 가 쓴 건물 하나를 읽습니다. 카탈로그에 없는 건물이거나, 이 건물이 훈련하지 않는 병사가 대기열에 있거나, 거점 번호가 @p siteCount 밖이거나, 진행 · 일꾼이 범위 밖이면 false 입니다. */
             [[nodiscard]] static bool readBuilding( Archive& archive, const ConquestCatalog& catalog, int32 siteCount, ConquestBuilding& outBuilding )
             {
                 hashed_string buildingID;
@@ -67,20 +67,23 @@ namespace sw
                 if ( StateArchiveUtil::readName( archive, buildingID ) == false || StateArchiveUtil::readCount( archive, 4, queueCount ) == false )
                     return false;
                 outBuilding._pDef = catalog.findBuilding( buildingID );
+                if ( outBuilding._pDef == nullptr )
+                    return false;
                 outBuilding._listQueue.assign( queueCount, hashed_string{} );
                 for ( hashed_string& unitID : outBuilding._listQueue )
                 {
-                    if ( StateArchiveUtil::readName( archive, unitID ) == false || catalog.findUnit( unitID ) == nullptr )
+                    if ( StateArchiveUtil::readName( archive, unitID ) == false || VectorUtil::contains( outBuilding._pDef->_listTrainable, unitID ) == false || catalog.findUnit( unitID ) == nullptr )
                         return false;
                 }
                 archive >> outBuilding._cycleProgress;
                 archive >> outBuilding._trainProgress;
                 archive >> outBuilding._siteIndex;
                 archive >> outBuilding._workers;
-                return archive.isOk() && outBuilding._pDef != nullptr && 0 <= outBuilding._siteIndex && outBuilding._siteIndex < siteCount && 0 <= outBuilding._workers;
+                return archive.isOk() && 0 <= outBuilding._siteIndex && outBuilding._siteIndex < siteCount && 0 <= outBuilding._workers && outBuilding._workers <= outBuilding._pDef->_workerSlots &&
+                       0.0f <= outBuilding._cycleProgress && 0.0f <= outBuilding._trainProgress;
             }
 
-            /** @brief `writeState` 가 쓴 병사 하나를 읽습니다. 카탈로그에 없는 병사이거나 열거형 · 플래그가 깨졌으면 false 입니다. */
+            /** @brief `writeState` 가 쓴 병사 하나를 읽습니다. 카탈로그에 없는 병사이거나 열거형 · 플래그가 깨졌거나 판이 만들 수 없는 값(중립, 플레이어가 아닌 부대원, 사다리가 아닌 걸침, 체력 범위 밖)이면 false 입니다. */
             [[nodiscard]] static bool readUnit( Archive& archive, const ConquestCatalog& catalog, ConquestUnit& outUnit )
             {
                 hashed_string unitID;
@@ -101,12 +104,15 @@ namespace sw
                 archive >> outUnit._bAlive;
                 archive >> outUnit._bPlanted;
                 const bool bValid = bCooldownRead && archive.isOk() && outUnit._pDef != nullptr && team <= static_cast<uint8>( ConquestTeam::Enemy ) &&
-                                    order <= static_cast<uint8>( ConquestOrder::Charge ) && outUnit._bAlive <= SW_TRUE && outUnit._bPlanted <= SW_TRUE;
+                                    order <= static_cast<uint8>( ConquestOrder::Charge ) && outUnit._bAlive == SW_TRUE && outUnit._bPlanted <= SW_TRUE;
                 if ( bValid == false )
                     return false;
                 outUnit._team  = static_cast<ConquestTeam>( team );
                 outUnit._order = static_cast<ConquestOrder>( order );
-                return true;
+                // 걸음 끝에 죽은 병사를 지우므로 상태에 든 병사는 살아 있다.
+                const bool bSquadValid   = outUnit._squadSlot >= -1 && ( outUnit._team == ConquestTeam::Player || outUnit._squadSlot == -1 );
+                const bool bPlantedValid = outUnit._bPlanted == SW_FALSE || outUnit._pDef->_siegeRole == ConquestSiegeRole::Ladder;
+                return outUnit._team != ConquestTeam::Neutral && 0.0f < outUnit._health && outUnit._health <= outUnit._pDef->_health && outUnit._unitID >= 1 && bSquadValid && bPlantedValid;
             }
         };
     } // namespace
@@ -297,6 +303,16 @@ namespace sw
         return unit._unitID;
     }
 
+    void ConquestWorld::addResource( const hashed_string& resource, float32 amount )
+    {
+        if ( amount < 0.0f )
+        {
+            SW_LOG_ERROR_ID( "ConquestWorld.NegativeResource", "ConquestWorld: refused to add %# of '%#' - it must not be negative", amount, resource.c_str() );
+            return;
+        }
+        _resource.addValue( resource, amount );
+    }
+
     void ConquestWorld::drainEvents( const DrainLease& lease, vector<ConquestEvent>& outListEvent )
     {
         _eventBuffer.drainTo( lease, outListEvent );
@@ -416,10 +432,48 @@ namespace sw
         archive >> restored._bDefeat;
         const bool bValid = bCommanderTimerRead && bStepRead && archive.isOk() && restored._commander._bAlive <= SW_TRUE && restored._bVictory <= SW_TRUE &&
                             restored._bDefeat <= SW_TRUE;
-        if ( bValid == false )
+        if ( bValid == false || restored.isStateConsistent() == false )
             return false;
         restored._eventBuffer.clear();
         *this = std::move( restored );
+        return true;
+    }
+
+    bool ConquestWorld::isStateConsistent() const
+    {
+        const ConquestRules& rules = _pCatalog->getRules();
+        for ( const StatValue& value : _resource.getValues() )
+        {
+            if ( value._value < 0.0f )
+                return false;
+        }
+        // 지휘관: 쓰러지면 체력이 0 이고, 입력과 바라보는 쪽은 setCommanderMove 가 정한 범위다.
+        const bool bCommanderHealthValid = _commander._bAlive == SW_TRUE ? ( 0.0f < _commander._health && _commander._health <= rules._commanderHealth ) : _commander._health == 0.0f;
+        const bool bCommanderInputValid  = -1.0f <= _commander._moveAxis && _commander._moveAxis <= 1.0f && ( _commander._facing == 1.0f || _commander._facing == -1.0f );
+        const bool bTimersValid          = _elapsed >= 0.0f && _incomeTimer >= 0.0f && _waveTimer >= 0.0f;
+        if ( bCommanderHealthValid == false || bCommanderInputValid == false || bTimersValid == false || ( _bVictory == SW_TRUE && _bDefeat == SW_TRUE ) )
+            return false;
+
+        // 건물: 잃은 거점의 건물은 일꾼과 대기열을 비운다(`stepCapture`). 거점의 슬롯과 일꾼 수를 넘지 않는다.
+        if ( computeFreeWorkers() < 0 )
+            return false;
+        for ( const ConquestBuilding& building : _listBuilding )
+        {
+            const ConquestSite& site     = _listSite[static_cast<size_t>( building._siteIndex )];
+            const bool          bOwned   = site._owner == ConquestTeam::Player;
+            const int32         siteUsed = VectorUtil::countBy<&ConquestBuilding::_siteIndex>( _listBuilding, building._siteIndex );
+            if ( siteUsed > site._pDef->_buildSlots || ( bOwned == false && ( building._workers != 0 || building._listQueue.empty() == false ) ) )
+                return false;
+        }
+
+        // 병사 번호는 겹치지 않고 다음 번호보다 작다 — 겹치면 `findUnit` 이 다른 병사를 돌려주고, 새 병사가 옛 번호를 받는다.
+        if ( VectorUtil::findDuplicateBy<&ConquestUnit::_unitID>( _listUnit ) != nullptr || _nextUnitID < 1 )
+            return false;
+        for ( const ConquestUnit& unit : _listUnit )
+        {
+            if ( unit._unitID >= _nextUnitID )
+                return false;
+        }
         return true;
     }
 
@@ -720,6 +774,7 @@ namespace sw
                     building._listQueue.clear();
                     building._trainProgress = 0.0f;
                 }
+                releaseExcessWorkers();
             }
             pushEvent( ConquestEvent::Kind::SiteCaptured, site._pDef->_id, 0, contender );
         }
@@ -810,6 +865,19 @@ namespace sw
         {
             if ( unit._squadSlot >= 0 )
                 unit._squadSlot = slot++;
+        }
+    }
+
+    void ConquestWorld::releaseExcessWorkers()
+    {
+        // 다른 거점의 건물이 잃은 거점의 일꾼을 쓰고 있었을 수 있다. 빼지 않으면 없는 일꾼이 계속 생산한다.
+        int32 excess = -computeFreeWorkers();
+        for ( size_t index = _listBuilding.size(); index > 0 && excess > 0; --index )
+        {
+            ConquestBuilding& building = _listBuilding[index - 1];
+            const int32       released = MathUtil::min( building._workers, excess );
+            building._workers -= released;
+            excess -= released;
         }
     }
 
