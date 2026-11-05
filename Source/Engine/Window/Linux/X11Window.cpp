@@ -361,10 +361,7 @@ namespace sw
         const Window win      = static_cast<Window>( _x11Window );
         const Window root     = DefaultRootWindow( pDisplay );
         if ( Internal::hasEwmhWindowManager( pDisplay, root ) == false )
-        {
-            SW_LOG_ERROR_ID( "X11Window.FrameExtentsNoWindowManager", "Window frame extents are unknown - no EWMH window manager (_NET_SUPPORTING_WM_CHECK) reports _NET_FRAME_EXTENTS" );
-            return false;
-        }
+            return true; // 창 관리자가 없으면 틀도 없다(Xvfb 등) - 두께는 0 이다
         const Atom frameExtents = XInternAtom( pDisplay, "_NET_FRAME_EXTENTS", 0 );
         if ( Internal::readFrameExtents( pDisplay, win, frameExtents, outExtents ) )
             return true;
