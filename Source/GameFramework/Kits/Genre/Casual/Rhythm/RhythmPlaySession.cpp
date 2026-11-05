@@ -278,19 +278,25 @@ namespace sw
         const bool bChartMismatch = archive.isError() || noteCount != listNote.size() || laneCount != _listLane.size();
         if ( bChartMismatch )
             return false;
-        vector<LaneQueue> listLane = _listLane;
+        vector<LaneQueue> listLane  = _listLane;
+        int64             cursorSum = 0;
         for ( size_t laneIndex = 0; laneIndex < listLane.size(); ++laneIndex )
         {
             LaneQueue& lane   = listLane[laneIndex];
             uint32     cursor = 0;
             archive >> cursor;
             archive >> lane._holdingNote;
-            const bool bHoldingValid = lane._holdingNote < 0 ||
-                                       ( static_cast<size_t>( lane._holdingNote ) < listNote.size() && listNote[static_cast<size_t>( lane._holdingNote )]._lane == static_cast<int32>( laneIndex ) );
-            const bool bInvalidLaneState = archive.isError() || cursor > lane._listNoteIndex.size() || bHoldingValid == false;
-            if ( bInvalidLaneState )
+            if ( archive.isError() || cursor > lane._listNoteIndex.size() || lane._holdingNote < -1 )
                 return false;
+            // 누르고 있는 노트는 이 레인에서 방금 머리를 판정한 롱노트이다(`pressInternal`). 보통 노트나 아직 안 온 노트를 들면 끝 판정만 공짜로 받는다.
+            if ( lane._holdingNote >= 0 )
+            {
+                const bool bHoldingValid = cursor > 0 && lane._listNoteIndex[cursor - 1] == lane._holdingNote && listNote[static_cast<size_t>( lane._holdingNote )]._bLong == SW_TRUE;
+                if ( bHoldingValid == false )
+                    return false;
+            }
             lane._cursor = cursor;
+            cursorSum += cursor;
         }
 
         uint32 gradeCount = 0;
@@ -298,9 +304,13 @@ namespace sw
         if ( archive.isError() || gradeCount != _listGradeCount.size() )
             return false;
         vector<int32> listGradeCount( gradeCount, 0 );
+        int64         gradeSum = 0;
         for ( int32& count : listGradeCount )
         {
             archive >> count;
+            if ( count < 0 )
+                return false;
+            gradeSum += count;
         }
 
         uint32 recordCount = 0;
@@ -313,7 +323,7 @@ namespace sw
             archive >> record._time;
             archive >> record._lane;
             archive >> record._bPress;
-            if ( archive.isError() || record._bPress > SW_TRUE )
+            if ( archive.isError() || record._bPress > SW_TRUE || record._lane < 0 || laneCount <= static_cast<uint32>( record._lane ) )
                 return false;
         }
 
@@ -337,6 +347,21 @@ namespace sw
         archive >> state;
         const bool bInvalidSessionState = archive.isError() || state > static_cast<uint8>( RhythmPlayState::Failed ) || combo < 0 || combo > maxCombo;
         if ( bInvalidSessionState )
+            return false;
+        // 판정 하나는 창 하나나 놓침 하나에 들어가고, 머리를 지난 노트마다 판정이 있었다. 합이 맞지 않으면 판정 없이 지나간 노트나 공짜 점수이다.
+        const bool bCountsValid = 0 <= missCount && judgedCount <= _pChart->getJudgmentCount() && gradeSum + missCount == judgedCount && cursorSum <= judgedCount && maxCombo <= judgedCount;
+        // 정확도 합은 판정마다 0..1 을 더한 값이고 라이프는 `applyJudgment` 가 0..최대로 자른다.
+        const bool bProgressValid = 0.0 <= accuracyWeightSum && accuracyWeightSum <= static_cast<float64>( judgedCount ) && 0.0f <= life && life <= _settings._maxLife;
+        // 끝난 판은 끝난 이유가 값에 남는다.
+        const bool bStateValid = ( state != static_cast<uint8>( RhythmPlayState::Cleared ) || judgedCount == _pChart->getJudgmentCount() ) && ( state != static_cast<uint8>( RhythmPlayState::Failed ) || life == 0.0f );
+        // 깎는 창이 없으면 점수는 음수가 되지 못한다.
+        bool bHasPenaltyWindow = false;
+        for ( const TimingWindow& window : _pJudge->getWindows() )
+        {
+            bHasPenaltyWindow = bHasPenaltyWindow || window._score < 0;
+        }
+        const bool bScoreValid = 0 <= score || bHasPenaltyWindow;
+        if ( bCountsValid == false || bProgressValid == false || bStateValid == false || bScoreValid == false )
             return false;
         _listLane          = std::move( listLane );
         _listGradeCount    = std::move( listGradeCount );
