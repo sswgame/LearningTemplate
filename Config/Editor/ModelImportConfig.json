@@ -45,6 +45,14 @@
       ]
     },
     {
+      "name": "PolyHaven_ScanProps",
+      "filter": { "includePatterns": ["common/models_raw/polyhaven/**"] },
+      "lods": [
+        { "triangleRatio": 0.25, "screenSize": 0.3, "maxError": 0.01 },
+        { "triangleRatio": 0.06, "screenSize": 0.1, "maxError": 0.03 }
+      ]
+    },
+    {
       "name": "WildWest_Horse",
       "filter": { "includePatterns": ["*/wildwest/models_raw/horse.*"] },
       "animationCodec": "acl",

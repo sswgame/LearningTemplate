@@ -62,7 +62,7 @@ SW_DECLARE_RW_STRUCTURED_BUFFER( uint, g_LODState, 2 );
 
 /// 가림 판정이 읽는 타일의 한 축 상한 — 화면에서 이보다 넓게 덮는 물체는 판정하지 않는다(스레드 하나가 최대 8 x 8 = 64 번 읽는다).
 static const uint kMaxOcclusionTestTiles = 8u;
-/// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(나누면 화면 사각형이 뒤집힌다).
+/// 이보다 작은 클립 w 는 카메라 뒤로 본다(화면 크기를 눈까지의 거리로 잰다 — 눈이 경계 구 안이면 1 이다).
 static const float kMinOcclusionClipW = 1.0e-4f;
 /// 이보다 작은 클립 w 는 카메라 뒤 · 눈 가까이로 본다(화면 크기를 1 로 본다 — CPU 의 `LODViewUtil::computeScreenSize` 의 `kEpsilon`).
 static const float kMinLODClipW = 1.0e-5f;
@@ -115,10 +115,12 @@ bool computeWorldBox( InstanceData instance, BatchData batch, out float3 outCent
 /// @brief 경계 구가 뷰에 차지하는 화면 크기(지름 / 화면 높이)입니다. CPU `LODViewUtil::computeScreenSize` 와 같은 식이다(절두체 밖 판정만 빼고 — 여기는 이미 통과한 인스턴스다).
 float computeLODScreenSize( float3 center, float radius )
 {
-    const float3 toEye  = center - g_LODView.xyz;
-    const float  clipW  = dot( center, g_LODDepthRow.xyz ) + g_LODDepthRow.w;
-    const bool   bClose = dot( toEye, toEye ) <= radius * radius || clipW <= kMinLODClipW;
-    return bClose ? 1.0f : radius * g_LODView.w / clipW;
+    const float3 toEye           = center - g_LODView.xyz;
+    const float  distanceSquared = dot( toEye, toEye );
+    const float  clipW           = dot( center, g_LODDepthRow.xyz ) + g_LODDepthRow.w;
+    // 카메라 뒤(클립 w 가 뜻이 없다)는 눈까지의 거리로 잰다 — 1 로 치면 화면 밖에서 그림자만 드리우는 물체가 모두 가장 고운 단계로 그려진다.
+    const float viewDepth = clipW > kMinLODClipW ? clipW : sqrt( distanceSquared );
+    return distanceSquared <= radius * radius ? 1.0f : radius * g_LODView.w / viewDepth;
 }
 
 /**
