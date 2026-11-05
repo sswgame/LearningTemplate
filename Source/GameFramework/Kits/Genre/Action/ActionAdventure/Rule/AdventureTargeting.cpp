@@ -26,28 +26,29 @@ namespace sw
         _settings = settings;
         _selector.setSettings( settings._lockOn );
         release();
+        _evade.clear();
+        _invulnerable.clear();
+        _state = AdventureTargetingState::Free;
     }
 
     bool AdventureTargeting::press( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate )
     {
-        _bHeld = SW_TRUE;
-        if ( _selector.pickBest( eye, forward, listCandidate ) == 0 )
-        {
-            _state = AdventureTargetingState::Parallel;
-            return false;
-        }
-        refreshTargetPosition( listCandidate );
-        _state = AdventureTargetingState::Locked;
-        return true;
+        _bHeld             = SW_TRUE;
+        const bool bPicked = _selector.pickBest( eye, forward, listCandidate ) != 0;
+        if ( bPicked )
+            refreshTargetPosition( listCandidate );
+        if ( _evade.isActive() == false ) // 회피 중이면 몸놀림 상태는 회피가 끝난 뒤 `update` 가 정한다
+            _state = bPicked ? AdventureTargetingState::Locked : AdventureTargetingState::Parallel;
+        return bPicked;
     }
 
     void AdventureTargeting::release()
     {
         _selector.release();
         _bHeld = SW_FALSE;
-        _evade.clear();
-        _invulnerable.clear();
-        _state = AdventureTargetingState::Free;
+        // 시작한 회피는 끝까지 간다. 버튼을 뗐다고 공중에서 멈추거나 무적을 잃지 않는다.
+        if ( _evade.isActive() == false )
+            _state = AdventureTargetingState::Free;
     }
 
     uint64 AdventureTargeting::cycleTarget( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate, int32 direction )
@@ -63,16 +64,16 @@ namespace sw
                                                         float32 deltaTime )
     {
         _invulnerable.update( deltaTime );
-        if ( _bHeld == SW_FALSE )
-        {
-            _state = AdventureTargetingState::Free;
-            return _state;
-        }
         if ( _selector.hasTarget() && _selector.update( eye, listCandidate, deltaTime ) )
             refreshTargetPosition( listCandidate );
         // 회피 동작은 끝날 때까지 입력을 받지 않는다(공중에서 방향을 바꿀 수 없다).
         if ( _evade.isActive() && _evade.update( deltaTime ) == false )
             return _state;
+        if ( _bHeld == SW_FALSE )
+        {
+            _state = AdventureTargetingState::Free;
+            return _state;
+        }
         const bool bLocked               = _selector.hasTarget();
         const bool bBack                 = moveInput._y < -_settings._deadZone && MathUtil::abs( moveInput._y ) >= MathUtil::abs( moveInput._x );
         const bool bSide                 = MathUtil::abs( moveInput._x ) > _settings._deadZone && MathUtil::abs( moveInput._x ) > MathUtil::abs( moveInput._y );
@@ -142,7 +143,8 @@ namespace sw
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._evade ) && StateArchiveUtil::readCountdown( archive, restored._invulnerable );
         archive >> state;
         archive >> restored._bHeld;
-        const bool bValid = bTimerRead && archive.isOk() && state <= static_cast<uint8>( AdventureTargetingState::SideHopRight ) && restored._bHeld <= SW_TRUE;
+        const bool bPositionFinite = MathUtil::isFinite( restored._targetPosition._x ) && MathUtil::isFinite( restored._targetPosition._y ) && MathUtil::isFinite( restored._targetPosition._z );
+        const bool bValid          = bTimerRead && archive.isOk() && bPositionFinite && state <= static_cast<uint8>( AdventureTargetingState::SideHopRight ) && restored._bHeld <= SW_TRUE;
         if ( bValid == false )
             return false;
         restored._state = static_cast<AdventureTargetingState>( state );

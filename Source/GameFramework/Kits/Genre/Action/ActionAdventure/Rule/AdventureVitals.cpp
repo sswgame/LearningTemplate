@@ -19,7 +19,7 @@ namespace sw
         , _heartPieceCount{ 0 }
         , _bMagicUpgraded{ SW_FALSE }
     {
-        // 기본 설정은 선언된 범위 안이다(테스트 `AdventureVitalsRefusesOutOfRangeSettingsInsteadOfClamping` 이 지킨다).
+        // 기본 설정은 선언된 범위 안이다(테스트 `AdventureVitalsTest.RefusesOutOfRangeSettingsInsteadOfClamping` 이 지킨다).
         const bool bDefaultsAccepted = initialize( AdventureVitalsSettings{} );
         SW_ASSERT( bDefaultsAccepted );
         (void)bDefaultsAccepted;
@@ -208,6 +208,12 @@ namespace sw
             return false;
         const bool bBodyRead = restored._health.readState( archive ) && restored._magic.readState( archive ) && restored._stamina.readState( archive );
         if ( bBodyRead == false )
+            return false;
+        // 값은 하트 수와 그릇이 정한 최대를 넘지 못하고, 두 배 마법을 받지 않았으면 마법 보너스가 없다(기반 값들은 자기 최대를 보지 않는다).
+        const bool bConsistent = restored._health.getHealth() <= static_cast<float32>( restored.getMaxHealthQuarters() ) && restored._magic.getValue() <= restored._magic.getMax() &&
+                                 restored._stamina.getValue() <= restored._stamina.getMax() && 0.0f <= restored._magic.getMaxBonus() && 0.0f <= restored._stamina.getMaxBonus() &&
+                                 restored._stamina.getMaxBonus() <= _settings._staminaVesselMax + 0.001f && ( restored._bMagicUpgraded == SW_TRUE || restored._magic.getMaxBonus() <= 0.0f );
+        if ( bConsistent == false )
             return false;
         *this = std::move( restored );
         return true;

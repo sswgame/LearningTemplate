@@ -19,6 +19,21 @@ namespace sw
     {
         struct AdventureDungeonInternal
         {
+            /** @brief 정의 목록의 id 가 겹치면 그 id 를 돌려줍니다. 없으면 빈 이름입니다. */
+            template <typename TDef>
+            static hashed_string findDuplicateID( const vector<TDef>& listDef )
+            {
+                for ( size_t index = 1; index < listDef.size(); ++index )
+                {
+                    for ( size_t previous = 0; previous < index; ++previous )
+                    {
+                        if ( listDef[previous]._id == listDef[index]._id )
+                            return listDef[index]._id;
+                    }
+                }
+                return hashed_string{};
+            }
+
             static const hashed_string& getSmallKeyName()
             {
                 static const hashed_string name( "SmallKey" );
@@ -115,12 +130,23 @@ namespace sw
                 dungeon._listDevice.push_back( device );
             bValid = bDeviceValid && bValid;
         }
+        // 같은 id 의 문 · 상자 · 장치는 뒤의 것에 영영 닿지 못한다.
+        const hashed_string arrDuplicate[] = { AdventureDungeonInternal::findDuplicateID( dungeon._listDoor ), AdventureDungeonInternal::findDuplicateID( dungeon._listTreasure ),
+                                               AdventureDungeonInternal::findDuplicateID( dungeon._listDevice ) };
+        for ( const hashed_string& duplicate : arrDuplicate )
+        {
+            if ( duplicate.empty() == false )
+            {
+                SW_LOG_ERROR_ID( "AdventureDungeon.DuplicateId", "%#: <Dungeon id=\"%#\"> uses id '%#' twice", sourceName, dungeon._id.c_str(), duplicate.c_str() );
+                bValid = false;
+            }
+        }
         if ( bValid == false )
         {
             SW_LOG_ERROR_ID( "AdventureDungeon.DungeonIdErrorsNot", "%#: <Dungeon id=\"%#\"> has errors - not added", sourceName, dungeon._id.c_str() );
             return false;
         }
-        (void)add( dungeon ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        (void)add( dungeon ); // 같은 id 는 앞의 것을 바꾼다(`GameCatalog::add`)
         return true;
     }
 
@@ -133,16 +159,22 @@ namespace sw
 
     void AdventureDungeonState::initialize( const AdventureDungeonCatalog* pCatalog )
     {
-        _pCatalog = pCatalog;
-        _listRuntime.clear();
+        _pCatalog    = pCatalog;
+        _listRuntime = makeInitialRuntime();
         _eventBuffer.clear();
-        if ( pCatalog == nullptr )
-            return;
-        _listRuntime.resize( pCatalog->getAll().size() );
-        for ( size_t index = 0; index < _listRuntime.size(); ++index )
+    }
+
+    vector<AdventureDungeonState::DungeonRuntime> AdventureDungeonState::makeInitialRuntime() const
+    {
+        vector<DungeonRuntime> listRuntime;
+        if ( _pCatalog == nullptr )
+            return listRuntime;
+        listRuntime.resize( _pCatalog->getAll().size() );
+        for ( size_t index = 0; index < listRuntime.size(); ++index )
         {
-            _listRuntime[index]._listDevice.resize( pCatalog->getAll()[index]._listDevice.size() );
+            listRuntime[index]._listDevice.resize( _pCatalog->getAll()[index]._listDevice.size() );
         }
+        return listRuntime;
     }
 
     AdventureDungeonState::DungeonRuntime* AdventureDungeonState::findRuntime( const hashed_string& dungeonID, const AdventureDungeonDef** ppOutDef )
@@ -432,7 +464,7 @@ namespace sw
         if ( StateArchiveUtil::readCount( archive, 19, dungeonCount ) == false )
             return false;
         // 사본에 읽고 끝까지 맞으면 바꾼다. 저장되지 않은 던전은 `initialize` 직후의 새 상태로 남는다.
-        vector<DungeonRuntime> listRuntime = _listRuntime;
+        vector<DungeonRuntime> listRuntime = makeInitialRuntime();
         for ( uint32 entry = 0; entry < dungeonCount; ++entry )
         {
             hashed_string dungeonID;

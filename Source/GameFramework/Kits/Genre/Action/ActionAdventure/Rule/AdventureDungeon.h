@@ -135,8 +135,8 @@ namespace sw
     /**
      * @class AdventureDungeonCatalog
      * @brief 다음 형식의 XML 을 읽는 카탈로그입니다. `<AdventureDungeons><Dungeon id="forest" region="ForestTemple"><Door id="d1" kind="SmallKey" flag="forest.d1"/>
-     *        <Door id="crack" kind="Condition" requires="bombs>=1"/><Treasure id="c1" area="hall" item="SmallKey"/>
-     *        <Device id="eye" kind="Switch"/><Device id="torches" kind="TorchGroup" torches="2" duration="6"/></Dungeon></AdventureDungeons>`
+     *        <Door id="crack" kind="Condition" flag="forest.crack" requires="bombs>=1"/><Treasure id="c1" area="hall" item="SmallKey" flag="forest.c1"/>
+     *        <Device id="eye" kind="Switch" flag="forest.eye"/><Device id="torches" kind="TorchGroup" flag="forest.torches" torches="2" duration="6"/></Dungeon></AdventureDungeons>`
      */
     class SW_KIT_API AdventureDungeonCatalog : public GameCatalog<AdventureDungeonDef, XMLCatalog<AdventureDungeonCatalog>>
     {
@@ -269,10 +269,12 @@ namespace sw
             vector<DeviceRuntime>    _listDevice{};
         };
 
-        DungeonRuntime* findRuntime( const hashed_string& dungeonID, const AdventureDungeonDef** ppOutDef );
-        void            setDeviceActive( const AdventureDungeonDef& dungeon, int32 deviceIndex, bool bActive, GameFlags& flags );
-        void            pushEvent( AdventureDungeonEventType type, const hashed_string& dungeonID, const hashed_string& id, const hashed_string& item = hashed_string{},
-                                   int32 count = 0 );
+        /** @brief 카탈로그의 던전마다 아직 아무 일도 없었던 상태입니다. */
+        vector<DungeonRuntime> makeInitialRuntime() const;
+        DungeonRuntime*        findRuntime( const hashed_string& dungeonID, const AdventureDungeonDef** ppOutDef );
+        void                   setDeviceActive( const AdventureDungeonDef& dungeon, int32 deviceIndex, bool bActive, GameFlags& flags );
+        void                   pushEvent( AdventureDungeonEventType type, const hashed_string& dungeonID, const hashed_string& id, const hashed_string& item = hashed_string{},
+                                          int32 count = 0 );
 
     private:
         const AdventureDungeonCatalog*     _pCatalog;

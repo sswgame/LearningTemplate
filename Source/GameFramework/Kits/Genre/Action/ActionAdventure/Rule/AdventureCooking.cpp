@@ -50,7 +50,7 @@ namespace sw
         {
             AdventureCookEffectDef effect;
             if ( XMLFields::readFields( node, effect, sourceName ) )
-                (void)_effectCatalog.add( effect ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+                (void)_effectCatalog.add( effect ); // 같은 id 는 앞의 것을 바꾼다(`GameCatalog::add`)
         }
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild( "Ingredient" ); node; node = node.findNextSibling( "Ingredient" ) )

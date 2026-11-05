@@ -38,6 +38,13 @@ namespace sw
                 bValid = false;
                 continue;
             }
+            // `loadRoot` 가 먼저 비웠으니 이미 있으면 같은 글 안의 겹침이다. 받으면 뒤의 종류가 앞을 덮어(사당이 탑을) 그 표지가 말없이 사라진다.
+            if ( _catalog.find( landmark._id ) != nullptr )
+            {
+                SW_LOG_ERROR_ID( "AdventureWorldMap.DuplicateLandmark", "%#: landmark id '%#' is used twice", sourceName, landmark._id.c_str() );
+                bValid = false;
+                continue;
+            }
             (void)_catalog.add( landmark );
             ++inoutCount;
         }

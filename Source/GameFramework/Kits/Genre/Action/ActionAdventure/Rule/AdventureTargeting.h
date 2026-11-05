@@ -65,7 +65,7 @@ namespace sw
 
         /** @brief 주목 버튼을 눌렀을 때 호출합니다. 대상을 잡았으면 true 를 반환하고, 못 잡았으면 평행 주목이 됩니다. */
         bool press( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate );
-        /** @brief 주목 버튼을 뗐을 때 호출합니다. */
+        /** @brief 주목 버튼을 뗐을 때 호출합니다. 대상을 놓습니다. 회피 중이면 회피와 무적은 끝까지 가고, 그 뒤 `Free` 가 됩니다. */
         void release();
         /** @brief 잡은 채로 다음 대상으로 넘깁니다(@p direction 이 1이면 오른쪽, −1이면 왼쪽). */
         uint64 cycleTarget( const float3& eye, const float3& forward, const vector<LockOnCandidate>& listCandidate, int32 direction );
