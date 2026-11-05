@@ -225,9 +225,9 @@ namespace sw
      *     <AIDirector startPhase="BuildUp">
      *       <Calendar weathers="sunny,rain"/>                                         <!-- 조건 이름 검사(선택) -->
      *       <Intensity max="1" decayPerSecond="0.08" decayDelay="4">
-     *         <Signal id="damageTaken" kind="impulse" scale="0.02" combat="true"/>
-     *         <Signal id="enemiesNearby" kind="rate" scale="0.01" max="0.06"/>
-     *         <Signal id="lowResources" kind="level" scale="0.3"/>
+     *         <Signal id="damageTaken" kind="Impulse" scale="0.02" combat="true"/>
+     *         <Signal id="enemiesNearby" kind="Rate" scale="0.01" max="0.06"/>
+     *         <Signal id="lowResources" kind="Level" scale="0.3"/>
      *       </Intensity>
      *       <Phase id="BuildUp" spawnScale="1" spawnTags="Common">
      *         <Curve time="0" scale="0.5"/><Curve time="40" scale="1.5"/>
@@ -235,13 +235,13 @@ namespace sw
      *       </Phase>
      *       <Phase id="Peak" spawnScale="2"><Exit to="Relax" minTime="5"/></Phase>
      *       <Phase id="Relax" spawnScale="0" rewardScale="2"><Exit to="BuildUp" intensityBelow="0.25" calmFor="5" minTime="15"/></Phase>
-     *       <Pool id="horde" kind="encounter" trigger="phaseEnter" phase="Peak">
+     *       <Pool id="horde" kind="Encounter" trigger="PhaseEnter" phase="Peak">
      *         <Encounter id="swarm" weight="3" count="6"/><Encounter id="elite" weight="1" cooldown="120" minCycle="2"/>
      *       </Pool>
-     *       <Pool id="ambient" trigger="interval" interval="20" chance="0.5" pacing="BuildUp,Relax">
+     *       <Pool id="ambient" trigger="Interval" interval="20" chance="0.5" pacing="BuildUp,Relax">
      *         <Encounter id="ambush" areas="Forest" phases="Night" tags="Player.Mounted" notTags="Player.Hidden"/>
      *       </Pool>
-     *       <Pool id="supplies" kind="reward" trigger="budget" perMinute="2" maxBudget="4" need="lowResources" needScale="2">
+     *       <Pool id="supplies" kind="Reward" trigger="Budget" perMinute="2" maxBudget="4" need="lowResources" needScale="2">
      *         <Encounter id="ammo" cost="1" weight="3"/><Encounter id="medkit" cost="2" maxIntensity="0.5"/>
      *       </Pool>
      *     </AIDirector>

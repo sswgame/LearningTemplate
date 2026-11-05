@@ -165,7 +165,9 @@ namespace sw
         {
             archive >> value;
         }
-        if ( archive.isError() )
+        // 스트레스는 0 ~ max, 평온 시간은 음수가 아니다 - 쓰는 쪽은 이 범위만 쓴다.
+        const float32 maxStress = _pDef != nullptr ? _pDef->_max : 0.0f;
+        if ( archive.isError() || stress < 0.0f || stress > maxStress || calmSeconds < 0.0f )
             return false;
         _stress          = stress;
         _calmSeconds     = calmSeconds;

@@ -634,7 +634,8 @@ namespace sw
             return false;
         const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         const bool                       bShape   = phaseCount == static_cast<int32>( _pProfile->getPhases().size() ) && 0 <= phaseIndex && phaseIndex < phaseCount && poolCount == listPool.size();
-        if ( bShape == false )
+        const bool                       bClock   = time >= 0.0f && phaseTime >= 0.0f && intensity >= 0.0f && cycle >= 0;
+        if ( bShape == false || bClock == false )
             return false;
         vector<PoolState> listPoolState( poolCount );
         for ( size_t poolIndex = 0; poolIndex < listPoolState.size(); ++poolIndex )
@@ -652,7 +653,13 @@ namespace sw
             {
                 archive >> encounter._lastTime;
                 archive >> encounter._count;
+                if ( encounter._count < 0 )
+                    return false;
             }
+            const bool bPoolValid = state._timer >= 0.0f && state._budget >= 0.0f && state._budget <= listPool[poolIndex]._maxBudget && state._pendingIndex >= -1 &&
+                                    state._pendingIndex < static_cast<int32>( encounterCount );
+            if ( bPoolValid == false )
+                return false;
         }
         // 긴장도 모델 · 스폰 감독은 사본에 읽어 둘 다 맞을 때 바꾼다 — 반쯤 읽은 상태를 남기지 않는다.
         // 태그 거르기는 단계가 정한다(싣지 않았다) — 읽기 전에 걸어야 실린 골라 둔 것을 그대로 받는다(뒤에 걸면 상한에 걸린 것을 비워 원본과 갈린다).
