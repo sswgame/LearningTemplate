@@ -48,48 +48,28 @@ namespace sw
         uint32 loadedCount = 0;
         for ( XMLNode questNode = root.findChild( "Quest" ); questNode; questNode = questNode.findNextSibling( "Quest" ) )
         {
-            const utf8* pID = XMLReadUtil::findRequiredID( questNode, sourceName );
-            if ( pID == nullptr )
+            // 기본값 · 범위는 스키마가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readFields 가 남긴다).
+            QuestDef quest;
+            bool     bValid = XMLFields::readFields( questNode, quest, sourceName );
+            if ( quest._id.empty() )
                 continue;
-            // 기본값 · 범위는 스키마(Quest*RowDef)가 정한다. 칸 하나라도 오류면 그 퀘스트를 넣지 않는다(오류는 readFields 가 남긴다).
-            QuestRowDef questRow;
-            bool        bValid = XMLFields::readFields( questNode, questRow, sourceName, { "id", "name", "requires" } );
-            QuestDef    quest;
-            quest._id            = hashed_string( pID );
-            const utf8* pName    = questNode.findAttribute( "name" );
-            quest._name          = pName != nullptr ? pName : pID;
-            quest._requiredLevel = questRow._level;
-            quest._bRepeatable   = questRow._bRepeatable ? SW_TRUE : SW_FALSE;
-            StringUtil::forEachToken( questNode.getAttributeText( "requires" ), ", ", [&]( string_view token )
-            { quest._listRequiredQuest.push_back( hashed_string( token ) ); } );
+            const utf8* const pID = quest._id.c_str();
+            if ( quest._name.empty() )
+                quest._name = pID;
             for ( XMLNode stageNode = questNode.findChild( "Stage" ); stageNode; stageNode = stageNode.findNextSibling( "Stage" ) )
             {
-                QuestStageRowDef stageRow;
-                bValid = XMLFields::readFields( stageNode, stageRow, sourceName, { "id", "next" } ) && bValid;
                 QuestStage stage;
-                bValid           = XMLReadUtil::readRequiredName( stageNode, "id", sourceName, stage._id ) && bValid;
-                stage._nextStage = XMLReadUtil::readOptionalName( stageNode, "next" ); // 마지막 단계는 다음이 없다
-                stage._text      = stageRow._text;
-                stage._timeLimit = stageRow._time;
-                stage._bComplete = stageRow._bComplete ? SW_TRUE : SW_FALSE;
-                stage._bFail     = stageRow._bFail ? SW_TRUE : SW_FALSE;
+                bValid = XMLFields::readFields( stageNode, stage, sourceName ) && bValid;
                 for ( XMLNode node = stageNode.findChild( "Objective" ); node; node = node.findNextSibling( "Objective" ) )
                 {
-                    QuestObjectiveRowDef objectiveRow;
-                    bValid = XMLFields::readFields( node, objectiveRow, sourceName, { "kind", "target" } ) && bValid;
                     QuestObjective objective;
-                    bValid               = XMLReadUtil::readRequiredName( node, "kind", sourceName, objective._kind ) && bValid;
-                    bValid               = XMLReadUtil::readRequiredName( node, "target", sourceName, objective._target ) && bValid;
-                    objective._text      = objectiveRow._text;
-                    objective._count     = objectiveRow._count;
-                    objective._bOptional = objectiveRow._bOptional ? SW_TRUE : SW_FALSE;
+                    bValid = XMLFields::readFields( node, objective, sourceName ) && bValid;
                     stage._listObjective.push_back( objective );
                 }
                 for ( XMLNode node = stageNode.findChild( "Branch" ); node; node = node.findNextSibling( "Branch" ) )
                 {
                     QuestBranch branch;
-                    bValid = XMLReadUtil::readRequiredName( node, "choice", sourceName, branch._choice ) && bValid;
-                    bValid = XMLReadUtil::readRequiredName( node, "next", sourceName, branch._nextStage ) && bValid;
+                    bValid = XMLFields::readFields( node, branch, sourceName ) && bValid;
                     stage._listBranch.push_back( branch );
                 }
                 bValid = readQuestReward( stageNode, sourceName, stage._reward ) && bValid;

@@ -24,60 +24,6 @@ namespace sw
 
 namespace sw
 {
-    /**
-     * @brief `<Quest>` 속성 중 기본값이 있는 필드의 스키마입니다(`XMLFields::readFields`). 속성 이름은 필드 이름에서 `_` 를 뺀 것입니다.
-     * @details `id`, `name`, `requires` 는 읽는 코드가 따로 읽는다(이름과 이름 목록). 적지 않은 필드는 여기 초기값입니다.
-     */
-    REFLECT()
-    struct QuestRowDef
-    {
-        REFLECT_BODY();
-
-        PROPERTY()
-        int32 _level{ 0 }; ///< 받을 수 있는 최소 레벨
-        PROPERTY()
-        bool _bRepeatable{ false };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief `<Stage>` 속성 중 기본값이 있는 필드의 스키마입니다(`id` 와 `next` 는 이름으로 따로 읽는다). 범위 밖 값은 로드 오류입니다. */
-    REFLECT()
-    struct QuestStageRowDef
-    {
-        REFLECT_BODY();
-
-        PROPERTY()
-        string _text{};
-        PROPERTY( Min = 0, Units = s )
-        float32 _time{ 0.0f }; ///< 0 이면 제한이 없다
-        PROPERTY()
-        bool _bComplete{ false };
-        PROPERTY()
-        bool _bFail{ false };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief `<Objective>` 속성 중 기본값이 있는 필드의 스키마입니다(`kind` 와 `target` 은 이름으로 따로 읽는다). */
-    REFLECT()
-    struct QuestObjectiveRowDef
-    {
-        REFLECT_BODY();
-
-        PROPERTY()
-        string _text{};
-        PROPERTY( Min = 1 )
-        int32 _count{ 1 };
-        PROPERTY()
-        bool _bOptional{ false };
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 보상의 `<Item>` 속성 스키마입니다. */
     REFLECT()
     struct QuestRewardItemRowDef
@@ -94,22 +40,35 @@ namespace sw
 namespace sw
 {
     /** @brief 목표 하나입니다. "무엇을(종류) 누구에게(대상) 몇 번" 하는지 담습니다. 종류와 대상은 문자열이므로 게임이 정합니다("Kill", "Collect", "Talk", "Reach"). */
+    REFLECT()
     struct QuestObjective
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _kind{};
+        PROPERTY( Required )
         hashed_string _target{};
-        string        _text{};
-        int32         _count{ 1 };
-        uint8         _bOptional{ SW_FALSE }; ///< 끝내지 않아도 단계가 넘어간다. 보너스 보상이나 다른 결말의 조건에 쓴다
+        PROPERTY()
+        string _text{};
+        PROPERTY( Min = 1 )
+        int32 _count{ 1 };
+        PROPERTY()
+        bool _bOptional{ false }; ///< 끝내지 않아도 단계가 넘어간다. 보너스 보상이나 다른 결말의 조건에 쓴다
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 선택지 하나입니다. 고르면 그 단계로 넘어갑니다. */
+    REFLECT()
     struct QuestBranch
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _choice{};
+        PROPERTY( Required, Name = "next" )
         hashed_string _nextStage{};
     };
 } // namespace sw
@@ -127,31 +86,48 @@ namespace sw
 namespace sw
 {
     /** @brief 단계 하나입니다. */
+    REFLECT()
     struct QuestStage
     {
-        hashed_string          _id{};
-        hashed_string          _nextStage{}; ///< 목표를 다 하면 넘어갈 단계. 비어 있으면 완료나 실패 단계이거나 선택지 단계이다
-        string                 _text{};      ///< 일지에 표시할 텍스트
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY( Name = "next" )
+        hashed_string _nextStage{}; ///< 목표를 다 하면 넘어갈 단계. 비어 있으면 완료나 실패 단계이거나 선택지 단계이다
+        PROPERTY()
+        string                 _text{}; ///< 일지에 표시할 텍스트
         vector<QuestObjective> _listObjective{};
-        vector<QuestBranch>    _listBranch{};      ///< 있으면 목표를 다 한 뒤 선택을 기다린다
-        QuestReward            _reward{};          ///< 이 단계에 들어설 때 준다. 완료 단계이면 퀘스트 보상이다
-        float32                _timeLimit{ 0.0f }; ///< 초 단위이며, 넘으면 실패한다. 0 이면 제한이 없다
-        uint8                  _bComplete{ SW_FALSE };
-        uint8                  _bFail{ SW_FALSE };
+        vector<QuestBranch>    _listBranch{}; ///< 있으면 목표를 다 한 뒤 선택을 기다린다
+        QuestReward            _reward{};     ///< 이 단계에 들어설 때 준다. 완료 단계이면 퀘스트 보상이다
+        PROPERTY( Name = "time", Min = 0, Units = s )
+        float32 _timeLimit{ 0.0f }; ///< 초 단위이며, 넘으면 실패한다. 0 이면 제한이 없다
+        PROPERTY()
+        bool _bComplete{ false };
+        PROPERTY()
+        bool _bFail{ false };
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 퀘스트 하나입니다. 첫 단계에서 시작합니다. */
+    REFLECT()
     struct SW_GF_API QuestDef
     {
-        hashed_string         _id{};
-        string                _name{};
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _id{};
+        PROPERTY()
+        string _name{}; ///< 적지 않으면 id
+        PROPERTY( Name = "requires" )
         vector<hashed_string> _listRequiredQuest{}; ///< 끝낸(완료한) 퀘스트
         vector<QuestStage>    _listStage{};
-        int32                 _requiredLevel{ 0 };
-        uint8                 _bRepeatable{ SW_FALSE };
+        PROPERTY( Name = "level" )
+        int32 _requiredLevel{ 0 }; ///< 받을 수 있는 최소 레벨
+        PROPERTY()
+        bool _bRepeatable{ false };
 
         const QuestStage* findStage( const hashed_string& stageID ) const;
     };

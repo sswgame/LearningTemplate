@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include <algorithm>
@@ -25,21 +26,14 @@ namespace sw
     {
         // 적지 않은 칸은 TimingWindow 의 초기값이다. `width` 는 앞뒤 폭을 함께 정하고, `early` · `late` 가 각자 덮는다.
         // 깨진 값 · 음수 폭은 오류이고 창 표를 바꾸지 않는다(자르지 않는다).
-        constexpr float32    kAnyFloat = MathUtil::kMaxFloat;
-        bool                 bValid    = true;
+        bool                 bValid = true;
         vector<TimingWindow> listWindow;
         for ( XMLNode child = node.findChild( "Window" ); child; child = child.findNextSibling( "Window" ) )
         {
             TimingWindow window;
-            bValid             = XMLReadUtil::readRequiredName( child, "grade", sourceName, window._grade ) && bValid;
-            float32 width      = window._earlyWidth;
-            bValid             = XMLReadUtil::readOptionalNumber( child, "width", sourceName, 0.0f, kAnyFloat, width ) && bValid;
-            window._earlyWidth = width;
-            window._lateWidth  = width;
-            bValid             = XMLReadUtil::readOptionalNumber( child, "early", sourceName, 0.0f, kAnyFloat, window._earlyWidth ) && bValid;
-            bValid             = XMLReadUtil::readOptionalNumber( child, "late", sourceName, 0.0f, kAnyFloat, window._lateWidth ) && bValid;
-            bValid             = XMLReadUtil::readOptionalNumber( child, "score", sourceName, MathUtil::kMinInt32, MathUtil::kMaxInt32, window._score ) && bValid;
-            bValid             = XMLReadUtil::readOptionalFlag( child, "breaksCombo", window._bBreaksCombo ) && bValid;
+            bValid            = XMLReadUtil::readOptionalNumber( child, "width", sourceName, 0.0f, MathUtil::kMaxFloat, window._earlyWidth ) && bValid;
+            window._lateWidth = window._earlyWidth;
+            bValid            = XMLFields::readFields( child, window, sourceName, { "width" } ) && bValid;
             listWindow.push_back( window );
         }
         if ( bValid )

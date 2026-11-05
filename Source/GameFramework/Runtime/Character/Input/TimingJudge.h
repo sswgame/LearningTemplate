@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 
 namespace sw
@@ -16,13 +18,21 @@ namespace sw
     class XMLNode;
 
     /** @brief 판정 창 하나입니다. */
+    REFLECT()
     struct TimingWindow
     {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
         hashed_string _grade{};
-        float32       _earlyWidth{ 0.05f }; ///< 목표보다 이만큼 이르게까지(초)
-        float32       _lateWidth{ 0.05f };  ///< 늦게까지
-        int32         _score{ 0 };
-        uint8         _bBreaksCombo{ SW_FALSE };
+        PROPERTY( Name = "early", Min = 0, Units = s )
+        float32 _earlyWidth{ 0.05f }; ///< 목표보다 이만큼 이르게까지(초)
+        PROPERTY( Name = "late", Min = 0, Units = s )
+        float32 _lateWidth{ 0.05f }; ///< 늦게까지
+        PROPERTY()
+        int32 _score{ 0 };
+        PROPERTY()
+        bool _bBreaksCombo{ false };
     };
 } // namespace sw
 

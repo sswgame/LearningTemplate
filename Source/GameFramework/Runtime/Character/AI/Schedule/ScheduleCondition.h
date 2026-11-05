@@ -13,6 +13,8 @@
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
@@ -79,10 +81,16 @@ namespace sw
 namespace sw
 {
     /** @brief 조건이 쓰는 이름의 목록입니다. 목록이 비면 그 종류의 이름은 검사하지 않습니다(아무 이름이나 받는다). */
+    REFLECT()
     struct ScheduleConditionVocabulary
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "days" )
         vector<hashed_string> _listWeekday{};
+        PROPERTY( Name = "seasons" )
         vector<hashed_string> _listSeason{};
+        PROPERTY( Name = "weathers" )
         vector<hashed_string> _listWeather{};
     };
 } // namespace sw

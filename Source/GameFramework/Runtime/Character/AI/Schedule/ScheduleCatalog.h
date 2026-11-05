@@ -90,18 +90,28 @@ namespace sw
 namespace sw
 {
     /** @brief 일정 블록 하나입니다. 그 시간에 할 활동을 담습니다. */
+    REFLECT()
     struct ScheduleBlockDef
     {
+        REFLECT_BODY();
+
         ScheduleCondition _condition{};
-        hashed_string     _activity{};
-        hashed_string     _place{};
-        hashed_string     _objectKind{};  ///< `UseObject` 가 쓰는 스마트 오브젝트 종류
-        hashed_string     _appointment{}; ///< `Meet` 가 쓰는 약속. 시간과 장소는 약속의 것을 쓴다
-        hashed_string     _animation{};   ///< 비면 활동 종류의 기본 애니메이션
-        int32             _startMinute{ 0 };
-        int32             _endMinute{ 0 };
-        int32             _wanderMinutes{ 20 }; ///< `Wander` 가 한 위치에 머무는 분
-        float32           _radius{ -1.0f };     ///< `Wander` 의 범위. 음수면 장소의 반지름
+        PROPERTY()
+        hashed_string _activity{};
+        PROPERTY()
+        hashed_string _place{};
+        PROPERTY()
+        hashed_string _objectKind{}; ///< `UseObject` 가 쓰는 스마트 오브젝트 종류
+        PROPERTY()
+        hashed_string _appointment{}; ///< `Meet` 가 쓰는 약속. 시간과 장소는 약속의 것을 쓴다
+        PROPERTY()
+        hashed_string _animation{}; ///< 비면 활동 종류의 기본 애니메이션
+        int32         _startMinute{ 0 };
+        int32         _endMinute{ 0 };
+        PROPERTY( Name = "every", Min = 1 )
+        int32 _wanderMinutes{ 20 }; ///< `Wander` 가 한 위치에 머무는 분
+        PROPERTY()
+        float32 _radius{ -1.0f }; ///< `Wander` 의 범위. 음수면 장소의 반지름
     };
 } // namespace sw
 

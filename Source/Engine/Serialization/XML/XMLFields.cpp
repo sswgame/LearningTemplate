@@ -110,7 +110,7 @@ namespace sw
             // 이름 목록 칸(`vector<hashed_string>`)은 속성 하나에 낱말을 잇는다(`days="Mon, Tue"`) — 데이터가 쓰는 구분자를 모두 받는다.
             if ( Internal::isNameList( *pFound ) )
             {
-                XMLReadUtil::appendNameList( pValue, ",;| \t", *static_cast<vector<hashed_string>*>( pFound->getRawPtr( pInstance ) ) );
+                XMLReadUtil::parseNameList( pValue, ",;| \t", *static_cast<vector<hashed_string>*>( pFound->getRawPtr( pInstance ) ) );
                 continue;
             }
             if ( SerializerUtil::applyPropertyText( *pFound, MutableObjectAddress{ pInstance }, pValue, context ) == false )

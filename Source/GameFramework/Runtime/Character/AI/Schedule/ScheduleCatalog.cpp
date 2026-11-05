@@ -9,7 +9,6 @@
 #include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleActivity.h"
@@ -20,8 +19,6 @@ namespace sw
     {
         struct ScheduleCatalogInternal
         {
-            static constexpr const utf8* kArrCalendarAttribute[] = { "days", "seasons", "weathers" };
-            static constexpr const utf8* kArrBlockAttribute[]    = { "start", "end", "activity", "place", "objectKind", "appointment", "animation", "radius", "every", "overnight" };
             /** @brief 원소를 읽는 바퀴입니다 — 가리켜지는 것을 먼저 읽어 파일 안 순서와 상관없이 이름을 검사한다. */
             struct ElementPass
             {
@@ -52,13 +49,6 @@ namespace sw
             }
 
             /** @brief 표에 없는 속성마다 경고합니다. @p bCondition 이면 조건 속성도 받습니다. */
-            template <size_t Count>
-            static void warnUnknownAttributes( const XMLNode& node, const utf8* const ( &arrKnown )[Count], bool bCondition, string_view sourceName )
-            {
-                (void)XMLNameCheck::reportUnknownAttributes( node, arrKnown, sourceName, LogLevel::Warning, // 경고만 하고 읽기를 잇는다
-                                                             bCondition ? &ScheduleCondition::isConditionAttribute : nullptr );
-            }
-
             /** @brief 시각 속성을 분으로 읽는다. 속성이 없거나 깨졌으면(깨진 경우 @p inoutbValid 를 내린다) 값이 없다. 없을 때의 값은 호출부가 정한다. */
             [[nodiscard]] static std::optional<int32> readClock( const XMLNode& node, const utf8* pName, string_view sourceName, string_view ownerName, bool& inoutbValid )
             {
@@ -219,11 +209,7 @@ namespace sw
 
     void ScheduleCatalog::loadCalendar( const XMLNode& node, string_view sourceName )
     {
-        using Internal = ScheduleCatalogInternal;
-        Internal::warnUnknownAttributes( node, Internal::kArrCalendarAttribute, false, sourceName );
-        ScheduleCondition::parseNameList( node.getAttributeText( "days" ), _vocabulary._listWeekday );
-        ScheduleCondition::parseNameList( node.getAttributeText( "seasons" ), _vocabulary._listSeason );
-        ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), _vocabulary._listWeather );
+        (void)XMLFields::readFields( node, _vocabulary, sourceName );
     }
 
     void ScheduleCatalog::loadPlace( const XMLNode& node, string_view sourceName, const utf8* pID )
@@ -400,17 +386,11 @@ namespace sw
     {
         using Internal   = ScheduleCatalogInternal;
         outTailEndMinute = -1;
-        Internal::warnUnknownAttributes( node, Internal::kArrBlockAttribute, true, sourceName );
-        outBlock._activity    = hashed_string( node.getAttributeText( "activity" ) );
-        outBlock._place       = hashed_string( node.getAttributeText( "place" ) );
-        outBlock._objectKind  = hashed_string( node.getAttributeText( "objectKind" ) );
-        outBlock._appointment = hashed_string( node.getAttributeText( "appointment" ) );
-        outBlock._animation   = hashed_string( node.getAttributeText( "animation" ) );
-        bool bFieldsValid     = XMLReadUtil::readOptionalNumber( node, "radius", sourceName, -MathUtil::kMaxFloat, MathUtil::kMaxFloat, outBlock._radius );
-        bFieldsValid          = XMLReadUtil::readOptionalNumber( node, "every", sourceName, 1, MathUtil::kMaxInt32, outBlock._wanderMinutes ) && bFieldsValid;
-        bFieldsValid          = outBlock._condition.readFromNode( node, _vocabulary, sourceName, ownerName ) && bFieldsValid;
-        bool bOvernight       = false;
-        bFieldsValid          = XMLReadUtil::readOptionalBool( node, "overnight", bOvernight ) && bFieldsValid;
+        // 시각은 시계 표기이고 자정 넘김은 칸이 아니라 시각을 고치는 표시다.
+        bool bFieldsValid = XMLFields::readFields( node, outBlock, sourceName, { "start", "end", "overnight" }, &ScheduleCondition::isConditionAttribute );
+        bFieldsValid      = outBlock._condition.readFromNode( node, _vocabulary, sourceName, ownerName ) && bFieldsValid;
+        bool bOvernight   = false;
+        bFieldsValid      = XMLReadUtil::readOptionalBool( node, "overnight", bOvernight ) && bFieldsValid;
         if ( bFieldsValid == false )
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.BlockInvalidFieldsSkipped", "%#: '%#' has a block with invalid fields - skipped", sourceName, ownerName );
