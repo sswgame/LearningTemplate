@@ -20,7 +20,7 @@
 	<Expect watch="Object.Y" target="Player" atMost="1.74"/>
 	<!-- 같은 액션의 패드 바인딩(A)은 그대로다. -->
 	<Wait frames="2"/>
-	<Action name="Jump" device="gamepad"/>
+	<Action name="Jump" device="Gamepad"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
 	<Wait frames="10"/>
 	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1"/>

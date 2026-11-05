@@ -119,6 +119,75 @@ namespace sw
         string _backend{};
     };
 
+    /** @brief 액션 단계가 고를 입력 장치입니다. `Any` 면 입력 맵의 첫 바인딩입니다. */
+    ENUM()
+    enum class AutomationActionDevice : uint8
+    {
+        Any,
+        Keyboard,
+        Mouse,
+        Gamepad,
+    };
+
+    /** @brief `ActionPress` · `ActionRelease` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationActionButtonFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY()
+        AutomationActionDevice _device{ AutomationActionDevice::Any };
+    };
+
+    /** @brief 초 칸의 "적지 않음" 입니다 — `PROPERTY( Min = 0 )` 는 적힌 값만 보므로 음수 초기값이 곧 적지 않음입니다. */
+    inline constexpr float32 kAutomationNoSeconds = -1.0f;
+    /** @brief 프레임 칸의 "적지 않음" 입니다. */
+    inline constexpr uint32 kAutomationNoFrames = 0xFFFFFFFFu;
+
+    /** @brief `Action` 의 인자입니다. 누르는 길이와 간격은 프레임 또는 초 둘 중 하나로 적습니다. */
+    REFLECT()
+    struct SW_API AutomationActionFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY()
+        uint32 _hold{ kAutomationNoFrames };
+        PROPERTY( Min = 0 )
+        float32 _seconds{ kAutomationNoSeconds };
+        PROPERTY()
+        uint32 _count{ 1 };
+        PROPERTY()
+        uint32 _interval{ kAutomationNoFrames };
+        PROPERTY( Min = 0 )
+        float32 _intervalSeconds{ kAutomationNoSeconds };
+        PROPERTY()
+        AutomationActionDevice _device{ AutomationActionDevice::Any };
+    };
+
+    /** @brief `ActionAxis` 의 인자입니다. 길이는 프레임 또는 초 둘 중 하나로 적습니다. */
+    REFLECT()
+    struct SW_API AutomationActionAxisFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY()
+        float32 _x{ 0.0f };
+        PROPERTY()
+        float32 _y{ 0.0f };
+        PROPERTY()
+        uint32 _frames{ kAutomationNoFrames };
+        PROPERTY( Min = 0 )
+        float32 _seconds{ kAutomationNoSeconds };
+        PROPERTY()
+        AutomationActionDevice _device{ AutomationActionDevice::Any };
+    };
+
     /** @brief 인자가 없는 단계의 스키마입니다 — 적힌 속성은 모두 오타입니다. */
     REFLECT()
     struct SW_API AutomationNoFields

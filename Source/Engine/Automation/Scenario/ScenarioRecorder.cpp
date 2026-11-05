@@ -80,11 +80,11 @@ namespace sw
                 switch ( kind )
                 {
                     case InputDeviceKind::Keyboard:
-                        return "keyboard";
+                        return "Keyboard";
                     case InputDeviceKind::Mouse:
-                        return "mouse";
+                        return "Mouse";
                     case InputDeviceKind::Gamepad:
-                        return "gamepad";
+                        return "Gamepad";
                     default:
                         return nullptr;
                 }
@@ -126,7 +126,7 @@ namespace sw
             }
 
             /**
-             * @brief 패드 @p pad 의 스틱 @p stick 이 어떤 액션의, `ActionAxis device="gamepad"` 가 고를 바인딩(그 액션의 첫 패드 축 바인딩)이면 그 액션 이름입니다. 없으면 nullptr 입니다.
+             * @brief 패드 @p pad 의 스틱 @p stick 이 어떤 액션의, `ActionAxis device="Gamepad"` 가 고를 바인딩(그 액션의 첫 패드 축 바인딩)이면 그 액션 이름입니다. 없으면 nullptr 입니다.
              * @details 재생은 그 바인딩의 스틱 두 축에 값을 낸다 — 같은 패드 · 같은 스틱의 2D 바인딩일 때만 같은 입력이 재현된다(한 성분 바인딩은 x 를 그 성분에 낸다).
              */
             [[nodiscard]] static const hashed_string* findActionOfStick( const InputMap& inputMap, uint8 pad, uint8 stick )
@@ -197,7 +197,7 @@ namespace sw
                 writeFloatAttribute( writer, "x", inoutTrack._arrValue[0] );
                 writeFloatAttribute( writer, "y", inoutTrack._arrValue[1] );
                 writer.attributeInt( "frames", endFrame > inoutTrack._runStart ? endFrame - inoutTrack._runStart : 1u );
-                writer.attribute( "device", "gamepad" );
+                writer.attribute( "device", "Gamepad" );
                 writer.endElement();
                 ++outResult._writtenStepCount;
             }

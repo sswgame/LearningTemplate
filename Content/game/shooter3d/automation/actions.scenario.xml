@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Shooter3D 액션 단계 — "점프하고 앞으로 달린다" 를 입력 맵 액션 이름(Jump · Move · Weapon2 · Weapon3)으로 낸다. 키보드 바인딩(Space · WASD)이 기본이고,
-  두 번째 점프는 패드 바인딩(A)으로 낸다(device="gamepad" — 가상 패드를 연결하고 같은 액션을 낸다). 플레이어는 (0, 1.6, -16) 에서 시작하며 눈 높이(몸의 Eyes 소켓)가 1.69 m 이다.
+  두 번째 점프는 패드 바인딩(A)으로 낸다(device="Gamepad" — 가상 패드를 연결하고 같은 액션을 낸다). 플레이어는 (0, 1.6, -16) 에서 시작하며 눈 높이(몸의 Eyes 소켓)가 1.69 m 이다.
   실행: App -scenario=game/shooter3d/automation/actions.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
 <Scenario name="game.shooter3d.actions" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
@@ -21,7 +21,7 @@
 	<WaitUntil watch="Object.Y" target="Player" atMost="1.70" timeoutSeconds="1"/>
 	<!-- 패드 A 로 다시 점프 — 같은 액션의 다른 바인딩. -->
 	<Wait frames="10"/>
-	<Action name="Jump" device="gamepad"/>
+	<Action name="Jump" device="Gamepad"/>
 	<WaitUntil watch="Object.Y" target="Player" atLeast="1.9" timeoutSeconds="0.1"/>
 	<!-- 무기: 숫자 바인딩 액션으로 산탄총 → 권총. -->
 	<Action name="Weapon2"/>

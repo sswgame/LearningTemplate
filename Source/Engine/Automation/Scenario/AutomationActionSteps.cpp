@@ -12,12 +12,14 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepFields.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
+#include "Engine/Reflection/EnumName.h"
 
 namespace sw
 {
@@ -31,9 +33,6 @@ namespace sw
 
             /** @brief 누르는 길이 · 축 값을 내는 길이를 적지 않았을 때의 프레임 수입니다. */
             static constexpr uint32 kDefaultHoldFrames = 1;
-            /** @brief 누르는 횟수를 적지 않았을 때입니다. */
-            static constexpr uint32 kDefaultPressCount = 1;
-
             /** @brief `device` 속성이 고른 장치입니다. 없으면 아무 장치나 받습니다. */
             struct DeviceFilter
             {
@@ -41,146 +40,54 @@ namespace sw
                 InputDeviceKind _kind{ InputDeviceKind::Keyboard }; ///< `_bAny` 가 거짓일 때 고른 장치
             };
 
-            /** @brief `Action` 단계의 인자입니다. 검사와 실행이 같은 `parseAction` 으로 만든다. */
-            struct ActionArgs
+            /** @brief 스키마의 장치를 입력 장치 고르기로 바꿉니다. */
+            static DeviceFilter makeDeviceFilter( AutomationActionDevice device )
             {
-                uint32       _holdFrames{ kDefaultHoldFrames };
-                uint32       _count{ kDefaultPressCount };
-                uint32       _intervalFrames{ 0 }; ///< 적지 않으면 누르는 길이 + 1(떼고 한 프레임 뒤 다시 누른다)
-                DeviceFilter _device{};
-            };
+                DeviceFilter filter{};
+                filter._bAny = device == AutomationActionDevice::Any;
+                if ( device == AutomationActionDevice::Keyboard )
+                    filter._kind = InputDeviceKind::Keyboard;
+                else if ( device == AutomationActionDevice::Mouse )
+                    filter._kind = InputDeviceKind::Mouse;
+                else if ( device == AutomationActionDevice::Gamepad )
+                    filter._kind = InputDeviceKind::Gamepad;
+                return filter;
+            }
 
-            /** @brief `ActionAxis` 단계의 인자입니다. 적지 않은 축은 0 입니다. */
-            struct AxisArgs
+            /** @brief 프레임과 초를 함께 적었으면 false 와 이유입니다. */
+            [[nodiscard]] static bool checkDurationChoice( const AutomationStep& step, uint32 frames, float32 seconds, const utf8* pFramesName, const utf8* pSecondsName, string& outError )
             {
-                float32      _valueX{ 0.0f };
-                float32      _valueY{ 0.0f };
-                uint32       _frames{ kDefaultHoldFrames };
-                DeviceFilter _device{};
-            };
-
-            /** @brief 있으면 음이 아닌 정수로 읽습니다. 없으면 @p inoutValue 를 그대로 둡니다(형식의 초기값). */
-            [[nodiscard]] static bool readUint( const AutomationStep& step, string_view name, uint32& inoutValue, string& outError )
-            {
-                const string* pValue = step.findAttribute( name );
-                if ( pValue == nullptr )
+                if ( frames == kAutomationNoFrames || seconds == kAutomationNoSeconds )
                     return true;
-                int32 value = 0;
-                if ( StringUtil::parseInt( StringUtil::trim( string_view{ *pValue } ), value ) && value >= 0 )
-                {
-                    inoutValue = static_cast<uint32>( value );
-                    return true;
-                }
-                outError = step.describe() + ": " + string( name ) + " must be a non-negative integer, got '" + *pValue + "'";
+                outError = step.describe() + ": give " + pFramesName + " or " + pSecondsName + ", not both";
                 return false;
             }
 
-            /** @brief 있으면 수로 읽습니다. 없으면 @p inoutValue 를 그대로 둡니다. */
-            [[nodiscard]] static bool readFloat( const AutomationStep& step, string_view name, float32& inoutValue, string& outError )
+            /** @brief 길이를 프레임으로 냅니다 — 적은 쪽(초는 시나리오 고정 프레임 시간으로 바꾼다), 둘 다 없으면 @p defaultFrames 입니다. */
+            static uint32 resolveDuration( const AutomationStepContext& runner, uint32 frames, float32 seconds, uint32 defaultFrames )
             {
-                const string* pValue = step.findAttribute( name );
-                if ( pValue == nullptr || StringUtil::parseFloat( StringUtil::trim( string_view{ *pValue } ), inoutValue ) )
-                    return true;
-                outError = step.describe() + ": " + string( name ) + " must be a number, got '" + *pValue + "'";
-                return false;
-            }
-
-            /**
-             * @brief 프레임 길이를 읽습니다 — @p pFramesName(프레임) 또는 @p pSecondsName(초, 시나리오 고정 프레임 시간으로 바꾼다) 하나, 없으면 @p inoutFrames 를 그대로 둡니다.
-             * @details 검사 때는 실행기가 없어(@p pRunner 가 nullptr) 형식만 본다.
-             */
-            [[nodiscard]] static bool readDuration( const AutomationStepContext* pRunner, const AutomationStep& step, const utf8* pFramesName, const utf8* pSecondsName, uint32& inoutFrames,
-                                                    string& outError )
-            {
-                const bool bFrames  = step.findAttribute( pFramesName ) != nullptr;
-                const bool bSeconds = step.findAttribute( pSecondsName ) != nullptr;
-                if ( bFrames && bSeconds )
-                {
-                    outError = step.describe() + ": give " + pFramesName + " or " + pSecondsName + ", not both";
-                    return false;
-                }
-                float32 seconds = 0.0f;
-                if ( readUint( step, pFramesName, inoutFrames, outError ) == false || readFloat( step, pSecondsName, seconds, outError ) == false )
-                    return false;
-                if ( seconds < 0.0f )
-                {
-                    outError = step.describe() + ": " + pSecondsName + " must not be negative";
-                    return false;
-                }
-                if ( bSeconds && pRunner != nullptr )
-                    inoutFrames = pRunner->convertSecondsToFrames( seconds );
-                return true;
-            }
-
-            /** @brief `device` 속성이 장치 종류 하나(keyboard · mouse · gamepad)인지 봅니다. 없으면 아무 장치나 받습니다. */
-            [[nodiscard]] static bool readDevice( const AutomationStep& step, DeviceFilter& outDevice, string& outError )
-            {
-                outDevice             = DeviceFilter{};
-                const string* pDevice = step.findAttribute( "device" );
-                if ( pDevice == nullptr )
-                    return true;
-                outDevice._bAny        = false;
-                const string_view name = *pDevice;
-                if ( name == "keyboard" )
-                    outDevice._kind = InputDeviceKind::Keyboard;
-                else if ( name == "mouse" )
-                    outDevice._kind = InputDeviceKind::Mouse;
-                else if ( name == "gamepad" )
-                    outDevice._kind = InputDeviceKind::Gamepad;
-                else
-                {
-                    outError = step.describe() + ": unknown device '" + *pDevice + "' (keyboard · mouse · gamepad)";
-                    return false;
-                }
-                return true;
-            }
-
-            static bool validateName( const AutomationStep& step, string& outError )
-            {
-                if ( step.findAttribute( "name" ) != nullptr )
-                    return true;
-                outError = step.describe() + ": needs name=\"<input map action>\"";
-                return false;
-            }
-
-            /** @brief `Action` 단계의 인자를 읽습니다. 검사(@p pRunner 가 nullptr — 초를 프레임으로 바꾸지 않는다)와 실행이 이 함수 하나를 쓴다. */
-            [[nodiscard]] static bool parseAction( const AutomationStepContext* pRunner, const AutomationStep& step, ActionArgs& outArgs, string& outError )
-            {
-                outArgs = ActionArgs{};
-                if ( readDuration( pRunner, step, "hold", "seconds", outArgs._holdFrames, outError ) == false || readUint( step, "count", outArgs._count, outError ) == false )
-                    return false;
-                outArgs._intervalFrames = outArgs._holdFrames + 1;
-                return readDuration( pRunner, step, "interval", "intervalSeconds", outArgs._intervalFrames, outError ) && readDevice( step, outArgs._device, outError );
-            }
-
-            /** @brief `ActionAxis` 단계의 인자를 읽습니다(검사와 실행이 함께 쓴다). */
-            [[nodiscard]] static bool parseAxis( const AutomationStepContext* pRunner, const AutomationStep& step, AxisArgs& outArgs, string& outError )
-            {
-                outArgs = AxisArgs{};
-                return readFloat( step, "x", outArgs._valueX, outError ) && readFloat( step, "y", outArgs._valueY, outError ) &&
-                       readDuration( pRunner, step, "frames", "seconds", outArgs._frames, outError ) && readDevice( step, outArgs._device, outError );
+                if ( seconds != kAutomationNoSeconds )
+                    return runner.convertSecondsToFrames( seconds );
+                return frames != kAutomationNoFrames ? frames : defaultFrames;
             }
 
             static bool validateAction( const AutomationStep& step, string& outError )
             {
-                ActionArgs args{};
-                if ( step.hasOnlyAttributes( { "name", "hold", "seconds", "count", "interval", "intervalSeconds", "device" }, outError ) == false || validateName( step, outError ) == false )
-                    return false;
-                return parseAction( nullptr, step, args, outError );
+                AutomationActionFields fields;
+                return step.readFields( fields, outError ) && checkDurationChoice( step, fields._hold, fields._seconds, "hold", "seconds", outError ) &&
+                       checkDurationChoice( step, fields._interval, fields._intervalSeconds, "interval", "intervalSeconds", outError );
             }
 
             static bool validatePressOrRelease( const AutomationStep& step, string& outError )
             {
-                DeviceFilter device{};
-                return step.hasOnlyAttributes( { "name", "device" }, outError ) && validateName( step, outError ) && readDevice( step, device, outError );
+                AutomationActionButtonFields fields;
+                return step.readFields( fields, outError );
             }
 
             static bool validateAxis( const AutomationStep& step, string& outError )
             {
-                AxisArgs args{};
-                if ( step.hasOnlyAttributes( { "name", "x", "y", "frames", "seconds", "device" }, outError ) == false || validateName( step, outError ) == false )
-                    return false;
-                return parseAxis( nullptr, step, args, outError );
+                AutomationActionAxisFields fields;
+                return step.readFields( fields, outError ) && checkDurationChoice( step, fields._frames, fields._seconds, "frames", "seconds", outError );
             }
 
             /** @brief 바인딩이 쓰는 장치 종류입니다. */
@@ -203,11 +110,11 @@ namespace sw
              * @brief 액션의 바인딩 중 @p pAccept 가 받고 @p device 에 맞는 첫 것을 찾습니다(바인딩 순서 — 입력 맵 파일의 순서). 액션이 없거나 받을 바인딩이 없으면 이유와 nullptr 입니다.
              * @details 바인딩은 시작 프레임의 맵에서 찾는다. 게임이 맵을 다시 읽어도 단계가 이미 낸 이벤트는 그대로다.
              */
-            static const ActionBinding* findBinding( AutomationStepContext& runner, const AutomationStep& step, const DeviceFilter& device, bool ( *pAccept )( const ActionBinding& ),
+            static const ActionBinding* findBinding( AutomationStepContext& runner, const AutomationStep& step, const string& name, AutomationActionDevice deviceChoice, bool ( *pAccept )( const ActionBinding& ),
                                                      const utf8* pWhat, string& outError )
             {
                 const InputManager* pInput = runner.getInputManager();
-                const string&       name   = *step.findAttribute( "name" );
+                const DeviceFilter  device = makeDeviceFilter( deviceChoice );
                 if ( pInput == nullptr )
                 {
                     outError = step.describe() + ": there is no input manager";
@@ -228,7 +135,7 @@ namespace sw
                     if ( bUsable )
                         return pBinding;
                 }
-                outError = step.describe() + ": action '" + name + "' has no " + pWhat + ( device._bAny ? string() : " on " + *step.findAttribute( "device" ) ) + " binding";
+                outError = step.describe() + ": action '" + name + "' has no " + pWhat + ( device._bAny ? string() : " on " + string( getEnumName( deviceChoice ) ) ) + " binding";
                 return nullptr;
             }
 
@@ -244,22 +151,21 @@ namespace sw
 
             [[nodiscard]] static bool prepareAction( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
-                ActionArgs args{};
-                if ( parseAction( &runner, step, args, outError ) == false )
-                    return false;
-                const ActionBinding* pBinding = findBinding( runner, step, args._device, &isButtonBinding, "single button", outError );
+                const AutomationActionFields fields   = step.readValidatedFields<AutomationActionFields>();
+                const ActionBinding*         pBinding = findBinding( runner, step, fields._name, fields._device, &isButtonBinding, "single button", outError );
                 if ( pBinding == nullptr )
                     return false;
-                if ( args._count > 1 && args._intervalFrames <= args._holdFrames )
+                const uint32 holdFrames     = resolveDuration( runner, fields._hold, fields._seconds, kDefaultHoldFrames );
+                const uint32 intervalFrames = resolveDuration( runner, fields._interval, fields._intervalSeconds, holdFrames + 1 ); // 적지 않으면 떼고 한 프레임 뒤 다시 누른다
+                if ( fields._count > 1 && intervalFrames <= holdFrames )
                 {
-                    outError = step.describe() + ": interval (" + to_string( args._intervalFrames ) + " frames) must be longer than hold (" + to_string( args._holdFrames ) +
-                               ") to press again";
+                    outError = step.describe() + ": interval (" + to_string( intervalFrames ) + " frames) must be longer than hold (" + to_string( holdFrames ) + " frames) to press again";
                     return false;
                 }
                 connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
-                for ( uint32 pressIndex = 0; pressIndex < args._count; ++pressIndex )
+                for ( uint32 pressIndex = 0; pressIndex < fields._count; ++pressIndex )
                 {
-                    if ( runner.getInputScript().addTap( step._frameIndex + pressIndex * args._intervalFrames, pBinding->_arrSlot[0], args._holdFrames ) == false )
+                    if ( runner.getInputScript().addTap( step._frameIndex + pressIndex * intervalFrames, pBinding->_arrSlot[0], holdFrames ) == false )
                     {
                         outError = step.describe() + ": the slot " + InputSlot::toText( pBinding->_arrSlot[0] ) + " cannot be pressed";
                         return false;
@@ -270,10 +176,8 @@ namespace sw
 
             [[nodiscard]] static bool preparePressOrRelease( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
-                DeviceFilter device{};
-                if ( readDevice( step, device, outError ) == false )
-                    return false;
-                const ActionBinding* pBinding = findBinding( runner, step, device, &isButtonBinding, "single button", outError );
+                const AutomationActionButtonFields fields   = step.readValidatedFields<AutomationActionButtonFields>();
+                const ActionBinding*               pBinding = findBinding( runner, step, fields._name, fields._device, &isButtonBinding, "single button", outError );
                 if ( pBinding == nullptr )
                     return false;
                 connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
@@ -298,19 +202,17 @@ namespace sw
 
             /**
              * @brief 축 값을 @p frames 동안 냅니다. 스틱은 그 값 그대로, 합성 축은 부호의 방향 키(크기는 1), 마우스 이동은 프레임마다 그 픽셀만큼입니다.
-             * @details 합성 축 값의 크기가 1 이 아니어도 키는 켜고 끄는 것뿐이다 — 아날로그 크기가 필요하면 `device="gamepad"` 로 스틱을 고른다.
+             * @details 합성 축 값의 크기가 1 이 아니어도 키는 켜고 끄는 것뿐이다 — 아날로그 크기가 필요하면 `device="Gamepad"` 로 스틱을 고른다.
              */
             [[nodiscard]] static bool prepareAxis( AutomationStepContext& runner, const AutomationStep& step, string& outError )
             {
-                AxisArgs args{};
-                if ( parseAxis( &runner, step, args, outError ) == false )
-                    return false;
-                const ActionBinding* pBinding = findBinding( runner, step, args._device, &isAxisBinding, "axis", outError );
+                const AutomationActionAxisFields fields   = step.readValidatedFields<AutomationActionAxisFields>();
+                const ActionBinding*             pBinding = findBinding( runner, step, fields._name, fields._device, &isAxisBinding, "axis", outError );
                 if ( pBinding == nullptr )
                     return false;
-                const float32       valueX = args._valueX;
-                const float32       valueY = args._valueY;
-                const uint32        frames = args._frames;
+                const float32       valueX = fields._x;
+                const float32       valueY = fields._y;
+                const uint32        frames = resolveDuration( runner, fields._frames, fields._seconds, kDefaultHoldFrames );
                 VirtualInputScript& script = runner.getInputScript();
                 const uint32        first  = step._frameIndex;
                 bool                bOk    = true;

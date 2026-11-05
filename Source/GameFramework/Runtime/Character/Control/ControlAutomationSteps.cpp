@@ -17,6 +17,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
+#include "GameFramework/Runtime/Character/Control/ControlAutomationFields.h"
 #include "GameFramework/Runtime/Character/Control/Controller/ControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/IntentPlayback.h"
 #include "GameFramework/Runtime/Character/Control/Controller/IntentTrackControllerComponent.h"
@@ -41,43 +42,6 @@ namespace sw
                 return false;
             }
 
-            /** @brief `move="x,y"` 를 읽습니다(없으면 0,0, 길이가 1 을 넘으면 오류). */
-            [[nodiscard]] static bool readMove( const AutomationStep& step, float2& outMove, string& outError )
-            {
-                outMove              = float2{};
-                const string* pValue = step.findAttribute( "move" );
-                if ( pValue == nullptr )
-                    return true;
-                const string_view text  = *pValue;
-                const size_t      comma = text.find( ',' );
-                const bool        bParsed =
-                    comma != string_view::npos && StringUtil::parseFloat( StringUtil::trim( text.substr( 0, comma ) ), outMove._x ) &&
-                    StringUtil::parseFloat( StringUtil::trim( text.substr( comma + 1 ) ), outMove._y );
-                // 이동 길이는 1 이하다(`ControlIntent::_move`) — 선 · 파일은 넘는 값을 거절하므로 시나리오도 받지 않는다. NaN 도 여기서 걸린다.
-                const bool bLengthOk = bParsed && outMove._x * outMove._x + outMove._y * outMove._y <= 1.0f + MathUtil::kEpsilon;
-                if ( bLengthOk )
-                    return true;
-                outError = step.describe() + ": move must be \"x,y\" with length at most 1, got '" + *pValue + "'";
-                return false;
-            }
-
-            /** @brief `frames` 를 읽습니다(없으면 1, 1 이상). */
-            [[nodiscard]] static bool readFrameCount( const AutomationStep& step, uint32& outFrameCount, string& outError )
-            {
-                outFrameCount        = 1;
-                const string* pValue = step.findAttribute( "frames" );
-                if ( pValue == nullptr )
-                    return true;
-                int32 parsedFrameCount = 0;
-                if ( StringUtil::parseInt( StringUtil::trim( string_view{ *pValue } ), parsedFrameCount ) && parsedFrameCount >= 1 )
-                {
-                    outFrameCount = static_cast<uint32>( parsedFrameCount );
-                    return true;
-                }
-                outError = step.describe() + ": frames must be a positive integer, got '" + *pValue + "'";
-                return false;
-            }
-
             /** @brief 이름의 오브젝트입니다. 없으면 실패를 적고 nullptr 입니다. */
             static GameObject* findObject( AutomationStepContext& runner, const AutomationStep& step, const string& objectName )
             {
@@ -90,46 +54,45 @@ namespace sw
 
             static bool validateIntentStep( const AutomationStep& step, string& outError )
             {
-                float32 value    = 0.0f;
-                bool    bPresent = false;
-                float2  move{};
-                uint32  frameCount = 0;
-                return step.hasOnlyAttributes( { "pawn", "move", "up", "yaw", "pitch", "buttons", "frames" }, outError ) &&
-                       step.requireAttribute( "pawn", outError ) != nullptr && readMove( step, move, outError ) &&
-                       readFloat( step, "up", value, bPresent, outError ) && readFloat( step, "yaw", value, bPresent, outError ) &&
-                       readFloat( step, "pitch", value, bPresent, outError ) && readFrameCount( step, frameCount, outError );
+                ControlIntentStepFields fields;
+                float32                 value    = 0.0f;
+                bool                    bPresent = false;
+                if ( step.readFields( fields, outError, { "yaw", "pitch" } ) == false || readFloat( step, "yaw", value, bPresent, outError ) == false ||
+                     readFloat( step, "pitch", value, bPresent, outError ) == false )
+                    return false;
+                // 이동 길이는 1 이하다(`ControlIntent::_move`) — 선 · 파일은 넘는 값을 거절하므로 시나리오도 받지 않는다.
+                if ( fields._move._x * fields._move._x + fields._move._y * fields._move._y <= 1.0f + MathUtil::kEpsilon )
+                    return true;
+                outError = step.describe() + ": move must have length at most 1";
+                return false;
             }
 
             /** @brief 폰을 기록 조종자로 `frames` 틱 동안 몰고 원래 조종자에게 돌려준다. 버튼은 첫 틱에 발동 + 내내 누름. */
             static bool runIntentStep( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string* pPawnName = step.findAttribute( "pawn" );
-                GameObject*   pObject   = pPawnName != nullptr ? findObject( runner, step, *pPawnName ) : nullptr;
+                const ControlIntentStepFields fields  = step.readValidatedFields<ControlIntentStepFields>( { "yaw", "pitch" } );
+                GameObject*                   pObject = findObject( runner, step, fields._pawn );
                 if ( pObject == nullptr )
-                    return pPawnName != nullptr;
+                    return true;
                 PawnComponent* pPawn = pObject->getComponent<PawnComponent>();
                 if ( pPawn == nullptr )
                 {
-                    runner.recordFailure( step, "object '" + *pPawnName + "' has no pawn" );
+                    runner.recordFailure( step, "object '" + fields._pawn + "' has no pawn" );
                     return true;
                 }
                 string        error;
                 ControlIntent intent{};
-                float32       yaw        = 0.0f;
-                float32       pitch      = 0.0f;
-                bool          bHasYaw    = false;
-                bool          bHasPitch  = false;
-                bool          bHasUp     = false;
-                uint32        frameCount = 1;
-                const bool    bRead      = readMove( step, intent._move, error ) && readFloat( step, "up", intent._moveUp, bHasUp, error ) &&
-                                   readFloat( step, "yaw", yaw, bHasYaw, error ) && readFloat( step, "pitch", pitch, bHasPitch, error ) &&
-                                   readFrameCount( step, frameCount, error );
-                if ( bRead == false )
+                float32       yaw       = 0.0f;
+                float32       pitch     = 0.0f;
+                bool          bHasYaw   = false;
+                bool          bHasPitch = false;
+                if ( readFloat( step, "yaw", yaw, bHasYaw, error ) == false || readFloat( step, "pitch", pitch, bHasPitch, error ) == false )
                     return false;
-                intent._controlYaw     = bHasYaw ? yaw : pPawn->getIntent()._controlYaw;
-                intent._controlPitch   = bHasPitch ? pitch : pPawn->getIntent()._controlPitch;
-                const string* pButtons = step.findAttribute( "buttons" );
-                string_view   rest     = pButtons != nullptr ? string_view{ *pButtons } : string_view{};
+                intent._move         = fields._move;
+                intent._moveUp       = fields._up;
+                intent._controlYaw   = bHasYaw ? yaw : pPawn->getIntent()._controlYaw;
+                intent._controlPitch = bHasPitch ? pitch : pPawn->getIntent()._controlPitch;
+                string_view rest     = fields._buttons;
                 while ( rest.empty() == false )
                 {
                     const size_t      comma      = rest.find( ',' );
@@ -139,16 +102,16 @@ namespace sw
                         continue;
                     const int32 buttonIndex = pPawn->findButton( hashed_string( buttonName ) );
                     if ( buttonIndex < 0 )
-                        runner.recordFailure( step, "pawn '" + *pPawnName + "' has no button '" + string( buttonName ) + "'" );
+                        runner.recordFailure( step, "pawn '" + fields._pawn + "' has no button '" + string( buttonName ) + "'" );
                     else
                         intent.setButton( buttonIndex, true, false );
                 }
 
-                vector<ControlIntent> listIntent( frameCount, intent );
+                vector<ControlIntent> listIntent( fields._frames, intent );
                 listIntent[0]._buttonTriggered = intent._buttonDown;
 
                 GameObjectManager& manager        = *pObject->getManager();
-                const string       controllerName = string( IntentPlayback::kControllerPrefix ) + *pPawnName;
+                const string       controllerName = string( IntentPlayback::kControllerPrefix ) + fields._pawn;
                 GameObject*        pTrackObject   = manager.findGameObjectByName( hashed_string( controllerName ) );
                 if ( pTrackObject == nullptr )
                     pTrackObject = manager.createGameObject( hashed_string( controllerName ) );
@@ -163,34 +126,34 @@ namespace sw
 
             static bool validatePossessStep( const AutomationStep& step, string& outError )
             {
-                return step.hasOnlyAttributes( { "controller", "pawn" }, outError ) && step.requireAttribute( "controller", outError ) != nullptr;
+                ControlPossessStepFields fields;
+                return step.readFields( fields, outError );
             }
 
             /** @brief 조종자 오브젝트가 폰을 쥐게 한다(`pawn` 이 없으면 놓게). */
             static bool runPossessStep( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string* pControllerName = step.findAttribute( "controller" );
-                GameObject*   pObject         = pControllerName != nullptr ? findObject( runner, step, *pControllerName ) : nullptr;
+                const ControlPossessStepFields fields  = step.readValidatedFields<ControlPossessStepFields>();
+                GameObject*                    pObject = findObject( runner, step, fields._controller );
                 if ( pObject == nullptr )
-                    return pControllerName != nullptr;
+                    return true;
                 ControllerComponent* pController = pObject->getComponent<ControllerComponent>();
                 if ( pController == nullptr )
                 {
-                    runner.recordFailure( step, "object '" + *pControllerName + "' has no controller" );
+                    runner.recordFailure( step, "object '" + fields._controller + "' has no controller" );
                     return true;
                 }
-                const string* pPawnName = step.findAttribute( "pawn" );
-                if ( pPawnName == nullptr )
+                if ( fields._pawn.empty() )
                 {
                     pController->unpossess();
                     return true;
                 }
-                GameObject*    pPawnObject = findObject( runner, step, *pPawnName );
+                GameObject*    pPawnObject = findObject( runner, step, fields._pawn );
                 PawnComponent* pPawn       = pPawnObject != nullptr ? pPawnObject->getComponent<PawnComponent>() : nullptr;
                 if ( pPawn == nullptr )
                 {
                     if ( pPawnObject != nullptr )
-                        runner.recordFailure( step, "object '" + *pPawnName + "' has no pawn" );
+                        runner.recordFailure( step, "object '" + fields._pawn + "' has no pawn" );
                     return true;
                 }
                 pController->possess( *pPawn );

@@ -21,6 +21,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
+#include "GameFramework/Runtime/Gameplay/Automation/GameplayAutomationFields.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
@@ -31,32 +32,13 @@ namespace sw
     {
         struct GameplayAutomationStepsInternal
         {
-            /** @brief 속성 @p name 을 음이 아닌 수로 읽습니다. 없으면 true 이고 @p outbPresent 가 false 입니다. */
-            [[nodiscard]] static bool readNonNegative( const AutomationStep& step, string_view name, float32& outValue, bool& outbPresent, string& outError )
-            {
-                const string* pValue = step.findAttribute( name );
-                outbPresent          = pValue != nullptr;
-                outValue             = 0.0f;
-                if ( pValue == nullptr )
-                    return true;
-                if ( StringUtil::parseFloat( StringUtil::trim( string_view{ *pValue } ), outValue ) && outValue >= 0.0f )
-                    return true;
-                outError = step.describe() + ": " + string( name ) + " must be a non-negative number, got '" + *pValue + "'";
-                return false;
-            }
-
             /** @brief `AdvanceGameTime` 은 `minutes` · `hours` · `toHour`(다음 그 시각, 0..24) 중 정확히 하나를 받습니다. */
             static bool validateAdvanceGameTime( const AutomationStep& step, string& outError )
             {
-                float32    value    = 0.0f;
-                bool       bMinutes = false;
-                bool       bHours   = false;
-                bool       bToHour  = false;
-                const bool bRead    = step.hasOnlyAttributes( { "minutes", "hours", "toHour" }, outError ) && readNonNegative( step, "minutes", value, bMinutes, outError ) &&
-                                   readNonNegative( step, "hours", value, bHours, outError ) && readNonNegative( step, "toHour", value, bToHour, outError );
-                if ( bRead == false )
+                AdvanceGameTimeFields fields;
+                if ( step.readFields( fields, outError ) == false )
                     return false;
-                const uint32 count = ( bMinutes ? 1u : 0u ) + ( bHours ? 1u : 0u ) + ( bToHour ? 1u : 0u );
+                const uint32 count = ( fields._minutes >= 0.0f ? 1u : 0u ) + ( fields._hours >= 0.0f ? 1u : 0u ) + ( fields._toHour >= 0.0f ? 1u : 0u );
                 if ( count == 1 )
                     return true;
                 outError = step.describe() + ": needs exactly one of minutes · hours · toHour";
@@ -69,31 +51,18 @@ namespace sw
              */
             static bool runAdvanceGameTime( AutomationStepContext& runner, const AutomationStep& step )
             {
-                GameObjectManager* pManager = runner.findActiveObjectManager();
-                uint32             count    = 0;
-                string             error;
-                float32            minutes  = 0.0f;
-                float32            hours    = 0.0f;
-                float32            toHour   = 0.0f;
-                bool               bMinutes = false;
-                bool               bHours   = false;
-                bool               bToHour  = false;
-                const bool         bRead    = readNonNegative( step, "minutes", minutes, bMinutes, error ) && readNonNegative( step, "hours", hours, bHours, error ) &&
-                                   readNonNegative( step, "toHour", toHour, bToHour, error );
-                if ( bRead == false )
-                {
-                    runner.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
-                    return true;
-                }
+                GameObjectManager*             pManager = runner.findActiveObjectManager();
+                uint32                         count    = 0;
+                const AdvanceGameTimeFields    fields   = step.readValidatedFields<AdvanceGameTimeFields>();
                 vector<SessionStateComponent*> listState;
                 SessionStateComponent::collectOpen( pManager, listState );
                 for ( SessionStateComponent* pState : listState )
                 {
                     WorldClock& clock = pState->getClock();
-                    if ( bToHour )
-                        clock.advanceToHour( toHour );
+                    if ( fields._toHour >= 0.0f )
+                        clock.advanceToHour( fields._toHour );
                     else
-                        clock.advanceMinutes( bHours ? hours * static_cast<float32>( constant::time::kSecondsPerHour / constant::time::kSecondsPerMinute ) : minutes );
+                        clock.advanceMinutes( fields._hours >= 0.0f ? fields._hours * static_cast<float32>( constant::time::kSecondsPerHour / constant::time::kSecondsPerMinute ) : fields._minutes );
                     ++count;
                 }
                 if ( count == 0 )
@@ -114,13 +83,14 @@ namespace sw
 
             static bool validateMountStep( const AutomationStep& step, string& outError )
             {
-                return step.hasOnlyAttributes( { "rider", "vehicle" }, outError ) && step.requireAttribute( "rider", outError ) != nullptr &&
-                       step.requireAttribute( "vehicle", outError ) != nullptr;
+                MountStepFields fields;
+                return step.readFields( fields, outError );
             }
 
             static bool validateDismountStep( const AutomationStep& step, string& outError )
             {
-                return step.hasOnlyAttributes( { "rider" }, outError ) && step.requireAttribute( "rider", outError ) != nullptr;
+                DismountStepFields fields;
+                return step.readFields( fields, outError );
             }
 
             static const utf8* toText( MountResult result )
@@ -156,10 +126,11 @@ namespace sw
             /** @brief 탑승자 폰을 탈것 오브젝트의 빈 좌석(운전석 먼저)에 태운다. 탈 수 없으면 그 까닭(`TooFar` 등)을 실패로 적는다. */
             static bool runMountStep( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string&  riderName   = *step.findAttribute( "rider" );
-                const string&  vehicleName = *step.findAttribute( "vehicle" );
-                PawnComponent* pRider      = findPawn( runner, step, riderName );
-                GameObject*    pVehicle    = pRider != nullptr ? findObject( runner, step, vehicleName ) : nullptr;
+                const MountStepFields fields      = step.readValidatedFields<MountStepFields>();
+                const string&         riderName   = fields._rider;
+                const string&         vehicleName = fields._vehicle;
+                PawnComponent*        pRider      = findPawn( runner, step, riderName );
+                GameObject*           pVehicle    = pRider != nullptr ? findObject( runner, step, vehicleName ) : nullptr;
                 if ( pVehicle == nullptr )
                     return true;
                 VehicleSeatComponent* pSeat = nullptr;
@@ -182,7 +153,7 @@ namespace sw
 
             static bool runDismountStep( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string&  riderName = *step.findAttribute( "rider" );
+                const string   riderName = step.readValidatedFields<DismountStepFields>()._rider;
                 PawnComponent* pRider    = findPawn( runner, step, riderName );
                 if ( pRider != nullptr && VehicleSeatComponent::dismount( *pRider, false ) == false )
                     runner.recordFailure( step, "'" + riderName + "' is not seated" );
