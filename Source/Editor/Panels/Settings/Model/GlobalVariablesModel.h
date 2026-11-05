@@ -50,7 +50,7 @@ namespace sw::editor
 
         /**
          * @brief 지금 값을 프리셋 폴더에 @p presetName 이름으로 저장하고 목록을 다시 훑게 합니다. 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다(dirty 는 그대로).
-         * @return 저장했으면 true 입니다(입력란을 비운다). 이름이 비었거나 쓰지 못하면 false 이고 쓰지 못한 것은 로그에 남는다.
+         * @return 저장했으면 true 입니다(입력란을 비운다). 이름이 비었거나 경로 글자가 있거나 쓰지 못하면 false 이고 비지 않은 이름의 실패는 로그에 남는다.
          */
         [[nodiscard]] bool savePreset( string_view presetName );
         /** @brief 프리셋 파일 @p presetFile 의 값을 읽어 지금 값으로 둡니다. 읽지 못하면 값이 그대로이고 로그에 남는다. */
@@ -59,7 +59,11 @@ namespace sw::editor
          * @brief 프리셋 목록 훑기 결과를 받고, 다시 훑어야 하면 훑기를 겁니다. 프리셋 팝업이 열린 동안 그리기마다 부릅니다.
          * @return 훑는 중이면 true 입니다(목록을 보이지 않는다).
          */
-        bool                  pollPresetFiles();
+        bool pollPresetFiles();
+        /** @brief `pollPresetFiles` 와 같되 훑을 폴더 @p presetFolder 를 받습니다(프리셋 폴더는 에디터 상태 폴더 아래라 테스트는 빈 폴더를 넘긴다). */
+        bool pollPresetFilesIn( string_view presetFolder );
+        /** @brief 다음 `pollPresetFiles` 가 목록을 다시 훑게 합니다. 지금 훑는 중이면 그 결과를 받은 뒤 한 번 더 훑는다. */
+        void                  markPresetListStale() { _bPresetListDirty = SW_TRUE; }
         const vector<string>& getPresetFiles() const { return _listPresetFile; }
         /** @brief 프리셋 파일 경로 @p presetFile 의 표시 이름(파일 이름에서 `.gvpreset.xml` 을 뗀 것)입니다. */
         static string makePresetDisplayName( string_view presetFile );

@@ -19,6 +19,8 @@ namespace sw::editor
         {
             /// @brief 프리셋 파일의 접미사입니다.
             static constexpr string_view kPresetSuffix = ".gvpreset.xml";
+            /// @brief 프리셋 이름에 쓸 수 없는 경로 글자입니다(폴더 구분자와 Windows 드라이브 · 스트림 구분자).
+            static constexpr string_view kPresetNamePathChars = "/\:";
 
             static bool compareVariableInfo( const GlobalVariableInfo* pLeft, const GlobalVariableInfo* pRight )
             {
@@ -90,6 +92,12 @@ namespace sw::editor
     {
         if ( presetName.empty() )
             return false;
+        // 이름은 프리셋 폴더 안의 파일 이름이다 — 경로 글자를 받으면 "../x" 가 폴더 밖에 쓴다.
+        if ( presetName.find_first_of( GlobalVariablesModelInternal::kPresetNamePathChars ) != string_view::npos )
+        {
+            SW_LOG_WARNING_ID( "GlobalVariablesPanel.PresetNameHasPathCharacter", "Preset name '%#' must not contain a path character", string( presetName ).c_str() );
+            return false;
+        }
         const string name{ presetName };
         const string presetPath = FileUtil::joinPath( EditorGlobalVariableCommands::getPresetFolderPath(), name + string{ GlobalVariablesModelInternal::kPresetSuffix } );
         // 이름 붙인 프리셋 저장은 세션 문서의 저장이 아니다. 세션의 dirty 는 건드리지 않는다.
@@ -98,7 +106,7 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "GlobalVariablesPanel.CouldNotSavePreset", "Could not save preset '%#'", presetPath.c_str() );
             return false;
         }
-        _bPresetListDirty = SW_TRUE;
+        markPresetListStale();
         return true;
     }
 
@@ -111,18 +119,22 @@ namespace sw::editor
 
     bool GlobalVariablesModel::pollPresetFiles()
     {
+        return pollPresetFilesIn( EditorGlobalVariableCommands::getPresetFolderPath() );
+    }
+
+    bool GlobalVariablesModel::pollPresetFilesIn( string_view presetFolder )
+    {
         vector<string>       listNewPresetFile;
         const EditorTaskPoll presetPoll = _presetJob.take( listNewPresetFile );
         if ( presetPoll == EditorTaskPoll::Ready )
-        {
-            _listPresetFile   = std::move( listNewPresetFile );
-            _bPresetListDirty = SW_FALSE;
-        }
+            _listPresetFile = std::move( listNewPresetFile );
 
         bool bPresetScanning = presetPoll == EditorTaskPoll::Running;
         if ( _bPresetListDirty && presetPoll != EditorTaskPoll::Running )
         {
-            _presetJob.request( EditorGlobalVariableCommands::getPresetFolderPath(), GlobalVariablesModelInternal::kPresetSuffix, false );
+            // 깃발은 훑기를 거는 때 내린다 — 결과를 받을 때 내리면 훑는 사이에 저장한 프리셋이 목록에서 빠진 채 남는다.
+            _bPresetListDirty = SW_FALSE;
+            _presetJob.request( presetFolder, GlobalVariablesModelInternal::kPresetSuffix, false );
             bPresetScanning = true;
         }
         return bPresetScanning;
