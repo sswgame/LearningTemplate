@@ -7,7 +7,7 @@
 
 #include "Editor/Common/EditorExports.h"
 #include "Editor/Common/EditorSubsystem.h"
-#include "Editor/Common/Workspace/Undo/ObjectUndoUtil.h"
+#include "Editor/Common/Workspace/Undo/ObjectSnapshot.h"
 
 namespace sw
 {
@@ -23,7 +23,7 @@ namespace sw::editor
     /**
      * @class EditorTransaction
      * @brief GameObject 편집을 Undo/Redo 에 기록하는 트랜잭션 관리자입니다.
-     * @details 오브젝트 편집(수정 · 생성 · 삭제)은 데이터 명령(`ObjectUndoUtil`)으로 기록해 에디터 모듈 핫 리로드를 넘깁니다. 열린 문서 편집
+     * @details 오브젝트 편집(수정 · 생성 · 삭제)은 데이터 명령(`ObjectSnapshot`)으로 기록해 에디터 모듈 핫 리로드를 넘깁니다. 열린 문서 편집
      *          (`recordDocumentText`)은 패널 버퍼에 묶인 코드 단계라 기록을 맡길 때 버립니다.
      */
     class SW_EDITOR_API EditorTransaction

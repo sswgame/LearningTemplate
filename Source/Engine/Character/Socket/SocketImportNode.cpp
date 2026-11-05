@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Character/Socket/SocketImportUtil.h"
+#include "Engine/Character/Socket/SocketImportNode.h"
 
 #include "Core/File/FileUtil.h"
 
@@ -8,7 +8,7 @@
 
 namespace sw
 {
-    void SocketImportUtil::createSocketSet( vector_reference<const SocketImportNode> listNode, SocketSet& outSockets )
+    void SocketImportNode::createSocketSet( vector_reference<const SocketImportNode> listNode, SocketSet& outSockets )
     {
         outSockets.clear();
         for ( const SocketImportNode& node : listNode )
@@ -28,7 +28,7 @@ namespace sw
         }
     }
 
-    bool SocketImportUtil::writeIfMissing( string_view absolutePath, const SocketSet& sockets, bool& outWritten )
+    bool SocketImportNode::writeIfMissing( string_view absolutePath, const SocketSet& sockets, bool& outWritten )
     {
         outWritten = false;
         if ( FileUtil::exists( absolutePath ) )

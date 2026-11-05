@@ -26,7 +26,7 @@ SW_EXTERN_GLOBAL_VARIABLE( bool, gv_cameraHeadBob );        ///< 걷기 머리 �
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_colorVisionMode );             ///< 색각 보정입니다(0 끔, 1 적색약, 2 녹색약, 3 청색약). 캔버스(UI)가 겁니다. 렌더러는 화면 출력 뷰의 `g_CameraFrame.z` 에 방식을 싣고, 톤맵 쪽 셰이더(`post_grade.hlsli`)는 쿠킹과 함께 들어온다(UserSettingsConsumers U3).
 SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiScale );                   ///< 게임 UI 배율.
 SW_EXTERN_GLOBAL_VARIABLE( sw::string, gv_uiTheme );                ///< 게임 UI 테마 이름입니다(UISystem 이 테마 목록에서 고르며, 목록에 없으면 목록의 기본 테마를 씁니다).
-SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiTextScale );               ///< 게임 UI 글자 크기 배율입니다(줄여도 글은 12 UI 단위 밑으로 가지 않습니다. UIScaleUtil).
+SW_EXTERN_GLOBAL_VARIABLE( float32, gv_uiTextScale );               ///< 게임 UI 글자 크기 배율입니다(줄여도 글은 12 UI 단위 밑으로 가지 않습니다. UIScaleSettings).
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_uiReduceMotion );               ///< UI 움직임 줄이기입니다. UI 애니메이션, 트윈, 스타일 전환의 길이를 0 으로 만듭니다.
 SW_EXTERN_GLOBAL_VARIABLE( bool, gv_subtitles );                    ///< 자막 표시입니다(UISubtitleService 가 읽으며, 끄면 줄은 받되 화면을 닫습니다).
 SW_EXTERN_GLOBAL_VARIABLE( int32, gv_subtitleSize );                ///< 자막 크기입니다(0 작게, 1 보통, 2 크게).

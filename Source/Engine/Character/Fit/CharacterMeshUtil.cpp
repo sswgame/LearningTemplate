@@ -512,9 +512,9 @@ namespace sw
             garment._listPosition.push_back( Internal::getPosition( vertex ) );
         }
         vector<SurfaceBinding> listBinding;
-        SurfaceTransferUtil::bindPoints( bodyGeometry, bodySurface, garment._listPosition, maxDistance, listBinding );
-        SurfaceTransferUtil::transferMorphs( bodyGeometry, listBinding, garment );
-        SurfaceTransferUtil::transferSkinWeights( bodyGeometry, listBinding, garment );
+        SurfaceBinding::bindPoints( bodyGeometry, bodySurface, garment._listPosition, maxDistance, listBinding );
+        SurfaceBinding::transferMorphs( bodyGeometry, listBinding, garment );
+        SurfaceBinding::transferSkinWeights( bodyGeometry, listBinding, garment );
 
         uint32 unboundCount = 0;
         for ( const SurfaceBinding& binding : listBinding )

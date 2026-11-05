@@ -98,7 +98,7 @@ namespace sw::editor
             void drawReadOnlyValue( const PropertyInfo& prop, const ValueAddress value )
             {
                 fixed_string<constant::buffer::kMax512> buf;
-                const InspectorBuiltinValue*            pRow = InspectorBuiltinValueUtil::findBuiltin( prop._typeName.c_str() );
+                const InspectorBuiltinValue*            pRow = InspectorBuiltinValue::findBuiltin( prop._typeName.c_str() );
                 if ( pRow != nullptr )
                     pRow->_pFormatValue( value.get(), buf.data(), buf.capacity() );
                 drawReadOnlyText( prop, buf.c_str() );
@@ -434,7 +434,7 @@ namespace sw::editor
 
         using DrawMethodArgFn = bool ( * )( const utf8* pLabel, TaskValue& value );
 
-        /** @brief 인자 위젯 테이블입니다. 순서는 `InspectorBuiltinValueUtil` 테이블과 같습니다. 같은 파일을 같은 순서로 include 합니다. */
+        /** @brief 인자 위젯 테이블입니다. 순서는 `InspectorBuiltinValue` 테이블과 같습니다. 같은 파일을 같은 순서로 include 합니다. */
         const DrawMethodArgFn kArrDrawMethodArg[] = {
 #define SW_REFLECT_BUILTIN_TYPE( Canon, CppType, TextConv, Ns, ... ) &drawMethodArgFor<InspectorBuiltinCppTypeT<CppType>>,
 #define SW_REFLECT_BUILTIN_CONTAINER( ... )
@@ -575,7 +575,7 @@ namespace sw::editor
                 if ( prop._handleTargetTypeName.empty() )
                     return _untyped.draw( instance, prop, grid );
 
-                const TypeInfo*          pTargetType = InspectorComponentPickerUtil::findTargetType( editor::getSubsystem<TypeRegistry>(), prop );
+                const TypeInfo*          pTargetType = InspectorComponentChoice::findTargetType( editor::getSubsystem<TypeRegistry>(), prop );
                 const GameObject*        pOwner      = grid.getEditOwner();
                 const GameObjectManager* pManager    = pOwner != nullptr ? pOwner->getManager() : nullptr;
                 if ( pTargetType == nullptr || pManager == nullptr )
@@ -590,7 +590,7 @@ namespace sw::editor
 
                 if ( prop._metadata->_bReadOnly != SW_FALSE )
                 {
-                    const InspectorHandleState              state = InspectorComponentPickerUtil::computeHandleState( *pManager, *pTargetType, *pValue );
+                    const InspectorHandleState              state = InspectorComponentChoice::computeHandleState( *pManager, *pTargetType, *pValue );
                     fixed_string<constant::buffer::kMax512> preview;
                     makePreview( *pManager, *pValue, state, preview );
                     drawReadOnlyText( prop, preview.c_str() );
@@ -619,7 +619,7 @@ namespace sw::editor
             static bool drawPicker( const utf8* pLabel, const GameObjectManager& manager, const TypeInfo& targetType, ComponentHandle current,
                                     vector<InspectorComponentChoice>& inoutListChoice, ComponentHandle& outPicked )
             {
-                const InspectorHandleState              state = InspectorComponentPickerUtil::computeHandleState( manager, targetType, current );
+                const InspectorHandleState              state = InspectorComponentChoice::computeHandleState( manager, targetType, current );
                 fixed_string<constant::buffer::kMax512> preview;
                 makePreview( manager, current, state, preview );
                 const bool bColored = state == InspectorHandleState::Missing || state == InspectorHandleState::WrongType;
@@ -631,7 +631,7 @@ namespace sw::editor
                 if ( bOpen == false )
                     return false;
                 // 열린 프레임에만 모은다. 닫혀 있을 때 비용은 0 이다.
-                InspectorComponentPickerUtil::collectChoices( manager, targetType, inoutListChoice );
+                InspectorComponentChoice::collectChoices( manager, targetType, inoutListChoice );
                 ComponentHandle picked{};
                 bool            bPicked = false;
                 if ( ImGui::Selectable( "(none)", current.isValid() == false ) )
@@ -679,7 +679,7 @@ namespace sw::editor
                     }
                 }
                 const Component* pComp = manager.resolveComponent( value );
-                const string     label = pComp != nullptr ? InspectorComponentPickerUtil::makeLabel( *pComp ) : string();
+                const string     label = pComp != nullptr ? InspectorComponentChoice::makeLabel( *pComp ) : string();
                 formatstring( outPreview.data(), outPreview.capacity(), "%#%#", state == InspectorHandleState::WrongType ? "(wrong type) " : "", label );
             }
 
@@ -898,7 +898,7 @@ namespace sw::editor
                 return make_unique<ValueProperty<T>>();
         }
 
-        static_assert( std::size( kArrDrawMethodArg ) == InspectorBuiltinValueUtil::kBuiltinCount,
+        static_assert( std::size( kArrDrawMethodArg ) == InspectorBuiltinValue::kBuiltinCount,
                        "kArrDrawMethodArg must have one entry per ReflectBuiltins.xxx type" );
 
         /** @brief 메서드 인자 선택기 콤보의 선택지 버퍼를 담은 상태입니다. 에디터 범위의 상태 저장소가 소유한다. */
@@ -983,7 +983,7 @@ namespace sw::editor
             return kArrDrawMethodArg[slot._builtinIndex]( pLabel, slot._value );
 
         // 타입 핸들 인자 — 프로퍼티와 같은 선택기다. 칸의 값은 타입 없는 핸들이고(`_typeName` 이 `ComponentHandle`), 호출 썽크가 대상 타입을 다시 확인한다.
-        const TypeInfo* pTargetType = InspectorComponentPickerUtil::findTargetType( editor::getSubsystem<TypeRegistry>(), parameter._handleTargetTypeName );
+        const TypeInfo* pTargetType = InspectorComponentChoice::findTargetType( editor::getSubsystem<TypeRegistry>(), parameter._handleTargetTypeName );
         const bool      bPickable   = pTargetType != nullptr && pManager != nullptr && slot._value.getPtr<ComponentHandle>() != nullptr;
         if ( bPickable == false )
         {

@@ -13,10 +13,10 @@ using namespace sw;
  */
 SW_TEST_CASE( UIBindingValueKindTest, KindFollowsTheBuiltinClass )
 {
-    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "unorm8" ) ) == UIBindingValueKind::Number );
-    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "half" ) ) == UIBindingValueKind::Number );
-    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "half2" ) ) == UIBindingValueKind::Other );
-    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "float32" ) ) == UIBindingValueKind::Number );
-    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "bool" ) ) == UIBindingValueKind::Bool );
-    SW_EXPECT_TRUE( UIBindingValueUtil::classifyType( hashed_string( "string" ) ) == UIBindingValueKind::Text );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "unorm8" ) ) == UIBindingValueKind::Number );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "half" ) ) == UIBindingValueKind::Number );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "half2" ) ) == UIBindingValueKind::Other );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "float32" ) ) == UIBindingValueKind::Number );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "bool" ) ) == UIBindingValueKind::Bool );
+    SW_EXPECT_TRUE( UIBindingValue::classifyType( hashed_string( "string" ) ) == UIBindingValueKind::Text );
 }

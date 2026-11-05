@@ -83,6 +83,10 @@ namespace sw
     class SW_API CanvasPainter
     {
     public:
+        // 위젯 배치 없이 글 한 줄을 칠합니다(기본 글꼴 가족과 문화권 대체 체인, 셰이핑 · 커닝 없음). 개발 그림(테스트 이미지, 디버그 드로우 겹치기)이 쓴다.
+        /** @brief @p origin(기준선 위의 첫 글리프 원점, UI 단위)부터 왼쪽에서 오른쪽으로 칠합니다. 글꼴에 없는 글자는 건너뜁니다. */
+        static void drawLine( CanvasPainter& painter, FontService& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style, uint64 frameIndex );
+
         /** @brief 가짜 굵게의 임계값 이동량입니다(글꼴 픽셀 크기의 비율이며 윤곽이 양쪽으로 이만큼 밀립니다). */
         static constexpr float32 kFauxBoldEmFraction = 0.025f;
         /** @brief 가짜 기울임의 기울기입니다(아래로 1 내려갈 때 왼쪽으로 가는 양이며 약 11도입니다. 언리얼 Slate 의 가짜 이탤릭과 같은 값입니다). */
@@ -186,18 +190,5 @@ namespace sw
         float32                 _uiScale;
         uint32                  _anchor;             ///< 사각형에 붙일 화면 앵커 번호(없으면 constant::invalid_index::kUint32)
         uint32                  _deferredGlyphCount; ///< 래스터화 예산 때문에 미룬 글리프 수입니다(`drawGlyph` 가 올린다).
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct CanvasTextLineUtil
-     * @brief 위젯 배치 없이 글 한 줄을 칠합니다(기본 글꼴 가족과 문화권 대체 체인, 셰이핑 · 커닝 없음). 개발 그림(테스트 이미지, 디버그 드로우 겹치기)이 쓴다.
-     */
-    struct SW_API CanvasTextLineUtil
-    {
-        /** @brief @p origin(기준선 위의 첫 글리프 원점, UI 단위)부터 왼쪽에서 오른쪽으로 칠합니다. 글꼴에 없는 글자는 건너뜁니다. */
-        static void drawLine( CanvasPainter& painter, FontService& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style, uint64 frameIndex );
     };
 } // namespace sw

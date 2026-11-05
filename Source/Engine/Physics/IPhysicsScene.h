@@ -96,7 +96,7 @@ namespace sw
         virtual void setLayerCollision( const CollisionLayers& layers ) = 0;
         /** @brief 지금 쓰는 레이어 충돌 행렬입니다(`setLayerCollision` 이 마지막으로 준 것, 처음에는 설정 표의 것). */
         virtual const CollisionLayers& getLayerCollision() const = 0;
-        /** @brief 바디마다 셰이프를 선으로 냅니다(`PhysicsDebugDrawUtil`). */
+        /** @brief 바디마다 셰이프를 선으로 냅니다(`IPhysicsDebugRenderer`). */
         virtual void drawDebug( IPhysicsDebugRenderer& renderer ) const = 0;
     };
 } // namespace sw

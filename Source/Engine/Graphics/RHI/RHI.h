@@ -27,24 +27,6 @@ namespace sw
     /** @brief `-gv_rhiBackend`: 쓸 RHI 백엔드입니다. App 의 백엔드 교체(`RHIBackendSwitcher`)는 심볼이 아니라 매니저로 읽고 씁니다. */
     SW_EXTERN_GLOBAL_VARIABLE( RHIBackend, gv_rhiBackend );
 
-    /**
-     * @struct RHIBackendUtil
-     * @brief 백엔드 선택에 관한 질문 중 **한 곳에 있어야 하는 것**을 모았습니다.
-     */
-    struct SW_API RHIBackendUtil
-    {
-        /**
-         * @brief 커맨드라인이 백엔드를 **명시했는지**, 명시했다면 무엇인지 반환합니다.
-         * @details 이 질문은 두 곳에서 필요합니다. `Engine` 은 "명시했는가"를 묻고(안 했으면 설정
-         *          기본값으로 덮습니다), `RHI::initialize` 는 "무엇인가"를 묻습니다. 이를 통해 쓸 수 없을 때
-         *          조용히 폴백해도 되는지도 정합니다. 두 곳이 이 함수 하나로 답해야 `-vk` 와 `-gv_rhiBackend` 가
-         *          같은 백엔드를 고를 때 같은 결과(쓸 수 없으면 에러)가 납니다.
-         * @param commandLineManager 파싱이 끝난 커맨드라인
-         * @param outBackend 명시했을 때만 채워집니다
-         * @return 커맨드라인이 백엔드를 명시했으면 true
-         */
-        [[nodiscard]] static bool findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend );
-    };
 } // namespace sw
 
 namespace sw
@@ -56,6 +38,19 @@ namespace sw
     class SW_API RHI
     {
     public:
+        // 백엔드 선택에 관한 질문 중
+        /**
+         * @brief 커맨드라인이 백엔드를 **명시했는지**, 명시했다면 무엇인지 반환합니다.
+         * @details 이 질문은 두 곳에서 필요합니다. `Engine` 은 "명시했는가"를 묻고(안 했으면 설정
+         *          기본값으로 덮습니다), `RHI::initialize` 는 "무엇인가"를 묻습니다. 이를 통해 쓸 수 없을 때
+         *          조용히 폴백해도 되는지도 정합니다. 두 곳이 이 함수 하나로 답해야 `-vk` 와 `-gv_rhiBackend` 가
+         *          같은 백엔드를 고를 때 같은 결과(쓸 수 없으면 에러)가 납니다.
+         * @param commandLineManager 파싱이 끝난 커맨드라인
+         * @param outBackend 명시했을 때만 채워집니다
+         * @return 커맨드라인이 백엔드를 명시했으면 true
+         */
+        [[nodiscard]] static bool findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend );
+
         // ------------------------------------------------------------------------------
         // 1) 수명: 복사/이동 금지, initialize/shutdown, 소프트 재생성
         // ------------------------------------------------------------------------------

@@ -38,7 +38,7 @@ namespace sw::editor
     /**
      * @struct EditorColliderHandleMath
      * @brief 유니티 Box Collider · Sphere Collider · Capsule Collider 의 편집 손잡이에 해당하는 계산입니다.
-     * @details 셰이프는 바디의 월드 배율을 먹여(`PhysicsComponentUtil::makeScaledShape`) 월드 크기로 놓고, 끈 위치의 거리를 배율로 나눠 저장 값(배율 전)으로 되돌린다.
+     * @details 셰이프는 바디의 월드 배율을 먹여(`PhysicsComponent::makeScaledShape`) 월드 크기로 놓고, 끈 위치의 거리를 배율로 나눠 저장 값(배율 전)으로 되돌린다.
      *          그래서 보이는 손잡이가 곧 물리가 판정하는 면이다. 배율을 되돌리는 비율은 `makeScaledShape` 에 단위 셰이프를 먹여 구한다 — 배율 규칙이 한 곳에만 있다.
      *          크기는 중심을 지키며 양쪽으로 같이 변한다(손잡이를 끈 위치가 곧 새 가장자리).
      */

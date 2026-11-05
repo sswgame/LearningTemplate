@@ -22,15 +22,17 @@ namespace sw
     {
         Point = 0, ///< 맞은 지점이다(총알, 근접). 반경이 0 이면 가장 가까운 잎 하나(또는 `_leafHint`)가 맞는다.
         Radial,    ///< 폭발이다. 반경 안에서 거리에 따라 감쇠하고, 떨어진 조각을 바깥으로 민다.
-        Impact,    ///< 충돌이다. 물리 접촉 충격량에서 만든다(`DestructionDamageUtil::makeImpactEvent`).
+        Impact,    ///< 충돌이다. 물리 접촉 충격량에서 만든다(`DestructionDamageEvent::makeImpactEvent`).
         Count,
     };
 } // namespace sw
 
 namespace sw
 {
+    struct DestructionLeafStrain;
+
     /** @brief 피해 사건 하나입니다. */
-    struct DestructionDamageEvent
+    struct SW_API DestructionDamageEvent
     {
         float3                _position{};      ///< 중심이다(메시 공간).
         float3                _direction{};     ///< 맞은 방향이다(메시 공간, 단위 벡터). 폭발은 쓰지 않는다(바깥쪽으로 향한다).
@@ -40,24 +42,8 @@ namespace sw
         int32                 _leafHint{ -1 };  ///< 맞은 잎이다(광선이 고른 것). 있으면 그 잎은 감쇠 없이 `_strain` 을 받는다.
         uint32                _groupID{ 0 };    ///< 이 그룹의 잎만 맞는다(떨어져서 다른 곳에 있는 덩어리를 맞힌 경우). 0 이면 모든 잎이 대상이다.
         DestructionDamageKind _kind{ DestructionDamageKind::Point };
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 잎 하나가 받은 변형입니다. */
-    struct DestructionLeafStrain
-    {
-        uint32  _leaf{ 0 };
-        float32 _strain{ 0.0f };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 피해 계산 도우미입니다. 전부 static 입니다. */
-    struct SW_API DestructionDamageUtil
-    {
+        // 피해 계산 도우미입니다. 전부 static 입니다.
         /**
          * @brief 사건이 잎마다 주는 변형을 @p outListStrain 에 채웁니다(잎 번호 순이고 0 은 뺍니다). 반경 안은 선형 감쇠 `1 - 거리 / 반경` 을 쓰고, 반경이 0 이면
          *        `_leafHint` 또는 무게 중심이 가장 가까운 잎 하나가 맞습니다.
@@ -70,6 +56,16 @@ namespace sw
          * @param position 메시 공간 위치입니다. normal 도 메시 공간입니다.
          */
         static DestructionDamageEvent makeImpactEvent( const DestructionProfile& profile, const float3& position, const float3& normal, float32 impulse );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 잎 하나가 받은 변형입니다. */
+    struct DestructionLeafStrain
+    {
+        uint32  _leaf{ 0 };
+        float32 _strain{ 0.0f };
     };
 } // namespace sw
 

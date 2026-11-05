@@ -136,7 +136,7 @@ namespace sw
 
 namespace sw
 {
-    uint32 ShadowSetupUtil::countLocalTiles( const vector<GPULight>& listLight, const vector<uint32>& listShadowLightIndex )
+    uint32 FrameShadowData::countLocalTiles( const vector<GPULight>& listLight, const vector<uint32>& listShadowLightIndex )
     {
         uint32 tileCount = 0;
         for ( const uint32 lightIndex : listShadowLightIndex )
@@ -152,7 +152,7 @@ namespace sw
         return tileCount;
     }
 
-    float32 ShadowSetupUtil::computeLocalShadowPriority( const GPULight& light, const float4x4& viewProj )
+    float32 FrameShadowData::computeLocalShadowPriority( const GPULight& light, const float4x4& viewProj )
     {
         const float4  clip   = float4::transform( float4{ light._positionRadius._x, light._positionRadius._y, light._positionRadius._z, 1.0f }, viewProj );
         const float32 radius = MathUtil::max( light._positionRadius._w, 0.0f );
@@ -162,7 +162,7 @@ namespace sw
         return radius / MathUtil::max( clip._w, MathUtil::max( radius * kLocalPriorityMinDepthFraction, MathUtil::kEpsilon ) );
     }
 
-    void ShadowSetupUtil::populateLocalShadows( const ShadowAtlasLayout& layout, const float4x4* pPriorityViewProj, const vector<uint32>& listShadowLightIndex,
+    void FrameShadowData::populateLocalShadows( const ShadowAtlasLayout& layout, const float4x4* pPriorityViewProj, const vector<uint32>& listShadowLightIndex,
                                                 vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
     {
         using Internal               = ShadowSetupInternal;
@@ -240,7 +240,7 @@ namespace sw
         }
     }
 
-    ViewShadowData ShadowSetupUtil::makeViewShadow( const DirectionalShadowProjection& projection, const ShadowAtlasLayout& layout, const vector<float4>& listLocalBound )
+    ViewShadowData FrameShadowData::makeViewShadow( const DirectionalShadowProjection& projection, const ShadowAtlasLayout& layout, const vector<float4>& listLocalBound )
     {
         ViewShadowData data{};
         data._lightViewProj = projection._viewProj;
@@ -260,7 +260,7 @@ namespace sw
         return data;
     }
 
-    ViewShadowData ShadowSetupUtil::makeUnshadowedView( const ShadowAtlasLayout& layout )
+    ViewShadowData FrameShadowData::makeUnshadowedView( const ShadowAtlasLayout& layout )
     {
         // 행렬은 기본값으로 둔다 — 그림자를 받는 방향광(`params.x`)이 없으므로 셰이더는 이 볼륨을 읽지 않는다. 캐스케이드 하나 · 깊이 끝 무한이라 고르기만 성립한다.
         ViewShadowData data           = ViewShadowData{};
@@ -272,7 +272,7 @@ namespace sw
         return data;
     }
 
-    void ShadowSetupUtil::populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution,
+    void FrameShadowData::populateFrame( const DirectionalLightComponent* pShadowLight, const float4x4* pMainViewProj, uint32 atlasResolution,
                                          const vector<uint32>& listShadowLightIndex, vector<GPULight>& inoutListLight, FrameShadowData& outFrame )
     {
         outFrame.clear();
@@ -296,7 +296,7 @@ namespace sw
         }
     }
 
-    ViewShadowData ShadowSetupUtil::makeViewShadowFor( const DirectionalLightComponent* pShadowLight, const float4x4& viewProj, const FrameShadowData& frame )
+    ViewShadowData FrameShadowData::makeViewShadowFor( const DirectionalLightComponent* pShadowLight, const float4x4& viewProj, const FrameShadowData& frame )
     {
         if ( pShadowLight == nullptr )
             return frame._mainView;

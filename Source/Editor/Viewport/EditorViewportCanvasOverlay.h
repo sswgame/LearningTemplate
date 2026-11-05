@@ -6,7 +6,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
-#include "Editor/Viewport/Model/EditorGridUtil.h"
+#include "Editor/Viewport/Model/EditorGridLevel.h"
 
 struct ImDrawList;
 
@@ -30,7 +30,7 @@ namespace sw::editor
 
         /**
          * @brief 카메라 높이에 맞춰 간격을 고르는 격자를 그립니다. 2D 는 XY 평면, 3D 는 XZ 바닥입니다.
-         * @details 선 모양은 월드 인덱스로만 정한다(`EditorGridUtil`). 그린 결과는 이 오버레이가 값으로 든 `EditorGridStats` 에 남아 자체 테스트가 읽는다(`getGridStats`).
+         * @details 선 모양은 월드 인덱스로만 정한다(`EditorGridLevel`). 그린 결과는 이 오버레이가 값으로 든 `EditorGridStats` 에 남아 자체 테스트가 읽는다(`getGridStats`).
          */
         void drawAdaptiveGrid( ImDrawList* pDrawList, const float2& canvasPos, const float2& canvasSize, const float32* pView, const float32* pProj,
                                const float3& cameraPosition, bool b2DMode );

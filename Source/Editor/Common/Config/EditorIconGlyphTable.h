@@ -20,6 +20,8 @@
 
 namespace sw::editor
 {
+    struct EditorComponentIconTable;
+
     /**
      * @brief 아이콘 하나입니다.
      * @code
@@ -38,7 +40,7 @@ namespace sw::editor
 
     /** @brief 아이콘 글꼴 한 벌의 표입니다. 이름 · 코드포인트는 겹치지 않고 `Missing` 이 있어야 합니다. */
     REFLECT()
-    struct EditorIconGlyphTable
+    struct SW_EDITOR_API EditorIconGlyphTable
     {
         REFLECT_BODY();
         /** @brief 표에 없는 이름을 찾을 때 대신 그리는 아이콘입니다(테마 색의 마젠타와 같은 자리 — 오류는 따로 남긴다). */
@@ -59,6 +61,18 @@ namespace sw::editor
         /** @brief `U+XXXX` 를 코드포인트로 읽습니다. 형식이 틀리거나 기본 다국어 평면 밖이면 false 입니다. */
         [[nodiscard]] static bool parseCodepoint( string_view text, uint16& outCodepoint );
 
+        // 아이콘 이름 → 글리프입니다. 표는 셸(`ImGuiEditor`)이 들고 글꼴을 세울 때 읽어 여기 게시한다(`EditorUIContext::publish` 와 같은 모양).
+        /** @brief 셸이 표 둘을 게시합니다(읽은 뒤). 셸을 내릴 때 nullptr 둘로 거둔다. 표는 게시가 거둘 때까지 살아 있어야 한다. */
+        static void publish( const EditorIconGlyphTable* pGlyphTable, const EditorComponentIconTable* pComponentTable );
+        /** @brief 게시된 컴포넌트 아이콘 표입니다. 게시 전에 부르면 멈춘다(그리기는 셸이 선 뒤다). */
+        static const EditorComponentIconTable& getComponentIconTable();
+        /** @brief 이름의 글리프(UTF-8)입니다. 표에 없으면 Missing 아이콘이고 오류를 남깁니다(이름마다 한 번). 늘 nullptr 이 아닙니다. */
+        static const utf8* findPublishedGlyph( const hashed_string& name );
+        /** @brief 데이터 · 등록 줄이 든 이름으로 찾습니다(`findGlyph` 와 같은 규칙). @p pName 이 nullptr 이거나 비면 nullptr(아이콘 없음)입니다. */
+        static const utf8* findGlyphByName( const utf8* pName );
+        /** @brief 이름 형으로 찾습니다(`SW_EDITORICON_NAME`). 비었으면 nullptr 입니다. */
+        static const utf8* findGlyphByName( EditorIconName name ) { return findGlyphByName( name._pName ); }
+
     private:
         vector<hashed_string> _listNameKey;    ///< `_listIcon` 과 같은 순서의 이름 키(읽을 때 만든다)
         vector<string>        _listGlyphUTF8;  ///< `_listIcon` 과 같은 순서의 글리프(읽을 때 만든다)
@@ -66,31 +80,8 @@ namespace sw::editor
     };
 } // namespace sw::editor
 
-namespace sw::editor
-{
-    struct EditorComponentIconTable;
-
-    /**
-     * @brief 아이콘 이름 → 글리프입니다. 표는 셸(`ImGuiEditor`)이 들고 글꼴을 세울 때 읽어 여기 게시한다(`EditorUIContext::publish` 와 같은 모양).
-     * @details 글꼴 설정은 에디터 컨텍스트 · 테마 서브시스템보다 먼저 돈다 — 표를 그쪽에 두면 글꼴을 세울 때 없다. 셸은 프로세스에 하나다.
-     */
-    struct SW_EDITOR_API EditorIconUtil
-    {
-        /** @brief 셸이 표 둘을 게시합니다(읽은 뒤). 셸을 내릴 때 nullptr 둘로 거둔다. 표는 게시가 거둘 때까지 살아 있어야 한다. */
-        static void publish( const EditorIconGlyphTable* pGlyphTable, const EditorComponentIconTable* pComponentTable );
-        /** @brief 게시된 컴포넌트 아이콘 표입니다. 게시 전에 부르면 멈춘다(그리기는 셸이 선 뒤다). */
-        static const EditorComponentIconTable& getComponentIconTable();
-        /** @brief 이름의 글리프(UTF-8)입니다. 표에 없으면 Missing 아이콘이고 오류를 남깁니다(이름마다 한 번). 늘 nullptr 이 아닙니다. */
-        static const utf8* findGlyph( const hashed_string& name );
-        /** @brief 데이터 · 등록 줄이 든 이름으로 찾습니다(`findGlyph` 와 같은 규칙). @p pName 이 nullptr 이거나 비면 nullptr(아이콘 없음)입니다. */
-        static const utf8* findGlyphByName( const utf8* pName );
-        /** @brief 이름 형으로 찾습니다(`SW_EDITORICON_NAME`). 비었으면 nullptr 입니다. */
-        static const utf8* findGlyphByName( EditorIconName name ) { return findGlyphByName( name._pName ); }
-    };
-} // namespace sw::editor
-
 /** @brief 아이콘 이름 @p NameLiteral(문자열 리터럴)의 글리프입니다. 호출 자리마다 이름 키를 한 번만 intern 한다. */
 #define SW_EDITORICON( NameLiteral ) \
-    ::sw::editor::EditorIconUtil::findGlyph( []() -> const ::sw::hashed_string& {                                                                         \
+    ::sw::editor::EditorIconGlyphTable::findPublishedGlyph( []() -> const ::sw::hashed_string& {                                                                         \
         static const ::sw::hashed_string s_key{ NameLiteral };                                                                                             \
         return s_key; }() )

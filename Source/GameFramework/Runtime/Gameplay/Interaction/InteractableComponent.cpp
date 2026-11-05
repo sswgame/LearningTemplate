@@ -166,7 +166,7 @@ namespace sw
         const InteractionDef* pDef  = getDefinition();
         float4x4              world = pScene->getWorldMatrix();
         const bool            bMarker =
-            pDef != nullptr && pDef->_alignmentMarker.empty() == false && SocketLookupUtil::findSocketWorldTransform( *pOwner, pDef->_alignmentMarker, world );
+            pDef != nullptr && pDef->_alignmentMarker.empty() == false && SocketSetComponent::findSocketWorldTransform( *pOwner, pDef->_alignmentMarker, world );
         if ( bMarker == false )
             world = pScene->getWorldMatrix();
         outPosition          = world.getTranslation();

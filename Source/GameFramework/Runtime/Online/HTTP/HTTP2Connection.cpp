@@ -68,7 +68,7 @@ namespace sw
         , _headerStreamID{ 0 }
         , _connectionSendWindow{ kDefaultWindowSize }
         , _peerInitialWindow{ kDefaultWindowSize }
-        , _peerMaxFrameSize{ HTTP2FrameUtil::kDefaultMaxFrameSize }
+        , _peerMaxFrameSize{ HTTP2FrameHeader::kDefaultMaxFrameSize }
         , _peerMaxConcurrentStreams{ kUnlimitedStreams }
         , _nextStreamID{ 1 }
         , _continuationStreamID{ 0 }
@@ -81,7 +81,7 @@ namespace sw
 
     bool HTTP2Connection::isUsable() const
     {
-        return _bStarted == SW_TRUE && _bGoAway == SW_FALSE && _bFailed == SW_FALSE && _nextStreamID <= HTTP2FrameUtil::kMaxStreamID;
+        return _bStarted == SW_TRUE && _bGoAway == SW_FALSE && _bFailed == SW_FALSE && _nextStreamID <= HTTP2FrameHeader::kMaxStreamID;
     }
 
     void HTTP2Connection::start( vector<uint8>& outBytes )
@@ -89,11 +89,11 @@ namespace sw
         if ( _bStarted == SW_TRUE )
             return;
         _bStarted             = SW_TRUE;
-        const uint8* pPreface = reinterpret_cast<const uint8*>( HTTP2FrameUtil::kConnectionPreface.data() );
-        outBytes.insert( outBytes.end(), pPreface, pPreface + HTTP2FrameUtil::kConnectionPreface.size() );
+        const uint8* pPreface = reinterpret_cast<const uint8*>( HTTP2FrameHeader::kConnectionPreface.data() );
+        outBytes.insert( outBytes.end(), pPreface, pPreface + HTTP2FrameHeader::kConnectionPreface.size() );
         vector<HTTP2Setting> listSetting;
-        listSetting.push_back( HTTP2Setting{ HTTP2FrameUtil::kSettingsEnablePush, 0 } ); // 푸시를 받지 않는다
-        (void)HTTP2FrameUtil::writeSettings( listSetting, false, outBytes );             // 값이 상수라 범위 안이다
+        listSetting.push_back( HTTP2Setting{ HTTP2FrameHeader::kSettingsEnablePush, 0 } ); // 푸시를 받지 않는다
+        (void)HTTP2FrameHeader::writeSettings( listSetting, false, outBytes );             // 값이 상수라 범위 안이다
     }
 
     void HTTP2Connection::submit( uint64 requestID, const HTTPClientRequest& request, const HTTPAddress& url, vector<uint8>& outBytes )
@@ -140,7 +140,7 @@ namespace sw
     {
         const uint32 streamID = _nextStreamID;
         const bool   bNoBody  = queued._bodyBytes.empty();
-        if ( HTTP2FrameUtil::writeHeaders( streamID, queued._listHeaderBlock, bNoBody, _peerMaxFrameSize, outBytes ) == false )
+        if ( HTTP2FrameHeader::writeHeaders( streamID, queued._listHeaderBlock, bNoBody, _peerMaxFrameSize, outBytes ) == false )
         {
             pushFailure( queued._requestID, "request headers exceed the HTTP/2 frame size" );
             return;
@@ -164,7 +164,7 @@ namespace sw
                 if ( allowed <= 0 )
                     break; // 창이 찰 때까지 기다린다(WINDOW_UPDATE)
                 const bool bLast = static_cast<size_t>( allowed ) == remaining;
-                if ( HTTP2FrameUtil::writeData( streamID, stream._sendBytes.data() + stream._sendOffset, static_cast<size_t>( allowed ), bLast, _peerMaxFrameSize, outBytes ) == false )
+                if ( HTTP2FrameHeader::writeData( streamID, stream._sendBytes.data() + stream._sendOffset, static_cast<size_t>( allowed ), bLast, _peerMaxFrameSize, outBytes ) == false )
                     break; // 범위는 위에서 맞췄다 — 닿지 않는다
                 stream._sendOffset += static_cast<size_t>( allowed );
                 stream._sendWindow -= allowed;
@@ -191,16 +191,16 @@ namespace sw
         for ( ;; )
         {
             HTTP2FrameHeader header;
-            if ( HTTP2FrameUtil::readHeader( _inBytes.data() + offset, _inBytes.size() - offset, header ) == false )
+            if ( HTTP2FrameHeader::readHeader( _inBytes.data() + offset, _inBytes.size() - offset, header ) == false )
                 break;
-            if ( header._length > HTTP2FrameUtil::kDefaultMaxFrameSize )
+            if ( header._length > HTTP2FrameHeader::kDefaultMaxFrameSize )
                 return failConnection( "frame is larger than the advertised maximum", outError ); // 우리는 MAX_FRAME_SIZE 를 올리지 않았다
-            if ( _inBytes.size() - offset < HTTP2FrameUtil::kHeaderSize + header._length )
+            if ( _inBytes.size() - offset < HTTP2FrameHeader::kHeaderSize + header._length )
                 break;
-            const uint8* pBody = _inBytes.data() + offset + HTTP2FrameUtil::kHeaderSize;
+            const uint8* pBody = _inBytes.data() + offset + HTTP2FrameHeader::kHeaderSize;
             if ( handleFrame( header, pBody, outBytes, outError ) == false )
                 return false;
-            offset += HTTP2FrameUtil::kHeaderSize + header._length;
+            offset += HTTP2FrameHeader::kHeaderSize + header._length;
         }
         _inBytes.erase( _inBytes.begin(), _inBytes.begin() + static_cast<ptrdiff_t>( offset ) );
         promoteQueued( outBytes ); // 스트림이 끝나 줄 선 요청이 열릴 수 있고, 창이 늘어 본문을 더 보낼 수 있다
@@ -237,28 +237,28 @@ namespace sw
             {
                 if ( header._streamID != 0 || header._length != kPingOpaqueSize )
                     return failConnection( "malformed PING", outError );
-                if ( ( header._flags & HTTP2FrameUtil::kFlagAck ) != 0 )
+                if ( ( header._flags & HTTP2FrameHeader::kFlagAck ) != 0 )
                     return true;
                 uint8 arrOpaque[kPingOpaqueSize];
                 for ( size_t index = 0; index < kPingOpaqueSize; ++index )
                 {
                     arrOpaque[index] = pBody[index];
                 }
-                (void)HTTP2FrameUtil::writePing( arrOpaque, true, outBytes ); // 길이가 고정이라 범위 안이다
+                (void)HTTP2FrameHeader::writePing( arrOpaque, true, outBytes ); // 길이가 고정이라 범위 안이다
                 return true;
             }
             case HTTP2FrameType::RstStream:
             {
                 if ( header._streamID == 0 || header._length != HTTP2ConnectionInternal::kRstStreamBodySize )
                     return failConnection( "malformed RST_STREAM", outError );
-                const uint32 errorCode = HTTP2FrameUtil::readUint32( pBody );
+                const uint32 errorCode = HTTP2FrameHeader::readUint32( pBody );
                 failStream( header._streamID, ( formatToString( "stream was reset by the server (error %#)", errorCode ) ).c_str(), false, 0, outBytes );
                 return true;
             }
             case HTTP2FrameType::GoAway:
             {
                 HTTP2GoAway goAway;
-                if ( HTTP2FrameUtil::readGoAway( pBody, header._length, goAway ) == false )
+                if ( HTTP2FrameHeader::readGoAway( pBody, header._length, goAway ) == false )
                     return failConnection( "malformed GOAWAY", outError );
                 handleGoAway( goAway );
                 return true;
@@ -279,14 +279,14 @@ namespace sw
     {
         if ( header._streamID != 0 )
             return failConnection( "SETTINGS on a stream", outError );
-        if ( ( header._flags & HTTP2FrameUtil::kFlagAck ) != 0 )
+        if ( ( header._flags & HTTP2FrameHeader::kFlagAck ) != 0 )
             return header._length == 0 ? true : failConnection( "SETTINGS acknowledgement has a body", outError );
         vector<HTTP2Setting> listSetting;
-        if ( HTTP2FrameUtil::readSettings( pBody, header._length, listSetting ) == false )
+        if ( HTTP2FrameHeader::readSettings( pBody, header._length, listSetting ) == false )
             return failConnection( "malformed SETTINGS", outError );
         for ( const HTTP2Setting& setting : listSetting )
         {
-            if ( setting._id == HTTP2FrameUtil::kSettingsInitialWindowSize )
+            if ( setting._id == HTTP2FrameHeader::kSettingsInitialWindowSize )
             {
                 if ( setting._value > HTTP2ConnectionInternal::kWindowMask )
                     return failConnection( "initial window size is out of range", outError );
@@ -300,19 +300,19 @@ namespace sw
                         return failConnection( "stream window overflowed", outError );
                 }
             }
-            else if ( setting._id == HTTP2FrameUtil::kSettingsMaxFrameSize )
+            else if ( setting._id == HTTP2FrameHeader::kSettingsMaxFrameSize )
             {
                 if ( setting._value < kMinMaxFrameSize || setting._value > kMaxMaxFrameSize )
                     return failConnection( "max frame size is out of range", outError );
                 _peerMaxFrameSize = setting._value;
             }
-            else if ( setting._id == HTTP2FrameUtil::kSettingsMaxConcurrentStreams )
+            else if ( setting._id == HTTP2FrameHeader::kSettingsMaxConcurrentStreams )
             {
                 _peerMaxConcurrentStreams = setting._value;
             }
             // HEADER_TABLE_SIZE 는 부호기가 동적 표를 쓰지 않아 상관없고, ENABLE_PUSH 와 모르는 항목은 무시한다
         }
-        (void)HTTP2FrameUtil::writeSettings( {}, true, outBytes ); // 확인
+        (void)HTTP2FrameHeader::writeSettings( {}, true, outBytes ); // 확인
         return true;
     }
 
@@ -320,7 +320,7 @@ namespace sw
     {
         if ( header._length != sizeof( uint32 ) )
             return failConnection( "malformed WINDOW_UPDATE", outError );
-        const uint32 increment = HTTP2FrameUtil::readUint32( pBody ) & HTTP2ConnectionInternal::kWindowMask;
+        const uint32 increment = HTTP2FrameHeader::readUint32( pBody ) & HTTP2ConnectionInternal::kWindowMask;
         if ( increment == 0 )
             return failConnection( "WINDOW_UPDATE with a zero increment", outError );
         if ( header._streamID == 0 )
@@ -345,23 +345,23 @@ namespace sw
             return failConnection( "HEADERS on an invalid stream", outError );
         size_t offset  = 0;
         size_t padding = 0;
-        if ( ( header._flags & HTTP2FrameUtil::kFlagPadded ) != 0 )
+        if ( ( header._flags & HTTP2FrameHeader::kFlagPadded ) != 0 )
         {
             if ( header._length < Internal::kPaddingLengthSize )
                 return failConnection( "malformed HEADERS padding", outError );
             padding = pBody[0];
             offset += Internal::kPaddingLengthSize;
         }
-        if ( ( header._flags & HTTP2FrameUtil::kFlagPriority ) != 0 )
+        if ( ( header._flags & HTTP2FrameHeader::kFlagPriority ) != 0 )
             offset += Internal::kPrioritySize;
         if ( header._length < offset + padding )
             return failConnection( "malformed HEADERS", outError );
         _listHeaderBlock.assign( pBody + offset, pBody + header._length - padding );
         _headerStreamID   = header._streamID;
-        _bHeaderEndStream = ( header._flags & HTTP2FrameUtil::kFlagEndStream ) != 0 ? SW_TRUE : SW_FALSE;
+        _bHeaderEndStream = ( header._flags & HTTP2FrameHeader::kFlagEndStream ) != 0 ? SW_TRUE : SW_FALSE;
         if ( static_cast<int32>( _listHeaderBlock.size() ) > _settings._maxHeaderBlockBytes )
             return failConnection( "header block is too large", outError );
-        if ( ( header._flags & HTTP2FrameUtil::kFlagEndHeaders ) != 0 )
+        if ( ( header._flags & HTTP2FrameHeader::kFlagEndHeaders ) != 0 )
             return finishHeaderBlock( outBytes, outError );
         _continuationStreamID = header._streamID;
         return true;
@@ -374,7 +374,7 @@ namespace sw
         _listHeaderBlock.insert( _listHeaderBlock.end(), pBody, pBody + header._length );
         if ( static_cast<int32>( _listHeaderBlock.size() ) > _settings._maxHeaderBlockBytes )
             return failConnection( "header block is too large", outError );
-        if ( ( header._flags & HTTP2FrameUtil::kFlagEndHeaders ) == 0 )
+        if ( ( header._flags & HTTP2FrameHeader::kFlagEndHeaders ) == 0 )
             return true;
         _continuationStreamID = 0;
         return finishHeaderBlock( outBytes, outError );
@@ -431,7 +431,7 @@ namespace sw
             return failConnection( "DATA on the connection", outError );
         size_t offset  = 0;
         size_t padding = 0;
-        if ( ( header._flags & HTTP2FrameUtil::kFlagPadded ) != 0 )
+        if ( ( header._flags & HTTP2FrameHeader::kFlagPadded ) != 0 )
         {
             if ( header._length < Internal::kPaddingLengthSize )
                 return failConnection( "malformed DATA padding", outError );
@@ -442,7 +442,7 @@ namespace sw
             return failConnection( "malformed DATA", outError );
         const size_t dataSize = header._length - offset - padding;
         if ( header._length > 0 )
-            (void)HTTP2FrameUtil::writeWindowUpdate( 0, header._length, outBytes ); // 채움을 포함한 길이가 창을 쓴다 — 바로 돌려준다
+            (void)HTTP2FrameHeader::writeWindowUpdate( 0, header._length, outBytes ); // 채움을 포함한 길이가 창을 쓴다 — 바로 돌려준다
         const auto streamIt = _mapStream.find( header._streamID );
         if ( streamIt == _mapStream.end() )
             return true; // 끝난 스트림 — 연결 창만 돌려주었다
@@ -458,10 +458,10 @@ namespace sw
             return true;
         }
         stream._responseBytes.insert( stream._responseBytes.end(), pBody + offset, pBody + offset + dataSize );
-        if ( ( header._flags & HTTP2FrameUtil::kFlagEndStream ) != 0 )
+        if ( ( header._flags & HTTP2FrameHeader::kFlagEndStream ) != 0 )
             completeStream( header._streamID, outBytes );
         else if ( header._length > 0 )
-            (void)HTTP2FrameUtil::writeWindowUpdate( header._streamID, header._length, outBytes ); // 길이가 0 보다 크고 프레임 상한 이하라 범위 안이다
+            (void)HTTP2FrameHeader::writeWindowUpdate( header._streamID, header._length, outBytes ); // 길이가 0 보다 크고 프레임 상한 이하라 범위 안이다
         return true;
     }
 
@@ -499,7 +499,7 @@ namespace sw
         response._listHeader         = std::move( stream._listHeader );
         response._bodyBytes          = std::move( stream._responseBytes );
         if ( stream._bRequestEnded == SW_FALSE )
-            (void)HTTP2FrameUtil::writeRstStream( streamID, HTTP2ErrorCode::kNoError, outBytes ); // 응답이 먼저 끝났다 — 남은 본문은 보내지 않는다(RFC 9113 8.1)
+            (void)HTTP2FrameHeader::writeRstStream( streamID, HTTP2ErrorCode::kNoError, outBytes ); // 응답이 먼저 끝났다 — 남은 본문은 보내지 않는다(RFC 9113 8.1)
         _mapStream.erase( streamIt );
     }
 
@@ -510,7 +510,7 @@ namespace sw
             return;
         pushFailure( streamIt->second._requestID, pFailure );
         if ( bResetPeer )
-            (void)HTTP2FrameUtil::writeRstStream( streamID, errorCode, outBytes ); // 스트림 번호가 0 이 아니라 범위 안이다
+            (void)HTTP2FrameHeader::writeRstStream( streamID, errorCode, outBytes ); // 스트림 번호가 0 이 아니라 범위 안이다
         _mapStream.erase( streamIt );
     }
 

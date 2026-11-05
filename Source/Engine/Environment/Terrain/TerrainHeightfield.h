@@ -1,6 +1,6 @@
 /**
  * @file TerrainHeightfield.h
- * @brief 지형의 CPU 질의입니다. 월드 높이, 노멀, 구멍, 레이어 가중치를 제공하며, 렌더 메시, 배치, 물리 충돌 메시(`TerrainCollisionUtil`)가 같은 값을 읽습니다.
+ * @brief 지형의 CPU 질의입니다. 월드 높이, 노멀, 구멍, 레이어 가중치를 제공하며, 렌더 메시, 배치, 물리 충돌 메시(`TerrainColliderComponent`)가 같은 값을 읽습니다.
  */
 #pragma once
 #include "Core/Container/vector.h"

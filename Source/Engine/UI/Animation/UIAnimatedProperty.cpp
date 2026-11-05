@@ -110,7 +110,7 @@ namespace sw
     bool UIAnimatedProperty::resolve( const TypeInfo& type, string_view path, UIAnimatedProperty& outProperty, string& outError )
     {
         outProperty = UIAnimatedProperty{};
-        if ( UIBindingValueUtil::resolvePath( type, path, outProperty._path, outError ) == false )
+        if ( UIBindingValue::resolvePath( type, path, outProperty._path, outError ) == false )
             return false;
         if ( outProperty._path.getLeafProperty()._bIsContainer == SW_TRUE )
         {

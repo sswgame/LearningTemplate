@@ -115,7 +115,7 @@ namespace sw
         return true;
     }
 
-    void CardDeckUtil::makeStandardDeck( CardPile& outPile, int32 jokerCount )
+    void CardPile::makeStandardDeck( CardPile& outPile, int32 jokerCount )
     {
         outPile.clear();
         uint16 cardID = 0;
@@ -132,7 +132,7 @@ namespace sw
         }
     }
 
-    void CardDeckUtil::makePileInDrawOrder( const vector<Card>& listCardInDrawOrder, CardPile& outPile )
+    void CardPile::makePileInDrawOrder( const vector<Card>& listCardInDrawOrder, CardPile& outPile )
     {
         outPile.clear();
         for ( size_t index = listCardInDrawOrder.size(); index > 0; --index )

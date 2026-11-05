@@ -8,7 +8,7 @@
 #include "Editor/Common/Workspace/EditorStateStore.h"
 
 #include "Engine/Localization/LocText.h"
-#include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
+#include "Engine/Renderer/Capture/ScreenshotLocalTime.h"
 #include "Engine/Renderer/RenderThread.h"
 
 namespace sw::editor
@@ -41,7 +41,7 @@ namespace sw::editor
 {
     void EditorScreenshotCommands::captureGameView()
     {
-        EditorScreenshotCommandsInternal::request( ScreenshotPathUtil::makeDefaultPathNow(), 0 );
+        EditorScreenshotCommandsInternal::request( ScreenshotLocalTime::makeDefaultPathNow(), 0 );
     }
 
     void EditorScreenshotCommands::captureSceneView()
@@ -54,7 +54,7 @@ namespace sw::editor
             editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyScreenshotTitle" ), SW_LOCKEY( "EdCommon", "NotifyScreenshotNoSceneView" ), NotificationType::Warning );
             return;
         }
-        EditorScreenshotCommandsInternal::request( ScreenshotPathUtil::makeDefaultPathNow(), static_cast<RHITextureHandle>( renderTarget ) );
+        EditorScreenshotCommandsInternal::request( ScreenshotLocalTime::makeDefaultPathNow(), static_cast<RHITextureHandle>( renderTarget ) );
     }
 
     void EditorScreenshotCommands::captureFocusedView()

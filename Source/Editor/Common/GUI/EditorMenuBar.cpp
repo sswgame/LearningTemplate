@@ -319,11 +319,11 @@ namespace sw::editor
             return;
         }
         pPanel->setOpen( true );
-        ImGui::SetWindowFocus( EditorPanelTextUtil::makeWindowID( pPanel->getPanelTitle() ).c_str() ); // 창 이름은 인스턴스의 제목이다(`IEditorPanel::draw`)
+        ImGui::SetWindowFocus( EditorPanelText::makeWindowID( pPanel->getPanelTitle() ).c_str() ); // 창 이름은 인스턴스의 제목이다(`IEditorPanel::draw`)
         if ( request._bFloat == false )
             return;
         // 도킹을 풀고 메인 창 오른쪽 밖으로 옮긴다 — 메인 뷰포트 밖의 창은 ImGui 가 제 OS 창으로 띄운다(렌더러가 RHI 스왑체인을 단다). 패널은 앞 프레임에 그려져 있어야 한다.
-        ImGuiWindow* const pWindow = ImGui::FindWindowByName( EditorPanelTextUtil::makeWindowID( pPanel->getPanelTitle() ).c_str() );
+        ImGuiWindow* const pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( pPanel->getPanelTitle() ).c_str() );
         if ( pWindow == nullptr )
         {
             SW_LOG_ERROR_ID( "Editor.FloatPanelNotDrawn", "Float panel request: panel '%#' has not been drawn yet - open it a frame earlier", request._panelID.c_str() );

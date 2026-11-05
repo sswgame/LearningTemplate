@@ -49,13 +49,13 @@ namespace sw
         CanvasGlyphStyle title{};
         title._fontSize = 40.0f;
         title._color    = float4{ 1.0f, 1.0f, 1.0f, 1.0f };
-        CanvasTextLineUtil::drawLine( painter, *pFontService, "Canvas AaBb 0123", float2{ 48.0f, 230.0f }, title, frameIndex );
+        CanvasPainter::drawLine( painter, *pFontService, "Canvas AaBb 0123", float2{ 48.0f, 230.0f }, title, frameIndex );
         CanvasGlyphStyle outlined{};
         outlined._fontSize     = 32.0f;
         outlined._color        = float4{ 1.0f, 0.85f, 0.3f, 1.0f };
         outlined._outlineColor = float4{ 0.0f, 0.0f, 0.0f, 1.0f };
         outlined._outlineWidth = 2.0f;
         // 저장소 글꼴(라틴)에는 한글이 없으므로 문화권별 대체 글꼴 체인의 시스템 글꼴을 쓴다. 시스템 글꼴도 없으면 빈 네모(두부)로 나온다.
-        CanvasTextLineUtil::drawLine( painter, *pFontService, "UI 가나다 SDF", float2{ 48.0f, 290.0f }, outlined, frameIndex );
+        CanvasPainter::drawLine( painter, *pFontService, "UI 가나다 SDF", float2{ 48.0f, 290.0f }, outlined, frameIndex );
     }
 } // namespace sw

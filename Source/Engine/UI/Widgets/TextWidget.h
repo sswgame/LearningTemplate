@@ -26,7 +26,7 @@ namespace sw
     /**
      * @class TextWidget
      * @brief 텍스트를 배치(`TextLayoutEngine`)해 글리프 사각형으로 칠합니다.
-     * @details 원하는 크기는 측정으로 구한다(글자 배율 `gv_uiTextScale` 을 곱한 크기이며 하한은 `UIScaleUtil::kMinScaledFontSize`, 줄 바꿈이면 가용 너비 안에서).
+     * @details 원하는 크기는 측정으로 구한다(글자 배율 `gv_uiTextScale` 을 곱한 크기이며 하한은 `UIScaleSettings::kMinScaledFontSize`, 줄 바꿈이면 가용 너비 안에서).
      *          칠할 때는 위젯 너비로 배치하고 결과를 캐시한다(텍스트, 스타일, 너비, 글자 배율, 방향이 같으면 다시 배치하지 않는다). 텍스트나 스타일이 바뀌면 `kLayout`, 색만 바뀌면 `kPaint` 이다.
      *          문단 방향은 이 위젯의 흐름 방향(`isRightToLeft`)이다. `_bRichText` 면 `[b]`, `[i]`, `[color=]`, `[size=]` 표기를 읽는다(`RichTextParser`).
      *          글리프 아틀라스를 쓰므로 페이지가 비워지면(세대가 오르면) 다시 칠한다.

@@ -33,8 +33,8 @@ namespace sw
         int64                     _startedUnixMs{ 0 };         ///< 같은 시각의 유닉스 밀리초
         uint32                    _wallMilliseconds{ 0 };      ///< 시작부터 끝까지 벽시계로 지난 시간(밀리초)
         uint32                    _wallLimitMilliseconds{ 0 }; ///< 그 시나리오의 벽시계 상한(밀리초). 부하 시나리오는 0(자기 그물을 쓴다)
-        string_view               _lastStep{};                 ///< 끝난 자리 한 줄(`시나리오 · 백엔드 · step N 단계 · f프레임`, `AutomationRunTitleUtil::makeSummary`)
-        string_view               _reproduce{};                ///< 같은 실행을 다시 띄우는 App 명령줄(`AutomationRunTitleUtil::makeReproduceCommand`). 모르면 빔
+        string_view               _lastStep{};                 ///< 끝난 자리 한 줄(`시나리오 · 백엔드 · step N 단계 · f프레임`, `AutomationRunTitleInput::makeSummary`)
+        string_view               _reproduce{};                ///< 같은 실행을 다시 띄우는 App 명령줄(`AutomationRunTitleInput::makeReproduceCommand`). 모르면 빔
         const AutomationTimeline* _pTimeline{ nullptr };       ///< 벽시계가 프레임 종류별로 어디에 쓰였는지(`timeline` 칸). nullptr 이면 칸을 쓰지 않는다
     };
 } // namespace sw

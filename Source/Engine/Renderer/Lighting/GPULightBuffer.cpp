@@ -180,7 +180,7 @@ namespace sw
                 pLight->writeGPULight( light );
                 if ( pLight == pShadowLight )
                     light._params._x = 1.0f;
-                // 그림자를 드리우는 점광과 스폿은 번호만 적는다. 아틀라스 슬롯(`_params.x`, `_params.w`)은 슬롯 수를 아는 쪽이 나눠 준다(ShadowSetupUtil).
+                // 그림자를 드리우는 점광과 스폿은 번호만 적는다. 아틀라스 슬롯(`_params.x`, `_params.w`)은 슬롯 수를 아는 쪽이 나눠 준다(FrameShadowData).
                 if ( pOutListShadowLightIndex != nullptr && GPULightBufferInternal::castsLocalShadow( *pLight ) )
                     pOutListShadowLightIndex->push_back( static_cast<uint32>( outList.size() ) );
                 const hashed_string cookiePath = pLight->getCookieTexturePath();

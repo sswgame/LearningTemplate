@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Editor/Viewport/Model/EditorGridUtil.h"
+#include "Editor/Viewport/Model/EditorGridLevel.h"
 
 #include "Core/Math/MathUtil.h"
 
 namespace sw::editor
 {
-    EditorGridLevel EditorGridUtil::selectLevel( float32 viewHeight )
+    EditorGridLevel EditorGridLevel::selectLevel( float32 viewHeight )
     {
         const float32 height     = MathUtil::max( MathUtil::abs( viewHeight ), kLevelReferenceHeight );
         const float32 lod        = MathUtil::min( MathUtil::log( height / kLevelReferenceHeight ) / MathUtil::log( static_cast<float32>( kLevelRatio ) ),
@@ -21,7 +21,7 @@ namespace sw::editor
         return level;
     }
 
-    EditorGridLineStyle EditorGridUtil::evaluateLine( int64 worldIndex, const EditorGridLevel& level )
+    EditorGridLineStyle EditorGridLevel::evaluateLine( int64 worldIndex, const EditorGridLevel& level )
     {
         const bool    bNextLevelLine = ( worldIndex % kLevelRatio ) == 0;
         const float32 majorNow       = isMajorLine( worldIndex ) ? 1.0f : 0.0f;
@@ -33,7 +33,7 @@ namespace sw::editor
         return style;
     }
 
-    float32 EditorGridUtil::computeEdgeFade( float32 distance, float32 radius )
+    float32 EditorGridLevel::computeEdgeFade( float32 distance, float32 radius )
     {
         if ( radius <= 0.0f )
             return 0.0f;

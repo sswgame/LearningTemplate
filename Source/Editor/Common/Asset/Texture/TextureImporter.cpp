@@ -14,7 +14,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
-#include "Editor/Common/Asset/Texture/ImageUtil.h"
+#include "Editor/Common/Asset/Texture/RawImageData.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Config/EditorPaths.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -456,9 +456,9 @@ namespace sw::editor
         if ( FileUtil::hasExtension( sourcePath, ".hdr" ) )
             return importHDRTextureInternal( sourcePath, outputPath, rule, pTaskManager, pOutResult );
 
-        // 1) ImageUtil 로 소스 이미지를 디코딩한다
+        // 1) RawImageData 로 소스 이미지를 디코딩한다
         RawImageData rawImage;
-        if ( ImageUtil::loadImage( sourcePath, rawImage ) == false || rawImage.isValid() == false )
+        if ( RawImageData::loadImage( sourcePath, rawImage ) == false || rawImage.isValid() == false )
         {
             SW_LOG_ERROR_ID( "TextureImporter.FailedDecodeSourceImage", "Failed to decode source image: %#", sourcePath );
             return false;

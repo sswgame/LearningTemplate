@@ -53,7 +53,7 @@ namespace sw::editor
         }
     } // namespace
 
-    EditorWindowName EditorPanelTextUtil::makeWindowName( const utf8* pTitle )
+    EditorWindowName EditorPanelText::makeWindowName( const utf8* pTitle )
     {
         const EditorPanelText* pRow = findRow( pTitle );
         EditorWindowName       name;
@@ -63,7 +63,7 @@ namespace sw::editor
         return name;
     }
 
-    EditorWindowName EditorPanelTextUtil::makeWindowID( const utf8* pTitle )
+    EditorWindowName EditorPanelText::makeWindowID( const utf8* pTitle )
     {
         EditorWindowName name;
         name.append( "###" );

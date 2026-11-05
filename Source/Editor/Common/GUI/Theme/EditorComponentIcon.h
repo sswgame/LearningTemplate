@@ -21,7 +21,7 @@ namespace sw::editor
     /** @brief 컴포넌트 아이콘 한 줄입니다. 부를 때마다 지금 아이콘 표 · 테마에서 찾은 값입니다(담아 두지 않는다 — 글꼴 · 테마를 바꾸면 달라진다). */
     struct EditorComponentIconRow
     {
-        const utf8* _pGlyph{ nullptr };   ///< 아이콘 글리프(`EditorIconUtil`)
+        const utf8* _pGlyph{ nullptr };   ///< 아이콘 글리프(`EditorIconGlyphTable`)
         Color       _color{};             ///< 뷰포트 빌보드 · 카드 아이콘 색(테마 키 `Component.<이름>`)
         bool        _bBillboard{ false }; ///< 메시가 없어 뷰포트에 빌보드로 보이는 종류(빛 · 카메라 · 오디오 …) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };

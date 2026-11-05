@@ -46,7 +46,7 @@ namespace sw::editor
                 probe._halfExtents = float3{ 1.0f, 1.0f, 1.0f };
                 probe._radius      = 1.0f;
                 probe._halfHeight  = 1.0f;
-                return PhysicsComponentUtil::makeScaledShape( probe, bodyScale );
+                return PhysicsComponent::makeScaledShape( probe, bodyScale );
             }
 
             static void addHandle( vector<ColliderHandle>& outListHandle, ColliderHandleKind kind, uint32 shapeIndex, uint32 axis, float32 sign, const float3& center,
@@ -72,7 +72,7 @@ namespace sw::editor
         const bool bUnsupportedShapeType = shape._type != PhysicsShapeType3D::Box && shape._type != PhysicsShapeType3D::Sphere && shape._type != PhysicsShapeType3D::Capsule;
         if ( bUnsupportedShapeType )
             return;
-        const PhysicsShapeDesc3D scaled        = PhysicsComponentUtil::makeScaledShape( shape, bodyScale );
+        const PhysicsShapeDesc3D scaled        = PhysicsComponent::makeScaledShape( shape, bodyScale );
         const quaternion         frameRotation = bodyRotation * quaternion::makeFromYawPitchRoll( scaled._localRotation );
         const float3             center        = bodyPosition + float3::transform( scaled._localPosition, bodyRotation );
         for ( uint32 axis = 0; axis < 3; ++axis )

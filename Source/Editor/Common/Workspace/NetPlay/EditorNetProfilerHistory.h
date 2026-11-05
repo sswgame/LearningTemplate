@@ -34,11 +34,39 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    struct EditorNetKindShare;
+    struct EditorNetReplicaRate;
+
     /** @brief 시계열의 표본 하나입니다. */
     struct EditorNetProfilerSample
     {
         float64 _timeSeconds{ 0.0 }; ///< 보고를 받은 시각(단조 시계, 초)
         float32 _arrValue[static_cast<size_t>( EditorNetProfilerChannel::Count )]{};
+
+        // 시계열과 비중의 계산입니다. 탭과 테스트가 같이 씁니다.
+        /** @brief 자식 프로세스에 보고를 묻는 간격(초)입니다. 응답 줄이 자식 로그에도 남으므로 느리게 묻습니다. */
+        static constexpr float64 kQueryIntervalSeconds = 0.5;
+        /** @brief 자식 프로세스에 보고를 묻는 명령입니다(`GameNetSession` 의 개발 명령). */
+        static constexpr const utf8* kStatsCommand = "net.stats";
+
+        /**
+         * @brief 누적 값 둘의 차를 초당 값으로 바꿉니다. 줄었거나(연결 통계가 새로 시작) 시간이 흐르지 않았으면 0 입니다.
+         * @details 패킷 · 재전송 · 복제 셈이 모두 이 하나로 초당 값을 낸다(누적 값을 읽는 약속이 둘로 갈라지지 않게).
+         */
+        static float32 computeRate( uint64 previous, uint64 current, float64 elapsedSeconds );
+        /**
+         * @brief 보고 하나를 표본으로 바꿉니다. 초당 값은 @p pPrevious 와의 차를 시간으로 나눈 값이고, 앞 보고가 없거나 시간이 흐르지 않았거나
+         *        누적 값이 줄었으면(다시 연결해 연결 통계가 새로 시작) 0 입니다.
+         */
+        static EditorNetProfilerSample makeSample( const NetStatsReport* pPrevious, float64 previousTimeSeconds, const NetStatsReport& report, float64 timeSeconds );
+        /** @brief 여러 보고의 종류별 집계를 종류마다 합치고 바이트 비율을 계산해, 바이트가 큰 순서로 @p outListShare 에 다시 씁니다. */
+        static void computeKindShares( const vector<NetStatsKindEntry>& listEntry, vector<EditorNetKindShare>& outListShare );
+        /**
+         * @brief 복제 셈(누적)의 두 보고 차를 초당 값으로 바꿔 초당 바이트가 큰 순서로 @p outListRate 에 다시 씁니다.
+         * @details 앞 보고에 없던 이름(상위 목록에 새로 든 것)과 줄어든 값은 0 입니다 — 기준선이 없는 값을 누적 전체로 읽지 않는다. 시간이 흐르지 않았으면 비웁니다.
+         */
+        static void computeReplicaRates( const vector<NetStatsReplicaEntry>& listPrevious, const vector<NetStatsReplicaEntry>& listCurrent, float64 elapsedSeconds,
+                                         vector<EditorNetReplicaRate>& outListRate );
     };
 } // namespace sw::editor
 
@@ -112,37 +140,6 @@ namespace sw::editor
         float64                      _lastTimeSeconds{ 0.0 };
         uint32                       _seenReportCount{ 0 }; ///< 세션이 받은 보고 수 가운데 이미 넣은 것(`EditorNetPlayProcessStatus::_statsReportCount`)
         bool                         _bHasReport{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /** @brief 시계열과 비중의 계산입니다. 탭과 테스트가 같이 씁니다. */
-    struct EditorNetProfilerUtil
-    {
-        /** @brief 자식 프로세스에 보고를 묻는 간격(초)입니다. 응답 줄이 자식 로그에도 남으므로 느리게 묻습니다. */
-        static constexpr float64 kQueryIntervalSeconds = 0.5;
-        /** @brief 자식 프로세스에 보고를 묻는 명령입니다(`GameNetSession` 의 개발 명령). */
-        static constexpr const utf8* kStatsCommand = "net.stats";
-
-        /**
-         * @brief 누적 값 둘의 차를 초당 값으로 바꿉니다. 줄었거나(연결 통계가 새로 시작) 시간이 흐르지 않았으면 0 입니다.
-         * @details 패킷 · 재전송 · 복제 셈이 모두 이 하나로 초당 값을 낸다(누적 값을 읽는 약속이 둘로 갈라지지 않게).
-         */
-        static float32 computeRate( uint64 previous, uint64 current, float64 elapsedSeconds );
-        /**
-         * @brief 보고 하나를 표본으로 바꿉니다. 초당 값은 @p pPrevious 와의 차를 시간으로 나눈 값이고, 앞 보고가 없거나 시간이 흐르지 않았거나
-         *        누적 값이 줄었으면(다시 연결해 연결 통계가 새로 시작) 0 입니다.
-         */
-        static EditorNetProfilerSample makeSample( const NetStatsReport* pPrevious, float64 previousTimeSeconds, const NetStatsReport& report, float64 timeSeconds );
-        /** @brief 여러 보고의 종류별 집계를 종류마다 합치고 바이트 비율을 계산해, 바이트가 큰 순서로 @p outListShare 에 다시 씁니다. */
-        static void computeKindShares( const vector<NetStatsKindEntry>& listEntry, vector<EditorNetKindShare>& outListShare );
-        /**
-         * @brief 복제 셈(누적)의 두 보고 차를 초당 값으로 바꿔 초당 바이트가 큰 순서로 @p outListRate 에 다시 씁니다.
-         * @details 앞 보고에 없던 이름(상위 목록에 새로 든 것)과 줄어든 값은 0 입니다 — 기준선이 없는 값을 누적 전체로 읽지 않는다. 시간이 흐르지 않았으면 비웁니다.
-         */
-        static void computeReplicaRates( const vector<NetStatsReplicaEntry>& listPrevious, const vector<NetStatsReplicaEntry>& listCurrent, float64 elapsedSeconds,
-                                         vector<EditorNetReplicaRate>& outListRate );
     };
 } // namespace sw::editor
 

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Localization/TimeZoneUtil.h"
+#include "Engine/Localization/TimeZoneInfo.h"
 
 #include "Core/Container/VectorUtil.h"
 
@@ -10,7 +10,7 @@ namespace sw
 {
     namespace
     {
-        struct TimeZoneUtilInternal
+        struct TimeZoneInfoInternal
         {
             static constexpr int32 kDaylightShiftMinutes = 60;
 
@@ -148,24 +148,24 @@ namespace sw
         return VectorUtil::findBy<&TimeZoneInfo::_name>( _listZone, zoneName );
     }
 
-    int32 TimeZoneUtil::computeOffsetMinutes( int64 unixSeconds, const TimeZoneInfo& zone )
+    int32 TimeZoneInfo::computeOffsetMinutes( int64 unixSeconds, const TimeZoneInfo& zone )
     {
-        const int32 daylightMinutes = TimeZoneUtilInternal::isDaylight( unixSeconds, zone ) ? TimeZoneUtilInternal::kDaylightShiftMinutes : 0;
+        const int32 daylightMinutes = TimeZoneInfoInternal::isDaylight( unixSeconds, zone ) ? TimeZoneInfoInternal::kDaylightShiftMinutes : 0;
         return zone._standardOffsetMinutes + daylightMinutes;
     }
 
-    TextDateTime TimeZoneUtil::convertUnixMilliseconds( int64 unixMilliseconds, const TimeZoneInfo& zone )
+    TextDateTime TimeZoneInfo::convertUnixMilliseconds( int64 unixMilliseconds, const TimeZoneInfo& zone )
     {
-        const int64 unixSeconds   = TimeZoneUtilInternal::floorDivide( unixMilliseconds, constant::time::kMillisecondsPerSecond );
+        const int64 unixSeconds   = TimeZoneInfoInternal::floorDivide( unixMilliseconds, constant::time::kMillisecondsPerSecond );
         const int32 offsetMinutes = computeOffsetMinutes( unixSeconds, zone );
         const int64 localSeconds  = unixSeconds + static_cast<int64>( offsetMinutes ) * constant::time::kSecondsPerMinute;
-        const int64 days          = TimeZoneUtilInternal::floorDivide( localSeconds, constant::time::kSecondsPerDay );
+        const int64 days          = TimeZoneInfoInternal::floorDivide( localSeconds, constant::time::kSecondsPerDay );
         const int64 secondOfDay   = localSeconds - days * constant::time::kSecondsPerDay;
 
         int32 year{ 0 };
         int32 month{ 0 };
         int32 day{ 0 };
-        TimeZoneUtilInternal::computeCivilFromDays( days, year, month, day );
+        TimeZoneInfoInternal::computeCivilFromDays( days, year, month, day );
 
         TextDateTime value;
         value._year             = year;
@@ -179,14 +179,14 @@ namespace sw
         return value;
     }
 
-    int64 TimeZoneUtil::computeUnixSeconds( const TextDateTime& value )
+    int64 TimeZoneInfo::computeUnixSeconds( const TextDateTime& value )
     {
-        const int64 days = TimeZoneUtilInternal::computeDaysFromCivil( value._year, value._month, value._day );
+        const int64 days = TimeZoneInfoInternal::computeDaysFromCivil( value._year, value._month, value._day );
         return days * constant::time::kSecondsPerDay + value._hour * constant::time::kSecondsPerHour +
                value._minute * constant::time::kSecondsPerMinute + value._second;
     }
 
-    string TimeZoneUtil::formatOffset( int32 offsetMinutes, bool bPadded )
+    string TimeZoneInfo::formatOffset( int32 offsetMinutes, bool bPadded )
     {
         if ( offsetMinutes == 0 )
             return "UTC";

@@ -997,11 +997,11 @@ namespace sw::editor
         // 키는 타입 · 메서드 이름 원문이다(해시 조합은 부딪히면 다른 메서드의 인자 슬롯을 쓴다).
         const string                    slotKey  = string( pTypeInfo->_fullyQualifiedName.c_str() ) + '\x1F' + method._hashName.c_str();
         vector<InspectorMethodArgSlot>& listSlot = _mapMethodArgSlot[slotKey];
-        const bool                      bArgsOk  = InspectorBuiltinValueUtil::prepareMethodArgs( method, listSlot );
+        const bool                      bArgsOk  = InspectorBuiltinValue::prepareMethodArgs( method, listSlot );
         drawMethodArgInputs( method, listSlot );
 
-        if ( paramCount > InspectorBuiltinValueUtil::kMaxMethodArgCount )
-            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "TooManyArgumentsMax", TextArgumentList().addInteger( "maxMethodArgCount", static_cast<int64>( InspectorBuiltinValueUtil::kMaxMethodArgCount ) ) ).c_str() );
+        if ( paramCount > InspectorBuiltinValue::kMaxMethodArgCount )
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "TooManyArgumentsMax", TextArgumentList().addInteger( "maxMethodArgCount", static_cast<int64>( InspectorBuiltinValue::kMaxMethodArgCount ) ) ).c_str() );
 
         if ( bArgsOk == false )
         {
@@ -1019,7 +1019,7 @@ namespace sw::editor
                 EditorSelfTestMarks::note( invokeMark.c_str() );
             }
             if ( bInvoke )
-                invokeTypeMethod( pInstance, pTypeInfo, method, InspectorBuiltinValueUtil::makeMethodArgs( listSlot ) );
+                invokeTypeMethod( pInstance, pTypeInfo, method, InspectorBuiltinValue::makeMethodArgs( listSlot ) );
         }
 
         ImGui::PopID();
@@ -1081,7 +1081,7 @@ namespace sw::editor
                                                const TaskArgs& args )
     {
         const TaskValue result = editor::getSubsystem<TypeRegistry>().invokeMethod( pInstance, pTypeInfo->_fullyQualifiedName, method._hashName, args );
-        InspectorBuiltinValueUtil::formatMethodResult( result, method._returnTypeName, _lastInvokeResult.data(),
-                                                       _lastInvokeResult.capacity() );
+        InspectorBuiltinValue::formatMethodResult( result, method._returnTypeName, _lastInvokeResult.data(),
+                                                   _lastInvokeResult.capacity() );
     }
 } // namespace sw::editor

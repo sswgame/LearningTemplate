@@ -362,7 +362,7 @@ namespace sw
         const GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return false;
-        if ( SocketLookupUtil::findSocketWorldTransform( *pOwner, socketName, outWorldTransform ) )
+        if ( SocketSetComponent::findSocketWorldTransform( *pOwner, socketName, outWorldTransform ) )
             return true;
         const SceneComponent* pRoot = pOwner->getPrimarySceneComponent();
         outWorldTransform           = pRoot != nullptr ? pRoot->getWorldMatrix() : float4x4::Identity;
@@ -388,7 +388,7 @@ namespace sw
             return false;
         const uint64 ignoreID = pOwner->getObjectID();
         if ( is2D() )
-            return CharacterHitUtil::circleCast2D( *pManager, from, delta, distance, radius, layerMask, ignoreID, outHit );
-        return CharacterHitUtil::sphereCast3D( *pManager, from, delta, distance, radius, layerMask, ignoreID, outHit );
+            return CharacterRayHit::circleCast2D( *pManager, from, delta, distance, radius, layerMask, ignoreID, outHit );
+        return CharacterRayHit::sphereCast3D( *pManager, from, delta, distance, radius, layerMask, ignoreID, outHit );
     }
 } // namespace sw

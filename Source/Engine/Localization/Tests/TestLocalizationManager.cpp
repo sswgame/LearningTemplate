@@ -33,8 +33,8 @@ namespace
             LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.title": { "source": "Mystery Island", "maxLength": 20 },
                                                                 "ui.start": { "source": "Start Game" },
                                                                 "ui.quit": { "source": "Quit" })" );
-            const sw::string titleHash = sw::LocalizationTextUtil::formatSourceHash( sw::LocalizationTextUtil::computeSourceHash( "Mystery Island" ) );
-            const sw::string staleHash = sw::LocalizationTextUtil::formatSourceHash( sw::LocalizationTextUtil::computeSourceHash( "Begin" ) );
+            const sw::string titleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Mystery Island" ) );
+            const sw::string staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
             LocalizationTestUtil::writeTranslation( folder, "ko",
                                                     "\"ui.title\": { \"text\": \"신비의 섬\", \"sourceHash\": \"" + titleHash + "\" }, \"ui.start\": { \"text\": \"시작\", \"sourceHash\": \"" +
                                                         staleHash + "\" }" );

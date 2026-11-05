@@ -22,7 +22,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    EditorNetLinkSettings EditorNetConditionsUtil::makeLinkSettings( const NetEmulationConditions& conditions )
+    EditorNetLinkSettings EditorNetLinkSettings::makeLinkSettings( const NetEmulationConditions& conditions )
     {
         using Internal = EditorNetConditionsInternal;
         EditorNetLinkSettings settings;
@@ -33,7 +33,7 @@ namespace sw::editor
         return settings;
     }
 
-    NetEmulationConditions EditorNetConditionsUtil::makeConditions( const EditorNetLinkSettings& settings )
+    NetEmulationConditions EditorNetLinkSettings::makeConditions( const EditorNetLinkSettings& settings )
     {
         using Internal = EditorNetConditionsInternal;
         NetEmulationConditions conditions;
@@ -44,7 +44,7 @@ namespace sw::editor
         return conditions;
     }
 
-    const utf8* EditorNetConditionsUtil::toString( EditorNetLinkDirection direction )
+    const utf8* EditorNetLinkSettings::toString( EditorNetLinkDirection direction )
     {
         switch ( direction )
         {
@@ -58,24 +58,24 @@ namespace sw::editor
         return "both";
     }
 
-    string EditorNetConditionsUtil::makeLinkCommand( EditorNetLinkDirection direction, const EditorNetLinkSettings& settings )
+    string EditorNetLinkSettings::makeLinkCommand( EditorNetLinkDirection direction, const EditorNetLinkSettings& settings )
     {
         return string( "net.emulation " ) + toString( direction ) + " " + makeConditions( settings ).makeOverrideText();
     }
 
-    string EditorNetConditionsUtil::makePresetCommand( string_view presetName )
+    string EditorNetLinkSettings::makePresetCommand( string_view presetName )
     {
         return "net.emulation both " + string( presetName );
     }
 
-    string EditorNetConditionsUtil::makeSpikeCommand( float32 seconds )
+    string EditorNetLinkSettings::makeSpikeCommand( float32 seconds )
     {
         utf8 arrBuffer[constant::buffer::kMax32];
         (void)StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, MathUtil::max( 0.0f, seconds ) );
         return string( "net.emulation spike " ) + arrBuffer;
     }
 
-    bool EditorNetConditionsUtil::tryParseTarget( string_view text, int32 processCount, int32& outFirstIndex, int32& outLastIndex )
+    bool EditorNetLinkSettings::tryParseTarget( string_view text, int32 processCount, int32& outFirstIndex, int32& outLastIndex )
     {
         using Internal         = EditorNetConditionsInternal;
         int32      firstIndex  = 0;

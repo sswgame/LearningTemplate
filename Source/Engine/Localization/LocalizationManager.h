@@ -23,7 +23,7 @@
 #include "Engine/Localization/CultureInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
-#include "Engine/Localization/TimeZoneUtil.h"
+#include "Engine/Localization/TimeZoneInfo.h"
 #include "Engine/Serialization/Serializer/ReloadOutcome.h"
 
 namespace sw

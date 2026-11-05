@@ -98,7 +98,7 @@ namespace sw
             {
                 RHIBackend backend = engine::getSubsystem<EngineConfig>()._window._defaultRHI;
                 RHIBackend commandLineBackend{};
-                if ( RHIBackendUtil::findCommandLineBackend( commandLine, commandLineBackend ) )
+                if ( RHI::findCommandLineBackend( commandLine, commandLineBackend ) )
                     backend = commandLineBackend;
                 return RHI::getShaderTargetFormat( backend );
             }
@@ -366,7 +366,7 @@ namespace sw
                 if ( bWellFormed == false )
                     SW_LOG_ERROR_ID( "Headless.BakeRetargetExpectsProfile", "--bake-retarget expects <profile>,<source clip>,<output clip>" );
                 inoutState._bFailed = bWellFormed == false ||
-                                      RetargetBakeUtil::bakeClipFile( AssetID{ StringUtil::trim( listArgument[0] ) }, AssetID{ StringUtil::trim( listArgument[1] ) }, StringUtil::trim( listArgument[2] ) ) == false;
+                                      PoseRetargeter::bakeClipFile( AssetID{ StringUtil::trim( listArgument[0] ) }, AssetID{ StringUtil::trim( listArgument[1] ) }, StringUtil::trim( listArgument[2] ) ) == false;
                 return true;
             }
 

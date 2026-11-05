@@ -197,7 +197,7 @@ namespace sw
         desc._listShape.reserve( _listShape.size() );
         for ( const PhysicsShapeDesc3D& shape : _listShape )
         {
-            desc._listShape.push_back( PhysicsComponentUtil::makeScaledShape( shape, scale ) );
+            desc._listShape.push_back( PhysicsComponent::makeScaledShape( shape, scale ) );
         }
         desc._position         = position;
         desc._rotation         = rotation;
@@ -224,7 +224,7 @@ namespace sw
         float3     position{};
         quaternion rotation{};
         float3     scale{};
-        PhysicsComponentUtil::readWorldPose( *this, position, rotation, scale );
+        PhysicsComponent::readWorldPose( *this, position, rotation, scale );
         outListBody.push_back( makeBodyDesc( physics, position, rotation, scale ) );
     }
 
@@ -265,7 +265,7 @@ namespace sw
         SW_ASSERT( _body.isValid() == false || pScene->isBodyValid( _body ) );
         if ( _body.isValid() == false )
         {
-            PhysicsComponentUtil::readWorldPose( *this, position, rotation, _worldScale );
+            PhysicsComponent::readWorldPose( *this, position, rotation, _worldScale );
             createBody( physics, *pScene, position, rotation, _worldScale );
             (void)consumeTeleport();
             return;
@@ -280,7 +280,7 @@ namespace sw
         const bool bTeleported = consumeTeleport();
         const bool bMoved      = bTeleported || bTransformChanged;
         if ( bMoved )
-            PhysicsComponentUtil::readWorldPose( *this, position, rotation, _worldScale );
+            PhysicsComponent::readWorldPose( *this, position, rotation, _worldScale );
         if ( _bodyType == PhysicsBodyType::Kinematic && bTeleported == false )
         {
             // 목표는 트랜스폼이다 — 옮겨지지 않았으면 지난 목표가 곧 트랜스폼이다.
@@ -391,7 +391,7 @@ namespace sw
         const float32    weight   = _bInterpolate ? alpha : 1.0f;
         const float3     position = float3::lerp( _previousPosition, _currentPosition, weight );
         const quaternion rotation = quaternion::slerp( _previousRotation, _currentRotation, weight );
-        PhysicsComponentUtil::writeWorldPose( *this, position, rotation, _worldScale );
+        PhysicsComponent::writeWorldPose( *this, position, rotation, _worldScale );
         markTransformSynced();
         _bRestPoseWritten = bMovedLastStep == false;
     }

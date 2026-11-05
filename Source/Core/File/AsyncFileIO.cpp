@@ -557,7 +557,7 @@ namespace sw
                     const bool bRead = pRequest->_size == 0 ||
                                        PlatformFileUtil::readNativeFileAt( pRequest->_pFile->_handle, pRequest->_offset, pRequest->_result._bytes.data(),
                                                                            static_cast<size_t>( pRequest->_size ), readBytes );
-                    status = AsyncFileIOBackendUtil::classifyReadResult( bRead, pRequest->_size == 0 ? 0 : readBytes, pRequest->_size );
+                    status = IAsyncFileIOBackend::classifyReadResult( bRead, pRequest->_size == 0 ? 0 : readBytes, pRequest->_size );
                 }
                 _pQueue->finish( pRequest, status );
             }
@@ -572,12 +572,12 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IAsyncFileIOBackend> AsyncFileIOBackendUtil::createThreadPool( AsyncFileIOQueue& queue, uint32 threadCount )
+    unique_ptr<IAsyncFileIOBackend> IAsyncFileIOBackend::createThreadPool( AsyncFileIOQueue& queue, uint32 threadCount )
     {
         return make_unique<ThreadPoolAsyncFileIOBackend>( queue, threadCount );
     }
 
-    AsyncIOStatus AsyncFileIOBackendUtil::classifyReadResult( bool bReadSucceeded, uint64 bytesDone, uint64 bytesRequested )
+    AsyncIOStatus IAsyncFileIOBackend::classifyReadResult( bool bReadSucceeded, uint64 bytesDone, uint64 bytesRequested )
     {
         if ( bReadSucceeded == false )
             return AsyncIOStatus::ReadFailed;
@@ -609,7 +609,7 @@ namespace sw
         unique_ptr<IAsyncFileIOBackend> backend;
         if ( settings._backendKind != AsyncIOBackendKind::ThreadPool )
         {
-            backend = AsyncFileIOBackendUtil::createPlatform( *_queue, settings._backendKind, settings._maxInFlightCount );
+            backend = IAsyncFileIOBackend::createPlatform( *_queue, settings._backendKind, settings._maxInFlightCount );
             if ( backend != nullptr && backend->start() == false )
                 backend.reset();
             if ( backend == nullptr && settings._backendKind != AsyncIOBackendKind::Auto )
@@ -621,7 +621,7 @@ namespace sw
         }
         if ( backend == nullptr )
         {
-            backend = AsyncFileIOBackendUtil::createThreadPool( *_queue, settings._threadPoolThreadCount );
+            backend = IAsyncFileIOBackend::createThreadPool( *_queue, settings._threadPoolThreadCount );
             if ( backend->start() == false )
             {
                 _queue.reset();

@@ -21,8 +21,8 @@ namespace sw
 
 namespace sw
 {
-    bool NetCompressionUtil::compressEnvelope( const NetCompressionConfig& settings, const uint8* pData, int32 size, vector<uint8>& outBytes,
-                                               CompressionCodecRegistry* pRegistry )
+    bool NetCompressionConfig::compressEnvelope( const NetCompressionConfig& settings, const uint8* pData, int32 size, vector<uint8>& outBytes,
+                                                 CompressionCodecRegistry* pRegistry )
     {
         outBytes.clear();
         const bool bCompressionSkipped = settings._codec == CompressionCodecType::None || size < settings._minInputBytes || size <= 0;
@@ -48,7 +48,7 @@ namespace sw
         return true;
     }
 
-    bool NetCompressionUtil::decompressEnvelope( const uint8* pData, int32 size, int32 maxRawSize, vector<uint8>& outBytes, CompressionCodecRegistry* pRegistry )
+    bool NetCompressionConfig::decompressEnvelope( const uint8* pData, int32 size, int32 maxRawSize, vector<uint8>& outBytes, CompressionCodecRegistry* pRegistry )
     {
         outBytes.clear();
         if ( pData == nullptr || size < 2 )

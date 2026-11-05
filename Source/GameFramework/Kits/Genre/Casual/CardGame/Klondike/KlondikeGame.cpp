@@ -82,7 +82,7 @@ namespace sw
             return false;
         GameRandom random( seed );
         CardPile   deck;
-        CardDeckUtil::makeStandardDeck( deck );
+        CardPile::makeStandardDeck( deck );
         deck.shuffle( random );
         return initializeWithDeck( settings, deck );
     }
@@ -146,7 +146,7 @@ namespace sw
         if ( column.isEmpty() )
             return card._rank == StandardRank::kKing;
         const Card top = column.getTop();
-        return CardDeckUtil::isRedSuit( top._suit ) != CardDeckUtil::isRedSuit( card._suit ) && card._rank + 1 == top._rank;
+        return CardPile::isRedSuit( top._suit ) != CardPile::isRedSuit( card._suit ) && card._rank + 1 == top._rank;
     }
 
     bool KlondikeGame::canPlaceOnFoundation( const Card& card ) const
@@ -223,7 +223,7 @@ namespace sw
         {
             const Card& upper = from.getAt( index );
             const Card& lower = from.getAt( index - 1 );
-            if ( CardDeckUtil::isRedSuit( upper._suit ) == CardDeckUtil::isRedSuit( lower._suit ) || upper._rank + 1 != lower._rank )
+            if ( CardPile::isRedSuit( upper._suit ) == CardPile::isRedSuit( lower._suit ) || upper._rank + 1 != lower._rank )
                 return false;
         }
         if ( canStackOnTableau( from.getAt( baseIndex ), _state._arrTableau[toColumn] ) == false )

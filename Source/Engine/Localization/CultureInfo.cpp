@@ -8,8 +8,8 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Localization/CurrencyUtil.h"
-#include "Engine/Localization/TimeZoneUtil.h"
+#include "Engine/Localization/CurrencyInfo.h"
+#include "Engine/Localization/TimeZoneInfo.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -736,7 +736,7 @@ namespace sw
     string CultureInfo::formatCurrency( float64 amount, string_view currencyCode ) const
     {
         const string_view   code      = currencyCode.empty() ? string_view( _currencyCode ) : currencyCode;
-        const CurrencyInfo* pCurrency = CurrencyUtil::findCurrency( code );
+        const CurrencyInfo* pCurrency = CurrencyInfo::findCurrency( code );
         const uint32        digits    = pCurrency != nullptr ? pCurrency->_minorDigitCount : 2u;
         const string        symbol    = pCurrency != nullptr ? string( pCurrency->_pSymbol ) : string( code );
         string              number    = formatDecimal( amount, digits, digits );
@@ -867,7 +867,7 @@ namespace sw
                 {
                     // 시간대를 모르는 값(`_bZoned` 가 꺼진 값)에는 오프셋을 쓰지 않는다. 한 글자는 UTC+9, 넷은 UTC+09:00
                     if ( value._bZoned )
-                        text.append( TimeZoneUtil::formatOffset( value._utcOffsetMinutes, runLength >= 4 ) );
+                        text.append( TimeZoneInfo::formatOffset( value._utcOffsetMinutes, runLength >= 4 ) );
                     break;
                 }
                 default:

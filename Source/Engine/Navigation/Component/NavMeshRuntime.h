@@ -1,6 +1,6 @@
 /**
  * @file NavMeshRuntime.h
- * @brief 씬 내비게이션이 에이전트 종류마다 갖는 상태(`NavMeshRuntime`), 타일 하나를 워커에서 다시 베이크하는 일(`NavTileBakeJob`), 조각들이 함께 쓰는 판정(`SceneNavigationUtil`)입니다.
+ * @brief 씬 내비게이션이 에이전트 종류마다 갖는 상태(`NavMeshRuntime`), 타일 하나를 워커에서 다시 베이크하는 일(`NavTileBakeJob`), 조각들이 함께 쓰는 판정(`NavMeshRuntime`)입니다.
  * @details `SceneNavigation` 과 그 조각(`NavTileRebaker` · `NavAgentCrowdSync` · `NavDebugView`)이 함께 읽는 내부 헤더입니다.
  *          공개 헤더 `SceneNavigation.h` 는 앞 선언만 쓰므로 이 헤더를 퍼뜨리지 않습니다.
  */
@@ -29,17 +29,6 @@ namespace sw
 {
     class NavMeshSurfaceComponent;
 
-    /** @brief 씬 내비게이션 조각들이 같은 뜻으로 쓰는 작은 판정입니다. */
-    struct SceneNavigationUtil
-    {
-        /** @brief 플레이를 시작했고 켜져 있으며 지워지는 중이 아니고 주인이 계층에서 켜진 컴포넌트면 true 입니다(갱신이 다루는 대상). */
-        static bool isLive( const Component& component )
-        {
-            const GameObject* pOwner = component.getOwner();
-            return component.hasBegunPlay() && component.isActive() && component.isPendingDestroy() == false && pOwner != nullptr &&
-                   pOwner->isActiveInHierarchy();
-        }
-    };
 } // namespace sw
 
 namespace sw
@@ -158,6 +147,15 @@ namespace sw
                     return;
             }
             _listDirtyTile.push_back( tile );
+        }
+
+        // 씬 내비게이션 조각들이 같은 뜻으로 쓰는 작은 판정입니다.
+        /** @brief 플레이를 시작했고 켜져 있으며 지워지는 중이 아니고 주인이 계층에서 켜진 컴포넌트면 true 입니다(갱신이 다루는 대상). */
+        static bool isLive( const Component& component )
+        {
+            const GameObject* pOwner = component.getOwner();
+            return component.hasBegunPlay() && component.isActive() && component.isPendingDestroy() == false && pOwner != nullptr &&
+                   pOwner->isActiveInHierarchy();
         }
     };
 } // namespace sw

@@ -152,19 +152,19 @@ namespace sw
     void StressTestCombatComponent::shootAt( GameObjectManager& manager, GameObject& enemy, const utf8* pBone, bool bFatal )
     {
         float3 target{};
-        (void)SocketLookupUtil::findSocketWorldPosition( enemy, hashed_string( pBone ), target ); // 벤치 — 없으면 원점을 쏠 뿐이다
+        (void)SocketSetComponent::findSocketWorldPosition( enemy, hashed_string( pBone ), target ); // 벤치 — 없으면 원점을 쏠 뿐이다
         // 머리와 가슴 뼈는 해당 바디의 아래쪽 끝에 있습니다. 바디 가운데 높이에 맞도록 조금 올려서 쏩니다.
         target._y += 0.15f;
         const float3 muzzle = target + float3{ 0.0f, 0.0f, -_shooterRange };
         HitInfo      hit;
         if ( bFatal == false )
         {
-            if ( CharacterHitUtil::traceWeaponHit( manager, muzzle, float3{ 0.0f, 0.0f, 1.0f }, 10.0f, 0xFFFFFFFFu, getOwner(), 20.0f, 40.0f, false, hit ) )
+            if ( CharacterRayHit::traceWeaponHit( manager, muzzle, float3{ 0.0f, 0.0f, 1.0f }, 10.0f, 0xFFFFFFFFu, getOwner(), 20.0f, 40.0f, false, hit ) )
                 SW_LOG_INFO_ID( "StressTestCombat.THitZoneX", "[StressTestCombat] t=%# hit '%#' zone '%#' x%# (body %#)", _elapsed, pBone, hit._zone.c_str(), hit._damageMultiplier, hit._bodyIndex );
             return;
         }
         CharacterRayHit rayHit;
-        if ( CharacterHitUtil::raycast3D( manager, muzzle, float3{ 0.0f, 0.0f, 1.0f }, 10.0f, 0xFFFFFFFFu, 0, rayHit ) == false || rayHit._pObject == nullptr )
+        if ( CharacterRayHit::raycast3D( manager, muzzle, float3{ 0.0f, 0.0f, 1.0f }, 10.0f, 0xFFFFFFFFu, 0, rayHit ) == false || rayHit._pObject == nullptr )
             return;
         hit._pInstigator = getOwner();
         hit._body        = rayHit._body;
@@ -174,8 +174,8 @@ namespace sw
         hit._damage      = 100.0f;
         hit._impulse     = 180.0f;
         hit._bFatal      = true;
-        CharacterHitUtil::resolveHitZone( *rayHit._pObject, rayHit._body, hit );
-        CharacterHitUtil::deliverHit( *rayHit._pObject, hit );
+        CharacterRayHit::resolveHitZone( *rayHit._pObject, rayHit._body, hit );
+        CharacterRayHit::deliverHit( *rayHit._pObject, hit );
         SW_LOG_INFO_ID( "StressTestCombat.TFatalHitZone", "[StressTestCombat] t=%# fatal hit '%#' zone '%#' x%# -> ragdoll", _elapsed, pBone, hit._zone.c_str(), hit._damageMultiplier );
     }
 

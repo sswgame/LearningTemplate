@@ -46,6 +46,24 @@ namespace sw
         friend class ScenePhysics; ///< 등록 자리(`_physicsIndex`)를 적고 단계 콜백을 부른다
 
     public:
+        // 물리 컴포넌트가 함께 쓰는 자세 · 셰이프 도우미입니다.
+        /** @brief 월드 행렬을 자리 · 회전 · 배율로 풉니다. */
+        static void readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale );
+        /**
+         * @brief 자리 · 회전 · 배율을 월드 트랜스폼으로 씁니다. 부모가 없으면 행렬을 만들어 다시 풀지 않고 로컬 값에 바로 씁니다.
+         * @details 배율은 부르는 쪽이 들고 있는 값이다(트랜스폼 변경 번호가 같으면 지난번에 읽은 배율 그대로). 쓴 값을 다시 읽어 비교하지 않는다 —
+         *          바깥 이동은 변경 번호가 알린다(`PhysicsComponent::consumeTransformChange`).
+         */
+        static void writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, const float3& scale );
+        /** @brief Z 축 둘레 각입니다(2D 물리의 회전). */
+        static float32 getAngle2D( const quaternion& rotation );
+        /** @brief Z 축 둘레 각의 회전입니다. */
+        static quaternion makeRotation2D( float32 angle );
+        /** @brief 셰이프를 월드 배율로 키웁니다(상자 · 자리 · 점은 축마다, 반지름은 가로 축 중 큰 쪽, 캡슐 높이는 Y). */
+        static PhysicsShapeDesc3D makeScaledShape( const PhysicsShapeDesc3D& shape, const float3& scale );
+        /** @brief 2D 셰이프를 월드 배율(XY)로 키웁니다. */
+        static PhysicsShapeDesc2D makeScaledShape( const PhysicsShapeDesc2D& shape, const float3& scale );
+
         REFLECT_BODY();
         /** @brief 등록되지 않았다는 표시입니다. */
         static constexpr uint32 kNotRegistered = constant::invalid_index::kUint32;
@@ -160,29 +178,5 @@ namespace sw
         bool    _bSetLinearVelocity{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool    _bSetAngularVelocity{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         bool    _bWake{ false };               ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 물리 컴포넌트가 함께 쓰는 자세 · 셰이프 도우미입니다. */
-    struct SW_API PhysicsComponentUtil
-    {
-        /** @brief 월드 행렬을 자리 · 회전 · 배율로 풉니다. */
-        static void readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale );
-        /**
-         * @brief 자리 · 회전 · 배율을 월드 트랜스폼으로 씁니다. 부모가 없으면 행렬을 만들어 다시 풀지 않고 로컬 값에 바로 씁니다.
-         * @details 배율은 부르는 쪽이 들고 있는 값이다(트랜스폼 변경 번호가 같으면 지난번에 읽은 배율 그대로). 쓴 값을 다시 읽어 비교하지 않는다 —
-         *          바깥 이동은 변경 번호가 알린다(`PhysicsComponent::consumeTransformChange`).
-         */
-        static void writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, const float3& scale );
-        /** @brief Z 축 둘레 각입니다(2D 물리의 회전). */
-        static float32 getAngle2D( const quaternion& rotation );
-        /** @brief Z 축 둘레 각의 회전입니다. */
-        static quaternion makeRotation2D( float32 angle );
-        /** @brief 셰이프를 월드 배율로 키웁니다(상자 · 자리 · 점은 축마다, 반지름은 가로 축 중 큰 쪽, 캡슐 높이는 Y). */
-        static PhysicsShapeDesc3D makeScaledShape( const PhysicsShapeDesc3D& shape, const float3& scale );
-        /** @brief 2D 셰이프를 월드 배율(XY)로 키웁니다. */
-        static PhysicsShapeDesc2D makeScaledShape( const PhysicsShapeDesc2D& shape, const float3& scale );
     };
 } // namespace sw

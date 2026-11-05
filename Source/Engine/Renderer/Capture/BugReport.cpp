@@ -237,7 +237,7 @@ namespace sw
         inputs._report._note               = string( note );
         inputs._report._buildConfiguration = build::kConfigName;
         inputs._root                       = BugReportInternal::makeDefaultRoot();
-        inputs._localTime                  = ScreenshotPathUtil::getLocalTimeNow();
+        inputs._localTime                  = ScreenshotLocalTime::getLocalTimeNow();
         inputs._bRequestScreenshot         = true;
 
         // 로거는 비동기다 — 비우지 않으면 bugreport 직전 줄이 사본에 없다.

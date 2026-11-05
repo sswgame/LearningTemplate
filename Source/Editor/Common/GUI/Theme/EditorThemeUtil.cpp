@@ -289,7 +289,7 @@ namespace sw::editor
             /** @brief 종류 등록의 아이콘입니다. 종류가 없으면 일반 파일 아이콘입니다. */
             static const utf8* getIconOf( const EditorAssetTypeRegistration* pRegistration )
             {
-                return pRegistration != nullptr ? EditorIconUtil::findGlyphByName( pRegistration->_pIconName ) : SW_EDITORICON( "File" );
+                return pRegistration != nullptr ? EditorIconGlyphTable::findGlyphByName( pRegistration->_pIconName ) : SW_EDITORICON( "File" );
             }
 
             /** @brief 종류 등록의 테마 색(키는 등록 줄이 든다)입니다. 종류가 없으면 흐린 글자 색입니다. */

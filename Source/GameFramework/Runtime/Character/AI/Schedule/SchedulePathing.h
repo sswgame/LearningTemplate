@@ -47,6 +47,14 @@ namespace sw
     class SW_GF_API ISchedulePathing
     {
     public:
+        // 경로 계산 도우미입니다.
+        /** @brief 점 목록의 전체 길이입니다. */
+        static float32 computeLength( const vector<float3>& listPoint );
+        /** @brief 점 목록을 따라 길이의 @p fraction(0..1) 만큼 간 위치입니다. 목록이 비면 원점입니다. */
+        static float3 computePointAlong( const vector<float3>& listPoint, float32 fraction );
+        /** @brief 평면 위로 옮깁니다. */
+        static float3 offsetInPlane( SchedulePlane plane, const float3& center, float32 offsetU, float32 offsetV );
+
         ISchedulePathing()                                         = default;
         virtual ~ISchedulePathing()                                = default;
         ISchedulePathing( const ISchedulePathing& )                = default;
@@ -62,20 +70,6 @@ namespace sw
         virtual hashed_string computeAreaAt( const ScheduleLocation& from, const ScheduleLocation& to, float32 fraction ) const;
         /** @brief @p center 에서 평면 위로 (@p offsetU, @p offsetV) 만큼 옮긴 위치입니다. 돌아다니기 점에 씁니다. */
         virtual float3 offsetInPlane( const float3& center, float32 offsetU, float32 offsetV ) const;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 경로 계산 도우미입니다. */
-    struct SW_GF_API SchedulePathingUtil
-    {
-        /** @brief 점 목록의 전체 길이입니다. */
-        static float32 computeLength( const vector<float3>& listPoint );
-        /** @brief 점 목록을 따라 길이의 @p fraction(0..1) 만큼 간 위치입니다. 목록이 비면 원점입니다. */
-        static float3 computePointAlong( const vector<float3>& listPoint, float32 fraction );
-        /** @brief 평면 위로 옮깁니다. */
-        static float3 offsetInPlane( SchedulePlane plane, const float3& center, float32 offsetU, float32 offsetV );
     };
 } // namespace sw
 

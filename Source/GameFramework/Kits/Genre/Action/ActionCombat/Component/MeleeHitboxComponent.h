@@ -13,12 +13,12 @@ namespace sw
     /**
      * @class MeleeHitboxComponent
      * @brief 코드가 여는 근접 공격 판정입니다. 휘두르는 동안 오브젝트 기준 칼날(두 점과 두께)을 프레임마다 쓸어 걸린 오브젝트를 맞힙니다(2D 물리 씬).
-     * @details 판정은 엔진의 근접 판정 한 길(`MeleeHitWindowUtil::sweep`, 애니메이션 알림 `HitWindow` 와 같다)이고, 이 컴포넌트는 칼날을 오브젝트 변환으로
+     * @details 판정은 엔진의 근접 판정 한 길(`MeleeHit::sweep`, 애니메이션 알림 `HitWindow` 와 같다)이고, 이 컴포넌트는 칼날을 오브젝트 변환으로
      *          만들고 창을 열고 닫기만 한다. 칼날은 `setBlade` 의 두 점(이 오브젝트 기준)과 두께다. 칼 끝처럼 따로 움직일 판정은 자식 오브젝트에 붙인다.
      *          `beginAttack` 부터 `duration` 동안 창이 열리고, 그 사이 칼날에 걸린 오브젝트는 창마다 **한 번** 맞는다. 휘두르기 전부터 칼날 안에 있던 오브젝트는
      *          시작할 때, 휘두르는 동안 들어온 오브젝트는 그 프레임에 맞는다. 공격자 계층(이 오브젝트의 맨 위 조상과 그 아래 모두)은 맞지 않고, 맞음의 때린 쪽은
      *          그 맨 위 조상이다. 맞음은 `onHitReceived` 로 가고 유닛은 `UnitStatsComponent::onHitReceived` 에서 피해를 받는다(투사체와 같은 `takeDamage`).
-     *          트리거(감지 범위)는 걸리지 않는다. 클라이언트 프로세스는 맞음을 전달하지 않는다(서버 권위, `MeleeHitWindowUtil::getProcessAuthority`).
+     *          트리거(감지 범위)는 걸리지 않는다. 클라이언트 프로세스는 맞음을 전달하지 않는다(서버 권위, `MeleeHit::getProcessAuthority`).
      *          스윕은 틱 밖에서 돈다 — 틱(물리 뒤 단계)이 틱 직후로 미룬다(물리 질의와 `onHitReceived` 는 틱 밖의 일이다).
      */
     REFLECT()

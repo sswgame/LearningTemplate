@@ -177,7 +177,7 @@ namespace sw::editor
     {
         RenderTargetRegistry&   registry           = editor::getSubsystem<RenderTargetRegistry>();
         const RenderTargetInfo* pSelected          = findByName( _listTarget, _selectedName );
-        const bool              bTargetNotReadable = pSelected == nullptr || RenderTargetViewUtil::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false;
+        const bool              bTargetNotReadable = pSelected == nullptr || RenderTargetViewSettings::isDecodableFormat( pSelected->_format, pSelected->_bDepth != SW_FALSE ) == false;
         if ( bTargetNotReadable )
             return;
 
@@ -224,8 +224,8 @@ namespace sw::editor
             return;
 
         RenderTargetPreviewImage image{};
-        if ( RenderTargetViewUtil::makePreviewImage( _snapshot._byte, _snapshot._layout, pSelected->_format, pSelected->_bDepth != SW_FALSE, _viewSettings,
-                                                     image ) == false )
+        if ( RenderTargetViewSettings::makePreviewImage( _snapshot._byte, _snapshot._layout, pSelected->_format, pSelected->_bDepth != SW_FALSE, _viewSettings,
+                                                         image ) == false )
             return;
         _snapshotDepthRange = float2{ image._depthLow, image._depthHigh };
 
@@ -362,15 +362,15 @@ namespace sw::editor
         {
             const RenderTargetChannel channel = static_cast<RenderTargetChannel>( channelIndex );
             if ( channelIndex > 0 )
-                EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( RenderTargetViewUtil::getChannelLabel( channel ) ) );
-            if ( ImGui::RadioButton( RenderTargetViewUtil::getChannelLabel( channel ), _viewSettings._channel == channel ) && _viewSettings._channel != channel )
+                EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( RenderTargetViewSettings::getChannelLabel( channel ) ) );
+            if ( ImGui::RadioButton( RenderTargetViewSettings::getChannelLabel( channel ), _viewSettings._channel == channel ) && _viewSettings._channel != channel )
             {
                 _viewSettings._channel = channel;
                 _bSnapshotImageDirty   = SW_TRUE;
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "ChannelTip" ) );
             if ( EditorSelfTestMarks::isEnabled() )
-                EditorSelfTestMarks::note( ( string{ "renderTargets.channel." } + RenderTargetViewUtil::getChannelLabel( channel ) ).c_str() );
+                EditorSelfTestMarks::note( ( string{ "renderTargets.channel." } + RenderTargetViewSettings::getChannelLabel( channel ) ).c_str() );
         }
     }
 
@@ -380,13 +380,13 @@ namespace sw::editor
             return;
         const ImVec2 mouse = ImGui::GetMousePos();
         int2         texel{};
-        if ( RenderTargetViewUtil::mapPreviewToTexel( float2{ mouse.x - imageMin._x, mouse.y - imageMin._y }, imageSize, _snapshot._layout._width,
-                                                      _snapshot._layout._height, texel ) == false )
+        if ( RenderTargetViewSettings::mapPreviewToTexel( float2{ mouse.x - imageMin._x, mouse.y - imageMin._y }, imageSize, _snapshot._layout._width,
+                                                          _snapshot._layout._height, texel ) == false )
             return;
         float4     value{};
         const bool bDepth = selected._bDepth != SW_FALSE;
-        if ( RenderTargetViewUtil::readPixel( _snapshot._byte, _snapshot._layout, selected._format, bDepth, static_cast<uint32>( texel._x ),
-                                              static_cast<uint32>( texel._y ), value ) == false )
+        if ( RenderTargetViewSettings::readPixel( _snapshot._byte, _snapshot._layout, selected._format, bDepth, static_cast<uint32>( texel._x ),
+                                                  static_cast<uint32>( texel._y ), value ) == false )
             return;
         _probedPixel  = value;
         _probedTexel  = texel;
@@ -398,11 +398,11 @@ namespace sw::editor
         {
             ImGui::Text( "%s %.6f", SW_LOCKEY( "EditorRenderTarget", "DepthLabel" ), static_cast<float64>( value._x ) );
             ImGui::Text( "%s %.3f", SW_LOCKEY( "EditorRenderTarget", "LinearLabel" ),
-                         static_cast<float64>( RenderTargetViewUtil::linearizeDepth( value._x, _viewSettings._nearPlane, _viewSettings._farPlane ) ) );
+                         static_cast<float64>( RenderTargetViewSettings::linearizeDepth( value._x, _viewSettings._nearPlane, _viewSettings._farPlane ) ) );
         }
         else
         {
-            const uint32  channelCount = RenderTargetViewUtil::getChannelCount( selected._format, false );
+            const uint32  channelCount = RenderTargetViewSettings::getChannelCount( selected._format, false );
             const float32 arrValue[4]{ value._x, value._y, value._z, value._w };
             const utf8*   arrLabel[4]{ "R", "G", "B", "A" };
             for ( uint32 channelIndex = 0; channelIndex < channelCount; ++channelIndex )
@@ -431,7 +431,7 @@ namespace sw::editor
                              FrameRendererUtil::attachmentFormatName( pSelected->_format ) );
 
         const bool bDepth     = pSelected->_bDepth != SW_FALSE;
-        const bool bDecodable = RenderTargetViewUtil::isDecodableFormat( pSelected->_format, bDepth );
+        const bool bDecodable = RenderTargetViewSettings::isDecodableFormat( pSelected->_format, bDepth );
         if ( bDecodable )
             drawViewControls( *pSelected );
 

@@ -20,27 +20,6 @@ namespace sw
     class TerrainHeightfield;
     class ValidationContext;
 
-    /**
-     * @struct TerrainCollisionUtil
-     * @brief 지형 높이장을 물리 셰이프로 옮기는 어댑터입니다. 렌더 메시(LOD 0)와 높이 질의(`findHeightAt`)와 같은 삼각형을 냅니다.
-     */
-    struct SW_API TerrainCollisionUtil
-    {
-        /**
-         * @brief 높이장을 삼각형 메시 셰이프(`PhysicsShapeType3D::TriangleMesh`)로 만듭니다.
-         * @details 점은 샘플 (0, 0) 기준의 로컬 위치이고(바디는 `getOrigin()` 에 둔다), 행 우선으로 N² 개다. 셀은 대각선 (x, z)–(x+1, z+1) 로 나눈
-         *          삼각형 둘이며, 구멍 셀은 삼각형을 내지 않는다. 감김은 `(b−a)×(c−a)` 가 위(+Y)를 향한다(Jolt · Recast 가 같은 식으로 앞면을 정한다).
-         *          Jolt `HeightFieldShape` 는 구멍을 샘플 단위로만 받아 이웃 셀까지 뚫리므로, 셀 단위 구멍을 정확히 옮기는 이 메시를 쓴다.
-         * @return 높이장이 비었거나 삼각형이 하나도 없으면 false 이고 @p outShape 는 비어 있습니다.
-         */
-        [[nodiscard]] static bool makeCollisionMesh( const TerrainHeightfield& heightfield, PhysicsShapeDesc3D& outShape );
-        /**
-         * @brief 청크 (x, z) 의 셀만 같은 규칙으로 삼각형 메시로 만듭니다. 점은 그 청크의 샘플만이고 위치는 `makeCollisionMesh` 와 같은 기준(샘플 (0, 0))입니다.
-         * @return 청크가 범위 밖이거나 모두 구멍이면 false 이고 @p outShape 는 비어 있습니다.
-         */
-        [[nodiscard]] static bool makeChunkCollisionMesh( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ,
-                                                          PhysicsShapeDesc3D& outShape );
-    };
 } // namespace sw
 
 namespace sw
@@ -58,6 +37,22 @@ namespace sw
     class SW_API TerrainColliderComponent : public PhysicsComponent
     {
     public:
+        // 지형 높이장을 물리 셰이프로 옮기는 어댑터입니다. 렌더 메시(LOD 0)와 높이 질의(`findHeightAt`)와 같은 삼각형을 냅니다.
+        /**
+         * @brief 높이장을 삼각형 메시 셰이프(`PhysicsShapeType3D::TriangleMesh`)로 만듭니다.
+         * @details 점은 샘플 (0, 0) 기준의 로컬 위치이고(바디는 `getOrigin()` 에 둔다), 행 우선으로 N² 개다. 셀은 대각선 (x, z)–(x+1, z+1) 로 나눈
+         *          삼각형 둘이며, 구멍 셀은 삼각형을 내지 않는다. 감김은 `(b−a)×(c−a)` 가 위(+Y)를 향한다(Jolt · Recast 가 같은 식으로 앞면을 정한다).
+         *          Jolt `HeightFieldShape` 는 구멍을 샘플 단위로만 받아 이웃 셀까지 뚫리므로, 셀 단위 구멍을 정확히 옮기는 이 메시를 쓴다.
+         * @return 높이장이 비었거나 삼각형이 하나도 없으면 false 이고 @p outShape 는 비어 있습니다.
+         */
+        [[nodiscard]] static bool makeCollisionMesh( const TerrainHeightfield& heightfield, PhysicsShapeDesc3D& outShape );
+        /**
+         * @brief 청크 (x, z) 의 셀만 같은 규칙으로 삼각형 메시로 만듭니다. 점은 그 청크의 샘플만이고 위치는 `makeCollisionMesh` 와 같은 기준(샘플 (0, 0))입니다.
+         * @return 청크가 범위 밖이거나 모두 구멍이면 false 이고 @p outShape 는 비어 있습니다.
+         */
+        [[nodiscard]] static bool makeChunkCollisionMesh( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ,
+                                                          PhysicsShapeDesc3D& outShape );
+
         REFLECT_BODY();
 
         TerrainColliderComponent();

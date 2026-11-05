@@ -92,7 +92,7 @@ namespace sw
         entry._frame       = _frame;
         entry._params      = params;
         entry._listCurrent.assign( listCurrent.begin(), listCurrent.end() );
-        // 지난 칼날은 길이가 같을 때만 쓴다(`MeleeHitWindowUtil::sweep` 와 같은 규칙).
+        // 지난 칼날은 길이가 같을 때만 쓴다(`MeleeHit::sweep` 와 같은 규칙).
         if ( listPrevious.size() == listCurrent.size() )
             entry._listPrevious.assign( listPrevious.begin(), listPrevious.end() );
     }
@@ -160,7 +160,7 @@ namespace sw
         hit._damage      = params._damage;
         hit._impulse     = params._impulse;
         hit._bIs2D       = params._bIs2D;
-        CharacterHitUtil::deliverHit( target, hit );
+        CharacterRayHit::deliverHit( target, hit );
         return verdict;
     }
 } // namespace sw

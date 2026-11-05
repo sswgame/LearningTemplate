@@ -17,12 +17,16 @@
 
 namespace sw
 {
-    /**
-     * @struct LocalizationTextUtil
-     * @brief 원문 해시와 키 규칙처럼 저작 파일 세트가 함께 쓰는 유틸리티입니다.
-     */
-    struct SW_API LocalizationTextUtil
+    /** @brief 원문 표의 한 줄입니다. */
+    struct SW_API SourceTextEntry
     {
+        string         _source;         ///< 원문(ICU MessageFormat 패턴)
+        string         _context;        ///< 같은 글자의 다른 뜻을 구분하는 맥락입니다(번역가에게 보입니다. PO `#.`).
+        string         _comment;        ///< 개발자 설명(PO `#.`)
+        vector<string> _listOrigin;     ///< 수집기가 찾은 위치입니다(저장소 상대 파일, 리소스 경로). 비어 있으면 손으로 넣은 줄이고 수집기가 지우지 않습니다.
+        uint32         _maxLength{ 0 }; ///< 번역의 최대 글자 수(UTF-8 글자, 0 = 제한 없음)
+
+        // 원문 해시와 키 규칙처럼 저작 파일 세트가 함께 쓰는 유틸리티입니다.
         /** @brief 원문 해시입니다(대소문자 구분 64 비트 FNV-1a). 0 은 "해시 없음" 이라 쓰지 않습니다. */
         static uint64 computeSourceHash( string_view sourceText );
         /** @brief 16 자리 소문자 16 진수입니다. */
@@ -31,19 +35,6 @@ namespace sw
         [[nodiscard]] static bool tryParseSourceHash( string_view text, uint64& outSourceHash );
         /** @brief 코드의 키(`SW_LOCTEXT( "Namespace", "Key", … )`)를 표의 키(`Namespace.Key`)로 잇습니다. 이름공간이 비면 키 그대로입니다. */
         static string makeFullKey( string_view textNamespace, string_view key );
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 원문 표의 한 줄입니다. */
-    struct SourceTextEntry
-    {
-        string         _source;         ///< 원문(ICU MessageFormat 패턴)
-        string         _context;        ///< 같은 글자의 다른 뜻을 구분하는 맥락입니다(번역가에게 보입니다. PO `#.`).
-        string         _comment;        ///< 개발자 설명(PO `#.`)
-        vector<string> _listOrigin;     ///< 수집기가 찾은 위치입니다(저장소 상대 파일, 리소스 경로). 비어 있으면 손으로 넣은 줄이고 수집기가 지우지 않습니다.
-        uint32         _maxLength{ 0 }; ///< 번역의 최대 글자 수(UTF-8 글자, 0 = 제한 없음)
     };
 } // namespace sw
 

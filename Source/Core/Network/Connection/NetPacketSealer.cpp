@@ -49,7 +49,7 @@ namespace sw
             {
                 uint8                arrProofKey[NetSecurityConstant::kAeadKeySize]{};
                 unique_ptr<INetAead> proof;
-                if ( NetSessionKeyUtil::computeProofKey( provider, secret, arrProofKey ) )
+                if ( NetSessionKeys::computeProofKey( provider, secret, arrProofKey ) )
                     proof = provider.createAead( algorithm, arrProofKey );
                 std::memset( arrProofKey, 0, sizeof( arrProofKey ) );
                 return proof;
@@ -83,7 +83,7 @@ namespace sw
         NetPacketSealerInternal::makePacketAad( protocolID, arrHead, arrAad );
         uint8                   arrNonce[NetSecurityConstant::kAeadNonceSize]{};
         const NetDirectionKeys& keys = bServer ? security._keys._serverToClient : security._keys._clientToServer;
-        NetSessionKeyUtil::makeNonce( keys._arrIv, packetNumber, arrNonce );
+        NetSessionKeys::makeNonce( keys._arrIv, packetNumber, arrNonce );
         _listSealScratch.resize( static_cast<size_t>( plainSize + NetSecurityConstant::kAeadTagSize ) );
         if ( security._sendAead->seal( arrNonce, arrAad, kAadSize, pPlain, plainSize, _listSealScratch.data() ) == false )
             return false;
@@ -108,7 +108,7 @@ namespace sw
         NetPacketSealerInternal::makePacketAad( protocolID, pBody, arrAad );
         uint8                   arrNonce[NetSecurityConstant::kAeadNonceSize]{};
         const NetDirectionKeys& keys = bServer ? security._keys._clientToServer : security._keys._serverToClient;
-        NetSessionKeyUtil::makeNonce( keys._arrIv, packetNumber, arrNonce );
+        NetSessionKeys::makeNonce( keys._arrIv, packetNumber, arrNonce );
         const int32 cipherSize = bodySize - kSecureHeadSize;
         _listOpenScratch.resize( static_cast<size_t>( cipherSize - NetSecurityConstant::kAeadTagSize ) );
         if ( security._receiveAead->open( arrNonce, arrAad, kAadSize, pBody + kSecureHeadSize, cipherSize, _listOpenScratch.data() ) == false )
@@ -123,7 +123,7 @@ namespace sw
         uint8      arrShared[NetSecurityConstant::kX25519KeySize]{};
         const bool bKeys = provider.makeX25519KeyPair( outSecurity._keyPair ) &&
                            provider.computeX25519SharedSecret( outSecurity._keyPair._arrPrivateKey, pClientPublicKey, arrShared ) &&
-                           NetSessionKeyUtil::computeSessionKeys( provider, arrShared, pSecret, clientSalt, serverSalt, protocolID, outSecurity._keys );
+                           NetSessionKeys::computeSessionKeys( provider, arrShared, pSecret, clientSalt, serverSalt, protocolID, outSecurity._keys );
         std::memset( arrShared, 0, sizeof( arrShared ) );
         outSecurity._keyPair.wipe(); // 서버는 수락을 다시 보낼 때 쓰도록 공개 키만 남긴다.
         if ( bKeys == false )
@@ -138,7 +138,7 @@ namespace sw
     {
         uint8      arrShared[NetSecurityConstant::kX25519KeySize]{};
         const bool bKeys = provider.computeX25519SharedSecret( inoutSecurity._keyPair._arrPrivateKey, pServerPublicKey, arrShared ) &&
-                           NetSessionKeyUtil::computeSessionKeys( provider, arrShared, pSecret, clientSalt, serverSalt, protocolID, inoutSecurity._keys );
+                           NetSessionKeys::computeSessionKeys( provider, arrShared, pSecret, clientSalt, serverSalt, protocolID, inoutSecurity._keys );
         std::memset( arrShared, 0, sizeof( arrShared ) );
         if ( bKeys == false )
             return false;
@@ -151,7 +151,7 @@ namespace sw
     {
         uint8 arrNonce[NetSecurityConstant::kAeadNonceSize]{};
         uint8 arrAad[kKeyConfirmAadSize]{};
-        NetSessionKeyUtil::makeNonce( security._keys._serverToClient._arrIv, NetSessionKeyUtil::kKeyConfirmPacketNumber, arrNonce );
+        NetSessionKeys::makeNonce( security._keys._serverToClient._arrIv, NetSessionKeys::kKeyConfirmPacketNumber, arrNonce );
         NetPacketSealerInternal::makeKeyConfirmAad( serverIndex, serverSalt, arrAad );
         return security._sendAead->seal( arrNonce, arrAad, kKeyConfirmAadSize, nullptr, 0, security._arrKeyConfirmTag );
     }
@@ -160,7 +160,7 @@ namespace sw
     {
         uint8 arrNonce[NetSecurityConstant::kAeadNonceSize]{};
         uint8 arrAad[kKeyConfirmAadSize]{};
-        NetSessionKeyUtil::makeNonce( security._keys._serverToClient._arrIv, NetSessionKeyUtil::kKeyConfirmPacketNumber, arrNonce );
+        NetSessionKeys::makeNonce( security._keys._serverToClient._arrIv, NetSessionKeys::kKeyConfirmPacketNumber, arrNonce );
         NetPacketSealerInternal::makeKeyConfirmAad( serverIndex, serverSalt, arrAad );
         return security._receiveAead->open( arrNonce, arrAad, kKeyConfirmAadSize, pTag, NetSecurityConstant::kAeadTagSize, nullptr );
     }

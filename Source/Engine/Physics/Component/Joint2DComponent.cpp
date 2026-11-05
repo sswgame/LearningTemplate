@@ -116,7 +116,7 @@ namespace sw
         float3     position{};
         quaternion rotation{};
         float3     scale{};
-        PhysicsComponentUtil::readWorldPose( *this, position, rotation, scale );
+        PhysicsComponent::readWorldPose( *this, position, rotation, scale );
         PhysicsJointDesc2D desc;
         desc._bodyA   = bodyA;
         desc._bodyB   = bodyB;

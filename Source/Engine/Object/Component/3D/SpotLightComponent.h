@@ -19,7 +19,7 @@ namespace sw
      *          언리얼 `USpotLightComponent` 의 `InnerConeAngle` / `OuterConeAngle` 과 같은 규약입니다.
      * @note 방향은 기본 방향(**아래**)을 이 컴포넌트의 월드 회전으로 돌린 것입니다(`LightComponent` 의 방향 규약). 기본이 아래인
      *       까닭: 전방 +Z 를 쓰면 카메라 쪽으로 쏴 화면이 통째로 하얘져 "스폿인지" 를 알 수 없습니다.
-     * @note 그림자는 켤 때만 드리웁니다(`_bCastShadow`, 기본 끔). 그림자 아틀라스의 칸 하나에 바깥 원뿔을 덮는 원근으로 그립니다(`ShadowSetupUtil`).
+     * @note 그림자는 켤 때만 드리웁니다(`_bCastShadow`, 기본 끔). 그림자 아틀라스의 칸 하나에 바깥 원뿔을 덮는 원근으로 그립니다(`FrameShadowData`).
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Spot Light", Tooltip = "Cone-shaped light with inner/outer falloff", Meta = "Icon=LightSpot, IconColor=Light, Billboard" )
     class SW_API SpotLightComponent : public LightComponent

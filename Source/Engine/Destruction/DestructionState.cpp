@@ -757,7 +757,7 @@ namespace sw
         const FractureGraph& graph = *_pGraph;
         ++_eventCount;
         vector<DestructionLeafStrain> listLeafStrain;
-        DestructionDamageUtil::computeLeafStrain( graph, event, _listLeafGroup, listLeafStrain );
+        DestructionDamageEvent::computeLeafStrain( graph, event, _listLeafGroup, listLeafStrain );
         if ( listLeafStrain.empty() )
             return false;
         _listScratchStrain.assign( graph._leafCount, 0.0f );

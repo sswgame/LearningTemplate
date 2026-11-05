@@ -80,7 +80,7 @@ namespace sw::editor
     {
         const float2 physicalSize{ static_cast<float32>( resolution._width ), static_cast<float32>( resolution._height ) };
         // 창 OS 배율은 1 — 미리보기는 해상도 규칙과 사용자 배율만 본다(모니터 DPI 는 게임 창의 일).
-        return UIScaleUtil::makeViewport( settings, physicalSize, userScale, 1.0f, safeZoneRatio );
+        return UIScaleSettings::makeViewport( settings, physicalSize, userScale, 1.0f, safeZoneRatio );
     }
 
     float2 UIPreviewLogic::fitImage( const float2& imageSize, const float2& available )

@@ -127,19 +127,19 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    uint32 InspectorBuiltinValueUtil::getBuiltinCount()
+    uint32 InspectorBuiltinValue::getBuiltinCount()
     {
         return static_cast<uint32>( InspectorBuiltinValueInternal::getTable().size() );
     }
 
-    const InspectorBuiltinValue& InspectorBuiltinValueUtil::getBuiltin( uint32 index )
+    const InspectorBuiltinValue& InspectorBuiltinValue::getBuiltin( uint32 index )
     {
         const vector<InspectorBuiltinValue>& listRow = InspectorBuiltinValueInternal::getTable();
         SW_ASSERT( index < listRow.size() );
         return listRow[index];
     }
 
-    const InspectorBuiltinValue* InspectorBuiltinValueUtil::findBuiltin( string_view typeName )
+    const InspectorBuiltinValue* InspectorBuiltinValue::findBuiltin( string_view typeName )
     {
         for ( const InspectorBuiltinValue& row : InspectorBuiltinValueInternal::getTable() )
         {
@@ -149,12 +149,12 @@ namespace sw::editor
         return nullptr;
     }
 
-    bool InspectorBuiltinValueUtil::supportsMethodValue( string_view typeName )
+    bool InspectorBuiltinValue::supportsMethodValue( string_view typeName )
     {
         return findBuiltin( typeName ) != nullptr;
     }
 
-    bool InspectorBuiltinValueUtil::prepareMethodArgs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot )
+    bool InspectorBuiltinValue::prepareMethodArgs( const FunctionInfo& method, vector<InspectorMethodArgSlot>& inoutListSlot )
     {
         const size_t paramCount = method._listParameter.size();
         bool         bAllFilled = paramCount <= kMaxMethodArgCount;
@@ -179,7 +179,7 @@ namespace sw::editor
         return bAllFilled;
     }
 
-    TaskArgs InspectorBuiltinValueUtil::makeMethodArgs( const vector<InspectorMethodArgSlot>& listSlot )
+    TaskArgs InspectorBuiltinValue::makeMethodArgs( const vector<InspectorMethodArgSlot>& listSlot )
     {
         TaskArgs args;
         for ( const InspectorMethodArgSlot& slot : listSlot )
@@ -189,7 +189,7 @@ namespace sw::editor
         return args;
     }
 
-    bool InspectorBuiltinValueUtil::formatMethodResult( const TaskValue& value, string_view returnType, utf8* pOutBuf, uint32 capacity )
+    bool InspectorBuiltinValue::formatMethodResult( const TaskValue& value, string_view returnType, utf8* pOutBuf, uint32 capacity )
     {
         if ( pOutBuf == nullptr || capacity == 0 )
             return false;

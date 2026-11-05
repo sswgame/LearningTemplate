@@ -19,7 +19,7 @@
 #include "Editor/Viewport/EditorViewportBillboard.h"
 #include "Editor/Viewport/EditorViewportToolbar.h"
 #include "Editor/Viewport/EditorViewportVisualizer.h"
-#include "Editor/Viewport/Model/EditorGridUtil.h"
+#include "Editor/Viewport/Model/EditorGridLevel.h"
 #include "Editor/Viewport/Model/EditorViewportOverlayLayout.h"
 #include "Editor/Viewport/Visualizers/SelectionBoundsVisualizer.h"
 

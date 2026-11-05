@@ -34,7 +34,7 @@ SW_TEST_CASE( CardDeckTest, StandardDeckHasFiftyTwoOrderedCardsAndJokers )
 {
     sw::CardPile pile;
     pile.push( makeCard( 999, 0, 0 ) );
-    sw::CardDeckUtil::makeStandardDeck( pile, 2 );
+    sw::CardPile::makeStandardDeck( pile, 2 );
     SW_REQUIRE_EQUAL( 54, pile.getCount() );
     SW_EXPECT_TRUE( pile.getAt( 0 ) == makeCard( 0, sw::StandardSuit::kClubs, sw::StandardRank::kAce ) );
     SW_EXPECT_TRUE( pile.getAt( 12 ) == makeCard( 12, sw::StandardSuit::kClubs, sw::StandardRank::kKing ) );
@@ -43,10 +43,10 @@ SW_TEST_CASE( CardDeckTest, StandardDeckHasFiftyTwoOrderedCardsAndJokers )
     SW_EXPECT_TRUE( pile.getAt( 52 ) == makeCard( 52, sw::StandardSuit::kJoker, 0 ) );
     SW_EXPECT_FALSE( pile.containsID( 999 ) );
 
-    SW_EXPECT_TRUE( sw::CardDeckUtil::isRedSuit( sw::StandardSuit::kDiamonds ) );
-    SW_EXPECT_TRUE( sw::CardDeckUtil::isRedSuit( sw::StandardSuit::kHearts ) );
-    SW_EXPECT_FALSE( sw::CardDeckUtil::isRedSuit( sw::StandardSuit::kClubs ) );
-    SW_EXPECT_FALSE( sw::CardDeckUtil::isRedSuit( sw::StandardSuit::kJoker ) );
+    SW_EXPECT_TRUE( sw::CardPile::isRedSuit( sw::StandardSuit::kDiamonds ) );
+    SW_EXPECT_TRUE( sw::CardPile::isRedSuit( sw::StandardSuit::kHearts ) );
+    SW_EXPECT_FALSE( sw::CardPile::isRedSuit( sw::StandardSuit::kClubs ) );
+    SW_EXPECT_FALSE( sw::CardPile::isRedSuit( sw::StandardSuit::kJoker ) );
 }
 
 /**
@@ -55,7 +55,7 @@ SW_TEST_CASE( CardDeckTest, StandardDeckHasFiftyTwoOrderedCardsAndJokers )
 SW_TEST_CASE( CardDeckTest, PileDrawsFromTopAndDrawIntoReversesOrder )
 {
     sw::CardPile pile;
-    sw::CardDeckUtil::makePileInDrawOrder( { makeCard( 1, 0, 1 ), makeCard( 2, 0, 2 ), makeCard( 3, 0, 3 ), makeCard( 4, 0, 4 ) }, pile );
+    sw::CardPile::makePileInDrawOrder( { makeCard( 1, 0, 1 ), makeCard( 2, 0, 2 ), makeCard( 3, 0, 3 ), makeCard( 4, 0, 4 ) }, pile );
     SW_EXPECT_EQUAL( uint16( 1 ), pile.getTop()._id ); // 첫 카드가 먼저 뽑힌다
 
     sw::CardPile hand;
@@ -107,9 +107,9 @@ SW_TEST_CASE( CardDeckTest, ShuffleIsDeterministicPerSeedAndKeepsCards )
     sw::CardPile first;
     sw::CardPile second;
     sw::CardPile other;
-    sw::CardDeckUtil::makeStandardDeck( first );
-    sw::CardDeckUtil::makeStandardDeck( second );
-    sw::CardDeckUtil::makeStandardDeck( other );
+    sw::CardPile::makeStandardDeck( first );
+    sw::CardPile::makeStandardDeck( second );
+    sw::CardPile::makeStandardDeck( other );
     sw::GameRandom randomA( 1234u );
     sw::GameRandom randomB( 1234u );
     sw::GameRandom randomC( 4321u );
@@ -121,7 +121,7 @@ SW_TEST_CASE( CardDeckTest, ShuffleIsDeterministicPerSeedAndKeepsCards )
     SW_EXPECT_FALSE( collectIDs( first ) == collectIDs( other ) );
 
     sw::CardPile ordered;
-    sw::CardDeckUtil::makeStandardDeck( ordered );
+    sw::CardPile::makeStandardDeck( ordered );
     SW_EXPECT_FALSE( collectIDs( first ) == collectIDs( ordered ) ); // 52 장이 그대로일 확률은 무시할 만하다
 
     bool arrSeen[52] = {};
@@ -140,7 +140,7 @@ SW_TEST_CASE( CardDeckTest, ShuffleIsDeterministicPerSeedAndKeepsCards )
 SW_TEST_CASE( CardDeckTest, DealRoundRobinAndReportsShortDeck )
 {
     sw::CardPile deck;
-    sw::CardDeckUtil::makePileInDrawOrder( { makeCard( 1, 0, 1 ), makeCard( 2, 0, 2 ), makeCard( 3, 0, 3 ), makeCard( 4, 0, 4 ), makeCard( 5, 0, 5 ) }, deck );
+    sw::CardPile::makePileInDrawOrder( { makeCard( 1, 0, 1 ), makeCard( 2, 0, 2 ), makeCard( 3, 0, 3 ), makeCard( 4, 0, 4 ), makeCard( 5, 0, 5 ) }, deck );
     sw::vector<sw::CardPile> listHand( 2 );
     SW_REQUIRE_TRUE( deck.deal( listHand, 2 ) );
     SW_EXPECT_TRUE( collectIDs( listHand[0] ) == sw::vector<uint16>( { 1, 3 } ) );
@@ -197,7 +197,7 @@ SW_TEST_CASE( CardDeckTest, ActionBytesRoundTripAndRejectBadFrames )
 SW_TEST_CASE( CardDeckTest, PileStateRoundTripsAndRejectsTruncation )
 {
     sw::CardPile original;
-    sw::CardDeckUtil::makeStandardDeck( original, 1 );
+    sw::CardPile::makeStandardDeck( original, 1 );
     sw::GameRandom random( 77u );
     original.shuffle( random );
 

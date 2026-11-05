@@ -156,7 +156,7 @@ namespace sw
 
             /**
              * @class HitWindowHandler
-             * @brief 구간 동안 두 소켓 사이 칼날을 프레임마다 쓸어서 맞힙니다. 판정은 `MeleeHitWindowUtil::sweep` 한 길이고, 이 처리기는 소켓에서 칼날을 만들고
+             * @brief 구간 동안 두 소켓 사이 칼날을 프레임마다 쓸어서 맞힙니다. 판정은 `MeleeHit::sweep` 한 길이고, 이 처리기는 소켓에서 칼날을 만들고
              *        맞음을 기록에 남기기만 합니다. 한 구간에 오브젝트 하나는 한 번만 맞고, 클라이언트는 맞음을 기록만 하고 전달하지 않습니다(서버 권위).
              */
             class HitWindowHandler final : public IAnimationNotifyHandler
@@ -192,7 +192,7 @@ namespace sw
                     const float3               pointA      = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socketA ) );
                     const float3               pointB      = context._component.findSocketWorldPosition( context._entry.getNameParam( s_socketB ) );
                     const uint32               sampleCount = static_cast<uint32>( MathUtil::clamp( context._entry.getFloatParam( s_samples ), 2.0f, 16.0f ) );
-                    MeleeHitWindowUtil::makeBlade( pointA, pointB, sampleCount, outListPoint );
+                    MeleeHit::makeBlade( pointA, pointB, sampleCount, outListPoint );
                 }
 
                 /** @brief 지난 위치에서 현재 위치까지 쓸고, 현재 위치를 다음 기준으로 넘깁니다. */
@@ -219,8 +219,8 @@ namespace sw
                     params._layerMask = kAllLayers;
                     params._bIs2D     = context._component.is2D();
                     vector<MeleeHit> listHit;
-                    (void)MeleeHitWindowUtil::sweep( context._owner, state._listPreviousPoint, listCurrent, params, MeleeHitWindowUtil::getProcessAuthority(),
-                                                     state._listHitTarget, listHit );
+                    (void)MeleeHit::sweep( context._owner, state._listPreviousPoint, listCurrent, params, MeleeHit::getProcessAuthority(),
+                                           state._listHitTarget, listHit );
                     for ( const MeleeHit& melee : listHit )
                     {
                         record( context, melee._hit._zone, melee._hit._point, melee._target.objectID(), context._fired._phase );

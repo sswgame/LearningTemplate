@@ -49,7 +49,7 @@ namespace sw
 
         RHIBackend          commandLineBackend{};
         const EngineConfig& engineConfig = engine::getSubsystem<EngineConfig>();
-        if ( RHIBackendUtil::findCommandLineBackend( commandLine, commandLineBackend ) == false )
+        if ( RHI::findCommandLineBackend( commandLine, commandLineBackend ) == false )
             gv_rhiBackend = engineConfig._window._defaultRHI;
 
         const DisplaySettingsRequest& display = engine::getSubsystem<UserSettingsManager>().getDisplayRequest();

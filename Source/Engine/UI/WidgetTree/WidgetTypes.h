@@ -203,7 +203,7 @@ namespace sw
     /**
      * @struct UIViewport
      * @brief UI 가 그려질 화면 하나입니다. 게임 창이면 백버퍼, 에디터면 게임 뷰 렌더 타깃입니다.
-     * @details 물리 크기는 UI 크기 × 배율이다. `UIScaleUtil::makeViewport` 가 해상도 규칙, 사용자 배율, 안전 영역으로 채운다.
+     * @details 물리 크기는 UI 크기 × 배율이다. `UIScaleSettings::makeViewport` 가 해상도 규칙, 사용자 배율, 안전 영역으로 채운다.
      */
     struct UIViewport
     {

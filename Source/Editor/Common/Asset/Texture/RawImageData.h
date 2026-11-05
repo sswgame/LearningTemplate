@@ -15,7 +15,7 @@ namespace sw::editor
      *          `_sourceChannelCount` 가 따로 들고, 압축 형식(BC4 · BC5 · BC7)과 알파 유무는 그 값으로 고른다. 버퍼 배치와 원본 채널 수를 한 이름에 두지 않는다.
      *          디코드하지 않은 값은 `_sourceChannelCount` 가 0 이라 `isValid()` 가 거짓이다.
      */
-    struct RawImageData
+    struct SW_EDITOR_API RawImageData
     {
         static constexpr int32 kChannelCount = 4; ///< `_bytes` 의 텍셀당 바이트 수(RGBA)
 
@@ -35,17 +35,8 @@ namespace sw::editor
         bool         isValid() const { return _bytes.empty() == false && _width > 0 && _height > 0 && 0 < _sourceChannelCount && _sourceChannelCount <= kChannelCount; }
         bool         hasSourceAlpha() const { return _sourceChannelCount == 2 || _sourceChannelCount == 4; }
         const uint8* getPixels() const { return _bytes.data(); }
-    };
-} // namespace sw::editor
 
-namespace sw::editor
-{
-    /**
-     * @struct ImageUtil
-     * @brief 에디터에서 소스 이미지(PNG/JPG/TGA/BMP)를 RGBA 버퍼로 디코딩하는 유틸리티입니다(stb_image 를 감쌉니다).
-     */
-    struct SW_EDITOR_API ImageUtil
-    {
+        // 에디터에서 소스 이미지(PNG/JPG/TGA/BMP)를 RGBA 버퍼로 디코딩하는 유틸리티입니다(stb_image 를 감쌉니다).
         /**
          * @brief 파일 경로의 이미지를 읽어 4채널(RGBA) 버퍼로 디코딩합니다. 원본 채널 수는 `RawImageData::_sourceChannelCount` 에 채웁니다.
          */

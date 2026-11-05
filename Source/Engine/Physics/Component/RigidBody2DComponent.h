@@ -66,7 +66,7 @@ namespace sw
         void                 setLayer( const hashed_string& layer );
         const hashed_string& getMaterial() const { return _material; }
         void                 setMaterial( const hashed_string& material );
-        /** @brief 무기 판정이 이 바디를 맞혔을 때의 히트 존(이름 · 피해 배율)입니다(`CharacterHitUtil::resolveHitZone`). */
+        /** @brief 무기 판정이 이 바디를 맞혔을 때의 히트 존(이름 · 피해 배율)입니다(`CharacterRayHit::resolveHitZone`). */
         const PhysicsHitZoneDef& getHitZone() const { return _hitZone; }
         void                     setHitZone( const PhysicsHitZoneDef& hitZone ) { _hitZone = hitZone; }
         float32                  getMass() const { return _mass; }

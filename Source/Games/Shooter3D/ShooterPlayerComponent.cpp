@@ -690,14 +690,14 @@ namespace sw
                 float32                distance = shot._coverDistance;
                 bool                   bHitBody = false;
                 CharacterRayHit        rayHit;
-                const bool             bRayHit = bHasMask && CharacterHitUtil::raycast3D( manager, shot._ray._origin, shot._ray._direction, shot._coverDistance, hitboxMask, ownerID, rayHit );
+                const bool             bRayHit = bHasMask && CharacterRayHit::raycast3D( manager, shot._ray._origin, shot._ray._direction, shot._coverDistance, hitboxMask, ownerID, rayHit );
                 ShooterEnemyComponent* pEnemy  = bRayHit && rayHit._pObject != nullptr ? rayHit._pObject->getComponent<ShooterEnemyComponent>() : nullptr;
                 if ( pEnemy != nullptr )
                 {
                     // 쓰러진 적(래그돌)도 맞고 밀린다 — 맞음 수 · 맞음 표시는 산 적만 센다.
                     const bool    bAlive = pEnemy->isAlive();
-                    const HitInfo hit    = CharacterHitUtil::makeHitInfo( rayHit, pOwner, shot._ray._direction, shot._damage, _shotImpulse );
-                    CharacterHitUtil::deliverHit( *rayHit._pObject, hit );
+                    const HitInfo hit    = CharacterRayHit::makeHitInfo( rayHit, pOwner, shot._ray._direction, shot._damage, _shotImpulse );
+                    CharacterRayHit::deliverHit( *rayHit._pObject, hit );
                     distance = rayHit._distance;
                     bHitBody = true;
                     bAnyHit  = bAnyHit || bAlive;

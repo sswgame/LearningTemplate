@@ -1,7 +1,7 @@
 /**
  * @file MeshModifierTextureSampler.cpp
  * @brief 이미지 파일 CPU 디코드 · 경로 키 캐시 · 반복 래핑 이중선형 표본을 구현합니다.
- * @details 디코드는 Editor 의 `ImageUtil`(stb_image 를 감싼다)에 맡깁니다.
+ * @details 디코드는 Editor 의 `RawImageData`(stb_image 를 감싼다)에 맡깁니다.
  */
 #include "pch.h"
 
@@ -16,7 +16,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Time/MonotonicClock.h"
 
-#include "Editor/Common/Asset/Texture/ImageUtil.h"
+#include "Editor/Common/Asset/Texture/RawImageData.h"
 
 #include "Engine/Content/AssetPaths.h"
 
@@ -76,7 +76,7 @@ namespace sw::editor
                 }
                 else
                 {
-                    if ( ImageUtil::loadFloat4FromMemory( bytes.data(), bytes.size(), pTexture->_listTexel, pTexture->_width, pTexture->_height ) == false )
+                    if ( RawImageData::loadFloat4FromMemory( bytes.data(), bytes.size(), pTexture->_listTexel, pTexture->_width, pTexture->_height ) == false )
                         SW_LOG_WARNING_ID( "MeshModifierTextureSampler.MeshModifierTextureCould2", "Mesh modifier texture '%#' could not be decoded", string( assetPath ).c_str() );
                 }
                 return pTexture;

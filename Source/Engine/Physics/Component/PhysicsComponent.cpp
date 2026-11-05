@@ -64,7 +64,7 @@ namespace sw
 
 namespace sw
 {
-    void PhysicsComponentUtil::readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale )
+    void PhysicsComponent::readWorldPose( const SceneComponent& component, float3& outPosition, quaternion& outRotation, float3& outScale )
     {
         const float4x4 world = component.getWorldMatrix();
         if ( world.decompose( outScale, outRotation, outPosition ) == false )
@@ -76,7 +76,7 @@ namespace sw
         outRotation.normalize();
     }
 
-    void PhysicsComponentUtil::writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, const float3& scale )
+    void PhysicsComponent::writeWorldPose( SceneComponent& component, const float3& position, const quaternion& rotation, const float3& scale )
     {
         // 부모가 없으면 월드가 곧 로컬이다 — 행렬을 만들어 다시 분해하지 않는다(동적 바디 대부분이 루트에 있다).
         if ( component.getParent() == nullptr )
@@ -89,17 +89,17 @@ namespace sw
         component.setWorldTransform( float4x4::makeTrs( position, rotation, scale ) );
     }
 
-    float32 PhysicsComponentUtil::getAngle2D( const quaternion& rotation )
+    float32 PhysicsComponent::getAngle2D( const quaternion& rotation )
     {
         return 2.0f * ::atan2f( rotation._z, rotation._w );
     }
 
-    quaternion PhysicsComponentUtil::makeRotation2D( float32 angle )
+    quaternion PhysicsComponent::makeRotation2D( float32 angle )
     {
         return quaternion::makeFromAxisAngle( float3{ 0.0f, 0.0f, 1.0f }, angle );
     }
 
-    PhysicsShapeDesc3D PhysicsComponentUtil::makeScaledShape( const PhysicsShapeDesc3D& shape, const float3& scale )
+    PhysicsShapeDesc3D PhysicsComponent::makeScaledShape( const PhysicsShapeDesc3D& shape, const float3& scale )
     {
         const float3       absScale{ MathUtil::abs( scale._x ), MathUtil::abs( scale._y ), MathUtil::abs( scale._z ) };
         const float32      radiusScale  = absScale._x > absScale._z ? absScale._x : absScale._z;
@@ -116,7 +116,7 @@ namespace sw
         return scaled;
     }
 
-    PhysicsShapeDesc2D PhysicsComponentUtil::makeScaledShape( const PhysicsShapeDesc2D& shape, const float3& scale )
+    PhysicsShapeDesc2D PhysicsComponent::makeScaledShape( const PhysicsShapeDesc2D& shape, const float3& scale )
     {
         const float32      absX        = MathUtil::abs( scale._x );
         const float32      absY        = MathUtil::abs( scale._y );

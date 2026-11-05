@@ -144,7 +144,7 @@ namespace sw
 {
     /**
      * @brief 열린 구간 알림 하나의 상태 슬롯입니다(처리기가 시작에서 채우고 틱마다 읽습니다). 처리기는 상태를 갖지 않으므로 여기에 둡니다.
-     * @details 칼 궤적 판정은 지난 칼날 표본점(비었으면 아직 없다)과 이미 맞힌 오브젝트를(`MeleeHitWindowUtil::sweep` 의 상태), 모션 워핑은 창의 끝 시각을 적는다.
+     * @details 칼 궤적 판정은 지난 칼날 표본점(비었으면 아직 없다)과 이미 맞힌 오브젝트를(`MeleeHit::sweep` 의 상태), 모션 워핑은 창의 끝 시각을 적는다.
      */
     struct AnimationNotifyStateData
     {

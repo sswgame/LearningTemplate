@@ -355,13 +355,13 @@ namespace sw
                 }
                 if ( bKeyOnly )
                 {
-                    _pGatherer->addKeyReference( LocalizationTextUtil::makeFullKey( arrArgument[0], arrArgument[1] ), _originName );
+                    _pGatherer->addKeyReference( SourceTextEntry::makeFullKey( arrArgument[0], arrArgument[1] ), _originName );
                     return;
                 }
                 string error;
                 if ( TextFormatter::validatePattern( arrArgument[2], &error ) == false )
                     _pGatherer->addIssue( makeLocation( callLine ), "source text is not a valid message pattern: " + error, true );
-                _pGatherer->addKeyedText( LocalizationTextUtil::makeFullKey( arrArgument[0], arrArgument[1] ), arrArgument[2], {}, _originName );
+                _pGatherer->addKeyedText( SourceTextEntry::makeFullKey( arrArgument[0], arrArgument[1] ), arrArgument[2], {}, _originName );
             }
 
         private:

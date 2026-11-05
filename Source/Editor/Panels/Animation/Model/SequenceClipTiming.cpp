@@ -1,10 +1,10 @@
 #include "pch.h"
 
-#include "Editor/Panels/Animation/Model/SequenceTimingUtil.h"
+#include "Editor/Panels/Animation/Model/SequenceClipTiming.h"
 
 namespace sw::editor
 {
-    void SequenceTimingUtil::captureTiming( const vector<SequenceTrackItem>& listItem, vector<SequenceClipTiming>& outListTiming )
+    void SequenceClipTiming::captureTiming( const vector<SequenceTrackItem>& listItem, vector<SequenceClipTiming>& outListTiming )
     {
         outListTiming.clear();
         outListTiming.reserve( listItem.size() );
@@ -14,7 +14,7 @@ namespace sw::editor
         }
     }
 
-    bool SequenceTimingUtil::hasTimingChanged( const vector<SequenceClipTiming>& listTimingBefore, const vector<SequenceTrackItem>& listItem )
+    bool SequenceClipTiming::hasTimingChanged( const vector<SequenceClipTiming>& listTimingBefore, const vector<SequenceTrackItem>& listItem )
     {
         if ( listTimingBefore.size() != listItem.size() )
             return true;

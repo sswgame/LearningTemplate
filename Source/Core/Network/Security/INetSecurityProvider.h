@@ -17,7 +17,7 @@ namespace sw
     /**
      * @class INetAead
      * @brief AEAD 하나(키 고정)입니다. `seal` 은 암호문 뒤에 태그 16 바이트를 붙이고, `open` 은 태그가 틀리면 false 입니다.
-     * @details 한 스레드가 씁니다(연결마다 하나). nonce 는 키마다 한 번만 — 부르는 쪽이 패킷 번호로 만든다(`NetSessionKeyUtil::makeNonce`).
+     * @details 한 스레드가 씁니다(연결마다 하나). nonce 는 키마다 한 번만 — 부르는 쪽이 패킷 번호로 만든다(`NetSessionKeys::makeNonce`).
      */
     class SW_API INetAead
     {

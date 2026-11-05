@@ -32,10 +32,10 @@ namespace sw
 
     float3 ISchedulePathing::offsetInPlane( const float3& center, float32 offsetU, float32 offsetV ) const
     {
-        return SchedulePathingUtil::offsetInPlane( SchedulePlane::XZ, center, offsetU, offsetV );
+        return ISchedulePathing::offsetInPlane( SchedulePlane::XZ, center, offsetU, offsetV );
     }
 
-    float32 SchedulePathingUtil::computeLength( const vector<float3>& listPoint )
+    float32 ISchedulePathing::computeLength( const vector<float3>& listPoint )
     {
         float32 length = 0.0f;
         for ( size_t pointIndex = 1; pointIndex < listPoint.size(); ++pointIndex )
@@ -45,7 +45,7 @@ namespace sw
         return length;
     }
 
-    float3 SchedulePathingUtil::computePointAlong( const vector<float3>& listPoint, float32 fraction )
+    float3 ISchedulePathing::computePointAlong( const vector<float3>& listPoint, float32 fraction )
     {
         if ( listPoint.empty() )
             return float3{};
@@ -65,7 +65,7 @@ namespace sw
         return listPoint.back();
     }
 
-    float3 SchedulePathingUtil::offsetInPlane( SchedulePlane plane, const float3& center, float32 offsetU, float32 offsetV )
+    float3 ISchedulePathing::offsetInPlane( SchedulePlane plane, const float3& center, float32 offsetU, float32 offsetV )
     {
         switch ( plane )
         {
@@ -96,7 +96,7 @@ namespace sw
 
     float3 StraightSchedulePathing::offsetInPlane( const float3& center, float32 offsetU, float32 offsetV ) const
     {
-        return SchedulePathingUtil::offsetInPlane( _plane, center, offsetU, offsetV );
+        return ISchedulePathing::offsetInPlane( _plane, center, offsetU, offsetV );
     }
 
     NavGridSchedulePathing::NavGridSchedulePathing( const NavGrid* pGrid, GridPathfinder* pPathfinder, SchedulePlane plane )
@@ -118,7 +118,7 @@ namespace sw
 
     float3 NavGridSchedulePathing::offsetInPlane( const float3& center, float32 offsetU, float32 offsetV ) const
     {
-        return SchedulePathingUtil::offsetInPlane( _plane, center, offsetU, offsetV );
+        return ISchedulePathing::offsetInPlane( _plane, center, offsetU, offsetV );
     }
 
     float3 NavGridSchedulePathing::toGrid( const float3& position ) const
@@ -170,7 +170,7 @@ namespace sw
             }
         }
         listPoint.push_back( to._position );
-        const float32 length = SchedulePathingUtil::computeLength( listPoint );
+        const float32 length = ISchedulePathing::computeLength( listPoint );
         if ( pOutListPoint != nullptr )
             *pOutListPoint = listPoint;
         return length;
@@ -188,7 +188,7 @@ namespace sw
         vector<hashed_string> listArea;
         vector<float3>        listPoint;
         makeAreaRoute( from, to, listArea, listPoint );
-        return SchedulePathingInternal::computeMinutes( SchedulePathingUtil::computeLength( listPoint ), unitsPerMinute );
+        return SchedulePathingInternal::computeMinutes( ISchedulePathing::computeLength( listPoint ), unitsPerMinute );
     }
 
     void AreaGraphSchedulePathing::makeRoute( const ScheduleLocation& from, const ScheduleLocation& to, vector<float3>& outListPoint ) const
@@ -207,7 +207,7 @@ namespace sw
         if ( fraction >= 1.0f || listPoint.size() < 2 )
             return to._area;
         // 점 i 는 방 i 의 가운데(처음 · 끝은 실제 자리)다 — 간 거리가 넘은 점 중 마지막 점의 방이다.
-        const float32 total     = SchedulePathingUtil::computeLength( listPoint );
+        const float32 total     = ISchedulePathing::computeLength( listPoint );
         float32       travelled = 0.0f;
         size_t        areaIndex = 0;
         for ( size_t pointIndex = 1; pointIndex < listPoint.size(); ++pointIndex )
@@ -224,7 +224,7 @@ namespace sw
 
     float3 AreaGraphSchedulePathing::offsetInPlane( const float3& center, float32 offsetU, float32 offsetV ) const
     {
-        return SchedulePathingUtil::offsetInPlane( _plane, center, offsetU, offsetV );
+        return ISchedulePathing::offsetInPlane( _plane, center, offsetU, offsetV );
     }
 
     void AreaGraphSchedulePathing::makeAreaRoute( const ScheduleLocation& from, const ScheduleLocation& to, vector<hashed_string>& outListArea,
@@ -263,6 +263,6 @@ namespace sw
             return fallback;
         const float32 centerU = pArea->_x + pArea->_width * 0.5f;
         const float32 centerV = pArea->_y + pArea->_height * 0.5f;
-        return SchedulePathingUtil::offsetInPlane( _plane, float3{}, centerU, centerV );
+        return ISchedulePathing::offsetInPlane( _plane, float3{}, centerU, centerV );
     }
 } // namespace sw

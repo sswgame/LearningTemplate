@@ -729,7 +729,7 @@ namespace sw
         // 갱신 주기: 시간 단계는 매 프레임 돌고(알림 · 루트 모션이 늦지 않게), 포즈는 주기마다 만든다. 화면 밖이면 포즈를 건너뛴다.
         // 주기는 PROPERTY(하한)와 LOD 판정 중 큰 쪽이고, 위상을 더해 같은 주기의 유닛이 한 프레임에 몰리지 않게 한다.
         _effectiveDivisor           = MathUtil::max( _updateRateDivisor, MathUtil::max( _lodState._updateRateDivisor, 1u ) );
-        const bool bOnRate          = AnimationLODUtil::isOnUpdateFrame( frameIndex, _updatePhase, _effectiveDivisor );
+        const bool bOnRate          = AnimationLODState::isOnUpdateFrame( frameIndex, _updatePhase, _effectiveDivisor );
         const bool bOnScreen        = _bVisibleHint == SW_TRUE || _bAnimateWhenOffscreen == SW_TRUE;
         const bool bPoseDirty       = _bPoseDirty == SW_TRUE;
         _frameContext._deltaSeconds = deltaSeconds;

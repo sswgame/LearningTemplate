@@ -39,7 +39,7 @@ namespace sw::editor
                 uint32                                   _generation{ constant::invalid_index::kUint32 };
             };
 
-            static const EditorComponentIconTable& table() { return EditorIconUtil::getComponentIconTable(); }
+            static const EditorComponentIconTable& table() { return EditorIconGlyphTable::getComponentIconTable(); }
 
             static NamedRow makeRow( string_view iconName, string_view colorName, bool bBillboard )
             {
@@ -81,7 +81,7 @@ namespace sw::editor
 
             static EditorComponentIconRow resolve( const NamedRow& row )
             {
-                return EditorComponentIconRow{ EditorIconUtil::findGlyph( row._iconName ), EditorThemeUtil::findColor( row._colorKey ), row._bBillboard };
+                return EditorComponentIconRow{ EditorIconGlyphTable::findPublishedGlyph( row._iconName ), EditorThemeUtil::findColor( row._colorKey ), row._bBillboard };
             }
         };
     } // namespace

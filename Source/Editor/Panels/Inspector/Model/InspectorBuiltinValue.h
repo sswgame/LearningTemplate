@@ -116,6 +116,8 @@ namespace sw::editor
     template <typename T>
     using InspectorBuiltinCppTypeT = ReflectBuiltinCppTypeT<T>;
 
+    struct InspectorMethodArgSlot;
+
     /** @brief 내장 값 타입 하나의 테이블 항목입니다. 항목 순서는 `ReflectBuiltins.xxx` 의 순서입니다. */
     struct InspectorBuiltinValue
     {
@@ -128,24 +130,8 @@ namespace sw::editor
         const void* ( *_pFindTaskValue )( const TaskValue& value );
         InspectorValueWidget _widget; ///< 프로퍼티와 인자를 그리는 위젯 종류
         uint8                _index;  ///< 테이블 안의 인덱스
-    };
-} // namespace sw::editor
 
-namespace sw::editor
-{
-    /** @brief CallInEditor 인자 입력란 하나입니다. 값은 항상 `_builtinIndex` 항목의 C++ 타입입니다. */
-    struct InspectorMethodArgSlot
-    {
-        TaskValue _value;
-        uint8     _builtinIndex{ 0 };
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /** @brief 내장 값 타입 테이블을 읽어 CallInEditor 의 인자 판정, 인자 묶기, 반환 형식화를 한 테이블로 처리합니다. */
-    struct InspectorBuiltinValueUtil
-    {
+        // 내장 값 타입 테이블을 읽어 CallInEditor 의 인자 판정, 인자 묶기, 반환 형식화를 한 테이블로 처리합니다.
         /** @brief 인스펙터가 CallInEditor 인자 입력란을 그리는 최대 개수입니다. 넘는 메서드는 호출할 수 없습니다. */
         static constexpr uint32 kMaxMethodArgCount = 8;
         /** @brief 테이블의 항목 수입니다. `ReflectBuiltins.xxx` 의 내장 타입 수와 같습니다. 테이블을 따라 만드는 다른 배열이 static_assert 로 맞춥니다. */
@@ -178,5 +164,15 @@ namespace sw::editor
          * @return 형식화했으면 true 입니다. 내장 타입이 아닌 반환은 "(unsupported return: …)" 를 쓰고 false 를 반환합니다.
          */
         static bool formatMethodResult( const TaskValue& value, string_view returnType, utf8* pOutBuf, uint32 capacity );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief CallInEditor 인자 입력란 하나입니다. 값은 항상 `_builtinIndex` 항목의 C++ 타입입니다. */
+    struct InspectorMethodArgSlot
+    {
+        TaskValue _value;
+        uint8     _builtinIndex{ 0 };
     };
 } // namespace sw::editor

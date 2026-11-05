@@ -1,5 +1,5 @@
 /**
- * @file EditorGridUtil.h
+ * @file EditorGridLevel.h
  * @brief 뷰포트 바닥 격자의 판정을 담당합니다. 간격 단계, 굵은 선, 가장자리 흐림을 계산하며, ImGui 없이 계산만 하므로 `Test/EditorTest` 가 테스트합니다.
  * @details 격자 선은 월드에 고정된다. 선 하나는 "간격의 몇 배인가"(월드 인덱스)로 정해지고, 굵은 선인지도 그 인덱스로만 정한다.
  *          카메라 위치를 판정에 넣으면 카메라가 움직일 때 굵은 선이 다른 월드 선으로 미끄러진다.
@@ -10,49 +10,16 @@
 
 namespace sw::editor
 {
+    struct EditorGridLineStyle;
+
     /** @brief 이번 프레임의 격자 간격 단계입니다. */
     struct EditorGridLevel
     {
         float32 _step{ 1.0f };        ///< 가는 선 간격(월드 m). 1, 10, 100 중 하나다
         float32 _coarseBlend{ 0.0f }; ///< 0..1 범위다. 1 에 가까울수록 가는 선이 사라지고 굵은 선 판정이 다음 단계(간격 × 10)로 넘어간다
         float32 _radius{ 20.0f };     ///< 격자를 그리는 반지름(월드 m). 가장자리로 갈수록 흐려진다
-    };
-} // namespace sw::editor
 
-namespace sw::editor
-{
-    /** @brief 선 하나의 표시 속성입니다. */
-    struct EditorGridLineStyle
-    {
-        float32 _visibility{ 1.0f };  ///< 0..1 범위다. 단계가 바뀌는 동안 사라지는 가는 선은 0 이 된다
-        float32 _majorWeight{ 0.0f }; ///< 0..1 범위다. 1 이면 굵은 선의 색과 두께를 쓴다
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
-     * @brief 격자가 마지막으로 그린 결과입니다. 에디터 시나리오 프로브(`Editor.Grid*`)가 읽습니다. 값은 격자를 그리는 오버레이(`EditorViewportCanvasOverlay`)가 듭니다.
-     * @details 굵은 선 판정이 카메라를 따라 미끄러지면 `_misplacedMajorCount` 가 0 이 아니다. 그린 선의 월드 좌표로 다시 센다.
-     */
-    struct EditorGridStats
-    {
-        float32 _step{ 0.0f };
-        float3  _cameraPos{};
-        uint32  _majorLineCount{ 0 };
-        uint32  _misplacedMajorCount{ 0 };
-        int32   _frame{ -1 };
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
-     * @struct EditorGridUtil
-     * @brief 격자 판정 함수 모음입니다. 언리얼과 유니티의 에디터 격자처럼 카메라 높이에 따라 간격을 1m, 10m, 100m 로 바꾸고, 바뀌는 구간에서 두 간격을 섞습니다.
-     */
-    struct EditorGridUtil
-    {
+        // 격자 판정 함수 모음입니다. 언리얼과 유니티의 에디터 격자처럼 카메라 높이에 따라 간격을 1m, 10m, 100m 로 바꾸고, 바뀌는 구간에서 두 간격을 섞습니다.
         /** @brief 가는 선 몇 개마다 굵은 선이 하나인지 정합니다. 월드 인덱스가 이 수의 배수이면 굵은 선입니다. */
         static constexpr int64 kMajorEvery = 5;
         /** @brief 다음 단계의 간격이 이번 간격의 몇 배인지 정합니다. */
@@ -87,5 +54,31 @@ namespace sw::editor
 
         /** @brief 격자 중심에서 @p distance 떨어진 점의 가장자리 흐림을 구합니다. 1 이 또렷하고 0 이 안 보임입니다. */
         [[nodiscard]] static float32 computeEdgeFade( float32 distance, float32 radius );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 선 하나의 표시 속성입니다. */
+    struct EditorGridLineStyle
+    {
+        float32 _visibility{ 1.0f };  ///< 0..1 범위다. 단계가 바뀌는 동안 사라지는 가는 선은 0 이 된다
+        float32 _majorWeight{ 0.0f }; ///< 0..1 범위다. 1 이면 굵은 선의 색과 두께를 쓴다
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @brief 격자가 마지막으로 그린 결과입니다. 에디터 시나리오 프로브(`Editor.Grid*`)가 읽습니다. 값은 격자를 그리는 오버레이(`EditorViewportCanvasOverlay`)가 듭니다.
+     * @details 굵은 선 판정이 카메라를 따라 미끄러지면 `_misplacedMajorCount` 가 0 이 아니다. 그린 선의 월드 좌표로 다시 센다.
+     */
+    struct EditorGridStats
+    {
+        float32 _step{ 0.0f };
+        float3  _cameraPos{};
+        uint32  _majorLineCount{ 0 };
+        uint32  _misplacedMajorCount{ 0 };
+        int32   _frame{ -1 };
     };
 } // namespace sw::editor

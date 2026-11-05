@@ -23,11 +23,14 @@ namespace sw
 
 namespace sw
 {
+    struct AnimationLODSettings;
+    struct AnimationBudgetItem;
+
     /**
      * @struct AnimationLODState
      * @brief LOD 판정의 결과 한 벌입니다. `AnimationSystem` 이 게임 스레드에서 쓰고, 클라이언트(유닛 · 스프라이트 애니메이터)가 다음 평가에서 읽습니다.
      */
-    struct AnimationLODState
+    struct SW_API AnimationLODState
     {
         float32 _screenSize{ 1.0f };           ///< 보이는 뷰들 중 가장 큰 화면 크기(경계 구 지름 / 화면 높이). 안 보이면 0
         float32 _significance{ 1.0f };         ///< 예산 배분의 우선순위(지금은 화면 크기)
@@ -37,6 +40,19 @@ namespace sw
         uint8   _bInterpolate{ SW_FALSE };     ///< 건너뛴 프레임을 직전 두 포즈 사이 보간으로 채운다
         uint8   _bVisible{ SW_TRUE };          ///< 어느 뷰에라도 보인다
         uint8   _bVertexAnimation{ SW_FALSE }; ///< 정점 애니메이션(VAT)으로 그릴 만큼 멀다(군중 공유가 읽는다)
+
+        // LOD 의 순수 식입니다(테스트가 그대로 부릅니다).
+        /**
+         * @brief 중요도 순으로 예산을 맞춥니다(언리얼 Animation Budget Allocator). 덜 중요한 것부터 주기를 두 배씩(상한까지) 늘려
+         *        `Σ costPerEvaluation / 주기` 가 예산 이하가 될 때까지 갑니다. 예산이 0 이하이거나 이미 맞으면 손대지 않습니다.
+         * @return 예상 비용(마이크로초, 배분 뒤)입니다.
+         */
+        static float32 allocateBudget( AnimationBudgetItem* pItem, uint32 itemCount, float32 costPerEvaluationMicroseconds, float32 budgetMicroseconds,
+                                       uint32 maxUpdateRateDivisor );
+        /** @brief 주기 · 위상으로 이번 프레임에 포즈를 만드는지입니다. 같은 주기의 유닛들이 같은 프레임에 몰리지 않게 위상을 더합니다. */
+        static bool isOnUpdateFrame( uint64 frameIndex, uint32 phase, uint32 divisor ) { return divisor <= 1 || ( ( frameIndex + phase ) % divisor ) == 0; }
+        /** @brief 화면 크기와 표로 상태 하나를 만듭니다(가시성 · 주기 단계 · 보간 · 본 LOD · VAT). 예산은 따로입니다. */
+        static AnimationLODState makeState( const AnimationLODSettings& settings, float32 screenSize, bool bVisible, const SkeletonBoneLOD* pBoneLOD );
     };
 } // namespace sw
 
@@ -112,27 +128,5 @@ namespace sw
     {
         float32 _significance{ 0.0f };
         uint32  _updateRateDivisor{ 1 }; ///< 표가 고른 주기(입력) — 배분이 늘린 값으로 덮습니다(출력)
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct AnimationLODUtil
-     * @brief LOD 의 순수 식입니다(테스트가 그대로 부릅니다).
-     */
-    struct SW_API AnimationLODUtil
-    {
-        /**
-         * @brief 중요도 순으로 예산을 맞춥니다(언리얼 Animation Budget Allocator). 덜 중요한 것부터 주기를 두 배씩(상한까지) 늘려
-         *        `Σ costPerEvaluation / 주기` 가 예산 이하가 될 때까지 갑니다. 예산이 0 이하이거나 이미 맞으면 손대지 않습니다.
-         * @return 예상 비용(마이크로초, 배분 뒤)입니다.
-         */
-        static float32 allocateBudget( AnimationBudgetItem* pItem, uint32 itemCount, float32 costPerEvaluationMicroseconds, float32 budgetMicroseconds,
-                                       uint32 maxUpdateRateDivisor );
-        /** @brief 주기 · 위상으로 이번 프레임에 포즈를 만드는지입니다. 같은 주기의 유닛들이 같은 프레임에 몰리지 않게 위상을 더합니다. */
-        static bool isOnUpdateFrame( uint64 frameIndex, uint32 phase, uint32 divisor ) { return divisor <= 1 || ( ( frameIndex + phase ) % divisor ) == 0; }
-        /** @brief 화면 크기와 표로 상태 하나를 만듭니다(가시성 · 주기 단계 · 보간 · 본 LOD · VAT). 예산은 따로입니다. */
-        static AnimationLODState makeState( const AnimationLODSettings& settings, float32 screenSize, bool bVisible, const SkeletonBoneLOD* pBoneLOD );
     };
 } // namespace sw

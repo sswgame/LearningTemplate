@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
+#include "Engine/Renderer/Capture/ScreenshotLocalTime.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    string ScreenshotPathUtil::makeDefaultPath( const ScreenshotLocalTime& localTime )
+    string ScreenshotLocalTime::makeDefaultPath( const ScreenshotLocalTime& localTime )
     {
         StringBuilder<constant::buffer::kMax32> fileName;
         fileName.appendFormat( "%04d%02d%02d-%02d%02d%02d.png", localTime._year, localTime._month, localTime._day, localTime._hour, localTime._minute,
@@ -22,14 +22,14 @@ namespace sw
         return FileUtil::joinPath( FileUtil::joinPath( ProcessRoots::get()._saved.str(), kScreenshotFolderName ), fileName.c_str() );
     }
 
-    string ScreenshotPathUtil::makeDefaultPathNow()
+    string ScreenshotLocalTime::makeDefaultPathNow()
     {
         // 같은 초의 두 번째 사진(같은 프로세스든 다른 프로세스든)이 앞 사진을 덮지 않게 이름을 먼저 잡는다(`-2` …).
         const string path = makeDefaultPath( getLocalTimeNow() );
         return FileUtil::reserveUniquePath( FileUtil::removeExtension( path ), FileUtil::getExtension( path ), false );
     }
 
-    ScreenshotLocalTime ScreenshotPathUtil::getLocalTimeNow()
+    ScreenshotLocalTime ScreenshotLocalTime::getLocalTimeNow()
     {
         // 달력 변환은 `WallClock::toLocalCalendar` 하나다(스레드 안전한 플랫폼 함수를 거기서 고른다). 바꾸지 못하면 0 날짜 이름이 된다.
         LocalCalendarTime calendar{};
@@ -53,7 +53,7 @@ namespace sw
                 return false;
             string path;
             if ( listArgument.empty() )
-                path = ScreenshotPathUtil::makeDefaultPathNow();
+                path = ScreenshotLocalTime::makeDefaultPathNow();
             else if ( DevCommandRegistry::readDiskPathArgument( listArgument[0], path, outReply ) == false )
                 return true;
             if ( path.empty() )

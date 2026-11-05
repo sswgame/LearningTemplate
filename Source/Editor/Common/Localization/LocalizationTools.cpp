@@ -143,7 +143,7 @@ namespace sw
                     }
                     if ( entry._sourceHash == 0 )
                     {
-                        entry._sourceHash            = LocalizationTextUtil::computeSourceHash( sourceIt->second->_source );
+                        entry._sourceHash            = SourceTextEntry::computeSourceHash( sourceIt->second->_source );
                         inoutCultureReport._bChanged = SW_TRUE;
                     }
                     if ( inoutTranslation.computeState( key, sourceIt->second ) == TranslationState::Current )
@@ -173,7 +173,7 @@ namespace sw
                         continue; // 오래된 번역은 이전 문구를 그대로 둔다. 번역가가 PO 에서 이전 원문과 함께 본다
                     TranslationEntry& entry      = inoutTranslation.getOrAddEntry( key );
                     entry._text                  = match._text;
-                    entry._sourceHash            = LocalizationTextUtil::computeSourceHash( pSource->_source );
+                    entry._sourceHash            = SourceTextEntry::computeSourceHash( pSource->_source );
                     entry._bReview               = match._bExact == false;
                     inoutCultureReport._bChanged = SW_TRUE;
                     if ( match._bExact )
@@ -795,7 +795,7 @@ namespace sw
             TranslationEntry& entry  = translation.getOrAddEntry( poEntry._context );
             entry._text              = poEntry._translation;
             entry._translatorComment = poEntry._translatorComment;
-            entry._sourceHash        = LocalizationTextUtil::computeSourceHash( poEntry._source ); // 번역가가 본 원문
+            entry._sourceHash        = SourceTextEntry::computeSourceHash( poEntry._source ); // 번역가가 본 원문
             entry._bReview           = poEntry._bFuzzy;
             ++outResult._translatedCount;
             outResult._fuzzyCount += poEntry._bFuzzy ? 1u : 0u;

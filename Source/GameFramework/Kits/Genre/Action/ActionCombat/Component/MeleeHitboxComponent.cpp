@@ -95,7 +95,7 @@ namespace sw
         const GameObject*     pOwner = getOwner();
         const SceneComponent* pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         const float4x4        world  = pScene != nullptr ? pScene->getWorldMatrix() : float4x4::Identity;
-        MeleeHitWindowUtil::makeBlade( float3::transform( _bladeStart, world ), float3::transform( _bladeEnd, world ), kMeleeHitboxBladeSampleCount, outListPoint );
+        MeleeHit::makeBlade( float3::transform( _bladeStart, world ), float3::transform( _bladeEnd, world ), kMeleeHitboxBladeSampleCount, outListPoint );
     }
 
     void MeleeHitboxComponent::requestSweep()
@@ -123,7 +123,7 @@ namespace sw
         params._damage = static_cast<float32>( _damage );
         params._bIs2D  = true;
         vector<MeleeHit> listHit;
-        (void)MeleeHitWindowUtil::sweep( *pAttacker, _listPreviousPoint, listCurrent, params, MeleeHitWindowUtil::getProcessAuthority(), _listHitTarget, listHit );
+        (void)MeleeHit::sweep( *pAttacker, _listPreviousPoint, listCurrent, params, MeleeHit::getProcessAuthority(), _listHitTarget, listHit );
         _listPreviousPoint = std::move( listCurrent );
     }
 } // namespace sw

@@ -270,7 +270,7 @@ namespace sw::editor
         outLabel.clear();
         if ( desc._iconName.empty() == false )
         {
-            outLabel.append( EditorIconUtil::findGlyphByName( desc._iconName.c_str() ) );
+            outLabel.append( EditorIconGlyphTable::findGlyphByName( desc._iconName.c_str() ) );
             outLabel.append( "  " );
         }
         outLabel.append( desc._label.c_str() );

@@ -15,7 +15,7 @@
 
 namespace sw
 {
-    string AutomationRunTitleUtil::makeSummary( const AutomationRunTitleInput& input )
+    string AutomationRunTitleInput::makeSummary( const AutomationRunTitleInput& input )
     {
         string summary;
         if ( input._scenarioName.empty() == false )
@@ -49,7 +49,7 @@ namespace sw
         return summary;
     }
 
-    string AutomationRunTitleUtil::makeWindowTitle( const AutomationRunTitleInput& input )
+    string AutomationRunTitleInput::makeWindowTitle( const AutomationRunTitleInput& input )
     {
         string title;
         if ( input._baseTitle.empty() == false )
@@ -61,7 +61,7 @@ namespace sw
         return truncateUTF8( title, kMaxTitleBytes );
     }
 
-    string AutomationRunTitleUtil::makeStepLogLine( string_view scenarioName, uint32 stepNumber, string_view stepKind, uint32 frame )
+    string AutomationRunTitleInput::makeStepLogLine( string_view scenarioName, uint32 stepNumber, string_view stepKind, uint32 frame )
     {
         string line = "[Scenario] ";
         line += scenarioName;
@@ -148,7 +148,7 @@ namespace sw
         };
     } // namespace
 
-    string AutomationRunTitleUtil::makeReproduceCommand( const AutomationReproduceInput& input )
+    string AutomationRunTitleInput::makeReproduceCommand( const AutomationReproduceInput& input )
     {
         using Rules                = AutomationReproduceRules;
         const bool bScenarioInArgs = Rules::hasName( input._listOriginalArgument, "scenario" );
@@ -195,7 +195,7 @@ namespace sw
         return command;
     }
 
-    string AutomationRunTitleUtil::makeBenchSummary( vector<string> listPair )
+    string AutomationRunTitleInput::makeBenchSummary( vector<string> listPair )
     {
         static constexpr string_view kPrefix = "gv_stressTest";
         (void)VectorUtil::removeIf( listPair, []( const string& pair )
@@ -258,7 +258,7 @@ namespace sw
                     pair += value;
                     listPair.push_back( std::move( pair ) );
                 }
-                _benchSummary = AutomationRunTitleUtil::makeBenchSummary( std::move( listPair ) );
+                _benchSummary = AutomationRunTitleInput::makeBenchSummary( std::move( listPair ) );
             }
             if ( _benchSummary.empty() == false )
                 SW_LOG_INFO_ID( "Automation.BackendArgs", "[Bench] backend %# args %#", string{ backendName }.c_str(), _benchSummary.c_str() );
@@ -292,7 +292,7 @@ namespace sw
             return;
         }
         const bool bStepChanged = bScenario && ( stepNumber != _lastStepNumber || stepKind != _lastStepKind );
-        const bool bRefreshDue  = _frame % AutomationRunTitleUtil::kTitleRefreshFrames == 0;
+        const bool bRefreshDue  = _frame % AutomationRunTitleInput::kTitleRefreshFrames == 0;
         const bool bUpToDate    = bStepChanged == false && bRefreshDue == false && bBaseChanged == false && _bRunShown;
         if ( bUpToDate )
             return;
@@ -307,10 +307,10 @@ namespace sw
         _lastStepNumber     = stepNumber;
         _lastStepKind       = stepKind;
         _bRunShown          = SW_TRUE;
-        pTitleTarget->applyWindowTitle( AutomationRunTitleUtil::makeWindowTitle( input ).c_str() );
+        pTitleTarget->applyWindowTitle( AutomationRunTitleInput::makeWindowTitle( input ).c_str() );
     }
 
-    string AutomationRunTitleUtil::truncateUTF8( string_view text, uint32 maxBytes )
+    string AutomationRunTitleInput::truncateUTF8( string_view text, uint32 maxBytes )
     {
         constexpr uint32 kEllipsisBytes = 3; // "…" = E2 80 A6
         if ( text.size() <= maxBytes )

@@ -435,7 +435,7 @@ namespace sw
 
 namespace sw
 {
-    void CanvasTextLineUtil::drawLine( CanvasPainter& painter, FontService& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style, uint64 frameIndex )
+    void CanvasPainter::drawLine( CanvasPainter& painter, FontService& fontService, string_view text, const float2& origin, const CanvasGlyphStyle& style, uint64 frameIndex )
     {
         const FontFaceChain chain      = fontService.getFaceChain( FontSpec{} );
         CanvasGlyphStyle    glyphStyle = style;

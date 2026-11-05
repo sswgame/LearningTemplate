@@ -14,7 +14,7 @@
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Viewport/EditorViewportCamera.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/Model/EditorGridUtil.h"
+#include "Editor/Viewport/Model/EditorGridLevel.h"
 #include "Editor/Viewport/Model/EditorViewportRayPick.h"
 
 #include <imgui.h>
@@ -90,7 +90,7 @@ namespace sw::editor
                         continue;
 
                     const bool                bOrigin = ( worldIndex == 0 );
-                    const EditorGridLineStyle style   = EditorGridUtil::evaluateLine( worldIndex, level );
+                    const EditorGridLineStyle style   = EditorGridLevel::evaluateLine( worldIndex, level );
                     if ( bOrigin == false && style._visibility < kMinVisibleAlpha )
                         continue;
 
@@ -105,7 +105,7 @@ namespace sw::editor
                     if ( bOrigin == false && style._majorWeight >= 0.5f )
                     {
                         ++ctx._stats._majorLineCount;
-                        const float32 majorPeriod = level._step * static_cast<float32>( EditorGridUtil::kMajorEvery );
+                        const float32 majorPeriod = level._step * static_cast<float32>( EditorGridLevel::kMajorEvery );
                         const float32 phase       = MathUtil::abs( coordinate - MathUtil::round( coordinate / majorPeriod ) * majorPeriod );
                         if ( phase > 0.001f * level._step )
                             ++ctx._stats._misplacedMajorCount;
@@ -116,7 +116,7 @@ namespace sw::editor
                         const float32 from     = -halfChord + 2.0f * halfChord * static_cast<float32>( segment ) / static_cast<float32>( kSegmentCount );
                         const float32 to       = -halfChord + 2.0f * halfChord * static_cast<float32>( segment + 1 ) / static_cast<float32>( kSegmentCount );
                         const float32 middle   = 0.5f * ( from + to );
-                        const float32 edgeFade = EditorGridUtil::computeEdgeFade( MathUtil::sqrt( offset * offset + middle * middle ), radius );
+                        const float32 edgeFade = EditorGridLevel::computeEdgeFade( MathUtil::sqrt( offset * offset + middle * middle ), radius );
                         const float32 alpha    = lineAlpha * edgeFade;
                         if ( alpha < kMinVisibleAlpha )
                             continue;
@@ -268,7 +268,7 @@ namespace sw::editor
         const float32 centerV    = b2D ? cameraPosition._y : cameraPosition._z;
         const float32 viewHeight = bOrtho && MathUtil::abs( pProj[5] ) > 1e-6f ? 2.0f / MathUtil::abs( pProj[5] ) : ( b2D ? cameraPosition._z : cameraPosition._y );
 
-        const EditorGridLevel level = EditorGridUtil::selectLevel( viewHeight );
+        const EditorGridLevel level = EditorGridLevel::selectLevel( viewHeight );
 
         EditorGridStats& stats     = _gridStats;
         stats._step                = level._step;

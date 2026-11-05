@@ -9,7 +9,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
-#include "Editor/Panels/RenderTarget/Model/RenderTargetViewUtil.h"
+#include "Editor/Panels/RenderTarget/Model/RenderTargetViewSettings.h"
 
 #include "Engine/Graphics/Debug/RenderTargetRegistry.h"
 #include "Engine/Graphics/Texture/TextureCache.h"

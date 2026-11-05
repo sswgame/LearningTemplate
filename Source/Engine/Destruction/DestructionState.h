@@ -92,7 +92,7 @@ namespace sw
         bool breakLink( uint32 link, DestructionChange& outChange );
         /**
          * @brief 피해 사건 하나를 적용합니다(`DestructionDamage.cpp`). 바뀐 것이 있으면 true 입니다.
-         * @details 1) 잎마다 변형을 구한다(`DestructionDamageUtil::computeLeafStrain`).
+         * @details 1) 잎마다 변형을 구한다(`DestructionDamageEvent::computeLeafStrain`).
          *          2) 활성 노드마다 그 잎들의 최대 변형을 쌓고, 깊이별 임계값을 넘으면 묶음을 자식으로 가른다.
          *          이때 넘친 만큼(쌓인 값 - 임계값)의 비율을 자식에게 다시 준다. 그래서 센 피해 한 번은 여러 레벨을 지나고, 약한 피해는 큰 덩어리만 가른다.
          *          잎이 임계값을 넘으면 떨어져 나간다(`detachLeaf` 와 같다).

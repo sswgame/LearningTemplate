@@ -35,7 +35,7 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 어트리뷰트 세이브 바이트의 본문입니다(`AbilityAttributeSaveUtil::writeBytes`). */
+    /** @brief 어트리뷰트 세이브 바이트의 본문입니다(`SavedAttributeFile::writeBytes`). */
     REFLECT()
     struct SW_GF_API SavedAttributeFile
     {
@@ -43,14 +43,8 @@ namespace sw
 
         PROPERTY( Required )
         vector<SavedAttributeValue> _listValue{}; ///< 붙인 순서
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 어트리뷰트 base 값을 세이브 바이트로 옮기는 정적 도우미입니다. */
-    struct SW_GF_API AbilityAttributeSaveUtil
-    {
+        // 어트리뷰트 base 값을 세이브 바이트로 옮기는 정적 도우미입니다.
         /** @brief 컴포넌트에 붙은 세트의 어트리뷰트 base 값을 붙인 순서대로 @p outListValue 에 덧붙입니다. */
         static void captureBaseValues( const AbilityComponent& abilitySystem, vector<SavedAttributeValue>& outListValue );
         /**

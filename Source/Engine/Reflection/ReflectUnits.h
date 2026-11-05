@@ -35,6 +35,25 @@ namespace sw
         const utf8*          _pName;
         ReflectUnitDimension _dimension;
         float64              _toBase;
+
+        // 단위 표를 찾고 값을 바꿉니다.
+        /** @brief 철자(대소문자 구분 — `m` 과 `M` 은 다른 단위다)로 단위를 찾습니다. 없으면 nullptr 입니다. */
+        static const ReflectUnit* findUnit( const string_view name ) noexcept;
+
+        /** @brief 받는 철자를 `a, b, c` 꼴 한 줄로 씁니다(오류 메시지용). */
+        static string makeUnitList();
+
+        /**
+         * @brief @p value 를 @p fromUnit 에서 @p toUnit 으로 바꿉니다.
+         * @return 모르는 단위이거나 차원이 다르면 false(@p outValue 는 그대로)
+         */
+        [[nodiscard]] static bool convert( const float64 value, const string_view fromUnit, const string_view toUnit, float64& outValue ) noexcept;
+
+        /**
+         * @brief `"150 cm"` · `"1.5m"` · `"90"` 같은 글을 @p storedUnit 의 값으로 읽습니다. 단위를 적지 않았으면 이미 저장 단위입니다.
+         * @return 숫자가 아니거나, 모르는 단위이거나, 차원이 다르면 false
+         */
+        [[nodiscard]] static bool parseValueInUnit( const string_view text, const string_view storedUnit, float64& outValue );
     };
 } // namespace sw
 
@@ -68,78 +87,65 @@ namespace sw
         {    "N*s",      ReflectUnitDimension::Impulse,                     1.0},
     };
 
-    /** @brief 단위 표를 찾고 값을 바꿉니다. */
-    struct ReflectUnitUtil
+    inline const ReflectUnit* ReflectUnit::findUnit( const string_view name ) noexcept
     {
-        /** @brief 철자(대소문자 구분 — `m` 과 `M` 은 다른 단위다)로 단위를 찾습니다. 없으면 nullptr 입니다. */
-        static const ReflectUnit* findUnit( const string_view name ) noexcept
+        for ( const ReflectUnit& unit : kArrReflectUnit )
         {
-            for ( const ReflectUnit& unit : kArrReflectUnit )
-            {
-                if ( name == unit._pName )
-                    return &unit;
-            }
-            return nullptr;
+            if ( name == unit._pName )
+                return &unit;
         }
+        return nullptr;
+    }
 
-        /** @brief 받는 철자를 `a, b, c` 꼴 한 줄로 씁니다(오류 메시지용). */
-        static string makeUnitList()
+    inline string ReflectUnit::makeUnitList()
+    {
+        string text;
+        for ( const ReflectUnit& unit : kArrReflectUnit )
         {
-            string text;
-            for ( const ReflectUnit& unit : kArrReflectUnit )
-            {
-                if ( text.empty() == false )
-                    text += ", ";
-                text += unit._pName;
-            }
-            return text;
+            if ( text.empty() == false )
+                text += ", ";
+            text += unit._pName;
         }
+        return text;
+    }
 
-        /**
-         * @brief @p value 를 @p fromUnit 에서 @p toUnit 으로 바꿉니다.
-         * @return 모르는 단위이거나 차원이 다르면 false(@p outValue 는 그대로)
-         */
-        [[nodiscard]] static bool convert( const float64 value, const string_view fromUnit, const string_view toUnit, float64& outValue ) noexcept
+    inline bool ReflectUnit::convert( const float64 value, const string_view fromUnit, const string_view toUnit, float64& outValue ) noexcept
+    {
+        const ReflectUnit* pFrom              = findUnit( fromUnit );
+        const ReflectUnit* pTo                = findUnit( toUnit );
+        const bool         bIncompatibleUnits = pFrom == nullptr || pTo == nullptr || pFrom->_dimension != pTo->_dimension;
+        if ( bIncompatibleUnits )
+            return false;
+        outValue = value * pFrom->_toBase / pTo->_toBase;
+        return true;
+    }
+
+    inline bool ReflectUnit::parseValueInUnit( const string_view text, const string_view storedUnit, float64& outValue )
+    {
+        // 앞쪽의 숫자(부호 · 소수점 · 지수 포함)와 뒤쪽의 단위로 가른다 — 단위에도 숫자가 든다(`m/s2`).
+        const string_view trimmed = StringUtil::trim( text );
+        size_t            split   = 0;
+        while ( split < trimmed.size() )
         {
-            const ReflectUnit* pFrom              = findUnit( fromUnit );
-            const ReflectUnit* pTo                = findUnit( toUnit );
-            const bool         bIncompatibleUnits = pFrom == nullptr || pTo == nullptr || pFrom->_dimension != pTo->_dimension;
-            if ( bIncompatibleUnits )
-                return false;
-            outValue = value * pFrom->_toBase / pTo->_toBase;
+            const utf8 character = trimmed[split];
+            const bool bDigit    = '0' <= character && character <= '9';
+            const bool bExponent = ( character == 'e' || character == 'E' ) && split + 1 < trimmed.size() &&
+                                   ( ( '0' <= trimmed[split + 1] && trimmed[split + 1] <= '9' ) || trimmed[split + 1] == '-' || trimmed[split + 1] == '+' );
+            const bool bNumberEnded = bDigit == false && bExponent == false && character != '.' && character != '+' && character != '-';
+            if ( bNumberEnded )
+                break;
+            ++split;
+        }
+        float64 number{ 0.0 };
+        if ( StringUtil::parseDouble( StringUtil::trim( trimmed.substr( 0, split ) ), number ) == false )
+            return false;
+        const string_view unitText = StringUtil::trim( trimmed.substr( split ) );
+        if ( unitText.empty() )
+        {
+            outValue = number;
             return true;
         }
+        return convert( number, unitText, storedUnit, outValue );
+    }
 
-        /**
-         * @brief `"150 cm"` · `"1.5m"` · `"90"` 같은 글을 @p storedUnit 의 값으로 읽습니다. 단위를 적지 않았으면 이미 저장 단위입니다.
-         * @return 숫자가 아니거나, 모르는 단위이거나, 차원이 다르면 false
-         */
-        [[nodiscard]] static bool parseValueInUnit( const string_view text, const string_view storedUnit, float64& outValue )
-        {
-            // 앞쪽의 숫자(부호 · 소수점 · 지수 포함)와 뒤쪽의 단위로 가른다 — 단위에도 숫자가 든다(`m/s2`).
-            const string_view trimmed = StringUtil::trim( text );
-            size_t            split   = 0;
-            while ( split < trimmed.size() )
-            {
-                const utf8 character = trimmed[split];
-                const bool bDigit    = '0' <= character && character <= '9';
-                const bool bExponent = ( character == 'e' || character == 'E' ) && split + 1 < trimmed.size() &&
-                                       ( ( '0' <= trimmed[split + 1] && trimmed[split + 1] <= '9' ) || trimmed[split + 1] == '-' || trimmed[split + 1] == '+' );
-                const bool bNumberEnded = bDigit == false && bExponent == false && character != '.' && character != '+' && character != '-';
-                if ( bNumberEnded )
-                    break;
-                ++split;
-            }
-            float64 number{ 0.0 };
-            if ( StringUtil::parseDouble( StringUtil::trim( trimmed.substr( 0, split ) ), number ) == false )
-                return false;
-            const string_view unitText = StringUtil::trim( trimmed.substr( split ) );
-            if ( unitText.empty() )
-            {
-                outValue = number;
-                return true;
-            }
-            return convert( number, unitText, storedUnit, outValue );
-        }
-    };
 } // namespace sw

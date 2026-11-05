@@ -9,13 +9,13 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Localization/CultureInfo.h"
-#include "Engine/Localization/CurrencyUtil.h"
+#include "Engine/Localization/CurrencyInfo.h"
 #include "Engine/Localization/LocalizationBinaryTable.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Localization/Tests/LocalizationTestUtil.h"
 #include "Engine/Localization/TextFormatter.h"
-#include "Engine/Localization/TimeZoneUtil.h"
+#include "Engine/Localization/TimeZoneInfo.h"
 
 namespace
 {
@@ -65,14 +65,14 @@ namespace
             value._hour   = hour;
             value._minute = minute;
             value._second = second;
-            return sw::TimeZoneUtil::computeUnixSeconds( value );
+            return sw::TimeZoneInfo::computeUnixSeconds( value );
         }
 
         static int32 offsetAt( const utf8* pZone, int64 unixSeconds )
         {
             const sw::TimeZoneTable zones = loadTimeZones();
             const sw::TimeZoneInfo* pInfo = zones.findZone( pZone );
-            return pInfo != nullptr ? sw::TimeZoneUtil::computeOffsetMinutes( unixSeconds, *pInfo ) : -9999;
+            return pInfo != nullptr ? sw::TimeZoneInfo::computeOffsetMinutes( unixSeconds, *pInfo ) : -9999;
         }
     };
 } // namespace
@@ -154,13 +154,13 @@ SW_TEST_CASE( CurrencyFormatTest, SkeletonOverridesCultureCurrency )
     SW_EXPECT_EQUAL( sw::string( "1.234,00 €" ), Internal::format( "de", "{p, number, ::currency/EUR}", amount ) );
     SW_EXPECT_EQUAL( sw::string( "XYZ1,234.00" ), Internal::format( "en", "{p, number, ::currency/XYZ}", amount ) );
 
-    const sw::CurrencyInfo* pWon    = sw::CurrencyUtil::findCurrency( "KRW" );
-    const sw::CurrencyInfo* pDollar = sw::CurrencyUtil::findCurrency( "USD" );
+    const sw::CurrencyInfo* pWon    = sw::CurrencyInfo::findCurrency( "KRW" );
+    const sw::CurrencyInfo* pDollar = sw::CurrencyInfo::findCurrency( "USD" );
     SW_REQUIRE_NOT_NULL( pWon );
     SW_REQUIRE_NOT_NULL( pDollar );
     SW_EXPECT_EQUAL( uint8( 0 ), pWon->_minorDigitCount );
     SW_EXPECT_EQUAL( uint8( 2 ), pDollar->_minorDigitCount );
-    SW_EXPECT_NULL( sw::CurrencyUtil::findCurrency( "XYZ" ) );
+    SW_EXPECT_NULL( sw::CurrencyInfo::findCurrency( "XYZ" ) );
 }
 
 /**
@@ -176,7 +176,7 @@ SW_TEST_CASE( TimeZoneTest, FixedOffsetConversion )
     SW_REQUIRE_NOT_NULL( pKolkata );
     SW_REQUIRE_NOT_NULL( pUTC );
     const int64            utc   = LocalizationFormatsTestInternal::makeUnixSeconds( 2026, 12, 31, 20, 30, 15 );
-    const sw::TextDateTime local = sw::TimeZoneUtil::convertUnixMilliseconds( utc * 1000 + 999, *pSeoul );
+    const sw::TextDateTime local = sw::TimeZoneInfo::convertUnixMilliseconds( utc * 1000 + 999, *pSeoul );
     SW_EXPECT_EQUAL( 2027, local._year ); // 날짜가 넘어간다
     SW_EXPECT_EQUAL( uint8( 1 ), local._month );
     SW_EXPECT_EQUAL( uint8( 1 ), local._day );
@@ -186,12 +186,12 @@ SW_TEST_CASE( TimeZoneTest, FixedOffsetConversion )
     SW_EXPECT_TRUE( local._bZoned );
     SW_EXPECT_EQUAL( int16( 540 ), local._utcOffsetMinutes );
 
-    const sw::TextDateTime kolkata = sw::TimeZoneUtil::convertUnixMilliseconds( utc * 1000, *pKolkata );
+    const sw::TextDateTime kolkata = sw::TimeZoneInfo::convertUnixMilliseconds( utc * 1000, *pKolkata );
     SW_EXPECT_EQUAL( uint8( 2 ), kolkata._hour ); // 20:30 + 5:30 = 02:00
     SW_EXPECT_EQUAL( uint8( 0 ), kolkata._minute );
 
     SW_EXPECT_NULL( zones.findZone( "Mars/Olympus" ) );
-    SW_EXPECT_EQUAL( utc, sw::TimeZoneUtil::computeUnixSeconds( sw::TimeZoneUtil::convertUnixMilliseconds( utc * 1000, *pUTC ) ) );
+    SW_EXPECT_EQUAL( utc, sw::TimeZoneInfo::computeUnixSeconds( sw::TimeZoneInfo::convertUnixMilliseconds( utc * 1000, *pUTC ) ) );
 }
 
 /**
@@ -236,7 +236,7 @@ SW_TEST_CASE( TimeZoneTest, NegativeUnixTimeFloors )
     const sw::TimeZoneTable zones = LocalizationFormatsTestInternal::loadTimeZones();
     const sw::TimeZoneInfo* pUTC  = zones.findZone( "UTC" );
     SW_REQUIRE_NOT_NULL( pUTC );
-    const sw::TextDateTime value = sw::TimeZoneUtil::convertUnixMilliseconds( -1, *pUTC );
+    const sw::TextDateTime value = sw::TimeZoneInfo::convertUnixMilliseconds( -1, *pUTC );
     SW_EXPECT_EQUAL( 1969, value._year );
     SW_EXPECT_EQUAL( uint8( 12 ), value._month );
     SW_EXPECT_EQUAL( uint8( 31 ), value._day );
@@ -260,7 +260,7 @@ SW_TEST_CASE( TimeZoneTest, UnitedStatesDaylightSavingBoundaries )
     const sw::TimeZoneTable zones    = LocalizationFormatsTestInternal::loadTimeZones();
     const sw::TimeZoneInfo* pNewYork = zones.findZone( "America/New_York" );
     SW_REQUIRE_NOT_NULL( pNewYork );
-    const sw::TextDateTime summer = sw::TimeZoneUtil::convertUnixMilliseconds( Internal::makeUnixSeconds( 2026, 7, 4, 16, 0, 0 ) * 1000, *pNewYork );
+    const sw::TextDateTime summer = sw::TimeZoneInfo::convertUnixMilliseconds( Internal::makeUnixSeconds( 2026, 7, 4, 16, 0, 0 ) * 1000, *pNewYork );
     SW_EXPECT_EQUAL( uint8( 12 ), summer._hour );
 }
 
@@ -284,11 +284,11 @@ SW_TEST_CASE( TimeZoneTest, EuropeDaylightSavingBoundaries )
 SW_TEST_CASE( TimeZoneTest, OffsetTextAndFormatterIntegration )
 {
     using Internal = LocalizationFormatsTestInternal;
-    SW_EXPECT_EQUAL( sw::string( "UTC" ), sw::TimeZoneUtil::formatOffset( 0, false ) );
-    SW_EXPECT_EQUAL( sw::string( "UTC+9" ), sw::TimeZoneUtil::formatOffset( 540, false ) );
-    SW_EXPECT_EQUAL( sw::string( "UTC+5:30" ), sw::TimeZoneUtil::formatOffset( 330, false ) );
-    SW_EXPECT_EQUAL( sw::string( "UTC-3" ), sw::TimeZoneUtil::formatOffset( -180, false ) );
-    SW_EXPECT_EQUAL( sw::string( "UTC+09:00" ), sw::TimeZoneUtil::formatOffset( 540, true ) );
+    SW_EXPECT_EQUAL( sw::string( "UTC" ), sw::TimeZoneInfo::formatOffset( 0, false ) );
+    SW_EXPECT_EQUAL( sw::string( "UTC+9" ), sw::TimeZoneInfo::formatOffset( 540, false ) );
+    SW_EXPECT_EQUAL( sw::string( "UTC+5:30" ), sw::TimeZoneInfo::formatOffset( 330, false ) );
+    SW_EXPECT_EQUAL( sw::string( "UTC-3" ), sw::TimeZoneInfo::formatOffset( -180, false ) );
+    SW_EXPECT_EQUAL( sw::string( "UTC+09:00" ), sw::TimeZoneInfo::formatOffset( 540, true ) );
 
     const sw::TimeZoneTable zones  = Internal::loadTimeZones();
     const sw::TimeZoneInfo* pSeoul = zones.findZone( "Asia/Seoul" );
@@ -363,7 +363,7 @@ SW_TEST_CASE( LocalizationBinaryTableTest, ManagerCooksAndLoadsWithoutAuthoringF
     const sw::string                    folder  = domain.getFolder();
     const sw::string                    project = LocalizationTestUtil::writeProject( folder, "en", R"([ "ko" ])" );
     LocalizationTestUtil::writeSourceTable( folder, "en", R"("ui.start": { "source": "Start" }, "ui.quit": { "source": "Quit" })" );
-    const sw::string staleHash = sw::LocalizationTextUtil::formatSourceHash( sw::LocalizationTextUtil::computeSourceHash( "Begin" ) );
+    const sw::string staleHash = sw::SourceTextEntry::formatSourceHash( sw::SourceTextEntry::computeSourceHash( "Begin" ) );
     LocalizationTestUtil::writeTranslation( folder, "ko", "\"ui.start\": { \"text\": \"시작\" }, \"ui.quit\": { \"text\": \"종료\", \"sourceHash\": \"" + staleHash + "\" }" );
 
     sw::LocalizationManager cooker;

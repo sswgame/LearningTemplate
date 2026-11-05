@@ -140,7 +140,7 @@ namespace sw::editor
             ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2{ 0.0f, 0.0f } );
 
         // 창 이름은 "보이는 이름###제목" — 탭은 지금 언어로 보이고 ID(도킹 · 포커스 · 테스트가 찾는 이름)는 제목으로 고정이다.
-        const bool bVisible = ImGui::Begin( EditorPanelTextUtil::makeWindowName( pTitle ).c_str(), pOpen, EditorChromeInternal::toImGuiPanelFlags( flags ) );
+        const bool bVisible = ImGui::Begin( EditorPanelText::makeWindowName( pTitle ).c_str(), pOpen, EditorChromeInternal::toImGuiPanelFlags( flags ) );
         if ( bNoPadding )
             ImGui::PopStyleVar();
         EditorChromeInternal::noteCloseButton( pTitle, pOpen );

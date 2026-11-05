@@ -20,7 +20,7 @@ namespace sw
      *          모아 구조 버퍼 하나로 올리고, 포워드 · 디퍼드가 같은 버퍼를 같은 루프로 읽습니다
      *          (`GPULightBuffer` · `lighting.hlsli`).
      * @note 그림자는 켤 때만 드리웁니다(`_bCastShadow`, 기본 끔 — 언리얼 · 유니티의 점광 기본값과 같습니다). 그림자 아틀라스의 칸 여섯에
-     *       면(+X −X +Y −Y +Z −Z)마다 90° 원근으로 그립니다(큐브맵 대신 2D 아틀라스 — 유니티 URP · Godot 과 같은 방식, `ShadowSetupUtil`).
+     *       면(+X −X +Y −Y +Z −Z)마다 90° 원근으로 그립니다(큐브맵 대신 2D 아틀라스 — 유니티 URP · Godot 과 같은 방식, `FrameShadowData`).
      *       칸이 모자라면 앞의 빛부터 받고 나머지는 그림자 없이 비춥니다.
      */
     REFLECT( Category = "Rendering 3D", DisplayName = "Point Light", Tooltip = "Omnidirectional light with a finite radius", Meta = "Icon=LightPoint, IconColor=Light, Billboard" )

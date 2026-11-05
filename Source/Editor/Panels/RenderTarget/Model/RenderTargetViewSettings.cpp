@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/RenderTarget/Model/RenderTargetViewUtil.h"
+#include "Editor/Panels/RenderTarget/Model/RenderTargetViewSettings.h"
 
 #include "Core/Math/Half.h"
 #include "Core/Math/MathUtil.h"
@@ -11,7 +11,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct RenderTargetViewUtilInternal
+        struct RenderTargetViewSettingsInternal
         {
             static float32 readFloat( const uint8* pByte )
             {
@@ -50,7 +50,7 @@ namespace sw::editor
         };
     } // namespace
 
-    bool RenderTargetViewUtil::isDecodableFormat( RHIFormat format, bool bDepth )
+    bool RenderTargetViewSettings::isDecodableFormat( RHIFormat format, bool bDepth )
     {
         if ( bDepth )
             return true;
@@ -78,7 +78,7 @@ namespace sw::editor
         }
     }
 
-    uint32 RenderTargetViewUtil::getChannelCount( RHIFormat format, bool bDepth )
+    uint32 RenderTargetViewSettings::getChannelCount( RHIFormat format, bool bDepth )
     {
         if ( bDepth )
             return 1;
@@ -109,8 +109,8 @@ namespace sw::editor
         }
     }
 
-    bool RenderTargetViewUtil::readPixel( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, bool bDepth, uint32 x, uint32 y,
-                                          float4& outValue )
+    bool RenderTargetViewSettings::readPixel( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, bool bDepth, uint32 x, uint32 y,
+                                              float4& outValue )
     {
         const bool bTexelUnreadable = isDecodableFormat( format, bDepth ) == false || x >= layout._width || y >= layout._height;
         if ( bTexelUnreadable )
@@ -145,20 +145,20 @@ namespace sw::editor
             }
             case RHIFormat::R32G32B32_FLOAT:
             {
-                outValue._x = RenderTargetViewUtilInternal::readFloat( pPixel );
-                outValue._y = RenderTargetViewUtilInternal::readFloat( pPixel + 4 );
-                outValue._z = RenderTargetViewUtilInternal::readFloat( pPixel + 8 );
+                outValue._x = RenderTargetViewSettingsInternal::readFloat( pPixel );
+                outValue._y = RenderTargetViewSettingsInternal::readFloat( pPixel + 4 );
+                outValue._z = RenderTargetViewSettingsInternal::readFloat( pPixel + 8 );
                 break;
             }
             case RHIFormat::R32G32_FLOAT:
             {
-                outValue._x = RenderTargetViewUtilInternal::readFloat( pPixel );
-                outValue._y = RenderTargetViewUtilInternal::readFloat( pPixel + 4 );
+                outValue._x = RenderTargetViewSettingsInternal::readFloat( pPixel );
+                outValue._y = RenderTargetViewSettingsInternal::readFloat( pPixel + 4 );
                 break;
             }
             case RHIFormat::R32_FLOAT:
             {
-                outValue._x = RenderTargetViewUtilInternal::readFloat( pPixel );
+                outValue._x = RenderTargetViewSettingsInternal::readFloat( pPixel );
                 break;
             }
             case RHIFormat::R8_UNORM:
@@ -191,7 +191,7 @@ namespace sw::editor
         return true;
     }
 
-    float32 RenderTargetViewUtil::linearizeDepth( float32 depth, float32 nearPlane, float32 farPlane )
+    float32 RenderTargetViewSettings::linearizeDepth( float32 depth, float32 nearPlane, float32 farPlane )
     {
         if ( nearPlane <= 0.0f || farPlane <= nearPlane )
             return depth;
@@ -202,8 +202,8 @@ namespace sw::editor
         return nearPlane * farPlane / denominator;
     }
 
-    bool RenderTargetViewUtil::makePreviewImage( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, bool bDepth,
-                                                 const RenderTargetViewSettings& settings, RenderTargetPreviewImage& outImage )
+    bool RenderTargetViewSettings::makePreviewImage( const vector<uint8>& byte, const RHITextureMipSpan& layout, RHIFormat format, bool bDepth,
+                                                     const RenderTargetViewSettings& settings, RenderTargetPreviewImage& outImage )
     {
         outImage._byte.clear();
         outImage._width              = 0;
@@ -231,7 +231,7 @@ namespace sw::editor
                 {
                     float4 value{};
                     if ( readPixel( byte, layout, format, bDepth, x, y, value ) == false ||
-                         RenderTargetViewUtilInternal::isClearedDepth( value._x ) )
+                         RenderTargetViewSettingsInternal::isClearedDepth( value._x ) )
                         continue;
                     const float32 view = toDepthView( value._x );
                     foundLow           = MathUtil::min( foundLow, view );
@@ -262,18 +262,18 @@ namespace sw::editor
                 if ( bDepth )
                 {
                     float32 gray = 1.0f; // 배경은 먼 쪽 = 흰색
-                    if ( RenderTargetViewUtilInternal::isClearedDepth( value._x ) == false )
+                    if ( RenderTargetViewSettingsInternal::isClearedDepth( value._x ) == false )
                         gray = span > 0.0f ? ( toDepthView( value._x ) - low ) / span : 0.0f;
                     shown = float4{ gray, gray, gray, 1.0f };
                 }
                 else if ( settings._channel != RenderTargetChannel::RGBA )
                 {
-                    const float32 gray = RenderTargetViewUtilInternal::selectChannel( value, settings._channel );
+                    const float32 gray = RenderTargetViewSettingsInternal::selectChannel( value, settings._channel );
                     shown              = float4{ gray, gray, gray, 1.0f };
                 }
-                pOut[0] = RenderTargetViewUtilInternal::toUnorm8( shown._x );
-                pOut[1] = RenderTargetViewUtilInternal::toUnorm8( shown._y );
-                pOut[2] = RenderTargetViewUtilInternal::toUnorm8( shown._z );
+                pOut[0] = RenderTargetViewSettingsInternal::toUnorm8( shown._x );
+                pOut[1] = RenderTargetViewSettingsInternal::toUnorm8( shown._y );
+                pOut[2] = RenderTargetViewSettingsInternal::toUnorm8( shown._z );
                 pOut[3] = 255; // 알파는 미리보기를 비치게 하지 않는다 — 알파는 A 채널로 본다
                 pOut += 4;
             }
@@ -281,7 +281,7 @@ namespace sw::editor
         return true;
     }
 
-    bool RenderTargetViewUtil::mapPreviewToTexel( const float2& localPos, const float2& drawSize, uint32 width, uint32 height, int2& outTexel )
+    bool RenderTargetViewSettings::mapPreviewToTexel( const float2& localPos, const float2& drawSize, uint32 width, uint32 height, int2& outTexel )
     {
         const bool bInvalidPreviewSize = width == 0 || height == 0 || drawSize._x <= 0.0f || drawSize._y <= 0.0f;
         if ( bInvalidPreviewSize )
@@ -295,7 +295,7 @@ namespace sw::editor
         return true;
     }
 
-    const utf8* RenderTargetViewUtil::getChannelLabel( RenderTargetChannel channel )
+    const utf8* RenderTargetViewSettings::getChannelLabel( RenderTargetChannel channel )
     {
         switch ( channel )
         {

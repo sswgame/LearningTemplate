@@ -340,7 +340,7 @@ namespace sw
             }
             AnimationLODState&     state    = _listScratchLODState[clientIndex];
             const SkeletonBoneLOD* pBoneLOD = pClient->findBoneLOD();
-            state                           = AnimationLODUtil::makeState( _lodSettings, screenSize, bVisible, pBoneLOD );
+            state                           = AnimationLODState::makeState( _lodSettings, screenSize, bVisible, pBoneLOD );
             // 메시가 LOD 를 가지면 본 LOD 는 그 메시 단계를 따른다(화면 크기 임계값의 정본이 메시 단계 하나 — 본은 안 보이는 단계에서 먼저 빠지지 않는다).
             const int32 meshLODIndex   = pClient->findMeshLODIndex();
             const bool  bHasBoneLevels = pBoneLOD != nullptr && pBoneLOD->getLevelCount() > 0;
@@ -352,9 +352,9 @@ namespace sw
         }
 
         // 단가는 표의 비용 모형이다 — 측정 평균(`_averageEvaluationMicroseconds`)을 넣으면 같은 입력이 기계 · 부하마다 다른 주기가 된다.
-        _expectedEvaluationMicroseconds = AnimationLODUtil::allocateBudget( _listScratchBudgetItem.data(), static_cast<uint32>( _listScratchBudgetItem.size() ),
-                                                                            _lodSettings._unitCostMicroseconds, _lodSettings._budgetMilliseconds * constant::time::kMicrosecondsPerMillisecond,
-                                                                            _lodSettings._maxUpdateRateDivisor );
+        _expectedEvaluationMicroseconds = AnimationLODState::allocateBudget( _listScratchBudgetItem.data(), static_cast<uint32>( _listScratchBudgetItem.size() ),
+                                                                             _lodSettings._unitCostMicroseconds, _lodSettings._budgetMilliseconds * constant::time::kMicrosecondsPerMillisecond,
+                                                                             _lodSettings._maxUpdateRateDivisor );
         size_t budgetIndex              = 0;
         // 예산을 칸마다 풀어 두는 단계 — 훅이 없으니 목록이 그대로다. 예산 순번은 여기서만 센다(아래 순회가 해제된 칸을 건너뛰어도 어긋나지 않게).
         for ( size_t clientIndex = 0; clientIndex < clientCount; ++clientIndex )

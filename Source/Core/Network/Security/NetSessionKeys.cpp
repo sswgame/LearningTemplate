@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Core/Network/Security/NetSessionKeyUtil.h"
+#include "Core/Network/Security/NetSessionKeys.h"
 
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
@@ -11,7 +11,7 @@ namespace sw
 {
     namespace
     {
-        struct NetSessionKeyUtilInternal
+        struct NetSessionKeysInternal
         {
             static constexpr utf8  kSessionLabel[] = "sw-net-v1";
             static constexpr utf8  kProofLabel[]   = "sw-net-proof-v1";
@@ -33,13 +33,13 @@ namespace sw
 {
     void NetSessionKeys::wipe()
     {
-        NetSessionKeyUtilInternal::wipeBytes( this, sizeof( NetSessionKeys ) );
+        NetSessionKeysInternal::wipeBytes( this, sizeof( NetSessionKeys ) );
     }
 
-    bool NetSessionKeyUtil::computeSessionKeys( INetSecurityProvider& provider, const uint8* pSharedSecret, const NetSessionSecret* pSessionSecret, uint64 clientSalt,
-                                                uint64 serverSalt, uint32 protocolID, NetSessionKeys& outKeys )
+    bool NetSessionKeys::computeSessionKeys( INetSecurityProvider& provider, const uint8* pSharedSecret, const NetSessionSecret* pSessionSecret, uint64 clientSalt,
+                                             uint64 serverSalt, uint32 protocolID, NetSessionKeys& outKeys )
     {
-        using Internal             = NetSessionKeyUtilInternal;
+        using Internal             = NetSessionKeysInternal;
         constexpr int32 kLabelSize = static_cast<int32>( sizeof( Internal::kSessionLabel ) - 1 );
         uint8           arrInfo[kLabelSize + 8 + 8 + 4];
         std::memcpy( arrInfo, Internal::kSessionLabel, static_cast<size_t>( kLabelSize ) );
@@ -65,14 +65,14 @@ namespace sw
         return true;
     }
 
-    bool NetSessionKeyUtil::computeProofKey( INetSecurityProvider& provider, const NetSessionSecret& secret, uint8* pOutKey )
+    bool NetSessionKeys::computeProofKey( INetSecurityProvider& provider, const NetSessionSecret& secret, uint8* pOutKey )
     {
-        using Internal = NetSessionKeyUtilInternal;
+        using Internal = NetSessionKeysInternal;
         return provider.computeHkdfSHA256( secret._arrByte, NetSecurityConstant::kSHA256Size, nullptr, 0, reinterpret_cast<const uint8*>( Internal::kProofLabel ),
                                            static_cast<int32>( sizeof( Internal::kProofLabel ) - 1 ), pOutKey, NetSecurityConstant::kAeadKeySize );
     }
 
-    void NetSessionKeyUtil::makeNonce( const uint8* pIv, uint64 packetNumber, uint8* pOutNonce )
+    void NetSessionKeys::makeNonce( const uint8* pIv, uint64 packetNumber, uint8* pOutNonce )
     {
         std::memcpy( pOutNonce, pIv, NetSecurityConstant::kAeadNonceSize );
         for ( int32 index = 0; index < 8; ++index )

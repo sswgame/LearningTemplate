@@ -200,7 +200,7 @@ namespace sw
 
         // LOD: 안 보이거나 주기 밖이면 스프라이트에 넘기지 않는다(시간 · 상태는 위에서 흘렀다). 보이게 되면 그 틱에 맞춘다.
         const uint64 frameIndex = ( _pAnimationSystem != nullptr ) ? _pAnimationSystem->getFrameIndex() : 0u;
-        const bool   bOnRate    = AnimationLODUtil::isOnUpdateFrame( frameIndex, _updatePhase, MathUtil::max( _lodState._updateRateDivisor, 1u ) );
+        const bool   bOnRate    = AnimationLODState::isOnUpdateFrame( frameIndex, _updatePhase, MathUtil::max( _lodState._updateRateDivisor, 1u ) );
         if ( _lodState._bVisible == SW_FALSE || bOnRate == false )
         {
             if ( _currentFrame != prevFrame )

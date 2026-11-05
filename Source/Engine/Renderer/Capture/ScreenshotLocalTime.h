@@ -1,5 +1,5 @@
 /**
- * @file ScreenshotPathUtil.h
+ * @file ScreenshotLocalTime.h
  * @brief 실행 중 스크린샷(`RenderThread::requestScreenshot`)의 기본 파일 경로와 개발 명령 `screenshot` 입니다.
  */
 #pragma once
@@ -11,7 +11,7 @@
 namespace sw
 {
     /** @brief 경로에 쓰는 지역 시각입니다(월 1 ~ 12, 일 1 ~ 31). */
-    struct ScreenshotLocalTime
+    struct SW_API ScreenshotLocalTime
     {
         int32 _year{ 0 };
         int32 _month{ 0 };
@@ -19,18 +19,8 @@ namespace sw
         int32 _hour{ 0 };
         int32 _minute{ 0 };
         int32 _second{ 0 };
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct ScreenshotPathUtil
-     * @brief 스크린샷 기본 경로 `Saved/Screenshots/<yyyyMMdd-HHmmss>.png` 를 만듭니다(언리얼 HighResShot, 유니티 Game view 스크린샷과 같은 PNG).
-     * @details 작업 폴더 기준 상대 경로입니다. 테스트용 `-gv_screenshot` 은 PPM 계약 그대로입니다.
-     */
-    struct SW_API ScreenshotPathUtil
-    {
+        // 스크린샷 기본 경로 `Saved/Screenshots/<yyyyMMdd-HHmmss>.png` 를 만듭니다(언리얼 HighResShot, 유니티 Game view 스크린샷과 같은 PNG).
         /** @brief 저장 폴더(`constant::path::kSavedFolder`) 아래 스크린샷 폴더 이름입니다. */
         static constexpr const utf8* kScreenshotFolderName = "Screenshots";
 

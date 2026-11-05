@@ -265,7 +265,7 @@ namespace sw::editor
         _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
         drawFavoritesSection( pPrimary ); // 다중 선택의 즐겨찾기는 주 선택 오브젝트 기준이다
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Components" ) );
-        EditorMultiEditUtil::collectCommonComponents( listObject, _listMultiEditComponent );
+        EditorMultiEditComponent::collectCommonComponents( listObject, _listMultiEditComponent );
         for ( EditorMultiEditComponent& common : _listMultiEditComponent )
         {
             Component* pComponent = common._listComponent[0];
@@ -302,7 +302,7 @@ namespace sw::editor
     void InspectorPanel::copyEditToOthers( const PropertyInfo& prop )
     {
         if ( _pMultiEditCurrent != nullptr )
-            (void)EditorMultiEditUtil::copyPropertyToOthers( prop, _pMultiEditCurrent->_listComponent ); // 수는 쓰지 않는다 — 되돌리기는 위젯 추적이 모두를 담는다
+            (void)EditorMultiEditComponent::copyPropertyToOthers( prop, _pMultiEditCurrent->_listComponent ); // 수는 쓰지 않는다 — 되돌리기는 위젯 추적이 모두를 담는다
     }
 
     bool InspectorPanel::isMultiEditMixed( const PropertyInfo& prop )
@@ -314,7 +314,7 @@ namespace sw::editor
         {
             listInstance.push_back( ObjectAddress{ pComponent } );
         }
-        return EditorMultiEditUtil::hasMixedValues( prop, listInstance );
+        return EditorMultiEditComponent::hasMixedValues( prop, listInstance );
     }
 
     void InspectorPanel::drawFavoritesSection( GameObject* pObj )

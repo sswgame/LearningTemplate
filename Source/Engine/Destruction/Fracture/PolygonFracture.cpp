@@ -256,7 +256,7 @@ namespace sw
                             inoutPieces._graph._listLink.push_back( FractureLink{ pieceA, pieceB, length } );
                     }
                 }
-                FractureGraphUtil::normalizeLinks( inoutPieces._graph._listLink );
+                FractureGraph::normalizeLinks( inoutPieces._graph._listLink );
             }
 
             /** @brief 잎 조각 하나(번호 @p leaf)의 앞뒤 면 삼각형 · 경계 · 껍질 점을 에셋에 더합니다. */
@@ -379,7 +379,7 @@ namespace sw
         }
         Internal::linkPieces( listCell, pieces );
         vector<uint32> listLeafOrder;
-        FractureGraphUtil::populateHierarchy( pieces._graph, settings._listLevelCount, listLeafOrder );
+        FractureGraph::populateHierarchy( pieces._graph, settings._listLevelCount, listLeafOrder );
 
         float2 boundsMin{ MathUtil::kMaxFloat, MathUtil::kMaxFloat };
         float2 boundsMax{ MathUtil::kMinFloat, MathUtil::kMinFloat };

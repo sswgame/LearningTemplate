@@ -387,7 +387,7 @@ namespace sw
             capsule._radius     = record._desc._radius;
             capsule._halfHeight = record._desc._halfHeight;
             const float2 center = record._state._position + float2{ 0.0f, record._desc._halfHeight + record._desc._radius };
-            PhysicsDebugDrawUtil::drawShape2D( renderer, capsule, center, 0.0f, float4{ 0.9f, 0.4f, 1.0f, 1.0f } );
+            IPhysicsDebugRenderer::drawShape2D( renderer, capsule, center, 0.0f, float4{ 0.9f, 0.4f, 1.0f, 1.0f } );
         } );
     }
 
@@ -406,10 +406,10 @@ namespace sw
             return;
         const b2Transform transform = b2Body_GetTransform( record._bodyID );
         const bool        bSleeping = record._type != PhysicsBodyType::Static && b2Body_IsAwake( record._bodyID ) == false;
-        const float4      color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record.isSensor() );
+        const float4      color     = IPhysicsDebugRenderer::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record.isSensor() );
         for ( const PhysicsShapeDesc2D& shape : *record._pListShape )
         {
-            PhysicsDebugDrawUtil::drawShape2D( renderer, shape, Box2DUtil::toEngine( transform.p ), b2Rot_GetAngle( transform.q ), color );
+            IPhysicsDebugRenderer::drawShape2D( renderer, shape, Box2DUtil::toEngine( transform.p ), b2Rot_GetAngle( transform.q ), color );
         }
     }
 

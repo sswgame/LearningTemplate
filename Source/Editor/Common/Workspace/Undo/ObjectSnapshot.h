@@ -1,5 +1,5 @@
 /**
- * @file Editor/Common/Workspace/Undo/ObjectUndoUtil.h
+ * @file Editor/Common/Workspace/Undo/ObjectSnapshot.h
  * @brief 오브젝트 편집을 직렬화한 상태로 기록하는 Undo 데이터 명령입니다 — 코드는 엔진에 있어 에디터 모듈 핫 리로드를 넘습니다.
  */
 #pragma once
@@ -17,41 +17,20 @@ namespace sw
     class GameObject;
     class SceneManager;
 
+    enum class ObjectLifetimeEdit : uint8;
+
     /**
      * @struct ObjectSnapshot
      * @brief 오브젝트 하나의 상태(XML)와 찍을 때의 런타임 id 입니다.
      * @details 되돌리기는 상태를 다시 읽으면서 컴포넌트를 전부 새로 만듭니다. id 를 같이 적어 두지 않으면 속성 하나만 되돌려도 컴포넌트마다 새 id 가
      *          나가, 그 컴포넌트를 가리키던 `ComponentHandle`(컴포넌트 선택 · 씬의 활성 카메라 등)이 끊깁니다.
      */
-    struct ObjectSnapshot
+    struct SW_EDITOR_API ObjectSnapshot
     {
         string         _xml;
         ObjectIdentity _identity;
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 오브젝트 수명 편집의 방향입니다. 어느 쪽이 "복원하기" 인지를 정합니다. */
-    enum class ObjectLifetimeEdit : uint8
-    {
-        Created = 0, ///< 방금 만들었습니다. Undo 가 없애고 Redo 가 복원합니다
-        Destroyed    ///< 방금 지웠습니다. Undo 가 복원하고 Redo 가 없앱니다
-    };
-
-    /**
-     * @struct ObjectUndoUtil
-     * @brief 오브젝트 편집을 `CommandStack` 의 데이터 명령으로 만듭니다(UE `FTransaction` 의 오브젝트 레코드 자리).
-     * @details 명령이 드는 것은 값뿐입니다(`UndoStep`) — 대상 오브젝트 id(핸들의 id · 원래 id 로 복원하므로 재생성 뒤에도 같다), 직렬화한 상태, 이름 · 프리팹 경로.
-     *          그래서 편집기 모듈을 리로드해도 기록이 넘어가 같은 결과를 냅니다.
-     *          대상은 실행할 때마다 **기록할 때 그 오브젝트가 살던 씬**(활성 씬, 또는 미리보기 씬의 키 — `SceneManager::getPreviewSceneKeyOf`)에서 id 로 찾고,
-     *          없으면 기록할 때의 이름으로 찾습니다. 그 미리보기 씬이 내려졌으면 명령은 아무것도 하지 않습니다.
-     *          적용한 뒤에는 `CommandStack::notifyObjectEdit` 로 알려, 에디터가 선택 · 씬 dirty 를 맞춥니다.
-     * @warning 이름 조회는 한 프레임 안에서 없애고 복원한 경우를 위한 것입니다. 옛 오브젝트가 지연 파괴를 기다리는 동안에는 그 id 가 아직 등록돼 있어
-     *          `GameObjectManager::createGameObjectWithID` 가 새 id 를 줍니다(히스토리 점프 · 테스트처럼 프레임 없이 연달아 되돌릴 때).
-     */
-    struct SW_EDITOR_API ObjectUndoUtil
-    {
+        // 오브젝트 편집을 `CommandStack` 의 데이터 명령으로 만듭니다(UE `FTransaction` 의 오브젝트 레코드 자리).
         /** @brief 지금 상태(런타임 id 포함)를 찍습니다. nullptr 이면 빈 스냅샷입니다. */
         static ObjectSnapshot captureSnapshot( const GameObject* pObj );
 
@@ -65,4 +44,15 @@ namespace sw
          */
         static CommandStack::Command makeLifetime( SceneManager& sceneManager, const GameObject* pObj, ObjectLifetimeEdit edit, string_view label );
     };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 오브젝트 수명 편집의 방향입니다. 어느 쪽이 "복원하기" 인지를 정합니다. */
+    enum class ObjectLifetimeEdit : uint8
+    {
+        Created = 0, ///< 방금 만들었습니다. Undo 가 없애고 Redo 가 복원합니다
+        Destroyed    ///< 방금 지웠습니다. Undo 가 복원하고 Redo 가 없앱니다
+    };
+
 } // namespace sw

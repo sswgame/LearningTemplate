@@ -409,7 +409,7 @@ namespace sw
             capsule._radius     = record._desc._radius;
             capsule._halfHeight = record._desc._halfHeight;
             const float3 center = record._state._position + float3{ 0.0f, record._desc._halfHeight + record._desc._radius, 0.0f };
-            PhysicsDebugDrawUtil::drawShape3D( renderer, capsule, center, quaternion{}, float4{ 0.9f, 0.4f, 1.0f, 1.0f } );
+            IPhysicsDebugRenderer::drawShape3D( renderer, capsule, center, quaternion{}, float4{ 0.9f, 0.4f, 1.0f, 1.0f } );
         } );
         _softBodies.drawDebug( renderer );
     }
@@ -432,10 +432,10 @@ namespace sw
         JPH::Quat                 rotation;
         bodyInterface.GetPositionAndRotation( record._bodyID, position, rotation );
         const bool   bSleeping = record._type != PhysicsBodyType::Static && bodyInterface.IsActive( record._bodyID ) == false;
-        const float4 color     = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
+        const float4 color     = IPhysicsDebugRenderer::getBodyColor( static_cast<uint8>( record._type ), bSleeping, record._bTrigger );
         for ( const PhysicsShapeDesc3D& shape : *record._pListShape )
         {
-            PhysicsDebugDrawUtil::drawShape3D( renderer, shape, JoltUtil::toEngine( position ), JoltUtil::toEngine( rotation ), color );
+            IPhysicsDebugRenderer::drawShape3D( renderer, shape, JoltUtil::toEngine( position ), JoltUtil::toEngine( rotation ), color );
         }
     }
 

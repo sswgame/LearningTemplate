@@ -385,7 +385,7 @@ namespace sw::editor
         for ( int32 index = 0; index < 3; ++index )
         {
             const GizmoButton& button = kArrGizmoButton[index];
-            if ( drawIconToggle( button._pID, EditorIconUtil::findGlyphByName( button._pIconName ), operation == index, arrTooltip[index] ) )
+            if ( drawIconToggle( button._pID, EditorIconGlyphTable::findGlyphByName( button._pIconName ), operation == index, arrTooltip[index] ) )
                 editorContext.getSubsystem<EditorWorkspace>().setGizmoOperation( index );
             EditorSelfTestMarks::note( ( string( pMarkScope ) + button._pMarkSuffix ).c_str() );
             if ( bVertical == false )

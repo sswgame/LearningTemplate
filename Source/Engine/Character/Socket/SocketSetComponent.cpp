@@ -124,7 +124,7 @@ namespace sw
         return true;
     }
 
-    bool SocketLookupUtil::findSocketWorldTransform( const GameObject& object, const hashed_string& name, float4x4& outWorldTransform )
+    bool SocketSetComponent::findSocketWorldTransform( const GameObject& object, const hashed_string& name, float4x4& outWorldTransform )
     {
         const SkeletalMeshComponent* pUnit  = object.getComponent<SkeletalMeshComponent>();
         const SceneComponent*        pFrame = pUnit != nullptr ? pUnit : object.getPrimarySceneComponent();
@@ -140,7 +140,7 @@ namespace sw
         return true;
     }
 
-    bool SocketLookupUtil::findSocketWorldPosition( const GameObject& object, const hashed_string& name, float3& outPosition )
+    bool SocketSetComponent::findSocketWorldPosition( const GameObject& object, const hashed_string& name, float3& outPosition )
     {
         float4x4 world;
         if ( findSocketWorldTransform( object, name, world ) )

@@ -330,7 +330,7 @@ namespace sw
                     if ( ( frame._flags & StreamFrameFlag::kCompressed ) != 0 )
                     {
                         // 원래 크기가 본문 상한을 넘으면 풀기 전에 끊는다(압축 폭탄). 모르는 코덱이나 깨진 봉투도 끊는다.
-                        if ( NetCompressionUtil::decompressEnvelope( frame._pBody, frame._bodySize, _settings->_maxFrameBodySize, connection._decompressScratch ) == false )
+                        if ( NetCompressionConfig::decompressEnvelope( frame._pBody, frame._bodySize, _settings->_maxFrameBodySize, connection._decompressScratch ) == false )
                         {
                             closeForError( connection, StreamCloseReason::ProtocolError );
                             return false;
@@ -412,7 +412,7 @@ namespace sw
         const uint8* pFrameBody    = pBody;
         int32        frameBodySize = bodySize;
         uint8        flags         = 0;
-        if ( bodySize <= _settings->_maxFrameBodySize && NetCompressionUtil::compressEnvelope( _settings->_compression, pBody, bodySize, connection->_compressScratch ) )
+        if ( bodySize <= _settings->_maxFrameBodySize && NetCompressionConfig::compressEnvelope( _settings->_compression, pBody, bodySize, connection->_compressScratch ) )
         {
             pFrameBody    = connection->_compressScratch.data();
             frameBodySize = static_cast<int32>( connection->_compressScratch.size() );

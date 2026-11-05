@@ -33,17 +33,8 @@ namespace sw::editor
         float32 _jitterMilliseconds{ 0.0f };
         float32 _lossPercent{ 0.0f };
         int32   _bandwidthKilobytesPerSecond{ 0 }; ///< 0 이면 제한 없음
-    };
-} // namespace sw::editor
 
-namespace sw::editor
-{
-    /**
-     * @struct EditorNetConditionsUtil
-     * @brief 패널 값 ↔ 조건 변환, 자식 프로세스에 보내는 `net.emulation` 명령 글을 만듭니다. 프리셋 단추는 엔진 프리셋 표(`NetEmulationPresetTable`)의 줄입니다.
-     */
-    struct EditorNetConditionsUtil
-    {
+        // 패널 값 ↔ 조건 변환, 자식 프로세스에 보내는 `net.emulation` 명령 글을 만듭니다. 프리셋 단추는 엔진 프리셋 표(`NetEmulationPresetTable`)의 줄입니다.
         /** @brief 슬라이더 상한입니다(한 방향). */
         static constexpr float32 kMaxLatencyMilliseconds         = 1000.0f;
         static constexpr float32 kMaxJitterMilliseconds          = 500.0f;

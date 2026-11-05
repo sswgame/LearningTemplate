@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Asset/Texture/ImageUtil.h"
+#include "Editor/Common/Asset/Texture/RawImageData.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -13,7 +13,7 @@ namespace sw::editor
     namespace
     {
         /** @brief stb_image 의 할당 훅(`STBI_MALLOC` · `STBI_REALLOC_SIZED` · `STBI_FREE`)입니다. 디코드 버퍼가 sw 할당자를 지나 메모리 태그에 세입니다. */
-        struct ImageUtilInternal
+        struct RawImageDataInternal
         {
             static void* allocate( size_t size ) { return Memory::allocate( size ); }
 
@@ -36,34 +36,34 @@ namespace sw::editor
     } // namespace
 } // namespace sw::editor
 
-#define STBI_MALLOC( size )                          sw::editor::ImageUtilInternal::allocate( size )
-#define STBI_REALLOC_SIZED( pOld, oldSize, newSize ) sw::editor::ImageUtilInternal::reallocate( pOld, oldSize, newSize )
-#define STBI_FREE( pAddress )                        sw::editor::ImageUtilInternal::free( pAddress )
+#define STBI_MALLOC( size )                          sw::editor::RawImageDataInternal::allocate( size )
+#define STBI_REALLOC_SIZED( pOld, oldSize, newSize ) sw::editor::RawImageDataInternal::reallocate( pOld, oldSize, newSize )
+#define STBI_FREE( pAddress )                        sw::editor::RawImageDataInternal::free( pAddress )
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 namespace sw::editor
 {
-    bool ImageUtil::loadImage( string_view filePath, RawImageData& outImage )
+    bool RawImageData::loadImage( string_view filePath, RawImageData& outImage )
     {
         vector<uint8> bytes;
         if ( FileUtil::readFile( filePath, bytes ) == false || bytes.empty() )
         {
-            SW_LOG_ERROR_ID( "ImageUtil.FailedReadImageFile", "Failed to read image file: %#", filePath );
+            SW_LOG_ERROR_ID( "RawImageData.FailedReadImageFile", "Failed to read image file: %#", filePath );
             return false;
         }
 
         return loadImageFromMemory( bytes.data(), bytes.size(), outImage );
     }
 
-    bool ImageUtil::loadImageFromMemory( const uint8* pBuffer, size_t bufferSize, RawImageData& outImage )
+    bool RawImageData::loadImageFromMemory( const uint8* pBuffer, size_t bufferSize, RawImageData& outImage )
     {
         // 실패하면 출력에 아무것도 남기지 않는다. `DDSLoader::loadFromMemory` 와 같은 약속이다.
         outImage = RawImageData{};
 
         if ( pBuffer == nullptr || bufferSize == 0 )
         {
-            SW_LOG_ERROR_ID( "ImageUtil.ImageBufferNullEmpty", "Image buffer is null or empty." );
+            SW_LOG_ERROR_ID( "RawImageData.ImageBufferNullEmpty", "Image buffer is null or empty." );
             return false;
         }
 
@@ -71,7 +71,7 @@ namespace sw::editor
         // 넘기기 전에 거절한다.
         if ( bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 ) )
         {
-            SW_LOG_ERROR_ID( "ImageUtil.ImageBufferLargerStb", "Image buffer is larger than stb_image can address (%# bytes).", bufferSize );
+            SW_LOG_ERROR_ID( "RawImageData.ImageBufferLargerStb", "Image buffer is larger than stb_image can address (%# bytes).", bufferSize );
             return false;
         }
 
@@ -89,14 +89,14 @@ namespace sw::editor
 
         if ( pDecoded == nullptr )
         {
-            SW_LOG_ERROR_ID( "ImageUtil.StbiLoadMemoryFailed", "stbi_load_from_memory failed: %#", stbi_failure_reason() );
+            SW_LOG_ERROR_ID( "RawImageData.StbiLoadMemoryFailed", "stbi_load_from_memory failed: %#", stbi_failure_reason() );
             return false;
         }
 
         // stb 는 요청한 채널 수로 펼쳐 주고 `channels` 에는 원본 파일의 채널 수를 돌려준다. 범위 밖이면 원본을 알 수 없으므로 실패로 멈춘다.
         if ( channels < 1 || RawImageData::kChannelCount < channels )
         {
-            SW_LOG_ERROR_ID( "ImageUtil.StbiLoadMemoryReported", "stbi_load_from_memory reported %# source channels (expected 1..%#).", channels, RawImageData::kChannelCount );
+            SW_LOG_ERROR_ID( "RawImageData.StbiLoadMemoryReported", "stbi_load_from_memory reported %# source channels (expected 1..%#).", channels, RawImageData::kChannelCount );
             stbi_image_free( pDecoded );
             return false;
         }
@@ -112,7 +112,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ImageUtil::loadGray16FromMemory( const uint8* pBuffer, size_t bufferSize, vector<uint16>& outListSample, int32& outWidth, int32& outHeight )
+    bool RawImageData::loadGray16FromMemory( const uint8* pBuffer, size_t bufferSize, vector<uint16>& outListSample, int32& outWidth, int32& outHeight )
     {
         outListSample.clear();
         outWidth                       = 0;
@@ -120,7 +120,7 @@ namespace sw::editor
         const bool bInvalidImageBuffer = pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 );
         if ( bInvalidImageBuffer )
         {
-            SW_LOG_ERROR_ID( "ImageUtil.ImageBufferEmptyLarger", "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
+            SW_LOG_ERROR_ID( "RawImageData.ImageBufferEmptyLarger", "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
             return false;
         }
         int32   width    = 0;
@@ -129,7 +129,7 @@ namespace sw::editor
         uint16* pDecoded = stbi_load_16_from_memory( pBuffer, static_cast<int32>( bufferSize ), &width, &height, &channels, 1 );
         if ( pDecoded == nullptr )
         {
-            SW_LOG_ERROR_ID( "ImageUtil.StbiLoadMemoryFailed2", "stbi_load_16_from_memory failed: %#", stbi_failure_reason() );
+            SW_LOG_ERROR_ID( "RawImageData.StbiLoadMemoryFailed2", "stbi_load_16_from_memory failed: %#", stbi_failure_reason() );
             return false;
         }
         outListSample.assign( pDecoded, pDecoded + static_cast<size_t>( width ) * static_cast<size_t>( height ) );
@@ -139,7 +139,7 @@ namespace sw::editor
         return true;
     }
 
-    bool ImageUtil::loadFloat4FromMemory( const uint8* pBuffer, size_t bufferSize, vector<float4>& outListTexel, int32& outWidth, int32& outHeight )
+    bool RawImageData::loadFloat4FromMemory( const uint8* pBuffer, size_t bufferSize, vector<float4>& outListTexel, int32& outWidth, int32& outHeight )
     {
         outListTexel.clear();
         outWidth                       = 0;
@@ -147,7 +147,7 @@ namespace sw::editor
         const bool bInvalidImageBuffer = pBuffer == nullptr || bufferSize == 0 || bufferSize > static_cast<size_t>( MathUtil::kMaxInt32 );
         if ( bInvalidImageBuffer )
         {
-            SW_LOG_ERROR_ID( "ImageUtil.ImageBufferEmptyLarger", "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
+            SW_LOG_ERROR_ID( "RawImageData.ImageBufferEmptyLarger", "Image buffer is empty or larger than stb_image can address (%# bytes).", bufferSize );
             return false;
         }
         const int32 byteCount = static_cast<int32>( bufferSize );
@@ -159,7 +159,7 @@ namespace sw::editor
             float32* pDecoded = stbi_loadf_from_memory( pBuffer, byteCount, &width, &height, &channels, 4 );
             if ( pDecoded == nullptr )
             {
-                SW_LOG_ERROR_ID( "ImageUtil.StbiLoadfMemoryFailed", "stbi_loadf_from_memory failed: %#", stbi_failure_reason() );
+                SW_LOG_ERROR_ID( "RawImageData.StbiLoadfMemoryFailed", "stbi_loadf_from_memory failed: %#", stbi_failure_reason() );
                 return false;
             }
             const size_t texelCount = static_cast<size_t>( width ) * static_cast<size_t>( height );
@@ -175,7 +175,7 @@ namespace sw::editor
             uint8* pDecoded = stbi_load_from_memory( pBuffer, byteCount, &width, &height, &channels, 4 );
             if ( pDecoded == nullptr )
             {
-                SW_LOG_ERROR_ID( "ImageUtil.StbiLoadMemoryFailed", "stbi_load_from_memory failed: %#", stbi_failure_reason() );
+                SW_LOG_ERROR_ID( "RawImageData.StbiLoadMemoryFailed", "stbi_load_from_memory failed: %#", stbi_failure_reason() );
                 return false;
             }
             constexpr float32 kByteToUnit = 1.0f / 255.0f;

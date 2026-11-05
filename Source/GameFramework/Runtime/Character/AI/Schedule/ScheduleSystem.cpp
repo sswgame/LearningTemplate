@@ -576,7 +576,7 @@ namespace sw
                 view._location               = computePlanningLocationOnRoute( npc, view._segmentIndex, view._travelFraction );
                 const bool bNearRouteCurrent = npc._lod == ScheduleLOD::Near && npc._routeKey == ScheduleHash::computeSegmentKey( segment );
                 if ( bNearRouteCurrent )
-                    view._location._position = SchedulePathingUtil::computePointAlong( npc._listRoutePoint, view._travelFraction );
+                    view._location._position = ISchedulePathing::computePointAlong( npc._listRoutePoint, view._travelFraction );
                 break;
             }
         }
@@ -1193,7 +1193,7 @@ namespace sw
         vector<float3>          listPoint;
         _services._pPlanning->makeRoute( from, segment._target, listPoint );
         ScheduleLocation location;
-        location._position = SchedulePathingUtil::computePointAlong( listPoint, fraction );
+        location._position = ISchedulePathing::computePointAlong( listPoint, fraction );
         location._area     = _services._pPlanning->computeAreaAt( from, segment._target, fraction );
         return location;
     }

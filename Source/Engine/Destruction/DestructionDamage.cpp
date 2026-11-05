@@ -25,8 +25,8 @@ namespace sw
 
 namespace sw
 {
-    void DestructionDamageUtil::computeLeafStrain( const FractureGraph& graph, const DestructionDamageEvent& event, vector_reference<const uint32> listLeafGroup,
-                                                   vector<DestructionLeafStrain>& outListStrain )
+    void DestructionDamageEvent::computeLeafStrain( const FractureGraph& graph, const DestructionDamageEvent& event, vector_reference<const uint32> listLeafGroup,
+                                                    vector<DestructionLeafStrain>& outListStrain )
     {
         outListStrain.clear();
         if ( event._strain <= 0.0f || graph._leafCount == 0 )
@@ -76,7 +76,7 @@ namespace sw
         }
     }
 
-    DestructionDamageEvent DestructionDamageUtil::makeImpactEvent( const DestructionProfile& profile, const float3& position, const float3& normal, float32 impulse )
+    DestructionDamageEvent DestructionDamageEvent::makeImpactEvent( const DestructionProfile& profile, const float3& position, const float3& normal, float32 impulse )
     {
         DestructionDamageEvent event;
         event._kind      = DestructionDamageKind::Impact;

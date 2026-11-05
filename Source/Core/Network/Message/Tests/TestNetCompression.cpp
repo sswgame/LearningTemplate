@@ -101,11 +101,11 @@ SW_TEST_CASE( NetCompressionTest, EnvelopeRoundTripsAndKeepsRawWhenNotSmaller )
     CompressionCodecRegistry registry;
     const vector<uint8>      repeatedBytes( 4000, 0x41 );
     vector<uint8>            envelopeBytes;
-    SW_REQUIRE_TRUE( NetCompressionUtil::compressEnvelope( makeRleSettings(), repeatedBytes.data(), 4000, envelopeBytes, &registry ) );
+    SW_REQUIRE_TRUE( NetCompressionConfig::compressEnvelope( makeRleSettings(), repeatedBytes.data(), 4000, envelopeBytes, &registry ) );
     SW_EXPECT_TRUE( envelopeBytes.size() < 200 );
     SW_EXPECT_EQUAL( static_cast<int32>( CompressionCodecType::RLE ), static_cast<int32>( envelopeBytes[0] ) );
     vector<uint8> restoredBytes;
-    SW_REQUIRE_TRUE( NetCompressionUtil::decompressEnvelope( envelopeBytes.data(), static_cast<int32>( envelopeBytes.size() ), 4000, restoredBytes, &registry ) );
+    SW_REQUIRE_TRUE( NetCompressionConfig::decompressEnvelope( envelopeBytes.data(), static_cast<int32>( envelopeBytes.size() ), 4000, restoredBytes, &registry ) );
     SW_EXPECT_TRUE( restoredBytes == repeatedBytes );
 
     // 줄지 않는 바이트 — 봉투를 쓰지 않는다(부르는 쪽이 원문을 보낸다).
@@ -116,11 +116,11 @@ SW_TEST_CASE( NetCompressionTest, EnvelopeRoundTripsAndKeepsRawWhenNotSmaller )
         seed  = seed * 1664525u + 1013904223u;
         value = static_cast<uint8>( seed >> 24 );
     }
-    SW_EXPECT_FALSE( NetCompressionUtil::compressEnvelope( makeRleSettings(), noiseBytes.data(), 200, envelopeBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::compressEnvelope( makeRleSettings(), noiseBytes.data(), 200, envelopeBytes, &registry ) );
     SW_EXPECT_TRUE( envelopeBytes.empty() );
     // 상한보다 작은 몸 · 꺼진 설정도 봉투를 쓰지 않는다.
-    SW_EXPECT_FALSE( NetCompressionUtil::compressEnvelope( makeRleSettings(), repeatedBytes.data(), 64, envelopeBytes, &registry ) );
-    SW_EXPECT_FALSE( NetCompressionUtil::compressEnvelope( NetCompressionConfig{}, repeatedBytes.data(), 4000, envelopeBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::compressEnvelope( makeRleSettings(), repeatedBytes.data(), 64, envelopeBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::compressEnvelope( NetCompressionConfig{}, repeatedBytes.data(), 4000, envelopeBytes, &registry ) );
 }
 
 SW_TEST_CASE( NetCompressionTest, BombAndUnknownCodecAreRejectedBeforeInflating )
@@ -134,12 +134,12 @@ SW_TEST_CASE( NetCompressionTest, BombAndUnknownCodecAreRejectedBeforeInflating 
 
     // 바르면 푼다 — 코덱이 한 번 불린다. [Custom][varuint 4][4 바이트]
     const uint8 arrValid[6] = { 255, 4, 1, 2, 3, 4 };
-    SW_EXPECT_TRUE( NetCompressionUtil::decompressEnvelope( arrValid, 6, 1024, restoredBytes, &registry ) );
+    SW_EXPECT_TRUE( NetCompressionConfig::decompressEnvelope( arrValid, 6, 1024, restoredBytes, &registry ) );
     SW_EXPECT_EQUAL( 1, decompressCount );
 
     // 폭탄 — 원래 크기 칸(1025)이 상한(1024)을 넘는다: 크기가 거짓이어도 코덱을 부르지 않는다.
     const uint8 arrBomb[7] = { 255, 0x81, 0x08, 1, 2, 3, 4 };
-    SW_EXPECT_FALSE( NetCompressionUtil::decompressEnvelope( arrBomb, 7, 1024, restoredBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::decompressEnvelope( arrBomb, 7, 1024, restoredBytes, &registry ) );
     SW_EXPECT_EQUAL( 1, decompressCount );
     SW_EXPECT_TRUE( restoredBytes.empty() );
 
@@ -148,15 +148,15 @@ SW_TEST_CASE( NetCompressionTest, BombAndUnknownCodecAreRejectedBeforeInflating 
     const uint8 arrNone[6]     = { 0, 4, 1, 2, 3, 4 };
     const uint8 arrLongSize[8] = { 255, 0x80, 0x80, 0x80, 0x80, 0x80, 0x01, 1 };
     const uint8 arrZero[3]     = { 255, 0, 1 };
-    SW_EXPECT_FALSE( NetCompressionUtil::decompressEnvelope( arrUnknown, 6, 1024, restoredBytes, &registry ) );
-    SW_EXPECT_FALSE( NetCompressionUtil::decompressEnvelope( arrNone, 6, 1024, restoredBytes, &registry ) );
-    SW_EXPECT_FALSE( NetCompressionUtil::decompressEnvelope( arrLongSize, 8, 1 << 30, restoredBytes, &registry ) );
-    SW_EXPECT_FALSE( NetCompressionUtil::decompressEnvelope( arrZero, 3, 1024, restoredBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::decompressEnvelope( arrUnknown, 6, 1024, restoredBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::decompressEnvelope( arrNone, 6, 1024, restoredBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::decompressEnvelope( arrLongSize, 8, 1 << 30, restoredBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::decompressEnvelope( arrZero, 3, 1024, restoredBytes, &registry ) );
     SW_EXPECT_EQUAL( 1, decompressCount );
 
     // 압축 3 바이트로는 나올 수 없는 원래 크기(8, 이 코덱의 상한은 1 배) — 상한 안이어도 할당 · 코덱 호출 전에 끊는다(B-5).
     const uint8 arrShort[5] = { 255, 8, 1, 2, 3 };
-    SW_EXPECT_FALSE( NetCompressionUtil::decompressEnvelope( arrShort, 5, 1024, restoredBytes, &registry ) );
+    SW_EXPECT_FALSE( NetCompressionConfig::decompressEnvelope( arrShort, 5, 1024, restoredBytes, &registry ) );
     SW_EXPECT_TRUE( restoredBytes.empty() );
     SW_EXPECT_EQUAL( 1, decompressCount );
 }

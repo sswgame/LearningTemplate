@@ -155,25 +155,25 @@ namespace sw
         if ( _graph.isValid( pOutError ) == false )
             return false;
         if ( _listPiece.size() != _graph._leafCount )
-            return FractureGraphUtil::reportInvalid( pOutError, "piece count differs from leaf count" );
+            return FractureGraph::reportInvalid( pOutError, "piece count differs from leaf count" );
         if ( _listVertex.size() % 3 != 0 || _listTriangleSlot.size() * 3 != _listVertex.size() )
-            return FractureGraphUtil::reportInvalid( pOutError, "triangle slots do not match the vertex list" );
+            return FractureGraph::reportInvalid( pOutError, "triangle slots do not match the vertex list" );
         uint32 expectedVertex = 0;
         for ( const FracturePiece& piece : _listPiece )
         {
             const bool bInvalidPieceVertexRange = piece._firstVertex != expectedVertex || piece._vertexCount % 3 != 0 || piece._vertexCount == 0;
             if ( bInvalidPieceVertexRange )
-                return FractureGraphUtil::reportInvalid( pOutError, "piece vertex ranges must be contiguous triangle lists" );
+                return FractureGraph::reportInvalid( pOutError, "piece vertex ranges must be contiguous triangle lists" );
             expectedVertex += piece._vertexCount;
             if ( static_cast<size_t>( piece._firstHullPoint ) + piece._hullPointCount > _listHullPoint.size() || piece._hullPointCount < 3 )
-                return FractureGraphUtil::reportInvalid( pOutError, "piece hull out of range or too small" );
+                return FractureGraph::reportInvalid( pOutError, "piece hull out of range or too small" );
         }
         if ( expectedVertex != _listVertex.size() )
-            return FractureGraphUtil::reportInvalid( pOutError, "vertex list longer than the pieces" );
+            return FractureGraph::reportInvalid( pOutError, "vertex list longer than the pieces" );
         for ( const uint8 slot : _listTriangleSlot )
         {
             if ( slot >= static_cast<uint8>( FractureSurfaceSlot::Count ) )
-                return FractureGraphUtil::reportInvalid( pOutError, "unknown surface slot" );
+                return FractureGraph::reportInvalid( pOutError, "unknown surface slot" );
         }
         return true;
     }

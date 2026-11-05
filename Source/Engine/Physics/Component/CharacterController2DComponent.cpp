@@ -90,7 +90,7 @@ namespace sw
         const bool bUnchanged        = bCreate == false && bTransformChanged == false && bTeleported == false;
         if ( bUnchanged )
             return;
-        PhysicsComponentUtil::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
+        PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
         const float2 position{ _worldPosition._x, _worldPosition._y };
         if ( bCreate )
         {
@@ -163,8 +163,8 @@ namespace sw
         const float2 position = float2::lerp( _previousPosition, _state._position, alpha );
         // Z · 회전 · 배율은 트랜스폼의 것이다. 이 프레임 시작 뒤에 누가 옮겼을 때만 다시 읽는다.
         if ( consumeTransformChange() )
-            PhysicsComponentUtil::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
-        PhysicsComponentUtil::writeWorldPose( *this, float3{ position._x, position._y, _worldPosition._z }, _worldRotation, _worldScale );
+            PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
+        PhysicsComponent::writeWorldPose( *this, float3{ position._x, position._y, _worldPosition._z }, _worldRotation, _worldScale );
         markTransformSynced();
     }
 

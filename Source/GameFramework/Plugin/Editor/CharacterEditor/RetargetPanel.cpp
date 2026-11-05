@@ -305,7 +305,7 @@ namespace sw::editor
         targetPose.setToReference( _previewTarget );
         RetargetPanelInternal::computeBonePositions( _previewTarget, targetPose, _listTargetReferencePosition );
         // 리타기터와 같은 길로 리타깃 포즈를 얹는다. 없는 본을 적었으면 얹지 못하고(오류는 로그) 레퍼런스 그대로 보인다.
-        if ( RetargetPoseUtil::applyTargetPose( _profile, _previewTarget, targetPose ) == false )
+        if ( PoseRetargeter::applyTargetPose( _profile, _previewTarget, targetPose ) == false )
             targetPose.setToReference( _previewTarget );
         RetargetPanelInternal::computeBonePositions( _previewTarget, targetPose, _listTargetPosePosition );
     }

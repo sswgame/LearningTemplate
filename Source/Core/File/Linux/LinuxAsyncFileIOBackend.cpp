@@ -379,7 +379,7 @@ namespace sw
                     pushReadSqe( pOperation );
                     return;
                 }
-                status = AsyncFileIOBackendUtil::classifyReadResult( true, request._bytesDone, request._size );
+                status = IAsyncFileIOBackend::classifyReadResult( true, request._bytesDone, request._size );
             }
 
             const shared_ptr<AsyncReadRequest> pRequest = std::move( pOperation->_pRequest );
@@ -437,7 +437,7 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IAsyncFileIOBackend> AsyncFileIOBackendUtil::createPlatform( AsyncFileIOQueue& queue, AsyncIOBackendKind kind, uint32 maxInFlightCount )
+    unique_ptr<IAsyncFileIOBackend> IAsyncFileIOBackend::createPlatform( AsyncFileIOQueue& queue, AsyncIOBackendKind kind, uint32 maxInFlightCount )
     {
         if ( kind != AsyncIOBackendKind::Auto && kind != AsyncIOBackendKind::IOUring )
             return nullptr;

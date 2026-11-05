@@ -366,7 +366,7 @@ namespace sw
         /** @brief 막는 접촉이 끝났을 때 불립니다(떨어짐, 바디 사라짐). */
         virtual void onCollisionEnd( const CollisionInfo& collision ) { (void)collision; }
         /**
-         * @brief 이 오브젝트가 맞았을 때 불립니다. 근접 판정이나 무기 레이캐스트가 `CharacterHitUtil::deliverHit` 로 전달하며, 게임 스레드에서 켜진 컴포넌트마다 불립니다.
+         * @brief 이 오브젝트가 맞았을 때 불립니다. 근접 판정이나 무기 레이캐스트가 `CharacterRayHit::deliverHit` 로 전달하며, 게임 스레드에서 켜진 컴포넌트마다 불립니다.
          * @details 스폰, 파괴, 구조 변경을 해도 된다. 틱 밖이면 바로, 틱 중이면 틱이 끝난 뒤로 미뤄서 부른다.
          */
         virtual void onHitReceived( const HitInfo& hit ) { (void)hit; }

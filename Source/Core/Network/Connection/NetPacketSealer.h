@@ -2,7 +2,7 @@
  * @file NetPacketSealer.h
  * @brief UDP 연결의 AEAD 봉인과 열기, 핸드셰이크의 키 유도와 증명 태그, 키 확인 태그를 맡습니다.
  * @details 데이터 패킷과 끊기 패킷의 본문은 `[종류][연결 값 4바이트, 리틀 엔디언][패킷 번호 8바이트, 빅 엔디언][AEAD + 태그]` 형식이다.
- *          AAD는 프로토콜 ID(리틀 엔디언 4바이트)와 이 본문 헤더를 이은 값이고, nonce 는 방향 IV XOR 패킷 번호다(`NetSessionKeyUtil::makeNonce`).
+ *          AAD는 프로토콜 ID(리틀 엔디언 4바이트)와 이 본문 헤더를 이은 값이고, nonce 는 방향 IV XOR 패킷 번호다(`NetSessionKeys::makeNonce`).
  *          열 때는 재전송 방지 윈도우를 먼저 보고, **복호가 성공한 뒤에만** 번호를 표시한다. 먼저 표시하면 위조 패킷이 진짜 번호를 소모시킨다.
  *
  *          패킷 형식(체크섬 헤더, 패킷 종류)과 연결 상태는 `NetEndpoint` 가 맡고, 이 클래스는 바이트와 키만 다룬다.
@@ -15,7 +15,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/Network/Security/NetReplayWindow.h"
 #include "Core/Network/Security/NetSecurityTypes.h"
-#include "Core/Network/Security/NetSessionKeyUtil.h"
+#include "Core/Network/Security/NetSessionKeys.h"
 
 namespace sw
 {

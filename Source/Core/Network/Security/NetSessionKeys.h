@@ -1,5 +1,5 @@
 /**
- * @file NetSessionKeyUtil.h
+ * @file NetSessionKeys.h
  * @brief UDP 세션 키 유도 — X25519 공유 비밀을 HKDF-SHA256 으로 방향마다 키 32 + IV 12 로 펴고, nonce 는 IV XOR 패킷 번호입니다(TLS 1.3 · QUIC 과 같은 모양).
  * @details 소금 = 로그인 키트가 준 세션 비밀(없으면 0 32 바이트) — 세션 비밀을 모르는 중간자는 같은 키를 못 만든다. 정보 = "sw-net-v1" ‖ 클라이언트 소금 ‖ 서버 소금 ‖ 프로토콜 id
  *          (모두 LE) — 같은 공유 비밀이라도 다른 연결 · 다른 판에서는 다른 키다.
@@ -27,19 +27,13 @@ namespace sw
 namespace sw
 {
     /** @brief 한 연결의 두 방향 키입니다. 연결이 끝나면 `wipe`. */
-    struct NetSessionKeys
+    struct SW_API NetSessionKeys
     {
         NetDirectionKeys _clientToServer{};
         NetDirectionKeys _serverToClient{};
 
-        SW_API void wipe();
-    };
-} // namespace sw
+        void wipe();
 
-namespace sw
-{
-    struct SW_API NetSessionKeyUtil
-    {
         /** @brief 키 확인 태그에 쓰는 패킷 번호입니다 — 데이터 패킷은 0 부터 오르므로 겹치지 않는다. */
         static constexpr uint64 kKeyConfirmPacketNumber = ~0ull;
 

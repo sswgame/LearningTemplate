@@ -6,7 +6,7 @@
  *          백엔드 이름이나 버전이 다르면 읽지 않는다(다른 라이브러리로 바꾼 뒤 낡은 쿠킹본을 넣지 않는다). 읽기는 현재 형식만 받는다.
  *
  *          **쿠킹과 런타임 베이크.** 쿠킹(`App --cook-scenes`)은 내비 표면(`NavMeshSurfaceComponent`)이 있는 씬마다 `<씬 이름>.navmesh` 를 쓴다.
- *          배포본은 그것을 팩에서 읽고, Dev 는 쿠킹 폴더를 마운트하지 않으므로 처음 쓸 때 같은 함수(`NavMeshBakeUtil::bakeAllTiles`)로 베이크한다.
+ *          배포본은 그것을 팩에서 읽고, Dev 는 쿠킹 폴더를 마운트하지 않으므로 처음 쓸 때 같은 함수(`NavMeshAsset::bakeAllTiles`)로 베이크한다.
  *          두 경로의 타일 바이트는 같다. 읽은 쪽은 입력 해시와 베이크 값 해시가 현재 씬과 테이블에 같을 때만 쓰고, 다르면 경고를 남기고 베이크한다.
  */
 #pragma once
@@ -41,10 +41,24 @@ namespace sw
 
 namespace sw
 {
+    struct NavMeshBakeStats;
+
     /** @class NavMeshAsset @brief 파일 머리말 참고. */
     class SW_API NavMeshAsset
     {
     public:
+        // 내비메시 하나를 통째로 베이크거나 쿠킹본에서 채우는 도우미입니다.
+        /**
+         * @brief 타일 격자의 모든 타일을 워커로 나눠 베이크하고(`engine::runParallel`) 끼웁니다. @p geometry 의 색인은 여기서 짓습니다.
+         * @return 실패한 타일이 하나라도 있으면 false 입니다(나머지 타일은 끼운다).
+         */
+        static bool bakeAllTiles( INavMesh& navMesh, NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume = nullptr,
+                                  NavMeshBakeStats* pOutStats = nullptr );
+        /** @brief 쿠킹본의 항목을 끼웁니다(격자는 먼저 `initialize` 해 둔다). 하나라도 거절되면 false 입니다. */
+        static bool installTiles( INavMesh& navMesh, const vector<NavTileData>& listTile );
+        /** @brief 베이크 경계입니다. 입력 경계를 그대로 씁니다(비었으면 원점의 작은 상자입니다). */
+        static AABB computeBakeBounds( const NavMeshGeometry& geometry );
+
         /** @brief 쿠킹본의 확장자입니다. */
         static constexpr string_view kExtension = ".navmesh";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
@@ -92,23 +106,5 @@ namespace sw
         uint32  _filledTileCount{ 0 }; ///< 걸을 곳이 있는 타일 수다.
         uint32  _failedTileCount{ 0 };
         uint32  _polygonCount{ 0 };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 내비메시 하나를 통째로 베이크거나 쿠킹본에서 채우는 도우미입니다. */
-    struct SW_API NavMeshBakeUtil
-    {
-        /**
-         * @brief 타일 격자의 모든 타일을 워커로 나눠 베이크하고(`engine::runParallel`) 끼웁니다. @p geometry 의 색인은 여기서 짓습니다.
-         * @return 실패한 타일이 하나라도 있으면 false 입니다(나머지 타일은 끼운다).
-         */
-        static bool bakeAllTiles( INavMesh& navMesh, NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume = nullptr,
-                                  NavMeshBakeStats* pOutStats = nullptr );
-        /** @brief 쿠킹본의 항목을 끼웁니다(격자는 먼저 `initialize` 해 둔다). 하나라도 거절되면 false 입니다. */
-        static bool installTiles( INavMesh& navMesh, const vector<NavTileData>& listTile );
-        /** @brief 베이크 경계입니다. 입력 경계를 그대로 씁니다(비었으면 원점의 작은 상자입니다). */
-        static AABB computeBakeBounds( const NavMeshGeometry& geometry );
     };
 } // namespace sw

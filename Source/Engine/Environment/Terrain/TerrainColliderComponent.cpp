@@ -67,14 +67,14 @@ namespace sw
         }
     } // namespace
 
-    bool TerrainCollisionUtil::makeCollisionMesh( const TerrainHeightfield& heightfield, PhysicsShapeDesc3D& outShape )
+    bool TerrainColliderComponent::makeCollisionMesh( const TerrainHeightfield& heightfield, PhysicsShapeDesc3D& outShape )
     {
         const uint32 last = heightfield.isValid() ? heightfield.getResolution() - 1 : 0u;
         return makeCellMesh( heightfield, 0, 0, last, last, outShape );
     }
 
-    bool TerrainCollisionUtil::makeChunkCollisionMesh( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ,
-                                                       PhysicsShapeDesc3D& outShape )
+    bool TerrainColliderComponent::makeChunkCollisionMesh( const TerrainHeightfield& heightfield, const TerrainChunkLayout& layout, uint32 chunkX, uint32 chunkZ,
+                                                           PhysicsShapeDesc3D& outShape )
     {
         const bool bInside = chunkX < layout._chunkCountX && chunkZ < layout._chunkCountZ;
         if ( bInside == false )
@@ -173,7 +173,7 @@ namespace sw
             _listBuiltGeneration[chunkIndex] = listGeneration[chunkIndex];
             ++_chunkBuildCount;
             // 모두 구멍인 청크는 바디가 없다(무효 핸들로 남는다).
-            if ( TerrainCollisionUtil::makeChunkCollisionMesh( heightfield, layout, chunkIndex % layout._chunkCountX, chunkIndex / layout._chunkCountX, desc._listShape[0] ) == false )
+            if ( TerrainColliderComponent::makeChunkCollisionMesh( heightfield, layout, chunkIndex % layout._chunkCountX, chunkIndex / layout._chunkCountX, desc._listShape[0] ) == false )
                 continue;
             body = pScene->createBody( desc );
             if ( body.isValid() == false )
@@ -209,7 +209,7 @@ namespace sw
         PhysicsBodyDesc3D         desc        = makeChunkBodyDesc( physics, heightfield.getOrigin() );
         for ( uint32 chunkIndex = 0; chunkIndex < chunkCount; ++chunkIndex )
         {
-            if ( TerrainCollisionUtil::makeChunkCollisionMesh( heightfield, layout, chunkIndex % layout._chunkCountX, chunkIndex / layout._chunkCountX, desc._listShape[0] ) )
+            if ( TerrainColliderComponent::makeChunkCollisionMesh( heightfield, layout, chunkIndex % layout._chunkCountX, chunkIndex / layout._chunkCountX, desc._listShape[0] ) )
                 outListBody.push_back( desc );
         }
     }

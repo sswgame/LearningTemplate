@@ -21,7 +21,7 @@ namespace sw
         {
             inoutListRayHit.clear();
             const GameObjectManager& manager = *attacker.getManager();
-            if ( CharacterHitUtil::sweepAll( manager, from, to, params._radius, params._layerMask, attacker.getObjectID(), params._bIs2D, inoutListRayHit ) == 0 )
+            if ( CharacterRayHit::sweepAll( manager, from, to, params._radius, params._layerMask, attacker.getObjectID(), params._bIs2D, inoutListRayHit ) == 0 )
                 return;
             for ( const CharacterRayHit& rayHit : inoutListRayHit )
             {
@@ -36,7 +36,7 @@ namespace sw
                 inoutListHitTarget.push_back( target );
                 MeleeHit& melee  = outListHit.emplace_back();
                 melee._target    = target;
-                melee._hit       = CharacterHitUtil::makeHitInfo( rayHit, &attacker, to - from, params._damage, params._impulse );
+                melee._hit       = CharacterRayHit::makeHitInfo( rayHit, &attacker, to - from, params._damage, params._impulse );
                 melee._hit._kind = params._kind;
             }
         }
@@ -45,13 +45,13 @@ namespace sw
 
 namespace sw
 {
-    MeleeHitAuthority MeleeHitWindowUtil::getProcessAuthority()
+    MeleeHitAuthority MeleeHit::getProcessAuthority()
     {
         const GameNetSession* pSession = engine::findSubsystem<GameNetSession>();
         return pSession != nullptr && pSession->getRole() == GameNetRole::Client ? MeleeHitAuthority::Predicted : MeleeHitAuthority::Authority;
     }
 
-    void MeleeHitWindowUtil::makeBlade( const float3& pointA, const float3& pointB, uint32 sampleCount, vector<float3>& outListPoint )
+    void MeleeHit::makeBlade( const float3& pointA, const float3& pointB, uint32 sampleCount, vector<float3>& outListPoint )
     {
         SW_ASSERT( sampleCount >= 2 );
         outListPoint.resize( sampleCount );
@@ -61,8 +61,8 @@ namespace sw
         }
     }
 
-    uint32 MeleeHitWindowUtil::sweep( GameObject& attacker, vector_reference<const float3> listPrevious, vector_reference<const float3> listCurrent, const MeleeHitParams& params,
-                                      MeleeHitAuthority authority, vector<GameObjectHandle>& inoutListHitTarget, vector<MeleeHit>& outListHit )
+    uint32 MeleeHit::sweep( GameObject& attacker, vector_reference<const float3> listPrevious, vector_reference<const float3> listCurrent, const MeleeHitParams& params,
+                            MeleeHitAuthority authority, vector<GameObjectHandle>& inoutListHitTarget, vector<MeleeHit>& outListHit )
     {
         GameObjectManager* pManager = attacker.getManager();
         if ( pManager == nullptr )
@@ -93,7 +93,7 @@ namespace sw
             {
                 GameObject* pTarget = pManager->resolveGameObject( outListHit[hitIndex]._target );
                 if ( pTarget != nullptr )
-                    CharacterHitUtil::deliverHit( *pTarget, outListHit[hitIndex]._hit );
+                    CharacterRayHit::deliverHit( *pTarget, outListHit[hitIndex]._hit );
             }
         }
         return static_cast<uint32>( outListHit.size() - first );

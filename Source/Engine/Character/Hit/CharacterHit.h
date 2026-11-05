@@ -22,7 +22,7 @@ namespace sw
     class GameObjectManager;
 
     /** @brief 광선이 처음 맞은 것입니다. 2D 면 Z = 0 입니다. */
-    struct CharacterRayHit
+    struct SW_API CharacterRayHit
     {
         GameObject*       _pObject{ nullptr }; ///< 맞은 바디의 오브젝트(사용자 값이 오브젝트 id 가 아니면 nullptr)
         PhysicsBodyHandle _body{};
@@ -31,14 +31,8 @@ namespace sw
         hashed_string     _material{}; ///< 맞은 셰이프의 물리 재질 이름이다.
         float32           _distance{ 0.0f };
         bool              _bIs2D{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 맞힘 도우미입니다(전부 static, 게임 스레드에서 호출합니다. 물리 씬은 한 스레드에서만 다룹니다). */
-    struct SW_API CharacterHitUtil
-    {
+        // 맞힘 도우미입니다(전부 static, 게임 스레드에서 호출합니다. 물리 씬은 한 스레드에서만 다룹니다).
         /**
          * @brief 3D 강체 씬에 광선을 쏩니다. @p ignoreObjectID 의 바디는 모두 건너뜁니다(0 이면 건너뛰지 않습니다). 3D 씬이 없으면 false 를 반환합니다.
          * @param layerMask 볼 레이어 비트입니다(기본은 모두). 트리거는 보지 않습니다.
@@ -56,7 +50,7 @@ namespace sw
                                   uint64 ignoreObjectID, CharacterRayHit& outHit );
         /**
          * @brief @p from 에서 @p to 까지 구(2D 는 원, @p radius 가 0 이면 광선)를 쓸어 닿은 바디를 **모두** @p outListHit 끝에 붙이고 그 수를 반환합니다.
-         * @details 바디마다 가장 가까운 닿음 하나이고 가까운 순서다. 출발점에서 이미 겹친 바디도 들어온다(`shapeCastAll`). 근접 판정(`MeleeHitWindowUtil`)이
+         * @details 바디마다 가장 가까운 닿음 하나이고 가까운 순서다. 출발점에서 이미 겹친 바디도 들어온다(`shapeCastAll`). 근접 판정(`MeleeHit`)이
          *          칼날 한 토막에 걸린 것을 모두 찾는 데 쓴다 — 처음 닿은 것에서 멈추면 이미 맞힌 오브젝트가 뒤의 표적을 가린다. 길이가 거의 0 이거나 씬이 없으면 0 입니다.
          */
         static uint32 sweepAll( const GameObjectManager& manager, const float3& from, const float3& to, float32 radius, uint32 layerMask, uint64 ignoreObjectID, bool bIs2D,
@@ -68,7 +62,7 @@ namespace sw
         static void resolveHitZone( const GameObject& target, PhysicsBodyHandle body, HitInfo& inoutHit );
         /**
          * @brief 광선이 맞은 것(@p rayHit)과 때린 쪽 값으로 맞음을 만들고 히트 존까지 채웁니다. `_pObject` 가 없으면 히트 존은 비어 있습니다.
-         * @details 무기 레이캐스트(`traceWeaponHit`)와 근접 판정(`MeleeHitWindowUtil::sweep`)이 같은 맞음을 이 한 곳에서 만든다. 피해 배율은 히트 존이 정한다.
+         * @details 무기 레이캐스트(`traceWeaponHit`)와 근접 판정(`MeleeHit::sweep`)이 같은 맞음을 이 한 곳에서 만든다. 피해 배율은 히트 존이 정한다.
          * @param direction 때린 방향입니다(길이는 상관없고, 거의 0 이면 방향 없음).
          */
         static HitInfo makeHitInfo( const CharacterRayHit& rayHit, GameObject* pInstigator, const float3& direction, float32 damage, float32 impulse );

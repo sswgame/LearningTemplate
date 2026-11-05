@@ -69,7 +69,7 @@ namespace sw
      *          체력 어트리뷰트의 이름은 `_healthAttribute` 와 `_maxHealthAttribute` 로 바꿀 수 있다.
      *
      *          **저장**: PROPERTY 만 저장한다(어빌리티 세트 id, 표시 설정). 런타임 상태(어트리뷰트 값, 이펙트, 어빌리티)는 저장하지 않고
-     *          플레이를 시작할 때 세트에서 다시 만든다. 세이브가 필요한 값은 게임의 `SaveGame` 이 `AbilityAttributeSaveUtil` 로 base 값을 담는다.
+     *          플레이를 시작할 때 세트에서 다시 만든다. 세이브가 필요한 값은 게임의 `SaveGame` 이 `SavedAttributeFile` 로 base 값을 담는다.
      */
     REFLECT( Category = "Gameplay", DisplayName = "Ability System Component", Tooltip = "Attributes, gameplay effects, abilities and gameplay tags (Unreal GAS style)" )
     class SW_GF_API AbilityComponent : public HealthSourceComponent

@@ -85,6 +85,8 @@ namespace sw
 
 namespace sw
 {
+    class AsyncFileIOQueue;
+
     /**
      * @class IAsyncFileIOBackend
      * @brief OS 에 읽기를 거는 쪽의 계약입니다. 큐(`AsyncFileIOQueue`)에서 꺼내(`tryPop` · `waitPop`) 준비하고(`prepare`) 읽은 뒤 알립니다(`finish`).
@@ -92,6 +94,17 @@ namespace sw
     class IAsyncFileIOBackend
     {
     public:
+        // 백엔드를 만드는 곳입니다. 플랫폼 것(`createPlatform`)은 그 플랫폼 폴더의 `.cpp` 하나가 정의합니다.
+        /** @brief 스레드 풀 백엔드입니다(어디서나). */
+        static unique_ptr<IAsyncFileIOBackend> createThreadPool( AsyncFileIOQueue& queue, uint32 threadCount );
+        /**
+         * @brief 플랫폼 백엔드입니다(Windows IOCP · 리눅스 io_uring). 시작하지 않은 채 돌려줍니다.
+         * @param kind `Auto` 면 그 플랫폼 것, 그 플랫폼에 없는 종류면 nullptr
+         */
+        static unique_ptr<IAsyncFileIOBackend> createPlatform( AsyncFileIOQueue& queue, AsyncIOBackendKind kind, uint32 maxInFlightCount );
+        /** @brief 읽은 바이트 수와 OS 결과로 요청 결과를 정합니다(짧게 끝났으면 파일 끝 — `OutOfRange`). */
+        static AsyncIOStatus classifyReadResult( bool bReadSucceeded, uint64 bytesDone, uint64 bytesRequested );
+
         virtual ~IAsyncFileIOBackend() = default;
 
         /** @brief IO 스레드를 띄웁니다. 이 플랫폼 · 커널에서 쓸 수 없으면 false 입니다(그때 매니저가 스레드 풀로 내려간다). */
@@ -179,22 +192,5 @@ namespace sw
         bool _bStopping                                                             SW_GUARDED_BY( _mutex );
         /** @brief 태스크로 실은 완료 전달 전부입니다. 생성자에서 만든다 — 전달은 여러 I/O 스레드가 내므로 그 뒤에는 원자 `addTask` 만 한다. */
         TaskStageHandle _deliveryStage;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 백엔드를 만드는 곳입니다. 플랫폼 것(`createPlatform`)은 그 플랫폼 폴더의 `.cpp` 하나가 정의합니다. */
-    struct AsyncFileIOBackendUtil
-    {
-        /** @brief 스레드 풀 백엔드입니다(어디서나). */
-        static unique_ptr<IAsyncFileIOBackend> createThreadPool( AsyncFileIOQueue& queue, uint32 threadCount );
-        /**
-         * @brief 플랫폼 백엔드입니다(Windows IOCP · 리눅스 io_uring). 시작하지 않은 채 돌려줍니다.
-         * @param kind `Auto` 면 그 플랫폼 것, 그 플랫폼에 없는 종류면 nullptr
-         */
-        static unique_ptr<IAsyncFileIOBackend> createPlatform( AsyncFileIOQueue& queue, AsyncIOBackendKind kind, uint32 maxInFlightCount );
-        /** @brief 읽은 바이트 수와 OS 결과로 요청 결과를 정합니다(짧게 끝났으면 파일 끝 — `OutOfRange`). */
-        static AsyncIOStatus classifyReadResult( bool bReadSucceeded, uint64 bytesDone, uint64 bytesRequested );
     };
 } // namespace sw

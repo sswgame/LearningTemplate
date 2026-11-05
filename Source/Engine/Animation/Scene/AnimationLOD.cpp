@@ -76,8 +76,8 @@ namespace sw
         return _listRateLevel.empty() ? 0u : static_cast<uint32>( _listRateLevel.size() - 1 );
     }
 
-    float32 AnimationLODUtil::allocateBudget( AnimationBudgetItem* pItem, uint32 itemCount, float32 costPerEvaluationMicroseconds, float32 budgetMicroseconds,
-                                              uint32 maxUpdateRateDivisor )
+    float32 AnimationLODState::allocateBudget( AnimationBudgetItem* pItem, uint32 itemCount, float32 costPerEvaluationMicroseconds, float32 budgetMicroseconds,
+                                               uint32 maxUpdateRateDivisor )
     {
         float32 expected = 0.0f;
         for ( uint32 itemIndex = 0; itemIndex < itemCount; ++itemIndex )
@@ -113,7 +113,7 @@ namespace sw
         return expected;
     }
 
-    AnimationLODState AnimationLODUtil::makeState( const AnimationLODSettings& settings, float32 screenSize, bool bVisible, const SkeletonBoneLOD* pBoneLOD )
+    AnimationLODState AnimationLODState::makeState( const AnimationLODSettings& settings, float32 screenSize, bool bVisible, const SkeletonBoneLOD* pBoneLOD )
     {
         AnimationLODState state{};
         state._bVisible     = bVisible ? SW_TRUE : SW_FALSE;

@@ -3,7 +3,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Security/NetReplayWindow.h"
-#include "Core/Network/Security/NetSessionKeyUtil.h"
+#include "Core/Network/Security/NetSessionKeys.h"
 #include "Core/Testing/TestFramework.h"
 
 #include <cstring>
@@ -177,13 +177,13 @@ SW_TEST_CASE( NetReplayWindowTest, NonceIsIvXorBigEndianPacketNumber )
         arrIv[index] = static_cast<uint8>( 0xA0 + index );
     }
     uint8 arrNonce[NetSecurityConstant::kAeadNonceSize];
-    NetSessionKeyUtil::makeNonce( arrIv, 0x0102ull, arrNonce );
+    NetSessionKeys::makeNonce( arrIv, 0x0102ull, arrNonce );
     SW_EXPECT_EQUAL( arrIv[0], arrNonce[0] );
     SW_EXPECT_EQUAL( arrIv[9], arrNonce[9] );
     SW_EXPECT_EQUAL( static_cast<uint8>( arrIv[10] ^ 0x01 ), arrNonce[10] );
     SW_EXPECT_EQUAL( static_cast<uint8>( arrIv[11] ^ 0x02 ), arrNonce[11] );
     uint8 arrOther[NetSecurityConstant::kAeadNonceSize];
-    NetSessionKeyUtil::makeNonce( arrIv, 0x0103ull, arrOther );
+    NetSessionKeys::makeNonce( arrIv, 0x0103ull, arrOther );
     SW_EXPECT_TRUE( arrOther[11] != arrNonce[11] ); // 번호마다 nonce 가 다르다
 }
 
@@ -196,7 +196,7 @@ SW_TEST_CASE( NetReplayWindowTest, SessionKeysBindSaltsProtocolAndSessionSecret 
         arrShared[index] = static_cast<uint8>( 0x40 + index );
     }
     NetSessionKeys keys;
-    SW_REQUIRE_TRUE( NetSessionKeyUtil::computeSessionKeys( provider, arrShared, nullptr, 0x1122334455667788ull, 0x0102030405060708ull, 0xAABBCCDDu, keys ) );
+    SW_REQUIRE_TRUE( NetSessionKeys::computeSessionKeys( provider, arrShared, nullptr, 0x1122334455667788ull, 0x0102030405060708ull, 0xAABBCCDDu, keys ) );
 
     SW_EXPECT_EQUAL( NetSecurityConstant::kX25519KeySize, static_cast<int32>( provider._secret.size() ) );
     SW_EXPECT_TRUE( std::memcmp( provider._secret.data(), arrShared, sizeof( arrShared ) ) == 0 );
@@ -219,14 +219,14 @@ SW_TEST_CASE( NetReplayWindowTest, SessionKeysBindSaltsProtocolAndSessionSecret 
     {
         secret._arrByte[index] = static_cast<uint8>( 0xF0 ^ index );
     }
-    SW_REQUIRE_TRUE( NetSessionKeyUtil::computeSessionKeys( provider, arrShared, &secret, 1, 2, 3, keys ) );
+    SW_REQUIRE_TRUE( NetSessionKeys::computeSessionKeys( provider, arrShared, &secret, 1, 2, 3, keys ) );
     SW_EXPECT_TRUE( std::memcmp( provider._salt.data(), secret._arrByte, sizeof( secret._arrByte ) ) == 0 );
 
     keys.wipe();
     SW_EXPECT_EQUAL( 0, static_cast<int32>( keys._serverToClient._arrIv[NetSecurityConstant::kAeadNonceSize - 1] ) );
 
     uint8 arrProofKey[NetSecurityConstant::kAeadKeySize];
-    SW_REQUIRE_TRUE( NetSessionKeyUtil::computeProofKey( provider, secret, arrProofKey ) );
+    SW_REQUIRE_TRUE( NetSessionKeys::computeProofKey( provider, secret, arrProofKey ) );
     SW_EXPECT_TRUE( provider._salt.empty() );
     SW_EXPECT_TRUE( provider._info == vector<uint8>( { 's', 'w', '-', 'n', 'e', 't', '-', 'p', 'r', 'o', 'o', 'f', '-', 'v', '1' } ) );
 }

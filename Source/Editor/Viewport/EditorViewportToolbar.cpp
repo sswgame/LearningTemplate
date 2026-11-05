@@ -217,7 +217,7 @@ namespace sw::editor
             // 등록은 키(`SW_LOCKEYREF`)를 든다 — 지금 언어로 풀어 보이고, 버튼 ID 는 시각화 id 로 고정한다.
             const utf8* const pLabel = LocalizedText::find( visualizer._pToggleLabel, visualizer._pToggleLabel );
             formatstring( tooltip.data(), tooltip.capacity(), "%#: %#", pLabel, LocalizedText::find( visualizer._pTooltip, visualizer._pTooltip ) );
-            const bool bPressed = visualizer._pIconName.isEmpty() == false ? EditorWidgets::drawIconToggle( "##visualizer", EditorIconUtil::findGlyphByName( visualizer._pIconName ), bOn, tooltip.c_str() )
+            const bool bPressed = visualizer._pIconName.isEmpty() == false ? EditorWidgets::drawIconToggle( "##visualizer", EditorIconGlyphTable::findGlyphByName( visualizer._pIconName ), bOn, tooltip.c_str() )
                                                                            : EditorWidgets::drawToggleButton( EditorThemeUtil::makeStableLabel( pLabel, visualizer._pID ), bOn );
             if ( bPressed )
                 settings._visualizerToggles.setOn( visualizer, bOn == false );

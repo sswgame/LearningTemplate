@@ -142,7 +142,7 @@ namespace sw::editor
             if ( pHandle == nullptr )
                 return false;
             const Component* pTarget = pHandle->isValid() ? pObject->getManager()->resolveComponent( *pHandle ) : nullptr;
-            outValue.setText( pTarget != nullptr ? InspectorComponentPickerUtil::makeLabel( *pTarget ) : string{ "(none)" } );
+            outValue.setText( pTarget != nullptr ? InspectorComponentChoice::makeLabel( *pTarget ) : string{ "(none)" } );
             return true;
         }
 

@@ -1,5 +1,5 @@
 /**
- * @file RenderTargetViewUtil.h
+ * @file RenderTargetViewSettings.h
  * @brief 렌더 타깃 창의 보기 계산을 담당합니다. CPU 로 읽은 픽셀을 값으로 풀고, 채널 선택과 깊이 선형화를 거쳐 미리보기 RGBA8 을 만듭니다. ImGui 에 의존하지 않으며 EditorTest 가 테스트합니다.
  */
 #pragma once
@@ -22,6 +22,8 @@ namespace sw::editor
         Count,
     };
 
+    struct RenderTargetPreviewImage;
+
     /** @brief 미리보기 계산의 입력입니다. */
     struct RenderTargetViewSettings
     {
@@ -30,32 +32,8 @@ namespace sw::editor
         RenderTargetChannel _channel{ RenderTargetChannel::RGBA }; ///< 보여 줄 채널
         uint8               _bLinearizeDepth{ SW_TRUE };           ///< 깊이를 원근 투영 값으로 보고 거리로 되돌린다
         uint8               _bAutoDepthRange{ SW_TRUE };           ///< 깊이의 회색 범위를 화면에 있는 값(배경 제외)의 최솟값과 최댓값에 맞춘다
-    };
-} // namespace sw::editor
 
-namespace sw::editor
-{
-    /** @brief 미리보기 이미지와 그때 쓴 깊이 범위를 담습니다. */
-    struct RenderTargetPreviewImage
-    {
-        vector<uint8> _byte; ///< RGBA8 이며 행 사이에 빈틈이 없다
-        uint32        _width{ 0 };
-        uint32        _height{ 0 };
-        float32       _depthLow{ 0.0f };  ///< 회색 0 에 대응하는 깊이. 선형화했으면 거리다
-        float32       _depthHigh{ 1.0f }; ///< 회색 1 에 대응하는 깊이
-    };
-} // namespace sw::editor
-
-namespace sw::editor
-{
-    /**
-     * @struct RenderTargetViewUtil
-     * @brief 렌더 타깃 창이 쓰는 계산 모음입니다. 언리얼의 Buffer Visualization, 유니티 Frame Debugger 의 타깃 보기에 해당합니다.
-     * @details 입력 바이트는 `RHITransferUtil::readbackTexture2DAndWait` 가 만든 배치다. 깊이 타깃은 그 함수가 `kRHIDepthReadbackFormat`
-     *          (0..1 float32)으로 채우므로 @p bDepth 로 알린다.
-     */
-    struct RenderTargetViewUtil
-    {
+        // 렌더 타깃 창이 쓰는 계산 모음입니다. 언리얼의 Buffer Visualization, 유니티 Frame Debugger 의 타깃 보기에 해당합니다.
         /** @brief CPU 로 읽은 값을 풀 수 있는 포맷이면 true 입니다. 블록 압축과 Unknown 은 해당하지 않습니다. 깊이는 항상 true 입니다. */
         static bool isDecodableFormat( RHIFormat format, bool bDepth );
         /** @brief 포맷이 가진 채널 수를 반환합니다. 깊이는 1 입니다. 픽셀 값 행에 몇 개를 적을지 정합니다. */
@@ -87,5 +65,18 @@ namespace sw::editor
 
         /** @brief 채널 버튼에 표시할 이름을 반환합니다. "RGBA", "R", "G", "B", "A" 중 하나입니다. */
         static const utf8* getChannelLabel( RenderTargetChannel channel );
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /** @brief 미리보기 이미지와 그때 쓴 깊이 범위를 담습니다. */
+    struct RenderTargetPreviewImage
+    {
+        vector<uint8> _byte; ///< RGBA8 이며 행 사이에 빈틈이 없다
+        uint32        _width{ 0 };
+        uint32        _height{ 0 };
+        float32       _depthLow{ 0.0f };  ///< 회색 0 에 대응하는 깊이. 선형화했으면 거리다
+        float32       _depthHigh{ 1.0f }; ///< 회색 1 에 대응하는 깊이
     };
 } // namespace sw::editor

@@ -19,18 +19,12 @@ namespace sw
 namespace sw
 {
     /** @brief 압축 설정입니다. 기본은 꺼짐 — 켤지는 측정으로 정한다(`NetCompressionBenchTest`). */
-    struct NetCompressionConfig
+    struct SW_API NetCompressionConfig
     {
         CompressionCodecType _codec{ CompressionCodecType::None }; ///< None = 끈다
         int32                _level{ 0 };                          ///< 코덱 레벨(0 = 코덱 기본)
         int32                _minInputBytes{ 128 };                ///< 이보다 작은 몸은 압축하지 않는다
-    };
-} // namespace sw
 
-namespace sw
-{
-    struct SW_API NetCompressionUtil
-    {
         static constexpr int32 kMaxEnvelopeHeaderSize = 1 + 5; ///< 코덱 표식 + varuint(32 비트)
 
         /**

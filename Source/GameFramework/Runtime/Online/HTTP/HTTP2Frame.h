@@ -29,41 +29,18 @@ namespace sw
         Continuation = 9
     };
 
+    struct HTTP2Setting;
+    struct HTTP2GoAway;
+
     /** @brief 프레임 머리입니다. */
-    struct HTTP2FrameHeader
+    struct SW_GF_API HTTP2FrameHeader
     {
         uint32 _length{ 0 };   ///< 본문 길이(24 비트)
         uint32 _streamID{ 0 }; ///< 31 비트. 0 은 연결 전체
         uint8  _type{ 0 };     ///< `HTTP2FrameType` 의 번호(모르는 종류도 그대로 담는다 — 무시는 부르는 쪽이 정한다)
         uint8  _flags{ 0 };
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief SETTINGS 항목 하나입니다. */
-    struct HTTP2Setting
-    {
-        uint16 _id{ 0 };
-        uint32 _value{ 0 };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief GOAWAY 프레임의 내용입니다. */
-    struct HTTP2GoAway
-    {
-        uint32 _lastStreamID{ 0 };
-        uint32 _errorCode{ 0 };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @struct HTTP2FrameUtil @brief 프레임 바이트를 만들고 읽습니다. 상태가 없습니다. */
-    struct SW_GF_API HTTP2FrameUtil
-    {
+        // 프레임 바이트를 만들고 읽습니다. 상태가 없습니다.
         static constexpr size_t      kHeaderSize          = 9;
         static constexpr uint32      kMaxFrameLength      = 0xFFFFFFu; ///< 24 비트
         static constexpr uint32      kMaxStreamID         = 0x7FFFFFFFu;
@@ -104,5 +81,25 @@ namespace sw
         [[nodiscard]] static bool writeRstStream( uint32 streamID, uint32 errorCode, vector<uint8>& outBytes );
         /** @brief GOAWAY 본문(마지막 스트림 id 4 바이트 + 오류 코드 4 바이트 + 디버그 데이터)에서 앞 두 값을 읽습니다. 8 바이트보다 짧으면 false 입니다. */
         [[nodiscard]] static bool readGoAway( const uint8* pBody, size_t size, HTTP2GoAway& outGoAway );
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief SETTINGS 항목 하나입니다. */
+    struct HTTP2Setting
+    {
+        uint16 _id{ 0 };
+        uint32 _value{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief GOAWAY 프레임의 내용입니다. */
+    struct HTTP2GoAway
+    {
+        uint32 _lastStreamID{ 0 };
+        uint32 _errorCode{ 0 };
     };
 } // namespace sw

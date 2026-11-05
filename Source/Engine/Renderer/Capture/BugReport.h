@@ -10,7 +10,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/EngineMinimal.h"
-#include "Engine/Renderer/Capture/ScreenshotPathUtil.h"
+#include "Engine/Renderer/Capture/ScreenshotLocalTime.h"
 
 namespace sw
 {

@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "GameFramework/Runtime/World/Spline/ArcLengthUtil.h"
+#include "GameFramework/Runtime/World/Spline/ArcLengthSpan.h"
 
 namespace sw
 {
@@ -185,12 +185,12 @@ namespace sw
 
     float32 SplinePath::wrapDistance( float32 distance ) const
     {
-        return ArcLengthUtil::wrapDistance( distance, _length, _bClosed == SW_TRUE );
+        return ArcLengthSpan::wrapDistance( distance, _length, _bClosed == SW_TRUE );
     }
 
     float32 SplinePath::findParameterAtDistance( float32 wrappedDistance ) const
     {
-        const ArcLengthSpan span      = ArcLengthUtil::findSpan( _listTablePoint, &TablePoint::_distance, wrappedDistance, _length, _bClosed == SW_TRUE );
+        const ArcLengthSpan span      = ArcLengthSpan::findSpan( _listTablePoint, &TablePoint::_distance, wrappedDistance, _length, _bClosed == SW_TRUE );
         const float32       fromParam = _listTablePoint[span._index]._parameter;
         // 닫힌 곡선의 마지막 구간은 첫 점(매개변수 0)이 아니라 한 바퀴 끝(구간 수)으로 간다.
         const bool    bClosingSpan = span._nextIndex == 0 && span._index != 0;

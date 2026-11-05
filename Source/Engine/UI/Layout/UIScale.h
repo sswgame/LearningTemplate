@@ -63,17 +63,8 @@ namespace sw
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 규칙만 적용한 배율입니다(사용자 배율과 창 배율을 적용하기 전이며, 최소와 최대로 제한합니다). */
         float32 computeResolutionScale( const float2& physicalSize ) const;
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct UIScaleUtil
-     * @brief 물리 크기, 사용자 배율, 창 배율, 안전 영역으로 UI 뷰포트를 만듭니다.
-     */
-    struct SW_API UIScaleUtil
-    {
+        // 물리 크기, 사용자 배율, 창 배율, 안전 영역으로 UI 뷰포트를 만듭니다.
         /** @brief 글자 배율을 줄여도 글이 이 크기(UI 단위) 밑으로 내려가지 않게 하는 하한입니다. Xbox 접근성 지침(XAG 101)의 최소 글 크기입니다. */
         static constexpr float32 kMinScaledFontSize = 12.0f;
 

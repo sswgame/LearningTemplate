@@ -2,7 +2,7 @@
  * @file SceneNavigationCooker.h
  * @brief 내비메시 쿠킹 — 내비 표면(`NavMeshSurfaceComponent`)이 놓인 씬마다 `<씬 이름>.navmesh` 를 씁니다.
  * @details `App --cook-scenes` 단계가 씬 · 프리팹 · VAT 다음에 부릅니다. 씬을 소스 그대로 세우고(플레이는 시작하지 않는다 — 플레이가 세우는 것 ·
- *          장애물은 들지 않는다) 런타임 베이크와 같은 함수(`SceneNavigation::makeCookedEntry` → `collectGeometry` · `NavMeshBakeUtil::bakeAllTiles`)로
+ *          장애물은 들지 않는다) 런타임 베이크와 같은 함수(`SceneNavigation::makeCookedEntry` → `collectGeometry` · `NavMeshAsset::bakeAllTiles`)로
  *          베이크하므로 두 길의 타일 바이트가 같습니다. 배포본은 그것을 팩에서 읽고, Dev 는 쿠킹 폴더를 마운트하지 않아 처음 쓸 때 베이크합니다.
  */
 #pragma once
@@ -38,7 +38,7 @@ namespace sw
         static uint32 cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, uint32& outFailedCount );
         /** @brief 내비메시 쿠킹 작업의 키 값입니다. */
         static CookJobDesc makeCookJobDesc();
-        /** @brief 내비메시 쿠커 버전입니다. `.navmesh` 형식이나 베이크(`NavMeshBakeUtil`)를 바꾸면 올립니다 — 모든 내비메시가 다시 베이크됩니다. */
+        /** @brief 내비메시 쿠커 버전입니다. `.navmesh` 형식이나 베이크(`NavMeshAsset`)를 바꾸면 올립니다 — 모든 내비메시가 다시 베이크됩니다. */
         static constexpr uint32 kCookVersion = 1;
     };
 } // namespace sw

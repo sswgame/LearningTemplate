@@ -26,18 +26,18 @@ namespace sw::editor
             /**
              * @brief 3D 강체의 셰이프를 바디의 월드 자세와 배율로 그립니다.
              * @details 물리 씬은 플레이에서만 바디를 만든다. 그래서 씬의 `drawDebug` 대신 컴포넌트의 셰이프 목록(`getShapes`)에서 그린다 — 월드 배율을 먹이는 규칙
-             *          (`PhysicsComponentUtil::makeScaledShape`)이 바디를 만들 때와 같아 보이는 모양이 곧 물리가 판정하는 모양이다.
+             *          (`PhysicsComponent::makeScaledShape`)이 바디를 만들 때와 같아 보이는 모양이 곧 물리가 판정하는 모양이다.
              */
             static void drawBody3D( IPhysicsDebugRenderer& renderer, const RigidBodyComponent& body )
             {
                 float3     position{};
                 quaternion rotation{};
                 float3     scale{};
-                PhysicsComponentUtil::readWorldPose( body, position, rotation, scale );
-                const float4 color = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( body.getBodyType() ), body.isSleeping(), body.isTrigger() );
+                PhysicsComponent::readWorldPose( body, position, rotation, scale );
+                const float4 color = IPhysicsDebugRenderer::getBodyColor( static_cast<uint8>( body.getBodyType() ), body.isSleeping(), body.isTrigger() );
                 for ( const PhysicsShapeDesc3D& shape : body.getShapes() )
                 {
-                    PhysicsDebugDrawUtil::drawShape3D( renderer, PhysicsComponentUtil::makeScaledShape( shape, scale ), position, rotation, color );
+                    IPhysicsDebugRenderer::drawShape3D( renderer, PhysicsComponent::makeScaledShape( shape, scale ), position, rotation, color );
                 }
             }
 
@@ -47,13 +47,13 @@ namespace sw::editor
                 float3     position{};
                 quaternion rotation{};
                 float3     scale{};
-                PhysicsComponentUtil::readWorldPose( body, position, rotation, scale );
-                const float4  color = PhysicsDebugDrawUtil::getBodyColor( static_cast<uint8>( body.getBodyType() ), body.isSleeping(), body.isTrigger() );
-                const float32 angle = PhysicsComponentUtil::getAngle2D( rotation );
+                PhysicsComponent::readWorldPose( body, position, rotation, scale );
+                const float4  color = IPhysicsDebugRenderer::getBodyColor( static_cast<uint8>( body.getBodyType() ), body.isSleeping(), body.isTrigger() );
+                const float32 angle = PhysicsComponent::getAngle2D( rotation );
                 for ( const PhysicsShapeDesc2D& shape : body.getShapes() )
                 {
-                    PhysicsDebugDrawUtil::drawShape2D( renderer, PhysicsComponentUtil::makeScaledShape( shape, scale ), float2{ position._x, position._y }, angle,
-                                                       color );
+                    IPhysicsDebugRenderer::drawShape2D( renderer, PhysicsComponent::makeScaledShape( shape, scale ), float2{ position._x, position._y }, angle,
+                                                        color );
                 }
             }
 

@@ -610,7 +610,7 @@ namespace sw::editor
             const float32 side = ImGui::GetFrameHeight();
             ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f } );
             ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
-            bPressed = ImGui::Button( EditorIconUtil::findGlyphByName( pDesc->_iconName.c_str() ), ImVec2{ side, side } );
+            bPressed = ImGui::Button( EditorIconGlyphTable::findGlyphByName( pDesc->_iconName.c_str() ), ImVec2{ side, side } );
             ImGui::PopStyleVar();
             ImGui::PopStyleColor();
         }

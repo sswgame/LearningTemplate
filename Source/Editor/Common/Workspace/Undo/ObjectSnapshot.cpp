@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Common/Workspace/Undo/ObjectUndoUtil.h"
+#include "Editor/Common/Workspace/Undo/ObjectSnapshot.h"
 
 #include "Editor/Common/Workspace/EditorService.h"
 
@@ -66,7 +66,7 @@ namespace sw
 {
     namespace
     {
-        struct ObjectUndoUtilInternal
+        struct ObjectSnapshotInternal
         {
             /** @brief 대상 씬과 그 오브젝트 매니저입니다. 씬이 없으면 둘 다 nullptr 입니다. */
             struct ActiveTarget
@@ -109,7 +109,7 @@ namespace sw
                 context._pIdentity = &snapshot._identity;
                 // 실패하면 로드가 오브젝트를 읽기 전 상태로 되돌린다 — 되돌리기 하나가 빠졌다고 알린다.
                 if ( ObjectStateSerializer::loadFromXMLString( pTarget, snapshot._xml, context ) == false )
-                    SW_LOG_WARNING_ID( "ObjectUndoUtil.UndoRedoCouldNot", "Undo/redo could not restore '%#' - it is left as it was", pTarget->getName().c_str() );
+                    SW_LOG_WARNING_ID( "ObjectSnapshot.UndoRedoCouldNot", "Undo/redo could not restore '%#' - it is left as it was", pTarget->getName().c_str() );
             }
 
             /** @brief 이 단계를 실행하는 스택에 알립니다. */
@@ -149,7 +149,7 @@ namespace sw
                 GameObject*  pCreated = target._pManager->createGameObjectWithID( hashed_string( name.c_str() ), objectID );
                 if ( pCreated == nullptr )
                 {
-                    SW_LOG_WARNING_ID( "ObjectUndoUtil.UndoRedoCouldNot2", "Undo/redo could not recreate '%#' with its id %#", name.c_str(), objectID );
+                    SW_LOG_WARNING_ID( "ObjectSnapshot.UndoRedoCouldNot2", "Undo/redo could not recreate '%#' with its id %#", name.c_str(), objectID );
                     return;
                 }
                 loadSnapshot( pCreated, snapshot );
@@ -165,7 +165,7 @@ namespace sw
 
 namespace sw
 {
-    ObjectSnapshot ObjectUndoUtil::captureSnapshot( const GameObject* pObj )
+    ObjectSnapshot ObjectSnapshot::captureSnapshot( const GameObject* pObj )
     {
         ObjectSnapshot snapshot;
         if ( pObj == nullptr )
@@ -175,38 +175,38 @@ namespace sw
         return snapshot;
     }
 
-    CommandStack::Command ObjectUndoUtil::makeModify( SceneManager& sceneManager, const GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after,
+    CommandStack::Command ObjectSnapshot::makeModify( SceneManager& sceneManager, const GameObject& obj, const ObjectSnapshot& before, const ObjectSnapshot& after,
                                                       string_view label )
     {
-        const uint32          sceneKey = ObjectUndoUtilInternal::computeSceneKey( sceneManager, obj );
+        const uint32          sceneKey = ObjectSnapshotInternal::computeSceneKey( sceneManager, obj );
         const uint64          objectID = obj.getObjectID();
         const string          name{ obj.getName().c_str() };
         CommandStack::Command cmd{};
         cmd._label = string{ label };
-        cmd._undo  = SW_UNDO_STEP( ObjectUndoUtilInternal::restore, sceneKey, objectID, name, before );
-        cmd._redo  = SW_UNDO_STEP( ObjectUndoUtilInternal::restore, sceneKey, objectID, name, after );
+        cmd._undo  = SW_UNDO_STEP( ObjectSnapshotInternal::restore, sceneKey, objectID, name, before );
+        cmd._redo  = SW_UNDO_STEP( ObjectSnapshotInternal::restore, sceneKey, objectID, name, after );
         return cmd;
     }
 
-    CommandStack::Command ObjectUndoUtil::makeLifetime( SceneManager& sceneManager, const GameObject* pObj, ObjectLifetimeEdit edit, string_view label )
+    CommandStack::Command ObjectSnapshot::makeLifetime( SceneManager& sceneManager, const GameObject* pObj, ObjectLifetimeEdit edit, string_view label )
     {
         CommandStack::Command cmd{};
         if ( pObj == nullptr )
             return cmd;
 
-        const uint32         sceneKey = ObjectUndoUtilInternal::computeSceneKey( sceneManager, *pObj );
+        const uint32         sceneKey = ObjectSnapshotInternal::computeSceneKey( sceneManager, *pObj );
         const uint64         objectID = pObj->getObjectID();
         const string         name{ pObj->getName().c_str() };
         const ObjectSnapshot snapshot = captureSnapshot( pObj );
-        const Scene*         pScene   = ObjectUndoUtilInternal::findActiveTarget( &sceneManager, sceneKey )._pScene;
+        const Scene*         pScene   = ObjectSnapshotInternal::findActiveTarget( &sceneManager, sceneKey )._pScene;
         const string         prefabPath{ ( pScene != nullptr ) ? pScene->getEntityPrefabPath( objectID ) : string_view{} };
         // 중첩 프리팹 부품 표시는 값으로 든다 — 레지스트리는 놓인 오브젝트의 표시를 거둔다.
         const PrefabNestedPart* pFoundPart  = ( pObj->getManager() != nullptr ) ? pObj->getManager()->getSubsystem<PrefabInstanceRegistry>().findNestedPart( objectID ) : nullptr;
         const bool              bNestedPart = pFoundPart != nullptr;
         const PrefabNestedPart  nestedPart  = bNestedPart ? *pFoundPart : PrefabNestedPart{};
 
-        const editor::UndoStep destroyStep  = SW_UNDO_STEP( ObjectUndoUtilInternal::destroy, sceneKey, objectID, name );
-        const editor::UndoStep recreateStep = SW_UNDO_STEP( ObjectUndoUtilInternal::recreate, sceneKey, name, snapshot, prefabPath, bNestedPart, nestedPart );
+        const editor::UndoStep destroyStep  = SW_UNDO_STEP( ObjectSnapshotInternal::destroy, sceneKey, objectID, name );
+        const editor::UndoStep recreateStep = SW_UNDO_STEP( ObjectSnapshotInternal::recreate, sceneKey, name, snapshot, prefabPath, bNestedPart, nestedPart );
 
         // 생성과 삭제는 같은 두 절차를 반대 순서로 잇는 것이다.
         const bool bUndoRecreatesTheObject = ( edit == ObjectLifetimeEdit::Destroyed );

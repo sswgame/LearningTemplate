@@ -9,7 +9,7 @@
 
 namespace sw
 {
-    void AbilityAttributeSaveUtil::captureBaseValues( const AbilityComponent& abilitySystem, vector<SavedAttributeValue>& outListValue )
+    void SavedAttributeFile::captureBaseValues( const AbilityComponent& abilitySystem, vector<SavedAttributeValue>& outListValue )
     {
         for ( const unique_ptr<AttributeSet>& pAttributeSet : abilitySystem.getAttributeSets() )
         {
@@ -26,7 +26,7 @@ namespace sw
         }
     }
 
-    bool AbilityAttributeSaveUtil::applyBaseValues( AbilityComponent& abilitySystem, const vector<SavedAttributeValue>& listValue )
+    bool SavedAttributeFile::applyBaseValues( AbilityComponent& abilitySystem, const vector<SavedAttributeValue>& listValue )
     {
         bool bAllApplied = true;
         for ( const SavedAttributeValue& value : listValue )
@@ -39,7 +39,7 @@ namespace sw
         return bAllApplied;
     }
 
-    bool AbilityAttributeSaveUtil::writeBytes( const vector<SavedAttributeValue>& listValue, vector<uint8>& outBytes )
+    bool SavedAttributeFile::writeBytes( const vector<SavedAttributeValue>& listValue, vector<uint8>& outBytes )
     {
         for ( const SavedAttributeValue& value : listValue )
         {
@@ -56,7 +56,7 @@ namespace sw
         return true;
     }
 
-    bool AbilityAttributeSaveUtil::readBytes( const uint8* pData, size_t size, vector<SavedAttributeValue>& outListValue )
+    bool SavedAttributeFile::readBytes( const uint8* pData, size_t size, vector<SavedAttributeValue>& outListValue )
     {
         SavedAttributeFile file;
         // 모르는 키 · 빠진 필수 필드 · 읽지 못한 값은 키 이름과 함께 오류로 남는다(옛 `key=value` 세이브도 여기서 진다).

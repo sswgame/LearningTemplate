@@ -118,9 +118,9 @@ namespace sw
             CanvasGlyphStyle style{};
             style._fontSize = kTextFontSize;
             style._color    = DebugDrawCanvasInternal::kTextShadow;
-            CanvasTextLineUtil::drawLine( painter, *pFontService, text._text, float2{ screen._x + 1.0f, screen._y + 1.0f }, style, frameIndex );
+            CanvasPainter::drawLine( painter, *pFontService, text._text, float2{ screen._x + 1.0f, screen._y + 1.0f }, style, frameIndex );
             style._color = text._color;
-            CanvasTextLineUtil::drawLine( painter, *pFontService, text._text, screen, style, frameIndex );
+            CanvasPainter::drawLine( painter, *pFontService, text._text, screen, style, frameIndex );
             ++paintedCount;
         }
         return paintedCount;

@@ -70,7 +70,7 @@ namespace sw
 
 namespace sw
 {
-    float4 PhysicsDebugDrawUtil::getBodyColor( uint8 bodyType, bool bSleeping, bool bTrigger )
+    float4 IPhysicsDebugRenderer::getBodyColor( uint8 bodyType, bool bSleeping, bool bTrigger )
     {
         float4 color{ 0.2f, 0.9f, 0.3f, 1.0f };
         if ( bTrigger )
@@ -84,8 +84,8 @@ namespace sw
         return color;
     }
 
-    void PhysicsDebugDrawUtil::drawShape3D( IPhysicsDebugRenderer& renderer, const PhysicsShapeDesc3D& shape, const float3& bodyPosition,
-                                            const quaternion& bodyRotation, const float4& color )
+    void IPhysicsDebugRenderer::drawShape3D( IPhysicsDebugRenderer& renderer, const PhysicsShapeDesc3D& shape, const float3& bodyPosition,
+                                             const quaternion& bodyRotation, const float4& color )
     {
         const PhysicsDebugDrawInternal::Frame3D frame = PhysicsDebugDrawInternal::makeShapeFrame( shape, bodyPosition, bodyRotation );
         const float3                            axisX{ 1.0f, 0.0f, 0.0f };
@@ -163,8 +163,8 @@ namespace sw
         }
     }
 
-    void PhysicsDebugDrawUtil::drawShape2D( IPhysicsDebugRenderer& renderer, const PhysicsShapeDesc2D& shape, const float2& bodyPosition, float32 bodyAngle,
-                                            const float4& color )
+    void IPhysicsDebugRenderer::drawShape2D( IPhysicsDebugRenderer& renderer, const PhysicsShapeDesc2D& shape, const float2& bodyPosition, float32 bodyAngle,
+                                             const float4& color )
     {
         // 2D 는 Z 축 둘레 회전 하나라 3D 자세로 바꿔 같은 도우미를 쓴다.
         PhysicsDebugDrawInternal::Frame3D frame;

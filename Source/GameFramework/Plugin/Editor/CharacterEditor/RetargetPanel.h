@@ -5,7 +5,7 @@
  * @details 데이터는 `RetargetProfile` 하나이고 쓰기는 `RetargetProfile::toXML`, 점검은 `RetargetProfileInspector::inspect`(런타임과 같은 묶기) 하나다 —
  *          에디터 쪽 사본 규칙을 두지 않는다. 묶이지 않는 프로필은 저장하지 않는다. 되돌리기는 문서 패널의 글 스냅샷(`captureDocumentText`)이 한다.
  *          - **3D 미리보기**: 미리보기 씬은 비어 있고, 두 스켈레톤의 레퍼런스 자세를 뷰포트 위에 겹쳐 선으로 긋는다(원본 파랑 · 대상 레퍼런스 회색 · 리타깃 포즈를 얹은 대상 주황).
- *            리타깃 포즈를 얹는 길은 런타임 리타기터와 같은 `RetargetPoseUtil::applyTargetPose` 하나다.
+ *            리타깃 포즈를 얹는 길은 런타임 리타기터와 같은 `PoseRetargeter::applyTargetPose` 하나다.
  *          - **리타깃 포즈**: 프로필의 `target_pose` 줄(대상 본 + 부모 공간 도)을 고친다. 끄는 동안 미리보기가 바로 바뀌고 놓으면 되돌리기 한 단계가 된다.
  *          - **새 프로필**: 경로 칸에 `*.retarget.xml` 리소스 id 를 적고 New 를 누르면 없는 파일은 빈 문서(`ToolAssetLoadResult::Missing`)로 열린다. 스켈레톤 · 뿌리와 골반이
  *            묶이기 전에는 저장되지 않는다.

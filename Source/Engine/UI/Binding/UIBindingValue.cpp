@@ -343,7 +343,7 @@ namespace sw
 
 namespace sw
 {
-    UIBindingValueKind UIBindingValueUtil::classifyType( const hashed_string& typeName )
+    UIBindingValueKind UIBindingValue::classifyType( const hashed_string& typeName )
     {
         // 갈래는 내장 타입 표가 정한다(`ReflectBuiltinClass`) — 숫자 읽기 · 쓰기 표(`kArrNumberOps`)도 같은 갈래로 채워지므로 Number 인데 줄이 없는 타입은 없다.
         switch ( ReflectValueUtil::getBuiltinClass( ReflectValueUtil::findBuiltinIndex( typeName ) ) )
@@ -360,7 +360,7 @@ namespace sw
         return UIBindingValueKind::Other;
     }
 
-    bool UIBindingValueUtil::canConvert( UIBindingValueKind from, UIBindingValueKind to )
+    bool UIBindingValue::canConvert( UIBindingValueKind from, UIBindingValueKind to )
     {
         if ( from == UIBindingValueKind::None || to == UIBindingValueKind::None )
             return false;
@@ -371,12 +371,12 @@ namespace sw
         return bFromScalar && bToScalar;
     }
 
-    const utf8* UIBindingValueUtil::getKindName( UIBindingValueKind kind )
+    const utf8* UIBindingValue::getKindName( UIBindingValueKind kind )
     {
         return UIBindingValueInternal::getKindOps( kind ).pName;
     }
 
-    bool UIBindingValueUtil::resolvePath( const TypeInfo& type, string_view path, UIPropertyPath& outPath, string& outError )
+    bool UIBindingValue::resolvePath( const TypeInfo& type, string_view path, UIPropertyPath& outPath, string& outError )
     {
         outPath                 = UIPropertyPath{};
         const TypeInfo* pType   = &type;
@@ -415,7 +415,7 @@ namespace sw
         return true;
     }
 
-    UIBindingValue UIBindingValueUtil::readValue( const UIPropertyPath& path, const void* pRoot )
+    UIBindingValue UIBindingValue::readValue( const UIPropertyPath& path, const void* pRoot )
     {
         const void* pOwner = path.isValid() ? path.findLeafOwner( pRoot ) : nullptr;
         if ( pOwner == nullptr )
@@ -430,7 +430,7 @@ namespace sw
         return UIBindingValueInternal::getKindOps( path._kind ).pRead( leaf, ObjectAddress{ pOwner }, ValueAddress{ pValue }, builtinIndex );
     }
 
-    bool UIBindingValueUtil::writeValue( const UIPropertyPath& path, void* pRoot, const UIBindingValue& value )
+    bool UIBindingValue::writeValue( const UIPropertyPath& path, void* pRoot, const UIBindingValue& value )
     {
         void* pOwner = path.isValid() ? path.findLeafOwner( pRoot ) : nullptr;
         if ( pOwner == nullptr || value._kind == UIBindingValueKind::None )
@@ -451,7 +451,7 @@ namespace sw
         return UIBindingValueInternal::getKindOps( path._kind ).pWrite( leaf, MutableObjectAddress{ pOwner }, MutableValueAddress{ pValue }, builtinIndex, value );
     }
 
-    bool UIBindingValueUtil::copyValue( const UIPropertyPath& sourcePath, const void* pSourceRoot, const UIPropertyPath& targetPath, void* pTargetRoot )
+    bool UIBindingValue::copyValue( const UIPropertyPath& sourcePath, const void* pSourceRoot, const UIPropertyPath& targetPath, void* pTargetRoot )
     {
         UIBindingValue value = readValue( sourcePath, pSourceRoot );
         if ( value._kind == UIBindingValueKind::Other && targetPath._kind == UIBindingValueKind::Text )

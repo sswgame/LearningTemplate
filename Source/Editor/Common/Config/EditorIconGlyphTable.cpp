@@ -114,7 +114,7 @@ namespace sw::editor
         }
     } // namespace
 
-    void EditorIconUtil::publish( const EditorIconGlyphTable* pGlyphTable, const EditorComponentIconTable* pComponentTable )
+    void EditorIconGlyphTable::publish( const EditorIconGlyphTable* pGlyphTable, const EditorComponentIconTable* pComponentTable )
     {
         EditorIconPublished& state = published();
         state._pGlyphTable         = pGlyphTable;
@@ -122,7 +122,7 @@ namespace sw::editor
         state._listReported.clear();
     }
 
-    const EditorComponentIconTable& EditorIconUtil::getComponentIconTable()
+    const EditorComponentIconTable& EditorIconGlyphTable::getComponentIconTable()
     {
         const EditorComponentIconTable* pTable = published()._pComponentTable;
         if ( pTable == nullptr )
@@ -130,7 +130,7 @@ namespace sw::editor
         return *pTable;
     }
 
-    const utf8* EditorIconUtil::findGlyph( const hashed_string& name )
+    const utf8* EditorIconGlyphTable::findPublishedGlyph( const hashed_string& name )
     {
         EditorIconPublished&       state = published();
         static const hashed_string s_missingName{ EditorIconGlyphTable::kMissingIconName };
@@ -151,8 +151,8 @@ namespace sw::editor
         return pMissing != nullptr ? pMissing : "?";
     }
 
-    const utf8* EditorIconUtil::findGlyphByName( const utf8* pName )
+    const utf8* EditorIconGlyphTable::findGlyphByName( const utf8* pName )
     {
-        return pName != nullptr && pName[0] != 0 ? findGlyph( hashed_string{ pName } ) : nullptr;
+        return pName != nullptr && pName[0] != 0 ? findPublishedGlyph( hashed_string{ pName } ) : nullptr;
     }
 } // namespace sw::editor

@@ -219,7 +219,7 @@ namespace sw
         return s_lastGeneration.fetch_add( 1 ) + 1;
     }
 
-    bool RHIBackendUtil::findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend )
+    bool RHI::findCommandLineBackend( const CommandLineManager& commandLineManager, RHIBackend& outBackend )
     {
         for ( const RHIInternal::BackendArgument& row : RHIInternal::kArrBackendArgument )
         {
@@ -267,7 +267,7 @@ namespace sw
         // 커맨드라인이 고른 것은 **폴백하지 않는다.** 쓸 수 없으면 아래에서 에러로 선다.
         // 조용히 다른 백엔드로 뜨면 "네 백엔드를 확인했다" 가 거짓이 된다.
         RHIBackend commandLineBackend{};
-        const bool bCommandLineOverride = RHIBackendUtil::findCommandLineBackend( engine::getSubsystem<CommandLineManager>(), commandLineBackend );
+        const bool bCommandLineOverride = RHI::findCommandLineBackend( engine::getSubsystem<CommandLineManager>(), commandLineBackend );
         if ( bCommandLineOverride )
             currentBackend = commandLineBackend;
         else if ( RHIAvailability::isAvailable( currentBackend ) == false )

@@ -157,7 +157,7 @@ namespace sw
 
     bool PokerTable::startHand( GameRandom& random )
     {
-        CardDeckUtil::makeStandardDeck( _deck );
+        CardPile::makeStandardDeck( _deck );
         _deck.shuffle( random );
         return openHand();
     }

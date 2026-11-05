@@ -428,7 +428,7 @@ namespace sw::editor
         bool             bAllSettled     = true;
         for ( const utf8* pTitle : EditorDockLayoutInternal::collectFrontTabTitles() )
         {
-            ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelTextUtil::makeWindowID( pTitle ).c_str() );
+            ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( pTitle ).c_str() );
             if ( pWindow == nullptr || pWindow->Active == false )
                 continue;
             if ( pWindow->DockNode != nullptr && pWindow->DockTabIsVisible && _frontTabFrameCount >= kMinFocusFrames )
@@ -526,7 +526,7 @@ namespace sw::editor
         {
             const ImGuiID slotDockID = entry._pInstance != nullptr ? EditorDockLayoutInternal::findSlotDockID( entry._pInstance->getDefaultDockSlot(), nodes ) : 0;
             if ( slotDockID != 0 )
-                ImGui::DockBuilderDockWindow( EditorPanelTextUtil::makeWindowID( entry._title.c_str() ).c_str(), slotDockID );
+                ImGui::DockBuilderDockWindow( EditorPanelText::makeWindowID( entry._title.c_str() ).c_str(), slotDockID );
         }
 
         ImGui::DockBuilderFinish( id );

@@ -87,14 +87,14 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    float32 EditorNetProfilerUtil::computeRate( uint64 previous, uint64 current, float64 elapsedSeconds )
+    float32 EditorNetProfilerSample::computeRate( uint64 previous, uint64 current, float64 elapsedSeconds )
     {
         if ( current < previous || elapsedSeconds <= 0.0 )
             return 0.0f;
         return static_cast<float32>( static_cast<float64>( current - previous ) / elapsedSeconds );
     }
 
-    EditorNetProfilerSample EditorNetProfilerUtil::makeSample( const NetStatsReport* pPrevious, float64 previousTimeSeconds, const NetStatsReport& report, float64 timeSeconds )
+    EditorNetProfilerSample EditorNetProfilerSample::makeSample( const NetStatsReport* pPrevious, float64 previousTimeSeconds, const NetStatsReport& report, float64 timeSeconds )
     {
         using Internal = EditorNetProfilerHistoryInternal;
         EditorNetProfilerSample sample;
@@ -115,7 +115,7 @@ namespace sw::editor
         return sample;
     }
 
-    void EditorNetProfilerUtil::computeKindShares( const vector<NetStatsKindEntry>& listEntry, vector<EditorNetKindShare>& outListShare )
+    void EditorNetProfilerSample::computeKindShares( const vector<NetStatsKindEntry>& listEntry, vector<EditorNetKindShare>& outListShare )
     {
         outListShare.clear();
         uint64 totalBytes = 0;
@@ -142,8 +142,8 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorNetProfilerUtil::computeReplicaRates( const vector<NetStatsReplicaEntry>& listPrevious, const vector<NetStatsReplicaEntry>& listCurrent, float64 elapsedSeconds,
-                                                     vector<EditorNetReplicaRate>& outListRate )
+    void EditorNetProfilerSample::computeReplicaRates( const vector<NetStatsReplicaEntry>& listPrevious, const vector<NetStatsReplicaEntry>& listCurrent, float64 elapsedSeconds,
+                                                       vector<EditorNetReplicaRate>& outListRate )
     {
         outListRate.clear();
         if ( elapsedSeconds <= 0.0 )
@@ -203,14 +203,14 @@ namespace sw::editor
                 ingest( processIndex, status._statsReport, nowSeconds );
             }
         }
-        const bool bQueryDue = _bQueried == false || EditorNetProfilerUtil::kQueryIntervalSeconds <= nowSeconds - _lastQuerySeconds;
+        const bool bQueryDue = _bQueried == false || EditorNetProfilerSample::kQueryIntervalSeconds <= nowSeconds - _lastQuerySeconds;
         if ( bQueryDue == false )
             return;
         _bQueried         = SW_TRUE;
         _lastQuerySeconds = nowSeconds;
         for ( int32 processIndex = 0; processIndex < processCount; ++processIndex )
         {
-            (void)session.sendProcessCommand( processIndex, EditorNetProfilerUtil::kStatsCommand ); // 끝난 프로세스는 false — 그 칸은 더 늘지 않는다
+            (void)session.sendProcessCommand( processIndex, EditorNetProfilerSample::kStatsCommand ); // 끝난 프로세스는 false — 그 칸은 더 늘지 않는다
         }
     }
 
@@ -221,10 +221,10 @@ namespace sw::editor
         if ( _listTrack.size() <= static_cast<size_t>( processIndex ) )
             _listTrack.resize( static_cast<size_t>( processIndex ) + 1 );
         EditorNetProfilerTrack& track = _listTrack[static_cast<size_t>( processIndex )];
-        EditorNetProfilerUtil::computeReplicaRates( track._lastReport._listReplicaEntry, report._listReplicaEntry, timeSeconds - track._lastTimeSeconds, track._listReplicaRate );
+        EditorNetProfilerSample::computeReplicaRates( track._lastReport._listReplicaEntry, report._listReplicaEntry, timeSeconds - track._lastTimeSeconds, track._listReplicaRate );
         if ( track._bHasReport == false )
             track._listReplicaRate.clear();
-        track._series.push( EditorNetProfilerUtil::makeSample( track._bHasReport ? &track._lastReport : nullptr, track._lastTimeSeconds, report, timeSeconds ) );
+        track._series.push( EditorNetProfilerSample::makeSample( track._bHasReport ? &track._lastReport : nullptr, track._lastTimeSeconds, report, timeSeconds ) );
         track._lastReport      = report;
         track._lastTimeSeconds = timeSeconds;
         track._bHasReport      = true;

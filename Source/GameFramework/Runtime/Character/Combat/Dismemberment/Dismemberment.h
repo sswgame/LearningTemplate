@@ -18,21 +18,15 @@
 namespace sw
 {
     /** @brief 절단 결과입니다. 네 형상은 모두 같은 바인드 공간입니다. */
-    struct DismembermentResult
+    struct SW_GF_API DismembermentResult
     {
         AppearanceGeometry _remaining{};           ///< 남은 몸(잘린 삼각형 뺌)
         AppearanceGeometry _remainingCap{};        ///< 남은 몸의 구멍을 막는 캡이다.
         AppearanceGeometry _severed{};             ///< 떨어진 조각이다.
         AppearanceGeometry _severedCap{};          ///< 떨어진 조각의 구멍을 막는 캡이다.
         vector<uint8>      _listTriangleSevered{}; ///< 원본 삼각형마다 잘렸는지 나타낸다. 보임 마스크에 그대로 쓴다.
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 신체 절단입니다(전부 static). */
-    struct SW_GF_API DismembermentUtil
-    {
+        // 신체 절단입니다(전부 static).
         /**
          * @brief 영역들을 잘라 냅니다. 삼각형은 정점 둘 이상이 잘라 낼 영역에 있으면 떨어진 조각 쪽입니다.
          * @param listVertexRegion 정점마다 영역 번호(`FitTables::assignRegions` 의 것)입니다.

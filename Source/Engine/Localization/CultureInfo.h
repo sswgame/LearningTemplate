@@ -75,7 +75,7 @@ namespace sw
 {
     /**
      * @brief 날짜와 시각 값입니다(달력은 그레고리력입니다).
-     * @details 값은 받은 그대로 쓰고 시간대 변환은 하지 않습니다. 시간대가 필요하면 `TimeZoneUtil::convertUnixMilliseconds` 가 UTC 시각을 그 시간대의 값으로 바꾸고
+     * @details 값은 받은 그대로 쓰고 시간대 변환은 하지 않습니다. 시간대가 필요하면 `TimeZoneInfo::convertUnixMilliseconds` 가 UTC 시각을 그 시간대의 값으로 바꾸고
      *          `_bZoned` 와 `_utcOffsetMinutes` 를 채웁니다(패턴의 `z` 가 그 오프셋을 씁니다).
      */
     struct TextDateTime

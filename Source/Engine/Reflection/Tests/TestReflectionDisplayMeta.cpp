@@ -19,23 +19,23 @@
 SW_TEST_CASE( ReflectionDisplayMetaTest, UnitsConvertWithinADimension )
 {
     float64 value{ 0.0 };
-    SW_REQUIRE_TRUE( sw::ReflectUnitUtil::convert( 150.0, "cm", "m", value ) );
+    SW_REQUIRE_TRUE( sw::ReflectUnit::convert( 150.0, "cm", "m", value ) );
     SW_EXPECT_NEAR( 1.5, value, 1e-9 );
-    SW_REQUIRE_TRUE( sw::ReflectUnitUtil::convert( 180.0, "deg", "rad", value ) );
+    SW_REQUIRE_TRUE( sw::ReflectUnit::convert( 180.0, "deg", "rad", value ) );
     SW_EXPECT_NEAR( 3.14159265358979, value, 1e-9 );
-    SW_REQUIRE_TRUE( sw::ReflectUnitUtil::convert( 36.0, "km/h", "m/s", value ) );
+    SW_REQUIRE_TRUE( sw::ReflectUnit::convert( 36.0, "km/h", "m/s", value ) );
     SW_EXPECT_NEAR( 10.0, value, 1e-9 );
-    SW_EXPECT_FALSE( sw::ReflectUnitUtil::convert( 1.0, "m", "s", value ) ); // 차원이 다르다
-    SW_EXPECT_FALSE( sw::ReflectUnitUtil::convert( 1.0, "furlong", "m", value ) );
+    SW_EXPECT_FALSE( sw::ReflectUnit::convert( 1.0, "m", "s", value ) ); // 차원이 다르다
+    SW_EXPECT_FALSE( sw::ReflectUnit::convert( 1.0, "furlong", "m", value ) );
 
-    SW_REQUIRE_TRUE( sw::ReflectUnitUtil::parseValueInUnit( "2 km", "cm", value ) );
+    SW_REQUIRE_TRUE( sw::ReflectUnit::parseValueInUnit( "2 km", "cm", value ) );
     SW_EXPECT_NEAR( 200000.0, value, 1e-6 );
-    SW_REQUIRE_TRUE( sw::ReflectUnitUtil::parseValueInUnit( "1.5e1m/s2", "m/s2", value ) );
+    SW_REQUIRE_TRUE( sw::ReflectUnit::parseValueInUnit( "1.5e1m/s2", "m/s2", value ) );
     SW_EXPECT_NEAR( 15.0, value, 1e-9 );
-    SW_REQUIRE_TRUE( sw::ReflectUnitUtil::parseValueInUnit( " 42 ", "ms", value ) ); // 단위를 적지 않으면 이미 저장 단위다
+    SW_REQUIRE_TRUE( sw::ReflectUnit::parseValueInUnit( " 42 ", "ms", value ) ); // 단위를 적지 않으면 이미 저장 단위다
     SW_EXPECT_NEAR( 42.0, value, 1e-9 );
-    SW_EXPECT_FALSE( sw::ReflectUnitUtil::parseValueInUnit( "3 s", "m", value ) );
-    SW_EXPECT_FALSE( sw::ReflectUnitUtil::parseValueInUnit( "cm", "m", value ) );
+    SW_EXPECT_FALSE( sw::ReflectUnit::parseValueInUnit( "3 s", "m", value ) );
+    SW_EXPECT_FALSE( sw::ReflectUnit::parseValueInUnit( "cm", "m", value ) );
 }
 
 /**

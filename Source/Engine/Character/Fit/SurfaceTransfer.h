@@ -19,21 +19,15 @@ namespace sw
     class SurfaceBVH;
 
     /** @brief 한 점이 원본 표면에 연결된 위치입니다. */
-    struct SurfaceBinding
+    struct SW_API SurfaceBinding
     {
         uint32  _triangle{ 0 };        ///< 원본 삼각형 번호다.
         float32 _baryU{ 0.0f };        ///< 무게중심 좌표다(두 번째 정점 가중치).
         float32 _baryV{ 0.0f };        ///< 무게중심 좌표다(세 번째 정점 가중치).
         float32 _normalOffset{ 0.0f }; ///< 보간 법선 방향 거리다.
         uint8   _bBound{ SW_FALSE };   ///< 거리 안에서 표면을 찾았는지 나타낸다.
-    };
-} // namespace sw
 
-namespace sw
-{
-    /** @brief 표면 전이의 함수 모음입니다(전부 static). */
-    struct SW_API SurfaceTransferUtil
-    {
+        // 표면 전이의 함수 모음입니다(전부 static).
         /**
          * @brief 점마다 원본(@p source)의 가장 가까운 삼각형을 찾아 연결합니다(@p maxDistance 밖은 연결하지 않습니다). @p sourceBVH 는 원본 하나로 만든 것입니다.
          */

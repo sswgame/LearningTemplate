@@ -54,7 +54,7 @@ namespace sw
             {
                 UIPropertyPath path{};
                 string         ignored;
-                if ( UIBindingValueUtil::resolvePath( type, pName, path, ignored ) == false )
+                if ( UIBindingValue::resolvePath( type, pName, path, ignored ) == false )
                     path = UIPropertyPath{};
                 return path;
             }
@@ -62,7 +62,7 @@ namespace sw
             /** @brief 범위 필드 하나(있으면)에 설정 정의의 숫자를 쓰고, 바뀌었으면 위젯에 알립니다. */
             static void writeRange( const UIPropertyPath& path, Widget& widget, float64 number, bool bInteger )
             {
-                if ( path.isValid() && UIBindingValueUtil::writeValue( path, &widget, UIBindingValue::makeNumber( number, bInteger ) ) )
+                if ( path.isValid() && UIBindingValue::writeValue( path, &widget, UIBindingValue::makeNumber( number, bInteger ) ) )
                     widget.onBoundPropertyChanged( path.getRootProperty() );
             }
 
@@ -74,7 +74,7 @@ namespace sw
             {
                 if ( sourceKind == UIBindingValueKind::Other && target._kind == UIBindingValueKind::Other )
                     return sourceTypeName == target.getLeafTypeName();
-                return UIBindingValueUtil::canConvert( sourceKind, target._kind );
+                return UIBindingValue::canConvert( sourceKind, target._kind );
             }
         };
     } // namespace
@@ -177,7 +177,7 @@ namespace sw
                 case UIBindingSource::Poll:
                 {
                     ++_polledCount;
-                    const string text           = UIBindingValueUtil::readValue( binding._source, _pViewModel ).toText();
+                    const string text           = UIBindingValue::readValue( binding._source, _pViewModel ).toText();
                     const bool   bReformat      = context._bTextRevisionChanged && binding._expression._format.empty() == false;
                     const bool   bPollUnchanged = binding._bPollKnown && binding._lastPollText == text && bReformat == false;
                     if ( bPollUnchanged )
@@ -240,7 +240,7 @@ namespace sw
             outError = "the widget is not in the screen";
             return false;
         }
-        if ( UIBindingValueUtil::resolvePath( *pWidget->getTypeInfo(), desc._propertyPath, binding._target, outError ) == false )
+        if ( UIBindingValue::resolvePath( *pWidget->getTypeInfo(), desc._propertyPath, binding._target, outError ) == false )
             return false;
         UIBindingValueKind sourceKind     = UIBindingValueKind::None;
         hashed_string      sourceTypeName = {};
@@ -254,7 +254,7 @@ namespace sw
             // 뷰모델 소스는 뷰모델이 없으면 쉰다(오류가 아니며, `setViewModel` 이 다시 연결한다).
             if ( _pViewModel == nullptr || _pViewModel->getTypeInfo() == nullptr )
                 return true;
-            if ( UIBindingValueUtil::resolvePath( *_pViewModel->getTypeInfo(), binding._expression._path, binding._source, outError ) == false )
+            if ( UIBindingValue::resolvePath( *_pViewModel->getTypeInfo(), binding._expression._path, binding._source, outError ) == false )
                 return false;
             binding._sourceField = binding._source.getRootProperty()._name;
             sourceKind           = binding._source._kind;
@@ -269,10 +269,10 @@ namespace sw
                 outError = "unknown converter '" + string( binding._expression._converter.c_str() ) + "'";
                 return false;
             }
-            if ( UIBindingValueUtil::canConvert( sourceKind, pConverter->_inputKind ) == false )
+            if ( UIBindingValue::canConvert( sourceKind, pConverter->_inputKind ) == false )
             {
-                outError = "converter '" + string( pConverter->_name.c_str() ) + "' takes " + UIBindingValueUtil::getKindName( pConverter->_inputKind ) + ", the source is " +
-                           UIBindingValueUtil::getKindName( sourceKind );
+                outError = "converter '" + string( pConverter->_name.c_str() ) + "' takes " + UIBindingValue::getKindName( pConverter->_inputKind ) + ", the source is " +
+                           UIBindingValue::getKindName( sourceKind );
                 return false;
             }
             binding._converter = *pConverter;
@@ -282,15 +282,15 @@ namespace sw
             sourceKind = UIBindingValueKind::Text;
         if ( UIBindingSetInternal::canBind( sourceKind, sourceTypeName, binding._target ) == false )
         {
-            outError = string( "cannot bind " ) + UIBindingValueUtil::getKindName( sourceKind ) + " '" + sourceTypeName.c_str() + "' to " +
-                       UIBindingValueUtil::getKindName( binding._target._kind ) + " '" + binding._target.getLeafTypeName().c_str() + "' without a converter";
+            outError = string( "cannot bind " ) + UIBindingValue::getKindName( sourceKind ) + " '" + sourceTypeName.c_str() + "' to " +
+                       UIBindingValue::getKindName( binding._target._kind ) + " '" + binding._target.getLeafTypeName().c_str() + "' without a converter";
             return false;
         }
         if ( binding._expression._mode == UIBindingMode::TwoWay )
         {
             const bool bTransformed  = binding._converter._pConvert != nullptr || binding._expression._format.empty() == false;
             const bool bConvertsBack = binding._expression._source == UIBindingSource::Setting
-                                         ? UIBindingValueUtil::canConvert( binding._target._kind, sourceKind )
+                                         ? UIBindingValue::canConvert( binding._target._kind, sourceKind )
                                          : UIBindingSetInternal::canBind( binding._target._kind, binding._target.getLeafTypeName(), binding._source );
             if ( bTransformed || bConvertsBack == false )
             {
@@ -462,7 +462,7 @@ namespace sw
         const UserSettingDef* pDef = _pSettings != nullptr ? _pSettings->findSetting( binding._sourceField ) : nullptr;
         if ( pDef == nullptr )
             return;
-        const UIBindingValue value = UIBindingValueUtil::readValue( binding._target, &widget );
+        const UIBindingValue value = UIBindingValue::readValue( binding._target, &widget );
         // 결과는 보지 않는다. 보정되었든(Clamped) 거절됐든(Rejected, Disabled) 다음 단계가 설정 값을 다시 읽어 위젯에 쓴다.
         binding._bDirty = SW_TRUE;
         switch ( pDef->_type )
@@ -513,7 +513,7 @@ namespace sw
             return false;
         _bApplying           = SW_TRUE; // 범위, 선택지, 사용 가능 여부도 쓴다
         binding._bDirty      = SW_FALSE;
-        UIBindingValue value = bSetting ? readSetting( binding, *pWidget, context ) : UIBindingValueUtil::readValue( binding._source, _pViewModel );
+        UIBindingValue value = bSetting ? readSetting( binding, *pWidget, context ) : UIBindingValue::readValue( binding._source, _pViewModel );
         _bApplying           = SW_FALSE;
         if ( binding._expression._source == UIBindingSource::Poll )
         {
@@ -525,7 +525,7 @@ namespace sw
         if ( value._kind == UIBindingValueKind::Other && binding._target._kind == UIBindingValueKind::Text )
             value._kind = UIBindingValueKind::Text;
         _bApplying          = SW_TRUE;
-        const bool bChanged = UIBindingValueUtil::writeValue( binding._target, pWidget, value );
+        const bool bChanged = UIBindingValue::writeValue( binding._target, pWidget, value );
         if ( bChanged )
         {
             ++_writeCount;
@@ -552,7 +552,7 @@ namespace sw
             }
             if ( _pViewModel == nullptr )
                 continue;
-            if ( UIBindingValueUtil::copyValue( binding._target, &widget, binding._source, _pViewModel ) == false )
+            if ( UIBindingValue::copyValue( binding._target, &widget, binding._source, _pViewModel ) == false )
                 continue;
             _pViewModel->notifyFieldChanged( binding._sourceField );
             binding._skipSerial = _pViewModel->getChangeSerial();

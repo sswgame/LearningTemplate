@@ -132,7 +132,7 @@ namespace sw::editor
         unique_ptr<IImGuiPlatformBackend>    _platformBackend;
         unique_ptr<ImGuiRenderer>            _renderer;
         unique_ptr<EditorToolDefaults>       _editorToolDefaults;
-        unique_ptr<EditorIconGlyphTable>     _pIconGlyphTable;     ///< 아이콘 이름 → 코드포인트(글꼴과 짝) — 에디터 데이터 단계가 읽어 `EditorIconUtil` 에 게시한다
+        unique_ptr<EditorIconGlyphTable>     _pIconGlyphTable;     ///< 아이콘 이름 → 코드포인트(글꼴과 짝) — 에디터 데이터 단계가 읽어 `EditorIconGlyphTable` 에 게시한다
         unique_ptr<EditorComponentIconTable> _pComponentIconTable; ///< 컴포넌트 아이콘 표(Category → 아이콘 · 색 이름)
         unique_ptr<EditorContext>            _editorContext;
         EditorDockLayout                     _dockLayout;

@@ -641,7 +641,7 @@ namespace sw
         if ( pScene == nullptr )
             pScene = this;
         float3 scale{ 1.0f, 1.0f, 1.0f };
-        PhysicsComponentUtil::readWorldPose( *pScene, outPosition, outRotation, scale );
+        PhysicsComponent::readWorldPose( *pScene, outPosition, outRotation, scale );
         outScale = uses2DPhysics() ? ( scale._x + scale._y ) * 0.5f : ( scale._x + scale._y + scale._z ) / 3.0f;
         if ( outScale <= 0.0f )
             outScale = 1.0f;
@@ -732,7 +732,7 @@ namespace sw
         pending._worldPoint     = collision._point;
         pending._worldDirection = -collision._normal;
         pending._hitBody        = collision._selfBody;
-        pending._event          = DestructionDamageUtil::makeImpactEvent( _profile, float3{}, float3{}, collision._impulse );
+        pending._event          = DestructionDamageEvent::makeImpactEvent( _profile, float3{}, float3{}, collision._impulse );
         if ( pending._event._strain <= 0.0f )
             return;
         _pendingDamage.push( pending );

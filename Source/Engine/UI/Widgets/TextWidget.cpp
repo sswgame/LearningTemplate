@@ -195,7 +195,7 @@ namespace sw
             style._font = pStyle->_value._font;
         if ( pStyle != nullptr && pStyle->has( UIStyleField::FontSize ) )
             style._fontSize = pStyle->_value._fontSize;
-        style._fontSize           = UIScaleUtil::computeScaledFontSize( style._fontSize, textScale );
+        style._fontSize           = UIScaleSettings::computeScaledFontSize( style._fontSize, textScale );
         style._paragraphDirection = isRightToLeft() ? TextDirection::RightToLeft : TextDirection::LeftToRight;
         return style;
     }

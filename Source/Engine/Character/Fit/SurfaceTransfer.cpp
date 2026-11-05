@@ -29,8 +29,8 @@ namespace sw
 
 namespace sw
 {
-    void SurfaceTransferUtil::bindPoints( const AppearanceGeometry& source, const SurfaceBVH& sourceBVH, vector_reference<const float3> listPoint, float32 maxDistance,
-                                          vector<SurfaceBinding>& outListBinding )
+    void SurfaceBinding::bindPoints( const AppearanceGeometry& source, const SurfaceBVH& sourceBVH, vector_reference<const float3> listPoint, float32 maxDistance,
+                                     vector<SurfaceBinding>& outListBinding )
     {
         outListBinding.assign( listPoint.size(), SurfaceBinding{} );
         for ( size_t pointIndex = 0; pointIndex < listPoint.size(); ++pointIndex )
@@ -51,7 +51,7 @@ namespace sw
         }
     }
 
-    float3 SurfaceTransferUtil::evaluatePoint( const AppearanceGeometry& source, const SurfaceBinding& binding )
+    float3 SurfaceBinding::evaluatePoint( const AppearanceGeometry& source, const SurfaceBinding& binding )
     {
         const uint32 indexA = source._listIndex[binding._triangle * 3];
         const uint32 indexB = source._listIndex[binding._triangle * 3 + 1];
@@ -62,7 +62,7 @@ namespace sw
         return surfacePoint + normal * binding._normalOffset;
     }
 
-    void SurfaceTransferUtil::transferMorphs( const AppearanceGeometry& source, vector_reference<const SurfaceBinding> listBinding, AppearanceGeometry& inoutTarget )
+    void SurfaceBinding::transferMorphs( const AppearanceGeometry& source, vector_reference<const SurfaceBinding> listBinding, AppearanceGeometry& inoutTarget )
     {
         const uint32 targetVertexCount = inoutTarget.getVertexCount();
         for ( const GeometryMorphTarget& sourceMorph : source._listMorph )
@@ -104,7 +104,7 @@ namespace sw
         }
     }
 
-    void SurfaceTransferUtil::transferSkinWeights( const AppearanceGeometry& source, vector_reference<const SurfaceBinding> listBinding, AppearanceGeometry& inoutTarget )
+    void SurfaceBinding::transferSkinWeights( const AppearanceGeometry& source, vector_reference<const SurfaceBinding> listBinding, AppearanceGeometry& inoutTarget )
     {
         if ( source.isSkinned() == false )
             return;

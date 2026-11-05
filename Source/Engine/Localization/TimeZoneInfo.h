@@ -1,5 +1,5 @@
 /**
- * @file TimeZoneUtil.h
+ * @file TimeZoneInfo.h
  * @brief 시간대(IANA 이름)를 UTC 오프셋으로 바꾸고 UTC 유닉스 시각을 그 시간대의 날짜 · 시각으로 바꿉니다.
  * @details tz 데이터베이스를 들이지 않는다. 지원하는 시간대는 시간대 표(`TimeZoneTable`, 기본은 `EngineDefaultAssets::_timeZoneTable`)에 있는 이름뿐이고,
  *          표준 오프셋과 일광 절약 규칙 두 가지(미국 · 유럽 연합)로 계산한다. 과거 규칙 변경(2007 년 이전 미국 등)은 반영하지 않는다.
@@ -26,6 +26,8 @@ namespace sw
         Europe        ///< 3 월 마지막 일요일 01:00 UTC ~ 10 월 마지막 일요일 01:00 UTC
     };
 
+    struct TimeZoneTable;
+
     /**
      * @brief 시간대 한 줄입니다.
      * @code
@@ -42,6 +44,16 @@ namespace sw
         int16 _standardOffsetMinutes{ 0 };
         PROPERTY( Required, Tooltip = "Daylight saving rule (None, UnitedStates, Europe)" )
         DaylightRule _daylightRule{ DaylightRule::None };
+
+        // UTC ↔ 현지 날짜 변환입니다. 상태가 없습니다(시간대는 `TimeZoneTable` 이 찾는다).
+        /** @brief UTC 유닉스 시각(초)에서 그 시간대의 UTC 오프셋(분)입니다. 일광 절약 시간 중이면 표준 오프셋에 60 분이 더해집니다. */
+        static int32 computeOffsetMinutes( int64 unixSeconds, const TimeZoneInfo& zone );
+        /** @brief UTC 유닉스 시각(밀리초)을 그 시간대의 날짜 · 시각으로 바꿉니다. `_bZoned` 와 `_utcOffsetMinutes` 가 채워집니다. */
+        static TextDateTime convertUnixMilliseconds( int64 unixMilliseconds, const TimeZoneInfo& zone );
+        /** @brief 날짜 · 시각(오프셋은 무시)을 UTC 로 보고 유닉스 시각(초)으로 바꿉니다. */
+        static int64 computeUnixSeconds( const TextDateTime& value );
+        /** @brief `UTC`, `UTC+9`, `UTC+5:30` 모양의 오프셋 글입니다. @p bPadded 면 `UTC+09:00` 입니다. */
+        static string formatOffset( int32 offsetMinutes, bool bPadded );
     };
 
     /** @brief 시간대 표 한 벌입니다(`engine/localization/timezones.xml`). 이름은 비지 않고 겹치지 않으며 `UTC` 가 있어야 합니다. */
@@ -59,24 +71,5 @@ namespace sw
 
     private:
         [[nodiscard]] bool validate() const;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct TimeZoneUtil
-     * @brief UTC ↔ 현지 날짜 변환입니다. 상태가 없습니다(시간대는 `TimeZoneTable` 이 찾는다).
-     */
-    struct SW_API TimeZoneUtil
-    {
-        /** @brief UTC 유닉스 시각(초)에서 그 시간대의 UTC 오프셋(분)입니다. 일광 절약 시간 중이면 표준 오프셋에 60 분이 더해집니다. */
-        static int32 computeOffsetMinutes( int64 unixSeconds, const TimeZoneInfo& zone );
-        /** @brief UTC 유닉스 시각(밀리초)을 그 시간대의 날짜 · 시각으로 바꿉니다. `_bZoned` 와 `_utcOffsetMinutes` 가 채워집니다. */
-        static TextDateTime convertUnixMilliseconds( int64 unixMilliseconds, const TimeZoneInfo& zone );
-        /** @brief 날짜 · 시각(오프셋은 무시)을 UTC 로 보고 유닉스 시각(초)으로 바꿉니다. */
-        static int64 computeUnixSeconds( const TextDateTime& value );
-        /** @brief `UTC`, `UTC+9`, `UTC+5:30` 모양의 오프셋 글입니다. @p bPadded 면 `UTC+09:00` 입니다. */
-        static string formatOffset( int32 offsetMinutes, bool bPadded );
     };
 } // namespace sw

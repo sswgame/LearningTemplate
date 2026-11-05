@@ -600,7 +600,7 @@ namespace sw::editor
         if ( _pIconGlyphTable->loadFromAsset( AssetID{ EditorPaths::kIconGlyphTable } ) == false ||
              _pComponentIconTable->loadFromAsset( AssetID{ EditorPaths::kComponentIconTable } ) == false )
             return SubsystemInitResult::Failed;
-        EditorIconUtil::publish( _pIconGlyphTable.get(), _pComponentIconTable.get() );
+        EditorIconGlyphTable::publish( _pIconGlyphTable.get(), _pComponentIconTable.get() );
         // 정적 칸에 걸지 않는다 — 범위가 서기 전의 단계(글꼴)는 인자로 받고, 에디터 컨텍스트가 자기 범위에 빌려 건다(`initializeEditorContext`).
         return SubsystemInitResult::Succeeded;
     }
@@ -608,7 +608,7 @@ namespace sw::editor
     void ImGuiEditor::shutdownEditorData()
     {
         EditorPreferencesStore::close(); // 서비스가 서 있을 때 마지막으로 쓴다 — 뒤에 모듈이 내려가며 부르는 저장은 쓰지 않는다
-        EditorIconUtil::publish( nullptr, nullptr );
+        EditorIconGlyphTable::publish( nullptr, nullptr );
         _pComponentIconTable.reset();
         _pIconGlyphTable.reset();
         _editorToolDefaults.reset();

@@ -11,8 +11,10 @@
 
 namespace sw
 {
+    struct AutomationReproduceInput;
+
     /** @struct AutomationRunTitleInput @brief 실행 정보 한 줄을 만들 재료입니다. */
-    struct AutomationRunTitleInput
+    struct SW_API AutomationRunTitleInput
     {
         string_view _baseTitle{};    ///< 평소 창 제목(팩 설정의 창 제목). 비면 제목 앞부분 없이 정보만 쓴다
         string_view _scenarioName{}; ///< 시나리오 이름. 비면 시나리오가 아니라 벤치 실행이다
@@ -21,6 +23,28 @@ namespace sw
         string_view _benchSummary{}; ///< 벤치 인자 요약(`gv_stressTestMeshes=1000 …`). 시나리오가 없을 때만 쓴다
         uint32      _stepNumber{ 0 };
         uint32      _frame{ 0 };
+
+        // 실행 정보 글 만들기입니다.
+        /** @brief 창 제목 글 길이의 위쪽 한계(바이트)입니다. 넘으면 `…` 로 줄입니다(`IWindow::kTitleCapacity` 보다 작다). */
+        static constexpr uint32 kMaxTitleBytes = 200;
+        /** @brief 창 제목을 몇 프레임마다 다시 만들지 정합니다(단계가 바뀔 때는 바로 만든다). */
+        static constexpr uint32 kTitleRefreshFrames = 30;
+
+        /** @brief `<시나리오> · <백엔드> · step <번호> <단계> · f<프레임>` (벤치면 `bench <인자> · <백엔드> · f<프레임>`). 창 제목 · 로그가 같이 씁니다. */
+        [[nodiscard]] static string makeSummary( const AutomationRunTitleInput& input );
+        /** @brief `<기본 제목> — <요약>` 을 `kMaxTitleBytes` 안으로 줄여 씁니다(UTF-8 글자 중간을 자르지 않는다). */
+        [[nodiscard]] static string makeWindowTitle( const AutomationRunTitleInput& input );
+        /** @brief 단계 전환 로그 한 줄 `[Scenario] <이름> step <번호> <단계> frame <F>` 을 씁니다. */
+        [[nodiscard]] static string makeStepLogLine( string_view scenarioName, uint32 stepNumber, string_view stepKind, uint32 frame );
+        /** @brief `gv_stressTest` 로 시작하는 `이름=값` 글만 골라 이름순으로 공백으로 이어 한 줄로 씁니다. */
+        [[nodiscard]] static string makeBenchSummary( vector<string> listPair );
+        /**
+         * @brief 재현 명령 `App.exe -game=<게임> -gv_rhiBackend=<백엔드> [-EnableEditor] "-scenario=<목록>" [-scenario-keep-going] <추가 인자>` 를 씁니다. 시나리오 인자가 없으면 빈 글입니다.
+         * @details 공백이나 점이 든 인자는 큰따옴표로 감싼다(PowerShell 은 점이 든 인자를 쪼갠다).
+         */
+        [[nodiscard]] static string makeReproduceCommand( const AutomationReproduceInput& input );
+        /** @brief 글이 @p maxBytes 를 넘으면 UTF-8 글자 경계에서 자르고 `…` 를 붙입니다. */
+        [[nodiscard]] static string truncateUTF8( string_view text, uint32 maxBytes );
     };
 } // namespace sw
 
@@ -48,34 +72,6 @@ namespace sw
 
 namespace sw
 {
-    /** @struct AutomationRunTitleUtil @brief 실행 정보 글 만들기입니다. */
-    struct SW_API AutomationRunTitleUtil
-    {
-        /** @brief 창 제목 글 길이의 위쪽 한계(바이트)입니다. 넘으면 `…` 로 줄입니다(`IWindow::kTitleCapacity` 보다 작다). */
-        static constexpr uint32 kMaxTitleBytes = 200;
-        /** @brief 창 제목을 몇 프레임마다 다시 만들지 정합니다(단계가 바뀔 때는 바로 만든다). */
-        static constexpr uint32 kTitleRefreshFrames = 30;
-
-        /** @brief `<시나리오> · <백엔드> · step <번호> <단계> · f<프레임>` (벤치면 `bench <인자> · <백엔드> · f<프레임>`). 창 제목 · 로그가 같이 씁니다. */
-        [[nodiscard]] static string makeSummary( const AutomationRunTitleInput& input );
-        /** @brief `<기본 제목> — <요약>` 을 `kMaxTitleBytes` 안으로 줄여 씁니다(UTF-8 글자 중간을 자르지 않는다). */
-        [[nodiscard]] static string makeWindowTitle( const AutomationRunTitleInput& input );
-        /** @brief 단계 전환 로그 한 줄 `[Scenario] <이름> step <번호> <단계> frame <F>` 을 씁니다. */
-        [[nodiscard]] static string makeStepLogLine( string_view scenarioName, uint32 stepNumber, string_view stepKind, uint32 frame );
-        /** @brief `gv_stressTest` 로 시작하는 `이름=값` 글만 골라 이름순으로 공백으로 이어 한 줄로 씁니다. */
-        [[nodiscard]] static string makeBenchSummary( vector<string> listPair );
-        /**
-         * @brief 재현 명령 `App.exe -game=<게임> -gv_rhiBackend=<백엔드> [-EnableEditor] "-scenario=<목록>" [-scenario-keep-going] <추가 인자>` 를 씁니다. 시나리오 인자가 없으면 빈 글입니다.
-         * @details 공백이나 점이 든 인자는 큰따옴표로 감싼다(PowerShell 은 점이 든 인자를 쪼갠다).
-         */
-        [[nodiscard]] static string makeReproduceCommand( const AutomationReproduceInput& input );
-        /** @brief 글이 @p maxBytes 를 넘으면 UTF-8 글자 경계에서 자르고 `…` 를 붙입니다. */
-        [[nodiscard]] static string truncateUTF8( string_view text, uint32 maxBytes );
-    };
-} // namespace sw
-
-namespace sw
-{
     class CommandLineManager;
 
     /** @brief 창 제목에 적는 "지금 무엇을 돌리는가" 입니다(`AutomationSession` 이 채운다). */
@@ -93,7 +89,7 @@ namespace sw
      * @brief 자동화 세션이 프레임 끝마다 부르면, 시나리오 단계가 바뀔 때와 `kTitleRefreshFrames` 프레임마다만 창 제목을 바꿉니다(바뀔 때만 시스템 호출).
      * @details 시나리오가 없고 벤치 인자(`-gv_stressTest*`)만 있으면 벤치 요약을 적습니다. 처음 부를 때 벤치 인자가 있으면 `[Bench]` 로그 한 줄을 남깁니다.
      *          창 제목을 거는 곳은 여기 하나입니다. 평소 제목은 `MainWindowSubsystem::setBaseTitle`(에디터가 프레임마다 씬 · 미저장 표시를 넣어 정한다)이고,
-     *          정한 적이 없으면 창이 처음 가진 제목입니다. 실행 중이면 그 뒤에 `AutomationRunTitleUtil::makeWindowTitle` 로 실행 정보를 붙이고, 아니면 평소 제목 그대로 겁니다.
+     *          정한 적이 없으면 창이 처음 가진 제목입니다. 실행 중이면 그 뒤에 `AutomationRunTitleInput::makeWindowTitle` 로 실행 정보를 붙이고, 아니면 평소 제목 그대로 겁니다.
      *          창이 없는 호스트(헤드리스 · 전용 서버)는 창 포인터가 nullptr 이라 제목 갱신만 건너뛰고 로그는 남깁니다. 게임 스레드에서만 씁니다.
      */
     class SW_API AutomationRunTitleTracker

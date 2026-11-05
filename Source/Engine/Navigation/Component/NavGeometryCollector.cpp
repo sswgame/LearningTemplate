@@ -176,7 +176,7 @@ namespace sw
 
     AABB NavGeometryCollector::computeBakeBounds( const NavMeshSurfaceComponent* pSurface, const NavMeshGeometry& geometry )
     {
-        AABB bounds = NavMeshBakeUtil::computeBakeBounds( geometry );
+        AABB bounds = NavMeshAsset::computeBakeBounds( geometry );
         AABB surfaceBox{};
         if ( NavGeometryCollectorInternal::findSurfaceBox( pSurface, surfaceBox ) )
             bounds = clipToSurfaceBox( bounds, surfaceBox );
@@ -273,11 +273,11 @@ namespace sw
                     float3     position{};
                     quaternion rotation{};
                     float3     scale{};
-                    PhysicsComponentUtil::readWorldPose( *pBody, position, rotation, scale );
+                    PhysicsComponent::readWorldPose( *pBody, position, rotation, scale );
                     const float4x4 world = float4x4::makeTrs( position, rotation, float3{ 1.0f, 1.0f, 1.0f } );
                     for ( const PhysicsShapeDesc3D& shape : pBody->getShapes() )
                     {
-                        outGeometry.addPhysicsShape( PhysicsComponentUtil::makeScaledShape( shape, scale ), world, verdict._area );
+                        outGeometry.addPhysicsShape( PhysicsComponent::makeScaledShape( shape, scale ), world, verdict._area );
                     }
                 } );
             }

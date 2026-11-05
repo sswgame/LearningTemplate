@@ -12,7 +12,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
-#include "Editor/Common/Asset/Texture/ImageUtil.h"
+#include "Editor/Common/Asset/Texture/RawImageData.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Content/AssetPaths.h"
@@ -96,7 +96,7 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "HeightfieldImporter.FailedReadSplatSource", "Failed to read splat source '%#'", path );
                     return false;
                 }
-                if ( ImageUtil::loadImageFromMemory( bytes.data(), bytes.size(), outImage ) == false )
+                if ( RawImageData::loadImageFromMemory( bytes.data(), bytes.size(), outImage ) == false )
                     return false;
                 if ( outImage._sourceChannelCount != RawImageData::kChannelCount )
                 {
@@ -122,7 +122,7 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldHoleMaskCould", "Heightfield hole mask '%#' could not be opened", holePath.c_str() );
                     return false;
                 }
-                if ( ImageUtil::loadGray16FromMemory( bytes.data(), bytes.size(), listSample, width, height ) == false )
+                if ( RawImageData::loadGray16FromMemory( bytes.data(), bytes.size(), listSample, width, height ) == false )
                 {
                     SW_LOG_ERROR_ID( "HeightfieldImporter.HeightfieldHoleMaskNot", "Heightfield hole mask '%#' is not a readable 16-bit grayscale image", holePath.c_str() );
                     return false;
@@ -357,7 +357,7 @@ namespace sw::editor
         {
             int32 width{ 0 };
             int32 height{ 0 };
-            if ( ImageUtil::loadGray16FromMemory( bytes.data(), bytes.size(), outData._listHeight, width, height ) == false )
+            if ( RawImageData::loadGray16FromMemory( bytes.data(), bytes.size(), outData._listHeight, width, height ) == false )
                 return false;
             if ( width != height || width < 2 )
             {

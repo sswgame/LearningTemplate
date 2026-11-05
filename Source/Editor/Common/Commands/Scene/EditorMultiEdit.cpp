@@ -9,7 +9,7 @@
 
 namespace sw::editor
 {
-    void EditorMultiEditUtil::collectCommonComponents( const vector<GameObject*>& listObject, vector<EditorMultiEditComponent>& outListCommon )
+    void EditorMultiEditComponent::collectCommonComponents( const vector<GameObject*>& listObject, vector<EditorMultiEditComponent>& outListCommon )
     {
         outListCommon.clear();
         if ( listObject.empty() || listObject[0] == nullptr )
@@ -49,7 +49,7 @@ namespace sw::editor
         }
     }
 
-    bool EditorMultiEditUtil::hasMixedValues( const PropertyInfo& prop, const vector<ObjectAddress>& listInstance )
+    bool EditorMultiEditComponent::hasMixedValues( const PropertyInfo& prop, const vector<ObjectAddress>& listInstance )
     {
         if ( listInstance.size() < 2 )
             return false;
@@ -63,7 +63,7 @@ namespace sw::editor
         return false;
     }
 
-    uint32 EditorMultiEditUtil::copyPropertyToOthers( const PropertyInfo& prop, const vector<Component*>& listComponent )
+    uint32 EditorMultiEditComponent::copyPropertyToOthers( const PropertyInfo& prop, const vector<Component*>& listComponent )
     {
         if ( listComponent.size() < 2 || listComponent[0] == nullptr )
             return 0;

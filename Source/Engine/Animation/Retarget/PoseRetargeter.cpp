@@ -71,7 +71,7 @@ namespace sw
         else
             _targetReference.setToReference( targetSkeleton );
         // 리타깃 포즈는 넘겨받은 덮어쓰기(본 비율) 위에 얹는다 — 회전 차이의 기준이 되는 대상 레퍼런스가 이 포즈다.
-        if ( RetargetPoseUtil::applyTargetPose( profile, targetSkeleton, _targetReference ) == false )
+        if ( PoseRetargeter::applyTargetPose( profile, targetSkeleton, _targetReference ) == false )
             return false;
         _translationMode = profile.getTranslationMode();
 
@@ -209,7 +209,7 @@ namespace sw
         VectorUtil::sort( _listPair, &PoseRetargeter::isPairBefore );
     }
 
-    bool RetargetPoseUtil::applyTargetPose( const RetargetProfile& profile, const Skeleton& targetSkeleton, Pose& inoutPose )
+    bool PoseRetargeter::applyTargetPose( const RetargetProfile& profile, const Skeleton& targetSkeleton, Pose& inoutPose )
     {
         if ( inoutPose.getBoneCount() != targetSkeleton.getBoneCount() )
         {
@@ -300,8 +300,8 @@ namespace sw
         _targetBuffer.writeTo( outTargetPose );
     }
 
-    bool RetargetBakeUtil::bakeClip( PoseRetargeter& retargeter, const AnimationClip& sourceClip, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton,
-                                     float32 sampleRate, const IAnimationCodec& codec, const AnimationCodecSettings& settings, AnimationClip& outClip )
+    bool PoseRetargeter::bakeClip( PoseRetargeter& retargeter, const AnimationClip& sourceClip, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton,
+                                   float32 sampleRate, const IAnimationCodec& codec, const AnimationCodecSettings& settings, AnimationClip& outClip )
     {
         if ( retargeter.isInitialized() == false || sampleRate <= 0.0f )
             return false;
@@ -362,7 +362,7 @@ namespace sw
         return true;
     }
 
-    bool RetargetBakeUtil::bakeClipFile( const AssetID& profileID, const AssetID& sourceClipID, string_view outClipPath )
+    bool PoseRetargeter::bakeClipFile( const AssetID& profileID, const AssetID& sourceClipID, string_view outClipPath )
     {
         const string_view sourceClipPath = sourceClipID.view();
         const string_view profilePath    = profileID.view();

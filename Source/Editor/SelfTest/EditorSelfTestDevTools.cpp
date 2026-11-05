@@ -35,7 +35,7 @@
 #include "Editor/SelfTest/EditorSelfTest.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 #include "Editor/Viewport/EditorViewportProjection.h"
-#include "Editor/Viewport/Model/EditorGridUtil.h"
+#include "Editor/Viewport/Model/EditorGridLevel.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
 #include "Engine/Config/GameAutoplay.h"
@@ -96,7 +96,7 @@ namespace sw::editor
                 if ( context.expect( pPanel != nullptr, "the panel is not registered" ) == false )
                     return nullptr;
                 if ( context.getStepIndex() == 0 )
-                    ImGui::SetWindowFocus( EditorPanelTextUtil::makeWindowID( pPanel->getPanelTitle() ).c_str() );
+                    ImGui::SetWindowFocus( EditorPanelText::makeWindowID( pPanel->getPanelTitle() ).c_str() );
                 return pPanel;
             }
 
@@ -300,7 +300,7 @@ namespace sw::editor
 
                 const IEditorPanel* pPanel = editorContext.getSubsystem<EditorPanelManager>().findPanelByID( kPanelID );
                 (void)context.expect( pPanel != nullptr && pPanel->isOpen(), "loading the layout did not reopen the panel it saved open" );
-                const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( EditorPanelTextUtil::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
+                const ImGuiWindow* pHierarchy = ImGui::FindWindowByName( EditorPanelText::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
                 (void)context.expect( pHierarchy != nullptr && pHierarchy->DockId != 0, "the hierarchy is no longer docked after loading the layout" );
                 (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( kPanelID, false );
                 (void)EditorLayoutStore::remove( folder, kLayoutName ); // 임시 폴더이므로 남아도 다음 실행이 덮어쓴다
@@ -486,7 +486,7 @@ namespace sw::editor
             /** @brief 이번 프레임 "Game" 창의 그리기 목록에서 게임 뷰 이미지 뒤에 그린 정점 수를 셉니다. 이미지를 찾지 못하면 false 입니다. */
             static bool countVerticesAfterGameImage( ImTextureID textureID, int32& outVertexCount )
             {
-                const ImGuiWindow* pWindow             = ImGui::FindWindowByName( EditorPanelTextUtil::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
+                const ImGuiWindow* pWindow             = ImGui::FindWindowByName( EditorPanelText::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
                 const bool         bGameWindowNotDrawn = pWindow == nullptr || pWindow->DrawList == nullptr || pWindow->LastFrameActive != ImGui::GetFrameCount();
                 if ( bGameWindowNotDrawn )
                     return false;
@@ -547,7 +547,7 @@ namespace sw::editor
                 }
                 destroyProbe( pManager, probe._objectID );
                 // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다.
-                ImGui::SetWindowFocus( EditorPanelTextUtil::makeWindowID( SceneViewPanel::kPanelTitle ).c_str() );
+                ImGui::SetWindowFocus( EditorPanelText::makeWindowID( SceneViewPanel::kPanelTitle ).c_str() );
                 return EditorSelfTestStep::Done;
             }
 
@@ -570,7 +570,7 @@ namespace sw::editor
                 (void)context.expect( bDrawn, "the game view was not drawn while its tab was in front" );
 
                 const EditorViewTarget& view    = editorContext.getSubsystem<EditorRenderViews>().getViewTarget( EditorViewKind::Game );
-                const ImGuiWindow*      pWindow = ImGui::FindWindowByName( EditorPanelTextUtil::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
+                const ImGuiWindow*      pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( GameViewPanel::kPanelTitle ).c_str() );
                 if ( context.expect( pWindow != nullptr, "the Game window does not exist" ) == false )
                     return EditorSelfTestStep::Done;
                 // 이미지는 패널 창 안에 놓인다(주 창 클라이언트 픽셀). 주 뷰포트 자리를 빼지 않았거나 패널 밖 값이면 여기서 어긋난다.
@@ -584,7 +584,7 @@ namespace sw::editor
                 const UIViewport& uiViewport = uiSystem.getViewport();
                 (void)context.expect( uiViewport._pointerOrigin == int2{ view._windowX, view._windowY }, "the UI pointer origin differs from the game view image position" );
                 (void)context.expect( input.getGameViewRect()._origin == int2{ view._windowX, view._windowY }, "the input game view origin differs from the game view image position" );
-                ImGui::SetWindowFocus( EditorPanelTextUtil::makeWindowID( SceneViewPanel::kPanelTitle ).c_str() ); // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다
+                ImGui::SetWindowFocus( EditorPanelText::makeWindowID( SceneViewPanel::kPanelTitle ).c_str() ); // 다음 테스트가 기본 탭(씬 뷰)에서 시작하게 되돌린다
                 return EditorSelfTestStep::Done;
             }
         };

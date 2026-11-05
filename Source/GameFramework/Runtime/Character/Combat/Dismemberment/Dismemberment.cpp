@@ -29,8 +29,8 @@ namespace sw
 
 namespace sw
 {
-    bool DismembermentUtil::severRegions( const AppearanceGeometry& body, vector_reference<const uint16> listVertexRegion, vector_reference<const uint16> listSeveredRegion,
-                                          DismembermentResult& outResult )
+    bool DismembermentResult::severRegions( const AppearanceGeometry& body, vector_reference<const uint16> listVertexRegion, vector_reference<const uint16> listSeveredRegion,
+                                            DismembermentResult& outResult )
     {
         outResult                  = DismembermentResult{};
         const uint32 triangleCount = body.getTriangleCount();

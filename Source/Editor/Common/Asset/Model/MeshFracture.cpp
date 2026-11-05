@@ -1245,7 +1245,7 @@ namespace sw::editor
                         inoutPieces._graph._listLink.push_back( FractureLink{ pieceA, pieceB, MathUtil::min( iterAb->second, iterBa->second ) } );
                     }
                 }
-                FractureGraphUtil::normalizeLinks( inoutPieces._graph._listLink );
+                FractureGraph::normalizeLinks( inoutPieces._graph._listLink );
             }
 
             /** @brief 조각 하나의 렌더링 삼각형을 에셋에 더합니다. 메시 부피면 조각 그대로, 대리 부피면 원래 겉면 조각과 대리의 안쪽 면을 씁니다(대리의 바깥 면은 그리지 않는다). */
@@ -1517,7 +1517,7 @@ namespace sw::editor
         Build::linkPieces( cut, pieces );
 
         vector<uint32> listLeafOrder;
-        FractureGraphUtil::populateHierarchy( pieces._graph, settings._listLevelCount, listLeafOrder );
+        FractureGraph::populateHierarchy( pieces._graph, settings._listLevelCount, listLeafOrder );
 
         outAsset._graph = std::move( pieces._graph );
         outAsset._seed  = settings._seed;

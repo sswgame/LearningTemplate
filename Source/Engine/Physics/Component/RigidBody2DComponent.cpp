@@ -18,8 +18,8 @@ namespace sw
         /** @brief 지금 월드 회전에서 Z 축 둘레 각만 바꾼 회전입니다(다른 축 회전은 2D 물리가 모른다 — 그대로 둔다). */
         quaternion replaceRigidBody2DAngle( const quaternion& current, float32 angle )
         {
-            const float32    currentAngle = PhysicsComponentUtil::getAngle2D( current );
-            const quaternion delta        = PhysicsComponentUtil::makeRotation2D( angle - currentAngle );
+            const float32    currentAngle = PhysicsComponent::getAngle2D( current );
+            const quaternion delta        = PhysicsComponent::makeRotation2D( angle - currentAngle );
             return delta * current;
         }
     } // namespace
@@ -185,7 +185,7 @@ namespace sw
         desc._listShape.reserve( _listShape.size() );
         for ( const PhysicsShapeDesc2D& shape : _listShape )
         {
-            desc._listShape.push_back( PhysicsComponentUtil::makeScaledShape( shape, scale ) );
+            desc._listShape.push_back( PhysicsComponent::makeScaledShape( shape, scale ) );
         }
         desc._position           = position;
         desc._rotation           = angle;
@@ -217,9 +217,9 @@ namespace sw
 
     void RigidBody2DComponent::readWorldPose2D( float2& outPosition, float32& outAngle )
     {
-        PhysicsComponentUtil::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
+        PhysicsComponent::readWorldPose( *this, _worldPosition, _worldRotation, _worldScale );
         outPosition = float2{ _worldPosition._x, _worldPosition._y };
-        outAngle    = PhysicsComponentUtil::getAngle2D( _worldRotation );
+        outAngle    = PhysicsComponent::getAngle2D( _worldRotation );
     }
 
     void RigidBody2DComponent::beginPhysicsFrame( ScenePhysics& physics )
@@ -366,8 +366,8 @@ namespace sw
         const float2  position = float2::lerp( _previousPosition, _currentPosition, weight );
         const float32 angle    = MathUtil::lerpAngle( _previousAngle, _currentAngle, weight );
         // Z 와 Z 둘레 밖의 회전은 트랜스폼의 것이다 — 변경 번호가 같으면 지난번에 읽은 값 그대로다.
-        PhysicsComponentUtil::writeWorldPose( *this, float3{ position._x, position._y, _worldPosition._z },
-                                              replaceRigidBody2DAngle( _worldRotation, angle ), _worldScale );
+        PhysicsComponent::writeWorldPose( *this, float3{ position._x, position._y, _worldPosition._z },
+                                          replaceRigidBody2DAngle( _worldRotation, angle ), _worldScale );
         markTransformSynced();
         _bRestPoseWritten = bMovedLastStep == false;
     }

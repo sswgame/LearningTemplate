@@ -115,7 +115,7 @@ namespace sw
      * @brief 한 프레임에 모든 뷰가 같이 쓰는 그림자 값입니다. 아틀라스 배치, 주 시점의 방향광 그림자, 점광과 스폿 타일을 담습니다.
      * @details 패킷이 통째로 싣고 렌더러가 맞바꾸기로 받습니다(저장소가 돌아 다음 프레임에 다시 쓰입니다).
      */
-    struct FrameShadowData
+    struct SW_API FrameShadowData
     {
         ShadowAtlasLayout      _layout{};
         ViewShadowData         _mainView{};
@@ -132,17 +132,8 @@ namespace sw
             _listLocalTile.clear();
             _listLocalBound.clear();
         }
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct ShadowSetupUtil
-     * @brief 그림자 배치를 만드는 함수 묶음입니다. 패킷 경로(`RenderPacketBuilder`)와 씬 직접 경로(`FrameRenderer::execute`)가 같은 함수를 부릅니다.
-     */
-    struct SW_API ShadowSetupUtil
-    {
+        // 그림자 배치를 만드는 함수 묶음입니다. 패킷 경로(`RenderPacketBuilder`)와 씬 직접 경로(`FrameRenderer::execute`)가 같은 함수를 부릅니다.
         /// @brief 캐스케이드 경계를 섞는 폭입니다. 캐스케이드가 맡는 깊이 구간의 이 비율만큼 끝에서 다음 캐스케이드와 섞습니다(유니티 URP Cascade Blend).
         static constexpr float32 kCascadeBlendFraction = 0.1f;
 

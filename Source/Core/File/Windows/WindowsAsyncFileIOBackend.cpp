@@ -154,7 +154,7 @@ namespace sw
                 size_t     readBytes{ 0 };
                 const bool bRead = PlatformFileUtil::readNativeFileAt( pRequest->_pFile->_handle, pRequest->_offset, pRequest->_result._bytes.data(),
                                                                        static_cast<size_t>( pRequest->_size ), readBytes );
-                _pQueue->finish( pRequest, AsyncFileIOBackendUtil::classifyReadResult( bRead, readBytes, pRequest->_size ) );
+                _pQueue->finish( pRequest, IAsyncFileIOBackend::classifyReadResult( bRead, readBytes, pRequest->_size ) );
                 return;
             }
 
@@ -202,7 +202,7 @@ namespace sw
 
             AsyncIOStatus status = AsyncIOStatus::ReadFailed;
             if ( errorCode == ERROR_SUCCESS || errorCode == ERROR_HANDLE_EOF )
-                status = AsyncFileIOBackendUtil::classifyReadResult( true, request._bytesDone, request._size );
+                status = IAsyncFileIOBackend::classifyReadResult( true, request._bytesDone, request._size );
             else if ( errorCode == ERROR_OPERATION_ABORTED )
                 status = AsyncIOStatus::Canceled;
             else
@@ -244,7 +244,7 @@ namespace sw
 
 namespace sw
 {
-    unique_ptr<IAsyncFileIOBackend> AsyncFileIOBackendUtil::createPlatform( AsyncFileIOQueue& queue, AsyncIOBackendKind kind, uint32 maxInFlightCount )
+    unique_ptr<IAsyncFileIOBackend> IAsyncFileIOBackend::createPlatform( AsyncFileIOQueue& queue, AsyncIOBackendKind kind, uint32 maxInFlightCount )
     {
         (void)maxInFlightCount; // 상한은 큐가 지킨다(`tryPop`)
         if ( kind != AsyncIOBackendKind::Auto && kind != AsyncIOBackendKind::Iocp )

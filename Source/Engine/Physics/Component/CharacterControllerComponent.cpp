@@ -123,7 +123,7 @@ namespace sw
         if ( bUnchanged )
             return;
         float3 position{};
-        PhysicsComponentUtil::readWorldPose( *this, position, _worldRotation, _worldScale );
+        PhysicsComponent::readWorldPose( *this, position, _worldRotation, _worldScale );
         if ( bCreate )
         {
             PhysicsCharacterDesc3D desc;
@@ -221,14 +221,14 @@ namespace sw
         if ( consumeTransformChange() )
         {
             float3 current{};
-            PhysicsComponentUtil::readWorldPose( *this, current, _worldRotation, _worldScale );
+            PhysicsComponent::readWorldPose( *this, current, _worldRotation, _worldScale );
         }
         if ( _pendingGroundYaw != 0.0f )
         {
             _worldRotation    = quaternion::concatenate( _worldRotation, quaternion::makeFromAxisAngle( float3{ 0.0f, 1.0f, 0.0f }, _pendingGroundYaw ) ).normalize();
             _pendingGroundYaw = 0.0f;
         }
-        PhysicsComponentUtil::writeWorldPose( *this, position, _worldRotation, _worldScale );
+        PhysicsComponent::writeWorldPose( *this, position, _worldRotation, _worldScale );
         markTransformSynced();
     }
 

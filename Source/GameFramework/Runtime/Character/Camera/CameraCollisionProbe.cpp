@@ -81,7 +81,7 @@ namespace sw
         float32         nearest = length;
         bool            bHit    = false;
         CharacterRayHit hit;
-        if ( CharacterHitUtil::sphereCast3D( _manager, from, displacement, length, radius, layerMask, _ignoredObjectID, hit ) )
+        if ( CharacterRayHit::sphereCast3D( _manager, from, displacement, length, radius, layerMask, _ignoredObjectID, hit ) )
         {
             nearest = hit._distance;
             bHit    = true;
@@ -89,7 +89,7 @@ namespace sw
         // 2D 씬(2D 콜라이더 포함)은 XY 평면 — 암의 평면 성분으로 원을 쓸고, 닿은 비율을 3D 길이로 되돌린다. 암이 Z 로만 뻗으면 평면에서 걸리는 것이 없다.
         const float32 planarLength = float2{ displacement._x, displacement._y }.getLength();
         if ( planarLength > MathUtil::kEpsilon &&
-             CharacterHitUtil::circleCast2D( _manager, from, displacement, planarLength, radius, layerMask, _ignoredObjectID, hit ) )
+             CharacterRayHit::circleCast2D( _manager, from, displacement, planarLength, radius, layerMask, _ignoredObjectID, hit ) )
         {
             const float32 distance = hit._distance / planarLength * length;
             if ( bHit == false || distance < nearest )

@@ -8,7 +8,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Asset/OutfitAtlas.h"
-#include "Editor/Common/Asset/Texture/ImageUtil.h"
+#include "Editor/Common/Asset/Texture/RawImageData.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Asset/Image/ImageFileWriter.h"
@@ -127,7 +127,7 @@ namespace sw::editor
                     const string&                     texture = findTexture( map, part._name );
                     RawImageData                      image;
                     const std::optional<AbsolutePath> textureFile = editor::getSubsystem<AssetPaths>().toDiskPath( texture );
-                    if ( textureFile.has_value() == false || ImageUtil::loadImage( textureFile->str(), image ) == false || image.isValid() == false )
+                    if ( textureFile.has_value() == false || RawImageData::loadImage( textureFile->str(), image ) == false || image.isValid() == false )
                     {
                         SW_LOG_ERROR_ID( "OutfitAtlasBaker.OutfitAtlasMapTexture", "Outfit atlas map '%#': texture '%#' of part '%#' could not be read", map._name.c_str(), texture.c_str(), part._name.c_str() );
                         return false;

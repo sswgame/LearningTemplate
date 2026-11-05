@@ -8,7 +8,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
-#include "GameFramework/Runtime/World/Spline/ArcLengthUtil.h"
+#include "GameFramework/Runtime/World/Spline/ArcLengthSpan.h"
 
 namespace sw
 {
@@ -139,7 +139,7 @@ namespace sw
 
     float32 CoasterTrack::wrapDistance( float32 distance ) const
     {
-        return ArcLengthUtil::wrapDistance( distance, _length, _bClosed == SW_TRUE );
+        return ArcLengthSpan::wrapDistance( distance, _length, _bClosed == SW_TRUE );
     }
 
     CoasterTrackFrame CoasterTrack::sample( float32 distance ) const
@@ -153,7 +153,7 @@ namespace sw
             return frame;
         }
 
-        const ArcLengthSpan span  = ArcLengthUtil::findSpan( _listPoint, &Point::_distance, wrapDistance( distance ), _length, _bClosed == SW_TRUE );
+        const ArcLengthSpan span  = ArcLengthSpan::findSpan( _listPoint, &Point::_distance, wrapDistance( distance ), _length, _bClosed == SW_TRUE );
         const Point&        from  = _listPoint[span._index];
         const Point&        to    = _listPoint[span._nextIndex];
         const float32       alpha = span._alpha;

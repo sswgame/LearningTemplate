@@ -186,9 +186,9 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsInOrderUntilTheAtlasIsFull )
     listLight.push_back( Internal::makePointLight( sw::float3{ -6.0f, 2.0f, 0.0f }, 5.0f ) );
     const sw::vector<uint32> listShadowIndex{ 1u, 2u, 3u };
 
-    SW_EXPECT_EQUAL( sw::ShadowSetupUtil::countLocalTiles( listLight, listShadowIndex ), 13u );
+    SW_EXPECT_EQUAL( sw::FrameShadowData::countLocalTiles( listLight, listShadowIndex ), 13u );
     sw::FrameShadowData frame;
-    sw::ShadowSetupUtil::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
     SW_EXPECT_EQUAL( frame._layout.getCascadeCount(), 1u );
     SW_EXPECT_EQUAL( frame._layout.getLocalCapacity(), 12u );
 
@@ -203,7 +203,7 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsInOrderUntilTheAtlasIsFull )
     SW_EXPECT_EQUAL( frame._listTileElement.size(), static_cast<size_t>( 7 * sw::shaderslot::kShadowTileElementCount ) );
     SW_EXPECT_EQUAL( frame._listLocalBound.size(), static_cast<size_t>( 2 ) );
     // 그림자 빛이 없으면 주 시점은 그림자 없는 뷰(makeUnshadowedView)다 — 키 라이트로 볼륨을 지어내지 않는다.
-    const sw::ViewShadowData unshadowed = sw::ShadowSetupUtil::makeUnshadowedView( frame._layout );
+    const sw::ViewShadowData unshadowed = sw::FrameShadowData::makeUnshadowedView( frame._layout );
     SW_EXPECT_TRUE( frame._mainView._bValid == SW_TRUE );
     SW_EXPECT_EQUAL( frame._mainView._cascadeCount, unshadowed._cascadeCount );
     SW_EXPECT_NEAR( frame._mainView._arrCascade[0]._w, unshadowed._arrCascade[0]._w, 1e-6f );
@@ -226,7 +226,7 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsByScreenPriority )
     const sw::vector<uint32> listShadowIndex{ 0u, 1u, 2u };
 
     sw::FrameShadowData frame;
-    sw::ShadowSetupUtil::populateFrame( nullptr, &viewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( nullptr, &viewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
     SW_REQUIRE_EQUAL( frame._layout.getLocalCapacity(), 12u );
     SW_EXPECT_NEAR( listLight[0]._params._x, 0.0f, 1e-6f ); // 먼 점광은 칸이 모자라 그림자 없음
     SW_EXPECT_NEAR( listLight[1]._params._x, 1.0f, 1e-6f );
@@ -237,10 +237,10 @@ SW_TEST_CASE( ShadowSetupTest, LocalLightsTakeCellsByScreenPriority )
     SW_EXPECT_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 7 ) );
 
     const sw::GPULight behind = Internal::makePointLight( sw::float3{ 0.0f, 2.0f, -30.0f }, 5.0f );
-    SW_EXPECT_NEAR( sw::ShadowSetupUtil::computeLocalShadowPriority( behind, viewProj ), 0.0f, 1e-6f );
+    SW_EXPECT_NEAR( sw::FrameShadowData::computeLocalShadowPriority( behind, viewProj ), 0.0f, 1e-6f );
     const sw::GPULight around   = Internal::makePointLight( sw::float3{ 0.0f, 2.0f, 0.0f }, 5.0f );
-    const float32      priority = sw::ShadowSetupUtil::computeLocalShadowPriority( around, viewProj );
-    SW_EXPECT_NEAR( priority, 1.0f / sw::ShadowSetupUtil::kLocalPriorityMinDepthFraction, 1e-3f );
+    const float32      priority = sw::FrameShadowData::computeLocalShadowPriority( around, viewProj );
+    SW_EXPECT_NEAR( priority, 1.0f / sw::FrameShadowData::kLocalPriorityMinDepthFraction, 1e-3f );
 }
 
 /**
@@ -254,7 +254,7 @@ SW_TEST_CASE( ShadowSetupTest, PointFacesProjectIntoTheirOwnCells )
     sw::vector<sw::GPULight> listLight{ Internal::makePointLight( lightPosition, 10.0f ) };
     const sw::vector<uint32> listShadowIndex{ 0u };
     sw::FrameShadowData      frame;
-    sw::ShadowSetupUtil::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
     SW_REQUIRE_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( sw::shaderslot::kPointShadowFaceCount ) );
 
     const sw::float3 arrOffset[] = {
@@ -302,7 +302,7 @@ SW_TEST_CASE( ShadowSetupTest, SpotCellCoversTheOuterCone )
     sw::vector<sw::GPULight> listLight{ Internal::makeSpotLight( lightPosition, 12.0f, sw::float3{ 0.0f, -1.0f, 0.0f }, kOuterHalf ) };
     const sw::vector<uint32> listShadowIndex{ 0u };
     sw::FrameShadowData      frame;
-    sw::ShadowSetupUtil::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( nullptr, nullptr, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
     SW_REQUIRE_EQUAL( frame._listLocalTile.size(), static_cast<size_t>( 1 ) );
     const sw::float4x4  shading = Internal::makeMatrixFromElement( frame._listTileElement[0] );
     const sw::GPULight& info    = frame._listTileElement[1];
@@ -458,9 +458,9 @@ SW_TEST_CASE( ShadowSetupTest, ExtraViewShadowFollowsItsOwnCamera )
     sw::vector<sw::GPULight> listLight;
     const sw::vector<uint32> listShadowIndex;
     sw::FrameShadowData      frame;
-    sw::ShadowSetupUtil::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
     SW_REQUIRE_TRUE( frame._mainView._bValid == SW_TRUE );
-    const sw::ViewShadowData extra = sw::ShadowSetupUtil::makeViewShadowFor( pLight, extraViewProj, frame );
+    const sw::ViewShadowData extra = sw::FrameShadowData::makeViewShadowFor( pLight, extraViewProj, frame );
     SW_REQUIRE_TRUE( extra._bValid == SW_TRUE );
 
     const sw::float3 extraNdc = Internal::projectToNdc( extraFocus, extra._lightViewProj );
@@ -470,7 +470,7 @@ SW_TEST_CASE( ShadowSetupTest, ExtraViewShadowFollowsItsOwnCamera )
     SW_EXPECT_FALSE_MSG( sw::MathUtil::abs( mainNdc._x ) <= 1.0f && sw::MathUtil::abs( mainNdc._y ) <= 1.0f, "주 시점 볼륨이 이미 추가 뷰의 초점을 덮는다 — 테스트 배치가 무의미하다" );
 
     // 그림자 빛이 없으면 추가 뷰는 주 시점의 것을 그대로 쓴다.
-    const sw::ViewShadowData fallback = sw::ShadowSetupUtil::makeViewShadowFor( nullptr, extraViewProj, frame );
+    const sw::ViewShadowData fallback = sw::FrameShadowData::makeViewShadowFor( nullptr, extraViewProj, frame );
     SW_EXPECT_NEAR( fallback._lightViewProj._11, frame._mainView._lightViewProj._11, 1e-6f );
     SW_EXPECT_NEAR( fallback._lightViewProj._42, frame._mainView._lightViewProj._42, 1e-6f );
 }
@@ -491,7 +491,7 @@ SW_TEST_CASE( ShadowSetupTest, ShadowCullBoxCoversLocalLights )
     sw::vector<sw::GPULight> listLight{ Internal::makePointLight( farPoint, 6.0f ) };
     const sw::vector<uint32> listShadowIndex{ 0u };
     sw::FrameShadowData      frame;
-    sw::ShadowSetupUtil::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
+    sw::FrameShadowData::populateFrame( pLight, &mainViewProj, Internal::kAtlasResolution, listShadowIndex, listLight, frame );
     SW_REQUIRE_TRUE( frame._mainView._bValid == SW_TRUE );
 
     const sw::float3 shadingNdc = Internal::projectToNdc( farPoint, frame._mainView._lightViewProj );

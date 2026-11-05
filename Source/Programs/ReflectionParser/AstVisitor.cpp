@@ -2036,7 +2036,7 @@ namespace sw
                 // `Meta` 의 `Units` 는 철자 검사를 받지 않으므로 표에 없는 글자(`HP`)만 받는다 — 표에 있는 단위는 `Units = …` 로 적는다.
                 for ( const auto& [key, value] : prop._listCustomMeta )
                 {
-                    if ( key == "Units" && ReflectUnitUtil::findUnit( value ) != nullptr )
+                    if ( key == "Units" && ReflectUnit::findUnit( value ) != nullptr )
                     {
                         SW_LOG_ERROR_ID( "AstVisitor.ERRORWritesMetaUnits", "ERROR: '%#' writes Meta = \"Units=%#\" - a known unit is written PROPERTY( Units = %# ).", owner, value, value );
                         return false;
@@ -2045,10 +2045,10 @@ namespace sw
 
                 if ( prop._units.empty() == false )
                 {
-                    if ( ReflectUnitUtil::findUnit( prop._units ) == nullptr )
+                    if ( ReflectUnit::findUnit( prop._units ) == nullptr )
                     {
                         SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYUnitsUnknown", "ERROR: PROPERTY( Units = %# ) on '%#' - unknown unit. Known: %#. A free-form label is written Meta = \"Units=…\".",
-                                         prop._units, owner, ReflectUnitUtil::makeUnitList() );
+                                         prop._units, owner, ReflectUnit::makeUnitList() );
                         return false;
                     }
                     for ( const auto& [key, value] : prop._listCustomMeta )

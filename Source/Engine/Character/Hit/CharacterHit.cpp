@@ -73,8 +73,8 @@ namespace sw
 
 namespace sw
 {
-    bool CharacterHitUtil::raycast3D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
-                                      uint64 ignoreObjectID, CharacterRayHit& outHit )
+    bool CharacterRayHit::raycast3D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
+                                     uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
         const IPhysicsQueryScene3D* pScene            = manager.getSubsystem<sw::ScenePhysics>().findScene3D();
         const bool                  bInvalidRaycast3D = pScene == nullptr || maxDistance <= 0.0f || direction.getLengthSquared() <= 1.0e-12f;
@@ -87,8 +87,8 @@ namespace sw
         return true;
     }
 
-    bool CharacterHitUtil::raycast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
-                                      uint64 ignoreObjectID, CharacterRayHit& outHit )
+    bool CharacterRayHit::raycast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
+                                     uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
         const IPhysicsQueryScene2D* pScene = manager.getSubsystem<sw::ScenePhysics>().findScene2D();
         float2                      planar{};
@@ -102,8 +102,8 @@ namespace sw
         return true;
     }
 
-    bool CharacterHitUtil::sphereCast3D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 radius,
-                                         uint32 layerMask, uint64 ignoreObjectID, CharacterRayHit& outHit )
+    bool CharacterRayHit::sphereCast3D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 radius,
+                                        uint32 layerMask, uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
         if ( radius <= 0.0f )
             return raycast3D( manager, origin, direction, maxDistance, layerMask, ignoreObjectID, outHit );
@@ -122,8 +122,8 @@ namespace sw
         return true;
     }
 
-    bool CharacterHitUtil::circleCast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 radius,
-                                         uint32 layerMask, uint64 ignoreObjectID, CharacterRayHit& outHit )
+    bool CharacterRayHit::circleCast2D( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, float32 radius,
+                                        uint32 layerMask, uint64 ignoreObjectID, CharacterRayHit& outHit )
     {
         if ( radius <= 0.0f )
             return raycast2D( manager, origin, direction, maxDistance, layerMask, ignoreObjectID, outHit );
@@ -143,8 +143,8 @@ namespace sw
         return true;
     }
 
-    uint32 CharacterHitUtil::sweepAll( const GameObjectManager& manager, const float3& from, const float3& to, float32 radius, uint32 layerMask, uint64 ignoreObjectID,
-                                       bool bIs2D, vector<CharacterRayHit>& outListHit )
+    uint32 CharacterRayHit::sweepAll( const GameObjectManager& manager, const float3& from, const float3& to, float32 radius, uint32 layerMask, uint64 ignoreObjectID,
+                                      bool bIs2D, vector<CharacterRayHit>& outListHit )
     {
         const float3             delta  = to - from;
         const PhysicsQueryFilter filter = CharacterHitInternal::makeFilter( layerMask, ignoreObjectID );
@@ -199,7 +199,7 @@ namespace sw
         return static_cast<uint32>( outListHit.size() - first );
     }
 
-    void CharacterHitUtil::resolveHitZone( const GameObject& target, PhysicsBodyHandle body, HitInfo& inoutHit )
+    void CharacterRayHit::resolveHitZone( const GameObject& target, PhysicsBodyHandle body, HitInfo& inoutHit )
     {
         CharacterHitInternal::applyHitZone( PhysicsHitZoneDef{}, inoutHit );
         inoutHit._bodyIndex = -1;
@@ -236,7 +236,7 @@ namespace sw
         }
     }
 
-    HitInfo CharacterHitUtil::makeHitInfo( const CharacterRayHit& rayHit, GameObject* pInstigator, const float3& direction, float32 damage, float32 impulse )
+    HitInfo CharacterRayHit::makeHitInfo( const CharacterRayHit& rayHit, GameObject* pInstigator, const float3& direction, float32 damage, float32 impulse )
     {
         HitInfo hit;
         hit._pInstigator = pInstigator;
@@ -252,7 +252,7 @@ namespace sw
         return hit;
     }
 
-    void CharacterHitUtil::deliverHit( GameObject& target, const HitInfo& hit )
+    void CharacterRayHit::deliverHit( GameObject& target, const HitInfo& hit )
     {
         if ( target.isPendingDestroy() || target.isActiveInHierarchy() == false )
             return;
@@ -266,8 +266,8 @@ namespace sw
         }
     }
 
-    bool CharacterHitUtil::traceWeaponHit( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
-                                           GameObject* pInstigator, float32 damage, float32 impulse, bool bIs2D, HitInfo& outHit )
+    bool CharacterRayHit::traceWeaponHit( const GameObjectManager& manager, const float3& origin, const float3& direction, float32 maxDistance, uint32 layerMask,
+                                          GameObject* pInstigator, float32 damage, float32 impulse, bool bIs2D, HitInfo& outHit )
     {
         const uint64    ignoreID = pInstigator != nullptr ? pInstigator->getObjectID() : 0;
         CharacterRayHit rayHit;

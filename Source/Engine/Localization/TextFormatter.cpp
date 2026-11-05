@@ -7,7 +7,7 @@
 #include "Core/Container/set.h"
 #include "Core/String/StringBuilder.h"
 
-#include "Engine/Localization/TimeZoneUtil.h"
+#include "Engine/Localization/TimeZoneInfo.h"
 
 namespace sw
 {
@@ -530,7 +530,7 @@ namespace sw
                 // 시각의 long · full 스타일은 시간대를 아는 값에 오프셋을 붙인다(ICU 의 z)
                 const bool bLongTime = type == "time" && ( style == "long" || style == "full" );
                 if ( bLongTime && pArgument->_dateTime._bZoned )
-                    outText.append( " " ).append( TimeZoneUtil::formatOffset( pArgument->_dateTime._utcOffsetMinutes, false ) );
+                    outText.append( " " ).append( TimeZoneInfo::formatOffset( pArgument->_dateTime._utcOffsetMinutes, false ) );
             }
 
         private:
@@ -607,7 +607,7 @@ namespace sw
 
     TextArgumentList& TextArgumentList::addUnixTime( string_view name, int64 unixMilliseconds, const TimeZoneInfo& zone )
     {
-        return addDateTime( name, TimeZoneUtil::convertUnixMilliseconds( unixMilliseconds, zone ) );
+        return addDateTime( name, TimeZoneInfo::convertUnixMilliseconds( unixMilliseconds, zone ) );
     }
 
     const TextArgument* TextArgumentList::findArgument( string_view name ) const

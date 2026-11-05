@@ -13,19 +13,19 @@
 
 namespace sw::editor
 {
-    const TypeInfo* InspectorComponentPickerUtil::findTargetType( const TypeRegistry& registry, const PropertyInfo& prop )
+    const TypeInfo* InspectorComponentChoice::findTargetType( const TypeRegistry& registry, const PropertyInfo& prop )
     {
         return findTargetType( registry, prop._handleTargetTypeName );
     }
 
-    const TypeInfo* InspectorComponentPickerUtil::findTargetType( const TypeRegistry& registry, const hashed_string& targetTypeName )
+    const TypeInfo* InspectorComponentChoice::findTargetType( const TypeRegistry& registry, const hashed_string& targetTypeName )
     {
         if ( targetTypeName.empty() )
             return nullptr;
         return registry.findType( targetTypeName );
     }
 
-    string InspectorComponentPickerUtil::makeLabel( const Component& component )
+    string InspectorComponentChoice::makeLabel( const Component& component )
     {
         const GameObject* pOwner = component.getOwner();
         string            label  = pOwner != nullptr ? string( pOwner->getName().c_str() ) : string();
@@ -34,7 +34,7 @@ namespace sw::editor
         return label;
     }
 
-    void InspectorComponentPickerUtil::collectChoices( const GameObjectManager& manager, const TypeInfo& targetType, vector<InspectorComponentChoice>& outListChoice )
+    void InspectorComponentChoice::collectChoices( const GameObjectManager& manager, const TypeInfo& targetType, vector<InspectorComponentChoice>& outListChoice )
     {
         outListChoice.clear();
         // 콜백은 공유 잠금 안이라 구조를 바꾸지 않는다. 핸들과 라벨만 모은다.
@@ -45,7 +45,7 @@ namespace sw::editor
         { return lhs._label < rhs._label; } );
     }
 
-    InspectorHandleState InspectorComponentPickerUtil::computeHandleState( const GameObjectManager& manager, const TypeInfo& targetType, ComponentHandle handle )
+    InspectorHandleState InspectorComponentChoice::computeHandleState( const GameObjectManager& manager, const TypeInfo& targetType, ComponentHandle handle )
     {
         if ( handle.isValid() == false )
             return InspectorHandleState::Empty;

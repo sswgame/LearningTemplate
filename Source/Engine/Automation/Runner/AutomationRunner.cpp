@@ -415,7 +415,7 @@ namespace sw
         _frameStats.onFrameEnd(); // 벤치마크 구간이면 이 프레임의 벽시계 시간을 쌓는다
         const size_t stepIndexBefore = _run._nextStepIndex;
         finishIfWallClockExceeded();
-        const bool bRefreshCrashContext = _bStarted == SW_TRUE && _result == AutomationOutcome::Running && _run._seenFrameCount % AutomationRunTitleUtil::kTitleRefreshFrames == 0;
+        const bool bRefreshCrashContext = _bStarted == SW_TRUE && _result == AutomationOutcome::Running && _run._seenFrameCount % AutomationRunTitleInput::kTitleRefreshFrames == 0;
         if ( bRefreshCrashContext )
             updateCrashContext();
         const bool bRunsSteps = _result == AutomationOutcome::Running && _bStarted == SW_TRUE && _run._bClockHeld == SW_FALSE; // 시계 잡기 조건이 붙잡은 프레임은 단계를 돌리지 않는다
@@ -453,7 +453,7 @@ namespace sw
                 {
                     _run._currentStepKind   = step._kind;
                     _run._currentStepNumber = step._orderInFile;
-                    const string stepLine   = AutomationRunTitleUtil::makeStepLogLine( _scenario.getName(), _run._currentStepNumber, _run._currentStepKind, _run._frameIndex );
+                    const string stepLine   = AutomationRunTitleInput::makeStepLogLine( _scenario.getName(), _run._currentStepNumber, _run._currentStepKind, _run._frameIndex );
                     SW_LOG_INFO_ID( "Automation.Step", "%#", stepLine.c_str() );
                     engine::getSubsystem<CrashHandler>().addBreadcrumb( stepLine ); // 크래시 보고에 최근 단계 전환이 남는다
                     updateCrashContext();
@@ -610,7 +610,7 @@ namespace sw
         input._stepKind     = _run._currentStepKind;
         input._stepNumber   = _run._currentStepNumber;
         input._frame        = _run._frameIndex;
-        return AutomationRunTitleUtil::makeSummary( input );
+        return AutomationRunTitleInput::makeSummary( input );
     }
 
     void AutomationRunner::updateCrashContext( string_view note )
@@ -624,7 +624,7 @@ namespace sw
             text += ')';
         }
         // 키 하나가 시나리오 · 백엔드 · 단계 · 프레임을 든다. 값 길이를 넘으면 글자 경계에서 자른다(저장소가 조용히 자르면 UTF-8 중간이 깨진다).
-        engine::getSubsystem<CrashHandler>().setContextValue( "Scenario", AutomationRunTitleUtil::truncateUTF8( text, CrashContextStore::kMaxValueLength - 1 ) );
+        engine::getSubsystem<CrashHandler>().setContextValue( "Scenario", AutomationRunTitleInput::truncateUTF8( text, CrashContextStore::kMaxValueLength - 1 ) );
         publishHangSnapshot( position ); // 행 감시 스레드가 읽을 같은 자리(단계 전환 때와 30 프레임마다)
     }
 
@@ -635,7 +635,7 @@ namespace sw
         {
             reproduceInput._listExtraArgument.push_back( "-" + variable._name + "=" + variable._value ); // `<Launch>` 변수는 명령줄에 있어야 시작한다
         }
-        return AutomationRunTitleUtil::makeReproduceCommand( reproduceInput );
+        return AutomationRunTitleInput::makeReproduceCommand( reproduceInput );
     }
 
     void AutomationRunner::startHangWatchdog()

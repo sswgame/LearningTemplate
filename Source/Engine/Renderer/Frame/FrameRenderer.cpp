@@ -594,7 +594,7 @@ namespace sw
             _state._frameShadow._layout = ShadowAtlasLayout::make( atlasResolution, _state._frameShadow._layout.getCascadeCount(), static_cast<uint32>( _state._frameShadow._listLocalTile.size() ) );
         // 게임 스레드가 그림자 배치를 만들지 않은 프레임(씬 없음)은 그림자 없는 뷰다. 빛이 없는데 그림자 볼륨을 지어내지 않는다.
         if ( _state._frameShadow._mainView._bValid == SW_FALSE )
-            _state._frameShadow._mainView = ShadowSetupUtil::makeUnshadowedView( _state._frameShadow._layout );
+            _state._frameShadow._mainView = FrameShadowData::makeUnshadowedView( _state._frameShadow._layout );
         _state._mainView._shadow = _state._frameShadow._mainView;
     }
 
@@ -1076,7 +1076,7 @@ namespace sw
         view._cullInput._position = request._position;
         if ( view._bRenderThisFrame == SW_FALSE )
             return;
-        // 방향광 그림자는 이 뷰의 카메라에 맞춘 것이다 — 그리는 뷰는 게임 스레드가 늘 채운다(그림자 빛이 없으면 그림자 없는 뷰, `ShadowSetupUtil::makeViewShadowFor`).
+        // 방향광 그림자는 이 뷰의 카메라에 맞춘 것이다 — 그리는 뷰는 게임 스레드가 늘 채운다(그림자 빛이 없으면 그림자 없는 뷰, `FrameShadowData::makeViewShadowFor`).
         // 비었으면 주 시점 것을 빌리지 않는다(다른 곳을 보는 뷰는 그림자가 빠진다) — 이 뷰를 그리지 않는다.
         if ( request._shadow._bValid == SW_FALSE )
         {

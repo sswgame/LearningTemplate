@@ -322,7 +322,7 @@ namespace sw
         }
         const Stopwatch stopwatch;
         if ( runtime._pNavMesh->initialize( agentType, _settings, pEntry->_bounds ) == false ||
-             NavMeshBakeUtil::installTiles( *runtime._pNavMesh, pEntry->_listTile ) == false )
+             NavMeshAsset::installTiles( *runtime._pNavMesh, pEntry->_listTile ) == false )
         {
             SW_LOG_WARNING_ID( "SceneNavigation.CookedNavmeshCouldNot", "Cooked navmesh '%#' (%#) could not be installed - baking at runtime", cookedPath.c_str(), agentType._name.c_str() );
             return false;
@@ -404,7 +404,7 @@ namespace sw
                 return nullptr;
             }
             pRuntime->_bounds = bounds;
-            (void)NavMeshBakeUtil::bakeAllTiles( *pRuntime->_pNavMesh, *pGeometry, pVolume.get(), &pRuntime->_bakeStats );
+            (void)NavMeshAsset::bakeAllTiles( *pRuntime->_pNavMesh, *pGeometry, pVolume.get(), &pRuntime->_bakeStats );
             SW_LOG_INFO_ID( "SceneNavigation.NavmeshBakedTilesPolygons", "Navmesh '%#' baked: %# of %# tiles, %# polygons, %# triangles in, %# ms", pType->_name.c_str(), pRuntime->_bakeStats._filledTileCount,
                             pRuntime->_bakeStats._tileCount, pRuntime->_bakeStats._polygonCount, pGeometry->getTriangleCount(), pRuntime->_bakeStats._milliseconds );
         }
@@ -642,7 +642,7 @@ namespace sw
         for ( size_t agentIndex = 0; agentIndex < _listAgent.size(); ++agentIndex )
         {
             NavMeshAgentComponent& agent = *_listAgent[agentIndex];
-            if ( SceneNavigationUtil::isLive( agent ) == false )
+            if ( NavMeshRuntime::isLive( agent ) == false )
             {
                 releaseAgent( &agent );
                 continue;

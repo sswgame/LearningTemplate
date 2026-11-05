@@ -1,12 +1,12 @@
 #include "pch.h"
 
-#include "Engine/Localization/CurrencyUtil.h"
+#include "Engine/Localization/CurrencyInfo.h"
 
 namespace sw
 {
     namespace
     {
-        struct CurrencyUtilInternal
+        struct CurrencyInfoInternal
         {
             static constexpr CurrencyInfo kArrCurrency[] = {
                 {"USD",   "$", 2},
@@ -26,9 +26,9 @@ namespace sw
 
 namespace sw
 {
-    const CurrencyInfo* CurrencyUtil::findCurrency( string_view code )
+    const CurrencyInfo* CurrencyInfo::findCurrency( string_view code )
     {
-        for ( const CurrencyInfo& currency : CurrencyUtilInternal::kArrCurrency )
+        for ( const CurrencyInfo& currency : CurrencyInfoInternal::kArrCurrency )
         {
             if ( code == currency._pCode )
                 return &currency;

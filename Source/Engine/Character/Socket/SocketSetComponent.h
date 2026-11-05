@@ -3,7 +3,7 @@
  * @brief 오브젝트 하나의 소켓과 마커 테이블(`*.sockets.xml`)을 가지고, 이름에서 월드 변환을 구하는 컴포넌트와 조회 도우미입니다.
  * @details 소켓은 같은 오브젝트의 애니메이션 유닛(`SkeletalMeshComponent`)의 현재 본을 따르고, 유닛이 없으면(문, 레버, 상자) 오브젝트 루트 기준이다.
  *          상호작용의 맞춤 마커(`Front`, `Handle`), 알림의 이펙트와 칼 끝 위치, 무기의 총구가 같은 테이블에서 나온다. 부모 본 이름은 시작할 때 유닛의
- *          스켈레톤과 대조한다(모르는 본은 오류). 조회 도우미(`SocketLookupUtil`)는 테이블에 없는 이름을 유닛의 본 이름으로도 받는다(`foot.l`).
+ *          스켈레톤과 대조한다(모르는 본은 오류). 조회 도우미(`SocketSetComponent`)는 테이블에 없는 이름을 유닛의 본 이름으로도 받는다(`foot.l`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -30,6 +30,16 @@ namespace sw
     class SW_API SocketSetComponent : public Component
     {
     public:
+        // 오브젝트의 소켓과 본 이름을 월드 변환으로 변환합니다(전부 static, 게임 스레드).
+        /**
+         * @brief @p object 의 소켓 @p name 의 월드 변환을 구합니다. 소켓 테이블(`SocketSetComponent`)에서 먼저 찾고, 없으면 유닛의 본 이름으로 찾습니다.
+         * @details 유닛 공간은 `SkeletalMeshComponent` 의 월드 변환 아래에 있고, 유닛이 없으면 오브젝트 루트 아래에 있다.
+         * @return 테이블에도 본에도 없으면 false 를 반환합니다.
+         */
+        [[nodiscard]] static bool findSocketWorldTransform( const GameObject& object, const hashed_string& name, float4x4& outWorldTransform );
+        /** @brief 소켓의 월드 위치를 반환합니다. 찾지 못하면 오브젝트 루트 위치를 반환하고 false 를 반환합니다. */
+        [[nodiscard]] static bool findSocketWorldPosition( const GameObject& object, const hashed_string& name, float3& outPosition );
+
         REFLECT_BODY();
 
         SocketSetComponent();
@@ -58,21 +68,5 @@ namespace sw
         string _socketSetPath;
 
         shared_ptr<const SocketSet> _socketSet; ///< 캐시가 제자리에서 다시 읽으므로, 파일을 고치면 이 객체가 새 내용이다.
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 오브젝트의 소켓과 본 이름을 월드 변환으로 변환합니다(전부 static, 게임 스레드). */
-    struct SW_API SocketLookupUtil
-    {
-        /**
-         * @brief @p object 의 소켓 @p name 의 월드 변환을 구합니다. 소켓 테이블(`SocketSetComponent`)에서 먼저 찾고, 없으면 유닛의 본 이름으로 찾습니다.
-         * @details 유닛 공간은 `SkeletalMeshComponent` 의 월드 변환 아래에 있고, 유닛이 없으면 오브젝트 루트 아래에 있다.
-         * @return 테이블에도 본에도 없으면 false 를 반환합니다.
-         */
-        [[nodiscard]] static bool findSocketWorldTransform( const GameObject& object, const hashed_string& name, float4x4& outWorldTransform );
-        /** @brief 소켓의 월드 위치를 반환합니다. 찾지 못하면 오브젝트 루트 위치를 반환하고 false 를 반환합니다. */
-        [[nodiscard]] static bool findSocketWorldPosition( const GameObject& object, const hashed_string& name, float3& outPosition );
     };
 } // namespace sw

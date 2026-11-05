@@ -125,7 +125,7 @@ namespace sw
         using Internal = NavTileRebakerInternal;
         for ( NavMeshObstacleComponent* pObstacle : listObstacle )
         {
-            if ( SceneNavigationUtil::isLive( *pObstacle ) == false )
+            if ( NavMeshRuntime::isLive( *pObstacle ) == false )
             {
                 if ( pObstacle->_bCarved == SW_TRUE )
                     forgetObstacle( *pObstacle, listRuntime );

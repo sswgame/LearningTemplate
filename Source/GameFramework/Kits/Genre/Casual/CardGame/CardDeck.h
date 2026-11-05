@@ -67,6 +67,13 @@ namespace sw
     class SW_KIT_API CardPile
     {
     public:
+        // 트럼프 덱 도우미입니다.
+        /** @brief 52장(무늬 순, 숫자 순, 번호 0..51)과 조커 @p jokerCount 장(번호 52부터)을 @p outPile 에 채웁니다. 섞지는 않습니다. */
+        static void makeStandardDeck( CardPile& outPile, int32 jokerCount = 0 );
+        static bool isRedSuit( uint8 suit ) { return suit == StandardSuit::kDiamonds || suit == StandardSuit::kHearts; }
+        /** @brief @p listCardInDrawOrder 의 첫 카드가 가장 먼저 뽑히는 더미를 만듭니다(테스트와 리플레이용 덱). */
+        static void makePileInDrawOrder( const vector<Card>& listCardInDrawOrder, CardPile& outPile );
+
         CardPile();
 
         void clear() { _listCard.clear(); }
@@ -108,19 +115,6 @@ namespace sw
 
     private:
         vector<Card> _listCard; ///< [0] 이 맨 아래이고 끝이 맨 위이다
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 트럼프 덱 도우미입니다. */
-    struct SW_KIT_API CardDeckUtil
-    {
-        /** @brief 52장(무늬 순, 숫자 순, 번호 0..51)과 조커 @p jokerCount 장(번호 52부터)을 @p outPile 에 채웁니다. 섞지는 않습니다. */
-        static void makeStandardDeck( CardPile& outPile, int32 jokerCount = 0 );
-        static bool isRedSuit( uint8 suit ) { return suit == StandardSuit::kDiamonds || suit == StandardSuit::kHearts; }
-        /** @brief @p listCardInDrawOrder 의 첫 카드가 가장 먼저 뽑히는 더미를 만듭니다(테스트와 리플레이용 덱). */
-        static void makePileInDrawOrder( const vector<Card>& listCardInDrawOrder, CardPile& outPile );
     };
 } // namespace sw
 

@@ -96,7 +96,7 @@ namespace sw::editor
                 }
                 int32 firstIndex = 0;
                 int32 lastIndex  = 0;
-                if ( EditorNetConditionsUtil::tryParseTarget( listArgument[0], pSession->getProcessCount(), firstIndex, lastIndex ) == false )
+                if ( EditorNetLinkSettings::tryParseTarget( listArgument[0], pSession->getProcessCount(), firstIndex, lastIndex ) == false )
                 {
                     outReply = "no process '" + listArgument[0] + "' (server, client<N>, clients, all)";
                     return true;
@@ -278,7 +278,7 @@ namespace sw::editor
     MultiplayerConditionsTab::MultiplayerConditionsTab()
         : _listLink{}
         , _presetTable{}
-        , _spikeSeconds{ EditorNetConditionsUtil::kDefaultSpikeSeconds }
+        , _spikeSeconds{ EditorNetLinkSettings::kDefaultSpikeSeconds }
         , _sessionPort{ 0 }
         , _bApplyToAll{ false }
         , _bPresetTableAttempted{ SW_FALSE }
@@ -302,16 +302,16 @@ namespace sw::editor
         bool bChanged = false;
         ImGui::PushID( pID );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "LatencyMs" ) );
-        ImGui::SliderFloat( "##Latencyms", &inoutSettings._latencyMilliseconds, 0.0f, EditorNetConditionsUtil::kMaxLatencyMilliseconds, "%.0f" );
+        ImGui::SliderFloat( "##Latencyms", &inoutSettings._latencyMilliseconds, 0.0f, EditorNetLinkSettings::kMaxLatencyMilliseconds, "%.0f" );
         bChanged |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "JitterMs" ) );
-        ImGui::SliderFloat( "##Jitterms", &inoutSettings._jitterMilliseconds, 0.0f, EditorNetConditionsUtil::kMaxJitterMilliseconds, "%.0f" );
+        ImGui::SliderFloat( "##Jitterms", &inoutSettings._jitterMilliseconds, 0.0f, EditorNetLinkSettings::kMaxJitterMilliseconds, "%.0f" );
         bChanged |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Loss" ) );
         ImGui::SliderFloat( "##Loss", &inoutSettings._lossPercent, 0.0f, 100.0f, "%.1f" );
         bChanged |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "BandwidthKBS" ) );
-        ImGui::SliderInt( "##BandwidthKBs", &inoutSettings._bandwidthKilobytesPerSecond, 0, EditorNetConditionsUtil::kMaxBandwidthKilobytesPerSecond, "%d" );
+        ImGui::SliderInt( "##BandwidthKBs", &inoutSettings._bandwidthKilobytesPerSecond, 0, EditorNetLinkSettings::kMaxBandwidthKilobytesPerSecond, "%d" );
         bChanged |= ImGui::IsItemDeactivatedAfterEdit();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsBandwidth" ) );
         ImGui::PopID();
@@ -373,10 +373,10 @@ namespace sw::editor
                 const int32                  lastIndex  = _bApplyToAll ? session.getProcessCount() - 1 : targetIndex;
                 for ( int32 processIndex = firstIndex; processIndex <= lastIndex; ++processIndex )
                 {
-                    _listLink[static_cast<size_t>( processIndex )]._up   = EditorNetConditionsUtil::makeLinkSettings( conditions );
-                    _listLink[static_cast<size_t>( processIndex )]._down = EditorNetConditionsUtil::makeLinkSettings( conditions );
+                    _listLink[static_cast<size_t>( processIndex )]._up   = EditorNetLinkSettings::makeLinkSettings( conditions );
+                    _listLink[static_cast<size_t>( processIndex )]._down = EditorNetLinkSettings::makeLinkSettings( conditions );
                 }
-                sendToTargets( session, targetIndex, EditorNetConditionsUtil::makePresetCommand( preset._name ) );
+                sendToTargets( session, targetIndex, EditorNetLinkSettings::makePresetCommand( preset._name ) );
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsPreset" ) );
@@ -388,12 +388,12 @@ namespace sw::editor
             ImGui::TextUnformatted( SW_LOCKEY( "EdText", "UpSend" ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsUp" ) );
             if ( drawLinkSliders( "##Up", link._up ) )
-                sendToTargets( session, targetIndex, EditorNetConditionsUtil::makeLinkCommand( EditorNetLinkDirection::Up, link._up ) );
+                sendToTargets( session, targetIndex, EditorNetLinkSettings::makeLinkCommand( EditorNetLinkDirection::Up, link._up ) );
             ImGui::TableNextColumn();
             ImGui::TextUnformatted( SW_LOCKEY( "EdText", "DownReceive" ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsDown" ) );
             if ( drawLinkSliders( "##Down", link._down ) )
-                sendToTargets( session, targetIndex, EditorNetConditionsUtil::makeLinkCommand( EditorNetLinkDirection::Down, link._down ) );
+                sendToTargets( session, targetIndex, EditorNetLinkSettings::makeLinkCommand( EditorNetLinkDirection::Down, link._down ) );
             ImGui::EndTable();
         }
 
@@ -411,7 +411,7 @@ namespace sw::editor
         _spikeSeconds = MathUtil::max( 0.0f, _spikeSeconds );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Spike" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Spike" ) ) )
-            sendToTargets( session, targetIndex, EditorNetConditionsUtil::makeSpikeCommand( _spikeSeconds ) );
+            sendToTargets( session, targetIndex, EditorNetLinkSettings::makeSpikeCommand( _spikeSeconds ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsSpike" ) );
 
         ImGui::Separator();

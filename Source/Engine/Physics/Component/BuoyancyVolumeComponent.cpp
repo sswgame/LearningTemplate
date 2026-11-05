@@ -24,7 +24,7 @@ namespace sw
     bool BuoyancyVolumeComponent::computeSurface( float3& outSurfacePoint, float3& outSurfaceNormal, float3& outCenter, quaternion& outRotation ) const
     {
         float3 scale;
-        PhysicsComponentUtil::readWorldPose( *this, outCenter, outRotation, scale );
+        PhysicsComponent::readWorldPose( *this, outCenter, outRotation, scale );
         const float4x4 world = getWorldMatrix();
         const float3   up    = float3::transformVector( float3{ 0.0f, 1.0f, 0.0f }, world ).normalize();
         if ( up.getLength() <= 0.0f )

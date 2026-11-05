@@ -58,7 +58,7 @@ namespace sw
         bool isValid() const { return _kind != UIAnimatedValueKind::None; }
 
         /**
-         * @brief @p type(기반 타입 포함) 기준으로 경로 @p path 를 해석합니다(`UIBindingValueUtil::resolvePath`). 컨테이너는 잎이어도 받지 않습니다.
+         * @brief @p type(기반 타입 포함) 기준으로 경로 @p path 를 해석합니다(`UIBindingValue::resolvePath`). 컨테이너는 잎이어도 받지 않습니다.
          * @return 모르는 이름이거나 컨테이너면 false 이고 @p outError 에 이유(영어)를 둡니다.
          */
         [[nodiscard]] static bool resolve( const TypeInfo& type, string_view path, UIAnimatedProperty& outProperty, string& outError );

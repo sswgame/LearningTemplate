@@ -111,7 +111,7 @@ namespace sw::test
                 entry._translatorComment = value.get( "translatorComment" ).asString();
                 (void)value.readOptionalInto( "review", entry._bReview ); // 없으면 검토 표시 없음이다
                 const JSONValue hash = value.get( "sourceHash" );
-                if ( hash.isValid() && LocalizationTextUtil::tryParseSourceHash( hash.asString(), entry._sourceHash ) == false )
+                if ( hash.isValid() && SourceTextEntry::tryParseSourceHash( hash.asString(), entry._sourceHash ) == false )
                     reportFailure( __FILE__, __LINE__, "test translation has a bad sourceHash: " + hash.asString() );
             }
             save( table, FileUtil::joinPath( folder, string( culture ) + ".translation.xml" ) );

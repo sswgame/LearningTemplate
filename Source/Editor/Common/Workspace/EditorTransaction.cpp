@@ -237,7 +237,7 @@ namespace sw::editor
 
     ObjectSnapshot EditorTransaction::captureSnapshot( const GameObject* pObj )
     {
-        return ObjectUndoUtil::captureSnapshot( pObj );
+        return ObjectSnapshot::captureSnapshot( pObj );
     }
 
     void EditorTransaction::recordModify( GameObject* pObj, const ObjectSnapshot& before, const ObjectSnapshot& after,
@@ -261,7 +261,7 @@ namespace sw::editor
             EditorTransactionInternal::markActiveSceneDirty();
             return;
         }
-        EditorTransactionInternal::pushCommand( pStack, ObjectUndoUtil::makeModify( *pSceneManager, *pObj, before, after, label ) );
+        EditorTransactionInternal::pushCommand( pStack, ObjectSnapshot::makeModify( *pSceneManager, *pObj, before, after, label ) );
     }
 
     void EditorTransaction::recordObjectLifetime( GameObject* pObj, string_view label, ObjectLifetimeEdit edit )
@@ -280,7 +280,7 @@ namespace sw::editor
                 SW_LOG_ERROR_ID( "EditorTransaction.NoSceneManagerLifetimeEdit", "No SceneManager - the lifetime edit of '%#' in the preview scene is not recorded", pObj->getName().c_str() );
                 return;
             }
-            pPreviewStack->push( ObjectUndoUtil::makeLifetime( *pSceneManager, pObj, edit, label ) );
+            pPreviewStack->push( ObjectSnapshot::makeLifetime( *pSceneManager, pObj, edit, label ) );
             return;
         }
 
@@ -291,7 +291,7 @@ namespace sw::editor
             EditorTransactionInternal::markActiveSceneDirty();
             return;
         }
-        EditorTransactionInternal::pushCommand( pStack, ObjectUndoUtil::makeLifetime( *pSceneManager, pObj, edit, label ) );
+        EditorTransactionInternal::pushCommand( pStack, ObjectSnapshot::makeLifetime( *pSceneManager, pObj, edit, label ) );
     }
 
     void EditorTransaction::recordCreation( GameObject* pObj, string_view label )

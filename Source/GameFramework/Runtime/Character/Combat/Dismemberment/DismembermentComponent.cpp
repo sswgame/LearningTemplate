@@ -108,8 +108,8 @@ namespace sw
                 vector<uint16> listVertexRegion;
                 regionTable.assignRegions( welded, bones, listVertexRegion );
                 const uint16 severedRegion = static_cast<uint16>( regionIndex );
-                return DismembermentUtil::severRegions( welded, vector_reference<const uint16>{ listVertexRegion.data(), listVertexRegion.size() },
-                                                        vector_reference<const uint16>{ &severedRegion, 1 }, outResult );
+                return DismembermentResult::severRegions( welded, vector_reference<const uint16>{ listVertexRegion.data(), listVertexRegion.size() },
+                                                          vector_reference<const uint16>{ &severedRegion, 1 }, outResult );
             }
 
             /** @brief 원래 정점(이음매 그대로)을 삼각형 단위로 남은 몸과 조각으로 나눠 삼각형 목록으로 풀고, 각각의 캡을 스킨 정점으로 붙입니다. */

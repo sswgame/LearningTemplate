@@ -188,7 +188,7 @@ namespace sw
 
 namespace sw
 {
-    bool NavMeshBakeUtil::bakeAllTiles( INavMesh& navMesh, NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume, NavMeshBakeStats* pOutStats )
+    bool NavMeshAsset::bakeAllTiles( INavMesh& navMesh, NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume, NavMeshBakeStats* pOutStats )
     {
         SW_MEMORY_SCOPE( Navigation );
         const Stopwatch    stopwatch;
@@ -237,7 +237,7 @@ namespace sw
         return failedCount == 0;
     }
 
-    bool NavMeshBakeUtil::installTiles( INavMesh& navMesh, const vector<NavTileData>& listTile )
+    bool NavMeshAsset::installTiles( INavMesh& navMesh, const vector<NavTileData>& listTile )
     {
         bool bAll = true;
         for ( const NavTileData& tile : listTile )
@@ -247,7 +247,7 @@ namespace sw
         return bAll;
     }
 
-    AABB NavMeshBakeUtil::computeBakeBounds( const NavMeshGeometry& geometry )
+    AABB NavMeshAsset::computeBakeBounds( const NavMeshGeometry& geometry )
     {
         if ( geometry.getBounds().isValid() )
             return geometry.getBounds();

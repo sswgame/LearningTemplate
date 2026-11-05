@@ -4,7 +4,7 @@
  * @details 클라이언트의 근접 판정은 같은 스윕으로 맞음을 예측해 타격감만 낸다(`MeleeHitAuthority::Predicted`). 서버는 자기 시점의 스윕으로 정하는데,
  *          클라이언트가 지연된 월드를 보고 휘둘렀다면 서버의 칼날이 닿는 순간 표적은 이미 비켜서 있을 수 있다. 그래서 클라이언트가 "내가 휘두른 입력 틱에 이 표적이
  *          칼날에 있었다" 를 주장(`MeleeHitClaim`)하면, 서버는 그 주장을 **자기 스윕 기록**과 맞춰 본다.
- *          - 기록: 권위 있는 `MeleeHitWindowUtil::sweep` 이 칼날 표본점 줄(지난 칼날 → 지금 칼날)과 두께 · 피해를 이 장부에 프레임 번호로 적는다. 장부는 서버가
+ *          - 기록: 권위 있는 `MeleeHit::sweep` 이 칼날 표본점 줄(지난 칼날 → 지금 칼날)과 두께 · 피해를 이 장부에 프레임 번호로 적는다. 장부는 서버가
  *            `ensureFor` 로 켠 씬에만 있다 — 혼자 하는 게임과 클라이언트는 켜지 않으므로 기록하지 않는다.
  *          - 확인: 서버의 폰 루프가 주장의 입력 틱을 그 입력을 처리한 서버 프레임으로 옮겨(`MeleeHitClaim::_frame`), 지연 보상으로 되감은 표적 자리를 함께 넘긴다.
  *            표적 구(중심 · 반지름)가 그 프레임 안팎(`kClaimSlackFrames`)의 칼날 토막에서 칼날 두께 안에 들면 인정한다. 서버가 그 휘두름을 한 적이 없으면(기록 없음)
@@ -85,7 +85,7 @@ namespace sw
         /** @brief 지금 보관한 스윕 기록 수입니다(테스트 · 진단). */
         size_t getRecordCount() const { return _listRecord.size(); }
 
-        /** @brief 권위 있는 스윕 하나를 이번 프레임으로 적습니다. `MeleeHitWindowUtil::sweep` 이 부릅니다. */
+        /** @brief 권위 있는 스윕 하나를 이번 프레임으로 적습니다. `MeleeHit::sweep` 이 부릅니다. */
         void record( uint64 attackerID, const MeleeHitParams& params, vector_reference<const float3> listPrevious, vector_reference<const float3> listCurrent );
 
         /**

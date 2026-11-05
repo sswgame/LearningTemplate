@@ -1,5 +1,5 @@
 /**
- * @file ArcLengthUtil.h
+ * @file ArcLengthSpan.h
  * @brief 누적 거리 표(샘플 점마다 시작부터의 거리)로 거리 → 구간 · 비율을 찾는 공통 계산입니다.
  * @details 스플라인(`SplinePath`)과 코스터 트랙(`CoasterTrack`)처럼 곡선을 점 목록으로 펼쳐 보관하고 "거리 s 의 위치" 를 묻는 곳이 함께 씁니다.
  *          닫힌 곡선은 거리를 한 바퀴로 감고(음수도), 열린 곡선은 양 끝에서 자릅니다. 마지막 점 뒤의 구간은 닫힌 곡선에서만 첫 점으로 이어집니다.
@@ -17,17 +17,8 @@ namespace sw
         size_t  _index{ 0 };
         size_t  _nextIndex{ 0 };
         float32 _alpha{ 0.0f };
-    };
-} // namespace sw
 
-namespace sw
-{
-    /**
-     * @struct ArcLengthUtil
-     * @brief 거리 감기와 구간 찾기입니다. 점 타입은 거리 필드를 가리키는 멤버 포인터로 받습니다(점 타입마다 다른 필드를 써도 같은 계산이다).
-     */
-    struct ArcLengthUtil
-    {
+        // 거리 감기와 구간 찾기입니다. 점 타입은 거리 필드를 가리키는 멤버 포인터로 받습니다(점 타입마다 다른 필드를 써도 같은 계산이다).
         /** @brief @p distance 를 곡선 위 거리로 감습니다(닫힌 곡선) 또는 자릅니다(열린 곡선). 길이가 0 이하면 0 입니다. */
         static float32 wrapDistance( float32 distance, float32 length, bool bClosed )
         {

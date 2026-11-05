@@ -125,7 +125,7 @@ namespace sw
 
         /**
          * @brief 이번 틱에 쏜 광선 하나입니다. 틱 안에서는 막는 상자 · 바닥까지의 거리만 재고, 적 판정(물리 질의)은 틱이 끝난 뒤 게임 스레드에서 합니다.
-         * @details 물리 씬은 한 스레드에서만 다룬다(`CharacterHitUtil`). 같은 방아쇠의 광선(산탄)은 같은 `_volley` 라 소리 · 맞음 수를 한 번만 낸다.
+         * @details 물리 씬은 한 스레드에서만 다룬다(`CharacterRayHit`). 같은 방아쇠의 광선(산탄)은 같은 `_volley` 라 소리 · 맞음 수를 한 번만 낸다.
          */
         struct PendingShot
         {
@@ -162,7 +162,7 @@ namespace sw
         float32 traceCover( const ShooterDirectorComponent& director, const Ray& ray ) const;
         /**
          * @brief 쌓인 광선을 적의 히트박스(래그돌 바디, 레이어 `_hitboxLayer`)에 물리 질의로 쏘고, 맞은 적에 맞음을 보내며 탄도선 · 탄착 · 소리를 쌓습니다(게임 스레드).
-         * @details 질의 거리는 막는 상자까지라 엄폐물 뒤의 적은 맞지 않는다. 피해 배율은 맞은 바디의 히트 존(머리 ×2 등)이 정한다(`CharacterHitUtil::makeHitInfo`).
+         * @details 질의 거리는 막는 상자까지라 엄폐물 뒤의 적은 맞지 않는다. 피해 배율은 맞은 바디의 히트 존(머리 ×2 등)이 정한다(`CharacterRayHit::makeHitInfo`).
          */
         void resolveShots( GameObjectManager& manager );
         /** @brief 총구의 월드 위치를 반환합니다. 1인칭이면 손에 든 총, 아니면 몸 외형의 `MainHand.Muzzle` 입니다. 찾지 못하면 눈 아래입니다. */

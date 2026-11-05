@@ -162,7 +162,7 @@ namespace sw::editor
         float3     position{};
         quaternion rotation{};
         float3     scale{};
-        PhysicsComponentUtil::readWorldPose( *pBody, position, rotation, scale );
+        PhysicsComponent::readWorldPose( *pBody, position, rotation, scale );
 
         if ( state._bDragging )
         {

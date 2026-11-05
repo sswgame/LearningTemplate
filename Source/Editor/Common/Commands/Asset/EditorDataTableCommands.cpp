@@ -78,7 +78,7 @@ namespace sw::editor
                     source._context             = record._context;
                     source._comment             = record._comment;
                     source._maxLength           = record._maxLength;
-                    const uint64 sourceHash     = LocalizationTextUtil::computeSourceHash( record._source );
+                    const uint64 sourceHash     = SourceTextEntry::computeSourceHash( record._source );
                     for ( size_t cultureIndex = 0; cultureIndex < inoutListTranslation.size() && cultureIndex < record._listTranslation.size(); ++cultureIndex )
                     {
                         TranslationTable& translation = inoutListTranslation[cultureIndex];

@@ -146,13 +146,13 @@ namespace sw
 
 namespace sw
 {
-    uint64 LocalizationTextUtil::computeSourceHash( string_view sourceText )
+    uint64 SourceTextEntry::computeSourceHash( string_view sourceText )
     {
         const uint64 hash = HashUtil::computeStringHash64( sourceText, false );
         return hash == 0 ? 1u : hash;
     }
 
-    string LocalizationTextUtil::formatSourceHash( uint64 sourceHash )
+    string SourceTextEntry::formatSourceHash( uint64 sourceHash )
     {
         utf8         arrBuffer[constant::buffer::kMax32]{};
         const uint32 length = StringUtil::formatNumber( arrBuffer, constant::buffer::kMax32, sourceHash, 16 );
@@ -164,12 +164,12 @@ namespace sw
         return text;
     }
 
-    bool LocalizationTextUtil::tryParseSourceHash( string_view text, uint64& outSourceHash )
+    bool SourceTextEntry::tryParseSourceHash( string_view text, uint64& outSourceHash )
     {
         return text.size() == 16 && StringUtil::parseUint64( text, outSourceHash, 16 );
     }
 
-    string LocalizationTextUtil::makeFullKey( string_view textNamespace, string_view key )
+    string SourceTextEntry::makeFullKey( string_view textNamespace, string_view key )
     {
         if ( textNamespace.empty() )
             return string( key );
@@ -339,7 +339,7 @@ namespace sw
                 break;
             }
             entry._bReview = review.value_or( false );
-            if ( entryNode.findAttribute( "sourceHash" ) != nullptr && LocalizationTextUtil::tryParseSourceHash( entryNode.getAttributeText( "sourceHash" ), entry._sourceHash ) == false )
+            if ( entryNode.findAttribute( "sourceHash" ) != nullptr && SourceTextEntry::tryParseSourceHash( entryNode.getAttributeText( "sourceHash" ), entry._sourceHash ) == false )
             {
                 error = string( sourceName ) + ": entry '" + key + "' sourceHash must be 16 hex digits";
                 break;
@@ -375,7 +375,7 @@ namespace sw
             value.appendAttribute( "key", string_view{ key } );
             value.appendAttribute( "text", string_view{ entry._text } );
             if ( entry._sourceHash != 0 )
-                value.appendAttribute( "sourceHash", string_view{ LocalizationTextUtil::formatSourceHash( entry._sourceHash ) } );
+                value.appendAttribute( "sourceHash", string_view{ SourceTextEntry::formatSourceHash( entry._sourceHash ) } );
             if ( entry._bReview )
                 value.appendAttribute( "review", string_view{ "true" } );
             if ( entry._translatorComment.empty() == false )
@@ -414,7 +414,7 @@ namespace sw
             return TranslationState::Orphan;
         if ( pEntry->_bReview )
             return TranslationState::Review;
-        const bool bStale = pEntry->_sourceHash != 0 && pEntry->_sourceHash != LocalizationTextUtil::computeSourceHash( pSource->_source );
+        const bool bStale = pEntry->_sourceHash != 0 && pEntry->_sourceHash != SourceTextEntry::computeSourceHash( pSource->_source );
         return bStale ? TranslationState::Stale : TranslationState::Current;
     }
 

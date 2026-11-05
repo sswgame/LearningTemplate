@@ -387,7 +387,7 @@ namespace sw::editor
                 const bool         bMarked = EditorSelfTestMarks::find( "hierarchy.activeToggle", mark );
                 if ( bMarked == false && stepIndex < kMaxMarkWaitStep )
                 {
-                    ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelTextUtil::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
+                    ImGuiWindow* pWindow = ImGui::FindWindowByName( EditorPanelText::makeWindowID( HierarchyPanel::kPanelTitle ).c_str() );
                     if ( pWindow != nullptr )
                         ImGui::FocusWindow( pWindow );
                     return EditorSelfTestStep::Continue;

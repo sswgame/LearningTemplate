@@ -292,11 +292,11 @@ namespace sw::editor
         drawItemFields();
 
         // ImSequencer 는 여러 항목을 그리는 위젯이라 IsItemEdited("마지막 항목")가 클립 끌기 · 더하기 · 지우기를 뜻하지 않는다 — 부르기 전후의 배치를 비교한다.
-        SequenceTimingUtil::captureTiming( _sequence->_listItem, _listTimingBefore );
+        SequenceClipTiming::captureTiming( _sequence->_listItem, _listTimingBefore );
         const int32 frameBefore = _currentFrame;
         ImSequencer::Sequencer( _sequence.get(), &_currentFrame, &_bExpanded, &_selected, &_firstFrame,
                                 ImSequencer::SEQUENCER_EDIT_STARTEND | ImSequencer::SEQUENCER_ADD | ImSequencer::SEQUENCER_DEL | ImSequencer::SEQUENCER_CHANGE_FRAME );
-        if ( SequenceTimingUtil::hasTimingChanged( _listTimingBefore, _sequence->_listItem ) )
+        if ( SequenceClipTiming::hasTimingChanged( _listTimingBefore, _sequence->_listItem ) )
             notifyDocumentEdited( "Edit Sequence Timeline", "sequence-timeline" );
         if ( _currentFrame != frameBefore )
             previewCurrentFrame();

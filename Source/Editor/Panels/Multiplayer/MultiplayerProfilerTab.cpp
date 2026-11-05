@@ -230,7 +230,7 @@ namespace sw::editor
             MultiplayerProfilerTabInternal::getHistory().collectKindEntries( direction, _listKindEntryScratch );
         else
             _listKindEntryScratch = track._lastReport.getKindEntries( direction );
-        EditorNetProfilerUtil::computeKindShares( _listKindEntryScratch, _listShareScratch );
+        EditorNetProfilerSample::computeKindShares( _listKindEntryScratch, _listShareScratch );
         if ( _listShareScratch.empty() )
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorMultiplayer", "ProfilerNoKinds" ) );

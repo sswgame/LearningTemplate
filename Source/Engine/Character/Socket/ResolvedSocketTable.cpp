@@ -128,8 +128,8 @@ namespace sw
                 continue;
             const float3           bindPoint = bindTransform.getTranslation();
             vector<SurfaceBinding> listBinding;
-            SurfaceTransferUtil::bindPoints( *pBindGeometry, bindSurface, vector_reference<const float3>( &bindPoint, 1 ),
-                                             ResolvedSocketTableInternal::kSurfaceSearchDistance, listBinding );
+            SurfaceBinding::bindPoints( *pBindGeometry, bindSurface, vector_reference<const float3>( &bindPoint, 1 ),
+                                        ResolvedSocketTableInternal::kSurfaceSearchDistance, listBinding );
             slot._surfaceBinding   = listBinding.front();
             slot._surfacePointBind = bindPoint;
         }
@@ -168,7 +168,7 @@ namespace sw
                 continue;
             if ( slot._surfaceBinding._triangle >= shapedGeometry.getTriangleCount() )
                 continue;
-            const float3 shapedPoint = SurfaceTransferUtil::evaluatePoint( shapedGeometry, slot._surfaceBinding );
+            const float3 shapedPoint = SurfaceBinding::evaluatePoint( shapedGeometry, slot._surfaceBinding );
             const float3 delta       = shapedPoint - slot._surfacePointBind;
             slot._shapeOffsetLocal   = float3::transformVector( delta, slot._bindParentModel.invert() );
         }

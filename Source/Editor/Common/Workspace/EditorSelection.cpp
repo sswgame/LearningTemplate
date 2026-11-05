@@ -11,7 +11,7 @@
 #include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
-#include "Editor/Common/Workspace/Undo/ObjectUndoUtil.h"
+#include "Editor/Common/Workspace/Undo/ObjectSnapshot.h"
 
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -278,14 +278,14 @@ namespace sw::editor
             EditorTransaction::recordModify( &obj, before, after, label );
             return;
         }
-        // 창의 스택에 남긴다 — 명령은 기록할 때의 씬 키를 기억해 활성 씬이 바뀌어도 그 미리보기 씬에서 되돌린다(`ObjectUndoUtil`).
+        // 창의 스택에 남긴다 — 명령은 기록할 때의 씬 키를 기억해 활성 씬이 바뀌어도 그 미리보기 씬에서 되돌린다(`ObjectSnapshot`).
         SceneManager* pSceneManager = editor::findSubsystem<SceneManager>();
         if ( pSceneManager == nullptr )
         {
             SW_LOG_ERROR_ID( "EditorSelection.NoSceneManagerEditPreview", "No SceneManager - the edit of '%#' in the preview scene is not recorded", obj.getName().c_str() );
             return;
         }
-        _pPreviewStack->push( ObjectUndoUtil::makeModify( *pSceneManager, obj, before, after, label ) );
+        _pPreviewStack->push( ObjectSnapshot::makeModify( *pSceneManager, obj, before, after, label ) );
     }
 
     void EditorSelection::notifyChanged()

@@ -22,16 +22,16 @@ namespace sw
             header._type     = static_cast<uint8>( type );
             header._flags    = flags;
             header._streamID = streamID;
-            return bodySize <= HTTP2FrameUtil::kMaxFrameLength && HTTP2FrameUtil::writeHeader( header, outBytes );
+            return bodySize <= HTTP2FrameHeader::kMaxFrameLength && HTTP2FrameHeader::writeHeader( header, outBytes );
         }
     } // namespace
 
-    uint32 HTTP2FrameUtil::readUint32( const uint8* pBytes )
+    uint32 HTTP2FrameHeader::readUint32( const uint8* pBytes )
     {
         return ( static_cast<uint32>( pBytes[0] ) << 24 ) | ( static_cast<uint32>( pBytes[1] ) << 16 ) | ( static_cast<uint32>( pBytes[2] ) << 8 ) | pBytes[3];
     }
 
-    bool HTTP2FrameUtil::writeHeader( const HTTP2FrameHeader& header, vector<uint8>& outBytes )
+    bool HTTP2FrameHeader::writeHeader( const HTTP2FrameHeader& header, vector<uint8>& outBytes )
     {
         if ( header._length > kMaxFrameLength || header._streamID > kMaxStreamID )
             return false;
@@ -44,7 +44,7 @@ namespace sw
         return true;
     }
 
-    bool HTTP2FrameUtil::readHeader( const uint8* pBytes, size_t size, HTTP2FrameHeader& outHeader )
+    bool HTTP2FrameHeader::readHeader( const uint8* pBytes, size_t size, HTTP2FrameHeader& outHeader )
     {
         if ( size < kHeaderSize )
             return false;
@@ -55,7 +55,7 @@ namespace sw
         return true;
     }
 
-    bool HTTP2FrameUtil::writeSettings( const vector<HTTP2Setting>& listSetting, bool bAck, vector<uint8>& outBytes )
+    bool HTTP2FrameHeader::writeSettings( const vector<HTTP2Setting>& listSetting, bool bAck, vector<uint8>& outBytes )
     {
         if ( bAck && listSetting.empty() == false )
             return false; // 확인 프레임은 본문이 없다
@@ -70,7 +70,7 @@ namespace sw
         return true;
     }
 
-    bool HTTP2FrameUtil::readSettings( const uint8* pBody, size_t size, vector<HTTP2Setting>& outListSetting )
+    bool HTTP2FrameHeader::readSettings( const uint8* pBody, size_t size, vector<HTTP2Setting>& outListSetting )
     {
         outListSetting.clear();
         if ( size % 6 != 0 )
@@ -85,7 +85,7 @@ namespace sw
         return true;
     }
 
-    bool HTTP2FrameUtil::writeWindowUpdate( uint32 streamID, uint32 increment, vector<uint8>& outBytes )
+    bool HTTP2FrameHeader::writeWindowUpdate( uint32 streamID, uint32 increment, vector<uint8>& outBytes )
     {
         if ( increment == 0 || increment > kMaxStreamID )
             return false;
@@ -95,7 +95,7 @@ namespace sw
         return true;
     }
 
-    bool HTTP2FrameUtil::writePing( const uint8 ( &arrOpaque )[8], bool bAck, vector<uint8>& outBytes )
+    bool HTTP2FrameHeader::writePing( const uint8 ( &arrOpaque )[8], bool bAck, vector<uint8>& outBytes )
     {
         if ( beginFrame( HTTP2FrameType::Ping, bAck ? kFlagAck : 0, 0, 8, outBytes ) == false )
             return false;
@@ -103,7 +103,7 @@ namespace sw
         return true;
     }
 
-    bool HTTP2FrameUtil::writeHeaders( uint32 streamID, const vector<uint8>& listHeaderBlock, bool bEndStream, uint32 maxFrameSize, vector<uint8>& outBytes )
+    bool HTTP2FrameHeader::writeHeaders( uint32 streamID, const vector<uint8>& listHeaderBlock, bool bEndStream, uint32 maxFrameSize, vector<uint8>& outBytes )
     {
         if ( streamID == 0 || listHeaderBlock.size() > maxFrameSize )
             return false;
@@ -114,7 +114,7 @@ namespace sw
         return true;
     }
 
-    bool HTTP2FrameUtil::writeData( uint32 streamID, const uint8* pData, size_t size, bool bEndStream, uint32 maxFrameSize, vector<uint8>& outBytes )
+    bool HTTP2FrameHeader::writeData( uint32 streamID, const uint8* pData, size_t size, bool bEndStream, uint32 maxFrameSize, vector<uint8>& outBytes )
     {
         if ( streamID == 0 || size > maxFrameSize )
             return false;
@@ -125,7 +125,7 @@ namespace sw
         return true;
     }
 
-    bool HTTP2FrameUtil::writeRstStream( uint32 streamID, uint32 errorCode, vector<uint8>& outBytes )
+    bool HTTP2FrameHeader::writeRstStream( uint32 streamID, uint32 errorCode, vector<uint8>& outBytes )
     {
         if ( streamID == 0 || beginFrame( HTTP2FrameType::RstStream, 0, streamID, 4, outBytes ) == false )
             return false;
@@ -133,7 +133,7 @@ namespace sw
         return true;
     }
 
-    bool HTTP2FrameUtil::readGoAway( const uint8* pBody, size_t size, HTTP2GoAway& outGoAway )
+    bool HTTP2FrameHeader::readGoAway( const uint8* pBody, size_t size, HTTP2GoAway& outGoAway )
     {
         if ( size < 8 )
             return false;

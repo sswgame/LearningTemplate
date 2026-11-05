@@ -41,6 +41,26 @@ namespace sw
     class SW_API PoseRetargeter
     {
     public:
+        // 오프라인 리타깃 베이크입니다(쿠킹과 도구에서 씁니다).
+        /**
+         * @brief 원본 클립을 @p sampleRate 로 샘플해 리타깃하고, 대상 스켈레톤 트랙(본 이름)의 클립으로 압축합니다. 알림, 커브, 반복, 루트 모션
+         *        트랙(이름으로 짝지음)을 옮깁니다. 파일로 쓰는 일은 호출하는 쪽이 합니다(`AnimationClip::saveToFile`).
+         */
+        [[nodiscard]] static bool bakeClip( PoseRetargeter& retargeter, const AnimationClip& sourceClip, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton,
+                                            float32 sampleRate, const IAnimationCodec& codec, const AnimationCodecSettings& settings, AnimationClip& outClip );
+        /**
+         * @brief 파일에서 파일로 베이크합니다. 프로필(`*.retarget.xml`)이 지정한 두 스켈레톤을 읽고, 원본 클립을 30 Hz 로 샘플해 원본과 같은 코덱으로
+         *        압축한 뒤 @p outClipPath 에 씁니다. `App --bake-retarget=<프로필>,<원본 클립>,<출력 클립>` 이 호출합니다.
+         */
+        [[nodiscard]] static bool bakeClipFile( const AssetID& profileID, const AssetID& sourceClipID, string_view outClipPath );
+
+        // 프로필의 리타깃 포즈(`target_pose`)를 대상 포즈에 얹는 길 하나입니다 — 리타기터 묶기(`initialize`)와 에디터 리타깃 창의 미리보기가 같이 씁니다.
+        /**
+         * @brief @p inoutPose(본 수 = 대상 스켈레톤 본 수)의 대상 본마다 프로필의 돌림을 부모 공간에서 더 돌립니다(새 로컬 회전 = 돌림 × 로컬 회전).
+         * @return 대상 스켈레톤에 없는 본을 적었거나 본 수가 다르면 오류를 남기고 false 입니다(포즈는 그대로입니다).
+         */
+        [[nodiscard]] static bool applyTargetPose( const RetargetProfile& profile, const Skeleton& targetSkeleton, Pose& inoutPose );
+
         PoseRetargeter();
 
         /**
@@ -111,37 +131,5 @@ namespace sw
         uint32                  _targetPelvis;
         RetargetTranslationMode _translationMode;
         uint8                   _bInitialized;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 프로필의 리타깃 포즈(`target_pose`)를 대상 포즈에 얹는 길 하나입니다 — 리타기터 묶기(`initialize`)와 에디터 리타깃 창의 미리보기가 같이 씁니다. */
-    struct SW_API RetargetPoseUtil
-    {
-        /**
-         * @brief @p inoutPose(본 수 = 대상 스켈레톤 본 수)의 대상 본마다 프로필의 돌림을 부모 공간에서 더 돌립니다(새 로컬 회전 = 돌림 × 로컬 회전).
-         * @return 대상 스켈레톤에 없는 본을 적었거나 본 수가 다르면 오류를 남기고 false 입니다(포즈는 그대로입니다).
-         */
-        [[nodiscard]] static bool applyTargetPose( const RetargetProfile& profile, const Skeleton& targetSkeleton, Pose& inoutPose );
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 오프라인 리타깃 베이크입니다(쿠킹과 도구에서 씁니다). */
-    struct SW_API RetargetBakeUtil
-    {
-        /**
-         * @brief 원본 클립을 @p sampleRate 로 샘플해 리타깃하고, 대상 스켈레톤 트랙(본 이름)의 클립으로 압축합니다. 알림, 커브, 반복, 루트 모션
-         *        트랙(이름으로 짝지음)을 옮깁니다. 파일로 쓰는 일은 호출하는 쪽이 합니다(`AnimationClip::saveToFile`).
-         */
-        [[nodiscard]] static bool bakeClip( PoseRetargeter& retargeter, const AnimationClip& sourceClip, const Skeleton& sourceSkeleton, const Skeleton& targetSkeleton,
-                                            float32 sampleRate, const IAnimationCodec& codec, const AnimationCodecSettings& settings, AnimationClip& outClip );
-        /**
-         * @brief 파일에서 파일로 베이크합니다. 프로필(`*.retarget.xml`)이 지정한 두 스켈레톤을 읽고, 원본 클립을 30 Hz 로 샘플해 원본과 같은 코덱으로
-         *        압축한 뒤 @p outClipPath 에 씁니다. `App --bake-retarget=<프로필>,<원본 클립>,<출력 클립>` 이 호출합니다.
-         */
-        [[nodiscard]] static bool bakeClipFile( const AssetID& profileID, const AssetID& sourceClipID, string_view outClipPath );
     };
 } // namespace sw

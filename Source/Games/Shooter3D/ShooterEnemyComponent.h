@@ -42,7 +42,7 @@ namespace sw
      *          `Attack` · `Hit`(트리거) · `Dead` 로 움직입니다. 플레이어를 때리는 것은 다른 오브젝트에 쓰는 일이라 틱 뒤로 미룹니다.
      *          휘두름이 맞는 시각은 클립 데이터다 — 클립 알림 `Impact` → 알림 표(`characters/skeleton_minion/skeleton_minion.notifies.xml`)의 `AbilityEvent` →
      *          `onAnimationNotify` 가 이벤트 `_attackHitEvent` 를 받으면 다음 틱에 손이 닿는지 보고 때린다. 휘두름이 끝날 때까지 이벤트가 없으면 데이터 오류로 알린다.
-     *          **맞음**은 플레이어의 물리 질의 히트스캔이 틱 뒤에 `CharacterHitUtil::deliverHit` 으로 보낸다(`onHitReceived`). 히트박스는 같은 오브젝트의
+     *          **맞음**은 플레이어의 물리 질의 히트스캔이 틱 뒤에 `CharacterRayHit::deliverHit` 으로 보낸다(`onHitReceived`). 히트박스는 같은 오브젝트의
      *          `RagdollComponent`(물리 에셋 `skeleton_warrior.physics.xml` — 뼈마다 바디와 히트 존 배율)이고, 피해는 기본 피해 × 히트 존 배율이다.
      *          쓰러지면 래그돌로 넘긴다(맞은 바디에 충격량). 쓰러지지 않은 맞음의 몸 흔들림은 래그돌 컴포넌트가 같은 맞음으로 스스로 한다.
      *          `_radius` · `_height` 는 몸 이동 · 내비 에이전트 · 자동 조준이 쓰는 몸 크기다(판정에는 쓰지 않는다).
