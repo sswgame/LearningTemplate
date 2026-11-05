@@ -107,8 +107,9 @@ namespace sw
 
             static string readText( const string& path )
             {
+                // 묶음 · 로그는 다른 프로세스의 보관 개수 정리(`SavedRetention`)가 목록을 읽은 뒤에도 지울 수 있다 - 없는 것은 오류가 아니라 빈 내용이다.
                 string text;
-                if ( FileUtil::readTextFile( path, text ) == false )
+                if ( FileUtil::readOptionalTextFile( path, text ) != OptionalFileRead::Read )
                     text.clear();
                 return text;
             }
