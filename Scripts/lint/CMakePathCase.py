@@ -30,6 +30,7 @@ from common.Paths import getProjectRoot  # noqa: E402
 kCheckTag = "CMakePathCase"
 
 _kPathCallRe = re.compile(r'\b(?:include|add_subdirectory)\(\s*"?([^\s")]+)', re.IGNORECASE)
+_kRootPathRe = re.compile(r'\$\{CMAKE_SOURCE_DIR\}/([^\s"$)<]+)')
 
 
 def checkCMakePathCase(projectRoot: Path) -> list[str]:
@@ -47,6 +48,12 @@ def checkCMakePathCase(projectRoot: Path) -> list[str]:
             continue
         text = (projectRoot / file).read_text(encoding="utf-8", errors="ignore")
         baseDir = str(Path(file).parent).replace("\\", "/")
+        # 스크립트 경로(`-P`) · 파일 인자처럼 저장소 루트에서 적은 경로도 같은 덫이다 — 윈도우는 통과하고 리눅스 구성 · 빌드가 선다.
+        for match in _kRootPathRe.finditer(text):
+            written = match.group(1)
+            actual = mapLower.get(written.lower())
+            if written not in setExact and actual is not None:
+                listViolation.append(f"{file}: '{written}' → 실제 이름 '{actual}'")
         for match in _kPathCallRe.finditer(text):
             written = match.group(1)
             if "$" in written or "<" in written:

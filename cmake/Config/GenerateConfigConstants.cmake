@@ -39,7 +39,6 @@ if(NOT EXISTS "${CMAKE_SOURCE_DIR}/${SW_FILE_RUNTIME_GAME_CONFIG}")
 		"SW_ACTIVE_GAME='${SW_ACTIVE_GAME}' has no game preset ${SW_FILE_RUNTIME_GAME_CONFIG}\n"
 		"  Add it next to the other presets in ${SW_DIR_RUNTIME_GAME_PRESET}/ (_packRoot)")
 endif()
-set(SW_FILE_RUNTIME_SERVER_CONFIG "${SW_DIR_RUNTIME_SERVER_PRESET}/${SW_ACTIVE_GAME}.json")
 # 게임 이름은 Shipping 만 굽는다. Dev 는 실행할 때 고르고(`-game=`, `GameSelection`) 기본은 `Bin/Modules/ActiveGame.txt` 라 ConfigConstants.h 가 활성 게임과 무관하다.
 if(SW_SHIPPING_BUILD)
 	set(SW_SHIPPING_GAME_NAME "${SW_ACTIVE_GAME}")

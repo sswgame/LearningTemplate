@@ -71,7 +71,7 @@ function(sw_vcpkgComputeManifestHash OUT_VAR)
         get_filename_component(tripletName "${tripletFile}" NAME)
 
         # 실제 패키지 빌드에 영향을 주는 타겟 트립릿 파일(*-windows.cmake, *-linux.cmake, *-osx.cmake)만 스탬프 해시에 포함
-        if(NOT tripletName MATCHES "-(windows|linux|osx)\\.cmake$")
+        if(NOT tripletName MATCHES "-(windows|linux)\\.cmake$")
             continue()
         endif()
 
@@ -299,7 +299,6 @@ endif()
 if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
     # 이 파일은 project() **앞**에서 include 되므로 CMAKE_SYSTEM_PROCESSOR 가 아직 비어 있다.
     # 그 상태로 매치를 돌리면 언제나 마지막 else() 로 떨어져 **호스트가 무엇이든 x64** 가 됐다 —
-    # GitHub 의 macos-14 러너(Apple Silicon)가 `x64-osx` 이름으로 포트를 굽고 있었다. 호스트
     # 아키텍처는 project() 없이도 물을 수 있으니(OS_PLATFORM: AMD64 · x86_64 · arm64 · aarch64)
     # 프로세서가 비어 있으면 그것을 대신 본다. 대소문자는 OS 마다 달라서 낮춰서 본다.
     set(sw_vcpkg_processor "${CMAKE_SYSTEM_PROCESSOR}")
@@ -322,8 +321,6 @@ if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
 
     if(WIN32)
         set(sw_vcpkg_triplet "${sw_vcpkg_arch}-windows")
-    elseif(APPLE)
-        set(sw_vcpkg_triplet "${sw_vcpkg_arch}-osx")
     else()
         set(sw_vcpkg_triplet "${sw_vcpkg_arch}-linux")
     endif()

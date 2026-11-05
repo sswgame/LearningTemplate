@@ -3,7 +3,7 @@
 # @brief 모듈 매니페스트(`<모듈>.module.json`) 읽기 · 해석 — 켜짐 · 의존 확인 · 적재 순서, Dev 는 매니페스트를 `Bin/Modules/` 에 복사한다
 # ==============================================================================
 #
-# 해석 결과를 묻는 쪽(꺼진 모듈 건너뛰기 · 꺼진 키트의 테스트 소스 빼기)은 `ModuleActivation.cmake`, `Bin` 의 옛 산출물 지우기는 `BuildLayout.cmake` 다.
+# 해석 결과를 묻는 쪽(꺼진 모듈 건너뛰기)은 `ModuleActivation.cmake`, `Bin` 의 옛 산출물 지우기는 `BuildLayout.cmake` 다.
 #
 # 규칙은 런타임(`Engine/Module/ModuleCatalog.cpp`)과 같다 — 한쪽만 고치면 빌드한 것과 App 이 올리는 것이 갈린다.
 # 그래서 해석 결과(켜진 모듈 · 적재 순서)를 `Bin/Modules/ResolvedModules.txt` 로 남기고, 테스트(`ModuleCatalogTest.BuildAndRuntimeAgree`)이

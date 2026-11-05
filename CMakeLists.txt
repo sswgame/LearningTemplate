@@ -1,7 +1,7 @@
 # ==============================================================================
-# @file ModuleManager/CMakeLists.txt
+# @file CMakeLists.txt
 # @brief SW Engine 최상위 루트 빌드 스크립트
-# @note cmake/ 의 계층과 각 파일의 역할은 cmake/README.md 가 원본이다.
+# @note cmake/ 의 파일마다 역할은 그 파일 머리말에 있다. 읽는 순서는 아래 include 순서다.
 # ==============================================================================
 
 cmake_minimum_required(VERSION 3.24)
