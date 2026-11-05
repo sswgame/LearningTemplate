@@ -36,6 +36,33 @@ function(sw_setModuleBinOutput TARGET_NAME KIND)
 	)
 endfunction()
 
+# 키트 라이브러리의 컴파일 설정. 키트는 명령줄 정의가 서로 같아야 PCH 하나(`sw_kit_pch`)를 나눠 쓴다 — 타깃 고유 정의는 강제 포함 헤더로 준다.
+# 자동 정의 `<타깃>_EXPORTS` 는 아무도 쓰지 않아 끈다.
+function(sw_configureKitModuleCompile TARGET_NAME LIB_TYPE LOG_TAG MODULE_NAME DEFINITIONS)
+	set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")
+	if(DEFINITIONS)
+		target_compile_definitions(${TARGET_NAME} PRIVATE ${DEFINITIONS})
+	endif()
+	set(listTargetDefsOption LOG_TAG "${LOG_TAG}" REGISTRAR_MODULE "${MODULE_NAME}")
+	set(listPCHDefinition "")
+	if(LIB_TYPE STREQUAL "SHARED")
+		# 키트 TU 는 `SW_GF_EXPORTS` 를 주지 않는다 — 주면 include 한 Base 선언까지 dllexport 로 풀린다(C-3).
+		# 서버 키트(`GF_Server_<X>`)는 `SW_KIT_SERVER_EXPORTS`, 그 밖은 `SW_KIT_EXPORTS` 만 내보낸다 — 서버 키트가 include 한 런타임 키트 헤더(`SW_KIT_API`)는
+		# dllimport 로 남아 런타임 키트 클래스를 다시 내보내지 않는다. `SW_KIT_IMPORTS` 는 모든 키트 TU 가 가진다(자기 내보내기 매크로가 먼저 읽힌다) —
+		# 키트 PCH 하나를 나눠 쓰려면 명령줄 정의가 같아야 한다.
+		if(TARGET_NAME MATCHES "^GF_Server_")
+			list(APPEND listTargetDefsOption KIT_SERVER_EXPORTS)
+		else()
+			list(APPEND listTargetDefsOption KIT_EXPORTS)
+		endif()
+		target_compile_definitions(${TARGET_NAME} PUBLIC SW_KIT_IMPORTS)
+		set(listPCHDefinition DEFINITIONS SW_KIT_IMPORTS)
+	endif()
+	sw_setTargetDefsHeader(${TARGET_NAME} ${listTargetDefsOption})
+	sw_addSharedPCHOwner(sw_kit_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
+		LINK GameFramework Engine sw_public_source_includes sw_global_options ${listPCHDefinition})
+endfunction()
+
 # ------------------------------------------------------------------------------
 # sw_addModuleLibrary — 엔진 모듈 라이브러리 하나(RHI 백엔드 · 키트 · 게임 · GameFramework · 에디터)
 #
@@ -107,44 +134,22 @@ function(sw_addModuleLibrary TARGET_NAME)
 		target_link_libraries(${TARGET_NAME} PUBLIC ${ARG_LINK_PUBLIC})
 	endif()
 	target_link_libraries(${TARGET_NAME} PRIVATE ${ARG_LINK_PRIVATE} sw_global_options)
+	set(listIdentityDefinition "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" "SW_REGISTRAR_MODULE=\"${ARG_MODULE_NAME}\"")
 	if(ARG_KIND STREQUAL "kit")
-		# 키트는 명령줄 정의가 서로 같아야 PCH 하나(`sw_kit_pch`, 함수 끝의 `sw_useSharedPCH`)를 나눠 쓴다 — 타깃 고유 정의는 강제 포함 헤더로 준다.
-		# 자동 정의 `<타깃>_EXPORTS` 는 아무도 쓰지 않아 끈다.
-		set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")
-		if(ARG_DEFINITIONS)
-			target_compile_definitions(${TARGET_NAME} PRIVATE ${ARG_DEFINITIONS})
-		endif()
-		set(listTargetDefsOption LOG_TAG "${ARG_LOG_TAG}" REGISTRAR_MODULE "${ARG_MODULE_NAME}")
-		set(listPCHDefinition "")
-		if(libType STREQUAL "SHARED")
-			# 키트 TU 는 `SW_GF_EXPORTS` 를 주지 않는다 — 주면 include 한 Base 선언까지 dllexport 로 풀린다(C-3).
-			# 서버 키트(`GF_Server_<X>`)는 `SW_KIT_SERVER_EXPORTS`, 그 밖은 `SW_KIT_EXPORTS` 만 내보낸다 — 서버 키트가 include 한 런타임 키트 헤더(`SW_KIT_API`)는
-			# dllimport 로 남아 런타임 키트 클래스를 다시 내보내지 않는다. `SW_KIT_IMPORTS` 는 모든 키트 TU 가 가진다(자기 내보내기 매크로가 먼저 읽힌다) —
-			# 키트 PCH 하나를 나눠 쓰려면 명령줄 정의가 같아야 한다.
-			if(TARGET_NAME MATCHES "^GF_Server_")
-				list(APPEND listTargetDefsOption KIT_SERVER_EXPORTS)
-			else()
-				list(APPEND listTargetDefsOption KIT_EXPORTS)
-			endif()
-			target_compile_definitions(${TARGET_NAME} PUBLIC SW_KIT_IMPORTS)
-			set(listPCHDefinition DEFINITIONS SW_KIT_IMPORTS)
-		endif()
-		sw_setTargetDefsHeader(${TARGET_NAME} ${listTargetDefsOption})
-		sw_addSharedPCHOwner(sw_kit_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
-			LINK GameFramework Engine sw_public_source_includes sw_global_options ${listPCHDefinition})
+		sw_configureKitModuleCompile(${TARGET_NAME} ${libType} "${ARG_LOG_TAG}" ${ARG_MODULE_NAME} "${ARG_DEFINITIONS}")
 	elseif(bShareGamePCH)
 		# 자동 정의 `<타깃>_EXPORTS`(`SWGame_<게임>_EXPORTS`)는 게임마다 달라 PCH 를 나눌 수 없고 아무도 쓰지 않는다.
 		set_target_properties(${TARGET_NAME} PROPERTIES DEFINE_SYMBOL "")
 		# 키트를 링크하는 게임 모듈은 키트 타깃의 PUBLIC `SW_KIT_IMPORTS` 를 물려받는다. 게임 PCH 와 게임 TU 의 명령줄 정의가 같아야
 		# 하므로 모든 게임이 이 정의를 직접 가지고 PCH 소유자도 같게 가진다(키트가 없는 게임에도 해롭지 않다. 키트 헤더만 읽는다).
 		# 게임 모듈 이름은 모두 SWGame 이라 등록자 이름(`SW_REGISTRAR_MODULE`)도 PCH 소유자와 같다.
-		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" "SW_REGISTRAR_MODULE=\"${ARG_MODULE_NAME}\"" SW_KIT_IMPORTS ${ARG_DEFINITIONS})
+		target_compile_definitions(${TARGET_NAME} PRIVATE ${listIdentityDefinition} SW_KIT_IMPORTS ${ARG_DEFINITIONS})
 		sw_configureDLLExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
 		sw_addSharedPCHOwner(sw_game_pch "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h"
 			LINK Engine ModuleAPI GameFramework sw_global_options
-			DEFINITIONS "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" "SW_REGISTRAR_MODULE=\"${ARG_MODULE_NAME}\"" SW_MODULE_EXPORTS SW_KIT_IMPORTS ${ARG_DEFINITIONS})
+			DEFINITIONS ${listIdentityDefinition} SW_MODULE_EXPORTS SW_KIT_IMPORTS ${ARG_DEFINITIONS})
 	else()
-		target_compile_definitions(${TARGET_NAME} PRIVATE "SW_LOG_TAG=\"${ARG_LOG_TAG}\"" "SW_REGISTRAR_MODULE=\"${ARG_MODULE_NAME}\"" ${ARG_DEFINITIONS})
+		target_compile_definitions(${TARGET_NAME} PRIVATE ${listIdentityDefinition} ${ARG_DEFINITIONS})
 		sw_configurePCH(${TARGET_NAME} "${CMAKE_SOURCE_DIR}/Source/Engine/pch.h")
 		sw_configureDLLExports(${TARGET_NAME} ${libType} ${ARG_EXPORTS})
 	endif()

@@ -21,6 +21,149 @@ function(sw_skipWithoutReflectionParser TARGET_NAME OUT_VAR)
 endfunction()
 
 # ------------------------------------------------------------------------------
+# 내용이 달라졌을 때만 PATH 를 건드린다(같으면 mtime 이 그대로라 그 파일에 건 단계가 다시 돌지 않는다).
+# ------------------------------------------------------------------------------
+function(sw_writeIfChanged PATH TEXT)
+	file(WRITE "${PATH}.in" "${TEXT}\n")
+	configure_file("${PATH}.in" "${PATH}" COPYONLY)
+endfunction()
+
+# 현재 소스 폴더를 훑어 반사 매크로가 있는 헤더(OUT_HEADERS)와 없는 헤더(OUT_OTHERS)로 가른다.
+function(sw_scanReflectionHeaders OUT_HEADERS OUT_OTHERS TARGET_NAME EXCLUDE_REGEX)
+	message(VERBOSE "[Reflection] No HEADERS specified for target: ${TARGET_NAME}, auto-scanning for REFLECT macros...")
+	file(GLOB_RECURSE listCandidateHeader "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
+	# 하위 폴더의 다른 모듈(키트 · 게임의 Editor/ 확장)은 그 모듈이 따로 훑는다.
+	if(EXCLUDE_REGEX)
+		list(FILTER listCandidateHeader EXCLUDE REGEX "${EXCLUDE_REGEX}")
+	endif()
+	# 배포 구성은 개발 전용 소스(단위 테스트 `Tests/` 등, `SW_DEV_ONLY_SOURCE_PATTERNS`)를 짓지 않는다 — 그 폴더의 테스트용 반사 타입도 코드젠하지 않는다
+	# (빼지 않으면 테스트 타입이 배포 이미지의 타입 목록에 오른다). 소스를 빼는 규칙과 같은 목록을 쓴다.
+	if(SW_SHIPPING_BUILD)
+		foreach(devOnlyPattern IN LISTS SW_DEV_ONLY_SOURCE_PATTERNS)
+			list(FILTER listCandidateHeader EXCLUDE REGEX "${devOnlyPattern}")
+		endforeach()
+	endif()
+
+	set(listHeader "")
+	set(listOther "")
+	foreach(hdr IN LISTS listCandidateHeader)
+		file(STRINGS "${hdr}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
+
+		if(listReflectLine)
+			list(APPEND listHeader "${hdr}")
+		else()
+			list(APPEND listOther "${hdr}")
+		endif()
+	endforeach()
+	set(${OUT_HEADERS} ${listHeader} PARENT_SCOPE)
+	set(${OUT_OTHERS} ${listOther} PARENT_SCOPE)
+endfunction()
+
+# 파서 인자(`sw_addReflectionStep` 의 ARG_* 와 경로 변수를 읽는다 — 그 함수에서만 부른다).
+function(sw_makeReflectionParserArgs OUT_VAR TARGET_NAME)
+	set(parserArgs "")
+
+	foreach(header IN LISTS ARG_HEADERS)
+		list(APPEND parserArgs "--input" "${header}")
+	endforeach()
+
+	list(APPEND parserArgs "--output" "${ARG_OUTPUT_DIR}")
+	list(APPEND parserArgs "--builtins" "${swReflectBuiltins}")
+	list(APPEND parserArgs "--annotation-meta" "${swAnnotationMeta}")
+	list(APPEND parserArgs "--emit-templates" "${swEmitTemplatesDir}")
+
+	list(APPEND parserArgs "--module" "${ARG_MODULE}")
+	# 설정은 절대 경로로 넘긴다(파서가 작업 폴더 · 프로젝트 루트를 추측하지 않는다). 로컬 parser_config.json · toolchain_config.json 은 그 옆이다.
+	list(APPEND parserArgs "--config" "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}")
+
+	# 실행 파일과 게임 모듈의 타입은 모듈 경계를 넘지 않는다. 그래서 생성기가 서버 버스 본문 타입(`kBusVersion`)에 내보내기 매크로를 요구하지 않게 알린다.
+	# 그 밖의 라이브러리(Base · 키트, STATIC 배포 포함)는 늘 검사한다. 정적 배포에서도 같은 헤더가 DLL 빌드로 쓰이기 때문이다.
+	get_target_property(swTargetType ${TARGET_NAME} TYPE)
+	if(ARG_MODULE_LOCAL OR swTargetType STREQUAL "EXECUTABLE")
+		list(APPEND parserArgs "--module-local")
+	endif()
+
+	# 리플렉션 대상 헤더가 생성 헤더(sw/config/*.gen.h 등)를 include 할 수 있으므로 항상 넣어준다.
+	# 없으면 libclang 파싱이 "file not found" 로 실패한다.
+	if(EXISTS "${CMAKE_BINARY_DIR}/generated")
+		list(APPEND parserArgs "--include" "${CMAKE_BINARY_DIR}/generated")
+	endif()
+
+	# 셰이더 바인딩 계약(binding_slots.hlsli)은 Engine 의 PUBLIC include 자리다 — 계약 수(shaderslot::k*)를 배열 크기로 쓰는 반사 헤더
+	# (WaterBodyComponent 등)를 파서도 컴파일러와 같은 자리에서 읽게 한다.
+	list(APPEND parserArgs "--include" "${CMAKE_SOURCE_DIR}/Content/engine/shaders")
+	foreach(inc IN LISTS ARG_INCLUDES)
+		list(APPEND parserArgs "--include" "${inc}")
+	endforeach()
+	set(${OUT_VAR} ${parserArgs} PARENT_SCOPE)
+endfunction()
+
+# 반사 헤더 이름 STEM 을 TARGET_NAME 의 것으로 적는다. 생성 파일 이름은 헤더 이름(확장자 뺀 것)뿐이다 — 같은 이름의 반사 헤더가 둘이면 같은 타깃에서는 서로의 .gen.cpp 를 덮어쓰고,
+# 다른 타깃(코어 ↔ 모듈, 키트 ↔ 플러그인 에디터 등 gen 폴더를 나눠 쓰는 쌍)에서는 둘 다 include 경로에 있어 .gen.h 가 서로를 가린다.
+# 어느 쌍이 include 경로를 공유하는지는 타깃 그래프에 달려 있어 여기서 가려내지 않는다 - 전역 레지스트리(stem → 소유 타깃 · 헤더)로 모든 쌍을 막는다.
+# 예외 · 별칭은 없다: 걸리면 헤더 이름을 고친다. 레지스트리는 구성마다 비어 시작한다(전역 속성).
+function(sw_claimReflectionStem STEM TARGET_NAME HEADER)
+	get_property(stemOwner GLOBAL PROPERTY SW_REFLECT_GEN_STEM_${STEM})
+	if(NOT stemOwner)
+		set_property(GLOBAL PROPERTY SW_REFLECT_GEN_STEM_${STEM} "${TARGET_NAME}|${HEADER}")
+		return()
+	endif()
+	string(REPLACE "|" ";" stemOwnerParts "${stemOwner}")
+	list(GET stemOwnerParts 0 stemOwnerTarget)
+	list(GET stemOwnerParts 1 stemOwnerHeader)
+	if(NOT stemOwnerHeader STREQUAL HEADER)
+		message(FATAL_ERROR "[Reflection] two reflected headers share the name '${STEM}' (${STEM}.gen.cpp / ${STEM}.gen.h would overwrite or shadow each other):\n  ${stemOwnerTarget}: ${stemOwnerHeader}\n  ${TARGET_NAME}: ${HEADER}\n  Rename one of them.")
+	endif()
+endfunction()
+
+# 헤더마다의 생성 파일을 OUT_FILES(전부) · OUT_CPP_FILES(.gen.cpp) 에 담고, 없는 것은 자리 표시자를 심는다 — target_sources 가 구성 때 붙일 파일이 있어야 한다.
+function(sw_planReflectionOutputs OUT_FILES OUT_CPP_FILES TARGET_NAME OUTPUT_DIR)
+	set(listFile "")
+	set(listCpp "")
+	foreach(header IN LISTS ARGN)
+		get_filename_component(stem "${header}" NAME_WE)
+		sw_claimReflectionStem(${stem} ${TARGET_NAME} "${header}")
+		set(genFile "${OUTPUT_DIR}/${stem}${SW_EXT_REFLECTION_GEN_CPP}")
+		set(genHeader "${OUTPUT_DIR}/${stem}${SW_EXT_REFLECTION_GEN_HEADER}")
+		list(APPEND listFile "${genFile}" "${genHeader}")
+		list(APPEND listCpp "${genFile}")
+
+		# 자리 표시자 = 스탬프 없음 — 자리 표시자를 심으면 그 입력의 스탬프를 지운다. 파서는 스탬프가 없는 입력을 다시 만들고, 생성 글을 읽어 자리 표시자인지 추측하지 않는다.
+		if(NOT EXISTS "${genFile}" OR NOT EXISTS "${genHeader}")
+			file(WRITE "${genFile}" "// AUTO-GENERATED placeholder — regenerated by ReflectionParser\n")
+			file(WRITE "${genHeader}" "// AUTO-GENERATED placeholder\n#pragma once\n")
+			file(REMOVE "${genFile}${SW_EXT_REFLECTION_STAMP}")
+		endif()
+	endforeach()
+	set(${OUT_FILES} ${listFile} PARENT_SCOPE)
+	set(${OUT_CPP_FILES} ${listCpp} PARENT_SCOPE)
+endfunction()
+
+# 자동 훑기는 구성 때 굳는다. 매크로가 없던 헤더가 바뀌면 그것만 다시 읽어 매크로가 생겼는지 본다(바뀐 헤더가 없으면 돌지 않는다).
+# 후보 검사는 타깃 컴파일을 막지 않는 별도 ALL 타깃이다. 예전에는 _ReflectionGen 에 묶여 평범한 헤더 하나만 고쳐도
+# 수천 개 후보를 다시 훑는 동안 컴파일이 기다렸다. 계약: ALL 에 들어 있으므로 기본 빌드(all)에서 검사가 FATAL_ERROR 로
+# 실패하면 빌드 전체가 실패한다(컴파일과 병렬로 돌 뿐 결과는 같다). `--target <타깃>` 만 지으면 검사는 돌지 않는다 —
+# 그때 새 매크로 헤더는 링크의 미해결 기호로 드러난다. 같은 이름 반사 헤더 FATAL 은 구성 때 판정이라 영향이 없다.
+function(sw_addReflectionCandidateCheck TARGET_NAME OUTPUT_DIR)
+	if(NOT ARGN)
+		return()
+	endif()
+	set(swReflectCandidateList "${OUTPUT_DIR}/ReflectionCandidates.list")
+	string(REPLACE ";" "\n" swReflectCandidateText "${ARGN}")
+	sw_writeIfChanged("${swReflectCandidateList}" "${swReflectCandidateText}")
+	set(swReflectScanStamp "${OUTPUT_DIR}/ReflectionCandidates.stamp")
+	add_custom_command(
+		OUTPUT "${swReflectScanStamp}"
+		COMMAND ${CMAKE_COMMAND} "-DCANDIDATE_LIST=${swReflectCandidateList}" "-DSTAMP=${swReflectScanStamp}" "-DTARGET_NAME=${TARGET_NAME}"
+			-P "${CMAKE_SOURCE_DIR}/cmake/Engine/CheckReflectionCandidates.cmake"
+		DEPENDS ${ARGN} "${swReflectCandidateList}" "${CMAKE_SOURCE_DIR}/cmake/Engine/CheckReflectionCandidates.cmake"
+		COMMENT "[Reflection] Checking ${TARGET_NAME} headers for new reflection macros"
+		VERBATIM
+	)
+	add_custom_target(${TARGET_NAME}_ReflectionCandidateCheck ALL DEPENDS "${swReflectScanStamp}")
+endfunction()
+
+# ------------------------------------------------------------------------------
 # 1) sw_addReflectionStep — ENUM() 헤더 → .gen.cpp / .gen.h
 # HEADERS / INCLUDES / OUTPUT_DIR. .gen.cpp는 Unity 배치에서 제외 (ODR)
 # 루트가 Tools(ReflectionParser) 이후 Engine을 호출해야 이 스텝이 살아 있음
@@ -44,30 +187,7 @@ function(sw_addReflectionStep TARGET_NAME)
 	endif()
 
 	if(NOT ARG_HEADERS)
-		message(VERBOSE "[Reflection] No HEADERS specified for target: ${TARGET_NAME}, auto-scanning for REFLECT macros...")
-		file(GLOB_RECURSE listCandidateHeader "${CMAKE_CURRENT_SOURCE_DIR}/*.h" "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp")
-		# 하위 폴더의 다른 모듈(키트 · 게임의 Editor/ 확장)은 그 모듈이 따로 훑는다.
-		if(ARG_EXCLUDE_REGEX)
-			list(FILTER listCandidateHeader EXCLUDE REGEX "${ARG_EXCLUDE_REGEX}")
-		endif()
-		# 배포 구성은 개발 전용 소스(단위 테스트 `Tests/` 등, `SW_DEV_ONLY_SOURCE_PATTERNS`)를 짓지 않는다 — 그 폴더의 테스트용 반사 타입도 코드젠하지 않는다
-		# (빼지 않으면 테스트 타입이 배포 이미지의 타입 목록에 오른다). 소스를 빼는 규칙과 같은 목록을 쓴다.
-		if(SW_SHIPPING_BUILD)
-			foreach(devOnlyPattern IN LISTS SW_DEV_ONLY_SOURCE_PATTERNS)
-				list(FILTER listCandidateHeader EXCLUDE REGEX "${devOnlyPattern}")
-			endforeach()
-		endif()
-
-		set(listNonReflectHeader "")
-		foreach(hdr IN LISTS listCandidateHeader)
-			file(STRINGS "${hdr}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
-
-			if(listReflectLine)
-				list(APPEND ARG_HEADERS "${hdr}")
-			else()
-				list(APPEND listNonReflectHeader "${hdr}")
-			endif()
-		endforeach()
+		sw_scanReflectionHeaders(ARG_HEADERS listNonReflectHeader ${TARGET_NAME} "${ARG_EXCLUDE_REGEX}")
 
 		if(NOT ARG_HEADERS)
 			message(VERBOSE "[Reflection] Auto-scan found no headers with REFLECT macros for target: ${TARGET_NAME}")
@@ -75,44 +195,11 @@ function(sw_addReflectionStep TARGET_NAME)
 		endif()
 	endif()
 
-	set(parserArgs "")
-
-	foreach(header IN LISTS ARG_HEADERS)
-		list(APPEND parserArgs "--input" "${header}")
-	endforeach()
-
-	list(APPEND parserArgs "--output" "${ARG_OUTPUT_DIR}")
 	set(swReflectBuiltins "${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}")
 	set(swAnnotationMeta "${CMAKE_SOURCE_DIR}/${SW_FILE_ANNOTATION_META}")
 	set(swEmitTemplatesDir "${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}")
-	list(APPEND parserArgs "--builtins" "${swReflectBuiltins}")
-	list(APPEND parserArgs "--annotation-meta" "${swAnnotationMeta}")
-	list(APPEND parserArgs "--emit-templates" "${swEmitTemplatesDir}")
-
-	list(APPEND parserArgs "--module" "${ARG_MODULE}")
-	# 설정은 절대 경로로 넘긴다(파서가 작업 폴더 · 프로젝트 루트를 추측하지 않는다). 로컬 parser_config.json · toolchain_config.json 은 그 옆이다.
-	list(APPEND parserArgs "--config" "${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}")
-
-	# 실행 파일과 게임 모듈의 타입은 모듈 경계를 넘지 않는다. 그래서 생성기가 서버 버스 본문 타입(`kBusVersion`)에 내보내기 매크로를 요구하지 않게 알린다.
-	# 그 밖의 라이브러리(Base · 키트, STATIC 배포 포함)는 늘 검사한다. 정적 배포에서도 같은 헤더가 DLL 빌드로 쓰이기 때문이다.
-	get_target_property(swTargetType ${TARGET_NAME} TYPE)
-	if(ARG_MODULE_LOCAL OR swTargetType STREQUAL "EXECUTABLE")
-		list(APPEND parserArgs "--module-local")
-	endif()
 	file(GLOB swEmitTpls "${swEmitTemplatesDir}/*${SW_EXT_REFLECTION_TEMPLATE}")
-
-	# 리플렉션 대상 헤더가 생성 헤더(sw/config/*.gen.h 등)를 include 할 수 있으므로 항상 넣어준다.
-	# 없으면 libclang 파싱이 "file not found" 로 실패한다.
-	if(EXISTS "${CMAKE_BINARY_DIR}/generated")
-		list(APPEND parserArgs "--include" "${CMAKE_BINARY_DIR}/generated")
-	endif()
-
-	# 셰이더 바인딩 계약(binding_slots.hlsli)은 Engine 의 PUBLIC include 자리다 — 계약 수(shaderslot::k*)를 배열 크기로 쓰는 반사 헤더
-	# (WaterBodyComponent 등)를 파서도 컴파일러와 같은 자리에서 읽게 한다.
-	list(APPEND parserArgs "--include" "${CMAKE_SOURCE_DIR}/Content/engine/shaders")
-	foreach(inc IN LISTS ARG_INCLUDES)
-		list(APPEND parserArgs "--include" "${inc}")
-	endforeach()
+	sw_makeReflectionParserArgs(parserArgs ${TARGET_NAME})
 
 	# 파서가 런타임에 읽는 설정. 바뀌면 clang 인자/SDK 경로가 달라지므로 재생성해야 함.
 	set(swParserConfigs "")
@@ -127,38 +214,7 @@ function(sw_addReflectionStep TARGET_NAME)
 	endforeach()
 
 	file(MAKE_DIRECTORY "${ARG_OUTPUT_DIR}")
-	set(generatedFiles "")
-	set(generatedCppFiles "")
-
-	# 생성 파일 이름은 헤더 이름(확장자 뺀 것)뿐이다 — 같은 이름의 반사 헤더가 둘이면 같은 타깃에서는 서로의 .gen.cpp 를 덮어쓰고,
-	# 다른 타깃(코어 ↔ 모듈, 키트 ↔ 플러그인 에디터 등 gen 폴더를 나눠 쓰는 쌍)에서는 둘 다 include 경로에 있어 .gen.h 가 서로를 가린다.
-	# 어느 쌍이 include 경로를 공유하는지는 타깃 그래프에 달려 있어 여기서 가려내지 않는다 - 전역 레지스트리(stem → 소유 타깃 · 헤더)로 모든 쌍을 막는다.
-	# 예외 · 별칭은 없다: 걸리면 헤더 이름을 고친다. 레지스트리는 구성마다 비어 시작한다(전역 속성).
-	foreach(header IN LISTS ARG_HEADERS)
-		get_filename_component(stem "${header}" NAME_WE)
-		get_property(stemOwner GLOBAL PROPERTY SW_REFLECT_GEN_STEM_${stem})
-		if(stemOwner)
-			string(REPLACE "|" ";" stemOwnerParts "${stemOwner}")
-			list(GET stemOwnerParts 0 stemOwnerTarget)
-			list(GET stemOwnerParts 1 stemOwnerHeader)
-			if(NOT stemOwnerHeader STREQUAL header)
-				message(FATAL_ERROR "[Reflection] two reflected headers share the name '${stem}' (${stem}.gen.cpp / ${stem}.gen.h would overwrite or shadow each other):\n  ${stemOwnerTarget}: ${stemOwnerHeader}\n  ${TARGET_NAME}: ${header}\n  Rename one of them.")
-			endif()
-		else()
-			set_property(GLOBAL PROPERTY SW_REFLECT_GEN_STEM_${stem} "${TARGET_NAME}|${header}")
-		endif()
-		set(genFile "${ARG_OUTPUT_DIR}/${stem}${SW_EXT_REFLECTION_GEN_CPP}")
-		set(genHeader "${ARG_OUTPUT_DIR}/${stem}${SW_EXT_REFLECTION_GEN_HEADER}")
-		list(APPEND generatedFiles "${genFile}" "${genHeader}")
-		list(APPEND generatedCppFiles "${genFile}")
-
-		# 자리 표시자 = 스탬프 없음 — 자리 표시자를 심으면 그 입력의 스탬프를 지운다. 파서는 스탬프가 없는 입력을 다시 만들고, 생성 글을 읽어 자리 표시자인지 추측하지 않는다.
-		if(NOT EXISTS "${genFile}" OR NOT EXISTS "${genHeader}")
-			file(WRITE "${genFile}" "// AUTO-GENERATED placeholder — regenerated by ReflectionParser\n")
-			file(WRITE "${genHeader}" "// AUTO-GENERATED placeholder\n#pragma once\n")
-			file(REMOVE "${genFile}${SW_EXT_REFLECTION_STAMP}")
-		endif()
-	endforeach()
+	sw_planReflectionOutputs(generatedFiles generatedCppFiles ${TARGET_NAME} "${ARG_OUTPUT_DIR}" ${ARG_HEADERS})
 
 	set(swFlagOpsHeader "${ARG_OUTPUT_DIR}/${SW_FILE_REFLECTION_FLAG_OPS}")
 	list(APPEND generatedFiles "${swFlagOpsHeader}")
@@ -176,8 +232,7 @@ function(sw_addReflectionStep TARGET_NAME)
 	# 스탬프로 남겨 의존에 넣는다 — 내용이 같으면 COPYONLY 가 파일을 건드리지 않는다.
 	set(swReflectInputList "${ARG_OUTPUT_DIR}/ReflectionInputs.list")
 	string(REPLACE ";" "\n" swReflectInputText "${ARG_HEADERS}")
-	file(WRITE "${swReflectInputList}.in" "${swReflectInputText}\n")
-	configure_file("${swReflectInputList}.in" "${swReflectInputList}" COPYONLY)
+	sw_writeIfChanged("${swReflectInputList}" "${swReflectInputText}")
 
 	# 반사된 헤더가 include 한 **반사되지 않은** 헤더(예: `using ScoreList = …`)가 바뀌어도 이 단계가 다시 돌게 한다. 파서가 실행마다
 	# include 목록을 이 파일에 쓰고 ninja 가 읽는다. DEPENDS 가 반사된 헤더뿐이면 생성 코드가 낡은 타입 정보로 남는다.
@@ -187,11 +242,8 @@ function(sw_addReflectionStep TARGET_NAME)
 	# 내용이 같으면 COPYONLY 가 파일을 건드리지 않아 불필요하게 다시 돌지 않는다.
 	set(swReflectResponseFile "${ARG_OUTPUT_DIR}/ReflectionParser.rsp")
 	set(swReflectResponseArgs ${parserArgs} "--depfile" "${swReflectDepfile}")
-	string(REPLACE ";" "
-" swReflectResponseText "${swReflectResponseArgs}")
-	file(WRITE "${swReflectResponseFile}.in" "${swReflectResponseText}
-")
-	configure_file("${swReflectResponseFile}.in" "${swReflectResponseFile}" COPYONLY)
+	string(REPLACE ";" "\n" swReflectResponseText "${swReflectResponseArgs}")
+	sw_writeIfChanged("${swReflectResponseFile}" "${swReflectResponseText}")
 
 	add_custom_command(
 		OUTPUT ${generatedFiles}
@@ -221,31 +273,7 @@ function(sw_addReflectionStep TARGET_NAME)
 		target_compile_options(${TARGET_NAME} PUBLIC "SHELL:-include ${swFlagOpsHeader}")
 	endif()
 
-	# 자동 훑기는 구성 때 굳는다. 매크로가 없던 헤더가 바뀌면 그것만 다시 읽어 매크로가 생겼는지 본다(바뀐 헤더가 없으면 돌지 않는다).
-	set(swReflectScanStamp "")
-	if(listNonReflectHeader)
-		set(swReflectCandidateList "${ARG_OUTPUT_DIR}/ReflectionCandidates.list")
-		string(REPLACE ";" "\n" swReflectCandidateText "${listNonReflectHeader}")
-		file(WRITE "${swReflectCandidateList}.in" "${swReflectCandidateText}\n")
-		configure_file("${swReflectCandidateList}.in" "${swReflectCandidateList}" COPYONLY)
-		set(swReflectScanStamp "${ARG_OUTPUT_DIR}/ReflectionCandidates.stamp")
-		add_custom_command(
-			OUTPUT "${swReflectScanStamp}"
-			COMMAND ${CMAKE_COMMAND} "-DCANDIDATE_LIST=${swReflectCandidateList}" "-DSTAMP=${swReflectScanStamp}" "-DTARGET_NAME=${TARGET_NAME}"
-				-P "${CMAKE_SOURCE_DIR}/cmake/Engine/CheckReflectionCandidates.cmake"
-			DEPENDS ${listNonReflectHeader} "${swReflectCandidateList}" "${CMAKE_SOURCE_DIR}/cmake/Engine/CheckReflectionCandidates.cmake"
-			COMMENT "[Reflection] Checking ${TARGET_NAME} headers for new reflection macros"
-			VERBATIM
-		)
-	endif()
-
-	# 후보 검사는 타깃 컴파일을 막지 않는 별도 ALL 타깃이다. 예전에는 _ReflectionGen 에 묶여 평범한 헤더 하나만 고쳐도
-	# 수천 개 후보를 다시 훑는 동안 컴파일이 기다렸다. 계약: ALL 에 들어 있으므로 기본 빌드(all)에서 검사가 FATAL_ERROR 로
-	# 실패하면 빌드 전체가 실패한다(컴파일과 병렬로 돌 뿐 결과는 같다). `--target <타깃>` 만 지으면 검사는 돌지 않는다 —
-	# 그때 새 매크로 헤더는 링크의 미해결 기호로 드러난다. 같은 이름 반사 헤더 FATAL 은 구성 때 판정이라 영향이 없다.
-	if(swReflectScanStamp)
-		add_custom_target(${TARGET_NAME}_ReflectionCandidateCheck ALL DEPENDS "${swReflectScanStamp}")
-	endif()
+	sw_addReflectionCandidateCheck(${TARGET_NAME} "${ARG_OUTPUT_DIR}" ${listNonReflectHeader})
 	add_custom_target(${TARGET_NAME}_ReflectionGen DEPENDS ${generatedFiles})
 	add_dependencies(${TARGET_NAME} ReflectionParser ${TARGET_NAME}_ReflectionGen)
 
@@ -334,8 +362,7 @@ function(sw_addContentModuleCheck)
 	endforeach()
 	set(swInputs "${CMAKE_BINARY_DIR}/generated/ContentModuleInputs.list")
 	string(REPLACE ";" "\n" swInputText "${listInputLine}")
-	file(WRITE "${swInputs}.in" "${swInputText}\n")
-	configure_file("${swInputs}.in" "${swInputs}" COPYONLY)
+	sw_writeIfChanged("${swInputs}" "${swInputText}")
 	set(swStamp "${CMAKE_BINARY_DIR}/generated/ContentModules.stamp")
 	add_custom_command(
 		OUTPUT "${swStamp}"
