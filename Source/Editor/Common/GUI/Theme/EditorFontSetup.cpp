@@ -15,7 +15,6 @@
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Text/FontService.h"
-#include "Engine/Text/SystemFontLocator.h"
 
 #include <imgui.h>
 #include <imgui_freetype.h>
@@ -64,15 +63,8 @@ namespace sw::editor
                         return candidate;
                 }
 
-                // 프로젝트 안에 없으면 OS 시스템 폰트 폴더를 직접 찾는다(I/O 지연을 막으려고 재귀 스캔은 하지 않는다)
-                for ( const string& fontsDir : SystemFontLocator::getSystemFontDirectories() )
-                {
-                    string direct = FileUtil::joinPath( fontsDir, pFileName );
-                    if ( FileUtil::isRegularFile( direct ) )
-                        return string( std::move( direct ) );
-                }
-
-                return {};
+                // 결함: OS 폴더 바로 아래만 봐 리눅스(`truetype/<패밀리>/`)에서 글꼴을 못 찾고 에디터가 서지 못했다 - 엔진의 찾기를 그대로 쓴다.
+                return editor::getSubsystem<FontService>().findSystemFontFile( pFileName );
             }
 
             /**

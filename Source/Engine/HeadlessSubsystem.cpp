@@ -312,6 +312,8 @@ namespace sw
                 options._repeatCount   = repeatCount > 0 ? static_cast<uint32>( repeatCount ) : 1u;
                 options._pCrashHandler = &engine::getSubsystem<CrashHandler>();
                 inoutState._bFailed    = test::TestRunner::run( options ) == false;
+                // 이 실행의 "전부 통과" 를 에디터까지 통과한 것으로 읽지 않게 한다 - 에디터 모듈은 이 단계에 아직 올라오지 않았다.
+                SW_LOG_INFO_ID( "Headless.EditorCasesRunElsewhere", "Editor cases are not in this run - they run inside the editor (self test editor.unitTests, ctest Scenario.editor)" );
                 return true;
 #else
                 (void)commandLine;
