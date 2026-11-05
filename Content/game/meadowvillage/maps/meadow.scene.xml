@@ -99,9 +99,9 @@
 				<_listComponent>
 					<MeshComponent _componentName="MeshComponent"
 					               _bActive="true"
-					               _localPosition="-17,0,-20"
+					               _localPosition="6,0,1"
 					               _localRotation="0,0,0"
-					               _localScale="1,1,1"
+					               _localScale="60,1,60"
 					               _attachOwner="None"
 					               _attachOwnerID="0"
 					               _attachComponent="None"
