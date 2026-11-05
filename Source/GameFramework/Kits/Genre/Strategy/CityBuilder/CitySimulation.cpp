@@ -76,6 +76,64 @@ namespace sw
                 return archive.isError() == false;
             }
 
+            /**
+             * @brief 읽은 건물 하나를 봅니다. 살아 있는 건물은 정의를 바로 찌르고(`storage._pDef->_kind`), 발밑을 격자 번호로 바로 바꾼다(`demolish`) — 정의가 없거나 격자 밖이면 범위 밖이다.
+             */
+            [[nodiscard]] static bool isBuildingValid( const CityBuilding& building, const CityCatalog& catalog, const GridTopology& topology )
+            {
+                if ( building._bAlive > SW_TRUE )
+                    return false;
+                if ( building._bAlive == SW_FALSE )
+                    return true;
+                if ( building._pDef == nullptr )
+                    return false;
+                const CityBuildingDef& def         = *building._pDef;
+                const bool             bPlaceValid = topology.isRectInside( building._origin, int2{ def._size, def._size } ) && ( building.hasRoadAccess() ? topology.isInside( building._accessTile ) : building._accessTile == int2{ -1, -1 } );
+                const bool             bTimeValid  = 0.0f <= building._walkerTimer && 0.0f <= building._productionProgress && 0.0f <= building._evolveTimer && 0.0f <= building._devolveTimer && 0.0f <= building._immigrationTimer;
+                const bool             bWorkValid  = 0.0f <= building._efficiency && building._efficiency <= 1.0f && 0 <= building._assignedWorkers && building._assignedWorkers <= def._workers && 0 <= building._activeWalkerCount;
+                const int32            levelCount  = static_cast<int32>( catalog.getHouseLevels().size() );
+                const bool             bHouseValid = building.isHouse() ? 0 <= building._level && ( building._level == 0 || building._level < levelCount ) && 0 <= building._population : building._level == 0 && building._population == 0;
+                return bPlaceValid && bTimeValid && bWorkValid && bHouseValid;
+            }
+
+            /** @brief 읽은 타일과 건물이 서로 맞는지 봅니다. 타일의 번호는 건물 목록을 바로 찌르고, 살아 있는 건물의 발밑은 모두 그 건물을 가리킵니다. */
+            [[nodiscard]] static bool areTilesValid( const vector<CityTile>& listTile, const vector<CityBuilding>& listBuilding, const GridTopology& topology )
+            {
+                const int32 buildingCount = static_cast<int32>( listBuilding.size() );
+                for ( const CityTile& tile : listTile )
+                {
+                    const bool bIndexValid = -1 <= tile._buildingIndex && tile._buildingIndex < buildingCount && ( tile._buildingIndex < 0 || listBuilding[static_cast<size_t>( tile._buildingIndex )]._bAlive != SW_FALSE );
+                    // 도로 위에는 건물을 짓지 못한다(`placeBuilding`).
+                    const bool bRoadValid = tile._bRoad <= SW_TRUE && -1 <= tile._roadComponent && ( tile._bRoad == SW_FALSE || tile._buildingIndex < 0 );
+                    if ( bIndexValid == false || bRoadValid == false )
+                        return false;
+                }
+                int32 footprintSum = 0;
+                for ( int32 buildingIndex = 0; buildingIndex < buildingCount; ++buildingIndex )
+                {
+                    const CityBuilding& building = listBuilding[static_cast<size_t>( buildingIndex )];
+                    if ( building._bAlive == SW_FALSE )
+                        continue;
+                    const int32 size = building._pDef->_size;
+                    for ( int32 dy = 0; dy < size; ++dy )
+                    {
+                        for ( int32 dx = 0; dx < size; ++dx )
+                        {
+                            if ( listTile[static_cast<size_t>( topology.toIndex( building._origin._x + dx, building._origin._y + dy ) )]._buildingIndex != buildingIndex )
+                                return false;
+                        }
+                    }
+                    footprintSum += size * size;
+                }
+                // 발밑이 모두 맞고 건물을 가리키는 타일 수가 발밑의 합이면, 남의 발밑 밖에서 건물을 가리키는 타일은 없다.
+                int32 occupiedCount = 0;
+                for ( const CityTile& tile : listTile )
+                {
+                    occupiedCount += tile._buildingIndex >= 0 ? 1 : 0;
+                }
+                return occupiedCount == footprintSum;
+            }
+
             /** @brief 타일 좌표 목록 하나(개수 + 좌표)를 읽습니다. */
             [[nodiscard]] static bool readTileList( Archive& archive, vector<int2>& outListTile )
             {
@@ -111,12 +169,39 @@ namespace sw
                 archive >> outWalker._bReturning;
                 archive >> outWalker._bAlive;
                 const bool bHomeValid         = -1 <= outWalker._homeBuilding && outWalker._homeBuilding < static_cast<int32>( buildingCount );
+                const bool bTargetValid       = -1 <= outWalker._targetBuilding && outWalker._targetBuilding < static_cast<int32>( buildingCount );
                 const bool bEnumValid         = kind <= static_cast<uint8>( CityWalkerKind::Cart ) && service <= static_cast<uint8>( CityService::Count );
-                const bool bInvalidWalkerData = archive.isError() || bHomeValid == false || bEnumValid == false;
+                const bool bInvalidWalkerData = archive.isError() || bHomeValid == false || bTargetValid == false || bEnumValid == false || outWalker._bReturning > SW_TRUE || outWalker._bAlive > SW_TRUE || outWalker._cargoAmount < 0;
                 if ( bInvalidWalkerData )
                     return false;
                 outWalker._kind    = static_cast<CityWalkerKind>( kind );
                 outWalker._service = static_cast<CityService>( service );
+                return true;
+            }
+
+            /**
+             * @brief 읽은 일꾼 하나를 봅니다. 살아 있는 일꾼의 집과 목적지는 살아 있는 건물이다(`demolish` 가 함께 지운다). 집은 `startReturn` 이 바로 찌른다.
+             * @details 진행은 걸음마다 1 을 빼 1 아래이다. 터무니없는 값은 `updateWalkers` 의 고리가 끝나지 않는다(1e30 - 1 == 1e30).
+             */
+            [[nodiscard]] static bool isWalkerValid( const CityWalker& walker, const vector<CityBuilding>& listBuilding, const GridTopology& topology )
+            {
+                if ( walker._bAlive == SW_FALSE )
+                    return true;
+                const bool bHomeAlive   = walker._homeBuilding >= 0 && listBuilding[static_cast<size_t>( walker._homeBuilding )]._bAlive != SW_FALSE;
+                const bool bTargetAlive = walker._targetBuilding < 0 || listBuilding[static_cast<size_t>( walker._targetBuilding )]._bAlive != SW_FALSE;
+                const bool bTilesValid  = topology.isInside( walker._tile ) && topology.isInside( walker._nextTile ) && ( walker._previousTile == int2{ -1, -1 } || topology.isInside( walker._previousTile ) );
+                if ( bHomeAlive == false || bTargetAlive == false || bTilesValid == false || walker._progress < 0.0f || 1.0f <= walker._progress )
+                    return false;
+                for ( const int2& tile : walker._listPath )
+                {
+                    if ( topology.isInside( tile ) == false )
+                        return false;
+                }
+                for ( const int2& tile : walker._listVisited )
+                {
+                    if ( topology.isInside( tile ) == false )
+                        return false;
+                }
                 return true;
             }
         };
@@ -1149,7 +1234,6 @@ namespace sw
         if ( bInvalidCityHeader )
             return false;
 
-        const int32      buildingLimit = static_cast<int32>( _listTile.size() ); // 건물은 적어도 한 셀을 차지한다
         vector<CityTile> listTile( _listTile.size() );
         for ( CityTile& tile : listTile )
         {
@@ -1159,7 +1243,7 @@ namespace sw
             archive >> tile._desirability;
             archive >> terrain;
             archive >> tile._bRoad;
-            const bool bInvalidTileData = archive.isError() || terrain > static_cast<uint8>( CityTerrain::Rock ) || tile._buildingIndex >= buildingLimit;
+            const bool bInvalidTileData = archive.isError() || terrain > static_cast<uint8>( CityTerrain::Rock );
             if ( bInvalidTileData )
                 return false;
             tile._terrain = static_cast<CityTerrain>( terrain );
@@ -1171,9 +1255,11 @@ namespace sw
         vector<CityBuilding> listBuilding( buildingCount );
         for ( CityBuilding& building : listBuilding )
         {
-            if ( CitySimulationInternal::readBuilding( archive, *_pCatalog, building ) == false )
+            if ( CitySimulationInternal::readBuilding( archive, *_pCatalog, building ) == false || CitySimulationInternal::isBuildingValid( building, *_pCatalog, _topology ) == false )
                 return false;
         }
+        if ( CitySimulationInternal::areTilesValid( listTile, listBuilding, _topology ) == false )
+            return false;
 
         uint32 walkerCount = 0;
         if ( StateArchiveUtil::readCount( archive, CitySimulationInternal::kMinWalkerStateBytes, walkerCount ) == false )
@@ -1181,7 +1267,7 @@ namespace sw
         vector<CityWalker> listWalker( walkerCount );
         for ( CityWalker& walker : listWalker )
         {
-            if ( CitySimulationInternal::readWalker( archive, buildingCount, walker ) == false )
+            if ( CitySimulationInternal::readWalker( archive, buildingCount, walker ) == false || CitySimulationInternal::isWalkerValid( walker, listBuilding, _topology ) == false )
                 return false;
         }
 
@@ -1205,7 +1291,11 @@ namespace sw
         archive >> employed;
         archive >> bRoadsDirty;
         archive >> bDesirabilityDirty;
-        if ( archive.isError() )
+        // 임금 빚은 정수 부분을 달마다 내어 1 아래이다. 일하는 사람은 일할 수 있는 사람에서 나눠 준다(`assignLabor`).
+        const bool bMoneyValid = 0.0f <= wageDebt && wageDebt < 1.0f;
+        const bool bLaborValid = 0 <= workforce && 0 <= employed && employed <= workforce;
+        const bool bFlagsValid = bRoadsDirty <= SW_TRUE && bDesirabilityDirty <= SW_TRUE;
+        if ( archive.isError() || time < 0.0f || floodFertility < 0.0f || 1.0f < floodFertility || bMoneyValid == false || bLaborValid == false || bFlagsValid == false )
             return false;
 
         _listTile           = std::move( listTile );

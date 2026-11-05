@@ -251,7 +251,7 @@ namespace sw
         void writeState( Archive& outArchive ) const;
         /**
          * @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. `initialize` 를 먼저 호출해야 하며 크기와 카탈로그가 같아야 합니다.
-         * @return 크기가 다르거나, 카탈로그에 없는 건물이 있거나, 데이터가 깨졌으면 false 이며 상태는 그대로 둔다.
+         * @return 크기가 다르거나, 카탈로그에 없는 건물, 타일 · 건물 · 일꾼이 서로 맞지 않는 값, 범위 밖 값이 있거나 데이터가 깨졌으면 false 이며 상태는 그대로 둔다.
          */
         [[nodiscard]] bool readState( Archive& archive );
 
