@@ -252,7 +252,9 @@ namespace sw
         }
         archive >> restored._deadEyeLevel;
         archive >> restored._bDeadEyeActive;
-        if ( archive.isError() || restored._bDeadEyeActive > SW_TRUE )
+        // 표시는 켜 둔 동안 단계의 개수까지만 찍는다(`markTarget`). 단계를 읽은 뒤라야 상한을 안다.
+        const bool bMarksValid = restored._bDeadEyeActive != SW_FALSE ? static_cast<int32>( restored._listMark.size() ) <= restored.getMarkLimit() : restored._listMark.empty();
+        if ( archive.isError() || restored._bDeadEyeActive > SW_TRUE || restored._deadEyeLevel < 0 || bMarksValid == false )
             return false;
         *this = std::move( restored );
         return true;

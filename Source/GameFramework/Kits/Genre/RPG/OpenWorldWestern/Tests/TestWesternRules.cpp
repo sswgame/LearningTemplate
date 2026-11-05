@@ -180,19 +180,25 @@ namespace
             return count;
         }
 
-        bool readForged( const sw::hashed_string& horseID, float32 healthCore, float32 staminaCore, float32 hoursSinceBrush )
+        bool readForged( const sw::hashed_string& horseID, float32 healthCore, float32 staminaCore, float32 hoursSinceBrush, const sw::vector<sw::hashed_string>& listAbility = {}, int32 bondLevel = 1 )
         {
             sw::GameRandom random;
             random.setSeed( 7 );
             sw::Archive written;
             sw::StateArchiveUtil::writeName( written, horseID );
-            written << static_cast<uint32>( 0 );
+            written << static_cast<uint32>( listAbility.size() );
+            for ( const sw::hashed_string& ability : listAbility )
+            {
+                sw::StateArchiveUtil::writeName( written, ability );
+            }
             _horse.getHealth().writeState( written );
             _horse.getStamina().writeState( written );
             sw::StateArchiveUtil::writeRandom( written, random );
             written << healthCore;
             written << staminaCore;
-            sw::LevelProgress{}.writeState( written );
+            sw::LevelProgress bond;
+            bond.setLevel( _catalog.getBondCurve(), bondLevel );
+            bond.writeState( written );
             written << 0.0f;
             written << 0.0f;
             written << hoursSinceBrush;
@@ -209,18 +215,22 @@ namespace
 
         WesternSurvivalTest() { SW_REQUIRE_TRUE( _survival.initialize( &_catalog ) ); }
 
-        bool readForged( float32 healthCore, uint8 bDeadEyeActive )
+        bool readForged( float32 healthCore, uint8 bDeadEyeActive, const sw::vector<uint64>& listMark = {}, int32 deadEyeLevel = 2 )
         {
             sw::Archive written;
             written << static_cast<uint32>( 0 );
-            written << static_cast<uint32>( 0 );
+            written << static_cast<uint32>( listMark.size() );
+            for ( const uint64 targetID : listMark )
+            {
+                written << targetID;
+            }
             _survival.getGauge( sw::WesternCore::Health ).writeState( written );
             written << healthCore;
             _survival.getGauge( sw::WesternCore::Stamina ).writeState( written );
             written << 100.0f;
             _survival.getGauge( sw::WesternCore::DeadEye ).writeState( written );
             written << 100.0f;
-            written << static_cast<int32>( 2 );
+            written << deadEyeLevel;
             written << bDeadEyeActive;
             sw::Archive reading( written.getData(), written.getSize() );
             return _survival.readState( reading );
@@ -496,6 +506,7 @@ SW_TEST_CASE_F( WesternLawTest, ReadStateRefusesBrokenRecords )
     SW_EXPECT_FALSE( readForgedRecords( -1.0f, 9, 2, false ) );
     SW_EXPECT_FALSE( readForgedRecords( 1.0f, -9, 2, false ) );
     SW_EXPECT_FALSE( readForgedRecords( 1.0f, 9, -2, false ) );
+    SW_EXPECT_FALSE( readForgedRecords( 1.0f, 9, 4, false ) ); // 지역의 최대 수배(3)를 넘는다
     SW_EXPECT_FALSE( readForgedRecords( 1.0f, 9, 2, true ) );
     SW_EXPECT_EQUAL( 8, _law.getBounty( _region ) );
 
@@ -791,6 +802,22 @@ SW_TEST_CASE_F( WesternHorseTest, ReadStateRefusesOutOfRangeValues )
 }
 
 /**
+ * @brief [WesternHorseTest] 결함: 능력 목록을 그대로 받아 유대 없이 능력을 열 수 있었다. 겹친 능력, 모르는 능력, 지금 단계보다 뒤에 열리는 능력을 거절하고 상태를 둔다
+ */
+SW_TEST_CASE_F( WesternHorseTest, ReadStateRefusesAbilitiesNotUnlocked )
+{
+    SW_REQUIRE_TRUE( readForged( "steady", 50.0f, 60.0f, 1.0f, { "rear" }, 2 ) ); // 형식은 맞다
+    SW_EXPECT_TRUE( _horse.hasAbility( "rear" ) );
+
+    SW_EXPECT_FALSE( readForged( "steady", 50.0f, 60.0f, 1.0f, { "rear", "rear" }, 2 ) );
+    SW_EXPECT_FALSE( readForged( "steady", 50.0f, 60.0f, 1.0f, { "fly" }, 2 ) );
+    SW_EXPECT_FALSE( readForged( "steady", 50.0f, 60.0f, 1.0f, { "drift" }, 2 ) ); // 3 단계에서 열린다
+    SW_EXPECT_FALSE( readForged( "steady", 50.0f, 60.0f, 1.0f, { "rear" }, 1 ) );
+    SW_EXPECT_TRUE( _horse.hasAbility( "rear" ) );
+    SW_EXPECT_FALSE( _horse.hasAbility( "drift" ) );
+}
+
+/**
  * @brief [WesternSurvivalTest] 편한 범위 안(경계 포함)에서는 기본 감소만, 추우면 체력 코어가, 더우면 스태미나 코어가 벗어난 만큼 더 준다. 옷은 체감 온도를 올린다. 바닥 아래로 가지 않는다
  */
 SW_TEST_CASE_F( WesternSurvivalTest, TemperatureDrainsTheRightCore )
@@ -912,8 +939,16 @@ SW_TEST_CASE_F( WesternSurvivalTest, InitializeAndStateChecks )
     SW_EXPECT_FALSE( readForged( -1.0f, SW_FALSE ) );
     SW_EXPECT_FALSE( readForged( 101.0f, SW_FALSE ) );
     SW_EXPECT_FALSE( readForged( 50.0f, 2 ) );
+    SW_EXPECT_FALSE( readForged( 50.0f, SW_TRUE, {}, -1 ) );         // 음수 단계
+    SW_EXPECT_FALSE( readForged( 50.0f, SW_FALSE, { 1 } ) );         // 꺼져 있는데 표시가 있다
+    SW_EXPECT_FALSE( readForged( 50.0f, SW_TRUE, { 1, 2, 3, 4 } ) ); // 2 단계는 셋까지다
+    SW_EXPECT_FALSE( readForged( 50.0f, SW_TRUE, { 1 }, 1 ) );       // 1 단계는 표시가 없다
     SW_EXPECT_NEAR( 40.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
     SW_EXPECT_TRUE( _survival.isDeadEyeActive() );
+    SW_EXPECT_TRUE( _survival.getMarks().empty() );
+
+    SW_REQUIRE_TRUE( readForged( 50.0f, SW_TRUE, { 1, 1, 2 } ) ); // 같은 대상에 또 표시해도 된다
+    SW_EXPECT_EQUAL( size_t( 3 ), _survival.getMarks().size() );
 }
 
 /**

@@ -107,6 +107,8 @@ namespace sw
     private:
         void    applyBondLevel( int32 level );
         float32 computeFearResist() const;
+        /** @brief 읽은 능력이 겹치지 않고 모두 지금 유대 단계까지 열린 것인지 반환합니다. 능력 목록은 `applyBondLevel` 만 채웁니다. */
+        [[nodiscard]] bool areAbilitiesUnlocked() const;
 
     private:
         EventBuffer<WesternHorseEvent> _eventBuffer;

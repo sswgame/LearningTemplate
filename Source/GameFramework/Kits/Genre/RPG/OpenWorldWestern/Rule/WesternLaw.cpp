@@ -250,7 +250,10 @@ namespace sw
         for ( size_t recordIndex = 0; recordIndex < listRecord.size(); ++recordIndex )
         {
             RegionRecord& record = listRecord[recordIndex];
-            if ( StateArchiveUtil::readName( archive, record._regionID ) == false || _pCatalog->findRegion( record._regionID ) == nullptr )
+            if ( StateArchiveUtil::readName( archive, record._regionID ) == false )
+                return false;
+            const WesternRegionDef* pRegion = _pCatalog->findRegion( record._regionID );
+            if ( pRegion == nullptr )
                 return false;
             for ( size_t earlier = 0; earlier < recordIndex; ++earlier )
             {
@@ -262,7 +265,7 @@ namespace sw
             archive >> record._wantedLevel;
             archive >> record._bSeenByLaw;
             // 안 보인 시간이 NaN 이면 식는 비교가 늘 거짓이라 수배가 영영 내려가지 않는다
-            const bool bValid = archive.isOk() && 0.0f <= record._unseenTime && 0 <= record._bounty && 0 <= record._wantedLevel && record._bSeenByLaw <= SW_TRUE;
+            const bool bValid = archive.isOk() && 0.0f <= record._unseenTime && 0 <= record._bounty && 0 <= record._wantedLevel && record._wantedLevel <= pRegion->_maxWanted && record._bSeenByLaw <= SW_TRUE;
             if ( bValid == false )
                 return false;
         }

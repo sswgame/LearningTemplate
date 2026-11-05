@@ -254,10 +254,28 @@ namespace sw
         const bool bCoreValid = 0.0f <= restored._healthCore && restored._healthCore <= kCoreMax && 0.0f <= restored._staminaCore && restored._staminaCore <= kCoreMax;
         const bool bValid     = archive.isOk() && bCoreValid && restored._bRidden <= SW_TRUE && restored._bGalloping <= SW_TRUE && 0.0f <= restored._fear && 0.0f <= restored._hoursSinceBrush &&
                             0.0f <= restored._bondXPCarry && restored._bondXPCarry < 1.0f && restored._bond.getLevel() <= MathUtil::max( 1, _pCatalog->getBondCurve().getMaxLevel() );
-        if ( bValid == false )
+        if ( bValid == false || restored.areAbilitiesUnlocked() == false )
             return false;
         restored._eventBuffer.clear();
         *this = std::move( restored );
+        return true;
+    }
+
+    bool WesternHorse::areAbilitiesUnlocked() const
+    {
+        if ( VectorUtil::findDuplicate( _listAbility ) != nullptr )
+            return false;
+        const int32 bondLevel = getBondLevel();
+        for ( const hashed_string& ability : _listAbility )
+        {
+            bool bUnlocked = false;
+            for ( const WesternBondLevelDef& bond : _pCatalog->getBondLevels() )
+            {
+                bUnlocked = bUnlocked || ( bond._level <= bondLevel && VectorUtil::contains( bond._listUnlock, ability ) );
+            }
+            if ( bUnlocked == false )
+                return false;
+        }
         return true;
     }
 
