@@ -12,6 +12,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/JSON/JSONFields.h"
 
 namespace sw::editor
 {
@@ -110,25 +111,15 @@ namespace sw::editor
                 return string_view::npos;
             }
 
-            /** @brief 칸 목록의 글 배열 하나를 읽습니다. 없거나 배열이 아니거나 글이 아닌 원소가 있으면 오류와 false 입니다. */
-            [[nodiscard]] static bool readStringArray( const JSONValue& object, string_view key, string_view sourceLabel, vector<string>& outList )
+            /** @brief 칸 목록의 글이 모두 비어 있지 않으면 true 입니다. 빈 글은 모든 경로의 앞머리가 되어 규칙을 망가뜨린다. */
+            [[nodiscard]] static bool hasNoEmptyText( const vector<string>& listText, string_view key, string_view sourceLabel )
             {
-                const JSONValue array = object.get( key );
-                if ( array.isArray() == false )
+                for ( size_t index = 0; index < listText.size(); ++index )
                 {
-                    SW_LOG_ERROR_ID( "AssetReferenceFields.ArrayMissing", "%#: '%#' is missing or not an array", sourceLabel, key );
+                    if ( listText[index].empty() == false )
+                        continue;
+                    SW_LOG_ERROR_ID( "AssetReferenceFields.ElementNotText", "%#: '%#' element %# is not a non-empty string", sourceLabel, key, static_cast<uint32>( index ) );
                     return false;
-                }
-                outList.clear();
-                for ( size_t index = 0; index < array.size(); ++index )
-                {
-                    const JSONValue element = array.at( index );
-                    if ( element.isString() == false || element.asString().empty() )
-                    {
-                        SW_LOG_ERROR_ID( "AssetReferenceFields.ElementNotText", "%#: '%#' element %# is not a non-empty string", sourceLabel, key, static_cast<uint32>( index ) );
-                        return false;
-                    }
-                    outList.push_back( element.asString() );
                 }
                 return true;
             }
@@ -166,44 +157,31 @@ namespace sw::editor
             SW_LOG_ERROR_ID( "AssetReferenceFields.ConfigUnreadable", "Asset reference fields %# could not be read", path );
             return false;
         }
-        const JSONValue root = document.getRoot();
-        vector<string>  listField;
-        const bool      bLists = AssetReferenceFieldsInternal::readStringArray( root, "_listDomain", path, _listDomain ) &&
-                            AssetReferenceFieldsInternal::readStringArray( root, "_listUncheckedDomain", path, _listUncheckedDomain ) &&
-                            AssetReferenceFieldsInternal::readStringArray( root, "_listTextExtension", path, _listTextExtension ) &&
-                            AssetReferenceFieldsInternal::readStringArray( root, "_listCMakeFile", path, _listCMakeFile ) &&
-                            AssetReferenceFieldsInternal::readStringArray( root, "_listCMakeArgument", path, _listCMakeArgument ) &&
-                            AssetReferenceFieldsInternal::readStringArray( root, "_listField", path, listField );
-        const JSONValue imported = root.get( "_listImportedFolder" );
-        if ( bLists == false || imported.isArray() == false )
+        AssetReferenceFieldsConfig config;
+        using Internal = AssetReferenceFieldsInternal;
+        bool bValid    = JSONFields::readFields( document.getRoot(), config, path );
+        bValid         = Internal::hasNoEmptyText( config._listDomain, "_listDomain", path ) && bValid;
+        bValid         = Internal::hasNoEmptyText( config._listUncheckedDomain, "_listUncheckedDomain", path ) && bValid;
+        bValid         = Internal::hasNoEmptyText( config._listTextExtension, "_listTextExtension", path ) && bValid;
+        bValid         = Internal::hasNoEmptyText( config._listCMakeFile, "_listCMakeFile", path ) && bValid;
+        bValid         = Internal::hasNoEmptyText( config._listCMakeArgument, "_listCMakeArgument", path ) && bValid;
+        bValid         = Internal::hasNoEmptyText( config._listField, "_listField", path ) && bValid;
+        for ( const AssetImportedFolder& folder : config._listImportedFolder )
         {
-            SW_LOG_ERROR_ID( "AssetReferenceFields.ConfigInvalid", "Asset reference fields %# need every list (_listDomain … _listField, _listImportedFolder)", path );
-            return false;
+            bValid = Internal::hasNoEmptyText( folder._listSourceExtension, "_listSourceExtension", path ) && bValid;
         }
+        if ( bValid == false )
+            return false;
+        _listDomain          = std::move( config._listDomain );
+        _listUncheckedDomain = std::move( config._listUncheckedDomain );
+        _listTextExtension   = std::move( config._listTextExtension );
+        _listCMakeFile       = std::move( config._listCMakeFile );
+        _listCMakeArgument   = std::move( config._listCMakeArgument );
+        _listImported        = std::move( config._listImportedFolder );
         _setField.clear();
-        for ( const string& field : listField )
+        for ( const string& field : config._listField )
         {
             _setField.insert( field );
-        }
-        _listImported.clear();
-        for ( size_t index = 0; index < imported.size(); ++index )
-        {
-            const JSONValue             entry = imported.at( index );
-            AssetImportedFolder         folder;
-            const std::optional<string> name       = entry.readRequired<string>( "_folder" );
-            const std::optional<string> sourceName = entry.readRequired<string>( "_sourceFolder" );
-            const std::optional<bool>   bGenerated = entry.readRequired<bool>( "_bGeneratedReferrers" );
-            if ( name.has_value() == false || sourceName.has_value() == false || bGenerated.has_value() == false ||
-                 AssetReferenceFieldsInternal::readStringArray( entry, "_listSourceExtension", path, folder._listSourceExtension ) == false )
-            {
-                SW_LOG_ERROR_ID( "AssetReferenceFields.ImportedFolderInvalid", "Asset reference fields %#: imported folder %# needs _folder, _sourceFolder, _listSourceExtension and _bGeneratedReferrers",
-                                 path, static_cast<uint32>( index ) );
-                return false;
-            }
-            folder._folder              = *name;
-            folder._sourceFolder        = *sourceName;
-            folder._bGeneratedReferrers = *bGenerated;
-            _listImported.push_back( std::move( folder ) );
         }
         return true;
     }

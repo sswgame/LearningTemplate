@@ -296,21 +296,15 @@ namespace sw::editor
             const JSONValue notifies = clipValue.get( "notifies" );
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
             {
-                const JSONValue notify         = notifies.at( notifyIndex );
-                const bool      bInvalidNotify = JSONFields::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
-                                            notify.get( "time" ).isNumber() == false;
+                const JSONValue      notify = notifies.at( notifyIndex );
+                AnimationNotifyEvent event{};
+                // 이름과 시각은 여기서 필수다(스프라이트 클립은 같은 칸을 생략할 수 있어 구조체에 필수를 달지 않는다).
+                const bool bInvalidNotify = JSONFields::readFields( notify, event, clipDataPath ) == false || notify.has( "name" ) == false || notify.has( "time" ) == false;
                 if ( bInvalidNotify )
                 {
-                    SW_LOG_ERROR_ID( "ModelImporter.ClipDataNotifyNeeds", "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath.c_str(), notifyIndex, clipName.c_str() );
+                    SW_LOG_ERROR_ID( "ModelImporter.ClipDataNotifyNeeds", "Clip data '%#': notify %# of '%#' needs a name and a time", clipDataPath, static_cast<uint32>( notifyIndex ), clipName );
                     return false;
                 }
-                AnimationNotifyEvent event{};
-                event._name                       = hashed_string( notify.get( "name" ).asString() );
-                const std::optional<float32> time = notify.readRequired<float32>( "time" );
-                // 길이는 없으면 형식의 초기값(순간 알림)이다.
-                if ( time.has_value() == false || notify.readOptionalInto( "duration", event._duration ) == false )
-                    return false;
-                event._time = *time;
                 extra._listNotify.push_back( event );
             }
             const JSONValue curves = clipValue.get( "curves" );

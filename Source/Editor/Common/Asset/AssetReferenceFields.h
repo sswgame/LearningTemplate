@@ -16,6 +16,8 @@
 
 #include "Editor/Common/EditorExports.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw::editor
 {
     /** @brief 참조를 담는 글의 문법입니다. 파일 종류로 고른다(`.json` → JSON, 테스트 CMake → CMake, 나머지 글 에셋 → XML). */
@@ -59,12 +61,41 @@ namespace sw::editor
     };
 
     /** @brief 임포트 산출물 폴더 하나입니다 — 산출물은 커밋하지 않고 같은 자리의 원본 폴더에서 만든다(`models_raw/x.glb` → `models/x.mesh` · `models/x/…`). */
+    REFLECT()
     struct AssetImportedFolder
     {
-        string         _folder;
-        string         _sourceFolder;
+        REFLECT_BODY();
+
+        PROPERTY( Name = "_folder", Required )
+        string _folder;
+        PROPERTY( Name = "_sourceFolder", Required )
+        string _sourceFolder;
+        PROPERTY( Name = "_listSourceExtension", Required )
         vector<string> _listSourceExtension;
-        bool           _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        PROPERTY( Name = "_bGeneratedReferrers", Required )
+        bool _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+
+    /** @brief 칸 목록 파일(`AssetReferenceFields::kConfigFile`)의 스키마입니다. 키 철자는 `Scripts/dev/MoveAsset.py` 도 읽어 그대로 둔다. */
+    REFLECT()
+    struct AssetReferenceFieldsConfig
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "_listDomain", Required )
+        vector<string> _listDomain;
+        PROPERTY( Name = "_listUncheckedDomain", Required )
+        vector<string> _listUncheckedDomain;
+        PROPERTY( Name = "_listTextExtension", Required )
+        vector<string> _listTextExtension;
+        PROPERTY( Name = "_listCMakeFile", Required )
+        vector<string> _listCMakeFile;
+        PROPERTY( Name = "_listCMakeArgument", Required )
+        vector<string> _listCMakeArgument;
+        PROPERTY( Name = "_listField", Required )
+        vector<string> _listField;
+        PROPERTY( Name = "_listImportedFolder", Required )
+        vector<AssetImportedFolder> _listImportedFolder;
     };
 
     /**
