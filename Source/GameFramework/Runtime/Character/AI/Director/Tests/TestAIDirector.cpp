@@ -116,9 +116,10 @@ SW_TEST_CASE( AIDirectorIntensityTest, RateAccumulatesAndLevelIsAFloor )
 {
     DirectorRig               rig;
     AIDirectorIntensityModel& model = rig._director.getBuiltinIntensityModel();
+    SW_REQUIRE_TRUE( model.addSignal( hashed_string( "hit" ), 1.0f ) ); // 싸움 신호가 평온 시계를 되돌려 식기 지연 안에 든다
     SW_REQUIRE_TRUE( model.setSignal( hashed_string( "near" ), 100.0f ) );
-    model.update( 0.5f ); // 초당 최대 0.2, 식기 지연 안
-    SW_EXPECT_NEAR( 0.1f, model.getStress(), 1.0e-4f );
+    model.update( 0.5f ); // 초당 최대 0.2
+    SW_EXPECT_NEAR( 0.2f, model.getStress(), 1.0e-4f );
     SW_REQUIRE_TRUE( model.setSignal( hashed_string( "near" ), 0.0f ) );
 
     SW_REQUIRE_TRUE( model.setSignal( hashed_string( "low" ), 3.0f ) );
@@ -437,29 +438,28 @@ SW_TEST_CASE( AIDirectorStateTest, OutOfRangeValuesAreRefused )
 
 SW_TEST_CASE( AIDirectorProfileTest, RefusesBrokenData )
 {
+    SW_EXPECT_LOG( "AIDirectorProfile.PhaseDeclaredTwice" );
+    SW_EXPECT_LOG( "AIDirectorProfile.PoolNoEncounter" );
+    SW_EXPECT_LOG( "AIDirectorProfile.PoolTriggeredPhaseEnter" );
+    SW_EXPECT_LOG( "AIDirectorProfile.PoolWaitsUnknownPhase" );
+    SW_EXPECT_LOG( "AIDirectorProfile.PoolListsTwice" );
     {
-        SW_EXPECT_LOG( "AIDirectorProfile.PhaseDeclaredTwice" );
         AIDirectorProfile profile;
         SW_EXPECT_FALSE( profile.loadFromXMLText( R"(<AIDirector startPhase="A"><Phase id="A"/><Phase id="A"/></AIDirector>)", "DirectorTest" ) );
     }
     {
-        SW_EXPECT_LOG( "AIDirectorProfile.PoolNoEncounter" );
         AIDirectorProfile profile;
         SW_EXPECT_FALSE( profile.loadFromXMLText( DirectorProfileTestUtil::makePoolProfile( R"(<Pool id="p" trigger="Interval"/>)" ), "DirectorTest" ) );
     }
     {
-        SW_EXPECT_LOG( "AIDirectorProfile.PoolTriggeredPhaseEnter" );
-        SW_EXPECT_LOG( "AIDirectorProfile.PoolWaitsUnknownPhase" ); // 이름이 없으면 찾기도 진다
         AIDirectorProfile profile;
         SW_EXPECT_FALSE( profile.loadFromXMLText( DirectorProfileTestUtil::makePoolProfile( R"(<Pool id="p" trigger="PhaseEnter"><Encounter id="e"/></Pool>)" ), "DirectorTest" ) );
     }
     {
-        SW_EXPECT_LOG( "AIDirectorProfile.PoolWaitsUnknownPhase" );
         AIDirectorProfile profile;
         SW_EXPECT_FALSE( profile.loadFromXMLText( DirectorProfileTestUtil::makePoolProfile( R"(<Pool id="p" trigger="PhaseEnter" phase="Z"><Encounter id="e"/></Pool>)" ), "DirectorTest" ) );
     }
     {
-        SW_EXPECT_LOG( "AIDirectorProfile.PoolListsTwice" );
         AIDirectorProfile profile;
         SW_EXPECT_FALSE( profile.loadFromXMLText( DirectorProfileTestUtil::makePoolProfile( R"(<Pool id="p" trigger="Interval"><Encounter id="e"/><Encounter id="e"/></Pool>)" ), "DirectorTest" ) );
     }
