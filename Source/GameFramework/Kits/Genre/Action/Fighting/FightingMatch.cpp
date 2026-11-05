@@ -244,8 +244,9 @@ namespace sw
                     --fighter._stanceFrames;
                     if ( fighter._stanceFrames <= 0 )
                     {
-                        fighter._stanceIndex = -1;
-                        fighter._posture     = FighterPosture::Standing;
+                        fighter._stanceIndex  = -1;
+                        fighter._stanceFrames = 0; // `_stanceFrames` 설정이 0 이면 여기서 −1 이 되어 저장이 범위 밖으로 실패한다
+                        fighter._posture      = FighterPosture::Standing;
                     }
                 }
                 break;
@@ -754,11 +755,16 @@ namespace sw
         aimAtOpponent( 1 );
     }
 
-    void FightingMatch::setFighterHealth( int32 player, int32 health )
+    bool FightingMatch::setFighterHealth( int32 player, int32 health )
     {
-        if ( player < 0 || player >= kPlayerCount )
-            return;
+        const bool bKnownPlayer = 0 <= player && player < kPlayerCount && _arrFighter[player]._pDef != nullptr;
+        if ( bKnownPlayer == false || health < 0 || health > _arrFighter[player]._pDef->_health )
+        {
+            SW_LOG_ERROR_ID( "FightingMatch.FighterHealthOutOfRange", "Fighter %# cannot have health %# - it is outside the definition", player, health );
+            return false;
+        }
         _arrFighter[player]._health = health;
+        return true;
     }
 
     // ------------------------------------------------------------------------------
@@ -858,28 +864,37 @@ namespace sw
 
     void FightingMatch::resolveHits()
     {
-        // 두 쪽을 먼저 모두 판정한 뒤 함께 적용한다. 같은 프레임에 닿으면 상쇄되어 둘 다 맞는다.
-        bool arrContact[kPlayerCount] = { false, false };
+        // 두 쪽을 먼저 모두 판정한 뒤 함께 적용한다. 기술은 판정할 때 잡아 둔다 — 맞으면 기술이 끊겨, 적용할 때 지금 기술을 찾으면 뒤쪽 기술이 사라진다(0 번이 늘 이겼다).
+        const FighterMove* arrContact[kPlayerCount] = { nullptr, nullptr };
+        bool               arrThrow[kPlayerCount]   = { false, false };
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            arrContact[player] = testHit( player );
+            if ( testHit( player ) == false )
+                continue;
+            arrContact[player] = _arrFighter[player].findCurrentMove();
+            arrThrow[player]   = arrContact[player]->_frame._height == AttackHeight::Throw;
         }
+        // 타격이 먼저다. 둘 다 타격이면 둘 다 맞는다.
         for ( int32 player = 0; player < kPlayerCount; ++player )
         {
-            if ( arrContact[player] )
-                applyHit( player );
+            if ( arrContact[player] != nullptr && arrThrow[player] == false )
+                applyHit( player, *arrContact[player] );
+        }
+        // 잡기는 그다음이다. 타격에 맞아 끊겼으면 들어가지 않고, 잡기끼리는 둘 다 헛친다 — 순서로 정하면 0 번이 늘 잡는다.
+        if ( arrThrow[0] && arrThrow[1] )
+            return;
+        for ( int32 player = 0; player < kPlayerCount; ++player )
+        {
+            if ( arrThrow[player] && _arrFighter[player]._state == FighterState::Attacking )
+                applyHit( player, *arrContact[player] );
         }
     }
 
-    void FightingMatch::applyHit( int32 attacker )
+    void FightingMatch::applyHit( int32 attacker, const FighterMove& move )
     {
-        FighterRuntime&    fighter  = _arrFighter[attacker];
-        FighterRuntime&    other    = _arrFighter[1 - attacker];
-        const int32        defender = 1 - attacker;
-        const FighterMove* pMove    = fighter.findCurrentMove();
-        if ( pMove == nullptr )
-            return;
-        const FighterMove&   move      = *pMove;
+        FighterRuntime&      fighter   = _arrFighter[attacker];
+        FighterRuntime&      other     = _arrFighter[1 - attacker];
+        const int32          defender  = 1 - attacker;
         const MoveFrameData& frameData = move._frame;
         const bool           bInCombo =
             other._state == FighterState::Juggle || other._state == FighterState::WallSplat || other._state == FighterState::Down;
@@ -1172,8 +1187,9 @@ namespace sw
 
     void FightingMatch::validateState( ValidationContext& context ) const
     {
-        for ( const FighterRuntime& fighter : _arrFighter )
+        for ( int32 player = 0; player < kPlayerCount; ++player )
         {
+            const FighterRuntime& fighter = _arrFighter[player];
             if ( fighter._pDef == nullptr )
             {
                 context.addError( "fighter has no definition - initialize the match before loading a state" );
@@ -1181,6 +1197,12 @@ namespace sw
             }
             if ( fighter._fighterIDHash != fighter._pDef->_id.getHash() )
                 context.addError( "state belongs to another fighter" );
+            if ( fighter._health < 0 || fighter._health > fighter._pDef->_health )
+                context.addError( "fighter health is outside its definition" );
+            if ( fighter._side != 1 && fighter._side != -1 )
+                context.addError( "fighter side is neither left nor right" );
+            if ( fighter._state == FighterState::ThrowBreak && _arrFighter[1 - player]._state != FighterState::Throwing )
+                context.addError( "a thrown fighter has no thrower" );
             const int32 moveCount   = static_cast<int32>( fighter._pDef->_listMove.size() );
             const int32 stanceCount = static_cast<int32>( fighter._pDef->_listStance.size() );
             const bool  bBadIndex   = fighter._moveIndex >= moveCount || fighter._bufferedMove >= moveCount || fighter._stanceIndex >= stanceCount;

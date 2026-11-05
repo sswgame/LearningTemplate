@@ -83,13 +83,19 @@ namespace sw
             TDef def;
             if ( XMLFields::readFields( node, def, sourceName ) == false )
                 return false;
-            if ( outCatalog.find( def._id ) != nullptr )
-            {
-                SW_LOG_ERROR_ID( "GameDataXML.DuplicateID", "%#: id '%#' is defined twice", sourceName, def._id.c_str() );
+            if ( isNewID( outCatalog, def._id, sourceName ) == false )
                 return false;
-            }
             (void)outCatalog.add( def );
             return true;
+        }
+        /** @brief @p id 가 카탈로그에 아직 없으면 true 입니다. 있으면 오류를 남깁니다. 손으로 읽는 원소(자식이 있는 기체 · 캐릭터 등)가 `readInto` 와 같은 규칙으로 겹친 id 를 거절할 때 씁니다. */
+        template <typename TDef, typename TBase>
+        [[nodiscard]] static bool isNewID( const GameCatalog<TDef, TBase>& catalog, const hashed_string& id, string_view sourceName )
+        {
+            if ( catalog.find( id ) == nullptr )
+                return true;
+            SW_LOG_ERROR_ID( "GameDataXML.DuplicateID", "%#: id '%#' is defined twice", sourceName, id );
+            return false;
         }
         /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
         template <typename TDef>

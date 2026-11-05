@@ -400,6 +400,9 @@ namespace sw
             {
                 archive >> record._attacker;
                 archive >> record._time;
+                // `reportKill` 이 이 번호로 참가자 목록을 그대로 찾는다. 범위 밖 번호는 목록 밖을 읽는다.
+                if ( record._attacker < 0 || record._attacker >= static_cast<int32>( participantCount ) )
+                    return false;
             }
             if ( StateArchiveUtil::readCountdown( archive, participant._respawnTimer ) == false )
                 return false;
@@ -411,7 +414,8 @@ namespace sw
             archive >> participant._respawnCost;
             archive >> participant._bAlive;
             archive >> participant._bEliminated;
-            const bool bValid = archive.isOk() && -1 <= participant._team && participant._team < static_cast<int32>( teamCount ) && participant._bAlive <= SW_TRUE &&
+            // 팀 없는 참가자는 `addParticipant` 가 만들지 않는다. −1 을 받으면 `reportKill` 이 팀 목록 밖을 읽는다.
+            const bool bValid = archive.isOk() && 0 <= participant._team && participant._team < static_cast<int32>( teamCount ) && participant._bAlive <= SW_TRUE &&
                                 participant._bEliminated <= SW_TRUE;
             if ( bValid == false )
                 return false;

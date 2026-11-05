@@ -186,25 +186,25 @@ namespace sw
         float32 _carryZ{ 0.0f };
         PROPERTY()
         int32 _health{ 0 };
-        PROPERTY()
+        PROPERTY( Min = 0 )
         int32 _stateFrames{ 0 }; ///< 상태별 남은 프레임(경직, 다운, 기상, 풀기 입력 시간, 횡이동 등)
-        PROPERTY()
+        PROPERTY( Min = 0 )
         int32 _hitstop{ 0 }; ///< 맞은 쪽의 히트스톱(때린 쪽은 타임라인이 가지고 있다)
         PROPERTY( Min = -1 )
         int32 _moveIndex{ -1 }; ///< 지금 쓰는 기술(`_pDef->_listMove` 인덱스)
         PROPERTY( Min = -1 )
         int32 _bufferedMove{ -1 };
-        PROPERTY()
+        PROPERTY( Min = 0 )
         int32 _bufferedAge{ 0 };
         PROPERTY( Min = -1 )
         int32 _stanceIndex{ -1 };
-        PROPERTY()
+        PROPERTY( Min = 0 )
         int32 _stanceFrames{ 0 };
         PROPERTY( Min = 0 )
         int32 _comboHits{ 0 }; ///< 이번 콤보에 맞은 수
         PROPERTY( Min = 0 )
         int32 _airHits{ 0 }; ///< 떠서 맞은 횟수(띄우기 포함, 피해 감쇠에 쓴다)
-        PROPERTY()
+        PROPERTY( Min = 0 )
         int32 _heatFrames{ 0 };
         PROPERTY( Min = -1, Max = 1 )
         int32 _sidestepSign{ 0 }; ///< +1은 안쪽, −1은 바깥쪽
@@ -250,7 +250,7 @@ namespace sw
      *          2. 상태를 한 프레임 진행한다(경직, 다운, 저글 물리, 횡이동, 잡기 풀기 입력 시간).
      *          3. 움직일 수 있으면 커맨드로 기술, 스트링, 횡이동, 점프를 실행한다. 커맨드는 우선도가 높은 것을 고르고, 같으면 단계가 많은 것을 고른다(기반 규칙). 움직일 수 없으면 선입력 버퍼에 담는다.
      *          4. 몸 겹침과 벽을 처리한다.
-     *          5. 두 쪽의 판정을 함께 본 뒤 함께 적용한다(상쇄).
+     *          5. 두 쪽의 판정을 함께 본 뒤 함께 적용한다(상쇄, 타격끼리는 둘 다 맞는다). 타격에 맞은 쪽의 잡기는 들어가지 않고, 잡기끼리 닿으면 둘 다 헛친다.
      *          6. K.O., 레이지, 타이머를 처리한다.
      *          경직은 닿은 다음 프레임부터 센다. 그래서 `MoveTimeline::computeFrameAdvantage` 의 이득이 그대로 성립한다(−10이면 10프레임 기술이 확정된다).
      *          라운드 번호, 선승 조건, 라운드 시간, 라운드 사이 대기는 기반 클래스 `RoundSeries` 가 가진다. 라운드 승은 1위가 1점이고, 무승부 라운드는 둘 다 1승이다.
@@ -291,14 +291,15 @@ namespace sw
         void               drainEvents( vector<FightingEvent>& outListEvent );
         /**
          * @brief 읽은 상태가 이 대전의 캐릭터 정의와 맞는지 봅니다(`REFLECT( Validate )`, 롤백과 세이브가 함께 씁니다).
-         * @details 같은 캐릭터인지, 기술 · 자세 인덱스가 정의 안인지, 재생 중인 타임라인의 프레임이 그 기술 안인지, 참가자가 둘인지 봅니다.
+         * @details 같은 캐릭터인지, 체력이 0 부터 정의의 최대 안인지, 화면 쪽이 ±1 인지, 기술 · 자세 인덱스가 정의 안인지, 재생 중인 타임라인의 프레임이 그 기술 안인지,
+         *          잡힌 쪽의 상대가 잡은 상태인지, 참가자가 둘인지 봅니다.
          */
         void validateState( ValidationContext& context ) const;
 
         /** @brief 연습 모드와 테스트에서 위치를 옮깁니다. 벽 안으로 잘라 냅니다. */
         void setFighterPosition( int32 player, float32 x, float32 z );
-        /** @brief 연습 모드와 테스트에서 체력을 정합니다. 레이지 판정은 다음 프레임에 반영됩니다. */
-        void setFighterHealth( int32 player, int32 health );
+        /** @brief 연습 모드와 테스트에서 체력을 정합니다. 레이지 판정은 다음 프레임에 반영됩니다. 0 부터 정의의 최대를 벗어나면 오류를 남기고 false 이며 그대로입니다(그런 체력은 저장해도 읽히지 않는다). */
+        [[nodiscard]] bool setFighterHealth( int32 player, int32 health );
 
         const FighterRuntime&   getFighter( int32 player ) const { return _arrFighter[player]; }
         const FightingSettings& getSettings() const { return _settings; }
@@ -353,7 +354,8 @@ namespace sw
         void  startMove( int32 player, int32 moveIndex );
         void  finishMove( int32 player );
         bool  testHit( int32 attacker );
-        void  applyHit( int32 attacker );
+        /** @brief 판정 때 잡아 둔 기술 @p move 를 적용합니다. 상쇄에서는 앞쪽 적용이 공격 쪽의 기술을 이미 끊었을 수 있어 지금 기술을 다시 찾지 않습니다. */
+        void applyHit( int32 attacker, const FighterMove& move );
         /** @brief 잡기가 들어갔습니다. 상대에게 풀기 입력 창을 열고 잡은 쪽은 `Throwing` 으로 둡니다(피해는 `landThrow`). */
         void grabOpponent( int32 attacker, const FighterMove& move );
         /** @brief 띄운 상대에게 맞힌 추가타입니다. 스크류 · 바운드는 콤보마다 한 번이고, 그 밖에는 맞을수록 덜 뜹니다. */

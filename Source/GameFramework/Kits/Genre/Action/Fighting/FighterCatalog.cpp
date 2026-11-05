@@ -200,6 +200,8 @@ namespace sw
                 SW_LOG_ERROR_ID( "FighterCatalog.FighterIdErrorsNot", "%#: <Fighter id=\"%#\"> has errors - not added", sourceName, fighter._id.c_str() );
                 continue;
             }
+            if ( GameDataXML::isNewID( *this, fighter._id, sourceName ) == false )
+                continue; // `add` 는 말없이 앞 정의를 덮어쓴다 — 오타 하나로 캐릭터가 바뀌지 않게 거절한다
 
             // 틀린 기술은 그 기술만 버린다(오류는 남긴다) — 나머지 기술로 캐릭터를 쓸 수 있다.
             for ( XMLNode child = node.findChild( "Move" ); child; child = child.findNextSibling( "Move" ) )

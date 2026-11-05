@@ -125,13 +125,13 @@ namespace sw
      * @class FighterCatalog
      * @brief 다음 형식의 XML 을 읽는 캐릭터 카탈로그입니다.
      *        `<FighterCatalog buttons="1,2,3,4"><Fighter id="kaz" name="Kaz" health="170" walkSpeed="0.03" hurtRadius="0.35" pushRadius="0.3"
-     *        standHeight="1.8" crouchHeight="1.1" sidestepAngle="40" sidestepFrames="16" sidestep="u" sidestepDown="d,n" jump="u/f"
+     *        standHeight="1.8" crouchHeight="1.1" sidestepAngle="0.698" sidestepFrames="16" sidestep="u" sidestepDown="d,n" jump="u/f"
      *        jumpFrames="40" jumpHeight="1" jumpDistance="0.8">
      *        <Move id="jab" command="1" priority="0" maxGap="10" from="Standing,Crouching" stance="" enterStance="" stringOnly="false" tracking="false"
      *        screw="false" bound="false" groundHit="false" nearWall="false" rageArt="false" heatBurst="false" breakButtons="1" pushback="0.1"/>
      *        </Fighter></FighterCatalog>`
      * @details 기술의 프레임 데이터는 함께 넘긴 기반 `MoveCatalog` 에서 같은 id 로 복사해 온다(`frames="다른id"` 로 다른 id 를 지정할 수 있다).
-     *          프레임 데이터가 없거나 커맨드 · 자세 · 풀기 버튼을 읽지 못하면 오류를 남기고 그 기술만 버린다. 캐릭터의 칸 · 횡이동 · 점프 커맨드가 틀리면 캐릭터를 넣지 않는다.
+     *          프레임 데이터가 없거나 커맨드 · 자세 · 풀기 버튼을 읽지 못하면 오류를 남기고 그 기술만 버린다. 캐릭터의 칸 · 횡이동 · 점프 커맨드가 틀리거나 id 가 겹치면 캐릭터를 넣지 않는다.
      *          `stance` 가 있으면 시작 자세는 `Stance` 다. `breakButtons` 는 커맨드 표기("1" 또는 "1+2")로 쓴다.
      */
     class SW_KIT_API FighterCatalog : public GameCatalog<FighterDef>
