@@ -3,7 +3,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
-#include "Editor/SelfTest/EditorTestOutputParser.h"
+#include "Editor/SelfTest/Model/EditorTestOutputParser.h"
 
 using namespace sw;
 using namespace sw::editor;
