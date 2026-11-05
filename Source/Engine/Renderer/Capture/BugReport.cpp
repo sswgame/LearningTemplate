@@ -145,7 +145,8 @@ namespace sw
     bool BugReport::readInfo( string_view directory, BugReport& outReport )
     {
         string text;
-        if ( FileUtil::readTextFile( FileUtil::joinPath( directory, kInfoFileName ), text ) == false )
+        // 폴더는 언제든 사라질 수 있다(다른 프로세스의 보관 개수 정리 `SavedRetention`). 없는 것은 오류가 아니라 "그 리포트가 없다" 다. 못 읽은 것은 읽기가 오류를 남긴다.
+        if ( FileUtil::readOptionalTextFile( FileUtil::joinPath( directory, kInfoFileName ), text ) != OptionalFileRead::Read )
             return false;
         outReport              = BugReport{};
         const string_view body = FileUtil::skipUTF8Bom( text );
