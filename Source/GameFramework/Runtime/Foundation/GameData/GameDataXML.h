@@ -85,7 +85,7 @@ namespace sw
                 return false;
             if ( outCatalog.find( def._id ) != nullptr )
             {
-                SW_LOG_ERROR_ID( "GameDataXML.DuplicateID", "%#: id '%#' is defined twice", sourceName, def._id );
+                SW_LOG_ERROR_ID( "GameDataXML.DuplicateID", "%#: id '%#' is defined twice", sourceName, def._id.c_str() );
                 return false;
             }
             (void)outCatalog.add( def );
