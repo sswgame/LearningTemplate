@@ -20,6 +20,7 @@
  */
 #define SW_OWN_ROOT_CONSTANTS 1
 #include "binding.hlsli"
+#include "fullscreen.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
 {
@@ -36,21 +37,6 @@ SW_ROOT_CONSTANTS_END
 
 /// RCAS 의 엽(lobe) 상한이다(AMD FSR_RCAS_LIMIT — 0.25 - 1/16).
 static const float kRcasLimit = 0.25f - ( 1.0f / 16.0f );
-
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-    float2 _uv : TEXCOORD0; // 뷰포트 안 UV(DX 규약 — 위가 0). 픽셀 위치는 SV_Position 이 아니라 이것으로 구한다: GL 의 기본 프레임버퍼는 조각 좌표 원점이 다르다
-};
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput      output;
-    const float2 clipPosition = float2( ( vertexID == 1u ) ? 3.0f : -1.0f, ( vertexID == 2u ) ? 3.0f : -1.0f );
-    output._position          = float4( clipPosition, 0.0f, 1.0f );
-    output._uv                = float2( clipPosition.x * 0.5f + 0.5f, 0.5f - clipPosition.y * 0.5f );
-    return output;
-}
 
 // ---- 근사 역수(ffx_a.h APrxLoRcpF1 · APrxMedRcpF1 · APrxLoRsqF1 — 비트 트릭, 결과가 원본과 같아야 그림이 같다) ----
 float approximateReciprocalLow( float value )

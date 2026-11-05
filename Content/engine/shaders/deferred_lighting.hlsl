@@ -1,4 +1,5 @@
 #include "lighting.hlsli"
+#include "fullscreen.hlsli"
 
 /**
  * deferred_lighting.hlsl — G버퍼를 읽어 씬의 모든 라이트로 셰이딩하는 풀스크린 패스.
@@ -9,21 +10,6 @@
  * 월드 위치는 깊이에서 복원한다(Transform::computeWorldPositionFromDepth). G버퍼에 위치를 저장하지 않는 이유는
  * 첨부 하나를 통째로 아끼기 때문이고, 언리얼도 같은 선택을 한다.
  */
-
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-    float2 _uv : TEXCOORD0;
-};
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput output;
-    float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
-    output._position     = float4( clipPosition, 0.0f, 1.0f );
-    output._uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
-    return output;
-}
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {

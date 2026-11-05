@@ -254,11 +254,23 @@ float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
     return surface._albedo;
 }
     #else
+        #if defined( SW_MATERIAL_RIM_LIGHT )
+static void PixelContext::addRimLight( float3 normal, inout float3 inoutLit )
+{
+    inoutLit += Lighting::computeRimLight( normal );
+}
+        #else
+static void PixelContext::addRimLight( float3 normal, inout float3 inoutLit )
+{
+}
+        #endif
 /** @brief 기본 PBR — 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다. */
 float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
 {
     const float shadow = Shadow::sampleAtWorld( _worldPosition, surface._normal );
-    return float4( Lighting::shadeLights( surface._albedo.rgb, _worldPosition, surface._normal, shadow, surface._roughness, surface._metallic ), surface._albedo.a );
+    float3      lit    = Lighting::shadeLights( surface._albedo.rgb, _worldPosition, surface._normal, shadow, surface._roughness, surface._metallic );
+    PixelContext::addRimLight( surface._normal, lit );
+    return float4( lit, surface._albedo.a );
 }
     #endif
 #endif // !SW_MATERIAL_DEPTH_ONLY

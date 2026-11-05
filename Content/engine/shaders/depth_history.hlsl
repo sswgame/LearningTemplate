@@ -5,25 +5,13 @@
 // C++: FramePassExecutor::recordDepthHistories — 컴퓨트 프리패스 리스트에서 뷰마다 drawInstanced 하나(정점 셋).
 #define SW_OWN_ROOT_CONSTANTS 1
 #include "binding.hlsli"
+#include "fullscreen.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
 {
     uint g_DepthHistorySource; // 원본 깊이의 bindless 번호(네이티브). 에뮬은 쓰지 않는다
 };
 SW_ROOT_CONSTANTS_END
-
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-};
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput      output;
-    const float2 clipPosition = float2( ( vertexID == 1u ) ? 3.0f : -1.0f, ( vertexID == 2u ) ? 3.0f : -1.0f );
-    output._position          = float4( clipPosition, 0.0f, 1.0f );
-    return output;
-}
 
 #if defined( OPENGL )
 // GL 의 장면 깊이는 행이 아래부터다(0 행이 화면 아래). 읽는 쪽(vfx_simulate · occlusion_tiles)은 D3D 처럼 0 행이 화면 위라고 보고 텍셀을 구하므로

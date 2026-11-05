@@ -12,6 +12,7 @@
  *          `SW_POST_*` 를 하나도 안 켜면 이 셰이더는 `fullscreen_blit.hlsl` 과 같다(원본을 그대로 낸다).
  */
 #include "binding.hlsli"
+#include "fullscreen.hlsli"
 
 #if defined( SW_POST_BLOOM )
     #include "post_bloom.hlsli"
@@ -22,21 +23,6 @@
 #if defined( SW_POST_TONEMAP )
     #include "post_grade.hlsli"
 #endif
-
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-    float2 _uv : TEXCOORD0;
-};
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput output;
-    float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
-    output._position     = float4( clipPosition, 0.0f, 1.0f );
-    output._uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
-    return output;
-}
 
 // 단계마다 정의 하나 — 이 변형이 켠 단계만 일하고, 끈 단계는 색을 그대로 돌려준다(PSMain 본문에는 `#if` 가 없다).
 #if defined( SW_POST_BLOOM )

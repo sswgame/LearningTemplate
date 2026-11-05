@@ -42,14 +42,7 @@ struct MaterialVaryings
  */
 float3 computeWorldPositionOffset( VertexContext context )
 {
-    float3 offset = float3( 0.0f, 0.0f, 0.0f );
-    if ( context._instance._pixelSnap > 0.0f )
-    {
-        const float2 origin  = mul( float4( 0.0f, 0.0f, 0.0f, 1.0f ), context._instance._world ).xy;
-        const float2 snapped = floor( origin / context._instance._pixelSnap + 0.5f ) * context._instance._pixelSnap;
-        offset.xy            = snapped - origin;
-    }
-    return offset;
+    return context._instance.computePixelSnapOffset();
 }
 
 MaterialVaryings computeMaterialVaryings( VertexContext context )

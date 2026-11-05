@@ -1,21 +1,7 @@
 #include "binding.hlsli"
+#include "fullscreen.hlsli"
 
 #include "post_outline.hlsli"
-
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-    float2 _uv : TEXCOORD0;
-};
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput output;
-    float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
-    output._position     = float4( clipPosition, 0.0f, 1.0f );
-    output._uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
-    return output;
-}
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {

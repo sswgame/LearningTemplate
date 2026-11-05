@@ -5,6 +5,7 @@
 // 톤맵(post_grade.hlsli)이 이 RT 를 g_AutoExposureIndex 로 읽어 2^-EV 를 곱한다. C++: FramePostProcess::recordAutoExposure — 톤맵하는 패스 앞에 같은 리스트로 그린다.
 #define SW_OWN_ROOT_CONSTANTS 1
 #include "binding.hlsli"
+#include "fullscreen.hlsli"
 
 SW_ROOT_CONSTANTS_BEGIN
 {
@@ -20,19 +21,6 @@ SW_ROOT_CONSTANTS_END
 static const uint  kAutoExposureGrid = 32u;     // 화면을 32 x 32 칸으로 나눠 칸 가운데 텍셀 하나씩 읽는다(1024 번 — 한 픽셀이 다 읽는다)
 static const float kMiddleGrey       = 0.18f;   // EV 0 의 평균 휘도
 static const float kMinLuminance     = 1.0e-4f; // 검은 텍셀의 log2 가 -무한이 되지 않게 자르는 휘도
-
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-};
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput      output;
-    const float2 clipPosition = float2( ( vertexID == 1u ) ? 3.0f : -1.0f, ( vertexID == 2u ) ? 3.0f : -1.0f );
-    output._position          = float4( clipPosition, 0.0f, 1.0f );
-    return output;
-}
 
 float3 loadSource( int2 texel )
 {

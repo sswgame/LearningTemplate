@@ -30,7 +30,8 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-#define SW_MATERIAL_CUSTOM_LIGHTING
+#define SW_MATERIAL_DEFAULT_LIGHTING
+#define SW_MATERIAL_RIM_LIGHT
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #if !defined( SW_PASS_SHADOW ) && !defined( SW_PASS_DEPTH_PREPASS )
     #define SW_MATERIAL_USES_TANGENT
@@ -94,21 +95,5 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     surface.setAlphaCutoff( context._material._alphaCutoff ); // 알파 컷오프 머티리얼만 싣는다 — 깊이 · 본 패스가 같은 값으로 오린다
     return surface;
 }
-
-#if SW_VIEWMODE_SKIPS_LIGHTING
-float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
-{
-    return surface._albedo;
-}
-#else
-float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
-{
-    // 조명 식은 디퍼드 · forward_lit 과 같은 함수다(lighting.hlsli).
-    const float shadow = Shadow::sampleAtWorld( context._worldPosition, surface._normal );
-    float3      lit    = Lighting::shadeLights( surface._albedo.rgb, context._worldPosition, surface._normal, shadow, surface._roughness, surface._metallic );
-    lit += Lighting::computeRimLight( surface._normal );
-    return float4( lit, surface._albedo.a );
-}
-#endif
 
 #include "material_shader_main.hlsli"

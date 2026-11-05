@@ -11,25 +11,11 @@
  * 끈 뷰(조리개 0 · 직교 · 후처리 끔)는 이 패스를 기록하지 않고 출력 이름이 원본을 가리킨다(RenderPassTraitFlag::kBypassesToSource) — 여기서는 늘 흐린다.
  */
 #include "binding.hlsli"
-
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-    float2 _uv : TEXCOORD0;
-};
+#include "fullscreen.hlsli"
 
 static const uint  kTapCount      = 16u;
 static const uint  kInnerTapCount = 6u;
 static const float kInnerRadius   = 0.5f;
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput output;
-    float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
-    output._position     = float4( clipPosition, 0.0f, 1.0f );
-    output._uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
-    return output;
-}
 
 /** @brief 단위 원판 위 탭 하나의 자리 — 안쪽 고리(반지름 0.5) 6 개, 바깥 고리(반지름 1) 10 개. 바깥 고리는 반 칸 돌려 안쪽과 겹치지 않는다. */
 float2 computeTapOffset( uint tapIndex )

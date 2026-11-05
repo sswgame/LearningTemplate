@@ -3,21 +3,7 @@
 // 같은 크기 · 같은 텍셀이라 필터 없는 점 샘플로 옮긴다(PassTexture::sampleDepthPoint — GL 의 행 방향은 슬롯 읽기가 이미 맞춘다).
 // C++: RenderPassType::SceneDepthCopy(일반 풀스크린 패스) — 입력 SceneDepth, 출력 SceneDepthCopy(R32_FLOAT).
 #include "binding.hlsli"
-
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-    float2 _uv : TEXCOORD0;
-};
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput output;
-    float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
-    output._position     = float4( clipPosition, 0.0f, 1.0f );
-    output._uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
-    return output;
-}
+#include "fullscreen.hlsli"
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {

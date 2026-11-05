@@ -31,7 +31,8 @@ SW_MATERIAL_BEGIN
 }
 SW_MATERIAL_END
 
-#define SW_MATERIAL_CUSTOM_LIGHTING
+#define SW_MATERIAL_DEFAULT_LIGHTING
+#define SW_MATERIAL_RIM_LIGHT
 #define SW_MATERIAL_DEFAULT_VARYINGS
 #include "material_shader.hlsli"
 
@@ -90,22 +91,5 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     surface.setAlphaCutoff( 0.5f );
     return surface;
 }
-
-#if SW_VIEWMODE_SKIPS_LIGHTING
-float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
-{
-    // 보기 모드 Unlit — 조명 · 그림자 · 림 없이 알베도 그대로.
-    return surface._albedo;
-}
-#else
-float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
-{
-    // 조명 식은 디퍼드와 같은 함수다(lighting.hlsli) — forward_lit.hlsl 과 같은 조합.
-    const float shadow = Shadow::sampleAtWorld( context._worldPosition, surface._normal );
-    float3      lit    = Lighting::shadeLights( surface._albedo.rgb, context._worldPosition, surface._normal, shadow, surface._roughness, surface._metallic );
-    lit += Lighting::computeRimLight( surface._normal );
-    return float4( lit, surface._albedo.a );
-}
-#endif
 
 #include "material_shader_main.hlsli"

@@ -4,25 +4,11 @@
 // 하늘(깊이 1)도 같은 식이라 돌면 흐려진다. 끈 경우(사용자 설정 · 후처리를 끈 뷰 · 품질 미달 · 뷰-투영이 지난번과 같음)는 이 패스를 기록하지 않고
 // 출력 이름이 원본을 가리킨다(RenderPassTraitFlag::kBypassesToSource). 카메라 움직임만 쓰므로 뷰-투영이 같으면 모든 픽셀의 속도가 0 이다.
 #include "binding.hlsli"
+#include "fullscreen.hlsli"
 
 static const uint  kMotionBlurSampleCount = 8u;
 static const float kMaxBlurUV             = 0.05f;   // 한 프레임 흐림 길이의 상한(화면 폭 비율) — 순간 이동 · 큰 회전이 화면을 통째로 문대지 않게
 static const float kMinBlurUV             = 0.0005f; // 이보다 짧으면 섞지 않는다(정지 화면의 미세 떨림)
-
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-    float2 _uv : TEXCOORD0;
-};
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput output;
-    float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
-    output._position     = float4( clipPosition, 0.0f, 1.0f );
-    output._uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
-    return output;
-}
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {

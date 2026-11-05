@@ -16,24 +16,10 @@
  * 바인딩 계약: 패스 상수 g_FogColorDensity · g_FogHeightParams · g_FogInscatter · g_FogVolumeParams, 장면 깊이(역할 SceneDepth), 볼륨 버퍼 t11(SW_SLOT_PASS_SRV, 볼륨이 켜진 때만 걸린다).
  */
 #include "binding.hlsli"
+#include "fullscreen.hlsli"
 #include "fog_common.hlsli"
 
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-    float2 _uv : TEXCOORD0;
-};
-
 SW_DECLARE_STRUCTURED_BUFFER( float4, g_FogVolume, SW_SLOT_PASS_SRV );
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput output;
-    float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
-    output._position     = float4( clipPosition, 0.0f, 1.0f );
-    output._uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
-    return output;
-}
 
 /** @brief 볼륨 한 칸의 값입니다. @p slice 가 -1 이면 시작(산란 0, 투과율 1)이다. 칸 번호는 volumetric_fog.hlsl 의 쓰기와 같다((조각 × Y + y) × X + x). */
 float4 loadFogVolume( uint tileX, uint tileY, int slice )

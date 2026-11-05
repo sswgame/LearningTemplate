@@ -4,23 +4,9 @@
 // 겹치지 않고, 속도 버퍼가 없는 움직이는 물체의 기록도 클램프가 잘라 낸다. 재투영한 자리가 화면 밖이면 이번 원본만 쓴다.
 // 컷 · 후처리를 끈 뷰는 C++ 가 기록 슬롯에 이번 원본을 바인딩한다(섞어도 이번 그림만 남는다).
 #include "binding.hlsli"
+#include "fullscreen.hlsli"
 
 static const float kHistoryWeight = 0.9f; // 기록 비율 — 화면이 그대로인 곳의 누적 정도
-
-struct PSInput
-{
-    float4 _position : SV_POSITION;
-    float2 _uv : TEXCOORD0;
-};
-
-PSInput VSMain( uint vertexID : SV_VertexID )
-{
-    PSInput output;
-    float2  clipPosition = float2( ( vertexID == 1 ) ? 3.0f : -1.0f, ( vertexID == 2 ) ? 3.0f : -1.0f );
-    output._position     = float4( clipPosition, 0.0f, 1.0f );
-    output._uv           = clipPosition * float2( 0.5f, -0.5f ) + 0.5f;
-    return output;
-}
 
 float4 PSMain( PSInput input ) : SV_TARGET
 {
