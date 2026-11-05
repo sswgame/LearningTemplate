@@ -3,6 +3,7 @@
 #include "DevTools/DevToolsHost.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -86,8 +87,11 @@ namespace sw
         // 오래된 실행 산출물(`Saved` — 자동화 실행 · 로그 · 스크린샷 · 트레이스 …)을 자기 스레드에서 지운다.
         (void)startup.emplaceSubsystem<SavedRetentionSubsystem>();
         // 셰이더 라이브 리로드는 렌더러가 있는 호스트만(전용 서버 · 렌더러를 끈 기동은 렌더 쪽이 nullptr).
-        if ( parts._pFrameRendererSubsystem != nullptr && parts._pRenderThread != nullptr )
-            (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *parts._pFrameRendererSubsystem, *parts._pRenderThread );
+        if constexpr ( build::kWithClientCode )
+        {
+            if ( parts._pFrameRendererSubsystem != nullptr && parts._pRenderThread != nullptr )
+                (void)startup.emplaceSubsystem<LiveShaderSubsystem>( *parts._pFrameRendererSubsystem, *parts._pRenderThread );
+        }
         // 설정 파일 리로드는 서버에도 선다.
         if ( parts._pConfigManager != nullptr )
         {
@@ -128,14 +132,17 @@ namespace sw
     {
 #if defined( SW_DEBUG )
         // 셰이더 재컴파일 · 강제 리로드 단축키(`ReloadShaders`)는 Debug 클라이언트만 — 단축키의 뜻은 재컴파일기를 가진 이쪽이 읽는다(디버그 키 맵은 입력 사실만 낸다).
-        LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
-        if ( ShaderRecompiler* const pRecompiler = pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr )
+        if constexpr ( build::kWithClientCode )
         {
-            pRecompiler->update();
-            if ( engine::getSubsystem<DebugKeyActions>().wasActionTriggered( hashed_string( InputMapDefaults::kReloadShadersAction ) ) )
+            LiveShaderSubsystem* const pLiveShader = engine::findSubsystem<LiveShaderSubsystem>();
+            if ( ShaderRecompiler* const pRecompiler = pLiveShader != nullptr ? pLiveShader->findShaderRecompiler() : nullptr )
             {
-                pRecompiler->triggerReloadAll();
-                SW_LOG_INFO_ID( "DevTools.ForceShaderReload", "%#: force shader reload", InputMapDefaults::kReloadShadersAction );
+                pRecompiler->update();
+                if ( engine::getSubsystem<DebugKeyActions>().wasActionTriggered( hashed_string( InputMapDefaults::kReloadShadersAction ) ) )
+                {
+                    pRecompiler->triggerReloadAll();
+                    SW_LOG_INFO_ID( "DevTools.ForceShaderReload", "%#: force shader reload", InputMapDefaults::kReloadShadersAction );
+                }
             }
         }
 #endif

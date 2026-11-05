@@ -417,13 +417,8 @@ namespace sw
 
     void AutomationSession::onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context )
     {
-        ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
-        if ( _pRunner == nullptr || pMailbox == nullptr )
-            return;
-        // 패킷 하나에는 사진이 하나다 — 앞 것이 아직 실리지 않았으면 꺼내지 않고 다음 프레임에 맡긴다.
-        string path;
-        if ( pMailbox->isPacketSlotFree() && _pRunner->takePendingScreenshotPath( path ) )
-            (void)pMailbox->putForNextPacket( path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
+        if ( _pRunner != nullptr )
+            _pRunner->forwardPendingScreenshot();
     }
 
     // 실행기는 스스로 엔진 범위에 선다 — 이 폴더(`Automation/Runner`)를 짓지 않는 구성은 등록이 없어 호스트가 찾지 못한다(`IAutomationRuntime`).

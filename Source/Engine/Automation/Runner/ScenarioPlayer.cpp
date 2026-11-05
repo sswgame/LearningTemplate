@@ -10,7 +10,6 @@
 #include "Engine/EngineFrameHookList.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Renderer/ScreenshotRequestQueue.h"
 
 namespace sw
 {
@@ -93,13 +92,8 @@ namespace sw
 
     void ScenarioPlayer::onAfterSceneTick( [[maybe_unused]] const EngineFrameContext& context )
     {
-        ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
-        if ( _pRunner == nullptr || pMailbox == nullptr )
-            return;
-        // 패킷 하나에는 사진이 하나다 — 앞 것이 아직 실리지 않았으면 꺼내지 않고 다음 프레임에 맡긴다.
-        string path;
-        if ( pMailbox->isPacketSlotFree() && _pRunner->takePendingScreenshotPath( path ) )
-            (void)pMailbox->putForNextPacket( path );
+        if ( _pRunner != nullptr )
+            _pRunner->forwardPendingScreenshot();
     }
 
     int32 ScenarioPlayer::onFrameEnd( const EngineFrameContext& context )

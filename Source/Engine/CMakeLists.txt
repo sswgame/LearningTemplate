@@ -42,6 +42,8 @@ if(NOT SW_ENABLE_AUTOMATION)
 		"/Source/Engine/Automation/Runner/.*\\.(cpp|h)$")
 	# 실행기 헤더를 include 하는 나머지(실행기 단위 테스트)도 뺀다. 실행기는 스스로 등록하므로(`IAutomationRuntime`) 호스트 쪽에 고를 짝이 없다.
 	sw_excludeSourcesIncludingPrefix(ENGINE_SOURCES "Engine/Automation/Runner/")
+	# 시나리오 파일 검사는 실행기가 올리는 단계(`Press` 등)를 읽는다 — include 가 없어 위 줄에 걸리지 않는다.
+	sw_excludeUnbuiltSources(ENGINE_SOURCES "/Source/Engine/Automation/Tests/TestScenarioFiles\\.cpp$")
 	message(STATUS "[Engine] SW_ENABLE_AUTOMATION=OFF: automation runtime is not built")
 endif()
 

@@ -8,6 +8,7 @@
  *          캡처를 미루는 화면 덮개(로딩 화면 · 페이드)는 자동화 층의 것이라 여기 없다(`AutomationCaptureUtil::isReadyForCapture` 가 더한다).
  */
 #pragma once
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -29,7 +30,11 @@ namespace sw
         /** @brief (게임 스레드) 씬 @p pManager 를 @p sceneKey 로 찍는 캡처의 남은 일 수입니다 — 씬 쪽과 렌더 쪽의 합입니다(감시 값 `Assets.Pending` 은 주 화면). */
         [[nodiscard]] static uint32 countPendingWork( const GameObjectManager* pManager, uint32 sceneKey = 0 )
         {
-            return countPendingSceneWork( pManager ) + countPendingRenderWork( sceneKey );
+            // 전용 서버는 Renderer 폴더를 짓지 않고 찍을 그림도 없다.
+            if constexpr ( build::kWithClientCode )
+                return countPendingSceneWork( pManager ) + countPendingRenderWork( sceneKey );
+            else
+                return 0u;
         }
         /** @brief (렌더 스레드) @p renderer 가 지난 프레임을 빠짐없이 그렸는지입니다. 화면 밖 캡처는 자기 하위 렌더러로 묻는다. */
         [[nodiscard]] static bool isFrameComplete( const FrameRenderer& renderer );

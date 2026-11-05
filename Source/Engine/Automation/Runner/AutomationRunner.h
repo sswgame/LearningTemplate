@@ -147,10 +147,8 @@ namespace sw
         /** @brief 도는 시나리오를 바로 멈춥니다(재생을 끊을 때 — 데모 중 사람 입력 · `scenario.stop`). 결과는 건너뜀이고 가상 입력을 뗀다. 끝났으면 아무것도 하지 않는다. */
         void stop( InputManager* pInput, string_view reason );
 
-        /**
-         * @brief `<Screenshot>` 이 요청한 경로를 하나 꺼냅니다(Engine 가 다음 렌더 패킷에 싣고, 그 패킷이 그린 이미지가 찍힙니다). 없으면 false 입니다.
-         */
-        [[nodiscard]] bool takePendingScreenshotPath( string& outPath ) { return _run.takePendingScreenshotPath( outPath ); }
+        /** @brief `<Screenshot>` 이 요청한 경로를 하나 다음 렌더 패킷에 넘깁니다(그 패킷이 그린 이미지가 찍힙니다). 패킷 하나에 사진 하나라 앞 것이 아직 실리지 않았으면 다음 프레임에 맡깁니다. */
+        void forwardPendingScreenshot();
         /** @brief 요청한 스크린샷이 아직 다 써지지 않았으면 true 입니다(패킷에 싣기 전이거나 렌더 스레드 · 워커가 덜 썼다). */
         [[nodiscard]] bool hasPendingScreenshot() const { return _run.hasPendingScreenshot(); }
         /** @brief 렌더 스레드가 지금까지 쓴 시나리오 스크린샷 수입니다(Engine 가 `onFrameEnd` 전에 넘긴다). `<ExpectImage>` 는 이것이 오를 때까지 기다린다. */

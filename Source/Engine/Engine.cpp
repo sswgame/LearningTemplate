@@ -642,6 +642,12 @@ namespace sw
         engine::getSubsystem<VisualLogger>().endFrame();
     }
 
+#if defined( SW_WITH_CLIENT_CODE )
+    // ----------------------------------------------------------------------------------------------------------------------
+    // 엔진 루프의 렌더러 몫(창 크기 · 렌더 스레드 · 렌더 패킷 · 백엔드 교체)이다. 전용 서버는 `Renderer/` 를 짓지 않아(SW_TARGET_TYPE=Server) 정의만 여기서 가른다
+    // (docs/agents/BuildConfigSwitch.md 둘째 줄). 부르는 자리는 `build::kWithClientCode` 로 가른다.
+    // ----------------------------------------------------------------------------------------------------------------------
+
     bool Engine::rebindSceneAfterDeviceRecreate( string* pOutTiming )
     {
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )
@@ -668,12 +674,6 @@ namespace sw
             pScene->pickActiveGameCamera();
         return bRestarted;
     }
-
-#if defined( SW_WITH_CLIENT_CODE )
-    // ----------------------------------------------------------------------------------------------------------------------
-    // 엔진 루프의 렌더러 몫(창 크기 · 렌더 스레드 · 렌더 패킷 · 백엔드 교체)이다. 전용 서버는 `Renderer/` 를 짓지 않아(SW_TARGET_TYPE=Server) 정의만 여기서 가른다
-    // (docs/agents/BuildConfigSwitch.md 둘째 줄). 부르는 자리는 `build::kWithClientCode` 로 가른다.
-    // ----------------------------------------------------------------------------------------------------------------------
     void Engine::onMainWindowResize( const uint32 width, const uint32 height )
     {
         if ( _pRHI == nullptr || _pRHI->hasDevice() == false )

@@ -36,10 +36,12 @@ namespace sw
 {
     // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 에셋 · 헤드리스 판정 뒤에 스플래시를 띄운다 — 엔진 초기화(RHI 디바이스 생성)를 기다리지 않는다.
+#if defined( SW_WITH_CLIENT_CODE ) // 클라이언트 전용 칸이다 — 창 없는 전용 서버는 이 자리를 올리지 않는다
     SW_ENGINE_SUBSYSTEM( SplashSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bRenderer == false )
             return;
         (void)scope.emplaceSubsystem<SplashSubsystem>();
     } );
+#endif
 } // namespace sw

@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -35,6 +36,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Renderer/ScreenshotRequestQueue.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
 #include "Engine/Window/IWindow.h"
@@ -164,6 +166,18 @@ namespace sw
     AutomationRunner::~AutomationRunner()
     {
         releaseWriteGate();
+    }
+
+    void AutomationRunner::forwardPendingScreenshot()
+    {
+        // 전용 서버는 Renderer 폴더를 짓지 않고 찍을 그림도 없다.
+        if constexpr ( build::kWithClientCode )
+        {
+            ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
+            string                        path;
+            if ( pMailbox != nullptr && pMailbox->isPacketSlotFree() && _run.takePendingScreenshotPath( path ) )
+                (void)pMailbox->putForNextPacket( path ); // 칸이 비어 있음을 방금 봤다 — 같은 게임 스레드만 채우고 꺼낸다
+        }
     }
 
     void AutomationRunner::acquireWriteGate()

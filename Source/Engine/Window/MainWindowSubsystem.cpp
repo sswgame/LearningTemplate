@@ -54,10 +54,12 @@ namespace sw
 {
     // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 주 창의 소유자 — RHI 가 기본 창을 만들면 여기에 넘기고, App 이 직접 만든 창도 여기로 간다. RHI 보다 먼저 서고 나중에 내려간다(RHI 가 의존한다). 렌더러를 두는 호스트만.
+#if defined( SW_WITH_CLIENT_CODE ) // 클라이언트 전용 칸이다 — 창 없는 전용 서버는 이 자리를 올리지 않는다
     SW_ENGINE_SUBSYSTEM( MainWindowSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bRenderer == false )
             return;
         (void)scope.emplaceSubsystem<MainWindowSubsystem>();
     } );
+#endif
 } // namespace sw
