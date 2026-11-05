@@ -55,6 +55,11 @@ namespace sw::test
         /** @brief 지금 등록된 케이스 이름입니다(이름 순, 자식 역할은 빼고). */
         static vector<string> collectCaseNames();
         /**
+         * @brief 파일 경로에 @p listFolder 중 하나가 든 케이스를 뺀 이름입니다(이름 순, 자식 역할은 빼고).
+         * @details 에디터 · 편집기 플러그인 케이스는 `App -test` 에 등록되지 않는다 — 그쪽으로 자식을 띄우는 곳이 돌리지 못할 이름을 고르지 않게 거른다. 구분자는 `/` 로 적는다.
+         */
+        static vector<string> collectCaseNamesOutside( std::initializer_list<string_view> listFolder );
+        /**
          * @brief 거른 케이스를 섞어 돌립니다. 모두 통과하면 true 입니다.
          * @details 거르개에 맞는 케이스가 없으면 실패다(빈 실행을 통과로 보지 않는다). 케이스 하나는 실패 단언 · 단언 0 개 · 적지 않은 Warning · Error 로그 ·
          *          적었는데 나오지 않은 로그 가운데 하나라도 있으면 실패다. 비활성 케이스는 돌지 않고 까닭과 함께 센다. 시한을 넘긴 케이스는 실행을 끝낸다(`kTestTimeoutExitCode`).

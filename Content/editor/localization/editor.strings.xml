@@ -3425,12 +3425,6 @@
 				<item>Source/Editor/Panels/Animation/SequencerPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdText.NoTestExeNextToThisBuildBuild"
-		       source="No *Test.exe next to this build (build the AllTests target)">
-			<origins>
-				<item>Source/Editor/SelfTest/TestRunnerPanel.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdText.NoTextAssetNamesIt" source="No text asset names it.">
 			<origins>
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>

@@ -3236,11 +3236,6 @@ msgctxt "EdText.NoSeqFileFocused"
 msgid "No .seq file focused"
 msgstr "선택한 .seq 파일이 없습니다"
 
-#: Source/Editor/SelfTest/TestRunnerPanel.cpp
-msgctxt "EdText.NoTestExeNextToThisBuildBuild"
-msgid "No *Test.exe next to this build (build the AllTests target)"
-msgstr "이 빌드 옆에 *Test.exe 가 없습니다(AllTests 대상을 지으세요)"
-
 #: Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp
 msgctxt "EdText.NoTextAssetNamesIt"
 msgid "No text asset names it."

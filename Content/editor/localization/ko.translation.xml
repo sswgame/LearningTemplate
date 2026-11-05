@@ -1080,9 +1080,6 @@
 		<entry key="EdText.NoLeakReportYet" text="아직 누수 보고가 없습니다." sourceHash="1f3bfd7b6d93ff27" />
 		<entry key="EdText.NoSavedPresets" text="저장한 프리셋이 없습니다." sourceHash="8c96c9a9fa0c00b5" />
 		<entry key="EdText.NoSeqFileFocused" text="선택한 .seq 파일이 없습니다" sourceHash="cc20f0013472a6be" />
-		<entry key="EdText.NoTestExeNextToThisBuildBuild"
-		       text="이 빌드 옆에 *Test.exe 가 없습니다(AllTests 대상을 지으세요)"
-		       sourceHash="58cc5cc7bbb26ac1" />
 		<entry key="EdText.NoTextAssetNamesIt"
 		       text="이 이름을 쓰는 글 에셋이 없습니다."
 		       sourceHash="d4bdce75259d6350" />

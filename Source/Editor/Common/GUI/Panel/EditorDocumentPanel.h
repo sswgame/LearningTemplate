@@ -53,7 +53,7 @@ namespace sw::editor
         string_view getMatchingFocusedPath() const;
         /**
          * @brief 이 패널이 @p assetPath(리소스 id)를 문서로 받으면 true 입니다. 기본은 종류만 맞으면 받습니다.
-         * @details 한 종류 안의 일부만 다루는 패널이 좁힌다(Data 종류 중 `*.vfx.xml` 만 보는 VFX 미리보기). 포커스 매칭과 "Open..." 목록이 같은 판정을 쓴다.
+         * @details 한 종류 안의 일부만 다루는 패널이 좁힌다(Data 종류 중 `*.vfx.xml` 만 보는 VFX 미리보기). "Open..." 목록은 이 판정에 더해 파일의 첫 종류가 이 패널의 종류여야 한다 — 포커스는 그보다 넓다(스프라이트 클립은 포커스한 이미지를 아틀라스로 열지만, 이미지를 모두 목록에 넣지는 않는다).
          */
         virtual bool acceptsDocumentPath( string_view assetPath ) const
         {

@@ -555,6 +555,26 @@ namespace sw::test
         { return expected._id == pLogID; } );
     }
 
+    vector<string> TestRunner::collectCaseNamesOutside( std::initializer_list<string_view> listFolder )
+    {
+        vector<string>                listName;
+        TestRunnerInternal::Registry& registry = TestRunnerInternal::getRegistry();
+        {
+            ScopedLock<mutex> lock{ registry._mutex };
+            for ( const TestCaseRegistration* pCase : registry._registration.getItems() )
+            {
+                string file( pCase->_pFile );
+                std::replace( file.begin(), file.end(), '\\', '/' );
+                const bool bExcluded = std::any_of( listFolder.begin(), listFolder.end(), [&file]( string_view folder )
+                { return string_view( file ).find( folder ) != string_view::npos; } );
+                if ( pCase->_bChildRole == false && bExcluded == false )
+                    listName.emplace_back( pCase->_pName );
+            }
+        }
+        VectorUtil::sort( listName );
+        return listName;
+    }
+
     vector<string> TestRunner::collectCaseNames()
     {
         vector<string>                listName;
