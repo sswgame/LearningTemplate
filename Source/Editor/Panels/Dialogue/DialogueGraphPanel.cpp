@@ -19,6 +19,7 @@
 #include "Editor/Common/Widgets/EditorNodeGraphID.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
+#include "Editor/Panels/Dialogue/Model/DialogueGraphEdit.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
@@ -170,8 +171,6 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetDefault" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "ResetDefault" ) ) )
             {
-                _graph._listNode.clear();
-                _graph._listLink.clear();
                 ensureDefaults();
                 _nodeGraph.requestContentFit();
                 notifyDocumentEdited( "Reset Dialogue Graph" );
@@ -325,55 +324,7 @@ namespace sw::editor
 
     void DialogueGraphPanel::ensureDefaults()
     {
-        _graph._listNode.clear();
-        _graph._listLink.clear();
-
-        DialogueNode startNode{};
-        startNode._id          = 1;
-        startNode._type        = DialogueAssetNodeType::Start;
-        startNode._position._x = 50.0f;
-        startNode._position._y = 100.0f;
-        _graph._listNode.push_back( startNode );
-
-        DialogueNode dialogueNode{};
-        dialogueNode._id          = 2;
-        dialogueNode._type        = DialogueAssetNodeType::Dialogue;
-        dialogueNode._speaker     = "Elder";
-        dialogueNode._text        = "Greetings adventurer! The ancient ruins ahead are full of peril.";
-        dialogueNode._position._x = 250.0f;
-        dialogueNode._position._y = 100.0f;
-        _graph._listNode.push_back( dialogueNode );
-
-        DialogueNode choiceNode{};
-        choiceNode._id          = 3;
-        choiceNode._type        = DialogueAssetNodeType::Choice;
-        choiceNode._text        = "How do you respond?";
-        choiceNode._listChoice  = { "I am ready for any challenge!", "Could you give me some supplies first?" };
-        choiceNode._position._x = 650.0f;
-        choiceNode._position._y = 100.0f;
-        _graph._listNode.push_back( choiceNode );
-
-        DialogueNode actionNode{};
-        actionNode._id            = 4;
-        actionNode._type          = DialogueAssetNodeType::Action;
-        actionNode._actionCommand = "give_item:healing_potion:3";
-        actionNode._position._x   = 1050.0f;
-        actionNode._position._y   = 220.0f;
-        _graph._listNode.push_back( actionNode );
-
-        DialogueNode endNode{};
-        endNode._id          = 5;
-        endNode._type        = DialogueAssetNodeType::End;
-        endNode._position._x = 1350.0f;
-        endNode._position._y = 120.0f;
-        _graph._listNode.push_back( endNode );
-
-        // 기본 링크 연결
-        _graph._listLink.push_back( DialogueLink{ 1, DialogueGraphPanelInternal::pinOut( 1 ), DialogueGraphPanelInternal::pinIn( 2 ) } );
-        _graph._listLink.push_back( DialogueLink{ 2, DialogueGraphPanelInternal::pinOut( 2 ), DialogueGraphPanelInternal::pinIn( 3 ) } );
-        _graph._listLink.push_back( DialogueLink{ 3, DialogueGraphPanelInternal::pinChoice( 3, 0 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
-        _graph._listLink.push_back( DialogueLink{ 4, DialogueGraphPanelInternal::pinChoice( 3, 1 ), DialogueGraphPanelInternal::pinIn( 4 ) } );
-        _graph._listLink.push_back( DialogueLink{ 5, DialogueGraphPanelInternal::pinOut( 4 ), DialogueGraphPanelInternal::pinIn( 5 ) } );
+        DialogueGraphEdit::makeDefaultGraph( _graph );
     }
 
     ToolAssetLoadResult DialogueGraphPanel::loadDocument()
@@ -465,11 +416,8 @@ namespace sw::editor
 
     int32 DialogueGraphPanel::addNode( DialogueAssetNodeType type )
     {
-        DialogueNode node = DialogueCursor::makeNode( type, nextNodeID() );
-        node._position._x = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );
-        node._position._y = 150.0f + static_cast<float32>( ( node._id % 5 ) * 60 );
-        _selectedNodeID   = node._id;
-        _graph._listNode.push_back( std::move( node ) );
+        _selectedNodeID = nextNodeID();
+        DialogueGraphEdit::addNode( _graph, type, _selectedNodeID );
         return _selectedNodeID;
     }
 
@@ -671,7 +619,7 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "X" ) );
             if ( ImGui::Button( "X" ) )
             {
-                node._listChoice.erase( node._listChoice.begin() + static_cast<std::ptrdiff_t>( choiceIndex ) );
+                DialogueGraphEdit::removeChoice( _graph, node, choiceIndex );
                 notifyDocumentEdited( "Edit Dialogue Node" );
                 ImGui::PopID();
                 break;

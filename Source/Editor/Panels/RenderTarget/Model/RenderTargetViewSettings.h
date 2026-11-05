@@ -33,6 +33,9 @@ namespace sw::editor
         uint8               _bLinearizeDepth{ SW_TRUE };           ///< 깊이를 원근 투영 값으로 보고 거리로 되돌린다
         uint8               _bAutoDepthRange{ SW_TRUE };           ///< 깊이의 회색 범위를 화면에 있는 값(배경 제외)의 최솟값과 최댓값에 맞춘다
 
+        /** @brief 깊이 선형화 범위를 정합니다. 가까운 면은 0.001 이상, 먼 면은 그보다 멀게 맞춥니다(0 이나 뒤집힌 범위는 선형화를 깨뜨린다). */
+        void setDepthPlanes( float32 nearPlane, float32 farPlane );
+
         // 렌더 타깃 창이 쓰는 계산 모음입니다. 언리얼의 Buffer Visualization, 유니티 Frame Debugger 의 타깃 보기에 해당합니다.
         /** @brief CPU 로 읽은 값을 풀 수 있는 포맷이면 true 입니다. 블록 압축과 Unknown 은 해당하지 않습니다. 깊이는 항상 true 입니다. */
         static bool isDecodableFormat( RHIFormat format, bool bDepth );

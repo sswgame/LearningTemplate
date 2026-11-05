@@ -50,6 +50,12 @@ namespace sw::editor
         };
     } // namespace
 
+    void RenderTargetViewSettings::setDepthPlanes( float32 nearPlane, float32 farPlane )
+    {
+        _nearPlane = MathUtil::max( nearPlane, 0.001f );
+        _farPlane  = MathUtil::max( farPlane, _nearPlane + 0.001f );
+    }
+
     bool RenderTargetViewSettings::isDecodableFormat( RHIFormat format, bool bDepth )
     {
         if ( bDepth )

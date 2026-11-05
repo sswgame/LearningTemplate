@@ -342,9 +342,8 @@ namespace sw::editor
                 float32 arrPlane[2]{ _viewSettings._nearPlane, _viewSettings._farPlane };
                 if ( ImGui::DragFloat2( "##NearFar", arrPlane, 0.1f, 0.001f, 100000.0f, "%.3f" ) )
                 {
-                    _viewSettings._nearPlane = MathUtil::max( arrPlane[0], 0.001f );
-                    _viewSettings._farPlane  = MathUtil::max( arrPlane[1], _viewSettings._nearPlane + 0.001f );
-                    bChanged                 = true;
+                    _viewSettings.setDepthPlanes( arrPlane[0], arrPlane[1] );
+                    bChanged = true;
                 }
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorRenderTarget", "NearFarTip" ) );
             }
