@@ -26,7 +26,6 @@
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorSelection.h"
 #include "Editor/Common/Workspace/EditorService.h"
-#include "Editor/Common/Workspace/EditorTransaction.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 #include "Editor/Common/Workspace/Play/EditorSessionPolicy.h"
@@ -38,6 +37,7 @@
 #include "Editor/Panels/Inspector/InspectorPropertyManager.h"
 #include "Editor/Panels/Inspector/InspectorPropertyUndo.h"
 #include "Editor/Panels/Inspector/Model/InspectorComponentManager.h"
+#include "Editor/Panels/Inspector/Model/InspectorMultiSelection.h"
 #include "Editor/Panels/Inspector/Model/InspectorPropertyLayout.h"
 #include "Editor/Panels/Inspector/Model/PropertyEditCondition.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
@@ -240,27 +240,16 @@ namespace sw::editor
             ImGui::BeginDisabled();
 
         // 활성은 모든 선택에 적용한다. 값이 섞여 있으면 혼합으로 표시하고, 체크는 주 선택의 값을 따른다.
-        bool bMixedActive = false;
-        for ( const GameObject* pObject : listObject )
-        {
-            bMixedActive = bMixedActive || pObject->isActive() != pPrimary->isActive();
-        }
-        bool bActive = pPrimary->isActive();
-        if ( bMixedActive )
+        const InspectorMultiSelection::ActiveState activeState = InspectorMultiSelection::readActiveState( listObject );
+        bool                                       bActive     = activeState._bActive;
+        if ( activeState._bMixed )
         {
             ImGui::TextDisabled( "\xe2\x80\x94" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "MultipleValues" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Active" ) ) );
         }
         if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Active" ), &bActive ) )
-        {
-            EditorTransaction::beginTransaction( "Set Active (multiple)" );
-            for ( GameObject* pObject : listObject )
-            {
-                EditorSceneCommands::setActive( pObject, bActive );
-            }
-            EditorTransaction::endTransaction();
-        }
+            InspectorMultiSelection::applyActive( listObject, bActive );
 
         _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
         drawFavoritesSection( pPrimary ); // 다중 선택의 즐겨찾기는 주 선택 오브젝트 기준이다
@@ -287,13 +276,9 @@ namespace sw::editor
             }
             ImGui::PopID();
         }
-        size_t componentCount{ 0 };
-        for ( const Component* pComponent : pPrimary->getComponents() )
-        {
-            componentCount += pComponent != nullptr ? 1u : 0u;
-        }
-        if ( componentCount > _listMultiEditComponent.size() )
-            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "ComponentSAreNot", TextArgumentList().addInteger( "componentCount", static_cast<int64>( componentCount - _listMultiEditComponent.size() ) ) ).c_str() );
+        const size_t unsharedCount = InspectorMultiSelection::countUnsharedComponents( *pPrimary, _listMultiEditComponent );
+        if ( unsharedCount > 0 )
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "ComponentSAreNot", TextArgumentList().addInteger( "componentCount", static_cast<int64>( unsharedCount ) ) ).c_str() );
 
         if ( bEditsAllowed == false )
             ImGui::EndDisabled();
@@ -307,14 +292,7 @@ namespace sw::editor
 
     bool InspectorPanel::isMultiEditMixed( const PropertyInfo& prop )
     {
-        if ( _pMultiEditCurrent == nullptr )
-            return false;
-        vector<ObjectAddress> listInstance;
-        for ( const Component* pComponent : _pMultiEditCurrent->_listComponent )
-        {
-            listInstance.push_back( ObjectAddress{ pComponent } );
-        }
-        return EditorMultiEditComponent::hasMixedValues( prop, listInstance );
+        return _pMultiEditCurrent != nullptr && InspectorMultiSelection::hasMixedValues( prop, _pMultiEditCurrent->_listComponent );
     }
 
     void InspectorPanel::drawFavoritesSection( GameObject* pObj )
