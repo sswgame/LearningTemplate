@@ -12,6 +12,7 @@
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationDef.h"
 #include "Engine/Character/Socket/SocketSet.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 
 namespace sw
@@ -65,7 +66,7 @@ namespace sw
         static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
         static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
 
-        [[nodiscard]] static bool load( const AssetID& assetID, AnimationNotifyTable& outTable ) { return outTable.loadFromAsset( assetID, AnimationNotifyHandlerRegistry::getDefault() ); }
+        [[nodiscard]] static bool load( const AssetID& assetID, AnimationNotifyTable& outTable ) { return outTable.loadFromAsset( assetID, sw::engine::getSubsystem<AnimationNotifyHandlerRegistry>() ); }
     };
 } // namespace sw
 

@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Foundation/EngineScope.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/ModuleObjectRegistrar.h"
 #include "Engine/Module/ModuleRegistrationHost.h"
@@ -56,7 +57,7 @@ namespace sw
             vector<ModuleObjectRegistrar*>& listAttached = getRegistrationHost().getAttachedObjects()[string{ moduleName }];
             for ( size_t index = listRegistrar.size(); index > 0; --index )
             {
-                listRegistrar[index - 1]->attach();
+                listRegistrar[index - 1]->attach( *engine::getEngineSubsystems() );
                 listAttached.push_back( listRegistrar[index - 1] );
             }
         }
@@ -80,7 +81,7 @@ namespace sw
                 for ( size_t index = listAttached.size(); index > 0; --index )
                 {
                     if ( listAttached[index - 1]->getDetachPass() == pass )
-                        listAttached[index - 1]->detach();
+                        listAttached[index - 1]->detach( *engine::getEngineSubsystems() );
                 }
             }
         }

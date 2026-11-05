@@ -11,7 +11,34 @@
 #include "Core/File/AsyncFileIO.h"
 #include "Core/Task/TaskManager.h"
 
+#include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+
+namespace sw
+{
+    namespace
+    {
+        /** @brief 엔진 코덱(LZ4 · Zstd · Zlib)의 등록 구독을 듭니다. 레지스트리 바로 뒤에 서서 먼저 내려간다. */
+        class EngineCompressionCodecs final : public ISubsystem
+        {
+        public:
+            static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+            static constexpr const utf8* kSubsystemName      = "EngineCompressionCodecs";
+
+            explicit EngineCompressionCodecs( CompressionCodecRegistry& registry )
+                : _listSubscription{ EngineCompressionCodecUtil::registerAll( registry ) }
+            {
+            }
+
+            SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+            void                shutdownSubsystem() override {}
+            const utf8*         getSubsystemName() const override { return kSubsystemName; }
+
+        private:
+            vector<Subscription> _listSubscription;
+        };
+    } // namespace
+} // namespace sw
 
 namespace sw
 {
@@ -23,6 +50,7 @@ namespace sw
     SW_ENGINE_SUBSYSTEM( CompressionCodecRegistry, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pStartupParts->_pCodecRegistry = &scope.emplaceSubsystem<CompressionCodecRegistry>();
+        (void)scope.emplaceSubsystem<EngineCompressionCodecs>( *build._pStartupParts->_pCodecRegistry );
     } );
 
     SW_ENGINE_SUBSYSTEM_DEFAULT( TaskManager, TaskManager );

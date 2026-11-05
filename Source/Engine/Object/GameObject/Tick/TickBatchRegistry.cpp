@@ -58,15 +58,15 @@ namespace sw
 
 namespace sw
 {
-    void TickBatchRegistrar::attach()
+    void TickBatchRegistrar::attach( const ISubsystemLocator& scope )
     {
         // 모듈을 올리는 길은 엔진 서비스가 선 동안에만 온다 — 레지스트리가 없으면 그 실행의 잘못이라 멈춘다(`getSubsystem`).
-        engine::getSubsystem<TickBatchRegistry>().registerType( _entry );
+        requireSubsystem<TickBatchRegistry>( scope ).registerType( _entry );
     }
 
-    void TickBatchRegistrar::detach()
+    void TickBatchRegistrar::detach( const ISubsystemLocator& scope )
     {
-        engine::getSubsystem<TickBatchRegistry>().unregisterType( _entry );
+        requireSubsystem<TickBatchRegistry>( scope ).unregisterType( _entry );
     }
 } // namespace sw
 

@@ -8,19 +8,39 @@
 
 #include "Core/Log/Logger.h"
 #include "Core/String/RegistrationList.h"
+#include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/SubsystemScope.h"
+
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
+
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw::editor
 {
     namespace
     {
+        /** @brief 지금 올라 있는 모디파이어 등록의 목록을 듭니다. 등록자는 이 서브시스템이 선 뒤에 붙는다(`engine::registerModuleTypes`). */
+        class MeshModifierRegistrations final : public ISubsystem
+        {
+        public:
+            RegistrationList<MeshModifierRegistration> _listRegistration;
+
+            static constexpr const utf8* kSubsystemName = "MeshModifierRegistrations";
+
+            MeshModifierRegistrations()
+                : _listRegistration{ "MeshModifierRegistry", RegistrationOrder::ByOrderThenName, true }
+            {
+            }
+
+            SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+            void                shutdownSubsystem() override {}
+            const utf8*         getSubsystemName() const override { return kSubsystemName; }
+        };
+
         struct MeshModifierRegistryInternal
         {
-            /** @brief 등록 목록입니다. 함수 안 정적 객체라 처음 등록할 때 만들어지고, 모든 등록 객체보다 늦게 소멸합니다. */
-            static RegistrationList<MeshModifierRegistration>& getList()
-            {
-                static RegistrationList<MeshModifierRegistration> s_list{ "MeshModifierRegistry", RegistrationOrder::ByOrderThenName, true };
-                return s_list;
-            }
+            /** @brief 등록 목록입니다(플러그인의 모듈 서브시스템이 듭니다). 등록자는 넘겨받은 범위로 직접 찾는다 — 모듈을 올리는 때 게임 창구는 아직 묶이지 않았다. */
+            static RegistrationList<MeshModifierRegistration>& getList() { return game::getSubsystem<MeshModifierRegistrations>()._listRegistration; }
 
             static bool isBefore( const MeshModifierRegistration* pLeft, const MeshModifierRegistration* pRight )
             {
@@ -35,6 +55,11 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    SW_MODULE_SUBSYSTEM( Engine, MeshModifierRegistrations, MeshModifierRegistrations );
+} // namespace sw::editor
+
+namespace sw::editor
+{
     MeshModifierRegistration::MeshModifierRegistration( const utf8* pID, const utf8* pDisplayName, const utf8* pCategory, MeshModifierCreateFn pCreateFn )
         : _pID{ pID }
         , _pDisplayName{ pDisplayName }
@@ -43,14 +68,16 @@ namespace sw::editor
     {
     }
 
-    void MeshModifierRegistration::attach()
+    void MeshModifierRegistration::attach( const ISubsystemLocator& scope )
     {
-        MeshModifierRegistry::add( this );
+        (void)requireSubsystem<MeshModifierRegistrations>( scope )._listRegistration.addLogged( this, "Mesh modifier id", _pID );
     }
 
-    void MeshModifierRegistration::detach()
+    void MeshModifierRegistration::detach( const ISubsystemLocator& scope )
     {
-        MeshModifierRegistry::remove( this );
+        MeshModifierRegistrations* const pRegistrations = locateSubsystem<MeshModifierRegistrations>( &scope ); // 종료 때는 표가 먼저 내려갔을 수 있다
+        if ( pRegistrations != nullptr )
+            (void)pRegistrations->_listRegistration.remove( this ); // 거절된 중복 등록은 목록에 없다
     }
 } // namespace sw::editor
 
@@ -88,15 +115,5 @@ namespace sw::editor
             modifier->setName( pRegistration->_pDisplayName );
         }
         return modifier;
-    }
-
-    void MeshModifierRegistry::add( MeshModifierRegistration* pRegistration )
-    {
-        (void)MeshModifierRegistryInternal::getList().addLogged( pRegistration, "Mesh modifier id", pRegistration->_pID );
-    }
-
-    void MeshModifierRegistry::remove( const MeshModifierRegistration* pRegistration )
-    {
-        (void)MeshModifierRegistryInternal::getList().remove( pRegistration ); // 거절된 중복 등록은 목록에 없다
     }
 } // namespace sw::editor

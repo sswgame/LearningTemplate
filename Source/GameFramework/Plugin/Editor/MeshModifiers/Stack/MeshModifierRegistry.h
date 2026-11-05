@@ -36,8 +36,8 @@ namespace sw::editor
         MeshModifierRegistration( const MeshModifierRegistration& )            = delete;
         MeshModifierRegistration& operator=( const MeshModifierRegistration& ) = delete;
 
-        void attach() override;
-        void detach() override;
+        void attach( const ISubsystemLocator& scope ) override;
+        void detach( const ISubsystemLocator& scope ) override;
     };
 } // namespace sw::editor
 
@@ -52,11 +52,6 @@ namespace sw::editor
         static const MeshModifierRegistration* findRegistration( string_view id );
         /** @brief id 로 기본값 모디파이어를 만들고 id · 이름(표시 이름)을 채웁니다. 모르는 id 면 nullptr 입니다. */
         static unique_ptr<MeshModifier> create( string_view id );
-
-        /** @brief 등록 객체가 부릅니다. 같은 id 가 이미 있으면 경고하고 먼저 것을 둡니다. */
-        static void add( MeshModifierRegistration* pRegistration );
-        /** @brief 등록 객체가 소멸하며 부릅니다. */
-        static void remove( const MeshModifierRegistration* pRegistration );
     };
 } // namespace sw::editor
 

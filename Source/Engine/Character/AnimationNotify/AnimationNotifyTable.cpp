@@ -7,6 +7,7 @@
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyHandlers.h"
 #include "Engine/Character/CharacterDataReader.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -242,17 +243,12 @@ namespace sw
     AnimationNotifyHandlerRegistry::AnimationNotifyHandlerRegistry()
         : _registry{}
     {
+        (void)AnimationNotifyHandlerUtil::registerBuiltInHandlers( *this );
     }
 
     AnimationNotifyHandlerRegistry::~AnimationNotifyHandlerRegistry() = default;
 
-    const AnimationNotifyHandlerRegistry& AnimationNotifyHandlerRegistry::getDefault()
-    {
-        static AnimationNotifyHandlerRegistry s_registry;
-        static const bool                     s_bRegistered = AnimationNotifyHandlerUtil::registerBuiltInHandlers( s_registry );
-        (void)s_bRegistered;
-        return s_registry;
-    }
+    SW_ENGINE_SUBSYSTEM_DEFAULT( AnimationNotifyHandlerRegistry, AnimationNotifyHandlerRegistry );
 
     void AnimationNotifyHandlerRegistry::registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler )
     {

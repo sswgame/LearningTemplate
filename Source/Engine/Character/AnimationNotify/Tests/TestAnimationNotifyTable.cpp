@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
+#include "Engine/Foundation/EngineServices.h"
 
 using namespace sw;
 
@@ -12,7 +13,7 @@ using namespace sw;
  */
 SW_TEST_CASE( AnimationNotifyTableTest, FootContactReadsUnderscoreFields )
 {
-    const AnimationNotifyHandlerRegistry& registry = AnimationNotifyHandlerRegistry::getDefault();
+    const AnimationNotifyHandlerRegistry& registry = sw::engine::getSubsystem<sw::AnimationNotifyHandlerRegistry>();
     AnimationNotifyTable                  table;
     SW_REQUIRE_TRUE( table.loadFromXMLText( R"(<AnimationNotifies>
         <Notify name="FootL" handler="Footstep" socket="foot_l"/>
@@ -34,7 +35,7 @@ namespace
     {
         AnimationNotifyTable table;
         const string         xml = string( R"(<AnimationNotifies><Notify name="FootL" handler="Footstep" socket="foot_l"/>)" ) + pLine + "</AnimationNotifies>";
-        return table.loadFromXMLText( xml, "bad", AnimationNotifyHandlerRegistry::getDefault() );
+        return table.loadFromXMLText( xml, "bad", sw::engine::getSubsystem<sw::AnimationNotifyHandlerRegistry>() );
     }
 } // namespace
 

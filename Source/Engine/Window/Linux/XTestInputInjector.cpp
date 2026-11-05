@@ -3,6 +3,7 @@
 #include "Engine/Window/Linux/XTestInputInjector.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Memory/LifetimeScope.h"
 
 #include "Engine/Console/DevCommandRegistry.h"
 
@@ -131,10 +132,11 @@ namespace sw
     namespace
     {
         /// 명령 사이에 연결을 유지한다(누른 채로 다음 명령에서 떼는 시험이 있다). 개발 콘솔(게임 스레드)에서만 부른다.
+        ScopeOwned<XTestInputInjector> s_injector{};
+
         XTestInputInjector& getInjector()
         {
-            static XTestInputInjector s_injector;
-            return s_injector;
+            return s_injector.getRequired();
         }
 
         /// 동작 이름(down · up · tap · click)을 읽습니다. @p outPress · @p outRelease 는 누름 · 뗌이 필요한지입니다.

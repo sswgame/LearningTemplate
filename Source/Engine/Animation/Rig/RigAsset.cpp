@@ -13,6 +13,8 @@
 #include "Engine/Animation/Rig/RigIKNodes.h"
 #include "Engine/Animation/Rig/RigSecondaryNodes.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -21,7 +23,7 @@ namespace sw
 {
     class RigNodeRegistry;
 
-    /** @brief 엔진 노드 등록 함수 모음입니다(`RigNodeRegistry::getInstance` 가 처음 한 번 호출합니다). */
+    /** @brief 엔진 노드 등록 함수 모음입니다(`RigNodeRegistry` 의 생성자가 부릅니다). */
     struct RigNodeLibrary
     {
         /** @brief 엔진 노드 종류를 모두 등록합니다. 늘 true 입니다(정적 초기화에 쓰려고 값을 돌려줍니다). */
@@ -52,14 +54,13 @@ namespace sw
         }
     } // namespace
 
-    RigNodeRegistry& RigNodeRegistry::getInstance()
+    RigNodeRegistry::RigNodeRegistry()
+        : _registry{}
     {
-        // 엔진 노드는 레지스트리가 처음 만들어질 때 한 번 등록한다(함수 안 정적 초기화라 스레드에 안전하다).
-        static RigNodeRegistry s_registry;
-        static const bool      s_bEngineNodes = RigNodeLibrary::registerEngineNodes( s_registry );
-        (void)s_bEngineNodes;
-        return s_registry;
+        (void)RigNodeLibrary::registerEngineNodes( *this );
     }
+
+    SW_ENGINE_SUBSYSTEM_DEFAULT( RigNodeRegistry, RigNodeRegistry );
 
     void RigNodeRegistry::registerNode( const hashed_string& typeName, RigNodeFactory factory )
     {
@@ -237,7 +238,7 @@ namespace sw
         hashed_string typeName{};
         if ( reader.readName( "type", typeName, true ) == false )
             return false;
-        unique_ptr<RigNode> node = RigNodeRegistry::getInstance().createNode( typeName );
+        unique_ptr<RigNode> node = engine::getSubsystem<RigNodeRegistry>().createNode( typeName );
         if ( node == nullptr )
         {
             SW_LOG_ERROR_ID( "RigAsset.RigUnknownNodeType", "Rig '%#': unknown node type '%#'", sourceLabel, typeName.c_str() );

@@ -7,12 +7,34 @@
  *          한 프레임의 스냅숏은 인스턴스 · 팔레트가 같은 프레임의 칸을 실으므로 놓은 번호를 곧바로 다시 주어도 RT 가 섞어 읽지 않는다.
  */
 #pragma once
+#include "Core/Concurrency/SpinLock.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 namespace sw
 {
+    /**
+     * @class AnimationSkinSlotRegistry
+     * @brief 칸 번호 목록입니다(엔진 서비스 범위가 소유한다 — 컴포넌트 기본값 객체보다 오래 산다). 놓은 번호를 먼저 다시 준다.
+     */
+    class SW_API AnimationSkinSlotRegistry final : public ISubsystem
+    {
+    public:
+        SpinLock                 _spinLock;
+        vector<uint32> _listFree SW_GUARDED_BY( _spinLock ){};
+        uint32 _nextSlot         SW_GUARDED_BY( _spinLock ){ 0 };
+
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr const utf8* kSubsystemName      = "AnimationSkinSlotRegistry";
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
+    };
+
     /**
      * @class AnimationSkinSlot
      * @brief 만들 때 칸 번호를 받고 사라질 때 돌려주는 값입니다(복사 · 이동하지 않는다 — 번호는 주인 하나의 것이다).

@@ -151,13 +151,13 @@ namespace sw::editor
         EditorExtensionRegistrar( const EditorExtensionRegistrar& )            = delete;
         EditorExtensionRegistrar& operator=( const EditorExtensionRegistrar& ) = delete;
 
-        void attach() override
+        void attach( const ISubsystemLocator& /*scope*/ ) override
         {
             _bRegistered = EditorExtensionRegistry<TRegistration>::getList().addRegistration( _registration );
             if ( _bRegistered )
                 TRegistration::onAttached( _registration );
         }
-        void detach() override
+        void detach( const ISubsystemLocator& /*scope*/ ) override
         {
             if ( _bRegistered == false )
                 return;

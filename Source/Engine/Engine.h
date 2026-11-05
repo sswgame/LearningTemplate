@@ -224,8 +224,6 @@ namespace sw
         Subscription _configReloadedSubscription;
         /** @brief 주 창 크기 칸의 구독입니다(RHI 가 선 클라이언트만). `shutdown` 이 창보다 먼저 놓는다. */
         Subscription _mainWindowResizeSubscription;
-        /** @brief 엔진이 붙인 압축 코덱(LZ4 · Zstd · Zlib)의 등록 구독입니다(`EngineCompressionCodecUtil::registerAll`). */
-        vector<Subscription> _listCodecSubscription;
         /** @brief 서비스 범위의 디버그 키 맵입니다(`_services` 소유 — 빌려 쓴다). `shutdown` 이 단계 종료 뒤 · 해제 전에(입력 매니저가 소멸하기 전에) 맵을 놓는다. */
         DebugKeyActions* _pDebugKeyActions;
         /**

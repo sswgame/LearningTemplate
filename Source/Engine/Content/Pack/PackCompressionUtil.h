@@ -44,10 +44,8 @@ namespace sw
         [[nodiscard]] static bool findCodecType( PackCompressionType packType, CompressionCodecType& outCodecType );
 
         /**
-         * @brief 팩 종류의 코덱을 찾습니다. 표에 없거나 어느 레지스트리에도 없으면 nullptr 입니다.
-         * @details 활성 레지스트리(`CompressionCodecRegistry::getActive`)를 먼저 봅니다 — 엔진 · 모듈이 같은 종류를 다른 구현으로 바꿨으면 팩도
-         *          그것을 씁니다. 활성 레지스트리가 없거나 그 종류가 빠졌으면(도구 · 테스트 호스트는 내장 둘만 올린다) 엔진이 제공하는 코덱을 모두
-         *          올린 이 파일의 레지스트리를 씁니다(`EngineCompressionCodecUtil::registerAll`). 코덱은 상태가 없어 여러 스레드가 같이 씁니다.
+         * @brief 팩 종류의 코덱을 활성 레지스트리(`CompressionCodecRegistry::getActive`)에서 찾습니다. 표에 없거나 레지스트리에 없으면 nullptr 입니다.
+         * @details 엔진 코덱(LZ4 · Zstd · Zlib)은 레지스트리를 세우는 슬롯 공장이 함께 올린다 — 엔진 · 테스트 하네스가 같은 길이다. 코덱은 상태가 없어 여러 스레드가 같이 쓴다.
          */
         static ICompressionCodec* findCodec( PackCompressionType packType );
     };

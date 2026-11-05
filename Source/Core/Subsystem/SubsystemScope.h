@@ -64,6 +64,16 @@ namespace sw
         }
         return nullptr;
     }
+
+    /** @brief 범위 @p scope 부터 찾은, 반드시 있어야 하는 @p T 입니다. 없으면 그 실행의 잘못이라 모든 구성에서 멈춥니다. */
+    template <typename T>
+    T& requireSubsystem( const ISubsystemLocator& scope )
+    {
+        T* const pFound = locateSubsystem<T>( &scope );
+        if ( pFound == nullptr )
+            ::sw::internal::reportMissingRequiredService( SW_FUNCTION_SIGNATURE );
+        return *pFound;
+    }
 } // namespace sw
 
 namespace sw

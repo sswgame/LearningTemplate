@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Content/AssetID.h"
@@ -23,13 +24,20 @@ namespace sw
     /**
      * @class RigNodeRegistry
      * @brief 노드 종류 이름에서 생성 함수로 가는 레지스트리입니다. 데이터의 `"type"` 이 여기서 고르고, 모르는 이름은 로드 오류입니다.
-     * @details 엔진 노드(IK, 제약, 스프링, 포즈 구동, 발 디딤)는 처음 쓸 때 등록된다. 게임과 키트는 `registerNode` 로 추가한다.
+     * @details 엔진 서비스 범위가 소유한다. 엔진 노드(IK, 제약, 스프링, 포즈 구동, 발 디딤)는 만들 때 등록된다. 게임과 키트는 `registerNode` 로 추가한다.
      */
-    class SW_API RigNodeRegistry
+    class SW_API RigNodeRegistry final : public ISubsystem
     {
     public:
-        /** @brief 프로세스 하나의 레지스트리입니다(엔진 노드가 든 채로). */
-        static RigNodeRegistry& getInstance();
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr const utf8* kSubsystemName      = "RigNodeRegistry";
+
+        /** @brief 엔진 노드가 든 표를 만듭니다. */
+        RigNodeRegistry();
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 종류를 등록합니다. 같은 이름이 있으면 바꿉니다. */
         void registerNode( const hashed_string& typeName, RigNodeFactory factory );
@@ -37,9 +45,6 @@ namespace sw
         unique_ptr<RigNode> createNode( const hashed_string& typeName ) const;
         /** @brief 등록된 종류 이름들을 등록 순서로 반환합니다(진단과 에디터용). */
         vector<hashed_string> getTypeNames() const;
-
-    private:
-        RigNodeRegistry() = default;
 
     private:
         NameRegistry<RigNodeFactory> _registry; ///< 종류 이름 → 생성 함수(등록 순서)

@@ -172,8 +172,8 @@ namespace sw
     public:
         explicit DebugHUDSectionRegistrar( const DebugHUDSectionRegistration* pRegistration );
 
-        void attach() override;
-        void detach() override;
+        void attach( const ISubsystemLocator& scope ) override;
+        void detach( const ISubsystemLocator& scope ) override;
 
     private:
         const DebugHUDSectionRegistration* _pRegistration;

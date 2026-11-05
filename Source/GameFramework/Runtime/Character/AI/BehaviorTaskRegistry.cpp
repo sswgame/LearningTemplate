@@ -4,10 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
-
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -81,15 +80,17 @@ namespace sw
     {
     }
 
-    void BehaviorTaskRegistrar::attach()
+    void BehaviorTaskRegistrar::attach( const ISubsystemLocator& scope )
     {
-        _bRegistered = game::getSubsystem<BehaviorTaskRegistry>().registerTask( _pEntry ) ? SW_TRUE : SW_FALSE;
+        _bRegistered = requireSubsystem<BehaviorTaskRegistry>( scope ).registerTask( _pEntry ) ? SW_TRUE : SW_FALSE;
     }
 
-    void BehaviorTaskRegistrar::detach()
+    void BehaviorTaskRegistrar::detach( const ISubsystemLocator& scope )
     {
-        if ( _bRegistered == SW_TRUE )
-            game::getSubsystem<BehaviorTaskRegistry>().unregisterTask( _pEntry );
+        // 종료 때는 공용 모듈의 표가 키트보다 먼저 내려간다 — 표가 없으면 뺄 것도 없다.
+        BehaviorTaskRegistry* const pRegistry = locateSubsystem<BehaviorTaskRegistry>( &scope );
+        if ( _bRegistered == SW_TRUE && pRegistry != nullptr )
+            pRegistry->unregisterTask( _pEntry );
         _bRegistered = SW_FALSE;
     }
 

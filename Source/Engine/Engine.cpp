@@ -32,7 +32,6 @@
 #include "Engine/Audio/IAudioService.h"
 #include "Engine/Audio/LipSyncImport.h"
 #include "Engine/Automation/AutomationCaptureUtil.h"
-#include "Engine/Compression/EngineCompressionCodecUtil.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineConfig.h"
 #include "Engine/Config/EngineDefaultAssets.h"
@@ -127,7 +126,6 @@ namespace sw
         , _pEventDispatcher{ nullptr }
         , _pConfigManager{ nullptr }
         , _configReloadedSubscription{}
-        , _listCodecSubscription{}
         , _pDebugKeyActions{ nullptr }
         , _frameHooks{}
         , _startupExtension{}
@@ -248,7 +246,6 @@ namespace sw
             // 호스트가 건 확장(개발 도구 `DevTools` 의 셰이더 · 설정 리로드 · 디버그 HUD)이 같은 범위에 더한다 — 엔진은 무엇인지 모른다.
             if ( _startupExtension.isBound() )
                 _startupExtension( _startup, startupParts );
-            _listCodecSubscription = EngineCompressionCodecUtil::registerAll( *startupParts._pCodecRegistry );
             // 다시 읽기 알림은 엔진 루프가 받는다.
             _pConfigManager             = startupParts._pConfigManager;
             _configReloadedSubscription = _pConfigManager->onConfigReloaded().add( SW_DELEGATE_METHOD( Delegate<void( const hashed_string& )>, &Engine::onConfigReloaded, this ) );

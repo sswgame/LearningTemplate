@@ -104,8 +104,8 @@ namespace sw
     public:
         explicit DevCommandRegistrar( const DevCommandRegistration* pRegistration );
 
-        void attach() override;
-        void detach() override;
+        void attach( const ISubsystemLocator& scope ) override;
+        void detach( const ISubsystemLocator& scope ) override;
 
     private:
         const DevCommandRegistration* _pRegistration;

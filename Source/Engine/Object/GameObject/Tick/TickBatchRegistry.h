@@ -93,8 +93,8 @@ namespace sw
     class SW_API TickBatchRegistrar : public ModuleObjectRegistrar
     {
     public:
-        void attach() override;
-        void detach() override;
+        void attach( const ISubsystemLocator& scope ) override;
+        void detach( const ISubsystemLocator& scope ) override;
 
     protected:
         explicit TickBatchRegistrar( const TickBatchRegistry::Entry& entry )

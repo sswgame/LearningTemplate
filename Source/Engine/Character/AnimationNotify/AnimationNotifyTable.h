@@ -26,6 +26,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ISubsystem.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Notify/AnimationFootContact.h"
@@ -204,20 +205,25 @@ namespace sw
 {
     /**
      * @class AnimationNotifyHandlerRegistry
-     * @brief 이름에서 처리기로 가는 테이블입니다. `getDefault` 가 엔진 내장 처리기(PlaySound, SpawnPrefab, Footstep, HitWindow, CameraShake, AbilityEvent,
+     * @brief 이름에서 처리기로 가는 테이블입니다(엔진 서비스 범위가 소유한다). 만들 때 엔진 내장 처리기(PlaySound, SpawnPrefab, Footstep, HitWindow, CameraShake, AbilityEvent,
      *        MotionWarp)를 가지고 있습니다. 추가한 처리기는 엔진이 끝날 때까지 살아 있으므로, 핫 리로드되는 모듈의 처리기는 추가하지 말고 이벤트(`AbilityEvent`)로 받으세요.
      */
-    class SW_API AnimationNotifyHandlerRegistry
+    class SW_API AnimationNotifyHandlerRegistry final : public ISubsystem
     {
     public:
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::Animation; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr const utf8* kSubsystemName      = "AnimationNotifyHandlerRegistry";
+
+        /** @brief 내장 처리기가 든 표를 만듭니다. */
         AnimationNotifyHandlerRegistry();
-        ~AnimationNotifyHandlerRegistry();
+        ~AnimationNotifyHandlerRegistry() override;
 
         AnimationNotifyHandlerRegistry( const AnimationNotifyHandlerRegistry& )            = delete;
         AnimationNotifyHandlerRegistry& operator=( const AnimationNotifyHandlerRegistry& ) = delete;
 
-        /** @brief 내장 처리기를 든 표입니다(엔진 수명). */
-        static const AnimationNotifyHandlerRegistry& getDefault();
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 처리기를 이름으로 추가합니다. 같은 이름이 있으면 교체하며, 그 처리기를 가리키던 테이블은 다시 읽어야 합니다. */
         void registerHandler( const hashed_string& name, unique_ptr<IAnimationNotifyHandler> handler );

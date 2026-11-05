@@ -6,8 +6,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
@@ -98,15 +98,15 @@ namespace sw
     {
     }
 
-    void DevCommandRegistrar::attach()
+    void DevCommandRegistrar::attach( const ISubsystemLocator& scope )
     {
-        _bRegistered = engine::getSubsystem<DevCommandRegistry>().registerCommand( _pRegistration ) ? SW_TRUE : SW_FALSE;
+        _bRegistered = requireSubsystem<DevCommandRegistry>( scope ).registerCommand( _pRegistration ) ? SW_TRUE : SW_FALSE;
     }
 
-    void DevCommandRegistrar::detach()
+    void DevCommandRegistrar::detach( const ISubsystemLocator& scope )
     {
         if ( _bRegistered == SW_TRUE )
-            engine::getSubsystem<DevCommandRegistry>().unregisterCommand( _pRegistration );
+            requireSubsystem<DevCommandRegistry>( scope ).unregisterCommand( _pRegistration );
         _bRegistered = SW_FALSE;
     }
 

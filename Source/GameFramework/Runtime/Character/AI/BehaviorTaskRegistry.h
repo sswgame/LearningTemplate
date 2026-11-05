@@ -75,8 +75,8 @@ namespace sw
     public:
         explicit BehaviorTaskRegistrar( const BehaviorTaskEntry* pEntry );
 
-        void attach() override;
-        void detach() override;
+        void attach( const ISubsystemLocator& scope ) override;
+        void detach( const ISubsystemLocator& scope ) override;
 
     private:
         const BehaviorTaskEntry* _pEntry;

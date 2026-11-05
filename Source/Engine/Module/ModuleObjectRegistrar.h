@@ -8,6 +8,8 @@
 
 namespace sw
 {
+    class ISubsystemLocator;
+
     /**
      * @class ModuleObjectRegistrar
      * @brief 이미지의 정적 객체로 두면 링크 때 목록(`getHead`)에 달리고, 모듈을 올린 쪽이 걷어 모듈 이름과 함께 붙이며(`attach`), 내리기 전에 뗍니다(`detach`).
@@ -28,11 +30,11 @@ namespace sw
         /** @brief 목록의 다음(먼저 만든 쪽)입니다. */
         ModuleObjectRegistrar* getNext() const { return _pNext; }
         /** @brief 레지스트리에 올립니다. 모듈을 올린 쪽이 한 번 부릅니다. */
-        virtual void attach() = 0;
+        virtual void attach( const ISubsystemLocator& scope ) = 0;
         /** @brief 레지스트리에서 뺍니다. 붙인 등록자만, 모듈을 내리기 전에 한 번 부릅니다. 뺀 등록으로 만든 인스턴스는 레지스트리가 이 안에서 거둔다. */
-        virtual void detach() = 0;
+        virtual void detach( const ISubsystemLocator& scope ) = 0;
         /**
-         * @brief 떼는 차례입니다. 한 모듈의 등록자는 작은 차례부터, 같은 차례 안에서는 붙인 역순으로 뗍니다.
+         * @brief 떼는 차례입니다(`attach` · `detach` 의 @p scope 는 엔진 범위다 — 레지스트리를 여기서 찾는다. 게임 창구는 모듈을 올리는 때 아직 묶이지 않았다). 한 모듈의 등록자는 작은 차례부터, 같은 차례 안에서는 붙인 역순으로 뗍니다.
          * @details 다른 등록의 인스턴스가 쓰는 것(편집기 확장 서브시스템)은 1 을 돌려 쓰는 쪽(패널 · 명령)이 먼저 내려가게 한다.
          */
         virtual uint32 getDetachPass() const { return 0; }

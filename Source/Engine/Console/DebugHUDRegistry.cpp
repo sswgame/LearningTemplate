@@ -4,8 +4,8 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Subsystem/SubsystemScope.h"
 
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
@@ -234,15 +234,15 @@ namespace sw
     {
     }
 
-    void DebugHUDSectionRegistrar::attach()
+    void DebugHUDSectionRegistrar::attach( const ISubsystemLocator& scope )
     {
-        _bRegistered = engine::getSubsystem<DebugHUDRegistry>().registerSection( _pRegistration ) ? SW_TRUE : SW_FALSE;
+        _bRegistered = requireSubsystem<DebugHUDRegistry>( scope ).registerSection( _pRegistration ) ? SW_TRUE : SW_FALSE;
     }
 
-    void DebugHUDSectionRegistrar::detach()
+    void DebugHUDSectionRegistrar::detach( const ISubsystemLocator& scope )
     {
         if ( _bRegistered == SW_TRUE )
-            engine::getSubsystem<DebugHUDRegistry>().unregisterSection( _pRegistration );
+            requireSubsystem<DebugHUDRegistry>( scope ).unregisterSection( _pRegistration );
         _bRegistered = SW_FALSE;
     }
 
