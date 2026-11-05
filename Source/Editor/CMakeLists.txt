@@ -292,12 +292,6 @@ sw_addModuleLibrary(EditorModule
 	REFLECTION_EXCLUDE "${editorCoreReflectRegex}"
 )
 
-# 리눅스도 Windows 처럼 모듈마다 ImGui 사본을 갖게 한다. 에디터 모듈이 정적 라이브러리의 심볼을 공개하면 확장 모듈의 링커가 자기 사본을 넣지 않아, 확장의 결속기(`EditorExtensionUIBinder`)가
-# 에디터 모듈의 할당자를 자기 함수로 덮어썼다 - 확장이 내려간 뒤 에디터가 ImGui 메모리를 풀면 없는 코드로 뛴다(종료 시 ImGuizmo 전역 소멸자에서 세그폴트, WSL Vulkan 에서 재현).
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	target_link_options(EditorModule PRIVATE "LINKER:--exclude-libs,libimgui.a:libimguid.a:libimplot.a:libimplotd.a:libimguizmo.a:libimgui-node-editor.a")
-endif()
-
 # EditorCore 의 오브젝트와 FlagOps 우산을 받는다. View 부분이 아래에서 이 타깃의 컴파일 옵션을 복사하므로 부분을 만들기 전에 부른다.
 sw_linkEditorCore(EditorModule PUBLIC)
 
