@@ -17,9 +17,8 @@
     #include <poll.h>
 
     #include "Core/Foundation/X11MacroUndef.h"
-#endif
 
-#include <cstring>
+    #include <cstring>
 
 namespace sw
 {
@@ -31,7 +30,6 @@ namespace sw
         constexpr int32 kDefaultRestoreY = 100;
     } // namespace
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     namespace
     {
         /** @brief 클립보드 주인에게 변환을 청한 뒤 답(`SelectionNotify`)을 기다리는 한 번의 길이(ms)입니다. */
@@ -167,7 +165,6 @@ namespace sw
             }
         };
     } // namespace
-#endif
 
     X11Window::X11Window()
         : _clipboardText{}
@@ -191,7 +188,6 @@ namespace sw
         X11Window::destroy();
     }
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     bool X11Window::initializeWindow( const utf8* pTitle, uint32 width, uint32 height )
     {
         _width  = width;
@@ -879,90 +875,5 @@ namespace sw
             XCloseIM( static_cast<XIM>( _pInputMethod ) );
         _pInputMethod = nullptr;
     }
-#else
-    bool X11Window::initializeWindow( const utf8* pTitle, uint32 width, uint32 height )
-    {
-        std::ignore = pTitle;
-        _width      = width;
-        _height     = height;
-        return true;
-    }
-
-    void X11Window::destroy()
-    {
-    }
-
-    bool X11Window::setMinimized( bool bMinimized )
-    {
-        (void)bMinimized;
-        return false;
-    }
-
-    bool X11Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
-    {
-        (void)width;
-        (void)height;
-        _displayMode = mode;
-        return false;
-    }
-
-    bool X11Window::tryGetFrameExtents( WindowFrameExtents& outExtents ) const
-    {
-        outExtents = WindowFrameExtents{};
-        SW_LOG_ERROR_ID( "X11Window.FrameExtentsNoX11", "This build has no X11 window - window frame extents are unknown" );
-        return false;
-    }
-
-    bool X11Window::setFramePosition( int32 x, int32 y )
-    {
-        (void)x;
-        (void)y;
-        return false;
-    }
-
-    void X11Window::captureRestorePosition()
-    {
-    }
-
-    void X11Window::clearRestorePosition()
-    {
-        // 이 플랫폼에서는 창을 만들지 않지만, 생성자가 부르므로 값은 채워 둔다.
-        _restoreX = kDefaultRestoreX;
-        _restoreY = kDefaultRestoreY;
-    }
-
-    void X11Window::applyMinimumClientSize()
-    {
-    }
-
-    void X11Window::applyTitle()
-    {
-    }
-
-    bool X11Window::processMessages()
-    {
-        return _bShouldClose == SW_FALSE;
-    }
-
-    void X11Window::waitForMessages( uint32 timeoutMilliseconds )
-    {
-        // 이 플랫폼에는 메시지가 오지 않는다 — 기다릴 것이 없다.
-        (void)timeoutMilliseconds;
-    }
-
-    void X11Window::applyWindowVisibility( bool bShow )
-    {
-        (void)bShow;
-    }
-
-    bool X11Window::isVisible() const
-    {
-        return false;
-    }
-
-    float32 X11Window::getContentScale() const
-    {
-        return 1.0f;
-    }
-#endif
 } // namespace sw
+#endif

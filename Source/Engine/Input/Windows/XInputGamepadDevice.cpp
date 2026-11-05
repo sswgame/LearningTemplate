@@ -71,6 +71,7 @@ namespace sw
     } // namespace
 } // namespace sw
 
+#if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
     XInputGamepadDevice::XInputGamepadDevice( uint32 userIndex )
@@ -100,7 +101,6 @@ namespace sw
             _onConnectionChanged( userIndex, false );
     }
 
-#if defined( SW_PLATFORM_WINDOWS )
     void XInputGamepadDevice::pollUser( uint32 userIndex, float32 deltaTime )
     {
         // _prevButtonMask 는 GamepadDevice::onFrameBegin() 이 poll() 을 부르기 직전에 이미 갱신한다.
@@ -278,30 +278,6 @@ namespace sw
             }
         }
         return info;
-    }
-#else
-    void XInputGamepadDevice::pollUser( uint32 userIndex, float32 )
-    {
-        _prevButtonMask = _buttonMask;
-        markDisconnected( userIndex, false );
-    }
-
-    bool XInputGamepadDevice::setVibration( float32, float32 )
-    {
-        return false;
-    }
-
-    void XInputGamepadDevice::setVibration( float32, float32, uint32 )
-    {
-    }
-
-    void XInputGamepadDevice::stopVibration()
-    {
-    }
-
-    GamepadBatteryInfo XInputGamepadDevice::getBatteryInfo() const
-    {
-        return GamepadBatteryInfo{};
     }
 #endif
 } // namespace sw

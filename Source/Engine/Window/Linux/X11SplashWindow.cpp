@@ -7,7 +7,6 @@
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Foundation/PlatformOSHeaders.h"
     #include "Core/Foundation/X11Headers.h"
-#endif
 
 namespace sw
 {
@@ -24,7 +23,6 @@ namespace sw
         X11SplashWindow::dismiss();
     }
 
-#if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     namespace
     {
         // 스플래시 팔레트. 창 배경과 픽스맵 배경이 **같은 값이어야** 노출 순간에 색이 튀지 않는다.
@@ -223,22 +221,5 @@ namespace sw
 
         _bOpen = SW_FALSE;
     }
-
-#else
-
-    bool X11SplashWindow::initialize( const utf8*, const utf8*, uint32, uint32 )
-    {
-        return false;
-    }
-    void X11SplashWindow::updateStatus( const utf8*, float32 )
-    {
-    }
-    void X11SplashWindow::setProgress( float32 )
-    {
-    }
-    void X11SplashWindow::dismiss()
-    {
-    }
-
-#endif
 } // namespace sw
+#endif

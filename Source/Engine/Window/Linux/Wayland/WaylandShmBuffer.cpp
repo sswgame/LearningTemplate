@@ -130,22 +130,4 @@ namespace sw
         return pResult;
     }
 } // namespace sw
-
-#else
-
-namespace sw
-{
-    WaylandShmBuffer::~WaylandShmBuffer() = default;
-
-    bool WaylandShmBuffer::initialize( wl_shm*, uint32, uint32 )
-    {
-        return false;
-    }
-
-    WaylandShmBuffer* WaylandShmBufferPool::acquire( wl_shm*, uint32, uint32 )
-    {
-        return nullptr;
-    }
-} // namespace sw
-
 #endif

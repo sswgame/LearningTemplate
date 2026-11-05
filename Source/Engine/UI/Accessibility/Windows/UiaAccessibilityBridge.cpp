@@ -691,9 +691,4 @@ namespace sw
 
     SW_REGISTER_UI_ACCESSIBILITY_BRIDGE( "UIAutomation", &UiaAccessibility::createBridge ); // Windows 클라이언트의 브리지(`UIAccessibilityBridgeFactory` 가 등록표에서 고른다)
 } // namespace sw
-#else
-namespace sw
-{
-    // 이 플랫폼(리눅스 · 서버)에는 UI Automation 이 없다. 리눅스의 AT-SPI 는 D-Bus 위의 별도 구현이라 이 파일의 일이 아니다.
-} // namespace sw
 #endif

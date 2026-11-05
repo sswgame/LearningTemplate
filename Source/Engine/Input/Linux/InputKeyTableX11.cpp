@@ -265,15 +265,4 @@ namespace sw
         }
     }
 } // namespace sw
-
-#else
-
-namespace sw
-{
-    Key InputKeyTable::mapX11KeySym( uint64 )
-    {
-        return Key::Unknown;
-    }
-} // namespace sw
-
 #endif

@@ -521,26 +521,4 @@ namespace sw
         return InputKeyTableWin32Internal::kArrPollKeys;
     }
 } // namespace sw
-
-#else
-
-namespace sw
-{
-    Key InputKeyTable::mapWin32VirtualKey( uintptr_t, intptr_t )
-    {
-        return Key::Unknown;
-    }
-
-    MouseButton InputKeyTable::mapWin32MouseButton( uint32, uintptr_t )
-    {
-        return MouseButton::Count;
-    }
-
-    const InputKeyTable::VkKeyPair* InputKeyTable::getWin32PollKeyTable( uint32& outCount )
-    {
-        outCount = 0;
-        return nullptr;
-    }
-} // namespace sw
-
 #endif

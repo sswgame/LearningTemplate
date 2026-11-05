@@ -295,40 +295,4 @@ namespace sw
         _bOpen             = SW_FALSE;
     }
 } // namespace sw
-
-#else
-
-namespace sw
-{
-    /** @brief Wayland 를 짓지 않은 구성의 빈 상태입니다 — 이 구성은 `createPlatformSplash` 가 이 창을 만들지 않는다. */
-    struct WaylandSplashWindow::State
-    {
-    };
-
-    WaylandSplashWindow::WaylandSplashWindow()
-        : ISplashWindow{}
-        , _pState{ make_unique<State>() }
-    {
-    }
-
-    WaylandSplashWindow::~WaylandSplashWindow() = default;
-
-    bool WaylandSplashWindow::initialize( const utf8*, const utf8*, uint32, uint32 )
-    {
-        return false;
-    }
-
-    void WaylandSplashWindow::updateStatus( const utf8*, float32 )
-    {
-    }
-
-    void WaylandSplashWindow::setProgress( float32 )
-    {
-    }
-
-    void WaylandSplashWindow::dismiss()
-    {
-    }
-} // namespace sw
-
 #endif
