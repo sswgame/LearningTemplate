@@ -141,5 +141,6 @@ namespace sw::editor
         uint64             _lastProfilerFrame;  ///< 마지막으로 담은 프로파일러 프레임 번호
         uint32             _windowFrame;        ///< 링 버퍼 크기
         uint32             _writeIndex;         ///< 다음에 쓸 위치
+        uint8              _bLoadedCapture : 1; ///< 파일에서 연 내용이다. 트랙 순서가 슬롯 번호가 아니라 다음 `capture` 가 비우고 새로 시작한다
     };
 } // namespace sw::editor

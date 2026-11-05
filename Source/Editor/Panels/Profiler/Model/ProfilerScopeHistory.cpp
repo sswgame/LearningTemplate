@@ -71,6 +71,7 @@ namespace sw::editor
         , _lastProfilerFrame{ UINT64_MAX }
         , _windowFrame{ windowFrame > 0 ? windowFrame : 1u }
         , _writeIndex{ 0 }
+        , _bLoadedCapture{ SW_FALSE }
     {
     }
 
@@ -80,6 +81,9 @@ namespace sw::editor
         const uint64 profilerFrame = profiler.getFrameCount();
         if ( profilerFrame == _lastProfilerFrame || profiler.isEnabled() == false )
             return false;
+        // 트랙 번호는 프로파일러 슬롯인데 연 캡처의 번호는 파일 순서다. 이어 담으면 새 값이 다른 이름의 트랙에 섞인다.
+        if ( _bLoadedCapture == SW_TRUE )
+            reset();
         _lastProfilerFrame = profilerFrame;
 
         const uint32 scopeCount = profiler.getScopeCount();
@@ -124,6 +128,7 @@ namespace sw::editor
         _capturedFrameCount = 0;
         _lastProfilerFrame  = UINT64_MAX;
         _writeIndex         = 0;
+        _bLoadedCapture     = SW_FALSE;
     }
 
     void ProfilerScopeHistory::makeRows( const ProfilerRowQuery& query, vector<ProfilerScopeRow>& outListRow ) const
@@ -269,6 +274,7 @@ namespace sw::editor
         _writeIndex         = 0;
         _capturedFrameCount = capturedFrame;
         _lastProfilerFrame  = UINT64_MAX;
+        _bLoadedCapture     = SW_TRUE;
         return true;
     }
 
