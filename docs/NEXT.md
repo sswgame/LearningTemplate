@@ -2,7 +2,7 @@
 
 > 질문: 무엇이 남았고 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: 아래 **남은 일**만 본다 — 끝난 일은 git 기록과 계획 문서([StructureRefactor](StructureRefactor.md))에 있다. 순서는 1 → 6. 이 문서에는 끝난 일을 쌓지 않는다(끝나면 줄을 지운다).
+> 결론: 아래 **남은 일**만 본다 — 끝난 일은 git 기록과 계획 문서([StructureRefactor](StructureRefactor.md))에 있다. 순서는 셰이더 → 7 → 1 → 2 → 0 → 5 → 6. 이 문서에는 끝난 일을 쌓지 않는다(끝나면 줄을 지운다).
 
 ## 일하는 법 (요약)
 
@@ -15,6 +15,14 @@
 
 ## 남은 일
 
+### 셰이더 정리와 최적화 (2026-11-05 사용자 지시)
+
+| 일 | 내용 |
+|---|---|
+| 중복 합치기 | 전체 화면 정점 셰이더 13 벌, `computeMaterialLighting` 세 벌(`forward_lit` · `pbr_lit` · `surface_lit`), 스프라이트 오프셋 두 벌. `binding.hlsli`(2020 줄) · `mesh_modifier.hlsli`(1725 줄)는 나눌지 읽고 정한다 |
+| 그림이 그대로인 최적화 | 기준값(`Scenario.game.empty.benchmark`, 패스별 GPU 시간, DXC 명령어 수)을 먼저 재고 전후를 비교한다. 후보: `evaluateSpecular` 의 `pow` · `normalDotView` 재계산, `View::computeToView` 의 행렬 곱, `sampleProbeVolume` 의 버퍼 읽기 56 번 |
+| 그림자 필터 | `filterAtlas` 9 탭 PCF(캐스케이드 경계 18 탭)는 그림이 바뀌므로 측정과 스크린샷 비교 뒤 정한다 |
+
 ### 0. 사용자가 시킨 일 — 빠짐없이 (2026-11-01)
 
 에이전트 없이 직접 한다. 이름만 보지 말고 내용을 읽고 판단한다. 빌드 통과는 판단 기준이 아니라 마지막 확인이다.
@@ -23,7 +31,7 @@
 2. 확인한 상태(Debug 빌드 · 단위 · ctest, Release 빌드 · ctest, 오류 · 경고 분류)만 중간중간 origin main 에 푸시한다.
 3. 아래 2 ~ 6 절(테스트 공백 · 흔들리는 골든 · T8 · T9 …)도 남은 일이다.
 4. 로우폴리 에셋을 실제 게임 품질로(CC0 만, 원본 바이너리는 Git LFS — 사용자 결정). Quaternius 열 팩은 `/AssetLibrary/Quaternius/`(무시)에 받아 두었고, 게임에 쓰는 것만
-   `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 농장 · 서부 · 놀이공원 · 투기장 · 나일 소품과 HarvestValley 농부 · 마을 사람(외형 · 피팅 · UAL 클립)은 했다. 남은 것:
+   `common/models_raw · textures_raw/quaternius/<묶음>/` 로 옮긴다(credits.md). 농장 · 서부 · 놀이공원 · 투기장 · 나일 소품과 HarvestValley 농부 · 마을 사람(외형 · 피팅 · UAL 클립)은 했다. 남은 것: MeadowVillage 밭 칸(`game/meadowvillage/prefabs/tile.prefab.xml` — 아직 큐브 판에 상태 색).
 
 ### 2. 테스트 · 시나리오 공백
 
@@ -31,10 +39,6 @@
 |---|---|
 | 흔들리는 게임 골든 | 2026-11-04 Debug · Release 전체 ctest 각 일곱 번과 Release Shooter3D 체인 세 번에서 한 번도 지지 않았다(killcam · cape · bodyviews · useroptions · GL 컨텍스트 잃음 모두). 다시 지면 그 로그의 단계 · 백엔드 · 직전 `Assets.Pending` 을 적는다 — GL 컨텍스트 잃음은 GL 디버그 출력(`KHR_debug`)으로 드라이버 리셋인지 VAT 인덱스 드로우인지 가린다 |
 | 남은 단위 테스트 | 테스트 없는 폴더 41(`py -3 Scripts/dev/TestCoverage.py`) — 거의 온라인 키트다. 온라인 키트는 싣는 게임이 없어 `UnitTests.OnlineKits`(OnlineLoadBot `-test`, Release — 봇이 온라인 키트를 모두 싣는다)가 돌린다 — 매칭 · 채팅 거르기 · 라이브 이벤트 · 친구 관계 · 거래 상태 기계 · 우편 · 경제 구매 · 순위 보드 정의 · GM 권한 · 지급은 채웠다, 계정 로그인 저장(가짜 암호 — 연동 · 마지막 로그인 수단 · 탈퇴 유예 포함)과 서버 목록 `ServerListModel`(실패 길 · 루프백 서버로 응답 길)도 채웠다. 네트워크 하네스는 있다 — Core 엔드포인트는 `LoopbackCluster`, 온라인 키트 끝단은 `OnlineHostTestUtil.h`(`OnlineTestRig` — 호스트 + 클라이언트 묶음, 키트 DLL 이 include 하고 키트 서버 쪽은 같은 프로토콜 항목의 가짜로 올린다). 이식에 하네스가 필요한 것: 자식 프로세스(크래시 · 로그), AnimationTestUtil, RHIFakeDevice, FakeFontRasterizer, 임시 프로젝트 마운트, Reflection 큰 파일 다섯 · 파서 |
-
-### 3. 에셋 · 그래프 편집기 UX — 남은 것 (2026-11-04)
-
-공통 바닥(`EditorNodeGraph` 보기 막대 · 미니맵 · 정렬 · 핀 끌어 만들기, `EditorGraphDocumentPanel` 복사 · 붙여 넣기 · 주석, `EditorPreviewPanel` 재생 막대)은 했다. 남은 것:
 
 ### 7. 규칙을 형식 · 린트로 강제하고 전수 정리 (2026-11-05 사용자 지적)
 
@@ -54,7 +58,7 @@
 |---|---|
 | D 시나리오 단계 인자 | `AutomationJudge`(22) · `AutomationRunnerSteps`(20) · `AutomationStepArgs` · `AutomationActionSteps` · `AutomationWindowSteps` · `AutomationSceneSteps` · `AutomationEnvironmentSteps` · `AutomationBackendSteps` · `AutomationScenario` · `AutomationStepValidation` · `AutomationFrameStats` · `EditorScenarioSteps` · `EditorScenarioStepValidation` · `EditorCaptureSteps` · `ControlAutomationSteps` · `GameplayAutomationSteps` · `UIScenarioSteps` |
 | E 카탈로그의 남은 손 읽기 | `CharacterAppearance`(29) · `ScheduleCondition` · `ItemVisual` · `AppearanceXMLUtil` · 키트 카탈로그 스물남짓(`readFields` 와 섞인 손 읽기) · 에디터(`CharacterEditorPackData` · `EditorGlobalVariableCommands` · `ProjectSettingsDocument`). 외형 묶음은 `CharacterDataReader::readFields`(오류를 읽개의 목록으로) 길로 |
-| F JSON 손 읽기 | `MeshModifierStack` · `LatticeModifier` · `ModelImportConfig` · `TextureImportConfig` · `ModelImportGeometry` · `ModelImportAnimation` · `EditorSettingsRegistry` · `ProjectSettingsDocument` · `PrefabAsset`(JSON) · `CrashReportService` · `VisualLogger` · `UserSettingsFile` · `AssetReferenceFields` · `LoadBotMetrics` 등(`git grep -l "JSONValue" -- Source` 44 파일에서 바깥 형식 뺀 것) |
+| F JSON 손 읽기 | `MeshModifierStack` · `LatticeModifier` · `ModelImportGeometry` · `ModelImportAnimation` · `EditorSettingsRegistry` · `ProjectSettingsDocument` · `PrefabAsset`(JSON) · `CrashReportService` · `VisualLogger` · `UserSettingsFile` · `AssetReferenceFields` · `LoadBotMetrics` 등(`git grep -l "JSONValue" -- Source` 75 파일에서 바깥 형식 뺀 것) |
 | G 손 열거 이름표 — 남은 것 | `SRPGCatalog` 크기(`S` · `M` · `L` · `LL` 또는 0..3 두 문법) · `BehaviorTreeAsset` 의 대소문자 무시 열거 읽기(두 번째 철자). 그대로 둘 것: UI 라벨 · 명령 이름 · 바깥 표준 철자(Prometheus 지표 종류 · CLDR 복수 범주 · VRM · 명령줄 백엔드 이름), 사용자 기기에 저장되는 설정 값(스피커 모드 · 크래시 보고 동의), 종료 진단에서도 쓰는 이름(RHI 메모리 종류 — 엔진 서비스가 내려간 뒤), Core 층(리플렉션 없음) |
 - 시퀀서 · 타일맵 · 스프라이트 클립 · 입력 맵 · 데이터 테이블 · 전역 변수 · 카탈로그 · 리타깃 · 테마파크 배치 · UI 미리보기는 상용 엔진 대비 점검만 했고 손대지 않았다(보고의 비교 표).
 
