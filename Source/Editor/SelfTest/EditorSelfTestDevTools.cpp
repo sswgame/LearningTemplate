@@ -5,7 +5,9 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Math/MatrixMath.h"
+#include "Core/Process/Process.h"
 #include "Core/String/TagID.h"
 
 #include "DevTools/Console/DevConsole.h"
@@ -277,7 +279,8 @@ namespace sw::editor
                 EditorDockLayout*     pDock         = editorContext.findSubsystem<EditorDockLayout>();
                 if ( context.expect( pDock != nullptr, "no dock layout" ) == false )
                     return EditorSelfTestStep::Done;
-                const string folder = FileUtil::joinPath( FileUtil::getTempDirectory(), "sw_editor_selftest_layouts" );
+                // 프로세스마다 따로 — 백엔드별 실행이 나란히 돌 때 같은 파일을 덮어쓰면 방금 저장한 레이아웃을 다른 실행의 것으로 읽는다.
+                const string folder = FileUtil::joinPath( ProcessRoots::get()._saved.str(), "Test/editor_selftest_layouts_" + to_string( Process::getCurrentProcessID() ) );
 
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )

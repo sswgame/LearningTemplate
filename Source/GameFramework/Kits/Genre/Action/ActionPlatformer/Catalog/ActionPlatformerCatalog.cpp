@@ -17,8 +17,6 @@ namespace sw
     {
         struct ActionPlatformerCatalogInternal
         {
-            static constexpr const utf8* kNameSeparators = ",; \t";
-
             static bool isGradeHigher( const ActionGradeDef& lhs, const ActionGradeDef& rhs ) { return lhs._minScore > rhs._minScore; }
         };
     } // namespace
@@ -111,7 +109,6 @@ namespace sw
 
     bool ActionPlatformerCatalog::loadStage( const XMLNode& node, string_view sourceName )
     {
-        using Internal = ActionPlatformerCatalogInternal;
         ActionStageDef stage;
         if ( XMLFields::readFields( node, stage, sourceName ) == false )
             return false;
@@ -121,7 +118,6 @@ namespace sw
 
     bool ActionPlatformerCatalog::loadCombo( const XMLNode& node, string_view sourceName )
     {
-        using Internal = ActionPlatformerCatalogInternal;
         ActionComboDef combo;
         if ( XMLFields::readFields( node, combo, sourceName ) == false )
             return false;

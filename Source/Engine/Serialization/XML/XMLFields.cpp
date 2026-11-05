@@ -21,7 +21,7 @@ namespace sw
         {
             static bool isNameList( const PropertyInfo& prop )
             {
-                return prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._elementTypeName == typeFqn<hashed_string>() && prop._typeName.view().find( "vector" ) != string_view::npos;
+                return prop._bIsContainer == SW_TRUE && prop._typeName.view() == "vector<hashed_string>";
             }
 
             static bool isHandRead( string_view attribute, std::initializer_list<string_view> listHandRead )
