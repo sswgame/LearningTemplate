@@ -67,7 +67,7 @@ namespace sw
                     const SQLValue  arrParam[] = { makeTableValue( table ), SQLValue::makeText( key ) };
                     const SQLResult result     = _connection.execute( kReadSQL, arrParam, 2, &_rowSet );
                     if ( result != SQLResult::Ok )
-                        return toStoreResult( result == SQLResult::Constraint ? SQLResult::Error : result );
+                        return ServiceStoreResult::Unavailable; // 읽기에 Conflict 는 없다(계약) - 직렬화 실패 · 교착이 그대로 올라가 호출한 쪽이 커밋이 어긋난 것으로 읽었다
                     if ( _rowSet._listRow.empty() )
                         return ServiceStoreResult::NotFound;
                     outRecord._bytes   = std::move( _rowSet._listRow[0][0]._bytes );
@@ -98,7 +98,7 @@ namespace sw
                         result                       = _connection.execute( kListDescendingSQL, arrParam, 4, &_rowSet );
                     }
                     if ( result != SQLResult::Ok )
-                        return toStoreResult( result == SQLResult::Constraint ? SQLResult::Error : result );
+                        return ServiceStoreResult::Unavailable; // 읽기에 Conflict 는 없다(`readRecord` 와 같다)
                     for ( vector<SQLValue>& row : _rowSet._listRow )
                     {
                         ServiceRecord& record = outListRecord.emplace_back();
@@ -134,8 +134,12 @@ namespace sw
                     }
                     else if ( commitResult != SQLResult::Ok )
                     {
-                        result = ServiceStoreResult::Unavailable; // 적용됐는지 알 수 없다
+                        result              = ServiceStoreResult::Unavailable; // 적용됐는지 알 수 없다 - 커밋 버전을 알리지 않는다(`_commitVersion` 은 Ok 일 때만 뜻이 있다)
+                        info._commitVersion = 0;
                     }
+                    // SQLite 의 COMMIT 은 잠금에 지면(SQLITE_BUSY) 트랜잭션을 연 채로 돌아온다. 그대로 두면 이 워커의 다음 BEGIN 이 모두 "트랜잭션 안의 트랜잭션" 으로 진다 - 연결이 살아 있어 다시 열리지도 않는다.
+                    if ( commitResult != SQLResult::Ok )
+                        (void)_connection.executeScript( "ROLLBACK" ); // 이미 실패한 커밋의 정리다 — 위의 결과를 돌려준다
                     if ( pOutInfo != nullptr )
                         *pOutInfo = info;
                     return result;

@@ -246,7 +246,9 @@ namespace sw
     bool SQLMigrationRunner::apply( ISQLConnection& connection, const vector<SQLMigration>& listMigration, UnixMilliseconds nowMs, string& outError )
     {
         const SQLDialect& dialect = connection.getDialect();
-        if ( connection.executeScript( SQLMigrationRunnerInternal::kCreateHistorySQL ) != SQLResult::Ok )
+        // PostgreSQL 의 `CREATE TABLE IF NOT EXISTS` 는 서버 둘이 동시에 돌면 진 쪽이 고유 키 위반(23505)을 받는다 - 다른 서버가 방금 만든 것이므로 있는 것이다(아래 락이 그 다음을 줄 세운다).
+        const SQLResult createResult = connection.executeScript( SQLMigrationRunnerInternal::kCreateHistorySQL );
+        if ( createResult != SQLResult::Ok && createResult != SQLResult::Constraint )
         {
             outError = string( "cannot create the migration history table: " ) + connection.getLastErrorText();
             return false;
@@ -273,6 +275,17 @@ namespace sw
         for ( const vector<SQLValue>& row : rowSet._listRow )
         {
             mapAppliedChecksum[static_cast<int32>( row[0]._integer )] = string( row[1].getText() );
+        }
+        // 이 빌드가 모르는 번호가 적용돼 있으면 더 새 빌드가 올린 스키마다 - 예전에는 말없이 지나가 옛 서버가 새 스키마에 쓸 수 있었다(Flyway 의 validate 와 같다).
+        for ( const auto& [appliedVersion, appliedChecksum] : mapAppliedChecksum )
+        {
+            (void)appliedChecksum;
+            if ( VectorUtil::findBy<&SQLMigration::_version>( listMigration, appliedVersion ) == nullptr )
+            {
+                outError = SQLMigrationRunnerInternal::makeText( "migration ", appliedVersion, " is applied but unknown to this build - the database is newer", "" );
+                SQLMigrationRunnerInternal::rollback( connection );
+                return false;
+            }
         }
 
         for ( const SQLMigration& migration : listMigration )

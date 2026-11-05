@@ -9,7 +9,7 @@
  *          - require, erase 없어야 함: `SELECT version …` 으로 비교한다. PostgreSQL 은 SERIALIZABLE 이 읽은 행의 동시 변경을 직렬화 실패로 막는다.
  *
  *          하나라도 어긋나면 ROLLBACK 한다. 직렬화 실패는 Conflict(버전 -1)이고, 연결 끊김과 COMMIT 실패는 Unavailable 이다. Unavailable 은 적용됐는지 알 수 없다.
- *          메모리 구현과 같은 계약 테스트(`ServiceStoreContract.h`)를 같은 결과로 통과한다.
+ *          메모리 구현과 같은 시나리오를 같은 결과로 지난다(`Tests/TestSQLServiceStore.cpp` 의 `ServiceStoreParity`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -37,7 +37,7 @@ namespace sw
 
         /**
          * @brief 드라이버를 찾고, 마이그레이션을 적용하고, 풀을 시작합니다. 실패하면 false 와 실패 이유를 반환하며 기동 오류입니다. 폴백은 없습니다.
-         * @param migrationFolder 리소스 경로(`common/sql/servicestore`)나 디스크 폴더입니다.
+         * @param migrationFolder 리소스 폴더(`common/sql/servicestore`)입니다.
          * @param nowMs 마이그레이션 기록에 남길 벽시계 시각입니다.
          */
         [[nodiscard]] bool initialize( string_view driverName, const SQLConnectionPoolConfig& settings, string_view migrationFolder, UnixMilliseconds nowMs, string& outError );

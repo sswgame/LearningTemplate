@@ -1,7 +1,8 @@
 /**
  * @file PostgresDriver.cpp
  * @brief PostgreSQL 드라이버(libpq)입니다. 이 폴더(`Driver/Postgres/`)만 libpq 를 알며 서버 전용입니다(GF_Server_SQLStore).
- * @details 접속 문자열은 libpq 의 키워드 형식(`host=127.0.0.1 port=5432 dbname=game user=game`)이나 URI(`postgresql://user@host:5432/db?sslmode=require`)를 쓴다.
+ * @details 문장 · 값 · SQLSTATE 변환은 libpq 없이 테스트하도록 `PostgresCodec` 에 있다.
+ *          접속 문자열은 libpq 의 키워드 형식(`host=127.0.0.1 port=5432 dbname=game user=game`)이나 URI(`postgresql://user@host:5432/db?sslmode=require`)를 쓴다.
  *          비밀번호는 접속 문자열이 아니라 `secret` 으로 따로 받는다. 서버 설정의 환경 변수에서 읽은 값이다.
  *          자리표시자 `?` 는 SQL 문마다 한 번 `$1..$n` 으로 바꿔 준비된 문장으로 캐시한다.
  *          결과는 이진 형식(int8, int4, int2, bytea, text)으로 받고, bytea 매개변수도 이진으로 보낸다.
@@ -17,6 +18,7 @@
 
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriver.h"
 #include "GameFramework/Kits/Feature/Storage/SQLStore/Runtime/SQL/SQLDriverRegistry.h"
+#include "GameFramework/Kits/Feature/Storage/SQLStore/Server/Driver/Postgres/PostgresCodec.h"
 
 #include <cstdlib>
 #include <libpq-fe.h>
@@ -27,14 +29,6 @@ namespace sw
     {
         struct PostgresDriverInternal
         {
-            // PostgreSQL 타입 OID(pg_type)이다. 이진 결과를 읽는 데 쓰는 것만 둔다.
-            static constexpr Oid kBoolOid    = 16;
-            static constexpr Oid kInt8Oid    = 20;
-            static constexpr Oid kInt2Oid    = 21;
-            static constexpr Oid kInt4Oid    = 23;
-            static constexpr Oid kTextOid    = 25;
-            static constexpr Oid kVarcharOid = 1043;
-
             static const SQLDialect& getDialect()
             {
                 static const SQLDialect s_dialect{ "postgres",
@@ -53,51 +47,6 @@ namespace sw
                 (void)pMessage;
             }
 
-            /** @brief `?` 를 `$1..$n` 으로 바꿉니다. 작은따옴표와 큰따옴표 안은 건너뜁니다. @p outParamCount 는 매개변수 개수입니다. */
-            static string convertPlaceholders( string_view sql, int32& outParamCount )
-            {
-                string text;
-                text.reserve( sql.size() + 8 );
-                outParamCount  = 0;
-                utf8 quoteChar = '\0';
-                for ( const utf8 ch : sql )
-                {
-                    if ( quoteChar != '\0' )
-                    {
-                        if ( ch == quoteChar )
-                            quoteChar = '\0';
-                        text.push_back( ch );
-                        continue;
-                    }
-                    if ( ch == '\'' || ch == '"' )
-                    {
-                        quoteChar = ch;
-                        text.push_back( ch );
-                        continue;
-                    }
-                    if ( ch != '?' )
-                    {
-                        text.push_back( ch );
-                        continue;
-                    }
-                    ++outParamCount;
-                    StringBuilder<constant::buffer::kMax16> placeholder;
-                    placeholder.appendFormat( "$%#", outParamCount );
-                    text.append( placeholder.c_str() );
-                }
-                return text;
-            }
-
-            static uint64 readBigEndian( const uint8* pData, int32 size )
-            {
-                uint64 value = 0;
-                for ( int32 byteIndex = 0; byteIndex < size; ++byteIndex )
-                {
-                    value = ( value << 8 ) | pData[byteIndex];
-                }
-                return value;
-            }
-
             static SQLResult toSQLResult( const PGresult* pResult, const PGconn* pConnection )
             {
                 const ExecStatusType status           = PQresultStatus( pResult );
@@ -106,18 +55,8 @@ namespace sw
                     return SQLResult::Ok;
                 if ( PQstatus( pConnection ) == CONNECTION_BAD )
                     return SQLResult::ConnectionLost;
-                const utf8*       pState = PQresultErrorField( pResult, PG_DIAG_SQLSTATE );
-                const string_view state  = pState != nullptr ? string_view( pState ) : string_view{};
-                if ( state == "23505" )
-                    return SQLResult::Constraint;
-                if ( state == "40001" || state == "40P01" )
-                    return SQLResult::SerializationFailure;
-                const bool bConnectionClassError = state.size() == 5 && state[0] == '0' && state[1] == '8';
-                if ( bConnectionClassError )
-                    return SQLResult::ConnectionLost;
-                if ( state == "55P03" )
-                    return SQLResult::Busy; // lock_not_available
-                return SQLResult::Error;
+                const utf8* pState = PQresultErrorField( pResult, PG_DIAG_SQLSTATE );
+                return PostgresCodec::classifySQLState( pState != nullptr ? string_view( pState ) : string_view{} );
             }
 
             /** @brief 결과 하나를 꺼내 반환하고 지웁니다. */
@@ -160,56 +99,25 @@ namespace sw
                     _lastError.clear();
                     if ( pOutRowSet != nullptr )
                         pOutRowSet->clear();
-                    const PreparedStatement* pStatement = findOrPrepare( sql );
+                    SQLResult                prepareResult = SQLResult::Ok;
+                    const PreparedStatement* pStatement    = findOrPrepare( sql, prepareResult );
                     if ( pStatement == nullptr )
+                        return prepareResult;
+                    PostgresParameters parameters;
+                    if ( PostgresCodec::encodeParameters( pParam, paramCount, pStatement->_paramCount, parameters, _lastError ) == false )
                         return SQLResult::Error;
-                    // 매개변수는 정수와 문자열을 텍스트 형식(0, NUL 로 끝남)으로, 바이트를 이진 형식(1)으로 보낸다. 덜 주면 NULL 로 채운다.
-                    const int32         placeholderCount = pStatement->_paramCount;
-                    vector<string>      listText( static_cast<size_t>( placeholderCount ) );
-                    vector<const utf8*> listValuePointer( static_cast<size_t>( placeholderCount ), nullptr );
-                    vector<int32>       listLength( static_cast<size_t>( placeholderCount ), 0 );
-                    vector<int32>       listFormat( static_cast<size_t>( placeholderCount ), 0 );
-                    for ( int32 paramIndex = 0; paramIndex < placeholderCount && paramIndex < paramCount; ++paramIndex )
-                    {
-                        const SQLValue& value = pParam[paramIndex];
-                        const size_t    index = static_cast<size_t>( paramIndex );
-                        switch ( value._type )
-                        {
-                            case SQLValueType::Null:
-                            {
-                                break;
-                            }
-                            case SQLValueType::Int64:
-                            {
-                                StringBuilder<constant::buffer::kMax32> number;
-                                number.append( value._integer );
-                                listText[index]         = string( number.view() );
-                                listValuePointer[index] = listText[index].c_str();
-                                break;
-                            }
-                            case SQLValueType::Text:
-                            {
-                                listText[index]         = string( value.getText() );
-                                listValuePointer[index] = listText[index].c_str();
-                                break;
-                            }
-                            case SQLValueType::Blob:
-                            {
-                                listValuePointer[index] = value._bytes.empty() ? "" : reinterpret_cast<const utf8*>( value._bytes.data() );
-                                listLength[index]       = static_cast<int32>( value._bytes.size() );
-                                listFormat[index]       = 1;
-                                break;
-                            }
-                        }
-                    }
-                    ScopedResult    result{ PQexecPrepared( _pConnection, pStatement->_name.c_str(), placeholderCount, listValuePointer.data(), listLength.data(),
-                                                            listFormat.data(), 1 ) };
+                    ScopedResult    result{ PQexecPrepared( _pConnection, pStatement->_name.c_str(), pStatement->_paramCount, parameters._listValue.data(), parameters._listLength.data(),
+                                                            parameters._listFormat.data(), 1 ) };
                     const SQLResult sqlResult = toSQLResult( result.get(), _pConnection );
                     if ( sqlResult != SQLResult::Ok )
                         return fail( sqlResult, result.get() );
                     if ( pOutRowSet != nullptr )
                     {
-                        readRows( result.get(), *pOutRowSet );
+                        if ( readRows( result.get(), *pOutRowSet, _lastError ) == false )
+                        {
+                            pOutRowSet->clear();
+                            return SQLResult::Error;
+                        }
                         // PQcmdTuples 는 행 수가 없는 명령이면 빈 글을 준다 — 그때만 0 이고, 숫자가 아닌 글은 드라이버 오류다.
                         const utf8* pAffected    = PQcmdTuples( result.get() );
                         const bool  bHasRowCount = pAffected != nullptr && pAffected[0] != '\0';
@@ -244,14 +152,15 @@ namespace sw
                     int32  _paramCount{ 0 };
                 };
 
-                const PreparedStatement* findOrPrepare( string_view sql )
+                /** @brief 준비된 문장을 찾거나 만듭니다. 못 만들면 nullptr 과 까닭(@p outFailure)입니다 - 예전에는 까닭을 버려 끊김 · 직렬화 실패가 호출한 쪽에는 Error 로 보였다. */
+                const PreparedStatement* findOrPrepare( string_view sql, SQLResult& outFailure )
                 {
                     const string key( sql );
                     const auto   statementIt = _mapStatementName.find( key );
                     if ( statementIt != _mapStatementName.end() )
                         return &statementIt->second;
                     PreparedStatement                       statement;
-                    const string                            converted = convertPlaceholders( sql, statement._paramCount );
+                    const string                            converted = PostgresCodec::convertPlaceholders( sql, statement._paramCount );
                     StringBuilder<constant::buffer::kMax32> name;
                     name.appendFormat( "sw_s%#", _nextStatementIndex++ );
                     statement._name = string( name.view() );
@@ -259,13 +168,14 @@ namespace sw
                     const SQLResult sqlResult = toSQLResult( result.get(), _pConnection );
                     if ( sqlResult != SQLResult::Ok )
                     {
-                        (void)fail( sqlResult, result.get() );
+                        outFailure = fail( sqlResult, result.get() );
                         return nullptr;
                     }
                     return &_mapStatementName.emplace( key, statement ).first->second;
                 }
 
-                static void readRows( const PGresult* pResult, SQLRowSet& outRowSet )
+                /** @brief 결과 행을 읽습니다. 담을 수 없는 칸(모르는 타입 · 틀린 정수 길이)이 있으면 false 와 까닭입니다 - 예전에는 모르는 타입의 이진 표현을 바이트로 그대로 건넸다. */
+                [[nodiscard]] static bool readRows( const PGresult* pResult, SQLRowSet& outRowSet, string& outError )
                 {
                     const int32 rowCount    = PQntuples( pResult );
                     const int32 columnCount = PQnfields( pResult );
@@ -279,24 +189,13 @@ namespace sw
                             SQLValue& value = listValue.emplace_back();
                             if ( PQgetisnull( pResult, rowIndex, columnIndex ) != 0 )
                                 continue;
-                            const uint8* pData    = reinterpret_cast<const uint8*>( PQgetvalue( pResult, rowIndex, columnIndex ) );
-                            const int32  size     = PQgetlength( pResult, rowIndex, columnIndex );
-                            const Oid    type     = PQftype( pResult, columnIndex );
-                            const bool   bInteger = type == kInt8Oid || type == kInt4Oid || type == kInt2Oid || type == kBoolOid;
-                            if ( bInteger )
-                            {
-                                // 이진 정수는 빅엔디언이며, 부호는 크기만큼 확장한다.
-                                const uint64 raw   = readBigEndian( pData, size );
-                                const int32  shift = 64 - size * 8;
-                                value._type        = SQLValueType::Int64;
-                                value._integer     = shift > 0 ? static_cast<int64>( raw << shift ) >> shift : static_cast<int64>( raw );
-                                continue;
-                            }
-                            value._type = ( type == kTextOid || type == kVarcharOid ) ? SQLValueType::Text : SQLValueType::Blob;
-                            if ( size > 0 )
-                                value._bytes.assign( pData, pData + size );
+                            const uint8* pData = reinterpret_cast<const uint8*>( PQgetvalue( pResult, rowIndex, columnIndex ) );
+                            const int32  size  = PQgetlength( pResult, rowIndex, columnIndex );
+                            if ( PostgresCodec::decodeColumn( static_cast<uint32>( PQftype( pResult, columnIndex ) ), pData, size, value, outError ) == false )
+                                return false;
                         }
                     }
+                    return true;
                 }
 
                 SQLResult fail( SQLResult result, const PGresult* pResult )
@@ -345,6 +244,12 @@ namespace sw
 
     unique_ptr<ISQLConnection> PostgresDriver::openConnection( string_view connection, string_view secret, string& outError )
     {
+        // 빈 접속 문자열을 libpq 에 넘기면 환경 변수 · 기본값(localhost, OS 사용자)으로 어딘가에 붙는다 - SQLite 드라이버처럼 거절한다.
+        if ( connection.empty() )
+        {
+            outError = "postgres connection needs a connection string";
+            return nullptr;
+        }
         // 접속 문자열은 dbname 에 펼쳐 넘기고(expand_dbname) 비밀번호는 따로 넘긴다. 그래서 비밀이 접속 문자열이나 로그에 남지 않는다.
         const string connectionText( connection );
         const string secretText( secret );

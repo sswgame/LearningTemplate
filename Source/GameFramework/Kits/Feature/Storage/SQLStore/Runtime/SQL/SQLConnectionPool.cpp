@@ -225,8 +225,8 @@ namespace sw
                 if ( connection == nullptr )
                 {
                     SW_LOG_WARNING_ID( "SQLConnectionPool.SQLWorkerCouldNot2", "SQL worker %# could not reconnect: %#", workerIndex, error.c_str() );
+                    retryAt      = Deadline::afterMilliseconds( retryDelayMs ); // 먼저 기다리고 늘린다 - 예전에는 늘린 뒤 기다려 첫 값(`kFirstRetryDelayMs`)을 쓰는 일이 없었다
                     retryDelayMs = MathUtil::min( retryDelayMs * 2, SQLConnectionPoolInternal::kMaxRetryDelayMs );
-                    retryAt      = Deadline::afterMilliseconds( retryDelayMs );
                 }
                 else
                 {
