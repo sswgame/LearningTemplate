@@ -526,8 +526,15 @@ namespace sw
         const BehaviorNode&         node   = _pTree->getNode( index );
         INavMover*                  pMover = _context._pMover;
         const std::optional<float3> target = _context._pBlackboard->getVector( node._key );
-        if ( pMover == nullptr || target.has_value() == false )
+        if ( pMover == nullptr )
             return BehaviorStatus::Failure;
+        if ( target.has_value() == false )
+        {
+            // 도는 중에 목적지가 사라졌다. 트리만 실패로 넘어가면 몸은 옛 목적지로 계속 간다.
+            if ( bFirst == false )
+                pMover->stopMoving();
+            return BehaviorStatus::Failure;
+        }
         const float3 destination = *target;
         float3&      issued      = _listMoveTarget[static_cast<size_t>( index )];
         const bool   bRepath     = bFirst || ( destination - issued ).getLength() > node._compareValue;
