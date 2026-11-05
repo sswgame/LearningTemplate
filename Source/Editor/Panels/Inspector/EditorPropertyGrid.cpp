@@ -321,7 +321,13 @@ namespace sw::editor
             else
                 SW_LOG_WARNING_ID( "EditorPropertyGrid.CouldNotApplied", "'%#' could not be applied to %#", value.c_str(), prop._name.c_str() );
         };
-        if ( pOwnerObj != nullptr )
+        // 다중 편집 대상(`_isMixed` 가 걸렸다)은 `_onEdited` 가 값을 나머지에도 입힌다. 주 선택만 찍으면 되돌리기가 나머지를 돌리지 못하므로 선택 전부를 찍는다.
+        if ( _isMixed.isBound() )
+        {
+            InspectorPropertyUndo::recordImmediateEdit( prop );
+            apply();
+        }
+        else if ( pOwnerObj != nullptr )
             InspectorObjectEdit::applyObjectEdit( pOwnerObj, pUndoLabel, apply );
         else
             apply();
