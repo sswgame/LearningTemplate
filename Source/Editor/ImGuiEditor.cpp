@@ -80,7 +80,6 @@
 #include "ModuleAPI/Service/IModuleStateStore.h"
 
 #include <imgui.h>
-#include <ImGuiNotify.hpp>
 #include <ImGuizmo.h>
 #include <implot.h>
 #include <imgui_internal.h>
@@ -170,8 +169,6 @@ namespace sw::editor
                         registration._pfnRun( context );
                 }
             }
-
-            static constexpr Color kNotificationWindowBg{ 0.10f, 0.10f, 0.10f, 1.00f };
 
             /// @brief 글자 배율(모니터 DPI)과 테마 배율이 이 값보다 크게 다르면 테마 배율을 글자 배율에 맞춘다(beginFrame).
             static constexpr float32 kDPIFollowTolerance = 0.001f;
@@ -1202,13 +1199,6 @@ namespace sw::editor
     {
         if ( _bInitialized == SW_FALSE )
             return;
-
-        ImGui::PushStyleVar( ImGuiStyleVar_WindowRounding, 0.0f );
-        ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 0.0f );
-        ImGui::PushStyleColor( ImGuiCol_WindowBg, EditorColorUtil::toImVec4( ImGuiEditorInternal::kNotificationWindowBg ) );
-        ImGui::RenderNotifications();
-        ImGui::PopStyleColor( 1 );
-        ImGui::PopStyleVar( 2 );
 
         ImGui::Render();
     }

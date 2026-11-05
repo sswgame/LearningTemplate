@@ -107,7 +107,7 @@ SW_TEST_CASE( EditorIconNames, EveryNameCodeAndDataUseIsInTheTable )
 SW_TEST_CASE( EditorIconNames, BrokenTablesAreNotRead )
 {
     const auto makeTable = []( string_view rows )
-    { return "<EditorIconGlyphTable><_listIcon>" + string( rows ) + "</_listIcon><_listExtraCodepoint /></EditorIconGlyphTable>"; };
+    { return "<EditorIconGlyphTable><_listIcon>" + string( rows ) + "</_listIcon></EditorIconGlyphTable>"; };
     const string missingRow = R"(<EditorIconGlyph _name="Missing" _codepoint="U+E060" />)";
 
     EditorIconGlyphTable table;

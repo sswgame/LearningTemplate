@@ -294,7 +294,7 @@ endif()
 # VCPKG_TARGET_TRIPLET은 vcpkg.cmake include 전에 정해야 적용됨
 # 공유 VCPKG_INSTALLED_DIR은 ADDITIONAL_CLEAN_FILES에 넣지 않음
 # (한 preset의 clean이 Debug/Release/Shipping 패키지를 전부 지움)
-# overlay ports는 install 게이트 전에 보여야 함 (imgui-notify 등)
+# overlay ports는 install 게이트 전에 보여야 함
 # ------------------------------------------------------------------------------
 if(NOT DEFINED VCPKG_TARGET_TRIPLET OR VCPKG_TARGET_TRIPLET STREQUAL "")
     # 이 파일은 project() **앞**에서 include 되므로 CMAKE_SYSTEM_PROCESSOR 가 아직 비어 있다.

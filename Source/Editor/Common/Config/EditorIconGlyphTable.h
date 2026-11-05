@@ -46,8 +46,6 @@ namespace sw::editor
 
         PROPERTY( Required, Tooltip = "Icons of the font" )
         vector<EditorIconGlyph> _listIcon;
-        PROPERTY( Required, Tooltip = "Other codepoints the font holds that code draws by value (ImGuiNotify), U+XXXX" )
-        vector<string> _listExtraCodepoint;
 
         /** @brief 리소스 경로의 XML 을 엄격하게 읽고 검사합니다. 실패하면 오류를 남기고 false 이며 표는 비어 있습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

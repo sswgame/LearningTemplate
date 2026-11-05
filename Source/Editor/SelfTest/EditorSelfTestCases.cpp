@@ -188,12 +188,9 @@ namespace sw::editor
 
             static EditorSelfTestStep runIconFontHasGlyphs( EditorSelfTestContext& context )
             {
-                // ImGuiNotify 토스트가 고정해 둔 Font Awesome 코드포인트(성공)다. 아이콘 폰트가 같은 코드포인트에 글리프를 둔다.
-                constexpr uint32 kNotifySuccessCodepoint = 0xF058;
-                ImFont*          pFont                   = ImGui::GetFont();
+                ImFont* pFont = ImGui::GetFont();
                 (void)context.expect( hasGlyph( pFont, decodeFirstCodepoint( SW_EDITORICON( "Save" ) ) ), "editor icon font glyph kSave is missing" );
                 (void)context.expect( hasGlyph( pFont, decodeFirstCodepoint( SW_EDITORICON( "Missing" ) ) ), "editor icon font glyph kMissing is missing" );
-                (void)context.expect( hasGlyph( pFont, kNotifySuccessCodepoint ), "notification glyph U+F058 is missing from the editor icon font" );
                 return EditorSelfTestStep::Done;
             }
 

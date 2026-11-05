@@ -63,17 +63,6 @@ namespace sw::editor
             _listGlyphUTF8.push_back( std::move( glyph ) );
             _listNameKey.emplace_back( string_view{ icon._name } );
         }
-        for ( const string& text : _listExtraCodepoint )
-        {
-            uint16 codepoint{ 0 };
-            if ( parseCodepoint( text, codepoint ) == false )
-            {
-                SW_LOG_ERROR_ID( "EditorIcon.BadRow", "Editor icon table extra codepoint is not U+XXXX: '%#'", text.c_str() );
-                bValid = false;
-                continue;
-            }
-            listCodepoint.push_back( codepoint );
-        }
         if ( VectorUtil::findBy<&EditorIconGlyph::_name>( _listIcon, string_view{ kMissingIconName } ) == nullptr )
         {
             SW_LOG_ERROR_ID( "EditorIcon.NoMissingIcon", "Editor icon table has no '%#' icon", kMissingIconName );
