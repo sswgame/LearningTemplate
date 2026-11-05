@@ -64,3 +64,14 @@ Search here before writing a helper for a common job. If the job is missing, sea
 | Well-known constants | `Core/Math/MathUtil.h` `kPi` …; units: `Core/Foundation/Constants.h` `constant::time` · `constant::memory` | retyped literals |
 
 A new row names the header and the API.
+
+## 리플렉션 스키마로 읽지 않고 손으로 두는 것
+
+데이터 파일의 칸은 `PROPERTY` 구조체 + `XMLFields` · `JSONFields::readFields` 로 읽는다. 목록 칸(`vector<이름 · 태그 ID · 수 · 열거>`)은 속성 하나에 낱말을 잇고(구분자 `,;| \t`), 범위는 원소마다 본다. 아래만 손으로 둔다.
+
+- 바깥 표준 · 원문 편집: 시나리오 단계의 수 비교(`equals` · `near` · `atLeast` · `atMost` — 어느 속성을 적었는지가 규칙)와 여러 단계가 함께 쓰는 감시 값 참조 · 시한 읽기, VRM · glTF(`Vrm*` · `ModelImportVrm` · `ModelImportMaterial`), TMX(`TranslationMemory`), JWT, 알림 테이블의 `<Notify>`(처리기마다 선언한 인자), `UIStyleSheet`(규칙 칸은 이미 WidgetStyle 리플렉션 대입 — 상태 이름은 CSS 철자 `focus-visible`), 머티리얼 속성 항목 쓰기(종류마다 적는 칸이 다르고 물려받기라 생략이 곧 부모 값), 타일맵 머리말(자식 원소 형식), 프로파일러 트레이스, 스토어 영수증, `CatalogXMLText` · `RigFileRewrite`(원문 위치를 지키며 고친다), `TextGatherer`, `XMLReadUtil`. **칸 데이터 · 물려받기**도 손 읽기로 둔다: 타일맵의 타일 칸(수천 개 · 깃발 칸은 표가 정한다 — `readFields` 는 속성마다 이름 글을 만들어 느리다), 립싱크 프레임 가중치, 문화권 표(적지 않은 칸은 부모 문화권에서 물려받는다 — 적었는지가 뜻이라 스키마 기본값으로 담지 못한다).
+- 적었는지가 뜻인 것: 조건 하나만 적는 원소(`<Requires>` · `<When>` · `<Hide>`), 값 · 범위 · 선택지 중 하나를 적는 외형 값과 장비 슬롯, `width` 와 `early` · `late`, 없으면 다른 칸을 따르는 `max`.
+- 고유 문법: 일정 조건(`ScheduleCondition` — 날짜 범위 · 조건식 · 어휘 검사), 이름=수 목록(`seasons="Spring=2"`), 고정 길이 수 배열(능력치 · 적성 · 네 값 배율), 낱말을 비트로 합치는 칸(`sizes` · `targets` · `search` · `services`), 격자 · 패턴 글, 시계 표기 시각.
+- `TagContainer` 칸: 층이 `XMLFields` 보다 위이고 정렬 불변식을 `addTag` 가 지킨다(`AppearanceXMLUtil::readTags`).
+- JSON 에서 키가 동적이거나 칸 구조가 아닌 것: 메시 수정자 인자 · 격자 · 커브 키, 크래시 매니페스트의 문맥, 사용자 설정 값, 프로젝트 설정 차이 쓰기, 프리팹 트리, 부하 봇 단계(동작마다 받는 키가 다르다), 비주얼 로그의 벡터 배열, 게임 문자열 산출(`LoadBotMetrics` 는 쓰기만).
+- 이름표로 그대로 두는 것: UI 라벨 · 명령 이름 · 바깥 표준 철자(Prometheus 지표 종류 · CLDR 복수 범주 · VRM · 명령줄 백엔드 이름), 사용자 기기에 저장되는 설정 값(스피커 모드 · 크래시 보고 동의), 종료 진단에서도 쓰는 이름(RHI 메모리 종류 — 엔진 서비스가 내려간 뒤), Core 층(리플렉션 없음)

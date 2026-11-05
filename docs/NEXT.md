@@ -47,20 +47,9 @@
 
 끝났다. 그대로 두는 정적 상태: 상태 없는 객체(SQL 드라이버 · 애니메이션 코덱), 정적 초기화 전에도 세는 `CacheStats`, 테스트 등록표, OS 진입점, 모듈 경계 창구, `FileDialog`(떼어 둔 스레드가 객체를 쓴다), 아이콘 표 발행(글꼴 설정이 에디터 범위보다 먼저 돈다), `EditorExtensionRegistry` 의 종류별 목록(등록 줄의 수명이 모듈 이미지와 같아 편집기 범위보다 먼저 선다 — 언리얼 모듈 등록과 같은 자리).
 
-### 1. 리플렉션으로 옮기기 — Source 전체 (2026-11-04 사용자 지시: "리플렉션 활용이 가능한 부분은 모두")
-
-엔진이 정한 형식을 손으로 읽고 쓰는 곳을 원소마다 `PROPERTY` 스키마 구조체 + `readFields` · `writeFields` 로 옮긴다(행동 트리 · 카탈로그와 같은 길 — 이름 · 필수 · 범위 · 기본값이 스키마 한 곳). 칸 사이 의미 검사만 손으로 남긴다. 열거 표기는 열거자 이름(`ENUM()`)으로 맞추고 콘텐츠는 변환 스크립트로 한 번에 고친다. 묶음마다 끝에 전체 검증.
-**그대로 두는 것**(바깥 표준 · 원문 편집): 시나리오 단계의 수 비교(`equals` · `near` · `atLeast` · `atMost` — 어느 속성을 적었는지가 규칙)와 여러 단계가 함께 쓰는 감시 값 참조 · 시한 읽기, VRM · glTF(`Vrm*` · `ModelImportVrm` · `ModelImportMaterial`), TMX(`TranslationMemory`), JWT, 알림 테이블의 `<Notify>`(처리기마다 선언한 인자), `UIStyleSheet`(규칙 칸은 이미 WidgetStyle 리플렉션 대입 — 상태 이름은 CSS 철자 `focus-visible`), 머티리얼 속성 항목 쓰기(종류마다 적는 칸이 다르고 물려받기라 생략이 곧 부모 값), 타일맵 머리말(자식 원소 형식), 프로파일러 트레이스, 스토어 영수증, `CatalogXMLText` · `RigFileRewrite`(원문 위치를 지키며 고친다), `TextGatherer`, `XMLReadUtil`. **칸 데이터 · 물려받기**도 손 읽기로 둔다: 타일맵의 타일 칸(수천 개 · 깃발 칸은 표가 정한다 — `readFields` 는 속성마다 이름 글을 만들어 느리다), 립싱크 프레임 가중치, 문화권 표(적지 않은 칸은 부모 문화권에서 물려받는다 — 적었는지가 뜻이라 스키마 기본값으로 담지 못한다).
-
-| 묶음 | 대상(손 호출 수) |
-|---|---|
-| E 카탈로그의 남은 손 읽기 | `CharacterAppearance`(29) · `ScheduleCondition` · `ItemVisual` · `AppearanceXMLUtil` · 키트 카탈로그 스물남짓(`readFields` 와 섞인 손 읽기) · 에디터(`CharacterEditorPackData` · `EditorGlobalVariableCommands` · `ProjectSettingsDocument`). 외형 묶음은 `CharacterDataReader::readFields`(오류를 읽개의 목록으로) 길로 |
-| F JSON 손 읽기 | `MeshModifierStack` · `LatticeModifier` · `ModelImportGeometry` · `ModelImportAnimation` · `EditorSettingsRegistry` · `ProjectSettingsDocument` · `PrefabAsset`(JSON) · `CrashReportService` · `VisualLogger` · `UserSettingsFile` · `AssetReferenceFields` · `LoadBotMetrics` 등(`git grep -l "JSONValue" -- Source` 75 파일에서 바깥 형식 뺀 것) |
-| G 손 열거 이름표 — 남은 것 | `SRPGCatalog` 크기(`S` · `M` · `L` · `LL` 또는 0..3 두 문법) · `BehaviorTreeAsset` 의 대소문자 무시 열거 읽기(두 번째 철자). 그대로 둘 것: UI 라벨 · 명령 이름 · 바깥 표준 철자(Prometheus 지표 종류 · CLDR 복수 범주 · VRM · 명령줄 백엔드 이름), 사용자 기기에 저장되는 설정 값(스피커 모드 · 크래시 보고 동의), 종료 진단에서도 쓰는 이름(RHI 메모리 종류 — 엔진 서비스가 내려간 뒤), Core 층(리플렉션 없음) |
-- 시퀀서 · 타일맵 · 스프라이트 클립 · 입력 맵 · 데이터 테이블 · 전역 변수 · 카탈로그 · 리타깃 · 테마파크 배치 · UI 미리보기는 상용 엔진 대비 점검만 했고 손대지 않았다(보고의 비교 표).
-
 ### 5. 그 뒤
 
+- 시퀀서 · 타일맵 · 스프라이트 클립 · 입력 맵 · 데이터 테이블 · 전역 변수 · 카탈로그 · 리타깃 · 테마파크 배치 · UI 미리보기는 상용 엔진 대비 점검만 했고 손대지 않았다(보고의 비교 표).
 - Linux 시나리오 체인(X11 · Wayland · ALSA · epoll 은 Windows 가 짓지 않는다): 빌드 · 단위 테스트는 WSL 에서 돈다. 체인은 ICCCM 아이콘화를 따르는 창 관리자와 `GL_ARB_gl_spirv` 가 있는 GL 이 있는 리눅스 PC(또는 CI)에서 돌린다.
 
 ### 6. 다음 설계 (긴 것)
