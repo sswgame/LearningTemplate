@@ -562,6 +562,7 @@
 		<entry key="EdField.Opacity" text="불투명도" sourceHash="ba64d8954d027206" />
 		<entry key="EdField.OrthoHeight" text="직교 높이" sourceHash="a337307055350c80" />
 		<entry key="EdField.Path" text="경로" sourceHash="2e532e19ed477a56" />
+		<entry key="EdField.Priority" text="우선순위" sourceHash="a4e407b3a0fe4669" />
 		<entry key="EdField.Radius" text="반지름" sourceHash="8afc8c5aafb392d3" />
 		<entry key="EdField.RightMotor" text="오른쪽 모터" sourceHash="4de5c78b61be18ac" />
 		<entry key="EdField.Rows" text="행" sourceHash="cace072bef961918" />
@@ -1006,6 +1007,7 @@
 		<entry key="EdText.Compare" text="비교" sourceHash="7c54f95c59141594" />
 		<entry key="EdText.Connect" text="연결" sourceHash="7a4f059aaa029719" />
 		<entry key="EdText.CreateAction" text="액션 만들기" sourceHash="3000fa4bc98cb4dd" />
+		<entry key="EdText.CreateLayer" text="레이어 만들기" sourceHash="3d55a87e1548c268" />
 		<entry key="EdText.Curves" text="커브" sourceHash="1ed69c4ea2882825" />
 		<entry key="EdText.DataLayers" text="데이터 레이어" sourceHash="b47513221d8a31b9" />
 		<entry key="EdText.Del" text="삭제" sourceHash="e0a34419921b022a" />
@@ -1387,6 +1389,7 @@
 		<entry key="EdWidget.Mask" text="마스크" sourceHash="49c560aecfeb8c29" />
 		<entry key="EdWidget.Name" text="이름" sourceHash="ef49aec68fd1dc66" />
 		<entry key="EdWidget.NewActionName" text="새 액션 이름" sourceHash="6ee3a452443a26a8" />
+		<entry key="EdWidget.NewLayerName" text="새 레이어 이름" sourceHash="8c7fe68b86632b3f" />
 		<entry key="EdWidget.NoFileDefaults" text="파일 없음 - 기본값" sourceHash="ccc95153c036563f" />
 		<entry key="EdWidget.OutputFolder" text="출력 폴더" sourceHash="9d7d1af4a632c558" />
 		<entry key="EdWidget.Panel" text="패널" sourceHash="1e85480db1ab92e5" />
@@ -1755,6 +1758,8 @@
 		<entry key="EditorDataTable.AddKeyTip"
 		       text="왼쪽에 입력한 키로 문자열을 추가합니다. 테이블에 이미 있는 키는 무시합니다."
 		       sourceHash="e4ce1f6fbf06f1a3" />
+		<entry key="EditorDataTable.ConfirmTranslation" text="확인" sourceHash="091d3d07b5b3076f" />
+		<entry key="EditorDataTable.ConfirmTranslationTip" text="이 글을 그대로 둡니다. 지금 원문의 번역이 되고 저장할 때 낡음 · 검토 표시가 사라집니다." sourceHash="121bdeeff5430a67" />
 		<entry key="EditorDataTable.DeleteKeyTip"
 		       text="저장할 때 이 키를 원문 테이블과 모든 번역 테이블에서 지웁니다."
 		       sourceHash="9ae9ac16bec83b09" />
@@ -1764,11 +1769,14 @@
 		<entry key="EditorDataTable.LoadingLocalization"
 		       text="현지화 데이터를 읽는 중..."
 		       sourceHash="9cd65b2fc60109d6" />
+		<entry key="EditorDataTable.NeedsWorkOnly" text="할 일만" sourceHash="78a63713311f7333" />
+		<entry key="EditorDataTable.NeedsWorkOnlyTip" text="번역이 없거나 낡았거나 검토 표시가 있는 키만 보여 줍니다." sourceHash="e41c820332dfddcb" />
 		<entry key="EditorDataTable.NewKeyHint" text="새 문자열 키..." sourceHash="fe3b2029f3d4165d" />
 		<entry key="EditorDataTable.NoProject" text="(프로젝트 없음)" sourceHash="c3402b13fa7c9690" />
 		<entry key="EditorDataTable.NoRecordsHint"
 		       text="현지화 항목이 없습니다. 키를 추가하거나 App --gather-text 를 실행합니다."
 		       sourceHash="65cd3a1adcb650ac" />
+		<entry key="EditorDataTable.NoWorkLeftHint" text="모든 번역이 최신입니다." sourceHash="b74b37408ec1cf41" />
 		<entry key="EditorDataTable.OverMaxLength" text=" (최대 길이 초과)" sourceHash="8ee4c29bf4fab431" />
 		<entry key="EditorDataTable.ProjectTip"
 		       text="문자열 테이블을 보여 줄 현지화 프로젝트입니다. 바꾸기 전에 저장하거나 다시 읽습니다. 저장하지 않은 편집이 있으면 프로젝트가 바뀌지 않습니다."
@@ -1782,9 +1790,8 @@
 		<entry key="EditorDataTable.RevertTip"
 		       text="편집을 버리고 디스크에서 파일을 다시 읽습니다."
 		       sourceHash="a269a2a1598c5872" />
-		<entry key="EditorDataTable.SaveFileTip"
-		       text="편집한 XML 텍스트를 이 파일에 다시 씁니다. 검증 없이 입력한 그대로 저장합니다."
-		       sourceHash="40785909d213a29a" />
+		<entry key="EditorDataTable.SaveBeforeSwitchingTip" text="다른 파일을 열기 전에 이 파일을 저장하거나 되돌립니다." sourceHash="2e6714349a0b9409" />
+		<entry key="EditorDataTable.SaveFileTip" text="고친 XML 글을 이 파일에 씁니다. 올바른 XML 이 아닌 글은 저장하지 않습니다." sourceHash="04294fe1a00c05e2" />
 		<entry key="EditorDataTable.SaveLocalizationTip"
 		       text="이 프로젝트의 원문 테이블과 모든 번역 테이블을 씁니다."
 		       sourceHash="d8ab6d2797a9dd17" />
@@ -1860,13 +1867,17 @@
 		<entry key="EditorInputMap.ActionConflictTip"
 		       text="같은 레이어의 다른 액션과 키가 겹칩니다. 자세한 내용을 확인합니다."
 		       sourceHash="fa3b46437d93db02" />
-		<entry key="EditorInputMap.CaptureInstruction"
-		       text="바인딩할 키보드 키를 누르거나 아래 버튼을 클릭합니다..."
-		       sourceHash="3fe7f422962c1953" />
+		<entry key="EditorInputMap.AddBinding" text="바인딩 추가" sourceHash="702c0b99e7e9dcc5" />
+		<entry key="EditorInputMap.AddBindingTip" text="이 액션에 바인딩을 더합니다. 다음에 누르는 키, 키 조합 또는 게임패드 버튼이 새 바인딩이 됩니다." sourceHash="7720ca069f4fb855" />
+		<entry key="EditorInputMap.BindingLayerTip" text="이 바인딩이 속한 레이어입니다. 그 레이어가 활성일 때만 발화합니다." sourceHash="5c09eded0f9462e8" />
+		<entry key="EditorInputMap.CaptureInstruction" text="바인딩할 키, 키 조합 또는 게임패드 버튼을 누르거나 아래 버튼을 클릭합니다. Esc 는 취소입니다..." sourceHash="a33ae98350b8864d" />
 		<entry key="EditorInputMap.ConflictCount" text="{count, plural, other {충돌 #개}}" sourceHash="56897214c8ed6835" />
 		<entry key="EditorInputMap.CreateActionTip"
 		       text="바인딩 없이 액션을 추가합니다. 목록에서 선택해 키를 추가합니다."
 		       sourceHash="cd07b5aaf9893d9a" />
+		<entry key="EditorInputMap.CreateLayerTip" text="이 맵에 레이어를 더합니다. 그러면 바인딩을 그 레이어로 옮길 수 있습니다." sourceHash="8bc8c20698c0c1d6" />
+		<entry key="EditorInputMap.DeleteAction" text="액션 삭제" sourceHash="3d40e4519968fdf4" />
+		<entry key="EditorInputMap.DeleteActionTip" text="이 액션과 바인딩을 맵에서 지웁니다. 저장하기 전에는 다시 읽기로 되돌릴 수 있습니다." sourceHash="f0ea0dbc1eaf4aa7" />
 		<entry key="EditorInputMap.FilterActionsHint" text="액션 필터..." sourceHash="28cd4902f6c8a7ea" />
 		<entry key="EditorInputMap.InjectKeyDownTip"
 		       text="고른 키를 눌러서 누르고 있는 것처럼 키 누름 이벤트를 보냅니다. 떼려면 KeyUp 을 보냅니다."
@@ -1898,6 +1909,8 @@
 		<entry key="EditorInputMap.NewActionTypeTip"
 		       text="액션이 보고하는 값입니다. 버튼은 Boolean, 트리거나 축 하나는 Axis 1D, 스틱이나 WASD 는 Vector 2D 입니다."
 		       sourceHash="276d232159753089" />
+		<entry key="EditorInputMap.NewLayerNameTip" text="새 레이어의 이름입니다. 이미 쓰는 이름은 쓸 수 없습니다." sourceHash="3f1118ea74b0cee7" />
+		<entry key="EditorInputMap.NoActionsHint" text="이 맵에는 아직 액션이 없습니다. 아래 절에서 만듭니다." sourceHash="ab2d52830ca91c1d" />
 		<entry key="EditorInputMap.NoBindings" text="바인딩 없음" sourceHash="981fae4d1a3c6b60" />
 		<entry key="EditorInputMap.NoGamepad"
 		       text="포트 0에 연결된 게임패드가 없습니다."
@@ -1944,6 +1957,7 @@
 		<entry key="EditorInputMap.ReloadTip"
 		       text="저장하지 않은 편집을 버리고 왼쪽 경로의 입력 맵을 읽습니다."
 		       sourceHash="da5a9f2c34acc2ea" />
+		<entry key="EditorInputMap.RemoveBindingTip" text="이 바인딩을 액션에서 지웁니다. 저장하기 전에는 다시 읽기로 되돌릴 수 있습니다." sourceHash="66671787c8653b09" />
 		<entry key="EditorInputMap.ReplayFileTip"
 		       text="Save 와 Load 가 쓰는 .swreplay 파일의 리소스 경로입니다."
 		       sourceHash="0b6468cb3ba984d5" />
@@ -2007,9 +2021,7 @@
 		<entry key="EditorInputMap.TriggerTip"
 		       text="액션이 발동하는 시점입니다(Pressed, Hold, Tap, Double Tap ...). 언리얼 Enhanced Input 의 트리거와 같습니다."
 		       sourceHash="273ade5be3842277" />
-		<entry key="EditorInputMap.UnbindOtherTip"
-		       text="다른 액션의 바인딩에서 키를 지워 이 액션이 그 키를 갖게 합니다."
-		       sourceHash="a05a1706f5251267" />
+		<entry key="EditorInputMap.UnbindOtherTip" text="이 액션이 입력을 갖도록 다른 액션의 바인딩을 지웁니다." sourceHash="f89f8deb8dcdc8a8" />
 		<entry key="EditorInputMap.UnsavedChanges" text="* 저장하지 않은 변경" sourceHash="973e262de06494ae" />
 		<entry key="EditorInputMap.WaitingForInput" text="입력을 기다리는 중..." sourceHash="fbd1ecd3af100cc7" />
 		<entry key="EditorInspector.AddToFavorites" text="즐겨찾기에 추가" sourceHash="7b1bc15f29f533d4" />

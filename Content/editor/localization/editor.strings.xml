@@ -1610,6 +1610,11 @@
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdField.Priority" source="Priority">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdField.Radius" source="Radius">
 			<origins>
 				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
@@ -3158,6 +3163,11 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdText.CreateLayer" source="Create Layer">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdText.Curves" source="Curves">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
@@ -4569,6 +4579,11 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdWidget.NewLayerName" source="New Layer Name">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdWidget.NoFileDefaults" source="No file - defaults">
 			<origins>
 				<item>Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp</item>
@@ -5516,6 +5531,16 @@
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorDataTable.ConfirmTranslation" source="OK">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.ConfirmTranslationTip" source="Keep this text: it becomes the translation of the current source and the stale or review mark goes away when you save.">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorDataTable.DeleteKeyTip"
 		       source="Remove this key from the source table and every translation table when you save.">
 			<origins>
@@ -5532,6 +5557,16 @@
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorDataTable.NeedsWorkOnly" source="Needs work">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.NeedsWorkOnlyTip" source="Show only keys with a missing, stale or review-marked translation.">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorDataTable.NewKeyHint" source="New string key...">
 			<origins>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
@@ -5543,6 +5578,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorDataTable.NoRecordsHint" source="No localization records. Add a key or run App --gather-text.">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataTable.NoWorkLeftHint" source="Every translation is up to date.">
 			<origins>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
@@ -5574,8 +5614,13 @@
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorDataTable.SaveBeforeSwitchingTip" source="Save or revert this file before opening another one.">
+			<origins>
+				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorDataTable.SaveFileTip"
-		       source="Write the edited XML text back to this file. The text is saved as typed, without validation.">
+		       source="Write the edited XML text back to this file. Text that is not valid XML is not saved.">
 			<origins>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
@@ -5733,7 +5778,22 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInputMap.CaptureInstruction" source="Press any keyboard key, or click a button below to bind...">
+		<entry key="EditorInputMap.AddBinding" source="Add Binding">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.AddBindingTip" source="Add a binding to this action: the next key, key combination or gamepad button you press becomes it.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.BindingLayerTip" source="The layer this binding belongs to. It fires only while that layer is active.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.CaptureInstruction" source="Press a key, key combination or gamepad button to bind, Esc to cancel, or click a button below...">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
@@ -5745,6 +5805,21 @@
 		</entry>
 		<entry key="EditorInputMap.CreateActionTip"
 		       source="Add the action with no bindings; select it in the list to add keys.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.CreateLayerTip" source="Add the layer to this map. Bindings can then be moved to it.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.DeleteAction" source="Delete Action">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.DeleteActionTip" source="Remove this action and its bindings from the map. Reload brings it back until you save.">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
@@ -5809,6 +5884,16 @@
 		</entry>
 		<entry key="EditorInputMap.NewActionTypeTip"
 		       source="Value the action reports: Boolean for buttons, Axis 1D for a trigger or one axis, Vector 2D for a stick or WASD.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.NewLayerNameTip" source="Name of the new layer. It must not be in use.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.NoActionsHint" source="This map has no actions yet. Create one in the section below.">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
@@ -5899,6 +5984,11 @@
 		</entry>
 		<entry key="EditorInputMap.ReloadTip"
 		       source="Read the input map from the path on the left, discarding unsaved edits.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.RemoveBindingTip" source="Remove this binding from the action. Reload brings it back until you save.">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
@@ -6019,7 +6109,7 @@
 			</origins>
 		</entry>
 		<entry key="EditorInputMap.UnbindOtherTip"
-		       source="Clear the key from the other action's binding so this action keeps it.">
+		       source="Remove the other action's binding so this action keeps the input.">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>

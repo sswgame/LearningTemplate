@@ -1429,6 +1429,11 @@ msgctxt "EdField.Path"
 msgid "Path"
 msgstr "경로"
 
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdField.Priority"
+msgid "Priority"
+msgstr "우선순위"
+
 #: Source/Editor/Viewport/TerrainBrushTool.cpp
 msgctxt "EdField.Radius"
 msgid "Radius"
@@ -2974,6 +2979,11 @@ msgctxt "EdText.CreateAction"
 msgid "Create Action"
 msgstr "액션 만들기"
 
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdText.CreateLayer"
+msgid "Create Layer"
+msgstr "레이어 만들기"
+
 #: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
 msgctxt "EdText.Curves"
 msgid "Curves"
@@ -4371,6 +4381,11 @@ msgctxt "EdWidget.NewActionName"
 msgid "New Action Name"
 msgstr "새 액션 이름"
 
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EdWidget.NewLayerName"
+msgid "New Layer Name"
+msgstr "새 레이어 이름"
+
 #: Source/Editor/Panels/ProjectSettings/ProjectSettingsPanel.cpp
 msgctxt "EdWidget.NoFileDefaults"
 msgid "No file - defaults"
@@ -5281,6 +5296,16 @@ msgid "Add a string with the key typed on the left. Keys already in the table ar
 msgstr "왼쪽에 입력한 키로 문자열을 추가합니다. 테이블에 이미 있는 키는 무시합니다."
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.ConfirmTranslation"
+msgid "OK"
+msgstr "확인"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.ConfirmTranslationTip"
+msgid "Keep this text: it becomes the translation of the current source and the stale or review mark goes away when you save."
+msgstr "이 글을 그대로 둡니다. 지금 원문의 번역이 되고 저장할 때 낡음 · 검토 표시가 사라집니다."
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.DeleteKeyTip"
 msgid "Remove this key from the source table and every translation table when you save."
 msgstr "저장할 때 이 키를 원문 테이블과 모든 번역 테이블에서 지웁니다."
@@ -5296,6 +5321,16 @@ msgid "Loading localization..."
 msgstr "현지화 데이터를 읽는 중..."
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.NeedsWorkOnly"
+msgid "Needs work"
+msgstr "할 일만"
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.NeedsWorkOnlyTip"
+msgid "Show only keys with a missing, stale or review-marked translation."
+msgstr "번역이 없거나 낡았거나 검토 표시가 있는 키만 보여 줍니다."
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.NewKeyHint"
 msgid "New string key..."
 msgstr "새 문자열 키..."
@@ -5309,6 +5344,11 @@ msgstr "(프로젝트 없음)"
 msgctxt "EditorDataTable.NoRecordsHint"
 msgid "No localization records. Add a key or run App --gather-text."
 msgstr "현지화 항목이 없습니다. 키를 추가하거나 App --gather-text 를 실행합니다."
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.NoWorkLeftHint"
+msgid "Every translation is up to date."
+msgstr "모든 번역이 최신입니다."
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.OverMaxLength"
@@ -5336,9 +5376,14 @@ msgid "Discard the edits and read the file from disk again."
 msgstr "편집을 버리고 디스크에서 파일을 다시 읽습니다."
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
+msgctxt "EditorDataTable.SaveBeforeSwitchingTip"
+msgid "Save or revert this file before opening another one."
+msgstr "다른 파일을 열기 전에 이 파일을 저장하거나 되돌립니다."
+
+#: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.SaveFileTip"
-msgid "Write the edited XML text back to this file. The text is saved as typed, without validation."
-msgstr "편집한 XML 텍스트를 이 파일에 다시 씁니다. 검증 없이 입력한 그대로 저장합니다."
+msgid "Write the edited XML text back to this file. Text that is not valid XML is not saved."
+msgstr "고친 XML 글을 이 파일에 씁니다. 올바른 XML 이 아닌 글은 저장하지 않습니다."
 
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.SaveLocalizationTip"
@@ -5491,9 +5536,24 @@ msgid "Shares a key with another action on the same layer - see the details"
 msgstr "같은 레이어의 다른 액션과 키가 겹칩니다. 자세한 내용을 확인합니다."
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EditorInputMap.AddBinding"
+msgid "Add Binding"
+msgstr "바인딩 추가"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EditorInputMap.AddBindingTip"
+msgid "Add a binding to this action: the next key, key combination or gamepad button you press becomes it."
+msgstr "이 액션에 바인딩을 더합니다. 다음에 누르는 키, 키 조합 또는 게임패드 버튼이 새 바인딩이 됩니다."
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EditorInputMap.BindingLayerTip"
+msgid "The layer this binding belongs to. It fires only while that layer is active."
+msgstr "이 바인딩이 속한 레이어입니다. 그 레이어가 활성일 때만 발화합니다."
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EditorInputMap.CaptureInstruction"
-msgid "Press any keyboard key, or click a button below to bind..."
-msgstr "바인딩할 키보드 키를 누르거나 아래 버튼을 클릭합니다..."
+msgid "Press a key, key combination or gamepad button to bind, Esc to cancel, or click a button below..."
+msgstr "바인딩할 키, 키 조합 또는 게임패드 버튼을 누르거나 아래 버튼을 클릭합니다. Esc 는 취소입니다..."
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EditorInputMap.ConflictCount"
@@ -5504,6 +5564,21 @@ msgstr "{count, plural, other {충돌 #개}}"
 msgctxt "EditorInputMap.CreateActionTip"
 msgid "Add the action with no bindings; select it in the list to add keys."
 msgstr "바인딩 없이 액션을 추가합니다. 목록에서 선택해 키를 추가합니다."
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EditorInputMap.CreateLayerTip"
+msgid "Add the layer to this map. Bindings can then be moved to it."
+msgstr "이 맵에 레이어를 더합니다. 그러면 바인딩을 그 레이어로 옮길 수 있습니다."
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EditorInputMap.DeleteAction"
+msgid "Delete Action"
+msgstr "액션 삭제"
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EditorInputMap.DeleteActionTip"
+msgid "Remove this action and its bindings from the map. Reload brings it back until you save."
+msgstr "이 액션과 바인딩을 맵에서 지웁니다. 저장하기 전에는 다시 읽기로 되돌릴 수 있습니다."
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EditorInputMap.FilterActionsHint"
@@ -5559,6 +5634,16 @@ msgstr "게임 코드가 새 액션을 조회할 때 쓰는 이름입니다(예:
 msgctxt "EditorInputMap.NewActionTypeTip"
 msgid "Value the action reports: Boolean for buttons, Axis 1D for a trigger or one axis, Vector 2D for a stick or WASD."
 msgstr "액션이 보고하는 값입니다. 버튼은 Boolean, 트리거나 축 하나는 Axis 1D, 스틱이나 WASD 는 Vector 2D 입니다."
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EditorInputMap.NewLayerNameTip"
+msgid "Name of the new layer. It must not be in use."
+msgstr "새 레이어의 이름입니다. 이미 쓰는 이름은 쓸 수 없습니다."
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EditorInputMap.NoActionsHint"
+msgid "This map has no actions yet. Create one in the section below."
+msgstr "이 맵에는 아직 액션이 없습니다. 아래 절에서 만듭니다."
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EditorInputMap.NoBindings"
@@ -5639,6 +5724,11 @@ msgstr "이 바인딩의 키를 바꿉니다. 키를 누르거나 열리는 목�
 msgctxt "EditorInputMap.ReloadTip"
 msgid "Read the input map from the path on the left, discarding unsaved edits."
 msgstr "저장하지 않은 편집을 버리고 왼쪽 경로의 입력 맵을 읽습니다."
+
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+msgctxt "EditorInputMap.RemoveBindingTip"
+msgid "Remove this binding from the action. Reload brings it back until you save."
+msgstr "이 바인딩을 액션에서 지웁니다. 저장하기 전에는 다시 읽기로 되돌릴 수 있습니다."
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EditorInputMap.ReplayFileTip"
@@ -5747,8 +5837,8 @@ msgstr "액션이 발동하는 시점입니다(Pressed, Hold, Tap, Double Tap ..
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EditorInputMap.UnbindOtherTip"
-msgid "Clear the key from the other action's binding so this action keeps it."
-msgstr "다른 액션의 바인딩에서 키를 지워 이 액션이 그 키를 갖게 합니다."
+msgid "Remove the other action's binding so this action keeps the input."
+msgstr "이 액션이 입력을 갖도록 다른 액션의 바인딩을 지웁니다."
 
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EditorInputMap.UnsavedChanges"
