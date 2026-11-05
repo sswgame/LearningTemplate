@@ -2,7 +2,6 @@
 
 #include "Core/Container/vector.h"
 #include "Core/String/Base64Util.h"
-
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;

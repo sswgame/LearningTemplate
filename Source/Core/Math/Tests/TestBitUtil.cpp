@@ -1,7 +1,6 @@
 #include "pch.h"
 
 #include "Core/Math/BitUtil.h"
-
 #include "Core/Testing/TestFramework.h"
 
 using namespace sw;
