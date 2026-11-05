@@ -9,7 +9,6 @@
 
 #if defined( SW_PLATFORM_WINDOWS )
     #include "Core/Foundation/PlatformOSHeaders.h"
-#endif
 
 namespace sw
 {
@@ -17,7 +16,6 @@ namespace sw
     {
         struct XInputGamepadDeviceInternal
         {
-#if defined( SW_PLATFORM_WINDOWS )
             using PFN_XInputGetState = DWORD( WINAPI* )( DWORD, XINPUT_STATE* );
             using PFN_XInputSetState = DWORD( WINAPI* )( DWORD, XINPUT_VIBRATION* );
 
@@ -66,12 +64,10 @@ namespace sw
                 static const PFN_XInputGetBatteryInformation s_pfn = reinterpret_cast<PFN_XInputGetBatteryInformation>( findXInputProc( "XInputGetBatteryInformation" ) );
                 return s_pfn;
             }
-#endif
         };
     } // namespace
 } // namespace sw
 
-#if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
     XInputGamepadDevice::XInputGamepadDevice( uint32 userIndex )
@@ -279,5 +275,5 @@ namespace sw
         }
         return info;
     }
-#endif
 } // namespace sw
+#endif
