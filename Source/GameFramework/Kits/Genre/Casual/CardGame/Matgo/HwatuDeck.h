@@ -60,5 +60,7 @@ namespace sw
         static const HwatuCardInfo& getInfo( uint16 cardID );
         static Card                 makeCard( int32 month, int32 indexInMonth );
         static uint8                getMonth( const Card& card ) { return getInfo( card._id )._month; }
+        /** @brief 덱(`makeDeck`)의 카드인지 반환합니다. 번호, 종류, 월이 덱의 정의와 모두 같아야 합니다. */
+        static bool isDeckCard( const Card& card );
     };
 } // namespace sw

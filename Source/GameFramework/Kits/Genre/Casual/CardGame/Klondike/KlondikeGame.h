@@ -95,7 +95,7 @@ namespace sw
 
         /** @brief 판(열, 뒤집힌 장수, 파운데이션, 스톡, 웨이스트, 되돌린 수, 옮긴 수)과 되돌리기 기록을 씁니다. 설정은 `initialize` 에서 받으므로 저장하지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 규칙으로 나올 수 없는 판(트럼프에 없거나 겹친 카드, 순서가 틀린 파운데이션, 뒤집힌 맨 위, 범위 밖 수)이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         const KlondikeState&    getState() const { return _state; }

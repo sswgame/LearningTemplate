@@ -24,6 +24,16 @@ namespace sw
 
             static bool isWildValue( uint8 rank ) { return rank == static_cast<uint8>( UnoValue::Wild ) || rank == static_cast<uint8>( UnoValue::WildDrawFour ); }
 
+            /** @brief 읽은 더미들의 카드가 모두 덱(`makeDeck`)의 카드이고 겹치지 않는지 반환합니다. 색이 범위 밖이면 그 카드를 낼 때 지금 색이 범위 밖이 됩니다. */
+            [[nodiscard]] static bool arePilesFromDeck( const vector<const CardPile*>& listPile )
+            {
+                CardPile deck;
+                UnoGame::makeDeck( deck );
+                const auto isDeckCard = [&deck]( const Card& card )
+                { return card._id < deck.getCount() && deck.getAt( card._id ) == card; };
+                return CardPile::arePilesValid( listPile, isDeckCard );
+            }
+
             /**
              * @brief 설정이 선언된 범위 안이고 나눌 카드가 덱에 있는지 봅니다. 밖이면 오류를 남기고 false 입니다(맞추지 않는다).
              * @details 인원 × 손패 + 첫 장 한 장이 덱(108장)을 넘으면 나누기가 모자라 손패가 조용히 짧아진다.
@@ -398,13 +408,25 @@ namespace sw
         archive >> game._unoTarget;
         archive >> game._winner;
         archive >> color;
-        const int32 count            = static_cast<int32>( handCount );
-        const bool  bPlayerValid     = 0 <= game._currentPlayer && game._currentPlayer < count;
-        const bool  bDirectionValid  = game._direction == 1 || game._direction == -1;
-        const bool  bTargetValid     = -1 <= game._unoTarget && game._unoTarget < count && -1 <= game._winner && game._winner < count;
-        const bool  bColorValid      = color <= static_cast<uint8>( UnoColor::Wild );
-        const bool  bInvalidUnoState = archive.isError() || bPlayerValid == false || bDirectionValid == false || bTargetValid == false || bColorValid == false || game._pendingDraw < 0;
+        const int32 count           = static_cast<int32>( handCount );
+        const bool  bPlayerValid    = 0 <= game._currentPlayer && game._currentPlayer < count;
+        const bool  bDirectionValid = game._direction == 1 || game._direction == -1;
+        const bool  bTargetValid    = -1 <= game._unoTarget && game._unoTarget < count && -1 <= game._winner && game._winner < count;
+        const bool  bColorValid     = color <= static_cast<uint8>( UnoColor::Wild );
+        // 쌓인 벌칙은 덱을 넘지 못한다 — 쌓는 동안에는 뽑지 않아 카드가 돌아오지 않는다. 터무니없는 값은 `_pendingDraw += amount` 를 넘친다.
+        const bool bPendingValid    = 0 <= game._pendingDraw && game._pendingDraw <= UnoGameInternal::kDeckCardCount;
+        const bool bInvalidUnoState = archive.isError() || bPlayerValid == false || bDirectionValid == false || bTargetValid == false || bColorValid == false || bPendingValid == false;
         if ( bInvalidUnoState )
+            return false;
+        // 이긴 사람은 손패를 다 낸 사람이다.
+        if ( game._winner >= 0 && game._listHand[static_cast<size_t>( game._winner )].isEmpty() == false )
+            return false;
+        vector<const CardPile*> listPile{ &game._drawPile, &game._discardPile };
+        for ( const CardPile& hand : game._listHand )
+        {
+            listPile.push_back( &hand );
+        }
+        if ( UnoGameInternal::arePilesFromDeck( listPile ) == false )
             return false;
         game._color = static_cast<UnoColor>( color );
         game._eventBuffer.clear();

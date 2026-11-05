@@ -44,15 +44,40 @@ namespace sw
                 outArchive << state._moveCount;
             }
 
-            [[nodiscard]] static bool readBoard( Archive& archive, KlondikeState& outState )
+            /** @brief 읽은 판이 규칙으로 나올 수 있는 판인지 봅니다. 파운데이션은 무늬별로 에이스부터 하나씩 쌓이고, 카드는 트럼프 52장이며 겹치지 않습니다. */
+            [[nodiscard]] static bool isBoardValid( const KlondikeState& state, const KlondikeSettings& settings )
+            {
+                vector<const CardPile*> listPile{ &state._stock, &state._waste };
+                for ( const CardPile& tableau : state._arrTableau )
+                {
+                    listPile.push_back( &tableau );
+                }
+                for ( int32 suit = 0; suit < KlondikeState::kFoundationCount; ++suit )
+                {
+                    const CardPile& foundation = state._arrFoundation[suit];
+                    listPile.push_back( &foundation );
+                    for ( int32 index = 0; index < foundation.getCount(); ++index )
+                    {
+                        // `isWon` 은 장수만 세고 `canPlaceOnFoundation` 은 장수로 다음 숫자를 정한다 — 순서가 틀린 더미는 가짜 승리다
+                        const Card& card = foundation.getAt( index );
+                        if ( card._suit != suit || card._rank != index + StandardRank::kAce )
+                            return false;
+                    }
+                }
+                const bool bRecycleValid = 0 <= state._recycleCount && ( settings._maxRecycle < 0 || state._recycleCount <= settings._maxRecycle );
+                return bRecycleValid && 0 <= state._moveCount && CardPile::arePilesValid( listPile, &CardPile::isStandardCard );
+            }
+
+            [[nodiscard]] static bool readBoard( Archive& archive, const KlondikeSettings& settings, KlondikeState& outState )
             {
                 for ( int32 column = 0; column < KlondikeState::kColumnCount; ++column )
                 {
                     if ( outState._arrTableau[column].readState( archive ) == false )
                         return false;
                     archive >> outState._arrFaceDownCount[column];
-                    // 뒤집힌 장수는 열의 장수를 넘지 않는다
-                    const bool bFaceDownValid = 0 <= outState._arrFaceDownCount[column] && outState._arrFaceDownCount[column] <= outState._arrTableau[column].getCount();
+                    // 카드가 있는 열의 맨 위는 늘 앞면이다(`revealColumnTop`). 뒤집힌 맨 위는 옮길 수 없는데 파운데이션으로는 올라가 숨은 패를 꺼낸다
+                    const int32 columnCount    = outState._arrTableau[column].getCount();
+                    const bool  bFaceDownValid = 0 <= outState._arrFaceDownCount[column] && outState._arrFaceDownCount[column] <= MathUtil::max( 0, columnCount - 1 );
                     if ( archive.isError() || bFaceDownValid == false )
                         return false;
                 }
@@ -64,7 +89,7 @@ namespace sw
                 const bool bPilesRead = outState._stock.readState( archive ) && outState._waste.readState( archive );
                 archive >> outState._recycleCount;
                 archive >> outState._moveCount;
-                return bPilesRead && archive.isOk();
+                return bPilesRead && archive.isOk() && isBoardValid( outState, settings );
             }
         };
     } // namespace
@@ -325,7 +350,7 @@ namespace sw
     bool KlondikeGame::readState( Archive& archive )
     {
         KlondikeState state;
-        if ( KlondikeGameInternal::readBoard( archive, state ) == false )
+        if ( KlondikeGameInternal::readBoard( archive, _settings, state ) == false )
             return false;
         uint32 historyCount = 0;
         // 판마다 열 7개(더미 4 + 뒤집힌 수 4) + 파운데이션 4개, 스톡, 웨이스트(더미 4) + 되돌린 수, 옮긴 수(8)
@@ -334,7 +359,7 @@ namespace sw
         vector<KlondikeState> listHistory( historyCount, KlondikeState{} );
         for ( KlondikeState& history : listHistory )
         {
-            if ( KlondikeGameInternal::readBoard( archive, history ) == false )
+            if ( KlondikeGameInternal::readBoard( archive, _settings, history ) == false )
                 return false;
         }
         _state       = std::move( state );

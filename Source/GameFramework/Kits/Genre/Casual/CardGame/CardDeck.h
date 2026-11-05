@@ -73,6 +73,27 @@ namespace sw
         static bool isRedSuit( uint8 suit ) { return suit == StandardSuit::kDiamonds || suit == StandardSuit::kHearts; }
         /** @brief @p listCardInDrawOrder 의 첫 카드가 가장 먼저 뽑히는 더미를 만듭니다(테스트와 리플레이용 덱). */
         static void makePileInDrawOrder( const vector<Card>& listCardInDrawOrder, CardPile& outPile );
+        /** @brief 조커를 뺀 트럼프 덱(`makeStandardDeck`)의 카드인지 반환합니다. 번호, 무늬, 숫자가 덱의 정의와 모두 같아야 합니다. */
+        static bool isStandardCard( const Card& card );
+        /** @brief 더미 여럿을 통틀어 같은 번호의 카드가 두 번 나오면 true 입니다. 판 하나의 더미들은 한 덱을 나눠 가지므로 겹치면 카드가 복제된 것입니다. */
+        [[nodiscard]] static bool hasDuplicateID( const vector<const CardPile*>& listPile );
+        /**
+         * @brief 상태 바이트로 읽은 더미들이 한 판의 더미로 맞는지 반환합니다. 번호가 겹치지 않고 모든 카드가 @p isCardValid 를 지나야 합니다.
+         * @details 카드의 뜻(덱 구성)은 게임마다 달라 판정을 받는다. 게임마다 `readState` 끝에서 같은 모양으로 부른다.
+         */
+        template <typename TPredicate>
+        [[nodiscard]] static bool arePilesValid( const vector<const CardPile*>& listPile, TPredicate isCardValid )
+        {
+            for ( const CardPile* pPile : listPile )
+            {
+                for ( const Card& card : pPile->getCards() )
+                {
+                    if ( isCardValid( card ) == false )
+                        return false;
+                }
+            }
+            return hasDuplicateID( listPile ) == false;
+        }
 
         CardPile();
 
@@ -110,7 +131,7 @@ namespace sw
 
         /** @brief 장수와, 카드마다 번호, 무늬, 숫자를 맨 아래부터 씁니다. 카드 게임 키트 상태에서 더미 하나에 해당합니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌거나 빈 카드, 겹친 번호가 있으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

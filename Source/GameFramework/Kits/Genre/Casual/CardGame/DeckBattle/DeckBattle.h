@@ -139,7 +139,7 @@ namespace sw
 
         /** @brief 덱의 정의 id(카드 번호 순), 더미 넷, 적, 난수, 체력, 방어, 에너지, 턴, 단계를 씁니다. 카탈로그와 설정은 `initialize` 에서 받으므로 저장하지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 카탈로그에 없는 정의 id 이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 카탈로그에 없는 정의 id, 음수이거나 최대를 넘는 값, 덱과 맞지 않는 더미(빠지거나 겹친 카드)이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         const DeckBattleCardDef* getCardDef( const Card& card ) const;

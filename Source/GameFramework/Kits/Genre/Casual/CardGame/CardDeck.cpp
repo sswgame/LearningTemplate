@@ -2,9 +2,13 @@
 
 #include "GameFramework/Kits/Genre/Casual/CardGame/CardDeck.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+
+#include <algorithm>
 
 namespace sw
 {
@@ -111,8 +115,37 @@ namespace sw
         }
         if ( archive.isError() )
             return false;
-        _listCard = std::move( listCard );
+        // 더미에는 빈 카드가 들어가지 않는다. 겹친 번호는 `takeByID` 가 앞의 것만 찾아 뒤의 것이 남는다.
+        CardPile pile;
+        pile._listCard = std::move( listCard );
+        if ( arePilesValid( { &pile }, []( const Card& card )
+        { return card.isValid(); } ) == false )
+            return false;
+        _listCard = std::move( pile._listCard );
         return true;
+    }
+
+    bool CardPile::isStandardCard( const Card& card )
+    {
+        constexpr int32 kRankCount = StandardRank::kKing;
+        if ( card._id >= StandardSuit::kCount * kRankCount )
+            return false;
+        // `makeStandardDeck` 의 번호 규칙 — 번호만 보면 같은 에이스를 번호만 달리해 여러 장 만들 수 있다.
+        return card._suit == card._id / kRankCount && card._rank == card._id % kRankCount + StandardRank::kAce;
+    }
+
+    bool CardPile::hasDuplicateID( const vector<const CardPile*>& listPile )
+    {
+        vector<uint16> listID;
+        for ( const CardPile* pPile : listPile )
+        {
+            for ( const Card& card : pPile->_listCard )
+            {
+                listID.push_back( card._id );
+            }
+        }
+        VectorUtil::sort( listID ); // 꾸민 바이트의 긴 목록이 제곱 시간을 쓰지 않게 정렬해 본다
+        return std::adjacent_find( listID.begin(), listID.end() ) != listID.end();
     }
 
     void CardPile::makeStandardDeck( CardPile& outPile, int32 jokerCount )

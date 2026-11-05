@@ -11,6 +11,7 @@
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace sw
 {
@@ -20,6 +21,31 @@ namespace sw
         {
             static constexpr int32 kHoleCount  = 2;
             static constexpr int32 kBoardCount = 5;
+
+            /** @brief 읽은 자리 값이 맞는지 봅니다. 칩은 음수가 아니고, 이번 스트리트에 낸 칩은 이번 판에 낸 칩에 들어 있으며, 폴드와 올인은 판에 든 자리만 합니다. */
+            static bool isSeatValid( const PokerSeat& seat )
+            {
+                const bool bChipsValid = 0 <= seat._stack && 0 <= seat._committed && seat._committed <= seat._contributed && 0 <= seat._won;
+                const bool bFlagsValid = seat._bInHand <= SW_TRUE && seat._bFolded <= SW_TRUE && seat._bAllIn <= SW_TRUE && seat._bActed <= SW_TRUE;
+                return bChipsValid && bFlagsValid && ( seat._bInHand == SW_TRUE || ( seat._bFolded == SW_FALSE && seat._bAllIn == SW_FALSE ) );
+            }
+
+            /** @brief 읽은 더미와 홀 카드가 트럼프 52장 안에서 겹치지 않는지 봅니다. 진행 중인 판의 자리는 홀 카드 두 장을 다 가집니다. */
+            [[nodiscard]] static bool areCardsValid( const vector<PokerSeat>& listSeat, const CardPile& deck, const CardPile& board, bool bHandRunning )
+            {
+                CardPile holes;
+                for ( const PokerSeat& seat : listSeat )
+                {
+                    for ( const Card& card : seat._arrHole )
+                    {
+                        if ( card.isValid() )
+                            holes.push( card );
+                        else if ( bHandRunning && seat._bInHand == SW_TRUE )
+                            return false;
+                    }
+                }
+                return CardPile::arePilesValid( { &holes, &deck, &board }, &CardPile::isStandardCard );
+            }
 
             static bool isSameSeatList( const vector<int32>& listLhsSeat, const vector<int32>& listRhsSeat )
             {
@@ -532,8 +558,9 @@ namespace sw
         if ( archive.isError() || seatCount != _listSeat.size() )
             return false;
         // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 설정은 사본도 그대로 가지고 있다.
-        PokerTable  table = *this;
-        const int32 count = static_cast<int32>( seatCount );
+        PokerTable  table     = *this;
+        const int32 count     = static_cast<int32>( seatCount );
+        int64       chipTotal = 0;
         for ( PokerSeat& seat : table._listSeat )
         {
             for ( Card& card : seat._arrHole )
@@ -550,20 +577,23 @@ namespace sw
             archive >> seat._bFolded;
             archive >> seat._bAllIn;
             archive >> seat._bActed;
-            const bool bFlagsValid = seat._bInHand <= SW_TRUE && seat._bFolded <= SW_TRUE && seat._bAllIn <= SW_TRUE && seat._bActed <= SW_TRUE;
-            if ( archive.isError() || bFlagsValid == false )
+            if ( archive.isError() || PokerTableInternal::isSeatValid( seat ) == false )
                 return false;
+            chipTotal += static_cast<int64>( seat._stack ) + seat._contributed + seat._won;
         }
+        // 칩을 더하는 곳(`computePotTotal`, 레이즈 투)이 넘치지 않게 판 전체의 칩이 int32 안이어야 한다.
+        if ( chipTotal > std::numeric_limits<int32>::max() )
+            return false;
 
         uint32 potCount = 0;
-        // 팟마다 자리 수(4) + 금액(4)
-        if ( StateArchiveUtil::readCount( archive, 8, potCount ) == false )
+        // 팟마다 자리 수(4) + 금액(4). 팟은 낸 금액의 단계마다 하나라 자리 수를 넘지 않는다(`makePots`).
+        if ( StateArchiveUtil::readCount( archive, 8, potCount ) == false || count < static_cast<int64>( potCount ) )
             return false;
         table._listLastPot.assign( potCount, PokerPot{} );
         for ( PokerPot& pot : table._listLastPot )
         {
             uint32 eligibleCount = 0;
-            if ( StateArchiveUtil::readCount( archive, 4, eligibleCount ) == false )
+            if ( StateArchiveUtil::readCount( archive, 4, eligibleCount ) == false || count < static_cast<int64>( eligibleCount ) )
                 return false;
             pot._listEligibleSeat.assign( eligibleCount, -1 );
             for ( int32& seat : pot._listEligibleSeat )
@@ -573,6 +603,10 @@ namespace sw
                     return false;
             }
             archive >> pot._amount;
+            // 겹친 자리는 이긴 수를 부풀려 몫을 나누어 준다. 팟은 판의 칩을 넘지 못한다.
+            const bool bPotValid = archive.isOk() && 0 <= pot._amount && pot._amount <= chipTotal && VectorUtil::findDuplicate( pot._listEligibleSeat ) == nullptr;
+            if ( bPotValid == false )
+                return false;
         }
         if ( table._deck.readState( archive ) == false || table._board.readState( archive ) == false )
             return false;
@@ -584,10 +618,17 @@ namespace sw
         archive >> street;
         const bool bButtonValid       = -1 <= table._button && table._button < count;
         const bool bSeatValid         = -1 <= table._currentSeat && table._currentSeat < count;
-        const bool bInvalidTableState = archive.isError() || bButtonValid == false || bSeatValid == false || street > static_cast<uint8>( PokerStreet::HandOver );
-        if ( bInvalidTableState )
+        const bool bBetValid          = 0 <= table._currentBet && table._currentBet <= chipTotal && 0 <= table._lastRaiseSize && static_cast<int64>( table._currentBet ) + table._lastRaiseSize <= std::numeric_limits<int32>::max();
+        const bool bInvalidTableState = archive.isError() || bButtonValid == false || bSeatValid == false || bBetValid == false || street > static_cast<uint8>( PokerStreet::HandOver );
+        // 쇼다운은 홀 둘과 보드를 고정 크기 배열에 담는다(`finishShowdown`) — 보드가 다섯을 넘으면 스택을 넘어 쓴다.
+        if ( bInvalidTableState || table._board.getCount() > PokerTableInternal::kBoardCount )
             return false;
         table._street = static_cast<PokerStreet>( street );
+        // 진행 중인 판은 차례인 자리가 있어야 이어진다. 끝난 판에는 차례가 없다.
+        const bool bHandRunning = table._street != PokerStreet::HandOver;
+        const bool bTurnValid   = bHandRunning ? table._currentSeat >= 0 && table.canAct( table._currentSeat ) : table._currentSeat < 0;
+        if ( bTurnValid == false || PokerTableInternal::areCardsValid( table._listSeat, table._deck, table._board, bHandRunning ) == false )
+            return false;
         table._eventBuffer.clear();
         *this = std::move( table );
         return true;

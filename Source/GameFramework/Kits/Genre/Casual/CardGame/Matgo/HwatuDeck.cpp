@@ -105,6 +105,13 @@ namespace sw
         return HwatuDeckInternal::getTable()._arrInfo[cardID];
     }
 
+    bool HwatuDeck::isDeckCard( const Card& card )
+    {
+        if ( card._id >= kCardCount )
+            return false;
+        return card == makeCard( card._id / HwatuDeckInternal::kCardsPerMonth + 1, card._id % HwatuDeckInternal::kCardsPerMonth );
+    }
+
     Card HwatuDeck::makeCard( int32 month, int32 indexInMonth )
     {
         const uint16         cardID = static_cast<uint16>( ( month - 1 ) * HwatuDeckInternal::kCardsPerMonth + indexInMonth );

@@ -32,15 +32,18 @@ namespace sw
                 return true;
             }
 
-            /** @brief 더미의 카드 번호가 모두 덱(@p cardCount 장) 안에 있는지 반환합니다. */
-            static bool arePileIDsInDeck( const CardPile& pile, size_t cardCount )
+            /** @brief 더미 넷이 덱(@p cardCount 장)을 빠짐없이 한 장씩 나눠 가지는지 반환합니다. 전투 중에 카드는 더미 사이를 옮겨 다닐 뿐 늘거나 줄지 않습니다. */
+            [[nodiscard]] static bool arePilesExactlyDeck( const vector<const CardPile*>& listPile, size_t cardCount )
             {
-                for ( const Card& card : pile.getCards() )
+                size_t heldCount = 0;
+                for ( const CardPile* pPile : listPile )
                 {
-                    if ( card._id >= cardCount )
-                        return false;
+                    heldCount += static_cast<size_t>( pPile->getCount() );
                 }
-                return true;
+                // 카드 번호는 `getCardDef` 가 찾는 덱 index 이고 무늬와 숫자는 쓰지 않는다(`initialize` 가 0 으로 둔다).
+                const auto isDeckCard = [cardCount]( const Card& card )
+                { return card._id < cardCount && card._suit == 0 && card._rank == 0; };
+                return heldCount == cardCount && CardPile::arePilesValid( listPile, isDeckCard );
             }
         };
     } // namespace
@@ -317,7 +320,8 @@ namespace sw
             uint8 kind = 0;
             archive >> kind;
             archive >> intent._amount;
-            if ( kind > static_cast<uint8>( DeckBattleEffectKind::Energy ) )
+            // 음수 공격은 `endTurn` 의 빼기가 더하기로 뒤집혀 체력과 방어를 채운다
+            if ( kind > static_cast<uint8>( DeckBattleEffectKind::Energy ) || intent._amount < 0 )
                 return false;
             intent._kind = static_cast<DeckBattleEffectKind>( kind );
         }
@@ -332,17 +336,17 @@ namespace sw
         archive >> battle._energy;
         archive >> battle._turn;
         archive >> phase;
-        const bool bInvalidBattleState = archive.isError() || phase > static_cast<uint8>( DeckBattlePhase::Lost ) || battle._enemy._intentIndex < 0;
+        const bool bEnemyValid         = 0 <= battle._enemy._hp && 0 <= battle._enemy._block && 0 <= battle._enemy._intentIndex;
+        const bool bPlayerValid        = 0 <= battle._playerHP && battle._playerHP <= _settings._playerHP && 0 <= battle._playerBlock && 0 <= battle._energy && 0 <= battle._turn;
+        const bool bInvalidBattleState = archive.isError() || phase > static_cast<uint8>( DeckBattlePhase::Lost ) || bEnemyValid == false || bPlayerValid == false;
         if ( bInvalidBattleState )
             return false;
         battle._phase = static_cast<DeckBattlePhase>( phase );
-
-        // 더미의 카드 번호가 덱 안이어야 한다(`getCardDef` 가 카탈로그 index 를 찾는다).
-        const size_t cardCount = battle._listDefIndex.size();
-        const bool   bIDsValid = DeckBattleInternal::arePileIDsInDeck( battle._drawPile, cardCount ) && DeckBattleInternal::arePileIDsInDeck( battle._hand, cardCount ) &&
-                               DeckBattleInternal::arePileIDsInDeck( battle._discardPile, cardCount ) &&
-                               DeckBattleInternal::arePileIDsInDeck( battle._exhaustPile, cardCount );
-        if ( bIDsValid == false )
+        // 끝난 판은 끝난 이유가 값에 남는다(이긴 적 없는데 이겼다고 적은 바이트를 받지 않는다).
+        const bool bPhaseValid = ( battle._phase != DeckBattlePhase::Won || battle._enemy._hp == 0 ) && ( battle._phase != DeckBattlePhase::Lost || battle._playerHP == 0 );
+        const bool bPilesValid = battle._hand.getCount() <= _settings._handLimit &&
+                                 DeckBattleInternal::arePilesExactlyDeck( { &battle._drawPile, &battle._hand, &battle._discardPile, &battle._exhaustPile }, battle._listDefIndex.size() );
+        if ( bPhaseValid == false || bPilesValid == false )
             return false;
         *this = std::move( battle );
         return true;
