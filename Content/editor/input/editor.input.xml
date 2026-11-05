@@ -134,6 +134,9 @@
 		<action name="tileMap.picker" trigger="Pressed">
 			<bind source="Key" code="I"/>
 		</action>
+		<action name="tileMap.line" trigger="Pressed">
+			<bind source="Key" code="L"/>
+		</action>
 	</layer>
 
 	<!-- Scene view: gizmo modes, framing, orthographic views, camera bookmarks (1-9 go, Ctrl+1-9 store), ruler (hold M). Read by the viewport. -->

@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/TileMap/Model/TileMapDocument.h"
@@ -134,13 +135,42 @@ SW_TEST_CASE( TileMapDocumentTest, VisualBrushReportsOnlyRealChanges )
     TileMapDocument document;
     Util::selectLayer( document, TileMapDocument::PaintLayer::Visual );
     document.editErase() = true;
-    SW_EXPECT_FALSE( document.applyToolInput( Util::makeBrushInput( 0, 0 ) ) ); // 보이는 칸의 지우기는 아무것도 하지 않는다
+    SW_EXPECT_FALSE( document.applyToolInput( Util::makeBrushInput( 0, 0 ) ) ); // 이미 새 칸의 값이다
 
     document.editErase()       = false;
     document.editPaintHeight() = 3;
     SW_EXPECT_TRUE( document.applyToolInput( Util::makeBrushInput( 0, 0 ) ) );
     SW_EXPECT_EQUAL( 3, static_cast<int32>( document.getMap()._listVisual[0]._height ) );
     SW_EXPECT_FALSE( document.applyToolInput( Util::makeBrushInput( 0, 0 ) ) );
+
+    document.editErase() = true; // 지우기는 새 칸의 값으로 되돌린다
+    SW_EXPECT_TRUE( document.applyToolInput( Util::makeBrushInput( 0, 0 ) ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( document.getMap()._listVisual[0]._height ) );
+}
+
+// 칸은 0..255 를 받는다 - 그대로 자르면 -1 이 255, 300 이 44 가 됐다.
+SW_TEST_CASE( TileMapDocumentTest, VisualBrushClampsHeightAndAtlas )
+{
+    TileMapDocument document;
+    Util::selectLayer( document, TileMapDocument::PaintLayer::Visual );
+    document.editPaintHeight() = 300;
+    document.editAtlasID()     = -1;
+    SW_EXPECT_TRUE( document.applyToolInput( Util::makeBrushInput( 0, 0 ) ) );
+    SW_EXPECT_EQUAL( 255, static_cast<int32>( document.getMap()._listVisual[0]._height ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( document.getMap()._listVisual[0]._atlasID ) );
+}
+
+// 스포이트로 집어 다시 칠해도 틴트가 줄어들지 않는다 - 내림이면 칠할 때마다 한 단계씩 어두워졌다.
+SW_TEST_CASE( TileMapDocumentTest, PickedTintPaintsTheSameBytes )
+{
+    TileMapDocument document;
+    Util::selectLayer( document, TileMapDocument::PaintLayer::Visual );
+    for ( int32 byteValue = 0; byteValue <= 255; ++byteValue )
+    {
+        document.editTint()[0] = static_cast<float32>( byteValue ) / 255.0f;
+        (void)document.applyToolInput( Util::makeBrushInput( 0, 0 ) );
+        SW_REQUIRE_EQUAL( byteValue, static_cast<int32>( document.getMap()._listVisual[0]._tintR ) );
+    }
 }
 
 SW_TEST_CASE( TileMapDocumentTest, WarpPaintReplacesAndErases )
@@ -165,6 +195,41 @@ SW_TEST_CASE( TileMapDocumentTest, WarpPaintReplacesAndErases )
     document.editErase() = true;
     SW_EXPECT_TRUE( document.applyToolInput( Util::makeBrushInput( 2, 2 ) ) );
     SW_EXPECT_TRUE( document.getMap()._listWarp.empty() );
+}
+
+// 빈 대상은 같은 맵 워프다(스키마). 비었다고 칠하면서 지우지 않는다.
+SW_TEST_CASE( TileMapDocumentTest, WarpWithoutTargetIsASameMapWarp )
+{
+    TileMapDocument document;
+    Util::selectLayer( document, TileMapDocument::PaintLayer::Warp );
+    document.editWarpTarget().clear();
+    document.editWarpTileX() = 6;
+    SW_EXPECT_TRUE( document.applyToolInput( Util::makeBrushInput( 2, 2 ) ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, document.getMap()._listWarp.size() );
+    SW_EXPECT_TRUE( document.getMap()._listWarp[0]._targetMap.empty() );
+    SW_EXPECT_EQUAL( 6, document.getMap()._listWarp[0]._targetTileX );
+    SW_EXPECT_FALSE( document.applyToolInput( Util::makeBrushInput( 2, 2 ) ) );
+}
+
+// 다시 칠해도 파일의 짝 id 가 남는다 - 지우고 새로 만들면 양쪽 짝이 끊겼다.
+SW_TEST_CASE( TileMapDocumentTest, RepaintingAWarpKeepsItsPairID )
+{
+    TileMapDocument document;
+    TileMapXMLData  data;
+    SW_REQUIRE_TRUE( data.resetTiles( 4, 4 ) );
+    TileMapXMLData::Warp warp{};
+    warp._tileX     = 1;
+    warp._targetMap = "maps/a.tilemap.xml";
+    warp._pairID    = "door";
+    data._listWarp.push_back( warp );
+    document.applyText( data.toXML() );
+
+    Util::selectLayer( document, TileMapDocument::PaintLayer::Warp );
+    document.editWarpTarget() = "maps/b.tilemap.xml";
+    SW_EXPECT_TRUE( document.applyToolInput( Util::makeBrushInput( 1, 0 ) ) );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, document.getMap()._listWarp.size() );
+    SW_EXPECT_TRUE( document.getMap()._listWarp[0]._pairID == "door" );
+    SW_EXPECT_TRUE( document.getMap()._listWarp[0]._targetMap == "maps/b.tilemap.xml" );
 }
 
 // 빠르게 끌어도 지난 칸에서 이번 칸까지 끊기지 않는다.
@@ -205,16 +270,69 @@ SW_TEST_CASE( TileMapDocumentTest, RectAppliesOnRelease )
     press._bButtonDown = true;
     SW_EXPECT_FALSE( document.applyToolInput( press ) );
     int2 start{};
-    SW_EXPECT_TRUE( document.readRectStart( start ) );
+    SW_EXPECT_TRUE( document.readDragStart( start ) );
     SW_EXPECT_EQUAL( 1, start._x );
 
     TileMapToolInput release;
     release._hoverCell = int2{ 2, 2 };
     SW_EXPECT_TRUE( document.applyToolInput( release ) );
-    SW_EXPECT_FALSE( document.readRectStart( start ) );
+    SW_EXPECT_FALSE( document.readDragStart( start ) );
     SW_EXPECT_EQUAL( 60u, document.countSelectedFlagCells() );
 
     SW_EXPECT_FALSE( document.applyToolInput( release ) ); // 놓은 뒤에는 다시 칠하지 않는다
+}
+
+SW_TEST_CASE( TileMapDocumentTest, LineAppliesOnReleaseAndSkipsOutsideCells )
+{
+    TileMapDocument document;
+    document.setTool( TileMapDocument::PaintTool::Line );
+    document.editErase() = true;
+    TileMapToolInput press;
+    press._hoverCell   = int2{ 0, 0 };
+    press._bClicked    = true;
+    press._bButtonDown = true;
+    SW_EXPECT_FALSE( document.applyToolInput( press ) );
+
+    TileMapToolInput release;
+    release._hoverCell = int2{ 20, 0 }; // 맵 밖까지 그어도 맵 안 칸만 칠한다
+    SW_EXPECT_TRUE( document.applyToolInput( release ) );
+    SW_EXPECT_EQUAL( 56u, document.countSelectedFlagCells() );
+    SW_EXPECT_FALSE( document.applyToolInput( release ) );
+}
+
+// 끌던 중 도구를 바꾸면 획을 버린다 - 남겨 두면 돌아왔을 때 옛 칸에서 이어 칠했다.
+SW_TEST_CASE( TileMapDocumentTest, SwitchingToolDropsTheActiveDrag )
+{
+    TileMapDocument document;
+    document.setTool( TileMapDocument::PaintTool::Rect );
+    TileMapToolInput press;
+    press._hoverCell   = int2{ 1, 1 };
+    press._bClicked    = true;
+    press._bButtonDown = true;
+    (void)document.applyToolInput( press );
+    document.setTool( TileMapDocument::PaintTool::Fill );
+    int2 start{};
+    SW_EXPECT_FALSE( document.readDragStart( start ) );
+
+    document.editErase() = true;
+    document.setTool( TileMapDocument::PaintTool::Brush );
+    SW_EXPECT_TRUE( document.applyToolInput( Util::makeBrushInput( 0, 0 ) ) );
+    document.setTool( TileMapDocument::PaintTool::Picker );
+    document.setTool( TileMapDocument::PaintTool::Brush );
+    (void)document.applyToolInput( Util::makeBrushInput( 4, 0 ) );
+    SW_EXPECT_TRUE( Util::isWalkable( document, 2, 0 ) ); // (0,0) 에서 잇지 않았다
+}
+
+SW_TEST_CASE( TileMapDocumentTest, EveryPressStartsANewStroke )
+{
+    TileMapDocument document;
+    const uint32    first = document.getStrokeSerial();
+    (void)document.applyToolInput( Util::makeBrushInput( 0, 0 ) ); // 끌기만 해서는 그대로다
+    SW_EXPECT_EQUAL( first, document.getStrokeSerial() );
+    TileMapToolInput press = Util::makeBrushInput( 1, 0 );
+    press._bClicked        = true;
+    (void)document.applyToolInput( press );
+    SW_EXPECT_EQUAL( first + 1u, document.getStrokeSerial() );
 }
 
 SW_TEST_CASE( TileMapDocumentTest, FillChangesTheConnectedRegionOnly )
@@ -254,6 +372,26 @@ SW_TEST_CASE( TileMapDocumentTest, PickerReadsTheCellAndReturnsToTheBrush )
     SW_EXPECT_FALSE( document.applyToolInput( click ) );
     SW_EXPECT_TRUE( document.getTool() == TileMapDocument::PaintTool::Brush );
     SW_EXPECT_FALSE( document.isErase() ); // 켜진 칸을 집었다
+}
+
+// 집은 버튼을 누른 채 끌어도 놓을 때까지 칠하지 않는다.
+SW_TEST_CASE( TileMapDocumentTest, PickerHoldDoesNotPaintUntilRelease )
+{
+    TileMapDocument document;
+    document.editErase() = true;
+    SW_REQUIRE_TRUE( document.applyToolInput( Util::makeBrushInput( 0, 0 ) ) );
+    TileMapToolInput release;
+    (void)document.applyToolInput( release );
+
+    document.setTool( TileMapDocument::PaintTool::Picker );
+    TileMapToolInput press = Util::makeBrushInput( 0, 0 );
+    press._bClicked        = true;
+    (void)document.applyToolInput( press ); // 꺼진 칸을 집었으니 지우기다
+    SW_EXPECT_TRUE( document.isErase() );
+    SW_EXPECT_FALSE( document.applyToolInput( Util::makeBrushInput( 3, 3 ) ) );
+    SW_EXPECT_TRUE( Util::isWalkable( document, 3, 3 ) );
+    (void)document.applyToolInput( release );
+    SW_EXPECT_TRUE( document.applyToolInput( Util::makeBrushInput( 3, 3 ) ) );
 }
 
 SW_TEST_CASE( TileMapDocumentTest, DataLayerPaintsAndErasesToItsDefault )
@@ -300,8 +438,11 @@ SW_TEST_CASE( TileMapDocumentTest, EdgeWarpCoversTheEdgeWithoutDuplicates )
     SW_REQUIRE_TRUE( document.paintEdgeWarp( 1 ) );
     SW_EXPECT_EQUAL( size_t{ 8 }, document.getMap()._listWarp.size() );
     SW_EXPECT_TRUE( Util::isWalkable( document, 7, 3 ) ); // 넘어갈 칸은 걸을 수 있다
-    SW_REQUIRE_TRUE( document.paintEdgeWarp( 1 ) );
+    SW_EXPECT_FALSE( document.paintEdgeWarp( 1 ) );       // 바뀐 칸이 없다
     SW_EXPECT_EQUAL( size_t{ 8 }, document.getMap()._listWarp.size() );
+    document.editEdgePreset( 2 )._target = "maps/south.xml";
+    SW_REQUIRE_TRUE( document.paintEdgeWarp( 2 ) );
+    SW_EXPECT_EQUAL( size_t{ 15 }, document.getMap()._listWarp.size() ); // 남동쪽 모서리는 겹친다
 }
 
 SW_TEST_CASE( TileMapDocumentTest, SnapshotRoundTripRestoresTheMap )
@@ -347,4 +488,164 @@ SW_TEST_CASE( TileMapDocumentTest, OversizedResizeIsRefused )
     SW_EXPECT_TRUE( document.applyInputSize() );
     SW_EXPECT_EQUAL( 1, document.getMap()._width );
     SW_EXPECT_EQUAL( 3, document.getMap()._height );
+}
+
+// 크기를 바꿔도 겹치는 칸 · 안에 남는 워프가 남는다(유니티 · Godot 와 같다) - 예전에는 모든 레이어를 지웠다.
+SW_TEST_CASE( TileMapDocumentTest, ResizeKeepsOverlappingCellsAndWarps )
+{
+    TileMapDocument document;
+    document.editErase() = true;
+    (void)document.applyToolInput( Util::makeBrushInput( 1, 1 ) ); // 플래그
+    TileMapToolInput release;
+    (void)document.applyToolInput( release );
+    document.editErase() = false;
+    SW_REQUIRE_TRUE( document.addDataLayer( "Cost", 2 ) );
+    document.editPaintDataValue() = 9;
+    (void)document.applyToolInput( Util::makeBrushInput( 2, 1 ) ); // 데이터
+    (void)document.applyToolInput( release );
+    document.editEdgePreset( 0 )._target = "maps/north.xml";
+    SW_REQUIRE_TRUE( document.paintEdgeWarp( 0 ) ); // y = 0 줄의 8 칸
+
+    document.editInputWidth()  = 3;
+    document.editInputHeight() = 12;
+    SW_REQUIRE_TRUE( document.applyInputSize() );
+    SW_EXPECT_FALSE( Util::isWalkable( document, 1, 1 ) );
+    SW_EXPECT_TRUE( Util::isWalkable( document, 0, 11 ) ); // 새 칸은 기본값이다
+    int32 value = 0;
+    SW_REQUIRE_TRUE( document.getMap().getCellData( 0, 2, 1, value ) );
+    SW_EXPECT_EQUAL( 9, value );
+    SW_REQUIRE_TRUE( document.getMap().getCellData( 0, 2, 11, value ) );
+    SW_EXPECT_EQUAL( 2, value );
+    SW_EXPECT_EQUAL( size_t{ 3 }, document.getMap()._listWarp.size() ); // 맵 밖 워프는 빠진다
+
+    SW_EXPECT_FALSE( document.applyInputSize() ); // 크기가 그대로다
+}
+
+// 스폰이 맵 밖이면 읽기가 거절한다 - 줄인 맵은 저장도 되돌리기도 실패했다.
+SW_TEST_CASE( TileMapDocumentTest, ShrinkingKeepsTheMapReadable )
+{
+    TileMapDocument document;
+    document.editInputWidth()  = 1;
+    document.editInputHeight() = 1;
+    SW_REQUIRE_TRUE( document.applyInputSize() );
+    SW_EXPECT_EQUAL( 0, document.getMap()._spawnX );
+    SW_EXPECT_EQUAL( 0, document.getMap()._spawnY );
+    TileMapXMLData readBack;
+    SW_EXPECT_TRUE( readBack.loadFromXML( document.captureText() ) );
+}
+
+SW_TEST_CASE( TileMapDocumentTest, SpawnInputRefusesCellsOutsideTheMap )
+{
+    TileMapDocument document;
+    document.editInputSpawnX() = 8;
+    SW_EXPECT_FALSE( document.applyInputSpawn() );
+    SW_EXPECT_EQUAL( 1, document.editInputSpawnX() ); // 칸을 되돌린다
+    SW_EXPECT_FALSE( document.getStatus().empty() );
+
+    document.editInputSpawnX() = 7;
+    document.editInputSpawnY() = 0;
+    SW_EXPECT_TRUE( document.applyInputSpawn() );
+    SW_EXPECT_EQUAL( 7, document.getMap()._spawnX );
+    SW_EXPECT_FALSE( document.applyInputSpawn() ); // 그대로다
+
+    TileMapXMLData readBack;
+    SW_REQUIRE_TRUE( readBack.loadFromXML( document.captureText() ) );
+    SW_EXPECT_EQUAL( 7, readBack._spawnX );
+    document.applyText( document.captureText() );
+    SW_EXPECT_EQUAL( 7, document.editInputSpawnX() );
+}
+
+SW_TEST_CASE( TileMapDocumentTest, RemovingDataLayersFallsBackToFlags )
+{
+    TileMapDocument document;
+    SW_EXPECT_FALSE( document.removeSelectedDataLayer() ); // 플래그 레이어를 고른 상태다
+    SW_REQUIRE_TRUE( document.addDataLayer( "A", 0 ) );
+    SW_REQUIRE_TRUE( document.addDataLayer( "B", 0 ) );
+    SW_EXPECT_TRUE( document.removeSelectedDataLayer() );
+    SW_EXPECT_TRUE( document.getPaintLayer() == TileMapDocument::PaintLayer::Data );
+    SW_EXPECT_EQUAL( 0, document.getDataLayerIndex() );
+    SW_EXPECT_TRUE( document.removeSelectedDataLayer() );
+    SW_EXPECT_TRUE( document.getPaintLayer() == TileMapDocument::PaintLayer::Flag );
+    SW_EXPECT_TRUE( document.getMap()._listDataLayer.empty() );
+}
+
+// 없는 파일은 새 문서다 - 앞 문서의 내용으로 시작하면 저장할 때 그 내용이 새 파일에 쓰였고, "저장 안 함" 도 편집을 버리지 못했다.
+SW_TEST_CASE( TileMapDocumentTest, MissingFileStartsANewMap )
+{
+    TileMapDocument document;
+    document.editInputWidth() = 12;
+    SW_REQUIRE_TRUE( document.applyInputSize() );
+    SW_REQUIRE_TRUE( document.addDataLayer( "Depth", 0 ) );
+
+    const string missingPath = FileUtil::joinPath( FileUtil::getTempDirectory(), "SwTileMapDocumentMissing.tilemap.xml" );
+    SW_EXPECT_TRUE( document.loadXML( missingPath ) == ToolAssetLoadResult::Missing );
+    SW_EXPECT_EQUAL( TileMapDocument::kNewMapSide, document.getMap()._width );
+    SW_EXPECT_TRUE( document.getMap()._listDataLayer.empty() );
+    SW_EXPECT_TRUE( document.getPaintLayer() == TileMapDocument::PaintLayer::Flag );
+}
+
+SW_TEST_CASE( TileMapDocumentTest, SaveAndLoadRoundTripWithStatus )
+{
+    const string path = FileUtil::joinPath( FileUtil::getTempDirectory(), "SwTileMapDocumentRoundTrip.tilemap.xml" );
+    {
+        TileMapDocument document;
+        document.editPath()  = path.c_str();
+        document.editErase() = true;
+        (void)document.applyToolInput( Util::makeBrushInput( 1, 1 ) );
+        SW_REQUIRE_TRUE( document.saveXML() );
+        SW_EXPECT_FALSE( document.getStatus().empty() );
+    }
+    TileMapDocument document;
+    SW_EXPECT_TRUE( document.loadXML( path ) == ToolAssetLoadResult::Loaded );
+    SW_EXPECT_FALSE( Util::isWalkable( document, 1, 1 ) );
+    (void)FileUtil::removeFile( path );
+}
+
+SW_TEST_CASE( TileMapDocumentTest, DescribeCellReadsTheSelectedLayer )
+{
+    TileMapDocument document;
+    SW_EXPECT_TRUE( document.describeCell( 99, 0 ).empty() );
+    SW_EXPECT_TRUE( document.describeCell( 1, 2 ) == "1, 2: 1" ); // 걷기 플래그
+    SW_REQUIRE_TRUE( document.addDataLayer( "Depth", 7 ) );
+    SW_EXPECT_TRUE( document.describeCell( 1, 2 ) == "1, 2: 7" );
+    Util::selectLayer( document, TileMapDocument::PaintLayer::Warp );
+    SW_EXPECT_TRUE( document.describeCell( 1, 2 ) == "1, 2" );
+}
+
+// ---------------------------------------------------------------------- 캔버스 보기
+
+SW_TEST_CASE( TileMapCanvasViewTest, WheelKeepsTheCellUnderThePointer )
+{
+    TileMapCanvasView view;
+    const float2      pointer{ 100.0f, 60.0f };
+    const float32     oldCell = view.computeCellSize( 1.0f );
+    const float32     cellX   = ( pointer._x - view.getPan()._x ) / oldCell;
+    view.applyWheel( 3.0f, pointer );
+    SW_EXPECT_NEAR( 1.3f, view.getZoom(), 1e-5f );
+    SW_EXPECT_NEAR( cellX, ( pointer._x - view.getPan()._x ) / view.computeCellSize( 1.0f ), 1e-3f );
+
+    view.applyWheel( -1000.0f, pointer ); // 범위 안에서 멈춘다
+    SW_EXPECT_NEAR( TileMapCanvasView::kMinZoom, view.getZoom(), 1e-5f );
+    view.reset();
+    SW_EXPECT_NEAR( 1.0f, view.getZoom(), 1e-5f );
+    SW_EXPECT_NEAR( TileMapCanvasView::kMargin, view.getPan()._x, 1e-5f );
+}
+
+// 큰 맵은 보이는 칸만 그린다.
+SW_TEST_CASE( TileMapPaintUtilTest, VisibleCellsAreClippedToCanvasAndMap )
+{
+    TileCellRange range = TileMapPaintUtil::computeVisibleCells( float2{ -25.0f, 5.0f }, float2{ 100.0f, 30.0f }, 10.0f, 2048, 2048 );
+    SW_EXPECT_EQUAL( 2, range._min._x );
+    SW_EXPECT_EQUAL( 13, range._max._x );
+    SW_EXPECT_EQUAL( 0, range._min._y );
+    SW_EXPECT_EQUAL( 3, range._max._y );
+
+    range = TileMapPaintUtil::computeVisibleCells( float2{ 0.0f, 0.0f }, float2{ 1000.0f, 1000.0f }, 10.0f, 4, 4 );
+    SW_EXPECT_EQUAL( 4, range._max._x );
+
+    range = TileMapPaintUtil::computeVisibleCells( float2{ -5000.0f, 0.0f }, float2{ 100.0f, 100.0f }, 10.0f, 4, 4 ); // 맵이 화면 밖이다
+    SW_EXPECT_EQUAL( range._min._x, range._max._x );
+
+    range = TileMapPaintUtil::computeVisibleCells( float2{ 0.0f, 0.0f }, float2{ 100.0f, 100.0f }, 0.0f, 4, 4 );
+    SW_EXPECT_EQUAL( 0, range._max._x );
 }

@@ -1645,6 +1645,16 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdField.SpawnX" source="Spawn X">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdField.SpawnY" source="Spawn Y">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdField.Strength" source="Strength">
 			<origins>
 				<item>Source/Editor/Viewport/TerrainBrushTool.cpp</item>
@@ -7545,6 +7555,16 @@
 				<item>Source/Editor/Panels/Settings/GlobalVariablesPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSpriteClip.AddAllCells" source="Add All Cells">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.AddAllCellsTip" source="Add one frame for every grid cell, from the top left.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSpriteClip.AnimationFirstFrameTip"
 		       source="Index of the frame this animation starts on, counting from 0.">
 			<origins>
@@ -7563,9 +7583,19 @@
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSpriteClip.AnimationNameRejectedStatus" source="Animation name not changed: it is empty or already used">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSpriteClip.AnimationNameTip" source="Name game code uses to play this animation.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.AnimationNeedsFrameStatus" source="Animation not added: the clip has no frames">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSpriteClip.AtlasCellTip"
@@ -7574,8 +7604,43 @@
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSpriteClip.AtlasSize" source="Atlas size">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.AtlasSizeTip" source="Atlas width and height in pixels. Pixel borders need it.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSpriteClip.AtlasTip"
 		       source="Path of the texture the frames are cut from. The UV rectangles below are fractions of this image.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.Border" source="Border">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.BorderNeedsAtlasSizeStatus" source="A frame with a border needs the atlas size in pixels">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.BorderTip" source="Nine-slice border of this frame in atlas pixels: left, bottom, right, top.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.DuplicateFrame" source="Duplicate">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.DuplicateFrameTip" source="Insert a copy of the selected frame right after it.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
@@ -7627,9 +7692,44 @@
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorSpriteClip.MoveFrameEarlier" source="Earlier">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.MoveFrameEarlierTip" source="Move the selected frame one place earlier in the play order.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.MoveFrameLater" source="Later">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.MoveFrameLaterTip" source="Move the selected frame one place later in the play order.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorSpriteClip.NoAtlas" source="No atlas">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.PreviewEmpty" source="Nothing to preview: pick an atlas and add a frame.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.PreviewTip" source="Play the selected animation, or every frame when none is selected.">
+			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorSpriteClip.SaveFailedStatus" source="Save failed">
+			<origins>
+				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorSpriteClip.SaveTip" source="Write the frames, animations and keys to the clip file.">
@@ -7720,7 +7820,7 @@
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.ApplySizeTip"
-		       source="Resize the map to the width and height above. This clears every layer.">
+		       source="Resize the map to the width and height above. Overlapping cells are kept; cells and warps outside the new size are removed.">
 			<origins>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
@@ -7795,6 +7895,11 @@
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorTileMap.LineTip" source="Paint the line you drag out when you release the mouse (L)">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorTileMap.LoadTip"
 		       source="Read the map at Path, discarding unsaved edits. Nothing changes if no file is there.">
 			<origins>
@@ -7831,6 +7936,11 @@
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorTileMap.RemoveDataLayerTip" source="Delete the selected data layer and its values.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorTileMap.ResetViewTip"
 		       source="Reset zoom and pan to the start (wheel: zoom, middle or right drag: pan)">
 			<origins>
@@ -7855,6 +7965,21 @@
 		<entry key="EditorTileMap.SizeOutOfRange" source="Size is out of range.">
 			<origins>
 				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.SpawnOutsideStatus" source="Spawn not changed: the cell is outside the map">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.SpawnXTip" source="Cell column where the player starts on this map.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorTileMap.SpawnYTip" source="Cell row where the player starts on this map.">
+			<origins>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.TileSetReadFailed" source="Tile set could not be read: {path}">

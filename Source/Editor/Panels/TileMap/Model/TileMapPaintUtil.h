@@ -9,6 +9,13 @@
 
 namespace sw::editor
 {
+    /** @brief 격자 칸의 범위입니다. `_min` 은 포함, `_max` 는 미포함이고 비었으면 어느 한 축에서 `_min == _max` 입니다. */
+    struct TileCellRange
+    {
+        int2 _min{};
+        int2 _max{};
+    };
+
     /**
      * @struct TileMapPaintUtil
      * @brief 칠하기 획 하나를 셀로 바꿉니다.
@@ -29,6 +36,46 @@ namespace sw::editor
         static void collectFloodFillCells( const vector<uint64>& listCellValue, int32 width, int32 height, const int2& start, vector<int2>& outListCell );
         /** @brief 격자 원점에서 측정한 화면 위치(@p localX, @p localY)가 놓인 셀입니다. 음수 쪽도 내림이라 원점 왼쪽 · 위는 -1 셀입니다. */
         static int2 findCellAt( float32 localX, float32 localY, float32 cellSize );
+        /**
+         * @brief 격자 원점이 캔버스에서 @p pan 만큼 떨어져 있을 때 @p canvasSize 안에 보이는 칸의 범위입니다(맵 안으로 자른다).
+         * @details 맵은 2048 x 2048 까지 된다. 칸마다 사각형 둘을 프레임마다 그리면 드로 리스트가 넘치므로 보이는 칸만 그린다(유니티 씬 뷰 · Godot 타일맵 편집기와 같다).
+         */
+        static TileCellRange computeVisibleCells( const float2& pan, const float2& canvasSize, float32 cellSize, int32 width, int32 height );
+    };
+
+    /**
+     * @class TileMapCanvasView
+     * @brief 칠하는 캔버스의 보기입니다. 격자까지의 거리와 확대를 들고 휠 · 끌기를 받습니다(유니티 씬 뷰 2D).
+     */
+    class TileMapCanvasView
+    {
+    public:
+        /** @brief 확대 1 의 칸 한 변(96 DPI px)입니다. */
+        static constexpr float32 kBaseCellSize = 18.0f;
+        /** @brief 확대 범위입니다. */
+        static constexpr float32 kMinZoom = 0.25f;
+        static constexpr float32 kMaxZoom = 4.0f;
+        /** @brief 캔버스 왼쪽 위와 격자 사이의 처음 여백(px)입니다. */
+        static constexpr float32 kMargin = 4.0f;
+
+        /** @brief 처음 보기(확대 1, 여백만큼 떨어진 격자)로 만듭니다. */
+        TileMapCanvasView();
+
+        /** @brief 처음 보기로 되돌립니다. */
+        void reset();
+        /** @brief 휠 @p wheel 만큼 확대합니다. 캔버스 안 위치 @p pointer 아래의 격자 자리는 그대로 남습니다. */
+        void applyWheel( float32 wheel, const float2& pointer );
+        /** @brief 격자를 @p delta 만큼 옮깁니다. */
+        void applyDrag( const float2& delta );
+
+        const float2& getPan() const { return _pan; }
+        float32       getZoom() const { return _zoom; }
+        /** @brief 화면 배율 @p dpiScale 에서 칸 한 변(px)입니다. */
+        float32 computeCellSize( float32 dpiScale ) const { return kBaseCellSize * dpiScale * _zoom; }
+
+    private:
+        float2  _pan;  ///< 캔버스 왼쪽 위에서 격자 왼쪽 위까지의 거리(px)
+        float32 _zoom; ///< 칸 크기 배율
     };
 } // namespace sw::editor
 

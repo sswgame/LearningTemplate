@@ -1464,6 +1464,16 @@ msgctxt "EdField.SimStickY"
 msgid "Sim Stick Y"
 msgstr "시험 스틱 Y"
 
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.SpawnX"
+msgid "Spawn X"
+msgstr "스폰 X"
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdField.SpawnY"
+msgid "Spawn Y"
+msgstr "스폰 Y"
+
 #: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
 msgctxt "EdField.Speed"
 msgid "Speed"
@@ -7167,6 +7177,16 @@ msgid "Module: {module}"
 msgstr "모듈: {module}"
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.AddAllCells"
+msgid "Add All Cells"
+msgstr "모든 칸 추가"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.AddAllCellsTip"
+msgid "Add one frame for every grid cell, from the top left."
+msgstr "격자의 모든 칸을 왼쪽 위부터 프레임으로 추가합니다."
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AnimationFirstFrameTip"
 msgid "Index of the frame this animation starts on, counting from 0."
 msgstr "이 애니메이션이 시작하는 프레임의 인덱스로, 0부터 셉니다."
@@ -7181,10 +7201,20 @@ msgctxt "EditorSpriteClip.AnimationLoopTip"
 msgid "Repeat from the first frame after the last one; off stops on the last frame."
 msgstr "마지막 프레임 다음에 첫 프레임부터 반복합니다. 끄면 마지막 프레임에서 멈춥니다."
 
+#: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
+msgctxt "EditorSpriteClip.AnimationNameRejectedStatus"
+msgid "Animation name not changed: it is empty or already used"
+msgstr "애니메이션 이름을 바꾸지 않았습니다. 비어 있거나 이미 쓰는 이름입니다."
+
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AnimationNameTip"
 msgid "Name game code uses to play this animation."
 msgstr "게임 코드가 이 애니메이션을 재생할 때 쓰는 이름입니다."
+
+#: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
+msgctxt "EditorSpriteClip.AnimationNeedsFrameStatus"
+msgid "Animation not added: the clip has no frames"
+msgstr "애니메이션을 추가하지 않았습니다. 클립에 프레임이 없습니다."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AtlasCellTip"
@@ -7192,9 +7222,44 @@ msgid "Click a cell to set the selected frame's rectangle to it. Shift+click add
 msgstr "칸을 클릭하면 선택한 프레임의 사각형이 그 칸이 됩니다. Shift+클릭하면 새 프레임을 추가합니다."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.AtlasSize"
+msgid "Atlas size"
+msgstr "아틀라스 크기"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.AtlasSizeTip"
+msgid "Atlas width and height in pixels. Pixel borders need it."
+msgstr "아틀라스의 너비와 높이(픽셀)입니다. 픽셀 테두리에 필요합니다."
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AtlasTip"
 msgid "Path of the texture the frames are cut from. The UV rectangles below are fractions of this image."
 msgstr "프레임을 잘라 낼 텍스처의 경로입니다. 아래 UV 사각형은 이 이미지에 대한 비율입니다."
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.Border"
+msgid "Border"
+msgstr "테두리"
+
+#: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
+msgctxt "EditorSpriteClip.BorderNeedsAtlasSizeStatus"
+msgid "A frame with a border needs the atlas size in pixels"
+msgstr "테두리가 있는 프레임에는 아틀라스 픽셀 크기가 필요합니다."
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.BorderTip"
+msgid "Nine-slice border of this frame in atlas pixels: left, bottom, right, top."
+msgstr "이 프레임의 9-슬라이스 테두리(아틀라스 픽셀)입니다. 왼쪽, 아래, 오른쪽, 위 순서입니다."
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.DuplicateFrame"
+msgid "Duplicate"
+msgstr "복제"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.DuplicateFrameTip"
+msgid "Insert a copy of the selected frame right after it."
+msgstr "고른 프레임의 복사본을 바로 뒤에 넣습니다."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.FrameDurationTip"
@@ -7242,9 +7307,44 @@ msgid "Loading atlas..."
 msgstr "아틀라스를 읽는 중..."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.MoveFrameEarlier"
+msgid "Earlier"
+msgstr "앞으로"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.MoveFrameEarlierTip"
+msgid "Move the selected frame one place earlier in the play order."
+msgstr "고른 프레임을 재생 순서에서 한 칸 앞으로 옮깁니다."
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.MoveFrameLater"
+msgid "Later"
+msgstr "뒤로"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.MoveFrameLaterTip"
+msgid "Move the selected frame one place later in the play order."
+msgstr "고른 프레임을 재생 순서에서 한 칸 뒤로 옮깁니다."
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.NoAtlas"
 msgid "No atlas"
 msgstr "아틀라스 없음"
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.PreviewEmpty"
+msgid "Nothing to preview: pick an atlas and add a frame."
+msgstr "미리 볼 것이 없습니다. 아틀라스를 고르고 프레임을 추가하세요."
+
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
+msgctxt "EditorSpriteClip.PreviewTip"
+msgid "Play the selected animation, or every frame when none is selected."
+msgstr "고른 애니메이션을 재생합니다. 고른 것이 없으면 모든 프레임을 재생합니다."
+
+#: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
+msgctxt "EditorSpriteClip.SaveFailedStatus"
+msgid "Save failed"
+msgstr "저장하지 못했습니다."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.SaveTip"
@@ -7328,8 +7428,8 @@ msgstr "이 가장자리의 모든 칸을 대상 맵으로 가는, 걸을 수 �
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EditorTileMap.ApplySizeTip"
-msgid "Resize the map to the width and height above. This clears every layer."
-msgstr "맵을 위의 너비와 높이로 바꿉니다. 모든 레이어가 지워집니다."
+msgid "Resize the map to the width and height above. Overlapping cells are kept; cells and warps outside the new size are removed."
+msgstr "맵을 위의 너비와 높이로 바꿉니다. 겹치는 칸은 남고, 새 크기 밖의 칸과 워프는 지워집니다."
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EditorTileMap.AtlasIDTip"
@@ -7397,6 +7497,11 @@ msgid "Layer the canvas shows and the tools paint: Visual (height and tint), War
 msgstr "캔버스가 보여 주고 도구가 칠할 레이어입니다. Visual(높이와 틴트), Warp(다른 맵으로 가는 출구), Tile(타일셋 브러시), 또는 게임플레이 플래그 레이어 중 하나입니다."
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EditorTileMap.LineTip"
+msgid "Paint the line you drag out when you release the mouse (L)"
+msgstr "끌어 그은 선을 마우스를 놓을 때 칠합니다(L)."
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EditorTileMap.LoadTip"
 msgid "Read the map at Path, discarding unsaved edits. Nothing changes if no file is there."
 msgstr "저장하지 않은 편집을 버리고 Path 의 맵을 읽습니다. 그 자리에 파일이 없으면 아무것도 바뀌지 않습니다."
@@ -7432,6 +7537,11 @@ msgid "Paint the rectangle you drag out when you release the mouse (U)"
 msgstr "눌러 끈 사각형을 놓을 때 칠합니다 (U)"
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EditorTileMap.RemoveDataLayerTip"
+msgid "Delete the selected data layer and its values."
+msgstr "고른 데이터 레이어와 그 값을 지웁니다."
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EditorTileMap.ResetViewTip"
 msgid "Reset zoom and pan to the start (wheel: zoom, middle or right drag: pan)"
 msgstr "확대와 이동을 처음으로 되돌립니다 (휠: 확대, 가운데 · 오른쪽 끌기: 이동)"
@@ -7455,6 +7565,21 @@ msgstr "{path} 저장됨"
 msgctxt "EditorTileMap.SizeOutOfRange"
 msgid "Size is out of range."
 msgstr "크기가 범위를 벗어났습니다."
+
+#: Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp
+msgctxt "EditorTileMap.SpawnOutsideStatus"
+msgid "Spawn not changed: the cell is outside the map"
+msgstr "스폰을 바꾸지 않았습니다. 맵 밖의 칸입니다."
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EditorTileMap.SpawnXTip"
+msgid "Cell column where the player starts on this map."
+msgstr "플레이어가 이 맵에서 시작하는 칸의 열입니다."
+
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EditorTileMap.SpawnYTip"
+msgid "Cell row where the player starts on this map."
+msgstr "플레이어가 이 맵에서 시작하는 칸의 행입니다."
 
 #: Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp
 msgctxt "EditorTileMap.TileSetReadFailed"

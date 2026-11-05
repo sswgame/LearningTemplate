@@ -4,6 +4,7 @@
 
 #include "Core/Container/unordered_set.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -15,7 +16,6 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
-#include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -30,24 +30,8 @@ namespace sw::editor
     {
         struct TileMapPanelInternal
         {
-            static constexpr Color kCanvasBg{ Color::fromBytes( 28, 28, 32, 255 ) };
-            static constexpr Color kEmptyCell{ Color::fromBytes( 60, 60, 70, 255 ) };
-            static constexpr Color kWarpCell{ Color::fromBytes( 200, 120, 80, 255 ) };
-            static constexpr Color kNoWarpCell{ Color::fromBytes( 50, 50, 55, 255 ) };
-            static constexpr Color kCellBorder{ Color::fromBytes( 20, 20, 24, 255 ) };
-
-            static constexpr Color kBrushPreview{ Color::fromBytes( 255, 255, 255 ) };
-            static constexpr Color kBrushPreviewErase{ Color::fromBytes( 255, 90, 90 ) };
-            static constexpr Color kCellNumberText{ Color::fromBytes( 255, 255, 255 ) };
             /** @brief 플래그 층의 `0xRRGGBB` 색을 불투명 `0xAARRGGBB` 로 만드는 알파 바이트입니다. */
             static constexpr uint32 kOpaqueAlphaMask = 0xFF000000u;
-            /** @brief 확대 1 의 셀 한 변(96 DPI px)입니다. */
-            static constexpr float32 kBaseCellSize = 18.0f;
-            /** @brief 확대 범위입니다. */
-            static constexpr float32 kMinZoom = 0.25f;
-            static constexpr float32 kMaxZoom = 4.0f;
-            /** @brief 캔버스 왼쪽 위와 격자 사이의 처음 여백(px)입니다. */
-            static constexpr float32 kCanvasMargin = 4.0f;
 
             [[nodiscard]] static bool readFlagCells( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -108,14 +92,14 @@ namespace sw::editor
     SW_AUTOMATION_WATCH( editorTileMapDataLayers, "Editor.TileMapDataLayers", "Data layers of the Tile Map Tool's map", &TileMapPanelInternal::readDataLayerCount );
     SW_AUTOMATION_WATCH( editorTileMapDataCells, "Editor.TileMapDataCells", "Cells that differ from the layer default, summed over all data layers of the Tile Map Tool's map",
                          &TileMapPanelInternal::readDataCells );
-    SW_AUTOMATION_WATCH( editorTileMapTool, "Editor.TileMapTool", "Tile Map Tool paint tool: 0 Brush, 1 Rect, 2 Fill, 3 Picker", &TileMapPanelInternal::readPaintTool );
+    SW_AUTOMATION_WATCH( editorTileMapTool, "Editor.TileMapTool", "Tile Map Tool paint tool: 0 Brush, 1 Rect, 2 Fill, 3 Picker, 4 Line", &TileMapPanelInternal::readPaintTool );
 
     TileMapPanel::TileMapPanel()
         : EditorDocumentPanel{ EditorAssetType{ TileMapXMLData::kAssetType }, false }
         , _document{}
         , _atlasThumbnail{}
-        , _canvasPan{ TileMapPanelInternal::kCanvasMargin, TileMapPanelInternal::kCanvasMargin }
-        , _canvasZoom{ 1.0f }
+        , _canvasView{}
+        , _hoverText{}
         , _newDataLayerName{}
         , _newDataLayerDefault{ 0 }
     {
@@ -166,6 +150,7 @@ namespace sw::editor
             {  "Rect",   "tileMap.tool.rect", SW_LOCKEY( "EditorTileMap",   "RectTip" ),   PaintTool::Rect},
             {  "Fill",   "tileMap.tool.fill", SW_LOCKEY( "EditorTileMap",   "FillTip" ),   PaintTool::Fill},
             {"Picker", "tileMap.tool.picker", SW_LOCKEY( "EditorTileMap", "PickerTip" ), PaintTool::Picker},
+            {  "Line",   "tileMap.tool.line", SW_LOCKEY( "EditorTileMap",   "LineTip" ),   PaintTool::Line},
         };
         for ( const ToolButton& button : arrToolButton )
         {
@@ -182,13 +167,10 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EraseTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ResetView" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "ResetView" ) ) )
-        {
-            _canvasPan  = float2{ TileMapPanelInternal::kCanvasMargin, TileMapPanelInternal::kCanvasMargin };
-            _canvasZoom = 1.0f;
-        }
+            _canvasView.reset();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ResetViewTip" ) );
         ImGui::SameLine();
-        ImGui::TextDisabled( "%dx%d  %.0f%%", _document.getMap()._width, _document.getMap()._height, static_cast<float64>( _canvasZoom * 100.0f ) );
+        ImGui::TextDisabled( "%dx%d  %.0f%%  %s", _document.getMap()._width, _document.getMap()._height, static_cast<float64>( _canvasView.getZoom() * 100.0f ), _hoverText.c_str() );
 
         // 유니티 Tile Palette 의 단축키 — `Editor.Panel.tile_map` 레이어의 액션(이 창이 포커스이고 글을 치는 중이 아닐 때만 발화한다).
         if ( EditorInputGUI::wasActionTriggered( "tileMap.brush" ) )
@@ -199,6 +181,8 @@ namespace sw::editor
             _document.setTool( PaintTool::Fill );
         if ( EditorInputGUI::wasActionTriggered( "tileMap.picker" ) )
             _document.setTool( PaintTool::Picker );
+        if ( EditorInputGUI::wasActionTriggered( "tileMap.line" ) )
+            _document.setTool( PaintTool::Line );
     }
 
     void TileMapPanel::drawCanvas()
@@ -214,18 +198,25 @@ namespace sw::editor
 
         updateCanvasView( canvasMin, bHovered, bActive );
 
-        const float32 cell = TileMapPanelInternal::kBaseCellSize * EditorThemeUtil::getDPIScale() * _canvasZoom;
-        const ImVec2  origin( canvasMin.x + _canvasPan._x, canvasMin.y + _canvasPan._y );
+        const float32 cell = _canvasView.computeCellSize( EditorThemeUtil::getDPIScale() );
+        const float2& pan  = _canvasView.getPan();
+        const ImVec2  origin( canvasMin.x + pan._x, canvasMin.y + pan._y );
         const ImVec2  canvasMax( canvasMin.x + canvasSize.x, canvasMin.y + canvasSize.y );
         ImDrawList*   pDl = ImGui::GetWindowDrawList();
         pDl->PushClipRect( canvasMin, canvasMax, true );
-        pDl->AddRectFilled( canvasMin, canvasMax, EditorColorUtil::toImU32( TileMapPanelInternal::kCanvasBg ) );
+        pDl->AddRectFilled( canvasMin, canvasMax, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "DockingEmptyBg" ) ) );
 
-        drawGridCells( pDl, origin, cell );
+        const TileMapXMLData& map = _document.getMap();
+        drawGridCells( pDl, origin, cell, TileMapPaintUtil::computeVisibleCells( pan, float2{ canvasSize.x, canvasSize.y }, cell, map._width, map._height ) );
+
+        // 스폰 자리 — 어느 층을 칠하든 보인다(유니티 씬 뷰의 플레이어 시작 표시).
+        const ImVec2 spawnMin( origin.x + static_cast<float32>( map._spawnX ) * cell, origin.y + static_cast<float32>( map._spawnY ) * cell );
+        pDl->AddRect( spawnMin, ImVec2( spawnMin.x + cell, spawnMin.y + cell ), EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "Marker" ) ), 0.0f, 0, 2.0f );
 
         const int2 hoverCell = TileMapPaintUtil::findCellAt( EditorInputGUI::readPointer()._position._x - origin.x, EditorInputGUI::readPointer()._position._y - origin.y, cell );
         drawBrushPreview( pDl, origin, cell, hoverCell, bHovered );
         pDl->PopClipRect();
+        _hoverText = bHovered ? _document.describeCell( hoverCell._x, hoverCell._y ) : string{};
 
         applyToolInput( hoverCell, bHovered );
     }
@@ -235,28 +226,20 @@ namespace sw::editor
         // 휠은 커서 아래 위치를 붙든 채 확대하고, 가운데 · 오른쪽 끌기는 이동한다(유니티 씬 뷰 2D).
         const EditorPointerState pointer = EditorInputGUI::readPointer();
         if ( bHovered && pointer._wheel != 0.0f )
-        {
-            const float32 oldZoom = _canvasZoom;
-            _canvasZoom           = MathUtil::clamp( _canvasZoom * ( 1.0f + 0.1f * pointer._wheel ), TileMapPanelInternal::kMinZoom, TileMapPanelInternal::kMaxZoom );
-            const float32 mouseX  = pointer._position._x - canvasMin.x;
-            const float32 mouseY  = pointer._position._y - canvasMin.y;
-            const float32 ratio   = _canvasZoom / oldZoom;
-            _canvasPan._x         = mouseX - ( mouseX - _canvasPan._x ) * ratio;
-            _canvasPan._y         = mouseY - ( mouseY - _canvasPan._y ) * ratio;
-        }
+            _canvasView.applyWheel( pointer._wheel, float2{ pointer._position._x - canvasMin.x, pointer._position._y - canvasMin.y } );
         // 화면 이동은 끌기 문턱(입력 맵의 `dragThreshold`)을 넘은 뒤부터다 — 문턱 0 이면 오른쪽 클릭(메뉴)도 한 픽셀 끌기가 됐다(R1).
         if ( bActive && ( pointer.isDragging( EditorMouseButton::Middle ) || pointer.isDragging( EditorMouseButton::Right ) ) )
-        {
-            _canvasPan._x += pointer._delta._x;
-            _canvasPan._y += pointer._delta._y;
-        }
+            _canvasView.applyDrag( float2{ pointer._delta._x, pointer._delta._y } );
     }
 
-    void TileMapPanel::drawGridCells( ImDrawList* pDl, const ImVec2& origin, float32 cell )
+    void TileMapPanel::drawGridCells( ImDrawList* pDl, const ImVec2& origin, float32 cell, const TileCellRange& range )
     {
-        const TileMapXMLData& map       = _document.getMap();
-        const PaintLayer      layer     = _document.getPaintLayer();
-        const TileFlagLayer   flagLayer = _document.getFlagLayer();
+        const ImU32           emptyColor  = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "FrameBg" ) );
+        const ImU32           dataColor   = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Accent" ) ); // 강조색은 데이터에 쓴다
+        const ImU32           borderColor = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Border" ) );
+        const TileMapXMLData& map         = _document.getMap();
+        const PaintLayer      layer       = _document.getPaintLayer();
+        const TileFlagLayer   flagLayer   = _document.getFlagLayer();
         void*                 pAtlasTexture{ nullptr };
         if ( layer == PaintLayer::Tile )
         {
@@ -277,12 +260,12 @@ namespace sw::editor
             }
         }
 
-        for ( int32 tileY = 0; tileY < map._height; ++tileY )
+        for ( int32 tileY = range._min._y; tileY < range._max._y; ++tileY )
         {
-            for ( int32 tileX = 0; tileX < map._width; ++tileX )
+            for ( int32 tileX = range._min._x; tileX < range._max._x; ++tileX )
             {
                 const size_t tileIndex = _document.indexOf( tileX, tileY );
-                ImU32        color     = EditorColorUtil::toImU32( TileMapPanelInternal::kEmptyCell );
+                ImU32        color     = emptyColor;
                 switch ( layer )
                 {
                     case PaintLayer::Visual:
@@ -294,7 +277,7 @@ namespace sw::editor
                     case PaintLayer::Warp:
                     {
                         const uint64 key = ( static_cast<uint64>( static_cast<uint32>( tileY ) ) << 32 ) | static_cast<uint32>( tileX );
-                        color            = uniqueWarpCells.count( key ) ? EditorColorUtil::toImU32( TileMapPanelInternal::kWarpCell ) : EditorColorUtil::toImU32( TileMapPanelInternal::kNoWarpCell );
+                        color            = uniqueWarpCells.count( key ) ? dataColor : emptyColor;
                         break;
                     }
                     case PaintLayer::Tile:
@@ -314,7 +297,7 @@ namespace sw::editor
                         const int32 dataLayerIndex = _document.getDataLayerIndex();
                         int32       value          = 0;
                         if ( map.getCellData( dataLayerIndex, tileX, tileY, value ) && value != map._listDataLayer[static_cast<size_t>( dataLayerIndex )]._defaultValue )
-                            color = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Accent" ) );
+                            color = dataColor;
                         break;
                     }
                 }
@@ -324,22 +307,33 @@ namespace sw::editor
                 pDl->AddRectFilled( p0, p1, color );
                 if ( layer == PaintLayer::Tile )
                     drawTileLayerCell( pDl, p0, p1, tileX, tileY, pAtlasTexture );
-                pDl->AddRect( p0, p1, EditorColorUtil::toImU32( TileMapPanelInternal::kCellBorder ) );
+                pDl->AddRect( p0, p1, borderColor );
             }
         }
     }
 
     void TileMapPanel::drawBrushPreview( ImDrawList* pDl, const ImVec2& origin, float32 cell, const int2& hoverCell, bool bHovered )
     {
-        // 브러시 미리보기 — 커서 아래 셀, Rect 도구로 끄는 중이면 그 사각형(지우기면 빨강).
-        const ImU32 previewColor = EditorColorUtil::toImU32( _document.isErase() ? TileMapPanelInternal::kBrushPreviewErase : TileMapPanelInternal::kBrushPreview );
-        int2        rectStartCell{};
-        if ( _document.readRectStart( rectStartCell ) )
+        // 브러시 미리보기 — 커서 아래 셀, Rect · Line 도구로 끄는 중이면 그 모양(지우기면 빨강).
+        const ImU32 previewColor = EditorColorUtil::toImU32( _document.isErase() ? SW_THEMECOLOR( "Signal", "Error" ) : SW_THEMECOLOR( "Base", "Highlight" ) );
+        int2        dragStartCell{};
+        const bool  bDragging = _document.readDragStart( dragStartCell );
+        if ( bDragging && _document.getTool() == PaintTool::Line )
         {
-            const float32 minX = static_cast<float32>( MathUtil::min( rectStartCell._x, hoverCell._x ) );
-            const float32 minY = static_cast<float32>( MathUtil::min( rectStartCell._y, hoverCell._y ) );
-            const float32 maxX = static_cast<float32>( MathUtil::max( rectStartCell._x, hoverCell._x ) + 1 );
-            const float32 maxY = static_cast<float32>( MathUtil::max( rectStartCell._y, hoverCell._y ) + 1 );
+            vector<int2> listLineCell;
+            TileMapPaintUtil::collectLineCells( dragStartCell, hoverCell, listLineCell );
+            for ( const int2& lineCell : listLineCell )
+            {
+                const ImVec2 p0( origin.x + static_cast<float32>( lineCell._x ) * cell, origin.y + static_cast<float32>( lineCell._y ) * cell );
+                pDl->AddRect( p0, ImVec2( p0.x + cell, p0.y + cell ), previewColor, 0.0f, 0, 2.0f );
+            }
+        }
+        else if ( bDragging )
+        {
+            const float32 minX = static_cast<float32>( MathUtil::min( dragStartCell._x, hoverCell._x ) );
+            const float32 minY = static_cast<float32>( MathUtil::min( dragStartCell._y, hoverCell._y ) );
+            const float32 maxX = static_cast<float32>( MathUtil::max( dragStartCell._x, hoverCell._x ) + 1 );
+            const float32 maxY = static_cast<float32>( MathUtil::max( dragStartCell._y, hoverCell._y ) + 1 );
             pDl->AddRect( ImVec2( origin.x + minX * cell, origin.y + minY * cell ), ImVec2( origin.x + maxX * cell, origin.y + maxY * cell ), previewColor, 0.0f, 0,
                           2.0f );
         }
@@ -357,9 +351,9 @@ namespace sw::editor
         input._bClicked    = bHovered && EditorInputGUI::readPointer().wasPressed( EditorMouseButton::Left );
         input._bButtonDown = ImGui::IsMouseDown( ImGuiMouseButton_Left );
         input._bPainting   = ImGui::IsItemActive() && input._bButtonDown;
-        // 한 프레임에 칠한 셀은 기록 하나다 — 같은 묶음 키라 끄는 동안의 프레임도 한 기록으로 합쳐진다.
+        // 한 프레임에 칠한 셀은 기록 하나다 — 획마다 다른 묶음 키라 끄는 동안의 프레임은 합쳐지고 다음 획은 새 기록이다(같은 키면 다른 편집이 끼기 전까지 모든 획이 한 기록이 됐다).
         if ( _document.applyToolInput( input ) )
-            notifyDocumentEdited( "Paint Tile Map", "tilemap-paint" );
+            notifyDocumentEdited( "Paint Tile Map", formatToString( "tilemap-paint-%#", _document.getStrokeSerial() ) );
     }
 
     void TileMapPanel::drawDataLayerControls()
@@ -370,6 +364,11 @@ namespace sw::editor
             ImGui::InputInt( "##Value", &_document.editPaintDataValue() );
             EditorSelfTestMarks::note( "tileMap.dataLayer.value" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "DataValueTip" ) );
+            const bool bRemoveDataLayer = ImGui::Button( SW_LOCKEY( "EdVerb", "Remove" ) );
+            EditorSelfTestMarks::note( "tileMap.dataLayer.remove" );
+            if ( bRemoveDataLayer && _document.removeSelectedDataLayer() )
+                notifyDocumentEdited( "Remove Tile Map Data Layer" );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "RemoveDataLayerTip" ) );
         }
         ImGui::Separator();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "DataLayers" ) );
@@ -385,7 +384,7 @@ namespace sw::editor
         if ( bAddDataLayer && _document.addDataLayer( _newDataLayerName.c_str(), _newDataLayerDefault ) )
         {
             _newDataLayerName.clear();
-            notifyDocumentEdited( "Add Tile Map Data Layer", "tilemap-datalayer" );
+            notifyDocumentEdited( "Add Tile Map Data Layer" );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "AddDataLayerTip" ) );
     }
@@ -411,7 +410,7 @@ namespace sw::editor
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "NameAlt" ) );
         ImGui::InputText( "##Name", name.data(), name.capacity() );
         if ( ImGui::IsItemDeactivatedAfterEdit() )
-            notifyDocumentEdited( "Edit Tile Map Name", "tilemap-name" );
+            notifyDocumentEdited( "Edit Tile Map Name" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "NameTip" ) );
         // 이름표는 왼쪽 열(인스펙터와 같다) — ImGui 기본(오른쪽 이름표)은 좁은 왼쪽 칸에서 Height · 가장자리 칸을 잘랐다(uiaudit 21).
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Width" ) );
@@ -423,6 +422,16 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "ApplySize" ) ) && _document.applyInputSize() )
             notifyDocumentEdited( "Resize Tile Map" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplySizeTip" ) );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "SpawnX" ) );
+        ImGui::InputInt( "##SpawnX", &_document.editInputSpawnX() );
+        if ( ImGui::IsItemDeactivatedAfterEdit() && _document.applyInputSpawn() )
+            notifyDocumentEdited( "Set Tile Map Spawn" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "SpawnXTip" ) );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "SpawnY" ) );
+        ImGui::InputInt( "##SpawnY", &_document.editInputSpawnY() );
+        if ( ImGui::IsItemDeactivatedAfterEdit() && _document.applyInputSpawn() )
+            notifyDocumentEdited( "Set Tile Map Spawn" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "SpawnYTip" ) );
 
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Load" ) ) );
         const bool bLoad = ImGui::Button( SW_LOCKEY( "EdVerb", "Load" ) );
@@ -431,22 +440,21 @@ namespace sw::editor
         {
             // 적어 넣은 경로에 파일이 없으면 지금 맵을 그대로 둔다(새 문서로 표시하면 편집 중인 맵이 저장 안 한 채 깨끗해진다).
             // 읽기(`EditorToolAssetCommands::loadTileMap`)와 같은 해석으로 묻는다 — 입력란은 리소스 경로와 디스크 경로를 모두 받는다.
-            if ( EditorToolAssetCommands::hasToolDocument( path.c_str() ) )
+            // 다른 문서는 열기 경로로 넘긴다 — 미저장 확인 · 최근 목록 · 되돌리기의 문서 경로가 이 파일을 가리킨다(곧바로 읽으면 열린 문서는 옛 경로로 남았다).
+            if ( EditorToolAssetCommands::hasToolDocument( path.c_str() ) == false )
+                SW_LOG_WARNING_ID( "TileMapPanel.NoTileMap", "No tile map at '%#'", path.c_str() );
+            else if ( string_view( path.c_str() ) == string_view( getLoadedAssetPath() ) )
                 reloadDocument();
             else
-                SW_LOG_WARNING_ID( "TileMapPanel.NoTileMap", "No tile map at '%#'", path.c_str() );
+                requestOpenDocument( path.c_str() );
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "LoadTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
         const bool bSave = ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) );
         EditorSelfTestMarks::note( "tileMap.save" );
+        // 저장 경로 하나를 지난다 — 단추만 따로 쓰면 못 읽은 문서(Malformed)를 덮어쓰고 핫 리로드를 건너뛰었다.
         if ( bSave )
-        {
-            if ( saveXML() )
-                _document.setStatus( SW_LOCKEYFORMAT( "EditorTileMap", "SavedStatus", TextArgumentList().addText( "path", path.c_str() ) ) );
-            else
-                _document.setStatus( SW_LOCKEY( "EditorTileMap", "SaveFailedStatus" ) );
-        }
+            (void)saveDocumentAndClearDirty(); // 실패하면 dirty 가 남고 이유는 상태 줄에 있다
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "SaveTip" ) );
     }
 
@@ -477,7 +485,7 @@ namespace sw::editor
         {
             fixed_string<constant::buffer::kMax128>& warpTarget = _document.editWarpTarget();
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "WarpTarget" ) );
-            ImGui::InputText( "##WarpTarget", warpTarget.data(), warpTarget.capacity() );
+            (void)EditorWidgets::drawAssetPathField( "##WarpTarget", warpTarget, "tile map", ".tilemap.xml", "tileMap.warpTarget" ); // 콘텐츠 브라우저에서 끌어 놓을 수 있다. 비우면 같은 맵이다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "WarpTargetTip" ) );
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "TargetX" ) );
             ImGui::InputInt( "##WarpTileX", &_document.editWarpTileX() );
@@ -491,11 +499,11 @@ namespace sw::editor
             fixed_string<constant::buffer::kMax256>& tileSetInput = _document.editTileSetInput();
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "TileSet" ) );
             ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x - EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Use" ) ) - ImGui::GetStyle().ItemSpacing.x );
-            ImGui::InputText( "##TileSet", tileSetInput.data(), tileSetInput.capacity() );
+            (void)EditorWidgets::drawAssetPathField( "##TileSet", tileSetInput, "tile set", ".tileset.xml", "tileMap.tileSet" ); // 콘텐츠 브라우저에서 끌어 놓을 수 있다
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "TileSetTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Use" ) ) );
             if ( ImGui::Button( SW_LOCKEY( "EdText", "Use" ) ) && _document.useTileSetInput() )
-                notifyDocumentEdited( "Set Tile Set", "tilemap-tileset" );
+                notifyDocumentEdited( "Set Tile Set" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "UseTileSetTip" ) );
             drawTilePalette();
         }
@@ -527,7 +535,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "EdgeTargetYTip" ) );
             ImGui::SameLine();
             if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Apply" ) ) && _document.paintEdgeWarp( edgeIndex ) )
-                notifyDocumentEdited( "Paint Tile Map Edge", "tilemap-edge" );
+                notifyDocumentEdited( "Paint Tile Map Edge" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTileMap", "ApplyEdgeTip" ) );
             ImGui::PopID();
         }
@@ -535,18 +543,15 @@ namespace sw::editor
         ImGui::Separator();
     }
 
-    bool TileMapPanel::saveXML()
+    bool TileMapPanel::saveDocument()
     {
         if ( _document.saveXML() == false )
             return false;
-        clearDocumentDirty();
         syncDocumentUndoBaseline();
+        // 다른 경로로 저장했으면 그 파일이 열린 문서다 — 핫 리로드 · 최근 목록 · 되돌리기의 문서 경로가 옛 파일을 가리키지 않게 한다.
+        if ( string_view( _document.getPath() ) != string_view( getLoadedAssetPath() ) )
+            requestOpenDocument( _document.getPath() );
         return true;
-    }
-
-    bool TileMapPanel::saveDocument()
-    {
-        return saveXML();
     }
 
     void TileMapPanel::drawTilePalette()
@@ -555,7 +560,7 @@ namespace sw::editor
         const vector<TileBrush>& listBrush = tileSet.getBrushes();
         if ( listBrush.empty() )
         {
-            ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorTileMap", "NoTileSet" ) );
+            EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorTileMap", "NoTileSet" ) );
             return;
         }
         // 브러시마다 아틀라스 이미지의 그 셀을 보인다(유니티 Tile Palette). 이미지를 아직 못 읽었으면 이름만.
@@ -602,6 +607,6 @@ namespace sw::editor
         const ImU32  color      = EditorColorUtil::toImU32( Color::fromBytes( static_cast<uint8>( 80 + ( hash & 0x7Fu ) ), static_cast<uint8>( 80 + ( ( hash >> 8 ) & 0x7Fu ) ), static_cast<uint8>( 80 + ( ( hash >> 16 ) & 0x7Fu ) ) ) );
         pDrawList->AddRectFilled( cellMin, cellMax, color );
         const string number = to_string( pVisual->computeCellAt( 0.0f ) );
-        pDrawList->AddText( ImVec2( cellMin.x + 2.0f, cellMin.y + 1.0f ), EditorColorUtil::toImU32( TileMapPanelInternal::kCellNumberText ), number.c_str() );
+        pDrawList->AddText( ImVec2( cellMin.x + 2.0f, cellMin.y + 1.0f ), EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Text" ) ), number.c_str() );
     }
 } // namespace sw::editor

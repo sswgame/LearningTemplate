@@ -96,6 +96,45 @@ namespace sw::editor
             return int2{ -1, -1 };
         return int2{ static_cast<int32>( MathUtil::floor( localX / cellSize ) ), static_cast<int32>( MathUtil::floor( localY / cellSize ) ) };
     }
+
+    TileCellRange TileMapPaintUtil::computeVisibleCells( const float2& pan, const float2& canvasSize, float32 cellSize, int32 width, int32 height )
+    {
+        if ( cellSize <= 0.0f )
+            return TileCellRange{};
+        TileCellRange range{};
+        range._min._x = MathUtil::clamp( static_cast<int32>( MathUtil::floor( -pan._x / cellSize ) ), 0, width );
+        range._min._y = MathUtil::clamp( static_cast<int32>( MathUtil::floor( -pan._y / cellSize ) ), 0, height );
+        range._max._x = MathUtil::clamp( static_cast<int32>( MathUtil::ceil( ( canvasSize._x - pan._x ) / cellSize ) ), range._min._x, width );
+        range._max._y = MathUtil::clamp( static_cast<int32>( MathUtil::ceil( ( canvasSize._y - pan._y ) / cellSize ) ), range._min._y, height );
+        return range;
+    }
+
+    TileMapCanvasView::TileMapCanvasView()
+        : _pan{ kMargin, kMargin }
+        , _zoom{ 1.0f }
+    {
+    }
+
+    void TileMapCanvasView::reset()
+    {
+        _pan  = float2{ kMargin, kMargin };
+        _zoom = 1.0f;
+    }
+
+    void TileMapCanvasView::applyWheel( float32 wheel, const float2& pointer )
+    {
+        const float32 oldZoom = _zoom;
+        _zoom                 = MathUtil::clamp( _zoom * ( 1.0f + 0.1f * wheel ), kMinZoom, kMaxZoom );
+        const float32 ratio   = _zoom / oldZoom;
+        _pan._x               = pointer._x - ( pointer._x - _pan._x ) * ratio;
+        _pan._y               = pointer._y - ( pointer._y - _pan._y ) * ratio;
+    }
+
+    void TileMapCanvasView::applyDrag( const float2& delta )
+    {
+        _pan._x += delta._x;
+        _pan._y += delta._y;
+    }
 } // namespace sw::editor
 
 namespace sw::editor

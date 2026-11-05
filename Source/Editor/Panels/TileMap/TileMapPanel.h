@@ -11,6 +11,7 @@
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Panels/TileMap/Model/TileMapDocument.h"
+#include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
 struct ImDrawList;
 struct ImVec2;
@@ -51,7 +52,7 @@ namespace sw::editor
         uint32 getDataLayerCount() const { return static_cast<uint32>( _document.getMap()._listDataLayer.size() ); }
         /** @brief 모든 데이터 레이어에서 기본값과 다른 칸 수의 합을 반환합니다. 고른 레이어와 상관없습니다. 프로브 `Editor.TileMapDataCells` 가 읽습니다. */
         uint32 countDataCells() const { return _document.countDataCells(); }
-        /** @brief 현재 도구 번호를 반환합니다. 0 은 Brush, 1 은 Rect, 2 는 Fill, 3 은 Picker 입니다. 프로브 `Editor.TileMapTool` 이 읽습니다. */
+        /** @brief 현재 도구 번호를 반환합니다. 0 은 Brush, 1 은 Rect, 2 는 Fill, 3 은 Picker, 4 는 Line 입니다. 프로브 `Editor.TileMapTool` 이 읽습니다. */
         uint32 getPaintToolIndex() const { return static_cast<uint32>( _document.getTool() ); }
 
     protected:
@@ -66,22 +67,19 @@ namespace sw::editor
         void   applyDocumentText( string_view text ) override { _document.applyText( text ); }
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반 클래스가 결과를 보고 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override { return _document.loadDocument(); }
-        /** @brief 경로 칸에 맵을 쓰고, 성공하면 dirty 를 내리고 되돌리기 기준을 맞춥니다. */
-        [[nodiscard]] bool saveXML();
-
         /** @brief 데이터 레이어 값 · 새 데이터 레이어 만들기 컨트롤을 그립니다. */
         void drawDataLayerControls();
         /** @brief Tile 레이어 셀을 그립니다. 아틀라스 이미지의 해당 셀을 그리고, 이미지가 없으면 브러시 색과 규칙이 고른 셀 번호를 그립니다. */
         void drawTileLayerCell( ImDrawList* pDrawList, const ImVec2& cellMin, const ImVec2& cellMax, int32 x, int32 y, void* pAtlasTexture ) const;
-        /** @brief 도구 버튼 행을 그립니다. Brush, Rect, Fill, Picker, Erase, 보기 초기화 버튼이 있습니다. */
+        /** @brief 도구 버튼 행을 그립니다. Brush, Rect, Fill, Picker, Line, Erase, 보기 초기화 버튼이 있습니다. */
         void drawToolBar();
         /** @brief 칠하는 캔버스를 그립니다. 확대, 이동, 미리보기, 도구 입력을 처리합니다. */
         void drawCanvas();
-        /** @brief 휠 확대(커서 아래 셀을 붙든 채)와 가운데 · 오른쪽 끌기 이동을 처리합니다. */
+        /** @brief 휠 확대(커서 아래 셀을 붙든 채)와 가운데 · 오른쪽 끌기 이동을 입력에서 읽어 보기(`_canvasView`)에 넘깁니다. */
         void updateCanvasView( const ImVec2& canvasMin, bool bHovered, bool bActive );
-        /** @brief 현재 층의 셀을 모두 그립니다(타일 층은 아틀라스 이미지, 워프 층은 워프 셀 표시). */
-        void drawGridCells( ImDrawList* pDl, const ImVec2& origin, float32 cell );
-        /** @brief 커서 아래 셀이나 Rect 도구로 끄는 사각형의 브러시 미리보기를 그립니다(지우기면 빨강). */
+        /** @brief 현재 층에서 @p range 의 셀을 그립니다(타일 층은 아틀라스 이미지, 워프 층은 워프 셀 표시). */
+        void drawGridCells( ImDrawList* pDl, const ImVec2& origin, float32 cell, const TileCellRange& range );
+        /** @brief 커서 아래 셀이나 Rect · Line 도구로 끄는 모양의 브러시 미리보기를 그립니다(지우기면 빨강). */
         void drawBrushPreview( ImDrawList* pDl, const ImVec2& origin, float32 cell, const int2& hoverCell, bool bHovered );
         /** @brief 캔버스에서 왼쪽 버튼으로 한 입력을 읽어 모델의 도구에 넘기고, 칠했으면 되돌리기 기록을 남깁니다. */
         void applyToolInput( const int2& hoverCell, bool bHovered );
@@ -91,8 +89,8 @@ namespace sw::editor
     private:
         TileMapDocument                        _document;            ///< 편집 중인 맵과 칠하기 상태 · 명령
         EditorThumbnailCache                   _atlasThumbnail;      ///< 타일셋 아틀라스 이미지
-        float2                                 _canvasPan;           ///< 캔버스 원점에서 격자 왼쪽 위까지의 거리(px)
-        float32                                _canvasZoom;          ///< 셀 크기 배율(휠로 바꾼다)
+        TileMapCanvasView                      _canvasView;          ///< 캔버스의 확대 · 이동
+        string                                 _hoverText;           ///< 커서 아래 칸의 값(캔버스 머리에 보인다)
         fixed_string<constant::buffer::kMax64> _newDataLayerName;    ///< 새 데이터 레이어 이름 입력란
         int32                                  _newDataLayerDefault; ///< 새 데이터 레이어의 기본값 입력란
     };

@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
 #include "Editor/Common/Config/EditorToolDefaults.h"
@@ -16,6 +17,23 @@
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct TileMapDocumentInternal
+        {
+            /** @brief 0..1 틴트를 바이트로 반올림합니다. 내리면 스포이트로 집어 칠할 때마다 값이 한 단계씩 줄어든다. */
+            [[nodiscard]] static uint8 toTintByte( float32 value )
+            {
+                return static_cast<uint8>( MathUtil::round( MathUtil::saturate( value ) * 255.0f ) );
+            }
+
+            [[nodiscard]] static bool isSameVisual( const TileMapXMLData::Visual& first, const TileMapXMLData::Visual& second )
+            {
+                return first._height == second._height && first._atlasID == second._atlasID && first._tintR == second._tintR && first._tintG == second._tintG && first._tintB == second._tintB;
+            }
+        };
+    } // namespace
+
     TileMapDocument::TileMapDocument()
         : _pathBuffer{}
         , _nameBuffer{ "Untitled" }
@@ -31,36 +49,43 @@ namespace sw::editor
         , _listCellValue{}
         , _brushIndex{ 0 }
         , _arrTint{ 180.0f / 255.0f, 200.0f / 255.0f, 160.0f / 255.0f }
-        , _inputWidth{ 8 }
-        , _inputHeight{ 8 }
+        , _inputWidth{ kNewMapSide }
+        , _inputHeight{ kNewMapSide }
+        , _inputSpawnX{ 1 }
+        , _inputSpawnY{ 1 }
         , _paintHeight{ 1 }
         , _atlasID{ 0 }
         , _warpTx{ 1 }
         , _warpTy{ 1 }
         , _lastPaintCell{}
-        , _rectStartCell{}
+        , _dragStartCell{}
         , _dataLayerIndex{ 0 }
         , _paintDataValue{ 1 }
+        , _strokeSerial{ 0 }
         , _layer{ PaintLayer::Flag }
         , _flagLayer{ TileFlagLayer::Walkable }
         , _tool{ PaintTool::Brush }
         , _bErase{ false }
         , _bStrokeActive{ SW_FALSE }
-        , _bRectActive{ SW_FALSE }
+        , _bDragActive{ SW_FALSE }
+        , _bAwaitRelease{ SW_FALSE }
     {
         const EditorToolDefaults& editorToolDefaults = editor::getEditorToolDefaults();
         if ( editorToolDefaults._defaultMap.isSet() )
             _pathBuffer = editorToolDefaults._defaultMap.c_str();
         if ( editorToolDefaults._warpMap.isSet() )
             _warpTarget = editorToolDefaults._warpMap.c_str();
-        (void)resize( 8, 8 ); // 8x8 은 상한 안이다
+        (void)resize( kNewMapSide, kNewMapSide ); // 상한 안이다
     }
 
     ToolAssetLoadResult TileMapDocument::loadDocument()
     {
         // 경로가 없으면 새 맵(기본 8x8)이다. 경로 필드는 첫 로드 때 열린 문서로, Load 단추 때는 적어 넣은 경로로 채워져 있다.
         if ( _pathBuffer.empty() )
+        {
+            startNewMap();
             return ToolAssetLoadResult::Missing;
+        }
         return loadXML( _pathBuffer.c_str() );
     }
 
@@ -68,6 +93,8 @@ namespace sw::editor
     {
         TileMapXMLData            data;
         const ToolAssetLoadResult result = EditorToolAssetCommands::loadTileMap( assetRelativePath, data, _status );
+        if ( result == ToolAssetLoadResult::Missing )
+            startNewMap(); // 새 문서다 - 앞 문서의 내용으로 시작하면 저장할 때 그 내용이 새 파일에 쓰인다
         if ( result != ToolAssetLoadResult::Loaded )
             return result;
 
@@ -76,9 +103,15 @@ namespace sw::editor
         return ToolAssetLoadResult::Loaded;
     }
 
-    bool TileMapDocument::saveXML() const
+    bool TileMapDocument::saveXML()
     {
-        return EditorToolAssetCommands::saveTileMap( _pathBuffer.c_str(), captureMapData() );
+        if ( EditorToolAssetCommands::saveTileMap( _pathBuffer.c_str(), captureMapData() ) == false )
+        {
+            _status = SW_LOCKEY( "EditorTileMap", "SaveFailedStatus" );
+            return false;
+        }
+        _status = SW_LOCKEYFORMAT( "EditorTileMap", "SavedStatus", TextArgumentList().addText( "path", _pathBuffer.c_str() ) );
+        return true;
     }
 
     string TileMapDocument::captureText() const
@@ -99,8 +132,32 @@ namespace sw::editor
         return resize( MathUtil::max( 1, _inputWidth ), MathUtil::max( 1, _inputHeight ) );
     }
 
+    bool TileMapDocument::applyInputSpawn()
+    {
+        if ( isInBounds( _inputSpawnX, _inputSpawnY ) == false )
+        {
+            _inputSpawnX = _map._spawnX;
+            _inputSpawnY = _map._spawnY;
+            _status      = SW_LOCKEY( "EditorTileMap", "SpawnOutsideStatus" );
+            return false;
+        }
+        const bool bEdited = _inputSpawnX != _map._spawnX || _inputSpawnY != _map._spawnY;
+        _map._spawnX       = _inputSpawnX;
+        _map._spawnY       = _inputSpawnY;
+        return bEdited;
+    }
+
     bool TileMapDocument::applyToolInput( const TileMapToolInput& input )
     {
+        if ( input._bClicked )
+            ++_strokeSerial;
+        // 스포이트로 집은 버튼을 놓기 전까지 칠하지 않는다 - 끌면 집은 값으로 지나간 칸을 덮어썼다(유니티 Tile Palette 의 Picker 는 놓을 때 끝난다).
+        if ( _bAwaitRelease )
+        {
+            _bAwaitRelease = input._bButtonDown ? SW_TRUE : SW_FALSE;
+            return false;
+        }
+
         const int2& hoverCell = input._hoverCell;
         bool        bEdited   = false;
         switch ( _tool )
@@ -118,16 +175,20 @@ namespace sw::editor
                 break;
             }
             case PaintTool::Rect:
+            case PaintTool::Line:
             {
                 if ( input._bClicked )
                 {
-                    _rectStartCell = hoverCell;
-                    _bRectActive   = SW_TRUE;
+                    _dragStartCell = hoverCell;
+                    _bDragActive   = SW_TRUE;
                 }
-                if ( _bRectActive && input._bButtonDown == false )
+                if ( _bDragActive && input._bButtonDown == false )
                 {
-                    _bRectActive = SW_FALSE;
-                    TileMapPaintUtil::collectRectCells( _rectStartCell, hoverCell, _map._width, _map._height, _listStrokeCell );
+                    _bDragActive = SW_FALSE;
+                    if ( _tool == PaintTool::Rect )
+                        TileMapPaintUtil::collectRectCells( _dragStartCell, hoverCell, _map._width, _map._height, _listStrokeCell );
+                    else
+                        TileMapPaintUtil::collectLineCells( _dragStartCell, hoverCell, _listStrokeCell );
                     bEdited = paintStrokeCells();
                 }
                 break;
@@ -147,7 +208,8 @@ namespace sw::editor
                 if ( input._bClicked && isInBounds( hoverCell._x, hoverCell._y ) )
                 {
                     pickCell( hoverCell._x, hoverCell._y );
-                    _tool = PaintTool::Brush; // 유니티 Tile Palette 처럼 집은 뒤에는 칠한다
+                    _tool          = PaintTool::Brush; // 유니티 Tile Palette 처럼 집은 뒤에는 칠한다
+                    _bAwaitRelease = input._bButtonDown ? SW_TRUE : SW_FALSE;
                 }
                 break;
             }
@@ -193,10 +255,10 @@ namespace sw::editor
             }
             case PaintLayer::Tile:
             {
-                (void)_map.mapTileCells( _tileSet, _listBrushIndex ); // 모르는 브러시는 빈 셀(0)이다
-                for ( size_t cellIndex = 0; cellIndex < cellCount && cellIndex < _listBrushIndex.size(); ++cellIndex )
+                // 맵의 팔레트 번호로 비교한다 - 타일셋 번호로 옮기면 타일셋에 없는 브러시가 빈 칸과 한 영역이 되어 채우기에 덮였다.
+                for ( size_t cellIndex = 0; cellIndex < cellCount && cellIndex < _map._listTileCell.size(); ++cellIndex )
                 {
-                    outListValue[cellIndex] = _listBrushIndex[cellIndex];
+                    outListValue[cellIndex] = _map._listTileCell[cellIndex];
                 }
                 break;
             }
@@ -294,9 +356,32 @@ namespace sw::editor
         return true;
     }
 
+    bool TileMapDocument::removeSelectedDataLayer()
+    {
+        if ( _layer != PaintLayer::Data || _dataLayerIndex < 0 || static_cast<size_t>( _dataLayerIndex ) >= _map._listDataLayer.size() )
+            return false;
+        _map._listDataLayer.erase( _map._listDataLayer.begin() + _dataLayerIndex );
+        _dataLayerIndex = MathUtil::min( _dataLayerIndex, static_cast<int32>( _map._listDataLayer.size() ) - 1 );
+        if ( _dataLayerIndex < 0 )
+        {
+            _layer          = PaintLayer::Flag;
+            _dataLayerIndex = 0;
+        }
+        return true;
+    }
+
     bool TileMapDocument::useTileSetInput()
     {
-        _map._tileSetPath = _tileSetBuffer.c_str();
+        const string path = _tileSetBuffer.c_str();
+        if ( path == _map._tileSetPath )
+            return false;
+        TileSetAsset probe;
+        if ( path.empty() == false && probe.loadFromAsset( AssetID{ path } ) == false )
+        {
+            _status = SW_LOCKEYFORMAT( "EditorTileMap", "TileSetReadFailed", TextArgumentList().addText( "path", path ) );
+            return false;
+        }
+        _map._tileSetPath = path;
         refreshTileSet();
         return true;
     }
@@ -331,7 +416,7 @@ namespace sw::editor
     bool TileMapDocument::resize( int32 width, int32 height )
     {
         // 크기는 Width/Height 필드에서 그대로 온다. 상한과 그 이유는 `TileMapXMLData::kMaxTileCount` 에 있다.
-        if ( _map.resetTiles( width, height ) == false )
+        if ( TileMapXMLData::isSizeSupported( width, height ) == false )
         {
             _status = SW_LOCKEY( "EditorTileMap", "SizeOutOfRange" );
             SW_LOG_WARNING_ID( "TileMapDocument.TileMapResizeXBeyond", "TileMap resize %#x%# is beyond the supported tile count (%#)",
@@ -340,7 +425,51 @@ namespace sw::editor
         }
         _inputWidth  = width;
         _inputHeight = height;
+        if ( width == _map._width && height == _map._height )
+            return false;
+
+        const TileMapXMLData oldMap = _map;
+        (void)_map.resetTiles( width, height ); // 크기는 위에서 봤다
+        const int32 keptWidth  = MathUtil::min( oldMap._width, width );
+        const int32 keptHeight = MathUtil::min( oldMap._height, height );
+        for ( int32 cellY = 0; cellY < keptHeight; ++cellY )
+        {
+            for ( int32 cellX = 0; cellX < keptWidth; ++cellX )
+            {
+                const size_t oldIndex = static_cast<size_t>( cellY ) * static_cast<size_t>( oldMap._width ) + static_cast<size_t>( cellX );
+                const size_t newIndex = indexOf( cellX, cellY );
+                for ( const TileFlagLayerInfo& info : kArrTileFlagLayerInfo )
+                {
+                    _map.getFlagLayer( info._layer )[newIndex] = oldMap.getFlagLayer( info._layer )[oldIndex];
+                }
+                _map._listVisual[newIndex] = oldMap._listVisual[oldIndex];
+                for ( size_t layerIndex = 0; layerIndex < _map._listDataLayer.size(); ++layerIndex )
+                {
+                    _map._listDataLayer[layerIndex]._listValue[newIndex] = oldMap._listDataLayer[layerIndex]._listValue[oldIndex];
+                }
+                if ( oldIndex < oldMap._listTileCell.size() )
+                    _map._listTileCell[newIndex] = oldMap._listTileCell[oldIndex];
+            }
+        }
+        for ( const TileMapXMLData::Warp& warp : oldMap._listWarp )
+        {
+            if ( isInBounds( warp._tileX, warp._tileY ) )
+                _map._listWarp.push_back( warp );
+        }
+        // 맵 밖 스폰은 읽기가 거절한다 - 그대로 두면 저장도 되돌리기(스냅숏 읽기)도 실패한다.
+        _map._spawnX = MathUtil::min( _map._spawnX, width - 1 );
+        _map._spawnY = MathUtil::min( _map._spawnY, height - 1 );
+        _inputSpawnX = _map._spawnX;
+        _inputSpawnY = _map._spawnY;
         return true;
+    }
+
+    void TileMapDocument::startNewMap()
+    {
+        TileMapXMLData newMap;
+        (void)newMap.resetTiles( kNewMapSide, kNewMapSide ); // 상한 안이다
+        newMap._name = "Untitled";
+        applyMapData( newMap );
     }
 
     TileMapXMLData TileMapDocument::captureMapData() const
@@ -356,6 +485,8 @@ namespace sw::editor
         _nameBuffer  = data._name.c_str();
         _inputWidth  = data._width;
         _inputHeight = data._height;
+        _inputSpawnX = data._spawnX;
+        _inputSpawnY = data._spawnY;
         // 새 맵에 고른 데이터 레이어가 없으면 플래그 레이어로 돌아간다(옛 번호로 다른 레이어를 칠하지 않는다).
         const bool bDataLayerGone = _layer == PaintLayer::Data && ( _dataLayerIndex < 0 || static_cast<size_t>( _dataLayerIndex ) >= _map._listDataLayer.size() );
         if ( bDataLayerGone )
@@ -394,22 +525,19 @@ namespace sw::editor
         {
             case PaintLayer::Visual:
             {
-                if ( _bErase )
-                    return false; // 보이는 칸에는 지울 값이 없다
-                const uint8             height     = static_cast<uint8>( _paintHeight );
-                const uint8             atlasID    = static_cast<uint8>( _atlasID );
-                const uint8             tintR      = static_cast<uint8>( MathUtil::clamp( _arrTint[0] * 255.0f, 0.0f, 255.0f ) );
-                const uint8             tintG      = static_cast<uint8>( MathUtil::clamp( _arrTint[1] * 255.0f, 0.0f, 255.0f ) );
-                const uint8             tintB      = static_cast<uint8>( MathUtil::clamp( _arrTint[2] * 255.0f, 0.0f, 255.0f ) );
-                TileMapXMLData::Visual& tileVisual = _map._listVisual[tileIndex];
-                const bool              bSame      = tileVisual._height == height && tileVisual._atlasID == atlasID && tileVisual._tintR == tintR && tileVisual._tintG == tintG && tileVisual._tintB == tintB;
-                if ( bSame )
+                // 지우기는 새 칸의 값으로 되돌린다(데이터 레이어의 지우기와 같다). 칸은 0..255 를 적는다고 알리므로 묶는다 - 그대로 자르면 -1 이 255, 300 이 44 가 됐다.
+                TileMapXMLData::Visual visual{};
+                if ( _bErase == false )
+                {
+                    visual._height  = static_cast<uint8>( MathUtil::clamp( _paintHeight, 0, 255 ) );
+                    visual._atlasID = static_cast<uint8>( MathUtil::clamp( _atlasID, 0, 255 ) );
+                    visual._tintR   = TileMapDocumentInternal::toTintByte( _arrTint[0] );
+                    visual._tintG   = TileMapDocumentInternal::toTintByte( _arrTint[1] );
+                    visual._tintB   = TileMapDocumentInternal::toTintByte( _arrTint[2] );
+                }
+                if ( TileMapDocumentInternal::isSameVisual( _map._listVisual[tileIndex], visual ) )
                     return false;
-                tileVisual._height  = height;
-                tileVisual._atlasID = atlasID;
-                tileVisual._tintR   = tintR;
-                tileVisual._tintG   = tintG;
-                tileVisual._tintB   = tintB;
+                _map._listVisual[tileIndex] = visual;
                 break;
             }
             case PaintLayer::Flag:
@@ -446,32 +574,11 @@ namespace sw::editor
             }
             case PaintLayer::Warp:
             {
-                const bool                  bWantWarp = _bErase == false && _warpTarget.empty() == false;
-                const TileMapXMLData::Warp* pExisting = nullptr;
-                for ( const TileMapXMLData::Warp& warp : _map._listWarp )
-                {
-                    if ( warp._tileX == x && warp._tileY == y )
-                        pExisting = &warp;
-                }
-                const bool bSame = pExisting != nullptr && bWantWarp && string_view( pExisting->_targetMap ) == string_view( _warpTarget.c_str() ) && pExisting->_targetTileX == _warpTx &&
-                                   pExisting->_targetTileY == _warpTy && _map.getFlagLayer( TileFlagLayer::Walkable )[tileIndex] != 0;
-                const bool bNothingToErase = pExisting == nullptr && bWantWarp == false;
-                if ( bSame || bNothingToErase )
-                    return false;
-                VectorUtil::removeIf( _map._listWarp, [x, y]( const TileMapXMLData::Warp& warp )
-                { return warp._tileX == x && warp._tileY == y; } );
-                if ( bWantWarp )
-                {
-                    TileMapXMLData::Warp warpItem{};
-                    warpItem._tileX       = x;
-                    warpItem._tileY       = y;
-                    warpItem._targetMap   = _warpTarget.c_str();
-                    warpItem._targetTileX = _warpTx;
-                    warpItem._targetTileY = _warpTy;
-                    _map._listWarp.push_back( std::move( warpItem ) );
-                    _map.getFlagLayer( TileFlagLayer::Walkable )[tileIndex] = 1;
-                }
-                break;
+                // 빈 대상은 같은 맵 워프다(`TileWarpFields::_map`). 대상이 비었다고 지우면 집어 온 같은 맵 워프를 칠할 때 도리어 지워졌다.
+                if ( _bErase == false )
+                    return stampWarp( x, y, _warpTarget.c_str(), _warpTx, _warpTy );
+                return VectorUtil::removeIf( _map._listWarp, [x, y]( const TileMapXMLData::Warp& warp )
+                { return warp._tileX == x && warp._tileY == y; } ) > 0;
             }
         }
         return true;
@@ -483,60 +590,47 @@ namespace sw::editor
         if ( bInvalidEdgeTarget )
             return false;
 
-        const EdgeWarpPreset& preset = _arrEdgePreset[edge];
-        auto                  stamp  = [&]( int32 tileX, int32 tileY )
-        {
-            _map.getFlagLayer( TileFlagLayer::Walkable )[indexOf( tileX, tileY )] = 1;
-            VectorUtil::removeIf( _map._listWarp, [tileX, tileY]( const TileMapXMLData::Warp& warp )
-            { return warp._tileX == tileX && warp._tileY == tileY; } );
-            TileMapXMLData::Warp warpItem{};
-            warpItem._tileX       = tileX;
-            warpItem._tileY       = tileY;
-            warpItem._targetMap   = preset._target.c_str();
-            warpItem._targetTileX = preset._tileX;
-            warpItem._targetTileY = preset._tileY;
-            _map._listWarp.push_back( std::move( warpItem ) );
+        const EdgeWarpPreset& preset                   = _arrEdgePreset[edge];
+        const int32           lastX                    = _map._width - 1;
+        const int32           lastY                    = _map._height - 1;
+        const int2            arrCorner[kEdgeCount][2] = {
+            {    int2{ 0, 0 },     int2{ lastX, 0 }},
+            {int2{ lastX, 0 }, int2{ lastX, lastY }},
+            {int2{ 0, lastY }, int2{ lastX, lastY }},
+            {    int2{ 0, 0 },     int2{ 0, lastY }},
         };
-
-        switch ( edge )
+        TileMapPaintUtil::collectRectCells( arrCorner[edge][0], arrCorner[edge][1], _map._width, _map._height, _listStrokeCell );
+        bool bEdited = false;
+        for ( const int2& cell : _listStrokeCell )
         {
-            case 0:
-            {
-                for ( int32 tileX = 0; tileX < _map._width; ++tileX )
-                {
-                    stamp( tileX, 0 );
-                }
-                break;
-            }
-            case 1:
-            {
-                for ( int32 tileY = 0; tileY < _map._height; ++tileY )
-                {
-                    stamp( _map._width - 1, tileY );
-                }
-                break;
-            }
-            case 2:
-            {
-                for ( int32 tileX = 0; tileX < _map._width; ++tileX )
-                {
-                    stamp( tileX, _map._height - 1 );
-                }
-                break;
-            }
-            case 3:
-            {
-                for ( int32 tileY = 0; tileY < _map._height; ++tileY )
-                {
-                    stamp( 0, tileY );
-                }
-                break;
-            }
-            default:
-            {
-                break;
-            }
+            bEdited = stampWarp( cell._x, cell._y, preset._target.c_str(), preset._tileX, preset._tileY ) || bEdited;
         }
+        return bEdited;
+    }
+
+    bool TileMapDocument::stampWarp( int32 x, int32 y, const utf8* pTargetMap, int32 targetX, int32 targetY )
+    {
+        uint8&     walkable = _map.getFlagLayer( TileFlagLayer::Walkable )[indexOf( x, y )];
+        const bool bOpened  = walkable == 0;
+        walkable            = 1;
+        for ( TileMapXMLData::Warp& warp : _map._listWarp )
+        {
+            if ( warp._tileX != x || warp._tileY != y )
+                continue;
+            if ( string_view( warp._targetMap ) == string_view( pTargetMap ) && warp._targetTileX == targetX && warp._targetTileY == targetY )
+                return bOpened;
+            warp._targetMap   = pTargetMap;
+            warp._targetTileX = targetX;
+            warp._targetTileY = targetY;
+            return true;
+        }
+        TileMapXMLData::Warp warpItem{};
+        warpItem._tileX       = x;
+        warpItem._tileY       = y;
+        warpItem._targetMap   = pTargetMap;
+        warpItem._targetTileX = targetX;
+        warpItem._targetTileY = targetY;
+        _map._listWarp.push_back( std::move( warpItem ) );
         return true;
     }
 
@@ -581,12 +675,64 @@ namespace sw::editor
         }
     }
 
-    bool TileMapDocument::readRectStart( int2& outCell ) const
+    void TileMapDocument::setTool( PaintTool tool )
     {
-        if ( _bRectActive == false )
+        if ( tool == _tool )
+            return;
+        _tool          = tool;
+        _bStrokeActive = SW_FALSE;
+        _bDragActive   = SW_FALSE;
+    }
+
+    bool TileMapDocument::readDragStart( int2& outCell ) const
+    {
+        if ( _bDragActive == false )
             return false;
-        outCell = _rectStartCell;
+        outCell = _dragStartCell;
         return true;
+    }
+
+    string TileMapDocument::describeCell( int32 x, int32 y ) const
+    {
+        if ( isInBounds( x, y ) == false )
+            return {};
+        const size_t tileIndex = indexOf( x, y );
+        switch ( _layer )
+        {
+            case PaintLayer::Visual:
+            {
+                const TileMapXMLData::Visual& visual = _map._listVisual[tileIndex];
+                return formatToString( "%#, %#: %# / %#", x, y, static_cast<int32>( visual._height ), static_cast<int32>( visual._atlasID ) );
+            }
+            case PaintLayer::Warp:
+            {
+                for ( const TileMapXMLData::Warp& warp : _map._listWarp )
+                {
+                    if ( warp._tileX == x && warp._tileY == y )
+                        return formatToString( "%#, %#: %# (%#, %#)", x, y, warp._targetMap, warp._targetTileX, warp._targetTileY );
+                }
+                break;
+            }
+            case PaintLayer::Tile:
+            {
+                const string_view brushName = _map.getTileBrushName( x, y );
+                if ( brushName.empty() == false )
+                    return formatToString( "%#, %#: %#", x, y, brushName );
+                break;
+            }
+            case PaintLayer::Flag:
+            {
+                return formatToString( "%#, %#: %#", x, y, static_cast<int32>( _map.getFlagLayer( _flagLayer )[tileIndex] ) );
+            }
+            case PaintLayer::Data:
+            {
+                int32 value = 0;
+                if ( _map.getCellData( _dataLayerIndex, x, y, value ) )
+                    return formatToString( "%#, %#: %#", x, y, value );
+                break;
+            }
+        }
+        return formatToString( "%#, %#", x, y );
     }
 
     bool TileMapDocument::isInBounds( int32 x, int32 y ) const
