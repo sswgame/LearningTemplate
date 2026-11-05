@@ -384,17 +384,6 @@ namespace sw
 
     namespace
     {
-        /** @brief @p container 의 태그 중 하나라도 @p query 의 태그이거나 그 하위 태그이면 true 입니다. */
-        bool matchesAnyTag( const TagContainer& container, const TagContainer& query )
-        {
-            for ( const TagID& queryTag : query.getTags() )
-            {
-                if ( container.hasTag( queryTag, false ) )
-                    return true;
-            }
-            return false;
-        }
-
         struct AbilityComponentInternal
         {
             /** @brief 시간 비교의 허용 오차입니다. 0.1 초씩 더한 시간이 정확히 1 이 되지 않는 부동소수점 오차를 흡수합니다. */
@@ -601,7 +590,7 @@ namespace sw
         for ( const unique_ptr<AbilitySpec>& pSpec : _listAbilitySpec )
         {
             const bool bMatches = pSpec->_bPendingRemove == SW_FALSE &&
-                                  matchesAnyTag( pSpec->_pAbility->getConfig()._abilityTags, tags );
+                                  AbilityComponentInternal::matchesAnyTag( pSpec->_pAbility->getConfig()._abilityTags, tags );
             if ( bMatches )
                 listCandidate.push_back( pSpec->_handle );
         }
@@ -659,7 +648,7 @@ namespace sw
             const bool   bSkip    = spec._bPendingRemove == SW_TRUE || pAbility == pIgnore || pAbility->isActive() == false;
             if ( bSkip )
                 continue;
-            if ( matchesAnyTag( pAbility->getConfig()._abilityTags, tags ) )
+            if ( AbilityComponentInternal::matchesAnyTag( pAbility->getConfig()._abilityTags, tags ) )
                 pAbility->cancelAbility();
         }
     }
@@ -1312,7 +1301,18 @@ namespace sw
             float32 magnitude = 0.0f;
             if ( computeModifierMagnitude( modifier, spec, magnitude ) == false )
                 return false;
-            if ( *current + magnitude < 0.0f )
+            // 같은 어트리뷰트의 변경은 합으로 본다. 하나씩 보면 각각 통과한 뒤 합쳐서 음수가 된다.
+            float32 total = magnitude;
+            for ( const AbilityEffectModifier& earlier : spec._pDef->_listModifier )
+            {
+                if ( &earlier == &modifier )
+                    break;
+                float32    earlierMagnitude = 0.0f;
+                const bool bSameCost        = earlier._op == AttributeModOp::Add && earlier._attribute == modifier._attribute;
+                if ( bSameCost && computeModifierMagnitude( earlier, spec, earlierMagnitude ) )
+                    total += earlierMagnitude;
+            }
+            if ( *current + total < 0.0f )
                 return false;
         }
         return true;
