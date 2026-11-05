@@ -200,7 +200,7 @@ namespace sw
                 outArchive << pilot._spawnPosition;
                 outArchive << pilot._team;
                 outArchive << pilot._deckIndex;
-                outArchive << pilot._deathSlot;
+                outArchive << pilot._nextDeckIndex;
                 outArchive << pilot._mode;
                 outArchive << pilot._comboStage;
                 outArchive << pilot._meleeSlot;
@@ -241,6 +241,31 @@ namespace sw
                     pilot._listWeaponState[index].writeState( outArchive );
                     StateArchiveUtil::writeCountdown( outArchive, pilot._listSpecialCooldown[index] );
                 }
+            }
+
+            /**
+             * @brief 읽은 근접 상태가 지금 기체와 맞는지 봅니다. 콤보 중이면 근접 타임라인이 돌고, 슬롯이 지금 형태의 근접 슬롯이고, 단이 그 슬롯의 기술 수 안이어야 합니다.
+             * @details `stepMelee` 가 `_meleeSlot` 으로 지금 형태의 무기 목록을 그대로 찾는다. 이 값이 어긋나면 목록 밖을 읽는다.
+             */
+            [[nodiscard]] static bool isMeleeStateValid( const MechPilot& pilot )
+            {
+                if ( pilot._comboStage < 0 )
+                    return pilot._meleeSlot == -1 && pilot._melee.isPlaying() == false;
+                const MechDef*                   pMech      = pilot.getMech();
+                const vector<MechWeaponSlotDef>& listWeapon = pMech->_listMode[static_cast<size_t>( pilot._mode )]._listWeapon;
+                const int32                      slotInMode = pilot._meleeSlot - pMech->computeSlotOffset( pilot._mode );
+                if ( pilot._melee.isPlaying() == false || slotInMode < 0 || slotInMode >= static_cast<int32>( listWeapon.size() ) )
+                    return false;
+                const MechWeaponSlotDef& slot = listWeapon[static_cast<size_t>( slotInMode )];
+                return slot._kind == MechWeaponKind::Melee && pilot._comboStage < static_cast<int32>( slot._listMoveID.size() );
+            }
+
+            /** @brief 읽은 조종사 상태와 체력 상태가 맞는지 봅니다. 나와 있으면 살아 있고, 격추됐으면 죽어 있습니다(판이 끝나 내려간 조종사와 출격 전은 어느 쪽이든 됩니다). */
+            [[nodiscard]] static bool isVitalityFittingState( const MechPilot& pilot )
+            {
+                if ( pilot._state == MechPilotState::Active || pilot._state == MechPilotState::Down )
+                    return pilot._vitality.isAlive();
+                return pilot._state != MechPilotState::Destroyed || pilot._vitality.isDead();
             }
 
             /** @brief @p direction 을 @p desired 쪽으로 최대 @p maxRadian 만큼 돌립니다(구면 보간). 둘 다 단위 벡터여야 합니다. */
@@ -345,7 +370,7 @@ namespace sw
         for ( const hashed_string& mechID : config._listMechID )
         {
             const MechDef* pMech = _pMechCatalog->findMech( mechID );
-            if ( pMech == nullptr || pMech->_listMode.empty() )
+            if ( pMech == nullptr || pMech->_listMode.empty() || isMechDataComplete( *pMech ) == false )
                 return -1;
             // 기체를 바꿀 때마다 체력과 부스트를 다시 짜므로(equipMech) 덱의 모든 기체가 지금 범위 안이어야 한다(거절 사유는 각 initialize 가 남긴다).
             Vitality      probeVitality;
@@ -360,8 +385,9 @@ namespace sw
         for ( const hashed_string& skillID : config._listSkillID )
         {
             const MechSkillDef* pSkill = _pMechCatalog->findSkill( skillID );
-            if ( pSkill != nullptr )
-                pilot._listSkill.push_back( pSkill );
+            if ( pSkill == nullptr )
+                return -1; // 오타 하나로 스킬 슬롯이 말없이 당겨지지 않게 거절한다(상태 읽기도 없는 스킬을 거절한다)
+            pilot._listSkill.push_back( pSkill );
         }
         pilot._listSkillRemaining.resize( pilot._listSkill.size() );
         pilot._listSkillCooldown.resize( pilot._listSkill.size() );
@@ -444,7 +470,8 @@ namespace sw
         const bool       bSwapOverCost = pTeam != nullptr && pTeam->_bIgnoreCost == SW_FALSE && target._listDeckMech[static_cast<size_t>( deckIndex )]->_cost > pTeam->_costPool;
         if ( bSwapOverCost )
             return MechSwapResult::OverCost;
-        target._deckIndex = deckIndex;
+        // 장착은 출격할 때 바뀐다. 여기서 `_deckIndex` 를 바꾸면 스냅샷이 새 기체의 슬롯 번호로 옛 기체의 무기 목록을 읽어 목록 밖을 읽었다.
+        target._nextDeckIndex = deckIndex;
         pushEvent( MechArenaEvent::Kind::MechSwapped, pilot, -1, static_cast<float32>( deckIndex ), target._listDeckMech[static_cast<size_t>( deckIndex )]->_id );
         return MechSwapResult::Ok;
     }
@@ -519,11 +546,19 @@ namespace sw
             {
                 for ( int32 pilot = 0; pilot < getPilotCount(); ++pilot )
                 {
-                    const MechPilot& target = _listPilot[static_cast<size_t>( pilot )];
-                    const bool       bWaitingOnThis =
-                        target._state == MechPilotState::Destroyed && target._deathSlot >= 0 && target._listParticipant[static_cast<size_t>( target._deathSlot )] == event._participant;
+                    const MechPilot& target         = _listPilot[static_cast<size_t>( pilot )];
+                    const bool       bWaitingOnThis = target._state == MechPilotState::Destroyed && target._listParticipant[static_cast<size_t>( target._deckIndex )] == event._participant;
                     if ( bWaitingOnThis )
                         spawnPilot( pilot, true );
+                }
+            }
+            else if ( event._kind == MatchEvent::Kind::TeamEliminated )
+            {
+                // 셋 이상의 판에서 게이지가 바닥난 팀은 판이 끝나지 않아도 진 것이다. 내리지 않으면 격추된 조종사가 오지 않을 부활을 기다리고 남은 조종사는 계속 싸웠다.
+                for ( MechPilot& pilot : _listPilot )
+                {
+                    if ( pilot._team == event._team )
+                        retirePilot( pilot );
                 }
             }
         }
@@ -532,13 +567,46 @@ namespace sw
             _bEndReported = SW_TRUE;
             for ( MechPilot& pilot : _listPilot )
             {
-                pilot._state = MechPilotState::Retired;
-                pilot._melee.cancel();
-                pilot._comboStage = -1;
+                retirePilot( pilot );
             }
             _listProjectile.clear();
             pushEvent( MechArenaEvent::Kind::MatchEnded, -1, _match.getWinningTeam(), 0.0f, hashed_string{} );
         }
+    }
+
+    void MechArenaWorld::retirePilot( MechPilot& pilot )
+    {
+        pilot._state = MechPilotState::Retired;
+        pilot._melee.cancel();
+        pilot._comboStage   = -1;
+        pilot._meleeSlot    = -1;
+        pilot._bMeleeQueued = SW_FALSE;
+    }
+
+    bool MechArenaWorld::isMechDataComplete( const MechDef& mech ) const
+    {
+        for ( const MechModeDef& mode : mech._listMode )
+        {
+            for ( const MechWeaponSlotDef& slot : mode._listWeapon )
+            {
+                bool bComplete = true;
+                if ( slot._kind == MechWeaponKind::Shot )
+                    bComplete = _pWeaponCatalog != nullptr && _pWeaponCatalog->find( slot._weaponID ) != nullptr;
+                if ( slot._kind == MechWeaponKind::Melee )
+                {
+                    bComplete = _pMoveCatalog != nullptr && slot._listMoveID.empty() == false;
+                    for ( size_t stage = 0; bComplete && stage < slot._listMoveID.size(); ++stage )
+                    {
+                        bComplete = _pMoveCatalog->find( slot._listMoveID[stage] ) != nullptr;
+                    }
+                }
+                if ( bComplete )
+                    continue;
+                SW_LOG_ERROR_ID( "MechArenaWorld.MechSlotMissingData", "Mech '%#' slot '%#' points at a weapon or move that is not in the catalogs", mech._id.c_str(), slot._id.c_str() );
+                return false;
+            }
+        }
+        return true;
     }
 
     bool MechArenaWorld::equipMech( MechPilot& pilot, int32 pilotIndex )
@@ -546,6 +614,8 @@ namespace sw
         const MechDef* pMech = pilot.getMech();
         if ( pMech == nullptr )
             return true;
+        if ( isMechDataComplete( *pMech ) == false )
+            return false;
         if ( pilot._vitality.initialize( makeMechVitality( *pMech ) ) == false )
             return false;
 
@@ -588,6 +658,7 @@ namespace sw
     void MechArenaWorld::spawnPilot( int32 pilotIndex, bool bRespawn )
     {
         MechPilot& pilot = _listPilot[static_cast<size_t>( pilotIndex )];
+        pilot._deckIndex = pilot._nextDeckIndex;
         if ( equipMech( pilot, pilotIndex ) == false )
         {
             // 덱의 모든 기체를 `addPilot` 이 범위 안인지 봤으므로 여기에 닿지 않는다. 닿으면 그 조종사는 출격시키지 않는다(옛 기체로 대신 뜨지 않는다).
@@ -602,7 +673,6 @@ namespace sw
         pilot._transformCooldown.clear();
         pilot._comboStage   = -1;
         pilot._meleeSlot    = -1;
-        pilot._deathSlot    = -1;
         pilot._bMeleeQueued = SW_FALSE;
         pilot._bGrounded    = pilot._position._y <= 0.0f ? SW_TRUE : SW_FALSE;
         pilot._melee.cancel();
@@ -821,7 +891,6 @@ namespace sw
         if ( result._bDied == SW_TRUE )
         {
             target._state        = MechPilotState::Destroyed;
-            target._deathSlot    = target._deckIndex;
             target._comboStage   = -1;
             target._meleeSlot    = -1;
             target._bMeleeQueued = SW_FALSE;
@@ -1037,6 +1106,8 @@ namespace sw
         restored._match.initialize( restored._bStarted == SW_TRUE ? makeMatchSettings() : MatchSettings{} );
         if ( restored._match.readState( archive ) == false )
             return false;
+        if ( restored._bStarted == SW_TRUE && restored._match.getTeamCount() != static_cast<int32>( teamCount ) )
+            return false;
 
         uint32 pilotCount = 0;
         // 조종사마다 적어도 덱 개수(4) + 기체 이름(4) + 스킬 개수(4) + 위치, 정수, 상태 슬롯(60) 바이트
@@ -1046,6 +1117,11 @@ namespace sw
         for ( uint32 index = 0; index < pilotCount; ++index )
         {
             if ( restored.readPilot( archive, static_cast<int32>( index ), restored._listPilot[index] ) == false )
+                return false;
+        }
+        for ( const MechPilot& pilot : restored._listPilot )
+        {
+            if ( pilot._lockOn.getTarget() > static_cast<uint64>( pilotCount ) ) // 대상 id 는 조종사 번호 + 1 이다(0 은 대상 없음)
                 return false;
         }
 
@@ -1069,7 +1145,10 @@ namespace sw
             archive >> projectile._owner;
             archive >> projectile._target;
             archive >> kind;
-            const bool bValid = archive.isOk() && -1 <= projectile._owner && projectile._owner < static_cast<int32>( pilotCount ) && -1 <= projectile._target &&
+            // 탄속 0 인 탄은 날아가지 않는 광선이라 쏠 때 탄이 되지 않는다. 받으면 사거리가 줄지 않아 영원히 남는다.
+            const bool bValueValid = projectile._speed > 0.0f && projectile._rangeLeft > 0.0f && projectile._homing >= 0.0f && projectile._downValue >= 0.0f && projectile._knockback >= 0.0f &&
+                                     projectile._staggerTime >= 0.0f;
+            const bool bValid = archive.isOk() && bValueValid && -1 <= projectile._owner && projectile._owner < static_cast<int32>( pilotCount ) && -1 <= projectile._target &&
                                 projectile._target < static_cast<int32>( pilotCount ) && kind <= static_cast<uint8>( MechWeaponKind::Special );
             if ( bValid == false )
                 return false;
@@ -1101,7 +1180,7 @@ namespace sw
         archive >> outPilot._spawnPosition;
         archive >> outPilot._team;
         archive >> outPilot._deckIndex;
-        archive >> outPilot._deathSlot;
+        archive >> outPilot._nextDeckIndex;
         archive >> mode;
         archive >> outPilot._comboStage;
         archive >> outPilot._meleeSlot;
@@ -1115,31 +1194,32 @@ namespace sw
         const int32 deckSize   = static_cast<int32>( deckCount );
         const uint8 flags      = static_cast<uint8>( outPilot._bGrounded | outPilot._bMeleeHit | outPilot._bMeleeQueued | bWasOverheated );
         const bool  bHeadValid = archive.isOk() && 0 <= outPilot._team && outPilot._team < static_cast<int32>( _listTeamName.size() ) && 0 <= outPilot._deckIndex &&
-                                outPilot._deckIndex < deckSize && -1 <= outPilot._deathSlot && outPilot._deathSlot < deckSize && -1 <= outPilot._comboStage &&
-                                state <= static_cast<uint8>( MechPilotState::Retired ) && flags <= SW_TRUE;
+                                outPilot._deckIndex < deckSize && 0 <= outPilot._nextDeckIndex && outPilot._nextDeckIndex < deckSize && -1 <= outPilot._comboStage && 0 <= outPilot._kills &&
+                                0 <= outPilot._deaths && state <= static_cast<uint8>( MechPilotState::Retired ) && flags <= SW_TRUE;
         if ( bHeadValid == false )
             return false;
         outPilot._state = static_cast<MechPilotState>( state );
 
-        // 무기, 체력, 부스트 설정은 지금 장착한 기체가 정한다. 격추된 동안은 격추된 슬롯의 기체를 쓴다(교체한 슬롯은 부활할 때 장착된다).
-        const int32 deckIndex = outPilot._deckIndex;
-        outPilot._deckIndex   = outPilot._deathSlot >= 0 ? outPilot._deathSlot : deckIndex;
-        const MechDef* pMech  = outPilot.getMech();
+        // 무기, 체력, 부스트 설정은 지금 장착한 기체가 정한다.
+        const MechDef* pMech = outPilot.getMech();
         if ( equipMech( outPilot, pilotIndex ) == false )
             return false;
-        outPilot._deckIndex      = deckIndex;
         outPilot._bWasOverheated = bWasOverheated;
         outPilot._mode           = mode;
         if ( mode < 0 || mode >= static_cast<int32>( pMech->_listMode.size() ) )
             return false;
 
         uint32 participantCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, participantCount ) == false || ( participantCount != 0 && participantCount != deckCount ) )
+        // 참가자는 `start` 가 덱 슬롯마다 만든다. `stepMatch` 와 `resolveHit` 가 지금 슬롯의 참가자를 그대로 찾는다.
+        if ( StateArchiveUtil::readCount( archive, 4, participantCount ) == false || participantCount != ( _bStarted == SW_TRUE ? deckCount : 0u ) )
             return false;
         outPilot._listParticipant.assign( participantCount, -1 );
         for ( int32& participant : outPilot._listParticipant )
         {
             archive >> participant;
+            const MatchParticipant* pParticipant = _match.findParticipant( participant );
+            if ( archive.isError() || pParticipant == nullptr || pParticipant->_team != outPilot._team )
+                return false;
         }
         archive >> outPilot._position;
         archive >> outPilot._velocity;
@@ -1158,9 +1238,7 @@ namespace sw
 
         uint32 weaponCount = 0;
         archive >> weaponCount;
-        const bool bWeaponStateInvalid = archive.isError() || weaponCount != static_cast<uint32>( outPilot._listWeaponState.size() ) || outPilot._meleeSlot >= static_cast<int32>( weaponCount ) ||
-                                         outPilot._meleeSlot < -1;
-        if ( bWeaponStateInvalid )
+        if ( archive.isError() || weaponCount != static_cast<uint32>( outPilot._listWeaponState.size() ) )
             return false;
         for ( uint32 index = 0; index < weaponCount; ++index )
         {
@@ -1168,7 +1246,7 @@ namespace sw
                  StateArchiveUtil::readCountdown( archive, outPilot._listSpecialCooldown[index] ) == false )
                 return false;
         }
-        return true;
+        return MechArenaWorldInternal::isMeleeStateValid( outPilot ) && MechArenaWorldInternal::isVitalityFittingState( outPilot );
     }
 
     void MechArenaWorld::stepPilot( int32 pilotIndex, float32 deltaTime )

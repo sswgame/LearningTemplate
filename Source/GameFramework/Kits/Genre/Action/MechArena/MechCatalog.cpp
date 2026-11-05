@@ -102,9 +102,11 @@ namespace sw
     uint32 MechCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 루트가 틀리면 파일을 읽지 않는다 — 코스트 상한이 "제한 없음" 으로 남은 채 판이 열리지 않게 한다.
         MechCatalogRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) )
-            _deckCostLimit = rootDef._deckCostLimit;
+        if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
+            return 0;
+        _deckCostLimit = rootDef._deckCostLimit;
 
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
@@ -161,6 +163,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "MechCatalog.MechIdSpeedBelongs", "%#: <Mech id=\"%#\" speed> belongs to each <Mode> when the mech has modes", sourceName, def._id.c_str() );
                 bValid = false;
             }
+            if ( node.findChild( "Weapon" ) )
+            {
+                SW_LOG_ERROR_ID( "MechCatalog.MechWeaponOutsideMode", "%#: <Mech id=\"%#\"> has a <Weapon> outside its <Mode> - it would be dropped", sourceName, def._id.c_str() );
+                bValid = false;
+            }
             for ( ; modeNode; modeNode = modeNode.findNextSibling( "Mode" ) )
             {
                 MechModeDef mode;
@@ -182,7 +189,9 @@ namespace sw
             SW_LOG_ERROR_ID( "MechCatalog.MechIdErrorsNot", "%#: <Mech id=\"%#\"> has errors - not added", sourceName, def._id.c_str() );
             return false;
         }
-        (void)_catalogMech.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        if ( GameDataXML::isNewID( _catalogMech, def._id, sourceName ) == false )
+            return false; // `add` 는 말없이 앞 정의를 덮어쓴다
+        (void)_catalogMech.add( def );
         return true;
     }
 
@@ -194,6 +203,8 @@ namespace sw
         const XMLNode statNode = node.findChild( "Stats" );
         if ( statNode )
             skill._modifier.addAttributes( statNode ); // 속성이 없으면 보정이 없는 것이다
+        if ( GameDataXML::isNewID( _catalogSkill, skill._id, sourceName ) == false )
+            return false; // `add` 는 말없이 앞 정의를 덮어쓴다
         (void)_catalogSkill.add( skill );
         return true;
     }

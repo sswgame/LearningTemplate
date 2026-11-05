@@ -219,7 +219,7 @@ namespace sw
      *        <Mode id="ms" speed="9"><Weapon id="rifle" kind="Shot" weapon="beam_rifle" down="30" homing="90"/>
      *        <Weapon id="saber" kind="Melee" moves="slash1,slash2,slash3" range="4"/></Mode></Mech><Skill id=".." trigger="HealthBelow"><Stats attack="1.2"/></Skill></MechCatalog>`
      * @details `<Mode>` 없이 `<Weapon>` 이 `<Mech>` 바로 아래에 있으면 형태 하나("default")로 읽고, 그 형태의 속도는 `<Mech speed>` 다(`<Mode>` 가 있으면 `<Mech speed>` 는 오류다).
-     *          분류 보정 이름은 "melee", "shot", "down"(받는 다운치 배율)이다. 스키마를 어긴 원소는 넣지 않고 오류로 남긴다.
+     *          분류 보정 이름은 "melee", "shot", "down"(받는 다운치 배율)이다. 스키마를 어긴 원소와 겹친 id 는 넣지 않고 오류로 남긴다. 루트 속성이 틀리면 파일을 읽지 않는다.
      */
     class SW_KIT_API MechCatalog : public XMLCatalog<MechCatalog>
     {

@@ -179,8 +179,8 @@ namespace sw
         Countdown                   _staggerRemaining{};
         Countdown                   _transformCooldown{};
         int32                       _team{ 0 };
-        int32                       _deckIndex{ 0 };  ///< 지금 타는 덱 슬롯
-        int32                       _deathSlot{ -1 }; ///< 격추된 덱 슬롯(그 참가자의 부활을 기다린다)
+        int32                       _deckIndex{ 0 };     ///< 지금 장착한 덱 슬롯. 격추된 동안은 격추된 슬롯이다(무기 상태가 이 기체의 것이고 그 참가자의 부활을 기다린다)
+        int32                       _nextDeckIndex{ 0 }; ///< 다음 출격에 탈 덱 슬롯(`requestMechSwap`). 출격할 때 `_deckIndex` 가 된다
         int32                       _mode{ 0 };
         int32                       _comboStage{ -1 }; ///< 근접 콤보의 지금 단(−1이면 근접 중이 아님)
         int32                       _meleeSlot{ -1 };
@@ -240,7 +240,7 @@ namespace sw
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "MCHA" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2;
 
         MechArenaWorld();
 
@@ -248,7 +248,7 @@ namespace sw
         [[nodiscard]] bool initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog, const MoveCatalog* pMoveCatalog );
         /** @brief 팀을 추가하고 번호를 반환합니다. */
         int32 addTeam( const hashed_string& name );
-        /** @brief 조종사를 추가합니다. 덱이 비었거나, 모르는 기체나 팀이거나, 덱 코스트가 상한을 넘거나, 덱 기체의 체력 설정이 범위 밖이면 −1 을 반환합니다. */
+        /** @brief 조종사를 추가합니다. 덱이 비었거나, 모르는 기체 · 스킬 · 팀이거나, 덱 코스트가 상한을 넘거나, 덱 기체의 체력 설정이 범위 밖이거나, 슬롯의 무기 · 기술이 카탈로그에 없으면 −1 을 반환합니다. */
         int32 addPilot( const MechPilotConfig& config );
         /** @brief 팀 게이지를 정하고(코스트 합) 출격시킵니다. */
         void start();
@@ -316,6 +316,10 @@ namespace sw
         void triggerSkills( int32 pilot, MechSkillTrigger trigger );
         /** @brief 지금 장착한 기체로 체력, 부스트, 록온, 무기를 다시 짭니다. 기체의 체력 설정이 범위 밖이라 거절되면 false 입니다. */
         [[nodiscard]] bool equipMech( MechPilot& pilot, int32 pilotIndex );
+        /** @brief 기체의 모든 슬롯이 가리키는 무기와 근접 기술이 카탈로그에 있는지 봅니다. 없으면 오류를 남기고 false 입니다(쏘려 해도 말없이 아무 일도 없는 슬롯을 만들지 않는다). */
+        [[nodiscard]] bool isMechDataComplete( const MechDef& mech ) const;
+        /** @brief 조종사를 판에서 내립니다(판이 끝났거나 팀이 졌다). */
+        static void retirePilot( MechPilot& pilot );
         /** @brief `start` 가 판에 주는 설정입니다(복원할 때 같은 설정으로 판을 다시 엽니다). */
         MatchSettings makeMatchSettings() const;
         /** @brief 조종사 하나를 읽어 덱과 스킬을 카탈로그에서 찾고, 탄 기체를 장착한 뒤 상태를 덮어씁니다. 바이트가 깨졌으면 false 를 반환합니다. */
