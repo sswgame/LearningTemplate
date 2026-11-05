@@ -227,6 +227,11 @@ namespace sw
         }
 
         // 다른 정의를 가리키는 id 는 모두 읽은 뒤에 확인한다(앞에 적힌 종이 뒤에 적힌 종으로 진화할 수 있다).
+        for ( const MonsterMoveDef& move : _moveCatalog.getAll() )
+        {
+            if ( move._weatherID.empty() == false && _weatherCatalog.find( move._weatherID ) == nullptr )
+                SW_LOG_ERROR_ID( "MonsterCollectorCatalog.MoveCallsUnknownWeather", "%#: move '%#' calls unknown weather '%#'", sourceName, move._id.c_str(), move._weatherID.c_str() );
+        }
         for ( const MonsterSpeciesDef& species : _speciesCatalog.getAll() )
         {
             for ( const MonsterLearnEntry& learn : species._listLearn )
@@ -277,8 +282,7 @@ namespace sw
             MonsterWeatherDef def;
             if ( XMLFields::readFields( node, def, sourceName ) == false )
                 return false;
-            (void)_weatherCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-            return true;
+            return GameDataXML::addUnique( def, sourceName, _weatherCatalog );
         }
         if ( XMLReadUtil::isElement( name, "Encounter" ) )
             return loadEncounter( node, sourceName );
@@ -303,8 +307,7 @@ namespace sw
             SW_LOG_ERROR_ID( "MonsterCollectorCatalog.MoveCannotChangeHP", "%#: move '%#' cannot change HP by stages", sourceName, def._id.c_str() );
             return false;
         }
-        (void)_moveCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return true;
+        return GameDataXML::addUnique( def, sourceName, _moveCatalog );
     }
 
     bool MonsterCollectorCatalog::loadSpecies( const XMLNode& node, string_view sourceName )
@@ -336,8 +339,7 @@ namespace sw
         // 레벨 순서가 흐트러져 있어도 "그 레벨까지 배운 마지막 네 개"가 맞게 나오도록 정렬한다. 같은 레벨은 적힌 순서를 지킨다.
         VectorUtil::stableSort( def._listLearn, []( const MonsterLearnEntry& lhs, const MonsterLearnEntry& rhs )
         { return lhs._level < rhs._level; } );
-        (void)_speciesCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return true;
+        return GameDataXML::addUnique( def, sourceName, _speciesCatalog );
     }
 
     bool MonsterCollectorCatalog::loadEncounter( const XMLNode& node, string_view sourceName )
@@ -348,8 +350,6 @@ namespace sw
         {
             bValid = GameDataXML::readInto( child, sourceName, def._listSlot ) && bValid;
         }
-        if ( bValid )
-            (void)_encounterCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return bValid;
+        return bValid && GameDataXML::addUnique( def, sourceName, _encounterCatalog );
     }
 } // namespace sw

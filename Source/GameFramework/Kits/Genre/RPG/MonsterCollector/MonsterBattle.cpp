@@ -107,13 +107,18 @@ namespace sw
 
     void MonsterBattle::setWeather( const hashed_string& weatherID, int32 turns )
     {
-        const bool bClearWeather = weatherID.empty() || _pCatalog == nullptr || _pCatalog->findWeather( weatherID ) == nullptr;
-        if ( bClearWeather )
+        if ( weatherID.empty() )
         {
             if ( _weatherID.empty() == false )
                 pushEvent( MonsterBattleEvent::Kind::WeatherEnded, kPlayerSide, 0, _weatherID );
             _weatherID    = hashed_string{};
             _weatherTurns = 0;
+            return;
+        }
+        if ( _pCatalog == nullptr || _pCatalog->findWeather( weatherID ) == nullptr )
+        {
+            // 없애면 오타 하나가 지금 날씨를 말없이 지운다.
+            SW_LOG_ERROR_ID( "MonsterBattle.UnknownWeather", "MonsterBattle: refused unknown weather '%#'", weatherID.c_str() );
             return;
         }
         _weatherID    = weatherID;
@@ -130,11 +135,22 @@ namespace sw
         return entry._listMonster[static_cast<size_t>( entry._activeIndex )];
     }
 
+    bool MonsterBattle::isInProgress() const
+    {
+        return _outcome == MonsterBattleOutcome::Ongoing && _pCatalog != nullptr && _arrSide[kPlayerSide]._listMonster.empty() == false && _arrSide[kFoeSide]._listMonster.empty() == false;
+    }
+
     bool MonsterBattle::setAction( int32 side, const MonsterAction& action )
     {
-        const bool bActionRejected = side < 0 || side >= kSideCount || _outcome != MonsterBattleOutcome::Ongoing || _arrSide[side]._bNeedsSwitch;
-        if ( bActionRejected )
+        const bool bActionRejected = side < 0 || side >= kSideCount || isInProgress() == false || _arrSide[side]._bNeedsSwitch;
+        if ( bActionRejected || canUseAction( side, action ) == false )
             return false;
+        _arrSide[side]._action = action;
+        return true;
+    }
+
+    bool MonsterBattle::canUseAction( int32 side, const MonsterAction& action ) const
+    {
         const Side& entry = _arrSide[side];
         switch ( action._kind )
         {
@@ -164,16 +180,33 @@ namespace sw
             {
                 if ( _bWild == false || side != kPlayerSide )
                     return false;
+                if ( action._kind == MonsterActionKind::Ball && action._ballMultiplier <= 0.0f )
+                    return false;
                 break;
             }
         }
-        _arrSide[side]._action = action;
         return true;
+    }
+
+    bool MonsterBattle::isSideStateValid( int32 side ) const
+    {
+        const Side& entry = _arrSide[side];
+        // 시작 전(개체 없음)의 나선 자리는 0 이다.
+        if ( entry._listMonster.empty() )
+            return entry._activeIndex == 0 && entry._bNeedsSwitch == false && entry._action._kind == MonsterActionKind::None;
+        if ( entry._activeIndex < 0 || entry._activeIndex >= static_cast<int32>( entry._listMonster.size() ) || canUseAction( side, entry._action ) == false )
+            return false;
+        if ( _outcome != MonsterBattleOutcome::Ongoing )
+            return true;
+        // 진행 중에는 나선 개체가 살아 있거나, 쓰러졌으면 대신 나설 개체가 있어 교체를 기다린다.
+        if ( entry._bNeedsSwitch == false )
+            return getActive( side ).isFainted() == false;
+        return findFirstUsable( side ) >= 0;
     }
 
     void MonsterBattle::resolveRound()
     {
-        if ( _outcome != MonsterBattleOutcome::Ongoing || _pCatalog == nullptr )
+        if ( isInProgress() == false )
             return;
         if ( _arrSide[kPlayerSide]._bNeedsSwitch || _arrSide[kFoeSide]._bNeedsSwitch )
             return;
@@ -301,11 +334,9 @@ namespace sw
         --moveSlot._pp;
         pushEvent( MonsterBattleEvent::Kind::MoveUsed, side, slot, pMove->_id );
 
-        if ( pMove->_weatherID.empty() == false )
-        {
-            const MonsterWeatherDef* pWeather = _pCatalog->findWeather( pMove->_weatherID );
-            setWeather( pMove->_weatherID, pWeather != nullptr ? pWeather->_turns : 5 );
-        }
+        // 모르는 날씨는 카탈로그 읽기가 이미 오류로 알렸다.
+        if ( const MonsterWeatherDef* pWeather = _pCatalog->findWeather( pMove->_weatherID ) )
+            setWeather( pMove->_weatherID, pWeather->_turns );
 
         const bool bTargetsFoe = pMove->isDamaging() || pMove->_status != MonsterStatus::None ||
                                  ( pMove->_statStages != 0 && pMove->_statTarget == MonsterEffectTarget::Foe );
@@ -748,7 +779,7 @@ namespace sw
             outArchive << side._action._index;
             outArchive << static_cast<uint8>( side._action._kind );
             outArchive << side._activeIndex;
-            outArchive << side._bNeedsSwitch;
+            outArchive << static_cast<uint8>( side._bNeedsSwitch ? SW_TRUE : SW_FALSE );
         }
         _turnOrder.writeState( outArchive );
         StateArchiveUtil::writeRandom( outArchive, _random );
@@ -757,7 +788,7 @@ namespace sw
         outArchive << _weatherTurns;
         outArchive << _escapeAttempts;
         outArchive << static_cast<uint8>( _outcome );
-        outArchive << _bWild;
+        outArchive << static_cast<uint8>( _bWild ? SW_TRUE : SW_FALSE );
     }
 
     bool MonsterBattle::readState( Archive& archive )
@@ -774,13 +805,8 @@ namespace sw
             side._listMonster.assign( monsterCount, MonsterInstance{} );
             for ( MonsterInstance& monster : side._listMonster )
             {
-                if ( monster.readState( archive ) == false || _pCatalog->findSpecies( monster._speciesID ) == nullptr )
+                if ( monster.readState( archive ) == false || monster.isKnownTo( *_pCatalog ) == false )
                     return false;
-                for ( const MonsterMoveSlot& slot : monster._arrMove )
-                {
-                    if ( slot.isEmpty() == false && _pCatalog->findMove( slot._moveID ) == nullptr )
-                        return false;
-                }
             }
             for ( int32& stage : side._arrStage )
             {
@@ -788,20 +814,22 @@ namespace sw
                 if ( ( kMinStage <= stage && stage <= kMaxStage ) == false )
                     return false;
             }
-            uint8 kind = 0;
+            uint8 kind         = 0;
+            uint8 bNeedsSwitch = SW_FALSE;
             archive >> side._action._ballMultiplier;
             archive >> side._action._index;
             archive >> kind;
             archive >> side._activeIndex;
-            archive >> side._bNeedsSwitch;
-            const int32 monsterLimit = MathUtil::max( 1, static_cast<int32>( monsterCount ) );
-            const bool  bValid       = archive.isOk() && kind <= static_cast<uint8>( MonsterActionKind::Run ) && 0 <= side._activeIndex && side._activeIndex < monsterLimit;
+            archive >> bNeedsSwitch; // bool 칸에 바로 읽으면 2 같은 바이트가 그대로 들어가 미정의 동작이다
+            const bool bValid = archive.isOk() && kind <= static_cast<uint8>( MonsterActionKind::Run ) && bNeedsSwitch <= SW_TRUE;
             if ( bValid == false )
                 return false;
             side._action._kind = static_cast<MonsterActionKind>( kind );
+            side._bNeedsSwitch = bNeedsSwitch == SW_TRUE;
         }
 
         uint8 outcome = 0;
+        uint8 bWild   = SW_FALSE;
         if ( restored._turnOrder.readState( archive ) == false || StateArchiveUtil::readRandom( archive, restored._random ) == false )
             return false;
         if ( restored._captured.readState( archive ) == false || StateArchiveUtil::readName( archive, restored._weatherID ) == false )
@@ -809,12 +837,20 @@ namespace sw
         archive >> restored._weatherTurns;
         archive >> restored._escapeAttempts;
         archive >> outcome;
-        archive >> restored._bWild;
-        const bool bWeatherKnown = restored._weatherID.empty() || _pCatalog->findWeather( restored._weatherID ) != nullptr;
-        const bool bValid        = archive.isOk() && bWeatherKnown && outcome <= static_cast<uint8>( MonsterBattleOutcome::Escaped );
+        archive >> bWild;
+        // 날씨가 없으면 턴도 0 이고, 있으면 남은 턴이거나 끝없음(-1)이다.
+        const bool bWeatherValid  = restored._weatherID.empty() ? restored._weatherTurns == 0 : ( _pCatalog->findWeather( restored._weatherID ) != nullptr && ( restored._weatherTurns == -1 || restored._weatherTurns > 0 ) );
+        const bool bCapturedValid = restored._captured._speciesID.empty() ? outcome != static_cast<uint8>( MonsterBattleOutcome::Captured ) : restored._captured.isKnownTo( *_pCatalog );
+        const bool bValid         = archive.isOk() && bWeatherValid && bCapturedValid && outcome <= static_cast<uint8>( MonsterBattleOutcome::Escaped ) && bWild <= SW_TRUE && restored._escapeAttempts >= 0;
         if ( bValid == false )
             return false;
         restored._outcome = static_cast<MonsterBattleOutcome>( outcome );
+        restored._bWild   = bWild == SW_TRUE;
+        for ( int32 side = 0; side < kSideCount; ++side )
+        {
+            if ( restored.isSideStateValid( side ) == false )
+                return false;
+        }
         restored._eventBuffer.clear();
         *this = std::move( restored );
         return true;

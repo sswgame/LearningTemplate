@@ -60,8 +60,10 @@ namespace sw
         int32 findMoveSlot( const hashed_string& moveID ) const;
         /** @brief 개체 하나(종, 성격, 별명, 기술 슬롯, 개체값, 노력치, 능력치, 경험치, 레벨, HP, 친밀도, 상태이상)를 씁니다. 보관함과 전투가 함께 씁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다(종과 기술이 카탈로그에 있는지는 호출하는 쪽이 확인합니다). */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 바이트가 깨졌거나 값이 범위 밖이면 상태를 바꾸지 않고 false 를 반환합니다(id 가 카탈로그에 있는지는 `isKnownTo` 입니다). */
         [[nodiscard]] bool readState( Archive& archive );
+        /** @brief 종, 성격, 기술이 모두 카탈로그에 있는지입니다. 카탈로그를 가진 쪽이 읽은 뒤에 봅니다. */
+        [[nodiscard]] bool isKnownTo( const MonsterCollectorCatalog& catalog ) const;
     };
 } // namespace sw
 
@@ -98,7 +100,8 @@ namespace sw
         static constexpr int32 kMaxEvPerStat       = 252;
         static constexpr int32 kMaxEvTotal         = 510;
         static constexpr int32 kMaxFriendship      = 255;
-        static constexpr int32 kFriendshipPerLevel = 5; ///< 레벨업마다 오르는 친밀도
+        static constexpr int32 kFriendshipPerLevel = 5;  ///< 레벨업마다 오르는 친밀도
+        static constexpr int32 kMaxStatusTurns     = 16; ///< `_statusTurns` 의 상한이다(맹독의 n 이 15 에서 멈추고 다음 값으로 16 을 둔다. 수면은 3 까지)
 
         /** @brief 능력치 하나를 위 공식으로 계산합니다. */
         static int32 computeStat( MonsterStat stat, int32 baseStat, int32 iv, int32 ev, int32 level, int32 naturePercent );
@@ -140,13 +143,14 @@ namespace sw
     {
         Party = 0,
         Box,
-        Full ///< 파티도 박스도 가득 찼다
+        Full,   ///< 파티도 박스도 가득 찼다
+        Refused ///< 카탈로그에 없는 개체다(`createMonster` 가 거절한 빈 개체 등). 넣으면 세이브가 읽히지 않는다
     };
 
     /**
      * @class MonsterStorage
      * @brief 파티(최대 6마리)와 박스입니다. 잡은 개체는 파티에 자리가 있으면 파티로, 없으면 박스로 갑니다.
-     * @details 파티의 마지막 "싸울 수 있는" 개체는 박스에 맡길 수 없다(전투 불능인 개체만 남는 파티를 막기 위해서다).
+     * @details 파티의 마지막 "싸울 수 있는" 개체는 박스에 맡길 수 없다(전투 불능인 개체만 남는 파티를 막기 위해서다). 카탈로그는 빌려 쓴다.
      */
     class SW_KIT_API MonsterStorage
     {
@@ -157,8 +161,8 @@ namespace sw
 
         MonsterStorage();
 
-        /** @brief 파티를 비우고 상자 크기를 정합니다. @p boxCapacity 가 음수이면 오류를 남기고 false 입니다(맞추지 않습니다). */
-        [[nodiscard]] bool  initialize( int32 boxCapacity );
+        /** @brief 파티를 비우고 상자 크기를 정합니다. 카탈로그가 없거나 @p boxCapacity 가 음수이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        [[nodiscard]] bool  initialize( const MonsterCollectorCatalog* pCatalog, int32 boxCapacity );
         MonsterStoragePlace add( const MonsterInstance& monster );
         [[nodiscard]] bool  depositToBox( int32 partyIndex );
         [[nodiscard]] bool  withdrawFromBox( int32 boxIndex );
@@ -167,7 +171,7 @@ namespace sw
         void restoreParty();
         /** @brief 파티와 박스의 개체를 씁니다. 박스 정원은 `initialize` 에서 받은 설정이라 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 파티가 6을 넘거나 박스가 정원을 넘거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 파티가 6을 넘거나 박스가 정원을 넘거나 카탈로그에 없는 개체이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         bool                           hasUsableMonster() const;
@@ -177,8 +181,13 @@ namespace sw
         int32                          getBoxCapacity() const { return _boxCapacity; }
 
     private:
-        vector<MonsterInstance> _listParty;
-        vector<MonsterInstance> _listBox;
-        int32                   _boxCapacity;
+        /** @brief 개체 @p count 마리를 읽어 @p outListMonster 를 채웁니다. 깨졌거나 카탈로그에 없으면 false 입니다. */
+        [[nodiscard]] bool readMonsters( Archive& archive, uint32 count, vector<MonsterInstance>& outListMonster ) const;
+
+    private:
+        vector<MonsterInstance>        _listParty;
+        vector<MonsterInstance>        _listBox;
+        const MonsterCollectorCatalog* _pCatalog;
+        int32                          _boxCapacity;
     };
 } // namespace sw

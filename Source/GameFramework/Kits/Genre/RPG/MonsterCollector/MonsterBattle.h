@@ -162,18 +162,18 @@ namespace sw
         void initialize( const MonsterCollectorCatalog* pCatalog, const ElementChart* pChart, uint32 seed );
         /** @brief 양쪽 파티로 전투를 시작합니다. 맨 앞의 싸울 수 있는 개체가 나섭니다. @p bWild 가 true 면 볼과 도망을 쓸 수 있는 야생전입니다. */
         void start( const vector<MonsterInstance>& listPlayer, const vector<MonsterInstance>& listFoe, bool bWild );
-        /** @brief 날씨를 설정합니다. @p turns 가 0 이하면 끝없이 지속되며(필드 날씨), id 가 비어 있으면 날씨를 없앱니다. */
+        /** @brief 날씨를 설정합니다. @p turns 가 0 이하면 끝없이 지속되며(필드 날씨), id 가 비어 있으면 날씨를 없앱니다. 모르는 id 는 오류를 남기고 지금 날씨를 그대로 둡니다. */
         void setWeather( const hashed_string& weatherID, int32 turns );
-        /** @brief 이번 라운드 행동을 정합니다. 쓸 수 없는 행동(없는 슬롯, 기절한 개체, 트레이너전의 볼)이면 false 를 반환합니다. */
+        /** @brief 이번 라운드 행동을 정합니다. 쓸 수 없는 행동(시작 전, 없는 슬롯, 기절한 개체, 트레이너전의 볼)이면 false 를 반환합니다. */
         [[nodiscard]] bool setAction( int32 side, const MonsterAction& action );
-        /** @brief 라운드를 처리합니다. 행동을 정하지 않은 쪽은 아무것도 하지 않습니다. */
+        /** @brief 라운드를 처리합니다. 행동을 정하지 않은 쪽은 아무것도 하지 않습니다. `start` 전이거나 끝난 전투이면 아무 일도 없습니다. */
         void resolveRound();
         /** @brief 쓰러진 자리를 @p partyIndex 의 개체로 채웁니다(`NeedsSwitch` 다음에 호출합니다). */
         [[nodiscard]] bool switchFainted( int32 side, int32 partyIndex );
         void               drainEvents( vector<MonsterBattleEvent>& outListEvent );
         /** @brief 양쪽(개체, 능력 변화, 정한 행동, 나선 개체, 교체 대기), 턴 순서, 난수, 잡은 개체, 날씨, 도망 횟수, 결과, 야생 여부를 씁니다. 카탈로그와 상성표는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 종, 기술, 날씨이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 종, 기술, 성격, 날씨이거나 값이 범위 밖이거나(쓸 수 없는 행동, 교체할 개체가 없는 교체 대기 등) 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 피해 공식입니다. 단계마다 내림하고, 상성이 0이 아니면 최소 1 입니다. */
@@ -223,13 +223,19 @@ namespace sw
             bool                    _bNeedsSwitch{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
-        MonsterInstance& getActiveMutable( int32 side ) { return _arrSide[side]._listMonster[static_cast<size_t>( _arrSide[side]._activeIndex )]; }
-        void             pushEvent( MonsterBattleEvent::Kind kind, int32 side, int32 value = 0, const hashed_string& id = hashed_string{}, float32 multiplier = 1.0f );
-        void             executeAction( int32 side );
-        void             executeMove( int32 side, int32 slot );
-        void             executeBall( float32 ballMultiplier );
-        void             executeRun();
-        void             switchTo( int32 side, int32 partyIndex );
+        /** @brief 시작한 전투가 끝나지 않았는지입니다. 양쪽에 개체가 있어야 나선 개체를 쓸 수 있습니다(`start` 전에는 양쪽이 비어 있다). */
+        [[nodiscard]] bool isInProgress() const;
+        /** @brief 이 행동을 지금 쓸 수 있는지입니다. `setAction` 과 읽은 상태가 같은 규칙을 씁니다 — 읽은 슬롯이 범위 밖이면 라운드가 배열을 넘어 읽는다. */
+        [[nodiscard]] bool canUseAction( int32 side, const MonsterAction& action ) const;
+        /** @brief 읽은 한 편의 나선 개체와 교체 대기가 맞는지입니다. */
+        [[nodiscard]] bool isSideStateValid( int32 side ) const;
+        MonsterInstance&   getActiveMutable( int32 side ) { return _arrSide[side]._listMonster[static_cast<size_t>( _arrSide[side]._activeIndex )]; }
+        void               pushEvent( MonsterBattleEvent::Kind kind, int32 side, int32 value = 0, const hashed_string& id = hashed_string{}, float32 multiplier = 1.0f );
+        void               executeAction( int32 side );
+        void               executeMove( int32 side, int32 slot );
+        void               executeBall( float32 ballMultiplier );
+        void               executeRun();
+        void               switchTo( int32 side, int32 partyIndex );
         /** @brief 행동 전 상태이상(수면, 얼음, 마비)을 처리합니다. 행동할 수 있으면 true 를 반환합니다. */
         [[nodiscard]] bool resolveStatusBeforeAct( int32 side );
         void               applyStatus( int32 targetSide, MonsterStatus status );

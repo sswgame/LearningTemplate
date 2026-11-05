@@ -112,11 +112,40 @@ namespace sw
         archive >> restored._statusTurns;
         archive >> status;
         const bool bValid = archive.isOk() && 1 <= restored._level && restored._level <= MonsterCollectorCatalog::kMaxLevel &&
-                            status <= static_cast<uint8>( MonsterStatus::Freeze ) && 0 <= restored._exp;
+                            status <= static_cast<uint8>( MonsterStatus::Freeze ) && 0 <= restored._exp && 0 <= restored._friendship && restored._friendship <= MonsterRules::kMaxFriendship &&
+                            0 <= restored._statusTurns && restored._statusTurns <= MonsterRules::kMaxStatusTurns;
         if ( bValid == false )
+            return false;
+        for ( const MonsterMoveSlot& slot : restored._arrMove )
+        {
+            if ( slot._pp < 0 || slot._pp > slot._ppMax )
+                return false;
+        }
+        int32 evTotal = 0;
+        for ( int32 statIndex = 0; statIndex < kMonsterStatCount; ++statIndex )
+        {
+            const int32 ev           = restored._arrEv[statIndex];
+            const bool  bStatInRange = 0 <= restored._arrIv[statIndex] && restored._arrIv[statIndex] <= MonsterRules::kMaxIv && 0 <= ev && ev <= MonsterRules::kMaxEvPerStat && restored._arrStat[statIndex] >= 1;
+            if ( bStatInRange == false )
+                return false;
+            evTotal += ev;
+        }
+        if ( evTotal > MonsterRules::kMaxEvTotal || restored._hp < 0 || restored._hp > restored.getMaxHP() )
             return false;
         restored._status = static_cast<MonsterStatus>( status );
         *this            = std::move( restored );
+        return true;
+    }
+
+    bool MonsterInstance::isKnownTo( const MonsterCollectorCatalog& catalog ) const
+    {
+        if ( catalog.findSpecies( _speciesID ) == nullptr || ( _natureID.empty() == false && catalog.findNature( _natureID ) == nullptr ) )
+            return false;
+        for ( const MonsterMoveSlot& slot : _arrMove )
+        {
+            if ( slot.isEmpty() == false && catalog.findMove( slot._moveID ) == nullptr )
+                return false;
+        }
         return true;
     }
 
@@ -325,25 +354,29 @@ namespace sw
     MonsterStorage::MonsterStorage()
         : _listParty{}
         , _listBox{}
+        , _pCatalog{ nullptr }
         , _boxCapacity{ 30 }
     {
     }
 
-    bool MonsterStorage::initialize( int32 boxCapacity )
+    bool MonsterStorage::initialize( const MonsterCollectorCatalog* pCatalog, int32 boxCapacity )
     {
-        if ( boxCapacity < 0 )
+        if ( pCatalog == nullptr || boxCapacity < 0 )
         {
-            SW_LOG_ERROR_ID( "MonsterInstance.MonsterStorageRefusedBoxCapacity", "MonsterStorage: refused box capacity %# - it must not be negative", boxCapacity );
+            SW_LOG_ERROR_ID( "MonsterInstance.MonsterStorageRefusedBoxCapacity", "MonsterStorage: refused box capacity %# - it must not be negative and needs a catalog", boxCapacity );
             return false;
         }
         _listParty.clear();
         _listBox.clear();
+        _pCatalog    = pCatalog;
         _boxCapacity = boxCapacity;
         return true;
     }
 
     MonsterStoragePlace MonsterStorage::add( const MonsterInstance& monster )
     {
+        if ( _pCatalog == nullptr || monster.isKnownTo( *_pCatalog ) == false )
+            return MonsterStoragePlace::Refused;
         if ( static_cast<int32>( _listParty.size() ) < kPartySize )
         {
             _listParty.push_back( monster );
@@ -422,26 +455,31 @@ namespace sw
         }
     }
 
+    bool MonsterStorage::readMonsters( Archive& archive, uint32 count, vector<MonsterInstance>& outListMonster ) const
+    {
+        outListMonster.assign( count, MonsterInstance{} );
+        for ( MonsterInstance& monster : outListMonster )
+        {
+            if ( monster.readState( archive ) == false || monster.isKnownTo( *_pCatalog ) == false )
+                return false;
+        }
+        return true;
+    }
+
     bool MonsterStorage::readState( Archive& archive )
     {
-        uint32 partyCount = 0;
-        if ( StateArchiveUtil::readCount( archive, MonsterInstance::kStateMinBytes, partyCount ) == false || partyCount > static_cast<uint32>( kPartySize ) )
+        uint32                  partyCount = 0;
+        vector<MonsterInstance> listParty;
+        if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, MonsterInstance::kStateMinBytes, partyCount ) == false || partyCount > static_cast<uint32>( kPartySize ) )
             return false;
-        vector<MonsterInstance> listParty( partyCount );
-        for ( MonsterInstance& monster : listParty )
-        {
-            if ( monster.readState( archive ) == false )
-                return false;
-        }
-        uint32 boxCount = 0;
+        if ( readMonsters( archive, partyCount, listParty ) == false )
+            return false;
+        uint32                  boxCount = 0;
+        vector<MonsterInstance> listBox;
         if ( StateArchiveUtil::readCount( archive, MonsterInstance::kStateMinBytes, boxCount ) == false || boxCount > static_cast<uint32>( _boxCapacity ) )
             return false;
-        vector<MonsterInstance> listBox( boxCount );
-        for ( MonsterInstance& monster : listBox )
-        {
-            if ( monster.readState( archive ) == false )
-                return false;
-        }
+        if ( readMonsters( archive, boxCount, listBox ) == false )
+            return false;
         _listParty = std::move( listParty );
         _listBox   = std::move( listBox );
         return true;
