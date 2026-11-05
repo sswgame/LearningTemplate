@@ -10,6 +10,7 @@
 
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Panels/AudioEvents/Model/AudioEventBrowserUtil.h"
+#include "Editor/Panels/AudioEvents/Model/AudioEventEditModel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
 #include "Engine/Audio/AudioEngineState.h"
@@ -28,7 +29,7 @@ namespace sw::editor
     /**
      * @class AudioEventBrowserPanel
      * @brief 언리얼 Sound Cue 에디터의 속성 보기 · 오디오 디버거, FMOD Studio 이벤트 속성 · 프로파일러에 해당합니다.
-     * @details 이벤트 속성은 기본이 읽기 보기다. "고치기" 를 누르면 그 이벤트가 있는 라이브러리 파일을 사본(`_editLibrary`)으로 다시 읽어 속성 그리드로 고치고
+     * @details 이벤트 속성은 기본이 읽기 보기다. "고치기" 를 누르면 그 이벤트가 있는 라이브러리 파일을 사본(`AudioEventEditModel`)으로 다시 읽어 속성 그리드로 고치고
      *          (이벤트 복제 · 지우기, 라이브러리의 파라미터 · 감쇠 프리셋 포함 — FMOD Studio 의 이벤트 · 파라미터 편집에 해당),
      *          "저장" 은 검사를 통과할 때만 파일에 쓴다(`AudioEventLibrary::saveToAsset`). 엔진에 올라간 라이브러리는 저장한 파일을 에셋 핫 리로드
      *          (`IAudioService` 의 라이브러리 다시 읽기)가 바꾼다 — 창은 엔진 사본을 직접 고치지 않는다(오디오 스레드가 설명자를 참조한다).
@@ -48,28 +49,24 @@ namespace sw::editor
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 109.0f, 27.0f ); }
         /** @brief 고치는 라이브러리 사본을 파일에 씁니다(닫기 · 종료 확인의 Save). 검사를 통과하지 못하면 쓰지 않고 false 입니다. */
         [[nodiscard]] bool saveDocument() override;
-        bool               canSaveDocument() const override { return _bEditDirty; }
+        bool               canSaveDocument() const override { return _edit.isDirty(); }
         /** @brief 엔진에서 모은 이벤트 이름 수입니다(감시 값 `Editor.AudioEventCount`). */
         uint32 getEventCount() const { return static_cast<uint32>( _listEventName.size() ); }
         /** @brief 목록에서 이벤트를 골랐습니다(감시 값 `Editor.AudioEventSelected`). */
         bool hasSelectedEvent() const { return _selectedEvent.empty() == false; }
         /** @brief 고치는 라이브러리 사본의 이벤트 수입니다. 고치는 중이 아니면 0 입니다(감시 값 `Editor.AudioEventEditCount`). */
-        uint32 getEditEventCount() const { return _editLibraryName.empty() ? 0u : static_cast<uint32>( _editLibrary._listEvent.size() ); }
+        uint32 getEditEventCount() const { return _edit.isEditingAny() ? static_cast<uint32>( _edit.getLibrary()._listEvent.size() ) : 0u; }
 
     private:
-        /** @brief 사본의 미저장(`_bEditDirty`)을 패널 dirty 로 옮깁니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). */
+        /** @brief 사본의 미저장(`AudioEventEditModel::isDirty`)을 패널 dirty 로 옮깁니다(닫기 · 종료 확인 · 제목 표시가 이 값을 본다). */
         void syncDocumentDirty() override;
         /** @brief "Don't Save" — 고치기를 끝내고 사본을 버립니다(파일과 엔진 사본은 그대로다). */
-        void revertDocument() override { endEditing(); }
+        void revertDocument() override { _edit.end(); }
         void drawEventList();
         void drawEventDetail( IAudioService& audio );
-        /** @brief 고른 이벤트의 라이브러리 파일을 사본으로 읽어 고치기를 시작합니다. 읽지 못하면 시작하지 않습니다(읽기가 오류를 남긴다). */
-        void beginEditing();
-        /** @brief 고치기를 끝내고 사본을 버립니다. */
-        void endEditing();
         /**
          * @brief 고치는 라이브러리 사본을 그립니다 — 저장 · 그만두기, 고칠 이벤트 고르기 · 복제 · 지우기, 이벤트 속성 그리드, 라이브러리의 파라미터 · 감쇠 프리셋 그리드.
-         * @details 고칠 이벤트(`_editEvent`)는 사본에서 고른다. 복제 · 지운 이벤트는 저장 뒤 핫 리로드가 엔진 목록에 올리기 전까지 사본에만 있다.
+         * @details 고칠 이벤트(`AudioEventEditModel::getEventName`)는 사본에서 고른다. 복제 · 지운 이벤트는 저장 뒤 핫 리로드가 엔진 목록에 올리기 전까지 사본에만 있다.
          */
         void drawLibraryEditor();
         /** @brief 속성 그리드가 사본을 고쳤다는 알림입니다(이벤트 · 라이브러리 그리드 둘 다). 저장 전 상태로 표시합니다. */
@@ -78,7 +75,7 @@ namespace sw::editor
         void drawVoiceProfiler( const AudioEngineStats& stats );
 
     private:
-        AudioEventLibrary                       _editLibrary;      ///< 고치는 중인 라이브러리 사본(파일에서 다시 읽음)
+        AudioEventEditModel                     _edit;             ///< 고치기 상태
         EditorPropertyGrid                      _grid;             ///< 사본 이벤트의 속성 그리드
         EditorPropertyGrid                      _libraryGrid;      ///< 사본 라이브러리의 파라미터 · 감쇠 프리셋 그리드
         vector<hashed_string>                   _listEventName;    ///< 엔진이 준 이벤트 이름(순서 없음)
@@ -88,11 +85,8 @@ namespace sw::editor
         vector<AudioInstanceStatus>             _listInstanceRow;
         hashed_string                           _selectedEvent;
         hashed_string                           _selectedLibrary; ///< 고른 이벤트가 들어 있는 라이브러리(리소스 경로)
-        hashed_string                           _editLibraryName; ///< `_editLibrary` 를 읽은 리소스 경로(저장할 곳)입니다. 비면 고치기 중이 아닙니다.
-        hashed_string                           _editEvent;       ///< 사본에서 고치는 이벤트 이름(복제한 새 이벤트일 수 있다)
         fixed_string<constant::buffer::kMax128> _filter;
         bool                                    _bOnlySelectedEvent;     ///< 재생 중 목록을 고른 이벤트로 거른다. NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
-        uint8                                   _bEditDirty         : 1; ///< 사본을 고친 뒤 아직 저장하지 않았다.
         uint8                                   _bVisibleEventStale : 1; ///< 이름 목록이 바뀌어 다시 걸러야 한다
         const AudioEngine*                      _pEventNameEngine;       ///< `_listEventName` 을 모은 엔진(엔진이 새로 뜨면 세대가 다시 1 부터라 함께 본다)
         uint32                                  _eventNameGeneration;    ///< `_listEventName` 을 모은 때의 `AudioEngine::getEventLibraryGeneration`

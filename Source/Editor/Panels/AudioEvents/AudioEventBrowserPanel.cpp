@@ -110,7 +110,7 @@ namespace sw::editor
 {
     AudioEventBrowserPanel::AudioEventBrowserPanel()
         : IEditorDocumentPanel( false )
-        , _editLibrary{}
+        , _edit{}
         , _grid{}
         , _libraryGrid{}
         , _listEventName{}
@@ -120,11 +120,8 @@ namespace sw::editor
         , _listInstanceRow{}
         , _selectedEvent{}
         , _selectedLibrary{}
-        , _editLibraryName{}
-        , _editEvent{}
         , _filter{}
         , _bOnlySelectedEvent{ false }
-        , _bEditDirty{ SW_FALSE }
         , _bVisibleEventStale{ SW_TRUE }
         , _pEventNameEngine{ nullptr }
         , _eventNameGeneration{ 0 }
@@ -132,45 +129,19 @@ namespace sw::editor
     {
     }
 
-    void AudioEventBrowserPanel::beginEditing()
-    {
-        // 엔진의 사본이 아니라 파일을 다시 읽는다 — 엔진 설명자는 오디오 스레드가 참조하고, 저장은 파일이 원본이다.
-        if ( _editLibrary.loadFromAsset( AssetID{ _selectedLibrary.view() } ) == false )
-        {
-            endEditing();
-            return;
-        }
-        _editLibraryName = _selectedLibrary;
-        _editEvent       = _selectedEvent;
-        _bEditDirty      = SW_FALSE;
-    }
-
-    void AudioEventBrowserPanel::endEditing()
-    {
-        _editLibrary     = AudioEventLibrary{};
-        _editLibraryName = hashed_string{};
-        _editEvent       = hashed_string{};
-        _bEditDirty      = SW_FALSE;
-    }
-
     void AudioEventBrowserPanel::onEventEdited( const PropertyInfo& /*prop*/ )
     {
-        _bEditDirty = SW_TRUE;
+        _edit.markEdited();
     }
 
     bool AudioEventBrowserPanel::saveDocument()
     {
-        // 검사를 통과하지 못하면 쓰지 않고 오류를 남긴다(고친 사본은 그대로 남아 계속 고칠 수 있다).
-        const std::optional<AbsolutePath> libraryFile = editor::getSubsystem<AssetPaths>().toDiskPath( _editLibraryName.view() );
-        if ( libraryFile.has_value() == false || _bEditDirty == false || _editLibrary.saveToAsset( *libraryFile ) == false )
-            return false;
-        _bEditDirty = SW_FALSE;
-        return true;
+        return _edit.save();
     }
 
     void AudioEventBrowserPanel::syncDocumentDirty()
     {
-        if ( _bEditDirty )
+        if ( _edit.isDirty() )
             markDocumentDirty();
         else
             clearDocumentDirty();
@@ -178,7 +149,7 @@ namespace sw::editor
 
     void AudioEventBrowserPanel::drawLibraryEditor()
     {
-        ImGui::BeginDisabled( _bEditDirty == false );
+        ImGui::BeginDisabled( _edit.isDirty() == false );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "SaveEdits" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 하나다 — 실패는 saveToAsset 가 오류로 남기고 사본은 그대로다
         ImGui::EndDisabled();
@@ -187,43 +158,38 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "StopEditing" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "StopEditing" ) ) )
         {
-            endEditing();
+            _edit.end();
             return;
         }
         EditorSelfTestMarks::note( "audioevents.stopEditing" );
-        if ( _bEditDirty )
+        if ( _edit.isDirty() )
         {
             ImGui::SameLine();
             EditorThemeUtil::textMuted( SW_LOCKEY( "EditorAudioEvents", "Unsaved" ) );
         }
 
         // 고칠 이벤트 — 사본의 이벤트에서 고른다(복제한 새 이벤트는 저장 전에는 엔진 목록에 없다).
-        if ( ImGui::BeginCombo( SW_LOCKEY( "EditorAudioEvents", "EditedEvent" ), _editEvent.c_str() ) )
+        if ( ImGui::BeginCombo( SW_LOCKEY( "EditorAudioEvents", "EditedEvent" ), _edit.getEventName().c_str() ) )
         {
-            for ( const AudioEventDesc& candidate : _editLibrary._listEvent )
+            for ( const AudioEventDesc& candidate : _edit.getLibrary()._listEvent )
             {
-                if ( ImGui::Selectable( candidate._name.c_str(), candidate._name == _editEvent ) )
-                    _editEvent = candidate._name;
+                if ( ImGui::Selectable( candidate._name.c_str(), candidate._name == _edit.getEventName() ) )
+                    _edit.selectEvent( candidate._name );
             }
             ImGui::EndCombo();
         }
         EditorSelfTestMarks::note( "audioevents.editedEvent" );
-        AudioEventDesc* pEvent = _editLibrary.findEvent( _editEvent );
+        AudioEventDesc* pEvent = _edit.findEvent();
         ImGui::BeginDisabled( pEvent == nullptr );
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "DuplicateEvent" ) ) )
         {
-            _editEvent  = AudioEventBrowserUtil::duplicateEvent( _editLibrary, _editEvent );
-            _bEditDirty = SW_TRUE;
-            pEvent      = _editLibrary.findEvent( _editEvent ); // 목록이 다시 잡혔을 수 있다
+            _edit.duplicateEvent();
+            pEvent = _edit.findEvent(); // 목록이 다시 잡혔을 수 있다
         }
         EditorSelfTestMarks::note( "audioevents.duplicate" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "DeleteEvent" ) ) );
-        if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "DeleteEvent" ) ) && AudioEventBrowserUtil::removeEvent( _editLibrary, _editEvent ) )
-        {
-            _editEvent  = _editLibrary._listEvent.empty() ? hashed_string{} : _editLibrary._listEvent.front()._name;
-            _bEditDirty = SW_TRUE;
-            pEvent      = _editLibrary.findEvent( _editEvent );
-        }
+        if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "DeleteEvent" ) ) && _edit.removeEvent() )
+            pEvent = _edit.findEvent();
         EditorSelfTestMarks::note( "audioevents.delete" );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "DeleteEventTip" ) );
@@ -242,7 +208,7 @@ namespace sw::editor
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EditorAudioEvents", "LibrarySettings" ) ) )
         {
             EditorPropertyGridTarget target{};
-            target._pInstance = &_editLibrary;
+            target._pInstance = &_edit.editLibrary();
             target._pType     = AudioEventLibrary::StaticType();
             target._onEdited  = onEdited;
             ImGui::PushID( "##AudioLibraryGrid" );
@@ -318,15 +284,15 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "OpenDataFileTip" ) );
 
         // 고치기 — 같은 파일의 사본이 있으면 그 사본을 고친다(고칠 이벤트는 사본에서 고른다).
-        if ( _editLibraryName.empty() == false && _editLibraryName == _selectedLibrary )
+        if ( _edit.isEditing( _selectedLibrary ) )
         {
             drawLibraryEditor();
             return;
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "EditEvent" ) ) );
-        ImGui::BeginDisabled( _bEditDirty ); // 다른 파일을 고치는 중에 저장하지 않은 것이 있으면 바꾸지 않는다
+        ImGui::BeginDisabled( _edit.isDirty() ); // 다른 파일을 고치는 중에 저장하지 않은 것이 있으면 바꾸지 않는다
         if ( ImGui::Button( SW_LOCKEY( "EditorAudioEvents", "EditEvent" ) ) )
-            beginEditing();
+            (void)_edit.begin( _selectedLibrary, _selectedEvent );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "audioevents.edit" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAudioEvents", "EditEventTip" ) );
