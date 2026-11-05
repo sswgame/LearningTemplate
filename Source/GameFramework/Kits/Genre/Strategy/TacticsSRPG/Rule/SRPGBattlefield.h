@@ -234,7 +234,7 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
 
         // --- 개발 ---
-        /** @brief 기체 레벨 조건을 채운 개발 분기를 모읍니다. */
+        /** @brief 기체 레벨 조건을 채운 개발 분기를 모읍니다. 격파된 유닛은 분기가 없습니다. */
         void collectDevelopOptions( int32 unitIndex, vector<hashed_string>& outListUnitID ) const;
         /** @brief 다른 기체로 개발합니다. 파일럿과 위치는 그대로이고 기체 레벨은 1 이 되며 HP, EN, 탄이 가득 찹니다. 조건이 안 되면 false 를 반환합니다. */
         [[nodiscard]] bool developUnit( int32 unitIndex, const hashed_string& targetUnitID );

@@ -26,6 +26,8 @@ namespace sw
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 틀린 원소가 하나라도 있으면 설정 전체를 읽지 못한 것으로 본다(반쪽 지도를 만들지 않는다).
         RunMapSettings settings;
         bool           bValid = XMLFields::readFields( root, settings, sourceName );
+        if ( bValid == false )
+            return false; // 범위 밖 층 수(음수)로 아래 표를 만들면 터무니없는 크기를 할당한다
         settings._listForcedFloor.assign( static_cast<size_t>( settings._floorCount ), hashed_string{} );
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
@@ -131,6 +133,12 @@ namespace sw
         if ( rangeError.empty() == false )
         {
             SW_LOG_ERROR_ID( "RunMap.RunMapRefusedSettings", "RunMap: refused settings - %#", rangeError.c_str() );
+            return false;
+        }
+        if ( seed == 0u )
+        {
+            // 0 은 난수의 고정점이다(`DeterministicRandom32::setSeed` 가 단언한다).
+            SW_LOG_ERROR_ID( "RunMap.RunMapRefusedSeedZero", "RunMap: refused seed 0 - give a non-zero seed" );
             return false;
         }
         GameRandom random( seed );
@@ -306,6 +314,17 @@ namespace sw
                             kStart <= current && current < static_cast<int32>( nodeCount );
         if ( bValid == false )
             return false;
+        // 칸의 번호는 고를 수 있는 노드가 되어 `_current` 로 들어간다. 노드 밖이면 다음 조회가 범위 밖을 읽는다.
+        for ( const int32 cell : listCell )
+        {
+            if ( cell < -1 || cell >= static_cast<int32>( nodeCount ) )
+                return false;
+        }
+        for ( const RunNode& node : listNode )
+        {
+            if ( node._floor < 0 || node._floor >= floorCount || node._column < 0 || node._column >= columnCount )
+                return false;
+        }
         _listNode    = std::move( listNode );
         _listCell    = std::move( listCell );
         _floorCount  = floorCount;

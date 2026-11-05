@@ -125,7 +125,9 @@ namespace sw
         SRPGCommanderAIPlan plan;
         if ( makePlan( field, unitIndex, plan ) == false )
             return false;
-        if ( field.moveUnit( unitIndex, plan._moveCell ) && plan._bAttack == SW_TRUE )
+        // 이미 움직인 유닛의 계획은 제자리다. `moveUnit` 은 그 유닛을 거절하므로 제자리면 부르지 않는다(거절을 공격 포기로 읽었다).
+        const bool bInPlace = plan._moveCell == field.findUnit( unitIndex )->_cell;
+        if ( ( bInPlace || field.moveUnit( unitIndex, plan._moveCell ) ) && plan._bAttack == SW_TRUE )
         {
             SRPGCombatResult result;
             (void)SRPGCombat::executeAttack( field, unitIndex, plan._weapon, plan._target, result ); // 결과는 result 로 넘긴다

@@ -650,7 +650,8 @@ namespace sw
             archive >> unit._bSupportUsed;
             const bool bFlagValid = unit._bAlive <= SW_TRUE && unit._bMoved <= SW_TRUE && unit._bAttacked <= SW_TRUE && unit._bActed <= SW_TRUE &&
                                     unit._bCommander <= SW_TRUE && unit._bSupportUsed <= SW_TRUE;
-            const bool bValid = bLevelRead && archive.isOk() && isInside( unit._cell ) && team < static_cast<uint8>( kSRPGTeamCount ) && bFlagValid;
+            const bool bStatValid = 0 <= unit._hp && 0 <= unit._en && 0 <= unit._morale && 0 <= unit._dodge && -1 <= unit._rosterIndex;
+            const bool bValid     = bLevelRead && archive.isOk() && isInside( unit._cell ) && team < static_cast<uint8>( kSRPGTeamCount ) && bFlagValid && bStatValid;
             if ( bValid == false )
                 return false;
             unit._team = static_cast<SRPGTeam>( team );
@@ -675,7 +676,8 @@ namespace sw
     {
         outListUnitID.clear();
         const SRPGUnit* pUnit = findUnit( unitIndex );
-        if ( pUnit == nullptr || _pCatalog == nullptr )
+        // 격파된 유닛을 개발하면 HP 가 가득 찬 채 죽어 있는 유닛이 된다.
+        if ( pUnit == nullptr || _pCatalog == nullptr || pUnit->_bAlive == SW_FALSE )
             return;
         for ( const SRPGDevelopTarget& target : pUnit->_pDef->_listDevelop )
         {
