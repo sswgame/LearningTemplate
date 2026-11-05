@@ -345,6 +345,11 @@ namespace sw
             SW_LOG_ERROR_ID( "LipSync.VisemeTrackNeedsFrameRate", "Viseme track '%#' needs _frameRate, _listViseme and _listFrame", sourceLabel );
             return false;
         }
+        if ( *frameRate <= 0.0f )
+        {
+            SW_LOG_ERROR_ID( "LipSync.VisemeTrackFrameRate", "Viseme track '%#': _frameRate must be positive", sourceLabel );
+            return false;
+        }
         _frameRate = *frameRate;
         for ( XMLNode viseme = visemes.findChild(); viseme.isValid(); viseme = viseme.findNextSibling() )
         {
@@ -362,7 +367,7 @@ namespace sw
             }
             _listWeight.insert( _listWeight.end(), listFrame.begin(), listFrame.end() );
         }
-        return _frameRate > 0.0f;
+        return true;
     }
 
     bool VisemeTrack::loadFromAsset( const AssetID& assetID )
