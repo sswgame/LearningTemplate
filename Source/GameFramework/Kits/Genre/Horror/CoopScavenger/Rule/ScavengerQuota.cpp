@@ -90,7 +90,7 @@ namespace sw
         archive >> daysLeft;
         archive >> cycle;
         archive >> bGameOver;
-        const bool bValid = archive.isOk() && 0 <= fulfilled && 0 <= daysLeft && 0 <= cycle && bGameOver <= SW_TRUE;
+        const bool bValid = archive.isOk() && 1 <= quota && 0 <= fulfilled && 0 <= daysLeft && 0 <= cycle && bGameOver <= SW_TRUE;
         if ( bValid == false )
             return false;
         _quota     = quota;

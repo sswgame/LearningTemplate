@@ -97,8 +97,12 @@ namespace sw
                                              { return def._spawnWeight; } );
                     return index >= 0 ? listScrap.data() + index : nullptr;
                 }
+                // 목록의 모르는 이름은 카탈로그가 읽을 때 오류로 알렸다 — 뽑히지 않게 무게 0 으로 친다(내리는 순간 빈 포인터를 읽지 않는다).
                 const int32 index = random.pickWeightedIndex( moon._listScrap, [&catalog]( const hashed_string& scrapID )
-                { return catalog.findScrap( scrapID )->_spawnWeight; } );
+                {
+                    const ScavengerScrapDef* pDef = catalog.findScrap( scrapID );
+                    return pDef != nullptr ? pDef->_spawnWeight : 0.0f;
+                } );
                 return index >= 0 ? catalog.findScrap( moon._listScrap[static_cast<size_t>( index )] ) : nullptr;
             }
         };
@@ -341,9 +345,16 @@ namespace sw
         archive >> restored._nextUid;
         archive >> restored._roomCount;
         archive >> restored._lockedDoorCount;
-        const bool bValid = archive.isOk() && 1 <= restored._nextUid && 0 <= restored._roomCount && 0 <= restored._lockedDoorCount;
+        // 시드 0 은 난수의 고정점이라 만든 지도에는 없다.
+        const bool bValid = archive.isOk() && 1 <= restored._nextUid && 0 <= restored._roomCount && 0 <= restored._lockedDoorCount && ( restored._layoutMoonID.empty() || restored._layoutSeed != 0u );
         if ( bValid == false )
             return false;
+        for ( const ScavengerScrap& scrap : restored._listGroundScrap )
+        {
+            // 번호는 `placeScrap` 이 나눠 준다. 다음 번호 이상이면 새로 놓는 고철과 겹쳐 찾기가 엉뚱한 것을 집는다.
+            if ( scrap._uid <= 0 || scrap._uid >= restored._nextUid )
+                return false;
+        }
 
         // 그래프는 같은 위성과 같은 시드로 다시 만든다(고철 배치는 버리고 읽은 바닥을 쓴다).
         restored._graph.clear();
@@ -384,7 +395,8 @@ namespace sw
         archive >> scrap._bodyOf;
         archive >> scrap._day;
         archive >> scrap._bTwoHanded;
-        const bool bValid = archive.isOk() && -1 <= scrap._bodyOf && scrap._bTwoHanded <= SW_TRUE;
+        // 무게가 NaN 이면 이동 속도가, 음수 가치면 매입액이 깨진다.
+        const bool bValid = archive.isOk() && 0.0f <= scrap._weight && 0 <= scrap._value && -1 <= scrap._bodyOf && scrap._bTwoHanded <= SW_TRUE;
         if ( bValid == false )
             return false;
         outScrap = scrap;

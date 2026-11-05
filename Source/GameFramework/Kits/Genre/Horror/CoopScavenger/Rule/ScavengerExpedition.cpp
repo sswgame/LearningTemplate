@@ -396,6 +396,7 @@ namespace sw
             else if ( bOnShip )
             {
                 _listCrew[static_cast<size_t>( scrap._bodyOf )]._bBodyRecovered = SW_TRUE;
+                pushEvent( ScavengerEvent::Kind::BodyRecovered, scrap._bodyOf, 0 );
             }
             else
             {
@@ -635,7 +636,7 @@ namespace sw
         archive >> restored._seed;
         archive >> restored._hoursOnMoon;
         const bool bHeadValid = StateArchiveUtil::readRandom( archive, restored._random ) && phase <= static_cast<uint8>( ScavengerPhase::GameOver ) &&
-                                restored._bDuskAnnounced <= SW_TRUE;
+                                restored._bDuskAnnounced <= SW_TRUE && 0.0f <= restored._hoursOnMoon; // NaN 이면 자정 비교가 늘 거짓이라 우주선이 뜨지 않는다
         if ( bHeadValid == false )
             return false;
         restored._phase = static_cast<ScavengerPhase>( phase );
@@ -652,6 +653,23 @@ namespace sw
         const bool bPartRead = restored._quota.readState( archive ) && restored._facility.readState( archive ) &&
                                restored._indoorDirector.readState( archive ) && restored._outdoorDirector.readState( archive ) && restored._shop.readState( archive );
         if ( bPartRead == false )
+            return false;
+        // 시신 번호는 나중에 `_listCrew` 를 그대로 가리킨다. 사람 수 밖이면 시신을 싣는 순간 범위 밖을 쓴다.
+        const auto isBodyInCrew = [crewCount]( const vector<ScavengerScrap>& listScrap )
+        {
+            for ( const ScavengerScrap& scrap : listScrap )
+            {
+                if ( scrap._bodyOf >= static_cast<int32>( crewCount ) )
+                    return false;
+            }
+            return true;
+        };
+        bool bBodiesValid = isBodyInCrew( restored._listShipScrap ) && isBodyInCrew( restored._facility.getGroundScrap() );
+        for ( const ScavengerCrewMember& member : restored._listCrew )
+        {
+            bBodiesValid = bBodiesValid && isBodyInCrew( member._carry.getScraps() );
+        }
+        if ( bBodiesValid == false )
             return false;
         restored._eventBuffer.clear();
         restored._listSpawnScratch.clear();

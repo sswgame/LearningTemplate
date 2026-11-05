@@ -93,7 +93,7 @@ namespace sw
 
         /** @brief 고철 하나를 씁니다(운반 슬롯, 우주선, 바닥이 함께 씁니다). */
         static void writeScrap( Archive& outArchive, const ScavengerScrap& scrap );
-        /** @brief `writeScrap` 이 쓴 바이트를 읽습니다. 데이터가 깨졌으면 false 를 반환합니다. */
+        /** @brief `writeScrap` 이 쓴 바이트를 읽습니다. 데이터가 깨졌거나 무게 · 가치가 범위 밖이면 false 를 반환합니다. 시신 번호가 사람 수 안인지는 사람을 아는 `ScavengerExpedition` 이 봅니다. */
         [[nodiscard]] static bool readScrap( Archive& archive, ScavengerScrap& outScrap );
 
     private:

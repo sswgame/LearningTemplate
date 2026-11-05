@@ -118,7 +118,7 @@ namespace sw
             ScavengerScrapDef def;
             if ( XMLFields::readFields( node, def, sourceName ) == false )
                 return false;
-            (void)_scrapCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+            (void)_scrapCatalog.add( def ); // 같은 id 는 뒤의 것으로 바꾼다(`GameCatalog::add`)
             return true;
         }
         if ( XMLReadUtil::isElement( name, "Moon" ) )
@@ -132,7 +132,7 @@ namespace sw
         ScavengerMoonDef def;
         if ( XMLFields::readFields( node, def, sourceName ) == false )
             return false;
-        (void)_moonCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
+        (void)_moonCatalog.add( def ); // 같은 id 는 뒤의 것으로 바꾼다(`GameCatalog::add`)
         return true;
     }
 } // namespace sw
