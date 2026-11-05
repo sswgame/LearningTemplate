@@ -50,7 +50,6 @@ namespace sw::editor
             static constexpr const utf8* kCanvasID           = "GimmickGraphCanvas";
             static constexpr const utf8* kCanvasSettingsFile = "GimmickGraphCanvas.json";
             static constexpr float32     kSidePanelWidth     = 340.0f; ///< 96 DPI 기준입니다
-            static constexpr float32     kNewNodeRowHeight   = 150.0f; ///< 도구 모음으로 더한 노드를 기존 노드 아래에 놓는 간격(캔버스 좌표)
 
             // 핀 번호 = 노드 그래프 번호 × 64 + (출력이면 32) + 포트 번호. 포트는 종류마다 최대 32 개다(`GimmickGraphModel::kMaxPortCount`).
             static constexpr int32 kPinsPerNode   = 2 * GimmickGraphModel::kMaxPortCount;
@@ -259,12 +258,7 @@ namespace sw::editor
                         continue;
                     if ( ImGui::Selectable( kind._name.c_str() ) )
                     {
-                        float32 lowestY = -GimmickGraphPanelInternal::kNewNodeRowHeight;
-                        for ( const GimmickGraphNode& node : _model.getNodes() )
-                        {
-                            lowestY = node._position._y > lowestY ? node._position._y : lowestY;
-                        }
-                        const float2 position{ 0.0f, lowestY + GimmickGraphPanelInternal::kNewNodeRowHeight };
+                        const float2 position = _model.computeNewNodePosition();
                         editAddNode( circuit, kind._name, &position );
                     }
                     if ( EditorSelfTestMarks::isEnabled() )

@@ -116,6 +116,8 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 조회
         // ------------------------------------------------------------------------------
+        /** @brief 새 노드를 놓을 자리입니다. 가장 아래 노드의 한 줄 아래이고, 노드가 없으면 원점입니다. */
+        float2                          computeNewNodePosition() const;
         const vector<GimmickGraphNode>& getNodes() const { return _listNode; }
         vector<GimmickGraphNode>&       getMutableNodes() { return _listNode; } ///< 위치와 `_bPlaced` 만 고칩니다(캔버스가 끌린 위치를 되돌려 줍니다)
         const vector<GimmickGraphWire>& getWires() const { return _listWire; }

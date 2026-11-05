@@ -75,3 +75,9 @@ A new row names the header and the API.
 - `TagContainer` 칸: 층이 `XMLFields` 보다 위이고 정렬 불변식을 `addTag` 가 지킨다(`AppearanceXMLUtil::readTags`).
 - JSON 에서 키가 동적이거나 칸 구조가 아닌 것: 메시 수정자 인자 · 격자 · 커브 키, 크래시 매니페스트의 문맥, 사용자 설정 값, 프로젝트 설정 차이 쓰기, 프리팹 트리, 부하 봇 단계(동작마다 받는 키가 다르다), 비주얼 로그의 벡터 배열, 게임 문자열 산출(`LoadBotMetrics` 는 쓰기만).
 - 이름표로 그대로 두는 것: UI 라벨 · 명령 이름 · 바깥 표준 철자(Prometheus 지표 종류 · CLDR 복수 범주 · VRM · 명령줄 백엔드 이름), 사용자 기기에 저장되는 설정 값(스피커 모드 · 크래시 보고 동의), 종료 진단에서도 쓰는 이름(RHI 메모리 종류 — 엔진 서비스가 내려간 뒤), Core 층(리플렉션 없음)
+
+## 에디터 패널: 그리기와 로직
+
+로직은 `Model/`(ImGui 를 쓰면 빌드가 막는다, `EditorModelForbidsImGui.h`)에 두고 패널에는 위젯과 호출만 남긴다. 고침 → 되돌리기 기록 → 저장하지 않은 표시처럼 함께 해야 하는 단계는 Model 함수 하나로 묶어 패널이 빠뜨릴 수 없게 한다(`InputMapDocument` · `MeshModifierSession::applyEdit`). 단위 테스트는 `Model/Tests/` 에 두고 `App -EnableEditor -scenario=engine/automation/editor/selftests.scenario.xml` 이 돌린다(`App --test` 는 돌리지 않는다).
+
+패널에 남기는 것: 위젯이 돌려준 값을 칸에 넣는 한 줄, 콤보 · 툴팁 · 팝업 열기 · 스크롤처럼 ImGui 프레임에만 뜻이 있는 것, 에디터 서비스(선택 · 플레이 세션 · 자식 프로세스)를 부르는 얇은 연결. 위젯 추상화 층이나 패널마다의 뷰모델은 만들지 않는다. 레이아웃 · 입력 전달 · 실제 클릭 경로는 시나리오가 본다.

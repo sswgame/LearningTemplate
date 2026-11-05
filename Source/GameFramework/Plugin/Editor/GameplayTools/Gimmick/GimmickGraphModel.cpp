@@ -583,4 +583,15 @@ namespace sw::editor
             outListIssue.push_back( std::move( issue ) );
         }
     }
+
+    float2 GimmickGraphModel::computeNewNodePosition() const
+    {
+        constexpr float32 kRowHeight = 150.0f;
+        float32           lowestY    = -kRowHeight;
+        for ( const GimmickGraphNode& node : _listNode )
+        {
+            lowestY = node._position._y > lowestY ? node._position._y : lowestY;
+        }
+        return float2{ 0.0f, lowestY + kRowHeight };
+    }
 } // namespace sw::editor
