@@ -10,8 +10,8 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/Map/InputRemapSerializer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -49,7 +49,7 @@ namespace sw
                 if ( pDebugKeys == nullptr )
                     return false;
                 InputSlot slot{};
-                if ( InputSlotUtil::tryParse( listArgument[1], slot ) == false )
+                if ( InputSlot::tryParse( listArgument[1], slot ) == false )
                 {
                     outReply = "unknown slot '" + listArgument[1] + "' (e.g. Key.F2, Gamepad.Back)";
                     return false;
@@ -66,7 +66,7 @@ namespace sw
                     return false;
                 }
                 const bool bSaved = pDebugKeys->getUserBindingsPath().empty() || pDebugKeys->saveUserBindings();
-                outReply          = listArgument[0] + "[" + to_string( bindIndex ) + "] = " + InputSlotUtil::toText( slot ) + ( bSaved ? "" : " (not saved - see the log)" );
+                outReply          = listArgument[0] + "[" + to_string( bindIndex ) + "] = " + InputSlot::toText( slot ) + ( bSaved ? "" : " (not saved - see the log)" );
                 return true;
             }
 
@@ -184,7 +184,7 @@ namespace sw
                 const bool bModifierChanged = bKeyboardChord && pCurrent->_modifierMask != pDefault->_modifierMask;
                 if ( current == defaultSlot && bModifierChanged == false )
                     continue;
-                const string slotText = InputSlotUtil::toText( current );
+                const string slotText = InputSlot::toText( current );
                 if ( slotText.empty() )
                     continue; // 키보드, 마우스, 패드가 아닌 슬롯은 문자열로 적을 수 없다
                 DebugKeyRebindFields fields;
@@ -233,7 +233,7 @@ namespace sw
             // `modifier` 는 적지 않음(슬롯만 바꿈) · `None`(수정 키 없음) · 이름 셋이라 스키마 칸이 아니다.
             DebugKeyRebindFields fields;
             InputSlot            slot{};
-            if ( XMLFields::readFields( bindNode, fields, filePath, { kModifierAttr } ) == false || InputSlotUtil::tryParse( fields._slot, slot ) == false )
+            if ( XMLFields::readFields( bindNode, fields, filePath, { kModifierAttr } ) == false || InputSlot::tryParse( fields._slot, slot ) == false )
             {
                 SW_LOG_WARNING_ID( "DebugKeyActions.DebugKeyUserBindings3", "Debug key user bindings '%#': a <bind> with action '%#' and slot '%#' cannot be read - skipped", filePath, fields._action.c_str(),
                                    fields._slot.c_str() );

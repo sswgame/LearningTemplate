@@ -3,6 +3,7 @@
  * @brief 입력 장치의 다형 추상 인터페이스와 범용 InputSlot 스키마입니다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
@@ -26,7 +27,7 @@ namespace sw
      * @struct InputSlot
      * @brief 장치 종류, 장치 인덱스(4인 로컬 게임패드 등), 장치 안 컨트롤 인덱스를 하나로 묶어 식별하는 분기 없는 입력 경로입니다.
      */
-    struct InputSlot
+    struct SW_API InputSlot
     {
         InputDeviceKind _deviceKind{ InputDeviceKind::Keyboard };
         uint8           _deviceIndex{ 0 };
@@ -70,6 +71,11 @@ namespace sw
                 return _deviceIndex < other._deviceIndex;
             return _controlIndex < other._controlIndex;
         }
+
+        /** @brief @p text 를 슬롯으로 읽습니다. 형식이 틀리거나 모르는 이름이면 false 를 반환하고 @p outSlot 은 그대로 둡니다. */
+        [[nodiscard]] static bool tryParse( string_view text, InputSlot& outSlot );
+        /** @brief 슬롯의 문자열 표기를 반환합니다. 키보드, 마우스, 게임패드가 아닌 슬롯이면 빈 문자열입니다. */
+        static string toText( const InputSlot& slot );
     };
 } // namespace sw
 

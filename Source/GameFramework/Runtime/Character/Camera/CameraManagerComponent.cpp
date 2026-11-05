@@ -15,7 +15,7 @@
 #include "Engine/UI/Input/UIInputMapView.h"
 #include "Engine/UI/UISystem.h"
 
-#include "GameFramework/Runtime/Character/Camera/CameraPoseUtil.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Character/Camera/CameraUserSettings.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
@@ -198,22 +198,22 @@ namespace sw
             return;
         CameraComponent* pTargetCamera = findTargetCamera( _viewTarget );
         // 타깃이 없으면 지금 화면을 지킨다(타깃이 사라진 프레임에 원점으로 튀지 않게).
-        CameraPose incoming = _blender.hasPose() ? _blender.getPose() : CameraPoseUtil::makePoseFromCamera( *pCamera );
+        CameraPose incoming = _blender.hasPose() ? _blender.getPose() : CameraPose::makePoseFromCamera( *pCamera );
         if ( pTargetCamera != nullptr )
-            incoming = CameraPoseUtil::makePoseFromCamera( *pTargetCamera );
+            incoming = CameraPose::makePoseFromCamera( *pTargetCamera );
         CameraPose             liveFrom{};
         const CameraPose*      pLiveFrom       = nullptr;
         const CameraComponent* pPreviousCamera = _blender.isFromLive() ? findTargetCamera( _previousTarget ) : nullptr;
         if ( pPreviousCamera != nullptr )
         {
-            liveFrom  = CameraPoseUtil::makePoseFromCamera( *pPreviousCamera );
+            liveFrom  = CameraPose::makePoseFromCamera( *pPreviousCamera );
             pLiveFrom = &liveFrom;
         }
         const CameraPose& blended = _blender.step( deltaTime, incoming, pLiveFrom );
         _impulseListener.step( deltaTime );
         const float32    shakeScale = CameraUserSettings::makeFromGlobalVariables()._shakeScale;
         const CameraPose output     = _impulseListener.isActive() ? applyCameraShake( blended, _impulseListener.computeOffset( blended._position ) * shakeScale ) : blended;
-        CameraPoseUtil::applyToCamera( *pCamera, output );
+        CameraPose::applyToCamera( *pCamera, output );
         // 블렌드 없는 전환, 또는 타깃 카메라 자신의 컷(디렉터의 컷 전환)은 이 카메라의 화면도 끊는다.
         const bool bTargetCut = pTargetCamera != nullptr && pTargetCamera->consumeCut( CameraCutReader::Follow ); // 타깃 카메라가 자기 뷰로도 그려지면 렌더 쪽 표시는 그대로 남는다
         if ( _blender.consumeCut() || bTargetCut )

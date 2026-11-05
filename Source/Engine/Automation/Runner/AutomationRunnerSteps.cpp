@@ -23,8 +23,8 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -81,7 +81,7 @@ namespace sw
                 const string* pSlot = step.requireAttribute( "slot", outError );
                 if ( pSlot == nullptr )
                     return false;
-                if ( InputSlotUtil::tryParse( *pSlot, outArgs._slot ) == false )
+                if ( InputSlot::tryParse( *pSlot, outArgs._slot ) == false )
                 {
                     outError = step.describe() + ": unknown slot '" + *pSlot + "' (Key.E · Mouse.Left · Gamepad.A · Gamepad1.A)";
                     return false;

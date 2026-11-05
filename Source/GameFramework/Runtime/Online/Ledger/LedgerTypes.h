@@ -51,18 +51,26 @@ namespace sw
         string makeKey() const;
         bool   operator==( const LedgerHolder& other ) const;
         bool   operator!=( const LedgerHolder& other ) const { return ( *this == other ) == false; }
+
+        static void write( BitWriter& outWriter, const LedgerHolder& holder );
+
+        [[nodiscard]] static bool read( BitReader& reader, LedgerHolder& outHolder );
     };
 } // namespace sw
 
 namespace sw
 {
     /** @brief 이동 한 다리입니다. @p _from 에서 @p _to 로 @p _assetID 를 @p _amount(1 이상)만큼 옮깁니다. */
-    struct LedgerPosting
+    struct SW_GF_API LedgerPosting
     {
         LedgerHolder _from{};
         LedgerHolder _to{};
         string       _assetID{};
         int64        _amount{ 0 };
+
+        static void write( BitWriter& outWriter, const LedgerPosting& posting );
+
+        [[nodiscard]] static bool read( BitReader& reader, LedgerPosting& outPosting );
     };
 } // namespace sw
 
@@ -234,10 +242,5 @@ namespace sw
         static bool isValidEscrowDomain( string_view domain );   ///< `[0-9a-z_]`, 1..16
         static bool isValidEscrowToken( string_view token );     ///< `[0-9a-z_.-]`, 1..64
         static bool isValidJournalKey( string_view journalKey ); ///< 저장소 키 규칙, 1..200, `/` 하나 이상
-
-        static void               writeHolder( BitWriter& outWriter, const LedgerHolder& holder );
-        [[nodiscard]] static bool readHolder( BitReader& reader, LedgerHolder& outHolder );
-        static void               writePosting( BitWriter& outWriter, const LedgerPosting& posting );
-        [[nodiscard]] static bool readPosting( BitReader& reader, LedgerPosting& outPosting );
     };
 } // namespace sw

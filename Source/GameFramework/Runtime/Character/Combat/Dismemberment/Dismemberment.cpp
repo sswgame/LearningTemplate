@@ -2,7 +2,7 @@
 
 #include "GameFramework/Runtime/Character/Combat/Dismemberment/Dismemberment.h"
 
-#include "Engine/Character/Fit/GeometryCut.h"
+#include "Engine/Character/Fit/CharacterGeometry.h"
 
 namespace sw
 {
@@ -59,7 +59,7 @@ namespace sw
                 ++severedCount;
             }
         }
-        GeometryCutUtil::splitByTriangleMask( body, outResult._listTriangleSevered, outResult._remaining, outResult._severed );
+        AppearanceGeometry::splitByTriangleMask( body, outResult._listTriangleSevered, outResult._remaining, outResult._severed );
         if ( severedCount == 0 )
             return false;
         // 자른 위치(남은 쪽과 떨어진 쪽 삼각형이 함께 쓰는 정점)의 구멍만 막는다. 원래 있던 구멍은 그대로 둔다.
@@ -81,9 +81,9 @@ namespace sw
         }
         vector<uint8> listSeamFlag;
         flagSeamVertices( outResult._remaining, listSeamPosition, listSeamFlag );
-        (void)GeometryCutUtil::createCaps( outResult._remaining, outResult._remainingCap, &listSeamFlag ); // 막은 고리 수일 뿐이다. 0 이면 막을 구멍이 없다.
+        (void)AppearanceGeometry::createCaps( outResult._remaining, outResult._remainingCap, &listSeamFlag ); // 막은 고리 수일 뿐이다. 0 이면 막을 구멍이 없다.
         flagSeamVertices( outResult._severed, listSeamPosition, listSeamFlag );
-        (void)GeometryCutUtil::createCaps( outResult._severed, outResult._severedCap, &listSeamFlag ); // 막은 고리 수일 뿐이다. 0 이면 막을 구멍이 없다.
+        (void)AppearanceGeometry::createCaps( outResult._severed, outResult._severedCap, &listSeamFlag ); // 막은 고리 수일 뿐이다. 0 이면 막을 구멍이 없다.
         return true;
     }
 } // namespace sw

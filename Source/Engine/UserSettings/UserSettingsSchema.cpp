@@ -8,7 +8,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/EnumNameTable.h"
 
-#include "Engine/Input/InputSlotUtil.h"
+#include "Engine/Input/IInputDevice.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
@@ -760,9 +760,9 @@ namespace sw
                     return UserSettingValueResult::Accepted;
                 }
                 InputSlot slot;
-                if ( InputSlotUtil::tryParse( value, slot ) == false )
+                if ( InputSlot::tryParse( value, slot ) == false )
                     return UserSettingValueResult::Rejected;
-                outValue = InputSlotUtil::toText( slot );
+                outValue = InputSlot::toText( slot );
                 return UserSettingValueResult::Accepted;
             }
             case UserSettingType::String:

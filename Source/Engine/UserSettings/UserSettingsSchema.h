@@ -30,7 +30,7 @@ namespace sw
         Int,        ///< 정수입니다. min, max, step 이 있습니다.
         Float,      ///< 실수입니다. min, max, step 이 있습니다.
         Enum,       ///< 선택지 이름 하나(`<Option value=…>` 또는 `optionsFrom` 공급자)
-        KeyBinding, ///< 입력 슬롯 글(`InputSlotUtil`). 빈 글은 "입력 맵의 기본 바인딩" 입니다.
+        KeyBinding, ///< 입력 슬롯 글(`InputSlot`). 빈 글은 "입력 맵의 기본 바인딩" 입니다.
         String,     ///< 자유 텍스트입니다.
     };
 
@@ -109,7 +109,7 @@ namespace sw
 {
     /**
      * @brief 설정 하나의 정의입니다. 스키마 XML 의 `<Setting>` 한 줄입니다.
-     * @details 값은 정규화한 텍스트로 다룬다. bool 은 `true`/`false`, 숫자는 가장 짧은 왕복 표기, 열거형은 선택지 이름, 키는 `InputSlotUtil` 텍스트다.
+     * @details 값은 정규화한 텍스트로 다룬다. bool 은 `true`/`false`, 숫자는 가장 짧은 왕복 표기, 열거형은 선택지 이름, 키는 `InputSlot` 텍스트다.
      */
     REFLECT()
     struct SW_API UserSettingDef

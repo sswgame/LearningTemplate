@@ -216,7 +216,7 @@ namespace sw
         return bHasScope && LedgerTypesInternal::isTokenText( journalKey, LedgerConstant::kMaxJournalKeySize, "_./-" );
     }
 
-    void LedgerUtil::writeHolder( BitWriter& outWriter, const LedgerHolder& holder )
+    void LedgerHolder::write( BitWriter& outWriter, const LedgerHolder& holder )
     {
         outWriter.writeVarUint( static_cast<uint64>( holder._kind ) );
         if ( holder._kind == LedgerHolderKind::Account )
@@ -230,7 +230,7 @@ namespace sw
         }
     }
 
-    bool LedgerUtil::readHolder( BitReader& reader, LedgerHolder& outHolder )
+    bool LedgerHolder::read( BitReader& reader, LedgerHolder& outHolder )
     {
         const uint64 kind = reader.readVarUint();
         if ( kind >= static_cast<uint64>( LedgerHolderKind::Count ) )
@@ -251,17 +251,17 @@ namespace sw
         return reader.hasOverflowed() == false && outHolder.isValid();
     }
 
-    void LedgerUtil::writePosting( BitWriter& outWriter, const LedgerPosting& posting )
+    void LedgerPosting::write( BitWriter& outWriter, const LedgerPosting& posting )
     {
-        writeHolder( outWriter, posting._from );
-        writeHolder( outWriter, posting._to );
+        LedgerHolder::write( outWriter, posting._from );
+        LedgerHolder::write( outWriter, posting._to );
         ServiceKeyUtil::writeString( outWriter, posting._assetID );
         outWriter.writeVarInt( posting._amount );
     }
 
-    bool LedgerUtil::readPosting( BitReader& reader, LedgerPosting& outPosting )
+    bool LedgerPosting::read( BitReader& reader, LedgerPosting& outPosting )
     {
-        if ( readHolder( reader, outPosting._from ) == false || readHolder( reader, outPosting._to ) == false )
+        if ( LedgerHolder::read( reader, outPosting._from ) == false || LedgerHolder::read( reader, outPosting._to ) == false )
             return false;
         if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, outPosting._assetID ) == false )
             return false;

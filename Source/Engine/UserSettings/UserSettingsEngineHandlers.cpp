@@ -6,7 +6,7 @@
 #include "Core/Container/formatString.h"
 
 #include "Engine/Audio/IAudioService.h"
-#include "Engine/Input/InputSlotUtil.h"
+#include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/UserSettings/HardwareDetection.h"
@@ -279,7 +279,7 @@ namespace sw
 
         // 빈 값은 "입력 맵의 기본 바인딩" 이다. 기본으로 되돌린 설정이 지난번 리바인딩을 그대로 남기면 안 된다.
         InputSlot  slot;
-        const bool bHasSlot = context._value.empty() ? pInputMap->findDefaultRebindSlot( def._action, def._bindIndex, slot ) : InputSlotUtil::tryParse( context._value, slot );
+        const bool bHasSlot = context._value.empty() ? pInputMap->findDefaultRebindSlot( def._action, def._bindIndex, slot ) : InputSlot::tryParse( context._value, slot );
         if ( bHasSlot == false )
         {
             SW_LOG_WARNING_ID( "UserSettings.KeyBindingActionBinding", "key binding '%#': action '%#' binding %# cannot take '%#'", def._id.c_str(), def._action.c_str(), def._bindIndex, context._value );

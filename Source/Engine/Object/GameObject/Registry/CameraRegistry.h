@@ -74,7 +74,7 @@ namespace sw
 
         /**
          * @brief 이 씬의 게임 카메라가 그리는 뷰포트의 픽셀 크기를 적습니다(`Engine` 가 틱 전에). 모르면 0 입니다.
-         * @details 주 출력(에디터 게임 뷰의 이미지)이 있으면 그 크기, 없으면 백버퍼다 — 창 크기가 아니다. 카메라의 종횡비(`CameraPoseUtil::computeAspectRatio`)와
+         * @details 주 출력(에디터 게임 뷰의 이미지)이 있으면 그 크기, 없으면 백버퍼다 — 창 크기가 아니다. 카메라의 종횡비(`CameraPose::computeAspectRatio`)와
          *          픽셀 퍼펙트 배율이 이 값을 읽는다.
          */
         void setViewportSize( uint32 width, uint32 height )

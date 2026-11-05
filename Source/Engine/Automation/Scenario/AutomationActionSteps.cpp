@@ -13,8 +13,8 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
@@ -261,7 +261,7 @@ namespace sw
                 {
                     if ( runner.getInputScript().addTap( step._frameIndex + pressIndex * args._intervalFrames, pBinding->_arrSlot[0], args._holdFrames ) == false )
                     {
-                        outError = step.describe() + ": the slot " + InputSlotUtil::toText( pBinding->_arrSlot[0] ) + " cannot be pressed";
+                        outError = step.describe() + ": the slot " + InputSlot::toText( pBinding->_arrSlot[0] ) + " cannot be pressed";
                         return false;
                     }
                 }
@@ -279,7 +279,7 @@ namespace sw
                 connectGamepadOf( runner.getInputScript(), step._frameIndex, pBinding->_arrSlot[0] );
                 if ( runner.getInputScript().addSlot( step._frameIndex, pBinding->_arrSlot[0], string_view{ step._kind } == "ActionPress" ) )
                     return true;
-                outError = step.describe() + ": the slot " + InputSlotUtil::toText( pBinding->_arrSlot[0] ) + " cannot be pressed";
+                outError = step.describe() + ": the slot " + InputSlot::toText( pBinding->_arrSlot[0] ) + " cannot be pressed";
                 return false;
             }
 

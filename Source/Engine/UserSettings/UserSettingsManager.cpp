@@ -21,8 +21,8 @@
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
@@ -755,7 +755,7 @@ namespace sw
         InputSlot  slot;
         InputMap*  pInputMap = _engineHandlers.findBindingInputMap( def._action );
         const bool bHasSlot  = slotText.empty() ? ( pInputMap != nullptr && pInputMap->findDefaultRebindSlot( def._action, def._bindIndex, slot ) )
-                                                : InputSlotUtil::tryParse( slotText, slot );
+                                                : InputSlot::tryParse( slotText, slot );
         if ( bHasSlot == false )
             return false;
 
@@ -811,7 +811,7 @@ namespace sw
         InputSlot currentSlot;
         string    currentText;
         if ( findEffectiveSlot( settingIndex, currentSlot ) )
-            currentText = InputSlotUtil::toText( currentSlot );
+            currentText = InputSlot::toText( currentSlot );
         string normalized;
         if ( UserSettingsSchema::normalizeValue( _schema.getSettings()[settingIndex], slotText, normalized ) == UserSettingValueResult::Rejected )
             return UserSettingSetResult::Rejected;
@@ -1039,7 +1039,7 @@ namespace sw
         const UserSettingDef& def   = _schema.getSettings()[settingIndex];
         const string&         value = getEffectiveValue( settingIndex );
         if ( value.empty() == false )
-            return InputSlotUtil::tryParse( value, outSlot );
+            return InputSlot::tryParse( value, outSlot );
         const InputMap* pInputMap = _engineHandlers.findBindingInputMap( def._action );
         return pInputMap != nullptr && pInputMap->findDefaultRebindSlot( def._action, def._bindIndex, outSlot );
     }

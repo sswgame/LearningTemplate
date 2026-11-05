@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
-#include "GameFramework/Runtime/Character/Camera/CameraPoseUtil.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
 
 namespace sw
@@ -70,6 +70,6 @@ namespace sw
         def._lens._farPlane     = MathUtil::max( pCamera->getFarPlane(), _minFarPlane );
         CameraTarget target;
         target._focus = focus;
-        CameraPoseUtil::applyToCamera( *pCamera, evaluatePreset( def, target ) );
+        CameraPose::applyToCamera( *pCamera, evaluatePreset( def, target ) );
     }
 } // namespace sw

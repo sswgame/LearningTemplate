@@ -133,7 +133,7 @@ namespace sw
                 outListManifest.clear();
                 for ( const string& candidate : listCandidateFile )
                 {
-                    if ( StringUtil::endsWith( candidate, PackPatchUtil::kManifestExtension, true ) == false )
+                    if ( StringUtil::endsWith( candidate, PackPatchManifest::kManifestExtension, true ) == false )
                         continue;
                     string text;
                     if ( FileUtil::readTextFile( candidate, text ) == false )
@@ -142,7 +142,7 @@ namespace sw
                         return false;
                     }
                     PackPatchManifest manifest;
-                    if ( PackPatchUtil::parseManifest( text, candidate, manifest ) == false )
+                    if ( PackPatchManifest::parse( text, candidate, manifest ) == false )
                         return false;
                     outListManifest.push_back( std::move( manifest ) );
                 }
@@ -615,7 +615,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "PackManager.PackPatchPackCould", "Pack patch %# -> %# pack %# could not be read to check its signature", manifest._fromBuild, manifest._toBuild, packPath );
                 return false;
             }
-            if ( PackPatchUtil::verifyManifest( *_patchTrust._pProvider, _patchTrust._publicKey, packBytes, manifest, packPath ) == false )
+            if ( PackPatchManifest::verify( *_patchTrust._pProvider, _patchTrust._publicKey, packBytes, manifest, packPath ) == false )
                 return false;
         }
         return true;
@@ -623,25 +623,25 @@ namespace sw
 
     bool PackManager::mountPatchChain( string_view packsDirectory, const vector<PackPatchManifest>& listManifest, vector<string>& listMountedPath )
     {
-        const string recordPath = FileUtil::joinPath( packsDirectory, PackPatchUtil::kBuildRecordFileName );
+        const string recordPath = FileUtil::joinPath( packsDirectory, PackBuildRecord::kFileName );
         string       recordText;
         if ( FileUtil::readTextFile( recordPath, recordText ) == false )
         {
-            SW_LOG_ERROR_ID( "PackManager.PackPatchesExistBut", "Pack patches exist in %# but the installed build is unknown - %# is missing", packsDirectory, PackPatchUtil::kBuildRecordFileName );
+            SW_LOG_ERROR_ID( "PackManager.PackPatchesExistBut", "Pack patches exist in %# but the installed build is unknown - %# is missing", packsDirectory, PackBuildRecord::kFileName );
             return false;
         }
         PackBuildRecord record;
-        if ( PackPatchUtil::parseBuildRecord( recordText, recordPath, record ) == false )
+        if ( PackBuildRecord::parse( recordText, recordPath, record ) == false )
             return false;
         if ( record._patching == PackPatching::None )
         {
             SW_LOG_ERROR_ID( "PackManager.PackPatchesExistBut2", "Pack patches exist in %# but %# says patching=\"none\" - a build that takes no patches must not ship patch lists", packsDirectory,
-                             PackPatchUtil::kBuildRecordFileName );
+                             PackBuildRecord::kFileName );
             return false;
         }
         vector<size_t> listOrder;
         string         latestBuild;
-        if ( PackPatchUtil::orderPatchChainToLatest( record._build, listManifest, listOrder, latestBuild ) == false )
+        if ( PackPatchManifest::orderChainToLatest( record._build, listManifest, listOrder, latestBuild ) == false )
             return false;
         // 서명은 패치 팩을 하나라도 올리기 전에 모두 확인한다 — 중간에 틀리면 절반만 얹힌 상태를 거치지 않는다.
         if ( verifyPatchSignatures( packsDirectory, listManifest, listOrder ) == false )

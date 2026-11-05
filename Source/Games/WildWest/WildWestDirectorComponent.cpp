@@ -18,7 +18,6 @@
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/MountUtil.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Runtime/UI/HUD/HUDControllerComponent.h"
 
@@ -180,15 +179,15 @@ namespace sw
         GameObjectManager* pManager = getObjectManager();
         GameObject*        pPlayer  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
         PawnComponent*     pPawn    = pPlayer != nullptr ? pPlayer->getComponent<PawnComponent>() : nullptr;
-        if ( pPawn == nullptr || MountUtil::findSeatOf( *pPawn ) != nullptr )
+        if ( pPawn == nullptr || VehicleSeatComponent::findSeatOf( *pPawn ) != nullptr )
             return;
-        VehicleSeatComponent* pSeat = MountUtil::findNearestFreeSeat( *pPawn );
+        VehicleSeatComponent* pSeat = VehicleSeatComponent::findNearestFreeSeat( *pPawn );
         if ( pSeat == nullptr )
         {
             SW_LOG_WARNING_ID( "WildWestDirector.AutoPlayNoHorse", "[WildWest] auto play: no horse within reach of the rider" );
             return;
         }
-        const MountResult result = MountUtil::mount( *pPawn, *pSeat );
+        const MountResult result = VehicleSeatComponent::mount( *pPawn, *pSeat );
         if ( result != MountResult::Mounted )
             SW_LOG_WARNING_ID( "WildWestDirector.AutoPlayRiderCould", "[WildWest] auto play: the rider could not mount '%#' (result %#)", pSeat->getOwner()->getName().c_str(), static_cast<int32>( result ) );
     }
@@ -203,7 +202,7 @@ namespace sw
         WildWestHUDViewModel* pViewModel = pHUD->getOrCreateViewModel<WildWestHUDViewModel>();
         if ( pViewModel == nullptr )
             return; // 다른 뷰모델이 걸려 있다 — HUD 컨트롤러가 오류를 남겼다
-        const VehicleSeatComponent* pSeat        = MountUtil::findSeatOf( *pPlayerPawn );
+        const VehicleSeatComponent* pSeat        = VehicleSeatComponent::findSeatOf( *pPlayerPawn );
         const GameObject*           pHorseObject = pSeat != nullptr ? pSeat->getOwner() : nullptr;
         if ( pHorseObject == nullptr )
         {

@@ -8,7 +8,6 @@
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/MountUtil.h"
 
 namespace sw
 {
@@ -38,7 +37,7 @@ namespace sw
         GameObject*    pOccupant = _occupant.isValid() && bClearing == false ? manager.resolveGameObject( _occupant ) : nullptr;
         PawnComponent* pRider    = pOccupant != nullptr ? pOccupant->getComponent<PawnComponent>() : nullptr;
         if ( pRider != nullptr )
-            (void)MountUtil::dismount( *pRider, true );
+            (void)VehicleSeatComponent::dismount( *pRider, true );
         _occupant                  = GameObjectHandle{};
         _occupantController        = TComponentHandle<ControllerComponent>{};
         _previousVehicleController = TComponentHandle<ControllerComponent>{};

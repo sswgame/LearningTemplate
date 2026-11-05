@@ -9,7 +9,7 @@
  *          그래서 캡 고리가 정확히 닫히고 조각은 다시 닫힌 메시가 된다.
  *          막은 면은 "j 쪽 평면에서 생겼다"를 기억해 두므로, 두 조각의 맞닿은 넓이를 구할 수 있다.
  *
- *          입력은 닫혀 있어야 한다. `GeometryCutUtil::isClosed` 는 같은 위치의 정점을 하나로 보고, 모든 모서리를 두 삼각형이 나누는지 검사한다.
+ *          입력은 닫혀 있어야 한다. `AppearanceGeometry::isClosed` 는 같은 위치의 정점을 하나로 보고, 모든 모서리를 두 삼각형이 나누는지 검사한다.
  *          겹친 닫힌 부품 여럿도 입력으로 쓸 수 있다. 자르기 전에 허용 오차 안의 위치를 한 점으로 용접한다.
  *          조각은 위치가 비트까지 같은 정점끼리 닫혀 있다(`isClosedMesh`).
  *          세 평면이 만나는 셀 꼭짓점 둘레에는 아주 짧은 변이 남는다.
@@ -49,7 +49,7 @@ namespace sw::editor
                                             string& outError );
         /** @brief 삼각형 목록이 닫혔는지 반환합니다. 위치가 비트까지 같은 점만 같은 정점으로 봅니다(쪼갠 조각이 정확히 닫혔는지 확인할 때 씁니다). */
         static bool isClosedMesh( vector_reference<const RHIVertex> listVertex );
-        /** @brief 허용 오차(1e-5) 안의 위치를 같은 정점으로 보고 닫혔는지 반환합니다. `GeometryCutUtil::isClosed` 를 쓰며, 임포트한 입력을 검사합니다. */
+        /** @brief 허용 오차(1e-5) 안의 위치를 같은 정점으로 보고 닫혔는지 반환합니다. `AppearanceGeometry::isClosed` 를 쓰며, 임포트한 입력을 검사합니다. */
         static bool isClosedWithinTolerance( vector_reference<const RHIVertex> listVertex );
         /** @brief 닫힌 삼각형 목록의 부피(감은 방향과 무관한 절댓값)와 무게 중심을 반환합니다. */
         static float32 computeVolume( vector_reference<const RHIVertex> listVertex, float3& outCentroid );

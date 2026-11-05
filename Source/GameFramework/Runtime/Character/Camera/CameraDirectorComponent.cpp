@@ -20,7 +20,7 @@
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
-#include "GameFramework/Runtime/Character/Camera/CameraPoseUtil.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/ComponentStateStore.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
@@ -292,7 +292,7 @@ namespace sw
             return false;
         const GameObject*      pOwner      = getOwner();
         const CameraComponent* pCamera     = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
-        const float32          aspectRatio = pCamera != nullptr ? CameraPoseUtil::computeAspectRatio( *pCamera ) : CameraTarget::kDefaultAspectRatio;
+        const float32          aspectRatio = pCamera != nullptr ? CameraPose::computeAspectRatio( *pCamera ) : CameraTarget::kDefaultAspectRatio;
         const CameraPose&      pose        = _director.getPose();
         const Ray              ray         = computeCameraScreenRay( pose, aspectRatio, mouseNormalized );
         float32                distance    = 0.0f;
@@ -523,7 +523,7 @@ namespace sw
         pose = _photoMode.makePose( pose );
         if ( pCamera == nullptr )
             return;
-        CameraPoseUtil::applyToCamera( *pCamera, pose );
+        CameraPose::applyToCamera( *pCamera, pose );
         const bool bDirectorCut = _director.consumeCut();
         if ( bDirectorCut || _bPhotoModeCut )
             pCamera->markCut();
@@ -538,7 +538,7 @@ namespace sw
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const CameraComponent*   pCamera  = pOwner != nullptr ? pOwner->getComponent<CameraComponent>() : nullptr;
         if ( pCamera != nullptr )
-            target._aspectRatio = CameraPoseUtil::computeAspectRatio( *pCamera );
+            target._aspectRatio = CameraPose::computeAspectRatio( *pCamera );
         if ( pManager == nullptr )
             return target;
         if ( _listGroupTarget.empty() == false )

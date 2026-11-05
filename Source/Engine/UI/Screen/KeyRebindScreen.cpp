@@ -4,8 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
+#include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputSlotUtil.h"
 #include "Engine/UI/UISystem.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 #include "Engine/UserSettings/UserSettingsManager.h"
@@ -109,7 +109,7 @@ namespace sw
         UISystem* pUI = getUISystem();
         if ( pUI != nullptr )
             pUI->getInputRouter().getConsumption().consumeSlot( slot );
-        _capturedSlotText = InputSlotUtil::toText( slot );
+        _capturedSlotText = InputSlot::toText( slot );
         _bListening       = SW_FALSE;
         UserSettingBindingConflict conflict{};
         if ( _pSettings->findBindingConflict( _settingID, _capturedSlotText, conflict ) )

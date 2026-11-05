@@ -184,8 +184,8 @@ namespace sw
                 string build;
                 (void)commandLine.getArgument( CommandLineArgument::PACK_BUILD, build );
                 if ( build.empty() )
-                    return PackPatchBuilder::writeNoPatchingRecord( FileUtil::joinPath( params._packOutputDir, PackPatchUtil::kBuildRecordFileName ) );
-                return PackPatchBuilder::writeBuildRecord( params._packOutputDir, build, FileUtil::joinPath( params._packOutputDir, PackPatchUtil::kBuildRecordFileName ) );
+                    return PackPatchBuilder::writeNoPatchingRecord( FileUtil::joinPath( params._packOutputDir, PackBuildRecord::kFileName ) );
+                return PackPatchBuilder::writeBuildRecord( params._packOutputDir, build, FileUtil::joinPath( params._packOutputDir, PackBuildRecord::kFileName ) );
             }
 
             /**

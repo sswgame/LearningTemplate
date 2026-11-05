@@ -93,12 +93,12 @@ namespace sw
 
     const HTTPHeader* HTTPClientResponse::findHeader( string_view name ) const
     {
-        return HTTPUtil::findHeader( _listHeader, name );
+        return HTTPHeader::find( _listHeader, name );
     }
 
     const HTTPHeader* HTTPServerRequest::findHeader( string_view name ) const
     {
-        return HTTPUtil::findHeader( _listHeader, name );
+        return HTTPHeader::find( _listHeader, name );
     }
 
     const HTTPHeader* HTTPServerRequest::findQuery( string_view name ) const
@@ -232,10 +232,10 @@ namespace sw
         return true;
     }
 
-    const HTTPHeader* HTTPUtil::findHeader( const vector<HTTPHeader>& listHeader, string_view name )
+    const HTTPHeader* HTTPHeader::find( const vector<HTTPHeader>& listHeader, string_view name )
     {
         return VectorUtil::findIf( listHeader, [&]( const HTTPHeader& header )
-        { return isEqualIgnoreCase( header._name, name ); } );
+        { return HTTPUtil::isEqualIgnoreCase( header._name, name ); } );
     }
 
     bool HTTPUtil::isEqualIgnoreCase( string_view left, string_view right )
@@ -391,8 +391,8 @@ namespace sw
             return false;
         }
         _buffer.erase( _buffer.begin(), _buffer.begin() + static_cast<ptrdiff_t>( headEnd + 4 ) );
-        const HTTPHeader* pEncoding = HTTPUtil::findHeader( _listHeader, "Transfer-Encoding" );
-        const HTTPHeader* pLength   = HTTPUtil::findHeader( _listHeader, "Content-Length" );
+        const HTTPHeader* pEncoding = HTTPHeader::find( _listHeader, "Transfer-Encoding" );
+        const HTTPHeader* pLength   = HTTPHeader::find( _listHeader, "Content-Length" );
         if ( pEncoding != nullptr && HTTPUtil::isEqualIgnoreCase( pEncoding->_value, "chunked" ) )
         {
             _phase = Phase::ChunkSize;
@@ -547,7 +547,7 @@ namespace sw
         return _state;
     }
 
-    void HTTPWriteUtil::writeRequest( const HTTPClientRequest& request, const HTTPAddress& url, vector<uint8>& outBytes )
+    void HTTPClientRequest::write( const HTTPClientRequest& request, const HTTPAddress& url, vector<uint8>& outBytes )
     {
         using Internal = HTTPTypesInternal;
         outBytes.clear();
@@ -573,7 +573,7 @@ namespace sw
         outBytes.insert( outBytes.end(), request._bodyBytes.begin(), request._bodyBytes.end() );
     }
 
-    void HTTPWriteUtil::writeResponse( const HTTPServerResponse& response, vector<uint8>& outBytes )
+    void HTTPServerResponse::write( const HTTPServerResponse& response, vector<uint8>& outBytes )
     {
         using Internal = HTTPTypesInternal;
         outBytes.clear();
@@ -610,7 +610,7 @@ namespace sw
         Internal::appendText( outBytes, "0\r\n\r\n" );
     }
 
-    const utf8* HTTPWriteUtil::getReasonPhrase( int32 statusCode )
+    const utf8* HTTPServerResponse::getReasonPhrase( int32 statusCode )
     {
         switch ( statusCode )
         {

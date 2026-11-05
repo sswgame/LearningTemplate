@@ -14,7 +14,7 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
-#include "GameFramework/Runtime/Character/Camera/CameraPoseUtil.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 
 namespace sw
 {
@@ -144,7 +144,7 @@ namespace sw
             // 다른 카메라에서 넘어오면 그 화면에서 이 프리셋의 블렌드로 섞는다. 같은 카메라면 디렉터가 이미 지금 화면에서 섞는다.
             const bool bFromOtherCamera = bActivated && pPreviousCamera != nullptr && pPrevious != pTarget;
             if ( bFromOtherCamera )
-                pDirector->blendFromPose( CameraPoseUtil::makePoseFromCamera( *pPreviousCamera ), pDirector->getCatalog().getBlend( hashed_string{}, presetID ) );
+                pDirector->blendFromPose( CameraPose::makePoseFromCamera( *pPreviousCamera ), pDirector->getCatalog().getBlend( hashed_string{}, presetID ) );
         }
         _currentCutCamera = pTarget->getHandle();
 
@@ -167,7 +167,7 @@ namespace sw
         CameraDirectorComponent* pDirector            = findDirector( pTarget );
         const bool               bBlendFromGameCamera = pGameCamera != nullptr && pDirector != nullptr && pGameCamera->getOwner() != pTarget;
         if ( bBlendFromGameCamera )
-            pDirector->blendFromPose( CameraPoseUtil::makePoseFromCamera( *pGameCamera ), makeCinematicBlend( signal._blendSeconds ) );
+            pDirector->blendFromPose( CameraPose::makePoseFromCamera( *pGameCamera ), makeCinematicBlend( signal._blendSeconds ) );
     }
 
     void CinematicCameraComponent::endCinematic( const SequenceCameraSignal& signal )
@@ -184,7 +184,7 @@ namespace sw
         GameObject*      pGameObject = pGameCamera != nullptr ? pGameCamera->getOwner() : nullptr;
         if ( pGameObject == nullptr || pGameObject == pLastCut )
             return;
-        const CameraPose         from      = CameraPoseUtil::makePoseFromCamera( *pCutCamera );
+        const CameraPose         from      = CameraPose::makePoseFromCamera( *pCutCamera );
         const BlendCurveDef      blend     = makeCinematicBlend( signal._blendSeconds );
         CameraDirectorComponent* pDirector = findDirector( pGameObject );
         if ( pDirector != nullptr )

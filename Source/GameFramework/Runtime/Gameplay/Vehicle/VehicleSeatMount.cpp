@@ -1,7 +1,5 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Vehicle/MountUtil.h"
-
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
@@ -27,7 +25,7 @@ namespace sw
 {
     namespace
     {
-        struct MountUtilInternal
+        struct VehicleSeatComponentInternal
         {
             /** @brief 하차 위치가 막혔을 때 둘러보는 방향 수입니다. 45° 간격입니다. */
             static constexpr int32 kExitProbeCount = 8;
@@ -108,9 +106,9 @@ namespace sw
 
 namespace sw
 {
-    MountResult MountUtil::mount( PawnComponent& riderPawn, VehicleSeatComponent& seat )
+    MountResult VehicleSeatComponent::mount( PawnComponent& riderPawn, VehicleSeatComponent& seat )
     {
-        using Internal                   = MountUtilInternal;
+        using Internal                   = VehicleSeatComponentInternal;
         GameObject*        pRider        = riderPawn.getOwner();
         GameObject*        pVehicle      = seat.getOwner();
         GameObjectManager* pManager      = Internal::findManager( riderPawn );
@@ -168,9 +166,9 @@ namespace sw
         return MountResult::Mounted;
     }
 
-    bool MountUtil::dismount( PawnComponent& riderPawn, bool bForced )
+    bool VehicleSeatComponent::dismount( PawnComponent& riderPawn, bool bForced )
     {
-        using Internal                           = MountUtilInternal;
+        using Internal                           = VehicleSeatComponentInternal;
         VehicleSeatComponent* pSeat              = findSeatOf( riderPawn );
         GameObject*           pRider             = riderPawn.getOwner();
         GameObjectManager*    pManager           = Internal::findManager( riderPawn );
@@ -220,7 +218,7 @@ namespace sw
         return true;
     }
 
-    VehicleSeatComponent* MountUtil::findSeatOf( const PawnComponent& riderPawn )
+    VehicleSeatComponent* VehicleSeatComponent::findSeatOf( const PawnComponent& riderPawn )
     {
         const GameObject*        pRider   = riderPawn.getOwner();
         const GameObjectManager* pManager = pRider != nullptr ? pRider->getManager() : nullptr;
@@ -235,7 +233,7 @@ namespace sw
         return nullptr;
     }
 
-    VehicleSeatComponent* MountUtil::findNearestFreeSeat( const PawnComponent& riderPawn )
+    VehicleSeatComponent* VehicleSeatComponent::findNearestFreeSeat( const PawnComponent& riderPawn )
     {
         const GameObject*        pRider     = riderPawn.getOwner();
         const GameObjectManager* pManager   = pRider != nullptr ? pRider->getManager() : nullptr;

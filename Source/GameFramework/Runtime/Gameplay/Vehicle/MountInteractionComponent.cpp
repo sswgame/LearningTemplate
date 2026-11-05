@@ -6,7 +6,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/MountUtil.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 namespace sw
@@ -46,16 +45,16 @@ namespace sw
         PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn == nullptr )
             return;
-        const VehicleSeatComponent* pCurrentSeat = MountUtil::findSeatOf( *pPawn );
+        const VehicleSeatComponent* pCurrentSeat = VehicleSeatComponent::findSeatOf( *pPawn );
         if ( pCurrentSeat != nullptr )
         {
             // 운전석에서 내리는 것은 탈것 쪽 버튼이다. 여기서는 승객석만 처리한다.
             if ( pCurrentSeat->isDriverSeat() == false )
-                (void)MountUtil::dismount( *pPawn, false );
+                (void)VehicleSeatComponent::dismount( *pPawn, false );
             return;
         }
-        VehicleSeatComponent* pSeat = MountUtil::findNearestFreeSeat( *pPawn );
+        VehicleSeatComponent* pSeat = VehicleSeatComponent::findNearestFreeSeat( *pPawn );
         if ( pSeat != nullptr )
-            (void)MountUtil::mount( *pPawn, *pSeat ); // 태우지 못하면 아무것도 바뀌지 않는다 — 결과는 좌석 상태로 본다
+            (void)VehicleSeatComponent::mount( *pPawn, *pSeat ); // 태우지 못하면 아무것도 바뀌지 않는다 — 결과는 좌석 상태로 본다
     }
 } // namespace sw

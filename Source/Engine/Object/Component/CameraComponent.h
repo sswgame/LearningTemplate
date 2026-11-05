@@ -194,12 +194,12 @@ namespace sw
 
         /** @brief 이 카메라의 후처리 값(노출 · 블룸 배율 · 비네트 · 채도 · 대비 · 레터박스)입니다. 렌더 뷰가 이 값을 렌더러로 나릅니다. */
         const CameraPostProcessValues& getPostProcess() const { return _postProcess; }
-        /** @brief 후처리 값을 바꿉니다. 카메라 프리셋 · 블렌드를 쓰는 게임은 포즈가 매 프레임 씁니다(`CameraPoseUtil::applyToCamera`). */
+        /** @brief 후처리 값을 바꿉니다. 카메라 프리셋 · 블렌드를 쓰는 게임은 포즈가 매 프레임 씁니다(`CameraPose::applyToCamera`). */
         void setPostProcess( const CameraPostProcessValues& values ) { _postProcess = values; }
 
         /** @brief 이 카메라의 피사계 심도 렌즈 값(초점 거리 · 조리개)입니다. 렌더 뷰가 이 값을 렌더러로 나릅니다. */
         const CameraDepthOfFieldValues& getDepthOfField() const { return _depthOfField; }
-        /** @brief 피사계 심도 렌즈 값을 바꿉니다. 카메라 프리셋 · 블렌드를 쓰는 게임은 포즈가 매 프레임 씁니다(`CameraPoseUtil::applyLensToCamera`). */
+        /** @brief 피사계 심도 렌즈 값을 바꿉니다. 카메라 프리셋 · 블렌드를 쓰는 게임은 포즈가 매 프레임 씁니다(`CameraPose::applyLensToCamera`). */
         void setDepthOfField( const CameraDepthOfFieldValues& values ) { _depthOfField = values; }
 
         /**
@@ -208,7 +208,7 @@ namespace sw
          *          건축 사진의 시프트 렌즈처럼 카메라를 기울이지 않고 위를 더 보게 해 세로선이 모이지 않는다.
          */
         const float2& getLensShift() const { return _lensShift; }
-        /** @brief 렌즈 시프트를 바꿉니다. 카메라 프리셋 · 블렌드를 쓰는 게임은 포즈가 매 프레임 씁니다(`CameraPoseUtil::applyLensToCamera`). */
+        /** @brief 렌즈 시프트를 바꿉니다. 카메라 프리셋 · 블렌드를 쓰는 게임은 포즈가 매 프레임 씁니다(`CameraPose::applyLensToCamera`). */
         void setLensShift( const float2& shift ) { _lensShift = shift; }
 
         /**

@@ -240,7 +240,7 @@ namespace sw
         writer.writeVarUint( message._actorID );
         writer.writeVarInt( message._createdMs );
         writer.writeVarInt( message._expiresMs );
-        LedgerUtil::writeHolder( writer, message._fundingHolder );
+        LedgerHolder::write( writer, message._fundingHolder );
         ServiceKeyUtil::writeString( writer, message._titleKey );
         ServiceKeyUtil::writeString( writer, message._body );
         ServiceKeyUtil::writeString( writer, message._senderName );
@@ -275,7 +275,7 @@ namespace sw
         message._actorID            = reader.readVarUint();
         message._createdMs          = reader.readVarInt();
         message._expiresMs          = reader.readVarInt();
-        if ( LedgerUtil::readHolder( reader, message._fundingHolder ) == false )
+        if ( LedgerHolder::read( reader, message._fundingHolder ) == false )
             return false;
         const bool bTextOk = ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxTitleSize, message._titleKey ) &&
                              ServiceKeyUtil::readString( reader, ServiceMailConstant::kMaxBodySize, message._body ) &&

@@ -34,10 +34,13 @@ namespace sw
 namespace sw
 {
     /** @brief 머리 하나입니다. 쿼리나 폼의 이름과 값 한 쌍으로도 씁니다. */
-    struct HTTPHeader
+    struct SW_GF_API HTTPHeader
     {
         string _name{};
         string _value{};
+
+        /** @brief 머리 목록에서 이름으로 찾습니다. 대소문자는 가립니다. */
+        static const HTTPHeader* find( const vector<HTTPHeader>& listHeader, string_view name );
     };
 } // namespace sw
 
@@ -69,14 +72,18 @@ namespace sw
 
 namespace sw
 {
+    struct HTTPAddress;
+
     /** @brief 나가는 요청 하나입니다. */
-    struct HTTPClientRequest
+    struct SW_GF_API HTTPClientRequest
     {
         vector<HTTPHeader> _listHeader{}; ///< `Host`, `Content-Length`, `Connection` 은 클라이언트가 붙인다
         vector<uint8>      _bodyBytes{};
         string             _url{}; ///< `http://` · `https://` + 호스트[:포트] + 경로[?쿼리]
         int64              _timeoutMs{ HTTPConstant::kDefaultTimeoutMs };
         HTTPMethod         _method{ HTTPMethod::Get };
+
+        static void write( const HTTPClientRequest& request, const HTTPAddress& url, vector<uint8>& outBytes );
     };
 } // namespace sw
 
@@ -126,12 +133,16 @@ namespace sw
 namespace sw
 {
     /** @brief 서버가 돌려줄 응답입니다. */
-    struct HTTPServerResponse
+    struct SW_GF_API HTTPServerResponse
     {
         vector<HTTPHeader> _listHeader{}; ///< `Content-Length` · `Connection` 은 서버가 붙인다
         vector<uint8>      _bodyBytes{};
         int32              _statusCode{ HTTPConstant::kStatusOk };
         uint8              _bChunked{ SW_FALSE }; ///< 본문을 chunked 로 보낸다(받는 쪽 chunked 해석을 테스트할 때 쓴다)
+
+        static void write( const HTTPServerResponse& response, vector<uint8>& outBytes );
+
+        static const utf8* getReasonPhrase( int32 statusCode );
     };
 } // namespace sw
 
@@ -163,9 +174,7 @@ namespace sw
         static string encodeForm( const vector<HTTPHeader>& listPair );
         /** @brief `이름=값&…` 을 풉니다. 틀린 퍼센트 인코딩이 있으면 false 입니다. */
         [[nodiscard]] static bool decodeForm( string_view text, vector<HTTPHeader>& outListPair );
-        /** @brief 머리 목록에서 이름으로 찾습니다. 대소문자는 가립니다. */
-        static const HTTPHeader* findHeader( const vector<HTTPHeader>& listHeader, string_view name );
-        static bool              isEqualIgnoreCase( string_view left, string_view right );
+        static bool               isEqualIgnoreCase( string_view left, string_view right );
     };
 } // namespace sw
 
@@ -254,16 +263,5 @@ namespace sw
         HTTPMessageKind    _kind;
         HTTPParseState     _state;
         Phase              _phase;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 메시지 쓰기 도우미입니다. */
-    struct SW_GF_API HTTPWriteUtil
-    {
-        static void        writeRequest( const HTTPClientRequest& request, const HTTPAddress& url, vector<uint8>& outBytes );
-        static void        writeResponse( const HTTPServerResponse& response, vector<uint8>& outBytes );
-        static const utf8* getReasonPhrase( int32 statusCode );
     };
 } // namespace sw

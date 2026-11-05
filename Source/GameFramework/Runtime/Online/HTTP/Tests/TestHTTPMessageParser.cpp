@@ -40,7 +40,7 @@ SW_TEST_CASE( HTTPMessageParserTest, ReadsARequestFedByteByByte )
     SW_REQUIRE_TRUE( feedByteByByte( parser, "POST /token?x=1 HTTP/1.1\r\nHost: a.test\r\nContent-Length: 5\r\n\r\nhello" ) == sw::HTTPParseState::Complete );
     SW_EXPECT_TRUE( parser.getMethod() == sw::HTTPMethod::Post );
     SW_EXPECT_EQUAL( sw::string( "/token?x=1" ), parser.getTarget() );
-    SW_REQUIRE_TRUE( sw::HTTPUtil::findHeader( parser.getHeaders(), "host" ) != nullptr );
+    SW_REQUIRE_TRUE( sw::HTTPHeader::find( parser.getHeaders(), "host" ) != nullptr );
     SW_EXPECT_EQUAL( sw::string( "hello" ), bodyText( parser ) );
 }
 

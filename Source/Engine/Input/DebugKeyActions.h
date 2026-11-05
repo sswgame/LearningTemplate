@@ -29,7 +29,7 @@ namespace sw
         /** @brief 액션 안의 바인딩 번호입니다(잘못된 파일이 큰 번호를 주지 못하게 상한을 둔다). */
         PROPERTY( Required, Min = 0, Max = 16 )
         int32 _index{ 0 };
-        /** @brief 새 슬롯(`InputSlotUtil::toText` — `Key.F2`)입니다. */
+        /** @brief 새 슬롯(`InputSlot::toText` — `Key.F2`)입니다. */
         PROPERTY( Required )
         string _slot{};
     };

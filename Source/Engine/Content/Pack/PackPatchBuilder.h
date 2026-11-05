@@ -61,7 +61,7 @@ namespace sw
          */
         [[nodiscard]] static bool collectBuildEntries( string_view packsDirectory, vector<PackContentEntry>& outListEntry );
 
-        /** @brief @p packsDirectory 의 팩 내용 목록을 빌드 @p build 의 기록으로 @p recordPath 에 씁니다(기본 팩 폴더에는 `PackPatchUtil::kBuildRecordFileName`). */
+        /** @brief @p packsDirectory 의 팩 내용 목록을 빌드 @p build 의 기록으로 @p recordPath 에 씁니다(기본 팩 폴더에는 `PackBuildRecord::kFileName`). */
         [[nodiscard]] static bool writeBuildRecord( string_view packsDirectory, string_view build, string_view recordPath );
         /** @brief 패치를 쓰지 않는 빌드의 기록(`patching="none"`, 번호 · 내용 목록 없음)을 @p recordPath 에 씁니다. 빌드 번호를 주지 않은 쿠킹이 쓴다 — 기록이 없는 것으로 대신하지 않는다. */
         [[nodiscard]] static bool writeNoPatchingRecord( string_view recordPath );

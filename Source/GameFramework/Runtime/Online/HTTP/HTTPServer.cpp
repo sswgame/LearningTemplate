@@ -83,7 +83,7 @@ namespace sw
                 _onRequest.get()( ready._request, response );
             ++_handledCount;
             vector<uint8> bytes;
-            HTTPWriteUtil::writeResponse( response, bytes );
+            HTTPServerResponse::write( response, bytes );
             ScopedLock<mutex> lock{ _mutex };
             const auto        peerIt = _mapPeer.find( ready._handle.packed() );
             if ( peerIt == _mapPeer.end() )

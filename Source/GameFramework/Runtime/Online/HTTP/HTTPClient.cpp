@@ -113,7 +113,7 @@ namespace sw
         call->_requestID      = requestID;
         call->_deadline       = _clock.nowMilliseconds() + ( request._timeoutMs > 0 ? request._timeoutMs : HTTPConstant::kDefaultTimeoutMs );
         call->_parser.reset( HTTPMessageKind::Response, _settings->_maxResponseBodyBytes );
-        HTTPWriteUtil::writeRequest( request, url, call->_requestBytes );
+        HTTPClientRequest::write( request, url, call->_requestBytes );
         if ( call->_link.initialize( pTLSContext ) == false )
         {
             failImmediately( requestID, "could not create a TLS session" );

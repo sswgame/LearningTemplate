@@ -132,7 +132,7 @@ namespace sw
          * @brief 디렉터리 안의 .pack 파일을 훑어 표준 우선순위로 마운트하고, 패치 목록(`*.packpatch.xml`)이 있으면 그 패치를 사슬 순서로 적용합니다.
          * @param packsDirectory .pack 파일들이 있는 디렉터리(예: "Bin/Packs")
          * @return 팩을 하나 이상 마운트하면 true 입니다.
-         * @details 패치 목록이 가리키는 팩은 기본 팩으로 마운트하지 않는다. 설치된 빌드는 같은 폴더의 `PackPatchUtil::kBuildRecordFileName` 이 밝히고, 거기서 이어지는 패치를
+         * @details 패치 목록이 가리키는 팩은 기본 팩으로 마운트하지 않는다. 설치된 빌드는 같은 폴더의 `PackBuildRecord::kFileName` 이 밝히고, 거기서 이어지는 패치를
          *          모두 적용한다(`mountPatchChain`). 목록을 못 읽거나 · 빌드 기록이 없거나 · 사슬이 끊기거나 갈리거나 · 패치 팩이 없으면 이 호출이 마운트한 팩을 모두 해제하고 false 다 —
          *          패치가 덜 적용된 채 돌지 않는다.
          */

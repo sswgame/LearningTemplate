@@ -49,7 +49,7 @@ namespace sw
                 VectorUtil::sort( listFile );
                 for ( const string& file : listFile )
                 {
-                    if ( StringUtil::endsWith( file, PackPatchUtil::kManifestExtension, true ) )
+                    if ( StringUtil::endsWith( file, PackPatchManifest::kManifestExtension, true ) )
                     {
                         SW_LOG_ERROR_ID( "PackPatchBuilder.PackFolderHoldsPatch", "Pack folder '%#' holds the patch %# - give the base packs of the build, not a patched install", packsDirectory, file );
                         return false;
@@ -85,7 +85,7 @@ namespace sw
                         }
                         Source source;
                         source._fullPath    = domain + "/" + pathInPack;
-                        source._contentHash = PackPatchUtil::computeEntryHash( bytes );
+                        source._contentHash = PackContentEntry::computeHash( bytes );
                         source._packIndex   = packIndex;
                         source._pathInPack  = pathInPack;
                         if ( mapFullPathToPack.emplace( source._fullPath, packIndex ).second == false )
@@ -135,7 +135,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "PackPatchBuilder.PreviousBuildRecordCould", "Previous build record '%#' could not be read", params._previousRecordPath );
                     return false;
                 }
-                if ( PackPatchUtil::parseBuildRecord( previousText, params._previousRecordPath, outPrevious ) == false )
+                if ( PackBuildRecord::parse( previousText, params._previousRecordPath, outPrevious ) == false )
                     return false;
                 if ( outPrevious._patching == PackPatching::None )
                 {
@@ -200,7 +200,7 @@ namespace sw
 
     string PackPatchBuilder::makeManifestFileName( string_view build )
     {
-        return string( PackPatchBuilderInternal::kPatchPackPrefix ) + string( build ) + string( PackPatchUtil::kManifestExtension );
+        return string( PackPatchBuilderInternal::kPatchPackPrefix ) + string( build ) + string( PackPatchManifest::kManifestExtension );
     }
 
     bool PackPatchBuilder::isValidBuildName( string_view build )
@@ -239,7 +239,7 @@ namespace sw
         record._build = string( build );
         if ( collectBuildEntries( packsDirectory, record._listEntry ) == false )
             return false;
-        if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( recordPath ) ) == false || FileUtil::writeTextFile( recordPath, PackPatchUtil::makeBuildRecordText( record ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( recordPath ) ) == false || FileUtil::writeTextFile( recordPath, PackBuildRecord::makeText( record ) ) == false )
         {
             SW_LOG_ERROR_ID( "PackPatchBuilder.BuildRecordCouldNot", "Build record '%#' could not be written", recordPath );
             return false;
@@ -252,7 +252,7 @@ namespace sw
     {
         PackBuildRecord record;
         record._patching = PackPatching::None;
-        if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( recordPath ) ) == false || FileUtil::writeTextFile( recordPath, PackPatchUtil::makeBuildRecordText( record ) ) == false )
+        if ( FileUtil::ensureDirectoryExists( FileUtil::getDirectoryPart( recordPath ) ) == false || FileUtil::writeTextFile( recordPath, PackBuildRecord::makeText( record ) ) == false )
         {
             SW_LOG_ERROR_ID( "PackPatchBuilder.BuildRecordCouldNot", "Build record '%#' could not be written", recordPath );
             return false;
@@ -276,7 +276,7 @@ namespace sw
         current._build     = params._newBuild;
         current._listEntry = Internal::makeEntries( listSource );
         PackDelta delta;
-        if ( PackPatchUtil::computeDelta( previous._listEntry, current._listEntry, delta ) == false )
+        if ( PackDelta::compute( previous._listEntry, current._listEntry, delta ) == false )
             return false;
         if ( delta._listChangedPath.empty() && delta._listRemovedPath.empty() )
         {
@@ -295,7 +295,7 @@ namespace sw
         manifest._listRemovedPath = delta._listRemovedPath;
         const string packPath     = FileUtil::joinPath( params._outputDirectory, manifest._packFileName );
         const string manifestPath = FileUtil::joinPath( params._outputDirectory, makeManifestFileName( params._newBuild ) );
-        const string recordPath   = FileUtil::joinPath( params._outputDirectory, params._newBuild + string( PackPatchUtil::kBuildRecordExtension ) );
+        const string recordPath   = FileUtil::joinPath( params._outputDirectory, params._newBuild + string( PackBuildRecord::kExtension ) );
         if ( FileUtil::ensureDirectoryExists( params._outputDirectory ) == false || writer.writePackFile( packPath ) == false )
         {
             SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackCouldNot", "Patch pack could not be written to '%#'", packPath );
@@ -310,11 +310,11 @@ namespace sw
                 SW_LOG_ERROR_ID( "PackPatchBuilder.PatchPackCouldNot2", "Patch pack '%#' could not be read back for signing", packPath );
                 return false;
             }
-            if ( PackPatchUtil::signManifest( *params._signer._pProvider, params._signer._privateKeyPem, packBytes, manifest ) == false )
+            if ( PackPatchManifest::sign( *params._signer._pProvider, params._signer._privateKeyPem, packBytes, manifest ) == false )
                 return false;
         }
-        const bool bWritten = FileUtil::writeTextFile( manifestPath, PackPatchUtil::makeManifestText( manifest ) ) &&
-                              FileUtil::writeTextFile( recordPath, PackPatchUtil::makeBuildRecordText( current ) );
+        const bool bWritten = FileUtil::writeTextFile( manifestPath, PackPatchManifest::makeText( manifest ) ) &&
+                              FileUtil::writeTextFile( recordPath, PackBuildRecord::makeText( current ) );
         if ( bWritten == false )
         {
             SW_LOG_ERROR_ID( "PackPatchBuilder.PatchFilesCouldNot", "Patch files could not be written to '%#'", params._outputDirectory );

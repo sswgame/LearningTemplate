@@ -9,7 +9,7 @@
  *          이웃 셀은 정해진 순서(z → y → x, 각각 작은 셀 → 큰 셀)로, 셀 안의 점은 넣은 순서로 봅니다. 쿠킹 해시와 파괴 해시가 이 성질에 기댑니다.
  *          대표 점은 오차 안에서 **처음 넣은 점**이라 합친 결과가 넣는 순서에 따라 달라질 수 있습니다(같은 입력이면 같다).
  *
- *          쓰는 곳: 물리 메시 셰이프(`PhysicsMeshShapeCache::makeShapeData`), 메시 파괴(`MeshFracture`), 캐릭터 기하 자르기(`GeometryCutUtil`).
+ *          쓰는 곳: 물리 메시 셰이프(`PhysicsMeshShapeCache::makeShapeData`), 메시 파괴(`MeshFracture`), 캐릭터 기하 자르기(`AppearanceGeometry`).
  */
 #pragma once
 #include "Core/Container/span.h"

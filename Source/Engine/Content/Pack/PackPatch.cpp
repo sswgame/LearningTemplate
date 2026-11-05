@@ -116,7 +116,7 @@ namespace sw
         };
     } // namespace
 
-    bool PackPatchUtil::computeDelta( const vector<PackContentEntry>& listBase, const vector<PackContentEntry>& listTarget, PackDelta& outDelta )
+    bool PackDelta::compute( const vector<PackContentEntry>& listBase, const vector<PackContentEntry>& listTarget, PackDelta& outDelta )
     {
         outDelta = PackDelta{};
         unordered_map<string, uint64> mapBase;
@@ -139,7 +139,7 @@ namespace sw
         return true;
     }
 
-    bool PackPatchUtil::parseManifest( string_view xmlText, string_view sourceName, PackPatchManifest& outManifest )
+    bool PackPatchManifest::parse( string_view xmlText, string_view sourceName, PackPatchManifest& outManifest )
     {
         outManifest = PackPatchManifest{};
         XMLDocument document;
@@ -204,7 +204,7 @@ namespace sw
         return true;
     }
 
-    string PackPatchUtil::makeManifestText( const PackPatchManifest& manifest )
+    string PackPatchManifest::makeText( const PackPatchManifest& manifest )
     {
         XMLDocument             document;
         const XMLNode           root = document.appendRoot( PackPatchInternal::kRootName );
@@ -227,12 +227,12 @@ namespace sw
         return document.saveToString();
     }
 
-    uint64 PackPatchUtil::computeEntryHash( const vector<uint8>& bytes )
+    uint64 PackContentEntry::computeHash( const vector<uint8>& bytes )
     {
         return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
     }
 
-    bool PackPatchUtil::parseBuildRecord( string_view xmlText, string_view sourceName, PackBuildRecord& outRecord )
+    bool PackBuildRecord::parse( string_view xmlText, string_view sourceName, PackBuildRecord& outRecord )
     {
         outRecord = PackBuildRecord{};
         XMLDocument document;
@@ -298,7 +298,7 @@ namespace sw
         return true;
     }
 
-    string PackPatchUtil::makeBuildRecordText( const PackBuildRecord& record )
+    string PackBuildRecord::makeText( const PackBuildRecord& record )
     {
         vector<const PackContentEntry*> listSorted;
         listSorted.reserve( record._listEntry.size() );
@@ -327,7 +327,7 @@ namespace sw
         return document.saveToString();
     }
 
-    bool PackPatchUtil::orderPatchChainToLatest( string_view installedBuild, const vector<PackPatchManifest>& listManifest, vector<size_t>& outListOrder, string& outLatestBuild )
+    bool PackPatchManifest::orderChainToLatest( string_view installedBuild, const vector<PackPatchManifest>& listManifest, vector<size_t>& outListOrder, string& outLatestBuild )
     {
         outListOrder.clear();
         outLatestBuild = string( installedBuild );
@@ -368,7 +368,7 @@ namespace sw
         return true;
     }
 
-    string PackPatchUtil::makeSigningPayload( const PackPatchManifest& manifest )
+    string PackPatchManifest::makeSigningPayload( const PackPatchManifest& manifest )
     {
         // 줄 하나 = `이름=값\n`. `operator+` 대신 append 로 잇는다(sw::string 은 std::string 과 섞어 더하지 않는다).
         string     payload;
@@ -396,7 +396,7 @@ namespace sw
         return payload;
     }
 
-    bool PackPatchUtil::signManifest( INetSecurityProvider& provider, const string& privateKeyPem, const vector<uint8>& packBytes, PackPatchManifest& inOutManifest )
+    bool PackPatchManifest::sign( INetSecurityProvider& provider, const string& privateKeyPem, const vector<uint8>& packBytes, PackPatchManifest& inOutManifest )
     {
         string packSHA256Hex;
         if ( PackPatchInternal::computePackSHA256Hex( provider, packBytes, packSHA256Hex ) == false )
@@ -424,8 +424,8 @@ namespace sw
         return true;
     }
 
-    bool PackPatchUtil::verifyManifest( INetSecurityProvider& provider, const NetPublicKey& publicKey, const vector<uint8>& packBytes, const PackPatchManifest& manifest,
-                                        string_view sourceName )
+    bool PackPatchManifest::verify( INetSecurityProvider& provider, const NetPublicKey& publicKey, const vector<uint8>& packBytes, const PackPatchManifest& manifest,
+                                    string_view sourceName )
     {
         if ( manifest._signatureHex.empty() || manifest._packSHA256Hex.empty() )
         {
@@ -465,7 +465,7 @@ namespace sw
         return true;
     }
 
-    bool PackPatchUtil::orderPatchChain( string_view installedBuild, string_view targetBuild, const vector<PackPatchManifest>& listManifest, vector<size_t>& outListOrder )
+    bool PackPatchManifest::orderChain( string_view installedBuild, string_view targetBuild, const vector<PackPatchManifest>& listManifest, vector<size_t>& outListOrder )
     {
         outListOrder.clear();
         string currentBuild{ installedBuild };

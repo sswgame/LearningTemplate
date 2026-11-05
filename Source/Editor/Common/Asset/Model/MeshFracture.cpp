@@ -12,7 +12,6 @@
 #include "Core/Spatial/PositionWelder.h"
 
 #include "Engine/Character/Fit/CharacterGeometry.h"
-#include "Engine/Character/Fit/GeometryCut.h"
 #include "Engine/Destruction/DestructionRandom.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
 #include "Engine/Destruction/Fracture/FractureGraph.h"
@@ -1388,7 +1387,7 @@ namespace sw::editor
             geometry._listNormal.push_back( float3{ vertex._arrNormal[0], vertex._arrNormal[1], vertex._arrNormal[2] } );
             geometry._listUv.push_back( float2{ vertex._arrUv[0], vertex._arrUv[1] } );
         }
-        return geometry.getTriangleCount() > 0 && GeometryCutUtil::isClosed( geometry );
+        return geometry.getTriangleCount() > 0 && AppearanceGeometry::isClosed( geometry );
     }
 
     float32 MeshFractureUtil::computeVolume( vector_reference<const RHIVertex> listVertex, float3& outCentroid )

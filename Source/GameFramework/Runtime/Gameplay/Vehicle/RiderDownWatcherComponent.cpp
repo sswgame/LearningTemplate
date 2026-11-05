@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/MountUtil.h"
+#include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 namespace sw
 {
@@ -28,6 +28,6 @@ namespace sw
         GameObject*    pOwner = getOwner();
         PawnComponent* pPawn  = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
-            (void)MountUtil::dismount( *pPawn, true );
+            (void)VehicleSeatComponent::dismount( *pPawn, true );
     }
 } // namespace sw

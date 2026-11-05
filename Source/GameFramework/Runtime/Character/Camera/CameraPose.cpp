@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Character/Camera/CameraPoseUtil.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 
 #include "Core/Math/MatrixMath.h"
 
@@ -13,7 +13,7 @@
 
 namespace sw
 {
-    float32 CameraPoseUtil::computeAspectRatio( const CameraComponent& camera )
+    float32 CameraPose::computeAspectRatio( const CameraComponent& camera )
     {
         const CameraRenderOutput& output = camera.getRenderOutput();
         if ( output._target == CameraOutputTarget::RenderTexture )
@@ -33,7 +33,7 @@ namespace sw
         return height > 0.0f ? width / height : CameraTarget::kDefaultAspectRatio;
     }
 
-    void CameraPoseUtil::applyLensToCamera( CameraComponent& camera, const CameraPose& pose )
+    void CameraPose::applyLensToCamera( CameraComponent& camera, const CameraPose& pose )
     {
         camera.setOrthographic( pose._bOrthographic == SW_TRUE );
         camera.setFieldOfViewY( pose._fieldOfViewY );
@@ -45,14 +45,14 @@ namespace sw
         camera.setLensShift( pose._lensShift );
     }
 
-    void CameraPoseUtil::applyToCameraLocal( CameraComponent& camera, const CameraPose& pose )
+    void CameraPose::applyToCameraLocal( CameraComponent& camera, const CameraPose& pose )
     {
         applyLensToCamera( camera, pose );
         camera.setLocalPosition( pose._position );
         camera.setLocalRotation( pose._rotation.getEulerAngles() );
     }
 
-    void CameraPoseUtil::applyToCamera( CameraComponent& camera, const CameraPose& pose )
+    void CameraPose::applyToCamera( CameraComponent& camera, const CameraPose& pose )
     {
         applyLensToCamera( camera, pose );
         float3     worldScale{};
@@ -63,7 +63,7 @@ namespace sw
         camera.setWorldTransform( float4x4::makeTrs( pose._position, pose._rotation, worldScale ) );
     }
 
-    CameraPose CameraPoseUtil::makePoseFromCamera( const CameraComponent& camera )
+    CameraPose CameraPose::makePoseFromCamera( const CameraComponent& camera )
     {
         CameraPose pose;
         float3     worldScale{};

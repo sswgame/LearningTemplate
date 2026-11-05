@@ -2,7 +2,7 @@
  * @file GameplayAutomationSteps.cpp
  * @brief 자동화 시나리오의 영역을 넘는 게임 로직 단계입니다. 등록은 이 .cpp 의 정적 등록자가 합니다(Shipping 은 GameFramework 를 통째로 링크한다 — `sw_linkWholeArchive`).
  * @details - 게임 시간: `AdvanceGameTime`(minutes · hours · toHour) — 활성 씬의 판 상태(`SessionStateComponent`) 시계를 감는다.
- *          - 빙의 · 탑승: 단계 `Mount` · `Dismount`(`MountUtil`). 빙의 단계 `Possess` 는 조종 층(`ControlAutomationSteps`)에 있다.
+ *          - 빙의 · 탑승: 단계 `Mount` · `Dismount`(`VehicleSeatComponent`). 빙의 단계 `Possess` 는 조종 층(`ControlAutomationSteps`)에 있다.
  *          - 오브젝트 대상(`rider` · `vehicle`)은 `AutomationTarget` 규칙으로 고른다 — 같은 이름이 여럿이면 `Name[N]`.
  *          감시 값은 각 영역 폴더의 자기 .cpp 가 등록한다: `Clock.*` · `Session.Money`(`SessionStateProbes.cpp`), `Quest.Status`(`QuestProbes.cpp`), `Schedule.*`(`ScheduleProbes.cpp`),
  *          `AI.*`(`AIControllerProbes.cpp`), `Pawn.Controller`(`PawnProbes.cpp`), `Pawn.Seat`(`VehicleProbes.cpp`). 이 파일에는 영역을 넘는 단계만 둔다.
@@ -22,7 +22,6 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/MountUtil.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
@@ -175,7 +174,7 @@ namespace sw
                     runner.recordFailure( step, "vehicle '" + vehicleName + "' has no free seat" );
                     return true;
                 }
-                const MountResult result = MountUtil::mount( *pRider, *pSeat );
+                const MountResult result = VehicleSeatComponent::mount( *pRider, *pSeat );
                 if ( result != MountResult::Mounted )
                     runner.recordFailure( step, "'" + riderName + "' could not mount '" + vehicleName + "': " + toText( result ) );
                 return true;
@@ -185,7 +184,7 @@ namespace sw
             {
                 const string&  riderName = *step.findAttribute( "rider" );
                 PawnComponent* pRider    = findPawn( runner, step, riderName );
-                if ( pRider != nullptr && MountUtil::dismount( *pRider, false ) == false )
+                if ( pRider != nullptr && VehicleSeatComponent::dismount( *pRider, false ) == false )
                     runner.recordFailure( step, "'" + riderName + "' is not seated" );
                 return true;
             }
@@ -195,7 +194,7 @@ namespace sw
     // 시간 감기는 씬 틱 뒤에 돈다 — 감은 시각의 알림은 다음 틱의 디렉터 · 일정이 받는다.
     SW_AUTOMATION_STEP( worldAdvanceGameTime, "AdvanceGameTime", &GameplayAutomationStepsInternal::runAdvanceGameTime, &GameplayAutomationStepsInternal::validateAdvanceGameTime, false );
 
-    // 탈것 단계는 씬 틱 뒤(틱 밖)에 돈다 — `MountUtil` 은 틱 안에서 부르지 않는다.
+    // 탈것 단계는 씬 틱 뒤(틱 밖)에 돈다 — `VehicleSeatComponent` 은 틱 안에서 부르지 않는다.
     SW_AUTOMATION_STEP( controlMount, "Mount", &GameplayAutomationStepsInternal::runMountStep, &GameplayAutomationStepsInternal::validateMountStep, false );
     SW_AUTOMATION_STEP( controlDismount, "Dismount", &GameplayAutomationStepsInternal::runDismountStep, &GameplayAutomationStepsInternal::validateDismountStep, false );
 } // namespace sw

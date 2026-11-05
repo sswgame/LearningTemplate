@@ -1,14 +1,14 @@
 #include "pch.h"
 
-#include "Engine/Input/InputSlotUtil.h"
-
 #include "Core/Container/StringUtil.h"
+
+#include "Engine/Input/IInputDevice.h"
 
 namespace sw
 {
     namespace
     {
-        struct InputSlotUtilInternal
+        struct InputSlotInternal
         {
             static constexpr string_view kKeyPrefix     = "Key";
             static constexpr string_view kMousePrefix   = "Mouse";
@@ -22,7 +22,7 @@ namespace sw
 
 namespace sw
 {
-    bool InputSlotUtil::tryParse( string_view text, InputSlot& outSlot )
+    bool InputSlot::tryParse( string_view text, InputSlot& outSlot )
     {
         const size_t dotPos             = text.find( '.' );
         const bool   bMalformedSlotText = dotPos == string_view::npos || dotPos == 0 || dotPos + 1 >= text.size();
@@ -31,26 +31,26 @@ namespace sw
         const string_view device = text.substr( 0, dotPos );
         const string_view name   = text.substr( dotPos + 1 );
 
-        if ( StringUtil::equals( device, InputSlotUtilInternal::kKeyPrefix ) )
+        if ( StringUtil::equals( device, InputSlotInternal::kKeyPrefix ) )
         {
             const Key key = KeyCodeUtil::fromName( name );
-            if ( key == Key::Unknown || InputSlotUtilInternal::isSameName( KeyCodeUtil::toName( key ), name ) == false )
+            if ( key == Key::Unknown || InputSlotInternal::isSameName( KeyCodeUtil::toName( key ), name ) == false )
                 return false;
             outSlot = InputSlot::fromKey( key );
             return true;
         }
-        if ( StringUtil::equals( device, InputSlotUtilInternal::kMousePrefix ) )
+        if ( StringUtil::equals( device, InputSlotInternal::kMousePrefix ) )
         {
             const MouseButton button = MouseButtonUtil::fromName( name );
-            if ( button == MouseButton::Count || InputSlotUtilInternal::isSameName( MouseButtonUtil::toName( button ), name ) == false )
+            if ( button == MouseButton::Count || InputSlotInternal::isSameName( MouseButtonUtil::toName( button ), name ) == false )
                 return false;
             outSlot = InputSlot::fromMouseButton( button );
             return true;
         }
-        if ( StringUtil::startsWith( device, InputSlotUtilInternal::kGamepadPrefix, true ) )
+        if ( StringUtil::startsWith( device, InputSlotInternal::kGamepadPrefix, true ) )
         {
             int32             padIndex   = 0;
-            const string_view padNumber  = device.substr( InputSlotUtilInternal::kGamepadPrefix.size() );
+            const string_view padNumber  = device.substr( InputSlotInternal::kGamepadPrefix.size() );
             const bool        bHasNumber = padNumber.empty() == false;
             if ( bHasNumber && StringUtil::parseInt( padNumber, padIndex ) == false )
                 return false;
@@ -66,21 +66,21 @@ namespace sw
         return false;
     }
 
-    string InputSlotUtil::toText( const InputSlot& slot )
+    string InputSlot::toText( const InputSlot& slot )
     {
         switch ( slot._deviceKind )
         {
             case InputDeviceKind::Keyboard:
             {
-                return string( InputSlotUtilInternal::kKeyPrefix ) + "." + KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) );
+                return string( InputSlotInternal::kKeyPrefix ) + "." + KeyCodeUtil::toName( static_cast<Key>( slot._controlIndex ) );
             }
             case InputDeviceKind::Mouse:
             {
-                return string( InputSlotUtilInternal::kMousePrefix ) + "." + MouseButtonUtil::toName( static_cast<MouseButton>( slot._controlIndex ) );
+                return string( InputSlotInternal::kMousePrefix ) + "." + MouseButtonUtil::toName( static_cast<MouseButton>( slot._controlIndex ) );
             }
             case InputDeviceKind::Gamepad:
             {
-                string text( InputSlotUtilInternal::kGamepadPrefix );
+                string text( InputSlotInternal::kGamepadPrefix );
                 if ( slot._deviceIndex != 0 )
                 {
                     utf8 arrDigit[constant::buffer::kMax16]{};

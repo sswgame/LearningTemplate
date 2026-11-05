@@ -1,6 +1,6 @@
 /**
  * @file VehicleWatches.cpp
- * @brief 탈것의 자동화 감시 값 `Pawn.Seat` 입니다. 폰이 어느 탈것에 앉았는지는 탈것 층(`MountUtil`)이 알고, 조종 층(폰)은 탈것을 보지 않으므로 이 폴더에 둔다.
+ * @brief 탈것의 자동화 감시 값 `Pawn.Seat` 입니다. 폰이 어느 탈것에 앉았는지는 탈것 층(`VehicleSeatComponent`)이 알고, 조종 층(폰)은 탈것을 보지 않으므로 이 폴더에 둔다.
  */
 #include "pch.h"
 
@@ -9,7 +9,6 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/MountMovementComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/MountUtil.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 namespace sw
@@ -26,7 +25,7 @@ namespace sw
                 outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "pawn" ) );
                 return false;
             }
-            const VehicleSeatComponent* pSeat = MountUtil::findSeatOf( *pPawn );
+            const VehicleSeatComponent* pSeat = VehicleSeatComponent::findSeatOf( *pPawn );
             outValue.setText( pSeat != nullptr ? string_view{ pSeat->getOwner()->getName().c_str() } : string_view{ "none" } );
             return true;
         }

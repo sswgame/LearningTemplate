@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
-#include "GameFramework/Runtime/Character/Camera/CameraPoseUtil.h"
+#include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Character/Camera/CameraShake.h"
 #include "GameFramework/Runtime/Character/Camera/CameraUserSettings.h"
 #include "GameFramework/Runtime/Character/Control/Intent/ControlIntent.h"
@@ -134,7 +134,7 @@ namespace sw
             if ( settings._bHeadBob )
                 pose = applyCameraShake( pose, computeCameraHeadBob( _headBob, _eyePosition, _pendingDeltaTime, _modeState ) );
             _pendingDeltaTime = 0.0f;
-            CameraPoseUtil::applyToCameraLocal( *pCamera, pose );
+            CameraPose::applyToCameraLocal( *pCamera, pose );
         }
         MeshComponent* pViewModel = findViewModel();
         if ( pViewModel == nullptr || pCamera == nullptr )

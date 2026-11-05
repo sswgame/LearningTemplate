@@ -18,7 +18,7 @@ namespace sw
      * @class HorseFollowAIController
      * @brief `AIControllerComponent` 를 상속합니다. 판단만 하고 움직임은 말의 `MountMovementComponent` 가 처리합니다(플레이어가 몰 때와 같은 경로입니다).
      * @details 말 폰의 자동 빙의를 `AI` 로 두고 이 조종자를 가진 프리팹을 주면 시작할 때 말을 조종한다. 누가 타면 빙의가 탄 사람의 조종자로 넘어가고, 내리면
-     *          탈 때 말을 조종하던 이 조종자가 다시 조종한다(`MountUtil`).
+     *          탈 때 말을 조종하던 이 조종자가 다시 조종한다(`VehicleSeatComponent`).
      */
     REFLECT( Category = "Western", DisplayName = "Horse Follow AI", Tooltip = "Horse AI: follows its owner when nobody rides it, comes at a whistle" )
     class SW_KIT_API HorseFollowAIController : public AIControllerComponent

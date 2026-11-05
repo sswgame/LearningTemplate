@@ -4,8 +4,8 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Character/Fit/FitSolver.h"
-#include "Engine/Character/Fit/GeometryCut.h"
 
 namespace sw
 {
@@ -68,7 +68,7 @@ namespace sw
                     }
                 }
                 transformed._listTrianglePart.clear();
-                GeometryCutUtil::extractTriangles( transformed, listVisible, outPrepared );
+                AppearanceGeometry::extractTriangles( transformed, listVisible, outPrepared );
             }
         };
     } // namespace
@@ -129,7 +129,7 @@ namespace sw
                 range._socketBone      = source._socketBone;
                 range._vertexStart     = outMerged._geometry.getVertexCount();
                 range._vertexCount     = prepared.getVertexCount();
-                GeometryCutUtil::appendGeometry( outMerged._geometry, prepared, static_cast<uint16>( sourceIndex ) );
+                AppearanceGeometry::appendGeometry( outMerged._geometry, prepared, static_cast<uint16>( sourceIndex ) );
             }
             section._indexCount = static_cast<uint32>( outMerged._geometry._listIndex.size() ) - section._indexStart;
             outMerged._listSection.push_back( section );
@@ -152,7 +152,7 @@ namespace sw
         {
             listSelected[triangle] = geometry._listTrianglePart[triangle] == partIndex ? SW_TRUE : SW_FALSE;
         }
-        GeometryCutUtil::extractTriangles( geometry, listSelected, outGeometry );
+        AppearanceGeometry::extractTriangles( geometry, listSelected, outGeometry );
         outGeometry._listTrianglePart.clear();
         const MergedPartRange& range = merged._listPart[partIndex];
         if ( range._socketBone < 0 )

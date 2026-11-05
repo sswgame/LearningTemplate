@@ -7,7 +7,6 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
-#include "GameFramework/Runtime/Gameplay/Vehicle/MountUtil.h"
 #include "GameFramework/Runtime/Gameplay/Vehicle/VehicleSeatComponent.h"
 
 namespace sw
@@ -56,7 +55,7 @@ namespace sw
             GameObject*    pRider     = pManager->resolveGameObject( pSeat->getOccupant() );
             PawnComponent* pRiderPawn = pRider != nullptr ? pRider->getComponent<PawnComponent>() : nullptr;
             if ( pRiderPawn != nullptr )
-                (void)MountUtil::dismount( *pRiderPawn, false );
+                (void)VehicleSeatComponent::dismount( *pRiderPawn, false );
             return;
         }
     }

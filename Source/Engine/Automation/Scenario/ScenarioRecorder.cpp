@@ -11,8 +11,8 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/InputManager.h"
-#include "Engine/Input/InputSlotUtil.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -45,9 +45,9 @@ namespace sw
             /** @brief 슬롯을 시나리오 글로 바꿉니다. 다시 읽을 수 없는 이름(엔진 서비스 없이 `Unknown` 등)이면 false 입니다. */
             [[nodiscard]] static bool tryMakeSlotText( const InputSlot& slot, string& outText )
             {
-                outText = InputSlotUtil::toText( slot );
+                outText = InputSlot::toText( slot );
                 InputSlot parsed{};
-                return outText.empty() == false && InputSlotUtil::tryParse( outText, parsed );
+                return outText.empty() == false && InputSlot::tryParse( outText, parsed );
             }
 
             /**

@@ -1,11 +1,11 @@
 #include "pch.h"
 
-#include "Engine/Character/Fit/GeometryCut.h"
-
 #include "Core/Container/unordered_map.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Spatial/PositionWelder.h"
+
+#include "Engine/Character/Fit/CharacterGeometry.h"
 
 namespace sw
 {
@@ -53,8 +53,8 @@ namespace sw
 
 namespace sw
 {
-    void GeometryCutUtil::extractTriangles( const AppearanceGeometry& source, vector_reference<const uint8> listTriangleSelected, AppearanceGeometry& outGeometry,
-                                            vector<uint32>* pOutListVertexRemap )
+    void AppearanceGeometry::extractTriangles( const AppearanceGeometry& source, vector_reference<const uint8> listTriangleSelected, AppearanceGeometry& outGeometry,
+                                               vector<uint32>* pOutListVertexRemap )
     {
         outGeometry.clear();
         outGeometry._listGroupName   = source._listGroupName;
@@ -123,8 +123,8 @@ namespace sw
             *pOutListVertexRemap = std::move( listRemap );
     }
 
-    void GeometryCutUtil::splitByTriangleMask( const AppearanceGeometry& source, vector_reference<const uint8> listTriangleSevered, AppearanceGeometry& outKept,
-                                               AppearanceGeometry& outSevered )
+    void AppearanceGeometry::splitByTriangleMask( const AppearanceGeometry& source, vector_reference<const uint8> listTriangleSevered, AppearanceGeometry& outKept,
+                                                  AppearanceGeometry& outSevered )
     {
         vector<uint8> listKept( source.getTriangleCount(), SW_TRUE );
         for ( uint32 triangle = 0; triangle < source.getTriangleCount() && triangle < listTriangleSevered.size(); ++triangle )
@@ -140,7 +140,7 @@ namespace sw
         extractTriangles( source, listSevered, outSevered );
     }
 
-    void GeometryCutUtil::appendGeometry( AppearanceGeometry& inoutTarget, const AppearanceGeometry& source, uint16 trianglePart )
+    void AppearanceGeometry::appendGeometry( AppearanceGeometry& inoutTarget, const AppearanceGeometry& source, uint16 trianglePart )
     {
         const uint32 baseVertex        = inoutTarget.getVertexCount();
         const uint32 sourceVertexCount = source.getVertexCount();
@@ -236,7 +236,7 @@ namespace sw
         }
     }
 
-    void GeometryCutUtil::findBoundaryLoops( const AppearanceGeometry& geometry, vector<vector<uint32>>& outListLoop )
+    void AppearanceGeometry::findBoundaryLoops( const AppearanceGeometry& geometry, vector<vector<uint32>>& outListLoop )
     {
         outListLoop.clear();
         // 같은 위치의 정점을 하나로 본다. UV 이음매로 갈라진 정점이 가짜 경계를 만들지 않게 하려는 것이다.
@@ -292,7 +292,7 @@ namespace sw
         }
     }
 
-    uint32 GeometryCutUtil::createCaps( const AppearanceGeometry& geometry, AppearanceGeometry& outCap, const vector<uint8>* pVertexOnSeam )
+    uint32 AppearanceGeometry::createCaps( const AppearanceGeometry& geometry, AppearanceGeometry& outCap, const vector<uint8>* pVertexOnSeam )
     {
         outCap.clear();
         vector<vector<uint32>> listLoop;
@@ -365,7 +365,7 @@ namespace sw
         return cappedCount;
     }
 
-    bool GeometryCutUtil::isClosed( const AppearanceGeometry& geometry )
+    bool AppearanceGeometry::isClosed( const AppearanceGeometry& geometry )
     {
         if ( geometry.getTriangleCount() == 0 )
             return false;

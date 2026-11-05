@@ -55,7 +55,7 @@ namespace sw
                 writer.writeVarUint( request._listPosting.size() );
                 for ( const LedgerPosting& posting : request._listPosting )
                 {
-                    LedgerUtil::writePosting( writer, posting );
+                    LedgerPosting::write( writer, posting );
                 }
                 const vector<uint8>& bytes = writer.getBytes();
                 return HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size(), false );
@@ -75,12 +75,12 @@ namespace sw
                 writer.writeVarUint( request._listPosting.size() );
                 for ( const LedgerPosting& posting : request._listPosting )
                 {
-                    LedgerUtil::writePosting( writer, posting );
+                    LedgerPosting::write( writer, posting );
                 }
                 writer.writeVarUint( listHolderBalance.size() );
                 for ( const LedgerTransferOutcome::HolderBalance& holderBalance : listHolderBalance )
                 {
-                    LedgerUtil::writeHolder( writer, holderBalance._holder );
+                    LedgerHolder::write( writer, holderBalance._holder );
                     ServiceKeyUtil::writeString( writer, holderBalance._balance._assetID );
                     writer.writeVarInt( holderBalance._balance._amount );
                 }
@@ -111,7 +111,7 @@ namespace sw
                 outEntry._listPosting.resize( static_cast<size_t>( postingCount ) );
                 for ( LedgerPosting& posting : outEntry._listPosting )
                 {
-                    if ( LedgerUtil::readPosting( reader, posting ) == false )
+                    if ( LedgerPosting::read( reader, posting ) == false )
                         return false;
                 }
                 const uint64 balanceCount = reader.readVarUint();
@@ -122,7 +122,7 @@ namespace sw
                 for ( uint64 balanceIndex = 0; balanceIndex < balanceCount; ++balanceIndex )
                 {
                     LedgerTransferOutcome::HolderBalance holderBalance;
-                    if ( LedgerUtil::readHolder( reader, holderBalance._holder ) == false )
+                    if ( LedgerHolder::read( reader, holderBalance._holder ) == false )
                         return false;
                     if ( ServiceKeyUtil::readString( reader, LedgerConstant::kMaxAssetIDSize, holderBalance._balance._assetID ) == false )
                         return false;
