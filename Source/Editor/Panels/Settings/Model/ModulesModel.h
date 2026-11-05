@@ -40,10 +40,12 @@ namespace sw::editor
         // ------------------------------------------------------------------------------
         // 1) 카탈로그
         // ------------------------------------------------------------------------------
-        /** @brief 아직 읽지 않았으면(매니페스트 0 · 오류 없음) 읽습니다. 패널이 그리기마다 부릅니다. */
+        /** @brief 아직 읽지 않았으면 읽습니다. 패널이 그리기마다 부릅니다 — 읽은 폴더가 비었어도 다시 읽지 않습니다. */
         void ensureLoaded();
         /** @brief `Bin/Modules` 의 카탈로그를 다시 읽고 해석합니다. 실패하면 `getLoadError` 가 이유입니다. */
-        void                    reload();
+        void reload();
+        /** @brief `reload` 와 같되 카탈로그 폴더 @p directory 를 받습니다(테스트는 빈 폴더에 매니페스트를 써서 넘긴다). */
+        void                    reloadFrom( string_view directory );
         const string&           getLoadError() const { return _loadError; }
         const ModuleCatalog&    getCatalog() const { return _catalog; }
         const ModuleResolution& getResolution() const { return _resolution; }
@@ -79,6 +81,8 @@ namespace sw::editor
         [[nodiscard]] bool requestToggle( const string& moduleName, bool bEnabled );
         /** @brief 미리보기 중인 바꿈을 프로젝트 매니페스트에 씁니다. 성공하면 "다시 빌드" 띠가 켜진다. 성공 여부와 관계없이 미리보기를 닫는다. */
         void applyPending();
+        /** @brief `applyPending` 과 같되 프로젝트 매니페스트 경로 @p path 를 받습니다(테스트가 소스 트리의 매니페스트를 고치지 않게 한다). */
+        void applyPendingTo( const string& path );
         /** @brief 미리보기를 닫습니다(바꾸지 않는다). */
         void cancelPending() { _pendingModule.clear(); }
 
@@ -91,7 +95,7 @@ namespace sw::editor
         bool hasChangedSinceStart() const { return _bChangedSinceStart; }
 
     private:
-        [[nodiscard]] bool writeProjectOverride();
+        [[nodiscard]] bool writeProjectOverride( const string& path );
 
     private:
         ModuleCatalog               _catalog;
@@ -105,5 +109,6 @@ namespace sw::editor
         vector<string>              _listNewlyActive;
         uint8                       _bPendingEnabled    : 1;
         uint8                       _bChangedSinceStart : 1; ///< 이 실행에서 매니페스트를 고쳤다 — 빌드 · 다시 시작 띠를 보인다
+        uint8                       _bLoaded            : 1; ///< 카탈로그를 한 번 읽었다
     };
 } // namespace sw::editor

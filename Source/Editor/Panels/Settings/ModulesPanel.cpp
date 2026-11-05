@@ -35,6 +35,10 @@ namespace sw::editor
         if ( _model.getLoadError().empty() == false )
         {
             EditorThemeUtil::textError( _model.getLoadError().c_str() );
+            // 매니페스트를 고친 뒤 다시 읽을 길이 있어야 한다 — 없으면 오류가 다시 시작할 때까지 남는다.
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
+                _model.reload();
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "RefreshModules" ) );
             return;
         }
         if ( _model.hasChangedSinceStart() )

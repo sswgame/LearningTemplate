@@ -30,6 +30,17 @@ namespace sw::editor
                     return std::nullopt;
                 return AbsolutePath::tryResolve( "Source/Games/" + gameName + "/" + config::kTargetGameModule + ModuleCatalog::kManifestExtension, ProcessRoots::get()._project );
             }
+
+            /** @brief 이 실행이 모듈을 올린 조건입니다(`ModuleCatalogLoader` 와 같다). 기본값(Windows · 양쪽 대상)으로 풀면 다른 플랫폼에서 창이 실제와 다른 켜짐을 보인다. */
+            static ModuleResolveContext makeResolveContext()
+            {
+                ModuleResolveContext context{};
+                context._platform      = ModuleCatalog::getCurrentPlatform();
+                context._configuration = ModuleCatalog::getCurrentConfiguration();
+                context._projectModule = config::kTargetGameModule;
+                context._targetMask    = ModuleCatalog::getBuildTargetMask();
+                return context;
+            }
         };
     } // namespace
 
@@ -45,23 +56,31 @@ namespace sw::editor
         , _listNewlyActive{}
         , _bPendingEnabled{ SW_FALSE }
         , _bChangedSinceStart{ SW_FALSE }
+        , _bLoaded{ SW_FALSE }
     {
     }
 
     void ModulesModel::ensureLoaded()
     {
-        if ( _catalog.getManifestCount() == 0 && _loadError.empty() )
+        if ( _bLoaded == SW_FALSE )
             reload();
     }
 
     void ModulesModel::reload()
     {
+        reloadFrom( ModuleLibraryUtil::getModuleDirectory() );
+    }
+
+    void ModulesModel::reloadFrom( string_view directory )
+    {
+        _bLoaded = SW_TRUE;
         _catalog = ModuleCatalog{};
+        // 읽기에 실패하면 풀기가 돌지 않는다 — 옛 카탈로그의 해석을 남기지 않는다.
+        _resolution = ModuleResolution{};
         _loadError.clear();
-        const string         directory = ModuleLibraryUtil::getModuleDirectory();
-        ModuleResolveContext context{};
+        const ModuleResolveContext context = ModulesModelInternal::makeResolveContext();
         if ( _catalog.loadDirectory( directory, _loadError ) == false || _catalog.resolve( context, _resolution, _loadError ) == false )
-            SW_LOG_WARNING_ID( "ModulesPanel.ModulesCatalogCouldNot", "Modules: the catalog in %# could not be resolved - %#", directory.c_str(), _loadError.c_str() );
+            SW_LOG_WARNING_ID( "ModulesPanel.ModulesCatalogCouldNot", "Modules: the catalog in %# could not be resolved - %#", string( directory ).c_str(), _loadError.c_str() );
     }
 
     string ModulesModel::findInactiveReason( const string& name ) const
@@ -127,7 +146,7 @@ namespace sw::editor
         _pendingModule   = moduleName;
         _bPendingEnabled = bEnabled;
         string error;
-        if ( EditorModuleOverrideUtil::previewToggle( _catalog, ModuleResolveContext{}, moduleName, bEnabled, _listNewlyInactive, _listNewlyActive, error ) == false )
+        if ( EditorModuleOverrideUtil::previewToggle( _catalog, ModulesModelInternal::makeResolveContext(), moduleName, bEnabled, _listNewlyInactive, _listNewlyActive, error ) == false )
         {
             SW_LOG_WARNING_ID( "ModulesPanel.ModulesTurningBreaksModule", "Modules: turning %# %# breaks the module graph - %#", moduleName.c_str(), bEnabled ? "on" : "off", error.c_str() );
             _pendingModule.clear();
@@ -138,20 +157,25 @@ namespace sw::editor
 
     void ModulesModel::applyPending()
     {
-        if ( writeProjectOverride() )
-            _bChangedSinceStart = SW_TRUE;
-        _pendingModule.clear();
-    }
-
-    bool ModulesModel::writeProjectOverride()
-    {
         const std::optional<AbsolutePath> manifestPath = ModulesModelInternal::getProjectManifestPath();
         if ( manifestPath.has_value() == false )
         {
             SW_LOG_ERROR_ID( "ModulesPanel.ModulesRunningGameDoes", "Modules: the running game '%#' does not name a project manifest path", GameSelection::getName().c_str() );
-            return false;
+            _pendingModule.clear();
+            return;
         }
-        const string&         path      = manifestPath->str();
+        applyPendingTo( manifestPath->str() );
+    }
+
+    void ModulesModel::applyPendingTo( const string& path )
+    {
+        if ( writeProjectOverride( path ) )
+            _bChangedSinceStart = SW_TRUE;
+        _pendingModule.clear();
+    }
+
+    bool ModulesModel::writeProjectOverride( const string& path )
+    {
         const ModuleManifest* pManifest = _catalog.findManifest( _pendingModule );
         string                text;
         string                rewritten;
