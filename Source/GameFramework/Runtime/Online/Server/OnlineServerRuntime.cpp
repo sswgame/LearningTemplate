@@ -530,7 +530,7 @@ namespace sw
         {
             // 서비스 스트림은 TLS 1.3 이다. 경로가 둘 다 비면 Dev 만 개발용 인증서를 쓰고 Shipping 은 여기서 멈춘다.
             parts._tlsContext = NetSecurity::createServerTLSContext( game::getSubsystem<INetSecurityProvider>(), settings._tlsCertificateFile, settings._tlsPrivateKeyFile, settings._tlsPrivateKeyPassphrase, outError );
-            OnlineServerRuntimeStringUtil::wipeSecret( settings._tlsPrivateKeyPassphrase );
+            StringUtil::wipeSecret( settings._tlsPrivateKeyPassphrase );
             if ( parts._tlsContext == nullptr )
             {
                 outError = "online service TLS context could not be created: " + outError;
