@@ -6,13 +6,16 @@
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
-#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
+#include "Core/Subsystem/ISubsystem.h"
+
+#include "Engine/Console/DevCommandsEnabled.h"
+#include "Engine/Module/ModuleObjectRegistrar.h"
 
 namespace sw
 {
@@ -48,24 +51,23 @@ namespace sw
 {
     /**
      * @class DevCommandRegistry
-     * @brief 개발 명령의 레지스트리입니다(Core 이미지에 하나 있으며, 엔진, 게임, 키트, 에디터 모듈이 등록하고 모듈을 언로드하면 그 명령이 빠집니다).
-     * @details 명령은 자기 .cpp 에 `SW_DEV_COMMAND` 한 줄로 등록한다. 정적 등록자가 이미지를 로드할 때 등록하고 언로드할 때(핫 리로드) 뺀다.
-     *          레지스트리는 Core 에 있어 모듈이 바뀌어도 살아 있다. 같은 이름의 둘째 등록은 경고와 함께 거절한다.
+     * @brief 개발 명령의 레지스트리입니다(엔진 서비스 범위가 소유한다). 엔진 · 게임 · 키트 · 에디터 모듈이 등록하고 모듈을 내리기 전에 뺀다.
+     * @details 명령은 자기 .cpp 에 `SW_DEV_COMMAND` 한 줄로 등록한다. 등록자는 링크 때 목록에만 달리고 모듈을 올리는 길이 붙인다(`DevCommandRegistrar`) — 정적 초기화 때는 서비스가 아직 없다.
+     *          같은 이름의 둘째 등록은 경고와 함께 거절한다.
      *          등록 · 해제는 이미지 로더 스레드(정적 초기화)에서, 조회는 콘솔(게임 스레드)에서 오므로 등록 목록은 잠금 하나로 지킨다.
      *          명령 본문은 잠금 밖에서 부른다(찾은 등록 줄은 그 모듈이 내려가기 전까지 산다). 프레임마다 도는 경로가 아니다.
      */
-    class SW_API DevCommandRegistry
+    class SW_API DevCommandRegistry final : public ISubsystem
     {
     public:
-        /** @brief 프로세스에 하나인 레지스트리입니다(Core 이미지의 함수 정적). */
-        static DevCommandRegistry& get();
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr const utf8* kSubsystemName      = "DevCommandRegistry";
 
         DevCommandRegistry();
-        /**
-         * @brief 이 레지스트리가 이미지에 들어 있다는 표식 글입니다. Shipping 실행 파일에는 이 글이 없어야 합니다
-         *        (`DevCommandShippingTest` 가 바이너리를 훑어 확인합니다).
-         */
-        static const utf8* getImageMarker();
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /**
          * @brief 쓸 자리 · 읽을 디스크 파일 인자를 읽습니다 - 절대 경로(시나리오의 `{out}/…`)만 받는다. 작업 폴더 상대 경로는 받지 않는다(R5 - 작업 폴더를 바꾸면 다른 곳을 썼다).
@@ -94,16 +96,20 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_DEV_COMMAND` 가 두는 정적 등록자입니다 — 만들 때 올리고 없앨 때(모듈을 내릴 때) 뺍니다. */
-    struct SW_API DevCommandRegistrar
+    /**
+     * @brief `SW_DEV_COMMAND` 가 두는 정적 등록자입니다. 링크 때 목록에 달리고, 모듈을 올릴 때 붙고 내리기 전에 뗍니다(`ModuleObjectRegistrar`).
+     */
+    class SW_API DevCommandRegistrar final : public ModuleObjectRegistrar
     {
+    public:
+        explicit DevCommandRegistrar( const DevCommandRegistration* pRegistration );
 
+        void attach() override;
+        void detach() override;
+
+    private:
         const DevCommandRegistration* _pRegistration;
         uint8                         _bRegistered : 1;
-        explicit DevCommandRegistrar( const DevCommandRegistration* pRegistration );
-        ~DevCommandRegistrar();
-        DevCommandRegistrar( const DevCommandRegistrar& )            = delete;
-        DevCommandRegistrar& operator=( const DevCommandRegistrar& ) = delete;
     };
 } // namespace sw
 
@@ -121,7 +127,7 @@ namespace sw
  */
     #define SW_DEV_COMMAND( varName, pName, pUsage, pHelp, pFunc )                                                    \
         static const ::sw::DevCommandRegistration sw_devCommandRegistration_##varName{ pName, pUsage, pHelp, pFunc }; \
-        static const ::sw::DevCommandRegistrar    sw_devCommandRegistrar_##varName                                    \
+        static ::sw::DevCommandRegistrar          sw_devCommandRegistrar_##varName                                    \
         {                                                                                                             \
             &sw_devCommandRegistration_##varName                                                                      \
         }

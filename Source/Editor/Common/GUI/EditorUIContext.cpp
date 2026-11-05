@@ -2,7 +2,6 @@
 
 #include "Editor/Common/GUI/EditorUIContext.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/Panel/EditorDockLayout.h"
@@ -12,6 +11,8 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorRenderViews.h"
 #include "Editor/Common/Workspace/EditorWorkspace.h"
+
+#include "Engine/Console/DevCommandRegistry.h"
 
 #include <imgui.h>
 #include <implot.h>

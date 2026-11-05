@@ -59,7 +59,7 @@ namespace sw::editor
         // 기록(프레임 시간)은 섹션마다 따로 들므로, 남는 섹션의 쓰개는 그대로 옮긴다.
         vector<SectionSlot> listOld;
         listOld.swap( _listSlot );
-        for ( const DebugHUDSectionRegistration* pSection : DebugHUDRegistry::get().getSections() )
+        for ( const DebugHUDSectionRegistration* pSection : editor::getSubsystem<DebugHUDRegistry>().getSections() )
         {
             SectionSlot slot{ pSection, nullptr };
             for ( SectionSlot& old : listOld )
@@ -71,7 +71,7 @@ namespace sw::editor
                 slot._pWriter = make_unique<DebugHUDSectionWriter>();
             _listSlot.push_back( std::move( slot ) );
         }
-        _registryRevision = DebugHUDRegistry::get().getRevision();
+        _registryRevision = editor::getSubsystem<DebugHUDRegistry>().getRevision();
     }
 
     void EditorDebugHUDView::refresh()
@@ -97,7 +97,7 @@ namespace sw::editor
         _drawnSectionCount = 0;
         if ( pDrawList == nullptr )
             return 0.0f;
-        if ( _registryRevision != DebugHUDRegistry::get().getRevision() )
+        if ( _registryRevision != editor::getSubsystem<DebugHUDRegistry>().getRevision() )
         {
             rebuildSlots();
             _refreshTimer = 0.0f;

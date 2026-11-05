@@ -2,7 +2,6 @@
 
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
@@ -10,6 +9,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 
 #include <algorithm>
@@ -72,7 +72,7 @@ namespace sw
             if ( pLine != nullptr )
                 listToken = StringUtil::splitQuotedTokens( *pLine );
             // line 이 없거나 비면 이름을 묻기 전에 검사 함수가 속성 오류로 거절한다 — 그 거절을 보려고 여기서는 모르는 것으로 세지 않는다.
-            if ( listToken.empty() == false && DevCommandRegistry::get().findCommand( listToken[0] ) == nullptr )
+            if ( listToken.empty() == false && engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] ) == nullptr )
             {
                 outName = listToken[0];
                 return AutomationStepDependency::DevCommand;

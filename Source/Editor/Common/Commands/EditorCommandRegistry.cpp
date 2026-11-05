@@ -6,7 +6,6 @@
 
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/VectorUtil.h"
 
 #include "Editor/Common/Commands/EditorCommandTarget.h"
@@ -14,6 +13,8 @@
 #include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
+
+#include "Engine/Console/DevCommandRegistry.h"
 
 namespace sw::editor
 {

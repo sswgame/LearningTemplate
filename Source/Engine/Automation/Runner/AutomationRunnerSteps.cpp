@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -21,6 +20,7 @@
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 #include "Engine/Automation/Scenario/AutomationWindowSteps.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Input/InputManager.h"

@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/String/StringBuilder.h"
@@ -16,6 +15,7 @@
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 

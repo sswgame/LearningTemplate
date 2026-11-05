@@ -2,7 +2,6 @@
 
 #include "DevTools/ServerPose/ServerPoseOverlay.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -12,6 +11,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Object/Component/SceneComponent.h"

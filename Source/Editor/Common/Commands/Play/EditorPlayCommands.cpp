@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Commands/Play/EditorPlayCommands.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -21,6 +20,7 @@
 #include "Editor/Common/Workspace/IEditorPanelService.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Scene/Scene.h"
 

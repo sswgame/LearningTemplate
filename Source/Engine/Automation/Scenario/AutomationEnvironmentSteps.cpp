@@ -8,12 +8,12 @@
 
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"
@@ -46,7 +46,7 @@ namespace sw
                     return false;
                 }
                 // 단계 종류 검사와 같은 때(시작 조건이 참인 프레임)라 게임과 에디터 모듈의 명령이 이미 등록되어 있다.
-                if ( DevCommandRegistry::get().findCommand( listToken[0] ) == nullptr )
+                if ( engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] ) == nullptr )
                 {
                     outError = step.describe() + ": unknown dev command '" + listToken[0] + "'";
                     return false;
@@ -63,7 +63,7 @@ namespace sw
 #if SW_DEV_COMMANDS_ENABLED
                 vector<string> listToken;
                 listToken                              = StringUtil::splitQuotedTokens( *step.findAttribute( "line" ) );
-                const DevCommandRegistration* pCommand = listToken.empty() ? nullptr : DevCommandRegistry::get().findCommand( listToken[0] );
+                const DevCommandRegistration* pCommand = listToken.empty() ? nullptr : engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] );
                 if ( pCommand == nullptr )
                 {
                     // 검사 뒤에 모듈이 언로드됐다(핫 리로드). 실패로 적고 이어 간다.

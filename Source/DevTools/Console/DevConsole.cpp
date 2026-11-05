@@ -99,10 +99,10 @@ namespace sw
             {
                 outReply = "get <variable> | set <variable> <value> | <variable> [value] | help [prefix]";
                 vector<string> listName;
-                DevCommandRegistry::get().collectNames( prefix, listName );
+                engine::getSubsystem<DevCommandRegistry>().collectNames( prefix, listName );
                 for ( const string& name : listName )
                 {
-                    const DevCommandRegistration* pCommand = DevCommandRegistry::get().findCommand( name );
+                    const DevCommandRegistration* pCommand = engine::getSubsystem<DevCommandRegistry>().findCommand( name );
                     outReply += "\n  ";
                     outReply += pCommand->_pUsage;
                     outReply += " - ";
@@ -160,7 +160,7 @@ namespace sw
             return DevConsoleInternal::writeVariable( getVariables(), listToken[1], DevConsoleInternal::joinFrom( listToken, 2 ), outReply );
         }
 
-        if ( const DevCommandRegistration* pCommand = DevCommandRegistry::get().findCommand( head ) )
+        if ( const DevCommandRegistration* pCommand = engine::getSubsystem<DevCommandRegistry>().findCommand( head ) )
         {
             const vector<string> listArgument( listToken.begin() + 1, listToken.end() );
             if ( pCommand->_pFunc( listArgument, outReply ) )
@@ -277,14 +277,14 @@ namespace sw
                     outListCandidate.push_back( pBuiltin );
             }
             vector<string> listCommand;
-            DevCommandRegistry::get().collectNames( partial, listCommand );
+            engine::getSubsystem<DevCommandRegistry>().collectNames( partial, listCommand );
             outListCandidate.insert( outListCandidate.end(), listCommand.begin(), listCommand.end() );
             addVariables();
         }
         else if ( listToken.size() == 2 && ( StringUtil::equals( listToken[0], "set", true ) || StringUtil::equals( listToken[0], "get", true ) ) )
             addVariables();
         else if ( listToken.size() == 2 && StringUtil::equals( listToken[0], "help", true ) )
-            DevCommandRegistry::get().collectNames( partial, outListCandidate );
+            engine::getSubsystem<DevCommandRegistry>().collectNames( partial, outListCandidate );
         VectorUtil::sort( outListCandidate );
     }
 

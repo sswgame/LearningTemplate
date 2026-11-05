@@ -3,7 +3,6 @@
 #include "Engine/Automation/Runner/AutomationJudge.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -24,6 +23,7 @@
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 #include "Engine/Automation/Scenario/AutomationWindowSteps.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"

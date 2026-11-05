@@ -3,7 +3,6 @@
 #include "Engine/Automation/Runner/AutomationHangWatch.h"
 
 #include "Core/Concurrency/ThreadName.h"
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Diagnostics/CrashHandler.h"
@@ -15,6 +14,7 @@
 
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationOutcome.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Serialization/JSON/JSONWriter.h"
 
 #include <algorithm>

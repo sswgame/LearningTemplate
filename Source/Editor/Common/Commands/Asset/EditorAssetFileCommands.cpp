@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Commands/Asset/EditorAssetFileCommands.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
@@ -22,6 +21,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"

@@ -1,18 +1,19 @@
 /**
  * @file DebugHUDRegistry.h
- * @brief 디버그 HUD 섹션 레지스트리와 `SW_DEBUG_HUD_SECTION` 입니다. **Shipping 에서는 통째로 빠집니다**(`SW_DEV_COMMANDS_ENABLED`).
+ * @brief 디버그 HUD 섹션 레지스트리와 `SW_DEBUG_HUD_SECTION` 입니다. Shipping 에서는 등록 매크로가 꺼져 표가 비어 있습니다(`SW_DEV_COMMANDS_ENABLED`).
  */
 #pragma once
 #include "Core/Concurrency/mutex.h"
-#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
+#include "Core/Subsystem/ISubsystem.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "Engine/Console/DevCommandsEnabled.h"
+#include "Engine/Module/ModuleObjectRegistrar.h"
 
 namespace sw
 {
@@ -45,7 +46,7 @@ namespace sw
         void addLine( string_view label, string_view value );
         /**
          * @brief 값을 printf 형식(`formatstring` — `%.1f` · `%#`)으로 적은 줄 하나를 더합니다. 128 바이트에서 자릅니다.
-         * @details 정의는 `Core/Console/DebugHUDSectionFormat.h` 에 있다(이 헤더가 서식 헤더를 끌어오지 않게) — 부르는 .cpp 가 그것을 include 한다.
+         * @details 정의는 `Engine/Console/DebugHUDSectionFormat.h` 에 있다(이 헤더가 서식 헤더를 끌어오지 않게) — 부르는 .cpp 가 그것을 include 한다.
          */
         template <typename... Args>
         void addLineFormat( string_view label, string_view format, Args&&... args );
@@ -112,13 +113,17 @@ namespace sw
      *          등록 · 해제(이미지 로더의 정적 초기화)와 조회(게임 스레드)가 잠금 하나로 등록 목록을 지킨다. 섹션 본문은 잠금 밖에서 부른다 —
      *          `getSections` 는 복사본을 돌려준다(HUD 가 보일 때만 부르는 Dev 전용 경로라 프레임 핫 경로가 아니다).
      */
-    class SW_API DebugHUDRegistry
+    class SW_API DebugHUDRegistry final : public ISubsystem
     {
     public:
-        /** @brief 프로세스에 하나인 레지스트리입니다(Core 이미지의 함수 정적). */
-        static DebugHUDRegistry& get();
+        static constexpr MemoryTag   kSubsystemMemoryTag = MemoryTag::EngineMisc; ///< 할당 용도(`ISubsystem::getSubsystemMemoryTag`)
+        static constexpr const utf8* kSubsystemName      = "DebugHUDRegistry";
 
         DebugHUDRegistry();
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 섹션을 올립니다. 이름이 비었거나 · 예약어거나 · 이미 있거나 · 본문이 없으면 false 입니다. */
         [[nodiscard]] bool registerSection( const DebugHUDSectionRegistration* pRegistration );
@@ -161,18 +166,22 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_DEBUG_HUD_SECTION` 이 두는 정적 등록자입니다 — 만들 때 올리고 없앨 때(모듈을 내릴 때) 뺍니다. */
-    struct SW_API DebugHUDSectionRegistrar
+    /** @brief `SW_DEBUG_HUD_SECTION` 이 두는 정적 등록자입니다. 링크 때 목록에 달리고, 모듈을 올릴 때 붙고 내리기 전에 뗍니다(`ModuleObjectRegistrar`). */
+    class SW_API DebugHUDSectionRegistrar final : public ModuleObjectRegistrar
     {
+    public:
+        explicit DebugHUDSectionRegistrar( const DebugHUDSectionRegistration* pRegistration );
 
+        void attach() override;
+        void detach() override;
+
+    private:
         const DebugHUDSectionRegistration* _pRegistration;
         uint8                              _bRegistered : 1;
-        explicit DebugHUDSectionRegistrar( const DebugHUDSectionRegistration* pRegistration );
-        ~DebugHUDSectionRegistrar();
-        DebugHUDSectionRegistrar( const DebugHUDSectionRegistrar& )            = delete;
-        DebugHUDSectionRegistrar& operator=( const DebugHUDSectionRegistrar& ) = delete;
     };
 } // namespace sw
+
+#if SW_DEV_COMMANDS_ENABLED
 
 /**
  * @brief 디버그 HUD 섹션을 그 섹션의 .cpp 에서 등록합니다. Shipping 에서는 아무것도 남기지 않습니다 — 본문 함수도 `#if SW_DEV_COMMANDS_ENABLED`
@@ -186,7 +195,7 @@ namespace sw
  */
     #define SW_DEBUG_HUD_SECTION( varName, pName, pTitle, order, flags, pFunc )                                                                  \
         static const ::sw::DebugHUDSectionRegistration sw_debugHUDSection_##varName{ pName, pTitle, pFunc, order, static_cast<uint8>( flags ) }; \
-        static const ::sw::DebugHUDSectionRegistrar    sw_debugHUDSectionRegistrar_##varName                                                     \
+        static ::sw::DebugHUDSectionRegistrar          sw_debugHUDSectionRegistrar_##varName                                                     \
         {                                                                                                                                        \
             &sw_debugHUDSection_##varName                                                                                                        \
         }

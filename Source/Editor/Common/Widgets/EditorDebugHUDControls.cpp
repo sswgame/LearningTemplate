@@ -53,7 +53,7 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdCommon", "DebugHUDNotRunning" ) );
             return;
         }
-        for ( const DebugHUDSectionRegistration* pSection : DebugHUDRegistry::get().getSections() )
+        for ( const DebugHUDSectionRegistration* pSection : editor::getSubsystem<DebugHUDRegistry>().getSections() )
         {
             bool bShown = DebugHUD::isSectionShown( *pSection );
             ImGui::PushID( pSection->_pName );

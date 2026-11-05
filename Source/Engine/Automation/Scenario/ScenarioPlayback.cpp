@@ -2,9 +2,9 @@
 
 #include "Engine/Automation/Scenario/ScenarioPlayback.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

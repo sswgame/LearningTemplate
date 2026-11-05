@@ -8,7 +8,6 @@
 
 #include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/TagID.h"
 
@@ -25,6 +24,7 @@
 #include "Editor/Common/Workspace/EditorWorkspace.h"
 #include "Editor/Common/Workspace/Play/EditorPlaySession.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/GameObject/GameObject.h"

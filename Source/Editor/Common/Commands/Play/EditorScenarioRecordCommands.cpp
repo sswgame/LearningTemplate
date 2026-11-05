@@ -6,7 +6,6 @@
  */
 #include "pch.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/String/StringBuilder.h"
@@ -21,6 +20,7 @@
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/ScenarioRecorder.h"
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Window/IWindow.h"
 #include "Engine/Window/MainWindowSubsystem.h"

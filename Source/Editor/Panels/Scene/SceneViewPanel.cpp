@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/Scene/SceneViewPanel.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
@@ -22,6 +21,7 @@
 #include "Editor/Viewport/EditorViewportOverlays.h"
 
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
 

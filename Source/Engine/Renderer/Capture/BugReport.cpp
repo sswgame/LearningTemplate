@@ -3,7 +3,6 @@
 #include "Engine/Renderer/Capture/BugReport.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
@@ -16,6 +15,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Config/PackEngineSettings.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Object/Component/CameraComponent.h"

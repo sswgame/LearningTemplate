@@ -1,11 +1,12 @@
 #include "pch.h"
 
-#include "Core/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDRegistry.h"
 
-#if SW_DEV_COMMANDS_ENABLED
+#include "Core/Container/StringUtil.h"
+#include "Core/Log/Logger.h"
 
-    #include "Core/Container/StringUtil.h"
-    #include "Core/Log/Logger.h"
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -105,12 +106,6 @@ namespace sw
 
 namespace sw
 {
-    DebugHUDRegistry& DebugHUDRegistry::get()
-    {
-        static DebugHUDRegistry s_registry;
-        return s_registry;
-    }
-
     DebugHUDRegistry::DebugHUDRegistry()
         : _mutex{}
         , _registration{ "DebugHUDRegistry", RegistrationOrder::ByOrderThenName, true, NameCase::IgnoreCase }
@@ -235,15 +230,21 @@ namespace sw
 {
     DebugHUDSectionRegistrar::DebugHUDSectionRegistrar( const DebugHUDSectionRegistration* pRegistration )
         : _pRegistration{ pRegistration }
-        , _bRegistered{ DebugHUDRegistry::get().registerSection( pRegistration ) }
+        , _bRegistered{ SW_FALSE }
     {
     }
 
-    DebugHUDSectionRegistrar::~DebugHUDSectionRegistrar()
+    void DebugHUDSectionRegistrar::attach()
     {
-        if ( _bRegistered )
-            DebugHUDRegistry::get().unregisterSection( _pRegistration );
+        _bRegistered = engine::getSubsystem<DebugHUDRegistry>().registerSection( _pRegistration ) ? SW_TRUE : SW_FALSE;
     }
+
+    void DebugHUDSectionRegistrar::detach()
+    {
+        if ( _bRegistered == SW_TRUE )
+            engine::getSubsystem<DebugHUDRegistry>().unregisterSection( _pRegistration );
+        _bRegistered = SW_FALSE;
+    }
+
+    SW_ENGINE_SUBSYSTEM_DEFAULT( DebugHUDRegistry, DebugHUDRegistry );
 } // namespace sw
-
-#endif

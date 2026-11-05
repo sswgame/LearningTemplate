@@ -2,8 +2,9 @@
 
 #include "Engine/Window/Linux/XTestInputInjector.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
+
+#include "Engine/Console/DevCommandRegistry.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_XTEST )
 

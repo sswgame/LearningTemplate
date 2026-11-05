@@ -1,6 +1,5 @@
 #include "pch.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/LogOnce.h"
 #include "Core/Math/MathUtil.h"
@@ -19,6 +18,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/NetEmulationPresetTable.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Localization/LocText.h"
 
 #include <imgui.h>

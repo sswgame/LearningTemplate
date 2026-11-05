@@ -2,7 +2,6 @@
 
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
 #include "Core/String/StringBuilder.h"
@@ -11,6 +10,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Character/Hit/CharacterHit.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"

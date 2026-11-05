@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/ContentBrowser/ContentBrowserPanel.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -32,6 +31,7 @@
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"

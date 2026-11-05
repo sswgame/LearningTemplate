@@ -3,12 +3,13 @@
 #include "DevTools/RenderDoc/RenderDocCapture.h"
 
 #include "Core/Concurrency/atomic.h"
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Process/ProcessEnvironment.h"
+
+#include "Engine/Console/DevCommandRegistry.h"
 
 #include <renderdoc_app.h>
 

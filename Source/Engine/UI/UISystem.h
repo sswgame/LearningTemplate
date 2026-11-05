@@ -3,7 +3,6 @@
  * @brief 런타임 UI 의 엔진 서비스입니다. 화면 스택, 입력에서 UI 이벤트로의 변환, 갱신 순서를 담당합니다.
  */
 #pragma once
-#include "Core/Console/DevCommandsEnabled.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -15,6 +14,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
 
+#include "Engine/Console/DevCommandsEnabled.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"

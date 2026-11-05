@@ -2,7 +2,6 @@
 
 #include "Engine/Scene/Scene.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -13,6 +12,7 @@
 
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialCache.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"

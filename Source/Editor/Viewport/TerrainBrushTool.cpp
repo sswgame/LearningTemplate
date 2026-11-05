@@ -2,7 +2,6 @@
 
 #include "Editor/Viewport/TerrainBrushTool.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/GameObjectHandle.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -26,6 +25,7 @@
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Environment/Terrain/HeightfieldAsset.h"
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"

@@ -2,7 +2,6 @@
 
 #include "DevTools/DebugHUD/DebugHUD.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
@@ -12,6 +11,7 @@
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasPainter.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -136,7 +136,7 @@ namespace sw
 
             static void appendSectionList( string& outReply )
             {
-                for ( const DebugHUDSectionRegistration* pRegistration : DebugHUDRegistry::get().getSections() )
+                for ( const DebugHUDSectionRegistration* pRegistration : engine::getSubsystem<DebugHUDRegistry>().getSections() )
                 {
                     if ( outReply.empty() == false )
                         outReply += ", ";
@@ -147,7 +147,7 @@ namespace sw
 
             static bool runSectionCommand( DebugHUD& hud, const vector<string>& listArgument, string& outReply )
             {
-                const DebugHUDSectionRegistration* pRegistration = DebugHUDRegistry::get().findSection( listArgument[0] );
+                const DebugHUDSectionRegistration* pRegistration = engine::getSubsystem<DebugHUDRegistry>().findSection( listArgument[0] );
                 if ( pRegistration == nullptr )
                 {
                     outReply = "unknown section '" + listArgument[0] + "' - sections: ";
@@ -362,7 +362,7 @@ namespace sw
                 _writer.recordFrameSeconds( deltaSeconds );
                 applyPlacement();
                 _secondsSinceRefresh += deltaSeconds;
-                const DebugHUDRegistry& registry     = DebugHUDRegistry::get();
+                const DebugHUDRegistry& registry     = engine::getSubsystem<DebugHUDRegistry>();
                 const bool              bListChanged = registry.getRevision() != _seenRevision || gv_debugHUDSections != _seenState;
                 if ( bListChanged == false && _secondsSinceRefresh < DebugHUDInternal::kRefreshSeconds )
                     return;
@@ -410,7 +410,7 @@ namespace sw
             {
                 SW_PROFILE_SCOPE( "GT.DebugHUD.Sections" );
                 _listShownScratch.clear();
-                for ( const DebugHUDSectionRegistration* pRegistration : DebugHUDRegistry::get().getSections() )
+                for ( const DebugHUDSectionRegistration* pRegistration : engine::getSubsystem<DebugHUDRegistry>().getSections() )
                 {
                     if ( DebugHUD::isSectionShown( *pRegistration ) )
                         _listShownScratch.push_back( pRegistration );
@@ -545,7 +545,7 @@ namespace sw
             void onTick( float32 deltaSeconds ) override
             {
                 (void)deltaSeconds;
-                const DebugHUDRegistry& registry = DebugHUDRegistry::get();
+                const DebugHUDRegistry& registry = engine::getSubsystem<DebugHUDRegistry>();
                 if ( registry.getRevision() != _seenRevision )
                     rebuildCheckBoxes();
                 DebugHUD* pHUD = DebugHUDInternal::findEngineHUD();
@@ -579,7 +579,7 @@ namespace sw
         private:
             void rebuildCheckBoxes()
             {
-                const DebugHUDRegistry& registry = DebugHUDRegistry::get();
+                const DebugHUDRegistry& registry = engine::getSubsystem<DebugHUDRegistry>();
                 _seenRevision                    = registry.getRevision();
                 _listSectionName.clear();
                 _listCheckBox.clear();
@@ -712,7 +712,7 @@ namespace sw
 
     bool DebugHUD::setSectionShown( string_view name, bool bShown )
     {
-        const DebugHUDSectionRegistration* pRegistration = DebugHUDRegistry::get().findSection( name );
+        const DebugHUDSectionRegistration* pRegistration = engine::getSubsystem<DebugHUDRegistry>().findSection( name );
         if ( pRegistration == nullptr )
             return false;
         const bool   bDefaultShown = ( pRegistration->_flags & DebugHUDSectionFlag::kDefaultOn ) != 0;
@@ -724,7 +724,7 @@ namespace sw
     uint32 DebugHUD::getShownSectionCount()
     {
         uint32 count = 0;
-        for ( const DebugHUDSectionRegistration* pRegistration : DebugHUDRegistry::get().getSections() )
+        for ( const DebugHUDSectionRegistration* pRegistration : engine::getSubsystem<DebugHUDRegistry>().getSections() )
         {
             if ( isSectionShown( *pRegistration ) )
                 ++count;
@@ -860,7 +860,7 @@ namespace sw
         // 잠금 안에서 콜백을 부르는 순회는 섹션 쪽이 레지스트리를 다시 부르면 교착하므로 쓰지 않는다.
         if ( _screen != kInvalidUIScreenHandle )
         {
-            const DebugHUDRegistry& registry = DebugHUDRegistry::get();
+            const DebugHUDRegistry& registry = engine::getSubsystem<DebugHUDRegistry>();
             const uint64            revision = registry.getRevision();
             if ( revision != _profilerSeenRevision || gv_debugHUDSections != _profilerSeenState )
             {

@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Asset/OutfitAtlasBaker.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
@@ -15,6 +14,7 @@
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"

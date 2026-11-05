@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Workspace/EditorNotificationManager.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
@@ -10,6 +9,7 @@
 #include "Editor/Common/Workspace/EditorService.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Console/DevCommandRegistry.h"
 
 #include <cstdlib>
 

@@ -2,7 +2,6 @@
 
 #include "Editor/Common/Commands/Scene/EditorSceneFileCommands.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
@@ -21,6 +20,7 @@
 #include "Editor/Common/Workspace/Undo/CommandStack.h"
 
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Localization/LocText.h"

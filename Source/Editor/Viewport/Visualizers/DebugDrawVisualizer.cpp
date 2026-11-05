@@ -4,7 +4,6 @@
  */
 #include "pch.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/StringBuilder.h"
 
@@ -17,6 +16,7 @@
 #include "Editor/Viewport/EditorViewportVisualizer.h"
 #include "Editor/Viewport/Model/EditorVisualizerGeometry.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Object/Component/CameraComponent.h"

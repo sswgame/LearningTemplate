@@ -3,7 +3,6 @@
 #include "Server/ServerApp.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Diagnostics/CrashHandler.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -21,6 +20,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/GameSelection.h"
 #include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/DedicatedServer/ServerServiceManager.h"
 #include "Engine/DedicatedServer/ServiceHealthRegistry.h"
 #include "Engine/Foundation/EngineServices.h"

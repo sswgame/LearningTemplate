@@ -109,6 +109,8 @@ namespace sw
     X( AssetLoadProfiler, Services, false )           \
     X( AssetDataKindRegistry, Services, false )       \
     X( TickBatchRegistry, Services, false )           \
+    X( DevCommandRegistry, Services, false )          \
+    X( DebugHUDRegistry, Services, false )            \
     X( ContentHashCache, Services, false )            \
     X( GameTimeScale, Services, false )               \
     X( QuitRequest, Services, false )                 \

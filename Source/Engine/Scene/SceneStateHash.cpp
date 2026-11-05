@@ -2,7 +2,6 @@
 
 #include "Engine/Scene/SceneStateHash.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -12,6 +11,7 @@
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Foundation/StateHashBuilder.h"

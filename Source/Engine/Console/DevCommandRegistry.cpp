@@ -1,20 +1,17 @@
 #include "pch.h"
 
-#include "Core/Console/DevCommandRegistry.h"
+#include "Engine/Console/DevCommandRegistry.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
 
+#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+
 namespace sw
 {
-    DevCommandRegistry& DevCommandRegistry::get()
-    {
-        static DevCommandRegistry s_registry;
-        return s_registry;
-    }
-
     bool DevCommandRegistry::readDiskPathArgument( string_view argument, string& outAbsolutePath, string& outReply )
     {
         const std::optional<AbsolutePath> absolutePath = AbsolutePath::tryMake( argument );
@@ -49,11 +46,6 @@ namespace sw
         : _mutex{}
         , _registration{ "DevCommandRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
     {
-    }
-
-    const utf8* DevCommandRegistry::getImageMarker()
-    {
-        return "sw-dev-command-registry-image-marker";
     }
 
     bool DevCommandRegistry::registerCommand( const DevCommandRegistration* pRegistration )
@@ -102,13 +94,21 @@ namespace sw
 
     DevCommandRegistrar::DevCommandRegistrar( const DevCommandRegistration* pRegistration )
         : _pRegistration{ pRegistration }
-        , _bRegistered{ DevCommandRegistry::get().registerCommand( pRegistration ) }
+        , _bRegistered{ SW_FALSE }
     {
     }
 
-    DevCommandRegistrar::~DevCommandRegistrar()
+    void DevCommandRegistrar::attach()
     {
-        if ( _bRegistered )
-            DevCommandRegistry::get().unregisterCommand( _pRegistration );
+        _bRegistered = engine::getSubsystem<DevCommandRegistry>().registerCommand( _pRegistration ) ? SW_TRUE : SW_FALSE;
     }
+
+    void DevCommandRegistrar::detach()
+    {
+        if ( _bRegistered == SW_TRUE )
+            engine::getSubsystem<DevCommandRegistry>().unregisterCommand( _pRegistration );
+        _bRegistered = SW_FALSE;
+    }
+
+    SW_ENGINE_SUBSYSTEM_DEFAULT( DevCommandRegistry, DevCommandRegistry );
 } // namespace sw

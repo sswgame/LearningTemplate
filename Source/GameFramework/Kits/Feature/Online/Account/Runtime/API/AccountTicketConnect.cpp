@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Feature/Online/Account/Runtime/API/AccountTicketConnect.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Network/Connection/NetEndpointSecurity.h"
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/IStreamTransport.h"
@@ -10,6 +9,7 @@
 #include "Core/Time/Clock.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Net/GameNetSession.h"
 

@@ -2,7 +2,6 @@
 
 #include "Engine/Net/GameNetSession.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
@@ -18,6 +17,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/Server/ServerConfig.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/DedicatedServer/ServerServiceRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"

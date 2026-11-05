@@ -6,14 +6,14 @@
  */
 #include "pch.h"
 
-#include "Core/Console/DebugHUDRegistry.h"
-#include "Core/Console/DebugHUDSectionFormat.h"
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/MemoryTag.h"
 
 #include "Engine/Audio/AudioEngine.h"
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Console/DebugHUDRegistry.h"
+#include "Engine/Console/DebugHUDSectionFormat.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/InputManager.h"

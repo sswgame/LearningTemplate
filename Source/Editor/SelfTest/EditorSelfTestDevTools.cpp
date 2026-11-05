@@ -4,7 +4,6 @@
  */
 #include "pch.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/String/TagID.h"
@@ -41,6 +40,7 @@
 
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/Component/CameraComponent.h"
@@ -222,7 +222,7 @@ namespace sw::editor
                 const uint32 stepIndex = context.getStepIndex();
                 if ( stepIndex == 0 )
                 {
-                    (void)context.expect( DevCommandRegistry::get().findCommand( "select.tag" ) != nullptr, "the editor module did not register its dev commands" );
+                    (void)context.expect( editor::getSubsystem<DevCommandRegistry>().findCommand( "select.tag" ) != nullptr, "the editor module did not register its dev commands" );
                     (void)context.expect( pConsole->getDevConsole().submit( "timescale 0.75" ) == DevConsoleResult::Ok, "timescale failed in the editor console" );
                     // 정한 배율을 본다 — 멈춘 편집기는 첫 Play 까지 로딩 화면의 정지 요청이 남아 실효 배율(`get`)이 0 이다.
                     (void)context.expect( editor::getSubsystem<GameTimeScale>().getSetting() == 0.75f, "the console command did not change the time scale" );

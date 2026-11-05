@@ -2,9 +2,9 @@
 
 #include "GameFramework/Runtime/Character/Camera/PhotoModeCamera.h"
 
-#include "Core/Console/DevCommandRegistry.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -184,7 +184,7 @@ namespace sw
             {
                 if ( listArgument.size() > 1 )
                     return false;
-                const DevCommandRegistration* pScreenshot = DevCommandRegistry::get().findCommand( "screenshot" );
+                const DevCommandRegistration* pScreenshot = game::getSubsystem<DevCommandRegistry>().findCommand( "screenshot" );
                 if ( pScreenshot == nullptr )
                 {
                     outReply = "photo mode: the screenshot command is not registered";
