@@ -6,7 +6,7 @@
 | 마을 오브젝트 · 생물 모습(`prefabs/tree` · `grass` · `sprout`) | Quaternius "Stylized Nature MegaKit" — 공용 원본 `common/models_raw/quaternius/nature/` 의 CommonTree_1 · Grass_Common_Tall · Plant_1(출처는 `common/credits.md`) | CC0 1.0 |
 
 - 라이선스 근거: 묶음의 `License.txt` 원문 "License: (Creative Commons Zero, CC0)".
-- 밭 칸은 아직 엔진 기본 큐브 판(`prefabs/tile.prefab.xml` — 칸 상태 색)이다. 위 Kenney 땅 모델은 그 자리 표시를 바꿀 원본이다. 씬 · 데이터 · 입력 맵은 저장소에서 새로 썼다.
+- 밭 칸(`prefabs/tile.prefab.xml`)은 위 Kenney `crops_dirt_single` 이다. 칸 상태는 그 위에 곱하는 틴트로 보인다. 씬 · 데이터 · 입력 맵은 저장소에서 새로 썼다.
 - 원본은 `models_raw/` 에 두고, 엔진이 읽는 `models/*.mesh` 는 `App --import-models` 가 만든다(스탬프는 `models_raw/import.stamp`).
   쓰려면 `MeshComponent::_meshID` 를 `game/meadowvillage/models/<이름>.mesh` 로 바꾼다. 파일 이름은 원본의 camelCase 를 소문자 `_` 로 바꾼 것이다.
 - CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kenney (www.kenney.nl).

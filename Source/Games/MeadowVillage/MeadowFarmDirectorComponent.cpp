@@ -46,10 +46,10 @@ namespace sw
         : _tilePrefab{}
         , _startingGold{ 20 }
         , _fastTimeScale{ 8.0f }
-        , _readyColor{ 0.95f, 0.85f, 0.30f, 1.0f }
-        , _wateredColor{ 0.33f, 0.22f, 0.13f, 1.0f }
-        , _tilledColor{ 0.58f, 0.40f, 0.24f, 1.0f }
-        , _grassColor{ 0.40f, 0.62f, 0.28f, 1.0f }
+        , _readyColor{ 1.60f, 1.35f, 0.55f, 1.0f } // 메시 정점 색이 이미 흙색이라 상태 색은 그 위에 곱하는 틴트다
+        , _wateredColor{ 0.60f, 0.58f, 0.62f, 1.0f }
+        , _tilledColor{ 1.0f, 1.0f, 1.0f, 1.0f }
+        , _grassColor{ 0.80f, 1.30f, 0.60f, 1.0f }
         , _tileSpacing{ 1.0f }
         , _field{}
         , _tintCache{}
@@ -211,7 +211,7 @@ namespace sw
                 MeshComponent*  pMesh = pView != nullptr ? pView->getComponent<MeshComponent>() : nullptr;
                 if ( pMesh == nullptr )
                     continue;
-                pMesh->setLocalPosition( float3{ ( static_cast<float32>( x ) + 0.5f ) * _tileSpacing, 0.05f, ( static_cast<float32>( y ) + 0.5f ) * _tileSpacing } );
+                pMesh->setLocalPosition( float3{ ( static_cast<float32>( x ) + 0.5f ) * _tileSpacing, 0.0f, ( static_cast<float32>( y ) + 0.5f ) * _tileSpacing } );
                 _tintCache.apply( *pMesh, findTileColor( *pTile, _readyColor, _wateredColor, _tilledColor, _grassColor ) );
                 _listTileView.push_back( pView->getHandle() );
             }
