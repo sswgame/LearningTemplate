@@ -2,7 +2,6 @@
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/VectorMath.h"
 
@@ -12,6 +11,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorFontSetup.h"
+#include "Editor/Common/GUI/Theme/Model/EditorThemeConfigUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorContext.h"
@@ -86,21 +86,9 @@ namespace sw::editor
                 return theme.getAvailable();
             }
 
-            static const EditorThemeConfig* findAvailable( string_view name )
-            {
-                for ( const EditorThemeConfig& theme : availableThemes() )
-                {
-                    if ( StringUtil::equals( theme._name, name, true ) )
-                        return &theme;
-                }
-                return nullptr;
-            }
-
             /** @brief 뷰포트 호버 색이 강조색에서 흰색 쪽으로 가는 비율과 알파입니다. */
             static constexpr float32 kHoverWhiten = 0.45f;
             static constexpr float32 kHoverAlpha  = 0.75f;
-            /** @brief 둥글기를 한 슬라이더로 묶을 때 스크롤바 둥글기는 입력 필드 둥글기의 이 배수입니다. */
-            static constexpr float32 kScrollbarRadiusPerFrameRadius = 2.0f;
 
             static ImVec4 toImVec4( const Color& color, float32 alphaMultiplier = 1.0f )
             {
@@ -139,36 +127,6 @@ namespace sw::editor
                 fresh.FontScaleDpi           = outStyle.FontScaleDpi;
                 fresh._NextFrameFontSizeBase = outStyle._NextFrameFontSizeBase;
                 outStyle                     = fresh;
-            }
-
-            /** @brief 사용자가 덮어쓰는 토큰 키입니다(강조색 · 둥글기 세 슬라이더). 나머지 둥글기는 이 셋에서 정한다. */
-            static inline const hashed_string kAccentKey{ "Base.Accent" };
-
-            /** @brief 둥글기 슬라이더 셋의 값을 테마에 씁니다. 팝업은 창, 스크롤바 · 그랩은 입력 필드를 따른다. */
-            static void setRadius( float32 window, float32 frame, float32 tab, EditorThemeConfig& inoutTheme )
-            {
-                inoutTheme._mapMetric[hashed_string( "Radius.Window" )]    = window;
-                inoutTheme._mapMetric[hashed_string( "Radius.Frame" )]     = frame;
-                inoutTheme._mapMetric[hashed_string( "Radius.Tab" )]       = tab;
-                inoutTheme._mapMetric[hashed_string( "Radius.Popup" )]     = window;
-                inoutTheme._mapMetric[hashed_string( "Radius.Scrollbar" )] = frame * kScrollbarRadiusPerFrameRadius;
-                inoutTheme._mapMetric[hashed_string( "Radius.Grab" )]      = frame;
-            }
-
-            /** @brief 사용자 설정(강조색 · 둥글기 덮어쓰기)을 테마 위에 얹습니다. 값이 음수면 덮어쓰지 않은 것입니다. */
-            static void applyUserOverrides( const EditorConfig& editorConfig, EditorThemeConfig& inoutTheme )
-            {
-                const bool bHasAccentOverride = editorConfig._themeAccentR >= 0.0f && editorConfig._themeAccentG >= 0.0f && editorConfig._themeAccentB >= 0.0f;
-                if ( bHasAccentOverride )
-                {
-                    inoutTheme._mapColor[kAccentKey] = Color{ editorConfig._themeAccentR, editorConfig._themeAccentG, editorConfig._themeAccentB, 1.0f };
-                    inoutTheme._bAccentOverridden    = SW_TRUE;
-                }
-                if ( editorConfig._themeWindowRounding >= 0.0f )
-                {
-                    setRadius( editorConfig._themeWindowRounding, editorConfig._themeFrameRounding, editorConfig._themeTabRounding, inoutTheme );
-                    inoutTheme._bRadiusOverridden = SW_TRUE;
-                }
             }
 
             /** @brief 1 단계: 지오메트리와 레이아웃 메트릭(토큰)을 스타일에 씁니다. 여백 · 간격에는 밀도를, 크기에는 모니터 배율을 곱합니다. 지금 테마(`applyTheme` 이 먼저 바꿔 둔다)를 키로 읽는다. */
@@ -312,7 +270,7 @@ namespace sw::editor
 
     bool EditorThemeUtil::applyThemeByName( string_view name )
     {
-        const EditorThemeConfig* pTheme = EditorThemeInternal::findAvailable( name );
+        const EditorThemeConfig* pTheme = EditorThemeConfigUtil::findByName( EditorThemeInternal::availableThemes(), name );
         if ( pTheme == nullptr )
             return false;
         applyTheme( *pTheme );
@@ -368,47 +326,28 @@ namespace sw::editor
     bool EditorThemeUtil::loadFromConfig()
     {
         // 테마 이름의 원본은 설정(`EditorConfig::_themeName`)이다. 그 벌이 없으면 다른 벌로 바꿔 끼우지 않는다 — 고친 이름이 무시된 것을 아무도 모른다.
-        const EditorConfig&      editorConfig = getPreferences<EditorConfig>();
-        const EditorThemeConfig* pTheme       = EditorThemeInternal::findAvailable( editorConfig._themeName );
-        if ( pTheme == nullptr )
+        const EditorConfig& editorConfig = getPreferences<EditorConfig>();
+        EditorThemeConfig   themeConfig{};
+        if ( EditorThemeConfigUtil::buildFromSaved( EditorThemeInternal::availableThemes(), editorConfig, themeConfig ) == false )
         {
             SW_LOG_ERROR_ID( "EditorThemeUtil.EditorThemeEditorAppearance", "Editor theme '%#' (Editor/Appearance) has no token file under %#", editorConfig._themeName.c_str(), EditorThemeTokens::getFolderPath().c_str() );
             return false;
         }
 
-        EditorThemeConfig themeConfig = *pTheme;
-        EditorThemeInternal::applyUserOverrides( editorConfig, themeConfig );
         applyTheme( themeConfig );
         return true;
     }
 
     void EditorThemeUtil::saveToConfig()
     {
-        EditorConfig& editorConfig = EditorThemeInternal::editAppearance();
-
-        const EditorThemeConfig& themeConfig = EditorThemeInternal::activeTheme();
-        editorConfig._themeName              = themeConfig._name;
-
-        // 덮어쓰지 않은 값은 음수로 둔다. 그래야 토큰 파일이 바뀌면 그 값을 따른다.
-        const bool   bAccent       = themeConfig._bAccentOverridden == SW_TRUE;
-        const Color& accent        = SW_THEMECOLOR( "Base", "Accent" );
-        editorConfig._themeAccentR = bAccent ? accent._r : EditorConfig::kNotOverridden;
-        editorConfig._themeAccentG = bAccent ? accent._g : EditorConfig::kNotOverridden;
-        editorConfig._themeAccentB = bAccent ? accent._b : EditorConfig::kNotOverridden;
-
-        const bool bRadius                = themeConfig._bRadiusOverridden == SW_TRUE;
-        editorConfig._themeWindowRounding = bRadius ? SW_THEMEMETRIC( "Radius", "Window" ) : EditorConfig::kNotOverridden;
-        editorConfig._themeFrameRounding  = bRadius ? SW_THEMEMETRIC( "Radius", "Frame" ) : EditorConfig::kNotOverridden;
-        editorConfig._themeTabRounding    = bRadius ? SW_THEMEMETRIC( "Radius", "Tab" ) : EditorConfig::kNotOverridden;
-
+        EditorThemeConfigUtil::writeSaved( EditorThemeInternal::activeTheme(), EditorThemeInternal::editAppearance() );
         EditorConfig::saveToPreferences();
     }
 
     void EditorThemeUtil::setAccentColor( const Color& accentColor )
     {
-        EditorThemeConfig editorConfig                          = EditorThemeInternal::activeTheme();
-        editorConfig._mapColor[EditorThemeInternal::kAccentKey] = accentColor;
-        editorConfig._bAccentOverridden                         = SW_TRUE;
+        EditorThemeConfig editorConfig = EditorThemeInternal::activeTheme();
+        EditorThemeConfigUtil::overrideAccent( accentColor, editorConfig );
         applyTheme( editorConfig );
         saveToConfig();
     }
@@ -598,8 +537,7 @@ namespace sw::editor
 
             if ( bMetricsChanged )
             {
-                EditorThemeInternal::setRadius( windowRadius, frameRadius, tabRadius, editorConfig );
-                editorConfig._bRadiusOverridden = SW_TRUE;
+                EditorThemeConfigUtil::overrideRadius( windowRadius, frameRadius, tabRadius, editorConfig );
                 applyTheme( editorConfig );
                 saveToConfig();
             }
