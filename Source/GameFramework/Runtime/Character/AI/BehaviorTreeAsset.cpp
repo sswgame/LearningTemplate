@@ -68,13 +68,13 @@ namespace sw
                 return false;
             }
 
-            /** @brief 열거자 이름(리플렉션 `ENUM()`)을 대소문자 없이 찾습니다. 0 부터 @p last 까지 본다. */
+            /** @brief 열거자 이름(리플렉션 `ENUM()`)을 그대로 찾습니다. 0 부터 @p last 까지 본다. */
             template <typename E>
             static bool parseEnumName( string_view text, E last, E& outValue )
             {
                 for ( int32 value = 0; value <= static_cast<int32>( last ); ++value )
                 {
-                    if ( StringUtil::equals( getEnumName( static_cast<E>( value ) ), text, true ) )
+                    if ( StringUtil::equals( getEnumName( static_cast<E>( value ) ), text ) )
                     {
                         outValue = static_cast<E>( value );
                         return true;

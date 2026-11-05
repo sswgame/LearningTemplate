@@ -70,25 +70,7 @@ namespace sw
     bool GhostCatalog::loadVacuum( const XMLNode& node, string_view sourceName )
     {
         GhostVacuumDef vacuum;
-        bool           bValid = XMLFields::readFields( node, vacuum, sourceName, { "stages" } );
-        // 단계 위력은 적었으면 모두 0 이상의 수여야 한다(적지 않으면 스키마 초기값 한 단계).
-        const string_view stages = node.getAttributeText( "stages" );
-        if ( stages.empty() == false )
-        {
-            vacuum._listStagePower.clear();
-            StringUtil::forEachToken( stages, ",; ", [&]( string_view token )
-            {
-                float32    power  = 0.0f;
-                const bool bPower = StringUtil::parseFloat( token, power ) && power >= 0.0f;
-                if ( bPower )
-                    vacuum._listStagePower.push_back( power );
-                else
-                {
-                    SW_LOG_ERROR_ID( "GhostCatalog.VacuumStagesNeedsNumbers", "%#: <Vacuum stages> has '%#' - needs numbers of 0 or more", sourceName, token );
-                    bValid = false;
-                }
-            } );
-        }
+        const bool     bValid = XMLFields::readFields( node, vacuum, sourceName );
         if ( bValid )
             _vacuum = vacuum;
         return bValid;

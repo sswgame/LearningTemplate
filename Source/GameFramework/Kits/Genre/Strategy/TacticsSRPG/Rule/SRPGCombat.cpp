@@ -191,7 +191,7 @@ namespace sw
         const int32 damage = MathUtil::max( settings._minimumDamage, attackPower - defensePower ) * MathUtil::max( 0, damagePercent ) / 100;
 
         int32 hit = settings._baseHit + pWeapon->_hitBonus + attacker.computeStat( SRPGPilotStat::Reaction ) - defender.computeStat( SRPGPilotStat::Reaction ) +
-                    ( defender._pDef->_size - attacker._pDef->_size ) * settings._sizeHitStep - ( pTerrain != nullptr ? pTerrain->_evasionBonus : 0 ) -
+                    ( static_cast<int32>( defender._pDef->_size ) - static_cast<int32>( attacker._pDef->_size ) ) * settings._sizeHitStep - ( pTerrain != nullptr ? pTerrain->_evasionBonus : 0 ) -
                     defender._pDef->_mobility - defender._dodge;
         hit = hit * aptitude / 100;
         const int32 crit =

@@ -22,6 +22,16 @@ namespace sw
 {
     class XMLNode;
 
+    /** @brief 유닛 크기입니다. 클수록 맞히기 쉽습니다(값의 차이가 명중 보정이다). */
+    ENUM()
+    enum class SRPGUnitSize : int32
+    {
+        S = 0,
+        M,
+        L,
+        LL
+    };
+
     /** @brief 이동 타입입니다. 지형의 이동 비용과 적성은 이 순서("지상 공중 우주 수중")로 적습니다. */
     ENUM()
     enum class SRPGMoveType : uint8
@@ -163,9 +173,10 @@ namespace sw
         PROPERTY( Min = 0 )
         int32 _armor{ 500 }; ///< 장갑이다. 받는 피해에서 빠진다
         PROPERTY()
-        int32 _mobility{ 0 };                                         ///< 운동성이다. 회피에 쓴다(명중률에서 빼는 %p)
-        int32 _size{ 1 };                                             ///< 0 은 S, 1 은 M, 2 는 L, 3 은 LL 이다. 클수록 맞히기 쉽다
-        int32 _arrAptitude[kSRPGMoveTypeCount]{ 100, 100, 100, 100 }; ///< 지형 적성(%)이다. 0 이면 그 영역에 들어갈 수 없다
+        int32 _mobility{ 0 }; ///< 운동성이다. 회피에 쓴다(명중률에서 빼는 %p)
+        PROPERTY()
+        SRPGUnitSize _size{ SRPGUnitSize::M };
+        int32        _arrAptitude[kSRPGMoveTypeCount]{ 100, 100, 100, 100 }; ///< 지형 적성(%)이다. 0 이면 그 영역에 들어갈 수 없다
         PROPERTY()
         SRPGMoveType _moveType{ SRPGMoveType::Ground };
     };

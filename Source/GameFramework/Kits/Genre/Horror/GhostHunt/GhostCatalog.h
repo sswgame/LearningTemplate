@@ -45,6 +45,7 @@ namespace sw
     {
         REFLECT_BODY();
 
+        PROPERTY( Name = "stages", Min = 0 )
         vector<float32> _listStagePower{ 10.0f }; ///< 강화 단계마다의 초당 피해이다(0단계부터 · `stages="10 16 24"`)
         PROPERTY( Min = 0.1 )
         float32 _range{ 4.0f }; ///< 기절한 유령을 빨아들이기 시작할 수 있는 거리

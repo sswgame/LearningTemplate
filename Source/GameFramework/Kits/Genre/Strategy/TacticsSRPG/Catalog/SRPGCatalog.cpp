@@ -65,32 +65,6 @@ namespace sw
                 return true;
             }
 
-            /** @brief `size` 를 S · M · L · LL 또는 0..3 으로 읽습니다. 적지 않으면 Def 의 초기값이고, 모르는 값은 오류입니다. */
-            [[nodiscard]] static bool readSize( const XMLNode& node, string_view sourceName, int32& inoutSize )
-            {
-                static constexpr const utf8* kArrSizeName[] = { "S", "M", "L", "LL" };
-                const string_view            text           = node.getAttributeText( "size" );
-                if ( text.empty() )
-                    return true;
-                for ( int32 index = 0; index < static_cast<int32>( std::size( kArrSizeName ) ); ++index )
-                {
-                    if ( StringUtil::equals( text, string_view( kArrSizeName[index] ) ) )
-                    {
-                        inoutSize = index;
-                        return true;
-                    }
-                }
-                int32      value  = 0;
-                const bool bValue = StringUtil::parseInt( text, value ) && 0 <= value && value <= 3;
-                if ( bValue == false )
-                {
-                    SW_LOG_ERROR_ID( "SRPGCatalog.SizeNeedsML", "%#: <%# size=\"%#\"> needs S, M, L, LL or 0..3", sourceName, node.getName(), text );
-                    return false;
-                }
-                inoutSize = value;
-                return true;
-            }
-
             /** @brief 파일럿 능력치 다섯 칸을 이름으로 읽습니다. 적지 않은 칸은 Def 의 초기값이고, 깨진 값은 오류입니다. */
             [[nodiscard]] static bool readPilotStats( const XMLNode& node, const utf8* const ( &arrName )[kSRPGPilotStatCount], int32 ( &inoutArrValue )[kSRPGPilotStatCount] )
             {
@@ -253,8 +227,7 @@ namespace sw
     {
         using Internal = SRPGCatalogInternal;
         SRPGUnitDef def;
-        bool        bValid = XMLFields::readFields( node, def, sourceName, { "size", "aptitude", "developsTo" } );
-        bValid             = Internal::readSize( node, sourceName, def._size ) && bValid;
+        bool        bValid = XMLFields::readFields( node, def, sourceName, { "aptitude", "developsTo" } );
         bValid             = Internal::readFour( node, "aptitude", sourceName, &SRPGCatalog::parseAptitude, def._arrAptitude ) && bValid;
         XMLReadUtil::forEachNamedNumber( node.getAttributeText( "developsTo" ), ",; \t", SRPGDevelopTarget{}._requiredLevel, XMLReadUtil::MissingValue::UseDefault,
                                          [&]( string_view token, string_view unitName, int32 requiredLevel, bool bLevel )
