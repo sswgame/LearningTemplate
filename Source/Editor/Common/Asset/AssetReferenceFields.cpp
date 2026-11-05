@@ -158,17 +158,32 @@ namespace sw::editor
             return false;
         }
         AssetReferenceFieldsConfig config;
-        using Internal = AssetReferenceFieldsInternal;
-        bool bValid    = JSONFields::readFields( document.getRoot(), config, path );
-        bValid         = Internal::hasNoEmptyText( config._listDomain, "_listDomain", path ) && bValid;
-        bValid         = Internal::hasNoEmptyText( config._listUncheckedDomain, "_listUncheckedDomain", path ) && bValid;
-        bValid         = Internal::hasNoEmptyText( config._listTextExtension, "_listTextExtension", path ) && bValid;
-        bValid         = Internal::hasNoEmptyText( config._listCMakeFile, "_listCMakeFile", path ) && bValid;
-        bValid         = Internal::hasNoEmptyText( config._listCMakeArgument, "_listCMakeArgument", path ) && bValid;
-        bValid         = Internal::hasNoEmptyText( config._listField, "_listField", path ) && bValid;
-        for ( const AssetImportedFolder& folder : config._listImportedFolder )
+        using Internal       = AssetReferenceFieldsInternal;
+        const JSONValue root = document.getRoot();
+        // 구조체 목록 칸은 `JSONFields` 가 직렬화기로 넘겨 C++ 칸 이름을 키로 기대한다 — 이 파일은 칸 이름 규칙이라 원소마다 읽는다.
+        bool                        bValid   = JSONFields::readFields( root, config, path, { "listImportedFolder" } );
+        const JSONValue             imported = root.get( "listImportedFolder" );
+        vector<AssetImportedFolder> listImported;
+        if ( imported.isArray() == false )
         {
-            bValid = Internal::hasNoEmptyText( folder._listSourceExtension, "_listSourceExtension", path ) && bValid;
+            SW_LOG_ERROR_ID( "AssetReferenceFields.ConfigInvalid", "Asset reference fields %# need listImportedFolder", path );
+            bValid = false;
+        }
+        for ( size_t index = 0; imported.isArray() && index < imported.size(); ++index )
+        {
+            AssetImportedFolder folder;
+            bValid = JSONFields::readFields( imported.at( index ), folder, path ) && bValid;
+            listImported.push_back( std::move( folder ) );
+        }
+        bValid = Internal::hasNoEmptyText( config._listDomain, "listDomain", path ) && bValid;
+        bValid = Internal::hasNoEmptyText( config._listUncheckedDomain, "listUncheckedDomain", path ) && bValid;
+        bValid = Internal::hasNoEmptyText( config._listTextExtension, "listTextExtension", path ) && bValid;
+        bValid = Internal::hasNoEmptyText( config._listCMakeFile, "listCMakeFile", path ) && bValid;
+        bValid = Internal::hasNoEmptyText( config._listCMakeArgument, "listCMakeArgument", path ) && bValid;
+        bValid = Internal::hasNoEmptyText( config._listField, "listField", path ) && bValid;
+        for ( const AssetImportedFolder& folder : listImported )
+        {
+            bValid = Internal::hasNoEmptyText( folder._listSourceExtension, "listSourceExtension", path ) && bValid;
         }
         if ( bValid == false )
             return false;
@@ -177,7 +192,7 @@ namespace sw::editor
         _listTextExtension   = std::move( config._listTextExtension );
         _listCMakeFile       = std::move( config._listCMakeFile );
         _listCMakeArgument   = std::move( config._listCMakeArgument );
-        _listImported        = std::move( config._listImportedFolder );
+        _listImported        = std::move( listImported );
         _setField.clear();
         for ( const string& field : config._listField )
         {

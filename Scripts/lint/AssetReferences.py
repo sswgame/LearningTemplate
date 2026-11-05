@@ -10,7 +10,7 @@ Scripts/lint/AssetReferences.py
   글 모양을 짐작하는 정규식으로 찾지 않는다 — 칸 이름이 목록에 있는 속성 · 요소 글 · JSON 키의 값만, 그 안에서도 도메인(`engine/` …)으로 시작하는 낱말만 경로다.
 - 있음 판정은 **스테이지(인덱스)** 기준이다. 커밋하지 않은 파일은 없는 것으로 본다(작업 트리에만 있는 파일을 가리킨 커밋은 다른 체크아웃에서 끊긴다).
   임포트 산출물(`models/` · `textures/` · `heightfields/`)은 커밋하지 않으므로 같은 자리의 원본(`models_raw/<이름>.glb` 등)이 있으면 있다.
-- 검사 범위는 인덱스의 모든 참조 파일(Content 의 글 에셋 + `_listCMakeFile`)이다 — 680 개 남짓이라 1 초 안팎이고, 지우거나 옮긴 에셋을 가리키던 다른 파일
+- 검사 범위는 인덱스의 모든 참조 파일(Content 의 글 에셋 + `listCMakeFile`)이다 — 680 개 남짓이라 1 초 안팎이고, 지우거나 옮긴 에셋을 가리키던 다른 파일
   (역참조)도 같은 한 번의 훑기로 잡힌다. 저장소가 깨끗해야 하므로(ctest 가 지킨다) 걸린 것은 모두 이 커밋이 고칠 몫이다.
 """
 
@@ -81,12 +81,12 @@ def loadConfig(projectRoot: Path) -> FieldConfig:
     """칸 목록을 읽습니다. 파일이 없거나 칸이 빠지면 예외다(기본값으로 검사하지 않는다)."""
     document = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
     listImported = []
-    for entry in _require(document, "_listImportedFolder", list):
-        listImported.append(ImportedFolder(_require(entry, "_folder", str), _require(entry, "_sourceFolder", str),
-                                           tuple(_require(entry, "_listSourceExtension", list)), _require(entry, "_bGeneratedReferrers", bool)))
-    return FieldConfig(tuple(_require(document, "_listDomain", list)), tuple(_require(document, "_listUncheckedDomain", list)),
-                       tuple(_require(document, "_listTextExtension", list)), frozenset(_require(document, "_listField", list)), tuple(listImported),
-                       tuple(_require(document, "_listCMakeFile", list)), tuple(_require(document, "_listCMakeArgument", list)))
+    for entry in _require(document, "listImportedFolder", list):
+        listImported.append(ImportedFolder(_require(entry, "folder", str), _require(entry, "sourceFolder", str),
+                                           tuple(_require(entry, "listSourceExtension", list)), _require(entry, "generatedReferrers", bool)))
+    return FieldConfig(tuple(_require(document, "listDomain", list)), tuple(_require(document, "listUncheckedDomain", list)),
+                       tuple(_require(document, "listTextExtension", list)), frozenset(_require(document, "listField", list)), tuple(listImported),
+                       tuple(_require(document, "listCMakeFile", list)), tuple(_require(document, "listCMakeArgument", list)))
 
 
 # ----------------------------------------------------------------------------------------------------------------------------------
@@ -212,7 +212,7 @@ def _extractJSON(text: str, config: FieldConfig) -> list[Reference]:
 
 
 def _extractCMake(text: str, config: FieldConfig) -> list[Reference]:
-    """CMake: `_listCMakeArgument` 의 인자(`--render-portraits=<경로>`) 값. 앞은 공백 · 따옴표 · 줄 처음이어야 한다."""
+    """CMake: `listCMakeArgument` 의 인자(`--render-portraits=<경로>`) 값. 앞은 공백 · 따옴표 · 줄 처음이어야 한다."""
     out: list[Reference] = []
     lineOf = _makeLineOf(text)
     for argument in config.listCMakeArgument:

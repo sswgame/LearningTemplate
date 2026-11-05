@@ -1,15 +1,15 @@
 {
-    "_listDomain": [ "engine", "common", "game", "editor", "scratch" ],
-    "_listUncheckedDomain": [ "scratch" ],
-    "_listTextExtension": [ ".xml", ".json", ".material" ],
-    "_listImportedFolder": [
-        { "_folder": "models", "_sourceFolder": "models_raw", "_listSourceExtension": [ ".glb", ".gltf", ".vrm" ], "_bGeneratedReferrers": true },
-        { "_folder": "textures", "_sourceFolder": "textures_raw", "_listSourceExtension": [ ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr" ], "_bGeneratedReferrers": false },
-        { "_folder": "heightfields", "_sourceFolder": "heightfields_raw", "_listSourceExtension": [ ".png", ".r16" ], "_bGeneratedReferrers": false }
+    "listDomain": [ "engine", "common", "game", "editor", "scratch" ],
+    "listUncheckedDomain": [ "scratch" ],
+    "listTextExtension": [ ".xml", ".json", ".material" ],
+    "listImportedFolder": [
+        { "folder": "models", "sourceFolder": "models_raw", "listSourceExtension": [ ".glb", ".gltf", ".vrm" ], "generatedReferrers": true },
+        { "folder": "textures", "sourceFolder": "textures_raw", "listSourceExtension": [ ".png", ".jpg", ".jpeg", ".tga", ".bmp", ".hdr" ], "generatedReferrers": false },
+        { "folder": "heightfields", "sourceFolder": "heightfields_raw", "listSourceExtension": [ ".png", ".r16" ], "generatedReferrers": false }
     ],
-    "_listCMakeFile": [ "Test/CMakeLists.txt", "Test/Scenario/CMakeLists.txt" ],
-    "_listCMakeArgument": [ "--render-portraits", "-scenario" ],
-    "_listField": [
+    "listCMakeFile": [ "Test/CMakeLists.txt", "Test/Scenario/CMakeLists.txt" ],
+    "listCMakeArgument": [ "--render-portraits", "-scenario" ],
+    "listField": [
         "_aiControllerPrefab", "_albedo", "_animationCrowdSettings", "_animationGraphPath", "_animationLODSettings", "appearance", "assetPath", "assetRoots",
         "atlas", "_atlasPath", "audioEvents", "_autoBattleAIPrefab", "_autoFarmerPrefab", "_autoPlanPath", "_blockBuildingPrefab", "_bodyPrefab",
         "_carFrontPrefab", "_carPrefab", "_casterAIPrefab", "_casterPrefab", "_catalogPath", "_characterLODSettings", "_chunkPrefab", "_cityDataPath",

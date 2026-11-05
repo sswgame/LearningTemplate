@@ -66,36 +66,34 @@ namespace sw::editor
     {
         REFLECT_BODY();
 
-        PROPERTY( Name = "_folder", Required )
+        PROPERTY( Required )
         string _folder;
-        PROPERTY( Name = "_sourceFolder", Required )
+        PROPERTY( Required )
         string _sourceFolder;
-        PROPERTY( Name = "_listSourceExtension", Required )
+        PROPERTY( Required )
         vector<string> _listSourceExtension;
-        PROPERTY( Name = "_bGeneratedReferrers", Required )
+        PROPERTY( Required )
         bool _bGeneratedReferrers{ false }; ///< 산출물 안의 글 에셋(임포터가 쓴 머티리얼 · 프리팹)은 참조자로 훑지 않는다 — 임포터의 몫이다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 
-    /** @brief 칸 목록 파일(`AssetReferenceFields::kConfigFile`)의 스키마입니다. 키 철자는 `Scripts/dev/MoveAsset.py` 도 읽어 그대로 둔다. */
+    /** @brief 칸 목록 파일(`AssetReferenceFields::kConfigFile`)의 스키마입니다. `Scripts/lint/AssetReferences.py` 도 같은 키를 읽는다. */
     REFLECT()
     struct AssetReferenceFieldsConfig
     {
         REFLECT_BODY();
 
-        PROPERTY( Name = "_listDomain", Required )
+        PROPERTY( Required )
         vector<string> _listDomain;
-        PROPERTY( Name = "_listUncheckedDomain", Required )
+        PROPERTY( Required )
         vector<string> _listUncheckedDomain;
-        PROPERTY( Name = "_listTextExtension", Required )
+        PROPERTY( Required )
         vector<string> _listTextExtension;
-        PROPERTY( Name = "_listCMakeFile", Required )
+        PROPERTY( Required )
         vector<string> _listCMakeFile;
-        PROPERTY( Name = "_listCMakeArgument", Required )
+        PROPERTY( Required )
         vector<string> _listCMakeArgument;
-        PROPERTY( Name = "_listField", Required )
+        PROPERTY( Required )
         vector<string> _listField;
-        PROPERTY( Name = "_listImportedFolder", Required )
-        vector<AssetImportedFolder> _listImportedFolder;
     };
 
     /**
