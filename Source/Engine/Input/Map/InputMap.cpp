@@ -652,6 +652,30 @@ namespace sw
         return true;
     }
 
+    bool InputMap::swapKeyShortcut( const hashed_string& action, uint32 bindIndex, const hashed_string& otherAction, Key key, uint8 modifierMask )
+    {
+        const ActionBinding* pBefore = getBinding( action, bindIndex );
+        if ( pBefore == nullptr )
+            return false;
+        const ActionBinding before         = *pBefore;
+        const InputSlot     keySlot        = InputSlot::fromKey( key );
+        uint32              otherBindIndex = 0;
+        const uint32        otherCount     = getBindingCount( otherAction );
+        while ( otherBindIndex < otherCount )
+        {
+            const ActionBinding* pOther = getBinding( otherAction, otherBindIndex );
+            if ( pOther->_arrSlot[0] == keySlot && pOther->_modifierMask == modifierMask )
+                break;
+            ++otherBindIndex;
+        }
+        if ( otherBindIndex == otherCount || rebindKeyShortcut( action, bindIndex, key, modifierMask ) == false )
+            return false;
+        if ( rebindKeyShortcut( otherAction, otherBindIndex, static_cast<Key>( before._arrSlot[0]._controlIndex ), before._modifierMask ) )
+            return true;
+        (void)rebindKeyShortcut( action, bindIndex, static_cast<Key>( before._arrSlot[0]._controlIndex ), before._modifierMask ); // 방금 있던 조합이다
+        return false;
+    }
+
     bool InputMap::findSameLayerInputConflict( const hashed_string& action, uint32 bindIndex, hashed_string& outOtherAction ) const
     {
         const ActionBinding* pBinding = getBinding( action, bindIndex );

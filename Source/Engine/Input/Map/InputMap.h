@@ -265,6 +265,12 @@ namespace sw
          * @return 액션 · 바인딩이 없거나, 키보드 단일 키 · 단축키가 아니거나, 키가 없거나 모르는 수정 키 비트면 false 입니다.
          */
         [[nodiscard]] bool rebindKeyShortcut( const hashed_string& action, uint32 bindIndex, Key key, uint8 modifierMask );
+        /**
+         * @brief @p action 의 바인딩 @p bindIndex 를 키 + 수정 키로 바꾸고, 그 입력을 가진 @p otherAction 의 바인딩에는 @p action 의 옛 입력을 줍니다.
+         * @details 겹침은 상대의 모든 바인딩에서 찾으므로 맞바꾸기도 겹친 그 바인딩을 고친다(첫 바인딩을 고치면 바꾼 뒤에도 겹쳐 한 번 눌러 둘 다 발화한다).
+         * @return 상대에게 그 입력이 없거나 어느 쪽이든 바꿀 수 없으면 false 이고 아무것도 바뀌지 않습니다.
+         */
+        [[nodiscard]] bool swapKeyShortcut( const hashed_string& action, uint32 bindIndex, const hashed_string& otherAction, Key key, uint8 modifierMask );
         /** @brief 처음 등록한 기본 바인딩(`resetActionToDefault` 가 되돌리는 대상)입니다. 없으면 nullptr 입니다. */
         const ActionBinding* getDefaultBinding( const hashed_string& action, uint32 bindIndex ) const;
         /**

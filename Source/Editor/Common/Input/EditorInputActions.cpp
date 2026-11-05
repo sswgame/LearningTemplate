@@ -353,22 +353,25 @@ namespace sw::editor
     {
         const hashed_string actionName( string( action ).c_str() );
         const hashed_string otherName( string( otherAction ).c_str() );
-        uint32              bindIndex      = 0;
-        uint32              otherBindIndex = 0;
-        if ( findKeyboardBinding( actionName, bindIndex ) == false || findKeyboardBinding( otherName, otherBindIndex ) == false )
+        uint32              bindIndex = 0;
+        if ( findKeyboardBinding( actionName, bindIndex ) == false || _map.swapKeyShortcut( actionName, bindIndex, otherName, key, modifierMask ) == false )
             return false;
-        const ActionBinding before  = *_map.getBinding( actionName, bindIndex );
-        const bool          bOther  = _map.rebindKeyShortcut( otherName, otherBindIndex, static_cast<Key>( before._arrSlot[0]._controlIndex ), before._modifierMask );
-        const bool          bAction = bOther && _map.rebindKeyShortcut( actionName, bindIndex, key, modifierMask );
-        if ( bAction )
-            saveUserBindings();
-        return bAction;
+        saveUserBindings();
+        return true;
     }
 
     void EditorInputActions::resetShortcut( string_view action )
     {
-        (void)_map.resetActionToDefault( hashed_string( string( action ).c_str() ) ); // 없는 액션이면 되돌릴 것도 없다
+        const hashed_string actionName( string( action ).c_str() );
+        (void)_map.resetActionToDefault( actionName ); // 없는 액션이면 되돌릴 것도 없다
         saveUserBindings();
+        // 되돌린 기본 조합을 사용자가 다른 액션에 줬을 수 있다 - 한 번 눌러 둘 다 발화하므로 알린다(어느 쪽을 바꿀지는 사용자 몫이라 저절로 고치지 않는다).
+        for ( uint32 bindIndex = 0; bindIndex < _map.getBindingCount( actionName ); ++bindIndex )
+        {
+            hashed_string conflictAction;
+            if ( _map.findSameLayerInputConflict( actionName, bindIndex, conflictAction ) )
+                SW_LOG_WARNING_ID( "EditorInputActions.ResetShortcutConflict", "The default shortcut of '%#' is also bound to '%#' - both fire on one press", actionName.c_str(), conflictAction.c_str() );
+        }
     }
 
     void EditorInputActions::resetAllShortcuts()
