@@ -115,8 +115,9 @@ MaterialSurface computeMaterialSurface( PixelContext context )
     }
 
     // 디테일 — 평면(위에서) 하나와 3 축 셋. 평면 표본은 3 축의 xz 면과 같다.
-    const float tiling     = material._terrainParams.y;
-    float3      axisWeight = pow( abs( normal ), 4.0f );
+    const float  tiling        = material._terrainParams.y;
+    const float3 normalSquared = normal * normal;
+    float3       axisWeight    = normalSquared * normalSquared; // pow 는 DXC 가 log · exp 로 낸다
     axisWeight /= max( axisWeight.x + axisWeight.y + axisWeight.z, 1e-5f );
     const float4 detailLow  = sampleLayerDetail( material._detailMap, context._worldPosition, axisWeight, tiling, 1.0f, material._layerTriplanar );
     const float4 detailHigh = sampleLayerDetail( material._detailMap, context._worldPosition, axisWeight, tiling, kHighLayerDetailScale, material._layerTriplanar1 );

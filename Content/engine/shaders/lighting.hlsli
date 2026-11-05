@@ -484,7 +484,7 @@ struct SurfacePBR
     float  _alpha;         // GGX α = 거칠기²
 
     static SurfacePBR make( float3 baseColor, float roughness, float metallic );
-    float3 evaluateSpecular( float3 normal, float3 toView, float3 toLight, float normalDotLight );
+    float3 evaluateSpecular( float3 normal, float3 toView, float3 toLight, float normalDotLight, float normalDotView );
     float3 computeEnvironmentSpecular( float normalDotView );
 };
 
@@ -505,19 +505,19 @@ static SurfacePBR SurfacePBR::make( float3 baseColor, float roughness, float met
  */
 static float3 View::computeToView( float3 worldPosition )
 {
-    const float4 clip      = mul( float4( worldPosition, 1.0f ), g_ViewProj );
-    const float2 ndcXy     = clip.xy / max( abs( clip.w ), 1e-6f ) * sign( clip.w ); // 카메라 뒤의 점(w < 0)도 시선이 맞는다(툰 외곽선 · 물의 정점)
-    const float4 nearPoint = mul( float4( ndcXy, 0.0f, 1.0f ), g_InvViewProj );
-    const float4 farPoint  = mul( float4( ndcXy, 1.0f, 1.0f ), g_InvViewProj );
+    const float4 clip  = mul( float4( worldPosition, 1.0f ), g_ViewProj );
+    const float2 ndcXy = clip.xy / max( abs( clip.w ), 1e-6f ) * sign( clip.w ); // 카메라 뒤의 점(w < 0)도 시선이 맞는다(툰 외곽선 · 물의 정점)
+    // 깊이 0 과 1 의 두 점은 역행렬의 셋째 행(깊이)만큼 다르다 — 행렬 곱 둘 대신 공통 합 하나로 구한다.
+    const float4 nearPoint = ndcXy.x * g_InvViewProj[0] + ndcXy.y * g_InvViewProj[1] + g_InvViewProj[3];
+    const float4 farPoint  = nearPoint + g_InvViewProj[2];
     return normalize( nearPoint.xyz / nearPoint.w - farPoint.xyz / farPoint.w );
 }
 
 /** @brief 빛 하나의 반사 BRDF × π(엔진 단위) × N·L 입니다. 언리얼 `SpecularGGX` 의 D_GGX · Vis_SmithJointApprox · F_Schlick 과 같다. */
-float3 SurfacePBR::evaluateSpecular( float3 normal, float3 toView, float3 toLight, float normalDotLight )
+float3 SurfacePBR::evaluateSpecular( float3 normal, float3 toView, float3 toLight, float normalDotLight, float normalDotView )
 {
     const float3 halfway       = normalize( toView + toLight );
     const float  normalDotHalf = saturate( dot( normal, halfway ) );
-    const float  normalDotView = max( saturate( dot( normal, toView ) ), 1e-4f );
     const float  viewDotHalf   = saturate( dot( toView, halfway ) );
     const float  alphaSquared  = _alpha * _alpha;
     const float  denominator   = normalDotHalf * normalDotHalf * ( alphaSquared - 1.0f ) + 1.0f;
@@ -526,7 +526,9 @@ float3 SurfacePBR::evaluateSpecular( float3 normal, float3 toView, float3 toLigh
     const float  visibility          = 0.5f / max( normalDotLight * ( normalDotView * ( 1.0f - _alpha ) + _alpha ) +
                                                        normalDotView * ( normalDotLight * ( 1.0f - _alpha ) + _alpha ),
                                                    1e-5f );
-    const float  fresnelWeight       = pow( 1.0f - viewDotHalf, 5.0f );
+    const float  oneMinusViewDotHalf = 1.0f - viewDotHalf;
+    const float  fresnelSquared      = oneMinusViewDotHalf * oneMinusViewDotHalf;
+    const float  fresnelWeight       = fresnelSquared * fresnelSquared * oneMinusViewDotHalf; // pow 는 DXC 가 log · exp 로 낸다
     const float3 fresnel             = _specularColor + ( 1.0f - _specularColor ) * fresnelWeight;
     return distributionTimesPi * visibility * fresnel * normalDotLight;
 }
@@ -552,7 +554,8 @@ float3 SurfacePBR::computeEnvironmentSpecular( float normalDotView )
  */
 static float3 Lighting::computeRimLight( float3 normal )
 {
-    const float rim = pow( 1.0f - saturate( dot( normal, float3( 0.0f, 0.0f, 1.0f ) ) ), 3.0f ) * 0.12f;
+    const float edge = 1.0f - saturate( normal.z );
+    const float rim  = edge * edge * edge * 0.12f;
     return rim * g_KeyLightColor.rgb;
 }
 
@@ -614,7 +617,7 @@ static float3 Lighting::shadeLights( float3 albedo, float3 worldPosition, float3
             continue;
 
         const float  shadowTerm = light.computeShadow( worldPosition, normal, shadow );
-        const float3 response   = surface._diffuseColor * normalDotLight + surface.evaluateSpecular( normal, toView, toLight, normalDotLight );
+        const float3 response   = surface._diffuseColor * normalDotLight + surface.evaluateSpecular( normal, toView, toLight, normalDotLight, normalDotView );
         lit += response * attenuation * light._colorIntensity.a * light._colorIntensity.rgb * shadowTerm;
     }
     // 볼륨이 덮는 곳은 확산 앰비언트를 프로브의 간접광으로 바꾼다(겹친 볼륨은 가중 평균). 덮지 않으면 아무 연산도 더하지 않는다.

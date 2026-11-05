@@ -152,8 +152,10 @@ float4 computeMaterialLighting( PixelContext context, MaterialSurface surface )
     const float3 toView = normalize( context._user._toView );
 
     // 프레넬(슐릭, 물 F0 = 0.02) — 비스듬히 볼수록 하늘이 비친다.
-    const float facing  = saturate( dot( normal, toView ) );
-    const float fresnel = 0.02f + 0.98f * pow( 1.0f - facing, 5.0f );
+    const float facing         = saturate( dot( normal, toView ) );
+    const float oneMinusFacing = 1.0f - facing;
+    const float facingSquared  = oneMinusFacing * oneMinusFacing;
+    const float fresnel        = 0.02f + 0.98f * facingSquared * facingSquared * oneMinusFacing; // pow 는 DXC 가 log · exp 로 낸다
     float3      body;
     float       specular;
     computeWaterLighting( context, normal, toView, body, specular );
