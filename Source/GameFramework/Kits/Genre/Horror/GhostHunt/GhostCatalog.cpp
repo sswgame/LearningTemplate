@@ -44,6 +44,12 @@ namespace sw
                     SW_LOG_ERROR_ID( "GhostCatalog.RoomNamesUnknownGhost", "%#: room '%#' names an unknown ghost '%#'", sourceName, room._id.c_str(), ghostID.c_str() );
             }
         }
+        // 없는 가구에 숨은 부는 뒤져서 찾을 수 없다(가구가 부보다 뒤에 적혀도 된다).
+        for ( const HidingGhostDef& boo : _booCatalog.getAll() )
+        {
+            if ( boo._furniture.empty() == false && _furnitureCatalog.find( boo._furniture ) == nullptr )
+                SW_LOG_ERROR_ID( "GhostCatalog.BooNamesUnknownFurniture", "%#: boo '%#' hides in an unknown furniture '%#'", sourceName, boo._id.c_str(), boo._furniture.c_str() );
+        }
         return loadedCount;
     }
 
@@ -70,10 +76,16 @@ namespace sw
     bool GhostCatalog::loadVacuum( const XMLNode& node, string_view sourceName )
     {
         GhostVacuumDef vacuum;
-        const bool     bValid = XMLFields::readFields( node, vacuum, sourceName );
-        if ( bValid )
-            _vacuum = vacuum;
-        return bValid;
+        if ( XMLFields::readFields( node, vacuum, sourceName ) == false )
+            return false;
+        // 단계가 없으면 흡입 피해가 0 이라 유령을 잡을 수 없다.
+        if ( vacuum._listStagePower.empty() )
+        {
+            SW_LOG_ERROR_ID( "GhostCatalog.VacuumNeedsStages", "%#: <Vacuum> needs stages=\"...\"", sourceName );
+            return false;
+        }
+        _vacuum = vacuum;
+        return true;
     }
 
     bool GhostCatalog::loadRoom( const XMLNode& node, string_view sourceName )
@@ -81,8 +93,7 @@ namespace sw
         GhostRoomDef room;
         if ( XMLFields::readFields( node, room, sourceName ) == false )
             return false;
-        (void)_roomCatalog.add( room ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return true;
+        return GameDataXML::addUnique( room, sourceName, _roomCatalog );
     }
 
     bool GhostCatalog::loadFurniture( const XMLNode& node, string_view sourceName )
@@ -107,9 +118,13 @@ namespace sw
                     bValid = false;
                 }
             } );
+            // 구분자만 적으면 어느 방법으로도 뒤질 수 없는 가구가 된다.
+            if ( bValid && furniture._bVacuum == false && furniture._bShake == false )
+            {
+                SW_LOG_ERROR_ID( "GhostCatalog.FurnitureNeedsSearchMode", "%#: furniture '%#' has an empty search mode (Vacuum, Shake)", sourceName, furniture._id.c_str() );
+                bValid = false;
+            }
         }
-        if ( bValid )
-            (void)_furnitureCatalog.add( furniture ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return bValid;
+        return bValid && GameDataXML::addUnique( furniture, sourceName, _furnitureCatalog );
     }
 } // namespace sw

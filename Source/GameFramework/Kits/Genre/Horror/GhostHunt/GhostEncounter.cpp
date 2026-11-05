@@ -45,12 +45,18 @@ namespace sw
     {
     }
 
-    void GhostEncounter::initialize( const GhostCatalog* pCatalog, uint32 seed )
+    bool GhostEncounter::initialize( const GhostCatalog* pCatalog, uint32 seed )
     {
+        if ( pCatalog == nullptr || seed == 0 )
+        {
+            SW_LOG_ERROR_ID( "GhostEncounter.RefusedInitialize", "GhostEncounter: refused - it needs a catalog and a non-zero seed" );
+            return false;
+        }
         _pCatalog = pCatalog;
         _random.setSeed( seed );
         _vacuumStage = 0;
         clear();
+        return true;
     }
 
     void GhostEncounter::clear()
@@ -413,7 +419,14 @@ namespace sw
             const bool bValid = bTimerRead && archive.isOk() && ghost._pDef != nullptr && state <= static_cast<uint8>( GhostState::Caught );
             if ( bValid == false )
                 return false;
-            ghost._state = static_cast<GhostState>( state );
+            ghost._state       = static_cast<GhostState>( state );
+            const bool bCaught = ghost._state == GhostState::Caught;
+            // 잡힌 유령의 체력은 0 이고, 체력이 0 이면 잡힌 것이다. 도망 방향은 단위 벡터이거나 0 이다.
+            const bool bHpInvalid    = bCaught ? ghost._hp != 0.0f : ( ghost._hp <= 0.0f || ghost._hp > ghost._pDef->_hp );
+            const bool bFleeTooLong  = ghost._fleeDirection.getLengthSquared() > 1.01f;
+            const bool bGhostInvalid = bHpInvalid || bFleeTooLong || ghost._id == 0;
+            if ( bGhostInvalid )
+                return false;
         }
         float32 strobeCharge  = 0.0f;
         float32 surgeGauge    = 0.0f;
@@ -425,13 +438,19 @@ namespace sw
         archive >> suctionTarget;
         archive >> nextGhostID;
         archive >> vacuumStage;
-        if ( archive.isError() || vacuumStage < 0 )
+        const int32 lastStage   = static_cast<int32>( _pCatalog->getVacuum()._listStagePower.size() ) - 1;
+        const bool  bOutOfRange = vacuumStage < 0 || vacuumStage > MathUtil::max( 0, lastStage ) || strobeCharge < 0.0f || strobeCharge > _pCatalog->getFlashlight()._strobeChargeTime ||
+                                 surgeGauge < 0.0f || surgeGauge > 1.0f;
+        if ( archive.isError() || bOutOfRange || VectorUtil::findDuplicateBy<&GhostInstance::_id>( listGhost ) != nullptr )
             return false;
-        // 흡입 대상은 있는 유령이어야 한다.
+        // 흡입 대상은 흡입 중인 유령 하나이고, 흡입 중인 유령은 대상뿐이다(짝이 없으면 `update` 가 건너뛰어 영영 멈춘다). 다음 번호는 있는 번호와 겹치지 않는다.
         bool bTargetFound = suctionTarget == 0;
         for ( const GhostInstance& ghost : listGhost )
         {
-            bTargetFound = bTargetFound || ghost._id == suctionTarget;
+            const bool bTarget = ghost._id == suctionTarget;
+            if ( bTarget != ( ghost._state == GhostState::Sucking ) || ghost._id >= nextGhostID )
+                return false;
+            bTargetFound = bTargetFound || bTarget;
         }
         if ( bTargetFound == false )
             return false;

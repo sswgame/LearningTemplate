@@ -36,8 +36,10 @@ namespace sw
     {
     }
 
-    void GhostMansion::initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const SessionStateRefs& refs, uint32 seed )
+    bool GhostMansion::initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const SessionStateRefs& refs, uint32 seed )
     {
+        if ( _encounter.initialize( pCatalog, seed ) == false )
+            return false;
         _pCatalog   = pCatalog;
         _pLoot      = pLoot;
         _pAreaGraph = pAreaGraph;
@@ -45,15 +47,12 @@ namespace sw
         _pInventory = refs._pInventory;
         _pWallet    = refs._pWallet;
         _seed       = seed;
-        _random.setSeed( HashUtil::mix32( seed ^ 0xB00B00u ) );
-        _encounter.initialize( pCatalog, seed );
+        _random.setSeed( GameRandom::deriveSeed( seed, 0xB00B00u ) );
         _eventBuffer.clear();
         _listGhostEvent.clear();
         _currentRoom = hashed_string{};
         _listBoo.clear();
         _listSearched.clear();
-        if ( pCatalog == nullptr )
-            return;
         for ( const HidingGhostDef& boo : pCatalog->getBoos() )
         {
             HidingGhostRuntime runtime;
@@ -63,6 +62,7 @@ namespace sw
             _listBoo.push_back( runtime );
         }
         _listSearched.assign( pCatalog->getFurniture().size(), SW_FALSE );
+        return true;
     }
 
     int32 GhostMansion::enterRoom( const hashed_string& roomID )
@@ -75,6 +75,8 @@ namespace sw
             return -1;
         if ( bOnGraph )
             (void)_pAreaGraph->enterArea( roomID );
+        // 흡입은 틱 사이에 끝나므로, 잡고 바로 나가면 `clear` 가 잡은 이벤트를 지워 동전과 불이 사라졌다.
+        collectEncounterEvents();
         _encounter.clear();
         _currentRoom = roomID;
         // 가구 없이 방에 숨은 부는 들어서면 나온다.
@@ -104,6 +106,21 @@ namespace sw
     void GhostMansion::update( float32 deltaTime )
     {
         _encounter.update( deltaTime );
+        collectEncounterEvents();
+
+        for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
+        {
+            HidingGhostRuntime& boo = _listBoo[booIndex];
+            if ( boo._state != HidingGhostState::Revealed )
+                continue;
+            boo._timer.update( deltaTime );
+            if ( boo._timer.isActive() == false )
+                moveBooAway( booIndex );
+        }
+    }
+
+    void GhostMansion::collectEncounterEvents()
+    {
         // 게임에 넘길 목록에 바로 꺼내고, 이번에 들어온 구간만 훑는다(지역 목록과 복사가 없다).
         const size_t firstNew = _listGhostEvent.size();
         _encounter.drainEvents( _listGhostEvent );
@@ -121,16 +138,6 @@ namespace sw
         const bool bCleared = bCaughtAny && _encounter.getGhosts().empty() == false && _encounter.countRemaining() == 0;
         if ( bCleared && isRoomLit( _currentRoom ) == false )
             lightRoom( _currentRoom );
-
-        for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
-        {
-            HidingGhostRuntime& boo = _listBoo[booIndex];
-            if ( boo._state != HidingGhostState::Revealed )
-                continue;
-            boo._timer.update( deltaTime );
-            if ( boo._timer.isActive() == false )
-                moveBooAway( booIndex );
-        }
     }
 
     GhostDoorResult GhostMansion::unlockDoor( const hashed_string& doorID )
@@ -171,7 +178,7 @@ namespace sw
         if ( _pLoot != nullptr && furniture._lootTable.empty() == false )
         {
             // 가구마다 따로 시드를 내므로, 어느 가구부터 뒤져도 같은 것이 나온다.
-            GameRandom random( HashUtil::mix32( _seed ^ static_cast<uint32>( furnitureID.getHash() ) ) );
+            GameRandom random( GameRandom::deriveSeed( _seed, static_cast<uint32>( furnitureID.getHash() ) ) );
             (void)_pLoot->roll( furniture._lootTable, random, outLoot );
         }
         return GhostSearchResult::Found;
@@ -247,6 +254,11 @@ namespace sw
                 return static_cast<int32>( index );
         }
         return -1;
+    }
+
+    bool GhostMansion::isKnownRoom( const hashed_string& roomID ) const
+    {
+        return roomID.empty() || _pCatalog->findRoom( roomID ) != nullptr || ( _pAreaGraph != nullptr && _pAreaGraph->findArea( roomID ) != nullptr );
     }
 
     void GhostMansion::lightRoom( const hashed_string& roomID )
@@ -362,10 +374,11 @@ namespace sw
             restored._encounter.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random ) && StateArchiveUtil::readCount( archive, 17, booCount );
         if ( bHeadRead == false || booCount != _listBoo.size() )
             return false;
-        for ( HidingGhostRuntime& boo : restored._listBoo )
+        for ( size_t booIndex = 0; booIndex < restored._listBoo.size(); ++booIndex )
         {
-            uint8      state     = 0;
-            const bool bNameRead = StateArchiveUtil::readName( archive, boo._room ) && StateArchiveUtil::readName( archive, boo._furniture );
+            HidingGhostRuntime& boo       = restored._listBoo[booIndex];
+            uint8               state     = 0;
+            const bool          bNameRead = StateArchiveUtil::readName( archive, boo._room ) && StateArchiveUtil::readName( archive, boo._furniture );
             if ( bNameRead == false )
                 return false;
             archive >> boo._hp;
@@ -375,6 +388,11 @@ namespace sw
             if ( bInvalidBooState )
                 return false;
             boo._state = static_cast<HidingGhostState>( state );
+            // 잡힌 부의 체력은 0 이고, 나머지는 정의의 최대까지이다. 방과 가구는 있는 것이어야 한다(`readState` 가 맞은 뒤 카탈로그는 사본도 같다).
+            const bool bHpInvalid    = boo._state == HidingGhostState::Caught ? boo._hp != 0.0f : ( boo._hp <= 0.0f || boo._hp > _pCatalog->getBoos()[booIndex]._hp );
+            const bool bPlaceInvalid = isKnownRoom( boo._room ) == false || ( boo._furniture.empty() == false && _pCatalog->findFurniture( boo._furniture ) == nullptr );
+            if ( bHpInvalid || bPlaceInvalid )
+                return false;
         }
         uint32 searchedCount = 0;
         if ( StateArchiveUtil::readCount( archive, 1, searchedCount ) == false || searchedCount != _listSearched.size() )
@@ -385,7 +403,7 @@ namespace sw
             if ( bSearched > SW_TRUE )
                 archive.setError();
         }
-        if ( StateArchiveUtil::readName( archive, restored._currentRoom ) == false )
+        if ( StateArchiveUtil::readName( archive, restored._currentRoom ) == false || isKnownRoom( restored._currentRoom ) == false )
             return false;
         archive >> restored._seed;
         if ( archive.isError() )

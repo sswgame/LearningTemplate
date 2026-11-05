@@ -112,8 +112,11 @@ namespace sw
 
         GhostMansion();
 
-        /** @brief 새 판을 엽니다. 플래그, 플레이어 가방(열쇠), 지갑(동전)은 @p refs 에서 빌립니다. 가방이 없으면 열쇠가 필요한 문은 열리지 않습니다. */
-        void initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const SessionStateRefs& refs, uint32 seed );
+        /**
+         * @brief 새 판을 엽니다. 플래그, 플레이어 가방(열쇠), 지갑(동전)은 @p refs 에서 빌립니다. 가방이 없으면 열쇠가 필요한 문은 열리지 않습니다.
+         * @return 카탈로그가 없거나 시드가 0 이면 오류를 남기고 false 이며 그대로입니다(`GhostEncounter::initialize`).
+         */
+        [[nodiscard]] bool initialize( const GhostCatalog* pCatalog, const LootCatalog* pLoot, AreaGraph* pAreaGraph, const SessionStateRefs& refs, uint32 seed );
 
         /** @brief 방에 들어갑니다. 불이 꺼진 방이면 그 방의 유령이 숨은 채로 나옵니다. 나온 유령 수를 반환하고, 없는 방이면 -1 입니다. */
         int32 enterRoom( const hashed_string& roomID );
@@ -135,7 +138,10 @@ namespace sw
          *        카탈로그, 빌린 방 그래프, 열쇠 가방, 지갑, 플래그(밝힌 방과 연 문)는 저장하지 않고(주인이 저장합니다), 이벤트는 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 부와 가구의 수가 다르면 false 를 반환하고 상태는 그대로입니다. */
+        /**
+         * @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 카탈로그로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 부와 가구의 수가 다르면 false 를 반환하고 상태는 그대로입니다.
+         * @details 부의 체력(잡힌 부는 0, 나머지는 정의의 최대까지), 없는 방과 가구도 거절합니다.
+         */
         [[nodiscard]] bool readState( Archive& archive );
 
         GhostEncounter&           getEncounter() { return _encounter; }
@@ -148,10 +154,14 @@ namespace sw
 
     private:
         int32 findFurnitureIndex( const hashed_string& furnitureID ) const;
-        void  lightRoom( const hashed_string& roomID );
-        void  moveBooAway( size_t booIndex );
-        void  revealBoo( size_t booIndex );
-        void  pushEvent( GhostMansionEventType type, const hashed_string& id, const hashed_string& room = hashed_string{}, int32 count = 0 );
+        /** @brief 카탈로그나 그래프에 있는 방이면 true 입니다. 비어 있으면(아직 방에 들어가지 않았다) 맞습니다. */
+        bool isKnownRoom( const hashed_string& roomID ) const;
+        /** @brief 싸움의 이벤트를 꺼내 게임에 넘길 목록에 붙이고, 잡은 유령의 동전과 불 켜기를 처리합니다. */
+        void collectEncounterEvents();
+        void lightRoom( const hashed_string& roomID );
+        void moveBooAway( size_t booIndex );
+        void revealBoo( size_t booIndex );
+        void pushEvent( GhostMansionEventType type, const hashed_string& id, const hashed_string& room = hashed_string{}, int32 count = 0 );
 
     private:
         GhostEncounter                 _encounter;
