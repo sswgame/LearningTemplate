@@ -64,7 +64,7 @@ namespace sw
 
         /** @brief 바이트로 씁니다(세이브와 서버 순위표용). 프레임 하나라도 쓰지 못하면(`writeFrame`) false 이고 @p outBuffer 는 쓰면 안 됩니다. */
         [[nodiscard]] bool serialize( vector<uint8>& outBuffer ) const;
-        /** @brief 바이트를 읽습니다. 형식이 다르거나 잘렸으면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief 바이트를 읽습니다. 형식이 다르거나 잘렸거나 걸음 크기 · 기록이 범위 밖이면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool deserialize( const uint8* pData, int32 byteCount );
 
         const vector<KartGhostFrame>& getFrames() const { return _listFrame; }

@@ -99,6 +99,14 @@ namespace sw
             const float3& to                   = _listSample[( sampleIndex + 1 ) % count]._position;
             _length += KartTrackInternal::computeFlatLength( to._x - from._x, to._z - from._z );
         }
+        if ( _length < KartTrackInternal::kMinSegmentLength )
+        {
+            // 조절점이 모두 한 자리면 길이 0 이다 — 거리 감기와 문이 뜻을 잃어 경기가 끝나지 않는다.
+            SW_LOG_WARNING_ID( "KartTrack.TrackHasNoLength", "track '%#' has no length - its control points are all at one spot", def._id.c_str() );
+            _listSample.clear();
+            _length = 0.0f;
+            return false;
+        }
 
         // 3) 문: 결승선(0) 다음에 체크포인트를 거리 순으로 둔다.
         vector<float32> listCheckpoint = def._listCheckpoint;
@@ -371,6 +379,9 @@ namespace sw
 
     bool KartTrack::isWithinSpan( float32 distance, float32 fromDistance, float32 toDistance ) const
     {
+        // 한 바퀴를 모두 덮는 구간(0..1)은 감으면 길이 0 이 된다.
+        if ( toDistance - fromDistance >= _length )
+            return true;
         const float32 span = wrapDistance( toDistance - fromDistance );
         return wrapDistance( distance - fromDistance ) <= span;
     }

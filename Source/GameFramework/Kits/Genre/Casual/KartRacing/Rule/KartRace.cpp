@@ -68,7 +68,7 @@ namespace sw
                 outArchive << kart._bWrongWay;
             }
 
-            [[nodiscard]] static bool readRacer( Archive& archive, int32 racerCount, KartRacer& outKart )
+            [[nodiscard]] static bool readRacer( Archive& archive, int32 racerCount, const KartTrack& track, KartRacer& outKart )
             {
                 int32 driftSide = 0;
                 if ( outKart._motor.readState( archive ) == false )
@@ -117,7 +117,11 @@ namespace sw
                 archive >> outKart._bWrongWay;
                 const bool bPlaceValid = 0 <= outKart._place && outKart._place <= racerCount && 0 <= outKart._finishPlace && outKart._finishPlace <= racerCount;
                 const bool bFlagsValid = outKart._bFinished <= SW_TRUE && outKart._bWrongWay <= SW_TRUE;
-                return bTimersRead && archive.isOk() && bPlaceValid && bFlagsValid && outKart._speedScale > 0.0f;
+                // 체크포인트 수는 문 번호로 바로 쓰인다(`computeProgress`). 트랙 데이터가 바뀐 세이브면 문 밖을 읽는다.
+                const bool bCourseValid = 0 <= outKart._nextCheckpoint && outKart._nextCheckpoint <= track.getCheckpointCount() && 0 <= outKart._lap && outKart._lap <= track.getLapCount() + 1;
+                // 비교는 NaN 에서 거짓이다. 시간이 NaN 이면 랩 타임과 최고 기록이 줄줄이 깨진다.
+                const bool bTimesValid = 0.0f <= outKart._lapStartTime && 0.0f <= outKart._bestLapTime && 0.0f <= outKart._finishTime && 0.0f <= outKart._wrongWayTime && 0.0f <= outKart._itemHeldTime;
+                return bTimersRead && archive.isOk() && bPlaceValid && bFlagsValid && bCourseValid && bTimesValid && outKart._speedScale > 0.0f;
             }
         };
     } // namespace
@@ -214,6 +218,9 @@ namespace sw
             kart._ai.reset();
             kart._progress = computeProgress( kart );
         }
+        // 격자에 서기 전에 기록을 걸었으면 출발 위치가 틀려 재생이 다른 길로 간다 — 선 자리로 다시 시작한다.
+        if ( _pGhost != nullptr )
+            startGhostRecording( _ghostRacer, _pGhost );
         _phase = KartRacePhase::Countdown;
         _countdown.start( _settings._countdownTime );
         _raceTime = 0.0f;
@@ -347,12 +354,15 @@ namespace sw
 
         // 문: 다음 체크포인트(앞), 지난 체크포인트(뒤), 결승선 순서로 확인한다.
         const int32 checkpointCount = _pTrack->getCheckpointCount();
-        if ( kart._nextCheckpoint < checkpointCount && _pTrack->computeGateCrossing( kart._nextCheckpoint + 1, kart._previousPosition, position ) > 0 )
+        // 한 걸음에 여러 문을 지날 수 있다(가까이 놓인 문, 같은 자리의 문). 하나만 세면 뒤의 문은 다시 지날 길이 없어 그 바퀴를 끝낼 수 없다.
+        bool bPassedForward = false;
+        while ( kart._nextCheckpoint < checkpointCount && _pTrack->computeGateCrossing( kart._nextCheckpoint + 1, kart._previousPosition, position ) > 0 )
         {
             ++kart._nextCheckpoint;
+            bPassedForward = true;
             pushEvent( KartRaceEvent::Kind::CheckpointPassed, racer, -1, kart._nextCheckpoint, _raceTime );
         }
-        else if ( kart._nextCheckpoint > 0 && _pTrack->computeGateCrossing( kart._nextCheckpoint, kart._previousPosition, position ) < 0 )
+        while ( bPassedForward == false && kart._nextCheckpoint > 0 && _pTrack->computeGateCrossing( kart._nextCheckpoint, kart._previousPosition, position ) < 0 )
         {
             --kart._nextCheckpoint;
         }
@@ -378,6 +388,12 @@ namespace sw
                 for ( const float32 lapTime : kart._listLapTime )
                 {
                     kart._bestLapTime = kart._bestLapTime <= 0.0f ? lapTime : MathUtil::min( kart._bestLapTime, lapTime );
+                }
+                // 경기 최고 기록도 다시 센다. 지운 바퀴가 최고 기록으로 남으면 차 기록과 어긋난다.
+                _bestLapTime = 0.0f;
+                for ( const KartRacer& other : _listRacer )
+                {
+                    _bestLapTime = other._bestLapTime > 0.0f && ( _bestLapTime <= 0.0f || other._bestLapTime < _bestLapTime ) ? other._bestLapTime : _bestLapTime;
                 }
             }
             pushEvent( KartRaceEvent::Kind::LapRevoked, racer, -1, kart._lap, _raceTime );
@@ -512,9 +528,11 @@ namespace sw
 
     bool KartRace::useItem( int32 racer )
     {
-        if ( isValidRacer( racer ) == false || _pItemCatalog == nullptr )
+        if ( isValidRacer( racer ) == false || _pItemCatalog == nullptr || _phase != KartRacePhase::Racing )
             return false;
-        KartRacer&         kart  = _listRacer[static_cast<size_t>( racer )];
+        KartRacer& kart = _listRacer[static_cast<size_t>( racer )];
+        if ( kart._bFinished == SW_TRUE ) // 들어온 차는 경기 밖이다 — 남은 차를 맞히지 않는다
+            return false;
         const KartItemDef* pItem = kart._itemID.empty() ? nullptr : _pItemCatalog->find( kart._itemID );
         if ( pItem == nullptr )
             return false;
@@ -554,7 +572,7 @@ namespace sw
             }
             case KartItemKind::LeaderShell:
             {
-                projectile._target = findRacerAtPlace( 1 );
+                projectile._target = findLeaderInRace();
                 _listProjectile.push_back( projectile );
                 break;
             }
@@ -570,6 +588,17 @@ namespace sw
             }
         }
         return true;
+    }
+
+    int32 KartRace::findLeaderInRace() const
+    {
+        // 들어온 차는 맞지 않는다(`applyHit`). 1 등을 그대로 쫓으면 첫 결승 뒤의 공격은 아무도 맞히지 못하고 떠돈다.
+        for ( const int32 racer : _listPlaceOrder )
+        {
+            if ( _listRacer[static_cast<size_t>( racer )]._bFinished == SW_FALSE )
+                return racer;
+        }
+        return -1;
     }
 
     int32 KartRace::pickRedShellTarget( int32 owner ) const
@@ -622,7 +651,7 @@ namespace sw
 
             // 1) 움직임: 바나나는 멈춰 있고, 1등 공격은 항상 지금의 1등을 쫓는다.
             if ( projectile._kind == KartItemKind::LeaderShell )
-                projectile._target = findRacerAtPlace( 1 );
+                projectile._target = findLeaderInRace();
             if ( projectile._kind != KartItemKind::Banana )
             {
                 if ( isValidRacer( projectile._target ) )
@@ -896,7 +925,7 @@ namespace sw
         const int32 count = static_cast<int32>( racerCount );
         for ( KartRacer& kart : race._listRacer )
         {
-            if ( KartRaceInternal::readRacer( archive, count, kart ) == false || race.isKnownItem( kart._itemID ) == false )
+            if ( KartRaceInternal::readRacer( archive, count, *_pTrack, kart ) == false || race.isKnownItem( kart._itemID ) == false )
                 return false;
             // 러버밴딩 배율이 바꾼 최고 속도를 기본 설정에서 다시 계산한다(`updateRubberBand` 와 같은 식이다).
             ArcadeVehicleSettings settings = kart._baseSettings;
@@ -959,7 +988,9 @@ namespace sw
         archive >> race._finishedCount;
         archive >> phase;
         const bool bFinishedValid    = 0 <= race._finishedCount && race._finishedCount <= count;
-        const bool bInvalidRaceState = bRandomRead == false || bCountdownRead == false || archive.isError() || bFinishedValid == false || phase > static_cast<uint8>( KartRacePhase::Ended );
+        const bool bFirstFinishValid = race._firstFinishTime < 0.0f || 0.0f <= race._firstFinishTime; // 둘 다 거짓이면 NaN 이다 — 시한이 영영 끝나지 않는다
+        const bool bTimesValid       = 0.0f <= race._raceTime && 0.0f <= race._bestLapTime && bFirstFinishValid;
+        const bool bInvalidRaceState = bRandomRead == false || bCountdownRead == false || archive.isError() || bFinishedValid == false || bTimesValid == false || phase > static_cast<uint8>( KartRacePhase::Ended );
         if ( bInvalidRaceState )
             return false;
         race._phase = static_cast<KartRacePhase>( phase );

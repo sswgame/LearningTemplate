@@ -146,7 +146,7 @@ namespace sw
         const uint64 frameCount        = reader.readVarUint();
         const int32  frameBits         = 8 + 8 + KartGhostInternal::kButtonBits;
         const bool   bCountFits        = frameCount <= static_cast<uint64>( reader.getBitsRemaining() / frameBits );
-        const bool   bInvalidGhostData = reader.hasOverflowed() || bCountFits == false || step <= 0.0f;
+        const bool   bInvalidGhostData = reader.hasOverflowed() || bCountFits == false || step <= 0.0f || finishTime < 0.0f;
         if ( bInvalidGhostData )
             return false;
         vector<KartGhostFrame> listFrame;

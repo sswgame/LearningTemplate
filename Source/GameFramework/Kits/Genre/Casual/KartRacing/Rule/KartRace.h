@@ -208,7 +208,7 @@ namespace sw
         void startGhostRecording( int32 racer, KartGhost* pGhost );
         /** @brief 아이템을 쥐여 줍니다(테스트와 이벤트용). 들고 있던 아이템은 바뀝니다. */
         void giveItem( int32 racer, const hashed_string& itemID );
-        /** @brief 들고 있는 아이템을 씁니다. 없으면 false 를 반환합니다. */
+        /** @brief 들고 있는 아이템을 씁니다. 없거나, 경기 중이 아니거나, 이미 들어온 차면 false 를 반환합니다. */
         [[nodiscard]] bool useItem( int32 racer );
         /** @brief 아이템에 맞습니다(게임 쪽 함정과 테스트용). 방어막이 막으면 false 를 반환합니다. */
         [[nodiscard]] bool applyHit( int32 victim, int32 attacker, const KartItemDef& def );
@@ -249,10 +249,12 @@ namespace sw
         void               updateProjectiles( float32 deltaTime );
         void               explode( const KartProjectile& projectile, const KartItemDef& def );
         int32              pickRedShellTarget( int32 owner ) const;
-        void               updatePlaces();
-        void               updateRubberBand( int32 racer );
-        void               resolveRaceEnd();
-        void               pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time );
+        /** @brief 아직 들어오지 않은 차 중 가장 앞선 차의 번호를 반환합니다. 없으면 -1 입니다. */
+        int32 findLeaderInRace() const;
+        void  updatePlaces();
+        void  updateRubberBand( int32 racer );
+        void  resolveRaceEnd();
+        void  pushEvent( KartRaceEvent::Kind kind, int32 racer, int32 other, int32 value, float32 time );
 
     private:
         vector<KartRacer>          _listRacer;

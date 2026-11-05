@@ -203,7 +203,7 @@ namespace sw
 
         KartTrack();
 
-        /** @brief 정의로 곡선을 만듭니다. 조절점이 3개보다 적거나 폭이 0 이하이면 false 를 반환하고 비어 있는 상태가 됩니다. */
+        /** @brief 정의로 곡선을 만듭니다. 조절점이 3개보다 적거나 폭이 0 이하이거나 길이가 0 이면 false 를 반환하고 비어 있는 상태가 됩니다. */
         [[nodiscard]] bool initialize( const KartTrackDef& def );
 
         /** @brief 가장 가까운 중심선 위치를 반환합니다(모든 구간을 검사합니다). */
