@@ -48,7 +48,8 @@ namespace sw
                 {
                     const size_t dash           = token.find( '-' );
                     const bool   bMalformedLink = dash == string_view::npos || dash == 0 || dash + 1 >= token.size();
-                    if ( bMalformedLink )
+                    // 단서를 자기 자신과 잇는 연결은 보드(`linkClues`)가 받지 않으므로 그런 추리는 풀 수 없다.
+                    if ( bMalformedLink || token.substr( 0, dash ) == token.substr( dash + 1 ) )
                     {
                         SW_LOG_ERROR_ID( "HorrorCatalog.DeductionBadLinkExpected", "%#: deduction '%#' has a bad link '%#' (expected clueA-clueB)", sourceName, id.c_str(), token );
                         bValid = false;
@@ -150,8 +151,7 @@ namespace sw
         recipe._inputs.addItem( combine._firstItem, 1 );
         recipe._inputs.addItem( combine._secondItem, 1 );
         recipe._outputs.addItem( combine._outItem, combine._count );
-        _recipeCatalog.add( recipe );
-        return true;
+        return GameDataXML::addUnique( recipe, sourceName, _recipeCatalog );
     }
 
     bool HorrorCatalog::loadDialLock( const XMLNode& node, string_view sourceName )
@@ -159,9 +159,7 @@ namespace sw
         HorrorDialLockDef lock;
         bool              bValid = XMLFields::readFields( node, lock, sourceName, { "code" } );
         bValid                   = HorrorCatalogInternal::readDigits( node.getAttributeText( "code" ), lock._listDigit, sourceName, lock._id ) && bValid;
-        if ( bValid )
-            (void)_dialLockCatalog.add( lock ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return bValid;
+        return bValid && GameDataXML::addUnique( lock, sourceName, _dialLockCatalog );
     }
 
     bool HorrorCatalog::loadSequence( const XMLNode& node, string_view sourceName )
@@ -174,8 +172,7 @@ namespace sw
             SW_LOG_ERROR_ID( "HorrorCatalog.SequenceNeedsStepsB", "%#: sequence '%#' needs steps=\"a,b,...\"", sourceName, sequence._id.c_str() );
             return false;
         }
-        (void)_sequenceCatalog.add( sequence ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return true;
+        return GameDataXML::addUnique( sequence, sourceName, _sequenceCatalog );
     }
 
     bool HorrorCatalog::loadDocument( const XMLNode& node, string_view sourceName )
@@ -183,8 +180,7 @@ namespace sw
         HorrorDocumentDef document;
         if ( XMLFields::readFields( node, document, sourceName ) == false )
             return false;
-        (void)_documentCatalog.add( document ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return true;
+        return GameDataXML::addUnique( document, sourceName, _documentCatalog );
     }
 
     bool HorrorCatalog::loadDeduction( const XMLNode& node, string_view sourceName )
@@ -192,9 +188,7 @@ namespace sw
         HorrorDeductionDef deduction;
         bool               bValid = XMLFields::readFields( node, deduction, sourceName, { "links" } );
         bValid                    = HorrorCatalogInternal::readLinks( node.getAttributeText( "links" ), deduction._listRequiredLink, sourceName, deduction._id ) && bValid;
-        if ( bValid )
-            (void)_deductionCatalog.add( deduction ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return bValid;
+        return bValid && GameDataXML::addUnique( deduction, sourceName, _deductionCatalog );
     }
 
     GridInventory::ShapeDelegate HorrorCatalog::makeShapeLookup() const

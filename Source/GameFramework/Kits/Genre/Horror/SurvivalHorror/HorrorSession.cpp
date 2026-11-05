@@ -144,21 +144,27 @@ namespace sw
             SW_LOG_ERROR_ID( "HorrorSession.HorrorSessionRefusedNoCatalog", "HorrorSession: refused - no catalog (the rules come from the catalog, there is no default set)" );
             return false;
         }
+        // 없는 방에서 시작하면 어느 길도 지날 수 없어 판이 멈춘다.
+        if ( pAreaGraph != nullptr && startArea.empty() == false && pAreaGraph->findArea( startArea ) == nullptr )
+        {
+            SW_LOG_ERROR_ID( "HorrorSession.UnknownStartArea", "HorrorSession: refused - start area '%#' is not on the graph", startArea.c_str() );
+            return false;
+        }
         const SurvivalHorrorRules& rules = pCatalog->getRules();
         // 따로 만들어 둘 다 받아들여질 때만 바꾼다 — 하나라도 거절되면 상태는 그대로다.
         ResourceGauge sanity;
         ResourceGauge battery;
         if ( sanity.initialize( HorrorSessionInternal::makeSanitySettings( rules ) ) == false || battery.initialize( HorrorSessionInternal::makeBatterySettings( rules ) ) == false )
             return false;
+        if ( inventory.initialize( pCatalog->makeShapeLookup(), rules._gridWidth, rules._gridHeight ) == false )
+            return false;
         _pCatalog   = pCatalog;
         _pAreaGraph = pAreaGraph;
         _pInventory = &inventory;
         _pItemBox   = &itemBox;
         _pFlags     = refs._pFlags;
-        if ( _pInventory->initialize( pCatalog->makeShapeLookup(), rules._gridWidth, rules._gridHeight ) == false )
-            return false;
-        _sanity  = sanity;
-        _battery = battery;
+        _sanity     = sanity;
+        _battery    = battery;
         _uniqueSeenMonster.clear();
         _uniqueReadDocument.clear();
         _uniqueClue.clear();
@@ -188,9 +194,11 @@ namespace sw
             pushEvent( SurvivalHorrorEvent::Kind::FlashlightDied, hashed_string() );
         }
         // 어둠은 매 프레임 조금씩 깎이므로 이벤트를 내지 않는다(환각 시작과 끝만 알린다).
+        // 회복은 밝은 곳에서만 돈다. 회복 지연이 걸음보다 짧으면 어둠 속에서도 찼다.
         if ( bInDarkness && _bFlashlightOn == SW_FALSE )
             (void)_sanity.drain( deltaTime ); // 0 에 붙어 있어도 계속 깎는 중이므로 회복 지연이 다시 센다
-        _sanity.update( deltaTime );
+        else
+            _sanity.update( deltaTime );
         _battery.update( deltaTime );
         refreshHallucination();
     }
@@ -277,7 +285,8 @@ namespace sw
     bool HorrorSession::tryUseItem( int32 instanceID )
     {
         const GridItem* pItem = _pInventory->findInstance( instanceID );
-        if ( pItem == nullptr || _pCatalog == nullptr )
+        // 죽은 뒤에 약을 먹어 되살아나지 않는다.
+        if ( pItem == nullptr || _pCatalog == nullptr || isDead() )
             return false;
         const HorrorItemDef* pDef = _pCatalog->findItem( pItem->_itemID );
         if ( pDef == nullptr || ( pDef->_healAmount <= 0.0f && pDef->_sanityAmount <= 0.0f && pDef->_batteryAmount <= 0.0f ) )
@@ -383,13 +392,15 @@ namespace sw
             return HorrorPuzzleResult::Unknown;
         if ( _uniqueSolvedPuzzle.count( lockID ) > 0 )
             return HorrorPuzzleResult::AlreadySolved;
-        int32& wrongCount = _mapDialAttempt[lockID];
+        // 틀렸을 때만 칸을 만든다 — 시도하지 않은 자물쇠와 맞힌 자물쇠의 바이트가 같아야 한다.
+        const auto  attemptIter = _mapDialAttempt.find( lockID );
+        const int32 wrongCount  = attemptIter != _mapDialAttempt.end() ? attemptIter->second : 0;
         if ( pLock->_maxAttempts > 0 && wrongCount >= pLock->_maxAttempts )
             return HorrorPuzzleResult::LockedOut;
         if ( listDigit != pLock->_listDigit )
         {
-            ++wrongCount;
-            return pLock->_maxAttempts > 0 && wrongCount >= pLock->_maxAttempts ? HorrorPuzzleResult::LockedOut : HorrorPuzzleResult::Wrong;
+            _mapDialAttempt[lockID] = wrongCount + 1;
+            return pLock->_maxAttempts > 0 && wrongCount + 1 >= pLock->_maxAttempts ? HorrorPuzzleResult::LockedOut : HorrorPuzzleResult::Wrong;
         }
         (void)markSolved( lockID, pLock->_flag );
         pushEvent( SurvivalHorrorEvent::Kind::PuzzleSolved, lockID );
@@ -403,16 +414,21 @@ namespace sw
             return HorrorPuzzleResult::Unknown;
         if ( _uniqueSolvedPuzzle.count( puzzleID ) > 0 )
             return HorrorPuzzleResult::AlreadySolved;
-        int32& progress = _mapSequenceProgress[puzzleID];
+        // 진행 칸은 푸는 중에만 있다. 푼 퍼즐에 걸음 수만큼 남겨 두면 그 값이 `readState` 의 범위를 넘어 세이브를 다시 읽지 못했다.
+        const auto  progressIter = _mapSequenceProgress.find( puzzleID );
+        const int32 progress     = progressIter != _mapSequenceProgress.end() ? progressIter->second : 0;
         if ( pSequence->_listStep[static_cast<size_t>( progress )] != step )
         {
-            progress = 0;
+            _mapSequenceProgress.erase( puzzleID );
             loseSanity( pSequence->_mistakeSanity, puzzleID );
             return HorrorPuzzleResult::Wrong;
         }
-        ++progress;
-        if ( progress < static_cast<int32>( pSequence->_listStep.size() ) )
+        if ( progress + 1 < static_cast<int32>( pSequence->_listStep.size() ) )
+        {
+            _mapSequenceProgress[puzzleID] = progress + 1;
             return HorrorPuzzleResult::Progress;
+        }
+        _mapSequenceProgress.erase( puzzleID );
         (void)markSolved( puzzleID, pSequence->_flag );
         pushEvent( SurvivalHorrorEvent::Kind::PuzzleSolved, puzzleID );
         return HorrorPuzzleResult::Solved;
@@ -547,6 +563,8 @@ namespace sw
 
     bool HorrorSession::readState( Archive& archive )
     {
+        if ( _pCatalog == nullptr )
+            return false;
         // 사본에 읽고 끝까지 맞으면 그때 바꾼다. 카탈로그, 빌린 포인터, 게이지 설정은 사본도 그대로 가지고 있다.
         HorrorSession restored = *this;
         const bool    bPartRead =
@@ -571,21 +589,65 @@ namespace sw
         archive >> restored._wrongDeductionCount;
         archive >> restored._bFlashlightOn;
         archive >> restored._bHallucinating;
-        const bool bValid = archive.isOk() && 0 <= restored._saveCount && 0 <= restored._wrongDeductionCount && restored._bFlashlightOn <= SW_TRUE &&
-                            restored._bHallucinating <= SW_TRUE;
-        if ( bValid == false )
+        const bool bValid = archive.isOk() && restored._bFlashlightOn <= SW_TRUE && restored._bHallucinating <= SW_TRUE;
+        if ( bValid == false || restored.isStateConsistent() == false )
             return false;
-        // 순서 퍼즐 진행은 다음 걸음의 index 이므로 그 퍼즐의 걸음 수 안이어야 한다.
-        for ( const auto& [puzzleID, progress] : restored._mapSequenceProgress )
+        restored._eventBuffer.clear();
+        *this = std::move( restored );
+        return true;
+    }
+
+    bool HorrorSession::isStateConsistent() const
+    {
+        const SurvivalHorrorRules& rules          = _pCatalog->getRules();
+        const bool                 bLimitedOver   = rules._saveMode == HorrorSaveMode::Limited && _saveCount > rules._maxSaves;
+        const bool                 bCountsInvalid = _health < 0.0f || _health > rules._maxHealth || _saveCount < 0 || _wrongDeductionCount < 0 || bLimitedOver;
+        if ( bCountsInvalid )
+            return false;
+        for ( const hashed_string& monsterID : _uniqueSeenMonster )
         {
-            const HorrorSequenceDef* pSequence                = _pCatalog != nullptr ? _pCatalog->findSequence( puzzleID ) : nullptr;
+            if ( _pCatalog->findMonster( monsterID ) == nullptr )
+                return false;
+        }
+        for ( const hashed_string& documentID : _uniqueReadDocument )
+        {
+            if ( _pCatalog->findDocument( documentID ) == nullptr )
+                return false;
+        }
+        for ( const hashed_string& puzzleID : _uniqueSolvedPuzzle )
+        {
+            const bool bKnownPuzzle = _pCatalog->findKeyLock( puzzleID ) != nullptr || _pCatalog->findDialLock( puzzleID ) != nullptr || _pCatalog->findSequence( puzzleID ) != nullptr || _pCatalog->findDeduction( puzzleID ) != nullptr;
+            if ( bKnownPuzzle == false )
+                return false;
+        }
+        for ( const auto& [lockID, wrongCount] : _mapDialAttempt )
+        {
+            const HorrorDialLockDef* pLock           = _pCatalog->findDialLock( lockID );
+            const bool               bInvalidAttempt = pLock == nullptr || wrongCount < 0 || ( pLock->_maxAttempts > 0 && wrongCount > pLock->_maxAttempts );
+            if ( bInvalidAttempt )
+                return false;
+        }
+        // 순서 퍼즐 진행은 다음 걸음의 index 이므로 그 퍼즐의 걸음 수 안이어야 한다.
+        for ( const auto& [puzzleID, progress] : _mapSequenceProgress )
+        {
+            const HorrorSequenceDef* pSequence                = _pCatalog->findSequence( puzzleID );
             const bool               bInvalidSequenceProgress = pSequence == nullptr || progress < 0 || progress >= static_cast<int32>( pSequence->_listStep.size() );
             if ( bInvalidSequenceProgress )
                 return false;
         }
-        restored._eventBuffer.clear();
-        *this = std::move( restored );
-        return true;
+        // 보드의 규칙(`linkClues`)과 같다. 가진 단서끼리이고, 자기 자신과 겹침은 없다.
+        for ( size_t linkIndex = 0; linkIndex < _listClueLink.size(); ++linkIndex )
+        {
+            const HorrorClueLink& link     = _listClueLink[linkIndex];
+            bool                  bInvalid = link._first == link._second || hasClue( link._first ) == false || hasClue( link._second ) == false;
+            for ( size_t earlier = 0; earlier < linkIndex; ++earlier )
+            {
+                bInvalid = bInvalid || _listClueLink[earlier].isSame( link._first, link._second );
+            }
+            if ( bInvalid )
+                return false;
+        }
+        return _currentArea.empty() || _pAreaGraph == nullptr || _pAreaGraph->findArea( _currentArea ) != nullptr;
     }
 
     void HorrorSession::pushEvent( SurvivalHorrorEvent::Kind kind, const hashed_string& id, float32 value )

@@ -99,7 +99,7 @@ namespace sw
          * @brief 새 판을 시작합니다. @p pAreaGraph 가 있으면 @p startArea 에 들어갑니다.
          * @details 플래그(풀린 퍼즐과 문, 길 조건이 읽는다)는 @p refs 에서 빌린다(없으면 길 조건은 빈 플래그로 본다). 격자 가방(@p inventory, 장르 고유 그릇이라 게임이 가진다)과 아이템 상자(@p itemBox, 세계 보관함)도 빌리므로 세션보다 오래 살아야 한다.
          *          격자 가방은 여기서 카탈로그의 모양과 규칙의 크기로 다시 연다. 이 함수를 호출하기 전에는 다른 함수를 호출하지 않는다.
-         *          카탈로그가 없거나(대신 쓸 기본 규칙은 없다) 정신력 · 배터리 게이지 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 세션은 그대로이다.
+         *          카탈로그가 없거나(대신 쓸 기본 규칙은 없다), 그래프에 없는 시작 방이거나, 정신력 · 배터리 게이지 · 격자 크기 설정이 범위 밖이면 오류를 남기고 false 를 반환하며 세션은 그대로이다.
          */
         [[nodiscard]] bool initialize( const HorrorCatalog* pCatalog, AreaGraph* pAreaGraph, const hashed_string& startArea, const SessionStateRefs& refs, GridInventory& inventory,
                                        Inventory& itemBox );
@@ -120,7 +120,7 @@ namespace sw
         // ── 자원 ──────────────────────────────────────────────────────────
         /** @brief 가방의 탄약을 @p count 발 씁니다. 모자라면 쏘지 않고 false 를 반환합니다. */
         [[nodiscard]] bool tryConsumeAmmo( const hashed_string& ammoItemID, int32 count );
-        /** @brief 회복, 진정, 배터리 아이템 하나를 씁니다. 쓸 수 없는 아이템이면 false 를 반환합니다. */
+        /** @brief 회복, 진정, 배터리 아이템 하나를 씁니다. 쓸 수 없는 아이템이거나 이미 죽었으면 false 를 반환합니다. */
         [[nodiscard]] bool tryUseItem( int32 instanceID );
         void               applyDamage( float32 amount );
         /** @brief 세이브합니다(타자기). 규칙의 제한(횟수, 잉크 리본)을 따릅니다. */
@@ -169,7 +169,7 @@ namespace sw
          *        틀린 추리 수, 손전등, 환각을 씁니다. 같은 상태면 같은 바이트가 나옵니다. 카탈로그, 빌린 격자 가방, 아이템 상자, 플래그, 방 그래프는 저장하지 않고, 이벤트는 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. `initialize` 전이거나, 데이터가 깨졌거나, 범위 밖 값이나 카탈로그에 없는 id 가 있으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         const ResourceGauge&          getSanity() const { return _sanity; }
@@ -186,6 +186,8 @@ namespace sw
         void pushEvent( SurvivalHorrorEvent::Kind kind, const hashed_string& id, float32 value = 0.0f );
         void refreshHallucination();
         bool markSolved( const hashed_string& puzzleID, const hashed_string& flag );
+        /** @brief 읽은 상태가 카탈로그와 맞는지 봅니다(체력과 세이브 수의 범위, 정의가 있는 id, 다이얼 시도와 순서 진행의 범위, 가진 단서의 연결, 그래프에 있는 방). */
+        [[nodiscard]] bool isStateConsistent() const;
 
     private:
         ResourceGauge                       _sanity;

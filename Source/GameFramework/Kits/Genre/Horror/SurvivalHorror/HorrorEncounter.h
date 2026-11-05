@@ -70,7 +70,7 @@ namespace sw
 
         HorrorEncounter();
 
-        /** @brief @p successFace 이상이 나오면 성공으로 봅니다(기본 5이며 여섯 면 중 둘입니다). 1 ~ 6 밖이면 오류를 남기고 false 입니다(맞추지 않습니다). */
+        /** @brief @p successFace 이상이 나오면 성공으로 봅니다(기본 5이며 여섯 면 중 둘입니다). 1 ~ 6 밖이거나, 시드가 0 이거나, 조사자 번호가 음수 · 괴물 번호 · 겹침이면 오류를 남기고 false 입니다(맞추지 않습니다). */
         [[nodiscard]] bool initialize( const HorrorMonsterDef& monster, const vector<HorrorInvestigator>& listInvestigator, uint32 seed, int32 successFace = 5 );
         /** @brief 다음 차례를 진행합니다. 이미 끝났으면 `_actorID` 가 -1 인 빈 결과를 반환합니다. */
         HorrorTurnResult playNextTurn();
@@ -80,7 +80,7 @@ namespace sw
          *        괴물 정의와 성공 눈은 `initialize` 에서 받으므로 저장하지 않습니다(괴물 id 는 같은 괴물인지 확인하려고 저장합니다).
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 괴물로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나 괴물이 다르면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 같은 괴물로 `initialize` 한 뒤에 호출해야 합니다. 데이터가 깨졌거나, 괴물이 다르거나, 조사자 · 차례 · 강인함 · 결과가 서로 맞지 않으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         HorrorEncounterState              getState() const { return _state; }
@@ -93,6 +93,10 @@ namespace sw
         HorrorInvestigator* findInvestigator( int32 actorID );
         void                defeatIfBroken( HorrorInvestigator& investigator );
         void                refreshState();
+        /** @brief 차례를 받을 수 있는 번호(0 이상, 괴물 번호와 다름)이고 겹치지 않으면 true 입니다. 겹친 둘은 차례 하나를 나눠 쓰고 한쪽이 빠지면 함께 빠진다. */
+        [[nodiscard]] static bool hasValidActorIDs( const vector<HorrorInvestigator>& listInvestigator );
+        /** @brief 읽은 상태가 스스로 맞는지 봅니다. 빠짐은 체력 · 정신력이 정하고, 차례에는 남은 조사자와 괴물만 있으며, 결과는 강인함과 남은 수가 정합니다. */
+        [[nodiscard]] bool isStateConsistent() const;
 
     private:
         vector<HorrorInvestigator> _listInvestigator;
