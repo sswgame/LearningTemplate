@@ -74,14 +74,14 @@ namespace sw
         static void               writeRandom( Archive& outArchive, const GameRandom& random );
         [[nodiscard]] static bool readRandom( Archive& archive, GameRandom& outRandom );
 
-        /** @brief 고정 걸음 타이머의 남은 시간만 씁니다. 걸음과 상한은 설정이 정합니다. */
+        /** @brief 고정 걸음 타이머의 남은 시간만 씁니다. 걸음과 상한은 설정이 정합니다. 읽기는 음수와 한 프레임 상한을 넘는 값을 거절합니다(@p inoutTimer 는 설정된 타이머여야 합니다). */
         static void               writeStepTimer( Archive& outArchive, const FixedStepTimer& timer );
         [[nodiscard]] static bool readStepTimer( Archive& archive, FixedStepTimer& inoutTimer );
 
         /** @brief 남은 시간을 그대로 씁니다. 음수 늦음까지 써야 복원한 뒤 같은 발생 시각이 나옵니다. */
         static void               writeCountdown( Archive& outArchive, const Countdown& countdown );
         [[nodiscard]] static bool readCountdown( Archive& archive, Countdown& outCountdown );
-        /** @brief 아직 정수가 되지 않은 누적 양을 씁니다. */
+        /** @brief 아직 정수가 되지 않은 누적 양을 씁니다. 읽기는 0..1 밖을 거절합니다. */
         static void               writeRateAccumulator( Archive& outArchive, const RateAccumulator& accumulator );
         [[nodiscard]] static bool readRateAccumulator( Archive& archive, RateAccumulator& outAccumulator );
     };

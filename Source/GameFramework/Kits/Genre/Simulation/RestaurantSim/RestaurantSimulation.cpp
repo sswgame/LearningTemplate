@@ -825,7 +825,10 @@ namespace sw
         {
             const int32 typeIndex = _random.pickWeightedIndex( listType, getWeight );
             if ( typeIndex < 0 )
+            {
+                _arrival.reset(); // 올 수 있는 성향이 없다 — 쌓아 두지 않는다(누적은 1 아래라는 규칙을 지킨다)
                 return;
+            }
             (void)admitCustomer( listType[static_cast<size_t>( typeIndex )]._id );
         }
     }

@@ -171,7 +171,9 @@ namespace sw
     {
         float32 accumulator = 0.0f;
         archive >> accumulator;
-        if ( archive.isError() || accumulator < 0.0f )
+        // 터무니없는 값은 `consume` 의 빼기가 float 정밀도에 먹혀 끝나지 않는다(1e30 - 걸음 == 1e30). 한 프레임이 받는 시간까지만 받는다 — 걸음을 조정한 핫 리로드는 그대로 읽힌다.
+        const float32 maxAccumulator = inoutTimer._step > inoutTimer._maxFrameTime ? inoutTimer._step : inoutTimer._maxFrameTime;
+        if ( archive.isError() || accumulator < 0.0f || accumulator > maxAccumulator )
             return false;
         inoutTimer._accumulator = accumulator;
         return true;
@@ -202,7 +204,8 @@ namespace sw
     {
         float32 fraction = 0.0f;
         archive >> fraction;
-        if ( archive.isError() || ( 0.0f <= fraction ) == false )
+        // 정수가 된 몫은 그때그때 빼 간다. 터무니없는 값은 `takeOne` 고리가 끝나지 않는다(1e30 - 1 == 1e30).
+        if ( archive.isError() || fraction < 0.0f || 1.0f <= fraction )
             return false;
         outAccumulator._fraction = fraction;
         return true;
