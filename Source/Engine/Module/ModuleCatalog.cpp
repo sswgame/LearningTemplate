@@ -258,22 +258,29 @@ namespace sw
             /** @brief 2-2) 에디터 확장은 의존(EditorModule · 키트)이 하나라도 꺼져 있으면 함께 꺼진다 — 오류가 아니다(그 확장만 없다). CMake 의 `sw_resolveModuleManifests` 와 같다. */
             static void deactivateEditorExtensions( const ModuleCatalog& catalog, vector<uint8>& inoutListActive, vector<string>& inoutListReason )
             {
-                for ( size_t index = 0; index < catalog.getManifestCount(); ++index )
+                // 확장이 확장에 의존할 수 있고 목록은 이름 순이다. 뒤의 확장이 꺼지면 앞의 확장도 꺼져야 하므로 바뀌는 것이 없을 때까지 돈다.
+                bool bChanged = true;
+                while ( bChanged )
                 {
-                    const ModuleManifest& manifest = catalog.getManifests()[index];
-                    if ( inoutListActive[index] == SW_FALSE || manifest._kind != ModuleKind::EditorExtension )
-                        continue;
-                    for ( const ModuleDependency& dependency : manifest._listDependency )
+                    bChanged = false;
+                    for ( size_t index = 0; index < catalog.getManifestCount(); ++index )
                     {
-                        const ModuleManifest* pDependency = catalog.findManifest( dependency._name );
-                        if ( pDependency == nullptr )
-                            break; // 없는 의존은 다음 단계(`collectDependencies`)가 오류로 알린다
-                        const size_t dependencyIndex = indexOf( catalog, pDependency );
-                        if ( inoutListActive[dependencyIndex] == SW_FALSE )
+                        const ModuleManifest& manifest = catalog.getManifests()[index];
+                        if ( inoutListActive[index] == SW_FALSE || manifest._kind != ModuleKind::EditorExtension )
+                            continue;
+                        for ( const ModuleDependency& dependency : manifest._listDependency )
                         {
-                            inoutListActive[index] = SW_FALSE;
-                            inoutListReason[index] = "needs " + dependency._name + ", which is " + inoutListReason[dependencyIndex];
-                            break;
+                            const ModuleManifest* pDependency = catalog.findManifest( dependency._name );
+                            if ( pDependency == nullptr )
+                                break; // 없는 의존은 다음 단계(`collectDependencies`)가 오류로 알린다
+                            const size_t dependencyIndex = indexOf( catalog, pDependency );
+                            if ( inoutListActive[dependencyIndex] == SW_FALSE )
+                            {
+                                inoutListActive[index] = SW_FALSE;
+                                inoutListReason[index] = "needs " + dependency._name + ", which is " + inoutListReason[dependencyIndex];
+                                bChanged               = true;
+                                break;
+                            }
                         }
                     }
                 }
