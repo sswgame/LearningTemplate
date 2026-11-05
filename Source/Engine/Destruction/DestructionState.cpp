@@ -518,10 +518,10 @@ namespace sw
                 continue;
             const DestructionGroup old = _listGroup[static_cast<size_t>( groupIndex )];
             vector<vector<uint32>> listComponent;
-            // 붙은 덩어리는 무게로 끊길 수 있다. 끊기면 다시 나누고 지지를 다시 계산한다.
+            splitComponents( old._listNode, listComponent );
+            // 붙은 덩어리는 무게로 끊길 수 있다. 끊기면 다시 나누고 지지를 다시 계산한다. 나누기가 끊은 뒤에 오므로 상한에 닿은 회차의 끊김도 그룹에 반영된다.
             for ( uint32 pass = 0; pass < kMaxSupportPass; ++pass )
             {
-                splitComponents( old._listNode, listComponent );
                 bool bBroke = false;
                 for ( const vector<uint32>& component : listComponent )
                 {
@@ -535,6 +535,7 @@ namespace sw
                 }
                 if ( bBroke == false )
                     break;
+                splitComponents( old._listNode, listComponent );
             }
 
             vector<DestructionGroup> listPart;
@@ -698,6 +699,7 @@ namespace sw
         vector<DestructionGroup> listGroup;
         vector<uint32>           listLeafActive( graph._leafCount, Internal::kNoActiveNode );
         vector<uint32>           listLeafGroup( graph._leafCount, 0 );
+        uint32                   previousGroupID = 0;
         for ( uint64 groupIndex = 0; groupIndex < groupCount; ++groupIndex )
         {
             DestructionGroup group;
@@ -705,15 +707,20 @@ namespace sw
             group._parentID          = reader.readVarUint32();
             group._bAnchored         = reader.readBits( 1 ) != 0 ? SW_TRUE : SW_FALSE;
             const uint64 activeCount = reader.readVarUint();
-            const bool   bBadGroup   = reader.hasOverflowed() || activeCount == 0 || activeCount > graph._listNode.size() || group._id == 0 || group._id >= nextGroupID;
+            // 그룹 찾기는 번호 오름차순에 기대므로(`findGroupIndex`) 그 순서가 아니면 받지 않는다. 번호 0 도 여기서 걸린다.
+            const bool bBadGroup = reader.hasOverflowed() || activeCount == 0 || activeCount > graph._listNode.size() || group._id <= previousGroupID || group._id >= nextGroupID;
             if ( bBadGroup )
                 return false;
-            uint64 node = 0;
+            previousGroupID = group._id;
+            uint64 node     = 0;
             for ( uint64 entry = 0; entry < activeCount; ++entry )
             {
-                node += reader.readVarUint();
-                if ( node >= graph._listNode.size() || reader.hasOverflowed() )
+                // 활성 노드도 오름차순이다(`openNode` · `splitComponents` 의 이분 탐색). 더해 보고 비교하면 큰 간격이 uint64 를 감아 앞 노드로 돌아온다.
+                const uint64 step       = reader.readVarUint();
+                const bool   bValidStep = ( entry == 0 || step > 0 ) && step < static_cast<uint64>( graph._listNode.size() ) - node;
+                if ( bValidStep == false || reader.hasOverflowed() )
                     return false;
+                node += step;
                 const FractureNode& data = graph._listNode[static_cast<size_t>( node )];
                 for ( uint32 leaf = data._firstLeaf; leaf < data._firstLeaf + data._leafCount; ++leaf )
                 {

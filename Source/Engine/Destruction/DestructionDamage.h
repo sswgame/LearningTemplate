@@ -71,17 +71,10 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 네트워크나 리플레이로 보내는 파괴 기록입니다. 시드와 사건열로 이루어지며, 받는 쪽은 같은 순서로 `applyDamage` 합니다. */
-    struct SW_API DestructionEventLog
+    /** @brief 적용한 파괴 기록입니다. 시드와 사건열로 이루어지며, 받는 쪽은 같은 순서로 `applyDamage` 합니다. */
+    struct DestructionEventLog
     {
-        static constexpr uint32 kVersion = 1;
-
         vector<DestructionDamageEvent> _listEvent;
         uint64                         _seed{ 0 };
-
-        /** @brief 바이트로 직렬화합니다(리틀 엔디언). */
-        void makeBytes( vector<uint8>& outBytes ) const;
-        /** @brief 바이트를 읽습니다. 매직, 버전, 길이가 틀리거나 모르는 종류면 false 를 반환하고 비웁니다. */
-        [[nodiscard]] bool readFromBytes( const uint8* pData, size_t size );
     };
 } // namespace sw
