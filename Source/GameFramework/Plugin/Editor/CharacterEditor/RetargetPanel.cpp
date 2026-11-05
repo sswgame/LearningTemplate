@@ -24,6 +24,8 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/RetargetProfileEdit.h"
+
 #include <imgui.h>
 
 namespace sw::editor
@@ -84,30 +86,7 @@ namespace sw::editor
                 return readPublished( &RetargetPanel::Published::_chainCount, outValue );
             }
 
-            /** @brief 쉼표 · 빈칸으로 나눈 본 이름 목록입니다. */
-            static vector<hashed_string> parseNames( string_view text )
-            {
-                vector<hashed_string> listName;
-                StringUtil::forEachToken( text, ", ", [&listName]( string_view token )
-                {
-                    if ( token.empty() == false )
-                        listName.push_back( hashed_string( token ) );
-                } );
-                return listName;
-            }
-
             /** @brief 본 이름 목록을 `a, b, c` 로 잇습니다. */
-            static string joinNames( const vector<hashed_string>& listName )
-            {
-                string text;
-                for ( const hashed_string& name : listName )
-                {
-                    if ( text.empty() == false )
-                        text += ", ";
-                    text += name.c_str();
-                }
-                return text;
-            }
 
             /** @brief 자세의 모델 공간 본 위치를 스켈레톤 순서로 모읍니다. */
             static void computeBonePositions( const Skeleton& skeleton, const Pose& pose, vector<float3>& outListPosition )
@@ -273,8 +252,8 @@ namespace sw::editor
         for ( size_t chainIndex = 0; chainIndex < _profile.getChains().size(); ++chainIndex )
         {
             const RetargetChain& chain         = _profile.getChains()[chainIndex];
-            _listChainText[chainIndex]._source = string_view( RetargetPanelInternal::joinNames( chain._listSourceBone ) );
-            _listChainText[chainIndex]._target = string_view( RetargetPanelInternal::joinNames( chain._listTargetBone ) );
+            _listChainText[chainIndex]._source = string_view( RetargetProfileEdit::joinNames( chain._listSourceBone ) );
+            _listChainText[chainIndex]._target = string_view( RetargetProfileEdit::joinNames( chain._listTargetBone ) );
         }
         (void)RetargetProfileInspector::inspect( _profile, _inspection, _inspectionError ); // 실패는 점검 칸이 보인다
         reloadPreviewSkeletons();
@@ -472,14 +451,14 @@ namespace sw::editor
             ImGui::InputTextWithHint( "##SourceBones", "root to end: a, b, c", text._source.data(), text._source.max_size() );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
             {
-                chain._listSourceBone = RetargetPanelInternal::parseNames( text._source.c_str() );
+                chain._listSourceBone = RetargetProfileEdit::parseNames( text._source.c_str() );
                 bChanged              = true;
             }
             EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "TargetBones" ) );
             ImGui::InputTextWithHint( "##TargetBones", "root to end: a, b, c", text._target.data(), text._target.max_size() );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
             {
-                chain._listTargetBone = RetargetPanelInternal::parseNames( text._target.c_str() );
+                chain._listTargetBone = RetargetProfileEdit::parseNames( text._target.c_str() );
                 bChanged              = true;
             }
             bool bIKGoal = chain._bIKGoal == SW_TRUE;
@@ -504,12 +483,7 @@ namespace sw::editor
         ImGui::InputText( "##NewChain", _newChainName.data(), _newChainName.max_size() );
         ImGui::SameLine();
         const hashed_string newName( _newChainName.c_str() );
-        bool                bNameTaken = newName.empty();
-        for ( const RetargetChain& chain : listChain )
-        {
-            bNameTaken = bNameTaken || chain._name == newName;
-        }
-        ImGui::BeginDisabled( bNameTaken ); // 겹친 사슬 이름은 다시 읽을 때 오류다
+        ImGui::BeginDisabled( RetargetProfileEdit::canAddChain( listChain, newName ) == false ); // 겹친 사슬 이름은 다시 읽을 때 오류다
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddChain" ) ) )
         {
             RetargetChain chain{};
@@ -566,10 +540,7 @@ namespace sw::editor
         ImGui::SameLine();
         const hashed_string newBone( _newPoseBone.c_str() );
         bool                bBoneUsable = _bPreviewTargetReady == SW_TRUE && _previewTarget.findBoneIndex( newBone ) >= 0; // 대상 스켈레톤에 있는 본만 받는다
-        for ( const RetargetPoseBone& poseBone : listPose )
-        {
-            bBoneUsable = bBoneUsable && poseBone._bone != newBone; // 같은 본을 두 번 적으면 다시 읽을 때 오류다
-        }
+        bBoneUsable                     = bBoneUsable && RetargetProfileEdit::canAddPoseBone( listPose, newBone );
         ImGui::BeginDisabled( bBoneUsable == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "AddBoneTurn" ) ) )
         {

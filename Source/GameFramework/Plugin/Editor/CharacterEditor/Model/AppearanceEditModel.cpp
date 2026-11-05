@@ -4,6 +4,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceDatabase.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceResolver.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/UserAppearancePresetStore.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
@@ -140,6 +141,33 @@ namespace sw::editor
         recordUndo( bContinuous ? makeKey( "color", parameter ) : string{} );
         _selection._customization.setColor( parameter, color );
         return true;
+    }
+
+    bool AppearanceEditModel::isSymmetryPartner( const CustomizationParamDef& param, const CustomizationParamDef& other )
+    {
+        if ( param._symmetry.empty() || other._name == param._name )
+            return false;
+        return other._symmetry == param._symmetry && other._kind == param._kind;
+    }
+
+    void AppearanceEditModel::setNumberSymmetric( const vector<CustomizationParamDef>& listParameter, const CustomizationParamDef& param, float32 value, bool bContinuous )
+    {
+        (void)setNumber( param._name, value, bContinuous ); // 같은 값이면 false 이고 그대로 둔다
+        for ( const CustomizationParamDef& other : listParameter )
+        {
+            if ( isSymmetryPartner( param, other ) )
+                (void)setNumber( other._name, MathUtil::clamp( value, other._min, other._max ), bContinuous );
+        }
+    }
+
+    void AppearanceEditModel::setColorSymmetric( const vector<CustomizationParamDef>& listParameter, const CustomizationParamDef& param, const float4& color, bool bContinuous )
+    {
+        (void)setColor( param._name, color, bContinuous ); // 같은 값이면 false 이고 그대로 둔다
+        for ( const CustomizationParamDef& other : listParameter )
+        {
+            if ( isSymmetryPartner( param, other ) )
+                (void)setColor( other._name, color, bContinuous );
+        }
     }
 
     bool AppearanceEditModel::setOption( const hashed_string& parameter, const hashed_string& option )

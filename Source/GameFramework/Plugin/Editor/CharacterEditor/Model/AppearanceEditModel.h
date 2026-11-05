@@ -17,6 +17,8 @@
 
 namespace sw
 {
+    struct CustomizationParamDef;
+
     struct ResolvedAppearance;
 
     class AppearanceDatabase;
@@ -57,6 +59,12 @@ namespace sw::editor
         bool               setNumber( const hashed_string& parameter, float32 value, bool bContinuous );
         bool               setColor( const hashed_string& parameter, const float4& color, bool bContinuous );
         bool               setOption( const hashed_string& parameter, const hashed_string& option );
+        /** @brief @p other 가 @p param 과 같은 대칭 그룹의 다른 매개변수(같은 종류)이면 true 입니다. */
+        static bool isSymmetryPartner( const CustomizationParamDef& param, const CustomizationParamDef& other );
+        /** @brief 값을 정하고 대칭 그룹(좌우 귀)의 짝도 같은 값으로 바꿉니다. 짝은 자기 범위로 자릅니다. */
+        void setNumberSymmetric( const vector<CustomizationParamDef>& listParameter, const CustomizationParamDef& param, float32 value, bool bContinuous );
+        /** @brief 색을 정하고 대칭 그룹의 짝도 같은 색으로 바꿉니다. */
+        void setColorSymmetric( const vector<CustomizationParamDef>& listParameter, const CustomizationParamDef& param, const float4& color, bool bContinuous );
         /** @brief 꾸미기 값을 지웁니다(스키마 기본값으로 돌아갑니다). 없으면 false 입니다. */
         [[nodiscard]] bool removeValue( const hashed_string& parameter );
         bool               setBodyType( const hashed_string& bodyType );

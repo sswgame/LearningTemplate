@@ -102,14 +102,6 @@ namespace sw::editor
                 return bChanged;
             }
 
-            /** @brief @p other 가 @p param 과 같은 대칭 그룹의 다른 매개변수(같은 종류)면 true 입니다. 대칭 그룹이 비어 있으면 짝이 없다. */
-            static bool isSymmetryPartner( const CustomizationParamDef& param, const CustomizationParamDef& other )
-            {
-                if ( param._symmetry.empty() || other._name == param._name )
-                    return false;
-                return other._symmetry == param._symmetry && other._kind == param._kind;
-            }
-
             /** @brief 감시 값이 읽는 값 하나입니다 — 패널 인스턴스가 게시한 값 중 @p pField 를 @p outValue 에 씁니다. 패널이 없으면 false 입니다. */
             [[nodiscard]] static bool readPublished( uint32 CharacterEditorPanel::Published::* pField, float64& outValue )
             {
@@ -1235,13 +1227,7 @@ namespace sw::editor
                     float32 number = pValue != nullptr ? pValue->_number._x : param._default;
                     if ( ImGui::SliderFloat( param._name.c_str(), &number, param._min, param._max ) )
                     {
-                        (void)appearance.setNumber( param._name, number, true ); // 같은 값이면 false 이고 그대로 둔다
-                        // 대칭 그룹(좌우 귀)의 짝은 같은 값으로 함께 바뀐다 — 자기 범위로 자른다.
-                        for ( const CustomizationParamDef& other : pSchema->_listParameter )
-                        {
-                            if ( CharacterEditorPanelInternal::isSymmetryPartner( param, other ) )
-                                (void)appearance.setNumber( other._name, MathUtil::clamp( number, other._min, other._max ), true );
-                        }
+                        appearance.setNumberSymmetric( pSchema->_listParameter, param, number, true );
                     }
                     bAnyActive = bAnyActive || ImGui::IsItemActive();
                     if ( ImGui::IsItemDeactivatedAfterEdit() )
@@ -1258,12 +1244,7 @@ namespace sw::editor
                     if ( ImGui::ColorEdit4( param._name.c_str(), arrColor ) )
                     {
                         const float4 edited{ arrColor[0], arrColor[1], arrColor[2], arrColor[3] };
-                        (void)appearance.setColor( param._name, edited, true ); // 같은 값이면 false 이고 그대로 둔다
-                        for ( const CustomizationParamDef& other : pSchema->_listParameter )
-                        {
-                            if ( CharacterEditorPanelInternal::isSymmetryPartner( param, other ) )
-                                (void)appearance.setColor( other._name, edited, true );
-                        }
+                        appearance.setColorSymmetric( pSchema->_listParameter, param, edited, true );
                     }
                     bAnyActive = bAnyActive || ImGui::IsItemActive();
                     if ( ImGui::IsItemDeactivatedAfterEdit() )
