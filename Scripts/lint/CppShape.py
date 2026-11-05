@@ -23,10 +23,16 @@ C++ 모양 규칙 중 컴파일러가 보지 않는 여섯을 본다. 규칙 문
 from __future__ import annotations
 
 import argparse
+import functools
 import re
 import sys
 from pathlib import Path
 from typing import Sequence
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # Scripts
+
+from lint.Parallel import flatMapInProcesses  # noqa: E402
+
 
 kSkipFolders = ("ThirdParty", "graphify-out", "Generated", ".gen.")
 kBoolFlagExempt = "NOLINT(sw-bool-flag)"
@@ -435,18 +441,19 @@ def isTarget(relative: str) -> bool:
     return relative.startswith("Source/") and relative.endswith((".h", ".cpp")) and not any(skip in relative for skip in kSkipFolders)
 
 
+def inspectListedFile(projectRoot: Path, file: str) -> list[str]:
+    """파일 하나를 봅니다. 대상이 아니면 빈 목록입니다(`checkCppShape` 가 프로세스로 넘기므로 모듈 최상위에 둔다)."""
+    path = Path(file).resolve()
+    try:
+        relative = path.relative_to(projectRoot).as_posix()
+    except ValueError:
+        return []
+    return inspectFile(path, relative) if isTarget(relative) and path.exists() else []
+
+
 def checkCppShape(projectRoot: Path, listFile: Sequence[str]) -> list[str]:
-    """@p listFile 가운데 Source 의 C++ 파일을 보고 어긋남을 `경로:줄: 설명` 으로 돌려준다."""
-    listViolation: list[str] = []
-    for file in listFile:
-        path = Path(file).resolve()
-        try:
-            relative = path.relative_to(projectRoot).as_posix()
-        except ValueError:
-            continue
-        if isTarget(relative) and path.exists():
-            listViolation += inspectFile(path, relative)
-    return listViolation
+    """@p listFile 가운데 Source 의 C++ 파일을 보고 어긋남을 `경로:줄: 설명` 으로 돌려준다. 파일마다 정규식이 오래 돌아 프로세스로 나눈다."""
+    return flatMapInProcesses(functools.partial(inspectListedFile, projectRoot), listFile)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
