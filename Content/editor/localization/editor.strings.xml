@@ -1331,6 +1331,7 @@
 			<origins>
 				<item>Source/Editor/Common/Widgets/EditorComponentMenu.cpp</item>
 				<item>Source/Editor/Common/Widgets/EditorWidgets.cpp</item>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdCommon.SearchNodesHint" source="Search nodes...">
@@ -2361,6 +2362,7 @@
 		<entry key="EdLabel.Duplicate" source="Duplicate">
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphPanel.cpp</item>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.EnableDetailedCallStackTrackingHighOverhead"
@@ -3524,6 +3526,7 @@
 		</entry>
 		<entry key="EdText.PlayPreview" source="Play Preview">
 			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
@@ -3823,6 +3826,7 @@
 		</entry>
 		<entry key="EdText.StopPreview" source="Stop Preview">
 			<origins>
+				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
 		</entry>
@@ -4232,6 +4236,8 @@
 			<origins>
 				<item>Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp</item>
 				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdVerb.Reset" source="Reset">
@@ -5536,7 +5542,8 @@
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorDataTable.ConfirmTranslationTip" source="Keep this text: it becomes the translation of the current source and the stale or review mark goes away when you save.">
+		<entry key="EditorDataTable.ConfirmTranslationTip"
+		       source="Keep this text: it becomes the translation of the current source and the stale or review mark goes away when you save.">
 			<origins>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
@@ -5562,7 +5569,8 @@
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorDataTable.NeedsWorkOnlyTip" source="Show only keys with a missing, stale or review-marked translation.">
+		<entry key="EditorDataTable.NeedsWorkOnlyTip"
+		       source="Show only keys with a missing, stale or review-marked translation.">
 			<origins>
 				<item>Source/Editor/Panels/DataTable/DataTablePanel.cpp</item>
 			</origins>
@@ -5783,17 +5791,20 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInputMap.AddBindingTip" source="Add a binding to this action: the next key, key combination or gamepad button you press becomes it.">
+		<entry key="EditorInputMap.AddBindingTip"
+		       source="Add a binding to this action: the next key, key combination or gamepad button you press becomes it.">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInputMap.BindingLayerTip" source="The layer this binding belongs to. It fires only while that layer is active.">
+		<entry key="EditorInputMap.BindingLayerTip"
+		       source="The layer this binding belongs to. It fires only while that layer is active.">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInputMap.CaptureInstruction" source="Press a key, key combination or gamepad button to bind, Esc to cancel, or click a button below...">
+		<entry key="EditorInputMap.CaptureInstruction"
+		       source="Press a key, key combination or gamepad button to bind, Esc to cancel, or click a button below...">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
@@ -5819,7 +5830,8 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInputMap.DeleteActionTip" source="Remove this action and its bindings from the map. Reload brings it back until you save.">
+		<entry key="EditorInputMap.DeleteActionTip"
+		       source="Remove this action and its bindings from the map. Reload brings it back until you save.">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
@@ -5988,7 +6000,8 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInputMap.RemoveBindingTip" source="Remove this binding from the action. Reload brings it back until you save.">
+		<entry key="EditorInputMap.RemoveBindingTip"
+		       source="Remove this binding from the action. Reload brings it back until you save.">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
@@ -6108,8 +6121,7 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInputMap.UnbindOtherTip"
-		       source="Remove the other action's binding so this action keeps the input.">
+		<entry key="EditorInputMap.UnbindOtherTip" source="Remove the other action's binding so this action keeps the input.">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
@@ -7673,7 +7685,8 @@
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSpriteClip.AnimationNameRejectedStatus" source="Animation name not changed: it is empty or already used">
+		<entry key="EditorSpriteClip.AnimationNameRejectedStatus"
+		       source="Animation name not changed: it is empty or already used">
 			<origins>
 				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
 			</origins>
@@ -7715,12 +7728,14 @@
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSpriteClip.BorderNeedsAtlasSizeStatus" source="A frame with a border needs the atlas size in pixels">
+		<entry key="EditorSpriteClip.BorderNeedsAtlasSizeStatus"
+		       source="A frame with a border needs the atlas size in pixels">
 			<origins>
 				<item>Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSpriteClip.BorderTip" source="Nine-slice border of this frame in atlas pixels: left, bottom, right, top.">
+		<entry key="EditorSpriteClip.BorderTip"
+		       source="Nine-slice border of this frame in atlas pixels: left, bottom, right, top.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
@@ -7787,7 +7802,8 @@
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorSpriteClip.MoveFrameEarlierTip" source="Move the selected frame one place earlier in the play order.">
+		<entry key="EditorSpriteClip.MoveFrameEarlierTip"
+		       source="Move the selected frame one place earlier in the play order.">
 			<origins>
 				<item>Source/Editor/Panels/Animation/SpriteClipPanel.cpp</item>
 			</origins>
@@ -8039,7 +8055,7 @@
 		</entry>
 		<entry key="EditorTileMap.SaveFailedStatus" source="Save failed">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.SaveTip" source="Write the map to Path.">
@@ -8049,7 +8065,7 @@
 		</entry>
 		<entry key="EditorTileMap.SavedStatus" source="Saved {path}">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.SizeOutOfRange" source="Size is out of range.">

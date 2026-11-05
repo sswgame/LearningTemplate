@@ -43,11 +43,11 @@ namespace
             return profile;
         }
 
-        static bool containsText( const vector<string>& listLine, string_view text )
+        static bool containsText( const vector<string>& listLine, const char* pText )
         {
             for ( const string& line : listLine )
             {
-                if ( line.find( text ) != string::npos )
+                if ( line.find( pText ) != string::npos )
                     return true;
             }
             return false;

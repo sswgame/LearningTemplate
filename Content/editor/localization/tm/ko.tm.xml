@@ -39,6 +39,7 @@
 		<entry source="Add" text="추가" />
 		<entry source="Add Animation" text="애니메이션 추가" />
 		<entry source="Add Attack" text="공격 추가" />
+		<entry source="Add Binding" text="바인딩 추가" />
 		<entry source="Add Bone" text="뼈 추가" />
 		<entry source="Add Component" text="컴포넌트 추가" />
 		<entry source="Add Data Layer" text="데이터 레이어 추가" />
@@ -51,6 +52,8 @@
 		<entry source="Add Walk" text="걷기 추가" />
 		<entry source="Add a Walk state node. Its name is the clip it plays; rename it in the inspector."
 		       text="Walk 상태 노드를 추가합니다. 노드 이름이 재생할 클립이며, 인스펙터에서 바꿀 수 있습니다." />
+		<entry source="Add a binding to this action: the next key, key combination or gamepad button you press becomes it."
+		       text="이 액션에 바인딩을 더합니다. 다음에 누르는 키, 키 조합 또는 게임패드 버튼이 새 바인딩이 됩니다." />
 		<entry source="Add a bone mask that starts at the spine. Rename its bones to match your skeleton."
 		       text="spine 에서 시작하는 본 마스크를 더합니다. 본 이름을 스켈레톤에 맞게 고칩니다." />
 		<entry source="Add a comment box around the selected nodes, or in the middle of the view. Double-click its title to rename it"
@@ -89,6 +92,8 @@
 		       text="복사한 컴포넌트를 선택한 오브젝트에 더합니다" />
 		<entry source="Add the item to the timeline. Every required field must be filled in."
 		       text="항목을 타임라인에 더합니다. 필수 칸을 모두 채워야 합니다." />
+		<entry source="Add the layer to this map. Bindings can then be moved to it."
+		       text="이 맵에 레이어를 더합니다. 그러면 바인딩을 그 레이어로 옮길 수 있습니다." />
 		<entry source="Add to Favorites" text="즐겨찾기에 추가" />
 		<entry source="Add up the message kinds every process received instead of only the selected one"
 		       text="고른 프로세스 대신 모든 프로세스가 받은 메시지 종류를 합쳐 봅니다" />
@@ -381,6 +386,7 @@
 		<entry source="Create Folder" text="폴더 만들기" />
 		<entry source="Create Folder Inside" text="안에 폴더 만들기" />
 		<entry source="Create GameObject" text="GameObject 만들기" />
+		<entry source="Create Layer" text="레이어 만들기" />
 		<entry source="Create a new GameObject at the root of the current scene"
 		       text="현재 씬의 루트에 새 게임오브젝트를 생성합니다" />
 		<entry source="Create a new folder or asset (material, scene, prefab) in the current folder"
@@ -414,6 +420,7 @@
 		<entry source="Default" text="기본값" />
 		<entry source="Del" text="삭제" />
 		<entry source="Delete" text="삭제" />
+		<entry source="Delete Action" text="액션 삭제" />
 		<entry source="Delete Event" text="이벤트 지우기" />
 		<entry source="Delete Key" text="키 지우기" />
 		<entry source="Delete Track" text="트랙 삭제" />
@@ -532,6 +539,7 @@
 		<entry source="Events" text="이벤트" />
 		<entry source="Events posted since start, and events dropped by cooldown, limit or slot shortage"
 		       text="시작 뒤 재생한 이벤트와 쿨다운 · 상한 · 슬롯 부족으로 버린 이벤트" />
+		<entry source="Every translation is up to date." text="모든 번역이 최신입니다." />
 		<entry source="Ex: boss_defeated &amp;&amp; gold >= 10" text="예: boss_defeated &amp;&amp; gold >= 10" />
 		<entry source="Ex: give_item:potion:3" text="예: give_item:potion:3" />
 		<entry source="Exit" text="종료" />
@@ -754,6 +762,8 @@
 		       text="선택한 오브젝트의 플레이 상태를 멈춘 뒤에도 남깁니다" />
 		<entry source="Keep these display settings? Reverting in {seconds} s"
 		       text="이 화면 설정을 유지할까요? {seconds} 초 뒤 되돌립니다" />
+		<entry source="Keep this text: it becomes the translation of the current source and the stale or review mark goes away when you save."
+		       text="이 글을 그대로 둡니다. 지금 원문의 번역이 되고 저장할 때 낡음 · 검토 표시가 사라집니다." />
 		<entry source="Keeps the current (play) state of the selected objects in the edit scene after Stop (one undo)"
 		       text="고른 오브젝트의 지금(플레이 중) 상태를 Stop 뒤 편집 씬에 남깁니다(되돌리기 한 번)" />
 		<entry source="Key" text="키" />
@@ -924,7 +934,10 @@
 		       text="게임 코드가 새 액션을 조회할 때 쓰는 이름입니다(예: Jump, Move)." />
 		<entry source="Name of the new data layer. The game reads the layer by this name."
 		       text="새 데이터 레이어의 이름입니다. 게임은 이 이름으로 레이어를 읽습니다." />
-		<entry source="Name of the scene object this item acts on." text="이 항목이 작용하는 씬 오브젝트의 이름입니다." />
+		<entry source="Name of the new layer. It must not be in use."
+		       text="새 레이어의 이름입니다. 이미 쓰는 이름은 쓸 수 없습니다." />
+		<entry source="Name of the scene object this item acts on."
+		       text="이 항목이 작용하는 씬 오브젝트의 이름입니다." />
 		<entry source="Name shown as the speaker of this line."
 		       text="이 대사의 화자로 표시되는 이름입니다." />
 		<entry source="Name the spawned object gets." text="스폰한 오브젝트가 받을 이름입니다." />
@@ -934,6 +947,7 @@
 		       text="깊이를 렌더링한 카메라의 근평면과 원평면(월드 단위)입니다. 정확한 거리를 보려면 그 카메라에 맞춥니다." />
 		<entry source="Near/Far" text="가까운/먼" />
 		<entry source="Nearest Park Ride" text="가장 가까운 놀이기구" />
+		<entry source="Needs work" text="할 일만" />
 		<entry source="Negate" text="반전" />
 		<entry source="Nested Prefabs &amp; Sub-Assets" text="중첩 프리팹 · 하위 에셋" />
 		<entry source="Nested: {prefabIndex}" text="중첩: {prefabIndex}" />
@@ -943,6 +957,7 @@
 		       text="네트워크 프리셋을 읽지 못했습니다 — 로그를 보세요" />
 		<entry source="New Action Name" text="새 액션 이름" />
 		<entry source="New Folder" text="새 폴더" />
+		<entry source="New Layer Name" text="새 레이어 이름" />
 		<entry source="New Scene" text="새 씬" />
 		<entry source="New scene" text="새 씬" />
 		<entry source="New string key..." text="새 문자열 키..." />
@@ -1049,6 +1064,7 @@
 		       text="Step 이 돌릴 서버 틱 수입니다(1 이상)" />
 		<entry source="Numbers the process already counts (connection stats, message kinds), asked with net.stats every 0.5 s while this tab is shown"
 		       text="프로세스가 이미 세는 값(연결 통계, 메시지 종류)을 이 탭이 보이는 동안 0.5 초마다 net.stats 로 묻습니다" />
+		<entry source="OK" text="확인" />
 		<entry source="Object not found in the active scene."
 		       text="활성 씬에서 오브젝트를 찾지 못했습니다." />
 		<entry source="Off - {reason}" text="꺼짐 — {reason}" />
@@ -1275,6 +1291,8 @@
 		       text="Preview Split 을 눌러 쿠킹처럼 씬을 셀로 나눠 봅니다." />
 		<entry source="Press a key combo (Esc cancels, Backspace clears)"
 		       text="키 조합을 누르세요 (Esc 취소, Backspace 지우기)" />
+		<entry source="Press a key, key combination or gamepad button to bind, Esc to cancel, or click a button below..."
+		       text="바인딩할 키, 키 조합 또는 게임패드 버튼을 누르거나 아래 버튼을 클릭합니다. Esc 는 취소입니다..." />
 		<entry source="Press any keyboard key, or click a button below to bind..."
 		       text="바인딩할 키보드 키를 누르거나 아래 버튼을 클릭합니다..." />
 		<entry source="Press the focused widget (UI.Accept). Its command is only logged - the preview has no screen code."
@@ -1421,10 +1439,16 @@
 		<entry source="Remove from Favorites" text="즐겨찾기에서 제거" />
 		<entry source="Remove the loaded trace from the timeline"
 		       text="불러온 트레이스를 타임라인에서 뺍니다" />
+		<entry source="Remove the other action's binding so this action keeps the input."
+		       text="이 액션이 입력을 갖도록 다른 액션의 바인딩을 지웁니다." />
 		<entry source="Remove the selected key track and all of its keys."
 		       text="선택한 키 트랙과 그 키를 모두 지웁니다." />
 		<entry source="Remove the selected widget and its children (Undo puts them back). The root cannot be removed."
 		       text="선택한 위젯과 그 자식을 지웁니다(실행 취소로 되돌립니다). 뿌리는 지울 수 없습니다." />
+		<entry source="Remove this action and its bindings from the map. Reload brings it back until you save."
+		       text="이 액션과 바인딩을 맵에서 지웁니다. 저장하기 전에는 다시 읽기로 되돌릴 수 있습니다." />
+		<entry source="Remove this binding from the action. Reload brings it back until you save."
+		       text="이 바인딩을 액션에서 지웁니다. 저장하기 전에는 다시 읽기로 되돌릴 수 있습니다." />
 		<entry source="Remove this choice option." text="이 선택지를 지웁니다." />
 		<entry source="Remove this key from the source table and every translation table when you save."
 		       text="저장할 때 이 키를 원문 테이블과 모든 번역 테이블에서 지웁니다." />
@@ -1574,6 +1598,8 @@
 		<entry source="Save or load named sets of global variable values"
 		       text="이름 붙인 전역 변수 값 묶음을 저장하거나 불러옵니다" />
 		<entry source="Save or revert the open file first" text="열린 파일을 먼저 저장하거나 되돌리세요" />
+		<entry source="Save or revert this file before opening another one."
+		       text="다른 파일을 열기 전에 이 파일을 저장하거나 되돌립니다." />
 		<entry source="Save preset" text="프리셋 저장" />
 		<entry source="Save the captured window to Saved/Profiler/ProfilerCapture.txt (long captures: Tracy)"
 		       text="캡처한 구간을 Saved/Profiler/ProfilerCapture.txt 로 저장합니다(긴 캡처는 Tracy)" />
@@ -1678,7 +1704,8 @@
 		<entry source="Select an action to edit its bindings and triggers."
 		       text="바인딩과 트리거를 편집할 액션을 선택합니다." />
 		<entry source="Select an event on the left" text="왼쪽에서 이벤트를 고르세요" />
-		<entry source="Select an item on the timeline to edit it." text="편집하려면 타임라인에서 항목을 선택합니다." />
+		<entry source="Select an item on the timeline to edit it."
+		       text="편집하려면 타임라인에서 항목을 선택합니다." />
 		<entry source="Select an object first" text="먼저 오브젝트를 고르십시오" />
 		<entry source="Select an object with a Pose Modifier component"
 		       text="Pose Modifier 컴포넌트가 있는 오브젝트를 고르세요" />
@@ -1739,6 +1766,8 @@
 		<entry source="Show error rows" text="오류 줄을 보입니다" />
 		<entry source="Show in Explorer" text="탐색기에서 보기" />
 		<entry source="Show in the Content Browser" text="콘텐츠 브라우저에서 보여 줍니다" />
+		<entry source="Show only keys with a missing, stale or review-marked translation."
+		       text="번역이 없거나 낡았거나 검토 표시가 있는 키만 보여 줍니다." />
 		<entry source="Show only objects with a component type (same as typing t:Type in the search)"
 		       text="이 컴포넌트 종류를 가진 오브젝트만 보입니다(검색에 t:종류 를 친 것과 같습니다)" />
 		<entry source="Show only one module category" text="한 종류의 모듈만 보입니다" />
@@ -1933,6 +1962,8 @@
 		       text="그래프에 없는 노드를 가리키는 연결이나 순환이 있어 처리하지 않습니다" />
 		<entry source="The last build finished successfully."
 		       text="마지막 빌드가 성공적으로 완료되었습니다" />
+		<entry source="The layer this binding belongs to. It fires only while that layer is active."
+		       text="이 바인딩이 속한 레이어입니다. 그 레이어가 활성일 때만 발화합니다." />
 		<entry source="The line the player reads. On a Choice node it is the prompt shown above the options."
 		       text="플레이어가 읽는 대사입니다. Choice 노드에서는 선택지 위에 나오는 질문입니다." />
 		<entry source="The node canvas could not be drawn" text="노드 캔버스를 그리지 못했습니다" />
@@ -1970,6 +2001,8 @@
 		       text="이미 쓰이는 조합입니다. Replace 를 누르면 다른 명령에서 지웁니다." />
 		<entry source="This format cannot be read back." text="이 포맷은 다시 읽어 올 수 없습니다." />
 		<entry source="This is a prefab instance" text="프리팹 인스턴스입니다" />
+		<entry source="This map has no actions yet. Create one in the section below."
+		       text="이 맵에는 아직 액션이 없습니다. 아래 절에서 만듭니다." />
 		<entry source="This mesh has one level - set LOD ratios in the import rule and import again."
 		       text="이 메시는 단계가 하나입니다 — 가져오기 규칙에 LOD 비율을 정하고 다시 가져오세요." />
 		<entry source="This object is not in the active scene" text="이 오브젝트는 활성 씬에 없습니다" />
@@ -2164,6 +2197,8 @@
 		       text="기본 바인딩을 입력 맵 파일에 씁니다. 플레이어 리매핑은 사용자 설정에 따로 저장됩니다." />
 		<entry source="Write the dialogue graph and its node layout to the asset file."
 		       text="대화 그래프와 노드 배치를 애셋 파일에 씁니다." />
+		<entry source="Write the edited XML text back to this file. Text that is not valid XML is not saved."
+		       text="고친 XML 글을 이 파일에 씁니다. 올바른 XML 이 아닌 글은 저장하지 않습니다." />
 		<entry source="Write the edited XML text back to this file. The text is saved as typed, without validation."
 		       text="편집한 XML 텍스트를 이 파일에 다시 씁니다. 검증 없이 입력한 그대로 저장합니다." />
 		<entry source="Write the edited widget properties back to the document (UIDocumentWriter). Disabled after input simulation or animation playback changed the preview tree - Reload first."
