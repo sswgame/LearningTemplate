@@ -177,10 +177,6 @@ namespace sw
             // 데이터 파일 종류도 새로 뗀 것만 올린다. 모듈을 내리기 전에 같은 이름으로 뺀다(`unregisterModuleTypes`).
             if ( heads._pDataKind != nullptr )
                 (void)getSubsystem<AssetDataKindRegistry>().registerModuleKinds( heads._pDataKind );
-            // 엔진 밖 레지스트리(편집기 확장 · 키트)의 등록자도 새로 뗀 것만 붙인다. 모듈을 내리기 전에 같은 이름으로 뗀다.
-            if ( heads._pObject != nullptr )
-                attachModuleObjects( moduleName, heads._pObject );
-
             // 캐시와 인자를 합치는 **유일한 자리**다. 새로 받은 머리가 있으면 캐시를 갱신하고,
             // 없으면 캐시에 남아 있던 것을 쓴다(리로드로 같은 모듈이 다시 올 때의 경로다).
             auto&        cache           = getModuleHeadCache();
@@ -213,6 +209,10 @@ namespace sw
             {
                 (void)getRegistrationHost().mountModule( moduleName, heads._pSubsystem ); // 실패는 오류로 남았다 — 그 서브시스템을 찾는 쪽이 없다는 오류로 멈춘다
             }
+
+            // 엔진 밖 레지스트리(편집기 확장 · 키트)의 등록자도 새로 뗀 것만 붙인다. 모듈을 내리기 전에 같은 이름으로 뗀다. 모듈 서브시스템이 선 뒤다 — 그 레지스트리가 모듈 서브시스템일 수 있다(내릴 때는 떼고 나서 서브시스템을 내린다).
+            if ( heads._pObject != nullptr )
+                attachModuleObjects( moduleName, heads._pObject );
 
             for ( const auto& scene : getSubsystem<SceneManager>().getLoadedScenes() )
             {

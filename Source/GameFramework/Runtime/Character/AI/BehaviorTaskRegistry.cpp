@@ -5,14 +5,12 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
+
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+
 namespace sw
 {
-    BehaviorTaskRegistry& BehaviorTaskRegistry::get()
-    {
-        static BehaviorTaskRegistry s_registry;
-        return s_registry;
-    }
-
     BehaviorTaskRegistry::BehaviorTaskRegistry()
         : _mutex{}
         , _registration{ "BehaviorTaskRegistry", RegistrationOrder::Insertion, true, NameCase::IgnoreCase }
@@ -81,12 +79,19 @@ namespace sw
         : _pEntry{ pEntry }
         , _bRegistered{ SW_FALSE }
     {
-        _bRegistered = BehaviorTaskRegistry::get().registerTask( pEntry );
     }
 
-    BehaviorTaskRegistrar::~BehaviorTaskRegistrar()
+    void BehaviorTaskRegistrar::attach()
     {
-        if ( _bRegistered )
-            BehaviorTaskRegistry::get().unregisterTask( _pEntry );
+        _bRegistered = game::getSubsystem<BehaviorTaskRegistry>().registerTask( _pEntry ) ? SW_TRUE : SW_FALSE;
     }
+
+    void BehaviorTaskRegistrar::detach()
+    {
+        if ( _bRegistered == SW_TRUE )
+            game::getSubsystem<BehaviorTaskRegistry>().unregisterTask( _pEntry );
+        _bRegistered = SW_FALSE;
+    }
+
+    SW_MODULE_SUBSYSTEM( Engine, BehaviorTaskRegistry, BehaviorTaskRegistry );
 } // namespace sw

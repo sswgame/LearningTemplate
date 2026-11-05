@@ -13,6 +13,9 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
+#include "Core/Subsystem/ISubsystem.h"
+
+#include "Engine/Module/ModuleObjectRegistrar.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
@@ -31,16 +34,19 @@ namespace sw
 {
     /**
      * @class BehaviorTaskRegistry
-     * @brief 이름 → 작업 · 조건 함수 표입니다(GameFramework 이미지에 하나 있으며, 키트 · 게임 모듈이 등록하고 모듈을 내리면 빠집니다).
-     * @details 등록 · 해제는 이미지 로더 스레드(정적 초기화)에서, 조회는 트리를 읽는 스레드에서 오므로 목록은 잠금 하나로 지킵니다. 프레임마다 도는 경로가 아닙니다(트리를 읽을 때만 찾는다).
+     * @brief 이름 → 작업 · 조건 함수 표입니다(GameFramework 의 모듈 서브시스템 — 엔진 범위 아래). 키트 · 게임 모듈이 등록하고 모듈을 내리기 전에 뺀다.
+     * @details 등록 · 해제는 모듈을 올리고 내리는 스레드에서, 조회는 트리를 읽는 스레드에서 오므로 목록은 잠금 하나로 지킵니다. 프레임마다 도는 경로가 아닙니다(트리를 읽을 때만 찾는다).
      */
-    class SW_GF_API BehaviorTaskRegistry
+    class SW_GF_API BehaviorTaskRegistry final : public ISubsystem
     {
     public:
-        /** @brief 프로세스에 하나인 레지스트리입니다. */
-        static BehaviorTaskRegistry& get();
+        static constexpr const utf8* kSubsystemName = "BehaviorTaskRegistry";
 
         BehaviorTaskRegistry();
+
+        SubsystemInitResult initializeSubsystem() override { return SubsystemInitResult::Succeeded; }
+        void                shutdownSubsystem() override {}
+        const utf8*         getSubsystemName() const override { return kSubsystemName; }
 
         /** @brief 함수를 올립니다. 이름이 비었거나 이미 있거나 함수가 없으면 false 입니다(오류를 남긴다). */
         [[nodiscard]] bool registerTask( const BehaviorTaskEntry* pEntry );
@@ -63,16 +69,18 @@ namespace sw
 
 namespace sw
 {
-    /** @brief `SW_BEHAVIOR_TASK` 가 두는 정적 등록자입니다 — 만들 때 올리고 없앨 때(모듈을 내릴 때) 뺍니다. */
-    struct SW_GF_API BehaviorTaskRegistrar
+    /** @brief `SW_BEHAVIOR_TASK` 가 두는 정적 등록자입니다. 링크 때 목록에 달리고, 모듈을 올릴 때 붙고 내리기 전에 뗍니다(`ModuleObjectRegistrar`). */
+    class SW_GF_API BehaviorTaskRegistrar final : public ModuleObjectRegistrar
     {
+    public:
+        explicit BehaviorTaskRegistrar( const BehaviorTaskEntry* pEntry );
 
+        void attach() override;
+        void detach() override;
+
+    private:
         const BehaviorTaskEntry* _pEntry;
         uint8                    _bRegistered : 1;
-        explicit BehaviorTaskRegistrar( const BehaviorTaskEntry* pEntry );
-        ~BehaviorTaskRegistrar();
-        BehaviorTaskRegistrar( const BehaviorTaskRegistrar& )            = delete;
-        BehaviorTaskRegistrar& operator=( const BehaviorTaskRegistrar& ) = delete;
     };
 } // namespace sw
 
@@ -82,9 +90,9 @@ namespace sw
  * @param pName     데이터 파일이 적는 이름(리터럴, `<영역>.<작업>`)
  * @param pFunction `BehaviorStatus( BehaviorContext& )` 함수
  */
-#define SW_BEHAVIOR_TASK( varName, pName, pFunction )                                       \
-    static const ::sw::BehaviorTaskEntry     sw_behaviorTask_##varName{ pName, pFunction }; \
-    static const ::sw::BehaviorTaskRegistrar sw_behaviorTaskRegistrar_##varName             \
-    {                                                                                       \
-        &sw_behaviorTask_##varName                                                          \
+#define SW_BEHAVIOR_TASK( varName, pName, pFunction )                                   \
+    static const ::sw::BehaviorTaskEntry sw_behaviorTask_##varName{ pName, pFunction }; \
+    static ::sw::BehaviorTaskRegistrar   sw_behaviorTaskRegistrar_##varName             \
+    {                                                                                   \
+        &sw_behaviorTask_##varName                                                      \
     }

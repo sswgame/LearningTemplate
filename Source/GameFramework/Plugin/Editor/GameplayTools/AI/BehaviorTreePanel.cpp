@@ -29,6 +29,7 @@
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -710,7 +711,7 @@ namespace sw::editor
             if ( ImGui::BeginCombo( "##behaviorTree.task", node._task.empty() ? "(pick a task)" : node._task.c_str() ) )
             {
                 _listTaskName.clear();
-                BehaviorTaskRegistry::get().collectNames( _listTaskName );
+                game::getSubsystem<BehaviorTaskRegistry>().collectNames( _listTaskName );
                 for ( const string& name : _listTaskName )
                 {
                     if ( ImGui::Selectable( name.c_str(), name == node._task ) )

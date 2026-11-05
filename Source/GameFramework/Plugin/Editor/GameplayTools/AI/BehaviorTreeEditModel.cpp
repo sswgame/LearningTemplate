@@ -9,6 +9,7 @@
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTaskRegistry.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw::editor
 {
@@ -286,7 +287,7 @@ namespace sw::editor
             {
                 if ( node._task.empty() )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Pick a task" } );
-                else if ( BehaviorTaskRegistry::get().findTask( node._task ) == nullptr )
+                else if ( game::getSubsystem<BehaviorTaskRegistry>().findTask( node._task ) == nullptr )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, string{ "No task named '" } + node._task + "' is registered - the game would not load this tree" } );
             }
             if ( Internal::hasKey( node._type ) && node._key.empty() )

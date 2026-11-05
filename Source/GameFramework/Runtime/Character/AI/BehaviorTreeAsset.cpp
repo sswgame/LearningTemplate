@@ -13,6 +13,7 @@
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTaskRegistry.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeFields.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -141,11 +142,11 @@ namespace sw
                     break;
             }
             // 작업 이름이 레지스트리에 있는지는 런타임만 본다 — 편집기는 아직 안 만든 작업의 트리도 연다(`BehaviorTreeEditModel::collectIssues`).
-            const BehaviorTaskFunction function = BehaviorTaskRegistry::get().findTask( data._task );
+            const BehaviorTaskFunction function = game::getSubsystem<BehaviorTaskRegistry>().findTask( data._task );
             if ( function == nullptr )
             {
                 SW_LOG_ERROR_ID( "BehaviorTreeAsset.NamesUnknownTaskRegistered", "%#: <%#> names the unknown task '%#' (registered: %#)", _sourceName, node.getName(), data._task.c_str(),
-                                 BehaviorTaskRegistry::get().joinNames().c_str() );
+                                 game::getSubsystem<BehaviorTaskRegistry>().joinNames().c_str() );
                 inoutbValid = false;
                 return -1;
             }
