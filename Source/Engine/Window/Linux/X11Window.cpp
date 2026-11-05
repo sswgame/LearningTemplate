@@ -315,7 +315,10 @@ namespace sw
         event.xclient.data.l[3]    = 1;
         XSendEvent( pDisplay, DefaultRootWindow( pDisplay ), 0, SubstructureRedirectMask | SubstructureNotifyMask, &event );
         if ( bFullscreen == false )
+        {
+            clampToMinimumClientSize( width, height );
             XResizeWindow( pDisplay, static_cast<Window>( _x11Window ), width, height );
+        }
         XFlush( pDisplay );
         return true;
     }

@@ -399,6 +399,12 @@ namespace sw
          * @details 메시지를 받을 때마다 값을 읽는 플랫폼(Win32 `WM_GETMINMAXINFO`)은 할 일이 없다.
          */
         virtual void applyMinimumClientSize() {}
+        /** @brief 창 모드 크기를 `setMinimumClientSize` 의 하한 위로 올립니다. OS 가 막아 주지 않는 플랫폼의 `setDisplayMode` 가 부른다(X11 의 힌트는 사용자 조작용이라 프로그램의 크기 바꾸기를 막지 않고, Wayland 는 크기를 클라이언트가 정한다). */
+        void clampToMinimumClientSize( uint32& inoutWidth, uint32& inoutHeight ) const
+        {
+            inoutWidth  = inoutWidth < _minClientWidth ? _minClientWidth : inoutWidth;
+            inoutHeight = inoutHeight < _minClientHeight ? _minClientHeight : inoutHeight;
+        }
         /** @brief `_arrTitle` 을 플랫폼 창의 제목 줄에 겁니다. 창이 아직 없으면 아무것도 하지 않습니다(만들 때 `_arrTitle` 로 겁니다). */
         virtual void applyTitle() {}
 

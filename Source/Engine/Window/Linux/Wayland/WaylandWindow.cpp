@@ -1151,6 +1151,7 @@ namespace sw
         xdg_toplevel_unset_fullscreen( state._pToplevel );
         wl_surface_commit( state._pSurface );
         // 창 모드의 크기는 클라이언트가 정한다 — 그 크기로 그린다고 알린다.
+        clampToMinimumClientSize( width, height );
         _width  = width;
         _height = height;
         if ( _onResize.isBound() )
