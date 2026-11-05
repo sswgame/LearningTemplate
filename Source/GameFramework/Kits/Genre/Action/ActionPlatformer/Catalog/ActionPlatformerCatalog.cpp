@@ -122,7 +122,7 @@ namespace sw
                 return false;
             }
         }
-        (void)_stageCatalog.add( stage ); // 같은 id 는 앞의 것을 바꾼다(`GameCatalog::add`)
+        (void)_stageCatalog.add( stage );
         return true;
     }
 

@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw
@@ -28,21 +29,33 @@ namespace sw
     class GameCatalog : public TBase
     {
     public:
-        /** @brief 정의를 더하거나(새 id) 바꿉니다(같은 id). 인덱스를 돌려줍니다. id 가 비면 -1 입니다. */
+        /**
+         * @brief 정의를 더하고 인덱스를 돌려줍니다. id 가 비거나 이미 있으면 더하지 않고 -1 입니다(겹침은 오류를 남깁니다).
+         * @details 앞 정의를 바꾸지 않는다. 데이터의 오타 하나로 다른 정의가 말없이 사라지면 찾을 길이 없다. 다시 읽을 때는 `clear` 뒤에 더한다.
+         */
         int32 add( const TDef& def )
         {
             if ( def._id.empty() )
                 return -1;
-            const auto mapIter = _mapIndex.find( def._id );
-            if ( mapIter != _mapIndex.end() )
+            if ( _mapIndex.find( def._id ) != _mapIndex.end() )
             {
-                _listDef[mapIter->second] = def;
-                return static_cast<int32>( mapIter->second );
+                SW_LOG_ERROR_ID( "GameCatalog.DuplicateID", "id '%#' is defined twice - the later definition is ignored", def._id.c_str() );
+                return -1;
             }
             const uint32 index = static_cast<uint32>( _listDef.size() );
             _listDef.push_back( def );
             _mapIndex[def._id] = index;
             return static_cast<int32>( index );
+        }
+
+        /** @brief 이미 있는 정의를 @p def 로 바꿉니다(읽은 뒤 해석한 값을 채울 때 쓴다). 없는 id 면 false 입니다. */
+        [[nodiscard]] bool replace( const TDef& def )
+        {
+            const auto mapIter = _mapIndex.find( def._id );
+            if ( mapIter == _mapIndex.end() )
+                return false;
+            _listDef[mapIter->second] = def;
+            return true;
         }
 
         /** @brief id 의 정의입니다. 없으면 nullptr 입니다. */

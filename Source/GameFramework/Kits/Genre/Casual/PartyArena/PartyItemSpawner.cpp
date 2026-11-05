@@ -239,9 +239,8 @@ namespace sw
             if ( weight.has_value() )
                 def._weight = *weight;
             def._stats.addAttributes( itemNode, "id,effect,weight" ); // 읽은 속성 수만 돌려주므로, 속성이 없으면 빈 스탯이다
-            if ( GameDataXML::isNewID( _catalog, def._id, sourceName ) == false )
-                continue; // `add` 는 말없이 앞 정의를 덮어쓴다
-            addItem( def );
+            if ( GameDataXML::addUnique( def, sourceName, _catalog ) == false )
+                continue;
             ++loadedCount;
         }
         if ( loadedCount == 0 )

@@ -184,7 +184,7 @@ namespace sw
         bool           bValid = XMLFields::readFields( node, def, sourceName, { "cost" } );
         bValid                = SRPGCatalogInternal::readFour( node, "cost", sourceName, &SRPGCatalogInternal::parseMoveCost, def._arrMoveCost ) && bValid;
         if ( bValid )
-            (void)_terrainCatalog.add( def ); // 같은 id 는 뒤의 것으로 바꾼다(`GameCatalog::add`)
+            (void)_terrainCatalog.add( def );
         return bValid;
     }
 
@@ -219,7 +219,7 @@ namespace sw
             bValid = false;
         }
         if ( bValid )
-            (void)_weaponCatalog.add( def ); // 같은 id 는 뒤의 것으로 바꾼다(`GameCatalog::add`)
+            (void)_weaponCatalog.add( def );
         return bValid;
     }
 
@@ -244,7 +244,7 @@ namespace sw
             def._listDevelop.push_back( target );
         } );
         if ( bValid )
-            (void)_unitCatalog.add( def ); // 같은 id 는 뒤의 것으로 바꾼다(`GameCatalog::add`)
+            (void)_unitCatalog.add( def );
         return bValid;
     }
 
@@ -258,7 +258,7 @@ namespace sw
         bValid              = Internal::readPilotStats( node, Internal::kArrPilotStatName, def._arrStat ) && bValid;
         bValid              = Internal::readPilotStats( node, Internal::kArrPilotGrowthName, def._arrGrowth ) && bValid;
         if ( bValid )
-            (void)_pilotCatalog.add( def ); // 같은 id 는 뒤의 것으로 바꾼다(`GameCatalog::add`)
+            (void)_pilotCatalog.add( def );
         return bValid;
     }
 } // namespace sw

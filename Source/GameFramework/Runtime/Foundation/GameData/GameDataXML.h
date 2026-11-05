@@ -85,23 +85,17 @@ namespace sw
                 return false;
             return addUnique( def, sourceName, outCatalog );
         }
-        /** @brief 손으로 읽은 정의를 카탈로그에 더합니다. 겹친 id 면 더하지 않고 오류와 false 입니다 — `GameCatalog::add` 는 같은 id 를 바꾸므로 바로 부르면 앞 정의를 말없이 덮어쓴다. */
+        /** @brief 손으로 읽은 정의를 카탈로그에 더합니다. 겹친 id 면 더하지 않고 파일 이름이 든 오류와 false 입니다. */
         template <typename TDef, typename TBase>
         [[nodiscard]] static bool addUnique( const TDef& def, string_view sourceName, GameCatalog<TDef, TBase>& outCatalog )
         {
-            if ( isNewID( outCatalog, def._id, sourceName ) == false )
+            if ( outCatalog.find( def._id ) != nullptr )
+            {
+                SW_LOG_ERROR_ID( "GameDataXML.DuplicateID", "%#: id '%#' is defined twice", sourceName, def._id.c_str() );
                 return false;
+            }
             (void)outCatalog.add( def );
             return true;
-        }
-        /** @brief @p id 가 카탈로그에 아직 없으면 true 입니다. 있으면 오류를 남깁니다. 손으로 읽는 원소(자식이 있는 기체 · 캐릭터 등)가 `readInto` 와 같은 규칙으로 겹친 id 를 거절할 때 씁니다. */
-        template <typename TDef, typename TBase>
-        [[nodiscard]] static bool isNewID( const GameCatalog<TDef, TBase>& catalog, const hashed_string& id, string_view sourceName )
-        {
-            if ( catalog.find( id ) == nullptr )
-                return true;
-            SW_LOG_ERROR_ID( "GameDataXML.DuplicateID", "%#: id '%#' is defined twice", sourceName, id.c_str() );
-            return false;
         }
         /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */
         template <typename TDef>

@@ -15,6 +15,8 @@
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
+#include <limits>
+
 namespace sw
 {
     namespace
@@ -304,7 +306,7 @@ namespace sw
                 switch ( command._method )
                 {
                     case AdminMethod::kAdjustAsset:
-                        return bHasAccount && request._amount != 0 && LedgerUtil::isValidAssetID( request._assetID );
+                        return bHasAccount && request._amount != 0 && request._amount != std::numeric_limits<int64>::min() && LedgerUtil::isValidAssetID( request._assetID ); // 최솟값은 부호를 뒤집지 못한다
                     case AdminMethod::kSetSanction:
                         return bHasAccount && request._untilMs >= 0;
                     case AdminMethod::kSendMail:

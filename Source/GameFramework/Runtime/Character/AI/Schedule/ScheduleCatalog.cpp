@@ -509,7 +509,7 @@ namespace sw
             {
                 SW_LOG_WARNING_ID( "Schedule.ArchetypeParentCycle", "%#: archetype '%#' is part of a parent cycle - parent dropped", sourceName, archetype._id.c_str() );
                 archetype._parent = hashed_string{};
-                (void)_archetypeCatalog.add( archetype );
+                (void)_archetypeCatalog.replace( archetype );
             }
         }
 
@@ -552,7 +552,7 @@ namespace sw
                         listAttendee.push_back( npc._id );
                 }
             }
-            (void)_npcCatalog.add( npc );
+            (void)_npcCatalog.replace( npc );
         }
         for ( size_t appointmentIndex = 0; appointmentIndex < _appointmentCatalog.getCount(); ++appointmentIndex )
         {
@@ -561,7 +561,7 @@ namespace sw
             if ( appointment._listAttendee.size() < 2 )
                 SW_LOG_WARNING_ID( "ScheduleCatalog.AppointmentReferencedNpcMeeting", "%#: appointment '%#' is referenced by %# npc(s) - a meeting needs two", sourceName, appointment._id.c_str(),
                                    static_cast<uint32>( appointment._listAttendee.size() ) );
-            (void)_appointmentCatalog.add( appointment );
+            (void)_appointmentCatalog.replace( appointment );
         }
         for ( const ScheduleEventDef& event : _eventCatalog.getAll() )
         {

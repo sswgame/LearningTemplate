@@ -982,7 +982,7 @@ SW_TEST_CASE( FightingTest, CatalogRefusesBrokenFighters )
  */
 SW_TEST_CASE( FightingTest, CatalogRefusesDuplicateFighterIDs )
 {
-    SW_EXPECT_LOG( "GameDataXML.DuplicateID" );
+    SW_EXPECT_LOG( "GameCatalog.DuplicateID" );
     MoveCatalog moves;
     SW_REQUIRE_TRUE( moves.loadFromXMLText( kFightingMoveXML, "FightingTest" ) );
     FighterCatalog catalog;

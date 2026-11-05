@@ -189,10 +189,7 @@ namespace sw
             SW_LOG_ERROR_ID( "MechCatalog.MechIdErrorsNot", "%#: <Mech id=\"%#\"> has errors - not added", sourceName, def._id.c_str() );
             return false;
         }
-        if ( GameDataXML::isNewID( _catalogMech, def._id, sourceName ) == false )
-            return false; // `add` 는 말없이 앞 정의를 덮어쓴다
-        (void)_catalogMech.add( def );
-        return true;
+        return GameDataXML::addUnique( def, sourceName, _catalogMech );
     }
 
     bool MechCatalog::loadSkill( const XMLNode& node, string_view sourceName )
@@ -203,9 +200,6 @@ namespace sw
         const XMLNode statNode = node.findChild( "Stats" );
         if ( statNode )
             skill._modifier.addAttributes( statNode ); // 속성이 없으면 보정이 없는 것이다
-        if ( GameDataXML::isNewID( _catalogSkill, skill._id, sourceName ) == false )
-            return false; // `add` 는 말없이 앞 정의를 덮어쓴다
-        (void)_catalogSkill.add( skill );
-        return true;
+        return GameDataXML::addUnique( skill, sourceName, _catalogSkill );
     }
 } // namespace sw

@@ -357,11 +357,11 @@ SW_TEST_CASE( KartTrackTest, RefusesUnusableDefinitions )
  */
 SW_TEST_CASE( KartTrackTest, CatalogReportsBrokenTracks )
 {
+    SW_EXPECT_LOG( "GameCatalog.DuplicateID" ); // 뒤의 ring 은 버리고 앞 정의를 지킨다
     SW_EXPECT_LOG( "KartTrack.TrackNeedsMorePoint" );
     SW_EXPECT_LOG( "KartTrack.TrackUnknownChild" );
     SW_EXPECT_LOG( "KartTrack.UnknownElementSkipped" );
     constexpr const utf8* kTrackXML = R"(<KartTrackCatalog>
-  <Track id="ring" name="First" width="20" laps="9"><Point x="100" z="0"/><Point x="0" z="100"/><Point x="-100" z="0"/></Track>
   <Track id="ring" name="Ring" width="12" laps="2" samples="4">
     <Point x="100" z="0"/><Point x="0" z="100"/><Point x="-100" z="0"/><Point x="0" z="-100"/>
     <Checkpoint at="0.5"/><Checkpoint at="0.25"/>
@@ -369,6 +369,7 @@ SW_TEST_CASE( KartTrackTest, CatalogReportsBrokenTracks )
     <BoostPad at="0.2" duration="1"/>
     <Offroad from="0.6" to="0.65" scale="0.4"/>
   </Track>
+  <Track id="ring" name="First" width="20" laps="9"><Point x="100" z="0"/><Point x="0" z="100"/><Point x="-100" z="0"/></Track>
   <Track id="short" name="Short"><Point x="0" z="0"/></Track>
   <Track id="odd" name="Odd"><Point x="1" z="0"/><Point x="0" z="1"/><Point x="-1" z="0"/><Bridge/></Track>
   <Mystery/>

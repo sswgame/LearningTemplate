@@ -130,7 +130,7 @@ namespace sw
             SW_LOG_ERROR_ID( "AdventureDungeon.DungeonIdErrorsNot", "%#: <Dungeon id=\"%#\"> has errors - not added", sourceName, dungeon._id.c_str() );
             return false;
         }
-        (void)add( dungeon ); // 같은 id 는 앞의 것을 바꾼다(`GameCatalog::add`)
+        (void)add( dungeon );
         return true;
     }
 

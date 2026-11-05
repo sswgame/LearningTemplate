@@ -96,7 +96,7 @@ namespace sw
             MonsterHuntAlchemyDef item;
             if ( readAlchemyItem( node, sourceName, item ) == false )
                 return false;
-            (void)_alchemyCatalog.add( item ); // 같은 id 는 뒤의 것으로 바꾼다(`GameCatalog::add`)
+            (void)_alchemyCatalog.add( item );
             return true;
         }
         if ( XMLReadUtil::isElement( name, "Sign" ) )
@@ -133,7 +133,7 @@ namespace sw
             monster._listWeakness.push_back( weakness );
         }
         if ( bValid )
-            (void)_monsterCatalog.add( monster ); // 같은 id 는 뒤의 것으로 바꾼다(`GameCatalog::add`)
+            (void)_monsterCatalog.add( monster );
         return bValid;
     }
 
@@ -156,7 +156,7 @@ namespace sw
             contract._listStep.push_back( step );
         }
         if ( bValid )
-            (void)_contractCatalog.add( contract ); // 같은 id 는 뒤의 것으로 바꾼다(`GameCatalog::add`)
+            (void)_contractCatalog.add( contract );
         return bValid;
     }
 } // namespace sw
