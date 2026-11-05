@@ -195,15 +195,7 @@ namespace sw::editor
             return;
         }
 
-        // 플레이 중에도 값은 고칠 수 있다(유니티의 플레이 모드 편집). Stop 이 스냅샷으로 되돌리며, 남기려면 Keep Simulation Changes 를 쓴다.
-        // 구조 편집(컴포넌트 추가, 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
-        if ( EditorPlaySession::areSceneEditsAllowed() == false )
-        {
-            EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "PlayMode" ), SW_THEMECOLOR( "Signal", "Warning" ) );
-            ImGui::SameLine();
-            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "EditsRevertOnStopPlayKeepSimulationChanges" ) );
-        }
-
+        drawPlayModeNotice();
         drawGameObjectHeader( pObj );
 
         ImGui::Spacing();
@@ -229,15 +221,24 @@ namespace sw::editor
         drawComponentList( pObj, ws );
     }
 
+    void InspectorPanel::drawPlayModeNotice()
+    {
+        // 플레이 중에도 값은 고칠 수 있다(유니티의 플레이 모드 편집). Stop 이 스냅샷으로 되돌리며, 남기려면 Keep Simulation Changes 를 쓴다.
+        // 구조 편집(컴포넌트 추가, 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
+        if ( EditorPlaySession::areSceneEditsAllowed() )
+            return;
+        EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "PlayMode" ), SW_THEMECOLOR( "Signal", "Warning" ) );
+        ImGui::SameLine();
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "EditsRevertOnStopPlayKeepSimulationChanges" ) );
+    }
+
     void InspectorPanel::drawMultiSelection( const vector<GameObject*>& listObject )
     {
         GameObject* pPrimary = listObject[0];
         ImGui::TextColored( EditorColorUtil::toImVec4( InspectorPanelInternal::kMultiSelectionText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "ObjectsSelected", TextArgumentList().addInteger( "objectCount", static_cast<int64>( listObject.size() ) ) ).c_str() );
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Primary", TextArgumentList().addText( "name", pPrimary->getName().c_str() ) ).c_str() );
 
-        const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
-        if ( bEditsAllowed == false )
-            ImGui::BeginDisabled();
+        drawPlayModeNotice();
 
         // 활성은 모든 선택에 적용한다. 값이 섞여 있으면 혼합으로 표시하고, 체크는 주 선택의 값을 따른다.
         const InspectorMultiSelection::ActiveState activeState = InspectorMultiSelection::readActiveState( listObject );
@@ -279,9 +280,6 @@ namespace sw::editor
         const size_t unsharedCount = InspectorMultiSelection::countUnsharedComponents( *pPrimary, _listMultiEditComponent );
         if ( unsharedCount > 0 )
             ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "ComponentSAreNot", TextArgumentList().addInteger( "componentCount", static_cast<int64>( unsharedCount ) ) ).c_str() );
-
-        if ( bEditsAllowed == false )
-            ImGui::EndDisabled();
     }
 
     void InspectorPanel::copyEditToOthers( const PropertyInfo& prop )
