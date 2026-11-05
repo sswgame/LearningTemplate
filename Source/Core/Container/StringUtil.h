@@ -55,6 +55,8 @@ namespace sw
         static constexpr const utf16* kWhiteSpaceW = L" \n\r\t\f\v";
 
         /** @brief UTF-8 문자열이 nullptr 이거나 비어 있는지 확인합니다. */
+        /** @brief 비밀(비밀번호 · 토큰)의 바이트를 0 으로 덮고 비웁니다. 드라이버에 넘긴 뒤의 임시 사본에 부릅니다. */
+        static void wipeSecret( string& inoutSecret );
         static bool isNullOrEmpty( const utf8* pStr );
         /** @brief UTF-16 문자열이 nullptr 이거나 비어 있는지 확인합니다. */
         static bool isNullOrEmpty( const utf16* pStr );

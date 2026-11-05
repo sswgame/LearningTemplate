@@ -39,3 +39,16 @@ SW_TEST_CASE( StringUtilTest, TrimRemovesSurroundingWhitespaceOnly )
     SW_EXPECT_EQUAL( string_view( "a b" ), StringUtil::trim( "  a b \t\n" ) );
     SW_EXPECT_EQUAL( string_view( "" ), StringUtil::trim( "   " ) );
 }
+
+SW_TEST_CASE( StringUtilTest, WipeSecretOverwritesTheBytes )
+{
+    string       secret = "a longer secret than the small buffer holds";
+    const utf8*  pData  = secret.data();
+    const size_t size   = secret.size();
+    StringUtil::wipeSecret( secret );
+    SW_EXPECT_TRUE( secret.empty() );
+    for ( size_t index = 0; index < size; ++index )
+    {
+        SW_EXPECT_EQUAL( 0, static_cast<int32>( pData[index] ) );
+    }
+}

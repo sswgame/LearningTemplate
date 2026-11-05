@@ -251,11 +251,13 @@ namespace sw
             return nullptr;
         }
         // 접속 문자열은 dbname 에 펼쳐 넘기고(expand_dbname) 비밀번호는 따로 넘긴다. 그래서 비밀이 접속 문자열이나 로그에 남지 않는다.
+        // connect_timeout 은 기본값이고 뒤에 펼치는 접속 문자열이 덮는다 - libpq 기본은 무한 대기라 망이 막히면 워커와 shutdown 의 join 이 멈춘다.
         const string connectionText( connection );
-        const string secretText( secret );
-        const utf8*  arrKeyword[] = { "dbname", secretText.empty() ? nullptr : "password", nullptr };
-        const utf8*  arrValue[]   = { connectionText.c_str(), secretText.empty() ? nullptr : secretText.c_str(), nullptr };
+        string       secretText( secret );
+        const utf8*  arrKeyword[] = { "connect_timeout", "dbname", secretText.empty() ? nullptr : "password", nullptr };
+        const utf8*  arrValue[]   = { "10", connectionText.c_str(), secretText.empty() ? nullptr : secretText.c_str(), nullptr };
         PGconn*      pConnection  = PQconnectdbParams( arrKeyword, arrValue, 1 );
+        StringUtil::wipeSecret( secretText );
         if ( pConnection == nullptr )
         {
             outError = "postgres connection failed: out of memory";

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Online/Server/OnlineServerRuntime.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/IStreamTransport.h"
 #include "Core/Time/Clock.h"
@@ -84,16 +85,6 @@ namespace sw
                         return true;
                 }
                 return false;
-            }
-
-            /** @brief 비밀을 0 으로 덮고 비웁니다. 드라이버에 넘긴 뒤 부릅니다. */
-            static void wipeSecret( string& inoutSecret )
-            {
-                for ( utf8& character : inoutSecret )
-                {
-                    character = 0;
-                }
-                inoutSecret.clear();
             }
         };
 
@@ -377,12 +368,12 @@ namespace sw
             if ( pDriver == nullptr )
             {
                 outError = "store driver '" + settings._store._driver + "' needs a storage kit (GF_Server_SQLStore) that is not loaded";
-                Internal::wipeSecret( settings._store._secret );
+                StringUtil::wipeSecret( settings._store._secret );
                 return false;
             }
             parts._store = pDriver->createServiceStore( settings._store._driver, settings._store._connection, settings._store._secret, parts._config._storeWorkerCount, nowMs, outError );
         }
-        Internal::wipeSecret( settings._store._secret );
+        StringUtil::wipeSecret( settings._store._secret );
         if ( parts._store == nullptr )
             return false;
 
@@ -397,12 +388,12 @@ namespace sw
             if ( pDriver == nullptr )
             {
                 outError = "cache driver '" + settings._cache._driver + "' needs a storage kit (GF_Server_CacheStore) that is not loaded";
-                Internal::wipeSecret( settings._cache._secret );
+                StringUtil::wipeSecret( settings._cache._secret );
                 return false;
             }
             parts._cache = pDriver->createEphemeralStore( settings._cache._driver, settings._cache._connection, settings._cache._secret, outError );
         }
-        Internal::wipeSecret( settings._cache._secret );
+        StringUtil::wipeSecret( settings._cache._secret );
         if ( parts._cache == nullptr )
             return false;
 
@@ -539,7 +530,7 @@ namespace sw
         {
             // 서비스 스트림은 TLS 1.3 이다. 경로가 둘 다 비면 Dev 만 개발용 인증서를 쓰고 Shipping 은 여기서 멈춘다.
             parts._tlsContext = NetSecurity::createServerTLSContext( game::getSubsystem<INetSecurityProvider>(), settings._tlsCertificateFile, settings._tlsPrivateKeyFile, settings._tlsPrivateKeyPassphrase, outError );
-            OnlineServerRuntimeInternal::wipeSecret( settings._tlsPrivateKeyPassphrase );
+            OnlineServerRuntimeStringUtil::wipeSecret( settings._tlsPrivateKeyPassphrase );
             if ( parts._tlsContext == nullptr )
             {
                 outError = "online service TLS context could not be created: " + outError;

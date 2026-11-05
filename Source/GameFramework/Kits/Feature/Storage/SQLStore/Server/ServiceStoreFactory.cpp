@@ -8,6 +8,7 @@
  */
 #include "pch.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/string.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
@@ -55,11 +56,13 @@ namespace sw
             if ( driverName == kMemoryStoreDriverName )
                 return make_unique<MemoryServiceStore>( &_memoryDatabase );
             SQLConnectionPoolConfig settings;
-            settings._connection              = string( connection );
-            settings._secret                  = string( secret );
-            settings._workerCount             = workerCount;
-            unique_ptr<SQLServiceStore> store = make_unique<SQLServiceStore>();
-            if ( store->initialize( driverName, settings, SQLServiceStore::kMigrationFolder, nowMs, outError ) == false )
+            settings._connection                 = string( connection );
+            settings._secret                     = string( secret );
+            settings._workerCount                = workerCount;
+            unique_ptr<SQLServiceStore> store    = make_unique<SQLServiceStore>();
+            const bool                  bStarted = store->initialize( driverName, settings, SQLServiceStore::kMigrationFolder, nowMs, outError );
+            StringUtil::wipeSecret( settings._secret ); // 재접속에 쓰는 사본은 풀이 살아 있는 동안 지닌다
+            if ( bStarted == false )
                 return nullptr;
             return store;
         }

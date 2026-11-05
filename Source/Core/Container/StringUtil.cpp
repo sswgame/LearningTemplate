@@ -458,6 +458,17 @@ namespace sw
         return StringUtilInternal::numberToString( value );
     }
 
+    void StringUtil::wipeSecret( string& inoutSecret )
+    {
+        // volatile - 곧 버릴 값을 덮는 쓰기를 컴파일러가 지우지 못하게 한다.
+        volatile utf8* pByte = inoutSecret.data();
+        for ( size_t index = 0; index < inoutSecret.size(); ++index )
+        {
+            pByte[index] = 0;
+        }
+        inoutSecret.clear();
+    }
+
     bool StringUtil::isNullOrEmpty( const utf8* pStr )
     {
         return ( pStr == nullptr || *pStr == '\0' );
