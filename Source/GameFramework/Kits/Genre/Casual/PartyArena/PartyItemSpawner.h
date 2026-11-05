@@ -124,7 +124,7 @@ namespace sw
 
         /** @brief 놓인 아이템(위치, 정의 id, 나이, 번호), 난수, 다음 아이템까지 남은 시간, 다음 번호를 씁니다. 정의와 규칙은 저장하지 않고, 이벤트는 읽을 때 비웁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 모르는 아이템 id 이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 모르는 아이템 id, `_maxActive` 를 넘는 수, 음수 나이, 범위 밖 번호이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         const PartyItemDef*              findItem( const hashed_string& id ) const { return _catalog.find( id ); }

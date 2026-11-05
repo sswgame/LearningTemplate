@@ -67,7 +67,7 @@ namespace sw
     {
         uint32 instanceCount = 0;
         // 놓인 것마다 위치(12) + 이름(4) + 나이(4) + 번호(4)
-        if ( StateArchiveUtil::readCount( archive, 24, instanceCount ) == false )
+        if ( StateArchiveUtil::readCount( archive, 24, instanceCount ) == false || instanceCount > static_cast<uint32>( _settings._maxActive ) )
             return false;
         vector<PartyItemInstance> listInstance( instanceCount, PartyItemInstance{} );
         for ( PartyItemInstance& instance : listInstance )
@@ -77,14 +77,22 @@ namespace sw
                 return false;
             archive >> instance._age;
             archive >> instance._serial;
+            if ( archive.isError() || instance._age < 0.0f || instance._serial < 1 )
+                return false;
         }
         GameRandom random     = _random;
         Countdown  spawnTimer = {};
         int32      nextSerial = 0;
         const bool bRead      = StateArchiveUtil::readRandom( archive, random ) && StateArchiveUtil::readCountdown( archive, spawnTimer );
         archive >> nextSerial;
-        if ( bRead == false || archive.isError() )
+        if ( bRead == false || archive.isError() || nextSerial < 1 )
             return false;
+        // 번호는 하나씩 오르므로 놓인 것은 모두 다음 번호보다 작다. 어기면 새 아이템이 같은 번호를 받는다.
+        for ( const PartyItemInstance& instance : listInstance )
+        {
+            if ( instance._serial >= nextSerial )
+                return false;
+        }
         _listInstance = std::move( listInstance );
         _random       = random;
         _spawnTimer   = spawnTimer;
@@ -200,12 +208,12 @@ namespace sw
     uint32 PartyItemSpawner::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 루트 속성은 `PartyItemSpawnSettings` 스키마다(기본값 = 초기값, 범위 = PROPERTY). 가운데(`_center`)는 게임이 정한다.
+        // 틀리면 파일을 읽지 않는다 — 규칙은 기본값인 채 아이템만 읽혀 성공으로 보이지 않게 한다.
         PartyItemSpawnSettings settings;
-        if ( XMLFields::readFields( root, settings, sourceName ) )
-        {
-            settings._center = _settings._center;
-            _settings        = settings;
-        }
+        if ( XMLFields::readFields( root, settings, sourceName ) == false )
+            return 0;
+        settings._center   = _settings._center;
+        _settings          = settings;
         uint32 loadedCount = 0;
         for ( XMLNode itemNode = root.findChild(); itemNode; itemNode = itemNode.findNextSibling() )
         {
@@ -231,6 +239,8 @@ namespace sw
             if ( weight.has_value() )
                 def._weight = *weight;
             def._stats.addAttributes( itemNode, "id,effect,weight" ); // 읽은 속성 수만 돌려주므로, 속성이 없으면 빈 스탯이다
+            if ( GameDataXML::isNewID( _catalog, def._id, sourceName ) == false )
+                continue; // `add` 는 말없이 앞 정의를 덮어쓴다
             addItem( def );
             ++loadedCount;
         }

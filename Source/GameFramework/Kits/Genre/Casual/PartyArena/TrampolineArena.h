@@ -209,7 +209,7 @@ namespace sw
         void              start();
 
         void setInput( int32 player, const TrampolineInput& input );
-        /** @brief 프레임 시간을 고정 걸음으로 나눠 진행하고, 진행한 걸음 수를 반환합니다. */
+        /** @brief 프레임 시간을 고정 걸음으로 나눠 진행하고, 진행한 걸음 수를 반환합니다. 판이 도는 동안(`start` 뒤 끝나기 전)만 시간이 흐릅니다. */
         int32 update( float32 frameTime );
         void  step();
 
@@ -219,7 +219,7 @@ namespace sw
 
         /** @brief 사람마다 몸, 받아 둔 입력, 타이머, 콤보, 아이템 효과와 아이템 상태, 경기(`MatchState`), 고정 걸음, 시각을 씁니다. 설정, 판정 창, 아이템 정의는 저장하지 않고, 이벤트는 읽을 때 비웁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 인원이 다르거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 인원이 다르거나, 경기의 팀 · 참가자 수가 인원과 다르거나, 값이 범위 밖이거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
         /** @brief 콤보 @p combo 일 때 튀는 높이를 반환합니다. */
@@ -247,12 +247,13 @@ namespace sw
         void land( int32 player );
         void launch( int32 player, bool bSuccess, const hashed_string& grade );
         void updateAttacks();
-        void knockBack( int32 victim, int32 attacker, const float3& direction, float32 strength );
-        void ringOut( int32 player );
-        void respawn( int32 player );
-        void pickUpItems();
-        void applyItem( int32 player, const PartyItemDef& def );
-        void pushEvent( TrampolineEvent::Kind kind, int32 player, int32 other, int32 value );
+        /** @brief 상대를 밀어냅니다. 방패가 있으면 방패만 깨고(`ShieldBlocked`) false 입니다. 돌진과 내려찍기가 같은 규칙을 씁니다. */
+        [[nodiscard]] bool knockBack( int32 victim, int32 attacker, const float3& direction, float32 strength );
+        void               ringOut( int32 player );
+        void               respawn( int32 player );
+        void               pickUpItems();
+        void               applyItem( int32 player, const PartyItemDef& def );
+        void               pushEvent( TrampolineEvent::Kind kind, int32 player, int32 other, int32 value );
 
     private:
         vector<TrampolinePlayer>     _listPlayer;

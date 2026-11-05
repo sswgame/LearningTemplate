@@ -103,7 +103,7 @@ namespace sw
                 outArchive << static_cast<uint8>( body._state );
             }
 
-            [[nodiscard]] static bool readPlayer( Archive& archive, int32 playerCount, TrampolinePlayer& outBody )
+            [[nodiscard]] static bool readPlayer( Archive& archive, int32 playerCount, int32 maxCombo, TrampolinePlayer& outBody )
             {
                 archive >> outBody._position;
                 archive >> outBody._velocity;
@@ -134,8 +134,10 @@ namespace sw
                 const bool bFlagsValid       = outBody._bPounding <= SW_TRUE && outBody._bSuperBounce <= SW_TRUE && outBody._bShield <= SW_TRUE && outBody._bHitThisDash <= SW_TRUE;
                 const bool bHitterValid      = -1 <= outBody._lastHitter && outBody._lastHitter < playerCount;
                 const bool bStateValid       = state <= static_cast<uint8>( TrampolinePlayerState::Respawning );
+                const bool bComboValid       = 0 <= outBody._combo && outBody._combo <= maxCombo;
+                const bool bKnockbackValid   = outBody._knockbackTaken >= 0.0f && outBody._knockbackDealt >= 0.0f;
                 const bool bInvalidBodyState = bTimersRead == false || bHeavyRead == false || archive.isError() || bInputValid == false || bFlagsValid == false || bHitterValid == false ||
-                                               bStateValid == false || outBody._combo < 0;
+                                               bStateValid == false || bComboValid == false || bKnockbackValid == false;
                 if ( bInvalidBodyState )
                     return false;
                 outBody._state = static_cast<TrampolinePlayerState>( state );
@@ -164,7 +166,10 @@ namespace sw
     {
         using Internal = TrampolineArenaInternal;
         if ( playerCount < Internal::kMinPlayers || playerCount > Internal::kMaxPlayers )
+        {
+            SW_LOG_ERROR_ID( "TrampolineArena.TrampolineArenaRefusedPlayerCount", "TrampolineArena: refused %# players (%# to %#)", playerCount, Internal::kMinPlayers, Internal::kMaxPlayers );
             return false;
+        }
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
         {
@@ -250,7 +255,8 @@ namespace sw
 
     void TrampolineArena::step()
     {
-        if ( isRoundOver() )
+        // `start` 전에도 돌면 몸이 스폰 지점 없이 원점에서 떨어지고 아이템이 나왔다.
+        if ( _match.getPhase() != MatchPhase::InProgress )
             return;
         const float32 deltaTime = _settings._step;
         _time += deltaTime;
@@ -350,13 +356,27 @@ namespace sw
         TrampolineArena arena = *this;
         for ( TrampolinePlayer& body : arena._listPlayer )
         {
-            if ( TrampolineArenaInternal::readPlayer( archive, static_cast<int32>( playerCount ), body ) == false )
+            if ( TrampolineArenaInternal::readPlayer( archive, static_cast<int32>( playerCount ), _settings._maxCombo, body ) == false )
                 return false;
         }
         const bool bPartsRead = arena._itemSpawner.readState( archive ) && arena._match.readState( archive ) && StateArchiveUtil::readStepTimer( archive, arena._timer );
         archive >> arena._time;
-        if ( bPartsRead == false || archive.isError() )
+        if ( bPartsRead == false || archive.isError() || arena._time < 0.0f )
             return false;
+        // 사람마다 팀과 참가자가 하나다. `reportKill` 과 점수가 사람 번호를 그대로 쓴다.
+        const int32 peopleCount = static_cast<int32>( playerCount );
+        if ( arena._match.getTeamCount() != peopleCount || arena._match.getParticipantCount() != peopleCount )
+            return false;
+        if ( arena._match.getPhase() == MatchPhase::InProgress )
+        {
+            // 진행 중이면 몸과 경기가 함께 움직인다. 어긋나면 탈락한 몸이 오지 않을 부활을 기다리거나, 산 몸이 부활 지점으로 튄다.
+            for ( int32 player = 0; player < peopleCount; ++player )
+            {
+                const bool bRespawning = arena._listPlayer[static_cast<size_t>( player )]._state == TrampolinePlayerState::Respawning;
+                if ( bRespawning == ( arena._match.findParticipant( player )->_bAlive == SW_TRUE ) )
+                    return false;
+            }
+        }
         arena._eventBuffer.clear();
         arena._listMatchEvent.clear();
         *this = std::move( arena );
@@ -526,7 +546,8 @@ namespace sw
         body._position._y      = 0.0f;
         body._velocity         = float3{};
         body._state            = TrampolinePlayerState::Contact;
-        body._landTime         = _time;
+        body._attackTimer.clear(); // 남겨 두면 튀어 오른 뒤 돌진이 이어져 중력 없이 떠올랐다
+        body._landTime = _time;
         body._contactTimer.start( _settings._contactTime );
         pushEvent( TrampolineEvent::Kind::Landed, player, -1, 0 );
         if ( body._bPounding == SW_FALSE )
@@ -547,8 +568,8 @@ namespace sw
             if ( distance > _settings._poundRadius )
                 continue;
             away = distance > Internal::kTiny ? away / distance : float3{ 1.0f, 0.0f, 0.0f };
-            knockBack( other, player, away, _settings._poundKnockback * body._knockbackDealt );
-            ++pushed;
+            if ( knockBack( other, player, away, _settings._poundKnockback * body._knockbackDealt ) )
+                ++pushed;
         }
         pushEvent( TrampolineEvent::Kind::GroundPound, player, -1, pushed );
         if ( body._combo > 0 )
@@ -606,30 +627,31 @@ namespace sw
                     continue;
                 if ( float3::getDistance( body._position, target._position ) > reach )
                     continue;
-                body._bHitThisDash = SW_TRUE;
-                if ( target._bShield == SW_TRUE )
-                {
-                    target._bShield = SW_FALSE;
-                    pushEvent( TrampolineEvent::Kind::ShieldBlocked, victim, attacker, 0 );
-                    break;
-                }
+                body._bHitThisDash      = SW_TRUE;
                 float3        direction = float3{ target._position._x - body._position._x, 0.0f, target._position._z - body._position._z };
                 const float32 length    = Internal::computeFlatLength( direction );
                 direction               = length > Internal::kTiny ? direction / length : body._facing;
-                knockBack( victim, attacker, direction, _settings._attackKnockback * body._knockbackDealt );
-                pushEvent( TrampolineEvent::Kind::Hit, victim, attacker, 0 );
+                if ( knockBack( victim, attacker, direction, _settings._attackKnockback * body._knockbackDealt ) )
+                    pushEvent( TrampolineEvent::Kind::Hit, victim, attacker, 0 );
                 break;
             }
         }
     }
 
-    void TrampolineArena::knockBack( int32 victim, int32 attacker, const float3& direction, float32 strength )
+    bool TrampolineArena::knockBack( int32 victim, int32 attacker, const float3& direction, float32 strength )
     {
         TrampolinePlayer& target = _listPlayer[static_cast<size_t>( victim )];
-        const float32     power  = strength * target._knockbackTaken;
-        target._velocity._x      = direction._x * power;
-        target._velocity._z      = direction._z * power;
-        target._velocity._y      = MathUtil::max( target._velocity._y, power * 0.3f );
+        // 방패 검사를 돌진에만 두어 내려찍기가 방패를 뚫었다.
+        if ( target._bShield == SW_TRUE )
+        {
+            target._bShield = SW_FALSE;
+            pushEvent( TrampolineEvent::Kind::ShieldBlocked, victim, attacker, 0 );
+            return false;
+        }
+        const float32 power = strength * target._knockbackTaken;
+        target._velocity._x = direction._x * power;
+        target._velocity._z = direction._z * power;
+        target._velocity._y = MathUtil::max( target._velocity._y, power * 0.3f );
         target._stunTimer.start( _settings._stunTime );
         target._attackTimer.clear();
         target._bPounding   = SW_FALSE;
@@ -638,6 +660,7 @@ namespace sw
         if ( target._state == TrampolinePlayerState::Contact )
             target._state = TrampolinePlayerState::Air; // 면에서 떠밀려 난다
         _match.reportDamage( attacker, victim, 1.0f );
+        return true;
     }
 
     void TrampolineArena::ringOut( int32 player )
@@ -696,13 +719,14 @@ namespace sw
         else if ( def._effect == TrampolineArenaInternal::getHeavyName() )
         {
             // Heavy 의 세 수치는 아이템 데이터가 반드시 적는다 — 코드가 대신 정한 값으로 효과를 내지 않는다.
+            // 시간이 0 이하면 타이머가 돌지 않아 배율이 부활할 때까지 남았고, 음수 배율은 밀림을 뒤집었다.
             const std::optional<float32> duration       = def._stats.findValue( TrampolineArenaInternal::getDurationName() );
             const std::optional<float32> knockbackTaken = def._stats.findValue( TrampolineArenaInternal::getKnockbackTakenName() );
             const std::optional<float32> knockbackDealt = def._stats.findValue( TrampolineArenaInternal::getKnockbackDealtName() );
-            const bool                   bComplete      = duration.has_value() && knockbackTaken.has_value() && knockbackDealt.has_value();
+            const bool                   bComplete      = duration.has_value() && knockbackTaken.has_value() && knockbackDealt.has_value() && *duration > 0.0f && *knockbackTaken >= 0.0f && *knockbackDealt >= 0.0f;
             if ( bComplete == false )
             {
-                SW_LOG_ERROR_ID( "TrampolineArena.ItemHeavyNeedsDuration", "item '%#' (Heavy) needs duration, knockbackTaken and knockbackDealt - not applied", def._id.c_str() );
+                SW_LOG_ERROR_ID( "TrampolineArena.ItemHeavyNeedsDuration", "item '%#' (Heavy) needs a positive duration and knockbackTaken and knockbackDealt of 0 or more - not applied", def._id.c_str() );
                 return;
             }
             body._heavyTimer.start( *duration );
@@ -712,6 +736,11 @@ namespace sw
         else if ( def._effect == TrampolineArenaInternal::getShieldName() )
         {
             body._bShield = SW_TRUE;
+        }
+        else
+        {
+            // 주웠는데 아무 일도 없는 아이템은 데이터 오타다(언리얼의 없는 GameplayEffect 와 같이 알린다).
+            SW_LOG_ERROR_ID( "TrampolineArena.ItemUnknownEffect", "item '%#' has effect '%#', which this arena does not know - not applied", def._id.c_str(), def._effect.c_str() );
         }
     }
 

@@ -86,22 +86,23 @@ namespace sw
     uint32 PartyRoundSeries::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 승리 점수와 순위 점수는 적지 않으면 지금 설정 그대로다. 적었으면 모두 읽혀야 한다 — 깨진 값은 오류를 남기고 이 파일을 읽지 않는다(깨진 값을 건너뛰어 순위가 밀리지 않게).
+        // 끝까지 읽은 뒤 한 번에 옮긴다. 앞 칸만 바뀐 채 실패하거나, 다시 읽을 때 라운드가 뒤에 덧붙지 않게 한다.
         std::optional<int32> winScore;
         if ( root.readOptionalAttribute( "winScore", winScore ) == false )
         {
             SW_LOG_ERROR_ID( "PartyRoundSeries.WinScoreNotNumber", "%#: <%# winScore> is not a number", sourceName, root.getName() );
             return 0;
         }
-        if ( winScore.has_value() && setWinScore( *winScore ) == false )
+        if ( winScore.has_value() && *winScore < 1 )
         {
             SW_LOG_ERROR_ID( "PartyRoundSeries.WinScoreNeedsMore", "%#: <%# winScore=\"%#\"> needs 1 or more", sourceName, root.getName(), *winScore );
             return 0;
         }
         const string_view points = root.getAttributeText( "placementPoints" );
+        vector<int32>     listPlacementPoint;
         if ( points.empty() == false )
         {
-            vector<int32> listPlacementPoint;
-            bool          bPoints = true;
+            bool bPoints = true;
             StringUtil::forEachToken( points, ",; ", [&]( string_view token )
             {
                 int32      value  = 0;
@@ -116,9 +117,9 @@ namespace sw
                 SW_LOG_ERROR_ID( "PartyRoundSeries.PlacementPointsNeedsIntegersMore", "%#: <%# placementPoints=\"%#\"> needs integers of 0 or more", sourceName, root.getName(), points );
                 return 0;
             }
-            _seriesSettings._listPlacementPoint = listPlacementPoint;
         }
-        uint32 loadedCount = 0;
+        vector<PartyRoundDef> listRound;
+        uint32                loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "Round" ) == false )
@@ -129,11 +130,19 @@ namespace sw
             PartyRoundDef round;
             if ( XMLFields::readFields( node, round, sourceName ) == false )
                 continue; // 오류는 readFields 가 남겼고, 그 판만 빠진다
-            _listRound.push_back( round );
+            listRound.push_back( round );
             ++loadedCount;
         }
         if ( loadedCount == 0 )
+        {
             SW_LOG_ERROR_ID( "PartyRoundSeries.NoRound", "%#: no <Round>", sourceName );
+            return 0;
+        }
+        if ( winScore.has_value() )
+            _seriesSettings._winScore = *winScore;
+        if ( points.empty() == false )
+            _seriesSettings._listPlacementPoint = listPlacementPoint;
+        _listRound = std::move( listRound );
         return loadedCount;
     }
 
