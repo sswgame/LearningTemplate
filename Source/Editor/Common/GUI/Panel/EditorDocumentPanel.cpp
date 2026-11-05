@@ -3,11 +3,11 @@
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Editor/Common/Commands/Asset/EditorAssetIndex.h"
+#include "Editor/Common/GUI/Panel/Model/EditorDocumentOpenUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Input/EditorInputGUI.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
@@ -57,13 +57,8 @@ namespace sw::editor
             // 열 때 한 번 모은다 — 리소스 트리를 훑으므로 그리기마다 하지 않는다.
             vector<EditorAssetIndexEntry> listEntry;
             EditorAssetIndex::collectEntries( editor::getSubsystem<AssetPaths>(), listEntry );
-            _listOpenCandidate.clear();
-            for ( const EditorAssetIndexEntry& entry : listEntry )
-            {
-                if ( entry._kind == _kind && acceptsDocumentPath( entry._path ) )
-                    _listOpenCandidate.push_back( entry._path );
-            }
-            VectorUtil::sort( _listOpenCandidate );
+            EditorDocumentOpenUtil::collectCandidates( listEntry, _kind, [this]( string_view path )
+            { return acceptsDocumentPath( path ); }, _listOpenCandidate );
             _openFilter.clear();
             EditorInputGUI::openPopup( "##DocumentOpen" );
         }
@@ -166,8 +161,7 @@ namespace sw::editor
         _bConfirmSwitch = SW_FALSE;
         _pendingFocusPath.clear();
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-        if ( _loadedAssetPath.empty() == false )
-            editorContext.getSubsystem<EditorWorkspace>().setFocusedAssetPath( _loadedAssetPath.c_str() );
+        EditorDocumentOpenUtil::restoreFocusAfterCancel( editorContext.getSubsystem<EditorWorkspace>(), _loadedAssetPath );
     }
 
     EditorDocumentPanel::EditorDocumentPanel( const EditorAssetType& kind, bool bLoadOnOpen )
@@ -211,10 +205,7 @@ namespace sw::editor
 
     bool EditorDocumentPanel::hasNewFocusedDocument() const
     {
-        const string_view focused = getMatchingFocusedPath();
-        if ( focused.empty() )
-            return false;
-        return focused != _loadedAssetPath;
+        return EditorDocumentOpenUtil::isNewFocus( getMatchingFocusedPath(), _loadedAssetPath );
     }
 
     string_view EditorDocumentPanel::getMatchingFocusedPath() const
@@ -237,33 +228,16 @@ namespace sw::editor
 
     void EditorDocumentPanel::acceptFocusedDocument()
     {
-        const string_view focused = _pendingFocusPath.empty() ? getMatchingFocusedPath() : string_view{ _pendingFocusPath };
+        const string_view focused = EditorDocumentOpenUtil::chooseDocumentToAccept( _pendingFocusPath, getMatchingFocusedPath() );
         if ( focused.empty() )
             return;
         _loadedAssetPath = string{ focused };
-        rememberRecentDocument( _loadedAssetPath );
+        EditorDocumentOpenUtil::rememberRecent( _listRecentPath, _loadedAssetPath, kMaxRecentDocumentCount );
         _pendingFocusPath.clear();
         _bLoaded        = SW_FALSE;
         _bConfirmSwitch = SW_FALSE;
         _bLoadFailed    = SW_FALSE;
         clearDocumentDirty();
-    }
-
-    void EditorDocumentPanel::rememberRecentDocument( string_view assetPath )
-    {
-        if ( assetPath.empty() )
-            return;
-        for ( auto it = _listRecentPath.begin(); it != _listRecentPath.end(); ++it )
-        {
-            if ( *it == assetPath )
-            {
-                _listRecentPath.erase( it );
-                break;
-            }
-        }
-        _listRecentPath.insert( _listRecentPath.begin(), string{ assetPath } );
-        if ( _listRecentPath.size() > kMaxRecentDocumentCount )
-            _listRecentPath.resize( kMaxRecentDocumentCount );
     }
 
     void EditorDocumentPanel::markDocumentLoaded()

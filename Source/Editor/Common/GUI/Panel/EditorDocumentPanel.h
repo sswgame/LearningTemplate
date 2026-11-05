@@ -146,8 +146,6 @@ namespace sw::editor
 
         /** @brief 이 종류의 에셋 목록 팝업을 그립니다. */
         void drawOpenDocumentPopup( const utf8* pMarkPrefix );
-        /** @brief 최근 문서 목록 맨 앞에 @p assetPath 를 둡니다. 중복은 뺍니다. */
-        void rememberRecentDocument( string_view assetPath );
         void drawUnsavedDocumentPopup();
         void restoreDocumentFromUndo( string_view text );
         /** @brief 읽었거나 새 문서임을 표시합니다. 저장을 허용하고 되돌리기 기준을 맞춥니다. */
