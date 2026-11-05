@@ -49,6 +49,8 @@ namespace sw::editor
         void resetSelectedSection();
         /** @brief 기다리는 저장이 있고 첫 편집 뒤 `kSaveDelayNanoseconds` 가 지났거나 @p bForce 면 파일에 씁니다. */
         void savePendingChanges( bool bForce );
+        /** @brief 파일에 쓰기를 기다리는 편집이 있으면 true 입니다. */
+        bool hasPendingSave() const { return _pendingSaveNanoseconds != 0; }
 
         /** @brief 첫 편집 뒤 저장까지 기다리는 시간입니다. 끌기 한 번에 파일을 수십 번 쓰지 않게 묶는다. */
         static constexpr int64 kSaveDelayNanoseconds = constant::time::kNanosecondsPerSecond / 2;
