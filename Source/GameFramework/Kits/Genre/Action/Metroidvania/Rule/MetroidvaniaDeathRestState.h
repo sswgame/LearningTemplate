@@ -139,7 +139,7 @@ namespace sw
          *        싣지 않으며, 알림은 읽을 때 비웁니다.
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 카탈로그에 없는 되살아날 지점이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 쉬는 지점이 아닌 되살아날 지점, 겹친 처치 위치, 깨진 시체 위치이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

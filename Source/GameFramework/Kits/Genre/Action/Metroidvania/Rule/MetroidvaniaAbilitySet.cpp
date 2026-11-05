@@ -131,9 +131,14 @@ namespace sw
                 for ( const MetroidvaniaAbilitySetInternal::IntField& field : MetroidvaniaAbilitySetInternal::kArrIntField )
                 {
                     if ( value._name == hashed_string( field._pName ) )
-                        outSettings.*field._pMember = MathUtil::max( 0, outSettings.*field._pMember + static_cast<int32>( MathUtil::round( value._value ) ) );
+                        outSettings.*field._pMember += static_cast<int32>( MathUtil::round( value._value ) );
                 }
             }
+        }
+        // 다 더한 뒤에 한 번만 자른다. 더하는 중에 자르면 결과가 얻은 순서에 달려, 플래그로 복원한(카탈로그 순서) 몸이 세이브 전과 달라진다.
+        for ( const MetroidvaniaAbilitySetInternal::IntField& field : MetroidvaniaAbilitySetInternal::kArrIntField )
+        {
+            outSettings.*field._pMember = MathUtil::max( 0, outSettings.*field._pMember );
         }
     }
 

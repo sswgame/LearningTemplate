@@ -95,6 +95,9 @@ namespace sw
             return outcome;
         }
         const MetroidvaniaRules& rules = _pCatalog->getRules();
+        // 음수 피해는 막기 비용이 음수라 가드가 깨지고, NaN 피해는 막기 비용으로 스태미나를 NaN 으로 만든다. 없는 피해로 친다.
+        damage      = damage > 0.0f ? damage : 0.0f;
+        poiseDamage = poiseDamage > 0.0f ? poiseDamage : 0.0f;
 
         // 패리다. 누른 시각이 공격이 닿는 순간의 창 안이면 피해 없이 반격 창을 연다. 누름은 한 번만 쓴다.
         const TimingResult parry = rules._parryJudge.judge( _time, _parryPressTime );
@@ -167,8 +170,8 @@ namespace sw
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._riposteWindow );
         archive >> restored._damageTakenScale;
         archive >> restored._bGuarding;
-        const bool bValid =
-            bBodyRead && bTimerRead && archive.isOk() && 0.0f <= restored._time && 0.0f < restored._damageTakenScale && restored._bGuarding <= SW_TRUE;
+        const bool bValid = bBodyRead && bTimerRead && archive.isOk() && MathUtil::isFinite( restored._time ) && 0.0f <= restored._time && MathUtil::isFinite( restored._parryPressTime ) &&
+                            MathUtil::isFinite( restored._damageTakenScale ) && 0.0f < restored._damageTakenScale && restored._bGuarding <= SW_TRUE;
         if ( bValid == false )
             return false;
         *this = std::move( restored );
