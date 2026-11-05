@@ -67,15 +67,14 @@ namespace sw
 
     VoxelBlockIndex VoxelBlockCatalog::addBlock( const VoxelBlockDef& block )
     {
-        // 블록 번호는 인덱스 + 1 이다. 같은 id 는 그 인덱스를 그대로 쓴다. 저장된 월드의 번호가 바뀌지 않게 하려는 것이다.
-        const int32 existingIndex = _catalog.findIndex( block._id );
-        if ( existingIndex < 0 && _catalog.getCount() >= VoxelBlockInternal::kMaxBlockCount )
+        // 블록 번호는 인덱스 + 1 이다. 저장된 월드가 이 번호를 쓰므로 겹친 id 는 카탈로그가 거절한다(앞 블록의 번호와 값을 지킨다).
+        if ( _catalog.getCount() >= VoxelBlockInternal::kMaxBlockCount )
         {
             SW_LOG_WARNING_ID( "VoxelBlockCatalog.BlockCatalogFullSkipped", "Block catalog is full - '%#' skipped", block._id.c_str() );
             return kVoxelAirBlock;
         }
         VoxelBlockDef stored = block;
-        stored._index        = static_cast<VoxelBlockIndex>( ( existingIndex >= 0 ? existingIndex : static_cast<int32>( _catalog.getCount() ) ) + 1 );
+        stored._index        = static_cast<VoxelBlockIndex>( _catalog.getCount() + 1 );
         return _catalog.add( stored ) >= 0 ? stored._index : kVoxelAirBlock;
     }
 

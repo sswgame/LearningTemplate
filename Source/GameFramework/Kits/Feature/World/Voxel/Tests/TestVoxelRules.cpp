@@ -1,0 +1,477 @@
+#include "pch.h"
+
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Serialization/Format/Archive.h"
+
+#include "GameFramework/Kits/Feature/World/Voxel/Catalog/VoxelBlock.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelBody.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelHotbar.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelRaycast.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelTerrain.h"
+#include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
+
+using namespace sw;
+
+namespace
+{
+    /** @brief 돌 · 물 · 유리 카탈로그와 2 x 2 청크 월드입니다. y = 10 의 돌 바닥을 깔 수 있습니다. */
+    struct VoxelRig
+    {
+        VoxelBlockCatalog _catalog;
+        VoxelWorld        _world;
+        VoxelBlockIndex   _stone{ kVoxelAirBlock };
+        VoxelBlockIndex   _water{ kVoxelAirBlock };
+        VoxelBlockIndex   _glass{ kVoxelAirBlock };
+
+        VoxelRig()
+        {
+            _stone = addBlock( "stone", true, true );
+            _water = addBlock( "water", false, false );
+            _glass = addBlock( "glass", true, false );
+            SW_REQUIRE_TRUE( _world.initialize( 2, 2, &_catalog ) );
+        }
+
+        VoxelBlockIndex addBlock( const utf8* pID, bool bSolid, bool bOpaque )
+        {
+            VoxelBlockDef block;
+            block._id      = hashed_string( pID );
+            block._name    = pID;
+            block._bSolid  = bSolid;
+            block._bOpaque = bOpaque;
+            return _catalog.addBlock( block );
+        }
+
+        void layFloor( int32 y )
+        {
+            for ( int32 z = 0; z < _world.getSizeZ(); ++z )
+            {
+                for ( int32 x = 0; x < _world.getSizeX(); ++x )
+                {
+                    SW_REQUIRE_TRUE( _world.setBlock( x, y, z, _stone ) );
+                }
+            }
+        }
+
+        static void clearDirty( VoxelWorld& world )
+        {
+            for ( int32 z = 0; z < world.getChunkCountZ(); ++z )
+            {
+                for ( int32 x = 0; x < world.getChunkCountX(); ++x )
+                {
+                    world.clearChunkDirty( x, z );
+                }
+            }
+        }
+
+        static vector<uint8> save( const VoxelWorld& world )
+        {
+            Archive archive;
+            world.writeState( archive );
+            return vector<uint8>( archive.getData(), archive.getData() + archive.getSize() );
+        }
+    };
+
+    /** @brief 몸을 @p seconds 동안 1/60 초씩 움직입니다. */
+    struct VoxelBodyTestUtil
+    {
+        static void run( VoxelBody& body, const VoxelWorld& world, const float3& wish, bool bJump, float32 seconds )
+        {
+            constexpr float32 kFrame = 1.0f / 60.0f;
+            for ( float32 elapsed = 0.0f; elapsed < seconds; elapsed += kFrame )
+            {
+                body.step( world, wish, bJump, false, kFrame );
+            }
+        }
+    };
+} // namespace
+
+// ---- 카탈로그 ----
+
+// 번호 0 은 공기다. 번호는 저장되므로 겹친 id 가 앞 블록의 번호를 바꾸면 안 된다.
+SW_TEST_CASE( VoxelBlockCatalogTest, IndexStartsAfterAirAndDuplicateIsRefused )
+{
+    VoxelRig rig;
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( rig._stone ) );
+    SW_EXPECT_EQUAL( 2, static_cast<int32>( rig._water ) );
+    SW_EXPECT_TRUE( rig._catalog.findBlockIndex( hashed_string( "glass" ) ) == rig._glass );
+    SW_EXPECT_TRUE( rig._catalog.findBlockIndex( hashed_string( "nothing" ) ) == kVoxelAirBlock );
+
+    SW_EXPECT_LOG( "GameCatalog.DuplicateID" );
+    SW_EXPECT_TRUE( rig.addBlock( "stone", false, false ) == kVoxelAirBlock );
+    SW_EXPECT_TRUE( rig._catalog.isSolid( rig._stone ) );
+    SW_EXPECT_FALSE( rig._catalog.isSolid( rig._water ) );
+    SW_EXPECT_FALSE( rig._catalog.isOpaque( rig._glass ) );
+}
+
+// ---- 월드 ----
+
+SW_TEST_CASE( VoxelWorldTest, OutsideReadsAirAndRefusesWrites )
+{
+    VoxelRig rig;
+    SW_EXPECT_EQUAL( 32, rig._world.getSizeX() );
+    SW_EXPECT_TRUE( rig._world.getBlock( -1, 0, 0 ) == kVoxelAirBlock );
+    SW_EXPECT_FALSE( rig._world.setBlock( 32, 0, 0, rig._stone ) );
+    SW_EXPECT_FALSE( rig._world.setBlock( 0, kVoxelChunkHeight, 0, rig._stone ) );
+    SW_EXPECT_TRUE( rig._world.isSolid( 5, -1, 5 ) );   // 월드 아래는 막혔다
+    SW_EXPECT_FALSE( rig._world.isSolid( -1, 5, 5 ) );  // 옆은 비었다
+    SW_EXPECT_FALSE( rig._world.isSolid( 5, 100, 5 ) ); // 위도 비었다
+    SW_EXPECT_EQUAL( -1, rig._world.findTopSolidY( 5, 5 ) );
+
+    SW_REQUIRE_TRUE( rig._world.setBlock( 5, 3, 5, rig._stone ) );
+    SW_REQUIRE_TRUE( rig._world.setBlock( 5, 7, 5, rig._water ) ); // 물은 단단하지 않다
+    SW_EXPECT_EQUAL( 3, rig._world.findTopSolidY( 5, 5 ) );
+    SW_EXPECT_EQUAL( uint32( 1 ), rig._world.countBlocks( rig._water ) );
+}
+
+SW_TEST_CASE( VoxelWorldTest, BoundaryBlockAlsoDirtiesItsNeighbor )
+{
+    VoxelRig rig;
+    VoxelRig::clearDirty( rig._world );
+    const uint32 revision = rig._world.findChunk( 0, 0 )->_revision;
+
+    SW_REQUIRE_TRUE( rig._world.setBlock( 5, 0, 5, rig._stone ) );
+    SW_EXPECT_TRUE( rig._world.isChunkDirty( 0, 0 ) );
+    SW_EXPECT_FALSE( rig._world.isChunkDirty( 1, 0 ) );
+    SW_EXPECT_EQUAL( revision + 1, rig._world.findChunk( 0, 0 )->_revision );
+
+    VoxelRig::clearDirty( rig._world );
+    SW_REQUIRE_TRUE( rig._world.setBlock( 5, 0, 5, rig._stone ) ); // 같은 값은 표시하지 않는다
+    SW_EXPECT_FALSE( rig._world.isChunkDirty( 0, 0 ) );
+
+    SW_REQUIRE_TRUE( rig._world.setBlock( kVoxelChunkSize - 1, 0, 3, rig._stone ) );
+    SW_EXPECT_TRUE( rig._world.isChunkDirty( 1, 0 ) );
+    SW_EXPECT_FALSE( rig._world.isChunkDirty( 0, 1 ) );
+
+    VoxelRig::clearDirty( rig._world );
+    SW_REQUIRE_TRUE( rig._world.setBlock( kVoxelChunkSize, 0, kVoxelChunkSize, rig._stone ) ); // 청크 (1, 1) 의 모서리
+    SW_EXPECT_TRUE( rig._world.isChunkDirty( 0, 1 ) );
+    SW_EXPECT_TRUE( rig._world.isChunkDirty( 1, 0 ) );
+    SW_EXPECT_FALSE( rig._world.isChunkDirty( 0, 0 ) );
+}
+
+SW_TEST_CASE( VoxelWorldTest, RefusesEmptyWorld )
+{
+    SW_EXPECT_LOG( "VoxelWorld.VoxelWorldRefusedChunkCounts" );
+    VoxelWorld world;
+    SW_EXPECT_FALSE( world.initialize( 0, 1, nullptr ) );
+}
+
+SW_TEST_CASE( VoxelWorldTest, StateRoundTripsAndBumpsRevisions )
+{
+    VoxelRig rig;
+    rig.layFloor( 2 );
+    SW_REQUIRE_TRUE( rig._world.setBlock( 20, 9, 20, rig._glass ) );
+    const vector<uint8> listSaved = VoxelRig::save( rig._world );
+
+    VoxelRig restored;
+    VoxelRig::clearDirty( restored._world );
+    const uint32 revision = restored._world.findChunk( 1, 1 )->_revision;
+    Archive      reading( listSaved.data(), listSaved.size() );
+    SW_REQUIRE_TRUE( restored._world.readState( reading ) );
+    SW_EXPECT_TRUE( restored._world.getBlock( 20, 9, 20 ) == restored._glass );
+    SW_EXPECT_EQUAL( uint32( 32 * 32 ), restored._world.countBlocks( restored._stone ) );
+    SW_EXPECT_TRUE( restored._world.isChunkDirty( 1, 1 ) );
+    SW_EXPECT_EQUAL( revision + 1, restored._world.findChunk( 1, 1 )->_revision ); // 이미 만든 메시가 낡은 것이 된다
+    SW_EXPECT_TRUE( VoxelRig::save( restored._world ) == listSaved );
+}
+
+SW_TEST_CASE( VoxelWorldTest, ForgedStateLeavesTheWorldAlone )
+{
+    VoxelRig            rig;
+    const vector<uint8> listSaved = VoxelRig::save( rig._world );
+
+    // 청크 수가 다르다
+    VoxelRig   target;
+    VoxelWorld other;
+    SW_REQUIRE_TRUE( other.initialize( 1, 1, &target._catalog ) );
+    Archive wrongSize( listSaved.data(), listSaved.size() );
+    SW_EXPECT_FALSE( other.readState( wrongSize ) );
+
+    SW_REQUIRE_TRUE( target._world.setBlock( 1, 1, 1, target._stone ) );
+
+    // 카탈로그에 없는 블록 번호 — 머리(int32 둘) 뒤 첫 구간의 블록이다
+    constexpr size_t kFirstBlockOffset = sizeof( int32 ) * 2;
+    vector<uint8>    listBadBlock      = listSaved;
+    listBadBlock[kFirstBlockOffset]    = 200;
+    Archive badBlock( listBadBlock.data(), listBadBlock.size() );
+    SW_EXPECT_FALSE( target._world.readState( badBlock ) );
+
+    // 잘린 바이트
+    Archive truncated( listSaved.data(), listSaved.size() - 1 );
+    SW_EXPECT_FALSE( target._world.readState( truncated ) );
+
+    // 청크를 넘는 구간 — 첫 구간 길이를 부풀린다
+    vector<uint8> listLongRun                                                         = listSaved;
+    listLongRun[kFirstBlockOffset + sizeof( VoxelBlockIndex ) + sizeof( uint32 ) - 1] = 0x7f;
+    Archive longRun( listLongRun.data(), listLongRun.size() );
+    SW_EXPECT_FALSE( target._world.readState( longRun ) );
+
+    SW_EXPECT_TRUE( target._world.getBlock( 1, 1, 1 ) == target._stone ); // 거절은 상태를 바꾸지 않는다
+}
+
+// ---- 광선 ----
+
+SW_TEST_CASE( VoxelRaycastTest, HitsTheFirstSolidWithFaceAndPlaceCell )
+{
+    VoxelRig rig;
+    SW_REQUIRE_TRUE( rig._world.setBlock( 5, 2, 2, rig._stone ) );
+    VoxelRayHit hit;
+    SW_REQUIRE_TRUE( VoxelRaycast::raycast( rig._world, float3{ 0.5f, 2.5f, 2.5f }, float3{ 1.0f, 0.0f, 0.0f }, 10.0f, hit ) );
+    SW_EXPECT_TRUE( hit._block == ( VoxelCoord{ 5, 2, 2 } ) );
+    SW_EXPECT_TRUE( hit._previous == ( VoxelCoord{ 4, 2, 2 } ) ); // 블록을 놓을 자리다
+    SW_EXPECT_TRUE( hit._normal == ( VoxelCoord{ -1, 0, 0 } ) );
+    SW_EXPECT_NEAR( 4.5f, hit._distance, 1.0e-4f );
+    SW_EXPECT_TRUE( hit._blockIndex == rig._stone );
+}
+
+SW_TEST_CASE( VoxelRaycastTest, RangeAndBadInputsMiss )
+{
+    VoxelRig rig;
+    SW_REQUIRE_TRUE( rig._world.setBlock( 5, 2, 2, rig._stone ) );
+    VoxelRayHit  hit;
+    const float3 origin{ 0.5f, 2.5f, 2.5f };
+    SW_EXPECT_FALSE( VoxelRaycast::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 4.0f, hit ) ); // 닿기 전에 끝난다
+    SW_EXPECT_FALSE( VoxelRaycast::raycast( rig._world, origin, float3{ -1.0f, 0.0f, 0.0f }, 10.0f, hit ) );
+    SW_EXPECT_FALSE( VoxelRaycast::raycast( rig._world, origin, float3{ 0.0f, 0.0f, 0.0f }, 10.0f, hit ) );
+    SW_EXPECT_FALSE( VoxelRaycast::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 0.0f, hit ) );
+    SW_EXPECT_FALSE( VoxelRaycast::raycast( rig._world, float3{ 0.5f, 90.0f, 0.5f }, float3{ 0.0f, 1.0f, 0.0f }, 100.0f, hit ) ); // 위로 빠져나간다
+}
+
+SW_TEST_CASE( VoxelRaycastTest, WaterStopsOnlyWhenAsked )
+{
+    VoxelRig rig;
+    SW_REQUIRE_TRUE( rig._world.setBlock( 2, 2, 2, rig._water ) );
+    SW_REQUIRE_TRUE( rig._world.setBlock( 4, 2, 2, rig._stone ) );
+    const float3 origin{ 0.5f, 2.5f, 2.5f };
+    VoxelRayHit  hit;
+    SW_REQUIRE_TRUE( VoxelRaycast::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 10.0f, hit ) );
+    SW_EXPECT_EQUAL( 4, hit._block._x );
+    SW_REQUIRE_TRUE( VoxelRaycast::raycast( rig._world, origin, float3{ 1.0f, 0.0f, 0.0f }, 10.0f, hit, true ) );
+    SW_EXPECT_EQUAL( 2, hit._block._x );
+}
+
+SW_TEST_CASE( VoxelRaycastTest, StartingInsideABlockHasNoFace )
+{
+    VoxelRig rig;
+    SW_REQUIRE_TRUE( rig._world.setBlock( 1, 1, 1, rig._stone ) );
+    VoxelRayHit hit;
+    SW_REQUIRE_TRUE( VoxelRaycast::raycast( rig._world, float3{ 1.5f, 1.5f, 1.5f }, float3{ 0.0f, 1.0f, 0.0f }, 5.0f, hit ) );
+    SW_EXPECT_TRUE( hit._normal == ( VoxelCoord{ 0, 0, 0 } ) );
+    SW_EXPECT_NEAR( 0.0f, hit._distance, 1.0e-6f );
+}
+
+// ---- 몸 ----
+
+SW_TEST_CASE( VoxelBodyTest, FallsOntoTheFloorAndStands )
+{
+    VoxelRig rig;
+    rig.layFloor( 2 );
+    VoxelBody body;
+    body.setPosition( float3{ 5.5f, 8.0f, 5.5f } );
+    VoxelBodyTestUtil::run( body, rig._world, float3{}, false, 2.0f );
+    SW_EXPECT_TRUE( body.isOnGround() );
+    SW_EXPECT_NEAR( 3.0f, body.getPosition()._y, 0.01f );
+    SW_EXPECT_NEAR( 0.0f, body.getVelocity()._y, 0.5f );
+    SW_EXPECT_FALSE( body.isBlockedAt( rig._world, body.getPosition() ) );
+}
+
+// 빠르게 떨어져도 한 걸음이 짧아 얇은 바닥을 뚫지 않는다.
+SW_TEST_CASE( VoxelBodyTest, LongFrameDoesNotTunnelThroughTheFloor )
+{
+    VoxelRig rig;
+    rig.layFloor( 2 );
+    VoxelBody body;
+    body.setPosition( float3{ 5.5f, 60.0f, 5.5f } );
+    for ( int32 frame = 0; frame < 40; ++frame )
+    {
+        body.step( rig._world, float3{}, false, false, 0.25f );
+    }
+    SW_EXPECT_NEAR( 3.0f, body.getPosition()._y, 0.01f );
+    SW_EXPECT_TRUE( body.isOnGround() );
+}
+
+SW_TEST_CASE( VoxelBodyTest, JumpNeedsTheGroundAndClearsOneBlock )
+{
+    VoxelRig rig;
+    rig.layFloor( 2 );
+    VoxelBody body;
+    body.setPosition( float3{ 5.5f, 3.5f, 5.5f } ); // 공중이다
+    body.step( rig._world, float3{}, true, false, 1.0f / 60.0f );
+    SW_EXPECT_TRUE( body.getVelocity()._y <= 0.0f ); // 공중에서는 뛰지 못한다
+
+    VoxelBodyTestUtil::run( body, rig._world, float3{}, false, 1.0f );
+    SW_REQUIRE_TRUE( body.isOnGround() );
+    float32 peak = 0.0f;
+    body.step( rig._world, float3{}, true, false, 1.0f / 60.0f );
+    for ( int32 frame = 0; frame < 60; ++frame )
+    {
+        body.step( rig._world, float3{}, false, false, 1.0f / 60.0f );
+        peak = MathUtil::max( peak, body.getPosition()._y );
+    }
+    SW_EXPECT_TRUE( peak > 4.0f ); // 블록 하나를 넘는다
+}
+
+SW_TEST_CASE( VoxelBodyTest, WallStopsOneAxisAndSlidesOnTheOther )
+{
+    VoxelRig rig;
+    rig.layFloor( 2 );
+    for ( int32 z = 0; z < 32; ++z )
+    {
+        SW_REQUIRE_TRUE( rig._world.setBlock( 8, 3, z, rig._stone ) );
+        SW_REQUIRE_TRUE( rig._world.setBlock( 8, 4, z, rig._stone ) );
+    }
+    VoxelBody body;
+    body.setPosition( float3{ 6.5f, 3.0f, 5.5f } );
+    VoxelBodyTestUtil::run( body, rig._world, float3{ 0.7f, 0.0f, 0.7f }, false, 1.5f );
+    SW_EXPECT_TRUE( body.getPosition()._x < 8.0f - body.getSettings()._halfWidth + 0.01f );
+    SW_EXPECT_TRUE( body.getPosition()._x > 7.5f );
+    SW_EXPECT_NEAR( 0.0f, body.getVelocity()._x, 1.0e-3f );
+    SW_EXPECT_TRUE( body.getPosition()._z > 7.0f ); // 벽을 따라 미끄러졌다
+}
+
+SW_TEST_CASE( VoxelBodyTest, WaterSlowsAndJumpSwimsUp )
+{
+    VoxelRig rig;
+    rig.layFloor( 2 );
+    for ( int32 y = 3; y < 20; ++y )
+    {
+        for ( int32 z = 0; z < 16; ++z )
+        {
+            for ( int32 x = 0; x < 16; ++x )
+            {
+                SW_REQUIRE_TRUE( rig._world.setBlock( x, y, z, rig._water ) );
+            }
+        }
+    }
+    VoxelBody body;
+    body.setWaterBlock( rig._water );
+    body.setPosition( float3{ 5.5f, 10.0f, 5.5f } );
+    VoxelBodyTestUtil::run( body, rig._world, float3{}, false, 0.2f );
+    SW_REQUIRE_TRUE( body.isInWater() );
+    SW_EXPECT_TRUE( body.getVelocity()._y >= -body.getSettings()._swimSpeed );
+
+    const float32 startY = body.getPosition()._y;
+    VoxelBodyTestUtil::run( body, rig._world, float3{}, true, 1.0f );
+    SW_EXPECT_TRUE( body.getPosition()._y > startY );
+
+    VoxelBody dry; // 물 블록을 알려 주지 않은 몸은 헤엄치지 않는다
+    dry.setPosition( float3{ 5.5f, 10.0f, 5.5f } );
+    VoxelBodyTestUtil::run( dry, rig._world, float3{}, false, 0.2f );
+    SW_EXPECT_FALSE( dry.isInWater() );
+}
+
+SW_TEST_CASE( VoxelBodyTest, OverlapIgnoresTheTouchingFace )
+{
+    VoxelBody body;
+    body.setPosition( float3{ 0.5f, 1.0f, 0.5f } );
+    SW_EXPECT_TRUE( body.overlapsBlock( VoxelCoord{ 0, 1, 0 } ) );
+    SW_EXPECT_TRUE( body.overlapsBlock( VoxelCoord{ 0, 2, 0 } ) );
+    SW_EXPECT_FALSE( body.overlapsBlock( VoxelCoord{ 0, 0, 0 } ) ); // 발밑 블록에 닿기만 한다
+    SW_EXPECT_FALSE( body.overlapsBlock( VoxelCoord{ 1, 1, 0 } ) );
+}
+
+// ---- 핫바 ----
+
+SW_TEST_CASE( VoxelHotbarTest, AddFillsSameBlockThenEmptySlotsAndReturnsTheRest )
+{
+    VoxelHotbar hotbar;
+    SW_EXPECT_EQUAL( 0, hotbar.addBlock( 1, 60 ) );
+    SW_EXPECT_EQUAL( 0, hotbar.addBlock( 2, 1 ) );
+    SW_EXPECT_EQUAL( 0, hotbar.addBlock( 1, 10 ) ); // 첫 칸을 64 로 채우고 나머지 6 은 빈 칸으로
+    SW_EXPECT_EQUAL( 64, hotbar.getSlot( 0 )._count );
+    SW_EXPECT_EQUAL( 6, hotbar.getSlot( 2 )._count );
+    SW_EXPECT_EQUAL( 70, hotbar.countBlock( 1 ) );
+
+    SW_EXPECT_EQUAL( 0, hotbar.addBlock( kVoxelAirBlock, 5 ) );
+    SW_EXPECT_EQUAL( 0, hotbar.addBlock( 3, -5 ) );
+    SW_EXPECT_EQUAL( 0, hotbar.countBlock( 3 ) );
+
+    VoxelHotbar full;
+    const int32 capacity = VoxelHotbar::kSlotCount * VoxelHotbar::kMaxStack;
+    SW_EXPECT_EQUAL( 5, full.addBlock( 1, capacity + 5 ) );
+    SW_EXPECT_EQUAL( capacity, full.countBlock( 1 ) );
+}
+
+SW_TEST_CASE( VoxelHotbarTest, ConsumeEmptiesTheSlotAndSelectWraps )
+{
+    VoxelHotbar     hotbar;
+    VoxelBlockIndex block = kVoxelAirBlock;
+    SW_EXPECT_FALSE( hotbar.consumeSelected( block ) );
+    SW_EXPECT_EQUAL( 0, hotbar.addBlock( 7, 1 ) );
+    SW_REQUIRE_TRUE( hotbar.consumeSelected( block ) );
+    SW_EXPECT_EQUAL( 7, static_cast<int32>( block ) );
+    SW_EXPECT_TRUE( hotbar.getSelectedSlot().isEmpty() );
+    SW_EXPECT_FALSE( hotbar.consumeSelected( block ) );
+
+    hotbar.selectRelative( -1 );
+    SW_EXPECT_EQUAL( VoxelHotbar::kSlotCount - 1, hotbar.getSelectedIndex() );
+    hotbar.selectRelative( 1 );
+    SW_EXPECT_EQUAL( 0, hotbar.getSelectedIndex() );
+    hotbar.selectRelative( VoxelHotbar::kSlotCount * 3 + 2 );
+    SW_EXPECT_EQUAL( 2, hotbar.getSelectedIndex() );
+    hotbar.select( 99 );
+    SW_EXPECT_EQUAL( VoxelHotbar::kSlotCount - 1, hotbar.getSelectedIndex() );
+    SW_EXPECT_TRUE( hotbar.getSlot( -5 ).isEmpty() ); // 범위 밖 번호도 끝 칸으로 읽는다
+}
+
+SW_TEST_CASE( VoxelHotbarTest, StateRoundTripsAndRefusesBadCounts )
+{
+    VoxelHotbar hotbar;
+    SW_EXPECT_EQUAL( 0, hotbar.addBlock( 4, 12 ) );
+    hotbar.select( 3 );
+    Archive writing;
+    hotbar.writeState( writing );
+    const vector<uint8> listSaved( writing.getData(), writing.getData() + writing.getSize() );
+
+    VoxelHotbar restored;
+    Archive     reading( listSaved.data(), listSaved.size() );
+    SW_REQUIRE_TRUE( restored.readState( reading ) );
+    SW_EXPECT_EQUAL( 12, restored.countBlock( 4 ) );
+    SW_EXPECT_EQUAL( 3, restored.getSelectedIndex() );
+
+    // 슬롯 하나는 블록 1 바이트 + 개수 int32 다. 첫 개수의 높은 바이트를 부풀린다.
+    vector<uint8> listBadCount                                    = listSaved;
+    listBadCount[sizeof( VoxelBlockIndex ) + sizeof( int32 ) - 1] = 0x7f;
+    VoxelHotbar target;
+    Archive     badCount( listBadCount.data(), listBadCount.size() );
+    SW_EXPECT_FALSE( target.readState( badCount ) );
+    SW_EXPECT_EQUAL( 0, target.countBlock( 4 ) );
+
+    vector<uint8> listBadSelect             = listSaved;
+    listBadSelect[listBadSelect.size() - 1] = 0x7f; // 고른 칸의 높은 바이트
+    Archive badSelect( listBadSelect.data(), listBadSelect.size() );
+    SW_EXPECT_FALSE( target.readState( badSelect ) );
+}
+
+// ---- 지형 ----
+
+SW_TEST_CASE( VoxelTerrainTest, SameSeedSameWorldAndColumnsAreLayered )
+{
+    VoxelRig              rig;
+    const VoxelBlockIndex grass   = rig.addBlock( "grass", true, true );
+    const VoxelBlockIndex dirt    = rig.addBlock( "dirt", true, true );
+    const VoxelBlockIndex bedrock = rig.addBlock( "bedrock", true, true );
+    (void)rig.addBlock( "sand", true, true );
+
+    VoxelTerrainSettings settings;
+    settings._treeChance            = 0.0f;
+    const VoxelTerrainReport report = VoxelTerrainGenerator::fillWorld( rig._world, settings );
+    SW_EXPECT_TRUE( report._minHeight <= report._maxHeight );
+    SW_EXPECT_EQUAL( uint32( 0 ), report._treeCount );
+    SW_EXPECT_TRUE( rig._world.getBlock( 3, 0, 3 ) == bedrock );
+    SW_EXPECT_TRUE( rig._world.countBlocks( grass ) > 0 );
+    SW_EXPECT_TRUE( rig._world.countBlocks( dirt ) > 0 );
+
+    const int32 surface = VoxelTerrainGenerator::computeSurfaceHeight( 3, 3, settings );
+    SW_EXPECT_TRUE( report._minHeight <= surface && surface <= report._maxHeight );
+    SW_EXPECT_EQUAL( surface, rig._world.findTopSolidY( 3, 3 ) ); // 나무가 없으면 맨 위 단단한 블록이 지면이다
+
+    VoxelRig again;
+    (void)again.addBlock( "grass", true, true );
+    (void)again.addBlock( "dirt", true, true );
+    (void)again.addBlock( "bedrock", true, true );
+    (void)again.addBlock( "sand", true, true );
+    (void)VoxelTerrainGenerator::fillWorld( again._world, settings );
+    SW_EXPECT_TRUE( VoxelRig::save( again._world ) == VoxelRig::save( rig._world ) );
+}
