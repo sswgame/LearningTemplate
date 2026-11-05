@@ -85,6 +85,24 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    /** @brief Sync 탭이 프로세스에 묻고 답을 읽는 창구입니다(세션이 구현한다 — 프로세스 없이 기다림 상태를 시험하려는 자리). */
+    class IEditorNetPlayProcesses
+    {
+    public:
+        IEditorNetPlayProcesses()                                            = default;
+        virtual ~IEditorNetPlayProcesses()                                   = default;
+        IEditorNetPlayProcesses( const IEditorNetPlayProcesses& )            = delete;
+        IEditorNetPlayProcesses& operator=( const IEditorNetPlayProcesses& ) = delete;
+
+        virtual bool                       isRunning() const                                             = 0;
+        virtual EditorNetPlayProcessStatus getProcessStatus( int32 processIndex ) const                  = 0;
+        [[nodiscard]] virtual bool         sendProcessCommand( int32 processIndex, string_view command ) = 0;
+        [[nodiscard]] virtual bool         requestObjectHashes( int32 processIndex, uint64 minTick )     = 0;
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     class EditorNetPlayStopJob;
 
     /**
@@ -92,7 +110,7 @@ namespace sw::editor
      * @brief 서버와 클라이언트 프로세스를 묶은 세션 하나입니다. `start`, 프레임마다 `update`, `stop` 순서로 씁니다. 게임(UI) 스레드에서만 호출합니다.
      * @details 확장 모듈의 Multiplayer 창 탭(`SW_EDITOR_MULTIPLAYER_TAB`)도 이 세션을 받으므로 EditorModule 밖으로 내보낸다.
      */
-    class SW_EDITOR_API EditorNetPlaySession : public EditorSubsystem
+    class SW_EDITOR_API EditorNetPlaySession : public EditorSubsystem, public IEditorNetPlayProcesses
     {
     public:
         /** @brief 패널 필터용으로 보관하는 최근 줄 수입니다. 넘으면 오래된 줄부터 버리며, 에디터 로그에는 모두 남습니다. */
@@ -162,15 +180,15 @@ namespace sw::editor
          * @brief 프로세스 하나(`getProcessStatus` 의 번호)의 표준 입력에 한 줄을 보냅니다. 끝났거나 번호가 없으면 false 입니다.
          * @details 클라이언트 · 리슨 호스트(`App -gv_standardInputCommands=1`)와 전용 서버(Dev)는 그 줄을 개발 명령으로 돌리고 답을 로그 줄로 남긴다.
          */
-        [[nodiscard]] bool sendProcessCommand( int32 processIndex, string_view command );
+        [[nodiscard]] bool sendProcessCommand( int32 processIndex, string_view command ) override;
         /**
          * @brief 프로세스 @p processIndex 에 오브젝트별 해시(`state.objectline`)를 묻되, @p minTick 보다 이른 답은 받지 않고 다시 묻습니다. 보냈으면 true 입니다.
          * @details 서버를 멈춘 뒤에도 클라이언트는 마지막 틱 몇 개를 더 받는다 — 첫 답을 그대로 받으면 두 쪽 틱이 달라 비교가 거절됐다(부하 걸린 기계에서 57 대 61).
          *          받아들인 답에서 `_objectHashReportCount` 가 오른다. 다시 묻기는 `kMaxObjectHashReask` 번까지이고, 넘으면 이른 답을 넘겨 비교가 틱 차이로 실패한다.
          */
-        [[nodiscard]] bool requestObjectHashes( int32 processIndex, uint64 minTick );
+        [[nodiscard]] bool requestObjectHashes( int32 processIndex, uint64 minTick ) override;
 
-        bool isRunning() const { return _listProcess.empty() == false; }
+        bool isRunning() const override { return _listProcess.empty() == false; }
         /** @brief `requestStop` 뒤 프로세스 거두기 · 트레이스 합치기가 아직 끝나지 않았으면 true 입니다. 이 동안 `isRunning` 은 거짓이고 `start` 는 거절한다. */
         bool isStopping() const { return _stopPhase != StopPhase::Idle; }
         /** @brief 서버에 연결되었다고 로그에 남긴 클라이언트 수입니다. `Net session connected to` 줄을 센 값이며, 프로브와 테스트가 접속 여부를 이 값으로 확인합니다. */
@@ -183,7 +201,7 @@ namespace sw::editor
         /** @brief 위 채널의 토큰입니다. 세션마다 새로 만듭니다. 채널이 없으면 비어 있습니다. */
         const string&              getDebugChannelToken() const { return _debugChannelToken; }
         int32                      getProcessCount() const { return static_cast<int32>( _listProcess.size() ); }
-        EditorNetPlayProcessStatus getProcessStatus( int32 processIndex ) const;
+        EditorNetPlayProcessStatus getProcessStatus( int32 processIndex ) const override;
         /** @brief 패널 필터용 최근 줄입니다. `update` 가 채웁니다. */
         const vector<EditorNetPlayLogLine>& getLogLines() const { return _listLogLine; }
         /** @brief 지난 `stop` 이 합친 트레이스 경로입니다. 없으면 빈 문자열입니다. */

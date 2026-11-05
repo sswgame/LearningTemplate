@@ -3,7 +3,6 @@
 #include "Core/File/ProcessRoots.h"
 #include "Core/String/StringBuilder.h"
 #include "Core/String/fixed_string.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Editor/Common/Config/EditorPreferences.h"
 #include "Editor/Common/Config/EditorSettingsRegistry.h"
@@ -14,6 +13,7 @@
 #include "Editor/Common/Workspace/EditorStateHashCompare.h"
 #include "Editor/Common/Workspace/EditorStateStore.h"
 #include "Editor/Common/Workspace/NetPlay/EditorNetPlaySession.h"
+#include "Editor/Panels/Multiplayer/Model/MultiplayerSyncModel.h"
 #include "Editor/Panels/Multiplayer/MultiplayerTab.h"
 
 #include "Engine/Automation/Watch/AutomationWatch.h"
@@ -30,8 +30,6 @@ namespace sw::editor
     {
         struct MultiplayerSyncTabInternal
         {
-            /** @brief 클라이언트에게 묻는 최근 틱 수입니다. 답은 로그 한 줄이라 한 줄 상한(`DebugReplyLine::kMaxBytes`)에 드는 수까지만 묻는다(더 많이 물으면 클라이언트가 오류로 답한다). 세션 서버 이력(3600 틱)보다 짧다. */
-            static constexpr int32 kClientHistoryTicks = static_cast<int32>( StateHashHistory::kMaxReportLineSamples );
             /** @brief 슬롯 이름입니다(탭 · 명령 답). */
             static constexpr const utf8* kArrSourceName[EditorStateHashCompare::kSourceCount] = { "A", "B" };
 
@@ -70,14 +68,6 @@ namespace sw::editor
                     return false;
                 }
                 return true;
-            }
-
-            /** @brief 클라이언트(프로세스 @p processIndex)의 마지막 이력 답을 칸에 담습니다. 답이 오류 형식이면 이력 답 수가 늘지 않으므로 여기 오지 않는다. */
-            [[nodiscard]] static bool loadClientReport( int32 sourceIndex, const EditorNetPlayProcessStatus& status )
-            {
-                string text;
-                StateHashHistory::writeReport( status._listStateHash, text );
-                return getCompare().loadFromReport( sourceIndex, status._label, text );
             }
 
             /** @brief 비교 결과 한 줄입니다(탭 · 명령 답). */
@@ -252,15 +242,6 @@ namespace sw::editor
         void drawSource( int32 sourceIndex );
         /** @brief 칸 하나의 클라이언트 원천 단추들입니다. 누르면 그 프로세스의 표준 입력에 `state.hashline` 을 묻고, 답이 오면(`pollClientReplies`) 칸에 담는다. */
         void drawClientSources( int32 sourceIndex );
-        /** @brief 기다리는 클라이언트 답이 왔으면 칸에 담습니다. 프레임마다 부릅니다. */
-        void pollClientReplies();
-        /**
-         * @brief "Which objects differ" 를 시작합니다. 채널에서 읽은 칸은 바로 받고, 클라이언트에서 읽은 칸은 표준 입력에 `state.objectline` 을 물어 답을 기다린다(`pollObjectReplies`).
-         * @details 두 칸의 답이 모이면 틱 머리 검증을 거치는 `EditorStateHashCompare::compareObjects` 하나로 견준다(서버 칸과 같은 규칙).
-         */
-        void startObjectCompare();
-        /** @brief 기다리는 클라이언트의 오브젝트 해시 답이 왔으면 담고, 두 칸이 모두 모였으면 견줍니다. 프레임마다 부릅니다. */
-        void pollObjectReplies();
         /**
          * @brief 되감기 줄(서버 디버깅 S7 · O7)입니다. 세션이 없으면 `.swintent` 로 멈춘 재생 서버를 띄우고, 재생 서버가 떠 있으면 `step N` 으로 한 틱씩 진행합니다.
          * @details 어긋난 틱을 안 뒤 새 서버를 틱 0 에서 멈춘 채 띄워(`startReplayServer`) 그 틱까지 정확히 진행하면, 같은 틱에서 Which objects differ · Inspector 로 볼 수 있다.
@@ -268,22 +249,13 @@ namespace sw::editor
         void drawReplay();
 
     private:
-        fixed_string<constant::buffer::kMax64>     _arrChannelName;                                                ///< 읽을 해시 줄 이름(편집 필드, `EditorStateHashCompare::setHashChannel`)
-        fixed_string<constant::file::kMaxPathSize> _arrPath[EditorStateHashCompare::kSourceCount];                 ///< 슬롯마다 파일 경로(편집 필드)
-        fixed_string<constant::buffer::kMax64>     _arrAddress[EditorStateHashCompare::kSourceCount];              ///< 슬롯마다 채널 주소(편집 필드)
-        fixed_string<constant::buffer::kMax128>    _arrToken[EditorStateHashCompare::kSourceCount];                ///< 슬롯마다 채널 토큰(편집 필드)
-        int32                                      _arrPendingProcess[EditorStateHashCompare::kSourceCount];       ///< 슬롯마다 답을 기다리는 클라이언트 프로세스 번호(-1 이면 없다)
-        uint32                                     _arrPendingReportCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 이력 답 수 — 늘면 새 답이다
-        uint8                                      _bObjectRequest : 1;                                            ///< "Which objects differ" 가 클라이언트 답을 기다리는 중이다
-        int32                                      _arrObjectPendingProcess[EditorStateHashCompare::kSourceCount]; ///< 슬롯마다 오브젝트 해시 답을 기다리는 클라이언트 프로세스 번호(-1 이면 안 기다린다)
-        uint32                                     _arrObjectPendingCount[EditorStateHashCompare::kSourceCount];   ///< 물을 때의 그 프로세스 오브젝트 해시 답 수
-        uint64                                     _arrObjectTick[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트 해시의 틱
-        vector<SceneObjectHash>                    _arrObjectList[EditorStateHashCompare::kSourceCount];           ///< 슬롯마다 받은 오브젝트별 해시
-        Stopwatch                                  _arrPendingWatch[EditorStateHashCompare::kSourceCount];         ///< 슬롯마다 이력 질의를 보낸 뒤 지난 시간 — 상한(`getReplyTimeoutMilliseconds`)을 넘으면 오류로 끝낸다
-        Stopwatch                                  _objectWatch;                                                   ///< 오브젝트 해시 질의를 보낸 뒤 지난 시간(위와 같다)
-        string                                     _errorText;                                                     ///< 마지막 질의 오류(시간 초과 포함). 새 질의가 시작되면 비운다
-        fixed_string<constant::file::kMaxPathSize> _arrReplayPath;                                                 ///< 재생할 `.swintent` 경로(편집 필드)
-        int32                                      _replayStepCount;                                               ///< 재생 서버를 한 번에 진행할 틱 수(편집 필드)
+        fixed_string<constant::buffer::kMax64>     _arrChannelName;                                   ///< 읽을 해시 줄 이름(편집 필드, `EditorStateHashCompare::setHashChannel`)
+        fixed_string<constant::file::kMaxPathSize> _arrPath[EditorStateHashCompare::kSourceCount];    ///< 슬롯마다 파일 경로(편집 필드)
+        fixed_string<constant::buffer::kMax64>     _arrAddress[EditorStateHashCompare::kSourceCount]; ///< 슬롯마다 채널 주소(편집 필드)
+        fixed_string<constant::buffer::kMax128>    _arrToken[EditorStateHashCompare::kSourceCount];   ///< 슬롯마다 채널 토큰(편집 필드)
+        fixed_string<constant::file::kMaxPathSize> _arrReplayPath;                                    ///< 재생할 `.swintent` 경로(편집 필드)
+        MultiplayerSyncModel                       _model;                                            ///< 클라이언트 답 기다리기
+        int32                                      _replayStepCount;                                  ///< 재생 서버를 한 번에 진행할 틱 수(편집 필드)
     };
 } // namespace sw::editor
 
@@ -294,20 +266,10 @@ namespace sw::editor
         , _arrPath{}
         , _arrAddress{}
         , _arrToken{}
-        , _arrPendingProcess{ -1, -1 }
-        , _arrPendingReportCount{}
-        , _bObjectRequest{ SW_FALSE }
-        , _arrObjectPendingProcess{ -1, -1 }
-        , _arrObjectPendingCount{}
-        , _arrObjectTick{}
-        , _arrObjectList{}
-        , _arrPendingWatch{}
-        , _objectWatch{}
-        , _errorText{}
         , _arrReplayPath{}
+        , _model{}
         , _replayStepCount{ 1 }
     {
-        static_assert( EditorStateHashCompare::kSourceCount == 2, "the pending client table is initialized for two sources" );
     }
 
     void MultiplayerSyncTab::drawClientSources( int32 sourceIndex )
@@ -322,150 +284,14 @@ namespace sw::editor
             ImGui::PushID( processIndex );
             if ( processIndex > 1 )
                 ImGui::SameLine();
-            const bool bWaiting = _arrPendingProcess[sourceIndex] == processIndex;
+            const bool bWaiting = _model.isWaitingForHistory( sourceIndex, processIndex );
             ImGui::BeginDisabled( status._bRunning == false || bWaiting );
             if ( ImGui::Button( status._label.c_str() ) )
-            {
-                const string& channel = MultiplayerSyncTabInternal::getCompare().getHashChannel();
-                const string  command = formatToString( "state.hashline %#%#", MultiplayerSyncTabInternal::kClientHistoryTicks, ( channel == StateHashHistory::kSceneChannelName ? string{} : " " + channel ) );
-                if ( session.sendProcessCommand( processIndex, command ) )
-                {
-                    _arrPendingProcess[sourceIndex]     = processIndex;
-                    _arrPendingReportCount[sourceIndex] = status._stateHashReportCount;
-                    _arrPendingWatch[sourceIndex].restart();
-                    _errorText.clear();
-                }
-                else
-                {
-                    SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotAsk", "Sync could not ask %# for its history (the process has exited)", status._label );
-                }
-            }
+                (void)_model.requestClientHistory( session, MultiplayerSyncTabInternal::getCompare(), sourceIndex, processIndex ); // 실패는 모델이 알린다
             ImGui::EndDisabled();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncClient" ) );
             ImGui::PopID();
         }
-    }
-
-    void MultiplayerSyncTab::pollClientReplies()
-    {
-        EditorNetPlaySession& session = MultiplayerSyncTabInternal::getSession();
-        for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
-        {
-            const int32 processIndex = _arrPendingProcess[sourceIndex];
-            if ( processIndex < 0 )
-                continue;
-            if ( session.isRunning() == false )
-            {
-                _arrPendingProcess[sourceIndex] = -1; // 세션이 끝났다 — 답이 올 곳이 없다
-                continue;
-            }
-            const EditorNetPlayProcessStatus status = session.getProcessStatus( processIndex );
-            if ( status._stateHashReportCount == _arrPendingReportCount[sourceIndex] )
-            {
-                // 클라이언트는 잘못된 질문에 오류 줄로 답하고 그 답은 이력 답 수를 늘리지 않는다 - 상한 없이 기다리면 영원히 대기 상태로 남는다.
-                if ( _arrPendingWatch[sourceIndex].getElapsedMilliseconds() >= MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() )
-                {
-                    _arrPendingProcess[sourceIndex] = -1;
-                    _errorText                      = formatToString( "Timed out waiting for %#'s history (no valid answer within %# ms)", status._label, MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() );
-                    SW_LOG_WARNING_ID( "MultiplayerSync.Sync", "Sync %#", _errorText );
-                }
-                continue;
-            }
-            _arrPendingProcess[sourceIndex] = -1;
-            if ( MultiplayerSyncTabInternal::loadClientReport( sourceIndex, status ) == false )
-                SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotTake", "Sync could not take %#'s history: %#", status._label, MultiplayerSyncTabInternal::getCompare().getLastError() );
-            else
-                MultiplayerSyncTabInternal::getCompare().setClientOrigin( sourceIndex, processIndex );
-        }
-    }
-
-    void MultiplayerSyncTab::startObjectCompare()
-    {
-        EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
-        EditorNetPlaySession&   session = MultiplayerSyncTabInternal::getSession();
-        _bObjectRequest                 = SW_FALSE;
-        bool   bWaiting                 = false;
-        uint64 channelTick              = 0;
-        // 채널(서버) 칸을 먼저 읽어 그 틱을 안다 — 클라이언트에는 그 틱 이상의 답만 받는다(멈춘 서버를 클라이언트가 아직 따라오는 중일 수 있다).
-        for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
-        {
-            _arrObjectPendingProcess[sourceIndex] = -1;
-            if ( compare.getClientOrigin( sourceIndex ) >= 0 )
-                continue;
-            if ( compare.readObjectsFromChannel( sourceIndex, _arrObjectTick[sourceIndex], _arrObjectList[sourceIndex] ) == false )
-            {
-                SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotCompare", "Sync could not compare objects: %#", compare.getLastError() );
-                return;
-            }
-            channelTick = _arrObjectTick[sourceIndex] > channelTick ? _arrObjectTick[sourceIndex] : channelTick;
-        }
-        for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
-        {
-            const int32 processIndex = compare.getClientOrigin( sourceIndex );
-            if ( processIndex < 0 )
-                continue;
-            // 클라이언트는 디버그 채널이 없다 - 표준 입력의 한 줄 답(`state.objectline`)을 기다린다.
-            const uint32 reportCount = session.isRunning() ? session.getProcessStatus( processIndex )._objectHashReportCount : 0;
-            if ( session.isRunning() == false || session.requestObjectHashes( processIndex, channelTick ) == false )
-            {
-                SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotAsk2", "Sync could not ask slot %# for its object hashes (the session or the process is gone)", sourceIndex );
-                return;
-            }
-            _arrObjectPendingProcess[sourceIndex] = processIndex;
-            _arrObjectPendingCount[sourceIndex]   = reportCount;
-            bWaiting                              = true;
-        }
-        _bObjectRequest = SW_TRUE;
-        _errorText.clear();
-        _objectWatch.restart();
-        if ( bWaiting == false )
-            pollObjectReplies();
-    }
-
-    void MultiplayerSyncTab::pollObjectReplies()
-    {
-        if ( _bObjectRequest == false )
-            return;
-        EditorNetPlaySession& session = MultiplayerSyncTabInternal::getSession();
-        bool                  bAllIn  = true;
-        for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
-        {
-            const int32 processIndex = _arrObjectPendingProcess[sourceIndex];
-            if ( processIndex < 0 )
-                continue;
-            if ( session.isRunning() == false )
-            {
-                _bObjectRequest = SW_FALSE; // 세션이 끝났다 - 답이 올 곳이 없다
-                return;
-            }
-            const EditorNetPlayProcessStatus status = session.getProcessStatus( processIndex );
-            if ( status._objectHashReportCount == _arrObjectPendingCount[sourceIndex] )
-            {
-                bAllIn = false;
-                continue;
-            }
-            _arrObjectTick[sourceIndex]           = status._objectHashTick;
-            _arrObjectList[sourceIndex]           = status._listObjectHash;
-            _arrObjectPendingProcess[sourceIndex] = -1;
-        }
-        if ( bAllIn == false )
-        {
-            if ( _objectWatch.getElapsedMilliseconds() >= MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() )
-            {
-                _bObjectRequest = SW_FALSE;
-                for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
-                {
-                    _arrObjectPendingProcess[sourceIndex] = -1;
-                }
-                _errorText = formatToString( "Timed out waiting for the object hashes (no valid answer within %# ms)", MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds() );
-                SW_LOG_WARNING_ID( "MultiplayerSync.Sync", "Sync %#", _errorText );
-            }
-            return;
-        }
-        _bObjectRequest                 = SW_FALSE;
-        EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
-        if ( compare.compareObjects( _arrObjectTick[0], _arrObjectList[0], _arrObjectTick[1], _arrObjectList[1] ) == false )
-            SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotCompare", "Sync could not compare objects: %#", compare.getLastError() );
     }
 
     void MultiplayerSyncTab::drawSource( int32 sourceIndex )
@@ -534,7 +360,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ReplayServer" ) ) );
         ImGui::BeginDisabled( session.isRunning() || _arrReplayPath.empty() );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "ReplayServer" ) ) && session.startReplayServer( _arrReplayPath.c_str() ) == false )
-            _errorText = "The replay server could not start - see the Output Log";
+            _model.setError( "The replay server could not start - see the Output Log" );
         ImGui::EndDisabled();
         // 한 틱씩 진행은 떠 있는 서버가 있을 때만 — 전용 서버는 멈춘 채 떠서 `step` 만큼만 돈다.
         ImGui::BeginDisabled( session.isRunning() == false );
@@ -543,14 +369,14 @@ namespace sw::editor
         _replayStepCount = _replayStepCount < 1 ? 1 : _replayStepCount;
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Step" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Step" ) ) && session.sendServerCommand( formatToString( "step %#", _replayStepCount ) ) == false )
-            _errorText = "The server did not take the step command";
+            _model.setError( "The server did not take the step command" );
         ImGui::EndDisabled();
     }
 
     void MultiplayerSyncTab::drawTab( const MultiplayerTabContext& /*context*/ )
     {
-        pollClientReplies();
-        pollObjectReplies();
+        const int64 timeoutMilliseconds = MultiplayerSyncTabInternal::getReplyTimeoutMilliseconds();
+        _model.poll( MultiplayerSyncTabInternal::getSession(), MultiplayerSyncTabInternal::getCompare(), timeoutMilliseconds );
         // 어느 줄의 이력을 읽을지 — 씬 줄(`scene`) 말고 키트가 더한 줄(`destruction` · `rollback`)도 같은 비교를 탄다. 읽는 단추를 누를 때 이 이름을 쓴다.
         if ( _arrChannelName.empty() )
             _arrChannelName = MultiplayerSyncTabInternal::getCompare().getHashChannel().c_str();
@@ -558,9 +384,9 @@ namespace sw::editor
         if ( ImGui::InputTextWithHint( "##SyncChannel", "scene | destruction | rollback", _arrChannelName.data(), _arrChannelName.capacity() ) )
         {
             if ( MultiplayerSyncTabInternal::getCompare().setHashChannel( _arrChannelName.c_str() ) == false )
-                _errorText = MultiplayerSyncTabInternal::getCompare().getLastError();
+                _model.setError( MultiplayerSyncTabInternal::getCompare().getLastError() );
             else
-                _errorText.clear();
+                _model.clearError();
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncChannel" ) );
         for ( int32 sourceIndex = 0; sourceIndex < EditorStateHashCompare::kSourceCount; ++sourceIndex )
@@ -569,8 +395,8 @@ namespace sw::editor
         }
         ImGui::Separator();
         drawReplay();
-        if ( _errorText.empty() == false )
-            EditorThemeUtil::textError( _errorText.c_str() );
+        if ( _model.getError().empty() == false )
+            EditorThemeUtil::textError( _model.getError().c_str() );
         EditorStateHashCompare& compare = MultiplayerSyncTabInternal::getCompare();
         if ( ImGui::Button( SW_LOCKEY( "EdText", "Compare" ) ) && compare.compare() == false )
             SW_LOG_WARNING_ID( "MultiplayerSync.SyncCouldNotCompare2", "Sync could not compare: %#", compare.getLastError() );
@@ -582,7 +408,7 @@ namespace sw::editor
         }
         // 어긋난 틱 근처에서 두 서버를 pause 한 채 누른다 — 두 서버의 현재 오브젝트 해시를 다시 받아 다른 오브젝트를 짚는다.
         if ( ImGui::Button( SW_LOCKEY( "EdText", "WhichObjectsDiffer" ) ) )
-            startObjectCompare();
+            _model.startObjectCompare( MultiplayerSyncTabInternal::getSession(), compare, timeoutMilliseconds );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncObjects" ) );
         if ( compare.hasObjectComparison() )
         {
