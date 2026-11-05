@@ -2,7 +2,7 @@
 
 > 질문: 무엇이 남았고 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: 아래 **남은 일**만 본다 — 끝난 일은 git 기록과 계획 문서([StructureRefactor](StructureRefactor.md))에 있다. 순서는 셰이더 → 7 → 1 → 2 → 0 → 5 → 6. 이 문서에는 끝난 일을 쌓지 않는다(끝나면 줄을 지운다).
+> 결론: 아래 **남은 일**만 본다 — 끝난 일은 git 기록과 계획 문서([StructureRefactor](StructureRefactor.md))에 있다. 순서는 7 → 1 → 2 → 0 → 5 → 6. 이 문서에는 끝난 일을 쌓지 않는다(끝나면 줄을 지운다).
 
 ## 일하는 법 (요약)
 
@@ -11,17 +11,10 @@
 - 느린 곳은 새로 재지 말고 로그의 `[Scenario] … timeline:` · `stage reset took` · `Backend swap took` 줄을 모은다(`Test/README.md` 의 시간 기록).
 - 규칙: 구조로 푼다 · 폴백 없음 · 게이트는 최후 · 구성 차이는 크기대로(`docs/agents/BuildConfigSwitch.md`) · 용어는 `docs/agents/NamingCpp.md` 의 표. 시나리오 체계는 `Test/README.md` 가 정본.
 - Linux 는 WSL 클론(`~/LT-linux`, `git fetch origin main` 뒤 `~/lt-scripts/build.sh`)에서 Linux-Debug 전체 빌드 · 단위 테스트(`Bin/App --test`)를 돌린다(2026-11-02 통과). 매니페스트에서 포트가 빠지면(2026-11-05 `vulkan`) 공유 설치본 보호 장치가 설치를 건너뛰어 오버레이 패치(imgui-node-editor 의 `NavigateToRect` · `GetGroupSize`)가 들어가지 않는다 — 혼자 쓰는 클론이라 한 번 `-DSW_VCPKG_FORCE_INSTALL=ON` 으로 구성한다. 시나리오는 WSLg 에서 Vulkan 만 돈다 — GL 은 WSLg 드라이버에 `GL_ARB_gl_spirv` 가 없어 기동이 물러나고(77), 창 관리자(Weston XWayland)가 아이콘화 요청을 무시해 `engine/automation/windowpresent` 의 최소화 단계가 진다.
+  전용 서버 Debug 도 클론에서 함께 짓는다 — 렌더러를 빼는 구성이라 클라이언트 빌드가 못 잡는 층 위반이 여기서만 드러난다: `cmake -S . -B build/Linux-Server -G Ninja -DCMAKE_BUILD_TYPE=Debug -DSW_TARGET_TYPE=Server` 에 Linux-Debug 캐시의 컴파일러 · 툴체인 · `VCPKG_INSTALLED_DIR` 을 **절대 경로로** 넘긴다(상대 경로면 컴파일러 확인에서 진다), 실행은 `Bin/Server -gv_serverExitAfterTicks=60` 과 `Bin/Server --test`.
   Wayland 창 층(`SW_ENABLE_WAYLAND`)은 기본 클론 빌드에 없다 — `~/lt-deps/root` 에 sudo 없이 푼 `libxkbcommon-dev` · `wayland-protocols`(`apt-get download` + `dpkg -x`, .pc 의 prefix 를 그 폴더로)를 `PKG_CONFIG_PATH` 로 주고 `cmake --preset Linux-Debug -B build/Linux-Wayland -DSW_ENABLE_WAYLAND=ON` 로 짓는다. 실행은 `SW_WINDOW_BACKEND=wayland`.
 
 ## 남은 일
-
-### 셰이더 정리와 최적화 (2026-11-05 사용자 지시)
-
-| 일 | 내용 |
-|---|---|
-| 중복 합치기 | 전체 화면 정점 셰이더 13 벌, `computeMaterialLighting` 세 벌(`forward_lit` · `pbr_lit` · `surface_lit`), 스프라이트 오프셋 두 벌. `binding.hlsli`(2020 줄) · `mesh_modifier.hlsli`(1725 줄)는 나눌지 읽고 정한다 |
-| 그림이 그대로인 최적화 | 기준값(`Scenario.game.empty.benchmark`, 패스별 GPU 시간, DXC 명령어 수)을 먼저 재고 전후를 비교한다. 후보: `evaluateSpecular` 의 `pow` · `normalDotView` 재계산, `View::computeToView` 의 행렬 곱, `sampleProbeVolume` 의 버퍼 읽기 56 번 |
-| 그림자 필터 | `filterAtlas` 9 탭 PCF(캐스케이드 경계 18 탭)는 그림이 바뀌므로 측정과 스크린샷 비교 뒤 정한다 |
 
 ### 0. 사용자가 시킨 일 — 빠짐없이 (2026-11-01)
 
@@ -47,7 +40,6 @@
 | 일 | 내용 |
 |---|---|
 | 정적 상태 — 남은 것 | 표 싱글턴(개발 명령 · HUD · 행동 트리 · 리그 노드 · 알림 처리기 · 스킨 칸 · 메시 모디파이어)은 범위 소유로 옮겼다. 그대로 두는 것: 상태 없는 객체(SQL 드라이버 · 애니메이션 코덱), 정적 초기화 전에도 세는 `CacheStats`, 테스트 등록표, OS 진입점, 모듈 경계 창구, `FileDialog`(떼어 둔 스레드가 객체를 쓴다), 아이콘 표 발행(글꼴 설정이 에디터 범위보다 먼저 돈다). 남은 것: `EditorExtensionRegistry` 의 종류별 목록(정적 객체로 만들어져 편집기 범위보다 먼저 선다), `CatalogPanel` 감시값(감시 API 가 인스턴스를 받아야 옮긴다) |
-| 플랫폼 대역(`#else`) 지우기 | 2026-11-05 리눅스 링크가 `Win32Window` 의 빈 대역에서 깨졌다 — 대역이 생성자를 정의해 가상 함수 표가 만들어지는데, 11-04 에 더한 `setFramePosition` · `tryGetFrameExtents` 를 대역에 맞추지 않았다. 리눅스가 쓰지 않는 `Win32Window` · `Win32SplashWindow` 대역은 지웠다. 남은 것: `X11Window` · `X11SplashWindow` · `WaylandWindow` · `WaylandSplashWindow` · 입력 키 표 · XInput · UIA 의 `#else` 대역 — 다른 구성(리눅스 서버 빌드 · Wayland 끔)이 쓰는지 확인하고 쓰지 않으면 지운다(언리얼처럼 플랫폼 파일은 그 플랫폼에서만 짓는다) |
 
 ### 1. 리플렉션으로 옮기기 — Source 전체 (2026-11-04 사용자 지시: "리플렉션 활용이 가능한 부분은 모두")
 
