@@ -2,7 +2,6 @@
 
 #include "Editor/Panels/Catalog/CatalogPanel.h"
 
-#include "Core/Concurrency/atomic.h"
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
@@ -15,6 +14,7 @@
 #include "Editor/Common/GUI/Theme/EditorColorUtil.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Common/Workspace/EditorContext.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
@@ -67,28 +67,42 @@ namespace sw::editor
             Subscription   _subscription; ///< 마지막 멤버라 먼저 풀린다 — 콜백이 만지는 `_mutex` · `_listWarning` 보다 먼저
         };
 
-        // 시나리오 감시 값이 읽는 값입니다. 패널이 그릴 때 갱신하고 감시 값은 게임 스레드에서 읽습니다.
-        atomic<int32> s_catalogFileCount{ 0 };
-        atomic<int32> s_catalogRowCount{ 0 };
-        atomic<int32> s_catalogValidation{ 0 }; ///< 0 아직, 1 통과, 2 실패
-
         struct CatalogPanelInternal
         {
+            /** @brief 열린 카탈로그 편집기입니다. 닫혔으면 nullptr 입니다(감시 값이 읽는다). */
+            [[nodiscard]] static const CatalogPanel* findOpenPanel()
+            {
+                EditorContext* pContext = editor::findSubsystem<EditorContext>();
+                if ( pContext == nullptr )
+                    return nullptr;
+                const CatalogPanel* pPanel = pContext->getSubsystem<EditorPanelManager>().findPanel<CatalogPanel>();
+                return pPanel != nullptr && pPanel->isOpen() ? pPanel : nullptr;
+            }
+
             [[nodiscard]] static bool readFileCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( s_catalogFileCount.load() );
+                const CatalogPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getFileCount() );
                 return true;
             }
 
             [[nodiscard]] static bool readRowCount( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( s_catalogRowCount.load() );
+                const CatalogPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->countRows() );
                 return true;
             }
 
             [[nodiscard]] static bool readValidation( const GameObjectManager* /*pManager*/, float64& outValue )
             {
-                outValue = static_cast<float64>( s_catalogValidation.load() );
+                const CatalogPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( static_cast<uint8>( pPanel->getValidationState() ) );
                 return true;
             }
 
@@ -168,7 +182,6 @@ namespace sw::editor
             _listFile.push_back( std::move( row ) );
         }
         VectorUtil::sort( _listFile, &CatalogPanel::isFileBefore );
-        s_catalogFileCount.store( static_cast<int32>( _listFile.size() ) );
     }
 
     bool CatalogPanel::isFileBefore( const FileRow& lhs, const FileRow& rhs )
@@ -457,15 +470,18 @@ namespace sw::editor
         SW_LOG_INFO_ID( "CatalogPanel.CatalogRestored", "Catalog restored %#", _selectedID.c_str() );
     }
 
-    void CatalogPanel::syncDirty()
+    uint32 CatalogPanel::countRows() const
     {
-        int32 rowCount = 0;
+        uint32 rowCount = 0;
         for ( const CatalogDocument::Group& group : _document.getGroups() )
         {
-            rowCount += static_cast<int32>( group._listRow.size() );
+            rowCount += static_cast<uint32>( group._listRow.size() );
         }
-        s_catalogRowCount.store( rowCount );
-        s_catalogValidation.store( static_cast<int32>( _validationState ) );
+        return rowCount;
+    }
+
+    void CatalogPanel::syncDirty()
+    {
         if ( _document.isDirty() )
             markDocumentDirty();
         else

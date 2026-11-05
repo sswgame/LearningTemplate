@@ -37,20 +37,27 @@ namespace sw::editor
         [[nodiscard]] bool saveDocument() override;
         void               revertDocument() override;
 
-    private:
-        /** @brief 목록의 파일 하나입니다. */
-        struct FileRow
-        {
-            string _assetID{};
-            string _kindLabel{};
-        };
-
         /** @brief 마지막 검증의 결과입니다. */
         enum class ValidationState : uint8
         {
             None = 0,
             Passed,
             Failed
+        };
+
+        /** @brief 목록의 파일 수입니다. 찾기가 끝나기 전에는 0 입니다(감시 값). */
+        uint32 getFileCount() const { return static_cast<uint32>( _listFile.size() ); }
+        /** @brief 열린 파일의 행 수입니다(감시 값). */
+        uint32 countRows() const;
+        /** @brief 마지막 검증의 결과입니다(감시 값). */
+        ValidationState getValidationState() const { return _validationState; }
+
+    private:
+        /** @brief 목록의 파일 하나입니다. */
+        struct FileRow
+        {
+            string _assetID{};
+            string _kindLabel{};
         };
 
         /** @brief 종류 이름, 같으면 리소스 id 순입니다. */
