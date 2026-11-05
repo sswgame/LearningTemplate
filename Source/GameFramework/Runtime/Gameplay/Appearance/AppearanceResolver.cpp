@@ -862,6 +862,11 @@ namespace sw
             builder.addName( part._fitTables );
             builder.addName( part._bodyShapes );
             builder.addInt( part._bDeforms );
+            for ( const AppearancePartVariantDef& section : part._listSection ) // 구간 머티리얼은 병합 메시의 구간이 된다
+            {
+                builder.addName( section._name );
+                builder.addName( section._material );
+            }
         }
         for ( const ResolvedMorph& morph : resolved._listMorph )
         {
@@ -877,6 +882,7 @@ namespace sw
             builder.addFloat4( value._value );
             builder.addInt( value._channel );
             builder.addInt( static_cast<int32>( value._target ) );
+            builder.addInt( static_cast<int32>( value._shape ) );
         }
         for ( const ResolvedBoneProportion& proportion : resolved._listBoneProportion )
         {
@@ -940,6 +946,8 @@ namespace sw
             builder.addName( detached._owner );
             builder.addName( detached._itemID );
             builder.addName( detached._partName );
+            builder.addName( detached._asset );
+            builder.addPlacement( detached._placement );
             builder.addFloat3( detached._impulse );
             builder.addInt( detached._bFromDamageStage );
         }
