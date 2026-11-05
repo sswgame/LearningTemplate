@@ -9,6 +9,7 @@
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Widgets/EditorWidgets.h"
+#include "Editor/Panels/Animation/Model/AnimationGraphLayerEdit.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
@@ -25,53 +26,6 @@ namespace sw::editor
         struct AnimationGraphLayerEditorInternal
         {
             /** @brief 값 입력란 앞 이름의 폭입니다(DPI 배율 전). */
-            /** @brief 새 마스크의 첫 항목입니다. 상체 마스크의 흔한 모양(spine 과 그 자손)이며, 사용자가 스켈레톤의 본 이름으로 고칩니다. */
-            static constexpr const utf8* kNewMaskRootBone = "spine";
-            /** @brief 클립 상태가 없는 그래프에서 새 레이어가 처음 가리키는 클립입니다. */
-            static constexpr const utf8* kNewLayerClip = "Idle";
-
-            static bool isNameTaken( const AnimationGraphAsset& graph, bool bLayer, const hashed_string& name )
-            {
-                return bLayer ? graph.findLayer( name ) != nullptr : graph.findBoneMask( name ) != nullptr;
-            }
-
-            /** @brief 목록에 없는 새 이름입니다(Layer, Layer2, …). */
-            static hashed_string makeUniqueName( const AnimationGraphAsset& graph, bool bLayer )
-            {
-                const utf8*   pBase = bLayer ? "Layer" : "Mask";
-                hashed_string name( pBase );
-                for ( uint32 suffix = 2; isNameTaken( graph, bLayer, name ); ++suffix )
-                {
-                    fixed_string<constant::buffer::kMax64> text;
-                    formatstring( text.data(), text.capacity(), "%#%#", pBase, suffix );
-                    name = hashed_string( text.c_str() );
-                }
-                return name;
-            }
-
-            /** @brief 새 레이어의 클립입니다. 그래프의 첫 클립 상태(블렌드 스페이스 · 포즈 노드가 아닌 상태 — 이름이 곧 클립)를 씁니다. */
-            static hashed_string findFirstClipName( const AnimationGraphAsset& graph )
-            {
-                for ( const AnimationGraphNode& node : graph._listNode )
-                {
-                    const bool bClipState = node.hasBlendSpace() == false && node.hasPoseNode() == false && node._name.empty() == false;
-                    if ( bClipState )
-                        return hashed_string( node._name );
-                }
-                return hashed_string( kNewLayerClip );
-            }
-
-            /** @brief 그 마스크를 쓰는 첫 레이어입니다. 없으면 nullptr 입니다. */
-            static const AnimationGraphLayerDef* findLayerUsingMask( const AnimationGraphAsset& graph, const hashed_string& maskName )
-            {
-                for ( const AnimationGraphLayerDef& layer : graph._listLayer )
-                {
-                    if ( layer._maskName == maskName )
-                        return &layer;
-                }
-                return nullptr;
-            }
-
             static void noteIndexedMark( const utf8* pPrefix, size_t index )
             {
                 if ( EditorSelfTestMarks::isEnabled() == false )
@@ -87,11 +41,6 @@ namespace sw::editor
             }
 
             /** @brief 목록 순서를 한 항목 옮깁니다. @p index 와 @p index + @p step 이 범위 안이어야 합니다. */
-            template <typename T>
-            static void swapItems( vector<T>& inoutList, int32 index, int32 step )
-            {
-                std::swap( inoutList[static_cast<size_t>( index )], inoutList[static_cast<size_t>( index + step )] );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -182,11 +131,7 @@ namespace sw::editor
 
         if ( ImGui::Button( SW_LOCKEY( "EdText", "AddLayer" ) ) )
         {
-            AnimationGraphLayerDef layer{};
-            layer._name     = AnimationGraphLayerEditorInternal::makeUniqueName( inoutGraph, true );
-            layer._clipName = AnimationGraphLayerEditorInternal::findFirstClipName( inoutGraph );
-            listLayer.push_back( layer );
-            _selectedLayer = static_cast<int32>( listLayer.size() ) - 1;
+            _selectedLayer = AnimationGraphLayerEdit::addLayer( inoutGraph );
             pEdit          = "Add Animation Layer";
         }
         EditorSelfTestMarks::note( "animationGraph.layer.add" );
@@ -207,18 +152,16 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         if ( ImGui::ArrowButton( "##layerUp", ImGuiDir_Up ) )
         {
-            AnimationGraphLayerEditorInternal::swapItems( listLayer, _selectedLayer, -1 );
-            --_selectedLayer;
-            pEdit = "Reorder Animation Layers";
+            _selectedLayer = AnimationGraphLayerEdit::moveLayer( inoutGraph, _selectedLayer, -1 );
+            pEdit          = "Reorder Animation Layers";
         }
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureArrowButton() );
         ImGui::BeginDisabled( bSelected == false || _selectedLayer + 1 >= layerCount );
         if ( ImGui::ArrowButton( "##layerDown", ImGuiDir_Down ) )
         {
-            AnimationGraphLayerEditorInternal::swapItems( listLayer, _selectedLayer, 1 );
-            ++_selectedLayer;
-            pEdit = "Reorder Animation Layers";
+            _selectedLayer = AnimationGraphLayerEdit::moveLayer( inoutGraph, _selectedLayer, 1 );
+            pEdit          = "Reorder Animation Layers";
         }
         ImGui::EndDisabled();
         ImGui::EndDisabled();
@@ -363,27 +306,19 @@ namespace sw::editor
 
         if ( ImGui::Button( SW_LOCKEY( "EdText", "AddMask" ) ) )
         {
-            AnimationBoneMaskDef   mask{};
-            AnimationBoneMaskEntry entry{};
-            entry._bone   = hashed_string( AnimationGraphLayerEditorInternal::kNewMaskRootBone );
-            entry._weight = 1.0f;
-            mask._name    = AnimationGraphLayerEditorInternal::makeUniqueName( inoutGraph, false );
-            mask._listEntry.push_back( entry );
-            listMask.push_back( std::move( mask ) );
-            _selectedMask = static_cast<int32>( listMask.size() ) - 1;
+            _selectedMask = AnimationGraphLayerEdit::addMask( inoutGraph );
             pEdit         = "Add Bone Mask";
         }
         EditorSelfTestMarks::note( "animationGraph.mask.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "AddBoneMaskTip" ) );
         const bool                    bSelected = 0 <= _selectedMask && _selectedMask < static_cast<int32>( listMask.size() );
         const AnimationGraphLayerDef* pUser =
-            bSelected ? AnimationGraphLayerEditorInternal::findLayerUsingMask( inoutGraph, listMask[static_cast<size_t>( _selectedMask )]._name ) : nullptr;
+            bSelected ? AnimationGraphLayerEdit::findLayerUsingMask( inoutGraph, listMask[static_cast<size_t>( _selectedMask )]._name ) : nullptr;
         // 레이어가 쓰는 마스크를 지우면 저장한 그래프가 로드 오류가 된다 — 그 레이어의 마스크를 먼저 바꾼다.
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "Remove##mask" ) );
         ImGui::BeginDisabled( bSelected == false || pUser != nullptr );
-        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##mask" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdVerb", "Remove" ), "Remove##mask" ) ) && AnimationGraphLayerEdit::removeMask( inoutGraph, _selectedMask ) )
         {
-            listMask.erase( listMask.begin() + _selectedMask );
             _selectedMask = -1;
             pEdit         = "Remove Bone Mask";
         }
@@ -423,22 +358,11 @@ namespace sw::editor
         string presetPath = inoutMask._filePath;
         if ( EditorWidgets::drawAssetSlot( SW_LOCKEY( "EdWidget", "Preset" ), presetPath, ".bonemask.xml" ) )
         {
-            AnimationBoneMaskDef loaded{};
-            loaded._name = inoutMask._name;
-            if ( presetPath.empty() )
-            {
-                inoutMask._filePath.clear();
+            const BoneMaskPresetResult result = AnimationGraphLayerEdit::applyMaskPreset( inoutMask, presetPath );
+            if ( result == BoneMaskPresetResult::Embedded )
                 pInoutEdit = "Embed Bone Mask";
-            }
-            else if ( loaded.loadFromFile( AssetID{ presetPath } ) )
-            {
-                inoutMask  = std::move( loaded );
+            else if ( result == BoneMaskPresetResult::Loaded )
                 pInoutEdit = "Use Bone Mask Preset";
-            }
-            else
-            {
-                SW_LOG_WARNING_ID( "AnimationGraphLayers.BoneMaskPresetCould", "Bone mask preset '%#' could not be read - the mask is unchanged", presetPath.c_str() );
-            }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "BoneMaskPresetTip" ) );
     }
