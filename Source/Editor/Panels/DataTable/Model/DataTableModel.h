@@ -78,6 +78,8 @@ namespace sw::editor
         const GameDataFileEntry* findSelectedGameDataFile() const;
         /** @brief 파일 @p fileIndex 를 골라 읽습니다. 다른 파일의 고친 것이 남았으면(잃지 않게) 바꾸지 않습니다(같은 파일은 다시 읽는다). */
         void selectGameDataFile( size_t fileIndex );
+        /** @brief 파일 목록을 바꿉니다. 고른 파일은 경로로 다시 찾고, 목록에서 사라졌으면 고르지 않은 상태가 됩니다(고친 글은 남아 저장 확인이 묻습니다). */
+        void setGameDataFiles( vector<GameDataFileEntry> listFile );
         /** @brief 고른 파일을 디스크에서 다시 읽습니다(Revert 단추). 읽지 못하면 고름을 풉니다. */
         void loadSelectedGameDataFile();
         /** @brief 고른 파일에 원문을 씁니다(Save File 단추). */

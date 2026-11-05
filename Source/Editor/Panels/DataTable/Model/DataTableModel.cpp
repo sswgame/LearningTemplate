@@ -58,8 +58,7 @@ namespace sw::editor
         const EditorTaskPoll      gameDataPoll = _gameDataJob.take( listGameData );
         if ( gameDataPoll == EditorTaskPoll::Ready )
         {
-            _listGameDataFile = std::move( listGameData );
-            _bGameDataLoaded  = SW_TRUE;
+            setGameDataFiles( std::move( listGameData ) );
         }
         else if ( _bGameDataLoaded == false && gameDataPoll == EditorTaskPoll::Idle )
             _gameDataJob.request();
@@ -174,10 +173,25 @@ namespace sw::editor
         return &_listGameDataFile[static_cast<size_t>( _selectedGameDataIndex )];
     }
 
+    void DataTableModel::setGameDataFiles( vector<GameDataFileEntry> listFile )
+    {
+        // 고른 파일은 번호가 아니라 경로로 다시 찾는다. 파일이 늘거나 줄면 옛 번호는 다른 파일이고, 저장이 그 파일을 덮어쓴다.
+        const GameDataFileEntry* pSelected    = findSelectedGameDataFile();
+        const string             selectedPath = pSelected != nullptr ? pSelected->_absolutePath : string{};
+        _listGameDataFile                     = std::move( listFile );
+        _bGameDataLoaded                      = SW_TRUE;
+        _selectedGameDataIndex                = -1;
+        for ( size_t index = 0; index < _listGameDataFile.size() && selectedPath.empty() == false; ++index )
+        {
+            if ( _listGameDataFile[index]._absolutePath == selectedPath )
+                _selectedGameDataIndex = static_cast<int32>( index );
+        }
+    }
+
     void DataTableModel::selectGameDataFile( size_t fileIndex )
     {
-        const bool bSelected = _selectedGameDataIndex == static_cast<int32>( fileIndex );
-        if ( fileIndex >= _listGameDataFile.size() || ( _bGameDataDirty && bSelected == false ) )
+        // 고친 것이 있으면 바꾸지 않는다. 같은 파일을 다시 눌러도 고친 글을 디스크 내용으로 덮지 않는다(다시 읽기는 Revert 다).
+        if ( fileIndex >= _listGameDataFile.size() || _bGameDataDirty )
             return;
         _selectedGameDataIndex = static_cast<int32>( fileIndex );
         loadSelectedGameDataFile();
