@@ -25,21 +25,24 @@ namespace sw::editor
         struct Group
         {
             string         _name{};
-            vector<int32>  _listRow{};    ///< 원소 인덱스(문서 순서)
-            vector<string> _listColumn{}; ///< 속성 이름의 합집합(처음 나온 순서)
+            vector<int32>  _listRow{};     ///< 원소 인덱스(문서 순서)
+            vector<string> _listColumn{};  ///< 속성 이름의 합집합(처음 나온 순서)
+            string         _duplicateID{}; ///< 두 행이 같이 쓰는 첫 id(`id` · `_id` 칸). 없으면 비어 있습니다 — 로더는 겹친 id 를 거절하므로 저장 전에 알린다
         };
 
         /** @brief 되돌리기 스택의 상한입니다. 넘으면 가장 오래된 것부터 버립니다. */
         static constexpr size_t kMaxUndoCount = 64;
 
-        CatalogDocument() = default;
+        CatalogDocument();
 
         /** @brief 원문을 읽어 문서를 처음 상태로 둡니다(저장된 원문 = 이 원문, 스택 비움). 형식이 깨졌으면 false 이고 `getError` 에 이유가 있습니다 — 원문은 글 상자로 고칠 수 있게 남습니다. */
         [[nodiscard]] bool load( string_view text );
         /** @brief 저장에 성공한 뒤 부릅니다. 지금 원문을 저장된 원문으로 삼습니다. */
         void markSaved();
-        /** @brief 저장된 원문으로 되돌립니다(스택은 비웁니다). */
+        /** @brief 저장된 원문으로 되돌립니다. 되돌리기 한 단계이므로 버린 편집은 Undo 로 돌아옵니다. */
         void revert();
+        /** @brief 디스크를 이 글로 되돌린 뒤 부릅니다. 저장된 원문과 지금 원문이 이 글이 되고, 그전 원문은 Undo 로 돌아옵니다. */
+        void replaceSavedText( string_view text );
 
         const string&         getText() const { return _text; }
         const string&         getSavedText() const { return _savedText; }
@@ -48,23 +51,42 @@ namespace sw::editor
         const string&         getError() const { return _error; }
         const CatalogXMLText& getParsed() const { return _parsed; }
         const vector<Group>&  getGroups() const { return _listGroup; }
+        /** @brief 모든 표의 행 수입니다. */
+        uint32 countRows() const;
         /** @brief 문서 루트 원소의 이름입니다. 훑지 못했으면 빈 문자열입니다. */
         string getRootName() const;
         /** @brief 원소 하나의 속성 값입니다. 속성이 없으면 nullptr 입니다(포인터는 다음 편집까지 유효합니다). */
         const string* findCellValue( int32 elementIndex, string_view column ) const;
+        /** @brief 표의 행 중 속성 값이 @p filter 를 포함하는 행을 문서 순서로 모읍니다(대소문자 무시). 필터가 비면 모두입니다. 먼저 출력 목록을 비웁니다. */
+        void collectVisibleRows( const Group& group, string_view filter, vector<int32>& outListRow ) const;
 
         // ------------------------------------------------------------------------------
         // 편집 — 성공하면 되돌리기 스택에 이전 원문을 한 단계 쌓습니다. 실패하면 아무것도 바뀌지 않고 `getError` 에 이유가 있습니다.
         // ------------------------------------------------------------------------------
         [[nodiscard]] bool setCell( int32 elementIndex, string_view column, string_view value );
         [[nodiscard]] bool unsetCell( int32 elementIndex, string_view column );
-        /** @brief @p groupName 테이블의 끝에 행을 더합니다. 열은 그 테이블의 열을 따르고 `id` · `name` 은 "new" 로 채웁니다. 테이블이 없으면 속성 없는 행(`id="new"` 하나)을 더합니다. */
+        /**
+         * @brief @p groupName 테이블의 끝에 행을 더합니다. 테이블이 없으면 `id="new"` 하나로 시작합니다.
+         * @details 값은 마지막 행을 따른다(그 행에 없는 칸은 적지 않는다) — 빈 값(`cost=""`)을 적으면 로더가 읽지 못해 새 행마다 검증이 실패했다.
+         *          `id` · `name` · `_id` · `_name` 칸은 표 안에서 겹치지 않는 값(`new`, `new_2`)이다. 겹친 id 는 로더가 거절한다.
+         */
         [[nodiscard]] bool addRow( string_view groupName );
         [[nodiscard]] bool removeRow( int32 elementIndex );
+        /** @brief 루트의 자식 원소 하나를 자식째 복사해 바로 뒤에 놓습니다(언리얼 Data Table 의 Duplicate). 이름 칸은 `<값>_copy` 로 겹치지 않게 바꿉니다. */
+        [[nodiscard]] bool duplicateRow( int32 elementIndex );
         /** @brief 어느 깊이의 원소든 @p parentIndex 의 마지막 자식으로 `<name a="…" />` 를 더합니다(곡선 키처럼 중첩된 원소를 고치는 길). 부모가 없으면 false 입니다. */
         [[nodiscard]] bool addChild( int32 parentIndex, string_view name, const vector<CatalogXMLNewAttribute>& listAttribute );
-        /** @brief 글 상자 편집입니다. 훑지 못하는 글도 받습니다(`isParsed` 가 false 가 되고 테이블은 비어 보입니다). 되돌리기 항목은 호출마다 쌓지 않고 @p bPushUndo 가 true 일 때만 쌓습니다. */
-        void replaceText( string_view text, bool bPushUndo );
+        /** @brief 여러 단계로 고친 원문을 한 단계로 넣습니다. 훑지 못하는 글이면 거절합니다. */
+        [[nodiscard]] bool replaceTextChecked( string_view text );
+        /**
+         * @brief 글 상자 편집입니다. 훑지 못하는 글도 받습니다(`isParsed` 가 false 가 되고 테이블은 비어 보입니다).
+         * @details 칸을 떠나기(`endTextEdit`) 전의 연속 입력은 되돌리기 한 단계입니다 — 글자마다 쌓으면 스택이 금방 차고, 쌓지 않으면 친 글을 되돌릴 수 없다.
+         */
+        void replaceText( string_view text );
+        /** @brief 글 상자를 떠날 때 부릅니다. 다음 글 상자 편집은 새 되돌리기 단계입니다. */
+        void endTextEdit() { _bTextEditOpen = SW_FALSE; }
+        /** @brief 문서 밖에서 고친 편집의 실패 이유를 남깁니다. */
+        void setError( string_view error ) { _error = string( error ); }
 
         bool canUndo() const { return _listUndo.empty() == false; }
         bool canRedo() const { return _listRedo.empty() == false; }
@@ -72,17 +94,18 @@ namespace sw::editor
         void redo();
 
     private:
-        void               rebuildFromText();
-        void               pushUndo();
-        [[nodiscard]] bool applyEdit( const string& editedText );
+        void rebuildFromText();
+        /** @brief 지금 원문을 되돌리기 스택에 쌓고 다시 하기를 비웁니다. 열린 글 상자 편집도 닫습니다. */
+        void pushUndo();
 
     private:
-        string         _text{};
-        string         _savedText{};
-        string         _error{};
-        CatalogXMLText _parsed{};
-        vector<Group>  _listGroup{};
-        vector<string> _listUndo{};
-        vector<string> _listRedo{};
+        string         _text;
+        string         _savedText;
+        string         _error;
+        CatalogXMLText _parsed;
+        vector<Group>  _listGroup;
+        vector<string> _listUndo;
+        vector<string> _listRedo;
+        uint8          _bTextEditOpen : 1; ///< 글 상자 입력이 이어지는 중이다 — 이미 되돌리기 단계를 쌓았다
     };
 } // namespace sw::editor

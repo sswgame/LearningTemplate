@@ -2,7 +2,7 @@
 
 #include "Editor/Panels/Catalog/CatalogTableEditor.h"
 
-#include "Core/Math/MathUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Config/EditorIconGlyphTable.h"
@@ -24,11 +24,12 @@ namespace sw::editor
     {
         struct CatalogTableEditorInternal
         {
-            static constexpr float32 kColumnWidth       = 130.0f; ///< 96 DPI 기준입니다
-            static constexpr float32 kActionColumnWidth = 70.0f;
-            static constexpr float32 kChildColumnWidth  = 64.0f;
-            static constexpr int32   kExtraColumnCount  = 2;  ///< 자식 수 · 행 동작
-            static constexpr int32   kMaxVisibleRows    = 12; ///< 넘으면 테이블 안에서 세로로 스크롤한다
+            static constexpr float32 kColumnWidth        = 130.0f; ///< 96 DPI 기준입니다
+            static constexpr float32 kActionColumnWidth  = 150.0f; ///< Duplicate · Remove 두 단추
+            static constexpr float32 kCurveKeyFieldWidth = 110.0f; ///< 곡선 키 줄의 칸 폭(96 DPI)
+            static constexpr float32 kChildColumnWidth   = 64.0f;
+            static constexpr int32   kExtraColumnCount   = 2;  ///< 자식 수 · 행 동작
+            static constexpr int32   kMaxVisibleRows     = 12; ///< 넘으면 테이블 안에서 세로로 스크롤한다
 
             /**
              * @brief 그룹 테이블의 바깥 높이입니다 — 행 수만큼(최대 `kMaxVisibleRows`)만 차지합니다.
@@ -44,16 +45,6 @@ namespace sw::editor
                 const int32       paddedRows   = shownRows > 0 ? shownRows : 1;
                 return headerHeight + rowHeight * static_cast<float32>( paddedRows ) + style.ScrollbarSize + style.FrameBorderSize * 2.0f + 2.0f;
             }
-
-            static string describe( string_view verb, string_view groupName, string_view column )
-            {
-                StringBuilder<constant::buffer::kMax256> text;
-                if ( column.empty() )
-                    text.appendFormat( "%# %#", verb, groupName );
-                else
-                    text.appendFormat( "%# %#.%#", verb, groupName, column );
-                return string( text.view() );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -65,28 +56,34 @@ namespace sw::editor
         , _listGradient{}
         , _listProbeCurve{}
         , _listSample{}
+        , _listGradientColor{}
+        , _listVisibleRow{}
         , _curveOwner{ -1 }
         , _bOpenCurvePopup{ SW_FALSE }
+        , _bEditFailed{ SW_FALSE }
         , _editText{}
-        , _pendingColumn{}
-        , _pendingText{}
         , _lastActionText{}
         , _editID{ 0 }
-        , _pendingElement{ -1 }
-        , _pendingKind{ PendingKind::None }
+        , _pending{}
+        , _rowFilter{}
     {
     }
 
     void CatalogTableEditor::reset()
     {
         _editText.clear();
-        _pendingColumn.clear();
-        _pendingText.clear();
         _editID          = 0;
-        _pendingElement  = -1;
-        _pendingKind     = PendingKind::None;
+        _pending         = CatalogTableEdit{};
         _curveOwner      = -1;
         _bOpenCurvePopup = SW_FALSE;
+        _bEditFailed     = SW_FALSE;
+    }
+
+    bool CatalogTableEditor::takeEditFailed()
+    {
+        const bool bFailed = _bEditFailed == SW_TRUE;
+        _bEditFailed       = SW_FALSE;
+        return bFailed;
     }
 
     bool CatalogTableEditor::draw( CatalogDocument& inoutDocument )
@@ -96,6 +93,9 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( inoutDocument.getError().empty() ? "Nothing to show" : inoutDocument.getError().c_str() );
             return false;
         }
+
+        // 언리얼 Data Table 의 행 검색처럼 칸 값으로 거른다.
+        EditorWidgets::drawSearchField( "##catalogRowFilter", _rowFilter, SW_LOCKEY( "EdCommon", "SearchHint" ), -1.0f, false );
 
         bool bFirstCell        = true;
         bool bFirstCurveButton = true;
@@ -111,13 +111,19 @@ namespace sw::editor
     {
         const float32 dpiScale = EditorThemeUtil::getDPIScale();
         ImGui::PushID( group._name.c_str() );
+        document.collectVisibleRows( group, _rowFilter.c_str(), _listVisibleRow );
         StringBuilder<constant::buffer::kMax64> subtitle;
-        subtitle.appendFormat( "%# rows", group._listRow.size() );
+        if ( _listVisibleRow.size() == group._listRow.size() )
+            subtitle.appendFormat( "%# rows", group._listRow.size() );
+        else
+            subtitle.appendFormat( "%# / %# rows", _listVisibleRow.size(), group._listRow.size() );
         EditorWidgets::drawSectionHeader( group._name.c_str(), subtitle.c_str() );
+        if ( group._duplicateID.empty() == false )
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ), "Two rows share the id '%s' - the loader refuses this", group._duplicateID.c_str() );
 
         const int32               columnCount = static_cast<int32>( group._listColumn.size() ) + CatalogTableEditorInternal::kExtraColumnCount;
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
-        const ImVec2              outerSize{ 0.0f, CatalogTableEditorInternal::computeOuterHeight( group._listRow.size() ) };
+        const ImVec2              outerSize{ 0.0f, CatalogTableEditorInternal::computeOuterHeight( _listVisibleRow.size() ) };
         if ( ImGui::BeginTable( "##CatalogRows", columnCount, kTableFlags, outerSize ) )
         {
             for ( const string& column : group._listColumn )
@@ -130,12 +136,12 @@ namespace sw::editor
             ImGui::TableHeadersRow();
 
             ImGuiListClipper clipper;
-            clipper.Begin( static_cast<int32>( group._listRow.size() ) );
+            clipper.Begin( static_cast<int32>( _listVisibleRow.size() ) );
             while ( clipper.Step() )
             {
                 for ( int32 rowPosition = clipper.DisplayStart; rowPosition < clipper.DisplayEnd; ++rowPosition )
                 {
-                    drawRow( document, group, rowPosition, bFirstGroup, inoutbFirstCell, inoutbFirstCurveButton );
+                    drawRow( document, group, _listVisibleRow[static_cast<size_t>( rowPosition )], rowPosition, bFirstGroup, inoutbFirstCell, inoutbFirstCurveButton );
                 }
             }
             ImGui::EndTable();
@@ -143,26 +149,22 @@ namespace sw::editor
 
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "AddRow" ) ) )
         {
-            _pendingKind    = PendingKind::AddRow;
-            _pendingElement = -1;
-            _pendingColumn.clear();
-            _pendingText = group._name;
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddRow, -1, string(), group._name };
         }
         if ( bFirstGroup )
             EditorSelfTestMarks::note( "catalog.addrow.first" );
         ImGui::PopID();
     }
 
-    void CatalogTableEditor::drawRow( const CatalogDocument& document, const CatalogDocument::Group& group, int32 rowPosition, bool bFirstGroup, bool& inoutbFirstCell,
+    void CatalogTableEditor::drawRow( const CatalogDocument& document, const CatalogDocument::Group& group, int32 elementIndex, int32 rowPosition, bool bFirstGroup, bool& inoutbFirstCell,
                                       bool& inoutbFirstCurveButton )
     {
-        const int32 elementIndex = group._listRow[static_cast<size_t>( rowPosition )];
         ImGui::PushID( elementIndex );
         ImGui::TableNextRow();
         for ( size_t columnIndex = 0; columnIndex < group._listColumn.size(); ++columnIndex )
         {
             ImGui::TableSetColumnIndex( static_cast<int32>( columnIndex ) );
-            drawCell( document, elementIndex, group._listColumn[columnIndex], inoutbFirstCell );
+            drawCell( document, elementIndex, group._listColumn[columnIndex], inoutbFirstCell, -1.0f );
             inoutbFirstCell = false;
         }
 
@@ -201,19 +203,19 @@ namespace sw::editor
         }
 
         ImGui::TableSetColumnIndex( static_cast<int32>( group._listColumn.size() ) + 1 );
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "Duplicate" ) ) )
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::DuplicateRow, elementIndex, string(), string() };
+        if ( rowPosition == 0 && bFirstGroup )
+            EditorSelfTestMarks::note( "catalog.row.duplicate.first" );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
-        {
-            _pendingKind    = PendingKind::RemoveRow;
-            _pendingElement = elementIndex;
-            _pendingColumn.clear();
-            _pendingText = group._name;
-        }
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::RemoveRow, elementIndex, string(), string() };
         if ( rowPosition == 0 && bFirstGroup )
             EditorSelfTestMarks::note( "catalog.row.remove.first" );
         ImGui::PopID();
     }
 
-    void CatalogTableEditor::drawCell( const CatalogDocument& document, int32 elementIndex, const string& column, bool bFirstCell )
+    void CatalogTableEditor::drawCell( const CatalogDocument& document, int32 elementIndex, const string& column, bool bFirstCell, float32 width )
     {
         ImGui::PushID( column.c_str() );
         const string* pValue   = document.findCellValue( elementIndex, column );
@@ -222,7 +224,7 @@ namespace sw::editor
         string        display  = bEditing ? _editText : ( pValue != nullptr ? *pValue : string() );
         if ( pValue == nullptr && bEditing == false )
             ImGui::PushStyleColor( ImGuiCol_FrameBg, ImVec4{ 0.0f, 0.0f, 0.0f, 0.12f } ); // 속성이 없는 칸은 어둡게 — 비어 있는 값과 다르다
-        const bool bChanged = EditorWidgets::drawTextField( "##cell", display, -1.0f );
+        const bool bChanged = EditorWidgets::drawTextField( "##cell", display, width );
         if ( pValue == nullptr && bEditing == false )
             ImGui::PopStyleColor();
         if ( bFirstCell )
@@ -236,12 +238,7 @@ namespace sw::editor
         {
             const bool bUnchanged = ( pValue == nullptr && _editText.empty() ) || ( pValue != nullptr && *pValue == _editText );
             if ( bUnchanged == false )
-            {
-                _pendingKind    = PendingKind::SetCell;
-                _pendingElement = elementIndex;
-                _pendingColumn  = column;
-                _pendingText    = _editText;
-            }
+                _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetCell, elementIndex, column, _editText };
             _editID = 0;
         }
         else if ( ImGui::IsItemDeactivated() && bEditing )
@@ -252,11 +249,7 @@ namespace sw::editor
         if ( pValue != nullptr && EditorInputGUI::beginItemContextMenu( "##cellMenu" ) )
         {
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "UnsetAttribute" ) ) )
-            {
-                _pendingKind    = PendingKind::UnsetCell;
-                _pendingElement = elementIndex;
-                _pendingColumn  = column;
-            }
+                _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, elementIndex, column, string() };
             ImGui::EndPopup();
         }
         ImGui::PopID();
@@ -264,95 +257,38 @@ namespace sw::editor
 
     bool CatalogTableEditor::applyPending( CatalogDocument& inoutDocument )
     {
-        const PendingKind kind = _pendingKind;
-        if ( kind == PendingKind::None )
+        if ( _pending._kind == CatalogTableEdit::Kind::None )
             return false;
-        _pendingKind = PendingKind::None;
-
-        string     groupName;
-        const bool bRowScopedEdit = kind == PendingKind::SetCell || kind == PendingKind::UnsetCell || kind == PendingKind::RemoveRow || kind == PendingKind::AddCurveKey;
-        if ( bRowScopedEdit )
-        {
-            if ( _pendingElement >= 0 && static_cast<size_t>( _pendingElement ) < inoutDocument.getParsed().getElements().size() )
-                groupName = inoutDocument.getParsed().getElement( _pendingElement )._name;
-        }
-
-        bool bChanged = false;
-        switch ( kind )
-        {
-            case PendingKind::None:
-            {
-                break;
-            }
-            case PendingKind::SetCell:
-            {
-                bChanged        = inoutDocument.setCell( _pendingElement, _pendingColumn, _pendingText );
-                _lastActionText = CatalogTableEditorInternal::describe( "Edited", groupName, _pendingColumn );
-                break;
-            }
-            case PendingKind::UnsetCell:
-            {
-                bChanged        = inoutDocument.unsetCell( _pendingElement, _pendingColumn );
-                _lastActionText = CatalogTableEditorInternal::describe( "Unset", groupName, _pendingColumn );
-                break;
-            }
-            case PendingKind::AddRow:
-            {
-                bChanged        = inoutDocument.addRow( _pendingText );
-                _lastActionText = CatalogTableEditorInternal::describe( "Added row to", _pendingText, string_view() );
-                break;
-            }
-            case PendingKind::RemoveRow:
-            {
-                bChanged        = inoutDocument.removeRow( _pendingElement );
-                _lastActionText = CatalogTableEditorInternal::describe( "Removed row from", groupName, string_view() );
-                break;
-            }
-            case PendingKind::AddCurveKey:
-            {
-                bChanged        = CatalogCurveModel::addKey( inoutDocument, _pendingElement );
-                _lastActionText = CatalogTableEditorInternal::describe( "Added a key to", groupName, string_view() );
-                break;
-            }
-        }
-        if ( bChanged == false )
-            _lastActionText = inoutDocument.getError();
-        else
+        const CatalogTableEdit edit = std::move( _pending );
+        _pending                    = CatalogTableEdit{};
+        const bool bChanged         = edit.apply( inoutDocument, _lastActionText );
+        _bEditFailed                = bChanged ? SW_FALSE : SW_TRUE;
+        if ( bChanged )
             SW_LOG_INFO_ID( "Catalog.TableEdited", "Catalog %#", _lastActionText.c_str() );
+        else
+            SW_LOG_WARNING_ID( "Catalog.TableEditRefused", "Catalog edit refused: %#", _lastActionText.c_str() );
         return bChanged;
     }
 
-    void CatalogTableEditor::drawGradientBar( const CatalogGradient& gradient ) const
+    void CatalogTableEditor::drawGradientBar( const CatalogGradient& gradient )
     {
         constexpr uint32 kSegmentCount = 32;
         const float32    width         = ImGui::GetContentRegionAvail().x;
         const float32    height        = ImGui::GetFrameHeight();
         const ImVec2     origin        = ImGui::GetCursorScreenPos();
         ImGui::Dummy( ImVec2{ width, height } );
-        const CatalogCurve& red          = _listCurve[static_cast<size_t>( gradient._red )];
-        const CatalogCurve& green        = _listCurve[static_cast<size_t>( gradient._green )];
-        const CatalogCurve& blue         = _listCurve[static_cast<size_t>( gradient._blue )];
-        const CatalogCurve& alpha        = _listCurve[static_cast<size_t>( gradient._alpha )];
-        const float32       redGreenEnd  = MathUtil::max( CatalogCurveModel::computeEndTime( red ), CatalogCurveModel::computeEndTime( green ) );
-        const float32       blueAlphaEnd = MathUtil::max( CatalogCurveModel::computeEndTime( blue ), CatalogCurveModel::computeEndTime( alpha ) );
-        const float32       endTime      = MathUtil::max( redGreenEnd, blueAlphaEnd );
-        vector<float32>     listRed;
-        vector<float32>     listGreen;
-        vector<float32>     listBlue;
-        vector<float32>     listAlpha;
-        const bool          bRedGreen  = CatalogCurveModel::sample( red, endTime, kSegmentCount + 1, listRed ) && CatalogCurveModel::sample( green, endTime, kSegmentCount + 1, listGreen );
-        const bool          bBlueAlpha = CatalogCurveModel::sample( blue, endTime, kSegmentCount + 1, listBlue ) && CatalogCurveModel::sample( alpha, endTime, kSegmentCount + 1, listAlpha );
-        ImDrawList*         pDrawList  = ImGui::GetWindowDrawList();
-        const ImU32         frameColor = ImGui::ColorConvertFloat4ToU32( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Border" ) ) );
-        if ( bRedGreen == false || bBlueAlpha == false )
+        ImDrawList* pDrawList  = ImGui::GetWindowDrawList();
+        const ImU32 frameColor = ImGui::ColorConvertFloat4ToU32( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Border" ) ) );
+        if ( CatalogCurveModel::sampleGradient( _listCurve, gradient, kSegmentCount + 1, _listGradientColor ) == false )
         {
             pDrawList->AddRect( origin, ImVec2{ origin.x + width, origin.y + height }, frameColor ); // 네 채널 중 키가 없는 것이 있다 - 띠 대신 빈 틀만 보인다
             return;
         }
-        const auto clamp01 = []( float32 value )
-        { return value < 0.0f ? 0.0f : ( value > 1.0f ? 1.0f : value ); };
-        const auto toColor = [&]( uint32 index )
-        { return ImGui::ColorConvertFloat4ToU32( ImVec4{ clamp01( listRed[index] ), clamp01( listGreen[index] ), clamp01( listBlue[index] ), clamp01( listAlpha[index] ) } ); };
+        const auto toColor = [this]( uint32 index )
+        {
+            const float4& color = _listGradientColor[index];
+            return ImGui::ColorConvertFloat4ToU32( ImVec4{ color._x, color._y, color._z, color._w } );
+        };
         for ( uint32 segment = 0; segment < kSegmentCount; ++segment )
         {
             const float32 left  = origin.x + width * static_cast<float32>( segment ) / static_cast<float32>( kSegmentCount );
@@ -375,21 +311,16 @@ namespace sw::editor
         for ( const CatalogCurveKey& key : curve._listKey )
         {
             ImGui::PushID( key._elementIndex );
-            ImGui::PushItemWidth( 110.0f * EditorThemeUtil::getDPIScale() );
-            drawCell( document, key._elementIndex, "_time", false );
+            // 폭을 칸마다 넘긴다 — 남은 폭 전부를 쓰면 첫 칸이 줄을 다 차지해 값 · 보간 칸이 창 밖으로 밀렸다.
+            const float32 fieldWidth = CatalogTableEditorInternal::kCurveKeyFieldWidth * EditorThemeUtil::getDPIScale();
+            drawCell( document, key._elementIndex, "_time", false, fieldWidth );
             ImGui::SameLine();
-            drawCell( document, key._elementIndex, "_value", false );
+            drawCell( document, key._elementIndex, "_value", false, fieldWidth );
             ImGui::SameLine();
-            drawCell( document, key._elementIndex, "_interpolation", false );
-            ImGui::PopItemWidth();
+            drawCell( document, key._elementIndex, "_interpolation", false, fieldWidth );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
-            {
-                _pendingKind    = PendingKind::RemoveRow;
-                _pendingElement = key._elementIndex;
-                _pendingColumn.clear();
-                _pendingText.clear();
-            }
+                _pending = CatalogTableEdit{ CatalogTableEdit::Kind::RemoveRow, key._elementIndex, string(), string() };
             if ( key._bValid == false )
             {
                 ImGui::SameLine();
@@ -398,12 +329,7 @@ namespace sw::editor
             ImGui::PopID();
         }
         if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "AddKey" ) ) )
-        {
-            _pendingKind    = PendingKind::AddCurveKey;
-            _pendingElement = curve._elementIndex;
-            _pendingColumn.clear();
-            _pendingText.clear();
-        }
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddCurveKey, curve._elementIndex, string(), string() };
         EditorSelfTestMarks::note( "catalog.curves.addkey" );
         ImGui::Separator();
         ImGui::PopID();

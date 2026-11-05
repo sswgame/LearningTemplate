@@ -4,6 +4,9 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
+#include "Editor/Panels/Catalog/Model/CatalogFileList.h"
+#include "Editor/Panels/Catalog/Model/CatalogFileSession.h"
+#include "Editor/Panels/Catalog/Model/CatalogTableEdit.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
 using namespace sw;
@@ -262,7 +265,11 @@ SW_TEST_CASE( CatalogDocumentTest, EditsUndoRedoAndDirtyTrackTheText )
     SW_EXPECT_FALSE( document.canRedo() ); // 새 편집이 다시 하기를 지운다
     document.revert();
     SW_EXPECT_TRUE( *document.findCellValue( row, "cost" ) == "7" );
-    SW_EXPECT_FALSE( document.canUndo() );
+    SW_EXPECT_FALSE( document.isDirty() );
+
+    document.undo(); // 되돌리기(Revert)로 버린 편집도 돌아온다
+    SW_EXPECT_TRUE( document.isDirty() );
+    SW_EXPECT_TRUE( document.findCellValue( row, "cost" ) == nullptr );
 }
 
 SW_TEST_CASE( CatalogDocumentTest, UndoHistoryIsBounded )
@@ -282,21 +289,116 @@ SW_TEST_CASE( CatalogDocumentTest, UndoHistoryIsBounded )
     SW_EXPECT_EQUAL( static_cast<uint32>( CatalogDocument::kMaxUndoCount ), undoCount );
 }
 
-SW_TEST_CASE( CatalogDocumentTest, AddedRowCopiesTheGroupColumns )
+// 빈 값을 적으면 로더가 읽지 못하고, 같은 id 를 적으면 로더가 거절한다 — 새 행은 바로 검증을 통과하는 모양이어야 한다.
+SW_TEST_CASE( CatalogDocumentTest, AddedRowFollowsTheLastRowWithUniqueNames )
 {
     CatalogDocument document;
-    SW_REQUIRE_TRUE( document.load( Util::kItems ) );
+    SW_REQUIRE_TRUE( document.load( "<r>\n\t<Item id=\"a\" cost=\"1\"/>\n\t<Item id=\"b\" cost=\"5\"/>\n\t<Note id=\"n\" text=\"hi\"/>\n\t<Note id=\"m\"/>\n</r>\n" ) );
     SW_REQUIRE_TRUE( document.addRow( "Item" ) );
-    const CatalogDocument::Group& items = document.getGroups()[0];
-    SW_REQUIRE_EQUAL( size_t{ 3 }, items._listRow.size() );
-    const int32 row = items._listRow[2];
-    SW_EXPECT_TRUE( *document.findCellValue( row, "id" ) == "new" );
-    SW_EXPECT_TRUE( *document.findCellValue( row, "name" ) == "new" );
-    SW_EXPECT_TRUE( document.findCellValue( row, "cost" ) != nullptr );
+    const CatalogDocument::Group* pItems = &document.getGroups()[0];
+    SW_REQUIRE_EQUAL( size_t{ 3 }, pItems->_listRow.size() );
+    SW_EXPECT_TRUE( *document.findCellValue( pItems->_listRow[2], "id" ) == "new" );
+    SW_EXPECT_TRUE( *document.findCellValue( pItems->_listRow[2], "cost" ) == "5" );
+
+    SW_REQUIRE_TRUE( document.addRow( "Item" ) );
+    pItems = &document.getGroups()[0];
+    SW_EXPECT_TRUE( *document.findCellValue( pItems->_listRow[3], "id" ) == "new_2" );
+    SW_EXPECT_TRUE( pItems->_duplicateID.empty() );
+
+    SW_REQUIRE_TRUE( document.addRow( "Note" ) ); // 마지막 행에 없는 칸은 빈 값으로 적지 않는다
+    const CatalogDocument::Group& notes = document.getGroups()[1];
+    SW_EXPECT_TRUE( document.findCellValue( notes._listRow.back(), "text" ) == nullptr );
 
     SW_REQUIRE_TRUE( document.addRow( "Brand" ) ); // 없는 묶음은 id 하나로 시작한다
     SW_REQUIRE_EQUAL( size_t{ 3 }, document.getGroups().size() );
     SW_EXPECT_TRUE( *document.findCellValue( document.getGroups()[2]._listRow[0], "id" ) == "new" );
+}
+
+SW_TEST_CASE( CatalogDocumentTest, DuplicatedRowKeepsChildrenAndGetsANewName )
+{
+    CatalogDocument document;
+    SW_REQUIRE_TRUE( document.load( Util::kItems ) );
+    const int32 row = document.getGroups()[0]._listRow[1]; // 자식 Tag 가 있는 b
+    SW_REQUIRE_TRUE( document.duplicateRow( row ) );
+    const CatalogDocument::Group& items = document.getGroups()[0];
+    SW_REQUIRE_EQUAL( size_t{ 3 }, items._listRow.size() );
+    const int32 copy = items._listRow[2];
+    SW_EXPECT_TRUE( *document.findCellValue( copy, "id" ) == "b_copy" );
+    SW_EXPECT_TRUE( *document.findCellValue( copy, "name" ) == "x & y_copy" );
+    SW_EXPECT_EQUAL( size_t{ 1 }, document.getParsed().getElement( copy )._listChild.size() );
+    SW_EXPECT_TRUE( document.getText().find( "<!-- 머리 <주석> -->" ) != string::npos );
+
+    SW_REQUIRE_TRUE( document.duplicateRow( items._listRow[1] ) ); // 또 복사해도 겹치지 않는다
+    SW_EXPECT_TRUE( *document.findCellValue( document.getGroups()[0]._listRow[2], "id" ) == "b_copy_2" );
+
+    document.undo();
+    document.undo(); // 복사 한 번이 되돌리기 한 번이다
+    SW_EXPECT_FALSE( document.isDirty() );
+
+    SW_EXPECT_FALSE( document.duplicateRow( document.getParsed().getRootIndex() ) ); // 루트는 행이 아니다
+    SW_EXPECT_FALSE( document.getError().empty() );
+    SW_EXPECT_FALSE( document.duplicateRow( 999 ) );
+    SW_EXPECT_FALSE( document.isDirty() );
+}
+
+SW_TEST_CASE( CatalogXMLTextTest, DuplicatingAnElementCopiesItsTextOntoANewLine )
+{
+    const string   text = "<r>\r\n  <a x=\"1\"><!-- c --></a>\r\n</r>\r\n";
+    CatalogXMLText parsed;
+    string         error;
+    SW_REQUIRE_TRUE( parsed.parse( text, error ) );
+    string edited;
+    SW_REQUIRE_TRUE( CatalogXMLText::duplicateElement( text, parsed.getElement( 1 ), edited, error ) );
+    SW_EXPECT_TRUE( edited == "<r>\r\n  <a x=\"1\"><!-- c --></a>\r\n  <a x=\"1\"><!-- c --></a>\r\n</r>\r\n" );
+    SW_EXPECT_FALSE( CatalogXMLText::duplicateElement( text, parsed.getElement( 0 ), edited, error ) );
+}
+
+// 로더가 겹친 id 를 거절하므로 저장하기 전에 표가 알린다. 이름은 겹쳐도 된다.
+SW_TEST_CASE( CatalogDocumentTest, GroupsReportASharedID )
+{
+    CatalogDocument document;
+    SW_REQUIRE_TRUE( document.load( "<r><A id=\"x\" name=\"same\"/><A id=\"y\" name=\"same\"/><B _id=\"k\"/><B _id=\"k\"/><C/></r>" ) );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, document.getGroups().size() );
+    SW_EXPECT_TRUE( document.getGroups()[0]._duplicateID.empty() );
+    SW_EXPECT_TRUE( document.getGroups()[1]._duplicateID == "k" );
+    SW_EXPECT_EQUAL( 5u, document.countRows() );
+    SW_REQUIRE_TRUE( document.setCell( document.getGroups()[1]._listRow[1], "_id", "z" ) );
+    SW_EXPECT_TRUE( document.getGroups()[1]._duplicateID.empty() );
+}
+
+SW_TEST_CASE( CatalogDocumentTest, RowFilterMatchesCellValues )
+{
+    CatalogDocument document;
+    SW_REQUIRE_TRUE( document.load( Util::kItems ) );
+    const CatalogDocument::Group& items = document.getGroups()[0];
+    vector<int32>                 listRow;
+    document.collectVisibleRows( items, "", listRow );
+    SW_EXPECT_EQUAL( size_t{ 2 }, listRow.size() );
+    document.collectVisibleRows( items, "  X & ", listRow ); // 앞뒤 공백 · 대소문자 무시
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listRow.size() );
+    SW_EXPECT_EQUAL( items._listRow[1], listRow[0] );
+    document.collectVisibleRows( items, "nothing", listRow );
+    SW_EXPECT_TRUE( listRow.empty() );
+}
+
+// 글 상자 입력은 칸을 떠날 때까지 되돌리기 한 단계다 — 쌓지 않으면 친 글을 되돌릴 수 없었다.
+SW_TEST_CASE( CatalogDocumentTest, TextBoxEditsAreOneUndoStepPerVisit )
+{
+    CatalogDocument document;
+    SW_REQUIRE_TRUE( document.load( "<a/>" ) );
+    document.replaceText( "<a/>" ); // 같은 글은 편집이 아니다
+    SW_EXPECT_FALSE( document.canUndo() );
+    document.replaceText( "<a x=\"1\"/>" );
+    document.replaceText( "<a x=\"12\"/>" );
+    document.endTextEdit();
+    document.replaceText( "<a x=\"123\"/>" );
+    document.undo();
+    SW_EXPECT_TRUE( document.getText() == "<a x=\"12\"/>" );
+    document.undo();
+    SW_EXPECT_TRUE( document.getText() == "<a/>" );
+    SW_EXPECT_FALSE( document.canUndo() );
+    document.redo();
+    SW_EXPECT_TRUE( document.getText() == "<a x=\"12\"/>" );
 }
 
 SW_TEST_CASE( CatalogDocumentTest, RemovedRowAndRefusedRoot )
@@ -324,7 +426,7 @@ SW_TEST_CASE( CatalogDocumentTest, BrokenTextOpensButRefusesTableEdits )
     SW_EXPECT_FALSE( document.removeRow( 0 ) );
     SW_EXPECT_FALSE( document.addChild( 0, "c", {} ) );
 
-    document.replaceText( "<a/>", true );
+    document.replaceText( "<a/>" );
     SW_EXPECT_TRUE( document.isParsed() );
     SW_EXPECT_TRUE( document.getError().empty() );
     document.undo();
@@ -420,4 +522,167 @@ SW_TEST_CASE( CatalogCurveModelTest, AddKeyContinuesAfterTheLastKey )
     SW_EXPECT_NEAR( 0.1f, pGreen->_listKey[1]._time, 1e-5f );
     SW_EXPECT_NEAR( 1.0f, pGreen->_listKey[1]._value, 1e-5f );
     SW_EXPECT_FALSE( CatalogCurveModel::addKey( document, -1 ) );
+    SW_EXPECT_FALSE( document.getError().empty() );
+}
+
+// 빈 채널에 키를 더하면 `_listKey` 와 키 두 원소가 생기지만 되돌리기는 한 번이다 — 빈 목록이 남지 않는다.
+SW_TEST_CASE( CatalogCurveModelTest, AddKeyIsOneUndoStep )
+{
+    CatalogDocument document;
+    SW_REQUIRE_TRUE( document.load( Util::kCurves ) );
+    SW_REQUIRE_TRUE( CatalogCurveModel::addKey( document, Util::findElement( document.getParsed(), "_green" ) ) );
+    document.undo();
+    SW_EXPECT_FALSE( document.isDirty() );
+    SW_EXPECT_FALSE( document.canUndo() );
+}
+
+SW_TEST_CASE( CatalogCurveModelTest, GradientSamplesNeedEveryChannelAndAreClamped )
+{
+    CatalogDocument document;
+    SW_REQUIRE_TRUE( document.load( Util::kCurves ) );
+    vector<CatalogCurve>    listCurve;
+    vector<CatalogGradient> listGradient;
+    vector<float4>          listColor;
+    CatalogCurveModel::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
+    CatalogCurveModel::collectGradients( listCurve, listGradient );
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listGradient.size() );
+    SW_EXPECT_FALSE( CatalogCurveModel::sampleGradient( listCurve, listGradient[0], 3, listColor ) ); // 키 없는 채널이 있다
+
+    for ( const utf8* pChannel : { "_green", "_blue", "_alpha" } )
+    {
+        SW_REQUIRE_TRUE( CatalogCurveModel::addKey( document, Util::findElement( document.getParsed(), pChannel ) ) );
+    }
+    CatalogCurveModel::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
+    SW_REQUIRE_TRUE( document.setCell( listCurve[static_cast<size_t>( listGradient[0]._red )]._listKey[0]._elementIndex, "_value", "5" ) );
+    CatalogCurveModel::collectCurves( document.getParsed(), document.getParsed().getRootIndex(), listCurve );
+    CatalogCurveModel::collectGradients( listCurve, listGradient );
+    SW_REQUIRE_TRUE( CatalogCurveModel::sampleGradient( listCurve, listGradient[0], 3, listColor ) );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, listColor.size() );
+    SW_EXPECT_NEAR( 1.0f, listColor[0]._x, 1e-5f ); // 5 는 1 로 자른다
+    SW_EXPECT_NEAR( 1.0f, listColor[2]._w, 1e-5f );
+}
+
+// ---------------------------------------------------------------------- 표에서 고른 편집
+
+SW_TEST_CASE( CatalogTableEditTest, DescribesWhatChangedOrWhyItWasRefused )
+{
+    CatalogDocument document;
+    SW_REQUIRE_TRUE( document.load( Util::kItems ) );
+    const int32 row = document.getGroups()[0]._listRow[0];
+    string      description;
+
+    SW_EXPECT_FALSE( CatalogTableEdit{}.apply( document, description ) );
+    SW_EXPECT_TRUE( description.empty() );
+
+    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::SetCell, row, "cost", "7" }.apply( document, description ) ) );
+    SW_EXPECT_TRUE( description == "Edited Item.cost" );
+    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, row, "cost", "" }.apply( document, description ) ) );
+    SW_EXPECT_TRUE( description == "Unset Item.cost" );
+    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::AddRow, -1, "", "Item" }.apply( document, description ) ) );
+    SW_EXPECT_TRUE( description == "Added row to Item" );
+    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::DuplicateRow, row, "", "" }.apply( document, description ) ) );
+    SW_EXPECT_TRUE( description == "Duplicated row in Item" );
+    SW_REQUIRE_TRUE( ( CatalogTableEdit{ CatalogTableEdit::Kind::RemoveRow, row, "", "" }.apply( document, description ) ) );
+    SW_EXPECT_TRUE( description == "Removed row from Item" );
+
+    SW_EXPECT_FALSE( ( CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, document.getGroups()[0]._listRow[0], "nope", "" }.apply( document, description ) ) );
+    SW_EXPECT_TRUE( description == "the element has no such attribute" ); // 거절의 이유가 그대로 나온다
+}
+
+// ---------------------------------------------------------------------- 파일 목록
+
+SW_TEST_CASE( CatalogFileListTest, SortsByKindThenIDAndFiltersIntoGroups )
+{
+    CatalogFileList list;
+    list.setRows( {
+        CatalogFileRow{"game/z.items.xml", "Items"},
+        CatalogFileRow{  "game/a.vfx.xml",   "VFX"},
+        CatalogFileRow{"game/a.items.xml", "Items"}
+    } );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, list.getRows().size() );
+    SW_EXPECT_TRUE( list.getRows()[0]._assetID == "game/a.items.xml" );
+    SW_EXPECT_TRUE( list.getRows()[2]._kindLabel == "VFX" );
+
+    vector<CatalogFileGroup> listGroup;
+    SW_EXPECT_EQUAL( 3u, list.collectGroups( "", listGroup ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listGroup.size() );
+    SW_EXPECT_EQUAL( size_t{ 2 }, listGroup[0]._listRow.size() );
+
+    SW_EXPECT_EQUAL( 1u, list.collectGroups( "Z.ITEMS", listGroup ) ); // 거르면 머리의 수도 맞는 파일 수다
+    SW_REQUIRE_EQUAL( size_t{ 1 }, listGroup.size() );
+    SW_EXPECT_EQUAL( 1u, listGroup[0]._listRow[0] );
+
+    SW_EXPECT_EQUAL( 1u, list.collectGroups( "vfx", listGroup ) ); // 종류 이름으로도 찾는다
+    SW_EXPECT_EQUAL( 0u, list.collectGroups( "nothing", listGroup ) );
+    SW_EXPECT_TRUE( listGroup.empty() ); // 빈 머리를 남기지 않는다
+}
+
+// ---------------------------------------------------------------------- 열린 파일
+
+// 방금 연 파일은 되쓸 "이전 글" 이 없다. 저장한 뒤에야 저장 직전 글로 돌아갈 수 있고, 고치던 글은 Undo 로 돌아온다.
+SW_TEST_CASE( CatalogFileSessionTest, RestoreBringsBackTheTextBeforeTheSaveAndKeepsEdits )
+{
+    CatalogFileSession session;
+    SW_EXPECT_FALSE( session.hasFile() );
+    session.open( "game/a.xml", "Items", "<r x=\"1\"/>" );
+    SW_EXPECT_TRUE( session.hasFile() );
+    SW_EXPECT_FALSE( session.canRestorePrevious() );
+
+    SW_REQUIRE_TRUE( session.editDocument().setCell( 0, "x", "2" ) );
+    SW_REQUIRE_TRUE( session.checkDiskBeforeSave( "<r x=\"1\"/>" ) );
+    session.onSaved();
+    SW_EXPECT_FALSE( session.getDocument().isDirty() );
+    SW_REQUIRE_TRUE( session.canRestorePrevious() );
+    SW_EXPECT_TRUE( session.getPreviousText() == "<r x=\"1\"/>" );
+
+    SW_REQUIRE_TRUE( session.editDocument().setCell( 0, "x", "3" ) ); // 아직 저장하지 않은 편집
+    session.onRestored();
+    SW_EXPECT_TRUE( session.getDocument().getText() == "<r x=\"1\"/>" );
+    SW_EXPECT_FALSE( session.getDocument().isDirty() );
+    SW_EXPECT_FALSE( session.canRestorePrevious() );
+    session.editDocument().undo();
+    SW_EXPECT_TRUE( session.getDocument().getText() == "<r x=\"3\"/>" ); // 잃지 않았다
+}
+
+// 밖에서 바뀐 파일은 첫 저장에서 멈추고 알린다. 다시 저장하면 덮어쓰되 밖의 글이 "이전 파일" 로 남는다.
+SW_TEST_CASE( CatalogFileSessionTest, ASaveOverAnOutsideChangeStopsOnceAndKeepsThatText )
+{
+    CatalogFileSession session;
+    session.open( "game/a.xml", "Items", "<r/>" );
+    SW_EXPECT_TRUE( session.checkDiskBeforeSave( "<r/>" ) );
+    SW_EXPECT_FALSE( session.checkDiskBeforeSave( "<outside/>" ) );
+    SW_EXPECT_FALSE( session.getStatus().empty() );
+    SW_EXPECT_FALSE( session.checkDiskBeforeSave( "<outside again/>" ) ); // 또 바뀌었으면 또 알린다
+    SW_EXPECT_TRUE( session.checkDiskBeforeSave( "<outside again/>" ) );
+    SW_REQUIRE_TRUE( session.editDocument().setCell( 0, "x", "1" ) );
+    session.onSaved();
+    SW_EXPECT_TRUE( session.getPreviousText() == "<outside again/>" );
+    SW_EXPECT_TRUE( session.checkDiskBeforeSave( session.getDocument().getSavedText() ) );
+    SW_EXPECT_FALSE( session.checkDiskBeforeSave( "<other/>" ) ); // 덮어쓴 뒤의 새 변경은 다시 알린다
+}
+
+SW_TEST_CASE( CatalogFileSessionTest, ValidationNeedsALoadWithoutWarningsAndSaysWhatItSaw )
+{
+    CatalogFileSession session;
+    session.open( "game/a.xml", "Items", "<r/>" );
+    SW_EXPECT_TRUE( session.getValidationState() == CatalogFileSession::ValidationState::None );
+
+    session.onValidated( true, {} );
+    SW_EXPECT_TRUE( session.getValidationState() == CatalogFileSession::ValidationState::Passed );
+    SW_EXPECT_TRUE( session.getStatus().empty() );
+
+    session.onValidated( true, { string( "unknown key" ) } );
+    SW_EXPECT_TRUE( session.getValidationState() == CatalogFileSession::ValidationState::Failed );
+    SW_EXPECT_EQUAL( size_t{ 1 }, session.getWarnings().size() );
+
+    session.onValidated( false, {} );
+    SW_EXPECT_TRUE( session.getValidationState() == CatalogFileSession::ValidationState::Failed );
+
+    SW_REQUIRE_TRUE( session.editDocument().setCell( 0, "x", "1" ) );
+    session.onValidated( true, {} );
+    SW_EXPECT_TRUE( session.getStatus().find( "unsaved" ) != string::npos ); // 고치던 글은 검증에 들지 않았다
+
+    session.open( "game/b.xml", "Items", "<r/>" ); // 다른 파일을 열면 앞 결과가 남지 않는다
+    SW_EXPECT_TRUE( session.getValidationState() == CatalogFileSession::ValidationState::None );
+    SW_EXPECT_TRUE( session.getWarnings().empty() );
 }

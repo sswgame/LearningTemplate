@@ -4,29 +4,130 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Editor/Common/Widgets/Model/EditorListFilter.h"
+
 namespace sw::editor
 {
+    namespace
+    {
+        struct CatalogDocumentInternal
+        {
+            /** @brief 파일이 원소를 짚는 id 칸이면 true 입니다. 로더가 겹침을 거절하는 칸입니다. */
+            static bool isIDColumn( string_view column ) { return column == "id" || column == "_id"; }
+
+            /** @brief 사람이 지어 주는 이름 칸이면 true 입니다(id 포함). 새 행 · 복사한 행은 이 칸을 표 안에서 겹치지 않게 채웁니다. */
+            static bool isNameColumn( string_view column ) { return isIDColumn( column ) || column == "name" || column == "_name"; }
+
+            static const CatalogDocument::Group* findGroup( const vector<CatalogDocument::Group>& listGroup, string_view name )
+            {
+                for ( const CatalogDocument::Group& group : listGroup )
+                {
+                    if ( string_view( group._name ) == name )
+                        return &group;
+                }
+                return nullptr;
+            }
+
+            /** @brief @p base 가 표의 @p column 칸에 없으면 그대로, 있으면 `<base>_2`, `<base>_3` … 입니다. */
+            static string makeUniqueValue( const CatalogDocument& document, const CatalogDocument::Group& group, string_view column, string_view base )
+            {
+                const auto isTaken = [&document, &group, column]( string_view candidate )
+                {
+                    for ( const int32 rowIndex : group._listRow )
+                    {
+                        const string* pValue = document.findCellValue( rowIndex, column );
+                        if ( pValue != nullptr && string_view( *pValue ) == candidate )
+                            return true;
+                    }
+                    return false;
+                };
+                string candidate{ base };
+                for ( uint64 suffix = 2; isTaken( candidate ); ++suffix )
+                {
+                    candidate = string{ base };
+                    candidate += "_";
+                    candidate += to_string( suffix );
+                }
+                return candidate;
+            }
+
+            /** @brief 표에서 두 행이 같이 쓰는 첫 id 입니다. 없으면 빈 글입니다. */
+            static string findDuplicateID( const CatalogDocument& document, const CatalogDocument::Group& group )
+            {
+                for ( const string& column : group._listColumn )
+                {
+                    if ( isIDColumn( column ) == false )
+                        continue;
+                    vector<string> listValue;
+                    for ( const int32 rowIndex : group._listRow )
+                    {
+                        const string* pValue = document.findCellValue( rowIndex, column );
+                        if ( pValue != nullptr && pValue->empty() == false )
+                            listValue.push_back( *pValue );
+                    }
+                    const string* pDuplicate = VectorUtil::findDuplicate( listValue );
+                    if ( pDuplicate != nullptr )
+                        return *pDuplicate;
+                }
+                return string();
+            }
+        };
+    } // namespace
+
+    CatalogDocument::CatalogDocument()
+        : _text{}
+        , _savedText{}
+        , _error{}
+        , _parsed{}
+        , _listGroup{}
+        , _listUndo{}
+        , _listRedo{}
+        , _bTextEditOpen{ SW_FALSE }
+    {
+    }
+
     bool CatalogDocument::load( string_view text )
     {
         _text      = string( text );
         _savedText = _text;
         _listUndo.clear();
         _listRedo.clear();
+        _bTextEditOpen = SW_FALSE;
         rebuildFromText();
         return _parsed.isParsed();
     }
 
     void CatalogDocument::markSaved()
     {
-        _savedText = _text;
+        _savedText     = _text;
+        _bTextEditOpen = SW_FALSE;
     }
 
     void CatalogDocument::revert()
     {
+        if ( isDirty() == false )
+            return;
+        pushUndo();
         _text = _savedText;
-        _listUndo.clear();
-        _listRedo.clear();
         rebuildFromText();
+    }
+
+    void CatalogDocument::replaceSavedText( string_view text )
+    {
+        pushUndo();
+        _text      = string( text );
+        _savedText = _text;
+        rebuildFromText();
+    }
+
+    uint32 CatalogDocument::countRows() const
+    {
+        uint32 rowCount = 0;
+        for ( const Group& group : _listGroup )
+        {
+            rowCount += static_cast<uint32>( group._listRow.size() );
+        }
+        return rowCount;
     }
 
     string CatalogDocument::getRootName() const
@@ -44,6 +145,28 @@ namespace sw::editor
         const CatalogXMLElement& element        = _parsed.getElement( elementIndex );
         const int32              attributeIndex = element.findAttribute( column );
         return attributeIndex >= 0 ? &element._listAttribute[static_cast<size_t>( attributeIndex )]._value : nullptr;
+    }
+
+    void CatalogDocument::collectVisibleRows( const Group& group, string_view filter, vector<int32>& outListRow ) const
+    {
+        outListRow.clear();
+        const EditorListFilter listFilter{ filter };
+        if ( listFilter.isActive() == false )
+        {
+            outListRow = group._listRow;
+            return;
+        }
+        for ( const int32 rowIndex : group._listRow )
+        {
+            for ( const CatalogXMLAttribute& attribute : _parsed.getElement( rowIndex )._listAttribute )
+            {
+                if ( listFilter.matches( attribute._value ) )
+                {
+                    outListRow.push_back( rowIndex );
+                    break;
+                }
+            }
+        }
     }
 
     void CatalogDocument::rebuildFromText()
@@ -77,6 +200,10 @@ namespace sw::editor
                     pGroup->_listColumn.push_back( attribute._name );
             }
         }
+        for ( Group& group : _listGroup )
+        {
+            group._duplicateID = CatalogDocumentInternal::findDuplicateID( *this, group ); // 그리기마다 세면 행 수의 제곱이다 — 원문이 바뀔 때만 센다
+        }
     }
 
     void CatalogDocument::pushUndo()
@@ -85,24 +212,20 @@ namespace sw::editor
         if ( _listUndo.size() > kMaxUndoCount )
             _listUndo.erase( _listUndo.begin() );
         _listRedo.clear();
+        _bTextEditOpen = SW_FALSE;
     }
 
-    bool CatalogDocument::applyEdit( const string& editedText )
+    bool CatalogDocument::replaceTextChecked( string_view text )
     {
-        const string before = _text;
-        _text               = editedText;
         string         error;
         CatalogXMLText probe;
-        if ( probe.parse( _text, error ) == false )
+        if ( probe.parse( text, error ) == false )
         {
-            _text  = before; // 원문 편집이 문서를 깨뜨리면 없던 일로 한다
-            _error = error;
+            _error = error; // 원문 편집이 문서를 깨뜨리면 없던 일로 한다
             return false;
         }
-        _listUndo.push_back( before );
-        if ( _listUndo.size() > kMaxUndoCount )
-            _listUndo.erase( _listUndo.begin() );
-        _listRedo.clear();
+        pushUndo();
+        _text = string( text );
         rebuildFromText();
         return true;
     }
@@ -122,7 +245,7 @@ namespace sw::editor
             _error = error;
             return false;
         }
-        return applyEdit( edited );
+        return replaceTextChecked( edited );
     }
 
     bool CatalogDocument::unsetCell( int32 elementIndex, string_view column )
@@ -140,37 +263,32 @@ namespace sw::editor
             _error = error;
             return false;
         }
-        return applyEdit( edited );
+        return replaceTextChecked( edited );
     }
 
     bool CatalogDocument::addRow( string_view groupName )
     {
+        using Internal = CatalogDocumentInternal;
         if ( _parsed.isParsed() == false )
         {
             _error = "the document is not parsed";
             return false;
         }
         vector<CatalogXMLNewAttribute> listAttribute;
-        for ( const Group& group : _listGroup )
+        const Group*                   pGroup = Internal::findGroup( _listGroup, groupName );
+        if ( pGroup != nullptr )
         {
-            if ( string_view( group._name ) != groupName )
-                continue;
-            for ( const string& column : group._listColumn )
+            for ( const string& column : pGroup->_listColumn )
             {
-                CatalogXMLNewAttribute attribute;
-                attribute._name = column;
-                if ( column == "id" || column == "name" )
-                    attribute._value = "new";
-                listAttribute.push_back( std::move( attribute ) );
+                const string* pLastValue = findCellValue( pGroup->_listRow.back(), column );
+                if ( Internal::isNameColumn( column ) )
+                    listAttribute.push_back( CatalogXMLNewAttribute{ column, Internal::makeUniqueValue( *this, *pGroup, column, "new" ) } );
+                else if ( pLastValue != nullptr )
+                    listAttribute.push_back( CatalogXMLNewAttribute{ column, *pLastValue } );
             }
         }
         if ( listAttribute.empty() )
-        {
-            CatalogXMLNewAttribute attribute;
-            attribute._name  = "id";
-            attribute._value = "new";
-            listAttribute.push_back( std::move( attribute ) );
-        }
+            listAttribute.push_back( CatalogXMLNewAttribute{ "id", "new" } );
         string edited;
         string error;
         if ( CatalogXMLText::appendChildElement( _text, _parsed.getElement( _parsed.getRootIndex() ), _parsed.getElements(), groupName, listAttribute, edited, error ) == false )
@@ -178,7 +296,7 @@ namespace sw::editor
             _error = error;
             return false;
         }
-        return applyEdit( edited );
+        return replaceTextChecked( edited );
     }
 
     bool CatalogDocument::addChild( int32 parentIndex, string_view name, const vector<CatalogXMLNewAttribute>& listAttribute )
@@ -196,7 +314,7 @@ namespace sw::editor
             _error = error;
             return false;
         }
-        return applyEdit( edited );
+        return replaceTextChecked( edited );
     }
 
     bool CatalogDocument::removeRow( int32 elementIndex )
@@ -214,13 +332,71 @@ namespace sw::editor
             _error = error;
             return false;
         }
-        return applyEdit( edited );
+        return replaceTextChecked( edited );
     }
 
-    void CatalogDocument::replaceText( string_view text, bool bPushUndo )
+    bool CatalogDocument::duplicateRow( int32 elementIndex )
     {
-        if ( bPushUndo )
+        using Internal                  = CatalogDocumentInternal;
+        const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();
+        if ( bInvalidElementIndex )
+        {
+            _error = "the document is not parsed";
+            return false;
+        }
+        const CatalogXMLElement& original = _parsed.getElement( elementIndex );
+        const Group*             pGroup   = Internal::findGroup( _listGroup, original._name );
+        if ( pGroup == nullptr || original._parent != _parsed.getRootIndex() )
+        {
+            _error = "only a table row can be duplicated";
+            return false;
+        }
+        string edited;
+        string error;
+        if ( CatalogXMLText::duplicateElement( _text, original, edited, error ) == false )
+        {
+            _error = error;
+            return false;
+        }
+        // 복사본의 이름 칸을 하나씩 바꾼다. 바꿀 때마다 위치가 밀리므로 다시 훑는다. 복사본은 원본의 다음 형제다(원본의 인덱스는 그대로다).
+        CatalogXMLText draft;
+        for ( const CatalogXMLAttribute& attribute : original._listAttribute )
+        {
+            if ( Internal::isNameColumn( attribute._name ) == false )
+                continue;
+            if ( draft.parse( edited, error ) == false )
+            {
+                _error = error;
+                return false;
+            }
+            const vector<int32>& listRow   = draft.getRowIndices();
+            int32                copyIndex = -1;
+            for ( size_t rowPosition = 0; rowPosition + 1 < listRow.size(); ++rowPosition )
+            {
+                if ( listRow[rowPosition] == elementIndex )
+                    copyIndex = listRow[rowPosition + 1];
+            }
+            const string copiedValue = Internal::makeUniqueValue( *this, *pGroup, attribute._name, attribute._value + "_copy" );
+            string       editedAgain;
+            if ( CatalogXMLText::setAttributeValue( edited, draft.getElement( copyIndex ), attribute._name, copiedValue, editedAgain, error ) == false )
+            {
+                _error = error;
+                return false;
+            }
+            edited = std::move( editedAgain );
+        }
+        return replaceTextChecked( edited );
+    }
+
+    void CatalogDocument::replaceText( string_view text )
+    {
+        if ( string_view( _text ) == text )
+            return;
+        if ( _bTextEditOpen == SW_FALSE )
+        {
             pushUndo();
+            _bTextEditOpen = SW_TRUE;
+        }
         _text = string( text );
         rebuildFromText();
     }
@@ -232,6 +408,7 @@ namespace sw::editor
         _listRedo.push_back( _text );
         _text = _listUndo.back();
         _listUndo.pop_back();
+        _bTextEditOpen = SW_FALSE;
         rebuildFromText();
     }
 
@@ -242,6 +419,7 @@ namespace sw::editor
         _listUndo.push_back( _text );
         _text = _listRedo.back();
         _listRedo.pop_back();
+        _bTextEditOpen = SW_FALSE;
         rebuildFromText();
     }
 } // namespace sw::editor

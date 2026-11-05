@@ -4,9 +4,9 @@
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -31,12 +31,13 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief 검증이 도는 동안 로더가 남기는 경고 · 오류 줄을 모읍니다. */
+        /** @brief 검증이 도는 동안 **이 호출의** 로더가 남기는 경고 · 오류 줄을 모읍니다. 다른 스레드의 줄이 섞이면 멀쩡한 파일이 실패로 보이므로 추적 id 로 가른다. */
         class CatalogWarningCollector
         {
         public:
             CatalogWarningCollector()
-                : _mutex{}
+                : _traceID{ LogTraceID::makeRandom() }
+                , _mutex{}
                 , _listWarning{}
                 , _subscription{}
             {
@@ -45,6 +46,14 @@ namespace sw::editor
 
             CatalogWarningCollector( const CatalogWarningCollector& )            = delete;
             CatalogWarningCollector& operator=( const CatalogWarningCollector& ) = delete;
+
+            /** @brief 지금 스레드의 로그 문맥에 이 추적 id 를 얹은 값입니다. `ScopedLogContext` 에 넘깁니다. */
+            [[nodiscard]] LogContext makeContext() const
+            {
+                LogContext context = LogContext::getCurrent();
+                context._traceID   = _traceID;
+                return context;
+            }
 
             vector<string> take()
             {
@@ -57,11 +66,14 @@ namespace sw::editor
             {
                 if ( entry._level != LogLevel::Warning && entry._level != LogLevel::Error )
                     return;
+                if ( entry._context._traceID != _traceID )
+                    return;
                 ScopedLock<mutex> lock{ _mutex };
                 _listWarning.push_back( entry._message );
             }
 
         private:
+            LogTraceID     _traceID;
             mutex          _mutex;
             vector<string> _listWarning;
             Subscription   _subscription; ///< 마지막 멤버라 먼저 풀린다 — 콜백이 만지는 `_mutex` · `_listWarning` 보다 먼저
@@ -116,16 +128,11 @@ namespace sw::editor
     CatalogPanel::CatalogPanel()
         : IEditorDocumentPanel( false )
         , _filter{}
-        , _listFile{}
-        , _listWarning{}
+        , _fileList{}
+        , _listFileGroup{}
         , _indexJob{}
-        , _document{}
+        , _session{}
         , _tableEditor{}
-        , _selectedID{}
-        , _selectedKindLabel{}
-        , _previousFileText{}
-        , _statusText{}
-        , _validationState{ ValidationState::None }
         , _bIndexLoaded{ SW_FALSE }
         , _bRawMode{ false }
     {
@@ -169,25 +176,16 @@ namespace sw::editor
 
     void CatalogPanel::rebuildFileList( const vector<EditorAssetIndexEntry>& listEntry )
     {
-        _listFile.clear();
+        vector<CatalogFileRow>       listRow;
         vector<const AssetDataKind*> listKind;
         for ( const EditorAssetIndexEntry& entry : listEntry )
         {
             AssetDataKind::collectMatches( entry._path, listKind );
             if ( listKind.size() != 1 )
                 continue; // 카탈로그가 아니거나(0) 종류가 겹치는(스키마 테스트가 잡는다) 파일은 이 창이 다루지 않는다
-            FileRow row;
-            row._assetID   = entry._path;
-            row._kindLabel = listKind[0]->_pLabel;
-            _listFile.push_back( std::move( row ) );
+            listRow.push_back( CatalogFileRow{ entry._path, listKind[0]->_pLabel } );
         }
-        VectorUtil::sort( _listFile, &CatalogPanel::isFileBefore );
-    }
-
-    bool CatalogPanel::isFileBefore( const FileRow& lhs, const FileRow& rhs )
-    {
-        const int32 byKind = StringUtil::compare( lhs._kindLabel, rhs._kindLabel );
-        return byKind != 0 ? byKind < 0 : StringUtil::compare( lhs._assetID, rhs._assetID ) < 0;
+        _fileList.setRows( std::move( listRow ) );
     }
 
     void CatalogPanel::drawToolbar()
@@ -196,7 +194,8 @@ namespace sw::editor
             _bIndexLoaded = SW_FALSE;
         EditorSelfTestMarks::note( "catalog.refresh" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Save" ) ) );
-        ImGui::BeginDisabled( _selectedID.empty() );
+        CatalogDocument& document = _session.editDocument();
+        ImGui::BeginDisabled( _session.hasFile() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) )
             (void)saveDocumentAndClearDirty(); // 실패하면 상태 줄에 이유가 있다
         EditorSelfTestMarks::note( "catalog.save" );
@@ -205,21 +204,21 @@ namespace sw::editor
             revertDocument();
         EditorSelfTestMarks::note( "catalog.revert" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Undo" ) ) );
-        ImGui::BeginDisabled( _document.canUndo() == false );
+        ImGui::BeginDisabled( document.canUndo() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Undo" ) ) )
         {
             SW_LOG_INFO_ID( "Catalog.Undo", "Catalog undo" );
-            _document.undo();
+            document.undo();
             _tableEditor.reset();
             syncDirty();
         }
         EditorSelfTestMarks::note( "catalog.undo" );
         ImGui::EndDisabled();
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Redo" ) ) );
-        ImGui::BeginDisabled( _document.canRedo() == false );
+        ImGui::BeginDisabled( document.canRedo() == false );
         if ( ImGui::Button( SW_LOCKEY( "EdVerb", "Redo" ) ) )
         {
-            _document.redo();
+            document.redo();
             _tableEditor.reset();
             syncDirty();
         }
@@ -244,114 +243,117 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorCatalog", "Scanning" ) );
             return;
         }
-        if ( _listFile.empty() )
+        if ( _fileList.getRows().empty() )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorCatalog", "NoKinds" ) );
             return;
         }
 
-        const string_view filter     = _filter.c_str();
-        bool              bFirstFile = true;
-        size_t            index      = 0;
-        while ( index < _listFile.size() )
+        if ( _fileList.collectGroups( _filter.c_str(), _listFileGroup ) == 0 )
         {
-            size_t end = index;
-            while ( end < _listFile.size() && _listFile[end]._kindLabel == _listFile[index]._kindLabel )
-            {
-                ++end;
-            }
+            EditorWidgets::drawNoSearchResultHint( _filter.c_str() ); // 머리만 남으면 왜 비었는지 알 수 없다
+            return;
+        }
+        bool bFirstFile = true;
+        for ( const CatalogFileGroup& group : _listFileGroup )
+        {
             StringBuilder<constant::buffer::kMax128> header;
-            header.appendFormat( "%# (%#)###kind_%#", _listFile[index]._kindLabel, end - index, _listFile[index]._kindLabel );
+            header.appendFormat( "%# (%#)###kind_%#", group._kindLabel, group._listRow.size(), group._kindLabel );
             // 종류는 트리 노드(띠 없는 머리)로, 줄은 파일 이름 + 회색 폴더 — 좁은 왼쪽 칸에서 전체 경로가 잘려 같은 종류의 파일이 구분되지 않았다(uiaudit 24).
-            if ( ImGui::TreeNodeEx( header.c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_NoTreePushOnOpen ) )
+            if ( ImGui::TreeNodeEx( header.c_str(), ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_NoTreePushOnOpen ) == false )
+                continue;
+            for ( const uint32 rowIndex : group._listRow )
             {
-                for ( size_t fileIndex = index; fileIndex < end; ++fileIndex )
+                const CatalogFileRow& file      = _fileList.getRows()[rowIndex];
+                const bool            bSelected = file._assetID == _session.getAssetID();
+                const string          fileName  = FileUtil::getFileNamePart( file._assetID );
+                const string          label     = fileName + "##" + file._assetID;
+                if ( ImGui::Selectable( label.c_str(), bSelected ) && bSelected == false )
                 {
-                    const FileRow& file = _listFile[fileIndex];
-                    if ( filter.empty() == false && StringUtil::contains( file._assetID, filter, true ) == false )
-                        continue;
-                    const bool   bSelected = file._assetID == _selectedID;
-                    const string fileName  = FileUtil::getFileNamePart( file._assetID );
-                    const string label     = fileName + "##" + file._assetID;
-                    if ( ImGui::Selectable( label.c_str(), bSelected ) && bSelected == false )
-                    {
-                        if ( _document.isDirty() )
-                            _statusText = SW_LOCKEY( "EditorCatalog", "SaveOrRevertFirst" );
-                        else
-                            openFile( file._assetID );
-                    }
-                    if ( bFirstFile )
-                    {
-                        EditorSelfTestMarks::note( "catalog.file.first" ); // 표식은 마지막 항목을 가리킨다 — 회색 폴더 글보다 먼저
-                        bFirstFile = false;
-                    }
-                    EditorWidgets::drawTooltip( file._assetID.c_str() );
-                    const string_view folder = string_view( file._assetID ).substr( 0, file._assetID.size() - fileName.size() );
-                    if ( folder.empty() == false )
-                    {
-                        // 선택 줄은 폭 전체를 쓰므로 같은 줄에 잇지 않고 그 줄 위, 파일 이름 뒤에 회색으로 얹는다(배치는 바꾸지 않는다).
-                        const ImVec2  itemMin = ImGui::GetItemRectMin();
-                        const float32 textY   = itemMin.y + ( ImGui::GetItemRectSize().y - ImGui::GetFontSize() ) * 0.5f; // 선택 줄이 이름을 세로 가운데에 그리는 자리
-                        const ImVec2  at{ itemMin.x + ImGui::CalcTextSize( fileName.c_str() ).x + ImGui::GetStyle().ItemSpacing.x, textY };
-                        ImGui::GetWindowDrawList()->AddText( at, ImGui::GetColorU32( ImGuiCol_TextDisabled ), folder.data(), folder.data() + folder.size() );
-                    }
+                    if ( _session.getDocument().isDirty() )
+                        _session.setStatus( SW_LOCKEY( "EditorCatalog", "SaveOrRevertFirst" ) );
+                    else
+                        openFile( file._assetID );
+                }
+                if ( bFirstFile )
+                {
+                    EditorSelfTestMarks::note( "catalog.file.first" ); // 표식은 마지막 항목을 가리킨다 — 회색 폴더 글보다 먼저
+                    bFirstFile = false;
+                }
+                EditorWidgets::drawTooltip( file._assetID.c_str() );
+                const string_view folder = string_view( file._assetID ).substr( 0, file._assetID.size() - fileName.size() );
+                if ( folder.empty() == false )
+                {
+                    // 선택 줄은 폭 전체를 쓰므로 같은 줄에 잇지 않고 그 줄 위, 파일 이름 뒤에 회색으로 얹는다(배치는 바꾸지 않는다).
+                    const ImVec2  itemMin = ImGui::GetItemRectMin();
+                    const float32 textY   = itemMin.y + ( ImGui::GetItemRectSize().y - ImGui::GetFontSize() ) * 0.5f; // 선택 줄이 이름을 세로 가운데에 그리는 자리
+                    const ImVec2  at{ itemMin.x + ImGui::CalcTextSize( fileName.c_str() ).x + ImGui::GetStyle().ItemSpacing.x, textY };
+                    ImGui::GetWindowDrawList()->AddText( at, ImGui::GetColorU32( ImGuiCol_TextDisabled ), folder.data(), folder.data() + folder.size() );
                 }
             }
-            index = end;
         }
     }
 
     void CatalogPanel::drawDocumentArea()
     {
-        if ( _selectedID.empty() )
+        if ( _session.hasFile() == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EdLabel", "PickACatalogFileOnTheLeft" ) );
             return;
         }
 
-        ImGui::Text( "%s", _selectedID.c_str() );
+        CatalogDocument& document = _session.editDocument();
+        ImGui::Text( "%s", _session.getAssetID().c_str() );
         ImGui::SameLine();
-        ImGui::TextDisabled( "[%s]%s", _selectedKindLabel.c_str(), _document.isDirty() ? " *" : "" );
+        ImGui::TextDisabled( "[%s]%s", _session.getKindLabel().c_str(), document.isDirty() ? " *" : "" );
         drawValidation();
         ImGui::Separator();
 
-        if ( _bRawMode || _document.isParsed() == false )
+        if ( _bRawMode || document.isParsed() == false )
         {
-            if ( _document.isParsed() == false )
-                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdFormat", "TheFileIsNot", TextArgumentList().addText( "error", _document.getError().c_str() ) ).c_str() );
-            string       raw       = _document.getText();
-            const uint32 lineCount = static_cast<uint32>( ImGui::GetContentRegionAvail().y / ImGui::GetTextLineHeightWithSpacing() ) - 1;
-            if ( EditorWidgets::drawTextFieldMultiline( "##catalogRaw", raw, lineCount > 4 ? lineCount : 4 ) )
+            if ( document.isParsed() == false )
+                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdFormat", "TheFileIsNot", TextArgumentList().addText( "error", document.getError().c_str() ) ).c_str() );
+            string raw = document.getText();
+            // 줄 수를 부호 있게 센다 — 남은 높이가 한 줄도 안 되면 부호 없는 뺄셈이 넘쳐 글 상자가 터무니없는 높이가 되었다.
+            const int32 lineCount = MathUtil::max( static_cast<int32>( ImGui::GetContentRegionAvail().y / ImGui::GetTextLineHeightWithSpacing() ) - 1, 4 );
+            if ( EditorWidgets::drawTextFieldMultiline( "##catalogRaw", raw, static_cast<uint32>( lineCount ) ) )
             {
-                _document.replaceText( raw, false );
+                document.replaceText( raw );
                 syncDirty();
             }
+            if ( ImGui::IsItemDeactivated() )
+                document.endTextEdit(); // 다음 입력은 새 되돌리기 단계다
             return;
         }
 
-        if ( _tableEditor.draw( _document ) )
-        {
-            _statusText = _tableEditor.getLastActionText();
+        const bool bChanged = _tableEditor.draw( document );
+        if ( bChanged || _tableEditor.takeEditFailed() )
+            _session.setStatus( _tableEditor.getLastActionText() );
+        if ( bChanged )
             syncDirty();
-        }
     }
 
     void CatalogPanel::drawValidation()
     {
-        if ( _statusText.empty() == false )
-            ImGui::TextDisabled( "%s", _statusText.c_str() );
-        if ( _validationState == ValidationState::Passed )
+        if ( _session.getStatus().empty() == false )
+            ImGui::TextDisabled( "%s", _session.getStatus().c_str() );
+        const CatalogFileSession::ValidationState state = _session.getValidationState();
+        if ( state == CatalogFileSession::ValidationState::Passed )
         {
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "Validation passed" );
         }
-        else if ( _validationState == ValidationState::Failed )
+        else if ( state == CatalogFileSession::ValidationState::Failed )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdFormat", "ValidationFailedWarnings", TextArgumentList().addInteger( "warningCount", static_cast<int64>( _listWarning.size() ) ) ).c_str() );
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RestorePreviousFile" ) ) );
-            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "RestorePreviousFile" ) ) )
-                restorePreviousFile();
-            EditorSelfTestMarks::note( "catalog.restore" );
-            for ( const string& warning : _listWarning )
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdFormat", "ValidationFailedWarnings", TextArgumentList().addInteger( "warningCount", static_cast<int64>( _session.getWarnings().size() ) ) ).c_str() );
+            // 이번 저장 전 글이 없으면(방금 연 파일) 되쓸 것이 없다 — 같은 글을 되쓰는 단추를 보이지 않는다.
+            if ( _session.canRestorePrevious() )
+            {
+                EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RestorePreviousFile" ) ) );
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "RestorePreviousFile" ) ) )
+                    restorePreviousFile();
+                EditorSelfTestMarks::note( "catalog.restore" );
+            }
+            for ( const string& warning : _session.getWarnings() )
             {
                 ImGui::BulletText( "%s", warning.c_str() );
             }
@@ -366,45 +368,46 @@ namespace sw::editor
         if ( absolutePath.has_value() == false || FileUtil::readTextFile( absolutePath->str(), text ) == false )
         {
             SW_LOG_ERROR_ID( "CatalogPanel.CouldNotReadCatalog", "Could not read catalog file '%#'", assetID.c_str() );
-            _statusText = "Could not read the file";
+            _session.setStatus( "Could not read the file" );
             return;
         }
-        _selectedID.clear();
-        _selectedKindLabel.clear();
         vector<const AssetDataKind*> listKind;
         AssetDataKind::collectMatches( assetID, listKind );
-        if ( listKind.size() == 1 )
-            _selectedKindLabel = listKind[0]->_pLabel;
-        _selectedID = assetID;
-        (void)_document.load( text ); // 깨진 원문은 글 상자로 고치게 열어 둔다 — 이유는 문서가 안다
+        _session.open( assetID, listKind.size() == 1 ? string_view( listKind[0]->_pLabel ) : string_view(), text );
         _tableEditor.reset();
-        _listWarning.clear();
-        _validationState  = ValidationState::None;
-        _previousFileText = text;
-        _statusText.clear();
         syncDirty();
         SW_LOG_INFO_ID( "Catalog.Opened", "Catalog opened %#", assetID.c_str() );
     }
 
     bool CatalogPanel::writeCurrentFile()
     {
-        if ( _selectedID.empty() )
+        if ( _session.hasFile() == false )
             return false;
-        if ( _document.isParsed() == false )
+        if ( _session.getDocument().isParsed() == false )
         {
-            _statusText = "Fix the XML before saving";
+            _session.setStatus( "Fix the XML before saving" );
             return false;
         }
-        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( _selectedID );
-        if ( absolutePath.has_value() == false || FileUtil::writeTextFile( absolutePath->str(), _document.getText() ) == false )
+        const string&                     assetID      = _session.getAssetID();
+        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( assetID );
+        if ( absolutePath.has_value() == false )
         {
-            SW_LOG_ERROR_ID( "CatalogPanel.CouldNotWriteCatalog", "Could not write catalog file '%#'", _selectedID.c_str() );
-            _statusText = "Could not write the file";
+            SW_LOG_ERROR_ID( "CatalogPanel.CouldNotWriteCatalog", "Could not write catalog file '%#'", assetID.c_str() );
+            _session.setStatus( "Could not write the file" );
             return false;
         }
-        _previousFileText = _document.getSavedText(); // 저장 직전에 디스크에 있던 글
-        _document.markSaved();
-        SW_LOG_INFO_ID( "CatalogPanel.CatalogSaved", "Catalog saved %#", _selectedID.c_str() );
+        // 연 뒤 밖에서 바뀐 파일을 말없이 덮어쓰지 않는다. 지워진 파일(읽지 못함)은 다시 만든다.
+        string diskText;
+        if ( FileUtil::readTextFile( absolutePath->str(), diskText ) && _session.checkDiskBeforeSave( diskText ) == false )
+            return false;
+        if ( FileUtil::writeTextFile( absolutePath->str(), _session.getDocument().getText() ) == false )
+        {
+            SW_LOG_ERROR_ID( "CatalogPanel.CouldNotWriteCatalog", "Could not write catalog file '%#'", assetID.c_str() );
+            _session.setStatus( "Could not write the file" );
+            return false;
+        }
+        _session.onSaved();
+        SW_LOG_INFO_ID( "CatalogPanel.CatalogSaved", "Catalog saved %#", assetID.c_str() );
         return true;
     }
 
@@ -419,70 +422,60 @@ namespace sw::editor
 
     void CatalogPanel::revertDocument()
     {
-        _document.revert();
+        _session.editDocument().revert();
         _tableEditor.reset();
-        _statusText = "Reverted to the saved text";
+        _session.setStatus( "Reverted to the saved text - Undo brings the edits back" );
         syncDirty();
-        SW_LOG_INFO_ID( "Catalog.Reverted", "Catalog reverted %#", _selectedID.c_str() );
+        SW_LOG_INFO_ID( "Catalog.Reverted", "Catalog reverted %#", _session.getAssetID().c_str() );
     }
 
     void CatalogPanel::validateCurrentFile()
     {
-        _listWarning.clear();
-        _validationState           = ValidationState::None;
-        const AssetDataKind* pKind = _selectedKindLabel.empty() ? nullptr : AssetDataKind::findByLabel( _selectedKindLabel );
+        _session.clearValidation();
+        const string&        kindLabel = _session.getKindLabel();
+        const AssetDataKind* pKind     = kindLabel.empty() ? nullptr : AssetDataKind::findByLabel( kindLabel );
         if ( pKind == nullptr )
         {
-            _statusText = "No registered kind - nothing to validate with";
+            _session.setStatus( "No registered kind - nothing to validate with" );
             return;
         }
-        bool bLoaded = false;
+        bool           bLoaded = false;
+        vector<string> listWarning;
         {
             CatalogWarningCollector collector;
-            bLoaded      = pKind->_pLoad( AssetID{ _selectedID } );
-            _listWarning = collector.take();
+            const ScopedLogContext  context{ collector.makeContext() };
+            bLoaded     = pKind->_pLoad( AssetID{ _session.getAssetID() } );
+            listWarning = collector.take();
         }
-        const bool bPassed = bLoaded && _listWarning.empty();
-        _statusText        = _document.isDirty() ? "Validated the saved file - unsaved edits are not included" : string();
-        _validationState   = bPassed ? ValidationState::Passed : ValidationState::Failed;
-        if ( bPassed )
-            SW_LOG_INFO_ID( "Catalog.ValidationPassed", "Catalog validation passed (%#)", _selectedKindLabel.c_str() );
+        _session.onValidated( bLoaded, std::move( listWarning ) );
+        if ( _session.getValidationState() == CatalogFileSession::ValidationState::Passed )
+            SW_LOG_INFO_ID( "Catalog.ValidationPassed", "Catalog validation passed (%#)", kindLabel.c_str() );
         else
-            SW_LOG_INFO_ID( "CatalogPanel.CatalogValidationFailedWarnings", "Catalog validation failed (%#): %# warnings", _selectedKindLabel.c_str(), _listWarning.size() );
+            SW_LOG_INFO_ID( "CatalogPanel.CatalogValidationFailedWarnings", "Catalog validation failed (%#): %# warnings", kindLabel.c_str(), _session.getWarnings().size() );
     }
 
     void CatalogPanel::restorePreviousFile()
     {
-        if ( _selectedID.empty() )
+        if ( _session.hasFile() == false )
             return;
-        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( _selectedID );
-        if ( absolutePath.has_value() == false || FileUtil::writeTextFile( absolutePath->str(), _previousFileText ) == false )
+        const std::optional<AbsolutePath> absolutePath = editor::getSubsystem<AssetPaths>().toDiskPath( _session.getAssetID() );
+        if ( absolutePath.has_value() == false || FileUtil::writeTextFile( absolutePath->str(), _session.getPreviousText() ) == false )
         {
-            SW_LOG_ERROR_ID( "CatalogPanel.CouldNotRestoreCatalog", "Could not restore catalog file '%#'", _selectedID.c_str() );
-            _statusText = "Could not restore the file";
+            SW_LOG_ERROR_ID( "CatalogPanel.CouldNotRestoreCatalog", "Could not restore catalog file '%#'", _session.getAssetID().c_str() );
+            _session.setStatus( "Could not restore the file" );
             return;
         }
-        (void)_document.load( _previousFileText ); // 되돌린 글이 디스크와 문서의 새 기준이다
+        _session.onRestored();
         _tableEditor.reset();
-        _statusText = "Restored the file as it was before saving";
         validateCurrentFile();
+        _session.setStatus( "Restored the file as it was before saving" ); // 검증이 상태 줄을 비우므로 그 뒤에 적는다
         syncDirty();
-        SW_LOG_INFO_ID( "CatalogPanel.CatalogRestored", "Catalog restored %#", _selectedID.c_str() );
-    }
-
-    uint32 CatalogPanel::countRows() const
-    {
-        uint32 rowCount = 0;
-        for ( const CatalogDocument::Group& group : _document.getGroups() )
-        {
-            rowCount += static_cast<uint32>( group._listRow.size() );
-        }
-        return rowCount;
+        SW_LOG_INFO_ID( "CatalogPanel.CatalogRestored", "Catalog restored %#", _session.getAssetID().c_str() );
     }
 
     void CatalogPanel::syncDirty()
     {
-        if ( _document.isDirty() )
+        if ( _session.getDocument().isDirty() )
             markDocumentDirty();
         else
             clearDocumentDirty();

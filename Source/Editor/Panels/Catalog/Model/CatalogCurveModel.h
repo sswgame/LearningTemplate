@@ -9,6 +9,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/VectorMath.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
@@ -79,8 +80,14 @@ namespace sw::editor
         /** @brief 곡선의 마지막 키 시각입니다(1 보다 작으면 1). 표본 구간을 정한다. */
         static float32 computeEndTime( const CatalogCurve& curve );
         /**
+         * @brief 그래디언트의 색을 @p sampleCount 개 표본으로 냅니다(시각 0 ~ 네 채널의 가장 늦은 키, 각 채널은 0 ~ 1 로 자른다).
+         * @return 키가 없는 채널이 있으면 false 입니다(띠 대신 빈 틀을 그린다).
+         */
+        [[nodiscard]] static bool sampleGradient( const vector<CatalogCurve>& listCurve, const CatalogGradient& gradient, uint32 sampleCount, vector<float4>& outListColor );
+        /**
          * @brief 곡선의 끝에 키를 더합니다. `_listKey` 가 없으면(`<_red/>`) 먼저 만듭니다. 새 키는 마지막 키 뒤 0.1 에 같은 값(키가 없으면 시각 0 값 1)이고 보간은 `Linear` 입니다.
-         * @return 더했으면 true 입니다. 실패하면 아무것도 바뀌지 않는 것이 아니라(두 단계 중 첫 단계는 남을 수 있다) 문서의 `getError` 에 이유가 있습니다.
+         * @details 사본에서 고쳐 한 번에 넣는다 — 되돌리기 한 번에 키와 목록이 함께 사라지고, 실패하면 문서는 그대로다.
+         * @return 더했으면 true 입니다. 아니면 문서의 `getError` 에 이유가 있습니다.
          */
         [[nodiscard]] static bool addKey( CatalogDocument& inoutDocument, int32 curveElementIndex );
     };

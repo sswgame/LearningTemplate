@@ -3,6 +3,7 @@
 #include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
@@ -198,31 +199,59 @@ namespace sw::editor
         return true;
     }
 
+    bool CatalogCurveModel::sampleGradient( const vector<CatalogCurve>& listCurve, const CatalogGradient& gradient, uint32 sampleCount, vector<float4>& outListColor )
+    {
+        outListColor.clear();
+        const CatalogCurve& red     = listCurve[static_cast<size_t>( gradient._red )];
+        const CatalogCurve& green   = listCurve[static_cast<size_t>( gradient._green )];
+        const CatalogCurve& blue    = listCurve[static_cast<size_t>( gradient._blue )];
+        const CatalogCurve& alpha   = listCurve[static_cast<size_t>( gradient._alpha )];
+        const float32       endTime = MathUtil::max( MathUtil::max( computeEndTime( red ), computeEndTime( green ) ), MathUtil::max( computeEndTime( blue ), computeEndTime( alpha ) ) );
+        vector<float32>     listRed;
+        vector<float32>     listGreen;
+        vector<float32>     listBlue;
+        vector<float32>     listAlpha;
+        const bool          bSampled = sample( red, endTime, sampleCount, listRed ) && sample( green, endTime, sampleCount, listGreen ) && sample( blue, endTime, sampleCount, listBlue ) && sample( alpha, endTime, sampleCount, listAlpha );
+        if ( bSampled == false )
+            return false;
+        for ( uint32 index = 0; index < sampleCount; ++index )
+        {
+            outListColor.push_back( float4{ MathUtil::saturate( listRed[index] ), MathUtil::saturate( listGreen[index] ), MathUtil::saturate( listBlue[index] ), MathUtil::saturate( listAlpha[index] ) } );
+        }
+        return true;
+    }
+
     bool CatalogCurveModel::addKey( CatalogDocument& inoutDocument, int32 curveElementIndex )
     {
         using Internal                             = CatalogCurveModelInternal;
         const CatalogXMLText& parsed               = inoutDocument.getParsed();
         const bool            bInvalidElementIndex = parsed.isParsed() == false || curveElementIndex < 0 || static_cast<size_t>( curveElementIndex ) >= parsed.getElements().size();
         if ( bInvalidElementIndex )
+        {
+            inoutDocument.setError( "the curve element does not exist" );
             return false;
-        int32 listKeyIndex = Internal::findChildNamed( parsed, parsed.getElement( curveElementIndex ), kKeyListName );
+        }
+        CatalogDocument draft;
+        (void)draft.load( inoutDocument.getText() ); // 위에서 훑어진 글이다
+        int32 listKeyIndex = Internal::findChildNamed( draft.getParsed(), draft.getParsed().getElement( curveElementIndex ), kKeyListName );
         if ( listKeyIndex < 0 )
         {
-            if ( inoutDocument.addChild( curveElementIndex, kKeyListName, {} ) == false )
+            if ( draft.addChild( curveElementIndex, kKeyListName, {} ) == false )
+            {
+                inoutDocument.setError( draft.getError() );
                 return false;
-            // 고치면 문서가 다시 훑여 인덱스가 바뀐다 - 곡선 원소는 더한 원소보다 앞이라 같은 인덱스로 남는다.
-            listKeyIndex = Internal::findChildNamed( inoutDocument.getParsed(), inoutDocument.getParsed().getElement( curveElementIndex ), kKeyListName );
-            if ( listKeyIndex < 0 )
-                return false;
+            }
+            // 고치면 문서가 다시 훑여 인덱스가 바뀐다 - 곡선 원소는 더한 원소보다 앞이라 같은 인덱스로 남는다. 방금 더한 자식이므로 반드시 찾는다.
+            listKeyIndex = Internal::findChildNamed( draft.getParsed(), draft.getParsed().getElement( curveElementIndex ), kKeyListName );
         }
 
         // 새 키의 시각과 값: 마지막 키 뒤 한 걸음에 같은 값, 키가 없으면 시각 0 값 1.
         float32                  time    = 0.0f;
         float32                  value   = Internal::kNewKeyFirstValue;
-        const CatalogXMLElement& listKey = inoutDocument.getParsed().getElement( listKeyIndex );
+        const CatalogXMLElement& listKey = draft.getParsed().getElement( listKeyIndex );
         for ( const int32 keyIndex : listKey._listChild )
         {
-            const CatalogXMLElement& keyElement = inoutDocument.getParsed().getElement( keyIndex );
+            const CatalogXMLElement& keyElement = draft.getParsed().getElement( keyIndex );
             float32                  keyTime    = 0.0f;
             float32                  keyValue   = 0.0f;
             const bool               bRead      = Internal::readFloat( keyElement, "_time", keyTime ) && Internal::readFloat( keyElement, "_value", keyValue );
@@ -240,6 +269,11 @@ namespace sw::editor
         listAttribute.push_back( CatalogXMLNewAttribute{ "_time", string{ timeText.view() } } );
         listAttribute.push_back( CatalogXMLNewAttribute{ "_value", string{ valueText.view() } } );
         listAttribute.push_back( CatalogXMLNewAttribute{ "_interpolation", "Linear" } );
-        return inoutDocument.addChild( listKeyIndex, kKeyElementName, listAttribute );
+        if ( draft.addChild( listKeyIndex, kKeyElementName, listAttribute ) == false )
+        {
+            inoutDocument.setError( draft.getError() );
+            return false;
+        }
+        return inoutDocument.replaceTextChecked( draft.getText() );
     }
 } // namespace sw::editor

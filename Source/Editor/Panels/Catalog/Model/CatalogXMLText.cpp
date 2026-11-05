@@ -459,4 +459,22 @@ namespace sw::editor
         outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, element._begin ), string_view{}, text.substr( element._end ) );
         return true;
     }
+
+    bool CatalogXMLText::duplicateElement( string_view text, const CatalogXMLElement& element, string& outText, string& outError )
+    {
+        outError.clear();
+        if ( element._parent < 0 )
+        {
+            outError = "the root element cannot be duplicated";
+            return false;
+        }
+        const string_view newline = CatalogXMLTextInternal::detectNewline( text );
+        string            middle;
+        middle.append( newline.data(), newline.size() );
+        middle += CatalogXMLTextInternal::readLineIndent( text, element._begin );
+        const string_view original = text.substr( element._begin, element._end - element._begin );
+        middle.append( original.data(), original.size() );
+        outText = CatalogXMLTextInternal::joinPieces( text.substr( 0, element._end ), middle, text.substr( element._end ) );
+        return true;
+    }
 } // namespace sw::editor

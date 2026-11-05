@@ -85,6 +85,8 @@ namespace sw::editor
                                                       const vector<CatalogXMLNewAttribute>& listAttribute, string& outText, string& outError );
         /** @brief 원소를 통째로 뺍니다. 그 원소만 있던 줄이면 줄째 뺍니다. */
         [[nodiscard]] static bool removeElement( string_view text, const CatalogXMLElement& element, string& outText, string& outError );
+        /** @brief 원소의 원문(자식 · 주석 포함)을 그대로 복사해 바로 뒤 새 줄에 놓습니다. 루트는 false 입니다. 복사본은 다시 훑은 문서에서 다음 형제입니다. */
+        [[nodiscard]] static bool duplicateElement( string_view text, const CatalogXMLElement& element, string& outText, string& outError );
 
     private:
         /** @brief `parse` 의 본문입니다. 실패해도 일부 요소를 남기므로 `parse` 가 실패 때 비웁니다. */

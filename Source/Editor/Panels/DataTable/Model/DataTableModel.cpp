@@ -314,7 +314,7 @@ namespace sw::editor
 
     void DataTableModel::commitGameDataRawEdit()
     {
-        _gameDataDocument.replaceText( _selectedGameDataRawText, false );
+        _gameDataDocument.replaceText( _selectedGameDataRawText );
         _bGameDataDirty = SW_TRUE;
     }
 

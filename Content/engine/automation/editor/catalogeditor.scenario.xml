@@ -39,6 +39,11 @@
 	<EditorClick mark="catalog.addrow.first"/>
 	<EditorWaitSettled/>
 	<ExpectLog id="Catalog.TableEdited" contains="Added row to" count="1"/>
+	<!-- 첫 행을 복사하면 이름 칸이 겹치지 않게 바뀐 행이 바로 뒤에 선다 -->
+	<EditorWaitSettled/>
+	<EditorClick mark="catalog.row.duplicate.first"/>
+	<EditorWaitSettled/>
+	<ExpectLog id="Catalog.TableEdited" contains="Duplicated row in" count="1"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="catalog.revert"/>
 	<EditorWaitSettled/>
