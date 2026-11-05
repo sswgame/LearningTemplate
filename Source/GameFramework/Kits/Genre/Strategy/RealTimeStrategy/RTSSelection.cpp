@@ -43,6 +43,11 @@ namespace sw
                 vector<uint64> listPacked;
                 if ( StateArchiveUtil::readIDList( archive, listPacked ) == false )
                     return false;
+                // 선택과 부대는 유닛마다 한 번이다(`addUnit`). 꾸민 바이트의 긴 목록이 제곱 시간을 쓰지 않게 정렬해 본다.
+                vector<uint64> listSorted = listPacked;
+                VectorUtil::sort( listSorted );
+                if ( std::adjacent_find( listSorted.begin(), listSorted.end() ) != listSorted.end() )
+                    return false;
                 outListUnit.clear();
                 outListUnit.reserve( listPacked.size() );
                 for ( const uint64 packed : listPacked )
@@ -77,6 +82,8 @@ namespace sw
         vector<RTSUnitID> listSelected;
         vector<RTSUnitID> arrGroup[kGroupCount];
         if ( RTSSelectionInternal::readList( archive, listSelected ) == false )
+            return false;
+        if ( _maxCount > 0 && static_cast<int32>( listSelected.size() ) > _maxCount )
             return false;
         for ( vector<RTSUnitID>& listGroup : arrGroup )
         {

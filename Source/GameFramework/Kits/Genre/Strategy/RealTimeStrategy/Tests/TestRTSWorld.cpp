@@ -5,7 +5,9 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
+#include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
 #include <cstring>
@@ -152,6 +154,126 @@ namespace
             digest.add( unitID.packed() );
         return digest._value;
     }
+
+    /** @brief `RTSWorld::writeState` 의 형식으로 작은 판(8x8, 플레이어 하나, 슬롯 하나 또는 둘)을 꾸밉니다. 칸마다 맞는 값을 기본으로 두고 한 칸씩 망가뜨립니다. */
+    struct RTSForged
+    {
+        static constexpr int32 kSize = 8;
+
+        sw::hashed_string             _defID{ "marine" };
+        sw::vector<sw::hashed_string> _listProduction{};
+        sw::hashed_string             _orderBuildID{};
+        sw::vector<uint32>            _listFreeSlot{};
+        sw::int2                      _cell{ -1, -1 };
+        uint64                        _idPacked{ sw::RTSUnitID::make( 0, 1 ).packed() };
+        uint32                        _generation{ 1 };
+        float32                       _hp{ 40.0f };
+        float32                       _buildProgress{ 1.0f };
+        float32                       _gatherTimer{ 0.0f };
+        float32                       _arriveRadius{ 0.0f };
+        float32                       _nextUnderAttackTime{ 0.0f };
+        float32                       _time{ 0.0f };
+        int32                         _owner{ 0 };
+        int32                         _resourceLeft{ 0 };
+        int32                         _cargoAmount{ 0 };
+        int32                         _supplyReserved{ 0 };
+        int32                         _team{ 0 };
+        int32                         _supplyUsed{ 1 };
+        int32                         _winningTeam{ -1 };
+        uint8                         _terrain{ SW_FALSE };
+        uint8                         _visibility{ 0 };
+        uint8                         _bAlive{ SW_TRUE };
+        uint8                         _bFlowField{ SW_FALSE };
+        uint8                         _bWithOrder{ SW_FALSE };
+        uint8                         _bDeadSecondSlot{ SW_FALSE };
+
+        static void writeDeadSlot( sw::Archive& outArchive )
+        {
+            outArchive << static_cast<uint32>( 1 );
+            sw::StateArchiveUtil::writeName( outArchive, sw::hashed_string{} );
+            outArchive << static_cast<uint32>( 0 );
+            outArchive << static_cast<uint32>( 0 );
+            writeUnitFields( outArchive, sw::int2{ -1, -1 }, 0, 0.0f, 1.0f, 0.0f, -1, 0, 0, 0, SW_FALSE );
+        }
+
+        static void writeUnitFields( sw::Archive& outArchive, const sw::int2& cell, uint64 idPacked, float32 hp, float32 buildProgress, float32 gatherTimer, int32 owner, int32 resourceLeft, int32 cargoAmount, int32 supplyReserved, uint8 bAlive )
+        {
+            outArchive << sw::float3{ 1.5f, 0.0f, 1.5f };
+            outArchive << sw::float3{};
+            outArchive << sw::float3{};
+            sw::StateArchiveUtil::writeInt2( outArchive, cell );
+            outArchive << idPacked;
+            for ( int32 linked = 0; linked < 5; ++linked )
+            {
+                outArchive << static_cast<uint64>( 0 );
+            }
+            outArchive << hp;
+            outArchive << 0.0f;
+            outArchive << buildProgress;
+            outArchive << 0.0f;
+            outArchive << gatherTimer;
+            outArchive << owner;
+            outArchive << resourceLeft;
+            outArchive << cargoAmount;
+            outArchive << supplyReserved;
+            outArchive << static_cast<uint8>( sw::RTSResourceType::None );
+            outArchive << static_cast<uint8>( sw::RTSGatherPhase::ToResource );
+            outArchive << bAlive;
+            outArchive << static_cast<uint8>( SW_FALSE );
+            outArchive << static_cast<uint8>( SW_FALSE );
+        }
+
+        bool readInto( sw::RTSWorld& inoutWorld ) const
+        {
+            sw::Archive written;
+            written << kSize;
+            written << kSize;
+            written << sw::vector<uint8>( kSize * kSize, _terrain );
+            written << static_cast<uint32>( _bDeadSecondSlot != SW_FALSE ? 2 : 1 );
+            written << _generation;
+            sw::StateArchiveUtil::writeName( written, _defID );
+            written << static_cast<uint32>( _bWithOrder != SW_FALSE ? 1 : 0 );
+            if ( _bWithOrder != SW_FALSE )
+            {
+                sw::StateArchiveUtil::writeName( written, _orderBuildID );
+                written << sw::float3{ 2.5f, 0.0f, 2.5f };
+                sw::StateArchiveUtil::writeInt2( written, sw::int2{ -1, -1 } );
+                written << static_cast<uint64>( 0 );
+                written << _arriveRadius;
+                written << static_cast<uint8>( sw::RTSOrderType::Move );
+                written << _bFlowField;
+            }
+            written << static_cast<uint32>( _listProduction.size() );
+            for ( const sw::hashed_string& productionID : _listProduction )
+            {
+                sw::StateArchiveUtil::writeName( written, productionID );
+            }
+            writeUnitFields( written, _cell, _idPacked, _hp, _buildProgress, _gatherTimer, _owner, _resourceLeft, _cargoAmount, _supplyReserved, _bAlive );
+            if ( _bDeadSecondSlot != SW_FALSE )
+                writeDeadSlot( written );
+            written << static_cast<uint32>( _listFreeSlot.size() );
+            for ( const uint32 slot : _listFreeSlot )
+            {
+                written << slot;
+            }
+            written << static_cast<uint32>( 1 );
+            written << sw::float3{};
+            written << _supplyUsed;
+            written << static_cast<int32>( 0 );
+            written << _team;
+            written << _nextUnderAttackTime;
+            written << static_cast<uint8>( SW_FALSE );
+            written << static_cast<uint8>( SW_FALSE );
+            written << static_cast<uint32>( 1 );
+            written << sw::vector<uint8>( kSize * kSize, _visibility );
+            written << 0.0f;
+            sw::StateArchiveUtil::writeStepTimer( written, sw::FixedStepTimer{ 0.05f, 0.25f } );
+            written << _time;
+            written << _winningTeam;
+            sw::Archive reading( written.getData(), written.getSize() );
+            return inoutWorld.readState( reading );
+        }
+    };
 } // namespace
 
 /**
@@ -217,4 +339,225 @@ SW_TEST_CASE( RTSWorldTest, StateRoundTripContinuesTheSameMatch )
     restored.run( 20, 20 );
     again.run( 20, 20 );
     SW_EXPECT_EQUAL( digestMatch( restored ), digestMatch( again ) );
+}
+
+/**
+ * @brief [RTSWorldTest] 결함: 유닛의 주인과 플레이어의 팀이 배열을 바로 찌르는 번호인데 범위를 보지 않아 꾸민 바이트 하나로 범위 밖을 읽고 썼다. 빈 슬롯 목록은 살아 있는 슬롯을 내주어 유닛을 덮어쓰게 했다. 거절하고 월드를 둔다
+ */
+SW_TEST_CASE( RTSWorldTest, ReadStateRefusesOutOfRangeIndices )
+{
+    sw::RTSCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
+    sw::RTSWorld world;
+    SW_REQUIRE_TRUE( world.initialize( &catalog, RTSForged::kSize, RTSForged::kSize, sw::RTSSettings{} ) );
+    sw::Wallet wallet;
+    SW_REQUIRE_EQUAL( 0, world.addPlayer( 0, &wallet, sw::float3{} ) );
+
+    const RTSForged     valid;
+    const sw::RTSUnitID unitID = sw::RTSUnitID::make( 0, 1 );
+    SW_REQUIRE_TRUE( valid.readInto( world ) );
+    SW_REQUIRE_TRUE( world.findUnit( unitID ) != nullptr );
+
+    RTSForged ownerOutside = valid;
+    ownerOutside._owner    = 1;
+    SW_EXPECT_FALSE( ownerOutside.readInto( world ) );
+
+    RTSForged ownerNegative = valid;
+    ownerNegative._owner    = -2;
+    SW_EXPECT_FALSE( ownerNegative.readInto( world ) );
+
+    RTSForged teamOutside = valid;
+    teamOutside._team     = 1;
+    SW_EXPECT_FALSE( teamOutside.readInto( world ) );
+
+    RTSForged teamNegative = valid;
+    teamNegative._team     = -1;
+    SW_EXPECT_FALSE( teamNegative.readInto( world ) );
+
+    RTSForged winnerOutside    = valid;
+    winnerOutside._winningTeam = 1;
+    SW_EXPECT_FALSE( winnerOutside.readInto( world ) );
+
+    RTSForged winnerNegative    = valid;
+    winnerNegative._winningTeam = -2;
+    SW_EXPECT_FALSE( winnerNegative.readInto( world ) );
+
+    RTSForged freeAlive     = valid;
+    freeAlive._listFreeSlot = { 0 };
+    SW_EXPECT_FALSE( freeAlive.readInto( world ) );
+
+    RTSForged freeOutside     = valid;
+    freeOutside._listFreeSlot = { 1 };
+    SW_EXPECT_FALSE( freeOutside.readInto( world ) );
+
+    RTSForged freeRepeated        = valid;
+    freeRepeated._bDeadSecondSlot = SW_TRUE;
+    freeRepeated._listFreeSlot    = { 1, 1 };
+    SW_EXPECT_FALSE( freeRepeated.readInto( world ) );
+
+    RTSForged freeDead        = valid;
+    freeDead._bDeadSecondSlot = SW_TRUE;
+    freeDead._listFreeSlot    = { 1 };
+    SW_EXPECT_TRUE( freeDead.readInto( world ) ); // 죽어 비운 슬롯은 내줄 수 있다
+
+    RTSForged idElsewhere = valid;
+    idElsewhere._idPacked = sw::RTSUnitID::make( 3, 1 ).packed();
+    SW_EXPECT_FALSE( idElsewhere.readInto( world ) );
+
+    RTSForged idOldGeneration = valid;
+    idOldGeneration._idPacked = sw::RTSUnitID::make( 0, 2 ).packed();
+    SW_EXPECT_FALSE( idOldGeneration.readInto( world ) );
+
+    SW_EXPECT_TRUE( world.findUnit( unitID ) != nullptr );
+    SW_EXPECT_NEAR( 40.0f, world.findUnit( unitID )->_hp, 1.0e-5f );
+    SW_EXPECT_EQUAL( -1, world.getWinningTeam() );
+}
+
+/**
+ * @brief [RTSWorldTest] 결함: 유닛과 명령의 값 범위를 보지 않았다. 최대를 넘거나 음수인 체력 · 진행 · 양, 격자 밖 건물, 없는 정의, 상한을 넘는 생산 줄, 깨진 안개 · 지형 · 표시, 음수 시각을 거절하고 월드를 둔다
+ */
+SW_TEST_CASE( RTSWorldTest, ReadStateRefusesOutOfRangeValues )
+{
+    sw::RTSCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kUnitXML, "RTSWorldTest" ) );
+    sw::RTSWorld world;
+    SW_REQUIRE_TRUE( world.initialize( &catalog, RTSForged::kSize, RTSForged::kSize, sw::RTSSettings{} ) );
+    sw::Wallet wallet;
+    SW_REQUIRE_EQUAL( 0, world.addPlayer( 0, &wallet, sw::float3{} ) );
+
+    RTSForged valid;
+    valid._bWithOrder     = SW_TRUE;
+    valid._orderBuildID   = kSupply;
+    valid._arriveRadius   = 1.0f;
+    valid._listProduction = { kMarine };
+    SW_REQUIRE_TRUE( valid.readInto( world ) );
+
+    RTSForged hpOver = valid;
+    hpOver._hp       = 41.0f;
+    SW_EXPECT_FALSE( hpOver.readInto( world ) );
+
+    RTSForged hpNegative = valid;
+    hpNegative._hp       = -1.0f;
+    SW_EXPECT_FALSE( hpNegative.readInto( world ) );
+
+    RTSForged progressOver      = valid;
+    progressOver._buildProgress = 1.5f;
+    SW_EXPECT_FALSE( progressOver.readInto( world ) );
+
+    RTSForged progressNegative      = valid;
+    progressNegative._buildProgress = -0.5f;
+    SW_EXPECT_FALSE( progressNegative.readInto( world ) );
+
+    RTSForged resourceNegative     = valid;
+    resourceNegative._resourceLeft = -1;
+    SW_EXPECT_FALSE( resourceNegative.readInto( world ) );
+
+    RTSForged cargoNegative    = valid;
+    cargoNegative._cargoAmount = -1;
+    SW_EXPECT_FALSE( cargoNegative.readInto( world ) );
+
+    RTSForged supplyNegative       = valid;
+    supplyNegative._supplyReserved = -1;
+    SW_EXPECT_FALSE( supplyNegative.readInto( world ) );
+
+    RTSForged gatherNegative    = valid;
+    gatherNegative._gatherTimer = -1.0f;
+    SW_EXPECT_FALSE( gatherNegative.readInto( world ) );
+
+    RTSForged buildingOutside = valid;
+    buildingOutside._defID    = kSupply;
+    buildingOutside._hp       = 100.0f;
+    buildingOutside._cell     = sw::int2{ 99, 0 };
+    SW_EXPECT_FALSE( buildingOutside.readInto( world ) );
+
+    RTSForged orderUnknown     = valid;
+    orderUnknown._orderBuildID = "nothing";
+    SW_EXPECT_FALSE( orderUnknown.readInto( world ) );
+
+    RTSForged orderRadius     = valid;
+    orderRadius._arriveRadius = -1.0f;
+    SW_EXPECT_FALSE( orderRadius.readInto( world ) );
+
+    RTSForged orderFlowField   = valid;
+    orderFlowField._bFlowField = 2;
+    SW_EXPECT_FALSE( orderFlowField.readInto( world ) );
+
+    RTSForged productionUnknown       = valid;
+    productionUnknown._listProduction = { "nothing" };
+    SW_EXPECT_FALSE( productionUnknown.readInto( world ) );
+
+    RTSForged productionOver       = valid;
+    productionOver._listProduction = sw::vector<sw::hashed_string>( 6, kMarine ); // 설정의 상한은 5 이다
+    SW_EXPECT_FALSE( productionOver.readInto( world ) );
+
+    RTSForged visibilityBroken   = valid;
+    visibilityBroken._visibility = 3;
+    SW_EXPECT_FALSE( visibilityBroken.readInto( world ) );
+
+    RTSForged terrainBroken = valid;
+    terrainBroken._terrain  = 2;
+    SW_EXPECT_FALSE( terrainBroken.readInto( world ) );
+
+    RTSForged supplyUsedNegative   = valid;
+    supplyUsedNegative._supplyUsed = -1;
+    SW_EXPECT_FALSE( supplyUsedNegative.readInto( world ) );
+
+    RTSForged timeNegative = valid;
+    timeNegative._time     = -1.0f;
+    SW_EXPECT_FALSE( timeNegative.readInto( world ) );
+
+    RTSForged attackTimeNegative            = valid;
+    attackTimeNegative._nextUnderAttackTime = -1.0f;
+    SW_EXPECT_FALSE( attackTimeNegative.readInto( world ) );
+
+    const sw::RTSUnit* pUnit = world.findUnit( sw::RTSUnitID::make( 0, 1 ) );
+    SW_REQUIRE_TRUE( pUnit != nullptr );
+    SW_EXPECT_EQUAL( kMarine, pUnit->_pDef->_id );
+    SW_EXPECT_EQUAL( size_t( 1 ), pUnit->_listProduction.size() );
+}
+
+/**
+ * @brief [RTSWorldTest] 결함: 선택과 부대가 겹친 유닛과 상한을 넘는 선택을 그대로 받았다. 거절하고 선택을 둔다. 없는 유닛의 id 는 죽은 유닛의 id 와 같아 받는다
+ */
+SW_TEST_CASE( RTSWorldTest, SelectionStateRefusesRepeatedAndOverLimit )
+{
+    const auto writeLists = []( const sw::vector<uint64>& listSelected, const sw::vector<uint64>& listFirstGroup, sw::Archive& outArchive )
+    {
+        sw::StateArchiveUtil::writeIDList( outArchive, listSelected );
+        sw::StateArchiveUtil::writeIDList( outArchive, listFirstGroup );
+        for ( int32 group = 1; group < sw::RTSSelection::kGroupCount; ++group )
+        {
+            sw::StateArchiveUtil::writeIDList( outArchive, sw::vector<uint64>{} );
+        }
+    };
+    const uint64 first  = sw::RTSUnitID::make( 1, 1 ).packed();
+    const uint64 second = sw::RTSUnitID::make( 2, 1 ).packed();
+    const uint64 third  = sw::RTSUnitID::make( 3, 1 ).packed();
+
+    sw::RTSSelection selection;
+    selection.setMaxCount( 2 );
+
+    sw::Archive writtenValid;
+    writeLists( { first, second }, { third }, writtenValid );
+    sw::Archive readingValid( writtenValid.getData(), writtenValid.getSize() );
+    SW_REQUIRE_TRUE( selection.readState( readingValid ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), selection.getSelected().size() );
+
+    sw::Archive writtenRepeated;
+    writeLists( { third, third }, {}, writtenRepeated );
+    sw::Archive readingRepeated( writtenRepeated.getData(), writtenRepeated.getSize() );
+    SW_EXPECT_FALSE( selection.readState( readingRepeated ) );
+
+    sw::Archive writtenGroupRepeated;
+    writeLists( { third }, { first, first }, writtenGroupRepeated );
+    sw::Archive readingGroupRepeated( writtenGroupRepeated.getData(), writtenGroupRepeated.getSize() );
+    SW_EXPECT_FALSE( selection.readState( readingGroupRepeated ) );
+
+    sw::Archive writtenOver;
+    writeLists( { first, second, third }, {}, writtenOver );
+    sw::Archive readingOver( writtenOver.getData(), writtenOver.getSize() );
+    SW_EXPECT_FALSE( selection.readState( readingOver ) );
+
+    SW_REQUIRE_EQUAL( size_t( 2 ), selection.getSelected().size() );
+    SW_EXPECT_EQUAL( first, selection.getSelected()[0].packed() );
 }

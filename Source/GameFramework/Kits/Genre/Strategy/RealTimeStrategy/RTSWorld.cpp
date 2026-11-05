@@ -26,7 +26,7 @@ namespace sw
             static constexpr uint32  kMinPlayerStateBytes = 30;   ///< 플레이어 하나의 상태가 최소한 차지하는 바이트 수
 
             /** @brief `writeState` 가 쓴 명령 하나를 읽습니다. 흐름장을 쓰던 명령인지는 @p outListFlowFieldOrder 끝에 붙입니다. */
-            [[nodiscard]] static bool readOrder( Archive& archive, RTSOrder& outOrder, vector<uint8>& outListFlowFieldOrder )
+            [[nodiscard]] static bool readOrder( Archive& archive, const RTSCatalog& catalog, RTSOrder& outOrder, vector<uint8>& outListFlowFieldOrder )
             {
                 uint64 targetUnit = 0;
                 uint8  type       = 0;
@@ -39,7 +39,8 @@ namespace sw
                 archive >> outOrder._arriveRadius;
                 archive >> type;
                 archive >> bFlowField;
-                if ( archive.isError() || type > static_cast<uint8>( RTSOrderType::Hold ) )
+                const bool bBuildKnown = outOrder._buildID.empty() || catalog.find( outOrder._buildID ) != nullptr;
+                if ( archive.isError() || type > static_cast<uint8>( RTSOrderType::Hold ) || bFlowField > SW_TRUE || outOrder._arriveRadius < 0.0f || bBuildKnown == false )
                     return false;
                 outOrder._targetUnit = RTSUnitID::fromPacked( targetUnit );
                 outOrder._type       = static_cast<RTSOrderType>( type );
@@ -114,7 +115,7 @@ namespace sw
             }
 
             /** @brief 유닛 하나(정의 id, 명령, 생산 줄, 필드)를 읽습니다. 카탈로그에서 빠진 정의면 판을 맞출 수 없으므로 false 입니다. */
-            [[nodiscard]] static bool readUnit( Archive& archive, const RTSCatalog& catalog, RTSUnit& outUnit, vector<uint8>& outListFlowFieldOrder )
+            [[nodiscard]] static bool readUnit( Archive& archive, const RTSCatalog& catalog, const RTSSettings& settings, RTSUnit& outUnit, vector<uint8>& outListFlowFieldOrder )
             {
                 hashed_string defID;
                 if ( StateArchiveUtil::readName( archive, defID ) == false )
@@ -127,20 +128,61 @@ namespace sw
                     return false;
                 for ( uint32 orderIndex = 0; orderIndex < orderCount; ++orderIndex )
                 {
-                    if ( readOrder( archive, outUnit._listOrder.emplace_back(), outListFlowFieldOrder ) == false )
+                    if ( readOrder( archive, catalog, outUnit._listOrder.emplace_back(), outListFlowFieldOrder ) == false )
                         return false;
                 }
                 uint32 productionCount = 0;
-                if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), productionCount ) == false )
+                if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), productionCount ) == false || productionCount > static_cast<uint32>( settings._productionQueueMax ) )
                     return false;
                 for ( uint32 productionIndex = 0; productionIndex < productionCount; ++productionIndex )
                 {
                     hashed_string productionID;
-                    if ( StateArchiveUtil::readName( archive, productionID ) == false )
+                    if ( StateArchiveUtil::readName( archive, productionID ) == false || catalog.find( productionID ) == nullptr )
                         return false;
                     outUnit._listProduction.push_back( productionID );
                 }
                 return readUnitFields( archive, outUnit );
+            }
+
+            /**
+             * @brief 읽은 유닛 하나가 슬롯 @p slot 에 놓일 수 있는지 봅니다. 주인은 `_listPlayer` 를 바로 찌르는 번호라 죽은 유닛도 범위 안이어야 합니다.
+             * @details 살아 있는 유닛의 id 는 자기 슬롯과 세대를 가리켜야 `findUnit` 이 찾고, 건물과 자원의 셀은 격자 안이어야 놓였던 자리이다.
+             */
+            [[nodiscard]] static bool isUnitValid( const RTSUnit& unit, uint32 slot, uint32 generation, int32 playerCount, const NavGrid& grid )
+            {
+                const bool bOwnerValid = unit._owner == RTSWorld::kNoOwner || ( 0 <= unit._owner && unit._owner < playerCount );
+                const bool bFlagsValid = unit._bAlive <= SW_TRUE && unit._bHasRally <= SW_TRUE && unit._bSupplyBlocked <= SW_TRUE;
+                if ( bOwnerValid == false || bFlagsValid == false || generation == 0 )
+                    return false;
+                if ( unit._bAlive == SW_FALSE )
+                    return true;
+                const bool bIDValid       = unit._id.isValid() && unit._id.index() == slot && unit._id.generation() == generation;
+                const bool bHPValid       = 0.0f <= unit._hp && unit._hp <= unit._pDef->_hp;
+                const bool bProgressValid = 0.0f <= unit._buildProgress && unit._buildProgress <= 1.0f && 0.0f <= unit._productionTimer && 0.0f <= unit._gatherTimer;
+                const bool bAmountValid   = 0 <= unit._resourceLeft && 0 <= unit._cargoAmount && 0 <= unit._supplyReserved;
+                const bool bCellValid     = unit.isMobile() || grid.isInside( unit._cell );
+                return bIDValid && bHPValid && bProgressValid && bAmountValid && bCellValid;
+            }
+
+            /** @brief 읽은 빈 슬롯 목록을 봅니다. 겹치거나 살아 있는 슬롯을 내주면 `allocateUnit` 이 살아 있는 유닛을 덮어씁니다. */
+            [[nodiscard]] static bool areFreeSlotsValid( const vector<uint32>& listFreeSlot, const deque<RTSUnit>& listUnit )
+            {
+                vector<uint8> listSeen( listUnit.size(), SW_FALSE );
+                for ( const uint32 slot : listFreeSlot )
+                {
+                    const RTSUnit& unit = listUnit[slot];
+                    if ( listSeen[slot] != SW_FALSE || unit._bAlive != SW_FALSE || unit._id.isValid() )
+                        return false;
+                    listSeen[slot] = SW_TRUE;
+                }
+                return true;
+            }
+
+            /** @brief 읽은 플레이어 하나를 봅니다. 팀은 시야 표(`RTSVision::reveal`)를 바로 찌르는 번호입니다. */
+            [[nodiscard]] static bool isPlayerValid( const RTSPlayer& player, int32 teamCount )
+            {
+                const bool bTeamValid = 0 <= player._team && player._team < teamCount;
+                return bTeamValid && 0 <= player._supplyUsed && 0 <= player._supplyCap && 0.0f <= player._nextUnderAttackTime && player._bDefeated <= SW_TRUE && player._bHadBuilding <= SW_TRUE;
             }
         };
 
@@ -1846,6 +1888,11 @@ namespace sw
         archive >> listTerrainBlocked;
         if ( archive.isError() || listTerrainBlocked.size() != _listTerrainBlocked.size() )
             return false;
+        for ( const uint8 bBlocked : listTerrainBlocked )
+        {
+            if ( bBlocked > SW_TRUE )
+                return false;
+        }
 
         uint32 unitCount = 0;
         if ( StateArchiveUtil::readCount( archive, Internal::kMinUnitStateBytes, unitCount ) == false )
@@ -1856,7 +1903,9 @@ namespace sw
         for ( uint32 index = 0; index < unitCount; ++index )
         {
             archive >> listGeneration[index];
-            if ( Internal::readUnit( archive, *_pCatalog, listUnit.emplace_back(), listFlowFieldOrder ) == false )
+            if ( Internal::readUnit( archive, *_pCatalog, _settings, listUnit.emplace_back(), listFlowFieldOrder ) == false )
+                return false;
+            if ( Internal::isUnitValid( listUnit.back(), index, listGeneration[index], static_cast<int32>( _listPlayer.size() ), _grid ) == false )
                 return false;
         }
 
@@ -1873,7 +1922,7 @@ namespace sw
         uint32 playerCount = 0;
         // 지갑은 플레이어를 추가한 쪽이 빌려 준 것이라 싣지 않는다. 같은 수의 플레이어를 먼저 추가한 월드에만 읽어야 한다.
         const bool bInvalidPlayerData = archive.isError() || StateArchiveUtil::readCount( archive, Internal::kMinPlayerStateBytes, playerCount ) == false || playerCount != _listPlayer.size();
-        if ( bInvalidPlayerData )
+        if ( bInvalidPlayerData || Internal::areFreeSlotsValid( listFreeSlot, listUnit ) == false )
             return false;
         vector<RTSPlayer> listPlayer( playerCount );
         for ( uint32 playerIndex = 0; playerIndex < playerCount; ++playerIndex )
@@ -1895,8 +1944,14 @@ namespace sw
             return false;
         archive >> time;
         archive >> winningTeam;
-        if ( archive.isError() )
+        const int32 teamCount = vision.getTeamCount();
+        if ( archive.isError() || time < 0.0f || winningTeam < -1 || teamCount <= winningTeam )
             return false;
+        for ( const RTSPlayer& player : listPlayer )
+        {
+            if ( Internal::isPlayerValid( player, teamCount ) == false )
+                return false;
+        }
 
         _listTerrainBlocked = std::move( listTerrainBlocked );
         _listUnit           = std::move( listUnit );

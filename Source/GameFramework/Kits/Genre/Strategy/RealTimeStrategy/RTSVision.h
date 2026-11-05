@@ -51,7 +51,7 @@ namespace sw
 
         /** @brief 팀마다의 셀 상태와 다시 칠하기 타이머를 씁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽습니다. 셀 수가 지금 격자와 다르거나 데이터가 깨졌으면 false 이고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽습니다. 셀 수가 지금 격자와 다르거나, 셀 값이 범위 밖이거나 데이터가 깨졌으면 false 이고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

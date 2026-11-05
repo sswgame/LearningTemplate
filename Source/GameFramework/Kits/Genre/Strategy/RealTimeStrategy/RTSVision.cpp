@@ -92,6 +92,11 @@ namespace sw
             archive >> listCell;
             if ( listCell.size() != static_cast<size_t>( _topology.getCellCount() ) )
                 archive.setError();
+            for ( const uint8 visibility : listCell )
+            {
+                if ( visibility > static_cast<uint8>( RTSVisibility::Visible ) )
+                    archive.setError();
+            }
         }
         float32 remaining = 0.0f;
         archive >> remaining;
