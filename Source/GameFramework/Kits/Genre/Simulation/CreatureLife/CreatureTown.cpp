@@ -82,6 +82,9 @@ namespace sw
                 archive >> outHabitat._rotation;
                 if ( StateArchiveUtil::readCount( archive, 4, habitatTileCount ) == false )
                     return false;
+                // 서식지는 적어도 한 셀을 차지하고 번호는 1 부터이다(`matchesAt`, `_nextHabitatID`). 회전은 해시와 맞춤에 그대로 쓴다.
+                if ( habitatTileCount == 0 || outHabitat._id <= 0 || outHabitat._rotation < 0 || kRotationCount <= outHabitat._rotation )
+                    return false;
                 outHabitat._listTile.resize( habitatTileCount, 0 );
                 for ( int32& tileIndex : outHabitat._listTile )
                 {
@@ -110,7 +113,13 @@ namespace sw
                 archive >> outCreature._lastTalkDay;
                 archive >> outCreature._lastGiftDay;
                 archive >> outCreature._arrivalDay;
-                return true;
+                // 음수 사용 횟수는 하루 횟수를 늘린다. 없는 날은 -1 이다.
+                for ( const int32 useCount : outCreature._listAbilityUse )
+                {
+                    if ( useCount < 0 )
+                        return false;
+                }
+                return -1 <= outCreature._habitat && -1 <= outCreature._lastTalkDay && -1 <= outCreature._lastGiftDay && 0 <= outCreature._arrivalDay;
             }
         };
     } // namespace
@@ -867,29 +876,100 @@ namespace sw
                 return false;
             StateArchiveUtil::readInt2( archive, house._tile );
             archive >> house._capacity;
+            if ( house._capacity < 1 || _topology.isInside( house._tile._x, house._tile._y ) == false )
+                return false;
         }
 
         if ( CreatureTownInternal::readNameList( archive, town._listOpenRequest ) == false )
             return false;
         archive >> town._nextHabitatID;
         archive >> town._lastAttractKey;
-        if ( archive.isError() )
+        const bool bCountersValid = 0 < town._nextHabitatID && -1 <= town._lastAttractKey;
+        if ( archive.isError() || bCountersValid == false || town.areLinksValid() == false )
             return false;
-
-        // 생물이 가리키는 서식지 번호와 집 index 가 실제로 있어야 한다.
-        const int32 townHouseCount = static_cast<int32>( town._listHouse.size() );
-        for ( const TownCreature& creature : town._listCreature )
-        {
-            const bool bHabitatValid = creature._habitat < 0 || town.findHabitat( creature._habitat ) != nullptr;
-            const bool bHouseValid   = -1 <= creature._house && creature._house < townHouseCount;
-            if ( bHabitatValid == false || bHouseValid == false )
-                return false;
-        }
         town._eventBuffer.clear();
         town.updateAppealTier();
         town._eventBuffer.clear(); // 복원한 단계는 알리지 않는다
         *this = std::move( town );
         return true;
+    }
+
+    bool CreatureTown::areLinksValid() const
+    {
+        if ( _pCatalog == nullptr && ( _listHabitat.empty() == false || _listCreature.empty() == false ) )
+            return false; // 카탈로그 없이는 서식지도 생물도 생기지 않는다(`refreshHabitats`, `attractVisitorsAt`)
+
+        // 서식지: 카탈로그에 있고, 번호가 겹치지 않고, 셀은 한 서식지에만 속한다.
+        vector<uint8> listClaimed( _listObject.size(), SW_FALSE );
+        for ( const HabitatInstance& habitat : _listHabitat )
+        {
+            const bool bKnownPlace = _pCatalog->findHabitat( habitat._habitatID ) != nullptr && _topology.isInside( habitat._origin._x, habitat._origin._y );
+            if ( bKnownPlace == false || habitat._id >= _nextHabitatID )
+                return false;
+            for ( const int32 tileIndex : habitat._listTile )
+            {
+                uint8& bClaimed = listClaimed[static_cast<size_t>( tileIndex )];
+                if ( bClaimed != SW_FALSE )
+                    return false;
+                bClaimed = SW_TRUE;
+            }
+        }
+        if ( VectorUtil::findDuplicateBy<&HabitatInstance::_id>( _listHabitat ) != nullptr )
+            return false;
+
+        // 생물: 종마다 하나이고(찾기는 앞의 것만 돌려준다), 서식지와 집은 실제로 있으며, 집은 그 생물을 입주자로 적었다.
+        for ( const TownCreature& creature : _listCreature )
+        {
+            if ( _pCatalog->findSpecies( creature._speciesID ) == nullptr )
+                return false;
+        }
+        if ( VectorUtil::findDuplicateBy<&TownCreature::_speciesID>( _listCreature ) != nullptr )
+            return false;
+        const int32 houseCount = static_cast<int32>( _listHouse.size() );
+        for ( const TownCreature& creature : _listCreature )
+        {
+            const CreatureSpeciesDef* pSpecies = _pCatalog->findSpecies( creature._speciesID );
+            if ( creature._listAbilityUse.size() > pSpecies->_listAbility.size() )
+                return false;
+            for ( size_t slot = 0; slot < creature._listAbilityUse.size(); ++slot )
+            {
+                const CreatureAbilityDef* pAbility = _pCatalog->findAbility( pSpecies->_listAbility[slot] );
+                if ( pAbility != nullptr && creature._listAbilityUse[slot] > pAbility->_usesPerDay )
+                    return false;
+            }
+            const bool bHabitatValid = creature._habitat < 0 || findHabitat( creature._habitat ) != nullptr;
+            const bool bHouseValid   = -1 <= creature._house && creature._house < houseCount;
+            if ( bHabitatValid == false || bHouseValid == false )
+                return false;
+            if ( creature._house >= 0 && VectorUtil::contains( _listHouse[static_cast<size_t>( creature._house )]._listResident, creature._speciesID ) == false )
+                return false;
+        }
+        for ( const HabitatInstance& habitat : _listHabitat )
+        {
+            if ( countResidents( habitat._id ) > _pCatalog->findHabitat( habitat._habitatID )->_capacity )
+                return false;
+        }
+
+        // 집: 정원 안이고, 입주자는 겹치지 않으며 이 집을 자기 집으로 적은 생물이다.
+        for ( int32 houseIndex = 0; houseIndex < houseCount; ++houseIndex )
+        {
+            const CreatureHouse& house = _listHouse[static_cast<size_t>( houseIndex )];
+            if ( static_cast<int32>( house._listResident.size() ) > house._capacity || VectorUtil::findDuplicate( house._listResident ) != nullptr )
+                return false;
+            for ( const hashed_string& resident : house._listResident )
+            {
+                const TownCreature* pCreature = findCreature( resident );
+                if ( pCreature == nullptr || pCreature->_house != houseIndex )
+                    return false;
+            }
+        }
+
+        for ( const hashed_string& questID : _listOpenRequest )
+        {
+            if ( questID.empty() )
+                return false;
+        }
+        return VectorUtil::findDuplicate( _listOpenRequest ) == nullptr;
     }
 
     int32 CreatureTown::getDay() const

@@ -215,7 +215,7 @@ namespace sw
         void drainEvents( vector<CreatureTownEvent>& outListEvent );
         /** @brief 셀, 서식지(번호 포함), 생물, 집, 받은 부탁을 씁니다(핫 리로드와 세이브용). 평판, 부탁 일지, 시계는 빌린 것이라 저장하지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 마을 크기가 다르거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다(카탈로그, 일지, 시계는 `initialize` 에서 받은 것을 씁니다). */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 마을 크기가 다르거나, 없는 종 · 서식지 · 집, 겹친 항목, 범위 밖 값이 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다(카탈로그, 일지, 시계는 `initialize` 에서 받은 것을 씁니다). */
         [[nodiscard]] bool readState( Archive& archive );
 
         const hashed_string*           findObject( int32 x, int32 y ) const;
@@ -262,6 +262,8 @@ namespace sw
         void updateAppealTier();
         int2 computeCreatureAnchor( const TownCreature& creature ) const;
         bool isBlockingObject( const hashed_string& object ) const;
+        /** @brief 읽은 서식지, 생물, 집, 부탁이 서로와 카탈로그에 맞는지 반환합니다. `readState` 가 사본에 부릅니다. */
+        [[nodiscard]] bool areLinksValid() const;
 
     private:
         vector<hashed_string>          _listObject; ///< 셀마다의 오브젝트 id 이다(`_topology` 의 타일 번호). 빈 id 는 빈 셀이다
