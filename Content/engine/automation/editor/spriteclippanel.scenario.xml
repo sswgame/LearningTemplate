@@ -44,6 +44,14 @@
 	<EditorClick mark="spriteClip.load"/>
 	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="3" timeoutFrames="60"/>
 	<Expect watch="Editor.SpriteClipAnimationCount" equals="1"/>
+	<!-- 복제는 프레임을 늘리고, 다시 읽으면 저장한 문서로 돌아온다 -->
+	<EditorWaitSettled/>
+	<EditorClick mark="spriteClip.duplicateFrame"/>
+	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="4" timeoutFrames="60"/>
+	<Expect watch="Editor.DirtyDocumentCount" equals="1"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="spriteClip.load"/>
+	<WaitUntil watch="Editor.SpriteClipFrameCount" equals="3" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<DevCommand line="asset.removeTemp {out}/temp.sprite.xml"/>
 	<WaitUntil watch="Editor.TempAssetExists" equals="0" timeoutFrames="60"/>
