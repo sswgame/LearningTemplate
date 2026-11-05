@@ -1270,6 +1270,76 @@ msgctxt "EdPluginFormat.WearingOnBasePreset"
 msgid "Wearing {wearing, select, none {no slot items} other {the selection}} on base preset ''{basePresetID}'' (assembled {appearance} times)"
 msgstr "基準プリセット ''{basePresetID}'' に {wearing, select, none {スロットアイテムなし} other {選択中のもの}} を装着(組み立て {appearance} 回)"
 
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.ColumnCapacity"
+msgid "Capacity"
+msgstr "定員"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.ColumnCheck"
+msgid "Check"
+msgstr "チェック"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.ColumnCost"
+msgid "Cost"
+msgstr "費用"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.ColumnPrice"
+msgid "Ticket"
+msgstr "料金"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.ColumnRide"
+msgid "Ride"
+msgstr "アトラクション"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.ColumnTime"
+msgid "Time (s)"
+msgstr "時間(秒)"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.FocusGate"
+msgid "Focus gate"
+msgstr "正門を表示"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.FocusGateTip"
+msgid "Move the scene view camera to the park gate"
+msgstr "シーンビューのカメラを公園の正門へ移動します"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.IssueDuplicateID"
+msgid "Same id as {name}"
+msgstr "{name}と ID が同じ"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.IssueEntrance"
+msgid "Entrance is inside the footprint"
+msgstr "入口が敷地の内側にある"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.IssueOverlap"
+msgid "Overlaps {name}"
+msgstr "{name}と重なっている"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.NoLayoutHint"
+msgid "This game has no park layout data ({path})"
+msgstr "このゲームにはパーク配置データがありません({path})"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.ReadFailedHint"
+msgid "The park layout could not be read ({path}). Fix the file (see the log) and press Reload."
+msgstr "パーク配置を読み込めませんでした({path})。ログを確認してファイルを修正し、再読み込みしてください。"
+
+#: Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp
+msgctxt "EdPluginParkLayout.Summary"
+msgid "Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}"
+msgstr "総費用 {cost}  ·  初期資金 {cash}  ·  入場料 {fee}  ·  配置の問題 {issues}"
+
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 msgid "Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo"

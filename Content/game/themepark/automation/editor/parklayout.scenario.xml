@@ -37,6 +37,11 @@
 	<EditorClick mark="themepark.layout.ride.2"/>
 	<WaitUntil watch="Editor.SceneViewCameraX" differsFrom="cupsX" timeoutFrames="60"/>
 	<EditorWaitSettled/>
+	<!-- ④ 정문 보기 — Sky Drop(x -28) 에서 정문(x 20)으로 -->
+	<Remember watch="Editor.SceneViewCameraX" as="dropX"/>
+	<EditorClick mark="themepark.layout.gate"/>
+	<WaitUntil watch="Editor.SceneViewCameraX" differsFrom="dropX" timeoutFrames="60"/>
+	<EditorWaitSettled/>
 	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

@@ -1290,6 +1290,76 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdPluginParkLayout.ColumnCapacity" source="Capacity">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.ColumnCheck" source="Check">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.ColumnCost" source="Cost">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.ColumnPrice" source="Ticket">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.ColumnRide" source="Ride">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.ColumnTime" source="Time (s)">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.FocusGate" source="Focus gate">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.FocusGateTip" source="Move the scene view camera to the park gate">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.IssueDuplicateID" source="Same id as {name}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.IssueEntrance" source="Entrance is inside the footprint">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.IssueOverlap" source="Overlaps {name}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.NoLayoutHint" source="This game has no park layout data ({path})">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.ReadFailedHint" source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload.">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdPluginParkLayout.Summary" source="Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}">
+			<origins>
+				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 		       source="Anchor-relative root position and yaw at alignment time; select the role object in the viewport to move it with the gizmo">
 			<origins>

@@ -2,9 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPreview.h"
 
-#include "Core/Container/StringUtil.h"
-#include "Core/Hash/HashUtil.h"
-#include "Core/Math/MathUtil.h"
+#include "Core/File/FileUtil.h"
 
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
 #include "Editor/Common/Workspace/EditorExtensionSubsystems.h"
@@ -12,6 +10,7 @@
 
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Content/ContentFolderWatch.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
@@ -19,59 +18,35 @@
 
 namespace sw::editor
 {
-    namespace
-    {
-        struct ParkLayoutPreviewInternal
-        {
-            /** @brief 트랙 선분을 이을 때 건너뛰는 점 간격입니다. 트랙 점은 0.25 m 마다 있어서 그대로 그리면 선분이 수천 개가 됩니다. */
-            static constexpr size_t kTrackPointStride = 8;
-            /** @brief 입구 십자의 높이(m)입니다. */
-            static constexpr float32 kGateHeight = 3.0f;
-
-            static void appendBox( vector<EditorWorldSegment>& outListSegment, const float3& center, const float3& size, const float4& color )
-            {
-                const float32 halfX        = size._x * 0.5f;
-                const float32 halfZ        = size._z * 0.5f;
-                const float3  arrCorner[4] = {
-                    center + float3{-halfX, 0.0f, -halfZ},
-                    center + float3{ halfX, 0.0f, -halfZ},
-                    center + float3{ halfX, 0.0f,  halfZ},
-                    center + float3{-halfX, 0.0f,  halfZ}
-                };
-                const float3 up{ 0.0f, size._y, 0.0f };
-                for ( size_t index = 0; index < 4; ++index )
-                {
-                    const float3& from = arrCorner[index];
-                    const float3& to   = arrCorner[( index + 1 ) % 4];
-                    outListSegment.push_back( EditorWorldSegment{ from, to, color } );
-                    outListSegment.push_back( EditorWorldSegment{ from + up, to + up, color } );
-                    outListSegment.push_back( EditorWorldSegment{ from, from + up, color } );
-                }
-            }
-        };
-    } // namespace
-} // namespace sw::editor
-
-namespace sw::editor
-{
     ParkLayoutPreview::ParkLayoutPreview()
-        : _listRide{}
-        , _listTrackPoint{}
-        , _gatePosition{}
+        : _model{}
+        , _layoutWatch{}
+        , _coasterWatch{}
         , _layoutPath{}
-        , _contentHash{ 0 }
-        , _bLoaded{ SW_FALSE }
-        , _bMissing{ SW_FALSE }
+        , _watchedLayoutPath{}
+        , _watchedCoasterPath{}
+        , _bFolderChanged{ SW_FALSE }
         , _bWarned{ SW_FALSE }
     {
     }
 
-    void ParkLayoutPreview::clearPreview( bool bMissing )
+    void ParkLayoutPreview::syncWatch( const string& coasterPath )
     {
-        _bLoaded  = SW_FALSE;
-        _bMissing = bMissing;
-        _listRide.clear();
-        _listTrackPoint.clear();
+        if ( _watchedLayoutPath == _layoutPath && _watchedCoasterPath == coasterPath )
+            return;
+        _watchedLayoutPath  = _layoutPath;
+        _watchedCoasterPath = coasterPath;
+        _layoutWatch.reset();
+        _coasterWatch.reset();
+        IContentFolderWatch* pFolderWatch = findSubsystem<IContentFolderWatch>(); // 개발 도구가 건다 — 없으면 refresh 가 내용을 비교한다
+        if ( pFolderWatch == nullptr )
+            return;
+        const IContentFolderWatch::ChangedDelegate onChanged  = IContentFolderWatch::ChangedDelegate::create<&ParkLayoutPreview::onDataFolderChanged>( this );
+        const string                               layoutDir  = FileUtil::getDirectoryPart( _layoutPath );
+        const string                               coasterDir = FileUtil::getDirectoryPart( coasterPath );
+        _layoutWatch                                          = pFolderWatch->watchAssetFolder( layoutDir, { ".xml" }, onChanged );
+        if ( coasterDir != layoutDir )
+            _coasterWatch = pFolderWatch->watchAssetFolder( coasterDir, { ".xml" }, onChanged );
     }
 
     bool ParkLayoutPreview::refresh( bool bForce )
@@ -86,114 +61,44 @@ namespace sw::editor
                 SW_LOG_ERROR_ID( "ParkLayoutPreview.ParkLayoutPreviewNo", "The park layout preview has no path in pack '%#': %#", packRoot.c_str(), error.c_str() );
             _bWarned    = SW_TRUE;
             _layoutPath = error;
-            clearPreview( false );
+            _model.setFailed();
             return false;
         }
         if ( AssetIO::hasAsset( AssetID{ _layoutPath } ) == false )
         {
-            clearPreview( true ); // 이 게임 팩에는 공원 배치가 없다 — 패널이 그 상태를 보인다
+            _model.setMissing(); // 이 게임 팩에는 공원 배치가 없다 — 패널이 그 상태를 보인다
             return false;
         }
-        string text;
-        if ( AssetIO::readTextAsset( AssetID{ _layoutPath }, text ) == false )
+        syncWatch( coasterPath );
+        const bool bWatching   = _layoutWatch.isActive();
+        const bool bNothingNew = bForce == false && bWatching && _bFolderChanged == false && _model.getState() != ParkLayoutState::Unread && _model.getState() != ParkLayoutState::Missing;
+        if ( bNothingNew )
+            return false;
+        _bFolderChanged = SW_FALSE;
+
+        string layoutText;
+        string coasterText;
+        if ( AssetIO::readTextAsset( AssetID{ _layoutPath }, layoutText ) == false || AssetIO::readTextAsset( AssetID{ coasterPath }, coasterText ) == false )
         {
             if ( _bWarned == false )
-                SW_LOG_WARNING_ID( "ParkLayoutPreview.CouldNotReadPark", "%# could not be read - the park layout preview is empty", _layoutPath.c_str() );
+                SW_LOG_WARNING_ID( "ParkLayoutPreview.CouldNotReadPark", "%# or %# could not be read - the park layout preview is empty", _layoutPath.c_str(), coasterPath.c_str() );
             _bWarned = SW_TRUE;
-            clearPreview( false );
+            _model.setFailed();
             return false;
         }
-        const uint64 contentHash       = HashUtil::computeStringHash64( text.data(), text.size(), false );
-        const bool   bUnchangedContent = bForce == false && _bLoaded && contentHash == _contentHash;
-        if ( bUnchangedContent )
-            return false;
-        _contentHash = contentHash;
-
-        CoasterLayoutCatalog catalog;
-        ParkLayout           layout;
-        if ( catalog.loadFromAsset( AssetID{ coasterPath } ) == false )
-        {
-            SW_LOG_WARNING_ID( "ParkLayoutPreview.CoasterCatalogCouldNot", "The coaster catalog '%#' could not be loaded - the park layout preview is empty", coasterPath );
-            clearPreview( false );
-            return true;
-        }
-        if ( layout.loadFromXMLText( text, catalog, _layoutPath ) == false )
-        {
-            SW_LOG_WARNING_ID( "ParkLayoutPreview.DidNotLoadThrough", "%# did not load through the ThemePark kit - the park layout preview is empty", _layoutPath.c_str() );
-            clearPreview( false );
-            return true;
-        }
-
-        _listRide.clear();
-        _listTrackPoint.clear();
-        _gatePosition = layout.getGatePosition();
-        for ( const ParkRidePlacement& placement : layout.getPlacements() )
-        {
-            ParkRidePreview ride{};
-            ride._name      = placement._ride._name;
-            ride._position  = placement._position;
-            ride._size      = placement._size;
-            ride._color     = placement._color;
-            ride._buildCost = placement._buildCost;
-            ride._capacity  = placement._ride._capacity;
-            ride._loadTime  = placement._loadTime;
-            ride._bCoaster  = placement._layoutID.empty() == false;
-            _listRide.push_back( ride );
-            if ( ride._bCoaster == false )
-                continue;
-            const CoasterLayoutDef* pLayout = catalog.find( placement._layoutID );
-            if ( pLayout == nullptr )
-                continue;
-            CoasterTrackBuilder builder;
-            builder.reset( placement._position + float3{ 0.0f, pLayout->_startHeight, 0.0f }, placement._heading );
-            builder.appendPieces( pLayout->_listPiece );
-            const CoasterTrack track = builder.makeTrack( true );
-            vector<float3>     listPoint;
-            for ( size_t index = 0; index < track.getPoints().size(); index += ParkLayoutPreviewInternal::kTrackPointStride )
-            {
-                listPoint.push_back( track.getPoints()[index]._position );
-            }
-            _listTrackPoint.push_back( std::move( listPoint ) );
-        }
-        _bLoaded  = SW_TRUE;
-        _bMissing = SW_FALSE;
-        _bWarned  = SW_FALSE;
-        SW_LOG_INFO_ID( "ParkLayoutPreview.ParkLayoutPreviewLoaded", "Park layout preview loaded %# rides from %#", static_cast<uint32>( _listRide.size() ), _layoutPath.c_str() );
-        return true;
+        const bool bReread = _model.applyTexts( layoutText, coasterText, _layoutPath, coasterPath, bForce );
+        if ( _model.getState() == ParkLayoutState::Loaded )
+            _bWarned = SW_FALSE;
+        return bReread;
     }
 
     void ParkLayoutPreview::appendSegments( vector<EditorWorldSegment>& outListSegment ) const
     {
-        for ( const ParkRidePreview& ride : _listRide )
-        {
-            if ( ride._bCoaster )
-            {
-                ParkLayoutPreviewInternal::appendBox( outListSegment, ride._position, float3{ 4.0f, 2.0f, 4.0f }, ride._color ); // 스테이션
-                continue;
-            }
-            ParkLayoutPreviewInternal::appendBox( outListSegment, ride._position, ride._size, ride._color );
-        }
-        const float4 gateColor = SW_THEMECOLOR( "Viewport", "ParkGate" ).toFloat4();
-        const float3 gateTop   = _gatePosition + float3{ 0.0f, ParkLayoutPreviewInternal::kGateHeight, 0.0f };
-        outListSegment.push_back( EditorWorldSegment{ _gatePosition, gateTop, gateColor } );
-        outListSegment.push_back( EditorWorldSegment{
-            gateTop + float3{-1.0f, 0.0f, 0.0f},
-            gateTop + float3{ 1.0f, 0.0f, 0.0f},
-            gateColor
-        } );
-        outListSegment.push_back( EditorWorldSegment{
-            gateTop + float3{0.0f, 0.0f, -1.0f},
-            gateTop + float3{0.0f, 0.0f,  1.0f},
-            gateColor
-        } );
-        const float4 trackColor = SW_THEMECOLOR( "Viewport", "ParkTrack" ).toFloat4();
-        for ( const vector<float3>& listPoint : _listTrackPoint )
-        {
-            for ( size_t index = 1; index < listPoint.size(); ++index )
-            {
-                outListSegment.push_back( EditorWorldSegment{ listPoint[index - 1], listPoint[index], trackColor } );
-            }
-        }
+        ParkLayoutColors colors{};
+        colors._gate     = SW_THEMECOLOR( "Viewport", "ParkGate" ).toFloat4();
+        colors._track    = SW_THEMECOLOR( "Viewport", "ParkTrack" ).toFloat4();
+        colors._selected = SW_THEMECOLOR( "Base", "Highlight" ).toFloat4();
+        _model.appendSegments( colors, outListSegment );
     }
 
     SW_EDITOR_SUBSYSTEM( ParkLayoutPreview, 9300 );

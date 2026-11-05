@@ -1,15 +1,18 @@
 /**
  * @file ParkLayoutPanel.h
- * @brief Park Layout 패널을 구현합니다. 배치 파일의 놀이기구 목록(비용, 정원, 탑승 시간)을 보여 주며, 더블클릭하면 에디터 카메라를 그 놀이기구로 옮깁니다.
+ * @brief Park Layout 패널을 구현합니다. 배치 파일의 놀이기구 표(비용, 정원, 시간, 탑승료, 배치 문제)를 거르고 정렬해 보여 주며, 더블클릭하면 에디터 카메라를 그 놀이기구로 옮깁니다.
  */
 #pragma once
+#include "Core/Foundation/Constants.h"
+#include "Core/String/fixed_string.h"
+
 #include "Editor/Common/GUI/Panel/IEditorPanel.h"
 
 namespace sw::editor
 {
     /**
      * @class ParkLayoutPanel
-     * @brief ThemePark 키트의 에디터 확장 패널입니다. 키트 데이터를 읽기만 하므로 어느 게임으로 띄워도 동작합니다.
+     * @brief ThemePark 키트의 에디터 확장 패널입니다. 키트 데이터를 읽기만 하므로 어느 게임으로 띄워도 동작합니다. 판단은 모델(`ParkLayoutModel`)이고 이 패널은 그리기만 합니다.
      */
     // [doc:panel-class]
     class ParkLayoutPanel final : public IEditorPanel
@@ -25,6 +28,9 @@ namespace sw::editor
         const utf8* getPanelTitle() const override { return kPanelTitle; }
         bool        isToolPanel() const override { return true; }
         void        drawContent() override;
+
+    private:
+        fixed_string<constant::buffer::kMax64> _filter; ///< 놀이기구 검색어
     };
     // [/doc:panel-class]
 } // namespace sw::editor

@@ -7,8 +7,6 @@
  */
 #include "pch.h"
 
-#include "Core/Math/MathUtil.h"
-
 #include "Editor/Common/Commands/EditorCommandRegistry.h"
 #include "Editor/Common/Commands/Scene/EditorSceneObjectCommands.h"
 #include "Editor/Common/Workspace/EditorService.h"
@@ -24,11 +22,17 @@ namespace sw::editor
     {
         struct ParkLayoutContextMenuInternal
         {
-            /** @brief 놀이기구가 읽혀 있는 미리보기입니다. 없거나 비어 있으면 nullptr 입니다. */
+            /**
+             * @brief 놀이기구가 읽혀 있는 미리보기입니다. 없거나 비어 있으면 nullptr 입니다.
+             * @details 여기서 읽는다 — 읽기가 패널 · 시각화를 그릴 때만 일어나 둘을 켠 적이 없으면 데이터가 있어도 메뉴가 꺼져 있었다. 바뀌지 않았으면 다시 읽지 않는다.
+             */
             static const ParkLayoutPreview* findLoadedPreview()
             {
-                const ParkLayoutPreview* pPreview            = findSubsystem<ParkLayoutPreview>();
-                const bool               bPreviewUnavailable = pPreview == nullptr || pPreview->isLoaded() == false || pPreview->getRides().empty();
+                ParkLayoutPreview* pPreview = findSubsystem<ParkLayoutPreview>();
+                if ( pPreview == nullptr )
+                    return nullptr;
+                (void)pPreview->refresh(); // 결과는 아래 isLoaded 로 본다
+                const bool bPreviewUnavailable = pPreview->isLoaded() == false || pPreview->getRides().empty();
                 if ( bPreviewUnavailable )
                     return nullptr;
                 return pPreview;
@@ -66,21 +70,13 @@ namespace sw::editor
                 if ( pPreview == nullptr || findTargetPosition( target, position ) == false )
                     return;
 
-                const ParkRidePreview* pNearest      = nullptr;
-                float32                nearestDistSq = 0.0f;
-                for ( const ParkRidePreview& ride : pPreview->getRides() )
-                {
-                    const float32 dx     = ride._position._x - position._x;
-                    const float32 dz     = ride._position._z - position._z;
-                    const float32 distSq = dx * dx + dz * dz;
-                    if ( pNearest == nullptr || distSq < nearestDistSq )
-                    {
-                        pNearest      = &ride;
-                        nearestDistSq = distSq;
-                    }
-                }
-                SW_LOG_INFO_ID( "ParkLayoutContextMenu.NearestParkRideM", "Nearest park ride to (%#, %#, %#): '%#' at %# m (cost %#, capacity %#)", position._x, position._y, position._z, pNearest->_name.c_str(),
-                                MathUtil::sqrt( nearestDistSq ), pNearest->_buildCost, pNearest->_capacity );
+                float32      distance{ 0.0f };
+                const uint32 nearest = pPreview->getModel().findNearestRide( position, distance );
+                if ( nearest == ParkLayoutModel::kNoRide )
+                    return;
+                const ParkRidePreview& ride = pPreview->getRides()[nearest];
+                SW_LOG_INFO_ID( "ParkLayoutContextMenu.NearestParkRideM", "Nearest park ride to (%#, %#, %#): '%#' at %# m (cost %#, capacity %#)", position._x, position._y, position._z, ride._name.c_str(), distance,
+                                ride._buildCost, ride._capacity );
             }
         };
     } // namespace
