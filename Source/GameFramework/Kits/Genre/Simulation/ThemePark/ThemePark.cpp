@@ -12,6 +12,8 @@
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
 
+#include <algorithm>
+
 namespace sw
 {
     namespace
@@ -46,7 +48,11 @@ namespace sw
                 archive >> outRide._cycleTimer._remaining;
                 archive >> outRide._totalRiders;
                 archive >> outRide._totalIncome;
-                return archive.isError() == false;
+                // `buildRide` 가 정원과 한 바퀴 시간을 1 이상으로 맞춘다. 정원 0 은 줄이 영영 줄지 않고 예상 대기가 0 나누기가 된다. 음수 값은 돈을 거꾸로 옮긴다.
+                const bool bRatingValid = 0.0f <= outRide._excitement && 0.0f <= outRide._intensity && 0.0f <= outRide._nausea;
+                const bool bRunValid    = 1.0f <= outRide._cycleTime && 1 <= outRide._capacity && static_cast<int32>( outRide._listRider.size() ) <= outRide._capacity;
+                const bool bMoneyValid  = 0 <= outRide._price && 0 <= outRide._runningCostPerMinute && 0 <= outRide._totalIncome;
+                return archive.isOk() && outRide._id.empty() == false && outRide._bOpen <= SW_TRUE && bRatingValid && bRunValid && bMoneyValid;
             }
 
             /** @brief `writeState` 가 쓴 손님 하나를 읽습니다. 열거형이 범위 밖이거나 목표 놀이기구가 @p rideCount 밖이면 false 입니다. */
@@ -74,11 +80,63 @@ namespace sw
                 archive >> thought;
                 const bool bEnumValid        = state <= static_cast<uint8>( ParkGuestState::Left ) && thought <= static_cast<uint8>( ParkGuestThought::NothingToRide );
                 const bool bRideValid        = -1 <= outGuest._targetRideIndex && outGuest._targetRideIndex < static_cast<int32>( rideCount );
-                const bool bInvalidGuestData = archive.isError() || bEnumValid == false || bRideValid == false;
+                const bool bFeelingValid     = 0.0f <= outGuest._happiness && outGuest._happiness <= 1.0f && 0.0f <= outGuest._nausea && outGuest._nausea <= 1.0f && 0.0f <= outGuest._energy && outGuest._energy <= 1.0f;
+                const bool bValuesValid      = 0 < outGuest._id && 0 <= outGuest._cash && outGuest._minIntensity <= outGuest._maxIntensity && 0.0f <= outGuest._walkDuration && 0.0f <= outGuest._queueTime;
+                const bool bInvalidGuestData = archive.isError() || bEnumValid == false || bRideValid == false || bFeelingValid == false || bValuesValid == false;
                 if ( bInvalidGuestData )
                     return false;
                 outGuest._state   = static_cast<ParkGuestState>( state );
                 outGuest._thought = static_cast<ParkGuestThought>( thought );
+                return true;
+            }
+
+            /**
+             * @brief 줄 또는 탑승자 목록 하나가 손님과 맞는지 봅니다. 모든 id 는 그 놀이기구를 고른 손님이고, 그 상태이며, 다른 목록에 또 있지 않아야 합니다.
+             * @details 손님은 id 오름차순이다(`findGuest` 가 이분 탐색을 쓴다). @p inoutListListed 는 손님마다 목록에 있는지를 쌓는다.
+             */
+            [[nodiscard]] static bool isGuestListValid( const vector<uint32>& listGuestID, const vector<ParkGuest>& listGuest, int32 rideIndex, ParkGuestState state, vector<uint8>& inoutListListed )
+            {
+                for ( const uint32 guestID : listGuestID )
+                {
+                    const auto guestIter = std::lower_bound( listGuest.begin(), listGuest.end(), guestID, []( const ParkGuest& guest, uint32 id )
+                    { return guest._id < id; } );
+                    if ( guestIter == listGuest.end() || guestIter->_id != guestID || guestIter->_state != state || guestIter->_targetRideIndex != rideIndex )
+                        return false;
+                    uint8& bListed = inoutListListed[static_cast<size_t>( guestIter - listGuest.begin() )];
+                    if ( bListed != SW_FALSE )
+                        return false;
+                    bListed = SW_TRUE;
+                }
+                return true;
+            }
+
+            /**
+             * @brief 읽은 놀이기구와 손님이 서로 맞는지 봅니다. 줄 선 손님은 놀이기구를 직접 찌른다(`updateGuests`) — 목표 없이 줄 선 손님은 범위 밖을 읽는다.
+             */
+            [[nodiscard]] static bool areLinksValid( const vector<ParkRide>& listRide, const vector<ParkGuest>& listGuest, uint32 nextGuestID )
+            {
+                uint32 previousID = 0;
+                for ( const ParkGuest& guest : listGuest )
+                {
+                    if ( guest._id <= previousID || nextGuestID <= guest._id )
+                        return false;
+                    previousID = guest._id;
+                }
+                vector<uint8> listListed( listGuest.size(), SW_FALSE );
+                for ( size_t rideIndex = 0; rideIndex < listRide.size(); ++rideIndex )
+                {
+                    const ParkRide& ride        = listRide[rideIndex];
+                    const bool      bListsValid = isGuestListValid( ride._listQueue, listGuest, static_cast<int32>( rideIndex ), ParkGuestState::Queuing, listListed ) &&
+                                             isGuestListValid( ride._listRider, listGuest, static_cast<int32>( rideIndex ), ParkGuestState::Riding, listListed );
+                    if ( bListsValid == false )
+                        return false;
+                }
+                for ( size_t guestIndex = 0; guestIndex < listGuest.size(); ++guestIndex )
+                {
+                    const bool bNeedsList = listGuest[guestIndex]._state == ParkGuestState::Queuing || listGuest[guestIndex]._state == ParkGuestState::Riding;
+                    if ( bNeedsList && listListed[guestIndex] == SW_FALSE )
+                        return false;
+                }
                 return true;
             }
         };
@@ -688,7 +746,7 @@ namespace sw
         int32 entryFee = 0;
         archive >> entryFee;
         uint32 rideCount = 0;
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, ThemeParkInternal::kMinRideStateBytes, rideCount ) == false )
+        if ( archive.isError() || entryFee < 0 || StateArchiveUtil::readCount( archive, ThemeParkInternal::kMinRideStateBytes, rideCount ) == false )
             return false;
         vector<ParkRide> listRide( rideCount );
         for ( ParkRide& ride : listRide )
@@ -721,7 +779,10 @@ namespace sw
         archive >> parkRating;
         archive >> nextGuestID;
         archive >> totalVisitorCount;
-        if ( archive.isError() )
+        // 운영비는 정수 부분을 걸음마다 빼 가 1 아래이다. 도착 누적은 공원이 차면 1 위로 쌓일 수 있다(`admitGuest` 가 정원에서 멈춘다).
+        const bool bAccumulatorValid = 0.0f <= arrivalAccumulator && 0.0f <= costAccumulator && costAccumulator < 1.0f;
+        const bool bParkValid        = 0.0f <= elapsedTime && 0 <= parkRating && parkRating <= 999 && 0 < nextGuestID && guestCount <= totalVisitorCount && static_cast<int64>( guestCount ) <= _settings._maxGuests;
+        if ( archive.isError() || bAccumulatorValid == false || bParkValid == false || ThemeParkInternal::areLinksValid( listRide, listGuest, nextGuestID ) == false )
             return false;
 
         _settings._entryFee    = entryFee;

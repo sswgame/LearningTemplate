@@ -217,7 +217,7 @@ namespace sw
          * @brief 놀이기구(운행 상태 포함), 손님, 돈, 평가, 난수, 입장료를 씁니다(핫 리로드와 세이브용). 나머지 설정은 쓰지 않으며, 읽는 쪽이 같은 설정으로 `initialize` 해야 합니다.
          */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
+        /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 음수 · 범위 밖 값, 손님과 맞지 않는 줄과 탑승자가 있거나 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
