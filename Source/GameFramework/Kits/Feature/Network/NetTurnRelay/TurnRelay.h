@@ -61,8 +61,10 @@ namespace sw
         InvalidAction, ///< 정책이 거절했다. 규칙 위반이다
         RoomFull,
         UnknownRoom,
-        SeatInUse,    ///< 토큰은 맞지만 그 자리의 연결이 살아 있다. 이전 연결이 끊긴 것을 서버가 알기 전이면 잠시 뒤에 다시 시도한다
-        AlreadySeated ///< 이 연결은 다른 방에 자리가 있다
+        SeatInUse,     ///< 토큰은 맞지만 그 자리의 연결이 살아 있다. 이전 연결이 끊긴 것을 서버가 알기 전이면 잠시 뒤에 다시 시도한다
+        AlreadySeated, ///< 이 연결은 다른 방에 자리가 있다
+        ServerFull,    ///< 서버의 방 수가 상한(`TurnRelayConfig::_maxRoomCount`)이다
+        HistoryFull    ///< 방의 행동 기록이 상한(`TurnRelayConfig::_maxActionsPerRoom`)이다
     };
 
     /** @brief 방의 자리 하나입니다. */
@@ -166,6 +168,10 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( Min = 1 )
         int32 _seatCount{ 2 }; ///< 방 하나의 자리 수
+        PROPERTY( Min = 1 )
+        int32 _maxRoomCount{ 4096 }; ///< 서버의 방 수 상한. 방은 받은 메시지가 만들고 사라지지 않으므로 끝없이 늘지 못하게 막는다
+        PROPERTY( Min = 1 )
+        int32 _maxActionsPerRoom{ 65536 }; ///< 방 하나의 행동 기록 상한. 기록은 돌아오는 클라이언트에 다시 보내려고 모두 보관한다
     };
 } // namespace sw
 
@@ -222,7 +228,7 @@ namespace sw
         void sendDenied( int32 connectionID, uint32 roomID, TurnRejectReason reason );
         /** @brief 그 연결에 큐에 쌓인 것이 없으면 바로 보내고, 있거나 창이 찼으면 큐 끝에 넣습니다. */
         void sendOrQueue( int32 connectionID );
-        /** @brief 자리의 연결에 아직 보내지 않은 행동을 신뢰 창이 허락하는 만큼 보냅니다. */
+        /** @brief 자리의 연결에 아직 보내지 않은 행동을 신뢰 창이 허락하는 만큼 보냅니다. 그 연결에 줄 선 알림이 있으면 알림이 먼저입니다(입장 · 시작이 행동보다 늦게 닿지 않게). */
         void   flushSeat( const TurnRoom& room, TurnSeat& seat );
         void   flushPending();
         int32  countPending( int32 connectionID ) const;
@@ -239,6 +245,8 @@ namespace sw
         SipHashKey                  _tokenKey; ///< 자리 토큰 PRF 의 비밀 키
         uint64                      _tokenCount;
         int32                       _seatCount;
+        int32                       _maxRoomCount;
+        int32                       _maxActionsPerRoom;
         NetMessageWriter            _messageWriter; ///< 보낼 메시지. 버퍼를 재사용한다
     };
 } // namespace sw
@@ -252,7 +260,7 @@ namespace sw
         TurnRelayClient();
 
         void initialize( INetPeers* pHost );
-        /** @brief 방에 들어갑니다. 자리가 -1이면 빈 자리 어디든 받습니다. 전에 받은 토큰이 있으면 그 자리로 돌아갑니다. */
+        /** @brief 방에 들어갑니다. 자리가 -1이면 빈 자리 어디든 받습니다. 전에 받은 토큰이 있으면 그 자리로 돌아갑니다. 다른 방이면 지난 방의 행동 · 토큰 · 자리 · 시작 표시를 잊습니다. */
         void join( uint32 roomID, int32 seat = -1 );
         /** @brief 행동을 보내고 행동 번호를 반환합니다. 거절 알림에 이 번호가 붙습니다. 행동이 `NetTurnRelayMessage::kMaxActionBytes` 를 넘으면 보내지 않고 오류를 남긴 뒤 -1 을 반환합니다. */
         int32 submitAction( const vector<uint8>& buffer );

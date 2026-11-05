@@ -75,6 +75,8 @@ namespace sw
         , _tokenKey{}
         , _tokenCount{ 0 }
         , _seatCount{ 2 }
+        , _maxRoomCount{ 0 }
+        , _maxActionsPerRoom{ 0 }
         , _messageWriter{}
     {
     }
@@ -89,11 +91,13 @@ namespace sw
             SW_LOG_ERROR_ID( "TurnRelay.TurnRelayServerRefusedStartSettings", "TurnRelayServer: refused to start - settings '%#'", rangeError.c_str() );
             return false;
         }
-        _pHost      = pHost;
-        _seatCount  = settings._seatCount;
-        _pPolicy    = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
-        _tokenKey   = TurnRelayInternal::makeTokenKey( tokenSeed );
-        _tokenCount = 0;
+        _pHost             = pHost;
+        _seatCount         = settings._seatCount;
+        _maxRoomCount      = settings._maxRoomCount;
+        _maxActionsPerRoom = settings._maxActionsPerRoom;
+        _pPolicy           = pPolicy != nullptr ? pPolicy : &_defaultPolicy;
+        _tokenKey          = TurnRelayInternal::makeTokenKey( tokenSeed );
+        _tokenCount        = 0;
         _listRoom.clear();
         _listPending.clear();
         _eventBuffer.clear();
@@ -185,8 +189,8 @@ namespace sw
 
     void TurnRelayServer::flushSeat( const TurnRoom& room, TurnSeat& seat )
     {
-        if ( seat._connectionID < 0 )
-            return;
+        if ( seat._connectionID < 0 || countPending( seat._connectionID ) > 0 )
+            return; // 줄 선 알림은 `update` 가 먼저 보내고 그 뒤에 이어서 보낸다
         while ( seat._sentActionCount < static_cast<int32>( room._listAction.size() ) )
         {
             const int32       index  = seat._sentActionCount;
@@ -260,6 +264,11 @@ namespace sw
         TurnRoom* pRoom = findRoomMutable( roomID );
         if ( pRoom == nullptr )
         {
+            if ( static_cast<int32>( _listRoom.size() ) >= _maxRoomCount )
+            {
+                sendDenied( connectionID, roomID, TurnRejectReason::ServerFull );
+                return true;
+            }
             TurnRoom room;
             room._roomID = roomID;
             room._listSeat.resize( static_cast<size_t>( _seatCount ) );
@@ -353,6 +362,8 @@ namespace sw
                 reason = TurnRejectReason::NotStarted;
             else if ( _pPolicy->isActionAllowed( *pRoom, seat, actionBuffer ) == false )
                 reason = seat != pRoom->_currentSeat ? TurnRejectReason::NotYourTurn : TurnRejectReason::InvalidAction;
+            else if ( static_cast<int32>( pRoom->_listAction.size() ) >= _maxActionsPerRoom )
+                reason = TurnRejectReason::HistoryFull;
             else
             {
                 pRoom->_listAction.push_back( TurnAction{ actionBuffer, seat } );
@@ -450,7 +461,9 @@ namespace sw
         if ( _roomID != roomID )
         {
             _listAction.clear();
-            _token = 0;
+            _token    = 0;
+            _seat     = -1;
+            _bStarted = SW_FALSE;
         }
         _roomID           = roomID;
         BitWriter& writer = _messageWriter.begin( NetTurnRelayMessage::kJoin );
