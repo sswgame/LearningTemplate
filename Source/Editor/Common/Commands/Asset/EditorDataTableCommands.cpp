@@ -88,8 +88,10 @@ namespace sw::editor
                             (void)translation.removeEntry( record._key ); // 번역이 없던 키면 false 이고 할 일이 없다
                             continue;
                         }
-                        const TranslationEntry* pExisting = translation.findEntry( record._key );
-                        if ( pExisting != nullptr && pExisting->_text == text )
+                        // 글이 같아도 `Current` 면 사람이 "이 원문의 번역이 맞다" 고 확인한 것이다. 낡음 · 검토 표시를 걷으려고 글을 고칠 필요가 없다(언리얼 번역 편집기의 Needs Review → Completed).
+                        const bool              bConfirmed = cultureIndex < record._listState.size() && record._listState[cultureIndex] == TranslationState::Current;
+                        const TranslationEntry* pExisting  = translation.findEntry( record._key );
+                        if ( pExisting != nullptr && pExisting->_text == text && bConfirmed == false )
                             continue; // 번역은 그대로 둔다. 원문만 고쳤으면 이 번역은 낡은 것이 된다
                         TranslationEntry& entry = translation.getOrAddEntry( record._key );
                         entry._text             = text;
@@ -138,6 +140,33 @@ namespace sw::editor
 
 namespace sw::editor
 {
+    uint32 LocalizationRecord::measureTranslation( size_t cultureIndex ) const
+    {
+        const string& text   = _listTranslation[cultureIndex];
+        uint32        length = 0;
+        for ( size_t offset = 0; offset < text.size(); )
+        {
+            (void)StringUtil::decodeUTF8( text, offset );
+            ++length;
+        }
+        return length;
+    }
+
+    bool LocalizationRecord::isTranslationTooLong( size_t cultureIndex ) const
+    {
+        return _maxLength != 0 && measureTranslation( cultureIndex ) > _maxLength;
+    }
+
+    bool LocalizationRecord::needsWork() const
+    {
+        for ( const TranslationState state : _listState )
+        {
+            if ( state != TranslationState::Current )
+                return true;
+        }
+        return false;
+    }
+
     string EditorDataTableCommands::getGameDataFolderPath()
     {
         return EditorPaths::findContentFolder( FileUtil::joinPath( editor::getSubsystem<const GameConfig>()._packRoot.get(), constant::path::kDataFolder ) );

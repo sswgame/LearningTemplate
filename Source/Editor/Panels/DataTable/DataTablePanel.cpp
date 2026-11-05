@@ -2,10 +2,9 @@
 
 #include "Editor/Panels/DataTable/DataTablePanel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Memory/Memory.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
@@ -30,10 +29,6 @@ namespace sw::editor
     {
         struct DataTablePanelInternal
         {
-            static constexpr Color kStaleText{ 1.0f, 0.62f, 0.25f, 1.0f };
-            static constexpr Color kReviewText{ 0.95f, 0.85f, 0.30f, 1.0f };
-            static constexpr Color kTooLongBorder{ 0.95f, 0.25f, 0.25f, 1.0f };
-
             /** @brief 열린 데이터 테이블 창의 현지화 표 레코드 수 · 보이는 행 수를 읽습니다. 창이 닫혔거나 표를 읽지 않았으면 false 입니다. */
             [[nodiscard]] static bool readRecordCounts( uint32& outRecordCount, uint32& outVisibleCount )
             {
@@ -84,6 +79,7 @@ namespace sw::editor
         , _gameDataTable{}
         , _seenGameDataLoadCount{ 0 }
         , _bGameDataRaw{ false }
+        , _bNeedsWorkOnly{ false }
     {
     }
 
@@ -181,6 +177,9 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( 240.0f ); // 검색 칸 폭(아래 인자와 같다)
             EditorWidgets::drawSearchField( "##locFilter", _localizationFilter, SW_LOCKEY( "EditorDataTable", "SearchHint" ), 240.0f, false );
             EditorSelfTestMarks::note( "dataTable.search" );
+            EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EditorDataTable", "NeedsWorkOnly" ) ) );
+            (void)ImGui::Checkbox( SW_LOCKEY( "EditorDataTable", "NeedsWorkOnly" ), &_bNeedsWorkOnly );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "NeedsWorkOnlyTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "SaveLocalization" ) ) );
 
             if ( ImGui::Button( SW_LOCKEY( "EdText", "SaveLocalization" ) ) )
@@ -206,35 +205,32 @@ namespace sw::editor
         EditorChrome::endToolbar();
     }
 
-    bool DataTablePanel::drawTranslationCell( LocalizationRecord& record, size_t cultureIndex )
+    void DataTablePanel::drawTranslationCell( LocalizationRecord& record, size_t cultureIndex )
     {
-        string&                text   = record._listTranslation[cultureIndex];
-        const TranslationState state  = cultureIndex < record._listState.size() ? record._listState[cultureIndex] : TranslationState::Missing;
-        uint32                 length = 0;
-        for ( size_t offset = 0; offset < text.size(); )
-        {
-            (void)StringUtil::decodeUTF8( text, offset );
-            ++length;
-        }
-        const bool bTooLong = record._maxLength != 0 && length > record._maxLength;
+        string&                text         = record._listTranslation[cultureIndex];
+        const TranslationState state        = record._listState[cultureIndex];
+        const bool             bTooLong     = record.isTranslationTooLong( cultureIndex );
+        const bool             bConfirmable = state == TranslationState::Stale || state == TranslationState::Review;
 
         uint32 pushedColorCount = 0;
         if ( state == TranslationState::Stale )
         {
-            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( DataTablePanelInternal::kStaleText ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ) );
             ++pushedColorCount;
         }
         else if ( state == TranslationState::Review )
         {
-            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( DataTablePanelInternal::kReviewText ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Info" ) ) );
             ++pushedColorCount;
         }
         if ( bTooLong )
         {
-            ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( DataTablePanelInternal::kTooLongBorder ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ) );
             ++pushedColorCount;
         }
-        const bool bChanged = EditorWidgets::drawTextField( "##tr", text, -1.0f );
+        // 확인 단추 자리를 남기고 칸이 나머지 폭을 채운다(폭 인자 0 은 이 값을 쓴다).
+        ImGui::SetNextItemWidth( bConfirmable ? -( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorDataTable", "ConfirmTranslation" ) ) + ImGui::GetStyle().ItemSpacing.x ) : -1.0f );
+        const bool bChanged = EditorWidgets::drawTextField( "##tr", text, 0.0f );
         if ( pushedColorCount > 0 )
             ImGui::PopStyleColor( static_cast<int32>( pushedColorCount ) );
 
@@ -252,11 +248,19 @@ namespace sw::editor
                                                       TextArgumentList()
                                                           .addText( "context", record._context.empty() ? record._comment : record._context )
                                                           .addText( "state", pState )
-                                                          .addInteger( "length", static_cast<int64>( length ) )
+                                                          .addInteger( "length", static_cast<int64>( record.measureTranslation( cultureIndex ) ) )
                                                           .addText( "overflow", pOverflow ) );
             ImGui::SetTooltip( "%s", tooltip.c_str() );
         }
-        return bChanged;
+        if ( bChanged )
+            _model.markTranslationEdited( record, cultureIndex );
+        if ( bConfirmable )
+        {
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( SW_LOCKEY( "EditorDataTable", "ConfirmTranslation" ) ) )
+                _model.confirmTranslation( record, cultureIndex );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "ConfirmTranslationTip" ) );
+        }
     }
 
     void DataTablePanel::drawLocalizationTable()
@@ -269,11 +273,13 @@ namespace sw::editor
         const EditorListFilter filter{ _localizationFilter.c_str() };
 
         vector<size_t>& listVisibleIndex = _listVisibleLocalizationIndex;
-        _model.collectVisibleRecords( filter, listVisibleIndex );
+        _model.collectVisibleRecords( filter, listVisibleIndex, _bNeedsWorkOnly ? LocalizationRowFilter::NeedsWork : LocalizationRowFilter::All );
 
         if ( listVisibleIndex.empty() )
         {
-            if ( filter.isActive() )
+            if ( _bNeedsWorkOnly && filter.isActive() == false )
+                EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorDataTable", "NoWorkLeftHint" ) );
+            else if ( filter.isActive() )
                 EditorWidgets::drawNoSearchResultHint( filter.getText() );
             else
                 EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorDataTable", "NoRecordsHint" ) );
@@ -288,18 +294,28 @@ namespace sw::editor
             ImGui::TableSetupColumn( "Key", ImGuiTableColumnFlags_WidthStretch, 0.22f );
             const string sourceHeader = "Source (" + sheet._sourceCulture + ")";
             ImGui::TableSetupColumn( sourceHeader.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.28f );
-            for ( const string& culture : sheet._listCulture )
+            // 머리에 진행도를 적는다(유니티 Localization 표의 완료율 자리). 줄마다 세지 않고 문화권마다 한 번 센다.
+            for ( size_t cultureIndex = 0; cultureIndex < cultureCount; ++cultureIndex )
             {
-                ImGui::TableSetupColumn( culture.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.5f / static_cast<float32>( cultureCount > 0 ? cultureCount : 1 ) );
+                const string cultureHeader = formatToString( "%# (%#/%#)", sheet._listCulture[cultureIndex].c_str(), static_cast<uint64>( _model.countCurrentTranslations( cultureIndex ) ), static_cast<uint64>( sheet._listRecord.size() ) );
+                ImGui::TableSetupColumn( cultureHeader.c_str(), ImGuiTableColumnFlags_WidthStretch, 0.5f / static_cast<float32>( cultureCount > 0 ? cultureCount : 1 ) );
             }
             ImGui::TableSetupColumn( "Action", ImGuiTableColumnFlags_WidthFixed, 50.0f * EditorThemeUtil::getDPIScale() );
+            ImGui::TableSetupScrollFreeze( 0, 1 );
             ImGui::TableHeadersRow();
 
-            int32 deleteIndex = -1;
-            for ( const size_t recordIndex : listVisibleIndex )
+            // 수천 줄의 입력칸을 프레임마다 그리지 않는다. 줄 높이가 같아 보이는 줄만 그린다.
+            int32            deleteIndex = -1;
+            ImGuiListClipper clipper;
+            clipper.Begin( static_cast<int32>( listVisibleIndex.size() ) );
+            while ( clipper.Step() )
             {
-                if ( drawLocalizationRow( recordIndex, cultureCount ) )
-                    deleteIndex = static_cast<int32>( recordIndex );
+                for ( int32 rowPosition = clipper.DisplayStart; rowPosition < clipper.DisplayEnd; ++rowPosition )
+                {
+                    const size_t recordIndex = listVisibleIndex[static_cast<size_t>( rowPosition )];
+                    if ( drawLocalizationRow( recordIndex, cultureCount ) )
+                        deleteIndex = static_cast<int32>( recordIndex );
+                }
             }
 
             if ( deleteIndex >= 0 )
@@ -313,7 +329,6 @@ namespace sw::editor
     {
         bool                bDeleteRequested = false;
         LocalizationRecord& record           = _model.editSheet()._listRecord[recordIndex];
-        record._listTranslation.resize( cultureCount );
 
         ImGui::PushID( static_cast<int32>( recordIndex ) );
         ImGui::TableNextRow();
@@ -332,14 +347,13 @@ namespace sw::editor
 
         ImGui::TableSetColumnIndex( 1 );
         if ( EditorWidgets::drawTextField( "##source", record._source, -1.0f ) )
-            _model.markRecordModified( record );
+            _model.markSourceEdited( record );
 
         for ( size_t cultureIndex = 0; cultureIndex < cultureCount; ++cultureIndex )
         {
             ImGui::TableSetColumnIndex( static_cast<int32>( 2 + cultureIndex ) );
             ImGui::PushID( static_cast<int32>( cultureIndex ) );
-            if ( drawTranslationCell( record, cultureIndex ) )
-                _model.markRecordModified( record );
+            drawTranslationCell( record, cultureIndex );
             ImGui::PopID();
         }
 
@@ -376,8 +390,13 @@ namespace sw::editor
             {
                 const GameDataFileEntry& entry     = listGameDataFile[fileIndex];
                 const bool               bSelected = ( _model.getSelectedGameDataIndex() == static_cast<int32>( fileIndex ) );
+                const bool               bBlocked  = _model.isGameDataDirty() && bSelected == false; // 모델이 바꾸지 않는다 — 눌러도 아무 일이 없는 줄로 두지 않는다
+                ImGui::BeginDisabled( bBlocked );
                 if ( ImGui::Selectable( entry._fileName.c_str(), bSelected ) )
-                    _model.selectGameDataFile( fileIndex ); // 다른 파일의 고친 것이 남았으면 모델이 바꾸지 않는다
+                    _model.selectGameDataFile( fileIndex );
+                ImGui::EndDisabled();
+                if ( bBlocked )
+                    EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "SaveBeforeSwitchingTip" ) );
             }
         }
         EditorChrome::endSection();
@@ -413,16 +432,11 @@ namespace sw::editor
 
             if ( _bGameDataRaw || _model.getGameDataDocument().isParsed() == false )
             {
-                // XML 원문 텍스트 상자 - 테이블로 못 읽는 문서도 여기서 고친다
-                const string& rawText = _model.getGameDataRawText();
-                vector<utf8>  arrEditBuffer;
-                arrEditBuffer.resize( rawText.size() + 4096, 0 );
-                if ( rawText.empty() == false )
-                    Memory::copy( arrEditBuffer.data(), rawText.c_str(), rawText.size() );
-
-                constexpr ImGuiInputTextFlags editFlags = ImGuiInputTextFlags_AllowTabInput;
-                if ( ImGui::InputTextMultiline( "##rawXMLEdit", arrEditBuffer.data(), arrEditBuffer.size(), ImGui::GetContentRegionAvail(), editFlags ) )
-                    _model.replaceGameDataRawText( arrEditBuffer.data() );
+                // XML 원문 텍스트 상자 - 테이블로 못 읽는 문서도 여기서 고친다. 고정 버퍼면 그 크기를 넘게 붙여 넣은 글이 말없이 잘린다.
+                const float32 boxHeight = ImGui::GetContentRegionAvail().y - ImGui::GetStyle().FramePadding.y * 2.0f;
+                const uint32  lineCount = MathUtil::max( static_cast<uint32>( boxHeight / ImGui::GetTextLineHeight() ), 4u );
+                if ( EditorWidgets::drawTextFieldMultiline( "##rawXMLEdit", _model.editGameDataRawText(), lineCount, nullptr, ImGuiInputTextFlags_AllowTabInput ) )
+                    _model.commitGameDataRawEdit();
             }
             else if ( _gameDataTable.draw( _model.editGameDataDocument() ) )
                 _model.commitGameDataTableEdit();

@@ -21,6 +21,7 @@ namespace sw::editor
         , _gameDataJob{}
         , _selectedGameDataIndex{ -1 }
         , _selectedProjectIndex{ 0 }
+        , _requestedProjectIndex{ 0 }
         , _gameDataLoadCount{ 0 }
         , _bLocalizationLoaded{ SW_FALSE }
         , _bGameDataLoaded{ SW_FALSE }
@@ -35,21 +36,18 @@ namespace sw::editor
         const EditorTaskPoll localizationPoll = _localizationJob.take( loadedSheet );
         if ( localizationPoll == EditorTaskPoll::Ready )
         {
-            if ( _bLocalizationDirty == false )
-            {
-                _localizationSheet   = std::move( loadedSheet );
-                _bLocalizationLoaded = SW_TRUE;
-            }
+            (void)acceptLoadedSheet( _requestedProjectIndex, std::move( loadedSheet ) ); // 버렸으면 아직 읽지 않은 상태라 다음 그리기가 고른 프로젝트를 다시 읽는다
         }
         else if ( _bLocalizationLoaded == false && localizationPoll == EditorTaskPoll::Idle )
         {
-            LocalizationTools::collectProjectPaths( _listLocalizationProject ); // 현지화 도구와 같은 목록(엔진 · 에디터 UI · 활성 게임)
+            vector<string> listProject;
+            LocalizationTools::collectProjectPaths( listProject ); // 현지화 도구와 같은 목록(엔진 · 에디터 UI · 활성 게임)
+            setLocalizationProjects( std::move( listProject ) );
             if ( _listLocalizationProject.empty() )
                 _bLocalizationLoaded = SW_TRUE; // 프로젝트가 없다 — 빈 안내를 보인다
             else
             {
-                if ( _selectedProjectIndex < 0 || static_cast<size_t>( _selectedProjectIndex ) >= _listLocalizationProject.size() )
-                    _selectedProjectIndex = 0;
+                _requestedProjectIndex = _selectedProjectIndex;
                 _localizationJob.request( _listLocalizationProject[static_cast<size_t>( _selectedProjectIndex )] );
             }
         }
@@ -92,6 +90,13 @@ namespace sw::editor
         }
     }
 
+    void DataTableModel::setLocalizationProjects( vector<string> listProject )
+    {
+        _listLocalizationProject = std::move( listProject );
+        if ( _selectedProjectIndex < 0 || static_cast<size_t>( _selectedProjectIndex ) >= _listLocalizationProject.size() )
+            _selectedProjectIndex = 0;
+    }
+
     void DataTableModel::selectProject( size_t projectIndex )
     {
         if ( projectIndex >= _listLocalizationProject.size() || _bLocalizationDirty )
@@ -100,10 +105,53 @@ namespace sw::editor
         reloadLocalization();
     }
 
-    void DataTableModel::markRecordModified( LocalizationRecord& record )
+    bool DataTableModel::acceptLoadedSheet( int32 requestedProjectIndex, LocalizationSheet&& sheet )
     {
+        if ( _bLocalizationDirty || requestedProjectIndex != _selectedProjectIndex )
+            return false;
+        _localizationSheet   = std::move( sheet );
+        _bLocalizationLoaded = SW_TRUE;
+        return true;
+    }
+
+    void DataTableModel::markSourceEdited( LocalizationRecord& record )
+    {
+        // 검토 표시는 원문과 상관없이 남는다(`TranslationTable::computeState` 가 검토를 먼저 본다).
+        for ( TranslationState& state : record._listState )
+        {
+            if ( state == TranslationState::Current )
+                state = TranslationState::Stale;
+        }
         record._bModified   = true;
         _bLocalizationDirty = SW_TRUE;
+    }
+
+    void DataTableModel::markTranslationEdited( LocalizationRecord& record, size_t cultureIndex )
+    {
+        record._listState[cultureIndex] = record._listTranslation[cultureIndex].empty() ? TranslationState::Missing : TranslationState::Current;
+        record._bModified               = true;
+        _bLocalizationDirty             = SW_TRUE;
+    }
+
+    void DataTableModel::confirmTranslation( LocalizationRecord& record, size_t cultureIndex )
+    {
+        const TranslationState state = record._listState[cultureIndex];
+        if ( state != TranslationState::Stale && state != TranslationState::Review )
+            return;
+        record._listState[cultureIndex] = TranslationState::Current;
+        record._bModified               = true;
+        _bLocalizationDirty             = SW_TRUE;
+    }
+
+    uint32 DataTableModel::countCurrentTranslations( size_t cultureIndex ) const
+    {
+        uint32 count = 0;
+        for ( const LocalizationRecord& record : _localizationSheet._listRecord )
+        {
+            if ( record._listState[cultureIndex] == TranslationState::Current )
+                ++count;
+        }
+        return count;
     }
 
     bool DataTableModel::addKey( string_view key )
@@ -134,15 +182,17 @@ namespace sw::editor
         _bLocalizationDirty = SW_TRUE;
     }
 
-    void DataTableModel::collectVisibleRecords( const EditorListFilter& filter, vector<size_t>& outListVisibleIndex ) const
+    void DataTableModel::collectVisibleRecords( const EditorListFilter& filter, vector<size_t>& outListVisibleIndex, LocalizationRowFilter rowFilter ) const
     {
         // 호출한 쪽이 **멤버 버퍼를 다시 쓴다** — 지역 `vector` 면 프레임마다 할당하고 해제한다.
         outListVisibleIndex.clear();
         outListVisibleIndex.reserve( _localizationSheet._listRecord.size() );
         for ( size_t recordIndex = 0; recordIndex < _localizationSheet._listRecord.size(); ++recordIndex )
         {
-            const LocalizationRecord& record   = _localizationSheet._listRecord[recordIndex];
-            bool                      bMatches = filter.matchesAny( { record._key, record._source } );
+            const LocalizationRecord& record = _localizationSheet._listRecord[recordIndex];
+            if ( rowFilter == LocalizationRowFilter::NeedsWork && record.needsWork() == false )
+                continue;
+            bool bMatches = filter.matchesAny( { record._key, record._source } );
             for ( const string& translation : record._listTranslation )
             {
                 bMatches = bMatches || filter.matchesAny( { translation } );
@@ -154,12 +204,16 @@ namespace sw::editor
 
     void DataTableModel::reloadLocalization()
     {
+        _localizationSheet   = LocalizationSheet{}; // 읽는 동안 앞 표에 키를 더하면 dirty 가 되어 읽은 결과를 영영 받지 못한다
         _bLocalizationDirty  = SW_FALSE;
         _bLocalizationLoaded = SW_FALSE;
     }
 
     void DataTableModel::saveLocalization()
     {
+        // 고친 것이 없으면 쓰지 않는다 — 읽는 중의 빈 표나 그대로인 표로 파일을 다시 쓰고 실행 중인 게임을 다시 읽게 할 까닭이 없다.
+        if ( _bLocalizationDirty == false )
+            return;
         // 하나라도 쓰지 못했으면 dirty 를 지우지 않는다 — 저장 확인이 다시 묻는다.
         if ( EditorDataTableCommands::saveLocalizationProject( _localizationSheet ) == false )
             return;
@@ -230,6 +284,11 @@ namespace sw::editor
         if ( pEntry == nullptr )
             return;
 
+        if ( _gameDataDocument.isParsed() == false )
+        {
+            SW_LOG_ERROR_ID( "DataTablePanel.GameDataNotValidXML", "Game data table '%#' is not saved - the text is not valid XML: %#", pEntry->_fileName.c_str(), _gameDataDocument.getError().c_str() );
+            return;
+        }
         if ( FileUtil::writeTextFile( pEntry->_absolutePath, _selectedGameDataRawText ) == false )
         {
             SW_LOG_ERROR_ID( "DataTablePanel.CouldNotWriteGame", "Could not write game data table '%#'", pEntry->_absolutePath.c_str() );
@@ -250,6 +309,11 @@ namespace sw::editor
     void DataTableModel::replaceGameDataRawText( string_view text )
     {
         _selectedGameDataRawText = text;
+        commitGameDataRawEdit();
+    }
+
+    void DataTableModel::commitGameDataRawEdit()
+    {
         _gameDataDocument.replaceText( _selectedGameDataRawText, false );
         _bGameDataDirty = SW_TRUE;
     }

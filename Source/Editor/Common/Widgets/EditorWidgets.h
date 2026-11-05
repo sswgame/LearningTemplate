@@ -186,8 +186,9 @@ namespace sw::editor
         /**
          * @brief `drawTextField` 의 여러 줄 버전입니다(`PROPERTY( Multiline )`). 높이는 @p lineCount 줄만큼이고 폭은 남은 폭 전부입니다.
          * @param pHint 비어 있고 치는 중이 아닐 때 칸 안에 흐리게 보일 안내입니다(ImGui 여러 줄 칸에는 힌트가 없어 빈 상자만 남았다). nullptr 이면 없다.
+         * @param flags 더할 `ImGuiInputTextFlags` 입니다(원문 편집의 탭 입력).
          */
-        static bool drawTextFieldMultiline( const utf8* pLabel, string& text, uint32 lineCount = 4, const utf8* pHint = nullptr );
+        static bool drawTextFieldMultiline( const utf8* pLabel, string& text, uint32 lineCount = 4, const utf8* pHint = nullptr, int32 flags = 0 );
         /**
          * @brief 이름표를 칸 앞(왼쪽)에 둔 콤보를 엽니다. 열렸으면 true 이고 `ImGui::EndCombo()` 로 닫습니다. 폭은 부르는 쪽이 `SetNextItemWidth` 로 정합니다(이름표 뒤 칸에 걸린다).
          * @details `ImGui::BeginCombo( "Name###id" )` 는 이름표를 오른쪽에 붙여 다음 칸의 이름처럼 읽혔다(Packaging "Client [v] Target Empty [v]"). id 는 @p pLabel 전체에서 뽑는다.

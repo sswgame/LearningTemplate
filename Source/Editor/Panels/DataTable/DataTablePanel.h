@@ -56,8 +56,8 @@ namespace sw::editor
         void drawLocalizationTable();
         /** @brief 현지화 테이블의 한 줄(키 · 원문 · 번역 필드 · 삭제 단추)을 그립니다. 삭제 단추를 눌렀으면 true 입니다. */
         [[nodiscard]] bool drawLocalizationRow( size_t recordIndex, size_t cultureCount );
-        /** @brief 번역 필드 하나를 상태 색 · 길이 경고 · 맥락 툴팁과 함께 그립니다. 고쳤으면 true 입니다. */
-        bool drawTranslationCell( LocalizationRecord& record, size_t cultureIndex );
+        /** @brief 번역 필드 하나를 상태 색 · 길이 경고 · 맥락 툴팁과 함께 그리고, 낡음 · 검토면 확인 단추를 답니다. 고친 것은 모델에 알립니다. */
+        void drawTranslationCell( LocalizationRecord& record, size_t cultureIndex );
         void drawGameDataTab();
         /** @brief 모델의 두 문서 dirty 비트를 기반 클래스의 문서 dirty 비트에 반영합니다. */
         void syncDocumentDirty() override;
@@ -71,6 +71,7 @@ namespace sw::editor
         CatalogTableEditor _gameDataTable;
         /** @brief 표 편집기가 본 모델의 게임 데이터 읽기 횟수입니다. 다르면 표 편집기 상태(고른 칸 · 되돌리기 위치)를 지운다. */
         uint32 _seenGameDataLoadCount;
-        bool   _bGameDataRaw; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        bool   _bGameDataRaw;   ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        bool   _bNeedsWorkOnly; ///< 할 일이 남은 행만 본다. NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor

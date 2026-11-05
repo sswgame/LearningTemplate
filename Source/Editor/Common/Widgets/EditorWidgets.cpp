@@ -695,13 +695,13 @@ namespace sw::editor
         return bChanged;
     }
 
-    bool EditorWidgets::drawTextFieldMultiline( const utf8* pLabel, string& text, const uint32 lineCount, const utf8* pHint )
+    bool EditorWidgets::drawTextFieldMultiline( const utf8* pLabel, string& text, const uint32 lineCount, const utf8* pHint, const int32 flags )
     {
         const ImVec2 size( -1.0f, ImGui::GetTextLineHeight() * static_cast<float32>( lineCount ) + ImGui::GetStyle().FramePadding.y * 2.0f );
         const utf8*  pID = pLabel != nullptr ? pLabel : "##text";
         EditorWidgetsInternal::drawLeadingLabel( pID );
         ImGui::PushID( pID );
-        const bool bChanged = ImGui::InputTextMultiline( "##value", text.data(), text.capacity() + 1, size, ImGuiInputTextFlags_CallbackResize,
+        const bool bChanged = ImGui::InputTextMultiline( "##value", text.data(), text.capacity() + 1, size, static_cast<ImGuiInputTextFlags>( flags ) | ImGuiInputTextFlags_CallbackResize,
                                                          &EditorWidgetsInternal::resizeStringCallback, &text );
         if ( StringUtil::isNullOrEmpty( pHint ) == false && text.empty() && ImGui::IsItemActive() == false )
         {
