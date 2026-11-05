@@ -110,6 +110,13 @@ namespace sw
         bool isPendingDestroy() const { return _bIsPendingDestroy.load( std::memory_order_acquire ); }
 
         /**
+         * @brief 부모가 파괴될 때 함께 파괴되지 않고 루트로 남을지 정합니다.
+         * @details 씬 계층의 자식은 기본으로 부모와 함께 사라진다. 잠시 올라탄 탑승자처럼 부모의 일부가 아닌 오브젝트만 켠다(언리얼은 붙어 있는 액터를 지우지 않고 떼어 낸다).
+         */
+        void setKeptWhenParentDestroyed( bool bKept ) { _bKeptWhenParentDestroyed = bKept; }
+        bool isKeptWhenParentDestroyed() const { return _bKeptWhenParentDestroyed; }
+
+        /**
          * @brief 켜거나 끕니다.
          * @details 자기 활성 플래그를 갱신하고 소유 컴포넌트에 그 값을 전파한 뒤, `isActiveInHierarchy` 를 부모 계층에
          *          맞게 다시 계산한다(자손까지 한 번).
@@ -449,7 +456,8 @@ namespace sw
         uint32 _tickPrerequisiteCount;
         /** @brief 틱 멤버십이 바뀌어 레지스트리의 더티 목록에 올라 있는지 나타냅니다. 워커에서 표시하므로 원자값입니다. */
         atomic<uint8> _bTickDirty;
-        bool          _bBeingDestroyed; ///< 소멸자 안이다. 컴포넌트를 새로 붙이지 않는다(`allocateComponentStorage`). 소유 스레드만 읽고 쓴다
+        bool          _bKeptWhenParentDestroyed; ///< 부모가 파괴돼도 루트로 남는다(`setKeptWhenParentDestroyed`)
+        bool          _bBeingDestroyed;          ///< 소멸자 안이다. 컴포넌트를 새로 붙이지 않는다(`allocateComponentStorage`). 소유 스레드만 읽고 쓴다
         /**
          * @brief 형제 사이의 표시 순서입니다(`getSiblingIndex`). 클래스 끝의 꼬리 패딩에 들어가 오브젝트 크기를 늘리지 않으므로, 앞쪽으로 옮기지 않는다.
          */

@@ -156,6 +156,7 @@ namespace sw
         if ( pRider->getComponent<RiderDownWatcherComponent>() == nullptr )
             (void)pRider->addComponent<RiderDownWatcherComponent>();
 
+        pRider->setKeptWhenParentDestroyed( true ); // 소켓으로 붙어도 탈것의 일부가 아니다 — 탈것이 사라지면 내린다
         seat._occupant = pRider->getHandle();
         if ( seat.isDriverSeat() )
         {
@@ -206,9 +207,10 @@ namespace sw
         ControllerComponent* pPreviousVehicleController = pSeat->_previousVehicleController.isValid()
                                                             ? pManager->resolveComponent( pSeat->_previousVehicleController )
                                                             : nullptr;
-        pSeat->_occupant                                = GameObjectHandle{};
-        pSeat->_occupantController                      = TComponentHandle<ControllerComponent>{};
-        pSeat->_previousVehicleController               = TComponentHandle<ControllerComponent>{};
+        pRider->setKeptWhenParentDestroyed( false );
+        pSeat->_occupant                  = GameObjectHandle{};
+        pSeat->_occupantController        = TComponentHandle<ControllerComponent>{};
+        pSeat->_previousVehicleController = TComponentHandle<ControllerComponent>{};
         if ( pController != nullptr )
             pController->possess( riderPawn );
         PawnComponent* pVehiclePawn            = pVehicle != nullptr ? pVehicle->getComponent<PawnComponent>() : nullptr;
@@ -216,6 +218,28 @@ namespace sw
         if ( bReturnControlToVehicle )
             pPreviousVehicleController->possess( *pVehiclePawn );
         return true;
+    }
+
+    void VehicleSeatComponent::releaseGoneOccupant( GameObjectManager& manager, const GameObjectHandle& rider )
+    {
+        for ( VehicleSeatComponent* pSeat : manager.getComponentRegistry().getAll<VehicleSeatComponent>() )
+        {
+            if ( pSeat == nullptr || pSeat->_occupant != rider )
+                continue;
+            ControllerComponent* pController         = pSeat->_occupantController.isValid() ? manager.resolveComponent( pSeat->_occupantController ) : nullptr;
+            ControllerComponent* pPreviousController = pSeat->_previousVehicleController.isValid() ? manager.resolveComponent( pSeat->_previousVehicleController ) : nullptr;
+            pSeat->_occupant                         = GameObjectHandle{};
+            pSeat->_occupantController               = TComponentHandle<ControllerComponent>{};
+            pSeat->_previousVehicleController        = TComponentHandle<ControllerComponent>{};
+            // 사라진 탑승자의 조종자가 탈것을 쥔 채 남지 않는다. 내릴 때처럼 탈 때 쥐고 있던 조종자가 되찾는다.
+            const GameObject* pVehicle     = pSeat->getOwner();
+            PawnComponent*    pVehiclePawn = pVehicle != nullptr ? pVehicle->getComponent<PawnComponent>() : nullptr;
+            if ( pController != nullptr && pVehiclePawn != nullptr && pController->findPawn() == pVehiclePawn )
+                pController->unpossess();
+            if ( pPreviousController != nullptr && pVehiclePawn != nullptr && pVehiclePawn->isPossessed() == false )
+                pPreviousController->possess( *pVehiclePawn );
+            return;
+        }
     }
 
     VehicleSeatComponent* VehicleSeatComponent::findSeatOf( const PawnComponent& riderPawn )

@@ -358,7 +358,7 @@ namespace sw
         {
             for ( GameObject* pChild : listChildren )
             {
-                if ( pChild != nullptr )
+                if ( pChild != nullptr && pChild->isKeptWhenParentDestroyed() == false )
                     destroyObject( pChild, true );
             }
         }

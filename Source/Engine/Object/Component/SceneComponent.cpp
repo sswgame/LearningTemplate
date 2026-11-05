@@ -56,7 +56,15 @@ namespace sw
         {
             SceneComponent* pChild = _listChild.back();
             if ( pChild != nullptr )
+            {
+                // 남는 자식은 있던 자리에 남는다(로컬 값 그대로면 원점 쪽으로 튄다). 함께 사라지는 자식은 계산하지 않는다.
+                const GameObject* pChildOwner = pChild->getOwner();
+                const bool        bSurvives   = pChildOwner != nullptr && pChildOwner->isPendingDestroy() == false;
+                const float4x4    world       = bSurvives ? pChild->getWorldMatrix() : float4x4{};
                 pChild->detachFromParentImmediate();
+                if ( bSurvives )
+                    pChild->setWorldTransform( world );
+            }
             else
                 _listChild.pop_back();
         }

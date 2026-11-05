@@ -29,6 +29,8 @@ namespace sw
         ~RiderDownWatcherComponent() override = default;
 
         void onHealthChanged( const HealthChangedEvent& event ) override;
+        /** @brief 탑승자가 사라지면 좌석을 비웁니다. 끊긴 핸들을 든 좌석은 다시 탈 수 없습니다. */
+        void onUnregister( GameObjectManager& manager ) override;
 
     private:
         /** @brief 틱 뒤에 실행합니다. 앉아 있으면 강제로 내립니다. */

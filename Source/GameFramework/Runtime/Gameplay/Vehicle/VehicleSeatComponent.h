@@ -60,6 +60,8 @@ namespace sw
          * @return 앉아 있지 않으면 false 입니다.
          */
         static bool dismount( PawnComponent& riderPawn, bool bForced );
+        /** @brief 탑승자 오브젝트가 사라지는 중입니다. 앉았던 좌석을 비우고 탈것의 빙의를 정리합니다(`RiderDownWatcherComponent` 가 부릅니다). */
+        static void releaseGoneOccupant( GameObjectManager& manager, const GameObjectHandle& rider );
         /** @brief 탑승자가 앉은 좌석입니다. 없으면 nullptr 입니다. */
         static VehicleSeatComponent* findSeatOf( const PawnComponent& riderPawn );
         /** @brief @p riderPawn 이 타는 거리 안에 있는 빈 좌석입니다. 운전석을 먼저 보고, 그다음은 가까운 순입니다. 없으면 nullptr 입니다. */

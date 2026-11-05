@@ -86,6 +86,7 @@ namespace sw
         , _arrTickIndex{ TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList, TickRegistry::kNotInList }
         , _tickPrerequisiteCount{ 0 }
         , _bTickDirty{ SW_FALSE }
+        , _bKeptWhenParentDestroyed{ false }
         , _bBeingDestroyed{ false }
         , _siblingIndex{ 0 }
         , _bAlwaysLoaded{ false }
@@ -99,23 +100,8 @@ namespace sw
     {
         // 지금부터 컴포넌트를 붙이지 않는다. 아래 해체 콜백이 붙이면 비운 목록에 남아 파괴되지 않는다(`allocateComponentStorage`).
         _bBeingDestroyed = true;
-        // 컴포넌트를 파괴하기 전에 부모-자식 계층 연결을 끊는다(자식 오브젝트들은 루트가 되어 살아남는다).
+        // 자기를 부모에서 뗀다. 자식은 씬 컴포넌트가 파괴될 때 떨어지고 있던 자리에 남는다(`~SceneComponent`).
         detachFromParent();
-
-        // 자식 목록을 복사하지 않는다. 분리하면 그 위치가 swap-remove 되므로 뒤에서 앞으로 순회한다(뒤에서 온 원소는 이미 본 것이다).
-        if ( SceneComponent* pSceneComp = getPrimarySceneComponent() )
-        {
-            const vector<SceneComponent*>& listChildComp = pSceneComp->getChildren();
-            for ( size_t childIndex = listChildComp.size(); childIndex-- > 0; )
-            {
-                if ( childIndex >= listChildComp.size() )
-                    continue;
-                SceneComponent* pChildComp = listChildComp[childIndex];
-                GameObject*     pChildObj  = ( pChildComp != nullptr ) ? pChildComp->getOwner() : nullptr;
-                if ( pChildObj != nullptr && pChildObj != this )
-                    pChildObj->detachFromParent();
-            }
-        }
 
         clearComponents();
         SW_ASSERT( _listComponent.empty() );
