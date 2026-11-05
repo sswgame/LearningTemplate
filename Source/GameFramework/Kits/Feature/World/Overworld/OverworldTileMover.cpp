@@ -178,7 +178,8 @@ namespace sw
             if ( flag > SW_TRUE )
                 return false;
         }
-        if ( archive.isError() )
+        const bool bWarpWithoutMap = arrFlag[1] == SW_TRUE && restored._pendingWarpMap.empty();
+        if ( archive.isError() || bWarpWithoutMap )
             return false;
         restored._bMoved            = arrFlag[0];
         restored._bWarpPending      = arrFlag[1];

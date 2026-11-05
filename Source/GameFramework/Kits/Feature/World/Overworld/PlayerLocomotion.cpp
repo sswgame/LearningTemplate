@@ -34,8 +34,9 @@ namespace sw
 
     void PlayerLocomotion::notifyStepStarted( float32 stepSeconds )
     {
-        _state = LocomotionState::Walk;
+        // 시간이 0 이하면 타이머가 서지 않아 Walk 에 갇힌다 - 그 자리에서 끝난 걸음이다.
         _stateTimer.start( stepSeconds );
+        _state = _stateTimer.isActive() ? LocomotionState::Walk : LocomotionState::Idle;
     }
 
     void PlayerLocomotion::notifyStepFinished()
@@ -47,8 +48,8 @@ namespace sw
 
     void PlayerLocomotion::beginInteract( float32 duration )
     {
-        _state = LocomotionState::Interact;
         _stateTimer.start( duration );
+        _state = _stateTimer.isActive() ? LocomotionState::Interact : LocomotionState::Idle;
     }
 
     void PlayerLocomotion::setFacingFromDelta( int32 dx, int32 dy )
@@ -85,7 +86,8 @@ namespace sw
         if ( StateArchiveUtil::readCountdown( archive, stateTimer ) == false )
             return false;
         const bool bValid = archive.isOk() && state <= static_cast<uint8>( LocomotionState::Interact ) && facing <= static_cast<uint8>( FacingDir::Up );
-        if ( bValid == false )
+        const bool bBusy  = state != static_cast<uint8>( LocomotionState::Idle );
+        if ( bValid == false || ( bBusy && stateTimer.isActive() == false ) ) // 남은 시간 없는 걸음은 깨어날 길이 없다
             return false;
         _state      = static_cast<LocomotionState>( state );
         _facing     = static_cast<FacingDir>( facing );
