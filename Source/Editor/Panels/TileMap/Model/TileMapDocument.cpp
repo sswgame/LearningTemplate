@@ -394,20 +394,31 @@ namespace sw::editor
         {
             case PaintLayer::Visual:
             {
-                if ( _bErase == false )
-                {
-                    TileMapXMLData::Visual& tileVisual = _map._listVisual[tileIndex];
-                    tileVisual._height                 = static_cast<uint8>( _paintHeight );
-                    tileVisual._atlasID                = static_cast<uint8>( _atlasID );
-                    tileVisual._tintR                  = static_cast<uint8>( MathUtil::clamp( _arrTint[0] * 255.0f, 0.0f, 255.0f ) );
-                    tileVisual._tintG                  = static_cast<uint8>( MathUtil::clamp( _arrTint[1] * 255.0f, 0.0f, 255.0f ) );
-                    tileVisual._tintB                  = static_cast<uint8>( MathUtil::clamp( _arrTint[2] * 255.0f, 0.0f, 255.0f ) );
-                }
+                if ( _bErase )
+                    return false; // 보이는 칸에는 지울 값이 없다
+                const uint8             height     = static_cast<uint8>( _paintHeight );
+                const uint8             atlasID    = static_cast<uint8>( _atlasID );
+                const uint8             tintR      = static_cast<uint8>( MathUtil::clamp( _arrTint[0] * 255.0f, 0.0f, 255.0f ) );
+                const uint8             tintG      = static_cast<uint8>( MathUtil::clamp( _arrTint[1] * 255.0f, 0.0f, 255.0f ) );
+                const uint8             tintB      = static_cast<uint8>( MathUtil::clamp( _arrTint[2] * 255.0f, 0.0f, 255.0f ) );
+                TileMapXMLData::Visual& tileVisual = _map._listVisual[tileIndex];
+                const bool              bSame      = tileVisual._height == height && tileVisual._atlasID == atlasID && tileVisual._tintR == tintR && tileVisual._tintG == tintG && tileVisual._tintB == tintB;
+                if ( bSame )
+                    return false;
+                tileVisual._height  = height;
+                tileVisual._atlasID = atlasID;
+                tileVisual._tintR   = tintR;
+                tileVisual._tintG   = tintG;
+                tileVisual._tintB   = tintB;
                 break;
             }
             case PaintLayer::Flag:
             {
-                _map.getFlagLayer( _flagLayer )[tileIndex] = _bErase ? 0 : 1;
+                uint8&      flag  = _map.getFlagLayer( _flagLayer )[tileIndex];
+                const uint8 value = _bErase ? 0 : 1;
+                if ( flag == value )
+                    return false;
+                flag = value;
                 break;
             }
             case PaintLayer::Data:
@@ -435,9 +446,21 @@ namespace sw::editor
             }
             case PaintLayer::Warp:
             {
+                const bool                  bWantWarp = _bErase == false && _warpTarget.empty() == false;
+                const TileMapXMLData::Warp* pExisting = nullptr;
+                for ( const TileMapXMLData::Warp& warp : _map._listWarp )
+                {
+                    if ( warp._tileX == x && warp._tileY == y )
+                        pExisting = &warp;
+                }
+                const bool bSame = pExisting != nullptr && bWantWarp && string_view( pExisting->_targetMap ) == string_view( _warpTarget.c_str() ) && pExisting->_targetTileX == _warpTx &&
+                                   pExisting->_targetTileY == _warpTy && _map.getFlagLayer( TileFlagLayer::Walkable )[tileIndex] != 0;
+                const bool bNothingToErase = pExisting == nullptr && bWantWarp == false;
+                if ( bSame || bNothingToErase )
+                    return false;
                 VectorUtil::removeIf( _map._listWarp, [x, y]( const TileMapXMLData::Warp& warp )
                 { return warp._tileX == x && warp._tileY == y; } );
-                if ( _bErase == false && _warpTarget.empty() == false )
+                if ( bWantWarp )
                 {
                     TileMapXMLData::Warp warpItem{};
                     warpItem._tileX       = x;
