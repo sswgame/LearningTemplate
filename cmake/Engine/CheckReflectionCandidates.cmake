@@ -6,14 +6,16 @@
 #          이 스크립트는 그런 헤더(구성 때 매크로가 없던 것)가 바뀌었을 때만 돈다 — 매크로가 생겼으면 다시 구성하라고 알리고 빌드를 세운다.
 # 인자: -DCANDIDATE_LIST=<줄마다 헤더 경로> -DSTAMP=<스탬프 파일> -DTARGET_NAME=<타깃>
 # ==============================================================================
+include("${CMAKE_CURRENT_LIST_DIR}/ReflectionMacroScan.cmake")
+
 file(STRINGS "${CANDIDATE_LIST}" listCandidateHeader)
 set(listNewlyReflected "")
 foreach(hdr IN LISTS listCandidateHeader)
 	if(NOT EXISTS "${hdr}")
 		continue()
 	endif()
-	file(STRINGS "${hdr}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
-	if(listReflectLine)
+	sw_hasReflectionMacro(bReflected "${hdr}")
+	if(bReflected)
 		list(APPEND listNewlyReflected "${hdr}")
 	endif()
 endforeach()

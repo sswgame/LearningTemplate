@@ -117,30 +117,11 @@ function(sw_addEditorLayerStubs PART TIER)
 				if("Editor/${header}" IN_LIST SW_EDITOR_PRELUDE_HEADERS)
 					continue()
 				endif()
-				set(stubPath "${stubRoot}/Editor/${header}")
-				set(stubContent "#error \"Editor layer '${layer}' (tier ${upperTier}) cannot be included from tier ${TIER} code. A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"\n")
-				set(oldContent "")
-				if(EXISTS "${stubPath}")
-					file(READ "${stubPath}" oldContent)
-				endif()
-				if(NOT oldContent STREQUAL stubContent)
-					file(WRITE "${stubPath}" "${stubContent}")
-				endif()
-				list(APPEND listNewStub "${stubPath}")
+				sw_writeLayerStub(listNewStub "${stubRoot}/Editor/${header}" "#error \"Editor layer '${layer}' (tier ${upperTier}) cannot be included from tier ${TIER} code. A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"\n")
 			endforeach()
 		endforeach()
 	endforeach()
-	set(manifestPath "${stubRoot}.manifest")
-	if(EXISTS "${manifestPath}")
-		file(STRINGS "${manifestPath}" listOldStub)
-		list(REMOVE_ITEM listOldStub ${listNewStub})
-		foreach(oldStub IN LISTS listOldStub)
-			file(REMOVE "${oldStub}")
-		endforeach()
-	endif()
-	string(REPLACE ";" "\n" manifestContent "${listNewStub}")
-	file(WRITE "${manifestPath}" "${manifestContent}\n")
-	target_include_directories(${PART} BEFORE PRIVATE "${stubRoot}")
+	sw_applyLayerStubs(${PART} "${stubRoot}" ${listNewStub})
 endfunction()
 
 # ------------------------------------------------------------------------------
@@ -174,8 +155,8 @@ foreach(header IN LISTS listEditorAllSource)
 	if(NOT header MATCHES "\\.(h|hpp)$")
 		continue()
 	endif()
-	file(STRINGS "${header}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
-	if(NOT listReflectLine)
+	sw_hasReflectionMacro(bReflected "${header}")
+	if(NOT bReflected)
 		continue()
 	endif()
 	if(header MATCHES "${editorCoreReflectRegex}")
@@ -201,6 +182,23 @@ function(sw_applyEditorCoreSettings TARGET_NAME)
 	sw_setUnityBuild(${TARGET_NAME} BATCH_SIZE 8)
 endfunction()
 
+# 코어 리플렉션이 만든 FlagOps 우산(`/FI`)과 gen 폴더를 TARGET_NAME 에 준다. PUBLIC 이면 TARGET_NAME 을 링크하는 쪽도 받는다.
+function(sw_inheritEditorCoreReflection TARGET_NAME VISIBILITY)
+	if(NOT TARGET EditorCoreReflect)
+		return()
+	endif()
+	foreach(property COMPILE_OPTIONS INCLUDE_DIRECTORIES)
+		get_target_property(listValue EditorCoreReflect INTERFACE_${property})
+		if(listValue)
+			set_property(TARGET ${TARGET_NAME} APPEND PROPERTY ${property} ${listValue})
+			if(VISIBILITY STREQUAL "PUBLIC")
+				set_property(TARGET ${TARGET_NAME} APPEND PROPERTY INTERFACE_${property} ${listValue})
+			endif()
+		endif()
+	endforeach()
+	add_dependencies(${TARGET_NAME} EditorCoreReflect_ReflectionGen)
+endfunction()
+
 # 소비자(EditorModule)가 코어를 받는다: 오브젝트를 링크하고, 리플렉션이 만든 FlagOps 우산(`/FI`)과 gen 폴더를 같은 값으로 준다.
 # VISIBILITY 가 PUBLIC 이면 그 소비자를 링크하는 확장 모듈도 우산을 받는다(EditorModule 의 옛 리플렉션이 하던 일).
 function(sw_linkEditorCore TARGET_NAME VISIBILITY)
@@ -209,18 +207,7 @@ function(sw_linkEditorCore TARGET_NAME VISIBILITY)
 		message(FATAL_ERROR "sw_linkEditorCore(${TARGET_NAME}): EditorCore 가 만들어지지 않았다 (Source/Editor/CMakeLists.txt 가 먼저 구성돼야 한다)")
 	endif()
 	target_link_libraries(${TARGET_NAME} PRIVATE ${listCore})
-	if(TARGET EditorCoreReflect)
-		foreach(property COMPILE_OPTIONS INCLUDE_DIRECTORIES)
-			get_target_property(listValue EditorCoreReflect INTERFACE_${property})
-			if(listValue)
-				set_property(TARGET ${TARGET_NAME} APPEND PROPERTY ${property} ${listValue})
-				if(VISIBILITY STREQUAL "PUBLIC")
-					set_property(TARGET ${TARGET_NAME} APPEND PROPERTY INTERFACE_${property} ${listValue})
-				endif()
-			endif()
-		endforeach()
-		add_dependencies(${TARGET_NAME} EditorCoreReflect_ReflectionGen)
-	endif()
+	sw_inheritEditorCoreReflection(${TARGET_NAME} ${VISIBILITY})
 endfunction()
 
 if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_SHIPPING_BUILD)
@@ -255,15 +242,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server" AND NOT SW_SHIPPING_BUILD)
 		# 모델은 imgui 링크가 없다. vcpkg 는 모든 헤더를 한 include 자리에 두므로, ImGui 가 사용자 설정을 읽는 자리에 #error 를 건다.
 		target_compile_definitions(${part} PRIVATE "IMGUI_USER_CONFIG=\"${editorModelImGuiBlock}\"")
 		sw_addEditorLayerStubs(${part} ${tier})
-		if(TARGET EditorCoreReflect)
-			foreach(property COMPILE_OPTIONS INCLUDE_DIRECTORIES)
-				get_target_property(listValue EditorCoreReflect INTERFACE_${property})
-				if(listValue)
-					set_property(TARGET ${part} APPEND PROPERTY ${property} ${listValue})
-				endif()
-			endforeach()
-			add_dependencies(${part} EditorCoreReflect_ReflectionGen)
-		endif()
+		sw_inheritEditorCoreReflection(${part} PRIVATE)
 		list(APPEND listEditorCoreTarget ${part})
 	endforeach()
 	set_property(GLOBAL PROPERTY SW_EDITOR_CORE_TARGETS "${listEditorCoreTarget}")
@@ -296,6 +275,9 @@ if(swSkipEditor)
 	return()
 endif()
 
+# 뷰 코드가 링크하는 것(EditorModule 과 뷰 부분이 같은 목록을 쓴다).
+set(listEditorViewLink Engine DevTools ModuleAPI imgui imgui_nodeeditor imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs)
+
 sw_addModuleLibrary(EditorModule
 	KIND editor
 	DEV_TYPE SHARED
@@ -303,7 +285,7 @@ sw_addModuleLibrary(EditorModule
 	LOG_TAG "Editor"
 	FOLDER "Source/Editor"
 	SOURCES ${listEditorSource}
-	LINK_PRIVATE Engine DevTools ModuleAPI imgui imgui_nodeeditor imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs
+	LINK_PRIVATE ${listEditorViewLink}
 	UNITY_BATCH 8
 	# REFLECTION_HEADERS 를 주지 않는다 — 리플렉션 입력은 폴더를 훑어 REFLECT · ENUM 매크로가 있는 헤더로 정한다(손 목록에 빠뜨리면 StaticType 링크 오류).
 	# 코어 폴더의 헤더는 뺀다 — 그쪽은 EditorCoreReflect 가 한 번만 짓는다(두 곳에 있으면 StaticType 이 중복 정의된다).
@@ -319,7 +301,7 @@ foreach(tier IN LISTS SW_EDITOR_TIER_LIST)
 		sw_addModulePart(EditorTier${tier}View
 			OWNER EditorModule
 			SOURCES ${swEditorTierViewSource_${tier}}
-			LINK Engine DevTools ModuleAPI imgui imgui_nodeeditor imguizmo implot Microsoft::DirectXTex cgltf meshoptimizer stb sw_graphics_libs
+			LINK ${listEditorViewLink}
 		)
 		sw_addEditorLayerStubs(EditorTier${tier}View ${tier})
 		if(TARGET EditorCoreReflect)

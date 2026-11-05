@@ -289,19 +289,12 @@ sw_markDeterministicSources(Engine ${swDeterministicPhysicsSources})
 # ------------------------------------------------------------------------------
 # 8) 리플렉션 코드젠 — ReflectionParser 필요 (루트가 Tools 이후 이 파일을 호출)
 # ------------------------------------------------------------------------------
-if(swUnbuiltFolderRegex)
-	# 짓지 않는 폴더의 리플렉션 타입(렌더 패스 · 파이프라인 에셋)은 코드젠도 하지 않는다 — 그 구현이 빠졌다.
-	sw_addReflectionStep(Engine
-		MODULE Engine
-		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
-		EXCLUDE_REGEX "${swUnbuiltFolderRegex}"
-	)
-else()
-	sw_addReflectionStep(Engine
-		MODULE Engine
-		INCLUDES "${CMAKE_SOURCE_DIR}/Source"
-	)
-endif()
+# 짓지 않는 폴더의 리플렉션 타입(렌더 패스 · 파이프라인 에셋)은 코드젠도 하지 않는다 — 그 구현이 빠졌다.
+sw_addReflectionStep(Engine
+	MODULE Engine
+	INCLUDES "${CMAKE_SOURCE_DIR}/Source"
+	EXCLUDE_REGEX "${swUnbuiltFolderRegex}"
+)
 sw_addReflectBuiltinsGen(Engine)
 
 # ------------------------------------------------------------------------------
@@ -345,7 +338,7 @@ target_sources(Engine PRIVATE $<TARGET_OBJECTS:EngineJolt_objects>)
 add_dependencies(Engine EngineJolt_objects)
 
 # ------------------------------------------------------------------------------
-# 11) 층 부분 — 층마다 OBJECT 라이브러리 `EngineLayer<N>`(오브젝트는 Engine 이미지 안, `sw_addModulePart`). 부분 N 은 N 보다 위 층의 헤더마다 같은 경로의
+# 10) 층 부분 — 층마다 OBJECT 라이브러리 `EngineLayer<N>`(오브젝트는 Engine 이미지 안, `sw_addModulePart`). 부분 N 은 N 보다 위 층의 헤더마다 같은 경로의
 #     `#error` 껍데기를 자기 include 자리 맨 앞에 둔다 — 아래 층이 위 층 헤더를 include 하면(전이 include 도) 컴파일이 멈춘다. 에디터 층과 같은 방식이다.
 #     Engine 설정이 모두 끝난 뒤(Jolt 블록과 같은 자리)에 둔다 — 부분은 Engine 의 정의 · 옵션 · include · 링크 목록을 구성 때 복사한다.
 # ------------------------------------------------------------------------------
@@ -359,32 +352,10 @@ function(sw_addEngineLayerStubs PART TIER)
 		set(stubContent "#error \"Engine layer ${upperTier} header cannot be included from layer ${TIER} code (Scripts/generate/rules/EngineLayers.toml). A lower layer must not see an upper layer: move what you need down, or invert the dependency.\"
 ")
 		foreach(header IN LISTS SW_ENGINE_TIER_${upperTier}_HEADERS)
-			set(stubPath "${stubRoot}/${header}")
-			set(oldContent "")
-			if(EXISTS "${stubPath}")
-				file(READ "${stubPath}" oldContent)
-			endif()
-			if(NOT oldContent STREQUAL stubContent)
-				file(WRITE "${stubPath}" "${stubContent}")
-			endif()
-			list(APPEND listNewStub "${stubPath}")
+			sw_writeLayerStub(listNewStub "${stubRoot}/${header}" "${stubContent}")
 		endforeach()
 	endforeach()
-	set(manifestPath "${stubRoot}.manifest")
-	if(EXISTS "${manifestPath}")
-		file(STRINGS "${manifestPath}" listOldStub)
-		if(listNewStub)
-			list(REMOVE_ITEM listOldStub ${listNewStub})
-		endif()
-		foreach(oldStub IN LISTS listOldStub)
-			file(REMOVE "${oldStub}")
-		endforeach()
-	endif()
-	string(REPLACE ";" "
-" manifestContent "${listNewStub}")
-	file(WRITE "${manifestPath}" "${manifestContent}
-")
-	target_include_directories(${PART} BEFORE PRIVATE "${stubRoot}")
+	sw_applyLayerStubs(${PART} "${stubRoot}" ${listNewStub})
 endfunction()
 
 # 링크 목록은 부분을 만들기 전에 한 번 읽는다 — `sw_addModulePart` 가 부분을 Engine 에 링크하므로 뒤에 읽으면 앞 부분이 섞인다.
@@ -406,7 +377,7 @@ foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
 endforeach()
 
 # ------------------------------------------------------------------------------
-# 10) RHI 백엔드 MODULE 플러그인 (DX는 Windows 전용, GL/Vulkan은 전 플랫폼) — Dev 만 짓는다. 런타임 로드라 링크하지 않는다.
+# 11) RHI 백엔드 MODULE 플러그인 (DX는 Windows 전용, GL/Vulkan은 전 플랫폼) — Dev 만 짓는다. 런타임 로드라 링크하지 않는다.
 # 백엔드 폴더 하나가 장치 소스와 모듈 엔트리(`<백엔드>/Module/` — CMakeLists · ModuleEntry · 매니페스트)를 함께 든다.
 # Shipping 은 모듈 엔트리를 짓지 않는다 — 소스 검사 게이트에 적는다.
 # ------------------------------------------------------------------------------

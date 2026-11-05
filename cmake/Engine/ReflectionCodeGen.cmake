@@ -3,6 +3,8 @@
 # @brief ReflectionParser로 .gen.cpp를 생성하는 CMake 코드젠 파이프라인
 # ==============================================================================
 
+include("${CMAKE_CURRENT_LIST_DIR}/ReflectionMacroScan.cmake")
+
 # ------------------------------------------------------------------------------
 # 0) 파서 타깃이 없을 때 — SW_REQUIRE_REFLECTION 이면 구성을 세우고, 아니면 경고 후 이 단계를 건너뛴다(OUT_VAR = ON 이면 건너뛸 것).
 # ------------------------------------------------------------------------------
@@ -47,9 +49,9 @@ function(sw_scanReflectionHeaders OUT_HEADERS OUT_OTHERS TARGET_NAME EXCLUDE_REG
 	set(listHeader "")
 	set(listOther "")
 	foreach(hdr IN LISTS listCandidateHeader)
-		file(STRINGS "${hdr}" listReflectLine REGEX "^[ \t]*(REFLECT\\(|ENUM\\(|REFLECT_CONTAINER\\()")
+		sw_hasReflectionMacro(bReflected "${hdr}")
 
-		if(listReflectLine)
+		if(bReflected)
 			list(APPEND listHeader "${hdr}")
 		else()
 			list(APPEND listOther "${hdr}")

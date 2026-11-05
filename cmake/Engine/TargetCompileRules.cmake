@@ -248,3 +248,41 @@ function(sw_verifyDeterministicMark TARGET_NAME ROLLBACK_HEADERS)
 			"but marks no deterministic sources - call sw_markDeterministicSources(${TARGET_NAME} <simulation .cpp files>) in its CMakeLists")
 	endif()
 endfunction()
+
+# ------------------------------------------------------------------------------
+# 층 경계 껍데기 — 아래 층 부분의 include 자리 맨 앞에, 위 층 헤더와 같은 경로의 `#error` 파일을 둔다. 아래 층이 위 층 헤더를 include 하면
+# (헤더를 거쳐 닿는 전이 include 도) 진짜 헤더 대신 껍데기를 찾아 컴파일이 멈춘다. Engine 층 · Editor 층이 함께 쓴다.
+#
+# sw_writeLayerStub: 내용이 같으면 쓰지 않는다(다시 짓지 않게). LIST_VAR 에 경로를 더한다.
+# sw_applyLayerStubs: 이번 구성이 쓰지 않은 옛 껍데기(사라진 헤더)를 지우고 PART 의 include 자리 맨 앞에 STUB_ROOT 를 둔다.
+# ------------------------------------------------------------------------------
+function(sw_writeLayerStub LIST_VAR STUB_PATH CONTENT)
+	set(oldContent "")
+	if(EXISTS "${STUB_PATH}")
+		file(READ "${STUB_PATH}" oldContent)
+	endif()
+	if(NOT oldContent STREQUAL CONTENT)
+		file(WRITE "${STUB_PATH}" "${CONTENT}")
+	endif()
+	list(APPEND ${LIST_VAR} "${STUB_PATH}")
+	set(${LIST_VAR} ${${LIST_VAR}} PARENT_SCOPE)
+endfunction()
+
+function(sw_applyLayerStubs PART STUB_ROOT)
+	set(listNewStub ${ARGN})
+	set(manifestPath "${STUB_ROOT}.manifest")
+	if(EXISTS "${manifestPath}")
+		file(STRINGS "${manifestPath}" listOldStub)
+		if(listNewStub)
+			list(REMOVE_ITEM listOldStub ${listNewStub})
+		endif()
+		foreach(oldStub IN LISTS listOldStub)
+			file(REMOVE "${oldStub}")
+		endforeach()
+	endif()
+	string(REPLACE ";" "
+" manifestContent "${listNewStub}")
+	file(WRITE "${manifestPath}" "${manifestContent}
+")
+	target_include_directories(${PART} BEFORE PRIVATE "${STUB_ROOT}")
+endfunction()
