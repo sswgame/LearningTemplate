@@ -163,3 +163,43 @@ SW_TEST_CASE( CompareUtilTest, LexicographicMixesDirections )
     SW_EXPECT_EQUAL( 1, listItem[2]._id );
     SW_EXPECT_EQUAL( 4, listItem[3]._id );
 }
+
+SW_TEST_CASE( VectorUtilTest, FindDuplicateReturnsTheLaterElement )
+{
+    const sw::vector<int32> listRepeated{ 1, 2, 3, 2, 3 };
+    const int32*            pDuplicate = sw::VectorUtil::findDuplicate( listRepeated );
+    SW_REQUIRE_NOT_NULL( pDuplicate );
+    SW_EXPECT_TRUE( pDuplicate == &listRepeated[3] );
+
+    const sw::vector<int32> listUnique{ 1, 2, 3 };
+    SW_EXPECT_TRUE( sw::VectorUtil::findDuplicate( listUnique ) == nullptr );
+    SW_EXPECT_TRUE( sw::VectorUtil::findDuplicate( sw::vector<int32>{} ) == nullptr );
+}
+
+namespace
+{
+    struct VectorUtilMemberTestItem
+    {
+        int32 _id{ 0 };
+        int32 _kind{ 0 };
+    };
+} // namespace
+
+SW_TEST_CASE( VectorUtilTest, MemberSearchesLookAtTheMember )
+{
+    const sw::vector<VectorUtilMemberTestItem> listItem{
+        {1, 7},
+        {2, 7},
+        {1, 8}
+    };
+    SW_EXPECT_EQUAL( sw::VectorUtil::countBy<&VectorUtilMemberTestItem::_kind>( listItem, 7 ), 2 );
+    SW_EXPECT_EQUAL( sw::VectorUtil::countBy<&VectorUtilMemberTestItem::_kind>( listItem, 9 ), 0 );
+
+    const VectorUtilMemberTestItem* pDuplicate = sw::VectorUtil::findDuplicateBy<&VectorUtilMemberTestItem::_id>( listItem );
+    SW_REQUIRE_NOT_NULL( pDuplicate );
+    SW_EXPECT_EQUAL( pDuplicate->_kind, 8 );
+    SW_EXPECT_TRUE( sw::VectorUtil::findDuplicateBy<&VectorUtilMemberTestItem::_kind>( sw::vector<VectorUtilMemberTestItem>{
+                        {1, 7},
+                        {2, 8}
+    } ) == nullptr );
+}

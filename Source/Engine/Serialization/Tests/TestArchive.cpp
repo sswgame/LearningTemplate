@@ -434,3 +434,51 @@ SW_TEST_CASE( ArchiveTest, VarIntAndZigZagBoundaryEncoding )
     SW_EXPECT_EQUAL( iNeg2Billion, outINeg2Billion );
     SW_EXPECT_EQUAL( iNegLarge, outINegLarge );
 }
+
+// 결함: 세이브 · 스냅숏의 NaN · 무한대를 그대로 읽어 키트마다 손으로 검사했고 빠뜨린 칸이 남았다 - 읽기 입구가 거절한다.
+SW_TEST_CASE( ArchiveTest, NonFiniteFloatsAreRefused )
+{
+    const float32 nan      = std::numeric_limits<float32>::quiet_NaN();
+    const float32 infinite = std::numeric_limits<float32>::infinity();
+
+    const auto refuses = []( auto written, auto read )
+    {
+        sw::Archive archive;
+        archive << written;
+        sw::Archive reading( archive.getData(), archive.getSize() );
+        reading >> read;
+        return reading.isError() && read == decltype( read ){};
+    };
+    SW_EXPECT_TRUE( refuses( nan, 1.0f ) );
+    SW_EXPECT_TRUE( refuses( -infinite, 1.0f ) );
+    SW_EXPECT_TRUE( refuses( std::numeric_limits<float64>::quiet_NaN(), 1.0 ) );
+    SW_EXPECT_TRUE( refuses( sw::float2{ 1.0f, nan }, sw::float2{} ) );
+    SW_EXPECT_TRUE( refuses( sw::float3{ 1.0f, 2.0f, infinite }, sw::float3{} ) );
+    SW_EXPECT_TRUE( refuses( sw::float4{ nan, 2.0f, 3.0f, 4.0f }, sw::float4{} ) );
+
+    // 오류는 끈적이다 - 뒤의 멀쩡한 값을 읽어도 풀리지 않는다.
+    sw::Archive archive;
+    archive << nan << 7.0f;
+    sw::Archive reading( archive.getData(), archive.getSize() );
+    float32     first  = 1.0f;
+    float32     second = 0.0f;
+    reading >> first >> second;
+    SW_EXPECT_TRUE( reading.isError() );
+}
+
+// 유한한 값은 경계까지 그대로 읽는다.
+SW_TEST_CASE( ArchiveTest, FiniteFloatsRoundTrip )
+{
+    sw::Archive archive;
+    archive << std::numeric_limits<float32>::max() << std::numeric_limits<float32>::denorm_min() << -0.0f << sw::float3{ 1.0f, -2.0f, 3.0f };
+    sw::Archive reading( archive.getData(), archive.getSize() );
+    float32     largest = 0.0f;
+    float32     tiny    = 0.0f;
+    float32     zero    = 1.0f;
+    sw::float3  vector{};
+    reading >> largest >> tiny >> zero >> vector;
+    SW_EXPECT_TRUE( reading.isOk() );
+    SW_EXPECT_EQUAL( largest, std::numeric_limits<float32>::max() );
+    SW_EXPECT_EQUAL( tiny, std::numeric_limits<float32>::denorm_min() );
+    SW_EXPECT_EQUAL( vector._y, -2.0f );
+}

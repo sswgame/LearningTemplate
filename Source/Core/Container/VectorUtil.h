@@ -183,6 +183,48 @@ namespace sw
             return findIndexBy<Member>( list, value ).has_value();
         }
 
+        /** @brief 멤버 @p Member 가 @p value 인 원소 수입니다. */
+        template <auto Member, typename TVector, typename TValue>
+        [[nodiscard]] static int32 countBy( const TVector& list, const TValue& value )
+        {
+            int32 count = 0;
+            for ( const auto& element : list )
+            {
+                count += element.*Member == value ? 1 : 0;
+            }
+            return count;
+        }
+
+        /** @brief 앞의 원소와 같은 첫 원소입니다. 겹침이 없으면 nullptr 입니다. 목록이 짧은 데이터 검사에 쓴다(제곱 시간). */
+        template <typename TVector>
+        [[nodiscard]] static const typename TVector::value_type* findDuplicate( const TVector& list )
+        {
+            for ( size_t index = 1; index < list.size(); ++index )
+            {
+                for ( size_t previous = 0; previous < index; ++previous )
+                {
+                    if ( list[previous] == list[index] )
+                        return &list[index];
+                }
+            }
+            return nullptr;
+        }
+
+        /** @brief 멤버 @p Member 가 앞의 원소와 같은 첫 원소입니다. 겹침이 없으면 nullptr 입니다. 정의 목록의 id 겹침을 찾는다. */
+        template <auto Member, typename TVector>
+        [[nodiscard]] static const typename TVector::value_type* findDuplicateBy( const TVector& list )
+        {
+            for ( size_t index = 1; index < list.size(); ++index )
+            {
+                for ( size_t previous = 0; previous < index; ++previous )
+                {
+                    if ( list[previous].*Member == list[index].*Member )
+                        return &list[index];
+                }
+            }
+            return nullptr;
+        }
+
         /**
          * @brief `predicate` 가 true 인 원소를 모두 지우고 지운 개수를 돌려줍니다. 남은 원소의 순서는 지킵니다(erase-remove, C++20 `std::erase_if`).
          * @details `list.erase( std::remove_if( ... ), list.end() )` 에서 `erase` 의 둘째 인자를 빠뜨리면 한 개만 지워지는데도 컴파일됩니다.

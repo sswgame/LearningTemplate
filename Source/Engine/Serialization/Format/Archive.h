@@ -362,6 +362,12 @@ namespace sw
          * @details 부른 쪽이 읽기를 마친 뒤 `isError` 를 본다(iostream 과 같은 관용). 연산자마다 결과를 검사하면 체인(`arch >> a >> b`)을 쓸 수 없다.
          *          버리는 자리가 이 함수 하나라 연산자들에 `(void)` 가 흩어지지 않는다.
          */
+        /**
+         * @brief 실수 @p count 개를 읽습니다. 유한하지 않은 값이 있으면 0 으로 두고 오류를 남깁니다 — `BitReader::readFiniteFloat` 와 같은 규칙이다.
+         * @details 아카이브는 세이브와 스냅숏을 읽는다. 쓰는 쪽은 유한한 값만 쓰므로 NaN · 무한대는 깨졌거나 꾸민 데이터다. NaN 체력은 죽지 않는 적이 되고 NaN 시간은 비교가 늘 거짓이다.
+         *          키트마다 손으로 검사하면 빠뜨린 칸이 남아 읽기 입구 하나에서 막는다.
+         */
+        void readFiniteFloats( float32* pOutValue, uint32 count );
         void readLatched( void* pOutBuffer, uint64 byteSize );
 
     private:

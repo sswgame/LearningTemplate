@@ -7,6 +7,7 @@
 #include "Core/Container/VarIntUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
@@ -428,15 +429,37 @@ namespace sw
         return *this;
     }
 
+    void Archive::readFiniteFloats( float32* pOutValue, uint32 count )
+    {
+        if ( readBytes( pOutValue, sizeof( float32 ) * count ) == false )
+            return;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            if ( MathUtil::isFinite( pOutValue[index] ) )
+                continue;
+            for ( uint32 clearIndex = 0; clearIndex < count; ++clearIndex )
+            {
+                pOutValue[clearIndex] = 0.0f;
+            }
+            _bError = SW_TRUE;
+            return;
+        }
+    }
+
     Archive& Archive::operator>>( float32& outData )
     {
-        readLatched( &outData, sizeof( float32 ) );
+        readFiniteFloats( &outData, 1 );
         return *this;
     }
 
     Archive& Archive::operator>>( float64& outData )
     {
         readLatched( &outData, sizeof( float64 ) );
+        if ( _bError == SW_FALSE && std::isfinite( outData ) == false )
+        {
+            outData = 0.0;
+            _bError = SW_TRUE;
+        }
         return *this;
     }
 
@@ -498,25 +521,26 @@ namespace sw
 
     Archive& Archive::operator>>( float2& outData )
     {
-        readLatched( &outData, sizeof( float2 ) );
+        readFiniteFloats( &outData._x, 2 );
         return *this;
     }
 
     Archive& Archive::operator>>( float3& outData )
     {
-        readLatched( &outData, sizeof( float3 ) );
+        readFiniteFloats( &outData._x, 3 );
         return *this;
     }
 
     Archive& Archive::operator>>( float4& outData )
     {
-        readLatched( &outData, sizeof( float4 ) );
+        readFiniteFloats( &outData._x, 4 );
         return *this;
     }
 
     Archive& Archive::operator>>( float4x4& outData )
     {
-        readLatched( &outData, sizeof( float4x4 ) );
+        static_assert( sizeof( float4x4 ) == sizeof( float32 ) * 16, "the matrix is read as sixteen floats" );
+        readFiniteFloats( reinterpret_cast<float32*>( &outData ), 16 );
         return *this;
     }
 
