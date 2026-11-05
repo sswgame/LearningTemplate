@@ -3,11 +3,9 @@
 #include "Editor/SelfTest/TestRunnerPanel.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
-#include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
-#include "Core/Log/LogLineFormat.h"
 #include "Core/String/fixed_string.h"
+#include "Core/Testing/TestRunner.h"
 
 #include "Editor/Common/GUI/Panel/EditorPanelManager.h"
 #include "Editor/Common/GUI/Theme/EditorThemeUtil.h"
@@ -36,30 +34,12 @@ namespace sw::editor
         {
             /** @brief 외부 실행 출력 가운데 보이는 끝 줄 수입니다. */
             static constexpr uint32 kVisibleTailLineCount = 40;
-            /** @brief 시나리오 파일 꼬리입니다. */
-            static constexpr const utf8* kScenarioSuffix = ".scenario.xml";
-            /** @brief 시나리오가 있는 폴더 이름입니다(`<영역>/automation/`). */
-            static constexpr const utf8* kAutomationFolder = "/automation/";
-            /** @brief 에디터 시나리오 폴더입니다 — 이 아래는 `-EnableEditor` 로 띄운다. */
 
             static const ImVec4 kPassColor;
             static const ImVec4 kFailColor;
 
             /** @brief 이 실행 파일이 있는 폴더(Bin)입니다. 테스트 실행 파일 · 시나리오 실행의 작업 폴더입니다. */
             static string getBinDirectory() { return FileUtil::getDirectoryPart( FileUtil::getExecutablePath() ); }
-
-            /** @brief 출력의 Error 수준 로그 줄 수입니다(쓰는 쪽과 같은 모양으로 읽는다 — `LogLineFormat`). */
-            static uint32 countErrorLines( const vector<string>& listLine )
-            {
-                uint32        count{ 0 };
-                ParsedLogLine parsed;
-                for ( const string& line : listLine )
-                {
-                    if ( LogLineFormat::tryParse( line, parsed ) && parsed._level == LogLevel::Error )
-                        ++count;
-                }
-                return count;
-            }
 
             /** @brief 지금 백엔드의 App 명령줄 플래그(`-dx12` …)입니다. 모르면 빈 글이라 App 이 설정의 기본 백엔드로 뜬다. */
             static string makeBackendArgument()
@@ -84,22 +64,19 @@ namespace sw::editor
     TestRunnerPanel::TestRunnerPanel()
         : IEditorPanel( false )
         , _pJob{ make_unique<EditorExternalToolJob>() }
-        , _uniqueSelectedSelfTest{}
-        , _uniqueSelectedUnitTest{}
-        , _listScenarioPath{}
-        , _listTestExecutablePath{}
-        , _listUnitTestName{}
+        , _selfTests{}
+        , _unitTests{}
+        , _scenarios{}
         , _listUnitTestResult{}
         , _listExternalLine{}
         , _externalTitle{}
         , _arrFilter{}
         , _externalExitCode{ 0 }
         , _externalErrorCount{ 0 }
-        , _selectedScenarioIndex{ kNoSelection }
-        , _selectedExecutableIndex{ kNoSelection }
+        , _selfTestGeneration{ 0 }
         , _externalRunKind{ ExternalRunKind::None }
         , _bScenarioListDirty{ SW_TRUE }
-        , _bExecutableListDirty{ SW_TRUE }
+        , _bUnitTestListDirty{ SW_TRUE }
         , _bExternalLaunched{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -137,34 +114,33 @@ namespace sw::editor
 
     void TestRunnerPanel::drawSelfTestTab()
     {
-        using Registry = EditorExtensionRegistry<EditorSelfTestRegistration>;
-        ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDPIScale() );
-        (void)EditorWidgets::drawHintField( "##SelfTestFilter", _arrFilter, sizeof( _arrFilter ), "Filter tests...", "testRunner.filter" );
-        const string_view filter( _arrFilter );
-
-        // 고른 것 · 맞는 것 모두를 패턴(쉼표로 이은 id)으로 만든다 — 실행기는 패턴만 받는다.
-        string selectedPattern;
-        string allPattern;
-        for ( uint32 index = 0; index < Registry::getCount(); ++index )
+        using Registry          = EditorExtensionRegistry<EditorSelfTestRegistration>;
+        const uint32 generation = Registry::getList().getGeneration();
+        if ( generation != _selfTestGeneration )
         {
-            const utf8* pID = Registry::getAt( index )._pID;
-            if ( filter.empty() == false && StringUtil::contains( pID, filter, true ) == false )
-                continue;
-            allPattern += ( allPattern.empty() ? "" : "," ) + string( pID );
-            if ( _uniqueSelectedSelfTest.count( pID ) != 0 )
-                selectedPattern += ( selectedPattern.empty() ? "" : "," ) + string( pID );
+            _selfTestGeneration = generation;
+            vector<string> listID;
+            for ( uint32 index = 0; index < Registry::getCount(); ++index )
+            {
+                listID.push_back( Registry::getAt( index )._pID );
+            }
+            _selfTests.setCases( std::move( listID ) );
         }
 
+        ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDPIScale() );
+        (void)EditorWidgets::drawHintField( "##SelfTestFilter", _arrFilter, sizeof( _arrFilter ), "Filter tests...", "testRunner.filter" );
+        _selfTests.setFilter( _arrFilter );
+
         ImGui::SameLine();
-        ImGui::BeginDisabled( selectedPattern.empty() );
+        ImGui::BeginDisabled( _selfTests.getSelectedPattern().empty() );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RunSelected" ) ) )
-            (void)EditorSelfTestRunner::requestRun( selectedPattern, false ); // 버튼은 실행 중에 회색이다 — 거절될 일이 없다
+            (void)EditorSelfTestRunner::requestRun( _selfTests.getSelectedPattern(), false ); // 버튼은 실행 중에 회색이다 — 거절될 일이 없다
         EditorSelfTestMarks::note( "testRunner.runSelected" );
         ImGui::EndDisabled();
         ImGui::SameLine();
-        ImGui::BeginDisabled( allPattern.empty() );
+        ImGui::BeginDisabled( _selfTests.getVisiblePattern().empty() );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RunAll" ) ) )
-            (void)EditorSelfTestRunner::requestRun( allPattern, false ); // 위와 같다
+            (void)EditorSelfTestRunner::requestRun( _selfTests.getVisiblePattern(), false ); // 위와 같다
         ImGui::EndDisabled();
         ImGui::SameLine();
         if ( EditorSelfTestRunner::isRunning() )
@@ -175,49 +151,31 @@ namespace sw::editor
         const vector_reference<const EditorSelfTestResult> listResult = EditorSelfTestRunner::getResults();
         if ( ImGui::BeginChild( "##SelfTestList", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders ) )
         {
-            string_view openGroup;
-            bool        bGroupOpen{ false };
-            for ( uint32 index = 0; index < Registry::getCount(); ++index )
+            for ( const EditorTestGroup& group : _selfTests.getGroups() )
             {
-                const utf8*       pID   = Registry::getAt( index )._pID;
-                const string_view group = EditorTestOutputParser::findSuiteName( pID );
-                if ( filter.empty() == false && StringUtil::contains( pID, filter, true ) == false )
+                if ( ImGui::TreeNodeEx( group._name.c_str(), ImGuiTreeNodeFlags_DefaultOpen ) == false )
                     continue;
-                if ( group != openGroup || index == 0 )
+                for ( const uint32 index : group._listCaseIndex )
                 {
-                    if ( bGroupOpen )
-                        ImGui::TreePop();
-                    openGroup  = group;
-                    bGroupOpen = ImGui::TreeNodeEx( string( group ).c_str(), ImGuiTreeNodeFlags_DefaultOpen );
+                    const string& id = _selfTests.getCases()[index];
+                    // 묶음 아래 줄은 뒷이름만 — 묶음 이름을 되풀이하면("theme" 아래 "theme.palette") 줄이 길고 훑기 어렵다(uiaudit 30). 전체 이름은 툴팁과 ID 에 남는다.
+                    const string label     = string( EditorTestSelection::findLeafName( id ) ) + "##" + id;
+                    bool         bSelected = _selfTests.isSelected( id );
+                    if ( ImGui::Checkbox( label.c_str(), &bSelected ) )
+                        _selfTests.setSelected( id, bSelected );
+                    EditorWidgets::drawTooltip( id.c_str() );
+                    const string markKey = "testRunner.select." + id;
+                    EditorSelfTestMarks::note( markKey.c_str() );
+                    for ( const EditorSelfTestResult& result : listResult )
+                    {
+                        if ( result._id != id )
+                            continue;
+                        ImGui::SameLine();
+                        ImGui::TextColored( result._bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "Frames2", TextArgumentList().addText( "result", result._bPassed ? "pass" : "fail" ).addInteger( "frameCount", static_cast<int64>( result._frameCount ) ).addText( "hasReason", result._reason.empty() ? "no" : "yes" ).addText( "reason", result._reason ) ).c_str() );
+                    }
                 }
-                if ( bGroupOpen == false )
-                    continue;
-
-                // 묶음 아래 줄은 뒷이름만 — 묶음 이름을 되풀이하면("theme" 아래 "theme.palette") 줄이 길고 훑기 어렵다(uiaudit 30). 전체 이름은 툴팁과 ID 에 남는다.
-                const string_view id        = pID;
-                const string_view leafName  = id.size() > group.size() + 1 && id.substr( 0, group.size() ) == group ? id.substr( group.size() + 1 ) : id;
-                const string      label     = string( leafName ) + "##" + pID;
-                bool              bSelected = _uniqueSelectedSelfTest.count( pID ) != 0;
-                if ( ImGui::Checkbox( label.c_str(), &bSelected ) )
-                {
-                    if ( bSelected )
-                        _uniqueSelectedSelfTest.insert( pID );
-                    else
-                        _uniqueSelectedSelfTest.erase( pID );
-                }
-                EditorWidgets::drawTooltip( pID );
-                const string markKey = string( "testRunner.select." ) + pID;
-                EditorSelfTestMarks::note( markKey.c_str() );
-                for ( const EditorSelfTestResult& result : listResult )
-                {
-                    if ( result._id != pID )
-                        continue;
-                    ImGui::SameLine();
-                    ImGui::TextColored( result._bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s", SW_LOCKEYFORMAT( "EdFormat", "Frames2", TextArgumentList().addText( "result", result._bPassed ? "pass" : "fail" ).addInteger( "frameCount", static_cast<int64>( result._frameCount ) ).addText( "hasReason", result._reason.empty() ? "no" : "yes" ).addText( "reason", result._reason ) ).c_str() );
-                }
-            }
-            if ( bGroupOpen )
                 ImGui::TreePop();
+            }
         }
         ImGui::EndChild();
     }
@@ -227,36 +185,19 @@ namespace sw::editor
         if ( _bScenarioListDirty == SW_TRUE )
         {
             _bScenarioListDirty = SW_FALSE;
-            _listScenarioPath.clear();
             const string&  root = editor::getSubsystem<AssetPaths>().getRootFolderPath();
             vector<string> listFilePath;
-            if ( FileUtil::collectFiles( root, ".xml", listFilePath, true ) )
-            {
-                for ( const string& filePath : listFilePath )
-                {
-                    string relative = filePath;
-                    if ( StringUtil::startsWith( relative, root ) )
-                        relative.erase( 0, root.size() );
-                    StringUtil::replaceChar( relative, '\\', '/' );
-                    while ( relative.empty() == false && relative[0] == '/' )
-                    {
-                        relative.erase( 0, 1 );
-                    }
-                    const bool bScenario = StringUtil::endsWith( relative, TestRunnerPanelInternal::kScenarioSuffix ) &&
-                                           relative.find( TestRunnerPanelInternal::kAutomationFolder ) != string::npos;
-                    if ( bScenario )
-                        _listScenarioPath.push_back( relative );
-                }
-            }
-            VectorUtil::sort( _listScenarioPath );
+            if ( FileUtil::collectFiles( root, ".xml", listFilePath, true ) == false )
+                listFilePath.clear(); // 도중에 멈춘 목록을 전부로 보이지 않는다
+            _scenarios.setFromFiles( listFilePath, root );
         }
 
         const bool bBusy           = _pJob->isPending();
-        const bool bScenarioChosen = _selectedScenarioIndex < _listScenarioPath.size();
+        const bool bScenarioChosen = _scenarios.getChosen().empty() == false;
         ImGui::BeginDisabled( bBusy || bScenarioChosen == false );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RunScenario" ) ) && bScenarioChosen )
         {
-            const string& scenarioPath = _listScenarioPath[_selectedScenarioIndex];
+            const string& scenarioPath = _scenarios.getChosen();
             // 에디터 상태 폴더는 주지 않는다 — 시나리오 실행은 자식 프로세스가 자기 폴더를 비우고 쓴다(`EditorPaths::prepareAutomationStateDirectory`).
             const std::optional<AbsolutePath> executable      = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
             ProcessCommand                    command         = executable.has_value() ? ProcessCommand::at( *executable, {} ) : ProcessCommand{};
@@ -277,10 +218,10 @@ namespace sw::editor
 
         if ( ImGui::BeginChild( "##ScenarioList", ImVec2{ 0.0f, ImGui::GetContentRegionAvail().y * 0.5f }, ImGuiChildFlags_Borders ) )
         {
-            for ( uint32 index = 0; index < static_cast<uint32>( _listScenarioPath.size() ); ++index )
+            for ( const string& path : _scenarios.getPaths() )
             {
-                if ( ImGui::Selectable( _listScenarioPath[index].c_str(), _selectedScenarioIndex == index ) )
-                    _selectedScenarioIndex = index;
+                if ( ImGui::Selectable( path.c_str(), _scenarios.getChosen() == path ) )
+                    _scenarios.choose( path );
             }
         }
         ImGui::EndChild();
@@ -288,68 +229,18 @@ namespace sw::editor
             drawExternalOutput();
     }
 
-    void TestRunnerPanel::refreshExecutableList( const string& binDirectory )
+    void TestRunnerPanel::drawRunSelectedCasesButton( bool bBusy )
     {
-        if ( _bExecutableListDirty != SW_TRUE )
-            return;
-        _bExecutableListDirty = SW_FALSE;
-        _listTestExecutablePath.clear();
-        vector<string> listFilePath;
-        if ( FileUtil::collectFiles( FileUtil::joinPath( binDirectory, "../TestBin" ), ".exe", listFilePath, false ) )
+        const string& filter = _unitTests.getSelectedPattern();
+        ImGui::BeginDisabled( bBusy || filter.empty() );
+        if ( ImGui::Button( SW_LOCKEY( "EdText", "RunSelectedCases" ) ) )
         {
-            for ( const string& filePath : listFilePath )
-            {
-                if ( StringUtil::endsWith( FileUtil::getFileNamePart( filePath ), "Test.exe" ) )
-                    _listTestExecutablePath.push_back( filePath );
-            }
-        }
-        VectorUtil::sort( _listTestExecutablePath );
-    }
-
-    void TestRunnerPanel::drawExecutableCombo( const string& binDirectory, bool bBusy, bool bExecutableChosen )
-    {
-        ImGui::SetNextItemWidth( 220.0f * EditorThemeUtil::getDPIScale() );
-        const utf8* pPreview = bExecutableChosen ? _listTestExecutablePath[_selectedExecutableIndex].c_str() : "Choose a test executable";
-        if ( ImGui::BeginCombo( "##TestExecutable", pPreview ) == false )
-            return;
-        for ( uint32 index = 0; index < static_cast<uint32>( _listTestExecutablePath.size() ); ++index )
-        {
-            const string fileName = FileUtil::getFileNamePart( _listTestExecutablePath[index] );
-            if ( ImGui::Selectable( fileName.c_str(), _selectedExecutableIndex == index ) && bBusy == false )
-            {
-                // 케이스 목록은 실행 파일에 묻는다(--test_list) — 필터를 적용한 목록이라 지금 고를 수 있는 것과 같다.
-                _selectedExecutableIndex = index;
-                _listUnitTestName.clear();
-                _uniqueSelectedUnitTest.clear();
-                const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( _listTestExecutablePath[index] );
-                if ( executable.has_value() && _pJob->request( ProcessCommand::at( *executable, { "--test_list" } ), binDirectory ) )
-                {
-                    _externalRunKind = ExternalRunKind::UnitTestList;
-                    _externalTitle   = fileName + " --test_list";
-                }
-            }
-        }
-        ImGui::EndCombo();
-    }
-
-    void TestRunnerPanel::drawRunSelectedCasesButton( const string& binDirectory, bool bBusy, bool bExecutableChosen )
-    {
-        ImGui::BeginDisabled( bBusy || _uniqueSelectedUnitTest.empty() || bExecutableChosen == false );
-        if ( ImGui::Button( SW_LOCKEY( "EdText", "RunSelectedCases" ) ) && bExecutableChosen )
-        {
-            vector<string> listCase;
-            for ( const string& name : _listUnitTestName )
-            {
-                if ( _uniqueSelectedUnitTest.count( name ) != 0 )
-                    listCase.push_back( name );
-            }
-            const string filter = EditorTestOutputParser::makeFilter( listCase );
             // 작업 폴더는 Bin 이다 — 테스트는 거기서 위로 올라가며 Content/ 를 찾는다(CLAUDE.md 의 테스트 실행 규칙).
-            const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( _listTestExecutablePath[_selectedExecutableIndex] );
-            if ( executable.has_value() && _pJob->request( ProcessCommand::at( *executable, { "--test_filter=" + filter } ), binDirectory ) )
+            const std::optional<AbsolutePath> executable = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
+            if ( executable.has_value() && _pJob->request( ProcessCommand::at( *executable, EditorTestOutputParser::makeUnitTestArguments( filter ) ), TestRunnerPanelInternal::getBinDirectory() ) )
             {
                 _externalRunKind = ExternalRunKind::UnitTestRun;
-                _externalTitle   = FileUtil::getFileNamePart( _listTestExecutablePath[_selectedExecutableIndex] ) + " --test_filter=" + filter;
+                _externalTitle   = "App -test -test-filter=" + filter;
             }
         }
         ImGui::EndDisabled();
@@ -359,67 +250,47 @@ namespace sw::editor
     {
         if ( ImGui::BeginChild( "##UnitTestList", ImVec2{ 0.0f, ImGui::GetContentRegionAvail().y * 0.5f }, ImGuiChildFlags_Borders ) )
         {
-            string_view openSuite;
-            bool        bSuiteOpen{ false };
-            for ( size_t index = 0; index < _listUnitTestName.size(); ++index )
+            for ( const EditorTestGroup& group : _unitTests.getGroups() )
             {
-                const string&     name  = _listUnitTestName[index];
-                const string_view suite = EditorTestOutputParser::findSuiteName( name );
-                if ( suite != openSuite || index == 0 )
-                {
-                    if ( bSuiteOpen )
-                        ImGui::TreePop();
-                    openSuite  = suite;
-                    bSuiteOpen = ImGui::TreeNode( string( suite ).c_str() );
-                }
-                if ( bSuiteOpen == false )
+                if ( ImGui::TreeNode( group._name.c_str() ) == false )
                     continue;
-                bool bSelected = _uniqueSelectedUnitTest.count( name ) != 0;
-                if ( ImGui::Checkbox( name.c_str(), &bSelected ) )
+                for ( const uint32 index : group._listCaseIndex )
                 {
-                    if ( bSelected )
-                        _uniqueSelectedUnitTest.insert( name );
-                    else
-                        _uniqueSelectedUnitTest.erase( name );
+                    const string& name      = _unitTests.getCases()[index];
+                    bool          bSelected = _unitTests.isSelected( name );
+                    if ( ImGui::Checkbox( name.c_str(), &bSelected ) )
+                        _unitTests.setSelected( name, bSelected );
+                    for ( const EditorTestCaseResult& result : _listUnitTestResult )
+                    {
+                        if ( result._name != name )
+                            continue;
+                        ImGui::SameLine();
+                        ImGui::TextColored( result.isPassed() ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s %.1f ms", result.getStateText(), static_cast<float64>( result._milliseconds ) );
+                    }
                 }
-                for ( const EditorTestCaseResult& result : _listUnitTestResult )
-                {
-                    if ( result._name != name )
-                        continue;
-                    const bool bPassed = result._state == EditorTestCaseState::Passed || result._state == EditorTestCaseState::Skipped;
-                    ImGui::SameLine();
-                    ImGui::TextColored( bPassed ? TestRunnerPanelInternal::kPassColor : TestRunnerPanelInternal::kFailColor, "%s %.1f ms",
-                                        result._state == EditorTestCaseState::Passed    ? "OK"
-                                        : result._state == EditorTestCaseState::Skipped ? "SKIPPED"
-                                        : result._state == EditorTestCaseState::Failed  ? "FAILED"
-                                                                                        : "DID NOT FINISH",
-                                        static_cast<float64>( result._milliseconds ) );
-                }
-            }
-            if ( bSuiteOpen )
                 ImGui::TreePop();
+            }
         }
         ImGui::EndChild();
     }
 
     void TestRunnerPanel::drawUnitTestTab()
     {
-        const string binDirectory = TestRunnerPanelInternal::getBinDirectory();
-        refreshExecutableList( binDirectory );
+        // 케이스는 이 프로세스의 등록에서 읽는다 — 테스트는 App 안에 있다(`App -test`, 따로 있던 `TestBin/*Test.exe` 는 없앴다).
+        // shortcut: 에디터 모듈의 케이스도 목록에 들지만 자식 `App -test` 에는 등록되지 않아 돌지 않는다(그 케이스는 자체 테스트 `editor.unitTests` 가 돌린다), `TestRunner::collectCaseNames` 가 소스 폴더를 받으면 거른다.
+        if ( _bUnitTestListDirty == SW_TRUE )
+        {
+            _bUnitTestListDirty = SW_FALSE;
+            _unitTests.setCases( test::TestRunner::collectCaseNames() );
+        }
 
-        const bool bBusy             = _pJob->isPending();
-        const bool bExecutableChosen = _selectedExecutableIndex < _listTestExecutablePath.size();
-        drawExecutableCombo( binDirectory, bBusy, bExecutableChosen );
-        ImGui::SameLine();
-        drawRunSelectedCasesButton( binDirectory, bBusy, bExecutableChosen );
+        drawRunSelectedCasesButton( _pJob->isPending() );
         ImGui::SameLine();
         if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Refresh" ) ) )
-            _bExecutableListDirty = SW_TRUE;
-        if ( _listTestExecutablePath.empty() )
-            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoTestExeNextToThisBuildBuild" ) );
+            _bUnitTestListDirty = SW_TRUE;
 
         drawUnitTestList();
-        if ( _externalRunKind == ExternalRunKind::UnitTestRun || _externalRunKind == ExternalRunKind::UnitTestList )
+        if ( _externalRunKind == ExternalRunKind::UnitTestRun )
             drawExternalOutput();
     }
 
@@ -431,10 +302,8 @@ namespace sw::editor
         _listExternalLine   = std::move( result._listLine );
         _externalExitCode   = result._exitCode;
         _bExternalLaunched  = result._bLaunched ? SW_TRUE : SW_FALSE;
-        _externalErrorCount = TestRunnerPanelInternal::countErrorLines( _listExternalLine );
-        if ( _externalRunKind == ExternalRunKind::UnitTestList )
-            EditorTestOutputParser::collectTestNames( _listExternalLine, _listUnitTestName );
-        else if ( _externalRunKind == ExternalRunKind::UnitTestRun )
+        _externalErrorCount = EditorTestOutputParser::countErrorLines( _listExternalLine );
+        if ( _externalRunKind == ExternalRunKind::UnitTestRun )
             EditorTestOutputParser::collectResults( _listExternalLine, _listUnitTestResult );
     }
 

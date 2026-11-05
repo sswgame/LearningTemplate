@@ -4,7 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
+#include "Core/Log/LogLineFormat.h"
 
 namespace sw::editor
 {
@@ -12,14 +12,13 @@ namespace sw::editor
     {
         struct EditorTestOutputParserInternal
         {
-            static constexpr string_view kRunPrefix        = "[ RUN      ] ";
-            static constexpr string_view kOkPrefix         = "[       OK ] ";
-            static constexpr string_view kFailedPrefix     = "[  FAILED  ] ";
-            static constexpr string_view kSkippedPrefix    = "[  SKIPPED ] ";
-            static constexpr string_view kHostSuitesPrefix = "Host suites";
-            static constexpr string_view kRepeatPrefix     = "Repeating all tests (iteration ";
+            static constexpr string_view kRunPrefix     = "[ RUN      ] ";
+            static constexpr string_view kOkPrefix      = "[       OK ] ";
+            static constexpr string_view kFailedPrefix  = "[  FAILED  ] ";
+            static constexpr string_view kSkippedPrefix = "[  SKIPPED ] ";
+            static constexpr string_view kRepeatPrefix  = "Repeating all tests (iteration ";
 
-            /** @brief 케이스 이름 형태(`이름.이름` — 영문자 · 숫자 · 밑줄, 점 하나)인지입니다. */
+            /** @brief 케이스 이름 형태(`이름.이름` — 영문자 · 숫자 · 밑줄, 점 하나, 매개변수 케이스의 `/번호`)인지입니다. */
             static bool isCaseName( string_view text )
             {
                 const size_t dot                  = text.find( '.' );
@@ -29,7 +28,7 @@ namespace sw::editor
                 for ( const utf8 character : text )
                 {
                     const bool bWordCharacter = ( 'a' <= character && character <= 'z' ) || ( 'A' <= character && character <= 'Z' ) ||
-                                                ( '0' <= character && character <= '9' ) || character == '_' || character == '.';
+                                                ( '0' <= character && character <= '9' ) || character == '_' || character == '.' || character == '/';
                     if ( bWordCharacter == false )
                         return false;
                 }
@@ -70,24 +69,20 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void EditorTestOutputParser::collectTestNames( const vector<string>& listLine, vector<string>& outListName )
+    const utf8* EditorTestCaseResult::getStateText() const
     {
-        outListName.clear();
-        for ( const string& rawLine : listLine )
+        switch ( _state )
         {
-            const string_view line = StringUtil::trimEnd( rawLine );
-            if ( StringUtil::startsWith( line, EditorTestOutputParserInternal::kHostSuitesPrefix ) )
+            case EditorTestCaseState::Passed:
+                return "OK";
+            case EditorTestCaseState::Skipped:
+                return "SKIPPED";
+            case EditorTestCaseState::Failed:
+                return "FAILED";
+            case EditorTestCaseState::Running:
                 break;
-            // 케이스 줄은 공백 두 개로 들여 쓴 이름 하나다(로그로 같이 나오는 줄은 앞에 시각 · 태그가 붙어 걸리지 않는다).
-            if ( StringUtil::startsWith( line, "  " ) == false )
-                continue;
-            const string_view name = StringUtil::trim( line );
-            if ( EditorTestOutputParserInternal::isCaseName( name ) == false )
-                continue;
-            const string nameText( name );
-            if ( VectorUtil::contains( outListName, nameText ) == false )
-                outListName.push_back( nameText );
         }
+        return "DID NOT FINISH";
     }
 
     void EditorTestOutputParser::collectResults( const vector<string>& listLine, vector<EditorTestCaseResult>& outListResult )
@@ -165,15 +160,21 @@ namespace sw::editor
         return listArgument;
     }
 
-    string EditorTestOutputParser::makeFilter( const vector<string>& listCase )
+    uint32 EditorTestOutputParser::countErrorLines( const vector<string>& listLine )
     {
-        string filter;
-        for ( const string& caseName : listCase )
+        uint32        count{ 0 };
+        ParsedLogLine parsed;
+        for ( const string& line : listLine )
         {
-            if ( filter.empty() == false )
-                filter += ":";
-            filter += caseName;
+            if ( LogLineFormat::tryParse( line, parsed ) && parsed._level == LogLevel::Error )
+                ++count;
         }
-        return filter;
+        return count;
+    }
+
+    vector<string> EditorTestOutputParser::makeUnitTestArguments( string_view filter )
+    {
+        return { "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::TEST ) ),
+                 "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::TEST_FILTER ) ) + "=" + string( filter ) };
     }
 } // namespace sw::editor
