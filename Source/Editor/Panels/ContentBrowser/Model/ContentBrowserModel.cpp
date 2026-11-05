@@ -146,8 +146,10 @@ namespace sw::editor
         , _selectedFolderAbs{}
         , _listCrumb{}
         , _selectedAssetAbs{}
+        , _importFolderAbs{}
         , _history{}
         , _fileActions{}
+        , _pendingMoves{}
         , _referenceSearch{}
         , _importQueue{}
         , _typeFilter{}
@@ -445,7 +447,16 @@ namespace sw::editor
 
     bool ContentBrowserModel::beginRename( string_view absolutePath, string& outStem )
     {
-        return _fileActions.beginRename( absolutePath, outStem );
+        const bool bStarted = _fileActions.beginRename( absolutePath, outStem );
+        if ( bStarted )
+            _pendingMoves.discardRename();
+        return bStarted;
+    }
+
+    void ContentBrowserModel::cancelRename()
+    {
+        _fileActions.cancelRename();
+        _pendingMoves.discardRename();
     }
 
     EditorReferenceIndex* ContentBrowserModel::findCurrentReferenceIndex()
@@ -455,10 +466,10 @@ namespace sw::editor
 
     void ContentBrowserModel::applyPendingMove()
     {
-        if ( _pendingMove.has_value() == false || findCurrentReferenceIndex() == nullptr )
+        // 옮기기 하나가 역색인을 다시 읽게 하므로 다음 옮기기는 역색인이 다시 따라온 뒤에 돈다.
+        ContentBrowserMoveQueue::Move move;
+        if ( _pendingMoves.isEmpty() || findCurrentReferenceIndex() == nullptr || _pendingMoves.takeNext( move ) == false )
             return;
-        const PendingMove move = std::move( *_pendingMove );
-        _pendingMove.reset();
         if ( move._bRename )
             (void)commitRename( move._newName ); // 실패(이름 규칙 · 이미 있음)는 moveAsset 이 알린다
         else
@@ -470,7 +481,7 @@ namespace sw::editor
         EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
         if ( pIndex == nullptr )
         {
-            _pendingMove = PendingMove{ true, string( newName ), string{}, string{} };
+            _pendingMoves.addRename( newName );
             SW_LOG_INFO_ID( "ContentBrowserModel.MoveWaitsForReferenceIndex", "Rename waits for the reference index to catch up with the last file change" );
             return true;
         }
@@ -492,7 +503,7 @@ namespace sw::editor
         EditorReferenceIndex* pIndex = findCurrentReferenceIndex();
         if ( pIndex == nullptr )
         {
-            _pendingMove = PendingMove{ false, string{}, string( sourceAbs ), string( folderAbs ) };
+            _pendingMoves.addMove( sourceAbs, folderAbs );
             SW_LOG_INFO_ID( "ContentBrowserModel.MoveWaitsForReferenceIndex", "Move waits for the reference index to catch up with the last file change" );
             return true;
         }
@@ -521,7 +532,8 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "ContentBrowserModel.SelectDestinationFolderBefore", "Select a destination folder before importing." );
             return;
         }
-        _importQueue.openDialog( _selectedFolderAbs );
+        _importFolderAbs = _selectedFolderAbs;
+        _importQueue.openDialog( _importFolderAbs );
     }
 
     void ContentBrowserModel::processPendingImports()
@@ -529,12 +541,12 @@ namespace sw::editor
         vector<string> listPath;
         if ( _importQueue.takePending( listPath ) == false )
             return;
-        if ( _selectedFolderAbs.empty() )
+        if ( _importFolderAbs.empty() )
         {
             SW_LOG_WARNING_ID( "ContentBrowserModel.ImportCancelledNoDestination", "Import cancelled — no destination folder." );
             return;
         }
-        if ( EditorAssetFileCommands::importFiles( _selectedFolderAbs, listPath ) > 0 )
+        if ( EditorAssetFileCommands::importFiles( _importFolderAbs, listPath ) > 0 )
             _bFolderDirty = SW_TRUE;
     }
 

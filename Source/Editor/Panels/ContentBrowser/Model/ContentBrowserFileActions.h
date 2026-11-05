@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
 namespace sw::editor
@@ -11,6 +12,41 @@ namespace sw::editor
     struct EditorNewAssetTemplate;
 
     class EditorReferenceIndex;
+} // namespace sw::editor
+
+namespace sw::editor
+{
+    /**
+     * @class ContentBrowserMoveQueue
+     * @brief 참조 역색인이 따라오기를 기다리는 옮기기들입니다. 옮기기 하나가 끝나면 역색인을 다시 읽으므로, 그동안 온 옮기기는 차례로 줄을 선다.
+     * @details 이름 바꾸기는 지금 입력란의 것 하나뿐이다(다시 Enter 하면 새 이름으로 바뀌고, 취소하거나 다른 에셋을 시작하면 버린다 — 남겨 두면 다음 에셋에 그 이름이 붙는다).
+     *          한 에셋을 또 옮기면 나중 목적지만 남는다(먼저 옮기면 나중 옮기기의 원본이 사라진다).
+     */
+    class ContentBrowserMoveQueue
+    {
+    public:
+        /** @brief 기다리는 옮기기 하나입니다. 이름 바꾸기면 `_newName`, 폴더로 옮기기면 `_sourceAbs` · `_folderAbs` 입니다. */
+        struct Move
+        {
+            bool   _bRename{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+            string _newName{};
+            string _sourceAbs{};
+            string _folderAbs{};
+        };
+
+        ContentBrowserMoveQueue();
+
+        void addRename( string_view newName );
+        void addMove( string_view sourceAbs, string_view folderAbs );
+        /** @brief 기다리는 이름 바꾸기를 버립니다. */
+        void discardRename();
+        /** @brief 가장 먼저 온 옮기기를 꺼냅니다. 없으면 false 입니다. */
+        [[nodiscard]] bool takeNext( Move& outMove );
+        bool               isEmpty() const { return _listMove.empty(); }
+
+    private:
+        vector<Move> _listMove;
+    };
 } // namespace sw::editor
 
 namespace sw::editor

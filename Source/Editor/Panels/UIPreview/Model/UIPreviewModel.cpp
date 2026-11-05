@@ -230,6 +230,8 @@ namespace sw::editor
         _bPointerPressed    = SW_FALSE;
         _bNavigationMode    = SW_FALSE;
         _bApplyLocalization = SW_TRUE;
+        _bAwaitReload       = SW_FALSE; // 닫은 화면의 저장을 기다리지 않는다 - 새 화면의 핫 리로드를 "저장 뒤 다시 읽음" 으로 세지 않게
+        _bAnimationPaused   = SW_FALSE; // 재생기는 화면과 함께 사라졌다 - 멈춤 표시만 남지 않게
         ++_generation;
         _listBaseline.clear();
         setDirty( false );

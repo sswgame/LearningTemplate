@@ -3,6 +3,7 @@
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 
@@ -11,6 +12,51 @@
 
 namespace sw::editor
 {
+    ContentBrowserMoveQueue::ContentBrowserMoveQueue()
+        : _listMove{}
+    {
+    }
+
+    void ContentBrowserMoveQueue::addRename( string_view newName )
+    {
+        discardRename();
+        Move move;
+        move._bRename = true;
+        move._newName = string( newName );
+        _listMove.push_back( std::move( move ) );
+    }
+
+    void ContentBrowserMoveQueue::addMove( string_view sourceAbs, string_view folderAbs )
+    {
+        for ( Move& move : _listMove )
+        {
+            if ( move._bRename == false && FileUtil::pathsEqualNormalized( move._sourceAbs, sourceAbs ) )
+            {
+                move._folderAbs = string( folderAbs );
+                return;
+            }
+        }
+        Move move;
+        move._sourceAbs = string( sourceAbs );
+        move._folderAbs = string( folderAbs );
+        _listMove.push_back( std::move( move ) );
+    }
+
+    void ContentBrowserMoveQueue::discardRename()
+    {
+        VectorUtil::removeIf( _listMove, []( const Move& move )
+        { return move._bRename; } );
+    }
+
+    bool ContentBrowserMoveQueue::takeNext( Move& outMove )
+    {
+        if ( _listMove.empty() )
+            return false;
+        outMove = std::move( _listMove.front() );
+        _listMove.erase( _listMove.begin() );
+        return true;
+    }
+
     ContentBrowserFileActions::ContentBrowserFileActions()
         : _renamingAbs{}
         , _pendingDeleteAbs{}

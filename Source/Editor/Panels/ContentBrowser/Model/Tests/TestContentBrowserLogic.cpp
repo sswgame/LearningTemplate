@@ -2,6 +2,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Editor/Panels/ContentBrowser/Model/ContentBrowserFileActions.h"
 #include "Editor/Panels/ContentBrowser/Model/ContentBrowserLogic.h"
 
 using namespace sw;
@@ -22,6 +23,64 @@ namespace
     };
     using Util = ContentBrowserLogicTestUtil;
 } // namespace
+
+// 결함: 대기 칸이 하나라 역색인을 기다리는 사이 두 에셋을 옮기면 앞 옮기기가 말없이 사라졌다 - 온 순서대로 돈다.
+SW_TEST_CASE( ContentBrowserMoveQueueTest, MovesWaitInOrder )
+{
+    ContentBrowserMoveQueue queue;
+    SW_EXPECT_TRUE( queue.isEmpty() );
+    queue.addMove( "D:/c/a.mesh", "D:/c/x" );
+    queue.addMove( "D:/c/b.mesh", "D:/c/y" );
+    SW_EXPECT_FALSE( queue.isEmpty() );
+
+    ContentBrowserMoveQueue::Move move;
+    SW_REQUIRE_TRUE( queue.takeNext( move ) );
+    SW_EXPECT_EQUAL( move._sourceAbs, string( "D:/c/a.mesh" ) );
+    SW_EXPECT_EQUAL( move._folderAbs, string( "D:/c/x" ) );
+    SW_EXPECT_FALSE( move._bRename );
+    SW_REQUIRE_TRUE( queue.takeNext( move ) );
+    SW_EXPECT_EQUAL( move._sourceAbs, string( "D:/c/b.mesh" ) );
+    SW_EXPECT_FALSE( queue.takeNext( move ) );
+    SW_EXPECT_TRUE( queue.isEmpty() );
+}
+
+// 한 에셋을 또 옮기면 나중 목적지만 남는다 - 먼저 옮기면 나중 옮기기의 원본이 사라진다.
+SW_TEST_CASE( ContentBrowserMoveQueueTest, SameAssetKeepsTheLastFolder )
+{
+    ContentBrowserMoveQueue queue;
+    queue.addMove( "D:/c/a.mesh", "D:/c/x" );
+    queue.addMove( "D:\\c\\a.mesh", "D:/c/y" );
+
+    ContentBrowserMoveQueue::Move move;
+    SW_REQUIRE_TRUE( queue.takeNext( move ) );
+    SW_EXPECT_EQUAL( move._folderAbs, string( "D:/c/y" ) );
+    SW_EXPECT_TRUE( queue.isEmpty() );
+}
+
+// 결함: 기다리던 새 이름이 취소 뒤에 시작한 다른 에셋에 붙을 수 있었다 - 이름 바꾸기는 하나뿐이고 버릴 수 있다. 폴더 옮기기는 남는다.
+SW_TEST_CASE( ContentBrowserMoveQueueTest, RenameIsSingleAndDiscardable )
+{
+    ContentBrowserMoveQueue queue;
+    queue.addMove( "D:/c/a.mesh", "D:/c/x" );
+    queue.addRename( "first" );
+    queue.addRename( "second" );
+
+    ContentBrowserMoveQueue::Move move;
+    SW_REQUIRE_TRUE( queue.takeNext( move ) );
+    SW_EXPECT_FALSE( move._bRename );
+    SW_REQUIRE_TRUE( queue.takeNext( move ) );
+    SW_EXPECT_TRUE( move._bRename );
+    SW_EXPECT_EQUAL( move._newName, string( "second" ) );
+    SW_EXPECT_TRUE( queue.isEmpty() );
+
+    queue.addRename( "third" );
+    queue.addMove( "D:/c/b.mesh", "D:/c/x" );
+    queue.discardRename();
+    SW_REQUIRE_TRUE( queue.takeNext( move ) );
+    SW_EXPECT_FALSE( move._bRename );
+    SW_EXPECT_EQUAL( move._sourceAbs, string( "D:/c/b.mesh" ) );
+    SW_EXPECT_TRUE( queue.isEmpty() );
+}
 
 SW_TEST_CASE( ContentBrowserLogicTest, FolderTrailHasOneCrumbPerFolderBelowTheRoot )
 {
