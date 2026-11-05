@@ -31,7 +31,7 @@ namespace sw
     /** @brief 깬 결과입니다. */
     struct ActionStageResult
     {
-        hashed_string _grade{};
+        hashed_string _grade{}; ///< 비어 있으면 어떤 등급의 최소 점수에도 못 미쳤다
         float32       _clearTime{ 0.0f };
         float32       _score{ 0.0f }; ///< 0..100
         float32       _timeScore{ 0.0f };

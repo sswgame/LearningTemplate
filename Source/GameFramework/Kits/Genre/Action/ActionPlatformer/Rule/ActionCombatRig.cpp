@@ -47,6 +47,18 @@ namespace sw
         _pCatalog = pCatalog;
         _pMoves   = pMoves;
         _pCombo   = pCatalog != nullptr ? pCatalog->findCombo( comboID ) : nullptr;
+        // 기술 표에 없는 기술을 든 콤보는 받지 않는다. 받으면 그 차례의 공격이 말없이 사라진다.
+        if ( _pCombo != nullptr && _pMoves != nullptr )
+        {
+            for ( const hashed_string& moveID : _pCombo->_listMove )
+            {
+                if ( _pMoves->find( moveID ) != nullptr )
+                    continue;
+                SW_LOG_ERROR_ID( "ActionCombatRig.ComboMoveUnknown", "ActionCombatRig: combo '%#' names an unknown move '%#'", comboID.c_str(), moveID.c_str() );
+                _pCombo = nullptr;
+                break;
+            }
+        }
         _timeline.cancel();
         _listProjectile.clear();
         _eventBuffer.clear();
@@ -144,15 +156,9 @@ namespace sw
         {
             const int32 nextIndex = _comboIndex + 1;
             if ( _timeline.isPlaying() == false )
-            {
-                startMove( 0 );
-                bStarted = true;
-            }
+                bStarted = startMove( 0 );
             else if ( nextIndex < static_cast<int32>( _pCombo->_listMove.size() ) && _timeline.canCancelInto( _pCombo->_listMove[static_cast<size_t>( nextIndex )] ) )
-            {
-                startMove( nextIndex );
-                bStarted = true;
-            }
+                bStarted = startMove( nextIndex );
             if ( bStarted )
                 _attackBufferFrames = 0;
             else
@@ -209,6 +215,8 @@ namespace sw
     int32 ActionCombatRig::takeProjectileHits( ActionTeam team, const float2& center, float32 radius, vector<ActionProjectile>& outListHit )
     {
         outListHit.clear();
+        if ( radius < 0.0f )
+            return 0; // 제곱하면 음수 반경이 양수 반경처럼 맞는다
         for ( size_t index = 0; index < _listProjectile.size(); )
         {
             const ActionProjectile& projectile = _listProjectile[index];
@@ -228,16 +236,15 @@ namespace sw
         _eventBuffer.drainTo( outListEvent );
     }
 
-    void ActionCombatRig::startMove( int32 comboIndex )
+    bool ActionCombatRig::startMove( int32 comboIndex )
     {
         const hashed_string& moveID = _pCombo->_listMove[static_cast<size_t>( comboIndex )];
         const MoveFrameData* pMove  = _pMoves->find( moveID );
-        if ( pMove == nullptr )
-            return;
-        if ( _timeline.start( *pMove ) == false )
-            return;
+        if ( pMove == nullptr || _timeline.start( *pMove ) == false )
+            return false;
         _comboIndex = comboIndex;
         pushEvent( ActionCombatEventType::MoveStarted, moveID, comboIndex );
+        return true;
     }
 
     void ActionCombatRig::startHitstop( int32 frames )
@@ -323,7 +330,10 @@ namespace sw
             archive >> projectile._id;
             archive >> team;
             archive >> projectile._bReflected;
-            const bool bValid = archive.isOk() && team <= static_cast<uint8>( ActionTeam::Enemy ) && projectile._bReflected <= SW_TRUE;
+            // id 는 다음 id 아래여야 새 탄과 겹치지 않고, 수치가 깨지면 칸 계산(`computeTileX`)과 수명 비교가 망가진다.
+            const bool bFinite = MathUtil::isFinite( projectile._position._x ) && MathUtil::isFinite( projectile._position._y ) && MathUtil::isFinite( projectile._velocity._x ) &&
+                                 MathUtil::isFinite( projectile._velocity._y ) && MathUtil::isFinite( projectile._damage ) && MathUtil::isFinite( projectile._lifetime );
+            const bool bValid = archive.isOk() && bFinite && projectile._id < restored._nextProjectileID && team <= static_cast<uint8>( ActionTeam::Enemy ) && projectile._bReflected <= SW_TRUE;
             if ( bValid == false )
                 return false;
             projectile._team = static_cast<ActionTeam>( team );

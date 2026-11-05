@@ -45,7 +45,7 @@ namespace sw
 
         ActionEnemyBrain();
 
-        /** @brief 패턴을 설정하고 시작 상태로 갑니다. 패턴이 비어 있으면 false 를 반환합니다. */
+        /** @brief 패턴을 설정하고 시작 상태로 갑니다. 패턴이 없거나 시작 상태(`_start`)가 상태 목록에 없으면 false 를 반환하고 패턴 없는 상태가 됩니다. */
         [[nodiscard]] bool initialize( const ActionPatternDef* pPattern, int32 facing = 1 );
         /**
          * @brief 한 프레임 진행합니다. 먼저 가까움(`onNear`)을 보고 그다음 시간(`next`)을 확인해 상태를 바꾼 뒤, 이번 프레임에 할 일을 정합니다.

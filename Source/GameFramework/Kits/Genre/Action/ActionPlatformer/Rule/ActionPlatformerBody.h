@@ -142,6 +142,8 @@ namespace sw
         [[nodiscard]] bool tryEnterDrill( const ActionTerrainGrid& terrain, const ActionBodyInput& input );
         void               updateGrapple( const PlatformTileMap& map, const ActionBodyInput& input, float32 deltaTime );
         void               updateDrill( const PlatformTileMap& map, const ActionTerrainGrid& terrain, const ActionBodyInput& input, float32 deltaTime );
+        /** @brief 흙에 닿기를 기다리는 시간을 흘리고, 다 되면 드릴을 그만둡니다. */
+        void updateDrillSearch( float32 deltaTime );
         /** @brief 직접 움직이던 위치와 속도를 기반 몸에 돌려주고 일반 모드로 돌아갑니다. */
         void returnToMotor( const float2& velocity );
 

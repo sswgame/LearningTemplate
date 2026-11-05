@@ -21,13 +21,19 @@ namespace sw
 
     bool ActionEnemyBrain::initialize( const ActionPatternDef* pPattern, int32 facing )
     {
-        _pPattern   = pPattern;
-        _stateIndex = -1;
         setFacing( facing );
-        if ( pPattern == nullptr || pPattern->_listState.empty() )
+        const int32 startIndex = pPattern != nullptr ? pPattern->findStateIndex( pPattern->_start ) : -1;
+        if ( startIndex < 0 )
+        {
+            // 첫 상태로 대신 시작하지 않는다. 실패하면 앞 패턴의 진행도 남기지 않는다.
+            _pPattern   = nullptr;
+            _stateIndex = -1;
+            _stateFrame = 0;
+            _bEntered   = SW_FALSE;
             return false;
-        const int32 startIndex = pPattern->findStateIndex( pPattern->_start );
-        enterState( startIndex >= 0 ? startIndex : 0 );
+        }
+        _pPattern = pPattern;
+        enterState( startIndex );
         return true;
     }
 

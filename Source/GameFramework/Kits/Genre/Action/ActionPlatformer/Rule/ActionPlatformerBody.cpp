@@ -338,7 +338,12 @@ namespace sw
         const int32  nextY     = map.computeTileY( next._y );
         const bool   bDirt     = terrain.isDirtAt( next );
         if ( bDirt == false && map.getTile( nextX, nextY ) == PlatformTile::Solid )
-            return; // 바위는 팔 수 없다(방향을 바꿀 때까지 멈춘다)
+        {
+            // 바위는 팔 수 없다(방향을 바꿀 때까지 멈춘다). 아직 흙에 닿지 못했으면 찾기 시간은 흐른다 — 멈추면 드릴 모드에 영영 갇힌다.
+            if ( _bInsideDirt == SW_FALSE )
+                updateDrillSearch( deltaTime );
+            return;
+        }
         _position = next;
         if ( bDirt )
         {
@@ -347,12 +352,7 @@ namespace sw
         }
         if ( _bInsideDirt == SW_FALSE )
         {
-            _drillSearchTimer.update( deltaTime );
-            if ( _drillSearchTimer.isActive() == false )
-            {
-                returnToMotor( _velocity * 0.5f );
-                _events |= ActionBodyEvent::kDrillAborted;
-            }
+            updateDrillSearch( deltaTime );
             return;
         }
 
@@ -377,6 +377,15 @@ namespace sw
             _events |= ActionBodyEvent::kDrillJumped;
         }
         returnToMotor( exitVelocity );
+    }
+
+    void ActionPlatformerBody::updateDrillSearch( float32 deltaTime )
+    {
+        _drillSearchTimer.update( deltaTime );
+        if ( _drillSearchTimer.isActive() )
+            return;
+        returnToMotor( _velocity * 0.5f );
+        _events |= ActionBodyEvent::kDrillAborted;
     }
 
     void ActionPlatformerBody::returnToMotor( const float2& velocity )
@@ -418,7 +427,10 @@ namespace sw
         archive >> restored._ropeLength;
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._drillSearchTimer );
         archive >> restored._bInsideDirt;
-        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._ropeLength && restored._bInsideDirt <= SW_TRUE;
+        // 수치가 깨지면 칸 계산(`computeTileX`)이 망가진다.
+        const bool bFinite = MathUtil::isFinite( restored._position._x ) && MathUtil::isFinite( restored._position._y ) && MathUtil::isFinite( restored._velocity._x ) && MathUtil::isFinite( restored._velocity._y ) &&
+                             MathUtil::isFinite( restored._anchor._x ) && MathUtil::isFinite( restored._anchor._y ) && MathUtil::isFinite( restored._ropeLength );
+        const bool bValid = bTimerRead && archive.isOk() && bFinite && 0.0f <= restored._ropeLength && restored._bInsideDirt <= SW_TRUE;
         if ( bValid == false )
             return false;
         restored._events = 0;
