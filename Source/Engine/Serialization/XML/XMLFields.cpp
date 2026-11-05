@@ -40,6 +40,9 @@ namespace sw
                     void* const pElement = sequence.getElement( pContainer, sequence.getSize( pContainer ) - 1 );
                     bValid               = SerializerUtil::parseTextValue( MutableValueAddress{ pElement }, prop._elementTypeName, token, context ) && bValid;
                 } );
+                // 읽지 못한 낱말의 자리에는 기본값이 남아 있다 — 범위 검사가 그 값을 또 오류로 알리지 않게 비운다.
+                if ( bValid == false )
+                    sequence.clear( pContainer );
                 return bValid;
             }
 
