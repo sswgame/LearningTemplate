@@ -57,6 +57,97 @@ sw_readModuleEnumNames(SW_MODULE_PLATFORMS ModulePlatform)
 sw_readModuleEnumNames(SW_MODULE_CONFIGURATIONS ModuleConfiguration)
 sw_readModuleEnumNames(SW_MODULE_TARGETS ModuleTarget)
 
+# 매니페스트 키가 모두 표(`SW_MODULE_MANIFEST_KEYS`)에 있는지 본다.
+function(sw_checkManifestKeys MANIFEST_PATH)
+	sw_requireJSONValue(swKeyCount "${MANIFEST_PATH}" LENGTH)
+	math(EXPR swLastKey "${swKeyCount} - 1")
+
+	foreach(swKeyIndex RANGE ${swLastKey})
+		sw_requireJSONValue(swKey "${MANIFEST_PATH}" MEMBER ${swKeyIndex})
+
+		if(NOT swKey IN_LIST SW_MODULE_MANIFEST_KEYS)
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown key '${swKey}'")
+		endif()
+	endforeach()
+endfunction()
+
+# 비면 안 되는 낱말 배열 KEY 를 OUT_VAR 에 읽는다. 낱말은 모두 ALLOWED_WORDS(런타임 열거자 이름)에 있어야 하고 LABEL 은 오류 글에 쓴다.
+function(sw_readManifestWords OUT_VAR MANIFEST_PATH KEY LABEL ALLOWED_WORDS)
+	sw_requireJSONValue(swCount "${MANIFEST_PATH}" LENGTH ${KEY})
+
+	if(swCount EQUAL 0)
+		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: ${KEY} must be a non-empty array")
+	endif()
+
+	set(swValues "")
+	math(EXPR swLast "${swCount} - 1")
+
+	foreach(swIndex RANGE ${swLast})
+		sw_requireJSONValue(swValue "${MANIFEST_PATH}" ${KEY} ${swIndex})
+
+		if(NOT swValue IN_LIST ALLOWED_WORDS)
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown ${LABEL} '${swValue}' (one of ${ALLOWED_WORDS})")
+		endif()
+
+		list(APPEND swValues ${swValue})
+	endforeach()
+
+	set(${OUT_VAR} ${swValues} PARENT_SCOPE)
+endfunction()
+
+# 선택 키 `_listDependency` 를 이름(OUT_NAMES) · 최소 버전(OUT_MIN_VERSIONS, 기본 0.0.0)으로 읽는다.
+function(sw_readManifestDependencies OUT_NAMES OUT_MIN_VERSIONS MANIFEST_PATH)
+	set(swNames "")
+	set(swMinVersions "")
+	sw_readOptionalJSONValue(swCount "${MANIFEST_PATH}" LENGTH _listDependency)
+
+	if(DEFINED swCount AND swCount GREATER 0)
+		math(EXPR swLast "${swCount} - 1")
+
+		foreach(swIndex RANGE ${swLast})
+			sw_requireJSONValue(swDependency "${MANIFEST_PATH}" _listDependency ${swIndex} _name)
+			sw_readOptionalJSONValue(swMinVersion "${MANIFEST_PATH}" _listDependency ${swIndex} _minVersion)
+
+			if(NOT DEFINED swMinVersion)
+				set(swMinVersion "0.0.0")
+			endif()
+
+			list(APPEND swNames ${swDependency})
+			list(APPEND swMinVersions ${swMinVersion})
+		endforeach()
+	endif()
+
+	set(${OUT_NAMES} ${swNames} PARENT_SCOPE)
+	set(${OUT_MIN_VERSIONS} ${swMinVersions} PARENT_SCOPE)
+endfunction()
+
+# 선택 키 `_listModuleOverride`(프로젝트의 켜기/끄기 표)를 이름(OUT_NAMES) · 값(OUT_VALUES)으로 읽는다. 게임 모듈만 가진다.
+function(sw_readManifestOverrides OUT_NAMES OUT_VALUES MANIFEST_PATH KIND)
+	set(swNames "")
+	set(swValues "")
+	sw_readOptionalJSONValue(swCount "${MANIFEST_PATH}" LENGTH _listModuleOverride)
+
+	if(DEFINED swCount)
+		if(NOT KIND STREQUAL "Game")
+			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: only a Game module (the project) has _listModuleOverride")
+		endif()
+
+		if(swCount GREATER 0)
+			math(EXPR swLast "${swCount} - 1")
+
+			foreach(swIndex RANGE ${swLast})
+				sw_requireJSONValue(swOverrideName "${MANIFEST_PATH}" _listModuleOverride ${swIndex} _name)
+				sw_requireJSONValue(swOverrideValue "${MANIFEST_PATH}" _listModuleOverride ${swIndex} _bEnabled)
+				list(APPEND swNames ${swOverrideName})
+				list(APPEND swValues ${swOverrideValue})
+			endforeach()
+		endif()
+	endif()
+
+	set(${OUT_NAMES} ${swNames} PARENT_SCOPE)
+	set(${OUT_VALUES} ${swValues} PARENT_SCOPE)
+endfunction()
+
 # 매니페스트 하나를 읽어 전역 속성 `SW_MODULE_<이름>_*` 에 담는다. 형식이 틀리면 구성을 세운다.
 function(sw_readModuleManifest MANIFEST_PATH)
 	sw_requireJSONValue(swName "${MANIFEST_PATH}" _name)
@@ -71,17 +162,7 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: the file must be named '${swName}.module.json'")
 	endif()
 
-	sw_requireJSONValue(swKeyCount "${MANIFEST_PATH}" LENGTH)
-	math(EXPR swLastKey "${swKeyCount} - 1")
-
-	foreach(swKeyIndex RANGE ${swLastKey})
-		sw_requireJSONValue(swKey "${MANIFEST_PATH}" MEMBER ${swKeyIndex})
-
-		if(NOT swKey IN_LIST SW_MODULE_MANIFEST_KEYS)
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown key '${swKey}'")
-		endif()
-	endforeach()
-
+	sw_checkManifestKeys("${MANIFEST_PATH}")
 	sw_requireJSONValue(swVersion "${MANIFEST_PATH}" _version)
 
 	if(NOT swVersion MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+$")
@@ -94,41 +175,9 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown _kind '${swKind}' (one of ${SW_MODULE_KINDS})")
 	endif()
 
-	foreach(swListKey _listPlatform _listConfiguration _listTarget)
-		set(swValues "")
-		sw_requireJSONValue(swCount "${MANIFEST_PATH}" LENGTH ${swListKey})
-
-		if(swCount EQUAL 0)
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: ${swListKey} must be a non-empty array")
-		endif()
-
-		math(EXPR swLast "${swCount} - 1")
-
-		foreach(swIndex RANGE ${swLast})
-			sw_requireJSONValue(swValue "${MANIFEST_PATH}" ${swListKey} ${swIndex})
-			list(APPEND swValues ${swValue})
-		endforeach()
-
-		set(swValues_${swListKey} ${swValues})
-	endforeach()
-
-	foreach(swPlatform IN LISTS swValues__listPlatform)
-		if(NOT swPlatform IN_LIST SW_MODULE_PLATFORMS)
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown platform '${swPlatform}' (one of ${SW_MODULE_PLATFORMS})")
-		endif()
-	endforeach()
-
-	foreach(swConfiguration IN LISTS swValues__listConfiguration)
-		if(NOT swConfiguration IN_LIST SW_MODULE_CONFIGURATIONS)
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown configuration '${swConfiguration}' (one of ${SW_MODULE_CONFIGURATIONS})")
-		endif()
-	endforeach()
-
-	foreach(swTarget IN LISTS swValues__listTarget)
-		if(NOT swTarget IN_LIST SW_MODULE_TARGETS)
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: unknown target '${swTarget}' (one of ${SW_MODULE_TARGETS})")
-		endif()
-	endforeach()
+	sw_readManifestWords(swPlatforms "${MANIFEST_PATH}" _listPlatform platform "${SW_MODULE_PLATFORMS}")
+	sw_readManifestWords(swConfigurations "${MANIFEST_PATH}" _listConfiguration configuration "${SW_MODULE_CONFIGURATIONS}")
+	sw_readManifestWords(swTargets "${MANIFEST_PATH}" _listTarget target "${SW_MODULE_TARGETS}")
 
 	# 선택 키 셋(`_bEnabledByDefault` · `_listDependency` · `_minVersion`)은 매니페스트 형식의 기본값이다 — 설정 파일에는 기본값과 다른 값만 적는다.
 	# 같은 기본값을 런타임 `ModuleCatalog::parseManifest` 가 들고, `ModuleCatalogTest.BuildAndRuntimeAgree` 가 두 해석을 견준다.
@@ -138,29 +187,11 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		set(swEnabled ON)
 	endif()
 
-	set(swDependencyNames "")
-	set(swDependencyMinVersions "")
-	sw_readOptionalJSONValue(swCount "${MANIFEST_PATH}" LENGTH _listDependency)
-
-	if(DEFINED swCount AND swCount GREATER 0)
-		math(EXPR swLast "${swCount} - 1")
-
-		foreach(swIndex RANGE ${swLast})
-			sw_requireJSONValue(swDependency "${MANIFEST_PATH}" _listDependency ${swIndex} _name)
-			sw_readOptionalJSONValue(swMinVersion "${MANIFEST_PATH}" _listDependency ${swIndex} _minVersion)
-
-			if(NOT DEFINED swMinVersion)
-				set(swMinVersion "0.0.0")
-			endif()
-
-			list(APPEND swDependencyNames ${swDependency})
-			list(APPEND swDependencyMinVersions ${swMinVersion})
-		endforeach()
-	endif()
+	sw_readManifestDependencies(swDependencyNames swDependencyMinVersions "${MANIFEST_PATH}")
 
 	# 에디터 확장은 Dev 전용이고 EditorModule 에 의존한다(언리얼 Type "Editor" 모듈과 같다) — 런타임 `ModuleCatalog::parseManifest` 와 같은 검사.
 	if(swKind STREQUAL "EditorExtension")
-		if(NOT swValues__listConfiguration STREQUAL "Dev")
+		if(NOT swConfigurations STREQUAL "Dev")
 			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: an EditorExtension module is built for Dev only (_listConfiguration [\"Dev\"])")
 		endif()
 
@@ -169,27 +200,7 @@ function(sw_readModuleManifest MANIFEST_PATH)
 		endif()
 	endif()
 
-	set(swOverrideNames "")
-	set(swOverrideValues "")
-	sw_readOptionalJSONValue(swCount "${MANIFEST_PATH}" LENGTH _listModuleOverride)
-
-	if(DEFINED swCount)
-		if(NOT swKind STREQUAL "Game")
-			message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: only a Game module (the project) has _listModuleOverride")
-		endif()
-
-		if(swCount GREATER 0)
-			math(EXPR swLast "${swCount} - 1")
-
-			foreach(swIndex RANGE ${swLast})
-				sw_requireJSONValue(swOverrideName "${MANIFEST_PATH}" _listModuleOverride ${swIndex} _name)
-				sw_requireJSONValue(swOverrideValue "${MANIFEST_PATH}" _listModuleOverride ${swIndex} _bEnabled)
-				list(APPEND swOverrideNames ${swOverrideName})
-				list(APPEND swOverrideValues ${swOverrideValue})
-			endforeach()
-		endif()
-	endif()
-
+	sw_readManifestOverrides(swOverrideNames swOverrideValues "${MANIFEST_PATH}" ${swKind})
 	get_property(swKnown GLOBAL PROPERTY SW_MODULE_NAMES)
 
 	if(swName IN_LIST swKnown)
@@ -203,9 +214,9 @@ function(sw_readModuleManifest MANIFEST_PATH)
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_DIR "${swDirectory}")
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_KIND ${swKind})
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_VERSION ${swVersion})
-	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_PLATFORMS ${swValues__listPlatform})
-	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_CONFIGURATIONS ${swValues__listConfiguration})
-	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_TARGETS ${swValues__listTarget})
+	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_PLATFORMS ${swPlatforms})
+	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_CONFIGURATIONS ${swConfigurations})
+	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_TARGETS ${swTargets})
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ENABLED_BY_DEFAULT ${swEnabled})
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_DEPENDENCIES ${swDependencyNames})
 	set_property(GLOBAL PROPERTY SW_MODULE_${swName}_DEPENDENCY_MIN_VERSIONS ${swDependencyMinVersions})
@@ -260,25 +271,13 @@ function(sw_readGamePackManifest MANIFEST_PATH GAME_NAME)
 		message(FATAL_ERROR "[Module] ${MANIFEST_PATH}: a game pack manifest must have _kind Game")
 	endif()
 
-	set(swDependencyNames "")
-	sw_readOptionalJSONValue(swCount "${MANIFEST_PATH}" LENGTH _listDependency)
-
-	if(DEFINED swCount AND swCount GREATER 0)
-		math(EXPR swLast "${swCount} - 1")
-
-		foreach(swIndex RANGE ${swLast})
-			sw_requireJSONValue(swDependency "${MANIFEST_PATH}" _listDependency ${swIndex} _name)
-			list(APPEND swDependencyNames ${swDependency})
-		endforeach()
-	endif()
-
+	sw_readManifestDependencies(swDependencyNames swIgnoredMinVersions "${MANIFEST_PATH}")
 	set_property(GLOBAL PROPERTY SW_GAME_PACK_${GAME_NAME}_DEPENDENCIES ${swDependencyNames})
 endfunction()
 
-# 저장소의 매니페스트를 모두 읽고 해석한다. 고르지 않은 게임의 매니페스트는 읽지 않고, 함께 짓는 게임 팩(`SW_GAMES`)은 의존만 읽는다
+# 저장소의 매니페스트를 모두 읽는다. 고르지 않은 게임의 매니페스트는 읽지 않고, 함께 짓는 게임 팩(`SW_GAMES`)은 의존만 읽는다
 # (게임 모듈 이름은 모두 SWGame 이다 — `sw_readGamePackManifest`).
-# 결과: 전역 속성 `SW_MODULE_<이름>_ACTIVE`(ON/OFF) · `_REASON`, `SW_MODULE_LOAD_ORDER`. 틀리면 구성을 세운다.
-function(sw_resolveModuleManifests)
+function(sw_readAllModuleManifests)
 	file(GLOB_RECURSE swListManifest CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/Source/*.module.json")
 	list(SORT swListManifest)
 	# 매니페스트의 **내용**(켜짐 · 의존 · 종류)이 무엇을 지을지 정한다 — 내용이 바뀌면 다시 구성해야 한다(GLOB 의 CONFIGURE_DEPENDS 는 목록만 본다).
@@ -301,22 +300,17 @@ function(sw_resolveModuleManifests)
 
 		sw_readModuleManifest("${swManifest}")
 	endforeach()
+endfunction()
 
-	# 플랫폼 · 구성 이름은 sw_platform_name · sw_configuration_name(cmake/Engine/BuildLayout.cmake) — 배포 백엔드 확인과 같은 낱말이다.
-	# 빌드 타깃이 담는 모듈 대상 — Game 은 둘 다.
-	if(SW_TARGET_TYPE STREQUAL "Game")
-		set(swBuildTargets Client Server)
-	else()
-		set(swBuildTargets ${SW_TARGET_TYPE})
-	endif()
+# 모듈 NAME 을 끄고 까닭을 남긴다.
+function(sw_deactivateModule NAME REASON)
+	set_property(GLOBAL PROPERTY SW_MODULE_${NAME}_ACTIVE OFF)
+	set_property(GLOBAL PROPERTY SW_MODULE_${NAME}_REASON "${REASON}")
+endfunction()
 
+# 모듈마다 켜짐을 정해 전역 속성에 남기고, 켜진 이름을 OUT_ACTIVE 에 담는다. 프로젝트의 켜기/끄기 표에 모르는 이름이 있으면 오류다.
+function(sw_decideModuleActivation OUT_ACTIVE)
 	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)
-
-	if(NOT "SWGame" IN_LIST swNames)
-		message(FATAL_ERROR "[Module] Source/Games/${SW_ACTIVE_GAME}/SWGame.module.json is missing — the project manifest decides which modules are on")
-	endif()
-
-	# 1) 프로젝트의 켜기/끄기 표 — 모르는 이름은 오류다.
 	get_property(swOverrideNames GLOBAL PROPERTY SW_MODULE_SWGame_OVERRIDE_NAMES)
 	get_property(swOverrideValues GLOBAL PROPERTY SW_MODULE_SWGame_OVERRIDE_VALUES)
 	set(swOverrideIndex 0)
@@ -331,7 +325,14 @@ function(sw_resolveModuleManifests)
 		math(EXPR swOverrideIndex "${swOverrideIndex} + 1")
 	endforeach()
 
-	# 2) 켜짐
+	# 플랫폼 · 구성 이름은 sw_platform_name · sw_configuration_name(cmake/Engine/BuildLayout.cmake) — 배포 백엔드 확인과 같은 낱말이다.
+	# 빌드 타깃이 담는 모듈 대상 — Game 은 둘 다.
+	if(SW_TARGET_TYPE STREQUAL "Game")
+		set(swBuildTargets Client Server)
+	else()
+		set(swBuildTargets ${SW_TARGET_TYPE})
+	endif()
+
 	set(swActive "")
 
 	foreach(swName IN LISTS swNames)
@@ -360,39 +361,29 @@ function(sw_resolveModuleManifests)
 		endif()
 
 		if(NOT swEnabled)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE OFF)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "${swReason}")
+			sw_deactivateModule(${swName} "${swReason}")
 		elseif(NOT sw_platform_name IN_LIST swPlatforms)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE OFF)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "not available on ${sw_platform_name}")
+			sw_deactivateModule(${swName} "not available on ${sw_platform_name}")
 		elseif(NOT sw_configuration_name IN_LIST swConfigurations)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE OFF)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "not built for ${sw_configuration_name}")
+			sw_deactivateModule(${swName} "not built for ${sw_configuration_name}")
 		elseif(NOT swTargetHit)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE OFF)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "not built for the ${SW_TARGET_TYPE} target")
+			sw_deactivateModule(${swName} "not built for the ${SW_TARGET_TYPE} target")
 		else()
 			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE ON)
 			list(APPEND swActive ${swName})
 		endif()
 	endforeach()
 
-	# 2-1) 활성 게임이 쓰지 않는 키트(`SW_BUILD_UNUSED_KITS=OFF`)는 짓지 않는다. 아래 5) 가 그 매니페스트를 `Bin/Modules/` 에 두지 않으므로
-	# 런타임 카탈로그도 그 키트를 모른다 — 고르지 않은 게임의 매니페스트와 같다(`ModuleCatalogTest.BuildAndRuntimeAgree`).
-	set(swUnusedKits "")
+	set(${OUT_ACTIVE} ${swActive} PARENT_SCOPE)
+endfunction()
 
-	if(DEFINED SW_BUILD_UNUSED_KITS AND NOT SW_BUILD_UNUSED_KITS)
-		sw_collectUnusedKits(swActive swUnusedKits)
+# 에디터 확장은 의존(EditorModule · 키트)이 하나라도 꺼져 있으면 함께 꺼진다 — 오류가 아니다(그 확장만 없다). 런타임 `ModuleCatalog::resolve` 와 같다.
+# 의존이 쓰지 않아 뺀 키트면 확장도 그 목록(INOUT_UNUSED)에 넣는다 — 그 매니페스트도 `Bin/Modules` 에 두지 않는다.
+function(sw_deactivateExtensionsOfInactiveDependencies INOUT_ACTIVE INOUT_UNUSED)
+	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)
+	set(swActive ${${INOUT_ACTIVE}})
+	set(swUnused ${${INOUT_UNUSED}})
 
-		foreach(swName IN LISTS swUnusedKits)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE OFF)
-			set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "not used by ${SW_ACTIVE_GAME} or SW_GAMES (SW_BUILD_UNUSED_KITS=OFF)")
-			list(REMOVE_ITEM swActive ${swName})
-		endforeach()
-	endif()
-
-	# 2-2) 에디터 확장은 의존(EditorModule · 키트)이 하나라도 꺼져 있으면 함께 꺼진다 — 오류가 아니다(그 확장만 없다). 런타임 `ModuleCatalog::resolve` 와 같다.
-	# 의존이 쓰지 않아 뺀 키트(2-1)면 확장도 그 목록에 넣는다 — 그 매니페스트도 `Bin/Modules` 에 두지 않는다.
 	foreach(swName IN LISTS swActive)
 		get_property(swKind GLOBAL PROPERTY SW_MODULE_${swName}_KIND)
 		if(NOT swKind STREQUAL "EditorExtension")
@@ -406,19 +397,25 @@ function(sw_resolveModuleManifests)
 			get_property(swDependencyActive GLOBAL PROPERTY SW_MODULE_${swDependency}_ACTIVE)
 			if(NOT swDependencyActive)
 				get_property(swDependencyReason GLOBAL PROPERTY SW_MODULE_${swDependency}_REASON)
-				set_property(GLOBAL PROPERTY SW_MODULE_${swName}_ACTIVE OFF)
-				set_property(GLOBAL PROPERTY SW_MODULE_${swName}_REASON "needs ${swDependency}, which is ${swDependencyReason}")
+				sw_deactivateModule(${swName} "needs ${swDependency}, which is ${swDependencyReason}")
 				list(REMOVE_ITEM swActive ${swName})
-				if(swDependency IN_LIST swUnusedKits)
-					list(APPEND swUnusedKits ${swName})
+				if(swDependency IN_LIST swUnused)
+					list(APPEND swUnused ${swName})
 				endif()
 				break()
 			endif()
 		endforeach()
 	endforeach()
 
-	# 3) 켜진 모듈의 의존 — 있고 · 켜져 있고 · 버전이 맞아야 한다.
-	foreach(swName IN LISTS swActive)
+	set(${INOUT_ACTIVE} ${swActive} PARENT_SCOPE)
+	set(${INOUT_UNUSED} ${swUnused} PARENT_SCOPE)
+endfunction()
+
+# 켜진 모듈(ACTIVE)의 의존은 있고 · 켜져 있고 · 버전이 맞아야 한다 — 아니면 구성을 세운다.
+function(sw_requireActiveDependencies ACTIVE)
+	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)
+
+	foreach(swName IN LISTS ACTIVE)
 		get_property(swDependencies GLOBAL PROPERTY SW_MODULE_${swName}_DEPENDENCIES)
 		get_property(swMinVersions GLOBAL PROPERTY SW_MODULE_${swName}_DEPENDENCY_MIN_VERSIONS)
 		set(swDependencyIndex 0)
@@ -445,46 +442,80 @@ function(sw_resolveModuleManifests)
 			math(EXPR swDependencyIndex "${swDependencyIndex} + 1")
 		endforeach()
 	endforeach()
+endfunction()
 
-	# 4) 적재 순서 — 의존이 먼저, 동점은 이름 순(켜진 모듈의 의존은 위 3) 이 모두 켜져 있음을 확인했다).
+# Dev 는 매니페스트를 실행 파일 옆 `Modules/` 에 둔다 — App 이 같은 규칙으로 다시 해석해 적재 순서를 정한다. 꺼진 모듈의 것도 둔다(무엇이 왜 꺼졌는지 App 도 안다).
+# 쓰지 않아 뺀 키트(UNUSED)는 두지 않는다 — 런타임에는 그 규칙이 없다.
+function(sw_writeRuntimeModuleCatalog LOAD_ORDER UNUSED)
+	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)
+	set(swCatalogDirectory "${CMAKE_BINARY_DIR}/Bin/Modules")
+	file(MAKE_DIRECTORY "${swCatalogDirectory}")
+	set(swKeptManifests "")
+	foreach(swName IN LISTS swNames)
+		if(NOT swName IN_LIST UNUSED)
+			list(APPEND swKeptManifests "${swName}")
+		endif()
+	endforeach()
+
+	# 옛 매니페스트는 **복사 전에** 지운다. Windows 에서 대소문자만 바뀐 이름(`GF_ClassicJRPG` → `GF_ClassicJRPG`)은 같은 파일이라
+	# 복사가 옛 철자 파일 이름을 그대로 두고, 복사 뒤에 글자 그대로 비교해 지우면 방금 복사한 매니페스트를 지운다.
+	file(GLOB swExistingList "${swCatalogDirectory}/*.module.json")
+	foreach(swExisting IN LISTS swExistingList)
+		get_filename_component(swExistingFile "${swExisting}" NAME)
+		string(REGEX REPLACE "\\.module\\.json$" "" swExistingName "${swExistingFile}")
+		if(NOT swExistingName IN_LIST swKeptManifests)
+			file(REMOVE "${swExisting}")
+		endif()
+	endforeach()
+
+	foreach(swName IN LISTS swKeptManifests)
+		get_property(swFile GLOBAL PROPERTY SW_MODULE_${swName}_FILE)
+		configure_file("${swFile}" "${swCatalogDirectory}/${swName}.module.json" COPYONLY)
+	endforeach()
+
+	list(JOIN LOAD_ORDER "\n" swOrderText)
+	file(CONFIGURE OUTPUT "${swCatalogDirectory}/ResolvedModules.txt" CONTENT "${swOrderText}\n")
+	# `Modules/SWGame` 이 어느 게임인가 — `-game=` 이 없을 때 `GameSelection` 이 읽는다(이름을 엔진 TU 에 굽지 않는다).
+	file(CONFIGURE OUTPUT "${swCatalogDirectory}/${SW_FILE_ACTIVE_GAME}" CONTENT "${SW_ACTIVE_GAME}\n")
+
+	sw_removeStaleBinaryOutputs("${LOAD_ORDER}")
+endfunction()
+
+# 저장소의 매니페스트를 모두 읽고 해석한다.
+# 결과: 전역 속성 `SW_MODULE_<이름>_ACTIVE`(ON/OFF) · `_REASON`, `SW_MODULE_LOAD_ORDER`. 틀리면 구성을 세운다.
+function(sw_resolveModuleManifests)
+	sw_readAllModuleManifests()
+	get_property(swNames GLOBAL PROPERTY SW_MODULE_NAMES)
+
+	if(NOT "SWGame" IN_LIST swNames)
+		message(FATAL_ERROR "[Module] Source/Games/${SW_ACTIVE_GAME}/SWGame.module.json is missing — the project manifest decides which modules are on")
+	endif()
+
+	sw_decideModuleActivation(swActive)
+
+	# 활성 게임이 쓰지 않는 키트(`SW_BUILD_UNUSED_KITS=OFF`)는 짓지 않는다. 아래 카탈로그가 그 매니페스트를 `Bin/Modules/` 에 두지 않으므로
+	# 런타임 카탈로그도 그 키트를 모른다 — 고르지 않은 게임의 매니페스트와 같다(`ModuleCatalogTest.BuildAndRuntimeAgree`).
+	set(swUnusedKits "")
+
+	if(DEFINED SW_BUILD_UNUSED_KITS AND NOT SW_BUILD_UNUSED_KITS)
+		sw_collectUnusedKits(swActive swUnusedKits)
+
+		foreach(swName IN LISTS swUnusedKits)
+			sw_deactivateModule(${swName} "not used by ${SW_ACTIVE_GAME} or SW_GAMES (SW_BUILD_UNUSED_KITS=OFF)")
+			list(REMOVE_ITEM swActive ${swName})
+		endforeach()
+	endif()
+
+	sw_deactivateExtensionsOfInactiveDependencies(swActive swUnusedKits)
+	sw_requireActiveDependencies("${swActive}")
+
+	# 적재 순서 — 의존이 먼저, 동점은 이름 순(켜진 모듈의 의존은 모두 켜져 있음을 위에서 확인했다).
 	set(swOrder ${swActive})
 	sw_sortModulesByDependency(swOrder)
 	set_property(GLOBAL PROPERTY SW_MODULE_LOAD_ORDER ${swOrder})
 
-	# 5) Dev 는 매니페스트를 실행 파일 옆 `Modules/` 에 둔다 — App 이 같은 규칙으로 다시 해석해 적재 순서를 정한다. 꺼진 모듈의 것도 둔다(무엇이 왜 꺼졌는지 App 도 안다).
-	# 쓰지 않아 뺀 키트(2-1)는 두지 않는다 — 런타임에는 그 규칙이 없다.
 	if(NOT SW_SHIPPING_BUILD)
-		set(swCatalogDirectory "${CMAKE_BINARY_DIR}/Bin/Modules")
-		file(MAKE_DIRECTORY "${swCatalogDirectory}")
-		set(swKeptManifests "")
-		foreach(swName IN LISTS swNames)
-			if(NOT swName IN_LIST swUnusedKits)
-				list(APPEND swKeptManifests "${swName}")
-			endif()
-		endforeach()
-
-		# 옛 매니페스트는 **복사 전에** 지운다. Windows 에서 대소문자만 바뀐 이름(`GF_ClassicJRPG` → `GF_ClassicJRPG`)은 같은 파일이라
-		# 복사가 옛 철자 파일 이름을 그대로 두고, 복사 뒤에 글자 그대로 비교해 지우면 방금 복사한 매니페스트를 지운다.
-		file(GLOB swExistingList "${swCatalogDirectory}/*.module.json")
-		foreach(swExisting IN LISTS swExistingList)
-			get_filename_component(swExistingFile "${swExisting}" NAME)
-			string(REGEX REPLACE "\\.module\\.json$" "" swExistingName "${swExistingFile}")
-			if(NOT swExistingName IN_LIST swKeptManifests)
-				file(REMOVE "${swExisting}")
-			endif()
-		endforeach()
-
-		foreach(swName IN LISTS swKeptManifests)
-			get_property(swFile GLOBAL PROPERTY SW_MODULE_${swName}_FILE)
-			configure_file("${swFile}" "${swCatalogDirectory}/${swName}.module.json" COPYONLY)
-		endforeach()
-
-		list(JOIN swOrder "\n" swOrderText)
-		file(CONFIGURE OUTPUT "${swCatalogDirectory}/ResolvedModules.txt" CONTENT "${swOrderText}\n")
-		# `Modules/SWGame` 이 어느 게임인가 — `-game=` 이 없을 때 `GameSelection` 이 읽는다(이름을 엔진 TU 에 굽지 않는다).
-		file(CONFIGURE OUTPUT "${swCatalogDirectory}/${SW_FILE_ACTIVE_GAME}" CONTENT "${SW_ACTIVE_GAME}\n")
-
-		sw_removeStaleBinaryOutputs("${swOrder}")
+		sw_writeRuntimeModuleCatalog("${swOrder}" "${swUnusedKits}")
 	endif()
 
 	list(LENGTH swNames swManifestCount)
@@ -581,9 +612,8 @@ function(sw_collectUnusedKits ACTIVE_LIST_VAR OUT_VAR)
 		get_property(swKind GLOBAL PROPERTY SW_MODULE_${swName}_KIND)
 		set(swSeed OFF)
 
+		# 에디터 확장은 자기 키트를 쓰는 쪽이 아니다 — 키트가 쓰이지 않으면 확장이 따라 꺼진다(`sw_deactivateExtensionsOfInactiveDependencies`).
 		if(swKind STREQUAL "EditorExtension")
-			# 에디터 확장은 자기 키트를 쓰는 쪽이 아니다 — 키트가 쓰이지 않으면 확장이 따라 꺼진다(sw_resolveModuleManifests 2-2).
-			set(swSeed OFF)
 		elseif(NOT swKind STREQUAL "Kit")
 			set(swSeed ON)
 		else()
