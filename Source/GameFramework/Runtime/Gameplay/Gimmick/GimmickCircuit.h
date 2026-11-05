@@ -89,6 +89,12 @@ namespace sw
         int32   getIntState( int32 node, int32 slot ) const;
         /** @brief 해석된 매개변수입니다. 종류에 없는 이름이면 nullptr 입니다. */
         const GimmickParamValue* findParam( int32 node, const hashed_string& name ) const;
+        /** @brief 노드 매개변수의 벡터 값입니다. 없으면 0 입니다. */
+        float3 readParamVector( int32 node, const utf8* pName ) const;
+        /** @brief 노드 매개변수의 수입니다. 없으면 비어 있습니다(없을 때의 값은 호출부가 정한다). */
+        [[nodiscard]] std::optional<float32> readParamNumber( int32 node, const utf8* pName ) const;
+        /** @brief 노드 매개변수의 글입니다. 없으면 nullptr 입니다. */
+        const string* readParamText( int32 node, const utf8* pName ) const;
 
         /**
          * @brief 상태 전체를 씁니다. 스텝 번호, 누적 시간, 노드마다 id, 종류, 상태 버전, 출력, 지난 입력, 센서 값, 상태 슬롯이 들어 있습니다.

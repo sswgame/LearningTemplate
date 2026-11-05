@@ -136,15 +136,15 @@ namespace sw
                     {
                         case CustomizationKind::Slider:
                         {
-                            writer.writeBits( CustomizationUtil::quantizeSlider( param, pValue->_number._x ), kSliderBits );
+                            writer.writeBits( param.quantizeSlider( pValue->_number._x ), kSliderBits );
                             break;
                         }
                         case CustomizationKind::Color:
                         {
-                            writer.writeBits( CustomizationUtil::quantizeColorChannel( pValue->_number._x ), kColorBits );
-                            writer.writeBits( CustomizationUtil::quantizeColorChannel( pValue->_number._y ), kColorBits );
-                            writer.writeBits( CustomizationUtil::quantizeColorChannel( pValue->_number._z ), kColorBits );
-                            writer.writeBits( CustomizationUtil::quantizeColorChannel( pValue->_number._w ), kColorBits );
+                            writer.writeBits( CustomizationParamDef::quantizeColorChannel( pValue->_number._x ), kColorBits );
+                            writer.writeBits( CustomizationParamDef::quantizeColorChannel( pValue->_number._y ), kColorBits );
+                            writer.writeBits( CustomizationParamDef::quantizeColorChannel( pValue->_number._z ), kColorBits );
+                            writer.writeBits( CustomizationParamDef::quantizeColorChannel( pValue->_number._w ), kColorBits );
                             break;
                         }
                         case CustomizationKind::Choice:
@@ -182,15 +182,15 @@ namespace sw
                         case CustomizationKind::Slider:
                         {
                             const uint32 step = reader.readBits( kSliderBits );
-                            value._number._x  = pParam != nullptr ? CustomizationUtil::dequantizeSlider( *pParam, step ) : 0.0f;
+                            value._number._x  = pParam != nullptr ? pParam->dequantizeSlider( step ) : 0.0f;
                             break;
                         }
                         case CustomizationKind::Color:
                         {
-                            value._number._x = CustomizationUtil::dequantizeColorChannel( reader.readBits( kColorBits ) );
-                            value._number._y = CustomizationUtil::dequantizeColorChannel( reader.readBits( kColorBits ) );
-                            value._number._z = CustomizationUtil::dequantizeColorChannel( reader.readBits( kColorBits ) );
-                            value._number._w = CustomizationUtil::dequantizeColorChannel( reader.readBits( kColorBits ) );
+                            value._number._x = CustomizationParamDef::dequantizeColorChannel( reader.readBits( kColorBits ) );
+                            value._number._y = CustomizationParamDef::dequantizeColorChannel( reader.readBits( kColorBits ) );
+                            value._number._z = CustomizationParamDef::dequantizeColorChannel( reader.readBits( kColorBits ) );
+                            value._number._w = CustomizationParamDef::dequantizeColorChannel( reader.readBits( kColorBits ) );
                             break;
                         }
                         case CustomizationKind::Choice:

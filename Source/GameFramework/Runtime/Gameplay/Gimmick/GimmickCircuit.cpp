@@ -15,8 +15,6 @@ namespace sw
     {
         struct GimmickCircuitInternal
         {
-            static string describeSource( const GimmickCircuitDef& def ) { return def.getSourceName().empty() ? string( "<gimmick>" ) : def.getSourceName(); }
-
             static string joinNames( const vector<hashed_string>& listName )
             {
                 string joined;
@@ -27,11 +25,6 @@ namespace sw
                     joined += name.c_str();
                 }
                 return joined.empty() ? string( "none" ) : joined;
-            }
-
-            static string describeNode( const GimmickCircuitDef& def, const GimmickNodeDef& node )
-            {
-                return describeSource( def ) + ": node '" + node._id.c_str() + "' (" + node._kind.c_str() + ")";
             }
 
             /** @brief 매개변수 문자열을 종류의 형식대로 해석합니다. 숫자나 벡터를 하나도 읽지 못하면 false 입니다. */
@@ -98,7 +91,7 @@ namespace sw
         if ( listNodeDef.size() > GimmickCircuitState::kMaxNodeCount )
         {
             utf8 arrBuffer[constant::buffer::kMax256]{};
-            formatstring( arrBuffer, constant::buffer::kMax256, "%#: %# nodes, more than the %# a circuit state holds", GimmickCircuitInternal::describeSource( def ).c_str(),
+            formatstring( arrBuffer, constant::buffer::kMax256, "%#: %# nodes, more than the %# a circuit state holds", def.describeSource().c_str(),
                           static_cast<uint64>( listNodeDef.size() ), GimmickCircuitState::kMaxNodeCount );
             outListError.push_back( string( arrBuffer ) );
             return false;
@@ -128,18 +121,18 @@ namespace sw
             node._id                      = nodeDef._id;
             if ( nodeDef._id.empty() )
             {
-                outListError.push_back( Internal::describeSource( def ) + ": node #" + std::to_string( nodeIndex ).c_str() + " has no id" );
+                outListError.push_back( def.describeSource() + ": node #" + std::to_string( nodeIndex ).c_str() + " has no id" );
                 continue;
             }
             for ( size_t otherIndex = 0; otherIndex < nodeIndex; ++otherIndex )
             {
                 if ( listNodeDef[otherIndex]._id == nodeDef._id )
-                    outListError.push_back( Internal::describeNode( def, nodeDef ) + ": duplicate node id" );
+                    outListError.push_back( def.describeNode( nodeDef ) + ": duplicate node id" );
             }
             node._pKind = registry.findKind( nodeDef._kind );
             if ( node._pKind == nullptr )
             {
-                outListError.push_back( Internal::describeNode( def, nodeDef ) + ": unknown node kind" );
+                outListError.push_back( def.describeNode( nodeDef ) + ": unknown node kind" );
                 continue;
             }
             const GimmickNodeKind& kind = *node._pKind;
@@ -152,7 +145,7 @@ namespace sw
                     {
                         listParamName.push_back( spec._name );
                     }
-                    outListError.push_back( Internal::describeNode( def, nodeDef ) + ": unknown parameter '" + param._name.c_str() + "' (parameters: " +
+                    outListError.push_back( def.describeNode( nodeDef ) + ": unknown parameter '" + param._name.c_str() + "' (parameters: " +
                                             Internal::joinNames( listParamName ) + ")" );
                 }
             }
@@ -162,7 +155,7 @@ namespace sw
                 const string*     pText = nodeDef.findParam( spec._name );
                 GimmickParamValue value;
                 if ( Internal::parseParam( spec, pText != nullptr ? *pText : spec._defaultText, value ) == false )
-                    outListError.push_back( Internal::describeNode( def, nodeDef ) + ": parameter '" + spec._name.c_str() + "' is not a number: '" +
+                    outListError.push_back( def.describeNode( nodeDef ) + ": parameter '" + spec._name.c_str() + "' is not a number: '" +
                                             ( pText != nullptr ? *pText : spec._defaultText ) + "'" );
                 _listParam.push_back( value );
             }
@@ -179,7 +172,7 @@ namespace sw
         vector<vector<InputWire>> listWirePerNode( _listNode.size() );
         for ( const GimmickWireDef& wire : def.getWires() )
         {
-            const string where = Internal::describeSource( def ) + ": wire " + wire._fromNode.c_str() + "." + wire._fromPort.c_str() + " -> " + wire._toNode.c_str() +
+            const string where = def.describeSource() + ": wire " + wire._fromNode.c_str() + "." + wire._fromPort.c_str() + " -> " + wire._toNode.c_str() +
                                  "." + wire._toPort.c_str();
             const int32 fromNode = findNode( wire._fromNode );
             const int32 toNode   = findNode( wire._toNode );
@@ -226,7 +219,7 @@ namespace sw
             GimmickNodeContext context = makeContext( node );
             context._pError            = &error;
             if ( node._pKind->_pInitialize( context ) == false )
-                outListError.push_back( GimmickCircuitInternal::describeNode( def, listNodeDef[nodeIndex] ) + ": " + ( error.empty() ? string( "invalid parameters" ) : error ) );
+                outListError.push_back( def.describeNode( listNodeDef[nodeIndex] ) + ": " + ( error.empty() ? string( "invalid parameters" ) : error ) );
             node._outputBits = context._outputBits;
         }
     }
@@ -291,7 +284,7 @@ namespace sw
             cycleNodes += node._id.c_str();
         }
         if ( cycleNodes.empty() == false )
-            outListError.push_back( GimmickCircuitInternal::describeSource( def ) + ": signal loop without a Delay through nodes " + cycleNodes );
+            outListError.push_back( def.describeSource() + ": signal loop without a Delay through nodes " + cycleNodes );
     }
 
     GimmickNodeContext GimmickCircuit::makeContext( NodeRuntime& node )
@@ -432,6 +425,34 @@ namespace sw
         const NodeRuntime& runtime    = _listNode[static_cast<size_t>( node )];
         const int32        paramIndex = runtime._pKind->findParam( name );
         return paramIndex >= 0 ? &_listParam[runtime._paramStart + static_cast<uint32>( paramIndex )] : nullptr;
+    }
+
+    string GimmickCircuitDef::describeSource() const
+    {
+        return getSourceName().empty() ? string( "<gimmick>" ) : getSourceName();
+    }
+
+    string GimmickCircuitDef::describeNode( const GimmickNodeDef& node ) const
+    {
+        return describeSource() + ": node '" + node._id.c_str() + "' (" + node._kind.c_str() + ")";
+    }
+
+    float3 GimmickCircuit::readParamVector( int32 node, const utf8* pName ) const
+    {
+        const GimmickParamValue* pValue = findParam( node, hashed_string( pName ) );
+        return pValue != nullptr ? float3{ pValue->_vector._x, pValue->_vector._y, pValue->_vector._z } : float3{};
+    }
+
+    std::optional<float32> GimmickCircuit::readParamNumber( int32 node, const utf8* pName ) const
+    {
+        const GimmickParamValue* pValue = findParam( node, hashed_string( pName ) );
+        return pValue != nullptr ? std::optional<float32>{ pValue->_vector._x } : std::nullopt; // 없을 때의 값은 호출부가 정한다
+    }
+
+    const string* GimmickCircuit::readParamText( int32 node, const utf8* pName ) const
+    {
+        const GimmickParamValue* pValue = findParam( node, hashed_string( pName ) );
+        return pValue != nullptr ? &pValue->_text : nullptr;
     }
 
     void GimmickCircuit::saveState( GimmickCircuitState& outState ) const

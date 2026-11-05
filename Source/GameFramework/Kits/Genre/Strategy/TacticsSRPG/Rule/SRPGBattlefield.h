@@ -240,7 +240,9 @@ namespace sw
         [[nodiscard]] bool developUnit( int32 unitIndex, const hashed_string& targetUnitID );
 
         // --- 조회 ---
-        static bool           isHostile( SRPGTeam lhs, SRPGTeam rhs ) { return lhs != rhs; }
+        static bool isHostile( SRPGTeam lhs, SRPGTeam rhs ) { return lhs != rhs; }
+        /** @brief @p cell 에서 @p unit 의 가장 가까운 살아 있는 적까지의 거리입니다. 적이 없으면 -1 입니다. */
+        int32                 computeNearestHostileDistance( const SRPGUnit& unit, const int2& cell ) const;
         static int32          computeDistance( const int2& lhs, const int2& rhs );
         bool                  isInside( const int2& cell ) const { return _topology.isInside( cell ); }
         const SRPGTerrainDef* findTerrainAt( const int2& cell ) const;

@@ -123,7 +123,11 @@ namespace sw
         float32                       getStepTime() const { return _stepTime; }
         void                          setStepTime( float32 stepTime ) { _stepTime = stepTime; }
         const string&                 getSourceName() const { return _sourceName; }
-        void                          setSourceName( string_view sourceName ) { _sourceName = string( sourceName ); }
+        /** @brief 오류 글 머리에 쓰는 원본 이름입니다(없으면 `<gimmick>`). */
+        string describeSource() const;
+        /** @brief 오류 글 머리에 쓰는 노드 설명입니다(원본 이름 · 노드 id · 종류). */
+        string describeNode( const GimmickNodeDef& node ) const;
+        void   setSourceName( string_view sourceName ) { _sourceName = string( sourceName ); }
 
     private:
         [[nodiscard]] bool loadRoot( const XMLNode& root );

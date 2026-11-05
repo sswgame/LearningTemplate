@@ -9,32 +9,23 @@
 
 namespace sw
 {
-    namespace
+    float32 FloatCurveKey::interpolateTo( const FloatCurveKey& next, float32 time ) const
     {
-        struct FloatCurveInternal
-        {
-            static bool isKeyBefore( const FloatCurveKey& left, const FloatCurveKey& right ) { return left._time < right._time; }
-
-            /** @brief 구간 [@p from, @p to] 안의 @p time 값입니다. */
-            static float32 interpolate( const FloatCurveKey& from, const FloatCurveKey& to, float32 time )
-            {
-                const float32 span = to._time - from._time;
-                if ( from._interpolation == CurveInterpolation::Constant || span <= 0.0f )
-                    return from._value;
-                const float32 t = MathUtil::saturate( ( time - from._time ) / span );
-                if ( from._interpolation == CurveInterpolation::Linear )
-                    return from._value + ( to._value - from._value ) * t;
-                // 에르미트 기저: h00 · p0 + h10 · dt · m0 + h01 · p1 + h11 · dt · m1
-                const float32 t2  = t * t;
-                const float32 t3  = t2 * t;
-                const float32 h00 = 2.0f * t3 - 3.0f * t2 + 1.0f;
-                const float32 h10 = t3 - 2.0f * t2 + t;
-                const float32 h01 = -2.0f * t3 + 3.0f * t2;
-                const float32 h11 = t3 - t2;
-                return h00 * from._value + h10 * span * from._leaveTangent + h01 * to._value + h11 * span * to._arriveTangent;
-            }
-        };
-    } // namespace
+        const float32 span = next._time - _time;
+        if ( _interpolation == CurveInterpolation::Constant || span <= 0.0f )
+            return _value;
+        const float32 t = MathUtil::saturate( ( time - _time ) / span );
+        if ( _interpolation == CurveInterpolation::Linear )
+            return _value + ( next._value - _value ) * t;
+        // 에르미트 기저: h00 · p0 + h10 · dt · m0 + h01 · p1 + h11 · dt · m1
+        const float32 t2  = t * t;
+        const float32 t3  = t2 * t;
+        const float32 h00 = 2.0f * t3 - 3.0f * t2 + 1.0f;
+        const float32 h10 = t3 - 2.0f * t2 + t;
+        const float32 h01 = -2.0f * t3 + 3.0f * t2;
+        const float32 h11 = t3 - t2;
+        return h00 * _value + h10 * span * _leaveTangent + h01 * next._value + h11 * span * next._arriveTangent;
+    }
 
     std::optional<float32> FloatCurve::evaluate( float32 time ) const
     {
@@ -47,7 +38,7 @@ namespace sw
         // time 보다 늦은 첫 키 — 그 앞 키와 구간을 이룬다(위 두 줄이 양 끝을 걸렀으므로 [1, 끝-1) 안에 있다).
         const auto next = std::upper_bound( _listKey.begin() + 1, _listKey.end() - 1, time, []( float32 value, const FloatCurveKey& key )
         { return value < key._time; } );
-        return FloatCurveInternal::interpolate( *( next - 1 ), *next, time );
+        return ( next - 1 )->interpolateTo( *next, time );
     }
 
     uint32 FloatCurve::addKey( float32 time, float32 value, CurveInterpolation interpolation )
@@ -68,7 +59,7 @@ namespace sw
 
     void FloatCurve::sortAndComputeAutoTangents()
     {
-        VectorUtil::stableSort( _listKey, &FloatCurveInternal::isKeyBefore );
+        VectorUtil::stableSort( _listKey, &FloatCurveKey::isBefore );
         const size_t keyCount = _listKey.size();
         for ( size_t index = 0; index < keyCount; ++index )
         {

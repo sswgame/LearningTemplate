@@ -28,24 +28,6 @@ namespace sw
         {
             static constexpr float32 kFarDistance = 1.0e9f;
 
-            static float3 readVector( const GimmickCircuit& circuit, int32 node, const utf8* pName )
-            {
-                const GimmickParamValue* pValue = circuit.findParam( node, hashed_string( pName ) );
-                return pValue != nullptr ? float3{ pValue->_vector._x, pValue->_vector._y, pValue->_vector._z } : float3{};
-            }
-
-            [[nodiscard]] static std::optional<float32> readNumber( const GimmickCircuit& circuit, int32 node, const utf8* pName )
-            {
-                const GimmickParamValue* pValue = circuit.findParam( node, hashed_string( pName ) );
-                return pValue != nullptr ? std::optional<float32>{ pValue->_vector._x } : std::nullopt; // 없을 때의 값은 호출부가 정한다
-            }
-
-            static const string* readText( const GimmickCircuit& circuit, int32 node, const utf8* pName )
-            {
-                const GimmickParamValue* pValue = circuit.findParam( node, hashed_string( pName ) );
-                return pValue != nullptr ? &pValue->_text : nullptr;
-            }
-
             static float3 toRadians( const float3& degrees ) { return degrees * MathUtil::kDegreeToRadian; }
 
             /** @brief 무버는 대상(없으면 회로 주인)의 스플라인에서 @p distance 위치로 옮깁니다. `faceForward` 면 진행 방향으로 돌립니다. */
@@ -60,7 +42,7 @@ namespace sw
                     return;
                 const SplineSample sample = pSpline->getWorldPath().sampleAtDistance( distance );
                 pScene->setWorldPosition( sample._position );
-                if ( readNumber( circuit, node, "faceForward" ).value_or( 0.0f ) != 0.0f )
+                if ( circuit.readParamNumber( node, "faceForward" ).value_or( 0.0f ) != 0.0f )
                     pScene->setLocalRotation( float3{ pose._rotation._x, MathUtil::atan2( sample._tangent._x, sample._tangent._z ), pose._rotation._z } );
             }
 
@@ -70,7 +52,7 @@ namespace sw
                 const GimmickSensorComponent* pSensor = target.getComponent<GimmickSensorComponent>();
                 if ( pSensor == nullptr || circuit.getOutput( node, hashed_string( "OnDamageTick" ) ) == false )
                     return;
-                const float32 damage = readNumber( circuit, node, "damage" ).value_or( 0.0f );
+                const float32 damage = circuit.readParamNumber( node, "damage" ).value_or( 0.0f );
                 for ( const GameObjectHandle& handle : pSensor->getOccupants() )
                 {
                     GameObject* pVictim = manager.resolveGameObject( handle );
@@ -85,7 +67,7 @@ namespace sw
                 LightComponent* pLight = target.getComponent<LightComponent>();
                 if ( pLight == nullptr )
                     return;
-                const float32 intensity = circuit.getOutput( node, hashed_string( "Lit" ) ) ? pose._intensity * readNumber( circuit, node, "intensity" ).value_or( 1.0f ) : 0.0f;
+                const float32 intensity = circuit.getOutput( node, hashed_string( "Lit" ) ) ? pose._intensity * circuit.readParamNumber( node, "intensity" ).value_or( 1.0f ) : 0.0f;
                 if ( pLight->getIntensity() == intensity )
                     return;
                 const TComponentHandle<LightComponent> light{ pLight };
@@ -117,12 +99,12 @@ namespace sw
             /** @brief 스폰 출력이 켜진 틱에 프리팹을 대상 위치(오프셋 더함)에 스폰합니다. 스폰은 틱 뒤로 미룹니다. */
             static void applySpawner( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager, const SceneComponent* pScene )
             {
-                const string* pPrefab      = readText( circuit, node, "prefab" );
+                const string* pPrefab      = circuit.readParamText( node, "prefab" );
                 const bool    bCannotSpawn = circuit.getOutput( node, hashed_string( "OnSpawn" ) ) == false || pPrefab == nullptr || pPrefab->empty() || pScene == nullptr;
                 if ( bCannotSpawn )
                     return;
                 const string       prefab   = *pPrefab;
-                const float3       position = pScene->getWorldPosition() + readVector( circuit, node, "offset" );
+                const float3       position = pScene->getWorldPosition() + circuit.readParamVector( node, "offset" );
                 GameObjectManager* pManager = &manager;
                 manager.executeOrDeferPostTick( [pManager, prefab, position]()
                 {
@@ -137,7 +119,7 @@ namespace sw
             /** @brief 재생 출력이 켜진 틱에 소리를 냅니다. 재생은 틱 뒤로 미룹니다. */
             static void applySound( const GimmickCircuit& circuit, int32 node, GameObjectManager& manager )
             {
-                const string* pSound           = readText( circuit, node, "sound" );
+                const string* pSound           = circuit.readParamText( node, "sound" );
                 const bool    bCannotPlaySound = circuit.getOutput( node, hashed_string( "OnPlay" ) ) == false || pSound == nullptr || pSound->empty();
                 if ( bCannotPlaySound )
                     return;
@@ -336,7 +318,7 @@ namespace sw
             const Binding binding                     = findBinding( _circuit.getKind( node )._name );
             _listBinding[static_cast<size_t>( node )] = binding;
             // 근접 노드의 태그는 여기서 한 번 TagID 로 바꾼다. 스텝마다 문자열을 intern 하지 않는다.
-            const string* pTag = binding == Binding::Proximity ? GimmickCircuitComponentInternal::readText( _circuit, node, "tag" ) : nullptr;
+            const string* pTag = binding == Binding::Proximity ? _circuit.readParamText( node, "tag" ) : nullptr;
             if ( pTag != nullptr && pTag->empty() == false )
                 _listNodeTag[static_cast<size_t>( node )].addTag( TagID::request( *pTag ) );
             GameObject* pTarget = resolveTarget( *pManager, node );
@@ -384,7 +366,7 @@ namespace sw
         const bool            bNoTagFilter = index >= _listNodeTag.size() || _listNodeTag[index].getTagCount() == 0 || pScene == nullptr;
         if ( bNoTagFilter )
             return GimmickCircuitComponentInternal::kFarDistance;
-        const bool   bPlanar  = GimmickCircuitComponentInternal::readNumber( _circuit, node, "planar" ).value_or( 0.0f ) != 0.0f;
+        const bool   bPlanar  = _circuit.readParamNumber( node, "planar" ).value_or( 0.0f ) != 0.0f;
         const float3 origin   = pScene->getWorldPosition();
         float32      nearest  = GimmickCircuitComponentInternal::kFarDistance;
         const uint64 targetID = target.getObjectID();
@@ -410,8 +392,8 @@ namespace sw
             return 0.0f;
         const float4x4 world     = pScene->getWorldMatrix();
         const float3   origin    = pScene->getWorldPosition();
-        const float3   direction = float3::transformVector( GimmickCircuitComponentInternal::readVector( _circuit, node, "direction" ), world ).normalize();
-        const float32  range     = GimmickCircuitComponentInternal::readNumber( _circuit, node, "range" ).value_or( 10.0f );
+        const float3   direction = float3::transformVector( _circuit.readParamVector( node, "direction" ), world ).normalize();
+        const float32  range     = _circuit.readParamNumber( node, "range" ).value_or( 10.0f );
         WorldRayHit    hit;
         return WorldQuery::raycast( manager, origin, origin + direction * range, target.getObjectID(), hit ) ? 1.0f : 0.0f;
     }
@@ -501,20 +483,20 @@ namespace sw
             {
                 if ( pScene == nullptr )
                     break;
-                pScene->setLocalPosition( pose._position + Internal::readVector( _circuit, node, "openOffset" ) * value );
-                pScene->setLocalRotation( pose._rotation + Internal::toRadians( Internal::readVector( _circuit, node, "openRotation" ) ) * value );
+                pScene->setLocalPosition( pose._position + _circuit.readParamVector( node, "openOffset" ) * value );
+                pScene->setLocalRotation( pose._rotation + Internal::toRadians( _circuit.readParamVector( node, "openRotation" ) ) * value );
                 break;
             }
             case Binding::Elevator:
             {
                 if ( pScene != nullptr )
-                    pScene->setLocalPosition( pose._position + Internal::readVector( _circuit, node, "axis" ) * value );
+                    pScene->setLocalPosition( pose._position + _circuit.readParamVector( node, "axis" ) * value );
                 break;
             }
             case Binding::Rotator:
             {
                 if ( pScene != nullptr )
-                    pScene->setLocalRotation( pose._rotation + Internal::toRadians( Internal::readVector( _circuit, node, "axis" ) * value ) );
+                    pScene->setLocalRotation( pose._rotation + Internal::toRadians( _circuit.readParamVector( node, "axis" ) * value ) );
                 break;
             }
             case Binding::Mover:

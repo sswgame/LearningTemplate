@@ -754,4 +754,18 @@ namespace sw
     {
         return 0 <= unitIndex && unitIndex < static_cast<int32>( _listUnit.size() ) ? &_listUnit[static_cast<size_t>( unitIndex )] : nullptr;
     }
+
+    int32 SRPGBattlefield::computeNearestHostileDistance( const SRPGUnit& unit, const int2& cell ) const
+    {
+        int32 nearest = -1;
+        for ( const SRPGUnit& other : getUnits() )
+        {
+            if ( other._bAlive == SW_FALSE || isHostile( unit._team, other._team ) == false )
+                continue;
+            const int32 distance = computeDistance( other._cell, cell );
+            if ( nearest < 0 || distance < nearest )
+                nearest = distance;
+        }
+        return nearest;
+    }
 } // namespace sw

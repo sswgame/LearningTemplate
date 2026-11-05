@@ -16,20 +16,6 @@ namespace sw
             static constexpr int32 kNoScore = -2147483647;
 
             /** @brief @p cell 에서 가장 가까운 적까지의 거리를 반환합니다. 적이 없으면 -1 입니다. */
-            static int32 computeNearestHostileDistance( const SRPGBattlefield& field, const SRPGUnit& unit, const int2& cell )
-            {
-                int32 nearest = -1;
-                for ( const SRPGUnit& other : field.getUnits() )
-                {
-                    if ( other._bAlive == SW_FALSE || SRPGBattlefield::isHostile( unit._team, other._team ) == false )
-                        continue;
-                    const int32 distance = SRPGBattlefield::computeDistance( other._cell, cell );
-                    if ( nearest < 0 || distance < nearest )
-                        nearest = distance;
-                }
-                return nearest;
-            }
-
             static int32 scoreForecast( const SRPGBattlefield& field, const SRPGCommanderAISettings& settings, const SRPGUnit& unit, const SRPGForecast& forecast )
             {
                 const SRPGStrikePreview& attack    = forecast._attack;
@@ -118,11 +104,11 @@ namespace sw
             return true;
 
         // 공격할 대상이 없으면 가장 가까운 적에게 다가간다(거리가 같으면 덜 걷는 셀을 고른다).
-        int32 bestDistance = SRPGCommanderAIInternal::computeNearestHostileDistance( field, unit, unit._cell );
+        int32 bestDistance = field.computeNearestHostileDistance( unit, unit._cell );
         bestCost           = 0;
         for ( const int2& stand : listStand )
         {
-            const int32 distance = SRPGCommanderAIInternal::computeNearestHostileDistance( field, unit, stand );
+            const int32 distance = field.computeNearestHostileDistance( unit, stand );
             const int32 cost     = unit._bMoved == SW_FALSE ? reach.getCost( stand ) : 0;
             const bool  bCloser  = distance >= 0 && ( distance < bestDistance || ( distance == bestDistance && cost < bestCost ) );
             if ( bCloser == false )

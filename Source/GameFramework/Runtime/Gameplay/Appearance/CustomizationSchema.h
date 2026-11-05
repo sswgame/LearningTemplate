@@ -148,6 +148,8 @@ namespace sw
 
 namespace sw
 {
+    struct CustomizationSchemaDef;
+
     /** @brief 매개변수 하나입니다. */
     struct SW_GF_API CustomizationParamDef
     {
@@ -165,9 +167,22 @@ namespace sw
         float32                           _default{ 0.0f };
         CustomizationKind                 _kind{ CustomizationKind::Slider };
 
+        static constexpr uint32 kSliderSteps = 65535u;
+        static constexpr uint32 kColorSteps  = 255u;
+
         const CustomizationOptionDef* findOption( const hashed_string& option ) const;
         /** @brief 이 매개변수의 기본값입니다. */
         CustomizationValue makeDefaultValue() const;
+        /** @brief 슬라이더 값을 범위로 자르고 격자 번호로 바꿉니다. */
+        uint32 quantizeSlider( float32 value ) const;
+        /** @brief 격자 번호를 값으로 바꿉니다. */
+        float32        dequantizeSlider( uint32 step ) const;
+        static uint32  quantizeColorChannel( float32 value );
+        static float32 dequantizeColorChannel( uint32 step );
+        /** @brief 이 매개변수가 켜져 있는지, 즉 조건이 모두 맞는지 판정합니다. @p normalizedValues 는 `CustomizationSchemaDef::normalize` 의 결과입니다. */
+        bool isActive( const CustomizationSchemaDef& schema, const CustomizationValueSet& normalizedValues ) const;
+        /** @brief 슬라이더 값을 대상에 보내는 출력값입니다. 범위 [min,max] 를 [from,to] 로 옮긴 값입니다. */
+        float32 computeDriveValue( const CustomizationDriveDef& drive, float32 value ) const;
     };
 } // namespace sw
 
@@ -184,6 +199,15 @@ namespace sw
         hashed_string _id{};
 
         const CustomizationParamDef* findParameter( const hashed_string& name ) const;
+        /**
+         * @brief @p values 를 이 스키마에 맞춰 @p outValues 를 채웁니다. 매개변수마다 정확히 하나를 채우고(없으면 기본값), 범위와 격자에 맞춥니다.
+         * @details **값은 전송 정밀도로 저장한다.** 슬라이더는 범위를 65535 단계, 색은 성분마다 255 단계로 맞춘다. 해석기는 맞춘 값만 쓰므로
+         *          네트워크나 공유 코드로 오간 값이 보낸 쪽과 비트까지 같고, 해석 해시도 같다.
+         *          스키마에 없는 이름은 버리고 @p pOutListDropped 에 담는다. 콘텐츠가 바뀌어 지워진 매개변수가 여기에 해당한다. 결과 순서는 스키마 순서다.
+         */
+        void normalize( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped ) const;
+        /** @brief 값을 넣습니다. @p bSymmetric 이 true 이면 같은 대칭 그룹의 다른 매개변수(같은 종류끼리)에도 같은 값을 넣습니다. 알 수 없는 매개변수이면 false 입니다. */
+        [[nodiscard]] bool applyValue( const CustomizationValue& value, bool bSymmetric, CustomizationValueSet& inoutValues ) const;
     };
 } // namespace sw
 
@@ -207,41 +231,5 @@ namespace sw
 
     private:
         vector<CustomizationSchemaDef> _listSchema{};
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @struct CustomizationUtil
-     * @brief 꾸미기 값의 정규화, 양자화, 조건, 대칭을 처리합니다.
-     * @details **값은 전송 정밀도로 저장한다.** 슬라이더는 범위를 65535 단계, 색은 성분마다 255 단계로 맞춘다(`normalize`). 해석기는 맞춘 값만 쓰므로
-     *          네트워크나 공유 코드로 오간 값이 보낸 쪽과 비트까지 같고, 해석 해시도 같다.
-     */
-    struct SW_GF_API CustomizationUtil
-    {
-        static constexpr uint32 kSliderSteps = 65535u;
-        static constexpr uint32 kColorSteps  = 255u;
-
-        /** @brief 슬라이더 값을 범위로 자르고 격자 번호로 바꿉니다. */
-        static uint32 quantizeSlider( const CustomizationParamDef& param, float32 value );
-        /** @brief 격자 번호를 값으로 바꿉니다. */
-        static float32 dequantizeSlider( const CustomizationParamDef& param, uint32 step );
-        static uint32  quantizeColorChannel( float32 value );
-        static float32 dequantizeColorChannel( uint32 step );
-
-        /**
-         * @brief @p values 를 스키마에 맞춰 @p outValues 를 채웁니다. 매개변수마다 정확히 하나를 채우고(없으면 기본값), 범위와 격자에 맞추며, 없는 항목은 기본 항목으로 채웁니다.
-         * @details 스키마에 없는 이름은 버리고 @p pOutListDropped 에 담는다. 콘텐츠가 바뀌어 지워진 매개변수가 여기에 해당한다. 결과 순서는 스키마 순서이다.
-         */
-        static void normalize( const CustomizationSchemaDef& schema, const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped );
-        /** @brief 매개변수가 켜져 있는지, 즉 조건이 모두 맞는지 판정합니다. @p normalizedValues 는 `normalize` 의 결과입니다. */
-        static bool isActive( const CustomizationParamDef& param, const CustomizationSchemaDef& schema, const CustomizationValueSet& normalizedValues );
-        /**
-         * @brief 값을 넣습니다. @p bSymmetric 이 true 이면 같은 대칭 그룹의 다른 매개변수(같은 종류끼리)에도 같은 값을 넣습니다. 알 수 없는 매개변수이면 false 입니다.
-         */
-        [[nodiscard]] static bool applyValue( const CustomizationSchemaDef& schema, const CustomizationValue& value, bool bSymmetric, CustomizationValueSet& inoutValues );
-        /** @brief 슬라이더 값을 대상에 보내는 출력값입니다. 범위 [min,max] 를 [from,to] 로 옮긴 값입니다. */
-        static float32 computeDriveValue( const CustomizationParamDef& param, const CustomizationDriveDef& drive, float32 value );
     };
 } // namespace sw

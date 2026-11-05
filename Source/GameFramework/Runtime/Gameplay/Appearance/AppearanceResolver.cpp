@@ -175,7 +175,7 @@ namespace sw
                     const CustomizationValue* pValue = normalized.findValue( param._name );
                     if ( pValue == nullptr )
                         continue;
-                    if ( CustomizationUtil::isActive( param, schema, normalized ) == false )
+                    if ( param.isActive( schema, normalized ) == false )
                     {
                         addTrace( out, AppearanceTraceStep::Customization, param._name, "'%#' is inactive (condition not met)", param._name.c_str() );
                         continue;
@@ -187,7 +187,7 @@ namespace sw
                         {
                             for ( const CustomizationDriveDef& drive : param._listDrive )
                             {
-                                const float32 driven = CustomizationUtil::computeDriveValue( param, drive, pValue->_number._x );
+                                const float32 driven = param.computeDriveValue( drive, pValue->_number._x );
                                 switch ( drive._kind )
                                 {
                                     case CustomizationDriveKind::Morph:
@@ -528,7 +528,7 @@ namespace sw
                 {
                     CustomizationValueSet normalized;
                     vector<hashed_string> listDropped;
-                    CustomizationUtil::normalize( *pSchema, pRequest->_customization, normalized, &listDropped );
+                    pSchema->normalize( pRequest->_customization, normalized, &listDropped );
                     for ( const hashed_string& dropped : listDropped )
                     {
                         addTrace( out, AppearanceTraceStep::Customization, inoutEntry._owner, "'%#' is not in schema '%#' - dropped", dropped.c_str(), pSchema->_id.c_str() );
@@ -570,7 +570,7 @@ namespace sw
                     return;
                 CustomizationValueSet normalized;
                 vector<hashed_string> listDropped;
-                CustomizationUtil::normalize( *pSchema, spec._customization, normalized, &listDropped );
+                pSchema->normalize( spec._customization, normalized, &listDropped );
                 for ( const hashed_string& dropped : listDropped )
                 {
                     addTrace( out, AppearanceTraceStep::Customization, dropped, "'%#' is not in schema '%#' - dropped", dropped.c_str(), pSchema->_id.c_str() );

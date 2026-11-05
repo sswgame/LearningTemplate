@@ -1211,14 +1211,14 @@ namespace sw::editor
             return;
         }
         CustomizationValueSet normalized;
-        CustomizationUtil::normalize( *pSchema, selection._customization, normalized, nullptr );
+        pSchema->normalize( selection._customization, normalized, nullptr );
         bool          bAnyActive   = false;
         bool          bFirstSlider = true;
         hashed_string category{};
         bool          bFirst = true;
         for ( const CustomizationParamDef& param : pSchema->_listParameter )
         {
-            if ( CustomizationUtil::isActive( param, *pSchema, normalized ) == false )
+            if ( param.isActive( *pSchema, normalized ) == false )
                 continue;
             if ( bFirst || param._category != category )
             {

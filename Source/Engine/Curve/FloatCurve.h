@@ -42,6 +42,11 @@ namespace sw
         CurveInterpolation _interpolation{ CurveInterpolation::Cubic };
         PROPERTY( Tooltip = "Tangents follow the neighbouring keys; dragging a tangent turns it off" )
         bool _bAutoTangent{ true };
+
+        /** @brief 키 시간 순서입니다. */
+        static bool isBefore( const FloatCurveKey& left, const FloatCurveKey& right ) { return left._time < right._time; }
+        /** @brief 이 키부터 @p next 까지의 구간 안에서 @p time 의 값입니다. */
+        float32 interpolateTo( const FloatCurveKey& next, float32 time ) const;
     };
 } // namespace sw
 

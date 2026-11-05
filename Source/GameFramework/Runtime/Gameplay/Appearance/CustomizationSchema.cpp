@@ -275,35 +275,35 @@ namespace sw
         return VectorUtil::findBy<&CustomizationSchemaDef::_id>( _listSchema, id );
     }
 
-    uint32 CustomizationUtil::quantizeSlider( const CustomizationParamDef& param, float32 value )
+    uint32 CustomizationParamDef::quantizeSlider( float32 value ) const
     {
-        const float32 range = param._max - param._min;
+        const float32 range = _max - _min;
         if ( range <= 0.0f )
             return 0;
-        const float32 unit = MathUtil::saturate( ( value - param._min ) / range );
+        const float32 unit = MathUtil::saturate( ( value - _min ) / range );
         return static_cast<uint32>( unit * static_cast<float32>( kSliderSteps ) + 0.5f );
     }
 
-    float32 CustomizationUtil::dequantizeSlider( const CustomizationParamDef& param, uint32 step )
+    float32 CustomizationParamDef::dequantizeSlider( uint32 step ) const
     {
         const uint32 clamped = MathUtil::min( step, kSliderSteps );
-        return param._min + ( param._max - param._min ) * ( static_cast<float32>( clamped ) / static_cast<float32>( kSliderSteps ) );
+        return _min + ( _max - _min ) * ( static_cast<float32>( clamped ) / static_cast<float32>( kSliderSteps ) );
     }
 
-    uint32 CustomizationUtil::quantizeColorChannel( float32 value )
+    uint32 CustomizationParamDef::quantizeColorChannel( float32 value )
     {
         return static_cast<uint32>( MathUtil::saturate( value ) * static_cast<float32>( kColorSteps ) + 0.5f );
     }
 
-    float32 CustomizationUtil::dequantizeColorChannel( uint32 step )
+    float32 CustomizationParamDef::dequantizeColorChannel( uint32 step )
     {
         return static_cast<float32>( MathUtil::min( step, kColorSteps ) ) / static_cast<float32>( kColorSteps );
     }
 
-    void CustomizationUtil::normalize( const CustomizationSchemaDef& schema, const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped )
+    void CustomizationSchemaDef::normalize( const CustomizationValueSet& values, CustomizationValueSet& outValues, vector<hashed_string>* pOutListDropped ) const
     {
         outValues.clear();
-        for ( const CustomizationParamDef& param : schema._listParameter )
+        for ( const CustomizationParamDef& param : _listParameter )
         {
             CustomizationValue        value       = param.makeDefaultValue();
             const CustomizationValue* pGiven      = values.findValue( param._name );
@@ -317,12 +317,12 @@ namespace sw
             // 기본값도 같은 격자로 맞춘다. 정규화를 두 번 해도 결과가 같아야 하고, 전송한 값과 기본값이 비트까지 같아야 하기 때문이다.
             if ( param._kind == CustomizationKind::Slider )
             {
-                value._number = float4( dequantizeSlider( param, quantizeSlider( param, value._number._x ) ), 0.0f, 0.0f, 0.0f );
+                value._number = float4( param.dequantizeSlider( param.quantizeSlider( value._number._x ) ), 0.0f, 0.0f, 0.0f );
             }
             else if ( param._kind == CustomizationKind::Color )
             {
-                value._number = float4( dequantizeColorChannel( quantizeColorChannel( value._number._x ) ), dequantizeColorChannel( quantizeColorChannel( value._number._y ) ),
-                                        dequantizeColorChannel( quantizeColorChannel( value._number._z ) ), dequantizeColorChannel( quantizeColorChannel( value._number._w ) ) );
+                value._number = float4( CustomizationParamDef::dequantizeColorChannel( CustomizationParamDef::quantizeColorChannel( value._number._x ) ), CustomizationParamDef::dequantizeColorChannel( CustomizationParamDef::quantizeColorChannel( value._number._y ) ),
+                                        CustomizationParamDef::dequantizeColorChannel( CustomizationParamDef::quantizeColorChannel( value._number._z ) ), CustomizationParamDef::dequantizeColorChannel( CustomizationParamDef::quantizeColorChannel( value._number._w ) ) );
             }
             outValues.setValue( value );
         }
@@ -330,21 +330,21 @@ namespace sw
             return;
         for ( const CustomizationValue& given : values.getValues() )
         {
-            if ( schema.findParameter( given._parameter ) == nullptr )
+            if ( findParameter( given._parameter ) == nullptr )
                 pOutListDropped->push_back( given._parameter );
         }
     }
 
-    bool CustomizationUtil::isActive( const CustomizationParamDef& param, const CustomizationSchemaDef& schema, const CustomizationValueSet& normalizedValues )
+    bool CustomizationParamDef::isActive( const CustomizationSchemaDef& schema, const CustomizationValueSet& normalizedValues ) const
     {
-        for ( const CustomizationConditionDef& condition : param._listCondition )
+        for ( const CustomizationConditionDef& condition : _listCondition )
         {
             const CustomizationParamDef* pTarget = schema.findParameter( condition._parameter );
             const CustomizationValue*    pValue  = normalizedValues.findValue( condition._parameter );
             if ( pTarget == nullptr || pValue == nullptr )
                 return false;
             // 조건 대상이 꺼져 있으면 그 값도 없는 것으로 본다. 앞 매개변수부터 차례로 판정하므로 연쇄 조건도 한 번에 끝난다.
-            if ( isActive( *pTarget, schema, normalizedValues ) == false )
+            if ( pTarget->isActive( schema, normalizedValues ) == false )
                 return false;
             if ( pTarget->_kind == CustomizationKind::Slider )
             {
@@ -360,15 +360,15 @@ namespace sw
         return true;
     }
 
-    bool CustomizationUtil::applyValue( const CustomizationSchemaDef& schema, const CustomizationValue& value, bool bSymmetric, CustomizationValueSet& inoutValues )
+    bool CustomizationSchemaDef::applyValue( const CustomizationValue& value, bool bSymmetric, CustomizationValueSet& inoutValues ) const
     {
-        const CustomizationParamDef* pParam = schema.findParameter( value._parameter );
+        const CustomizationParamDef* pParam = findParameter( value._parameter );
         if ( pParam == nullptr )
             return false;
         inoutValues.setValue( value );
         if ( bSymmetric == false || pParam->_symmetry.empty() )
             return true;
-        for ( const CustomizationParamDef& partner : schema._listParameter )
+        for ( const CustomizationParamDef& partner : _listParameter )
         {
             const bool bNotMirrorPartner = partner._symmetry != pParam->_symmetry || partner._name == pParam->_name || partner._kind != pParam->_kind;
             if ( bNotMirrorPartner )
@@ -380,10 +380,10 @@ namespace sw
         return true;
     }
 
-    float32 CustomizationUtil::computeDriveValue( const CustomizationParamDef& param, const CustomizationDriveDef& drive, float32 value )
+    float32 CustomizationParamDef::computeDriveValue( const CustomizationDriveDef& drive, float32 value ) const
     {
-        const float32 range = param._max - param._min;
-        const float32 unit  = range > 0.0f ? MathUtil::saturate( ( value - param._min ) / range ) : 0.0f;
+        const float32 range = _max - _min;
+        const float32 unit  = range > 0.0f ? MathUtil::saturate( ( value - _min ) / range ) : 0.0f;
         return drive._from + ( drive._to - drive._from ) * unit;
     }
 } // namespace sw
