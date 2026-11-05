@@ -137,7 +137,7 @@ namespace sw
      * @brief 적과 보스의 투사체를 스폰하고, 클리어하면 클리어 게이트를 엽니다.
      * @details 상태가 바뀔 때마다 "game" 채널에 룸 이벤트를 낸다(언리얼 GameMode 의 브로드캐스트에 해당하며 `GameEventUtil::send` 를 쓴다).
      *          - 전투를 시작하면(`beginEntrance`, `beginHall`, `beginBoss`) 게이트가 닫힌다(`ClearGateStateChangedEvent` 의 잠김과 진입 트리거).
-     *          - 클리어하면 `RoomClearedEvent`(보스였는지 포함)를 낸 뒤 게이트가 열린다.
+     *          - 클리어하면 남은 적 탄을 지우고 `RoomClearedEvent`(보스를 쓰러뜨렸는지 포함. 적을 세우지 못한 보스 룸은 아니다)를 낸 뒤 게이트가 열린다.
      *          - 플레이어가 패배하면(`onPlayerDefeated`) `PlayerDefeatedInRoomEvent` 를 낸 뒤 게이트가 열리고 룸이 비워진다.
      *          HUD 와 오버월드는 `update` 의 반환값으로 결과를 확인하지 않고 이 이벤트로 받는다.
      *          적의 수치(HP, 반지름, 속도, 닿은 피해, 방어, 사격)는 게임이 게임 서비스로 등록한 `MonsterCatalog` 에서 종 id 로 찾는다. 코드에 내장 정의가 없으므로
@@ -206,7 +206,7 @@ namespace sw
          */
         void writeState( Archive& outArchive ) const;
         /**
-         * @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 종 정의는 지금의 카탈로그 서비스에서 다시 찾습니다. 카탈로그에 없는 종이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
+         * @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 종 정의는 지금의 카탈로그 서비스에서 다시 찾습니다. 카탈로그에 없는 종이거나 체력이 그 종의 최대를 넘거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다.
          *        상태를 바꿔도 룸 이벤트(게이트, 클리어)는 내지 않습니다.
          */
         [[nodiscard]] bool readState( Archive& archive );

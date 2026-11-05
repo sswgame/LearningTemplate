@@ -37,6 +37,7 @@ namespace sw
     {
         // 칸의 기본값은 각 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 몬스터를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 rejectedCount = 0;
+        uint32 loadedCount   = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             const bool bMonster = StringUtil::equals( node.getName(), "Monster" );
@@ -44,20 +45,22 @@ namespace sw
                 SW_LOG_ERROR_ID( "MonsterCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, node.getName() );
             if ( bMonster == false || loadMonster( node, sourceName ) == false )
                 ++rejectedCount; // 원인은 위 줄이나 loadMonster 가 남겼다
+            else
+                ++loadedCount;
         }
         if ( rejectedCount > 0 )
             SW_LOG_ERROR_ID( "MonsterCatalog.ElementNotLoadedListed", "%#: %# element(s) were not loaded (listed above)", sourceName, rejectedCount );
 
         // **읽었는데 하나도 없으면 실패로 본다**(0을 반환하면 호출한 쪽이 폴백을 채운다). 성공으로 넘기면 `<Monster>` 를 `<monster>` 로 잘못 적은 오타 하나가
         // **텅 빈 카탈로그**가 되고, 모든 `findMonster` 가 nullptr 을 반환해서 그 널을 다루는 쪽이 조용히 아무것도 하지 않는다.
-        if ( _mapMonster.empty() )
+        if ( loadedCount == 0 )
         {
             SW_LOG_WARNING_ID( "MonsterCatalog.NoMonsterEntries", "No <Monster> entries in %#", sourceName );
             return 0;
         }
 
-        SW_LOG_INFO_ID( "MonsterCatalog.LoadedMonsterDefinitions", "Loaded %# monster definitions from %#", static_cast<int32>( _mapMonster.size() ), sourceName );
-        return static_cast<uint32>( _mapMonster.size() );
+        SW_LOG_INFO_ID( "MonsterCatalog.LoadedMonsterDefinitions", "Loaded %# monster definitions from %#", static_cast<int32>( loadedCount ), sourceName );
+        return loadedCount;
     }
 
     bool MonsterCatalog::loadMonster( const XMLNode& node, string_view sourceName )
@@ -110,6 +113,12 @@ namespace sw
                 SW_LOG_ERROR_ID( "MonsterCatalog.UnknownChild", "%#: unknown child <%#>", where, name );
                 bValid = false;
             }
+        }
+        // 쏘는 종의 공격 간격이 0 이면 프레임마다 쏜다(발사 빈도가 fps 에 묶인다).
+        if ( monsterDef._listShot.empty() == false && monsterDef._ai._attackCoolTime <= 0.0f )
+        {
+            SW_LOG_ERROR_ID( "MonsterCatalog.ShooterNeedsCoolTime", "%#: a monster with <Shot> needs <AI coolTime=\"...\"> above 0", where );
+            bValid = false;
         }
         if ( bValid )
             _mapMonster[hashed_string( monsterDef._id.c_str() )] = monsterDef;

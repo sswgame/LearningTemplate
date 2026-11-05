@@ -149,7 +149,8 @@ namespace sw
     ActionRoomFrameResult ActionRoom::update( float32 deltaTime, const ActionRoomFrameInput& input )
     {
         ActionRoomFrameResult result{};
-        if ( _kind == ActionRoomKind::None )
+        // 음수 시간은 적과 탄을 거꾸로 움직인다.
+        if ( _kind == ActionRoomKind::None || deltaTime < 0.0f )
             return result;
 
         _attackCooldown.update( deltaTime );
@@ -371,8 +372,11 @@ namespace sw
             return;
         _bCleared                    = SW_TRUE;
         outResult._bClearedThisFrame = SW_TRUE;
-        if ( _kind == ActionRoomKind::Boss )
+        // 적을 하나도 세우지 못한 보스 룸(배치 없음 · 카탈로그 오류)은 비어서 끝난 것이지 보스를 쓰러뜨린 것이 아니다.
+        if ( _kind == ActionRoomKind::Boss && _listActor.empty() == false )
             outResult._bBossDefeated = SW_TRUE;
+        // 이긴 방에서 남은 탄에 맞아 지지 않게 탄을 지운다(건전 · 하데스처럼 클리어가 탄을 거둔다).
+        _listProjectile.clear();
 
         // 클리어는 한 번만 알린다(위의 `_bCleared` 가 막는다). 결과를 알리고 문을 연다.
         RoomClearedEvent cleared;
@@ -513,7 +517,11 @@ namespace sw
                 return false;
             archive >> actor._defIndex;
             archive >> bAlive;
-            const bool bActorValid = archive.isOk() && actor._defIndex < defCount && bAlive <= SW_TRUE;
+            if ( archive.isError() || actor._defIndex >= defCount || bAlive > SW_TRUE )
+                return false;
+            // NaN 체력은 깎여도 0 이하가 되지 않아 죽지 않는 적이 된다.
+            const bool bActorValid = MathUtil::isFinite( actor._position._x ) && MathUtil::isFinite( actor._position._y ) && 0.0f <= actor._hp &&
+                                     actor._hp <= static_cast<float32>( restored._listMonsterDef[actor._defIndex]._stats._maxHP );
             if ( bActorValid == false )
                 return false;
             actor._bAlive = bAlive;
@@ -534,7 +542,9 @@ namespace sw
             archive >> projectile._radius;
             archive >> projectile._damage;
             archive >> bAlive;
-            if ( archive.isError() || bAlive > SW_TRUE )
+            const bool bProjectileValid = archive.isOk() && bAlive <= SW_TRUE && MathUtil::isFinite( projectile._position._x ) && MathUtil::isFinite( projectile._position._y ) &&
+                                          MathUtil::isFinite( projectile._velocity._x ) && MathUtil::isFinite( projectile._velocity._y ) && 0.0f <= projectile._radius && 0 <= projectile._damage;
+            if ( bProjectileValid == false )
                 return false;
             projectile._bAlive = bAlive;
         }

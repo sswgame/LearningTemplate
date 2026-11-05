@@ -112,7 +112,7 @@ namespace sw
         PROPERTY( Min = 0.0 )
         float32 _attackRange{ 1.0f }; ///< 공격 거리(m)
         PROPERTY( Name = "coolTime", Min = 0.0 )
-        float32 _attackCoolTime{ 1.5f }; ///< 공격 간격(s)
+        float32 _attackCoolTime{ 1.5f }; ///< 공격 간격(s). `<Shot>` 이 있는 종은 0 보다 커야 한다
         PROPERTY( Name = "firstDelay", Min = 0.0 )
         float32 _firstAttackDelay{ 0.0f }; ///< 나타나서 첫 공격까지의 시간(s)
         PROPERTY()
