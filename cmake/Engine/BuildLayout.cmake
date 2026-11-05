@@ -81,6 +81,11 @@ message(STATUS "[BuildConfig] Target type: ${SW_TARGET_TYPE}")
 set(SW_UNBUILT_ENGINE_FOLDERS "")
 if(SW_TARGET_TYPE STREQUAL "Server")
 	list(APPEND SW_UNBUILT_ENGINE_FOLDERS "Renderer")
+	# Windows 의 `dllexport` 클래스는 쓰지 않는 inline 멤버까지 오브젝트에 내보내, 헤더만 읽는 렌더러 클래스가 짓지 않는 정의를 부른다(ELF 에는 없는 일이라 Linux 서버는 링크된다).
+	if(MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+		# Jolt 오브젝트만 뺀다 — Jolt 헤더의 함수 안 thread_local 은 이 옵션과 함께 dllimport 로 읽혀 컴파일되지 않는다.
+		target_compile_options(sw_global_options INTERFACE "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<NOT:$<STREQUAL:$<TARGET_PROPERTY:NAME>,EngineJolt_objects>>>:/Zc:dllexportInlines->")
+	endif()
 endif()
 
 if(SW_SHIPPING_BUILD)
