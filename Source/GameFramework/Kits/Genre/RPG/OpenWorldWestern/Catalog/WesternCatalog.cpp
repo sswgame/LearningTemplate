@@ -26,13 +26,18 @@ namespace sw
                 return lhs._level < rhs._level;
             }
 
-            /** @brief `<PeltGrade scales="0,0.3,0.6,1">` — 0..3 성 네 값이 모두 있어야 합니다. 모자라면 오류이고 표를 바꾸지 않습니다. */
+            /** @brief `<PeltGrade scales="0,0.3,0.6,1">` — 0..3 성 네 값이 모두 있고 음수가 아니어야 합니다(음수면 가죽 값이 음수다). 아니면 오류이고 표를 바꾸지 않습니다. */
             [[nodiscard]] static bool readGradeScales( const XMLNode& node, string_view sourceName, vector<float32>& outListScale )
             {
                 float4 scales{};
                 if ( XMLReadUtil::parseFloat4( node.getAttributeText( "scales" ), scales ) == false )
                 {
                     SW_LOG_ERROR_ID( "WesternCatalog.PeltGradeScalesNeedsExactly", "%#: <PeltGrade scales> needs exactly four numbers (0..3 stars)", sourceName );
+                    return false;
+                }
+                if ( scales._x < 0.0f || scales._y < 0.0f || scales._z < 0.0f || scales._w < 0.0f )
+                {
+                    SW_LOG_ERROR_ID( "WesternCatalog.PeltGradeScalesNegative", "%#: <PeltGrade scales> must not be negative", sourceName );
                     return false;
                 }
                 outListScale.assign( { scales._x, scales._y, scales._z, scales._w } );
@@ -201,6 +206,8 @@ namespace sw
         for ( size_t bondIndex = 1; bondIndex < _listBondLevel.size(); ++bondIndex )
         {
             const float32 gap = _listBondLevel[bondIndex]._experience - _listBondLevel[bondIndex - 1]._experience;
+            if ( gap <= 0.0f ) // 표는 단계 수를 지켜야 해서 칸을 빼지 않는다 — 1 로 두고 오류를 남긴다
+                SW_LOG_ERROR_ID( "WesternCatalog.BondExperienceNotRising", "%#: <Bond level=\"%#\"> xp must be above the previous level", sourceName, _listBondLevel[bondIndex]._level );
             listXPToNext.push_back( MathUtil::max( int64{ 1 }, static_cast<int64>( MathUtil::round( gap ) ) ) );
         }
         _bondCurve.setTable( listXPToNext );
@@ -210,8 +217,10 @@ namespace sw
     bool WesternCatalog::loadHonor( const XMLNode& node, string_view sourceName )
     {
         WesternHonorRangeDef range;
-        bool                 bValid = XMLFields::readFields( node, range, sourceName );
-        FactionDef           faction;
+        if ( XMLFields::readFields( node, range, sourceName ) == false )
+            return false; // 깨진 범위로 세력을 만들면 값을 뒤집힌 범위로 자른다
+        bool       bValid = true;
+        FactionDef faction;
         faction._id         = hashed_string( kHonorFactionID );
         faction._name       = "Honor";
         faction._minValue   = range._min;

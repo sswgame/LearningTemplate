@@ -109,6 +109,9 @@ namespace sw
 
     void WesternLawState::setSeenByLaw( const hashed_string& regionID, bool bSeen )
     {
+        // 모르는 지역의 기록을 만들면 쓴 상태를 `readState` 가 통째로 거절한다 — 세이브 하나가 이름 하나에 막힌다
+        if ( _pCatalog == nullptr || _pCatalog->findRegion( regionID ) == nullptr )
+            return;
         RegionRecord& record = acquireRecord( regionID );
         record._bSeenByLaw   = bSeen ? SW_TRUE : SW_FALSE;
         if ( bSeen )
@@ -244,15 +247,22 @@ namespace sw
         if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 17, recordCount ) == false )
             return false;
         vector<RegionRecord> listRecord( recordCount );
-        for ( RegionRecord& record : listRecord )
+        for ( size_t recordIndex = 0; recordIndex < listRecord.size(); ++recordIndex )
         {
+            RegionRecord& record = listRecord[recordIndex];
             if ( StateArchiveUtil::readName( archive, record._regionID ) == false || _pCatalog->findRegion( record._regionID ) == nullptr )
                 return false;
+            for ( size_t earlier = 0; earlier < recordIndex; ++earlier )
+            {
+                if ( listRecord[earlier]._regionID == record._regionID ) // 찾기는 앞의 것만 돌려주어 뒤의 것은 조회되지 않은 채 식는다
+                    return false;
+            }
             archive >> record._unseenTime;
             archive >> record._bounty;
             archive >> record._wantedLevel;
             archive >> record._bSeenByLaw;
-            const bool bValid = archive.isOk() && 0 <= record._bounty && 0 <= record._wantedLevel && record._bSeenByLaw <= SW_TRUE;
+            // 안 보인 시간이 NaN 이면 식는 비교가 늘 거짓이라 수배가 영영 내려가지 않는다
+            const bool bValid = archive.isOk() && 0.0f <= record._unseenTime && 0 <= record._bounty && 0 <= record._wantedLevel && record._bSeenByLaw <= SW_TRUE;
             if ( bValid == false )
                 return false;
         }
@@ -284,6 +294,12 @@ namespace sw
         const bool bInvalidLawState = archive.isError() || nextIncidentID == 0 || bDisguised > SW_TRUE;
         if ( bInvalidLawState )
             return false;
+        for ( const PendingReport& report : listPending )
+        {
+            // 앞으로 붙일 번호와 같은 대기는 새 사건과 한 사건으로 묶여 함께 지워진다
+            if ( report._incidentID == 0 || report._incidentID >= nextIncidentID )
+                return false;
+        }
         _listRecord     = std::move( listRecord );
         _listPending    = std::move( listPending );
         _nextIncidentID = nextIncidentID;
@@ -325,9 +341,10 @@ namespace sw
         record._unseenTime = 0.0f;
         _bDisguised        = SW_FALSE; // 새로 신고된 모습이므로 갈아입은 옷도 이제 알려졌다
         pushEvent( WesternLawEvent::Kind::Reported, report._regionID, record._bounty, report._incidentID, report._crimeID, report._witnessID );
-        if ( pCrime->_wanted > 0 )
+        const int32 raisedLevel = MathUtil::min( pRegion->_maxWanted, record._wantedLevel + pCrime->_wanted );
+        if ( raisedLevel > record._wantedLevel ) // 상한에서는 오르지 않는다 — 오른 것처럼 알리지 않는다
         {
-            setWantedLevel( record, MathUtil::min( pRegion->_maxWanted, record._wantedLevel + pCrime->_wanted ) );
+            setWantedLevel( record, raisedLevel );
             pushEvent( WesternLawEvent::Kind::WantedRaised, report._regionID, record._wantedLevel, report._incidentID, report._crimeID );
         }
     }

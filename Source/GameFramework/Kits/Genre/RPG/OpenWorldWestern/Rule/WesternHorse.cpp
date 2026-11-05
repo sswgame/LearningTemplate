@@ -106,9 +106,9 @@ namespace sw
     {
         if ( _pDef == nullptr )
             return false;
-        _bGalloping           = SW_TRUE;
         const bool bWasLocked = _stamina.isExhausted();
         const bool bGalloping = _stamina.drain( deltaTime );
+        _bGalloping           = bWasLocked ? SW_FALSE : SW_TRUE; // 탈진해 달리지 못한 걸음은 질주가 아니다(코어가 더 줄지 않는다)
         if ( bGalloping == false && bWasLocked == false )
         {
             WesternHorseEvent event;
@@ -250,8 +250,10 @@ namespace sw
         archive >> restored._hoursSinceBrush;
         archive >> restored._bRidden;
         archive >> restored._bGalloping;
-        const bool bValid = archive.isOk() && restored._bRidden <= SW_TRUE && restored._bGalloping <= SW_TRUE && 0.0f <= restored._fear && 0.0f <= restored._bondXPCarry &&
-                            restored._bondXPCarry < 1.0f && restored._bond.getLevel() <= MathUtil::max( 1, _pCatalog->getBondCurve().getMaxLevel() );
+        // 비교는 NaN 에서 거짓이라 범위를 쓴 쪽이 NaN 도 거른다. 코어가 NaN 이면 회복 배율과 코어 감소가 영영 NaN 으로 남는다.
+        const bool bCoreValid = 0.0f <= restored._healthCore && restored._healthCore <= kCoreMax && 0.0f <= restored._staminaCore && restored._staminaCore <= kCoreMax;
+        const bool bValid     = archive.isOk() && bCoreValid && restored._bRidden <= SW_TRUE && restored._bGalloping <= SW_TRUE && 0.0f <= restored._fear && 0.0f <= restored._hoursSinceBrush &&
+                            0.0f <= restored._bondXPCarry && restored._bondXPCarry < 1.0f && restored._bond.getLevel() <= MathUtil::max( 1, _pCatalog->getBondCurve().getMaxLevel() );
         if ( bValid == false )
             return false;
         restored._eventBuffer.clear();

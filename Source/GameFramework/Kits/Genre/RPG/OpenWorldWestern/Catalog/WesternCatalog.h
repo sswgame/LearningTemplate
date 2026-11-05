@@ -93,7 +93,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY()
+        PROPERTY( Required )
         hashed_string _name{};
         PROPERTY( Name = "flag" )
         hashed_string _dialogueFlag{}; ///< 이 단계에서 켜지는 플래그(대사 분기에 쓰며 `GameFlags` 에 켠다)
@@ -465,7 +465,7 @@ namespace sw
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief 원소 하나를 읽습니다. 개수에 넣는 원소(단계 · id 가 있는 정의)를 읽었으면 true 입니다. */
         [[nodiscard]] bool loadElement( const XMLNode& node, string_view name, string_view sourceName );
-        /** @brief `<Honor>` 를 읽습니다. 스키마 오류가 있으면 그 단계 · 행동을 빼고 false 입니다. */
+        /** @brief `<Honor>` 를 읽습니다. 범위가 깨졌으면 세력을 넣지 않고, 단계 · 행동의 스키마 오류는 그것만 빼고 false 입니다. */
         [[nodiscard]] bool loadHonor( const XMLNode& node, string_view sourceName );
 
     private:

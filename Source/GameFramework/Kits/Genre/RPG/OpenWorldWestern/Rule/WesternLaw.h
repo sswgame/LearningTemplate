@@ -137,7 +137,7 @@ namespace sw
                             const IWesternWitnessSight& sight, bool bMasked );
         /** @brief 목격자를 처치하거나 위협했음을 알립니다. 지운 신고 대기가 있으면 true 를 반환합니다(이미 신고했으면 늦은 것입니다). */
         bool silenceWitness( uint64 witnessID );
-        /** @brief 법이 지금 플레이어를 보고 있는지 나타냅니다(보이는 동안 수배가 식지 않습니다). */
+        /** @brief 법이 지금 플레이어를 보고 있는지 나타냅니다(보이는 동안 수배가 식지 않습니다). 모르는 지역이면 아무것도 하지 않습니다. */
         void setSeenByLaw( const hashed_string& regionID, bool bSeen );
         /** @brief 옷을 갈아입었음을 알립니다(변장하면 수배가 빨리 식습니다). 새 범죄가 신고되면 변장이 풀립니다. */
         void setDisguised( bool bDisguised ) { _bDisguised = bDisguised ? SW_TRUE : SW_FALSE; }
@@ -157,7 +157,7 @@ namespace sw
         void  drainEvents( vector<WesternLawEvent>& outListEvent );
         /** @brief 지역 기록(현상금, 수배, 안 보인 시간, 법이 보는지), 신고 대기(남은 시간까지), 다음 사건 번호, 변장을 씁니다. 카탈로그는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 지역이나 범죄이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 모르는 지역이나 범죄, 같은 지역의 두 기록, 다음 사건 번호 밖의 신고 대기이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
