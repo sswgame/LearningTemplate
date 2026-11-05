@@ -16,6 +16,7 @@
 #include "Engine/Automation/AutomationRunTitle.h"
 #include "Engine/Automation/Runner/AutomationExitCode.h"
 #include "Engine/Automation/Runner/AutomationImageMetric.h"
+#include "Engine/Automation/Runner/AutomationRunnerFields.h"
 #include "Engine/Automation/Runner/AutomationStepArgs.h"
 #include "Engine/Automation/Scenario/AutomationEnvironmentSteps.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
@@ -211,35 +212,27 @@ namespace sw
 
     void AutomationJudge::runExpectVisited( AutomationStepContext& context, const AutomationStep& step )
     {
-        const string*       pTarget = step.findAttribute( "target" );
-        const string*       pKey    = step.findAttribute( "key" );
-        const string_view   watch   = *step.findAttribute( "watch" );
-        const string_view   target  = pTarget != nullptr ? string_view{ *pTarget } : string_view{};
-        const string_view   key     = pKey != nullptr ? string_view{ *pKey } : string_view{};
-        const WatchHistory* pWatch  = nullptr;
+        const AutomationExpectVisitedFields fields = step.readValidatedFields<AutomationExpectVisitedFields>();
+        const string_view                   watch  = fields._watch;
+        const string_view                   target = fields._target;
+        const string_view                   key    = fields._key;
+        const WatchHistory*                 pWatch = nullptr;
         for ( const WatchHistory& history : _listWatch )
         {
             const bool bSame = history._watch == watch && history._target == target && history._key == key;
             if ( bSame )
                 pWatch = &history;
         }
-        string error;
-        uint32 since = 0; // 적지 않으면 처음부터 본다
-        if ( AutomationStepArgsUtil::readUint( step, "since", since, error ) == false )
-        {
-            context.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
-            return;
-        }
-        const string*  pIs = step.findAttribute( "is" );
+        const uint32   since = fields._since; // 적지 않으면 처음부터 본다
         vector<string> listWant;
-        if ( pIs != nullptr )
+        if ( step.findAttribute( "is" ) != nullptr )
         {
-            listWant.push_back( *pIs );
+            listWant.push_back( fields._is );
         }
         else
         {
             // `sequence` 는 쉼표로 가른 값 목록이다(앞뒤 공백을 떼고 빈 항목은 버린다).
-            for ( const string_view value : StringUtil::split( *step.findAttribute( "sequence" ), ",", { ._bTrim = true, ._bDropEmpty = true } ) )
+            for ( const string_view value : StringUtil::split( fields._sequence, ",", { ._bTrim = true, ._bDropEmpty = true } ) )
             {
                 listWant.emplace_back( value );
             }
@@ -295,8 +288,8 @@ namespace sw
             context.recordFailure( step, "Remember " + message );
             return;
         }
-        const string& name = *step.findAttribute( "as" );
-        string        text = AutomationStepArgsUtil::makeValueText( value );
+        const string name = step.readValidatedFields<AutomationRememberFields>()._as;
+        string       text = AutomationStepArgsUtil::makeValueText( value );
         SW_LOG_INFO_ID( "Automation.FrameRemember", "[Scenario] frame %# remember %# = %# (%#)", context.getFrameIndex(), name.c_str(), text.c_str(), message.c_str() );
         for ( RememberedValue& remembered : _listRemembered )
         {
@@ -311,25 +304,17 @@ namespace sw
 
     void AutomationJudge::runExpectLog( AutomationStepContext& context, const AutomationStep& step )
     {
-        const string&                         id        = *step.findAttribute( "id" ); // 검사 함수가 요구했다
-        const string*                         pContains = step.findAttribute( "contains" );
-        const string                          target    = pContains != nullptr ? string( id + "' containing '" + *pContains ) : id;
-        string                                error;
-        AutomationStepArgsUtil::ExpectLogArgs args;
-        if ( AutomationStepArgsUtil::parseExpectLog( step, args, error ) == false )
+        const AutomationExpectLogFields fields     = step.readValidatedFields<AutomationExpectLogFields>();
+        const string                    target     = fields._contains.empty() ? fields._id : string( fields._id + "' containing '" + fields._contains );
+        const uint32                    matchCount = _logCapture.countLinesWithID( fields._id, fields._contains, fields._since );
+        if ( fields._count != kAutomationNoCount )
         {
-            context.recordFailure( step, error ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
+            if ( matchCount != fields._count )
+                context.recordFailure( step, formatToString( "ExpectLog id '%#' count == %#, got %#", target, fields._count, matchCount ) );
             return;
         }
-        const uint32 matchCount = _logCapture.countLinesWithID( id, pContains != nullptr ? *pContains : string{}, args._since );
-        if ( args._bExactCount )
-        {
-            if ( matchCount != args._expected )
-                context.recordFailure( step, formatToString( "ExpectLog id '%#' count == %#, got %#", target, args._expected, matchCount ) );
-            return;
-        }
-        if ( matchCount < args._expected )
-            context.recordFailure( step, formatToString( "ExpectLog id '%#' count >= %#, got %#", target, args._expected, matchCount ) );
+        if ( matchCount < fields._atLeast )
+            context.recordFailure( step, formatToString( "ExpectLog id '%#' count >= %#, got %#", target, fields._atLeast, matchCount ) );
     }
 
     void AutomationJudge::deferExpectImage( AutomationStepContext& context, const AutomationStep& step )
@@ -388,7 +373,7 @@ namespace sw
         string                                  error;
         AutomationStepArgsUtil::ExpectImageArgs args;
         (void)AutomationStepArgsUtil::parseExpectImage( step, args, error ); // 미룰 때 읽혔다
-        const string&   file = *step.findAttribute( "file" );
+        const string    file = step.readValidatedFields<AutomationExpectImageFields>()._file;
         AutomationImage image;
         AutomationImage reduced;
         if ( AutomationImageMetric::loadPpm( context.resolveOutputPath( file ), image, error ) == false || AutomationImageMetric::reduce( image, args._region, reduced, error ) == false )
@@ -495,10 +480,9 @@ namespace sw
         {
             if ( step._kind != "ExpectLog" )
                 continue;
-            AutomationStepArgsUtil::ExpectLogArgs args;
-            string                                argsError;
-            const bool                            bParsed = AutomationStepArgsUtil::parseExpectLog( step, args, argsError );
-            const bool                            bAbsent = bParsed && args._bExactCount && args._expected == 0;
+            AutomationExpectLogFields fields;
+            string                    readError;
+            const bool                bAbsent = step.readFields( fields, readError ) && fields._count == 0;
             if ( bAbsent )
                 continue;                                                // count="0" 은 "이 줄이 없어야 한다" 는 단언이지 선언이 아니다 — 그 줄이 나오면 단언과 로그 게이트가 모두 진다
             _logPolicy.declareExpectedID( *step.findAttribute( "id" ) ); // 검사 함수가 id 를 요구했다

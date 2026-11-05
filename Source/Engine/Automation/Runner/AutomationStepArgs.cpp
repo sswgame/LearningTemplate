@@ -7,6 +7,8 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Automation/Runner/AutomationRunnerFields.h"
+
 namespace sw
 {
     bool AutomationStepArgsUtil::readFloat( const AutomationStep& step, string_view name, float32& inoutValue, string& outError )
@@ -98,36 +100,23 @@ namespace sw
                readFloat( step, "timeoutWallSeconds", outArgs._timeoutWallSeconds, outError );
     }
 
-    bool AutomationStepArgsUtil::parseExpectLog( const AutomationStep& step, ExpectLogArgs& outArgs, string& outError )
-    {
-        outArgs._bExactCount = step.findAttribute( "count" ) != nullptr;
-        return readUint( step, "since", outArgs._since, outError ) && readUint( step, outArgs._bExactCount ? "count" : "atLeast", outArgs._expected, outError );
-    }
-
     bool AutomationStepArgsUtil::parseExpectImage( const AutomationStep& step, ExpectImageArgs& outArgs, string& outError )
     {
-        const string* pGolden = step.requireAttribute( "golden", outError );
-        if ( pGolden == nullptr )
+        AutomationExpectImageFields fields;
+        if ( step.readFields( fields, outError ) == false )
             return false;
         // 골든 이름은 파일 이름의 한 조각이다 — 경로 · 점을 받지 않는다(`<시나리오>.<이름>.<백엔드>.ppm` 이 하나로 읽혀야 한다).
-        const bool bPlainName = pGolden->empty() == false && pGolden->find_first_of( "/\\.:" ) == string::npos;
+        const bool bPlainName = fields._golden.empty() == false && fields._golden.find_first_of( "/\\.:" ) == string::npos;
         if ( bPlainName == false )
         {
-            outError = step.describe() + ": golden must be a plain name (no path, no dot), got '" + *pGolden + "'";
+            outError = step.describe() + ": golden must be a plain name (no path, no dot), got '" + fields._golden + "'";
             return false;
         }
-        outArgs._golden       = *pGolden;
-        const string* pRegion = step.findAttribute( "region" );
-        if ( pRegion != nullptr && AutomationImageMetric::tryParseRegion( *pRegion, outArgs._region ) == false )
+        outArgs._golden    = fields._golden;
+        outArgs._tolerance = fields._tolerance;
+        if ( fields._region.empty() == false && AutomationImageMetric::tryParseRegion( fields._region, outArgs._region ) == false )
         {
-            outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + *pRegion + "'";
-            return false;
-        }
-        if ( readFloat( step, "tolerance", outArgs._tolerance, outError ) == false )
-            return false;
-        if ( outArgs._tolerance < 0.0f || outArgs._tolerance > 1.0f )
-        {
-            outError = step.describe() + ": tolerance is the allowed fraction of differing pixels (0..1)";
+            outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + fields._region + "'";
             return false;
         }
         return true;

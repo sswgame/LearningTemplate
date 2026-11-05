@@ -1,0 +1,261 @@
+/**
+ * @file AutomationRunnerFields.h
+ * @brief 실행기가 맡는 시나리오 단계(입력 · 변수 · 감시 값 · 로그 · 이미지 · 종료)의 인자 스키마입니다(`AutomationStep::readFields`).
+ * @details 수 비교(`equals` · `near` · `atLeast` · `atMost`)는 어느 속성을 적었는지가 곧 규칙이라 스키마 칸이 아니라 손으로 읽습니다(`AutomationStepArgsUtil::parseNumberComparison`).
+ *          감시 값 참조(`watch` · `target` · `key`)의 뜻 검사도 등록표를 봐야 해서 단계의 검사 함수가 합니다.
+ */
+#pragma once
+#include "Core/Container/string.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+
+#include "Engine/Automation/Scenario/AutomationTimeLimits.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    /** @brief 횟수 칸의 "적지 않음" 입니다. */
+    inline constexpr uint32 kAutomationNoCount = 0xFFFFFFFFu;
+
+    /** @brief `Press` · `Release` · `Tap` 의 인자입니다. `hold` 는 `Tap` 에만 씁니다. */
+    REFLECT()
+    struct SW_API AutomationSlotStepFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _slot{};
+        PROPERTY()
+        uint32 _hold{ 1 };
+    };
+
+    /** @brief `MouseDelta` · `Wheel` 의 인자입니다. 없는 축은 0 입니다. */
+    REFLECT()
+    struct SW_API AutomationAxisPairFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        float32 _x{ 0.0f };
+        PROPERTY()
+        float32 _y{ 0.0f };
+    };
+
+    /** @brief `MousePosition` 의 인자입니다(클라이언트 영역의 비율). */
+    REFLECT()
+    struct SW_API AutomationMousePositionFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Min = 0, Max = 1 )
+        float32 _x{ 0.0f };
+        PROPERTY( Required, Min = 0, Max = 1 )
+        float32 _y{ 0.0f };
+    };
+
+    /** @brief `GamepadAxis` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationGamepadAxisFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        uint32 _axis{ 0 };
+        PROPERTY( Required )
+        float32 _value{ 0.0f };
+        PROPERTY()
+        uint32 _pad{ 0 };
+    };
+
+    /** @brief `Text` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationTextStepFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _value{};
+    };
+
+    /** @brief `Variable` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationVariableFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY( Required )
+        string _value{};
+    };
+
+    /** @brief `ExpectVariable` 의 인자입니다. 적지 않으면 정확히 같아야 합니다. */
+    REFLECT()
+    struct SW_API AutomationExpectVariableFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY( Required )
+        string _value{};
+        PROPERTY( Min = 0 )
+        float32 _tolerance{ 0.0f };
+    };
+
+    /** @brief `Expect` 의 글 칸입니다. 수 비교 속성은 손으로 읽습니다(파일 머리말). */
+    REFLECT()
+    struct SW_API AutomationExpectFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _watch{};
+        PROPERTY()
+        string _target{};
+        PROPERTY()
+        string _key{};
+        PROPERTY( Min = 0 )
+        float32 _tolerance{ 0.0f };
+        PROPERTY()
+        string _is{};
+        PROPERTY()
+        string _sameAs{};
+        PROPERTY()
+        string _differsFrom{};
+    };
+
+    /** @brief `WaitUntil` 의 시한 칸(`Expect` 칸에 더해진다)입니다. 셋 중 하나만 적습니다. */
+    REFLECT()
+    struct SW_API AutomationWaitUntilFields : public AutomationExpectFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        uint32 _timeoutFrames{ 0 };
+        PROPERTY( Min = 0 )
+        float32 _timeoutSeconds{ 0.0f };
+        PROPERTY( Min = 0 )
+        float32 _timeoutWallSeconds{ 0.0f };
+    };
+
+    /** @brief `ExpectVisited` 의 인자입니다. `is` · `sequence` 중 하나를 적습니다. */
+    REFLECT()
+    struct SW_API AutomationExpectVisitedFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _watch{};
+        PROPERTY()
+        string _target{};
+        PROPERTY()
+        string _key{};
+        PROPERTY()
+        string _is{};
+        PROPERTY()
+        string _sequence{};
+        PROPERTY()
+        uint32 _since{ 0 };
+    };
+
+    /** @brief `Record` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationRecordFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _watch{};
+        PROPERTY()
+        string _target{};
+        PROPERTY()
+        string _key{};
+    };
+
+    /** @brief `Remember` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationRememberFields : public AutomationRecordFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _as{};
+    };
+
+    /** @brief `ExpectLog` 의 인자입니다. `count` · `atLeast` 중 하나를 적습니다. */
+    REFLECT()
+    struct SW_API AutomationExpectLogFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _id{};
+        PROPERTY()
+        string _contains{};
+        PROPERTY()
+        uint32 _count{ kAutomationNoCount };
+        PROPERTY()
+        uint32 _atLeast{ kAutomationNoCount };
+        PROPERTY()
+        uint32 _since{ 0 };
+    };
+
+    /** @brief `Screenshot` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationScreenshotFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _file{};
+        PROPERTY()
+        bool _bWaitForSettle{ true }; ///< NOLINT(sw-bool-flag): 집합체다
+    };
+
+    /** @brief `ExpectImage` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationExpectImageFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _file{};
+        PROPERTY( Required )
+        string _golden{};
+        PROPERTY()
+        string _region{};
+        PROPERTY( Min = 0, Max = 1 )
+        float32 _tolerance{ 0.01f }; ///< 다른 화소의 비율 상한
+    };
+
+    /** @brief `CloseWindow` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationCloseWindowFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0 )
+        float32 _withinSeconds{ AutomationTimeLimits::kDefaultExitWithinSeconds };
+    };
+
+    /** @brief `ExpectExitWithin` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationExpectExitWithinFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Min = 0 )
+        float32 _seconds{ AutomationTimeLimits::kDefaultExitWithinSeconds };
+    };
+
+    /** @brief `Fail` · `Skip` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationEndStepFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _reason{};
+    };
+} // namespace sw

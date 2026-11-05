@@ -54,22 +54,12 @@ namespace sw
             bool    _bWallSeconds{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         };
 
-        /** @brief `ExpectLog` 의 인자입니다. */
-        struct ExpectLogArgs
-        {
-            uint32 _since{ 0 };
-            uint32 _expected{ 0 };
-            bool   _bExactCount{ false }; ///< 참이면 `count`(같아야 한다), 거짓이면 `atLeast` NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        };
-
-        /** @brief `ExpectImage` 의 기본 허용 — 다른 화소(`AutomationImageMetric::kDifferingMinDistance`)의 비율 상한입니다. */
-        static constexpr float32 kDefaultGoldenTolerance = 0.01f;
         /** @brief `ExpectImage` 의 인자입니다(`file` · `golden` · `region` · `tolerance`). */
         struct ExpectImageArgs
         {
             AutomationImageRegion _region{};
-            string                _golden{};                             ///< 골든 이름(`<시나리오 폴더>/golden/<시나리오>.<이름>.<백엔드>.ppm`)
-            float32               _tolerance{ kDefaultGoldenTolerance }; ///< 다른 화소 비율의 상한(0..1)
+            string                _golden{};          ///< 골든 이름(`<시나리오 폴더>/golden/<시나리오>.<이름>.<백엔드>.ppm`)
+            float32               _tolerance{ 0.0f }; ///< 다른 화소 비율의 상한(0..1)
         };
 
         static constexpr float32 kWatchNearTolerance = 1.0e-4f; ///< 감시 값 `near` 의 기본 허용 폭
@@ -84,7 +74,6 @@ namespace sw
         /** @brief @p comparison 대로 @p value 를 비교합니다. 실패 메시지의 규칙 글을 @p outRule 에 씁니다. */
         static bool               matchesNumber( const NumberComparison& comparison, float64 value, string& outRule );
         [[nodiscard]] static bool parseWaitTimeout( const AutomationStep& step, WaitTimeoutArgs& outArgs, string& outError );
-        [[nodiscard]] static bool parseExpectLog( const AutomationStep& step, ExpectLogArgs& outArgs, string& outError );
         [[nodiscard]] static bool parseExpectImage( const AutomationStep& step, ExpectImageArgs& outArgs, string& outError );
 
         /**
