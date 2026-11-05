@@ -10,10 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-namespace sw
-{
-    class JSONValue;
-} // namespace sw
+#include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw::editor
 {
@@ -22,15 +19,22 @@ namespace sw::editor
      * @brief 리소스 루트 기준 경로에 대한 포함 · 제외 조건입니다.
      * @details 패턴은 `/` 가 없으면 파일 이름에만 맞춥니다. `/` 가 있으면 경로를 마디(폴더 이름 · 파일 이름) 단위로 맞춥니다.
      *          마디 안에서 `*`(0 글자 이상) · `?`(한 글자)는 **마디를 넘지 않고**, 마디 하나가 통째로 `**` 이면 0 개 이상의 마디에 맞습니다
-     *          (`**` 만 폴더를 넘는다). 대소문자는 가리지 않습니다. 경로(`include_paths` · `exclude_paths`)는 폴더 마디의 연속이며
+     *          (`**` 만 폴더를 넘는다). 대소문자는 가리지 않습니다. 경로(`includePaths` · `excludePaths`)는 폴더 마디의 연속이며
      *          (`ui/` 는 `…/ui/…` 에 맞고 `…/guide/…` 에는 맞지 않는다) 부분 문자열이 아닙니다.
      *          제외가 먼저이고, 포함 목록이 비어 있으면 그 검사는 통과입니다 — 네 목록이 모두 비면 무엇에나 맞습니다.
      */
+    REFLECT()
     struct AssetImportPathFilter
     {
+        REFLECT_BODY();
+
+        PROPERTY( Name = "includePatterns" )
         vector<string> _listIncludePattern;
+        PROPERTY( Name = "excludePatterns" )
         vector<string> _listExcludePattern;
+        PROPERTY( Name = "includePaths" )
         vector<string> _listIncludePath;
+        PROPERTY( Name = "excludePaths" )
         vector<string> _listExcludePath;
 
         AssetImportPathFilter()
@@ -40,9 +44,6 @@ namespace sw::editor
             , _listExcludePath{}
         {
         }
-
-        /** @brief 규칙 객체의 `include_patterns` · `exclude_patterns` · `include_paths` · `exclude_paths` 중 있는 것을 읽습니다. 구분자 `\` 는 `/` 로 바꿉니다. */
-        void parse( const JSONValue& jsonValue );
 
         /** @brief @p relativePath(리소스 루트 기준)가 조건에 맞는지 봅니다. */
         bool matchesPath( string_view relativePath ) const;

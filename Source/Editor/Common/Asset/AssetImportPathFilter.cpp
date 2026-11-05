@@ -15,22 +15,6 @@ namespace sw::editor
     {
         struct AssetImportPathFilterInternal
         {
-            /** @brief 문자열 목록을 읽습니다. 경로 구분자는 `/` 로 맞춥니다(`\` 로 적어도 같은 패턴이다). */
-            static void parseStringList( const JSONValue& arrValue, vector<string>& outListItem )
-            {
-                outListItem.clear();
-                if ( arrValue.isArray() == false )
-                    return;
-
-                const size_t count = arrValue.size();
-                for ( size_t index = 0; index < count; ++index )
-                {
-                    const JSONValue item = arrValue.at( index );
-                    if ( item.isString() )
-                        outListItem.push_back( FileUtil::normalizeSeparators( item.asString() ) );
-                }
-            }
-
             /** @brief 패턴 목록 중 하나가 @p normalized 경로에 맞는지 봅니다(마디 매칭은 `StringUtil::matchesPathPattern`). */
             static bool matchesAnyPattern( const vector<string>& listPattern, string_view normalized )
             {
@@ -65,21 +49,6 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    void AssetImportPathFilter::parse( const JSONValue& jsonValue )
-    {
-        if ( jsonValue.has( "include_patterns" ) )
-            AssetImportPathFilterInternal::parseStringList( jsonValue.get( "include_patterns" ), _listIncludePattern );
-
-        if ( jsonValue.has( "exclude_patterns" ) )
-            AssetImportPathFilterInternal::parseStringList( jsonValue.get( "exclude_patterns" ), _listExcludePattern );
-
-        if ( jsonValue.has( "include_paths" ) )
-            AssetImportPathFilterInternal::parseStringList( jsonValue.get( "include_paths" ), _listIncludePath );
-
-        if ( jsonValue.has( "exclude_paths" ) )
-            AssetImportPathFilterInternal::parseStringList( jsonValue.get( "exclude_paths" ), _listExcludePath );
-    }
-
     bool AssetImportPathFilter::matchesPath( string_view relativePath ) const
     {
         const string normalized  = FileUtil::normalizeSeparators( relativePath );

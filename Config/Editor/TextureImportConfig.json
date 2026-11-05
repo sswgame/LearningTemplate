@@ -1,38 +1,38 @@
 {
   "presets": {
     "Base_Default": {
-      "format": "BC7_UNORM",
-      "generate_mips": true,
-      "srgb": true,
-      "invert_green": false,
+      "format": "BC7",
+      "generateMips": true,
+      "sRGB": true,
+      "invertGreen": false,
       "swizzle": "RGBA"
     },
     "Base_NormalMap": {
-      "format": "BC5_UNORM",
-      "generate_mips": true,
-      "srgb": false,
-      "invert_green": false,
+      "format": "BC5",
+      "generateMips": true,
+      "sRGB": false,
+      "invertGreen": false,
       "swizzle": "RGBA"
     },
     "Base_UI": {
-      "format": "B8G8R8A8_UNORM",
-      "generate_mips": false,
-      "srgb": true,
-      "invert_green": false,
+      "format": "B8G8R8A8",
+      "generateMips": false,
+      "sRGB": true,
+      "invertGreen": false,
       "swizzle": "BGRA"
     },
     "Base_HDR": {
-      "format": "BC6H_UF16",
-      "generate_mips": true,
-      "srgb": false,
-      "invert_green": false,
+      "format": "BC6H",
+      "generateMips": true,
+      "sRGB": false,
+      "invertGreen": false,
       "swizzle": "RGBA"
     },
     "Base_Uncompressed": {
-      "format": "R8G8B8A8_UNORM",
-      "generate_mips": true,
-      "srgb": true,
-      "invert_green": false,
+      "format": "R8G8B8A8",
+      "generateMips": true,
+      "sRGB": true,
+      "invertGreen": false,
       "swizzle": "RGBA"
     }
   },
@@ -40,84 +40,81 @@
     {
       "name": "Pixel_Art",
       "inherits": "Base_Uncompressed",
-      "include_patterns": ["*/textures_raw/pixel/**"],
-      "generate_mips": false
+      "filter": { "includePatterns": ["*/textures_raw/pixel/**"] },
+      "generateMips": false
     },
     {
       "name": "Editor_Splash",
       "inherits": "Base_UI",
-      "include_patterns": ["*splash*"],
-      "format": "B8G8R8A8_UNORM",
-      "generate_mips": false,
+      "filter": { "includePatterns": ["*splash*"] },
+      "format": "B8G8R8A8",
+      "generateMips": false,
       "swizzle": "BGRA"
     },
     {
       "name": "Normal_Maps",
       "inherits": "Base_NormalMap",
-      "include_patterns": ["*_n.*", "*_normal.*", "*_norm.*", "*_nor_gl_*"],
-      "exclude_paths": ["ui/", "gui/", "icons/"]
+      "filter": { "includePatterns": ["*_n.*", "*_normal.*", "*_norm.*", "*_nor_gl_*"], "excludePaths": ["ui/", "gui/", "icons/"] }
     },
     {
       "name": "ORM_Maps",
       "inherits": "Base_Default",
-      "include_patterns": ["*_orm.*", "*_arm_*"],
-      "format": "BC1_UNORM",
-      "srgb": false
+      "filter": { "includePatterns": ["*_orm.*", "*_arm_*"] },
+      "format": "BC1",
+      "sRGB": false
     },
     {
       "name": "Roughness_Maps",
       "inherits": "Base_Default",
-      "include_patterns": ["*_rough.*", "*_roughness.*"],
-      "exclude_paths": ["quaternius/"],
-      "srgb": false
+      "filter": { "includePatterns": ["*_rough.*", "*_roughness.*"], "excludePaths": ["quaternius/"] },
+      "sRGB": false
     },
     {
       "name": "Quaternius_Roughness",
       "inherits": "Base_Default",
-      "include_patterns": ["*/textures_raw/quaternius/**/*_roughness.*"],
-      "srgb": false,
-      "quick_compress": true
+      "filter": { "includePatterns": ["*/textures_raw/quaternius/**/*_roughness.*"] },
+      "sRGB": false,
+      "quickCompress": true
     },
     {
       "name": "Quaternius_Color",
       "inherits": "Base_Default",
-      "include_patterns": ["*/textures_raw/quaternius/**"],
-      "exclude_patterns": ["*_normal.*", "*_orm.*", "*_roughness.*"],
-      "quick_compress": true
+      "filter": { "includePatterns": ["*/textures_raw/quaternius/**"], "excludePatterns": ["*_normal.*", "*_orm.*", "*_roughness.*"] },
+      "quickCompress": true
     },
     {
       "name": "UI_Textures",
       "inherits": "Base_UI",
-      "include_paths": ["ui/", "gui/", "icons/"]
+      "filter": { "includePaths": ["ui/", "gui/", "icons/"] }
     },
     {
       "name": "Palette_Textures",
       "inherits": "Base_Default",
-      "include_patterns": ["*colormap*", "*/voxelcraft/textures_raw/blocks.*"],
-      "generate_mips": false
+      "filter": { "includePatterns": ["*colormap*", "*/voxelcraft/textures_raw/blocks.*"] },
+      "generateMips": false
     },
     {
       "name": "Character_Atlases",
       "inherits": "Base_Default",
-      "include_patterns": ["*/shooter3d/textures_raw/kaykit_dungeon.*"],
-      "format": "BC1_UNORM"
+      "filter": { "includePatterns": ["*/shooter3d/textures_raw/kaykit_dungeon.*"] },
+      "format": "BC1"
     },
     {
       "name": "Terrain_Detail",
       "inherits": "Base_Uncompressed",
-      "include_patterns": ["*/textures_raw/terrain/*_detail.*"],
-      "srgb": false
+      "filter": { "includePatterns": ["*/textures_raw/terrain/*_detail.*"] },
+      "sRGB": false
     },
     {
       "name": "HDR_Cubemaps",
       "inherits": "Base_HDR",
-      "include_patterns": ["*.hdr", "*_sky.*", "*_env.*"]
+      "filter": { "includePatterns": ["*.hdr", "*_sky.*", "*_env.*"] }
     },
     {
       "name": "Vrm_Character_Textures",
       "inherits": "Base_Default",
-      "include_patterns": ["**/textures_raw/avatarsample_d/**"],
-      "format": "BC3_UNORM"
+      "filter": { "includePatterns": ["**/textures_raw/avatarsample_d/**"] },
+      "format": "BC3"
     },
     {
       "name": "Fallback_Default",

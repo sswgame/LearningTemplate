@@ -2,72 +2,70 @@
   "rules": [
     {
       "name": "StarSkirmish_KayKitSpaceBase",
-      "include_patterns": ["*/starskirmish/models_raw/kaykit_space/**"]
+      "filter": { "includePatterns": ["*/starskirmish/models_raw/kaykit_space/**"] }
     },
     {
       "name": "StarSkirmish_KitLayoutOffset",
-      "include_patterns": ["*/starskirmish/models_raw/**"],
-      "exclude_patterns": ["*/starskirmish/models_raw/kaykit_space/**"],
+      "filter": { "includePatterns": ["*/starskirmish/models_raw/**"], "excludePatterns": ["*/starskirmish/models_raw/kaykit_space/**"] },
       "translation": [-2.0, 0.0, -1.5]
     },
     {
       "name": "Shooter3D_KayKitDungeon",
-      "include_patterns": ["*/shooter3d/models_raw/kaykit_dungeon/**"],
-      "import_materials": false
+      "filter": { "includePatterns": ["*/shooter3d/models_raw/kaykit_dungeon/**"] },
+      "importMaterials": false
     },
     {
       "name": "KayKit_Characters",
-      "include_patterns": ["common/models_raw/kaykit/**"],
-      "exclude_patterns": ["common/models_raw/kaykit/skeleton_minion.glb"],
-      "import_materials": false,
-      "animation_codec": "acl",
-      "animation_sample_rate": 30,
-      "animation_precision": 0.0001,
-      "animation_shell_distance": 0.1
+      "filter": { "includePatterns": ["common/models_raw/kaykit/**"], "excludePatterns": ["common/models_raw/kaykit/skeleton_minion.glb"] },
+      "importMaterials": false,
+      "animationCodec": "acl",
+      "animationSampleRate": 30,
+      "animationPrecision": 0.0001,
+      "animationShellDistance": 0.1
     },
     {
       "name": "Quaternius_Characters",
-      "include_patterns": ["common/models_raw/quaternius/**"],
-      "animation_codec": "acl",
-      "animation_sample_rate": 30,
-      "animation_precision": 0.0001,
-      "animation_shell_distance": 0.1
+      "filter": { "includePatterns": ["common/models_raw/quaternius/**"] },
+      "animationCodec": "acl",
+      "animationSampleRate": 30,
+      "animationPrecision": 0.0001,
+      "animationShellDistance": 0.1
     },
     {
       "name": "KayKit_SkeletonMinionLOD",
-      "include_patterns": ["common/models_raw/kaykit/skeleton_minion.glb"],
-      "import_materials": false,
-      "animation_codec": "acl",
-      "animation_sample_rate": 30,
-      "animation_precision": 0.0001,
-      "animation_shell_distance": 0.1,
+      "filter": { "includePatterns": ["common/models_raw/kaykit/skeleton_minion.glb"] },
+      "importMaterials": false,
+      "animationCodec": "acl",
+      "animationSampleRate": 30,
+      "animationPrecision": 0.0001,
+      "animationShellDistance": 0.1,
       "lods": [
-        { "triangle_ratio": 0.5, "screen_size": 0.3, "max_error": 0.01 },
-        { "triangle_ratio": 0.25, "screen_size": 0.12, "max_error": 0.02 }
+        { "triangleRatio": 0.5, "screenSize": 0.3, "maxError": 0.01 },
+        { "triangleRatio": 0.25, "screenSize": 0.12, "maxError": 0.02 }
       ]
     },
     {
       "name": "WildWest_Horse",
-      "include_patterns": ["*/wildwest/models_raw/horse.*"],
-      "animation_codec": "acl",
-      "animation_sample_rate": 30,
-      "animation_precision": 0.0001,
-      "animation_shell_distance": 0.1
+      "filter": { "includePatterns": ["*/wildwest/models_raw/horse.*"] },
+      "animationCodec": "acl",
+      "animationSampleRate": 30,
+      "animationPrecision": 0.0001,
+      "animationShellDistance": 0.1
     },
     {
       "name": "Destruction_BrickWall",
-      "include_patterns": ["*/empty/models_raw/brick_wall*"],
-      "fracture": { "pattern": "uniform", "pieces": 200, "seed": 7, "levels": [6, 30], "interior_color": [0.55, 0.5, 0.45, 1.0] }
+      "filter": { "includePatterns": ["*/empty/models_raw/brick_wall*"] },
+      "fracture": { "pattern": "Uniform", "pieces": 200, "seed": 7, "levels": [6, 30], "interiorColor": "0.55, 0.5, 0.45, 1.0" }
     },
     {
       "name": "Destruction_Crate",
-      "include_patterns": ["*/empty/models_raw/crate_medium*"],
-      "fracture": { "volume": "bounds", "pattern": "uniform", "pieces": 24, "seed": 3, "levels": [4], "interior_color": [0.62, 0.45, 0.28, 1.0] }
+      "filter": { "includePatterns": ["*/empty/models_raw/crate_medium*"] },
+      "fracture": { "volume": "Bounds", "pattern": "Uniform", "pieces": 24, "seed": 3, "levels": [4], "interiorColor": "0.62, 0.45, 0.28, 1.0" }
     },
     {
       "name": "Destruction_Barrel",
-      "include_patterns": ["*/empty/models_raw/barrel*"],
-      "fracture": { "pattern": "uniform", "pieces": 20, "seed": 11, "levels": [3], "interior_color": [0.35, 0.33, 0.3, 1.0] }
+      "filter": { "includePatterns": ["*/empty/models_raw/barrel*"] },
+      "fracture": { "pattern": "Uniform", "pieces": 20, "seed": 11, "levels": [3], "interiorColor": "0.35, 0.33, 0.3, 1.0" }
     }
   ]
 }

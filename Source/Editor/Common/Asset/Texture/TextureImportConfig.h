@@ -8,6 +8,8 @@
 
 #include "Editor/Common/Asset/AssetImportPathFilter.h"
 
+#include "Engine/Reflection/ReflectionMacros.h"
+
 namespace sw
 {
     enum class ConfigReadResult : uint8;
@@ -21,6 +23,7 @@ namespace sw::editor
      * @enum TextureSwizzle
      * @brief 채널 순서입니다. 기본은 RGBA 이고, UI 용 BGRA, 레거시 ARGB, 불투명 RGB1 등이 있습니다.
      */
+    ENUM()
     enum class TextureSwizzle : uint8
     {
         RGBA = 0,
@@ -34,10 +37,11 @@ namespace sw::editor
 {
     /**
      * @enum TextureImportFormat
-     * @brief 임포트 결과의 픽셀 형식입니다. 규칙의 `format` 이름은 `TextureImportFormatUtil::parse` 로만 이 값이 됩니다.
-     * @details 이름 표는 하나뿐입니다. 설정 로드가 모르는 이름을 거절하고, 임포터는 이 열거형을 DXGI 로 바꿀 뿐이라 "모르는 이름이면 BC7" 같은 기본값이 설 자리가 없습니다.
-     *          BC2 는 없다 — 같은 크기에 BC3 가 알파를 더 잘 담고 언리얼 · 유니티의 압축 설정에도 없다(규칙의 `bc2` 는 로드 오류).
+     * @brief 임포트 결과의 픽셀 형식입니다. 규칙의 `format` 은 열거자 이름(`BC7` · `B8G8R8A8` …)입니다.
+     * @details 설정 로드가 모르는 이름을 거절하고, 임포터는 이 열거형을 DXGI 로 바꿀 뿐이라 "모르는 이름이면 BC7" 같은 기본값이 설 자리가 없습니다.
+     *          BC2 는 없다 — 같은 크기에 BC3 가 알파를 더 잘 담고 언리얼 · 유니티의 압축 설정에도 없다(규칙의 `BC2` 는 로드 오류).
      */
+    ENUM()
     enum class TextureImportFormat : uint8
     {
         BC1 = 0,
@@ -58,12 +62,10 @@ namespace sw::editor
 {
     /**
      * @struct TextureImportFormatUtil
-     * @brief `format` 이름(`BC7_UNORM` · `bc7` …)과 `TextureImportFormat` 을 잇는 유일한 표입니다.
+     * @brief `TextureImportFormat` 과 DXGI 이름 · 번호를 잇는 표입니다.
      */
     struct TextureImportFormatUtil
     {
-        /** @brief @p name 을 형식으로 읽습니다. 모르는 이름이면 false 이고 @p outFormat 은 그대로입니다. */
-        [[nodiscard]] static bool parse( string_view name, TextureImportFormat& outFormat );
         /** @brief @p format 의 DXGI 이름(`BC7_UNORM` …)입니다. 로그에 씁니다. */
         [[nodiscard]] static string_view getName( TextureImportFormat format );
         /**
@@ -80,18 +82,31 @@ namespace sw::editor
      * @struct TextureImportRule
      * @brief 텍스처 임포트와 압축 규칙입니다.
      * @details 형식은 이름이 아니라 `TextureImportFormat` 으로 든다 — 이름은 설정을 읽을 때 한 번 풀고 모르는 이름은 그때 거절한다. 쓰는 쪽에 "못 푸는 형식" 이 없다.
+     *          키는 `PROPERTY` 이고(`JSONFields`), 적지 않은 칸은 `inherits` 의 값, 그것도 없으면 기본값이다.
      */
+    REFLECT()
     struct TextureImportRule
     {
-        string                 _name;
-        string                 _inherits;
-        AssetImportPathFilter  _filter;
-        TextureImportFormat    _format;
-        TextureSwizzle         _swizzle;
-        uint8                  _bGenerateMips  : 1;
-        uint8                  _bSRGB          : 1;
-        uint8                  _bInvertGreen   : 1;
-        uint8                  _bQuickCompress : 1; ///< BC7 빠른 프로필(quick_compress)
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _name; ///< 규칙 이름(로그 · 경고에 나온다). 프리셋은 키가 이름이다
+        PROPERTY()
+        string _inherits; ///< 값을 물려받을 프리셋 이름 — 위에 정의되지 않은 이름은 로드 오류
+        PROPERTY()
+        AssetImportPathFilter _filter;
+        PROPERTY()
+        TextureImportFormat _format;
+        PROPERTY()
+        TextureSwizzle _swizzle;
+        PROPERTY()
+        uint8 _bGenerateMips : 1;
+        PROPERTY()
+        uint8 _bSRGB : 1; ///< sRGB 색 공간으로 읽는다(노멀 · 데이터 텍스처는 false)
+        PROPERTY()
+        uint8 _bInvertGreen : 1; ///< G 채널을 뒤집는다(DirectX ↔ OpenGL 노멀 맵)
+        PROPERTY()
+        uint8                  _bQuickCompress : 1; ///< BC7 빠른 프로필(모드 6 하나 — DirectXTex BC7_QUICK). 기본 압축은 2K 한 장에 수십 분이라 큰 팩에 쓴다
         [[maybe_unused]] uint8 _reserved       : 4;
 
         TextureImportRule()
@@ -160,11 +175,6 @@ namespace sw::editor
         size_t findShadowingRuleIndex() const;
 
     private:
-        /**
-         * @brief 프리셋이나 규칙 객체 하나를 @p inoutRule 에 읽습니다. 객체가 아니거나 모르는 키, 모르는 swizzle · format 이면 오류를 남기고 false 입니다.
-         * @details 키 테이블은 `TextureImportConfig.cpp` 의 `kArrTextureImportRuleKeyDoc` 에 있다.
-         */
-        [[nodiscard]] static bool parseRuleObject( const sw::JSONValue& jsonValue, TextureImportRule& inoutRule, string_view context );
         /**
          * @brief `inherits` 가 가리키는 프리셋을 @p inoutRule 의 바탕으로 적용합니다. `inherits` 가 없으면 아무것도 하지 않고 true 입니다.
          * @details 찾기는 그 시점까지 파싱된 프리셋만 본다. 오타이거나 부모를 아래쪽에 적었으면 오류를 남기고 false 를 반환한다.

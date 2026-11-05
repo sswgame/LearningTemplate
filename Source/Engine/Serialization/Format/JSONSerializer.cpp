@@ -658,6 +658,11 @@ namespace sw
         return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } ) ? FieldReadResult::Read : FieldReadResult::FieldFailed;
     }
 
+    FieldReadResult JSONSerializer::readField( const JSONValue& field, const PropertyInfo& prop, void* pInstance, const SerializeContext& context )
+    {
+        return JSONSerializerInternal::readProperty( field, prop, MutableObjectAddress{ pInstance }, context );
+    }
+
     SoftReadResult JSONSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view jsonStr,
                                                     vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
                                                     const SerializeContext& context )

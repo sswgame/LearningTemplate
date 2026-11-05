@@ -6,7 +6,7 @@
 
 Ask in this order. Stop at the first yes.
 
-1. **Does one type own it?** A function that reads or keeps one type's data or invariants is that type's member — `static` if it needs no instance, `private` if only the type's own code calls it. `ConfigKeyDoc::hasOnlyKnownKeys`, not a `ConfigKeyDocUtil` beside it; a crash handler's report-writing steps are `CrashHandler` members, not free functions next to it. Moving such a function out only because it is "a helper" splits one type's rules across two names.
+1. **Does one type own it?** A function that reads or keeps one type's data or invariants is that type's member — `static` if it needs no instance, `private` if only the type's own code calls it. `JSONFields::hasOnlyKnownKeys`, not a `JSONFieldsUtil` beside it; a crash handler's report-writing steps are `CrashHandler` members, not free functions next to it. Moving such a function out only because it is "a helper" splits one type's rules across two names.
 2. **No owner, several translation units use it** → a `XxxUtil` static struct in a header (`SerializerUtil`, `MeshUtil`). Typical owners-that-cannot-own: an enum (it has no members — `TextureImportFormatUtil`), an algorithm across several types, an external type. Never name those headers or types `Internal`.
 3. **No owner, one `.cpp` uses it** → that file's anonymous namespace (below).
 

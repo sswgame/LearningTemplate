@@ -21,19 +21,6 @@ namespace sw
     {
     }
 
-    bool FractureSettings::parsePattern( string_view text, FracturePattern& outPattern )
-    {
-        if ( text == "uniform" )
-            outPattern = FracturePattern::Uniform;
-        else if ( text == "clustered" )
-            outPattern = FracturePattern::Clustered;
-        else if ( text == "slices" )
-            outPattern = FracturePattern::Slices;
-        else
-            return false;
-        return true;
-    }
-
     string_view FractureSettings::getPatternName( FracturePattern pattern )
     {
         switch ( pattern )
@@ -46,19 +33,6 @@ namespace sw
                 return "slices";
         }
         return "uniform";
-    }
-
-    bool FractureSettings::parseVolume( string_view text, FractureVolume& outVolume )
-    {
-        if ( text == "mesh" )
-            outVolume = FractureVolume::Mesh;
-        else if ( text == "bounds" )
-            outVolume = FractureVolume::Bounds;
-        else if ( text == "hull" )
-            outVolume = FractureVolume::Hull;
-        else
-            return false;
-        return true;
     }
 
     string_view FractureSettings::getVolumeName( FractureVolume volume )

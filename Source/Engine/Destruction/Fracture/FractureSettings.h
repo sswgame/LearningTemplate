@@ -43,31 +43,43 @@ namespace sw
 namespace sw
 {
     /** @brief 쪼개기 설정입니다. 모델 임포트 규칙 `fracture` 와 `Fracture2DComponent` 가 채웁니다. */
+    REFLECT()
     struct SW_API FractureSettings
     {
-        vector<uint32>  _listLevelCount;  ///< 클러스터 레벨마다 클러스터 수다(위에서 아래로). 비면 루트 하나다.
-        float4          _interiorColor;   ///< 안쪽 면의 정점 색이다.
-        float3          _impactPoint;     ///< Clustered 에서 맞은 지점이다(메시 공간).
-        float32         _clusterRadius;   ///< Clustered 에서 시드가 몰리는 반경이다(미터).
-        float32         _clusterFraction; ///< Clustered 에서 반경 안에 놓을 시드의 비율이다(0..1).
-        float32         _interiorUvScale; ///< 안쪽 면 평면 투영 UV 의 미터당 배율이다.
-        float32         _sliceJitter;     ///< Slices 에서 셀 크기에 대한 흔들림이다(0..0.5).
-        uint64          _seed;
-        uint32          _pieceCount;       ///< Uniform, Clustered 에서 조각 수다(시드 수이며, 메시 밖 셀은 빠진다).
-        uint32          _arrSliceCount[3]; ///< Slices 에서 축마다 셀 수다.
-        uint32          _maxHullPoint;     ///< 조각 껍질 점의 상한이다. 넘으면 고른 방향의 끝점만 남긴다.
+        REFLECT_BODY();
+
+        PROPERTY( Name = "levels", Min = 1 )
+        vector<uint32> _listLevelCount; ///< 클러스터 레벨마다 클러스터 수다(위에서 아래로). 비면 루트 하나다.
+        PROPERTY()
+        float4 _interiorColor; ///< 안쪽 면의 정점 색이다.
+        PROPERTY()
+        float3 _impactPoint; ///< Clustered 에서 맞은 지점이다(메시 공간).
+        PROPERTY( Min = 0.0 )
+        float32 _clusterRadius; ///< Clustered 에서 시드가 몰리는 반경이다(미터).
+        PROPERTY( Min = 0.0, Max = 1.0 )
+        float32 _clusterFraction; ///< Clustered 에서 반경 안에 놓을 시드의 비율이다(0..1).
+        PROPERTY( Min = 0.0 )
+        float32 _interiorUvScale; ///< 안쪽 면 평면 투영 UV 의 미터당 배율이다.
+        PROPERTY( Min = 0.0, Max = 0.5 )
+        float32 _sliceJitter; ///< Slices 에서 셀 크기에 대한 흔들림이다(0..0.5).
+        PROPERTY( Min = 1 )
+        uint64 _seed;
+        PROPERTY( Name = "pieces", Min = 1 )
+        uint32 _pieceCount; ///< Uniform, Clustered 에서 조각 수다(시드 수이며, 메시 밖 셀은 빠진다).
+        PROPERTY( Name = "slices", Min = 1 )
+        uint32 _arrSliceCount[3]; ///< Slices 에서 축마다 셀 수다.
+        PROPERTY( Name = "maxHullPoints", Min = 1 )
+        uint32 _maxHullPoint; ///< 조각 껍질 점의 상한이다. 넘으면 고른 방향의 끝점만 남긴다.
+        PROPERTY()
         FracturePattern _pattern;
-        FractureVolume  _volume; ///< 부피다(닫히지 않은 모델은 Bounds 나 Hull 을 쓴다).
+        PROPERTY()
+        FractureVolume _volume; ///< 부피다(닫히지 않은 모델은 Bounds 나 Hull 을 쓴다).
 
         FractureSettings();
 
-        /** @brief 이름("uniform", "clustered", "slices")을 읽습니다. 모르는 이름이면 false 입니다. */
-        [[nodiscard]] static bool parsePattern( string_view text, FracturePattern& outPattern );
-        /** @brief 이름을 반환합니다. */
+        /** @brief 원본 해시에 섞는 이름입니다(글자를 바꾸면 모든 파쇄 모델을 다시 임포트한다). */
         static string_view getPatternName( FracturePattern pattern );
-        /** @brief 이름("mesh", "bounds", "hull")을 읽습니다. 모르는 이름이면 false 입니다. */
-        [[nodiscard]] static bool parseVolume( string_view text, FractureVolume& outVolume );
-        /** @brief 이름을 반환합니다. */
+        /** @brief 원본 해시에 섞는 이름입니다(글자를 바꾸면 모든 파쇄 모델을 다시 임포트한다). */
         static string_view getVolumeName( FractureVolume volume );
     };
 } // namespace sw

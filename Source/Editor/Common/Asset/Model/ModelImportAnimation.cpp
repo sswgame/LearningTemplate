@@ -20,6 +20,7 @@
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
+#include "Engine/Serialization/JSON/JSONFields.h"
 
 namespace sw::editor
 {
@@ -276,13 +277,13 @@ namespace sw::editor
             return false;
         }
         const JSONValue root = document.getRoot();
-        if ( ModelImportJSONUtil::hasOnlyKnownKeys( root, { "clips" }, clipDataPath ) == false || root.get( "clips" ).isObject() == false )
+        if ( JSONFields::hasOnlyKnownKeys( root, { "clips" }, clipDataPath ) == false || root.get( "clips" ).isObject() == false )
             return false;
         const JSONValue clips = root.get( "clips" );
         for ( const string& clipName : clips.getMemberNames() )
         {
             const JSONValue clipValue = clips.get( clipName );
-            if ( ModelImportJSONUtil::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath ) == false )
+            if ( JSONFields::hasOnlyKnownKeys( clipValue, { "loop", "notifies", "curves" }, clipDataPath ) == false )
                 return false;
             ClipExtra extra{};
             if ( clipValue.has( "loop" ) )
@@ -296,7 +297,7 @@ namespace sw::editor
             for ( size_t notifyIndex = 0; notifies.isArray() && notifyIndex < notifies.size(); ++notifyIndex )
             {
                 const JSONValue notify         = notifies.at( notifyIndex );
-                const bool      bInvalidNotify = ModelImportJSONUtil::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
+                const bool      bInvalidNotify = JSONFields::hasOnlyKnownKeys( notify, { "name", "time", "duration" }, clipDataPath ) == false || notify.get( "name" ).isString() == false ||
                                             notify.get( "time" ).isNumber() == false;
                 if ( bInvalidNotify )
                 {

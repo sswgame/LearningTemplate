@@ -13,6 +13,7 @@ namespace sw
 {
     enum class FieldReadResult : uint8;
 
+    struct PropertyInfo;
     struct TypeInfo;
 
     /**
@@ -67,6 +68,10 @@ namespace sw
         [[nodiscard]] static FieldReadResult readObject( JSONValue src, void* pInstance, const TypeInfo& typeInfo,
                                                          vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
                                                          const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+
+        /** @brief 값 @p field 를 칸 @p prop 하나로 읽습니다(`JSONFields` 처럼 키 규칙을 따로 두는 읽기가 쓴다). 스칼라 · 열거 · 비트 필드 · 컨테이너를 받습니다. */
+        [[nodiscard]] static FieldReadResult readField( const JSONValue& field, const PropertyInfo& prop, void* pInstance,
+                                                        const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         // ------------------------------------------------------------------------------
         // 2) Soft · 버전: orphan 수집, _schemaVersion
