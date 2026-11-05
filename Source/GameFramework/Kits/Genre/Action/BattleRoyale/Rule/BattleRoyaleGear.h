@@ -61,7 +61,7 @@ namespace sw
         BattleRoyaleLoadout();
 
         void initialize( const BattleRoyaleCatalog* pCatalog );
-        /** @brief 방어구를 입습니다. 같은 슬롯의 방어구는 벗겨지며, 게임이 바닥에 떨어뜨립니다. @p durability 가 음수면 새것입니다. 모르는 id 면 false 를 반환합니다. */
+        /** @brief 방어구를 입습니다. 같은 슬롯의 방어구는 벗겨지며, 게임이 바닥에 떨어뜨립니다. @p durability 가 음수면 새것이고, 최대를 넘으면 최대입니다. 모르는 id 이거나 내구도가 0 · NaN 이면(부서진 방어구) 입히지 않고 false 를 반환합니다. */
         [[nodiscard]] bool tryEquipArmor( const hashed_string& itemID, float32 durability = -1.0f );
         /** @brief 가방을 멥니다(빈 id 는 가방을 벗는 것입니다). 모르는 가방이거나 무게가 넘치면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool tryEquipBackpack( const hashed_string& itemID, Inventory& inoutInventory );

@@ -26,12 +26,20 @@ namespace sw
     {
     }
 
+    const hashed_string& BattleRoyaleCatalog::getHelmetSlotName()
+    {
+        static const hashed_string name( "Helmet" );
+        return name;
+    }
+
     uint32 BattleRoyaleCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 맵 크기가 깨진 글을 앞의 크기로 읽어 나가지 않는다(자기장 · 비행 경로가 말없이 다른 맵에서 돈다).
         BattleRoyaleCatalogRootDef rootDef;
-        if ( XMLFields::readFields( root, rootDef, sourceName ) )
-            _mapSize = rootDef._mapSize;
+        if ( XMLFields::readFields( root, rootDef, sourceName ) == false )
+            return 0;
+        _mapSize = rootDef._mapSize;
 
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
@@ -48,7 +56,7 @@ namespace sw
     bool BattleRoyaleCatalog::loadElement( const XMLNode& node, string_view name, string_view sourceName )
     {
         if ( XMLReadUtil::isElement( name, "Armor" ) )
-            return GameDataXML::readInto( node, sourceName, _armorCatalog );
+            return loadArmor( node, sourceName );
         if ( XMLReadUtil::isElement( name, "Backpack" ) )
             return GameDataXML::readInto( node, sourceName, _backpackCatalog );
         if ( XMLReadUtil::isElement( name, "LootSpot" ) )
@@ -65,6 +73,21 @@ namespace sw
             return loadSupplyDrop( node, sourceName );
         SW_LOG_ERROR_ID( "BattleRoyaleCatalog.UnknownElementSkipped", "%#: unknown element <%#> - skipped", sourceName, name );
         return false;
+    }
+
+    bool BattleRoyaleCatalog::loadArmor( const XMLNode& node, string_view sourceName )
+    {
+        BattleRoyaleArmorDef armor;
+        if ( XMLFields::readFields( node, armor, sourceName ) == false )
+            return false;
+        // 장비는 헬멧이 아니면 조끼로 입는다. 슬롯 오타가 말없이 조끼가 되지 않게 여기서 막는다.
+        if ( armor._slot != BattleRoyaleCatalog::getHelmetSlotName() && armor._slot != hashed_string( "Vest" ) )
+        {
+            SW_LOG_ERROR_ID( "BattleRoyaleCatalog.ArmorUnknownSlot", "%#: <Armor id=\"%#\"> slot '%#' is neither Helmet nor Vest", sourceName, armor._id.c_str(), armor._slot.c_str() );
+            return false;
+        }
+        (void)_armorCatalog.add( armor );
+        return true;
     }
 
     bool BattleRoyaleCatalog::loadZone( const XMLNode& node, string_view sourceName )

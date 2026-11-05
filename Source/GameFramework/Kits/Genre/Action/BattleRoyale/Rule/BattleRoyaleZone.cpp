@@ -194,6 +194,13 @@ namespace sw
                              reader.readFiniteFloat( nextRadius );
         if ( bFinite == false )
             return false;
+        // 음수 남은 시간은 `update` 의 시간을 늘리고, 음수 반지름은 모두를 원 밖으로 만든다. 마지막이 아닌 단계는 그 단계의 정의가 있어야 한다.
+        const int32 phaseCount    = static_cast<int32>( _settings._listPhase.size() );
+        const bool  bFinalStage   = stage == static_cast<int32>( BattleRoyaleZoneStage::Final );
+        const bool  bPhaseValid   = phaseIndex <= phaseCount && ( bFinalStage || phaseIndex < phaseCount );
+        const bool  bAmountsValid = 0.0f <= stageRemaining && 0.0f <= radius && 0.0f <= fromRadius && 0.0f <= nextRadius;
+        if ( bPhaseValid == false || bAmountsValid == false )
+            return false;
         _phaseIndex     = phaseIndex;
         _stage          = static_cast<BattleRoyaleZoneStage>( stage );
         _stageRemaining = stageRemaining;

@@ -126,10 +126,12 @@ namespace sw
 
     float32 BattleRoyaleMatch::applyDamage( int32 victim, int32 attacker, float32 damage, BattleRoyaleHitZone hitZone )
     {
-        const bool bDamageRejected = isValidPlayer( victim ) == false || damage <= 0.0f || _matchState.getPhase() != MatchPhase::InProgress;
+        const bool bDamageRejected = isValidPlayer( victim ) == false || ( damage > 0.0f ) == false || _matchState.getPhase() != MatchPhase::InProgress;
         if ( bDamageRejected )
             return 0.0f;
-        BattleRoyalePlayer& target = _listPlayer[static_cast<size_t>( victim )];
+        // 없는 사람은 환경이다. 그 번호가 `_downedBy` 에 남으면 세이브를 읽을 수 없다.
+        const int32         instigator = isValidPlayer( attacker ) ? attacker : -1;
+        BattleRoyalePlayer& target     = _listPlayer[static_cast<size_t>( victim )];
         if ( target.isDead() )
             return 0.0f;
         const bool bFriendlyFire = isValidPlayer( attacker ) && attacker != victim && TeamAttitudeUtil::isFriendly( _listPlayer[static_cast<size_t>( attacker )]._team, target._team );
@@ -142,13 +144,13 @@ namespace sw
             const BattleRoyaleArmorResult armor = target._loadout.absorbDamage( damage, hitZone );
             bodyDamage                          = armor._damage;
             if ( armor._bBroken == SW_TRUE )
-                pushEvent( BattleRoyaleEvent::Kind::ArmorBroken, victim, attacker, target._team, static_cast<int32>( hitZone ) );
+                pushEvent( BattleRoyaleEvent::Kind::ArmorBroken, victim, instigator, target._team, static_cast<int32>( hitZone ) );
         }
         else if ( target._revive.getParticipantCount() > 0 && isValidPlayer( attacker ) )
         {
             interruptRevive( victim, true ); // 기절한 사람이 적에게 맞으면 부활이 처음부터 다시 시작된다
         }
-        const VitalityDamageResult result = target._vitality.applyDamage( bodyDamage, 0.0f, attacker );
+        const VitalityDamageResult result = target._vitality.applyDamage( bodyDamage, 0.0f, instigator );
         const float32              dealt  = result._shieldAbsorbed + result._healthDamage;
         if ( isValidPlayer( attacker ) && dealt > 0.0f )
             _matchState.reportDamage( attacker, victim, dealt );
@@ -224,7 +226,8 @@ namespace sw
         _matchState.update( deltaTime );
         _zone.update( deltaTime );
 
-        for ( size_t index = 0; index < _listPlayer.size(); ++index )
+        // 판이 끝난 틱에는 남은 사람을 더 깎지 않는다. 이긴 팀이 끝난 뒤에 죽는 킬 피드가 나오면 안 된다.
+        for ( size_t index = 0; index < _listPlayer.size() && _matchState.getPhase() == MatchPhase::InProgress; ++index )
         {
             BattleRoyalePlayer& player = _listPlayer[index];
             if ( player.isDead() )
@@ -236,7 +239,7 @@ namespace sw
                 processVitality( static_cast<int32>( index ) );
             }
         }
-        for ( size_t index = 0; index < _listPlayer.size(); ++index )
+        for ( size_t index = 0; index < _listPlayer.size() && _matchState.getPhase() == MatchPhase::InProgress; ++index )
         {
             BattleRoyalePlayer& player = _listPlayer[index];
             if ( player.isDead() )
@@ -283,7 +286,8 @@ namespace sw
         target._downedBy           = instigator;
         target._revive.reset();
         endRevive( player ); // 살리던 사람이 기절하면 그만둔다
-        if ( isValidPlayer( instigator ) )
+        // 처치(`handleDeath`)와 같은 규칙이다. 자기 자신을 기절시킨 것은 세지 않는다.
+        if ( isValidPlayer( instigator ) && TeamAttitudeUtil::isHostile( _listPlayer[static_cast<size_t>( instigator )]._team, target._team ) )
             ++_listPlayer[static_cast<size_t>( instigator )]._knocks;
         pushEvent( BattleRoyaleEvent::Kind::PlayerDowned, player, instigator, target._team, 0 );
         resolveTeamWipe( target._team );
@@ -494,8 +498,9 @@ namespace sw
             archive >> player._knocks;
             archive >> player._downedBy;
             archive >> player._revivingTarget;
-            const bool bPlayerValid = archive.isOk() && 0 <= player._kills && 0 <= player._knocks && -1 <= player._downedBy && player._downedBy < playerLimit &&
-                                    -1 <= player._revivingTarget && player._revivingTarget < playerLimit;
+            // 위치가 깨지면 자기장 거리가 NaN 이 되어 원 안팎 판정이 무너진다.
+            const bool bPlayerValid = archive.isOk() && MathUtil::isFinite( player._position._x ) && MathUtil::isFinite( player._position._y ) && 0 <= player._kills && 0 <= player._knocks && -1 <= player._downedBy &&
+                                      player._downedBy < playerLimit && -1 <= player._revivingTarget && player._revivingTarget < playerLimit;
             if ( bPlayerValid == false )
                 return false;
         }
@@ -519,10 +524,13 @@ namespace sw
                     return false;
                 archive >> item._count;
                 archive >> item._spotIndex;
+                if ( archive.isError() || item._count <= 0 || MathUtil::isFinite( item._position._x ) == false || MathUtil::isFinite( item._position._y ) == false )
+                    return false;
             }
             archive >> drop._position;
             archive >> drop._time;
-            if ( archive.isError() )
+            const bool bDropValid = archive.isOk() && MathUtil::isFinite( drop._position._x ) && MathUtil::isFinite( drop._position._y ) && 0.0f <= drop._time;
+            if ( bDropValid == false )
                 return false;
         }
 

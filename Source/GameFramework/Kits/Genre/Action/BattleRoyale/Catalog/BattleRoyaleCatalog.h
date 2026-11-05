@@ -215,7 +215,7 @@ namespace sw
      * @brief 다음 형식의 XML 을 읽는 카탈로그입니다. `<BattleRoyaleCatalog mapSize="1000"><Player health="100" .../><Flight .../><Fall .../><Zone startRadius="0"><Phase wait="60" shrink="30" ratio="0.5" damage="1"/></Zone>
      *        <Armor id="helmet1" slot="Helmet" tier="1" reduction="0.3" durability="80"/><Backpack id="bag1" tier="1" capacity="150"/>
      *        <LootSpot id="house" table="house" chance="0.8" rolls="1" rollsMax="3"/><SupplyDrop table="airdrop" times="90,180"/></BattleRoyaleCatalog>`
-     * @details 스키마를 어긴 원소는 넣지 않고 오류로 남긴다. 설정 원소(Player · Flight · Fall · Zone · SupplyDrop)는 오류가 없을 때만 바꾼다.
+     * @details 루트의 맵 크기가 깨졌으면 읽기 실패다. 스키마를 어긴 원소는 넣지 않고 오류로 남긴다. 설정 원소(Player · Flight · Fall · Zone · SupplyDrop)는 오류가 없을 때만 바꾼다.
      */
     class SW_KIT_API BattleRoyaleCatalog : public XMLCatalog<BattleRoyaleCatalog>
     {
@@ -223,6 +223,9 @@ namespace sw
 
     public:
         BattleRoyaleCatalog();
+
+        /** @brief 방어구 슬롯 이름 "Helmet" 입니다(틱마다 쓰므로 한 번만 intern 합니다). */
+        static const hashed_string& getHelmetSlotName();
 
         const BattleRoyaleArmorDef*      findArmor( const hashed_string& id ) const { return _armorCatalog.find( id ); }
         const BattleRoyaleBackpackDef*   findBackpack( const hashed_string& id ) const { return _backpackCatalog.find( id ); }
@@ -238,6 +241,7 @@ namespace sw
         static constexpr const utf8* kXMLRootName = "BattleRoyaleCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool           loadElement( const XMLNode& node, string_view name, string_view sourceName );
+        [[nodiscard]] bool           loadArmor( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadZone( const XMLNode& node, string_view sourceName );
         [[nodiscard]] bool           loadSupplyDrop( const XMLNode& node, string_view sourceName );
 
