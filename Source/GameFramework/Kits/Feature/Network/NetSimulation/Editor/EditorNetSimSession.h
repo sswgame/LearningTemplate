@@ -15,6 +15,7 @@
 
 #include "Editor/Common/EditorSubsystem.h"
 
+#include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/Model/NetSimPlayModel.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/Editor/NetSimPreviewSceneSource.h"
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
@@ -89,6 +90,6 @@ namespace sw::editor
         unique_ptr<INetSimGame>              _pGame;
         unique_ptr<NetSimHarness>            _pHarness;
         vector<WorldView>                    _listView;
-        float64                              _accumulatedSeconds;
+        NetSimStepPacer                      _stepPacer;
     };
 } // namespace sw::editor

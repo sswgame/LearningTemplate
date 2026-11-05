@@ -20,7 +20,7 @@ namespace sw::editor
         , _pGame{}
         , _pHarness{}
         , _listView{}
-        , _accumulatedSeconds{ 0.0 }
+        , _stepPacer{}
     {
     }
 
@@ -89,24 +89,15 @@ namespace sw::editor
         _pHarness.reset();
         _pGame.reset();
         _pSceneSource.reset();
-        _accumulatedSeconds = 0.0;
+        _stepPacer.reset();
     }
 
     uint32 EditorNetSimSession::update( float64 frameSeconds )
     {
         if ( _pHarness == nullptr )
             return 0;
-        const float64 interval = _pHarness->getTickInterval();
-        _accumulatedSeconds += frameSeconds;
-        uint32 stepCount = 0;
-        while ( _accumulatedSeconds >= interval && stepCount < kMaxStepsPerFrame )
-        {
-            _pHarness->step();
-            _accumulatedSeconds -= interval;
-            ++stepCount;
-        }
-        if ( stepCount == kMaxStepsPerFrame )
-            _accumulatedSeconds = 0.0; // 중단점 뒤 밀린 시간을 몰아 돌지 않는다
+        const uint32 stepCount = _stepPacer.consume( frameSeconds, _pHarness->getTickInterval(), kMaxStepsPerFrame );
+        _pHarness->stepTicks( stepCount );
         return stepCount;
     }
 
