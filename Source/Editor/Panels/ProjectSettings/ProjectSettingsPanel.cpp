@@ -151,20 +151,6 @@ namespace sw::editor
         }
     }
 
-    void ProjectSettingsPanel::openPage( Page& page )
-    {
-        page._bOpened         = true;
-        const TypeInfo* pType = editor::getSubsystem<TypeRegistry>().findType( hashed_string( page._entry._typeName.c_str() ) );
-        if ( pType == nullptr )
-        {
-            page._bTypeFound = false;
-            return;
-        }
-        if ( page._document.open( *pType, page._absolutePath, page._entry._elementName ) == ConfigReadResult::Invalid )
-            SW_LOG_WARNING_ID( "ProjectSettingsPanel.ProjectSettingsCouldNot", "Project settings: %# could not be opened - see the errors above", page._absolutePath.c_str() );
-        page._bDirty = SW_FALSE;
-    }
-
     void ProjectSettingsPanel::onPropertyEdited( const PropertyInfo& /*prop*/ )
     {
         refreshDirtyState();
@@ -172,30 +158,12 @@ namespace sw::editor
 
     void ProjectSettingsPanel::refreshDirtyState()
     {
-        if ( _pSelected != nullptr && _pSelected->_bOpened )
-            _pSelected->_bDirty = _pSelected->_document.isModified();
-        bool bAnyDirty = false;
-        for ( const unique_ptr<Page>& pPage : _listPage )
-        {
-            bAnyDirty = bAnyDirty || pPage->_bDirty;
-        }
-        if ( bAnyDirty )
+        if ( _pSelected != nullptr )
+            _pSelected->refreshDirty();
+        if ( ProjectSettingsPage::hasDirty( _listPage ) )
             markDocumentDirty();
         else
             clearDocumentDirty();
-    }
-
-    bool ProjectSettingsPanel::savePage( Page& page, bool& outApplied )
-    {
-        outApplied = false;
-        if ( page._document.save() == false )
-            return false;
-        page._bDirty = SW_FALSE;
-        // 호스트가 파일에서 읽은 설정(EngineConfig · GameConfig …)이면 제자리에서 다시 읽는다. 팩 설정이나 모르는 파일은 NotTracked — 다음 실행부터 반영된다.
-        // 방금 쓴 파일을 다시 읽지 못하면(Failed) 읽는 쪽이 오류를 남겼다 — 적용하지 않은 것으로 알린다.
-        ConfigReloadSubsystem* pConfigReload = editor::findSubsystem<ConfigReloadSubsystem>();
-        outApplied                           = pConfigReload != nullptr && pConfigReload->reloadChangedFile( page._absolutePath ) == ReloadOutcome::Reloaded;
-        return true;
     }
 
     bool ProjectSettingsPanel::saveDocument()
@@ -206,7 +174,7 @@ namespace sw::editor
             if ( pPage->_bDirty == false )
                 continue;
             bool bApplied = false;
-            bAllSaved     = savePage( *pPage, bApplied ) && bAllSaved;
+            bAllSaved     = pPage->save( bApplied ) && bAllSaved;
         }
         return bAllSaved;
     }
@@ -217,8 +185,7 @@ namespace sw::editor
         {
             if ( pPage->_bDirty == false )
                 continue;
-            (void)pPage->_document.revert(); // 결과는 창의 상태 줄이 파일 상태로 보인다
-            pPage->_bDirty = SW_FALSE;
+            pPage->revert();
         }
     }
 
@@ -238,7 +205,7 @@ namespace sw::editor
             {
                 _pSelected = &page;
                 if ( page._bOpened == false )
-                    openPage( page );
+                    page.open();
             }
             if ( page._bTypeFound == false )
                 ImGui::EndDisabled();
@@ -273,7 +240,7 @@ namespace sw::editor
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Save" ), SW_LOCKEY( "EdVerb", "Save" ), "Save" ) ) )
         {
             bool bApplied = false;
-            if ( savePage( page, bApplied ) )
+            if ( page.save( bApplied ) )
             {
                 _statusText = bApplied ? "Saved - the running host reloaded the file" : "Saved - applies on the next start";
                 refreshDirtyState();
@@ -289,8 +256,7 @@ namespace sw::editor
         ImGui::BeginDisabled( page._bDirty == false && document.isLoadFailed() == false );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Undo" ), SW_LOCKEY( "EdVerb", "Revert" ), "Revert" ) ) )
         {
-            (void)document.revert(); // 결과는 아래 칩과 오류 줄이 보인다
-            page._bDirty = SW_FALSE;
+            page.revert();
             refreshDirtyState();
             _statusText = "Reverted to the file";
         }
@@ -299,8 +265,7 @@ namespace sw::editor
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) );
         if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) )
         {
-            document.resetToDefault();
-            page._bDirty = document.isModified();
+            page.resetToDefault();
             refreshDirtyState();
             _statusText = "Reset to the default values - Save writes the file";
         }
@@ -352,7 +317,7 @@ namespace sw::editor
                 continue;
             _pSelected = pPage.get();
             if ( pPage->_bOpened == false )
-                openPage( *pPage );
+                pPage->open();
         }
         ImGui::BeginChild( "##ProjectSettingsPages", ImVec2{ listWidth, 0.0f }, ImGuiChildFlags_Borders );
         drawPageList();

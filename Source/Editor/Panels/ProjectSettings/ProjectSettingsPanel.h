@@ -12,7 +12,7 @@
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsCatalog.h"
-#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsPage.h"
 
 namespace sw
 {
@@ -54,26 +54,14 @@ namespace sw::editor
         void               revertDocument() override;
 
     private:
-        /** @brief 목록의 파일 하나와 그 편집 상태입니다. 처음 고를 때 연다. */
-        struct Page
-        {
-            ProjectSettingsEntry    _entry;
-            ProjectSettingsDocument _document;
-            string                  _absolutePath;
-            bool                    _bOpened{ false };    ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                    _bTypeFound{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            bool                    _bDirty{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        };
+        using Page = ProjectSettingsPage;
 
     private:
         void reloadCatalog();
-        void openPage( Page& page );
         void onPropertyEdited( const PropertyInfo& prop );
-        /** @brief 고른 파일을 저장하고 호스트에 알립니다. 호스트가 반영했으면 outApplied 가 true 입니다. */
-        [[nodiscard]] bool savePage( Page& page, bool& outApplied );
-        void               refreshDirtyState();
-        void               drawPageList();
-        void               drawPageDetail( Page& page );
+        void refreshDirtyState();
+        void drawPageList();
+        void drawPageDetail( Page& page );
 
     private:
         vector<unique_ptr<Page>> _listPage;
