@@ -12,6 +12,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepFields.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
@@ -35,11 +36,12 @@ namespace sw
 
             static bool validateDevCommand( const AutomationStep& step, string& outError )
             {
-                if ( step.hasRequiredAttributes( { "line" }, { "line" }, outError ) == false )
+                AutomationDevCommandFields fields;
+                if ( step.readFields( fields, outError ) == false )
                     return false;
 #if SW_DEV_COMMANDS_ENABLED
                 vector<string> listToken;
-                listToken = StringUtil::splitQuotedTokens( *step.findAttribute( "line" ) );
+                listToken = StringUtil::splitQuotedTokens( fields._line );
                 if ( listToken.empty() )
                 {
                     outError = step.describe() + ": line is empty";
@@ -62,7 +64,7 @@ namespace sw
             {
 #if SW_DEV_COMMANDS_ENABLED
                 vector<string> listToken;
-                listToken                              = StringUtil::splitQuotedTokens( *step.findAttribute( "line" ) );
+                listToken                              = StringUtil::splitQuotedTokens( step.readValidatedFields<AutomationDevCommandFields>()._line );
                 const DevCommandRegistration* pCommand = listToken.empty() ? nullptr : engine::getSubsystem<DevCommandRegistry>().findCommand( listToken[0] );
                 if ( pCommand == nullptr )
                 {
@@ -86,34 +88,17 @@ namespace sw
 #endif
             }
 
-            /** @brief 창 크기 속성(픽셀, 1..16384)을 읽습니다. */
-            [[nodiscard]] static bool parseSize( const AutomationStep& step, string_view name, uint32& outValue )
-            {
-                constexpr int32 kMaxWindowSide     = 16384;
-                const string*   pText              = step.findAttribute( name );
-                int32           value              = 0;
-                const bool      bInvalidWindowSide = pText == nullptr || StringUtil::parseInt( string_view{ *pText }, value ) == false || value < 1 || value > kMaxWindowSide;
-                if ( bInvalidWindowSide )
-                    return false;
-                outValue = static_cast<uint32>( value );
-                return true;
-            }
-
             static bool validateResize( const AutomationStep& step, string& outError )
             {
-                if ( step.hasRequiredAttributes( { "width", "height" }, { "width", "height" }, outError ) == false )
-                    return false;
-                uint32 width  = 0;
-                uint32 height = 0;
-                if ( parseSize( step, "width", width ) == false || parseSize( step, "height", height ) == false )
-                {
-                    outError = step.describe() + ": width and height must be pixels in 1..16384";
-                    return false;
-                }
-                return true;
+                AutomationResizeWindowFields fields;
+                return step.readFields( fields, outError );
             }
 
-            static bool validateNoAttribute( const AutomationStep& step, string& outError ) { return step.hasRequiredAttributes( {}, {}, outError ); }
+            static bool validateNoAttribute( const AutomationStep& step, string& outError )
+            {
+                AutomationNoFields fields;
+                return step.readFields( fields, outError );
+            }
 
             /** @brief 창을 최소화하거나(@p bMinimized) 되돌립니다. 최소화 중에도 시나리오 프레임은 돈다(자동화 실행의 페이싱이 최소화보다 앞선다 — `FramePacer`). */
             static bool setMinimized( AutomationStepContext& runner, const AutomationStep& step, bool bMinimized )
@@ -130,22 +115,16 @@ namespace sw
             /** @brief 창을 창 모드의 그 클라이언트 크기로 바꿉니다. 창의 최소 크기보다 작으면 창이 최소 크기에서 멈춘다(그것을 보는 단언은 뒤 단계가 한다). */
             static bool runResize( AutomationStepContext& runner, const AutomationStep& step )
             {
-                uint32 width  = 0;
-                uint32 height = 0;
-                if ( parseSize( step, "width", width ) == false || parseSize( step, "height", height ) == false )
-                {
-                    runner.recordFailure( step, "width and height must be pixels in 1..16384" ); // 검사 뒤 단계가 바뀌었다(핫 리로드)
-                    return true;
-                }
-                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
-                if ( pWindow == nullptr || pWindow->setDisplayMode( WindowDisplayMode::Windowed, width, height ) == false )
+                const AutomationResizeWindowFields fields      = step.readValidatedFields<AutomationResizeWindowFields>();
+                MainWindowSubsystem*               pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                IWindow*                           pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                if ( pWindow == nullptr || pWindow->setDisplayMode( WindowDisplayMode::Windowed, fields._width, fields._height ) == false )
                 {
                     runner.recordFailure( step, "this platform could not resize the window" );
                     return true;
                 }
                 // 창의 최소 크기보다 작게 요청했으면 창은 최소 크기에서 멈춘다 — 그 크기를 기다린다.
-                s_pendingResize = PendingResize{ std::max( width, pWindow->getMinimumClientWidth() ), std::max( height, pWindow->getMinimumClientHeight() ) };
+                s_pendingResize = PendingResize{ std::max( fields._width, pWindow->getMinimumClientWidth() ), std::max( fields._height, pWindow->getMinimumClientHeight() ) };
                 return true;
             }
         };

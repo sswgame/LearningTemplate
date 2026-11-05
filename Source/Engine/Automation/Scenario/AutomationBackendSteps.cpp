@@ -3,6 +3,7 @@
 #include "Engine/Automation/Scenario/AutomationBackendSteps.h"
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
+#include "Engine/Automation/Scenario/AutomationStepFields.h"
 #include "Engine/Automation/Scenario/AutomationStepValidation.h"
 
 #include "sw/config/CookContract.gen.h"
@@ -35,18 +36,12 @@ namespace sw
 
     bool AutomationBackendSteps::validateSwapBackend( const AutomationStep& step, string& outError )
     {
-        for ( const AutomationAttribute& attribute : step._listAttribute )
-        {
-            if ( string_view{ attribute._name } != "backend" )
-            {
-                outError = step.describe() + ": unknown attribute '" + attribute._name + "'";
-                return false;
-            }
-        }
-        const string* pBackend = step.findAttribute( "backend" );
-        RHIBackend    backend{};
-        const bool    bRelative = pBackend != nullptr && ( *pBackend == kOtherBackend || *pBackend == kStartBackend );
-        if ( pBackend == nullptr || ( bRelative == false && tryParseBackend( *pBackend, backend ) == false ) )
+        AutomationSwapBackendFields fields;
+        if ( step.readFields( fields, outError ) == false )
+            return false;
+        RHIBackend backend{};
+        const bool bRelative = fields._backend == kOtherBackend || fields._backend == kStartBackend;
+        if ( bRelative == false && tryParseBackend( fields._backend, backend ) == false )
         {
             outError = step.describe() + ": needs backend=\"dx11|dx12|vk|gl|other|start\"";
             return false;

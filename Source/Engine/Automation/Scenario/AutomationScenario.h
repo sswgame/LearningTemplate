@@ -64,6 +64,8 @@ namespace sw
 
 namespace sw
 {
+    struct TypeInfo;
+
     /** @struct AutomationStep @brief 한 프레임에 할 일 하나입니다(엘리먼트 이름 + 속성). */
     struct SW_API AutomationStep
     {
@@ -80,6 +82,27 @@ namespace sw
         bool hasOnlyAttributes( std::initializer_list<string_view> listAllowed, string& outError ) const;
         /** @brief `hasOnlyAttributes` 에 더해 @p listRequired 의 속성이 모두 있는지 봅니다. 없으면 false 와 이유. */
         bool hasRequiredAttributes( std::initializer_list<string_view> listAllowed, std::initializer_list<string_view> listRequired, string& outError ) const;
+        /**
+         * @brief 속성을 스키마 구조체 @p outFields 로 읽습니다(`XMLFields::readFields` 와 같은 규칙 — 모르는 이름 · 필수 · 범위가 `PROPERTY` 에서 나온다). 틀리면 false 와 이유.
+         * @param listHandRead 적었는지가 뜻인 속성(스키마 기본값으로 담지 못한다) — 부르는 쪽이 `findAttribute` 로 읽는다.
+         */
+        template <typename TFields>
+        [[nodiscard]] bool readFields( TFields& outFields, string& outError, std::initializer_list<string_view> listHandRead = {} ) const
+        {
+            return readFieldsOf( &outFields, *TFields::StaticType(), outError, listHandRead );
+        }
+        /** @brief 검사를 지난 단계의 스키마 구조체입니다(실행 함수가 읽는다). 시작 때 검사한 값이라 실패하면 단언합니다. */
+        template <typename TFields>
+        [[nodiscard]] TFields readValidatedFields( std::initializer_list<string_view> listHandRead = {} ) const
+        {
+            TFields    fields{};
+            string     error;
+            const bool bRead = readFieldsOf( &fields, *TFields::StaticType(), error, listHandRead );
+            SW_LOG_ASSERT( bRead, "%#", error );
+            return fields;
+        }
+        /** @brief `readFields` 의 몸통입니다. */
+        [[nodiscard]] bool readFieldsOf( void* pFields, const TypeInfo& typeInfo, string& outError, std::initializer_list<string_view> listHandRead ) const;
         /** @brief 꼭 있어야 하는 속성입니다. 없으면 nullptr 와 이유(@p outError). */
         const string* requireAttribute( string_view name, string& outError ) const;
     };

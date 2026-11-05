@@ -12,6 +12,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepFields.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -26,9 +27,6 @@ namespace sw
     {
         struct AutomationSceneStepsInternal
         {
-            static constexpr uint32 kDefaultLoadTimeoutFrames     = 600;
-            static constexpr uint32 kDefaultSequenceTimeoutFrames = 3600;
-
             /** @brief `LoadScene` 이 요청한 씬 로드의 답입니다 — 이번 실행의 붙잡은 단계 상태라 실행기가 소유하고, 단계가 놓이거나 실행이 끝나면 지운다. */
             struct PendingLoad final : IAutomationStepState
             {
@@ -40,33 +38,16 @@ namespace sw
                 }
             };
 
-            static uint32 readTimeoutFrames( const AutomationStep& step, uint32 defaultFrames )
-            {
-                const string* pText = step.findAttribute( "timeoutFrames" );
-                int64         value = 0;
-                return pText != nullptr && StringUtil::parseInt64( *pText, value ) && value > 0 ? static_cast<uint32>( value ) : defaultFrames;
-            }
-
-            static bool validateTimeout( const AutomationStep& step, string& outError )
-            {
-                const string* pText = step.findAttribute( "timeoutFrames" );
-                int64         value = 0;
-                if ( pText != nullptr && ( StringUtil::parseInt64( *pText, value ) == false || value <= 0 ) )
-                {
-                    outError = step.describe() + ": timeoutFrames must be a positive frame count";
-                    return false;
-                }
-                return true;
-            }
-
             static bool validateLoadScene( const AutomationStep& step, string& outError )
             {
-                return step.hasRequiredAttributes( { "path", "timeoutFrames" }, { "path" }, outError ) && validateTimeout( step, outError );
+                AutomationLoadSceneFields fields;
+                return step.readFields( fields, outError );
             }
 
             static bool validateSequenceStep( const AutomationStep& step, string& outError )
             {
-                return step.hasRequiredAttributes( { "object", "timeoutFrames" }, { "object" }, outError ) && validateTimeout( step, outError );
+                AutomationSequenceStepFields fields;
+                return step.readFields( fields, outError );
             }
 
             static bool runNothing( AutomationStepContext& context, const AutomationStep& step )
@@ -78,11 +59,12 @@ namespace sw
 
             static AutomationStepHold holdLoadScene( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
             {
+                const AutomationLoadSceneFields fields = step.readValidatedFields<AutomationLoadSceneFields>();
                 // 상태는 맡긴 이 단계만 만든다 — 같은 타입으로 되돌려 읽는다.
                 PendingLoad* pPending = static_cast<PendingLoad*>( context.findHeldStepState( step ) );
                 if ( pPending == nullptr )
                 {
-                    TaskFuture<Scene*> future = engine::getSubsystem<SceneManager>().requestLoadFuture( *step.findAttribute( "path" ), SceneLoadKind::Travel );
+                    TaskFuture<Scene*> future = engine::getSubsystem<SceneManager>().requestLoadFuture( fields._path, SceneLoadKind::Travel );
                     if ( future.isValid() == false )
                     {
                         context.recordFailure( step, "the scene load could not be requested" );
@@ -93,8 +75,8 @@ namespace sw
                 const bool bLoaded = pPending->_future.isReady() && pPending->_future.get() != nullptr &&
                                      engine::getSubsystem<SceneManager>().getActiveScene() == pPending->_future.get();
                 // Run 이면 실행기가 상태를 지운다 — 그 뒤로 pPending 을 읽지 않는다.
-                const AutomationStepHold hold = context.holdUntilReady( step, input, bLoaded, readTimeoutFrames( step, kDefaultLoadTimeoutFrames ),
-                                                                        "the scene '" + *step.findAttribute( "path" ) + ( pPending->_future.isReady() ? "' to become active" : "' to load" ) );
+                const AutomationStepHold hold = context.holdUntilReady( step, input, bLoaded, fields._timeoutFrames,
+                                                                        "the scene '" + fields._path + ( pPending->_future.isReady() ? "' to become active" : "' to load" ) );
                 if ( hold == AutomationStepHold::Run && bLoaded == false )
                     context.recordFailure( step, "the scene did not become active in time (or failed to load - see the log)" );
                 return hold;
@@ -103,7 +85,7 @@ namespace sw
             static SequencePlayerComponent* findSequence( AutomationStepContext& context, const AutomationStep& step )
             {
                 GameObjectManager* pManager = context.findActiveObjectManager();
-                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string{ *step.findAttribute( "object" ) } ) : nullptr;
+                GameObject*        pObject  = pManager != nullptr ? pManager->findGameObjectByName( hashed_string{ step.readValidatedFields<AutomationSequenceStepFields>()._object } ) : nullptr;
                 return pObject != nullptr ? pObject->getComponent<SequencePlayerComponent>() : nullptr;
             }
 
@@ -121,10 +103,11 @@ namespace sw
 
             static AutomationStepHold holdWaitSequence( AutomationStepContext& context, const AutomationStep& step, InputManager& input )
             {
-                SequencePlayerComponent* pSequence = findSequence( context, step );
-                const bool               bDone     = pSequence == nullptr || pSequence->isPlaying() == false;
-                const AutomationStepHold hold      = context.holdUntilReady( step, input, bDone, readTimeoutFrames( step, kDefaultSequenceTimeoutFrames ),
-                                                                             "the sequence on '" + *step.findAttribute( "object" ) + "' to finish playing" );
+                const AutomationSequenceStepFields fields    = step.readValidatedFields<AutomationSequenceStepFields>();
+                SequencePlayerComponent*           pSequence = findSequence( context, step );
+                const bool                         bDone     = pSequence == nullptr || pSequence->isPlaying() == false;
+                const AutomationStepHold           hold      = context.holdUntilReady( step, input, bDone, fields._timeoutFrames,
+                                                                                       "the sequence on '" + fields._object + "' to finish playing" );
                 if ( hold == AutomationStepHold::Run && ( pSequence == nullptr || bDone == false ) )
                     context.recordFailure( step, pSequence == nullptr ? "no object with that name and a SequencePlayerComponent in the active scene"
                                                                       : "the sequence was still playing when the wait timed out" );

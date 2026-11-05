@@ -12,6 +12,7 @@
 
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepFields.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/UI/Screen/UIScreen.h"
@@ -81,18 +82,15 @@ namespace sw
 
             static bool validateLayoutDump( const AutomationStep& step, string& outError )
             {
-                const bool bValidFileOnly = step._listAttribute.size() == 1 && step._listAttribute[0]._name == "file" && step._listAttribute[0]._value.empty() == false;
-                if ( bValidFileOnly )
-                    return true;
-                outError = step.describe() + ": needs only file=\"…\"";
-                return false;
+                AutomationFileStepFields fields;
+                return step.readFields( fields, outError );
             }
 
             /** @brief 상대 경로면 시나리오 산출물 폴더(`Saved/Automation/<이름>/`) 아래에 둡니다. 스크린샷과 같은 위치입니다. */
             static bool runLayoutDump( AutomationStepContext& runner, const AutomationStep& step )
             {
-                const string& file = *step.findAttribute( "file" );
-                const string  path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
+                const string file = step.readValidatedFields<AutomationFileStepFields>()._file;
+                const string path = FileUtil::isAbsolutePath( file ) ? file : FileUtil::joinPath( runner.getOutputDirectory(), file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false || FileUtil::writeTextFile( path, engine::getSubsystem<UISystem>().makeLayoutDump() ) == false )
                     runner.recordFailure( step, "could not write " + path );
                 return true;

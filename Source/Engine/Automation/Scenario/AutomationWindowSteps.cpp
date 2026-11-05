@@ -19,6 +19,7 @@
 #include "Engine/Asset/Image/ImageFileWriter.h"
 #include "Engine/Automation/Scenario/AutomationScenario.h"
 #include "Engine/Automation/Scenario/AutomationStepContext.h"
+#include "Engine/Automation/Scenario/AutomationStepFields.h"
 #include "Engine/Automation/Scenario/AutomationStepRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Window/IWindow.h"
@@ -34,39 +35,24 @@ namespace sw
     {
         struct AutomationWindowStepsInternal
         {
-            static bool isKnownMessage( string_view message )
-            {
-                return message == "WM_ACTIVATE_INACTIVE" || message == "WM_ACTIVATE_ACTIVE" || message == "WM_KILLFOCUS" || message == "WM_SETFOCUS" ||
-                       message == "WM_CLOSE" || message == "WM_LBUTTONDOWN_CLIENT" || message == "WM_LBUTTONUP_CLIENT";
-            }
-
             static bool validateMessage( const AutomationStep& step, string& outError )
             {
-                if ( step.hasRequiredAttributes( { "message" }, { "message" }, outError ) == false )
-                    return false;
-                if ( isKnownMessage( *step.findAttribute( "message" ) ) )
-                    return true;
-                outError = step.describe() + ": unknown message '" + *step.findAttribute( "message" ) +
-                           "' (WM_ACTIVATE_INACTIVE · WM_ACTIVATE_ACTIVE · WM_KILLFOCUS · WM_SETFOCUS · WM_CLOSE · WM_LBUTTONDOWN_CLIENT · WM_LBUTTONUP_CLIENT)";
-                return false;
+                AutomationWindowMessageFields fields;
+                return step.readFields( fields, outError );
             }
 
             static bool validateClip( const AutomationStep& step, string& outError )
             {
-                if ( step.hasRequiredAttributes( { "state" }, { "state" }, outError ) == false )
-                    return false;
-                const string& state = *step.findAttribute( "state" );
-                if ( state == "locked" || state == "free" )
-                    return true;
-                outError = step.describe() + ": state must be locked or free, got '" + state + "'";
-                return false;
+                AutomationCursorClipFields fields;
+                return step.readFields( fields, outError );
             }
 
             static bool validateCapture( const AutomationStep& step, string& outError )
             {
-                if ( step.hasRequiredAttributes( { "file" }, { "file" }, outError ) == false )
+                AutomationFileStepFields fields;
+                if ( step.readFields( fields, outError ) == false )
                     return false;
-                if ( StringUtil::endsWith( *step.findAttribute( "file" ), ".png", true ) )
+                if ( StringUtil::endsWith( fields._file, ".png", true ) )
                     return true;
                 outError = step.describe() + ": file must end with .png";
                 return false;
@@ -111,25 +97,35 @@ namespace sw
                     runner.recordFailure( step, "there is no window to send a message to" );
                     return true;
                 }
-                const string& message = *step.findAttribute( "message" );
-                RECT          client{};
+                const AutomationWindowMessage message = step.readValidatedFields<AutomationWindowMessageFields>()._message;
+                RECT                          client{};
                 GetClientRect( hwnd, &client );
                 const LPARAM center = MAKELPARAM( ( client.right - client.left ) / 2, ( client.bottom - client.top ) / 2 );
                 // 처리기가 돈 뒤 돌아오도록 보낸다(SendMessage). 창 닫기만 다른 창 메시지처럼 큐로(PostMessage) 보내고, 처리기 안에서 루프를 끝낸다.
-                if ( message == "WM_ACTIVATE_INACTIVE" )
-                    SendMessageW( hwnd, WM_ACTIVATE, WA_INACTIVE, 0 );
-                else if ( message == "WM_ACTIVATE_ACTIVE" )
-                    SendMessageW( hwnd, WM_ACTIVATE, WA_ACTIVE, 0 );
-                else if ( message == "WM_KILLFOCUS" )
-                    SendMessageW( hwnd, WM_KILLFOCUS, 0, 0 );
-                else if ( message == "WM_SETFOCUS" )
-                    SendMessageW( hwnd, WM_SETFOCUS, 0, 0 );
-                else if ( message == "WM_LBUTTONDOWN_CLIENT" )
-                    SendMessageW( hwnd, WM_LBUTTONDOWN, MK_LBUTTON, center );
-                else if ( message == "WM_LBUTTONUP_CLIENT" )
-                    SendMessageW( hwnd, WM_LBUTTONUP, 0, center );
-                else
-                    PostMessageW( hwnd, WM_CLOSE, 0, 0 );
+                switch ( message )
+                {
+                    case AutomationWindowMessage::ActivateInactive:
+                        SendMessageW( hwnd, WM_ACTIVATE, WA_INACTIVE, 0 );
+                        break;
+                    case AutomationWindowMessage::ActivateActive:
+                        SendMessageW( hwnd, WM_ACTIVATE, WA_ACTIVE, 0 );
+                        break;
+                    case AutomationWindowMessage::KillFocus:
+                        SendMessageW( hwnd, WM_KILLFOCUS, 0, 0 );
+                        break;
+                    case AutomationWindowMessage::SetFocus:
+                        SendMessageW( hwnd, WM_SETFOCUS, 0, 0 );
+                        break;
+                    case AutomationWindowMessage::LeftButtonDownClient:
+                        SendMessageW( hwnd, WM_LBUTTONDOWN, MK_LBUTTON, center );
+                        break;
+                    case AutomationWindowMessage::LeftButtonUpClient:
+                        SendMessageW( hwnd, WM_LBUTTONUP, 0, center );
+                        break;
+                    case AutomationWindowMessage::Close:
+                        PostMessageW( hwnd, WM_CLOSE, 0, 0 );
+                        break;
+                }
                 return true;
             }
 
@@ -153,7 +149,7 @@ namespace sw
                                    GetSystemMetrics( SM_XVIRTUALSCREEN ) + GetSystemMetrics( SM_CXVIRTUALSCREEN ),
                                    GetSystemMetrics( SM_YVIRTUALSCREEN ) + GetSystemMetrics( SM_CYVIRTUALSCREEN ) };
                 const bool bWholeScreen = clip.left <= screen.left && clip.top <= screen.top && clip.right >= screen.right && clip.bottom >= screen.bottom;
-                const bool bWantLocked  = *step.findAttribute( "state" ) == "locked";
+                const bool bWantLocked  = step.readValidatedFields<AutomationCursorClipFields>()._state == AutomationCursorClipState::Locked;
                 if ( bWantLocked ? bInsideClient : bWholeScreen )
                     return true;
                 // 커서는 전경 창만 가둔다(`InputManager::applyMouseLockMode`). 도는 사이 다른 창이 전경을 가져갔으면 잠금은 볼 수 없는 것이지 틀린 것이 아니다 —
@@ -297,7 +293,7 @@ namespace sw
                             memset( &bytes[( static_cast<size_t>( y ) * static_cast<size_t>( width ) + static_cast<size_t>( x ) ) * 4u], 0, 4u );
                     }
                 }
-                const string path = runner.resolveOutputPath( *step.findAttribute( "file" ) );
+                const string path = runner.resolveOutputPath( step.readValidatedFields<AutomationFileStepFields>()._file );
                 if ( FileUtil::ensureParentDirectoryExists( path ) == false ||
                      ImageFileWriter::writePNGRGBA8( path, bytes, static_cast<uint32>( width ), static_cast<uint32>( height ) ) == false )
                 {

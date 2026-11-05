@@ -13,37 +13,37 @@
 	<Variable name="gv_shooterAutoPlay" value="0"/>
 	<!-- 1인칭 카메라가 첫 틱에 잠금을 켠다 — 전경이면 바로 잡는다 -->
 	<Wait frames="10"/>
-	<ExpectCursorClip state="locked"/>
+	<ExpectCursorClip state="Locked"/>
 	<!-- 포커스 잃음(알트탭과 같은 메시지) → 풀린다 -->
 	<Wait frames="10"/>
-	<PostWindowMessage message="WM_ACTIVATE_INACTIVE"/>
-	<PostWindowMessage message="WM_KILLFOCUS"/>
+	<PostWindowMessage message="ActivateInactive"/>
+	<PostWindowMessage message="KillFocus"/>
 	<Wait frames="5"/>
-	<ExpectCursorClip state="free"/>
+	<ExpectCursorClip state="Free"/>
 	<!-- 다시 활성화만으로는 잡지 않는다(제목 표시줄 X 를 누를 수 있게) -->
 	<Wait frames="5"/>
-	<PostWindowMessage message="WM_ACTIVATE_ACTIVE"/>
-	<PostWindowMessage message="WM_SETFOCUS"/>
+	<PostWindowMessage message="ActivateActive"/>
+	<PostWindowMessage message="SetFocus"/>
 	<Wait frames="5"/>
-	<ExpectCursorClip state="free"/>
+	<ExpectCursorClip state="Free"/>
 	<!-- 클라이언트 클릭이 다시 잡는다 -->
 	<Wait frames="5"/>
-	<PostWindowMessage message="WM_LBUTTONDOWN_CLIENT"/>
-	<PostWindowMessage message="WM_LBUTTONUP_CLIENT"/>
+	<PostWindowMessage message="LeftButtonDownClient"/>
+	<PostWindowMessage message="LeftButtonUpClient"/>
 	<Wait frames="5"/>
-	<ExpectCursorClip state="locked"/>
+	<ExpectCursorClip state="Locked"/>
 	<!-- Esc(가상 키보드 — 입력 층)가 푼다 -->
 	<Wait frames="5"/>
 	<Tap slot="Key.Escape" hold="1"/>
 	<Wait frames="5"/>
-	<ExpectCursorClip state="free"/>
+	<ExpectCursorClip state="Free"/>
 	<!-- Esc 다시 → 잠근다 -->
 	<Wait frames="5"/>
 	<Tap slot="Key.Escape" hold="1"/>
 	<Wait frames="5"/>
-	<ExpectCursorClip state="locked"/>
+	<ExpectCursorClip state="Locked"/>
 	<!-- 창의 X 와 같은 WM_CLOSE → 10 초 안에 종료 코드 0 -->
 	<Wait frames="5"/>
-	<PostWindowMessage message="WM_CLOSE"/>
+	<PostWindowMessage message="Close"/>
 	<ExpectExitWithin seconds="10"/>
 </Scenario>

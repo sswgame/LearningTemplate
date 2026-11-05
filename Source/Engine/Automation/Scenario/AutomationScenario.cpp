@@ -19,6 +19,7 @@
 #include "Engine/Content/Pack/PackManager.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw
 {
@@ -176,6 +177,26 @@ namespace sw
     string AutomationStep::describe() const
     {
         return formatToString( "frame %# <%#> #%#", _frameIndex, _kind, _orderInFile + 1 );
+    }
+
+    bool AutomationStep::readFieldsOf( void* pFields, const TypeInfo& typeInfo, string& outError, std::initializer_list<string_view> listHandRead ) const
+    {
+        // 속성은 파일을 읽을 때 글로 풀어 뒀다 — 원소 하나를 다시 지어 XML 칸 읽기(`XMLFields`)와 같은 규칙으로 읽는다.
+        XMLDocument   document;
+        const XMLNode node = document.appendRoot( _kind.c_str() );
+        for ( const AutomationAttribute& attribute : _listAttribute )
+        {
+            node.appendAttribute( attribute._name.c_str(), string_view{ attribute._value } );
+        }
+        XMLFieldsIssueSink sink;
+        sink._pContext = &outError;
+        sink._pfnAdd   = []( void* pContext, const utf8* /*pID*/, string_view text )
+        {
+            string& error = *static_cast<string*>( pContext );
+            if ( error.empty() ) // 첫 오류만 — 뒤 오류는 대개 첫 오류의 결과다
+                error = string( text );
+        };
+        return XMLFields::readFields( node, pFields, typeInfo, describe(), listHandRead, nullptr, sink );
     }
 
     bool AutomationStep::hasOnlyAttributes( std::initializer_list<string_view> listAllowed, string& outError ) const
