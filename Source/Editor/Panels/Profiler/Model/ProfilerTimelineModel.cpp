@@ -7,6 +7,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Editor/Panels/Profiler/Model/ProfilerCaptureModel.h"
+
 #include "Engine/Profiling/FrameProfiler.h"
 
 namespace sw::editor
@@ -55,6 +57,21 @@ namespace sw::editor
     {
         _frameCount      = frameCount;
         _bTimelineZoomed = SW_FALSE;
+    }
+
+    void ProfilerTimelineModel::toggleRecording( FrameProfiler& profiler, ProfilerCaptureModel& inoutCapture, ProfilerRecordingView view )
+    {
+        ProfilerTimeline& timeline   = profiler.getTimeline();
+        const bool        bRecording = timeline.isRecording();
+        if ( bRecording == false )
+        {
+            if ( view == ProfilerRecordingView::Timeline )
+                beginTimelineRecording( timeline );
+            else
+                beginCallTreeRecording( timeline );
+            inoutCapture.setCollect( profiler, true );
+        }
+        timeline.setRecording( bRecording == false );
     }
 
     void ProfilerTimelineModel::beginTimelineRecording( ProfilerTimeline& timeline )

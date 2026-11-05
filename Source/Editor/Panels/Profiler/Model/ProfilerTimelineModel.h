@@ -23,6 +23,18 @@ namespace sw
 
 namespace sw::editor
 {
+    class ProfilerCaptureModel;
+
+    /** @brief 녹화 단추가 있는 탭입니다. 시작할 때 비우는 것이 다릅니다. */
+    enum class ProfilerRecordingView : uint8
+    {
+        Timeline = 0,
+        CallTree,
+    };
+} // namespace sw::editor
+
+namespace sw::editor
+{
     /**
      * @class ProfilerTimelineModel
      * @brief 타임라인과 호출 트리가 보는 녹화 사건, 보이는 범위, 불러온 트레이스를 가집니다.
@@ -48,6 +60,11 @@ namespace sw::editor
         uint32 getFrameCount() const { return _frameCount; }
         /** @brief 최근 프레임 수를 바꾸고 보이는 범위를 수집 구간에 맞춥니다. */
         void setFrameCount( uint32 frameCount );
+        /**
+         * @brief 녹화를 켜거나 끕니다. 켤 때 @p view 의 지난 기록을 비우고 수집도 켭니다 — 녹화는 계측이 켜져 있어야 쌓인다(스코프가 시계를 읽어야 한다).
+         * @details 끌 때 수집은 그대로 둔다 — 수집은 다른 탭도 쓴다.
+         */
+        void toggleRecording( FrameProfiler& profiler, ProfilerCaptureModel& inoutCapture, ProfilerRecordingView view );
         /** @brief 타임라인 녹화를 새로 시작합니다. 지난 사건을 비우고 보이는 범위를 수집 구간에 맞춥니다. 계측 켜기는 부르는 쪽(수집 모델)이 합니다. */
         void beginTimelineRecording( ProfilerTimeline& timeline );
         bool isTimelineFrozen() const { return _bTimelineFrozen == SW_TRUE; }

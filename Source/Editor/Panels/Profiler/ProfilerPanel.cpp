@@ -441,17 +441,8 @@ namespace sw::editor
 
     void ProfilerPanel::drawTimelineToolbar( FrameProfiler& profiler, bool bRecording )
     {
-        ProfilerTimeline& timeline = profiler.getTimeline();
         if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
-        {
-            // 녹화는 계측이 켜져 있어야 쌓인다. 스코프가 시계를 읽어야 하기 때문이다. 켤 때 지난 이벤트를 비운다.
-            if ( bRecording == false )
-            {
-                _timeline.beginTimelineRecording( timeline );
-                _capture.setCollect( profiler, true );
-            }
-            timeline.setRecording( bRecording == false );
-        }
+            _timeline.toggleRecording( profiler, _capture, ProfilerRecordingView::Timeline );
         EditorSelfTestMarks::note( "profiler.timeline.record" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "TimelineRecord" ) );
 
@@ -1019,14 +1010,7 @@ namespace sw::editor
         ProfilerTimeline& timeline   = profiler.getTimeline();
         const bool        bRecording = timeline.isRecording();
         if ( ImGui::Button( bRecording ? "Stop Recording" : "Record" ) )
-        {
-            if ( bRecording == false )
-            {
-                _timeline.beginCallTreeRecording( timeline );
-                _capture.setCollect( profiler, true );
-            }
-            timeline.setRecording( bRecording == false );
-        }
+            _timeline.toggleRecording( profiler, _capture, ProfilerRecordingView::CallTree );
         EditorSelfTestMarks::note( "profiler.callTree.record" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "CallTreeRecord" ) );
         ImGui::SameLine();

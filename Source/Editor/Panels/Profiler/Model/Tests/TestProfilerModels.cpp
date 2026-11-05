@@ -9,6 +9,7 @@
 #include "Editor/Panels/Profiler/Model/ProfilerPerformanceModel.h"
 #include "Editor/Panels/Profiler/Model/ProfilerScopeHistory.h"
 #include "Editor/Panels/Profiler/Model/ProfilerTimelineLayout.h"
+#include "Editor/Panels/Profiler/Model/ProfilerTimelineModel.h"
 
 #include "Engine/Profiling/FrameProfiler.h"
 
@@ -572,4 +573,25 @@ SW_TEST_CASE( ProfilerPerformanceModelTest, HistoryWrapsAround )
         (void)pModel->sampleFrame();
     }
     SW_EXPECT_EQUAL( 3u, pModel->getHistoryOffset() );
+}
+
+// 녹화를 켜면 수집도 켜지고 지난 사건이 비워진다. 끄면 녹화만 멈추고 수집은 남는다(다른 탭이 쓴다).
+SW_TEST_CASE( ProfilerTimelineModelTest, ToggleRecordingStartsCollecting )
+{
+    for ( const ProfilerRecordingView view : { ProfilerRecordingView::Timeline, ProfilerRecordingView::CallTree } )
+    {
+        unique_ptr<FrameProfiler> pProfiler = make_unique<FrameProfiler>();
+        ProfilerCaptureModel      capture;
+        ProfilerTimelineModel     timeline;
+        SW_REQUIRE_FALSE( pProfiler->getTimeline().isRecording() );
+
+        timeline.toggleRecording( *pProfiler, capture, view );
+        SW_EXPECT_TRUE( pProfiler->getTimeline().isRecording() );
+        SW_EXPECT_TRUE( capture.isCollecting() );
+        SW_EXPECT_TRUE( pProfiler->isEnabled() );
+
+        timeline.toggleRecording( *pProfiler, capture, view );
+        SW_EXPECT_FALSE( pProfiler->getTimeline().isRecording() );
+        SW_EXPECT_TRUE( capture.isCollecting() );
+    }
 }
