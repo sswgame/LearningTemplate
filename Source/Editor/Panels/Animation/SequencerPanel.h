@@ -76,15 +76,15 @@ namespace sw::editor
         void addKeyTrack( SequenceTrackKind kind );
 
     private:
-        fixed_string<constant::buffer::kMax512> _cinematicNote;
-        SequenceDocument                        _document; ///< 애셋 · 고른 번호(`_sequence` 가 참조하므로 먼저 선언한다)
-        unique_ptr<ClipSequence>                _sequence;
-        unique_ptr<sw::SequencePlayer>          _previewPlayer;
-        vector<SequenceClipTiming>              _listTimingBefore; ///< 타임라인 위젯을 부르기 전 배치(멤버라 프레임마다 할당하지 않는다)
-        vector<float32>                         _listKeyFrame;     ///< 키 띠가 쓰는 키 프레임(멤버라 프레임마다 할당하지 않는다)
-        EditorCurveEditorState                  _curveState;       ///< 커브 단추로 연 채널의 편집기 상태
-        int32                                   _currentFrame;
-        int32                                   _firstFrame;
-        bool                                    _bExpanded; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
+        string                         _cinematicNote;
+        SequenceDocument               _document; ///< 애셋 · 고른 번호(`_sequence` 가 참조하므로 먼저 선언한다)
+        unique_ptr<ClipSequence>       _sequence;
+        unique_ptr<sw::SequencePlayer> _previewPlayer;
+        vector<SequenceClipTiming>     _listTimingBefore; ///< 타임라인 위젯을 부르기 전 배치(멤버라 프레임마다 할당하지 않는다)
+        vector<float32>                _listKeyFrame;     ///< 키 띠가 쓰는 키 프레임(멤버라 프레임마다 할당하지 않는다)
+        EditorCurveEditorState         _curveState;       ///< 커브 단추로 연 채널의 편집기 상태
+        int32                          _currentFrame;
+        int32                          _firstFrame;
+        bool                           _bExpanded; ///< NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다
     };
 } // namespace sw::editor

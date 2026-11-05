@@ -41,11 +41,6 @@ namespace sw::editor
         void restoreAsset( const SequenceAsset& asset );
         /** @brief 새로 연 문서의 선택입니다 — 항목은 없음, 트랙은 첫 트랙, 커브 편집기는 닫힘입니다. */
         void resetSelection();
-        /**
-         * @brief 지금 문서를 저장해도 다시 읽을 수 있으면 true 입니다. 못 읽으면 이유가 읽기 검사의 로그로 남습니다.
-         * @details 쓰기는 검사를 하지 않으므로 대상을 지운 스폰 항목 같은 문서가 멀쩡한 파일을 덮어쓰고, 다음 열기에서 실패합니다.
-         */
-        [[nodiscard]] bool canReadBack() const;
 
         // 구간 항목
         /**

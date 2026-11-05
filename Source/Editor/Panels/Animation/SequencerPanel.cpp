@@ -239,8 +239,8 @@ namespace sw::editor
         if ( _currentFrame != frameBefore )
             previewCurrentFrame();
 
-        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "CinematicNote" ) ); // 폭 전체 칸이라 이름표는 위에(오른쪽 이름표는 창 밖으로 잘린다)
-        ImGui::InputTextMultiline( "##CinematicNote", _cinematicNote.data(), _cinematicNote.capacity(), ImVec2( -1.0f, 40.0f * EditorThemeUtil::getDPIScale() ) );
+        ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "CinematicNote" ) );                 // 폭 전체 칸이라 이름표는 위에(오른쪽 이름표는 창 밖으로 잘린다)
+        (void)EditorWidgets::drawTextFieldMultiline( "##CinematicNote", _cinematicNote, 2 ); // 바뀐 때는 아래 IsItemDeactivatedAfterEdit 가 본다
         if ( ImGui::IsItemDeactivatedAfterEdit() )
             notifyDocumentEdited( "Edit Sequence Note", "sequence-note" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSequencer", "CinematicNoteTip" ) );
@@ -567,9 +567,6 @@ namespace sw::editor
     {
         if ( getLoadedAssetPath().empty() )
             return;
-        // 다시 읽지 못할 내용으로 멀쩡한 파일을 덮지 않는다 — 문서는 고친 상태(dirty)로 남고, 이유는 읽기 검사의 로그에 있다.
-        if ( _document.canReadBack() == false )
-            return;
         if ( EditorToolAssetCommands::saveSequence( captureAsset(), getLoadedAssetPath() ) == false )
             return;
         clearDocumentDirty();
@@ -587,14 +584,14 @@ namespace sw::editor
     SequenceAsset SequencerPanel::captureAsset() const
     {
         SequenceAsset asset = _document._asset;
-        asset._note         = _cinematicNote.c_str();
+        asset._note         = _cinematicNote;
         return asset;
     }
 
     void SequencerPanel::applyAsset( const SequenceAsset& asset )
     {
         _document.restoreAsset( asset );
-        _cinematicNote = asset._note.c_str();
+        _cinematicNote = asset._note;
     }
 
     string SequencerPanel::captureDocumentText() const

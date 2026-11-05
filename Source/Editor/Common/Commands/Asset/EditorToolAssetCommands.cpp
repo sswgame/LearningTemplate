@@ -63,6 +63,8 @@ namespace sw::editor
 
         struct EditorToolAssetInternal
         {
+            static constexpr const utf8* kProbeFileSuffix = ".savecheck"; ///< 저장 전 읽어 보는 사본의 꼬리(종류 표에 없어 핫 리로드가 보지 않는다)
+
             /** @brief 도구 문서 경로가 어느 자리를 쓰는지입니다 - 읽기는 있는 파일, 쓰기는 쓸 자리(없는 전역 id 도)다. 둘은 있는 파일에서 같은 자리다(R7). */
             enum class DocumentUse : uint8
             {
@@ -160,7 +162,19 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "EditorToolAssetCommands.FailedSaveNoFile", "Failed to save the %# - no file path and no default file", desc._pLabel );
                     return false;
                 }
-                if ( writeDocument( data, resolved ) == false )
+                // 다시 읽지 못할 문서가 멀쩡한 파일을 덮지 않게, 옆에 써서 읽어 본 뒤에 덮는다(쓰기는 값을 검사하지 않고 읽기가 검사한다).
+                const string probePath = resolved + kProbeFileSuffix;
+                TAsset       readBack;
+                const bool   bProbeWritten = writeDocument( data, probePath );
+                const bool   bReadsBack    = bProbeWritten && readDocument( readBack, probePath );
+                if ( bProbeWritten )
+                    (void)FileUtil::removeFile( probePath );
+                if ( bProbeWritten && bReadsBack == false )
+                {
+                    SW_LOG_ERROR_ID( "EditorToolAssetCommands.WouldNotReadBack", "The %# was not saved to '%#' - the file could not be read back (see the log above), so the saved file is kept", desc._pLabel, resolved );
+                    return false;
+                }
+                if ( bProbeWritten == false || writeDocument( data, resolved ) == false )
                 {
                     SW_LOG_ERROR_ID( "EditorToolAssetCommands.FailedSave", "Failed to save the %# to '%#'", desc._pLabel, resolved );
                     return false;

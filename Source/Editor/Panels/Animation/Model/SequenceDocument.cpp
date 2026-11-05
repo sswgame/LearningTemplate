@@ -83,12 +83,6 @@ namespace sw::editor
         _curveTrack    = -1;
     }
 
-    bool SequenceDocument::canReadBack() const
-    {
-        SequenceAsset readBack;
-        return readBack.parseXML( _asset.toXML() );
-    }
-
     bool SequenceDocument::canAddItemKind( SequenceItemKind kind )
     {
         const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( kind );

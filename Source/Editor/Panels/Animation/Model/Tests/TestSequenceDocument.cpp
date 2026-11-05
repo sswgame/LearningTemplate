@@ -98,7 +98,8 @@ SW_TEST_CASE( SequenceDocumentTest, EveryAddableKindSurvivesSaveAndLoad )
     {
         SW_EXPECT_TRUE( document.addItem( SequenceDocument::getAddableItemKind( addableIndex ), "Kind" ) >= 0 );
     }
-    SW_EXPECT_TRUE( document.canReadBack() );
+    SequenceAsset readBack;
+    SW_EXPECT_TRUE( readBack.parseXML( document._asset.toXML() ) ); // 더할 수 있는 종류는 빈 칸으로도 다시 읽힌다
     SW_EXPECT_TRUE( SequenceDocument::getAddableItemKind( addableCount ) == SequenceItemKind::Count );
 }
 
@@ -110,17 +111,6 @@ SW_TEST_CASE( SequenceDocumentTest, KindsThatNeedMissingFieldsAreNotAdded )
     SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Scenario, "Scenario" ) );
     SW_EXPECT_EQUAL( -1, document.addItem( SequenceItemKind::Count, "Count" ) );
     SW_EXPECT_TRUE( document._asset._listItem.empty() );
-}
-
-// 쓰기는 검사하지 않으므로, 읽지 못할 문서를 저장 전에 가려야 멀쩡한 파일을 덮지 않는다.
-SW_TEST_CASE( SequenceDocumentTest, IncompleteSpawnItemCannotBeReadBack )
-{
-    SW_EXPECT_LOG( "SequenceAsset.SequenceSpawnItemNeeds" );
-    SequenceDocument  document;
-    SequenceTrackItem item{};
-    item._kind = SequenceItemKind::Spawn;
-    document._asset._listItem.push_back( item );
-    SW_EXPECT_FALSE( document.canReadBack() );
 }
 
 // 위젯이 주던 고정 길이 10 은 짧은 타임라인을 넘어 띠 밖으로 나갔다.
