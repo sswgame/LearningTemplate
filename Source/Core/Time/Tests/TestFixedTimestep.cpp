@@ -3,6 +3,7 @@
 #include "Core/Concurrency/thread.h"
 #include "Core/Testing/TestFramework.h"
 #include "Core/Time/FixedTimestep.h"
+#include "Core/Time/MonotonicClock.h"
 
 #include <chrono>
 #include <thread>
@@ -138,15 +139,18 @@ SW_TEST_CASE( FixedTimestepTest, StartRewindsTheTimerBeforeTheFirstFrame )
 
     // 만든 시점과 루프 진입 사이에 시간이 흐른다.
     sleepLongerThanAnyClamp();
+    const int64 beforeStartNanoseconds = MonotonicClock::nowNanoseconds();
     timeline.start();
 
-    // 루프에 들어가 한 프레임을 보낸다. 측정한 값은 이 100ms 여야 한다 — 앞의 300ms 가 섞였다면
-    // 최대 델타(0.25)에 붙고, 타이머가 아예 돌지 않았다면 0 이다. 양쪽을 다 본다.
+    // 루프에 들어가 한 프레임을 보낸다. 타이머가 아예 돌지 않았다면 0 이다.
     ThreadUtil::sleepForMilliseconds( 100 );
-    const FrameTime firstFrame = timeline.advance();
-
+    const FrameTime firstFrame              = timeline.advance();
+    const int64     afterAdvanceNanoseconds = MonotonicClock::nowNanoseconds();
     SW_EXPECT_TRUE_MSG( firstFrame._deltaTime > 0.05f, "start 뒤에 타이머가 돌지 않았다" );
-    SW_EXPECT_TRUE_MSG( firstFrame._deltaTime < 0.22f, "start 이전의 시간이 첫 델타에 섞였다" );
+
+    // 상한은 고정 값이 아니라 실제로 잰 start ~ advance 구간이다 — 병렬 테스트 부하로 잠이 길어져도 참이고, 앞의 300ms 가 섞이면 이 구간을 넘는다.
+    const float32 measuredSeconds = static_cast<float32>( afterAdvanceNanoseconds - beforeStartNanoseconds ) * 1e-9f;
+    SW_EXPECT_TRUE_MSG( firstFrame._deltaTime <= measuredSeconds + 0.001f, "start 이전의 시간이 첫 델타에 섞였다" );
 }
 
 /**
