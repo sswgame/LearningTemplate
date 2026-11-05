@@ -174,6 +174,7 @@ namespace sw
     {
         REFLECT_BODY();
 
+        PROPERTY( Name = "alcohol" )
         vector<hashed_string> _listAlcohol{}; ///< 명상에 쓰는 술(앞에서부터 찾는다)
         PROPERTY( Min = 1.0 )
         float32 _maxToxicity{ 100.0f };

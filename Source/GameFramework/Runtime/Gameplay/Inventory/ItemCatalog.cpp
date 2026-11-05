@@ -81,16 +81,12 @@ namespace sw
         {
             // 적지 않은 칸은 ItemDef 의 초기값이다. 깨진 값 · 범위 밖 값 · 모르는 깨짐 정책은 그 아이템을 넣지 않는 오류다(자르지 않는다).
             ItemDef def;
-            bool    bValid = XMLFields::readFields( node, def, sourceName, { "tags" } );
+            bool    bValid = XMLFields::readFields( node, def, sourceName );
             if ( def._id.empty() )
                 continue;
             const utf8* const pID = def._id.c_str();
             if ( def._name.empty() )
                 def._name = pID;
-            StringUtil::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
-            {
-                def._listTag.push_back( hashed_string( token ) );
-            } );
             if ( def._maxDurability > 0.0f && def._maxStack > 1 )
             {
                 SW_LOG_WARNING_ID( "ItemCatalog.DurabilityStacksLimited", "%#: '%#' has durability - stacks are limited to 1", sourceName, pID );

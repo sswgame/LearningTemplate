@@ -72,9 +72,8 @@ namespace sw
         if ( XMLReadUtil::isElement( name, "Alchemy" ) )
         {
             MonsterHuntAlchemyRuleDef rule;
-            if ( GameDataXML::readSetting( node, sourceName, rule, { "alcohol" } ) == false )
+            if ( GameDataXML::readSetting( node, sourceName, rule ) == false )
                 return false;
-            XMLReadUtil::parseNameList( node.getAttributeText( "alcohol" ), ",; ", rule._listAlcohol );
             _alchemy = rule;
             return true;
         }

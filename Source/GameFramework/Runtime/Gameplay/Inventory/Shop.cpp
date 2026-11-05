@@ -176,16 +176,12 @@ namespace sw
         {
             // 적지 않은 칸은 ShopDef 의 초기값이다. 깨진 값 · 범위 밖 값은 그 상점을 넣지 않는 오류다(자르지 않는다).
             ShopDef def;
-            bool    bValid = XMLFields::readFields( node, def, sourceName, { "refuses" } );
+            bool    bValid = XMLFields::readFields( node, def, sourceName );
             if ( def._id.empty() )
                 continue;
             const utf8* const pID = def._id.c_str();
             if ( def._currency.empty() )
                 def._currency = Wallet::getDefaultCurrency();
-            StringUtil::forEachToken( node.getAttributeText( "refuses" ), ",; ", [&]( string_view token )
-            {
-                def._listRefusedCategory.push_back( hashed_string( token ) );
-            } );
             for ( XMLNode stockNode = node.findChild( "Stock" ); stockNode; stockNode = stockNode.findNextSibling( "Stock" ) )
             {
                 ShopStockDef stock; // item 필수 · 재고 범위는 PROPERTY 가 본다

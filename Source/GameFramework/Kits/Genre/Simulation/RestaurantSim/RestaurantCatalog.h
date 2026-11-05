@@ -39,6 +39,7 @@ namespace sw
         PROPERTY( Name = "price", Min = 1 )
         int32 _basePrice{ 10 };
 
+        PROPERTY( Name = "quality", Min = 1 )
         vector<int32> _listQualityLevel{}; ///< 품질 단계의 요리사 레벨 임계값이다(낮은 것부터, `quality` 를 손으로 읽는다)
 
         /** @brief 레벨 @p cookLevel 의 요리사가 만든 품질(1..최대)을 반환합니다. */

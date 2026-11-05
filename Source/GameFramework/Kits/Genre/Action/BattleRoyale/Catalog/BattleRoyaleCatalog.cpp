@@ -88,19 +88,7 @@ namespace sw
     bool BattleRoyaleCatalog::loadSupplyDrop( const XMLNode& node, string_view sourceName )
     {
         BattleRoyaleSupplyDropDef supplyDrop;
-        bool                      bValid = XMLFields::readFields( node, supplyDrop, sourceName, { "times" } );
-        StringUtil::forEachToken( node.getAttributeText( "times" ), ",; ", [&]( string_view token )
-        {
-            float32 time = 0.0f;
-            if ( StringUtil::parseFloat( token, time ) && time >= 0.0f )
-                supplyDrop._listTime.push_back( time );
-            else
-            {
-                SW_LOG_ERROR_ID( "BattleRoyaleCatalog.SupplyDropTimesWhichNot", "%#: <SupplyDrop times> has '%#', which is not a time of 0 or more", sourceName, token );
-                bValid = false;
-            }
-        } );
-        if ( bValid == false )
+        if ( XMLFields::readFields( node, supplyDrop, sourceName ) == false )
             return false;
         VectorUtil::sort( supplyDrop._listTime );
         _supplyDrop = supplyDrop;

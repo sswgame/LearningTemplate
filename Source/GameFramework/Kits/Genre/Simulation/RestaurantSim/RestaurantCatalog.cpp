@@ -113,22 +113,8 @@ namespace sw
 
     bool RestaurantCatalog::loadDish( const XMLNode& node, string_view sourceName )
     {
-        DishDef dish;
-        bool    bValid = XMLFields::readFields( node, dish, sourceName, { "quality" } );
-        // 품질 임계값은 정수 레벨이다. 읽지 못한 토큰은 건너뛰지 않고 오류다.
-        StringUtil::forEachToken( node.getAttributeText( "quality" ), ",;| ", [&]( string_view token )
-        {
-            int32 level = 0;
-            if ( StringUtil::parseInt( token, level ) && level >= 1 )
-            {
-                dish._listQualityLevel.push_back( level );
-            }
-            else
-            {
-                SW_LOG_ERROR_ID( "RestaurantCatalog.DishQualityLevelNot", "%#: dish '%#' has a quality level '%#' that is not a positive integer", sourceName, dish._id.c_str(), token );
-                bValid = false;
-            }
-        } );
+        DishDef    dish;
+        const bool bValid = XMLFields::readFields( node, dish, sourceName );
         VectorUtil::sort( dish._listQualityLevel );
         if ( bValid )
             addDish( dish );

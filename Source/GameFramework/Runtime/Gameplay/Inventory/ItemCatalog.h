@@ -54,7 +54,8 @@ namespace sw
         PROPERTY( Name = "visual" )
         hashed_string _visualID{}; ///< 아이템 외형 id(`ItemVisualCatalog`). 게임플레이 정의와 따로 둔 외형이며, 비어 있으면 보이지 않는다
         PROPERTY()
-        string                 _name{};
+        string _name{};
+        PROPERTY( Name = "tags" )
         vector<hashed_string>  _listTag{};
         StatBlock              _stats{};
         vector<EquipCondition> _listEquipCondition{}; ///< 끼려면 모두 맞아야 하는 조건(`<Requires>`)

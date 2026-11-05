@@ -21,20 +21,8 @@ namespace sw
             template <typename TDef>
             [[nodiscard]] static bool readScaledSetting( const XMLNode& node, string_view sourceName, TDef& outSetting )
             {
-                TDef def;
-                bool bValid = XMLFields::readFields( node, def, sourceName, { "scales" } );
-                StringUtil::forEachToken( node.getAttributeText( "scales" ), ",; ", [&]( string_view token )
-                {
-                    float32    scale  = 0.0f;
-                    const bool bScale = StringUtil::parseFloat( token, scale ) && scale >= 0.0f;
-                    if ( bScale )
-                        def._listScale.push_back( scale );
-                    else
-                    {
-                        SW_LOG_ERROR_ID( "AsymmetricHorrorRulesCatalog.ScalesNeedsNumbersMore", "%#: <%# scales> has '%#' - needs numbers of 0 or more", sourceName, node.getName(), token );
-                        bValid = false;
-                    }
-                } );
+                TDef       def;
+                const bool bValid = XMLFields::readFields( node, def, sourceName );
                 if ( bValid )
                     outSetting = def;
                 return bValid;

@@ -268,6 +268,21 @@ namespace sw
 
 namespace sw
 {
+    /** @brief `<StatusImmunity>` 한 줄입니다. 이 타입들은 이 상태에 걸리지 않습니다. */
+    REFLECT()
+    struct MonsterStatusImmunityDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        MonsterStatus _status{ MonsterStatus::None };
+        PROPERTY( Name = "types" )
+        vector<hashed_string> _listType{};
+    };
+} // namespace sw
+
+namespace sw
+{
     /**
      * @class MonsterCollectorCatalog
      * @brief `<MonsterCollectorCatalog>` 아래의 `<Move>`, `<Nature>`, `<Weather>`, `<StatusImmunity>`, `<Species>`(`<Learn>`, `<Evolve>`), `<Encounter>`(`<Slot>`)를 읽는 카탈로그입니다.
@@ -315,16 +330,8 @@ namespace sw
 
         /** @brief 이름("Attack", "SpecialDefense" 등)을 능력치로 읽습니다. 모르는 이름이면 false 를 반환합니다. */
         [[nodiscard]] static bool parseStat( string_view text, MonsterStat& outStat );
-        /** @brief 이름("Burn", "Toxic" 등)을 상태이상으로 읽습니다. 모르는 이름이면 false 를 반환합니다. */
-        [[nodiscard]] static bool parseStatus( string_view text, MonsterStatus& outStatus );
 
     private:
-        struct StatusImmunity
-        {
-            MonsterStatus         _status{ MonsterStatus::None };
-            vector<hashed_string> _listType{};
-        };
-
         static constexpr const utf8* kXMLRootName = "MonsterCollectorCatalog"; ///< 루트 원소(`XMLCatalog`)
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief 원소 하나를 이름에 맞는 스키마로 읽습니다. 오류면 그 원소를 넣지 않고 false 입니다(오류는 이름과 함께 남긴다). */
@@ -339,6 +346,6 @@ namespace sw
         GameCatalog<MonsterNatureDef>    _natureCatalog;
         GameCatalog<MonsterWeatherDef>   _weatherCatalog;
         GameCatalog<MonsterEncounterDef> _encounterCatalog;
-        vector<StatusImmunity>           _listStatusImmunity;
+        vector<MonsterStatusImmunityDef> _listStatusImmunity;
     };
 } // namespace sw

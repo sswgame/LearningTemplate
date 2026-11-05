@@ -137,20 +137,6 @@ namespace sw
         return false;
     }
 
-    bool MonsterCollectorCatalog::parseStatus( string_view text, MonsterStatus& outStatus )
-    {
-        for ( uint8 index = static_cast<uint8>( MonsterStatus::Poison ); index <= static_cast<uint8>( MonsterStatus::Freeze ); ++index )
-        {
-            const MonsterStatus status = static_cast<MonsterStatus>( index );
-            if ( StringUtil::equals( text, string_view( getEnumName( status ) ) ) )
-            {
-                outStatus = status;
-                return true;
-            }
-        }
-        return false;
-    }
-
     int64 MonsterCollectorCatalog::computeTotalExp( MonsterExpGroup group, int32 level )
     {
         if ( level <= 1 )
@@ -213,7 +199,7 @@ namespace sw
 
     bool MonsterCollectorCatalog::isStatusImmune( MonsterStatus status, const vector<hashed_string>& listType ) const
     {
-        for ( const StatusImmunity& immunity : _listStatusImmunity )
+        for ( const MonsterStatusImmunityDef& immunity : _listStatusImmunity )
         {
             if ( immunity._status != status )
                 continue;
@@ -269,14 +255,14 @@ namespace sw
     {
         if ( XMLReadUtil::isElement( name, "StatusImmunity" ) )
         {
-            StatusImmunity    immunity;
-            const string_view status = node.getAttributeText( "status" );
-            if ( parseStatus( status, immunity._status ) == false )
+            MonsterStatusImmunityDef immunity;
+            if ( XMLFields::readFields( node, immunity, sourceName ) == false )
+                return false;
+            if ( immunity._status == MonsterStatus::None )
             {
-                SW_LOG_ERROR_ID( "MonsterCollectorCatalog.StatusImmunityNeedsKnownStatus", "%#: <StatusImmunity> needs a known status, got '%#'", sourceName, status );
+                SW_LOG_ERROR_ID( "MonsterCollectorCatalog.StatusImmunityNeedsKnownStatus", "%#: <StatusImmunity> needs a status other than None", sourceName );
                 return false;
             }
-            XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", immunity._listType );
             _listStatusImmunity.push_back( immunity );
             return true;
         }

@@ -95,6 +95,7 @@ namespace sw
 
         MoveCancelWindow();
 
+        PROPERTY( Name = "moves" )
         vector<hashed_string> _listMoveID;
         PROPERTY( Name = "from", Min = 0 )
         int32 _fromFrame;

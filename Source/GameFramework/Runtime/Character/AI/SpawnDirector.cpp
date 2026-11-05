@@ -52,9 +52,7 @@ namespace sw
         for ( XMLNode node = root.findChild( "Entry" ); node; node = node.findNextSibling( "Entry" ) )
         {
             SpawnEntryDef entry;
-            const bool    bEntryValid = XMLFields::readFields( node, entry, sourceName, { "tags" } );
-            StringUtil::forEachToken( node.getAttributeText( "tags" ), ",; ", [&]( string_view token )
-            { entry._listTag.push_back( hashed_string( token ) ); } );
+            const bool    bEntryValid = XMLFields::readFields( node, entry, sourceName );
             if ( bEntryValid )
                 (void)_catalog.add( entry );
             bValid = bEntryValid && bValid;

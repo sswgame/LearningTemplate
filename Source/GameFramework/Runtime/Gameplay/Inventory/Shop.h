@@ -125,8 +125,9 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY()
-        hashed_string         _currency{};            ///< 이 가게가 받고 주는 통화(비어 있으면 `Wallet::getDefaultCurrency`)
-        vector<ShopStockDef>  _listStock{};           ///< 진열 순서(`<Stock>`)
+        hashed_string        _currency{};  ///< 이 가게가 받고 주는 통화(비어 있으면 `Wallet::getDefaultCurrency`)
+        vector<ShopStockDef> _listStock{}; ///< 진열 순서(`<Stock>`)
+        PROPERTY( Name = "refuses" )
         vector<hashed_string> _listRefusedCategory{}; ///< 사들이지 않는 분류("Quest", "Key" — `refuses` 목록은 손으로 푼다)
         PROPERTY( Min = 0.0 )
         float32 _buyMultiplier{ 1.0f }; ///< 손님이 살 때 값에 곱한다

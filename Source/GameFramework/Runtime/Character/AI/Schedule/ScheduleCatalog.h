@@ -165,9 +165,10 @@ namespace sw
         PROPERTY()
         hashed_string _home{};
         PROPERTY( Name = "idle" )
-        hashed_string              _idleActivity{}; ///< 어느 블록도 없는 시간의 활동(기본 `StayHome`)
-        vector<TagID>              _listTag{};      ///< 처음 태그(직업, 성격)
-        vector<ScheduleRoutineDef> _listRoutine{};  ///< 자기 루틴 다음에 아키타입 체인의 루틴이 온다
+        hashed_string _idleActivity{}; ///< 어느 블록도 없는 시간의 활동(기본 `StayHome`)
+        PROPERTY( Name = "tags" )
+        vector<TagID>              _listTag{};     ///< 처음 태그(직업, 성격)
+        vector<ScheduleRoutineDef> _listRoutine{}; ///< 자기 루틴 다음에 아키타입 체인의 루틴이 온다
         PROPERTY( Name = "speed", Min = 0.01 )
         float32 _unitsPerMinute{ 60.0f };
     };

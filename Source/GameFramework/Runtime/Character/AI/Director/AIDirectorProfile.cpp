@@ -17,8 +17,7 @@ namespace sw
     {
         struct AIDirectorProfileInternal
         {
-            static constexpr const utf8* kArrRootAttribute[]     = { "startPhase" };
-            static constexpr const utf8* kArrCalendarAttribute[] = { "days", "seasons", "weathers" };
+            static constexpr const utf8* kArrRootAttribute[] = { "startPhase" };
 
             /** @brief 표에 없는 속성마다 오류를 남깁니다. @p bCondition 이면 일정 조건 속성도 받습니다. 모르는 것이 있으면 false 입니다. */
             template <size_t Count>
@@ -117,10 +116,7 @@ namespace sw
         ScheduleConditionVocabulary vocabulary;
         for ( XMLNode node = root.findChild( "Calendar" ); node; node = node.findNextSibling( "Calendar" ) )
         {
-            bValid = Internal::validateAttributes( node, Internal::kArrCalendarAttribute, false, sourceName ) && bValid;
-            ScheduleCondition::parseNameList( node.getAttributeText( "days" ), vocabulary._listWeekday );
-            ScheduleCondition::parseNameList( node.getAttributeText( "seasons" ), vocabulary._listSeason );
-            ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), vocabulary._listWeather );
+            bValid = XMLFields::readFields( node, vocabulary, sourceName ) && bValid;
         }
         for ( XMLNode node = root.findChild( "Intensity" ); node; node = node.findNextSibling( "Intensity" ) )
         {

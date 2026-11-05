@@ -188,6 +188,7 @@ namespace sw
     {
         REFLECT_BODY();
 
+        PROPERTY( Name = "times", Min = 0 )
         vector<float32> _listTime{}; ///< 판이 시작된 뒤 상자가 떨어지는 시각(초, 오름차순, 속성 `times`)
         PROPERTY( Name = "table", Required )
         hashed_string _tableID{};

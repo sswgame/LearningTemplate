@@ -63,13 +63,6 @@ namespace sw
                 return std::nullopt;
             }
 
-            static void parseTagList( string_view text, vector<TagID>& outListTag )
-            {
-                outListTag.clear();
-                StringUtil::forEachToken( text, ",;| ", [&]( string_view token )
-                { outListTag.push_back( TagID::request( token ) ); } );
-            }
-
             /** @brief 시작 순으로 놓은 칸 번호 — 겹침 검사가 쓴다. */
             struct BlockStartLess
             {
@@ -291,16 +284,14 @@ namespace sw
 
     bool ScheduleCatalog::loadNPC( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
-        using Internal = ScheduleCatalogInternal;
         ScheduleNPCDef npc;
-        if ( XMLFields::readFields( node, npc, sourceName, { "tags" } ) == false ) // 속도 >= 0.01 은 PROPERTY 가 본다
+        if ( XMLFields::readFields( node, npc, sourceName ) == false ) // 속도 >= 0.01 은 PROPERTY 가 본다
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.NpcInvalidFieldsSkipped", "%#: npc '%#' has invalid fields - skipped", sourceName, pID );
             return false;
         }
         if ( npc._idleActivity.empty() )
             npc._idleActivity = hashed_string( "StayHome" ); // 적지 않으면 집에 머문다
-        Internal::parseTagList( node.getAttributeText( "tags" ), npc._listTag );
         if ( npc._home.empty() == false && findPlace( npc._home ) == nullptr )
             SW_LOG_WARNING_ID( "ScheduleCatalog.NpcUnknownHome", "%#: npc '%#' has an unknown home '%#'", sourceName, pID, npc._home.c_str() );
         const ScheduleActivityDef* pIdle = getActivityRegistry().findActivity( npc._idleActivity );

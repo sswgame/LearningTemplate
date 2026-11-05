@@ -111,9 +111,7 @@ namespace sw
                 MoveCancelWindow window;
                 window._fromFrame = move.getLastActiveFrame() + 1;
                 window._toFrame   = lastFrame;
-                bool bWindowValid = XMLFields::readFields( child, window, sourceName, { "moves" } ); // to >= from 은 PROPERTY 가 본다
-                StringUtil::forEachToken( child.getAttributeText( "moves" ), ",; \t", [&]( string_view token )
-                { window._listMoveID.push_back( hashed_string( token ) ); } );
+                bool bWindowValid = XMLFields::readFields( child, window, sourceName ); // to >= from 은 PROPERTY 가 본다
                 if ( bWindowValid && ( window._listMoveID.empty() || window._toFrame < window._fromFrame ) )
                 {
                     SW_LOG_ERROR_ID( "FrameData.MoveEmptyCancelWindow", "%#: move '%#' has an empty cancel window", sourceName, pID );

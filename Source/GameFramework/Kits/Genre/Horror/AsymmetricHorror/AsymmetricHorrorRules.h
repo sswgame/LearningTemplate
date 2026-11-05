@@ -28,6 +28,7 @@ namespace sw
     {
         REFLECT_BODY();
 
+        PROPERTY( Name = "scales", Min = 0 )
         vector<float32> _listScale{}; ///< `scales` — [n-1] 이 n명이 고칠 때의 속도 배율이다(사람이 늘수록 한 명의 몫은 줄어든다)
         PROPERTY( Min = 0.1 )
         float32 _time{ 80.0f };
@@ -52,6 +53,7 @@ namespace sw
     {
         REFLECT_BODY();
 
+        PROPERTY( Name = "scales", Min = 0 )
         vector<float32> _listScale{}; ///< `scales` — [n-1] 이 n명이 치료할 때의 속도 배율이다
         PROPERTY( Min = 0.1 )
         float32 _time{ 16.0f };

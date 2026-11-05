@@ -156,6 +156,7 @@ namespace sw
     {
         REFLECT_BODY();
 
+        PROPERTY( Name = "unlocks" )
         vector<hashed_string> _listUnlock{}; ///< 이 단계에서 열리는 능력(뒷발 들기, 드리프트, 피아페 등)
         PROPERTY( Name = "xp", Min = 0.0 )
         float32 _experience{ 0.0f }; ///< 이 단계가 되는 누적 경험치(정수로 반올림해 `getBondCurve` 의 테이블이 된다)

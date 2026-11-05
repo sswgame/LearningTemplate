@@ -138,9 +138,7 @@ namespace sw
         else if ( XMLReadUtil::isElement( name, "Bond" ) )
         {
             WesternBondLevelDef bond;
-            bAdd = XMLFields::readFields( node, bond, sourceName, { "unlocks" } );
-            StringUtil::forEachToken( node.getAttributeText( "unlocks" ), ",; ", [&bond]( string_view token )
-            { bond._listUnlock.push_back( hashed_string( token ) ); } );
+            bAdd = XMLFields::readFields( node, bond, sourceName );
             if ( bAdd )
                 _listBondLevel.push_back( bond );
         }

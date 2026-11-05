@@ -30,7 +30,8 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        hashed_string         _id{};
+        hashed_string _id{};
+        PROPERTY( Name = "tags" )
         vector<hashed_string> _listTag{}; ///< 비면 태그 거르기와 상관없이 늘 낸다(`tags="a,b"` 는 손으로 푼다)
         PROPERTY( Min = 0.0 )
         float32 _cost{ 1.0f };
