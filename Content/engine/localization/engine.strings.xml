@@ -644,6 +644,7 @@
 		</entry>
 		<entry key="EdPlugin.Name" source="Name">
 			<origins>
+				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
 				<item>Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp</item>
 			</origins>
 		</entry>
@@ -1350,12 +1351,14 @@
 				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginParkLayout.ReadFailedHint" source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload.">
+		<entry key="EdPluginParkLayout.ReadFailedHint"
+		       source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload.">
 			<origins>
 				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginParkLayout.Summary" source="Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}">
+		<entry key="EdPluginParkLayout.Summary"
+		       source="Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}">
 			<origins>
 				<item>Source/GameFramework/Kits/Genre/Simulation/ThemePark/Editor/ParkLayoutPanel.cpp</item>
 			</origins>

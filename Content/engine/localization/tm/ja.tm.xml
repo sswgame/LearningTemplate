@@ -58,6 +58,7 @@
 		<entry source="CPU only:" text="CPU のみ:" />
 		<entry source="Camera Shake" text="カメラの揺れ" />
 		<entry source="Cancel" text="キャンセル" />
+		<entry source="Capacity" text="定員" />
 		<entry source="Center" text="中心" />
 		<entry source="Chains" text="チェーン" />
 		<entry source="Check" text="チェック" />
@@ -74,6 +75,7 @@
 		<entry source="Controls" text="操作" />
 		<entry source="Cooldown" text="クールダウン" />
 		<entry source="Corner" text="位置" />
+		<entry source="Cost" text="費用" />
 		<entry source="Could not copy to the clipboard."
 		       text="クリップボードにコピーできませんでした。" />
 		<entry source="Count" text="数" />
@@ -117,6 +119,7 @@
 		       text="空です。モディファイアを追加してグループにします。" />
 		<entry source="End maintenance" text="メンテナンス終了" />
 		<entry source="Enter / exit blend (s)" text="入り・出のブレンド(秒)" />
+		<entry source="Entrance is inside the footprint" text="入口が敷地の内側にある" />
 		<entry source="Equip set" text="装備セット" />
 		<entry source="Event JSON" text="イベント JSON" />
 		<entry source="Event id" text="イベント id" />
@@ -126,6 +129,7 @@
 		<entry source="Field of View" text="視野角" />
 		<entry source="Fit check (view only)" text="フィットチェック(表示のみ)" />
 		<entry source="Fit to Bounds" text="境界に合わせる" />
+		<entry source="Focus gate" text="正門を表示" />
 		<entry source="Foliage Density" text="植生の密度" />
 		<entry source="Follow game clock" text="ゲーム時計に合わせる" />
 		<entry source="From" text="送信元" />
@@ -199,6 +203,8 @@
 		<entry source="Mouse Sensitivity" text="マウス感度" />
 		<entry source="Move row down" text="行を下へ移動" />
 		<entry source="Move row up" text="行を上へ移動" />
+		<entry source="Move the scene view camera to the park gate"
+		       text="シーンビューのカメラを公園の正門へ移動します" />
 		<entry source="Music Volume" text="音楽の音量" />
 		<entry source="Mute All" text="すべてミュート" />
 		<entry source="NPCs" text="NPC" />
@@ -244,6 +250,7 @@
 		<entry source="Options" text="オプション" />
 		<entry source="Orthographic preset - the preview draws it in perspective."
 		       text="平行投影プリセット — プレビューは透視で描きます。" />
+		<entry source="Overlaps {name}" text="{name}と重なっている" />
 		<entry source="Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)"
 		       text="選択したモディファイアまでを適用した結果を別色の線で重ねて描きます(変形の影響プレビュー)" />
 		<entry source="Owned Tags" text="所有タグ" />
@@ -316,6 +323,7 @@
 		<entry source="Revert" text="元に戻す" />
 		<entry source="Reverting in" text="元に戻すまで" />
 		<entry source="Revoke" text="回収" />
+		<entry source="Ride" text="アトラクション" />
 		<entry source="Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
 		       text="ThemePark 配置ファイル(rides.xml)のアトラクションの足跡、入口、コースターのトラック" />
 		<entry source="Roles" text="役割" />
@@ -323,6 +331,7 @@
 		<entry source="Rotation" text="回転" />
 		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
 		       text="実行中のアビリティ状態はプレイ中にのみ存在します。プレイを押して確認してください。" />
+		<entry source="Same id as {name}" text="{name}と ID が同じ" />
 		<entry source="Sanction" text="制裁" />
 		<entry source="Save" text="保存" />
 		<entry source="Save Stack" text="スタックを保存" />
@@ -409,13 +418,21 @@
 		<entry source="Text Size" text="文字サイズ" />
 		<entry source="Texture Quality" text="テクスチャ品質" />
 		<entry source="The node editor could not be created" text="ノードエディタを作成できませんでした" />
+		<entry source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload."
+		       text="パーク配置を読み込めませんでした({path})。ログを確認してファイルを修正し、再読み込みしてください。" />
 		<entry source="The target object no longer exists."
 		       text="対象のオブジェクトはもう存在しません。" />
 		<entry source="This file could not be opened: {statusText}"
 		       text="このファイルを開けません: {statusText}" />
+		<entry source="This game has no park layout data ({path})"
+		       text="このゲームにはパーク配置データがありません({path})" />
+		<entry source="Ticket" text="料金" />
 		<entry source="Time" text="時刻" />
+		<entry source="Time (s)" text="時間(秒)" />
 		<entry source="To" text="宛先" />
 		<entry source="Toggle" text="切り替え" />
+		<entry source="Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}"
+		       text="総費用 {cost}  ·  初期資金 {cash}  ·  入場料 {fee}  ·  配置の問題 {issues}" />
 		<entry source="Translation" text="移動" />
 		<entry source="Travel" text="移動" />
 		<entry source="Tritanopia" text="3 型色覚 (青)" />

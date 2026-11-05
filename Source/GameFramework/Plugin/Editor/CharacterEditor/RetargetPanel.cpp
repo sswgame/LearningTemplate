@@ -438,7 +438,7 @@ namespace sw::editor
             ChainText&     text  = _listChainText[chainIndex];
             ImGui::PushID( static_cast<int32>( chainIndex ) );
             ImGui::SeparatorText( chain._name.c_str() );
-            EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdWidget", "Name" ) );
+            EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "Name" ) );
             (void)EditorWidgets::drawTextField( "##ChainName", text._name, -1.0f );
             if ( ImGui::IsItemDeactivatedAfterEdit() )
             {
@@ -477,7 +477,7 @@ namespace sw::editor
         }
 
         ImGui::SeparatorText( SW_LOCKEY( "EdPlugin", "AddChain" ) );
-        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdWidget", "Name" ) );
+        EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPlugin", "Name" ) );
         EditorChrome::setNextItemWidthColumns( 21.0f );
         ImGui::InputText( "##NewChain", _newChainName.data(), _newChainName.max_size() );
         EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdPluginField", "SourceBones" ) );

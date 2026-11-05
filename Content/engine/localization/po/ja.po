@@ -650,6 +650,7 @@ msgctxt "EdPlugin.MirrorBone"
 msgid "Mirror bone"
 msgstr "ボーンをミラー"
 
+#: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 #: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
 msgctxt "EdPlugin.Name"
 msgid "Name"

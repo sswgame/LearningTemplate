@@ -383,13 +383,23 @@
 		<entry key="EdPluginParkLayout.ColumnRide" text="アトラクション" sourceHash="dcc85b2bf9f5004f" />
 		<entry key="EdPluginParkLayout.ColumnTime" text="時間(秒)" sourceHash="b30cb1f77e66860c" />
 		<entry key="EdPluginParkLayout.FocusGate" text="正門を表示" sourceHash="0f54f967b84971ee" />
-		<entry key="EdPluginParkLayout.FocusGateTip" text="シーンビューのカメラを公園の正門へ移動します" sourceHash="8bfe700223462b90" />
+		<entry key="EdPluginParkLayout.FocusGateTip"
+		       text="シーンビューのカメラを公園の正門へ移動します"
+		       sourceHash="8bfe700223462b90" />
 		<entry key="EdPluginParkLayout.IssueDuplicateID" text="{name}と ID が同じ" sourceHash="f889fe2f2a742099" />
-		<entry key="EdPluginParkLayout.IssueEntrance" text="入口が敷地の内側にある" sourceHash="d771331ea711dc1b" />
+		<entry key="EdPluginParkLayout.IssueEntrance"
+		       text="入口が敷地の内側にある"
+		       sourceHash="d771331ea711dc1b" />
 		<entry key="EdPluginParkLayout.IssueOverlap" text="{name}と重なっている" sourceHash="1f5279ef06ad20b2" />
-		<entry key="EdPluginParkLayout.NoLayoutHint" text="このゲームにはパーク配置データがありません({path})" sourceHash="57f81944f9952bee" />
-		<entry key="EdPluginParkLayout.ReadFailedHint" text="パーク配置を読み込めませんでした({path})。ログを確認してファイルを修正し、再読み込みしてください。" sourceHash="b7bd7c1b560208ed" />
-		<entry key="EdPluginParkLayout.Summary" text="総費用 {cost}  ·  初期資金 {cash}  ·  入場料 {fee}  ·  配置の問題 {issues}" sourceHash="6e8c60cf7ef53d48" />
+		<entry key="EdPluginParkLayout.NoLayoutHint"
+		       text="このゲームにはパーク配置データがありません({path})"
+		       sourceHash="57f81944f9952bee" />
+		<entry key="EdPluginParkLayout.ReadFailedHint"
+		       text="パーク配置を読み込めませんでした({path})。ログを確認してファイルを修正し、再読み込みしてください。"
+		       sourceHash="b7bd7c1b560208ed" />
+		<entry key="EdPluginParkLayout.Summary"
+		       text="総費用 {cost}  ·  初期資金 {cash}  ·  入場料 {fee}  ·  配置の問題 {issues}"
+		       sourceHash="6e8c60cf7ef53d48" />
 		<entry key="EdPluginTip.AnchorRelativeRootPositionAndYawAt"
 		       text="位置合わせ時点のアンカー基準のルート位置とヨー — ビューポートで役割オブジェクトを選びギズモで動かします"
 		       sourceHash="0d52b634e78c2b8a" />

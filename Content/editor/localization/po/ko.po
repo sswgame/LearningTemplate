@@ -568,6 +568,11 @@ msgctxt "EdButton.ThemeLookAndFeel"
 msgid "Theme & Look and Feel"
 msgstr "테마 · 모양"
 
+#: Source/Editor/Common/Widgets/EditorWidgets.cpp
+msgctxt "EdCommon.Advanced"
+msgid "Advanced"
+msgstr "고급"
+
 #: Source/Editor/Viewport/EditorViewportToolbar.cpp
 msgctxt "EdCommon.AlignSelected"
 msgid "Align and distribute the selected objects (select two or more)."
@@ -668,6 +673,11 @@ msgctxt "EdCommon.CurvePreviewEdit"
 msgid "Click to edit the curve"
 msgstr "클릭하면 곡선을 편집합니다"
 
+#: Source/Editor/Panels/Inspector/DataPathPropertyDrawer.cpp
+msgctxt "EdCommon.DataPathHint"
+msgid "Resource id, or drop an asset"
+msgstr "리소스 id 를 치거나 에셋을 끌어 놓기"
+
 #: Source/Editor/Common/Widgets/EditorDebugHUDControls.cpp
 msgctxt "EdCommon.DebugHUDNotRunning"
 msgid "Debug HUD is not running"
@@ -722,6 +732,112 @@ msgstr "이동: 선택한 오브젝트를 축이나 평면을 따라 옮깁니�
 msgctxt "EdCommon.GizmoWorldSpace"
 msgid "World space: the gizmo follows the world axes. Click to switch to local space."
 msgstr "월드 공간: 기즈모가 월드 축을 따릅니다. 클릭하면 로컬 공간으로 바뀝니다."
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
+msgctxt "EdCommon.GraphAddNode"
+msgid "+ Node"
+msgstr "+ 노드"
+
+#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+msgctxt "EdCommon.GraphAddNodeTip"
+msgid "Add a node. Right-click the canvas to search, or drag a pin to empty space"
+msgstr "노드를 더합니다. 캔버스를 오른쪽 클릭하면 검색, 핀을 빈 곳으로 끌면 이어서 만듭니다"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlign"
+msgid "Align"
+msgstr "정렬"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlignCenterX"
+msgid "Align Centers in a Column"
+msgstr "가운데 맞춤(세로 줄)"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlignCenterY"
+msgid "Align Centers in a Row"
+msgstr "가운데 맞춤(가로 줄)"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlignLeft"
+msgid "Align Left"
+msgstr "왼쪽 맞춤"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlignTip"
+msgid "Line up or evenly space the selected nodes"
+msgstr "고른 노드를 한 줄로 맞추거나 간격을 고르게 합니다"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphAlignTop"
+msgid "Align Top"
+msgstr "위 맞춤"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphComment"
+msgid "Comment"
+msgstr "주석"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphCommentHint"
+msgid "Comment title"
+msgstr "주석 제목"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphCommentTip"
+msgid "Add a comment box around the selected nodes, or in the middle of the view. Double-click its title to rename it"
+msgstr "고른 노드를 감싸는 주석 상자를 만듭니다(없으면 보이는 가운데). 제목을 두 번 누르면 이름을 바꿉니다"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphCommentUntitled"
+msgid "Comment"
+msgstr "주석"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphDistributeX"
+msgid "Distribute Horizontally"
+msgstr "가로 간격 고르게"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphDistributeY"
+msgid "Distribute Vertically"
+msgstr "세로 간격 고르게"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphFit"
+msgid "Fit"
+msgstr "맞춤"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphFitTip"
+msgid "Fit every node in view; with nodes selected, go to them (F)"
+msgstr "모든 노드가 보이게 맞춥니다. 고른 노드가 있으면 그 노드로 갑니다(F)"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphMinimap"
+msgid "Minimap"
+msgstr "미니맵"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphMinimapAreaTip"
+msgid "Click or drag to move the view to the nearest node"
+msgstr "누르거나 끌면 가장 가까운 노드로 보기를 옮깁니다"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphMinimapTip"
+msgid "Show or hide the overview of the whole graph"
+msgstr "그래프 전체 축소판을 보이거나 감춥니다"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphNeedThreeNodes"
+msgid "Select three or more nodes"
+msgstr "노드를 셋 이상 고르세요"
+
+#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
+msgctxt "EdCommon.GraphNeedTwoNodes"
+msgid "Select two or more nodes"
+msgstr "노드를 둘 이상 고르세요"
 
 #: Source/Editor/Viewport/EditorViewportToolbar.cpp
 msgctxt "EdCommon.GridSnap"
@@ -1086,6 +1202,71 @@ msgctxt "EdCommon.PlayTimeScale"
 msgid "Game time scale (gv_timeScale). Drag to change it; right-click to reset it to x1.00."
 msgstr "게임 시간 배율 (gv_timeScale) — 끌어서 바꾸고, 오른쪽 클릭으로 x1.00 으로 되돌립니다"
 
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewAxes"
+msgid "Axes"
+msgstr "축"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewAxesTip"
+msgid "Show or hide the axis indicator in the lower-left corner"
+msgstr "왼쪽 아래 축 방향 표시를 보이거나 감춥니다"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewFloor"
+msgid "Floor"
+msgstr "바닥"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewFloorTip"
+msgid "Show or hide the floor"
+msgstr "바닥을 보이거나 감춥니다"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewFrame"
+msgid "Frame"
+msgstr "맞춤"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewFrameTip"
+msgid "Bring the camera back to the preview subject (F)"
+msgstr "카메라를 미리보기 대상으로 되돌립니다(F)"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewPause"
+msgid "Pause"
+msgstr "멈춤"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewPauseTip"
+msgid "Play or pause the preview scene (animation, effects and physics together)"
+msgstr "미리보기 씬을 재생하거나 멈춥니다(애니메이션 · 효과 · 물리가 함께)"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewPlay"
+msgid "Play"
+msgstr "재생"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewScrubTip"
+msgid "Drag to move through the timeline; dragging pauses playback"
+msgstr "끌어서 시간축을 오갑니다. 끄는 동안 재생을 멈춥니다"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewSpeedTip"
+msgid "Playback speed of the preview scene"
+msgstr "미리보기 씬의 재생 속도"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewStep"
+msgid "Step"
+msgstr "한 프레임"
+
+#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
+msgctxt "EdCommon.PreviewStepTip"
+msgid "While paused, advance the preview by one frame"
+msgstr "멈춘 동안 미리보기를 한 프레임 나아가게 합니다"
+
 #: Source/Editor/Popups/QuickLauncherPopup.cpp
 msgctxt "EdCommon.QuickOpenHint"
 msgid "Type to search assets, scenes, game objects (ESC to cancel)..."
@@ -1146,6 +1327,16 @@ msgctxt "EdCommon.SaveLayout"
 msgid "Save the current dock layout and panel visibility under this name (Saved/Editor/Layouts; letters, digits, spaces, _ and - only)."
 msgstr "지금 도킹 배치와 패널 가시성을 이 이름으로 저장합니다 (Saved/Editor/Layouts, 영숫자 · 공백 · _ · -)"
 
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ScaleSnap"
+msgid "Scale snap: scaling jumps in steps of the value on the right."
+msgstr "크기 스냅: 크기가 오른쪽 값 단위로 바뀝니다."
+
+#: Source/Editor/Viewport/EditorViewportToolbar.cpp
+msgctxt "EdCommon.ScaleSnapSize"
+msgid "Scale snap step, as a scale factor."
+msgstr "크기 스냅 간격(배율)입니다."
+
 #: Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp
 msgctxt "EdCommon.SearchAssetsHint"
 msgid "Search assets"
@@ -1158,6 +1349,7 @@ msgstr "검색어를 지웁니다."
 
 #: Source/Editor/Common/Widgets/EditorComponentMenu.cpp
 #: Source/Editor/Common/Widgets/EditorWidgets.cpp
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
 msgctxt "EdCommon.SearchHint"
 msgid "Search..."
 msgstr "검색..."
@@ -1479,11 +1671,6 @@ msgstr "스폰 X"
 msgctxt "EdField.SpawnY"
 msgid "Spawn Y"
 msgstr "스폰 Y"
-
-#: Source/Editor/Panels/Animation/AnimationClipPreviewPanel.cpp
-msgctxt "EdField.Speed"
-msgid "Speed"
-msgstr "속도"
 
 #: Source/Editor/Viewport/TerrainBrushTool.cpp
 msgctxt "EdField.Strength"
@@ -2164,6 +2351,7 @@ msgid "Delete Key"
 msgstr "키 지우기"
 
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
 msgctxt "EdLabel.Duplicate"
 msgid "Duplicate"
 msgstr "복제"
@@ -2793,11 +2981,6 @@ msgctxt "EdText.AddAnimation"
 msgid "Add Animation"
 msgstr "애니메이션 추가"
 
-#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
-msgctxt "EdText.AddAttack"
-msgid "Add Attack"
-msgstr "공격 추가"
-
 #: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
 msgctxt "EdText.AddBone"
 msgid "Add Bone"
@@ -2812,11 +2995,6 @@ msgstr "데이터 레이어 추가"
 msgctxt "EdText.AddFrame"
 msgid "Add Frame"
 msgstr "프레임 추가"
-
-#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
-msgctxt "EdText.AddIdle"
-msgid "Add Idle"
-msgstr "대기 추가"
 
 #: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
 msgctxt "EdText.AddKey"
@@ -2837,11 +3015,6 @@ msgstr "마스크 추가"
 msgctxt "EdText.AddRow"
 msgid "Add row"
 msgstr "줄 추가"
-
-#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
-msgctxt "EdText.AddWalk"
-msgid "Add Walk"
-msgstr "걷기 추가"
 
 #: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
 msgctxt "EdText.Advance"
@@ -2887,11 +3060,6 @@ msgstr "바깥 프리팹에 적용"
 msgctxt "EdText.ApplyToPrefab"
 msgid "Apply to Prefab"
 msgstr "프리팹에 적용"
-
-#: Source/Editor/Panels/Material/MaterialPanel.cpp
-msgctxt "EdText.ApplyToSelection"
-msgid "Apply to Selection"
-msgstr "선택에 적용"
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EdText.AtlasCellsClickSelectedFrameShiftClickNew"
@@ -3272,11 +3440,6 @@ msgctxt "EdText.Notifies"
 msgid "Notifies:"
 msgstr "알림:"
 
-#: Source/Editor/Panels/Settings/ModulesPanel.cpp
-msgctxt "EdText.On"
-msgid "On"
-msgstr "켜짐"
-
 #: Source/Editor/Common/GUI/Panel/EditorDocumentPanel.cpp
 msgctxt "EdText.Open"
 msgid "Open..."
@@ -3338,6 +3501,7 @@ msgctxt "EdText.PickAnObjectOnTheLeft"
 msgid "Pick an object on the left"
 msgstr "왼쪽에서 오브젝트를 고릅니다"
 
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EdText.PlayPreview"
 msgid "Play Preview"
@@ -3387,11 +3551,6 @@ msgstr "이것 다시 묶기"
 msgctxt "EdText.Reconnect"
 msgid "Reconnect"
 msgstr "다시 연결"
-
-#: Source/Editor/Panels/Scene/HistoryPanel.cpp
-msgctxt "EdText.RedoCtrlY"
-msgid "Redo (Ctrl+Y)"
-msgstr "다시 실행(Ctrl+Y)"
 
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
 msgctxt "EdText.RefreshFiles"
@@ -3643,12 +3802,12 @@ msgctxt "EdText.Step"
 msgid "Step"
 msgstr "한 걸음"
 
+#: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EdText.StopPreview"
 msgid "Stop Preview"
 msgstr "미리보기 정지"
 
-#: Source/Editor/Panels/Console/ConsolePanel.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdText.Tags"
 msgid "Tags:"
@@ -3714,11 +3873,6 @@ msgctxt "EdText.UnbindOther"
 msgid "Unbind other"
 msgstr "다른 것 풀기"
 
-#: Source/Editor/Panels/Scene/HistoryPanel.cpp
-msgctxt "EdText.UndoCtrlZ"
-msgid "Undo (Ctrl+Z)"
-msgstr "실행 취소(Ctrl+Z)"
-
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdText.Unlink"
 msgid "Unlink"
@@ -3779,11 +3933,6 @@ msgstr "어떤 오브젝트가 다른가"
 msgctxt "EdText.XMLDataFiles"
 msgid "XML Data Files"
 msgstr "XML 데이터 파일"
-
-#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
-msgctxt "EdText.ZoomFit"
-msgid "Zoom Fit"
-msgstr "맞춰 보기"
 
 #: Source/Editor/Panels/UIPreview/UIPreviewPanel.cpp
 msgctxt "EdTip.AddTheChosenWidgetTypeIntoThe"
@@ -3975,7 +4124,6 @@ msgstr "취소"
 #: Source/Editor/Panels/Multiplayer/MultiplayerProfilerTab.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
-#: Source/Editor/Panels/Scene/HistoryPanel.cpp
 msgctxt "EdVerb.Clear"
 msgid "Clear"
 msgstr "지우기"
@@ -4023,7 +4171,6 @@ msgstr "새로 고침"
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
-#: Source/Editor/Panels/Material/MaterialPanel.cpp
 #: Source/Editor/Panels/Mesh/MeshPreviewPanel.cpp
 #: Source/Editor/Panels/Physics/RagdollPreviewPanel.cpp
 #: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
@@ -4035,6 +4182,8 @@ msgstr "다시 읽기"
 
 #: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
 #: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+#: Source/Editor/Panels/InputMap/InputMapPanel.cpp
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EdVerb.Remove"
 msgid "Remove"
 msgstr "제거"
@@ -4064,7 +4213,6 @@ msgstr "되돌리기"
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
-#: Source/Editor/Panels/Material/MaterialPanel.cpp
 #: Source/Editor/Panels/Multiplayer/MultiplayerSyncTab.cpp
 #: Source/Editor/Panels/Prefab/PrefabEditorPanel.cpp
 #: Source/Editor/Panels/Profiler/ProfilerPanel.cpp
@@ -4323,11 +4471,6 @@ msgctxt "EdWidget.Game"
 msgid "Game"
 msgstr "게임"
 
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
-msgctxt "EdWidget.GridSnap"
-msgid "Grid Snap"
-msgstr "격자 스냅"
-
 #: Source/Editor/Panels/Animation/AnimationGraphLayerEditor.cpp
 msgctxt "EdWidget.HalfLife"
 msgid "Half Life"
@@ -4455,11 +4598,6 @@ msgstr "다시 시작 필요"
 msgctxt "EdWidget.RightStick"
 msgid "Right Stick"
 msgstr "오른쪽 스틱"
-
-#: Source/Editor/Viewport/EditorViewportToolbar.cpp
-msgctxt "EdWidget.RotSnap"
-msgid "Rot Snap"
-msgstr "회전 스냅"
 
 #: Source/Editor/Panels/Material/MaterialPanel.cpp
 msgctxt "EdWidget.Shader"
@@ -5527,11 +5665,6 @@ msgctxt "EditorDialogueGraph.TextTip"
 msgid "The line the player reads. On a Choice node it is the prompt shown above the options."
 msgstr "플레이어가 읽는 대사입니다. Choice 노드에서는 선택지 위에 나오는 질문입니다."
 
-#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
-msgctxt "EditorDialogueGraph.ZoomFitTip"
-msgid "Zoom and pan the canvas so every node is visible."
-msgstr "모든 노드가 보이도록 캔버스를 확대 · 이동합니다."
-
 #: Source/Editor/Panels/InputMap/InputMapPanel.cpp
 msgctxt "EditorInputMap.ActionConflictTip"
 msgid "Shares a key with another action on the same layer - see the details"
@@ -5959,6 +6092,7 @@ msgid "Remove from Favorites"
 msgstr "즐겨찾기에서 제거"
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Panels/Material/MaterialPanel.cpp
 msgctxt "EditorInspector.ResetToDefaultTooltip"
 msgid "Reset to the default value"
 msgstr "기본값으로 되돌립니다"
@@ -5974,6 +6108,7 @@ msgid "Search assets..."
 msgstr "에셋 검색..."
 
 #: Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp
+#: Source/Editor/Panels/Material/MaterialPanel.cpp
 msgctxt "EditorInspector.SearchPropertiesHint"
 msgid "Search properties..."
 msgstr "프로퍼티 검색..."
@@ -6217,11 +6352,6 @@ msgstr "한 프로세스 또는 모든 프로세스의 로그를 보입니다"
 msgctxt "EditorMultiplayer.NoProcesses"
 msgid "No processes - pick a Net Mode and press Play (toolbar or here)."
 msgstr "프로세스가 없습니다 - Net Mode 를 고르고 Play 를 누르세요(툴바 또는 여기)."
-
-#: Source/Editor/Panels/Multiplayer/MultiplayerPanel.cpp
-msgctxt "EditorMultiplayer.NoTarget"
-msgid "No multiplayer session is running. Start one in the Session tab."
-msgstr "실행 중인 멀티플레이 세션이 없습니다. Session 탭에서 시작하세요."
 
 #: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.PauseServer"
@@ -6709,6 +6839,11 @@ msgid "Hidden in the editor - click to show"
 msgstr "에디터에서 숨겨져 있습니다 - 클릭하면 보입니다"
 
 #: Source/Editor/Panels/Scene/HierarchyPanel.cpp
+msgctxt "EditorScene.HierarchyAllTypes"
+msgid "All types"
+msgstr "모든 종류"
+
+#: Source/Editor/Panels/Scene/HierarchyPanel.cpp
 msgctxt "EditorScene.HierarchyNoActiveScene"
 msgid "No active scene."
 msgstr "활성 씬이 없습니다."
@@ -6723,10 +6858,30 @@ msgctxt "EditorScene.HierarchySearchHint"
 msgid "Search (t:Mesh, tag:Player)..."
 msgstr "검색 (t:Mesh, tag:Player)..."
 
+#: Source/Editor/Panels/Scene/HierarchyPanel.cpp
+msgctxt "EditorScene.HierarchyTypeFilter"
+msgid "Show only objects with a component type (same as typing t:Type in the search)"
+msgstr "이 컴포넌트 종류를 가진 오브젝트만 보입니다(검색에 t:종류 를 친 것과 같습니다)"
+
 #: Source/Editor/Panels/Scene/HistoryPanel.cpp
 msgctxt "EditorScene.HistoryClear"
 msgid "Clear the whole undo history. This cannot be undone"
 msgstr "실행 취소 기록을 모두 지웁니다. 되돌릴 수 없습니다"
+
+#: Source/Editor/Panels/Scene/HistoryPanel.cpp
+msgctxt "EditorScene.HistoryInitialState"
+msgid "Initial state"
+msgstr "처음 상태"
+
+#: Source/Editor/Panels/Scene/HistoryPanel.cpp
+msgctxt "EditorScene.HistoryNothingToRedo"
+msgid "Nothing to redo"
+msgstr "다시 실행할 것이 없습니다"
+
+#: Source/Editor/Panels/Scene/HistoryPanel.cpp
+msgctxt "EditorScene.HistoryNothingToUndo"
+msgid "Nothing to undo"
+msgstr "실행 취소할 것이 없습니다"
 
 #: Source/Editor/Panels/Scene/HistoryPanel.cpp
 msgctxt "EditorScene.HistoryRedo"
@@ -7276,7 +7431,7 @@ msgstr "모든 칸 추가"
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AddAllCellsTip"
 msgid "Add one frame for every grid cell, from the top left."
-msgstr "격자의 모든 칸을 왼쪽 위부터 프레임으로 추가합니다."
+msgstr "왼쪽 위부터 격자의 칸마다 프레임을 하나씩 더합니다."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AnimationFirstFrameTip"
@@ -7296,7 +7451,7 @@ msgstr "마지막 프레임 다음에 첫 프레임부터 반복합니다. 끄�
 #: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
 msgctxt "EditorSpriteClip.AnimationNameRejectedStatus"
 msgid "Animation name not changed: it is empty or already used"
-msgstr "애니메이션 이름을 바꾸지 않았습니다. 비어 있거나 이미 쓰는 이름입니다."
+msgstr "애니메이션 이름을 바꾸지 않았습니다: 비었거나 이미 쓰는 이름입니다"
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AnimationNameTip"
@@ -7306,7 +7461,7 @@ msgstr "게임 코드가 이 애니메이션을 재생할 때 쓰는 이름입�
 #: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
 msgctxt "EditorSpriteClip.AnimationNeedsFrameStatus"
 msgid "Animation not added: the clip has no frames"
-msgstr "애니메이션을 추가하지 않았습니다. 클립에 프레임이 없습니다."
+msgstr "애니메이션을 더하지 않았습니다: 클립에 프레임이 없습니다"
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AtlasCellTip"
@@ -7321,7 +7476,7 @@ msgstr "아틀라스 크기"
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AtlasSizeTip"
 msgid "Atlas width and height in pixels. Pixel borders need it."
-msgstr "아틀라스의 너비와 높이(픽셀)입니다. 픽셀 테두리에 필요합니다."
+msgstr "아틀라스의 픽셀 너비와 높이입니다. 픽셀 테두리에 필요합니다."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.AtlasTip"
@@ -7336,12 +7491,12 @@ msgstr "테두리"
 #: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
 msgctxt "EditorSpriteClip.BorderNeedsAtlasSizeStatus"
 msgid "A frame with a border needs the atlas size in pixels"
-msgstr "테두리가 있는 프레임에는 아틀라스 픽셀 크기가 필요합니다."
+msgstr "테두리가 있는 프레임에는 아틀라스 픽셀 크기가 필요합니다"
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.BorderTip"
 msgid "Nine-slice border of this frame in atlas pixels: left, bottom, right, top."
-msgstr "이 프레임의 9-슬라이스 테두리(아틀라스 픽셀)입니다. 왼쪽, 아래, 오른쪽, 위 순서입니다."
+msgstr "이 프레임의 9-슬라이스 테두리입니다(아틀라스 픽셀): 왼쪽, 아래, 오른쪽, 위."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.DuplicateFrame"
@@ -7351,7 +7506,7 @@ msgstr "복제"
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.DuplicateFrameTip"
 msgid "Insert a copy of the selected frame right after it."
-msgstr "고른 프레임의 복사본을 바로 뒤에 넣습니다."
+msgstr "고른 프레임의 사본을 바로 뒤에 넣습니다."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.FrameDurationTip"
@@ -7426,7 +7581,7 @@ msgstr "아틀라스 없음"
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.PreviewEmpty"
 msgid "Nothing to preview: pick an atlas and add a frame."
-msgstr "미리 볼 것이 없습니다. 아틀라스를 고르고 프레임을 추가하세요."
+msgstr "미리 볼 것이 없습니다: 아틀라스를 고르고 프레임을 더하세요."
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.PreviewTip"
@@ -7436,7 +7591,7 @@ msgstr "고른 애니메이션을 재생합니다. 고른 것이 없으면 모�
 #: Source/Editor/Panels/Animation/Model/SpriteClipModel.cpp
 msgctxt "EditorSpriteClip.SaveFailedStatus"
 msgid "Save failed"
-msgstr "저장하지 못했습니다."
+msgstr "저장하지 못했습니다"
 
 #: Source/Editor/Panels/Animation/SpriteClipPanel.cpp
 msgctxt "EditorSpriteClip.SaveTip"
@@ -7591,7 +7746,7 @@ msgstr "캔버스가 보여 주고 도구가 칠할 레이어입니다. Visual(�
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EditorTileMap.LineTip"
 msgid "Paint the line you drag out when you release the mouse (L)"
-msgstr "끌어 그은 선을 마우스를 놓을 때 칠합니다(L)."
+msgstr "끌어서 그린 선을 마우스를 놓을 때 칠합니다 (L)"
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EditorTileMap.LoadTip"
@@ -7638,7 +7793,7 @@ msgctxt "EditorTileMap.ResetViewTip"
 msgid "Reset zoom and pan to the start (wheel: zoom, middle or right drag: pan)"
 msgstr "확대와 이동을 처음으로 되돌립니다 (휠: 확대, 가운데 · 오른쪽 끌기: 이동)"
 
-#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+#: Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp
 msgctxt "EditorTileMap.SaveFailedStatus"
 msgid "Save failed"
 msgstr "저장하지 못했습니다"
@@ -7648,7 +7803,7 @@ msgctxt "EditorTileMap.SaveTip"
 msgid "Write the map to Path."
 msgstr "맵을 Path 에 씁니다."
 
-#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+#: Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp
 msgctxt "EditorTileMap.SavedStatus"
 msgid "Saved {path}"
 msgstr "{path} 저장됨"
@@ -7661,17 +7816,17 @@ msgstr "크기가 범위를 벗어났습니다."
 #: Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp
 msgctxt "EditorTileMap.SpawnOutsideStatus"
 msgid "Spawn not changed: the cell is outside the map"
-msgstr "스폰을 바꾸지 않았습니다. 맵 밖의 칸입니다."
+msgstr "스폰을 바꾸지 않았습니다: 맵 밖의 칸입니다"
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EditorTileMap.SpawnXTip"
 msgid "Cell column where the player starts on this map."
-msgstr "플레이어가 이 맵에서 시작하는 칸의 열입니다."
+msgstr "이 맵에서 플레이어가 시작하는 칸의 열입니다."
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EditorTileMap.SpawnYTip"
 msgid "Cell row where the player starts on this map."
-msgstr "플레이어가 이 맵에서 시작하는 칸의 행입니다."
+msgstr "이 맵에서 플레이어가 시작하는 칸의 행입니다."
 
 #: Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp
 msgctxt "EditorTileMap.TileSetReadFailed"
@@ -8995,173 +9150,3 @@ msgstr "활성 씬을 씁니다. 저장한 적이 없으면 다른 이름으로 
 msgctxt "Write the selected component to a preset file"
 msgid "Write the selected component to a preset file"
 msgstr "선택한 컴포넌트를 프리셋 파일로 씁니다"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphFit"
-msgid "Fit"
-msgstr "맞춤"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphFitTip"
-msgid "Fit every node in view; with nodes selected, go to them (F)"
-msgstr "모든 노드가 보이게 맞춥니다. 고른 노드가 있으면 그 노드로 갑니다(F)"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphAlign"
-msgid "Align"
-msgstr "정렬"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphAlignTip"
-msgid "Line up or evenly space the selected nodes"
-msgstr "고른 노드를 한 줄로 맞추거나 간격을 고르게 합니다"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphAlignLeft"
-msgid "Align Left"
-msgstr "왼쪽 맞춤"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphAlignTop"
-msgid "Align Top"
-msgstr "위 맞춤"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphAlignCenterX"
-msgid "Align Centers in a Column"
-msgstr "가운데 맞춤(세로 줄)"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphAlignCenterY"
-msgid "Align Centers in a Row"
-msgstr "가운데 맞춤(가로 줄)"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphDistributeX"
-msgid "Distribute Horizontally"
-msgstr "가로 간격 고르게"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphDistributeY"
-msgid "Distribute Vertically"
-msgstr "세로 간격 고르게"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphNeedTwoNodes"
-msgid "Select two or more nodes"
-msgstr "노드를 둘 이상 고르세요"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphNeedThreeNodes"
-msgid "Select three or more nodes"
-msgstr "노드를 셋 이상 고르세요"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphMinimap"
-msgid "Minimap"
-msgstr "미니맵"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphMinimapTip"
-msgid "Show or hide the overview of the whole graph"
-msgstr "그래프 전체 축소판을 보이거나 감춥니다"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphMinimapAreaTip"
-msgid "Click or drag to move the view to the nearest node"
-msgstr "누르거나 끌면 가장 가까운 노드로 보기를 옮깁니다"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphComment"
-msgid "Comment"
-msgstr "주석"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphCommentTip"
-msgid "Add a comment box around the selected nodes, or in the middle of the view. Double-click its title to rename it"
-msgstr "고른 노드를 감싸는 주석 상자를 만듭니다(없으면 보이는 가운데). 제목을 두 번 누르면 이름을 바꿉니다"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphCommentUntitled"
-msgid "Comment"
-msgstr "주석"
-
-#: Source/Editor/Common/Widgets/EditorNodeGraph.cpp
-msgctxt "EdCommon.GraphCommentHint"
-msgid "Comment title"
-msgstr "주석 제목"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewPlay"
-msgid "Play"
-msgstr "재생"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewPause"
-msgid "Pause"
-msgstr "멈춤"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewPauseTip"
-msgid "Play or pause the preview scene (animation, effects and physics together)"
-msgstr "미리보기 씬을 재생하거나 멈춥니다(애니메이션 · 효과 · 물리가 함께)"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewStep"
-msgid "Step"
-msgstr "한 프레임"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewStepTip"
-msgid "While paused, advance the preview by one frame"
-msgstr "멈춘 동안 미리보기를 한 프레임 나아가게 합니다"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewSpeedTip"
-msgid "Playback speed of the preview scene"
-msgstr "미리보기 씬의 재생 속도"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewScrubTip"
-msgid "Drag to move through the timeline; dragging pauses playback"
-msgstr "끌어서 시간축을 오갑니다. 끄는 동안 재생을 멈춥니다"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewFrame"
-msgid "Frame"
-msgstr "맞춤"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewFrameTip"
-msgid "Bring the camera back to the preview subject (F)"
-msgstr "카메라를 미리보기 대상으로 되돌립니다(F)"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewFloor"
-msgid "Floor"
-msgstr "바닥"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewFloorTip"
-msgid "Show or hide the floor"
-msgstr "바닥을 보이거나 감춥니다"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewAxes"
-msgid "Axes"
-msgstr "축"
-
-#: Source/Editor/Common/GUI/Panel/EditorPreviewPanel.cpp
-msgctxt "EdCommon.PreviewAxesTip"
-msgid "Show or hide the axis indicator in the lower-left corner"
-msgstr "왼쪽 아래 축 방향 표시를 보이거나 감춥니다"
-
-#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
-msgctxt "EdCommon.GraphAddNode"
-msgid "+ Node"
-msgstr "+ 노드"
-
-#: Source/Editor/Panels/Animation/AnimationGraphPanel.cpp
-msgctxt "EdCommon.GraphAddNodeTip"
-msgid "Add a node. Right-click the canvas to search, or drag a pin to empty space"
-msgstr "노드를 더합니다. 캔버스를 오른쪽 클릭하면 검색, 핀을 빈 곳으로 끌면 이어서 만듭니다"

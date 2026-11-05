@@ -3,10 +3,14 @@
 		<entry source=" (over the maximum length)" text=" (최대 길이 초과)" />
 		<entry source="(No Speaker)" text="(화자 없음)" />
 		<entry source="(Nodes: {nodeCount}, Links: {linkCount})" text="(노드: {nodeCount}, 링크: {linkCount})" />
+		<entry source="(game language)" text="(게임 언어)" />
+		<entry source="(game theme)" text="(게임 테마)" />
+		<entry source="(no animations)" text="(애니메이션 없음)" />
 		<entry source="(no description)" text="(설명 없음)" />
 		<entry source="(no document)" text="(문서 없음)" />
 		<entry source="(no keys)" text="(키 없음)" />
 		<entry source="(no project)" text="(프로젝트 없음)" />
+		<entry source="(unnamed)" text="(이름 없음)" />
 		<entry source="* Unsaved changes" text="* 저장하지 않은 변경" />
 		<entry source="+ Create" text="+ 만들기" />
 		<entry source="+ Node" text="+ 노드" />
@@ -24,6 +28,8 @@
 		       text="> 명령 또는 gv_name [value] (Tab 자동 완성, 위/아래 기록, help)" />
 		<entry source="A command used by self-tests and scenarios - writes one log line"
 		       text="자체 테스트과 시나리오가 쓰는 커맨드 — 로그 한 줄을 남깁니다" />
+		<entry source="A frame with a border needs the atlas size in pixels"
+		       text="테두리가 있는 프레임에는 아틀라스 픽셀 크기가 필요합니다" />
 		<entry source="A recommended accent color. Click to apply it."
 		       text="추천 액센트 색상 팔레트입니다. 클릭하면 적용됩니다." />
 		<entry source="A required field is empty. Leaving it empty restores the previous value."
@@ -37,6 +43,7 @@
 		<entry source="Active Device:" text="활성 장치:" />
 		<entry source="Active Scene &amp; Component Distribution" text="활성 씬과 컴포넌트 분포" />
 		<entry source="Add" text="추가" />
+		<entry source="Add All Cells" text="모든 칸 추가" />
 		<entry source="Add Animation" text="애니메이션 추가" />
 		<entry source="Add Attack" text="공격 추가" />
 		<entry source="Add Binding" text="바인딩 추가" />
@@ -83,6 +90,8 @@
 		<entry source="Add an option the player can pick. Each option gets its own output pin."
 		       text="플레이어가 고를 수 있는 선택지를 추가합니다. 선택지마다 출력 핀이 따로 생깁니다." />
 		<entry source="Add key" text="키 추가" />
+		<entry source="Add one frame for every grid cell, from the top left."
+		       text="왼쪽 위부터 격자의 칸마다 프레임을 하나씩 더합니다." />
 		<entry source="Add row" text="줄 추가" />
 		<entry source="Add the action with no bindings; select it in the list to add keys."
 		       text="바인딩 없이 액션을 추가합니다. 목록에서 선택해 키를 추가합니다." />
@@ -136,6 +145,10 @@
 		<entry source="Anchors" text="앵커" />
 		<entry source="Animation Graph" text="애니메이션 그래프" />
 		<entry source="Animation Rewind" text="애니메이션 되감기" />
+		<entry source="Animation name not changed: it is empty or already used"
+		       text="애니메이션 이름을 바꾸지 않았습니다: 비었거나 이미 쓰는 이름입니다" />
+		<entry source="Animation not added: the clip has no frames"
+		       text="애니메이션을 더하지 않았습니다: 클립에 프레임이 없습니다" />
 		<entry source="Animations (name, first frame, frame count, loop) - none means the whole clip is one loop"
 		       text="애니메이션(이름 · 첫 프레임 · 프레임 수 · 반복) — 없으면 클립 전체가 한 반복이다" />
 		<entry source="Animator parameter that drives the weight every frame (clamped to 0..1). Leave empty to use Weight."
@@ -161,6 +174,9 @@
 		<entry source="Atlas cell index to paint, 0 to 255." text="칠할 아틀라스 칸 인덱스(0~255)입니다." />
 		<entry source="Atlas cells (click: selected frame, Shift+click: new frame)"
 		       text="아틀라스 칸(누르면 고른 프레임, Shift+누르면 새 프레임)" />
+		<entry source="Atlas size" text="아틀라스 크기" />
+		<entry source="Atlas width and height in pixels. Pixel borders need it."
+		       text="아틀라스의 픽셀 너비와 높이입니다. 픽셀 테두리에 필요합니다." />
 		<entry source="Attach" text="붙기" />
 		<entry source="Attach by address" text="주소로 붙기" />
 		<entry source="Attach to a server that is already running: its debug channel address (127.0.0.1:port) and token, as given with -gv_debugChannelPort and -gv_debugChannelToken"
@@ -208,6 +224,7 @@
 		       text="레이어가 움직이는 본입니다. (all bones) 면 스켈레톤 전체입니다." />
 		<entry source="Bones: {boneCount}  ·  pose {poseByteCount} B"
 		       text="본: {boneCount}  ·  포즈 {poseByteCount} B" />
+		<entry source="Border" text="테두리" />
 		<entry source="Bottom Center" text="아래 가운데" />
 		<entry source="Bottom Left" text="왼쪽 아래" />
 		<entry source="Bottom Right" text="오른쪽 아래" />
@@ -255,8 +272,12 @@
 		<entry source="Catalog Editor" text="카탈로그 편집기" />
 		<entry source="Cell column the player arrives at in the target map."
 		       text="대상 맵에서 플레이어가 도착할 칸의 열입니다." />
+		<entry source="Cell column where the player starts on this map."
+		       text="이 맵에서 플레이어가 시작하는 칸의 열입니다." />
 		<entry source="Cell row the player arrives at in the target map."
 		       text="대상 맵에서 플레이어가 도착할 칸의 행입니다." />
+		<entry source="Cell row where the player starts on this map."
+		       text="이 맵에서 플레이어가 시작하는 칸의 행입니다." />
 		<entry source="Center" text="가운데" />
 		<entry source="Center Left" text="왼쪽 가운데" />
 		<entry source="Center Right" text="오른쪽 가운데" />
@@ -426,6 +447,8 @@
 		<entry source="Delete Track" text="트랙 삭제" />
 		<entry source="Delete key" text="키 지우기" />
 		<entry source="Delete preset" text="프리셋 삭제" />
+		<entry source="Delete the selected data layer and its values."
+		       text="고른 데이터 레이어와 그 값을 지웁니다." />
 		<entry source="Delete the selected preset from your preset file"
 		       text="고른 프리셋을 프리셋 파일에서 지웁니다" />
 		<entry source="Delete this saved layout." text="저장된 레이아웃을 지웁니다." />
@@ -501,6 +524,7 @@
 		       text="길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault, select, yes {예} other {아니오}}  루트 모션 {rootMotionTrack, select, yes {예} other {아니오}}  알림 {findNotifyTrack, select, yes {예} other {아니오}}" />
 		<entry source="Duration {duration} s  Tracks {trackCount}  Curves {curvesCount}  Default loop {loopingByDefault}  Root motion {rootMotionTrack}  Notifies {findNotifyTrack}"
 		       text="길이 {duration}초  트랙 {trackCount}  커브 {curvesCount}  기본 반복 {loopingByDefault}  루트 모션 {rootMotionTrack}  알림 {findNotifyTrack}" />
+		<entry source="Earlier" text="앞으로" />
 		<entry source="Edge Warp Presets" text="가장자리 이동 프리셋" />
 		<entry source="Edit" text="편집" />
 		<entry source="Edit a key's time, value and interpolation in place. Values above 1 are clamped in the color preview."
@@ -739,6 +763,8 @@
 		<entry source="Input Replay Recorder &amp; Deterministic QA Playback"
 		       text="입력 재생 기록 · 결정적 QA 재생" />
 		<entry source="InputManager service is not available." text="InputManager 서비스를 쓸 수 없습니다." />
+		<entry source="Insert a copy of the selected frame right after it."
+		       text="고른 프레임의 사본을 바로 뒤에 넣습니다." />
 		<entry source="Inspector" text="인스펙터" />
 		<entry source="Instance" text="인스턴스" />
 		<entry source="Instances" text="인스턴스" />
@@ -787,6 +813,7 @@
 		<entry source="Last merged trace:" text="마지막으로 합친 추적:" />
 		<entry source="Last result: {lastInvokeResult}" text="마지막 결과: {lastInvokeResult}" />
 		<entry source="Latency (ms)" text="지연(ms)" />
+		<entry source="Later" text="뒤로" />
 		<entry source="Latest" text="최신" />
 		<entry source="Launch a separate server and clients and connect them. Logs gather in the Output Log as [Server] and [Client1], and Stop shuts them all down."
 		       text="서버와 클라이언트를 따로 띄워 붙입니다 — 로그는 Output Log 에 [Server] · [Client1] 로 모이고, Stop 이 모두 끕니다" />
@@ -912,12 +939,20 @@
 		       text="미리보기 초점을 이 방향으로 옮깁니다(키보드 · 패드처럼). 처음 누르면 초점을 받는 첫 위젯에 갑니다." />
 		<entry source="Move the preview to the next node without waiting."
 		       text="기다리지 않고 미리보기를 다음 노드로 넘깁니다." />
+		<entry source="Move the selected frame one place earlier in the play order."
+		       text="고른 프레임을 재생 순서에서 한 칸 앞으로 옮깁니다." />
+		<entry source="Move the selected frame one place later in the play order."
+		       text="고른 프레임을 재생 순서에서 한 칸 뒤로 옮깁니다." />
 		<entry source="Move the selected layer up or down. Order changes the result: later layers are applied on top."
 		       text="고른 레이어를 위나 아래로 옮깁니다. 순서가 결과를 바꿉니다. 뒤의 레이어가 위에 얹힙니다." />
 		<entry source="Move the selected object down among its siblings"
 		       text="선택한 오브젝트를 형제 사이에서 아래로 옮깁니다" />
 		<entry source="Move the selected object up among its siblings"
 		       text="선택한 오브젝트를 형제 사이에서 위로 옮깁니다" />
+		<entry source="Move the selected widget one place earlier among its siblings"
+		       text="고른 위젯을 형제 사이에서 한 칸 앞으로 옮깁니다" />
+		<entry source="Move the selected widget one place later among its siblings"
+		       text="고른 위젯을 형제 사이에서 한 칸 뒤로 옮깁니다" />
 		<entry source="Moves the selected object down one place among its siblings"
 		       text="고른 오브젝트를 형제 사이에서 한 칸 아래로 옮깁니다" />
 		<entry source="Moves the selected object up one place among its siblings"
@@ -961,6 +996,8 @@
 		<entry source="New Scene" text="새 씬" />
 		<entry source="New scene" text="새 씬" />
 		<entry source="New string key..." text="새 문자열 키..." />
+		<entry source="Nine-slice border of this frame in atlas pixels: left, bottom, right, top."
+		       text="이 프레임의 9-슬라이스 테두리입니다(아틀라스 픽셀): 왼쪽, 아래, 오른쪽, 위." />
 		<entry source="No *Test.exe next to this build (build the AllTests target)"
 		       text="이 빌드 옆에 *Test.exe 가 없습니다(AllTests 대상을 지으세요)" />
 		<entry source="No .seq file focused" text="선택한 .seq 파일이 없습니다" />
@@ -1050,6 +1087,8 @@
 		       text="아직 기록이 없습니다. 기록을 켜고 플레이(PIE)하거나 콘솔에서 'anim.rewind on' 을 입력합니다." />
 		<entry source="Nothing selected. Pick in the Scene view or use Hierarchy."
 		       text="선택한 것이 없습니다. 씬 뷰에서 고르거나 Hierarchy 를 쓰세요." />
+		<entry source="Nothing to preview: pick an atlas and add a frame."
+		       text="미리 볼 것이 없습니다: 아틀라스를 고르고 프레임을 더하세요." />
 		<entry source="Nothing to redo" text="다시 실행할 것이 없습니다" />
 		<entry source="Nothing to undo" text="실행 취소할 것이 없습니다" />
 		<entry source="Notifies:" text="알림:" />
@@ -1185,6 +1224,8 @@
 		<entry source="Paint every cell you press and drag over (B)" text="누르고 끄는 칸마다 칠합니다 (B)" />
 		<entry source="Paint every connected cell that has the same value as the pressed cell (G)"
 		       text="누른 칸과 같은 값으로 이어진 칸을 모두 칠합니다 (G)" />
+		<entry source="Paint the line you drag out when you release the mouse (L)"
+		       text="끌어서 그린 선을 마우스를 놓을 때 칠합니다 (L)" />
 		<entry source="Paint the rectangle you drag out when you release the mouse (U)"
 		       text="눌러 끈 사각형을 놓을 때 칠합니다 (U)" />
 		<entry source="Paired Animation" text="페어드 애니메이션" />
@@ -1259,6 +1300,8 @@
 		<entry source="Play the effect again from the start" text="효과를 처음부터 다시 재생합니다" />
 		<entry source="Play the graph through the editor audio device"
 		       text="에디터 오디오 장치로 그래프를 재생합니다" />
+		<entry source="Play the selected animation, or every frame when none is selected."
+		       text="고른 애니메이션을 재생합니다. 고른 것이 없으면 모든 프레임을 재생합니다." />
 		<entry source="Play the sequence in the viewport from the current frame, looping at the end."
 		       text="현재 프레임부터 뷰포트에서 시퀀스를 재생하고, 끝에 닿으면 처음부터 반복합니다." />
 		<entry source="Playback Controls (Total Frames: {frameCount}, Duration: {totalDuration} s):"
@@ -1509,6 +1552,8 @@
 		<entry source="Reset zoom and pan to the start (wheel: zoom, middle or right drag: pan)"
 		       text="확대와 이동을 처음으로 되돌립니다 (휠: 확대, 가운데 · 오른쪽 끌기: 이동)" />
 		<entry source="Resize" text="크기 바꾸기" />
+		<entry source="Resize the map to the width and height above. Overlapping cells are kept; cells and warps outside the new size are removed."
+		       text="맵을 위의 너비와 높이로 바꿉니다. 겹치는 칸은 남고, 새 크기 밖의 칸과 워프는 지워집니다." />
 		<entry source="Resize the map to the width and height above. This clears every layer."
 		       text="맵을 위의 너비와 높이로 바꿉니다. 모든 레이어가 지워집니다." />
 		<entry source="Resolution" text="해상도" />
@@ -1838,6 +1883,10 @@
 		       text="단독 — 이 버스와 그 위 · 아래 버스만 들립니다" />
 		<entry source="Sources" text="소스" />
 		<entry source="Spawn" text="만들기" />
+		<entry source="Spawn X" text="스폰 X" />
+		<entry source="Spawn Y" text="스폰 Y" />
+		<entry source="Spawn not changed: the cell is outside the map"
+		       text="스폰을 바꾸지 않았습니다: 맵 밖의 칸입니다" />
 		<entry source="Spawned: {spawnedCount}  CPU alive: {subject}"
 		       text="생성: {spawnedCount}  CPU 살아 있음: {subject}" />
 		<entry source="Speaker" text="화자" />
@@ -2270,6 +2319,7 @@
 		<entry source="{alwaysLoadedIDCount} entities, {cellCount} cells"
 		       text="엔티티 {alwaysLoadedIDCount}개, 셀 {cellCount}개" />
 		<entry source="{backendName} - {sizeBasis} size" text="{backendName} - {sizeBasis} 크기" />
+		<entry source="{code} (pseudo)" text="{code} (의사 문화권)" />
 		<entry source="{componentCount, plural, one {# component is} other {# components are}} not on every selected object"
 		       text="컴포넌트 {componentCount}개는 선택한 모든 오브젝트에 있지 않습니다" />
 		<entry source="{componentCount} component(s) are not on every selected object"

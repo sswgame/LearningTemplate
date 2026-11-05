@@ -62,6 +62,7 @@
 		<entry source="CPU only:" text="CPU 전용:" />
 		<entry source="Camera Shake" text="카메라 흔들림" />
 		<entry source="Cancel" text="취소" />
+		<entry source="Capacity" text="정원" />
 		<entry source="Center" text="중심" />
 		<entry source="Chains" text="체인" />
 		<entry source="Check" text="검사" />
@@ -80,6 +81,7 @@
 		<entry source="Controls" text="조작" />
 		<entry source="Cooldown" text="쿨다운" />
 		<entry source="Corner" text="모서리" />
+		<entry source="Cost" text="비용" />
 		<entry source="Could not copy to the clipboard." text="클립보드에 복사하지 못했습니다." />
 		<entry source="Count" text="개수" />
 		<entry source="Count (0 = until it fails)" text="횟수(0 = 실패할 때까지)" />
@@ -120,6 +122,7 @@
 		<entry source="Empty - add modifiers to group them." text="비어 있음 - 모디파이어를 더해 묶습니다." />
 		<entry source="End maintenance" text="점검 끝내기" />
 		<entry source="Enter / exit blend (s)" text="들어감 · 나감 섞기(초)" />
+		<entry source="Entrance is inside the footprint" text="입구가 바닥 영역 안에 있음" />
 		<entry source="Equip set" text="장비 세트" />
 		<entry source="Event JSON" text="이벤트 JSON" />
 		<entry source="Event id" text="이벤트 id" />
@@ -132,6 +135,7 @@
 		<entry source="Fight: 1/2 moves, Enter=Move0, Esc=Run" text="싸운다: 1/2 기술, Enter=기술0, Esc=도망" />
 		<entry source="Fit check (view only)" text="맞춤 검사(보기만)" />
 		<entry source="Fit to Bounds" text="경계 상자에 맞추기" />
+		<entry source="Focus gate" text="정문 보기" />
 		<entry source="Foliage Density" text="초목 밀도" />
 		<entry source="Follow game clock" text="게임 시계 따라가기" />
 		<entry source="From" text="보내는 곳" />
@@ -208,6 +212,8 @@
 		<entry source="Mouse Sensitivity" text="마우스 감도" />
 		<entry source="Move row down" text="행을 아래로" />
 		<entry source="Move row up" text="행을 위로" />
+		<entry source="Move the scene view camera to the park gate"
+		       text="씬 뷰 카메라를 공원 정문으로 옮깁니다" />
 		<entry source="Music Volume" text="음악 음량" />
 		<entry source="Mute All" text="음소거" />
 		<entry source="NPCs" text="NPC 목록" />
@@ -251,6 +257,7 @@
 		<entry source="Options" text="옵션" />
 		<entry source="Orthographic preset - the preview draws it in perspective."
 		       text="직교 프리셋 — 미리보기는 원근으로 그립니다." />
+		<entry source="Overlaps {name}" text="{name}와 겹침" />
 		<entry source="Overlays, in another color, the result with only the modifiers up to the selected one applied (deformation influence preview)"
 		       text="고른 모디파이어까지만 건 결과를 다른 색 선으로 겹쳐 그립니다(변형 영향 미리보기)" />
 		<entry source="Owned Tags" text="소유 태그" />
@@ -324,6 +331,7 @@
 		<entry source="Revert" text="되돌리기" />
 		<entry source="Reverting in" text="되돌리기까지" />
 		<entry source="Revoke" text="회수" />
+		<entry source="Ride" text="놀이기구" />
 		<entry source="Ride footprints, entrances and coaster tracks of the ThemePark layout file (rides.xml)"
 		       text="ThemePark 배치 파일(rides.xml)의 놀이기구 발자국, 입구, 코스터 트랙" />
 		<entry source="Roles" text="역할" />
@@ -331,6 +339,7 @@
 		<entry source="Rotation" text="회전" />
 		<entry source="Runtime ability state exists only during play. Press Play to inspect it."
 		       text="어빌리티 런타임 상태는 플레이 중에만 있습니다. 플레이를 눌러 확인하세요." />
+		<entry source="Same id as {name}" text="{name}와 id 가 같음" />
 		<entry source="Sanction" text="제재" />
 		<entry source="Save" text="저장" />
 		<entry source="Save Stack" text="스택 저장" />
@@ -417,13 +426,21 @@
 		<entry source="Texture Quality" text="텍스처 품질" />
 		<entry source="The curve's value at this key." text="이 키에서 곡선이 가지는 값입니다." />
 		<entry source="The node editor could not be created" text="노드 편집기를 만들지 못했습니다" />
+		<entry source="The park layout could not be read ({path}). Fix the file (see the log) and press Reload."
+		       text="공원 배치를 읽지 못했습니다({path}). 로그를 보고 파일을 고친 뒤 다시 불러오세요." />
 		<entry source="The same checklist as a runtime UI window (shows in the game view while playing)"
 		       text="같은 체크리스트를 런타임 UI 창으로 엽니다(플레이 중 게임 뷰에 보입니다)." />
 		<entry source="The target object no longer exists." text="대상 오브젝트가 더 이상 없습니다." />
 		<entry source="This file could not be opened: {statusText}" text="이 파일을 열 수 없습니다: {statusText}" />
+		<entry source="This game has no park layout data ({path})"
+		       text="이 게임에는 공원 배치 데이터가 없습니다({path})" />
+		<entry source="Ticket" text="탑승료" />
 		<entry source="Time" text="시각" />
+		<entry source="Time (s)" text="시간(초)" />
 		<entry source="To" text="받는 곳" />
 		<entry source="Toggle" text="전환" />
+		<entry source="Total cost {cost}  ·  starting cash {cash}  ·  entry fee {fee}  ·  layout issues {issues}"
+		       text="총 비용 {cost}  ·  시작 자금 {cash}  ·  입장료 {fee}  ·  배치 문제 {issues}" />
 		<entry source="Translation" text="이동" />
 		<entry source="Travel" text="이동" />
 		<entry source="Tritanopia" text="청색약" />
