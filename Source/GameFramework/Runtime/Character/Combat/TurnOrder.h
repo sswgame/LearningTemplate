@@ -34,6 +34,7 @@ namespace sw
     {
     public:
         static constexpr float32 kTimelineThreshold = 100.0f; ///< 타임라인제에서 게이지가 이만큼 차면 차례가 온다
+        static constexpr float32 kMinSpeed          = 0.01f;  ///< 속도의 하한이다(타임라인제가 속도로 나눈다)
 
         TurnOrder();
 
@@ -57,10 +58,12 @@ namespace sw
         void  previewOrder( int32 count, vector<int32>& outListActor ) const;
         int32 getRound() const { return _round; }
         int32 getActorCount() const { return static_cast<int32>( _listCombatant.size() ); }
+        /** @brief 이 번호의 행위자가 들어 있으면 true 입니다. 주인이 자기 명단과 맞는지 볼 때 씁니다. */
+        [[nodiscard]] bool hasActor( int32 actorID ) const;
 
         /** @brief 행위자 목록, 라운드 대기열, 난수, 라운드 번호, 모드를 씁니다. 행위자마다 속도, 게이지, id, 우선도, 동률 깨기 값을 씁니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 데이터가 깨졌으면 false 를 돌려주고 상태는 그대로 둡니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 데이터가 깨졌거나 번호가 겹치거나 대기열에 없는 행위자가 있으면 false 를 돌려주고 상태는 그대로 둡니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

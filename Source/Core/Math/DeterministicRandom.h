@@ -30,6 +30,16 @@ namespace sw
         /** @brief @p seed 로 시작합니다. 0 은 거절합니다(`setSeed`). */
         explicit DeterministicRandom32( uint32 seed ) { setSeed( seed ); }
 
+        /**
+         * @brief 한 씨앗을 나눠 쓰는 난수 여럿의 씨앗을 냅니다. 섞은 값이 0 이면 `kDefaultSeed` 입니다.
+         * @details 손으로 쓰는 `씨앗 ^ 상수` 는 씨앗이 그 상수와 같을 때 0 이 되어 단언에 걸린다. 받은 씨앗의 0 은 여기서 숨기지 않는다 — 시작하는 쪽이 거절한다.
+         */
+        [[nodiscard]] static constexpr uint32 deriveSeed( uint32 seed, uint32 salt )
+        {
+            const uint32 mixed = HashUtil::mix32( seed ^ salt );
+            return mixed != 0 ? mixed : kDefaultSeed;
+        }
+
         /** @brief 씨앗을 다시 둡니다. 0 이면 단언 오류를 남기고 상태를 그대로 둡니다. */
         void setSeed( uint32 seed )
         {

@@ -37,13 +37,18 @@ namespace sw
         return VectorUtil::findBy<&Combatant::_actorID>( _listCombatant, actorID );
     }
 
+    bool TurnOrder::hasActor( int32 actorID ) const
+    {
+        return VectorUtil::containsBy<&Combatant::_actorID>( _listCombatant, actorID );
+    }
+
     void TurnOrder::addActor( int32 actorID, float32 speed )
     {
         if ( findCombatant( actorID ) != nullptr )
             return;
         Combatant actor;
         actor._actorID = actorID;
-        actor._speed   = MathUtil::max( 0.01f, speed );
+        actor._speed   = MathUtil::max( kMinSpeed, speed );
         actor._gauge   = kTimelineThreshold;
         _listCombatant.push_back( actor );
     }
@@ -60,7 +65,7 @@ namespace sw
     {
         Combatant* pActor = findCombatant( actorID );
         if ( pActor != nullptr )
-            pActor->_speed = MathUtil::max( 0.01f, speed ); // 게이지는 "남은 양" 이라 속도가 바뀌면 남은 시간이 저절로 바뀐다
+            pActor->_speed = MathUtil::max( kMinSpeed, speed ); // 게이지는 "남은 양" 이라 속도가 바뀌면 남은 시간이 저절로 바뀐다
     }
 
     void TurnOrder::setPriority( int32 actorID, int32 priority )
@@ -197,18 +202,25 @@ namespace sw
             archive >> actor._priority;
             archive >> actor._tieBreak;
         }
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false )
+        if ( archive.isError() || VectorUtil::findDuplicateBy<&Combatant::_actorID>( restored._listCombatant ) != nullptr || StateArchiveUtil::readCount( archive, 4, count ) == false )
             return false;
+        for ( const Combatant& actor : restored._listCombatant )
+        {
+            if ( actor._speed < kMinSpeed || actor._gauge < 0.0f )
+                return false;
+        }
         restored._listRoundQueue.resize( count );
         for ( int32& actorID : restored._listRoundQueue )
         {
             archive >> actorID;
+            if ( archive.isError() || restored.hasActor( actorID ) == false )
+                return false;
         }
         uint8      mode        = 0;
         const bool bRandomRead = StateArchiveUtil::readRandom( archive, restored._random );
         archive >> restored._round;
         archive >> mode;
-        const bool bValid = bRandomRead && archive.isOk() && mode <= static_cast<uint8>( TurnOrderMode::Timeline );
+        const bool bValid = bRandomRead && archive.isOk() && 0 <= restored._round && mode <= static_cast<uint8>( TurnOrderMode::Timeline );
         if ( bValid == false )
             return false;
         restored._mode = static_cast<TurnOrderMode>( mode );

@@ -22,7 +22,7 @@ namespace sw
         } );
     }
 
-    bool TimingJudge::loadFromNode( const XMLNode& node, string_view sourceName )
+    bool TimingJudge::loadFromNode( const XMLNode& node, string_view sourceName, bool ( *pfnHandRead )( const utf8* pName ) )
     {
         // 적지 않은 칸은 TimingWindow 의 초기값이다. `width` 는 앞뒤 폭을 함께 정하고, `early` · `late` 가 각자 덮는다.
         // 깨진 값 · 음수 폭은 오류이고 창 표를 바꾸지 않는다(자르지 않는다).
@@ -33,7 +33,7 @@ namespace sw
             TimingWindow window;
             bValid            = XMLReadUtil::readOptionalNumber( child, "width", sourceName, 0.0f, MathUtil::kMaxFloat, window._earlyWidth ) && bValid;
             window._lateWidth = window._earlyWidth;
-            bValid            = XMLFields::readFields( child, window, sourceName, { "width" } ) && bValid;
+            bValid            = XMLFields::readFields( child, window, sourceName, { "width" }, pfnHandRead ) && bValid;
             listWindow.push_back( window );
         }
         if ( bValid )

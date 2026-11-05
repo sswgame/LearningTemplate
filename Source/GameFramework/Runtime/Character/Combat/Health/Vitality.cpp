@@ -401,7 +401,7 @@ namespace sw
         archive >> restored._downCount;
         archive >> state;
         archive >> restored._bReviving;
-        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._health && restored._health <= restored._settings._maxHealth && 0.0f <= restored._shield && restored._shield <= restored._settings._maxShield && 0 <= restored._downCount &&
+        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._health && restored._health <= restored._settings._maxHealth && 0.0f <= restored._shield && restored._shield <= restored._settings._maxShield && 0.0f <= restored._downedHealth && restored._downedHealth <= restored._settings._downedHealth && 0 <= restored._downCount &&
                             state <= static_cast<uint8>( VitalityState::Dead ) && restored._bReviving <= SW_TRUE;
         if ( bValid == false )
             return false;
