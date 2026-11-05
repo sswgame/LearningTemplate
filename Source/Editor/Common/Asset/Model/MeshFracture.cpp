@@ -1482,6 +1482,12 @@ namespace sw::editor
         MeshFractureInternal::weldPositions( listWelded );
         vector<RHIVertex> listVolume;
         Build::pickVolume( listWelded, settings, bProxy, listVolume );
+        float3 volumeCentroid{};
+        if ( computeVolume( listVolume, volumeCentroid ) <= 0.0f )
+        {
+            outError = "the mesh has no volume to cut (it is flat)"; // 두께 0 인 대리 상자를 자르면 조각마다 열린 고리만 남는다
+            return false;
+        }
         vector<Triangle> listSource;
         vector<Triangle> listSurfaceSource;
         Build::makeTriangles( listVolume, MeshFractureInternal::kOuterTag, listSource );
