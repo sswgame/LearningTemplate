@@ -281,7 +281,7 @@ namespace sw::editor
         if ( _bUnitTestListDirty == SW_TRUE )
         {
             _bUnitTestListDirty = SW_FALSE;
-            _unitTests.setCases( test::TestRunner::collectCaseNamesOutside( { "Source/Editor/", "Plugin/Editor/" } ) );
+            _unitTests.setCases( test::TestRunner::collectCaseNamesOutside( { "/Editor/" } ) );
         }
 
         drawRunSelectedCasesButton( _pJob->isPending() );

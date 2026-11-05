@@ -203,11 +203,11 @@ namespace sw::editor
         FakeAdminAccount* pAccount = findMutableAccount( request._accountID );
         if ( pAccount == nullptr )
             return AdminResult::UnknownAccount;
-        const bool bAssetValid = request._assetID.empty() == false && static_cast<int32>( request._assetID.size() ) <= LedgerConstant::kMaxAssetIDSize;
-        if ( bAssetValid == false || request._amount == 0 )
+        // 서버와 같은 규칙이다(`AdminStoreLogic`) - 예전에는 길이만 봐 서버가 거절할 자산 이름이 메모리 제공자에서는 잔액이 되었다.
+        if ( LedgerUtil::isValidAssetID( request._assetID ) == false || request._amount == 0 )
             return AdminResult::InvalidRequest;
-        const int64 magnitude = request._amount < 0 ? -request._amount : request._amount;
-        if ( magnitude > kMaxAdjustAmount )
+        // 부호를 뒤집지 않고 비교한다 - INT64_MIN 의 부호 반전은 정의되지 않은 동작이다.
+        if ( request._amount > kMaxAdjustAmount || request._amount < -kMaxAdjustAmount )
             return AdminResult::CapExceeded;
 
         LedgerBalance* pBalance = AdminCommandProviderInternal::findBalance( pAccount->_listBalance, request._assetID );
@@ -239,7 +239,8 @@ namespace sw::editor
         FakeAdminAccount* pAccount = findMutableAccount( request._accountID );
         if ( pAccount == nullptr )
             return AdminResult::UnknownAccount;
-        if ( request._untilMs < 0 || request._sanctionKind == ServiceSanctionKind::Count )
+        // `==` 로는 Count 너머의 값이 지나 제재 칸 밖을 읽고 썼다.
+        if ( request._untilMs < 0 || static_cast<uint8>( request._sanctionKind ) >= static_cast<uint8>( ServiceSanctionKind::Count ) )
             return AdminResult::InvalidRequest;
 
         const int32 kindIndex = static_cast<int32>( request._sanctionKind );
@@ -248,7 +249,8 @@ namespace sw::editor
         const int64 after     = bBan ? ServiceSanctionState::kPermanentMs : request._untilMs;
 
         pAccount->_sanction._arrUntilMs[kindIndex] = after;
-        pAccount->_sanction._reasonCode            = request._reasonCode;
+        if ( request._reasonCode.empty() == false )
+            pAccount->_sanction._reasonCode = request._reasonCode; // 서버와 같다 - 사유 없는 해제가 앞의 사유를 지우지 않는다
         ++pAccount->_sanction._version;
 
         appendAudit( "admin.sanction", request, AdminCommandProviderInternal::formatNumber( before ), AdminCommandProviderInternal::formatNumber( after ) );

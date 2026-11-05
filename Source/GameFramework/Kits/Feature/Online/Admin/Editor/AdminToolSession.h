@@ -1,7 +1,8 @@
 /**
  * @file AdminToolSession.h
  * @brief GM 도구 패널의 상태입니다. 제공자에게 명령을 보내고 응답(조회 결과, 감사 줄, 마지막 결과)을 보관합니다. ImGui 를 모르므로 화면 없이 테스트합니다.
- * @details 상태를 바꾸는 명령은 멱등 키를 세션이 만들어 보내고(같은 키로 다시 보내면 서버가 처음 응답을 돌려준다), 성공하면 같은 계정을 다시 조회해 화면의 잔액과 제재를 새로 고친다.
+ * @details 상태를 바꾸는 명령은 멱등 키를 세션이 만들어 보내고(같은 키로 다시 보내면 서버가 처음 응답을 돌려준다), 지급 · 회수 · 제재가 성공하면 그 계정을 다시 조회해 화면의 잔액과 제재를 새로 고친다.
+ *          새로 고침은 결과 칸과 상태 줄을 덮지 않는다 — `getLastResult` · `getStatusLine` 은 GM 이 낸 명령의 답이다.
  *          기본 제공자는 서버 없이 도는 메모리 제공자(`FakeAdminProvider`)이고, `useLiveClient` 로 실제 `AdminClient` 를 건다.
  */
 #pragma once
@@ -40,6 +41,7 @@ namespace sw::editor
         const utf8* getSubsystemName() const override { return kSubsystemName; }
 
         AdminToolSession();
+        ~AdminToolSession() override;
         AdminToolSession( const AdminToolSession& )            = delete; // 활성 제공자가 자기 멤버를 가리킨다
         AdminToolSession& operator=( const AdminToolSession& ) = delete;
 
@@ -85,7 +87,7 @@ namespace sw::editor
         void requestLookup( AccountID accountID );
         /** @brief 지급(양수)이나 회수(음수)를 보냅니다. @p bRefund 는 환불 회수이며 잔액이 모자라면 빚으로 남깁니다. */
         void requestAdjust( AccountID accountID, string_view assetID, int64 amount, bool bRefund, string_view memo );
-        /** @brief 제재를 겁니다. @p durationSeconds 가 0 이면 해제입니다. 영구 정지(`Ban`)는 길이를 보지 않고 영구입니다. */
+        /** @brief 제재를 겁니다. @p durationSeconds 가 0 이면 해제입니다. 영구 정지(`Ban`)는 양수 길이면 영구입니다. 음수이거나 끝 시각이 넘치면 보내지 않고 `InvalidRequest` 입니다. */
         void requestSanction( AccountID accountID, ServiceSanctionKind kind, int64 durationSeconds, string_view reasonCode, string_view memo );
         /** @brief 감사 기록을 열람합니다. @p subjectPrefix 가 비면 전부입니다. */
         void requestAudit( string_view subjectPrefix );
@@ -93,10 +95,10 @@ namespace sw::editor
         void requestReports( bool bOpen );
         /** @brief 열린 신고를 처리합니다(Resolved 나 Dismissed). 메모가 처리 메모입니다. 성공하면 열린 신고를 다시 읽습니다. */
         void requestResolveReport( string_view reportKey, ServiceReportStatus status, string_view memo );
-        /** @brief 점검 창을 겁니다. @p durationSeconds 가 0 이면 해제할 때까지입니다. */
+        /** @brief 점검 창을 겁니다. @p durationSeconds 가 0 이면 해제할 때까지입니다. 음수이거나 끝 시각이 넘치면 보내지 않고 `InvalidRequest` 입니다. */
         void requestSetMaintenance( string_view scope, string_view messageKey, int64 durationSeconds, string_view memo );
         void requestClearMaintenance( string_view scope, string_view memo );
-        /** @brief 공지를 올립니다(GM 이 쓴 문구). @p durationSeconds 가 0 이면 내릴 때까지입니다. */
+        /** @brief 공지를 올립니다(GM 이 쓴 문구). @p durationSeconds 가 0 이면 내릴 때까지입니다. 음수이거나 끝 시각이 넘치면 보내지 않고 `InvalidRequest` 입니다. */
         void requestPostNotice( uint64 noticeID, string_view text, int32 priority, int64 durationSeconds, string_view memo );
         void requestRemoveNotice( uint64 noticeID, string_view memo );
         /** @brief 라이브 이벤트 정의(JSON)를 읽습니다. 성공하면 `getLiveEvents` 가 채워집니다. */
@@ -125,7 +127,18 @@ namespace sw::editor
 
     private:
         void send( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key );
+        /** @brief 명령 뒤의 새로 고침을 보냅니다. 답은 `onRefreshReply` 로 옵니다. */
+        void sendRefresh( uint16 method, const AdminRequest& request );
+        void sendWith( uint16 method, const AdminRequest& request, const NetIdempotencyKey& key, AdminClient::ReplyDelegate onReplyDelegate );
         void onReply( const AdminClient::Reply& reply );
+        void onRefreshReply( const AdminClient::Reply& reply );
+        /** @brief 읽기 명령의 답을 결과 칸에 담습니다. */
+        void storeResult( const AdminClient::Reply& reply );
+        /** @brief 기간이 틀려 보내지 않은 명령을 결과 칸에 적습니다. */
+        void                rejectLocally( uint16 method );
+        static AdminRequest makeLookupRequest( AccountID accountID );
+        static AdminRequest makeReportsRequest( bool bOpen );
+        static string       makeReplyLine( const AdminClient::Reply& reply );
 
     private:
         FakeAdminProvider                _fake;
@@ -142,6 +155,7 @@ namespace sw::editor
         int32                            _completedCount;
         int32                            _pendingCount;
         AccountID                        _lookupAccountID;
+        AccountID                        _actedAccountID; ///< 마지막 지급 · 회수 · 제재의 대상. shortcut: 답에 계정이 없어 마지막 것만 안다, 답이 계정을 담으면 그 값으로
         AdminResult                      _lastResult;
         uint16                           _lastMethod;
         uint8                            _bHasLookup    : 1;

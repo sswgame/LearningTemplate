@@ -62,6 +62,8 @@ namespace sw::editor
         OnlineServiceClient& getServiceClient() { return _client; }
 
         AdminToolConnectionState getState() const { return _state; }
+        /** @brief 연결을 걸 수 있으면 true 입니다(닫혀 있거나 실패한 뒤). */
+        bool canOpen() const { return _state == AdminToolConnectionState::Disconnected || _state == AdminToolConnectionState::Failed; }
         /** @brief 상태를 글로 적습니다(패널 표시용). */
         const utf8* getStateText() const;
         /** @brief 열려 있지 않으면 nullptr 입니다. `AdminToolSession::useLiveClient` 에 건다. */

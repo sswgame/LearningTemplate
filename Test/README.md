@@ -35,7 +35,7 @@ SW_TEST_CASE( Base64UtilTest, URLAlphabetHasNoPaddingAndRoundTrips )
 
 - 파일은 기능 폴더 옆 `Tests/` 에 두고 그 모듈과 함께 짓는다(Core · Engine · GameFramework · 키트 · 게임 모두). 목록이 없다 — 파일을 더하면 잡힌다. 배포 구성은 `Tests/` 와 `Core/Testing` 을 폴더째 짓지 않는다.
 - 키트 · 게임 케이스는 그 키트를 올린 프로세스에서만 등록된다. 함께 짓는 게임마다(`SW_GAMES`, Release) `UnitTests.<게임>` 이 그 게임으로 떠서 싣는 키트 · 게임 폴더의 케이스만 돌고(`--test-source=폴더,폴더`), 어느 게임도 쓰지 않는 키트(`SW_BUILD_UNUSED_KITS`, Release)는 App 이 모두 올리므로 ctest `UnitTests` 에 든다 — 그래서 게임이 아직 없는 키트에도 호스트를 따로 두지 않는다. Debug 는 `SW_GAMES` 가 비어 활성 게임이 싣지 않는 키트를 짓지도 않는다 — 키트를 고친 묶음은 Release 가 확인한다.
-- 에디터 케이스는 `App --test` 에 없다(그 단계에 에디터 모듈이 아직 없다). 숫자를 볼 때 `Scenario.editor` 의 `editor.unitTests` 를 따로 본다.
+- 에디터 케이스(경로에 `/Editor/` 가 든 파일 — `Source/Editor` · 플러그인 · 키트의 에디터 확장)는 `App --test` 에 없다(그 단계에 에디터 모듈이 아직 없다). 숫자를 볼 때 `Scenario.editor` 의 `editor.unitTests` 를 따로 본다.
 - 단언: `SW_EXPECT_TRUE` · `SW_EXPECT_FALSE` · `SW_EXPECT_EQUAL` · `SW_EXPECT_NEAR` · `SW_EXPECT_SNAPSHOT( 이름, 글 )`(케이스 옆 `Snapshots/<케이스>.<이름>.txt` 와 비교), `SW_REQUIRE_TRUE` · `SW_REQUIRE_EQUAL`(실패하면 케이스 끝).
 - 케이스가 일부러 내는 Warning · Error 는 그 로그 id 로 `SW_EXPECT_LOG( "영역.사건" )` 에 적는다. 쓰기는 `test::makeScratchPath( "이름" )` 의 폴더에만 한다.
 - 엔진 서비스(`engine::getSubsystem<T>()`)를 그대로 쓴다 — 헤드리스로 선 엔진 위에서 돈다.

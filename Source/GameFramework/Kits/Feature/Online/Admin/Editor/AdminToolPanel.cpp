@@ -2,9 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.h"
 
-#include "Core/Container/StringUtil.h"
 #include "Core/Memory/Memory.h"
-#include "Core/String/StringBuilder.h"
 #include "Core/Time/WallClock.h"
 
 #include "Editor/Common/GUI/EditorChrome.h"
@@ -20,6 +18,7 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolSession.h"
+#include "GameFramework/Kits/Feature/Online/Admin/Editor/Model/AdminToolModel.h"
 
 #include <imgui.h>
 
@@ -32,55 +31,6 @@ namespace sw::editor
             static constexpr int64 kDefaultAmount          = 100;
             static constexpr int64 kDefaultSanctionSeconds = 3600;
             static constexpr int64 kDefaultWindowSeconds   = 3600;
-
-            /** @brief 편집 칸의 16 진 문자열을 계정 id 로 바꿉니다. 비었거나 16 진이 아니면 false 입니다. */
-            [[nodiscard]] static bool parseAccountID( const string& text, AccountID& outAccountID )
-            {
-                const string_view trimmed             = StringUtil::trim( string_view( text ) );
-                uint64            value               = 0;
-                const bool        bInvalidAccountText = trimmed.empty() || StringUtil::parseUint64( trimmed, value, 16 ) == false || value == kInvalidAccountID;
-                if ( bInvalidAccountText )
-                    return false;
-                outAccountID = value;
-                return true;
-            }
-
-            static string formatAccountID( AccountID accountID )
-            {
-                StringBuilder<constant::buffer::kMax32> text;
-                text.appendFormat( "%#", Fmt( accountID, Format( 16, Format::Padding::Zero ).hex() ) );
-                return string( text.view() );
-            }
-
-            static string formatBalance( const LedgerBalance& balance )
-            {
-                StringBuilder<constant::buffer::kMax64> text;
-                text.appendFormat( "%#%#", balance._amount, balance.isDebt() ? " (debt)" : "" );
-                return string( text.view() );
-            }
-
-            static string formatClock( int64 unixMs )
-            {
-                const int64                             secondOfDay = ( unixMs / constant::time::kMillisecondsPerSecond ) % constant::time::kSecondsPerDay;
-                StringBuilder<constant::buffer::kMax32> text;
-                text.appendFormat( "%#:%#:%#", static_cast<int32>( secondOfDay / constant::time::kSecondsPerHour ),
-                                   static_cast<int32>( ( secondOfDay % constant::time::kSecondsPerHour ) / constant::time::kSecondsPerMinute ), static_cast<int32>( secondOfDay % constant::time::kSecondsPerMinute ) );
-                return string( text.view() );
-            }
-
-            static string formatSanction( int64 untilMs )
-            {
-                if ( untilMs == 0 )
-                    return "none";
-                if ( untilMs == ServiceSanctionState::kPermanentMs )
-                    return "permanent";
-                const int64 remainingSeconds = ( untilMs - WallClock::nowUnixMilliseconds().count() ) / constant::time::kMillisecondsPerSecond;
-                if ( remainingSeconds <= 0 )
-                    return "expired";
-                StringBuilder<constant::buffer::kMax64> text;
-                text.appendFormat( "%# s left", remainingSeconds );
-                return string( text.view() );
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -178,8 +128,9 @@ namespace sw::editor
         {
             ImGui::TextDisabled( "%s", SW_LOCKEY( "EdPlugin", "NoLoginHandlerIsBoundGMCommandsAre" ) );
         }
-        const bool bConnected = session.getConnection().getState() != AdminToolConnectionState::Disconnected;
-        if ( bConnected == false && ImGui::Button( SW_LOCKEY( "EdPlugin", "Connect" ) ) )
+        // 실패한 연결도 다시 걸 수 있다 - 예전에는 Failed 를 연결된 것으로 보아 Connect 단추가 사라져 Disconnect 를 먼저 눌러야 했다.
+        const bool bCanOpen = session.getConnection().canOpen();
+        if ( bCanOpen && ImGui::Button( SW_LOCKEY( "EdPlugin", "Connect" ) ) )
         {
             string     error;
             const bool bOpened =
@@ -188,7 +139,7 @@ namespace sw::editor
             if ( bOpened == false )
                 SW_LOG_WARNING_ID( "AdminToolPanel.AdminToolGMConnection", "Admin tool: GM connection failed - %#", error.c_str() );
         }
-        if ( bConnected && ImGui::Button( SW_LOCKEY( "EdPlugin", "Disconnect" ) ) )
+        if ( bCanOpen == false && ImGui::Button( SW_LOCKEY( "EdPlugin", "Disconnect" ) ) )
             session.disconnectLive();
         ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "GMConnection", TextArgumentList().addText( "stateText", session.getConnection().getStateText() ) ).c_str() );
     }
@@ -207,7 +158,7 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Lookup" ) ) )
         {
             AccountID accountID = kInvalidAccountID;
-            if ( AdminToolPanelInternal::parseAccountID( _accountText, accountID ) )
+            if ( AdminToolModel::parseAccountID( _accountText, accountID ) )
                 session.requestLookup( accountID );
             else
                 SW_LOG_WARNING_ID( "AdminToolPanel.AdminToolAccountId", "Admin tool: account id must be a non-zero hex number" );
@@ -221,7 +172,7 @@ namespace sw::editor
         }
 
         const AdminReply& lookup = session.getLookup();
-        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "Id", TextArgumentList().addText( "displayName", lookup._identity._displayName.c_str() ).addText( "accountID", AdminToolPanelInternal::formatAccountID( lookup._identity._accountID ).c_str() ).addText( "presence", lookup._bOnline == SW_TRUE ? "online" : "offline" ) ).c_str() );
+        ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdPluginFormat", "Id", TextArgumentList().addText( "displayName", lookup._identity._displayName.c_str() ).addText( "accountID", AdminToolModel::formatAccountID( lookup._identity._accountID ).c_str() ).addText( "presence", lookup._bOnline == SW_TRUE ? "online" : "offline" ) ).c_str() );
 
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp;
         if ( ImGui::BeginTable( "##AdminBalance", 2, kTableFlags ) )
@@ -235,14 +186,14 @@ namespace sw::editor
                 ImGui::TableSetColumnIndex( 0 );
                 ImGui::TextUnformatted( balance._assetID.c_str() );
                 ImGui::TableSetColumnIndex( 1 );
-                ImGui::TextUnformatted( AdminToolPanelInternal::formatBalance( balance ).c_str() );
+                ImGui::TextUnformatted( AdminToolModel::formatBalance( balance ).c_str() );
             }
             ImGui::EndTable();
         }
 
         for ( int32 kindIndex = 0; kindIndex < static_cast<int32>( ServiceSanctionKind::Count ); ++kindIndex )
         {
-            const string state = AdminToolPanelInternal::formatSanction( lookup._sanction._arrUntilMs[kindIndex] );
+            const string state = AdminToolModel::formatSanction( lookup._sanction._arrUntilMs[kindIndex], WallClock::nowUnixMilliseconds().count() );
             ImGui::Text( "%s: %s", getEnumName( static_cast<ServiceSanctionKind>( kindIndex ) ), state.c_str() );
             if ( kindIndex + 1 < static_cast<int32>( ServiceSanctionKind::Count ) )
                 ImGui::SameLine();
@@ -267,8 +218,9 @@ namespace sw::editor
         ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "RefundRevokeMayLeaveADebt" ), &_bRefund );
 
         AccountID  accountID     = kInvalidAccountID;
-        const bool bAccountValid = AdminToolPanelInternal::parseAccountID( _accountText, accountID );
-        ImGui::BeginDisabled( bAccountValid == false );
+        const bool bAccountValid = AdminToolModel::parseAccountID( _accountText, accountID );
+        // 칸은 크기다 - 음수를 그대로 두면 Grant 가 회수하고 Revoke 가 지급했다.
+        ImGui::BeginDisabled( bAccountValid == false || AdminToolModel::isAdjustAmountValid( _amount ) == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "Grant" ) ) )
             session.requestAdjust( accountID, _assetText, _amount, false, _memoText );
         EditorSelfTestMarks::note( "admin.grant" );
@@ -304,10 +256,13 @@ namespace sw::editor
         EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "ReasonCode" ), "Reason code" ), _reasonText, 160.0f * EditorThemeUtil::getDPIScale() );
 
         AccountID  accountID     = kInvalidAccountID;
-        const bool bAccountValid = AdminToolPanelInternal::parseAccountID( _accountText, accountID );
+        const bool bAccountValid = AdminToolModel::parseAccountID( _accountText, accountID );
         ImGui::BeginDisabled( bAccountValid == false );
+        // 기간 0 은 해제의 뜻이다 - 거는 단추가 해제를 보내지 않게 한다.
+        ImGui::BeginDisabled( AdminToolModel::isSanctionDurationValid( _sanctionSeconds ) == false );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "ApplySanction" ) ) )
             session.requestSanction( accountID, _sanctionKind, _sanctionSeconds, _reasonText, _memoText );
+        ImGui::EndDisabled();
         EditorSelfTestMarks::note( "admin.sanction.apply" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "LiftSanction" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "LiftSanction" ) ) )
@@ -343,7 +298,7 @@ namespace sw::editor
         {
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
-            ImGui::TextUnformatted( AdminToolPanelInternal::formatClock( entry._timeMs ).c_str() );
+            ImGui::TextUnformatted( AdminToolModel::formatClock( entry._timeMs ).c_str() );
             ImGui::TableSetColumnIndex( 1 );
             ImGui::TextUnformatted( entry._action.c_str() );
             ImGui::TableSetColumnIndex( 2 );
@@ -388,11 +343,11 @@ namespace sw::editor
             ImGui::PushID( report._reportKey.c_str() );
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
-            ImGui::TextUnformatted( AdminToolPanelInternal::formatClock( report._createdMs ).c_str() );
+            ImGui::TextUnformatted( AdminToolModel::formatClock( report._createdMs ).c_str() );
             ImGui::TableSetColumnIndex( 1 );
             ImGui::TextUnformatted( report._reason.c_str() );
             ImGui::TableSetColumnIndex( 2 );
-            ImGui::TextUnformatted( AdminToolPanelInternal::formatAccountID( report._targetID ).c_str() );
+            ImGui::TextUnformatted( AdminToolModel::formatAccountID( report._targetID ).c_str() );
             ImGui::TableSetColumnIndex( 3 );
             ImGui::TextUnformatted( report._listLine.empty() ? "" : report._listLine.back()._text.c_str() ); // 마지막 줄이 신고 대상이다
             ImGui::TableSetColumnIndex( 4 );
@@ -493,7 +448,6 @@ namespace sw::editor
         ImGui::EndDisabled();
     }
 
-    // 세션의 등록 줄은 여기 둔다 — EngineTest 가 세션 .cpp 를 에디터 없이 직접 컴파일한다.
     SW_EDITOR_SUBSYSTEM( AdminToolSession, 9200 );
     SW_EDITOR_PANEL( AdminToolPanel, AdminToolPanel::kPanelID, EditorPanelCategory::Custom, 9200 );
 } // namespace sw::editor
