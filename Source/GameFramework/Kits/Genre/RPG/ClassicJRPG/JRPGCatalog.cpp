@@ -157,10 +157,8 @@ namespace sw
     bool JRPGCatalog::loadCombo( const XMLNode& node, string_view sourceName )
     {
         JRPGComboDef def;
-        if ( XMLFields::readFields( node, def, sourceName, { "members", "types" } ) == false )
+        if ( XMLFields::readFields( node, def, sourceName ) == false )
             return false;
-        XMLReadUtil::appendNameList( node.getAttributeText( "members" ), ",; \t", def._listMemberID );
-        XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listDamageType );
         if ( def._listMemberID.size() < 2 )
         {
             SW_LOG_ERROR_ID( "JRPGCatalog.ComboNeedsTwoMore", "%#: combo '%#' needs two or more members", sourceName, def._id.c_str() );
@@ -187,11 +185,9 @@ namespace sw
     {
         using Internal = JRPGCatalogInternal;
         JRPGEnemyDef def;
-        bool         bValid = XMLFields::readFields( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck", "weak", "locks" } );
+        bool         bValid = XMLFields::readFields( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrStat ) && bValid;
         bValid              = Internal::checkMaxHP( def._arrStat, node, sourceName ) && bValid;
-        XMLReadUtil::appendNameList( node.getAttributeText( "weak" ), ",; \t", def._listWeakness );
-        XMLReadUtil::appendNameList( node.getAttributeText( "locks" ), ",; \t", def._listLock );
         if ( bValid )
             (void)_enemyCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return bValid;
@@ -204,8 +200,7 @@ namespace sw
         for ( XMLNode groupNode = node.findChild( "Group" ); groupNode; groupNode = groupNode.findNextSibling( "Group" ) )
         {
             JRPGEncounterGroup group;
-            bValid = XMLFields::readFields( groupNode, group, sourceName, { "enemies" } ) && bValid;
-            XMLReadUtil::appendNameList( groupNode.getAttributeText( "enemies" ), ",; \t", group._listEnemyID );
+            bValid = XMLFields::readFields( groupNode, group, sourceName ) && bValid;
             if ( group._listEnemyID.empty() )
             {
                 SW_LOG_ERROR_ID( "JRPGCatalog.AreaGroupWithoutEnemies", "%#: area '%#' has a <Group> without enemies", sourceName, def._id.c_str() );

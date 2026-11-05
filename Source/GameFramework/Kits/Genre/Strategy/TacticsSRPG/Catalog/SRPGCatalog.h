@@ -150,7 +150,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Required )
-        string                    _name{};
+        string _name{};
+        PROPERTY( Name = "weapons" )
         vector<hashed_string>     _listWeaponID{};
         vector<SRPGDevelopTarget> _listDevelop{};
         PROPERTY( Min = 1 )

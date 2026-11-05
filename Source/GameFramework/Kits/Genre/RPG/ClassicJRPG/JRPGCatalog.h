@@ -131,8 +131,10 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Required )
-        string                _name{};
-        vector<hashed_string> _listMemberID{};   ///< 참여 멤버의 id(직업이 아니라 캐릭터)
+        string _name{};
+        PROPERTY( Name = "members" )
+        vector<hashed_string> _listMemberID{}; ///< 참여 멤버의 id(직업이 아니라 캐릭터)
+        PROPERTY( Name = "types" )
         vector<hashed_string> _listDamageType{}; ///< 한 번에 여러 잠금을 깰 수 있다
         PROPERTY( Min = 0 )
         int32 _points{ 1 };
@@ -189,8 +191,10 @@ namespace sw
         PROPERTY()
         hashed_string _attackType{};
         PROPERTY( Name = "cast" )
-        hashed_string         _castSpellID{}; ///< 비어 있지 않으면 시전하는 적이다
+        hashed_string _castSpellID{}; ///< 비어 있지 않으면 시전하는 적이다
+        PROPERTY( Name = "weak" )
         vector<hashed_string> _listWeakness{};
+        PROPERTY( Name = "locks" )
         vector<hashed_string> _listLock{}; ///< 시전 중에 적용되는 잠금(피해 유형 하나씩이며, 같은 유형이 여럿일 수 있다)
         int32                 _arrStat[kJRPGStatCount]{ 10, 0, 5, 5, 5, 5, 5 };
         PROPERTY( Min = 0 )
@@ -214,6 +218,7 @@ namespace sw
     {
         REFLECT_BODY();
 
+        PROPERTY( Name = "enemies" )
         vector<hashed_string> _listEnemyID{};
         PROPERTY( Min = 0 )
         int32 _weight{ 1 };

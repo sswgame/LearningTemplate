@@ -289,9 +289,8 @@ namespace sw
         if ( XMLReadUtil::isElement( name, "Weather" ) )
         {
             MonsterWeatherDef def;
-            if ( XMLFields::readFields( node, def, sourceName, { "immune" } ) == false )
+            if ( XMLFields::readFields( node, def, sourceName ) == false )
                 return false;
-            XMLReadUtil::appendNameList( node.getAttributeText( "immune" ), ",; \t", def._listChipImmuneType );
             (void)_weatherCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
             return true;
         }
@@ -326,8 +325,7 @@ namespace sw
     {
         using Internal = MonsterCollectorCatalogInternal;
         MonsterSpeciesDef def;
-        bool              bValid = XMLFields::readFields( node, def, sourceName, { "types", "stats", "evYield" } );
-        XMLReadUtil::appendNameList( node.getAttributeText( "types" ), ",; \t", def._listType );
+        bool              bValid = XMLFields::readFields( node, def, sourceName, { "stats", "evYield" } );
         if ( def._listType.empty() || def._listType.size() > 2 )
         {
             SW_LOG_ERROR_ID( "MonsterCollectorCatalog.SpeciesTypesNeeds", "%#: species '%#' has %# types - needs 1 or 2", sourceName, def._id.c_str(), static_cast<uint32>( def._listType.size() ) );
@@ -359,8 +357,7 @@ namespace sw
     bool MonsterCollectorCatalog::loadEncounter( const XMLNode& node, string_view sourceName )
     {
         MonsterEncounterDef def;
-        bool                bValid = XMLFields::readFields( node, def, sourceName, { "time" } );
-        XMLReadUtil::appendNameList( node.getAttributeText( "time" ), ",; \t", def._listTime );
+        bool                bValid = XMLFields::readFields( node, def, sourceName );
         for ( XMLNode child = node.findChild( "Slot" ); child; child = child.findNextSibling( "Slot" ) )
         {
             bValid = GameDataXML::readInto( child, sourceName, def._listSlot ) && bValid;

@@ -109,7 +109,8 @@ namespace sw
         PROPERTY( Name = "key" )
         hashed_string _keyReward{}; ///< 불이 켜지면 주는 열쇠
         PROPERTY( Required )
-        hashed_string         _lightFlag{}; ///< 불이 켜지면 1 이 되는 플래그(`lightFlag`, 필수)
+        hashed_string _lightFlag{}; ///< 불이 켜지면 1 이 되는 플래그(`lightFlag`, 필수)
+        PROPERTY( Name = "ghosts" )
         vector<hashed_string> _listGhost{};
     };
 } // namespace sw

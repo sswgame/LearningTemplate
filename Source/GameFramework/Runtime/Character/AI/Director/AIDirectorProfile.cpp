@@ -171,9 +171,8 @@ namespace sw
         static constexpr const utf8* kArrPhaseChild[] = { "Curve", "Exit" };
         bool                         bValid           = Internal::validateChildren( node, kArrPhaseChild, sourceName );
         AIDirectorPhaseDef           phase;
-        if ( XMLFields::readFields( node, phase, sourceName, { "spawnTags" } ) == false )
+        if ( XMLFields::readFields( node, phase, sourceName ) == false )
             return false;
-        ScheduleCondition::parseNameList( node.getAttributeText( "spawnTags" ), phase._listSpawnTag );
         bValid = GameDataXML::readFloatCurve( node, "Curve", 0.0f, phase._spawnCurve, sourceName ) && bValid; // 키가 없으면 곡선이 대체값을 쓴다
         for ( XMLNode child = node.findChild( "Exit" ); child; child = child.findNextSibling( "Exit" ) )
         {
@@ -199,9 +198,8 @@ namespace sw
         bool                         bValid          = Internal::validateChildren( node, kArrPoolChild, sourceName );
         AIDirectorPoolDef            pool;
         // 종류는 적지 않으면 조우 풀이다(Def 초기값). 계기는 반드시 적는다 — 둘 다 ENUM() 이름이다.
-        if ( XMLFields::readFields( node, pool, sourceName, { "pacing" } ) == false )
+        if ( XMLFields::readFields( node, pool, sourceName ) == false )
             return false;
-        ScheduleCondition::parseNameList( node.getAttributeText( "pacing" ), pool._listPacing );
         if ( pool._trigger == AIDirectorPoolTrigger::PhaseEnter && pool._phase.empty() )
         {
             SW_LOG_ERROR_ID( "AIDirectorProfile.PoolTriggeredPhaseEnter", "%#: pool '%#' is triggered on phase enter but names no phase", sourceName, pool._id.c_str() );
@@ -211,13 +209,11 @@ namespace sw
         for ( XMLNode child = node.findChild( "Encounter" ); child; child = child.findNextSibling( "Encounter" ) )
         {
             AIDirectorEncounterDef encounter;
-            if ( XMLFields::readFields( child, encounter, sourceName, { "areas", "pacing" }, &ScheduleCondition::isConditionAttribute ) == false )
+            if ( XMLFields::readFields( child, encounter, sourceName, { "pacing" }, &ScheduleCondition::isConditionAttribute ) == false )
             {
                 bValid = false;
                 continue;
             }
-            ScheduleCondition::parseNameList( child.getAttributeText( "areas" ), encounter._listArea );
-            ScheduleCondition::parseNameList( child.getAttributeText( "pacing" ), encounter._listPacing );
             bValid = encounter._condition.readFromNode( child, vocabulary, sourceName, encounter._id.c_str() ) && bValid;
             for ( const AIDirectorEncounterDef& other : pool._listEncounter )
             {

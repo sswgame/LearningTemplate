@@ -172,9 +172,10 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        hashed_string            _id{};
-        ScheduleCondition        _condition{};
-        vector<hashed_string>    _listNPC{};       ///< 참가 NPC id
+        hashed_string         _id{};
+        ScheduleCondition     _condition{};
+        vector<hashed_string> _listNPC{}; ///< 참가 NPC id
+        PROPERTY( Name = "npcs" )
         vector<hashed_string>    _listArchetype{}; ///< 참가 아키타입(체인 어디에 있어도 된다). NPC 와 아키타입이 둘 다 비면 모두 참가한다
         vector<ScheduleBlockDef> _listBlock{};
         PROPERTY()

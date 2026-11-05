@@ -97,9 +97,8 @@ namespace sw
     bool GhostCatalog::loadRoom( const XMLNode& node, string_view sourceName )
     {
         GhostRoomDef room;
-        if ( XMLFields::readFields( node, room, sourceName, { "ghosts" } ) == false )
+        if ( XMLFields::readFields( node, room, sourceName ) == false )
             return false;
-        XMLReadUtil::parseNameList( node.getAttributeText( "ghosts" ), ",; ", room._listGhost );
         (void)_roomCatalog.add( room ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;
     }

@@ -105,7 +105,8 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        hashed_string             _id{};
+        hashed_string _id{};
+        PROPERTY( Name = "spawnTags" )
         vector<hashed_string>     _listSpawnTag{}; ///< 이 단계에서 낼 스폰 항목의 태그(`SpawnDirector::setAllowedTags`). 비면 모두
         vector<AIDirectorExitDef> _listExit{};     ///< 적은 순서로 본다 — 먼저 맞는 길로 나간다
         FloatCurve                _spawnCurve{};   ///< 단계 안 시간 → 스폰 배율(곡선이 없으면 1)
@@ -147,8 +148,9 @@ namespace sw
 
         PROPERTY( Required )
         hashed_string         _id{};
-        ScheduleCondition     _condition{};  ///< 요일, 계절, 날씨, 하루의 때(`phases`), 플래그 식, 태그(플레이어 상태), 확률
-        vector<hashed_string> _listArea{};   ///< 지금 지역 태그 중 하나가 이것이어야 한다. 비면 어디서나
+        ScheduleCondition     _condition{}; ///< 요일, 계절, 날씨, 하루의 때(`phases`), 플래그 식, 태그(플레이어 상태), 확률
+        vector<hashed_string> _listArea{};  ///< 지금 지역 태그 중 하나가 이것이어야 한다. 비면 어디서나
+        PROPERTY( Name = "areas" )
         vector<hashed_string> _listPacing{}; ///< 이 페이싱 단계에서만. 비면 늘
         PROPERTY( Min = 0.0 )
         float32 _weight{ 1.0f };
@@ -184,7 +186,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string                  _id{};
         vector<AIDirectorEncounterDef> _listEncounter{};
-        vector<hashed_string>          _listPacing{}; ///< 이 페이싱 단계에서만 돈다(시계 · 예산도 멈춘다). 비면 늘
+        PROPERTY( Name = "pacing" )
+        vector<hashed_string> _listPacing{}; ///< 이 페이싱 단계에서만 돈다(시계 · 예산도 멈춘다). 비면 늘
         PROPERTY( Tooltip = "Phase of a PhaseEnter pool" )
         hashed_string _phase{};
         PROPERTY( Name = "need", Tooltip = "Need signal a Budget pool reads (a signal of the intensity model)" )

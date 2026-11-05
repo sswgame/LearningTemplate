@@ -54,7 +54,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY()
-        hashed_string               _category{};    ///< "Necrophage", "Specter" 같은 도감 분류
+        hashed_string _category{}; ///< "Necrophage", "Specter" 같은 도감 분류
+        PROPERTY( Name = "elements" )
         vector<hashed_string>       _listElement{}; ///< 방어 속성(기반 `ElementChart` 의 방어 쪽이며, 비어 있으면 분류 하나를 쓴다)
         vector<MonsterHuntWeakness> _listWeakness{};
         PROPERTY( Min = 1 )

@@ -169,7 +169,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Required )
-        string                _name{};
+        string _name{};
+        PROPERTY( Name = "scraps" )
         vector<hashed_string> _listScrap{}; ///< 나오는 고철이다(비어 있으면 모두)
         PROPERTY( Min = 0.0 )
         float32 _risk{ 1.0f }; ///< 위협 예산이 쌓이는 배율

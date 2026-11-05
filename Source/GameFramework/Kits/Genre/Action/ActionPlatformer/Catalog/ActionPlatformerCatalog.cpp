@@ -113,10 +113,8 @@ namespace sw
     {
         using Internal = ActionPlatformerCatalogInternal;
         ActionStageDef stage;
-        if ( XMLFields::readFields( node, stage, sourceName, { "checkpoints", "secrets" } ) == false )
+        if ( XMLFields::readFields( node, stage, sourceName ) == false )
             return false;
-        XMLReadUtil::parseNameList( node.getAttributeText( "checkpoints" ), Internal::kNameSeparators, stage._listCheckpoint );
-        XMLReadUtil::parseNameList( node.getAttributeText( "secrets" ), Internal::kNameSeparators, stage._listSecret );
         (void)_stageCatalog.add( stage ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;
     }
@@ -125,9 +123,8 @@ namespace sw
     {
         using Internal = ActionPlatformerCatalogInternal;
         ActionComboDef combo;
-        if ( XMLFields::readFields( node, combo, sourceName, { "moves" } ) == false )
+        if ( XMLFields::readFields( node, combo, sourceName ) == false )
             return false;
-        XMLReadUtil::parseNameList( node.getAttributeText( "moves" ), Internal::kNameSeparators, combo._listMove );
         if ( combo._listMove.empty() )
         {
             SW_LOG_ERROR_ID( "ActionPlatformerCatalog.ComboIdNeedsMoves", "%#: <Combo id=\"%#\"> needs moves=\"...\" with at least one move", sourceName, combo._id.c_str() );

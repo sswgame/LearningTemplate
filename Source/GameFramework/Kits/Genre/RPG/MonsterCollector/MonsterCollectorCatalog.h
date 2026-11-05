@@ -123,7 +123,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Required )
-        string                      _name{};
+        string _name{};
+        PROPERTY( Name = "types" )
         vector<hashed_string>       _listType{};  ///< 1~2개
         vector<MonsterLearnEntry>   _listLearn{}; ///< 레벨 오름차순
         vector<MonsterEvolutionDef> _listEvolution{};
@@ -218,7 +219,8 @@ namespace sw
         PROPERTY( Name = "boost" )
         hashed_string _boostedType{}; ///< 이 타입 기술은 ×1.5
         PROPERTY( Name = "weaken" )
-        hashed_string         _weakenedType{};       ///< 이 타입 기술은 ×0.5
+        hashed_string _weakenedType{}; ///< 이 타입 기술은 ×0.5
+        PROPERTY( Name = "immune" )
         vector<hashed_string> _listChipImmuneType{}; ///< 턴 끝 피해를 받지 않는 타입
         PROPERTY( Name = "chip", Min = 0 )
         int32 _chipDivisor{ 0 }; ///< 턴 끝에 최대 HP 를 이 값으로 나눈 만큼 잃는다(0이면 없음)
@@ -257,7 +259,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Required )
-        hashed_string                _area{};
+        hashed_string _area{};
+        PROPERTY( Name = "time" )
         vector<hashed_string>        _listTime{}; ///< 비어 있으면 아무 때나
         vector<MonsterEncounterSlot> _listSlot{};
     };

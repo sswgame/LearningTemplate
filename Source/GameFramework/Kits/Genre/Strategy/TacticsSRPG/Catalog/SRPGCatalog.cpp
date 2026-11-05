@@ -253,10 +253,9 @@ namespace sw
     {
         using Internal = SRPGCatalogInternal;
         SRPGUnitDef def;
-        bool        bValid = XMLFields::readFields( node, def, sourceName, { "size", "aptitude", "weapons", "developsTo" } );
+        bool        bValid = XMLFields::readFields( node, def, sourceName, { "size", "aptitude", "developsTo" } );
         bValid             = Internal::readSize( node, sourceName, def._size ) && bValid;
         bValid             = Internal::readFour( node, "aptitude", sourceName, &SRPGCatalog::parseAptitude, def._arrAptitude ) && bValid;
-        XMLReadUtil::parseNameList( node.getAttributeText( "weapons" ), ",; \t", def._listWeaponID );
         XMLReadUtil::forEachNamedNumber( node.getAttributeText( "developsTo" ), ",; \t", SRPGDevelopTarget{}._requiredLevel, XMLReadUtil::MissingValue::UseDefault,
                                          [&]( string_view token, string_view unitName, int32 requiredLevel, bool bLevel )
         {

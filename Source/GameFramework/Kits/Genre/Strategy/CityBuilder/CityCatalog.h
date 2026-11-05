@@ -96,7 +96,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Required )
-        string                _name{};
+        string _name{};
+        PROPERTY( Name = "goods" )
         vector<hashed_string> _listGood{}; ///< 생산자는 만드는 물자(첫 항목), 창고는 받는 물자, 시장은 파는 물자
         PROPERTY( Min = 0.5 )
         float32 _productionTime{ 20.0f }; ///< 생산자가 쓴다. 일꾼이 다 찼을 때 물자 하나를 만드는 데 걸리는 시간(초)
@@ -138,7 +139,8 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        string                _name{};
+        string _name{};
+        PROPERTY( Name = "goods" )
         vector<hashed_string> _listRequiredGood{};
         PROPERTY( Min = 1 )
         int32 _population{ 5 }; ///< 수용 인구

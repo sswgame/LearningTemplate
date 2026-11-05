@@ -143,7 +143,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Required )
-        hashed_string         _flag{};
+        hashed_string _flag{};
+        PROPERTY( Name = "steps" )
         vector<hashed_string> _listStep{};
         PROPERTY( Min = 0.0 )
         float32 _mistakeSanity{ 0.0f }; ///< 틀릴 때 깎이는 정신력
@@ -161,7 +162,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY()
-        string                _title{};
+        string _title{};
+        PROPERTY( Name = "clues" )
         vector<hashed_string> _listClue{};
     };
 } // namespace sw

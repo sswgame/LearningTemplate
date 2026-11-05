@@ -331,10 +331,8 @@ namespace sw
     void ScheduleCatalog::loadEvent( const XMLNode& node, string_view sourceName, const utf8* pID )
     {
         ScheduleEventDef event;
-        bool             bValid = XMLFields::readFields( node, event, sourceName, { "npcs", "archetypes" }, &ScheduleCondition::isConditionAttribute );
-        ScheduleCondition::parseNameList( node.getAttributeText( "npcs" ), event._listNPC );
-        ScheduleCondition::parseNameList( node.getAttributeText( "archetypes" ), event._listArchetype );
-        bValid = event._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
+        bool             bValid = XMLFields::readFields( node, event, sourceName, { "archetypes" }, &ScheduleCondition::isConditionAttribute );
+        bValid                  = event._condition.readFromNode( node, _vocabulary, sourceName, pID ) && bValid;
         if ( bValid == false )
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.EventInvalidFieldsSkipped", "%#: event '%#' has invalid fields - skipped", sourceName, pID );

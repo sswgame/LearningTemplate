@@ -113,8 +113,7 @@ namespace sw
     bool MonsterHuntCatalog::loadMonster( const XMLNode& node, string_view sourceName )
     {
         MonsterHuntMonsterDef monster;
-        bool                  bValid = XMLFields::readFields( node, monster, sourceName, { "elements" } );
-        XMLReadUtil::parseNameList( node.getAttributeText( "elements" ), ",; ", monster._listElement );
+        bool                  bValid = XMLFields::readFields( node, monster, sourceName );
         if ( monster._listElement.empty() && monster._category.empty() == false )
             monster._listElement.push_back( monster._category ); // 방어 속성을 적지 않으면 분류 하나다(`_listElement` 의 정의)
         for ( XMLNode child = node.findChild( "Weakness" ); child; child = child.findNextSibling( "Weakness" ) )

@@ -138,8 +138,7 @@ namespace sw
     bool RestaurantCatalog::loadCustomer( const XMLNode& node, string_view sourceName )
     {
         CustomerTypeDef customerType;
-        const bool      bValid = XMLFields::readFields( node, customerType, sourceName, { "categories" } );
-        XMLReadUtil::parseNameList( node.getAttributeText( "categories" ), ",;| ", customerType._listCategory );
+        const bool      bValid = XMLFields::readFields( node, customerType, sourceName );
         if ( bValid )
             addCustomerType( customerType );
         return bValid;

@@ -19,8 +19,7 @@ namespace sw
             /** @brief `<Weapon>` 하나를 읽습니다. Melee · Special 은 `range` 를 적어야 합니다(종류에 따라 다른 기본값을 두지 않는다). */
             [[nodiscard]] static bool readWeapon( const XMLNode& node, string_view sourceName, MechWeaponSlotDef& outSlot )
             {
-                bool bValid = XMLFields::readFields( node, outSlot, sourceName, { "moves" } );
-                XMLReadUtil::appendNameList( node.getAttributeText( "moves" ), ",; ", outSlot._listMoveID );
+                bool bValid = XMLFields::readFields( node, outSlot, sourceName );
                 if ( outSlot._kind != MechWeaponKind::Shot && node.findAttribute( "range" ) == nullptr )
                 {
                     SW_LOG_ERROR_ID( "MechCatalog.WeaponIdKindMelee", "%#: <Weapon id=\"%#\"> of kind Melee or Special needs range=\"...\"", sourceName, outSlot._id.c_str() );

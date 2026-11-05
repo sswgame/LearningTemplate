@@ -89,7 +89,7 @@ namespace sw
     bool CityCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
     {
         CityBuildingDef building;
-        bool            bValid = XMLFields::readFields( node, building, sourceName, { "terrain", "goods" } );
+        bool            bValid = XMLFields::readFields( node, building, sourceName, { "terrain" } );
         // 땅 조건은 적었을 때만 있다(적지 않으면 아무 땅). 모르는 땅 이름은 오류다.
         const string_view terrainText = node.getAttributeText( "terrain" );
         if ( terrainText.empty() == false )
@@ -101,7 +101,6 @@ namespace sw
                 bValid = false;
             }
         }
-        XMLReadUtil::parseNameList( node.getAttributeText( "goods" ), ",; ", building._listGood );
         const bool bServiceWithoutService = building._kind == CityBuildingKind::Service && building._service == CityService::Count;
         if ( bServiceWithoutService )
         {
@@ -116,7 +115,7 @@ namespace sw
     bool CityCatalog::loadHouseLevel( const XMLNode& node, string_view sourceName )
     {
         CityHouseLevelDef level;
-        bool              bValid = XMLFields::readFields( node, level, sourceName, { "services", "goods" } );
+        bool              bValid = XMLFields::readFields( node, level, sourceName, { "services" } );
         StringUtil::forEachToken( node.getAttributeText( "services" ), ",; ", [&]( string_view token )
         {
             CityService service = CityService::Count;
@@ -128,7 +127,6 @@ namespace sw
                 bValid = false;
             }
         } );
-        XMLReadUtil::parseNameList( node.getAttributeText( "goods" ), ",; ", level._listRequiredGood );
         if ( bValid )
             _listHouseLevel.push_back( level ); // 적힌 순서가 단계다(0 = 처음 짓는 집)
         return bValid;

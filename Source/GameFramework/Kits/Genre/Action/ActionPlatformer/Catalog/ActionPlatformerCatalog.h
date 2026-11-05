@@ -31,9 +31,11 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Required )
-        string                _name{};
+        string _name{};
+        PROPERTY( Name = "checkpoints" )
         vector<hashed_string> _listCheckpoint{}; ///< 지나가는 순서(앞쪽 체크포인트로 되돌아가지 않는다, 속성 `checkpoints`)
-        vector<hashed_string> _listSecret{};     ///< 숨은 수집품(속성 `secrets`)
+        PROPERTY( Name = "secrets" )
+        vector<hashed_string> _listSecret{}; ///< 숨은 수집품(속성 `secrets`)
         PROPERTY( Min = 0.1 )
         float32 _parTime{ 60.0f }; ///< 이 시간(초) 안에 깨면 시간 점수가 만점이다
         PROPERTY( Min = 1 )
@@ -116,7 +118,8 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        hashed_string         _id{};
+        hashed_string _id{};
+        PROPERTY( Name = "moves" )
         vector<hashed_string> _listMove{}; ///< 속성 `moves`(하나 이상)
     };
 } // namespace sw

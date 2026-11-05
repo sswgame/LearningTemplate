@@ -130,9 +130,8 @@ namespace sw
     bool ScavengerCatalog::loadMoon( const XMLNode& node, string_view sourceName )
     {
         ScavengerMoonDef def;
-        if ( XMLFields::readFields( node, def, sourceName, { "scraps" } ) == false )
+        if ( XMLFields::readFields( node, def, sourceName ) == false )
             return false;
-        XMLReadUtil::parseNameList( node.getAttributeText( "scraps" ), ",; ", def._listScrap );
         (void)_moonCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;
     }

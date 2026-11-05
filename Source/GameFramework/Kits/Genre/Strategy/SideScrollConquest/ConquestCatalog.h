@@ -58,7 +58,8 @@ namespace sw
         hashed_string _id{};
         StatBlock     _cost{};
         PROPERTY()
-        hashed_string         _produces{};      ///< 만드는 자원이다(비어 있으면 생산하지 않는다)
+        hashed_string _produces{}; ///< 만드는 자원이다(비어 있으면 생산하지 않는다)
+        PROPERTY( Name = "trains" )
         vector<hashed_string> _listTrainable{}; ///< 훈련할 수 있는 병종
         PROPERTY( Min = 0.1 )
         float32 _cycleTime{ 10.0f }; ///< 생산 한 주기의 길이(초)

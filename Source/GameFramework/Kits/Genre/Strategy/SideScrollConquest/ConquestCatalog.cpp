@@ -129,9 +129,8 @@ namespace sw
     bool ConquestCatalog::loadBuilding( const XMLNode& node, string_view sourceName )
     {
         ConquestBuildingDef building;
-        if ( XMLFields::readFields( node, building, sourceName, { "trains" } ) == false )
+        if ( XMLFields::readFields( node, building, sourceName ) == false )
             return false;
-        XMLReadUtil::parseNameList( node.getAttributeText( "trains" ), ",; ", building._listTrainable );
         ConquestCatalogInternal::loadStatChild( node, "Cost", building._cost );
         (void)_buildingCatalog.add( building ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;

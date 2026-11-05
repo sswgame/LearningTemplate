@@ -11,6 +11,7 @@
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 namespace sw
 {
@@ -18,6 +19,11 @@ namespace sw
     {
         struct XMLFieldsInternal
         {
+            static bool isNameList( const PropertyInfo& prop )
+            {
+                return prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._elementTypeName == typeFqn<hashed_string>() && prop._typeName.view().find( "vector" ) != string_view::npos;
+            }
+
             static bool isHandRead( string_view attribute, std::initializer_list<string_view> listHandRead )
             {
                 return VectorUtil::contains( listHandRead, attribute );
@@ -101,6 +107,12 @@ namespace sw
                 continue;
             }
             const utf8* const pValue = attribute.getValue() != nullptr ? attribute.getValue() : "";
+            // 이름 목록 칸(`vector<hashed_string>`)은 속성 하나에 낱말을 잇는다(`days="Mon, Tue"`) — 데이터가 쓰는 구분자를 모두 받는다.
+            if ( Internal::isNameList( *pFound ) )
+            {
+                XMLReadUtil::appendNameList( pValue, ",;| \t", *static_cast<vector<hashed_string>*>( pFound->getRawPtr( pInstance ) ) );
+                continue;
+            }
             if ( SerializerUtil::applyPropertyText( *pFound, MutableObjectAddress{ pInstance }, pValue, context ) == false )
             {
                 report( "XMLFields.ValueUnreadable", formatToString( "%#: <%# %#=\"%#\"> cannot be read as %#", sourceName, pElement, attributeName, pValue, pFound->_typeName.c_str() ) );

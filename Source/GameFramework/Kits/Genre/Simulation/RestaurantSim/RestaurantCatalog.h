@@ -83,6 +83,7 @@ namespace sw
         PROPERTY( Name = "eat", Min = 0.0 )
         float32 _eatMinutes{ 15.0f };
 
+        PROPERTY( Name = "categories" )
         vector<hashed_string> _listCategory{}; ///< 좋아하는 분류이다(`categories` 를 손으로 읽는다. 고를 때 `_preferredWeight` 배로 반영한다)
     };
 } // namespace sw

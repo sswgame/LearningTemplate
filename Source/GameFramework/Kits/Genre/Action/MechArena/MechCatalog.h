@@ -63,7 +63,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _id{};
         PROPERTY( Name = "weapon" )
-        hashed_string         _weaponID{};   ///< Shot 일 때 `WeaponCatalog` 의 id
+        hashed_string _weaponID{}; ///< Shot 일 때 `WeaponCatalog` 의 id
+        PROPERTY( Name = "moves" )
         vector<hashed_string> _listMoveID{}; ///< Melee 일 때 콤보 단마다의 `MoveCatalog` id(개수가 콤보 단수다, 속성 `moves`)
         PROPERTY( Min = 0.0 )
         float32 _damage{ 0.0f }; ///< Special 의 피해(Shot 은 무기, Melee 는 기술의 피해를 쓴다)

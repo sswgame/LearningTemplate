@@ -111,10 +111,15 @@ namespace sw
         float32 _chance{ 0.5f }; ///< 조건이 맞는 시간마다 찾아올 확률
 
         // 아래 목록과 방문 조건은 손으로 읽는다(`habitats` · `foods` · `gifts` · `abilities` · `requests` · `phases` · `weathers`).
+        PROPERTY( Name = "habitats" )
         vector<hashed_string> _listHabitat{}; ///< 좋아하는 서식지이다(이 서식지가 생기면 찾아온다)
-        vector<hashed_string> _listFood{};    ///< 좋아하는 음식이다(선물 점수 `_foodPoints`)
-        vector<hashed_string> _listGift{};    ///< 좋아하는 선물이다(선물 점수 `_likedGiftPoints`)
+        PROPERTY( Name = "foods" )
+        vector<hashed_string> _listFood{}; ///< 좋아하는 음식이다(선물 점수 `_foodPoints`)
+        PROPERTY( Name = "gifts" )
+        vector<hashed_string> _listGift{}; ///< 좋아하는 선물이다(선물 점수 `_likedGiftPoints`)
+        PROPERTY( Name = "abilities" )
         vector<hashed_string> _listAbility{};
+        PROPERTY( Name = "requests" )
         vector<hashed_string> _listRequest{};    ///< 이 생물이 하는 부탁이다(퀘스트 id)
         ScheduleCondition     _visitCondition{}; ///< 찾아오는 때(`phases`)와 날씨(`weathers`)이며 비어 있으면 언제나 온다. NPC 일정과 같은 조건 판정을 쓴다
 

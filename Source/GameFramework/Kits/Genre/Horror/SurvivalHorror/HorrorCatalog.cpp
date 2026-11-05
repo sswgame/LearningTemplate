@@ -167,9 +167,8 @@ namespace sw
     bool HorrorCatalog::loadSequence( const XMLNode& node, string_view sourceName )
     {
         HorrorSequenceDef sequence;
-        if ( XMLFields::readFields( node, sequence, sourceName, { "steps" } ) == false )
+        if ( XMLFields::readFields( node, sequence, sourceName ) == false )
             return false;
-        XMLReadUtil::parseNameList( node.getAttributeText( "steps" ), ",; ", sequence._listStep );
         if ( sequence._listStep.empty() )
         {
             SW_LOG_ERROR_ID( "HorrorCatalog.SequenceNeedsStepsB", "%#: sequence '%#' needs steps=\"a,b,...\"", sourceName, sequence._id.c_str() );
@@ -182,9 +181,8 @@ namespace sw
     bool HorrorCatalog::loadDocument( const XMLNode& node, string_view sourceName )
     {
         HorrorDocumentDef document;
-        if ( XMLFields::readFields( node, document, sourceName, { "clues" } ) == false )
+        if ( XMLFields::readFields( node, document, sourceName ) == false )
             return false;
-        XMLReadUtil::parseNameList( node.getAttributeText( "clues" ), ",; ", document._listClue );
         (void)_documentCatalog.add( document ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
         return true;
     }
