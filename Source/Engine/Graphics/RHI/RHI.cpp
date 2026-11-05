@@ -274,8 +274,15 @@ namespace sw
         {
             // 설정 · 사용자 설정이 고른 백엔드(지난 실행의 선택일 수 있다)가 이 빌드에 없다 - 기동은 하되 말없이 바꾸지 않는다(언리얼도 지원하는 RHI 로 내려가며 로그를 남긴다).
             const RHIBackend platformBackend = getDefaultPlatformBackend();
-            SW_LOG_WARNING_ID( "RHI.ConfiguredBackendUnavailable", "The configured RHI backend '%#' is not available in this build - starting with '%#' (pass -<backend> to require one)",
-                               getBackendTypeName( currentBackend ), getBackendTypeName( platformBackend ) );
+#if defined( SW_PLATFORM_LINUX )
+            // 설정 파일은 플랫폼 공용이고 기본값이 Direct3D 다 - 리눅스에서 그것을 못 쓰는 것은 고칠 일이 아니다.
+            if ( currentBackend == RHIBackend::DirectX11 || currentBackend == RHIBackend::DirectX12 )
+                SW_LOG_INFO_ID( "RHI.ConfiguredDirect3DOnLinux", "The configured RHI backend '%#' does not exist on Linux - starting with '%#'", getBackendTypeName( currentBackend ),
+                                getBackendTypeName( platformBackend ) );
+            else
+#endif
+                SW_LOG_WARNING_ID( "RHI.ConfiguredBackendUnavailable", "The configured RHI backend '%#' is not available in this build - starting with '%#' (pass -<backend> to require one)",
+                                   getBackendTypeName( currentBackend ), getBackendTypeName( platformBackend ) );
             currentBackend = platformBackend;
         }
 
