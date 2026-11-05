@@ -58,14 +58,16 @@ namespace sw::editor
         void tick( InputManager& input, float32 deltaTime );
 
         // ------------------------------------------------------------------------------
-        // 1) 파일 — 성공하면 true(패널이 dirty 를 내린다). 실패는 로그로 알린다
+        // 1) 파일 — 성공하면 true(저장하지 않은 표시가 내려간다). 실패는 로그로 알린다
         // ------------------------------------------------------------------------------
         /** @brief 아직 한 번도 읽지 않았으면 true 입니다. 패널은 첫 그리기에서 `reload` 를 부릅니다. */
         bool needsFirstLoad() const { return _bLoaded == SW_FALSE; }
         /** @brief 확정한 맵 경로에서 다시 읽습니다. 읽지 못하면 편집 중인 바인딩을 그대로 둡니다. */
         [[nodiscard]] bool reload();
         /** @brief 확정한 맵 경로에 리소스의 기본 바인딩(`<InputMap>`)을 씁니다. */
-        [[nodiscard]] bool save() const;
+        [[nodiscard]] bool save();
+        /** @brief 파일과 달라진 편집이 있으면 true 입니다. 패널은 프레임마다 이 값을 따른다(`syncDocumentDirty`). */
+        bool isDirty() const { return _bDirty == SW_TRUE; }
 
         EditableAssetPath& editInputMapPath() { return _inputMapPath; }
         EditableAssetPath& editReplayFilePath() { return _replayFilePath; }
@@ -74,8 +76,17 @@ namespace sw::editor
         // 2) 액션 · 바인딩
         // ------------------------------------------------------------------------------
         const InputMap& getInputMap() const { return _inputMap; }
-        /** @brief 바인딩 한 칸을 고치는 엔진 API 가 곧 명령이라 그대로 넘깁니다. 고친 뒤 dirty 는 부르는 쪽이 올립니다. */
-        InputMap& editInputMap() { return _inputMap; }
+        /** @name 편집 — 맵을 고치는 길은 이 함수들뿐이라 저장하지 않은 표시를 빠뜨릴 수 없다. 실제로 바뀌었으면 true 입니다.
+         *  @{ */
+        void resetAllBindingsToDefault();
+        bool resetActionToDefault( const hashed_string& action );
+        void setLayerEnabled( const hashed_string& layer, bool bEnabled );
+        bool setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger );
+        bool setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds );
+        bool setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate );
+        bool setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount );
+        bool unbind( const hashed_string& action, uint32 bindIndex );
+        /** @} */
 
         const string& getSelectedAction() const { return _selectedAction; }
         void          selectAction( string_view action ) { _selectedAction = action; }
@@ -145,6 +156,7 @@ namespace sw::editor
         uint8                    _bLoaded       : 1;
         uint8                    _bCapturingKey : 1;
         uint8                    _bPlotPaused   : 1;
-        [[maybe_unused]] uint8   _reserved      : 5;
+        uint8                    _bDirty        : 1;
+        [[maybe_unused]] uint8   _reserved      : 4;
     };
 } // namespace sw::editor

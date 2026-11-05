@@ -29,6 +29,7 @@ namespace sw::editor
         , _bLoaded{ SW_FALSE }
         , _bCapturingKey{ SW_FALSE }
         , _bPlotPaused{ SW_FALSE }
+        , _bDirty{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -92,10 +93,11 @@ namespace sw::editor
             return false;
         }
         SW_LOG_INFO_ID( "InputMapDocument.ReloadedInputMap", "Reloaded InputMap from %#", _inputMapPath.c_str() );
+        _bDirty = SW_FALSE;
         return true;
     }
 
-    bool InputMapDocument::save() const
+    bool InputMapDocument::save()
     {
         // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reload`)와 같은 형식, 같은 위치에 쓴다.
         // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.
@@ -106,7 +108,62 @@ namespace sw::editor
             return false;
         }
         SW_LOG_INFO_ID( "InputMapDocument.SavedInputMap", "Saved InputMap to %#", _inputMapPath.c_str() );
+        _bDirty = SW_FALSE;
         return true;
+    }
+
+    void InputMapDocument::resetAllBindingsToDefault()
+    {
+        _inputMap.resetAllBindingsToDefault();
+        _bDirty = SW_TRUE;
+    }
+
+    bool InputMapDocument::resetActionToDefault( const hashed_string& action )
+    {
+        const bool bChanged = _inputMap.resetActionToDefault( action );
+        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
+        return bChanged;
+    }
+
+    void InputMapDocument::setLayerEnabled( const hashed_string& layer, bool bEnabled )
+    {
+        _inputMap.setLayerEnabled( layer, bEnabled );
+        _bDirty = SW_TRUE;
+    }
+
+    bool InputMapDocument::setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger )
+    {
+        const bool bChanged = _inputMap.setBindingTrigger( action, bindIndex, trigger );
+        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
+        return bChanged;
+    }
+
+    bool InputMapDocument::setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds )
+    {
+        const bool bChanged = _inputMap.setBindingTriggerTime( action, bindIndex, seconds );
+        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
+        return bChanged;
+    }
+
+    bool InputMapDocument::setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate )
+    {
+        const bool bChanged = _inputMap.setBindingNegate( action, bindIndex, bNegate );
+        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
+        return bChanged;
+    }
+
+    bool InputMapDocument::setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount )
+    {
+        const bool bChanged = _inputMap.setBindingTapCount( action, bindIndex, tapCount );
+        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
+        return bChanged;
+    }
+
+    bool InputMapDocument::unbind( const hashed_string& action, uint32 bindIndex )
+    {
+        const bool bChanged = _inputMap.rebindKey( action, Key::Unknown, bindIndex );
+        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
+        return bChanged;
     }
 
     bool InputMapDocument::createAction( string_view name, int32 valueTypeIndex )
@@ -116,6 +173,7 @@ namespace sw::editor
         static constexpr InputActionValueType kArrValueType[] = { InputActionValueType::Boolean, InputActionValueType::Axis1D, InputActionValueType::Axis2D };
         const InputActionValueType            valueType       = kArrValueType[MathUtil::clamp( valueTypeIndex, 0, 2 )];
         _inputMap.createAction( sw::hashed_string( string( name ).c_str() ), valueType );
+        _bDirty = SW_TRUE;
         return true;
     }
 
@@ -140,7 +198,9 @@ namespace sw::editor
         }
 
         // 키 하나로 바꿀 수 없는 바인딩(합성 축, 스틱)이면 바뀌지 않는다. 경고는 InputMap 이 남긴다. 이때는 문서를 dirty 로 표시하지 않는다.
-        return _inputMap.rebindKey( sw::hashed_string( _selectedAction.c_str() ), newKey, _capturingBindIndex );
+        const bool bChanged = _inputMap.rebindKey( sw::hashed_string( _selectedAction.c_str() ), newKey, _capturingBindIndex );
+        _bDirty             = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
+        return bChanged;
     }
 
     void InputMapDocument::refreshConflicts()

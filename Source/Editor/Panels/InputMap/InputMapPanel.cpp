@@ -193,10 +193,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "SaveTip" ) );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "RevertAllToDefault" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RevertAllToDefault" ) ) )
-        {
-            _document.editInputMap().resetAllBindingsToDefault();
-            markDocumentDirty();
-        }
+            _document.resetAllBindingsToDefault();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RevertAllTip" ) );
         if ( isDocumentDirty() )
         {
@@ -272,14 +269,14 @@ namespace sw::editor
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorInputMap", "SelectActionHint" ) );
             return;
         }
-        InputMap&           inputMap = _document.editInputMap();
+        const InputMap&     inputMap = _document.getInputMap();
         const hashed_string action( selectedAction.c_str() );
         ImGui::SeparatorText( selectedAction.c_str() );
         const ActionPhase phase = inputMap.getActionPhase( action );
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateHoldS", TextArgumentList().addText( "phase", inputMap.wasActionTriggered( action ) ? "triggered" : ( inputMap.isActionDown( action ) ? "down" : ( phase != ActionPhase::None ? "ongoing" : "idle" ) ) ).addDecimal( "holdSeconds", static_cast<float64>( inputMap.getActionHoldDuration( action ) ), 2 ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) );
-        if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) && inputMap.resetActionToDefault( action ) )
-            markDocumentDirty();
+        if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) )
+            (void)_document.resetActionToDefault( action );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "ResetActionTip" ) );
 
         // 바인딩마다 키(글리프), 레이어, 발화 규칙(트리거), 다시 잡기 버튼을 둔다.
@@ -329,7 +326,7 @@ namespace sw::editor
     {
         // 가장 긴 트리거 이름(HoldThreshold · HoldAndRelease)이 잘리지 않을 만큼 — 고정 8 em 이면 "HoldThresho" 로 끊긴다.
         ImGui::SetNextItemWidth( ImGui::CalcTextSize( "HoldAndRelease" ).x + ImGui::GetFrameHeight() + ImGui::GetStyle().FramePadding.x * 2.0f );
-        InputMap&           inputMap = _document.editInputMap();
+        const InputMap&     inputMap = _document.getInputMap();
         const ActionTrigger trigger  = inputMap.getBindingTrigger( action, bindIndex );
         const utf8*         pCurrent = getEnumName( trigger );
         const bool          bOpen    = ImGui::BeginCombo( "##trigger", pCurrent != nullptr ? pCurrent : "?" );
@@ -341,8 +338,8 @@ namespace sw::editor
         for ( uint32 option = 0; option < static_cast<uint32>( ActionTrigger::Count ); ++option )
         {
             const ActionTrigger value = static_cast<ActionTrigger>( option );
-            if ( ImGui::Selectable( getEnumName( value ), value == trigger ) && inputMap.setBindingTrigger( action, bindIndex, value ) )
-                markDocumentDirty();
+            if ( ImGui::Selectable( getEnumName( value ), value == trigger ) )
+                (void)_document.setBindingTrigger( action, bindIndex, value );
             if ( EditorSelfTestMarks::isEnabled() )
                 EditorSelfTestMarks::note( ( formatToString( "inputMap.trigger.%#", static_cast<uint64>( option ) ) ).c_str() );
         }
@@ -352,10 +349,10 @@ namespace sw::editor
     void InputMapPanel::drawTriggerOptions( const hashed_string& action, uint32 bindIndex, const ActionBinding& binding, float32 rightEdgeX )
     {
         // 바인딩마다 발화 시간(초)과 값 부호 뒤집기. 시간을 쓰지 않는 트리거(Pressed 등)면 시간 필드는 숨긴다.
-        InputMap&     inputMap      = _document.editInputMap();
-        const float32 effectiveTime = inputMap.getEffectiveTriggerTime( binding );
-        const bool    bUsesTime     = effectiveTime > 0.0f;
-        const bool    bUsesTaps     = binding._trigger == ActionTrigger::MultiTap;
+        const InputMap& inputMap      = _document.getInputMap();
+        const float32   effectiveTime = inputMap.getEffectiveTriggerTime( binding );
+        const bool      bUsesTime     = effectiveTime > 0.0f;
+        const bool      bUsesTaps     = binding._trigger == ActionTrigger::MultiTap;
         // 시간 · 횟수 필드가 필요하거나 Negate 가 남은 폭에 안 들어가면 패널 오른쪽 밖으로 잘린다 — 콤보와 같은 열 위치에서 시작하는 다음 줄로 내린다.
         const float32 negateWidth       = ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize( "Negate" ).x;
         const bool    bNegateFits       = ImGui::GetItemRectMax().x + ImGui::GetStyle().ItemSpacing.x + negateWidth <= rightEdgeX;
@@ -373,8 +370,8 @@ namespace sw::editor
                 ImGui::SameLine();
             bLineStart = false;
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
-            if ( ImGui::DragFloat( "##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f s" ) && inputMap.setBindingTriggerTime( action, bindIndex, editTime ) )
-                markDocumentDirty();
+            if ( ImGui::DragFloat( "##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f s" ) )
+                (void)_document.setBindingTriggerTime( action, bindIndex, editTime );
         }
         // MultiTap 만 누름 횟수를 고른다(2 이상).
         if ( bUsesTaps )
@@ -384,14 +381,14 @@ namespace sw::editor
                 ImGui::SameLine();
             bLineStart = false;
             ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldTinyEm" ) );
-            if ( ImGui::DragInt( "##taps", &editTaps, 0.1f, 2, 9, "%d taps" ) && inputMap.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) ) )
-                markDocumentDirty();
+            if ( ImGui::DragInt( "##taps", &editTaps, 0.1f, 2, 9, "%d taps" ) )
+                (void)_document.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) );
         }
         bool bNegate = binding._bNegate;
         if ( bLineStart == false )
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "Negate" ) ) );
-        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Negate" ), &bNegate ) && inputMap.setBindingNegate( action, bindIndex, bNegate ) )
-            markDocumentDirty();
+        if ( ImGui::Checkbox( SW_LOCKEY( "EdLabel", "Negate" ), &bNegate ) )
+            (void)_document.setBindingNegate( action, bindIndex, bNegate );
     }
 
     void InputMapPanel::drawActionConflicts( const hashed_string& action )
@@ -419,8 +416,8 @@ namespace sw::editor
                 _document.beginKeyCapture( bIsA ? conflict._bindIndexA : conflict._bindIndexB );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "RebindThisTip" ) );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "UnbindOther" ) ) );
-            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "UnbindOther" ) ) && _document.editInputMap().rebindKey( other, Key::Unknown, otherIndex ) )
-                markDocumentDirty();
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdText", "UnbindOther" ) ) )
+                (void)_document.unbind( other, otherIndex );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "UnbindOtherTip" ) );
             ImGui::PopID();
         }
@@ -466,7 +463,7 @@ namespace sw::editor
 
     void InputMapPanel::drawLayerList()
     {
-        InputMap&                    inputMap  = _document.editInputMap();
+        const InputMap&              inputMap  = _document.getInputMap();
         const vector<hashed_string>& listLayer = inputMap.getLayerNames();
 
         if ( ImGui::CollapsingHeader( SW_LOCKEY( "EdSection", "InputLayers" ) ) )
@@ -486,8 +483,7 @@ namespace sw::editor
                     bool bEnabled = inputMap.isLayerEnabled( layerName );
                     if ( ImGui::Checkbox( "##Enabled", &bEnabled ) )
                     {
-                        inputMap.setLayerEnabled( sw::hashed_string( layerName.view() ), bEnabled );
-                        markDocumentDirty();
+                        _document.setLayerEnabled( sw::hashed_string( layerName.view() ), bEnabled );
                     }
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "LayerEnabledTip" ) );
                     ImGui::PopID();
@@ -526,7 +522,6 @@ namespace sw::editor
             if ( ImGui::Button( SW_LOCKEY( "EdText", "CreateAction" ) ) && _document.createAction( _newActionName, _newActionValueType ) )
             {
                 _newActionName = "";
-                markDocumentDirty();
             }
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "CreateActionTip" ) );
         }
@@ -549,7 +544,7 @@ namespace sw::editor
             const Key pressedKey = ImGuiKeyForward::findPressedKey();
             if ( pressedKey != Key::Unknown )
             {
-                finishKeyCapture( pressedKey );
+                (void)_document.finishKeyCapture( pressedKey );
                 ImGui::CloseCurrentPopup();
             }
 
@@ -564,7 +559,7 @@ namespace sw::editor
                     if ( ImGui::Button( pKeyName, EditorChrome::measureTextExtent( EditorTextExtent::ofText( 11.0f, 1.25f ) ) ) )
 
                     {
-                        finishKeyCapture( key );
+                        (void)_document.finishKeyCapture( key );
                         ImGui::CloseCurrentPopup();
                         break;
                     }
@@ -581,12 +576,6 @@ namespace sw::editor
             }
             ImGui::EndPopup();
         }
-    }
-
-    void InputMapPanel::finishKeyCapture( sw::Key newKey )
-    {
-        if ( _document.finishKeyCapture( newKey ) )
-            markDocumentDirty();
     }
 
     void InputMapPanel::drawDeviceMonitorTab()
@@ -1001,16 +990,20 @@ namespace sw::editor
 
     void InputMapPanel::reloadFromFile()
     {
-        if ( _document.reload() )
-            clearDocumentDirty();
+        (void)_document.reload(); // 실패는 문서가 알리고 편집 중인 바인딩 · 표시는 그대로다
     }
 
     bool InputMapPanel::saveToFile()
     {
-        if ( _document.save() == false )
-            return false;
-        clearDocumentDirty();
-        return true;
+        return _document.save();
+    }
+
+    void InputMapPanel::syncDocumentDirty()
+    {
+        if ( _document.isDirty() )
+            markDocumentDirty();
+        else
+            clearDocumentDirty();
     }
 
     bool InputMapPanel::saveDocument()

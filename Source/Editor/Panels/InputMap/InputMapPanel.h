@@ -93,9 +93,8 @@ namespace sw::editor
         void drawCaptureModal();
         void drawGamepadStickVisualizer( const utf8* pLabel, float32 stickX, float32 stickY, float32 deadzone );
 
-        /** @brief 잡은 키로 바인딩을 바꾸고, 바꿨으면 dirty 를 올립니다. */
-        void finishKeyCapture( sw::Key newKey );
         /** @brief 맵 파일을 다시 읽고, 읽었으면 dirty 를 내립니다. */
+        void syncDocumentDirty() override;
         void reloadFromFile();
         /** @brief 맵 파일에 쓰고, 썼으면 dirty 를 내립니다. */
         [[nodiscard]] bool saveToFile();
