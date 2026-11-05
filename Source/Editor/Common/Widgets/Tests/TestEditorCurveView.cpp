@@ -35,3 +35,16 @@ SW_TEST_CASE( EditorCurveViewTest, ValueRangeIncludesOvershoot )
     FloatCurve empty;
     SW_EXPECT_FALSE( EditorCurveView::computeValueRange( empty, minValue, maxValue ) );
 }
+
+// 키 시각은 이웃 키를 넘지 못한다.
+SW_TEST_CASE( EditorCurveViewTest, KeyTimeStaysBetweenNeighbours )
+{
+    sw::FloatCurve curve;
+    (void)curve.addKey( 0.0f, 0.0f );
+    (void)curve.addKey( 1.0f, 0.0f );
+    (void)curve.addKey( 2.0f, 0.0f );
+    SW_EXPECT_TRUE( sw::editor::EditorCurveView::clampKeyTime( curve, 1, 5.0f ) < 2.0f );
+    SW_EXPECT_TRUE( sw::editor::EditorCurveView::clampKeyTime( curve, 1, -5.0f ) > 0.0f );
+    SW_EXPECT_EQUAL( 1.5f, sw::editor::EditorCurveView::clampKeyTime( curve, 1, 1.5f ) );
+    SW_EXPECT_EQUAL( 9.0f, sw::editor::EditorCurveView::clampKeyTime( curve, 2, 9.0f ) );
+}

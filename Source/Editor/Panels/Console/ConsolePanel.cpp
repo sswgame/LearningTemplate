@@ -198,15 +198,6 @@ namespace sw::editor
                 outReply = formatToString( "logged %# lines", count );
                 return true;
             }
-
-            static const utf8* levelName( LogLevel level )
-            {
-                static constexpr const utf8* kArrNames[] = { "Error", "Warning", "Info", "Trace" };
-                const uint8                  index       = static_cast<uint8>( level );
-                if ( index >= 4 )
-                    return "Info";
-                return kArrNames[index];
-            }
         };
     } // namespace
 } // namespace sw::editor
@@ -451,7 +442,7 @@ namespace sw::editor
             for ( const LogEntry* pEntry : _listVisible )
             {
                 if ( pEntry != nullptr )
-                    allLogs += formatEntryLine( *pEntry ) + "\n";
+                    allLogs += ConsoleLogRows::formatEntryLine( *pEntry ) + "\n";
             }
             ImGui::SetClipboardText( allLogs.c_str() );
         }
@@ -560,7 +551,7 @@ namespace sw::editor
         if ( entry._level != LogLevel::Info )
         {
             ImGui::SameLine( 0.0f, 0.0f );
-            ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), " %s:", ConsolePanelInternal::levelName( entry._level ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( ConsolePanelInternal::colorForLevel( entry._level ) ), " %s:", ConsoleLogRows::levelName( entry._level ) );
         }
         ImGui::SameLine( 0.0f, 0.0f );
         ImGui::TextUnformatted( " " );
@@ -605,9 +596,7 @@ namespace sw::editor
             ImGui::SetClipboardText( entry._message.c_str() );
         if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "CopyFullLogLine" ) ) )
         {
-            string full = formatEntryLine( entry );
-            if ( entry._file.empty() == false )
-                full += formatToString( " (%#:%#)", entry._file, entry._line );
+            const string full = ConsoleLogRows::formatEntryLineWithSource( entry );
             ImGui::SetClipboardText( full.c_str() );
         }
         fixed_string<constant::buffer::kMax64> copySelectedLabel;
@@ -670,11 +659,6 @@ namespace sw::editor
         _bHasNewLogs = SW_FALSE;
     }
 
-    string ConsolePanel::formatEntryLine( const LogEntry& entry )
-    {
-        return "[" + entry._timeStamp + "] [" + entry._tag + "] [" + ConsolePanelInternal::levelName( entry._level ) + "] - " + entry._message;
-    }
-
     void ConsolePanel::copySelectedRows() const
     {
         _uiThread.assumeHeld(); // 패널을 그리는 UI 스레드에서 불린다
@@ -683,7 +667,7 @@ namespace sw::editor
         string text;
         for ( uint32 rowIndex = _selection.getFirst(); rowIndex <= _selection.getLast() && rowIndex < _listRow.size(); ++rowIndex )
         {
-            text += formatEntryLine( *_listRow[rowIndex]._pEntry );
+            text += ConsoleLogRows::formatEntryLine( *_listRow[rowIndex]._pEntry );
             text += "\n";
         }
         ImGui::SetClipboardText( text.c_str() );

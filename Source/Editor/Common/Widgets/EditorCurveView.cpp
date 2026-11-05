@@ -144,6 +144,16 @@ namespace sw::editor
         _valueMax += valueShift;
     }
 
+    float32 EditorCurveView::clampKeyTime( const FloatCurve& curve, uint32 index, float32 time )
+    {
+        constexpr float32 kGap = 1e-3f;
+        if ( index > 0 )
+            time = MathUtil::max( time, curve._listKey[index - 1]._time + kGap );
+        if ( index + 1 < curve._listKey.size() )
+            time = MathUtil::min( time, curve._listKey[index + 1]._time - kGap );
+        return time;
+    }
+
     float32 EditorCurveView::computeGridStep( float32 span, float32 pixels, float32 minPixels )
     {
         const bool bInvalidGridInputs = span <= 0.0f || pixels <= 0.0f || minPixels <= 0.0f;

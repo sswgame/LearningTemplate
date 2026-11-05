@@ -41,7 +41,6 @@ namespace sw::editor
             /** @brief 시나리오가 있는 폴더 이름입니다(`<영역>/automation/`). */
             static constexpr const utf8* kAutomationFolder = "/automation/";
             /** @brief 에디터 시나리오 폴더입니다 — 이 아래는 `-EnableEditor` 로 띄운다. */
-            static constexpr const utf8* kEditorScenarioFolder = "/automation/editor/";
 
             static const ImVec4 kPassColor;
             static const ImVec4 kFailColor;
@@ -258,17 +257,11 @@ namespace sw::editor
         if ( ImGui::Button( SW_LOCKEY( "EdText", "RunScenario" ) ) && bScenarioChosen )
         {
             const string& scenarioPath = _listScenarioPath[_selectedScenarioIndex];
-            const bool    bEditor      = ( "/" + scenarioPath ).find( TestRunnerPanelInternal::kEditorScenarioFolder ) != string::npos;
             // 에디터 상태 폴더는 주지 않는다 — 시나리오 실행은 자식 프로세스가 자기 폴더를 비우고 쓴다(`EditorPaths::prepareAutomationStateDirectory`).
             const std::optional<AbsolutePath> executable      = AbsolutePath::tryMake( FileUtil::getExecutablePath() );
             ProcessCommand                    command         = executable.has_value() ? ProcessCommand::at( *executable, {} ) : ProcessCommand{};
-            const string                      backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백을 뗀 글이 인자 하나다
-            if ( backendArgument.empty() == false )
-                command._listArgument.push_back( backendArgument.substr( 1 ) );
-            if ( bEditor )
-                command._listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::ENABLE_EDITOR ) ) );
-            command._listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::SCENARIO ) ) + "=" + scenarioPath );
-            command._listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) ) );
+            const string                      backendArgument = TestRunnerPanelInternal::makeBackendArgument(); // " -dx12" 꼴 — 앞 공백 · 줄표를 뗀다
+            command._listArgument                             = EditorTestOutputParser::makeScenarioArguments( scenarioPath, backendArgument.empty() ? string_view{} : string_view( backendArgument ).substr( 2 ) );
             if ( _pJob->request( command, TestRunnerPanelInternal::getBinDirectory() ) )
             {
                 _externalRunKind = ExternalRunKind::Scenario;

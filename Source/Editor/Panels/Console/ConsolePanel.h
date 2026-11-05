@@ -102,8 +102,6 @@ namespace sw::editor
         }
         /** @brief 보관 중인 로그를 모두 지웁니다. Clear 버튼과 Clear on Play 가 부릅니다. */
         void clearEntries();
-        /** @brief 한 행의 전체 문자열(시각, 태그, 수준, 메시지)을 만듭니다. 복사가 씁니다. */
-        static string formatEntryLine( const LogEntry& entry );
         /** @brief 선택한 행을 클립보드에 복사합니다. 접힌 행은 한 번만 복사합니다. */
         void copySelectedRows() const;
         /** @brief 로그 파일 폴더에서 가장 최근 파일을 파일 탐색기로 엽니다. */

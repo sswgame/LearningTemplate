@@ -48,6 +48,8 @@ namespace sw::editor
         void pan( const float2& delta );
 
         /** @brief 범위 @p span 을 @p pixels 픽셀에 그릴 때 줄 사이가 @p minPixels 이상인 1 · 2 · 5 × 10^n 간격입니다. */
+        /** @brief 키 @p index 의 시각을 이웃 키 사이로 묶습니다 — 순서가 뒤집히지 않습니다. */
+        static float32 clampKeyTime( const FloatCurve& curve, uint32 index, float32 time );
         static float32 computeGridStep( float32 span, float32 pixels, float32 minPixels );
         /**
          * @brief @p curve 가 지나는 값의 최소 · 최대입니다(키 값에 64 개 표본을 더해 키 사이 곡선의 넘침까지 담는다). 키가 없으면 false 입니다.

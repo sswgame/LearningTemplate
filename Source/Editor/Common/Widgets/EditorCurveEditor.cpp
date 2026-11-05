@@ -103,17 +103,6 @@ namespace sw::editor
                 }
             }
 
-            /** @brief 키 @p index 의 시각을 이웃 키 사이로 묶습니다 — 끄는 동안 순서가 바뀌지 않게(언리얼도 키가 이웃을 넘지 못한다). */
-            static float32 clampKeyTime( const FloatCurve& curve, uint32 index, float32 time )
-            {
-                constexpr float32 kGap = 1e-3f;
-                if ( index > 0 )
-                    time = MathUtil::max( time, curve._listKey[index - 1]._time + kGap );
-                if ( index + 1 < curve._listKey.size() )
-                    time = MathUtil::min( time, curve._listKey[index + 1]._time - kGap );
-                return time;
-            }
-
             /** @brief 고른 키의 시각 · 값 · 보간 칸입니다. 입력을 마쳤으면 true 입니다. */
             static bool drawSelectedKeyFields( EditorCurveEditorState& state )
             {
@@ -135,7 +124,7 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorTip", "CurveKeyTime" ) );
                 if ( ImGui::IsItemDeactivatedAfterEdit() )
                 {
-                    key._time = clampKeyTime( curve, state._selectedKey, key._time );
+                    key._time = EditorCurveView::clampKeyTime( curve, state._selectedKey, key._time );
                     bFinished = true;
                 }
                 ImGui::SameLine();
@@ -267,7 +256,7 @@ namespace sw::editor
                     float32        value{ 0.0f };
                     view.toCurve( mouse, time, value );
                     if ( pointer.hasModifier( ModifierKey::Ctrl ) == false )
-                        key._time = clampKeyTime( curve, state._selectedKey, time ); // Ctrl = 값만
+                        key._time = EditorCurveView::clampKeyTime( curve, state._selectedKey, time ); // Ctrl = 값만
                     if ( pointer.hasModifier( ModifierKey::Shift ) == false )
                         key._value = value; // Shift = 시간만
                     curve.sortAndComputeAutoTangents();

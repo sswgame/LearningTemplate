@@ -2,6 +2,7 @@
 
 #include "Editor/SelfTest/EditorTestOutputParser.h"
 
+#include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 
@@ -149,6 +150,19 @@ namespace sw::editor
     {
         const size_t dot = caseName.find( '.' );
         return dot == string_view::npos ? caseName : caseName.substr( 0, dot );
+    }
+
+    vector<string> EditorTestOutputParser::makeScenarioArguments( string_view scenarioPath, string_view backendFlag )
+    {
+        const bool     bEditor = ( "/" + string( scenarioPath ) ).find( "/automation/editor/" ) != string::npos;
+        vector<string> listArgument;
+        if ( backendFlag.empty() == false )
+            listArgument.push_back( "-" + string( backendFlag ) );
+        if ( bEditor )
+            listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::ENABLE_EDITOR ) ) );
+        listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::SCENARIO ) ) + "=" + string( scenarioPath ) );
+        listArgument.push_back( "-" + string( getCommandLineArgumentSpelling( CommandLineArgument::UNATTENDED ) ) );
+        return listArgument;
     }
 
     string EditorTestOutputParser::makeFilter( const vector<string>& listCase )

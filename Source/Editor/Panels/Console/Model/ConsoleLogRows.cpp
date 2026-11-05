@@ -7,6 +7,28 @@
 
 namespace sw::editor
 {
+    const utf8* ConsoleLogRows::levelName( LogLevel level )
+    {
+        static constexpr const utf8* kArrNames[] = { "Error", "Warning", "Info", "Trace" };
+        const uint8                  index       = static_cast<uint8>( level );
+        if ( index >= 4 )
+            return "Info";
+        return kArrNames[index];
+    }
+
+    string ConsoleLogRows::formatEntryLine( const LogEntry& entry )
+    {
+        return "[" + entry._timeStamp + "] [" + entry._tag + "] [" + levelName( entry._level ) + "] - " + entry._message;
+    }
+
+    string ConsoleLogRows::formatEntryLineWithSource( const LogEntry& entry )
+    {
+        string full = formatEntryLine( entry );
+        if ( entry._file.empty() == false )
+            full += formatToString( " (%#:%#)", entry._file, entry._line );
+        return full;
+    }
+
     void ConsoleLogRows::populate( const vector<const LogEntry*>& listVisible, bool bCollapse, vector<ConsoleLogRow>& outListRow )
     {
         outListRow.clear();

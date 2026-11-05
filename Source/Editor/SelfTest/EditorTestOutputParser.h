@@ -45,5 +45,7 @@ namespace sw::editor
         static string_view findSuiteName( string_view caseName );
         /** @brief @p listCase 를 `--test_filter=` 값(`A.B:C.D`)으로 잇습니다. */
         static string makeFilter( const vector<string>& listCase );
+        /** @brief 시나리오 한 편을 자식 프로세스로 돌릴 인자입니다. @p backendFlag 는 "dx12" 꼴이고 비어도 됩니다. 에디터 시나리오면 에디터를 켭니다. */
+        static vector<string> makeScenarioArguments( string_view scenarioPath, string_view backendFlag );
     };
 } // namespace sw::editor
