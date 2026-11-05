@@ -203,16 +203,16 @@ SW_TEST_CASE( KartTrackTest, Projection )
     SW_EXPECT_TRUE( track.isOnRoad( KartTestUtil::makeOffsetPoint( track, 150.0f, 5.5f ) ) );
     SW_EXPECT_FALSE( track.isOnRoad( KartTestUtil::makeOffsetPoint( track, 150.0f, 6.5f ) ) );
 
-    const sw::float3 far = track.sample( 300.0f )._position;
-    SW_EXPECT_NEAR( 300.0f, track.project( far, 290.0f, 30.0f )._distance, 1.0f );
-    const float32 hinted = track.project( far, 0.0f, 20.0f )._distance; // 맞는 자리가 범위 밖이면 범위 안의 답이다
+    const sw::float3 opposite = track.sample( 300.0f )._position;
+    SW_EXPECT_NEAR( 300.0f, track.project( opposite, 290.0f, 30.0f )._distance, 1.0f );
+    const float32 hinted = track.project( opposite, 0.0f, 20.0f )._distance; // 맞는 자리가 범위 밖이면 범위 안의 답이다
     SW_EXPECT_TRUE( sw::MathUtil::abs( track.computeSignedGap( 0.0f, hinted ) ) < 40.0f );
-    SW_EXPECT_NEAR( 300.0f, track.project( far, 0.0f, track.getLength() )._distance, 1.0f ); // 범위가 크면 전체를 본다
-    SW_EXPECT_NEAR( 300.0f, track.project( far, 0.0f, -1.0f )._distance, 1.0f );
+    SW_EXPECT_NEAR( 300.0f, track.project( opposite, 0.0f, track.getLength() )._distance, 1.0f ); // 범위가 크면 전체를 본다
+    SW_EXPECT_NEAR( 300.0f, track.project( opposite, 0.0f, -1.0f )._distance, 1.0f );
 
     sw::KartTrack empty;
     SW_EXPECT_FALSE( empty.isValid() );
-    SW_EXPECT_NEAR( 0.0f, empty.project( far )._distance, kKartTolerance );
+    SW_EXPECT_NEAR( 0.0f, empty.project( opposite )._distance, kKartTolerance );
     SW_EXPECT_NEAR( 0.0f, empty.wrapDistance( 50.0f ), kKartTolerance );
     SW_EXPECT_NEAR( 1.0f, empty.sampleSpeedScale( 0.0f, 0.0f ), kKartTolerance );
 }
