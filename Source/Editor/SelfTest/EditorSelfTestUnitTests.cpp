@@ -22,7 +22,7 @@ namespace sw::editor
             static constexpr size_t kMaxReportedFailure = 8;
 
             /**
-             * @brief 에디터 · 편집기 플러그인 · 키트 에디터 확장(`Kits/**/Editor/`) 폴더에서 정의한 케이스를 모두 돌린다. 하나라도 지면 실패다.
+             * @brief 에디터 · 편집기 플러그인 · 키트 에디터 확장(`Kits` 아래 `Editor` 폴더)에서 정의한 케이스를 모두 돌린다. 하나라도 지면 실패다.
              * @details 실패 사유를 이 실패 메시지에 싣는다 — 시나리오 자식은 표준 출력을 남기지 않아, 실행기의 `[ FAIL ]` 줄만으로는 로그에 사유가 없었다.
              */
             static EditorSelfTestStep runEditorUnitTests( EditorSelfTestContext& context )

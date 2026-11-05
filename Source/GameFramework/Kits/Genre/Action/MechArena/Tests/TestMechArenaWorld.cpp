@@ -665,18 +665,18 @@ SW_TEST_CASE_F( MechArenaRulesTest, EliminatedTeamRetiresWhileTheMatchGoesOn )
 SW_TEST_CASE_F( MechArenaRulesTest, MechSwapWaitsForTheNextSortie )
 {
     SW_REQUIRE_TRUE( open() );
-    SW_REQUIRE_TRUE( addPilot( 0, float3{}, { hashed_string( "plain" ), hashed_string( "gunner" ), hashed_string( "heavy" ) } ) == 0 );
+    SW_REQUIRE_TRUE( addPilot( 0, float3{}, { hashed_string( "sniper" ), hashed_string( "gunner" ), hashed_string( "heavy" ) } ) == 0 );
     SW_REQUIRE_TRUE( addPilot( 1, float3{ 0.0f, 0.0f, 10.0f }, { hashed_string( "gunner" ) } ) == 1 );
     _world.start();
-    SW_EXPECT_EQUAL( 400, _world.getTeamGauge( 0 ) ); // 첫 기체(plain) 코스트 x 2
+    SW_EXPECT_EQUAL( 600, _world.getTeamGauge( 0 ) ); // 첫 기체(sniper) 코스트 x 2
     SW_EXPECT_TRUE( _world.requestMechSwap( 0, 1 ) == MechSwapResult::NotDestroyed );
     SW_EXPECT_TRUE( _world.requestMechSwap( 99, 1 ) == MechSwapResult::InvalidSlot );
 
     kill( 1, 0 );
-    SW_EXPECT_EQUAL( 200, _world.getTeamGauge( 0 ) );
+    SW_EXPECT_EQUAL( 300, _world.getTeamGauge( 0 ) );
     SW_EXPECT_TRUE( _world.requestMechSwap( 0, 9 ) == MechSwapResult::InvalidSlot );
     SW_EXPECT_TRUE( _world.requestMechSwap( 0, -1 ) == MechSwapResult::InvalidSlot );
-    SW_EXPECT_TRUE( _world.requestMechSwap( 0, 2 ) == MechSwapResult::OverCost ); // 900 > 남은 200
+    SW_EXPECT_TRUE( _world.requestMechSwap( 0, 2 ) == MechSwapResult::OverCost ); // 900 > 남은 300
     SW_EXPECT_TRUE( _world.requestMechSwap( 0, 1 ) == MechSwapResult::Ok );
     SW_EXPECT_EQUAL( 1, countEvents( MechArenaEvent::Kind::MechSwapped ) );
     SW_EXPECT_EQUAL( 0, pilot( 0 )._deckIndex );
@@ -685,7 +685,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, MechSwapWaitsForTheNextSortie )
     MechArenaSnapshot snapshot;
     _world.makeSnapshot( snapshot ); // 옛 기체에는 무기가 없고 새 기체의 0 번은 주무기다
     SW_REQUIRE_EQUAL( size_t( 2 ), snapshot._listPilot.size() );
-    SW_EXPECT_EQUAL( _mechs.findMechIndex( hashed_string( "plain" ) ), snapshot._listPilot[0]._mechIndex );
+    SW_EXPECT_EQUAL( _mechs.findMechIndex( hashed_string( "sniper" ) ), snapshot._listPilot[0]._mechIndex );
     SW_EXPECT_EQUAL( 0, snapshot._listPilot[0]._magazineAmmo );
 
     const vector<uint8> listSaved = writeBytes( _world );
@@ -695,11 +695,11 @@ SW_TEST_CASE_F( MechArenaRulesTest, MechSwapWaitsForTheNextSortie )
     SW_EXPECT_TRUE( pilot( 0 )._state == MechPilotState::Active );
     SW_EXPECT_EQUAL( 1, pilot( 0 )._deckIndex );
     SW_EXPECT_TRUE( pilot( 0 ).getMech()->_id == hashed_string( "gunner" ) );
-    SW_EXPECT_EQUAL( size_t( 3 ), pilot( 0 )._listWeaponState.size() );
+    SW_REQUIRE_EQUAL( size_t( 3 ), pilot( 0 )._listWeaponState.size() );
     SW_EXPECT_EQUAL( 3, pilot( 0 )._listWeaponState[0].getMagazineAmmo() );
 
-    kill( 1, 0 ); // 바뀐 기체의 코스트가 빠진다. 300 > 200 이라 팀이 진다
-    SW_EXPECT_EQUAL( -100, _world.getMatch().findTeam( 0 )->_costPool );
+    kill( 1, 0 ); // 바뀐 기체의 코스트가 빠진다. 게이지가 바닥나 팀이 진다
+    SW_EXPECT_EQUAL( 0, _world.getMatch().findTeam( 0 )->_costPool );
     step( 1 );
     SW_EXPECT_EQUAL( 1, _world.getMatch().getWinningTeam() );
 }

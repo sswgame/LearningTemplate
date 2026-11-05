@@ -91,7 +91,7 @@ namespace sw::test
             int32             count = 0;
             for ( const Statement& statement : _listStatement )
             {
-                if ( statement._sql.find( fragment ) != string::npos )
+                if ( statement._sql.find( string( fragment ) ) != string::npos )
                     ++count;
             }
             return count;
