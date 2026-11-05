@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -64,17 +65,6 @@ namespace
 
     struct AdventureDungeonTestUtil
     {
-        static int32 countEvents( const sw::vector<sw::AdventureDungeonEvent>& listEvent, sw::AdventureDungeonEventType type )
-        {
-            int32 count = 0;
-            for ( const sw::AdventureDungeonEvent& event : listEvent )
-            {
-                if ( event._type == type )
-                    ++count;
-            }
-            return count;
-        }
-
         /** @brief 던전 하나짜리 바이트를 씁니다(장치 없음 또는 @p deviceCount 개, 모두 @p litCount). */
         static void writeOneDungeon( sw::Archive& outArchive, const sw::hashed_string& dungeonID, int32 smallKeys, uint8 bBossKey, uint32 deviceCount, int32 litCount )
         {
@@ -131,7 +121,7 @@ SW_TEST_CASE( AdventureDungeonTest, SmallKeysOpenDoorsAndBelongToOneDungeon )
 
     sw::vector<sw::AdventureDungeonEvent> listEvent;
     state.drainEvents( listEvent );
-    SW_EXPECT_EQUAL( 2, AdventureDungeonTestUtil::countEvents( listEvent, sw::AdventureDungeonEventType::DoorOpened ) );
+    SW_EXPECT_EQUAL( 2, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventType::DoorOpened ) );
 }
 
 /**
@@ -261,7 +251,7 @@ SW_TEST_CASE( AdventureDungeonTest, SwitchesStayOn )
 
     sw::vector<sw::AdventureDungeonEvent> listEvent;
     state.drainEvents( listEvent );
-    SW_EXPECT_EQUAL( 1, AdventureDungeonTestUtil::countEvents( listEvent, sw::AdventureDungeonEventType::DeviceActivated ) );
+    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventType::DeviceActivated ) );
 }
 
 /**
@@ -290,8 +280,8 @@ SW_TEST_CASE( AdventureDungeonTest, TimedSwitchExpiresAndRestarts )
 
     sw::vector<sw::AdventureDungeonEvent> listEvent;
     state.drainEvents( listEvent );
-    SW_EXPECT_EQUAL( 1, AdventureDungeonTestUtil::countEvents( listEvent, sw::AdventureDungeonEventType::DeviceActivated ) );
-    SW_EXPECT_EQUAL( 1, AdventureDungeonTestUtil::countEvents( listEvent, sw::AdventureDungeonEventType::DeviceDeactivated ) );
+    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventType::DeviceActivated ) );
+    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventType::DeviceDeactivated ) );
 }
 
 /**
@@ -347,7 +337,7 @@ SW_TEST_CASE( AdventureDungeonTest, TorchGroupsNeedAllTorchesInTime )
     SW_EXPECT_EQUAL( 0, state.getLitTorchCount( kForest, kTorches ) );
     sw::vector<sw::AdventureDungeonEvent> listEvent;
     state.drainEvents( listEvent );
-    SW_EXPECT_EQUAL( 1, AdventureDungeonTestUtil::countEvents( listEvent, sw::AdventureDungeonEventType::TorchesFailed ) );
+    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::AdventureDungeonEvent::_type>( listEvent, sw::AdventureDungeonEventType::TorchesFailed ) );
 
     SW_EXPECT_TRUE( state.lightTorch( kForest, kTorches, flags ) );
     state.update( 2.0f, flags ); // 첫 불에서 시간이 다시 시작한다

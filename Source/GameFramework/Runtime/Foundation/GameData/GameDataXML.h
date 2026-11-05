@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -75,13 +76,18 @@ namespace sw
             return XMLCatalogLoader::loadText( &call, &RootCallWithContext<TLoader, TResult, TContext>::invoke, xmlText, sourceName, pRootName );
         }
 
-        /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류면 더하지 않고 false 입니다. 같은 id 는 카탈로그가 알리고 뒤의 것을 버립니다. */
+        /** @brief 원소 하나를 스키마 @p TDef 로 읽어 카탈로그에 더합니다. 스키마 오류나 겹친 id 면 더하지 않고 false 입니다(오타 하나가 앞 정의를 말없이 덮어쓰지 않게 한다). */
         template <typename TDef>
         [[nodiscard]] static bool readInto( const XMLNode& node, string_view sourceName, GameCatalog<TDef>& outCatalog )
         {
             TDef def;
             if ( XMLFields::readFields( node, def, sourceName ) == false )
                 return false;
+            if ( outCatalog.find( def._id ) != nullptr )
+            {
+                SW_LOG_ERROR_ID( "GameDataXML.DuplicateID", "%#: id '%#' is defined twice", sourceName, def._id );
+                return false;
+            }
             (void)outCatalog.add( def );
             return true;
         }

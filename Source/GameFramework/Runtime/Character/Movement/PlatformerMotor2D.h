@@ -128,6 +128,8 @@ namespace sw
         PlatformerMotor2D();
 
         void setSettings( const PlatformerSettings& settings );
+        /** @brief 수치만 바꿉니다. 남은 공중 점프 · 대시는 그대로 두고 새 상한 위로만 줄입니다 — 활공처럼 공중에서 켜고 끄는 조정이 횟수를 채우면 무한 공중 점프가 된다. */
+        void changeTuning( const PlatformerSettings& settings );
         void setPosition( const float2& position );
         void setVelocity( const float2& velocity ) { _velocity = velocity; }
         /** @brief 넉백이나 튕기기입니다. 속도를 더하고 대시를 끊습니다. */

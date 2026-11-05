@@ -519,9 +519,7 @@ namespace sw
             archive >> bAlive;
             if ( archive.isError() || actor._defIndex >= defCount || bAlive > SW_TRUE )
                 return false;
-            // NaN 체력은 깎여도 0 이하가 되지 않아 죽지 않는 적이 된다.
-            const bool bActorValid = MathUtil::isFinite( actor._position._x ) && MathUtil::isFinite( actor._position._y ) && 0.0f <= actor._hp &&
-                                     actor._hp <= static_cast<float32>( restored._listMonsterDef[actor._defIndex]._stats._maxHP );
+            const bool bActorValid = 0.0f <= actor._hp && actor._hp <= static_cast<float32>( restored._listMonsterDef[actor._defIndex]._stats._maxHP );
             if ( bActorValid == false )
                 return false;
             actor._bAlive = bAlive;
@@ -542,8 +540,7 @@ namespace sw
             archive >> projectile._radius;
             archive >> projectile._damage;
             archive >> bAlive;
-            const bool bProjectileValid = archive.isOk() && bAlive <= SW_TRUE && MathUtil::isFinite( projectile._position._x ) && MathUtil::isFinite( projectile._position._y ) &&
-                                          MathUtil::isFinite( projectile._velocity._x ) && MathUtil::isFinite( projectile._velocity._y ) && 0.0f <= projectile._radius && 0 <= projectile._damage;
+            const bool bProjectileValid = archive.isOk() && bAlive <= SW_TRUE && 0.0f <= projectile._radius && 0 <= projectile._damage;
             if ( bProjectileValid == false )
                 return false;
             projectile._bAlive = bAlive;

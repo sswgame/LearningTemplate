@@ -235,7 +235,7 @@ namespace sw
         archive >> restored._sinceUse;
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._overheatPenalty );
         archive >> restored._bLocked;
-        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._value && restored._bLocked <= SW_TRUE;
+        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._value && restored._value <= restored.getMax() && restored._bLocked <= SW_TRUE;
         if ( bValid == false )
             return false;
         *this = restored;

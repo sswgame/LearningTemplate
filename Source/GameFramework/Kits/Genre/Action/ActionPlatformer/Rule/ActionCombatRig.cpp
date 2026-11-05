@@ -330,10 +330,8 @@ namespace sw
             archive >> projectile._id;
             archive >> team;
             archive >> projectile._bReflected;
-            // id 는 다음 id 아래여야 새 탄과 겹치지 않고, 수치가 깨지면 칸 계산(`computeTileX`)과 수명 비교가 망가진다.
-            const bool bFinite = MathUtil::isFinite( projectile._position._x ) && MathUtil::isFinite( projectile._position._y ) && MathUtil::isFinite( projectile._velocity._x ) &&
-                                 MathUtil::isFinite( projectile._velocity._y ) && MathUtil::isFinite( projectile._damage ) && MathUtil::isFinite( projectile._lifetime );
-            const bool bValid = archive.isOk() && bFinite && projectile._id < restored._nextProjectileID && team <= static_cast<uint8>( ActionTeam::Enemy ) && projectile._bReflected <= SW_TRUE;
+            // id 는 다음 id 아래여야 새 탄과 겹치지 않는다.
+            const bool bValid = archive.isOk() && projectile._id < restored._nextProjectileID && team <= static_cast<uint8>( ActionTeam::Enemy ) && projectile._bReflected <= SW_TRUE;
             if ( bValid == false )
                 return false;
             projectile._team = static_cast<ActionTeam>( team );

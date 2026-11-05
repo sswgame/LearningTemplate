@@ -18,20 +18,6 @@ namespace sw
         struct ActionPlatformerCatalogInternal
         {
             static bool isGradeHigher( const ActionGradeDef& lhs, const ActionGradeDef& rhs ) { return lhs._minScore > rhs._minScore; }
-
-            /** @brief 목록에 같은 이름이 둘 있으면 그 이름을 돌려줍니다. 없으면 빈 이름입니다. */
-            static hashed_string findDuplicate( const vector<hashed_string>& listName )
-            {
-                for ( size_t index = 1; index < listName.size(); ++index )
-                {
-                    for ( size_t previous = 0; previous < index; ++previous )
-                    {
-                        if ( listName[previous] == listName[index] )
-                            return listName[index];
-                    }
-                }
-                return hashed_string{};
-            }
         };
     } // namespace
 
@@ -129,10 +115,10 @@ namespace sw
         // 비밀이 겹치면 다 모아도 수집 점수가 만점이 못 되고, 체크포인트가 겹치면 뒤의 것을 영영 지나지 못한다.
         for ( const vector<hashed_string>* pList : { &stage._listCheckpoint, &stage._listSecret } )
         {
-            const hashed_string duplicate = ActionPlatformerCatalogInternal::findDuplicate( *pList );
-            if ( duplicate.empty() == false )
+            const hashed_string* pDuplicate = VectorUtil::findDuplicate( *pList );
+            if ( pDuplicate != nullptr )
             {
-                SW_LOG_ERROR_ID( "ActionPlatformerCatalog.StageDuplicateName", "%#: <Stage id=\"%#\"> lists '%#' twice", sourceName, stage._id.c_str(), duplicate.c_str() );
+                SW_LOG_ERROR_ID( "ActionPlatformerCatalog.StageDuplicateName", "%#: <Stage id=\"%#\"> lists '%#' twice", sourceName, stage._id.c_str(), pDuplicate->c_str() );
                 return false;
             }
         }
@@ -182,10 +168,10 @@ namespace sw
         {
             listStateID.push_back( state._id );
         }
-        const hashed_string duplicateState = ActionPlatformerCatalogInternal::findDuplicate( listStateID );
-        if ( duplicateState.empty() == false )
+        const hashed_string* pDuplicateState = VectorUtil::findDuplicate( listStateID );
+        if ( pDuplicateState != nullptr )
         {
-            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternDuplicateState", "%#: <Pattern id=\"%#\"> has two states named '%#'", sourceName, pattern._id.c_str(), duplicateState.c_str() );
+            SW_LOG_ERROR_ID( "ActionPlatformerCatalog.PatternDuplicateState", "%#: <Pattern id=\"%#\"> has two states named '%#'", sourceName, pattern._id.c_str(), pDuplicateState->c_str() );
             bValid = false;
         }
         // 이어지는 상태 이름이 틀리면 그 패턴을 넣지 않는다(테스트와 에디터가 바로 볼 수 있다).

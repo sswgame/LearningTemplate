@@ -145,6 +145,13 @@ namespace sw
         _airDashesLeft  = settings._airDashCount;
     }
 
+    void PlatformerMotor2D::changeTuning( const PlatformerSettings& settings )
+    {
+        _settings       = settings;
+        _extraJumpsLeft = MathUtil::min( _extraJumpsLeft, settings._extraJumpCount );
+        _airDashesLeft  = MathUtil::min( _airDashesLeft, settings._airDashCount );
+    }
+
     void PlatformerMotor2D::setPosition( const float2& position )
     {
         _position = position;

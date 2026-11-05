@@ -143,8 +143,7 @@ namespace sw
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._evade ) && StateArchiveUtil::readCountdown( archive, restored._invulnerable );
         archive >> state;
         archive >> restored._bHeld;
-        const bool bPositionFinite = MathUtil::isFinite( restored._targetPosition._x ) && MathUtil::isFinite( restored._targetPosition._y ) && MathUtil::isFinite( restored._targetPosition._z );
-        const bool bValid          = bTimerRead && archive.isOk() && bPositionFinite && state <= static_cast<uint8>( AdventureTargetingState::SideHopRight ) && restored._bHeld <= SW_TRUE;
+        const bool bValid = bTimerRead && archive.isOk() && state <= static_cast<uint8>( AdventureTargetingState::SideHopRight ) && restored._bHeld <= SW_TRUE;
         if ( bValid == false )
             return false;
         restored._state = static_cast<AdventureTargetingState>( state );

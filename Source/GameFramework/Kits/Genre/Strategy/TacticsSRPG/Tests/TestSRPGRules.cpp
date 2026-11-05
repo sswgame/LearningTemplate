@@ -236,7 +236,7 @@ SW_TEST_CASE_F( SRPGRulesTest, WeaponStatusAndForecastRefusals )
     SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, sw::SRPGCombat::computeForecast( _field, attacker, 0, ally, forecast ) ); // 아군
     SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, sw::SRPGCombat::computeForecast( _field, attacker, 0, 99, forecast ) );
     SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidTarget, sw::SRPGCombat::computeForecast( _field, 99, 0, closeFoe, forecast ) );
-    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::OutOfRange, sw::SRPGCombat::computeForecast( _field, attacker, 0, distant, forecast ) );
+    SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::OutOfRange, sw::SRPGCombat::computeForecast( _field, attacker, 0, distantFoe, forecast ) );
     SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::OutOfRange, sw::SRPGCombat::computeForecast( _field, attacker, 2, closeFoe, forecast ) );    // 최소 사거리 2
     SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::InvalidWeapon, sw::SRPGCombat::computeForecast( _field, attacker, 3, closeFoe, forecast ) ); // MAP 병기
     SW_EXPECT_EQUAL( sw::SRPGWeaponStatus::Ok, sw::SRPGCombat::computeForecast( _field, attacker, 0, closeFoe, forecast ) );

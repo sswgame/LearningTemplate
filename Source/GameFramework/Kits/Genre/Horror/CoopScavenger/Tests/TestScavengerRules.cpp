@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -108,12 +109,7 @@ namespace
         int32 countEvents( sw::ScavengerEvent::Kind kind )
         {
             _expedition.drainEvents( _listEvent );
-            int32 count = 0;
-            for ( const sw::ScavengerEvent& event : _listEvent )
-            {
-                count += event._kind == kind ? 1 : 0;
-            }
-            return count;
+            return sw::VectorUtil::countBy<&sw::ScavengerEvent::_kind>( _listEvent, kind );
         }
 
         /** @brief 이어진 길을 찾아 그곳까지 한 칸씩 걷습니다. 길이 없으면 false 입니다(시설은 방 셋이라 전수로 찾는다). */

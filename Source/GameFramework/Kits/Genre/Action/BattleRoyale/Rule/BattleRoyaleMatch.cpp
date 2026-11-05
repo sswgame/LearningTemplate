@@ -498,8 +498,7 @@ namespace sw
             archive >> player._knocks;
             archive >> player._downedBy;
             archive >> player._revivingTarget;
-            // 위치가 깨지면 자기장 거리가 NaN 이 되어 원 안팎 판정이 무너진다.
-            const bool bPlayerValid = archive.isOk() && MathUtil::isFinite( player._position._x ) && MathUtil::isFinite( player._position._y ) && 0 <= player._kills && 0 <= player._knocks && -1 <= player._downedBy &&
+            const bool bPlayerValid = archive.isOk() && 0 <= player._kills && 0 <= player._knocks && -1 <= player._downedBy &&
                                       player._downedBy < playerLimit && -1 <= player._revivingTarget && player._revivingTarget < playerLimit;
             if ( bPlayerValid == false )
                 return false;
@@ -524,12 +523,12 @@ namespace sw
                     return false;
                 archive >> item._count;
                 archive >> item._spotIndex;
-                if ( archive.isError() || item._count <= 0 || MathUtil::isFinite( item._position._x ) == false || MathUtil::isFinite( item._position._y ) == false )
+                if ( archive.isError() || item._count <= 0 )
                     return false;
             }
             archive >> drop._position;
             archive >> drop._time;
-            const bool bDropValid = archive.isOk() && MathUtil::isFinite( drop._position._x ) && MathUtil::isFinite( drop._position._y ) && 0.0f <= drop._time;
+            const bool bDropValid = archive.isOk() && 0.0f <= drop._time;
             if ( bDropValid == false )
                 return false;
         }

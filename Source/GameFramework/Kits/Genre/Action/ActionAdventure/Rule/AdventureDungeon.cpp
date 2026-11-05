@@ -19,21 +19,6 @@ namespace sw
     {
         struct AdventureDungeonInternal
         {
-            /** @brief 정의 목록의 id 가 겹치면 그 id 를 돌려줍니다. 없으면 빈 이름입니다. */
-            template <typename TDef>
-            static hashed_string findDuplicateID( const vector<TDef>& listDef )
-            {
-                for ( size_t index = 1; index < listDef.size(); ++index )
-                {
-                    for ( size_t previous = 0; previous < index; ++previous )
-                    {
-                        if ( listDef[previous]._id == listDef[index]._id )
-                            return listDef[index]._id;
-                    }
-                }
-                return hashed_string{};
-            }
-
             static const hashed_string& getSmallKeyName()
             {
                 static const hashed_string name( "SmallKey" );
@@ -131,15 +116,14 @@ namespace sw
             bValid = bDeviceValid && bValid;
         }
         // 같은 id 의 문 · 상자 · 장치는 뒤의 것에 영영 닿지 못한다.
-        const hashed_string arrDuplicate[] = { AdventureDungeonInternal::findDuplicateID( dungeon._listDoor ), AdventureDungeonInternal::findDuplicateID( dungeon._listTreasure ),
-                                               AdventureDungeonInternal::findDuplicateID( dungeon._listDevice ) };
-        for ( const hashed_string& duplicate : arrDuplicate )
+        const AdventureDoorDef*     pDuplicateDoor     = VectorUtil::findDuplicateBy<&AdventureDoorDef::_id>( dungeon._listDoor );
+        const AdventureTreasureDef* pDuplicateTreasure = VectorUtil::findDuplicateBy<&AdventureTreasureDef::_id>( dungeon._listTreasure );
+        const AdventureDeviceDef*   pDuplicateDevice   = VectorUtil::findDuplicateBy<&AdventureDeviceDef::_id>( dungeon._listDevice );
+        const hashed_string         duplicate          = pDuplicateDoor != nullptr ? pDuplicateDoor->_id : ( pDuplicateTreasure != nullptr ? pDuplicateTreasure->_id : ( pDuplicateDevice != nullptr ? pDuplicateDevice->_id : hashed_string{} ) );
+        if ( duplicate.empty() == false )
         {
-            if ( duplicate.empty() == false )
-            {
-                SW_LOG_ERROR_ID( "AdventureDungeon.DuplicateId", "%#: <Dungeon id=\"%#\"> uses id '%#' twice", sourceName, dungeon._id.c_str(), duplicate.c_str() );
-                bValid = false;
-            }
+            SW_LOG_ERROR_ID( "AdventureDungeon.DuplicateId", "%#: <Dungeon id=\"%#\"> uses id '%#' twice", sourceName, dungeon._id.c_str(), duplicate.c_str() );
+            bValid = false;
         }
         if ( bValid == false )
         {

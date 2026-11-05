@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -41,17 +42,6 @@ namespace
 
     struct ActionCombatRigTestUtil
     {
-        static int32 countEvents( const sw::vector<sw::ActionCombatEvent>& listEvent, sw::ActionCombatEventType type )
-        {
-            int32 count = 0;
-            for ( const sw::ActionCombatEvent& event : listEvent )
-            {
-                if ( event._type == type )
-                    ++count;
-            }
-            return count;
-        }
-
         static sw::ActionProjectile makeShot( const sw::float2& position, const sw::float2& velocity, sw::ActionTeam team = sw::ActionTeam::Enemy, float32 damage = 5.0f, float32 lifetime = 3.0f )
         {
             sw::ActionProjectile projectile;
@@ -270,9 +260,9 @@ SW_TEST_CASE( ActionCombatRigTest, ParryReflectsOnlyEnemyShotsInRadius )
 
     sw::vector<sw::ActionCombatEvent> listEvent;
     rig.drainEvents( listEvent );
-    SW_EXPECT_EQUAL( 1, ActionCombatRigTestUtil::countEvents( listEvent, sw::ActionCombatEventType::ParryStarted ) );
-    SW_EXPECT_EQUAL( 1, ActionCombatRigTestUtil::countEvents( listEvent, sw::ActionCombatEventType::ProjectileReflected ) );
-    SW_EXPECT_EQUAL( 1, ActionCombatRigTestUtil::countEvents( listEvent, sw::ActionCombatEventType::HitstopStarted ) );
+    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventType::ParryStarted ) );
+    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventType::ProjectileReflected ) );
+    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventType::HitstopStarted ) );
     for ( const sw::ActionCombatEvent& event : listEvent )
     {
         if ( event._type == sw::ActionCombatEventType::ProjectileReflected )
@@ -402,7 +392,7 @@ SW_TEST_CASE( ActionCombatRigTest, GunSpawnsPelletsAndReportsWhyItCannot )
 
     sw::vector<sw::ActionCombatEvent> listEvent;
     rig.drainEvents( listEvent );
-    SW_EXPECT_EQUAL( 2, ActionCombatRigTestUtil::countEvents( listEvent, sw::ActionCombatEventType::GunFired ) );
+    SW_EXPECT_EQUAL( 2, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventType::GunFired ) );
 }
 
 /**

@@ -260,7 +260,7 @@ namespace sw
         // 되살아날 곳은 쉬는 지점이어야 한다. 시체 위치가 NaN 이면 거리 비교가 거짓이라 어디서든 되찾는다.
         const MetroidvaniaSiteDef* pSite   = respawnSite.empty() || _pCatalog == nullptr ? nullptr : _pCatalog->findSite( respawnSite );
         const bool                 bSiteOk = respawnSite.empty() || ( pSite != nullptr && pSite->_bRest );
-        const bool                 bValid  = archive.isOk() && bSiteOk && MathUtil::isFinite( corpse._position._x ) && MathUtil::isFinite( corpse._position._y ) && 0 <= corpse._currency && corpse._bActive <= SW_TRUE &&
+        const bool                 bValid  = archive.isOk() && bSiteOk && 0 <= corpse._currency && corpse._bActive <= SW_TRUE &&
                             0 <= lostCurrency && 0 <= flaskCharges && flaskCharges <= flaskMaxCharges && 0 <= flaskPotencyLevel;
         if ( bValid == false )
             return false;

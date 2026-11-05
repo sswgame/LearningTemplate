@@ -170,8 +170,7 @@ namespace sw
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._riposteWindow );
         archive >> restored._damageTakenScale;
         archive >> restored._bGuarding;
-        const bool bValid = bBodyRead && bTimerRead && archive.isOk() && MathUtil::isFinite( restored._time ) && 0.0f <= restored._time && MathUtil::isFinite( restored._parryPressTime ) &&
-                            MathUtil::isFinite( restored._damageTakenScale ) && 0.0f < restored._damageTakenScale && restored._bGuarding <= SW_TRUE;
+        const bool bValid = bBodyRead && bTimerRead && archive.isOk() && 0.0f <= restored._time && 0.0f < restored._damageTakenScale && restored._bGuarding <= SW_TRUE;
         if ( bValid == false )
             return false;
         *this = std::move( restored );

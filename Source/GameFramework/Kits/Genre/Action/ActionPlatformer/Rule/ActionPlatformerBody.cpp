@@ -238,7 +238,7 @@ namespace sw
             _mode = ActionMoveMode::Normal;
         }
         const float2 velocity = _motor.getVelocity();
-        _motor.setSettings( settings );
+        _motor.changeTuning( settings );
         _motor.setVelocity( velocity );
     }
 
@@ -427,10 +427,7 @@ namespace sw
         archive >> restored._ropeLength;
         const bool bTimerRead = StateArchiveUtil::readCountdown( archive, restored._drillSearchTimer );
         archive >> restored._bInsideDirt;
-        // 수치가 깨지면 칸 계산(`computeTileX`)이 망가진다.
-        const bool bFinite = MathUtil::isFinite( restored._position._x ) && MathUtil::isFinite( restored._position._y ) && MathUtil::isFinite( restored._velocity._x ) && MathUtil::isFinite( restored._velocity._y ) &&
-                             MathUtil::isFinite( restored._anchor._x ) && MathUtil::isFinite( restored._anchor._y ) && MathUtil::isFinite( restored._ropeLength );
-        const bool bValid = bTimerRead && archive.isOk() && bFinite && 0.0f <= restored._ropeLength && restored._bInsideDirt <= SW_TRUE;
+        const bool bValid = bTimerRead && archive.isOk() && 0.0f <= restored._ropeLength && restored._bInsideDirt <= SW_TRUE;
         if ( bValid == false )
             return false;
         restored._events = 0;
