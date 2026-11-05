@@ -139,6 +139,31 @@ namespace sw
                 return result == 0 && type == XA_WINDOW && itemCount == 1;
             }
 
+            /** @brief 창 관리자가 `_NET_SUPPORTED` 에 `_NET_REQUEST_FRAME_EXTENTS` 를 적었으면 true 입니다. 적지 않은 관리자(WSLg 의 Weston XWM 등)에게는 청해도 답이 없다. */
+            static bool advertisesFrameExtentsRequest( Display* pDisplay, Window root )
+            {
+                constexpr int64 kMaxAtomCount = 1024;
+                Atom            type          = 0;
+                int32           format        = 0;
+                uint64          itemCount     = 0;
+                uint64          bytesAfter    = 0;
+                uint8*          pData         = nullptr;
+                const Atom      wanted        = XInternAtom( pDisplay, "_NET_REQUEST_FRAME_EXTENTS", 0 );
+                const int32     result        = XGetWindowProperty( pDisplay, root, XInternAtom( pDisplay, "_NET_SUPPORTED", 0 ), 0, kMaxAtomCount, 0, XA_ATOM, &type, &format, &itemCount, &bytesAfter, &pData );
+                bool            bFound        = false;
+                if ( result == 0 && type == XA_ATOM && pData != nullptr )
+                {
+                    const Atom* pAtom = reinterpret_cast<const Atom*>( pData );
+                    for ( uint64 index = 0; index < itemCount && bFound == false; ++index )
+                    {
+                        bFound = pAtom[index] == wanted;
+                    }
+                }
+                if ( pData != nullptr )
+                    XFree( pData );
+                return bFound;
+            }
+
             /** @brief 창 @p win 의 `_NET_FRAME_EXTENTS`(CARDINAL[4] — 왼 · 오른 · 위 · 아래)를 읽습니다. 없으면 false 입니다. */
             static bool readFrameExtents( Display* pDisplay, Window win, Atom property, WindowFrameExtents& outExtents )
             {
@@ -343,6 +368,13 @@ namespace sw
         const Atom frameExtents = XInternAtom( pDisplay, "_NET_FRAME_EXTENTS", 0 );
         if ( Internal::readFrameExtents( pDisplay, win, frameExtents, outExtents ) )
             return true;
+
+        if ( Internal::advertisesFrameExtentsRequest( pDisplay, root ) == false )
+        {
+            // 틀 두께를 알 길이 없는 창 관리자다 - 칸 배치에만 쓰는 값이라 창을 못 띄울 일이 아니다. 칸 사이가 틀만큼 겹칠 수 있다.
+            SW_LOG_INFO_ID( "X11Window.FrameExtentsNotAdvertised", "The window manager does not offer _NET_REQUEST_FRAME_EXTENTS - tiling ignores the window frame" );
+            return true;
+        }
 
         // 띄우기 전이라 창 관리자가 아직 적지 않았다 — 적어 달라고 청하고 그 속성의 알림을 기다린다(EWMH `_NET_REQUEST_FRAME_EXTENTS`).
         XEvent request{};
