@@ -2,6 +2,8 @@
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Rule/MonsterHuntMutagens.h"
 
+#include "Core/Container/VectorUtil.h"
+
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Kits/Genre/RPG/MonsterHuntRPG/Catalog/MonsterHuntCatalog.h"
@@ -162,7 +164,8 @@ namespace sw
         const bool bInvalidMutagenData = _pCatalog == nullptr || archive.isError() || StateArchiveUtil::readCount( archive, 8, count ) == false || count != _listGroup.size();
         if ( bInvalidMutagenData )
             return false;
-        vector<Group> listGroup = _listGroup;
+        vector<Group>         listGroup = _listGroup;
+        vector<hashed_string> listSeenSkill;
         for ( Group& group : listGroup )
         {
             if ( StateArchiveUtil::readCount( archive, 4, count ) == false || count != group._listSkill.size() )
@@ -171,6 +174,11 @@ namespace sw
             {
                 if ( StateArchiveUtil::readName( archive, skillID ) == false )
                     return false;
+                if ( skillID.empty() )
+                    continue;
+                if ( VectorUtil::contains( listSeenSkill, skillID ) ) // `equipSkill` 의 `AlreadyEquipped` 와 같은 약속 — 겹치면 색 맞춤을 두 번 센다
+                    return false;
+                listSeenSkill.push_back( skillID );
             }
             if ( StateArchiveUtil::readName( archive, group._mutagenID ) == false )
                 return false;

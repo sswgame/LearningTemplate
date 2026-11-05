@@ -45,13 +45,16 @@ namespace sw
         _stepIndex = 0;
         _listFound.clear();
         _eventBuffer.clear();
-        return _pContract != nullptr;
+        if ( _pContract == nullptr )
+            return false;
+        advanceFinishedSteps(); // 첫 단계에 단서가 없으면 찾을 것이 없어 조사가 영영 끝나지 않는다
+        return true;
     }
 
     void MonsterHuntInvestigation::senseClues( const float3& position, float32 senseRadius, vector<const MonsterHuntClueDef*>& outListClue ) const
     {
         outListClue.clear();
-        if ( isSolved() )
+        if ( isSolved() || senseRadius < 0.0f ) // 음수 반지름은 제곱하면 양수가 되어 그 거리까지 보인다
             return;
         const int32 openOrder = computeOpenOrder();
         for ( const MonsterHuntClueDef& clue : _pContract->_listStep[static_cast<size_t>( _stepIndex )]._listClue )
@@ -91,9 +94,14 @@ namespace sw
         _eventBuffer.push( found );
         if ( _pQuestLog != nullptr )
             (void)_pQuestLog->notify( hashed_string( kClueNotifyKind ), clueID );
-        if ( computeOpenOrder() >= 0 )
-            return MonsterHuntClueResult::Found;
+        advanceFinishedSteps();
+        return MonsterHuntClueResult::Found;
+    }
 
+    void MonsterHuntInvestigation::advanceFinishedSteps()
+    {
+        if ( computeOpenOrder() >= 0 )
+            return;
         // 단계의 단서를 모두 찾았다. 일지에 알리고 다음 단계로 넘어간다. 단서가 없는 단계는 바로 넘긴다.
         while ( _stepIndex < static_cast<int32>( _pContract->_listStep.size() ) && computeOpenOrder() < 0 )
         {
@@ -113,7 +121,6 @@ namespace sw
             solved._kind = MonsterHuntInvestigationEvent::Kind::Solved;
             _eventBuffer.push( solved );
         }
-        return MonsterHuntClueResult::Found;
     }
 
     bool MonsterHuntInvestigation::isClueFound( const hashed_string& clueID ) const
@@ -173,7 +180,7 @@ namespace sw
         , _anger{ 0.0f }
         , _offer{ 0 }
         , _finalReward{ 0 }
-        , _bClosed{ SW_FALSE }
+        , _bClosed{ SW_TRUE } // 계약 없이는 흥정이 끝난 상태다 — 열려 있으면 `propose` 가 빈 계약을 읽는다
     {
     }
 
@@ -207,7 +214,8 @@ namespace sw
             _bClosed     = SW_TRUE;
             return MonsterHuntHaggleResult::BrokenOff;
         }
-        _offer = MathUtil::min( limit, MathUtil::max( _offer, ( _offer + askReward ) / 2 ) );
+        // 요구는 한도를 넘어 제안보다 크다. `( 제안 + 요구 ) / 2` 는 큰 요구에서 넘친다.
+        _offer = MathUtil::min( limit, _offer + ( askReward - _offer ) / 2 );
         return MonsterHuntHaggleResult::Countered;
     }
 
@@ -247,10 +255,15 @@ namespace sw
         const bool bStepInside = 0 <= stepIndex && stepIndex <= static_cast<int32>( pContract->_listStep.size() );
         if ( bStepInside == false )
             return false;
+        // 찾은 단서는 지금 단계의 것이고 하나는 남아 있어야 한다. 다 찾은 단계에 멈춘 상태는 넘어갈 길이 없어 조사가 영영 끝나지 않는다.
+        const MonsterHuntContractStepDef* pStep      = stepIndex < static_cast<int32>( pContract->_listStep.size() ) ? &pContract->_listStep[static_cast<size_t>( stepIndex )] : nullptr;
+        const bool                        bCountFits = pStep != nullptr ? count < pStep->_listClue.size() : count == 0;
+        if ( bCountFits == false )
+            return false;
         vector<hashed_string> listFound( count );
         for ( hashed_string& clueID : listFound )
         {
-            if ( StateArchiveUtil::readName( archive, clueID ) == false )
+            if ( StateArchiveUtil::readName( archive, clueID ) == false || VectorUtil::containsBy<&MonsterHuntClueDef::_id>( pStep->_listClue, clueID ) == false )
                 return false;
         }
         _pContract = pContract;
@@ -283,7 +296,7 @@ namespace sw
         archive >> offer;
         archive >> finalReward;
         archive >> bClosed;
-        const bool bValid = pContract != nullptr && archive.isOk() && bClosed <= SW_TRUE && 0.0f <= anger;
+        const bool bValid = pContract != nullptr && archive.isOk() && bClosed <= SW_TRUE && 0.0f <= anger && 0 <= offer && 0 <= finalReward;
         if ( bValid == false )
             return false;
         _pContract   = pContract;

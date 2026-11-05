@@ -144,6 +144,8 @@ namespace sw
 
     private:
         int32 findIndex( const hashed_string& skillID ) const;
+        /** @brief @p listRank 를 트리의 층(`_requiredSpent`)을 지키며 배워 닿을 수 있는지 판정합니다. */
+        bool isSpendOrderReachable( const vector<int32>& listRank ) const;
 
     private:
         vector<int32>       _listRank; ///< 트리의 스킬마다

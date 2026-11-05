@@ -64,6 +64,12 @@ namespace sw
                 const XMLNode statNode = node.findChild( "Stats" );
                 if ( statNode )
                     skill._statsPerRank.addAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
+                if ( tree.findSkill( skill._id ) != nullptr )
+                {
+                    // 찾기는 앞의 것만 돌려주어 뒤의 것은 배울 수 없는 칸으로 남는다
+                    SW_LOG_ERROR_ID( "SkillTree.SkillDuplicateSkipped", "%#: tree '%#' has a duplicate skill '%#' - skipped", sourceName, tree._id.c_str(), pID );
+                    continue;
+                }
                 tree._listSkill.push_back( skill );
             }
             for ( const SkillDef& skill : tree._listSkill )
@@ -94,6 +100,7 @@ namespace sw
     {
         _pTree = pTree;
         _listRank.assign( pTree != nullptr ? pTree->_listSkill.size() : 0, 0 );
+        _points = 0; // 랭크만 비우면 다시 시작한 캐릭터가 앞 판의 남은 점수를 들고 간다
     }
 
     int32 SkillTreeState::findIndex( const hashed_string& skillID ) const
@@ -184,13 +191,42 @@ namespace sw
                 if ( requirement._skillID == skill._id && newRank < requirement._rank )
                     return SkillResult::RequiredByOther;
             }
-            // 층 검사: 랭크를 내리면 이 스킬을 열어 준 점수가 모자라게 되는지 확인한다.
-            if ( static_cast<int32>( other ) != index && otherSkill._requiredSpent > getSpentPoints() - skill._cost - otherSkill._cost * _listRank[other] )
-                return SkillResult::RequiredByOther;
         }
-        _listRank[static_cast<size_t>( index )] = newRank;
+        vector<int32> listRankAfter                 = _listRank;
+        listRankAfter[static_cast<size_t>( index )] = newRank;
+        if ( isSpendOrderReachable( listRankAfter ) == false )
+            return SkillResult::RequiredByOther;
+        _listRank = std::move( listRankAfter );
         _points += skill._cost;
         return SkillResult::Ok;
+    }
+
+    bool SkillTreeState::isSpendOrderReachable( const vector<int32>& listRank ) const
+    {
+        // 스킬마다 "자기 몫을 뺀 점수" 를 따로 보면 같은 층의 둘이 서로를 열어 주는 것으로 통과한다(아래층을 다 빼도 위층 둘이 남는다).
+        // 실제로 배우는 순서를 되짚는다 — 쓴 점수로 열리는 스킬을 그 랭크째 더하기를 더 열리지 않을 때까지 하고, 못 연 것이 남으면 닿을 수 없는 배치다.
+        vector<int32> listLeft = listRank;
+        int32         spent    = 0;
+        bool          bOpened  = true;
+        while ( bOpened )
+        {
+            bOpened = false;
+            for ( size_t index = 0; index < listLeft.size(); ++index )
+            {
+                const SkillDef& skill = _pTree->_listSkill[index];
+                if ( listLeft[index] <= 0 || skill._requiredSpent > spent )
+                    continue;
+                spent += listLeft[index] * skill._cost;
+                listLeft[index] = 0;
+                bOpened         = true;
+            }
+        }
+        for ( const int32 rank : listLeft )
+        {
+            if ( rank > 0 )
+                return false;
+        }
+        return true;
     }
 
     int32 SkillTreeState::refundAll()

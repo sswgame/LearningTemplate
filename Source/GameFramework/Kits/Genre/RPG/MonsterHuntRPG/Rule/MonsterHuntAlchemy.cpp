@@ -284,6 +284,8 @@ namespace sw
             if ( StateArchiveUtil::readName( archive, charge._itemID ) == false || _pCatalog->findAlchemy( charge._itemID ) == nullptr )
                 return false;
             archive >> charge._charges;
+            if ( charge._charges < 0 )
+                return false;
         }
         // 효과마다 이름(4) + 남은 시간(4) + 묶인 독성(4) 바이트
         if ( StateArchiveUtil::readCount( archive, 12, count ) == false )
@@ -295,13 +297,16 @@ namespace sw
             if ( bHeadRead == false || _pCatalog->findAlchemy( effect._itemID ) == nullptr )
                 return false;
             archive >> effect._lockedToxicity;
+            if ( ( 0.0f <= effect._lockedToxicity ) == false ) // 음수는 총 독성을 깎고, NaN 은 독성 판정을 모두 통과시킨다
+                return false;
         }
         if ( StateArchiveUtil::readName( archive, restored._oilID ) == false )
             return false;
         archive >> restored._floatingToxicity;
         archive >> restored._oilHits;
-        const bool bOilKnown = restored._oilID.empty() || _pCatalog->findAlchemy( restored._oilID ) != nullptr;
-        const bool bValid    = archive.isOk() && bOilKnown && 0 <= restored._oilHits && 0.0f <= restored._floatingToxicity;
+        const bool bOilKnown  = restored._oilID.empty() || _pCatalog->findAlchemy( restored._oilID ) != nullptr;
+        const bool bOilPaired = restored._oilID.empty() == ( restored._oilHits == 0 ); // 적중 횟수가 다하면 오일 이름도 지운다(`consumeOilHit`)
+        const bool bValid     = archive.isOk() && bOilKnown && bOilPaired && 0 <= restored._oilHits && 0.0f <= restored._floatingToxicity;
         if ( bValid == false )
             return false;
         *this = std::move( restored );

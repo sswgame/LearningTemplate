@@ -61,7 +61,7 @@ namespace sw
         void collectEquippedSkills( vector<hashed_string>& outListSkill ) const;
         /** @brief 캐릭터 레벨과 그룹마다 끼운 스킬과 변이원을 씁니다. 카탈로그(그룹 구성)는 싣지 않습니다. */
         void writeState( Archive& outArchive ) const;
-        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 그룹이나 슬롯 수가 지금과 다르거나 모르는 변이원이거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
+        /** @brief `writeState` 가 쓴 바이트로 상태를 바꿉니다. 그룹이나 슬롯 수가 지금과 다르거나 모르는 변이원이거나 같은 스킬이 두 슬롯에 있거나 바이트가 깨졌으면 상태를 바꾸지 않고 false 를 반환합니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:

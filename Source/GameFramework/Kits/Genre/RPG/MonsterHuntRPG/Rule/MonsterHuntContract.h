@@ -68,7 +68,7 @@ namespace sw
 
         MonsterHuntInvestigation();
 
-        /** @brief 계약으로 시작합니다. 계약이 없으면 false 를 반환합니다. */
+        /** @brief 계약으로 시작합니다. 맨 앞의 단서 없는 단계는 바로 넘깁니다(단계가 하나도 없으면 바로 끝납니다). 계약이 없으면 false 를 반환합니다. */
         [[nodiscard]] bool initialize( const MonsterHuntCatalog* pCatalog, const hashed_string& contractID, QuestLog* pQuestLog );
         /** @brief 위쳐 감각입니다. @p position 에서 @p senseRadius 안에 있는 단서 중 지금 찾을 수 있고(순서가 열려 있고) 아직 못 찾은 것을 반환합니다. */
         void senseClues( const float3& position, float32 senseRadius, vector<const MonsterHuntClueDef*>& outListClue ) const;
@@ -89,6 +89,8 @@ namespace sw
         /** @brief 지금 단계에서 아직 못 찾은 단서의 가장 작은 순서를 반환합니다. 다 찾았으면 −1 을 반환합니다. */
         int32 computeOpenOrder() const;
         bool  isFoundInternal( const hashed_string& clueID ) const;
+        /** @brief 지금 단계의 단서를 다 찾았으면(단서가 없는 단계 포함) 일지에 알리고 찾을 것이 남은 단계까지 넘어갑니다. 끝까지 갔으면 끝남을 알립니다. */
+        void advanceFinishedSteps();
 
     private:
         vector<hashed_string>                      _listFound; ///< 지금 단계에서 찾은 단서
