@@ -93,6 +93,17 @@ namespace sw
                     SW_LOG_ERROR_ID( "JRPGCatalog.ClassLearnsUnknownSpell", "%#: class '%#' learns unknown spell '%#'", sourceName, def._id.c_str(), learn._spellID.c_str() );
             }
         }
+        for ( const JRPGSpellDef& def : _spellCatalog.getAll() )
+        {
+            if ( def._manualID.empty() == false && _manualCatalog.find( def._manualID ) == nullptr )
+                SW_LOG_ERROR_ID( "JRPGCatalog.SpellNamesUnknownManual", "%#: spell '%#' names unknown manual '%#'", sourceName, def._id.c_str(), def._manualID.c_str() );
+        }
+        for ( const JRPGEnemyDef& def : _enemyCatalog.getAll() )
+        {
+            // 전투는 모르는 주문을 위력 0 으로 터뜨린다 — 오타가 말없이 시전만 하는 적이 되지 않게 여기서 알린다.
+            if ( def._castSpellID.empty() == false && _spellCatalog.find( def._castSpellID ) == nullptr )
+                SW_LOG_ERROR_ID( "JRPGCatalog.EnemyCastsUnknownSpell", "%#: enemy '%#' casts unknown spell '%#'", sourceName, def._id.c_str(), def._castSpellID.c_str() );
+        }
         for ( const JRPGManualDef& def : _manualCatalog.getAll() )
         {
             for ( const JRPGManualStage& stage : def._listStage )
@@ -149,9 +160,7 @@ namespace sw
         {
             bValid = GameDataXML::readInto( learn, sourceName, def._listLearn ) && bValid;
         }
-        if ( bValid )
-            (void)_classCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return bValid;
+        return bValid && GameDataXML::addUnique( def, sourceName, _classCatalog );
     }
 
     bool JRPGCatalog::loadCombo( const XMLNode& node, string_view sourceName )
@@ -164,8 +173,7 @@ namespace sw
             SW_LOG_ERROR_ID( "JRPGCatalog.ComboNeedsTwoMore", "%#: combo '%#' needs two or more members", sourceName, def._id.c_str() );
             return false;
         }
-        (void)_comboCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return true;
+        return GameDataXML::addUnique( def, sourceName, _comboCatalog );
     }
 
     bool JRPGCatalog::loadManual( const XMLNode& node, string_view sourceName )
@@ -176,9 +184,7 @@ namespace sw
         {
             bValid = GameDataXML::readInto( stage, sourceName, def._listStage ) && bValid;
         }
-        if ( bValid )
-            (void)_manualCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return bValid;
+        return bValid && GameDataXML::addUnique( def, sourceName, _manualCatalog );
     }
 
     bool JRPGCatalog::loadEnemy( const XMLNode& node, string_view sourceName )
@@ -188,9 +194,7 @@ namespace sw
         bool         bValid = XMLFields::readFields( node, def, sourceName, { "hp", "mp", "str", "agi", "vit", "intellect", "luck" } );
         bValid              = Internal::readStats( node, Internal::kArrStatName, sourceName, def._arrStat ) && bValid;
         bValid              = Internal::checkMaxHP( def._arrStat, node, sourceName ) && bValid;
-        if ( bValid )
-            (void)_enemyCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return bValid;
+        return bValid && GameDataXML::addUnique( def, sourceName, _enemyCatalog );
     }
 
     bool JRPGCatalog::loadArea( const XMLNode& node, string_view sourceName )
@@ -209,8 +213,6 @@ namespace sw
             }
             def._listGroup.push_back( group );
         }
-        if ( bValid )
-            (void)_areaCatalog.add( def ); // 같은 id 는 카탈로그가 알리고 뒤의 것을 버린다
-        return bValid;
+        return bValid && GameDataXML::addUnique( def, sourceName, _areaCatalog );
     }
 } // namespace sw

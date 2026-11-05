@@ -56,6 +56,8 @@ namespace sw
         bool  knowsSpell( const hashed_string& spellID ) const;
         /** @brief 비급 숙련을 반환합니다. 배우지 않았으면 −1 입니다. */
         int32 findProficiency( const hashed_string& manualID ) const;
+        /** @brief 읽은 멤버가 카탈로그의 id 만 가리키고 값이 범위 안인지입니다(음수, 최대 초과, 겹친 주문 · 비급, 곡선을 넘는 레벨을 거절합니다). */
+        [[nodiscard]] bool isStateValid( const JRPGCatalog& catalog ) const;
     };
 } // namespace sw
 
@@ -116,7 +118,7 @@ namespace sw
         /** @brief 새 파티를 엽니다. 파티 가방과 지갑은 @p refs 에서 빌립니다. 가방이 없으면 아이템이 필요한 전직이, 지갑이 없으면 골드 보상, 여관, 교회가 막힙니다. */
         void initialize( const JRPGCatalog* pCatalog, const ItemCatalog* pItemCatalog, const SessionStateRefs& refs,
                          string_view equipLayout = "Weapon,Armor,Shield,Helmet,Accessory" );
-        /** @brief 멤버를 추가합니다(직업의 레벨 1 능력치에서 @p level 까지 성장시킵니다). 멤버 인덱스를 반환하고, 추가하지 못하면 −1 을 반환합니다. */
+        /** @brief 멤버를 추가합니다(직업의 레벨 1 능력치에서 @p level 까지 성장시킵니다). 멤버 인덱스를 반환하고, 추가하지 못하면(빈 id, 겹친 id, 모르는 직업, 정원) −1 을 반환합니다. */
         int32 addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level = 1 );
         /**
          * @brief 전직합니다(DQ3). 레벨 1과 경험치 0으로 돌아가고, 능력치는 지금의 절반이 되며(내림, 최대 HP 는 1 이상), 배운 주문은 남습니다.
@@ -133,7 +135,7 @@ namespace sw
         [[nodiscard]] bool reviveAtChurch( int32 memberIndex, int64 pricePerLevel );
         /** @brief 비급을 익힙니다(숙련 0). 첫 단계가 0이면 그 초식이 열립니다. */
         void learnManual( int32 memberIndex, const hashed_string& manualID );
-        /** @brief 비급 숙련을 더하고 새로 열린 초식을 알립니다. 익히지 않은 비급이면 아무것도 하지 않습니다. */
+        /** @brief 비급 숙련을 더하고 새로 열린 초식을 알립니다. 익히지 않은 비급이거나 0 이하이면 아무것도 하지 않습니다. */
         void addProficiency( int32 memberIndex, const hashed_string& manualID, int32 amount );
         void drainEvents( vector<JRPGPartyEvent>& outListEvent );
         /** @brief 멤버(직업, 이름, 주문, 비급 숙련, 장비 아이템 id, 레벨, 능력치, HP/MP, 내공)를 씁니다. 가방과 지갑은 빌려 온 것이라 싣지 않습니다. */
@@ -158,6 +160,8 @@ namespace sw
         bool isValidIndex( int32 memberIndex ) const { return memberIndex >= 0 && memberIndex < static_cast<int32>( _listMember.size() ); }
         void growOneLevel( int32 memberIndex, const JRPGClassDef& classDef );
         void learnSpellsAtLevel( int32 memberIndex, const JRPGClassDef& classDef, int32 level );
+        /** @brief 숙련이 ( @p before , @p after ] 로 지나간 단계의 초식이 열렸음을 알립니다. */
+        void pushUnlockedTechniques( int32 memberIndex, const JRPGManualDef& manual, int32 before, int32 after );
         void pushEvent( JRPGPartyEvent::Kind kind, int32 memberIndex, int32 value, const hashed_string& id = hashed_string{} );
 
     private:

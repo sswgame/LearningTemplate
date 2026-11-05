@@ -83,6 +83,12 @@ namespace sw
             TDef def;
             if ( XMLFields::readFields( node, def, sourceName ) == false )
                 return false;
+            return addUnique( def, sourceName, outCatalog );
+        }
+        /** @brief 손으로 읽은 정의를 카탈로그에 더합니다. 겹친 id 면 더하지 않고 오류와 false 입니다 — `GameCatalog::add` 는 같은 id 를 바꾸므로 바로 부르면 앞 정의를 말없이 덮어쓴다. */
+        template <typename TDef, typename TBase>
+        [[nodiscard]] static bool addUnique( const TDef& def, string_view sourceName, GameCatalog<TDef, TBase>& outCatalog )
+        {
             if ( isNewID( outCatalog, def._id, sourceName ) == false )
                 return false;
             (void)outCatalog.add( def );
@@ -94,7 +100,7 @@ namespace sw
         {
             if ( catalog.find( id ) == nullptr )
                 return true;
-            SW_LOG_ERROR_ID( "GameDataXML.DuplicateID", "%#: id '%#' is defined twice", sourceName, id );
+            SW_LOG_ERROR_ID( "GameDataXML.DuplicateID", "%#: id '%#' is defined twice", sourceName, id.c_str() );
             return false;
         }
         /** @brief 원소 하나를 스키마 @p TDef 로 읽어 목록에 더합니다. 스키마 오류면 더하지 않고 false 입니다. */

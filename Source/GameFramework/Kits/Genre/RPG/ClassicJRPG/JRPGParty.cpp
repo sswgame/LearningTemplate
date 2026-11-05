@@ -49,6 +49,29 @@ namespace sw
         return -1;
     }
 
+    bool JRPGMember::isStateValid( const JRPGCatalog& catalog ) const
+    {
+        const bool bKnown = _id.empty() == false && catalog.findClass( _classID ) != nullptr && _level.getLevel() <= catalog.getCurve().getMaxLevel();
+        if ( bKnown == false || VectorUtil::findDuplicate( _listSpell ) != nullptr || VectorUtil::findDuplicateBy<&JRPGManualProgress::_manualID>( _listManual ) != nullptr )
+            return false;
+        for ( const hashed_string& spellID : _listSpell )
+        {
+            if ( catalog.findSpell( spellID ) == nullptr )
+                return false;
+        }
+        for ( const JRPGManualProgress& progress : _listManual )
+        {
+            if ( catalog.findManual( progress._manualID ) == nullptr || progress._proficiency < 0 )
+                return false;
+        }
+        for ( const int32 stat : _arrStat )
+        {
+            if ( stat < 0 )
+                return false;
+        }
+        return getStat( JRPGStat::MaxHP ) >= 1 && 0 <= _hp && _hp <= getStat( JRPGStat::MaxHP ) && 0 <= _mp && _mp <= getStat( JRPGStat::MaxMP ) && 0 <= _inner && _inner <= JRPGParty::kInnerMax;
+    }
+
     JRPGParty::JRPGParty()
         : _listMember{}
         , _eventBuffer{}
@@ -74,7 +97,7 @@ namespace sw
     int32 JRPGParty::addMember( const hashed_string& memberID, string_view name, const hashed_string& classID, int32 level )
     {
         const JRPGClassDef* pClass           = _pCatalog != nullptr ? _pCatalog->findClass( classID ) : nullptr;
-        const bool          bCannotAddMember = pClass == nullptr || static_cast<int32>( _listMember.size() ) >= kMaxMembers || findMemberIndex( memberID ) >= 0;
+        const bool          bCannotAddMember = pClass == nullptr || memberID.empty() || static_cast<int32>( _listMember.size() ) >= kMaxMembers || findMemberIndex( memberID ) >= 0;
         if ( bCannotAddMember )
             return -1;
 
@@ -216,12 +239,12 @@ namespace sw
         if ( member.findProficiency( manualID ) >= 0 )
             return;
         member._listManual.push_back( JRPGManualProgress{ manualID, 0 } );
-        addProficiency( memberIndex, manualID, 0 );
+        pushUnlockedTechniques( memberIndex, *_pCatalog->findManual( manualID ), -1, 0 );
     }
 
     void JRPGParty::addProficiency( int32 memberIndex, const hashed_string& manualID, int32 amount )
     {
-        if ( isValidIndex( memberIndex ) == false || _pCatalog == nullptr )
+        if ( isValidIndex( memberIndex ) == false || _pCatalog == nullptr || amount <= 0 )
             return;
         const JRPGManualDef* pManual = _pCatalog->findManual( manualID );
         if ( pManual == nullptr )
@@ -230,14 +253,19 @@ namespace sw
         {
             if ( progress._manualID != manualID )
                 continue;
-            const int32 before    = amount == 0 ? -1 : progress._proficiency;
-            progress._proficiency = MathUtil::max( 0, progress._proficiency + amount );
-            for ( const JRPGManualStage& stage : pManual->_listStage )
-            {
-                if ( stage._proficiency > before && stage._proficiency <= progress._proficiency )
-                    pushEvent( JRPGPartyEvent::Kind::TechniqueUnlocked, memberIndex, stage._proficiency, stage._techniqueID );
-            }
+            const int32 before = progress._proficiency;
+            progress._proficiency += amount;
+            pushUnlockedTechniques( memberIndex, *pManual, before, progress._proficiency );
             return;
+        }
+    }
+
+    void JRPGParty::pushUnlockedTechniques( int32 memberIndex, const JRPGManualDef& manual, int32 before, int32 after )
+    {
+        for ( const JRPGManualStage& stage : manual._listStage )
+        {
+            if ( stage._proficiency > before && stage._proficiency <= after )
+                pushEvent( JRPGPartyEvent::Kind::TechniqueUnlocked, memberIndex, stage._proficiency, stage._techniqueID );
         }
     }
 
@@ -295,7 +323,7 @@ namespace sw
         {
             uint32     count     = 0;
             const bool bHeadRead = StateArchiveUtil::readName( archive, member._id ) && StateArchiveUtil::readName( archive, member._classID );
-            if ( bHeadRead == false || _pCatalog->findClass( member._classID ) == nullptr )
+            if ( bHeadRead == false )
                 return false;
             archive >> member._name;
             if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
@@ -345,9 +373,11 @@ namespace sw
             archive >> member._hp;
             archive >> member._mp;
             archive >> member._inner;
-            if ( archive.isError() )
+            if ( archive.isError() || member.isStateValid( *_pCatalog ) == false )
                 return false;
         }
+        if ( VectorUtil::findDuplicateBy<&JRPGMember::_id>( listMember ) != nullptr )
+            return false;
         _listMember = std::move( listMember );
         _eventBuffer.clear();
         return true;
@@ -439,7 +469,8 @@ namespace sw
         JRPGMember& member = _listMember[static_cast<size_t>( memberIndex )];
         for ( const JRPGLearnEntry& learn : classDef._listLearn )
         {
-            if ( learn._level != level || member.knowsSpell( learn._spellID ) )
+            // 모르는 주문은 카탈로그 읽기가 이미 오류로 알렸다. 배우면 세이브가 읽히지 않는다.
+            if ( learn._level != level || member.knowsSpell( learn._spellID ) || _pCatalog->findSpell( learn._spellID ) == nullptr )
                 continue;
             member._listSpell.push_back( learn._spellID );
             pushEvent( JRPGPartyEvent::Kind::LearnedSpell, memberIndex, level, learn._spellID );

@@ -80,7 +80,12 @@ namespace sw
         {
             const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemyID );
             if ( pEnemy == nullptr )
-                continue;
+            {
+                // 빼고 시작하면 오타 하나가 쉬운 전투가 된다.
+                SW_LOG_ERROR_ID( "JRPGBattle.UnknownEnemy", "JRPGBattle: refused to start - unknown enemy '%#'", enemyID.c_str() );
+                _listEnemy.clear();
+                return false;
+            }
             JRPGEnemyState state;
             state._enemyID = enemyID;
             state._hp      = pEnemy->_arrStat[static_cast<size_t>( JRPGStat::MaxHP )];
@@ -93,7 +98,7 @@ namespace sw
 
     bool JRPGBattle::setCommand( int32 memberIndex, const JRPGCommand& command )
     {
-        const bool bCannotSetCommand = _outcome != JRPGBattleOutcome::Ongoing || _pParty == nullptr || memberIndex < 0 || memberIndex >= _pParty->getMemberCount();
+        const bool bCannotSetCommand = isInProgress() == false || memberIndex < 0 || memberIndex >= _pParty->getMemberCount();
         if ( bCannotSetCommand )
             return false;
         const JRPGMember& member = _pParty->getMember( memberIndex );
@@ -106,6 +111,10 @@ namespace sw
             if ( bSpellUnusable )
                 return false;
             if ( _settings._bWuxia && member._inner < pSpell->_innerCost )
+                return false;
+            // 없는 멤버를 고르면 MP 만 쓰고 아무 일도 없다.
+            const bool bNoAllyTarget = pSpell->_kind != JRPGSpellKind::Damage && pSpell->_target == JRPGTargetKind::One && ( command._target < 0 || command._target >= _pParty->getMemberCount() );
+            if ( bNoAllyTarget )
                 return false;
         }
         else if ( command._kind == JRPGCommandKind::Combo )
@@ -128,9 +137,15 @@ namespace sw
         return true;
     }
 
+    bool JRPGBattle::isInProgress() const
+    {
+        return _outcome == JRPGBattleOutcome::Ongoing && _pParty != nullptr && _pCatalog != nullptr && _listEnemy.empty() == false &&
+               static_cast<int32>( _listCommand.size() ) == _pParty->getMemberCount();
+    }
+
     void JRPGBattle::resolveRound()
     {
-        if ( _outcome != JRPGBattleOutcome::Ongoing || _pParty == nullptr )
+        if ( isInProgress() == false )
             return;
         ++_round;
 
@@ -177,7 +192,7 @@ namespace sw
 
     bool JRPGBattle::tryFlee()
     {
-        if ( _outcome != JRPGBattleOutcome::Ongoing || _pParty == nullptr )
+        if ( isInProgress() == false )
             return false;
         const float32 chance = computeFleeChance();
         ++_fleeAttempts;
@@ -379,32 +394,35 @@ namespace sw
                 if ( target >= 0 )
                     hitEnemy( memberIndex, target, JRPGBattleInternal::applyVariance( base, 900, 1100, _random ), listType );
             }
-            if ( bTechnique && pSpell->_proficiencyGain > 0 )
+        }
+        else
+        {
+            const int32 firstTarget = pSpell->_target == JRPGTargetKind::All ? 0 : command._target;
+            const int32 lastTarget  = pSpell->_target == JRPGTargetKind::All ? _pParty->getMemberCount() - 1 : command._target;
+            for ( int32 target = firstTarget; target <= lastTarget; ++target )
             {
-                _pParty->addProficiency( memberIndex, pSpell->_manualID, pSpell->_proficiencyGain );
-                pushEvent( JRPGBattleEvent::Kind::ProficiencyGained, false, memberIndex, -1, pSpell->_proficiencyGain, pSpell->_manualID );
+                if ( target < 0 || target >= _pParty->getMemberCount() )
+                    continue;
+                JRPGMember& ally = _pParty->getMember( target );
+                if ( pSpell->_kind == JRPGSpellKind::Heal && ally.isAlive() )
+                {
+                    const int32 before = ally._hp;
+                    ally._hp           = MathUtil::min( ally.getStat( JRPGStat::MaxHP ), ally._hp + pSpell->_power + member.getStat( JRPGStat::Intellect ) / 2 );
+                    pushEvent( JRPGBattleEvent::Kind::Healed, false, memberIndex, target, ally._hp - before, pSpell->_id );
+                }
+                else if ( pSpell->_kind == JRPGSpellKind::Revive && ally.isAlive() == false )
+                {
+                    ally._hp = MathUtil::max( 1, ally.getStat( JRPGStat::MaxHP ) / 2 );
+                    pushEvent( JRPGBattleEvent::Kind::Revived, false, memberIndex, target, ally._hp, pSpell->_id );
+                }
             }
-            return;
         }
 
-        const int32 firstTarget = pSpell->_target == JRPGTargetKind::All ? 0 : command._target;
-        const int32 lastTarget  = pSpell->_target == JRPGTargetKind::All ? _pParty->getMemberCount() - 1 : command._target;
-        for ( int32 target = firstTarget; target <= lastTarget; ++target )
+        // 초식은 하는 일과 상관없이 쓸 때마다 숙련이 오른다.
+        if ( pSpell->_manualID.empty() == false && pSpell->_proficiencyGain > 0 )
         {
-            if ( target < 0 || target >= _pParty->getMemberCount() )
-                continue;
-            JRPGMember& ally = _pParty->getMember( target );
-            if ( pSpell->_kind == JRPGSpellKind::Heal && ally.isAlive() )
-            {
-                const int32 before = ally._hp;
-                ally._hp           = MathUtil::min( ally.getStat( JRPGStat::MaxHP ), ally._hp + pSpell->_power + member.getStat( JRPGStat::Intellect ) / 2 );
-                pushEvent( JRPGBattleEvent::Kind::Healed, false, memberIndex, target, ally._hp - before, pSpell->_id );
-            }
-            else if ( pSpell->_kind == JRPGSpellKind::Revive && ally.isAlive() == false )
-            {
-                ally._hp = MathUtil::max( 1, ally.getStat( JRPGStat::MaxHP ) / 2 );
-                pushEvent( JRPGBattleEvent::Kind::Revived, false, memberIndex, target, ally._hp, pSpell->_id );
-            }
+            _pParty->addProficiency( memberIndex, pSpell->_manualID, pSpell->_proficiencyGain );
+            pushEvent( JRPGBattleEvent::Kind::ProficiencyGained, false, memberIndex, -1, pSpell->_proficiencyGain, pSpell->_manualID );
         }
     }
 
@@ -562,12 +580,13 @@ namespace sw
         const int32 dealt = MathUtil::min( member._hp, MathUtil::max( 0, reduced ) );
         member._hp -= dealt;
         pushEvent( JRPGBattleEvent::Kind::Damage, true, enemyIndex, memberIndex, dealt );
-        addInner( memberIndex, _settings._innerPerHitTaken );
         if ( member.isAlive() == false )
         {
             _turnOrder.removeActor( memberIndex );
             pushEvent( JRPGBattleEvent::Kind::Defeated, true, enemyIndex, memberIndex, 0, member._id );
+            return; // 쓰러지는 타격에는 내공이 차지 않는다
         }
+        addInner( memberIndex, _settings._innerPerHitTaken );
     }
 
     void JRPGBattle::addComboPoints( int32 amount )
@@ -685,6 +704,27 @@ namespace sw
         outArchive << static_cast<uint8>( _outcome );
     }
 
+    bool JRPGBattle::isEnemyStateValid( const JRPGEnemyState& enemy ) const
+    {
+        const JRPGEnemyDef* pEnemy = _pCatalog->findEnemy( enemy._enemyID );
+        if ( pEnemy == nullptr )
+            return false;
+        // 잠금 전체가 음수이면 시전을 터뜨릴 때 0 으로 나눈다(`_lockTotal + 1`). 시전 중이 아니면 남은 잠금이 없다(터뜨리기 · 취소 · 쓰러짐이 모두 비운다).
+        const int32 lockCount = static_cast<int32>( enemy._listLock.size() );
+        const int32 lockLimit = static_cast<int32>( pEnemy->_listLock.size() );
+        return 0 <= enemy._hp && enemy._hp <= pEnemy->_arrStat[static_cast<size_t>( JRPGStat::MaxHP )] && 0 <= enemy._castTurnsLeft && enemy._castTurnsLeft <= pEnemy->_castTurns &&
+               lockCount <= enemy._lockTotal && enemy._lockTotal <= lockLimit && ( lockCount == 0 || enemy.isCasting() ) && 0 <= enemy._turnsTaken;
+    }
+
+    bool JRPGBattle::isCommandStateValid( const JRPGCommand& command ) const
+    {
+        if ( command._kind == JRPGCommandKind::Spell )
+            return _pCatalog->findSpell( command._id ) != nullptr;
+        if ( command._kind == JRPGCommandKind::Combo )
+            return _pCatalog->findCombo( command._id ) != nullptr;
+        return true;
+    }
+
     bool JRPGBattle::readState( Archive& archive )
     {
         // 사본에 읽고 끝까지 맞으면 바꾼다. 카탈로그, 판정, 타이밍 입력, 설정은 사본이 그대로 가지고 있다.
@@ -711,6 +751,8 @@ namespace sw
             archive >> enemy._castTurnsLeft;
             archive >> enemy._lockTotal;
             archive >> enemy._turnsTaken;
+            if ( archive.isError() || isEnemyStateValid( enemy ) == false )
+                return false;
         }
 
         // 명령마다 이름(4) + 대상(4) + 종류(1) + 방어(1) 바이트
@@ -734,7 +776,9 @@ namespace sw
             const bool bValid = archive.isOk() && kind <= static_cast<uint8>( JRPGCommandKind::Defend ) && bDefend <= SW_TRUE;
             if ( bValid == false )
                 return false;
-            command._kind                        = static_cast<JRPGCommandKind>( kind );
+            command._kind = static_cast<JRPGCommandKind>( kind );
+            if ( isCommandStateValid( command ) == false )
+                return false;
             restored._listDefending[memberIndex] = bDefend;
         }
 
@@ -747,7 +791,8 @@ namespace sw
         archive >> restored._round;
         archive >> restored._fleeAttempts;
         archive >> outcome;
-        const bool bValid = archive.isOk() && outcome <= static_cast<uint8>( JRPGBattleOutcome::Fled ) && 0 <= restored._comboPoints && 0 <= restored._round;
+        const bool bValid = archive.isOk() && outcome <= static_cast<uint8>( JRPGBattleOutcome::Fled ) && 0 <= restored._comboPoints && restored._comboPoints <= _settings._comboMax &&
+                            0 <= restored._round && 0 <= restored._fleeAttempts && 0 <= restored._rewardExp && 0 <= restored._rewardGold;
         if ( bValid == false )
             return false;
         restored._outcome = static_cast<JRPGBattleOutcome>( outcome );
