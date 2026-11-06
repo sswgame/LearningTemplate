@@ -16,9 +16,28 @@ namespace sw
 {
     namespace
     {
-        struct ActionCombatRigInternal
+        /** @brief 화면의 탄이 묻는 세계입니다. 맞는 것은 벽 칸뿐이고(선분 끝이 벽 칸이면 끝난다), 사람 · 적의 맞음은 게임이 `takeProjectileHits` 로 꺼낸다. */
+        class ActionRigProjectileQuery : public IProjectileWorld
         {
-            static constexpr float32 kDefaultBulletSpeed = 30.0f; ///< 무기 탄속이 0(히트스캔)일 때 2D 탄이 쓰는 속도
+        public:
+            explicit ActionRigProjectileQuery( const PlatformTileMap* pMap )
+                : _pMap{ pMap }
+            {
+            }
+
+            bool findTargetPoint( const ProjectileState& /*projectile*/, float3& /*outPoint*/ ) const override { return false; } // 유도 대상이 없다
+
+            bool sweep( const ProjectileState& /*projectile*/, const float3& /*from*/, const float3& to, ProjectileHit& outHit ) const override
+            {
+                if ( _pMap == nullptr || _pMap->getTile( _pMap->computeTileX( to._x ), _pMap->computeTileY( to._y ) ) != PlatformTile::Solid )
+                    return false;
+                outHit._position = to;
+                outHit._kind     = ProjectileHitKind::Surface;
+                return true;
+            }
+
+        private:
+            const PlatformTileMap* _pMap;
         };
     } // namespace
 } // namespace sw
@@ -31,15 +50,28 @@ namespace sw
         , _pCombo{ nullptr }
         , _timeline{}
         , _gun{}
-        , _listProjectile{}
+        , _projectiles{}
+        , _listProjectileEventScratch{}
         , _eventBuffer{}
-        , _nextProjectileID{ 1 }
         , _comboIndex{ -1 }
         , _attackBufferFrames{ 0 }
         , _parryFrames{ 0 }
         , _hitstopFrames{ 0 }
         , _bGunEquipped{ SW_FALSE }
     {
+        _projectiles.setPlaneNormal( float3{ 0.0f, 0.0f, 1.0f } ); // 화면 평면(XY)
+    }
+
+    ProjectileState ActionCombatRig::makeProjectile( const float2& position, const float2& velocity, ActionTeam team, float32 damage, float32 lifetime )
+    {
+        ProjectileState projectile;
+        projectile._position         = float3{ position._x, position._y, 0.0f };
+        projectile._previousPosition = projectile._position;
+        projectile._velocity         = float3{ velocity._x, velocity._y, 0.0f };
+        projectile._damage           = damage;
+        projectile._lifetime         = lifetime;
+        projectile._team             = static_cast<int32>( team );
+        return projectile;
     }
 
     bool ActionCombatRig::initialize( const ActionPlatformerCatalog* pCatalog, const MoveCatalog* pMoves, const hashed_string& comboID )
@@ -60,7 +92,7 @@ namespace sw
             }
         }
         _timeline.cancel();
-        _listProjectile.clear();
+        _projectiles.clear();
         _eventBuffer.clear();
         _comboIndex         = -1;
         _attackBufferFrames = 0;
@@ -69,10 +101,18 @@ namespace sw
         return _pCombo != nullptr && _pMoves != nullptr;
     }
 
-    void ActionCombatRig::equipGun( const WeaponDef& weapon, int32 reserveAmmo, uint32 seed )
+    bool ActionCombatRig::equipGun( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 seed )
     {
-        _gun.equip( weapon, reserveAmmo, seed );
+        if ( projectile._speed <= 0.0f )
+        {
+            SW_LOG_ERROR_ID( "ActionCombatRig.GunNeedsFlyingProjectile", "ActionCombatRig: weapon '%#' loads projectile '%#' with speed 0 - 2D shots must fly (set speed)", weapon._id.c_str(),
+                             projectile._id.c_str() );
+            return false;
+        }
+        if ( _gun.equip( weapon, projectile, reserveAmmo, seed ) == false )
+            return false;
         _bGunEquipped = SW_TRUE;
+        return true;
     }
 
     void ActionCombatRig::pressAttack()
@@ -102,32 +142,24 @@ namespace sw
         const WeaponFireResult result = _gun.pullTrigger( ray, bTriggerJustPressed, shot );
         if ( result != WeaponFireResult::Fired )
             return result;
-        const WeaponDef& def   = _gun.getDef();
-        const float32    speed = def._projectileSpeed > 0.0f ? def._projectileSpeed : ActionCombatRigInternal::kDefaultBulletSpeed;
         for ( const Ray& pellet : shot._listRay )
         {
-            // 퍼짐 원뿔은 3D 이므로 화면 평면(z = 0)으로 눌러서 2D 방향으로 쓴다.
+            // 퍼짐 원뿔은 3D 이므로 화면 평면(z = 0)으로 눌러서 2D 방향으로 쓴다. 중력은 플랫포머 탄이 받지 않는다(받는 탄은 쓰는 쪽이 정한다).
             float2        pelletDirection{ pellet._direction._x, pellet._direction._y };
             const float32 length = pelletDirection.getLength();
             pelletDirection      = length > 1.0e-4f ? pelletDirection * ( 1.0f / length ) : direction;
-            ActionProjectile projectile;
-            projectile._position = origin;
-            projectile._velocity = pelletDirection * speed;
-            projectile._damage   = def._damage;
-            projectile._lifetime = def._range / speed;
-            projectile._team     = ActionTeam::Player;
+            ProjectileState projectile =
+                ProjectileState::launch( _gun.getShot(), float3{ origin._x, origin._y, 0.0f }, float3{ pelletDirection._x, pelletDirection._y, 0.0f }, 0.0f );
+            projectile._team = static_cast<int32>( ActionTeam::Player );
             (void)spawnProjectile( projectile ); // 투사체 id 는 쓰지 않는다
         }
-        pushEvent( ActionCombatEventType::GunFired, def._id, static_cast<int32>( shot._listRay.size() ) );
+        pushEvent( ActionCombatEventType::GunFired, _gun.getDef()._id, static_cast<int32>( shot._listRay.size() ) );
         return result;
     }
 
-    uint32 ActionCombatRig::spawnProjectile( const ActionProjectile& projectile )
+    uint32 ActionCombatRig::spawnProjectile( const ProjectileState& projectile )
     {
-        ActionProjectile added = projectile;
-        added._id              = _nextProjectileID++;
-        _listProjectile.push_back( added );
-        return added._id;
+        return _projectiles.spawn( projectile );
     }
 
     void ActionCombatRig::registerMeleeContact( bool bBlocked )
@@ -181,16 +213,15 @@ namespace sw
         if ( _parryFrames > 0 && _pCatalog != nullptr )
         {
             const ActionParryRules& rules      = _pCatalog->getParryRules();
+            const float3            player     = float3{ playerPosition._x, playerPosition._y, 0.0f };
             bool                    bReflected = false;
-            for ( ActionProjectile& projectile : _listProjectile )
+            for ( ProjectileState& projectile : _projectiles.accessProjectiles() )
             {
-                if ( projectile._team != ActionTeam::Enemy || float2::getDistanceSquared( projectile._position, playerPosition ) > rules._radius * rules._radius )
+                const bool bEnemy = projectile._team == static_cast<int32>( ActionTeam::Enemy );
+                if ( bEnemy == false || float3::getDistanceSquared( projectile._position, player ) > rules._radius * rules._radius )
                     continue;
-                projectile._velocity   = projectile._velocity * -rules._reflectSpeedScale;
-                projectile._damage     = projectile._damage * rules._reflectDamageScale;
-                projectile._team       = ActionTeam::Player;
-                projectile._bReflected = SW_TRUE;
-                bReflected             = true;
+                projectile.deflect( static_cast<int32>( ActionTeam::Player ), rules._reflectSpeedScale, rules._reflectDamageScale );
+                bReflected = true;
                 pushEvent( ActionCombatEventType::ProjectileReflected, hashed_string{}, static_cast<int32>( projectile._id ) );
             }
             --_parryFrames;
@@ -198,36 +229,27 @@ namespace sw
                 startHitstop( rules._hitstopFrames );
         }
 
-        // 투사체는 움직이다가, 시간이 다 되거나 벽에 닿으면 없앤다.
-        for ( size_t index = _listProjectile.size(); index > 0; --index )
-        {
-            ActionProjectile& projectile = _listProjectile[index - 1];
-            projectile._position         = projectile._position + projectile._velocity * kFrameTime;
-            projectile._lifetime -= kFrameTime;
-            bool bRemove = projectile._lifetime <= 0.0f;
-            if ( bRemove == false && pMap != nullptr )
-                bRemove = pMap->getTile( pMap->computeTileX( projectile._position._x ), pMap->computeTileY( projectile._position._y ) ) == PlatformTile::Solid;
-            if ( bRemove )
-                _listProjectile.erase( _listProjectile.begin() + static_cast<ptrdiff_t>( index - 1 ) );
-        }
+        // 투사체는 움직이다가, 시간 · 사거리가 다 되거나 벽에 닿으면 없앤다(공통 발사체 시뮬레이션).
+        const ActionRigProjectileQuery query( pMap );
+        _listProjectileEventScratch.clear();
+        _projectiles.step( kFrameTime, query, _listProjectileEventScratch );
     }
 
-    int32 ActionCombatRig::takeProjectileHits( ActionTeam team, const float2& center, float32 radius, vector<ActionProjectile>& outListHit )
+    int32 ActionCombatRig::takeProjectileHits( ActionTeam team, const float2& center, float32 radius, vector<ProjectileState>& outListHit )
     {
         outListHit.clear();
         if ( radius < 0.0f )
             return 0; // 제곱하면 음수 반경이 양수 반경처럼 맞는다
-        for ( size_t index = 0; index < _listProjectile.size(); )
+        const float3 point = float3{ center._x, center._y, 0.0f };
+        for ( ProjectileState& projectile : _projectiles.accessProjectiles() )
         {
-            const ActionProjectile& projectile = _listProjectile[index];
-            if ( projectile._team == team && float2::getDistanceSquared( projectile._position, center ) <= radius * radius )
+            if ( projectile._team == static_cast<int32>( team ) && float3::getDistanceSquared( projectile._position, point ) <= radius * radius )
             {
                 outListHit.push_back( projectile );
-                _listProjectile.erase( _listProjectile.begin() + static_cast<ptrdiff_t>( index ) );
-                continue;
+                projectile._bAlive = SW_FALSE;
             }
-            ++index;
         }
+        _projectiles.removeDead();
         return static_cast<int32>( outListHit.size() );
     }
 
@@ -272,20 +294,9 @@ namespace sw
         outArchive << _attackBufferFrames;
         outArchive << _parryFrames;
         outArchive << _hitstopFrames;
-        outArchive << _nextProjectileID;
         outArchive << _bGunEquipped;
         _gun.writeState( outArchive );
-        outArchive << static_cast<uint32>( _listProjectile.size() );
-        for ( const ActionProjectile& projectile : _listProjectile )
-        {
-            outArchive << projectile._position;
-            outArchive << projectile._velocity;
-            outArchive << projectile._damage;
-            outArchive << projectile._lifetime;
-            outArchive << projectile._id;
-            outArchive << static_cast<uint8>( projectile._team );
-            outArchive << projectile._bReflected;
-        }
+        _projectiles.writeState( outArchive );
     }
 
     bool ActionCombatRig::readState( Archive& archive )
@@ -307,34 +318,20 @@ namespace sw
         archive >> restored._attackBufferFrames;
         archive >> restored._parryFrames;
         archive >> restored._hitstopFrames;
-        archive >> restored._nextProjectileID;
         archive >> bGunEquipped;
         const int32 comboMoveCount = restored._pCombo != nullptr ? static_cast<int32>( restored._pCombo->_listMove.size() ) : 0;
         const bool  bHeadValid     = archive.isOk() && -1 <= restored._comboIndex && restored._comboIndex < comboMoveCount && 0 <= restored._attackBufferFrames &&
                                 0 <= restored._parryFrames && 0 <= restored._hitstopFrames && bGunEquipped == _bGunEquipped;
         if ( bHeadValid == false || restored._gun.readState( archive ) == false )
             return false;
-
-        uint32 projectileCount = 0;
-        // 투사체마다 위치(8) + 속도(8) + 피해(4) + 남은 시간(4) + id(4) + 편(1) + 되받아침(1) 바이트
-        if ( archive.readCount( 30, projectileCount ) == false )
+        // 탄 수치 · id(다음 id 아래여야 새 탄과 겹치지 않는다)는 시뮬레이션이 보고, 편은 여기서 본다.
+        if ( restored._projectiles.readState( archive ) == false )
             return false;
-        restored._listProjectile.assign( projectileCount, ActionProjectile{} );
-        for ( ActionProjectile& projectile : restored._listProjectile )
+        for ( const ProjectileState& projectile : restored._projectiles.getProjectiles() )
         {
-            uint8 team = 0;
-            archive >> projectile._position;
-            archive >> projectile._velocity;
-            archive >> projectile._damage;
-            archive >> projectile._lifetime;
-            archive >> projectile._id;
-            archive >> team;
-            archive >> projectile._bReflected;
-            // id 는 다음 id 아래여야 새 탄과 겹치지 않는다.
-            const bool bValid = archive.isOk() && projectile._id < restored._nextProjectileID && team <= static_cast<uint8>( ActionTeam::Enemy ) && projectile._bReflected <= SW_TRUE;
-            if ( bValid == false )
+            const bool bTeamValid = projectile._team == static_cast<int32>( ActionTeam::Player ) || projectile._team == static_cast<int32>( ActionTeam::Enemy );
+            if ( bTeamValid == false || projectile._position._z != 0.0f || projectile._velocity._z != 0.0f )
                 return false;
-            projectile._team = static_cast<ActionTeam>( team );
         }
         restored._eventBuffer.clear();
         *this = std::move( restored );

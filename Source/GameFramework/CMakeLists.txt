@@ -38,6 +38,8 @@ sw_markDeterministicSources(GameFramework
 	Runtime/Character/Combat/Health/ResourceGauge.cpp
 	Runtime/Character/Combat/Health/Vitality.cpp
 	Runtime/Character/Combat/LockOnSelector.cpp
+	Runtime/Character/Combat/Projectile/ProjectileDef.cpp
+	Runtime/Character/Combat/Projectile/ProjectileSimulation.cpp
 	Runtime/Character/Combat/Weapon/Weapon.cpp
 	Runtime/Foundation/Utility/Math/RayMath.cpp
 )

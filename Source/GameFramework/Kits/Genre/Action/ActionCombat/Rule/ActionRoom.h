@@ -16,6 +16,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Catalog/MonsterCatalog.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/FacingDir.h"
 
 namespace sw
@@ -144,12 +145,13 @@ namespace sw
      *          카탈로그가 없거나 그 종이 없으면 오류를 남기고 그 적을 세우지 않는다.
      *          싸움을 시작할 때 그 싸움에 나온 종의 정의를 복사해 둔다(싸움 도중 카탈로그가 다시 로드되어도 영향이 없다). 방 배치(어느 종을 어디에 둘지)는 게임이 넘기는 `ActionRoomLayout` 이다.
      *          적은 오브젝트가 아니라서 `UnitStatsComponent` 를 거치지 않고, 방어 공식만 같다(`DamageMath::applyArmor`).
+     *          적의 탄은 단일 발사체 시뮬레이션(`ProjectileSimulation`)을 룸 평면(x, y, z = 0)에 묶어 돌리고, 플레이어 맞음(무적 · 한 프레임 한 번)만 룸이 본다.
      */
     class SW_KIT_API ActionRoom
     {
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "AROM" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2;
 
         /** @brief 비활성(None)과 게이트 닫힘 상태로 시작합니다. */
         ActionRoom();
@@ -234,33 +236,6 @@ namespace sw
             }
         };
 
-        /** @brief 적 투사체입니다. */
-        struct Projectile
-        {
-            float2                 _position;
-            float2                 _velocity;
-            Countdown              _life; ///< 남은 수명(초)
-            float32                _radius;
-            int32                  _damage; ///< 맞은 플레이어에게 주는 피해(`MonsterShotDef::_damage`)
-            uint8                  _bAlive   : 1;
-            [[maybe_unused]] uint8 _reserved : 7;
-
-            /** @brief 살아 있는 상태로 초기화합니다. */
-            Projectile()
-                : _position{}
-                , _velocity{}
-                , _life{}
-                , _radius{ 0.2f }
-                , _damage{ 0 }
-                , _bAlive{ SW_TRUE }
-                , _reserved{ 0 }
-            {
-            }
-
-            /** @brief 투사체 AABB 를 반환합니다. */
-            AABB bounds() const;
-        };
-
         static constexpr uint8 kLayerPlayer     = 0; ///< 플레이어 히트
         static constexpr uint8 kLayerEnemy      = 1; ///< 적 히트
         static constexpr uint8 kLayerPlayerAtk  = 2; ///< 플레이어 공격
@@ -291,24 +266,27 @@ namespace sw
         void sendGateState( bool bLocked, bool bTriggered ) const;
         /** @brief 적의 맞음 상자를 반환합니다(그 종의 `_radius`). */
         AABB computeActorBounds( const Actor& actor ) const;
+        /** @brief 적 탄의 맞음 상자를 반환합니다(탄의 `_radius`). 룸 평면 (x, y) 를 상자의 (x, z) 로 둔다. */
+        static AABB computeProjectileBounds( const ProjectileState& projectile );
         /** @brief 플레이어 피격 박스를 반환합니다. */
         AABB playerHurtBox( float32 x, float32 y ) const;
         /** @brief 플레이어 공격 박스를 반환합니다. */
         AABB playerAttackBox( float32 x, float32 y, FacingDir facing ) const;
 
     private:
-        ActionRoomSite         _site;
-        ActionRoomSettings     _settings;
-        ActionRoomLayout       _layout;
-        ActionRoomKind         _kind;
-        CollisionLayers        _layers;
-        vector<Actor>          _listActor;
-        vector<Projectile>     _listProjectile;
-        vector<MonsterDef>     _listMonsterDef; ///< 이번 싸움에 나온 종의 정의 복사본(`Actor::_defIndex` 가 가리킨다)
-        Countdown              _attackCooldown;
-        Countdown              _dashCooldown;
-        Countdown              _invulnerable; ///< 피격 후 무적 시간
-        uint8                  _bCleared : 1;
-        [[maybe_unused]] uint8 _reserved : 7;
+        ActionRoomSite          _site;
+        ActionRoomSettings      _settings;
+        ActionRoomLayout        _layout;
+        ActionRoomKind          _kind;
+        CollisionLayers         _layers;
+        vector<Actor>           _listActor;
+        ProjectileSimulation    _projectiles;
+        vector<ProjectileEvent> _listProjectileEventScratch;
+        vector<MonsterDef>      _listMonsterDef; ///< 이번 싸움에 나온 종의 정의 복사본(`Actor::_defIndex` 가 가리킨다)
+        Countdown               _attackCooldown;
+        Countdown               _dashCooldown;
+        Countdown               _invulnerable; ///< 피격 후 무적 시간
+        uint8                   _bCleared : 1;
+        [[maybe_unused]] uint8  _reserved : 7;
     };
 } // namespace sw

@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Action/MechArena/MechArenaWorld.h"
 
-#include "Core/Math/DeterministicMathUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/Ray.h"
 #include "Core/Serialization/BitStream.h"
@@ -268,23 +267,6 @@ namespace sw
                 return pilot._state != MechPilotState::Destroyed || pilot._vitality.isDead();
             }
 
-            /** @brief @p direction 을 @p desired 쪽으로 최대 @p maxRadian 만큼 돌립니다(구면 보간). 둘 다 단위 벡터여야 합니다. */
-            static float3 rotateToward( const float3& direction, const float3& desired, float32 maxRadian )
-            {
-                const float32 cosAngle = MathUtil::clamp( direction.dot( desired ), -1.0f, 1.0f );
-                // 결정적 시뮬레이션 TU 라 libm 대신 `DeterministicMathUtil` 이다(`sw_markDeterministicSources`).
-                const float32 angle = DeterministicMathUtil::acos( cosAngle );
-                if ( angle <= maxRadian || angle < kTiny )
-                    return desired;
-                const float32 sinAngle = DeterministicMathUtil::sin( angle );
-                if ( sinAngle < kTiny )
-                    return direction; // 정반대 방향이라 돌 축이 정해지지 않는다
-                const float32 ratio    = maxRadian / angle;
-                const float32 fromPart = DeterministicMathUtil::sin( ( 1.0f - ratio ) * angle ) / sinAngle;
-                const float32 toPart   = DeterministicMathUtil::sin( ratio * angle ) / sinAngle;
-                return ( direction * fromPart + desired * toPart ).normalizeOr( direction, MechArenaWorldInternal::kTiny );
-            }
-
             static bool isPressed( uint8 current, uint8 previous ) { return current == SW_TRUE && previous == SW_FALSE; }
 
             static const hashed_string& getBoostRegenName()
@@ -300,6 +282,70 @@ namespace sw
         };
     } // namespace
 
+    /**
+     * @class MechArenaProjectileQuery
+     * @brief 판의 탄이 묻는 세계입니다. 유도 대상은 그 조종사의 가운데이고, 맞는 것은 쏜 쪽의 적 조종사(구)와 판 밖(표면)입니다.
+     */
+    class MechArenaProjectileQuery : public IProjectileWorld
+    {
+    public:
+        explicit MechArenaProjectileQuery( const MechArenaWorld& world )
+            : _world{ world }
+        {
+        }
+
+        bool findTargetPoint( const ProjectileState& projectile, float3& outPoint ) const override
+        {
+            if ( _world.isTargetable( projectile._target ) == false )
+                return false;
+            outPoint = _world.computeCenter( _world._listPilot[static_cast<size_t>( projectile._target )] );
+            return true;
+        }
+
+        bool sweep( const ProjectileState& projectile, const float3& from, const float3& to, ProjectileHit& outHit ) const override
+        {
+            const float3  segment = to - from;
+            const float32 length  = segment.getLength();
+            if ( length > MechArenaWorldInternal::kTiny )
+            {
+                const int32 ownerTeam = _world.isValidPilot( projectile._owner ) ? _world._listPilot[static_cast<size_t>( projectile._owner )]._team : TeamAttitudeUtil::kNoTeam;
+                const Ray   ray{ from, segment / length };
+                int32       hitPilot    = -1;
+                float32     hitDistance = length;
+                for ( int32 other = 0; other < _world.getPilotCount(); ++other )
+                {
+                    const MechPilot& candidate = _world._listPilot[static_cast<size_t>( other )];
+                    float32          distance  = 0.0f;
+                    if ( other == projectile._lastHit || _world.isEnemyTarget( ownerTeam, other ) == false )
+                        continue;
+                    if ( RayMath::intersectSphere( ray, _world.computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
+                    {
+                        hitDistance = distance;
+                        hitPilot    = other;
+                    }
+                }
+                if ( hitPilot >= 0 )
+                {
+                    outHit._position = from + ray._direction * hitDistance;
+                    outHit._other    = hitPilot;
+                    outHit._kind     = ProjectileHitKind::Target;
+                    return true;
+                }
+            }
+            const MechArenaSettings& settings = _world._settings;
+            const bool               bOutside = MathUtil::abs( to._x ) > settings._arenaHalfSize || MathUtil::abs( to._z ) > settings._arenaHalfSize || to._y < 0.0f || to._y > settings._ceiling;
+            if ( bOutside == false )
+                return false;
+            // 판 밖은 표면이다 — 튕기는 탄이 아니면 여기서 끝난다(판 밖 탄은 스냅샷 양자화 범위 밖이다).
+            outHit._position = to;
+            outHit._kind     = ProjectileHitKind::Surface;
+            return true;
+        }
+
+    private:
+        const MechArenaWorld& _world;
+    };
+
     const MechModeDef* MechPilot::getMode() const
     {
         const MechDef* pMech = getMech();
@@ -311,16 +357,18 @@ namespace sw
     MechArenaWorld::MechArenaWorld()
         : _settings{}
         , _listPilot{}
-        , _listProjectile{}
+        , _projectiles{}
         , _listTeamName{}
         , _eventBuffer{}
         , _listVitalityScratch{}
         , _listMatchScratch{}
         , _listCandidateScratch{}
+        , _listProjectileEventScratch{}
         , _match{}
         , _timer{}
         , _pMechCatalog{ nullptr }
         , _pWeaponCatalog{ nullptr }
+        , _pProjectileCatalog{ nullptr }
         , _pMoveCatalog{ nullptr }
         , _tick{ 0 }
         , _bStarted{ SW_FALSE }
@@ -329,7 +377,7 @@ namespace sw
     }
 
     bool MechArenaWorld::initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog,
-                                     const MoveCatalog* pMoveCatalog )
+                                     const ProjectileCatalog* pProjectileCatalog, const MoveCatalog* pMoveCatalog )
     {
         const string rangeError = ConfigRangeUtil::describeRangeErrors( settings );
         if ( rangeError.empty() == false )
@@ -337,12 +385,13 @@ namespace sw
             SW_LOG_ERROR_ID( "MechArenaWorld.MechArenaWorldRefusedSettings", "MechArenaWorld: refused settings - %#", rangeError.c_str() );
             return false;
         }
-        _settings       = settings;
-        _pMechCatalog   = pMechCatalog;
-        _pWeaponCatalog = pWeaponCatalog;
-        _pMoveCatalog   = pMoveCatalog;
+        _settings           = settings;
+        _pMechCatalog       = pMechCatalog;
+        _pWeaponCatalog     = pWeaponCatalog;
+        _pProjectileCatalog = pProjectileCatalog;
+        _pMoveCatalog       = pMoveCatalog;
         _listPilot.clear();
-        _listProjectile.clear();
+        _projectiles = ProjectileSimulation{};
         _listTeamName.clear();
         _eventBuffer.clear();
         _match.initialize( MatchSettings{} );
@@ -569,7 +618,7 @@ namespace sw
             {
                 retirePilot( pilot );
             }
-            _listProjectile.clear();
+            _projectiles.clear();
             pushEvent( MechArenaEvent::Kind::MatchEnded, -1, _match.getWinningTeam(), 0.0f, hashed_string{} );
         }
     }
@@ -585,13 +634,24 @@ namespace sw
 
     bool MechArenaWorld::isMechDataComplete( const MechDef& mech ) const
     {
+        if ( mech.computeSlotCount() >= static_cast<int32>( kSlotStride ) )
+        {
+            SW_LOG_ERROR_ID( "MechArenaWorld.MechTooManySlots", "Mech '%#' has %# weapon slots - at most %# fit the projectile payload", mech._id.c_str(), mech.computeSlotCount(),
+                             kSlotStride - 1 );
+            return false;
+        }
         for ( const MechModeDef& mode : mech._listMode )
         {
             for ( const MechWeaponSlotDef& slot : mode._listWeapon )
             {
                 bool bComplete = true;
                 if ( slot._kind == MechWeaponKind::Shot )
-                    bComplete = _pWeaponCatalog != nullptr && _pWeaponCatalog->find( slot._weaponID ) != nullptr;
+                {
+                    // 주무기는 무기와 그 기본 탄이 둘 다 있고, 무기가 그 탄을 받아야 쏠 수 있다.
+                    const WeaponDef*     pWeapon     = _pWeaponCatalog != nullptr ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
+                    const ProjectileDef* pProjectile = pWeapon != nullptr && _pProjectileCatalog != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID ) : nullptr;
+                    bComplete                        = pProjectile != nullptr && pWeapon->accepts( *pProjectile );
+                }
                 if ( slot._kind == MechWeaponKind::Melee )
                 {
                     bComplete = _pMoveCatalog != nullptr && slot._listMoveID.empty() == false;
@@ -602,7 +662,7 @@ namespace sw
                 }
                 if ( bComplete )
                     continue;
-                SW_LOG_ERROR_ID( "MechArenaWorld.MechSlotMissingData", "Mech '%#' slot '%#' points at a weapon or move that is not in the catalogs", mech._id.c_str(), slot._id.c_str() );
+                SW_LOG_ERROR_ID( "MechArenaWorld.MechSlotMissingData", "Mech '%#' slot '%#' points at a weapon, projectile or move that is not in the catalogs", mech._id.c_str(), slot._id.c_str() );
                 return false;
             }
         }
@@ -639,10 +699,13 @@ namespace sw
         {
             for ( const MechWeaponSlotDef& slot : mode._listWeapon )
             {
-                const WeaponDef* pWeapon = _pWeaponCatalog != nullptr && slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
-                if ( pWeapon != nullptr )
-                    pilot._listWeaponState[static_cast<size_t>( slotIndex )].equip( *pWeapon, pWeapon->_maxReserveAmmo,
-                                                                                    mixMechArenaSeed( _settings._seed, pilotIndex, slotIndex ) );
+                // 탄과 받음은 `isMechDataComplete` 가 위에서 봤다.
+                const WeaponDef*     pWeapon     = _pWeaponCatalog != nullptr && slot._kind == MechWeaponKind::Shot ? _pWeaponCatalog->find( slot._weaponID ) : nullptr;
+                const ProjectileDef* pProjectile = pWeapon != nullptr ? _pProjectileCatalog->find( pWeapon->_projectileID ) : nullptr;
+                const bool           bEquipped   = pProjectile == nullptr || pilot._listWeaponState[static_cast<size_t>( slotIndex )].equip(
+                                                                     *pWeapon, *pProjectile, pWeapon->_maxReserveAmmo, mixMechArenaSeed( _settings._seed, pilotIndex, slotIndex ) );
+                if ( bEquipped == false )
+                    return false;
                 ++slotIndex;
             }
         }
@@ -788,10 +851,15 @@ namespace sw
         if ( weapon.pullTrigger( Ray{ origin, direction }, bPressed, shot ) != WeaponFireResult::Fired )
             return;
         pushEvent( MechArenaEvent::Kind::Fired, pilotIndex, target, 0.0f, slot._id );
-        const WeaponDef& def = weapon.getDef();
+        // 탄 값은 장전한 조합(무기 + 탄)이고, 유도는 그 탄의 유도에 슬롯의 유도를 더한다.
         for ( const Ray& ray : shot._listRay )
         {
-            launch( pilotIndex, target, ray._direction, def._projectileSpeed, def._range, def._damage, slot );
+            ProjectileState projectile = ProjectileState::launch( weapon.getShot(), origin, ray._direction, _settings._gravity );
+            projectile._turnRate += MathUtil::toRadian( slot._homing );
+            projectile._owner  = pilotIndex;
+            projectile._team   = pilot._team;
+            projectile._target = target;
+            launch( pilotIndex, slotIndex, ray._direction, projectile, slot );
         }
     }
 
@@ -807,20 +875,28 @@ namespace sw
         const float3 direction = target >= 0 ? ( computeCenter( _listPilot[static_cast<size_t>( target )] ) - origin ).normalizeOr( pilot._forward, MechArenaWorldInternal::kTiny )
                                              : pilot._forward;
         pushEvent( MechArenaEvent::Kind::Fired, pilotIndex, target, 0.0f, slot._id );
-        launch( pilotIndex, target, direction, slot._projectileSpeed, slot._range, slot._damage, slot );
+        // 특수기는 슬롯이 곧 탄 정의다(키트 데이터). 중력은 받지 않는다.
+        ProjectileState projectile;
+        projectile._velocity = direction * slot._projectileSpeed;
+        projectile._damage   = slot._damage;
+        projectile._range    = slot._range;
+        projectile._turnRate = MathUtil::toRadian( slot._homing );
+        projectile._owner    = pilotIndex;
+        projectile._team     = pilot._team;
+        projectile._target   = target;
+        launch( pilotIndex, slotIndex, direction, projectile, slot );
     }
 
-    void MechArenaWorld::launch( int32 pilotIndex, int32 target, const float3& direction, float32 speed, float32 range, float32 damage,
-                                 const MechWeaponSlotDef& slot )
+    void MechArenaWorld::launch( int32 pilotIndex, int32 slotIndex, const float3& direction, ProjectileState projectile, const MechWeaponSlotDef& slot )
     {
         const MechPilot& pilot  = _listPilot[static_cast<size_t>( pilotIndex )];
         const float3     origin = computeCenter( pilot );
-        if ( speed <= 0.0f )
+        if ( projectile._velocity.getLengthSquared() <= 0.0f )
         {
             // 즉시 탄(광선)은 사거리 안에서 가장 가까운 적을 맞힌다.
             const Ray ray{ origin, direction };
             int32     hitPilot    = -1;
-            float32   hitDistance = range;
+            float32   hitDistance = projectile._range;
             for ( int32 other = 0; other < getPilotCount(); ++other )
             {
                 const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];
@@ -834,23 +910,26 @@ namespace sw
                 }
             }
             if ( hitPilot >= 0 )
-                resolveHit( pilotIndex, hitPilot, damage, slot._downValue, slot._knockback, slot._staggerTime, false, slot._kind );
+                resolveHit( pilotIndex, hitPilot, projectile._damage, slot._downValue, slot._knockback, slot._staggerTime, false, slot._kind );
             return;
         }
-        MechProjectile projectile;
-        projectile._position    = origin;
-        projectile._direction   = direction;
-        projectile._speed       = speed;
-        projectile._homing      = slot._homing;
-        projectile._rangeLeft   = range;
-        projectile._damage      = damage;
-        projectile._downValue   = slot._downValue;
-        projectile._knockback   = slot._knockback;
-        projectile._staggerTime = slot._staggerTime;
-        projectile._owner       = pilotIndex;
-        projectile._target      = target;
-        projectile._kind        = slot._kind;
-        _listProjectile.push_back( projectile );
+        // 맞은 뒤의 반응(다운치 · 경직 · 넉백 · 종류)은 탄에 베끼지 않고 슬롯을 가리킨다(`findProjectileSlot`).
+        projectile._position         = origin;
+        projectile._previousPosition = origin;
+        projectile._payload          = static_cast<uint32>( _pMechCatalog->findMechIndex( pilot.getMech()->_id ) ) * kSlotStride + static_cast<uint32>( slotIndex );
+        (void)_projectiles.spawn( projectile ); // 탄 id 는 쓰지 않는다
+    }
+
+    const MechWeaponSlotDef* MechArenaWorld::findProjectileSlot( uint32 payload ) const
+    {
+        if ( _pMechCatalog == nullptr )
+            return nullptr;
+        const vector<MechDef>& listMech  = _pMechCatalog->getMechs();
+        const uint32           mechIndex = payload / kSlotStride;
+        if ( mechIndex >= static_cast<uint32>( listMech.size() ) )
+            return nullptr;
+        const MechWeaponSlotDef* pSlot = listMech[mechIndex].findSlot( static_cast<int32>( payload % kSlotStride ) );
+        return pSlot != nullptr && pSlot->_kind != MechWeaponKind::Melee ? pSlot : nullptr;
     }
 
     void MechArenaWorld::resolveHit( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 knockback, float32 staggerTime, bool bKnockdown,
@@ -1026,7 +1105,7 @@ namespace sw
             }
             outSnapshot._listPilot.push_back( entry );
         }
-        for ( const MechProjectile& projectile : _listProjectile )
+        for ( const ProjectileState& projectile : _projectiles.getProjectiles() )
         {
             MechProjectileSnapshot entry;
             entry._position = projectile._position;
@@ -1064,22 +1143,7 @@ namespace sw
         {
             MechArenaWorldInternal::writePilot( outArchive, pilot );
         }
-        outArchive << static_cast<uint32>( _listProjectile.size() );
-        for ( const MechProjectile& projectile : _listProjectile )
-        {
-            outArchive << projectile._position;
-            outArchive << projectile._direction;
-            outArchive << projectile._speed;
-            outArchive << projectile._homing;
-            outArchive << projectile._rangeLeft;
-            outArchive << projectile._damage;
-            outArchive << projectile._downValue;
-            outArchive << projectile._knockback;
-            outArchive << projectile._staggerTime;
-            outArchive << projectile._owner;
-            outArchive << projectile._target;
-            outArchive << static_cast<uint8>( projectile._kind );
-        }
+        _projectiles.writeState( outArchive );
     }
 
     bool MechArenaWorld::readState( Archive& archive )
@@ -1125,34 +1189,15 @@ namespace sw
                 return false;
         }
 
-        uint32 projectileCount = 0;
-        // 탄마다 위치(12) + 방향(12) + 실수 7개(28) + 쏜 쪽과 대상(8) + 종류(1) 바이트
-        if ( archive.readCount( 61, projectileCount ) == false )
+        if ( restored._projectiles.readState( archive ) == false )
             return false;
-        restored._listProjectile.assign( projectileCount, MechProjectile{} );
-        for ( MechProjectile& projectile : restored._listProjectile )
+        for ( const ProjectileState& projectile : restored._projectiles.getProjectiles() )
         {
-            uint8 kind = 0;
-            archive >> projectile._position;
-            archive >> projectile._direction;
-            archive >> projectile._speed;
-            archive >> projectile._homing;
-            archive >> projectile._rangeLeft;
-            archive >> projectile._damage;
-            archive >> projectile._downValue;
-            archive >> projectile._knockback;
-            archive >> projectile._staggerTime;
-            archive >> projectile._owner;
-            archive >> projectile._target;
-            archive >> kind;
-            // 탄속 0 인 탄은 날아가지 않는 광선이라 쏠 때 탄이 되지 않는다. 받으면 사거리가 줄지 않아 영원히 남는다.
-            const bool bValueValid = projectile._speed > 0.0f && projectile._rangeLeft > 0.0f && projectile._homing >= 0.0f && projectile._downValue >= 0.0f && projectile._knockback >= 0.0f &&
-                                     projectile._staggerTime >= 0.0f;
-            const bool bValid = archive.isOk() && bValueValid && -1 <= projectile._owner && projectile._owner < static_cast<int32>( pilotCount ) && -1 <= projectile._target &&
-                                projectile._target < static_cast<int32>( pilotCount ) && kind <= static_cast<uint8>( MechWeaponKind::Special );
+            // 탄속 0 인 탄은 날아가지 않는 광선이라 쏠 때 탄이 되지 않는다. 사거리 없는 탄은 판 밖에 닿기 전까지 남는다 — 둘 다 이 판이 쏘지 않는 탄이다.
+            const bool bValid = projectile.getSpeed() > 0.0f && projectile._range > 0.0f && -1 <= projectile._owner && projectile._owner < static_cast<int32>( pilotCount ) &&
+                              -1 <= projectile._target && projectile._target < static_cast<int32>( pilotCount ) && restored.findProjectileSlot( projectile._payload ) != nullptr;
             if ( bValid == false )
                 return false;
-            projectile._kind = static_cast<MechWeaponKind>( kind );
         }
         restored._eventBuffer.clear();
         *this = std::move( restored );
@@ -1531,50 +1576,18 @@ namespace sw
 
     void MechArenaWorld::stepProjectiles( float32 deltaTime )
     {
-        using Internal    = MechArenaWorldInternal;
-        size_t writeIndex = 0;
-        for ( size_t readIndex = 0; readIndex < _listProjectile.size(); ++readIndex )
+        // 걸음은 공통 시뮬레이션이 하고, 키트는 맞은 조종사에게 슬롯의 반응을 준다. 반응은 모든 탄이 움직인 뒤에 준다(걸음 안에서 세계를 바꾸지 않는다).
+        const MechArenaProjectileQuery query( *this );
+        _listProjectileEventScratch.clear();
+        _projectiles.step( deltaTime, query, _listProjectileEventScratch );
+        for ( const ProjectileEvent& event : _listProjectileEventScratch )
         {
-            MechProjectile projectile = _listProjectile[readIndex];
-            const bool     bCanHome   = projectile._target >= 0 && projectile._homing > 0.0f && isTargetable( projectile._target );
-            if ( bCanHome )
-            {
-                const float3 targetCenter = computeCenter( _listPilot[static_cast<size_t>( projectile._target )] );
-                const float3 desired      = ( targetCenter - projectile._position ).normalizeOr( projectile._direction, MechArenaWorldInternal::kTiny );
-                projectile._direction     = Internal::rotateToward( projectile._direction, desired, MathUtil::toRadian( projectile._homing ) * deltaTime );
-            }
-            const float32 stepLength = MathUtil::min( projectile._speed * deltaTime, projectile._rangeLeft );
-            const int32   ownerTeam  = isValidPilot( projectile._owner ) ? _listPilot[static_cast<size_t>( projectile._owner )]._team : TeamAttitudeUtil::kNoTeam;
-            const Ray     ray{ projectile._position, projectile._direction };
-            int32         hitPilot    = -1;
-            float32       hitDistance = stepLength;
-            for ( int32 other = 0; other < getPilotCount(); ++other )
-            {
-                const MechPilot& candidate = _listPilot[static_cast<size_t>( other )];
-                float32          distance  = 0.0f;
-                if ( isEnemyTarget( ownerTeam, other ) == false )
-                    continue;
-                if ( RayMath::intersectSphere( ray, computeCenter( candidate ), candidate.getMech()->_radius, hitDistance, distance ) && distance <= hitDistance )
-                {
-                    hitDistance = distance;
-                    hitPilot    = other;
-                }
-            }
-            if ( hitPilot >= 0 )
-            {
-                resolveHit( projectile._owner, hitPilot, projectile._damage, projectile._downValue, projectile._knockback, projectile._staggerTime, false,
-                            projectile._kind );
+            if ( event._kind != ProjectileEvent::Kind::Hit || event._hit._kind != ProjectileHitKind::Target )
                 continue;
-            }
-            projectile._position += projectile._direction * stepLength;
-            projectile._rangeLeft -= stepLength;
-            const bool bOutside = MathUtil::abs( projectile._position._x ) > _settings._arenaHalfSize ||
-                                  MathUtil::abs( projectile._position._z ) > _settings._arenaHalfSize || projectile._position._y < 0.0f ||
-                                  projectile._position._y > _settings._ceiling;
-            if ( projectile._rangeLeft <= 0.0f || bOutside )
-                continue;
-            _listProjectile[writeIndex++] = projectile;
+            const MechWeaponSlotDef* pSlot = findProjectileSlot( event._projectile._payload );
+            if ( pSlot == nullptr )
+                continue; // 쏠 때와 상태 읽기가 번호를 봤으므로 닿지 않는다
+            resolveHit( event._projectile._owner, event._hit._other, event._projectile._damage, pSlot->_downValue, pSlot->_knockback, pSlot->_staggerTime, false, pSlot->_kind );
         }
-        _listProjectile.resize( writeIndex );
     }
 } // namespace sw

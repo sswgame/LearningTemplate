@@ -107,6 +107,7 @@
         { "root": "CropCatalog", "listEntry": [ { "name": "Crop", "key": "id" } ] },
         { "root": "Interactions", "listEntry": [ { "name": "Interaction", "key": "id" }, { "name": "UsableObject", "key": "id" } ] },
         { "root": "LootCatalog", "listEntry": [ { "name": "Table", "key": "id" } ] },
+        { "root": "ProjectileCatalog", "listEntry": [ { "name": "Projectile", "key": "id", "listField": [ { "name": "OnHit", "key": "call" } ] }, { "name": "Impact", "key": "id" } ] },
         { "root": "QuestCatalog", "listEntry": [ { "name": "Quest", "key": "id", "listField": [ { "name": "Stage", "key": "id" } ] } ] },
         { "root": "RTSCatalog", "listEntry": [ { "name": "Unit", "key": "id" } ] },
         { "root": "ReputationCatalog", "listEntry": [ { "name": "Faction", "key": "id" } ] },
@@ -114,7 +115,7 @@
         { "root": "ShopCatalog", "listEntry": [ { "name": "Shop", "key": "id", "listField": [ { "name": "Stock", "key": "item" } ] } ] },
         { "root": "SkirmishUnitModels", "listEntry": [ { "name": "Model", "key": "id" } ] },
         { "root": "SpawnTable", "listEntry": [ { "name": "Entry", "key": "id" } ] },
-        { "root": "WeaponCatalog", "listEntry": [ { "name": "Weapon", "key": "id" } ] },
+        { "root": "WeaponCatalog", "listEntry": [ { "name": "Weapon", "key": "id", "listField": [ { "name": "Modifier", "key": "field" } ] } ] },
         { "root": "UIStyleSheet", "listEntry": [ { "name": "Variable", "key": "_name" }, { "name": "TypeVariation", "key": "_name" }, { "name": "Rule", "key": "_selector", "listField": [ { "name": "_font" } ] } ] },
         { "root": "WesternCatalog", "listEntry": [ { "name": "Horse", "key": "id" }, { "name": "Food", "key": "id" } ] }
     ]

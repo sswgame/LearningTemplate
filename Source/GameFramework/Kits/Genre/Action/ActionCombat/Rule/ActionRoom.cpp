@@ -2,7 +2,6 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionCombat/Rule/ActionRoom.h"
 
-#include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Math/MathUtil.h"
 
@@ -17,6 +16,16 @@
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 룸의 적 탄이 묻는 세계입니다. 벽이 없고 유도하지 않으며, 플레이어 맞음은 걸음 뒤에 룸이 본다(무적이 한 프레임 한 번을 정한다). */
+        class ActionRoomProjectileQuery : public IProjectileWorld
+        {
+        public:
+            bool findTargetPoint( const ProjectileState& /*projectile*/, float3& /*outPoint*/ ) const override { return false; }
+            bool sweep( const ProjectileState& /*projectile*/, const float3& /*from*/, const float3& /*to*/, ProjectileHit& /*outHit*/ ) const override { return false; }
+        };
+    } // namespace
 } // namespace sw
 
 namespace sw
@@ -28,7 +37,8 @@ namespace sw
         , _kind{ ActionRoomKind::None }
         , _layers{}
         , _listActor{}
-        , _listProjectile{}
+        , _projectiles{}
+        , _listProjectileEventScratch{}
         , _listMonsterDef{}
         , _attackCooldown{}
         , _dashCooldown{}
@@ -42,13 +52,14 @@ namespace sw
         _layers.setLayerCollision( kLayerPlayerAtk, kLayerProjectile, false );
         _layers.setLayerCollision( kLayerEnemy, kLayerEnemy, false );
         _layers.setLayerCollision( kLayerProjectile, kLayerEnemy, false );
+        _projectiles.setPlaneNormal( float3{ 0.0f, 0.0f, 1.0f } ); // 룸 평면 (x, y)
     }
 
     void ActionRoom::clear()
     {
         _kind = ActionRoomKind::None;
         _listActor.clear();
-        _listProjectile.clear();
+        _projectiles.clear();
         _listMonsterDef.clear();
         _attackCooldown.clear();
         _dashCooldown.clear();
@@ -191,19 +202,19 @@ namespace sw
             const float32 radius = _listMonsterDef[actor._defIndex]._stats._radius;
             pDbg->drawSphere( float3( actor._position._x, 0.5f, actor._position._y ), radius, actorColor );
         }
-        for ( const Projectile& projectile : _listProjectile )
+        for ( const ProjectileState& projectile : _projectiles.getProjectiles() )
         {
-            if ( projectile._bAlive == SW_FALSE )
-                continue;
             pDbg->drawSphere( float3( projectile._position._x, 0.4f, projectile._position._y ), projectile._radius, float4( 1.0f, 0.9f, 0.2f, 1.0f ) );
         }
     }
 
-    AABB ActionRoom::Projectile::bounds() const
+    AABB ActionRoom::computeProjectileBounds( const ProjectileState& projectile )
     {
+        const float3& position = projectile._position;
+        const float32 radius   = projectile._radius;
         return AABB{
-            float3{_position._x - _radius, 0.0f, _position._y - _radius},
-            float3{_position._x + _radius, 1.0f, _position._y + _radius}
+            float3{position._x - radius, 0.0f, position._y - radius},
+            float3{position._x + radius, 1.0f, position._y + radius}
         };
     }
 
@@ -304,34 +315,26 @@ namespace sw
                 const float32 cosine = MathUtil::cos( radian );
                 const float32 sine   = MathUtil::sin( radian );
 
-                Projectile projectile{};
-                projectile._position    = actor._position;
-                projectile._velocity._x = ( aim._x * cosine - aim._y * sine ) * shot._speed;
-                projectile._velocity._y = ( aim._x * sine + aim._y * cosine ) * shot._speed;
-                projectile._life.start( shot._lifeTime );
-                projectile._radius = shot._radius;
-                projectile._damage = shot._damage;
-                projectile._bAlive = SW_TRUE;
-                _listProjectile.push_back( projectile );
+                // 수명 0 인 탄은 쏜 프레임에 사라지는 탄이다. 공통 시뮬레이션의 수명 0 은 "제한 없음" 이라 내지 않는다.
+                if ( shot._lifeTime <= 0.0f )
+                    continue;
+                ProjectileState projectile;
+                projectile._position         = float3{ actor._position._x, actor._position._y, 0.0f };
+                projectile._previousPosition = projectile._position;
+                projectile._velocity         = float3{ ( aim._x * cosine - aim._y * sine ) * shot._speed, ( aim._x * sine + aim._y * cosine ) * shot._speed, 0.0f };
+                projectile._lifetime         = shot._lifeTime;
+                projectile._radius           = shot._radius;
+                projectile._damage           = static_cast<float32>( shot._damage );
+                (void)_projectiles.spawn( projectile ); // 탄 id 는 쓰지 않는다
             }
         }
     }
 
     void ActionRoom::updateProjectiles( float32 deltaTime )
     {
-        for ( Projectile& projectile : _listProjectile )
-        {
-            if ( projectile._bAlive == SW_FALSE )
-                continue;
-            projectile._position._x += projectile._velocity._x * deltaTime;
-            projectile._position._y += projectile._velocity._y * deltaTime;
-            projectile._life.update( deltaTime );
-            if ( projectile._life.isActive() == false )
-                projectile._bAlive = SW_FALSE;
-        }
-
-        VectorUtil::removeIf( _listProjectile, []( const Projectile& projectile )
-        { return projectile._bAlive == SW_FALSE; } );
+        const ActionRoomProjectileQuery query;
+        _listProjectileEventScratch.clear();
+        _projectiles.step( deltaTime, query, _listProjectileEventScratch );
     }
 
     void ActionRoom::resolvePlayerHits( float32 playerX, float32 playerY, ActionRoomFrameResult& outResult )
@@ -351,14 +354,13 @@ namespace sw
             _invulnerable.start( _settings._hitInvulnerableSeconds );
             return;
         }
-        for ( Projectile& projectile : _listProjectile )
+        for ( ProjectileState& projectile : _projectiles.accessProjectiles() )
         {
-            if ( projectile._bAlive == SW_FALSE )
+            if ( queryOverlaps( hurt, kLayerPlayer, computeProjectileBounds( projectile ), kLayerProjectile, _layers ) == false )
                 continue;
-            if ( queryOverlaps( hurt, kLayerPlayer, projectile.bounds(), kLayerProjectile, _layers ) == false )
-                continue;
-            outResult._damageToPlayer += projectile._damage;
+            outResult._damageToPlayer += static_cast<int32>( projectile._damage ); // 쏠 때 `MonsterShotDef::_damage`(정수)에서 왔다
             projectile._bAlive = SW_FALSE;
+            _projectiles.removeDead();
             _invulnerable.start( _settings._hitInvulnerableSeconds );
             return;
         }
@@ -376,7 +378,7 @@ namespace sw
         if ( _kind == ActionRoomKind::Boss && _listActor.empty() == false )
             outResult._bBossDefeated = SW_TRUE;
         // 이긴 방에서 남은 탄에 맞아 지지 않게 탄을 지운다(건전 · 하데스처럼 클리어가 탄을 거둔다).
-        _listProjectile.clear();
+        _projectiles.clear();
 
         // 클리어는 한 번만 알린다(위의 `_bCleared` 가 막는다). 결과를 알리고 문을 연다.
         RoomClearedEvent cleared;
@@ -461,16 +463,7 @@ namespace sw
             outArchive << actor._defIndex;
             outArchive << static_cast<uint8>( actor._bAlive );
         }
-        outArchive << static_cast<uint32>( _listProjectile.size() );
-        for ( const Projectile& projectile : _listProjectile )
-        {
-            outArchive << projectile._position;
-            outArchive << projectile._velocity;
-            StateArchiveUtil::writeCountdown( outArchive, projectile._life );
-            outArchive << projectile._radius;
-            outArchive << projectile._damage;
-            outArchive << static_cast<uint8>( projectile._bAlive );
-        }
+        _projectiles.writeState( outArchive );
     }
 
     bool ActionRoom::readState( Archive& archive )
@@ -525,25 +518,14 @@ namespace sw
             actor._bAlive = bAlive;
         }
 
-        uint32 projectileCount = 0;
-        // 투사체마다 위치(8) + 속도(8) + 수명(4) + 반지름(4) + 피해(4) + 생존(1) 바이트
-        if ( archive.readCount( 29, projectileCount ) == false )
+        // 탄 수치(유한 · 음수 아닌 반지름 · 수명)는 시뮬레이션이 보고, 룸 평면과 피해는 여기서 본다.
+        if ( restored._projectiles.readState( archive ) == false )
             return false;
-        restored._listProjectile.assign( projectileCount, Projectile{} );
-        for ( Projectile& projectile : restored._listProjectile )
+        for ( const ProjectileState& projectile : restored._projectiles.getProjectiles() )
         {
-            uint8 bAlive = SW_FALSE;
-            archive >> projectile._position;
-            archive >> projectile._velocity;
-            if ( StateArchiveUtil::readCountdown( archive, projectile._life ) == false )
-                return false;
-            archive >> projectile._radius;
-            archive >> projectile._damage;
-            archive >> bAlive;
-            const bool bProjectileValid = archive.isOk() && bAlive <= SW_TRUE && 0.0f <= projectile._radius && 0 <= projectile._damage;
+            const bool bProjectileValid = 0.0f <= projectile._damage && projectile._position._z == 0.0f && projectile._velocity._z == 0.0f;
             if ( bProjectileValid == false )
                 return false;
-            projectile._bAlive = bAlive;
         }
         *this = std::move( restored );
         return true;

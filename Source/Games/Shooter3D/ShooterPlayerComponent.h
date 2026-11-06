@@ -54,7 +54,9 @@ namespace sw
      *          섬광 구를 디렉터의 풀에서 꺼낸다. 에디터 없이 App 에서도 보인다.
      *          적에게 주는 피해, 효과, 효과음, 손에 든 총 교체는 쌓아 두었다가 틱이 끝난 뒤 한 번에 처리한다(게임 스레드).
      *          **히트스캔**: 틱 안에서는 막는 상자 · 바닥까지의 거리만 재고(`traceCover`), 적은 틱 뒤에 그 거리 안에서 물리 질의로 래그돌 히트박스를 묻는다
-     *          (`resolveShots`, 레이어 `_hitboxLayer`). 피해는 무기 피해 × 맞은 바디의 히트 존 배율이다.
+     *          (`resolveShots`, 레이어 `_hitboxLayer`). 피해는 장전한 탄의 피해(`WeaponState::getShot`) × 맞은 바디의 히트 존 배율이다.
+     *          **탄**: 사거리 · 피해 · 궤적(탄도선 색 · 두께)은 장전한 탄(`ProjectileCatalog`, projectiles.xml)이고, 탄착 효과(색 · 크기)는 탄과 표면(`Body` · `Cover`)의 맞음 표다.
+     *          탄은 무기가 받는 것만 넣는다(`WeaponDef::_accepts`). 적을 맞히면 그 탄의 맞음 동작(`<OnHit>`)을 적의 태그 문맥으로 부른다.
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Player", Tooltip = "Movement, weapons, hitscan, health, the body and the tracers of the shooter player" )
     class ShooterPlayerComponent : public Component
@@ -82,6 +84,11 @@ namespace sw
         bool isDamageImmune() const { return _vitality.isDamageImmune(); }
         /** @brief 스폰한 몸을 지웁니다(상태를 저장하기 전). 다음 틱이 끝난 뒤 다시 스폰합니다. */
         void despawnViews();
+        /**
+         * @brief 지금 무기에 탄 @p projectileID 를 장전합니다(치트 `cheat.shooter.projectile`, 시나리오). 빈 id 는 그 무기의 기본 탄입니다.
+         * @return 탄 카탈로그에 없거나 무기가 받지 않는 탄이면 오류를 남기고 false 이며 장전은 그대로입니다.
+         */
+        [[nodiscard]] bool loadProjectile( const hashed_string& projectileID );
 
         // ---- 디렉터, 몸, 조종자가 읽는 것(이 컴포넌트가 쓰지 않는 그룹) ----
         float3 getEyePosition() const;
@@ -121,8 +128,10 @@ namespace sw
         /** @brief 이번 발의 탄도선 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
         struct TracerRequest
         {
-            float3 _from{};
-            float3 _to{};
+            float4  _color{};
+            float3  _from{};
+            float3  _to{};
+            float32 _width{ 0.0f };
         };
 
         /**
@@ -131,12 +140,15 @@ namespace sw
          */
         struct PendingShot
         {
-            Ray     _ray{};
-            float3  _muzzle{};
-            float32 _coverDistance{ 0.0f }; ///< 막는 상자 · 바닥 · 사거리 중 가까운 것(m)
-            float32 _range{ 0.0f };         ///< 무기 사거리(m) — 이보다 짧으면 무언가에 닿았다
-            float32 _damage{ 0.0f };
-            uint32  _volley{ 0 };
+            Ray           _ray{};
+            float3        _muzzle{};
+            hashed_string _projectileID{};        ///< 장전한 탄(맞음 표 · 맞음 동작을 찾는다)
+            float4        _tracerColor{};         ///< 탄의 궤적 색
+            float32       _tracerWidth{ 0.0f };   ///< 탄의 궤적 두께
+            float32       _coverDistance{ 0.0f }; ///< 막는 상자 · 바닥 · 사거리 중 가까운 것(m)
+            float32       _range{ 0.0f };         ///< 탄 사거리(m) — 이보다 짧으면 무언가에 닿았다
+            float32       _damage{ 0.0f };
+            uint32        _volley{ 0 };
         };
 
         /** @brief 낼 탄착 효과 하나입니다. 틱이 끝난 뒤 디렉터의 풀에서 꺼냅니다. */
@@ -212,14 +224,6 @@ namespace sw
         float32 _hitEffectLifetime;
         PROPERTY( Category = "Effects", DisplayName = "Tracer Lifetime", Tooltip = "Seconds a tracer stays", Min = 0.0, Units = s )
         float32 _tracerLifetime;
-        PROPERTY( Category = "Effects", DisplayName = "Tracer Width", Min = 0.0, Units = m )
-        float32 _tracerWidth;
-        PROPERTY( Category = "Effects", DisplayName = "Enemy Hit Color", Tooltip = "Colour of the hit sphere on an enemy" )
-        float4 _enemyHitColor;
-        PROPERTY( Category = "Effects", DisplayName = "Cover Hit Color", Tooltip = "Colour of the hit sphere on cover" )
-        float4 _coverHitColor;
-        PROPERTY( Category = "Effects", DisplayName = "Tracer Color", Tooltip = "HDR colour of a tracer (above 1 glows)" )
-        float4 _tracerColor;
         PROPERTY( Category = "Effects", DisplayName = "Muzzle Flash Color", Tooltip = "HDR colour of the muzzle flash (above 1 glows)" )
         float4 _muzzleFlashColor;
 

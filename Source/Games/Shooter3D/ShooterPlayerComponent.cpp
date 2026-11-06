@@ -24,6 +24,7 @@
 #include "Engine/Telemetry/TelemetryService.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/FirstPersonCameraComponent.h"
@@ -35,6 +36,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 #include "GameFramework/Runtime/UI/HUD/HUDControllerComponent.h"
+#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 #include "Games/Shooter3D/ShooterAvatarComponent.h"
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"
@@ -62,6 +64,10 @@ namespace sw
             static constexpr const utf8* kSoundLand     = "Land";
             static constexpr const utf8* kSoundHitEnemy = "HitEnemy";
             static constexpr const utf8* kSoundHitCover = "HitCover";
+
+            // 맞음 표(projectiles.xml 의 `<Impact surface>`)의 표면 이름이다. 기동할 때 게임이 장전할 수 있는 모든 탄에 두 표면의 줄이 있는지 본다.
+            static constexpr const utf8* kSurfaceBody  = "Body";
+            static constexpr const utf8* kSurfaceCover = "Cover";
 
             /** @brief 같은 오브젝트에서 컴포넌트 이름이 @p pName 인 T 를 반환합니다. 없으면 nullptr 입니다. */
             template <typename T>
@@ -125,6 +131,16 @@ namespace sw
                 if ( pPlayer == nullptr )
                     return false;
                 outValue = static_cast<float64>( pPlayer->getWeaponIndex() );
+                return true;
+            }
+
+            /** @brief 첫 슈터 플레이어의 지금 무기에 장전한 탄의 한 알 피해입니다(무기 · 탄 · 수정자 조합의 결과). */
+            [[nodiscard]] static bool readShotDamage( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPlayer->getCurrentWeapon().getShot()._damage );
                 return true;
             }
 
@@ -258,6 +274,24 @@ namespace sw
                 outReply = formatToString( "%#%# player(s)", string( bImmune ? "cheat.shooter.god on for " : "cheat.shooter.god off for " ), listPlayer.size() );
                 return true;
             }
+
+            /** @brief `cheat.shooter.projectile [id]` — 슈터 플레이어의 지금 무기에 탄을 장전합니다. id 를 빼면 그 무기의 기본 탄입니다(무기 · 탄 조합 시나리오). */
+            static bool runProjectile( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() > 1 )
+                    return false;
+                vector<ShooterPlayerComponent*> listPlayer;
+                if ( collectPlayers( listPlayer, outReply ) == false )
+                    return true;
+                const hashed_string projectileID = listArgument.empty() ? hashed_string{} : hashed_string( listArgument.front() );
+                int32               loadedCount  = 0;
+                for ( ShooterPlayerComponent* pPlayer : listPlayer )
+                {
+                    loadedCount += pPlayer->loadProjectile( projectileID ) ? 1 : 0; // 거절한 까닭은 장전이 남겼다
+                }
+                outReply = formatToString( "cheat.shooter.projectile loaded '%#' for %# of %# player(s)", projectileID.c_str(), loadedCount, listPlayer.size() );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -278,10 +312,6 @@ namespace sw
         , _shotImpulse{ 30.0f }
         , _hitEffectLifetime{ 0.12f }
         , _tracerLifetime{ 0.07f }
-        , _tracerWidth{ 0.025f }
-        , _enemyHitColor{ 1.0f, 0.45f, 0.2f, 1.0f }
-        , _coverHitColor{ 0.9f, 0.85f, 0.6f, 1.0f }
-        , _tracerColor{ 3.0f, 2.2f, 0.6f, 1.0f }
         , _muzzleFlashColor{ 4.0f, 2.8f, 0.8f, 1.0f }
         , _arrWeapon{}
         , _vitality{}
@@ -547,10 +577,11 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool ShooterPlayerComponent::equipWeapons()
     {
-        const WeaponCatalog* pCatalog = game::findSubsystem<WeaponCatalog>();
-        if ( pCatalog == nullptr )
+        const WeaponCatalog*     pCatalog     = game::findSubsystem<WeaponCatalog>();
+        const ProjectileCatalog* pProjectiles = game::findSubsystem<ProjectileCatalog>();
+        if ( pCatalog == nullptr || pProjectiles == nullptr )
         {
-            SW_LOG_ERROR_ID( "ShooterPlayer.NoWeaponCatalogGameService", "[Shooter] no WeaponCatalog game service - the player cannot be armed" );
+            SW_LOG_ERROR_ID( "ShooterPlayer.NoWeaponCatalogGameService", "[Shooter] no WeaponCatalog or ProjectileCatalog game service - the player cannot be armed" );
             return false;
         }
         const size_t slotCount = static_cast<size_t>( kWeaponCount );
@@ -577,9 +608,27 @@ namespace sw
                 bArmed = false;
                 continue;
             }
-            _arrWeapon[weaponIndex].equip( *pDef, pDef->_maxReserveAmmo / 2, 0x51ed270bu + static_cast<uint32>( weaponIndex ) );
+            // 기본 탄과 받음은 게임이 기동할 때 봤다(`WeaponCatalog::checkProjectiles`). 여기서 틀리면 그 슬롯이 서지 않는다.
+            const ProjectileDef* pProjectile = pProjectiles->find( pDef->_projectileID );
+            const bool           bEquipped   = pProjectile != nullptr &&
+                                   _arrWeapon[weaponIndex].equip( *pDef, *pProjectile, pDef->_maxReserveAmmo / 2, 0x51ed270bu + static_cast<uint32>( weaponIndex ) );
+            bArmed = bArmed && bEquipped;
         }
         return bArmed;
+    }
+
+    bool ShooterPlayerComponent::loadProjectile( const hashed_string& projectileID )
+    {
+        const ProjectileCatalog* pProjectiles = game::findSubsystem<ProjectileCatalog>();
+        WeaponState&             weapon       = _arrWeapon[_weaponIndex];
+        const hashed_string&     wanted       = projectileID.empty() ? weapon.getDef()._projectileID : projectileID;
+        const ProjectileDef*     pProjectile  = pProjectiles != nullptr ? pProjectiles->find( wanted ) : nullptr;
+        if ( pProjectile == nullptr )
+        {
+            SW_LOG_ERROR_ID( "ShooterPlayer.ProjectileUnknown", "[Shooter] projectile '%#' is not in the projectile catalog", wanted.c_str() );
+            return false;
+        }
+        return weapon.loadProjectile( *pProjectile, {} ); // 부착물은 아직 없다 — 장전만 바꾼다
     }
 
     void ShooterPlayerComponent::applyWeaponIntent( const PawnComponent& pawn )
@@ -635,14 +684,18 @@ namespace sw
         flash._lifetime = 0.05f;
         _listPendingEffect.push_back( flash );
         // 판정은 눈에서 한다. 상자 · 바닥까지는 여기서 재고, 적(물리 히트박스)은 틱이 끝난 뒤 그 거리 안에서 묻는다(resolveShots).
+        const ResolvedShot& loaded = weapon.getShot();
         for ( const Ray& ray : shot._listRay )
         {
             PendingShot pending;
             pending._ray           = ray;
             pending._muzzle        = muzzle;
+            pending._projectileID  = loaded._projectileID;
+            pending._tracerColor   = loaded._tracerColor;
+            pending._tracerWidth   = loaded._tracerWidth;
             pending._coverDistance = traceCover( director, ray );
-            pending._range         = weapon.getDef()._range;
-            pending._damage        = weapon.getDef()._damage;
+            pending._range         = loaded._range;
+            pending._damage        = loaded._damage;
             pending._volley        = _shotCount;
             _listPendingShot.push_back( pending );
         }
@@ -653,7 +706,7 @@ namespace sw
 
     float32 ShooterPlayerComponent::traceCover( const ShooterDirectorComponent& director, const Ray& ray ) const
     {
-        float32 nearest = _arrWeapon[_weaponIndex].getDef()._range;
+        float32 nearest = _arrWeapon[_weaponIndex].getShot()._range;
         for ( const ShooterArenaBox& box : director.getBoxes() )
         {
             float32 distance = 0.0f;
@@ -675,9 +728,10 @@ namespace sw
         const bool bHasMask   = Internal::findLayerMask( manager, _hitboxLayer, hitboxMask );
         if ( bHasMask == false )
             SW_LOG_ERROR_ID( "ShooterPlayer.HitboxLayerNotPhysics", "Hitbox layer '%#' is not in the physics settings - shots cannot hit enemies", _hitboxLayer.c_str() );
-        GameObject*  pOwner   = getOwner();
-        const uint64 ownerID  = pOwner != nullptr ? pOwner->getObjectID() : 0;
-        size_t       shotHead = 0;
+        GameObject*              pOwner       = getOwner();
+        const uint64             ownerID      = pOwner != nullptr ? pOwner->getObjectID() : 0;
+        const ProjectileCatalog* pProjectiles = game::findSubsystem<ProjectileCatalog>();
+        size_t                   shotHead     = 0;
         while ( shotHead < _listPendingShot.size() )
         {
             // 한 방아쇠(산탄은 광선 여럿)에 소리 · 맞음 수는 하나만 낸다. 적을 맞혔으면 쇳소리, 상자나 벽을 맞혔으면 나무 소리다.
@@ -686,9 +740,10 @@ namespace sw
             bool         bHitCover = false;
             for ( ; shotHead < _listPendingShot.size() && _listPendingShot[shotHead]._volley == volley; ++shotHead )
             {
-                const PendingShot&     shot     = _listPendingShot[shotHead];
-                float32                distance = shot._coverDistance;
-                bool                   bHitBody = false;
+                const PendingShot&     shot        = _listPendingShot[shotHead];
+                const ProjectileDef*   pProjectile = pProjectiles != nullptr ? pProjectiles->find( shot._projectileID ) : nullptr;
+                float32                distance    = shot._coverDistance;
+                bool                   bHitBody    = false;
                 CharacterRayHit        rayHit;
                 const bool             bRayHit = bHasMask && CharacterRayHit::raycast3D( manager, shot._ray._origin, shot._ray._direction, shot._coverDistance, hitboxMask, ownerID, rayHit );
                 ShooterEnemyComponent* pEnemy  = bRayHit && rayHit._pObject != nullptr ? rayHit._pObject->getComponent<ShooterEnemyComponent>() : nullptr;
@@ -701,20 +756,33 @@ namespace sw
                     distance = rayHit._distance;
                     bHitBody = true;
                     bAnyHit  = bAnyHit || bAlive;
+                    // 탄의 맞음 동작은 맞은 적의 태그 문맥으로 부른다(상태 이상 · 표시 같은 탄 고유 반응).
+                    const GameObject* pEnemyObject = pEnemy->getOwner();
+                    if ( pProjectile != nullptr && pEnemyObject != nullptr && pProjectile->_listHitAction.empty() == false )
+                    {
+                        ActionContext context;
+                        context._world.set<SubjectTagsSlot>( &pEnemyObject->getTags() );
+                        context._pOwner = this;
+                        ProjectileDef::runHitActions( pProjectile->_listHitAction, context );
+                    }
                 }
                 const float3 end = shot._ray._origin + shot._ray._direction * distance;
-                // 탄도선은 총구에서 맞은 위치까지 이은 선이다.
-                _listPendingTracer.push_back( TracerRequest{ shot._muzzle, end } );
-                if ( distance < shot._range )
+                // 탄도선은 총구에서 맞은 위치까지 이은 선이다. 색 · 두께는 탄의 궤적이다.
+                _listPendingTracer.push_back( TracerRequest{ shot._tracerColor, shot._muzzle, end, shot._tracerWidth } );
+                // 탄착 효과는 탄과 표면의 조합이다(맞음 표). 표면 이름은 이 게임이 정한다: 적의 몸은 Body, 상자 · 바닥은 Cover.
+                const ProjectileImpactDef* pImpact =
+                    pProjectile != nullptr ? pProjectiles->findImpact( hashed_string( bHitBody ? Internal::kSurfaceBody : Internal::kSurfaceCover ), pProjectile->_tags ) : nullptr;
+                if ( distance < shot._range && pImpact != nullptr )
                 {
                     EffectRequest effect;
                     effect._position = end;
-                    effect._size     = bHitBody ? 0.18f : 0.1f;
-                    effect._color    = bHitBody ? _enemyHitColor : _coverHitColor;
+                    effect._size     = pImpact->_size;
+                    effect._color    = pImpact->_color;
                     effect._lifetime = _hitEffectLifetime;
                     _listPendingEffect.push_back( effect );
-                    bHitCover = bHitCover || ( bHitBody == false && end._y > 0.05f );
                 }
+                if ( distance < shot._range )
+                    bHitCover = bHitCover || ( bHitBody == false && end._y > 0.05f );
             }
             if ( bAnyHit )
             {
@@ -881,7 +949,7 @@ namespace sw
             }
             for ( const TracerRequest& tracer : _listPendingTracer )
             {
-                pDirector->spawnTracer( tracer._from, tracer._to, _tracerWidth, _tracerColor, _tracerLifetime );
+                pDirector->spawnTracer( tracer._from, tracer._to, tracer._width, tracer._color, _tracerLifetime );
             }
         }
         _listPendingEffect.clear();
@@ -992,6 +1060,10 @@ namespace sw
                          &ShooterPlayerComponentInternal::readWeaponIndex );
     SW_AUTOMATION_WATCH( shooterPlayerAlive, "Shooter3D.PlayerAlive", "1 while the first shooter player is alive", &ShooterPlayerComponentInternal::readAlive );
     SW_AUTOMATION_WATCH( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", &ShooterPlayerComponentInternal::readShotCount );
+    SW_AUTOMATION_WATCH( shooterShotDamage, "Shooter3D.ShotDamage", "Damage of one pellet of the projectile loaded in the first shooter player's weapon",
+                         &ShooterPlayerComponentInternal::readShotDamage );
+    SW_DEV_COMMAND( ShooterProjectile, "cheat.shooter.projectile", "cheat.shooter.projectile [projectile id]",
+                    "Load a projectile into the current weapon of every shooter player (no id: the weapon's own projectile)", &ShooterDevCommandsInternal::runProjectile );
     SW_AUTOMATION_WATCH( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", &ShooterPlayerComponentInternal::readEnemyHitCount );
     SW_AUTOMATION_WATCH( shooterPlayerControllerKind, "Shooter3D.PlayerControllerKind", "Who possesses the first shooter player: 0 the player, 1 an AI (auto play), -1 none",
                          &ShooterPlayerComponentInternal::readControllerKind );

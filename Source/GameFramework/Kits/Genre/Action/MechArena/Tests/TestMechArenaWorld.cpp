@@ -19,8 +19,13 @@ using namespace sw;
 namespace
 {
     constexpr const utf8* kMechWeaponXML = R"(<WeaponCatalog>
-  <Weapon id="rifle" fireInterval="0.1" reloadTime="0.2" damage="10" range="100" minSpread="0" maxSpread="0" spreadPerShot="0" magazineSize="3" maxReserveAmmo="3"/>
+  <Weapon id="rifle" projectile="beam" accepts="Ammo.Beam" fireInterval="0.1" reloadTime="0.2" minSpread="0" maxSpread="0" spreadPerShot="0" magazineSize="3" maxReserveAmmo="3"/>
 </WeaponCatalog>)";
+
+    // 주무기의 탄(무기와 탄은 따로 적고 무기가 받음 조건으로 고른다). 광선이라 중력을 받지 않는다.
+    constexpr const utf8* kMechProjectileXML = R"(<ProjectileCatalog>
+  <Projectile id="beam" tags="Ammo.Beam" damage="10" range="100" speed="0" gravityScale="0"/>
+</ProjectileCatalog>)";
 
     constexpr const utf8* kMechMoveXML = R"(<MoveCatalog>
   <Move id="slash1" startup="2" active="2" recovery="6" damage="15" hitstun="4"><Cancel moves="slash2" from="1" to="9"/></Move>
@@ -74,17 +79,19 @@ namespace
     constexpr size_t kMechPositionsSize    = 48; ///< 위치, 속도, 앞, 대시 방향
     constexpr size_t kMechTimersSize       = 12; ///< 대시, 경직, 변형 쿨다운
     constexpr size_t kMechInputSize        = 20; ///< 이동 둘, 스킬 슬롯, 깃발 여덟
-    // `writeState` 의 탄 하나(위치 12, 방향 12 뒤에 실수들)
-    constexpr size_t kMechProjectileSize      = 61;
-    constexpr size_t kMechProjectileSpeed     = 24;
-    constexpr size_t kMechProjectileRange     = 32;
-    constexpr size_t kMechProjectileKnockback = 44;
-    constexpr size_t kMechProjectileOwner     = 52;
+    // `ProjectileSimulation::writeState` 의 탄 하나(빈 정의 이름 4, 위치 12, 속도 12 뒤에 실수 11 개, id, 반응 번호, 정수 6 개, 깃발). 특수기 탄은 정의 이름이 비어 있다
+    constexpr size_t kMechProjectileSize        = 105;
+    constexpr size_t kMechProjectileVelocity    = 16;
+    constexpr size_t kMechProjectileRange       = 44;
+    constexpr size_t kMechProjectileRestitution = 68;
+    constexpr size_t kMechProjectilePayload     = 76;
+    constexpr size_t kMechProjectileOwner       = 80;
 
     /** @brief 카탈로그와 판 하나입니다. 팀은 A(0), B(1)로 시작합니다. */
     struct MechArenaRulesTest
     {
         WeaponCatalog          _weapons{};
+        ProjectileCatalog      _projectiles{};
         MoveCatalog            _moves{};
         MechCatalog            _mechs{};
         MechArenaSettings      _settings{};
@@ -94,6 +101,7 @@ namespace
         MechArenaRulesTest()
         {
             SW_REQUIRE_TRUE( _weapons.loadFromXMLText( kMechWeaponXML, "MechArenaTest" ) );
+            SW_REQUIRE_TRUE( _projectiles.loadFromXMLText( kMechProjectileXML, "MechArenaTest" ) );
             SW_REQUIRE_TRUE( _moves.loadFromXMLText( kMechMoveXML, "MechArenaTest" ) );
             SW_REQUIRE_TRUE( _mechs.loadFromXMLText( kMechCatalogXML, "MechArenaTest" ) );
             _settings._fixedStep           = kMechStep;
@@ -103,7 +111,7 @@ namespace
 
         [[nodiscard]] bool open()
         {
-            if ( _world.initialize( _settings, &_mechs, &_weapons, &_moves ) == false )
+            if ( _world.initialize( _settings, &_mechs, &_weapons, &_projectiles, &_moves ) == false )
                 return false;
             (void)_world.addTeam( hashed_string( "A" ) );
             (void)_world.addTeam( hashed_string( "B" ) );
@@ -214,7 +222,7 @@ namespace
         bool readInFreshWorld( const vector<uint8>& listByte )
         {
             MechArenaWorld target;
-            if ( target.initialize( _settings, &_mechs, &_weapons, &_moves ) == false )
+            if ( target.initialize( _settings, &_mechs, &_weapons, &_projectiles, &_moves ) == false )
                 return false;
             Archive reading( listByte.data(), listByte.size() );
             return target.readState( reading );
@@ -767,7 +775,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, BrokenSettingsAreRefused )
     SW_REQUIRE_TRUE( openDuel( "gunner", "gunner" ) );
     MechArenaSettings broken;
     broken._fixedStep = 0.0f;
-    SW_EXPECT_FALSE( _world.initialize( broken, &_mechs, &_weapons, &_moves ) );
+    SW_EXPECT_FALSE( _world.initialize( broken, &_mechs, &_weapons, &_projectiles, &_moves ) );
     SW_EXPECT_EQUAL( 2, _world.getPilotCount() );
 }
 
@@ -817,7 +825,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, StateRoundTripContinuesIdentically )
 
     const vector<uint8> listSaved = writeBytes( _world );
     MechArenaWorld      restored;
-    SW_REQUIRE_TRUE( restored.initialize( _settings, &_mechs, &_weapons, &_moves ) );
+    SW_REQUIRE_TRUE( restored.initialize( _settings, &_mechs, &_weapons, &_projectiles, &_moves ) );
     Archive reading( listSaved.data(), listSaved.size() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
     SW_EXPECT_TRUE( writeBytes( restored ) == listSaved );
@@ -916,7 +924,7 @@ SW_TEST_CASE_F( MechArenaRulesTest, ForgedReferencesAreRefused )
 }
 
 /**
- * @brief [MechArenaRulesTest] 탄의 번호 · 수치가 범위 밖이면 거절한다. 결함: 탄속 0 이나 음수 넉백을 받았다(날지 않는 탄이 영원히 남았다)
+ * @brief [MechArenaRulesTest] 탄의 번호 · 수치가 범위 밖이면 거절한다. 결함: 탄속 0 이나 음수 수치를 받았다(날지 않는 탄이 영원히 남았다). 반응은 슬롯을 가리키므로 없는 슬롯 번호도 거절한다
  */
 SW_TEST_CASE_F( MechArenaRulesTest, ForgedProjectileIsRefused )
 {
@@ -928,12 +936,14 @@ SW_TEST_CASE_F( MechArenaRulesTest, ForgedProjectileIsRefused )
     SW_REQUIRE_EQUAL( size_t( 1 ), _world.getProjectiles().size() );
     const size_t projectile = writeBytes( _world ).size() - kMechProjectileSize;
     SW_REQUIRE_TRUE( readInFreshWorld( writeBytes( _world ) ) );
-    SW_EXPECT_FALSE( readPatched<float32>( projectile + kMechProjectileSpeed, 0.0f ) );
-    SW_EXPECT_FALSE( readPatched<float32>( projectile + kMechProjectileSpeed, -1.0f ) );
+    SW_EXPECT_FALSE( readPatched<float3>( projectile + kMechProjectileVelocity, float3{} ) ); // 날지 않는 탄
     SW_EXPECT_FALSE( readPatched<float32>( projectile + kMechProjectileRange, 0.0f ) );
-    SW_EXPECT_FALSE( readPatched<float32>( projectile + kMechProjectileKnockback, -1.0f ) );
+    SW_EXPECT_FALSE( readPatched<float32>( projectile + kMechProjectileRange, -1.0f ) );
+    SW_EXPECT_FALSE( readPatched<float32>( projectile + kMechProjectileRestitution, 2.0f ) );
+    SW_EXPECT_FALSE( readPatched<uint32>( projectile + kMechProjectilePayload, 99999u ) ); // 없는 기체 · 슬롯
+    SW_EXPECT_FALSE( readPatched<uint32>( projectile + kMechProjectilePayload, 2u ) );     // 근접 슬롯은 탄을 쏘지 않는다
     SW_EXPECT_FALSE( readPatched<int32>( projectile + kMechProjectileOwner, 2 ) );
-    SW_EXPECT_FALSE( readPatched<uint8>( projectile + kMechProjectileSize - 1, 9 ) ); // 종류
+    SW_EXPECT_FALSE( readPatched<uint8>( projectile + kMechProjectileSize - 1, 9 ) ); // 깃발
 }
 
 /**

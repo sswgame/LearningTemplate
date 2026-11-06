@@ -8,29 +8,6 @@
 
 namespace sw
 {
-    Projectile Ballistics::launch( const float3& origin, const float3& direction, float32 speed, float32 gravityScale, float32 maxAge )
-    {
-        Projectile projectile;
-        projectile._position         = origin;
-        projectile._previousPosition = origin;
-        projectile._velocity         = direction * speed;
-        projectile._gravityScale     = gravityScale;
-        projectile._maxAge           = maxAge;
-        return projectile;
-    }
-
-    void Ballistics::step( Projectile& projectile, float32 deltaTime )
-    {
-        if ( deltaTime <= 0.0f )
-            return;
-        projectile._previousPosition = projectile._position;
-        if ( projectile._drag > 0.0f )
-            projectile._velocity = projectile._velocity * MathUtil::max( 0.0f, 1.0f - projectile._drag * deltaTime );
-        projectile._velocity._y -= PhysicsSystem::getConfiguredGravityMagnitude() * projectile._gravityScale * deltaTime;
-        projectile._position = projectile._position + projectile._velocity * deltaTime;
-        projectile._age += deltaTime;
-    }
-
     bool Ballistics::computeLaunchDirection( const float3& from, const float3& to, float32 speed, float32 gravityScale, bool bHighArc, float3& outDirection )
     {
         const float3  delta      = to - from;

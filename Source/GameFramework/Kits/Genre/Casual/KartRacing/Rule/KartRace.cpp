@@ -20,18 +20,6 @@ namespace sw
         {
             static constexpr float32 kAheadPriority = 100.0f; ///< 빨간 껍질은 바로 앞 순위의 차를 먼저 잡는다
 
-            /** @brief @p direction 을 @p target 쪽으로 @p maxTurn(라디안)까지 돌린 수평 단위 벡터를 반환합니다. */
-            static float3 turnToward( const float3& direction, const float3& from, const float3& target, float32 maxTurn )
-            {
-                const float32 currentYaw = MathUtil::atan2( direction._x, direction._z );
-                const float32 targetYaw  = MathUtil::atan2( target._x - from._x, target._z - from._z );
-                const float32 delta      = MathUtil::wrapAngle( targetYaw - currentYaw );
-                const float32 newYaw     = currentYaw + MathUtil::clamp( delta, -maxTurn, maxTurn );
-                return float3{ MathUtil::sin( newYaw ), 0.0f, MathUtil::cos( newYaw ) };
-            }
-
-            static constexpr uint8 kLastItemKind = static_cast<uint8>( KartItemKind::LeaderShell ); ///< 상태 읽기에서 허용하는 종류의 상한이다
-
             static void writeRacer( Archive& outArchive, const KartRacer& kart )
             {
                 kart._motor.writeState( outArchive );
@@ -125,13 +113,65 @@ namespace sw
             }
         };
     } // namespace
+
+    /**
+     * @class KartProjectileQuery
+     * @brief 경기의 아이템이 묻는 세계입니다. 유도 대상은 그 차의 자리이고, 맞는 것은 선분 끝에서 수평 거리가 (아이템 반지름 + 차 반지름) 안인 첫 차입니다.
+     * @details 들어온 차, 쏜 차의 유예 시간, 1 등 공격의 대상이 아닌 차는 맞지 않는다. 벽은 없다(트랙 밖 판정은 차의 일이다).
+     */
+    class KartProjectileQuery : public IProjectileWorld
+    {
+    public:
+        explicit KartProjectileQuery( const KartRace& race )
+            : _race{ race }
+        {
+        }
+
+        bool findTargetPoint( const ProjectileState& projectile, float3& outPoint ) const override
+        {
+            if ( _race.isValidRacer( projectile._target ) == false )
+                return false;
+            outPoint = _race._listRacer[static_cast<size_t>( projectile._target )]._motor.getPosition();
+            return true;
+        }
+
+        bool sweep( const ProjectileState& projectile, const float3& from, const float3& to, ProjectileHit& outHit ) const override
+        {
+            (void)from; // 수평 거리로 끝점만 본다(껍질은 차보다 느리지 않아 끝점이면 충분하다)
+            const KartItemDef* pItem = _race._pItemCatalog != nullptr ? _race._pItemCatalog->find( projectile._defID ) : nullptr;
+            if ( pItem == nullptr )
+                return false;
+            const float32 reach = projectile._radius + _race._settings._kartRadius;
+            for ( size_t racerIndex = 0; racerIndex < _race._listRacer.size(); ++racerIndex )
+            {
+                const int32      racer         = static_cast<int32>( racerIndex );
+                const KartRacer& kart          = _race._listRacer[racerIndex];
+                const bool       bOwnerGrace   = racer == projectile._owner && projectile._age < _race._settings._ownerGrace;
+                const bool       bNotTarget    = pItem->_kind == KartItemKind::LeaderShell && racer != projectile._target;
+                const bool       bSkipHitCheck = kart._bFinished == SW_TRUE || bOwnerGrace || bNotTarget || racer == projectile._lastHit;
+                if ( bSkipHitCheck )
+                    continue;
+                if ( float3::getHorizontalDistanceSquared( kart._motor.getPosition(), to ) > reach * reach )
+                    continue;
+                outHit._position = to;
+                outHit._other    = racer;
+                outHit._kind     = ProjectileHitKind::Target;
+                return true;
+            }
+            return false;
+        }
+
+    private:
+        const KartRace& _race;
+    };
 } // namespace sw
 
 namespace sw
 {
     KartRace::KartRace()
         : _listRacer{}
-        , _listProjectile{}
+        , _projectiles{}
+        , _listProjectileEventScratch{}
         , _eventBuffer{}
         , _listItemBoxTimer{}
         , _listPlaceOrder{}
@@ -159,7 +199,8 @@ namespace sw
         _random.setSeed( settings._seed );
         _timer = FixedStepTimer{ settings._step, 0.25f };
         _listRacer.clear();
-        _listProjectile.clear();
+        _projectiles = ProjectileSimulation{};
+        _projectiles.setPlaneNormal( float3{ 0.0f, 1.0f, 0.0f } ); // 아이템은 수평으로 날고 높이는 트랙을 따른다
         _eventBuffer.clear();
         _listPlaceOrder.clear();
         _listItemBoxTimer.clear();
@@ -541,39 +582,45 @@ namespace sw
         pushEvent( KartRaceEvent::Kind::ItemUsed, racer, -1, static_cast<int32>( pItem->_kind ), _raceTime );
         _eventBuffer.getLast()._itemID = pItem->_id;
 
-        const float3   forward  = kart._motor.computeForward();
-        const float3&  position = kart._motor.getPosition();
-        KartProjectile projectile;
-        projectile._itemID    = pItem->_id;
-        projectile._kind      = pItem->_kind;
-        projectile._owner     = racer;
-        projectile._direction = forward;
-        const float32 launch  = _settings._kartRadius + pItem->_radius + 0.5f;
-        projectile._position  = float3{ position._x + forward._x * launch, position._y, position._z + forward._z * launch };
+        // 아이템은 공통 발사체다. 아이템 표가 탄 정의를 대신한다(속력 · 회전 · 반지름 · 수명 · 폭발 반지름).
+        const float3    forward  = kart._motor.computeForward();
+        const float3&   position = kart._motor.getPosition();
+        ProjectileState projectile;
+        projectile._defID       = pItem->_id;
+        projectile._owner       = racer;
+        projectile._velocity    = float3{ forward._x, 0.0f, forward._z } * pItem->_speed;
+        projectile._lifetime    = pItem->_lifetime;
+        projectile._turnRate    = pItem->_turnRate;
+        projectile._radius      = pItem->_radius;
+        projectile._blastRadius = pItem->_blastRadius;
+        const float32 launch    = _settings._kartRadius + pItem->_radius + 0.5f;
+        projectile._position    = float3{ position._x + forward._x * launch, position._y, position._z + forward._z * launch };
         switch ( pItem->_kind )
         {
             case KartItemKind::Banana:
             {
+                projectile._velocity = float3{};
+                projectile._turnRate = 0.0f;
                 projectile._position = float3{ position._x - forward._x * _settings._dropBehindDistance, position._y,
                                                position._z - forward._z * _settings._dropBehindDistance };
-                _listProjectile.push_back( projectile );
+                (void)_projectiles.spawn( projectile ); // 탄 id 는 쓰지 않는다
                 break;
             }
             case KartItemKind::GreenShell:
             {
-                _listProjectile.push_back( projectile );
+                (void)_projectiles.spawn( projectile );
                 break;
             }
             case KartItemKind::RedShell:
             {
                 projectile._target = pickRedShellTarget( racer );
-                _listProjectile.push_back( projectile );
+                (void)_projectiles.spawn( projectile );
                 break;
             }
             case KartItemKind::LeaderShell:
             {
                 projectile._target = findLeaderInRace();
-                _listProjectile.push_back( projectile );
+                (void)_projectiles.spawn( projectile );
                 break;
             }
             case KartItemKind::Booster:
@@ -631,71 +678,41 @@ namespace sw
     {
         if ( _pItemCatalog == nullptr )
             return;
-        const float32 kartRadius = _settings._kartRadius;
-        for ( size_t projectileIndex = 0; projectileIndex < _listProjectile.size(); ++projectileIndex )
+        // 걸음 전: 카탈로그에서 빠진 아이템은 끝내고, 1등 공격은 항상 지금의 1등을 쫓는다.
+        for ( ProjectileState& projectile : _projectiles.accessProjectiles() )
         {
-            KartProjectile&    projectile = _listProjectile[projectileIndex];
-            const KartItemDef* pItem      = _pItemCatalog->find( projectile._itemID );
-            if ( pItem == nullptr || projectile._bActive == SW_FALSE )
-            {
-                projectile._bActive = SW_FALSE;
-                continue;
-            }
-            projectile._age += deltaTime;
-            const bool bExpires = pItem->_lifetime > 0.0f && projectile._age > pItem->_lifetime;
-            if ( bExpires )
-            {
-                projectile._bActive = SW_FALSE;
-                continue;
-            }
-
-            // 1) 움직임: 바나나는 멈춰 있고, 1등 공격은 항상 지금의 1등을 쫓는다.
-            if ( projectile._kind == KartItemKind::LeaderShell )
+            const KartItemDef* pItem = _pItemCatalog->find( projectile._defID );
+            if ( pItem == nullptr )
+                projectile._bAlive = SW_FALSE;
+            else if ( pItem->_kind == KartItemKind::LeaderShell )
                 projectile._target = findLeaderInRace();
-            if ( projectile._kind != KartItemKind::Banana )
-            {
-                if ( isValidRacer( projectile._target ) )
-                {
-                    const float3& targetPosition = _listRacer[static_cast<size_t>( projectile._target )]._motor.getPosition();
-                    projectile._direction =
-                        KartRaceInternal::turnToward( projectile._direction, projectile._position, targetPosition, pItem->_turnRate * deltaTime );
-                }
-                projectile._position._x += projectile._direction._x * pItem->_speed * deltaTime;
-                projectile._position._z += projectile._direction._z * pItem->_speed * deltaTime;
-                projectile._position._y = _pTrack->sampleHeight( projectile._position._x, projectile._position._z );
-            }
+        }
+        _projectiles.removeDead();
 
-            // 2) 맞음: 쏜 차는 잠깐 맞지 않는다. 1등 공격은 대상에게만 터진다.
-            const float32 reach = pItem->_radius + kartRadius;
-            for ( size_t racerIndex = 0; racerIndex < _listRacer.size(); ++racerIndex )
-            {
-                const int32      racer         = static_cast<int32>( racerIndex );
-                const KartRacer& kart          = _listRacer[racerIndex];
-                const bool       bOwnerGrace   = racer == projectile._owner && projectile._age < _settings._ownerGrace;
-                const bool       bNotTarget    = projectile._kind == KartItemKind::LeaderShell && racer != projectile._target;
-                const bool       bSkipHitCheck = kart._bFinished == SW_TRUE || bOwnerGrace || bNotTarget;
-                if ( bSkipHitCheck )
-                    continue;
-                if ( float3::getHorizontalDistanceSquared( kart._motor.getPosition(), projectile._position ) > reach * reach )
-                    continue;
-                projectile._bActive = SW_FALSE;
-                if ( projectile._kind == KartItemKind::LeaderShell )
-                    explode( projectile, *pItem );
-                else
-                    (void)applyHit( racer, projectile._owner, *pItem ); // 방어막이 막으면 false 이며, 맞지 않았을 뿐이다
-                break;
-            }
-        }
-        size_t writeIndex = 0;
-        for ( size_t readIndex = 0; readIndex < _listProjectile.size(); ++readIndex )
+        // 걸음: 수명 · 유도 · 이동 · 맞음(쏜 차의 유예 · 1등 공격의 대상만)은 공통 시뮬레이션이 한다.
+        const KartProjectileQuery query( *this );
+        _listProjectileEventScratch.clear();
+        _projectiles.step( deltaTime, query, _listProjectileEventScratch );
+
+        // 걸음 뒤: 날아가는 아이템은 트랙 높이를 따르고(바나나는 놓인 자리), 맞은 아이템은 효과를 준다.
+        for ( ProjectileState& projectile : _projectiles.accessProjectiles() )
         {
-            if ( _listProjectile[readIndex]._bActive == SW_TRUE )
-                _listProjectile[writeIndex++] = _listProjectile[readIndex];
+            if ( projectile._velocity.getLengthSquared() > 0.0f )
+                projectile._position._y = _pTrack->sampleHeight( projectile._position._x, projectile._position._z );
         }
-        _listProjectile.resize( writeIndex );
+        for ( const ProjectileEvent& event : _listProjectileEventScratch )
+        {
+            const KartItemDef* pItem = _pItemCatalog->find( event._projectile._defID );
+            if ( event._kind != ProjectileEvent::Kind::Hit || pItem == nullptr )
+                continue;
+            if ( pItem->_kind == KartItemKind::LeaderShell )
+                explode( event._projectile, *pItem );
+            else
+                (void)applyHit( event._hit._other, event._projectile._owner, *pItem ); // 방어막이 막으면 false 이며, 맞지 않았을 뿐이다
+        }
     }
 
-    void KartRace::explode( const KartProjectile& projectile, const KartItemDef& def )
+    void KartRace::explode( const ProjectileState& projectile, const KartItemDef& def )
     {
         const float32 reach = def._blastRadius + _settings._kartRadius;
         for ( size_t racerIndex = 0; racerIndex < _listRacer.size(); ++racerIndex )
@@ -882,18 +899,7 @@ namespace sw
         {
             KartRaceInternal::writeRacer( outArchive, kart );
         }
-        outArchive << static_cast<uint32>( _listProjectile.size() );
-        for ( const KartProjectile& projectile : _listProjectile )
-        {
-            outArchive << projectile._position;
-            outArchive << projectile._direction;
-            StateArchiveUtil::writeName( outArchive, projectile._itemID );
-            outArchive << projectile._age;
-            outArchive << projectile._owner;
-            outArchive << projectile._target;
-            outArchive << static_cast<uint8>( projectile._kind );
-            outArchive << projectile._bActive;
-        }
+        _projectiles.writeState( outArchive );
         outArchive << static_cast<uint32>( _listItemBoxTimer.size() );
         for ( const Countdown& boxTimer : _listItemBoxTimer )
         {
@@ -933,29 +939,15 @@ namespace sw
             kart._motor.setSettings( settings );
         }
 
-        uint32 projectileCount = 0;
-        // 탄마다 슬롯, 방향(24) + 이름(4) + 나이, 쏜 차, 대상(12) + 종류, 켜짐(2)
-        if ( archive.readCount( 42, projectileCount ) == false )
+        if ( race._projectiles.readState( archive ) == false )
             return false;
-        race._listProjectile.assign( projectileCount, KartProjectile{} );
-        for ( KartProjectile& projectile : race._listProjectile )
+        for ( const ProjectileState& projectile : race._projectiles.getProjectiles() )
         {
-            uint8 kind = 0;
-            archive >> projectile._position;
-            archive >> projectile._direction;
-            if ( StateArchiveUtil::readName( archive, projectile._itemID ) == false || race.isKnownItem( projectile._itemID ) == false )
+            // 아이템 종류는 정의 id 가 정한다(빈 id 는 아이템이 아니다).
+            const bool bOwnerValid  = -1 <= projectile._owner && projectile._owner < count;
+            const bool bTargetValid = -1 <= projectile._target && projectile._target < count;
+            if ( projectile._defID.empty() || race.isKnownItem( projectile._defID ) == false || bOwnerValid == false || bTargetValid == false )
                 return false;
-            archive >> projectile._age;
-            archive >> projectile._owner;
-            archive >> projectile._target;
-            archive >> kind;
-            archive >> projectile._bActive;
-            const bool bOwnerValid             = -1 <= projectile._owner && projectile._owner < count;
-            const bool bTargetValid            = -1 <= projectile._target && projectile._target < count;
-            const bool bInvalidProjectileState = archive.isError() || bOwnerValid == false || bTargetValid == false || kind > KartRaceInternal::kLastItemKind || projectile._bActive > SW_TRUE;
-            if ( bInvalidProjectileState )
-                return false;
-            projectile._kind = static_cast<KartItemKind>( kind );
         }
 
         uint32 boxCount = 0;

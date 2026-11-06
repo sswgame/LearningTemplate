@@ -5,7 +5,9 @@
  * @details 고정 걸음(`FixedStepTimer`, 기본 60Hz로 근접 기술의 프레임과 같다)으로만 흐르므로 같은 입력이면 같은 결과가 나온다. 기반 클래스는 다음과 같이 쓴다.
  *          - 체력, 다운치, 기상 무적은 `Vitality` 가 맡는다(poise 가 다운치이며, 0까지 깎이면 다운되고 붕괴 시간이 누운 시간이다).
  *          - 부스트는 과열형 `ResourceGauge` 가 맡는다(쓰면 열이 오르고 최대에 닿으면 오버히트가 되며, 식을 때까지 대시, 점프, 부유가 잠긴다).
- *          - 록온은 `LockOnSelector`, 주무기는 `WeaponState`, 근접은 `MoveTimeline` 이 맡는다(캔슬 창이 다음 콤보 단을 연다).
+ *          - 록온은 `LockOnSelector`, 주무기는 `WeaponState`(탄은 `ProjectileCatalog`), 근접은 `MoveTimeline` 이 맡는다(캔슬 창이 다음 콤보 단을 연다).
+ *          - 날아가는 탄은 단일 발사체 시뮬레이션(`ProjectileSimulation`)이 돌린다. 키트는 맞을 대상(적 조종사 · 판 밖)을 답하고 맞은 뒤의 반응(다운치 · 경직 · 넉백)만 한다.
+ *            반응 수치는 탄이 쏜 슬롯을 가리키는 번호(`ProjectileState::_payload` = 기체 카탈로그 번호 × `kSlotStride` + 슬롯)로 기체 정의에서 읽는다 — 탄에 수치를 베껴 두지 않는다.
  *          - 판과 전력 게이지는 `MatchState` 가 맡는다. 조종사의 **덱 슬롯마다** 참가자 하나를 두고, 그 슬롯 기체의 코스트를 부활 비용으로 준다.
  *            그래서 기체를 바꾸면 다음 격추 때 바뀐 기체의 코스트가 게이지에서 빠진다(통계는 조종사 단위로 모아서 읽는다).
  */
@@ -28,6 +30,7 @@
 #include "GameFramework/Runtime/Character/Combat/Health/ResourceGauge.h"
 #include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
 #include "GameFramework/Runtime/Character/Combat/LockOnSelector.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Combat/Weapon/Weapon.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchState.h"
 
@@ -200,32 +203,14 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 날아가는 탄 하나입니다. */
-    struct MechProjectile
-    {
-        float3         _position{};
-        float3         _direction{ 0.0f, 0.0f, 1.0f };
-        float32        _speed{ 0.0f };
-        float32        _homing{ 0.0f }; ///< 도/초
-        float32        _rangeLeft{ 0.0f };
-        float32        _damage{ 0.0f };
-        float32        _downValue{ 0.0f };
-        float32        _knockback{ 0.0f };
-        float32        _staggerTime{ 0.0f };
-        int32          _owner{ -1 };
-        int32          _target{ -1 }; ///< 쏠 때 록온한 조종사(유도 대상)
-        MechWeaponKind _kind{ MechWeaponKind::Shot };
-    };
-} // namespace sw
+    class MechArenaProjectileQuery;
 
-namespace sw
-{
     /**
      * @class MechArenaWorld
      * @brief 서버가 돌리는 한 판입니다. 카탈로그는 빌려 쓰며, 판보다 오래 살아야 합니다.
      * @code
      *     MechArenaWorld world;
-     *     world.initialize( settings, &mechCatalog, &weaponCatalog, &moveCatalog );
+     *     world.initialize( settings, &mechCatalog, &weaponCatalog, &projectileCatalog, &moveCatalog );
      *     const int32 amuro = world.addPilot( config );
      *     world.start();
      *     world.setInput( amuro, input );
@@ -238,14 +223,21 @@ namespace sw
      */
     class SW_KIT_API MechArenaWorld
     {
+        friend class MechArenaProjectileQuery;
+
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "MCHA" );
-        static constexpr uint32 kStateVersion = 2;
+        static constexpr uint32 kStateVersion = 3;
+        static constexpr uint32 kSlotStride   = 256; ///< 탄의 반응 번호에서 기체 번호와 슬롯을 가르는 폭(한 기체의 슬롯 수 상한)
 
         MechArenaWorld();
 
-        /** @brief 설정과 카탈로그를 받아 판을 비웁니다. 설정이 범위 밖(`MechArenaSettings` 의 `PROPERTY( Min · Max )`)이면 오류를 남기고 false 를 반환하며 판은 그대로입니다. */
-        [[nodiscard]] bool initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog, const MoveCatalog* pMoveCatalog );
+        /**
+         * @brief 설정과 카탈로그를 받아 판을 비웁니다. 설정이 범위 밖(`MechArenaSettings` 의 `PROPERTY( Min · Max )`)이면 오류를 남기고 false 를 반환하며 판은 그대로입니다.
+         * @details 주무기 슬롯은 무기(`WeaponCatalog`)의 기본 탄(`ProjectileCatalog`)을 장전한다.
+         */
+        [[nodiscard]] bool initialize( const MechArenaSettings& settings, const MechCatalog* pMechCatalog, const WeaponCatalog* pWeaponCatalog,
+                                       const ProjectileCatalog* pProjectileCatalog, const MoveCatalog* pMoveCatalog );
         /** @brief 팀을 추가하고 번호를 반환합니다. */
         int32 addTeam( const hashed_string& name );
         /** @brief 조종사를 추가합니다. 덱이 비었거나, 모르는 기체 · 스킬 · 팀이거나, 덱 코스트가 상한을 넘거나, 덱 기체의 체력 설정이 범위 밖이거나, 슬롯의 무기 · 기술이 카탈로그에 없으면 −1 을 반환합니다. */
@@ -284,10 +276,10 @@ namespace sw
         [[nodiscard]] bool readState( Archive& archive );
         void               drainEvents( vector<MechArenaEvent>& outListEvent );
 
-        const MechPilot*              findPilot( int32 pilot ) const { return isValidPilot( pilot ) ? &_listPilot[static_cast<size_t>( pilot )] : nullptr; }
-        int32                         getPilotCount() const { return static_cast<int32>( _listPilot.size() ); }
-        const vector<MechProjectile>& getProjectiles() const { return _listProjectile; }
-        const MatchState&             getMatch() const { return _match; }
+        const MechPilot*               findPilot( int32 pilot ) const { return isValidPilot( pilot ) ? &_listPilot[static_cast<size_t>( pilot )] : nullptr; }
+        int32                          getPilotCount() const { return static_cast<int32>( _listPilot.size() ); }
+        const vector<ProjectileState>& getProjectiles() const { return _projectiles.getProjectiles(); }
+        const MatchState&              getMatch() const { return _match; }
         /** @brief 팀의 남은 전력 게이지입니다. */
         int32 getTeamGauge( int32 team ) const;
         /** @brief 켜진 스킬들의 배율 곱입니다("attack", "defense", "speed", "boostRegen", "downResist"). */
@@ -309,11 +301,17 @@ namespace sw
         void stepMatch( float32 deltaTime );
         void fireShot( int32 pilot, int32 slotIndex, const MechWeaponSlotDef& slot, bool bPressed );
         void fireSpecial( int32 pilot, int32 slotIndex, const MechWeaponSlotDef& slot );
-        void launch( int32 pilot, int32 target, const float3& direction, float32 speed, float32 range, float32 damage, const MechWeaponSlotDef& slot );
-        void resolveHit( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 knockback, float32 staggerTime, bool bKnockdown,
-                         MechWeaponKind kind );
-        void activateSkill( int32 pilot, int32 skillIndex );
-        void triggerSkills( int32 pilot, MechSkillTrigger trigger );
+        /**
+         * @brief 한 발을 냅니다. 탄속 0 이면 @p direction 의 광선으로 사거리 안을 바로 맞히고, 아니면 @p projectile 을 시뮬레이션에 넣습니다.
+         * @details @p projectile 의 속도 · 수치 · 쏜 쪽 · 대상은 쏘는 쪽이 채우고, 위치(조종사 가운데)와 반응 번호는 여기서 채운다.
+         */
+        void launch( int32 pilot, int32 slotIndex, const float3& direction, ProjectileState projectile, const MechWeaponSlotDef& slot );
+        /** @brief 탄의 반응 번호가 가리키는 슬롯입니다. 번호가 틀리면 nullptr 입니다. */
+        const MechWeaponSlotDef* findProjectileSlot( uint32 payload ) const;
+        void                     resolveHit( int32 attacker, int32 victim, float32 damage, float32 downValue, float32 knockback, float32 staggerTime, bool bKnockdown,
+                                             MechWeaponKind kind );
+        void                     activateSkill( int32 pilot, int32 skillIndex );
+        void                     triggerSkills( int32 pilot, MechSkillTrigger trigger );
         /** @brief 지금 장착한 기체로 체력, 부스트, 록온, 무기를 다시 짭니다. 기체의 체력 설정이 범위 밖이라 거절되면 false 입니다. */
         [[nodiscard]] bool equipMech( MechPilot& pilot, int32 pilotIndex );
         /** @brief 기체의 모든 슬롯이 가리키는 무기와 근접 기술이 카탈로그에 있는지 봅니다. 없으면 오류를 남기고 false 입니다(쏘려 해도 말없이 아무 일도 없는 슬롯을 만들지 않는다). */
@@ -337,16 +335,18 @@ namespace sw
     private:
         MechArenaSettings           _settings;
         vector<MechPilot>           _listPilot;
-        vector<MechProjectile>      _listProjectile;
+        ProjectileSimulation        _projectiles;
         vector<hashed_string>       _listTeamName;
         EventBuffer<MechArenaEvent> _eventBuffer;
         vector<VitalityEvent>       _listVitalityScratch;
         vector<MatchEvent>          _listMatchScratch;
         vector<LockOnCandidate>     _listCandidateScratch;
+        vector<ProjectileEvent>     _listProjectileEventScratch;
         MatchState                  _match;
         FixedStepTimer              _timer;
         const MechCatalog*          _pMechCatalog;
         const WeaponCatalog*        _pWeaponCatalog;
+        const ProjectileCatalog*    _pProjectileCatalog;
         const MoveCatalog*          _pMoveCatalog;
         uint32                      _tick;
         uint8                       _bStarted;

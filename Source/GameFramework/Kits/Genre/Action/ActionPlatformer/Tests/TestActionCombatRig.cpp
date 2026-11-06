@@ -42,22 +42,19 @@ namespace
 
     struct ActionCombatRigTestUtil
     {
-        static sw::ActionProjectile makeShot( const sw::float2& position, const sw::float2& velocity, sw::ActionTeam team = sw::ActionTeam::Enemy, float32 damage = 5.0f, float32 lifetime = 3.0f )
+        static sw::ProjectileState makeShot( const sw::float2& position, const sw::float2& velocity, sw::ActionTeam team = sw::ActionTeam::Enemy, float32 damage = 5.0f, float32 lifetime = 3.0f )
         {
-            sw::ActionProjectile projectile;
-            projectile._position = position;
-            projectile._velocity = velocity;
-            projectile._team     = team;
-            projectile._damage   = damage;
-            projectile._lifetime = lifetime;
-            return projectile;
+            return sw::ActionCombatRig::makeProjectile( position, velocity, team, damage, lifetime );
         }
 
-        /** @brief 퍼짐이 없어 탄 방향이 정확한 산탄총입니다(3 알, 탄창 2, 예비 0, 탄속 0 이면 기본 30, 사거리 60). */
+        static bool isTeam( const sw::ProjectileState& projectile, sw::ActionTeam team ) { return projectile._team == static_cast<int32>( team ); }
+
+        /** @brief 퍼짐이 없어 탄 방향이 정확한 산탄총입니다(3 알, 탄창 2, 예비 0). 탄은 `makePellet` 입니다. */
         static sw::WeaponDef makeShotgun()
         {
             sw::WeaponDef weapon;
             weapon._id             = sw::hashed_string( "gun" );
+            weapon._projectileID   = sw::hashed_string( "pellet" );
             weapon._minSpread      = 0.0f;
             weapon._maxSpread      = 0.0f;
             weapon._spreadPerShot  = 0.0f;
@@ -65,9 +62,18 @@ namespace
             weapon._magazineSize   = 2;
             weapon._maxReserveAmmo = 0;
             weapon._fireInterval   = 0.1f;
-            weapon._damage         = 7.0f;
-            weapon._range          = 60.0f;
             return weapon;
+        }
+
+        /** @brief 탄속 30, 피해 7, 사거리 60 인 알입니다. */
+        static sw::ProjectileDef makePellet()
+        {
+            sw::ProjectileDef pellet;
+            pellet._id     = sw::hashed_string( "pellet" );
+            pellet._speed  = 30.0f;
+            pellet._damage = 7.0f;
+            pellet._range  = 60.0f;
+            return pellet;
         }
     };
 } // namespace
@@ -243,13 +249,13 @@ SW_TEST_CASE( ActionCombatRigTest, ParryReflectsOnlyEnemyShotsInRadius )
     rig.pressParry();
     rig.advanceFrame( nullptr, kRigPlayer );
 
-    const sw::vector<sw::ActionProjectile>& listShot = rig.getProjectiles();
+    const sw::vector<sw::ProjectileState>& listShot = rig.getProjectiles();
     SW_REQUIRE_EQUAL( size_t( 3 ), listShot.size() );
-    SW_EXPECT_TRUE( listShot[0]._team == sw::ActionTeam::Player );
+    SW_EXPECT_TRUE( ActionCombatRigTestUtil::isTeam( listShot[0], sw::ActionTeam::Player ) );
     SW_EXPECT_TRUE( listShot[0]._bReflected == SW_TRUE );
     SW_EXPECT_NEAR( 12.0f, listShot[0]._velocity._x, kRigTolerance );
     SW_EXPECT_NEAR( 15.0f, listShot[0]._damage, kRigTolerance );
-    SW_EXPECT_TRUE( listShot[1]._team == sw::ActionTeam::Enemy );
+    SW_EXPECT_TRUE( ActionCombatRigTestUtil::isTeam( listShot[1], sw::ActionTeam::Enemy ) );
     SW_EXPECT_TRUE( listShot[1]._bReflected == SW_FALSE );
     SW_EXPECT_TRUE( listShot[2]._bReflected == SW_FALSE );
     SW_EXPECT_NEAR( 5.0f, listShot[2]._damage, kRigTolerance );
@@ -297,7 +303,7 @@ SW_TEST_CASE( ActionCombatRigTest, ParryWindowCloses )
     SW_EXPECT_FALSE( rig.isParryActive() );
     (void)rig.spawnProjectile( ActionCombatRigTestUtil::makeShot( sw::float2{ 0.5f, 0.0f }, sw::float2{ 0.0f, 0.0f } ) );
     rig.advanceFrame( nullptr, kRigPlayer );
-    SW_EXPECT_TRUE( rig.getProjectiles()[0]._team == sw::ActionTeam::Enemy );
+    SW_EXPECT_TRUE( ActionCombatRigTestUtil::isTeam( rig.getProjectiles()[0], sw::ActionTeam::Enemy ) );
 }
 
 /**
@@ -337,8 +343,8 @@ SW_TEST_CASE( ActionCombatRigTest, TakeHitsFiltersTeamAndRadius )
     (void)rig.spawnProjectile( ActionCombatRigTestUtil::makeShot( sw::float2{ 6.0f, 0.0f }, sw::float2{ 0.0f, 0.0f } ) );                         // 거리 6
     (void)rig.spawnProjectile( ActionCombatRigTestUtil::makeShot( sw::float2{ 1.0f, 0.0f }, sw::float2{ 0.0f, 0.0f }, sw::ActionTeam::Player ) ); // 다른 편
 
-    sw::vector<sw::ActionProjectile> listHit;
-    listHit.push_back( sw::ActionProjectile{} );
+    sw::vector<sw::ProjectileState> listHit;
+    listHit.push_back( sw::ProjectileState{} );
     SW_EXPECT_EQUAL( 0, rig.takeProjectileHits( sw::ActionTeam::Enemy, kRigPlayer, -10.0f, listHit ) );
     SW_EXPECT_TRUE( listHit.empty() );
     SW_EXPECT_EQUAL( size_t( 3 ), rig.getProjectiles().size() );
@@ -349,11 +355,11 @@ SW_TEST_CASE( ActionCombatRigTest, TakeHitsFiltersTeamAndRadius )
     SW_EXPECT_EQUAL( size_t( 2 ), rig.getProjectiles().size() );
 
     SW_EXPECT_EQUAL( 1, rig.takeProjectileHits( sw::ActionTeam::Player, sw::float2{ 1.0f, 0.0f }, 0.0f, listHit ) ); // 반경 0 은 정확히 그 자리
-    SW_EXPECT_TRUE( listHit[0]._team == sw::ActionTeam::Player );
+    SW_EXPECT_TRUE( ActionCombatRigTestUtil::isTeam( listHit[0], sw::ActionTeam::Player ) );
 }
 
 /**
- * @brief [ActionCombatRigTest] 총은 알마다 내 편 탄을 겨눈 쪽으로 내고(탄속 0 은 기본 30, 수명은 사거리 ÷ 탄속), 쿨다운 · 빈 탄창 · 미장비를 알린다. 길이 0 인 겨냥은 오른쪽이다
+ * @brief [ActionCombatRigTest] 총은 알마다 내 편 탄을 겨눈 쪽으로 내고(탄속 · 피해 · 사거리는 장전한 탄), 쿨다운 · 빈 탄창 · 미장비를 알린다. 길이 0 인 겨냥은 오른쪽이다. 광선 탄(속도 0)은 2D 총에 넣지 않는다
  */
 SW_TEST_CASE( ActionCombatRigTest, GunSpawnsPelletsAndReportsWhyItCannot )
 {
@@ -361,16 +367,21 @@ SW_TEST_CASE( ActionCombatRigTest, GunSpawnsPelletsAndReportsWhyItCannot )
     SW_EXPECT_TRUE( rig.fireGun( sw::float2{ 1.0f, 2.0f }, sw::float2{ 0.0f, 5.0f }, true ) == sw::WeaponFireResult::OutOfAmmo );
     SW_EXPECT_TRUE( rig.getProjectiles().empty() );
 
-    rig.equipGun( ActionCombatRigTestUtil::makeShotgun(), 0 );
+    sw::ProjectileDef ray = ActionCombatRigTestUtil::makePellet();
+    ray._speed            = 0.0f;
+    SW_EXPECT_LOG( "ActionCombatRig.GunNeedsFlyingProjectile" );
+    SW_EXPECT_FALSE( rig.equipGun( ActionCombatRigTestUtil::makeShotgun(), ray, 0 ) );
+
+    SW_REQUIRE_TRUE( rig.equipGun( ActionCombatRigTestUtil::makeShotgun(), ActionCombatRigTestUtil::makePellet(), 0 ) );
     SW_EXPECT_TRUE( rig.fireGun( sw::float2{ 1.0f, 2.0f }, sw::float2{ 0.0f, 5.0f }, true ) == sw::WeaponFireResult::Fired );
-    const sw::vector<sw::ActionProjectile>& listShot = rig.getProjectiles();
+    const sw::vector<sw::ProjectileState>& listShot = rig.getProjectiles();
     SW_REQUIRE_EQUAL( size_t( 3 ), listShot.size() );
     SW_EXPECT_NEAR( 1.0f, listShot[0]._position._x, kRigTolerance );
     SW_EXPECT_NEAR( 0.0f, listShot[0]._velocity._x, kRigTolerance );
     SW_EXPECT_NEAR( 30.0f, listShot[0]._velocity._y, kRigTolerance );
     SW_EXPECT_NEAR( 7.0f, listShot[0]._damage, kRigTolerance );
-    SW_EXPECT_NEAR( 2.0f, listShot[0]._lifetime, kRigTolerance );
-    SW_EXPECT_TRUE( listShot[0]._team == sw::ActionTeam::Player );
+    SW_EXPECT_NEAR( 60.0f, listShot[0]._range, kRigTolerance );
+    SW_EXPECT_TRUE( ActionCombatRigTestUtil::isTeam( listShot[0], sw::ActionTeam::Player ) );
     SW_EXPECT_NOT_EQUAL( listShot[0]._id, listShot[1]._id );
 
     SW_EXPECT_TRUE( rig.fireGun( sw::float2{}, sw::float2{ 1.0f, 0.0f }, true ) == sw::WeaponFireResult::Cooling );
@@ -407,8 +418,9 @@ SW_TEST_CASE( ActionCombatRigTest, StateRoundTripResumesIdentically )
 
     sw::ActionCombatRig original;
     SW_REQUIRE_TRUE( original.initialize( &catalog, &moves, kSword ) );
-    const sw::WeaponDef gun = ActionCombatRigTestUtil::makeShotgun();
-    original.equipGun( gun, 0 );
+    const sw::WeaponDef     gun    = ActionCombatRigTestUtil::makeShotgun();
+    const sw::ProjectileDef pellet = ActionCombatRigTestUtil::makePellet();
+    SW_REQUIRE_TRUE( original.equipGun( gun, pellet, 0 ) );
     original.pressAttack();
     original.advanceFrame( nullptr, kRigPlayer );
     original.pressParry();
@@ -430,13 +442,13 @@ SW_TEST_CASE( ActionCombatRigTest, StateRoundTripResumesIdentically )
     SW_REQUIRE_TRUE( otherCatalog.loadFromXMLText( R"(<ActionPlatformer><Grading><Grade id="S" min="90"/></Grading></ActionPlatformer>)", "other" ) );
     sw::ActionCombatRig otherCombo;
     SW_EXPECT_FALSE( otherCombo.initialize( &otherCatalog, &moves, kSword ) );
-    otherCombo.equipGun( gun, 0 );
+    SW_REQUIRE_TRUE( otherCombo.equipGun( gun, pellet, 0 ) );
     sw::Archive forOther( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( otherCombo.readState( forOther ) );
 
     sw::ActionCombatRig restored;
     SW_REQUIRE_TRUE( restored.initialize( &catalog, &moves, kLong ) );
-    restored.equipGun( gun, 0 );
+    SW_REQUIRE_TRUE( restored.equipGun( gun, pellet, 0 ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
 
@@ -453,8 +465,8 @@ SW_TEST_CASE( ActionCombatRigTest, StateRoundTripResumesIdentically )
     }
 
     // 다음 탄 id 도 이어진다
-    const uint32 nextOriginal = original.spawnProjectile( sw::ActionProjectile{} );
-    const uint32 nextRestored = restored.spawnProjectile( sw::ActionProjectile{} );
+    const uint32 nextOriginal = original.spawnProjectile( sw::ProjectileState{} );
+    const uint32 nextRestored = restored.spawnProjectile( sw::ProjectileState{} );
     SW_EXPECT_EQUAL( nextOriginal, nextRestored );
 }
 
@@ -474,9 +486,10 @@ SW_TEST_CASE( ActionCombatRigTest, ReadRejectsBrokenProjectiles )
     sw::Archive written;
     source.writeState( written );
 
-    // 탄 하나는 맨 끝 30 바이트다: 위치(8) 속도(8) 피해(4) 수명(4) id(4) 편(1) 되받아침(1).
+    // 탄 하나는 맨 끝 105 바이트다(`ProjectileSimulation::writeState`): 빈 정의 이름(4) 위치(12) 속도(12) 피해 · 나이 · 거리 · 수명 · 사거리 · 중력 · 저항 · 유도 · 반지름 · 폭발 · 반발(44)
+    // id(4) 반응 번호(4) 쏜 쪽 · 편 · 대상 · 마지막 맞음 · 관통 · 튕김(24) 깃발(1). 끝에서 잰 자리를 쓴다.
     const size_t size = static_cast<size_t>( written.getSize() );
-    SW_REQUIRE_TRUE( size > 30 );
+    SW_REQUIRE_TRUE( size > 105 );
 
     sw::ActionCombatRig target;
     SW_REQUIRE_TRUE( target.initialize( &catalog, &moves, kSword ) );
@@ -490,16 +503,19 @@ SW_TEST_CASE( ActionCombatRigTest, ReadRejectsBrokenProjectiles )
     };
 
     const uint32  idAtNext = 2; // 다음 id 와 같다(원본의 탄은 1 번)
-    const uint8   badByte  = 2;
+    const int32   badTeam  = 2;
+    const uint8   badFlags = 2; // 살아 있지 않다
     const float32 nan      = std::numeric_limits<float32>::quiet_NaN();
     const float32 infinity = std::numeric_limits<float32>::infinity();
-    expectRejected( 6, &idAtNext, sizeof( idAtNext ) );
-    expectRejected( 2, &badByte, sizeof( badByte ) );
-    expectRejected( 1, &badByte, sizeof( badByte ) );
-    expectRejected( 30, &nan, sizeof( nan ) );           // 위치 X
-    expectRejected( 22, &infinity, sizeof( infinity ) ); // 속도 X
-    expectRejected( 14, &nan, sizeof( nan ) );           // 피해
-    expectRejected( 10, &nan, sizeof( nan ) );           // 수명
+    const float32 depth    = 1.0f; // 화면 평면 밖
+    expectRejected( 33, &idAtNext, sizeof( idAtNext ) );
+    expectRejected( 21, &badTeam, sizeof( badTeam ) );
+    expectRejected( 1, &badFlags, sizeof( badFlags ) );
+    expectRejected( 101, &nan, sizeof( nan ) );          // 위치 X
+    expectRejected( 93, &depth, sizeof( depth ) );       // 위치 Z
+    expectRejected( 89, &infinity, sizeof( infinity ) ); // 속도 X
+    expectRejected( 77, &nan, sizeof( nan ) );           // 피해
+    expectRejected( 65, &nan, sizeof( nan ) );           // 수명
 
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( target.readState( truncated ) );

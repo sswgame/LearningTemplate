@@ -27,6 +27,7 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartAI.h"
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
+#include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileSimulation.h"
 #include "GameFramework/Runtime/Character/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Match/MatchPhase.h"
@@ -109,22 +110,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 날아가거나 놓인 아이템입니다. */
-    struct KartProjectile
-    {
-        float3        _position{};
-        float3        _direction{ 0.0f, 0.0f, 1.0f }; ///< 수평 단위 벡터
-        hashed_string _itemID{};
-        float32       _age{ 0.0f };
-        int32         _owner{ -1 };
-        int32         _target{ -1 }; ///< 유도 대상이다(-1 이면 곧게 나간다)
-        KartItemKind  _kind{ KartItemKind::Banana };
-        uint8         _bActive{ SW_TRUE };
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 경기에서 일어난 일을 알리는 이벤트입니다. */
     struct KartRaceEvent
     {
@@ -159,6 +144,8 @@ namespace sw
 
 namespace sw
 {
+    class KartProjectileQuery;
+
     /**
      * @class KartRace
      * @brief 한 경기를 진행합니다. 트랙과 아이템 카탈로그는 빌려 쓰므로 경기보다 오래 살아야 합니다.
@@ -172,9 +159,11 @@ namespace sw
      */
     class SW_KIT_API KartRace
     {
+        friend class KartProjectileQuery;
+
     public:
         static constexpr uint32 kStateTag     = FourCcUtil::make( "KRAC" );
-        static constexpr uint32 kStateVersion = 1;
+        static constexpr uint32 kStateVersion = 2;
 
         KartRace();
 
@@ -224,11 +213,12 @@ namespace sw
         int32            getRacerCount() const { return static_cast<int32>( _listRacer.size() ); }
         const KartRacer* findRacer( int32 racer ) const;
         /** @brief @p place 등(1부터)인 차의 번호를 반환합니다. 없으면 -1 입니다. */
-        int32                         findRacerAtPlace( int32 place ) const;
-        const vector<KartProjectile>& getProjectiles() const { return _listProjectile; }
-        bool                          isItemBoxActive( int32 boxIndex ) const;
-        const KartTrack*              getTrack() const { return _pTrack; }
-        void                          drainEvents( vector<KartRaceEvent>& outListEvent );
+        int32 findRacerAtPlace( int32 place ) const;
+        /** @brief 날아가거나 놓인 아이템입니다(공통 발사체, 정의 id 가 아이템 id). 평면(XZ)에서 돌고 높이는 트랙을 따른다. */
+        const vector<ProjectileState>& getProjectiles() const { return _projectiles.getProjectiles(); }
+        bool                           isItemBoxActive( int32 boxIndex ) const;
+        const KartTrack*               getTrack() const { return _pTrack; }
+        void                           drainEvents( vector<KartRaceEvent>& outListEvent );
 
     private:
         bool               isValidRacer( int32 racer ) const { return 0 <= racer && racer < static_cast<int32>( _listRacer.size() ); }
@@ -240,7 +230,7 @@ namespace sw
         float32            computeProgress( const KartRacer& kart ) const;
         void               updateItemBoxes( float32 deltaTime );
         void               updateProjectiles( float32 deltaTime );
-        void               explode( const KartProjectile& projectile, const KartItemDef& def );
+        void               explode( const ProjectileState& projectile, const KartItemDef& def );
         int32              pickRedShellTarget( int32 owner ) const;
         /** @brief 아직 들어오지 않은 차 중 가장 앞선 차의 번호를 반환합니다. 없으면 -1 입니다. */
         int32 findLeaderInRace() const;
@@ -251,7 +241,8 @@ namespace sw
 
     private:
         vector<KartRacer>          _listRacer;
-        vector<KartProjectile>     _listProjectile;
+        ProjectileSimulation       _projectiles;
+        vector<ProjectileEvent>    _listProjectileEventScratch;
         EventBuffer<KartRaceEvent> _eventBuffer;
         vector<Countdown>          _listItemBoxTimer; ///< 끝나 있으면 상자가 놓여 있는 것이다
         vector<int32>              _listPlaceOrder;   ///< 순위 순서로 나열한 차 번호

@@ -204,12 +204,12 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, ReloadTakesOnlyWhatItNeeds )
     const sw::BattleRoyaleLoadout loadout;
 
     sw::WeaponState full;
-    full.equip( BattleRoyaleGearTestUtil::makeRifle( 50 ), 0 );
+    SW_REQUIRE_TRUE( full.equip( BattleRoyaleGearTestUtil::makeRifle( 50 ), sw::ProjectileDef{}, 0 ) );
     SW_EXPECT_FALSE( loadout.tryReload( full, inventory ) );
     SW_EXPECT_EQUAL( 100, inventory.getItemCount( kAmmo ) );
 
     sw::WeaponState weapon;
-    weapon.equip( BattleRoyaleGearTestUtil::makeRifle( 50 ), 1 );
+    SW_REQUIRE_TRUE( weapon.equip( BattleRoyaleGearTestUtil::makeRifle( 50 ), sw::ProjectileDef{}, 1 ) );
     BattleRoyaleGearTestUtil::shoot( weapon, 3 ); // 탄창 7, 예비 1 — 2 발만 더 있으면 찬다
     SW_EXPECT_EQUAL( 7, weapon.getMagazineAmmo() );
     SW_EXPECT_TRUE( loadout.tryReload( weapon, inventory ) );
@@ -219,7 +219,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, ReloadTakesOnlyWhatItNeeds )
     SW_EXPECT_EQUAL( 98, inventory.getItemCount( kAmmo ) );
 
     sw::WeaponState capped;
-    capped.equip( BattleRoyaleGearTestUtil::makeRifle( 2 ), 0 );
+    SW_REQUIRE_TRUE( capped.equip( BattleRoyaleGearTestUtil::makeRifle( 2 ), sw::ProjectileDef{}, 0 ) );
     BattleRoyaleGearTestUtil::shoot( capped, 5 );
     SW_EXPECT_TRUE( loadout.tryReload( capped, inventory ) );
     SW_EXPECT_EQUAL( 96, inventory.getItemCount( kAmmo ) ); // 예비 상한 2 만큼만
@@ -228,7 +228,7 @@ SW_TEST_CASE( BattleRoyaleLoadoutTest, ReloadTakesOnlyWhatItNeeds )
     sw::Inventory empty;
     SW_REQUIRE_TRUE( empty.initialize( &items, 4 ) );
     sw::WeaponState dry;
-    dry.equip( BattleRoyaleGearTestUtil::makeRifle( 50 ), 0 );
+    SW_REQUIRE_TRUE( dry.equip( BattleRoyaleGearTestUtil::makeRifle( 50 ), sw::ProjectileDef{}, 0 ) );
     BattleRoyaleGearTestUtil::shoot( dry, 1 );
     SW_EXPECT_FALSE( loadout.tryReload( dry, empty ) );
     SW_EXPECT_FALSE( dry.isReloading() );

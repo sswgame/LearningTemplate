@@ -538,9 +538,11 @@ SW_TEST_CASE( ActionRoomTest, ReadRejectsBrokenBytes )
     const size_t size = static_cast<size_t>( written.getSize() );
 
     // 머리: 종류(1) 클리어(1) 쿨다운 셋(12) = 14, 종 수(4), 이름 길이(4) + "gunner"(6) = 28, 적 수(4) = 32.
-    // 적: 위치(8) 체력(4) 사격(4) 종 인덱스(2) 생존(1). 맨 끝 탄: 위치(8) 속도(8) 수명(4) 반지름(4) 피해(4) 생존(1) = 29.
-    constexpr size_t kActorAt = 32;
-    SW_REQUIRE_TRUE( size == kActorAt + 19 + 4 + 29 );
+    // 적: 위치(8) 체력(4) 사격(4) 종 인덱스(2) 생존(1). 탄은 공통 발사체의 바이트다(`ProjectileSimulation::writeState`): 다음 id(4) 수(4), 맨 끝 탄 105 —
+    // 빈 정의 이름(4) 위치(12) 속도(12) 피해 · 나이 · 거리 · 수명 · 사거리 · 중력 · 저항 · 유도 · 반지름 · 폭발 · 반발(44) id · 반응 번호(8) 정수 여섯(24) 깃발(1).
+    constexpr size_t kActorAt    = 32;
+    constexpr size_t kProjectile = 105;
+    SW_REQUIRE_TRUE( size == kActorAt + 19 + 4 + 4 + kProjectile );
 
     sw::ActionRoom target;
     const auto     expectRejected = [&]( size_t offset, auto value )
@@ -562,11 +564,12 @@ SW_TEST_CASE( ActionRoomTest, ReadRejectsBrokenBytes )
     expectRejected( kActorAt + 8, 11.0f );                     // 최대 10 초과
     expectRejected( kActorAt + 16, static_cast<uint16>( 1 ) ); // 종 인덱스 범위 밖
     expectRejected( kActorAt + 18, static_cast<uint8>( 2 ) );  // 생존 표시
-    expectRejected( size - 29, nan );                          // 탄 위치
-    expectRejected( size - 21, infinity );                     // 탄 속도
-    expectRejected( size - 9, -1.0f );                         // 탄 반지름
-    expectRejected( size - 5, static_cast<int32>( -1 ) );      // 탄 피해
-    expectRejected( size - 1, static_cast<uint8>( 2 ) );       // 탄 생존 표시
+    expectRejected( size - 101, nan );                         // 탄 위치
+    expectRejected( size - 93, 1.0f );                         // 탄 위치 Z(룸 평면 밖)
+    expectRejected( size - 89, infinity );                     // 탄 속도
+    expectRejected( size - 77, -1.0f );                        // 탄 피해
+    expectRejected( size - 45, -1.0f );                        // 탄 반지름
+    expectRejected( size - 1, static_cast<uint8>( 2 ) );       // 탄 깃발(살아 있지 않다)
 
     sw::Archive truncated( written.getData(), written.getSize() - 1 );
     SW_EXPECT_FALSE( target.readState( truncated ) );

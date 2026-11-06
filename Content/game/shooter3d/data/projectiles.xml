@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shooter3D 의 탄 — 날아가는 것과 탄착. 속성 이름은 ProjectileDef · ProjectileImpactDef 의 필드 이름이다(빠진 것은 기본값). 거리는 m, 시간은 초.
+     speed 0 은 광선(히트스캔)이다. 무기(weapons.xml)는 tags 에 대한 accepts 조건으로 받는 탄을 고른다 — 무기 N 종과 탄 M 종이 N + M 줄로 조합된다.
+     탄은 _base 로 다른 탄을 물려받고 다른 칸만 적는다. tracerColor · tracerWidth 는 탄도선(1 을 넘는 색은 빛난다)이다.
+     <Impact> 는 탄과 표면의 맞음 표다. 위에서 처음 맞는 줄이 이기므로 조건(when, 탄 태그) 있는 줄을 일반 줄보다 위에 둔다. 표면은 이 게임이 정한다: Body(적의 몸) · Cover(상자 · 바닥).
+     소이탄(incendiary_round)은 치트 cheat.shooter.projectile 로 소총에 넣는다(시나리오 game.shooter3d.projectilecombo). -->
+<ProjectileCatalog>
+  <Projectile id="rifle_round" tags="Ammo.Rifle" damage="14" range="90" speed="0" tracerColor="3,2.2,0.6,1" tracerWidth="0.025"/>
+  <Projectile id="buckshot" _base="rifle_round" tags="Ammo.Shell" damage="9" range="28"/>
+  <Projectile id="pistol_round" _base="rifle_round" tags="Ammo.Pistol" damage="22" range="60"/>
+  <Projectile id="incendiary_round" _base="rifle_round" tags="Ammo.Rifle,Ammo.Incendiary" damage="11" tracerColor="8,1.2,0.15,1" tracerWidth="0.08"/>
+
+  <Impact id="body_incendiary" surface="Body" when="Ammo.Incendiary" color="4,0.8,0.1,1" size="0.32"/>
+  <Impact id="body" surface="Body" color="1,0.45,0.2,1" size="0.18"/>
+  <Impact id="cover" surface="Cover" color="0.9,0.85,0.6,1" size="0.1"/>
+</ProjectileCatalog>

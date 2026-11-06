@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 무기 · 탄 조합 — 같은 소총에 다른 탄(projectiles.xml)을 넣으면 한 발의 값과 그림이 탄을 따른다.
+  기본 탄(rifle_round, 피해 14, 노란 탄도선)으로 한 발, 치트로 소이탄(incendiary_round — rifle_round 를 물려받아 피해 11, 붉고 굵은 탄도선)을 넣고 한 발 쏜다.
+  값은 감시값(Shooter3D.ShotDamage)으로, 그림은 같은 실행의 두 장을 견주는 음성 대조(`ExpectImagesDiffer`)로 본다 — 탄도선이 지나는 화면 오른쪽 아래(총구 → 조준점)다.
+  탄이 그림을 바꾸지 않으면(궤적 칸을 읽지 않으면) 진다. 골든은 두지 않는다(적이 움직여 그림이 매번 다르다). 끝에 기본 탄으로 되돌린다.
+  실행: App -scenario=game/shooter3d/automation/projectilecombo.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.projectilecombo" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Expect watch="Shooter3D.WeaponIndex" equals="0"/>
+	<Wait frames="20"/>
+	<Expect watch="Shooter3D.ShotDamage" equals="14"/>
+	<Tap slot="Mouse.Left" hold="1"/>
+	<WaitUntil watch="Shooter3D.ShotCount" equals="1" timeoutFrames="10"/>
+	<Screenshot file="projectilecombo_default.ppm"/>
+	<!-- 탄도선이 사라지고(0.07 초) 연사 간격이 지난 뒤 탄을 바꾼다 -->
+	<Wait frames="30"/>
+	<DevCommand line="cheat.shooter.projectile incendiary_round"/>
+	<Wait frames="1"/>
+	<Expect watch="Shooter3D.ShotDamage" equals="11"/>
+	<Tap slot="Mouse.Left" hold="1"/>
+	<WaitUntil watch="Shooter3D.ShotCount" equals="2" timeoutFrames="10"/>
+	<Screenshot file="projectilecombo_incendiary.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="projectilecombo_default.ppm" second="projectilecombo_incendiary.ppm" region="0.5,0.5,1,1" minDiffering="0.01"/>
+	<!-- 다른 무기는 자기 기본 탄이다(산탄 9). 되돌리면 소총도 기본 탄이다 -->
+	<Tap slot="Key.Digit2" hold="2"/>
+	<Wait frames="10"/>
+	<Expect watch="Shooter3D.WeaponIndex" equals="1"/>
+	<Expect watch="Shooter3D.ShotDamage" equals="9"/>
+	<Tap slot="Key.Digit1" hold="2"/>
+	<Wait frames="10"/>
+	<Expect watch="Shooter3D.ShotDamage" equals="11"/>
+	<DevCommand line="cheat.shooter.projectile"/>
+	<Wait frames="1"/>
+	<Expect watch="Shooter3D.ShotDamage" equals="14"/>
+	<Expect watch="Shooter3D.PlayerAlive" equals="1"/>
+	<Pass/>
+</Scenario>

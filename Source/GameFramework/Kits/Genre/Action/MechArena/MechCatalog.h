@@ -1,7 +1,7 @@
 /**
  * @file MechCatalog.h
  * @brief 기체 대전의 데이터입니다. 기체(근, 중, 원거리 분류, 랭크, 코스트, 체력, 속도, 부스트, 다운치, 록온), 형태(변형)와 무기 슬롯, 분류 보정, 스킬을 담습니다.
- * @details 주무기의 탄창, 재장전, 피해는 기반 `WeaponCatalog` 에 있고, 근접 콤보 단마다의 발생, 경직, 캔슬 창은 기반 `MoveCatalog` 의 id 로 가리킨다.
+ * @details 주무기의 탄창, 재장전은 기반 `WeaponCatalog`, 그 탄의 피해 · 탄속 · 사거리는 기반 `ProjectileCatalog` 에 있고, 근접 콤보 단마다의 발생, 경직, 캔슬 창은 기반 `MoveCatalog` 의 id 로 가리킨다.
  *          여기에는 "어느 기체가 어느 무기와 기술을 몇 단으로 가지는가"와 기체 대전에만 있는 수치(다운치, 유도, 넉백, 쿨다운)만 둔다.
  *          정의 구조체는 리플렉션 스키마다 — 기본값은 초기값, 범위는 `PROPERTY( Min · Max )`, 필수는 `Required` 이고 `XMLFields::readFields` 가 읽는다.
  */
@@ -78,7 +78,7 @@ namespace sw
         PROPERTY( Name = "speed", Min = 0.0 )
         float32 _projectileSpeed{ 0.0f }; ///< Special 의 탄속(0이면 즉시 맞는 광선)
         PROPERTY( Min = 0.0 )
-        float32 _homing{ 0.0f }; ///< 록온 대상 쪽으로 꺾는 최대 각속도(0이면 곧게 간다)
+        float32 _homing{ 0.0f }; ///< 록온 대상 쪽으로 꺾는 최대 각속도(0이면 곧게 간다). Shot 은 이 값을 탄의 유도(`ProjectileDef::_homingRate`)에 더한다
         PROPERTY( Min = 0.0 )
         float32 _cooldown{ 0.0f }; ///< Special 의 재사용 대기 시간
         PROPERTY( Name = "stagger", Min = 0.0 )
@@ -174,6 +174,8 @@ namespace sw
         int32 computeSlotOffset( int32 mode ) const;
         /** @brief 모든 형태의 무기 슬롯 수를 반환합니다. */
         int32 computeSlotCount() const;
+        /** @brief 기체 전체 슬롯 목록의 @p slotIndex 번째 슬롯입니다. 범위 밖이면 nullptr 입니다. */
+        const MechWeaponSlotDef* findSlot( int32 slotIndex ) const;
     };
 } // namespace sw
 

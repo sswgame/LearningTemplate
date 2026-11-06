@@ -74,6 +74,19 @@ namespace sw
         return computeSlotOffset( static_cast<int32>( _listMode.size() ) );
     }
 
+    const MechWeaponSlotDef* MechDef::findSlot( int32 slotIndex ) const
+    {
+        int32 offset = 0;
+        for ( const MechModeDef& mode : _listMode )
+        {
+            const int32 count = static_cast<int32>( mode._listWeapon.size() );
+            if ( 0 <= slotIndex - offset && slotIndex - offset < count )
+                return &mode._listWeapon[static_cast<size_t>( slotIndex - offset )];
+            offset += count;
+        }
+        return nullptr;
+    }
+
     MechCatalog::MechCatalog()
         : _catalogMech{}
         , _catalogSkill{}

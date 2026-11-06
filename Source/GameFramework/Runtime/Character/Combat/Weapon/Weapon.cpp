@@ -13,6 +13,7 @@
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
+#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
 {
@@ -20,6 +21,7 @@ namespace sw
     {
         struct WeaponInternal
         {
+            static constexpr const utf8* kBareTag = "tag"; ///< `accepts` 의 그냥 이름은 탄 태그다
         };
     } // namespace
 } // namespace sw
@@ -30,27 +32,35 @@ namespace sw
         : _id{}
         , _ammoID{}
         , _itemID{}
+        , _projectileID{}
+        , _accepts{}
         , _name{}
         , _fireInterval{ 0.1f }
         , _reloadTime{ 1.8f }
-        , _damage{ 10.0f }
-        , _range{ 80.0f }
         , _minSpread{ 0.5f }
         , _maxSpread{ 4.0f }
         , _spreadPerShot{ 0.6f }
         , _spreadRecovery{ 6.0f }
         , _recoilPitch{ 0.6f }
-        , _falloffStart{ 0.0f }
-        , _falloffEnd{ 0.0f }
-        , _falloffMinScale{ 1.0f }
-        , _projectileSpeed{ 0.0f }
-        , _projectileGravity{ 1.0f }
-        , _headshotMultiplier{ 2.0f }
         , _magazineSize{ 30 }
         , _maxReserveAmmo{ 180 }
         , _pelletCount{ 1 }
         , _bAutomatic{ SW_TRUE }
+        , _acceptsExpr{}
+        , _listModifier{}
     {
+    }
+
+    bool WeaponDef::compileAccepts( string_view sourceName )
+    {
+        return ConditionExpr::compile( _accepts, sourceName, _acceptsExpr, WeaponInternal::kBareTag );
+    }
+
+    bool WeaponDef::accepts( const ProjectileDef& projectile ) const
+    {
+        GameplayContext context;
+        context.set<SubjectTagsSlot>( &projectile._tags );
+        return _acceptsExpr.evaluate( context );
     }
 
     // ------------------------------------------------------------------------------
@@ -73,6 +83,13 @@ namespace sw
             const utf8* const pID = weapon._id.c_str();
             if ( weapon._name.empty() )
                 weapon._name = pID;
+            bValid = weapon.compileAccepts( sourceName ) && bValid;
+            for ( XMLNode modifierNode = node.findChild( "Modifier" ); modifierNode; modifierNode = modifierNode.findNextSibling( "Modifier" ) )
+            {
+                ShotModifierDef modifier;
+                bValid = XMLFields::readFields( modifierNode, modifier, sourceName ) && bValid;
+                weapon._listModifier.push_back( modifier );
+            }
             if ( bValid == false )
             {
                 SW_LOG_ERROR_ID( "Weapon.WeaponInvalidFieldsSkipped", "%#: weapon '%#' has invalid fields - skipped", sourceName, pID );
@@ -86,11 +103,34 @@ namespace sw
         return loadedCount;
     }
 
+    bool WeaponCatalog::checkProjectiles( const ProjectileCatalog& projectiles ) const
+    {
+        bool bComplete = true;
+        for ( const WeaponDef& weapon : getAll() )
+        {
+            const ProjectileDef* pProjectile = projectiles.find( weapon._projectileID );
+            if ( pProjectile == nullptr )
+            {
+                SW_LOG_ERROR_ID( "Weapon.ProjectileUnknown", "weapon '%#' loads projectile '%#', which is not in the projectile catalog", weapon._id.c_str(), weapon._projectileID.c_str() );
+                bComplete = false;
+                continue;
+            }
+            if ( weapon.accepts( *pProjectile ) == false )
+            {
+                SW_LOG_ERROR_ID( "Weapon.ProjectileNotAccepted", "weapon '%#' loads projectile '%#', which its accepts='%#' refuses", weapon._id.c_str(), weapon._projectileID.c_str(),
+                                 weapon._accepts.c_str() );
+                bComplete = false;
+            }
+        }
+        return bComplete;
+    }
+
     // ------------------------------------------------------------------------------
     // WeaponState
     // ------------------------------------------------------------------------------
     WeaponState::WeaponState()
         : _def{}
+        , _shot{}
         , _random{ 1u }
         , _cooldown{}
         , _reload{}
@@ -100,15 +140,33 @@ namespace sw
     {
     }
 
-    void WeaponState::equip( const WeaponDef& weapon, int32 reserveAmmo, uint32 spreadSeed )
+    bool WeaponState::equip( const WeaponDef& weapon, const ProjectileDef& projectile, int32 reserveAmmo, uint32 spreadSeed )
     {
-        _def = weapon;
+        if ( weapon.accepts( projectile ) == false )
+        {
+            SW_LOG_ERROR_ID( "Weapon.EquipRefusedProjectile", "weapon '%#' does not accept projectile '%#' (accepts='%#')", weapon._id.c_str(), projectile._id.c_str(), weapon._accepts.c_str() );
+            return false;
+        }
+        _def  = weapon;
+        _shot = ResolvedShot::resolve( projectile, weapon._listModifier, {} );
         _random.setSeed( spreadSeed );
         _cooldown.clear();
         _reload.clear();
         _currentSpread = weapon._minSpread;
         _magazineAmmo  = weapon._magazineSize;
         _reserveAmmo   = MathUtil::clamp( reserveAmmo, 0, weapon._maxReserveAmmo );
+        return true;
+    }
+
+    bool WeaponState::loadProjectile( const ProjectileDef& projectile, const vector<ShotModifierDef>& listAttachment )
+    {
+        if ( _def.accepts( projectile ) == false )
+        {
+            SW_LOG_ERROR_ID( "Weapon.LoadRefusedProjectile", "weapon '%#' does not accept projectile '%#' (accepts='%#')", _def._id.c_str(), projectile._id.c_str(), _def._accepts.c_str() );
+            return false;
+        }
+        _shot = ResolvedShot::resolve( projectile, _def._listModifier, listAttachment );
+        return true;
     }
 
     void WeaponState::update( float32 deltaTime )
@@ -180,6 +238,7 @@ namespace sw
     void WeaponState::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeName( outArchive, _def._id );
+        StateArchiveUtil::writeName( outArchive, _shot._projectileID );
         StateArchiveUtil::writeRandom( outArchive, _random );
         StateArchiveUtil::writeCountdown( outArchive, _cooldown );
         StateArchiveUtil::writeCountdown( outArchive, _reload );
@@ -191,7 +250,11 @@ namespace sw
     bool WeaponState::readState( Archive& archive )
     {
         hashed_string defID;
+        hashed_string projectileID;
         if ( StateArchiveUtil::readName( archive, defID ) == false || defID != _def._id )
+            return false;
+        // 장전한 탄은 쓰는 쪽이 `loadProjectile` 로 먼저 맞춘다 — 다른 탄의 상태는 받지 않는다(탄 값이 들어맞지 않는다).
+        if ( StateArchiveUtil::readName( archive, projectileID ) == false || projectileID != _shot._projectileID )
             return false;
         WeaponState restored = *this;
         const bool  bRead    = StateArchiveUtil::readRandom( archive, restored._random ) && StateArchiveUtil::readCountdown( archive, restored._cooldown ) &&
