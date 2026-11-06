@@ -35,6 +35,128 @@ SW_TEST_CASE( ByteStreamTest, WriteThenReadRoundTrips )
     SW_EXPECT_FALSE( reader.hasOverflowed() );
 }
 
+/**
+ * @brief [ByteStreamTest] 개수 검사는 나눗셈이라 넘치지 않고, 차원의 곱은 넘치면 false 다
+ */
+SW_TEST_CASE( ByteStreamTest, CountChecksDoNotOverflow )
+{
+    SW_EXPECT_TRUE( ByteReader::canHoldCount( 3, 4, 12 ) );
+    SW_EXPECT_FALSE( ByteReader::canHoldCount( 4, 4, 12 ) );
+    SW_EXPECT_FALSE( ByteReader::canHoldCount( uint64{ 1 } << 62, 8, 16 ) ); // 곱하면 2^65 가 넘쳐 0 이 되어 통과할 값
+    SW_EXPECT_TRUE( ByteReader::canHoldCount( 16, 0, 16 ) );                 // 크기 0 은 1 로 본다
+    SW_EXPECT_FALSE( ByteReader::canHoldCount( 17, 0, 16 ) );
+
+    uint64 product = 0;
+    SW_EXPECT_TRUE( ByteReader::tryMultiplyCounts( { 65536, 65536, 16 }, product ) );
+    SW_EXPECT_EQUAL( uint64{ 1 } << 36, product );
+    SW_EXPECT_FALSE( ByteReader::tryMultiplyCounts( { uint64{ 1 } << 31, uint64{ 1 } << 31, 4 }, product ) ); // 2^64 — 그대로 곱하면 0
+    SW_EXPECT_TRUE( ByteReader::tryMultiplyCounts( { 0, uint64{ 1 } << 63, uint64{ 1 } << 63 }, product ) );
+    SW_EXPECT_EQUAL( uint64{ 0 }, product );
+}
+
+/**
+ * @brief [ByteStreamTest] 목록 읽기는 위조된 개수를 할당 전에 거르고, 잘리거나 원소가 거절되면 빈 목록과 실패를 남긴다
+ */
+SW_TEST_CASE( ByteStreamTest, ListReadsRefuseForgedCountsAndTruncation )
+{
+    vector<uint8> bytes;
+    ByteWriter    writer{ bytes };
+    writer.writeUint32( 3 );
+    writer.writeUint32( 10 );
+    writer.writeUint32( 20 );
+    writer.writeUint32( 30 );
+
+    const auto readValue = []( ByteReader& reader, uint32& outValue )
+    {
+        outValue = reader.readUint32();
+    };
+    {
+        ByteReader     reader{ bytes.data(), bytes.size() };
+        vector<uint32> listValue;
+        SW_REQUIRE_TRUE( reader.readCountedList( listValue, sizeof( uint32 ), [&]( uint32& outValue )
+        { readValue( reader, outValue ); } ) );
+        SW_REQUIRE_EQUAL( size_t{ 3 }, listValue.size() );
+        SW_EXPECT_EQUAL( 30u, listValue[2] );
+        SW_EXPECT_TRUE( reader.isFullyRead() );
+    }
+    // 모든 길이의 잘림: 어느 길이에서도 목록이 비고 실패다.
+    for ( size_t length = 0; length < bytes.size(); ++length )
+    {
+        ByteReader     reader{ bytes.data(), length };
+        vector<uint32> listValue{ 99u };
+        SW_EXPECT_FALSE( reader.readCountedList( listValue, sizeof( uint32 ), [&]( uint32& outValue )
+        { readValue( reader, outValue ); } ) );
+        SW_EXPECT_TRUE( listValue.empty() );
+        SW_EXPECT_TRUE( reader.hasOverflowed() );
+    }
+    // 위조된 개수: 원소를 부르기 전에 멈춘다(할당하지 않는다).
+    {
+        vector<uint8> forged;
+        ByteWriter    forgedWriter{ forged };
+        forgedWriter.writeUint32( 0xFFFFFFFFu );
+        forgedWriter.writeUint32( 1 );
+        ByteReader     reader{ forged.data(), forged.size() };
+        vector<uint64> listValue;
+        uint32         callCount = 0;
+        SW_EXPECT_FALSE( reader.readCountedList( listValue, sizeof( uint64 ), [&]( uint64& )
+        { ++callCount; } ) );
+        SW_EXPECT_EQUAL( 0u, callCount );
+    }
+    // 원소가 거절하면 그 자리에서 멈춘다.
+    {
+        ByteReader     reader{ bytes.data(), bytes.size() };
+        vector<uint32> listValue;
+        uint32         callCount = 0;
+        SW_EXPECT_FALSE( reader.readCountedList( listValue, sizeof( uint32 ), [&]( uint32& outValue ) -> bool
+        {
+            ++callCount;
+            outValue = reader.readUint32();
+            return outValue != 20u;
+        } ) );
+        SW_EXPECT_EQUAL( 2u, callCount );
+        SW_EXPECT_TRUE( listValue.empty() );
+    }
+    // POD 표: 개수 × 크기가 넘치는 값도 거른다.
+    {
+        ByteReader     reader{ bytes.data(), bytes.size() };
+        vector<uint32> listValue;
+        SW_EXPECT_FALSE( reader.readPodList( listValue, uint64{ 1 } << 62 ) );
+        SW_EXPECT_TRUE( listValue.empty() );
+    }
+    {
+        ByteReader     reader{ bytes.data(), bytes.size() };
+        vector<uint32> listValue;
+        SW_REQUIRE_TRUE( reader.readPodList( listValue, 4 ) );
+        SW_EXPECT_EQUAL( 3u, listValue[0] );
+        SW_EXPECT_TRUE( reader.isFullyRead() );
+    }
+}
+
+/**
+ * @brief [ByteStreamTest] 실수 읽기는 NaN · 무한대를 0 과 실패로 답하고 위치는 넘어간다. 유한한 값은 그대로다
+ */
+SW_TEST_CASE( ByteStreamTest, FloatReadRefusesNonFinite )
+{
+    vector<uint8> bytes;
+    ByteWriter    writer{ bytes };
+    writer.writeUint32( 0x7FC00000u ); // NaN
+    writer.writeUint32( 0x7F800000u ); // +무한대
+    writer.writeUint32( 0xFF800000u ); // -무한대
+    writer.writeFloat32( 1.5f );
+
+    for ( size_t skip = 0; skip < 3; ++skip )
+    {
+        ByteReader reader{ bytes.data(), bytes.size() };
+        SW_REQUIRE_TRUE( reader.skipBytes( skip * 4 ) );
+        SW_EXPECT_EQUAL( 0.0f, reader.readFloat32() );
+        SW_EXPECT_TRUE( reader.hasOverflowed() );
+    }
+    ByteReader reader{ bytes.data(), bytes.size() };
+    SW_REQUIRE_TRUE( reader.skipBytes( 12 ) );
+    SW_EXPECT_EQUAL( 1.5f, reader.readFloat32() );
+    SW_EXPECT_TRUE( reader.isFullyRead() );
+}
+
 SW_TEST_CASE( ByteStreamTest, ShortReadOverflowsWithoutMoving )
 {
     const uint8 arrByte[3] = { 0x01, 0x02, 0x03 };
