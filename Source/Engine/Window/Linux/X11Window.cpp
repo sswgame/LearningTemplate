@@ -516,12 +516,16 @@ namespace sw
             const bool bGrabFocus      = bFocusEvent && ( event.xfocus.mode == NotifyGrab || event.xfocus.mode == NotifyUngrab );
             if ( bMapChange )
             {
+                SW_LOG_INFO_ID( "X11Window.MapChanged", "[Window] main window %#", event.type == UnmapNotify ? "unmapped" : "mapped" );
                 setMinimizedState( event.type == UnmapNotify );
                 if ( event.type == MapNotify )
                     requestInputFocus();
             }
             else if ( bFocusEvent && bGrabFocus == false )
+            {
+                SW_LOG_INFO_ID( "X11Window.FocusChanged", "[Window] main window focus %# (mode %#, detail %#)", event.type == FocusIn ? "in" : "out", event.xfocus.mode, event.xfocus.detail );
                 setFocusState( event.type == FocusIn );
+            }
 
             // 선택 이벤트는 입력이 아니다 — 외부 처리기(ImGui)가 먹기 전에 답한다. 답하지 않으면 붙여넣는 프로그램이 시간 제한까지 기다린다.
             if ( handleSelectionEvent( &event ) || handleIncrPropertyEvent( &event ) )
