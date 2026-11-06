@@ -32,6 +32,7 @@ namespace sw
         Subgraph,    ///< 하위 그래프를 펼쳐 넣는다. 핀은 그 그래프의 `GraphInput` · `GraphOutput` 이다
         GraphInput,  ///< 하위 그래프의 입력 핀 선언(설정 `Name` · `Type`)
         GraphOutput, ///< 하위 그래프의 출력 핀 선언(설정 `Name`, 입력 `Value`)
+        Layer,       ///< 머티리얼 층 — 층 그래프(`_assetPath`)를 펼쳐 출력 위에 마스크로 얹는다. 머티리얼 그래프에만 둔다(`docs/agents/MaterialGraph.md` 의 층)
     };
 
     /** @brief 입력 핀 선언 하나입니다. `Name:type`, 필수면 `!`, 기본이 있으면 `=수치` 또는 `=HLSL 식`. */

@@ -75,6 +75,46 @@ namespace
             return false;
         }
 
+        /** @brief 층 파일 하나를 쓰고 리소스 id 를 돌려줍니다(못 쓰면 빈 글): 색 칸 `_color` 를 BaseColor 로 내고, 아래 거칠기의 반을 Roughness 로 낸다. @p extraNodes 는 더 붙일 노드입니다. */
+        [[nodiscard]] static string writeLayer( const test::ScopedScratchDomain& domain, string_view fileName, string_view extraNodes = {} )
+        {
+            string nodes = makeNode( "Color", "ColorParameter", {}, "Parameter=_color,Default=0.4 0.3 0.2 1" );
+            nodes.append( makeNode( "BelowRough", "GraphInput", {}, "Name=Roughness,Type=float" ) );
+            nodes.append( makeNode( "Half", "Multiply", "A=BelowRough.Out", "B=0.5" ) );
+            nodes.append( makeNode( "OutColor", "GraphOutput", "Value=Color.RGB", "Name=BaseColor" ) );
+            nodes.append( makeNode( "OutRough", "GraphOutput", "Value=Half.Out", "Name=Roughness" ) );
+            nodes.append( extraNodes );
+            if ( FileUtil::writeTextFile( domain.makeDiskPath( fileName ), wrapGraph( nodes ) ) == false )
+                return {};
+            return test::ScopedScratchDomain::makeID( fileName ).str();
+        }
+
+        /** @brief 출력 위에 층 노드 @p layerNodes 를 얹은 머티리얼을 읽고, 층 노드마다 @p layerID 를 겁니다. */
+        [[nodiscard]] static bool compileLayered( string_view layerNodes, string_view layerID, MaterialGraphCompileResult& outResult )
+        {
+            string nodes = makeNode( "Out", "Output", {}, "BaseColor=1 1 1,Roughness=0.8" );
+            nodes.append( layerNodes );
+            MaterialGraphDef graph;
+            if ( graph.loadFromXMLText( wrapGraph( nodes ), kSource ) == false )
+                return false;
+            for ( MaterialGraphNodeDesc& node : graph._listNode )
+            {
+                if ( node._kind == "Layer" )
+                    node._assetPath = string{ layerID };
+            }
+            return MaterialGraphCompiler::compile( graph, kSource, outResult );
+        }
+
+        [[nodiscard]] static const MaterialGraphField* findField( const MaterialGraphCompileResult& result, string_view name )
+        {
+            for ( const MaterialGraphField& field : result._listField )
+            {
+                if ( field._name == name )
+                    return &field;
+            }
+            return nullptr;
+        }
+
         [[nodiscard]] static string withoutCarriageReturns( string_view text )
         {
             string out;
@@ -314,18 +354,103 @@ SW_TEST_CASE( MaterialGraphCompilerTest, GeneratedPathsFollowGraphPath )
 /** @brief [MaterialGraphCompilerTest] 저장소의 생성물은 그래프와 같다 — 다르면 `App --cook-shaders` 로 다시 쓴다(그래프를 손으로 고치고 생성하지 않은 것이다) */
 SW_TEST_CASE( MaterialGraphCompilerTest, SampleGeneratedAssetsAreCurrent )
 {
-    constexpr const utf8* kGraphID = "game/empty/materials/matgraph/rim_glow.matgraph.xml";
-    MaterialGraphDef      graph;
-    SW_REQUIRE_TRUE( graph.loadFromAsset( AssetID{ kGraphID } ) );
+    // 하위 그래프 견본(rim_glow)과 층 견본(layered_stone)
+    for ( const utf8* const pGraphID : { "game/empty/materials/matgraph/rim_glow.matgraph.xml", "game/empty/materials/matgraph/layered_stone.matgraph.xml" } )
+    {
+        MaterialGraphDef graph;
+        SW_REQUIRE_TRUE( graph.loadFromAsset( AssetID{ pGraphID } ) );
+        MaterialGraphCompileResult result;
+        SW_REQUIRE_TRUE( MaterialGraphCompiler::compile( graph, pGraphID, result ) );
+        MaterialGraphGeneratedPaths paths;
+        SW_REQUIRE_TRUE( MaterialGraphCook::makeGeneratedPaths( pGraphID, paths ) );
+        const string shaderPath = MaterialGraphCook::makeShaderPath( paths, result );
+        string       shaderText;
+        string       materialText;
+        SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ shaderPath }, shaderText ) );
+        SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ paths._materialPath }, materialText ) );
+        SW_EXPECT_EQUAL( result._hlsl, MaterialGraphTestUtil::withoutCarriageReturns( shaderText ) );
+        SW_EXPECT_EQUAL( MaterialGraphCompiler::makeMaterialText( result, paths._stem, shaderPath, pGraphID ), MaterialGraphTestUtil::withoutCarriageReturns( materialText ) );
+    }
+}
+
+/** @brief [MaterialGraphCompilerTest] 층은 출력 위에 마스크 × 무게로 얹고, 층 안 파라미터는 `_<층>` 머리의 칸, 무게는 `_<층>Weight` 칸이며 층이 내지 않은 칸은 아래 값 그대로다 */
+SW_TEST_CASE( MaterialGraphCompilerTest, LayerBlendsOverOutput )
+{
+    const test::ScopedScratchDomain domain;
+    const string                    layerID = MaterialGraphTestUtil::writeLayer( domain, "dirt.matgraph.xml" );
+    SW_REQUIRE_FALSE( layerID.empty() );
     MaterialGraphCompileResult result;
-    SW_REQUIRE_TRUE( MaterialGraphCompiler::compile( graph, kGraphID, result ) );
-    MaterialGraphGeneratedPaths paths;
-    SW_REQUIRE_TRUE( MaterialGraphCook::makeGeneratedPaths( kGraphID, paths ) );
-    const string shaderPath = MaterialGraphCook::makeShaderPath( paths, result );
-    string       shaderText;
-    string       materialText;
-    SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ shaderPath }, shaderText ) );
-    SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ paths._materialPath }, materialText ) );
-    SW_EXPECT_EQUAL( result._hlsl, MaterialGraphTestUtil::withoutCarriageReturns( shaderText ) );
-    SW_EXPECT_EQUAL( MaterialGraphCompiler::makeMaterialText( result, paths._stem, shaderPath, kGraphID ), MaterialGraphTestUtil::withoutCarriageReturns( materialText ) );
+    SW_REQUIRE_TRUE( MaterialGraphTestUtil::compileLayered( MaterialGraphTestUtil::makeNode( "Dirt", "Layer", {}, "MaskChannel=G,Weight=0.75" ), layerID, result ) );
+
+    const MaterialGraphField* pWeight = MaterialGraphTestUtil::findField( result, "_DirtWeight" );
+    SW_REQUIRE_TRUE( pWeight != nullptr );
+    SW_EXPECT_EQUAL( string( "0.75" ), pWeight->_defaultValue );
+    SW_EXPECT_TRUE( MaterialGraphTestUtil::findField( result, "_Dirt_color" ) != nullptr );
+    const MaterialGraphField* pMask = MaterialGraphTestUtil::findField( result, "_layerMask" );
+    SW_REQUIRE_TRUE( pMask != nullptr );
+    SW_EXPECT_FALSE( pMask->_bSRGB );
+
+    SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "saturate( layerMask.g * context._material._DirtWeight )" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "output._baseColor = lerp( output._baseColor, " ) );
+    SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "output._roughness * 0.5f" ) );                         // 층의 GraphInput 은 아래 칸을 읽는다
+    SW_EXPECT_FALSE( StringUtil::contains( result._hlsl, "output._metallic = lerp" ) );                         // 층이 내지 않은 칸
+    SW_EXPECT_TRUE( result._hlsl.find( "output._roughness = 0.8f;" ) < result._hlsl.find( "// Dirt (Layer" ) ); // 층은 출력 대입 뒤다
+
+    const string               text     = MaterialGraphCompiler::makeMaterialText( result, "test", "game/x/shaders/matgraph/test_00000000.hlsl", MaterialGraphTestUtil::kSource );
+    const shared_ptr<Material> material = Material::create();
+    SW_REQUIRE_TRUE( material->loadFromXML( text ) );
+    float32 weight = 0.0f;
+    SW_EXPECT_TRUE( material->getScalarParameter( hashed_string( "_DirtWeight" ), weight ) );
+    SW_EXPECT_NEAR( 0.75f, weight, 1e-5f );
+}
+
+/** @brief [MaterialGraphCompilerTest] 같은 층 파일을 두 번 쓰면 칸이 층 노드 이름으로 갈리고, 마스크 핀을 이으면 채널 대신 그 값이며, 층은 노드 차례로 쌓인다 */
+SW_TEST_CASE( MaterialGraphCompilerTest, SharedLayerGetsSeparateFields )
+{
+    const test::ScopedScratchDomain domain;
+    const string                    layerID = MaterialGraphTestUtil::writeLayer( domain, "paint.matgraph.xml" );
+    SW_REQUIRE_FALSE( layerID.empty() );
+    string layers = MaterialGraphTestUtil::makeNode( "Up", "WorldNormal" );
+    layers.append( MaterialGraphTestUtil::makeNode( "UpY", "Split3", "In=Up.Out" ) );
+    layers.append( MaterialGraphTestUtil::makeNode( "Red", "Layer", "Mask=UpY.Y" ) );
+    layers.append( MaterialGraphTestUtil::makeNode( "Blue", "Layer" ) );
+    MaterialGraphCompileResult result;
+    SW_REQUIRE_TRUE( MaterialGraphTestUtil::compileLayered( layers, layerID, result ) );
+    SW_EXPECT_TRUE( MaterialGraphTestUtil::findField( result, "_Red_color" ) != nullptr );
+    SW_EXPECT_TRUE( MaterialGraphTestUtil::findField( result, "_Blue_color" ) != nullptr );
+    SW_EXPECT_TRUE( MaterialGraphTestUtil::findField( result, "_layerMask" ) == nullptr ); // 채널을 쓰지 않으면 마스크 텍스처 칸이 없다
+    SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "* context._material._RedWeight" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( result._hlsl, "saturate( 1.0f * context._material._BlueWeight )" ) );
+    SW_EXPECT_TRUE( result._hlsl.find( "// Red (Layer" ) < result._hlsl.find( "// Blue (Layer" ) );
+}
+
+/** @brief [MaterialGraphCompilerTest] 층 문제: 하위 그래프 안의 층, 상한(`Config/Dev/MaterialLayers.json`)보다 많은 층, 상한 밖 채널, 표면 칸이 아닌 층 출력 */
+SW_TEST_CASE( MaterialGraphCompilerTest, LayerProblemsAreReported )
+{
+    const test::ScopedScratchDomain domain;
+    const string                    layerID = MaterialGraphTestUtil::writeLayer( domain, "dirt.matgraph.xml" );
+    SW_REQUIRE_FALSE( layerID.empty() );
+
+    MaterialGraphCompileResult badChannel;
+    SW_EXPECT_FALSE( MaterialGraphTestUtil::compileLayered( MaterialGraphTestUtil::makeNode( "Dirt", "Layer", {}, "MaskChannel=Q" ), layerID, badChannel ) );
+    SW_EXPECT_TRUE( MaterialGraphTestUtil::hasIssue( badChannel, "BadValue", "Dirt" ) );
+
+    string tooMany;
+    for ( const string_view name : { "L1", "L2", "L3", "L4", "L5", "L6", "L7", "L8", "L9" } )
+    {
+        tooMany.append( MaterialGraphTestUtil::makeNode( name, "Layer" ) );
+    }
+    MaterialGraphCompileResult tooManyResult;
+    SW_EXPECT_FALSE( MaterialGraphTestUtil::compileLayered( tooMany, layerID, tooManyResult ) );
+    SW_EXPECT_TRUE( StringUtil::contains( tooManyResult._listIssue.empty() ? string{} : tooManyResult._listIssue[0]._id, "TooManyLayers" ) );
+
+    const string               nestedID = MaterialGraphTestUtil::writeLayer( domain, "nested.matgraph.xml", MaterialGraphTestUtil::makeNode( "Inner", "Layer" ) );
+    MaterialGraphCompileResult nested;
+    SW_EXPECT_FALSE( MaterialGraphTestUtil::compileLayered( MaterialGraphTestUtil::makeNode( "Outer", "Layer" ), nestedID, nested ) );
+    SW_EXPECT_TRUE( MaterialGraphTestUtil::hasIssue( nested, "LayerOutsideMaterial", "Outer/Inner" ) );
+
+    const string               alphaID = MaterialGraphTestUtil::writeLayer( domain, "alpha.matgraph.xml", MaterialGraphTestUtil::makeNode( "OutAlpha", "GraphOutput", "Value=Half.Out", "Name=Alpha" ) );
+    MaterialGraphCompileResult alpha;
+    SW_EXPECT_FALSE( MaterialGraphTestUtil::compileLayered( MaterialGraphTestUtil::makeNode( "Wet", "Layer" ), alphaID, alpha ) );
+    SW_EXPECT_TRUE( MaterialGraphTestUtil::hasIssue( alpha, "BadLayerPin", "Wet" ) );
 }

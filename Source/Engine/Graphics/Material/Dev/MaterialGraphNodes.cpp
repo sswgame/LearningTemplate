@@ -54,5 +54,7 @@ namespace sw
     static const MaterialGraphNodeKind sw_materialGraphNode_Subgraph{ "Subgraph", "Subgraph", "", "", "", "", MaterialGraphNodeRole::Subgraph };
     static const MaterialGraphNodeKind sw_materialGraphNode_GraphInput{ "GraphInput", "Subgraph", "", "Out:any=", "Name:string=In|Type:string=float", "", MaterialGraphNodeRole::GraphInput };
     static const MaterialGraphNodeKind sw_materialGraphNode_GraphOutput{ "GraphOutput", "Subgraph", "Value:any!", "", "Name:string=Out", "", MaterialGraphNodeRole::GraphOutput };
+    // 층 — 노드 차례대로 출력 위에 쌓는다. 핀 Mask 를 이으면 그 값이, 아니면 MaskChannel(None · R · G · B · A, 칸 _layerMask 의 채널)이 마스크다. Weight 는 칸 _<노드>Weight 의 기본값이다.
+    static const MaterialGraphNodeKind sw_materialGraphNode_Layer{ "Layer", "Layer", "Mask:float", "", "MaskChannel:string=None|Weight:float=1", "", MaterialGraphNodeRole::Layer };
 } // namespace sw
 // clang-format on

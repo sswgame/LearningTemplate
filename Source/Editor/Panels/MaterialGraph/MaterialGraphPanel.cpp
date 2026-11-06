@@ -432,7 +432,7 @@ namespace sw::editor
             drawValueRow( nodeIndex, name.c_str(), setting._type, setting._default, bColorParameter );
         }
         const bool bTextureNode = pKind->getParameterPropertyType() == "Texture2D";
-        const bool bSubgraph    = pKind->getRole() == MaterialGraphNodeRole::Subgraph;
+        const bool bSubgraph    = pKind->getRole() == MaterialGraphNodeRole::Subgraph || pKind->getRole() == MaterialGraphNodeRole::Layer; // 층도 그래프 파일을 가리킨다
         if ( bTextureNode || bSubgraph )
         {
             string     assetPath = node._assetPath;

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from game/empty/materials/matgraph/layered_stone.matgraph.xml by MaterialGraphCompiler - edit the graph; change values in a child material with _base. -->
+<MaterialDesc formatVersion="0" name="matgraph_layered_stone" shaderPath="game/empty/shaders/matgraph/matgraph_layered_stone_6d1c1006.hlsl" alphaMode="Opaque">
+	<_properties>
+		<item name="_alphaCutoff" type="Range" defaultValue="0.5" min="0" max="1" group="Graph"/>
+		<item name="_tint" type="Color" defaultValue="0.75 0.75 0.78 1" bHdr="0" bSrgb="1" group="Graph"/>
+		<item name="_DirtWeight" type="Range" defaultValue="1" min="0" max="1" group="Graph"/>
+		<item name="_Dirt_color" type="Color" defaultValue="0.35 0.22 0.1 1" bHdr="0" bSrgb="1" group="Graph"/>
+		<item name="_Dirt_roughness" type="Range" defaultValue="0.95" min="0" max="1" group="Graph"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+		</_alwaysDefines>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_LINEAR</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
+</MaterialDesc>

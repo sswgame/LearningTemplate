@@ -5,11 +5,16 @@
 #include "Core/Container/DependencyGraph.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
+#include "Core/File/FileUtil.h"
+#include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/String/fixed_string.h"
 
 #include "Engine/Graphics/Material/MaterialPacking.h"
+#include "Engine/Serialization/JSON/JSONDocument.h"
+
+#include <optional>
 
 namespace sw
 {
@@ -166,16 +171,78 @@ namespace sw
                 return true;
             }
 
+            /** @brief 층이 얹을 수 있는 표면 칸 하나입니다(층 그래프의 `GraphOutput` · `GraphInput` 이름). */
+            struct LayerAttribute
+            {
+                string_view            _pin;   ///< 층 그래프가 쓰는 이름(`Output` 노드의 핀과 같다)
+                string_view            _field; ///< `MaterialGraphOutput` 의 칸
+                MaterialGraphValueType _type;
+            };
+
+            /**
+             * @brief 층이 얹는 칸입니다. 알파는 넣지 않는다 — 알파 방식 · 컷오프는 머티리얼의 렌더 상태라 층이 바꾸면 패스가 달라진다.
+             *        언리얼 Material Layers 는 Material Attributes 를 통째로 섞는다(기억에 의존). 여기서는 층이 내지 않은 칸은 아래 값 그대로다(젖음은 거칠기 · 색만 바꾼다).
+             */
+            static constexpr LayerAttribute kArrLayerAttribute[] = {
+                {"BaseColor", "_baseColor", MaterialGraphValueType::Float3},
+                { "Metallic",  "_metallic",  MaterialGraphValueType::Float},
+                {"Roughness", "_roughness",  MaterialGraphValueType::Float},
+                {   "Normal",    "_normal", MaterialGraphValueType::Float3},
+                { "Emissive",  "_emissive", MaterialGraphValueType::Float3},
+            };
+
+            /** @brief 층 상한입니다(`Config/Dev/MaterialLayers.json`). 층마다 칸 · 텍스처 표본 · 섞기 줄이 늘어 셰이더 비용의 상한을 데이터로 둔다. */
+            struct LayerLimits
+            {
+                uint32 _maxLayerCount{ 0 };       ///< 머티리얼 하나의 층 수
+                uint32 _maxMaskChannelCount{ 0 }; ///< 마스크 텍스처(`_layerMask`)에서 쓸 수 있는 채널 수(R 부터)
+            };
+
+            static constexpr const utf8* kLayerLimitsPath = "Config/Dev/MaterialLayers.json";
+            static constexpr string_view kLayerMaskField  = "_layerMask";
+            static constexpr string_view kMaskChannels    = "RGBA";
+
+            /** @brief 층 상한을 읽습니다. 파일 · 칸이 없거나 0 이면 @p outError 에 까닭을 적고 false 입니다(폴백 없음). */
+            [[nodiscard]] static bool loadLayerLimits( LayerLimits& outLimits, string& outError )
+            {
+                const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kLayerLimitsPath );
+                string       text;
+                JSONDocument doc;
+                if ( FileUtil::readTextFile( path, text ) == false || doc.parse( text, kLayerLimitsPath ) == false )
+                {
+                    outError = string{ kLayerLimitsPath }.append( " cannot be read" );
+                    return false;
+                }
+                const std::optional<uint32> maxLayerCount       = doc.getRoot().get( "_maxLayerCount" ).read<uint32>();
+                const std::optional<uint32> maxMaskChannelCount = doc.getRoot().get( "_maxMaskChannelCount" ).read<uint32>();
+                const bool                  bValid              = maxLayerCount.has_value() && *maxLayerCount > 0 && maxMaskChannelCount.has_value() && *maxMaskChannelCount > 0 && *maxMaskChannelCount <= kMaskChannels.size();
+                if ( bValid == false )
+                {
+                    outError = string{ kLayerLimitsPath }.append( " needs _maxLayerCount (1 or more) and _maxMaskChannelCount (1 to 4)" );
+                    return false;
+                }
+                outLimits._maxLayerCount       = *maxLayerCount;
+                outLimits._maxMaskChannelCount = *maxMaskChannelCount;
+                return true;
+            }
+
             /** @brief 컴파일 한 번의 상태와 단계입니다. */
             struct Session
             {
                 vector<MaterialGraphField> _listField;
                 vector<MaterialGraphIssue> _listIssue;
-                vector<string>             _listGraphStack; ///< 펼치는 중인 하위 그래프(순환 검사)
-                string                     _body;           ///< `evaluateMaterialGraph` 의 본문
-                string                     _outputLines;    ///< 출력 칸 대입
+                vector<string>             _listGraphStack;  ///< 펼치는 중인 하위 그래프(순환 검사)
+                string                     _body;            ///< `evaluateMaterialGraph` 의 본문
+                string                     _outputLines;     ///< 출력 칸 대입. 층은 그 뒤에 이어 쓴다(층이 아래 칸 `output._x` 를 읽는다)
+                string                     _parameterPrefix; ///< 층 안 파라미터 칸 이름의 머리(`_<층 노드>`) — 같은 층 파일을 두 번 써도 칸이 갈린다
+                LayerLimits                _layerLimits;
                 uint32                     _nextVariable{ 1 };
-                bool                       _bEmissive{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
+                bool                       _bEmissive{ false };         ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다)
+                bool                       _bLayerPhase{ false };       ///< NOLINT(sw-bool-flag): 집합체다. 출력 노드를 펼친 뒤다 — 조각을 `_outputLines` 에 쓴다
+                bool                       _bLayerMaskSampled{ false }; ///< NOLINT(sw-bool-flag): 집합체다. `_layerMask` 를 이미 읽었다(층마다 다시 읽지 않는다)
+
+                /** @brief 조각 줄을 쓸 곳입니다. 층의 조각은 출력 대입 뒤에 와야 아래 칸을 읽는다. */
+                [[nodiscard]] string& emitTarget() { return _bLayerPhase ? _outputLines : _body; }
 
                 void report( string_view scope, string_view nodeName, const utf8* pID, string message )
                 {
@@ -308,14 +375,15 @@ namespace sw
                 /** @brief 파라미터 노드의 머티리얼 칸을 올리고 칸 이름을 돌려줍니다. 같은 이름 · 같은 형식은 한 칸을 함께 쓴다. 문제가 있으면 빈 글입니다. */
                 [[nodiscard]] string registerParameter( const MaterialGraphNodeKind& kind, const MaterialGraphNodeDesc& node, string_view scope )
                 {
-                    const string name = readSettingText( kind, node, "Parameter" );
-                    if ( isIdentifier( name ) == false || name.front() != '_' || MaterialPacking::isPaddingMember( name ) || name == "_alphaCutoff" )
+                    const string localName = readSettingText( kind, node, "Parameter" );
+                    if ( isIdentifier( localName ) == false || localName.front() != '_' || MaterialPacking::isPaddingMember( localName ) || localName == "_alphaCutoff" )
                     {
                         string message{ "parameter name '" };
-                        message.append( name ).append( "' must be an identifier starting with '_' and not _alphaCutoff or _swPad*" );
+                        message.append( localName ).append( "' must be an identifier starting with '_' and not _alphaCutoff or _swPad*" );
                         report( scope, node._name, "BadParameter", std::move( message ) );
                         return {};
                     }
+                    const string name = _parameterPrefix + localName;
                     for ( const MaterialGraphField& field : _listField )
                     {
                         if ( field._name != name )
@@ -466,7 +534,7 @@ namespace sw
                     if ( bAllRead == false )
                         return; // 문제는 남겼다 — 이 노드의 출력은 비어 뒤 노드가 같은 문제를 다시 말하지 않는다
 
-                    _body.append( "    // " ).append( scope ).append( node._name ).append( " (" ).append( kind.getName() ).append( ")\n" );
+                    emitTarget().append( "    // " ).append( scope ).append( node._name ).append( " (" ).append( kind.getName() ).append( ")\n" );
                     const uint32 variable = _nextVariable++;
                     for ( uint32 index = 0; index < kind.getOutputCount(); ++index )
                     {
@@ -475,7 +543,7 @@ namespace sw
                         fixed_string<constant::buffer::kMax64> variableName;
                         formatstring( variableName.data(), variableName.capacity(), "n%#_%#", variable, output._name );
                         const string expression = expand( output._expression, kind, listInput, outResult._listOutput, parameterName, node, scope );
-                        _body.append( "    const " ).append( MaterialGraphNodeRegistry::getHLSLTypeName( type ) ).append( " " ).append( variableName.c_str() ).append( " = " ).append( expression ).append( ";\n" );
+                        emitTarget().append( "    const " ).append( MaterialGraphNodeRegistry::getHLSLTypeName( type ) ).append( " " ).append( variableName.c_str() ).append( " = " ).append( expression ).append( ";\n" );
                         outResult._listOutput.push_back( NamedValue{
                             string{ output._name },
                             Value{ string{ variableName.c_str() }, type }
@@ -508,12 +576,13 @@ namespace sw
                 }
 
                 /** @brief 하위 그래프 노드를 펼칩니다(언리얼 Material Function 처럼 호출이 아니라 펼침이다 — 칸 · 순열이 머티리얼 하나로 모인다). */
-                void emitSubgraph( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDesc& node, string_view scope, NodeResult& outResult )
+                /** @brief 하위 그래프 · 층 노드가 가리키는 그래프(`_assetPath`)를 읽습니다. 경로 없음 · 순환 · 읽기 실패 · 하위 그래프가 아님은 문제를 남기고 false 입니다. */
+                [[nodiscard]] bool loadSubgraph( const MaterialGraphNodeDesc& node, string_view scope, MaterialGraphDef& outGraph )
                 {
                     if ( node._assetPath.empty() )
                     {
                         report( scope, node._name, "MissingSubgraph", "subgraph node has no graph (_assetPath)" );
-                        return;
+                        return false;
                     }
                     for ( const string& stacked : _listGraphStack )
                     {
@@ -522,23 +591,30 @@ namespace sw
                         string message{ "subgraph cycle through " };
                         message.append( node._assetPath );
                         report( scope, node._name, "SubgraphCycle", std::move( message ) );
-                        return;
+                        return false;
                     }
-                    MaterialGraphDef subgraph;
-                    if ( subgraph.loadFromAsset( AssetID{ node._assetPath } ) == false )
+                    if ( outGraph.loadFromAsset( AssetID{ node._assetPath } ) == false )
                     {
                         string message{ "subgraph cannot be read: " };
                         message.append( node._assetPath );
                         report( scope, node._name, "SubgraphUnreadable", std::move( message ) );
-                        return;
+                        return false;
                     }
-                    if ( MaterialGraphCompiler::isSubgraph( subgraph ) == false )
+                    if ( MaterialGraphCompiler::isSubgraph( outGraph ) == false )
                     {
                         string message{ node._assetPath };
                         message.append( " has no GraphOutput node or has an Output node - it is not a subgraph" );
                         report( scope, node._name, "NotSubgraph", std::move( message ) );
-                        return;
+                        return false;
                     }
+                    return true;
+                }
+
+                void emitSubgraph( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDesc& node, string_view scope, NodeResult& outResult )
+                {
+                    MaterialGraphDef subgraph;
+                    if ( loadSubgraph( node, scope, subgraph ) == false )
+                        return;
                     const MaterialGraphNodeKind* pInputKind = MaterialGraphNodeRegistry::find( "GraphInput" );
                     vector<NamedValue>           listArgument;
                     bool                         bAllRead = true;
@@ -582,6 +658,181 @@ namespace sw
                     _listGraphStack.pop_back();
                 }
 
+                [[nodiscard]] static const LayerAttribute* findLayerAttribute( string_view pin )
+                {
+                    for ( const LayerAttribute& attribute : kArrLayerAttribute )
+                    {
+                        if ( attribute._pin == pin )
+                            return &attribute;
+                    }
+                    return nullptr;
+                }
+
+                /** @brief 머티리얼 칸 하나를 더합니다. 같은 이름의 칸이 이미 있으면 문제를 남기고 false 입니다(층 칸은 노드 이름으로 정해져 겹치면 데이터의 잘못이다). */
+                [[nodiscard]] bool addLayerField( MaterialGraphField field, const MaterialGraphNodeDesc& node, string_view scope )
+                {
+                    for ( const MaterialGraphField& existing : _listField )
+                    {
+                        if ( existing._name != field._name )
+                            continue;
+                        string message{ "layer field '" };
+                        message.append( field._name ).append( "' is already a field of the material" );
+                        report( scope, node._name, "ParameterConflict", std::move( message ) );
+                        return false;
+                    }
+                    _listField.push_back( std::move( field ) );
+                    return true;
+                }
+
+                /** @brief 층 마스크 식입니다: 핀 `Mask` 를 이었거나 값을 적었으면 그 값, 아니면 `MaskChannel` 이 고른 `_layerMask` 의 채널(처음 쓸 때 한 번 읽는다), `None` 이면 1 입니다. 문제면 빈 글입니다. */
+                [[nodiscard]] string makeLayerMask( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDesc& node, const MaterialGraphNodeKind& kind, string_view scope )
+                {
+                    if ( node.findLink( "Mask" ) != nullptr || node.findValue( "Mask" ) != nullptr )
+                    {
+                        const Value value = resolveInput( graph, listResult, node, "Mask", MaterialGraphValueType::Float, {}, scope );
+                        return value._type == MaterialGraphValueType::Invalid ? string{} : value._expression;
+                    }
+                    const string channel = readSettingText( kind, node, "MaskChannel" );
+                    if ( channel == "None" )
+                        return string{ "1.0f" };
+                    const size_t channelIndex = channel.size() == 1 ? kMaskChannels.find( channel.front() ) : string_view::npos;
+                    if ( channelIndex == string_view::npos || channelIndex >= _layerLimits._maxMaskChannelCount )
+                    {
+                        string message{ "MaskChannel '" };
+                        message.append( channel ).append( "' must be None or one of the first " ).append( kMaskChannels.substr( 0, _layerLimits._maxMaskChannelCount ) ).append( " channels (" ).append( kLayerLimitsPath ).append( ")" );
+                        report( scope, node._name, "BadValue", std::move( message ) );
+                        return {};
+                    }
+                    if ( _bLayerMaskSampled == false )
+                    {
+                        MaterialGraphField field;
+                        field._name         = string{ kLayerMaskField };
+                        field._hlslType     = "uint";
+                        field._propertyType = "Texture2D";
+                        field._bSRGB        = false; // 마스크는 색이 아니라 비율이다
+                        if ( addLayerField( std::move( field ), node, scope ) == false )
+                            return {};
+                        _outputLines.append( "    const float4 layerMask = MaterialTexture::sampleIndex( context._material._layerMask, context._uv );\n" );
+                        _bLayerMaskSampled = true;
+                    }
+                    string expression{ "layerMask." };
+                    expression.push_back( static_cast<utf8>( channel.front() - 'A' + 'a' ) );
+                    return expression;
+                }
+
+                /**
+                 * @brief 층 노드 하나를 펼쳐 출력 위에 얹습니다. 층 그래프(하위 그래프)의 `GraphOutput` 이 표면 칸이고 `GraphInput` 은 아래 칸을 읽습니다.
+                 * @details 생성 길은 하위 그래프와 같다(펼침 — 런타임은 생성물만 읽는다). 층 안 파라미터는 `_<노드>` 를 머리에 붙인 칸이고, 칸 `_<노드>Weight` 가 마스크에 곱해진다 —
+                 *          자식 `.material` 이 0 을 적으면 층이 꺼진다. 켜고 끄기를 값으로 두어 셰이더 · PSO 가 하나다(언리얼은 층 보이기를 정적 스위치로 다시 컴파일하고,
+                 *          유니티 HDRP Layered Lit 은 층 수가 키워드다 — 기억에 의존). 층 파일을 바꾸는 변형은 셰이더가 달라지므로 그래프 `_base` 로 한다.
+                 */
+                void emitLayer( const MaterialGraphDef& graph, const vector<NodeResult>& listResult, const MaterialGraphNodeDesc& node, const MaterialGraphNodeKind& kind, string_view scope )
+                {
+                    if ( isIdentifier( node._name ) == false )
+                    {
+                        report( scope, node._name, "BadName", "layer node name prefixes material fields - use letters, digits and '_'" );
+                        return;
+                    }
+                    checkNumericSettings( kind, node, scope );
+                    MaterialGraphDef layer;
+                    if ( loadSubgraph( node, scope, layer ) == false )
+                        return;
+
+                    const MaterialGraphNodeKind* pInputKind = MaterialGraphNodeRegistry::find( "GraphInput" );
+                    vector<NamedValue>           listArgument;
+                    bool                         bAllRead = true;
+                    for ( const MaterialGraphNodeDesc& inner : layer._listNode )
+                    {
+                        if ( inner._kind != pInputKind->getName() )
+                            continue;
+                        const string          pinName    = readSettingText( *pInputKind, inner, "Name" );
+                        const LayerAttribute* pAttribute = findLayerAttribute( pinName );
+                        if ( pAttribute == nullptr || MaterialGraphNodeRegistry::parseValueType( readSettingText( *pInputKind, inner, "Type" ) ) != pAttribute->_type )
+                        {
+                            string message{ "layer input '" };
+                            message.append( pinName ).append( "' must be a surface attribute below the layer with its type (BaseColor float3, Metallic float, Roughness float, Normal float3, Emissive float3)" );
+                            report( scope, inner._name, "BadLayerPin", std::move( message ) );
+                            bAllRead = false;
+                            continue;
+                        }
+                        string below{ "output." };
+                        below.append( pAttribute->_field );
+                        listArgument.push_back( NamedValue{
+                            pinName, Value{ std::move( below ), pAttribute->_type }
+                        } );
+                    }
+                    const string mask = makeLayerMask( graph, listResult, node, kind, scope );
+                    if ( bAllRead == false || mask.empty() )
+                        return;
+
+                    const string       weightName = "_" + node._name + "Weight";
+                    MaterialGraphField weight;
+                    weight._name         = weightName;
+                    weight._hlslType     = "float";
+                    weight._propertyType = "Range";
+                    weight._defaultValue = readSettingText( kind, node, "Weight" );
+                    if ( addLayerField( std::move( weight ), node, scope ) == false )
+                        return;
+
+                    string innerScope{ scope };
+                    innerScope.append( node._name ).append( "/" );
+                    const string previousPrefix = _parameterPrefix;
+                    _parameterPrefix            = "_" + node._name;
+                    _listGraphStack.push_back( node._assetPath );
+                    vector<NamedValue> listLayerOutput;
+                    const bool         bLayerEmitted = emitGraph( layer, innerScope, listArgument, false, listLayerOutput );
+                    _listGraphStack.pop_back();
+                    _parameterPrefix = previousPrefix;
+                    if ( bLayerEmitted == false )
+                        return;
+
+                    const uint32                           variable = _nextVariable++;
+                    fixed_string<constant::buffer::kMax64> maskName;
+                    formatstring( maskName.data(), maskName.capacity(), "n%#_Mask", variable );
+                    _outputLines.append( "    // " ).append( scope ).append( node._name ).append( " (Layer " ).append( node._assetPath ).append( ")\n" );
+                    _outputLines.append( "    const float " ).append( maskName.c_str() ).append( " = saturate( " ).append( mask ).append( " * context._material." ).append( weightName ).append( " );\n" );
+                    for ( const NamedValue& output : listLayerOutput )
+                    {
+                        const LayerAttribute* pAttribute = findLayerAttribute( output._name );
+                        string                expression;
+                        if ( pAttribute == nullptr || coerce( output._value, pAttribute->_type, expression ) == false )
+                        {
+                            string message{ "layer output '" };
+                            message.append( output._name ).append( "' must be a surface attribute (BaseColor float3, Metallic float, Roughness float, Normal float3, Emissive float3)" );
+                            report( scope, node._name, "BadLayerPin", std::move( message ) );
+                            continue;
+                        }
+                        const string field{ pAttribute->_field };
+                        const string blended = "lerp( output." + field + ", " + expression + ", " + maskName.c_str() + " )";
+                        _outputLines.append( "    output." ).append( field ).append( " = " ).append( pAttribute->_field == "_normal" ? "normalize( " + blended + " )" : blended ).append( ";\n" );
+                        _bEmissive = _bEmissive || pAttribute->_field == "_emissive";
+                    }
+                }
+
+                /** @brief 층은 머티리얼 그래프에만 있고 수가 상한(`Config/Dev/MaterialLayers.json`) 안인지 봅니다. 상한은 층이 있을 때만 읽는다. */
+                [[nodiscard]] bool validateLayers( const MaterialGraphDef& graph, const vector<uint32>& listLayer, bool bMaterial, string_view scope )
+                {
+                    if ( bMaterial == false )
+                    {
+                        report( scope, graph._listNode[listLayer.front()]._name, "LayerOutsideMaterial", "a Layer node belongs in a material graph, not in a subgraph or a layer" );
+                        return false;
+                    }
+                    string error;
+                    if ( loadLayerLimits( _layerLimits, error ) == false )
+                    {
+                        report( scope, "(graph)", "LayerLimitsUnreadable", std::move( error ) );
+                        return false;
+                    }
+                    if ( listLayer.size() > _layerLimits._maxLayerCount )
+                    {
+                        string message{ "the material has more layers than _maxLayerCount in " };
+                        message.append( kLayerLimitsPath );
+                        report( scope, graph._listNode[listLayer[_layerLimits._maxLayerCount]]._name, "TooManyLayers", std::move( message ) );
+                        return false;
+                    }
+                    return true;
+                }
+
                 /**
                  * @brief 그래프 하나를 펼칩니다. 머티리얼은 `Output` 이, 하위 그래프는 `GraphOutput` 들이 뿌리이고 뿌리에 닿지 않는 노드는 펼치지 않습니다(언리얼의 쓰이지 않는 노드와 같다).
                  * @param listArgument 하위 그래프의 입력 값
@@ -596,10 +847,14 @@ namespace sw
 
                     const MaterialGraphNodeRole rootRole = bMaterial ? MaterialGraphNodeRole::Output : MaterialGraphNodeRole::GraphOutput;
                     vector<uint32>              listRoot;
+                    vector<uint32>              listLayer;
                     for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( graph._listNode.size() ); ++nodeIndex )
                     {
-                        if ( MaterialGraphNodeRegistry::find( graph._listNode[nodeIndex]._kind )->getRole() == rootRole )
+                        const MaterialGraphNodeRole role = MaterialGraphNodeRegistry::find( graph._listNode[nodeIndex]._kind )->getRole();
+                        if ( role == rootRole )
                             listRoot.push_back( nodeIndex );
+                        if ( role == MaterialGraphNodeRole::Layer )
+                            listLayer.push_back( nodeIndex );
                     }
                     if ( listRoot.empty() )
                     {
@@ -611,6 +866,10 @@ namespace sw
                         report( scope, graph._listNode[listRoot[1]]._name, "TwoOutputs", "the graph has more than one Output node" );
                         return false;
                     }
+                    if ( listLayer.empty() == false && validateLayers( graph, listLayer, bMaterial, scope ) == false )
+                        return false;
+                    // 층은 출력 뒤에 노드 차례대로 쌓는다 — 뿌리 목록의 차례가 곧 층 차례다(언리얼 Material Layers 의 층 목록과 같은 자리).
+                    listRoot.insert( listRoot.end(), listLayer.begin(), listLayer.end() );
 
                     // 링크가 간선이다(받는 노드가 내는 노드를 기다린다). 깊이 우선이라 링크 차례가 생성 HLSL 의 차례이고 내용 해시에 든다.
                     DependencyGraph dependencyGraph{ static_cast<uint32>( graph._listNode.size() ) };
@@ -646,6 +905,10 @@ namespace sw
                                 break;
                             case MaterialGraphNodeRole::Output:
                                 emitOutput( graph, listResult, node, kind, scope );
+                                _bLayerPhase = true; // 뒤에 오는 노드는 층과 그 마스크뿐이다(뿌리 차례)
+                                break;
+                            case MaterialGraphNodeRole::Layer:
+                                emitLayer( graph, listResult, node, kind, scope );
                                 break;
                             case MaterialGraphNodeRole::Subgraph:
                                 emitSubgraph( graph, listResult, node, scope, listResult[nodeIndex] );

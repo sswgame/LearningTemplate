@@ -198,7 +198,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | 교체표 | 애니메이션 그래프의 상태를 열쇠로 두고, 연결 레이어 슬롯을 둔다 | 언리얼 Linked Anim Layers |
 | 교체표 | 스프라이트 라이브러리: 분류 · 라벨 → 프레임. 클립은 라벨만 쓴다 | 유니티 Sprite Library |
 | 파라미터 | 머티리얼 파라미터 묶음(`*.matparams.xml`): 프로퍼티가 묶음의 이름을 가리키고 값이 바뀌면 다시 패킹한다. 슬롯을 새로 두지 않아 네 백엔드가 같은 길이다. 구현됨 | 언리얼 Material Parameter Collection(묶음마다 유니폼 버퍼 — 값 바꾸기가 O(1) 이지만 셰이더가 배치를 안다) |
-| 파라미터 | 머티리얼 층: 머티리얼 그래프 뒤에 한다 | 언리얼 Material Layers |
+| 파라미터 | 머티리얼 층: 층 파일 한 벌을 Layer 노드로 쌓고 켜고 끄기 · 값은 자식 `.material` 칸(`docs/agents/MaterialGraph.md` 의 층) | 언리얼 Material Layers · 유니티 HDRP Layered Lit |
 | 파라미터 | VFX 방출기 `InheritKey` 와 사용자 파라미터(색 · 크기 곱, 재생 중 덮기), 오디오 라이브러리 · 믹서 `_base`, 이벤트 프리셋 `_parentEvent`. 구현됨 | 언리얼 Niagara 부모 이미터 · User Parameters · MetaSound Preset |
 | 인스턴스 값 | 파일 없이 인스턴스마다 float4 둘(`GPUInstanceCustomData`, 인스턴스 원소 160 바이트). 내용이고 배치 키가 아니다. `MaterialInstance` 는 값 · 텍스처 · 키워드를 덮는 드로우 단위로 남는다. 구현됨 | 언리얼 Custom Primitive Data · 유니티 MaterialPropertyBlock |
 | 파라미터 | 외형 구간 머티리얼: 부품 · 변형 · 규칙 · 피해 단계가 메시 구간 이름마다 머티리얼과 매개변수를 정한다(`AppearanceSectionDef`, `ResolvedMaterialValue::_section`). 병합해도 구간이 남는다. 런타임 아틀라스는 두지 않는다. 구현됨 | 언리얼 Material Slot 덮어쓰기 · 유니티 `Renderer.materials`(여기는 번호가 아니라 이름) |
@@ -217,24 +217,6 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 - **스프라이트 라이브러리:** 아틀라스는 파일에 하나다. 라벨마다 텍스처가 다르면 프레임을 넘길 때 머티리얼 인스턴스가 바뀌어 배치가 깨진다.
 - **소켓 · 알림 표:** 원소 종류가 섞이고 열쇠 칸이 달라 `DataCatalogInheritance.json` 규칙 한 줄이다. 리그 · 리타겟은 `SW_DATA_INHERITANCE_SCHEMA`, 물리 에셋은 `PROPERTY( InheritKey )` 다.
 - **뺀 것:** 물리 셰이프(이름이 없다) · 충돌 쌍(열쇠가 뼈 둘이다), 리그 · 리타겟 안의 뼈 목록(순서가 뜻이다)은 통째로 바뀐다. 입력 레이어는 이번에 하지 않았다.
-
-### 7. 무기와 발사체 조합
-
-지금은 탄속 · 낙차 · 피해가 `WeaponDef` 안에 있어 "소총 + 폭발탄" 하나에 무기 정의 하나가 든다. 발사체 구조체도 키트마다 따로다(`Ballistics::Projectile`, `ProjectileComponent`, `MechProjectile`, `KartProjectile`, `ActionProjectile`, `ArenaProjectileComponent`). 정의를 나눠 무기 N 종과 발사체 M 종이 파일 N + M 개로 조합되게 한다.
-
-| 정의 | 가지는 것 |
-|---|---|
-| `WeaponDef`(쏘는 법) | 연사 · 탄창 · 재장전 · 퍼짐 · 반동 · 알 수 · 총구 효과, 받는 탄의 태그 조건, 기본 탄, 탄 값에 곱하는 배율 |
-| `ProjectileDef`(날아가는 것) | 운동(광선 · 탄도 · 유도), 탄속 · 중력 · 저항 · 수명, 관통 · 튕김 · 폭발, 궤적 · 충돌 효과, 태그, 맞을 때의 동작 목록(`ActionRegistry` + `ConditionExpr`) |
-| 부착물 · 버프 | 수정자 목록(칸, 더하기 · 곱하기). 합치는 순서는 탄 → 무기 → 수정자로 한 벌이다 |
-
-- 호환은 조합 표가 아니라 태그 조건이다(`accepts="Ammo.Rifle"`). 표로 적으면 M × N 이 그대로 돌아온다.
-- 조합 결과(`ResolvedShot`)는 장전 · 부착물이 바뀔 때 한 번 계산해 든다. 쏠 때마다 계산하지 않는다.
-- 충돌 효과는 탄과 표면의 조합이라 발사체가 직접 들지 않고 표면 표에서 찾는다(언리얼 Physical Material 과 같은 자리).
-- 런타임은 발사체 시뮬레이션 하나로 모은다. 탄을 게임 오브젝트로 만들지 않아 탄 수가 많아도 비용이 오르지 않고, 롤백 · 복제가 같은 결과를 내도록 결정적으로 돈다. 키트별 구조체는 옮기기 전에 복제 · 롤백 규칙을 읽어, 옮길 수 없으면 까닭을 적는다.
-- 세이브의 탄 id 는 지금 `_ammoID` 를 그대로 잇는다.
-
-언리얼 Lyra 의 무기 조각 · 유니티 ScriptableObject 탄 정의와 같은 방향이다(기억에 의존한 비교).
 
 ### 7. 무기와 발사체 조합
 

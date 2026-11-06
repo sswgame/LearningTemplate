@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 머티리얼 층 견본(언리얼 Material Layer) — 흙: 색과 거칠기를 낸다. 머티리얼 여럿이 Layer 노드로 이 한 벌을 쓰고, 칸은 쓰는 쪽에서 `_<층 노드>_color` · `_<층 노드>_roughness` 가 된다. -->
+<MaterialGraphDef formatVersion="0">
+	<_listNode>
+		<MaterialGraphNodeDesc _name="Color" _kind="ColorParameter" _position="0,0">
+			<_listValue>
+				<MaterialGraphValue _name="Parameter" _value="_color" />
+				<MaterialGraphValue _name="Default" _value="0.35 0.22 0.1 1" />
+			</_listValue>
+		</MaterialGraphNodeDesc>
+		<MaterialGraphNodeDesc _name="Rough" _kind="ScalarParameter" _position="0,160">
+			<_listValue>
+				<MaterialGraphValue _name="Parameter" _value="_roughness" />
+				<MaterialGraphValue _name="Default" _value="0.95" />
+			</_listValue>
+		</MaterialGraphNodeDesc>
+		<MaterialGraphNodeDesc _name="OutColor" _kind="GraphOutput" _position="280,0">
+			<_listLink>
+				<MaterialGraphLink _pin="Value" _fromNode="Color" _fromPin="RGB" />
+			</_listLink>
+			<_listValue>
+				<MaterialGraphValue _name="Name" _value="BaseColor" />
+			</_listValue>
+		</MaterialGraphNodeDesc>
+		<MaterialGraphNodeDesc _name="OutRough" _kind="GraphOutput" _position="280,160">
+			<_listLink>
+				<MaterialGraphLink _pin="Value" _fromNode="Rough" _fromPin="Out" />
+			</_listLink>
+			<_listValue>
+				<MaterialGraphValue _name="Name" _value="Roughness" />
+			</_listValue>
+		</MaterialGraphNodeDesc>
+	</_listNode>
+</MaterialGraphDef>

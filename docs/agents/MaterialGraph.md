@@ -10,7 +10,7 @@
 
 ```
 rim_glow.matgraph.xml                         저작 파일(팩에 들지 않는다)
-  └ MaterialGraphCompiler   위상 정렬 → 형식 검사 → HLSL 조각 펼치기
+  └ MaterialGraphCompiler   위상 정렬(DependencyGraph 깊이 우선) → 형식 검사 → HLSL 조각 펼치기
       ├ shaders/matgraph/<줄기>_<해시>.hlsl    SW_MATERIAL 칸 + evaluateMaterialGraph
       └ materials/.../rim_glow.gen.material    파라미터 칸 · 순열
           └ rim_glow_red.material              _base 로 값만 바꾼다(언리얼 Material Instance)
@@ -70,6 +70,31 @@ SW_MATERIAL_GRAPH_PARAMETER_NODE( ScalarParameter, "Parameter", "", "Out:float=%
 
 `GraphInput`(설정 `Name` · `Type`)과 `GraphOutput`(설정 `Name`, 입력 `Value`)을 가진 그래프가 하위 그래프다. `Subgraph` 노드의 `_assetPath` 로 가리키면 핀이 그 파일에서 오고, 컴파일이 펼쳐 넣는다(언리얼 Material Function). 안의 파라미터는 쓰는 머티리얼의 칸이 된다. 스스로를 부르면 오류다.
 
+## 층
+
+기반(`Output`) 위에 층(먼지 · 젖음 · 피 · 칠)을 마스크와 함께 쌓는다. 언리얼 Material Layers · Layer Blend, 유니티 HDRP Layered Lit 의 자리다(비교는 기억에 의존).
+
+```
+layer_dirt.matgraph.xml        층 한 벌 — GraphOutput 이름이 표면 칸이다. 머티리얼 여럿이 함께 쓴다
+layered_stone.matgraph.xml     Output + Layer 노드 목록(노드 차례가 층 차례)
+  └ layered_stone.gen.material     칸 _DirtWeight · _Dirt_color · _Dirt_roughness (· _layerMask)
+      └ layered_stone_clean.material   _DirtWeight=0 — 층을 끈 변형(같은 셰이더)
+```
+
+- **층 파일:** 하위 그래프다. `GraphOutput` 의 `Name` 이 `BaseColor` · `Metallic` · `Roughness` · `Normal` · `Emissive` 가운데 하나이고, 내지 않은 칸은 아래 값 그대로다. `GraphInput` 은 같은 이름으로 아래 칸을 읽는다(젖음이 아래 색을 어둡게 한다). 알파는 층이 바꾸지 않는다 — 렌더 상태라 패스가 달라진다.
+- **Layer 노드:** `_assetPath` 가 층 파일이고 노드 이름이 칸 머리다(글자 · 숫자 · `_`). 머티리얼 그래프에만 둔다. 생성 길은 하위 그래프와 같은 펼침이라 런타임은 생성물만 읽는다.
+- **마스크:** 핀 `Mask` 를 이으면 그 값(꼭짓점 색 · 법선 · 텍스처), 아니면 설정 `MaskChannel`(`None` · `R` · `G` · `B` · `A`)이 칸 `_layerMask`(선형 텍스처, 한 번 읽어 층들이 나눠 쓴다)의 채널을 고른다. 섞기는 `lerp( 아래, 층, saturate( 마스크 × _<층>Weight ) )` 이고 법선은 다시 정규화한다.
+- **상한:** `Config/Dev/MaterialLayers.json` 의 `_maxLayerCount`(머티리얼 하나의 층 수) · `_maxMaskChannelCount`(`_layerMask` 에서 R 부터 쓸 수 있는 채널 수). 층이 있는 그래프만 읽고, 없거나 틀리면 컴파일 오류다.
+- **변형:** 값 · 켜고 끄기는 자식 `.material` 이다(셰이더 · PSO 하나). 층 파일을 바꾸거나 층을 더하는 변형은 셰이더가 달라지므로 그래프 `_base` 로 Layer 노드를 열쇠(`_name`)로 고친다.
+
+외형 변형이 거는 칸(연결은 외형 쪽이 한다):
+
+| 칸 | 형식 | 뜻 |
+|---|---|---|
+| `_<층>Weight` | Range 0~1 | 층의 세기. 마스크에 곱한다. 0 이면 층이 꺼진다. 기본은 노드 설정 `Weight` |
+| `_<층>_<칸>` | 층 파일의 파라미터 형식 | 그 층의 값(`_Dirt_color`). 같은 층 파일을 두 노드가 쓰면 칸이 갈린다 |
+| `_layerMask` | Texture2D(선형) | 채널로 고른 층들의 마스크. 쓰는 층이 있을 때만 생긴다 |
+
 ## 출력과 조명
 
 `Output` 의 핀은 `material_graph.hlsli` 의 `MaterialGraphOutput` 칸과 이름이 같다. 조명은 `pbr_lit` 과 같은 뼈대의 기본 PBR 이다. 자체 발광을 잇거나 값을 적으면 `SW_MATERIAL_EMISSIVE` 훅을 쓰고, G버퍼에 칸이 없어 생성된 머티리얼이 `MATERIAL_FORWARD_ONLY` 를 함께 적는다(툰과 같은 길). 빛을 다르게 받는 셰이딩 모델은 아직 없다 — 더하려면 `Output` 설정과 뼈대의 조명 훅 선택을 잇는다.
@@ -87,7 +112,8 @@ SW_MATERIAL_GRAPH_PARAMETER_NODE( ScalarParameter, "Parameter", "", "Out:float=%
 | `UnknownKind` · `UnknownPin` · `UnknownValue` · `MissingNode` | 없는 종류 · 핀 · 값 · 노드 |
 | `BadValue` · `BadName` · `BadParameter` | 읽지 못한 값 · 이름 |
 | `ParameterConflict` | 같은 칸 이름에 다른 형식 |
-| `MissingSubgraph` · `SubgraphUnreadable` · `NotSubgraph` · `SubgraphCycle` | 하위 그래프 문제 |
+| `MissingSubgraph` · `SubgraphUnreadable` · `NotSubgraph` · `SubgraphCycle` | 하위 그래프 문제(층 파일도 같다) |
+| `LayerOutsideMaterial` · `TooManyLayers` · `LayerLimitsUnreadable` · `BadLayerPin` | 층 문제: 하위 그래프 · 층 안의 층, 상한 초과, 상한 파일, 표면 칸이 아닌 층 핀 |
 
 ## 편집기
 

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  머티리얼 층 — 흙 층을 켠 머티리얼(layered_stone.gen.material)과 층 무게 칸만 0 으로 적은 자식(layered_stone_clean.material)을 그린 두 장이 다른지 본다.
+  같은 실행의 두 장을 겹쳐 대조한다(`ExpectImagesDiffer`) — 층이 그림을 바꾸지 않거나 무게 칸이 셰이더에 닿지 않으면 진다. 골든은 쓰지 않는다.
+  실행: ctest -R Scenario.game.empty.matgraph_layer
+-->
+<Scenario name="game.empty.matgraph_layer" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/matgraph_layer_on.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="0"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="matgraph_layer_on.ppm"/>
+	<LoadScene path="game/empty/maps/matgraph_layer_off.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="matgraph_layer_off.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="matgraph_layer_on.ppm" second="matgraph_layer_off.ppm" region="0.3,0.2,0.4,0.6" minDiffering="0.05"/>
+	<Pass/>
+</Scenario>

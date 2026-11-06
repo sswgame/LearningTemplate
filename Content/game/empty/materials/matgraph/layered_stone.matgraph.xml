@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 머티리얼 층 견본 — 회색 바탕 위에 흙 층(layer_dirt)을 위를 보는 면에만 얹는다(마스크 = 법선의 y). 층을 끈 변형은 layered_stone_clean.material 처럼 `_DirtWeight` 를 0 으로 적는다. 생성물: layered_stone.gen.material · shaders/matgraph/matgraph_layered_stone_<해시>.hlsl. -->
+<MaterialGraphDef formatVersion="0">
+	<_listNode>
+		<MaterialGraphNodeDesc _name="Tint" _kind="ColorParameter" _position="0,0">
+			<_listValue>
+				<MaterialGraphValue _name="Parameter" _value="_tint" />
+				<MaterialGraphValue _name="Default" _value="0.75 0.75 0.78 1" />
+			</_listValue>
+		</MaterialGraphNodeDesc>
+		<MaterialGraphNodeDesc _name="Out" _kind="Output" _position="280,0">
+			<_listLink>
+				<MaterialGraphLink _pin="BaseColor" _fromNode="Tint" _fromPin="RGB" />
+			</_listLink>
+		</MaterialGraphNodeDesc>
+		<MaterialGraphNodeDesc _name="Up" _kind="WorldNormal" _position="0,200" />
+		<MaterialGraphNodeDesc _name="UpY" _kind="Split3" _position="200,200">
+			<_listLink>
+				<MaterialGraphLink _pin="In" _fromNode="Up" _fromPin="Out" />
+			</_listLink>
+		</MaterialGraphNodeDesc>
+		<MaterialGraphNodeDesc _name="Dirt" _kind="Layer" _assetPath="game/empty/materials/matgraph/layer_dirt.matgraph.xml" _position="440,200">
+			<_listLink>
+				<MaterialGraphLink _pin="Mask" _fromNode="UpY" _fromPin="Y" />
+			</_listLink>
+		</MaterialGraphNodeDesc>
+	</_listNode>
+</MaterialGraphDef>
