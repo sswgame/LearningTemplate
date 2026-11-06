@@ -1993,3 +1993,16 @@ namespace sw
         }
     }
 } // namespace sw
+
+namespace sw
+{
+    shared_ptr<const PrefabAsset> AssetRefCache<PrefabAsset>::acquire( string_view path )
+    {
+        return engine::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().loadPrefab( path );
+    }
+
+    PrefabHandle AssetRefCache<PrefabAsset>::request( string_view path )
+    {
+        return engine::getSubsystem<AssetManager>().getAssetCache<PrefabCache>().request( path );
+    }
+} // namespace sw

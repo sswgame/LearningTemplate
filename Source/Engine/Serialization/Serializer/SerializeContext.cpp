@@ -18,6 +18,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/ReflectAny.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Serializer/AssetRefBase.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
 #include "Engine/Serialization/Serializer/SerializeReflectAny.h"
 
@@ -579,6 +580,7 @@ namespace sw
                                      SW_DELEGATE_FUNCTION( TextReadFn, &Internal::readSlotHandleText ) );
 
         DataPath::registerSerializeHandler( context );
+        AssetRefBase::registerSerializeHandler( context );
         SerializeContextInternal::registerHandleTextHandlers( context );
 
         SerializeContextInternal::registerFloatVectorTextHandlers( context );

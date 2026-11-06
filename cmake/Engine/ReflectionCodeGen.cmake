@@ -224,6 +224,10 @@ function(sw_addReflectionStep TARGET_NAME)
 	set(swReflectedTypesList "${ARG_OUTPUT_DIR}/${SW_FILE_REFLECTED_TYPES_LIST}")
 	list(APPEND generatedFiles "${swReflectedTypesList}")
 	set_property(GLOBAL APPEND PROPERTY SW_REFLECTED_TYPE_LISTS "${ARG_CONTENT_OWNER}|${TARGET_NAME}|${swReflectedTypesList}")
+	# 대상의 경로 칸 목록(`<이름>\t<대상>`) — 참조 칸 생성 목록(`sw_addAssetReferenceFieldList`)이 모은다.
+	set(swAssetFieldsList "${ARG_OUTPUT_DIR}/${SW_FILE_ASSET_REFERENCE_FIELDS_LIST}")
+	list(APPEND generatedFiles "${swAssetFieldsList}")
+	set_property(GLOBAL APPEND PROPERTY SW_ASSET_REFERENCE_FIELD_LISTS "${ARG_CONTENT_OWNER}|${TARGET_NAME}|${swAssetFieldsList}")
 
 	if(NOT EXISTS "${swFlagOpsHeader}")
 		file(WRITE "${swFlagOpsHeader}" "// AUTO-GENERATED placeholder\n#pragma once\n#if !defined(__REFLECT_PARSER__)\n// no ENUM(Flags) in this target\n#endif\n")
@@ -377,4 +381,42 @@ function(sw_addContentModuleCheck)
 	add_custom_target(ContentModuleCheck ALL DEPENDS "${swStamp}")
 	add_dependencies(ContentModuleCheck ${listGenTarget})
 	set_target_properties(ContentModuleCheck PROPERTIES FOLDER "Reflection")
+endfunction()
+
+# ------------------------------------------------------------------------------
+# 4) sw_addAssetReferenceFieldList — 파서가 쓴 경로 칸 목록을 커밋하는 표(`Config/Dev/AssetReferenceFields.generated.json`)로 모은다
+# 커밋 전 린트와 `move-asset` 은 빌드 없이 돌아 빌드 폴더를 읽을 수 없다. 그래서 표를 저장소에 두고 빌드가 주인(이 구성이 짓는 대상)의 줄만 갈아 끼운다(게임은 구성마다 하나라 다른 게임의 줄은 그대로다).
+# 낡음은 `App --check-asset-refs`(ToolCheckAssetRefs)가 리플렉션과 표를 대조해 잡는다.
+# ------------------------------------------------------------------------------
+function(sw_addAssetReferenceFieldList)
+	get_property(listEntry GLOBAL PROPERTY SW_ASSET_REFERENCE_FIELD_LISTS)
+	if(NOT listEntry)
+		return()
+	endif()
+	set(listInputLine "")
+	set(listFieldList "")
+	set(listGenTarget "")
+	foreach(entry IN LISTS listEntry)
+		string(REPLACE "|" ";" entryParts "${entry}")
+		list(GET entryParts 0 owner)
+		list(GET entryParts 1 target)
+		list(GET entryParts 2 fieldList)
+		list(APPEND listInputLine "${owner}\t${fieldList}")
+		list(APPEND listFieldList "${fieldList}")
+		list(APPEND listGenTarget "${target}_ReflectionGen")
+	endforeach()
+	set(swInputs "${CMAKE_BINARY_DIR}/generated/AssetReferenceFieldInputs.list")
+	string(REPLACE ";" "\n" swInputText "${listInputLine}")
+	sw_writeIfChanged("${swInputs}" "${swInputText}")
+	set(swStamp "${CMAKE_BINARY_DIR}/generated/AssetReferenceFieldList.stamp")
+	add_custom_command(
+		OUTPUT "${swStamp}"
+		COMMAND "${Python3_EXECUTABLE}" -X utf8 "${CMAKE_SOURCE_DIR}/Scripts/generate/AssetReferenceFieldList.py" --inputs "${swInputs}" --output "${CMAKE_SOURCE_DIR}/Config/Dev/AssetReferenceFields.generated.json" --stamp "${swStamp}"
+		DEPENDS ${listFieldList} "${swInputs}" "${CMAKE_SOURCE_DIR}/Scripts/generate/AssetReferenceFieldList.py"
+		COMMENT "[Reflection] Collecting asset reference fields"
+		VERBATIM
+	)
+	add_custom_target(AssetReferenceFieldList ALL DEPENDS "${swStamp}")
+	add_dependencies(AssetReferenceFieldList ${listGenTarget})
+	set_target_properties(AssetReferenceFieldList PROPERTIES FOLDER "Reflection")
 endfunction()

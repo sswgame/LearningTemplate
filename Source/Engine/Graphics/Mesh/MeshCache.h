@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetHandle.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 
@@ -116,5 +117,18 @@ namespace sw
         static void invalidateDerivedCaches();
 
         unique_ptr<State> _pState;
+    };
+} // namespace sw
+
+namespace sw
+{
+    class MeshAssetFormat;
+
+    /** @brief `AssetRef<MeshAssetFormat>` 은 메시 캐시로 간다(GPU 수명 때문에 공유 캐시와 합치지 않았다 — `SharedAssetCache.h` 머리말). */
+    template <>
+    struct AssetRefCache<MeshAssetFormat>
+    {
+        static shared_ptr<Mesh> acquire( string_view path ) { return MeshCache::acquire( path ); }
+        static MeshHandle       request( string_view path ) { return MeshCache::request( path ); }
     };
 } // namespace sw

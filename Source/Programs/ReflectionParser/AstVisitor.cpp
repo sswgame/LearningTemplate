@@ -1203,6 +1203,19 @@ namespace sw
                 return outTarget.empty() == false;
             }
 
+            /** @brief `AssetRef<T>` 철자면 대상 `T` 를 꺼냅니다. `tryReadTypedHandleTarget` 와 같은 표기(정규화한 이름)를 읽는다. */
+            [[nodiscard]] static bool tryReadAssetRefTarget( const string& name, string& outTarget )
+            {
+                constexpr string_view kPrefix = "AssetRef<";
+                string_view           view    = StringUtil::trim( name );
+                if ( StringUtil::startsWith( view, kPrefix ) == false || view.back() != '>' )
+                    return false;
+                view.remove_prefix( kPrefix.size() );
+                view.remove_suffix( 1 );
+                outTarget = string{ StringUtil::trim( view ) };
+                return outTarget.empty() == false;
+            }
+
             /** @brief @p text 안의 @p from 을 모두 @p to 로 바꿉니다. */
             static void replaceAllText( string& text, const string& from, const string& to )
             {
@@ -1259,6 +1272,44 @@ namespace sw
                         pTree->_elementTypeName = kCanonical;
                 }
                 prop._handleTargetTypeName = target;
+                return true;
+            }
+
+            /**
+             * @brief PROPERTY 에 타입 있는 에셋 참조(`AssetRef<T>`)가 있으면 내장 형식 `AssetRef` 로 정규화하고 경로 칸 메타를 켭니다. 쓸 수 없는 모양이면 오류를 남기고 false 입니다.
+             * @details 값이 대상 종류를 품으므로(`AssetRefBase`) 처리기 하나가 모든 `T` 를 읽는다. 형식이 경로 칸임을 말하므로 `AssetPath` · `AssetType` 을 칸마다 적지 않는다 —
+             *          프리로드 · 핫 리로드 알림 · 참조 칸 생성 목록이 이 메타를 본다. 받는 모양은 값 하나와 한 겹 시퀀스이고, 맵 · 집합 · 중첩은 고쳐 쓸 자리를 도구가 모른다.
+             */
+            [[nodiscard]] static bool resolveAssetRefProperty( ParsedPropertyInfo& prop, const string& owner )
+            {
+                const bool bHolds = prop._typeName.find( "AssetRef<" ) != string::npos;
+                if ( bHolds == false )
+                    return true;
+                string     target;
+                const bool bSingleValue = prop._bIsContainer == SW_FALSE && tryReadAssetRefTarget( prop._typeName, target );
+                const bool bSequence    = prop._bIsContainer == SW_TRUE && prop._containerKind == ContainerKind::Sequence && prop._containerType != "Set" && prop._containerType != "UnorderedSet" &&
+                                       tryReadAssetRefTarget( prop._elementTypeName, target );
+                if ( bSingleValue == false && bSequence == false )
+                {
+                    SW_LOG_ERROR_ID( "AstVisitor.ERRORPROPERTYHoldsAssetRef", "ERROR: PROPERTY() '%#' holds an asset reference (%#) in a shape tools cannot rewrite. Use one AssetRef<T>, or a vector of AssetRef<T>.", owner,
+                                     prop._typeName );
+                    return false;
+                }
+                const string kCanonical = "AssetRef";
+                if ( bSingleValue )
+                {
+                    prop._typeName = kCanonical;
+                }
+                else
+                {
+                    const string typedSpelling = prop._elementTypeName;
+                    replaceAllText( prop._typeName, typedSpelling, kCanonical );
+                    prop._elementTypeName = kCanonical;
+                    if ( prop._containerTree != nullptr )
+                        prop._containerTree->_elementTypeName = kCanonical;
+                }
+                prop._assetType  = target;
+                prop._bAssetPath = SW_TRUE;
                 return true;
             }
 
@@ -1591,7 +1642,7 @@ namespace sw
                     return;
                 }
                 fillContainerDetails( prop, fieldType, session );
-                if ( resolveComponentHandleProperty( prop, owner ) == false )
+                if ( resolveComponentHandleProperty( prop, owner ) == false || resolveAssetRefProperty( prop, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;
@@ -1671,7 +1722,7 @@ namespace sw
                     collector._bHasError = SW_TRUE;
                     return;
                 }
-                if ( resolveComponentHandleProperty( prop, owner ) == false )
+                if ( resolveComponentHandleProperty( prop, owner ) == false || resolveAssetRefProperty( prop, owner ) == false )
                 {
                     collector._bHasError = SW_TRUE;
                     return;

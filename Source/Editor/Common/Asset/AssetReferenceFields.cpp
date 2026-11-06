@@ -198,6 +198,44 @@ namespace sw::editor
         {
             _setField.insert( field );
         }
+        return loadGeneratedFields( projectRoot );
+    }
+
+    bool AssetReferenceFields::loadGeneratedFields( string_view projectRoot )
+    {
+        const string path = FileUtil::joinPath( projectRoot, kGeneratedFile );
+        JSONDocument document;
+        if ( document.loadFile( path ) == false )
+        {
+            SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedUnreadable", "Generated asset reference fields %# could not be read", path );
+            return false;
+        }
+        const JSONValue listOwner = document.getRoot().get( "listOwner" );
+        if ( listOwner.isArray() == false )
+        {
+            SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedInvalid", "Generated asset reference fields %# need listOwner", path );
+            return false;
+        }
+        for ( size_t ownerIndex = 0; ownerIndex < listOwner.size(); ++ownerIndex )
+        {
+            const JSONValue listField = listOwner.at( ownerIndex ).get( "listField" );
+            if ( listField.isArray() == false )
+            {
+                SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedInvalid2", "Generated asset reference fields %#: owner %# needs listField", path, static_cast<uint32>( ownerIndex ) );
+                return false;
+            }
+            for ( size_t fieldIndex = 0; fieldIndex < listField.size(); ++fieldIndex )
+            {
+                const auto field = listField.at( fieldIndex ).read<string>();
+                if ( field.has_value() == false || field->empty() )
+                {
+                    SW_LOG_ERROR_ID( "AssetReferenceFields.GeneratedInvalid3", "Generated asset reference fields %#: owner %# field %# is not a non-empty string", path, static_cast<uint32>( ownerIndex ),
+                                     static_cast<uint32>( fieldIndex ) );
+                    return false;
+                }
+                _setField.insert( *field );
+            }
+        }
         return true;
     }
 

@@ -27,6 +27,8 @@ namespace sw
             static constexpr const utf8* kStampTypeKey = "type";
             /** @brief 스탬프의 고정 배치형 판정 줄 머리입니다 — `schema <FQN> | <정규 문자열 또는 이유>`. */
             static constexpr const utf8* kStampFixedSchemaKey = "schema";
+            /** @brief 스탬프의 경로 칸 줄 머리입니다 — `assetfield <이름>\t<대상>`. */
+            static constexpr const utf8* kStampAssetFieldKey = "assetfield";
             /** @brief ENUM(Flags) 가 있는 입력의 스탬프에만 있는 줄입니다. */
             static constexpr const utf8* kStampBitFlagLine = "flags";
             /** @brief 이번 실행의 시작을 적는 표식 파일 이름입니다(`markRunStart`). */
@@ -93,6 +95,10 @@ namespace sw
                     else if ( takeKeyedRest( line, kStampFixedSchemaKey, rest ) )
                     {
                         outRecord._listFixedSchema.emplace_back( rest );
+                    }
+                    else if ( takeKeyedRest( line, kStampAssetFieldKey, rest ) )
+                    {
+                        outRecord._listAssetField.emplace_back( rest );
                     }
                     else if ( line == kStampBitFlagLine )
                     {
@@ -163,6 +169,10 @@ namespace sw
         for ( const string& schemaLine : stamp._listFixedSchema )
         {
             stampText += formatToString( "%# %#\n", string( GeneratedFilesInternal::kStampFixedSchemaKey ), schemaLine );
+        }
+        for ( const string& assetField : stamp._listAssetField )
+        {
+            stampText += formatToString( "%# %#\n", string( GeneratedFilesInternal::kStampAssetFieldKey ), assetField );
         }
         for ( const StampDependency& dependency : stamp._listDependency )
         {

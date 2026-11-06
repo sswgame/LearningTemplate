@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/RHI/RHIRenderState.h"
@@ -126,5 +127,17 @@ namespace sw
 
     private:
         unique_ptr<Impl> _impl;
+    };
+} // namespace sw
+
+namespace sw
+{
+    class Material;
+
+    /** @brief `AssetRef<Material>` 은 머티리얼 캐시로 간다. 소유권은 캐시가 갖고 받은 쪽이 `release` 한다. 비동기 요청은 없다(GPU 초기화를 게임 스레드가 한다 — `MaterialCache`). */
+    template <>
+    struct SW_API AssetRefCache<Material>
+    {
+        static Material* acquire( string_view path );
     };
 } // namespace sw

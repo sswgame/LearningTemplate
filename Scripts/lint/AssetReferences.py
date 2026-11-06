@@ -30,6 +30,7 @@ import common  # noqa: E402,F401 — import 하면 콘솔이 UTF-8 이 된다(co
 from common.Git import resolveGitExecutable, runGit  # noqa: E402
 
 kConfigPath = "Config/Dev/AssetReferenceFields.json"
+kGeneratedPath = "Config/Dev/AssetReferenceFields.generated.json"   # 리플렉션 파서가 낸 경로 칸 표 — Scripts/generate/AssetReferenceFieldList.py 가 쓴다
 kContentFolder = "Content"
 # 경로 낱말을 가르는 글자(값 하나에 경로 여럿 — 쉼표 · 세미콜론 · 공백). 경로 안에는 오지 않는다(리소스 이름 규칙 `[a-z0-9_.-/]`).
 kTokenSeparators = ",; \t\r\n#"  # `#` 뒤는 파일 안의 항목 id 다(`_base="common/data/items.xml#helmet_knight"`) - 참조는 앞의 파일이다
@@ -78,14 +79,18 @@ def _require(document: dict, key: str, kind: type):
 
 
 def loadConfig(projectRoot: Path) -> FieldConfig:
-    """칸 목록을 읽습니다. 파일이 없거나 칸이 빠지면 예외다(기본값으로 검사하지 않는다)."""
+    """칸 목록을 읽습니다(손으로 읽는 XML 칸 `listField` + 파서가 낸 표). 파일이 없거나 칸이 빠지면 예외다(기본값으로 검사하지 않는다)."""
     document = json.loads((projectRoot / kConfigPath).read_text(encoding="utf-8"))
+    generated = json.loads((projectRoot / kGeneratedPath).read_text(encoding="utf-8"))
+    setField = set(_require(document, "listField", list))
+    for owner in _require(generated, "listOwner", list):
+        setField.update(_require(owner, "listField", list))
     listImported = []
     for entry in _require(document, "listImportedFolder", list):
         listImported.append(ImportedFolder(_require(entry, "folder", str), _require(entry, "sourceFolder", str),
                                            tuple(_require(entry, "listSourceExtension", list)), _require(entry, "generatedReferrers", bool)))
     return FieldConfig(tuple(_require(document, "listDomain", list)), tuple(_require(document, "listUncheckedDomain", list)),
-                       tuple(_require(document, "listTextExtension", list)), frozenset(_require(document, "listField", list)), tuple(listImported),
+                       tuple(_require(document, "listTextExtension", list)), frozenset(setField), tuple(listImported),
                        tuple(_require(document, "listCMakeFile", list)), tuple(_require(document, "listCMakeArgument", list)))
 
 
@@ -364,7 +369,7 @@ def checkStagedAssetReferences(projectRoot: Path) -> list[str] | None:
     if status.returnCode != 0:
         raise RuntimeError(f"git diff --cached 실패: {status.stderr.strip()}")
     listChanged = [line.strip().replace("\\", "/") for line in status.stdout.splitlines() if line.strip()]
-    bRelevant = any(path.startswith(kContentFolder + "/") or path in config.listCMakeFile or path == kConfigPath for path in listChanged)
+    bRelevant = any(path.startswith(kContentFolder + "/") or path in config.listCMakeFile or path in (kConfigPath, kGeneratedPath) for path in listChanged)
     if not bRelevant:
         return None
     listIndex = listIndexFiles(projectRoot)

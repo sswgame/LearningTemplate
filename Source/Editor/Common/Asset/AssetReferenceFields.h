@@ -1,7 +1,8 @@
 /**
  * @file AssetReferenceFields.h
  * @brief 에셋 참조 칸 목록(`Config/Dev/AssetReferenceFields.json`)과 그 규칙입니다 — 글 에셋에서 경로를 뽑고, 없는지 가리고, 옮긴 경로로 고칩니다.
- * @details 에셋은 경로 하나로 가리킨다(식별자 표 · `.meta` 는 없다 — 언리얼 소프트 경로와 같다). 그래서 끊어진 경로를 잡는 규칙이 참조의 정본이고, 같은 데이터 파일을
+ * @details 칸 이름은 두 표의 합이다 — 리플렉션 칸은 파서가 낸 표(`kGeneratedFile`), 손으로 읽는 XML 칸은 `kConfigFile` 의 `listField`.
+ *          에셋은 경로 하나로 가리킨다(식별자 표 · `.meta` 는 없다 — 언리얼 소프트 경로와 같다). 그래서 끊어진 경로를 잡는 규칙이 참조의 정본이고, 같은 데이터 파일을
  *          네 곳이 읽는다: 커밋 전 검사(`Scripts/lint/AssetReferences.py`), `py -3 -m Scripts move-asset`, 헤드리스 검사(`App --check-asset-refs` — ctest
  *          `ToolCheckAssetRefs`), 에디터 이름 바꾸기 · 옮기기(`EditorAssetFileCommands::moveAsset`). 뽑기 규칙은 파이썬 쪽(`AssetReferences.py` 의 `_extract*`)과 같은
  *          것이다 — 하나를 고치면 다른 하나도 고친다(언어가 달라 코드를 나눌 수 없는 자리라 둘이다).
@@ -105,6 +106,8 @@ namespace sw::editor
     public:
         /** @brief 칸 목록 파일(프로젝트 루트 기준)입니다. 개발 정책이라 `Config/Dev` 에 둔다. */
         static constexpr const utf8* kConfigFile = "Config/Dev/AssetReferenceFields.json";
+        /** @brief 리플렉션 파서가 낸 경로 칸 표(프로젝트 루트 기준)입니다. 손으로 고치지 않는다(`Scripts/generate/AssetReferenceFieldList.py`). `kConfigFile` 의 `listField` 는 손으로 읽는 XML 칸만 적는다. */
+        static constexpr const utf8* kGeneratedFile = "Config/Dev/AssetReferenceFields.generated.json";
 
         /** @brief 프로젝트 루트의 칸 목록을 읽습니다. 없거나 칸이 빠지면 오류를 남기고 false 입니다(기본 목록으로 대신하지 않는다). */
         [[nodiscard]] bool load( string_view projectRoot );
@@ -135,12 +138,14 @@ namespace sw::editor
         uint32 rewrite( string& inoutText, AssetReferenceSyntax syntax, const vector<AssetReferenceRewriteRule>& listRule ) const;
 
     private:
-        bool isImportedFromSource( string_view assetID, const AssetIDSet& assets ) const;
-        void appendTokens( string_view text, size_t valueStart, size_t valueEnd, string_view field, const vector<size_t>& listLineStart,
-                           vector<AssetReference>& outListReference ) const;
-        void extractXML( string_view text, const vector<size_t>& listLineStart, vector<AssetReference>& outListReference ) const;
-        void extractJSON( string_view text, const vector<size_t>& listLineStart, vector<AssetReference>& outListReference ) const;
-        void extractCMake( string_view text, const vector<size_t>& listLineStart, vector<AssetReference>& outListReference ) const;
+        /** @brief 생성 표(`kGeneratedFile`)의 칸 이름을 더합니다. 없거나 꼴이 틀리면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool loadGeneratedFields( string_view projectRoot );
+        bool               isImportedFromSource( string_view assetID, const AssetIDSet& assets ) const;
+        void               appendTokens( string_view text, size_t valueStart, size_t valueEnd, string_view field, const vector<size_t>& listLineStart,
+                                         vector<AssetReference>& outListReference ) const;
+        void               extractXML( string_view text, const vector<size_t>& listLineStart, vector<AssetReference>& outListReference ) const;
+        void               extractJSON( string_view text, const vector<size_t>& listLineStart, vector<AssetReference>& outListReference ) const;
+        void               extractCMake( string_view text, const vector<size_t>& listLineStart, vector<AssetReference>& outListReference ) const;
 
     private:
         vector<string>              _listDomain;

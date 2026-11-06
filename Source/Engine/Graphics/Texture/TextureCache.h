@@ -10,6 +10,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Asset/AssetHandle.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/RenderTargetDeclaration.h"
@@ -282,5 +283,16 @@ namespace sw
         Source                       _source;
         TextureResidency             _residency;           ///< 파일을 업로드할 밉 범위 — 비동기 로드는 아래쪽 밉부터(`TextureCache::request`)
         uint8                        _bHoldsReference : 1; ///< 항목의 참조 하나를 쥐었는가(완료에 성공했거나 캐시 적중)
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `AssetRef<Texture2D>` 는 텍스처 캐시로 간다. 소유권은 캐시가 갖고 받은 쪽이 `release` 한다(`TextureCache::acquire`). */
+    template <>
+    struct SW_API AssetRefCache<Texture2D>
+    {
+        static Texture2D*    acquire( string_view path );
+        static TextureHandle request( string_view path );
     };
 } // namespace sw

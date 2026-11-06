@@ -39,8 +39,8 @@ namespace sw::editor
                     {
                         if ( property._metadata->_bAssetPath == SW_FALSE || fields.isField( property._name.c_str() ) )
                             continue;
-                        SW_LOG_ERROR_ID( "AssetReferenceCheck.FieldNotListed", "%#.%# is an AssetPath property but '%#' is not in %# (_listField) - its paths would not be checked or fixed on move",
-                                         type._fullyQualifiedName.c_str(), property._name.c_str(), property._name.c_str(), AssetReferenceFields::kConfigFile );
+                        SW_LOG_ERROR_ID( "AssetReferenceCheck.FieldNotListed", "%#.%# is an AssetPath property but '%#' is not in %# - its paths would not be checked or fixed on move. The build rewrites that file: commit it",
+                                         type._fullyQualifiedName.c_str(), property._name.c_str(), property._name.c_str(), AssetReferenceFields::kGeneratedFile );
                         ++problemCount;
                     }
                 } );

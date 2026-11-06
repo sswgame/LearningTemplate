@@ -1207,3 +1207,16 @@ namespace sw
         (void)scope.bind( &scope.get<AssetManager>().getAssetCache<TextureCache>().getRenderTargetDeclarationSink() );
     } );
 } // namespace sw
+
+namespace sw
+{
+    Texture2D* AssetRefCache<Texture2D>::acquire( string_view path )
+    {
+        return engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().acquire( path );
+    }
+
+    TextureHandle AssetRefCache<Texture2D>::request( string_view path )
+    {
+        return engine::getSubsystem<AssetManager>().getAssetCache<TextureCache>().request( path, AssetLoadStart::Async );
+    }
+} // namespace sw

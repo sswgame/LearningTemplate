@@ -398,3 +398,11 @@ namespace sw
             SW_LOG_ERROR_ID( "MaterialCache.HotReloadFailedMaterial", "Hot-Reload failed for Material %#", key.c_str() );
     }
 } // namespace sw
+
+namespace sw
+{
+    Material* AssetRefCache<Material>::acquire( string_view path )
+    {
+        return engine::getSubsystem<AssetManager>().getAssetCache<MaterialCache>().acquire( path );
+    }
+} // namespace sw

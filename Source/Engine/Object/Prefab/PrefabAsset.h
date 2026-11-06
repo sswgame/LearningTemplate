@@ -15,6 +15,7 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Asset/AssetHandle.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
@@ -411,5 +412,16 @@ namespace sw
         unordered_map<string, shared_ptr<const PrefabAsset>> _mapCache   SW_GUARDED_BY( _mapCacheMutex );
         unordered_map<string, weak_ptr<PrefabLoadOperation>> _mapLoading SW_GUARDED_BY( _mapCacheMutex ); ///< 읽는 중인 로드(같은 경로의 동시 요청은 같은 로드 작업). `_mapCacheMutex` 로 지킨다
         atomic<uint32>                                                   _cacheGeneration;                ///< `reload` · `clear` 가 올린다. 읽는 사이 바뀌면 결과를 캐시에 넣지 않는다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief `AssetRef<PrefabAsset>` 은 프리팹 캐시로 간다(스폰이 캐시에 묶여 있어 공유 캐시와 합치지 않았다). */
+    template <>
+    struct SW_API AssetRefCache<PrefabAsset>
+    {
+        static shared_ptr<const PrefabAsset> acquire( string_view path );
+        static PrefabHandle                  request( string_view path );
     };
 } // namespace sw

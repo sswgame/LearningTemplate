@@ -43,6 +43,7 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Scene/SceneManager.h"
+#include "Engine/Serialization/Serializer/AssetRefBase.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 #include <imgui.h>
@@ -131,7 +132,7 @@ namespace sw::editor
              *          키 입력마다 인턴하면 그 문자열이 모두 테이블에 남기 때문이다. 드롭과 지우기의 처리도 호출하는 쪽이 한다.
              */
             template <typename DrawInputFn>
-            AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, const PropertyInfo& prop, string_view currentPath, string& outDroppedPath )
+            AssetFieldAction drawAssetPathField( DrawInputFn&& drawInput, const PropertyInfo& prop, string_view currentPath, string& outDroppedPath, const AssetTypeDef* pTargetType = nullptr )
             {
                 const float32    kButtonWidth = ImGui::GetFrameHeight();
                 AssetFieldAction action       = AssetFieldAction::None;
@@ -172,7 +173,9 @@ namespace sw::editor
                     ImGui::BeginChild( "##pickerList", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 43.0f, 14.0f ) ) );
                     for ( const EditorAssetIndexEntry& entry : picker._listEntry )
                     {
-                        if ( InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, entry._path ) == false ||
+                        // 타입 있는 참조는 대상 종류가 거른다(언리얼 `TSoftObjectPtr<T>` 의 선택기와 같다). 그 밖의 경로 칸은 `FileFilter` 를 본다.
+                        const bool bMatchesKind = pTargetType != nullptr ? AssetRefBase::isPathOfTarget( entry._path, *pTargetType ) : InspectorPropertyLayout::matchesFileFilter( prop._metadata->_fileFilter, entry._path );
+                        if ( bMatchesKind == false ||
                              filter.matchesAny( { string_view{ entry._path }, string_view{ entry._title } } ) == false )
                             continue;
                         const bool bFirst = shownCount == 0;
@@ -788,6 +791,48 @@ namespace sw::editor
             }
         };
 
+        /**
+         * @brief `AssetRef<T>` 칸입니다 — 글로 치거나 끌어 놓거나 대상 종류로 거른 선택 팝업에서 고릅니다.
+         * @details 값은 칸을 떠날 때 그리드가 글 처리기로 넣어(`applyPropertyTextAsEdit`) 되돌리기에 남고 종류 검사를 지난다. 글을 치는 칸은 한 번에 하나라 버퍼도 하나다(`DataPathPropertyDrawer` 와 같다).
+         */
+        class AssetRefProperty : public BuiltinPropertyBase
+        {
+        public:
+            bool draw( const MutableObjectAddress instance, const PropertyInfo& prop, EditorPropertyGrid& grid ) override
+            {
+                const AssetRefBase* pRef = prop.getValuePtr<AssetRefBase>( instance.get() );
+                if ( pRef == nullptr )
+                    return true;
+                if ( prop._metadata->_bReadOnly != SW_FALSE )
+                {
+                    drawReadOnlyText( prop, pRef->c_str() );
+                    return true;
+                }
+                string                 droppedPath;
+                bool                   bEdited = false;
+                const AssetFieldAction action  = drawAssetPathField(
+                    [this, pRef, &bEdited]( const utf8* pID )
+                {
+                    if ( ImGui::GetActiveID() != ImGui::GetID( pID ) )
+                        _buffer = pRef->path();
+                    EditorWidgets::drawTextField( pID, _buffer );
+                    bEdited = ImGui::IsItemDeactivatedAfterEdit();
+                },
+                    prop, pRef->path(), droppedPath, &pRef->getTargetType() );
+                if ( action == AssetFieldAction::Dropped && AssetRefBase::isPathOfTarget( droppedPath, pRef->getTargetType() ) )
+                    grid.applyPropertyTextAsEdit( instance, prop, droppedPath, "Set Asset" );
+                else if ( action == AssetFieldAction::Cleared )
+                    grid.applyPropertyTextAsEdit( instance, prop, "", "Clear Asset" );
+                else if ( bEdited && *pRef != string_view( _buffer ) )
+                    grid.applyPropertyTextAsEdit( instance, prop, _buffer, "Edit Path" );
+                showTooltipIfHovered( prop );
+                return true;
+            }
+
+        private:
+            string _buffer;
+        };
+
         class Float3Property : public BuiltinPropertyBase
         {
         public:
@@ -973,6 +1018,7 @@ namespace sw::editor
 #include "Engine/Reflection/ReflectBuiltins.xxx"
 #undef SW_REFLECT_BUILTIN_TYPE
 #undef SW_REFLECT_BUILTIN_CONTAINER
+        registerType( AssetRefBase::kTypeName, make_unique<AssetRefProperty>() );
     }
 
     bool InspectorPropertyManager::drawMethodArg( const utf8* pLabel, InspectorMethodArgSlot& slot, const FunctionParameterInfo& parameter, const GameObjectManager* pManager )

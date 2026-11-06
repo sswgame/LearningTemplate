@@ -339,6 +339,8 @@ namespace sw
             ++errorCount;
         if ( writeReflectedTypesList() == false )
             ++errorCount;
+        if ( writeAssetFieldList() == false )
+            ++errorCount;
         if ( writeFixedSchemaList() == false )
             ++errorCount;
         if ( writeDepfile() == false )
@@ -529,6 +531,18 @@ namespace sw
         {
             stamp._listTypeFqn.push_back( parsed._listType[typeIndex]._fullyQualifiedName );
             stamp._listFixedSchema.push_back( fixedCodec.makeSchemaLine( typeIndex ) );
+            for ( const ParsedPropertyInfo& prop : parsed._listType[typeIndex]._listProperty )
+            {
+                const bool bPathField = prop._bAssetPath == SW_TRUE || prop._typeName == "DataPath" || prop._elementTypeName == "DataPath";
+                if ( bPathField == false )
+                    continue;
+                const string target = prop._assetType.empty() ? string( "-" ) : prop._assetType;
+                stamp._listAssetField.push_back( formatToString( "%#\t%#", prop._name, target ) );
+                for ( const string& alias : prop._listAlias )
+                {
+                    stamp._listAssetField.push_back( formatToString( "%#\t%#", alias, target ) );
+                }
+            }
         }
         for ( const ParsedEnumInfo& enumInfo : parsed._listEnum )
         {
@@ -571,6 +585,7 @@ namespace sw
         }
         listTarget.push_back( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileReflectionFlagOps ) );
         listTarget.push_back( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileReflectedTypesList ) );
+        listTarget.push_back( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileAssetReferenceFieldsList ) );
         VectorUtil::sortUnique( listDependency );
 
         // 목표는 이 단계의 모든 산출물(CMake 의 OUTPUT 과 같은 목록), 의존은 스탬프들의 합. 경로는 절대 · 슬래시.
@@ -650,6 +665,30 @@ namespace sw
             text += "\n";
         }
         return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileReflectedTypesList ), text );
+    }
+
+    bool ReflectionPipeline::writeAssetFieldList() const
+    {
+        vector<string> listLine;
+        for ( const string& inputFile : _pOptions->_listInputFile )
+        {
+            GeneratedStamp stamp;
+            // 빠진 입력의 칸을 "경로가 아니다" 로 보면 끊어진 경로를 못 잡는다 - 쓰지 않는다.
+            if ( GeneratedFileUtil::readStamp( GeneratedFileUtil::makePaths( _pOptions->_outputDir, inputFile )._stampPath, stamp ) == false )
+            {
+                SW_LOG_ERROR_ID( "ReflectionPipeline.AssetFieldListNot", "%# is not written - some inputs have no stamp (they failed above)", sw::config::kFileAssetReferenceFieldsList );
+                return false;
+            }
+            listLine.insert( listLine.end(), stamp._listAssetField.begin(), stamp._listAssetField.end() );
+        }
+        VectorUtil::sortUnique( listLine );
+        string text;
+        for ( const string& line : listLine )
+        {
+            text += line;
+            text += "\n";
+        }
+        return GeneratedFileUtil::writeIfChanged( FileUtil::joinPath( _pOptions->_outputDir, sw::config::kFileAssetReferenceFieldsList ), text );
     }
 
     bool ReflectionPipeline::writeFlagOpsUmbrella() const

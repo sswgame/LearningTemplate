@@ -1,0 +1,275 @@
+{
+  "listOwner": [
+    {
+      "owner": "",
+      "listField": [
+        "_animationCrowdSettings",
+        "_animationGraphPath",
+        "_animationLODSettings",
+        "_animationSetPath",
+        "_base",
+        "_characterLODSettings",
+        "_clip",
+        "_cultureTable",
+        "_debugHUDSettingsSchema",
+        "_debugKeyInputMap",
+        "_defaultDeferredPipeline",
+        "_defaultDestructionProfile",
+        "_defaultForwardPipeline",
+        "_defaultMaterial",
+        "_defaultSocketKinds",
+        "_defaultSurfaceChannels",
+        "_detailTexturePath",
+        "_document",
+        "_effectPath",
+        "_facialRigPath",
+        "_foliageMaterial",
+        "_fontCatalog",
+        "_fracturePath",
+        "_heightfieldPath",
+        "_imagePath",
+        "_impulse",
+        "_interiorMaterialPath",
+        "_layerWeightsPath",
+        "_lipSyncSettings",
+        "_listStyleSheet",
+        "_loadingTexture",
+        "_localizationProject",
+        "_mappingPath",
+        "_materialPath",
+        "_meshID",
+        "_meshLODSettings",
+        "_meshPath",
+        "_missingMaterial",
+        "_missingTexture",
+        "_navMeshSettings",
+        "_netEmulationPresets",
+        "_normalMapName",
+        "_notifyTablePath",
+        "_packRoot",
+        "_pairedAnimationPath",
+        "_pbrMaterialTemplate",
+        "_photoModeInputMap",
+        "_physicsAssetPath",
+        "_prefab",
+        "_profilePath",
+        "_renderPipeline",
+        "_rigPath",
+        "_sequencePath",
+        "_shaderAutoExposure",
+        "_shaderCanvas",
+        "_shaderCanvasMarker",
+        "_shaderDeferredLighting",
+        "_shaderDepthHistory",
+        "_shaderDepthOfField",
+        "_shaderFog",
+        "_shaderForwardLit",
+        "_shaderFullscreenBlit",
+        "_shaderGBuffer",
+        "_shaderGPUCull",
+        "_shaderHighlightOutline",
+        "_shaderInstanceAnimation",
+        "_shaderInstanceSort",
+        "_shaderLightGrid",
+        "_shaderMeshMorph",
+        "_shaderMeshSkin",
+        "_shaderMotionBlur",
+        "_shaderNanCheck",
+        "_shaderOcclusionTiles",
+        "_shaderParticle",
+        "_shaderPostBloom",
+        "_shaderPostOutline",
+        "_shaderProbeComputeTextureWrite",
+        "_shaderProbeSampleCompute",
+        "_shaderProbeUpdate",
+        "_shaderProbeWaterWave",
+        "_shaderSSAO",
+        "_shaderSceneDepthCopy",
+        "_shaderShadowDepth",
+        "_shaderSky",
+        "_shaderSprite2D",
+        "_shaderSprite2DLit",
+        "_shaderTAA",
+        "_shaderTonemap",
+        "_shaderToon",
+        "_shaderUpscale",
+        "_shaderVFXMeshInstance",
+        "_shaderVFXSimulation",
+        "_shaderVolumetricFog",
+        "_skeletonPath",
+        "_socketSetPath",
+        "_spriteMaterial",
+        "_telemetrySchema",
+        "_terrainGeomorphMaterial",
+        "_terrainMaterial",
+        "_textureName",
+        "_texturePath",
+        "_tileMapMaterial",
+        "_tileMapPath",
+        "_timeZoneTable",
+        "_toonMaterialTemplate",
+        "_uiDebugHUD",
+        "_uiInputMap",
+        "_uiKeyRebind",
+        "_uiNotificationEntry",
+        "_uiNotifications",
+        "_uiOptionsMenu",
+        "_uiOptionsRowBool",
+        "_uiOptionsRowEnum",
+        "_uiOptionsRowEnumPad",
+        "_uiOptionsRowFloat",
+        "_uiOptionsRowInt",
+        "_uiOptionsRowKeyBinding",
+        "_uiOptionsRowString",
+        "_uiPauseMenu",
+        "_uiResolutionPresets",
+        "_uiScaleSettings",
+        "_uiSettingsConfirm",
+        "_uiSettingsUnsaved",
+        "_uiSubtitles",
+        "_uiThemes",
+        "_uiTooltip",
+        "_userSettingsSchema",
+        "_waterMaterial"
+      ]
+    },
+    {
+      "owner": "EditorModule",
+      "listField": [
+        "_defaultMap",
+        "_editorInputMap",
+        "_inputReplayFile",
+        "_spriteAtlas",
+        "_uiPreviewDocument",
+        "_warpMap"
+      ]
+    },
+    {
+      "owner": "GameFramework",
+      "listField": [
+        "_aiControllerPrefab",
+        "_audioEvents",
+        "_catalogPath",
+        "_documentPath",
+        "_entranceScene",
+        "_graphPath",
+        "_loadingScreen",
+        "_loadingTips",
+        "_localizationProject",
+        "_materialPath",
+        "_meshID",
+        "_packRoot",
+        "_regionTablePath",
+        "_sound",
+        "_startMap",
+        "_tablePath",
+        "_titleScene"
+      ]
+    },
+    {
+      "owner": "game:AbilityArena",
+      "listField": [
+        "_autoBattleAIPrefab",
+        "_casterAIPrefab",
+        "_casterPrefab",
+        "_gruntAIPrefab",
+        "_gruntPrefab",
+        "_playerPrefab",
+        "_projectilePrefab"
+      ]
+    },
+    {
+      "owner": "game:Empty",
+      "listField": [
+        "_material",
+        "_mesh"
+      ]
+    },
+    {
+      "owner": "game:FrontierTown",
+      "listField": [
+        "_tilePrefab",
+        "_unitPrefab"
+      ]
+    },
+    {
+      "owner": "game:HarvestValley",
+      "listField": [
+        "_autoFarmerPrefab",
+        "_cropDataPath",
+        "_cropPrefab",
+        "_readyModel",
+        "_scheduleDataPath",
+        "_soilPrefab",
+        "_villagerPrefab"
+      ]
+    },
+    {
+      "owner": "game:MeadowVillage",
+      "listField": [
+        "_prefab",
+        "_tilePrefab"
+      ]
+    },
+    {
+      "owner": "game:NileCity",
+      "listField": [
+        "_autoPlanPath",
+        "_blockBuildingPrefab",
+        "_cityDataPath",
+        "_groundPrefab",
+        "_modelBuildingPrefab",
+        "_roadPrefab",
+        "_walkerPrefab"
+      ]
+    },
+    {
+      "owner": "game:Shooter3D",
+      "listField": [
+        "_bodyPrefab",
+        "_effectPrefab",
+        "_pacingProfile",
+        "_prefab",
+        "_spawnTable",
+        "_tracerPrefab"
+      ]
+    },
+    {
+      "owner": "game:StarSkirmish",
+      "listField": [
+        "_commanderTreePath",
+        "_unitDataPath",
+        "_unitModelPath",
+        "_unitPrefab"
+      ]
+    },
+    {
+      "owner": "game:ThemeParkTycoon",
+      "listField": [
+        "_carFrontPrefab",
+        "_carPrefab",
+        "_coasterDataPath",
+        "_flatRidePrefab",
+        "_guestPrefab",
+        "_parkDataPath",
+        "_pathPrefab",
+        "_railPrefab",
+        "_rideEntrancePrefab",
+        "_stationPrefab",
+        "_supportPrefab"
+      ]
+    },
+    {
+      "owner": "game:VoxelCraft",
+      "listField": [
+        "_chunkPrefab"
+      ]
+    },
+    {
+      "owner": "game:WildWest",
+      "listField": [
+        "_westernDataPath"
+      ]
+    }
+  ]
+}
