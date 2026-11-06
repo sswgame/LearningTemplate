@@ -56,7 +56,7 @@ namespace sw
             [[nodiscard]] static bool readSet( Archive& archive, unordered_set<hashed_string>& outUniqueName )
             {
                 uint32 count = 0;
-                if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+                if ( archive.readCount( 4, count ) == false )
                     return false;
                 outUniqueName.clear();
                 for ( uint32 index = 0; index < count; ++index )
@@ -90,7 +90,7 @@ namespace sw
             {
                 uint32 count = 0;
                 // 이름(4) + 수(4)
-                if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+                if ( archive.readCount( 8, count ) == false )
                     return false;
                 outMapNameToCount.clear();
                 for ( uint32 index = 0; index < count; ++index )
@@ -574,7 +574,7 @@ namespace sw
             HorrorSessionInternal::readMap( archive, restored._mapSequenceProgress );
         uint32 linkCount = 0;
         // 연결마다 이름 둘(8)
-        if ( bPartRead == false || StateArchiveUtil::readCount( archive, 8, linkCount ) == false )
+        if ( bPartRead == false || archive.readCount( 8, linkCount ) == false )
             return false;
         restored._listClueLink.assign( linkCount, HorrorClueLink{} );
         for ( HorrorClueLink& link : restored._listClueLink )

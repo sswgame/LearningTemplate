@@ -489,7 +489,7 @@ namespace sw
         RestaurantSimulation restored = *this;
         uint32               count    = 0;
         // 직원마다 이름(4) + 레벨(경험치와 누적 16 + 레벨 4) + 바쁨(4) + 일당(8) + 맡은 손님(4) + 역할과 고용(2)
-        if ( StateArchiveUtil::readCount( archive, 42, count ) == false )
+        if ( archive.readCount( 42, count ) == false )
             return false;
         restored._listStaff.assign( count, StaffMember{} );
         for ( StaffMember& staff : restored._listStaff )
@@ -499,7 +499,7 @@ namespace sw
         }
 
         // 손님마다 이름 둘(8) + 기다림, 인내, 먹기(12) + 가격(8) + 번호, 자리, 품질(12) + 상태, 서빙, 계산(3)
-        if ( StateArchiveUtil::readCount( archive, 43, count ) == false )
+        if ( archive.readCount( 43, count ) == false )
             return false;
         restored._listCustomer.assign( count, RestaurantCustomer{} );
         for ( RestaurantCustomer& customer : restored._listCustomer )
@@ -509,7 +509,7 @@ namespace sw
         }
 
         // 주문마다 이름 둘(8) + 남은 시간, 손님, 요리사, 품질(16) + 준비(1)
-        if ( StateArchiveUtil::readCount( archive, 25, count ) == false )
+        if ( archive.readCount( 25, count ) == false )
             return false;
         restored._listOrder.clear();
         for ( uint32 index = 0; index < count; ++index )
@@ -521,7 +521,7 @@ namespace sw
         }
 
         // 메뉴는 카탈로그의 요리마다 하나이다. 이름(4) + 가격(8) + 켜짐(1)
-        if ( StateArchiveUtil::readCount( archive, 13, count ) == false || count != _listMenu.size() )
+        if ( archive.readCount( 13, count ) == false || count != _listMenu.size() )
             return false;
         for ( MenuEntry& entry : restored._listMenu )
         {
@@ -535,7 +535,7 @@ namespace sw
         }
 
         // 스테이션마다 이름(4) + 수(4)
-        if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+        if ( archive.readCount( 8, count ) == false )
             return false;
         restored._listStation.assign( count, StationSlot{} );
         for ( StationSlot& slot : restored._listStation )
@@ -546,7 +546,7 @@ namespace sw
             if ( slot._station.empty() || slot._count < 0 )
                 return false;
         }
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false )
+        if ( archive.isError() || archive.readCount( 4, count ) == false )
             return false;
         restored._listSatisfaction.assign( count, 0.0f );
         for ( float32& satisfaction : restored._listSatisfaction )

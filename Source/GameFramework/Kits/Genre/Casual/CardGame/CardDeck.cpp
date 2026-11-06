@@ -104,7 +104,7 @@ namespace sw
     {
         uint32 cardCount = 0;
         // 카드마다 번호(2) + 무늬(1) + 숫자(1)
-        if ( StateArchiveUtil::readCount( archive, 4, cardCount ) == false )
+        if ( archive.readCount( 4, cardCount ) == false )
             return false;
         vector<Card> listCard( cardCount, Card{} );
         for ( Card& card : listCard )

@@ -33,7 +33,7 @@ namespace sw
     bool ItemStackList::readState( Archive& archive )
     {
         uint32 count = 0;
-        if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ) + sizeof( int32 ), count ) == false )
+        if ( archive.readCount( sizeof( uint32 ) + sizeof( int32 ), count ) == false )
             return false;
         ItemStackList list;
         for ( uint32 index = 0; index < count; ++index )

@@ -354,7 +354,7 @@ namespace sw
             return false;
         uint32 historyCount = 0;
         // 판마다 열 7개(더미 4 + 뒤집힌 수 4) + 파운데이션 4개, 스톡, 웨이스트(더미 4) + 되돌린 수, 옮긴 수(8)
-        if ( StateArchiveUtil::readCount( archive, 88, historyCount ) == false )
+        if ( archive.readCount( 88, historyCount ) == false )
             return false;
         vector<KlondikeState> listHistory( historyCount, KlondikeState{} );
         for ( KlondikeState& history : listHistory )

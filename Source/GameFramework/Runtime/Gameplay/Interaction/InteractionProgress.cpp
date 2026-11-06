@@ -250,7 +250,7 @@ namespace sw
     {
         InteractionProgress restored         = *this;
         uint32              participantCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, participantCount ) == false || participantCount > static_cast<uint32>( _config._maxParticipants ) )
+        if ( archive.readCount( 4, participantCount ) == false || participantCount > static_cast<uint32>( _config._maxParticipants ) )
             return false;
         restored._listParticipant.assign( participantCount, 0u );
         for ( uint32& participant : restored._listParticipant )

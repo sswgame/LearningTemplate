@@ -223,7 +223,7 @@ namespace sw
         {
             vector<hashed_string>& listID  = listIndex == 0 ? listRegionMap : ( listIndex == 1 ? listSite : listPickup );
             uint32                 idCount = 0;
-            if ( StateArchiveUtil::readCount( archive, 4, idCount ) == false )
+            if ( archive.readCount( 4, idCount ) == false )
                 return false;
             listID.reserve( idCount );
             for ( uint32 entry = 0; entry < idCount; ++entry )

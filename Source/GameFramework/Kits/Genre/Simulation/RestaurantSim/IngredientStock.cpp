@@ -182,7 +182,7 @@ namespace sw
     {
         uint32 count = 0;
         // 배치마다 이름(4) + 원가(8) + 개수, 남은 날(8)
-        if ( StateArchiveUtil::readCount( archive, 20, count ) == false )
+        if ( archive.readCount( 20, count ) == false )
             return false;
         vector<IngredientBatch> listBatch( count );
         for ( IngredientBatch& batch : listBatch )

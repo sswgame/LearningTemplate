@@ -400,7 +400,7 @@ namespace sw
         GameRandom random = _random;
         uint32     count  = 0;
         // 유령마다 이름(4) + 위치, 도망 방향(24) + 체력, 시간, 번호(12) + 상태(1) 이상
-        if ( StateArchiveUtil::readRandom( archive, random ) == false || StateArchiveUtil::readCount( archive, 41, count ) == false )
+        if ( StateArchiveUtil::readRandom( archive, random ) == false || archive.readCount( 41, count ) == false )
             return false;
         vector<GhostInstance> listGhost( count );
         for ( GhostInstance& ghost : listGhost )

@@ -349,7 +349,7 @@ namespace sw
     {
         uint32 progressCount = 0;
         // 퀘스트마다 이름 두 개(8) + 목표 수(4) + 단계 시간(4) + 완료 횟수(4) + 상태(1) + 선택 대기(1) 이상
-        if ( StateArchiveUtil::readCount( archive, 22, progressCount ) == false )
+        if ( archive.readCount( 22, progressCount ) == false )
             return false;
         vector<QuestProgress> listProgress;
         listProgress.reserve( progressCount );
@@ -358,7 +358,7 @@ namespace sw
             QuestProgress progress;
             uint32        objectiveCount = 0;
             const bool    bHeadRead      = StateArchiveUtil::readName( archive, progress._questID ) && StateArchiveUtil::readName( archive, progress._stageID ) &&
-                                   StateArchiveUtil::readCount( archive, 4, objectiveCount );
+                                   archive.readCount( 4, objectiveCount );
             if ( bHeadRead == false )
                 return false;
             progress._listCount.resize( objectiveCount, 0 );

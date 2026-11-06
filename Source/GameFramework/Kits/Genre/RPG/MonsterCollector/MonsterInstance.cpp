@@ -470,13 +470,13 @@ namespace sw
     {
         uint32                  partyCount = 0;
         vector<MonsterInstance> listParty;
-        if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, MonsterInstance::kStateMinBytes, partyCount ) == false || partyCount > static_cast<uint32>( kPartySize ) )
+        if ( _pCatalog == nullptr || archive.readCount( MonsterInstance::kStateMinBytes, partyCount ) == false || partyCount > static_cast<uint32>( kPartySize ) )
             return false;
         if ( readMonsters( archive, partyCount, listParty ) == false )
             return false;
         uint32                  boxCount = 0;
         vector<MonsterInstance> listBox;
-        if ( StateArchiveUtil::readCount( archive, MonsterInstance::kStateMinBytes, boxCount ) == false || boxCount > static_cast<uint32>( _boxCapacity ) )
+        if ( archive.readCount( MonsterInstance::kStateMinBytes, boxCount ) == false || boxCount > static_cast<uint32>( _boxCapacity ) )
             return false;
         if ( readMonsters( archive, boxCount, listBox ) == false )
             return false;

@@ -746,7 +746,7 @@ namespace sw
         int32 entryFee = 0;
         archive >> entryFee;
         uint32 rideCount = 0;
-        if ( archive.isError() || entryFee < 0 || StateArchiveUtil::readCount( archive, ThemeParkInternal::kMinRideStateBytes, rideCount ) == false )
+        if ( archive.isError() || entryFee < 0 || archive.readCount( ThemeParkInternal::kMinRideStateBytes, rideCount ) == false )
             return false;
         vector<ParkRide> listRide( rideCount );
         for ( ParkRide& ride : listRide )
@@ -755,7 +755,7 @@ namespace sw
                 return false;
         }
         uint32 guestCount = 0;
-        if ( StateArchiveUtil::readCount( archive, ThemeParkInternal::kMinGuestStateBytes, guestCount ) == false )
+        if ( archive.readCount( ThemeParkInternal::kMinGuestStateBytes, guestCount ) == false )
             return false;
         vector<ParkGuest> listGuest( guestCount );
         for ( ParkGuest& guest : listGuest )

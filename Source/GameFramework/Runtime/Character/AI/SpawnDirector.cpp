@@ -264,7 +264,7 @@ namespace sw
     {
         uint32 count = 0;
         // 살아 있는 것마다 id(4) + 항목(4)
-        if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+        if ( archive.readCount( 8, count ) == false )
             return false;
         const int32        entryCount = static_cast<int32>( _listAliveCount.size() );
         vector<SpawnAlive> listAlive( count );
@@ -275,7 +275,7 @@ namespace sw
             if ( alive._entryIndex < 0 || alive._entryIndex >= entryCount )
                 archive.setError();
         }
-        const bool bInvalidAliveState = archive.isError() || StateArchiveUtil::readCount( archive, 4, count ) == false || count != _listAliveCount.size();
+        const bool bInvalidAliveState = archive.isError() || archive.readCount( 4, count ) == false || count != _listAliveCount.size();
         if ( bInvalidAliveState )
             return false;
         vector<int32> listAliveCount( count, 0 );
@@ -283,7 +283,7 @@ namespace sw
         {
             archive >> aliveCount;
         }
-        if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+        if ( archive.readCount( 4, count ) == false )
             return false;
         vector<hashed_string> listAllowedTag( count );
         for ( hashed_string& tag : listAllowedTag )

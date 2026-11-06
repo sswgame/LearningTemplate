@@ -800,7 +800,7 @@ namespace sw
         for ( Side& side : restored._arrSide )
         {
             uint32 monsterCount = 0;
-            if ( StateArchiveUtil::readCount( archive, MonsterInstance::kStateMinBytes, monsterCount ) == false )
+            if ( archive.readCount( MonsterInstance::kStateMinBytes, monsterCount ) == false )
                 return false;
             side._listMonster.assign( monsterCount, MonsterInstance{} );
             for ( MonsterInstance& monster : side._listMonster )

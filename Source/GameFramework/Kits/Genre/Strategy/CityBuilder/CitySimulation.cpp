@@ -138,7 +138,7 @@ namespace sw
             [[nodiscard]] static bool readTileList( Archive& archive, vector<int2>& outListTile )
             {
                 uint32 count = 0;
-                if ( StateArchiveUtil::readCount( archive, sizeof( int32 ) * 2, count ) == false )
+                if ( archive.readCount( sizeof( int32 ) * 2, count ) == false )
                     return false;
                 outListTile.resize( count );
                 for ( int2& tile : outListTile )
@@ -1250,7 +1250,7 @@ namespace sw
         }
 
         uint32 buildingCount = 0;
-        if ( StateArchiveUtil::readCount( archive, CitySimulationInternal::kMinBuildingStateBytes, buildingCount ) == false )
+        if ( archive.readCount( CitySimulationInternal::kMinBuildingStateBytes, buildingCount ) == false )
             return false;
         vector<CityBuilding> listBuilding( buildingCount );
         for ( CityBuilding& building : listBuilding )
@@ -1262,7 +1262,7 @@ namespace sw
             return false;
 
         uint32 walkerCount = 0;
-        if ( StateArchiveUtil::readCount( archive, CitySimulationInternal::kMinWalkerStateBytes, walkerCount ) == false )
+        if ( archive.readCount( CitySimulationInternal::kMinWalkerStateBytes, walkerCount ) == false )
             return false;
         vector<CityWalker> listWalker( walkerCount );
         for ( CityWalker& walker : listWalker )

@@ -137,11 +137,10 @@ namespace sw
         uint32 version = 0;
         uint32 count   = 0;
         archive >> version;
-        archive >> count;
         if ( archive.isError() || version != kVersion )
             return false;
         // 파일이 말한 개수를 그대로 잡지 않는다 — 깨진 값 하나가 수십 기가를 요구한다.
-        if ( static_cast<uint64>( count ) * ComponentStateStoreInternal::kMinEntryBytes > archive.getRemainingBytes() )
+        if ( archive.readCount( ComponentStateStoreInternal::kMinEntryBytes, count ) == false )
             return false;
         _listEntry.reserve( count );
         for ( uint32 index = 0; index < count; ++index )

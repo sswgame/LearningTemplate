@@ -317,7 +317,7 @@ namespace sw
 
         uint32 projectileCount = 0;
         // 투사체마다 위치(8) + 속도(8) + 피해(4) + 남은 시간(4) + id(4) + 편(1) + 되받아침(1) 바이트
-        if ( StateArchiveUtil::readCount( archive, 30, projectileCount ) == false )
+        if ( archive.readCount( 30, projectileCount ) == false )
             return false;
         restored._listProjectile.assign( projectileCount, ActionProjectile{} );
         for ( ActionProjectile& projectile : restored._listProjectile )

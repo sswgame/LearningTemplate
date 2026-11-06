@@ -35,11 +35,11 @@ namespace sw
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
             static constexpr uint32 kBinVersion = 5;
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯과 파일 id(8바이트)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
-            static constexpr uint64 kMinBytesPerEntity = 5u * sizeof( uint32 ) + sizeof( uint64 );
+            static constexpr uint32 kMinBytesPerEntity = 5u * sizeof( uint32 ) + sizeof( uint64 );
             /** @brief 지운 칸입니다. 프리팹은 경로로만 가리킨다 — 이 속성이 남은 씬은 오류로 읽지 않는다(옛 GUID 를 말없이 버리면 그 엔티티가 무엇을 가리켰는지 모른다). */
             static constexpr const utf8* kRemovedPrefabGUID = "prefabGUID";
             // 셀 하나는 좌표 둘과 엔티티 수다.
-            static constexpr uint64 kMinBytesPerCell = 2u * sizeof( int32 ) + sizeof( uint32 );
+            static constexpr uint32 kMinBytesPerCell = 2u * sizeof( int32 ) + sizeof( uint32 );
 
             /** @brief 엔티티 목록을 씁니다(수, 엔티티마다 필드). */
             static void writeEntities( Archive& arch, const vector<SceneDocument::SceneObjectNode>& listNode )
@@ -64,12 +64,9 @@ namespace sw
             [[nodiscard]] static bool readEntities( Archive& arch, vector<SceneDocument::SceneObjectNode>& outListNode, string_view absPath )
             {
                 uint32 entityCount{ 0 };
-                arch >> entityCount;
-                const uint64 maxPossibleEntity = arch.getRemainingBytes() / kMinBytesPerEntity;
-                if ( arch.isError() || static_cast<uint64>( entityCount ) > maxPossibleEntity )
+                if ( arch.readCount( kMinBytesPerEntity, entityCount ) == false )
                 {
-                    SW_LOG_ERROR_ID( "SceneDocument.BinarySceneClaimsEntities", "Binary scene claims %# entities but only %# can fit in %# remaining bytes: %#", entityCount, maxPossibleEntity,
-                                     arch.getRemainingBytes(), absPath );
+                    SW_LOG_ERROR_ID( "SceneDocument.BinarySceneClaimsEntities", "Binary scene claims more entities than can fit in its %# remaining bytes: %#", arch.getRemainingBytes(), absPath );
                     return false;
                 }
 
@@ -362,11 +359,9 @@ namespace sw
         }
 
         uint32 cellCount{ 0 };
-        arch >> cellCount;
-        const uint64 maxPossibleCell = arch.getRemainingBytes() / SceneDocumentInternal::kMinBytesPerCell;
-        if ( arch.isError() || static_cast<uint64>( cellCount ) > maxPossibleCell )
+        if ( arch.readCount( SceneDocumentInternal::kMinBytesPerCell, cellCount ) == false )
         {
-            SW_LOG_ERROR_ID( "SceneDocument.BinarySceneClaimsStreaming", "Binary scene claims %# streaming cells but only %# can fit: %#", cellCount, maxPossibleCell, absPath );
+            SW_LOG_ERROR_ID( "SceneDocument.BinarySceneClaimsStreaming", "Binary scene claims more streaming cells than can fit in its %# remaining bytes: %#", arch.getRemainingBytes(), absPath );
             *this = {};
             return false;
         }

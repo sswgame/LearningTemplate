@@ -161,14 +161,14 @@ namespace sw
         uint32 count          = 0;
         archive >> characterLevel;
         // 그룹마다 슬롯 수(4) + 변이원(4) 바이트 이상
-        const bool bInvalidMutagenData = _pCatalog == nullptr || archive.isError() || StateArchiveUtil::readCount( archive, 8, count ) == false || count != _listGroup.size();
+        const bool bInvalidMutagenData = _pCatalog == nullptr || archive.isError() || archive.readCount( 8, count ) == false || count != _listGroup.size();
         if ( bInvalidMutagenData )
             return false;
         vector<Group>         listGroup = _listGroup;
         vector<hashed_string> listSeenSkill;
         for ( Group& group : listGroup )
         {
-            if ( StateArchiveUtil::readCount( archive, 4, count ) == false || count != group._listSkill.size() )
+            if ( archive.readCount( 4, count ) == false || count != group._listSkill.size() )
                 return false;
             for ( hashed_string& skillID : group._listSkill )
             {

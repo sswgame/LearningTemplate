@@ -139,7 +139,7 @@ namespace sw
             [[nodiscard]] static bool readLoadout( Archive& archive, const MechCatalog& catalog, MechPilot& outPilot )
             {
                 uint32 deckCount = 0;
-                if ( StateArchiveUtil::readCount( archive, 4, deckCount ) == false || deckCount == 0 )
+                if ( archive.readCount( 4, deckCount ) == false || deckCount == 0 )
                     return false;
                 for ( uint32 index = 0; index < deckCount; ++index )
                 {
@@ -152,7 +152,7 @@ namespace sw
                     outPilot._listDeckMech.push_back( pMech );
                 }
                 uint32 skillCount = 0;
-                if ( StateArchiveUtil::readCount( archive, 4, skillCount ) == false )
+                if ( archive.readCount( 4, skillCount ) == false )
                     return false;
                 for ( uint32 index = 0; index < skillCount; ++index )
                 {
@@ -1089,7 +1089,7 @@ namespace sw
         // 사본에 읽고 끝까지 맞으면 바꾼다. 설정과 카탈로그는 사본이 그대로 가지고 있다.
         MechArenaWorld restored  = *this;
         uint32         teamCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, teamCount ) == false )
+        if ( archive.readCount( 4, teamCount ) == false )
             return false;
         restored._listTeamName.assign( teamCount, hashed_string{} );
         for ( hashed_string& name : restored._listTeamName )
@@ -1111,7 +1111,7 @@ namespace sw
 
         uint32 pilotCount = 0;
         // 조종사마다 적어도 덱 개수(4) + 기체 이름(4) + 스킬 개수(4) + 위치, 정수, 상태 슬롯(60) 바이트
-        if ( StateArchiveUtil::readCount( archive, 72, pilotCount ) == false )
+        if ( archive.readCount( 72, pilotCount ) == false )
             return false;
         restored._listPilot.assign( pilotCount, MechPilot{} );
         for ( uint32 index = 0; index < pilotCount; ++index )
@@ -1127,7 +1127,7 @@ namespace sw
 
         uint32 projectileCount = 0;
         // 탄마다 위치(12) + 방향(12) + 실수 7개(28) + 쏜 쪽과 대상(8) + 종류(1) 바이트
-        if ( StateArchiveUtil::readCount( archive, 61, projectileCount ) == false )
+        if ( archive.readCount( 61, projectileCount ) == false )
             return false;
         restored._listProjectile.assign( projectileCount, MechProjectile{} );
         for ( MechProjectile& projectile : restored._listProjectile )
@@ -1211,7 +1211,7 @@ namespace sw
 
         uint32 participantCount = 0;
         // 참가자는 `start` 가 덱 슬롯마다 만든다. `stepMatch` 와 `resolveHit` 가 지금 슬롯의 참가자를 그대로 찾는다.
-        if ( StateArchiveUtil::readCount( archive, 4, participantCount ) == false || participantCount != ( _bStarted == SW_TRUE ? deckCount : 0u ) )
+        if ( archive.readCount( 4, participantCount ) == false || participantCount != ( _bStarted == SW_TRUE ? deckCount : 0u ) )
             return false;
         outPilot._listParticipant.assign( participantCount, -1 );
         for ( int32& participant : outPilot._listParticipant )

@@ -158,7 +158,7 @@ namespace sw
         uint32  signalCount = 0;
         archive >> stress;
         archive >> calmSeconds;
-        if ( StateArchiveUtil::readCount( archive, 4, signalCount ) == false || signalCount != _listSignalValue.size() )
+        if ( archive.readCount( 4, signalCount ) == false || signalCount != _listSignalValue.size() )
             return false;
         vector<float32> listSignalValue( signalCount, 0.0f );
         for ( float32& value : listSignalValue )

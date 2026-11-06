@@ -15,6 +15,47 @@
 /**
  * @brief [ArchiveTest] Archive 바이너리 기본 타입 직렬화/역직렬화
  */
+SW_TEST_CASE( ArchiveTest, ReadCountRefusesCountsThatDoNotFit )
+{
+    sw::Archive writer;
+    writer << uint32{ 2 } << uint32{ 10 } << uint32{ 20 };
+    {
+        sw::Archive reader( writer.getData(), writer.getSize() );
+        uint32      count = 0;
+        SW_EXPECT_TRUE( reader.readCount( sizeof( uint32 ), count ) );
+        SW_EXPECT_EQUAL( 2u, count );
+        SW_EXPECT_TRUE( reader.isOk() );
+    }
+    {
+        // 원소가 넷씩 차지하면 2 개는 8 바이트, 8 바이트가 넘는 크기면 담을 수 없다.
+        sw::Archive reader( writer.getData(), writer.getSize() );
+        uint32      count = 77;
+        SW_EXPECT_FALSE( reader.readCount( 5, count ) );
+        SW_EXPECT_EQUAL( 77u, count ); // 실패하면 건드리지 않는다
+        SW_EXPECT_TRUE( reader.isError() );
+    }
+    {
+        sw::Archive forged;
+        forged << 0xFFFFFFFFu << uint32{ 1 };
+        sw::Archive reader( forged.getData(), forged.getSize() );
+        uint32      count = 0;
+        SW_EXPECT_FALSE( reader.readCount( 8, count ) );
+        SW_EXPECT_TRUE( reader.isError() );
+    }
+}
+
+SW_TEST_CASE( ArchiveTest, ReadFiniteFloatsRefusesNonFinite )
+{
+    sw::Archive writer;
+    writer << uint32{ 0x3F800000u } << uint32{ 0x7FC00000u };
+    sw::Archive reader( writer.getData(), writer.getSize() );
+    float32     arrValue[2] = { 5.0f, 5.0f };
+    reader.readFiniteFloats( arrValue, 2 );
+    SW_EXPECT_TRUE( reader.isError() );
+    SW_EXPECT_EQUAL( 0.0f, arrValue[0] ); // 반쯤 읽은 값을 남기지 않는다
+    SW_EXPECT_EQUAL( 0.0f, arrValue[1] );
+}
+
 SW_TEST_CASE( ArchiveTest, MemoryArchiveBinarySerialization )
 {
     sw::Archive arch;

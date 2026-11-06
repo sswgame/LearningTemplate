@@ -32,7 +32,10 @@ namespace sw
         uint32 componentCount{ 0 };
         if ( archive.readString( outSnapshot._xml ) == false )
             return false;
-        archive >> outSnapshot._identity._objectID >> componentCount;
+        archive >> outSnapshot._identity._objectID;
+        // 항목 하나는 적어도 이름 길이 · id · 키 길이다.
+        if ( archive.readCount( sizeof( uint32 ) + sizeof( uint64 ) + sizeof( uint32 ), componentCount ) == false )
+            return false;
         outSnapshot._identity._listComponent.resize( componentCount );
         for ( ObjectIdentity::ComponentEntry& entry : outSnapshot._identity._listComponent )
         {

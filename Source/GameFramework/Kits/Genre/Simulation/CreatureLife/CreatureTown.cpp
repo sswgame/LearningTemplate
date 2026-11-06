@@ -60,7 +60,7 @@ namespace sw
             [[nodiscard]] static bool readNameList( Archive& archive, vector<hashed_string>& outListName )
             {
                 uint32 count = 0;
-                if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+                if ( archive.readCount( 4, count ) == false )
                     return false;
                 outListName.assign( count, hashed_string{} );
                 for ( hashed_string& name : outListName )
@@ -80,7 +80,7 @@ namespace sw
                 StateArchiveUtil::readInt2( archive, outHabitat._origin );
                 archive >> outHabitat._id;
                 archive >> outHabitat._rotation;
-                if ( StateArchiveUtil::readCount( archive, 4, habitatTileCount ) == false )
+                if ( archive.readCount( 4, habitatTileCount ) == false )
                     return false;
                 // 서식지는 적어도 한 셀을 차지하고 번호는 1 부터이다(`matchesAt`, `_nextHabitatID`). 회전은 해시와 맞춤에 그대로 쓴다.
                 if ( habitatTileCount == 0 || outHabitat._id <= 0 || outHabitat._rotation < 0 || kRotationCount <= outHabitat._rotation )
@@ -100,7 +100,7 @@ namespace sw
             [[nodiscard]] static bool readCreature( Archive& archive, TownCreature& outCreature )
             {
                 uint32     abilityCount = 0;
-                const bool bHeadRead    = StateArchiveUtil::readName( archive, outCreature._speciesID ) && StateArchiveUtil::readCount( archive, 4, abilityCount );
+                const bool bHeadRead    = StateArchiveUtil::readName( archive, outCreature._speciesID ) && archive.readCount( 4, abilityCount );
                 if ( bHeadRead == false )
                     return false;
                 outCreature._listAbilityUse.resize( abilityCount, 0 );
@@ -845,7 +845,7 @@ namespace sw
 
         uint32 habitatCount = 0;
         // 서식지마다 이름(4) + 위치(8) + 번호(4) + 회전(4) + 셀 수(4) 이상
-        if ( StateArchiveUtil::readCount( archive, 24, habitatCount ) == false )
+        if ( archive.readCount( 24, habitatCount ) == false )
             return false;
         town._listHabitat.assign( habitatCount, HabitatInstance{} );
         for ( HabitatInstance& habitat : town._listHabitat )
@@ -856,7 +856,7 @@ namespace sw
 
         uint32 creatureCount = 0;
         // 생물마다 이름(4) + 능력 수(4) + 서식지, 집, 대화 날, 선물 날, 온 날(20) 이상
-        if ( StateArchiveUtil::readCount( archive, 28, creatureCount ) == false )
+        if ( archive.readCount( 28, creatureCount ) == false )
             return false;
         town._listCreature.assign( creatureCount, TownCreature{} );
         for ( TownCreature& creature : town._listCreature )
@@ -867,7 +867,7 @@ namespace sw
 
         uint32 houseCount = 0;
         // 집마다 사는 수(4) + 셀(8) + 정원(4) 이상
-        if ( StateArchiveUtil::readCount( archive, 16, houseCount ) == false )
+        if ( archive.readCount( 16, houseCount ) == false )
             return false;
         town._listHouse.assign( houseCount, CreatureHouse{} );
         for ( CreatureHouse& house : town._listHouse )

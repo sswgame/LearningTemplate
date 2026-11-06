@@ -324,7 +324,7 @@ namespace sw
         archive >> restored._layoutSeed;
 
         uint32 scrapCount = 0;
-        if ( StateArchiveUtil::readCount( archive, kMinScrapBytes, scrapCount ) == false )
+        if ( archive.readCount( kMinScrapBytes, scrapCount ) == false )
             return false;
         restored._listGroundScrap.assign( scrapCount, ScavengerScrap{} );
         for ( ScavengerScrap& scrap : restored._listGroundScrap )
@@ -334,7 +334,7 @@ namespace sw
         }
 
         uint32 flagCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, flagCount ) == false )
+        if ( archive.readCount( 4, flagCount ) == false )
             return false;
         restored._listUnlockedFlag.assign( flagCount, hashed_string{} );
         for ( hashed_string& flag : restored._listUnlockedFlag )

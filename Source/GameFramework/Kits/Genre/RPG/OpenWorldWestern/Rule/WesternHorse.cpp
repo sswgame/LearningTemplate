@@ -229,7 +229,7 @@ namespace sw
         if ( bSameDef == false && restored.initialize( _pCatalog, horseID, 1 ) == false )
             return false;
         uint32 abilityCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, abilityCount ) == false )
+        if ( archive.readCount( 4, abilityCount ) == false )
             return false;
         restored._listAbility.resize( abilityCount );
         for ( hashed_string& ability : restored._listAbility )

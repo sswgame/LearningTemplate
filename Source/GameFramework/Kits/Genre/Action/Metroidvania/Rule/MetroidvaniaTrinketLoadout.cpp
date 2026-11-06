@@ -146,7 +146,7 @@ namespace sw
         {
             vector<hashed_string>& listCharm  = listIndex == 0 ? listOwned : listEquipped;
             uint32                 charmCount = 0;
-            if ( StateArchiveUtil::readCount( archive, 4, charmCount ) == false )
+            if ( archive.readCount( 4, charmCount ) == false )
                 return false;
             listCharm.reserve( charmCount );
             for ( uint32 entry = 0; entry < charmCount; ++entry )

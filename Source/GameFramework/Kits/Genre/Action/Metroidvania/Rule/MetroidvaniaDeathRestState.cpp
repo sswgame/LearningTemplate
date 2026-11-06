@@ -220,7 +220,7 @@ namespace sw
     {
         uint32 killCount = 0;
         // 처치마다 위치 id(4) + 보스(1) 바이트 이상
-        if ( StateArchiveUtil::readCount( archive, 5, killCount ) == false )
+        if ( archive.readCount( 5, killCount ) == false )
             return false;
         vector<MetroidvaniaKillRecord> listKill( killCount );
         for ( MetroidvaniaKillRecord& kill : listKill )

@@ -276,7 +276,7 @@ namespace sw
         MonsterHuntAlchemy restored = *this;
         uint32             count    = 0;
         // 충전마다 이름(4) + 횟수(4) 바이트
-        if ( restored._crafter.readState( archive ) == false || StateArchiveUtil::readCount( archive, 8, count ) == false )
+        if ( restored._crafter.readState( archive ) == false || archive.readCount( 8, count ) == false )
             return false;
         restored._listCharge.assign( count, ChargeEntry{} );
         for ( ChargeEntry& charge : restored._listCharge )
@@ -288,7 +288,7 @@ namespace sw
                 return false;
         }
         // 효과마다 이름(4) + 남은 시간(4) + 묶인 독성(4) 바이트
-        if ( StateArchiveUtil::readCount( archive, 12, count ) == false )
+        if ( archive.readCount( 12, count ) == false )
             return false;
         restored._listEffect.assign( count, MonsterHuntActiveEffect{} );
         for ( MonsterHuntActiveEffect& effect : restored._listEffect )

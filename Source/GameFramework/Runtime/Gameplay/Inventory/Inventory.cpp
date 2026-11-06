@@ -424,7 +424,7 @@ namespace sw
         uint32  slotCount = 0;
         archive >> maxWeight;
         // 슬롯마다 이름(4) + 개수, 내구도, 피해(12) + 꾸미기 수, 부품 수(8)
-        const bool bInvalidInventoryArchive = archive.isError() || ( 0.0f <= maxWeight ) == false || StateArchiveUtil::readCount( archive, 24, slotCount ) == false || slotCount != _listSlot.size();
+        const bool bInvalidInventoryArchive = archive.isError() || ( 0.0f <= maxWeight ) == false || archive.readCount( 24, slotCount ) == false || slotCount != _listSlot.size();
         if ( bInvalidInventoryArchive )
             return false;
         vector<InventorySlot> listSlot( slotCount );
@@ -437,7 +437,7 @@ namespace sw
             archive >> slot._durability;
             archive >> slot._damage;
             // 값마다 이름 두 개(8) + 숫자 네 개(16)
-            if ( StateArchiveUtil::readCount( archive, 24, valueCount ) == false )
+            if ( archive.readCount( 24, valueCount ) == false )
                 return false;
             for ( uint32 valueIndex = 0; valueIndex < valueCount; ++valueIndex )
             {
@@ -448,7 +448,7 @@ namespace sw
                 slot._customization.setValue( value );
             }
             uint32 partCount = 0;
-            if ( StateArchiveUtil::readCount( archive, 4, partCount ) == false )
+            if ( archive.readCount( 4, partCount ) == false )
                 return false;
             slot._listDetachedPart.resize( partCount );
             for ( hashed_string& part : slot._listDetachedPart )

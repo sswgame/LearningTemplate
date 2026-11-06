@@ -100,7 +100,7 @@ namespace sw
                     return false;
                 outBlend._curve = static_cast<BlendCurve>( curve );
                 uint32 keyCount = 0;
-                if ( StateArchiveUtil::readCount( archive, 8, keyCount ) == false )
+                if ( archive.readCount( 8, keyCount ) == false )
                     return false;
                 outBlend._listCustomKey.resize( keyCount );
                 for ( BlendCurveKey& key : outBlend._listCustomKey )
@@ -369,7 +369,7 @@ namespace sw
         archive >> bHasPose;
         Internal::readPose( archive, outputPose );
         uint32 layerCount = 0;
-        if ( StateArchiveUtil::readCount( archive, Internal::kLayerMinBytes, layerCount ) == false || layerCount > kMaxLayerCount )
+        if ( archive.readCount( Internal::kLayerMinBytes, layerCount ) == false || layerCount > kMaxLayerCount )
             return false;
         // 임시에 다 읽고 끝까지 맞을 때만 바꾼다 — 반쯤 읽은 스택을 남기지 않는다.
         vector<Layer> listLayer( layerCount );

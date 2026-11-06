@@ -609,7 +609,7 @@ namespace sw
 
         uint32 unitCount = 0;
         // 유닛마다 이름 둘(8) + 탄 수(4) + 레벨 둘(40) + 셀(8) + HP, EN, 기력, 회피, 명단(20) + 팀, 비트 여섯(7)
-        if ( StateArchiveUtil::readCount( archive, 87, unitCount ) == false )
+        if ( archive.readCount( 87, unitCount ) == false )
             return false;
         restored._listUnit.assign( unitCount, SRPGUnit{} );
         for ( SRPGUnit& unit : restored._listUnit )
@@ -618,7 +618,7 @@ namespace sw
             hashed_string pilotID;
             uint32        ammoCount = 0;
             const bool    bHeadRead =
-                StateArchiveUtil::readName( archive, unitID ) && StateArchiveUtil::readName( archive, pilotID ) && StateArchiveUtil::readCount( archive, 4, ammoCount );
+                StateArchiveUtil::readName( archive, unitID ) && StateArchiveUtil::readName( archive, pilotID ) && archive.readCount( 4, ammoCount );
             if ( bHeadRead == false )
                 return false;
             unit._pDef   = _pCatalog->findUnit( unitID );

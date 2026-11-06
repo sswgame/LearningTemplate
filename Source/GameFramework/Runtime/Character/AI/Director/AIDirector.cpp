@@ -630,7 +630,7 @@ namespace sw
         archive >> pickSerial;
         GameRandom random;
         uint32     poolCount = 0;
-        if ( StateArchiveUtil::readRandom( archive, random ) == false || StateArchiveUtil::readCount( archive, Internal::kPoolMinBytes, poolCount ) == false )
+        if ( StateArchiveUtil::readRandom( archive, random ) == false || archive.readCount( Internal::kPoolMinBytes, poolCount ) == false )
             return false;
         const vector<AIDirectorPoolDef>& listPool = _pProfile->getPools();
         const bool                       bShape   = phaseCount == static_cast<int32>( _pProfile->getPhases().size() ) && 0 <= phaseIndex && phaseIndex < phaseCount && poolCount == listPool.size();
@@ -646,7 +646,7 @@ namespace sw
             archive >> state._lastPickTime;
             archive >> state._pendingIndex;
             uint32 encounterCount = 0;
-            if ( StateArchiveUtil::readCount( archive, Internal::kEncounterBytes, encounterCount ) == false || encounterCount != listPool[poolIndex]._listEncounter.size() )
+            if ( archive.readCount( Internal::kEncounterBytes, encounterCount ) == false || encounterCount != listPool[poolIndex]._listEncounter.size() )
                 return false;
             state._listEncounter.resize( encounterCount );
             for ( EncounterState& encounter : state._listEncounter )

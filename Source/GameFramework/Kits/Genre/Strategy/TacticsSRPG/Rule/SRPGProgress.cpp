@@ -202,7 +202,7 @@ namespace sw
         RunMap runMap;
         uint32 count = 0;
         // 명단마다 레벨 둘(40) + 이름 둘(8) + 잃음(1)
-        if ( runMap.readState( archive ) == false || StateArchiveUtil::readCount( archive, 49, count ) == false )
+        if ( runMap.readState( archive ) == false || archive.readCount( 49, count ) == false )
             return false;
         vector<SRPGRosterEntry> listRoster( count );
         for ( SRPGRosterEntry& entry : listRoster )

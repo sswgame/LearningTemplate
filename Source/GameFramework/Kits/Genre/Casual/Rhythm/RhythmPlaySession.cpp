@@ -315,7 +315,7 @@ namespace sw
 
         uint32 recordCount = 0;
         // 입력마다 시각(4) + 레인(4) + 누름(1)
-        if ( StateArchiveUtil::readCount( archive, 9, recordCount ) == false )
+        if ( archive.readCount( 9, recordCount ) == false )
             return false;
         vector<RhythmInputRecord> listInputRecord( recordCount, RhythmInputRecord{} );
         for ( RhythmInputRecord& record : listInputRecord )

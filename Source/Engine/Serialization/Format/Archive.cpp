@@ -11,6 +11,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -203,6 +204,21 @@ namespace sw
         const uint8* pSubData = _pData + _offset;
         _offset += byteSize;
         return Archive( pSubData, byteSize );
+    }
+
+    bool Archive::readCount( uint32 minBytesPerElement, uint32& outCount )
+    {
+        uint32 count = 0;
+        ( *this ) >> count;
+        if ( _bError == SW_TRUE )
+            return false;
+        if ( ByteReader::canHoldCount( count, minBytesPerElement, getRemainingBytes() ) == false )
+        {
+            _bError = SW_TRUE;
+            return false;
+        }
+        outCount = count;
+        return true;
     }
 
     void Archive::writeSection( const void* pData, uint32 byteSize )

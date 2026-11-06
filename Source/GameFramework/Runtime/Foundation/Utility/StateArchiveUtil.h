@@ -1,6 +1,6 @@
 /**
  * @file StateArchiveUtil.h
- * @brief 키트 시뮬레이션의 `writeState` 와 `readState`(바이너리 `Archive`)가 함께 쓰는 머리, 이름, 개수 읽기 도우미를 정의합니다.
+ * @brief 키트 시뮬레이션의 `writeState` 와 `readState`(바이너리 `Archive`)가 함께 쓰는 머리, 이름, 목록 읽기 도우미를 정의합니다.
  */
 #pragma once
 #include "Core/Container/vector.h"
@@ -21,7 +21,7 @@ namespace sw
 
     /**
      * @struct StateArchiveUtil
-     * @brief 시뮬레이션 상태 바이트의 공통 모양을 정합니다. 머리(형식 표와 버전) 다음에 본문이 오고, 이름은 길이가 붙은 글자이며, 개수는 남은 바이트로 상한을 둡니다.
+     * @brief 시뮬레이션 상태 바이트의 공통 모양을 정합니다. 머리(형식 표와 버전) 다음에 본문이 오고, 이름은 길이가 붙은 글자이며, 개수는 남은 바이트로 상한을 둡니다(`Archive::readCount`).
      * @details 같은 상태를 핫 리로드(같은 실행)와 세이브(다른 실행)가 함께 쓴다.
      *          그래서 포인터 대신 id 와 이름을 쓰고, 읽을 때는 임시에 읽어서 끝까지 맞으면 그때 바꾼다. 반쯤 읽은 상태를 남기지 않는다.
      */
@@ -52,12 +52,6 @@ namespace sw
 
         static void               writeName( Archive& outArchive, const hashed_string& name );
         [[nodiscard]] static bool readName( Archive& archive, hashed_string& outName );
-
-        /**
-         * @brief 원소 개수를 읽습니다. 원소마다 적어도 @p minBytesPerElement 바이트를 쓰므로, 남은 바이트로 담을 수 없는 개수면 false 입니다.
-         * @details 깨진 개수 하나가 `reserve` 로 수십 기가를 요구하지 않게 막는다.
-         */
-        [[nodiscard]] static bool readCount( Archive& archive, uint32 minBytesPerElement, uint32& outCount );
 
         /** @brief id 목록 하나(개수 + id 들)를 씁니다. `readIDList` 가 읽습니다. 64비트 id(묶은 id)는 `uint64` 목록 버전을 씁니다. */
         static void writeIDList( Archive& outArchive, const vector<uint32>& listID );

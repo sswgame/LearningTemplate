@@ -94,7 +94,7 @@ namespace sw
         int32  orbCount = 0;
         uint32 count    = 0;
         archive >> orbCount;
-        if ( archive.isError() || orbCount < 0 || StateArchiveUtil::readCount( archive, 2, count ) == false || count != _listActivated.size() )
+        if ( archive.isError() || orbCount < 0 || archive.readCount( 2, count ) == false || count != _listActivated.size() )
             return false;
         vector<uint8> listActivated( count, SW_FALSE );
         vector<uint8> listCompleted( count, SW_FALSE );

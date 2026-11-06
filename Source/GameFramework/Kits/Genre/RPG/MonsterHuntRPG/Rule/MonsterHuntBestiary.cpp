@@ -157,7 +157,7 @@ namespace sw
     {
         uint32 count = 0;
         // 괴물마다 이름(4) + 지식과 처치 수(8) 바이트
-        if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 12, count ) == false )
+        if ( _pCatalog == nullptr || archive.readCount( 12, count ) == false )
             return false;
         vector<Entry> listEntry( count );
         for ( Entry& entry : listEntry )

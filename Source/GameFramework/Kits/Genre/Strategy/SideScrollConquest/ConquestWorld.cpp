@@ -64,7 +64,7 @@ namespace sw
             {
                 hashed_string buildingID;
                 uint32        queueCount = 0;
-                if ( StateArchiveUtil::readName( archive, buildingID ) == false || StateArchiveUtil::readCount( archive, 4, queueCount ) == false )
+                if ( StateArchiveUtil::readName( archive, buildingID ) == false || archive.readCount( 4, queueCount ) == false )
                     return false;
                 outBuilding._pDef = catalog.findBuilding( buildingID );
                 if ( outBuilding._pDef == nullptr )
@@ -385,7 +385,7 @@ namespace sw
         ConquestWorld restored = *this;
         uint32        count    = 0;
         // 거점은 카탈로그의 거점마다 하나이다. 이름(4) + 성문, 성벽, 점령(12) + 주인, 점령 편(2)
-        if ( StateArchiveUtil::readCount( archive, 18, count ) == false || count != _listSite.size() )
+        if ( archive.readCount( 18, count ) == false || count != _listSite.size() )
             return false;
         for ( ConquestSite& site : restored._listSite )
         {
@@ -394,7 +394,7 @@ namespace sw
         }
 
         // 건물마다 이름(4) + 대기열 수(4) + 진행 둘(8) + 슬롯, 일꾼(8)
-        if ( StateArchiveUtil::readCount( archive, 24, count ) == false )
+        if ( archive.readCount( 24, count ) == false )
             return false;
         const int32 siteCount = static_cast<int32>( restored._listSite.size() );
         restored._listBuilding.assign( count, ConquestBuilding{} );
@@ -405,7 +405,7 @@ namespace sw
         }
 
         // 병사마다 이름(4) + 위치, 체력, 쿨다운, 대기 위치, 준 피해(20) + 번호, 부대 슬롯(8) + 편, 명령, 생존, 사다리(4)
-        if ( StateArchiveUtil::readCount( archive, 36, count ) == false )
+        if ( archive.readCount( 36, count ) == false )
             return false;
         restored._listUnit.assign( count, ConquestUnit{} );
         for ( ConquestUnit& unit : restored._listUnit )

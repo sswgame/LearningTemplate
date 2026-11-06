@@ -78,9 +78,11 @@ namespace sw
 
         [[nodiscard]] bool readReflectionInternal( Archive& archive, ShaderReflectionData& outReflection )
         {
+            // 원소의 최소 바이트: 이름 길이 + 안의 개수(버퍼 · 요소), 이름 · 형식 길이(변수 · 바인딩).
+            constexpr uint32 kMinElementBytes = sizeof( uint32 ) * 2;
+
             uint32 bufferCount{ 0 };
-            archive >> bufferCount;
-            if ( archive.isError() )
+            if ( archive.readCount( kMinElementBytes, bufferCount ) == false )
                 return false;
 
             outReflection._listConstantBuffer.resize( bufferCount );
@@ -92,8 +94,7 @@ namespace sw
                 archive >> buffer._totalSize;
 
                 uint32 variableCount{ 0 };
-                archive >> variableCount;
-                if ( archive.isError() )
+                if ( archive.readCount( kMinElementBytes, variableCount ) == false )
                     return false;
 
                 buffer._listVariable.resize( variableCount );
@@ -107,8 +108,7 @@ namespace sw
             }
 
             uint32 resourceCount{ 0 };
-            archive >> resourceCount;
-            if ( archive.isError() )
+            if ( archive.readCount( kMinElementBytes, resourceCount ) == false )
                 return false;
 
             outReflection._listResource.resize( resourceCount );
@@ -122,8 +122,7 @@ namespace sw
             }
 
             uint32 elementCount{ 0 };
-            archive >> elementCount;
-            if ( archive.isError() )
+            if ( archive.readCount( kMinElementBytes, elementCount ) == false )
                 return false;
             outReflection._listStructuredElement.resize( elementCount );
             for ( ShaderBufferInfo& element : outReflection._listStructuredElement )
@@ -133,8 +132,7 @@ namespace sw
                 archive >> element._bindPoint;
                 archive >> element._totalSize;
                 uint32 variableCount{ 0 };
-                archive >> variableCount;
-                if ( archive.isError() )
+                if ( archive.readCount( kMinElementBytes, variableCount ) == false )
                     return false;
                 element._listVariable.resize( variableCount );
                 for ( ShaderVariableInfo& variable : element._listVariable )

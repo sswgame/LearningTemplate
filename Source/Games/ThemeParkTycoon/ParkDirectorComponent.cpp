@@ -352,7 +352,7 @@ namespace sw
         ThemeParkSimulation simulation;
         simulation.initialize( _settings, makeRefs() );
         uint32 placementCount = 0;
-        if ( simulation.readState( archive ) == false || StateArchiveUtil::readCount( archive, sizeof( int32 ), placementCount ) == false )
+        if ( simulation.readState( archive ) == false || archive.readCount( sizeof( int32 ), placementCount ) == false )
             return false;
         if ( placementCount != static_cast<uint32>( _listPlacement.size() ) )
             return false; // 배치 데이터가 바뀌었다. 건설한 것을 맞출 수 없다.
@@ -365,7 +365,7 @@ namespace sw
                 archive.setError();
         }
         uint32 coasterCount = 0;
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, sizeof( int32 ) + sizeof( float32 ) * 2, coasterCount ) == false )
+        if ( archive.isError() || archive.readCount( sizeof( int32 ) + sizeof( float32 ) * 2, coasterCount ) == false )
             return false;
         vector<unique_ptr<CoasterRuntime>> listCoaster;
         for ( uint32 coasterIndex = 0; coasterIndex < coasterCount; ++coasterIndex )

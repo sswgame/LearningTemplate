@@ -83,7 +83,7 @@ namespace sw
         if ( header.hasOverflowed() || sampleCount == 0 || bodySize % transformSize != 0 || bodySize / transformSize != static_cast<uint64>( sampleCount ) * trackCount )
             return false;
 
-        outPose.resize( trackCount );
+        outPose.resize( trackCount ); // NOLINT(sw-unchecked-count): 위에서 본문 크기로 샘플 수 × 트랙 수를 맞췄다
         if ( pTrackMask != nullptr )
             outPose.setToIdentity();
         const float32 frame        = MathUtil::clamp( time * sampleRate, 0.0f, static_cast<float32>( sampleCount - 1 ) );

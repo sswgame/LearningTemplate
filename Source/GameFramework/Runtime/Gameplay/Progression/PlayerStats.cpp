@@ -206,7 +206,7 @@ namespace sw
     {
         uint32 count = 0;
         if ( StateArchiveUtil::readHeader( archive, PlayerStatsInternal::kStateTag, PlayerStatsInternal::kStateVersion ) == false ||
-             StateArchiveUtil::readCount( archive, sizeof( uint32 ) + sizeof( float64 ), count ) == false )
+             archive.readCount( sizeof( uint32 ) + sizeof( float64 ), count ) == false )
             return false;
         unordered_map<hashed_string, float64> mapValue;
         for ( uint32 index = 0; index < count; ++index )

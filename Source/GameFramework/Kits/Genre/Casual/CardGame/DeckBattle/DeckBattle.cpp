@@ -293,7 +293,7 @@ namespace sw
         DeckBattle battle   = *this;
         uint32     defCount = 0;
         // 카드마다 정의 id 이름(4) 이상
-        if ( StateArchiveUtil::readCount( archive, 4, defCount ) == false )
+        if ( archive.readCount( 4, defCount ) == false )
             return false;
         battle._listDefIndex.assign( defCount, -1 );
         for ( int32& defIndex : battle._listDefIndex )
@@ -312,7 +312,7 @@ namespace sw
 
         uint32 intentCount = 0;
         // 의도마다 종류(1) + 양(4)
-        if ( StateArchiveUtil::readCount( archive, 5, intentCount ) == false )
+        if ( archive.readCount( 5, intentCount ) == false )
             return false;
         battle._enemy._listIntent.assign( intentCount, DeckBattleEffect{} );
         for ( DeckBattleEffect& intent : battle._enemy._listIntent )

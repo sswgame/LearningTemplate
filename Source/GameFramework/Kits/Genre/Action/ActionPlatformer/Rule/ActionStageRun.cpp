@@ -216,7 +216,7 @@ namespace sw
         {
             vector<hashed_string>& listSecret  = listIndex == 0 ? restored._listSecretCommitted : restored._listSecretPending;
             uint32                 secretCount = 0;
-            if ( StateArchiveUtil::readCount( archive, 4, secretCount ) == false )
+            if ( archive.readCount( 4, secretCount ) == false )
                 return false;
             for ( uint32 secretIndex = 0; secretIndex < secretCount; ++secretIndex )
             {

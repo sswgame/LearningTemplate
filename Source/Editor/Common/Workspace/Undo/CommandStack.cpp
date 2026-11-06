@@ -45,13 +45,15 @@ namespace sw
                 writeStep( archive, cmd._redo );
             }
 
+            /** @brief 명령 하나의 최소 바이트입니다(이름표 길이 + 자식 수). */
+            static constexpr uint32 kMinCommandBytes = sizeof( uint32 ) * 2;
+
             [[nodiscard]] static bool readCommand( Archive& archive, CommandStack::Command& outCmd )
             {
                 uint32 childCount{ 0 };
                 if ( archive.readString( outCmd._label ) == false )
                     return false;
-                archive >> childCount;
-                if ( archive.isOk() == false )
+                if ( archive.readCount( kMinCommandBytes, childCount ) == false )
                     return false;
                 if ( childCount > 0 )
                 {
@@ -93,7 +95,9 @@ namespace sw
             {
                 uint32 count{ 0 };
                 uint32 index{ 0 };
-                archive >> count >> index;
+                if ( archive.readCount( kMinCommandBytes, count ) == false )
+                    return false;
+                archive >> index;
                 if ( archive.isOk() == false || index > count )
                     return false;
                 outListCommand.resize( count );

@@ -180,7 +180,7 @@ namespace sw
         const bool bGridMismatch = archive.isError() || width != _topology._width || height != _topology._height;
         if ( bGridMismatch )
             return false;
-        if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), ownerCount ) == false )
+        if ( archive.readCount( sizeof( uint32 ), ownerCount ) == false )
             return false;
         // 저장된 번호(1..) → 지금 번호. 이름이 지금 등록에 없으면 새로 등록한다(그 키트가 아직 묶이지 않았어도 칸은 그 이름의 것이다).
         LandRegistry   land = *this;

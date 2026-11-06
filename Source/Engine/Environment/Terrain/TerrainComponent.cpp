@@ -607,13 +607,16 @@ namespace sw
             archive >> resolution >> bResized >> sampleCount;
             // 크기를 먼저 비교한다 — 맞지 않는 수로 버퍼를 잡지 않는다. 해상도가 달라도 되는 것은 크기를 바꾼 편집(`replaceHeightfield`)뿐이다 —
             // 디스크 에셋을 다른 해상도로 다시 가져왔으면 낡은 편집이 그것을 덮지 않는다.
-            const uint32    current    = _heightfield.getResolution();
-            const bool      bSameSize  = resolution == current;
-            const bool      bSizeKnown = bSameSize || ( bResized && isResolutionUsable( resolution ) );
-            const bool      bFits      = archive.isOk() && bSizeKnown && static_cast<uint64>( sampleCount ) == static_cast<uint64>( resolution ) * resolution;
-            vector<float32> listHeight( bFits ? sampleCount : 0u );
-            const bool      bRead    = bFits && archive.readBytes( listHeight.data(), static_cast<uint64>( sampleCount ) * sizeof( float32 ) );
-            bool            bWritten = false;
+            const uint32 current    = _heightfield.getResolution();
+            const bool   bSameSize  = resolution == current;
+            const bool   bSizeKnown = bSameSize || ( bResized && isResolutionUsable( resolution ) );
+            const bool   bFits      = archive.isOk() && bSizeKnown && static_cast<uint64>( sampleCount ) == static_cast<uint64>( resolution ) * resolution &&
+                               archive.hasBytesAvailable( static_cast<uint64>( sampleCount ) * sizeof( float32 ) );
+            vector<float32> listHeight( bFits ? sampleCount : 0u ); // NOLINT(sw-unchecked-count): 위 bFits 가 남은 바이트로 걸렀다
+            if ( bFits )
+                archive.readFiniteFloats( listHeight.data(), sampleCount ); // NaN 높이는 물리 · 렌더 어디서도 걸러지지 않는다
+            const bool bRead    = bFits && archive.isOk();
+            bool       bWritten = false;
             if ( bRead && bSameSize )
             {
                 TerrainSampleRect all{};

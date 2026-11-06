@@ -1344,7 +1344,7 @@ namespace sw
 
         uint32 survivorCount = 0;
         // 생존자마다 최소한 위치(12) + 실수, 타이머, 정수 필드(60) + 체력, 치료, 점수
-        if ( StateArchiveUtil::readCount( archive, 72, survivorCount ) == false )
+        if ( archive.readCount( 72, survivorCount ) == false )
             return false;
         for ( uint32 index = 0; index < survivorCount; ++index )
         {
@@ -1570,7 +1570,7 @@ namespace sw
     bool HorrorMatch::readStage( Archive& archive, uint32& outPalletCount )
     {
         uint32 hookCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 12, hookCount ) == false )
+        if ( archive.readCount( 12, hookCount ) == false )
             return false;
         for ( uint32 index = 0; index < hookCount; ++index )
         {
@@ -1578,7 +1578,7 @@ namespace sw
             archive >> position;
             (void)addHook( position );
         }
-        if ( StateArchiveUtil::readCount( archive, 13, outPalletCount ) == false )
+        if ( archive.readCount( 13, outPalletCount ) == false )
             return false;
         for ( uint32 index = 0; index < outPalletCount; ++index )
         {
@@ -1591,7 +1591,7 @@ namespace sw
             _listPalletState[static_cast<size_t>( addPallet( position ) )] = static_cast<PalletState>( state );
         }
         uint32 lockerCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 16, lockerCount ) == false )
+        if ( archive.readCount( 16, lockerCount ) == false )
             return false;
         for ( uint32 index = 0; index < lockerCount; ++index )
         {
@@ -1602,7 +1602,7 @@ namespace sw
             _listLockerOccupant[static_cast<size_t>( addLocker( position ) )] = occupant;
         }
         uint32 windowCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 20, windowCount ) == false )
+        if ( archive.readCount( 20, windowCount ) == false )
             return false;
         for ( uint32 index = 0; index < windowCount; ++index )
         {
@@ -1613,7 +1613,7 @@ namespace sw
             archive >> window._chaseVaultCount;
         }
         uint32 generatorCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 14, generatorCount ) == false )
+        if ( archive.readCount( 14, generatorCount ) == false )
             return false;
         for ( uint32 index = 0; index < generatorCount; ++index )
         {
@@ -1635,7 +1635,7 @@ namespace sw
                 return false;
         }
         uint32 gateCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 12, gateCount ) == false )
+        if ( archive.readCount( 12, gateCount ) == false )
             return false;
         for ( uint32 index = 0; index < gateCount; ++index )
         {

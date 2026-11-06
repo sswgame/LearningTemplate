@@ -396,7 +396,7 @@ namespace sw
         uint32       booCount = 0;
         // 부마다 이름 둘(8) + 체력, 시간(8) + 상태(1) 이상
         const bool bHeadRead =
-            restored._encounter.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random ) && StateArchiveUtil::readCount( archive, 17, booCount );
+            restored._encounter.readState( archive ) && StateArchiveUtil::readRandom( archive, restored._random ) && archive.readCount( 17, booCount );
         if ( bHeadRead == false || booCount != _listBoo.size() )
             return false;
         for ( size_t booIndex = 0; booIndex < restored._listBoo.size(); ++booIndex )
@@ -420,7 +420,7 @@ namespace sw
                 return false;
         }
         uint32 searchedCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 1, searchedCount ) == false || searchedCount != _listSearched.size() )
+        if ( archive.readCount( 1, searchedCount ) == false || searchedCount != _listSearched.size() )
             return false;
         for ( uint8& bSearched : restored._listSearched )
         {
@@ -432,7 +432,7 @@ namespace sw
             return false;
         archive >> restored._seed;
         uint32 pendingCount = 0;
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, pendingCount ) == false )
+        if ( archive.isError() || archive.readCount( 4, pendingCount ) == false )
             return false;
         restored._listPendingKeyRoom.assign( pendingCount, hashed_string{} );
         for ( hashed_string& roomID : restored._listPendingKeyRoom )

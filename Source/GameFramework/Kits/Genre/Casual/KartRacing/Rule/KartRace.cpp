@@ -88,7 +88,7 @@ namespace sw
                     return false;
                 uint32 lapCount = 0;
                 // 바퀴마다 기록(4)
-                if ( StateArchiveUtil::readCount( archive, 4, lapCount ) == false )
+                if ( archive.readCount( 4, lapCount ) == false )
                     return false;
                 outKart._ai.setDriftSide( driftSide );
                 outKart._listLapTime.assign( lapCount, 0.0f );
@@ -935,7 +935,7 @@ namespace sw
 
         uint32 projectileCount = 0;
         // 탄마다 슬롯, 방향(24) + 이름(4) + 나이, 쏜 차, 대상(12) + 종류, 켜짐(2)
-        if ( StateArchiveUtil::readCount( archive, 42, projectileCount ) == false )
+        if ( archive.readCount( 42, projectileCount ) == false )
             return false;
         race._listProjectile.assign( projectileCount, KartProjectile{} );
         for ( KartProjectile& projectile : race._listProjectile )

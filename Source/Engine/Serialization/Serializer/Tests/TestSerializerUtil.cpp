@@ -149,6 +149,41 @@ SW_TEST_CASE( SerializerUtilTest, BitFieldHelpersTouchOnlyTheirOwnBit )
     SW_EXPECT_EQUAL( 1, static_cast<int32>( cleared._bSecond ) );
 }
 
+/** @brief [SerializerUtilTest] 바이너리 실수 칸은 NaN · 무한대를 거절하고 값 · 위치를 그대로 둔다 — 텍스트 읽기 · `Archive` 와 같은 규칙이다 */
+SW_TEST_CASE( SerializerUtilTest, BinaryFloatRefusesNonFinite )
+{
+    const SerializeContext::BinaryReadFn* pReadFloat  = getContext().findBinaryReader( hashed_string( "float32" ) );
+    const SerializeContext::BinaryReadFn* pReadDouble = getContext().findBinaryReader( hashed_string( "float64" ) );
+    SW_REQUIRE_NOT_NULL( pReadFloat );
+    SW_REQUIRE_NOT_NULL( pReadDouble );
+
+    const uint32 arrFloatBits[] = { 0x7FC00000u, 0x7F800000u, 0xFF800000u };
+    for ( const uint32 bits : arrFloatBits )
+    {
+        vector<uint8> bytes;
+        LittleEndianUtil::appendUint32( bytes, bits );
+        float32 value  = 1.0f;
+        size_t  offset = 0;
+        SW_EXPECT_FALSE( ( *pReadFloat )( &value, bytes.data(), bytes.size(), offset ) );
+        SW_EXPECT_EQUAL( 1.0f, value );
+        SW_EXPECT_EQUAL( size_t{ 0 }, offset );
+    }
+    vector<uint8> nanDouble;
+    LittleEndianUtil::appendUint64( nanDouble, 0x7FF8000000000000ull );
+    float64 doubleValue = 1.0;
+    size_t  offset      = 0;
+    SW_EXPECT_FALSE( ( *pReadDouble )( &doubleValue, nanDouble.data(), nanDouble.size(), offset ) );
+    SW_EXPECT_EQUAL( 1.0, doubleValue );
+
+    vector<uint8> finite;
+    LittleEndianUtil::appendFloat32( finite, 2.5f );
+    float32 value = 0.0f;
+    offset        = 0;
+    SW_EXPECT_TRUE( ( *pReadFloat )( &value, finite.data(), finite.size(), offset ) );
+    SW_EXPECT_EQUAL( 2.5f, value );
+    SW_EXPECT_EQUAL( size_t{ 4 }, offset );
+}
+
 /** @brief [SerializerUtilTest] 프로퍼티 바이너리는 끝까지 읽어야 Read 다 — 남는 바이트 · 잘린 바이트는 이 필드만 실패이고 값은 그대로다 */
 SW_TEST_CASE( SerializerUtilTest, PropertyBinaryMustBeReadToTheEnd )
 {

@@ -232,7 +232,7 @@ namespace sw
         // 사본에 읽고 끝까지 맞으면 바꾼다. 게이지 설정과 카탈로그는 사본이 그대로 가지고 있다.
         WesternSurvival restored = *this;
         uint32          count    = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+        if ( archive.readCount( 4, count ) == false )
             return false;
         restored._listClothing.resize( count );
         for ( hashed_string& clothingID : restored._listClothing )
@@ -240,7 +240,7 @@ namespace sw
             if ( StateArchiveUtil::readName( archive, clothingID ) == false )
                 return false;
         }
-        if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+        if ( archive.readCount( 8, count ) == false )
             return false;
         restored._listMark.resize( count );
         for ( uint64& targetID : restored._listMark )

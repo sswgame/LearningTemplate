@@ -202,7 +202,7 @@ namespace sw
         if ( _pCatalog == nullptr )
             return false;
         uint32 abilityCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, abilityCount ) == false )
+        if ( archive.readCount( 4, abilityCount ) == false )
             return false;
         vector<hashed_string> listAbility;
         listAbility.reserve( abilityCount );

@@ -587,13 +587,13 @@ namespace sw
 
         uint32 potCount = 0;
         // 팟마다 자리 수(4) + 금액(4). 팟은 낸 금액의 단계마다 하나라 자리 수를 넘지 않는다(`makePots`).
-        if ( StateArchiveUtil::readCount( archive, 8, potCount ) == false || count < static_cast<int64>( potCount ) )
+        if ( archive.readCount( 8, potCount ) == false || count < static_cast<int64>( potCount ) )
             return false;
         table._listLastPot.assign( potCount, PokerPot{} );
         for ( PokerPot& pot : table._listLastPot )
         {
             uint32 eligibleCount = 0;
-            if ( StateArchiveUtil::readCount( archive, 4, eligibleCount ) == false || count < static_cast<int64>( eligibleCount ) )
+            if ( archive.readCount( 4, eligibleCount ) == false || count < static_cast<int64>( eligibleCount ) )
                 return false;
             pot._listEligibleSeat.assign( eligibleCount, -1 );
             for ( int32& seat : pot._listEligibleSeat )

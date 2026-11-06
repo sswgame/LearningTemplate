@@ -84,7 +84,7 @@ namespace sw
     bool RTSVision::readState( Archive& archive )
     {
         uint32 teamCount = 0;
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, sizeof( uint32 ), teamCount ) == false )
+        if ( archive.isError() || archive.readCount( sizeof( uint32 ), teamCount ) == false )
             return false;
         vector<vector<uint8>> listTeamCell( teamCount );
         for ( vector<uint8>& listCell : listTeamCell )

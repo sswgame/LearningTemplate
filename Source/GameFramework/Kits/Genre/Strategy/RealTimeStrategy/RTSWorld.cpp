@@ -124,7 +124,7 @@ namespace sw
                 if ( defID.empty() == false && outUnit._pDef == nullptr )
                     return false;
                 uint32 orderCount = 0;
-                if ( StateArchiveUtil::readCount( archive, kMinOrderStateBytes, orderCount ) == false )
+                if ( archive.readCount( kMinOrderStateBytes, orderCount ) == false )
                     return false;
                 for ( uint32 orderIndex = 0; orderIndex < orderCount; ++orderIndex )
                 {
@@ -132,7 +132,7 @@ namespace sw
                         return false;
                 }
                 uint32 productionCount = 0;
-                if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), productionCount ) == false || productionCount > static_cast<uint32>( settings._productionQueueMax ) )
+                if ( archive.readCount( sizeof( uint32 ), productionCount ) == false || productionCount > static_cast<uint32>( settings._productionQueueMax ) )
                     return false;
                 for ( uint32 productionIndex = 0; productionIndex < productionCount; ++productionIndex )
                 {
@@ -1895,7 +1895,7 @@ namespace sw
         }
 
         uint32 unitCount = 0;
-        if ( StateArchiveUtil::readCount( archive, Internal::kMinUnitStateBytes, unitCount ) == false )
+        if ( archive.readCount( Internal::kMinUnitStateBytes, unitCount ) == false )
             return false;
         deque<RTSUnit> listUnit;
         vector<uint32> listGeneration( unitCount );
@@ -1910,7 +1910,7 @@ namespace sw
         }
 
         uint32 freeSlotCount = 0;
-        if ( StateArchiveUtil::readCount( archive, sizeof( uint32 ), freeSlotCount ) == false )
+        if ( archive.readCount( sizeof( uint32 ), freeSlotCount ) == false )
             return false;
         vector<uint32> listFreeSlot( freeSlotCount );
         for ( uint32& slot : listFreeSlot )
@@ -1921,7 +1921,7 @@ namespace sw
         }
         uint32 playerCount = 0;
         // 지갑은 플레이어를 추가한 쪽이 빌려 준 것이라 싣지 않는다. 같은 수의 플레이어를 먼저 추가한 월드에만 읽어야 한다.
-        const bool bInvalidPlayerData = archive.isError() || StateArchiveUtil::readCount( archive, Internal::kMinPlayerStateBytes, playerCount ) == false || playerCount != _listPlayer.size();
+        const bool bInvalidPlayerData = archive.isError() || archive.readCount( Internal::kMinPlayerStateBytes, playerCount ) == false || playerCount != _listPlayer.size();
         if ( bInvalidPlayerData || Internal::areFreeSlotsValid( listFreeSlot, listUnit ) == false )
             return false;
         vector<RTSPlayer> listPlayer( playerCount );

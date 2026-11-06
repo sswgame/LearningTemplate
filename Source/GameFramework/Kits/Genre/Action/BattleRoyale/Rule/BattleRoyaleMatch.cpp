@@ -481,7 +481,7 @@ namespace sw
         archive >> time;
         archive >> nextSupplyDrop;
         // 사람마다 팀(4) + 부활 수(4) + 진행(4) + 위치(8) + 정수 4개(16) 바이트 이상
-        const bool bHeadValid = bHeadRead && archive.isOk() && 0.0f <= time && 0 <= nextSupplyDrop && StateArchiveUtil::readCount( archive, 36, playerCount ) &&
+        const bool bHeadValid = bHeadRead && archive.isOk() && 0.0f <= time && 0 <= nextSupplyDrop && archive.readCount( 36, playerCount ) &&
                                 playerCount == static_cast<uint32>( matchState.getParticipantCount() );
         if ( bHeadValid == false )
             return false;
@@ -522,14 +522,14 @@ namespace sw
 
         uint32 dropCount = 0;
         // 상자마다 무더기 수(4) + 위치(8) + 시각(4) 바이트 이상
-        if ( StateArchiveUtil::readCount( archive, 16, dropCount ) == false )
+        if ( archive.readCount( 16, dropCount ) == false )
             return false;
         vector<BattleRoyaleSupplyDrop> listSupplyDrop( dropCount );
         for ( BattleRoyaleSupplyDrop& drop : listSupplyDrop )
         {
             uint32 itemCount = 0;
             // 무더기마다 위치(8) + 이름(4) + 개수(4) + 지점(4) 바이트
-            if ( StateArchiveUtil::readCount( archive, 20, itemCount ) == false )
+            if ( archive.readCount( 20, itemCount ) == false )
                 return false;
             drop._listItem.resize( itemCount );
             for ( BattleRoyaleGroundItem& item : drop._listItem )

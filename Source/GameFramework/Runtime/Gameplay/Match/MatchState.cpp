@@ -369,7 +369,7 @@ namespace sw
     {
         uint32 teamCount = 0;
         // 팀마다 이름(4) + 정수 세 개(12) + 플래그 두 개(2)
-        if ( StateArchiveUtil::readCount( archive, 18, teamCount ) == false )
+        if ( archive.readCount( 18, teamCount ) == false )
             return false;
         vector<MatchTeam> listTeam( teamCount );
         for ( MatchTeam& team : listTeam )
@@ -387,13 +387,13 @@ namespace sw
         }
         uint32 participantCount = 0;
         // 참가자마다 이름(4) + 피해 수(4) + 타이머(4) + 피해량(4) + 정수 여섯 개(24) + 플래그 두 개(2)
-        if ( StateArchiveUtil::readCount( archive, 42, participantCount ) == false )
+        if ( archive.readCount( 42, participantCount ) == false )
             return false;
         vector<MatchParticipant> listParticipant( participantCount );
         for ( MatchParticipant& participant : listParticipant )
         {
             uint32 damageCount = 0;
-            if ( StateArchiveUtil::readName( archive, participant._role ) == false || StateArchiveUtil::readCount( archive, 8, damageCount ) == false )
+            if ( StateArchiveUtil::readName( archive, participant._role ) == false || archive.readCount( 8, damageCount ) == false )
                 return false;
             participant._listDamage.resize( damageCount );
             for ( MatchParticipant::DamageRecord& record : participant._listDamage )

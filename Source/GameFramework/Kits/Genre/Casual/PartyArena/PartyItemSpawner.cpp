@@ -67,7 +67,7 @@ namespace sw
     {
         uint32 instanceCount = 0;
         // 놓인 것마다 위치(12) + 이름(4) + 나이(4) + 번호(4)
-        if ( StateArchiveUtil::readCount( archive, 24, instanceCount ) == false || instanceCount > static_cast<uint32>( _settings._maxActive ) )
+        if ( archive.readCount( 24, instanceCount ) == false || instanceCount > static_cast<uint32>( _settings._maxActive ) )
             return false;
         vector<PartyItemInstance> listInstance( instanceCount, PartyItemInstance{} );
         for ( PartyItemInstance& instance : listInstance )

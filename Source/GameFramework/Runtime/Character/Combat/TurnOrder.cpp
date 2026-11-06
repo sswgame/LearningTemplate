@@ -191,7 +191,7 @@ namespace sw
         TurnOrder restored = *this;
         uint32    count    = 0;
         // 배우마다 속도 · 게이지 · id · 우선 · 동률깨기(20)
-        if ( StateArchiveUtil::readCount( archive, 20, count ) == false )
+        if ( archive.readCount( 20, count ) == false )
             return false;
         restored._listCombatant.resize( count );
         for ( Combatant& actor : restored._listCombatant )
@@ -202,7 +202,7 @@ namespace sw
             archive >> actor._priority;
             archive >> actor._tieBreak;
         }
-        if ( archive.isError() || VectorUtil::findDuplicateBy<&Combatant::_actorID>( restored._listCombatant ) != nullptr || StateArchiveUtil::readCount( archive, 4, count ) == false )
+        if ( archive.isError() || VectorUtil::findDuplicateBy<&Combatant::_actorID>( restored._listCombatant ) != nullptr || archive.readCount( 4, count ) == false )
             return false;
         for ( const Combatant& actor : restored._listCombatant )
         {

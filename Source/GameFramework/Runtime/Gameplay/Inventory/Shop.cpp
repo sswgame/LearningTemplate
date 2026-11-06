@@ -114,7 +114,7 @@ namespace sw
     {
         uint32 count = 0;
         // 통화마다 이름 길이(4) + 잔액(8) 이상
-        if ( StateArchiveUtil::readCount( archive, 12, count ) == false )
+        if ( archive.readCount( 12, count ) == false )
             return false;
         vector<WalletBalance> listBalance;
         listBalance.reserve( count );
@@ -528,20 +528,20 @@ namespace sw
         vector<ShopRuntime> listRuntime = _listRuntime;
         uint32              shopCount   = 0;
         // 가게마다 이름(4) + 개수 세 개(12) + 배율 두 개(8) + 날짜(4) 이상
-        if ( StateArchiveUtil::readCount( archive, 28, shopCount ) == false )
+        if ( archive.readCount( 28, shopCount ) == false )
             return false;
         for ( uint32 shopIndex = 0; shopIndex < shopCount; ++shopIndex )
         {
             ShopRuntime saved;
             uint32      count = 0;
-            if ( StateArchiveUtil::readName( archive, saved._shopID ) == false || StateArchiveUtil::readCount( archive, 4, count ) == false )
+            if ( StateArchiveUtil::readName( archive, saved._shopID ) == false || archive.readCount( 4, count ) == false )
                 return false;
             saved._listStockCount.resize( count, 0 );
             for ( int32& stockCount : saved._listStockCount )
             {
                 archive >> stockCount;
             }
-            if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+            if ( archive.readCount( 8, count ) == false )
                 return false;
             saved._listSaturatedItem.resize( count );
             saved._listSellFactor.resize( count, 1.0f );
@@ -551,7 +551,7 @@ namespace sw
                     return false;
                 archive >> saved._listSellFactor[index];
             }
-            if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+            if ( archive.readCount( 4, count ) == false )
                 return false;
             saved._listExtraRefused.resize( count );
             for ( hashed_string& category : saved._listExtraRefused )

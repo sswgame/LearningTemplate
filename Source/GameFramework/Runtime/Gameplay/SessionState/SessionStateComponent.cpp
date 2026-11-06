@@ -289,7 +289,7 @@ namespace sw
             return false;
         uint32 sectionCount = 0;
         // 구간마다 태그, 버전, 길이(12바이트) 이상
-        if ( StateArchiveUtil::readCount( archive, 12, sectionCount ) == false )
+        if ( archive.readCount( 12, sectionCount ) == false )
             return false;
         // 구조를 끝까지 먼저 읽는다. 구조가 깨졌으면 아무것도 바꾸지 않는다.
         vector<SessionStateComponentInternal::Section> listSection;

@@ -315,7 +315,7 @@ namespace sw
     {
         uint32 memberCount = 0;
         // 멤버마다 id, 직업, 이름(12) + 주문, 비급, 슬롯 수(12) + 레벨(20) + 능력치(28) + HP, MP, 내공(12) 바이트 이상
-        const bool bInvalidPartyData = _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 84, memberCount ) == false || memberCount > static_cast<uint32>( kMaxMembers );
+        const bool bInvalidPartyData = _pCatalog == nullptr || archive.readCount( 84, memberCount ) == false || memberCount > static_cast<uint32>( kMaxMembers );
         if ( bInvalidPartyData )
             return false;
         vector<JRPGMember> listMember( memberCount );
@@ -326,7 +326,7 @@ namespace sw
             if ( bHeadRead == false )
                 return false;
             archive >> member._name;
-            if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+            if ( archive.readCount( 4, count ) == false )
                 return false;
             member._listSpell.resize( count );
             for ( hashed_string& spellID : member._listSpell )
@@ -335,7 +335,7 @@ namespace sw
                     return false;
             }
             // 비급마다 이름(4) + 숙련(4) 바이트
-            if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+            if ( archive.readCount( 8, count ) == false )
                 return false;
             member._listManual.resize( count );
             for ( JRPGManualProgress& progress : member._listManual )
@@ -346,7 +346,7 @@ namespace sw
             }
 
             member._equipment.initialize( _pItemCatalog, _equipLayout );
-            if ( StateArchiveUtil::readCount( archive, 4, count ) == false || count != member._equipment.getSlots().size() )
+            if ( archive.readCount( 4, count ) == false || count != member._equipment.getSlots().size() )
                 return false;
             for ( uint32 slotIndex = 0; slotIndex < count; ++slotIndex )
             {

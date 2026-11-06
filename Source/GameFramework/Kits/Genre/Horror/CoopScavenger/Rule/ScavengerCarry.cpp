@@ -101,7 +101,7 @@ namespace sw
     bool ScavengerCarry::readState( Archive& archive )
     {
         uint32 count = 0;
-        if ( StateArchiveUtil::readCount( archive, ScavengerFacility::kMinScrapBytes, count ) == false || static_cast<int32>( count ) > _settings._slotCount )
+        if ( archive.readCount( ScavengerFacility::kMinScrapBytes, count ) == false || static_cast<int32>( count ) > _settings._slotCount )
             return false;
         vector<ScavengerScrap> listScrap( count );
         for ( ScavengerScrap& scrap : listScrap )

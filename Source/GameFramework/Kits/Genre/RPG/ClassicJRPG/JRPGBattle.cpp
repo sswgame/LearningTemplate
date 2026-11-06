@@ -731,7 +731,7 @@ namespace sw
         JRPGBattle restored = *this;
         uint32     count    = 0;
         // 적마다 이름(4) + 잠금 수(4) + HP, 시전, 잠금 전체, 차례(16) 바이트 이상
-        if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 24, count ) == false )
+        if ( _pCatalog == nullptr || archive.readCount( 24, count ) == false )
             return false;
         restored._listEnemy.assign( count, JRPGEnemyState{} );
         for ( JRPGEnemyState& enemy : restored._listEnemy )
@@ -739,7 +739,7 @@ namespace sw
             uint32 lockCount = 0;
             if ( StateArchiveUtil::readName( archive, enemy._enemyID ) == false || _pCatalog->findEnemy( enemy._enemyID ) == nullptr )
                 return false;
-            if ( StateArchiveUtil::readCount( archive, 4, lockCount ) == false )
+            if ( archive.readCount( 4, lockCount ) == false )
                 return false;
             enemy._listLock.resize( lockCount );
             for ( hashed_string& lock : enemy._listLock )
@@ -756,7 +756,7 @@ namespace sw
         }
 
         // 명령마다 이름(4) + 대상(4) + 종류(1) + 방어(1) 바이트
-        if ( StateArchiveUtil::readCount( archive, 10, count ) == false )
+        if ( archive.readCount( 10, count ) == false )
             return false;
         const uint32 memberCount = _pParty != nullptr ? static_cast<uint32>( _pParty->getMemberCount() ) : 0;
         if ( count != memberCount )

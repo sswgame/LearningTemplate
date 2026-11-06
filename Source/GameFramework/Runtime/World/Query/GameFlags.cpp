@@ -353,7 +353,7 @@ namespace sw
     {
         uint32 count = 0;
         // 칸마다 이름 길이(4) + 값(4) 이상
-        if ( StateArchiveUtil::readCount( archive, 8, count ) == false )
+        if ( archive.readCount( 8, count ) == false )
             return false;
         vector<GameFlagEntry> listEntry;
         listEntry.reserve( count );

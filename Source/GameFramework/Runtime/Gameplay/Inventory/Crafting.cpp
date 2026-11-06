@@ -295,7 +295,7 @@ namespace sw
     bool Crafter::readState( Archive& archive )
     {
         uint32 count = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, count ) == false )
+        if ( archive.readCount( 4, count ) == false )
             return false;
         unordered_set<hashed_string> uniqueLearned;
         for ( uint32 index = 0; index < count; ++index )
@@ -306,7 +306,7 @@ namespace sw
             uniqueLearned.insert( recipeID );
         }
         // 작업마다 이름(4) + 남은 시간(4) + 개수(4)
-        if ( StateArchiveUtil::readCount( archive, 12, count ) == false )
+        if ( archive.readCount( 12, count ) == false )
             return false;
         deque<CraftJob> listJob;
         for ( uint32 index = 0; index < count; ++index )

@@ -276,7 +276,7 @@ namespace sw
     {
         uint32 nodeCount = 0;
         // 노드마다 이름(4) + 층과 열(8) + 이어진 수(4)
-        if ( StateArchiveUtil::readCount( archive, 16, nodeCount ) == false )
+        if ( archive.readCount( 16, nodeCount ) == false )
             return false;
         vector<RunNode> listNode( nodeCount );
         for ( RunNode& node : listNode )
@@ -286,7 +286,7 @@ namespace sw
                 return false;
             archive >> node._floor;
             archive >> node._column;
-            if ( StateArchiveUtil::readCount( archive, 4, nextCount ) == false )
+            if ( archive.readCount( 4, nextCount ) == false )
                 return false;
             node._listNext.resize( nextCount, 0 );
             for ( int32& next : node._listNext )
@@ -297,7 +297,7 @@ namespace sw
             }
         }
         uint32 cellCount = 0;
-        if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, cellCount ) == false )
+        if ( archive.isError() || archive.readCount( 4, cellCount ) == false )
             return false;
         vector<int32> listCell( cellCount, -1 );
         for ( int32& cell : listCell )

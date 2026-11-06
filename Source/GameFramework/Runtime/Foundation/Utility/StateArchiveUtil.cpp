@@ -75,22 +75,6 @@ namespace sw
         return true;
     }
 
-    bool StateArchiveUtil::readCount( Archive& archive, uint32 minBytesPerElement, uint32& outCount )
-    {
-        uint32 count = 0;
-        archive >> count;
-        if ( archive.isError() )
-            return false;
-        const uint64 minBytes = static_cast<uint64>( count ) * static_cast<uint64>( minBytesPerElement > 0 ? minBytesPerElement : 1 );
-        if ( minBytes > archive.getRemainingBytes() )
-        {
-            archive.setError();
-            return false;
-        }
-        outCount = count;
-        return true;
-    }
-
     namespace
     {
         template <typename TID>
@@ -107,7 +91,7 @@ namespace sw
         [[nodiscard]] bool readIDListImpl( Archive& archive, vector<TID>& outListID )
         {
             uint32 count = 0;
-            if ( StateArchiveUtil::readCount( archive, sizeof( TID ), count ) == false )
+            if ( archive.readCount( sizeof( TID ), count ) == false )
                 return false;
             outListID.resize( count );
             for ( TID& id : outListID )

@@ -742,9 +742,11 @@ namespace sw
             return false;
         }
 
-        uint32 nodeCount{ 0 };
-        arch >> _name >> _stateData >> nodeCount;
-        if ( arch.isError() || nodeCount > arch.getSize() )
+        // 노드 하나는 글 여섯의 길이와 부모 번호다 — 파일 크기만큼의 노드(한 개가 수백 바이트)를 잡지 않는다.
+        constexpr uint32 kMinBytesPerNode = sizeof( uint32 ) * 6 + sizeof( int32 );
+        uint32           nodeCount{ 0 };
+        arch >> _name >> _stateData;
+        if ( arch.isError() || arch.readCount( kMinBytesPerNode, nodeCount ) == false )
         {
             SW_LOG_ERROR_ID( "PrefabAsset.BinaryPrefabStreamCorrupted", "Binary prefab stream corrupted in %#", absPath );
             return false;

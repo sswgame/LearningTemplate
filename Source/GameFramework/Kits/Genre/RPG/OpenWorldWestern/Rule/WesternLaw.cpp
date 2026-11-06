@@ -244,7 +244,7 @@ namespace sw
     {
         uint32 recordCount = 0;
         // 기록마다 지역(4) + 안 보인 시간, 현상금, 수배(12) + 보는지(1) 바이트
-        if ( _pCatalog == nullptr || StateArchiveUtil::readCount( archive, 17, recordCount ) == false )
+        if ( _pCatalog == nullptr || archive.readCount( 17, recordCount ) == false )
             return false;
         vector<RegionRecord> listRecord( recordCount );
         for ( size_t recordIndex = 0; recordIndex < listRecord.size(); ++recordIndex )
@@ -272,7 +272,7 @@ namespace sw
 
         uint32 pendingCount = 0;
         // 대기마다 범죄와 지역(8) + 목격자(8) + 사건(4) + 남은 시간(4) + 가렸는지(1) 바이트
-        if ( StateArchiveUtil::readCount( archive, 25, pendingCount ) == false )
+        if ( archive.readCount( 25, pendingCount ) == false )
             return false;
         vector<PendingReport> listPending( pendingCount );
         for ( PendingReport& report : listPending )

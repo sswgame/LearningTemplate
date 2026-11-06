@@ -445,7 +445,7 @@ namespace sw
             return false;
         uint32 dungeonCount = 0;
         // 던전마다 id(4) + 진행(11) + 장치 수(4) 바이트 이상
-        if ( StateArchiveUtil::readCount( archive, 19, dungeonCount ) == false )
+        if ( archive.readCount( 19, dungeonCount ) == false )
             return false;
         // 사본에 읽고 끝까지 맞으면 바꾼다. 저장되지 않은 던전은 `initialize` 직후의 새 상태로 남는다.
         vector<DungeonRuntime> listRuntime = makeInitialRuntime();
@@ -467,7 +467,7 @@ namespace sw
             archive >> progress._bMap;
             archive >> progress._bCompass;
             // 장치마다 남은 시간(4) + 켜진 수(4) + 활성(1) 바이트
-            if ( StateArchiveUtil::readCount( archive, 9, deviceCount ) == false || deviceCount != runtime._listDevice.size() )
+            if ( archive.readCount( 9, deviceCount ) == false || deviceCount != runtime._listDevice.size() )
                 return false;
             const bool bProgressValid = 0 <= progress._smallKeyCount && 0 <= progress._smallKeyUsedCount && progress._bBossKey <= SW_TRUE &&
                                         progress._bMap <= SW_TRUE && progress._bCompass <= SW_TRUE;

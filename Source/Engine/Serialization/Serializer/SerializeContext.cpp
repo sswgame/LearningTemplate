@@ -21,6 +21,8 @@
 #include "Engine/Serialization/Serializer/DataPath.h"
 #include "Engine/Serialization/Serializer/SerializeReflectAny.h"
 
+#include <cmath>
+
 namespace sw
 {
     namespace
@@ -60,9 +62,22 @@ namespace sw
                 // bool 은 바이트를 그대로 옮기지 않는다. 0 · 1 이 아닌 바이트(망가진 파일)를 memcpy 하면 값이 정의되지 않는 bool 이 되고,
                 // 컴파일러는 그것을 2 로 쓰거나 `b` 와 `b == true` 를 다르게 본다.
                 if constexpr ( std::is_same_v<T, bool> )
+                {
                     *static_cast<bool*>( pPtr ) = pData[offset] != 0;
+                }
+                else if constexpr ( std::is_floating_point_v<T> )
+                {
+                    // 텍스트 읽기(`parseFloat`)와 `Archive::operator>>` 가 NaN · 무한대를 거절한다 — 바이너리 칸만 지나가면 형식에 따라 값의 규칙이 달라진다.
+                    T value{};
+                    Memory::copy( &value, pData + offset, sizeof( T ) );
+                    if ( std::isfinite( value ) == false )
+                        return false;
+                    *static_cast<T*>( pPtr ) = value;
+                }
                 else
+                {
                     Memory::copy( pPtr, pData + offset, sizeof( T ) );
+                }
                 offset += sizeof( T );
                 return true;
             }

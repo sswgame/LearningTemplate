@@ -618,7 +618,7 @@ namespace sw
         }
 
         uint32 scrapCount = 0;
-        if ( StateArchiveUtil::readCount( archive, ScavengerFacility::kMinScrapBytes, scrapCount ) == false )
+        if ( archive.readCount( ScavengerFacility::kMinScrapBytes, scrapCount ) == false )
             return false;
         restored._listShipScrap.assign( scrapCount, ScavengerScrap{} );
         for ( ScavengerScrap& scrap : restored._listShipScrap )

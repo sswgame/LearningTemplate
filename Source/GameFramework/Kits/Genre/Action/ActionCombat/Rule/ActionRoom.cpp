@@ -491,7 +491,7 @@ namespace sw
 
         // 종 정의는 id 로 다시 찾는다. 같은 순서로 추가하므로 적의 종 인덱스가 그대로 맞는다.
         uint32 defCount = 0;
-        if ( StateArchiveUtil::readCount( archive, 4, defCount ) == false )
+        if ( archive.readCount( 4, defCount ) == false )
             return false;
         restored._listMonsterDef.clear();
         for ( uint32 defIndex = 0; defIndex < defCount; ++defIndex )
@@ -505,7 +505,7 @@ namespace sw
 
         uint32 actorCount = 0;
         // 적마다 위치(8) + 체력(4) + 사격 시간(4) + 종 인덱스(2) + 생존(1) 바이트
-        if ( StateArchiveUtil::readCount( archive, 19, actorCount ) == false )
+        if ( archive.readCount( 19, actorCount ) == false )
             return false;
         restored._listActor.assign( actorCount, Actor{} );
         for ( Actor& actor : restored._listActor )
@@ -527,7 +527,7 @@ namespace sw
 
         uint32 projectileCount = 0;
         // 투사체마다 위치(8) + 속도(8) + 수명(4) + 반지름(4) + 피해(4) + 생존(1) 바이트
-        if ( StateArchiveUtil::readCount( archive, 29, projectileCount ) == false )
+        if ( archive.readCount( 29, projectileCount ) == false )
             return false;
         restored._listProjectile.assign( projectileCount, Projectile{} );
         for ( Projectile& projectile : restored._listProjectile )

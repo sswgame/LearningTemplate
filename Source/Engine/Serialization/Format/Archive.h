@@ -123,6 +123,19 @@ namespace sw
         /** @brief 남은 바이트가 @p byteSize 이상이면 true 입니다. 뺄셈으로 비교하는데, 덧셈은 큰 값에서 오버플로되기 때문입니다. */
         bool hasBytesAvailable( uint64 byteSize ) const { return ( _pData != nullptr && byteSize <= _dataSize - _offset ); }
 
+        /**
+         * @brief 원소 개수(uint32)를 읽습니다. 원소마다 적어도 @p minBytesPerElement 바이트를 쓰므로, 남은 바이트로 담을 수 없는 개수면 오류를 남기고 false 입니다.
+         * @details 파일 · 세이브가 적은 개수는 이 함수로 읽은 뒤에만 할당한다 — 깨진 개수 하나가 `reserve` 로 수십 기가를 요구하지 않게 한다(`ByteReader::canHoldCount` 와 한 계산).
+         *          린트(`Scripts/lint/ByteReadShape.py`)가 다른 길을 막는다.
+         */
+        [[nodiscard]] bool readCount( uint32 minBytesPerElement, uint32& outCount );
+        /**
+         * @brief 실수 @p count 개를 읽습니다. 유한하지 않은 값이 있으면 0 으로 두고 오류를 남깁니다 — `BitReader::readFiniteFloat` 와 같은 규칙이다.
+         * @details 아카이브는 세이브와 스냅숏을 읽는다. 쓰는 쪽은 유한한 값만 쓰므로 NaN · 무한대는 깨졌거나 꾸민 데이터다. NaN 체력은 죽지 않는 적이 되고 NaN 시간은 비교가 늘 거짓이다.
+         *          키트마다 손으로 검사하면 빠뜨린 칸이 남아 읽기 입구 하나에서 막는다. `operator>>` 의 실수 · 벡터 · 행렬이 이 길이고, 실수 배열을 통째로 읽는 쪽도 `readBytes` 가 아니라 이 함수를 쓴다.
+         */
+        void readFiniteFloats( float32* pOutValue, uint32 count );
+
         /** @brief 지정한 바이트 크기만큼을 잘라 읽기 전용 하위 아카이브로 만듭니다. */
         Archive readSubArchive( uint64 byteSize );
 
@@ -362,12 +375,6 @@ namespace sw
          * @details 부른 쪽이 읽기를 마친 뒤 `isError` 를 본다(iostream 과 같은 관용). 연산자마다 결과를 검사하면 체인(`arch >> a >> b`)을 쓸 수 없다.
          *          버리는 자리가 이 함수 하나라 연산자들에 `(void)` 가 흩어지지 않는다.
          */
-        /**
-         * @brief 실수 @p count 개를 읽습니다. 유한하지 않은 값이 있으면 0 으로 두고 오류를 남깁니다 — `BitReader::readFiniteFloat` 와 같은 규칙이다.
-         * @details 아카이브는 세이브와 스냅숏을 읽는다. 쓰는 쪽은 유한한 값만 쓰므로 NaN · 무한대는 깨졌거나 꾸민 데이터다. NaN 체력은 죽지 않는 적이 되고 NaN 시간은 비교가 늘 거짓이다.
-         *          키트마다 손으로 검사하면 빠뜨린 칸이 남아 읽기 입구 하나에서 막는다.
-         */
-        void readFiniteFloats( float32* pOutValue, uint32 count );
         void readLatched( void* pOutBuffer, uint64 byteSize );
 
     private:
