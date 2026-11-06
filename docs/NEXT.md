@@ -2,7 +2,7 @@
 
 > 질문: 무엇이 남았고 무엇부터 하는가?
 > 독자: 이어서 일하는 세션(에이전트와 사람).
-> 결론: 아래 **남은 일**만 본다 — 끝난 일은 git 기록과 계획 문서([StructureRefactor](StructureRefactor.md))에 있다. 순서는 7 → 1 → 2 → 0 → 5. 이 문서에는 끝난 일을 쌓지 않는다(끝나면 줄을 지운다).
+> 결론: 아래 **남은 일**만 본다 — 끝난 일은 git 기록과 계획 문서([StructureRefactor](StructureRefactor.md))에 있다. 순서는 A → 7 → 1 → 2 → 0 → 5. 이 문서에는 끝난 일을 쌓지 않는다(끝나면 줄을 지운다).
 
 ## 일하는 법 (요약)
 
@@ -16,6 +16,50 @@
   Wayland 창 층(`SW_ENABLE_WAYLAND`)은 기본 클론 빌드에 없다 — `~/lt-deps/root` 에 sudo 없이 푼 `libxkbcommon-dev` · `wayland-protocols`(`apt-get download` + `dpkg -x`, .pc 의 prefix 를 그 폴더로)를 `PKG_CONFIG_PATH` 로 주고 `cmake --preset Linux-Debug -B build/Linux-Wayland -DSW_ENABLE_WAYLAND=ON` 로 짓는다. 실행은 `SW_WINDOW_BACKEND=wayland`.
 
 ## 남은 일
+
+### A. 지금 하던 일 — 리소스 공통 구조 묶음(2026-11-07, 맨 먼저 이어서 한다)
+
+설계 정본: [ResourceStructure](ResourceStructure.md). 사용자가 2026-11-07 "**Linux 는 큰 작업이 모두 끝난 뒤**" 로 정했다 — 그때까지 `bash Scripts/dev/VerifyBundle.sh --no-linux`. 설계는 지금 사용처가 아니라 앞으로의 기능 확장 기준이고, 공유할 수 있는 것은 한 벌 · 변형은 차이만이다.
+
+**커밋 상태:** origin/main 은 `6f3e2dce5b`. 본 트리 `main` 은 작업자 A ~ I 통합과 고친 커밋이 쌓여 있고 **push 하지 않았다**(아래 1 번 때문). Debug 단위 2858 · ctest 29, Release ctest 60, 서버 단위 2724, 에디터 자체 테스트 49 는 `027432cf63` 에서 통과했다. Linux 는 돌리지 않았다.
+
+**1. 먼저 고칠 것 — `Ninja-Shipping-Server` 쿠킹 실패.** `DataInheritance.NoSchema`: 서버 구성은 `Renderer/` 를 짓지 않아 `RenderPipelineDesc` 형식이 없고, `_base` 를 가진 `engine/pipeline/forward2dpipeline.xml` · `game/empty/pipeline/computepasspipeline.xml` 를 펼치지 못한다. 재현: `cmake --build --preset Ninja-Shipping-Server`. 방향: 서버는 파이프라인을 읽지 않으니 `Config/Engine/CookContract.json` 의 `target_excluded_asset_kinds` 쪽으로 서버 팩에서 뺀다(파이프라인 파일은 접미사 종류가 없어 `AssetPaths::isExcludedForTarget` 이 잡을 규칙을 먼저 정한다). R1 의 합성 통합과 함께 볼 것. `PackCooker` 의 `<SkeletonVariant` 글 검사도 임시다(`shortcut:` 주석, 임포트 결과 54 개). 고친 뒤 `py -3 -m Scripts shipping-check`, 통과하면 그 SHA 를 push 한다.
+
+**2. 작업자 브랜치(기준 `027432cf63`).** 작업자는 코드 → 린트 → 커밋만 했고 **아무도 컴파일하지 않았다**. 표의 커밋 · 수정 수는 인계 시각의 값이다. 수정이 남은 워크트리(`.claude/worktrees/agent-<id>/`)는 세션이 끊기면 커밋되지 않은 채 남으니, 시작할 때 `git -C <워크트리> status` 로 보고 이어서 커밋한다. 다시 띄운다면 공통 규칙은 `.claude/handoff/brief_resource.md` 이다.
+
+| 작업자 | id(브랜치 `worktree-agent-<id>`) | 범위 | 커밋 · 미커밋 |
+|---|---|---|---|
+| R1 | a8e58f767d10d2b37 | 종류 정의 통합, `ResourceComposer`, 캐시 통합, `GameDataCache` 삭제, `SkeletonVariant` 를 `_base` 로, `acquire` | 2 · 0 |
+| R2 | ac2074812e245adb5 | `AssetRef<T>`, 생성 표, 약 90 칸 전환 — **끝남** | 5 · 0 |
+| R3 | a06832697f2987cbe | `ConditionExpr` · `ActionRegistry`, 행동 트리 하위 트리 · 슬롯, 스케줄 상속 | 1 · 36 |
+| R4 | a71c6174df7b87919 | 애니메이션 셋 · 그래프 상속 · 연결 레이어, 스프라이트 라이브러리, 리그 등 상속, 1 인칭 손 조사 | 4 · 11 |
+| R5 | a85a59b8cef89fa94 | 머티리얼 파라미터 묶음 · 인스턴스 값, VFX · 오디오 · UI 상속 | 5 · 3 |
+| R6 | a153b0bfd83a8f4c2 | 씬 인스턴스 · 씬 상속 · 데이터 레이어 | 0 · 29 |
+| R7 | a1d5203ab55b285e3 | 머티리얼 그래프 | 0 · 12 |
+| R8 | ab7513adb9ade55bc | 판매 전: Apple 샌드박스 구간(포럼에 30 일 답, 공식 근거 아님), Google 승인을 지급 뒤로, 환불 구간 영속, 구매자 토큰, 푸시 | 4 · 0 |
+| R9 | a205b527caa6bf6d2 | 카탈로그 편집기 자식 원소, 다른 파일 부모의 핫 리로드, 무기 · RTS · 작물 전환, 버려지는 칸 감사 | 3 · 0 |
+| R10 | a5ce6841c5c5d511d | 본 LOD 자동 생성, **핵심 본 규칙**(데이터 선언 + 사용처 파생, 빼면 로드 오류, 부모 사슬 보존), 부품 · 구간별 LOD 규칙 | 0 · 0 |
+
+**3. 통합 순서.** R1 을 먼저 합치고 나머지를 옮긴다. 충돌을 풀 때 쓴 스크립트는 `.claude/handoff/`: `cpm.sh <id…>`(`-x` 로 옮기기, 충돌에서 멈춤), `contm.sh`(포맷 후 계속). 경로가 옛 세션 폴더로 적힌 줄은 고쳐 쓴다. 통합 뒤 `App --import-models` · `--import-textures`(`kImporterVersion` 8), `--gather-text`, 검증. 그림: `rec.py <프리셋> <체인> <시나리오,…>`(골든 기록), `cmpg.py`(골든 | 실제 | 차이), `ppmsheet.py`(모아 보기), `classify2.py`(로그 id 분류). **기록 실행의 통과는 증거가 아니다. 그림을 본다.**
+
+**4. 통합 뒤 할 일(설계 단계 순).**
+- 단계 4: 카탈로그 약 54 종 공유 전환, 공개 `loadFromAsset` 제거. 쓰임을 모르는 약 20 종 조사.
+- 단계 5: `_when` 조건, 덮어쓰기 층, 경로 교체, 접속 때 합성 해시 대조.
+- R2 나머지: `SocketSet` · `PhysicsAsset` · 카탈로그 칸(R1 뒤), 애니메이션 · VFX · 프리팹 칸(R4 · R5 · R6 뒤), `Cube` · `None` 을 받는 칸, 손 표 45 칸, 생성 표의 주인 키 정리, `SaveGame` 칸의 세이브 호환 확인.
+- 쓰는 것만 담기: 참조를 따라가 쿠킹한다. `common.pack` 359MB 대 `game_empty.pack` 6MB 라 효과가 클 것으로 추정한다(재지 않았다). R2 나머지가 끝나야 믿을 수 있다. 파일 단위 중복은 4.3%(32MB)뿐이고 25MB 는 `shooter3d/textures/kaykit_dungeon` 고아 파일이라 팩 중복 제거는 뒤로 둔다.
+- 무기와 발사체 조합(`ResourceStructure.md` 7 절): R2 · R3 뒤, R9 가 무기 데이터를 옮긴 뒤.
+- 구간별 효과: `ResolvedMaterialValue` 에 `_section`, 변형 · 규칙이 구간 머티리얼을 바꾸게 한다(지금은 부품까지만, `AppearancePartDef::_listSection` 은 변형이 못 바꾼다).
+- 애니메이션 그래프 노드 · 레이어 LOD(R4 뒤), 2 차 물리 LOD 조사.
+- 머티리얼 층(R7 뒤).
+- 1 인칭에서 아래를 볼 때 손이 총을 잡지 않고 뜬다(`bodyviews.firstperson_down_a`, 옛 골든에도 있다). R4 가 조사 중이다.
+- 병합의 바인드 자세 옮기기(`MeshSkinBinding::rebindVertex`)는 여러 본에 걸친 정점에서 근사다. 그 결과로 shooter3d 골든을 다시 기록했다.
+- `editor.floatingwindow` 은 앞 단계 실패가 번진 것으로 끝났으나 원인 단계만 고쳤다. 다시 지면 체인에서 본다.
+
+**5. 그 다음.** Linux 체인 · `.linux` 골든을 한 번에(5 절의 18 단계 포함).
+
+**결정 대기가 아니라 사용자에게 알릴 것:** 스크립팅은 Lua 로 추천했고 답이 없으면 Lua 로 한다. 다음 플랫폼(모바일 · 웹 · 콘솔)은 답이 있어야 시작한다. 스킬 파일(`.claude/` 는 Git 밖)을 저장소에 넣을지, Linux 에서 dzn 시험을 할지 답을 못 받았다. 런타임 아틀라스는 하지 않기로 했다(부품 · 구간마다 머티리얼로 셰이더 효과를 주므로 맞지 않는다는 사용자 판단).
+
+사람이 보는 실행: `py -3 Scripts/dev/WatchScenarios.py [--preset 프리셋] [--backend 백엔드] [--stages a,b] [체인…]`.
 
 ### 0. 사용자가 시킨 일 — 빠짐없이 (2026-11-01)
 
