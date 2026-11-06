@@ -4,6 +4,7 @@
  * @details 방향성 비순환 그래프(DAG) 형태의 의존성을 가진 작업 실행을 지원합니다.
  */
 #pragma once
+#include "Core/Concurrency/Futex.h"
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/ConcurrentQueue.h"
 #include "Core/Container/WorkStealingDeque.h"
@@ -395,18 +396,6 @@ namespace sw
         void waitForJoin( JoinCounter& join, bool bHelpLowQueue );
         /** @brief 이 스레드를 @p join 의 대기자로 등록하고 잠듭니다. 깨어나면 부르는 쪽이 조건을 다시 확인합니다. */
         void parkOnJoin( JoinCounter& join );
-        /**
-         * @brief 완료 브로드캐스트(스테이지 완료 · 활성 수 0 · 메인 작업 · clear)를 기다리며 잠들 준비를 합니다. 대기자 수를 올리고 세대를 반환합니다.
-         * @details 부르는 쪽은 그 뒤에 조건을 다시 확인하고, `commitBroadcastWait` 로 잠들거나 `cancelBroadcastWait` 로 취소합니다. 수를
-         *          먼저 올리고 조건을 보는 쪽과, 조건을 바꾸고 수를 보는 완료 쪽이 Dekker 식 짝을 이룹니다.
-         */
-        uint32 prepareBroadcastWait();
-        /** @brief 브로드캐스트 세대가 @p observedEpoch 인 동안 잠듭니다. @p timeoutMilli 가 0 이면 무제한입니다. 대기자 수는 여기서 내립니다. */
-        void commitBroadcastWait( uint32 observedEpoch, uint32 timeoutMilli );
-        /** @brief 잠들지 않기로 했을 때 대기자 수만 내립니다. */
-        void cancelBroadcastWait();
-        /** @brief 브로드캐스트 대기자가 있으면 브로드캐스트 세대를 올려 모두 깨웁니다. */
-        void notifyBroadcast();
         /** @brief 메인 스레드가(어느 대기에서든) 잠들어 있으면 깨웁니다. 메인 전용 작업이 들어왔을 때 부릅니다. */
         void wakeParkedMainThread();
         /** @brief 대기자 슬롯 @p slotIndex 의 스레드를 깨웁니다. 할 일 없는 워커(슬롯 = 워커 번호)와 기다리는 스레드 모두 이 함수 하나로 깨웁니다. */
@@ -478,13 +467,11 @@ namespace sw
         alignas( 64 ) atomic<uint32> _workEpoch;
         atomic<uint32> _wakeSignalCount; ///< 워커를 깨운 시그널 수(통계 · 테스트용)
         /**
-         * @brief 완료 브로드캐스트 세대입니다. `waitAll` 과 "두 번째 대기자" 가 잠드는 워드입니다.
+         * @brief 완료 브로드캐스트입니다(스테이지 완료 · 활성 수 0 · 메인 작업 · clear). `waitAll` 과 "두 번째 대기자" 가 잠듭니다.
          * @details 스테이지 · 병렬 그룹은 대기자 **하나**를 자기 조인 카운터에 적어 두고, 마지막 태스크가 그 스레드만 깨웁니다. 같은
-         *          스테이지를 둘이 기다리거나 `waitAll` 처럼 대상이 전체인 대기만 이 브로드캐스트를 기다리며 잠듭니다.
-         *          `_broadcastWaiterCount` 가 0 이면 브로드캐스트는 원자 변수 하나를 읽고 끝납니다. 완료 경로에 시스템 콜이 없습니다.
+         *          스테이지를 둘이 기다리거나 `waitAll` 처럼 대상이 전체인 대기만 여기서 잠듭니다.
          */
-        alignas( 64 ) atomic<uint32> _completionEpoch;
-        atomic<uint32> _broadcastWaiterCount; ///< 브로드캐스트를 기다리며 잠든(또는 잠들려는) 스레드 수
+        alignas( 64 ) FutexBroadcast _completionBroadcast;
         /**
          * @brief 메인 스레드가 잠들어 있으면 그 대기자 슬롯이고, 아니면 -1 입니다.
          * @details 메인 전용 작업(`MainThread` 지정)은 메인 스레드만 실행할 수 있습니다. 메인이 스테이지를 기다리다 잠든 사이에 그

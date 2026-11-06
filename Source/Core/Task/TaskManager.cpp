@@ -219,8 +219,7 @@ namespace sw
         , _idleWorkerMask{ 0 }
         , _workEpoch{ 0 }
         , _wakeSignalCount{ 0 }
-        , _completionEpoch{ 0 }
-        , _broadcastWaiterCount{ 0 }
+        , _completionBroadcast{}
         , _mainThreadParkedSlot{ -1 }
         , _globalHighQueue{}
         , _globalWorkerQueue{}
@@ -355,7 +354,7 @@ namespace sw
         _clearEpoch.fetch_add( 1, std::memory_order_acq_rel );
         // 큐를 모두 비웠으니 실행 중인 태스크가 없다. 살아 있는 스테이지를 모두 돌려준다.
         _nodePool->resetAllStages();
-        notifyBroadcast();
+        _completionBroadcast.notifyAll();
     }
 
     void TaskManager::drainQueueItem( uintptr_t item )
@@ -789,7 +788,7 @@ namespace sw
         waitForJoin( group._join, false );
 
         if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
-            notifyBroadcast();
+            _completionBroadcast.notifyAll();
     }
 
     void TaskManager::pushGroupTickets( ParallelGroup* pGroup, uint32 ticketCount )
@@ -960,11 +959,11 @@ namespace sw
                 continue;
             }
             // 대기자 칸(스테이지마다 하나)에 적지 않고 브로드캐스트로 잔다 — 진단 간격마다 깨어야 하고, 같은 스테이지를 둘이 기다릴 수 있다. 스테이지 완료는 늘 브로드캐스트를 보낸다.
-            const uint32 epoch = prepareBroadcastWait();
+            const uint32 epoch = _completionBroadcast.prepareWait();
             if ( join.getPending() > 0 )
-                commitBroadcastWait( epoch, static_cast<uint32>( static_cast<int64>( kStageWaitReportMs ) - elapsed ) );
+                _completionBroadcast.commitWait( epoch, static_cast<uint32>( static_cast<int64>( kStageWaitReportMs ) - elapsed ) );
             else
-                cancelBroadcastWait();
+                _completionBroadcast.cancelWait();
         }
     }
 
@@ -1048,11 +1047,11 @@ namespace sw
                 continue;
             }
             // 대상이 전체라 대기자 하나를 적어 둘 곳이 없다. 브로드캐스트를 기다리며 잠든다(활성 수 0 · 메인 작업 · clear 가 알린다). 진단 주기에 맞춰 깬다.
-            const uint32 epoch = prepareBroadcastWait();
+            const uint32 epoch = _completionBroadcast.prepareWait();
             if ( _activeTaskCount.load( std::memory_order_seq_cst ) > 0 )
-                commitBroadcastWait( epoch, static_cast<uint32>( static_cast<int64>( kStageWaitReportMs ) - elapsed ) );
+                _completionBroadcast.commitWait( epoch, static_cast<uint32>( static_cast<int64>( kStageWaitReportMs ) - elapsed ) );
             else
-                cancelBroadcastWait();
+                _completionBroadcast.cancelWait();
         }
     }
 
@@ -1077,11 +1076,11 @@ namespace sw
             case JoinCounter::RegistrationResult::Busy:
             {
                 // 같은 것을 두 번째로 기다린다. 드문 경우다. 브로드캐스트를 기다리며 잠들되 짧게 끊어 폴링한다(완료되면 브로드캐스트도 보낸다).
-                const uint32 epoch = prepareBroadcastWait();
+                const uint32 epoch = _completionBroadcast.prepareWait();
                 if ( join.getPending() > 0 )
-                    commitBroadcastWait( epoch, kSecondWaiterPollMilli );
+                    _completionBroadcast.commitWait( epoch, kSecondWaiterPollMilli );
                 else
-                    cancelBroadcastWait();
+                    _completionBroadcast.cancelWait();
                 return;
             }
             case JoinCounter::RegistrationResult::Registered:
@@ -1109,38 +1108,6 @@ namespace sw
             _mainThreadParkedSlot.store( -1, std::memory_order_seq_cst );
     }
 
-    uint32 TaskManager::prepareBroadcastWait()
-    {
-        const uint32 epoch = _completionEpoch.load( std::memory_order_acquire );
-        _broadcastWaiterCount.fetch_add( 1, std::memory_order_seq_cst );
-        std::atomic_thread_fence( std::memory_order_seq_cst );
-        return epoch;
-    }
-
-    void TaskManager::commitBroadcastWait( uint32 observedEpoch, uint32 timeoutMilli )
-    {
-        if ( timeoutMilli == 0 )
-            Futex::wait( _completionEpoch, observedEpoch );
-        else
-            Futex::waitFor( _completionEpoch, observedEpoch, timeoutMilli );
-        _broadcastWaiterCount.fetch_sub( 1, std::memory_order_seq_cst );
-    }
-
-    void TaskManager::cancelBroadcastWait()
-    {
-        _broadcastWaiterCount.fetch_sub( 1, std::memory_order_seq_cst );
-    }
-
-    void TaskManager::notifyBroadcast()
-    {
-        // 완료를 만든 원자 연산 뒤에 메모리 펜스를 치고 대기자 수를 본다. 대기자 쪽의 "수 올리기 → 펜스 → 조건 확인" 과 짝을 이룬다.
-        std::atomic_thread_fence( std::memory_order_seq_cst );
-        if ( _broadcastWaiterCount.load( std::memory_order_seq_cst ) == 0 )
-            return;
-        _completionEpoch.fetch_add( 1, std::memory_order_release );
-        Futex::wakeAll( _completionEpoch );
-    }
-
     void TaskManager::wakeParkedMainThread()
     {
         std::atomic_thread_fence( std::memory_order_seq_cst );
@@ -1148,7 +1115,7 @@ namespace sw
         if ( parkedSlot >= 0 )
             unparkSlot( static_cast<uint32>( parkedSlot ) );
         // 메인이 브로드캐스트(`waitAll`)를 기다리며 잠들어 있을 수도 있다.
-        notifyBroadcast();
+        _completionBroadcast.notifyAll();
     }
 
     void TaskManager::unparkSlot( uint32 slotIndex )
@@ -1225,7 +1192,7 @@ namespace sw
         // 0xFFFFFFFF 로 돌아가 이후의 `waitAll` 이 영원히 기다린다(스케줄링에 따라 CTest 아래에서만 드러난다). 후속 태스크는 만들 때
         // 이미 세어져 있으므로 여기서 내려도 `waitAll` 이 일찍 돌아오지 않는다.
         if ( _activeTaskCount.fetch_sub( 1, std::memory_order_acq_rel ) == 1 )
-            notifyBroadcast();
+            _completionBroadcast.notifyAll();
 
         BLOCK( "Update Parent Task" )
         {
@@ -1252,7 +1219,7 @@ namespace sw
                     const uint32 waiterPlusOne = JoinCounter::waiterSlotPlusOne( joinBefore );
                     if ( waiterPlusOne != 0 )
                         unparkSlot( waiterPlusOne - 1 );
-                    notifyBroadcast();
+                    _completionBroadcast.notifyAll();
                     pStage->release();
                 }
             }
