@@ -267,7 +267,10 @@ namespace sw
         {
             outValue[index] = static_cast<utf8>( reader.readBits( 8 ) );
         }
-        return FixedReadResult::Ok;
+        // 글자 필드의 입구이다. 잘린 읽기는 뒤의 넘침 검사가 Truncated 로 돌려주므로 여기서 내용을 판정하지 않는다.
+        // 받은 글은 저장되어 다른 사람의 화면 · 로그로 나간다. 깨진 UTF-8 · NUL 을 키트마다 막지 않고 여기서 한 번 막는다(바이너리는 `vector<uint8>` 로 나른다).
+        const bool bTextOk = reader.hasOverflowed() || ( StringUtil::isValidUTF8( string_view( outValue ) ) && outValue.find( '\0' ) == string::npos );
+        return bTextOk ? FixedReadResult::Ok : FixedReadResult::InvalidText;
     }
 
     bool FixedCodecUtil::writeBitset( BitWriter& writer, const DynamicBitset& value, const uint32 maxCount )
@@ -384,6 +387,8 @@ namespace sw
                 return "ValidateFailed";
             case FixedReadResult::TrailingData:
                 return "TrailingData";
+            case FixedReadResult::InvalidText:
+                return "InvalidText";
         }
         return "Unknown";
     }

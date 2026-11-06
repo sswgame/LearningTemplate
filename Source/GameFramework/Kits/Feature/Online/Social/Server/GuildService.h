@@ -172,8 +172,6 @@ namespace sw
 
         /** @brief 이름 규칙을 검사합니다. 1~24바이트이고, 올바른 UTF-8 이며, 제어 문자가 없고, 앞뒤 공백이 없어야 합니다. */
         static bool isValidName( string_view name );
-        /** @brief 공지 규칙을 검사합니다. 256바이트까지이고 올바른 UTF-8 이며 NUL 이 없어야 합니다. 비어 있어도 되고 줄바꿈도 됩니다. 멤버 모두의 화면에 그대로 나갑니다. */
-        static bool isValidNotice( string_view notice );
 
         /** @brief 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
         void applyOutcome( const GuildRequest& request, uint64 requestTag, GuildOutcome&& outcome );

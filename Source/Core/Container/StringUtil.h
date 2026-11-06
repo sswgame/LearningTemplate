@@ -63,6 +63,8 @@ namespace sw
 
         /** @brief 바이트열이 올바른 UTF-8 인지 검사합니다. */
         static bool isValidUTF8( const utf8* pInput );
+        /** @brief 길이를 아는 글자의 UTF-8 검사입니다. 가운데의 NUL 도 올바른 UTF-8 로 봅니다 - 글자 규칙은 부르는 쪽이 더합니다. */
+        static bool isValidUTF8( string_view text );
         /**
          * @brief 올바른 UTF-8 은 그대로 두고, 잘못된 바이트만 백슬래시 + `xNN`(16진 두 자리) 넉 자로 바꿉니다. 결과는 늘 올바른 UTF-8 입니다.
          * @details 로그가 이것을 쓴다. 한 바이트만 틀려도 **줄 전체**를 로캘 변환하면, `setlocale` 을 부르는 곳이 없어 C 로캘이라

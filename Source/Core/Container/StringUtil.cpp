@@ -564,6 +564,11 @@ namespace sw
         return result;
     }
 
+    bool StringUtil::isValidUTF8( string_view text )
+    {
+        return StringUtilInternal::isValidUTF8( reinterpret_cast<const uint8*>( text.data() ), text.size() );
+    }
+
     string StringUtil::toUpper( const utf8* pInput )
     {
         return StringUtilInternal::mapEachChar<string>( pInput, []( utf8 ch )

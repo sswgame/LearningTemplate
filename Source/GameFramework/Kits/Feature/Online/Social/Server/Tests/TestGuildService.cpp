@@ -173,8 +173,8 @@ SW_TEST_CASE( GuildServiceTest, CreateRegistersUniqueNames )
     SW_EXPECT_TRUE( rig.run( GuildOperation::Get, kOutside )._result == SocialResult::NotInGuild );
 }
 
-/** @brief [GuildServiceTest] 이름 규칙: 1 ~ 24 바이트, 앞뒤 공백 · 제어 문자 · 깨진 UTF-8 은 안 된다. 공지는 줄바꿈이 되지만 깨진 UTF-8 · NUL · 상한 초과는 안 된다 */
-SW_TEST_CASE( GuildServiceTest, NameAndNoticeRules )
+/** @brief [GuildServiceTest] 이름 규칙: 1 ~ 24 바이트, 앞뒤 공백 · 제어 문자 · 깨진 UTF-8 은 안 된다 */
+SW_TEST_CASE( GuildServiceTest, NameRules )
 {
     SW_EXPECT_TRUE( GuildService::isValidName( "Dragons 2" ) );
     SW_EXPECT_TRUE( GuildService::isValidName( string( static_cast<size_t>( GuildLimit::kMaxNameSize ), 'x' ) ) );
@@ -184,12 +184,6 @@ SW_TEST_CASE( GuildServiceTest, NameAndNoticeRules )
     SW_EXPECT_FALSE( GuildService::isValidName( "trail " ) );
     SW_EXPECT_FALSE( GuildService::isValidName( "tab\tname" ) );
     SW_EXPECT_FALSE( GuildService::isValidName( "bad\xFFutf8" ) );
-
-    SW_EXPECT_TRUE( GuildService::isValidNotice( "" ) );
-    SW_EXPECT_TRUE( GuildService::isValidNotice( "한 줄\n둘째 줄" ) );
-    SW_EXPECT_FALSE( GuildService::isValidNotice( "bad\xFFutf8" ) );
-    SW_EXPECT_FALSE( GuildService::isValidNotice( string_view( "nul\0byte", 8 ) ) );
-    SW_EXPECT_FALSE( GuildService::isValidNotice( string( static_cast<size_t>( GuildLimit::kMaxNoticeSize ) + 1, 'x' ) ) );
 }
 
 /** @brief [GuildServiceTest] 초대 · 수락: 임원 이상만 초대하고, 자신 · 다른 길드 사람은 초대할 수 없다. 초대 없는 수락 · 만료된 수락은 지고, 수락하면 알림 · 이벤트가 난다 */
@@ -330,7 +324,7 @@ SW_TEST_CASE( GuildServiceTest, RoleChangesAndMasterTransfer )
     SW_EXPECT_TRUE( rig.run( GuildOperation::Leave, kMaster )._result == SocialResult::Ok ); // 넘긴 사람은 이제 떠날 수 있다
 }
 
-/** @brief [GuildServiceTest] 공지: 임원 이상이 바꾸고 멤버가 읽는다. 깨진 UTF-8 은 저장하지 않는다 */
+/** @brief [GuildServiceTest] 공지: 임원 이상이 바꾸고 멤버가 읽는다. 상한을 넘으면 저장하지 않는다(깨진 UTF-8 은 요청 코덱이 막는다) */
 SW_TEST_CASE( GuildServiceTest, NoticeIsValidatedAndShared )
 {
     GuildRig rig;
@@ -338,7 +332,6 @@ SW_TEST_CASE( GuildServiceTest, NoticeIsValidatedAndShared )
     SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kMember, kInvalidAccountID, "hi" )._result == SocialResult::NotAllowed );
     SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, "hello\nworld" )._result == SocialResult::Ok );
     SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._notice );
-    SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, "bad\xFF" )._result == SocialResult::Invalid );
     SW_EXPECT_TRUE( rig.run( GuildOperation::SetNotice, kOfficer, kInvalidAccountID, string( static_cast<size_t>( GuildLimit::kMaxNoticeSize ) + 1, 'x' ) )._result == SocialResult::Invalid );
     SW_EXPECT_EQUAL( string( "hello\nworld" ), rig.run( GuildOperation::Get, kMember )._info._notice );
 }

@@ -487,7 +487,7 @@ namespace sw
                     {
                         if ( selfMember._role < GuildRole::Officer )
                             return fail( SocialResult::NotAllowed );
-                        if ( GuildService::isValidNotice( _request._text ) == false )
+                        if ( _request._text.size() > static_cast<size_t>( GuildLimit::kMaxNoticeSize ) )
                             return fail( SocialResult::Invalid );
                         info._notice = _request._text;
                         transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
@@ -843,20 +843,6 @@ namespace sw
             const bool   bBad      = codepoint == GuildServiceInternal::kReplacementChar || codepoint < GuildServiceInternal::kFirstPrintable ||
                               codepoint == GuildServiceInternal::kDeleteChar;
             if ( bBad )
-                return false;
-        }
-        return true;
-    }
-
-    bool GuildService::isValidNotice( string_view notice )
-    {
-        if ( notice.size() > static_cast<size_t>( GuildLimit::kMaxNoticeSize ) )
-            return false;
-        size_t offset = 0;
-        while ( offset < notice.size() )
-        {
-            const uint32 codepoint = StringUtil::decodeUTF8( notice, offset );
-            if ( codepoint == GuildServiceInternal::kReplacementChar || codepoint == 0 )
                 return false;
         }
         return true;

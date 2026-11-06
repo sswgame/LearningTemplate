@@ -38,6 +38,7 @@ namespace sw
         OutOfRange,     ///< 범위 밖 정수 · 개수 · 양자화 칸, 등록되지 않은 열거자, 허용 범위 밖 실수입니다
         ValidateFailed, ///< `REFLECT( Validate = fn )` 가 오류를 적었습니다
         TrailingData,   ///< 필드를 다 읽고도 바이트 경계 패딩보다 많은 비트가 남았습니다
+        InvalidText,    ///< 글자 필드가 올바른 UTF-8 이 아니거나 NUL 이 있습니다
     };
 } // namespace sw
 
