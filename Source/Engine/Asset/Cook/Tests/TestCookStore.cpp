@@ -51,7 +51,7 @@ namespace
         }
     };
 
-    const CookJobDesc kDesc{ ._cookerName = "Fake", ._cookerVersion = 1, ._outputFormatVersion = 1, ._target = "Test", ._settingsHash = 0 };
+    const CookJobDesc kDesc{ ._cookerName = "Fake", ._codeFingerprint = 1, ._target = "Test", ._settingsHash = 0 };
 } // namespace
 
 /**
@@ -88,17 +88,11 @@ SW_TEST_CASE( CookStoreTest, CooksAgainWhenInputOrVersionChanges )
     SW_EXPECT_EQUAL( CookOutcome::Cooked, fixture.cook( fixture._store, kDesc, "x.bin" ) );
     SW_EXPECT_EQUAL( string( "baked:two" ), fixture.readOutput( "x.bin" ) );
 
-    CookJobDesc nextVersion    = kDesc;
-    nextVersion._cookerVersion = 2;
+    CookJobDesc nextVersion      = kDesc; // 쿠커 코드가 바뀌면 지문이 바뀌어 다시 굽는다
+    nextVersion._codeFingerprint = 2;
     SW_EXPECT_EQUAL( CookOutcome::Cooked, fixture.cook( fixture._store, nextVersion, "x.bin" ) );
     SW_EXPECT_EQUAL( CookOutcome::Reused, fixture.cook( fixture._store, nextVersion, "x.bin" ) );
     SW_EXPECT_EQUAL( 3, fixture._bakeCount );
-
-    // 읽는 쪽 형식 버전만 올려도 다시 굽는다 — 쿠커 번호를 따로 맞추지 않는다
-    CookJobDesc nextFormat          = nextVersion;
-    nextFormat._outputFormatVersion = 2;
-    SW_EXPECT_EQUAL( CookOutcome::Cooked, fixture.cook( fixture._store, nextFormat, "x.bin" ) );
-    SW_EXPECT_EQUAL( 4, fixture._bakeCount );
 }
 
 /**

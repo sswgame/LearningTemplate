@@ -12,6 +12,7 @@
 #include "Engine/Config/GameConfig.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Navigation/Component/NavMeshSurfaceComponent.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
@@ -143,11 +144,10 @@ namespace sw
     CookJobDesc SceneNavigationCooker::makeCookJobDesc()
     {
         CookJobDesc desc;
-        desc._cookerName          = "NavMesh";
-        desc._cookerVersion       = kCookVersion;
-        desc._outputFormatVersion = NavMeshAsset::kVersion;
-        desc._target              = "Any";
-        desc._settingsHash        = 0; // 베이크 설정은 리소스(내비 설정 표)라 읽기로 입력에 든다
+        desc._cookerName      = "NavMesh";
+        desc._codeFingerprint = CookCodeFingerprint::find( "NavMesh" );
+        desc._target          = "Any";
+        desc._settingsHash    = 0; // 베이크 설정은 리소스(내비 설정 표)라 읽기로 입력에 든다
         return desc;
     }
 } // namespace sw

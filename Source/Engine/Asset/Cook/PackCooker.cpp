@@ -14,6 +14,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
+#include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Content/Pack/PackConfig.h"
 #include "Engine/Content/Pack/PackTypes.h"
 #include "Engine/Content/Pack/PackWriter.h"
@@ -322,11 +323,10 @@ namespace sw
         }
 
         CookJobDesc desc;
-        desc._cookerName          = "Pack";
-        desc._cookerVersion       = kCookerVersion;
-        desc._outputFormatVersion = kPackFormatVersion;
-        desc._target              = params._buildTarget + "-" + params._shaderFolder;
-        desc._settingsHash        = PackCookerInternal::computeSettingsHash( config, params );
+        desc._cookerName      = "Pack";
+        desc._codeFingerprint = CookCodeFingerprint::find( "Pack" );
+        desc._target          = params._buildTarget + "-" + params._shaderFolder;
+        desc._settingsHash    = PackCookerInternal::computeSettingsHash( config, params );
 
         uint32                             failedCount = 0;
         PackCookerInternal::PackCookTiming timing;

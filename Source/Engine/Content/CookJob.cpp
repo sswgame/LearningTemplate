@@ -271,9 +271,8 @@ namespace sw
 
         // 사람이 읽을 수 있는 기준 글을 만들어 해시한다 — 칸 사이 구분자가 있어 이름 둘이 붙어 다른 이름이 되지 않는다.
         string canonical;
-        SW_ASSERT( desc._outputFormatVersion != 0 && "CookJobDesc needs the format version its reader checks" );
-        canonical.append( "cooker=" ).append( desc._cookerName ).append( "\nversion=" ).append( sw::to_string( desc._cookerVersion ) );
-        canonical.append( "\nformat=" ).append( sw::to_string( desc._outputFormatVersion ) );
+        SW_ASSERT( desc._codeFingerprint != 0 && "CookJobDesc needs the cooker's code fingerprint - is it listed in Config/Dev/CookCodeInputs.json?" );
+        canonical.append( "cooker=" ).append( desc._cookerName ).append( "\ncode=" ).append( sw::to_string( desc._codeFingerprint ) );
         canonical.append( "\ntarget=" ).append( desc._target ).append( "\nsettings=" ).append( sw::to_string( desc._settingsHash ) ).append( "\n" );
         for ( const CookInput* pInput : listSorted )
         {

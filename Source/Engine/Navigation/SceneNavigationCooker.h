@@ -38,7 +38,5 @@ namespace sw
         static uint32 cookAll( const SceneEngineServices& services, const string& resourceRoot, const string& cookedDir, const CookStore& store, uint32& outFailedCount );
         /** @brief 내비메시 쿠킹 작업의 키 값입니다. */
         static CookJobDesc makeCookJobDesc();
-        /** @brief 내비메시 쿠커 버전입니다. `.navmesh` 형식이나 베이크(`NavMeshAsset`)를 바꾸면 올립니다 — 모든 내비메시가 다시 베이크됩니다. */
-        static constexpr uint32 kCookVersion = 1;
     };
 } // namespace sw

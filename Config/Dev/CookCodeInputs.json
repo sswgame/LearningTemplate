@@ -1,0 +1,9 @@
+{
+    "Scene": [ "Source/Engine/Scene", "Source/Engine/Serialization", "Source/Engine/Object/GameObject/Serialization", "Source/Engine/Object/Prefab" ],
+    "ScenePreload": [ "Source/Engine/Scene" ],
+    "Prefab": [ "Source/Engine/Object/Prefab", "Source/Engine/Serialization" ],
+    "NavMesh": [ "Source/Engine/Navigation", "Source/Engine/Scene" ],
+    "VertexAnimation": [ "Source/Engine/Animation/Scene", "Source/Engine/Graphics/Mesh" ],
+    "Pack": [ "Source/Engine/Asset/Cook", "Source/Engine/Content/Pack" ],
+    "ShaderCompiler": [ "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp", "Source/Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.cpp" ]
+}

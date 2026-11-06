@@ -1,7 +1,7 @@
 /**
  * @file SPIRVOpenGLPatch.h
  * @brief DXC 가 낸 SPIR-V 를 OpenGL(ARB_gl_spirv)이 받는 모양으로 고칩니다. `ShaderCompiler` 가 GL 타깃에만 부릅니다.
- * @details DXC 는 Vulkan 용 SPIR-V 를 낸다 — GL 드라이버와 다른 둘을 여기서 맞춘다. 패치를 바꾸면 `ShaderCookStamp::kCompileOptionsRevision` 을 올린다(쿠킹한 GL 바이너리가 낡는다).
+ * @details DXC 는 Vulkan 용 SPIR-V 를 낸다 — GL 드라이버와 다른 둘을 여기서 맞춘다. 패치를 바꾸면 컴파일러 코드 지문(`CookCodeFingerprint`) 을 올린다(쿠킹한 GL 바이너리가 낡는다).
  */
 #pragma once
 #include "Core/Container/vector.h"

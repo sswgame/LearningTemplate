@@ -85,16 +85,10 @@ namespace sw
     /** @struct CookJobDesc @brief 작업 키에 들어가는 쿠커 쪽 값입니다. 모두 필수입니다. */
     struct CookJobDesc
     {
-        string _cookerName;         ///< 쿠커 이름(예: "Scene")
-        uint32 _cookerVersion{ 0 }; ///< 쿠킹 규칙 버전 — 출력 형식은 그대로인데 굽는 규칙(펼치기 · 고르기)을 바꾸면 올린다
-        /**
-         * @brief 출력 파일의 형식 버전 — 읽는 쪽이 대조하는 **그 상수**를 넘긴다(0 은 쓰지 않는다).
-         * @details 쿠커가 따로 든 번호와 읽는 쪽 번호를 맞춰 올리게 하면 하나만 올렸을 때 옛 쿠킹본을 재사용해 배포본이 그것을 읽지 못한다(프리팹 형식 2 → 3 에서 실제로 났다).
-         *          같은 상수가 키에 들어가므로 형식을 올리면 저절로 다시 굽는다.
-         */
-        uint32 _outputFormatVersion{ 0 };
-        string _target;            ///< 대상 플랫폼 · 백엔드(예: "Windows")
-        uint64 _settingsHash{ 0 }; ///< 쿠킹 설정의 해시(설정이 없으면 0 을 명시한다)
+        string _cookerName;           ///< 쿠커 이름(예: "Scene")
+        uint64 _codeFingerprint{ 0 }; ///< 쿠커 코드의 지문(`CookCodeFingerprint::find`) — 코드가 바뀌면 그 쿠커의 결과가 모두 다시 베이크된다. 사람이 올리는 번호가 없다
+        string _target;               ///< 대상 플랫폼 · 백엔드(예: "Windows")
+        uint64 _settingsHash{ 0 };    ///< 쿠킹 설정의 해시(설정이 없으면 0 을 명시한다)
     };
 } // namespace sw
 

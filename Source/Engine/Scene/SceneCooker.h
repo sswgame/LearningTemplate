@@ -123,12 +123,6 @@ namespace sw
          * @details 설정 해시는 0 이다 — 목록은 씬이 지어질 때 읽은 입력(씬 · 프리팹 · 컴포넌트 경로)으로만 정해진다. 형식 버전은 `ScenePreloadList::kVersion`.
          */
         SW_API static CookJobDesc makePreloadCookJobDesc();
-
-        /**
-         * @brief 씬 쿠커 버전입니다. 쿠킹된 씬의 형식이나 출력을 바꾸는 코드(기본값 · 검증)를 바꾸면 올립니다 — 모든 씬이 다시 베이크됩니다.
-         * @details 2: 월드 설정과 스트리밍 셀(SCN1 판 4).
-         */
-        static constexpr uint32 kCookVersion = 2;
     };
 
 } // namespace sw

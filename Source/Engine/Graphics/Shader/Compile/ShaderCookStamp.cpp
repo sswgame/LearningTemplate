@@ -23,6 +23,7 @@
 
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
+#include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
@@ -231,7 +232,7 @@ namespace sw
                 {
                     // SPIR-V 타깃 환경(ShaderCompiler 의 -fspv-target-env)은 Vulkan 요구 판이다.
                     constexpr uint32 kVulkanTargetVersion = constant::render::kVulkanRequiredMajor * 1000 + constant::render::kVulkanRequiredMinor;
-                    uint64           hash                 = ShaderCookStamp::makeToolchainFingerprint( ShaderCookStamp::kCompileOptionsRevision, kVulkanTargetVersion, ShaderCookStamp::kCompilerVersion );
+                    uint64           hash                 = ShaderCookStamp::makeToolchainFingerprint( CookCodeFingerprint::find( "ShaderCompiler" ), kVulkanTargetVersion, CookCodeFingerprint::getShaderCompilerVersion() );
                     // 엔진이 모든 컴파일에 넣는 define 도 도구 입력이다 — 요청 desc 로 키를 만드는 캐시도 표가 바뀌면 낡는다.
                     vector<ShaderMacroDefine> listDefine;
                     ShaderCompiler::appendEngineDefines( listDefine );
@@ -785,9 +786,9 @@ namespace sw
         return true;
     }
 
-    uint64 ShaderCookStamp::makeToolchainFingerprint( uint32 compileOptionsRevision, uint32 vulkanTargetVersion, string_view compilerVersion )
+    uint64 ShaderCookStamp::makeToolchainFingerprint( uint64 compilerCodeFingerprint, uint32 vulkanTargetVersion, string_view compilerVersion )
     {
-        uint64 hash = HashUtil::computeStringHash64( to_string( compileOptionsRevision ), false );
+        uint64 hash = HashUtil::computeStringHash64( to_string( compilerCodeFingerprint ), false );
         hash        = HashUtil::computeStringHash64( to_string( vulkanTargetVersion ), false, hash );
         return HashUtil::computeStringHash64( string( compilerVersion ), false, hash );
     }

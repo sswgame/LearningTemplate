@@ -17,6 +17,7 @@
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Content/CookCodeFingerprint.h"
 #include "Engine/Content/CookJob.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/Component/ComponentStableKey.h"
@@ -1646,11 +1647,10 @@ namespace sw
     CookJobDesc PrefabCache::makeCookJobDesc()
     {
         CookJobDesc desc;
-        desc._cookerName          = "Prefab";
-        desc._cookerVersion       = kCookVersion;
-        desc._outputFormatVersion = PrefabAssetInternal::kBinVersion;
-        desc._target              = "Any";
-        desc._settingsHash        = 0; // 프리팹 쿠킹에는 설정이 없다
+        desc._cookerName      = "Prefab";
+        desc._codeFingerprint = CookCodeFingerprint::find( "Prefab" );
+        desc._target          = "Any";
+        desc._settingsHash    = 0; // 프리팹 쿠킹에는 설정이 없다
         return desc;
     }
 } // namespace sw

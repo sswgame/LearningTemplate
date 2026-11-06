@@ -108,6 +108,29 @@ set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Module/EngineABIStamp.c
 	OBJECT_DEPENDS "${SW_ENGINE_ABI_STAMP_HEADER}"
 )
 
+# 쿠커 코드 지문 — 쿠킹 재사용 판단의 입력을 소스 내용에서 산출한다(`Engine/Content/CookCodeFingerprint.h`). 엔진 소스 어디가 바뀌어도 돌지만 결과가 같으면 파일을 다시 쓰지 않는다.
+file(GLOB_RECURSE swCookCodeInputs CONFIGURE_DEPENDS
+	"${CMAKE_SOURCE_DIR}/Source/Engine/*.h"
+	"${CMAKE_SOURCE_DIR}/Source/Engine/*.hpp"
+	"${CMAKE_SOURCE_DIR}/Source/Engine/*.cpp"
+	"${CMAKE_SOURCE_DIR}/Source/Engine/*.inl"
+	"${CMAKE_SOURCE_DIR}/Source/Engine/*.xxx"
+)
+set(swCookCodeHeader "${CMAKE_BINARY_DIR}/generated/engineabi/CookCodeFingerprint.gen.h")
+add_custom_command(
+	OUTPUT "${swCookCodeHeader}"
+	COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/Scripts/generate/CookCodeFingerprint.py"
+		--root "${CMAKE_SOURCE_DIR}" --inputs "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json"
+		--vcpkg-status "${VCPKG_INSTALLED_DIR}/vcpkg/status" --out "${swCookCodeHeader}"
+	DEPENDS ${swCookCodeInputs} "${CMAKE_SOURCE_DIR}/Config/Dev/CookCodeInputs.json" "${VCPKG_INSTALLED_DIR}/vcpkg/status"
+		"${CMAKE_SOURCE_DIR}/Scripts/generate/CookCodeFingerprint.py"
+	COMMENT "Fingerprinting cooker code"
+	VERBATIM
+)
+add_custom_target(SwCookCodeFingerprint DEPENDS "${swCookCodeHeader}")
+set_target_properties(SwCookCodeFingerprint PROPERTIES FOLDER "CMakePredefinedTargets")
+set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/Content/CookCodeFingerprint.cpp" PROPERTIES OBJECT_DEPENDS "${swCookCodeHeader}")
+
 # `Source/Engine` 자체는 include 경로가 아니다 — `#include "pch.h"` 만 진입 헤더로 푼다(소비하는 타깃 모두가 받는다).
 sw_addPCHEntryDirectory(Engine PUBLIC engine "Engine/pch.h")
 # 셰이더 바인딩 계약(binding_slots.hlsli)은 HLSL 과 C++ 가 같은 파일을 읽는다. ShaderBindingSlots.h 가 include 한다.
@@ -373,6 +396,8 @@ foreach(tier IN LISTS SW_ENGINE_TIER_LIST)
 		LINK ${swEngineLinkLibraries}
 	)
 	sw_addEngineLayerStubs(EngineLayer${tier} ${tier})
+	target_include_directories(EngineLayer${tier} PRIVATE "${CMAKE_BINARY_DIR}/generated/engineabi")
+	add_dependencies(EngineLayer${tier} SwCookCodeFingerprint)
 	if(swEngineDependency)
 		add_dependencies(EngineLayer${tier} ${swEngineDependency})
 	endif()

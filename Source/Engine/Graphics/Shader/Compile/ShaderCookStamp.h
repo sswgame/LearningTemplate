@@ -111,29 +111,14 @@ namespace sw
         [[nodiscard]] static bool readIncludeRecord( string_view recordPath, vector<string>& outListIncludedFile, uint64& outBytecodeHash );
 
         /**
-         * @brief 컴파일 옵션의 버전입니다. **`ShaderCompiler.cpp` 가 컴파일러에 넘기는 인자(플래그, 백엔드 define)를 바꾸면 올리세요.**
-         * @details 이 값은 `getToolchainFingerprint` 에 들어가 쿠킹 스탬프와 디스크 캐시 키를 바꾼다. 올리지 않으면 소스가 그대로라
-         *          옛 옵션으로 만든 바이너리가 "최신"으로 남는다.
-         */
-        inline static constexpr uint32 kCompileOptionsRevision = 3; // 3: GL SPIR-V 의 조각 좌표 원점(SPIRVOpenGLPatch::useLowerLeftFragmentOrigin), 2: 이름 없는 구조체 멤버에 이름
-
-        /**
-         * @brief 쿠킹에 쓰는 셰이더 컴파일러의 버전 식별자입니다 — vcpkg 포트 `directx-dxc` 의 버전(`build/vcpkg_installed/vcpkg/status`)과 같은 글이어야 한다.
-         * @details 컴파일러 파일의 내용 해시가 아니라 버전 글을 지문에 넣는다. 쿠킹본은 Windows 에서 만들어 커밋하고 리눅스도 같은 쿠킹본을 쓰므로,
-         *          OS 마다 다른 라이브러리 파일을 해시하면 다른 OS 에서 모든 스탬프가 낡은 것이 된다. 같은 vcpkg 기준선이면 두 OS 의 포트 버전이 같다.
-         *          DXC 를 올리면 이 글을 고친다 — 어긋나면 `TestShaderCompilerVersionPin.py` 가 진다.
-         */
-        inline static constexpr const utf8* kCompilerVersion = "directx-dxc 2026-05-27";
-
-        /**
-         * @brief 컴파일러 도구의 지문입니다. 컴파일 옵션 버전, Vulkan 타깃 버전, 컴파일러 버전 식별자를 합칩니다(`makeToolchainFingerprint` 에 이 클래스의 상수를 넣은 값).
+         * @brief 컴파일러 도구의 지문입니다. 컴파일러를 부르는 코드의 지문(`CookCodeFingerprint` "ShaderCompiler" — 인자 · 플래그를 고치면 저절로 바뀐다), Vulkan 타깃 버전, 설치된 컴파일러 버전(vcpkg 설치 기록)을 합칩니다(`makeToolchainFingerprint` 에 이 클래스의 상수를 넣은 값).
          * @details 소스 내용 해시만 보면 DXC 를 바꾸거나 옵션을 고쳐도 아무것도 다시 쿠킹하지 않는다. 슬롯 계약 숫자(시프트 포함)는
          *          `binding_slots.hlsli` 에 있고 그 파일은 include 루트 헤더라 이미 스탬프에 들어간다. 파일이나 OS 에 따라 달라지는 값은 넣지 않는다.
          */
         static uint64 getToolchainFingerprint();
 
         /** @brief 지문 계산의 본체입니다. 입력만으로 정해집니다(테스트가 상수만으로 같은 값이 나오는지 확인합니다). */
-        static uint64 makeToolchainFingerprint( uint32 compileOptionsRevision, uint32 vulkanTargetVersion, string_view compilerVersion );
+        static uint64 makeToolchainFingerprint( uint64 compilerCodeFingerprint, uint32 vulkanTargetVersion, string_view compilerVersion );
 
         /**
          * @brief 셰이더 `#include` 가 자기 폴더 다음으로 찾는 도메인 **종류**(`engine`, `common` 순)를 돌려줍니다(`<도메인>/shaders`).
