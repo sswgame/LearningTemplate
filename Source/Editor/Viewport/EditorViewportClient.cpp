@@ -320,7 +320,7 @@ namespace sw::editor
             pCanvasDrawList->PopClipRect();
 
             // 피킹과 호버는 기즈모보다 먼저 본다. ImGuizmo::IsOver · IsUsing 은 지난 프레임에 그린 기즈모의 상태다.
-            const bool bGizmoBusy = _gizmo.isHovered() || _gizmo.isDragging();
+            const bool bGizmoBusy = _gizmo.isMouseOverDrawnGizmo();
             _picker.processClick( canvasPos, canvasSize, pCamera, bCanvasClicked && ( EditorColliderHandleTool::isCapturingMouse() || EditorViewportMouseClaim::isClaimed() ) == false, bGizmoBusy, _toolbarSettings );
             pCanvasDrawList->PushClipRect( imagePos, canvasMax, true );
             _picker.processMarquee( canvasPos, canvasSize, pCamera, pCanvasDrawList );

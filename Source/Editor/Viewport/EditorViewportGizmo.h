@@ -46,6 +46,11 @@ namespace sw::editor
         bool isDragging() const { return _bTracking == SW_TRUE; }
         /** @brief 지난 `draw` 에서 마우스가 기즈모 위에 있었으면 true 입니다. 미리보기 뷰포트가 오빗 입력을 양보하는 데 씁니다. */
         bool isHovered() const { return _bHovered == SW_TRUE; }
+        /**
+         * @brief 지금 마우스가 지난 프레임에 그린 기즈모 위거나 끄는 중이면 true 입니다. 피킹처럼 기즈모보다 먼저 도는 쪽이 봅니다.
+         * @details ImGuizmo::IsOver 는 지금 마우스로 답하지만 그리지 않는 프레임에도 마지막 행렬로 답한다 - 선택을 푼 뒤 그 자리의 클릭을 가로채므로 그렸는지를 함께 본다.
+         */
+        [[nodiscard]] bool isMouseOverDrawnGizmo() const;
         /** @brief 기즈모를 마지막으로 그린 ImGui 프레임 번호입니다. -1 이면 아직 그린 적이 없습니다. */
         int32 getLastDrawFrame() const { return _lastDrawFrame; }
         /** @brief 그 프레임에 기즈모를 단 오브젝트 수입니다. */

@@ -75,6 +75,12 @@ namespace sw::editor
     {
     }
 
+    bool EditorViewportGizmo::isMouseOverDrawnGizmo() const
+    {
+        const bool bDrawnLastFrame = _lastDrawFrame + 1 >= ImGui::GetFrameCount();
+        return isDragging() || ( bDrawnLastFrame && ( ImGuizmo::IsOver() || ImGuizmo::IsUsing() ) );
+    }
+
     void EditorViewportGizmo::draw( EditorSelection& selection, const float32* pView, const float32* pProj, const float2& canvasPos, const float2& canvasSize,
                                     const ViewportToolbarSettings& settings )
     {

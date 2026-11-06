@@ -37,7 +37,7 @@ namespace sw::editor
         void processClick( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasClicked, bool bGizmoBusy, const ViewportToolbarSettings& settings );
         /**
          * @brief 호버 오브젝트를 정합니다. 마우스가 움직였을 때만 피킹하며 프레임당 많아야 한 번입니다.
-         * @param bGizmoBusy 지난 프레임에 그린 기즈모 위에 있거나 끄는 중이면 true 입니다. ImGuizmo::IsOver 를 직접 보지 않는다 - 기즈모를 그리지 않는 프레임에도 마지막 행렬로 답해, 선택을 푼 뒤 그 자리의 클릭이 먹지 않는다.
+         * @param bGizmoBusy `EditorViewportGizmo::isMouseOverDrawnGizmo` 입니다.
          */
         void processHover( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered, bool bGizmoBusy,
                            const ViewportToolbarSettings& settings );
