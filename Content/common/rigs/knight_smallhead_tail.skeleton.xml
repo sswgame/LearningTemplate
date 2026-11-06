@@ -1,0 +1,18 @@
+<SkeletonVariant _base="common/models/kaykit/knight/knight.skeleton.xml">
+	<_listAddedBone>
+		<SkeletonAddedBone _name="tail0" _parentBone="hips">
+			<_referencePose _translation="0,0,-0.2" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonAddedBone>
+		<SkeletonAddedBone _name="tail1" _parentBone="tail0">
+			<_referencePose _translation="0,0,-0.2" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonAddedBone>
+	</_listAddedBone>
+	<_listBoneOverride>
+		<SkeletonBoneOverride _bone="head" _scale="0.6,0.6,0.6" />
+	</_listBoneOverride>
+	<_listSocket>
+		<SkeletonSocket _name="TailTip" _parentBone="tail1">
+			<_localTransform _translation="0,0,-0.1" _rotation="0,0,0,1" _scale="1,1,1" />
+		</SkeletonSocket>
+	</_listSocket>
+</SkeletonVariant>

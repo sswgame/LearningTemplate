@@ -6,6 +6,8 @@
 
 #include "Editor/Common/Asset/Model/ModelImporter.h"
 
+#include "Core/Concurrency/ScopedLock.h"
+#include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
@@ -606,10 +608,10 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 부착 메시를 옆 폴더에 쓰고 스켈레톤에 부착으로 올립니다. 쓰기에 실패하면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool writeAttachments( const AssetPaths& assetPaths, ModelImportResult& inoutResult, const string& sideFolder )
+            /** @brief 부착 메시를 옆 폴더에 쓰고 부착 표를 만듭니다(모델마다 다르므로 공용 스켈레톤이 아니라 모델 옆 파일에 든다). 쓰기에 실패하면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool writeAttachments( const AssetPaths& assetPaths, const ModelImportResult& result, const string& sideFolder, vector<SkeletonAttachment>& outListAttachment )
             {
-                for ( const ModelImportAttachment& attachment : inoutResult._listAttachment )
+                for ( const ModelImportAttachment& attachment : result._listAttachment )
                 {
                     const string                      partPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kPartFolder ), attachment._fileStem + string( MeshAssetFormat::kExtension ) );
                     const std::optional<AbsolutePath> partFile = FileUtil::requireAbsolutePath( partPath );
@@ -623,7 +625,45 @@ namespace sw::editor
                     entry._meshPath       = assetPaths.toAssetID( partPath );
                     entry._parentBone     = attachment._parentBone;
                     entry._localTransform = attachment._localTransform;
-                    inoutResult._skeleton.addAttachment( entry );
+                    outListAttachment.push_back( entry );
+                }
+                return true;
+            }
+
+            /** @brief 공용 스켈레톤 파일을 쓰는 임포트 잡끼리 막습니다 — 일괄 임포트가 워커에서 돌고, 같은 내용의 모델이 같은 파일을 쓴다. */
+            static mutex& getSharedSkeletonMutex()
+            {
+                static mutex s_mutex;
+                return s_mutex;
+            }
+
+            /**
+             * @brief 스켈레톤을 공용 폴더(`<x>/models/_skeletons/`)에 내용당 한 벌만 쓰고, 그 경로를 돌려줍니다. 이름이 내용의 지문이라 같은 내용의 모델은 같은 파일을 가리킵니다.
+             * @details 언리얼이 임포트 때 기존 USkeleton 을 고르는 일을 내용 대조로 저절로 한다. 공용 폴더는 옆 폴더 밖이라 다시 임포트해도 지워지지 않는다.
+             *          원본이 사라져 아무도 가리키지 않는 파일은 남는다(스켈레톤 하나는 작다).
+             */
+            [[nodiscard]] static bool writeSharedSkeleton( const Skeleton& skeleton, string_view outputPath, string& outSharedPath )
+            {
+                const string normalized = FileUtil::normalizeSeparators( outputPath );
+                const string marker     = "/" + string( ModelImportUtil::kImportedModelFolder ) + "/";
+                const size_t folderEnd  = normalized.rfind( marker );
+                if ( folderEnd == string::npos )
+                {
+                    SW_LOG_ERROR_ID( "ModelImporter.ImportedMeshOutsideModels", "Imported mesh '%#' is not under a '%#' folder - the shared skeleton has no place", outputPath, ModelImportUtil::kImportedModelFolder );
+                    return false;
+                }
+                const string text = skeleton.toXML();
+                const uint64 hash = HashUtil::appendBytes64( HashUtil::kFNVOffset64, text.data(), text.size() );
+                outSharedPath     = normalized.substr( 0, folderEnd + marker.size() ) + string( ModelImportUtil::kSharedSkeletonFolder ) + "/skeleton_" + to_string( hash ) + string( Skeleton::kExtension );
+
+                ScopedLock<mutex> lock{ getSharedSkeletonMutex() };
+                string            existing;
+                if ( FileUtil::exists( outSharedPath ) && FileUtil::readTextFile( outSharedPath, existing ) && existing == text )
+                    return true;
+                if ( FileUtil::ensureParentDirectoryExists( outSharedPath ) == false || FileUtil::writeTextFile( outSharedPath, text ) == false )
+                {
+                    SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", outSharedPath.c_str() );
+                    return false;
                 }
                 return true;
             }
@@ -842,11 +882,16 @@ namespace sw::editor
             return true;
         }
 
-        if ( Internal::writeAttachments( assetPaths, result, sideFolder ) == false )
+        SkeletonVariant skeletonFileData{};
+        if ( Internal::writeAttachments( assetPaths, result, sideFolder, skeletonFileData._listAttachment ) == false )
             return false;
-        const string                      skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
-        const std::optional<AbsolutePath> skeletonFile = FileUtil::requireAbsolutePath( skeletonPath );
-        if ( skeletonFile.has_value() == false || result._skeleton.saveToFile( *skeletonFile ) == false )
+        // 스켈레톤은 내용당 한 벌이고, 모델 옆 파일은 그것을 가리키는 차이 없는 변형이다 — 데이터가 적은 경로(프리팹 · 본 LOD · 리타깃 프로필)는 그대로다.
+        string sharedSkeletonPath;
+        if ( Internal::writeSharedSkeleton( result._skeleton, outputPath, sharedSkeletonPath ) == false )
+            return false;
+        skeletonFileData._base    = assetPaths.toAssetID( sharedSkeletonPath );
+        const string skeletonPath = FileUtil::joinPath( sideFolder, stem + string( Skeleton::kExtension ) );
+        if ( FileUtil::ensureParentDirectoryExists( skeletonPath ) == false || FileUtil::writeTextFile( skeletonPath, skeletonFileData.toXML() ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWriteSkeleton", "Failed to write skeleton %#", skeletonPath.c_str() );
             return false;

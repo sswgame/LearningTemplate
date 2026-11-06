@@ -1,0 +1,169 @@
+<Scene formatVersion="2" name="SkeletonVariant">
+	<!-- 시나리오 automation/skeletonvariant 의 무대 — 같은 메시 · 같은 클립을 세 스켈레톤에 재생한다. 왼쪽: 부모 그대로. 가운데: 다리 비율을 키운 변형(골반 이동은 높이 비, 뼈 길이는 변형 값). 오른쪽: 머리를 줄이고 뼈를 뒤에 더한 변형. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.3,-6"
+					                 _localRotation="0.05,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.6,3.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.3"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,2"
+					               _localRotation="0,0,0"
+					               _localScale="16,1,16"
+					               _attachOwner="None"
+					               _attachComponent="None"
+					               _meshID="Plane"
+					               _materialPath="engine/materials/prototypegrid_dark.material"
+					               _boundsRadius="12"
+					               _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="BaseKnight">
+			<GameObject _schemaVersion="0" _name="BaseKnight" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="-1.6,0,0"
+					                       _localRotation="0,3.1415927,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID="common/models/kaykit/knight.mesh"
+					                       _materialPath="common/materials/kaykit_knight.material"
+					                       _boundsRadius="2"
+					                       _blendMode="Opaque"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _bAnimateWhenOffscreen="false" />
+					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
+					                           _clipFolder="common/models/kaykit/knight/clips"
+					                           _initialState="Idle"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="LongLegsKnight">
+			<GameObject _schemaVersion="0" _name="LongLegsKnight" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="0,0,0"
+					                       _localRotation="0,3.1415927,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID="common/models/kaykit/knight.mesh"
+					                       _materialPath="common/materials/kaykit_knight.material"
+					                       _boundsRadius="2"
+					                       _blendMode="Opaque"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath="common/rigs/knight_longlegs.skeleton.xml"
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _bAnimateWhenOffscreen="false" />
+					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
+					                           _clipFolder="common/models/kaykit/knight/clips"
+					                           _initialState="Idle"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="SmallHeadTailKnight">
+			<GameObject _schemaVersion="0" _name="SmallHeadTailKnight" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="1.6,0,0"
+					                       _localRotation="0,3.1415927,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID="common/models/kaykit/knight.mesh"
+					                       _materialPath="common/materials/kaykit_knight.material"
+					                       _boundsRadius="2"
+					                       _blendMode="Opaque"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath="common/rigs/knight_smallhead_tail.skeleton.xml"
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _bAnimateWhenOffscreen="false" />
+					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
+					                           _clipFolder="common/models/kaykit/knight/clips"
+					                           _initialState="Idle"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

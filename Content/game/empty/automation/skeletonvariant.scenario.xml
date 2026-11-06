@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  스켈레톤 변형 — 같은 메시와 같은 클립(부모 스켈레톤으로 저작)을 부모와 변형 둘에 재생한다. 메시는 역 바인드를 자기가 갖고, 변형은 부모 번호를 지키므로 그대로 걸린다.
+  왼쪽은 부모라 기준이다. 가운데는 다리와 골반이 길어(뼈 길이는 변형 값, 골반 이동은 높이 비) 발이 바닥에 있고 키가 커야 한다. 오른쪽은 머리가 작고, 뒤에 더한 뼈는 메시가 쓰지 않아 몸은 왼쪽과 같아야 한다.
+  세 기사가 같은 그림이면 변형이 먹지 않은 것이다. 틀린 조합이면 로그에 SkeletalMeshComponent.SkinnedMeshExpectsBones · AnimationClip.TracksNotInSkeleton 오류가 남아 진다.
+  실행: ctest -R Scenario.game.empty.skeletonvariant
+-->
+<Scenario name="game.empty.skeletonvariant" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/skeletonvariant.scene.xml"/>
+	<Wait frames="60"/>
+	<Screenshot file="skeletonvariant.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImage file="skeletonvariant.ppm" golden="skeletonvariant"/>
+	<Pass/>
+</Scenario>

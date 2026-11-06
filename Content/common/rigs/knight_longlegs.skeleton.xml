@@ -1,0 +1,9 @@
+<SkeletonVariant _base="common/models/kaykit/knight/knight.skeleton.xml" _pelvisBone="hips">
+	<_listBoneOverride>
+		<SkeletonBoneOverride _bone="hips" _translationScale="1.35" _translationMode="ScaleByPelvisHeight" />
+		<SkeletonBoneOverride _bone="lowerleg.l" _translationScale="1.35" />
+		<SkeletonBoneOverride _bone="lowerleg.r" _translationScale="1.35" />
+		<SkeletonBoneOverride _bone="foot.l" _translationScale="1.35" />
+		<SkeletonBoneOverride _bone="foot.r" _translationScale="1.35" />
+	</_listBoneOverride>
+</SkeletonVariant>

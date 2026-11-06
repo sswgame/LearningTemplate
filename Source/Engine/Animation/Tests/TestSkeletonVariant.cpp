@@ -164,13 +164,13 @@ SW_TEST_CASE( SkeletonVariantTest, BadDifferencesAreRejected )
 SW_TEST_CASE( SkeletonVariantTest, ClipRulesFollowTranslationMode )
 {
     using Util          = SkeletonVariantTestUtil;
-    const Skeleton base = Util::makeBase();
+    const Skeleton base = test::makeChainSkeleton( 4u );
 
     SkeletonVariant variant{};
     variant._pelvisBone = hashed_string( "bone1" );
     variant._listBoneOverride.push_back( Util::makeOverride( "bone1", 2.0f, RetargetTranslationMode::ScaleByPelvisHeight ) ); // 골반 높이 1 → 2
     variant._listBoneOverride.push_back( Util::makeOverride( "bone2", 3.0f, RetargetTranslationMode::None ) );
-    SkeletonBoneOverride scaled = Util::makeOverride( "bone0", 1.0f, RetargetTranslationMode::Copy );
+    SkeletonBoneOverride scaled = Util::makeOverride( "bone3", 1.0f, RetargetTranslationMode::Copy ); // 끝 본이라 골반 높이에 들지 않는다
     scaled._scale               = float3{ 2.0f, 2.0f, 2.0f };
     variant._listBoneOverride.push_back( scaled );
     Skeleton merged;
@@ -188,7 +188,7 @@ SW_TEST_CASE( SkeletonVariantTest, ClipRulesFollowTranslationMode )
     // ScaleByPelvisHeight — 변형 기준(2 m) + 움직인 양(0.5 m) * 골반 높이 비(2).
     SW_EXPECT_NEAR( 3.0f, merged.applyClipRule( 1u, sampled )._translation._y, 1e-6f );
     // Copy — 트랙 값 그대로이고, 크기 차이는 곱한다.
-    const BoneTransform copied = merged.applyClipRule( 0u, sampled );
+    const BoneTransform copied = merged.applyClipRule( 3u, sampled );
     SW_EXPECT_NEAR( 1.5f, copied._translation._y, 1e-6f );
     SW_EXPECT_NEAR( 2.0f, copied._scale._x, 1e-6f );
 }

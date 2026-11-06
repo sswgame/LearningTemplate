@@ -42,6 +42,9 @@ namespace sw::editor
 
         static constexpr string_view kClipFolder = "clips";
 
+        /** @brief `<x>/models/` 아래에서 내용이 같은 스켈레톤을 한 벌로 두는 폴더 이름입니다. */
+        static constexpr string_view kSharedSkeletonFolder = "_skeletons";
+
         /** @brief VRM 모델 옆 폴더에서 툰 머티리얼을 담는 폴더 이름입니다. */
         static constexpr string_view kMaterialFolder = "materials";
 
