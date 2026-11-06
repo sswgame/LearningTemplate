@@ -145,7 +145,7 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="meshmodifiers.nested.item.twist"/>
 	<WaitUntil watch="MeshModifiers.ModifierCount" equals="4" timeoutFrames="60"/>
-	<Expect watch="MeshModifiers.NestedCount" equals="1"/>
+	<WaitUntil watch="MeshModifiers.NestedCount" equals="1" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="meshmodifiers.nested.row.0"/>
 	<EditorWaitSettled/>

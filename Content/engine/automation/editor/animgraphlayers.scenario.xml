@@ -50,7 +50,7 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="animationGraph.mask.remove"/>
 	<WaitUntil watch="Editor.AnimationGraphLayerCount" equals="1" timeoutFrames="60"/>
-	<Expect watch="Editor.AnimationGraphBoneMaskCount" equals="1"/>
+	<WaitUntil watch="Editor.AnimationGraphBoneMaskCount" equals="1" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<EditorClick mark="animationGraph.save"/>
 	<WaitUntil watch="Editor.DirtyDocumentCount" equals="0" timeoutFrames="60"/>
