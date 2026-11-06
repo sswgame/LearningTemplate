@@ -8,8 +8,10 @@
 
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
+#include "Engine/Serialization/XML/XMLReadUtil.h"
 
 #include <algorithm>
 
@@ -22,7 +24,17 @@ namespace sw
         {
             static constexpr const utf8* kRootName = "AnimationSet";
             static constexpr const utf8* kClipName = "clip";
+
+            /** @brief 상속 규칙입니다. 루트의 자식이 곧 이름을 열쇠로 하는 목록입니다. */
+            static DataInheritanceSchema makeInheritanceSchema()
+            {
+                DataInheritanceSchema schema{ kRootName };
+                schema._keyAttribute = "name";
+                schema._listKeptAttribute.emplace_back( "formatVersion" );
+                return schema;
+            }
         };
+        SW_DATA_INHERITANCE_SCHEMA( AnimationSet, &AnimationSetInternal::makeInheritanceSchema ); // 팩 쿠커가 루트 이름으로 찾는다
     } // namespace
 
     const string* AnimationSet::findClipPath( const hashed_string& name ) const
@@ -90,7 +102,7 @@ namespace sw
     {
         if ( depth >= kMaxChainDepth )
         {
-            SW_LOG_ERROR_ID( "AnimationSet.ChainTooDeep", "Animation set chain is deeper than %# at '%#' (a loop?) - the set is not loaded", kMaxChainDepth, path );
+            SW_LOG_ERROR_ID( "AnimationSet.ChainTooDeep", "Animation set 'set' chain is deeper than %# at '%#' (a loop?) - the set is not loaded", kMaxChainDepth, path );
             return false;
         }
         const AssetID assetID{ path };
@@ -105,8 +117,12 @@ namespace sw
 
     bool AnimationSet::parseChained( string_view xml, string_view sourceLabel, uint32 depth )
     {
+        // 바탕은 공통 상속(`_base`)이 펼친다 — 같은 이름은 합치고(`_op="Replace"` 는 바꾸고) `_op="Remove"` 는 뺀다. 쿠킹본은 이미 펼친 한 벌이다.
+        string flatText;
+        if ( DataInheritance::findBasePath( xml ).empty() == false && DataInheritance::flattenFromResources( xml, sourceLabel, AnimationSetInternal::makeInheritanceSchema(), flatText ) == false )
+            return false;
         XMLDocument document;
-        if ( document.parse( xml ) == false )
+        if ( document.parse( flatText.empty() ? xml : string_view{ flatText } ) == false )
             return false;
         const XMLNode root = document.getRoot( AnimationSetInternal::kRootName );
         if ( root.isValid() == false )
@@ -116,11 +132,7 @@ namespace sw
         }
         if ( AssetXMLFormat::isCurrentXMLVersion( kAssetType, root ) == false )
             return false;
-        AnimationSetRootFields rootFields;
-        if ( XMLFields::readFields( root, rootFields, sourceLabel, { "formatVersion" } ) == false )
-            return false;
-        // 바탕 셋을 먼저 펼치고 이 파일의 줄이 덮는다 — 같은 이름은 차이다.
-        if ( rootFields._base.empty() == false && loadChained( rootFields._base, depth + 1 ) == false )
+        if ( XMLReadUtil::hasOnlyKnownNames( root, { "formatVersion" }, { AnimationSetInternal::kClipName }, sourceLabel ) == false )
             return false;
 
         vector<string> listSeen;
@@ -143,7 +155,7 @@ namespace sw
             listSeen.push_back( name );
             if ( fields._path.empty() == fields._set.empty() )
             {
-                SW_LOG_ERROR_ID( "AnimationSet.ClipNeedsOneSource", "Animation set '%#': clip '%#' must have exactly one of path and set", sourceLabel, name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationSet.ClipNeedsOneSource", "Animation set '%#': clip '%#' must have exactly one of path and set (a line of the other kind over a base line needs _op=\"Replace\")", sourceLabel, name.c_str() );
                 return false;
             }
             if ( fields._path.empty() == false )

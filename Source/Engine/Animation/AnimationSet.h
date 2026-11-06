@@ -4,7 +4,9 @@
  * @details 캐릭터와 그래프는 경로가 아니라 셋의 이름으로 클립을 찾는다. 클립 파일은 내용 키의 공유 저장소에 한 벌만 있어(`ImportedAssetStore`) 모델 수만큼 생기지 않고, 뼈는 이름으로 찾으므로
  *          (`AnimationClip::makeTrackToBoneMap`) 스켈레톤이 달라도 나눠 쓴다.
  *          상용 엔진 비교(기억에 의존): 언리얼은 Animation Sequence 를 스켈레톤 에셋이 나눠 쓰게 하고 Animation Blueprint 가 슬롯 이름으로 고른다. 유니티는 Avatar 로 근육 공간을 나누고
- *          AnimatorOverrideController 가 "기반 + 바꾼 클립" 이다. 여기는 뼈 이름 일치로 나누고(Avatar 의 근육 공간 없음), 셋의 `base` 가 오버라이드 컨트롤러 자리다.
+ *          AnimatorOverrideController 가 "기반 + 바꾼 클립" 이다. 여기는 뼈 이름 일치로 나누고(Avatar 의 근육 공간 없음), 셋의 `_base` 가 오버라이드 컨트롤러 자리다 —
+ *          그래프는 클립 이름(슬롯)만 적고 애니메이터의 셋이 내용을 정한다. 바탕은 공통 상속(`DataInheritance`, 이름이 열쇠)이고 쿠킹이 펼친다.
+ *          `set` 은 부모가 아니라 줄 하나를 다른 셋에서 빌리는 믹스인이다(`_listRenderPassRef` 와 같은 까닭으로 합치지 않는다 — 여러 파일을 섞는다).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -19,11 +21,10 @@
 
 namespace sw
 {
-    class XMLNode;
-
     /**
      * @brief 셋의 클립 한 줄(`<clip name path/>` · `<clip name set [source]/>`)입니다. 경로와 셋 중 하나만 적는다.
      * @details `path` 는 임포트가 쓰는 공유 파일이다 — 손으로 쓰는 셋은 키가 내용과 함께 바뀌는 경로를 적지 않고 `set`(그 셋의 같은 이름, 또는 `source` 이름)으로 가리킨다.
+     *          바탕의 `path` 줄을 `set` 으로 바꾸는 차이는 `_op="Replace"` 를 적는다(칸을 합치면 둘 다 남아 오류다).
      */
     REFLECT()
     struct SW_API AnimationSetClipFields
@@ -38,16 +39,6 @@ namespace sw
         string _set{};
         PROPERTY()
         string _source{};
-    };
-
-    /** @brief 셋 루트(`<AnimationSet formatVersion base>`)의 칸입니다. */
-    REFLECT()
-    struct SW_API AnimationSetRootFields
-    {
-        REFLECT_BODY();
-
-        PROPERTY()
-        string _base{};
     };
 
     /**
@@ -65,7 +56,7 @@ namespace sw
 {
     /**
      * @class AnimationSet
-     * @brief 이름 → 클립 경로 표입니다. 읽을 때 `base` · `set` 을 모두 펼쳐 표 하나로 둡니다.
+     * @brief 이름 → 클립 경로 표입니다. 읽을 때 `_base` · `set` 을 모두 펼쳐 표 하나로 둡니다.
      */
     class SW_API AnimationSet
     {
@@ -78,7 +69,7 @@ namespace sw
         };
         /** @brief 이 에셋 종류입니다(등록은 `AnimationSet.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "AnimationSet", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
-        /** @brief `base` · `set` 사슬의 최대 길이입니다. 넘으면 순환으로 보고 오류입니다. */
+        /** @brief `set` 사슬의 최대 길이입니다. 넘으면 순환으로 보고 오류입니다(`_base` 사슬은 `DataInheritance` 가 본다). */
         static constexpr uint32 kMaxChainDepth = 8;
 
         /** @brief 이름의 클립 경로입니다(대소문자 무시). 없으면 nullptr 입니다. */
@@ -91,7 +82,7 @@ namespace sw
         /** @brief 파일 글입니다(`path` 줄만 — 이미 펼친 표다). 이름순이라 같은 표는 같은 바이트입니다. */
         [[nodiscard]] string saveToString() const;
 
-        /** @brief XML 을 읽고 `base` · `set` 을 펼칩니다. 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
+        /** @brief XML 을 읽고 `_base` · `set` 을 펼칩니다. 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

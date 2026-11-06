@@ -438,10 +438,10 @@ namespace sw
         }
         else if ( propertyName == s_setPathName )
         {
-            const hashed_string state = _graphPlayer.getCurrentStateName();
-            const string        path  = _animationSetPath.path();
-            setAnimationSetPath( path );
-            (void)play( state.empty() ? hashed_string( _initialState ) : state, true, 0.0f );
+            const string path = _animationSetPath.path();
+            setAnimationSetPath( path ); // 재생 중이던 상태는 세터가 잇는다
+            if ( _graphPlayer.getCurrentStateName().empty() )
+                (void)play( hashed_string( _initialState ), true, 0.0f );
         }
         else if ( propertyName == s_blendName )
         {
@@ -563,6 +563,12 @@ namespace sw
 
     void SkeletalAnimatorComponent::setAnimationSetPath( string_view path )
     {
+        // 셋은 교체표다(유니티 Animator Override Controller) — 상태 기계는 그대로 두고 내용만 바꾸므로 같은 상태를 같은 위상으로 잇는다.
+        AnimationPlayer&    player  = _graphPlayer.getPlayer();
+        const hashed_string state   = _graphPlayer.getCurrentStateName();
+        const bool          bLoop   = player.getCurrentPlayable() == nullptr || player.isCurrentLooping();
+        const float32       phase   = player.getCurrentPlayable() != nullptr ? player.getCurrentNormalizedTime() : 0.0f;
+        const bool          bResume = state.empty() == false;
         // 플레이어가 빌린 클립 포인터를 먼저 놓고 표를 비운다.
         _graphPlayer.stop();
         _animationSetPath = string{ path };
@@ -574,8 +580,32 @@ namespace sw
         _listClipLoad.clear();
         _bClipsPending = SW_FALSE;
         applyGraphPlayables();
+        rebindCodeLayers();
         if ( bWasPending )
             runDeferredPlayback();
+        else if ( bResume && play( state, bLoop, 0.0f ) )
+            player.setNormalizedTime( phase );
+    }
+
+    void SkeletalAnimatorComponent::rebindCodeLayers()
+    {
+        // 코드 레이어도 클립 이름(슬롯)으로 더했다 — 옛 셋의 클립을 계속 재생하지 않게 새 셋에서 다시 찾는다. 위상은 잇고, 가산 기준은 다음 평가가 새 클립으로 다시 뜬다.
+        for ( LayerState& layer : _listLayer )
+        {
+            const float32 phase = layer._player.getCurrentNormalizedTime();
+            const bool    bLoop = layer._desc._bLoop == SW_TRUE;
+            layer._player.stop();
+            layer._clip.reset();
+            layer._pMaskSkeleton = nullptr;
+            if ( preloadClip( layer._desc._clipName ) == false )
+            {
+                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationLayerClipNot", "Animation layer clip '%#' was not found in '%#'", layer._desc._clipName.c_str(), _animationSetPath.c_str() );
+                continue;
+            }
+            layer._clip = _mapClip[layer._desc._clipName];
+            layer._player.play( layer._clip.get(), bLoop );
+            layer._player.setNormalizedTime( phase );
+        }
     }
 
     void SkeletalAnimatorComponent::setAnimationGraphPath( string_view path )

@@ -182,7 +182,7 @@ namespace sw
         bool play( const hashed_string& stateName, bool bLoop = true, float32 blendSeconds = -1.0f );
         FUNCTION( Category = "Playback", DisplayName = "Stop", CallInEditor )
         void stop();
-        /** @brief 애니메이션 셋을 바꿉니다(읽어 둔 클립은 비웁니다). */
+        /** @brief 애니메이션 셋(교체표)을 바꿉니다. 재생 중이던 상태 · 위상과 코드 레이어는 새 셋의 같은 이름 클립으로 잇습니다. 새 셋에 그 이름이 없으면 오류를 남깁니다. */
         void          setAnimationSetPath( string_view path );
         const string& getAnimationSetPath() const { return _animationSetPath.path(); }
         /** @brief 시작 상태를 바꿉니다(다음 시작부터). */
@@ -373,6 +373,8 @@ namespace sw
         [[nodiscard]] bool rebuildGraphPlayables();
         /** @brief 그래프의 "layers" 로 그래프 레이어를 다시 만듭니다. 클립을 못 찾은 레이어가 있으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool rebuildGraphLayers();
+        /** @brief 코드 레이어의 클립을 지금 셋에서 다시 찾습니다. 위상은 잇고, 없는 이름은 오류를 남기고 그 레이어를 끕니다. */
+        void rebindCodeLayers();
         /** @brief 블렌드 스페이스 상태의 가중치를 파라미터로 다시 구합니다. 현재 슬롯의 상태는 길이가 바뀌어도 위상을 지킵니다. */
         void updateBlendSpaceWeights();
         /** @brief 재생할 것이 이 애니메이터의 블렌드 스페이스 상태면 그것을, 아니면(클립) nullptr 을 반환합니다. */

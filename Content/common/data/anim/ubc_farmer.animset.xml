@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 농부의 클립 — UAL1 이동 클립 위에 UAL2 농사 동작 셋을 더한다. 손으로 쓰는 셋은 공유 파일 경로(키가 내용과 함께 바뀐다)를 적지 않고 셋과 이름으로 가리킨다. -->
-<AnimationSet formatVersion="0" base="common/models/quaternius/animations/ual1_standard/ual1_standard.animset.xml">
+<AnimationSet formatVersion="0" _base="common/models/quaternius/animations/ual1_standard/ual1_standard.animset.xml">
 	<clip name="farm_plantseed" set="common/models/quaternius/animations/ual2_standard/ual2_standard.animset.xml" />
 	<clip name="farm_watering" set="common/models/quaternius/animations/ual2_standard/ual2_standard.animset.xml" />
 	<clip name="farm_harvest" set="common/models/quaternius/animations/ual2_standard/ual2_standard.animset.xml" />

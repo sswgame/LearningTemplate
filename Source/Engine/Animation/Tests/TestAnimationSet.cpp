@@ -63,7 +63,7 @@ SW_TEST_CASE( AnimationSetTest, BaseAndBorrowedClipsFlattenIntoOneTable )
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "other.animset.xml" ), other.saveToString() ) );
     const string otherID = test::ScopedScratchDomain::makeID( "other.animset.xml" ).str();
 
-    const string text = "<AnimationSet formatVersion=\"0\" base=\"" + base + "\">" +                                     //
+    const string text = "<AnimationSet formatVersion=\"0\" _base=\"" + base + "\">" +                                    //
                         "<clip name=\"walk\" path=\"common/models/_shared/clips/dddd.animclip\" />" +                    // 차이
                         "<clip name=\"farm_harvest\" set=\"" + otherID + "\" />" +                                       // 같은 이름을 빌린다
                         "<clip name=\"harvest\" set=\"" + otherID + "\" source=\"farm_harvest\" />" + "</AnimationSet>"; // 다른 이름으로 빌린다
@@ -99,14 +99,41 @@ SW_TEST_CASE( AnimationSetTest, RejectsBrokenLines )
 }
 
 /**
- * @brief [AnimationSetTest] 바탕 사슬이 돌면 깊이 상한에서 오류로 멈춘다
+ * @brief [AnimationSetTest] 교체표 — 바탕의 줄을 빼고(`_op="Remove"`), 경로 줄을 셋 줄로 바꾸려면 `_op="Replace"` 다(칸을 합치면 둘 다 남아 오류다)
  */
-SW_TEST_CASE( AnimationSetTest, BaseLoopStopsAtDepthLimit )
+SW_TEST_CASE( AnimationSetTest, ChildRemovesAndReplacesBaseLines )
+{
+    const test::ScopedScratchDomain domain;
+    const string                    base = AnimationSetTestUtil::writeBaseSet( domain, "base.animset.xml" );
+    AnimationSet                    other;
+    other.setClip( "sprint", "common/models/_shared/clips/cccc.animclip" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "other.animset.xml" ), other.saveToString() ) );
+    const string otherID = test::ScopedScratchDomain::makeID( "other.animset.xml" ).str();
+
+    const string text = "<AnimationSet formatVersion=\"0\" _base=\"" + base + "\">" + "<clip name=\"idle\" _op=\"Remove\" />" + "<clip name=\"walk\" _op=\"Replace\" set=\"" + otherID + "\" source=\"sprint\" />" + "</AnimationSet>";
+    AnimationSet animationSet;
+    SW_REQUIRE_TRUE( animationSet.parseXML( text, "<test>" ) );
+    SW_EXPECT_TRUE( animationSet.findClipPath( hashed_string( "idle" ) ) == nullptr );
+    SW_EXPECT_EQUAL( string( "common/models/_shared/clips/cccc.animclip" ), AnimationSetTestUtil::findPath( animationSet, "walk" ) );
+
+    SW_EXPECT_LOG( "AnimationSet.ClipNeedsOneSource" );
+    SW_EXPECT_FALSE( animationSet.parseXML( "<AnimationSet formatVersion=\"0\" _base=\"" + base + "\"><clip name=\"walk\" set=\"" + otherID + "\" source=\"sprint\" /></AnimationSet>", "<test>" ) );
+}
+
+/**
+ * @brief [AnimationSetTest] 바탕 사슬이 돌면 공통 상속이 오류로 멈추고, `set` 사슬이 돌면 깊이 상한에서 멈춘다
+ */
+SW_TEST_CASE( AnimationSetTest, LoopsStopWithAnError )
 {
     const test::ScopedScratchDomain domain;
     const string                    self = test::ScopedScratchDomain::makeID( "loop.animset.xml" ).str();
-    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "loop.animset.xml" ), "<AnimationSet formatVersion=\"0\" base=\"" + self + "\"/>" ) );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "loop.animset.xml" ), "<AnimationSet formatVersion=\"0\" _base=\"" + self + "\"/>" ) );
     AnimationSet animationSet;
-    SW_EXPECT_LOG( "AnimationSet.ChainTooDeep" );
+    SW_EXPECT_LOG( "DataInheritance.Cycle" );
     SW_EXPECT_FALSE( animationSet.loadFromAsset( test::ScopedScratchDomain::makeID( "loop.animset.xml" ) ) );
+
+    const string selfSet = test::ScopedScratchDomain::makeID( "setloop.animset.xml" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "setloop.animset.xml" ), "<AnimationSet formatVersion=\"0\"><clip name=\"a\" set=\"" + selfSet + "\"/></AnimationSet>" ) );
+    SW_EXPECT_LOG( "AnimationSet.ChainTooDeep" );
+    SW_EXPECT_FALSE( animationSet.loadFromAsset( test::ScopedScratchDomain::makeID( "setloop.animset.xml" ) ) );
 }
