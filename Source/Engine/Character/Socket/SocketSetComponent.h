@@ -7,6 +7,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -67,6 +68,7 @@ namespace sw
         PROPERTY( Category = "Socket", DisplayName = "Socket Set", AssetPath, AssetType = "SocketSet", Tooltip = "Sockets and markers asset (*.sockets.xml)" )
         string _socketSetPath;
 
-        shared_ptr<const SocketSet> _socketSet; ///< 캐시가 제자리에서 다시 읽으므로, 파일을 고치면 이 객체가 새 내용이다.
+        shared_ptr<const SocketSet> _socketSet;       ///< 캐시가 제자리에서 다시 읽으므로, 파일을 고치면 이 객체가 새 내용이다.
+        Subscription                _boneRequirement; ///< 소켓 부모 본(가상 본의 두 끝 포함)을 유닛 본 LOD 의 핵심 본으로 지키는 구독
     };
 } // namespace sw

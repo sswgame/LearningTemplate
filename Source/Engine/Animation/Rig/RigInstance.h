@@ -143,6 +143,8 @@ namespace sw
         void evaluate( Pose& inoutLocalPose, const vector<int32>& listParent, const float4x4& worldFromModel );
         /** @brief 노드 상태를 모두 버립니다(순간이동이나 다시 켤 때). */
         void reset();
+        /** @brief 묶은 자기 유닛 본(대상 본과 노드가 쓰는 본)을 @p inoutListBone 에 덧붙입니다. 본 LOD 가 이 본을 핵심 본으로 지킵니다. */
+        void collectBoundBones( vector<uint32>& inoutListBone ) const;
         /** @brief 평가한 횟수를 반환합니다(테스트와 진단용). */
         uint32 getEvaluationCount() const { return _evaluationCount; }
 

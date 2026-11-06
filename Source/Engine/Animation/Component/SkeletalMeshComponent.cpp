@@ -3,6 +3,7 @@
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -65,6 +66,14 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief `-gv_animationBoneLOD=0` — 본 LOD 마스크(손 표 · 메시 LOD 자동)를 끕니다. 시나리오가 켜고 끈 두 장 · 풀어낸 본 수(`Animation.EvaluatedBones`)를 견줍니다.
+     */
+    SW_GLOBAL_VARIABLE( int32, gv_animationBoneLOD, 1, "Bone LOD masks: skip bones the drawn mesh LOD does not use (0 = evaluate every bone)" );
+} // namespace sw
+
+namespace sw
+{
     SkeletalMeshLODClient::SkeletalMeshLODClient( SkeletalMeshComponent& owner )
         : _owner{ owner }
     {
@@ -91,6 +100,11 @@ namespace sw
         if ( mesh == nullptr || mesh->getLODCount() <= 1 )
             return -1;
         return static_cast<int32>( _owner.getLODIndex() );
+    }
+
+    uint32 SkeletalMeshLODClient::getBoneLODMaskCount() const
+    {
+        return _owner.getBoneLODMaskCount();
     }
 
     void SkeletalMeshLODClient::applyAnimationLOD( const AnimationLODState& state )
@@ -124,6 +138,11 @@ namespace sw
         , _listBoneLODMask{}
         , _boneLODRevision{ 0 }
         , _pBoneLODMaskSkeleton{ nullptr }
+        , _boneLODMeshContentID{ 0 }
+        , _listBoneLODMaskCount{}
+        , _listBoneRequirement{}
+        , _boneRequirementSubscriptions{ SubscriptionList::ReleaseFunction::create<&SkeletalMeshComponent::releaseBoneRequirement>( this ) }
+        , _nextBoneRequirementID{ 1 }
         , _interpolationFrom{}
         , _interpolationTarget{}
         , _updatePhase{ 0 }
@@ -143,6 +162,8 @@ namespace sw
         , _bShareCrowdPose{ SW_FALSE }
         , _bHasDependents{ SW_FALSE }
         , _bRuntimeSkeleton{ SW_FALSE }
+        , _bBoneLODDirty{ SW_TRUE }
+        , _bBoneLODAuto{ SW_FALSE }
         , _reserved{ 0 }
     {
         resetPoseBuffers();
@@ -313,35 +334,83 @@ namespace sw
 
     void SkeletalMeshComponent::setBoneLOD( shared_ptr<const SkeletonBoneLOD> boneLOD )
     {
-        _boneLOD         = std::move( boneLOD );
-        _boneLODRevision = 0;
-        _listBoneLODMask.clear();
+        _boneLOD       = std::move( boneLOD );
+        _bBoneLODDirty = SW_TRUE;
         refreshBoneLODMasks();
     }
 
     void SkeletalMeshComponent::refreshBoneLODMasks()
     {
-        if ( _boneLOD == nullptr )
-        {
-            _listBoneLODMask.clear();
+        const uint64 revision      = _boneLOD != nullptr ? _boneLOD->getRevision() : 0u;
+        const uint64 meshContentID = _skinSourceMesh != nullptr ? _skinSourceMesh->getContentID() : 0u;
+        const bool   bFresh        = _bBoneLODDirty == SW_FALSE && _boneLODRevision == revision && _pBoneLODMaskSkeleton == _skeleton.get() && _boneLODMeshContentID == meshContentID;
+        if ( bFresh )
             return;
-        }
-        if ( _boneLODRevision == _boneLOD->getRevision() && _pBoneLODMaskSkeleton == _skeleton.get() )
-            return;
-        _boneLODRevision      = _boneLOD->getRevision();
+        _boneLODRevision      = revision;
         _pBoneLODMaskSkeleton = _skeleton.get();
-        // 스켈레톤에 없는 본 이름은 데이터 오류다 — 알리고 본 LOD 없이 간다.
-        if ( _boneLOD->computeMasks( *_skeleton, _listBoneLODMask, _skeletonPath ) == false )
-            _listBoneLODMask.clear();
+        _boneLODMeshContentID = meshContentID;
+        _bBoneLODDirty        = SW_FALSE;
+        _bBoneLODAuto         = SW_FALSE;
+        _listBoneLODMask.clear();
+        _listBoneLODMaskCount.clear();
+        // 암묵 스켈레톤(외형을 입기 전 · 전용 서버)은 본이 하나라 뺄 것이 없다.
+        if ( hasDataSkeleton() == false )
+            return;
+        vector<hashed_string> listUserBone;
+        for ( const BoneRequirement& requirement : _listBoneRequirement )
+        {
+            listUserBone.insert( listUserBone.end(), requirement._listBone.begin(), requirement._listBone.end() );
+        }
+        // 핵심 본 선언이 스켈레톤에 없거나 손 파일이 핵심 본을 빼면 데이터 오류다 — 알리고 본 LOD 없이 간다(모든 본을 푼다).
+        vector<uint8> requiredMask;
+        if ( SkeletonBoneLOD::computeRequiredMask( *_skeleton, _boneLOD.get(), listUserBone, requiredMask, _skeletonPath ) == false )
+            return;
+        if ( _boneLOD != nullptr && _boneLOD->getLevelCount() > 0 )
+        {
+            if ( _boneLOD->computeMasks( *_skeleton, requiredMask, _listBoneLODMask, _skeletonPath ) == false )
+                _listBoneLODMask.clear();
+        }
+        else if ( _skinSourceMesh != nullptr && _skinSourceMesh->hasSkin() )
+        {
+            // 손 표가 없으면 그리는 메시의 LOD 에서 만든다 — 조립 캐릭터는 합친 메시라 부품 합집합이 기준이다.
+            SkeletonBoneLOD::computeMeshMasks( *_skeleton, *_skinSourceMesh, requiredMask, _listBoneLODMask );
+            _bBoneLODAuto = SW_TRUE;
+        }
+        for ( const vector<uint8>& mask : _listBoneLODMask )
+        {
+            _listBoneLODMaskCount.push_back( static_cast<uint32>( std::count( mask.begin(), mask.end(), static_cast<uint8>( SW_TRUE ) ) ) );
+        }
     }
 
     const uint8* SkeletalMeshComponent::findBoneLODMask() const
     {
         const uint32 level = _lodState._boneLODLevel;
-        if ( level == 0 || level > _listBoneLODMask.size() )
+        // 자동 마스크는 이 메시만 보고 지었다 — 이 포즈를 읽는 유닛(리더를 따르는 부품 · 리그 대상)이 있으면 그 유닛이 쓰는 본을 모른다.
+        const bool bOff = gv_animationBoneLOD == 0 || level == 0 || level > _listBoneLODMask.size() || ( _bBoneLODAuto == SW_TRUE && _bHasDependents == SW_TRUE );
+        if ( bOff )
             return nullptr;
         const vector<uint8>& mask = _listBoneLODMask[level - 1];
         return mask.size() == _skeleton->getBoneCount() ? mask.data() : nullptr;
+    }
+
+    uint32 SkeletalMeshComponent::getEvaluatedBoneCount() const
+    {
+        return findBoneLODMask() != nullptr ? _listBoneLODMaskCount[_lodState._boneLODLevel - 1u] : _skeleton->getBoneCount();
+    }
+
+    Subscription SkeletalMeshComponent::requireBones( vector<hashed_string> listBone )
+    {
+        const uint64 id = _nextBoneRequirementID++;
+        _listBoneRequirement.push_back( BoneRequirement{ id, std::move( listBone ) } );
+        _bBoneLODDirty = SW_TRUE;
+        return _boneRequirementSubscriptions.issue( id );
+    }
+
+    void SkeletalMeshComponent::releaseBoneRequirement( uint64 id )
+    {
+        if ( VectorUtil::removeIf( _listBoneRequirement, [id]( const BoneRequirement& requirement )
+        { return requirement._id == id; } ) > 0 )
+            _bBoneLODDirty = SW_TRUE;
     }
 
     void SkeletalMeshComponent::applyAnimationLOD( const AnimationLODState& state )
@@ -754,9 +823,8 @@ namespace sw
         const uint32 morphTargetCount = getMorphTargetCount();
         if ( _listMorphWeight.size() != morphTargetCount )
             _listMorphWeight.assign( morphTargetCount, 0.0f );
-        // 본 LOD 표가 제자리에서 다시 읽혔으면(핫 리로드) 마스크를 다시 짓는다.
-        if ( _boneLOD != nullptr && _boneLODRevision != _boneLOD->getRevision() )
-            refreshBoneLODMasks();
+        // 본 LOD 표가 제자리에서 다시 읽혔거나(핫 리로드) 스킨 원본 · 핵심 본이 바뀌었으면 마스크를 다시 짓는다(열쇠가 같으면 비교만 한다).
+        refreshBoneLODMasks();
         bool bActive = _bPoseDirty == SW_TRUE || _leader.isValid();
         for ( const IAnimationPhaseTask* pTask : _listTask )
         {

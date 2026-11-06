@@ -299,6 +299,11 @@ namespace sw
                 AutomationExpectImagesDifferFields fields;
                 if ( step.readFields( fields, outError ) == false )
                     return false;
+                if ( fields._minDiffering > fields._maxDiffering )
+                {
+                    outError = step.describe() + ": minDiffering must not exceed maxDiffering";
+                    return false;
+                }
                 AutomationImageRegion region{};
                 if ( fields._region.empty() == false && AutomationImageMetric::tryParseRegion( fields._region, region ) == false )
                 {

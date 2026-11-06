@@ -43,6 +43,12 @@ namespace sw
         /** @brief 스킨드 부품(`<Variant>`)이 이 변형에서 쓰는 스켈레톤입니다 — 스켈레톤 변형(`SkeletonVariant`)을 적으면 외형이 런타임에 뼈 비율을 고릅니다(꾸미기 선택 · 규칙 · 피해 단계가 고르는 변형과 같은 길). */
         PROPERTY()
         hashed_string _skeleton{};
+        /** @brief `<Section>` 만: 합친 메시의 LOD 에서 이 구간을 늦게(> 1) 또는 빨리(< 1) 줄입니다(`CharacterLODSectionRule::_detail`). 적지 않으면 부품의 값입니다. */
+        PROPERTY( Min = 0.05 )
+        float32 _lodDetail{ 1.0f };
+        /** @brief `<Section>` 만: 이 LOD 단계(1 부터)부터 이 구간을 그리지 않습니다(`CharacterLODSectionRule::_dropLevel`). 0 이면 부품의 값입니다. */
+        PROPERTY()
+        uint32 _lodDropLevel{ 0 };
     };
 } // namespace sw
 
@@ -119,6 +125,10 @@ namespace sw
         hashed_string _breakStage{}; ///< 이 피해 단계에 이르면 저절로 떨어진다. 비어 있으면 맞아서만 떨어진다
         PROPERTY()
         int32 _layer{ 0 }; ///< 스프라이트 그리기 순서
+        PROPERTY( Min = 0.05 )
+        float32 _lodDetail{ 1.0f }; ///< 병합하는 스킨드 부품: 합친 메시 LOD 에서 늦게(> 1, 얼굴) 또는 빨리(< 1) 줄인다(`CharacterLODSectionRule::_detail`)
+        PROPERTY()
+        uint32 _lodDropLevel{ 0 }; ///< 병합하는 스킨드 부품: 이 LOD 단계(1 부터)부터 그리지 않는다(눈썹 · 장식). 0 이면 빼지 않는다
         PROPERTY( Required )
         AppearancePartKind _kind{ AppearancePartKind::Skinned };
         uint8              _bDeforms{ SW_TRUE };    ///< 스킨드로 휘는지 여부(아니면 본 하나를 따르는 단단한 조각)

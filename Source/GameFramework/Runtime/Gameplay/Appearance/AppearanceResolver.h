@@ -45,6 +45,8 @@ namespace sw
         hashed_string                    _state{};       ///< 외형 상태
         hashed_string                    _damageStage{}; ///< 피해 단계(비어 있으면 멀쩡함)
         int32                            _layer{ 0 };
+        float32                          _lodDetail{ 1.0f }; ///< 병합 메시 LOD 규칙(`AppearancePartDef::_lodDetail`)
+        uint32                           _lodDropLevel{ 0 }; ///< 병합 메시 LOD 규칙(`AppearancePartDef::_lodDropLevel`)
         AppearancePartKind               _kind{ AppearancePartKind::Skinned };
         uint8                            _bDeforms{ SW_TRUE };
     };

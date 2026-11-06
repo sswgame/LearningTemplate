@@ -4,12 +4,15 @@
 
 #include "Core/Concurrency/atomic.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -18,21 +21,59 @@ namespace sw
 {
     namespace
     {
-        /** @brief 프로세스 전역 내용 번호입니다(0 은 쓰지 않는다). */
-        uint64 allocateRevision()
+        struct SkeletonBoneLODInternal
         {
-            static atomic<uint64> s_nextRevision{ 1 };
-            return s_nextRevision.fetch_add( 1, std::memory_order_relaxed );
-        }
+            /** @brief 프로세스 전역 내용 번호입니다(0 은 쓰지 않는다). */
+            static uint64 allocateRevision()
+            {
+                static atomic<uint64> s_nextRevision{ 1 };
+                return s_nextRevision.fetch_add( 1, std::memory_order_relaxed );
+            }
+
+            /** @brief 남는 본의 부모 사슬을 남깁니다 — 자식이 뒤에 있으므로 뒤에서 앞으로 한 번 훑는다. */
+            static void keepAncestors( const Skeleton& skeleton, vector<uint8>& inoutMask )
+            {
+                for ( uint32 boneIndex = skeleton.getBoneCount(); boneIndex-- > 0; )
+                {
+                    const int32 parentIndex = skeleton.getBone( boneIndex )._parentIndex;
+                    if ( inoutMask[boneIndex] == SW_TRUE && parentIndex >= 0 )
+                        inoutMask[static_cast<uint32>( parentIndex )] = SW_TRUE;
+                }
+            }
+
+            static void markBone( const Skeleton& skeleton, const hashed_string& name, vector<uint8>& inoutMask )
+            {
+                const int32 boneIndex = skeleton.findBoneIndex( name );
+                if ( boneIndex >= 0 )
+                    inoutMask[static_cast<uint32>( boneIndex )] = SW_TRUE;
+            }
+        };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-
     bool SkeletonBoneLOD::parseXML( string_view xml, string_view sourceLabel )
     {
+        DataInheritanceResourceSource source;
+        return parseXML( xml, sourceLabel, source );
+    }
+
+    bool SkeletonBoneLOD::parseXML( string_view xml, string_view sourceLabel, IDataInheritanceSource& source )
+    {
         _listLevel.clear();
+        _listCoreBone.clear();
+        // 변형은 부모 파일을 가리키고 차이만 적는다 — 펼친 한 벌을 읽는다(부모 없이 자식 칸만으로 읽지 않는다).
+        if ( DataInheritance::findBasePath( xml ).empty() )
+            return parseFlat( xml, sourceLabel );
+        string flatText;
+        if ( DataInheritance::flatten( xml, sourceLabel, makeInheritanceSchema(), source, flatText ) == false )
+            return false;
+        return parseFlat( flatText, sourceLabel );
+    }
+
+    bool SkeletonBoneLOD::parseFlat( string_view xml, string_view sourceLabel )
+    {
         XMLDocument document;
         XMLNode     root;
         if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "SkeletonBoneLOD", root ) != XMLRootStatus::Found )
@@ -42,10 +83,11 @@ namespace sw
         }
         if ( parseRoot( root, sourceLabel ) )
         {
-            _revision = allocateRevision();
+            _revision = SkeletonBoneLODInternal::allocateRevision();
             return true;
         }
         _listLevel.clear();
+        _listCoreBone.clear();
         return false;
     }
 
@@ -58,6 +100,7 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODCouldNot", "Bone LOD '%#' could not be read", path );
             _listLevel.clear();
+            _listCoreBone.clear();
             return false;
         }
         return parseXML( text, path );
@@ -65,16 +108,22 @@ namespace sw
 
     bool SkeletonBoneLOD::parseRoot( const XMLNode& root, string_view sourceLabel )
     {
-        if ( XMLReadUtil::hasOnlyKnownNames( root, {}, { "levels" }, sourceLabel ) == false )
+        if ( XMLReadUtil::hasOnlyKnownNames( root, {}, { "coreBones", "levels" }, sourceLabel ) == false )
             return false;
-        const XMLNode levels = root.findChild( "levels" );
-        if ( levels.isValid() == false )
+        const XMLNode coreBones = root.findChild( "coreBones" );
+        for ( XMLNode bone = coreBones.isValid() ? coreBones.findChild() : XMLNode{}; bone.isValid(); bone = bone.findNextSibling() )
         {
-            SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelsElement", "Bone LOD '%#': a <levels> element is required", sourceLabel );
-            return false;
+            const hashed_string name = XMLReadUtil::readOptionalName( bone, "name" );
+            if ( string_view{ bone.getName() } != "bone" || XMLReadUtil::hasOnlyKnownNames( bone, { "name" }, {}, sourceLabel ) == false || name.empty() )
+            {
+                SW_LOG_ERROR_ID( "SkeletonBoneLOD.CoreBonesHolds", "Bone LOD '%#': <coreBones> holds only <bone name=\"...\"/> elements", sourceLabel );
+                return false;
+            }
+            _listCoreBone.push_back( name );
         }
-        size_t levelIndex{ 0 };
-        for ( XMLNode level = levels.findChild(); level.isValid(); level = level.findNextSibling(), ++levelIndex )
+        const XMLNode levels = root.findChild( "levels" );
+        size_t        levelIndex{ 0 };
+        for ( XMLNode level = levels.isValid() ? levels.findChild() : XMLNode{}; level.isValid(); level = level.findNextSibling(), ++levelIndex )
         {
             SkeletonBoneLODLevel entry{};
             if ( string_view{ level.getName() } != "level" || XMLFields::readFields( level, entry, sourceLabel ) == false ||
@@ -102,7 +151,14 @@ namespace sw
                     SW_LOG_ERROR_ID( "SkeletonBoneLOD.BoneLODLevelRemove", "Bone LOD '%#': level %# <remove> must hold <item> bone names", sourceLabel, levelIndex );
                     return false;
                 }
-                entry._listRemovedBone.push_back( hashed_string( string_view{ bone.getText() } ) );
+                const hashed_string boneName( string_view{ bone.getText() } );
+                // 같은 파일이 선언한 핵심 본을 빼면 읽기에서 멈춘다(부모 사슬 · 사용처의 본은 스켈레톤을 알아야 해서 `computeMasks` 가 본다).
+                if ( VectorUtil::contains( _listCoreBone, boneName ) )
+                {
+                    SW_LOG_ERROR_ID( "SkeletonBoneLOD.CoreBoneRemoved", "Bone LOD '%#': level %# removes core bone '%#'", sourceLabel, levelIndex, boneName.c_str() );
+                    return false;
+                }
+                entry._listRemovedBone.push_back( boneName );
             }
             _listLevel.push_back( std::move( entry ) );
         }
@@ -120,7 +176,7 @@ namespace sw
         return level;
     }
 
-    bool SkeletonBoneLOD::computeMasks( const Skeleton& skeleton, vector<vector<uint8>>& outListMask, string_view sourceLabel ) const
+    bool SkeletonBoneLOD::computeMasks( const Skeleton& skeleton, const vector<uint8>& requiredMask, vector<vector<uint8>>& outListMask, string_view sourceLabel ) const
     {
         outListMask.clear();
         const uint32  boneCount = skeleton.getBoneCount();
@@ -145,9 +201,90 @@ namespace sw
                 if ( parentIndex >= 0 && mask[static_cast<uint32>( parentIndex )] == SW_FALSE )
                     mask[boneIndex] = SW_FALSE;
             }
+            // 손 파일이 핵심 본(사용처가 가리키는 본 · 그 부모 사슬)을 빼면 조용히 넘기지 않는다 — 소켓 · IK 대상이 레퍼런스 포즈로 굳는다.
+            for ( uint32 boneIndex = 0; boneIndex < boneCount && boneIndex < requiredMask.size(); ++boneIndex )
+            {
+                if ( requiredMask[boneIndex] == SW_TRUE && mask[boneIndex] == SW_FALSE )
+                {
+                    SW_LOG_ERROR_ID( "SkeletonBoneLOD.CoreBoneRemoved", "Bone LOD '%#': a level removes '%#', a core bone or the parent of one (sockets, rig, physics, notifies, <coreBones>) - the unit keeps every bone",
+                                     sourceLabel, skeleton.getBone( boneIndex )._name.c_str() );
+                    outListMask.clear();
+                    return false;
+                }
+            }
             outListMask.push_back( mask );
         }
         return true;
+    }
+
+    bool SkeletonBoneLOD::computeRequiredMask( const Skeleton& skeleton, const SkeletonBoneLOD* pBoneLOD, const vector<hashed_string>& listUserBone, vector<uint8>& outRequiredMask, string_view sourceLabel )
+    {
+        using Internal = SkeletonBoneLODInternal;
+        outRequiredMask.assign( skeleton.getBoneCount(), SW_FALSE );
+        bool bValid = true;
+        if ( pBoneLOD != nullptr )
+        {
+            for ( const hashed_string& name : pBoneLOD->_listCoreBone )
+            {
+                if ( skeleton.findBoneIndex( name ) < 0 )
+                {
+                    SW_LOG_ERROR_ID( "SkeletonBoneLOD.CoreBoneUnknown", "Bone LOD '%#': core bone '%#' is not in the skeleton", sourceLabel, name.c_str() );
+                    bValid = false;
+                    continue;
+                }
+                Internal::markBone( skeleton, name, outRequiredMask );
+            }
+        }
+        // 스켈레톤 자체의 소켓(변형이 더한 자리)과 임포트 어태치먼트는 데이터에서 바로 나온다.
+        for ( const SkeletonAttachment& attachment : skeleton.getAttachments() )
+        {
+            Internal::markBone( skeleton, attachment._parentBone, outRequiredMask );
+        }
+        for ( const SkeletonSocket& socket : skeleton.getSockets() )
+        {
+            Internal::markBone( skeleton, socket._parentBone, outRequiredMask );
+        }
+        for ( const hashed_string& name : listUserBone )
+        {
+            Internal::markBone( skeleton, name, outRequiredMask );
+        }
+        Internal::keepAncestors( skeleton, outRequiredMask );
+        if ( bValid == false )
+            outRequiredMask.clear();
+        return bValid;
+    }
+
+    void SkeletonBoneLOD::computeMeshMasks( const Skeleton& skeleton, const Mesh& mesh, const vector<uint8>& requiredMask, vector<vector<uint8>>& outListMask )
+    {
+        outListMask.clear();
+        const uint32                  boneCount = skeleton.getBoneCount();
+        const vector<MeshSkinVertex>& listSkin  = mesh.getLODSkinVertices();
+        for ( const MeshLOD& lod : mesh.getLODs() )
+        {
+            vector<uint8> mask = requiredMask;
+            mask.resize( boneCount, SW_FALSE );
+            const size_t first = static_cast<size_t>( lod._firstVertex - mesh.getVertexCount() ); // 낮은 단계 정점은 LOD 0 뒤에 이어진다(`Mesh::getLODSkinVertices`)
+            for ( size_t vertex = first; vertex < first + lod._vertexCount && vertex < listSkin.size(); ++vertex )
+            {
+                for ( uint32 slot = 0; slot < 4u; ++slot )
+                {
+                    const uint16 joint = listSkin[vertex]._arrJoint[slot];
+                    if ( listSkin[vertex]._arrWeight[slot] > 0.0f && joint < boneCount )
+                        mask[joint] = SW_TRUE;
+                }
+            }
+            SkeletonBoneLODInternal::keepAncestors( skeleton, mask );
+            outListMask.push_back( std::move( mask ) );
+        }
+    }
+
+    DataInheritanceSchema SkeletonBoneLOD::makeInheritanceSchema()
+    {
+        DataInheritanceSchema schema{ "SkeletonBoneLOD" };
+        DataInheritanceSchema coreBones{ "coreBones" };
+        coreBones._keyAttribute = "name";
+        schema._listField.push_back( std::move( coreBones ) );
+        return schema; // `levels` 는 규칙에 없어 자식이 적으면 통째로 바뀐다(단계 표는 한 벌로 맞춘다)
     }
 
     string SkeletonBoneLOD::makePathForSkeleton( string_view skeletonPath )
@@ -185,4 +322,5 @@ namespace sw
 namespace sw
 {
     SW_ASSET_TYPE( SkeletonBoneLOD, SkeletonBoneLOD::kAssetType );
+    SW_DATA_INHERITANCE_SCHEMA( SkeletonBoneLOD, &SkeletonBoneLOD::makeInheritanceSchema );
 } // namespace sw

@@ -61,6 +61,9 @@ namespace sw
                 return false;
             }
 
+            /** @brief LOD 규칙(`lodDetail` · `lodDropLevel`)을 적었는지입니다 — 메시 · 머티리얼 변형은 구간이 아니라 받지 않는다. */
+            static bool hasLODRule( const AppearancePartVariantDef& def ) { return def._lodDetail != 1.0f || def._lodDropLevel != 0; }
+
             static void readPartChild( const XMLNode& child, const XMLNode& partNode, AppearancePartDef& inoutPart, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualID )
             {
                 const utf8* pName         = child.getName();
@@ -73,6 +76,8 @@ namespace sw
                     variant._asset = XMLReadUtil::readOptionalName( child, getAssetAttribute( inoutPart._kind ) );
                     if ( variant._skeleton.empty() == false && inoutPart._kind != AppearancePartKind::Skinned )
                         report.addErrorWithID( "Appearance.VariantSkeletonNotSkinned", "%#: visual '%#' part '%#' variant '%#' names a skeleton but the part is not Skinned", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
+                    if ( hasLODRule( variant ) )
+                        report.addErrorWithID( "Appearance.LODRuleNotAllowed", "%#: visual '%#' part '%#' variant '%#' cannot have lodDetail / lodDropLevel (only <Part> and <Section>)", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     if ( variant._name.empty() || inoutPart.findVariant( variant._name ) != nullptr )
                         report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a variant without a name or a duplicate '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
@@ -82,7 +87,8 @@ namespace sw
                 {
                     AppearancePartVariantDef variant;
                     (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName, {} );
-                    const bool bInvalidVariant = variant._name.empty() || variant._material.empty() || variant._skeleton.empty() == false || inoutPart.findMaterialVariant( variant._name ) != nullptr;
+                    const bool bInvalidVariant = variant._name.empty() || variant._material.empty() || variant._skeleton.empty() == false || hasLODRule( variant ) ||
+                                                 inoutPart.findMaterialVariant( variant._name ) != nullptr;
                     if ( bInvalidVariant )
                         report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a bad or duplicate material variant '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
@@ -168,6 +174,10 @@ namespace sw
                 {
                     readPartChild( child, node, part, report, sourceName, inoutVisual._id );
                 }
+                const bool bLODRuleOnUnmerged = ( part._lodDetail != 1.0f || part._lodDropLevel != 0 ) && part._kind != AppearancePartKind::Skinned;
+                if ( bLODRuleOnUnmerged )
+                    report.addErrorWithID( "Appearance.LODRuleNotAllowed", "%#: visual '%#' part '%#' of kind %# cannot have lodDetail / lodDropLevel (only merged Skinned parts)", sourceName, inoutVisual._id.c_str(),
+                                           part._name.c_str(), getEnumName( part._kind ) );
                 if ( part._listSection.empty() == false && part._material.empty() == false )
                     report.addErrorWithID( "Appearance.SectionWithPartMaterial", "%#: visual '%#' part '%#' has both 'material' and <Section> - give each section its material", sourceName,
                                            inoutVisual._id.c_str(), part._name.c_str() );

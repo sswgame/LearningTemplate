@@ -385,6 +385,7 @@ namespace sw
         releaseDependencies();
         _instance.shutdown();
         _listExternal.clear();
+        _boneRequirement.reset();
         _boundContentID               = 0;
         GameObject*            pOwner = getOwner();
         SkeletalMeshComponent* pUnit  = ( pOwner != nullptr ) ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
@@ -420,6 +421,20 @@ namespace sw
             _groundQuery = make_unique<PoseModifierComponentInternal::SceneGroundQuery>( *pOwner->getManager(), _instance.getSolveSpace()._bPlanar == SW_TRUE );
         loadSharedColliders();
         bindExternalTargets();
+        // 리그가 읽고 쓰는 본(대상 · 노드 사슬 · 바깥 대상의 공간 본)은 본 LOD 가 빼지 않는다 — 빠지면 IK 대상이 레퍼런스 포즈로 굳는다.
+        vector<uint32> listBone;
+        _instance.collectBoundBones( listBone );
+        for ( const ExternalTarget& external : _listExternal )
+        {
+            if ( external._spaceBone >= 0 )
+                listBone.push_back( static_cast<uint32>( external._spaceBone ) );
+        }
+        vector<hashed_string> listBoneName;
+        for ( const uint32 bone : listBone )
+        {
+            listBoneName.push_back( _pUnit->getSkeleton().getBone( bone )._name );
+        }
+        _boneRequirement = _pUnit->requireBones( std::move( listBoneName ) );
         _pUnit->markPoseDirty();
     }
 

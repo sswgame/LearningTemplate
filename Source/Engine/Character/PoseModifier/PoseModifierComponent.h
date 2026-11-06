@@ -250,6 +250,7 @@ namespace sw
         PoseModifierCurveSource                         _curveSource;         ///< 리그의 커브 출처다(`_instance` 가 빌린다)
         PoseModifierSocketResolver                      _socketResolver;      ///< 리그의 자기 유닛 소켓 해석이다(`_instance` 가 빌린다)
         Subscription                                    _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        Subscription                                    _boneRequirement;     ///< 리그가 묶은 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`SkeletalMeshComponent::requireBones`)
         RigInstance                                     _instance;
         shared_ptr<const RigAsset>                      _asset;
         shared_ptr<const SocketSet>                     _ownSockets;

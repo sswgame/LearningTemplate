@@ -2,6 +2,7 @@
 
 #include "Engine/Character/Fit/CharacterMeshLOD.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"
@@ -118,7 +119,7 @@ namespace sw
         };
     } // namespace
 
-    bool CharacterMeshLOD::buildLODs( Mesh& inoutMesh, const CharacterLODSettings& settings )
+    bool CharacterMeshLOD::buildLODs( Mesh& inoutMesh, const CharacterLODSettings& settings, const vector<CharacterLODSectionRule>& listRule )
     {
         using Internal = CharacterMeshLODInternal;
         if ( settings._listLevel.empty() || inoutMesh.getIndexCount() == 0 )
@@ -140,8 +141,21 @@ namespace sw
                 (void)Internal::simplifyRange( inoutMesh, 0, inoutMesh.getIndexCount(), rule, listLevelIndex );
             for ( const MeshSection& section : listSection )
             {
-                const uint32 first = static_cast<uint32>( listLevelIndex.size() );
-                const uint32 kept  = static_cast<uint32>( Internal::simplifyRange( inoutMesh, section._firstIndex, section._indexCount, rule, listLevelIndex ) );
+                const uint32                   first        = static_cast<uint32>( listLevelIndex.size() );
+                const CharacterLODSectionRule* pSectionRule = VectorUtil::findBy<&CharacterLODSectionRule::_section>( listRule, section._name );
+                const bool                     bDropped     = pSectionRule != nullptr && pSectionRule->_dropLevel > 0 && levelIndex + 1u >= pSectionRule->_dropLevel;
+                if ( bDropped )
+                {
+                    level._listSectionRange.push_back( MeshLODSectionRange{ first, 0u } ); // 빈 범위 — 이 단계부터 그 구간을 그리지 않는다
+                    continue;
+                }
+                CharacterLODLevelRule sectionLevelRule = rule;
+                if ( pSectionRule != nullptr )
+                {
+                    sectionLevelRule._triangleRatio = MathUtil::min( rule._triangleRatio * pSectionRule->_detail, 1.0f );
+                    sectionLevelRule._maxError      = rule._maxError / pSectionRule->_detail;
+                }
+                const uint32 kept = static_cast<uint32>( Internal::simplifyRange( inoutMesh, section._firstIndex, section._indexCount, sectionLevelRule, listLevelIndex ) );
                 level._listSectionRange.push_back( MeshLODSectionRange{ first, kept } );
             }
             if ( listLevelIndex.empty() || listLevelIndex.size() >= inoutMesh.getIndexCount() )

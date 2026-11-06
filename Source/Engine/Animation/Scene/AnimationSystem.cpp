@@ -158,6 +158,7 @@ namespace sw
         , _expectedEvaluationMicroseconds{ 0.0f }
         , _activeUnitCount{ 0 }
         , _poseEvaluatedUnitCount{ 0 }
+        , _poseEvaluatedBoneCount{ 0 }
         , _arrCrowdModeCount{}
         , _bOrderDirty{ SW_FALSE }
         , _bLODViewsSet{ SW_FALSE }
@@ -342,10 +343,11 @@ namespace sw
             const SkeletonBoneLOD* pBoneLOD = pClient->findBoneLOD();
             state                           = AnimationLODState::makeState( _lodSettings, screenSize, bVisible, pBoneLOD );
             // 메시가 LOD 를 가지면 본 LOD 는 그 메시 단계를 따른다(화면 크기 임계값의 정본이 메시 단계 하나 — 본은 안 보이는 단계에서 먼저 빠지지 않는다).
-            const int32 meshLODIndex   = pClient->findMeshLODIndex();
-            const bool  bHasBoneLevels = pBoneLOD != nullptr && pBoneLOD->getLevelCount() > 0;
-            if ( bHasBoneLevels && meshLODIndex >= 0 )
-                state._boneLODLevel = static_cast<uint8>( MathUtil::min( static_cast<uint32>( meshLODIndex ), pBoneLOD->getLevelCount() - 1 ) );
+            // 단계 n(1 부터)은 마스크 n - 1 이다 — 메시 LOD n 이 단계 n 이다(예전 `min( n, 단계 수 - 1 )` 은 마지막 본 단계에 닿지 못했다).
+            const int32  meshLODIndex  = pClient->findMeshLODIndex();
+            const uint32 boneMaskCount = pClient->getBoneLODMaskCount();
+            if ( boneMaskCount > 0 && meshLODIndex >= 0 )
+                state._boneLODLevel = static_cast<uint8>( MathUtil::min( static_cast<uint32>( meshLODIndex ), boneMaskCount ) );
             // 예산은 포즈를 만드는 것만 센다 — 화면 밖에서 포즈를 건너뛰는 것은 이미 0 이다.
             if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
                 _listScratchBudgetItem.push_back( AnimationBudgetItem{ state._significance, state._updateRateDivisor } );
@@ -597,15 +599,18 @@ namespace sw
         _componentActive.updateMaxComponentSize();
         _activeUnitCount        = _componentActive.getUnitCount();
         _poseEvaluatedUnitCount = 0;
+        _poseEvaluatedBoneCount = 0;
     }
 
     void AnimationSystem::runPosePhases()
     {
         // 포즈 단계의 벽시계 시간을 측정한다 — 보기 전용이다. 예산 배분은 표의 단가를 쓴다(언리얼 예산 배분기는 측정값으로 나누지만 그러면 배분이 결정적이지 않다).
         uint32 poseUnitCount = 0;
+        uint32 poseBoneCount = 0;
         for ( const SkeletalMeshComponent* pUnit : _componentActive.getUnits() )
         {
             poseUnitCount += pUnit->isPoseNeededThisFrame() ? 1u : 0u;
+            poseBoneCount += pUnit->isPoseNeededThisFrame() ? pUnit->getEvaluatedBoneCount() : 0u;
         }
         const int64 poseStart = MonotonicClock::nowNanoseconds();
         {
@@ -626,8 +631,10 @@ namespace sw
             engine::runParallelByCost( _componentActive.getComponentCount(), SW_DELEGATE_METHOD( ParallelBlockDelegate, &AnimationSystemInternal::PoseJob::runRange, &job ) );
         }
         _poseEvaluatedUnitCount = poseUnitCount;
+        _poseEvaluatedBoneCount = poseBoneCount;
         SW_PROFILE_COUNT( "GT.Animation.activeUnits", _activeUnitCount );
         SW_PROFILE_COUNT( "GT.Animation.poseUnits", poseUnitCount );
+        SW_PROFILE_COUNT( "GT.Animation.poseBones", poseBoneCount );
         // 성분 수는 병렬로 나눌 수 있는 항목 수이고, 가장 큰 성분은 직렬로 도는 임계 경로의 길이(유닛 수)다.
         SW_PROFILE_COUNT( "GT.Animation.componentCount", _componentActive.getComponentCount() );
         SW_PROFILE_COUNT( "GT.Animation.maxComponentSize", _componentActive.getMaxComponentSize() );

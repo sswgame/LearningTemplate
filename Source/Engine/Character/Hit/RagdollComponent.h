@@ -145,6 +145,8 @@ namespace sw
 
         void bindToUnit();
         void unbindFromUnit();
+        /** @brief 물리 에셋의 바디 본(과 부분 래그돌 뿌리)을 유닛 본 LOD 의 핵심 본으로 알립니다 — 빠지면 히트박스가 레퍼런스 포즈로 굳는다. */
+        void requirePhysicsBones();
         /** @brief 에셋을 (다시) 받습니다. 바뀌면 바디를 다시 세웁니다. */
         void loadAsset();
         /** @brief 유닛 스켈레톤의 뼈 이름 배열을 맞춥니다. */
@@ -198,6 +200,7 @@ namespace sw
 
         RagdollAnimationBinding        _binding;
         Subscription                   _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        Subscription                   _boneRequirement;     ///< 바디 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requirePhysicsBones`)
         shared_ptr<const PhysicsAsset> _asset;
         PhysicsRagdoll                 _ragdoll;
         vector<hashed_string>          _listBoneName;

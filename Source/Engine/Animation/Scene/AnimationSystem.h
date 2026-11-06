@@ -190,6 +190,8 @@ namespace sw
          *        임계값의 정본은 메시 단계 하나이고 본 LOD 표(`SkeletonBoneLOD`)는 단계마다 어느 본을 쓰는지만 정합니다(메시 단계 수가 더 많으면 마지막 본 단계).
          */
         virtual int32 findMeshLODIndex() const { return -1; }
+        /** @brief 본 LOD 마스크 단계 수입니다(손 표 또는 메시 LOD 에서 지은 것 — `SkeletalMeshComponent::findBoneLODMask`). 메시 LOD n 은 마스크 단계 n 을 씁니다(마지막을 넘으면 마지막). */
+        virtual uint32 getBoneLODMaskCount() const { return 0; }
         /** @brief 이번 프레임의 판정을 받습니다(게임 스레드). */
         virtual void applyAnimationLOD( const AnimationLODState& state ) = 0;
         /**
@@ -511,6 +513,8 @@ namespace sw
         float32 getExpectedEvaluationMicroseconds() const { return _expectedEvaluationMicroseconds; }
         /** @brief 지난 평가에서 실제로 포즈를 만든 유닛 수입니다. */
         uint32 getPoseEvaluatedUnitCount() const { return _poseEvaluatedUnitCount; }
+        /** @brief 지난 평가에서 포즈를 만든 유닛이 풀어 낸 본 수의 합입니다(본 LOD 가 뺀 본은 세지 않는다 — 감시 값 `Animation.EvaluatedBones`). */
+        uint32 getPoseEvaluatedBoneCount() const { return _poseEvaluatedBoneCount; }
 
         // --- 군중 공유 (AnimationCrowd.h) ---
         /** @brief 군중(묶음, 사본 풀, VAT 캐시, 시계)을 반환합니다. */
@@ -635,7 +639,8 @@ namespace sw
         float32            _expectedEvaluationMicroseconds;
         uint32             _activeUnitCount;
         uint32             _poseEvaluatedUnitCount;
-        uint32             _arrCrowdModeCount[4]; ///< 지난 프레임에 일한 유닛의 군중 방식(`AnimationCrowdMode`)별 수
+        uint32             _poseEvaluatedBoneCount; ///< 지난 평가에서 포즈를 만든 유닛이 풀어 낸 본 수의 합(본 LOD 마스크를 뺀 것)
+        uint32             _arrCrowdModeCount[4];   ///< 지난 프레임에 일한 유닛의 군중 방식(`AnimationCrowdMode`)별 수
         uint8              _bOrderDirty;
         uint8              _bLODViewsSet;         ///< 뷰를 한 번이라도 받았다(받지 않으면 LOD 꺼짐)
         uint8              _bLODSettingsReady;    ///< 테이블을 정했거나 읽었다

@@ -370,6 +370,8 @@ namespace sw
         _listMetricLine.push_back( line );
         if ( difference._differingFraction < static_cast<float64>( fields._minDiffering ) )
             context.recordFailure( step, "the field did not change the picture - " + line );
+        if ( difference._differingFraction > static_cast<float64>( fields._maxDiffering ) )
+            context.recordFailure( step, "the field changed the picture more than allowed (at most " + AutomationStepArgsUtil::formatNumber( static_cast<float64>( fields._maxDiffering ) * 100.0 ) + "%) - " + line );
     }
 
     void AutomationJudge::deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue )

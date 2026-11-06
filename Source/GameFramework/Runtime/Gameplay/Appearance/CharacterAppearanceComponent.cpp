@@ -18,8 +18,10 @@
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/PoseModifier/CharacterPoseUtil.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
+#include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketBindingComponent.h"
 #include "Engine/Character/Socket/SocketPartPool.h"
+#include "Engine/Character/Socket/SocketSet.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
@@ -124,6 +126,26 @@ namespace sw
                     merge._listSection.push_back( MeshMergeSectionPick{ section._name, name, section._material } );
                 }
                 return merge;
+            }
+
+            /**
+             * @brief 병합 조각(@p merge — `makeMergePart` 의 결과)마다 합친 메시 LOD 규칙을 덧붙입니다. 조각 이름이 합친 메시의 구간 이름이다(훅 없는 병합).
+             *        `<Section>` 이 적은 값이 먼저이고, 적지 않으면 부품의 값입니다.
+             */
+            static void appendLODRules( const ResolvedPart& part, const MeshMergePart& merge, vector<CharacterLODSectionRule>& inoutListRule )
+            {
+                if ( merge._listSection.empty() )
+                {
+                    inoutListRule.push_back( CharacterLODSectionRule{ merge._name, part._lodDetail, part._lodDropLevel } );
+                    return;
+                }
+                for ( size_t index = 0; index < merge._listSection.size() && index < part._listSection.size(); ++index )
+                {
+                    const AppearancePartVariantDef& section = part._listSection[index]; // `makeMergePart` 가 같은 순서로 조각을 만들었다
+                    const float32                   detail  = section._lodDetail != 1.0f ? section._lodDetail : part._lodDetail;
+                    const uint32                    drop    = section._lodDropLevel != 0 ? section._lodDropLevel : part._lodDropLevel;
+                    inoutListRule.push_back( CharacterLODSectionRule{ merge._listSection[index]._name, detail, drop } );
+                }
             }
 
             /** @brief 합친 부품의 조각마다 몸 오브젝트 @p owner 의 구간 컴포넌트를 맞춥니다 — 모자라면 더하고 남으면 지우고, 이름 · 머티리얼을 조각의 것으로 한다. */
@@ -695,6 +717,17 @@ namespace sw
         string socketError;
         if ( _rig.rebuild( _state.getResolved(), _bodyBindBones, _socketCache, &socketError ) == false )
             SW_LOG_ERROR_ID( "CharacterAppearance.AppearanceSockets", "Appearance '%#' sockets: %#", _presetID.c_str(), socketError.c_str() );
+        // 장비 소켓은 차림을 풀어야 안다(임포트 때 알 수 없다) — 소켓 표를 다시 지을 때마다 몸 소켓의 부모 본을 몸 유닛 본 LOD 의 핵심 본으로 다시 낸다.
+        const ResolvedSocketTable& socketTable = _rig.getTable();
+        vector<hashed_string>      listSocketBone;
+        for ( SocketID socketID = 0; socketID < socketTable.getSocketCount(); ++socketID )
+        {
+            const SocketDef* pDef        = socketTable.isSocketActive( socketID ) ? socketTable.findSocketDef( socketID ) : nullptr;
+            const bool       bBodySocket = pDef != nullptr && socketTable.getSocketUnit( socketID ) == AppearanceSocketRig::kBodyUnit && pDef->_parent.empty() == false;
+            if ( bBodySocket )
+                listSocketBone.push_back( pDef->_parent );
+        }
+        _socketBoneRequirement = pBody->requireBones( std::move( listSocketBone ) );
 
         syncParts( *pManager, *pBody, _bodyPart, listDetachEvent );
         bindSocketParts( *pManager );
@@ -1433,6 +1466,7 @@ namespace sw
             _listBaked.assign( _listPart.size(), nullptr );
         }
         // 합칠 부품의 메시는 베이크한 사본(없으면 원본)이다. 읽지 못한 메시가 있으면 합치지 않는다 — 읽기 오류는 이미 알렸다(몸 원본만 그려진다).
+        vector<CharacterLODSectionRule> listLODRule;
         for ( const uint32 loadIndex : _listMergeLoad )
         {
             const shared_ptr<Mesh>& mesh      = _listBaked[loadIndex] != nullptr ? _listBaked[loadIndex] : _listSource[loadIndex];
@@ -1446,6 +1480,7 @@ namespace sw
                 return;
             }
             _listMergePart.push_back( Internal::makeMergePart( part, *mesh, static_cast<int32>( partIndex ) == _bodyPart ) );
+            Internal::appendLODRules( part, _listMergePart.back(), listLODRule );
         }
         if ( _merged != nullptr || _listMergePart.empty() )
             return;
@@ -1459,7 +1494,7 @@ namespace sw
         }
         _merged = result._mesh;
         // 합친 메시의 LOD 는 여기서 한 번 만든다(조립한 메시라 임포트 LOD 가 없다) — 같은 차림은 캐시로 나눈다. 만들지 못하면 오류를 남기고 LOD 0 만 그린다.
-        (void)CharacterMeshLOD::buildLODs( *_merged, *_pLODSettings );
+        (void)CharacterMeshLOD::buildLODs( *_merged, *_pLODSettings, listLODRule );
         _bMergeBuilt = true;
     }
 

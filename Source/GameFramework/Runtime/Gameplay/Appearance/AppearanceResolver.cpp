@@ -415,25 +415,27 @@ namespace sw
                                              ResolvedAppearance& out )
             {
                 ResolvedPart resolved;
-                resolved._owner       = entry._owner;
-                resolved._itemID      = entry._itemID;
-                resolved._visualID    = visual._id;
-                resolved._partName    = part._name;
-                resolved._kind        = part._kind;
-                resolved._asset       = part._asset;
-                resolved._material    = part._material;
-                resolved._listSection = part._listSection;
-                resolved._skeleton    = part._skeleton;
-                resolved._socketSet   = part._socketSet;
-                resolved._rig         = part._rig;
-                resolved._fit         = part._fit;
-                resolved._fitTables   = part._fitTables;
-                resolved._bodyShapes  = part._bodyShapes;
-                resolved._layer       = part._layer;
-                resolved._bDeforms    = part._bDeforms;
-                resolved._state       = entry._state;
-                resolved._placement   = placement;
-                resolved._damageStage = pStage != nullptr ? pStage->_name : hashed_string{};
+                resolved._owner        = entry._owner;
+                resolved._itemID       = entry._itemID;
+                resolved._visualID     = visual._id;
+                resolved._partName     = part._name;
+                resolved._kind         = part._kind;
+                resolved._asset        = part._asset;
+                resolved._material     = part._material;
+                resolved._listSection  = part._listSection;
+                resolved._skeleton     = part._skeleton;
+                resolved._socketSet    = part._socketSet;
+                resolved._rig          = part._rig;
+                resolved._fit          = part._fit;
+                resolved._fitTables    = part._fitTables;
+                resolved._bodyShapes   = part._bodyShapes;
+                resolved._layer        = part._layer;
+                resolved._lodDetail    = part._lodDetail;
+                resolved._lodDropLevel = part._lodDropLevel;
+                resolved._bDeforms     = part._bDeforms;
+                resolved._state        = entry._state;
+                resolved._placement    = placement;
+                resolved._damageStage  = pStage != nullptr ? pStage->_name : hashed_string{};
 
                 hashed_string variant = entry._customVariant;
                 if ( pStage != nullptr )
@@ -871,10 +873,15 @@ namespace sw
             builder.addName( part._fitTables );
             builder.addName( part._bodyShapes );
             builder.addInt( part._bDeforms );
+            // LOD 규칙은 합친 메시의 낮은 단계를 바꾼다 — 같은 차림을 나누는 캐시 키(`AppearanceBakedMeshCache`)에 든다.
+            builder.addFloat( part._lodDetail );
+            builder.addUint64( part._lodDropLevel );
             for ( const AppearancePartVariantDef& section : part._listSection ) // 구간 머티리얼은 병합 메시의 구간이 된다
             {
                 builder.addName( section._name );
                 builder.addName( section._material );
+                builder.addFloat( section._lodDetail );
+                builder.addUint64( section._lodDropLevel );
             }
         }
         for ( const ResolvedMorph& morph : resolved._listMorph )

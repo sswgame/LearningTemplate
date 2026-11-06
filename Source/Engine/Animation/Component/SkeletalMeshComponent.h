@@ -39,6 +39,7 @@ namespace sw
         bool                   isRendered() const override;
         const SkeletonBoneLOD* findBoneLOD() const override;
         int32                  findMeshLODIndex() const override;
+        uint32                 getBoneLODMaskCount() const override;
         void                   applyAnimationLOD( const AnimationLODState& state ) override;
 
     private:
@@ -170,8 +171,22 @@ namespace sw
         void setBoneLOD( shared_ptr<const SkeletonBoneLOD> boneLOD );
         /** @brief 본 LOD 테이블을 반환합니다(없으면 nullptr). */
         const SkeletonBoneLOD* findBoneLOD() const { return _boneLOD.get(); }
-        /** @brief 현재 본 LOD 단계의 본 마스크입니다(본 수 크기, 1 이면 그 본을 평가). 모든 본을 평가하면 nullptr 입니다. 애니메이터가 샘플할 때 읽습니다(워커). */
+        /**
+         * @brief 현재 본 LOD 단계의 본 마스크입니다(본 수 크기, 1 이면 그 본을 평가). 모든 본을 평가하면 nullptr 입니다. 애니메이터가 샘플할 때 읽습니다(워커).
+         * @details 마스크는 손 파일(`<levels>`)이 있으면 그 표, 없으면 스킨 원본 메시의 LOD 단계마다 가중치가 쓰는 본이다(`SkeletonBoneLOD::computeMeshMasks`). 어느 쪽이든 핵심 본은 남는다.
+         *          자동 마스크는 이 유닛의 포즈를 다른 유닛이 읽으면(리더 · 리그 대상 — `hasAnimationDependents`) 쓰지 않는다 — 따르는 쪽이 어느 본을 쓰는지 이 메시로 알 수 없다.
+         */
         const uint8* findBoneLODMask() const;
+        /** @brief 본 LOD 마스크 단계 수입니다(0 이면 본 LOD 없음). 단계 n 은 메시 LOD n 에 맞춰 고릅니다(`AnimationSystem::updateLOD`). */
+        uint32 getBoneLODMaskCount() const { return static_cast<uint32>( _listBoneLODMask.size() ); }
+        /** @brief 이번 단계에서 풀어 내는 본 수입니다(마스크가 없으면 전부). 감시 값 `Animation.EvaluatedBones` 가 더한다. */
+        uint32 getEvaluatedBoneCount() const;
+        /**
+         * @brief 본 LOD 가 빼면 안 되는 본(핵심 본)을 이름으로 알립니다. 구독을 쥔 동안 이 본과 부모 사슬이 모든 단계에 남고, 손 파일이 빼면 오류입니다.
+         * @details 사용처(소켓 · 리그 · 래그돌 · 알림 · 시선 · 방향 보정)가 자기 데이터를 묶을 때 부른다 — 사람이 맞추는 목록이 아니라 그 데이터에서 나온다. 다시 묶으면 새 구독으로 바꾼다.
+         *          스켈레톤에 없는 이름은 건너뛴다(사용처가 자기 오류를 낸다). 마스크는 다음 평가 앞에 다시 짓는다.
+         */
+        [[nodiscard]] Subscription requireBones( vector<hashed_string> listBone );
         /** @brief LOD 판정을 받는 인터페이스 구현을 반환합니다. */
         SkeletalMeshLODClient& getLODClient() { return _lodClient; }
 
@@ -254,8 +269,10 @@ namespace sw
         void notifyOrderChanged();
         /** @brief 스켈레톤 옆의 본 LOD 파일을 읽습니다(없으면 본 LOD 없음). */
         void resolveBoneLOD();
-        /** @brief 본 LOD 테이블이나 스켈레톤이 바뀌었으면 단계별 마스크를 다시 만듭니다. */
+        /** @brief 본 LOD 테이블 · 스켈레톤 · 스킨 원본 메시 · 핵심 본이 바뀌었으면 단계별 마스크를 다시 만듭니다. */
         void refreshBoneLODMasks();
+        /** @brief 핵심 본 구독 @p id 가 풀렸습니다(`requireBones`). */
+        void releaseBoneRequirement( uint64 id );
         /** @brief 보간 프레임의 포즈를 만듭니다(직전 표시 포즈에서 마지막 평가 포즈로). 스킨 팔레트 단계에서 부릅니다. */
         void applySkippedFrameInterpolation( bool bEvaluatedThisFrame );
         /**
@@ -282,6 +299,13 @@ namespace sw
         void updateCrowdState( AnimationCrowd& crowd );
         /** @brief 작업을 뗍니다. 그 작업에 `onAnimationUnitDetached` 를 알립니다(작업 구독이 풀릴 때). */
         void detachAnimationPhaseTask( IAnimationPhaseTask* pTask );
+
+        /** @brief 사용처 하나가 알린 핵심 본입니다(`requireBones`). */
+        struct BoneRequirement
+        {
+            uint64                _id{ 0 };
+            vector<hashed_string> _listBone{};
+        };
 
         PROPERTY( Category = "Animation", DisplayName = "Skeleton", Tooltip = "Skeleton asset; empty uses a one-bone implicit skeleton" )
         AssetRef<Skeleton> _skeletonPath;
@@ -312,8 +336,13 @@ namespace sw
         vector<vector<uint8>>                           _listBoneLODMask;      ///< 본 LOD 단계 n + 1 의 본 마스크
         uint64                                          _boneLODRevision;      ///< 마스크를 만든 본 LOD 내용 번호다(0 이면 다시 만든다)
         const Skeleton*                                 _pBoneLODMaskSkeleton; ///< 마스크를 만든 스켈레톤이다(동일성만 확인한다)
-        Pose                                            _interpolationFrom;    ///< 마지막 평가 때 표시하던 포즈
-        Pose                                            _interpolationTarget;  ///< 마지막으로 평가한 포즈
+        uint64                                          _boneLODMeshContentID; ///< 마스크를 만든 스킨 원본 메시의 내용 번호다
+        vector<uint32>                                  _listBoneLODMaskCount; ///< 마스크마다 남는 본 수(`getEvaluatedBoneCount`)
+        vector<BoneRequirement>                         _listBoneRequirement;  ///< 사용처가 알린 핵심 본(`requireBones`)
+        SubscriptionList                                _boneRequirementSubscriptions;
+        uint64                                          _nextBoneRequirementID;
+        Pose                                            _interpolationFrom;   ///< 마지막 평가 때 표시하던 포즈
+        Pose                                            _interpolationTarget; ///< 마지막으로 평가한 포즈
         uint32                                          _updatePhase;
         uint32                                          _framesSinceEvaluation; ///< 마지막 평가 뒤 지난 프레임 수
         uint32                                          _effectiveDivisor;      ///< 이번 프레임의 주기(하한 PROPERTY 와 LOD 중 큰 쪽)
@@ -336,6 +365,8 @@ namespace sw
         uint8                  _bShareCrowdPose  : 1;
         uint8                  _bHasDependents   : 1; ///< 다른 유닛이 이 유닛의 포즈를 읽는다(VAT 로 넘기지 않는다)
         uint8                  _bRuntimeSkeleton : 1; ///< 스켈레톤을 코드가 정했다(`setSkeleton`) — 빈 경로로 다시 풀 때 지키지 않는다
-        [[maybe_unused]] uint8 _reserved         : 7;
+        uint8                  _bBoneLODDirty    : 1; ///< 핵심 본이 바뀌어 마스크를 다시 짓는다
+        uint8                  _bBoneLODAuto     : 1; ///< 마스크를 메시 LOD 에서 자동으로 만들었다(손 파일이 아니다)
+        [[maybe_unused]] uint8 _reserved         : 5;
     };
 } // namespace sw

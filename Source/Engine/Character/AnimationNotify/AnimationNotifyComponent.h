@@ -6,6 +6,7 @@
 #include "Core/Container/ComponentHandle.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
@@ -149,6 +150,8 @@ namespace sw
         const AnimationNotifyEntry* findEntry( const hashed_string& notify ) const;
         /** @brief 테이블의 `<FootContact>` 마다 발 본 높이로 닿음을 감지하고, 닿은 발의 알림을 처리기로 보냅니다(3D 만). */
         void processFootContacts( float32 deltaSeconds );
+        /** @brief 테이블의 발 닿음 본을 같은 오브젝트 유닛의 본 LOD 핵심 본으로 알립니다 — 빠지면 발이 레퍼런스 포즈로 굳어 발소리가 나지 않는다. */
+        void requireFootBones();
 
         PROPERTY( Category = "Animation", DisplayName = "Notify Table", AssetPath, AssetType = "AnimationNotifyTable", Tooltip = "Notify name to handler table (*.notifies.xml)" )
         string _notifyTablePath;
@@ -164,6 +167,7 @@ namespace sw
         ComponentHandle                        _animator;            ///< 받는 쪽으로 붙은 애니메이터(스켈레탈 또는 스프라이트)
         float32                                _pendingDeltaSeconds; ///< 2D 에서 복사한 프레임의 이동 구간이다.
         uint32                                 _seenTableReloadCount;
+        Subscription                           _boneRequirement;   ///< 발 닿음 본을 유닛 본 LOD 의 핵심 본으로 지키는 구독(`requireFootBones`)
         uint8                                  _bPendingFrame;     ///< 2D: 처리를 기다리는 프레임이 있다
         uint8                                  _bPendingRestarted; ///< 2D: 베낀 프레임 중 재생할 것이 바뀐 것이 있었다
     };

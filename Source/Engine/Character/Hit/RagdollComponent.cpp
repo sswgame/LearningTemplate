@@ -175,6 +175,22 @@ namespace sw
         if ( _physicsAssetPath.empty() == false && _asset == nullptr )
             SW_LOG_ERROR_ID( "Ragdoll.PhysicsAssetCouldNot", "'%#': physics asset '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _physicsAssetPath.c_str() );
         _bRebuild = true;
+        requirePhysicsBones();
+    }
+
+    void RagdollComponent::requirePhysicsBones()
+    {
+        _boneRequirement.reset();
+        if ( _pUnit == nullptr || _asset == nullptr )
+            return;
+        vector<hashed_string> listBone;
+        for ( const PhysicsAssetBodyDef& body : _asset->_listBody )
+        {
+            listBone.push_back( body._bone );
+        }
+        if ( _partialRootBone.empty() == false )
+            listBone.push_back( _partialRootBone );
+        _boneRequirement = _pUnit->requireBones( std::move( listBone ) );
     }
 
     void RagdollComponent::bindToUnit()
@@ -189,12 +205,14 @@ namespace sw
             _bindingRegistration = _pUnit->registerAnimationPhaseTask( &_binding );
         else
             SW_LOG_WARNING_ID( "Ragdoll.RagdollNoSkeletalMeshComponentObject", "'%#': ragdoll has no SkeletalMeshComponent on its object", pOwner != nullptr ? pOwner->getName().c_str() : "(no owner)" );
+        requirePhysicsBones();
     }
 
     void RagdollComponent::unbindFromUnit()
     {
         if ( _pUnit != nullptr )
             _bindingRegistration.reset();
+        _boneRequirement.reset();
         _pUnit = nullptr;
     }
 

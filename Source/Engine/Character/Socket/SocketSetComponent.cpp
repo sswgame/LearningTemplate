@@ -42,6 +42,7 @@ namespace sw
     SocketSetComponent::SocketSetComponent()
         : _socketSetPath{}
         , _socketSet{}
+        , _boneRequirement{}
     {
         setCanEverTick( false );
     }
@@ -72,6 +73,23 @@ namespace sw
         if ( _socketSetPath.empty() == false && _socketSet == nullptr )
             SW_LOG_ERROR_ID( "SocketSet.SocketSetCouldNot", "'%#': socket set '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _socketSetPath.c_str() );
         validateAgainstUnit();
+        // 소켓이 따르는 본은 본 LOD 가 빼지 않는다 — 빠지면 총구 · 칼 끝 · 상호작용 마커가 레퍼런스 포즈로 굳는다.
+        _boneRequirement.reset();
+        SkeletalMeshComponent* pUnit = getOwner() != nullptr ? getOwner()->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pUnit == nullptr || _socketSet == nullptr )
+            return;
+        vector<hashed_string> listBone;
+        for ( const SocketDef& socket : _socketSet->getSockets() )
+        {
+            if ( socket._parent.empty() == false )
+                listBone.push_back( socket._parent );
+        }
+        for ( const VirtualBoneDef& virtualBone : _socketSet->getVirtualBones() )
+        {
+            listBone.push_back( virtualBone._from );
+            listBone.push_back( virtualBone._to );
+        }
+        _boneRequirement = pUnit->requireBones( std::move( listBone ) );
     }
 
     void SocketSetComponent::validateAgainstUnit() const

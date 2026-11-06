@@ -256,6 +256,8 @@ namespace sw
         const vector<SkeletonAttachment>& getAttachments() const { return _listAttachment; }
         /** @brief 이름의 소켓입니다. 없으면 nullptr 입니다. */
         const SkeletonSocket* findSocket( const hashed_string& name ) const;
+        /** @brief 이 스켈레톤이 정한 소켓 전부입니다(본 LOD 가 부모 본을 핵심 본으로 지킨다). */
+        const vector<SkeletonSocket>& getSockets() const { return _listSocket; }
         /** @brief 다른 스켈레톤의 일부인 부품(복장 · 소품)이면 true 입니다 — 클립 트랙과 리더 본 중 이 스켈레톤에 없는 것은 오류가 아닙니다. */
         bool isPartial() const { return _bPartial == SW_TRUE; }
         /** @brief 부품으로 선언합니다(임포트 규칙 `_bPartialSkeleton`, 코드가 지은 스켈레톤). */

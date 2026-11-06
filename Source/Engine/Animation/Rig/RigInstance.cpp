@@ -156,6 +156,19 @@ namespace sw
         _pendingDeltaSeconds = 0.0f;
     }
 
+    void RigInstance::collectBoundBones( vector<uint32>& inoutListBone ) const
+    {
+        for ( const int32 bone : _listTargetBone )
+        {
+            if ( bone >= 0 )
+                inoutListBone.push_back( static_cast<uint32>( bone ) );
+        }
+        for ( const vector<uint32>& listWritten : _listNodeWrittenBone )
+        {
+            inoutListBone.insert( inoutListBone.end(), listWritten.begin(), listWritten.end() );
+        }
+    }
+
     int32 RigInstance::findTargetIndex( const hashed_string& name ) const
     {
         for ( size_t index = 0; index < _listTargetDef.size(); ++index )

@@ -54,6 +54,14 @@ namespace sw
                 outValue = static_cast<float64>( pManager->getSubsystem<AnimationSystem>().getPoseEvaluatedUnitCount() );
                 return true;
             }
+
+            [[nodiscard]] static bool readEvaluatedBones( const GameObjectManager* pManager, float64& outValue )
+            {
+                if ( pManager == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pManager->getSubsystem<AnimationSystem>().getPoseEvaluatedBoneCount() );
+                return true;
+            }
         };
     } // namespace
 } // namespace sw
@@ -68,4 +76,6 @@ namespace sw
     SW_AUTOMATION_WATCH( animationActiveUnits, "Animation.ActiveUnits", "Skeletal units that worked last frame (not resting)", &AnimationWatchsInternal::readActiveUnits );
     SW_AUTOMATION_WATCH( animationPoseEvaluatedUnits, "Animation.PoseEvaluatedUnits", "Skeletal units that built their own pose last frame (crowd-shared units do not)",
                          &AnimationWatchsInternal::readPoseEvaluatedUnits );
+    SW_AUTOMATION_WATCH( animationEvaluatedBones, "Animation.EvaluatedBones", "Bones the units that built their own pose evaluated last frame (bone LOD skips the rest)",
+                         &AnimationWatchsInternal::readEvaluatedBones );
 } // namespace sw

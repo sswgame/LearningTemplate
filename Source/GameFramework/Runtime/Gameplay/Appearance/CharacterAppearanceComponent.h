@@ -112,7 +112,8 @@ namespace sw
      *            스킨 원본을 바꾼다(`SkeletalMeshComponent::setSkinSourceMesh`). 그동안 피팅하는 부품은 숨긴다. 원본 메시 · 표 · 피팅 데이터가 다시 읽히면 다시 조립한다.
      *          - **병합**(`_bMergeParts`): 켜면 몸을 따르는 스킨드 부품(자기 리그 · 다른 스켈레톤이 아닌 것)은 오브젝트를 따로 두지 않는다. 몸과 그 부품들의 메시(베이크한 사본이거나 원본)를
      *            구간이 있는 메시 하나로 합쳐(`CharacterMeshUtil::mergeMeshes`) 몸 유닛이 한 번에 스키닝하고, 부품마다 몸 오브젝트의 구간 컴포넌트(`MeshSectionComponent`)가 자기 머티리얼로 그린다.
-     *            병합한 메시가 준비되기 전에는 몸 원본만 보인다. 합친 메시는 낮은 상세 단계(LOD)를 갖지 못한다(구간과 LOD 는 함께 쓰지 못한다 — LOD 0 만 가진다).
+     *            병합한 메시가 준비되기 전에는 몸 원본만 보인다. 합친 메시는 워커가 낮은 상세 단계(LOD)를 만든다(`CharacterMeshLOD::buildLODs` — 단계마다 구간 범위가 있고
+     *            구간마다 줄인다, 부품 · `<Section>` 의 `lodDetail` · `lodDropLevel` 규칙). 몸 유닛은 그 단계에서 가중치가 없는 본을 풀지 않는다(본 LOD 자동 마스크).
      *          - **염색**: 해석 결과의 머티리얼 값(`Parameter`, 꾸미기의 `MaterialColor` 와 `MaterialScalar`)을 주인의 부품마다 머티리얼 인스턴스에 적용한다.
      *          - **장비**: `setEquipment` 로 빌린 장비(`Equipment`)의 슬롯이 프리셋의 장비 구성을 덮는다. 해석은 외형 상태(`CharacterAppearanceState`)가 하고,
      *            장비 · 데이터 · 입력의 버전이 그대로이면 다시 해석하지 않는다. 지난 해석에 붙어 있다가 떨어져 나간 소켓 부품은 지우지 않고 물리로 뗀다
@@ -381,6 +382,7 @@ namespace sw
         // 작업보다 뒤에 선언한다 — 먼저 사라지며 풀리고, 풀릴 때 작업에 `onAnimationUnitDetached` 를 알린다.
         Subscription                                   _socketTaskRegistration;     ///< 소켓 작업의 유닛 등록 구독
         Subscription                                   _proportionTaskRegistration; ///< 비율 작업의 유닛 등록 구독
+        Subscription                                   _socketBoneRequirement;      ///< 몸 소켓의 부모 본을 몸 유닛 본 LOD 의 핵심 본으로 지키는 구독(장비가 바뀌면 다시 낸다)
         BoneProportion                                 _bodyProportion;             ///< 체형 축이 정한 본 비율(`applyBodyShapes`)
         vector<BodyMorphWeight>                        _listShapeMorph;             ///< 체형 축이 정한 몸 모프 가중치 — 구울 때 해석의 모프에 더한다
         shared_ptr<const BodyShapeSet>                 _bodyShapeSet;               ///< 쥐고 있는 체형 축 데이터(핫 리로드 판정)

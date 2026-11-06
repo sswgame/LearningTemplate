@@ -81,7 +81,7 @@ SW_TEST_CASE( CharacterMeshLODTest, LevelsKeepSectionsAndOnlyTheirVertices )
     CharacterLODSettings settings;
     SW_REQUIRE_TRUE( settings.parseXML( R"(<CharacterLODSettings><Level triangle_ratio="0.5" max_error="0.01" screen_size="0.3" lock_border="true" permissive="false" prune="false"/><Level triangle_ratio="0.2" max_error="0.05" screen_size="0.1" lock_border="false" permissive="true" prune="false"/></CharacterLODSettings>)",
                                         "test" ) );
-    SW_REQUIRE_TRUE( CharacterMeshLOD::buildLODs( *mesh, settings ) );
+    SW_REQUIRE_TRUE( CharacterMeshLOD::buildLODs( *mesh, settings, {} ) );
     SW_REQUIRE_EQUAL( 3u, mesh->getLODCount() );
     SW_EXPECT_EQUAL( mesh->getLODVertices().size(), mesh->getLODSkinVertices().size() );
 
@@ -114,6 +114,33 @@ SW_TEST_CASE( CharacterMeshLODTest, LevelsKeepSectionsAndOnlyTheirVertices )
 }
 
 /**
+ * @brief [CharacterMeshLODTest] 구간 규칙 — `_dropLevel` 의 구간은 그 단계부터 범위가 비고, `_detail` 이 큰 구간은 같은 단계에서 삼각형을 더 남기는지 검증
+ */
+SW_TEST_CASE( CharacterMeshLODTest, SectionRulesDropAndProtectSections )
+{
+    using Internal = CharacterMeshLODTestInternal;
+    CharacterLODSettings settings;
+    settings._listLevel.push_back( CharacterLODLevelRule{ 0.5f, 0.01f, 0.3f, true, false, false } );
+    settings._listLevel.push_back( CharacterLODLevelRule{ 0.2f, 0.05f, 0.1f, true, false, false } );
+
+    const shared_ptr<Mesh> plain = Internal::makeTwoSectionGrid();
+    SW_REQUIRE_TRUE( CharacterMeshLOD::buildLODs( *plain, settings, {} ) );
+    const shared_ptr<Mesh>                ruled = Internal::makeTwoSectionGrid();
+    const vector<CharacterLODSectionRule> listRule{
+        CharacterLODSectionRule{hashed_string( "s0" ), 1.0f, 2u},
+        CharacterLODSectionRule{hashed_string( "s1" ), 2.0f, 0u}
+    };
+    SW_REQUIRE_TRUE( CharacterMeshLOD::buildLODs( *ruled, settings, listRule ) );
+    SW_REQUIRE_EQUAL( 3u, ruled->getLODCount() );
+
+    // s0: LOD 1 은 그대로 줄고, LOD 2 부터 비어 그리지 않는다.
+    SW_EXPECT_TRUE( ruled->getLODs()[0]._listSectionRange[0]._indexCount > 0u );
+    SW_EXPECT_EQUAL( 0u, ruled->getLODs()[1]._listSectionRange[0]._indexCount );
+    // s1: 비율이 두 배라 규칙 없는 메시보다 LOD 1 삼각형이 많다.
+    SW_EXPECT_TRUE( ruled->getLODs()[0]._listSectionRange[1]._indexCount > plain->getLODs()[0]._listSectionRange[1]._indexCount );
+}
+
+/**
  * @brief [CharacterMeshLODTest] 단계가 낮아질수록 비율 · 화면 크기가 작아지지 않는 표는 거절하고 비는지 검증
  */
 SW_TEST_CASE( CharacterMeshLODTest, SettingsRejectNonDecreasingLevels )
@@ -138,7 +165,7 @@ SW_TEST_CASE( CharacterMeshLODTest, RigidSkinSourceIsSharedAndKeepsSectionsAndLe
     mesh->setMorphTargets( { target } );
     CharacterLODSettings settings;
     settings._listLevel.push_back( CharacterLODLevelRule{ 0.5f, 0.01f, 0.3f, true, false, false } );
-    SW_REQUIRE_TRUE( CharacterMeshLOD::buildLODs( *mesh, settings ) );
+    SW_REQUIRE_TRUE( CharacterMeshLOD::buildLODs( *mesh, settings, {} ) );
 
     const shared_ptr<Mesh> rigid = Mesh::acquireRigidSkinSource( *mesh );
     SW_EXPECT_TRUE( rigid == Mesh::acquireRigidSkinSource( *mesh ) ); // 유닛마다 사본이 아니다

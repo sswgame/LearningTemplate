@@ -40,6 +40,7 @@ namespace sw
         , _animator{}
         , _pendingDeltaSeconds{ 0.0f }
         , _seenTableReloadCount{ 0 }
+        , _boneRequirement{}
         , _bPendingFrame{ SW_FALSE }
         , _bPendingRestarted{ SW_FALSE }
     {
@@ -84,6 +85,21 @@ namespace sw
     {
         closeAllStates();
         _table = std::move( table );
+        requireFootBones();
+    }
+
+    void AnimationNotifyComponent::requireFootBones()
+    {
+        _boneRequirement.reset();
+        SkeletalMeshComponent* pUnit = getOwner() != nullptr ? getOwner()->getComponent<SkeletalMeshComponent>() : nullptr;
+        if ( pUnit == nullptr || _table == nullptr )
+            return;
+        vector<hashed_string> listBone;
+        for ( const AnimationFootContactDef& def : _table->getFootContacts() )
+        {
+            listBone.push_back( def._bone ); // 소켓 이름이면 스켈레톤에 없어 건너뛴다 — 그 소켓의 부모 본은 소켓 세트가 지킨다
+        }
+        _boneRequirement = pUnit->requireBones( std::move( listBone ) );
     }
 
     void AnimationNotifyComponent::loadNotifyTable()
@@ -96,6 +112,7 @@ namespace sw
         _table = SharedAssetCache<AnimationNotifyTable>::acquire( _notifyTablePath );
         if ( _table == nullptr )
             SW_LOG_ERROR_ID( "AnimationNotify.NotifyTableCouldNot", "'%#': notify table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _notifyTablePath.c_str() );
+        requireFootBones();
     }
 
     void AnimationNotifyComponent::bindToAnimator()
