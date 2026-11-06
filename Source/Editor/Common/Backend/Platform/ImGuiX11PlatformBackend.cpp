@@ -5,6 +5,7 @@
 #if defined( SW_PLATFORM_LINUX )
     #include "Core/Foundation/X11Headers.h"
     #include "Core/Container/StringUtil.h"
+    #include "Core/Container/string.h"
     #include "Core/Time/GameTimer.h"
 
     #include "Editor/Common/Backend/ImGuiKeyForward.h"
@@ -29,6 +30,7 @@ namespace sw::editor
             , _mainWindow{ 0 }
             , _wmDelete{ 0 }
             , _timer{}
+            , _clipboardText{}
             , _lastPointer{}
             , _lastPointerMask{ 0 }
             , _bPointerRead{ SW_FALSE }
@@ -85,6 +87,8 @@ namespace sw::editor
             platformIO.Platform_GetWindowFocus     = getWindowFocusThunk;
             platformIO.Platform_GetWindowMinimized = getWindowMinimizedThunk;
             platformIO.Platform_SetWindowTitle     = setWindowTitleThunk;
+            platformIO.Platform_GetClipboardTextFn = &getClipboardTextThunk;
+            platformIO.Platform_SetClipboardTextFn = &setClipboardTextThunk;
 
             // 모니터를 하나도 못 읽으면 가짜 모니터로 계속하지 않고 초기화 실패로 멈춘다(호출 쪽이 실패를 처리한다)
             if ( updateMonitors() == false )
@@ -331,6 +335,25 @@ namespace sw::editor
             return false;
         }
 
+        static const utf8* getClipboardTextThunk( ImGuiContext* pContext )
+        {
+            (void)pContext;
+            ImGuiX11PlatformBackend* pBackend = getActive();
+            if ( pBackend == nullptr || pBackend->_pWindow->readClipboardText( pBackend->_clipboardText ) == false )
+                return nullptr; // 글이 없음 — ImGui 는 안 붙여 넣는다
+            return pBackend->_clipboardText.c_str();
+        }
+
+        static void setClipboardTextThunk( ImGuiContext* pContext, const utf8* pText )
+        {
+            (void)pContext;
+            ImGuiX11PlatformBackend* pBackend = getActive();
+            if ( pBackend == nullptr || pText == nullptr )
+                return;
+            if ( pBackend->_pWindow->writeClipboardText( pText ) == false )
+                SW_LOG_WARNING_ID( "ImGuiX11.ClipboardWriteFailed", "Could not take the X11 clipboard - nothing copied" );
+        }
+
         /** @brief 키 하나를 ImGui 에 넣습니다. 번호 표는 입력 관리자와 같은 `InputKeyTable` 이고 레이아웃 0 번 칸(시프트 없는 값)으로 읽는다. 수정 키는 `xkey.state` 로 맞춰 포커스 밖에서 바뀐 것도 다음 키에서 바로잡힌다. */
         static void submitKey( ImGuiIO& io, XKeyEvent& keyEvent, bool bIsDown )
         {
@@ -559,6 +582,7 @@ namespace sw::editor
         Window    _mainWindow;
         Atom      _wmDelete;
         GameTimer _timer;
+        string    _clipboardText;    ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
         int2      _lastPointer;      ///< 마지막으로 ImGui 에 알린 실제 포인터 위치
         uint32    _lastPointerMask;  ///< 마지막으로 ImGui 에 알린 실제 버튼 상태
         uint8     _bPointerRead : 1; ///< 포인터를 한 번이라도 읽었는지
