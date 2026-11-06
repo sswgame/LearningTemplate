@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- parent.xml 을 고친 글이다(사거리 3 → 7). 시나리오가 바깥 편집기의 저장처럼 덮어쓴다. -->
+<Interactions>
+  <Interaction id="Base" prompt="ui.interact.use" mode="Press" maxDistance="7"/>
+</Interactions>

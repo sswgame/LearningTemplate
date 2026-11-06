@@ -42,8 +42,13 @@ namespace sw::editor
             static constexpr string_view kArrThemeTokenSuffix[] = { EditorThemeTokens::kExtension };
             /** @brief 모듈이 로드한 데이터 테이블 캐시입니다(GameFramework 의 상호작용 테이블과 원소 규칙 테이블). 에디터는 GameFramework 를 모른다. */
             static constexpr string_view kArrModuleDataSuffix[] = { ".interactions.xml", ".elements.xml" };
-            /** @brief 아무 종류도 아닌 카탈로그 데이터입니다. 모든 종류가 먼저 가져간다(`Catchall`). */
-            static constexpr string_view kArrDataExt[] = { ".xml", ".json" };
+            /**
+             * @brief 아무 종류도 아닌 카탈로그 데이터입니다. 모든 종류가 먼저 가져간다(`Catchall`).
+             * @details XML 은 그 경로를 가진 캐시가 다시 읽고, 항목 · 파일 `_base` 로 부모를 펼쳐 넣으므로 부모가 바뀌면 연쇄한다(`AssetReloadCascade`). 부모만 고쳐도 감시가 알려야 하므로 캐시에 없는 파일도 감시 대상이다.
+             *          JSON 은 상속이 없고(`DataInheritance.md`) 다시 읽는 캐시도 없어 감시하지 않는다.
+             */
+            static constexpr string_view kArrDataXMLExt[]  = { ".xml" };
+            static constexpr string_view kArrDataJSONExt[] = { ".json" };
 
             /** @brief 높이장 원본 규칙입니다. `heightfields_raw/` 아래에서 임포트 결과 경로가 나오는 원본만 높이장이다(`HeightfieldImporter::isRawHeightfieldPath`). */
             static EditorAssetMatchRule makeRawHeightfieldRule()
@@ -64,7 +69,7 @@ namespace sw::editor
         };
         const EditorAssetMatchRule kArrTileMapRule[]       = { EditorAssetMatchRule::engineType( TileMapXMLData::kAssetType ) };
         const EditorAssetMatchRule kArrSequenceRule[]      = { EditorAssetMatchRule::engineType( SequenceAsset::kAssetType ) };
-        const EditorAssetMatchRule kArrSkeletonRule[]      = { EditorAssetMatchRule::engineType( Skeleton::kAssetType, { "Skeleton" } ) };
+        const EditorAssetMatchRule kArrSkeletonRule[]      = { EditorAssetMatchRule::engineType( Skeleton::kAssetType, { "Skeleton", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
         const EditorAssetMatchRule kArrAnimationClipRule[] = { EditorAssetMatchRule::engineType( AnimationClip::kAssetType, { "AnimationClip" } ) };
         const EditorAssetMatchRule kArrAnimationSetRule[]  = { EditorAssetMatchRule::engineType( AnimationSet::kAssetType, { "AnimationSet" } ) };
         const EditorAssetMatchRule kArrRigRule[]           = { EditorAssetMatchRule::engineType( RigAsset::kAssetType, { "Rig" } ) };
@@ -89,10 +94,12 @@ namespace sw::editor
             EditorAssetMatchRule::engineType( LocalizationProject::kAssetType, { "StringTable" } ),
             EditorAssetMatchRule::engineType( UIStyleSheetAsset::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::EndsWith, BuiltinAssetTypesInternal::kArrModuleDataSuffix, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrModuleDataSuffix ),
-                                            EditorAssetMatchPriority::Suffix, { AssetReloadRoute::kAnyCacheHoldingPath } ),
+                                            EditorAssetMatchPriority::Suffix, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ),
             EditorAssetMatchRule::engineType( AudioMixerDesc::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
             EditorAssetMatchRule::engineType( AudioEventLibrary::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ),
-            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataExt ),
+            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataXMLExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataXMLExt ),
+                                            EditorAssetMatchPriority::Catchall, { AssetReloadRoute::kAnyCacheHoldingPath, nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ),
+            EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrDataJSONExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrDataJSONExt ),
                                             EditorAssetMatchPriority::Catchall ),
         };
     } // namespace

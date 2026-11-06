@@ -26,7 +26,7 @@ namespace sw::editor
             index.findReferrers( listNode[cursor], listReference );
             for ( const EditorAssetReference& reference : listReference )
             {
-                if ( mapNodeIndex.contains( reference._referrerPath ) || pfnInlinesReferences( reference._referrerPath ) == false )
+                if ( reference._bInlined == false || mapNodeIndex.contains( reference._referrerPath ) || pfnInlinesReferences( reference._referrerPath ) == false )
                     continue;
                 mapNodeIndex.emplace( reference._referrerPath, static_cast<uint32>( listNode.size() ) );
                 listNode.push_back( reference._referrerPath );
@@ -43,7 +43,7 @@ namespace sw::editor
             for ( const EditorAssetReference& reference : listReference )
             {
                 const auto itTarget = mapNodeIndex.find( reference._targetPath );
-                if ( itTarget == mapNodeIndex.end() || itTarget->second == nodeIndex || VectorUtil::contains( listDependency[nodeIndex], itTarget->second ) )
+                if ( reference._bInlined == false || itTarget == mapNodeIndex.end() || itTarget->second == nodeIndex || VectorUtil::contains( listDependency[nodeIndex], itTarget->second ) )
                     continue;
                 listDependency[nodeIndex].push_back( itTarget->second );
             }

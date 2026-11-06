@@ -111,8 +111,8 @@ namespace sw::editor
      */
     enum class AssetReferenceUse : uint8
     {
-        ResolvedAtUse, ///< 경로로 들고 쓸 때 캐시에서 푼다(메시 → 머티리얼, 스프라이트 → 텍스처, 프리팹 중첩은 스폰 때). 대상의 캐시 리로드로 따라가므로 연쇄하지 않는다
-        InlinedAtLoad, ///< 로드할 때 대상의 글을 펼쳐 넣는다(`_base=`, `DataInheritance`). 대상이 바뀌면 이 에셋도 다시 읽는다
+        ResolvedAtUse, ///< 경로로 들고 쓸 때 캐시에서 푼다(메시 → 머티리얼, 스프라이트 → 텍스처). 대상의 캐시 리로드로 따라가므로 연쇄하지 않는다
+        InlinedAtLoad, ///< `_base=` 로 대상의 글을 펼쳐 넣는다(`DataInheritance` · 카탈로그 항목 상속 · 프리팹 변형). 그 칸의 대상이 바뀌면 다시 읽는다. 같은 파일의 다른 경로 칸(프리팹 중첩은 스폰 때)은 연쇄하지 않는다(`EditorAssetReference::_bInlined`)
     };
 
     /**

@@ -11,6 +11,8 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+
 namespace sw::editor
 {
     namespace
@@ -59,6 +61,25 @@ namespace sw::editor
                         return true;
                 }
                 return false;
+            }
+
+            /**
+             * @brief @p offset 에서 시작하는 경로가 `_base="` 칸의 값이면 true 입니다.
+             * @details 항목 상속의 `_base="game/x/items.xml#id"` 도 경로 글자가 `#` 에서 끊겨 파일만 대상이 된다. shortcut: 글 검색이라 주석에 적은 `_base="…"` 도 센다 — 그 결과는 한 번 더 읽는 것뿐이다, 칸 단위 추출(`AssetReferenceFields`)로 옮길 때 사라진다.
+             */
+            static bool isBaseAttributeValue( string_view text, size_t offset )
+            {
+                if ( offset == 0 || ( text[offset - 1] != '"' && text[offset - 1] != '\'' ) )
+                    return false;
+                const string_view name{ DataInheritance::kBaseAttribute };
+                size_t            end = offset - 1;
+                while ( end > 0 && ( text[end - 1] == '=' || text[end - 1] == ' ' || text[end - 1] == '\t' ) )
+                {
+                    --end;
+                }
+                if ( end < name.size() || text.substr( end - name.size(), name.size() ) != name )
+                    return false;
+                return end == name.size() || isPathChar( text[end - name.size() - 1] ) == false;
             }
 
             static bool lessByTarget( const EditorAssetReference& left, const EditorAssetReference& right )
@@ -187,6 +208,7 @@ namespace sw::editor
                 ++endOffset;
             }
             const string candidate = FileUtil::normalizePath( text.substr( offset, endOffset - offset ) );
+            const bool   bInlined  = EditorReferenceIndexInternal::isBaseAttributeValue( text, offset );
             offset                 = endOffset;
             if ( std::binary_search( listSortedKnownID.begin(), listSortedKnownID.end(), candidate ) == false )
                 continue;
@@ -194,6 +216,7 @@ namespace sw::editor
             reference._referrerPath = referrerID;
             reference._targetPath   = candidate;
             reference._line         = line;
+            reference._bInlined     = bInlined;
             outListReference.push_back( std::move( reference ) );
         }
     }

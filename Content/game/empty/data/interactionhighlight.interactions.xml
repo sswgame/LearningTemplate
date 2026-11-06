@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 상호작용 강조 무대의 표 — 공용 팩의 항목을 물려받고 다른 칸만 적는다(docs/agents/DataInheritance.md). 부모를 고치면 이 표도 다시 읽힌다. -->
+<Interactions>
+  <Interaction id="PickUp" _base="common/data/interactions/default.interactions.xml#PickUp" cooldown="0.5"/>
+  <Interaction id="Hide" _base="common/data/interactions/default.interactions.xml#Hide"/>
+</Interactions>

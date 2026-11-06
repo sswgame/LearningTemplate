@@ -71,7 +71,7 @@ namespace sw::editor
             nullptr };
 
         /** @brief 프리팹은 쿠커가 쿠킹하는 저작 소스만이다(`AssetCookPath`). 쿠킹된 산출물(`.prefab.bin`)은 에셋이 아니다(`PrefabAsset::saveToFile` 은 소스만 쓴다). */
-        const EditorAssetMatchRule kArrPrefabRule[] = { EditorAssetMatchRule::cookableSource( PrefabAsset::kAssetType, { "Prefab" } ) };
+        const EditorAssetMatchRule kArrPrefabRule[] = { EditorAssetMatchRule::cookableSource( PrefabAsset::kAssetType, { "Prefab", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
     } // namespace
 
     SW_EDITOR_ASSET_TYPE( Prefab, PrefabAsset::kAssetType._name.data(), 200, "Prefab", "Prefabs", "Prefab Window", SW_EDITORICON_NAME( "Prefab" ), SW_THEMECOLOR_KEY( "Asset", "Prefab" ), true, true,

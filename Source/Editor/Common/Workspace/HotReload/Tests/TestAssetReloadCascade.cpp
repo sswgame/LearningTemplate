@@ -32,13 +32,17 @@ namespace
         return sw::StringUtil::endsWith( assetID, ".material" );
     }
 
-    /** @brief (참조자, 대상) 쌍으로 색인을 짓는다. 질의는 대상 순서의 이분 탐색이라 정렬해 넣는다. */
-    void buildIndex( EditorReferenceIndex& outIndex, std::initializer_list<std::pair<const char*, const char*>> listEdge )
+    /** @brief (참조자, 대상) 쌍으로 색인을 짓는다. @p listEdge 는 `_base` 칸이고 @p listPlainEdge 는 경로만 적은 칸이다. 질의는 대상 순서의 이분 탐색이라 정렬해 넣는다. */
+    void buildIndex( EditorReferenceIndex& outIndex, std::initializer_list<std::pair<const char*, const char*>> listEdge, std::initializer_list<std::pair<const char*, const char*>> listPlainEdge = {} )
     {
         EditorReferenceIndexData data{};
         for ( const auto& [pReferrer, pTarget] : listEdge )
         {
-            data._listReference.push_back( EditorAssetReference{ sw::FileUtil::normalizePath( pReferrer ), sw::FileUtil::normalizePath( pTarget ), 1u } );
+            data._listReference.push_back( EditorAssetReference{ sw::FileUtil::normalizePath( pReferrer ), sw::FileUtil::normalizePath( pTarget ), 1u, true } );
+        }
+        for ( const auto& [pReferrer, pTarget] : listPlainEdge )
+        {
+            data._listReference.push_back( EditorAssetReference{ sw::FileUtil::normalizePath( pReferrer ), sw::FileUtil::normalizePath( pTarget ), 1u, false } );
         }
         sw::VectorUtil::sort( data._listReference, []( const EditorAssetReference& left, const EditorAssetReference& right )
         { return left._targetPath != right._targetPath ? left._targetPath < right._targetPath : left._referrerPath < right._referrerPath; } );
@@ -142,5 +146,78 @@ SW_TEST_CASE( AssetReloadCascadeTest, ReferenceCycleIsAnError )
     sw::vector<sw::string> listOrder{ "stale" };
     SW_EXPECT_LOG( "AssetReloadCascade.ReferenceCycle" );
     SW_EXPECT_FALSE( AssetReloadCascade::planDependents( index, "game/t/base.material", &inlinesMaterial, listOrder ) );
+    SW_EXPECT_TRUE( listOrder.empty() );
+}
+
+/** @brief [AssetReloadCascadeTest] 표에 없는 XML 은 그 경로를 가진 캐시가 다시 읽고 `_base` 로 연쇄한다(부모만 고쳐도 감시가 알린다). JSON 은 상속이 없어 대상이 아니다 */
+SW_TEST_CASE( AssetReloadCascadeTest, CatalogRouteInlinesReferences )
+{
+    using sw::editor::AssetReferenceUse;
+    using sw::editor::AssetReloadRoute;
+    using sw::editor::EditorAssetTypeRegistry;
+    const AssetReloadRoute catalog = EditorAssetTypeRegistry::findReloadRoute( "game/t/data/items.xml" );
+    SW_REQUIRE_TRUE( catalog._pCacheKindName != nullptr );
+    SW_EXPECT_EQUAL( sw::string( AssetReloadRoute::kAnyCacheHoldingPath ), sw::string( catalog._pCacheKindName ) );
+    SW_EXPECT_TRUE( catalog._referenceUse == AssetReferenceUse::InlinedAtLoad );
+    SW_EXPECT_TRUE( EditorAssetTypeRegistry::findReloadRoute( "game/t/data/x.interactions.xml" )._referenceUse == AssetReferenceUse::InlinedAtLoad );
+
+    const AssetReloadRoute json = EditorAssetTypeRegistry::findReloadRoute( "game/t/data/x.json" );
+    SW_EXPECT_TRUE( json._pCacheKindName == nullptr );
+    SW_EXPECT_TRUE( json._referenceUse == AssetReferenceUse::ResolvedAtUse );
+}
+
+/** @brief [AssetReloadCascadeTest] 역색인은 `_base` 칸을 다른 경로 칸과 가른다 - 항목 상속은 `#` 앞 파일이 대상이고, 이름이 비슷한 칸(`my_base`)은 아니다 */
+SW_TEST_CASE( AssetReloadCascadeTest, IndexMarksBaseReferences )
+{
+    const sw::vector<sw::string>     listKnownID{ "game/t/a.xml", "game/t/b.xml", "game/t/c.xml", "game/t/d.xml", "game/t/e.xml" };
+    sw::vector<EditorAssetReference> listReference;
+    constexpr sw::string_view        kText = R"(<R><I _base="game/t/a.xml#id"/><I _base='game/t/b.xml'/><I item="game/t/c.xml"/><I my_base="game/t/d.xml"/><I _base = "game/t/e.xml"/></R>)";
+    EditorReferenceIndex::extractReferences( "game/t/child.xml", kText, listKnownID, listReference );
+    SW_REQUIRE_EQUAL( size_t{ 5 }, listReference.size() );
+    SW_EXPECT_EQUAL( sw::string( "game/t/a.xml" ), listReference[0]._targetPath );
+    SW_EXPECT_TRUE( listReference[0]._bInlined );
+    SW_EXPECT_TRUE( listReference[1]._bInlined );
+    SW_EXPECT_FALSE( listReference[2]._bInlined );
+    SW_EXPECT_FALSE( listReference[3]._bInlined );
+    SW_EXPECT_TRUE( listReference[4]._bInlined );
+}
+
+/**
+ * @brief [AssetReloadCascadeTest] 카탈로그 파일은 `_base` 칸만 따라간다 - 서로의 경로를 적은 두 카탈로그는 순환이 아니고 다시 읽지 않는다. 사슬은 부모부터다
+ * @details 다른 파일 항목(`_base="b.xml#id"`)과 파일 상속(`_base="b.xml"`)은 색인에서 같은 칸이다.
+ */
+SW_TEST_CASE( AssetReloadCascadeTest, CatalogFollowsOnlyBaseReferences )
+{
+    const auto inlinesCatalog = []( sw::string_view assetID )
+    { return sw::StringUtil::endsWith( assetID, ".xml" ); };
+    EditorReferenceIndex index;
+    buildIndex( index,
+                {
+                    {"game/t/z_child.xml", "common/data/base.xml"},
+                    {"game/t/a_grand.xml",   "game/t/z_child.xml"}
+    },
+                { { "game/t/quests.xml", "game/t/z_child.xml" },
+                  { "game/t/z_child.xml", "game/t/quests.xml" } } );
+    sw::vector<sw::string> listOrder;
+    SW_REQUIRE_TRUE( AssetReloadCascade::planDependents( index, "common/data/base.xml", inlinesCatalog, listOrder ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, listOrder.size() );
+    SW_EXPECT_EQUAL( sw::string( "game/t/z_child.xml" ), listOrder[0] );
+    SW_EXPECT_EQUAL( sw::string( "game/t/a_grand.xml" ), listOrder[1] );
+}
+
+/** @brief [AssetReloadCascadeTest] 카탈로그 파일이 서로를 부모로 삼으면 오류로 알리고 아무것도 다시 읽지 않는다 */
+SW_TEST_CASE( AssetReloadCascadeTest, CatalogBaseCycleIsAnError )
+{
+    const auto inlinesCatalog = []( sw::string_view assetID )
+    { return sw::StringUtil::endsWith( assetID, ".xml" ); };
+    EditorReferenceIndex index;
+    buildIndex( index, {
+                           {"game/t/a.xml", "common/data/base.xml"},
+                           {"game/t/a.xml",         "game/t/b.xml"},
+                           {"game/t/b.xml",         "game/t/a.xml"},
+    } );
+    sw::vector<sw::string> listOrder;
+    SW_EXPECT_LOG( "AssetReloadCascade.ReferenceCycle" );
+    SW_EXPECT_FALSE( AssetReloadCascade::planDependents( index, "common/data/base.xml", inlinesCatalog, listOrder ) );
     SW_EXPECT_TRUE( listOrder.empty() );
 }

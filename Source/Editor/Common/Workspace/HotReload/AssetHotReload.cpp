@@ -31,6 +31,7 @@
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 
 namespace sw::editor
 {
@@ -479,8 +480,12 @@ namespace sw::editor
     {
         const string assetID = FileUtil::normalizePath( relativePath );
         // 펼쳐 넣는 종류면 바뀐 파일의 참조를 먼저 맞춘다 — 부모를 바꿨으면 새 사슬로 순환을 본다(감시가 올린 번호의 증분 갱신은 다음 `update` 라 늦다).
-        // 바뀐 파일의 나가는 참조는 순환 검사에만 쓰인다(따라가는 것은 들어오는 참조) — 펼치지 않는 종류(체크아웃 한 번에 수천 개)는 다시 읽지 않는다.
-        if ( inlinesReferences( assetID ) )
+        // 바뀐 파일의 나가는 참조는 순환 검사에만 쓰인다(따라가는 것은 들어오는 참조) — `_base` 를 적지 않은 파일(체크아웃 한 번에 수천 개)은 표를 다시 정렬하지 않는다.
+        // 색인에 없는 새 파일도 여기서 넣지 않는다 — 있으면 추적기가 "생긴 파일" 을 몰라 다른 파일의 참조 판정을 다시 보지 않는다.
+        string changedText;
+        if ( inlinesReferences( assetID ) && _pReferenceTracker->getIndex().containsFile( assetID ) &&
+             FileUtil::readOptionalTextFile( FileUtil::joinPath( editor::getSubsystem<AssetPaths>().getRootFolderPath(), assetID ), changedText ) == OptionalFileRead::Read &&
+             changedText.find( DataInheritance::kBaseAttribute ) != string::npos )
             _pReferenceTracker->refreshFile( assetID );
         const EditorReferenceIndex& index = _pReferenceTracker->getIndex();
         if ( index.isReady() == false )
@@ -737,6 +742,6 @@ namespace sw::editor
     SW_AUTOMATION_WALL_WATCH( editorAssetImportFinishedCount, "Editor.AssetImportFinishedCount", "Changed sources whose import finished (success or failure) in this editor session",
                               &AssetHotReloadInternal::readImportFinishedCount );
     // 연쇄 리로드는 파일 감시가 부모 저장을 알린 뒤에 돈다 — 감시는 바깥 일(OS 파일 감시)이라 벽시계로 기다린다(`SW_AUTOMATION_WALL_WATCH`).
-    SW_AUTOMATION_WALL_WATCH( editorAssetCascadeReloadCount, "Editor.AssetCascadeReloadCount", "Assets reloaded because an asset they inline at load (material parent) changed",
+    SW_AUTOMATION_WALL_WATCH( editorAssetCascadeReloadCount, "Editor.AssetCascadeReloadCount", "Assets reloaded because an asset they inline at load (a _base parent) changed",
                               &AssetHotReloadInternal::readCascadeReloadCount );
 } // namespace sw::editor

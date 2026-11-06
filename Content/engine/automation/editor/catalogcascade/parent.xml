@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 다른 파일의 자식이 물려받는 부모 표다. parent_edited.xml 은 사거리만 다르다. -->
+<Interactions>
+  <Interaction id="Base" prompt="ui.interact.use" mode="Press" maxDistance="3"/>
+</Interactions>

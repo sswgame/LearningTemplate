@@ -21,9 +21,10 @@ namespace sw::editor
     /** @brief 참조 하나입니다. @p _referrerPath 의 텍스트 안에 @p _targetPath 가 적혀 있습니다. */
     struct EditorAssetReference
     {
-        string _referrerPath; ///< 리소스 id(`game/empty/maps/destructionshowcase.scene.xml`, 소문자)
-        string _targetPath;   ///< 리소스 id(소문자)
-        uint32 _line{ 0 };    ///< 1 부터 시작하는 줄 번호
+        string _referrerPath;      ///< 리소스 id(`game/empty/maps/destructionshowcase.scene.xml`, 소문자)
+        string _targetPath;        ///< 리소스 id(소문자)
+        uint32 _line{ 0 };         ///< 1 부터 시작하는 줄 번호
+        bool   _bInlined{ false }; ///< `_base="…"` 칸이다 — 참조자가 로드할 때 대상을 펼쳐 넣으므로 대상이 바뀌면 다시 읽는다(`AssetReloadCascade`). 경로만 적은 칸은 아니다. NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw::editor
 

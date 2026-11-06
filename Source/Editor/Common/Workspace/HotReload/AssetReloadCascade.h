@@ -22,7 +22,9 @@ namespace sw::editor
     /**
      * @struct AssetReloadCascade
      * @brief 연쇄 리로드의 계획입니다. 언리얼 에셋 레지스트리의 참조자 그래프(부모 머티리얼을 고치면 인스턴스가 다시 펼쳐진다) · 유니티의 의존 재임포트와 같은 일을 한다.
-     * @details 바뀐 에셋 X 에서 시작해 역색인(`EditorReferenceIndex::findReferrers`)으로 X 를 펼쳐 넣는 참조자를, 다시 그 참조자를 펼쳐 넣는 참조자를 따라간다(방문 집합으로 한 번씩).
+     * @details 바뀐 에셋 X 에서 시작해 역색인(`EditorReferenceIndex::findReferrers`)으로 X 를 `_base` 로 펼쳐 넣는 참조자를, 다시 그 참조자를 펼쳐 넣는 참조자를 따라간다(방문 집합으로 한 번씩).
+     *          경로만 적은 칸(`EditorAssetReference::_bInlined` 가 false)은 따라가지 않는다 — 카탈로그 둘이 서로의 경로를 적는 일은 순환이 아니다.
+     *          파일 단위 계획이라 두 카탈로그가 서로 다른 항목을 부모로 삼아도 순환이다. 항목 순환은 읽기(`DataCatalogInheritance`)가 따로 잡는다.
      *          중간 고리가 로드되지 않았어도 따라간다 — 손자는 사슬 전체를 디스크에서 펼쳐 읽었으므로 조부모가 바뀌면 다시 읽어야 한다. 로드됐는지는 실행하는 쪽(`AssetHotReload`)이 본다.
      *          순서는 위상 정렬(`TopologicalSortUtil`)이다 — 참조자는 자기가 펼쳐 넣는 대상보다 뒤에 온다(부모 → 자식 → 손자). 순환은 오류다.
      */

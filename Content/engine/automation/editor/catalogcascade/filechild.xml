@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 파일 상속: 부모 파일 전체를 물려받고 항목 하나를 더한다. -->
+<Interactions _base="engine/automation/editor/catalogcascade/parent.xml">
+  <Interaction id="Extra" prompt="ui.interact.use" mode="Press" maxDistance="1"/>
+</Interactions>

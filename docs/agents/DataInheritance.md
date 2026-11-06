@@ -94,7 +94,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 그 밖에 형식마다 해야 할 일은 둘이다.
 
-- `Config/Dev/AssetReferenceFields.json` 에는 `_base` 가 이미 있어 참조 색인 · 린트가 따라간다. 핫 리로드가 있는 종류면 표의 칸을 `AssetReferenceUse::InlinedAtLoad` 로 둔다 — 부모가 바뀌면 `AssetReloadCascade` 가 자식을 의존 순서로 다시 읽는다.
+- `Config/Dev/AssetReferenceFields.json` 에는 `_base` 가 이미 있어 참조 색인 · 린트가 따라간다. 핫 리로드가 있는 종류면 표의 칸을 `AssetReferenceUse::InlinedAtLoad` 로 둔다 — 부모가 바뀌면 `AssetReloadCascade` 가 자식을 의존 순서로 다시 읽는다. 따라가는 것은 `_base` 칸뿐이고(`EditorAssetReference::_bInlined`) 같은 파일의 다른 경로 칸은 연쇄하지 않는다.
 - 저장이 있으면 `ReflectedXMLFile::saveDescAsChild`(부모와 다른 칸만) · `saveDesc`(형식 기본값과 다른 칸만)를 쓴다. 손 형식은 `DataInheritance::makeDelta` 다. 두 글은 같은 직렬화기가 쓴 것이어야 한다.
 
 ## 쿠킹과 런타임
@@ -138,6 +138,8 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 읽기는 `XMLDocument::loadResource` · `parseData` 가 `ResourceComposer` 로 펼친다. 그래서 `XMLCatalog` · `AppearanceDatabase` · 데이터 종류 검증이 모두 펼친 결과만 본다. 항목 id 를 바꾸지 않으므로 세이브는 그대로다. 팩 쿠커도 같은 함수로 펼쳐 담는다. 쿠킹본에 `_base` 가 남으면 읽기가 모르는 칸 오류를 낸다.
 
 에디터 카탈로그 창(`CatalogDocument`)은 원문을 고치므로 적은 칸만 저장한다. 물려받은 칸은 흐린 글로 보이고, 부모와 같은 값을 적으면 그 칸을 지운다. 행의 Variant 단추가 이 행을 부모로 하는 새 행을 만든다. 표는 행의 속성만 보이므로 물려받은 자식 원소(`<Part>`)는 글 상자에서 고친다.
+
+핫 리로드: 부모 파일을 고치면 항목 `_base` · 루트 `_base` 로 물려받은 카탈로그가 다시 읽힌다. 표에 없는 `.xml` 은 그 경로를 가진 캐시가 다시 읽고(`AssetReloadRoute::kAnyCacheHoldingPath`) 부모만 고쳐도 감시가 알린다. 역색인은 `#` 앞 파일을 대상으로 센다. 파일 단위 계획이라 두 파일이 서로 다른 항목을 부모로 삼아도 순환 오류이고(`AssetReloadCascade.ReferenceCycle`) 아무것도 다시 읽지 않는다. 지금 캐시에 드는 표는 `GameDataCache` 의 상호작용 · 원소 규칙뿐이고, 쓰는 쪽이 사본을 멤버로 읽는 카탈로그는 다음 로드까지 옛 값이다. 공유 전환([ResourceStructure](../ResourceStructure.md) 단계 4)이 끝나면 이 경로를 그대로 탄다. 시나리오: `engine/automation/editor/catalogcascade`. 실제 예: `game/empty/data/interactionhighlight.interactions.xml` 은 `common` 의 항목을 부모로 쓴다.
 
 같은 메시를 머티리얼만 달리한 아이템은 외형 항목을 물려받아 `material` 만 적는다. 소켓 프리팹 부품은 프리팹의 모든 메시에 그 머티리얼을 입히고, 쉬는 부품 풀은 머티리얼별로 나뉜다. 꾸미기로 고르는 변형은 `<MaterialVariant>` 다. 시나리오: `game/shooter3d/automation/showcase/itemvariant`.
 
