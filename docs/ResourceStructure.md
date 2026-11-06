@@ -128,6 +128,10 @@ shared_ptr<const BehaviorTreeAsset> tree = _tree.acquire();  // 또는 request()
 - 읽기: 접미사가 대상 종류와 다르면 오류다. 잘못 연결한 참조가 로드 때 잡힌다.
 - 파생: 의존성 수집 · 미리 읽기(`PreloadSet`) · 쿠킹 입력 · 참조 색인 · 에디터 선택기 필터가 모두 이 칸을 본다.
 - 이름 표를 없앤다: 리플렉션 파서가 참조 칸 목록을 생성물로 내보내고, `AssetReferenceFields.json` 은 손으로 읽는 XML 칸이 남은 동안만 유지한다. 손으로 읽는 칸은 `XMLFields` 쪽 선언으로 옮겨 표를 지우는 것이 끝이다.
+- 값 모양: `AssetRefBase`(직렬화 층, 경로 + `const AssetTypeDef*`)와 `AssetRef<T>`(에셋 층, 칸을 더하지 않는다). 글 처리기는 값 주소만 받으므로 대상 종류를 프로퍼티 메타가 아니라 값이 품는다. 그래서 `vector<AssetRef<T>>` · 중첩 구조체 · 덮어쓰기 패치가 같은 검사를 지난다. 파서는 `TComponentHandle<T>` 처럼 칸 형식을 내장 이름 `AssetRef` 하나로 모으고 `AssetPath` 메타를 켠다.
+- `T` 는 칸이 만들어지는 곳에서 완전해야 한다(`unique_ptr<T>` 소멸자와 같은 규칙). 생성자를 .cpp 에 둔 컴포넌트는 헤더에 앞선 선언만 둔다. `acquire` · `request` 가 멤버 템플릿인 까닭도 같다 — 칸 선언이 `AssetRefCache<T>` 를 인스턴스화하면 뒤에 오는 캐시 헤더의 특수화가 컴파일 오류다.
+- 생성 목록: 파서가 대상마다 `AssetReferenceFields.list` 를 쓰고 빌드가 저장소의 표 `Config/Dev/AssetReferenceFields.generated.json` 으로 모은다(주인별, 이 구성이 짓는 주인의 줄만 갈아 끼운다). 커밋 전 린트와 `move-asset` 이 빌드 없이 돌기 때문에 표를 저장소에 둔다. 낡음은 `--check-asset-refs` 가 잡는다.
+- 전환하지 않는 칸: 종류가 여럿이거나(오디오 클립 · 그래프) 내장 이름을 함께 받거나(`_meshID` 의 `Cube`, `_materialPath` 의 `None`), 편집 사본이 치는 중인 글을 들거나(`SequenceTrackItem::_prefab`), 인턴 열쇠로 쓰는(`hashed_string`) 칸. 카탈로그 칸은 종류 정의(단계 1)가 `kAssetType` 을 주면 옮긴다. 이런 칸은 `PROPERTY( AssetPath )` 로 두면 생성 목록에 든다.
 
 ### 5. 행동 어휘
 
