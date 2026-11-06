@@ -16,18 +16,18 @@ namespace sw
             static constexpr float32 kUprightUpY    = 0.2f;  ///< 이보다 크면 바로 선 것이다
             static constexpr uint8   kDrivenFlags   = CoasterSegmentFlag::kLift | CoasterSegmentFlag::kStation | CoasterSegmentFlag::kBooster;
 
-            /** @brief 매개변수가 범위 안인지 봅니다. 밖이면 오류를 남기고 false 입니다(자르지 않는다). 적분 간격은 1/2000..1/30 초여야 한 프레임이 수천 번의 적분이 되지 않고 적분이 거칠어지지 않는다. */
+            /** @brief 매개변수가 범위 안인지 봅니다. 밖이면 오류를 남기고 false 입니다(자르지 않는다). 적분 간격은 1/2000..1/30 초여야 한 프레임이 수천 번의 적분이 되지 않고 적분이 거칠어지지 않는다. 중력은 G 의 분모라 0 보다 커야 한다. */
             [[nodiscard]] static bool acceptParams( const CoasterPhysicsParams& params )
             {
                 const float32 minFixedStep = 1.0f / 2000.0f;
                 const float32 maxFixedStep = 1.0f / 30.0f;
                 const bool    bStepValid   = minFixedStep <= params._fixedStep && params._fixedStep <= maxFixedStep;
-                const bool    bNonNegative = 0.0f <= params._gravity && 0.0f <= params._rollingResistance && 0.0f <= params._dragCoefficient && 0.0f <= params._liftSpeed &&
+                const bool    bNonNegative = 0.0f < params._gravity && 0.0f <= params._rollingResistance && 0.0f <= params._dragCoefficient && 0.0f <= params._liftSpeed &&
                                           0.0f <= params._stationSpeed && 0.0f <= params._boosterSpeed && 0.0f <= params._boosterAcceleration && 0.0f <= params._brakeSpeed &&
                                           0.0f <= params._brakeDeceleration && 0.0f <= params._stallSpeed && 0.0f <= params._stallSeconds && 0.0f <= params._gForceWarmupSeconds;
                 if ( bStepValid && bNonNegative )
                     return true;
-                SW_LOG_ERROR_ID( "CoasterTrain.CoasterPhysicsParamsRefusedFixedStepNeeds", "CoasterPhysicsParams: refused - fixedStep %# (needs %#..%#), the other constants need 0 or more", params._fixedStep, minFixedStep, maxFixedStep );
+                SW_LOG_ERROR_ID( "CoasterTrain.CoasterPhysicsParamsRefusedFixedStepNeeds", "CoasterPhysicsParams: refused - fixedStep %# (needs %#..%#), gravity needs more than 0, the other constants need 0 or more", params._fixedStep, minFixedStep, maxFixedStep );
                 return false;
             }
 

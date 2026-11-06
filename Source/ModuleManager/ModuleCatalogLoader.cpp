@@ -104,77 +104,72 @@ namespace sw
                         inoutListSeed.push_back( entry._name );
                 }
             }
-
-            /**
-             * @brief 고른 게임이 닿지 않고 함께 지은 게임 팩만 닿는 키트, 그리고 그런 키트에 기대는 키트 · 에디터 확장을 @p inoutListManifest 에서 빼고 @p outListRemoved 에 적습니다.
-             * @details 쓰는 쪽 = 키트가 아닌 모듈(프로젝트 · 에디터 · RHI · GameFramework)과 고른 게임의 표가 켠 키트다(CMake `sw_collectUnusedKits` 와 같다).
-             *          아무 게임도 닿지 않는 키트(`SW_BUILD_UNUSED_KITS=ON` 으로 지은 것)는 남긴다.
-             */
-            static void removeUnreachedGamePackKits( vector<ModuleManifest>& inoutListManifest, const vector<ModuleManifest>& listGamePackProject, const string& gameName,
-                                                     vector<ModuleInactiveEntry>& outListRemoved )
-            {
-                if ( listGamePackProject.empty() )
-                    return;
-                const size_t        manifestCount = inoutListManifest.size();
-                vector<string_view> listUsedSeed;
-                for ( const ModuleManifest& manifest : inoutListManifest )
-                {
-                    if ( manifest._kind == ModuleKind::Game )
-                        appendGameSeeds( manifest, listUsedSeed );
-                    if ( manifest._kind != ModuleKind::Kit && manifest._kind != ModuleKind::EditorExtension )
-                        listUsedSeed.push_back( manifest._name );
-                }
-                vector<string_view> listPackSeed;
-                for ( const ModuleManifest& project : listGamePackProject )
-                {
-                    appendGameSeeds( project, listPackSeed );
-                }
-                vector<uint8> listUsed( manifestCount, SW_FALSE );
-                vector<uint8> listRemoved( manifestCount, SW_FALSE );
-                markReached( inoutListManifest, std::move( listUsedSeed ), listUsed );
-                markReached( inoutListManifest, std::move( listPackSeed ), listRemoved );
-                for ( size_t index = 0; index < manifestCount; ++index )
-                {
-                    const bool bKit    = inoutListManifest[index]._kind == ModuleKind::Kit;
-                    listRemoved[index] = ( bKit && listUsed[index] == SW_FALSE && listRemoved[index] == SW_TRUE ) ? SW_TRUE : SW_FALSE;
-                }
-                // 뺀 키트에 기대는 것(남은 키트 · 에디터 확장)도 뺀다 — 남기면 resolve 가 없는 의존으로 멈춘다(CMake 는 그 매니페스트를 복사하지 않는다).
-                bool bChanged = true;
-                while ( bChanged )
-                {
-                    bChanged = false;
-                    for ( size_t index = 0; index < manifestCount; ++index )
-                    {
-                        if ( listRemoved[index] == SW_TRUE || listUsed[index] == SW_TRUE )
-                            continue;
-                        for ( const ModuleDependency& dependency : inoutListManifest[index]._listDependency )
-                        {
-                            const size_t dependencyIndex = findIndex( inoutListManifest, dependency._name );
-                            if ( dependencyIndex != kNotFound && listRemoved[dependencyIndex] == SW_TRUE )
-                            {
-                                listRemoved[index] = SW_TRUE;
-                                bChanged           = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                vector<ModuleManifest> listKept;
-                for ( size_t index = 0; index < manifestCount; ++index )
-                {
-                    if ( listRemoved[index] == SW_TRUE )
-                        outListRemoved.push_back( ModuleInactiveEntry{ inoutListManifest[index]._name, "not used by " + gameName } );
-                    else
-                        listKept.push_back( std::move( inoutListManifest[index] ) );
-                }
-                inoutListManifest = std::move( listKept );
-            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
+    void ModuleCatalogLoader::removeUnreachedGamePackKits( vector<ModuleManifest>& inoutListManifest, const vector<ModuleManifest>& listGamePackProject, const string& gameName,
+                                                           vector<ModuleInactiveEntry>& outListRemoved )
+    {
+        if ( listGamePackProject.empty() )
+            return;
+        const size_t        manifestCount = inoutListManifest.size();
+        vector<string_view> listUsedSeed;
+        for ( const ModuleManifest& manifest : inoutListManifest )
+        {
+            if ( manifest._kind == ModuleKind::Game )
+                ModuleCatalogLoaderInternal::appendGameSeeds( manifest, listUsedSeed );
+            if ( manifest._kind != ModuleKind::Kit && manifest._kind != ModuleKind::EditorExtension )
+                listUsedSeed.push_back( manifest._name );
+        }
+        vector<string_view> listPackSeed;
+        for ( const ModuleManifest& project : listGamePackProject )
+        {
+            ModuleCatalogLoaderInternal::appendGameSeeds( project, listPackSeed );
+        }
+        vector<uint8> listUsed( manifestCount, SW_FALSE );
+        vector<uint8> listRemoved( manifestCount, SW_FALSE );
+        ModuleCatalogLoaderInternal::markReached( inoutListManifest, std::move( listUsedSeed ), listUsed );
+        ModuleCatalogLoaderInternal::markReached( inoutListManifest, std::move( listPackSeed ), listRemoved );
+        for ( size_t index = 0; index < manifestCount; ++index )
+        {
+            const bool bKit    = inoutListManifest[index]._kind == ModuleKind::Kit;
+            listRemoved[index] = ( bKit && listUsed[index] == SW_FALSE && listRemoved[index] == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+        }
+        // 뺀 키트에 기대는 것(남은 키트 · 에디터 확장)도 뺀다 — 남기면 resolve 가 없는 의존으로 멈춘다(CMake 는 그 매니페스트를 복사하지 않는다).
+        bool bChanged = true;
+        while ( bChanged )
+        {
+            bChanged = false;
+            for ( size_t index = 0; index < manifestCount; ++index )
+            {
+                if ( listRemoved[index] == SW_TRUE || listUsed[index] == SW_TRUE )
+                    continue;
+                for ( const ModuleDependency& dependency : inoutListManifest[index]._listDependency )
+                {
+                    const size_t dependencyIndex = ModuleCatalogLoaderInternal::findIndex( inoutListManifest, dependency._name );
+                    if ( dependencyIndex != ModuleCatalogLoaderInternal::kNotFound && listRemoved[dependencyIndex] == SW_TRUE )
+                    {
+                        listRemoved[index] = SW_TRUE;
+                        bChanged           = true;
+                        break;
+                    }
+                }
+            }
+        }
+        vector<ModuleManifest> listKept;
+        for ( size_t index = 0; index < manifestCount; ++index )
+        {
+            if ( listRemoved[index] == SW_TRUE )
+                outListRemoved.push_back( ModuleInactiveEntry{ inoutListManifest[index]._name, "not used by " + gameName } );
+            else
+                listKept.push_back( std::move( inoutListManifest[index] ) );
+        }
+        inoutListManifest = std::move( listKept );
+    }
+
     bool ModuleCatalogLoader::loadAndResolve( uint8 targetMask, ModuleCatalog& outCatalog, ModuleResolution& outResolution )
     {
         // 무엇을 올릴지는 모듈 매니페스트가 정한다 — 빌드가 실행 파일 옆 `Modules/` 에 복사해 둔 것을 CMake 와 같은 규칙으로 해석한다.
@@ -216,7 +211,7 @@ namespace sw
             }
         }
         vector<ModuleInactiveEntry> listRemoved;
-        ModuleCatalogLoaderInternal::removeUnreachedGamePackKits( listManifest, listGamePackProject, GameSelection::getName(), listRemoved );
+        removeUnreachedGamePackKits( listManifest, listGamePackProject, GameSelection::getName(), listRemoved );
 
         string moduleError;
         for ( ModuleManifest& manifest : listManifest )

@@ -54,11 +54,8 @@ namespace sw
         const RTSPlayer* pPlayer = _pWorld->findPlayer( _player );
         if ( pPlayer == nullptr || pPlayer->_bDefeated )
             return;
-        _thinkTimer.update( deltaTime );
-        if ( _thinkTimer.isActive() )
-            return;
-        _thinkTimer.start( _settings._thinkInterval );
-        _runner.tick( _blackboard, this, _settings._thinkInterval );
+        if ( _thinkTimer.updateRepeat( deltaTime, _settings._thinkInterval, true ) ) // 늦음을 다음 간격으로 넘겨 생각 빈도가 프레임률에 매이지 않는다
+            _runner.tick( _blackboard, this, _settings._thinkInterval );
     }
 
     void RTSCommanderAI::notify( const RTSEvent& event )
@@ -83,7 +80,7 @@ namespace sw
         int32   attackWaveCount = 0;
         archive >> thinkTimer;
         archive >> attackWaveCount;
-        if ( archive.isError() || attackWaveCount < 0 )
+        if ( archive.isError() || attackWaveCount < 0 || MathUtil::isFinite( thinkTimer ) == false ) // 무한대 타이머는 AI 를 영영 세운다
             return false;
         _thinkTimer._remaining = thinkTimer;
         _attackWaveCount       = attackWaveCount;

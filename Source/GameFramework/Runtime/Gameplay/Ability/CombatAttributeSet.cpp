@@ -135,8 +135,7 @@ namespace sw
     {
         AttributeSet::postAttributeChange( name, oldValue, newValue );
 
-        // 최대치가 줄면(버프가 해제되면) 현재치도 따라서 줄인다. 현재치의 base 를 자르면 current 도 다시 집계된다. 최대치가 늘 때는 그대로 둔다.
-        // 최대 체력 버프로 체력이 차오르지 않는다(언리얼 Lyra 와 같음).
+        // 최대치가 줄면(버프가 해제되면) 현재치도 따라서 줄인다. 최대치가 늘 때는 그대로 둔다. 최대 체력 버프로 체력이 차오르지 않는다(언리얼 Lyra 와 같음).
         AbilityComponent* pAbilitySystem = getOwningAbilitySystem();
         if ( pAbilitySystem == nullptr || newValue >= oldValue )
             return;
@@ -149,9 +148,8 @@ namespace sw
         if ( currentName.empty() )
             return;
 
-        const float32 currentBase = CombatAttributeSetInternal::readOwnBase( *this, currentName );
-        if ( currentBase > newValue )
-            (void)pAbilitySystem->setAttributeBaseValue( currentName, newValue ); // 이 세트가 가진 어트리뷰트이므로 실패하지 않는다
+        // base 를 그대로 다시 쓴다 - 훅이 새 최대치로 자르고 current 도 다시 집계한다. base 가 최대치 안이어도 지속 이펙트로 오른 current 는 넘어 있을 수 있어 조건을 두지 않는다.
+        (void)pAbilitySystem->setAttributeBaseValue( currentName, CombatAttributeSetInternal::readOwnBase( *this, currentName ) ); // 이 세트가 가진 어트리뷰트이므로 실패하지 않는다
     }
 
     void CombatAttributeSet::postGameplayEffectExecute( const AttributeModCallbackData& data )
