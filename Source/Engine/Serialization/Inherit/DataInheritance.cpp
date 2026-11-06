@@ -461,21 +461,16 @@ namespace sw
             }
         };
 
-        /** @brief 손 형식 규칙의 표입니다. 정적 초기화에서 채워지므로 함수 안에 두어 처음 쓸 때 만듭니다. */
-        struct DataInheritanceSchemaTable
+        /** @brief 손 형식 규칙 사슬의 머리와 잠금입니다. 정적 초기화에서 쓰이므로 함수 안에 둡니다. */
+        struct DataInheritanceSchemaChain
         {
-            struct Row
-            {
-                const utf8*                         _pRootName;
-                DataInheritance::MakeSchemaFunction _pfnMakeSchema;
-            };
-            mutex                _mutex;
-            vector<Row> _listRow SW_GUARDED_BY( _mutex );
+            mutex                           _mutex;
+            DataInheritanceSchemaRegistrar* _pHead{ nullptr };
 
-            static DataInheritanceSchemaTable& get()
+            static DataInheritanceSchemaChain& get()
             {
-                static DataInheritanceSchemaTable s_table;
-                return s_table;
+                static DataInheritanceSchemaChain s_chain;
+                return s_chain;
             }
         };
 
@@ -691,19 +686,10 @@ namespace sw
             SW_LOG_ERROR_ID( "DataInheritance.NotXML2", "'%#' could not be parsed: %#", sourceName, doc.getLastError() );
             return false;
         }
-        const string_view rootName = doc.getRoot().getName();
-        {
-            DataInheritanceSchemaTable& table = DataInheritanceSchemaTable::get();
-            MakeSchemaFunction          pfnMakeSchema{ nullptr };
-            const ScopedLock<mutex>     lock( table._mutex );
-            for ( const DataInheritanceSchemaTable::Row& row : table._listRow )
-            {
-                if ( rootName == row._pRootName )
-                    pfnMakeSchema = row._pfnMakeSchema;
-            }
-            if ( pfnMakeSchema != nullptr )
-                return flatten( text, sourceName, pfnMakeSchema(), source, outText );
-        }
+        const string_view        rootName      = doc.getRoot().getName();
+        const MakeSchemaFunction pfnMakeSchema = DataInheritanceSchemaRegistrar::find( rootName );
+        if ( pfnMakeSchema != nullptr )
+            return flatten( text, sourceName, pfnMakeSchema(), source, outText );
         const string    rootNameText{ rootName };
         const TypeInfo* pTypeInfo = engine::getSubsystem<TypeRegistry>().findType( hashed_string( rootNameText.c_str() ) );
         if ( pTypeInfo == nullptr )
@@ -714,11 +700,41 @@ namespace sw
         return flatten( text, sourceName, DataInheritanceSchema::makeFromType( *pTypeInfo ), source, outText );
     }
 
-    void DataInheritance::registerSchema( const utf8* pRootName, MakeSchemaFunction pfnMakeSchema )
+    DataInheritanceSchemaRegistrar::DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MakeSchemaFunction pfnMakeSchema )
+        : _pRootName{ pRootName }
+        , _pfnMakeSchema{ pfnMakeSchema }
+        , _pNext{ nullptr }
     {
-        DataInheritanceSchemaTable& table = DataInheritanceSchemaTable::get();
-        const ScopedLock<mutex>     lock( table._mutex );
-        table._listRow.push_back( DataInheritanceSchemaTable::Row{ pRootName, pfnMakeSchema } );
+        DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
+        const ScopedLock<mutex>     lock( chain._mutex );
+        _pNext       = chain._pHead;
+        chain._pHead = this;
+    }
+
+    DataInheritanceSchemaRegistrar::~DataInheritanceSchemaRegistrar()
+    {
+        DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
+        const ScopedLock<mutex>     lock( chain._mutex );
+        for ( DataInheritanceSchemaRegistrar** ppLink = &chain._pHead; *ppLink != nullptr; ppLink = &( *ppLink )->_pNext )
+        {
+            if ( *ppLink == this )
+            {
+                *ppLink = _pNext;
+                return;
+            }
+        }
+    }
+
+    DataInheritance::MakeSchemaFunction DataInheritanceSchemaRegistrar::find( string_view rootName )
+    {
+        DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
+        const ScopedLock<mutex>     lock( chain._mutex );
+        for ( const DataInheritanceSchemaRegistrar* pEntry = chain._pHead; pEntry != nullptr; pEntry = pEntry->_pNext )
+        {
+            if ( rootName == pEntry->_pRootName )
+                return pEntry->_pfnMakeSchema;
+        }
+        return nullptr;
     }
 
     bool DataInheritance::makeDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, string& outText )

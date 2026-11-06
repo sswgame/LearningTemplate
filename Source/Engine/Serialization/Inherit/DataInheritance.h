@@ -147,14 +147,12 @@ namespace sw
         [[nodiscard]] static bool flattenReflected( string_view text, string_view sourceName, const TypeInfo& typeInfo, string& outText );
 
         /**
-         * @brief 루트 이름으로 규칙을 찾아 펼칩니다(팩 쿠커). 등록한 손 형식(`registerSchema`)이 먼저이고 그다음 같은 이름의 리플렉션 형식입니다. 둘 다 없으면 오류입니다.
+         * @brief 루트 이름으로 규칙을 찾아 펼칩니다(팩 쿠커). 등록한 손 형식(`SW_DATA_INHERITANCE_SCHEMA`)이 먼저이고 그다음 같은 이름의 리플렉션 형식입니다. 둘 다 없으면 오류입니다.
          */
         [[nodiscard]] static bool flattenByRootName( string_view text, string_view sourceName, IDataInheritanceSource& source, string& outText );
 
-        /** @brief 규칙을 돌려주는 함수입니다. 손으로 읽는 XML 형식이 `registerSchema` 로 올립니다. */
+        /** @brief 규칙을 돌려주는 함수입니다. 손으로 읽는 XML 형식이 `SW_DATA_INHERITANCE_SCHEMA` 로 올립니다. */
         using MakeSchemaFunction = DataInheritanceSchema ( * )();
-        /** @brief 루트 이름이 @p pRootName 인 손 형식의 규칙을 올립니다(정적 초기화에서 불러도 된다 — 표는 처음 쓸 때 만든다). */
-        static void registerSchema( const utf8* pRootName, MakeSchemaFunction pfnMakeSchema );
 
         /**
          * @brief @p fullText 가 @p parentFullText 와 다른 칸만 담은 문서를 만듭니다. @p baseID 가 있으면 루트에 `_base` 로 적고, 없으면 @p parentFullText 는 형식 기본값입니다.
@@ -182,13 +180,25 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 손 형식의 규칙을 정적 초기화에서 올립니다(`SW_DATA_INHERITANCE_SCHEMA`). */
-    struct DataInheritanceSchemaRegistrar
+    /**
+     * @class DataInheritanceSchemaRegistrar
+     * @brief 손 형식의 규칙 하나를 정적 초기화에서 올립니다(`SW_DATA_INHERITANCE_SCHEMA`). 힙을 쓰지 않는 사슬이고, 모듈이 내려가면 소멸자가 뺍니다.
+     */
+    class SW_API DataInheritanceSchemaRegistrar
     {
-        DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MakeSchemaFunction pfnMakeSchema )
-        {
-            DataInheritance::registerSchema( pRootName, pfnMakeSchema );
-        }
+    public:
+        DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MakeSchemaFunction pfnMakeSchema );
+        ~DataInheritanceSchemaRegistrar();
+        DataInheritanceSchemaRegistrar( const DataInheritanceSchemaRegistrar& )            = delete;
+        DataInheritanceSchemaRegistrar& operator=( const DataInheritanceSchemaRegistrar& ) = delete;
+
+        /** @brief 루트 이름이 @p rootName 인 규칙 함수입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] static DataInheritance::MakeSchemaFunction find( string_view rootName );
+
+    private:
+        const utf8*                         _pRootName;
+        DataInheritance::MakeSchemaFunction _pfnMakeSchema;
+        DataInheritanceSchemaRegistrar*     _pNext;
     };
 } // namespace sw
 
