@@ -10,6 +10,8 @@
 #include "Engine/UI/WidgetTree/UIFocusManager.h"
 #include "Engine/UI/WidgetTree/UINavigationSolver.h"
 #include "Engine/UI/WidgetTree/UIPointerState.h"
+#include "Engine/UI/Widgets/ButtonWidget.h"
+#include "Engine/UI/Widgets/SliderWidget.h"
 
 using namespace sw;
 
@@ -123,6 +125,7 @@ namespace
             return reply;
         }
         void onHoverChanged( bool bHovered ) override { _pLog->add( _pLabel, bHovered ? "+" : "-" ); }
+        void onPointerCaptureLost() override { _pLog->add( _pLabel, "lost" ); }
 
     private:
         UIEventLog* _pLog;
@@ -542,6 +545,73 @@ SW_TEST_CASE( UIPointerStateTest, CaptureEndsWhenTheWidgetIsRemoved )
     SW_EXPECT_TRUE( pointer.getCapturedWidget() == kInvalidWidgetID );
     SW_EXPECT_TRUE( result._bHitWidget == SW_TRUE );
     SW_EXPECT_TRUE( pointer.getHoveredWidget() == scene._pRoot->getID() );
+}
+
+/** @brief [UIPointerStateTest] 잡기 취소: 잡은 위젯에 한 번 알리고 놓는다. 그 뒤 이벤트는 점 아래로 간다. 잡은 것이 없거나 위젯이 사라졌으면 아무 일도 없다 */
+SW_TEST_CASE( UIPointerStateTest, CancelCaptureTellsTheWidgetOnce )
+{
+    UIEventScene scene;
+    scene._pLeaf->setCaptureOnDown();
+    UIPointerState pointer;
+    pointer.cancelCapture(); // 잡은 것이 없다
+    (void)pointer.process( scene._tree, UIEventScene::makeEvent( UIPointerEventKind::Down, 10.0f, 10.0f ) );
+    (void)scene._log.take();
+
+    pointer.cancelCapture();
+    SW_EXPECT_TRUE( scene._log.take() == "leaf:lost" );
+    SW_EXPECT_TRUE( pointer.getCapturedWidget() == kInvalidWidgetID );
+    SW_EXPECT_TRUE( pointer.getCaptureTree() == nullptr );
+    pointer.cancelCapture();
+    SW_EXPECT_TRUE( scene._log.take().empty() );
+
+    const UIPointerResult after = pointer.process( scene._tree, UIEventScene::makeEvent( UIPointerEventKind::Move, 500.0f, 500.0f ) );
+    SW_EXPECT_TRUE( after._bHitWidget == SW_FALSE ); // 밖의 점은 더는 위젯으로 가지 않는다
+
+    (void)pointer.process( scene._tree, UIEventScene::makeEvent( UIPointerEventKind::Down, 10.0f, 10.0f ) );
+    (void)scene._log.take();
+    unique_ptr<Widget> removed = scene._pRoot->removeChild( scene._pLeaf );
+    pointer.cancelCapture(); // 이미 떨어진 위젯에는 알리지 않는다
+    SW_EXPECT_TRUE( scene._log.take().empty() );
+    SW_EXPECT_TRUE( pointer.getCapturedWidget() == kInvalidWidgetID );
+}
+
+/** @brief [UIPointerStateTest] 잡기 취소: 누른 버튼은 눌림이 풀리고 뒤늦은 뗌에도 클릭이 없다 */
+SW_TEST_CASE( UIPointerStateTest, CancelCaptureEndsButtonPress )
+{
+    WidgetTree               tree;
+    unique_ptr<ButtonWidget> button  = make_unique<ButtonWidget>();
+    ButtonWidget*            pButton = button.get();
+    tree.setRoot( std::move( button ) );
+    (void)UITestUtil::layout( tree, float2{ 100.0f, 20.0f } );
+    uint32             clickCount{ 0 };
+    const Subscription clicked = pButton->getOnClicked().add( [&clickCount]( WidgetID )
+    { ++clickCount; } );
+
+    UIPointerState pointer;
+    (void)pointer.process( tree, UIEventScene::makeEvent( UIPointerEventKind::Down, 10.0f, 10.0f ) );
+    SW_REQUIRE_TRUE( pButton->isPressed() );
+    pointer.cancelCapture();
+    SW_EXPECT_FALSE( pButton->isPressed() );
+    (void)pointer.process( tree, UIEventScene::makeEvent( UIPointerEventKind::Up, 10.0f, 10.0f ) );
+    SW_EXPECT_EQUAL( 0u, clickCount );
+}
+
+/** @brief [UIPointerStateTest] 잡기 취소: 끌던 슬라이더는 그 뒤의 이동으로 값이 바뀌지 않는다 */
+SW_TEST_CASE( UIPointerStateTest, CancelCaptureEndsSliderDrag )
+{
+    WidgetTree               tree;
+    unique_ptr<SliderWidget> slider  = make_unique<SliderWidget>();
+    SliderWidget*            pSlider = slider.get();
+    tree.setRoot( std::move( slider ) );
+    (void)UITestUtil::layout( tree, float2{ 100.0f, 20.0f } );
+
+    UIPointerState pointer;
+    (void)pointer.process( tree, UIEventScene::makeEvent( UIPointerEventKind::Down, 20.0f, 10.0f ) );
+    SW_REQUIRE_TRUE( pointer.getCapturedWidget() == pSlider->getID() );
+    const float32 valueAtCancel = pSlider->getValue();
+    pointer.cancelCapture();
+    (void)pointer.process( tree, UIEventScene::makeEvent( UIPointerEventKind::Move, 90.0f, 10.0f ) );
+    SW_EXPECT_NEAR( valueAtCancel, pSlider->getValue(), 1.0e-6f );
 }
 
 SW_TEST_CASE( UIPointerStateTest, ClearHoverAndForgetTree )

@@ -54,6 +54,7 @@ namespace sw
 
         UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase ) override;
         UIReply onActionEvent( const UIActionEvent& event, UIRoutePhase phase ) override;
+        void    onPointerCaptureLost() override { _bDragging = SW_FALSE; }
 
     protected:
         float2 computeDesiredSize( const UILayoutContext& context, const float2& availableSize ) const override;

@@ -48,6 +48,7 @@ namespace sw
 
         UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase ) override;
         UIReply onActionEvent( const UIActionEvent& event, UIRoutePhase phase ) override;
+        void    onPointerCaptureLost() override;
         /** @brief 기본 상태에 누름(`:pressed`)을 더합니다. */
         uint32 computeStyleStates() const override;
         /** @brief 단추로 내보입니다. 이름은 `accessibleName`, 없으면 안의 글입니다. 안의 글은 따로 읽지 않습니다. */

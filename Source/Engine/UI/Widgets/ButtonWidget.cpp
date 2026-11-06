@@ -92,6 +92,12 @@ namespace sw
         return UIReply::makeUnhandled();
     }
 
+    void ButtonWidget::onPointerCaptureLost()
+    {
+        _bPressed = false;
+        invalidate( WidgetDirty::kStyle | WidgetDirty::kPaint ); // :pressed
+    }
+
     UIReply ButtonWidget::onActionEvent( const UIActionEvent& event, UIRoutePhase phase )
     {
         if ( phase != UIRoutePhase::Bubble || event._action != hashed_string( UIActionName::kAccept ) )

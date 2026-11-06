@@ -230,6 +230,8 @@ namespace sw
         // 게임이 포인터를 잠가 두면(1인칭 시점) 커서는 화면 가운데에 묶여 있으므로 UI 는 포인터를 보지 않는다.
         if ( _pInput->isMouseLockActive() )
         {
+            // 누른 채 잠기면 뗌이 오지 않는다. 잡기를 그대로 두면 잠금을 풀었을 때 버튼 없이 슬라이더가 커서를 따라간다.
+            _pointer.cancelCapture();
             _pointer.clearHover();
             _bPointerKnown = SW_FALSE;
             return;

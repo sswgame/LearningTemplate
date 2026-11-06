@@ -253,6 +253,10 @@ namespace sw
         return UIReply::makeUnhandled();
     }
 
+    void Widget::onPointerCaptureLost()
+    {
+    }
+
     void Widget::onFocusChanged( bool bFocused )
     {
         (void)bFocused;

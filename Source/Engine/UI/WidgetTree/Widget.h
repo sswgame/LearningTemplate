@@ -171,6 +171,8 @@ namespace sw
         virtual void onFocusChanged( bool bFocused );
         /** @brief 포인터가 들어오거나 나갔을 때의 알림입니다. 상태 스타일 무효화(kStyle)는 부르는 쪽이 이미 했습니다. */
         virtual void onHoverChanged( bool bHovered );
+        /** @brief 뗌을 받지 못한 채 포인터 잡기가 끝났을 때의 알림입니다(슬레이트 `OnMouseCaptureLost`). 누름 · 끌기 상태를 클릭이나 값 변경 없이 접습니다. */
+        virtual void onPointerCaptureLost();
 
         // --- 스타일 ---------------------------------------------------------------
         /** @brief 포인터가 이 위젯(또는 자손) 위에 있으면 true 입니다(호버 경로, 스타일 `:hover`). */

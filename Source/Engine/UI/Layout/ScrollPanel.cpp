@@ -205,6 +205,12 @@ namespace sw
         return UIReply::makeUnhandled();
     }
 
+    void ScrollPanel::onPointerCaptureLost()
+    {
+        _bDraggingBar = false;
+        invalidate( WidgetDirty::kPaint ); // 막대 누름 상태가 바뀐다
+    }
+
     UIReply ScrollPanel::onActionEvent( const UIActionEvent& event, UIRoutePhase phase )
     {
         // 오른쪽 스틱(위와 오른쪽이 +): 버블이라 포커스 위젯(값을 바꾸는 슬라이더 등)이 먼저 쓸 수 있다. 위로 기울이면 내용이 내려온다.

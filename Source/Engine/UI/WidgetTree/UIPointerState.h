@@ -43,6 +43,8 @@ namespace sw
         UIPointerResult process( WidgetTree& tree, const UIPointerEvent& event );
         /** @brief 호버를 모두 해제합니다(포인터가 창을 떠났거나 이 트리가 입력을 받지 못하게 됐을 때. 예를 들어 모달이 덮은 경우). */
         void clearHover();
+        /** @brief 잡은 위젯이 있으면 잡기를 끝내고 그 위젯에 알립니다(`Widget::onPointerCaptureLost`). 뗌을 전할 수 없게 됐을 때 부릅니다(게임이 마우스를 잠갔을 때). */
+        void cancelCapture();
         /** @brief @p tree 를 더 쓰지 않습니다. 그 트리의 호버와 잡기를 알림 없이 버립니다(트리를 지우기 직전에 부릅니다). */
         void forgetTree( const WidgetTree& tree );
 

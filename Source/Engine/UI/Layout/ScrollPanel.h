@@ -73,6 +73,7 @@ namespace sw
 
         UIReply onPointerEvent( const UIPointerEvent& event, UIRoutePhase phase ) override;
         UIReply onActionEvent( const UIActionEvent& event, UIRoutePhase phase ) override;
+        void    onPointerCaptureLost() override;
 
         float32 getNavigationMargin() const { return _navigationMargin; }
         void    setNavigationMargin( float32 navigationMargin ) { _navigationMargin = navigationMargin; }

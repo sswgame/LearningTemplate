@@ -66,6 +66,15 @@ namespace sw
         updateHover( nullptr, _scratchPath );
     }
 
+    void UIPointerState::cancelCapture()
+    {
+        Widget* pWidget = _pCaptureTree != nullptr ? _pCaptureTree->findWidgetByID( _captured ) : nullptr;
+        _pCaptureTree   = nullptr;
+        _captured       = kInvalidWidgetID;
+        if ( pWidget != nullptr )
+            pWidget->onPointerCaptureLost();
+    }
+
     void UIPointerState::forgetTree( const WidgetTree& tree )
     {
         if ( _pHoverTree == &tree )
