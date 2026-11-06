@@ -37,14 +37,14 @@ namespace
 
     struct XTestUtil
     {
-        static constexpr const utf8* kBaseTree = R"(<BehaviorTree>
+        static constexpr const utf8* kBaseTree = R"XML(<BehaviorTree>
   <Selector id="root" name="Root">
     <Sequence id="idle">
       <Condition id="calm" test="!flag(alarm)"/>
       <Action id="rest" task="flag.set" flag="rested"/>
     </Sequence>
   </Selector>
-</BehaviorTree>)";
+</BehaviorTree>)XML";
 
         /** @brief 트리를 한 번 돌리고 플래그를 돌려줍니다. */
         static void tickOnce( const BehaviorTree& tree, GameFlags& flags )
@@ -82,14 +82,14 @@ SW_TEST_CASE( BehaviorTreeVariantTest, BaseTreeReplacesBranchById )
 {
     XTestSource source;
     source._listFile.push_back( { "base.bt.xml", XTestUtil::kBaseTree } );
-    constexpr const utf8* kChild = R"(<BehaviorTree _base="base.bt.xml">
+    constexpr const utf8* kChild = R"XML(<BehaviorTree _base="base.bt.xml">
   <Selector id="root">
     <Action id="shout" task="flag.set" flag="shouted" _before="idle"/>
     <Sequence id="idle">
       <Action id="rest" task="flag.set" flag="slept"/>
     </Sequence>
   </Selector>
-</BehaviorTree>)";
+</BehaviorTree>)XML";
     BehaviorTreeAsset     asset;
     SW_REQUIRE_TRUE( asset.loadFromText( kChild, "child.bt.xml", source ) );
     GameFlags flags;

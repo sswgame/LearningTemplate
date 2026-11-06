@@ -9,6 +9,7 @@
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -119,7 +120,8 @@ namespace sw
     {
         // 바탕은 공통 상속(`_base`)이 펼친다 — 같은 이름은 합치고(`_op="Replace"` 는 바꾸고) `_op="Remove"` 는 뺀다. 쿠킹본은 이미 펼친 한 벌이다.
         string flatText;
-        if ( DataInheritance::findBasePath( xml ).empty() == false && DataInheritance::flattenFromResources( xml, sourceLabel, AnimationSetInternal::makeInheritanceSchema(), flatText ) == false )
+        bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
+        if ( ResourceComposer::compose( xml, sourceLabel, ResourceContext::forSchema( &AnimationSetInternal::makeInheritanceSchema ), flatText, bComposed ) == false )
             return false;
         XMLDocument document;
         if ( document.parse( flatText.empty() ? xml : string_view{ flatText } ) == false )

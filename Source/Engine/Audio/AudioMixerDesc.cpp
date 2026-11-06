@@ -10,6 +10,7 @@
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw
 {
@@ -29,7 +30,8 @@ namespace sw
     {
         *this = AudioMixerDesc{};
         string flatText;
-        if ( DataInheritance::findBasePath( xmlText ).empty() == false && DataInheritance::flattenReflected( xmlText, sourceName, *StaticType(), flatText ) == false )
+        bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
+        if ( ResourceComposer::compose( xmlText, sourceName, ResourceContext::forType( *StaticType() ), flatText, bComposed ) == false )
             return false;
         if ( XMLSerializer::deserialize( this, *StaticType(), flatText.empty() ? xmlText : string_view( flatText ) ) == false )
         {

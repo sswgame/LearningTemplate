@@ -7,6 +7,7 @@
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -107,7 +108,8 @@ namespace sw
     {
         clear();
         string flatText;
-        if ( DataInheritance::findBasePath( xml ).empty() == false && DataInheritance::flattenFromResources( xml, sourceLabel, RetargetProfileInternal::makeInheritanceSchema(), flatText ) == false )
+        bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
+        if ( ResourceComposer::compose( xml, sourceLabel, ResourceContext::forSchema( &RetargetProfileInternal::makeInheritanceSchema ), flatText, bComposed ) == false )
             return false;
         XMLDocument document;
         XMLNode     root;

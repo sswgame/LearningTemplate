@@ -36,7 +36,7 @@ namespace
     struct AnimationGraphTestUtil
     {
         /** @brief 부모 파일을 쓰고 @p pChildBody 를 그 자식으로 읽습니다. */
-        static bool parseChild( sw::AnimationGraphAsset& outGraph, const sw::test::ScopedScratchDomain& domain, const sw::utf8* pChildBody )
+        static bool parseChild( sw::AnimationGraphAsset& outGraph, const sw::test::ScopedScratchDomain& domain, const utf8* pChildBody )
         {
             SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "base.animgraph.xml" ), sw::string{ kBaseGraph } ) );
             const sw::string baseID = sw::test::ScopedScratchDomain::makeID( "base.animgraph.xml" ).str();

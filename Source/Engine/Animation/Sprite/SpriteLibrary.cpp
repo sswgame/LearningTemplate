@@ -9,6 +9,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 namespace sw
 {
@@ -28,7 +29,8 @@ namespace sw
     {
         clear();
         string flatText;
-        if ( DataInheritance::findBasePath( xml ).empty() == false && DataInheritance::flattenReflected( xml, sourceLabel, *StaticType(), flatText ) == false )
+        bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
+        if ( ResourceComposer::compose( xml, sourceLabel, ResourceContext::forType( *StaticType() ), flatText, bComposed ) == false )
             return false;
         const string label{ sourceLabel };
         if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), flatText.empty() ? xml : string_view{ flatText }, label.c_str() ) && resolveLoadedValues( sourceLabel ) )

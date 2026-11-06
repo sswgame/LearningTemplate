@@ -16,7 +16,7 @@ namespace sw
 {
     // 컴포넌트는 오브젝트마다 만들어진다. 필드 크기 합(베이스 + 필드 + 비트필드 한 바이트)을 정렬로 올린 값을 넘으면 필드 사이에 구멍이 생긴 것이다.
     static_assert( sizeof( SpriteAnimatorComponent ) <=
-                       ( sizeof( SceneComponent ) + sizeof( string ) * 2 + sizeof( AnimationGraphAsset ) + sizeof( vector<string> ) + sizeof( float32 ) +
+                       ( sizeof( SceneComponent ) + sizeof( string ) + sizeof( AssetRef<AnimationGraphAsset> ) + sizeof( AnimationGraphAsset ) + sizeof( vector<string> ) + sizeof( float32 ) +
                          sizeof( SpriteAnimatorClipSource ) + sizeof( SpriteClipPlayable ) + sizeof( AnimationGraphPlayer ) + sizeof( vector<AnimationFiredNotify> ) +
                          sizeof( IAnimationNotifyListener* ) + sizeof( SpriteAnimatorLODClient ) + sizeof( Subscription ) + sizeof( int32 ) * 3 + sizeof( uint32 ) + sizeof( AnimationLODState ) +
                          sizeof( const SpriteClipAsset* ) + sizeof( AnimationSystem* ) + sizeof( uint8 ) + alignof( SpriteAnimatorComponent ) - 1 ) /

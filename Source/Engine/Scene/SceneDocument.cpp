@@ -18,6 +18,7 @@
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -316,7 +317,8 @@ namespace sw
         if ( basePath.empty() == false )
         {
             string flatText;
-            if ( DataInheritance::flattenFromResources( root.toString(), absPath, SceneDocumentInternal::makeInheritanceSchema(), flatText ) == false || doc.parse( flatText ) == false )
+            bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
+            if ( ResourceComposer::compose( root.toString(), absPath, ResourceContext::forSchema( &SceneDocumentInternal::makeInheritanceSchema ), flatText, bComposed ) == false || doc.parse( flatText ) == false )
             {
                 SW_LOG_ERROR_ID( "SceneDocument.BaseSceneNotFlattened", "Scene '%#' could not be merged onto its base '%#' - the scene is not loaded", absPath, basePath );
                 *this = {};

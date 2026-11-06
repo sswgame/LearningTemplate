@@ -3,13 +3,17 @@
     {
       "owner": "",
       "listField": [
+        "_albedo",
         "_animationCrowdSettings",
         "_animationGraphPath",
         "_animationLODSettings",
         "_animationSetPath",
+        "_atlasPath",
         "_base",
         "_characterLODSettings",
         "_clip",
+        "_clipPath",
+        "_cookieTexturePath",
         "_cultureTable",
         "_debugHUDSettingsSchema",
         "_debugKeyInputMap",
@@ -27,12 +31,14 @@
         "_foliageMaterial",
         "_fontCatalog",
         "_fracturePath",
+        "_graphPath",
         "_heightfieldPath",
         "_imagePath",
         "_impulse",
         "_interiorMaterialPath",
         "_layerWeightsPath",
         "_lipSyncSettings",
+        "_listReference",
         "_listStyleSheet",
         "_loadingTexture",
         "_localizationProject",
@@ -49,11 +55,13 @@
         "_notifyTablePath",
         "_packRoot",
         "_pairedAnimationPath",
+        "_path",
         "_pbrMaterialTemplate",
         "_photoModeInputMap",
         "_physicsAssetPath",
         "_prefab",
         "_profilePath",
+        "_reference",
         "_renderPipeline",
         "_rigPath",
         "_sequencePath",
@@ -99,10 +107,12 @@
         "_shaderVolumetricFog",
         "_skeletonPath",
         "_socketSetPath",
+        "_spriteLibraryPath",
         "_spriteMaterial",
         "_telemetrySchema",
         "_terrainGeomorphMaterial",
         "_terrainMaterial",
+        "_texture",
         "_textureName",
         "_texturePath",
         "_tileMapMaterial",
@@ -146,6 +156,18 @@
       ]
     },
     {
+      "owner": "GF_EditorPlugin_CharacterEditor",
+      "listField": []
+    },
+    {
+      "owner": "GF_NetDestruction",
+      "listField": []
+    },
+    {
+      "owner": "GF_NetPairedAnimation",
+      "listField": []
+    },
+    {
       "owner": "GameFramework",
       "listField": [
         "_aiControllerPrefab",
@@ -160,12 +182,12 @@
         "_materialPath",
         "_meshID",
         "_packRoot",
-        "_projectilePrefab",
         "_regionTablePath",
         "_sound",
         "_startMap",
         "_tablePath",
-        "_titleScene"
+        "_titleScene",
+        "_tree"
       ]
     },
     {

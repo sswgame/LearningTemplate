@@ -10,6 +10,7 @@
 #include "Engine/Animation/Graph/AnimationGraphFields.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
@@ -180,7 +181,8 @@ namespace sw
         clear();
         _baseID = DataInheritance::findBasePath( text );
         string flatText;
-        if ( _baseID.empty() == false && DataInheritance::flattenFromResources( text, sourceLabel, AnimationGraphAssetInternal::makeInheritanceSchema(), flatText ) == false )
+        bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
+        if ( ResourceComposer::compose( text, sourceLabel, ResourceContext::forSchema( &AnimationGraphAssetInternal::makeInheritanceSchema ), flatText, bComposed ) == false )
         {
             clear();
             return false;

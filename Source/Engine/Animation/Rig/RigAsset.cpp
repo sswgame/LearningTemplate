@@ -16,6 +16,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -157,7 +158,8 @@ namespace sw
         SW_MEMORY_SCOPE( Animation );
         clear();
         string flatText;
-        if ( DataInheritance::findBasePath( xml ).empty() == false && DataInheritance::flattenFromResources( xml, sourceLabel, RigAssetInternal::makeInheritanceSchema(), flatText ) == false )
+        bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
+        if ( ResourceComposer::compose( xml, sourceLabel, ResourceContext::forSchema( &RigAssetInternal::makeInheritanceSchema ), flatText, bComposed ) == false )
             return false;
         XMLDocument document;
         XMLNode     root;

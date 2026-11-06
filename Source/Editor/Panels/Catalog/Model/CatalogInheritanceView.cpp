@@ -263,7 +263,7 @@ namespace sw::editor
                 {
                     CatalogChildSection section;
                     section._name                       = name;
-                    section._title                      = ownerTitle.empty() ? name : ownerTitle + " / " + name;
+                    section._title                      = ownerTitle.empty() ? name : string{ ownerTitle + " / " + name };
                     section._ownerPath                  = ownerPath;
                     section._bHasParent                 = parent.isValid();
                     const DataInheritanceSchema* pField = schema.findField( name );

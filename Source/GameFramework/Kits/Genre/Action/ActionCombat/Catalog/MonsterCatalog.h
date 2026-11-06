@@ -31,7 +31,6 @@
 
 namespace sw
 {
-    class PrefabAsset;
     class XMLNode;
 
     /** @brief 몬스터 AI 행동 유형입니다. monsters.xml 의 `archetype` 속성이 열거자 이름 그대로입니다(리플렉션 이름). */

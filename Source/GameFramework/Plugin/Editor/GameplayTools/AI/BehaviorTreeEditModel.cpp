@@ -4,6 +4,7 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
 #include "Engine/Vocabulary/ActionRegistry.h"
@@ -356,7 +357,8 @@ namespace sw::editor
     {
         // shortcut: `_base` 를 펼쳐 연다 - 저장하면 차이가 아니라 펼친 글이 된다. 물려받은 칸 표시가 필요해지면 `DataInheritance::makeDelta` 로 저장한다.
         string flatText;
-        if ( DataInheritance::flattenFromResources( xmlText, "BehaviorTreeEditModel", BehaviorTreeSchema::make(), flatText ) == false )
+        bool   bComposed = false; // 펼치지 않으면 flatText 는 빈 채로 남는다
+        if ( ResourceComposer::compose( xmlText, "BehaviorTreeEditModel", ResourceContext::forSchema( &BehaviorTreeSchema::make ), flatText, bComposed ) == false )
         {
             outError = "Its _base chain could not be flattened - see the log";
             return false;

@@ -14,6 +14,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -145,7 +146,8 @@ namespace sw
         *this = AudioEventLibrary{};
         // 파일 상속을 먼저 합친다 — 프리셋의 부모는 합친 결과에서 찾는다(자식 파일이 부모 파일의 이벤트를 고치고 부모로 삼는다).
         string fileText;
-        if ( DataInheritance::findBasePath( xmlText ).empty() == false && DataInheritance::flattenReflected( xmlText, sourceName, *StaticType(), fileText ) == false )
+        bool   bComposed = false; // 펼치지 않으면 fileText 는 빈 채로 남는다
+        if ( ResourceComposer::compose( xmlText, sourceName, ResourceContext::forType( *StaticType() ), fileText, bComposed ) == false )
             return false;
         const string_view mergedFile = fileText.empty() ? xmlText : string_view( fileText );
         string            presetText;
