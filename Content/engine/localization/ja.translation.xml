@@ -105,7 +105,6 @@
 		<entry key="EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
 		       text="シーンのキャラクター外見コンポーネントがこの id を指します。"
 		       sourceHash="5163a04480efea53" />
-		<entry key="EdPlugin.Abort" text="中断" sourceHash="0491e53d9de2e899" />
 		<entry key="EdPlugin.AddBoneTurn" text="ボーン回転を追加" sourceHash="9f9084fadd906ced" />
 		<entry key="EdPlugin.AddChain" text="チェーンを追加" sourceHash="057853bcd1500705" />
 		<entry key="EdPlugin.AddNode" text="ノードを追加" sourceHash="e63c78875f5b2178" />
@@ -115,14 +114,11 @@
 		<entry key="EdPlugin.Appearance" text="外見" sourceHash="f0e261e04eda82ff" />
 		<entry key="EdPlugin.ApplySanction" text="制裁を適用" sourceHash="9f0c979ae0d9d618" />
 		<entry key="EdPlugin.AutoLayout" text="自動レイアウト" sourceHash="4f4251e697a0d1dc" />
-		<entry key="EdPlugin.BlackboardKey" text="ブラックボードキー" sourceHash="dd80bb88ea05aac3" />
 		<entry key="EdPlugin.Check" text="チェック" sourceHash="42cbd8dca939a9c7" />
 		<entry key="EdPlugin.ClearTarget" text="ターゲットを解除" sourceHash="d18a85c948654d57" />
 		<entry key="EdPlugin.ClickANodeToEditIt" text="ノードをクリックして編集" sourceHash="3300dd9449098b38" />
 		<entry key="EdPlugin.ClosedReports" text="閉じた通報" sourceHash="3c5905586fa5e736" />
-		<entry key="EdPlugin.Compare" text="比較" sourceHash="7c54f95c59141594" />
 		<entry key="EdPlugin.Connect" text="接続" sourceHash="7a4f059aaa029719" />
-		<entry key="EdPlugin.Count0UntilItFails" text="回数(0 = 失敗するまで)" sourceHash="2f9c842033f27ce0" />
 		<entry key="EdPlugin.CustomizationValues" text="カスタマイズ値" sourceHash="fb5d3ccc0d692148" />
 		<entry key="EdPlugin.CustomizeReleaseASliderToRefit"
 		       text="カスタマイズ(スライダーを離すと再フィット)"
@@ -210,9 +206,6 @@
 		<entry key="EdPlugin.Preview" text="プレビュー" sourceHash="417b90913e05bc17" />
 		<entry key="EdPlugin.PreviewConstraintRig" text="拘束リグをプレビュー" sourceHash="ca9d7f72602ecd10" />
 		<entry key="EdPlugin.PutLiveEvent" text="ライブイベントを登録" sourceHash="9a54ec5c13858e78" />
-		<entry key="EdPlugin.ReactiveReCheckHigherPriorityChildrenEveryTick"
-		       text="リアクティブ(毎ティック優先度の高い子を再チェック)"
-		       sourceHash="9d5dfeddef6d942d" />
 		<entry key="EdPlugin.Redo" text="やり直し" sourceHash="7417792bbe720149" />
 		<entry key="EdPlugin.RedoAppearance" text="外見をやり直し" sourceHash="90c27634b30aba49" />
 		<entry key="EdPlugin.RedoPose" text="ポーズをやり直し" sourceHash="c78d384206df3fda" />
@@ -228,7 +221,6 @@
 		<entry key="EdPlugin.RemoveLiveEvent" text="ライブイベントを削除" sourceHash="286ec822b6f1b615" />
 		<entry key="EdPlugin.RemoveNotice" text="お知らせを削除" sourceHash="9d6cadb063f5b14f" />
 		<entry key="EdPlugin.Rename" text="名前を変更" sourceHash="60320a18282b2b33" />
-		<entry key="EdPlugin.RepathDistance" text="再経路探索距離" sourceHash="7ea4982c8d5bb972" />
 		<entry key="EdPlugin.ResetBone" text="ボーンをリセット" sourceHash="559f9c3dcb23c44e" />
 		<entry key="EdPlugin.Resolve" text="処理" sourceHash="4de430b40c94e903" />
 		<entry key="EdPlugin.Revoke" text="回収" sourceHash="0e871352ba4b17d3" />
@@ -237,7 +229,6 @@
 		<entry key="EdPlugin.SaveAsPreset" text="プリセットとして保存" sourceHash="c62bf7298fcf87d7" />
 		<entry key="EdPlugin.SavePose" text="ポーズを保存" sourceHash="4ff1503133a9ec95" />
 		<entry key="EdPlugin.SaveThumbnail" text="サムネイルを保存" sourceHash="a7a44b23c1b690f4" />
-		<entry key="EdPlugin.Seconds" text="秒" sourceHash="c4842e5b8b90466a" />
 		<entry key="EdPlugin.SelectABoneToEditItsReferencePose"
 		       text="ボーンを選ぶと基準ポーズを編集します。"
 		       sourceHash="21ed70f813fce439" />
@@ -275,7 +266,6 @@
 		<entry key="EdPlugin.UseSelectedObject"
 		       text="選択中のオブジェクトを使う"
 		       sourceHash="63735c6b1d1894ec" />
-		<entry key="EdPlugin.Value" text="値" sourceHash="41f7dca46d3f1b4a" />
 		<entry key="EdPlugin.ViewportGizmoEditingNeedsThePreviewSceneEditorMultiWorld"
 		       text="ビューポートギズモ編集にはプレビューシーン(EditorMultiWorld)が必要です。"
 		       sourceHash="4da4e8c3ea94daf6" />

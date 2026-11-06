@@ -1014,7 +1014,6 @@
 		<entry key="EdText.CreateLayer" text="레이어 만들기" sourceHash="3d55a87e1548c268" />
 		<entry key="EdText.Curves" text="커브" sourceHash="1ed69c4ea2882825" />
 		<entry key="EdText.DataLayers" text="데이터 레이어" sourceHash="b47513221d8a31b9" />
-		<entry key="EdText.DataLayers" text="데이터 레이어" sourceHash="b47513221d8a31b9" />
 		<entry key="EdText.Del" text="삭제" sourceHash="e0a34419921b022a" />
 		<entry key="EdText.DeletePreset" text="프리셋 삭제" sourceHash="63a54251e7d0bd8d" />
 		<entry key="EdText.DeleteTrack" text="트랙 삭제" sourceHash="127011f9f0a25ded" />
@@ -1658,7 +1657,9 @@
 		<entry key="EditorCatalog.FilterHint" text="파일 거르기" sourceHash="f88c42a9bdac2c80" />
 		<entry key="EditorCatalog.MoveEarlier" text="위로" sourceHash="09313a07b5c3ab60" />
 		<entry key="EditorCatalog.MoveLater" text="아래로" sourceHash="032c13736048bf35" />
-		<entry key="EditorCatalog.NoChildRules" text="이 행에는 보일 자식 칸이 없습니다" sourceHash="45f3ee43bec4f5b5" />
+		<entry key="EditorCatalog.NoChildRules"
+		       text="이 행에는 보일 자식 칸이 없습니다"
+		       sourceHash="45f3ee43bec4f5b5" />
 		<entry key="EditorCatalog.NoKinds"
 		       text="등록된 카탈로그 종류가 없습니다"
 		       sourceHash="e8f03e81c7886d00" />
@@ -1774,10 +1775,16 @@
 		<entry key="EditorContentBrowser.TypeFilter"
 		       text="특정 에셋 종류(텍스처, 씬, 프리팹, 사운드 등)별로 필터링합니다"
 		       sourceHash="1f723e598e12d46b" />
-		<entry key="EditorDataLayers.InitialTip" text="씬을 열 때 이 레이어를 켭니다. 씬과 함께 저장됩니다." sourceHash="51027ab35111ae58" />
+		<entry key="EditorDataLayers.InitialTip"
+		       text="씬을 열 때 이 레이어를 켭니다. 씬과 함께 저장됩니다."
+		       sourceHash="51027ab35111ae58" />
 		<entry key="EditorDataLayers.NoActiveScene" text="활성 씬이 없습니다." sourceHash="554770b7cdf6d60a" />
-		<entry key="EditorDataLayers.NoLayers" text="활성 씬에 선언한 데이터 레이어가 없습니다. 월드 설정에서 더합니다." sourceHash="60b6836b67a68f37" />
-		<entry key="EditorDataLayers.ShownTip" text="이 레이어의 오브젝트를 보이거나 감춥니다. 편집 중에는 숨기기만 하고, 플레이 중에는 내립니다." sourceHash="45cac62deda41660" />
+		<entry key="EditorDataLayers.NoLayers"
+		       text="활성 씬에 선언한 데이터 레이어가 없습니다. 월드 설정에서 더합니다."
+		       sourceHash="60b6836b67a68f37" />
+		<entry key="EditorDataLayers.ShownTip"
+		       text="이 레이어의 오브젝트를 보이거나 감춥니다. 편집 중에는 숨기기만 하고, 플레이 중에는 내립니다."
+		       sourceHash="45cac62deda41660" />
 		<entry key="EditorDataTable.AddKeyTip"
 		       text="왼쪽에 입력한 키로 문자열을 추가합니다. 테이블에 이미 있는 키는 무시합니다."
 		       sourceHash="e4ce1f6fbf06f1a3" />
@@ -1850,7 +1857,6 @@
 		<entry key="EditorDialogueGraph.AdvancePreviewTip"
 		       text="기다리지 않고 미리보기를 다음 노드로 넘깁니다."
 		       sourceHash="e0a2c5da95de576b" />
-		<entry key="EditorDialogueGraph.CommandExample" text="예: give_item:potion:3" sourceHash="acd4e3afc192748b" />
 		<entry key="EditorDialogueGraph.CommandTip"
 		       text="대화가 이 노드를 지날 때 게임이 실행하는 명령으로, 이름:인자:인자 형식입니다."
 		       sourceHash="b7ae3731670a857c" />
@@ -2078,7 +2084,9 @@
 		<entry key="EditorInputMap.UnsavedChanges" text="* 저장하지 않은 변경" sourceHash="973e262de06494ae" />
 		<entry key="EditorInputMap.WaitingForInput" text="입력을 기다리는 중..." sourceHash="fbd1ecd3af100cc7" />
 		<entry key="EditorInspector.AddToFavorites" text="즐겨찾기에 추가" sourceHash="7b1bc15f29f533d4" />
-		<entry key="EditorInspector.ApplyInstanceOverrides" text="씬을 저장합니다. 인스턴스 멤버의 변경은 앵커에 차이로 적히고, 넣은 씬 파일은 그대로입니다" sourceHash="278f05d97077dbac" />
+		<entry key="EditorInspector.ApplyInstanceOverrides"
+		       text="씬을 저장합니다. 인스턴스 멤버의 변경은 앵커에 차이로 적히고, 넣은 씬 파일은 그대로입니다"
+		       sourceHash="278f05d97077dbac" />
 		<entry key="EditorInspector.ApplyToPrefab"
 		       text="현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다"
 		       sourceHash="eea047cb60eefcdf" />
@@ -2123,7 +2131,9 @@
 		<entry key="EditorInspector.RevertToPrefab"
 		       text="프리팹 원본 파일의 내용으로 현재 오브젝트를 되돌립니다"
 		       sourceHash="964d25ac99ae2eeb" />
-		<entry key="EditorInspector.SceneInstance" text="다른 씬을 이 씬에 넣은 인스턴스의 일부입니다" sourceHash="87b11d52ec8cebbb" />
+		<entry key="EditorInspector.SceneInstance"
+		       text="다른 씬을 이 씬에 넣은 인스턴스의 일부입니다"
+		       sourceHash="87b11d52ec8cebbb" />
 		<entry key="EditorInspector.SearchAssetsHint" text="에셋 검색..." sourceHash="58e84ac00a3e31c8" />
 		<entry key="EditorInspector.SearchPropertiesHint" text="프로퍼티 검색..." sourceHash="fecffdbfe63170f0" />
 		<entry key="EditorInspector.SearchTooltip"
@@ -2192,15 +2202,11 @@
 		<entry key="EditorMaterial.ShaderTip"
 		       text="이 머티리얼이 렌더링에 쓰는 HLSL 셰이더입니다. .hlsl 파일을 여기에 놓거나 콘텐츠 브라우저에서 고릅니다."
 		       sourceHash="94bbffb6145f5c46" />
-		<entry key="EditorMaterialGraph.AssetSlot"
-		       text="에셋"
-		       sourceHash="8e4e6dccfe5f64fb" />
+		<entry key="EditorMaterialGraph.AssetSlot" text="에셋" sourceHash="8e4e6dccfe5f64fb" />
 		<entry key="EditorMaterialGraph.CanvasFailed"
 		       text="노드 캔버스를 그리지 못했습니다"
 		       sourceHash="06f628928d5048b9" />
-		<entry key="EditorMaterialGraph.CompiledStatus"
-		       text="컴파일됨 - 문제 없음"
-		       sourceHash="3a5f9e37baf56548" />
+		<entry key="EditorMaterialGraph.CompiledStatus" text="컴파일됨 - 문제 없음" sourceHash="3a5f9e37baf56548" />
 		<entry key="EditorMaterialGraph.NoGraph"
 		       text="편집할 머티리얼 그래프(.matgraph.xml)를 여세요"
 		       sourceHash="87f3d89cce84d1bf" />
@@ -3257,6 +3263,9 @@
 		       text="캐릭터 편집 패널을 엽니다"
 		       sourceHash="d69cd45c0ec1732c" />
 		<entry key="Open the gimmick graph panel" text="기믹 그래프 패널을 엽니다" sourceHash="177db3f3b1f9a37b" />
+		<entry key="Open the material graph editor"
+		       text="머티리얼 그래프 편집기를 엽니다"
+		       sourceHash="4d0d53286b4789c0" />
 		<entry key="Open the mesh modifier stack panel"
 		       text="메시 모디파이어 스택 패널을 엽니다"
 		       sourceHash="0aec269314ed14d2" />

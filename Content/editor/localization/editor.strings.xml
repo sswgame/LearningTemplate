@@ -3188,12 +3188,8 @@
 		</entry>
 		<entry key="EdText.DataLayers" source="Data Layers">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EdText.DataLayers" source="Data Layers">
-			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.Del" source="Del">
@@ -5628,12 +5624,14 @@
 				<item>Source/Editor/Panels/Scene/DataLayersPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorDataLayers.NoLayers" source="The active scene declares no data layers. Add them to its World Settings.">
+		<entry key="EditorDataLayers.NoLayers"
+		       source="The active scene declares no data layers. Add them to its World Settings.">
 			<origins>
 				<item>Source/Editor/Panels/Scene/DataLayersPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorDataLayers.ShownTip" source="Show or hide the objects of this layer. While editing, off only hides them; during play it unloads them.">
+		<entry key="EditorDataLayers.ShownTip"
+		       source="Show or hide the objects of this layer. While editing, off only hides them; during play it unloads them.">
 			<origins>
 				<item>Source/Editor/Panels/Scene/DataLayersPanel.cpp</item>
 			</origins>
@@ -5794,11 +5792,6 @@
 			</origins>
 		</entry>
 		<entry key="EditorDialogueGraph.AdvancePreviewTip" source="Move the preview to the next node without waiting.">
-			<origins>
-				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
-			</origins>
-		</entry>
-		<entry key="EditorDialogueGraph.CommandExample" source="Ex: give_item:potion:3">
 			<origins>
 				<item>Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp</item>
 			</origins>
@@ -6259,7 +6252,8 @@
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInspector.ApplyInstanceOverrides" source="Save the scene: changes to instance members are written to the anchor as differences; the included scene file stays as it is">
+		<entry key="EditorInspector.ApplyInstanceOverrides"
+		       source="Save the scene: changes to instance members are written to the anchor as differences; the included scene file stays as it is">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
@@ -6555,7 +6549,8 @@
 				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorMaterialGraph.SaveTip" source="Save the graph if it compiles; the generated shader and material follow">
+		<entry key="EditorMaterialGraph.SaveTip"
+		       source="Save the graph if it compiles; the generated shader and material follow">
 			<origins>
 				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
 			</origins>
@@ -8830,6 +8825,11 @@
 				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
+		<entry key="Material Graph" source="Material Graph" context="EditorCommandText._label">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
 		<entry key="Mesh Modifiers" source="Mesh Modifiers" context="Editor command name">
 			<origins>
 				<item>editor/commands/meshmodifiers.commands.xml</item>
@@ -8970,6 +8970,13 @@
 				<item>editor/commands/gameplaytools.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Open the material graph editor"
+		       source="Open the material graph editor"
+		       context="EditorCommandText._detail">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
+			</origins>
+		</entry>
 		<entry key="Open the mesh modifier stack panel"
 		       source="Open the mesh modifier stack panel"
 		       context="Editor command palette detail">
@@ -9041,6 +9048,13 @@
 		       context="Editor command tooltip">
 			<origins>
 				<item>editor/commands/gameplaytools.commands.xml</item>
+			</origins>
+		</entry>
+		<entry key="Opens the material graph window (node canvas, live preview, save)"
+		       source="Opens the material graph window (node canvas, live preview, save)"
+		       context="EditorCommandText._tooltip">
+			<origins>
+				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
 		<entry key="Opens the mesh modifier stack panel"

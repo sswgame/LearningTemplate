@@ -99,7 +99,6 @@
 		<entry key="EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
 		       text="씬의 캐릭터 외형 컴포넌트가 이 id 를 가리킵니다."
 		       sourceHash="5163a04480efea53" />
-		<entry key="EdPlugin.Abort" text="중단" sourceHash="0491e53d9de2e899" />
 		<entry key="EdPlugin.AddBoneTurn" text="뼈 회전 추가" sourceHash="9f9084fadd906ced" />
 		<entry key="EdPlugin.AddChain" text="사슬 추가" sourceHash="057853bcd1500705" />
 		<entry key="EdPlugin.AddNode" text="노드 추가" sourceHash="e63c78875f5b2178" />
@@ -109,14 +108,11 @@
 		<entry key="EdPlugin.Appearance" text="외형" sourceHash="f0e261e04eda82ff" />
 		<entry key="EdPlugin.ApplySanction" text="제재 적용" sourceHash="9f0c979ae0d9d618" />
 		<entry key="EdPlugin.AutoLayout" text="자동 배치" sourceHash="4f4251e697a0d1dc" />
-		<entry key="EdPlugin.BlackboardKey" text="블랙보드 키" sourceHash="dd80bb88ea05aac3" />
 		<entry key="EdPlugin.Check" text="검사" sourceHash="42cbd8dca939a9c7" />
 		<entry key="EdPlugin.ClearTarget" text="대상 지우기" sourceHash="d18a85c948654d57" />
 		<entry key="EdPlugin.ClickANodeToEditIt" text="노드를 누르면 편집합니다" sourceHash="3300dd9449098b38" />
 		<entry key="EdPlugin.ClosedReports" text="닫은 신고" sourceHash="3c5905586fa5e736" />
-		<entry key="EdPlugin.Compare" text="비교" sourceHash="7c54f95c59141594" />
 		<entry key="EdPlugin.Connect" text="연결" sourceHash="7a4f059aaa029719" />
-		<entry key="EdPlugin.Count0UntilItFails" text="횟수(0 = 실패할 때까지)" sourceHash="2f9c842033f27ce0" />
 		<entry key="EdPlugin.CustomizationValues" text="꾸미기 값" sourceHash="fb5d3ccc0d692148" />
 		<entry key="EdPlugin.CustomizeReleaseASliderToRefit"
 		       text="꾸미기(슬라이더를 놓으면 다시 맞춘다)"
@@ -202,9 +198,6 @@
 		<entry key="EdPlugin.Preview" text="미리보기" sourceHash="417b90913e05bc17" />
 		<entry key="EdPlugin.PreviewConstraintRig" text="제약 리그 미리보기" sourceHash="ca9d7f72602ecd10" />
 		<entry key="EdPlugin.PutLiveEvent" text="라이브 이벤트 넣기" sourceHash="9a54ec5c13858e78" />
-		<entry key="EdPlugin.ReactiveReCheckHigherPriorityChildrenEveryTick"
-		       text="반응형(틱마다 우선순위가 높은 자식을 다시 본다)"
-		       sourceHash="9d5dfeddef6d942d" />
 		<entry key="EdPlugin.Redo" text="다시 실행" sourceHash="7417792bbe720149" />
 		<entry key="EdPlugin.RedoAppearance" text="외형 다시 실행" sourceHash="90c27634b30aba49" />
 		<entry key="EdPlugin.RedoPose" text="포즈 다시 실행" sourceHash="c78d384206df3fda" />
@@ -220,7 +213,6 @@
 		<entry key="EdPlugin.RemoveLiveEvent" text="라이브 이벤트 지우기" sourceHash="286ec822b6f1b615" />
 		<entry key="EdPlugin.RemoveNotice" text="공지 지우기" sourceHash="9d6cadb063f5b14f" />
 		<entry key="EdPlugin.Rename" text="이름 바꾸기" sourceHash="60320a18282b2b33" />
-		<entry key="EdPlugin.RepathDistance" text="경로 다시 찾기 거리" sourceHash="7ea4982c8d5bb972" />
 		<entry key="EdPlugin.ResetBone" text="뼈 초기화" sourceHash="559f9c3dcb23c44e" />
 		<entry key="EdPlugin.Resolve" text="처리" sourceHash="4de430b40c94e903" />
 		<entry key="EdPlugin.Revoke" text="회수" sourceHash="0e871352ba4b17d3" />
@@ -229,7 +221,6 @@
 		<entry key="EdPlugin.SaveAsPreset" text="프리셋으로 저장" sourceHash="c62bf7298fcf87d7" />
 		<entry key="EdPlugin.SavePose" text="포즈 저장" sourceHash="4ff1503133a9ec95" />
 		<entry key="EdPlugin.SaveThumbnail" text="썸네일 저장" sourceHash="a7a44b23c1b690f4" />
-		<entry key="EdPlugin.Seconds" text="초" sourceHash="c4842e5b8b90466a" />
 		<entry key="EdPlugin.SelectABoneToEditItsReferencePose"
 		       text="뼈를 고르면 기준 포즈를 편집합니다."
 		       sourceHash="21ed70f813fce439" />
@@ -265,7 +256,6 @@
 		<entry key="EdPlugin.UndoPose" text="포즈 실행 취소" sourceHash="d192bb423fa30a2c" />
 		<entry key="EdPlugin.Up" text="위" sourceHash="09313a07b5c3ab60" />
 		<entry key="EdPlugin.UseSelectedObject" text="고른 오브젝트 쓰기" sourceHash="63735c6b1d1894ec" />
-		<entry key="EdPlugin.Value" text="값" sourceHash="41f7dca46d3f1b4a" />
 		<entry key="EdPlugin.ViewportGizmoEditingNeedsThePreviewSceneEditorMultiWorld"
 		       text="뷰포트 기즈모 편집은 미리보기 씬(EditorMultiWorld)이 필요합니다."
 		       sourceHash="4da4e8c3ea94daf6" />
