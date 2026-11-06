@@ -198,6 +198,6 @@ namespace sw
         GameCatalog<UsableObjectDef> _smartObjectCatalog{};
     };
 
-    /** @brief 공유 캐시("InteractionCatalog")는 GameFramework 가 인스턴스화합니다(`InteractionCatalog.cpp`). 다시 읽으면 떼어 낸다 — 정의를 쥔 컴포넌트 · 세션은 옛 테이블을 끝까지 쥔다. */
+    /** @brief 공유 캐시("interactions")는 GameFramework 가 인스턴스화합니다(`InteractionCatalog.cpp`). 다시 읽으면 떼어 낸다 — 정의를 쥔 컴포넌트 · 세션은 옛 테이블을 끝까지 쥔다. */
     extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<InteractionCatalog>;
 } // namespace sw

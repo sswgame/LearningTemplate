@@ -107,10 +107,11 @@
 
 `SharedAssetCache<T>` 하나로 합치고 `GameDataCache` 를 지운다. 옛 객체를 살려 두는 동작은 `SharedAssetReloadMode::Detach` 와 `shared_ptr` 가 대신한다.
 
-- **모듈 캐시:** 키트 · 게임 종류의 표를 그 모듈이 인스턴스화하고 모듈 수명으로 등록한다(`SW_MODULE_SHARED_ASSET_CACHE` — 모듈 서브시스템이 캐시를 들고 `AssetManager::registerAssetCache` 로 오르내린다). 핫 리로드의 내림은 `ModuleObjectRegistrar` 와 같은 사슬이다. 상호작용 · 원소 규칙 표가 옮겼다(단계 2).
-- **창구:** `XMLCatalog<T>::acquire( id )` · `request( id )` · `getReloadCount()`. 그 카탈로그의 .cpp 가 캐시를 인스턴스화해야 쓴다.
-- **사본을 못 만들게 한다:** `XMLCatalog::loadFromAsset` 을 공개 API 에서 내리고 `TCatalog::acquire( id )` 로 바꾼다. 로더만 friend 다. 테스트는 `loadFromXMLText` 를 쓴다.
-- **정의와 실행 상태:** 공유 객체는 `const` 다. 실행 상태가 섞인 카탈로그는 컴파일 오류로 드러나고, `BehaviorTree` · `BehaviorTreeRunner` 처럼 나눈다.
+- **모듈 캐시:** 키트 · 게임 종류의 표를 그 모듈이 인스턴스화하고 모듈 수명으로 등록한다(`SW_MODULE_SHARED_ASSET_CACHE`, `Engine/Module/ModuleSharedAssetCache.h` — 모듈 서브시스템이 캐시를 들고 `AssetManager::registerAssetCache` 로 오르내린다). 핫 리로드의 내림은 `ModuleObjectRegistrar` 와 같은 사슬이다. `XMLCatalog` 형식 55 종 모두가 가진다(단계 2 · 4).
+- **창구:** `SharedAssetCache<T>::acquire( 경로 )` · `request( 경로 )` · `getReloadCount()` 를 바로 부른다. `XMLCatalog` 에 감싸개를 두지 않는다 — 내보내는 카탈로그가 베이스 멤버를 모두 인스턴스화해 캐시가 없는 카탈로그에서 링크가 깨졌다.
+- **사본을 못 만들게 한다(단계 4, 끝남):** `XMLCatalog::loadFromAsset` 은 protected 이고 종류의 로더(`AssetTypeLoader`)만 friend 다. 쓰는 쪽은 `shared_ptr<const T>` 를 쥐고, 게임 범위 서비스는 `GameInstance::loadRequiredCatalog( shared_ptr<const T>& )` 가 받아 건다. 테스트 · 에디터 미리 보기는 `loadFromXMLText` 를 쓴다.
+- **다시 읽기:** 카탈로그는 기본이 제자리(`InPlace`)라 게임 범위 서비스 · 디렉터가 쥔 같은 객체에 닿는다 — 쥔 쪽은 항목 포인터를 프레임을 넘어 들지 않고 id 로 찾는다. 진행 중인 세션이 옛 정의를 읽어야 하는 표(상호작용 · 원소 규칙)와 옮길 수 없는 표(`CurrencyCatalog` 는 정책이 자기를 참조, `MonsterCatalog` 는 복사 금지)만 떼어 낸다(`Detach`). 시나리오 `editor/catalogshared` 가 쥔 쪽의 값으로 본다.
+- **정의와 실행 상태:** 공유 객체는 `const` 다. 실행 상태가 섞인 카탈로그는 나눈다 — `BehaviorTree` · `BehaviorTreeRunner`, 어빌리티 데이터(`AbilityCatalog`)와 클래스 팩토리(`AbilityClassRegistry`, 게임 코드). 읽기 전에 쓰는 쪽이 넣던 검사 문맥(작물의 알려 둔 계절)은 데이터로 옮긴다(작물 파일 루트 `seasons`).
 
 `MeshCache` · `TextureCache` · `MaterialCache` · `PrefabCache` 는 GPU 수명이나 쓰는 쪽의 수정이 있어 합치지 않는다(`SharedAssetCache.h` 머리말). `AssetHandle` · 로드 상태 · 종류 정의는 공유한다.
 
@@ -240,7 +241,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | 1 | 종류 정의 통합, `ResourceComposer` 로 읽는 길 통합(동작 변화 없음) | 기존 시나리오 그대로 통과, 읽는 길 한 곳 |
 | 2 | 공유 캐시 통합, `GameDataCache` 삭제, `acquire` 도입 | 같은 경로가 같은 객체라는 테스트, 다시 읽기가 쓰는 쪽에 닿는 시나리오 |
 | 3 | `AssetRef<T>` 와 생성 목록, `string` 칸 전환 | 잘못된 종류 연결이 로드 오류, 손 표가 줄어듦 |
-| 4 | 카탈로그 공유 전환 | 공개 `loadFromAsset` 제거가 컴파일됨 |
+| 4 | 카탈로그 공유 전환(코드 끝남, 컴파일 전) | 공개 `loadFromAsset` 제거가 컴파일됨 |
 | 5 | 조건 · 층, 경로 교체, 합성 해시 대조 | 조건 · 층마다 값과 그림이 바뀌는 시나리오 |
 | 6 | `ConditionExpr` · `ActionRegistry`, 행동 트리 하위 트리(구현 — 시나리오 `game/empty/automation/vocabulary`. `<Archetype>` 은 위 까닭으로 남김) | 같은 이름의 조건 · 동작을 행동 트리 · 스케줄 · 대화가 함께 쓰는 시나리오 |
 | 7 | 종류별 변형(위 표) | 표 한 줄마다 효과를 확인하는 시나리오 |
@@ -272,4 +273,4 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 구현 전에 코드를 읽어 정한다. 사용자 결정이 필요한 항목은 없다.
 
 - 메시 런타임 조립(언리얼 Mutable)은 `BodyShape` · 메시 병합 코드를 조사한 뒤 넣을지 정한다. 이 설계에 포함하지 않았다.
-- `XMLCatalog` 계열 중 멤버 · 지역 변수 패턴에 잡히지 않은 약 20 종의 사용 방식.
+- `XMLCatalog` 계열 중 파일에서 읽는 쪽이 저장소에 없는 키트 카탈로그(약 20 종 — SRPG · 정복 · 메트로배니아 · 공포 · 몬스터 · 파티 · 카트 등)는 지우지 않았다. 규칙 클래스가 `const T*` 를 받는 라이브러리이고 아직 그것을 쓰는 게임이 없을 뿐이라, 캐시 등록(파일 규칙 없는 `makeCacheOnly`)만 붙였다. 그 키트를 쓰는 게임이 생기면 데이터 파일 규칙(`makeDataFile`)을 정한다.
