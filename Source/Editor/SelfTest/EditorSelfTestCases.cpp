@@ -833,8 +833,7 @@ namespace sw::editor
             {
                 float32 ( *_pfnSavedDPIScale )( ImGuiViewport* ){ nullptr };
                 float32 _baseScale{ 1.0f };
-                float32 _fakeScale{ 1.5f }; ///< 교체한 창 DPI. 현재 배율에 0.5 를 더한 값이며, 이 PC 가 이미 150 % 여도 바뀐다
-                float32 _basePaddingX{ 0.0f };
+                float32 _fakeScale{ 1.5f };       ///< 교체한 창 DPI. 현재 배율에 0.5 를 더한 값이며, 이 PC 가 이미 150 % 여도 바뀐다
                 bool    _bFakeInstalled{ false }; ///< 플랫폼 콜백을 `fakeWindowDPIScale` 로 바꿔 둔 동안 true NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 #if defined( SW_PLATFORM_WINDOWS )
                 RECT _originalRect{};
@@ -885,19 +884,22 @@ namespace sw::editor
                 {
                     if ( ImGui::GetIO().ConfigDpiScaleFonts == false )
                         return EditorSelfTestStep::Done; // 배율을 직접 정한 실행(gv_editorUiScale)은 모니터를 따르지 않으므로 확인할 것이 없다
-                    probe._baseScale    = EditorThemeUtil::getDPIScale();
-                    probe._basePaddingX = ImGui::GetStyle().FramePadding.x;
-                    probe._fakeScale    = probe._baseScale + 0.5f;
+                    probe._baseScale = EditorThemeUtil::getDPIScale();
+                    probe._fakeScale = probe._baseScale + 0.5f;
                     probe.installFake( platformIO, &fakeWindowDPIScale );
                     return EditorSelfTestStep::WaitSettled; // NewFrame 이 뷰포트 DPI 를 다시 읽고, 다음 프레임에 테마가 따른다
                 }
                 if ( stepIndex == kCheckScaleStep )
                 {
-                    const float32 expectedPadding = probe._basePaddingX / probe._baseScale * probe._fakeScale;
+                    // ScaleAllSizes 가 자르므로(ImTrunc) 비례식이 아니라 같은 규칙으로 잰다 - 배율이 1.04 인 화면(Xvfb)에서 6 은 그대로 6 이고 1.54 에서 9 다.
+                    ImGuiStyle scaledStyle{};
+                    scaledStyle.FramePadding.x = SW_THEMEMETRIC( "Spacing", "FramePaddingX" ) * SW_THEMEMETRIC( "Layout", "Density" );
+                    scaledStyle.ScaleAllSizes( probe._fakeScale );
+                    const float32 expectedPadding = scaledStyle.FramePadding.x;
                     (void)context.expect( isNear( ImGui::GetMainViewport()->DpiScale, probe._fakeScale, 0.001f ), "the main viewport did not take the window DPI" );
                     (void)context.expect( isNear( ImGui::GetStyle().FontScaleDpi, probe._fakeScale, 0.001f ), "fonts did not follow the window DPI" );
                     (void)context.expect( isNear( EditorThemeUtil::getDPIScale(), probe._fakeScale, 0.001f ), "the theme scale did not follow the window DPI" );
-                    (void)context.expect( isNear( ImGui::GetStyle().FramePadding.x, expectedPadding, 0.01f ), formatToString( "%# - padding %# (expected %#, base %# at scale %#, now scale %#)", "frame padding stayed at the old DPI while fonts grew", ImGui::GetStyle().FramePadding.x, expectedPadding, probe._basePaddingX, probe._baseScale, EditorThemeUtil::getDPIScale() ).c_str() );
+                    (void)context.expect( isNear( ImGui::GetStyle().FramePadding.x, expectedPadding, 0.01f ), formatToString( "%# - padding %# (expected %#)", "frame padding stayed at the old DPI while fonts grew", ImGui::GetStyle().FramePadding.x, expectedPadding ).c_str() );
                     probe.restorePlatformCallback();
 #if defined( SW_PLATFORM_WINDOWS )
                     // 창 쪽에는 OS 가 보내는 것과 같은 메시지(새 DPI 와 그 비율만큼 큰 권장 사각형)를 보낸다. SendMessage 로 보내야 하며, PostMessage 로 게시한 WM_DPICHANGED 는 창 프로시저에 닿지 않는다.

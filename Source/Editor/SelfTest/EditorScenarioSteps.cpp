@@ -176,6 +176,22 @@ namespace sw::editor
                 return hold;
             }
 
+            /**
+             * @brief 글 단계는 글을 받을 칸이 활성일 때까지 시나리오 시계를 붙잡습니다. 칸이 끝내 없으면 실패입니다.
+             * @details ImGui 는 활성 입력 칸이 없는 프레임의 글자를 버린다. 앞 단계(핀 놓기 · 우클릭)가 연 팝업은 입력이 끝난 뒤 몇 프레임 지나서야 열려,
+             *          기다리지 않으면 글자가 조용히 사라지고 다음 Enter 가 거르지 않은 맨 위 줄을 고른다. Playwright 의 "입력 가능할 때까지" 와 같은 자리다.
+             */
+            static AutomationStepHold holdUntilTextTarget( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
+            {
+                if ( EditorSelfTestMarks::setEnabled( true ) == false )
+                    return AutomationStepHold::Run;
+                const bool               bReady = EditorSelfTestInput::hasPendingEvents() == false && EditorSelfTestInput::isKeyboardTargetSettled() && ImGui::GetIO().WantTextInput;
+                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames, "a text field to take the keyboard focus (no pending input)" );
+                if ( hold == AutomationStepHold::Run && bReady == false )
+                    runner.recordFailure( step, formatToString( "no text field took the keyboard focus within %# frame(s) - the text would be lost", kSettleWaitFrames ) );
+                return hold;
+            }
+
             /** @brief 레이블 가운데(또는 `anchor` 위치)로 마우스를 옮기고 누른 뒤 뗍니다. ImGui 입력 큐가 누름과 뗌을 프레임에 나눠 넣습니다. 레이블이 없으면 실패를 기록합니다. */
             static bool runClick( AutomationStepContext& runner, const AutomationStep& step )
             {
@@ -580,7 +596,7 @@ namespace sw::editor
     SW_AUTOMATION_STEP_WITH_HOOKS( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepsInternal::runHover, &EditorScenarioStepValidation::validateHover,
                                    &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarkSettled, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorText, EditorScenarioStepValidation::kTextKind, &EditorScenarioStepsInternal::runText, &EditorScenarioStepValidation::validateText,
-                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilKeyboardSettled, false );
+                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilTextTarget, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorKey, EditorScenarioStepValidation::kKeyKind, &EditorScenarioStepsInternal::runKey, &EditorScenarioStepValidation::validateKey,
                                    &EditorScenarioStepsInternal::prepareKey, &EditorScenarioStepsInternal::holdUntilKeyboardSettled, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorExpectObject, EditorScenarioStepValidation::kExpectObjectKind, &EditorScenarioStepsInternal::runExpectObject,
