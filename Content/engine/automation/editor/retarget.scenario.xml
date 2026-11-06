@@ -10,12 +10,16 @@
 	<DevCommand line="layout.reset"/>
 	<ResizeWindow width="1900" height="1300"/>
 	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchPanel" value="charactereditor.retarget"/>
 	<EditorWaitSettled/>
+	<Expect watch="Editor.PanelOpen" equals="0"/>
 	<EditorKey key="Ctrl+Shift+P"/>
 	<EditorWaitSettled/>
 	<EditorText value="Retarget Profile"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Enter"/>
+	<!-- 팔레트가 연 것을 본다 - panel.focus 는 닫힌 패널도 열어 팔레트 글자를 잃어도 통과한다 -->
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutFrames="60"/>
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus charactereditor.retarget"/>
 	<!-- 새 프로필: 없는 경로 → 빈 문서 -->
