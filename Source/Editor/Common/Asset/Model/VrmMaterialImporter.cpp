@@ -724,7 +724,12 @@ namespace sw::editor
             return {};
 
         root.setAttribute( "name", string_view( desc._name.empty() ? "Toon" : desc._name.c_str() ) );
-        root.setAttribute( "blendMode", desc._alphaMode == ToonAlphaMode::Transparent ? "Transparent" : "Opaque" );
+        root.setAttribute( "alphaMode", desc._alphaMode == ToonAlphaMode::Transparent ? "Blend" : ( desc._alphaMode == ToonAlphaMode::Cutout ? "Mask" : "Opaque" ) );
+        if ( desc._bTwoSided == SW_TRUE )
+        {
+            root.setAttribute( "cullMode", "None" );
+            root.setAttribute( "twoSidedLighting", "true" );
+        }
 
         // 템플릿에 없는 프로퍼티는 조용히 건너뛰지 않는다 — 템플릿과 이 표가 어긋나면 값이 기본값으로 남은 머티리얼이 나온다.
         bool bMissingProperty = false;
@@ -794,10 +799,6 @@ namespace sw::editor
             bool              bEnabled = false;
             if ( name == "Outline" )
                 bEnabled = desc._outlineMode != ToonOutlineMode::None && desc._outlineWidth > 0.0f && desc._alphaMode != ToonAlphaMode::Transparent;
-            else if ( name == "AlphaCutoff" )
-                bEnabled = desc._alphaMode == ToonAlphaMode::Cutout;
-            else if ( name == "TwoSided" )
-                bEnabled = desc._bTwoSided == SW_TRUE;
             item.setAttribute( "bEnabled", bEnabled ? "1" : "0" );
             // 임포트한 머티리얼의 스위치는 에셋이 정한 값이다. 템플릿(engine toon)이 런타임 스위치로 둔 것도 그 상태만 쿠킹한다.
             item.setAttribute( "bShaderFeature", "1" );

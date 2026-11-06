@@ -232,8 +232,6 @@ namespace sw
         void setStaticSwitch( hashed_string name, bool bEnabled );
         /** @brief 멀티컴파일 옵션을 선택합니다. */
         void setMultiCompile( hashed_string name, string_view selectedOption );
-        /** @brief 블렌드 모드를 설정합니다. */
-        void setBlendMode( RHIBlendMode mode );
         /** @brief float32 파라미터를 설정합니다. */
         bool setScalarParameter( hashed_string name, float32 value );
 
@@ -262,8 +260,12 @@ namespace sw
         const void* getParameterData( string_view name ) const;
         /** @brief 캐시된 셰이더 define 을 반환합니다. */
         const vector<string>& getCachedShaderDefines() const;
-        /** @brief 퍼뮤테이션 해시를 반환합니다. */
+        /** @brief 퍼뮤테이션 해시를 반환합니다. define 에 렌더 상태 · 그리기 순서를 섞은 값이라 PSO 변형과 배치가 그것으로 갈린다. */
         uint64 getPermutationHash() const;
+        /**
+         * @brief 퍼뮤테이션 해시에 섞을 렌더 칸의 해시입니다(`MaterialInstance` 도 부모의 것을 섞는다). 덮는 칸이 없고 순서가 기본이면 0 입니다 — 0 은 섞지 않아 기본 머티리얼의 해시 · 배치 순서가 그대로다.
+         */
+        uint64 getRenderFieldsHash() const;
         /** @brief 셰이더 경로를 반환합니다. */
         const string& getShaderPath() const { return _desc._shaderPath; }
 
@@ -287,12 +289,21 @@ namespace sw
          * @details 0 이면 셰이더가 SW_MATERIAL_BEGIN/END 를 쓰지 않는다(레거시 MaterialCB). 백엔드마다 다를 수 있다.
          */
         uint32 getElementStride() const { return _elementStride; }
-        /** @brief 블렌드 모드를 반환합니다. */
-        RHIBlendMode getBlendMode() const { return _blendMode; }
+        /** @brief 배치 목록 분류입니다(`alphaMode="Blend"` 면 반투명). */
+        RHIBlendMode getBlendMode() const { return _desc._alphaMode == MaterialAlphaMode::Blend ? RHIBlendMode::Transparent : RHIBlendMode::Opaque; }
+        /** @brief 알파 다루는 법을 반환합니다. */
+        MaterialAlphaMode getAlphaMode() const { return _desc._alphaMode; }
+        /** @brief 그리기 순서입니다(작은 것부터). 배치 나누기와 반투명 정렬의 첫 키입니다. */
+        int32 getRenderQueue() const { return _desc._renderQueue; }
+        /** @brief 패스의 렌더 상태 위에 덮는 칸입니다. */
+        const RHIRenderStateOverride& getRenderStateOverride() const { return _desc._renderStateOverride; }
         /** @brief float32 파라미터를 읽습니다. */
         bool getScalarParameter( hashed_string name, float32& outValue ) const;
 
     private:
+        /** @brief `alphaCutoff` 칸이 값을 넣는 프로퍼티 이름입니다(셰이더의 `MaterialSurface._alphaCutoff` 를 채운다). */
+        static constexpr const utf8* kAlphaCutoffProperty = "_alphaCutoff";
+
         /** @brief 부모와 상관없이 모든 칸을 적은 XML 입니다 — `saveToString` 이 이것과 부모의 같은 글을 맞대 차이만 남긴다. */
         string saveFullToString() const;
         /** @brief 프로퍼티가 없는 머티리얼에 리플렉션 스키마의 멤버를 프로퍼티로 채우고(텍스처 인덱스 멤버는 텍스처 속성) 바이트를 쌓습니다. */
@@ -329,7 +340,6 @@ namespace sw
         vector<string>                       _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드 중이면 로드 중 텍스처, 실패면 누락 텍스처, 진짜가 붙었으면 빈 문자열
         vector<RHIDescriptorIndex>           _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>                _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
-        RHIBlendMode                         _blendMode;
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;

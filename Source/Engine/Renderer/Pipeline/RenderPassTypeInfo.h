@@ -14,6 +14,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/Foundation.h"
+#include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
@@ -60,17 +61,8 @@ namespace sw
      */
     inline constexpr const utf8* kMaterialOutlineDefine = "MATERIAL_OUTLINE";
 
-    /**
-     * @brief 양면 머티리얼의 define 입니다. 머티리얼 변형 PSO 가 후면 컬링을 끕니다(언리얼 머티리얼의 Two Sided).
-     * @details 앞면 컬링을 쓰는 패스(메시 외곽선)는 그대로 둡니다. 껍질은 양면이어도 뒤집어 그려야 외곽선이 됩니다.
-     */
-    inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";
-
     /** @brief 그림자 패스가 셰이더에 추가하는 define 입니다. 깊이 패스를 머티리얼 셰이더로 그릴 때 그 셰이더가 빛 행렬로 투영하는 퍼뮤테이션을 고릅니다. */
     inline constexpr const utf8* kPassShadowDefine = "SW_PASS_SHADOW=1";
-
-    /** @brief 알파 컷오프 머티리얼의 define 입니다. 깊이 패스(그림자, 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 형태로 오립니다(`FrameRendererUtil::drawsDepthWithMaterialShader`). */
-    inline constexpr const utf8* kMaterialAlphaCutoffDefine = "MATERIAL_ALPHA_CUTOFF";
 
     /**
      * @brief 등장 중인 인스턴스(`GPUInstance::_appearance` < 1)의 퍼뮤테이션 define 입니다. 셰이더가 등장 비율만큼의 픽셀만 남긴다(binding.hlsli 8-1).

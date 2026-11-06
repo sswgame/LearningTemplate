@@ -19,7 +19,7 @@
  *          컬러 출력이 없어 픽셀 셰이더는 `clip` 만 한다.
  *
  *          머티리얼 define: `MATERIAL_OUTLINE`(외곽선 패스에 들어간다) · `MATERIAL_ALPHA_CUTOFF`(알파 컷오프) · `MATERIAL_TWO_SIDED`(양면 —
- *          컬링을 끄는 것은 PSO 변형이 하고, 셰이더는 뒷면의 노멀을 뒤집는다) · `MATERIAL_BLEND_TRANSLUCENT`(반투명, 머티리얼 blendMode 와 짝).
+ *          컬링을 끄는 것은 PSO 변형이 하고, 셰이더는 뒷면의 노멀을 뒤집는다) · `MATERIAL_BLEND_TRANSLUCENT`(반투명, 머티리얼 alphaMode="Blend" 와 짝).
  *          `MATERIAL_FORWARD_ONLY` 는 늘 있어야 한다 — G버퍼 퍼뮤테이션은 `#error` 로 쿠킹에서 멈춘다.
  *
  *          UV 애니메이션(MToon uvAnimation*)은 PassCB `g_SwMaterialTime` 으로 픽셀에서 UV 를 스크롤 · 회전한다(computeAnimatedUv).

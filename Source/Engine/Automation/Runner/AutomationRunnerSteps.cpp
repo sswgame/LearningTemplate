@@ -294,6 +294,20 @@ namespace sw
                 return step.readValidatedFields<AutomationScreenshotFields>()._bWaitForSettle == false;
             }
 
+            static bool validateExpectImagesDiffer( const AutomationStep& step, string& outError )
+            {
+                AutomationExpectImagesDifferFields fields;
+                if ( step.readFields( fields, outError ) == false )
+                    return false;
+                AutomationImageRegion region{};
+                if ( fields._region.empty() == false && AutomationImageMetric::tryParseRegion( fields._region, region ) == false )
+                {
+                    outError = step.describe() + ": region must be x0,y0,x1,y1 in 0..1 with x0<x1 and y0<y1, got '" + fields._region + "'";
+                    return false;
+                }
+                return true;
+            }
+
             static bool validateExpectImage( const AutomationStep& step, string& outError )
             {
                 AutomationStepArgsUtil::ExpectImageArgs args;
@@ -535,6 +549,12 @@ namespace sw
             return true;
         }
 
+        static bool runExpectImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
+        {
+            asRunner( context )._judge.deferExpectImagesDiffer( step );
+            return true;
+        }
+
         /** @brief 종료 시한을 겁니다. @p bClose 면 창 닫기도 요청합니다(`CloseWindow`). 시한을 읽지 못하면(핫 리로드로 바뀐 단계) 오류로 끝나도록 false 입니다. */
         [[nodiscard]] static bool startExitDeadline( AutomationRunner& runner, const AutomationStep& step, bool bClose )
         {
@@ -668,6 +688,7 @@ namespace sw
     SW_AUTOMATION_STEP_WITH_HOOKS( runnerScreenshot, "Screenshot", &AutomationRunnerEngineSteps::runScreenshot, &AutomationRunnerStepsInternal::validateScreenshot, nullptr,
                                    &AutomationRunnerEngineSteps::holdScreenshot, false );
     SW_AUTOMATION_STEP( runnerExpectImage, "ExpectImage", &AutomationRunnerEngineSteps::runExpectImage, &AutomationRunnerStepsInternal::validateExpectImage, false );
+    SW_AUTOMATION_STEP( runnerExpectImagesDiffer, "ExpectImagesDiffer", &AutomationRunnerEngineSteps::runExpectImagesDiffer, &AutomationRunnerStepsInternal::validateExpectImagesDiffer, false );
     SW_AUTOMATION_STEP( runnerCloseWindow, "CloseWindow", &AutomationRunnerEngineSteps::runCloseWindow, &AutomationRunnerStepsInternal::validateCloseWindow, false );
     SW_AUTOMATION_STEP( runnerExpectExitWithin, "ExpectExitWithin", &AutomationRunnerEngineSteps::runExpectExitWithin, &AutomationRunnerStepsInternal::validateExpectExitWithin,
                         false );

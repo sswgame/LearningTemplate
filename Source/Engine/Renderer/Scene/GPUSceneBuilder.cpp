@@ -248,7 +248,7 @@ namespace sw
             SortKey key{ candidate._mesh.get(), candidate._sectionFirstIndex, candidate._sectionIndexCount,
                          batchKeyMaterial( candidate._material.get(), candidate._permutationHash ),
                          _bMergeAcrossMaterials != SW_FALSE ? nullptr : candidate._instance.get(), candidate._permutationHash,
-                         candidate._bReverseCulling };
+                         candidate._bReverseCulling, getCandidateRenderQueue( candidate ) };
             _listScratchOpaqueEntry.push_back( SortEntry{ key, instanceIndex } );
         }
 
@@ -258,8 +258,11 @@ namespace sw
             // 연속 배치를 한 번의 drawIndirect(멀티 드로우)로 내므로, 그것들이 앞 키여야 그룹이 길다. 메시는 정점 풀 하나라 키가 아니어도
             // 되지만 풀 밖 메시(예산 초과)끼리 모이도록 뒤에 둔다. 이 순서의 이득은 상태 변경이 아니라 호출 수다
             // (상태 변경만 줄이는 순서는 측정 잡음 범위였다).
+            // 그리기 순서가 맨 앞이다 — 머티리얼이 정한 순서는 호출 수보다 앞선다(값을 적지 않은 머티리얼은 모두 0 이라 이득을 잃지 않는다).
             VectorUtil::sort( _listScratchOpaqueEntry, []( const SortEntry& entryA, const SortEntry& entryB )
             {
+                if ( entryA._key._renderQueue != entryB._key._renderQueue )
+                    return entryA._key._renderQueue < entryB._key._renderQueue;
                 if ( entryA._key._permutationHash != entryB._key._permutationHash )
                     return entryA._key._permutationHash < entryB._key._permutationHash;
                 if ( entryA._key._bReverseCulling != entryB._key._bReverseCulling )
@@ -1074,6 +1077,7 @@ namespace sw
             const uint32 sortLayer      = ( sortKey == Render2DSettings::kDefaultSortKeyPlaceholder ) ? defaultSortKey : sortKey;
             listSortKey[sortIndex] =
                 GPUTransparentSorter::makeTransparentSortKey( sortLayer, _listScratchRaw[candidateIndex]._boundsCenter, cameraPos, sortAxis, candidateIndex );
+            listSortKey[sortIndex]._renderQueue = getCandidateRenderQueue( _listScratchCandidate[candidateIndex] );
         }
         _transparentSorter.sortKeys( _listScratchTransparentIdx );
     }
@@ -1222,10 +1226,22 @@ namespace sw
                 outListKey[batchIndex]._sortKey = GPUTransparentSorter::kNoBatchHeadLayer;
                 continue;
             }
-            const uint32 tailIndex = batch._instanceBase - tailBase;
-            outListKey[batchIndex] = GPUTransparentSorter::makeTransparentSortKey( resolveTailSortLayer( tailIndex, defaultSortKey ), ( *pInstance )[batch._instanceBase]._boundsCenter,
-                                                                                   cameraPos, _transparentSorter.getAxis(), batchIndex );
+            const uint32 tailIndex              = batch._instanceBase - tailBase;
+            outListKey[batchIndex]              = GPUTransparentSorter::makeTransparentSortKey( resolveTailSortLayer( tailIndex, defaultSortKey ), ( *pInstance )[batch._instanceBase]._boundsCenter,
+                                                                                                cameraPos, _transparentSorter.getAxis(), batchIndex );
+            outListKey[batchIndex]._renderQueue = resolveTailRenderQueue( tailIndex );
         }
+    }
+
+    int32 GPUSceneBuilder::resolveTailRenderQueue( uint32 tailIndex ) const
+    {
+        const uint32 candidateIndex = _listBuiltTransparentIdx[tailIndex];
+        return candidateIndex < _listBuiltCandidate.size() ? getCandidateRenderQueue( _listBuiltCandidate[candidateIndex] ) : 0;
+    }
+
+    int32 GPUSceneBuilder::getCandidateRenderQueue( const DrawCandidate& candidate )
+    {
+        return candidate._material != nullptr ? candidate._material->getRenderQueue() : 0;
     }
 
     uint32 GPUSceneBuilder::resolveTailSortLayer( uint32 tailIndex, uint32 defaultSortKey ) const
@@ -1280,6 +1296,7 @@ namespace sw
             {
                 listViewSortKey[tailIndex] = GPUTransparentSorter::makeTransparentSortKey(
                     resolveTailSortLayer( tailIndex, defaultSortKey ), ( *pInstance )[tailBase + tailIndex]._boundsCenter, view._position, view._transparentSortAxis, tailIndex );
+                listViewSortKey[tailIndex]._renderQueue = resolveTailRenderQueue( tailIndex );
             }
             _snapshot._listViewTransparentOrder.push_back( _transparentSorter.computeViewOrder( view._viewID, tailBase, listBatch, listParticleKey ) );
         }

@@ -340,6 +340,38 @@ namespace sw
         _listDeferredImage.push_back( DeferredImageCheck{ &step, backendIndex < std::size( kArrBackendTag ) ? kArrBackendTag[backendIndex] : "unknown" } );
     }
 
+    void AutomationJudge::deferExpectImagesDiffer( const AutomationStep& step )
+    {
+        _listDeferredImagesDiffer.push_back( &step );
+    }
+
+    void AutomationJudge::judgeImagesDiffer( AutomationStepContext& context, const AutomationStep& step )
+    {
+        const AutomationExpectImagesDifferFields fields = step.readValidatedFields<AutomationExpectImagesDifferFields>();
+        AutomationImageRegion                    region{};
+        string                                   error;
+        AutomationImage                          first;
+        AutomationImage                          second;
+        AutomationImage                          reducedFirst;
+        AutomationImage                          reducedSecond;
+        AutomationImageDifference                difference;
+        const bool                               bRegionRead = fields._region.empty() || AutomationImageMetric::tryParseRegion( fields._region, region );
+        const bool                               bCompared   = bRegionRead && AutomationImageMetric::loadPpm( context.resolveOutputPath( fields._first ), first, error ) &&
+                               AutomationImageMetric::loadPpm( context.resolveOutputPath( fields._second ), second, error ) && AutomationImageMetric::reduce( first, region, reducedFirst, error ) &&
+                               AutomationImageMetric::reduce( second, region, reducedSecond, error ) && AutomationImageMetric::compare( reducedFirst, reducedSecond, difference, error );
+        if ( bCompared == false )
+        {
+            context.recordFailure( step, "could not compare the images: " + error );
+            return;
+        }
+        string line = fields._first + " vs " + fields._second + ": " + AutomationStepArgsUtil::formatNumber( difference._differingFraction * 100.0 ) + "% differing (at least " +
+                      AutomationStepArgsUtil::formatNumber( static_cast<float64>( fields._minDiffering ) * 100.0 ) + "%)";
+        SW_LOG_INFO_ID( "Automation.ImagesDiffer", "[Scenario] image %#", line.c_str() );
+        _listMetricLine.push_back( line );
+        if ( difference._differingFraction < static_cast<float64>( fields._minDiffering ) )
+            context.recordFailure( step, "the field did not change the picture - " + line );
+    }
+
     void AutomationJudge::deferExpectAtMost( const AutomationStep& step, string description, float64 limit, shared_ptr<const AutomationDeferredValue> pValue )
     {
         SW_ASSERT( pValue != nullptr );
@@ -353,6 +385,12 @@ namespace sw
             judgeImage( context, *check._pStep, check._pBackendTag );
         }
         _listDeferredImage.clear();
+
+        for ( const AutomationStep* const pStep : _listDeferredImagesDiffer )
+        {
+            judgeImagesDiffer( context, *pStep );
+        }
+        _listDeferredImagesDiffer.clear();
 
         for ( const DeferredAtMostCheck& check : _listDeferredAtMost )
         {

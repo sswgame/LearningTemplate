@@ -31,6 +31,24 @@ SW_TEST_CASE( GPUTransparentSorterTest, DrawOrderIsLayerThenFartherThenIndex )
 }
 
 /**
+ * @brief [GPUTransparentSorterTest] 머티리얼의 그리기 순서가 레이어 · 깊이보다 앞이다. 입자(순서 0)도 같은 규칙으로 메시 사이에 선다
+ */
+SW_TEST_CASE( GPUTransparentSorterTest, RenderQueueComesFirst )
+{
+    sw::GPUTransparentSortKey earlyQueue{ 9u, 1.0f, 5u };
+    earlyQueue._renderQueue = -1;
+    sw::GPUTransparentSortKey defaultQueue{ 1u, 100.0f, 0u };
+    SW_EXPECT_TRUE( sw::GPUTransparentSorter::isDrawnBefore( earlyQueue, defaultQueue ) );
+    SW_EXPECT_FALSE( sw::GPUTransparentSorter::isDrawnBefore( defaultQueue, earlyQueue ) );
+
+    sw::GPUTransparentSortKey lateBatch{ 0u, 100.0f, 0u };
+    lateBatch._renderQueue = 1;
+    const sw::GPUTransparentSortKey particle{ 9u, 1.0f, 0u };
+    SW_EXPECT_FALSE( sw::GPUTransparentSorter::isBatchDrawnBeforeParticle( lateBatch, particle ) );
+    SW_EXPECT_TRUE( sw::GPUTransparentSorter::isBatchDrawnBeforeParticle( earlyQueue, particle ) );
+}
+
+/**
  * @brief [GPUTransparentSorterTest] 축이 영벡터면 깊이는 눈까지의 거리², 아니면 눈에서 축 방향으로 측정한 깊이다
  */
 SW_TEST_CASE( GPUTransparentSorterTest, SortKeyDepthUsesDistanceOrAxis )

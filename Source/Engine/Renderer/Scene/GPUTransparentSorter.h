@@ -16,7 +16,7 @@ namespace sw
 {
     /**
      * @struct GPUTransparentSortKey
-     * @brief 투명 정렬 키(정렬 레이어 키, 깊이, 후보 인덱스)입니다. 정렬 전에 한 번 계산해 둡니다.
+     * @brief 투명 정렬 키(머티리얼의 그리기 순서, 정렬 레이어 키, 깊이, 후보 인덱스)입니다. 정렬 전에 한 번 계산해 둡니다.
      * @details 깊이는 정렬 축이 영벡터면 카메라까지의 거리², 아니면 그 축 위의 깊이(카메라 기준)입니다. 둘 다 클수록 먼저 그립니다.
      */
     struct GPUTransparentSortKey
@@ -24,6 +24,7 @@ namespace sw
         uint32  _sortKey{ 0 };
         float32 _depth{ 0.0f };
         uint32  _candidateIndex{ 0 };
+        int32   _renderQueue{ 0 }; ///< `Material::getRenderQueue`. 입자는 0 이다
     };
 } // namespace sw
 
@@ -44,12 +45,14 @@ namespace sw
         static constexpr size_t kTransparentInsertionMovesPerElement = 8;
 
         /**
-         * @brief 투명 정렬 순서입니다. 정렬 레이어 키가 작은 것, 깊이가 큰 것(먼 것), 후보 인덱스가 작은 것 순입니다. 전순서입니다.
+         * @brief 투명 정렬 순서입니다. 그리기 순서가 작은 것, 정렬 레이어 키가 작은 것, 깊이가 큰 것(먼 것), 후보 인덱스가 작은 것 순입니다. 전순서입니다.
          * @details 깊이가 같으면 후보 인덱스(등록 순서)로 가르므로 같은 Z 의 스프라이트가 카메라를 따라 앞뒤가 뒤집히지 않습니다.
          *          정렬 루프가 원소마다 부르므로 헤더에 둡니다(인라인).
          */
         static bool isDrawnBefore( const GPUTransparentSortKey& keyA, const GPUTransparentSortKey& keyB )
         {
+            if ( keyA._renderQueue != keyB._renderQueue )
+                return keyA._renderQueue < keyB._renderQueue;
             if ( keyA._sortKey != keyB._sortKey )
                 return keyA._sortKey < keyB._sortKey;
             if ( keyA._depth != keyB._depth )
@@ -62,6 +65,8 @@ namespace sw
          */
         static bool isBatchDrawnBeforeParticle( const GPUTransparentSortKey& batchKey, const GPUTransparentSortKey& particleKey )
         {
+            if ( batchKey._renderQueue != particleKey._renderQueue )
+                return batchKey._renderQueue < particleKey._renderQueue;
             if ( batchKey._sortKey != particleKey._sortKey )
                 return batchKey._sortKey < particleKey._sortKey;
             return batchKey._depth >= particleKey._depth;

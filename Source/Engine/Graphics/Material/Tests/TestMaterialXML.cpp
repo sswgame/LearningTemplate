@@ -77,7 +77,7 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
     const sw::string current    = R"(<?xml version="1.0" encoding="utf-8"?>
 <MaterialDesc formatVersion="0" name="CurrentMat" shaderPath=")" +
                                shaderPath +
-                               R"(" blendMode="Opaque">
+                               R"(" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" shaderType="Float4" defaultValue="1 0 0 1"/>
 	</_properties>
@@ -103,7 +103,7 @@ namespace
 {
     // 부모 상속 테스트의 부모 — 프로퍼티 둘(색 · 거칠기)과 퍼뮤테이션 하나.
     constexpr const utf8* kParentMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="ParentMat" shaderPath="engine/shaders/forward_lit.hlsl" blendMode="Opaque">
+<MaterialDesc formatVersion="0" name="ParentMat" shaderPath="engine/shaders/forward_lit.hlsl" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" shaderType="Float4" defaultValue="1 1 1 1" displayName="Base Color" group="Surface" bSrgb="1" />
 		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface" />

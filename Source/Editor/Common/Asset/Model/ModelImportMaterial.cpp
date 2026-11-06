@@ -509,30 +509,19 @@ namespace sw::editor
         setAttribute( "_normalScale", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._normalScale ) );
         setAttribute( "_occlusionStrength", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._occlusionStrength ) );
         setAttribute( "_alphaCutoff", "defaultValue", ModelImportUtil::formatMaterialNumber( pbr._alphaCutoff ) );
+        // glTF alphaMode · doubleSided 는 머티리얼의 칸이다(MASK 는 `Mask`, 양면은 컬 없음 + 양면 조명).
+        root.setAttribute( "alphaMode", pbr._bAlphaCutoff == SW_TRUE ? "Mask" : "Opaque" );
+        if ( pbr._bTwoSided == SW_TRUE )
+        {
+            root.setAttribute( "cullMode", "None" );
+            root.setAttribute( "twoSidedLighting", "true" );
+        }
         setAttribute( "_albedoMap", "assetPath", albedoPath );
         setAttribute( "_normalMap", "assetPath", normalPath );
         setAttribute( "_ormMap", "assetPath", ormPath );
-        // 정적 스위치는 glTF 머티리얼이 정한 값이다(툰 머티리얼 쓰기와 같은 규칙 — 견본에 없는 스위치면 멈춘다).
-        const XMLNode switches  = root.findChild( "_permutations" ).findChild( "_staticSwitches" );
-        auto          setSwitch = [&]( string_view name, uint8 bEnabled )
-        {
-            XMLNode item = switches.isValid() ? switches.findChild( "item" ) : XMLNode{};
-            while ( item.isValid() && item.getAttributeText( "name" ) != name )
-            {
-                item = item.findNextSibling( "item" );
-            }
-            if ( item.isValid() == false )
-            {
-                bMissingProperty = true;
-                return;
-            }
-            item.setAttribute( "bEnabled", bEnabled == SW_TRUE ? "1" : "0" );
-        };
-        setSwitch( "AlphaCutoff", pbr._bAlphaCutoff );
-        setSwitch( "TwoSided", pbr._bTwoSided );
         if ( bMissingProperty )
         {
-            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property or switch the importer fills", sourcePath );
+            SW_LOG_ERROR_ID( "ModelImporter.GlTFPBRMaterialTemplate3", "glTF '%#': the PBR material template lacks a property the importer fills", sourcePath );
             return false;
         }
         const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );

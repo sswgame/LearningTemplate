@@ -55,10 +55,11 @@ namespace sw
             };
             // `CaptureEditorUI` 는 마젠타 문턱이 있을 때만 화소를 본다 — 문턱 없는 캡처는 사람 · 리뷰가 볼 그림을 남기고, 잘린 창 수는 레이아웃이라 백엔드와 무관하다.
             static constexpr BackendJudgingStep kArrBackendJudgingStep[] = {
-                {    "ExpectImage",                   {}},
-                {"CaptureEditorUI", "maxMagentaFraction"},
-                { "EditorSelfTest",                   {}},
-                {         "Record",                   {}}
+                {       "ExpectImage",                   {}},
+                {"ExpectImagesDiffer",                   {}},
+                {   "CaptureEditorUI", "maxMagentaFraction"},
+                {    "EditorSelfTest",                   {}},
+                {            "Record",                   {}}
             };
 
             static bool judgesPerBackend( const AutomationStep& step )

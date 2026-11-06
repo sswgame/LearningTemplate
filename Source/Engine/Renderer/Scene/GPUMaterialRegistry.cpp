@@ -34,8 +34,9 @@ namespace sw
     GPUShaderPermutation GPUMaterialRegistry::makeShaderPermutation( const MaterialPSOWarmEntry& entry, bool bAppearanceDither )
     {
         GPUShaderPermutation permutation{};
-        permutation._shaderPath = entry._shaderPath;
-        permutation._listDefine = entry._listDefine;
+        permutation._shaderPath          = entry._shaderPath;
+        permutation._listDefine          = entry._listDefine;
+        permutation._renderStateOverride = entry._renderStateOverride;
         if ( bAppearanceDither )
             permutation._listDefine.push_back( string( kAppearanceDitherDefine ) ); // 머티리얼에서 만드는 길(아래)과 같은 자리에 붙인다
         permutation._hash = combinePermutationHash( entry._shaderPathHash, entry._permutationHash, bAppearanceDither );
@@ -45,8 +46,9 @@ namespace sw
     GPUShaderPermutation GPUMaterialRegistry::makeShaderPermutation( const Material& material, const MaterialInstance* pInstance, bool bAppearanceDither )
     {
         GPUShaderPermutation permutation{};
-        permutation._shaderPath = material.getShaderPath();
-        permutation._listDefine = ( pInstance != nullptr ) ? pInstance->getCachedShaderDefines() : material.getCachedShaderDefines();
+        permutation._shaderPath          = material.getShaderPath();
+        permutation._listDefine          = ( pInstance != nullptr ) ? pInstance->getCachedShaderDefines() : material.getCachedShaderDefines();
+        permutation._renderStateOverride = material.getRenderStateOverride(); // 인스턴스는 렌더 상태를 덮지 않는다(`MaterialInstance` 설명)
         if ( bAppearanceDither )
             permutation._listDefine.push_back( string( kAppearanceDitherDefine ) ); // 쿠커도 머티리얼 define 끝에 붙인다(`ShaderCookRequest`)
         permutation._hash = permutationHashFor( &material, pInstance, bAppearanceDither );

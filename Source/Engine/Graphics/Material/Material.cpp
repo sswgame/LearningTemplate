@@ -77,7 +77,6 @@ namespace sw
         , _listBorrowedTexturePath{}
         , _listMaterialTextureSRV{}
         , _listMaterialTextureName{}
-        , _blendMode{ RHIBlendMode::Opaque }
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
         , _cachedShaderPathHash{ 0 }
@@ -876,12 +875,6 @@ namespace sw
         _bDefinesDirty = SW_TRUE;
     }
 
-    void Material::setBlendMode( RHIBlendMode mode )
-    {
-        _blendMode       = mode;
-        _desc._blendMode = getEnumName( mode );
-    }
-
     bool Material::setScalarParameter( hashed_string name, float32 value )
     {
         for ( MaterialProperty& prop : _data._listProperty )
@@ -943,6 +936,12 @@ namespace sw
             MaterialPermutation::appendUniqueDefine( _listCachedDefine, string( "SHADER_LOD=" ) + to_string( permutationDesc._shaderLOD ) );
             MaterialPermutation::appendUsageDefines( permutationDesc._usage, _listCachedDefine );
 
+            // 칸이 내는 define — 쿠커도 이 목록을 읽는다.
+            if ( _desc._alphaMode == MaterialAlphaMode::Mask )
+                MaterialPermutation::appendUniqueDefine( _listCachedDefine, kMaterialAlphaCutoffDefine );
+            if ( _desc._bTwoSidedLighting != SW_FALSE )
+                MaterialPermutation::appendUniqueDefine( _listCachedDefine, kMaterialTwoSidedDefine );
+
             for ( const MaterialStaticSwitch& entry : permutationDesc._listStaticSwitch )
             {
                 if ( entry._bEnabled != 0 )
@@ -972,10 +971,19 @@ namespace sw
             }
 
             VectorUtil::sort( _listCachedDefine );
-            _cachedPermutationHash = MaterialPermutation::hashDefines( _listCachedDefine );
-            _bDefinesDirty         = SW_FALSE;
+            _cachedPermutationHash        = MaterialPermutation::hashDefines( _listCachedDefine );
+            const uint64 renderFieldsHash = getRenderFieldsHash();
+            if ( renderFieldsHash != 0 )
+                _cachedPermutationHash = HashUtil::combine( _cachedPermutationHash, renderFieldsHash );
+            _bDefinesDirty = SW_FALSE;
         }
         return _listCachedDefine;
+    }
+
+    uint64 Material::getRenderFieldsHash() const
+    {
+        const bool bNoFields = _desc._renderQueue == 0 && _desc._renderStateOverride.hasAny() == false;
+        return bNoFields ? 0u : HashUtil::combine( _desc._renderStateOverride.computeHash(), static_cast<uint64>( static_cast<uint32>( _desc._renderQueue ) ) + 1u );
     }
 
     void Material::setShaderPath( string_view shaderPath )
@@ -1069,10 +1077,17 @@ namespace sw
         AssetXMLFormat::writeXMLVersion( root, Material::kAssetType._formatVersion );
         // 루트 칸은 기본값도 모두 쓴다 — 부모와 다른 칸만 남기는 차이(`DataInheritance::makeDelta`)가 적지 않은 칸을 부모 값으로 읽는다.
         MaterialRootFields rootFields;
-        rootFields._name       = _desc._name;
-        rootFields._shaderPath = _desc._shaderPath;
-        rootFields._blendMode  = _blendMode;
+        rootFields._name              = _desc._name;
+        rootFields._shaderPath        = _desc._shaderPath;
+        rootFields._alphaMode         = _desc._alphaMode;
+        rootFields._renderQueue       = _desc._renderQueue;
+        rootFields._bTwoSidedLighting = _desc._bTwoSidedLighting != SW_FALSE;
+        rootFields._blendPreset       = _desc._blendPreset;
+        // 문턱값의 정본은 프로퍼티다(에디터가 고친다). Mask 가 아니면 칸은 쓰지 않는 값이라 기본값으로 둔다(읽을 때 다른 값은 오류다).
+        if ( _desc._alphaMode == MaterialAlphaMode::Mask && getScalarParameter( hashed_string( kAlphaCutoffProperty ), rootFields._alphaCutoff ) == false )
+            rootFields._alphaCutoff = _desc._alphaCutoff;
         XMLFields::writeEveryField( root, rootFields );
+        MaterialXML::appendRenderFields( root, _desc );
 
         XMLNode props = root.appendChild( "_properties" );
 
@@ -1151,16 +1166,15 @@ namespace sw
         if ( AssetXMLFormat::isCurrentXMLVersion( Material::kAssetType, root ) == false )
             return false;
 
-        // 루트 칸(이름 · 셰이더 · 블렌드)은 스키마로 읽는다 — 적지 않은 블렌드는 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다).
+        // 루트 칸(이름 · 셰이더 · 알파 모드)은 스키마로 읽는다 — 적지 않은 알파 모드는 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다). 렌더 상태 칸은 뒤의 `parseRenderFields` 가 읽는다.
         MaterialRootFields rootFields;
-        if ( XMLFields::readFields( root, rootFields, string_view{ root.getAttributeText( "name" ) }, { "formatVersion" } ) == false )
+        const string_view  sourceName{ root.getAttributeText( "name" ) };
+        if ( XMLFields::readFields( root, rootFields, sourceName, { "formatVersion" }, &MaterialXML::isRenderStateAttribute ) == false )
             return false;
         _desc             = MaterialDesc{};
         _desc._name       = rootFields._name;
         _desc._parentPath = parentPath;
         setShaderPath( rootFields._shaderPath );
-        const RHIBlendMode blendMode = rootFields._blendMode;
-        _desc._blendMode             = getEnumName( blendMode );
 
         XMLNode props = root.findChild( "_properties" );
         if ( props.isValid() )
@@ -1177,8 +1191,28 @@ namespace sw
 
         if ( MaterialXML::parsePermutationNode( root, _desc._permutations ) == false )
             return false;
+        if ( MaterialXML::parseRenderFields( root, rootFields, sourceName, _desc ) == false )
+            return false;
 
-        _blendMode = blendMode;
+        // 적은 문턱값은 셰이더가 읽는 프로퍼티로 간다. 프로퍼티가 없는 셰이더(문턱이 코드에 있다)에는 기본값 밖의 값을 받아 줄 곳이 없다.
+        if ( root.findAttribute( "alphaCutoff" ) != nullptr )
+        {
+            bool bApplied = false;
+            for ( MaterialProperty& prop : _desc._listProperty )
+            {
+                if ( string_view( prop._name ) != kAlphaCutoffProperty )
+                    continue;
+                prop._value = to_string( _desc._alphaCutoff );
+                bApplied    = true;
+            }
+            if ( bApplied == false && _desc._alphaCutoff != MaterialRootFields{}._alphaCutoff )
+            {
+                SW_LOG_ERROR_ID( "Material.AlphaCutoffNoProperty", "%#: alphaCutoff has nowhere to go - the material has no %# property", sourceName, kAlphaCutoffProperty );
+                return false;
+            }
+        }
+
+        _bDefinesDirty = SW_TRUE;
         applyDescToRuntime();
         return true;
     }
@@ -1197,7 +1231,6 @@ namespace sw
     {
         auto self                 = const_cast<Material*>( this );
         self->_desc._listProperty = _data._listProperty;
-        self->_desc._blendMode    = getEnumName( _blendMode );
         self->_desc._name         = _desc._name;
         self->setShaderPath( _desc._shaderPath );
     }

@@ -82,7 +82,7 @@ namespace
         if ( parentID.empty() == false )
             text += " _base=\"" + parentID + "\"";
         else
-            text += " shaderPath=\"engine/shaders/forward_lit.hlsl\" blendMode=\"Opaque\"";
+            text += " shaderPath=\"engine/shaders/forward_lit.hlsl\" alphaMode=\"Opaque\"";
         text += "><_properties>";
         if ( pRoughness != nullptr )
             text += "<item name=\"_roughness\" type=\"Range\" shaderType=\"Float\" defaultValue=\"" + sw::string( pRoughness ) + "\" min=\"0.0\" max=\"1.0\" />";

@@ -229,6 +229,22 @@ namespace sw
         float32 _tolerance{ 0.01f }; ///< 다른 화소의 비율 상한
     };
 
+    /** @brief `ExpectImagesDiffer` 의 인자입니다 — 값을 바꾼 두 장이 정말 다른지 보는 음성 대조입니다(골든 없이 같은 실행의 두 스크린샷을 견준다). */
+    REFLECT()
+    struct SW_API AutomationExpectImagesDifferFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _first{};
+        PROPERTY( Required )
+        string _second{};
+        PROPERTY()
+        string _region{};
+        PROPERTY( Min = 0, Max = 1 )
+        float32 _minDiffering{ 0.01f }; ///< 다른 화소의 비율 하한(영역을 줄인 뒤)
+    };
+
     /** @brief `CloseWindow` 의 인자입니다. */
     REFLECT()
     struct SW_API AutomationCloseWindowFields

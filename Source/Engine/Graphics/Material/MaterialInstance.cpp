@@ -580,7 +580,11 @@ namespace sw
 
             VectorUtil::sort( _listCachedDefine );
             _cachedPermutationHash = MaterialPermutation::hashDefines( _listCachedDefine );
-            _bDefinesDirty         = SW_FALSE;
+            // 렌더 상태 · 그리기 순서는 부모의 것이다 — 부모와 같은 해시 규칙으로 섞어야 다른 렌더 상태의 부모가 한 배치로 합쳐지지 않는다.
+            const uint64 renderFieldsHash = _pParentMaterial != nullptr ? _pParentMaterial->getRenderFieldsHash() : 0u;
+            if ( renderFieldsHash != 0 )
+                _cachedPermutationHash = HashUtil::combine( _cachedPermutationHash, renderFieldsHash );
+            _bDefinesDirty = SW_FALSE;
         }
     }
 

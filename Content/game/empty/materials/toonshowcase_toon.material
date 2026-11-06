@@ -20,8 +20,6 @@
 		</_alwaysDefines>
 		<_staticSwitches>
 			<item name="Outline" keyword="MATERIAL_OUTLINE" bEnabled="1" bShaderFeature="1" />
-			<item name="AlphaCutoff" keyword="MATERIAL_ALPHA_CUTOFF" bEnabled="0" bShaderFeature="1" />
-			<item name="TwoSided" keyword="MATERIAL_TWO_SIDED" bEnabled="0" bShaderFeature="1" />
 		</_staticSwitches>
 	</_permutations>
 </MaterialDesc>

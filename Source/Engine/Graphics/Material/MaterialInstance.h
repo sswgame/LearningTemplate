@@ -19,6 +19,9 @@ namespace sw
     /**
      * @class MaterialInstance
      * @brief 마스터 Material 위에 드로우나 액터 단위로 덮어쓰는 오버라이드입니다(UE 의 MaterialInstanceDynamic).
+     * @note 값 · 텍스처 · 키워드만 덮는다. 렌더 상태 · `alphaMode` · `renderQueue` · 양면 조명은 부모의 것이다 — 드로우마다 PSO 를 가르면 인스턴스의 값이 머티리얼 원소 하나로 합쳐지는 이득을 잃는다
+     *       (언리얼 Dynamic Instance · 유니티 MaterialPropertyBlock 도 상태를 바꾸지 못한다, 기억에 의존한 비교). 다른 렌더 상태가 필요하면 `parent=` 로 자식 머티리얼을 만든다.
+     *       문턱값은 프로퍼티(`_alphaCutoff`)라 덮을 수 있다.
      * @details 게임 스레드 객체다(`Material` 과 같은 규칙). 덮어쓴 텍스처 요청과 바이트 패킹도 게임 스레드가 하고, 렌더 스레드는 `getRenderBinding` 의
      *          불변 사본과 프록시만 받는다. 예전에는 렌더 스레드의 `updateRHI` 가 이 객체를 잠금 아래에서 함께 고쳤다.
      */

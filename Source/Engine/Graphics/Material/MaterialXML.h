@@ -74,6 +74,7 @@ namespace sw
     /**
      * @brief 머티리얼 루트(`<MaterialDesc …>`)의 칸입니다. `formatVersion` 은 에셋 형식이, `_base` 는 부모 펼치기(`DataInheritance`)가 읽는다.
      * @details 쓸 때는 기본값도 모두 쓴다(`XMLFields::writeEveryField`) — 부모와 다른 칸만 남기는 차이(`DataInheritance::makeDelta`)가 적지 않은 칸을 부모 값으로 읽는다.
+     *          렌더 상태 칸(`RHIFixedRenderState`)은 같은 원소에 적지만 이 구조체에 들지 않는다 — "적지 않음" 이 "패스의 값" 이라 적은 칸만 쓴다(`MaterialXML::parseRenderFields`).
      */
     REFLECT()
     struct SW_API MaterialRootFields
@@ -85,7 +86,15 @@ namespace sw
         PROPERTY()
         string _shaderPath{};
         PROPERTY()
-        RHIBlendMode _blendMode{ RHIBlendMode::Opaque };
+        MaterialAlphaMode _alphaMode{ MaterialAlphaMode::Opaque };
+        PROPERTY( Min = 0, Max = 1 )
+        float32 _alphaCutoff{ MaterialDesc{}._alphaCutoff };
+        PROPERTY()
+        int32 _renderQueue{ 0 };
+        PROPERTY()
+        bool _bTwoSidedLighting{ false }; ///< NOLINT(sw-bool-flag): 집합체다
+        PROPERTY()
+        string _blendPreset{};
     };
 
     /** @brief 순열(`<_permutations quality shaderLOD usage>`)의 칸입니다. 목록(`_alwaysDefines` · `_staticSwitches` · `_multiCompiles`)은 자식 원소라 손으로 푼다. */
@@ -182,6 +191,18 @@ namespace sw
         static void appendAttribute( XMLNode parent, const utf8* pName, string_view value );
 
         static void appendBoolAttribute( XMLNode parent, const utf8* pName, bool value );
+
+        /** @brief 루트 속성 @p pName 이 렌더 상태 칸(`RHIFixedRenderState`)이면 true 입니다. 칸 표는 리플렉션 하나다. */
+        [[nodiscard]] static bool isRenderStateAttribute( const utf8* pName );
+        /**
+         * @brief 루트의 렌더 칸(@p rootFields 와 렌더 상태 · `_listBlendTarget`)을 읽어 @p inoutDesc 에 담습니다. 받아 줄 수 없는 조합은 오류를 남기고 false 입니다.
+         * @details 조합 규칙: 깊이 테스트는 덮을 수 없다(첨부와 함께 움직인다 — `depthCompare="Always"` 를 쓴다). 켜진 블렌드는 `alphaMode="Blend"` 만 받는다. 프리셋과 타깃 목록은 함께 적지 않는다.
+         *          `twoSidedLighting` 은 `cullMode="None"` 과 함께다. `alphaCutoff` 는 `Mask` 일 때만 기본값이 아닐 수 있다. `MATERIAL_ALPHA_CUTOFF` · `MATERIAL_TWO_SIDED` 를 define 으로 직접 적지 않는다.
+         *          @p inoutDesc 의 퍼뮤테이션을 읽은 뒤에 부른다.
+         */
+        [[nodiscard]] static bool parseRenderFields( XMLNode root, const MaterialRootFields& rootFields, string_view sourceName, MaterialDesc& inoutDesc );
+        /** @brief 렌더 상태 칸 중 적은 것과 `_listBlendTarget` 을 씁니다(`parseRenderFields` 의 짝). */
+        static void appendRenderFields( XMLNode root, const MaterialDesc& desc );
 
         /** @brief 순열 설정을 읽습니다(칸은 `MaterialPermutationFields` · `MaterialStaticSwitchFields` · `MaterialMultiCompileFields`). 읽지 못한 칸이 있으면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool parsePermutationNode( XMLNode root, MaterialPermutationDesc& outDesc );

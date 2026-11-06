@@ -391,6 +391,8 @@ namespace sw
             uint64 _permutationHash{ 0 };
             /** @brief 컬 모드를 뒤집어 그리는지(거울 변환) 나타냅니다. 퍼뮤테이션과 함께 PSO 를 정하므로 키입니다. */
             uint8 _bReverseCulling{ SW_FALSE };
+            /** @brief 그리기 순서입니다. 불투명 정렬의 첫 키이고(스텐실 마스크는 받는 쪽보다 먼저 그려야 한다), 값이 같은 퍼뮤테이션 안에서 하나라 비교에는 넣지 않는다. */
+            int32 _renderQueue{ 0 };
             /** @brief 메시, 머티리얼, 인스턴스, 퍼뮤테이션, 컬 반전이 같은지 비교합니다. */
             bool operator==( const SortKey& other ) const
             {
@@ -545,6 +547,10 @@ namespace sw
         void fillMainBatchHeadKeys( const float3& cameraPos, vector<GPUTransparentSortKey>& outListKey ) const;
         /** @brief 투명 꼬리 원소 @p tailIndex(꼬리 시작 기준)의 정렬 레이어 키입니다. 기본 키 표시는 @p defaultSortKey 로 풉니다. */
         uint32 resolveTailSortLayer( uint32 tailIndex, uint32 defaultSortKey ) const;
+        /** @brief 투명 꼬리 원소 @p tailIndex 의 그리기 순서입니다. */
+        int32 resolveTailRenderQueue( uint32 tailIndex ) const;
+        /** @brief 후보 머티리얼의 그리기 순서입니다(머티리얼이 없으면 0). 후보에 칸을 두지 않는다 — 퍼뮤테이션 해시에 섞여 있어 바뀌면 후보가 달라진다. */
+        [[nodiscard]] static int32 getCandidateRenderQueue( const DrawCandidate& candidate );
         /**
          * @brief 배치를 다시 나누지 않고 인스턴스 값만 제자리에서 갱신합니다.
          * @details 배치 키가 그대로일 때 쓴다. 그러면 불투명 접두부의 배치와 각 원소의

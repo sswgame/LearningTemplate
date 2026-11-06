@@ -5,10 +5,27 @@
 #pragma once
 #include "Engine/EngineMinimal.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
+#include "Engine/Graphics/RHI/RHIRenderState.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    /**
+     * @brief 머티리얼의 알파 다루는 법입니다(glTF alphaMode · 언리얼 Blend Mode 자리). 배치 목록과 셰이더 변형이 여기서 정해진다.
+     */
+    ENUM()
+    enum class MaterialAlphaMode : uint8
+    {
+        Opaque, ///< 불투명 배치 목록
+        Mask,   ///< 불투명 배치 목록. `alphaCutoff` 보다 작은 알파를 버린다(`MATERIAL_ALPHA_CUTOFF` — 깊이 패스도 같은 모양으로 오린다)
+        Blend,  ///< 반투명 배치 목록. 반투명 패스의 블렌드를 쓰고, 머티리얼이 프리셋으로 덮을 수 있다
+    };
+
+    /** @brief `alphaMode="Mask"` 머티리얼의 define 입니다. 깊이 패스(그림자, 깊이 프리패스)도 머티리얼 셰이더로 그려 같은 형태로 오립니다(`FrameRendererUtil::drawsDepthWithMaterialShader`). 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
+    inline constexpr const utf8* kMaterialAlphaCutoffDefine = "MATERIAL_ALPHA_CUTOFF";
+    /** @brief `twoSidedLighting="true"` 머티리얼의 define 입니다. 셰이더가 뒷면 노멀을 뒤집습니다. 머티리얼 XML 에 직접 적지 않습니다(읽기 오류). */
+    inline constexpr const utf8* kMaterialTwoSidedDefine = "MATERIAL_TWO_SIDED";
+
     /// @brief 머티리얼 프로퍼티 타입 종류입니다.
     enum class MaterialPropertyType : uint8
     {
@@ -168,12 +185,18 @@ namespace sw
     struct MaterialDesc
     {
         /** @brief .material 리소스에서 채웁니다(팩별 C++ 기본값 없음). */
-        string                   _name;
-        string                   _shaderPath;
-        string                   _blendMode;
-        vector<MaterialProperty> _listProperty;
-        MaterialPermutationDesc  _permutations;
-        /** @brief 부모 머티리얼(`.material` 루트의 `_base`)입니다. 비어 있지 않으면 위 칸은 부모를 펼친 값이고, 저장은 부모와 다른 칸만 적는다(`DataInheritance::makeDelta`). */
+        string                      _name;
+        string                      _shaderPath;
+        MaterialAlphaMode           _alphaMode{ MaterialAlphaMode::Opaque }; ///< 어느 배치 목록으로 가고 알파를 어떻게 쓰는지입니다
+        float32                     _alphaCutoff{ 0.5f };                    ///< `Mask` 의 문턱값입니다. 셰이더의 `_alphaCutoff` 프로퍼티로 간다
+        int32                       _renderQueue{ 0 };                       ///< 그리기 순서입니다. 작은 것부터 그립니다(유니티 renderQueue · 언리얼 Translucency Sort Priority 자리). 0 이 기본입니다
+        uint8                       _bTwoSidedLighting{ SW_FALSE };          ///< 뒷면에서 노멀을 뒤집습니다(`MATERIAL_TWO_SIDED`). `cullMode="None"` 과 함께 적습니다
+        string                      _blendPreset;                            ///< 블렌드 프리셋 이름입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
+        vector<RHIBlendTargetState> _listBlendTarget;                        ///< 렌더 타깃마다의 블렌드입니다. 저장용 — 값은 `_renderStateOverride` 에 풀려 있다
+        RHIRenderStateOverride      _renderStateOverride;                    ///< 패스의 렌더 상태 위에 덮는 칸입니다(표: `docs/agents/RenderPipelineXml.md`)
+        vector<MaterialProperty>    _listProperty;
+        MaterialPermutationDesc     _permutations;
+        /** @brief 부모 머티리얼(`.material` 루트의 `_base`)입니다. 비어 있지 않으면 위 칸은 부모를 펼친 값이고, 저장은 부모와 다른 칸만 적는다(`MaterialXML::makeParentDelta`). */
         string _parentPath;
     };
 } // namespace sw

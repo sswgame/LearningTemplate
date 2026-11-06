@@ -9,6 +9,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
+#include "Engine/Graphics/Material/RenderBlendPreset.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -22,6 +23,8 @@ namespace sw
         /** @brief 머티리얼 XML 의 반복 구조(enum 항목 · 문자열 목록)를 읽고 쓰는 TU 로컬 도우미입니다. */
         struct MaterialXMLInternal
         {
+            static constexpr const utf8* kBlendTargetListName = "_listBlendTarget";
+
             /** @brief 열거 항목(`MaterialEnumEntryFields`)을 읽습니다. 읽지 못한 칸이 있으면 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool parseEnumEntries( XMLNode parent, string_view sourceName, vector<MaterialEnumEntry>& outListEntry )
             {
@@ -234,4 +237,153 @@ namespace sw
     }
 
     SW_DATA_INHERITANCE_SCHEMA( MaterialDesc, &MaterialXML::makeInheritanceSchema );
+
+    bool MaterialXML::isRenderStateAttribute( const utf8* pName )
+    {
+        for ( const PropertyInfo& prop : RHIFixedRenderState::StaticType()->getPropertiesWithBase() )
+        {
+            if ( XMLFields::getAttributeName( prop ) == pName )
+                return true;
+        }
+        return false;
+    }
+
+    bool MaterialXML::parseRenderFields( XMLNode root, const MaterialRootFields& rootFields, string_view sourceName, MaterialDesc& inoutDesc )
+    {
+        // 렌더 상태 칸을 0 으로 채운 값과 1 로 채운 값 위에 두 번 읽으면 두 값이 같은 비트가 적은 칸이다(`RHIRenderStateOverride::makeFromReads`). 다른 스키마의 속성은 모르는 칸이 아니다.
+        const auto isOtherAttribute = []( const utf8* pName )
+        { return isRenderStateAttribute( pName ) == false; };
+        const TypeInfo&     stateType = *RHIFixedRenderState::StaticType();
+        RHIFixedRenderState overZeros = RHIRenderStateOverride::makeFilledState( 0x00 );
+        RHIFixedRenderState overOnes  = RHIRenderStateOverride::makeFilledState( 0xFF );
+        if ( XMLFields::readFields( root, &overZeros, stateType, sourceName, {}, isOtherAttribute ) == false || XMLFields::readFields( root, &overOnes, stateType, sourceName, {}, isOtherAttribute ) == false )
+            return false;
+        RHIRenderStateOverride stateOverride = RHIRenderStateOverride::makeFromReads( overZeros, overOnes );
+
+        inoutDesc._alphaMode         = rootFields._alphaMode;
+        inoutDesc._alphaCutoff       = rootFields._alphaCutoff;
+        inoutDesc._renderQueue       = rootFields._renderQueue;
+        inoutDesc._bTwoSidedLighting = rootFields._bTwoSidedLighting ? SW_TRUE : SW_FALSE;
+        inoutDesc._blendPreset       = rootFields._blendPreset;
+        inoutDesc._listBlendTarget.clear();
+
+        bool       bValid = true;
+        const auto fail   = [&bValid]()
+        { bValid = false; };
+        // 깊이 테스트는 첨부와 함께 움직인다 — 패스의 PSO 깊이 형식과 렌더 패스가 어긋난다.
+        if ( stateOverride.hasDepthTestField() )
+        {
+            SW_LOG_ERROR_ID( "Material.DepthTestNotOverridable", "%#: enableDepthTest belongs to the pass (it binds the depth attachment) - write depthCompare=\"Always\" to pass every pixel", sourceName );
+            fail();
+        }
+        const bool bNoCull = static_cast<uint8>( stateOverride._mask._cullMode ) != 0 && stateOverride._values._cullMode == RHICullMode::None;
+        if ( rootFields._bTwoSidedLighting && bNoCull == false )
+        {
+            SW_LOG_ERROR_ID( "Material.TwoSidedLightingNeedsNoCull", "%#: twoSidedLighting lights the back faces - it needs cullMode=\"None\" too", sourceName );
+            fail();
+        }
+        if ( rootFields._alphaMode != MaterialAlphaMode::Mask && rootFields._alphaCutoff != MaterialRootFields{}._alphaCutoff )
+        {
+            SW_LOG_ERROR_ID( "Material.AlphaCutoffWithoutMask", "%#: alphaCutoff needs alphaMode=\"Mask\"", sourceName );
+            fail();
+        }
+
+        // 블렌드 칸: 프리셋(모든 타깃) 또는 타깃 목록이다.
+        const XMLNode blendTargets = root.findChild( MaterialXMLInternal::kBlendTargetListName );
+        if ( rootFields._blendPreset.empty() == false && blendTargets.isValid() )
+        {
+            SW_LOG_ERROR_ID( "Material.BlendPresetAndTargets", "%#: blendPreset and _listBlendTarget go separately - write one of them", sourceName );
+            fail();
+        }
+        if ( rootFields._blendPreset.empty() == false )
+        {
+            const RenderBlendPreset* const pPreset = RenderBlendPresetTable::find( rootFields._blendPreset );
+            if ( pPreset != nullptr )
+            {
+                stateOverride._arrBlendTarget[0] = *pPreset;
+                stateOverride._blendTargetCount  = 1;
+            }
+            else
+            {
+                SW_LOG_ERROR_ID( "Material.BlendPresetUnknown", "%#: blendPreset '%#' is not in %#", sourceName, rootFields._blendPreset, RenderBlendPresetTable::kAssetPath );
+                fail();
+            }
+        }
+        for ( XMLNode item = blendTargets.isValid() ? blendTargets.findChild( "RHIBlendTargetState" ) : XMLNode{}; item; item = item.findNextSibling( "RHIBlendTargetState" ) )
+        {
+            RHIBlendTargetState target{};
+            if ( XMLFields::readFields( item, target, sourceName ) == false )
+            {
+                fail();
+                continue;
+            }
+            const utf8* const pReason = target.findInvalidReason();
+            if ( pReason != nullptr )
+            {
+                SW_LOG_ERROR_ID( "Material.BlendTargetInvalid", "%#: blend target %#: %#", sourceName, static_cast<uint32>( inoutDesc._listBlendTarget.size() ), pReason );
+                fail();
+            }
+            if ( inoutDesc._listBlendTarget.size() >= kMaxColorAttachments )
+            {
+                SW_LOG_ERROR_ID( "Material.TooManyBlendTargets", "%#: more than %# blend targets", sourceName, kMaxColorAttachments );
+                fail();
+                break;
+            }
+            stateOverride._arrBlendTarget[inoutDesc._listBlendTarget.size()] = target;
+            inoutDesc._listBlendTarget.push_back( target );
+            stateOverride._blendTargetCount = static_cast<uint8>( inoutDesc._listBlendTarget.size() );
+        }
+        for ( uint32 targetIndex = 0; targetIndex < stateOverride._blendTargetCount; ++targetIndex )
+        {
+            // 쓰기 마스크만 바꾸는 것은 불투명도 받는다. 켜진 블렌드만 반투명 배치 목록의 일이다.
+            if ( stateOverride._arrBlendTarget[targetIndex]._bEnableBlend != SW_FALSE && rootFields._alphaMode != MaterialAlphaMode::Blend )
+            {
+                SW_LOG_ERROR_ID( "Material.BlendWithoutAlphaModeBlend", "%#: a blending target needs alphaMode=\"Blend\" - it is what sends the material to the transparent batches", sourceName );
+                fail();
+                break;
+            }
+        }
+
+        // 두 칸의 define 은 칸이 낸다 — 직접 적으면 칸과 갈라져 컬링 · 깊이 패스와 맞지 않는다.
+        const auto isFieldDefine = []( string_view define )
+        { return define == kMaterialAlphaCutoffDefine || define == kMaterialTwoSidedDefine; };
+        bool bDefineFound = false;
+        for ( const string& define : inoutDesc._permutations._listAlwaysDefine )
+        {
+            bDefineFound = bDefineFound || isFieldDefine( define );
+        }
+        for ( const MaterialStaticSwitch& entry : inoutDesc._permutations._listStaticSwitch )
+        {
+            bDefineFound = bDefineFound || isFieldDefine( entry._keyword );
+        }
+        if ( bDefineFound )
+        {
+            SW_LOG_ERROR_ID( "Material.DefineBelongsToField", "%#: %# and %# come from alphaMode=\"Mask\" and twoSidedLighting - do not write them as defines or switches", sourceName, kMaterialAlphaCutoffDefine, kMaterialTwoSidedDefine );
+            fail();
+        }
+        inoutDesc._renderStateOverride = stateOverride;
+        return bValid;
+    }
+
+    void MaterialXML::appendRenderFields( XMLNode root, const MaterialDesc& desc )
+    {
+        // 적은 칸의 비트를 뒤집은 값을 "기본값" 으로 넘기면 적은 칸만 다르다 — 적지 않은 칸은 쓰이지 않는다.
+        const RHIFixedRenderState& values   = desc._renderStateOverride._values;
+        const RHIFixedRenderState& mask     = desc._renderStateOverride._mask;
+        RHIFixedRenderState        flipped  = values;
+        const uint8*               pMask    = reinterpret_cast<const uint8*>( &mask );
+        uint8*                     pFlipped = reinterpret_cast<uint8*>( &flipped );
+        for ( size_t byteIndex = 0; byteIndex < sizeof( RHIFixedRenderState ); ++byteIndex )
+        {
+            pFlipped[byteIndex] = static_cast<uint8>( pFlipped[byteIndex] ^ pMask[byteIndex] );
+        }
+        XMLFields::writeFields( root, &values, &flipped, *RHIFixedRenderState::StaticType() );
+        if ( desc._listBlendTarget.empty() )
+            return;
+        const XMLNode list = root.appendChild( MaterialXMLInternal::kBlendTargetListName );
+        for ( const RHIBlendTargetState& target : desc._listBlendTarget )
+        {
+            XMLFields::writeEveryField( list.appendChild( "RHIBlendTargetState" ), target );
+        }
+    }
 } // namespace sw

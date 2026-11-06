@@ -31,8 +31,8 @@ namespace sw::editor
     enum class ToonAlphaMode : uint8
     {
         Opaque,
-        Cutout,      ///< 알파 컷오프(MATERIAL_ALPHA_CUTOFF)
-        Transparent, ///< 반투명(blendMode Transparent + MATERIAL_BLEND_TRANSLUCENT)
+        Cutout,      ///< 알파 컷오프(alphaMode Mask)
+        Transparent, ///< 반투명(alphaMode Blend + MATERIAL_BLEND_TRANSLUCENT)
     };
 } // namespace sw::editor
 
