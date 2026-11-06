@@ -422,6 +422,13 @@ namespace sw::editor
         return result;
     }
 
+    void AnimationGraphPanel::applyDocumentText( string_view text )
+    {
+        string baseID = _graph._baseID;
+        EditorGraphDocumentPanel<AnimationGraphAsset>::applyDocumentText( text );
+        _graph._baseID = std::move( baseID );
+    }
+
     bool AnimationGraphPanel::saveGraphData()
     {
         AnimationGraphAsset data = captureGraphData();

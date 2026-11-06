@@ -1,0 +1,6 @@
+<!-- 바탕 그래프의 슬롯 Weapon 을 채우는 그래프 — 자기 상태 기계로 돌고 클립 이름은 애니메이터의 셋에서 찾는다. -->
+<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="spellcasting" loop="true" />
+	</nodes>
+</AnimationGraphAsset>

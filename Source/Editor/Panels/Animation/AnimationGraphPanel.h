@@ -57,6 +57,8 @@ namespace sw::editor
         void ensureDefaults() override;
         /** @brief 문서를 읽어 내용을 채웁니다. 읽음 표시는 기반 클래스가 결과를 보고 합니다(`EditorDocumentPanel::reloadDocument`). */
         ToolAssetLoadResult loadDocument() override;
+        /** @brief 되돌리기 글은 펼친 그래프라 부모를 적지 않는다. 문서의 부모(`_baseID`)를 지켜 저장이 계속 차이만 쓰게 합니다. */
+        void applyDocumentText( string_view text ) override;
         /** @brief 그래프 데이터를 저장합니다. */
         [[nodiscard]] bool saveGraphData();
         /** @brief 주어진 이름의 노드를 추가하고 그 id 를 반환합니다. */

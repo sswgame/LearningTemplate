@@ -102,20 +102,32 @@ namespace sw
         inoutState._rootMotionRotation    = _owner._rootMotionDelta._rotation;
     }
 
-    SkeletalAnimatorClipSource::SkeletalAnimatorClipSource( const SkeletalAnimatorComponent& owner )
+    SkeletalAnimatorClipSource::SkeletalAnimatorClipSource( const SkeletalAnimatorComponent& owner, const vector<unique_ptr<SkeletalBlendSpaceState>>* pListBlendSpace )
         : _owner{ owner }
+        , _pListBlendSpace{ pListBlendSpace }
     {
     }
 
     const IAnimationPlayable* SkeletalAnimatorClipSource::findPlayable( const hashed_string& name ) const
     {
         // 블렌드 스페이스 노드는 그 상태를, 보통 노드(또는 그래프 밖 이름)는 같은 이름의 클립을 낸다.
-        for ( const unique_ptr<SkeletalBlendSpaceState>& state : _owner._listBlendSpace )
+        for ( const unique_ptr<SkeletalBlendSpaceState>& state : _pListBlendSpace != nullptr ? *_pListBlendSpace : _owner._listBlendSpace )
         {
             if ( state->getStateName() == name )
                 return state.get();
         }
         return _owner.findClip( name );
+    }
+
+    SkeletalAnimatorComponent::LinkedLayerGraph::LinkedLayerGraph( const SkeletalAnimatorComponent& owner )
+        : _slot{}
+        , _graphPath{}
+        , _graph{}
+        , _player{}
+        , _listBlendSpace{}
+        , _source{ owner, &_listBlendSpace }
+    {
+        _player.setPlayableSource( &_source );
     }
 
     SkeletalBlendSpaceState::SkeletalBlendSpaceState( const hashed_string& stateName, const AnimationGraphBlendSpaceDef& def, vector<const AnimationClip*>&& listClip )
@@ -190,6 +202,7 @@ namespace sw
     SkeletalAnimatorComponent::SkeletalAnimatorComponent()
         : _animationGraphPath{}
         , _animationSetPath{}
+        , _listLinkedLayer{}
         , _initialState{}
         , _currentState{}
         , _stateTime{ 0.0f }
@@ -212,6 +225,7 @@ namespace sw
         , _listLayer{}
         , _listGraphLayer{}
         , _listBlendSpace{}
+        , _listLinkedGraph{}
         , _listScratchSamplePose{}
         , _listScratchSamplePosePointer{}
         , _listScratchSampleWeight{}
@@ -223,6 +237,7 @@ namespace sw
         , _scratchPose{}
         , _scratchTrackPose{}
         , _scratchLayerPose{}
+        , _scratchLinkedPose{}
         , _listScratchTrackMask{}
         , _baseHistory{}
         , _carryOverPose{}
@@ -312,6 +327,7 @@ namespace sw
         _graph = AnimationGraphAsset{};
         if ( _animationGraphPath.empty() == false && _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
             SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphCouldNot", "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
+        loadLinkedGraphs();
         requestClipLoads();
         if ( _listClipLoad.empty() )
         {
@@ -339,11 +355,9 @@ namespace sw
         added._load     = SharedAssetCache<AnimationClip>::request( clipPath );
     }
 
-    void SkeletalAnimatorComponent::requestClipLoads()
+    void SkeletalAnimatorComponent::requestNodeClipLoads( const AnimationGraphAsset& graph )
     {
-        _listClipLoad.clear();
-        // 그래프를 짓는 것(`rebuildGraphPlayables`)과 같은 이름을 모은다 — 노드(블렌드 스페이스면 표본), 레이어. 그래프가 없으면 시작 상태가 곧 클립이다.
-        for ( const AnimationGraphNode& node : _graph._listNode )
+        for ( const AnimationGraphNode& node : graph._listNode )
         {
             if ( node.hasPoseNode() )
                 continue;
@@ -357,6 +371,17 @@ namespace sw
                 requestClipLoad( sample._clipName );
             }
         }
+    }
+
+    void SkeletalAnimatorComponent::requestClipLoads()
+    {
+        _listClipLoad.clear();
+        // 그래프를 짓는 것(`rebuildGraphPlayables`)과 같은 이름을 모은다 — 노드(블렌드 스페이스면 표본), 레이어, 연결 레이어 그래프의 노드. 그래프가 없으면 시작 상태가 곧 클립이다.
+        requestNodeClipLoads( _graph );
+        for ( const unique_ptr<LinkedLayerGraph>& linked : _listLinkedGraph )
+        {
+            requestNodeClipLoads( linked->_graph );
+        }
         for ( const AnimationGraphLayerDef& def : _graph._listLayer )
         {
             requestClipLoad( def._clipName );
@@ -365,6 +390,24 @@ namespace sw
         {
             requestClipLoad( hashed_string( _currentState ) );
             requestClipLoad( hashed_string( _initialState ) );
+        }
+    }
+
+    void SkeletalAnimatorComponent::loadLinkedGraphs()
+    {
+        _listGraphLayer.clear(); // 슬롯 레이어가 그래프를 빌렸다
+        _listLinkedGraph.clear();
+        for ( const AnimationLinkedLayerBinding& binding : _listLinkedLayer )
+        {
+            if ( binding._graphPath.empty() )
+                continue; // 비워 둔 슬롯이다
+            unique_ptr<LinkedLayerGraph> linked = sw::make_unique<LinkedLayerGraph>( *this );
+            linked->_slot                       = hashed_string( binding._slot );
+            linked->_graphPath                  = binding._graphPath;
+            // 못 읽으면 빈 그래프로 남고 `rebuildLinkedGraphs` 가 그래프를 쓰지 않게 한다.
+            if ( linked->_graph.loadFromFile( AssetID{ binding._graphPath } ) == false )
+                SW_LOG_ERROR_ID( "SkeletalAnimator.LinkedLayerGraphCouldNot", "Linked layer graph '%#' for slot '%#' could not be loaded", binding._graphPath.c_str(), binding._slot.c_str() );
+            _listLinkedGraph.push_back( std::move( linked ) );
         }
     }
 
@@ -430,6 +473,7 @@ namespace sw
         static const hashed_string s_graphPathName( "_animationGraphPath" );
         static const hashed_string s_setPathName( "_animationSetPath" );
         static const hashed_string s_blendName( "_blendSeconds" );
+        static const hashed_string s_linkedLayerName( "_listLinkedLayer" );
         if ( propertyName == s_graphPathName )
         {
             const hashed_string state = _graphPlayer.getCurrentStateName();
@@ -446,6 +490,10 @@ namespace sw
         else if ( propertyName == s_blendName )
         {
             _graphPlayer.setDefaultBlendSeconds( _blendSeconds );
+        }
+        else if ( propertyName == s_linkedLayerName )
+        {
+            refreshLinkedLayers();
         }
     }
 
@@ -474,6 +522,7 @@ namespace sw
         _graph = AnimationGraphAsset{};
         if ( _animationGraphPath.empty() == false && _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
             SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphCouldNot", "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
+        loadLinkedGraphs();
         applyGraphPlayables();
         if ( bWasPending )
             runDeferredPlayback();
@@ -492,19 +541,28 @@ namespace sw
         SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphNotUsed", "Animation graph '%#' is not used - it names what SkeletalAnimatorComponent cannot play (errors above)", _animationGraphPath.c_str() );
         _listBlendSpace.clear();
         _listGraphLayer.clear();
+        releaseLinkedGraphPlayables();
     }
 
     bool SkeletalAnimatorComponent::rebuildGraphPlayables()
     {
         // 플레이어(`setGraph`, `stop`)가 빌린 상태를 놓은 뒤에 부른다. 워커의 전이는 읽어 둔 클립만 찾으므로 클립은 지금(게임 스레드) 읽는다.
+        _listGraphLayer.clear();
         _listBlendSpace.clear();
+        bool bPlayable = rebuildNodePlayables( _graph, _animationGraphPath, _listBlendSpace );
+        bPlayable      = rebuildLinkedGraphs() && bPlayable;
+        return rebuildGraphLayers() && bPlayable;
+    }
+
+    bool SkeletalAnimatorComponent::rebuildNodePlayables( const AnimationGraphAsset& graph, string_view graphPath, vector<unique_ptr<SkeletalBlendSpaceState>>& outListBlendSpace )
+    {
         bool bPlayable = true;
-        for ( const AnimationGraphNode& node : _graph._listNode )
+        for ( const AnimationGraphNode& node : graph._listNode )
         {
             // 포즈 노드(`AnimationPoseNodeSet`)는 아직 이 애니메이터가 평가하지 않는다 — 클립으로 잘못 재생하지 않고 그래프를 쓰지 않는다.
             if ( node.hasPoseNode() )
             {
-                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphNodePose", "Animation graph '%#' node '%#' is a pose node, which SkeletalAnimatorComponent does not evaluate yet", _animationGraphPath.c_str(), node._name.c_str() );
+                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphNodePose", "Animation graph '%#' node '%#' is a pose node, which SkeletalAnimatorComponent does not evaluate yet", graphPath, node._name.c_str() );
                 bPlayable = false;
                 continue;
             }
@@ -529,9 +587,65 @@ namespace sw
             }
             unique_ptr<SkeletalBlendSpaceState> state = sw::make_unique<SkeletalBlendSpaceState>( hashed_string( node._name ), node._blendSpace, std::move( listClip ) );
             state->updateWeights( _parameters );
-            _listBlendSpace.push_back( std::move( state ) );
+            outListBlendSpace.push_back( std::move( state ) );
         }
-        return rebuildGraphLayers() && bPlayable;
+        return bPlayable;
+    }
+
+    bool SkeletalAnimatorComponent::rebuildLinkedGraphs()
+    {
+        releaseLinkedGraphPlayables();
+        bool bPlayable = true;
+        for ( const unique_ptr<LinkedLayerGraph>& linked : _listLinkedGraph )
+        {
+            // 레이어 슬롯을 적지 않은 주 그래프는 채울 곳이 없다. 빠뜨린 자리를 짐작하지 않고 데이터 오류로 알린다.
+            const bool bSlotDeclared = VectorUtil::containsIf( _graph._listLayer, [&]( const AnimationGraphLayerDef& def )
+            { return def._slotName == linked->_slot; } );
+            if ( bSlotDeclared == false )
+            {
+                SW_LOG_ERROR_ID( "SkeletalAnimator.LinkedLayerSlotUnknown", "Linked layer slot '%#' is not in animation graph '%#'", linked->_slot.c_str(), _animationGraphPath.c_str() );
+                bPlayable = false;
+            }
+            if ( linked->_graph._listNode.empty() )
+            {
+                SW_LOG_ERROR_ID( "SkeletalAnimator.LinkedLayerGraphEmpty", "Linked layer graph '%#' has no states to play", linked->_graphPath.c_str() );
+                bPlayable = false;
+                continue;
+            }
+            if ( linked->_graph._listLayer.empty() == false )
+            {
+                SW_LOG_ERROR_ID( "SkeletalAnimator.LinkedLayerGraphHasLayers", "Linked layer graph '%#' has layers of its own, which a linked layer does not evaluate", linked->_graphPath.c_str() );
+                bPlayable = false;
+                continue;
+            }
+            if ( rebuildNodePlayables( linked->_graph, linked->_graphPath, linked->_listBlendSpace ) == false )
+            {
+                bPlayable = false;
+                continue;
+            }
+            linked->_player.setDefaultBlendSeconds( _blendSeconds );
+            linked->_player.setGraph( &linked->_graph );
+        }
+        return bPlayable;
+    }
+
+    void SkeletalAnimatorComponent::releaseLinkedGraphPlayables()
+    {
+        for ( const unique_ptr<LinkedLayerGraph>& linked : _listLinkedGraph )
+        {
+            linked->_player.setGraph( nullptr );
+            linked->_listBlendSpace.clear();
+        }
+    }
+
+    SkeletalAnimatorComponent::LinkedLayerGraph* SkeletalAnimatorComponent::findLinkedGraph( const hashed_string& slot ) const
+    {
+        for ( const unique_ptr<LinkedLayerGraph>& linked : _listLinkedGraph )
+        {
+            if ( linked->_slot == slot && linked->_player.getGraph() != nullptr )
+                return linked.get();
+        }
+        return nullptr;
     }
 
     bool SkeletalAnimatorComponent::rebuildGraphLayers()
@@ -540,7 +654,8 @@ namespace sw
         bool bPlayable = true;
         for ( const AnimationGraphLayerDef& def : _graph._listLayer )
         {
-            if ( preloadClip( def._clipName ) == false )
+            const bool bSlot = def._slotName.empty() == false;
+            if ( bSlot == false && preloadClip( def._clipName ) == false )
             {
                 SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphLayerClip", "Animation graph layer '%#' clip '%#' was not found in '%#'", def._name.c_str(), def._clipName.c_str(), _animationSetPath.c_str() );
                 bPlayable = false;
@@ -554,11 +669,48 @@ namespace sw
             layer._desc._halfLifeSeconds = def._halfLifeSeconds;
             layer._pGraphLayer           = &def;
             layer._pBoneMask             = def._maskName.empty() ? nullptr : _graph.findBoneMask( def._maskName );
-            layer._clip                  = _mapClip[def._clipName];
-            layer._player.play( layer._clip.get(), def._bLoop == SW_TRUE );
+            if ( bSlot )
+            {
+                // 진입 상태부터 돈다. 비어 있는 슬롯은 레이어만 있고 얹을 포즈가 없다(`applyLayer`).
+                layer._pLinkedGraph = findLinkedGraph( def._slotName );
+                if ( layer._pLinkedGraph != nullptr )
+                    (void)layer._pLinkedGraph->_player.play( hashed_string{}, def._bLoop == SW_TRUE, 0.0f );
+            }
+            else
+            {
+                layer._clip = _mapClip[def._clipName];
+                layer._player.play( layer._clip.get(), def._bLoop == SW_TRUE );
+            }
             _listGraphLayer.push_back( std::move( layer ) );
         }
         return bPlayable;
+    }
+
+    void SkeletalAnimatorComponent::setLinkedLayer( string_view slot, string_view graphPath )
+    {
+        AnimationLinkedLayerBinding* pBinding = VectorUtil::findIf( _listLinkedLayer, [slot]( const AnimationLinkedLayerBinding& binding )
+        { return binding._slot == slot; } );
+        if ( pBinding == nullptr )
+        {
+            pBinding        = &_listLinkedLayer.emplace_back();
+            pBinding->_slot = string{ slot };
+        }
+        pBinding->_graphPath = string{ graphPath };
+        refreshLinkedLayers();
+    }
+
+    void SkeletalAnimatorComponent::refreshLinkedLayers()
+    {
+        if ( hasBegunPlay() == false )
+            return; // 시작이 표를 읽어 짓는다
+        loadLinkedGraphs();
+        if ( _bClipsPending == SW_TRUE )
+            return; // 시작 때 읽는 중이다 — 다 읽히면 레이어까지 짓는다(`applyGraphPlayables`)
+        const bool bPlayable = rebuildLinkedGraphs() && rebuildGraphLayers();
+        if ( bPlayable == false )
+            SW_LOG_ERROR_ID( "SkeletalAnimator.LinkedLayersNotUsed", "The linked layers of '%#' are not used (errors above)", _animationGraphPath.c_str() );
+        if ( _pUnit != nullptr )
+            _pUnit->markPoseDirty();
     }
 
     void SkeletalAnimatorComponent::setAnimationSetPath( string_view path )
@@ -661,7 +813,7 @@ namespace sw
         const AnimationGraphNode* pNode = stateName.empty() ? _graph.findEntryNode() : _graph.findNodeByName( stateName.c_str() );
         // 블렌드 스페이스 노드의 표본은 그래프를 읽을 때 읽었다. 가중치와 길이는 지금 파라미터로 맞춰 둔다(길이 0 이면 재생되지 않는다).
         if ( pNode != nullptr && pNode->hasBlendSpace() )
-            updateBlendSpaceWeights();
+            updateBlendSpaceWeights( _listBlendSpace, _graphPlayer.getPlayer() );
         else
             (void)preloadClip( pNode != nullptr ? hashed_string( pNode->_name ) : stateName ); // 못 찾으면 아래 play 가 오류를 남긴다
         const bool bFound = _graphPlayer.play( stateName, bLoop, blendSeconds < 0.0f ? _blendSeconds : blendSeconds );
@@ -817,22 +969,28 @@ namespace sw
         return bPlaying || bLayered || _sequencerWeight > 0.0f;
     }
 
-    void SkeletalAnimatorComponent::collectActivePlayables( vector<const IAnimationPlayable*>& outListPlayable ) const
+    void SkeletalAnimatorComponent::appendPlayerPlayables( const AnimationPlayer& player, vector<const IAnimationPlayable*>& inoutListPlayable ) const
     {
-        outListPlayable.clear();
-        const AnimationPlayer& player = _graphPlayer.getPlayer();
         for ( const IAnimationPlayable* pPlayable : { player.getCurrentPlayable(), player.getNextPlayable() } )
         {
             if ( pPlayable == nullptr )
                 continue;
-            outListPlayable.push_back( pPlayable );
+            inoutListPlayable.push_back( pPlayable );
             // 블렌드 스페이스 상태의 알림은 표본 클립이 출처다 — 그 클립이 빠지면 받는 쪽이 열린 구간 알림을 닫는다.
             const SkeletalBlendSpaceState* pState = findBlendSpaceState( pPlayable );
             if ( pState != nullptr )
-                pState->appendNotifySources( outListPlayable );
+                pState->appendNotifySources( inoutListPlayable );
         }
+    }
+
+    void SkeletalAnimatorComponent::collectActivePlayables( vector<const IAnimationPlayable*>& outListPlayable ) const
+    {
+        outListPlayable.clear();
+        appendPlayerPlayables( _graphPlayer.getPlayer(), outListPlayable );
         for ( const LayerState& layer : _listGraphLayer )
         {
+            if ( layer._pLinkedGraph != nullptr )
+                appendPlayerPlayables( layer._pLinkedGraph->_player.getPlayer(), outListPlayable );
             if ( layer._clip != nullptr )
                 outListPlayable.push_back( layer._clip.get() );
         }
@@ -929,12 +1087,18 @@ namespace sw
             }
         }
         _listFiredNotify.clear();
-        updateBlendSpaceWeights();
+        updateBlendSpaceWeights( _listBlendSpace, _graphPlayer.getPlayer() );
         _graphPlayer.update( deltaSeconds, &_parameters, &_listFiredNotify );
         for ( LayerState& layer : _listGraphLayer )
         {
             if ( layer._pGraphLayer->_weightParameter.empty() == false )
                 layer._desc._weight = MathUtil::saturate( _parameters.getFloat( layer._pGraphLayer->_weightParameter ) );
+            if ( layer._pLinkedGraph != nullptr )
+            {
+                updateBlendSpaceWeights( layer._pLinkedGraph->_listBlendSpace, layer._pLinkedGraph->_player.getPlayer() );
+                layer._pLinkedGraph->_player.update( deltaSeconds, &_parameters, &_listFiredNotify );
+                continue;
+            }
             layer._player.update( deltaSeconds, &_listFiredNotify );
         }
         for ( LayerState& layer : _listLayer )
@@ -1069,16 +1233,15 @@ namespace sw
                 layer._listBoneWeight[boneIndex] = bInMask ? 1.0f : 0.0f;
             }
         }
-        // 가산 기준은 레이어 클립의 시각 0 본 포즈다.
+        // 가산 기준은 레이어 클립의 시각 0 본 포즈다. 연결 레이어는 클립 하나가 아니므로 스켈레톤의 기준 포즈다.
         layer._additiveReference.setToReference( skeleton );
         if ( layer._clip != nullptr )
             sampleClipIntoPose( *layer._clip, 0.0f, skeleton, layer._additiveReference );
     }
 
-    void SkeletalAnimatorComponent::updateBlendSpaceWeights()
+    void SkeletalAnimatorComponent::updateBlendSpaceWeights( const vector<unique_ptr<SkeletalBlendSpaceState>>& listBlendSpace, AnimationPlayer& player )
     {
-        AnimationPlayer& player = _graphPlayer.getPlayer();
-        for ( const unique_ptr<SkeletalBlendSpaceState>& state : _listBlendSpace )
+        for ( const unique_ptr<SkeletalBlendSpaceState>& state : listBlendSpace )
         {
             const float32 previousLength = state->getPlayLength();
             state->updateWeights( _parameters );
@@ -1097,7 +1260,27 @@ namespace sw
             if ( state.get() == pPlayable )
                 return state.get();
         }
+        for ( const unique_ptr<LinkedLayerGraph>& linked : _listLinkedGraph )
+        {
+            for ( const unique_ptr<SkeletalBlendSpaceState>& state : linked->_listBlendSpace )
+            {
+                if ( state.get() == pPlayable )
+                    return state.get();
+            }
+        }
         return nullptr;
+    }
+
+    void SkeletalAnimatorComponent::sampleLinkedGraphIntoPose( const LinkedLayerGraph& linked, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask )
+    {
+        const AnimationPlayer& player = linked._player.getPlayer();
+        samplePlayableIntoPose( *player.getCurrentPlayable(), player.getCurrentTime(), skeleton, inoutPose, pBoneMask );
+        const IAnimationPlayable* pNext = player.getNextPlayable();
+        if ( pNext == nullptr )
+            return;
+        _scratchLinkedPose.setToReference( skeleton );
+        samplePlayableIntoPose( *pNext, player.getNextTime(), skeleton, _scratchLinkedPose, pBoneMask );
+        Pose::blend( inoutPose, _scratchLinkedPose, player.getBlendAlpha(), inoutPose );
     }
 
     void SkeletalAnimatorComponent::samplePlayableIntoPose( const IAnimationPlayable& playable, float32 time, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask )
@@ -1182,14 +1365,19 @@ namespace sw
     {
         // inertialization 의 시간은 가중치가 0 이어도 흐른다(다시 켰을 때 오래된 오프셋이 남지 않게).
         layer._inertializer.update( _lastDeltaSeconds );
-        if ( layer._clip == nullptr || layer._desc._weight <= 0.0f )
+        // 비어 있는 슬롯 · 재생할 것이 없는 연결 그래프는 얹을 포즈가 없다 — 기준 포즈를 덮어 쓰지 않는다.
+        const bool bLinkedPose = layer._pLinkedGraph != nullptr && layer._pLinkedGraph->_player.getPlayer().getCurrentPlayable() != nullptr;
+        if ( ( layer._clip == nullptr && bLinkedPose == false ) || layer._desc._weight <= 0.0f )
         {
             layer._history.invalidate(); // 얹지 않은 프레임이다 — 다시 켰을 때 옛 레이어 포즈에서 출발하지 않는다
             return;
         }
         refreshLayerMask( layer, skeleton );
         _scratchLayerPose.setToReference( skeleton );
-        sampleClipIntoPose( *layer._clip, layer._player.getCurrentTime(), skeleton, _scratchLayerPose, pBoneMask );
+        if ( bLinkedPose )
+            sampleLinkedGraphIntoPose( *layer._pLinkedGraph, skeleton, _scratchLayerPose, pBoneMask );
+        else
+            sampleClipIntoPose( *layer._clip, layer._player.getCurrentTime(), skeleton, _scratchLayerPose, pBoneMask );
         if ( layer._desc._halfLifeSeconds > 0.0f )
         {
             if ( layer._bRestartPending == SW_TRUE )

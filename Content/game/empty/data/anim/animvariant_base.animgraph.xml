@@ -1,0 +1,12 @@
+<!-- 시나리오 automation/animvariant 의 바탕 그래프 — 상태는 Idle 하나이고 상체에 연결 레이어 슬롯을 둔다. 비어 있는 슬롯은 아무것도 얹지 않는다. -->
+<AnimationGraphAsset>
+	<nodes>
+		<node id="1" name="Idle" loop="true" />
+	</nodes>
+	<bone_masks>
+		<bone_mask name="UpperBody" file="common/data/anim/masks/upper_body.bonemask.xml" />
+	</bone_masks>
+	<layers>
+		<layer name="Upper" slot="Weapon" mask="UpperBody" weight="1" blend="Override" />
+	</layers>
+</AnimationGraphAsset>

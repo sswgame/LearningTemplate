@@ -1,0 +1,12 @@
+<!-- 바탕 그래프의 Idle 상태만 바꾼 차이 — 이름이 열쇠라 id · 반복은 물려받는다. -->
+<AnimationGraphAsset _base="game/empty/data/anim/animvariant_base.animgraph.xml">
+	<nodes>
+		<node name="Idle">
+			<blend_space x="Speed">
+				<samples>
+					<sample clip="cheer" x="0" />
+				</samples>
+			</blend_space>
+		</node>
+	</nodes>
+</AnimationGraphAsset>

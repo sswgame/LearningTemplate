@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  애니메이션 변형 — 같은 기사 · 같은 무대에서 하나씩만 바꿔 바탕 사진과 견준다. 값이 재생을 바꾸지 않으면 진다(`ExpectImagesDiffer`).
+  ① 셋을 교체표로 바꾸면 그래프가 쓰는 슬롯 idle 이 다른 클립이 된다(유니티 Animator Override Controller).
+  ② 그래프 차이 파일(`_base`)이 Idle 상태만 바꾼다. ③ 비어 있는 연결 레이어 슬롯을 채우면 상체가 그 그래프를 따른다(언리얼 Linked Anim Layers).
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.animvariant" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/animvariant_base.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="0"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="30"/>
+	<Screenshot file="animvariant_base.ppm"/>
+	<LoadScene path="game/empty/maps/animvariant_set.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="30"/>
+	<Screenshot file="animvariant_set.ppm"/>
+	<LoadScene path="game/empty/maps/animvariant_graph.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="30"/>
+	<Screenshot file="animvariant_graph.ppm"/>
+	<LoadScene path="game/empty/maps/animvariant_linked.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="30"/>
+	<Screenshot file="animvariant_linked.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="animvariant_base.ppm" second="animvariant_set.ppm" region="0.3,0.1,0.4,0.8" minDiffering="0.005"/>
+	<ExpectImagesDiffer first="animvariant_base.ppm" second="animvariant_graph.ppm" region="0.3,0.1,0.4,0.8" minDiffering="0.005"/>
+	<ExpectImagesDiffer first="animvariant_base.ppm" second="animvariant_linked.ppm" region="0.3,0.1,0.4,0.8" minDiffering="0.005"/>
+	<Pass/>
+</Scenario>

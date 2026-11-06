@@ -8,6 +8,8 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Graph/AnimationGraphFields.h"
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
@@ -52,7 +54,38 @@ namespace sw
                 SW_LOG_ERROR_ID( "AnimationGraphAsset.UnexpectedElement", "Animation graph '%#': <%#> holds only <%#> elements (found <%#>)", sourceLabel, pParentTag, pTag, element.getName() );
                 return false;
             }
+
+            /** @brief 내용이 있는 자식 원소입니다. 빈 원소는 차이 파일이 물려받은 것을 비운 것이라 없는 것과 같습니다. */
+            [[nodiscard]] static XMLNode findFilledChild( const XMLNode& parent, const utf8* pName )
+            {
+                const XMLNode child   = parent.findChild( pName );
+                const bool    bFilled = child.isValid() && ( child.getFirstAttribute().isValid() || child.findChild().isValid() );
+                return bFilled ? child : XMLNode{};
+            }
+
+            /** @brief 열쇠 있는 목록의 규칙 하나입니다. */
+            [[nodiscard]] static DataInheritanceSchema makeKeyedList( const utf8* pName, const utf8* pKey )
+            {
+                DataInheritanceSchema list{ pName };
+                list._keyAttribute = pKey;
+                list._bEmptyClears = SW_FALSE; // 숫자 칸의 빈 글은 읽히지 않는다 — 기본값으로 되돌린 칸은 저장의 왕복 검사가 잡는다(`saveToFile`)
+                return list;
+            }
+
+            /** @brief 상속 규칙입니다(`AnimationGraphAsset` 설명). */
+            [[nodiscard]] static DataInheritanceSchema makeInheritanceSchema()
+            {
+                DataInheritanceSchema schema{ "AnimationGraphAsset" };
+                schema._bEmptyClears = SW_FALSE;
+                schema._listField.push_back( makeKeyedList( "nodes", "name" ) );
+                schema._listField.push_back( makeKeyedList( "links", "id" ) );
+                schema._listField.push_back( makeKeyedList( "bone_masks", "name" ) );
+                schema._listField.push_back( makeKeyedList( "layers", "name" ) );
+                schema._listField.push_back( makeKeyedList( "comments", "id" ) );
+                return schema;
+            }
         };
+        SW_DATA_INHERITANCE_SCHEMA( AnimationGraphAsset, &AnimationGraphAssetInternal::makeInheritanceSchema ); // 팩 쿠커가 루트 이름으로 찾는다
     } // namespace
 } // namespace sw
 
@@ -90,11 +123,10 @@ namespace sw
         if ( path.empty() )
             return false;
 
-        XMLDocument doc;
-        if ( doc.loadResource( assetID ) == false )
+        string text;
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
             return false;
-        // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 parseXML 에 다시 넘기지 않는다).
-        return parseRoot( doc.getRoot( "AnimationGraphAsset" ), path );
+        return parseText( text, path );
     }
 
     bool AnimationGraphAsset::loadFromDiskFile( string_view diskPath )
@@ -104,28 +136,63 @@ namespace sw
         if ( diskPath.empty() )
             return false;
 
-        XMLDocument doc;
-        if ( doc.loadFile( diskPath ) == false )
+        string text;
+        if ( AssetIO::readTextFile( diskPath, text ) == false )
             return false;
-        return parseRoot( doc.getRoot( "AnimationGraphAsset" ), diskPath );
+        return parseText( text, diskPath );
     }
 
     bool AnimationGraphAsset::saveToFile( const AbsolutePath& absPath ) const
     {
         if ( absPath.str().empty() )
             return false;
-        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), toXML() );
+        const string fullText = toXML();
+        string       deltaText;
+        if ( _baseID.empty() == false )
+        {
+            AnimationGraphAsset parent;
+            if ( parent.loadFromFile( AssetID{ _baseID } ) == false )
+            {
+                DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
+                return false;
+            }
+            if ( DataInheritance::makeDelta( fullText, parent.toXML(), AnimationGraphAssetInternal::makeInheritanceSchema(), _baseID, deltaText ) == false )
+                return false;
+            // 프리팹처럼 뺀 글을 다시 읽어 같을 때만 쓴다 — 칸을 형식 기본값으로 되돌리면 차이로 적을 수 없다.
+            AnimationGraphAsset reread;
+            if ( reread.parseText( deltaText, absPath.str() ) == false || reread.toXML() != fullText )
+            {
+                SW_LOG_WARNING_ID( "AnimationGraphAsset.DeltaMismatch", "Animation graph '%#': the difference from base '%#' does not read back the same - saving the whole graph without a base", absPath.str(), _baseID );
+                deltaText.clear();
+            }
+        }
+        return FileUtil::ensureParentDirectoryExists( absPath.str() ) && FileUtil::writeTextFile( absPath.str(), deltaText.empty() ? fullText : deltaText );
     }
 
     bool AnimationGraphAsset::parseXML( string_view xmlView )
     {
         clear();
+        return parseText( xmlView, "<animation graph text>" );
+    }
 
-        XMLDocument doc;
-        if ( doc.parse( xmlView, "<animation graph text>" ) == false )
+    bool AnimationGraphAsset::parseText( string_view text, string_view sourceLabel )
+    {
+        clear();
+        _baseID = DataInheritance::findBasePath( text );
+        string flatText;
+        if ( _baseID.empty() == false && DataInheritance::flattenFromResources( text, sourceLabel, AnimationGraphAssetInternal::makeInheritanceSchema(), flatText ) == false )
+        {
+            clear();
             return false;
-
-        return parseRoot( doc.getRoot( "AnimationGraphAsset" ), "<animation graph text>" );
+        }
+        XMLDocument doc;
+        if ( doc.parse( _baseID.empty() ? text : string_view{ flatText }, sourceLabel ) == false )
+        {
+            clear();
+            return false;
+        }
+        // 파싱한 문서를 그대로 읽는다(문자열로 덤프해 다시 넘기지 않는다).
+        return parseRoot( doc.getRoot( "AnimationGraphAsset" ), sourceLabel );
     }
 
     bool AnimationGraphAsset::parseBlendSpace( const XMLNode& blendSpaceXML, AnimationGraphNode& inoutNode )
@@ -215,8 +282,35 @@ namespace sw
         bValid      = parseComments( root, sourceLabel ) && bValid;
         if ( parseLayers( root ) == false )
             bValid = false;
+        bValid = validateGraphIDs( sourceLabel ) && bValid;
         if ( bValid == false )
             clear();
+        return bValid;
+    }
+
+    bool AnimationGraphAsset::validateGraphIDs( string_view sourceLabel ) const
+    {
+        bool bValid = true;
+        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
+        {
+            if ( findNode( _listNode[nodeIndex]._id ) == &_listNode[nodeIndex] )
+                continue;
+            SW_LOG_ERROR_ID( "AnimationGraphAsset.NodeIDRepeats", "Animation graph '%#': node '%#' repeats id %#", sourceLabel, _listNode[nodeIndex]._name.c_str(), _listNode[nodeIndex]._id );
+            bValid = false;
+        }
+        for ( const AnimationGraphLink& link : _listLink )
+        {
+            if ( VectorUtil::findBy<&AnimationGraphLink::_id>( _listLink, link._id ) != &link )
+            {
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.LinkIDRepeats", "Animation graph '%#': link id %# repeats", sourceLabel, link._id );
+                bValid = false;
+            }
+            if ( findNode( link._fromNode ) == nullptr || findNode( link._toNode ) == nullptr )
+            {
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.LinkNodeMissing", "Animation graph '%#': link %# joins nodes %# and %#, which the graph does not both have", sourceLabel, link._id, link._fromNode, link._toNode );
+                bValid = false;
+            }
+        }
         return bValid;
     }
 
@@ -230,7 +324,7 @@ namespace sw
             AnimationGraphNodeFields fields;
             std::optional<bool>      loop;
             if ( Internal::isTag( nodeXML, "node", "nodes", sourceLabel ) == false ||
-                 ( Internal::readElement( nodeXML, fields, sourceLabel, Internal::kArrNodeChild, { "loop" } ) && nodeXML.readOptionalAttribute( "loop", loop ) ) == false )
+                 ( Internal::readElement( nodeXML, fields, sourceLabel, Internal::kArrNodeChild, { "loop" } ) && ( nodeXML.getAttributeText( "loop" ).empty() || nodeXML.readOptionalAttribute( "loop", loop ) ) ) == false )
             {
                 bValid = false;
                 continue;
@@ -242,10 +336,10 @@ namespace sw
             node._syncGroup = fields._syncGroup;
             if ( loop.has_value() )
                 node._loopOverride = *loop ? 1 : 0;
-            const XMLNode blendSpaceXML = nodeXML.findChild( "blend_space" );
+            const XMLNode blendSpaceXML = Internal::findFilledChild( nodeXML, "blend_space" );
             if ( blendSpaceXML.isValid() && parseBlendSpace( blendSpaceXML, node ) == false )
                 bValid = false;
-            const XMLNode poseNodeXML = nodeXML.findChild( "pose_node" );
+            const XMLNode poseNodeXML = Internal::findFilledChild( nodeXML, "pose_node" );
             if ( poseNodeXML.isValid() && parsePoseNode( poseNodeXML, node ) == false )
                 bValid = false;
             if ( node.hasBlendSpace() && node.hasPoseNode() )
@@ -282,7 +376,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphLinkUses", "Animation graph link %# uses Inertialization without a positive 'half_life'", link._id );
                 bValid = false;
             }
-            const XMLNode conditionXML = linkXML.findChild( "condition" );
+            const XMLNode conditionXML = Internal::findFilledChild( linkXML, "condition" );
             if ( conditionXML.isValid() )
             {
                 AnimationGraphConditionFields condition;
@@ -309,6 +403,7 @@ namespace sw
         _listBoneMask.clear();
         _listLayer.clear();
         _listComment.clear();
+        _baseID.clear();
     }
 
     bool AnimationGraphAsset::parseComments( const XMLNode& root, string_view sourceLabel )
@@ -399,9 +494,9 @@ namespace sw
                 bValid = false;
                 continue;
             }
-            if ( fields._name.empty() || fields._clip.empty() || findLayer( fields._name ) != nullptr )
+            if ( fields._name.empty() || fields._clip.empty() == fields._slot.empty() || findLayer( fields._name ) != nullptr )
             {
-                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphRepeatsLayer", "Animation graph layer '%#' needs a 'clip' and a 'name' no other layer has", fields._name.c_str() );
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphRepeatsLayer", "Animation graph layer '%#' needs exactly one of 'clip' and 'slot' (one of the other kind over a base layer needs _op=\"Replace\") and a 'name' no other layer has", fields._name.c_str() );
                 bValid = false;
                 continue;
             }
@@ -414,6 +509,7 @@ namespace sw
             AnimationGraphLayerDef layer{};
             layer._name            = fields._name;
             layer._clipName        = fields._clip;
+            layer._slotName        = fields._slot;
             layer._maskName        = fields._mask;
             layer._weightParameter = fields._weightParam;
             layer._weight          = fields._weight;
@@ -449,6 +545,7 @@ namespace sw
             AnimationGraphLayerFields fields;
             fields._name        = layer._name;
             fields._clip        = layer._clipName;
+            fields._slot        = layer._slotName;
             fields._mask        = layer._maskName;
             fields._weightParam = layer._weightParameter;
             fields._weight      = layer._weight;

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 교체표 — 그래프가 쓰는 슬롯 idle 의 내용만 다른 클립으로 바꾼다. -->
+<AnimationSet formatVersion="0" _base="common/models/kaykit/knight/knight.animset.xml">
+	<clip name="idle" _op="Replace" set="common/models/kaykit/knight/knight.animset.xml" source="cheer" />
+</AnimationSet>

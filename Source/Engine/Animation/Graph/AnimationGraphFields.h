@@ -116,8 +116,12 @@ namespace sw
 
         PROPERTY( Required )
         hashed_string _name{};
-        PROPERTY( Required )
+        /** @brief 이 레이어가 재생할 클립 이름입니다. `slot` 과 둘 중 하나만 적는다. */
+        PROPERTY()
         hashed_string _clip{};
+        /** @brief 쓰는 쪽이 다른 그래프로 채우는 연결 레이어 슬롯 이름입니다(`SkeletalAnimatorComponent::_listLinkedLayer`). 비어 있는 슬롯은 아무것도 얹지 않는다. */
+        PROPERTY()
+        hashed_string _slot{};
         /** @brief 비었으면 모든 본이다. */
         PROPERTY()
         hashed_string _mask{};

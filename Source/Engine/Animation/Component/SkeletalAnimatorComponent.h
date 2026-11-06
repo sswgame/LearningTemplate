@@ -136,11 +136,31 @@ namespace sw
     class SW_API SkeletalAnimatorClipSource final : public IAnimationPlayableSource
     {
     public:
-        explicit SkeletalAnimatorClipSource( const SkeletalAnimatorComponent& owner );
+        /** @brief @p pListBlendSpace 는 그 상태 기계의 블렌드 스페이스 상태입니다. nullptr 이면 애니메이터의 주 그래프 것입니다. 클립은 어느 쪽이든 애니메이터의 셋에서 찾습니다. */
+        explicit SkeletalAnimatorClipSource( const SkeletalAnimatorComponent& owner, const vector<unique_ptr<SkeletalBlendSpaceState>>* pListBlendSpace = nullptr );
         const IAnimationPlayable* findPlayable( const hashed_string& name ) const override;
 
     private:
-        const SkeletalAnimatorComponent& _owner;
+        const SkeletalAnimatorComponent&                   _owner;
+        const vector<unique_ptr<SkeletalBlendSpaceState>>* _pListBlendSpace;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct AnimationLinkedLayerBinding
+     * @brief 그래프의 연결 레이어 슬롯(`<layer slot>`) 하나를 그래프 파일로 채우는 줄입니다. 언리얼 Linked Anim Layers 의 Link Anim Class Layers 에 해당합니다.
+     */
+    REFLECT()
+    struct SW_API AnimationLinkedLayerBinding
+    {
+        REFLECT_BODY();
+
+        PROPERTY( InheritKey, Tooltip = "Layer slot the animation graph declares" )
+        string _slot;
+        PROPERTY( AssetPath, AssetType = "AnimationGraph", Tooltip = "Graph whose pose fills the slot; its clip names come from this animator's set" )
+        string _graphPath;
     };
 } // namespace sw
 
@@ -152,6 +172,8 @@ namespace sw
      * @details - **클립**: 상태 이름이 곧 클립 이름이고, 파일은 `_animationSetPath` 의 셋이 정합니다(`AnimationSet` — 임포트가 모델 옆에 쓰고, 묶음을 섞는 셋은 손으로 쓴다).
      *            이름에 '/' 가 있으면 클립 파일의 콘텐츠 경로(확장자 없이)다 — 미리보기 창이 고른 파일 하나를 재생할 때 쓴다.
      *          - **그래프**: `_animationGraphPath` 의 노드가 상태, 링크가 전이입니다(`AnimationGraphPlayer`). 그래프가 없으면 `play( 이름 )` 이 바로 재생합니다.
+     *          - **연결 레이어**: 그래프의 `<layer slot>` 을 `_listLinkedLayer` 의 그래프로 채웁니다(언리얼 Linked Anim Layers). 채운 그래프는 자기 상태 기계로 돌고, 파라미터와 셋은 이 애니메이터의 것을 함께 씁니다.
+     *            같은 트리거를 주 그래프와 함께 쓰면 먼저 도는 주 그래프가 끕니다. 언리얼은 인스턴스가 따로 변수를 들지만, 여기는 게임 코드가 레이어를 몰라도 되도록 한 벌로 둡니다.
      *          - **단계**: 시간(상태 기계, 알림, 루트 모션, 커브. 매 프레임) → 기본 포즈(샘플, 크로스페이드, 레이어, 시퀀서 덮어쓰기. LOD 가
      *            허락한 프레임) → 게임 스레드에서 루트 모션을 오브젝트 트랜스폼에 씁니다.
      *          - **핫 리로드**: 현재 상태와 시간을 PROPERTY(`_currentState`, `_stateTime`)로 보관해 모듈이 바뀌어도 그 자리에서 이어 갑니다.
@@ -196,6 +218,11 @@ namespace sw
         [[nodiscard]] bool seekCurrentTime( float32 seconds );
         /** @brief 그래프 경로를 바꾸고 다시 읽습니다. */
         void setAnimationGraphPath( string_view path );
+        /**
+         * @brief 연결 레이어 슬롯을 그래프로 채웁니다(무기를 바꾸면 상체 그래프를 바꾼다). @p graphPath 가 비면 슬롯을 비웁니다.
+         * @details 주 상태 기계는 그대로 돌고, 그래프 레이어를 다시 만듭니다(`setGraphLayerWeight` 로 정한 가중치는 그래프 값으로 돌아갑니다). 그래프를 그 자리에서 읽습니다(동기 API).
+         */
+        void setLinkedLayer( string_view slot, string_view graphPath );
         /** @brief 클립을 미리 읽어 둡니다(게임 스레드). 워커의 전이는 읽어 둔 클립만 찾습니다. */
         bool preloadClip( const hashed_string& clipName );
         /**
@@ -329,11 +356,25 @@ namespace sw
             uint8   _bPreviousValid{ SW_FALSE };
         };
 
+        /** @brief 연결 레이어 슬롯을 채운 그래프 하나의 실행 상태입니다. 포인터를 빌려 주므로(`LayerState`, 상태 기계) 옮기지 않습니다. */
+        struct LinkedLayerGraph
+        {
+            explicit LinkedLayerGraph( const SkeletalAnimatorComponent& owner );
+
+            hashed_string                               _slot;
+            string                                      _graphPath;
+            AnimationGraphAsset                         _graph;
+            AnimationGraphPlayer                        _player;
+            vector<unique_ptr<SkeletalBlendSpaceState>> _listBlendSpace;
+            SkeletalAnimatorClipSource                  _source;
+        };
+
         /** @brief 레이어 하나의 실행 상태입니다. */
         struct LayerState
         {
             AnimationLayerDesc              _desc;
             shared_ptr<const AnimationClip> _clip;
+            LinkedLayerGraph*               _pLinkedGraph{ nullptr }; ///< 슬롯 레이어를 채운 그래프다(`_listLinkedGraph` 안). 클립 레이어와 비어 있는 슬롯은 nullptr 이다
             AnimationPlayer                 _player;
             vector<float32>                 _listBoneWeight; ///< 본 마스크(본 수 크기)다. 스켈레톤이 바뀌면 다시 만든다
             const Skeleton*                 _pMaskSkeleton{ nullptr };
@@ -351,8 +392,12 @@ namespace sw
         void loadGraph();
         /** @brief 시작 때의 그래프 읽기입니다. 클립은 비동기로 요청하고(`requestClipLoads`), 다 읽혔으면 그 자리에서 마무리합니다. */
         void loadGraphForBeginPlay();
-        /** @brief 그래프가 이름 붙인 클립(노드 · 블렌드 표본 · 레이어)과 그래프 밖 시작 상태의 클립을 비동기로 요청합니다(이미 표에 있는 것은 빼고). */
+        /** @brief 그래프가 이름 붙인 클립(노드 · 블렌드 표본 · 레이어, 연결 레이어의 그래프까지)과 그래프 밖 시작 상태의 클립을 비동기로 요청합니다(이미 표에 있는 것은 빼고). */
         void requestClipLoads();
+        /** @brief @p graph 의 노드와 블렌드 표본이 이름 붙인 클립을 비동기로 요청합니다. */
+        void requestNodeClipLoads( const AnimationGraphAsset& graph );
+        /** @brief `_listLinkedLayer` 의 그래프 파일을 다시 읽습니다. 레이어가 빌린 것을 먼저 놓습니다. 포즈는 `rebuildLinkedGraphs` 뒤에 나옵니다. */
+        void loadLinkedGraphs();
         /** @brief 클립 하나를 비동기로 요청합니다. 이름이 비었거나 이미 표에 있거나 요청한 클립이면 아무것도 하지 않습니다. */
         void requestClipLoad( const hashed_string& clipName );
         /** @brief 요청한 클립이 다 읽혔으면 표에 넣고 그래프를 지은 뒤 미뤄 둔 재생을 합니다. 아직 읽는 중이면 false 입니다. */
@@ -371,12 +416,32 @@ namespace sw
          * @return 포즈 노드(아직 평가하지 않는다), 표본 클립이 없는 블렌드 스페이스, 클립이 없는 레이어가 있으면 각각 오류를 남기고 false 입니다.
          */
         [[nodiscard]] bool rebuildGraphPlayables();
+        /**
+         * @brief @p graph 의 노드 클립을 미리 읽고 블렌드 스페이스 상태를 @p outListBlendSpace 에 다시 만듭니다.
+         * @return 포즈 노드나 표본 클립이 없는 블렌드 스페이스가 있으면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool rebuildNodePlayables( const AnimationGraphAsset& graph, string_view graphPath, vector<unique_ptr<SkeletalBlendSpaceState>>& outListBlendSpace );
+        /**
+         * @brief 연결 레이어 그래프의 재생할 것을 다시 만들고 상태 기계에 겁니다.
+         * @return 그래프를 읽지 못했거나, 그래프가 또 레이어를 적었거나(한 단계만 지원), 주 그래프에 없는 슬롯을 채우면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool rebuildLinkedGraphs();
+        /** @brief 연결 레이어 그래프의 상태 기계와 재생할 것을 놓습니다. */
+        void releaseLinkedGraphPlayables();
+        /** @brief 슬롯을 채운 그래프입니다. 비어 있는 슬롯이면 nullptr 입니다. */
+        LinkedLayerGraph* findLinkedGraph( const hashed_string& slot ) const;
+        /** @brief `_listLinkedLayer` 가 바뀌었습니다. 그래프를 다시 읽고 레이어를 다시 만듭니다. 주 상태 기계는 그대로 돕니다. */
+        void refreshLinkedLayers();
+        /** @brief 연결 레이어 그래프의 지금 포즈를 @p inoutPose 에 씁니다. */
+        void sampleLinkedGraphIntoPose( const LinkedLayerGraph& linked, const Skeleton& skeleton, Pose& inoutPose, const uint8* pBoneMask );
+        /** @brief @p player 의 재생 중인 항목(현재 · 다음 슬롯과 블렌드 스페이스의 알림 표본)을 덧붙입니다. */
+        void appendPlayerPlayables( const AnimationPlayer& player, vector<const IAnimationPlayable*>& inoutListPlayable ) const;
         /** @brief 그래프의 "layers" 로 그래프 레이어를 다시 만듭니다. 클립을 못 찾은 레이어가 있으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool rebuildGraphLayers();
         /** @brief 코드 레이어의 클립을 지금 셋에서 다시 찾습니다. 위상은 잇고, 없는 이름은 오류를 남기고 그 레이어를 끕니다. */
         void rebindCodeLayers();
-        /** @brief 블렌드 스페이스 상태의 가중치를 파라미터로 다시 구합니다. 현재 슬롯의 상태는 길이가 바뀌어도 위상을 지킵니다. */
-        void updateBlendSpaceWeights();
+        /** @brief @p listBlendSpace 의 가중치를 파라미터로 다시 구합니다. @p player 의 현재 슬롯 상태는 길이가 바뀌어도 위상을 지킵니다. */
+        void updateBlendSpaceWeights( const vector<unique_ptr<SkeletalBlendSpaceState>>& listBlendSpace, AnimationPlayer& player );
         /** @brief 재생할 것이 이 애니메이터의 블렌드 스페이스 상태면 그것을, 아니면(클립) nullptr 을 반환합니다. */
         const SkeletalBlendSpaceState* findBlendSpaceState( const IAnimationPlayable* pPlayable ) const;
         /** @brief 재생할 것(클립 또는 블렌드 스페이스 상태)을 @p time 에 샘플해 @p inoutPose 에 씁니다. */
@@ -415,6 +480,8 @@ namespace sw
         AssetRef<AnimationGraphAsset> _animationGraphPath;
         PROPERTY( Category = "Animation", DisplayName = "Animation Set", Tooltip = "Name to clip table (*.animset.xml); the import writes one beside each model" )
         AssetRef<AnimationSet> _animationSetPath;
+        PROPERTY( Category = "Animation", DisplayName = "Linked Layers", Tooltip = "Graphs that fill the layer slots of the animation graph; an unfilled slot adds nothing" )
+        vector<AnimationLinkedLayerBinding> _listLinkedLayer;
         PROPERTY( Category = "Animation", DisplayName = "Initial State", Tooltip = "State (or clip) played at begin play; empty uses the graph entry node" )
         string _initialState;
         PROPERTY( Category = "Animation", DisplayName = "Current State", Tooltip = "Currently playing state (kept across hot reload)", ReadOnly )
@@ -451,8 +518,9 @@ namespace sw
         unordered_map<const AnimationClip*, vector<int32>>            _mapTrackToBone;
         const Skeleton*                                               _pTrackMapSkeleton;
         vector<LayerState>                                            _listLayer;
-        vector<LayerState>                                            _listGraphLayer; ///< 그래프 "layers" 의 레이어다. 코드 레이어보다 먼저 얹는다
-        vector<unique_ptr<SkeletalBlendSpaceState>>                   _listBlendSpace; ///< 그래프의 블렌드 스페이스 상태다(상태 기계가 포인터를 빌린다)
+        vector<LayerState>                                            _listGraphLayer;  ///< 그래프 "layers" 의 레이어다. 코드 레이어보다 먼저 얹는다
+        vector<unique_ptr<SkeletalBlendSpaceState>>                   _listBlendSpace;  ///< 그래프의 블렌드 스페이스 상태다(상태 기계가 포인터를 빌린다)
+        vector<unique_ptr<LinkedLayerGraph>>                          _listLinkedGraph; ///< `_listLinkedLayer` 의 그래프를 읽은 것이다
         vector<Pose>                                                  _listScratchSamplePose;
         vector<const Pose*>                                           _listScratchSamplePosePointer;
         vector<float32>                                               _listScratchSampleWeight;
@@ -464,6 +532,7 @@ namespace sw
         Pose                                                          _scratchPose;
         Pose                                                          _scratchTrackPose;
         Pose                                                          _scratchLayerPose;
+        Pose                                                          _scratchLinkedPose;
         vector<uint8>                                                 _listScratchTrackMask; ///< 본 LOD 마스크를 트랙 순서로 옮긴 것(샘플마다 재사용)
         PoseHistory                                                   _baseHistory;          ///< 화면에 보인 지난 기본 포즈(레이어 전)다. 페이드가 끊기면 · inertialization 이 여기서 출발한다
         Pose                                                          _carryOverPose;        ///< 끊긴 순간의 포즈다. 새 페이드 길이 동안 현재 포즈로 섞이며 사라진다

@@ -39,7 +39,9 @@ namespace sw
      * @struct AnimationGraphLayerDef
      * @brief 그래프의 레이어 하나입니다(XML "layers" 항목). 상태 기계 결과 위에 클립 하나를 마스크 안의 본에 가중치만큼 얹습니다.
      * @details XML 형식은 `<layer name="UpperBody" clip="Aim" mask="UpperBody" weight="1" blend="Override" loop="true" weight_param="AimWeight" />` 이다.
-     *          name, clip, weight, blend 는 필수다. "mask" 를 적지 않으면 모든 본이고, 적었는데 "bone_masks" 에 없으면 로드 오류다.
+     *          name, weight, blend 는 필수이고 clip 과 slot 은 둘 중 하나만 적는다. "mask" 를 적지 않으면 모든 본이고, 적었는데 "bone_masks" 에 없으면 로드 오류다.
+     *          `slot="UpperBody"` 는 클립 대신 다른 그래프의 포즈를 얹는 연결 레이어다(언리얼 Linked Anim Layers). 그래프는 슬롯만 적고, 쓰는 쪽(`SkeletalAnimatorComponent::_listLinkedLayer`)이
+     *          그래프 파일로 채운다. 채우지 않은 슬롯은 얹지 않는다 — 무기가 없는 캐릭터처럼 비어 있는 것이 정상인 자리다.
      *          "weight_param" 이 있으면 매 프레임 그 파라미터 값(0..1 로 자름)이 가중치다(게임 코드가 레이어 번호를 몰라도 파라미터로 켜고 끈다).
      *          언리얼 Layered Blend Per Bone, 유니티 Animator 레이어(마스크, 가중치, Override/Additive)에 해당한다.
      */
@@ -47,6 +49,7 @@ namespace sw
     {
         hashed_string       _name{};
         hashed_string       _clipName{};
+        hashed_string       _slotName{};        ///< 비어 있지 않으면 `_clipName` 대신 쓰는 쪽이 채우는 연결 레이어 슬롯이다.
         hashed_string       _maskName{};        ///< 비었으면 모든 본이다.
         hashed_string       _weightParameter{}; ///< 비었으면 `_weight` 를 그대로 쓴다.
         float32             _weight{ 1.0f };
@@ -211,6 +214,10 @@ namespace sw
     /**
      * @class AnimationGraphAsset
      * @brief BlendSpace 와 SpriteAnimator 가 노드 이름을 함께 쓰는 XML 그래프입니다.
+     * @details 루트에 `_base="<그래프>"` 를 적으면 차이만 적는다(`DataInheritance`). 상태는 이름, 전이는 id, 레이어와 본 마스크는 이름, 주석은 id 가 열쇠다.
+     *          상태의 열쇠가 id 가 아니라 이름인 까닭: 부모와 자식이 따로 더한 상태의 id 가 겹치면 조용히 한 상태로 합쳐지지 않고 "id 가 겹친다" 는 오류로 드러난다.
+     *          `blend_space` · `pose_node` · `condition` 은 통째로 바뀐다(빈 원소는 비운다). 표본 일부만 다른 상태보다, 상태를 바꾸는 쪽이 뜻이 분명하다.
+     *          언리얼 Animation Blueprint 자식(Asset Override 로 클립만 바꾼다)과 유니티 Override Controller 는 구조를 못 바꾸지만 여기는 상태와 전이도 더하고 뺀다(기억에 의존).
      */
     class SW_API AnimationGraphAsset
     {
@@ -227,6 +234,7 @@ namespace sw
         vector<AnimationBoneMaskDef>   _listBoneMask; /**< 본 마스크 목록입니다(XML "bone_masks"). 레이어가 이름으로 가리킵니다. */
         vector<AnimationGraphLayerDef> _listLayer;    /**< 레이어 목록입니다(XML "layers"). 적은 순서대로 얹습니다. */
         vector<GraphCommentBox>        _listComment;  /**< 그래프 에디터의 주석 상자입니다(XML "comments", 선택 — 실행에는 쓰지 않는다). */
+        string                         _baseID;       /**< 부모 그래프의 리소스 id 입니다(XML "_base"). 목록은 펼친 값이고, 저장이 부모와 다른 칸만 쓴다. */
         /** @brief 이 에셋 종류입니다(등록은 `AnimationGraphAsset.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "AnimationGraphAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
@@ -237,9 +245,9 @@ namespace sw
         [[nodiscard]] bool loadFromFile( const AssetID& assetID );
         /** @brief **디스크 파일**의 XML 을 읽습니다. 리소스 id 로 풀지 않고 팩을 보지 않습니다(에디터 문서 · 도구 · 테스트용). */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
-        /** @brief XML 파일을 씁니다. */
+        /** @brief XML 파일을 씁니다. `_baseID` 가 있으면 차이만 쓰고, 차이로 같은 그래프가 나오지 않으면(칸을 형식 기본값으로 되돌렸다) 경고하고 부모 없는 한 벌로 씁니다. */
         [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
-        /** @brief XML 본문을 파싱합니다. */
+        /** @brief XML 본문을 파싱합니다. 루트가 `_base` 를 적었으면 부모를 합칩니다. */
         [[nodiscard]] bool parseXML( string_view xml );
         /** @brief XML 본문을 만듭니다. */
         string toXML() const;
@@ -259,6 +267,10 @@ namespace sw
         const AnimationGraphLayerDef* findLayer( const hashed_string& name ) const;
 
     private:
+        /** @brief 글을 펼치고(`_base`) 읽습니다. 세 읽기 입구의 공통 단계입니다. @p sourceLabel 은 오류에 적는 이름입니다. */
+        [[nodiscard]] bool parseText( string_view text, string_view sourceLabel );
+        /** @brief 노드 id 가 겹치거나, 링크 id 가 겹치거나, 링크가 없는 노드를 가리키면 오류를 남기고 false 입니다(차이 파일이 부모와 어긋난 것이 여기서 드러난다). */
+        [[nodiscard]] bool validateGraphIDs( string_view sourceLabel ) const;
         /** @brief 이미 파싱된 XML 루트에서 노드와 링크를 읽습니다. 모르는 조건 표기나 잘못된 블렌드 스페이스면 false 를 반환합니다. @p sourceLabel 은 오류에 적는 이름입니다. */
         [[nodiscard]] bool parseRoot( const XMLNode& root, string_view sourceLabel );
         /** @brief "nodes" 의 노드를 읽어 목록에 더합니다. 깨진 노드는 오류를 남기고 건너뛰며 false 를 돌려줍니다. */

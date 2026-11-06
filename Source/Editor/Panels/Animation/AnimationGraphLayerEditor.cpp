@@ -120,7 +120,7 @@ namespace sw::editor
         {
             const AnimationGraphLayerDef&           layer = listLayer[index];
             fixed_string<constant::buffer::kMax128> label;
-            formatstring( label.data(), label.capacity(), "%#  (%#, %#)", layer._name.c_str(), layer._clipName.c_str(),
+            formatstring( label.data(), label.capacity(), "%#  (%#, %#)", layer._name.c_str(), layer._slotName.empty() ? layer._clipName.c_str() : layer._slotName.c_str(),
                           layer._maskName.empty() ? "all bones" : layer._maskName.c_str() );
             ImGui::PushID( static_cast<int32>( index ) );
             if ( ImGui::Selectable( label.c_str(), _selectedLayer == static_cast<int32>( index ) ) )
@@ -192,15 +192,23 @@ namespace sw::editor
         {
             if ( committed.empty() )
             {
-                SW_LOG_WARNING_ID( "AnimationGraphLayers.LayerNeedsClipClip", "A layer needs a clip - the clip stays '%#'", inoutLayer._clipName.c_str() );
+                SW_LOG_WARNING_ID( "AnimationGraphLayers.LayerNeedsClipClip", "A layer needs a clip or a slot - the clip stays '%#'", inoutLayer._clipName.c_str() );
             }
             else
             {
                 inoutLayer._clipName = hashed_string( committed.c_str() );
+                inoutLayer._slotName = hashed_string{}; // 레이어는 클립과 슬롯 중 하나만 든다
                 pInoutEdit           = "Edit Animation Layer";
             }
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorAnimationGraph", "LayerClipTip" ) );
+        AnimationGraphLayerEditorInternal::drawRowLabel( "Slot" );
+        if ( drawCommittedText( "##layerSlot", inoutLayer._slotName.c_str(), committed ) && committed.empty() == false )
+        {
+            inoutLayer._slotName = hashed_string( committed.c_str() );
+            inoutLayer._clipName = hashed_string{};
+            pInoutEdit           = "Edit Animation Layer";
+        }
 
         AnimationGraphLayerEditorInternal::drawRowLabel( SW_LOCKEY( "EdWidget", "Mask" ) );
         if ( ImGui::BeginCombo( "##layerMask", inoutLayer._maskName.empty() ? "(all bones)" : inoutLayer._maskName.c_str() ) )

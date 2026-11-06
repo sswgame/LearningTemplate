@@ -1,9 +1,11 @@
 // AnimationGraphAsset — 원소 스키마(AnimationGraphFields.h)로 읽고 쓰기: 왕복, 기본값 생략, 열거자 이름, 칸 오류(nogpu).
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 
 namespace
 {
@@ -23,6 +25,24 @@ namespace
                                        "<layers><layer name=\"Aim\" clip=\"AimPose\" mask=\"Upper\" weight=\"0.5\" blend=\"Additive\" loop=\"false\" weight_param=\"AimWeight\"/></layers>"
                                        "<comments><comment id=\"1\" text=\"Locomotion\" x=\"10\" y=\"20\"/></comments>"
                                        "</AnimationGraphAsset>";
+
+    /** @brief 차이 파일의 부모입니다. 상태 둘 · 전이 하나 · 레이어 둘(클립 · 슬롯)입니다. */
+    constexpr sw::string_view kBaseGraph = "<AnimationGraphAsset>"
+                                           "<nodes><node id=\"1\" name=\"Idle\" loop=\"true\"/><node id=\"2\" name=\"Move\"><blend_space x=\"Speed\"><samples><sample clip=\"Walk\" x=\"1\"/></samples></blend_space></node></nodes>"
+                                           "<links><link id=\"1\" from=\"1\" to=\"2\" blend=\"0.2\"><condition param=\"Speed\" op=\"Greater\" value=\"0.5\"/></link></links>"
+                                           "<layers><layer name=\"Breath\" clip=\"Breathe\" weight=\"0.5\" blend=\"Additive\"/><layer name=\"Upper\" slot=\"UpperBody\" weight=\"1\" blend=\"Override\"/></layers>"
+                                           "</AnimationGraphAsset>";
+
+    struct AnimationGraphTestUtil
+    {
+        /** @brief 부모 파일을 쓰고 @p pChildBody 를 그 자식으로 읽습니다. */
+        static bool parseChild( sw::AnimationGraphAsset& outGraph, const sw::test::ScopedScratchDomain& domain, const sw::utf8* pChildBody )
+        {
+            SW_EXPECT_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "base.animgraph.xml" ), sw::string{ kBaseGraph } ) );
+            const sw::string baseID = sw::test::ScopedScratchDomain::makeID( "base.animgraph.xml" ).str();
+            return outGraph.parseXML( "<AnimationGraphAsset _base=\"" + baseID + "\">" + pChildBody + "</AnimationGraphAsset>" );
+        }
+    };
 } // namespace
 
 /**
@@ -79,4 +99,109 @@ SW_TEST_CASE( AnimationGraphAssetTest, RejectsFieldErrors )
     SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><nodes><node name=\"A\"/></nodes></AnimationGraphAsset>" ) );
     SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><layers><layer name=\"L\" clip=\"C\" weight=\"2\" blend=\"Override\"/></layers></AnimationGraphAsset>" ) );
     SW_EXPECT_TRUE( graph._listNode.empty() );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] 차이 파일 — 상태는 이름, 전이는 id, 레이어는 이름으로 합친다. 적지 않은 칸은 물려받고 `blend_space` 는 통째로 바뀐다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, ChildMergesByKeys )
+{
+    const sw::test::ScopedScratchDomain domain;
+    sw::AnimationGraphAsset             graph;
+    SW_REQUIRE_TRUE( AnimationGraphTestUtil::parseChild( graph, domain,
+                                                         "<nodes><node name=\"Move\"><blend_space x=\"Pace\"><samples><sample clip=\"Run\" x=\"2\"/></samples></blend_space></node><node id=\"3\" name=\"Dance\"/></nodes>"
+                                                         "<links><link id=\"1\" blend=\"0.4\"/><link id=\"2\" from=\"2\" to=\"3\"/></links>"
+                                                         "<layers><layer name=\"Breath\" _op=\"Remove\"/><layer name=\"Upper\" weight=\"0.25\"/></layers>" ) );
+    SW_REQUIRE_EQUAL( size_t{ 3 }, graph._listNode.size() );
+    SW_EXPECT_EQUAL( int8{ 1 }, graph._listNode[0]._loopOverride ); // 물려받음
+    SW_EXPECT_EQUAL( int32{ 2 }, graph._listNode[1]._id );          // 이름으로 짚었으니 id 는 물려받음
+    SW_EXPECT_TRUE( graph._listNode[1]._blendSpace._parameterX == sw::hashed_string( "Pace" ) );
+    SW_REQUIRE_EQUAL( uint32{ 1 }, graph._listNode[1]._blendSpace._space.getSampleCount() );
+    SW_EXPECT_TRUE( graph._listNode[1]._blendSpace._space.getSamples()[0]._clipName == sw::hashed_string( "Run" ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, graph._listLink.size() );
+    SW_EXPECT_EQUAL( 0.4f, graph._listLink[0]._blendSeconds );
+    SW_EXPECT_TRUE( graph._listLink[0]._op == sw::AnimationConditionOp::Greater ); // 조건은 물려받음
+    SW_REQUIRE_EQUAL( size_t{ 1 }, graph._listLayer.size() );
+    SW_EXPECT_TRUE( graph._listLayer[0]._slotName == sw::hashed_string( "UpperBody" ) );
+    SW_EXPECT_EQUAL( 0.25f, graph._listLayer[0]._weight );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] 빈 조건 원소는 물려받은 조건을 비워 "끝나면 다음" 이 되고, 클립 레이어를 슬롯으로 바꾸려면 `_op="Replace"` 다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, ChildClearsConditionAndReplacesLayer )
+{
+    const sw::test::ScopedScratchDomain domain;
+    sw::AnimationGraphAsset             graph;
+    SW_REQUIRE_TRUE( AnimationGraphTestUtil::parseChild( graph, domain,
+                                                         "<links><link id=\"1\"><condition/></link></links>"
+                                                         "<layers><layer name=\"Breath\" _op=\"Replace\" slot=\"Chest\" weight=\"1\" blend=\"Additive\"/></layers>" ) );
+    SW_EXPECT_TRUE( graph._listLink[0]._op == sw::AnimationConditionOp::None );
+    SW_EXPECT_TRUE( graph._listLayer[0]._clipName.empty() );
+    SW_EXPECT_TRUE( graph._listLayer[0]._slotName == sw::hashed_string( "Chest" ) );
+
+    SW_EXPECT_LOG( "AnimationGraphAsset.AnimationGraphRepeatsLayer" );
+    SW_EXPECT_FALSE( AnimationGraphTestUtil::parseChild( graph, domain, "<layers><layer name=\"Breath\" slot=\"Chest\"/></layers>" ) );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] 슬롯 레이어는 왕복하고, clip 과 slot 을 함께 적거나 둘 다 빼면 읽지 않는다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, LayerSlotRoundTripsAndNeedsOneSource )
+{
+    sw::AnimationGraphAsset graph;
+    SW_REQUIRE_TRUE( graph.parseXML( kBaseGraph ) );
+    SW_EXPECT_TRUE( graph.findLayer( sw::hashed_string( "Upper" ) )->_slotName == sw::hashed_string( "UpperBody" ) );
+    sw::AnimationGraphAsset reread;
+    SW_REQUIRE_TRUE( reread.parseXML( graph.toXML() ) );
+    SW_EXPECT_TRUE( reread.findLayer( sw::hashed_string( "Upper" ) )->_slotName == sw::hashed_string( "UpperBody" ) );
+
+    SW_EXPECT_LOG( "AnimationGraphAsset.AnimationGraphRepeatsLayer" );
+    SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><layers><layer name=\"L\" clip=\"C\" slot=\"S\" weight=\"1\" blend=\"Override\"/></layers></AnimationGraphAsset>" ) );
+    SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><layers><layer name=\"L\" weight=\"1\" blend=\"Override\"/></layers></AnimationGraphAsset>" ) );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] 부모와 어긋난 차이는 로드 오류다 — 겹치는 노드 id, 없는 노드를 가리키는 전이, 없는 상태의 삭제
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, ChildThatDisagreesWithBaseIsRejected )
+{
+    const sw::test::ScopedScratchDomain domain;
+    sw::AnimationGraphAsset             graph;
+    SW_EXPECT_LOG( "AnimationGraphAsset.NodeIDRepeats" );
+    SW_EXPECT_FALSE( AnimationGraphTestUtil::parseChild( graph, domain, "<nodes><node id=\"2\" name=\"Dance\"/></nodes>" ) );
+    SW_EXPECT_LOG( "AnimationGraphAsset.LinkNodeMissing" );
+    SW_EXPECT_FALSE( AnimationGraphTestUtil::parseChild( graph, domain, "<links><link id=\"2\" from=\"2\" to=\"9\"/></links>" ) );
+    SW_EXPECT_LOG( "DataInheritance.OpKeyMissing" );
+    SW_EXPECT_FALSE( AnimationGraphTestUtil::parseChild( graph, domain, "<nodes><node name=\"Nope\" _op=\"Remove\"/></nodes>" ) );
+    SW_EXPECT_TRUE( graph._listNode.empty() );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] 저장은 부모와 다른 칸만 쓰고, 칸을 형식 기본값으로 되돌려 차이로 적을 수 없으면 부모 없는 한 벌을 쓴다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, SaveWritesOnlyTheDifference )
+{
+    const sw::test::ScopedScratchDomain domain;
+    sw::AnimationGraphAsset             graph;
+    SW_REQUIRE_TRUE( AnimationGraphTestUtil::parseChild( graph, domain, "<links><link id=\"1\" blend=\"0.4\"/></links>" ) );
+
+    const sw::string                      childPath = domain.makeDiskPath( "child.animgraph.xml" );
+    const std::optional<sw::AbsolutePath> absPath   = sw::FileUtil::requireAbsolutePath( childPath );
+    SW_REQUIRE_TRUE( absPath.has_value() );
+    SW_REQUIRE_TRUE( graph.saveToFile( *absPath ) );
+    sw::string written;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( childPath, written ) );
+    SW_EXPECT_TRUE( written.find( "_base=" ) != sw::string::npos );
+    SW_EXPECT_TRUE( written.find( "Breathe" ) == sw::string::npos ); // 물려받은 칸은 쓰지 않는다
+
+    sw::AnimationGraphAsset reread;
+    SW_REQUIRE_TRUE( reread.loadFromDiskFile( childPath ) );
+    SW_EXPECT_EQUAL( graph.toXML(), reread.toXML() );
+
+    graph._listLink[0]._blendSeconds = -1.0f; // 형식 기본값은 쓰지 않으므로 부모의 0.2 를 덮을 수 없다
+    SW_EXPECT_LOG( "AnimationGraphAsset.DeltaMismatch" );
+    SW_REQUIRE_TRUE( graph.saveToFile( *absPath ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( childPath, written ) );
+    SW_EXPECT_TRUE( written.find( "_base=" ) == sw::string::npos );
 }
