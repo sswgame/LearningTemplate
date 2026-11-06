@@ -149,7 +149,7 @@ namespace sw
         /** @brief 쌓인 스폰과 소리를 틱 뒤 한 번으로 미룹니다. 틱 밖이면 바로 처리합니다. */
         void scheduleFlush();
         /** @brief 프리팹을 스폰하고 정리할 목록에 넣습니다. 게임 스레드에서 부르며, 프리팹을 읽지 못하면 nullptr 를 반환합니다. */
-        GameObject* spawnPrefab( GameObjectManager& manager, const string& prefabPath, const utf8* pName );
+        GameObject* spawnPrefab( GameObjectManager& manager, string_view prefabPath, const utf8* pName );
         /** @brief 프리팹이 아닌 경로로 만든 오브젝트(코드로 만든 것)를 정리할 목록에 넣습니다. */
         void trackSpawned( const GameObject& object );
         /** @brief 스폰한 오브젝트 하나를 지우고 @p inoutHandle 을 비웁니다. 이미 없으면 핸들만 비웁니다. */

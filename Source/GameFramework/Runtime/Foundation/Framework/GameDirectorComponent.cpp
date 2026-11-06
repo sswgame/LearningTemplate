@@ -186,7 +186,7 @@ namespace sw
         compactSpawned( *pManager );
     }
 
-    GameObject* GameDirectorComponent::spawnPrefab( GameObjectManager& manager, const string& prefabPath, const utf8* pName )
+    GameObject* GameDirectorComponent::spawnPrefab( GameObjectManager& manager, string_view prefabPath, const utf8* pName )
     {
         AssetManager* pAssetManager = game::findSubsystem<AssetManager>();
         if ( pAssetManager == nullptr || prefabPath.empty() )

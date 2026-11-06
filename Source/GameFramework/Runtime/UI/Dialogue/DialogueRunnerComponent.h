@@ -4,6 +4,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/Delegate/DelegateSlot.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/Component.h"
@@ -15,6 +16,7 @@
 
 namespace sw
 {
+    class DialogueGraphAsset;
     struct DialogueStepInput;
 
     class GameFlags;
@@ -63,8 +65,8 @@ namespace sw
     public:
         REFLECT_BODY();
 
-        PROPERTY( Category = "Dialogue", DisplayName = "Graph", AssetPath, AssetType = "DialogueGraph", Tooltip = "Dialogue graph asset" )
-        string _graphPath;
+        PROPERTY( Category = "Dialogue", DisplayName = "Graph", Tooltip = "Dialogue graph asset" )
+        AssetRef<DialogueGraphAsset> _graphPath;
         PROPERTY( Category = "Dialogue", DisplayName = "Post Subtitles", Tooltip = "Also show each line as a subtitle (leave off when a dialogue UI already shows the text)" )
         bool _bPostSubtitles;
 

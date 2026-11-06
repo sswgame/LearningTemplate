@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -20,6 +21,7 @@
 
 namespace sw
 {
+    class PrefabAsset;
     class ControllerComponent;
 
     /** @brief 조종자 없이 플레이를 시작한 폰을 누가 쥘지 정합니다. */
@@ -96,7 +98,7 @@ namespace sw
         /** @brief 플레이어가 쥔 동안 커서를 창 가운데에 잠그고 숨기기를 바라는지 나타냅니다(1인칭). 플레이어 조종자가 걸고, 잠금 토글 액션(Esc)이 풀고 다시 겁니다. */
         bool          wantsMouseLock() const { return _bLockMouse; }
         void          setLockMouse( bool bLockMouse ) { _bLockMouse = bLockMouse; }
-        const string& getAIControllerPrefab() const { return _aiControllerPrefab; }
+        const string& getAIControllerPrefab() const { return _aiControllerPrefab.path(); }
         /** @brief 이 폰의 의도를 내는 네트워크 연결입니다. 0 이면 로컬이며, 빙의를 따라갑니다. 탈것은 운전석 조종자의 연결입니다. */
         uint32 getInputPeer() const { return _inputPeer; }
 
@@ -129,8 +131,8 @@ namespace sw
         hashed_string _inputLayer;
         PROPERTY( Category = "Control", DisplayName = "Trigger Look Button", Tooltip = "Intent button whose press instant carries the control rotation at that moment (a shot fires along the look at the click, not at the frame end); empty = none" )
         hashed_string _triggerLookButton;
-        PROPERTY( Category = "Control", DisplayName = "AI Controller Prefab", AssetPath, AssetType = "Prefab", Tooltip = "Spawned to possess this pawn when Auto Possess is AI (empty: a plain AI controller)" )
-        string _aiControllerPrefab;
+        PROPERTY( Category = "Control", DisplayName = "AI Controller Prefab", Tooltip = "Spawned to possess this pawn when Auto Possess is AI (empty: a plain AI controller)" )
+        AssetRef<PrefabAsset> _aiControllerPrefab;
         PROPERTY( Category = "Control", DisplayName = "Max Pitch", Min = 0.0, Max = 1.5707963, Tooltip = "Largest look up or down angle of the control rotation", Units = rad )
         float32 _maxPitch;
         PROPERTY( Category = "Control", DisplayName = "Auto Possess", Tooltip = "Who takes this pawn when play starts without a controller" )

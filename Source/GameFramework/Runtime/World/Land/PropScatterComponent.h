@@ -11,7 +11,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/Placement/PlacementRule.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -39,8 +41,8 @@ namespace sw
 
         PROPERTY( Tooltip = "Mesh section name (the imported material name, e.g. bark_normaltree)" )
         string _sectionName{};
-        PROPERTY( AssetPath, AssetType = "Material" )
-        string _materialPath{};
+        PROPERTY()
+        AssetRef<Material> _materialPath{};
     };
 
     /**
@@ -183,8 +185,8 @@ namespace sw
         vector<PropScatterModel> _listModel;
         PROPERTY( Category = "Scatter", DisplayName = "Exclusions", Tooltip = "Ground circles left empty" )
         vector<PropScatterExclusion> _listExclusion;
-        PROPERTY( Category = "Scatter", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Material of every prop; empty uses the scene default" )
-        string _materialPath;
+        PROPERTY( Category = "Scatter", DisplayName = "Material", Tooltip = "Material of every prop; empty uses the scene default" )
+        AssetRef<Material> _materialPath;
         PROPERTY( Category = "Scatter", DisplayName = "Prop Name", Tooltip = "Name of the spawned objects" )
         string _propName;
         PROPERTY( Category = "Scatter", DisplayName = "Region Min", Units = m )

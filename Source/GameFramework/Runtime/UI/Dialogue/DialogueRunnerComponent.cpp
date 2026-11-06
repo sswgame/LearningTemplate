@@ -6,6 +6,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Dialogue/DialogueCursor.h"
+#include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/UI/Screen/UISubtitleService.h"
 #include "Engine/UI/UISystem.h"
 
@@ -62,7 +63,7 @@ namespace sw
     {
         if ( _graphPath.empty() )
             return;
-        const string path = _graphPath;
+        const string path = _graphPath.path();
         if ( loadGraphFile( AssetID{ path } ) == false )
             SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueGraphCouldNot", "Dialogue graph '%#' could not be loaded", path );
     }

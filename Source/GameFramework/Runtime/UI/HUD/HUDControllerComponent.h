@@ -9,6 +9,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -19,6 +20,7 @@
 
 namespace sw
 {
+    struct UIDocumentAsset;
     class UIScreen;
     class UISystem;
     class Widget;
@@ -53,7 +55,7 @@ namespace sw
         void      bindUISystem( UISystem* pUISystem );
         UISystem* getUISystem() const { return _pUISystem; }
 
-        const string& getDocumentPath() const { return _documentPath; }
+        const string& getDocumentPath() const { return _documentPath.path(); }
         /** @brief 문서를 바꿉니다. 화면이 떠 있으면 새 문서로 다시 엽니다. */
         void setDocumentPath( string_view documentPath );
 
@@ -100,7 +102,7 @@ namespace sw
         UISystem*               _pUISystem; ///< 화면을 연 UI 시스템(없으면 nullptr)
         UIScreenHandle          _screen;
         unique_ptr<UIViewModel> _viewModel; ///< HUD 문서의 바인딩 소스. 게임이 고른 타입이고 이 컴포넌트가 소유하며, 화면은 가리키기만 한다
-        PROPERTY( DisplayName = "Document", AssetPath, AssetType = "UIDocument", Tooltip = "HUD document (*.ui.xml) opened on the HUD layer" )
-        string _documentPath;
+        PROPERTY( DisplayName = "Document", Tooltip = "HUD document (*.ui.xml) opened on the HUD layer" )
+        AssetRef<UIDocumentAsset> _documentPath;
     };
 } // namespace sw
