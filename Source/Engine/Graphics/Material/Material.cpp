@@ -1143,8 +1143,9 @@ namespace sw
     bool Material::loadFromXML( string_view xmlText )
     {
         // 부모를 가리키면(`_base="..."`) 부모 칸 위에 자식이 적은 칸만 덮은 한 벌로 펼친 뒤 읽는다 — 손 머티리얼이 견본 칸을 베끼지 않게.
-        string flatText;
-        bool   bComposed = false;
+        const string parentPath = DataInheritance::findBasePath( xmlText ); // 저장이 부모와의 차이로 쓴다
+        string       flatText;
+        bool         bComposed = false;
         if ( ResourceComposer::compose( xmlText, "<material>", ResourceContext::forSchema( &MaterialXML::makeInheritanceSchema ), flatText, bComposed ) == false )
             return false;
         XMLDocument doc;

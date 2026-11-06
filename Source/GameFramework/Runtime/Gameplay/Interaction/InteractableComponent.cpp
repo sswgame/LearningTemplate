@@ -50,7 +50,7 @@ namespace sw
         }
         _pDef = nullptr;
         _pCatalog.reset();
-        _seenCatalogReloadCount = InteractionCatalog::getReloadCount();
+        _seenCatalogReloadCount = SharedAssetCache<InteractionCatalog>::getReloadCount();
         if ( _interactionID.empty() )
             return;
         if ( _catalogPath.empty() )
@@ -58,7 +58,7 @@ namespace sw
             SW_LOG_ERROR_ID( "InteractableComponent.InteractionNoCatalogPath", "Interaction '%#' has no catalog path - set Catalog", _interactionID.c_str() );
             return;
         }
-        _pCatalog = InteractionCatalog::acquire( AssetID{ _catalogPath } );
+        _pCatalog = SharedAssetCache<InteractionCatalog>::acquire( _catalogPath );
         _pDef     = _pCatalog != nullptr ? _pCatalog->findInteraction( _interactionID ) : nullptr;
         if ( _pDef == nullptr )
             SW_LOG_ERROR_ID( "InteractableComponent.InteractionNot", "Interaction '%#' is not in %#", _interactionID.c_str(), _catalogPath.c_str() );
@@ -99,7 +99,7 @@ namespace sw
     {
         Component::onTick( deltaTime );
         // 상호작용 테이블 파일이 바뀌었으므로 새 테이블에서 정의를 다시 찾는다. 진행 중인 세션은 옛 테이블을 쥐고 있어(`shareDefinition`) 끝까지 옛 정의를 읽는다.
-        if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != InteractionCatalog::getReloadCount() )
+        if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != SharedAssetCache<InteractionCatalog>::getReloadCount() )
             resolveDefinition();
         if ( _cooldownRemaining > 0.0f )
             _cooldownRemaining = MathUtil::max( 0.0f, _cooldownRemaining - deltaTime );

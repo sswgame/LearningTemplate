@@ -2,7 +2,7 @@
  * @file SharedAssetCacheDefinition.h
  * @brief `SharedAssetCache` 의 멤버 정의입니다. 에셋 종류를 명시적으로 인스턴스화하는 .cpp 만 포함합니다(Engine · GameFramework · 키트 · 게임).
  * @details 그 .cpp 는 이 헤더를 포함하고 `SharedAssetCacheTraits<에셋>` 을 특수화한 뒤 `SW_SHARED_ASSET_CACHE( 에셋 );`(Engine) 또는
- *          `SW_MODULE_SHARED_ASSET_CACHE( id, 에셋, 내보내기 매크로 );`(모듈) 한 줄로(`namespace sw` 안) 명시적 인스턴스화와 레지스트리 등록을 함께 합니다. 둘 중 하나만 빠질 수 없습니다. 특수화가 갖출 것은 아래와 같습니다.
+ *          `SW_MODULE_SHARED_ASSET_CACHE( id, 에셋, 내보내기 매크로 );`(모듈, `Engine/Module/ModuleSharedAssetCache.h`) 한 줄로(`namespace sw` 안) 명시적 인스턴스화와 레지스트리 등록을 함께 합니다. 둘 중 하나만 빠질 수 없습니다. 특수화가 갖출 것은 아래와 같습니다.
  *
  *          - `kKindName`   : 레지스트리의 종류 이름(정적 문자열)
  *          - `kMemoryTag`  : 읽는 동안 거는 할당 태그
@@ -21,7 +21,6 @@
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetTable.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
-#include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 namespace sw
 {
@@ -183,20 +182,3 @@ namespace sw
         Subscription                _registration; ///< 레지스트리 등록(캐시보다 먼저 풀린다 — 나중에 선언)
     };
 } // namespace sw
-
-/**
- * @brief 모듈(GameFramework · 키트 · 게임)의 종류 @p AssetType 을 그 모듈에서 인스턴스화하고(@p ExportMacro 로 내보낸다) 모듈 서브시스템으로 등록합니다(인스턴스화하는 .cpp, `namespace sw` 안, 특수화 뒤).
- * @param id 정적 이름 · 서브시스템 이름을 만드는 식별자입니다.
- */
-#define SW_MODULE_SHARED_ASSET_CACHE( id, AssetType, ExportMacro )                                 \
-    template class ExportMacro           SharedAssetCache<AssetType>;                              \
-    class SharedAssetCacheSubsystem_##id final : public ::sw::SharedAssetCacheSubsystem<AssetType> \
-    {                                                                                              \
-    public:                                                                                        \
-        static constexpr const utf8* kSubsystemName = "SharedAssetCache." #id;                     \
-        const utf8*                  getSubsystemName() const override                             \
-        {                                                                                          \
-            return kSubsystemName;                                                                 \
-        }                                                                                          \
-    };                                                                                             \
-    SW_MODULE_SUBSYSTEM( Engine, SharedAssetCacheSubsystem_##id, SharedAssetCacheSubsystem_##id )

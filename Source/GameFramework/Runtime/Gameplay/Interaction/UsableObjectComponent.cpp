@@ -99,7 +99,7 @@ namespace sw
 
     void UsableObjectComponent::resolveDefinition()
     {
-        _seenCatalogReloadCount = InteractionCatalog::getReloadCount();
+        _seenCatalogReloadCount = SharedAssetCache<InteractionCatalog>::getReloadCount();
         if ( _bHasOverride == SW_TRUE || _smartObjectID.empty() )
             return;
         if ( _catalogPath.empty() )
@@ -107,7 +107,7 @@ namespace sw
             SW_LOG_ERROR_ID( "UsableObjectComponent.SmartObjectNoCatalog", "Smart object '%#' has no catalog path - set Catalog", _smartObjectID.c_str() );
             return;
         }
-        const shared_ptr<const InteractionCatalog> pCatalog = InteractionCatalog::acquire( AssetID{ _catalogPath } );
+        const shared_ptr<const InteractionCatalog> pCatalog = SharedAssetCache<InteractionCatalog>::acquire( _catalogPath );
         const UsableObjectDef*                     pDef     = pCatalog != nullptr ? pCatalog->findSmartObject( _smartObjectID ) : nullptr; // 슬롯은 정의를 베낀다 — 테이블을 쥐지 않는다
         if ( pDef == nullptr )
         {
@@ -154,7 +154,7 @@ namespace sw
     {
         Component::onTick( deltaTime );
         // 상호작용 테이블 파일이 바뀌었으므로 새 테이블에서 슬롯을 다시 찾는다. 차지 상태는 슬롯 번호로 이어지고, 줄어든 슬롯의 차지는 해제된다.
-        if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != InteractionCatalog::getReloadCount() )
+        if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != SharedAssetCache<InteractionCatalog>::getReloadCount() )
             resolveDefinition();
     }
 

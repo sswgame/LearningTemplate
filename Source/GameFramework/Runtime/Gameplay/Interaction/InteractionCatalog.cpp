@@ -5,8 +5,8 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"

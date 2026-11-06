@@ -40,6 +40,13 @@ namespace sw
 
 namespace
 {
+    /** @brief `SW_MODULE_SHARED_ASSET_CACHE` 가 만드는 자식과 같은 모양입니다(그 매크로는 모듈 서브시스템 등록까지 해 테스트 이미지에서 쓰지 않는다). */
+    class SharedAssetCacheTestSubsystem final : public SharedAssetCacheSubsystem<SharedAssetCacheTestAsset>
+    {
+    public:
+        const utf8* getSubsystemName() const override { return "SharedAssetCache.Test"; }
+    };
+
     struct SharedAssetCacheTestUtil
     {
         using Cache = SharedAssetCache<SharedAssetCacheTestAsset>;
@@ -56,7 +63,7 @@ namespace
             ~ScopedModuleCache() { _subsystem.shutdownSubsystem(); }
 
         private:
-            SharedAssetCacheSubsystem<SharedAssetCacheTestAsset> _subsystem;
+            SharedAssetCacheTestSubsystem _subsystem;
         };
     };
 } // namespace
