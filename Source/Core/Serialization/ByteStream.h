@@ -112,7 +112,7 @@ namespace sw
         /**
          * @brief 원소 @p declaredCount 개(하나가 적어도 @p minElementBytes 바이트)가 @p availableBytes 안에 담길 수 있으면 true 입니다.
          * @details 곱하지 않고 나눈다 — 곱셈은 넘쳐서 작은 파일과 "맞아" 보인다. 원소 크기 0 은 1 로 본다(개수 상한을 없애지 않는다).
-         *          바이트를 이 타입으로 읽지 않는 쪽(`Archive` · 파일에서 바로 읽는 팩 머리)도 이 계산 하나를 쓴다.
+         *          바이트를 이 타입으로 읽지 않는 쪽(`Archive::readCount`)도 이 계산 하나를 쓴다.
          */
         [[nodiscard]] static constexpr bool canHoldCount( uint64 declaredCount, uint64 minElementBytes, uint64 availableBytes ) noexcept
         {
