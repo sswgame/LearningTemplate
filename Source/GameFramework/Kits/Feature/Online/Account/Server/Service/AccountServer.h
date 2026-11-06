@@ -3,7 +3,7 @@
  * @brief 계정 서비스의 스트림 바인딩입니다. `IOnlineServerService`(영역 `kAccount`)로 요청을 받아 `LoginService` 에 맡기고, 완료를 응답으로 돌려줍니다.
  * @details 로그인이나 재접속에 성공하면 호스트에 계정을 연결한다. 세션이 밀려나거나 운영 조치로 끊기면 알림(`kPushRevoked`)을 보낸 뒤 연결을 닫고, 연결이 닫히면 재접속 유예를 시작한다.
  *          - 연결의 세션 토큰은 이 객체가 메모리에 보관한다. 로그인 응답으로 클라이언트에 준 토큰이다. 로그아웃, 연동, 티켓 발급은 연결의 주체로 처리하므로 클라이언트가 비밀을 다시 보내지 않는다.
- *          - 이미 로그인한 연결이 로그인, 게스트 로그인, 외부 로그인, 재접속을 요청하면 `kInvalidRequest` 로 거절한다. 한 연결에는 계정 하나만 쓰고, 다른 계정은 새 연결로 접속해야 한다.
+ *          - 이미 로그인했거나 로그인을 맡겨 둔 연결이 로그인, 게스트 로그인, 외부 로그인, 재접속을 요청하면 `kInvalidRequest` 로 거절한다. 한 연결에는 계정 하나만 쓰고, 다른 계정은 새 연결로 접속해야 한다.
  *          - 로그인 응답 몸을 쓰지 못하면 `kInternal` 로 답하고, 저장소 작업이 이미 만든 그 세션은 로그아웃 작업으로 지운다. 응답 몸이 그 세션의 토큰을 실으므로
  *            저장소 작업 전에 쓸 수 없다.
  *          - 저장소 완료는 호스트 `tick` 이 회수한다. 탈퇴 정리와 세션 다시 읽기는 이 객체의 틱이 주기적으로 작업을 맡긴다.
@@ -14,6 +14,7 @@
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
@@ -131,6 +132,7 @@ namespace sw
         unordered_map<uint64, PendingCall>     _mapTagToCall;
         unordered_map<AccountID, BoundSession> _mapAccountToSession;
         unordered_map<AccountID, string>       _mapAccountToReasonCode;
+        unordered_set<uint64>                  _uniqueSetLoginConnection; ///< 로그인을 맡겨 두고 완료를 기다리는 연결(packed)이다 — 묶기 전이라 호스트의 연결 주체로는 겹친 로그인을 가리지 못한다
         vector<LoginCompletion>                _listCompletionScratch;
         vector<LoginEvent>                     _listEventScratch;
         vector<Subscription>                   _listBusSubscription; ///< 취소 주제와 이 서버의 알림 주제 구독(`attachHost`). 호스트가 내려가면 `onHostShutdown` 이 푼다

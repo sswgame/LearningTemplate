@@ -137,6 +137,7 @@ namespace sw
         : _mapTagToCall{}
         , _mapAccountToSession{}
         , _mapAccountToReasonCode{}
+        , _uniqueSetLoginConnection{}
         , _listCompletionScratch{}
         , _listEventScratch{}
         , _listBusSubscription{}
@@ -164,6 +165,7 @@ namespace sw
         _mapTagToCall.clear();
         _mapAccountToSession.clear();
         _mapAccountToReasonCode.clear();
+        _uniqueSetLoginConnection.clear();
         _listBusSubscription.clear();
         _presence.shutdown();
         _pLoginService = nullptr;
@@ -189,10 +191,12 @@ namespace sw
 
     void AccountServer::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
     {
-        _nowMs = context._nowMs;
-        if ( AccountServerInternal::isLoginMethod( context._method ) && context._accountID != kInvalidAccountID )
+        _nowMs                  = context._nowMs;
+        const bool bLoginMethod = AccountServerInternal::isLoginMethod( context._method );
+        // 한 연결에는 계정 하나만 쓴다. 겹쳐 보낸 로그인은 둘째 완료에서 묶지 못한 채 Ok 를 답해 응답의 세션과 연결의 주체가 갈린다.
+        if ( bLoginMethod && ( context._accountID != kInvalidAccountID || _uniqueSetLoginConnection.count( context._connection.packed() ) != 0 ) )
         {
-            (void)host.respondError( context._token, OnlineError::kInvalidRequest ); // 한 연결에는 계정 하나만 쓴다
+            (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
         }
         const auto          sessionIt     = _mapAccountToSession.find( context._accountID );
@@ -222,6 +226,8 @@ namespace sw
             }
         }
         _mapTagToCall[tag] = PendingCall{ context._token, context._connection, context._method };
+        if ( bLoginMethod )
+            _uniqueSetLoginConnection.insert( context._connection.packed() );
     }
 
     void AccountServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
@@ -305,6 +311,8 @@ namespace sw
             return;
         const PendingCall call = callIt->second;
         _mapTagToCall.erase( callIt );
+        if ( AccountServerInternal::isLoginMethod( call._method ) )
+            _uniqueSetLoginConnection.erase( call._connection.packed() );
         if ( respondCommonError( host, call._token, completion._result, completion._grant ) )
             return;
 

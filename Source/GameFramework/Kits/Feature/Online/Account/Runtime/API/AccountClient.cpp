@@ -307,9 +307,10 @@ namespace sw
             const bool bTokenDead = reply._result == LoginResult::InvalidToken || reply._result == LoginResult::Expired || reply._result == LoginResult::Revoked;
             if ( bTokenDead )
                 _token = LoginSessionToken{};
-            _bResuming = SW_FALSE;
+            _bResuming                     = SW_FALSE;
+            const LoginResult resumeResult = reply._result; // 모은 요청도 같은 결과로 끝난다 — 저장소 오류를 InvalidToken 으로 바꾸면 산 세션을 죽었다고 알린다
             _listReply.push_back( std::move( reply ) );
-            finishDeferred( bOk ? LoginResult::Ok : LoginResult::InvalidToken );
+            finishDeferred( resumeResult );
             if ( _pClient != nullptr && _pClient->isRequestGateClosed() )
                 _pClient->setRequestGate( OnlineMethodRange::kAccount, false ); // 다른 키트가 모아 둔 요청을 보낸다. 실패해도 그쪽이 kUnauthenticated 로 알 수 있다
             return;
