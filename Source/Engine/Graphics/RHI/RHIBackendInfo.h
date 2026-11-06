@@ -12,7 +12,7 @@
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
-#include "Engine/Profiling/IProfilerBackend.h"
+#include "Engine/Profiling/IProfilerGPUTimeline.h"
 
 namespace sw
 {

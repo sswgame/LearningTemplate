@@ -31,29 +31,29 @@ namespace sw
         : _listScratchSpan{}
         , _pDeviceIdentity{ nullptr }
         , _pBackend{ nullptr }
-        , _gpuContext{ IProfilerBackend::kInvalidGPUContext }
+        , _gpuContext{ IProfilerGPUTimeline::kInvalidGPUContext }
         , _framesSinceSync{ 0 }
     {
     }
 
-    bool GPUTimelineExporter::isContextOpenFor( const void* pDeviceIdentity, const IProfilerBackend* pBackend ) const
+    bool GPUTimelineExporter::isContextOpenFor( const void* pDeviceIdentity, const IProfilerGPUTimeline* pBackend ) const
     {
-        return _gpuContext != IProfilerBackend::kInvalidGPUContext && _pDeviceIdentity == pDeviceIdentity && _pBackend == pBackend;
+        return _gpuContext != IProfilerGPUTimeline::kInvalidGPUContext && _pDeviceIdentity == pDeviceIdentity && _pBackend == pBackend;
     }
 
-    bool GPUTimelineExporter::openContext( IProfilerBackend& backend, ProfilerGraphicsAPI api, const utf8* pName, const void* pDeviceIdentity,
+    bool GPUTimelineExporter::openContext( IProfilerGPUTimeline& backend, ProfilerGraphicsAPI api, const utf8* pName, const void* pDeviceIdentity,
                                            int64 gpuNowNanos )
     {
         _gpuContext      = backend.createGPUContext( api, pName, gpuNowNanos );
         _pDeviceIdentity = pDeviceIdentity;
         _pBackend        = &backend;
         _framesSinceSync = 0;
-        return _gpuContext != IProfilerBackend::kInvalidGPUContext;
+        return _gpuContext != IProfilerGPUTimeline::kInvalidGPUContext;
     }
 
     void GPUTimelineExporter::forgetContext()
     {
-        _gpuContext      = IProfilerBackend::kInvalidGPUContext;
+        _gpuContext      = IProfilerGPUTimeline::kInvalidGPUContext;
         _pDeviceIdentity = nullptr;
         _pBackend        = nullptr;
         _framesSinceSync = 0;
@@ -65,18 +65,18 @@ namespace sw
         return _framesSinceSync >= kResyncFrameInterval;
     }
 
-    void GPUTimelineExporter::resyncClock( IProfilerBackend& backend, int64 gpuNowNanos )
+    void GPUTimelineExporter::resyncClock( IProfilerGPUTimeline& backend, int64 gpuNowNanos )
     {
-        if ( _gpuContext == IProfilerBackend::kInvalidGPUContext )
+        if ( _gpuContext == IProfilerGPUTimeline::kInvalidGPUContext )
             return;
         backend.syncGPUClock( _gpuContext, gpuNowNanos );
         _framesSinceSync = 0;
     }
 
-    uint32 GPUTimelineExporter::exportFrame( IProfilerBackend& backend, const RHITimestampFrame& frame, const ProfileZoneSite& frameSite,
+    uint32 GPUTimelineExporter::exportFrame( IProfilerGPUTimeline& backend, const RHITimestampFrame& frame, const ProfileZoneSite& frameSite,
                                              const ProfileZoneSite& computeSite, const vector<const ProfileZoneSite*>& listPassSite )
     {
-        if ( _gpuContext == IProfilerBackend::kInvalidGPUContext || frame._listMicro.empty() )
+        if ( _gpuContext == IProfilerGPUTimeline::kInvalidGPUContext || frame._listMicro.empty() )
             return 0;
 
         // 1) 기록된 쌍만 모은다(한쪽이라도 기록되지 않았으면 구간이 성립하지 않는다. 엔진 프로파일러와 같은 규칙이다).

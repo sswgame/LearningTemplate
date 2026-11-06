@@ -16,7 +16,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
-#include "Engine/Profiling/IProfilerBackend.h"
+#include "Engine/Profiling/IProfilerGPUTimeline.h"
 
 namespace sw
 {
@@ -35,19 +35,19 @@ namespace sw
         GPUTimelineExporter();
 
         /** @brief @p pDeviceIdentity 디바이스와 @p pBackend 출력의 컨텍스트가 열려 있으면 true 입니다. 둘 중 하나가 바뀌면 다시 엽니다. */
-        bool isContextOpenFor( const void* pDeviceIdentity, const IProfilerBackend* pBackend ) const;
+        bool isContextOpenFor( const void* pDeviceIdentity, const IProfilerGPUTimeline* pBackend ) const;
         /**
          * @brief 컨텍스트를 엽니다. @p gpuNowNanos 는 **지금** GPU 시계(타임스탬프와 같은 영역)입니다.
          * @return 출력이 컨텍스트를 만들었으면 true 입니다.
          */
-        [[nodiscard]] bool openContext( IProfilerBackend& backend, ProfilerGraphicsAPI api, const utf8* pName, const void* pDeviceIdentity, int64 gpuNowNanos );
+        [[nodiscard]] bool openContext( IProfilerGPUTimeline& backend, ProfilerGraphicsAPI api, const utf8* pName, const void* pDeviceIdentity, int64 gpuNowNanos );
         /** @brief 디바이스가 사라졌을 때 잊습니다(출력 쪽 컨텍스트는 Tracy 가 닫지 않습니다. 다음 디바이스는 새 번호를 씁니다). */
         void forgetContext();
 
         /** @brief 프레임 하나를 세고, 시계를 다시 맞출 차례면 true 입니다. */
         bool advanceAndCheckResync();
         /** @brief 시계를 다시 맞춥니다. */
-        void resyncClock( IProfilerBackend& backend, int64 gpuNowNanos );
+        void resyncClock( IProfilerGPUTimeline& backend, int64 gpuNowNanos );
 
         /**
          * @brief 이미 읽힌 한 프레임을 GPU 구간 트리(프레임 ⊃ 컴퓨트 프리패스, 패스들)로 냅니다.
@@ -56,7 +56,7 @@ namespace sw
          * @details 형제 구간이 겹치거나(같은 큐라 실제로는 순서대로이며, 슬롯 해상도 차이로 겹칩니다) 부모 밖으로 나가면 뷰어의 트리가 깨지므로 시작 순으로
          *          정렬하고 앞 형제의 끝과 부모의 범위로 자릅니다.
          */
-        uint32 exportFrame( IProfilerBackend& backend, const RHITimestampFrame& frame, const ProfileZoneSite& frameSite,
+        uint32 exportFrame( IProfilerGPUTimeline& backend, const RHITimestampFrame& frame, const ProfileZoneSite& frameSite,
                             const ProfileZoneSite& computeSite, const vector<const ProfileZoneSite*>& listPassSite );
 
     private:
@@ -69,10 +69,10 @@ namespace sw
         };
 
     private:
-        vector<Span>            _listScratchSpan; ///< 프레임마다 다시 쓴다(할당을 되풀이하지 않게 보관한다)
-        const void*             _pDeviceIdentity; ///< 컨텍스트를 연 디바이스(비교만 한다)
-        const IProfilerBackend* _pBackend;        ///< 컨텍스트를 연 출력(비교만 한다)
-        uint32                  _gpuContext;      ///< 출력의 컨텍스트 번호
-        uint32                  _framesSinceSync; ///< 마지막 시계 맞추기 뒤 프레임 수
+        vector<Span>                _listScratchSpan; ///< 프레임마다 다시 쓴다(할당을 되풀이하지 않게 보관한다)
+        const void*                 _pDeviceIdentity; ///< 컨텍스트를 연 디바이스(비교만 한다)
+        const IProfilerGPUTimeline* _pBackend;        ///< 컨텍스트를 연 출력(비교만 한다)
+        uint32                      _gpuContext;      ///< 출력의 컨텍스트 번호
+        uint32                      _framesSinceSync; ///< 마지막 시계 맞추기 뒤 프레임 수
     };
 } // namespace sw
