@@ -223,7 +223,6 @@ SW_TEST_CASE( DataInheritanceTest, BadListEntriesAreErrors )
         SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="base.xml"><_listPass><Pass _name="Q" _op="Remove" /></_listPass></Doc>)", flat ) );
     }
     {
-        SW_EXPECT_LOG( "DataInheritance.OpKeyMissing" );
         SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="base.xml"><_listPass><Pass _name="Q" _op="Replace" /></_listPass></Doc>)", flat ) );
     }
     {

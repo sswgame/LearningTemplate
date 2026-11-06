@@ -104,7 +104,7 @@ SW_TEST_CASE( MeshAssetFormatBytesTest, EveryChunkRoundTrips )
     XTestUtil::addSection( data );
     XTestUtil::addMorph( data );
     XTestUtil::addLOD( data );
-    data._skinBoneCount = 2;
+    data._skinBinding._listInverseBind.resize( 2 );
     data._listSkinVertex.resize( XTestUtil::kVertexCount );
     data._listSkinVertex[3]._arrJoint[0] = 1;
     data._listLOD[0]._listSkinVertex.resize( XTestUtil::kVertexCount );

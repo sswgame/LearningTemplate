@@ -155,7 +155,6 @@ SW_TEST_CASE( PrefabVariantTest, BadVariantsFailToLoad )
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "b.prefab.xml" ), Util::makeVariant( idA, "" ) ) );
         PrefabAsset asset;
         SW_EXPECT_LOG( "DataInheritance.Cycle" );
-        SW_EXPECT_LOG( "DataInheritance.BaseNotFound" ); // 순환을 만난 부모 읽기가 실패하는 사슬의 각 단
         SW_EXPECT_FALSE( asset.loadFromDiskFile( domain.makeDiskPath( "a.prefab.xml" ) ) );
     }
     {

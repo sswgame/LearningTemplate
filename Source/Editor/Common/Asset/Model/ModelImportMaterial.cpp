@@ -28,6 +28,7 @@
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
 namespace sw::editor
@@ -551,7 +552,7 @@ namespace sw::editor
     bool ModelImportMaterial::makeSharedMaterialText( string_view fullText, string_view templateText, string_view templatePath, SharedMaterialText& outShared )
     {
         string deltaText;
-        if ( MaterialXML::makeParentDelta( fullText, templateText, templatePath, deltaText ) == false )
+        if ( DataInheritance::makeDelta( fullText, templateText, MaterialXML::makeInheritanceSchema(), templatePath, deltaText ) == false )
             return false;
         XMLDocument document;
         if ( document.parse( deltaText ) == false )
@@ -570,9 +571,10 @@ namespace sw::editor
 
     string ModelImportMaterial::makeSlotMaterialText( string_view fileStem, string_view sharedAssetID )
     {
-        XMLDocument   document;
-        const XMLNode root = document.appendRoot( "MaterialDesc" );
-        AssetXMLFormat::writeXMLVersion( root, Material::kAssetType._formatVersion );
+        XMLDocument                  document;
+        const XMLNode                root           = document.appendRoot( "MaterialDesc" );
+        constexpr AssetFormatVersion kFormatVersion = Material::kAssetType._formatVersion; // 상수로 읽는다 - 칸을 직접 쓰면 Engine 이 내보내지 않는 접미사 표까지 링크한다
+        AssetXMLFormat::writeXMLVersion( root, kFormatVersion );
         root.appendAttribute( "name", fileStem );
         root.appendAttribute( "_base", sharedAssetID );
         return document.saveToString();

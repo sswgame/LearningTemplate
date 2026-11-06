@@ -508,8 +508,8 @@ namespace sw
                 : _assetPath{ assetPath }
                 , _listShadowed{}
                 , _listRemove{}
-                , _bBase{ bBase ? SW_TRUE : SW_FALSE }
-                , _bVirtualCursor{ bVirtualCursor ? SW_TRUE : SW_FALSE }
+                , _bBase{ static_cast<uint8>( bBase ? SW_TRUE : SW_FALSE ) }
+                , _bVirtualCursor{ static_cast<uint8>( bVirtualCursor ? SW_TRUE : SW_FALSE ) }
                 , _reserved{ 0 }
             {
             }

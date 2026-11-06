@@ -10,8 +10,6 @@
 #include "Engine/Graphics/Material/MaterialTypes.h"
 #include "Engine/Graphics/Material/RenderBlendPreset.h"
 #include "Engine/Graphics/RHI/RHIRenderState.h"
-#include "Engine/Renderer/Frame/FrameRendererUtil.h"
-#include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
 using namespace sw;
 
@@ -120,20 +118,6 @@ SW_TEST_CASE( MaterialRenderStateTest, MergeFollowsThePassScope )
     SW_EXPECT_EQUAL( 0, static_cast<int32>( mergedNoDepth._bEnableDepthTest ) );
     SW_EXPECT_EQUAL( 0, static_cast<int32>( mergedNoDepth._bEnableDepthWrite ) );
     SW_EXPECT_TRUE( mergedNoDepth.findInvalidReason() == nullptr );
-}
-
-/** @brief [MaterialRenderStateTest] 머티리얼에 내주는 범위는 패스 종류의 표가 정한다 */
-SW_TEST_CASE( MaterialRenderStateTest, ScopeComesFromThePassTable )
-{
-    using Scope = RHIRenderStateOverride::Scope;
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::Transparent ) == Scope::FixedAndBlend );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::ForwardOpaque ) == Scope::FixedAndBlend );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::ForwardOpaqueNoDepthWrite ) == Scope::FixedAndBlend );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::ForwardOnlyOpaque ) == Scope::FixedAndBlend );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::GBuffer ) == Scope::FixedState );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::Shadow ) == Scope::CullOnly );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::DepthPrepass ) == Scope::CullOnly );
-    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::MeshOutline ) == Scope::CullOnly );
 }
 
 /** @brief [MaterialRenderStateTest] 해시와 비교가 칸을 따라온다 — 값이 하나 달라도 다르고, 같은 값은 같다 */

@@ -8,9 +8,9 @@
 #include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/Model/ModelImportConfig.h"
 #include "Editor/Common/Asset/Model/ModelImportMaterial.h"
+#include "Editor/Common/Asset/Tests/EditorScratchDomain.h"
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 
-#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Material/MaterialTypes.h"
@@ -24,7 +24,7 @@ namespace
     struct ImportedAssetStoreTestUtil
     {
         static constexpr const utf8* kTemplate = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="Template" shaderPath="engine/shaders/pbr_lit.hlsl" blendMode="Opaque">
+<MaterialDesc formatVersion="0" name="Template" shaderPath="engine/shaders/pbr_lit.hlsl" alphaMode="Opaque">
 	<_properties>
 		<item name="_color" type="Color" defaultValue="1 1 1 1" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
 		<item name="_roughness" type="Range" defaultValue="1" min="0.0" max="1.0" group="Surface"/>
@@ -140,7 +140,7 @@ SW_TEST_CASE( ImportedAssetStoreTest, SharedMaterialKeepsOnlyDifferencesAndIgnor
     SW_EXPECT_FALSE( StringUtil::contains( first._text, "shaderPath" ) );
     SW_EXPECT_FALSE( StringUtil::contains( first._text, "_color" ) );
     SW_EXPECT_FALSE( StringUtil::contains( first._text, "_permutations" ) );
-    SW_EXPECT_TRUE( StringUtil::contains( first._text, "parent=\"engine/materials/pbrmaterial.material\"" ) );
+    SW_EXPECT_TRUE( StringUtil::contains( first._text, "_base=\"engine/materials/pbrmaterial.material\"" ) );
 }
 
 /**
@@ -149,17 +149,17 @@ SW_TEST_CASE( ImportedAssetStoreTest, SharedMaterialKeepsOnlyDifferencesAndIgnor
 SW_TEST_CASE( ImportedAssetStoreTest, SlotRoundTripsAndInstanceValuesDoNotMix )
 {
     using Util = ImportedAssetStoreTestUtil;
-    const test::ScopedScratchDomain domain;
+    const test::EditorScratchDomain domain;
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "template.material" ), Util::kTemplate ) );
-    const string                            templateID = test::ScopedScratchDomain::makeID( "template.material" ).str();
+    const string                            templateID = test::EditorScratchDomain::makeID( "template.material" );
     ModelImportMaterial::SharedMaterialText shared;
     SW_REQUIRE_TRUE( ModelImportMaterial::makeSharedMaterialText( Util::makeFull( "slot_a", "0.5", "common/textures/a.dds" ), Util::kTemplate, templateID, shared ) );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "shared.material" ), shared._text ) );
-    const string sharedID = test::ScopedScratchDomain::makeID( "shared.material" ).str();
+    const string sharedID = test::EditorScratchDomain::makeID( "shared.material" );
     SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "slot_a.material" ), ModelImportMaterial::makeSlotMaterialText( "slot_a", sharedID ) ) );
 
     shared_ptr<Material> material = Material::create();
-    SW_REQUIRE_TRUE( material->loadFromFile( test::ScopedScratchDomain::makeID( "slot_a.material" ) ) );
+    SW_REQUIRE_TRUE( material->loadFromFile( AssetID{ test::EditorScratchDomain::makeID( "slot_a.material" ) } ) );
     SW_EXPECT_EQUAL( string( "slot_a" ), material->getName() );
     SW_EXPECT_EQUAL( string( "engine/shaders/pbr_lit.hlsl" ), material->getShaderPath() );
     const MaterialProperty* pRoughness = material->findProperty( hashed_string( "_roughness" ) );

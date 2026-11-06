@@ -32,8 +32,8 @@ namespace
         static InputSlot firstSlot( const InputMap& map, const utf8* pAction )
         {
             const ActionBinding* pBinding = map.getBinding( hashed_string( pAction ), 0 );
-            SW_REQUIRE_TRUE( pBinding != nullptr );
-            return pBinding->_arrSlot[0];
+            SW_EXPECT_TRUE( pBinding != nullptr );
+            return pBinding != nullptr ? pBinding->_arrSlot[0] : InputSlot{};
         }
     };
     using Util = InputMapBundleTestUtil;

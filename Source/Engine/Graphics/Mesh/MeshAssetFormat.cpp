@@ -392,7 +392,7 @@ namespace sw
                 }
             }
 
-            /** @brief 본 배치 지문과 역 바인드 @p boneCount 개를 읽습니다. 유한하지 않은 값이 있으면 false 입니다. */
+            /** @brief 본 배치 지문과 역 바인드 @p boneCount 개를 읽습니다. */
             [[nodiscard]] static bool readSkinBinding( ByteReader& reader, uint32 boneCount, MeshSkinBinding& outSkinBinding )
             {
                 outSkinBinding._layoutHash = reader.readUint64();
@@ -400,13 +400,7 @@ namespace sw
                 {
                     for ( uint32 element = 0; element < 16; ++element )
                     {
-                        const float32 value = reader.readFloat32();
-                        if ( MathUtil::isFinite( value ) == false )
-                        {
-                            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetInvalidInverseBind", "Mesh asset has an inverse bind matrix that is not finite - re-import the model" );
-                            return false;
-                        }
-                        ( &inverseBind._11 )[element] = value;
+                        ( &inverseBind._11 )[element] = reader.readFloat32(); // 유한하지 않은 값은 읽기가 넘침으로 거절한다(`ByteReader::readFloat32`)
                     }
                     return true;
                 } );

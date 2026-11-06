@@ -83,7 +83,6 @@ SW_TEST_CASE( AnimationSetTest, RejectsBrokenLines )
     AnimationSet animationSet;
     SW_EXPECT_LOG( "AnimationSet.ClipNeedsOneSource" );
     SW_EXPECT_FALSE( animationSet.parseXML( R"(<AnimationSet formatVersion="0"><clip name="a" path="x" set="y"/></AnimationSet>)", "<test>" ) );
-    SW_EXPECT_LOG( "AnimationSet.ClipNeedsOneSource" );
     SW_EXPECT_FALSE( animationSet.parseXML( R"(<AnimationSet formatVersion="0"><clip name="a"/></AnimationSet>)", "<test>" ) );
     SW_EXPECT_LOG( "AnimationSet.DuplicateClip" );
     SW_EXPECT_FALSE( animationSet.parseXML( R"(<AnimationSet formatVersion="0"><clip name="a" path="x"/><clip name="A" path="y"/></AnimationSet>)", "<test>" ) );

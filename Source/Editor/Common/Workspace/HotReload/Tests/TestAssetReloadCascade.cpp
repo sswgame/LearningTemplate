@@ -11,6 +11,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Common/Asset/Reference/EditorReferenceIndex.h"
+#include "Editor/Common/Asset/Tests/EditorScratchDomain.h"
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
@@ -43,38 +44,6 @@ namespace
         { return left._targetPath != right._targetPath ? left._targetPath < right._targetPath : left._referrerPath < right._referrerPath; } );
         outIndex.assign( std::move( data ) );
     }
-
-    /**
-     * @brief 케이스 폴더를 도메인 `cascadetest` 로 붙이고 사라질 때 뗍니다. 머티리얼의 부모 읽기(`XMLDocument::loadResource`)가 리소스 id 로 찾는다.
-     * @details 엔진 쪽 픽스처(`ScopedScratchDomain`)는 `EngineServices.h` 를 봐 에디터가 include 하지 못한다 — 에디터 창구(`editor::getSubsystem`)로 같은 일을 한다.
-     */
-    class ScopedCascadeDomain
-    {
-    public:
-        static constexpr const utf8* kDomain = "cascadetest";
-
-        ScopedCascadeDomain()
-            : _folder{ sw::FileUtil::normalizeSeparators( sw::test::makeScratchPath( kDomain ) ) }
-            , _bMounted{ SW_FALSE }
-        {
-            _bMounted = sw::FileUtil::ensureDirectoryExists( _folder ) && sw::editor::getSubsystem<sw::AssetPaths>().mountDiskDomain( kDomain, _folder );
-            SW_EXPECT_TRUE( _bMounted );
-        }
-        ~ScopedCascadeDomain()
-        {
-            if ( _bMounted )
-                (void)sw::editor::getSubsystem<sw::AssetPaths>().unmountDiskDomain( kDomain );
-        }
-        ScopedCascadeDomain( const ScopedCascadeDomain& )            = delete;
-        ScopedCascadeDomain& operator=( const ScopedCascadeDomain& ) = delete;
-
-        [[nodiscard]] sw::string        makeDiskPath( sw::string_view relativePath ) const { return sw::FileUtil::joinPath( _folder, relativePath ); }
-        [[nodiscard]] static sw::string makeID( sw::string_view relativePath ) { return sw::string( kDomain ) + "/" + sw::string( relativePath ); }
-
-    private:
-        sw::string _folder;
-        uint8      _bMounted : 1;
-    };
 
     sw::string makeMaterialText( const char* pName, const sw::string& parentID, const char* pRoughness )
     {
@@ -111,9 +80,9 @@ SW_TEST_CASE( AssetReloadCascadeTest, MaterialRouteInlinesReferences )
  */
 SW_TEST_CASE( AssetReloadCascadeTest, ParentChangeReloadsLoadedChildWithNewValue )
 {
-    const ScopedCascadeDomain domain;
-    const sw::string          parentID = ScopedCascadeDomain::makeID( "parent.material" );
-    const sw::string          childID  = ScopedCascadeDomain::makeID( "child.material" );
+    const sw::test::EditorScratchDomain domain;
+    const sw::string                    parentID = sw::test::EditorScratchDomain::makeID( "parent.material" );
+    const sw::string                    childID  = sw::test::EditorScratchDomain::makeID( "child.material" );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "parent.material" ), makeMaterialText( "Parent", {}, "0.5" ) ) );
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "child.material" ), makeMaterialText( "Child", parentID, nullptr ) ) );
 

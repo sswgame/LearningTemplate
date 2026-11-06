@@ -86,7 +86,7 @@ SW_TEST_CASE( MeshSkinBindingTest, TruncatedOrBadInverseBindsAreRejected )
     vector<uint8> badValue                    = bytes;
     badValue[skinEnd + sizeof( uint64 ) + 3u] = 0x7F; // 첫 칸의 지수를 모두 켠다
     badValue[skinEnd + sizeof( uint64 ) + 2u] = 0xC0;
-    SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetInvalidInverseBind" );
+    SW_EXPECT_LOG( "MeshAssetFormat.MeshAssetNonFinite" );
     SW_EXPECT_FALSE( MeshAssetFormat::readFromBytes( badValue.data(), badValue.size(), read ) );
     SW_EXPECT_TRUE( read._listVertex.empty() );
 

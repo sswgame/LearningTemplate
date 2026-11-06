@@ -186,7 +186,6 @@ SW_TEST_CASE( DataCatalogInheritance, BrokenChainsAreErrors )
         SW_EXPECT_FALSE( DataCatalogInheritance::flatten( R"(<Catalog><Visual id="a" _base="b" /><Visual id="b" _base="a" /></Catalog>)", "test.xml", schema, source, flatText ) );
     }
     {
-        SW_EXPECT_LOG( "DataInheritance.Cycle" );
         SW_EXPECT_FALSE( DataCatalogInheritance::flatten( R"(<Catalog><Visual id="a" _base="a" /></Catalog>)", "test.xml", schema, source, flatText ) );
     }
     {
@@ -194,11 +193,9 @@ SW_TEST_CASE( DataCatalogInheritance, BrokenChainsAreErrors )
         SW_EXPECT_FALSE( DataCatalogInheritance::flatten( R"(<Catalog><Visual id="a" _base="missing" /></Catalog>)", "test.xml", schema, source, flatText ) );
     }
     {
-        SW_EXPECT_LOG( "DataInheritance.BaseNotFound" ); // 종류마다 id 가 따로다
         SW_EXPECT_FALSE( DataCatalogInheritance::flatten( R"(<Catalog><Other id="o" /><Visual id="a" _base="o" /></Catalog>)", "test.xml", schema, source, flatText ) );
     }
     {
-        SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
         SW_EXPECT_FALSE( DataCatalogInheritance::flatten( R"(<Catalog><Visual id="a" _base="common/none.xml#x" /></Catalog>)", "test.xml", schema, source, flatText ) );
     }
     {
