@@ -105,6 +105,11 @@ namespace sw
             {
                 MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
                 IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                if ( pWindow != nullptr && pWindow->canMinimize() == false )
+                {
+                    runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": this desktop cannot minimize windows (no window manager)" );
+                    return true;
+                }
                 if ( pWindow == nullptr || pWindow->setMinimized( bMinimized ) == false )
                     runner.recordFailure( step, "this platform could not minimize or restore the window" );
                 return true;

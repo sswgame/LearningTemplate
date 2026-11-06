@@ -98,11 +98,6 @@ namespace sw::editor
          */
         [[nodiscard]] static bool holdMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
         static void               releaseMouseHold();
-        /**
-         * @brief 앞 단계가 누른 채 둔 키 · 단추를 모두 놓습니다(단계 초기화).
-         * @details 단계가 `state="Down"` 뒤에 건너뜀 · 실패로 끝나면 놓는 단계가 돌지 않는다. 그대로 두면 다음 단계들의 클릭 · 단축키가 눌린 입력과 섞여 엉뚱한 단계가 진다.
-         */
-        static void releaseHeldInput();
         /** @brief 앞 단계가 넣은 이벤트가 아직 ImGui 에 다 들어가지 않았으면 true 입니다. 입력 단계는 앞 입력이 다 들어간 뒤에 자리를 본다. */
         [[nodiscard]] static bool hasPendingEvents();
         /**

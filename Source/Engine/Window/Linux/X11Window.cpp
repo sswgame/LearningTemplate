@@ -318,6 +318,26 @@ namespace sw
         return false;
     }
 
+    bool X11Window::canMinimize() const
+    {
+        // 아이콘화는 창 관리자에게 하는 요청이다. 없으면(Xvfb) 요청은 성공해도 아무 일도 없다 - EWMH 창 관리자는 루트에 이 속성을 둔다.
+        if ( _pX11Display == nullptr )
+            return false;
+        Display*   pDisplay = static_cast<Display*>( _pX11Display );
+        const Atom wmCheck  = XInternAtom( pDisplay, "_NET_SUPPORTING_WM_CHECK", True );
+        if ( wmCheck == None )
+            return false;
+        Atom           actualType{ None };
+        int32          actualFormat{ 0 };
+        unsigned long  itemCount{ 0 };
+        unsigned long  bytesAfter{ 0 };
+        unsigned char* pData{ nullptr };
+        const int32    result = XGetWindowProperty( pDisplay, DefaultRootWindow( pDisplay ), wmCheck, 0, 1, False, XA_WINDOW, &actualType, &actualFormat, &itemCount, &bytesAfter, &pData );
+        if ( pData != nullptr )
+            XFree( pData );
+        return result == Success && itemCount > 0;
+    }
+
     bool X11Window::setMinimized( bool bMinimized )
     {
         if ( _pX11Display == nullptr || _x11Window == 0 )

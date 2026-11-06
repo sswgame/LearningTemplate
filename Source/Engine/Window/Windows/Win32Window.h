@@ -57,8 +57,9 @@ namespace sw
         bool isVisible() const override;
 
         /** @brief 창 스타일(WS_OVERLAPPEDWINDOW, WS_POPUP)과 위치, 크기를 바꿉니다. 크기 통보는 이 호출 안의 WM_SIZE 로 옵니다. */
-        bool setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
-        bool setMinimized( bool bMinimized ) override;
+        bool               setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
+        [[nodiscard]] bool canMinimize() const override { return true; }
+        bool               setMinimized( bool bMinimized ) override;
         /** @brief `GetWindowRect` 와 화면 좌표의 클라이언트 사각형(`GetClientRect` + `ClientToScreen`) 차이입니다. 숨은 창에도 맞는 값이다. */
         [[nodiscard]] bool tryGetFrameExtents( WindowFrameExtents& outExtents ) const override;
         [[nodiscard]] bool canPlaceWindow() const override { return true; }

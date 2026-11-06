@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 단계 초기화가 앞 단계의 눌린 입력을 놓는지 본다. 오른쪽 단추와 D 를 누른 채 끝난다(건너뜀 · 실패로 끝난 단계와 같은 모양).
+  이름순으로 바로 다음 단계가 graphaddnode 다 — 눌림이 남으면 그 단계의 우클릭 메뉴가 열리지 않아 진다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/graphaddheld.scenario.xml,engine/automation/editor/graphaddnode.scenario.xml -unattended
+-->
+<Scenario name="editor.graphaddheld" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<DevCommand line="layout.reset"/>
+	<ResizeWindow width="1600" height="900"/>
+	<EditorWaitSettled/>
+	<EditorClick mark="sceneView.canvas" button="1" state="Down"/>
+	<EditorKey key="D" state="Down"/>
+	<Wait frames="5"/>
+	<Pass/>
+</Scenario>

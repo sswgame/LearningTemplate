@@ -264,6 +264,9 @@ namespace sw
             (void)height;
             return false;
         }
+        /** @brief 이 데스크톱에서 창을 최소화할 수 있으면 true 입니다. 창 관리자가 없는 X 서버(Xvfb)는 요청해도 아무 일도 없어 false 입니다. */
+        [[nodiscard]] virtual bool canMinimize() const { return false; }
+
         /**
          * @brief 창을 최소화하거나 되돌립니다. 최소화 상태(`isMinimized`)는 플랫폼의 통보가 바꾼다.
          * @details 자동화 시나리오(`MinimizeWindow` · `RestoreWindow`)가 최소화 중의 프레임 · 스왑체인 경로를 볼 때 쓴다. **창 스레드(메인 스레드)에서만 부른다.**

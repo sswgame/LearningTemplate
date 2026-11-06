@@ -27,6 +27,30 @@ namespace sw::editor
     {
         struct EditorAutomationStageResetInternal
         {
+            /**
+             * @brief 앞 단계가 누른 채 둔 키 · 단추를 놓습니다. 지우기(`ClearInputKeys`)가 아니라 뗌 이벤트다 - 입력을 게임 뷰로 넘기는 쪽(`ImGuiKeyForward`)도 뗌을 봐야 한다.
+             * @details 단계가 `state="Down"` 뒤에 건너뜀 · 실패로 끝나면 놓는 단계가 돌지 않는다. 그대로 두면 다음 단계들의 클릭 · 단축키가 눌린 입력과 섞여 엉뚱한 단계가 진다.
+             */
+            static void releaseHeldInput()
+            {
+                ImGuiIO& io = ImGui::GetIO();
+                for ( int32 key = ImGuiKey_NamedKey_BEGIN; key < ImGuiKey_MouseLeft; ++key )
+                {
+                    if ( ImGui::GetKeyData( static_cast<ImGuiKey>( key ) )->Down )
+                        io.AddKeyEvent( static_cast<ImGuiKey>( key ), false );
+                }
+                for ( const ImGuiKey modifier : { ImGuiMod_Ctrl, ImGuiMod_Shift, ImGuiMod_Alt, ImGuiMod_Super } )
+                {
+                    if ( ImGui::GetKeyData( modifier )->Down )
+                        io.AddKeyEvent( modifier, false );
+                }
+                for ( int32 button = 0; button < ImGuiMouseButton_COUNT; ++button )
+                {
+                    if ( io.MouseDown[button] )
+                        io.AddMouseButtonEvent( button, false );
+                }
+            }
+
             static void resetEditor()
             {
                 EditorContext* pContext = editor::findSubsystem<EditorContext>(); // 선택: 편집기를 켜지 않은 체인(게임 시나리오)에는 없다
@@ -37,6 +61,7 @@ namespace sw::editor
                 pContext->getSubsystem<EditorNetPlaySession>().resetToFreshEditor();
                 if ( ImGui::GetCurrentContext() != nullptr )
                 {
+                    releaseHeldInput();
                     if ( ImGui::GetCurrentContext()->OpenPopupStack.Size > 0 )
                         ImGui::ClosePopupToLevel( 0, false );
                     ImGui::ClearActiveID();

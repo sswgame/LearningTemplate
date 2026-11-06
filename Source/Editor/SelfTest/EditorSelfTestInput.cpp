@@ -85,8 +85,6 @@ namespace sw::editor
                 string               _lastLayoutChange;               ///< 서명이 마지막으로 바뀐 까닭(창 이름 · 메인 뷰포트 · 팝업, `describeLastLayoutChange`)
                 float2               _heldMousePosition{};
                 uint32               _heldMouseViewportID{ 0 };
-                vector<int32>        _listHeldKey;          ///< 누른 채 둔 키(`releaseHeldInput` 이 놓는다)
-                uint32               _heldButtonMask{ 0 };  ///< 누른 채 둔 마우스 단추(비트 = 단추 번호)
                 bool                 _bHoldMouse{ false };  ///< 누른 채 두는 동안 프레임마다 커서를 이 위치로 다시 넣는다(플랫폼이 실제 커서를 넣어 호버가 풀리지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
                 bool                 _bEnabled{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             };
@@ -302,11 +300,6 @@ namespace sw::editor
 
     void EditorSelfTestInput::setMouseButton( int32 button, bool bDown )
     {
-        if ( EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState(); pState != nullptr )
-        {
-            const uint32 buttonBit  = 1u << static_cast<uint32>( button );
-            pState->_heldButtonMask = bDown ? ( pState->_heldButtonMask | buttonBit ) : ( pState->_heldButtonMask & ~buttonBit );
-        }
         EditorSelfTestInputInternal::PendingEvent event;
         event._kind  = EditorSelfTestInputInternal::EventKind::MouseButton;
         event._code  = button;
@@ -339,12 +332,6 @@ namespace sw::editor
 
     void EditorSelfTestInput::setKey( int32 imguiKey, bool bDown )
     {
-        if ( EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState(); pState != nullptr )
-        {
-            (void)VectorUtil::removeValue( pState->_listHeldKey, imguiKey );
-            if ( bDown )
-                pState->_listHeldKey.push_back( imguiKey );
-        }
         EditorSelfTestInputInternal::PendingEvent event;
         event._kind  = EditorSelfTestInputInternal::EventKind::Key;
         event._code  = imguiKey;
@@ -464,24 +451,6 @@ namespace sw::editor
     {
         const EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
         return pState != nullptr ? pState->_lastLayoutChange : string{};
-    }
-
-    void EditorSelfTestInput::releaseHeldInput()
-    {
-        EditorSelfTestInputInternal::State* pState = EditorSelfTestInputInternal::findState();
-        if ( pState == nullptr )
-            return;
-        const vector<int32> listHeldKey = pState->_listHeldKey;
-        for ( const int32 imguiKey : listHeldKey )
-        {
-            setKey( imguiKey, false );
-        }
-        for ( int32 button = 0; pState->_heldButtonMask != 0; ++button )
-        {
-            if ( ( pState->_heldButtonMask & ( 1u << static_cast<uint32>( button ) ) ) != 0 )
-                setMouseButton( button, false );
-        }
-        pState->_bHoldMouse = false;
     }
 
     void EditorSelfTestInput::releaseMouseHold()
