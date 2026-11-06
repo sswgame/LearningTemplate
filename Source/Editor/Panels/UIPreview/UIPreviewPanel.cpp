@@ -632,11 +632,13 @@ namespace sw::editor
 
         const EditorListFilter paletteFilter{ string_view{ _paletteFilter } };
         ImGui::BeginChild( "##uipreviewpalettelist", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_None );
+        uint32 shownCount{ 0 };
         for ( const TypeInfo* pType : _model.getPaletteTypes() )
         {
             const utf8* pName = pType->_name.c_str();
             if ( paletteFilter.matches( pName ) == false )
                 continue;
+            ++shownCount;
             const bool bChosen = _model.getPaletteType() == pType->_name;
             if ( ImGui::Selectable( pName, bChosen, ImGuiSelectableFlags_AllowDoubleClick ) )
             {
@@ -649,6 +651,8 @@ namespace sw::editor
             const EditorDragPayload payload{ EditorPayloadKind::WidgetType, EditorInputGUI::registerPayloadName( EditorPayloadKind::WidgetType, pName ) };
             (void)EditorInputGUI::beginDragSource( payload, pName ); // 끌기를 시작했는지는 쓰지 않는다
         }
+        if ( shownCount == 0 && paletteFilter.isActive() )
+            EditorWidgets::drawNoSearchResultHint( paletteFilter.getText() );
         ImGui::EndChild();
     }
 

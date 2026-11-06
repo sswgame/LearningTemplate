@@ -65,6 +65,7 @@ namespace sw::editor
         const ModuleResolution& resolution = _model.getResolution();
         const float32           listHeight = _model.getSelectedModule().empty() ? 0.0f : ImGui::GetContentRegionAvail().y * 0.6f;
         ImGui::BeginChild( "##ModuleList", ImVec2( 0.0f, listHeight ) );
+        uint32 shownCount{ 0 };
         for ( const ModuleKind kind : ModulesModel::kArrKindOrder )
         {
             if ( _model.isKindVisible( kind ) == false )
@@ -81,6 +82,7 @@ namespace sw::editor
             {
                 if ( manifest._kind != kind || filter.matchesAny( { manifest._name, manifest._description } ) == false || _model.isStateVisible( manifest._name ) == false )
                     continue;
+                ++shownCount;
                 const bool bActive = resolution.isActive( manifest._name );
                 ImGui::PushID( manifest._name.c_str() );
                 ImGui::TableNextRow();
@@ -113,6 +115,8 @@ namespace sw::editor
             }
             ImGui::EndTable();
         }
+        if ( shownCount == 0 && filter.isActive() )
+            EditorWidgets::drawNoSearchResultHint( filter.getText() );
         ImGui::EndChild();
         drawDetail();
         if ( _bOpenPreview )
