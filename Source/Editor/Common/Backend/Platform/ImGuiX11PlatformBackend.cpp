@@ -187,9 +187,11 @@ namespace sw::editor
                 case ButtonPress:
                 case ButtonRelease:
                 {
-                    // X11 마우스 확장 버튼 번호(표준 X.h 는 Button1~5 만 정의하므로 8/9 를 상수로 둔다)
-                    static constexpr uint32 kX11ButtonBack    = 8;
-                    static constexpr uint32 kX11ButtonForward = 9;
+                    // X11 마우스 확장 버튼 번호(표준 X.h 는 Button1~5 만 정의하므로 6 ~ 9 를 상수로 둔다)
+                    static constexpr uint32 kX11ButtonWheelLeft  = 6;
+                    static constexpr uint32 kX11ButtonWheelRight = 7;
+                    static constexpr uint32 kX11ButtonBack       = 8;
+                    static constexpr uint32 kX11ButtonForward    = 9;
 
                     // ImGui 마우스 버튼 인덱스
                     static constexpr int32 kImGuiMouseBack    = 3; // XButton1 (ImGuiKey_MouseX1)
@@ -215,10 +217,19 @@ namespace sw::editor
                             io.AddMouseWheelEvent( 0, -1.0f );
                         return io.WantCaptureMouse;
                     }
+                    else if ( pEvent->xbutton.button == kX11ButtonWheelLeft || pEvent->xbutton.button == kX11ButtonWheelRight )
+                    {
+                        // ImGui 의 가로 휠은 + 가 왼쪽이다(GLFW 백엔드도 6 = +1, 7 = -1).
+                        if ( bIsDown )
+                            io.AddMouseWheelEvent( pEvent->xbutton.button == kX11ButtonWheelLeft ? 1.0f : -1.0f, 0 );
+                        return io.WantCaptureMouse;
+                    }
                     else if ( pEvent->xbutton.button == kX11ButtonBack )
                         button = kImGuiMouseBack;
                     else if ( pEvent->xbutton.button == kX11ButtonForward )
                         button = kImGuiMouseForward;
+                    else
+                        return false; // 모르는 버튼을 왼쪽 단추로 알리지 않는다(Wayland `mapButton` 과 같다)
                     io.AddMouseButtonEvent( button, bIsDown );
 
                     return io.WantCaptureMouse;
