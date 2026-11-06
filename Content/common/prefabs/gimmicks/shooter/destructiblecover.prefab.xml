@@ -43,12 +43,12 @@
 					<item>50</item>
 				</_listStageThreshold>
 			</DestructibleComponent>
-			<UsableObjectComponent _componentName="UsableObjectComponent"
+			<SmartObjectComponent _componentName="SmartObjectComponent"
 			                      _bActive="true"
 			                      _smartObjectID="LowCover"
 			                      _catalogPath="common/data/interactions/default.interactions.xml">
 				<_listClaimant />
-			</UsableObjectComponent>
+			</SmartObjectComponent>
 		</_listComponent>
 	</GameObject>
 </Prefab>

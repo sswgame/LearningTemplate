@@ -140,7 +140,7 @@ namespace sw
         return bValid;
     }
 
-    bool InteractionCatalog::readSmartObject( const XMLNode& node, UsableObjectDef& outDef, string_view sourceName ) const
+    bool InteractionCatalog::readSmartObject( const XMLNode& node, SmartObjectDef& outDef, string_view sourceName ) const
     {
         using Internal = InteractionCatalogInternal;
         bool bValid    = XMLFields::readFields( node, outDef, sourceName );
@@ -148,11 +148,11 @@ namespace sw
         {
             if ( StringUtil::equals( slotNode.getName(), "Slot" ) == false )
             {
-                SW_LOG_WARNING_ID( "InteractionCatalog.UnknownElementUsableObject", "%#: unknown element <%#> in <UsableObject>", sourceName, slotNode.getName() );
+                SW_LOG_WARNING_ID( "InteractionCatalog.UnknownElementSmartObject", "%#: unknown element <%#> in <SmartObject>", sourceName, slotNode.getName() );
                 bValid = false;
                 continue;
             }
-            UsableObjectSlotDef slot; // 각은 라디안(±2π)이다 — PROPERTY 가 본다
+            SmartObjectSlotDef slot; // 각은 라디안(±2π)이다 — PROPERTY 가 본다
             bValid = XMLFields::readFields( slotNode, slot, sourceName, { "tags" } ) && bValid;
             Internal::readTags( slotNode.getAttributeText( "tags" ), slot._tags );
             outDef._listSlot.push_back( slot );
@@ -178,13 +178,13 @@ namespace sw
                 addInteraction( def );
                 continue;
             }
-            if ( StringUtil::equals( child.getName(), "UsableObject" ) )
+            if ( StringUtil::equals( child.getName(), "SmartObject" ) )
             {
-                UsableObjectDef def;
+                SmartObjectDef def;
                 bValid = readSmartObject( child, def, sourceName ) && bValid;
                 if ( def._id.empty() )
                 {
-                    SW_LOG_WARNING_ID( "InteractionCatalog.UsableObjectWithoutIdSkipped", "%#: <UsableObject> without an id - skipped", sourceName );
+                    SW_LOG_WARNING_ID( "InteractionCatalog.SmartObjectWithoutIdSkipped", "%#: <SmartObject> without an id - skipped", sourceName );
                     bValid = false;
                     continue;
                 }

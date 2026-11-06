@@ -14,7 +14,7 @@
  *       </Interaction>
  *       <Interaction id="Takedown" mode="Press" pairedAnimation="anim/takedown_front.pairedanim.xml;anim/takedown_back.pairedanim.xml"
  *                    interactorRole="Attacker" interactableRole="Victim"/>
- *       <UsableObject id="Bench"><Slot id="Left" offset="-0.5 0 0" yaw="3.1416" tags="Activity.Sit"/></UsableObject>
+ *       <SmartObject id="Bench"><Slot id="Left" offset="-0.5 0 0" yaw="3.1416" tags="Activity.Sit"/></SmartObject>
  *     </Interactions>
  * @endcode
  *          단계가 없으면 `<Interaction>` 의 mode, prompt, duration, presses, decay 가 한 단계가 된다. 각도는 라디안으로 적는다(`maxAngle` 은 [0, π], `yaw` 는 [−2π, 2π]). 깨진 숫자와 범위 밖 값은 오류다(자르지 않는다).
@@ -139,7 +139,7 @@ namespace sw
 {
     /** @brief 스마트 오브젝트의 슬롯 하나입니다(벤치 좌석, 엄폐 지점, 작업대 앞). */
     REFLECT()
-    struct SW_GF_API UsableObjectSlotDef
+    struct SW_GF_API SmartObjectSlotDef
     {
         REFLECT_BODY();
 
@@ -157,13 +157,13 @@ namespace sw
 {
     /** @brief 스마트 오브젝트 하나입니다. 슬롯 목록을 담으며, 플레이어와 AI 가 같은 정의로 슬롯을 차지합니다. */
     REFLECT()
-    struct SW_GF_API UsableObjectDef
+    struct SW_GF_API SmartObjectDef
     {
         REFLECT_BODY();
 
         PROPERTY( Required )
-        hashed_string               _id{};
-        vector<UsableObjectSlotDef> _listSlot{};
+        hashed_string              _id{};
+        vector<SmartObjectSlotDef> _listSlot{};
     };
 } // namespace sw
 
@@ -179,23 +179,23 @@ namespace sw
 
     public:
         void addInteraction( const InteractionDef& def ) { (void)_interactionCatalog.add( def ); }
-        void addSmartObject( const UsableObjectDef& def ) { (void)_smartObjectCatalog.add( def ); }
+        void addSmartObject( const SmartObjectDef& def ) { (void)_smartObjectCatalog.add( def ); }
 
-        const InteractionDef*          findInteraction( const hashed_string& id ) const { return _interactionCatalog.find( id ); }
-        const UsableObjectDef*         findSmartObject( const hashed_string& id ) const { return _smartObjectCatalog.find( id ); }
-        const vector<InteractionDef>&  getInteractions() const { return _interactionCatalog.getAll(); }
-        const vector<UsableObjectDef>& getSmartObjects() const { return _smartObjectCatalog.getAll(); }
+        const InteractionDef*         findInteraction( const hashed_string& id ) const { return _interactionCatalog.find( id ); }
+        const SmartObjectDef*         findSmartObject( const hashed_string& id ) const { return _smartObjectCatalog.find( id ); }
+        const vector<InteractionDef>& getInteractions() const { return _interactionCatalog.getAll(); }
+        const vector<SmartObjectDef>& getSmartObjects() const { return _smartObjectCatalog.getAll(); }
 
     private:
         static constexpr const utf8* kXMLRootName = "Interactions"; ///< 루트 원소(`XMLCatalog`)
 
         [[nodiscard]] bool loadRoot( const XMLNode& root, string_view sourceName );
         [[nodiscard]] bool readInteraction( const XMLNode& node, InteractionDef& outDef, string_view sourceName ) const;
-        [[nodiscard]] bool readSmartObject( const XMLNode& node, UsableObjectDef& outDef, string_view sourceName ) const;
+        [[nodiscard]] bool readSmartObject( const XMLNode& node, SmartObjectDef& outDef, string_view sourceName ) const;
 
     private:
-        GameCatalog<InteractionDef>  _interactionCatalog{};
-        GameCatalog<UsableObjectDef> _smartObjectCatalog{};
+        GameCatalog<InteractionDef> _interactionCatalog{};
+        GameCatalog<SmartObjectDef> _smartObjectCatalog{};
     };
 
     /** @brief 공유 캐시("interactions")는 GameFramework 가 인스턴스화합니다(`InteractionCatalog.cpp`). 다시 읽으면 떼어 낸다 — 정의를 쥔 컴포넌트 · 세션은 옛 테이블을 끝까지 쥔다. */

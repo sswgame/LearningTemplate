@@ -420,7 +420,7 @@ namespace sw
                 }
                 break;
             }
-            case ScheduleActivityTarget::UsableObject:
+            case ScheduleActivityTarget::SmartObject:
             {
                 if ( outBlock._objectKind.empty() )
                 {

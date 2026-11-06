@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Interaction/UsableObjectComponent.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectComponent.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Math/MathUtil.h"
@@ -17,13 +17,13 @@ namespace sw
 
 namespace sw
 {
-    void UsableObjectSlots::initialize( const UsableObjectDef& def )
+    void SmartObjectSlots::initialize( const SmartObjectDef& def )
     {
         _def = def;
         _listClaimant.assign( def._listSlot.size(), 0 );
     }
 
-    bool UsableObjectSlots::claim( int32 slot, uint64 claimantID )
+    bool SmartObjectSlots::claim( int32 slot, uint64 claimantID )
     {
         const bool bInvalidClaim = slot < 0 || slot >= getSlotCount() || claimantID == 0;
         if ( bInvalidClaim )
@@ -37,7 +37,7 @@ namespace sw
         return true;
     }
 
-    bool UsableObjectSlots::release( uint64 claimantID )
+    bool SmartObjectSlots::release( uint64 claimantID )
     {
         const int32 slot = findSlotOf( claimantID );
         if ( slot < 0 )
@@ -46,7 +46,7 @@ namespace sw
         return true;
     }
 
-    int32 UsableObjectSlots::findFreeSlot( const TagContainer& requiredTags ) const
+    int32 SmartObjectSlots::findFreeSlot( const TagContainer& requiredTags ) const
     {
         for ( int32 slot = 0; slot < getSlotCount(); ++slot )
         {
@@ -56,7 +56,7 @@ namespace sw
         return -1;
     }
 
-    int32 UsableObjectSlots::findSlotOf( uint64 claimantID ) const
+    int32 SmartObjectSlots::findSlotOf( uint64 claimantID ) const
     {
         for ( int32 slot = 0; slot < getSlotCount(); ++slot )
         {
@@ -66,12 +66,12 @@ namespace sw
         return -1;
     }
 
-    uint64 UsableObjectSlots::getClaimant( int32 slot ) const
+    uint64 SmartObjectSlots::getClaimant( int32 slot ) const
     {
         return 0 <= slot && slot < getSlotCount() ? _listClaimant[static_cast<size_t>( slot )] : 0;
     }
 
-    int32 UsableObjectSlots::countFree() const
+    int32 SmartObjectSlots::countFree() const
     {
         int32 count = 0;
         for ( const uint64 claimant : _listClaimant )
@@ -81,12 +81,12 @@ namespace sw
         return count;
     }
 
-    const UsableObjectSlotDef* UsableObjectSlots::findSlotDef( int32 slot ) const
+    const SmartObjectSlotDef* SmartObjectSlots::findSlotDef( int32 slot ) const
     {
         return 0 <= slot && slot < static_cast<int32>( _def._listSlot.size() ) ? &_def._listSlot[static_cast<size_t>( slot )] : nullptr;
     }
 
-    UsableObjectComponent::UsableObjectComponent()
+    SmartObjectComponent::SmartObjectComponent()
         : _smartObjectID{}
         , _catalogPath{}
         , _listClaimant{}
@@ -97,21 +97,21 @@ namespace sw
     {
     }
 
-    void UsableObjectComponent::resolveDefinition()
+    void SmartObjectComponent::resolveDefinition()
     {
         _seenCatalogReloadCount = SharedAssetCache<InteractionCatalog>::getReloadCount();
         if ( _bHasOverride == SW_TRUE || _smartObjectID.empty() )
             return;
         if ( _catalogPath.empty() )
         {
-            SW_LOG_ERROR_ID( "UsableObjectComponent.SmartObjectNoCatalog", "Smart object '%#' has no catalog path - set Catalog", _smartObjectID.c_str() );
+            SW_LOG_ERROR_ID( "SmartObjectComponent.SmartObjectNoCatalog", "Smart object '%#' has no catalog path - set Catalog", _smartObjectID.c_str() );
             return;
         }
         const shared_ptr<const InteractionCatalog> pCatalog = SharedAssetCache<InteractionCatalog>::acquire( _catalogPath );
-        const UsableObjectDef*                     pDef     = pCatalog != nullptr ? pCatalog->findSmartObject( _smartObjectID ) : nullptr; // 슬롯은 정의를 베낀다 — 테이블을 쥐지 않는다
+        const SmartObjectDef*                      pDef     = pCatalog != nullptr ? pCatalog->findSmartObject( _smartObjectID ) : nullptr; // 슬롯은 정의를 베낀다 — 테이블을 쥐지 않는다
         if ( pDef == nullptr )
         {
-            SW_LOG_ERROR_ID( "UsableObjectComponent.SmartObjectNot", "Smart object '%#' is not in %#", _smartObjectID.c_str(), _catalogPath.c_str() );
+            SW_LOG_ERROR_ID( "SmartObjectComponent.SmartObjectNot", "Smart object '%#' is not in %#", _smartObjectID.c_str(), _catalogPath.c_str() );
             return;
         }
         ScopedLock<mutex> lock{ _mutex };
@@ -125,32 +125,32 @@ namespace sw
         _listClaimant.resize( static_cast<size_t>( _slots.getSlotCount() ) );
     }
 
-    void UsableObjectComponent::onRegister( GameObjectManager& manager )
+    void SmartObjectComponent::onRegister( GameObjectManager& manager )
     {
         Component::onRegister( manager );
-        manager.getComponentRegistry().add<UsableObjectComponent>( this );
+        manager.getComponentRegistry().add<SmartObjectComponent>( this );
     }
 
-    void UsableObjectComponent::onUnregister( GameObjectManager& manager )
+    void SmartObjectComponent::onUnregister( GameObjectManager& manager )
     {
-        manager.getComponentRegistry().remove<UsableObjectComponent>( this );
+        manager.getComponentRegistry().remove<SmartObjectComponent>( this );
         Component::onUnregister( manager );
     }
 
-    void UsableObjectComponent::onPostLoad()
+    void SmartObjectComponent::onPostLoad()
     {
         Component::onPostLoad();
         resolveDefinition();
     }
 
-    void UsableObjectComponent::onBeginPlay()
+    void SmartObjectComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         if ( _slots.getSlotCount() == 0 )
             resolveDefinition();
     }
 
-    void UsableObjectComponent::onTick( float32 deltaTime )
+    void SmartObjectComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
         // 상호작용 테이블 파일이 바뀌었으므로 새 테이블에서 슬롯을 다시 찾는다. 차지 상태는 슬롯 번호로 이어지고, 줄어든 슬롯의 차지는 해제된다.
@@ -158,25 +158,25 @@ namespace sw
             resolveDefinition();
     }
 
-    void UsableObjectComponent::onPropertyChanged( hashed_string propertyName )
+    void SmartObjectComponent::onPropertyChanged( hashed_string propertyName )
     {
         Component::onPropertyChanged( propertyName );
         resolveDefinition();
     }
 
-    void UsableObjectComponent::setSmartObjectID( const hashed_string& id )
+    void SmartObjectComponent::setSmartObjectID( const hashed_string& id )
     {
         _smartObjectID = id;
         resolveDefinition();
     }
 
-    void UsableObjectComponent::setCatalogPath( string_view path )
+    void SmartObjectComponent::setCatalogPath( string_view path )
     {
         _catalogPath = string( path );
         resolveDefinition();
     }
 
-    void UsableObjectComponent::setDefinition( const UsableObjectDef& def )
+    void SmartObjectComponent::setDefinition( const SmartObjectDef& def )
     {
         ScopedLock<mutex> lock{ _mutex };
         _bHasOverride = SW_TRUE;
@@ -184,7 +184,7 @@ namespace sw
         _listClaimant.assign( def._listSlot.size(), GameObjectHandle{} );
     }
 
-    void UsableObjectComponent::syncClaimants()
+    void SmartObjectComponent::syncClaimants()
     {
         const GameObject*        pOwner   = getOwner();
         const GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
@@ -198,7 +198,7 @@ namespace sw
         }
     }
 
-    bool UsableObjectComponent::claimSlot( const GameObject& claimant, int32 slot )
+    bool SmartObjectComponent::claimSlot( const GameObject& claimant, int32 slot )
     {
         ScopedLock<mutex> lock{ _mutex };
         syncClaimants();
@@ -207,7 +207,7 @@ namespace sw
         return bClaimed;
     }
 
-    int32 UsableObjectComponent::claimFreeSlot( const GameObject& claimant, const TagContainer& requiredTags )
+    int32 SmartObjectComponent::claimFreeSlot( const GameObject& claimant, const TagContainer& requiredTags )
     {
         ScopedLock<mutex> lock{ _mutex };
         syncClaimants();
@@ -221,7 +221,7 @@ namespace sw
         return slot;
     }
 
-    bool UsableObjectComponent::releaseSlot( const GameObject& claimant )
+    bool SmartObjectComponent::releaseSlot( const GameObject& claimant )
     {
         ScopedLock<mutex> lock{ _mutex };
         const bool        bReleased = _slots.release( claimant.getObjectID() );
@@ -229,36 +229,36 @@ namespace sw
         return bReleased;
     }
 
-    int32 UsableObjectComponent::findSlotOf( const GameObject& claimant ) const
+    int32 SmartObjectComponent::findSlotOf( const GameObject& claimant ) const
     {
         ScopedLock<mutex> lock{ _mutex };
         return _slots.findSlotOf( claimant.getObjectID() );
     }
 
-    int32 UsableObjectComponent::countFreeSlots() const
+    int32 SmartObjectComponent::countFreeSlots() const
     {
         ScopedLock<mutex> lock{ _mutex };
         return _slots.countFree();
     }
 
-    hashed_string UsableObjectComponent::getDefinitionID() const
+    hashed_string SmartObjectComponent::getDefinitionID() const
     {
         ScopedLock<mutex> lock{ _mutex };
         return _slots.getDefinitionID();
     }
 
-    int32 UsableObjectComponent::getSlotCount() const
+    int32 SmartObjectComponent::getSlotCount() const
     {
         ScopedLock<mutex> lock{ _mutex };
         return _slots.getSlotCount();
     }
 
-    bool UsableObjectComponent::computeSlotTransform( int32 slot, float3& outPosition, float32& outYaw ) const
+    bool SmartObjectComponent::computeSlotTransform( int32 slot, float3& outPosition, float32& outYaw ) const
     {
-        ScopedLock<mutex>          lock{ _mutex };
-        const UsableObjectSlotDef* pSlot  = _slots.findSlotDef( slot );
-        const GameObject*          pOwner = getOwner();
-        const SceneComponent*      pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
+        ScopedLock<mutex>         lock{ _mutex };
+        const SmartObjectSlotDef* pSlot  = _slots.findSlotDef( slot );
+        const GameObject*         pOwner = getOwner();
+        const SceneComponent*     pScene = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pSlot == nullptr || pScene == nullptr )
             return false;
         const float4x4 world = pScene->getWorldMatrix();

@@ -1,7 +1,7 @@
 /**
- * @file UsableObjectComponent.h
+ * @file SmartObjectComponent.h
  * @brief 스마트 오브젝트입니다. 오브젝트 위의 슬롯(벤치 좌석, 엄폐 지점, 작업대 앞)을 플레이어와 AI 가 같은 데이터와 같은 함수로 차지하고 비웁니다.
- * @details 언리얼의 Smart Objects 와 심즈의 오브젝트 광고에 해당한다. 슬롯 정의는 상호작용 테이블의 `<UsableObject>` 이고(`InteractionCatalog`),
+ * @details 언리얼의 Smart Objects 와 심즈의 오브젝트 광고에 해당한다. 슬롯 정의는 상호작용 테이블의 `<SmartObject>` 이고(`InteractionCatalog`),
  *          차지한 쪽은 오브젝트 핸들로 센다. 슬롯을 고르는 AI 는 태그(`Activity.Sit`)로 빈 슬롯을 찾고, 플레이어는 상호작용으로 같은 슬롯을 차지한다.
  */
 #pragma once
@@ -22,14 +22,14 @@
 namespace sw
 {
     /**
-     * @class UsableObjectSlots
+     * @class SmartObjectSlots
      * @brief 슬롯마다 차지한 쪽(오브젝트 id, 0 이면 빔)을 담습니다. 씬 없이 테스트할 수 있습니다.
      */
-    class SW_GF_API UsableObjectSlots
+    class SW_GF_API SmartObjectSlots
     {
     public:
         /** @brief 정의의 슬롯 수만큼 비웁니다. */
-        void initialize( const UsableObjectDef& def );
+        void initialize( const SmartObjectDef& def );
         /** @brief 지금 정의의 id 입니다. */
         const hashed_string& getDefinitionID() const { return _def._id; }
 
@@ -46,31 +46,31 @@ namespace sw
         int32  countFree() const;
 
         /** @brief 슬롯 정의입니다. 태그와 오프셋을 담습니다. */
-        const UsableObjectSlotDef* findSlotDef( int32 slot ) const;
+        const SmartObjectSlotDef* findSlotDef( int32 slot ) const;
 
     private:
-        UsableObjectDef _def{};
-        vector<uint64>  _listClaimant{};
+        SmartObjectDef _def{};
+        vector<uint64> _listClaimant{};
     };
 } // namespace sw
 
 namespace sw
 {
     /**
-     * @class UsableObjectComponent
+     * @class SmartObjectComponent
      * @brief `_smartObjectID` 의 슬롯을 이 오브젝트에 둡니다. 차지하기와 비우기는 여러 스레드(병렬 틱의 AI)에서 불러도 됩니다. 잠금으로 보호합니다.
      * @details 차지한 쪽의 핸들 목록(`_listClaimant`, 슬롯 순서)은 PROPERTY 이므로 세이브와 핫 리로드를 거쳐도 유지된다. 차지한 쪽이 사라지면 다음 찾기에서 비운다.
      */
     REFLECT( Category = "Interaction", DisplayName = "Smart Object", Tooltip = "Claimable slots (bench, cover, workbench) shared by players and AI" )
-    class SW_GF_API UsableObjectComponent : public Component
+    class SW_GF_API SmartObjectComponent : public Component
     {
     public:
         REFLECT_BODY();
 
-        UsableObjectComponent();
-        virtual ~UsableObjectComponent() override = default;
+        SmartObjectComponent();
+        virtual ~SmartObjectComponent() override = default;
 
-        /** @brief 씬의 컴포넌트 레지스트리에 올라 "스마트 오브젝트를 모두" 를 씬을 훑지 않고 돌려줍니다(`UsableObjectScheduleLocator`). */
+        /** @brief 씬의 컴포넌트 레지스트리에 올라 "스마트 오브젝트를 모두" 를 씬을 훑지 않고 돌려줍니다(`SmartObjectScheduleLocator`). */
         void onRegister( GameObjectManager& manager ) override;
         void onUnregister( GameObjectManager& manager ) override;
         void onPostLoad() override;
@@ -81,10 +81,10 @@ namespace sw
         void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 정의를 코드로 넣습니다. 테이블보다 우선합니다. */
-        void setDefinition( const UsableObjectDef& def );
+        void setDefinition( const SmartObjectDef& def );
         /** @brief 정의 id 를 바꾸고 다시 찾습니다. */
         void setSmartObjectID( const hashed_string& id );
-        /** @brief 지금 쓰는 정의의 id 입니다(테이블의 `<UsableObject id>` 이거나 `setDefinition` 으로 넣은 정의의 id). 정의가 없으면 비어 있습니다. */
+        /** @brief 지금 쓰는 정의의 id 입니다(테이블의 `<SmartObject id>` 이거나 `setDefinition` 으로 넣은 정의의 id). 정의가 없으면 비어 있습니다. */
         hashed_string getDefinitionID() const;
         /** @brief 상호작용 테이블 경로를 바꾸고 다시 찾습니다. 비어 있으면 공용 기본 테이블을 씁니다. */
         void setCatalogPath( string_view path );
@@ -113,9 +113,9 @@ namespace sw
         PROPERTY( Category = "Smart Object", DisplayName = "Claimants", Tooltip = "Who holds each slot (runtime)" )
         vector<GameObjectHandle> _listClaimant SW_GUARDED_BY( _mutex );
 
-        UsableObjectSlots _slots;
-        mutable mutex     _mutex;
-        uint32            _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
-        uint8             _bHasOverride;
+        SmartObjectSlots _slots;
+        mutable mutex    _mutex;
+        uint32           _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
+        uint8            _bHasOverride;
     };
 } // namespace sw

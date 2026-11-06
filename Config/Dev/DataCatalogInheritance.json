@@ -112,7 +112,7 @@
         { "root": "CoasterCatalog", "listEntry": [ { "name": "Layout", "key": "id" } ] },
         { "root": "CreatureLifeCatalog", "listEntry": [ { "name": "Habitat", "key": "id" }, { "name": "Species", "key": "id" } ] },
         { "root": "CropCatalog", "listEntry": [ { "name": "Crop", "key": "id" } ] },
-        { "root": "Interactions", "listEntry": [ { "name": "Interaction", "key": "id" }, { "name": "UsableObject", "key": "id" } ] },
+        { "root": "Interactions", "listEntry": [ { "name": "Interaction", "key": "id" }, { "name": "SmartObject", "key": "id" } ] },
         { "root": "LootCatalog", "listEntry": [ { "name": "Table", "key": "id" } ] },
         { "root": "ProjectileCatalog", "listEntry": [ { "name": "Projectile", "key": "id", "listField": [ { "name": "OnHit", "key": "call" } ] }, { "name": "Impact", "key": "id" } ] },
         { "root": "QuestCatalog", "listEntry": [ { "name": "Quest", "key": "id", "listField": [ { "name": "Stage", "key": "id" } ] } ] },

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Interaction/UsableObjectScheduleLocator.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectScheduleLocator.h"
 
 #include "Core/Container/CompareUtil.h"
 #include "Core/Container/StringUtil.h"
@@ -12,13 +12,13 @@
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleSaveState.h"
-#include "GameFramework/Runtime/Gameplay/Interaction/UsableObjectComponent.h"
+#include "GameFramework/Runtime/Gameplay/Interaction/SmartObjectComponent.h"
 
 namespace sw
 {
     namespace
     {
-        struct UsableObjectScheduleLocatorInternal
+        struct SmartObjectScheduleLocatorInternal
         {
             static constexpr utf8 kKeySeparator = ':';
 
@@ -50,7 +50,7 @@ namespace sw
 
 namespace sw
 {
-    UsableObjectScheduleLocator::UsableObjectScheduleLocator()
+    SmartObjectScheduleLocator::SmartObjectScheduleLocator()
         : _pManager{ nullptr }
         , _defaultArea{}
         , _listReservation{}
@@ -58,25 +58,25 @@ namespace sw
     {
     }
 
-    void UsableObjectScheduleLocator::initialize( const GameObjectManager* pManager )
+    void SmartObjectScheduleLocator::initialize( const GameObjectManager* pManager )
     {
         _pManager = pManager;
         clear();
     }
 
-    void UsableObjectScheduleLocator::clear()
+    void SmartObjectScheduleLocator::clear()
     {
         _listReservation.clear();
         _nextID = 1;
     }
 
-    void UsableObjectScheduleLocator::collectCandidates( const hashed_string& kind, vector<Candidate>& outListCandidate ) const
+    void SmartObjectScheduleLocator::collectCandidates( const hashed_string& kind, vector<Candidate>& outListCandidate ) const
     {
         outListCandidate.clear();
         if ( _pManager == nullptr )
             return;
         // 씬을 훑지 않는다 — 스마트 오브젝트는 붙을 때 컴포넌트 레지스트리에 등록된다.
-        for ( UsableObjectComponent* pSmart : _pManager->getComponentRegistry().getAll<UsableObjectComponent>() )
+        for ( SmartObjectComponent* pSmart : _pManager->getComponentRegistry().getAll<SmartObjectComponent>() )
         {
             const GameObject* pOwner           = pSmart->getOwner();
             const bool        bSkipSmartObject = pOwner == nullptr || pSmart->isPendingDestroy() || pSmart->getDefinitionID() != kind;
@@ -98,19 +98,19 @@ namespace sw
         VectorUtil::sort( outListCandidate, Ascending<&Candidate::_objectID, &Candidate::_slot>{} );
     }
 
-    bool UsableObjectScheduleLocator::computeReservationPosition( const Reservation& reservation, float3& outPosition ) const
+    bool SmartObjectScheduleLocator::computeReservationPosition( const Reservation& reservation, float3& outPosition ) const
     {
         if ( _pManager == nullptr )
             return false;
         GameObject* pObject = _pManager->resolveGameObject( GameObjectHandle::make( reservation._objectID ) );
         if ( pObject == nullptr )
             return false;
-        const UsableObjectComponent* pSmart = pObject->getComponent<UsableObjectComponent>();
-        float32                      yaw{ 0.0f };
+        const SmartObjectComponent* pSmart = pObject->getComponent<SmartObjectComponent>();
+        float32                     yaw{ 0.0f };
         return pSmart != nullptr && pSmart->computeSlotTransform( reservation._slot, outPosition, yaw );
     }
 
-    int32 UsableObjectScheduleLocator::countOverlapping( uint64 objectID, int32 slot, int32 day, int32 startMinute, int32 endMinute ) const
+    int32 SmartObjectScheduleLocator::countOverlapping( uint64 objectID, int32 slot, int32 day, int32 startMinute, int32 endMinute ) const
     {
         int32 count = 0;
         for ( const Reservation& reservation : _listReservation )
@@ -123,7 +123,7 @@ namespace sw
         return count;
     }
 
-    bool UsableObjectScheduleLocator::reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationID )
+    bool SmartObjectScheduleLocator::reserve( const ScheduleReserveRequest& request, ScheduleLocation& outLocation, uint32& outReservationID )
     {
         if ( _pManager == nullptr )
             return false;
@@ -183,7 +183,7 @@ namespace sw
         return true;
     }
 
-    void UsableObjectScheduleLocator::release( uint32 reservationID )
+    void SmartObjectScheduleLocator::release( uint32 reservationID )
     {
         for ( size_t reservationIndex = 0; reservationIndex < _listReservation.size(); ++reservationIndex )
         {
@@ -195,7 +195,7 @@ namespace sw
         }
     }
 
-    bool UsableObjectScheduleLocator::claimReserved( uint32 reservationID, const GameObject& npc )
+    bool SmartObjectScheduleLocator::claimReserved( uint32 reservationID, const GameObject& npc )
     {
         if ( _pManager == nullptr )
             return false;
@@ -203,14 +203,14 @@ namespace sw
         {
             if ( reservation._id != reservationID )
                 continue;
-            GameObject*            pObject = _pManager->resolveGameObject( GameObjectHandle::make( reservation._objectID ) );
-            UsableObjectComponent* pSmart  = pObject != nullptr ? pObject->getComponent<UsableObjectComponent>() : nullptr;
+            GameObject*           pObject = _pManager->resolveGameObject( GameObjectHandle::make( reservation._objectID ) );
+            SmartObjectComponent* pSmart  = pObject != nullptr ? pObject->getComponent<SmartObjectComponent>() : nullptr;
             return pSmart != nullptr && pSmart->claimSlot( npc, reservation._slot );
         }
         return false;
     }
 
-    bool UsableObjectScheduleLocator::releaseClaim( uint32 reservationID, const GameObject& npc )
+    bool SmartObjectScheduleLocator::releaseClaim( uint32 reservationID, const GameObject& npc )
     {
         if ( _pManager == nullptr )
             return false;
@@ -218,20 +218,20 @@ namespace sw
         {
             if ( reservation._id != reservationID )
                 continue;
-            GameObject*            pObject = _pManager->resolveGameObject( GameObjectHandle::make( reservation._objectID ) );
-            UsableObjectComponent* pSmart  = pObject != nullptr ? pObject->getComponent<UsableObjectComponent>() : nullptr;
+            GameObject*           pObject = _pManager->resolveGameObject( GameObjectHandle::make( reservation._objectID ) );
+            SmartObjectComponent* pSmart  = pObject != nullptr ? pObject->getComponent<SmartObjectComponent>() : nullptr;
             return pSmart != nullptr && pSmart->releaseSlot( npc );
         }
         return false;
     }
 
-    void UsableObjectScheduleLocator::fillState( vector<ScheduleReservationSaveState>& outListReservation ) const
+    void SmartObjectScheduleLocator::fillState( vector<ScheduleReservationSaveState>& outListReservation ) const
     {
         outListReservation.clear();
         for ( const Reservation& reservation : _listReservation )
         {
             ScheduleReservationSaveState state;
-            state._spot        = hashed_string( UsableObjectScheduleLocatorInternal::makeKey( reservation._objectID, reservation._slot ) );
+            state._spot        = hashed_string( SmartObjectScheduleLocatorInternal::makeKey( reservation._objectID, reservation._slot ) );
             state._npc         = reservation._npc;
             state._kind        = reservation._kind;
             state._id          = reservation._id;
@@ -242,13 +242,13 @@ namespace sw
         }
     }
 
-    void UsableObjectScheduleLocator::restoreState( const vector<ScheduleReservationSaveState>& listReservation )
+    void SmartObjectScheduleLocator::restoreState( const vector<ScheduleReservationSaveState>& listReservation )
     {
         clear();
         for ( const ScheduleReservationSaveState& state : listReservation )
         {
             Reservation reservation;
-            if ( UsableObjectScheduleLocatorInternal::parseKey( state._spot.view(), reservation._objectID, reservation._slot ) == false )
+            if ( SmartObjectScheduleLocatorInternal::parseKey( state._spot.view(), reservation._objectID, reservation._slot ) == false )
                 continue;
             reservation._npc         = state._npc;
             reservation._kind        = state._kind;
