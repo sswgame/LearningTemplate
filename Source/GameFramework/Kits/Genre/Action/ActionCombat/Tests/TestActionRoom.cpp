@@ -542,7 +542,7 @@ SW_TEST_CASE( ActionRoomTest, ReadRejectsBrokenBytes )
     // 빈 정의 이름(4) 위치(12) 속도(12) 피해 · 나이 · 거리 · 수명 · 사거리 · 중력 · 저항 · 유도 · 반지름 · 폭발 · 반발(44) id · 반응 번호(8) 정수 여섯(24) 깃발(1).
     constexpr size_t kActorAt    = 32;
     constexpr size_t kProjectile = 105;
-    SW_REQUIRE_TRUE( size == kActorAt + 19 + 4 + 4 + kProjectile );
+    SW_REQUIRE_EQUAL( kActorAt + 19 + 4 + 4 + kProjectile, size );
 
     sw::ActionRoom target;
     const auto     expectRejected = [&]( size_t offset, auto value )

@@ -489,7 +489,7 @@ namespace sw
         return true;
     }
 
-    bool NetRequestServer::respond( const NetRequestToken& token, NetRequestStatus status, const uint8* pBody, int32 bodySize )
+    bool NetRequestServer::respond( const NetRequestToken& token, NetRequestStatus status, const uint8* pBody, int32 bodySize, NetResponseRetention retention )
     {
         vector<NetRequestToken> listWaiter;
         {
@@ -503,7 +503,17 @@ namespace sw
             const auto foundCount = _mapInFlightCount.find( token._handle.packed() );
             if ( foundCount != _mapInFlightCount.end() && --foundCount->second <= 0 )
                 _mapInFlightCount.erase( foundCount );
-            if ( inFlight._bIdempotent == SW_TRUE )
+            if ( inFlight._bIdempotent == SW_TRUE && retention == NetResponseRetention::Forget )
+            {
+                // 다시 시도할 결과다 — 기다리던 같은 키 요청은 이 응답을 받고, 키는 비워 다음 재시도를 처리기가 다시 받는다.
+                const auto found = _mapIdempotency.find( inFlight._scope );
+                if ( found != _mapIdempotency.end() )
+                {
+                    listWaiter.swap( found->second._listWaiter );
+                    _mapIdempotency.erase( found );
+                }
+            }
+            else if ( inFlight._bIdempotent == SW_TRUE )
             {
                 IdempotencyEntry& entry = _mapIdempotency[inFlight._scope];
                 entry._status           = status;

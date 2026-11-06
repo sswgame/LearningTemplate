@@ -396,10 +396,10 @@ namespace sw
         }
     }
 
-    bool OnlineServiceHost::respondOk( const NetRequestToken& token, const BitWriter& body )
+    bool OnlineServiceHost::respondOk( const NetRequestToken& token, const BitWriter& body, NetResponseRetention retention )
     {
         const vector<uint8>& bodyBytes = body.getBytes();
-        return _requestServer.respond( token, NetRequestStatus::Ok, bodyBytes.data(), body.getByteCount() );
+        return _requestServer.respond( token, NetRequestStatus::Ok, bodyBytes.data(), body.getByteCount(), retention );
     }
 
     bool OnlineServiceHost::respondError( const NetRequestToken& token, uint16 errorCode, const BitWriter* pDetail )

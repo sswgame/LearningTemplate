@@ -183,6 +183,9 @@ namespace sw
         EconomyResult _result{ EconomyResult::Ok };
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bReplayed{ SW_FALSE }; ///< 같은 멱등 키나 같은 영수증의 지난 결과이다
+
+        /** @brief 같은 멱등 키로 다시 시도할 결과(스토어 대기 · 충돌 · 일시 장애)인지입니다. 서버는 이 답을 기억하지 않고, 클라이언트 흐름은 거래를 마치지 않는다. */
+        [[nodiscard]] bool isRetryable() const { return _result == EconomyResult::ReceiptPending || _result == EconomyResult::Busy || _result == EconomyResult::Unavailable; }
     };
 } // namespace sw
 

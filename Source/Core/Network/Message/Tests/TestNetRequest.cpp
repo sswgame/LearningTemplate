@@ -292,3 +292,37 @@ SW_TEST_CASE( NetRequestTest, TraceIDTravelsInTheHeadAndWrapsTheHandler )
     SW_EXPECT_TRUE( LogContext::getCurrent().isEmpty() );
     SW_EXPECT_EQUAL( 4, static_cast<int32>( log._listStatus.size() ) );
 }
+
+/**
+ * @brief [NetRequestTest] 다시 시도할 결과(`NetResponseRetention::Forget`)는 기억하지 않는다 — 같은 키의 재시도가 처리기에 다시 닿고, 끝난 결과는 기억한다
+ */
+SW_TEST_CASE( NetRequestTest, ForgottenResponseLetsTheSameKeyRetry )
+{
+    RequestRig        rig;
+    NetRequestOptions options;
+    options._idempotencyKey = NetIdempotencyKey{ 11u, 12u };
+    ResponseLog pendingLog;
+    ResponseLog retryLog;
+    ResponseLog replayLog;
+    SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 2, vector<uint8>{}, options, pendingLog ) != 0 );
+    rig._pair.step( 2 );
+    SW_REQUIRE_EQUAL( 1, rig._echo._callCount );
+    const uint8 arrPending[1] = { 1 };
+    SW_EXPECT_TRUE( rig._serverSide._server.respond( rig._echo._listDeferred[0], NetRequestStatus::Ok, arrPending, 1, NetResponseRetention::Forget ) );
+    rig._pair.step( 4 );
+    SW_REQUIRE_EQUAL( 1, static_cast<int32>( pendingLog._listStatus.size() ) );
+
+    SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 2, vector<uint8>{}, options, retryLog ) != 0 );
+    rig._pair.step( 2 );
+    SW_REQUIRE_EQUAL( 2, rig._echo._callCount ); // 기억하지 않았으니 다시 처리한다
+    const uint8 arrDone[1] = { 2 };
+    SW_EXPECT_TRUE( rig._serverSide._server.respond( rig._echo._listDeferred[1], NetRequestStatus::Ok, arrDone, 1 ) );
+    rig._pair.step( 4 );
+    SW_REQUIRE_EQUAL( 1, static_cast<int32>( retryLog._listStatus.size() ) );
+
+    SW_EXPECT_TRUE( rig.send( rig._pair._clientHandle, 2, vector<uint8>{}, options, replayLog ) != 0 );
+    rig._pair.step( 4 );
+    SW_EXPECT_EQUAL( 2, rig._echo._callCount ); // 끝난 결과는 기억한 답이다
+    SW_REQUIRE_EQUAL( 1, static_cast<int32>( replayLog._listBody.size() ) );
+    SW_EXPECT_TRUE( replayLog._listBody[0] == ( vector<uint8>{ 2 } ) );
+}

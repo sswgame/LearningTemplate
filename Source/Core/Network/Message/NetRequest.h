@@ -31,6 +31,16 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @brief 멱등 키가 있는 요청의 응답을 서버가 기억할지입니다. 기억하면 같은 키의 재시도는 처리기를 거치지 않고 그 응답을 받는다.
+     * @details 결과가 "같은 키로 다시 시도하라"(대기 · 충돌 · 일시 장애)면 기억하지 않는다 — 기억하면 재시도가 영원히 같은 답을 받는다. Stripe 멱등 키가 재시도할 오류를 저장하지 않는 것과 같다(기억에 의존).
+     */
+    enum class NetResponseRetention : uint8
+    {
+        Remember, ///< 끝난 결과다. 같은 키의 재시도는 이 응답을 받는다
+        Forget,   ///< 다시 시도할 결과다. 같은 키의 재시도는 처리기가 다시 처리한다(처리 중에 기다리던 같은 키 요청은 이 응답을 함께 받는다)
+    };
+
     /** @brief 응답 상태입니다. 값은 와이어 형식입니다. */
     enum class NetRequestStatus : uint8
     {
@@ -209,8 +219,11 @@ namespace sw
         void               unregisterMethod( uint16 method );
         void               setPrincipal( StreamConnectionHandle handle, uint64 principalID );
 
-        /** @brief 응답합니다(어느 스레드에서나 가능). 이미 응답했으면 false 를 반환합니다. 연결이 닫혔어도 멱등 키가 있으면 응답을 기억하므로 재시도가 받습니다. */
-        bool respond( const NetRequestToken& token, NetRequestStatus status, const uint8* pBody, int32 bodySize );
+        /**
+         * @brief 응답합니다(어느 스레드에서나 가능). 이미 응답했으면 false 를 반환합니다.
+         * @details 멱등 키가 있으면 @p retention 이 `Remember` 일 때 응답을 기억하므로, 연결이 닫혔어도 재시도가 받습니다. `Forget` 이면 키를 비워 재시도를 다시 처리합니다.
+         */
+        bool respond( const NetRequestToken& token, NetRequestStatus status, const uint8* pBody, int32 bodySize, NetResponseRetention retention = NetResponseRetention::Remember );
         /** @brief 클라이언트가 취소했는지 반환합니다. 오래 걸리는 처리기가 중간에 확인합니다. */
         bool isCancelled( const NetRequestToken& token ) const;
 

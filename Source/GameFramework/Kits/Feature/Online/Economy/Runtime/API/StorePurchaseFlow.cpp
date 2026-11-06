@@ -74,7 +74,7 @@ namespace sw
             _listPending.erase( _listPending.begin() + static_cast<ptrdiff_t>( index ) );
 
             const EconomyResult result = finished._result;
-            finished._bRetryable       = result == EconomyResult::ReceiptPending || result == EconomyResult::Busy || result == EconomyResult::Unavailable ? SW_TRUE : SW_FALSE;
+            finished._bRetryable       = reply._reply.isRetryable() ? SW_TRUE : SW_FALSE;
             if ( result == EconomyResult::BuyerTokenMissing )
                 SW_LOG_WARNING_ID( "StorePurchaseFlow.BuyerTokenMissing", "The store answer has no account token - the '%#' billing bridge must pass StoreBillingRequest::_buyerToken to the purchase (obfuscatedAccountId / appAccountToken)", _bridge.getStoreName() );
             if ( result == EconomyResult::Ok || result == EconomyResult::ReceiptRefunded ) // 지급됐거나 돌려줄 것이 없다. 그 밖의 거절은 마치지 않아 맞는 계정이 다시 낼 수 있다

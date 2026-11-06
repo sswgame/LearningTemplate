@@ -48,7 +48,7 @@ namespace
                 SW_EXPECT_TRUE( EconomyProtocol::MessageTypes::read( body, request ) == FixedReadResult::Ok );
                 _listRedeem.push_back( request );
             }
-            (void)host.respondMessage<EconomyProtocol::MessageTypes>( context._token, _reply );
+            (void)host.respondMessage<EconomyProtocol::MessageTypes>( context._token, _reply, _reply.isRetryable() ? NetResponseRetention::Forget : NetResponseRetention::Remember ); // 진짜 서비스와 같은 규칙
         }
     };
 
@@ -196,7 +196,7 @@ SW_TEST_CASE( EconomyClientTest, FailedReplyChangesNothing )
     SW_EXPECT_EQUAL( int64( 0 ), rig._economy.getBalance( "cur.gold" ) );
 }
 
-/** @brief [EconomyClientTest] 구매 · 지급의 멱등 키: 비어 있으면 새로 만들고 답이 돌려주며, 그 키를 넘기면 서버에 같은 키가 간다. 키는 호출마다 다르다 */
+/** @brief [EconomyClientTest] 구매 · 지급의 멱등 키: 비어 있으면 새로 만들고 답이 돌려주며, 그 키를 넘기면 서버가 같은 키로 알아 기억한 답을 준다(서비스는 다시 불리지 않는다). 키는 호출마다 다르다 */
 SW_TEST_CASE( EconomyClientTest, IdempotencyKeyIsKeptForRetries )
 {
     EconomyClientRig     rig;
@@ -214,13 +214,14 @@ SW_TEST_CASE( EconomyClientTest, IdempotencyKeyIsKeptForRetries )
 
     (void)rig._economy.requestRedeem( redeem, first, recorder.makeDelegate() );
     rig.pump();
-    SW_REQUIRE_EQUAL( size_t( 2 ), rig._service._listKey.size() );
-    SW_EXPECT_TRUE( rig._service._listKey[1] == first );
+    SW_REQUIRE_EQUAL( size_t( 2 ), recorder._listReply.size() );
+    SW_EXPECT_TRUE( recorder._listReply[1]._idempotencyKey == first );
+    SW_EXPECT_EQUAL( size_t( 1 ), rig._service._listKey.size() ); // 다른 키를 보냈다면 서비스가 다시 불렸다
 
     (void)rig._economy.requestRedeem( redeem, NetIdempotencyKey{}, recorder.makeDelegate() );
     rig.pump();
-    SW_REQUIRE_EQUAL( size_t( 3 ), rig._service._listKey.size() );
-    SW_EXPECT_FALSE( rig._service._listKey[2] == first );
+    SW_REQUIRE_EQUAL( size_t( 2 ), rig._service._listKey.size() );
+    SW_EXPECT_FALSE( rig._service._listKey[1] == first );
 }
 
 /** @brief [EconomyClientTest] 연결 전 요청은 보내지 않고 요청 함수 안에서 Unavailable 로 끝난다 */

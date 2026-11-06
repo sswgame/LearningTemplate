@@ -96,10 +96,10 @@ namespace sw
                 return origin;
             }
 
-            void respond( const TReply& reply ) const
+            void respond( const TReply& reply, NetResponseRetention retention ) const
             {
                 if ( _pHost != nullptr )
-                    (void)_pHost->respondMessage<TMessageTypes>( _token, reply ); // 연결이 그사이 닫혔으면 호스트가 버린다
+                    (void)_pHost->respondMessage<TMessageTypes>( _token, reply, retention ); // 연결이 그사이 닫혔으면 호스트가 버린다
                 else if ( _onReply.isBound() )
                     _onReply( reply );
             }
@@ -152,8 +152,11 @@ namespace sw
             return nullptr;
         }
 
-        /** @brief 호출을 표에서 빼고 @p reply 로 응답한 뒤 지표를 셉니다. 모르는 id 면 경고(`ServiceServerCallTable.UnknownCall`)를 남기고 false 입니다. */
-        bool finish( uint64 callID, const TReply& reply )
+        /**
+         * @brief 호출을 표에서 빼고 @p reply 로 응답한 뒤 지표를 셉니다. 모르는 id 면 경고(`ServiceServerCallTable.UnknownCall`)를 남기고 false 입니다.
+         * @param retention 다시 시도할 결과면 `Forget` 입니다(`NetResponseRetention`).
+         */
+        bool finish( uint64 callID, const TReply& reply, NetResponseRetention retention = NetResponseRetention::Remember )
         {
             for ( size_t callIndex = 0; callIndex < _listCall.size(); ++callIndex )
             {
@@ -161,7 +164,7 @@ namespace sw
                     continue;
                 const Call call = _listCall[callIndex];
                 _listCall.erase( _listCall.begin() + static_cast<ptrdiff_t>( callIndex ) );
-                call._origin.respond( reply );
+                call._origin.respond( reply, retention );
                 _metrics.observeRequest( call._methodIndex, static_cast<int32>( reply._result ), call._receivedNanoseconds );
                 return true;
             }

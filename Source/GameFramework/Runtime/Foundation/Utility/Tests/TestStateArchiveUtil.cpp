@@ -102,3 +102,22 @@ SW_TEST_CASE( StateArchiveUtilTest, ExpectedSectionRejectsOtherVersionOrTag )
     SW_EXPECT_EQUAL( kTag, tag );
     SW_EXPECT_EQUAL( 2u, version );
 }
+
+/**
+ * @brief [StateArchiveUtilTest] 결함: 빈 이름의 c_str() 가 "None" 이라 빈 이름이 "None" 이라는 이름으로 돌아왔다. 빈 이름과 이름이 그대로 왕복하는지 검증
+ */
+SW_TEST_CASE( StateArchiveUtilTest, EmptyNameRoundTripsEmpty )
+{
+    sw::Archive written;
+    sw::StateArchiveUtil::writeName( written, sw::hashed_string{} );
+    sw::StateArchiveUtil::writeName( written, sw::hashed_string( "gunner" ) );
+    SW_EXPECT_EQUAL( int64{ 4 + 4 + 6 }, static_cast<int64>( written.getSize() ) ); // 빈 이름은 길이 칸만
+
+    sw::Archive       reading( written.getData(), written.getSize() );
+    sw::hashed_string first( "x" );
+    sw::hashed_string second;
+    SW_REQUIRE_TRUE( sw::StateArchiveUtil::readName( reading, first ) );
+    SW_REQUIRE_TRUE( sw::StateArchiveUtil::readName( reading, second ) );
+    SW_EXPECT_TRUE( first.empty() );
+    SW_EXPECT_TRUE( second == sw::hashed_string( "gunner" ) );
+}

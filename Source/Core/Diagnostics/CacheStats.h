@@ -181,8 +181,11 @@ namespace sw
     class SW_API CacheStats
     {
     public:
-        /** @brief 칸 수 상한입니다. 엔진 캐시(약 35)와 테스트가 쓰고 남는 크기이고, 넘치면 `registerCache` 가 오류로 멈춥니다. */
-        static constexpr uint32 kMaxCacheCount = 64;
+        /**
+         * @brief 칸 수 상한입니다. 넘치면 `registerCache` 가 오류로 멈춥니다.
+         * @details 공유 캐시는 카탈로그 종류마다 하나라(키트가 늘면 함께 는다) 엔진 캐시(약 35)와 모든 키트의 카탈로그(약 60)를 싣고도 몇 배 남게 둔다. 칸 하나가 약 100 바이트라 정적 저장소는 약 50KB 다.
+         */
+        static constexpr uint32 kMaxCacheCount = 512;
 
         /**
          * @brief 이름의 칸을 새로 올립니다. 같은 이름이 이미 있으면 오류를 남기고 거절하며(먼저 칸을 둡니다) 빈 핸들을 돌려줍니다.
