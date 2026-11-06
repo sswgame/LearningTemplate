@@ -359,10 +359,9 @@ namespace sw
                 if ( bMissing || bLocked )
                 {
                     Internal::addFallback( outReport, request._slot, request._itemID, defaultItem, bMissing ? AppearanceFallbackReason::MissingItem : AppearanceFallbackReason::LockedItem );
-                    accepted._itemID = defaultItem;
-                    accepted._customization.clear();
-                    accepted._listDetachedPart.clear();
-                    accepted._damage = 0.0f;
+                    // 슬롯을 통째로 되돌린다 - 형상 변경이 남으면 잠긴 아이템의 외형이 기본 아이템 위에 그대로 보인다
+                    accepted       = pBaseSlot != nullptr ? *pBaseSlot : AppearanceSlotRequest{};
+                    accepted._slot = request._slot;
                 }
             }
             if ( accepted._visibleVisual.empty() == false && database.getVisuals().findVisual( accepted._visibleVisual ) == nullptr )
@@ -435,10 +434,10 @@ namespace sw
 
         for ( const AppearanceSlotRequest& request : selection._listSlot )
         {
-            const bool bUnrepresentable = request._customization.isEmpty() == false || request._listDetachedPart.empty() == false;
+            const bool bUnrepresentable = request._customization.isEmpty() == false || request._listDetachedPart.empty() == false || request._bSuppressed == SW_TRUE;
             if ( bUnrepresentable )
             {
-                outReason = string( "slot '" ) + request._slot.c_str() + "' has item instance values or detached parts, which a preset cannot carry yet";
+                outReason = string( "slot '" ) + request._slot.c_str() + "' has item instance values, detached parts or a suppressed state, which a preset cannot carry yet";
                 return false;
             }
             CharacterAppearanceSlotDef slot;
