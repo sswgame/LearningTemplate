@@ -1,8 +1,8 @@
 /**
  * @file InteractableWatches.cpp
  * @brief 상호작용 대상이 **쥔** 정의의 자동화 감시 값 `Interaction.HeldMaxDistance` · `Interaction.HeldDefinition` 입니다.
- * @details 공유 캐시가 든 표(`Interaction.MaxDistance` 처럼 캐시에서 찾는 값)가 아니라 쓰는 쪽이 쥔 객체를 읽는다 — 다시 읽기가 쓰는 쪽에 닿는지(시나리오 `editor/catalogshared`)와
- *          같은 경로를 쥔 둘이 한 벌을 나누는지를 본다.
+ * @details 캐시에서 표를 찾지 않고 쓰는 쪽이 쥔 객체를 읽는다 — 캐시를 새로 읽는 감시는 다시 읽기가 쥔 쪽에 닿지 않아도 새 값을 보여 거짓 통과가 된다.
+ *          다시 읽기 · 연쇄가 쓰는 쪽에 닿는지(시나리오 `editor/catalogshared` · `editor/catalogcascade`)와 같은 경로를 쥔 둘이 한 벌을 나누는지를 본다.
  */
 #include "pch.h"
 

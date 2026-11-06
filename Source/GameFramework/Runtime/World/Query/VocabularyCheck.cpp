@@ -63,8 +63,8 @@ namespace sw
                 (void)runner.tick( blackboard, nullptr, 0.0f ); // 결과는 플래그로 본다
 
                 // 2) 스케줄: 경보가 켜진 날에만 문으로 가고, 도착하면 visits 를 올린다.
-                ScheduleCatalog catalog;
-                if ( catalog.loadFromAsset( AssetID{ folder + "/watch.schedules.xml" } ) == false )
+                const shared_ptr<const ScheduleCatalog> pCatalog = SharedAssetCache<ScheduleCatalog>::acquire( folder + "/watch.schedules.xml" );
+                if ( pCatalog == nullptr )
                 {
                     outReply = "the schedule could not be read (see the log)";
                     return false;
@@ -72,7 +72,7 @@ namespace sw
                 ScheduleSystem schedules;
                 schedules.setFlags( &flags );
                 schedules.setActionContext( world );
-                if ( schedules.initialize( &catalog, ScheduleSystemSettings{}, 7 * kMinutesPerHour ) == false )
+                if ( schedules.initialize( pCatalog.get(), ScheduleSystemSettings{}, 7 * kMinutesPerHour ) == false )
                 {
                     outReply = "the schedule system did not start";
                     return false;

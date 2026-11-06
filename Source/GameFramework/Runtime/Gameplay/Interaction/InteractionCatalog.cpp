@@ -5,7 +5,6 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/TypeRegistry.h"
@@ -84,28 +83,6 @@ namespace sw
     SW_MODULE_SHARED_ASSET_CACHE( Interactions, InteractionCatalog, SW_GF_API,
                                   AssetTypeDef::makeDataFile( "interactions", AssetPathRule{ {}, {}, ".interactions.xml" }, AssetTypeLoader::of<InteractionCatalog>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
 
-    namespace
-    {
-        /** @brief 공유 캐시를 읽는 감시 값입니다 - 캐시 등록 줄(특성 특수화) 뒤에 둬야 그 전에 인스턴스화되지 않는다. */
-        struct InteractionCatalogWatch
-        {
-            /** @brief 감시 값 `Interaction.MaxDistance` - 누가 쥔 공유 표(target = 리소스 id)에서 상호작용(key = id)의 사거리입니다. 다시 읽기가 값까지 닿는지 시나리오가 봅니다(`editor/catalogcascade`). */
-            [[nodiscard]] static bool readMaxDistanceWatch( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
-            {
-                const shared_ptr<const InteractionCatalog> pCatalog = SharedAssetCache<InteractionCatalog>::findHeld( query._target ); // 읽지 않는다 - 새로 읽으면 다시 읽기가 쥔 쪽에 닿지 않아도 새 값이 보인다
-                const InteractionDef*                      pDef     = pCatalog != nullptr ? pCatalog->findInteraction( hashed_string( query._key ) ) : nullptr;
-                if ( pDef == nullptr )
-                {
-                    outValue.setText( pCatalog == nullptr ? "nobody holds that catalog" : "no such interaction in that catalog" );
-                    return false;
-                }
-                outValue.setNumber( pDef->_maxDistance );
-                return true;
-            }
-        };
-    } // namespace
-
-    SW_AUTOMATION_QUERY_WATCH( interactionMaxDistance, "Interaction.MaxDistance", "Max distance (m) of interaction key in the shared catalog target (a resource id)", &InteractionCatalogWatch::readMaxDistanceWatch, true, true );
 } // namespace sw
 
 namespace sw

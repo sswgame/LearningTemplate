@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   에디터 시나리오 — 카탈로그 연쇄 리로드: 부모 표를 바깥에서 고치면 항목 _base · 루트 _base 로 물려받은 표가 감시를 따라 다시 읽히고 적지 않은 칸의 값이 바뀐다. 적은 칸은 그대로다.
-  표는 공유 캐시(GameDataCache)에 든다. 부모는 아무도 읽지 않았다 — 그래도 부모의 저장을 감시가 알려 연쇄가 돈다. 판정은 값이다(골든 없음).
+  공유 캐시는 쥔 동안만 표를 들므로 플레이 중인 상호작용 대상 넷이 두 자식 표를 쥔다(catalogcascade.scene.xml). 부모는 아무도 읽지 않았다 — 그래도 부모의 저장을 감시가 알려 연쇄가 돈다.
+  판정은 쥔 쪽이 읽는 값이다(골든 없음). 상호작용 표는 다시 읽으면 떼어 내고 대상은 틱에서 다시 받으므로 플레이 중에 본다.
   실행: App -EnableEditor -scenario=engine/automation/editor/catalogcascade.scenario.xml -unattended
 -->
 <Scenario name="editor.catalogcascade" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
@@ -11,19 +12,28 @@
 	<DevCommand line="panel.focus content_browser"/>
 	<EditorWaitSettled/>
 	<WaitUntil watch="Editor.ReferenceIndexReady" equals="1" timeoutWallSeconds="60"/>
-	<!-- 읽으면 공유 캐시에 든다 -->
-	<Expect watch="Interaction.MaxDistance" target="scratch/catalogcascade/entrychild.xml" key="Child" equals="3"/>
-	<Expect watch="Interaction.MaxDistance" target="scratch/catalogcascade/entrychild.xml" key="Fixed" equals="2"/>
-	<Expect watch="Interaction.MaxDistance" target="scratch/catalogcascade/filechild.xml" key="Base" equals="3"/>
+	<DevCommand line="scene.open scratch/catalogcascade/catalogcascade.scene.xml"/>
+	<EditorWaitSettled/>
+	<DevCommand line="play"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<EditorWaitSettled/>
+	<Expect watch="Interaction.HeldMaxDistance" target="EntryChild" equals="3"/>
+	<Expect watch="Interaction.HeldMaxDistance" target="EntryFixed" equals="2"/>
+	<Expect watch="Interaction.HeldMaxDistance" target="FileBase" equals="3"/>
 	<Remember watch="Editor.AssetCascadeReloadCount" as="beforeEdit"/>
 	<DevCommand line="asset.overwriteScratch scratch/catalogcascade/parent_edited.xml scratch/catalogcascade/parent.xml"/>
 	<WaitUntil watch="Editor.AssetCascadeReloadCount" differsFrom="beforeEdit" timeoutWallSeconds="30"/>
 	<EditorWaitSettled/>
-	<Expect watch="Interaction.MaxDistance" target="scratch/catalogcascade/entrychild.xml" key="Child" equals="7"/>
-	<Expect watch="Interaction.MaxDistance" target="scratch/catalogcascade/entrychild.xml" key="Fixed" equals="2"/>
-	<Expect watch="Interaction.MaxDistance" target="scratch/catalogcascade/filechild.xml" key="Base" equals="7"/>
-	<Expect watch="Interaction.MaxDistance" target="scratch/catalogcascade/filechild.xml" key="Extra" equals="1"/>
+	<!-- 대상은 다음 틱에 다시 읽은 횟수를 보고 다시 받는다 -->
+	<WaitUntil watch="Interaction.HeldMaxDistance" target="EntryChild" equals="7" timeoutFrames="120"/>
+	<Expect watch="Interaction.HeldMaxDistance" target="EntryFixed" equals="2"/>
+	<Expect watch="Interaction.HeldMaxDistance" target="FileBase" equals="7"/>
+	<Expect watch="Interaction.HeldMaxDistance" target="FileExtra" equals="1"/>
 	<ExpectLog id="AssetHotReload.CascadeReload" contains="scratch/catalogcascade/entrychild.xml (inlines scratch/catalogcascade/parent.xml)" count="1"/>
 	<ExpectLog id="AssetHotReload.CascadeReload" contains="scratch/catalogcascade/filechild.xml (inlines scratch/catalogcascade/parent.xml)" count="1"/>
+	<DevCommand line="stop"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
 	<Pass/>
 </Scenario>
