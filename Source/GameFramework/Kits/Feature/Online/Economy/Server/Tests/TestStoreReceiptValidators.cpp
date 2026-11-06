@@ -218,6 +218,7 @@ namespace
         int32                              _voidedStatus{ HTTPConstant::kStatusOk };
         int32                              _tokenRequestCount{ 0 };
         int32                              _acknowledgeCount{ 0 };
+        int32                              _acknowledgeStatus{ HTTPConstant::kStatusOk };
         int64                              _nowMs{ kNowMs };
 
         /** @param bRestoreCursor false 면 서비스가 기준 시각을 아직 넘기지 않은 제공자로 선다. */
@@ -265,7 +266,7 @@ namespace
             else if ( request._path.find( ":acknowledge" ) != string::npos )
             {
                 ++_acknowledgeCount;
-                body = "{}";
+                outResponse._statusCode = _acknowledgeStatus; // 구글 문서: 성공하면 몸이 비어 있다
             }
             else
             {
@@ -285,6 +286,25 @@ namespace
         }
 
         ReceiptValidationResult validate( string_view payload = "gem100|TOKEN" ) { return StoreTestUtil::validate( *this, "google", payload ); }
+
+        /** @brief 지급 알림 하나를 맡기고 왕복을 돌린 뒤 결과를 받습니다. */
+        ReceiptDeliveryStatus confirmDelivery( string_view deliveryKey = "gem100|TOKEN" )
+        {
+            ReceiptDeliveryTask task;
+            task._storeName   = "google";
+            task._recordKey   = "rcpt.google/rec";
+            task._deliveryKey = string( deliveryKey );
+            _pValidator->confirmDelivery( task, UnixMilliseconds{ _nowMs } );
+            pump();
+            vector<ReceiptDeliveryOutcome> listOutcome;
+            _pValidator->pollDeliveryOutcomes( listOutcome );
+            SW_EXPECT_EQUAL( size_t( 1 ), listOutcome.size() );
+            if ( listOutcome.empty() )
+                return ReceiptDeliveryStatus::Retry;
+            SW_EXPECT_EQUAL( string( "google" ), listOutcome[0]._storeName );
+            SW_EXPECT_EQUAL( string( "rcpt.google/rec" ), listOutcome[0]._recordKey );
+            return listOutcome[0]._status;
+        }
 
         vector<ReceiptRefundNotice> takeRefunds()
         {
@@ -630,8 +650,8 @@ SW_TEST_CASE( StoreReceiptValidatorTest, ProviderEntryRequiresABuyerBinding )
     }
 }
 
-/** @brief [GoogleReceiptValidatorTest] 정상 구매: 거래 id 는 주문 번호, 상품은 물은 것, 구매자는 답의 난독화 계정 id 이고 구매 확인을 한 번 보낸다 */
-SW_TEST_CASE( GoogleReceiptValidatorTest, PurchasedIsValidAndAcknowledged )
+/** @brief [GoogleReceiptValidatorTest] 정상 구매: 거래 id 는 주문 번호, 상품은 물은 것, 구매자는 답의 난독화 계정 id 다. 구매 확인은 검증에서 보내지 않고 알림 키와 기한(구매 + 3 일)만 싣는다 — 전에는 지급 전에 보내 지급이 지면 환불도 재시도도 없었다 */
+SW_TEST_CASE( GoogleReceiptValidatorTest, PurchasedIsValidAndWaitsForTheGrant )
 {
     GoogleRig rig;
     rig._productBody                     = R"({"orderId":"GPA.1","purchaseState":0,"acknowledgementState":0,"purchaseTimeMillis":"1700000000000","obfuscatedExternalAccountId":"tok"})";
@@ -644,8 +664,57 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, PurchasedIsValidAndAcknowledged )
     SW_EXPECT_EQUAL( kNowMs, result._purchaseTimeMs );
     SW_EXPECT_EQUAL( kTicket, result._ticket );
     SW_EXPECT_EQUAL( kBuyer, result._accountID );
+    SW_EXPECT_EQUAL( string( "gem100|TOKEN" ), result._deliveryKey );
+    SW_EXPECT_EQUAL( kNowMs + GoogleReceiptSettings::kAcknowledgeWindowMs, result._deliveryDeadlineMs );
     rig.pump();
+    SW_EXPECT_EQUAL( 0, rig._acknowledgeCount );
+
+    SW_EXPECT_TRUE( rig.confirmDelivery() == ReceiptDeliveryStatus::Confirmed );
     SW_EXPECT_EQUAL( 1, rig._acknowledgeCount );
+}
+
+/** @brief [GoogleReceiptValidatorTest] 이미 확인된 구매는 알릴 것이 없다. 취소 · 보류 답도 알림 키를 싣지 않는다 */
+SW_TEST_CASE( GoogleReceiptValidatorTest, OnlyUnacknowledgedPurchasesNeedConfirmation )
+{
+    GoogleRig rig;
+    rig._productBody = R"({"orderId":"GPA.1","purchaseState":0,"acknowledgementState":1})";
+    SW_EXPECT_TRUE( rig.validate()._deliveryKey.empty() );
+    rig._productBody = R"({"orderId":"GPA.1","purchaseState":1,"acknowledgementState":0})";
+    SW_EXPECT_TRUE( rig.validate()._deliveryKey.empty() );
+    rig._productBody = R"({"orderId":"GPA.1","purchaseState":2,"acknowledgementState":0})";
+    SW_EXPECT_TRUE( rig.validate()._deliveryKey.empty() );
+    rig._productBody                     = R"({"orderId":"GPA.1","purchaseState":0,"acknowledgementState":0})";
+    const ReceiptValidationResult result = rig.validate();
+    SW_EXPECT_FALSE( result._deliveryKey.empty() );
+    SW_EXPECT_EQUAL( kNowMs + GoogleReceiptSettings::kAcknowledgeWindowMs, result._deliveryDeadlineMs ); // 구매 시각이 없으면 지금부터 잰다
+}
+
+/** @brief [GoogleReceiptValidatorTest] 구매 확인의 답: 5xx · 429 · 자격 거절은 Retry(토큰을 버린다), 그 밖의 4xx 는 Refused 다. 읽을 수 없는 키는 묻지 않고 Refused 다 */
+SW_TEST_CASE( GoogleReceiptValidatorTest, ConfirmDeliveryStatusDecidesRetry )
+{
+    SW_EXPECT_LOG( "GoogleReceiptValidator.GoogleRejectedAccessToken" );
+    SW_EXPECT_LOG( "StoreReceiptValidator.DeliveryRefused" );
+    SW_EXPECT_LOG( "StoreReceiptValidator.DeliveryKeyUnreadable" );
+    GoogleRig rig;
+    for ( int32 status : { 500, 503, 429 } )
+    {
+        rig._acknowledgeStatus = status;
+        SW_EXPECT_TRUE( rig.confirmDelivery() == ReceiptDeliveryStatus::Retry );
+    }
+    const int32 tokensBefore = rig._tokenRequestCount;
+    rig._acknowledgeStatus   = HTTPConstant::kStatusForbidden;
+    SW_EXPECT_TRUE( rig.confirmDelivery() == ReceiptDeliveryStatus::Retry );
+    rig._acknowledgeStatus = HTTPConstant::kStatusOk;
+    SW_EXPECT_TRUE( rig.confirmDelivery() == ReceiptDeliveryStatus::Confirmed );
+    SW_EXPECT_EQUAL( tokensBefore + 1, rig._tokenRequestCount );
+    for ( int32 status : { 400, 404, 410 } )
+    {
+        rig._acknowledgeStatus = status;
+        SW_EXPECT_TRUE( rig.confirmDelivery() == ReceiptDeliveryStatus::Refused );
+    }
+    const int32 asked = rig._acknowledgeCount;
+    SW_EXPECT_TRUE( rig.confirmDelivery( "no-bar" ) == ReceiptDeliveryStatus::Refused );
+    SW_EXPECT_EQUAL( asked, rig._acknowledgeCount );
 }
 
 /** @brief [GoogleReceiptValidatorTest] 2xx 인데 JSON 이 아니면 Retry 다 — 전에는 Invalid 로 답해 결제한 사람의 영수증을 버렸다. 구매 확인도 보내지 않는다 */

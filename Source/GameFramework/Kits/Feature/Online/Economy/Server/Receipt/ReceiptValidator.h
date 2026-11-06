@@ -3,6 +3,7 @@
  * @brief 결제 영수증 검증 계약입니다. 스토어(Apple, Google, Steam, 가짜)마다 제공자가 하나씩 있으며 비동기로 동작합니다. 서비스 스레드가 맡기고 나중에 회수합니다.
  * @details 제공자는 스토어 서버와의 통신(HTTP, 서명 검증)을 **자기 스레드**에서 한다. 서비스 스레드는 `pollCompletions` 로 결과만 받는다.
  *          검증이 끝나면 서비스가 원장에 지급한다. 분개 키는 거래 id(`rcpt.<스토어>/…`)이므로 같은 영수증은 어느 계정으로든 한 번만 지급된다.
+ *          스토어가 "지급 뒤에 알려라" 고 하는 영수증은 지급이 커밋된 뒤에 `confirmDelivery` 로 알린다(구글의 구매 확인 — 지급 전에 알리면 지급이 진 구매가 환불되지 않는다).
  *          환불과 결제 취소 알림(Apple 서버 알림 v2, Google RTDN, Steam 환불 보고)은 제공자가 받아 `pollRefunds` 로 넘긴다. 서비스가 지급한 재화를 빚을 허용해 회수한다.
  *          제품 이름은 `Receipt/Provider/<제품>/` 폴더 안에만 쓴다. PlayFab 의 `RedeemAppleAppStoreInventoryItems` 가 하는 검증과 지급에 해당한다.
  *          실제 스토어의 공통 판단(응답 분류 · 요청 대조 · 조회 구간)은 `StoreReceiptValidator` 가 한 벌 가진다.
@@ -74,10 +75,12 @@ namespace sw
         string           _productID{};
         string           _failureText{};  ///< 로그용 문자열이며 영어로 쓴다
         string           _storeBuyerID{}; ///< 스토어 답이 말한 구매자이다(스토어 계정 id 또는 구매 때 찍은 토큰). 말하지 않았으면 비어 있다
+        string           _deliveryKey{};  ///< 비어 있지 않으면 지급한 뒤 스토어에 알려야 한다(`confirmDelivery`). 뜻은 제공자가 안다(구글은 영수증 글)
         ReceiptBuyerRule _buyerRule{};    ///< 이 값을 지급 계정과 어떻게 대조하는가
         uint64           _ticket{ 0 };
         uint64           _accountID{ 0 };
         int64            _purchaseTimeMs{ 0 };
+        int64            _deliveryDeadlineMs{ 0 }; ///< 이 시각까지 알리지 않으면 스토어가 결제를 되돌린다(`_deliveryKey` 가 있을 때)
         ReceiptStatus    _status{ ReceiptStatus::Invalid };
         uint8            _bSandbox{ SW_FALSE }; ///< 테스트 결제이다. 샌드박스나 테스트 카드가 해당한다
     };
@@ -91,6 +94,34 @@ namespace sw
         string _storeName{};
         string _transactionID{}; ///< 지급 때의 거래 id 와 같다
         int64  _refundedMs{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief "지급했다" 를 스토어에 알리는 일 하나입니다. 지급과 한 트랜잭션으로 저장소(`econ_delivery`)에 남아, 끝날 때까지 재시작을 넘어 다시 보냅니다. */
+    struct ReceiptDeliveryTask
+    {
+        string _storeName{};
+        string _recordKey{};   ///< 저장소의 레코드 키이다. 결과가 같은 값으로 돌아온다
+        string _deliveryKey{}; ///< `ReceiptValidationResult::_deliveryKey`
+        int64  _deadlineMs{ 0 };
+    };
+
+    /** @brief 지급 알림의 결과입니다. */
+    enum class ReceiptDeliveryStatus : uint8
+    {
+        Confirmed = 0, ///< 스토어가 받았다
+        Refused,       ///< 스토어가 거절했다(이미 처리했거나 없어진 구매) — 다시 보내도 같다
+        Retry          ///< 스토어에 닿지 못했다 — 저장소의 레코드가 남아 다시 보낸다
+    };
+
+    /** @brief 지급 알림 하나의 결과입니다. */
+    struct ReceiptDeliveryOutcome
+    {
+        string                _storeName{};
+        string                _recordKey{};
+        ReceiptDeliveryStatus _status{ ReceiptDeliveryStatus::Retry };
     };
 } // namespace sw
 
@@ -137,6 +168,16 @@ namespace sw
             (void)outLastReadMs;
             return false;
         }
+        /** @brief 지급 뒤 스토어에 알려야 하는 제공자이면 true 입니다(구글의 구매 확인). 서비스가 남은 알림을 주기적으로 읽어 다시 보냅니다. */
+        virtual bool usesDeliveryConfirmation() const { return false; }
+        /** @brief 지급을 마쳤다고 스토어에 알립니다. 결과는 정확히 한 번 `pollDeliveryOutcomes` 로 나옵니다(종료 때 날아가던 것은 나오지 않고 저장소의 레코드가 다음 기동에 다시 보낸다). */
+        virtual void confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now )
+        {
+            (void)task;
+            (void)now;
+        }
+        /** @brief 끝난 지급 알림을 @p outListOutcome 뒤에 붙입니다. */
+        virtual void pollDeliveryOutcomes( vector<ReceiptDeliveryOutcome>& outListOutcome ) { (void)outListOutcome; }
         virtual void shutdown() {}
     };
 } // namespace sw
@@ -165,7 +206,12 @@ namespace sw
         void pollRefunds( vector<ReceiptRefundNotice>& outListNotice );
         /** @brief 회수를 끝내지 못한 환불을 그 제공자에서 잊습니다(겹친 조회가 다시 알린다). */
         void forgetRefund( const ReceiptRefundNotice& notice );
-        void shutdown();
+        /** @brief 지급 뒤 스토어에 알려야 하는 제공자가 하나라도 있으면 true 입니다. */
+        bool usesDeliveryConfirmation() const;
+        /** @brief 그 스토어의 제공자에 지급 알림을 맡깁니다. 모르는 스토어이면 false 입니다. */
+        [[nodiscard]] bool confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now );
+        void               pollDeliveryOutcomes( vector<ReceiptDeliveryOutcome>& outListOutcome );
+        void               shutdown();
 
     private:
         vector<IReceiptValidator*> _listValidator;

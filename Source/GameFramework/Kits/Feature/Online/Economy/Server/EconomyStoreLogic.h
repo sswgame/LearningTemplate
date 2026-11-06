@@ -7,6 +7,8 @@
  *            커밋 사이에 잔액이 바뀌면 버전 충돌이 나므로 다시 짠다. 재원 중 하나라도 빚(환불 회수로 생긴 음수)이면 그 가상 화폐로는 살 수 없으며(`InsufficientFunds`) 빚을 먼저 갚아야 한다.
  *          - 영수증 지급의 분개 키는 거래 id(`rcpt.<스토어>/<거래 id 16진>`)이다. 그래서 같은 영수증은 어느 계정으로든 한 번만 지급된다.
  *            "누구에게" 는 구매자 대조가 정한다(`ReceiptBuyerBinding`) — 스토어 답의 구매자가 이 계정이 아니면 `NotPurchaser` 이고 지급 분개를 쓰지 않는다.
+ *          - 지급 뒤 스토어에 알려야 하는 영수증(`_deliveryKey`)은 지급 분개와 **같은 트랜잭션**으로 `econ_delivery` 레코드를 쓴다. 지급이 진 영수증에는 레코드가 없어 알리지 않고(스토어가 환불한다),
+ *            지급이 커밋되면 레코드도 있어 서버가 죽어도 다음 기동이 다시 알린다(트랜잭션 아웃박스 — 언리얼 · 유니티는 이 일을 게임 백엔드에 맡긴다).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -81,7 +83,15 @@ namespace sw
         static const hashed_string& getPurchaseCountTable(); ///< "econ_purchase" — 키 `<계정 16 진>/<상품 id>`
         static const hashed_string& getRefundTable();        ///< "econ_refund" — 키는 지급 분개 키, 값은 1 바이트(1 환불 회수, 2 청약철회). 같은 거래를 두 번 회수하지 않는다
         static const hashed_string& getRefundCursorTable();  ///< "econ_refund_cursor" — 키는 스토어 이름, 값은 환불 조회의 기준 시각(가변 정수)
+        static const hashed_string& getDeliveryTable();      ///< "econ_delivery" — 스토어에 아직 알리지 못한 지급. 키는 지급 분개 키, 값은 `[판 번호][스토어][알림 키][기한]`
         static EconomyResult        toEconomyResult( LedgerResult result );
+
+        /** @brief 검증 결과의 지급 알림 하나를 만듭니다. 결과에 알림 키가 없거나 거래 id 로 레코드 키를 만들 수 없으면 false 입니다. */
+        [[nodiscard]] static bool makeDeliveryTask( const ReceiptValidationResult& receipt, ReceiptDeliveryTask& outTask );
+        /** @brief 남은 지급 알림을 @p maxCount 까지 읽어 @p outListTask 뒤에 붙입니다. 읽을 수 없는 레코드는 오류 로그를 남기고 건너뜁니다. */
+        [[nodiscard]] static ServiceStoreResult listDeliveries( IServiceStoreConnection& connection, int32 maxCount, vector<ReceiptDeliveryTask>& outListTask );
+        /** @brief 끝난 지급 알림의 레코드를 지웁니다. */
+        [[nodiscard]] static ServiceStoreResult eraseDelivery( IServiceStoreConnection& connection, string_view recordKey );
 
         /** @brief 스토어의 환불 조회 기준 시각을 읽습니다. 레코드가 없으면 `Ok` 와 0 입니다. 값을 읽을 수 없으면 오류 로그와 `Invalid` 입니다. */
         [[nodiscard]] static ServiceStoreResult readRefundCursor( IServiceStoreConnection& connection, string_view storeName, int64& outLastReadMs );

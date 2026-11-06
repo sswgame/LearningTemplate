@@ -66,6 +66,78 @@ namespace sw
                 return EconomyResult::ReceiptInvalid;
             }
 
+            static constexpr uint64 kDeliveryRecordVersion = 1;
+
+            static void writeText( BitWriter& writer, string_view text )
+            {
+                writer.writeBlob( reinterpret_cast<const uint8*>( text.data() ), static_cast<int32>( text.size() ) );
+            }
+
+            [[nodiscard]] static bool readText( BitReader& reader, int32 maxSize, string& outText )
+            {
+                vector<uint8> listByte;
+                if ( reader.readBlob( listByte, maxSize ) == false )
+                    return false;
+                outText.assign( listByte.begin(), listByte.end() );
+                return true;
+            }
+
+            static vector<uint8> encodeDelivery( const ReceiptDeliveryTask& task )
+            {
+                BitWriter writer;
+                writer.writeVarUint( kDeliveryRecordVersion );
+                writeText( writer, task._storeName );
+                writeText( writer, task._deliveryKey );
+                writer.writeVarInt( task._deadlineMs );
+                return writer.releaseBytes();
+            }
+
+            [[nodiscard]] static bool decodeDelivery( const ServiceRecord& record, ReceiptDeliveryTask& outTask )
+            {
+                BitReader reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
+                if ( reader.readVarUint() != kDeliveryRecordVersion )
+                    return false;
+                if ( readText( reader, EconomyProtocol::kMaxStoreNameSize, outTask._storeName ) == false || readText( reader, EconomyProtocol::kMaxReceiptPayloadSize, outTask._deliveryKey ) == false )
+                    return false;
+                outTask._deadlineMs = reader.readVarInt();
+                outTask._recordKey  = record._key;
+                return reader.hasOverflowed() == false;
+            }
+
+            /**
+             * @brief 지급 분개를 커밋합니다. 스토어에 알려야 하는 영수증이면 알림 레코드를 같은 트랜잭션에 넣습니다.
+             * @details 재생(이미 지급한 거래)도 쓴다 — 스토어가 아직 확인 전이라고 답했으니 지난번 알림이 끝나지 않았다. 그 쓰기가 실패하면 Unavailable 로 답해 클라이언트가 같은 영수증을 다시 내게 한다.
+             */
+            [[nodiscard]] static LedgerResult commitRedeem( IServiceStoreConnection& connection, const LedgerTransferRequest& request, const ReceiptValidationResult& receipt, LedgerTransferOutcome& outOutcome )
+            {
+                ReceiptDeliveryTask task;
+                if ( EconomyStoreLogic::makeDeliveryTask( receipt, task ) == false )
+                    return Ledger::executeTransfer( connection, request, outOutcome );
+                const vector<uint8> recordBytes = encodeDelivery( task );
+                for ( int32 attempt = 0; attempt < LedgerConstant::kMaxRetryCount; ++attempt )
+                {
+                    ServiceTransaction transaction;
+                    const LedgerResult staged = Ledger::stageTransfer( connection, request, transaction, outOutcome );
+                    if ( staged != LedgerResult::Ok )
+                        return staged;
+                    const bool bReplayed = outOutcome._bReplayed == SW_TRUE;
+                    transaction.put( EconomyStoreLogic::getDeliveryTable(), task._recordKey, recordBytes );
+                    const ServiceStoreResult committed = connection.commit( transaction );
+                    if ( committed == ServiceStoreResult::Ok )
+                        return LedgerResult::Ok;
+                    if ( committed == ServiceStoreResult::Invalid )
+                        return LedgerResult::Invalid;
+                    if ( bReplayed )
+                        return LedgerResult::Unavailable;
+                    const LedgerResult resolved = Ledger::resolveConflict( connection, request, outOutcome );
+                    if ( resolved != LedgerResult::Conflict )
+                        return resolved;
+                    if ( committed == ServiceStoreResult::Unavailable )
+                        return LedgerResult::Unavailable; // 분개가 없어도 커밋이 늦게 닿을 수 있다 — 같은 거래로 나중에 가려진다
+                }
+                return LedgerResult::Conflict;
+            }
+
             static EconomyResult finish( EconomyReply& outReply, EconomyResult result )
             {
                 outReply._result = result;
@@ -373,7 +445,7 @@ namespace sw
             request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeMint(), account, grant._assetID, grant._amount } );
         }
         LedgerTransferOutcome outcome;
-        const LedgerResult    result = Ledger::executeTransfer( connection, request, outcome );
+        const LedgerResult    result = EconomyStoreLogicInternal::commitRedeem( connection, request, receipt, outcome );
         if ( result == LedgerResult::JournalKeyReused )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::AlreadyRedeemed ); // 받는 계정이 달라서 분개 내용이 다르다
         if ( result != LedgerResult::Ok )
@@ -387,6 +459,46 @@ namespace sw
     {
         static const hashed_string s_table{ "econ_refund" };
         return s_table;
+    }
+
+    const hashed_string& EconomyStoreLogic::getDeliveryTable()
+    {
+        static const hashed_string s_table{ "econ_delivery" };
+        return s_table;
+    }
+
+    bool EconomyStoreLogic::makeDeliveryTask( const ReceiptValidationResult& receipt, ReceiptDeliveryTask& outTask )
+    {
+        if ( receipt._deliveryKey.empty() || EconomyStoreLogicInternal::makeRedeemKey( receipt._storeName, receipt._transactionID, outTask._recordKey ) == false )
+            return false;
+        outTask._storeName   = receipt._storeName;
+        outTask._deliveryKey = receipt._deliveryKey;
+        outTask._deadlineMs  = receipt._deliveryDeadlineMs;
+        return true;
+    }
+
+    ServiceStoreResult EconomyStoreLogic::listDeliveries( IServiceStoreConnection& connection, int32 maxCount, vector<ReceiptDeliveryTask>& outListTask )
+    {
+        vector<ServiceRecord>    listRecord;
+        const ServiceStoreResult read = connection.listRecords( getDeliveryTable(), "", "", maxCount, false, listRecord );
+        if ( read != ServiceStoreResult::Ok )
+            return read;
+        for ( const ServiceRecord& record : listRecord )
+        {
+            ReceiptDeliveryTask task;
+            if ( EconomyStoreLogicInternal::decodeDelivery( record, task ) )
+                outListTask.push_back( std::move( task ) );
+            else
+                SW_LOG_ERROR_ID( "EconomyStoreLogic.DeliveryRecordUnreadable", "The delivery record '%#' is unreadable - the store refunds that purchase when its deadline passes", record._key.c_str() );
+        }
+        return ServiceStoreResult::Ok;
+    }
+
+    ServiceStoreResult EconomyStoreLogic::eraseDelivery( IServiceStoreConnection& connection, string_view recordKey )
+    {
+        ServiceTransaction transaction;
+        transaction.erase( getDeliveryTable(), recordKey );
+        return connection.commit( transaction );
     }
 
     const hashed_string& EconomyStoreLogic::getRefundCursorTable()

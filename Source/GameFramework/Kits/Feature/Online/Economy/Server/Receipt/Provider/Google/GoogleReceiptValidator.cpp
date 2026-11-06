@@ -156,7 +156,7 @@ namespace sw
                 url = makeProductURL( call._ask._productID, call._ask._askedKey );
                 break;
             }
-            case ReceiptCall::Kind::FollowUp:
+            case ReceiptCall::Kind::ConfirmDelivery:
             {
                 url    = makeAcknowledgeURL( call._ask._productID, call._ask._askedKey );
                 method = HTTPMethod::Post;
@@ -171,7 +171,7 @@ namespace sw
         return Internal::makeRequest( url, _settings._requestTimeoutMs, _tokenSource.getToken(), method );
     }
 
-    void GoogleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds /*now*/, ReceiptOrderFacts& outFacts )
+    void GoogleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds now, ReceiptOrderFacts& outFacts )
     {
         using Internal          = GoogleReceiptValidatorInternal;
         outFacts._transactionID = Internal::readText( root, "orderId" );
@@ -198,7 +198,8 @@ namespace sw
         outFacts._bSandbox = purchaseType == 0 ? SW_TRUE : SW_FALSE; // 라이선스 테스트 구매
         if ( outFacts._status != ReceiptStatus::Valid )
             outFacts._failureText = formatToString( "google purchase state %#", purchaseState );
-        outFacts._bNeedsFollowUp = acknowledgementState == 0 ? SW_TRUE : SW_FALSE;
+        outFacts._bNeedsDeliveryConfirm = acknowledgementState == 0 ? SW_TRUE : SW_FALSE;
+        outFacts._deliveryDeadlineMs    = ( outFacts._purchaseTimeMs > 0 ? outFacts._purchaseTimeMs : now.count() ) + GoogleReceiptSettings::kAcknowledgeWindowMs;
     }
 
     void GoogleReceiptValidator::parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage )
@@ -224,10 +225,5 @@ namespace sw
     {
         _tokenSource.invalidate(); // 토큰이 거절됐다 — 다음 요청이 새로 받는다
         SW_LOG_ERROR_ID( "GoogleReceiptValidator.GoogleRejectedAccessToken", "Google rejected the access token or the service account has no access to '%#' (status %#)", _settings._packageName.c_str(), response._statusCode );
-    }
-
-    void GoogleReceiptValidator::onFollowUpFailed( const HTTPClientResponse& response )
-    {
-        SW_LOG_WARNING_ID( "GoogleReceiptValidator.GooglePurchaseAcknowledgeFailed", "Google purchase acknowledge failed (status %#) - it is sent again when the token is validated again", response._statusCode );
     }
 } // namespace sw

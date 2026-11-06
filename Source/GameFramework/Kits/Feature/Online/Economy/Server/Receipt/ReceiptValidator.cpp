@@ -121,6 +121,33 @@ namespace sw
             pValidator->forgetRefund( notice._transactionID );
     }
 
+    bool ReceiptValidatorRegistry::usesDeliveryConfirmation() const
+    {
+        for ( const IReceiptValidator* pValidator : _listValidator )
+        {
+            if ( pValidator->usesDeliveryConfirmation() )
+                return true;
+        }
+        return false;
+    }
+
+    bool ReceiptValidatorRegistry::confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now )
+    {
+        IReceiptValidator* pValidator = findValidator( task._storeName );
+        if ( pValidator == nullptr )
+            return false;
+        pValidator->confirmDelivery( task, now );
+        return true;
+    }
+
+    void ReceiptValidatorRegistry::pollDeliveryOutcomes( vector<ReceiptDeliveryOutcome>& outListOutcome )
+    {
+        for ( IReceiptValidator* pValidator : _listValidator )
+        {
+            pValidator->pollDeliveryOutcomes( outListOutcome );
+        }
+    }
+
     void ReceiptValidatorRegistry::shutdown()
     {
         for ( IReceiptValidator* pValidator : _listValidator )

@@ -99,7 +99,12 @@ namespace sw
                 }
             }
 
-            void complete() override { _pService->completeCall( _callID, _reply ); }
+            void complete() override
+            {
+                if ( _methodIndex == EconomyServiceInternal::kRedeemIndex && _reply._result == EconomyResult::Ok )
+                    _pService->confirmDelivery( _redeem._receipt ); // 지급이 커밋된 뒤다
+                _pService->completeCall( _callID, _reply );
+            }
 
         private:
             EconomyReply         _reply;
@@ -202,6 +207,48 @@ namespace sw
             ServiceStoreResult  _result;
         };
 
+        /** @brief 남은 지급 알림을 읽습니다. */
+        class EconomyDeliveryListWork final : public IServiceStoreWork
+        {
+        public:
+            EconomyDeliveryListWork( EconomyService* pService, int32 maxCount )
+                : _listTask{}
+                , _pService{ pService }
+                , _maxCount{ maxCount }
+                , _result{ ServiceStoreResult::Unavailable }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::listDeliveries( connection, _maxCount, _listTask ); }
+            void complete() override { _pService->completeDeliveryList( _listTask, _result, getCompletion() ); }
+
+        private:
+            vector<ReceiptDeliveryTask> _listTask;
+            EconomyService*             _pService;
+            int32                       _maxCount;
+            ServiceStoreResult          _result;
+        };
+
+        /** @brief 끝난 지급 알림의 레코드를 지웁니다. */
+        class EconomyDeliveryEraseWork final : public IServiceStoreWork
+        {
+        public:
+            EconomyDeliveryEraseWork( EconomyService* pService, string recordKey )
+                : _recordKey{ std::move( recordKey ) }
+                , _pService{ pService }
+                , _result{ ServiceStoreResult::Unavailable }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::eraseDelivery( connection, _recordKey ); }
+            void complete() override { _pService->completeDeliveryErase( _recordKey, _result, getCompletion() ); }
+
+        private:
+            string             _recordKey;
+            EconomyService*    _pService;
+            ServiceStoreResult _result;
+        };
+
         struct EconomyDevOnlineInternal
         {
             static unique_ptr<IReceiptValidator> createFakeReceiptValidator()
@@ -223,6 +270,8 @@ namespace sw
         , _metrics{}
         , _settings{}
         , _mapPresenceRequestToNotice{}
+        , _uniqueSetDeliveryInFlight{}
+        , _uniqueSetDeliveryAlarmed{}
         , _balanceNotice{ *this }
         , _pHost{ nullptr }
         , _pStore{ nullptr }
@@ -231,12 +280,14 @@ namespace sw
         , _pendingRefundCount{ 0 }
         , _pendingUpkeepCount{ 0 }
         , _nextRefundCursorReadMs{ 0 }
+        , _nextDeliveryScanMs{ 0 }
         , _auditRun{}
         , _bAuditPending{ SW_FALSE }
         , _bAuditRunHeld{ SW_FALSE }
         , _bLastAuditBalanced{ SW_FALSE }
         , _bRefundCursorsRestored{ SW_FALSE }
         , _bRefundCursorReadPending{ SW_FALSE }
+        , _bDeliveryScanPending{ SW_FALSE }
         , _nowMs{ 0 }
     {
     }
@@ -381,7 +432,74 @@ namespace sw
         pollReceipts();
         pollRefunds();
         updateRefundCursors( nowMs );
+        updateDeliveries( nowMs );
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
+    }
+
+    void EconomyService::confirmDelivery( const ReceiptValidationResult& receipt )
+    {
+        ReceiptDeliveryTask task;
+        if ( EconomyStoreLogic::makeDeliveryTask( receipt, task ) )
+            startDelivery( task );
+    }
+
+    void EconomyService::startDelivery( const ReceiptDeliveryTask& task )
+    {
+        if ( _settings._pReceiptRegistry == nullptr || _uniqueSetDeliveryInFlight.insert( task._recordKey ).second == false )
+            return; // 이미 날아가는 중이다
+        if ( _settings._pReceiptRegistry->confirmDelivery( task, _nowMs ) )
+            return;
+        _uniqueSetDeliveryInFlight.erase( task._recordKey );
+        SW_LOG_WARNING_ID( "EconomyService.DeliveryStoreNotConfigured", "EconomyService: a delivery record belongs to store '%#' which this server does not have - it stays until a server with that store sends it", task._storeName.c_str() );
+    }
+
+    void EconomyService::updateDeliveries( UnixMilliseconds nowMs )
+    {
+        if ( _settings._pReceiptRegistry == nullptr || _settings._pReceiptRegistry->usesDeliveryConfirmation() == false )
+            return;
+        vector<ReceiptDeliveryOutcome> listOutcome;
+        _settings._pReceiptRegistry->pollDeliveryOutcomes( listOutcome );
+        for ( ReceiptDeliveryOutcome& outcome : listOutcome )
+        {
+            _uniqueSetDeliveryInFlight.erase( outcome._recordKey );
+            if ( outcome._status == ReceiptDeliveryStatus::Retry )
+                continue; // 레코드가 남아 다음 훑기가 다시 보낸다
+            _uniqueSetDeliveryAlarmed.erase( outcome._recordKey );
+            ++_pendingUpkeepCount;
+            _pStore->submit( make_unique<EconomyDeliveryEraseWork>( this, std::move( outcome._recordKey ) ) );
+        }
+        if ( _bDeliveryScanPending == SW_TRUE || nowMs.count() < _nextDeliveryScanMs )
+            return;
+        _nextDeliveryScanMs   = nowMs.count() + _settings._deliveryScanIntervalMs;
+        _bDeliveryScanPending = SW_TRUE;
+        ++_pendingUpkeepCount;
+        _pStore->submit( make_unique<EconomyDeliveryListWork>( this, _settings._deliveryScanMaxCount ) );
+    }
+
+    void EconomyService::completeDeliveryList( const vector<ReceiptDeliveryTask>& listTask, ServiceStoreResult result, ServiceStoreCompletion completion )
+    {
+        --_pendingUpkeepCount;
+        _bDeliveryScanPending = SW_FALSE;
+        if ( result != ServiceStoreResult::Ok )
+        {
+            if ( completion.isCancelled() == false )
+                SW_LOG_WARNING_ID( "EconomyService.DeliveryScanFailed", "EconomyService: the delivery records could not be read - the next scan reads them again" );
+            return;
+        }
+        for ( const ReceiptDeliveryTask& task : listTask )
+        {
+            const bool bLate = _nowMs.count() >= task._deadlineMs - _settings._deliveryAlarmMarginMs;
+            if ( bLate && _uniqueSetDeliveryAlarmed.insert( task._recordKey ).second )
+                SW_LOG_ERROR_ID( "EconomyService.DeliveryNearDeadline", "EconomyService: store '%#' has not taken the delivery confirmation '%#' and its deadline is %# (now %#) - past it the store refunds the purchase and the refund poll takes the grant back", task._storeName.c_str(), task._recordKey.c_str(), task._deadlineMs, _nowMs.count() );
+            startDelivery( task );
+        }
+    }
+
+    void EconomyService::completeDeliveryErase( const string& recordKey, ServiceStoreResult result, ServiceStoreCompletion completion )
+    {
+        --_pendingUpkeepCount;
+        if ( result != ServiceStoreResult::Ok && completion.isCancelled() == false ) // 다음 훑기가 다시 보내고 스토어가 거절하면 그때 지운다
+            SW_LOG_WARNING_ID( "EconomyService.DeliveryEraseFailed", "EconomyService: the finished delivery record '%#' could not be erased", recordKey.c_str() );
     }
 
     void EconomyService::updateRefundCursors( UnixMilliseconds nowMs )

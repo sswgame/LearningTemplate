@@ -25,6 +25,8 @@ namespace
     constexpr int64     kNowMs    = 1700000000000ll;
     constexpr int64     kWindowMs = 1000;
 
+    constexpr int64 kFarDeadlineMs = kNowMs + 100000000; ///< 지급 알림의 기한 — 기한 경고를 보는 케이스만 가깝게 둔다
+
     const utf8* const kCurrencyXML = R"(<CurrencyCatalog>
   <Currency id="cur.gold"/>
   <Currency id="cur.gem_paid" paid="true"/>
@@ -177,6 +179,56 @@ namespace
         }
     };
 
+    /** @brief 영수증마다 "지급 뒤에 알려라" 고 답하는 가짜 스토어입니다. 스토어 이름은 카탈로그에 있는 "fake" 이고, 지급 알림은 기록만 하고 결과는 테스트가 냅니다. */
+    class DeliveryRecordingValidator final : public IReceiptValidator
+    {
+    public:
+        vector<ReceiptDeliveryTask>     _listAsked{};
+        vector<ReceiptDeliveryOutcome>  _listOutcome{};
+        vector<ReceiptValidationResult> _listResult{};
+        ReceiptBuyerRule                _buyerRule{};
+        string                          _storeBuyerID{};
+        int64                           _deadlineMs{ kFarDeadlineMs };
+
+        const utf8*             getStoreName() const override { return "fake"; }
+        const ReceiptBuyerRule& getBuyerRule() const override { return _buyerRule; }
+        void                    submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override
+        {
+            (void)now;
+            ReceiptValidationResult& result = _listResult.emplace_back();
+            result._storeName               = "fake";
+            result._transactionID           = request._payload;
+            result._productID               = "com.x.gem100";
+            result._deliveryKey             = "key." + request._payload;
+            result._deliveryDeadlineMs      = _deadlineMs;
+            result._storeBuyerID            = _storeBuyerID;
+            result._buyerRule               = _buyerRule;
+            result._ticket                  = request._ticket;
+            result._status                  = ReceiptStatus::Valid;
+        }
+        void update( UnixMilliseconds now ) override { (void)now; }
+        void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override
+        {
+            outListResult.insert( outListResult.end(), _listResult.begin(), _listResult.end() );
+            _listResult.clear();
+        }
+        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override { (void)outListNotice; }
+        bool usesDeliveryConfirmation() const override { return true; }
+        void confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now ) override
+        {
+            (void)now;
+            _listAsked.push_back( task );
+        }
+        void pollDeliveryOutcomes( vector<ReceiptDeliveryOutcome>& outListOutcome ) override
+        {
+            outListOutcome.insert( outListOutcome.end(), _listOutcome.begin(), _listOutcome.end() );
+            _listOutcome.clear();
+        }
+
+        /** @brief 맡은 알림 @p index 의 결과를 다음 회수에 냅니다. */
+        void answer( size_t index, ReceiptDeliveryStatus status ) { _listOutcome.push_back( ReceiptDeliveryOutcome{ "fake", _listAsked[index]._recordKey, status } ); }
+    };
+
     /** @brief 서비스 답을 받습니다. */
     struct EconomyReplySink
     {
@@ -248,6 +300,77 @@ namespace
             call._redeem._storeName = "fake";
             call._redeem._payload   = string( payload );
             return this->call( EconomyMethod::kRedeemReceipt, accountID, &call );
+        }
+    };
+
+    /** @brief 지급 뒤 알림을 쓰는 서비스 하나입니다. 저장소를 넘겨받아 재시작을 흉내 냅니다. */
+    struct DeliveryServiceRig
+    {
+        DeliveryRecordingValidator _validator;
+        ReceiptValidatorRegistry   _registry;
+        EconomyService             _service;
+        EconomyReplySink           _sink;
+        MemoryServiceStore&        _store;
+        int64                      _nowMs;
+
+        DeliveryServiceRig( ReceiptRig& data, MemoryServiceStore& store, int64 nowMs = kNowMs )
+            : _validator{}
+            , _registry{}
+            , _service{}
+            , _sink{}
+            , _store{ store }
+            , _nowMs{ nowMs }
+        {
+            SW_EXPECT_TRUE( _registry.registerValidator( &_validator ) );
+            EconomyServiceConfig settings;
+            settings._pCurrencyCatalog       = &data._currencies;
+            settings._pOfferCatalog          = &data._offers;
+            settings._pReceiptRegistry       = &_registry;
+            settings._deliveryScanIntervalMs = 1000;
+            settings._deliveryAlarmMarginMs  = 100;
+            SW_EXPECT_TRUE( _service.initialize( &store, settings ) );
+        }
+
+        ~DeliveryServiceRig()
+        {
+            _service.shutdown();
+            _registry.shutdown();
+        }
+
+        void pump()
+        {
+            for ( int32 round = 0; round < 4; ++round )
+            {
+                _service.update( UnixMilliseconds{ _nowMs } );
+                while ( _store.pollCompletions() > 0 )
+                {
+                }
+            }
+        }
+
+        EconomyResult redeem( AccountID accountID, string_view payload )
+        {
+            EconomyCall call{ UnixMilliseconds{ _nowMs } };
+            call._method            = EconomyMethod::kRedeemReceipt;
+            call._accountID         = accountID;
+            call._redeem._storeName = "fake";
+            call._redeem._payload   = string( payload );
+            _service.submitCall( call, EconomyService::ReplyDelegate::create<&EconomyReplySink::onReply>( &_sink ) );
+            pump();
+            SW_EXPECT_EQUAL( size_t( 1 ), _sink._listReply.size() );
+            const EconomyResult result = _sink._listReply.empty() ? EconomyResult::Unavailable : _sink._listReply.back()._result;
+            _sink._listReply.clear();
+            return result;
+        }
+    };
+
+    struct DeliveryTestUtil
+    {
+        static size_t countRecords( ReceiptRig& data )
+        {
+            vector<ReceiptDeliveryTask> listTask;
+            SW_EXPECT_TRUE( EconomyStoreLogic::listDeliveries( data._database, 100, listTask ) == ServiceStoreResult::Ok );
+            return listTask.size();
         }
     };
 } // namespace
@@ -530,6 +653,152 @@ SW_TEST_CASE( EconomyReceiptsTest, LedgerAuditStaysBalanced )
     rig._service.requestLedgerAudit();
     rig.pump();
     SW_EXPECT_TRUE( rig._service.wasLastAuditBalanced() );
+}
+
+/** @brief [EconomyReceiptsTest] 지급 알림: 지급이 커밋된 뒤에만 스토어에 맡기고 레코드가 함께 남으며, 받았다는 답에 지운다. 지급 분개와 레코드는 한 트랜잭션이다 */
+SW_TEST_CASE( EconomyReceiptsTest, DeliveryIsConfirmedAfterTheGrant )
+{
+    ReceiptRig         data;
+    MemoryServiceStore store{ &data._database };
+    DeliveryServiceRig rig( data, store );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 100 ), data.balanceOf( kBuyer ) );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
+    SW_EXPECT_EQUAL( string( "key.tx1" ), rig._validator._listAsked[0]._deliveryKey );
+    SW_EXPECT_EQUAL( string( "fake" ), rig._validator._listAsked[0]._storeName );
+    SW_EXPECT_EQUAL( size_t( 1 ), DeliveryTestUtil::countRecords( data ) );
+
+    rig._validator.answer( 0, ReceiptDeliveryStatus::Confirmed );
+    rig.pump();
+    SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
+}
+
+/** @brief [EconomyReceiptsTest] 지급이 지면 알리지 않는다 — 스토어가 환불하게 둔다. 저장소 실패 · 다른 구매자 · 이미 다른 계정이 받은 거래 모두 레코드도 알림도 없다. 저장소가 돌아와 다시 내면 그때 알린다 */
+SW_TEST_CASE( EconomyReceiptsTest, FailedGrantIsNotConfirmed )
+{
+    ReceiptRig         data;
+    MemoryServiceStore store{ &data._database };
+    DeliveryServiceRig rig( data, store );
+    rig.pump(); // 기동 직후의 훑기를 먼저 끝낸다
+
+    data._database.armFault( ServiceStoreFault::RejectCommit );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Unavailable );
+    SW_EXPECT_TRUE( rig._validator._listAsked.empty() );
+    SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
+    SW_EXPECT_EQUAL( int64( 0 ), data.balanceOf( kBuyer ) );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
+
+    SW_EXPECT_TRUE( rig.redeem( kOther, "tx1" ) == EconomyResult::AlreadyRedeemed );
+    SW_EXPECT_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
+
+    rig._validator._buyerRule._binding = ReceiptBuyerBinding::AccountToken;
+    rig._validator._storeBuyerID       = ReceiptBuyerToken::make( kBuyer );
+    SW_EXPECT_TRUE( rig.redeem( kOther, "tx2" ) == EconomyResult::NotPurchaser );
+    SW_EXPECT_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), DeliveryTestUtil::countRecords( data ) );
+}
+
+/** @brief [EconomyReceiptsTest] 지급 알림의 재시도: 닿지 못하면 레코드가 남아 훑기 간격마다 다시 보내고, 날아가는 동안은 겹쳐 보내지 않으며, 거절은 지운다 */
+SW_TEST_CASE( EconomyReceiptsTest, DeliveryRetriesUntilAnswered )
+{
+    ReceiptRig         data;
+    MemoryServiceStore store{ &data._database };
+    DeliveryServiceRig rig( data, store );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
+
+    rig._nowMs += 1000;
+    rig.pump();
+    SW_EXPECT_EQUAL( size_t( 1 ), rig._validator._listAsked.size() ); // 아직 날아가는 중이다
+
+    rig._validator.answer( 0, ReceiptDeliveryStatus::Retry );
+    rig.pump();
+    SW_EXPECT_EQUAL( size_t( 1 ), DeliveryTestUtil::countRecords( data ) );
+    SW_EXPECT_EQUAL( size_t( 1 ), rig._validator._listAsked.size() ); // 간격 전이다
+
+    rig._nowMs += 1000;
+    rig.pump();
+    SW_REQUIRE_EQUAL( size_t( 2 ), rig._validator._listAsked.size() );
+    rig._validator.answer( 1, ReceiptDeliveryStatus::Refused );
+    rig.pump();
+    SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
+}
+
+/** @brief [EconomyReceiptsTest] 재시작: 지급 뒤 알림을 끝내지 못하고 내려가도 다음 기동이 레코드를 읽어 다시 보낸다 — 메모리에만 있으면 3 일 뒤 스토어가 환불해 지급이 회수된다 */
+SW_TEST_CASE( EconomyReceiptsTest, DeliverySurvivesARestart )
+{
+    ReceiptRig         data;
+    MemoryServiceStore store{ &data._database };
+    {
+        DeliveryServiceRig before( data, store );
+        SW_EXPECT_TRUE( before.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
+    }
+    DeliveryServiceRig after( data, store );
+    after.pump();
+    SW_REQUIRE_EQUAL( size_t( 1 ), after._validator._listAsked.size() );
+    SW_EXPECT_EQUAL( string( "key.tx1" ), after._validator._listAsked[0]._deliveryKey );
+    SW_EXPECT_EQUAL( kFarDeadlineMs, after._validator._listAsked[0]._deadlineMs );
+}
+
+/** @brief [EconomyReceiptsTest] 같은 거래를 다시 내면 재생이지만 스토어가 아직 확인 전이라 했으니 다시 알린다 */
+SW_TEST_CASE( EconomyReceiptsTest, ReplayedGrantIsConfirmedAgain )
+{
+    ReceiptRig         data;
+    MemoryServiceStore store{ &data._database };
+    DeliveryServiceRig rig( data, store );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._validator._listAsked.size() );
+    rig._validator.answer( 0, ReceiptDeliveryStatus::Confirmed );
+    rig.pump();
+    SW_EXPECT_EQUAL( size_t( 0 ), DeliveryTestUtil::countRecords( data ) );
+
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 100 ), data.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( size_t( 2 ), rig._validator._listAsked.size() );
+    SW_EXPECT_EQUAL( size_t( 1 ), DeliveryTestUtil::countRecords( data ) );
+}
+
+/** @brief [EconomyReceiptsTest] 기한이 가까운데 끝나지 않은 지급 알림은 오류 로그를 한 번 남긴다(사람이 볼 시간) */
+SW_TEST_CASE( EconomyReceiptsTest, DeliveryNearTheDeadlineAlarmsOnce )
+{
+    SW_EXPECT_LOG( "EconomyService.DeliveryNearDeadline" );
+    ReceiptRig         data;
+    MemoryServiceStore store{ &data._database };
+    DeliveryServiceRig rig( data, store );
+    rig._validator._deadlineMs = kNowMs + 1000;
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1" ) == EconomyResult::Ok );
+    rig._validator.answer( 0, ReceiptDeliveryStatus::Retry );
+    rig._nowMs += 1000; // 기한이 경고 폭(100) 안으로 왔다
+    rig.pump();
+    SW_EXPECT_EQUAL( size_t( 2 ), rig._validator._listAsked.size() );
+    rig._validator.answer( 1, ReceiptDeliveryStatus::Retry );
+    rig._nowMs += 1000;
+    rig.pump();
+    SW_EXPECT_EQUAL( size_t( 3 ), rig._validator._listAsked.size() ); // 기한이 지나도 스토어가 거절할 때까지 보낸다
+}
+
+/** @brief [EconomyReceiptsTest] 지급 알림 레코드: 판 번호가 다르거나 깨진 레코드는 오류와 함께 건너뛰고 나머지를 읽는다. 알림 키가 없는 결과는 일감을 만들지 않는다 */
+SW_TEST_CASE( EconomyReceiptsTest, DeliveryRecordRules )
+{
+    SW_EXPECT_LOG( "EconomyStoreLogic.DeliveryRecordUnreadable" );
+    ReceiptRig              rig;
+    ReceiptValidationResult receipt;
+    receipt._storeName     = "fake";
+    receipt._transactionID = "tx1";
+    ReceiptDeliveryTask task;
+    SW_EXPECT_FALSE( EconomyStoreLogic::makeDeliveryTask( receipt, task ) );
+    receipt._deliveryKey = "k";
+    SW_EXPECT_TRUE( EconomyStoreLogic::makeDeliveryTask( receipt, task ) );
+    SW_EXPECT_FALSE( task._recordKey.empty() );
+
+    ServiceTransaction broken;
+    broken.put( EconomyStoreLogic::getDeliveryTable(), "a", vector<uint8>{ 0xFF } );
+    SW_EXPECT_TRUE( rig._database.commit( broken ) == ServiceStoreResult::Ok );
+    vector<ReceiptDeliveryTask> listTask;
+    SW_EXPECT_TRUE( EconomyStoreLogic::listDeliveries( rig._database, 10, listTask ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( listTask.empty() );
+    SW_EXPECT_TRUE( EconomyStoreLogic::eraseDelivery( rig._database, "a" ) == ServiceStoreResult::Ok );
 }
 
 /** @brief [EconomyReceiptsTest] 환불 조회 기준: 기동 때 저장소에서 읽어 넘기고, 옮겨진 기준을 쓰며, 다시 켠 서비스가 그 값을 받는다 — 전에는 메모리에만 있어 재시작이 구간을 비웠다 */

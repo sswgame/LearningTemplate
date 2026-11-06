@@ -108,6 +108,7 @@ namespace sw
         , _listWaiting{}
         , _listDone{}
         , _listRefund{}
+        , _listDeliveryDone{}
         , _uniqueSetNotifiedRefund{}
         , _pHTTPClient{ pHTTPClient }
         , _bRefundIncomplete{ SW_FALSE }
@@ -267,7 +268,7 @@ namespace sw
 
     void StoreReceiptValidator::failCall( const ReceiptCall& call )
     {
-        // 자격을 받지 못했다 — 검증은 같은 영수증으로 다시 시도하게 하고, 후속 요청은 다음 확인에, 조회는 다음 주기에 맡긴다.
+        // 자격을 받지 못했다 — 검증은 같은 영수증으로 다시 시도하게 하고, 지급 알림은 저장소의 레코드로 다시 보내고, 조회는 다음 주기에 맡긴다.
         switch ( call._kind )
         {
             case ReceiptCall::Kind::Validate:
@@ -275,8 +276,9 @@ namespace sw
                 completeRetry( call, formatToString( "%# credentials are not available", getStoreName() ) );
                 break;
             }
-            case ReceiptCall::Kind::FollowUp:
+            case ReceiptCall::Kind::ConfirmDelivery:
             {
+                completeDelivery( call, ReceiptDeliveryStatus::Retry );
                 break;
             }
             case ReceiptCall::Kind::RefundPage:
@@ -339,13 +341,79 @@ namespace sw
         parseOrder( document.getRoot(), call, now, facts );
         ReceiptValidationResult result = makeResult( call );
         applyOrderFacts( call._ask, facts, result );
-        const bool bFollowUp = result._status == ReceiptStatus::Valid && facts._bNeedsFollowUp == SW_TRUE;
+        if ( result._status == ReceiptStatus::Valid && facts._bNeedsDeliveryConfirm == SW_TRUE )
+        {
+            // 여기서 알리지 않는다 — 구매자 대조 · 지급이 남았다. 지급이 진 영수증을 알리면 스토어가 환불하지 않아 돈만 받은 구매가 남는다.
+            result._deliveryKey        = call._request._payload;
+            result._deliveryDeadlineMs = facts._deliveryDeadlineMs;
+        }
         _listDone.push_back( std::move( result ) );
-        if ( bFollowUp == false )
+    }
+
+    void StoreReceiptValidator::confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now )
+    {
+        ReceiptCall call;
+        call._kind               = ReceiptCall::Kind::ConfirmDelivery;
+        call._recordKey          = task._recordKey;
+        call._request._storeName = task._storeName;
+        call._request._payload   = task._deliveryKey;
+        string failureText;
+        if ( readPayload( task._deliveryKey, call._ask, failureText ) == false )
+        {
+            SW_LOG_ERROR_ID( "StoreReceiptValidator.DeliveryKeyUnreadable", "A %# delivery record has an unreadable key (%#) - it is dropped, the store refunds that purchase when its deadline passes", getStoreName(), failureText.c_str() );
+            completeDelivery( call, ReceiptDeliveryStatus::Refused );
             return;
-        ReceiptCall followUp = call;
-        followUp._kind       = ReceiptCall::Kind::FollowUp;
-        dispatch( std::move( followUp ), now );
+        }
+        if ( _bStopped == SW_TRUE )
+        {
+            completeDelivery( call, ReceiptDeliveryStatus::Retry );
+            return;
+        }
+        dispatch( std::move( call ), now );
+    }
+
+    void StoreReceiptValidator::finishDelivery( const ReceiptCall& call, const HTTPClientResponse& response )
+    {
+        switch ( classifyResponse( response ) )
+        {
+            case ReceiptResponseKind::Answered:
+            {
+                completeDelivery( call, ReceiptDeliveryStatus::Confirmed );
+                break;
+            }
+            case ReceiptResponseKind::Refused:
+            {
+                // 이미 확인했거나 소비했거나 없어진 구매다. 다시 보내도 같고, 정말 확인되지 않았으면 스토어가 환불하고 환불 조회가 회수한다.
+                SW_LOG_WARNING_ID( "StoreReceiptValidator.DeliveryRefused", "%# refused a delivery confirmation (status %#) - it is not sent again", getStoreName(), response._statusCode );
+                completeDelivery( call, ReceiptDeliveryStatus::Refused );
+                break;
+            }
+            case ReceiptResponseKind::CredentialRejected:
+            {
+                onCredentialRejected( response );
+                completeDelivery( call, ReceiptDeliveryStatus::Retry );
+                break;
+            }
+            case ReceiptResponseKind::Unreachable:
+            {
+                completeDelivery( call, ReceiptDeliveryStatus::Retry );
+                break;
+            }
+        }
+    }
+
+    void StoreReceiptValidator::completeDelivery( const ReceiptCall& call, ReceiptDeliveryStatus status )
+    {
+        _listDeliveryDone.push_back( ReceiptDeliveryOutcome{ getStoreName(), call._recordKey, status } );
+    }
+
+    void StoreReceiptValidator::pollDeliveryOutcomes( vector<ReceiptDeliveryOutcome>& outListOutcome )
+    {
+        for ( ReceiptDeliveryOutcome& outcome : _listDeliveryDone )
+        {
+            outListOutcome.push_back( std::move( outcome ) );
+        }
+        _listDeliveryDone.clear();
     }
 
     void StoreReceiptValidator::finishRefundPage( const ReceiptCall& call, const HTTPClientResponse& response, UnixMilliseconds now )
@@ -431,10 +499,9 @@ namespace sw
                     finishValidation( call, response, now );
                     break;
                 }
-                case ReceiptCall::Kind::FollowUp:
+                case ReceiptCall::Kind::ConfirmDelivery:
                 {
-                    if ( response.isSuccess() == false )
-                        onFollowUpFailed( response );
+                    finishDelivery( call, response );
                     break;
                 }
                 case ReceiptCall::Kind::RefundPage:
@@ -466,7 +533,7 @@ namespace sw
 
     void StoreReceiptValidator::shutdown()
     {
-        // 날아가던 검증은 같은 영수증으로 다시 시도하게 Retry 로 끝낸다. 후속 요청 · 조회는 다음 기동의 일이다.
+        // 날아가던 검증은 같은 영수증으로 다시 시도하게 Retry 로 끝낸다. 지급 알림(저장소에 남아 있다) · 조회는 다음 기동의 일이다.
         const string text = formatToString( "%# validation was interrupted by shutdown", getStoreName() );
         for ( const auto& [requestID, call] : _mapRequestToCall )
         {

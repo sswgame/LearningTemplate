@@ -7,6 +7,7 @@
  *          - **요청과의 대조**(`applyOrderFacts`): 물은 거래 · 상품 · 키와 답이 다르면 Invalid, 판정에 필요한 거래 id · 상품이 없으면 Invalid 이다. 스토어는 답이 말한 값을 옮겨 적기만 한다.
  *          - **조회 구간**(`ReceiptPollWindow`): 끝까지 읽은 조회만 구간을 옮긴다. 실패 · 읽지 못한 항목 · 잇지 못한 잘림은 그대로 둬 다음 조회가 다시 읽는다 — 구간을 지나치면 그 환불을 영영 놓친다.
  *            기준 시각은 서비스가 저장소(`econ_refund_cursor`)에 남긴다. 받기 전(`restoreRefundCursor`)에는 조회하지 않아 재시작이 구간을 비우지 않고, 스토어의 한계를 넘겨 멈춘 동안 놓친 구간은 경고한다.
+ *          - **지급 알림**(`confirmDelivery`): 답이 "지급 뒤에 알려라" 고 하면(`_bNeedsDeliveryConfirm`) 결과에 키만 실어 내고, 알림은 서비스가 지급을 커밋한 뒤에 맡긴다. 2xx Confirmed, 그 밖의 4xx Refused, 닿지 못함 · 자격 거절 Retry 다.
  *          - 결과 · 환불 알림의 큐, 겹친 알림 거름, 종료 때 Retry 로 끝내기, 자격이 준비될 때까지 호출을 기다리게 하기.
  *          언리얼 OSS(`IOnlinePurchase`)는 플랫폼마다 영수증 파싱만 다르고 공통 상태(`EPurchaseTransactionState`)를 내며, 유니티 IAP 도 `IPurchaseReceipt` 하나로 모은다(기억에 의존). 둘 다 판단을 플랫폼 코드에
  *          흩어 두는데, 이 틀은 한 걸음 더 가 분류와 대조까지 위로 올린다 — 스토어가 늘 때 같은 결함을 다시 쓰지 못하게 하려는 것이다. 새 스토어는 이 클래스를 상속해 순수 가상 다섯을 적는다.
@@ -60,9 +61,10 @@ namespace sw
         string        _storeBuyerID{}; ///< 답이 말한 구매자(없으면 비어 있다)
         string        _failureText{};  ///< `_status` 가 Valid 가 아닐 때의 까닭(영어)
         int64         _purchaseTimeMs{ 0 };
+        int64         _deliveryDeadlineMs{ 0 }; ///< `_bNeedsDeliveryConfirm` 일 때 스토어가 결제를 되돌리는 시각
         ReceiptStatus _status{ ReceiptStatus::Invalid };
         uint8         _bSandbox{ SW_FALSE };
-        uint8         _bNeedsFollowUp{ SW_FALSE }; ///< Valid 면 후속 요청을 보낸다(구글의 구매 확인)
+        uint8         _bNeedsDeliveryConfirm{ SW_FALSE }; ///< Valid 면 지급한 뒤 스토어에 알려야 한다(구글의 구매 확인). 지급 전에 알리면 지급이 실패했을 때 환불도 재시도도 없다
     };
 
     /** @brief 환불 조회 응답 한 쪽에서 읽은 것입니다. 알림 자체는 `addRefund` 로 넘깁니다. */
@@ -79,13 +81,14 @@ namespace sw
     {
         enum class Kind : uint8
         {
-            Validate = 0, ///< 영수증 확인
-            FollowUp,     ///< Valid 뒤의 후속 요청(`ReceiptOrderFacts::_bNeedsFollowUp`)
-            RefundPage    ///< 환불 조회의 한 쪽
+            Validate = 0,    ///< 영수증 확인
+            ConfirmDelivery, ///< 지급을 마쳤다는 알림(`IReceiptValidator::confirmDelivery`)
+            RefundPage       ///< 환불 조회의 한 쪽
         };
 
         ReceiptValidationRequest _request{};
         ReceiptAsk               _ask{};
+        string                   _recordKey{}; ///< ConfirmDelivery — 결과에 그대로 돌려주는 저장소 키
         string                   _pageToken{}; ///< RefundPage — 첫 쪽이면 비어 있다
         int32                    _page{ 0 };   ///< RefundPage — 몇 번째 쪽인가
         Kind                     _kind{ Kind::Validate };
@@ -165,6 +168,8 @@ namespace sw
         bool               usesRefundCursor() const final { return true; }
         void               restoreRefundCursor( int64 lastReadMs ) final;
         [[nodiscard]] bool takeRefundCursor( int64& outLastReadMs ) final;
+        void               confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now ) final;
+        void               pollDeliveryOutcomes( vector<ReceiptDeliveryOutcome>& outListOutcome ) final;
         void               shutdown() final;
 
     protected:
@@ -204,9 +209,6 @@ namespace sw
             (void)now;
             return false;
         }
-        /** @brief 후속 요청이 실패했습니다. */
-        virtual void onFollowUpFailed( const HTTPClientResponse& response ) { (void)response; }
-
         /** @brief 기다리던 호출을 보냅니다. @p bGranted 가 false 면 검증은 Retry 로, 환불 조회는 다음 주기로 넘깁니다. */
         void flushWaiting( bool bGranted, UnixMilliseconds now );
         /** @brief 환불 하나를 알립니다. 겹친 조회의 같은 거래는 한 번만 알립니다(비어 있으면 알리지 않습니다). */
@@ -220,6 +222,8 @@ namespace sw
         ReceiptValidationResult makeResult( const ReceiptCall& call ) const;
         void                    completeRetry( const ReceiptCall& call, string failureText );
         void                    finishValidation( const ReceiptCall& call, const HTTPClientResponse& response, UnixMilliseconds now );
+        void                    finishDelivery( const ReceiptCall& call, const HTTPClientResponse& response );
+        void                    completeDelivery( const ReceiptCall& call, ReceiptDeliveryStatus status );
         void                    finishRefundPage( const ReceiptCall& call, const HTTPClientResponse& response, UnixMilliseconds now );
 
     private:
@@ -229,6 +233,7 @@ namespace sw
         vector<ReceiptCall>                _listWaiting;
         vector<ReceiptValidationResult>    _listDone;
         vector<ReceiptRefundNotice>        _listRefund;
+        vector<ReceiptDeliveryOutcome>     _listDeliveryDone;
         unordered_set<string>              _uniqueSetNotifiedRefund;
         HTTPClient*                        _pHTTPClient;
         uint8                              _bRefundIncomplete : 1; ///< 지금 조회의 어느 쪽에 읽지 못한 것이 있었다
