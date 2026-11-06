@@ -52,6 +52,7 @@ namespace sw
         /**
          * @brief 1인칭이면 몸은 보이고 머리만 숨깁니다 — 같은 오브젝트의 리그(`PoseModifierComponent`)의 슬롯 `_firstPersonHeadSlot`(머리 `ScaleBone`)을 켜고,
          *        외형의 칸 `_listFirstPersonHiddenSlot`(머리 장비 · 손 무기) 부품을 숨깁니다. 3인칭이면 둘 다 되돌립니다.
+         *        손 IK 도 바꿉니다: 1인칭은 슬롯 `_firstPersonHandsSlot`(보이는 시점 총을 잡는 노드), 3인칭은 슬롯 `_thirdPersonHandsSlot`(몸의 무기를 잡는 노드)입니다.
          * @details 몸 무기는 1인칭에서 숨기고 시점 무기(플레이어의 `ViewWeapon`)가 보인다 — 조준선과 총구가 카메라 기준이어야 하기 때문이다.
          *          리그나 슬롯이 없으면 오류로 알린다(머리를 숨기지 못하면 눈이 머리 안에 있다).
          */
@@ -93,6 +94,10 @@ namespace sw
         float32 _minLocomotionFootSpeed;
         PROPERTY( Category = "First Person", DisplayName = "Head Rig Slot", Tooltip = "Rig weight slot of the ScaleBone node that hides the head in first person" )
         hashed_string _firstPersonHeadSlot;
+        PROPERTY( Category = "First Person", DisplayName = "First Person Hands Slot", Tooltip = "Rig weight slot of the IK nodes that hold the view weapon; on only in first person" )
+        hashed_string _firstPersonHandsSlot;
+        PROPERTY( Category = "First Person", DisplayName = "Third Person Hands Slot", Tooltip = "Rig weight slot of the IK nodes that hold the body's weapon; on only in third person" )
+        hashed_string _thirdPersonHandsSlot;
         PROPERTY( Category = "First Person", DisplayName = "Hidden Appearance Slots", Tooltip = "Appearance slots whose parts are hidden in first person (head gear, the body's weapon)" )
         vector<hashed_string> _listFirstPersonHiddenSlot;
         PROPERTY( Category = "Avatar", DisplayName = "Stride Node", Tooltip = "StrideWarping node of this body's pose modifier rig that takes the rest of the speed matching" )

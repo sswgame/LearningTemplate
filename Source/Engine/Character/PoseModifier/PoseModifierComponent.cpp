@@ -14,6 +14,7 @@
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Socket/ResolvedSocketTable.h"
 #include "Engine/Character/Socket/SocketSet.h"
+#include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Asset/PhysicsAsset.h"
@@ -301,6 +302,21 @@ namespace sw
         bindExternalTargets();
     }
 
+    void PoseModifierComponent::bindRigidComponentUnit( const hashed_string& unitName, SceneComponent* pFrame, shared_ptr<const SocketSet> sockets )
+    {
+        UnitBinding binding{};
+        binding._name          = unitName;
+        binding._sockets       = std::move( sockets );
+        binding._rigidFrame    = TComponentHandle<SceneComponent>{ pFrame };
+        UnitBinding* pExisting = VectorUtil::findIf( _listUnitBinding, [&unitName]( const UnitBinding& existing )
+        { return existing._name == unitName; } );
+        if ( pExisting != nullptr )
+            *pExisting = binding;
+        else
+            _listUnitBinding.push_back( binding );
+        bindExternalTargets();
+    }
+
     void PoseModifierComponent::bindObject( const hashed_string& objectName, GameObject* pObject )
     {
         const GameObjectHandle handle = ( pObject != nullptr ) ? pObject->getHandle() : GameObjectHandle{};
@@ -505,7 +521,8 @@ namespace sw
         const UnitBinding*          pBinding     = ( def._unit.empty() == false ) ? findUnitBinding( def._unit ) : nullptr;
         GameObjectManager*          pManager     = getOwner()->getManager();
         GameObject*                 pRigidObject = ( pBinding != nullptr && pManager != nullptr ) ? pManager->resolveGameObject( pBinding->_rigidObject ) : nullptr;
-        if ( pRigidObject != nullptr )
+        SceneComponent*             pRigidFrame  = ( pBinding != nullptr && pManager != nullptr ) ? pManager->resolveComponent( pBinding->_rigidFrame ) : nullptr;
+        if ( pRigidObject != nullptr || pRigidFrame != nullptr )
         {
             // 강체 유닛(본 없는 장비 부품)이다. 소켓만 대상이 될 수 있고 소켓 로컬은 오브젝트 원점 기준이다.
             const SocketDef* pDef = ( def._kind == RigTargetKind::Socket && pBinding->_sockets != nullptr ) ? pBinding->_sockets->findSocket( def._socket ) : nullptr;
@@ -516,6 +533,7 @@ namespace sw
                 return false;
             }
             outResolved._pRigidObject = pRigidObject;
+            outResolved._pRigidFrame  = pRigidFrame;
             outResolved._socketLocal  = BoneTransform::makeFromMatrix( pDef->makeLocalTransform() );
             return true;
         }
@@ -601,10 +619,11 @@ namespace sw
             SocketTargetResolution resolved;
             if ( resolveSocketTarget( def, label, resolved ) == false )
                 continue;
-            if ( resolved._pRigidObject != nullptr )
+            if ( resolved._pRigidObject != nullptr || resolved._pRigidFrame != nullptr )
             {
-                // 오브젝트 대상과 같은 길로 프레임 시작에 기록한다(오프셋 × 소켓 로컬 × 오브젝트 월드).
-                external._object      = resolved._pRigidObject->getHandle();
+                // 오브젝트 대상과 같은 길로 프레임 시작에 기록한다(오프셋 × 소켓 로컬 × 오브젝트 · 컴포넌트 월드).
+                external._object      = resolved._pRigidObject != nullptr ? resolved._pRigidObject->getHandle() : GameObjectHandle{};
+                external._frame       = TComponentHandle<SceneComponent>{ resolved._pRigidFrame };
                 external._socketLocal = BoneTransform::makeFromMatrix( def._offset.toMatrix() * resolved._socketLocal.toMatrix() );
                 external._bBound      = SW_TRUE;
                 continue;
@@ -707,10 +726,10 @@ namespace sw
             if ( external._bBound == SW_FALSE || pManager == nullptr )
                 continue;
             float4x4 targetInModel{};
-            if ( external._object.isValid() )
+            if ( external._object.isValid() || external._frame.isValid() )
             {
                 const GameObject*     pObject = pManager->resolveGameObject( external._object );
-                const SceneComponent* pScene  = ( pObject != nullptr ) ? pObject->getPrimarySceneComponent() : nullptr;
+                const SceneComponent* pScene  = ( pObject != nullptr ) ? pObject->getPrimarySceneComponent() : pManager->resolveComponent( external._frame );
                 if ( pScene == nullptr )
                 {
                     _instance.setExternalTarget( targetIndex, RigTargetValue{} );

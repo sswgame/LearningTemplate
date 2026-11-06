@@ -1,6 +1,8 @@
 <RigAsset>
 	<targets>
 		<item name="Grip" unit="MainHand" socket="SupportHand" space="hand_r" />
+		<item name="ViewGrip" unit="ViewWeapon" socket="Grip" />
+		<item name="ViewSupport" unit="ViewWeapon" socket="SupportHand" />
 	</targets>
 	<nodes>
 		<item type="StrideWarping" name="Stride" pelvis="pelvis" min_scale="0.6" max_scale="1.6" max_pelvis_drop="0.2">
@@ -9,7 +11,9 @@
 				<item root="thigh_r" mid="calf_r" end="foot_r" />
 			</feet>
 		</item>
-		<item type="TwoBoneIK" name="LeftHandGrip" root="upperarm_l" mid="lowerarm_l" end="hand_l" target="Grip" />
+		<item type="TwoBoneIK" name="LeftHandGrip" root="upperarm_l" mid="lowerarm_l" end="hand_l" target="Grip" weight_slot="ThirdPersonHands" />
+		<item type="TwoBoneIK" name="RightHandView" root="upperarm_r" mid="lowerarm_r" end="hand_r" target="ViewGrip" weight_slot="FirstPersonHands" />
+		<item type="TwoBoneIK" name="LeftHandView" root="upperarm_l" mid="lowerarm_l" end="hand_l" target="ViewSupport" weight_slot="FirstPersonHands" />
 		<item type="ScaleBone" name="HideHead" bone="Head" weight_slot="FirstPersonHead" />
 	</nodes>
 </RigAsset>

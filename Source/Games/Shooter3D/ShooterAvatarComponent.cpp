@@ -99,6 +99,8 @@ namespace sw
         , _maxPlayRate{ 1.8f }
         , _minLocomotionFootSpeed{ 0.3f }
         , _firstPersonHeadSlot{}
+        , _firstPersonHandsSlot{}
+        , _thirdPersonHandsSlot{}
         , _listFirstPersonHiddenSlot{}
         , _strideNode{ "Stride" }
         , _locomotion{ 0.25f }
@@ -149,6 +151,8 @@ namespace sw
                                  _firstPersonHeadSlot.c_str() );
             // 슬롯 가중치 1 = ScaleBone 이 머리를 0 으로 모은다, 0 = 그대로.
             pRig->setSlotWeight( _firstPersonHeadSlot, bFirstPerson ? 1.0f : 0.0f );
+            pRig->setSlotWeight( _firstPersonHandsSlot, bFirstPerson ? 1.0f : 0.0f );
+            pRig->setSlotWeight( _thirdPersonHandsSlot, bFirstPerson ? 0.0f : 1.0f );
         }
         CharacterAppearanceComponent* pAppearance = pOwner->getComponent<CharacterAppearanceComponent>();
         if ( pAppearance != nullptr )

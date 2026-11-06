@@ -3,4 +3,5 @@
 <SocketSet>
   <Socket name="Muzzle" translation="0 0.165 -0.752" rotation="0 180 0" kind="EffectSpawn"/>
   <Socket name="SupportHand" translation="0 0.0 -0.38" kind="Attach"/>
+  <Socket name="Grip" translation="0 0 0.05" kind="Attach"/>
 </SocketSet>

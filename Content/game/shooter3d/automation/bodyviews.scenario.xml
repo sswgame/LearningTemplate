@@ -4,6 +4,7 @@
   걷는 동안 몸이 어색하지 않은지 사진을 골든과 견준다. 감시 값 StrideAppliedCount 는 몸 리그(player_body.rig.xml)가 묶여 일하는지 가른다.
   골든을 뜰 때 볼 것: ① 1인칭에서 아래를 보면 몸 · 다리가 보이고 머리 · 투구 · 몸의 총이 없다(근평면에 목 단면이 걸리면 HideHead 를 neck 까지 넓힌다). ② 3인칭에서 머리가 돌아온다.
   ③ 소총 · 산탄총 · 권총마다 왼손이 총열 아래 SupportHand 에 붙는다(기사 세트의 방패가 왼손에 함께 있어 가리면 총을 든 프리셋에서 방패 칸을 비울지 정한다). 팔꿈치가 어색하면 pole.
+  ④ 1인칭에서 아래를 봐도 두 손이 시점 총을 잡고 있다(리그의 RightHandView · LeftHandView 가 시점 총의 Grip · SupportHand 를 잡는다. 몸은 요만 돌고 시점 총은 피치로 움직여 몸의 숨은 무기를 잡으면 손이 떠 있었다).
   MouseDelta 의 부호(아래를 보는 쪽)는 입력 맵의 Look 배율에 달렸으니 두 방향을 다 찍는다. 사진 앞의 고정 대기는 카메라 · 애니메이션이 자리 잡을 시간이다.
   실행: App -scenario=game/shooter3d/automation/bodyviews.scenario.xml -unattended -gv_cameraPreset=firstperson (체인: ctest -R Scenario.shooter3d)
 -->

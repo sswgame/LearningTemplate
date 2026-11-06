@@ -30,6 +30,7 @@ namespace sw
     class PoseModifierComponent;
     class ResolvedSocketTable;
     class RigAsset;
+    class SceneComponent;
     class SkeletalAnimatorComponent;
     class SkeletalMeshComponent;
     class SocketSet;
@@ -133,6 +134,11 @@ namespace sw
          *          지난 프레임 값이므로 손에 붙은 부품은 `space` 로 손 본 기준으로 받아야 늦지 않는다. @p pObject 가 nullptr 이면 연결을 풀고 그 대상은 값이 없다(노드가 쉰다).
          */
         void bindRigidUnit( const hashed_string& unitName, GameObject* pObject, shared_ptr<const SocketSet> sockets );
+        /**
+         * @brief `bindRigidUnit` 과 같되 소켓 로컬의 기준이 오브젝트 루트가 아니라 컴포넌트 @p pFrame 입니다(카메라 자식인 1인칭 총처럼 오브젝트를 따로 두지 않는 부품).
+         * @details 위치는 지난 프레임 값일 수 있다 — 같은 틱 그룹의 카메라가 먼저 돌면 이번 프레임 값이다. @p pFrame 이 nullptr 이면 연결을 풀고 노드가 쉰다.
+         */
+        void bindRigidComponentUnit( const hashed_string& unitName, SceneComponent* pFrame, shared_ptr<const SocketSet> sockets );
         /** @brief 리그의 `object` 이름에 오브젝트를 겁니다. 걸지 않은 이름은 같은 이름의 오브젝트를 찾습니다. */
         void bindObject( const hashed_string& objectName, GameObject* pObject );
         /**
@@ -176,6 +182,7 @@ namespace sw
             const SkeletalMeshComponent*            _pFrameUnit{ nullptr }; ///< 이번 프레임에 찾은 대상 유닛이다(프레임 시작부터 평가가 끝날 때까지만 참조한다).
             TComponentHandle<SkeletalMeshComponent> _unit{};                ///< 다른 유닛(본이나 소켓 대상)이다.
             GameObjectHandle                        _object{};              ///< 오브젝트를 대상으로 삼는다.
+            TComponentHandle<SceneComponent>        _frame{};               ///< 컴포넌트를 대상으로 삼는다(`bindRigidComponentUnit`).
             int32                                   _unitBone{ -1 };        ///< 대상 유닛의 본이다.
             int32                                   _spaceBone{ -1 };       ///< `space` 에 지정한 내 유닛의 본이다.
             uint8                                   _bBound{ SW_FALSE };
@@ -188,6 +195,7 @@ namespace sw
             shared_ptr<const SocketSet>             _sockets{};
             TComponentHandle<SkeletalMeshComponent> _unit{};
             GameObjectHandle                        _rigidObject{}; ///< 강체 유닛(`bindRigidUnit`)이면 그 오브젝트다. 이때 `_unit` 은 비어 있다
+            TComponentHandle<SceneComponent>        _rigidFrame{};  ///< 컴포넌트가 기준인 강체 유닛(`bindRigidComponentUnit`)이면 그 컴포넌트다
         };
 
         struct ObjectBinding
@@ -203,6 +211,7 @@ namespace sw
         {
             SkeletalMeshComponent* _pTargetUnit{ nullptr };
             GameObject*            _pRigidObject{ nullptr }; ///< 강체 유닛의 소켓이면 그 오브젝트다(`_socketLocal` 이 오브젝트 원점 기준)
+            SceneComponent*        _pRigidFrame{ nullptr };  ///< 컴포넌트가 기준인 강체 유닛의 소켓이면 그 컴포넌트다(`_socketLocal` 이 컴포넌트 원점 기준)
             hashed_string          _boneName{};
             BoneTransform          _socketLocal{};
             bool                   _bSocketRoot{ false };

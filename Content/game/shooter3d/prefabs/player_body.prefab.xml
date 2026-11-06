@@ -48,7 +48,9 @@
 			                        _walkThreshold="0.4"
 			                        _runThreshold="3"
 			                        _hitPause="0.45"
-			                        _firstPersonHeadSlot="FirstPersonHead">
+			                        _firstPersonHeadSlot="FirstPersonHead"
+			                        _firstPersonHandsSlot="FirstPersonHands"
+			                        _thirdPersonHandsSlot="ThirdPersonHands">
 				<_listFirstPersonHiddenSlot>
 					<item>Head</item>
 					<item>MainHand</item>
