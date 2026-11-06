@@ -24,6 +24,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
 #include "Core/Time/MonotonicClock.h"
@@ -31,6 +32,7 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Material/Dev/MaterialGraphCook.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingValidator.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
@@ -375,6 +377,18 @@ namespace sw
         }
 
         SW_LOG_INFO_ID( "ShaderCooker.StartingBatchShaderCook", "Starting batch shader cook across all domains in '%#'...", rootDir.c_str() );
+
+        // 머티리얼 그래프의 생성물을 먼저 맞춘다 — 그 뒤로는 손으로 쓴 셰이더 · 머티리얼과 같은 입력이다(스탬프가 내용 해시로 추적한다). 배포 구성에는 그래프 컴파일러가 없다.
+        if constexpr ( build::kShipping == false )
+        {
+            if ( MaterialGraphCook::refreshAll( engine::getSubsystem<AssetPaths>(), rootDir, nullptr ) == false )
+            {
+                SW_LOG_ERROR_ID( "ShaderCooker.MaterialGraphsNotCompiled", "Material graphs could not be compiled - their generated shaders would be stale" );
+                ShaderCookSummary nothingCooked{};
+                nothingCooked._failedCount = 1; // 낡은 생성물을 쿠킹하지 않는다. 실패로 센다
+                return nothingCooked;
+            }
+        }
 
         // 렌더 파이프라인 에셋과 엔진 데이터로 요청을 한꺼번에 모은다
         vector<ShaderCookRequest> listRequest;

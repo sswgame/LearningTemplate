@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 그래프 머티리얼의 값 변형(언리얼 Material Instance) — 셰이더는 부모 그대로이고 파라미터 칸의 값만 바꾼다. -->
+<MaterialDesc formatVersion="0" name="rim_glow_red" _base="game/empty/materials/matgraph/rim_glow.gen.material">
+	<_properties>
+		<item name="_tint" defaultValue="0.9 0.1 0.1 1"/>
+		<item name="_rimColor" defaultValue="1 0.7 0.1 1"/>
+	</_properties>
+</MaterialDesc>

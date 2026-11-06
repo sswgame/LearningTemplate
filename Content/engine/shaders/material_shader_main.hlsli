@@ -264,12 +264,23 @@ static void PixelContext::addRimLight( float3 normal, inout float3 inoutLit )
 {
 }
         #endif
+        #if defined( SW_MATERIAL_EMISSIVE )
+void PixelContext::addEmissive( inout float3 inoutLit )
+{
+    inoutLit += computeMaterialEmissive( this );
+}
+        #else
+void PixelContext::addEmissive( inout float3 inoutLit )
+{
+}
+        #endif
 /** @brief 기본 PBR — 조명 식은 디퍼드와 **같은 함수**다(lighting.hlsli). 두 벌로 두면 두 경로의 그림이 갈라진다. */
 float4 PixelContext::computeSelectedLighting( MaterialSurface surface )
 {
     const float shadow = Shadow::sampleAtWorld( _worldPosition, surface._normal );
     float3      lit    = Lighting::shadeLights( surface._albedo.rgb, _worldPosition, surface._normal, shadow, surface._roughness, surface._metallic );
     PixelContext::addRimLight( surface._normal, lit );
+    addEmissive( lit );
     return float4( lit, surface._albedo.a );
 }
     #endif

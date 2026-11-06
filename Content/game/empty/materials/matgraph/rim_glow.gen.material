@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generated from game/empty/materials/matgraph/rim_glow.matgraph.xml by MaterialGraphCompiler - edit the graph; change values in a child material with _base. -->
+<MaterialDesc formatVersion="0" name="matgraph_rim_glow" shaderPath="game/empty/shaders/matgraph/matgraph_rim_glow_51edde95.hlsl" alphaMode="Opaque">
+	<_properties>
+		<item name="_alphaCutoff" type="Range" defaultValue="0.5" min="0" max="1" group="Graph"/>
+		<item name="_tint" type="Color" defaultValue="0.2 0.4 0.9 1" bHdr="0" bSrgb="1" group="Graph"/>
+		<item name="_albedo" type="Texture2D" bSrgb="1" group="Graph"/>
+		<item name="_roughness" type="Range" defaultValue="0.4" min="0" max="1" group="Graph"/>
+		<item name="_rimColor" type="Color" defaultValue="0.1 0.8 1 1" bHdr="0" bSrgb="1" group="Graph"/>
+		<item name="_rimPower" type="Range" defaultValue="3" min="0.5" max="8" group="Graph"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_DOMAIN_SURFACE</item>
+			<item>MATERIAL_FORWARD_ONLY</item>
+		</_alwaysDefines>
+		<_multiCompiles>
+			<item name="FogMode" selected="FOG_OFF">
+				<_options>
+					<item>FOG_OFF</item>
+					<item>FOG_LINEAR</item>
+					<item>FOG_EXP</item>
+				</_options>
+			</item>
+		</_multiCompiles>
+	</_permutations>
+</MaterialDesc>

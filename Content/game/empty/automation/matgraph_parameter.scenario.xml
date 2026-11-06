@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  머티리얼 그래프 — 그래프가 낸 머티리얼을 그리고, 파라미터 칸의 값만 바꾼 자식 머티리얼(`_base`)을 그린 두 장이 다른지 본다.
+  같은 실행의 두 장을 견주는 음성 대조다(`ExpectImagesDiffer`) — 파라미터가 그림을 바꾸지 않거나 생성된 셰이더가 그려지지 않으면 진다. 골든은 두지 않는다.
+  실행: ctest -R Scenario.game.empty.matgraph_parameter
+-->
+<Scenario name="game.empty.matgraph_parameter" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/matgraph_base.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="0"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="matgraph_base.ppm"/>
+	<LoadScene path="game/empty/maps/matgraph_red.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="matgraph_red.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="matgraph_base.ppm" second="matgraph_red.ppm" region="0.3,0.2,0.4,0.6" minDiffering="0.05"/>
+	<Pass/>
+</Scenario>

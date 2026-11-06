@@ -10,7 +10,7 @@
     "listCMakeFile": [ "Test/CMakeLists.txt", "Test/Scenario/CMakeLists.txt" ],
     "listCMakeArgument": [ "--render-portraits", "-scenario" ],
     "listField": [
-        "_animationSetPath", "animationSet", "base", "set", "_aiControllerPrefab", "_albedo", "_animationCrowdSettings", "_animationGraphPath", "_animationLODSettings", "appearance", "assetPath", "assetRoots",
+        "_animationSetPath", "animationSet", "base", "set", "_aiControllerPrefab", "_albedo", "_animationCrowdSettings", "_animationGraphPath", "_animationLODSettings", "appearance", "assetPath", "_assetPath", "assetRoots",
         "atlas", "_atlasPath", "audioEvents", "_autoBattleAIPrefab", "_autoFarmerPrefab", "_autoPlanPath", "_base", "_blockBuildingPrefab", "_bodyPrefab",
         "_carFrontPrefab", "_carPrefab", "_casterAIPrefab", "_casterPrefab", "_catalogPath", "_characterLODSettings", "_chunkPrefab", "_cityDataPath",
         "_cliffPrefab", "_clipPath", "_coasterDataPath", "_combatEnemyClips", "_combatEnemyMaterial", "_combatEnemyMesh",

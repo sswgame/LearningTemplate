@@ -23,6 +23,7 @@
     "*.blend",
     "*.blend1",
     "*.sources.json",
+    "*.matgraph.xml",
     "*.bak",
     "*.tmp",
     "thumbs.db",

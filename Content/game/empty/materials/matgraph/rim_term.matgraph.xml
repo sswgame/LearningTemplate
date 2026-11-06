@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 하위 그래프 견본(언리얼 Material Function) — 시선과 노멀로 테두리 세기를 낸다. rim_glow 가 펼쳐 넣는다. -->
+<MaterialGraphDef formatVersion="0">
+	<_listNode>
+		<MaterialGraphNodeDesc _name="Power" _kind="GraphInput" _position="0,0">
+			<_listValue>
+				<MaterialGraphValue _name="Name" _value="Power" />
+				<MaterialGraphValue _name="Type" _value="float" />
+			</_listValue>
+		</MaterialGraphNodeDesc>
+		<MaterialGraphNodeDesc _name="Fresnel" _kind="Fresnel" _position="240,0">
+			<_listLink>
+				<MaterialGraphLink _pin="Power" _fromNode="Power" _fromPin="Out" />
+			</_listLink>
+		</MaterialGraphNodeDesc>
+		<MaterialGraphNodeDesc _name="Rim" _kind="GraphOutput" _position="480,0">
+			<_listLink>
+				<MaterialGraphLink _pin="Value" _fromNode="Fresnel" _fromPin="Out" />
+			</_listLink>
+			<_listValue>
+				<MaterialGraphValue _name="Name" _value="Rim" />
+			</_listValue>
+		</MaterialGraphNodeDesc>
+	</_listNode>
+</MaterialGraphDef>

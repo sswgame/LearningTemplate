@@ -22,6 +22,7 @@ Korean examples for these rules are in [docs/04_CodingGuidelines.md](docs/04_Cod
 | change or review an editor panel, shared widget, theme token or editor input | [EditorUI](docs/agents/EditorUI.md) | tokens, app-screen rules, UI capture, review checklist, context-menu and input rules |
 | write a render pipeline or render pass XML, or change what a pass reads from it | [RenderPipelineXml](docs/agents/RenderPipelineXml.md) | XML values are what runs; invalid combinations are load errors; compute and optional stages |
 | write a data file that inherits another (`_base`), or put a new data format on that structure | [DataInheritance](docs/agents/DataInheritance.md) | field and list merge rules, schema for a new format, cooking, prefab variants, saving without default values |
+| add a material graph node or change the graph compiler | [MaterialGraph](docs/agents/MaterialGraph.md) | node registration syntax, generated files, errors |
 | are about to write a helper for a common job, or call a C runtime / `std` facility | [ExistingFacilities](docs/agents/ExistingFacilities.md) | what Core and Engine already provide, and what not to call |
 
 ## Project architecture

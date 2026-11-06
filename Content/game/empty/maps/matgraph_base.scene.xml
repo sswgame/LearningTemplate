@@ -1,0 +1,36 @@
+<Scene formatVersion="2" name="MatGraph_base">
+	<!-- 시나리오 automation/matgraph_parameter 의 무대 — 그래프가 낸 베이스 머티리얼을 입은 구. matgraph_red 는 그 머티리얼의 값 변형만 다르다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,2,-5" _localRotation="0.3,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="GraphSphere">
+			<GameObject _schemaVersion="0" _name="GraphSphere" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,1,0" _localRotation="0,0,0" _localScale="1.6,1.6,1.6" _attachOwner="None" _attachComponent="None" _meshID="Sphere" _materialPath="game/empty/materials/matgraph/rim_glow.gen.material" _boundsRadius="1.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>
