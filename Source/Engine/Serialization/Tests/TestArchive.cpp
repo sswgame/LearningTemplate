@@ -13,7 +13,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 
 /**
- * @brief [ArchiveTest] Archive 바이너리 기본 타입 직렬화/역직렬화
+ * @brief [ArchiveTest] 개수는 남은 바이트로 담을 수 있을 때만 읽히고, 실패하면 결과를 건드리지 않고 오류를 남긴다
  */
 SW_TEST_CASE( ArchiveTest, ReadCountRefusesCountsThatDoNotFit )
 {
@@ -27,7 +27,7 @@ SW_TEST_CASE( ArchiveTest, ReadCountRefusesCountsThatDoNotFit )
         SW_EXPECT_TRUE( reader.isOk() );
     }
     {
-        // 원소가 넷씩 차지하면 2 개는 8 바이트, 8 바이트가 넘는 크기면 담을 수 없다.
+        // 남은 바이트는 8 이다 — 원소가 5 바이트면 2 개를 담을 수 없다.
         sw::Archive reader( writer.getData(), writer.getSize() );
         uint32      count = 77;
         SW_EXPECT_FALSE( reader.readCount( 5, count ) );
@@ -44,6 +44,9 @@ SW_TEST_CASE( ArchiveTest, ReadCountRefusesCountsThatDoNotFit )
     }
 }
 
+/**
+ * @brief [ArchiveTest] 실수 묶음은 하나라도 유한하지 않으면 모두 0 이고 오류다
+ */
 SW_TEST_CASE( ArchiveTest, ReadFiniteFloatsRefusesNonFinite )
 {
     sw::Archive writer;
@@ -56,6 +59,9 @@ SW_TEST_CASE( ArchiveTest, ReadFiniteFloatsRefusesNonFinite )
     SW_EXPECT_EQUAL( 0.0f, arrValue[1] );
 }
 
+/**
+ * @brief [ArchiveTest] Archive 바이너리 기본 타입 직렬화/역직렬화
+ */
 SW_TEST_CASE( ArchiveTest, MemoryArchiveBinarySerialization )
 {
     sw::Archive arch;

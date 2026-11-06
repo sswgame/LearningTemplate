@@ -19,7 +19,7 @@ namespace sw
         struct ComponentStateStoreInternal
         {
             /** @brief 항목 하나의 최소 바이트(이름 길이 4 + id 8 + 본문 길이 4)입니다. 파일이 말한 개수를 그대로 잡지 않는 데 씁니다. */
-            static constexpr uint64 kMinEntryBytes = sizeof( uint32 ) + sizeof( uint64 ) + sizeof( uint32 );
+            static constexpr uint32 kMinEntryBytes = sizeof( uint32 ) + sizeof( uint64 ) + sizeof( uint32 );
 
             /** @brief 정적 등록 목록입니다. 함수 안 정적 객체라 처음 등록할 때 만들어지고, 모든 등록 객체보다 늦게 소멸합니다. */
             static RegistrationList<StatefulComponentRegistration>& getRegistrationList()
