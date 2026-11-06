@@ -237,10 +237,10 @@ namespace sw
                 const bool  bSkinned = first.hasSkin();
                 for ( const MeshMergePart& part : listPart )
                 {
-                    const bool bMixedSkin = part._pMesh->hasSkin() != bSkinned || ( bSkinned && part._pMesh->getSkinBinding().matches( first.getSkinBinding() ) == false );
+                    const bool bMixedSkin = part._pMesh->hasSkin() != bSkinned || ( bSkinned && part._pMesh->getSkinBinding().hasSameLayout( first.getSkinBinding() ) == false );
                     if ( bMixedSkin )
                     {
-                        outReason = string( "merge part '" ) + part._name.c_str() + "' differs from the first part in skin, bone layout or inverse bind - parts merge within one skeleton and one bind pose only";
+                        outReason = string( "merge part '" ) + part._name.c_str() + "' differs from the first part in skin or bone layout - parts merge within one skeleton only";
                         return false;
                     }
                 }
@@ -600,11 +600,18 @@ namespace sw
                 Internal::appendPieceGeometry( piece, mesh, pHooks, listVertex, listIndex, listNewIndex );
                 if ( bSkinned )
                 {
+                    // 합친 메시의 역 바인드는 첫 부품의 것 하나다 — 쓰는 본의 바인드 자세가 다른 부품은 그 자세로 옮긴다.
+                    const bool             bRebind    = mesh.getSkinBinding().matchesForVertices( first.getSkinBinding(), mesh.getSkinVertices() ) == false;
+                    const vector<float4x4> listRebind = bRebind ? mesh.getSkinBinding().makeRebindMatrices( first.getSkinBinding() ) : vector<float4x4>{};
                     listSkin.resize( listVertex.size() );
                     for ( size_t vertex = 0; vertex < listNewIndex.size(); ++vertex )
                     {
-                        if ( listNewIndex[vertex] != constant::invalid_index::kUint32 )
-                            listSkin[listNewIndex[vertex]] = mesh.getSkinVertices()[vertex];
+                        const uint32 newIndex = listNewIndex[vertex];
+                        if ( newIndex == constant::invalid_index::kUint32 )
+                            continue;
+                        listSkin[newIndex] = mesh.getSkinVertices()[vertex];
+                        if ( bRebind )
+                            MeshSkinBinding::rebindVertex( listRebind, listSkin[newIndex], listVertex[newIndex] );
                     }
                 }
                 Internal::mergeMorphTargets( mesh, listNewIndex, listTarget );

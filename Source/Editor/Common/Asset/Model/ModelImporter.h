@@ -171,7 +171,7 @@ namespace sw::editor
      *            본은 스킨의 관절이고 부모가 앞에 오도록 정렬한다. 관절 위에 있는 비관절 노드의 변환은 루트 본에 합친다. 역 바인드는 메시(`.mesh`)에 든다.
      *          - `parts/<노드>.mesh`: 관절 아래의 스킨 없는 메시이며 노드 로컬 공간이다. 부모 본과 로컬 변환은 모델 옆 스켈레톤 파일의 부착 테이블에 둔다.
      *          - `<y>.animset.xml`: 클립 이름 → 파일 표다(`AnimationSet`). 애니메이션마다 관절별로 균일한 간격으로 다시 샘플링해 규칙의 코덱으로 압축하고, 클립마다 압축률과 최대 오차를 로그로 보고한다.
-     *            클립 파일은 내용 키의 공유 저장소 `<x>/models/_shared/clips/<키>.animclip` 에 한 벌만 둔다(`ImportedAssetStore`).
+     *            클립 파일은 내용 키의 공유 저장소 `<x>/models/_shared/clips/<클립 이름>_<키>.animclip` 에 한 벌만 둔다(`ImportedAssetStore`).
      *          클립의 반복, 알림, 커브는 원본 옆의 부가 데이터 `<y>.clips.json` 이 정하며 원본 해시에 섞인다. 옆 폴더는 임포트할 때마다 지우고 다시 쓴다.
      *
      *          VRM 은 머티리얼에 MToon 값이 있다(0.x 는 `extensions.VRM`, 1.0 은 `VRMC_materials_mtoon`). 본 메시는 (머티리얼, 1인칭 가시성)마다 구간(`SECT`)을 갖고,

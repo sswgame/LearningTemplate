@@ -2320,11 +2320,6 @@
 				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdLabel.CreateVariant" source="Variant">
-			<origins>
-				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
-			</origins>
-		</entry>
 		<entry key="EdLabel.CollapseAll" source="Collapse All">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
@@ -2358,6 +2353,11 @@
 		<entry key="EdLabel.CopyVisibleLines" source="Copy Visible Lines">
 			<origins>
 				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdLabel.CreateVariant" source="Variant">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdLabel.DeleteKey" source="Delete Key">
@@ -5810,8 +5810,7 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EditorInputMap.BundleFiles"
-		       source="Files in this bundle">
+		<entry key="EditorInputMap.BundleFiles" source="Files in this bundle">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>

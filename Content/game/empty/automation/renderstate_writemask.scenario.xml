@@ -7,7 +7,7 @@
 <Scenario name="game.empty.renderstate_writemask" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
 	<Launch variable="gv_firstScene" value="game/empty/maps/renderstate_base.scene.xml"/>
 	<Launch variable="gv_deferredShading" value="0"/>
-	<Launch variable="gv_postQuality" value="0"/>
+	<Launch variable="gv_postQuality" value="2"/>
 	<Launch variable="gv_renderScale" value="1"/>
 	<Launch variable="gv_viewDistanceScale" value="1"/>
 	<Wait frames="20"/>

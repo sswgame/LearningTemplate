@@ -598,6 +598,7 @@
 		       text="테스트할 격투 게임 커맨드로, 숫자 패드 방향(2 아래, 6 오른쪽, 3 오른쪽 아래 ...) 뒤에 버튼 글자를 붙입니다. 게임패드나 키보드로 입력해 일치하는지 봅니다." />
 		<entry source="File" text="파일" />
 		<entry source="File: {file}" text="파일: {file}" />
+		<entry source="Files in this bundle" text="이 묶음의 파일" />
 		<entry source="Fill Weight" text="채우기 비율" />
 		<entry source="Fill in the required fields to create the item."
 		       text="필수 칸을 채우면 항목을 만들 수 있습니다." />
@@ -1563,6 +1564,8 @@
 		       text="Save 와 Load 가 쓰는 .swreplay 파일의 리소스 경로입니다." />
 		<entry source="Resource path of the UI document (*.ui.xml) to preview. The preview rebuilds when it changes."
 		       text="미리 볼 UI 문서(*.ui.xml)의 리소스 경로입니다. 바꾸면 미리보기를 다시 만듭니다." />
+		<entry source="Resource path of the input map (*.input.xml) or of a game's data/gamesettings.xml to edit its whole bundle. Press Reload after changing it."
+		       text="편집할 입력 맵(*.input.xml)이나, 묶음 전체를 고칠 게임의 data/gamesettings.xml 의 리소스 경로입니다. 바꾼 뒤에는 Reload 를 누릅니다." />
 		<entry source="Resource path of the input map (*.input.xml) to edit. Press Reload after changing it."
 		       text="편집할 입력 맵(*.input.xml)의 리소스 경로입니다. 바꾼 뒤에는 Reload 를 누릅니다." />
 		<entry source="Resource path of the tile map file that Load and Save use."
@@ -2015,6 +2018,8 @@
 		       text="이 바인딩이 속한 레이어입니다. 그 레이어가 활성일 때만 발화합니다." />
 		<entry source="The line the player reads. On a Choice node it is the prompt shown above the options."
 		       text="플레이어가 읽는 대사입니다. Choice 노드에서는 선택지 위에 나오는 질문입니다." />
+		<entry source="The maps of this game, in load order: the base map, the shared maps, the kit maps and last the game's own differences. Saving writes each action back to the file that set it, and files you did not change are left alone."
+		       text="이 게임의 맵을 읽는 차례대로 보입니다. 기본 맵, 공통 맵, 키트 맵, 맨 끝이 게임의 차이입니다. 저장하면 액션은 그것을 정한 파일로 돌아가고, 고치지 않은 파일은 쓰지 않습니다." />
 		<entry source="The node canvas could not be drawn" text="노드 캔버스를 그리지 못했습니다" />
 		<entry source="The process reports no replication counters (a replication kit raises them with GameNetSession::setReplicaStats)"
 		       text="프로세스가 복제 셈을 보고하지 않습니다(복제 키트가 GameNetSession::setReplicaStats 로 올립니다)" />
@@ -2171,6 +2176,7 @@
 		       text="새 레이어의 모든 칸 값이자 지우기가 칠하는 값입니다." />
 		<entry source="Value the action reports: Boolean for buttons, Axis 1D for a trigger or one axis, Vector 2D for a stick or WASD."
 		       text="액션이 보고하는 값입니다. 버튼은 Boolean, 트리거나 축 하나는 Axis 1D, 스틱이나 WASD 는 Vector 2D 입니다." />
+		<entry source="Variant" text="변형" />
 		<entry source="Version" text="버전" />
 		<entry source="Vertical Alignment" text="세로 정렬" />
 		<entry source="Vertical field of view in degrees. Larger values show more of the scene and stretch the edges."

@@ -57,6 +57,24 @@ namespace sw
         static MeshSkinBinding makeIdentity( uint32 boneCount ) { return MeshSkinBinding{ vector<float4x4>( boneCount, float4x4::Identity ), kAnyLayout }; }
         /** @brief 한 팔레트로 함께 그릴 수 있으면 true 입니다 — 본 수와 역 바인드가 허용 오차 안이고 본 배치가 같습니다(`kAnyLayout` 은 어느 배치와도 맞습니다). */
         bool matches( const MeshSkinBinding& other ) const;
+        /**
+         * @brief @p listSkin 정점을 이 묶음의 팔레트로 그려도 같은 그림이면 true 입니다 — 본 수와 배치가 같고 정점이 쓰는 본의 역 바인드가 허용 오차 안입니다.
+         * @details 쓰지 않는 본의 차이는 그림에 닿지 않는다. 부품 파일마다 저작 때 안 쓰는 본의 자세가 다른 캐릭터 팩(머리카락과 몸)이 있다.
+         */
+        bool matchesForVertices( const MeshSkinBinding& other, const vector<MeshSkinVertex>& listSkin ) const;
+        /** @brief 본 수와 배치가 같으면 true 입니다. 같으면 정점을 옮겨(`makeRebindMatrices`) 한 팔레트로 그릴 수 있습니다. */
+        bool hasSameLayout( const MeshSkinBinding& other ) const;
+        /**
+         * @brief 이 묶음의 정점을 @p target 의 바인드 자세로 옮기는 본마다의 행렬입니다. 본 수가 같아야 합니다.
+         * @details 언리얼의 스켈레탈 메시 병합이 기준 자세를 맞추는 일과 같다. 본 하나에만 묶인 정점은 어느 자세에서든 정확하고, 여러 본에 걸친 정점은 가중 평균이라 자세가 바인드에서 멀수록 근사다.
+         */
+        [[nodiscard]] vector<float4x4> makeRebindMatrices( const MeshSkinBinding& target ) const;
+        /** @brief @p vertex 의 위치와 노멀을 @p listRebind(`makeRebindMatrices`)로 옮깁니다. */
+        static void rebindVertex( const vector<float4x4>& listRebind, const MeshSkinVertex& skin, RHIVertex& inoutVertex );
+
+    private:
+        /** @brief 본 하나의 역 바인드가 허용 오차 안이면 true 입니다. 본 수가 같아야 합니다. */
+        bool hasSameBone( const MeshSkinBinding& other, size_t boneIndex ) const;
     };
 } // namespace sw
 

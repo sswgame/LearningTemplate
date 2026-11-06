@@ -689,8 +689,9 @@ namespace sw::editor
                 {
                     vector<uint8> bytes;
                     imported._clip.makeBytes( bytes );
-                    const string key      = ImportedAssetStore::makeKey( bytes.data(), bytes.size(), settingsText );
-                    const string clipPath = ImportedAssetStore::makeStorePath( domain, ModelImportUtil::kClipFolder, key, AnimationClip::kExtension );
+                    const string key = ImportedAssetStore::makeKey( bytes.data(), bytes.size(), settingsText );
+                    // 이름을 앞에 붙인다 - 키만으로는 Quick Open · 브라우저 · 로그에서 어떤 클립인지 알 수 없다(언리얼 · 유니티도 에셋을 이름으로 찾는다). 이름까지 같아야 한 벌이다.
+                    const string clipPath = ImportedAssetStore::makeStorePath( domain, ModelImportUtil::kClipFolder, imported._fileStem + "_" + key, AnimationClip::kExtension );
                     if ( ImportedAssetStore::writeIfAbsent( clipPath, bytes.data(), bytes.size() ) == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAnimationClip", "Failed to write animation clip %#", clipPath.c_str() );

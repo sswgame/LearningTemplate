@@ -462,17 +462,87 @@ namespace sw
         }
     }
 
-    bool MeshSkinBinding::matches( const MeshSkinBinding& other ) const
+    bool MeshSkinBinding::hasSameBone( const MeshSkinBinding& other, size_t boneIndex ) const
+    {
+        for ( uint32 element = 0; element < 16; ++element )
+        {
+            if ( MathUtil::abs( ( &_listInverseBind[boneIndex]._11 )[element] - ( &other._listInverseBind[boneIndex]._11 )[element] ) > kInverseBindTolerance )
+                return false;
+        }
+        return true;
+    }
+
+    bool MeshSkinBinding::hasSameLayout( const MeshSkinBinding& other ) const
     {
         const bool bSameLayout = _layoutHash == other._layoutHash || _layoutHash == kAnyLayout || other._layoutHash == kAnyLayout;
-        if ( bSameLayout == false || _listInverseBind.size() != other._listInverseBind.size() )
+        return bSameLayout && _listInverseBind.size() == other._listInverseBind.size();
+    }
+
+    vector<float4x4> MeshSkinBinding::makeRebindMatrices( const MeshSkinBinding& target ) const
+    {
+        vector<float4x4> listRebind( _listInverseBind.size() );
+        for ( size_t boneIndex = 0; boneIndex < _listInverseBind.size(); ++boneIndex )
+        {
+            listRebind[boneIndex] = _listInverseBind[boneIndex] * target._listInverseBind[boneIndex].invert();
+        }
+        return listRebind;
+    }
+
+    void MeshSkinBinding::rebindVertex( const vector<float4x4>& listRebind, const MeshSkinVertex& skin, RHIVertex& inoutVertex )
+    {
+        const float3 position{ inoutVertex._arrPosition[0], inoutVertex._arrPosition[1], inoutVertex._arrPosition[2] };
+        const float3 normal{ inoutVertex._arrNormal[0], inoutVertex._arrNormal[1], inoutVertex._arrNormal[2] };
+        float3       movedPosition{};
+        float3       movedNormal{};
+        float32      weightSum = 0.0f;
+        for ( uint32 influence = 0; influence < 4; ++influence )
+        {
+            const float32 weight = skin._arrWeight[influence];
+            if ( weight <= 0.0f || skin._arrJoint[influence] >= listRebind.size() )
+                continue;
+            const float4x4& rebind = listRebind[skin._arrJoint[influence]];
+            movedPosition += float3::transform( position, rebind ) * weight;
+            movedNormal += float3::transformVector( normal, rebind ) * weight;
+            weightSum += weight;
+        }
+        if ( weightSum <= 0.0f )
+            return;
+        movedPosition = movedPosition * ( 1.0f / weightSum );
+        movedNormal   = movedNormal.normalizeOr( normal, 1e-6f );
+        for ( uint32 axis = 0; axis < 3; ++axis )
+        {
+            inoutVertex._arrPosition[axis] = ( &movedPosition._x )[axis];
+            inoutVertex._arrNormal[axis]   = ( &movedNormal._x )[axis];
+        }
+    }
+
+    bool MeshSkinBinding::matches( const MeshSkinBinding& other ) const
+    {
+        if ( hasSameLayout( other ) == false )
             return false;
         for ( size_t boneIndex = 0; boneIndex < _listInverseBind.size(); ++boneIndex )
         {
-            for ( uint32 element = 0; element < 16; ++element )
+            if ( hasSameBone( other, boneIndex ) == false )
+                return false;
+        }
+        return true;
+    }
+
+    bool MeshSkinBinding::matchesForVertices( const MeshSkinBinding& other, const vector<MeshSkinVertex>& listSkin ) const
+    {
+        if ( hasSameLayout( other ) == false )
+            return false;
+        vector<uint8> listChecked( _listInverseBind.size(), SW_FALSE );
+        for ( const MeshSkinVertex& skin : listSkin )
+        {
+            for ( uint32 influence = 0; influence < 4; ++influence )
             {
-                if ( MathUtil::abs( ( &_listInverseBind[boneIndex]._11 )[element] - ( &other._listInverseBind[boneIndex]._11 )[element] ) > kInverseBindTolerance )
+                const size_t boneIndex = skin._arrJoint[influence];
+                if ( skin._arrWeight[influence] <= 0.0f || boneIndex >= listChecked.size() || listChecked[boneIndex] != SW_FALSE )
+                    continue;
+                if ( hasSameBone( other, boneIndex ) == false )
                     return false;
+                listChecked[boneIndex] = SW_TRUE;
             }
         }
         return true;

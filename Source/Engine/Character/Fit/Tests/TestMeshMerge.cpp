@@ -96,3 +96,33 @@ SW_TEST_CASE( MeshMergeTest, SectionedPartsMergeOnlyThePickedSections )
     SW_EXPECT_FALSE( CharacterMeshUtil::mergeMeshes( listPart, nullptr, result, &error ) );
     SW_EXPECT_TRUE( error.find( "used twice" ) != string::npos );
 }
+
+/**
+ * @brief [MeshMergeTest] 쓰는 본의 바인드 자세가 다른 부품은 첫 부품의 자세로 옮겨 합친다 - 옮긴 정점을 첫 부품의 역 바인드로 스킨하면 원래 부품의 스킨 결과와 같다.
+ */
+SW_TEST_CASE( MeshMergeTest, PartsWithAnotherBindPoseMoveToTheFirstPose )
+{
+    using Internal                       = MeshMergeTestInternal;
+    const shared_ptr<Mesh> body          = Internal::makeQuads( 1u, false );
+    const shared_ptr<Mesh> outfit        = Internal::makeQuads( 1u, false );
+    MeshSkinBinding        outfitBinding = MeshSkinBinding::makeIdentity( 4u );
+    outfitBinding._listInverseBind[1].setTranslation( float3{ 0.0f, 0.0f, 5.0f } ); // 2 번째 정점(본 1)이 이 본을 쓴다
+    vector<MeshSkinVertex> listOutfitSkin = outfit->getSkinVertices();
+    outfit->setSkin( std::move( listOutfitSkin ), outfitBinding );
+
+    vector<MeshMergePart> listPart( 2 );
+    listPart[0]._name  = hashed_string( "Body" );
+    listPart[0]._pMesh = body.get();
+    listPart[1]._name  = hashed_string( "Outfit.Body" );
+    listPart[1]._pMesh = outfit.get();
+
+    MeshMergeResult result;
+    string          error;
+    SW_REQUIRE_TRUE( CharacterMeshUtil::mergeMeshes( listPart, nullptr, result, &error ) );
+    SW_EXPECT_TRUE( result._mesh->getSkinBinding().matches( body->getSkinBinding() ) );
+    const vector<RHIVertex>& listVertex = result._mesh->getVertices();
+    SW_REQUIRE_TRUE( listVertex.size() == 8u );
+    SW_EXPECT_NEAR( 0.0f, listVertex[1]._arrPosition[2], 1e-4f ); // 몸은 그대로다
+    SW_EXPECT_NEAR( 5.0f, listVertex[5]._arrPosition[2], 1e-4f ); // 옷의 본 1 정점은 옮겼다
+    SW_EXPECT_NEAR( 0.0f, listVertex[4]._arrPosition[2], 1e-4f ); // 옷의 본 0 정점은 바인드가 같아 그대로다
+}

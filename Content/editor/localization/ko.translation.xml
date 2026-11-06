@@ -789,7 +789,6 @@
 		<entry key="EdLabel.Bodies" text="바디" sourceHash="e3707cdd2dd42549" />
 		<entry key="EdLabel.BoneMarkers" text="뼈 표시" sourceHash="93f13345e2ad4494" />
 		<entry key="EdLabel.ClearOnPlay" text="플레이 때 지우기" sourceHash="beece2dfe156c8cb" />
-		<entry key="EdLabel.CreateVariant" text="변형" sourceHash="bcabce7030eb33c6" />
 		<entry key="EdLabel.CollapseAll" text="모두 접기" sourceHash="62006d0c66337241" />
 		<entry key="EdLabel.Collect" text="모으기" sourceHash="828e9e42981c5891" />
 		<entry key="EdLabel.CopyFullLogLine" text="로그 줄 전체 복사" sourceHash="e782d27f233f5e83" />
@@ -797,6 +796,7 @@
 		<entry key="EdLabel.CopyPropertyName" text="프로퍼티 이름 복사" sourceHash="afbec81438558fc4" />
 		<entry key="EdLabel.CopyValue" text="값 복사" sourceHash="5899dbc9c6094f85" />
 		<entry key="EdLabel.CopyVisibleLines" text="보이는 줄 복사" sourceHash="52077621fa7648c1" />
+		<entry key="EdLabel.CreateVariant" text="변형" sourceHash="bcabce7030eb33c6" />
 		<entry key="EdLabel.DeleteKey" text="키 지우기" sourceHash="b213ea15eedd28c5" />
 		<entry key="EdLabel.Duplicate" text="복제" sourceHash="fac15b89e0668996" />
 		<entry key="EdLabel.EnableDetailedCallStackTrackingHighOverhead"
@@ -1885,9 +1885,7 @@
 		<entry key="EditorInputMap.BindingLayerTip"
 		       text="이 바인딩이 속한 레이어입니다. 그 레이어가 활성일 때만 발화합니다."
 		       sourceHash="5c09eded0f9462e8" />
-		<entry key="EditorInputMap.BundleFiles"
-		       text="이 묶음의 파일"
-		       sourceHash="9a8d01caebd983db" />
+		<entry key="EditorInputMap.BundleFiles" text="이 묶음의 파일" sourceHash="9a8d01caebd983db" />
 		<entry key="EditorInputMap.BundleFilesTip"
 		       text="이 게임의 맵을 읽는 차례대로 보입니다. 기본 맵, 공통 맵, 키트 맵, 맨 끝이 게임의 차이입니다. 저장하면 액션은 그것을 정한 파일로 돌아가고, 고치지 않은 파일은 쓰지 않습니다."
 		       sourceHash="00a5bf76bddc1a53" />

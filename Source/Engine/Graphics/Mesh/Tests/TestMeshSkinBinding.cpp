@@ -135,6 +135,13 @@ SW_TEST_CASE( MeshSkinBindingTest, MatchesComparesLayoutAndInverseBinds )
     MeshSkinBinding otherBind     = base;
     otherBind._listInverseBind[1] = float4x4::makeTranslation( 0.0f, -2.5f, 0.0f );
     SW_EXPECT_FALSE( base.matches( otherBind ) );
+    // 정점이 쓰지 않는 본의 차이는 같은 그림이다. 쓰는 본이 다르면 다른 그림이다.
+    vector<MeshSkinVertex> listOnBoneZero( 1 );
+    MeshSkinBinding        otherUnusedBone = base;
+    otherUnusedBone._listInverseBind[1]._11 += 1.0f;
+    SW_EXPECT_TRUE( base.matchesForVertices( otherUnusedBone, listOnBoneZero ) );
+    listOnBoneZero[0]._arrJoint[0] = 1;
+    SW_EXPECT_FALSE( base.matchesForVertices( otherUnusedBone, listOnBoneZero ) );
 
     MeshSkinBinding fewerBones = base;
     fewerBones._listInverseBind.pop_back();
