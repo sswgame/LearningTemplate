@@ -83,7 +83,13 @@ namespace sw
                         _listChanged.push_back( _completion._snapshot );
                 }
 
-                void complete() override { _pService->applyCompletion( std::move( _completion ), _listChanged ); }
+                void complete() override
+                {
+                    const bool bExpiryFailed = _completion._operation == TradeOperation::Expire && _completion._result == TradeResult::Unavailable;
+                    if ( bExpiryFailed )
+                        _pService->retryExpiry( _tradeID, _nowMs );
+                    _pService->applyCompletion( std::move( _completion ), _listChanged );
+                }
 
             private:
                 TradeCompletion       _completion;
@@ -234,6 +240,11 @@ namespace sw
             trackTrade( completion._snapshot ); // 아직 시한 전이다. 그사이 바뀌었으므로 새 시한으로 다시 확인한다
         if ( completion._requestTag != 0 )
             _completionBuffer.push( std::move( completion ) );
+    }
+
+    void TradeService::retryExpiry( uint64 tradeID, UnixMilliseconds nowMs )
+    {
+        _mapTradeToDeadline[tradeID] = nowMs.count() + TradeConstant::kExpiryRetryMs; // 잊으면 당사자가 시한을 알림으로 받지 못한다. 저장소가 돌아오면 닫힌다
     }
 
     void TradeService::submitCommand( TradeOperation operation, uint64 tradeID, const TradeCommand& command, UnixMilliseconds nowMs, uint64 requestTag )

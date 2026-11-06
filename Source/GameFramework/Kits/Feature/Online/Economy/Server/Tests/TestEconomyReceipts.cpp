@@ -1,0 +1,398 @@
+// EconomyReceiptsTest — 결제 저장 규칙과 서비스(메모리 저장소 + 가짜 스토어): 영수증 지급은 거래당 한 번(다른 계정이면 AlreadyRedeemed), 샌드박스 · 모르는 상품 거절, 환불 회수는 빚을 허용하고 한 번만,
+// 지급 전에 온 환불이 지급을 막음, 청약철회는 쓰지 않은 만큼 · 기한 안 · 구매자만 · 환불과 겹치지 않음, 지갑 · 내역, 서비스의 멱등 키 요구 · 원장 보존 검사.
+// 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
+#include "pch.h"
+
+#include "Core/Testing/TestFramework.h"
+
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
+#include "GameFramework/Runtime/Online/Ledger/Ledger.h"
+#include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
+
+using namespace sw;
+
+namespace
+{
+    constexpr AccountID kBuyer    = 42;
+    constexpr AccountID kOther    = 43;
+    constexpr int64     kNowMs    = 1700000000000ll;
+    constexpr int64     kWindowMs = 1000;
+
+    const utf8* const kCurrencyXML = R"(<CurrencyCatalog>
+  <Currency id="cur.gold"/>
+  <Currency id="cur.gem_paid" paid="true"/>
+</CurrencyCatalog>)";
+
+    const utf8* const kOfferXML = R"(<OfferCatalog>
+  <Offer id="gem_100">
+    <Product store="fake" id="com.x.gem100"/>
+    <Grant asset="cur.gem_paid" amount="100"/>
+    <Grant asset="cur.gold" amount="10"/>
+  </Offer>
+</OfferCatalog>)";
+
+    /** @brief 저장 규칙을 바로 부르는 묶음입니다. */
+    struct ReceiptRig
+    {
+        MemoryServiceDatabase _database;
+        CurrencyCatalog       _currencies;
+        OfferCatalog          _offers;
+
+        ReceiptRig()
+            : _database{}
+            , _currencies{}
+            , _offers{}
+        {
+            SW_EXPECT_TRUE( _currencies.loadFromXMLText( kCurrencyXML, "test" ) );
+            SW_EXPECT_TRUE( _offers.loadFromXMLText( kOfferXML, "test" ) );
+        }
+
+        EconomyReply redeem( AccountID accountID, string_view transactionID = "tx1", ReceiptStatus status = ReceiptStatus::Valid, string_view productID = "com.x.gem100", bool bSandbox = false, bool bAcceptSandbox = false )
+        {
+            EconomyRedeemInput input;
+            input._receipt._storeName     = "fake";
+            input._receipt._transactionID = string( transactionID );
+            input._receipt._productID     = string( productID );
+            input._receipt._status        = status;
+            input._receipt._bSandbox      = bSandbox ? SW_TRUE : SW_FALSE;
+            input._accountID              = accountID;
+            input._nowMs                  = kNowMs;
+            input._bAcceptSandbox         = bAcceptSandbox ? SW_TRUE : SW_FALSE;
+            EconomyReply reply;
+            (void)EconomyStoreLogic::redeemReceipt( _database, _currencies, _offers, input, reply );
+            return reply;
+        }
+
+        EconomyResult refund( string_view transactionID = "tx1", vector<EconomyBalanceChange>* pOutListChange = nullptr )
+        {
+            ReceiptRefundNotice notice;
+            notice._storeName     = "fake";
+            notice._transactionID = string( transactionID );
+            vector<EconomyBalanceChange> listChange;
+            const EconomyResult          result = EconomyStoreLogic::revokeRefund( _database, _currencies, notice, kNowMs, listChange );
+            if ( pOutListChange != nullptr )
+                *pOutListChange = listChange;
+            return result;
+        }
+
+        EconomyReply withdraw( AccountID accountID, int64 nowMs = kNowMs, string_view transactionID = "tx1" )
+        {
+            EconomyWithdrawInput input;
+            input._storeName     = "fake";
+            input._transactionID = string( transactionID );
+            input._accountID     = accountID;
+            input._nowMs         = nowMs;
+            input._windowMs      = kWindowMs;
+            EconomyReply reply;
+            (void)EconomyStoreLogic::withdrawPurchase( _database, _currencies, input, reply );
+            return reply;
+        }
+
+        int64 balanceOf( AccountID accountID, string_view assetID = "cur.gem_paid" )
+        {
+            LedgerBalance balance;
+            SW_EXPECT_TRUE( Ledger::readBalance( _database, LedgerHolder::makeAccount( accountID ), assetID, balance ) == ServiceStoreResult::Ok );
+            return balance._amount;
+        }
+
+        /** @brief 계정의 재화를 태웁니다(게임에서 쓴 것). */
+        void spend( AccountID accountID, int64 amount, string_view assetID = "cur.gem_paid" )
+        {
+            LedgerTransferRequest request;
+            request._listPosting.push_back( LedgerPosting{ LedgerHolder::makeAccount( accountID ), LedgerHolder::makeSink(), string( assetID ), amount } );
+            request._journalKey = "test/spend/" + to_string( accountID ) + "/" + to_string( amount );
+            request._reason     = "test.spend";
+            LedgerTransferOutcome outcome;
+            SW_EXPECT_TRUE( Ledger::executeTransfer( _database, request, outcome ) == LedgerResult::Ok );
+        }
+    };
+
+    /** @brief 서비스 답을 받습니다. */
+    struct EconomyReplySink
+    {
+        vector<EconomyReply> _listReply{};
+
+        void onReply( const EconomyReply& reply ) { _listReply.push_back( reply ); }
+    };
+
+    /** @brief 서비스 + 가짜 스토어입니다. */
+    struct EconomyServiceRig
+    {
+        ReceiptRig               _data;
+        MemoryServiceStore       _store;
+        FakeReceiptValidator     _validator;
+        ReceiptValidatorRegistry _registry;
+        EconomyService           _service;
+        EconomyReplySink         _sink;
+
+        explicit EconomyServiceRig( bool bAcceptSandbox = false )
+            : _data{}
+            , _store{ &_data._database }
+            , _validator{}
+            , _registry{}
+            , _service{}
+            , _sink{}
+        {
+            SW_EXPECT_TRUE( _registry.registerValidator( &_validator ) );
+            EconomyServiceConfig settings;
+            settings._pCurrencyCatalog       = &_data._currencies;
+            settings._pOfferCatalog          = &_data._offers;
+            settings._pReceiptRegistry       = &_registry;
+            settings._bAcceptSandboxReceipts = bAcceptSandbox ? SW_TRUE : SW_FALSE;
+            SW_EXPECT_TRUE( _service.initialize( &_store, settings ) );
+        }
+
+        ~EconomyServiceRig()
+        {
+            _service.shutdown();
+            _registry.shutdown();
+        }
+
+        void pump()
+        {
+            for ( int32 round = 0; round < 4; ++round )
+            {
+                _service.update( UnixMilliseconds{ kNowMs } );
+                while ( _store.pollCompletions() > 0 )
+                {
+                }
+            }
+        }
+
+        EconomyReply call( uint16 method, AccountID accountID, const EconomyCall* pCall = nullptr )
+        {
+            EconomyCall call = pCall != nullptr ? *pCall : EconomyCall{ UnixMilliseconds{ kNowMs } };
+            call._method     = method;
+            call._accountID  = accountID;
+            _service.submitCall( call, EconomyService::ReplyDelegate::create<&EconomyReplySink::onReply>( &_sink ) );
+            pump();
+            SW_EXPECT_EQUAL( size_t( 1 ), _sink._listReply.size() );
+            const EconomyReply reply = _sink._listReply.empty() ? EconomyReply{} : _sink._listReply.back();
+            _sink._listReply.clear();
+            return reply;
+        }
+
+        EconomyReply redeem( AccountID accountID, string_view payload )
+        {
+            EconomyCall call{ UnixMilliseconds{ kNowMs } };
+            call._redeem._storeName = "fake";
+            call._redeem._payload   = string( payload );
+            return this->call( EconomyMethod::kRedeemReceipt, accountID, &call );
+        }
+    };
+} // namespace
+
+/** @brief [EconomyReceiptsTest] 지급: 카탈로그의 지급대로 받고, 같은 거래를 다시 내면 재생으로 한 번만 받으며, 다른 계정은 AlreadyRedeemed 다 */
+SW_TEST_CASE( EconomyReceiptsTest, RedeemGrantsOncePerTransaction )
+{
+    ReceiptRig         rig;
+    const EconomyReply first = rig.redeem( kBuyer );
+    SW_EXPECT_TRUE( first._result == EconomyResult::Ok );
+    SW_EXPECT_TRUE( first._bReplayed == SW_FALSE );
+    SW_EXPECT_EQUAL( string( "com.x.gem100" ), first._productID );
+    SW_EXPECT_EQUAL( size_t( 2 ), first._listBalance.size() );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 10 ), rig.balanceOf( kBuyer, "cur.gold" ) );
+
+    const EconomyReply again = rig.redeem( kBuyer );
+    SW_EXPECT_TRUE( again._result == EconomyResult::Ok );
+    SW_EXPECT_TRUE( again._bReplayed == SW_TRUE );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+
+    SW_EXPECT_TRUE( rig.redeem( kOther )._result == EconomyResult::AlreadyRedeemed );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kOther ) );
+}
+
+/** @brief [EconomyReceiptsTest] 지급 거절: 검증 결과 · 샌드박스 · 모르는 상품 · 계정 0 은 아무것도 주지 않는다 */
+SW_TEST_CASE( EconomyReceiptsTest, RedeemRefusalsGrantNothing )
+{
+    ReceiptRig rig;
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Invalid )._result == EconomyResult::ReceiptInvalid );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Refunded )._result == EconomyResult::ReceiptRefunded );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Retry )._result == EconomyResult::ReceiptPending );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Count )._result == EconomyResult::ReceiptInvalid );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Valid, "com.x.unknown" )._result == EconomyResult::UnknownProduct );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Valid, "com.x.gem100", true, false )._result == EconomyResult::ReceiptInvalid );
+    SW_EXPECT_TRUE( rig.redeem( kInvalidAccountID )._result == EconomyResult::InvalidRequest );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "tx1", ReceiptStatus::Valid, "com.x.gem100", true, true )._result == EconomyResult::Ok ); // 개발 서버는 샌드박스를 받는다
+    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+}
+
+/** @brief [EconomyReceiptsTest] 지급 응답을 잃어도 같은 거래를 다시 내면 한 번만 받는다 */
+SW_TEST_CASE( EconomyReceiptsTest, RedeemSurvivesLostCommitReply )
+{
+    ReceiptRig rig;
+    rig._database.armFault( ServiceStoreFault::LoseCommitReply );
+    (void)rig.redeem( kBuyer );
+    const EconomyReply retried = rig.redeem( kBuyer );
+    SW_EXPECT_TRUE( retried._result == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+}
+
+/** @brief [EconomyReceiptsTest] 환불: 지급한 만큼 회수하고 이미 쓴 부분은 빚이 된다. 두 번 와도 한 번만 회수하고, 환불된 거래는 다시 받을 수 없다 */
+SW_TEST_CASE( EconomyReceiptsTest, RefundRevokesOnceIntoDebt )
+{
+    ReceiptRig rig;
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    rig.spend( kBuyer, 70 );
+
+    vector<EconomyBalanceChange> listChange;
+    SW_EXPECT_TRUE( rig.refund( "tx1", &listChange ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( size_t( 2 ), listChange.size() );
+    SW_EXPECT_EQUAL( kBuyer, listChange[0]._accountID );
+    SW_EXPECT_EQUAL( int64( -70 ), rig.balanceOf( kBuyer ) );
+
+    SW_EXPECT_TRUE( rig.refund() == EconomyResult::AlreadyRefunded );
+    SW_EXPECT_EQUAL( int64( -70 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::ReceiptRefunded );
+    SW_EXPECT_EQUAL( int64( -70 ), rig.balanceOf( kBuyer ) );
+}
+
+/** @brief [EconomyReceiptsTest] 지급보다 먼저 온 환불은 표시만 남기고, 뒤에 온 지급을 막는다 */
+SW_TEST_CASE( EconomyReceiptsTest, RefundBeforeRedeemBlocksIt )
+{
+    ReceiptRig rig;
+    SW_EXPECT_TRUE( rig.refund() == EconomyResult::Ok );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::ReceiptRefunded );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+}
+
+/** @brief [EconomyReceiptsTest] 환불 저장소 실패는 Unavailable 이고 스토어가 다시 보내면 한 번만 회수한다 */
+SW_TEST_CASE( EconomyReceiptsTest, RefundRetriesAfterStoreFailure )
+{
+    ReceiptRig rig;
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    rig._database.armFault( ServiceStoreFault::RejectCommit );
+    SW_EXPECT_TRUE( rig.refund() == EconomyResult::Unavailable );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_TRUE( rig.refund() == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+
+    rig._database.armFault( ServiceStoreFault::RejectRead );
+    SW_EXPECT_TRUE( rig.refund( "tx2" ) == EconomyResult::Unavailable );
+}
+
+/** @brief [EconomyReceiptsTest] 청약철회: 쓰지 않은 만큼만 돌려받고 내역을 알린다. 다시 하면 AlreadyRefunded, 그 뒤 온 스토어 환불은 또 회수하지 않는다 */
+SW_TEST_CASE( EconomyReceiptsTest, WithdrawTakesBackOnlyUnused )
+{
+    ReceiptRig rig;
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    rig.spend( kBuyer, 70 );
+
+    const EconomyReply withdrawn = rig.withdraw( kBuyer );
+    SW_EXPECT_TRUE( withdrawn._result == EconomyResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 2 ), withdrawn._listWithdrawn.size() );
+    SW_EXPECT_EQUAL( int64( 30 ), withdrawn._listWithdrawn[0]._amount + withdrawn._listWithdrawn[1]._amount - 10 );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer, "cur.gold" ) );
+
+    SW_EXPECT_TRUE( rig.withdraw( kBuyer )._result == EconomyResult::AlreadyRefunded );
+    SW_EXPECT_TRUE( rig.refund() == EconomyResult::AlreadyRefunded );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+}
+
+/** @brief [EconomyReceiptsTest] 청약철회 거절: 다른 계정 · 없는 거래는 NotPurchaser, 기한이 지나면 WithdrawalExpired, 다 썼으면 NothingToWithdraw 다 */
+SW_TEST_CASE( EconomyReceiptsTest, WithdrawRefusals )
+{
+    ReceiptRig rig;
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    SW_EXPECT_TRUE( rig.withdraw( kOther )._result == EconomyResult::NotPurchaser );
+    SW_EXPECT_TRUE( rig.withdraw( kBuyer, kNowMs, "tx-none" )._result == EconomyResult::NotPurchaser );
+    SW_EXPECT_TRUE( rig.withdraw( kInvalidAccountID )._result == EconomyResult::InvalidRequest );
+    SW_EXPECT_TRUE( rig.withdraw( kBuyer, kNowMs + kWindowMs + 1 )._result == EconomyResult::WithdrawalExpired );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+
+    rig.spend( kBuyer, 100 );
+    rig.spend( kBuyer, 10, "cur.gold" );
+    SW_EXPECT_TRUE( rig.withdraw( kBuyer, kNowMs + kWindowMs )._result == EconomyResult::NothingToWithdraw ); // 기한 끝 시각은 안이다
+}
+
+/** @brief [EconomyReceiptsTest] 지갑과 내역: 지급 · 사용이 부호와 함께 최근 내역에 나온다 */
+SW_TEST_CASE( EconomyReceiptsTest, WalletAndHistoryReflectMoves )
+{
+    ReceiptRig rig;
+    SW_EXPECT_TRUE( rig.redeem( kBuyer )._result == EconomyResult::Ok );
+    rig.spend( kBuyer, 30 );
+
+    EconomyReply wallet;
+    SW_EXPECT_TRUE( EconomyStoreLogic::readWallet( rig._database, kBuyer, wallet ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( size_t( 2 ), wallet._listBalance.size() );
+
+    EconomyHistoryRequest request;
+    request._maxCount = 10;
+    EconomyReply history;
+    SW_EXPECT_TRUE( EconomyStoreLogic::readHistory( rig._database, kBuyer, request, history ) == EconomyResult::Ok );
+    SW_REQUIRE_EQUAL( size_t( 2 ), history._listHistory.size() );
+    int64 total = 0;
+    for ( const EconomyHistoryEntry& entry : history._listHistory )
+    {
+        for ( const LedgerBalance& change : entry._listChange )
+        {
+            if ( change._assetID == "cur.gem_paid" )
+                total += change._amount;
+        }
+    }
+    SW_EXPECT_EQUAL( int64( 70 ), total );
+}
+
+/** @brief [EconomyReceiptsTest] 서비스: 영수증은 스토어 검증 뒤에 지급한다. 등록 안 된 스토어 · 깨진 영수증 · 샌드박스는 거절, 멱등 키 없는 구매 · 로그인 전 요청도 거절한다 */
+SW_TEST_CASE( EconomyReceiptsTest, ServiceRedeemsThroughTheValidator )
+{
+    EconomyServiceRig  rig;
+    const EconomyReply redeemed = rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" );
+    SW_EXPECT_TRUE( redeemed._result == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 100 ), rig._data.balanceOf( kBuyer ) );
+
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "not a receipt" )._result == EconomyResult::ReceiptInvalid );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx2|sandbox" )._result == EconomyResult::ReceiptInvalid );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx3|refunded" )._result == EconomyResult::ReceiptRefunded );
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx4|retry" )._result == EconomyResult::ReceiptPending );
+
+    EconomyCall other{ UnixMilliseconds{ kNowMs } };
+    other._redeem._storeName = "apple";
+    other._redeem._payload   = "x";
+    SW_EXPECT_TRUE( rig.call( EconomyMethod::kRedeemReceipt, kBuyer, &other )._result == EconomyResult::ReceiptInvalid );
+
+    SW_EXPECT_TRUE( rig.call( EconomyMethod::kPurchase, kBuyer )._result == EconomyResult::InvalidRequest );
+    SW_EXPECT_TRUE( rig.call( EconomyMethod::kGetWallet, kInvalidAccountID )._result == EconomyResult::NotSignedIn );
+    SW_EXPECT_EQUAL( size_t( 2 ), rig.call( EconomyMethod::kGetWallet, kBuyer )._listBalance.size() );
+}
+
+/** @brief [EconomyReceiptsTest] 서비스: 스토어가 보낸 환불 알림을 회수한다 */
+SW_TEST_CASE( EconomyReceiptsTest, ServiceRevokesPushedRefunds )
+{
+    EconomyServiceRig rig;
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" )._result == EconomyResult::Ok );
+    rig._validator.pushRefund( "tx1", kNowMs );
+    rig._validator.pushRefund( "tx1", kNowMs ); // 스토어는 다시 보낼 수 있다
+    rig.pump();
+    SW_EXPECT_EQUAL( int64( 0 ), rig._data.balanceOf( kBuyer ) );
+}
+
+/** @brief [EconomyReceiptsTest] 원장 보존 검사: 지급 · 사용 · 환불 뒤에도 잔액 합이 발행 - 소각과 맞는다(환불의 빚도 포함) */
+SW_TEST_CASE( EconomyReceiptsTest, LedgerAuditStaysBalanced )
+{
+    EconomyServiceRig rig;
+    SW_EXPECT_TRUE( rig.redeem( kBuyer, "fake|com.x.gem100|tx1|ok" )._result == EconomyResult::Ok );
+    rig._data.spend( kBuyer, 70 );
+    rig._validator.pushRefund( "tx1", kNowMs );
+    rig.pump();
+    rig._service.requestLedgerAudit();
+    rig.pump();
+    SW_EXPECT_TRUE( rig._service.wasLastAuditBalanced() );
+}
+
+/** @brief [EconomyReceiptsTest] 시작: 저장소 · 카탈로그가 없으면 서지 않는다 */
+SW_TEST_CASE( EconomyReceiptsTest, ServiceNeedsDependencies )
+{
+    SW_EXPECT_LOG( "EconomyService.EconomyServiceNeedsStoreBoth" );
+    EconomyService service;
+    SW_EXPECT_FALSE( service.initialize( nullptr, EconomyServiceConfig{} ) );
+}

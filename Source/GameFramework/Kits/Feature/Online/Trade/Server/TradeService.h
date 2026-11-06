@@ -81,6 +81,9 @@ namespace sw
         void drainUpdates( vector<TradeSnapshot>& outListUpdate ) { _updateBuffer.drainTo( outListUpdate ); }
 
         int32 getPendingCount() const { return _pendingCount; }
+
+        /** @brief 시한 처리가 저장소 실패로 졌습니다. 작업의 `complete` 가 호출합니다. */
+        void retryExpiry( uint64 tradeID, UnixMilliseconds nowMs );
         /** @brief 이 서비스가 보고 있는 열린 거래 수입니다(시한 감시 대상). 서버 종료 드레인이 끝나기를 기다린다. */
         int32                     getOpenTradeCount() const { return static_cast<int32>( _mapTradeToDeadline.size() ); }
         const TradeServiceConfig& getSettings() const { return _settings; }

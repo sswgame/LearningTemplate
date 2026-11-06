@@ -29,6 +29,7 @@ namespace sw
         static constexpr int32 kMaxPeerNameSize = 64;                  ///< 신청 요청의 상대 표시 이름(UTF-8 바이트)이다
         static constexpr int64 kInviteTimeoutMs = 30 * constant::time::kMillisecondsPerSecond;
         static constexpr int64 kIdleTimeoutMs   = 5 * 60 * constant::time::kMillisecondsPerSecond;
+        static constexpr int64 kExpiryRetryMs   = 5 * constant::time::kMillisecondsPerSecond; ///< 시한 처리가 저장소 실패로 졌을 때 다시 시도할 간격이다
     };
 } // namespace sw
 
