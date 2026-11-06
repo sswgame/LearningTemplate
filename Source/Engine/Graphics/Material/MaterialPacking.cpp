@@ -139,17 +139,29 @@ namespace sw
                 return true;
             }
 
-            static uint32 parseChannelMask( string_view value )
+            /**
+             * @brief ChannelMask 글(`RGBA` 글자 조합 · 0..15 숫자)을 비트 마스크로 읽습니다. 빈 글은 네 채널 모두입니다(값을 적지 않은 프로퍼티).
+             * @details 모르는 글자나 넷을 넘는 비트는 false 입니다 — 오타가 조용히 네 채널이 되지 않는다(Bool · Enum · Range 와 같은 규칙).
+             */
+            [[nodiscard]] static bool tryParseChannelMask( string_view value, uint32& outMask )
             {
-                const string valueNt( value );
-                const string trimmedValue{ StringUtil::trim( valueNt ) };
+                constexpr uint32  kAllChannels = 0xFu;
+                const string_view trimmedValue = StringUtil::trim( value );
                 if ( trimmedValue.empty() )
-                    return 0xFu;
+                {
+                    outMask = kAllChannels;
+                    return true;
+                }
 
                 // 숫자
                 uint64 numericValue{ 0 };
                 if ( StringUtil::parseUint64( trimmedValue, numericValue, 0 ) )
-                    return static_cast<uint32>( numericValue );
+                {
+                    if ( numericValue > kAllChannels )
+                        return false;
+                    outMask = static_cast<uint32>( numericValue );
+                    return true;
+                }
 
                 uint32 mask{ 0 };
                 for ( utf8 charByte : trimmedValue )
@@ -178,11 +190,12 @@ namespace sw
                         }
                         default:
                         {
-                            break;
+                            return false;
                         }
                     }
                 }
-                return mask != 0 ? mask : 0xFu;
+                outMask = mask;
+                return true;
             }
 
             /**
@@ -203,7 +216,8 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool writeNumericValue( void* pDst, size_t packSize, MaterialPropertyType shaderType, string_view value )
+            /** @brief 숫자 글을 셰이더 타입의 칸들로 씁니다. 색인지는 @p cpuType 이 정한다 — 색의 셰이더 타입은 `Float4` 라(`defaultShaderTypeFor` · 리플렉션 · XML) 셰이더 타입으로는 가릴 수 없다. */
+            [[nodiscard]] static bool writeNumericValue( void* pDst, size_t packSize, MaterialPropertyType cpuType, MaterialPropertyType shaderType, string_view value )
             {
                 const uint32 need                  = MaterialPacking::packedSizeOf( shaderType );
                 const bool   bInvalidPackArguments = need == 0 || packSize < need || pDst == nullptr;
@@ -228,7 +242,7 @@ namespace sw
                     if ( wordIndex >= tokens.size() )
                     {
                         const float32 alpha = 1.0f;
-                        if ( wordIndex == 3 && shaderType == MaterialPropertyType::Color )
+                        if ( wordIndex == 3 && cpuType == MaterialPropertyType::Color )
                             Memory::copy( &arrWord[wordIndex], &alpha, sizeof( alpha ) );
                         continue;
                     }
@@ -242,7 +256,7 @@ namespace sw
                     else if ( bUintPackedType )
                     {
                         uint64 component{ 0 };
-                        bRead              = StringUtil::parseUint64( tokens[wordIndex], component, 10 );
+                        bRead              = StringUtil::parseUint64( tokens[wordIndex], component, 10 ) && component <= MathUtil::kMaxUInt32; // 넘치는 값이 잘려 다른 값이 되지 않는다
                         arrWord[wordIndex] = static_cast<uint32>( component );
                     }
                     else
@@ -300,10 +314,15 @@ namespace sw
                 return writeBoundedValue( pDst, packSize, &uEnumVal, sizeof( uEnumVal ) );
             }
 
-            /** @brief ChannelMask — 셰이더가 float4 면 채널마다 1.0 · 0.0, 아니면 비트 마스크입니다. */
+            /** @brief ChannelMask — 셰이더가 float4 면 채널마다 1.0 · 0.0, 아니면 비트 마스크입니다. 읽지 못한 글이면 false 입니다. */
             [[nodiscard]] static bool packChannelMask( const MaterialProperty& prop, MaterialPropertyType shaderType, uint8* pDst, uint32 packSize )
             {
-                const uint32 mask = parseChannelMask( prop._value );
+                uint32 mask{ 0 };
+                if ( tryParseChannelMask( prop._value, mask ) == false )
+                {
+                    SW_LOG_ERROR_ID( "Material.ChannelMaskUnreadable", "Material parameter '%#' has an unreadable channel mask '%#'", prop._name, prop._value );
+                    return false;
+                }
                 if ( shaderType == MaterialPropertyType::Float4 )
                 {
                     float32 arrComp[4] = {
@@ -328,7 +347,7 @@ namespace sw
                 if ( textureIndex == kInvalidDescriptorIndex && prop._value.empty() == false )
                 {
                     uint64 numericVal{ 0 };
-                    if ( StringUtil::parseUint64( prop._value, numericVal, 0 ) )
+                    if ( StringUtil::parseUint64( prop._value, numericVal, 0 ) && numericVal <= MathUtil::kMaxUInt32 ) // 넘치는 값이 잘려 유효한 인덱스가 되지 않는다
                         textureIndex = static_cast<uint32>( numericVal );
                 }
                 return writeBoundedValue( pDst, packSize, &textureIndex, sizeof( textureIndex ) );
@@ -479,10 +498,10 @@ namespace sw
         return StringUtil::startsWith( memberName, "_swPad" );
     }
 
-    bool MaterialPacking::isTextureIndexMember( string_view memberName, string_view reflectedType, uint32 byteSize )
+    bool MaterialPacking::isTextureIndexMember( string_view memberName, string_view reflectedType )
     {
-        return shaderTypeFromReflectionName( reflectedType, byteSize ) == MaterialPropertyType::Uint &&
-               StringUtil::endsWith( memberName, string_view{ kTextureIndexMemberSuffix } );
+        // 리플렉션 이름을 직접 본다 — `shaderTypeFromReflectionName` 은 Bool 도 Uint 로 묶으므로 `bool useNormalMap` 이 텍스처 인덱스가 된다.
+        return MaterialPackingInternal::equalsName( reflectedType, "Uint" ) && StringUtil::endsWith( memberName, string_view{ kTextureIndexMemberSuffix } );
     }
 
     vector<uint8> MaterialPacking::makeFallbackElement( const vector<ShaderVariableInfo>& listMember, uint32 stride )
@@ -493,7 +512,7 @@ namespace sw
         for ( const ShaderVariableInfo& member : listMember )
         {
             const bool bFits = member._offset + indexSize <= stride;
-            if ( bFits && isTextureIndexMember( member._name, member._type, member._size ) )
+            if ( bFits && isTextureIndexMember( member._name, member._type ) )
                 Memory::copy( bytes.data() + member._offset, &noTexture, indexSize );
         }
         return bytes;
@@ -570,11 +589,11 @@ namespace sw
             case MaterialPropertyType::Int2:
             case MaterialPropertyType::Int3:
             case MaterialPropertyType::Int4:
-                return MaterialPackingInternal::writeNumericValue( pDst, packSize, shaderType, prop._value );
+                return MaterialPackingInternal::writeNumericValue( pDst, packSize, prop._type, shaderType, prop._value );
             case MaterialPropertyType::Keyword:
             case MaterialPropertyType::Unknown:
                 return false;
         }
-        return MaterialPackingInternal::writeNumericValue( pDst, packSize, shaderType, prop._value );
+        return MaterialPackingInternal::writeNumericValue( pDst, packSize, prop._type, shaderType, prop._value );
     }
 } // namespace sw

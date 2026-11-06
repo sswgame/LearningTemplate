@@ -540,7 +540,7 @@ namespace sw
             prop._type       = prop._shaderType;
             // 텍스처 인덱스 필드(이름 규칙 — MaterialPacking::isTextureIndexMember)는 텍스처 속성으로 둔다. uint 로 두면 0 이 들어가는데,
             // 0 은 Vulkan 의 첫 실제 텍스처 · DX11 · GL 의 서수 0 이다. 텍스처 속성은 붙은 것이 없으면 kInvalidDescriptorIndex 를 넣는다.
-            if ( MaterialPacking::isTextureIndexMember( var._name, var._type, var._size ) )
+            if ( MaterialPacking::isTextureIndexMember( var._name, var._type ) )
                 prop._type = MaterialPropertyType::Texture2D;
             _data._listProperty.push_back( prop );
         }

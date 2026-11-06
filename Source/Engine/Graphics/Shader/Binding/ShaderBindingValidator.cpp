@@ -624,10 +624,15 @@ namespace sw
                 }
             }
 
-            /** @brief 컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GPUAssertRW) 전용이고, 그 링은 u4 에만 놓인다. */
+            /**
+             * @brief 컴퓨트 쓰기 슬롯 u4 는 셰이더 assert 링(g_GPUAssertRW) 전용이고, 그 링은 u4 에만 놓인다.
+             * @details SPIR-V 는 RW 구조버퍼도 StorageBuffer(읽기 구조버퍼와 같은 종류)로 보고하므로 종류로 거르면 Vulkan · GL 에서 이 검사가 돌지 않는다 — 스토리지 버퍼는 모두 본다.
+             */
             void checkAssertSlot( const Internal::ReflectedBinding& reflected )
             {
-                if ( reflected._space != 0 || Internal::registerClassOf( reflected._kind ) != Internal::RegisterClass::UnorderedAccess )
+                const bool bWritableKind = Internal::registerClassOf( reflected._kind ) == Internal::RegisterClass::UnorderedAccess ||
+                                           ( Internal::isSPIRV( _targetFormat ) && reflected._kind == ShaderBindingKind::StructuredBuffer );
+                if ( reflected._space != 0 || bWritableKind == false )
                     return;
                 const uint32 bindOffset  = _bVulkan ? shaderslot::vk::kUShift : ( _bOpenGl ? shaderslot::gl::kUAVBinding0 : 0u );
                 const bool   bAssertName = reflected._name == shaderslot::resname::kGPUAssertRing;
