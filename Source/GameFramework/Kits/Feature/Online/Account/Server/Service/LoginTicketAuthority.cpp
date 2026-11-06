@@ -55,7 +55,7 @@ namespace sw
     void LoginTicketAuthority::shutdown()
     {
         _pCrypto = nullptr;
-        Memory::set( _arrMasterKey, 0, kMasterKeySize );
+        Memory::wipe( _arrMasterKey, kMasterKeySize );
     }
 
     bool LoginTicketAuthority::issueTicket( uint64 accountID, uint64 sessionID, const hashed_string& serverID, int64 expiresAtMs, NetGameTicket& outTicket ) const

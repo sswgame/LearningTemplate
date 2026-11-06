@@ -61,8 +61,8 @@ namespace sw
 
     AppleLoginProvider::~AppleLoginProvider()
     {
-        Memory::set( _signingKeyPem.data(), 0, _signingKeyPem.size() ); // 서명 키를 메모리에 남기지 않는다
-        Memory::set( _clientSecret.data(), 0, _clientSecret.size() );
+        Memory::wipe( _signingKeyPem.data(), _signingKeyPem.size() ); // 서명 키를 메모리에 남기지 않는다
+        Memory::wipe( _clientSecret.data(), _clientSecret.size() );
     }
 
     void AppleLoginProvider::splitTicket( string_view ticket, string& outIDToken, string& outNonce, string& outCode )

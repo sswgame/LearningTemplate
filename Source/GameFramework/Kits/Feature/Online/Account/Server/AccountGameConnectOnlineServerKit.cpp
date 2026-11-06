@@ -62,7 +62,7 @@ namespace sw
                 if ( LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey, outError ) == false )
                     return false;
                 _ticketAuthority.initialize( &_crypto, arrTicketKey );
-                Memory::set( arrTicketKey, 0, sizeof( arrTicketKey ) );
+                Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );
                 return true;
             }
 

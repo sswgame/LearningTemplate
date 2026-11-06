@@ -65,7 +65,7 @@ namespace sw
             return false;
         }
         const bool bParsed = parseHex( secret, outArrKey );
-        Memory::set( secret.data(), 0, secret.size() );
+        Memory::wipe( secret.data(), secret.size() );
         if ( bParsed == false )
         {
             outError = "the game ticket master key must be 64 hexadecimal digits (32 bytes)";

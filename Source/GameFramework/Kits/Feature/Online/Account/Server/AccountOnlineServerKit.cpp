@@ -92,7 +92,7 @@ namespace sw
                 if ( LoginTicketKey::readFromEnvironment( ticketKeyEnvironment, arrTicketKey, outError ) == false )
                     return false;
                 _loginService.initialize( context._pStore, &_crypto, loginSettings, arrTicketKey );
-                Memory::set( arrTicketKey, 0, sizeof( arrTicketKey ) );
+                Memory::wipe( arrTicketKey, sizeof( arrTicketKey ) );
                 // 여기부터 실패하면 세운 로그인 서비스를 스스로 내린다 — 초기화에 실패한 키트는 shutdown 을 받지 않는다.
                 const bool bAssembled = createPlatformProviders( providersFile, trustFile, linkSecretKeyEnvironment, context._clock, outError ) && exposeAccount( context, entry, outError );
                 if ( bAssembled == false )
@@ -176,7 +176,7 @@ namespace sw
                 if ( LoginTicketKey::readFromEnvironment( linkSecretKeyEnvironment, arrVaultKey, outError ) == false )
                     return false;
                 _secretVault.initialize( &game::getSubsystem<INetSecurityProvider>(), arrVaultKey );
-                Memory::set( arrVaultKey, 0, sizeof( arrVaultKey ) );
+                Memory::wipe( arrVaultKey, sizeof( arrVaultKey ) );
                 _loginService.setSecretVault( &_secretVault );
                 return true;
             }

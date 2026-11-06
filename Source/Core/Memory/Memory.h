@@ -107,6 +107,8 @@ namespace sw
         static void* move( void* pDest, const void* pSrc, size_t size );
         /** @brief pDest 의 size 바이트를 value 로 채웁니다. */
         static void* set( void* pDest, uint8 value, size_t size );
+        /** @brief 비밀(키 · 비밀번호)을 0 으로 덮습니다. `set` 과 달리 곧 버릴 메모리여도 컴파일러가 이 쓰기를 지우지 못합니다. */
+        static void wipe( void* pDest, size_t size );
         /** @brief 두 버퍼의 size 바이트를 비교합니다. 같으면 0 입니다. */
         static int32 compare( const void* pLhs, const void* pRhs, size_t size );
 

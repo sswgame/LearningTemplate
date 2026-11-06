@@ -296,6 +296,16 @@ namespace sw
         return std::memmove( pDest, pSrc, size );
     }
 
+    void Memory::wipe( void* pDest, size_t size )
+    {
+        // volatile - 곧 버릴 값을 덮는 쓰기를 컴파일러가 지우지 못하게 한다.
+        volatile uint8* pByte = static_cast<volatile uint8*>( pDest );
+        for ( size_t index = 0; index < size; ++index )
+        {
+            pByte[index] = 0;
+        }
+    }
+
     void* Memory::set( void* pDest, uint8 value, size_t size )
     {
         if ( pDest == nullptr || size == 0 )

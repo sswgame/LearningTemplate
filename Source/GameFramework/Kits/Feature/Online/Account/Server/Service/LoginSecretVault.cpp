@@ -26,7 +26,7 @@ namespace sw
 
     void LoginSecretVault::shutdown()
     {
-        Memory::set( _arrKey, 0, sizeof( _arrKey ) );
+        Memory::wipe( _arrKey, sizeof( _arrKey ) );
         _pSecurity = nullptr;
     }
 
@@ -67,7 +67,7 @@ namespace sw
         if ( bOpened == false )
             return false;
         outPlain.assign( reinterpret_cast<const utf8*>( listPlain.data() ), listPlain.size() );
-        Memory::set( listPlain.data(), 0, listPlain.size() );
+        Memory::wipe( listPlain.data(), listPlain.size() );
         return true;
     }
 } // namespace sw

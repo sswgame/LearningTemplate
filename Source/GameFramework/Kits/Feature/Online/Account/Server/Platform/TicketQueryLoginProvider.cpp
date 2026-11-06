@@ -38,7 +38,7 @@ namespace sw
 
     TicketQueryLoginProvider::~TicketQueryLoginProvider()
     {
-        Memory::set( _key.data(), 0, _key.size() ); // 비밀 키를 메모리에 남기지 않는다
+        Memory::wipe( _key.data(), _key.size() ); // 비밀 키를 메모리에 남기지 않는다
     }
 
     bool TicketQueryLoginProvider::isQuerySafe( string_view text )

@@ -172,7 +172,7 @@ namespace sw
                     // 워커를 떠나면 비밀번호, 장치 비밀, 외부 주체를 보관하지 않는다. 별도로 지우기(wipe)는 하지 않으며 서버의 관례를 따른다.
                     _credential._password.clear();
                     _subject.clear();
-                    Memory::set( _arrDeviceSecret, 0, sizeof( _arrDeviceSecret ) );
+                    Memory::wipe( _arrDeviceSecret, sizeof( _arrDeviceSecret ) );
                 }
 
                 void complete() override { _pService->applyCompletion( std::move( _completion ), _outcome ); }
