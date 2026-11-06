@@ -9,6 +9,7 @@
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Text/FontService.h"
 #include "Engine/Text/Tests/FakeFontRasterizer.h"
+#include "Engine/Text/TextItemizer.h"
 
 namespace
 {
@@ -193,4 +194,26 @@ SW_TEST_CASE( FontServiceTest, LanguageChangeRebuildsChain )
     {
         SW_EXPECT_NOT_EQUAL( koreanFace, arabicChain._arrFace[index] );
     }
+}
+
+/** @brief [FontServiceTest] 형식 문자(방향 · 폭 없는 이음 · 이체 선택자)는 글꼴에 글리프가 없어도 빠졌다고 알리지 않는다. 결합 부호는 보이는 글자라 알린다 */
+SW_TEST_CASE( FontServiceTest, FormatControlsAreNotMissingGlyphs )
+{
+    SW_EXPECT_TRUE( sw::TextItemizer::isFormatControl( 0x202Eu ) );
+    SW_EXPECT_TRUE( sw::TextItemizer::isFormatControl( 0x200Du ) );
+    SW_EXPECT_TRUE( sw::TextItemizer::isFormatControl( 0xFE0Fu ) );
+    SW_EXPECT_TRUE( sw::TextItemizer::isFormatControl( 0xFEFFu ) );
+    SW_EXPECT_FALSE( sw::TextItemizer::isFormatControl( 0x0301u ) );
+    SW_EXPECT_TRUE( sw::TextItemizer::isZeroWidth( 0x0301u ) );
+    SW_EXPECT_FALSE( sw::TextItemizer::isZeroWidth( 0x0041u ) );
+
+    sw::test::FakeFontServiceFixture fixture;
+    FontServiceTestUtil::configureLatinHangul( *fixture._pRasterizer );
+    SW_REQUIRE_TRUE( fixture.initialize( FontServiceTestUtil::makeLatinHangulCatalog() ) );
+    sw::FontSpec spec{};
+    spec._family                  = FontServiceTestUtil::makeLatinHangulCatalog()._defaultFamily;
+    const sw::FontFaceChain chain = fixture._fontService->getFaceChain( spec );
+    uint32                  glyphIndex{ 0 };
+    (void)fixture._fontService->findFaceForCodepoint( chain, 0x202Eu, glyphIndex );
+    SW_EXPECT_EQUAL( 0u, fixture._fontService->getWarnedOnceCount() );
 }

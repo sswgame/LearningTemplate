@@ -14,6 +14,7 @@
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Text/SystemFontLocator.h"
+#include "Engine/Text/TextItemizer.h"
 
 // 카탈로그의 `_glyphField` 가 값의 정본이다. 이 변수는 카탈로그를 고치지 않고 MSDF 로 켜 SDF 와 견주는 측정 스위치다.
 SW_TEST_GLOBAL_VARIABLE( bool, gv_fontMsdfGlyphs, false, "글리프 아틀라스를 MSDF 로 만든다(카탈로그의 _glyphField 를 덮는다 — SDF 와 큰 글자 모서리를 견주는 측정용)" );
@@ -268,7 +269,7 @@ namespace sw
                 return chain._arrFace[index];
             }
         }
-        if ( markWarnedOnce( FontServiceInternal::makeCodepointWarningKey( codepoint ) ) )
+        if ( TextItemizer::isFormatControl( codepoint ) == false && markWarnedOnce( FontServiceInternal::makeCodepointWarningKey( codepoint ) ) )
             SW_LOG_WARNING_ID( "Text.GlyphMissing", "[Text] No font in the fallback chain has a glyph for codepoint %# - it draws as a box (install a system font that covers it)",
                                codepoint );
         return chain._arrFace[0];

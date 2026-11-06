@@ -207,6 +207,11 @@ namespace sw
         // "지원 안 함"이 정상인 곳(해당 없는 창)과 청했는데 안 되는 곳(오류)은 호출 쪽이 가른다 — 여기서는 대신하지 않고 false 로 알린다.
 
         /** @brief 창이 커서 모양을 스스로 바꾸는지(`setCursorShape` 가 되는지)입니다. */
+        /**
+         * @brief 이 창에 입력 초점을 요청합니다. 키 · 마우스를 전제하는 시나리오가 시작할 때 부릅니다(앞 단계의 다른 창 · 자식 프로세스 창이 초점을 가져갔을 수 있다).
+         * @details 창 관리자가 초점을 돌려주지 않는 곳(X11 의 창 관리자 없는 화면)만 뜻이 있어 기본은 아무 일도 하지 않습니다 — Windows 는 다른 창이 닫히면 OS 가 돌려주고, 쓰고 있는 사람의 전경을 뺏지 않습니다.
+         */
+        virtual void               requestInputFocus() {}
         [[nodiscard]] virtual bool supportsCursorShape() const { return false; }
         /** @brief 커서 모양을 바꿉니다. `supportsCursorShape` 가 아니면 아무것도 하지 않고 false 입니다. */
         [[nodiscard]] virtual bool setCursorShape( CursorShape shape )

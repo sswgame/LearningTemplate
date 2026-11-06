@@ -34,13 +34,18 @@ namespace sw
         return bLatin1Symbol || bGeneralPunctuation || bCjkSymbol || bFullwidthPunctuation || bArabicDigit || isZeroWidth( codepoint );
     }
 
-    bool TextItemizer::isZeroWidth( uint32 codepoint )
+    bool TextItemizer::isFormatControl( uint32 codepoint )
     {
         const bool bFormatControl     = 0x200Bu <= codepoint && codepoint <= 0x200Fu;
         const bool bSeparatorEmbed    = 0x2028u <= codepoint && codepoint <= 0x202Eu;
         const bool bVariationSelector = 0xFE00u <= codepoint && codepoint <= 0xFE0Fu;
-        const bool bCombiningMark     = 0x0300u <= codepoint && codepoint <= 0x036Fu;
-        return bFormatControl || bSeparatorEmbed || bVariationSelector || bCombiningMark || codepoint == 0xFEFFu;
+        return bFormatControl || bSeparatorEmbed || bVariationSelector || codepoint == 0xFEFFu;
+    }
+
+    bool TextItemizer::isZeroWidth( uint32 codepoint )
+    {
+        const bool bCombiningMark = 0x0300u <= codepoint && codepoint <= 0x036Fu;
+        return isFormatControl( codepoint ) || bCombiningMark;
     }
 
     void TextItemizer::itemize( FontService& fontService, const FontFaceChain& chain, string_view text, vector<ShapingRun>& outListRun )

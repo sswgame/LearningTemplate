@@ -30,7 +30,9 @@ namespace sw
         /** @brief 중립 또는 약한 문자(공백, ASCII 숫자, 구두점, 기호, 일반 구두점 블록, CJK 기호와 구두점)인지 확인합니다. */
         static bool isNeutral( uint32 codepoint );
         /** @brief 폭 없는 문자(ZWSP..RLM, 줄/문단 구분, 방향 제어 U+202A..U+202E, 변이 선택자, 결합 분음 U+0300..U+036F)인지 확인합니다. */
-        static bool isZeroWidth( uint32 codepoint );
+        /** @brief 형식 문자(방향 · 폭 없는 이음 · 이체 선택자)이면 true 입니다. 글꼴에 글리프가 없는 것이 정상이라 빠졌다고 알리지 않습니다(`FontService`). */
+        [[nodiscard]] static bool isFormatControl( uint32 codepoint );
+        static bool               isZeroWidth( uint32 codepoint );
 
         /**
          * @brief @p text 를 런으로 나눠 @p outListRun 을 채웁니다(앞을 비웁니다). 같은 면과 방향이 이어지면 한 런입니다.

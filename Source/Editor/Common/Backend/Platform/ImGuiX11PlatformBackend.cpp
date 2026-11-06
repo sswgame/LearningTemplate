@@ -339,6 +339,14 @@ namespace sw::editor
                 const bool bShouldDestroyWindow = pData->_bOwned && pData->_windowHandle != 0 && _pDisplay != nullptr;
                 if ( bShouldDestroyWindow )
                 {
+                    // Win32 의 소유 창처럼 닫히는 창의 초점을 주 창으로 돌려준다 — X 는 부모(루트)로 되돌려, 창 관리자가 없으면 주 창에 키가 다시 오지 않는다.
+                    Window focused{ 0 };
+                    int    revertTo{ 0 };
+                    XGetInputFocus( _pDisplay, &focused, &revertTo );
+                    XWindowAttributes mainAttributes{};
+                    const bool        bFocusLeavesMain = focused == pData->_windowHandle && _mainWindow != 0 && XGetWindowAttributes( _pDisplay, _mainWindow, &mainAttributes ) != 0 && mainAttributes.map_state == IsViewable;
+                    if ( bFocusLeavesMain )
+                        XSetInputFocus( _pDisplay, _mainWindow, RevertToParent, CurrentTime );
                     XDestroyWindow( _pDisplay, pData->_windowHandle );
                     XFlush( _pDisplay );
                 }

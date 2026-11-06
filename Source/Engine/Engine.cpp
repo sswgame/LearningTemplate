@@ -470,7 +470,7 @@ namespace sw
         }
     }
 
-    void Engine::updateFrameServices( float32 deltaTime )
+    void Engine::updateFrameServices()
     {
         // 글리프 캐시의 프레임 시계 — 래스터화 예산이 프레임마다 되살아나는 유일한 길이다(프로파일러 프레임 수는 꺼지면 늘 0 이다).
         if ( _pFontService != nullptr && _pFontService->isInitialized() )
@@ -495,7 +495,7 @@ namespace sw
             if ( _pEventDispatcher != nullptr )
                 _pEventDispatcher->processEvents();
             if ( _pAudioService != nullptr )
-                _pAudioService->update( deltaTime );
+                _pAudioService->update( engine::getSubsystem<GameTimeScale>().getUnscaledDeltaTime() ); // 장치는 게임이 멈춰도 돈다 — 장치 없는 렌더도 같아야 정지 · 에디터에서 오디오 상태가 움직인다
         }
     }
 
@@ -583,7 +583,7 @@ namespace sw
         SW_PROFILE_SCOPE( "GT.Frame" );
 
         // 프레임 순서가 곧 의미다: 서비스 → 씬 틱 → 디버그 그리기 → 관찰자 → 런타임 UI → 렌더 패킷.
-        updateFrameServices( deltaTime );
+        updateFrameServices();
         updateScenes( deltaTime, views, vpWidth, vpHeight, bTickScene );
 
         // 물리 · 내비 디버그 선 — 씬 틱이 이번 프레임의 바디 · 경로를 정한 **뒤**, 관찰자 · UI · 패킷 **앞**이다(이번 프레임에 넣은 선이 endFrame 에서 확정된다).

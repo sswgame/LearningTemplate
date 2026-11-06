@@ -45,6 +45,8 @@
 // AutomationStepTimeline
 namespace sw
 {
+    SW_TEST_GLOBAL_VARIABLE( float32, gv_scenarioWallScale, 1.0f, "시나리오 벽시계 시한의 배율 (소프트웨어 렌더러처럼 느린 기계는 키운다)" );
+
     AutomationStepTimeline::AutomationStepTimeline()
         : _listPendingScreenshot{}
         , _currentStepKind{}
@@ -402,6 +404,8 @@ namespace sw
             input.attachVirtualInput( &_inputScript, _scenario.getInputMode() );
             // 배타 시나리오는 무인 실행이다. 사람이 같은 PC 에서 마우스를 움직여도 에디터 UI 까지 결과가 바뀌지 않게 장치 이벤트를 창 메시지 단계에서 버린다.
             input.setOSDeviceInputBlocked( _scenario.getInputMode() == VirtualInputMode::Exclusive );
+            if ( MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>(); pWindowHost != nullptr && pWindowHost->getWindow() != nullptr )
+                pWindowHost->getWindow()->requestInputFocus();
             SW_LOG_INFO_ID( "Automation.StartedAfterFrame", "[Scenario] %# started after %# frame(s)", _scenario.getName().c_str(), _run._waitFrameCount );
             updateCrashContext( "started" );
             startLoadWindow();
@@ -579,7 +583,7 @@ namespace sw
                               : timeout._bSeconds     ? timeout._timeoutSeconds
                                                       : static_cast<float32>( timeout._timeoutFrames ) * _scenario.getFixedDelta();
         }
-        return limitSeconds;
+        return limitSeconds * gv_scenarioWallScale; // 기계가 느린 만큼(소프트웨어 렌더러) 데이터로 늘린다 — 시나리오마다 시한을 고치지 않는다
     }
 
     void AutomationRunner::finishIfWallClockExceeded()
