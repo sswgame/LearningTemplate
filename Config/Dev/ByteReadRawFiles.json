@@ -1,0 +1,22 @@
+{
+    "_comment": "LittleEndianUtil::read* 를 직접 쓰는 파일과 그 까닭(Scripts/lint/ByteReadShape.py). 새 파일 형식은 여기에 더하지 않고 ByteReader 로 읽는다.",
+    "_listFile": [
+        { "_path": "Source/Core/Serialization/ByteStream.h", "_reason": "ByteReader 자신이다" },
+        { "_path": "Source/Core/Network/Message/StreamMessageEndpoint.cpp", "_reason": "메시지 틀 머리 - 고정 길이를 먼저 확인한 네트워크 바이트" },
+        { "_path": "Source/Core/Network/Message/StreamFrame.cpp", "_reason": "메시지 틀 머리 - 고정 길이를 먼저 확인한 네트워크 바이트" },
+        { "_path": "Source/Core/Network/Connection/NetEndpoint.cpp", "_reason": "연결 머리 - 고정 길이를 먼저 확인한 네트워크 바이트" },
+        { "_path": "Source/GameFramework/Runtime/Online/Service/OnlineServiceHost.cpp", "_reason": "서비스 틀 머리 - 고정 길이를 먼저 확인한 네트워크 바이트" },
+        { "_path": "Source/GameFramework/Runtime/Online/Service/OnlineServiceClient.cpp", "_reason": "서비스 틀 머리 - 고정 길이를 먼저 확인한 네트워크 바이트" },
+        { "_path": "Source/GameFramework/Runtime/Online/Local/LocalSlotEnvelope.cpp", "_reason": "봉투 머리는 고정 크기이고 본문 길이는 전체 크기와 맞춘 뒤 쓴다 - 암호 라이브러리에 포인터로 넘긴다" },
+        { "_path": "Source/GameFramework/Runtime/Online/Bus/EphemeralServerBus.cpp", "_reason": "버스 머리 - 고정 길이를 먼저 확인한 네트워크 바이트" },
+        { "_path": "Source/GameFramework/Kits/Feature/Network/NetTurnRelay/TurnRelay.cpp", "_reason": "턴 중계 머리 - 고정 길이를 먼저 확인한 네트워크 바이트" },
+        { "_path": "Source/GameFramework/Kits/Feature/Network/NetClientServer/GimmickSnapshotUtil.cpp", "_reason": "스냅숏 머리 - 고정 길이를 먼저 확인한 네트워크 바이트" },
+        { "_path": "Source/GameFramework/Kits/Feature/Online/Account/Server/Service/LoginTicketAuthority.cpp", "_reason": "서명을 확인하는 표의 고정 자리 읽기" },
+        { "_path": "Source/Engine/Audio/AudioVorbisDecoder.cpp", "_reason": "바깥 형식(Ogg Vorbis)의 고정 자리 읽기" },
+        { "_path": "Source/Engine/Audio/AudioClipDecoder.cpp", "_reason": "바깥 형식(WAV)의 고정 자리 읽기" },
+        { "_path": "Source/Engine/Animation/Scene/AnimationRewind.cpp", "_reason": "같은 실행의 되감기 기록을 프레임마다 푸는 뜨거운 길 - 길이는 기록이 정한다" },
+        { "_path": "Source/Engine/Animation/Codec/Raw/RawAnimationCodec.cpp", "_reason": "프레임마다 표본을 푸는 뜨거운 길 - 범위는 sample 머리에서 ByteReader 규칙으로 맞췄다" },
+        { "_path": "Source/Engine/Serialization/Serializer/SerializerUtil.cpp", "_reason": "오프셋을 넘겨 다니는 바이너리 칸 읽기 - 읽을 때마다 남은 길이를 본다" },
+        { "_path": "Source/Editor/Common/Asset/Model/ModelImportGeometry.cpp", "_reason": "바깥 형식(glTF 버퍼)의 임포트 - 접근자 범위를 먼저 확인한다" }
+    ]
+}
