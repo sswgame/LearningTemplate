@@ -4,7 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 
-#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -193,5 +193,5 @@ namespace sw
 namespace sw
 {
     /** @brief `VoxelBlockCatalog` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_RESOURCE_DATA_KIND( VoxelBlocks, VoxelBlockCatalog::kDataKind, "game/", nullptr, "/data/blocks.xml", &AssetDataKind::loadCatalog<VoxelBlockCatalog> );
+    SW_ASSET_TYPE( VoxelBlocks, AssetTypeDef::makeDataFile( VoxelBlockCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/blocks.xml" }, AssetTypeLoader::of<VoxelBlockCatalog>() ) );
 } // namespace sw

@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 
 namespace sw
 {
@@ -13,10 +13,10 @@ namespace sw
     {
         outPath.clear();
         outError.clear();
-        const AssetDataKind* pKind = AssetDataKind::findByLabel( kindLabel );
+        const AssetTypeDef* pKind = AssetTypeRegistry::findType( kindLabel );
         if ( pKind == nullptr )
         {
-            outError = "data kind '" + string( kindLabel ) + "' is not registered (SW_RESOURCE_DATA_KIND)";
+            outError = "data kind '" + string( kindLabel ) + "' is not registered (SW_ASSET_TYPE)";
             return false;
         }
         const string pack = FileUtil::trimTrailingSlashes( packRoot );
@@ -25,21 +25,22 @@ namespace sw
             outError = "data kind '" + string( kindLabel ) + "' needs a pack root, but the game has none";
             return false;
         }
-        if ( pKind->_pPrefix != nullptr && StringUtil::startsWith( pack, string_view( pKind->_pPrefix ), true ) == false )
+        const AssetPathRule& rule = pKind->_pathRule;
+        if ( rule._prefix.empty() == false && StringUtil::startsWith( pack, rule._prefix, true ) == false )
         {
-            outError = "pack '" + pack + "' is outside the '" + pKind->_pPrefix + "' prefix of data kind '" + string( kindLabel ) + "'";
+            outError = "pack '" + pack + "' is outside the '" + string( rule._prefix ) + "' prefix of data kind '" + string( kindLabel ) + "'";
             return false;
         }
-        const bool bFileKind = pKind->_pSuffix != nullptr && pKind->_pSuffix[0] == '/';
+        const bool bFileKind = rule._suffix.empty() == false && rule._suffix.front() == '/';
         if ( bFileKind )
         {
-            outPath = pack + pKind->_pSuffix;
+            outPath = pack + string( rule._suffix );
             return true;
         }
-        const bool bFolderKind = pKind->_pContains != nullptr && pKind->_pContains[0] == '/';
+        const bool bFolderKind = rule._contains.empty() == false && rule._contains.front() == '/';
         if ( bFolderKind )
         {
-            outPath = pack + FileUtil::trimTrailingSlashes( pKind->_pContains );
+            outPath = pack + FileUtil::trimTrailingSlashes( rule._contains );
             return true;
         }
         outError = "data kind '" + string( kindLabel ) + "' has no in-pack path rule (a '/...' suffix or a '/.../' folder)";

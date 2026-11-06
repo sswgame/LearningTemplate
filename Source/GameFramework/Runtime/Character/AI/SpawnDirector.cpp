@@ -4,7 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -326,5 +326,5 @@ namespace sw
 namespace sw
 {
     /** @brief `SpawnTable` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_RESOURCE_DATA_KIND( SpawnTable, "spawntable", nullptr, nullptr, ".spawns.xml", &AssetDataKind::loadCatalog<SpawnTable> );
+    SW_ASSET_TYPE( SpawnTable, AssetTypeDef::makeDataFile( "spawntable", AssetPathRule{ {}, {}, ".spawns.xml" }, AssetTypeLoader::of<SpawnTable>() ) );
 } // namespace sw

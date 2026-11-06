@@ -2,10 +2,11 @@
 
 #include "Engine/Audio/AudioMusic.h"
 
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Audio/AudioTypes.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -150,5 +151,5 @@ namespace sw
     }
 
     /** @brief 오디오 음악 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( AudioMusic, "audiomusic", nullptr, nullptr, ".music.xml", &AssetDataKind::loadCatalog<AudioMusicDesc> );
+    SW_ASSET_TYPE( AudioMusic, AssetTypeDef::makeDataFile( "audiomusic", AssetPathRule{ {}, {}, ".music.xml" }, AssetTypeLoader::of<AudioMusicDesc>() ) );
 } // namespace sw

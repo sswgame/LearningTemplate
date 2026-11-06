@@ -7,9 +7,10 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -179,5 +180,5 @@ namespace sw
     }
 
     /** @brief 캐릭터 LOD 표 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( CharacterLOD, "characterlod", nullptr, nullptr, "/character/characterlod.xml", &AssetDataKind::loadCatalog<CharacterLODSettings> );
+    SW_ASSET_TYPE( CharacterLOD, AssetTypeDef::makeDataFile( "characterlod", AssetPathRule{ {}, {}, "/character/characterlod.xml" }, AssetTypeLoader::of<CharacterLODSettings>() ) );
 } // namespace sw

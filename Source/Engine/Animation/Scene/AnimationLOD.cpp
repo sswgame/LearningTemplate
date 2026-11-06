@@ -8,9 +8,10 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Config/ConfigManager.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 
 namespace sw
 {
@@ -139,5 +140,5 @@ namespace sw
     }
 
     /** @brief 애니메이션 LOD 표 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( AnimationLOD, "animationlod", nullptr, nullptr, "/animation/animationlod.xml", &AssetDataKind::loadCatalog<AnimationLODSettings> );
+    SW_ASSET_TYPE( AnimationLOD, AssetTypeDef::makeDataFile( "animationlod", AssetPathRule{ {}, {}, "/animation/animationlod.xml" }, AssetTypeLoader::of<AnimationLODSettings>() ) );
 } // namespace sw

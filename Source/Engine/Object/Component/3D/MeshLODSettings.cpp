@@ -4,10 +4,11 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw
@@ -50,5 +51,5 @@ namespace sw
     }
 
     /** @brief 메시 LOD 정책 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( MeshLOD, "meshlod", nullptr, nullptr, "/render/meshlod.xml", &AssetDataKind::loadCatalog<MeshLODSettings> );
+    SW_ASSET_TYPE( MeshLOD, AssetTypeDef::makeDataFile( "meshlod", AssetPathRule{ {}, {}, "/render/meshlod.xml" }, AssetTypeLoader::of<MeshLODSettings>() ) );
 } // namespace sw

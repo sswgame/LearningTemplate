@@ -23,16 +23,6 @@
 
 namespace sw
 {
-    /** @brief 파일이 바뀐 에셋을 쥔 쪽에 어떻게 보이는가입니다. */
-    enum class SharedAssetReloadMode : uint8
-    {
-        InPlace, ///< 쥔 객체를 제자리에서 바꾼다(`SharedAssetTable::reloadShared`). 모두가 다음 읽기부터 새 내용을 본다
-        Detach,  ///< 표에서 떼어 낸다(`SharedAssetTable::detachShared`). 쥔 쪽은 옛 객체를 끝까지 쥐고, 다시 `acquire` 하면 새 객체를 받는다
-    };
-} // namespace sw
-
-namespace sw
-{
     /**
      * @brief 에셋 종류 하나의 계측 칸입니다(`CacheStats`, 종류 이름으로 한 번 올린다). 센 값은 이 칸에 있고 `SharedAssetCache` 의 생성자가 같은 이름으로 칸을 이어 받는다(`CacheTracking::counted`).
      * @details 표는 캐시(에셋 매니저 소유)가 들어 엔진을 다시 세우면 새로 서지만, 칸은 프로세스 끝까지 살아 함수 정적 핸들이 그대로 유효하다.

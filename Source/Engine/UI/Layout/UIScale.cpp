@@ -5,7 +5,8 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 SW_TEST_GLOBAL_VARIABLE( float32, gv_uiDebugSafeZone, 0.0f, "UI 안전 영역 흉내 — 각 변을 화면 크기의 이 비율(0..0.1)만큼 안쪽으로 민다" );
@@ -113,5 +114,5 @@ namespace sw
     }
 
     /** @brief UI 배율 설정 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( UIScale, "uiscale", nullptr, nullptr, "uiscale.xml", &AssetDataKind::loadCatalog<UIScaleSettings> );
+    SW_ASSET_TYPE( UIScale, AssetTypeDef::makeDataFile( "uiscale", AssetPathRule{ {}, {}, "uiscale.xml" }, AssetTypeLoader::of<UIScaleSettings>() ) );
 } // namespace sw

@@ -12,13 +12,14 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/Scene/MeshVertexAnimationBaker.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/Cook/CookStore.h"
 #include "Engine/Config/GameConfig.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/CookCodeFingerprint.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -236,8 +237,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ASSET_TYPE( VertexAnimationCookList, VertexAnimationCookList::kAssetType );
 
     /** @brief VAT 쿠킹 목록 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( VertexAnimation, "vertexanimation", nullptr, nullptr, VertexAnimationCookList::kExtension.data(), &AssetDataKind::loadCatalog<VertexAnimationCookList> );
+    SW_ASSET_TYPE( VertexAnimationCookList, VertexAnimationCookList::kAssetType.withPathRule( AssetPathRule{ {}, {}, VertexAnimationCookList::kExtension } ).withLoader( AssetTypeLoader::of<VertexAnimationCookList>() ) );
 } // namespace sw

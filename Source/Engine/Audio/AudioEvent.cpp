@@ -5,10 +5,11 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
@@ -162,8 +163,7 @@ namespace sw
 
 namespace sw
 {
-    SW_ASSET_TYPE( AudioEventLibrary, AudioEventLibrary::kAssetType );
 
     /** @brief 오디오 이벤트 라이브러리 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( AudioEvents, "audioevents", nullptr, nullptr, ".audioevents.xml", &AssetDataKind::loadCatalog<AudioEventLibrary> );
+    SW_ASSET_TYPE( AudioEventLibrary, AudioEventLibrary::kAssetType.withPathRule( AssetPathRule{ {}, {}, ".audioevents.xml" } ).withLoader( AssetTypeLoader::of<AudioEventLibrary>() ) );
 } // namespace sw

@@ -110,7 +110,6 @@ namespace sw
     X( ProfilerBackendSubsystem, Services, false )       \
     X( CrashReportService, Services, false )             \
     X( AssetLoadProfiler, Services, false )              \
-    X( AssetDataKindRegistry, Services, false )          \
     X( TickBatchRegistry, Services, false )              \
     X( DevCommandRegistry, Services, false )             \
     X( InputMapExtensionRegistry, Services, false )      \

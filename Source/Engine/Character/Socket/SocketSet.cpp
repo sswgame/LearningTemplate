@@ -6,10 +6,11 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Config/EngineDefaultAssets.h"
+#include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -427,5 +428,5 @@ namespace sw
     }
 
     /** @brief 소켓 종류 표 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_RESOURCE_DATA_KIND( SocketKinds, "socketkinds", nullptr, nullptr, ".socketkinds.xml", &AssetDataKind::loadCatalog<SocketKindTable> );
+    SW_ASSET_TYPE( SocketKinds, AssetTypeDef::makeDataFile( "socketkinds", AssetPathRule{ {}, {}, ".socketkinds.xml" }, AssetTypeLoader::of<SocketKindTable>() ) );
 } // namespace sw

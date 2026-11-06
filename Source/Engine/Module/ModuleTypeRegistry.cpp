@@ -10,7 +10,6 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Foundation/EngineScope.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Module/ModuleObjectRegistrar.h"
@@ -115,14 +114,6 @@ namespace sw
                                  pRegistrar->_pName, pRegistrar->_pModuleName, moduleName );
                 bMatched = false;
             }
-            for ( const AssetDataKindRegistrar* pRegistrar = heads._pDataKind; pRegistrar != nullptr; pRegistrar = pRegistrar->_pNext )
-            {
-                if ( moduleName == string_view{ pRegistrar->_pModuleName } )
-                    continue;
-                SW_LOG_ERROR_ID( "ModuleTypeRegistry.ResourceDataKindBelongs", "Resource data kind %# belongs to module '%#' but was loaded with '%#' — load that module first (LiveReloadManager::loadSharedModule)",
-                                 pRegistrar->_pKind->_pLabel, pRegistrar->_pModuleName, moduleName );
-                bMatched = false;
-            }
             return bMatched;
         }
 
@@ -151,7 +142,6 @@ namespace sw
             heads._pType      = TypeRegistrar::getHead();
             heads._pEnum      = EnumRegistrar::getHead();
             heads._pVariable  = GlobalVariableRegistrar::getHead();
-            heads._pDataKind  = AssetDataKindRegistrar::getHead();
             heads._pObject    = ModuleObjectRegistrar::getHead();
             heads._pSubsystem = ModuleSubsystemRegistrar::getHead();
             return heads;
@@ -162,7 +152,6 @@ namespace sw
             TypeRegistrar::getHead()            = heads._pType;
             EnumRegistrar::getHead()            = heads._pEnum;
             GlobalVariableRegistrar::getHead()  = heads._pVariable;
-            AssetDataKindRegistrar::getHead()   = heads._pDataKind;
             ModuleObjectRegistrar::getHead()    = heads._pObject;
             ModuleSubsystemRegistrar::getHead() = heads._pSubsystem;
         }
@@ -175,9 +164,6 @@ namespace sw
             // 전역 변수는 새로 뗀 것만 올린다(아래 캐시에 넣지 않는다) — 각자 찍힌 모듈 이름으로. 모듈이 자기 변수를 읽기 전에 커맨드라인 보류값이 여기서 적용된다.
             if ( heads._pVariable != nullptr )
                 getSubsystem<GlobalVariableManager>().registerPendingVariables( heads._pVariable );
-            // 데이터 파일 종류도 새로 뗀 것만 올린다. 모듈을 내리기 전에 같은 이름으로 뺀다(`unregisterModuleTypes`).
-            if ( heads._pDataKind != nullptr )
-                (void)getSubsystem<AssetDataKindRegistry>().registerModuleKinds( heads._pDataKind );
             // 캐시와 인자를 합치는 **유일한 자리**다. 새로 받은 머리가 있으면 캐시를 갱신하고,
             // 없으면 캐시에 남아 있던 것을 쓴다(리로드로 같은 모듈이 다시 올 때의 경로다).
             auto&        cache           = getModuleHeadCache();
@@ -267,7 +253,6 @@ namespace sw
             getRegistrationHost().unmountModule( moduleName );
             getSubsystem<TypeRegistry>().unregisterTypesByModule( moduleName );
             getSubsystem<GlobalVariableManager>().unregisterVariablesByModule( moduleName );
-            (void)getSubsystem<AssetDataKindRegistry>().unregisterModuleKinds( moduleName );
         }
     } // namespace engine
 } // namespace sw

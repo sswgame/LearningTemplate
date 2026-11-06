@@ -2,22 +2,14 @@
 
 #include "Engine/UI/Layout/UIResolutionPresetTable.h"
 
-#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
 namespace sw
 {
-    namespace
-    {
-        [[nodiscard]] bool loadTable( const AssetID& id )
-        {
-            UIResolutionPresetTable table;
-            return table.loadFromAsset( id );
-        }
-    } // namespace
-
     /** @brief 해상도 견본 표의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 표를 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( UIResolutionPresets, "uiresolutions", "engine/", nullptr, "/settings/uiresolutions.xml", &loadTable );
+    SW_ASSET_TYPE( UIResolutionPresets, AssetTypeDef::makeDataFile( "uiresolutions", AssetPathRule{ "engine/", {}, "/settings/uiresolutions.xml" }, AssetTypeLoader::of<UIResolutionPresetTable>() ) );
 } // namespace sw
 
 namespace sw

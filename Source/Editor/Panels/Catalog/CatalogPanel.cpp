@@ -18,10 +18,10 @@
 #include "Editor/Common/Workspace/EditorService.h"
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 
@@ -177,14 +177,14 @@ namespace sw::editor
 
     void CatalogPanel::rebuildFileList( const vector<EditorAssetIndexEntry>& listEntry )
     {
-        vector<CatalogFileRow>       listRow;
-        vector<const AssetDataKind*> listKind;
+        vector<CatalogFileRow>      listRow;
+        vector<const AssetTypeDef*> listKind;
         for ( const EditorAssetIndexEntry& entry : listEntry )
         {
-            AssetDataKind::collectMatches( entry._path, listKind );
+            AssetTypeRegistry::collectPathMatches( entry._path, listKind );
             if ( listKind.size() != 1 )
                 continue; // 카탈로그가 아니거나(0) 종류가 겹치는(스키마 테스트가 잡는다) 파일은 이 창이 다루지 않는다
-            listRow.push_back( CatalogFileRow{ entry._path, listKind[0]->_pLabel } );
+            listRow.push_back( CatalogFileRow{ entry._path, string{ listKind[0]->_name } } );
         }
         _fileList.setRows( std::move( listRow ) );
     }
@@ -372,9 +372,9 @@ namespace sw::editor
             _session.setStatus( "Could not read the file" );
             return;
         }
-        vector<const AssetDataKind*> listKind;
-        AssetDataKind::collectMatches( assetID, listKind );
-        _session.open( assetID, listKind.size() == 1 ? string_view( listKind[0]->_pLabel ) : string_view(), text, &_inheritanceSource );
+        vector<const AssetTypeDef*> listKind;
+        AssetTypeRegistry::collectPathMatches( assetID, listKind );
+        _session.open( assetID, listKind.size() == 1 ? listKind[0]->_name : string_view(), text, &_inheritanceSource );
         _tableEditor.reset();
         syncDirty();
         SW_LOG_INFO_ID( "Catalog.Opened", "Catalog opened %#", assetID.c_str() );
@@ -433,8 +433,8 @@ namespace sw::editor
     void CatalogPanel::validateCurrentFile()
     {
         _session.clearValidation();
-        const string&        kindLabel = _session.getKindLabel();
-        const AssetDataKind* pKind     = kindLabel.empty() ? nullptr : AssetDataKind::findByLabel( kindLabel );
+        const string&       kindLabel = _session.getKindLabel();
+        const AssetTypeDef* pKind     = kindLabel.empty() ? nullptr : AssetTypeRegistry::findType( kindLabel );
         if ( pKind == nullptr )
         {
             _session.setStatus( "No registered kind - nothing to validate with" );
@@ -445,7 +445,7 @@ namespace sw::editor
         {
             CatalogWarningCollector collector;
             const ScopedLogContext  context{ collector.makeContext() };
-            bLoaded     = pKind->_pLoad( AssetID{ _session.getAssetID() } );
+            bLoaded     = AssetTypeRegistry::checkLoad( *pKind, AssetID{ _session.getAssetID() } );
             listWarning = collector.take();
         }
         _session.onValidated( bLoaded, std::move( listWarning ) );

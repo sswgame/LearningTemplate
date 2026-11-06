@@ -14,12 +14,13 @@
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/Hit/RagdollComponent.h"
 #include "Engine/Character/PoseModifier/PoseModifierComponent.h"
 #include "Engine/Character/Socket/SocketSet.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
@@ -160,10 +161,9 @@ namespace sw
             }
         };
 
-        [[nodiscard]] bool loadBenchSceneSettings( const AssetID& id )
+        [[nodiscard]] bool loadBenchSceneSettings( const AssetID& id, StressTestSceneSettings& outSettings )
         {
-            StressTestSceneSettings settings;
-            return ReflectedXMLFile::loadDesc( id, settings );
+            return ReflectedXMLFile::loadDesc( id, outSettings );
         }
     } // namespace
 
@@ -2077,5 +2077,5 @@ namespace sw
     }
 
     /** @brief 벤치 장면 설정(`StressTestSceneSettings`)의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). */
-    SW_RESOURCE_DATA_KIND( StressTestSceneSettings, "benchscene", "game/", nullptr, "/data/benchscene.xml", &loadBenchSceneSettings );
+    SW_ASSET_TYPE( StressTestSceneSettings, AssetTypeDef::makeDataFile( "benchscene", AssetPathRule{ "game/", {}, "/data/benchscene.xml" }, AssetTypeLoader::with<StressTestSceneSettings, &loadBenchSceneSettings>( MemoryTag::Game ) ) );
 } // namespace sw

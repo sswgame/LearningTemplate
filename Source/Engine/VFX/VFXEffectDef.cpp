@@ -4,7 +4,8 @@
 
 #include "Core/Log/Logger.h"
 
-#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
 namespace sw
@@ -18,12 +19,6 @@ namespace sw
             static constexpr float32 kLifeRatioMax = 1.0f;
 
             /** @brief 효과 파일을 읽는 로더 모양입니다(데이터 종류 표가 부릅니다). */
-            [[nodiscard]] static bool loadKind( const AssetID& id )
-            {
-                VFXEffectDef effect;
-                return effect.loadFromAsset( id );
-            }
-
             /** @brief 필수 커브입니다. 키가 하나도 없으면 오류를 남기고 false, 키 시각이 0..1 밖이어도 false 입니다. */
             [[nodiscard]] static bool isRequiredCurveValid( const FloatCurve& curve, string_view sourceLabel, string_view emitterName, const utf8* pCurveName )
             {
@@ -99,7 +94,7 @@ namespace sw
     } // namespace
 
     /** @brief 효과 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 읽어 본다). 접미사 글자는 에셋 종류와 같은 `kExtension` 하나다. */
-    SW_RESOURCE_DATA_KIND( VFXEffect, "vfx", nullptr, nullptr, VFXEffectDef::kExtension.data(), &VFXEffectDefInternal::loadKind );
+    SW_ASSET_TYPE( VFXEffectDef, VFXEffectDef::kAssetType.withPathRule( AssetPathRule{ {}, {}, VFXEffectDef::kExtension } ).withLoader( AssetTypeLoader::of<VFXEffectDef>() ) );
 } // namespace sw
 
 namespace sw
@@ -304,5 +299,4 @@ namespace sw
 
 namespace sw
 {
-    SW_ASSET_TYPE( VFXEffectDef, VFXEffectDef::kAssetType );
 } // namespace sw

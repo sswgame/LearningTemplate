@@ -321,7 +321,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        /** @brief 효과 파일의 접미사입니다. 데이터 종류 표(`SW_RESOURCE_DATA_KIND`)가 이 값으로 파일을 찾습니다. */
+        /** @brief 효과 파일의 접미사입니다. 데이터 종류 표(`SW_ASSET_TYPE`)가 이 값으로 파일을 찾습니다. */
         static constexpr string_view kExtension = ".vfx.xml";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
         static constexpr AssetSuffix kArrAssetSuffix[] = {

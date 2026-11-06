@@ -5,7 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
-#include "Engine/Asset/AssetDataKind.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -551,5 +551,5 @@ namespace sw
 namespace sw
 {
     /** @brief `AbilityCatalog` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_RESOURCE_DATA_KIND( Abilities, AbilityCatalog::kDataKind, "game/", nullptr, "/data/abilities.xml", &AssetDataKind::loadCatalog<AbilityCatalog> );
+    SW_ASSET_TYPE( Abilities, AssetTypeDef::makeDataFile( AbilityCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/abilities.xml" }, AssetTypeLoader::of<AbilityCatalog>() ) );
 } // namespace sw

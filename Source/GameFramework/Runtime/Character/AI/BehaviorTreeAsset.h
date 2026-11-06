@@ -92,7 +92,7 @@ namespace sw
     public:
         /**
          * @brief 데이터 종류 이름입니다(스키마 테스트 `ResourceDataSchemaTest` 의 표 줄 이름).
-         * @details `SW_RESOURCE_DATA_KIND` 에 올리지 않는다 - 레지스트리는 카탈로그 편집기(표)의 파일 목록이기도 한데 이 종류에는 전용 편집기(`BehaviorTreePanel`)가 있어 같은 파일을 두 편집기가 쥐게 된다.
+         * @details 경로 규칙(`AssetPathRule`)을 두지 않는다 - 경로 규칙은 카탈로그 편집기(표)의 파일 목록이기도 한데 이 종류에는 전용 편집기(`BehaviorTreePanel`)가 있어 같은 파일을 두 편집기가 쥐게 된다.
          */
         static constexpr const utf8* kDataKind = "behaviortree";
         /** @brief 파일 접미입니다. */

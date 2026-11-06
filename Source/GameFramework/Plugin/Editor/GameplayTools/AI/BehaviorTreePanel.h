@@ -5,7 +5,7 @@
  *          (`BehaviorTreeEditModel`)이 가진다. 문서는 `EditorDocumentPanel` 의 Data 종류 가운데 접미 `.bt.xml` 만 받는다(같은 Data 종류의 VFX 미리보기가 `.vfx.xml` 만 받는 것과 같다).
  *          **노드 위치는 파일에 없다** - 편집할 때마다 트리 모양대로 자동 배치한다(루트가 왼쪽, 자식이 오른쪽, 형제 순서가 위에서 아래 = 우선순위).
  *          플레이 중에는 선택한 오브젝트의 `AIControllerComponent` 가 쥔 실행기(`BehaviorTreeRunner`)의 활성 노드를 같은 깊이 우선 번호로 맞춰 "running" 으로 표시한다(언리얼 BT 디버거에서 깜빡이는 노드).
- *          이 종류는 데이터 종류 레지스트리(`SW_RESOURCE_DATA_KIND`)에 올리지 않아 카탈로그 편집기(표)의 파일 목록에 없다 - 같은 파일을 두 편집기가 쥐지 않게 한다(`BehaviorTreeAsset::kDataKind`).
+ *          이 종류는 경로 규칙(`AssetPathRule`)을 두지 않아 카탈로그 편집기(표)의 파일 목록에 없다 - 같은 파일을 두 편집기가 쥐지 않게 한다(`BehaviorTreeAsset::kDataKind`).
  */
 #pragma once
 #include "Core/Container/string.h"

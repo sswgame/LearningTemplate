@@ -10,7 +10,6 @@ namespace sw
 {
     struct EnumRegistrar;
     struct GlobalVariableRegistrar;
-    struct AssetDataKindRegistrar;
     class ModuleObjectRegistrar;
     class ModuleSubsystemRegistrar;
     struct TypeRegistrar;
@@ -27,7 +26,6 @@ namespace sw
             TypeRegistrar*            _pType{ nullptr };
             EnumRegistrar*            _pEnum{ nullptr };
             GlobalVariableRegistrar*  _pVariable{ nullptr };  ///< 타입과 달리 캐시해 두었다 다시 쓰지 않는다 — 같은 이름을 두 번 올리면 매니저가 경고하고 무시하므로, 새로 뗀 것만 올린다.
-            AssetDataKindRegistrar*   _pDataKind{ nullptr };  ///< 변수와 같다 — 새로 뗀 것만 올린다(모듈 이름으로 올리고 내리기 전에 뺀다).
             ModuleObjectRegistrar*    _pObject{ nullptr };    ///< 변수와 같다 — 새로 뗀 것만 붙이고(`attach`), 모듈을 내리기 전에 뗀다(`detach`).
             ModuleSubsystemRegistrar* _pSubsystem{ nullptr }; ///< 변수와 같다 — 새로 뗀 것만 모듈 이름의 자식 범위에 세우고(`ModuleRegistrationHost::mountModule`), 모듈을 내리기 전에 걷는다.
         };
@@ -38,19 +36,19 @@ namespace sw
         SW_API void setGlobalRegistrarHeads( const ModuleRegistrarHeads& heads );
 
         /**
-         * @brief 동적 모듈 하나의 이름 찍힌 등록자(전역 변수 · 데이터 파일 종류)가 모두 @p moduleName 의 것인지 봅니다.
+         * @brief 동적 모듈 하나의 이름 찍힌 등록자(전역 변수)가 모두 @p moduleName 의 것인지 봅니다.
          * @details 등록자는 정의한 대상의 이름(`SW_REGISTRAR_MODULE`)으로 오르고 그 이름으로 내린다. 올리는 쪽 이름과 다르면 다른 이미지(먼저 올려야 할 공용 모듈)의
          *          등록자가 섞인 것이다 — 오류를 남기고 false 입니다.
          */
         [[nodiscard]] SW_API bool verifyModuleRegistrars( string_view moduleName, const ModuleRegistrarHeads& heads );
 
         /**
-         * @brief DLL 로드 직후: 전역 헤드에 매달린 모듈의 리플렉션 타입 · 전역 변수 · 데이터 파일 종류를 떼어 등록합니다. 컴포넌트 생성 함수는 타입(`TypeInfo::_addComponent`)과 함께 오릅니다.
+         * @brief DLL 로드 직후: 전역 헤드에 매달린 모듈의 리플렉션 타입 · 전역 변수를 떼어 등록합니다. 컴포넌트 생성 함수는 타입(`TypeInfo::_addComponent`)과 함께 오릅니다.
          * @return 등록자 이름이 @p moduleName 과 다르면(`verifyModuleRegistrars`) 아무것도 올리지 않고 false 입니다 — 부르는 쪽은 모듈 로드를 멈춘다.
          */
         [[nodiscard]] SW_API bool registerModuleTypes( string_view moduleName );
 
-        /** @brief DLL 로드 직후: 지정된 헤드들로부터 모듈의 타입 · 전역 변수 · 데이터 파일 종류를 등록합니다(`ModuleRegistrarHeads` 참고). @p heads 는 `verifyModuleRegistrars` 를 지난 것이다. */
+        /** @brief DLL 로드 직후: 지정된 헤드들로부터 모듈의 타입 · 전역 변수를 등록합니다(`ModuleRegistrarHeads` 참고). @p heads 는 `verifyModuleRegistrars` 를 지난 것이다. */
         SW_API void registerModuleTypes( string_view moduleName, const ModuleRegistrarHeads& heads );
 
         /**

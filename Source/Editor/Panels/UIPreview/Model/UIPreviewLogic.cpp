@@ -11,7 +11,6 @@
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
-#include "Engine/Asset/AssetDataKind.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionTypes.h"
 #include "Engine/Reflection/TypeRegistry.h"

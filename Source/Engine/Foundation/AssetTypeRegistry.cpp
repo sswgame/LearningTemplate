@@ -5,6 +5,7 @@
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/String/StringBuilder.h"
 
@@ -78,6 +79,17 @@ namespace sw
 
 namespace sw
 {
+    bool AssetPathRule::matches( string_view assetID ) const
+    {
+        if ( isEmpty() )
+            return false;
+        if ( _prefix.empty() == false && StringUtil::startsWith( assetID, _prefix, true ) == false )
+            return false;
+        if ( _contains.empty() == false && StringUtil::contains( assetID, _contains, true ) == false )
+            return false;
+        return _suffix.empty() || StringUtil::endsWith( assetID, _suffix, true );
+    }
+
     void AssetTypeRegistry::registerType( const AssetTypeDef& def )
     {
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
@@ -136,6 +148,26 @@ namespace sw
         AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
         ScopedLock<mutex>                 lock{ table._mutex };
         return table._listType.findByName( name );
+    }
+
+    void AssetTypeRegistry::collectPathMatches( string_view assetID, vector<const AssetTypeDef*>& outListType )
+    {
+        outListType.clear();
+        AssetTypeRegistryInternal::Table& table = AssetTypeRegistryInternal::getTable();
+        ScopedLock<mutex>                 lock{ table._mutex };
+        for ( const AssetTypeDef* pType : table._listType.getItems() )
+        {
+            if ( pType->_pathRule.matches( assetID ) )
+                outListType.push_back( pType );
+        }
+    }
+
+    bool AssetTypeRegistry::checkLoad( const AssetTypeDef& def, const AssetID& assetID )
+    {
+        if ( def._loader._pCheckLoad == nullptr )
+            return false;
+        const ScopedMemoryTag memoryScope{ def._loader._memoryTag };
+        return def._loader._pCheckLoad( assetID ); // 잠금 밖이다 — 로더가 다른 종류를 찾는다
     }
 
     vector<const AssetTypeDef*> AssetTypeRegistry::collectTypes()

@@ -154,7 +154,7 @@ namespace sw
     class SW_KIT_API ParkLayout
     {
     public:
-        /** @brief 데이터 종류 이름입니다(`SW_RESOURCE_DATA_KIND` 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
+        /** @brief 데이터 종류 이름입니다(`SW_ASSET_TYPE` 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
         static constexpr const utf8* kDataKind = "parklayout";
 
         ParkLayout();

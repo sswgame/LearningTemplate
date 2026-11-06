@@ -11,7 +11,7 @@ namespace sw::editor
 {
     bool CatalogFileRow::isBefore( const CatalogFileRow& lhs, const CatalogFileRow& rhs )
     {
-        const int32 byKind = StringUtil::compare( lhs._kindLabel, rhs._kindLabel );
+        const int32 byKind = StringUtil::compare( lhs._kindLabel, rhs._kindLabel, true );
         return byKind != 0 ? byKind < 0 : StringUtil::compare( lhs._assetID, rhs._assetID ) < 0;
     }
 
