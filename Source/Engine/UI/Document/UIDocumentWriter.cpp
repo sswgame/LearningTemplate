@@ -102,6 +102,9 @@ namespace sw
                 {
                     destination.appendAttribute( attribute.getName(), attribute.getValue() );
                 }
+                const utf8* pText = source.getText(); // 글만 든 요소를 비었다고 보지 않으면서 글을 버리면 다시 읽을 때 값이 사라진다
+                if ( StringUtil::isNullOrEmpty( pText ) == false )
+                    destination.setValue( pText );
                 for ( XMLNode child = source.findChild(); child.isValid(); child = child.findNextSibling() )
                 {
                     const bool bEmpty = child.getFirstAttribute().isValid() == false && child.findChild().isValid() == false && StringUtil::isNullOrEmpty( child.getText() );
