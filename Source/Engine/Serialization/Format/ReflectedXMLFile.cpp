@@ -49,7 +49,8 @@ namespace sw
         const SoftReadResult      result = XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, text, &listOrphan );
         if ( result == SoftReadResult::NotParsed )
         {
-            SW_LOG_ERROR_ID( "Xml.WrongRoot", "XML load failed: %# (%#) - not a <%#> document", sourceName, pTypeInfo->_name.c_str(), pTypeInfo->_name.c_str() );
+            // 왜 못 읽었는지(`Xml.ParseError` · `Xml.WrongRoot`)는 안쪽이 이미 알렸다 — 어느 파일인지를 더한다. 빈 글은 이 줄만 남는다.
+            SW_LOG_ERROR_ID( "Xml.NotRead", "XML load failed: %# is not a readable <%#> document", sourceName, pTypeInfo->_name.c_str() );
             return false;
         }
         // 범위 밖 값(`Rejected`)은 읽기 공통 끝(`SerializerUtil::isWithinDeclaredRanges`)이 칸마다 이미 알렸다.

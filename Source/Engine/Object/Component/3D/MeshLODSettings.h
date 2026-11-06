@@ -25,7 +25,7 @@ namespace sw
         PROPERTY( Min = 1.0, Tooltip = "Skinned mesh bounds = bind-pose bounds x this - animation moves vertices outside the bind pose, culling must not clip them" )
         float32 _skinnedBoundsScale{ 0.0f };
 
-        /** @brief XML 을 읽습니다. 모르는 키 · 범위 밖 값은 오류이고 false 입니다(`ConfigManager::readConfigXMLElement`). */
+        /** @brief XML 을 읽습니다. 모르는 키 · 범위 밖 값은 오류이고 false 입니다(`ConfigManager::readConfigXMLDocument`). */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );

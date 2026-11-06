@@ -125,7 +125,7 @@ namespace sw
     {
         *this = LiveLinkFaceLayout{};
         const string label{ sourceLabel };
-        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() ) == false )
+        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) == false )
         {
             *this = LiveLinkFaceLayout{};
             return false;
@@ -175,7 +175,7 @@ namespace sw
         *this     = LiveLinkFaceMapping{};
         outLayout = LiveLinkFaceLayout{};
         const string label{ sourceLabel };
-        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() ) == false )
+        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) == false )
         {
             *this = LiveLinkFaceMapping{};
             return false;

@@ -255,7 +255,7 @@ namespace sw::editor
         const XMLNode element = document.getRoot().findChild( _elementName.c_str() );
         if ( element.isValid() == false )
             return ConfigReadResult::Missing;
-        return ConfigManager::readConfigXMLElement( pInstance, *_pType, element.toString(), _path.c_str() ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
+        return ConfigManager::readConfigXMLElement( pInstance, *_pType, element, _path.c_str() ) ? ConfigReadResult::Loaded : ConfigReadResult::Invalid;
     }
 
     ConfigReadResult ProjectSettingsDocument::revert()
@@ -439,7 +439,9 @@ namespace sw::editor
         const ReflectedInstance check = ReflectedInstance::create( *_pType );
         if ( check.isValid() == false )
             return false;
-        const bool bReadable = ConfigManager::readConfigXMLElement( check.get(), *_pType, elementText, _path.c_str() );
+        XMLDocument elementDocument;
+        const bool  bParsed   = elementDocument.parse( elementText, _path );
+        const bool  bReadable = bParsed && ConfigManager::readConfigXMLElement( check.get(), *_pType, elementDocument.getRoot( _elementName.c_str() ), _path.c_str() );
         if ( bReadable == false )
         {
             SW_LOG_WARNING_ID( "ProjectSettings.ProjectSettingsEditedWould", "Project settings: the edited <%#> would not load - not saved", _elementName.c_str() );

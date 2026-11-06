@@ -16,8 +16,8 @@ namespace sw
     {
         *this = MeshLODSettings{};
         const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고 모르는 속성 · 범위 밖 숫자는 오류다(`readConfigXMLElement` 가 알린다). 두 값 모두 필수다(0 은 읽지 못한 값).
-        const bool bRead = ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() );
+        // 키는 대소문자까지 맞아야 하고 모르는 속성 · 범위 밖 숫자는 오류다(`readConfigXMLDocument` 가 알린다). 두 값 모두 필수다(0 은 읽지 못한 값).
+        const bool bRead = ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() );
         if ( bRead && _refineHysteresis > 0.0f && _skinnedBoundsScale >= 1.0f )
             return true;
         SW_LOG_ERROR_ID( "MeshLODSettings.Invalid", "Mesh LOD settings '%#' need _refineHysteresis > 0 and _skinnedBoundsScale >= 1", sourceLabel );

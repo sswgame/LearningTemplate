@@ -397,6 +397,7 @@ SW_TEST_CASE( VFXEffectDefTest, MissingOrEmptyFilesFail )
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "Xml.FileNotFound" );
     SW_EXPECT_LOG( "Xml.ParseError" );
+    SW_EXPECT_LOG( "Xml.NotRead" );
     SW_EXPECT_LOG( "Xml.WrongRoot" );
     SW_EXPECT_LOG( "VFXEffectDef.VFXNoEmittersListEmitter" );
 
@@ -406,6 +407,10 @@ SW_TEST_CASE( VFXEffectDefTest, MissingOrEmptyFilesFail )
     const string brokenPath = test::makeScratchPath( "broken.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile( brokenPath, "<VFXEffectDef" ) );
     SW_EXPECT_FALSE( effect.loadFromDiskFile( brokenPath ) );
+
+    const string otherKindPath = test::makeScratchPath( "otherkind.vfx.xml" );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( otherKindPath, "<RenderPipelineDesc></RenderPipelineDesc>" ) );
+    SW_EXPECT_FALSE( effect.loadFromDiskFile( otherKindPath ) );
 
     const string noEmitterPath = test::makeScratchPath( "noemitter.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile( noEmitterPath, "<VFXEffectDef></VFXEffectDef>" ) );

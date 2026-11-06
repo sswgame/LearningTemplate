@@ -15,6 +15,7 @@ namespace sw
 
     /** @brief `XMLDocumentBackend::getDeserializationRoot` 와 `IXMLBackend::getCurrentNode` 가 반환하는 노드입니다. */
     class XMLNode;
+    class XMLDocument;
 
     /** @brief 자식 요소를 방문하는 콜백입니다. 불리는 동안 그 자식이 백엔드의 현재 노드가 됩니다. */
     using XMLChildVisitDelegate = Delegate<void( string_view tagName )>;
@@ -57,6 +58,7 @@ namespace sw
          * @note XML 을 **`string_view` 로** 받습니다. `const utf8*` 로 받으면 부르는 쪽이 `string_view::data()` 를 넘기며
          *       길이가 사라지고, 뷰가 더 큰 버퍼의 일부면 널 종단이 없어 파서가 끝을 넘어 읽습니다. `XMLDocument::parse` 도
          *       `string_view` 를 받아 `load_buffer(data, size)` 로 읽습니다.
+         *       루트 이름이 @p pRootTagName 이 아니면 다른 종류의 파일이다 — `Xml.WrongRoot` 를 남기고 false 입니다(첫 루트로 대신 읽지 않는다).
          */
         [[nodiscard]] virtual bool initializeXMLDeserialization( string_view xmlStr, const utf8* pRootTagName ) = 0;
         /** @brief XML 자식 요소에서 값을 읽습니다. */
@@ -141,6 +143,8 @@ namespace sw
 
         /** @brief XML 역직렬화를 시작합니다. */
         [[nodiscard]] bool initializeXMLDeserialization( string_view xmlStr, const utf8* pRootTagName ) override;
+        /** @brief 부르는 쪽이 이미 찾은 요소를 읽기 시작합니다(이름을 보지 않는다). @p element 의 문서가 읽는 동안 살아 있어야 합니다. 무효 노드면 false 입니다. */
+        [[nodiscard]] bool initializeFromElement( const XMLNode& element );
         /** @brief XML 자식 요소에서 값을 읽습니다. */
         [[nodiscard]] bool readValue( const utf8* pTagName, string& outValue ) override;
         /** @brief 현재 부모 요소의 XML 속성을 읽습니다. */
@@ -208,6 +212,8 @@ namespace sw
          */
         [[nodiscard]] static bool deserialize( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
                                                const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+        /** @brief 이름이 @p typeInfo 인 문서 루트를 찾습니다. 없으면 `Xml.WrongRoot` 를 남기고 무효 노드입니다(다른 종류의 파일을 조용히 읽지 않는다). */
+        [[nodiscard]] static XMLNode findDocumentRoot( const XMLDocument& document, const TypeInfo& typeInfo );
         /**
          * @brief `PROPERTY( Required )` 칸 가운데 @p element 에 적히지 않은 것을 경로(`_listBone[2]._parentIndex`)로 모읍니다.
          * @details 적는 자리는 속성이거나 자식 요소다. 구조체 칸은 이름이 칸 이름인 자식 요소, 구조체 목록은 칸 이름의 자식 요소 안에 원소가 차례로 들어 있다.
@@ -227,7 +233,7 @@ namespace sw
         // ------------------------------------------------------------------------------
         /**
          * @brief Soft 역직렬화입니다. 변환하지 못한 필드를 orphan 으로 모읍니다.
-         * @return 문서나 루트를 읽지 못하면 `NotParsed`, 읽지 못한 칸이나 범위 밖 값이 있으면 `Rejected`(루트의 orphan 과 범위는 끝까지 본다)입니다(`SoftReadResult`).
+         * @return 문서를 읽지 못하거나 루트 이름이 타입 이름이 아니면(`Xml.WrongRoot`) `NotParsed`, 읽지 못한 칸이나 범위 밖 값이 있으면 `Rejected`(루트의 orphan 과 범위는 끝까지 본다)입니다(`SoftReadResult`).
          *         orphan 목록이 있으면 읽지 못한 필드는 orphan 으로 넘어가고 **읽기 전 값**으로 남습니다(`PropertyReadRollback`, 컨테이너는 칸 원문 하나가 orphan 이다).
          *         되돌릴 수 없으면(읽다 만 소유 포인터 목록) 그 뒤를 읽지 않고 `Rejected` 입니다. 안쪽(구조체 칸, 컨테이너 원소인 구조체 · 컴포넌트)의
          *         금지된 필드도 그 칸을 넘기지 않고 `Rejected` 입니다(`FieldReadResult::ObjectRejected`).
@@ -235,6 +241,14 @@ namespace sw
         [[nodiscard]] static SoftReadResult deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,
                                                              vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
                                                              const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
+
+        /**
+         * @brief 부르는 쪽이 고른 요소 하나를 Soft 로 읽습니다. 요소의 이름은 보지 않습니다 — 한 파일 안의 요소 하나를 소유하는 타입(`PackEngineSettings` 의 `<Engine>`)의 길입니다.
+         * @return 무효 노드면 `NotParsed`, 그 밖은 `deserializeSoft` 와 같습니다.
+         */
+        [[nodiscard]] static SoftReadResult deserializeElementSoft( void* pInstance, const TypeInfo& typeInfo, const XMLNode& element,
+                                                                    vector<SchemaOrphanValue>* pOutListOrphan = nullptr, uint32* pOutVersion = nullptr,
+                                                                    const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring ) );
 
         /** @brief 루트 속성 `_schemaVersion` 을 붙여 XML 로 직렬화합니다. */
         static string serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,

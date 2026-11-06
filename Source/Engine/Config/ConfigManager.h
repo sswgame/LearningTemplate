@@ -27,6 +27,11 @@
 
 namespace sw
 {
+    class XMLNode;
+} // namespace sw
+
+namespace sw
+{
     /** @brief 설정 하나를 파일에서 다시 읽었다는 알림입니다. 인자는 설정 타입의 이름(`T::StaticType()->_fullyQualifiedName`)입니다. */
     using ConfigReloadedDelegate = MulticastDelegate<void( const hashed_string& configTypeName )>;
 
@@ -274,9 +279,14 @@ namespace sw
         /**
          * @brief 설정 XML 요소 하나(`<Engine _windowTitle="…"/>` — 속성과 자식이 칸)를 @p pInstance 에 엄격하게 읽습니다.
          * @details 모르는 속성 · 자식, 읽지 못한 값, 빠진 필수 칸(`PROPERTY( Required )`, 맨 위 칸만), 범위 밖 숫자를 **모두** 오류 로그에 남기고 false 를 반환한다.
-         *          요소의 이름은 보지 않는다 — 한 파일 안의 요소 하나를 소유하는 설정(`PackEngineSettings`)과 프로젝트 설정 창이 같은 규칙으로 읽는다.
+         *          요소의 이름은 보지 않는다 — 부르는 쪽이 이름으로 찾은 요소다. 한 파일 안의 요소 하나를 소유하는 설정(`PackEngineSettings`)과 프로젝트 설정 창이 같은 규칙으로 읽는다.
          */
-        [[nodiscard]] static bool readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, string_view elementXML, const utf8* pSourceLabel );
+        [[nodiscard]] static bool readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, const XMLNode& element, const utf8* pSourceLabel );
+        /**
+         * @brief 루트가 타입 이름인 설정 XML 문서를 `readConfigXMLElement` 규칙으로 읽습니다.
+         * @details 파일이 곧 그 타입 하나인 표(`Skeleton`, `MeshLODSettings` …)의 길이다. 루트 이름이 다르면 다른 종류의 파일이다 — `Xml.WrongRoot` 로 멈춘다.
+         */
+        [[nodiscard]] static bool readConfigXMLDocument( void* pInstance, const TypeInfo& typeInfo, string_view documentXML, const utf8* pSourceLabel );
 
         /** @brief `readConfigJSON` 의 타입 지정 버전입니다. */
         template <typename T>

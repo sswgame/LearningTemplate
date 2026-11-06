@@ -85,7 +85,7 @@ namespace sw
      *          예산 배분의 입력은 결정적 비용 모형(유닛 수 × `_unitCostMicroseconds`)이다 — 벽시계 측정값으로 배분하면 같은 입력이 기계 · 부하마다 다른 갱신 주기
      *          (그래서 다른 포즈 프레임)가 된다. 예산을 켜면 단가가 필수다(`validate`).
      *          `_vertexAnimationScreenSize` 보다 작은 군중 유닛은 정점 애니메이션(VAT)으로 그립니다(0 이면 쓰지 않음).
-     *          파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 기준이다.
+     *          파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLDocument` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 기준이다.
      */
     REFLECT()
     struct SW_API AnimationLODSettings

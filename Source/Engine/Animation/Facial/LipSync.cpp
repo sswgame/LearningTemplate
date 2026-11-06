@@ -213,8 +213,8 @@ namespace sw
     {
         *this = LipSyncSettings{};
         const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigXMLElement` 가 로그로 알린다).
-        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() ) && validate( sourceLabel ) )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류다(`readConfigXMLDocument` 가 로그로 알린다).
+        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) && validate( sourceLabel ) )
             return true;
         *this = LipSyncSettings{};
         return false;

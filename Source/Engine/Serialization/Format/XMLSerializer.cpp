@@ -21,6 +21,33 @@ namespace sw
     {
         struct XMLSerializerInternal
         {
+            /** @brief 타입 이름을 태그 이름으로 바꿉니다(`::` 는 태그에 쓸 수 없어 `__`). 쓰기와 읽기가 같은 이름을 보게 한다. */
+            static string sanitizeTag( const utf8* pName )
+            {
+                string s( pName != nullptr ? pName : "" );
+                for ( size_t pos = 0; ( pos = s.find( "::", pos ) ) != string::npos; pos += 2 )
+                {
+                    s.replace( pos, 2, "__" );
+                }
+                return s;
+            }
+
+            /**
+             * @brief 이름이 @p pRootTagName 인 루트를 찾습니다. 없으면 `Xml.WrongRoot` 를 남기고 무효 노드입니다.
+             * @details 이름이 다른 루트는 다른 종류의 파일이다. 첫 루트로 대신 읽으면 칸이 모두 선택인 타입에서 빈 값으로 조용히 통과한다
+             *          (언리얼 · Godot 도 에셋의 타입 표시가 다르면 읽지 않는다 — 기억에 따른 비교). 한 파일 안의 요소 하나를 읽는 쪽은 `deserializeElementSoft` 로 노드를 넘긴다.
+             */
+            [[nodiscard]] static XMLNode findNamedRoot( const XMLDocument& document, const utf8* pRootTagName )
+            {
+                const string  tag  = sanitizeTag( pRootTagName );
+                const XMLNode root = document.getRoot( tag.c_str() );
+                if ( root.isValid() )
+                    return root;
+                const XMLNode firstRoot = document.getRoot();
+                SW_LOG_ERROR_ID( "Xml.WrongRoot", "XML document has root <%#> where <%#> is required - it is another kind of file", firstRoot.isValid() ? firstRoot.getName() : "", tag.c_str() );
+                return XMLNode{};
+            }
+
             /**
              * @brief 프로퍼티 이름, 안 되면 별칭 순으로 `tryName( pName )` 을 불러 처음 성공하면 true 입니다.
              * @details 자식 요소 들어가기(컨테이너 · 중첩 구조체)와 속성 읽기가 이 "이름 → 별칭" 루프 하나를 씁니다.
@@ -617,24 +644,44 @@ namespace sw
                 }
             }
 
-            [[nodiscard]] static bool tryAppendUnknownXMLChildOrphans( string_view xmlStr, const TypeInfo&                             typeInfo,
-                                                                       const SerializeContext& /*context*/, vector<SchemaOrphanValue>* pOutListOrphan )
+            /**
+             * @brief 백엔드가 가리키는 요소(문서 루트 또는 부르는 쪽이 고른 요소)를 소프트로 읽습니다. 버전 속성 · 값 · orphan 자식을 노드 하나로 다 합니다.
+             * @details 씬 · 프리팹 로드가 엔티티마다 이 길로 간다 — 같은 글을 두 번 파싱하지 않는다(형제 `JSONSerializer::deserializeSoft` 도 문서 하나만 쓴다).
+             */
+            [[nodiscard]] static SoftReadResult readCurrentElementSoft( XMLDocumentBackend& backend, void* pInstance, const TypeInfo& typeInfo,
+                                                                        vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion, const SerializeContext& context )
             {
-                if ( xmlStr.empty() || pOutListOrphan == nullptr )
-                    return false;
-
-                XMLDocument doc;
-                if ( doc.parse( xmlStr ) == false )
-                    return false;
-
-                XMLNode root = doc.getRoot( typeInfo._name.c_str() );
+                const XMLNode root = backend.getDeserializationRoot();
                 if ( root.isValid() == false )
-                    root = doc.getRoot( nullptr );
-                if ( root.isValid() == false )
-                    return false;
+                    return SoftReadResult::NotParsed;
 
-                appendUnknownXMLChildOrphans( root, typeInfo, pOutListOrphan );
-                return true;
+                if ( pOutVersion != nullptr )
+                {
+                    *pOutVersion     = 0;
+                    const utf8* pVer = root.findAttribute( kSchemaVersionKey );
+                    if ( pVer != nullptr )
+                    {
+                        uint64 ver{ 0 };
+                        // 읽지 못한 판을 0 으로 보면 옛 판 이주가 엉뚱한 문서에 돈다 — 거절한다.
+                        if ( StringUtil::parseUint64( pVer, ver, 10 ) == false || ver > MathUtil::kMaxUInt32 )
+                        {
+                            SW_LOG_ERROR_ID( "Serialization.SchemaVersionUnreadable", "_schemaVersion '%#' of %# is not a 32-bit unsigned number - the document is not read", pVer,
+                                             typeInfo._name.c_str() );
+                            return SoftReadResult::Rejected;
+                        }
+                        *pOutVersion = static_cast<uint32>( ver );
+                    }
+                }
+
+                // 칸 하나를 읽지 못해도 멈추지 않는다 — 루트의 모르는 자식과 범위 밖 값까지 모아야 부르는 쪽이 한 번에 다 알린다(C-60).
+                const bool bFieldsRead = readXMLIntoInstance( MutableObjectAddress{ pInstance }, typeInfo, backend, context, pOutListOrphan ) == FieldReadResult::Read;
+
+                if ( pOutListOrphan != nullptr )
+                    appendUnknownXMLChildOrphans( root, typeInfo, pOutListOrphan );
+
+                // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
+                const bool bWithinRange = SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
+                return bFieldsRead && bWithinRange ? SoftReadResult::Read : SoftReadResult::Rejected;
             }
         };
     } // namespace
@@ -647,16 +694,6 @@ namespace sw
         XMLDocument     _doc;
         XMLNode         _currentParent;
         vector<XMLNode> _listNodeStack;
-
-        static string sanitizeTag( const utf8* pName )
-        {
-            string s( pName != nullptr ? pName : "" );
-            for ( size_t pos = 0; ( pos = s.find( "::", pos ) ) != string::npos; pos += 2 )
-            {
-                s.replace( pos, 2, "__" );
-            }
-            return s;
-        }
     };
 
     XMLDocumentBackend::XMLDocumentBackend()
@@ -669,7 +706,7 @@ namespace sw
     void XMLDocumentBackend::initializeXMLSerialization( const utf8* pRootTagName )
     {
         _impl->_doc.clear();
-        string  tag           = Impl::sanitizeTag( pRootTagName );
+        string  tag           = XMLSerializerInternal::sanitizeTag( pRootTagName );
         XMLNode root          = _impl->_doc.appendRoot( tag.c_str() );
         _impl->_currentParent = root;
         _impl->_listNodeStack.push_back( root );
@@ -680,7 +717,7 @@ namespace sw
         if ( _impl->_currentParent.isValid() == false )
             return;
 
-        string  sTag = Impl::sanitizeTag( pTagName );
+        string  sTag = XMLSerializerInternal::sanitizeTag( pTagName );
         XMLNode node = _impl->_currentParent.appendChild( sTag.c_str() );
         if ( StringUtil::isNullOrEmpty( pValueString ) == false )
             node.setValue( pValueString );
@@ -691,7 +728,7 @@ namespace sw
         if ( _impl->_currentParent.isValid() == false )
             return;
 
-        string sName = Impl::sanitizeTag( pAttrName );
+        string sName = XMLSerializerInternal::sanitizeTag( pAttrName );
         _impl->_currentParent.appendAttribute( sName.c_str(), pValueString != nullptr ? pValueString : "" );
     }
 
@@ -700,7 +737,7 @@ namespace sw
         if ( _impl->_currentParent.isValid() == false )
             return;
 
-        string  sTag = Impl::sanitizeTag( pTagName );
+        string  sTag = XMLSerializerInternal::sanitizeTag( pTagName );
         XMLNode node = _impl->_currentParent.appendChild( sTag.c_str() );
         _impl->_listNodeStack.push_back( node );
         _impl->_currentParent = node;
@@ -748,17 +785,16 @@ namespace sw
         if ( _impl->_doc.parse( xmlStr ) == false )
             return false;
 
-        string  sTag = Impl::sanitizeTag( pRootTagName );
-        XMLNode root = _impl->_doc.getRoot( sTag.c_str() );
-        if ( root.isValid() == false )
-            root = _impl->_doc.getRoot( nullptr );
+        return initializeFromElement( XMLSerializerInternal::findNamedRoot( _impl->_doc, pRootTagName ) );
+    }
 
-        if ( root.isValid() == false )
-            return false;
-
-        _impl->_currentParent = root;
+    bool XMLDocumentBackend::initializeFromElement( const XMLNode& element )
+    {
         _impl->_listNodeStack.clear();
-        _impl->_listNodeStack.push_back( root );
+        _impl->_currentParent = element;
+        if ( element.isValid() == false )
+            return false;
+        _impl->_listNodeStack.push_back( element );
         return true;
     }
 
@@ -767,7 +803,7 @@ namespace sw
         if ( _impl->_currentParent.isValid() == false )
             return false;
 
-        string  sTag = Impl::sanitizeTag( pTagName );
+        string  sTag = XMLSerializerInternal::sanitizeTag( pTagName );
         XMLNode node = _impl->_currentParent.findChild( sTag.c_str() );
         if ( node.isValid() == false )
             return false;
@@ -781,7 +817,7 @@ namespace sw
         if ( _impl->_currentParent.isValid() == false )
             return false;
 
-        string      sName = Impl::sanitizeTag( pAttrName );
+        string      sName = XMLSerializerInternal::sanitizeTag( pAttrName );
         const utf8* pVal  = _impl->_currentParent.findAttribute( sName.c_str() );
         if ( pVal == nullptr )
             return false;
@@ -795,7 +831,7 @@ namespace sw
         if ( _impl->_currentParent.isValid() == false )
             return false;
 
-        string  sTag  = Impl::sanitizeTag( pTagName );
+        string  sTag  = XMLSerializerInternal::sanitizeTag( pTagName );
         XMLNode child = _impl->_currentParent.findChild( sTag.c_str() );
         if ( child.isValid() == false )
             return false;
@@ -901,11 +937,15 @@ namespace sw
         if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return false;
 
+        // 칸을 읽기 전에 쥔다. 노드를 내줄 수 없는 백엔드는 무효 노드라 모르는 자식을 보지 않는다(`IXMLBackend::getCurrentNode`).
+        const XMLNode root = backend.getCurrentNode();
         if ( XMLSerializerInternal::readXMLIntoInstance( MutableObjectAddress{ pInstance }, typeInfo, backend, context, nullptr ) != FieldReadResult::Read )
             return false;
 
         vector<SchemaOrphanValue> listOrphan;
-        if ( XMLSerializerInternal::tryAppendUnknownXMLChildOrphans( xmlStr, typeInfo, context, &listOrphan ) && listOrphan.empty() == false )
+        if ( root.isValid() )
+            XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, &listOrphan );
+        if ( listOrphan.empty() == false )
             return false;
         // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
         return SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
@@ -921,20 +961,28 @@ namespace sw
     {
         if ( xmlStr.empty() )
             return false;
-        vector<SchemaOrphanValue> listOrphan;
-        const bool                bRead = deserializeSoft( pInstance, typeInfo, xmlStr, &listOrphan, nullptr, context ) == SoftReadResult::Read && listOrphan.empty();
-        // 필수 칸은 초기값으로 대신하지 않는다. 문서를 한 번 더 읽는다 — 엄격한 읽기는 표 · 설정 크기이고, 씬 · 프리팹(엔티티마다)은 soft 길이다.
         XMLDocument document;
         if ( document.parse( xmlStr ) == false )
             return false;
+        const XMLNode root = findDocumentRoot( document, typeInfo );
+        if ( root.isValid() == false )
+            return false;
+        vector<SchemaOrphanValue> listOrphan;
+        const bool                bRead = deserializeElementSoft( pInstance, typeInfo, root, &listOrphan, nullptr, context ) == SoftReadResult::Read && listOrphan.empty();
+        // 필수 칸은 초기값으로 대신하지 않는다.
         vector<string> listMissing;
-        collectMissingRequired( document.getRoot(), typeInfo, listMissing );
+        collectMissingRequired( root, typeInfo, listMissing );
         for ( const string& missingPath : listMissing )
         {
             SW_LOG_ERROR_ID( "Serialization.RequiredMissing", "<%#> has no required '%#' (PROPERTY( Required ) - the initial value is not a default)", typeInfo._name.c_str(),
                              missingPath.c_str() );
         }
         return bRead && listMissing.empty();
+    }
+
+    XMLNode XMLSerializer::findDocumentRoot( const XMLDocument& document, const TypeInfo& typeInfo )
+    {
+        return XMLSerializerInternal::findNamedRoot( document, typeInfo._name.c_str() );
     }
 
     void XMLSerializer::collectMissingRequired( const XMLNode& element, const TypeInfo& typeInfo, vector<string>& outListPath, const string& prefix )
@@ -1000,43 +1048,20 @@ namespace sw
         if ( xmlStr.empty() )
             return SoftReadResult::NotParsed;
 
-        // **문서 하나로 셋을 다 한다.** 버전 속성 · 값 읽기 · orphan 자식 훑기 — 같은 문자열을 두 번 파싱하지 않는다.
-        // 씬 · 프리팹 로드가 엔티티마다 이 경로로 간다(형제 `JSONSerializer::deserializeSoft` 도 문서 하나만 쓴다).
         XMLDocumentBackend backend;
         if ( backend.initializeXMLDeserialization( xmlStr, typeInfo._name.c_str() ) == false )
             return SoftReadResult::NotParsed;
+        return XMLSerializerInternal::readCurrentElementSoft( backend, pInstance, typeInfo, pOutListOrphan, pOutVersion, context );
+    }
 
-        const XMLNode root = backend.getDeserializationRoot();
-        if ( root.isValid() == false )
+    SoftReadResult XMLSerializer::deserializeElementSoft( void* pInstance, const TypeInfo& typeInfo, const XMLNode& element,
+                                                          vector<SchemaOrphanValue>* pOutListOrphan, uint32* pOutVersion,
+                                                          const SerializeContext& context )
+    {
+        XMLDocumentBackend backend;
+        if ( backend.initializeFromElement( element ) == false )
             return SoftReadResult::NotParsed;
-
-        if ( pOutVersion != nullptr )
-        {
-            *pOutVersion     = 0;
-            const utf8* pVer = root.findAttribute( kSchemaVersionKey );
-            if ( pVer != nullptr )
-            {
-                uint64 ver{ 0 };
-                // 읽지 못한 판을 0 으로 보면 옛 판 이주가 엉뚱한 문서에 돈다 — 거절한다.
-                if ( StringUtil::parseUint64( pVer, ver, 10 ) == false || ver > MathUtil::kMaxUInt32 )
-                {
-                    SW_LOG_ERROR_ID( "Serialization.SchemaVersionUnreadable", "_schemaVersion '%#' of %# is not a 32-bit unsigned number - the document is not read", pVer,
-                                     typeInfo._name.c_str() );
-                    return SoftReadResult::Rejected;
-                }
-                *pOutVersion = static_cast<uint32>( ver );
-            }
-        }
-
-        // 칸 하나를 읽지 못해도 멈추지 않는다 — 루트의 모르는 자식과 범위 밖 값까지 모아야 부르는 쪽이 한 번에 다 알린다(C-60).
-        const bool bFieldsRead = XMLSerializerInternal::readXMLIntoInstance( MutableObjectAddress{ pInstance }, typeInfo, backend, context, pOutListOrphan ) == FieldReadResult::Read;
-
-        if ( pOutListOrphan != nullptr )
-            XMLSerializerInternal::appendUnknownXMLChildOrphans( root, typeInfo, pOutListOrphan );
-
-        // 선언된 범위는 읽기 공통 끝에서 본다(바이너리 · JSON 과 같다).
-        const bool bWithinRange = SerializerUtil::isWithinDeclaredRanges( typeInfo, ObjectAddress{ pInstance } );
-        return bFieldsRead && bWithinRange ? SoftReadResult::Read : SoftReadResult::Rejected;
+        return XMLSerializerInternal::readCurrentElementSoft( backend, pInstance, typeInfo, pOutListOrphan, pOutVersion, context );
     }
 
     string XMLSerializer::serializeVersioned( uint32 version, const void* pInstance, const TypeInfo& typeInfo,

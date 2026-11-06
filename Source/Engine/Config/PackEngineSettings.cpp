@@ -43,7 +43,7 @@ namespace sw
         }
         // 먼저 비운다 — 다른 팩을 읽은 값이 이 팩에 없는 칸으로 남지 않게.
         *this = PackEngineSettings{};
-        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), element.toString(), label.c_str() ) == false )
+        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), element, label.c_str() ) == false )
             return false;
 
         // 경로 칸이 가리키는 파일이 있어야 한다. 이 호스트가 읽지 않는 에셋 종류(전용 서버의 UI 문서)는 팩에 없으므로 보지 않는다.

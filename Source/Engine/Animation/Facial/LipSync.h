@@ -59,7 +59,7 @@ namespace sw
     /**
      * @struct LipSyncSettings
      * @brief 분석 표(데이터, `engine/animation/lipsync.xml`)입니다. 첫 비즘은 무음(sil)으로 씁니다.
-     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLElement` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 기준이다.
+     * @details 파일은 리플렉션 구조체로 읽는다(`ConfigManager::readConfigXMLDocument` — 모르는 속성 · 자식 · 읽지 못한 값 · 범위 밖 숫자는 오류). 칸 표는 PROPERTY 가 기준이다.
      *          대역은 (낮은 Hz, 높은 Hz) 쌍이고, 비즘은 둘 이상이며 `_fallbackViseme` 은 그 가운데 하나여야 한다(`validate`).
      */
     REFLECT()

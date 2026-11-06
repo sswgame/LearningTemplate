@@ -65,8 +65,8 @@ namespace sw
     {
         clear();
         const string label{ sourceLabel };
-        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 빠진 칸 · 읽지 못한 값은 오류다(`readConfigXMLElement` 가 로그로 알린다).
-        if ( ConfigManager::readConfigXMLElement( this, *StaticType(), xml, label.c_str() ) && rebuildFromLoaded( sourceLabel ) )
+        // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 빠진 칸 · 읽지 못한 값은 오류다(`readConfigXMLDocument` 가 로그로 알린다).
+        if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) && rebuildFromLoaded( sourceLabel ) )
             return true;
         clear();
         return false;

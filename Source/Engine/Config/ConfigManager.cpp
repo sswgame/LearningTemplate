@@ -109,18 +109,24 @@ namespace sw
         return bWithinRange && listOrphan.empty() && listMissing.empty();
     }
 
-    bool ConfigManager::readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, string_view elementXML, const utf8* pSourceLabel )
+    bool ConfigManager::readConfigXMLDocument( void* pInstance, const TypeInfo& typeInfo, string_view documentXML, const utf8* pSourceLabel )
     {
         XMLDocument document;
-        if ( document.parse( elementXML, pSourceLabel ) == false || document.getRoot().isValid() == false )
+        if ( document.parse( documentXML, pSourceLabel ) == false || document.getRoot().isValid() == false )
         {
             SW_LOG_ERROR_ID( "Config.NotXMLElement", "Config %#: not an XML element for %#", pSourceLabel, typeInfo._fullyQualifiedName.c_str() );
             return false;
         }
+        const XMLNode root = XMLSerializer::findDocumentRoot( document, typeInfo );
+        return root.isValid() && readConfigXMLElement( pInstance, typeInfo, root, pSourceLabel );
+    }
+
+    bool ConfigManager::readConfigXMLElement( void* pInstance, const TypeInfo& typeInfo, const XMLNode& element, const utf8* pSourceLabel )
+    {
         // 키는 대소문자까지 맞아야 한다(`readConfigJSON` 과 같다). 범위 밖 값은 칸마다 읽기 공통 끝이 이미 알렸다.
         SerializeContext          context = SerializeContext::deriveFromDefault( SerializePurpose::Authoring );
         vector<SchemaOrphanValue> listOrphan;
-        const bool                bWithinRange = XMLSerializer::deserializeSoft( pInstance, typeInfo, elementXML, &listOrphan, nullptr, context ) == SoftReadResult::Read;
+        const bool                bWithinRange = XMLSerializer::deserializeElementSoft( pInstance, typeInfo, element, &listOrphan, nullptr, context ) == SoftReadResult::Read;
         for ( const SchemaOrphanValue& orphan : listOrphan )
         {
             const utf8* const pName = orphan._writtenName.empty() ? orphan._name.c_str() : orphan._writtenName.c_str();
@@ -128,7 +134,7 @@ namespace sw
         }
         // 필수 칸은 속성이나 자식으로 적혀 있어야 한다(구조체 칸 · 목록 원소 안까지) — 초기값은 형식이지 기본값이 아니다.
         vector<string> listMissing;
-        XMLSerializer::collectMissingRequired( document.getRoot(), typeInfo, listMissing );
+        XMLSerializer::collectMissingRequired( element, typeInfo, listMissing );
         for ( const string& missingPath : listMissing )
         {
             SW_LOG_ERROR_ID( "Config.KeyMissing", "Config %#: required '%#' of %# is missing", pSourceLabel, missingPath.c_str(), typeInfo._fullyQualifiedName.c_str() );
