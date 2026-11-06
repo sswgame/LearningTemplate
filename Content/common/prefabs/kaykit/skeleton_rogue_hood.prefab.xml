@@ -1,20 +1,7 @@
-<Prefab formatVersion="0" name="SkeletonRogueHood">
-	<GameObject _schemaVersion="0" _name="SkeletonRogueHood" _bActive="true">
-		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
-			               _bActive="true"
-			               _localPosition="0,0,0"
-			               _localRotation="0,0,0"
-			               _localScale="1,1,1"
-			               _attachOwner="None"
-			               _attachOwnerID="0"
-			               _attachComponent="None"
-			               _meshID="common/models/kaykit/skeleton_rogue/parts/skeleton_rogue_hood.mesh"
-			               _materialPath="common/materials/kaykit_skeleton.material"
-			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
-			               _gpuSpinSeed="0"
-			               _bVisible="true" />
-		</_listComponent>
-	</GameObject>
+<Prefab formatVersion="0" _base="common/prefabs/kaykit/skeleton_rogue_cape.prefab.xml" name="SkeletonRogueHood">
+	<PrefabOverrides>
+		<Override key="MeshComponent#0">
+			<MeshComponent _meshID="common/models/kaykit/skeleton_rogue/parts/skeleton_rogue_hood.mesh" />
+		</Override>
+	</PrefabOverrides>
 </Prefab>

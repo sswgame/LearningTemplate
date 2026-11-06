@@ -1,20 +1,7 @@
-<Prefab formatVersion="0" name="CoasterSupport">
-	<GameObject _schemaVersion="0" _name="CoasterSupport" _bActive="true">
-		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
-			               _bActive="true"
-			               _localPosition="0,0,0"
-			               _localRotation="0,0,0"
-			               _localScale="2,2,2"
-			               _attachOwner="None"
-			               _attachOwnerID="0"
-			               _attachComponent="None"
-			               _meshID="game/themepark/models/support_small.mesh"
-			               _materialPath="game/themepark/materials/palette.material"
-			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
-			               _gpuSpinSeed="0"
-			               _bVisible="true" />
-		</_listComponent>
-	</GameObject>
+<Prefab formatVersion="0" _base="game/themepark/prefabs/coasterrail.prefab.xml" name="CoasterSupport">
+	<PrefabOverrides>
+		<Override key="MeshComponent#0">
+			<MeshComponent _localScale="2,2,2" _meshID="game/themepark/models/support_small.mesh" />
+		</Override>
+	</PrefabOverrides>
 </Prefab>

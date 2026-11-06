@@ -1,126 +1,28 @@
-<Prefab formatVersion="0" name="Trilobite">
-	<GameObject _schemaVersion="0" _name="Trilobite" _bActive="true">
-		<_listComponent>
-			<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
-			                       _bActive="true"
-			                       _localPosition="0,0,0"
-			                       _localRotation="0,0,0"
-			                       _localScale="1,1,1"
-			                       _attachOwner="None"
-			                       _attachOwnerID="0"
-			                       _attachComponent="None"
-			                       _meshID=""
-			                       _materialPath="None"
-			                       _boundsRadius="2"
-			                       _blendMode="Opaque"
-			                       _gpuSpinSeed="0"
-			                       _bVisible="true"
-			                       _skeletonPath=""
-			                       _updateRateDivisor="1"
-			                       _bFollowParentPose="false"
-			                       _bAnimateWhenOffscreen="false"
-			                       _bShareCrowdPose="true" />
-			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
-			                           _bActive="true"
-			                           _animationGraphPath="common/data/anim/trilobite.animgraph.xml"
-			                           _clipFolder="common/models/quaternius/scifi/enemy_trilobite/clips"
-			                           _initialState="Look"
-			                           _currentState=""
-			                           _stateTime="0"
-			                           _playRate="1"
-			                           _blendSeconds="0.2"
-			                           _syncGroup=""
-			                           _syncWeight="1"
-			                           _bExtractRootMotion="false"
-			                           _bPlayOnBegin="true" />
-			<AnimationNotifyComponent _componentName="AnimationNotifyComponent"
-			                          _bActive="true"
-			                          _notifyTablePath="common/characters/trilobite/trilobite.notifies.xml" />
-			<RagdollComponent _componentName="RagdollComponent"
-			                  _bActive="true"
-			                  _physicsAssetPath="common/characters/trilobite/trilobite.physics.xml"
-			                  _bRagdollOnFatalHit="false"
-			                  _bAutoGetUp="false" />
-			<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent"
-			                              _bActive="true"
-			                              _presetID="Trilobite"
-			                              _seed="0" />
-			<WidgetComponent _componentName="WidgetComponent"
-			                 _bActive="true"
-			                 _documentPath=""
-			                 _space="Screen"
-			                 _drawSize="72,8"
-			                 _pivot="0.5,1"
-			                 _worldSize="1,0.5"
-			                 _screenOffset="0,0"
-			                 _worldOffset="0,2.97,0"
-			                 _maxDistance="0"
-			                 _referenceDistance="10"
-			                 _bClampToScreenEdge="false"
-			                 _bScaleWithDistance="false" />
-			<HealthBarComponent _componentName="HealthBarComponent"
-			                    _bActive="true"
-			                    _hpRatio="1"
-			                    _remainRatio="1"
-			                    _targetRatio="1"
-			                    _lerpSpeed="5"
-			                    _fillColor="0.85,0.2,0.2,1"
-			                    _trailColor="0.95,0.8,0.25,1"
-			                    _backgroundColor="0.08,0.08,0.1,0.8"
-			                    _bVisible="false"
-			                    _bShowWhenHurt="true"
-			                    _bHideWhenDead="true" />
-			<ShooterEnemyComponent _componentName="ShooterEnemyComponent"
-			                       _bActive="true"
-			                       _director="0"
-			                       _radius="1.68"
-			                       _height="2.38"
-			                       _reach="1.35"
-			                       _damage="9"
-			                       _attackInterval="1.5"
-			                       _attackHitEvent="AttackHit"
-			                       _attackLength="1"
-			                       _riseTime="1.6"
-			                       _staggerTime="0.4"
-			                       _corpseTime="3"
-			                       _runSpeed="3.2"
-			                       _turnRate="6" />
-			<NavMeshAgentComponent _componentName="NavMeshAgentComponent"
-			                       _bActive="true"
-			                       _agentType="Humanoid"
-			                       _maxSpeed="3"
-			                       _maxAcceleration="12"
-			                       _stoppingDistance="1.15"
-			                       _radius="1.68"
-			                       _separationWeight="2"
-			                       _avoidanceQuality="Medium"
-			                       _turnRate="8"
-			                       _driveMode="SteerOnly"
-			                       _bUpdateRotation="false" />
-			<PawnComponent _componentName="PawnComponent"
-			               _bActive="true"
-			               _moveAction="None"
-			               _lookAction="None"
-			               _upAction="None"
-			               _inputLayer="None"
-			               _aiControllerPrefab="game/shooter3d/prefabs/enemy_ai.prefab.xml"
-			               _maxPitch="1.4"
-			               _autoPossess="AI"
-			               _bLockMouse="false">
-				<_listButton>
-					<item>Attack</item>
-				</_listButton>
-				<_listAnalog />
-			</PawnComponent>
-			<ShooterBodyMovementComponent _componentName="ShooterBodyMovementComponent"
-			                              _bActive="true"
-			                              _sprintButton="None"
-			                              _jumpButton="None"
-			                              _walkSpeed="3"
-			                              _sprintSpeed="3"
-			                              _jumpSpeed="0"
-			                              _gravity="18"
-			                              _radius="1.68" />
-		</_listComponent>
-	</GameObject>
+<Prefab formatVersion="0" _base="game/shooter3d/prefabs/quadshell.prefab.xml" name="Trilobite">
+	<PrefabOverrides>
+		<Override key="SkeletalAnimatorComponent#0">
+			<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/trilobite.animgraph.xml" _clipFolder="common/models/quaternius/scifi/enemy_trilobite/clips" />
+		</Override>
+		<Override key="AnimationNotifyComponent#0">
+			<AnimationNotifyComponent _notifyTablePath="common/characters/trilobite/trilobite.notifies.xml" />
+		</Override>
+		<Override key="RagdollComponent#0">
+			<RagdollComponent _physicsAssetPath="common/characters/trilobite/trilobite.physics.xml" />
+		</Override>
+		<Override key="CharacterAppearanceComponent#0">
+			<CharacterAppearanceComponent _presetID="Trilobite" />
+		</Override>
+		<Override key="WidgetComponent#0">
+			<WidgetComponent _worldOffset="0,2.97,0" />
+		</Override>
+		<Override key="ShooterEnemyComponent#0">
+			<ShooterEnemyComponent _radius="1.68" _height="2.38" />
+		</Override>
+		<Override key="NavMeshAgentComponent#0">
+			<NavMeshAgentComponent _radius="1.68" />
+		</Override>
+		<Override key="ShooterBodyMovementComponent#0">
+			<ShooterBodyMovementComponent _radius="1.68" />
+		</Override>
+	</PrefabOverrides>
 </Prefab>

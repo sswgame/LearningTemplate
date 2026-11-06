@@ -1,20 +1,7 @@
-<Prefab formatVersion="0" name="RoundShield">
-	<GameObject _schemaVersion="0" _name="RoundShield" _bActive="true">
-		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
-			               _bActive="true"
-			               _localPosition="0,0,0"
-			               _localRotation="0,0,0"
-			               _localScale="1,1,1"
-			               _attachOwner="None"
-			               _attachOwnerID="0"
-			               _attachComponent="None"
-			               _meshID="common/models/kaykit/knight/parts/round_shield.mesh"
-			               _materialPath="common/materials/kaykit_knight.material"
-			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
-			               _gpuSpinSeed="0"
-			               _bVisible="true" />
-		</_listComponent>
-	</GameObject>
+<Prefab formatVersion="0" _base="common/prefabs/kaykit/knight_cape.prefab.xml" name="RoundShield">
+	<PrefabOverrides>
+		<Override key="MeshComponent#0">
+			<MeshComponent _meshID="common/models/kaykit/knight/parts/round_shield.mesh" />
+		</Override>
+	</PrefabOverrides>
 </Prefab>

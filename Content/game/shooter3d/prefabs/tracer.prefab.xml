@@ -1,21 +1,7 @@
-<Prefab formatVersion="0" name="Tracer">
-	<GameObject _schemaVersion="0" _name="Tracer" _bActive="true">
-		<_listComponent>
-			<MeshComponent _componentName="MeshComponent"
-			               _bActive="true"
-			               _localPosition="0,0,0"
-			               _localRotation="0,0,0"
-			               _localScale="0.02,0.02,1"
-			               _attachOwner="None"
-			               _attachOwnerID="0"
-			               _attachComponent="None"
-			               _meshID="Cube"
-			               _materialPath="engine/materials/defaultmaterial.material"
-			               _boundsRadius="0.866"
-			               _blendMode="Opaque"
-			               _gpuSpinSeed="0"
-			               _bVisible="false" />
-			<ShooterEffectComponent _componentName="ShooterEffectComponent" _bActive="true" />
-		</_listComponent>
-	</GameObject>
+<Prefab formatVersion="0" _base="game/shooter3d/prefabs/effect.prefab.xml" name="Tracer">
+	<PrefabOverrides>
+		<Override key="MeshComponent#0">
+			<MeshComponent _localScale="0.02,0.02,1" _meshID="Cube" />
+		</Override>
+	</PrefabOverrides>
 </Prefab>
