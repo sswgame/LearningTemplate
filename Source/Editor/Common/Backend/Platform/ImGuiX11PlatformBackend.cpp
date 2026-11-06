@@ -128,10 +128,12 @@ namespace sw::editor
             {
                 // 바뀔 때만 알린다(Win32 · Wayland 의 이벤트와 같다). 매 프레임 알리면 움직이지 않은 실제 포인터가 시나리오의 가상 입력(`EditorSelfTestInput`)을 덮는다.
                 const uint32 buttonMask = maskReturn & ( Button1Mask | Button2Mask | Button3Mask );
-                const int2   pointer{ winX, winY };
-                const bool   bPointerMoved = _bPointerRead == SW_FALSE || pointer != _lastPointer;
+                // 뷰포트가 켜지면 ImGui 좌표는 화면 기준이다(주 뷰포트의 Pos 도 getWindowPos 의 화면 좌표다) - imgui_impl_win32 와 같다. 창 기준으로 넘기면 창이 (0, 0) 이 아닐 때 그만큼 빗나간다.
+                const bool bScreenSpace  = ( io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) != 0;
+                const int2 pointer       = bScreenSpace ? int2{ rootX, rootY } : int2{ winX, winY };
+                const bool bPointerMoved = _bPointerRead == SW_FALSE || pointer != _lastPointer;
                 if ( bPointerMoved )
-                    io.AddMousePosEvent( static_cast<float32>( winX ), static_cast<float32>( winY ) );
+                    io.AddMousePosEvent( static_cast<float32>( pointer._x ), static_cast<float32>( pointer._y ) );
                 if ( _bPointerRead == SW_FALSE || buttonMask != _lastPointerMask )
                 {
                     io.AddMouseButtonEvent( 0, ( buttonMask & Button1Mask ) != 0 );
