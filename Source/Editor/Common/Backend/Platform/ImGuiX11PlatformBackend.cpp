@@ -16,6 +16,8 @@
 
     #include <imgui.h>
 
+    #include <X11/cursorfont.h>
+
 namespace sw::editor
 {
     class ImGuiX11PlatformBackend : public IImGuiPlatformBackend
@@ -33,6 +35,8 @@ namespace sw::editor
             , _clipboardText{}
             , _lastPointer{}
             , _lastPointerMask{ 0 }
+            , _arrCursor{}
+            , _lastCursor{ ImGuiMouseCursor_COUNT }
             , _bPointerRead{ SW_FALSE }
         {
         }
@@ -107,6 +111,12 @@ namespace sw::editor
                 IM_DELETE( static_cast<ViewportData*>( pMainViewport->PlatformUserData ) );
                 pMainViewport->PlatformUserData = nullptr;
             }
+            for ( uint64& cursor : _arrCursor )
+            {
+                if ( cursor != 0 && _pDisplay != nullptr )
+                    XFreeCursor( _pDisplay, static_cast<Cursor>( cursor ) );
+                cursor = 0;
+            }
             _pWindow                               = nullptr;
             _pDisplay                              = nullptr;
             _mainWindow                            = 0;
@@ -151,6 +161,8 @@ namespace sw::editor
                 _lastPointerMask = buttonMask;
                 _bPointerRead    = SW_TRUE;
             }
+
+            updateCursor( io );
         }
 
         bool processEvent( const NativeWindowEvent& event ) override
@@ -335,6 +347,62 @@ namespace sw::editor
             return false;
         }
 
+        /** @brief ImGui 커서의 X 글꼴 커서 번호입니다. 대응이 없는 모양(`ImGuiMouseCursor_None` - 에디터는 쓰지 않는다)은 화살표입니다. 프로토콜 번호의 짝이라 데이터가 아니다(`X11Window::setCursorShape` 와 같다). */
+        static uint32 toFontCursorID( ImGuiMouseCursor cursor )
+        {
+            switch ( cursor )
+            {
+                case ImGuiMouseCursor_TextInput:
+                    return XC_xterm;
+                case ImGuiMouseCursor_ResizeAll:
+                    return XC_fleur;
+                case ImGuiMouseCursor_ResizeNS:
+                    return XC_sb_v_double_arrow;
+                case ImGuiMouseCursor_ResizeEW:
+                    return XC_sb_h_double_arrow;
+                case ImGuiMouseCursor_ResizeNESW:
+                    return XC_bottom_left_corner;
+                case ImGuiMouseCursor_ResizeNWSE:
+                    return XC_bottom_right_corner;
+                case ImGuiMouseCursor_Hand:
+                    return XC_hand2;
+                case ImGuiMouseCursor_Wait:
+                case ImGuiMouseCursor_Progress:
+                    return XC_watch;
+                case ImGuiMouseCursor_NotAllowed:
+                    return XC_X_cursor;
+                default:
+                    break;
+            }
+            return XC_left_ptr;
+        }
+
+        /** @brief ImGui 커서의 X 커서입니다(처음 쓸 때 만든다). 주 창 몫만 다루는 `IWindow::setCursorShape` 대신 쓰는 까닭은 떼어 낸 창에도 걸어야 해서다 - X 커서는 창마다 걸린다(GLFW 백엔드도 뷰포트마다 건다). */
+        Cursor findOrCreateCursor( ImGuiMouseCursor cursor )
+        {
+            const int32 index = cursor >= 0 && cursor < ImGuiMouseCursor_COUNT ? cursor : ImGuiMouseCursor_Arrow;
+            if ( _arrCursor[index] == 0 )
+                _arrCursor[index] = XCreateFontCursor( _pDisplay, toFontCursorID( static_cast<ImGuiMouseCursor>( index ) ) );
+            return static_cast<Cursor>( _arrCursor[index] );
+        }
+
+        /** @brief ImGui 가 권하는 커서를 모든 뷰포트 창에 겁니다(바뀔 때만). `HasMouseCursors` 를 알리고 하지 않아 커서가 늘 그대로였다. */
+        void updateCursor( const ImGuiIO& io )
+        {
+            const ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
+            if ( ( io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange ) != 0 || cursor == _lastCursor )
+                return;
+            _lastCursor                       = cursor;
+            const Cursor           xCursor    = findOrCreateCursor( cursor );
+            const ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
+            for ( int32 viewportIndex = 0; viewportIndex < platformIO.Viewports.Size; ++viewportIndex )
+            {
+                const ViewportData* pData = static_cast<const ViewportData*>( platformIO.Viewports[viewportIndex]->PlatformUserData );
+                if ( pData != nullptr && pData->_windowHandle != 0 )
+                    XDefineCursor( _pDisplay, pData->_windowHandle, xCursor );
+            }
+        }
+
         static const utf8* getClipboardTextThunk( ImGuiContext* pContext )
         {
             (void)pContext;
@@ -426,6 +494,7 @@ namespace sw::editor
                 BlackPixel( _pDisplay, DefaultScreen( _pDisplay ) ),
                 WhitePixel( _pDisplay, DefaultScreen( _pDisplay ) ) );
 
+            XDefineCursor( _pDisplay, pData->_windowHandle, findOrCreateCursor( _lastCursor ) ); // 지금 커서가 바뀔 때까지 기다리지 않는다
             XSelectInput( _pDisplay, pData->_windowHandle,
                           ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask | KeyPressMask | KeyReleaseMask );
             if ( _wmDelete == 0 )
@@ -577,15 +646,17 @@ namespace sw::editor
         }
 
     private:
-        IWindow*  _pWindow;
-        Display*  _pDisplay;
-        Window    _mainWindow;
-        Atom      _wmDelete;
-        GameTimer _timer;
-        string    _clipboardText;    ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
-        int2      _lastPointer;      ///< 마지막으로 ImGui 에 알린 실제 포인터 위치
-        uint32    _lastPointerMask;  ///< 마지막으로 ImGui 에 알린 실제 버튼 상태
-        uint8     _bPointerRead : 1; ///< 포인터를 한 번이라도 읽었는지
+        IWindow*         _pWindow;
+        Display*         _pDisplay;
+        Window           _mainWindow;
+        Atom             _wmDelete;
+        GameTimer        _timer;
+        string           _clipboardText;                     ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
+        int2             _lastPointer;                       ///< 마지막으로 ImGui 에 알린 실제 포인터 위치
+        uint32           _lastPointerMask;                   ///< 마지막으로 ImGui 에 알린 실제 버튼 상태
+        uint64           _arrCursor[ImGuiMouseCursor_COUNT]; ///< 모양마다 만든 X 커서(0 이면 아직 없음). 이 연결의 자원이라 `shutdown` 이 놓는다
+        ImGuiMouseCursor _lastCursor;                        ///< 창에 건 커서. 처음에는 `ImGuiMouseCursor_COUNT` 라 첫 프레임에 건다
+        uint8            _bPointerRead : 1;                  ///< 포인터를 한 번이라도 읽었는지
     };
 
     unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackend()
