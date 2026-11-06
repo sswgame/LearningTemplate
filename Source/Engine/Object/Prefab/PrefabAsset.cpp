@@ -28,6 +28,7 @@
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
 #include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -86,6 +87,7 @@ namespace sw
             static constexpr const utf8* kNestedAttach      = "attach";
             static constexpr const utf8* kNestedOverrides   = "overrides";
             static constexpr const utf8* kNestedList        = "_listPrefabInstance";
+            static constexpr const utf8* kVariantOverrides  = "overrides"; ///< JSON 변형의 다른 점(글 하나 — 중첩 노드의 `overrides` 와 같다)
             static constexpr uint32      kBinMagic          = FourCcUtil::make( "PFB2" );
             /**
              * @brief 버전 1 부터 상태 뒤에 중첩 인스턴스 노드가 붙고, 2 부터 노드에 부품 경로(`_partPath`)가 붙고, 3 에서 노드의 GUID 칸을 지웠다(경로 하나로 가리킨다).
@@ -431,6 +433,90 @@ namespace sw
                 inoutListInner.insert( inoutListInner.end(), listEnclosingPart.begin(), listEnclosingPart.end() );
             }
 
+            /**
+             * @brief 저장할 XML 본문입니다 — 형식 기본값과 같은 칸을 뺀 글이고, 빼고 읽은 값이 뺀 전과 같을 때만 그것을 씁니다.
+             * @details 대조는 데이터를 지키는 자리다. 칸의 초기값이 다른 칸에 달려 있으면(접근자 칸) 뺀 글이 다르게 읽힐 수 있다 — 그때는 모든 칸을 쓰고 경고한다.
+             *          shortcut: JSON 저장은 칸을 빼지 않는다, JSON 프리팹이 생기면 같은 비교를 JSON 값에 더한다.
+             */
+            static string makeBodyWithoutDefaults( const PrefabAsset& asset, const string& fullBody )
+            {
+                string trimmedBody;
+                if ( fullBody.empty() || PrefabOverrides::omitDefaultValues( fullBody, trimmedBody ) == false )
+                    return fullBody;
+                PrefabAsset trimmedAsset;
+                string      fullState;
+                string      trimmedState;
+                if ( trimmedAsset.setStateForCompare( asset.getName(), trimmedBody ) && PrefabOverrides::makeBaseState( asset, fullState ) && PrefabOverrides::makeBaseState( trimmedAsset, trimmedState ) && fullState == trimmedState )
+                    return trimmedBody;
+                SW_LOG_WARNING_ID( "PrefabAsset.DefaultOmitMismatch", "Prefab '%#' reads differently without its default values - all fields are written", asset.getName() );
+                return fullBody;
+            }
+
+            /**
+             * @brief 변형의 노드 목록을 물려받은 것과 자기 것으로 나눕니다. 물려받은 노드를 고친 것은 그 노드의 `<Part>` 가 됩니다.
+             * @details 지우거나 옮긴 물려받은 노드는 파일로 적을 수 없어 오류다(유니티 Prefab Variant 도 물려받은 자식을 지우지 못한다). 자기 노드는 물려받은 노드 아래에 둘 수 없다 — 파일에서 노드는 자기 노드 안에만 중첩한다.
+             */
+            [[nodiscard]] static bool splitVariantNodes( const PrefabAsset& base, const vector<PrefabInstanceNode>& listNode, string_view prefabName, vector<PrefabInstanceNode>& outListOwnNode, vector<PrefabPartOverride>& inoutListPart )
+            {
+                const vector<PrefabInstanceNode>& listBaseNode = base.getNestedInstances();
+                const size_t                      inherited    = listBaseNode.size();
+                if ( listNode.size() < inherited )
+                {
+                    SW_LOG_ERROR_ID( "PrefabAsset.VariantRemovedInheritedNode", "Variant '%#' removed nested instances its base has - a variant cannot remove them", prefabName );
+                    return false;
+                }
+                PrefabCache sources;
+                for ( size_t index = 0; index < inherited; ++index )
+                {
+                    const PrefabInstanceNode& node     = listNode[index];
+                    const PrefabInstanceNode& baseNode = listBaseNode[index];
+                    if ( node._prefabPath != baseNode._prefabPath || node._parentIndex != baseNode._parentIndex || node._attachKey != baseNode._attachKey )
+                    {
+                        SW_LOG_ERROR_ID( "PrefabAsset.VariantMovedInheritedNode", "Variant '%#' moved or replaced nested instance '%#' its base has - a variant cannot", prefabName, baseNode._name );
+                        return false;
+                    }
+                    if ( node._overrideXML == baseNode._overrideXML )
+                        continue;
+                    const shared_ptr<const PrefabAsset> pSource = sources.loadPrefab( node._prefabPath );
+                    string                              sourceState;
+                    string                              baseNodeState;
+                    string                              nodeState;
+                    string                              error;
+                    PrefabPartOverride                  part{ to_string( static_cast<uint64>( index ) ), {} };
+                    vector<PrefabPartOverride>          listDeepPart;
+                    const bool                          bMade = pSource != nullptr && PrefabOverrides::makeBaseState( *pSource, sourceState ) &&
+                                       PrefabOverrides::makeInstanceState( sourceState, baseNode._overrideXML, node._name, baseNodeState ) &&
+                                       PrefabOverrides::makeInstanceState( sourceState, node._overrideXML, node._name, nodeState ) &&
+                                       PrefabOverrides::computeOverrides( nodeState, baseNodeState, part._overrideXML, error ) && PrefabOverrides::collectPartOverrides( node._overrideXML, listDeepPart );
+                    if ( bMade == false )
+                    {
+                        SW_LOG_ERROR_ID( "PrefabAsset.VariantNodeDeltaFailed", "Variant '%#': the difference of nested instance '%#' could not be made (%#)", prefabName, node._name, error );
+                        return false;
+                    }
+                    if ( part._overrideXML.empty() == false )
+                        inoutListPart.push_back( std::move( part ) );
+                    for ( PrefabPartOverride& deepPart : listDeepPart )
+                    {
+                        deepPart._partPath = joinPartPath( to_string( static_cast<uint64>( index ) ), deepPart._partPath );
+                        inoutListPart.push_back( std::move( deepPart ) );
+                    }
+                }
+                outListOwnNode.clear();
+                for ( size_t index = inherited; index < listNode.size(); ++index )
+                {
+                    PrefabInstanceNode node = listNode[index];
+                    if ( node._parentIndex >= 0 && static_cast<size_t>( node._parentIndex ) < inherited )
+                    {
+                        SW_LOG_ERROR_ID( "PrefabAsset.VariantNodeUnderInherited", "Variant '%#': nested instance '%#' hangs under an inherited one - a variant adds nodes only at its root or under its own", prefabName, node._name );
+                        return false;
+                    }
+                    if ( node._parentIndex >= 0 )
+                        node._parentIndex -= static_cast<int32>( inherited );
+                    outListOwnNode.push_back( std::move( node ) );
+                }
+                return true;
+            }
+
             /** @brief @p rootObjectID 인스턴스가 스폰한 부품과 그 부품들이 스폰한 부품을 모두 모읍니다(부모 부품이 앞). */
             static void collectPartTree( const PrefabInstanceRegistry& registry, uint64 rootObjectID, vector<uint64>& outListObjectID )
             {
@@ -550,6 +636,8 @@ namespace sw
             PrefabAssetInternal::PrefabPathStack _loadStack;
             /** @brief 로드 스택에서 찾은 순환의 시작 깊이입니다. 순환에 든 프리팹(그 깊이 이상)은 로드에 실패하고, 시작 깊이의 프리팹이 끝날 때 지운다. */
             size_t _cycleFloor{ PrefabAssetInternal::kNoCycle };
+            /** @brief 이 스레드가 변형을 읽으며 따라가는 부모 경로입니다(순환 · 깊이 검사, `PrefabAsset::resolveVariant`). */
+            PrefabAssetInternal::PrefabPathStack _variantStack;
         };
 
         thread_local PrefabThreadChain t_prefabChain;
@@ -566,7 +654,10 @@ namespace sw
     PrefabAsset::PrefabAsset()
         : _name{}
         , _stateData{}
+        , _basePath{}
+        , _variantOverrideXML{}
         , _listNestedInstance{}
+        , _listVariantPart{}
         , _stateFormat{ PrefabStateFormat::XML }
         , _bValid{ SW_FALSE }
         , _reserved{ 0 }
@@ -634,26 +725,40 @@ namespace sw
         }
 
         PrefabRootFields rootFields;
-        if ( XMLFields::readFields( root, rootFields, absPath, { "formatVersion" } ) == false )
+        if ( XMLFields::readFields( root, rootFields, absPath, { "formatVersion", DataInheritance::kBaseAttribute } ) == false )
             return false;
         if ( rootFields._name.empty() == false )
             _name = rootFields._name;
-
-        XMLNode bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
-        if ( bodyNode.isValid() == false )
-        {
-            SW_LOG_ERROR_ID( "PrefabAsset.MissingGameObjectPrefab", "Missing <GameObject> in <Prefab>: %#", absPath );
-            return false;
-        }
-        _stateData = bodyNode.toString();
+        if ( _name.empty() )
+            _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
 
         vector<PrefabInstanceNode> listNode;
         if ( PrefabAssetInternal::readNodesFromXML( root, -1, listNode, absPath ) == false || PrefabAssetInternal::areNodesWellFormed( listNode, absPath ) == false )
             return false;
-        _listNestedInstance = std::move( listNode );
 
-        if ( _name.empty() )
-            _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
+        const XMLNode     bodyNode = root.findChild( PrefabAssetInternal::kGameObject );
+        const string_view basePath = root.getAttributeText( DataInheritance::kBaseAttribute );
+        if ( basePath.empty() )
+        {
+            if ( bodyNode.isValid() == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.MissingGameObjectPrefab", "Missing <GameObject> in <Prefab>: %#", absPath );
+                return false;
+            }
+            _stateData          = bodyNode.toString();
+            _listNestedInstance = std::move( listNode );
+        }
+        else
+        {
+            if ( bodyNode.isValid() )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.VariantHasBody", "Prefab variant has both %# and <GameObject> - it writes <%#> only: %#", DataInheritance::kBaseAttribute, PrefabOverrides::kRootName, absPath );
+                return false;
+            }
+            const XMLNode overrides = root.findChild( PrefabOverrides::kRootName );
+            if ( resolveVariant( basePath, overrides.isValid() ? overrides.toString() : string{}, std::move( listNode ), absPath ) == false )
+                return false;
+        }
 
         _stateFormat = PrefabStateFormat::XML;
         _bValid      = SW_TRUE;
@@ -684,6 +789,20 @@ namespace sw
         vector<PrefabInstanceNode> listNode;
         if ( PrefabAssetInternal::readNodesFromJSON( root, -1, listNode, absPath ) == false || PrefabAssetInternal::areNodesWellFormed( listNode, absPath ) == false )
             return false;
+
+        // 변형은 XML 과 같다 — 부모 경로와 다른 점(글 하나)만 적고, 읽으면 상태는 XML 이다(`makeInstanceState`).
+        if ( root.has( DataInheritance::kBaseAttribute ) )
+        {
+            if ( _name.empty() )
+                _name = FileUtil::removeExtension( FileUtil::getFileNamePart( absPath ) );
+            const string basePath  = root.get( DataInheritance::kBaseAttribute ).asString();
+            const string overrides = root.get( PrefabAssetInternal::kVariantOverrides ).asString();
+            if ( resolveVariant( basePath, overrides, std::move( listNode ), absPath ) == false )
+                return false;
+            _stateFormat = PrefabStateFormat::XML;
+            _bValid      = SW_TRUE;
+            return true;
+        }
         _listNestedInstance = std::move( listNode );
 
         if ( root.has( PrefabAssetInternal::kNestedList ) )
@@ -708,6 +827,115 @@ namespace sw
         _stateFormat = PrefabStateFormat::JSON;
         _bValid      = SW_TRUE;
         return true;
+    }
+
+    bool PrefabAsset::resolveVariant( const string_view basePath, const string_view overrideXML, vector<PrefabInstanceNode> listOwnNode, const string_view sourceName )
+    {
+        PrefabAssetInternal::PrefabPathStack& stack = t_prefabChain._variantStack;
+        const string                          baseID{ basePath };
+        const hashed_string                   baseKey = PrefabAssetInternal::makePathKey( PrefabAssetInternal::makePrefabCacheKey( baseID ) );
+        if ( VectorUtil::contains( stack, baseKey ) )
+        {
+            DataInheritance::reportCycle( basePath, sourceName );
+            return false;
+        }
+        if ( stack.size() >= DataInheritance::getMaxDepth() )
+        {
+            DataInheritance::reportTooDeep( basePath, sourceName );
+            return false;
+        }
+        const PrefabAssetInternal::PathStackScope scope{ stack, baseKey };
+
+        // 부모는 캐시를 거치지 않고 바로 읽는다 — 자산이 합친 값을 들고 있으므로 부모를 들고 있을 일이 없고, 쿠킹 작업의 입력도 이 읽기로 남는다.
+        PrefabAsset base;
+        const bool  bLoaded = FileUtil::hasExtension( baseID, ".json" ) ? base.loadFromJSONFile( AssetID{ baseID } ) : base.loadFromXMLFile( AssetID{ baseID } );
+        if ( bLoaded == false )
+        {
+            DataInheritance::reportBaseNotFound( basePath, sourceName );
+            return false;
+        }
+        string convertedBase;
+        if ( base.getStateFormat() != PrefabStateFormat::XML && PrefabOverrides::makeBaseState( base, convertedBase ) == false )
+            return false;
+        const string_view baseState = base.getStateFormat() == PrefabStateFormat::XML ? string_view( base.getStateData() ) : string_view( convertedBase );
+
+        vector<PrefabPartOverride> listOwnPart;
+        if ( PrefabOverrides::checkOverrideTargets( baseState, overrideXML, sourceName ) == false || PrefabOverrides::collectPartOverrides( overrideXML, listOwnPart ) == false )
+            return false;
+        if ( PrefabOverrides::makeInstanceState( baseState, overrideXML, _name, _stateData ) == false )
+        {
+            SW_LOG_ERROR_ID( "PrefabAsset.VariantStateFailed", "Prefab variant '%#': its differences could not be applied to '%#'", sourceName, basePath );
+            return false;
+        }
+        _basePath           = baseID;
+        _variantOverrideXML = string{ overrideXML };
+        _listVariantPart    = base.getVariantPartOverrides();
+        _listVariantPart.insert( _listVariantPart.end(), listOwnPart.begin(), listOwnPart.end() );
+
+        // 부모 노드가 앞이고 자기 노드의 부모 인덱스는 그만큼 밀린다 — 부품 경로(`<Part>` 의 `2/0`)가 부모와 같은 번호를 유지한다.
+        _listNestedInstance            = base.getNestedInstances();
+        const int32 inheritedNodeCount = static_cast<int32>( _listNestedInstance.size() );
+        for ( PrefabInstanceNode& node : listOwnNode )
+        {
+            if ( node._parentIndex >= 0 )
+                node._parentIndex += inheritedNodeCount;
+            _listNestedInstance.push_back( std::move( node ) );
+        }
+        return true;
+    }
+
+    bool PrefabAsset::makeVariantFileFields( string& outOverrideXML, vector<PrefabInstanceNode>& outListOwnNode ) const
+    {
+        outOverrideXML.clear();
+        PrefabAsset base;
+        const bool  bLoaded = FileUtil::hasExtension( _basePath, ".json" ) ? base.loadFromJSONFile( AssetID{ _basePath } ) : base.loadFromXMLFile( AssetID{ _basePath } );
+        if ( bLoaded == false )
+        {
+            DataInheritance::reportBaseNotFound( _basePath, _name );
+            return false;
+        }
+        // 두 쪽 모두 같은 직렬화기로 쓴 글을 맞댄다 — 손으로 쓴 원문과 맞대면 같은 값도 글자가 달라 다른 칸으로 남는다.
+        string selfState;
+        string baseState;
+        string error;
+        if ( PrefabOverrides::makeBaseState( *this, selfState ) == false || PrefabOverrides::makeBaseState( base, baseState ) == false ||
+             PrefabOverrides::computeOverrides( selfState, baseState, outOverrideXML, error ) == false )
+        {
+            SW_LOG_ERROR_ID( "PrefabAsset.VariantDeltaFailed", "Prefab variant '%#': its differences from '%#' could not be made (%#)", _name, _basePath, error );
+            return false;
+        }
+        vector<PrefabPartOverride> listPart;
+        for ( const PrefabPartOverride& part : _listVariantPart )
+        {
+            // 부모에게서 물려받은 부품 덮어쓰기는 부모가 적는다.
+            const bool bInherited = VectorUtil::containsIf( base.getVariantPartOverrides(), [&part]( const PrefabPartOverride& basePart )
+            { return basePart._partPath == part._partPath && basePart._overrideXML == part._overrideXML; } );
+            if ( bInherited == false )
+                listPart.push_back( part );
+        }
+        if ( PrefabAssetInternal::splitVariantNodes( base, _listNestedInstance, _name, outListOwnNode, listPart ) == false )
+            return false;
+        return PrefabOverrides::appendPartOverrides( outOverrideXML, listPart );
+    }
+
+    bool PrefabAsset::setStateForCompare( const string_view name, const string_view stateXML )
+    {
+        _name        = string{ name };
+        _stateData   = string{ stateXML };
+        _stateFormat = PrefabStateFormat::XML;
+        _bValid      = _stateData.empty() ? SW_FALSE : SW_TRUE;
+        return _bValid == SW_TRUE;
+    }
+
+    string PrefabAsset::readBasePathFromSource( string_view sourceText )
+    {
+        const string_view trimmed = StringUtil::trim( sourceText );
+        if ( trimmed.empty() || trimmed.front() != '{' )
+            return DataInheritance::findBasePath( sourceText );
+        JSONDocument doc;
+        if ( doc.parse( trimmed ) == false || doc.getRoot().isObject() == false || doc.getRoot().has( DataInheritance::kBaseAttribute ) == false )
+            return {};
+        return doc.getRoot().get( DataInheritance::kBaseAttribute ).asString();
     }
 
     bool PrefabAsset::loadFromBinaryFile( const AssetID& assetID )
@@ -786,12 +1014,38 @@ namespace sw
             return false;
         }
 
-        const string xmlBody = ( _stateFormat == PrefabStateFormat::XML ) ? _stateData : convertState( PrefabStateFormat::XML );
-
         XMLDocument xmlDoc;
         XMLNode     root = xmlDoc.appendRoot( PrefabAssetInternal::kRoot );
         root.appendAttribute( "formatVersion", static_cast<uint32>( PrefabAsset::kAssetType._formatVersion ) );
+        if ( _basePath.empty() == false )
+            root.appendAttribute( DataInheritance::kBaseAttribute, string_view( _basePath ) );
         XMLFields::writeFields( root, PrefabRootFields{ _name } );
+
+        // 변형은 부모와 다른 점만 쓴다. 다른 점을 만들지 못하면 쓰지 않는다 — 모든 칸을 적어 부모를 끊지 않는다.
+        if ( _basePath.empty() == false )
+        {
+            string                     overrideXML;
+            vector<PrefabInstanceNode> listOwnNode;
+            XMLDocument                overrideDoc;
+            const bool                 bFields = makeVariantFileFields( overrideXML, listOwnNode );
+            if ( bFields && overrideXML.empty() == false && overrideDoc.parse( overrideXML ) )
+                (void)root.appendClone( overrideDoc.getRoot() );
+            if ( bFields == false || PrefabAssetInternal::writeNodesToXML( root, listOwnNode, -1 ) == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.PrefabVariantNotWritten", "Prefab variant '%#' could not be written - '%#' is left as it was", _name, absPath.str() );
+                return false;
+            }
+            if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveFile( absPath.str() ) == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabXML2", "Failed to write prefab XML: %#", absPath.str() );
+                return false;
+            }
+            SW_LOG_INFO_ID( "PrefabAsset.SavedVariant", "Saved variant '%#' of '%#' -> %#", _name, _basePath, absPath.str() );
+            return true;
+        }
+
+        const string fullBody = ( _stateFormat == PrefabStateFormat::XML ) ? _stateData : convertState( PrefabStateFormat::XML );
+        const string xmlBody  = PrefabAssetInternal::makeBodyWithoutDefaults( *this, fullBody );
         if ( xmlBody.empty() == false )
         {
             XMLDocument bodyDoc;
@@ -834,6 +1088,31 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "PrefabAsset.PrefabHoldsCookedResolved2", "Prefab '%#' holds cooked (resolved) nested instances and cannot be written as a source file; nothing written: %#", _name, absPath.str() );
             return false;
+        }
+
+        if ( _basePath.empty() == false )
+        {
+            string                     overrideXML;
+            vector<PrefabInstanceNode> listOwnNode;
+            if ( makeVariantFileFields( overrideXML, listOwnNode ) == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.PrefabVariantNotWrittenJSON", "Prefab variant '%#' could not be written; nothing written: %#", _name, absPath.str() );
+                return false;
+            }
+            JSONDocument    variantDoc;
+            const JSONValue variantRoot = variantDoc.makeObject();
+            variantRoot.set( "_name" ).setString( _name );
+            variantRoot.set( DataInheritance::kBaseAttribute ).setString( _basePath );
+            if ( overrideXML.empty() == false )
+                variantRoot.set( PrefabAssetInternal::kVariantOverrides ).setString( overrideXML );
+            PrefabAssetInternal::writeNodesToJSON( variantRoot, listOwnNode, -1 );
+            const string variantText = variantDoc.dump( 0 );
+            if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeFile( absPath.str(), reinterpret_cast<const uint8*>( variantText.data() ), variantText.size() ) == false )
+            {
+                SW_LOG_ERROR_ID( "PrefabAsset.FailedWritePrefabJSON2", "Failed to write prefab JSON: %#", absPath.str() );
+                return false;
+            }
+            return true;
         }
 
         string jsonStr = ( _stateFormat == PrefabStateFormat::JSON ) ? _stateData : convertState( PrefabStateFormat::JSON );
@@ -904,6 +1183,8 @@ namespace sw
     void PrefabAsset::setFromGameObject( const GameObject* pGameObject, PrefabCache* pNestedPrefabs )
     {
         _listNestedInstance.clear();
+        _listVariantPart.clear(); // 살아 있는 부품에 이미 얹혀 있다 — 노드의 오버라이드로 다시 담긴다
+        _variantOverrideXML.clear();
         if ( pGameObject == nullptr )
         {
             _bValid = SW_FALSE;
@@ -961,6 +1242,7 @@ namespace sw
             listFound.push_back( node._prefabPath );
             PrefabAssetInternal::collectPrefabRefsFromXMLText( node._overrideXML, listFound );
         }
+        PrefabAssetInternal::collectPrefabRefsFromXMLText( _variantOverrideXML, listFound ); // 물려받은 부품에 덮어쓴 값(`<Part>`)은 상태에 합쳐지지 않는다
 
         const string trimmed{ StringUtil::trim( _stateData ) };
         if ( trimmed.empty() == false && _stateFormat == PrefabStateFormat::JSON )
@@ -1348,9 +1630,12 @@ namespace sw
 
     uint32 PrefabCache::spawnNestedInstances( GameObject* pRoot, const PrefabAsset& asset, const vector<PrefabPartOverride>& listPartOverride )
     {
+        // 변형이 물려받은 부품에 덮어쓴 것이 앞이다 — 인스턴스가 덮어쓴 것이 나중에 얹혀 이긴다.
+        vector<PrefabPartOverride> listAllPart = asset.getVariantPartOverrides();
+        listAllPart.insert( listAllPart.end(), listPartOverride.begin(), listPartOverride.end() );
         vector<string> listSpawnedPath;
-        const uint32   createdCount = spawnNestedInstancesUnder( pRoot, asset, {}, listPartOverride, listSpawnedPath );
-        for ( const PrefabPartOverride& part : listPartOverride )
+        const uint32   createdCount = spawnNestedInstancesUnder( pRoot, asset, {}, listAllPart, listSpawnedPath );
+        for ( const PrefabPartOverride& part : listAllPart )
         {
             if ( VectorUtil::contains( listSpawnedPath, part._partPath ) == false )
                 SW_LOG_WARNING_ID( "Prefab.NestedPartOverrideDropped", "Override of nested prefab part '%#' in '%#' is dropped - '%#' no longer spawns that part", part._partPath,
@@ -1428,7 +1713,8 @@ namespace sw
             {
                 vector<PrefabPartOverride> listInnerPart;
                 if ( PrefabOverrides::collectPartOverrides( node._overrideXML, listInnerPart ) == false )
-                    listInnerPart.clear(); // 오류는 알렸다 — 안쪽 덮어쓴 것 없이 스폰한다
+                    listInnerPart.clear();                                                                                                           // 오류는 알렸다 — 안쪽 덮어쓴 것 없이 스폰한다
+                listInnerPart.insert( listInnerPart.begin(), pSource->getVariantPartOverrides().begin(), pSource->getVariantPartOverrides().end() ); // 원본이 변형이면 그것이 가장 안쪽이다
                 const PrefabAssetInternal::PathStackScope scope{ spawnStack, sourceKey };
                 if ( listInnerPart.empty() )
                 {
@@ -1500,7 +1786,7 @@ namespace sw
         if ( inoutAsset.getNestedInstances().empty() )
             return true;
         vector<PrefabInstanceNode> listFlat;
-        if ( appendFlattenedNodes( inoutAsset, -1, {}, {}, listFlat ) == false )
+        if ( appendFlattenedNodes( inoutAsset, -1, {}, inoutAsset.getVariantPartOverrides(), listFlat ) == false )
             return false;
         return inoutAsset.setNestedInstances( std::move( listFlat ) );
     }
@@ -1565,6 +1851,7 @@ namespace sw
             inoutListNode.push_back( std::move( flat ) );
 
             // 노드가 부품 아래에 덮어쓴 것(`<Part>`)은 스폰과 같은 순서(안쪽 먼저, 바깥 것이 이김)로 아래 노드의 펼친 상태에 베이크한다.
+            listInnerPart.insert( listInnerPart.begin(), pSource->getVariantPartOverrides().begin(), pSource->getVariantPartOverrides().end() );
             PrefabAssetInternal::prependInnerParts( partPath, listInnerPart, listPartOverride );
             const PrefabAssetInternal::PathStackScope scope{ spawnStack, sourceKey };
             if ( appendFlattenedNodes( *pSource, flatIndex, partPath, listInnerPart, inoutListNode ) == false )
@@ -1662,6 +1949,21 @@ namespace sw
     SW_BUILT_IN_ASSET_CACHE( PrefabCache );
     SW_ASSET_TYPE( Prefab, PrefabAsset::kAssetType );
 
+    string PrefabCache::findFieldOrigin( string_view assetRelativePath, string_view componentKey, string_view fieldName )
+    {
+        string path{ assetRelativePath };
+        for ( uint32 depth = 0; depth <= DataInheritance::getMaxDepth(); ++depth ) // 읽힌 사슬은 상한 안이다 — 읽는 사이 파일이 바뀌어도 끝난다
+        {
+            const shared_ptr<const PrefabAsset> pAsset = loadPrefab( path );
+            if ( pAsset == nullptr )
+                return {};
+            if ( pAsset->getBasePath().empty() || PrefabOverrides::writesField( pAsset->getVariantOverrides(), componentKey, fieldName ) )
+                return path;
+            path = pAsset->getBasePath();
+        }
+        return {};
+    }
+
     void PrefabCache::reload( const AssetID& assetID )
     {
         const string_view assetRelativePath = assetID.view();
@@ -1684,7 +1986,7 @@ namespace sw
             {
                 bHasSourceNode = bHasSourceNode || node.isResolved() == false;
             }
-            if ( bHasSourceNode )
+            if ( bHasSourceNode || cacheIt->second->getBasePath().empty() == false )
                 cacheIt = _mapCache.erase( cacheIt );
             else
                 ++cacheIt;

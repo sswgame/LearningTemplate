@@ -145,6 +145,9 @@ namespace sw::editor
         // 형식은 경로가 정한다(`.prefab.json` 에는 JSON). 프리팹 경로가 아니면 쓰지 않는다.
         PrefabAsset asset;
         asset.setFromGameObject( pObj );
+        // 변형은 변형으로 남는다 — 전체 상태로 쓰면 부모와의 연결이 끊긴다(유니티 Apply 도 Variant 를 Variant 로 저장한다).
+        if ( bHadFile )
+            asset.setBasePath( PrefabAsset::readBasePathFromSource( oldFileText ) );
         if ( asset.saveToFile( *filePath ) == false )
         {
             SW_LOG_ERROR_ID( "EditorInspectorCommands.ApplyPrefabRefusedCould", "Apply to prefab refused: could not write '%#'", string{ prefabPath }.c_str() );

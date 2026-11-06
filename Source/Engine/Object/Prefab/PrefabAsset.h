@@ -18,6 +18,7 @@
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Object/Prefab/PrefabOverrides.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -48,7 +49,6 @@ namespace sw
 
     struct CookJobDesc;
     struct ObjectIdentity;
-    struct PrefabPartOverride;
 
     class AssetLoadScope;
     class CookStore;
@@ -122,7 +122,10 @@ namespace sw
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
         /** @brief 바이너리에서 프리팹을 로드합니다(쿠킹된 PFB2). 다른 버전의 쿠킹본은 거절합니다(다시 쿠킹합니다). */
         [[nodiscard]] bool loadFromBinaryFile( const AssetID& assetID );
-        /** @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). 쿠킹본 형식(펼친 중첩 인스턴스)은 저작 파일로 쓸 수 없어 false 입니다. */
+        /**
+         * @brief XML 로 저장합니다(<Prefab formatVersion="0" name="...">). 쿠킹본 형식(펼친 중첩 인스턴스)은 저작 파일로 쓸 수 없어 false 입니다.
+         * @details 형식 기본값과 같은 칸은 쓰지 않습니다(`PrefabOverrides::omitDefaultValues`). 변형(`getBasePath` 가 있음)은 부모와 다른 점만 `<PrefabOverrides>` 로 씁니다.
+         */
         [[nodiscard]] bool saveToXMLFile( const AbsolutePath& absPath ) const;
         /** @brief JSON 으로 저장합니다(GameObject 상태 JSON + `_listPrefabInstance`). 상태를 JSON 으로 옮기지 못하거나 쿠킹본 형식이면 쓰지 않고 오류를 알리며 false 입니다. */
         [[nodiscard]] bool saveToJSONFile( const AbsolutePath& absPath ) const;
@@ -143,6 +146,22 @@ namespace sw
 
         /** @brief 프리팹 이름을 반환합니다. */
         const string& getName() const { return _name; }
+        /**
+         * @brief 이 프리팹이 변형이면 부모 프리팹 경로(파일의 `_base`)입니다. 아니면 빈 글입니다. 쿠킹본은 펼쳐져 있어 늘 빈 글입니다.
+         * @details 변형은 유니티 Prefab Variant 와 같은 모델이다. 파일은 부모 경로와 다른 점(`<PrefabOverrides>`, 씬 인스턴스와 같은 형식)만 적고, 읽으면 `getStateData` · 중첩 인스턴스는 부모를 합친 값이다 —
+         *          스폰 · 씬 복원 · 쿠킹은 변형인지 모른다. 부모를 고치면 적지 않은 칸이 따라간다. 변형은 물려받은 중첩 인스턴스를 지울 수 없다(유니티도 같다).
+         */
+        const string& getBasePath() const { return _basePath; }
+        /** @brief 저장을 변형으로 할지 정합니다(에디터가 `setFromGameObject` 뒤에 파일의 부모를 되돌려 놓는다 — `readBasePathFromSource`). */
+        void setBasePath( string_view basePath ) { _basePath = string{ basePath }; }
+        /** @brief 이름과 XML 상태만 채운 자산으로 만듭니다(저장이 기본값을 뺀 글이 같게 읽히는지 맞대는 데 쓴다). 상태가 비면 false 입니다. */
+        [[nodiscard]] bool setStateForCompare( string_view name, string_view stateXML );
+        /** @brief 파일 글(XML · JSON)에 적힌 부모 경로입니다. 없으면 빈 글입니다. */
+        [[nodiscard]] static string readBasePathFromSource( string_view sourceText );
+        /** @brief 변형 파일이 적은 다른 점입니다(`PrefabCache::findFieldOrigin`). 변형이 아니면 빈 글입니다. */
+        const string& getVariantOverrides() const { return _variantOverrideXML; }
+        /** @brief 변형 사슬이 물려받은 중첩 부품에 덮어쓴 것입니다(`<Part>`, 경로는 이 프리팹 루트에서). 스폰과 펼치기가 노드 위에 얹습니다. */
+        const vector<PrefabPartOverride>& getVariantPartOverrides() const { return _listVariantPart; }
         /** @brief 직렬화된 본문 상태 데이터(XML 또는 JSON. `getStateFormat` 참고)를 반환합니다. */
         const string& getStateData() const { return _stateData; }
         /** @brief 상태 본문의 형식입니다(읽을 때 정해집니다). */
@@ -189,10 +208,20 @@ namespace sw
          */
         string convertState( PrefabStateFormat targetFormat ) const;
 
+        /**
+         * @brief 변형을 읽습니다 — 부모를 읽어 @p overrideXML 을 얹은 상태와 부모 노드 + @p listOwnNode 를 이 자산에 채웁니다. 순환 · 없는 부모 · 없는 대상 · 깊이 초과는 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] bool resolveVariant( string_view basePath, string_view overrideXML, vector<PrefabInstanceNode> listOwnNode, string_view sourceName );
+        /** @brief 변형을 파일에 쓸 값을 만듭니다 — 부모와 다른 점과 물려받지 않은 노드입니다. 부모를 읽지 못하거나 물려받은 노드를 지웠거나 옮겼으면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool makeVariantFileFields( string& outOverrideXML, vector<PrefabInstanceNode>& outListOwnNode ) const;
+
     private:
         string                     _name;
         string                     _stateData;
+        string                     _basePath;           ///< 변형의 부모 프리팹 경로(`getBasePath`)
+        string                     _variantOverrideXML; ///< 변형 파일이 적은 다른 점(`getVariantOverrides`)
         vector<PrefabInstanceNode> _listNestedInstance;
+        vector<PrefabPartOverride> _listVariantPart; ///< 변형 사슬이 물려받은 부품에 덮어쓴 것(`getVariantPartOverrides`)
         PrefabStateFormat          _stateFormat;
         // `_bValid` 라는 이름은 이 저장소에서 **두 가지**다. 여기와 `RenderFramePacket` 은
         // `uint8 : 1` 비트필드이고, `EditorWorkspace` 와 `SceneDocument` 는 진짜 `bool` 이다.
@@ -306,8 +335,15 @@ namespace sw
          *          씬을 다시 읽을 때가 그렇다. 씬은 프리팹 인스턴스의 덮어쓴 값만 저장하므로(`PrefabOverrides`) 다시 읽은 씬의 인스턴스에는
          *          고친 프리팹의 값이 퍼지고, 인스턴스가 덮어쓴 값은 그대로 남는다. 중첩 인스턴스를 가진 프리팹도 함께 버린다 — 고친 원본이 순환을
          *          만들었는지 다음 로드가 다시 본다(상위 프리팹은 원본을 경로로만 가지므로 버리지 않아도 고친 원본이 퍼진다).
+         *          변형도 함께 버린다 — 읽을 때 부모를 합쳐 들고 있으므로 다음 로드가 다시 합쳐야 고친 부모가 퍼진다.
          */
         void reload( const AssetID& assetID );
+        /**
+         * @brief 프리팹 @p assetRelativePath 의 칸이 어디서 왔는지 변형 사슬을 따라 찾습니다. "이 칸이 어디서 왔나" 의 답이고 인스펙터 같은 도구가 묻습니다.
+         * @param componentKey 컴포넌트 키(`이름#n`)입니다. 비면 오브젝트 자기 칸입니다.
+         * @return 그 칸을 마지막으로 적은 프리팹 경로입니다(변형이 아니거나 어느 변형도 적지 않았으면 사슬 맨 위 프리팹). 읽지 못하면 빈 글입니다.
+         */
+        [[nodiscard]] string findFieldOrigin( string_view assetRelativePath, string_view componentKey, string_view fieldName );
         /** @brief 이 캐시가 다루는 에셋 종류의 이름입니다. */
         const utf8* getAssetKindName() const override { return kAssetKindName; }
         /** @brief 그 프리팹을 캐시가 지금 가지고 있으면 true 입니다. */

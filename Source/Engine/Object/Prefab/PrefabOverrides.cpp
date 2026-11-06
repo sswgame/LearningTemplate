@@ -9,10 +9,13 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
+#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -487,6 +490,154 @@ namespace sw
         XMLNode     outRoot = outDoc.appendRoot( baseRoot.getName() );
         PrefabOverridesInternal::appendMergedAttributes( outRoot, baseRoot, objectOverride, name.empty() ? nullptr : name.c_str() );
         PrefabOverridesInternal::appendMergedChildren( outRoot, baseRoot, objectOverride, &writeList );
+        outStateXML = outRoot.toString();
+        return outStateXML.empty() == false;
+    }
+
+    bool PrefabOverrides::checkOverrideTargets( string_view baseStateXML, string_view overrideXML, string_view sourceName )
+    {
+        if ( StringUtil::trim( overrideXML ).empty() )
+            return true;
+        XMLDocument baseDoc;
+        XMLDocument overrideDoc;
+        if ( baseDoc.parse( baseStateXML ) == false || overrideDoc.parse( overrideXML ) == false || overrideDoc.getRoot( kRootName ).isValid() == false )
+        {
+            SW_LOG_ERROR_ID( "PrefabOverrides.VariantNotParsed", "'%#': its <%#> or its base state could not be parsed", sourceName, kRootName );
+            return false;
+        }
+        vector<PrefabOverridesInternal::KeyedComponent> listBase;
+        PrefabOverridesInternal::collectComponents( PrefabOverridesInternal::findChildElement( baseDoc.getRoot(), PrefabOverridesInternal::kComponentList ), listBase );
+        const auto hasKey = [&listBase]( const utf8* pKey )
+        {
+            return pKey != nullptr && VectorUtil::containsIf( listBase, [pKey]( const PrefabOverridesInternal::KeyedComponent& component )
+            { return component._key == pKey; } );
+        };
+        const XMLNode overrideRoot = overrideDoc.getRoot( kRootName );
+        bool          bAllFound    = true;
+        const auto    check        = [&]( const utf8* pElement, const utf8* pAttribute, bool bOptional )
+        {
+            for ( XMLNode entry = overrideRoot.findChild( pElement ); entry.isValid(); entry = entry.findNextSibling( pElement ) )
+            {
+                const utf8* pKey = entry.findAttribute( pAttribute );
+                if ( ( bOptional && pKey == nullptr ) || hasKey( pKey ) )
+                    continue;
+                SW_LOG_ERROR_ID( "PrefabOverrides.VariantTargetMissing", "'%#': <%# %#=\"%#\"> names a component its base does not have", sourceName, pElement, pAttribute, pKey != nullptr ? pKey : "" );
+                bAllFound = false;
+            }
+        };
+        check( PrefabOverridesInternal::kOverride, PrefabOverridesInternal::kKey, false );
+        check( PrefabOverridesInternal::kRemove, PrefabOverridesInternal::kKey, false );
+        check( PrefabOverridesInternal::kAdd, PrefabOverridesInternal::kAfter, true );
+        return bAllFound;
+    }
+
+    bool PrefabOverrides::writesField( string_view overrideXML, string_view componentKey, string_view fieldName )
+    {
+        XMLDocument doc;
+        if ( StringUtil::trim( overrideXML ).empty() || doc.parse( overrideXML ) == false )
+            return false;
+        const XMLNode root = doc.getRoot( kRootName );
+        const string  fieldText{ fieldName };
+        const auto    hasField = [&fieldText]( const XMLNode& element )
+        {
+            return element.isValid() && ( element.hasAttribute( fieldText.c_str() ) || element.findChild( fieldText.c_str() ).isValid() );
+        };
+        if ( componentKey.empty() )
+            return hasField( PrefabOverridesInternal::findChildElement( root, PrefabOverridesInternal::kObject ) );
+        for ( XMLNode entry = root.findChild( PrefabOverridesInternal::kOverride ); entry.isValid(); entry = entry.findNextSibling( PrefabOverridesInternal::kOverride ) )
+        {
+            if ( entry.getAttributeText( PrefabOverridesInternal::kKey ) == componentKey && hasField( PrefabOverridesInternal::findFirstElement( entry ) ) )
+                return true;
+        }
+        for ( XMLNode entry = root.findChild( PrefabOverridesInternal::kAdd ); entry.isValid(); entry = entry.findNextSibling( PrefabOverridesInternal::kAdd ) )
+        {
+            const XMLNode     added = PrefabOverridesInternal::findFirstElement( entry );
+            const string_view label = added.isValid() && added.hasAttribute( PrefabOverridesInternal::kComponentName ) ? added.getAttributeText( PrefabOverridesInternal::kComponentName ) : string_view( added.isValid() ? added.getName() : "" );
+            if ( added.isValid() && StringUtil::startsWith( componentKey, label ) && hasField( added ) )
+                return true;
+        }
+        return false;
+    }
+
+    bool PrefabOverrides::omitDefaultValues( string_view stateXML, string& outStateXML )
+    {
+        outStateXML.clear();
+        XMLDocument stateDoc;
+        if ( stateDoc.parse( stateXML ) == false || stateDoc.getRoot().isValid() == false )
+            return false;
+        const XMLNode stateRoot = stateDoc.getRoot();
+
+        // 기본값은 씬 밖에서 새로 만든 오브젝트 · 컴포넌트를 같은 직렬화기로 쓴 글이다(언리얼 CDO 자리).
+        GameObjectManager scratch;
+        ObjectSaveOptions options{ SerializePurpose::Authoring };
+        options._bOmitExternalParent = SW_TRUE;
+        GameObject* pDefaultObject   = scratch.createGameObject( hashed_string( PrefabOverridesInternal::kBaseName ) );
+        if ( pDefaultObject == nullptr )
+            return false;
+        XMLDocument defaultDoc;
+        if ( defaultDoc.parse( ObjectStateSerializer::saveToXMLString( pDefaultObject, options ) ) == false || defaultDoc.getRoot().isValid() == false )
+            return false;
+
+        XMLDocument   outDoc;
+        const XMLNode outRoot = outDoc.appendRoot( stateRoot.getName() );
+        // 판 · 이름은 늘 쓴다(읽기가 찾는다). 컴포넌트 목록은 아래에서 원소마다 줄인다.
+        for ( const utf8* pRootField : { sw::kSchemaVersionKey, PrefabOverridesInternal::kObjectName } )
+        {
+            const utf8* pValue = stateRoot.findAttribute( pRootField );
+            if ( pValue != nullptr )
+                outRoot.appendAttribute( pRootField, pValue );
+        }
+        vector<XMLAttribute> listAttribute;
+        vector<XMLNode>      listChild;
+        PrefabOverridesInternal::collectDifferences( stateRoot, defaultDoc.getRoot(), true, listAttribute, listChild );
+        for ( const XMLAttribute& attribute : listAttribute )
+        {
+            outRoot.appendAttribute( attribute.getName(), attribute.getValue() );
+        }
+        for ( const XMLNode& child : listChild )
+        {
+            (void)outRoot.appendClone( child );
+        }
+
+        const XMLNode outList = outRoot.appendChild( PrefabOverridesInternal::kComponentList );
+        const XMLNode list    = PrefabOverridesInternal::findChildElement( stateRoot, PrefabOverridesInternal::kComponentList );
+        for ( XMLNode component = list.isValid() ? list.findChild() : XMLNode{}; component.isValid(); component = component.findNextSibling() )
+        {
+            if ( PrefabOverridesInternal::isElement( component ) == false )
+                continue;
+            const hashed_string typeName( component.getName() );
+            GameObject*         pHolder    = scratch.createGameObject( hashed_string( PrefabOverridesInternal::kBaseName ) );
+            Component*          pComponent = pHolder != nullptr ? scratch.addComponentByName( pHolder, typeName, false ) : nullptr;
+            XMLDocument         holderDoc;
+            const XMLNode       defaultElement = pComponent != nullptr && holderDoc.parse( ObjectStateSerializer::saveToXMLString( pHolder, options ) )
+                                                   ? PrefabOverridesInternal::findChildElement( PrefabOverridesInternal::findChildElement( holderDoc.getRoot(), PrefabOverridesInternal::kComponentList ), component.getName() )
+                                                   : XMLNode{};
+            if ( defaultElement.isValid() == false )
+            {
+                (void)outList.appendClone( component ); // 만들지 못한 타입 — 기본값을 모른다
+                continue;
+            }
+            PrefabOverridesInternal::collectDifferences( component, defaultElement, false, listAttribute, listChild );
+            const XMLNode   element   = outList.appendChild( component.getName() );
+            const TypeInfo* pTypeInfo = engine::getSubsystem<TypeRegistry>().findType( typeName );
+            if ( pTypeInfo != nullptr )
+            {
+                for ( const string& required : DataInheritanceSchema::makeFromType( *pTypeInfo )._listKeptAttribute )
+                {
+                    const utf8* pValue = component.findAttribute( required.c_str() );
+                    if ( pValue != nullptr && defaultElement.findAttribute( required.c_str() ) != nullptr && StringUtil::equals( pValue, defaultElement.findAttribute( required.c_str() ) ) )
+                        element.appendAttribute( required.c_str(), pValue );
+                }
+            }
+            for ( const XMLAttribute& attribute : listAttribute )
+            {
+                element.appendAttribute( attribute.getName(), attribute.getValue() );
+            }
+            for ( const XMLNode& child : listChild )
+            {
+                (void)element.appendClone( child );
+            }
+        }
         outStateXML = outRoot.toString();
         return outStateXML.empty() == false;
     }
