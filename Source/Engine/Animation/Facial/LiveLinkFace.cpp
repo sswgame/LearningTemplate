@@ -260,6 +260,7 @@ namespace sw
             formatstring( arrMessage, constant::buffer::kMax256, "packet carries %# channels but the layout has %#", static_cast<uint32>( channelCount ),
                           static_cast<uint32>( layout._listChannel.size() ) );
             outError = arrMessage;
+            outFrame = LiveLinkFaceFrame{};
             return false;
         }
         outFrame._listValue.resize( channelCount );
