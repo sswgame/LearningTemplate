@@ -1,0 +1,84 @@
+<Scene formatVersion="2" name="animgraphlod">
+	<!-- 시나리오 automation/animgraphlod 의 무대 — animvariant_linked 와 같고, 그래프만 상체 레이어에 LOD 규칙을 더한 차이다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.0,-3.4"
+					                 _localRotation="0.05,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0"
+					                           _localRotation="0.6,3.6,0"
+					                           _localScale="1,1,1"
+					                           _attachOwner="None"
+					                           _attachComponent="None"
+					                           _color="1,0.96,0.9"
+					                           _intensity="1.2"
+					                           _ambient="0.3"
+					                           _shadowExtent="8"
+					                           _shadowDistance="20"
+					                           _bCastShadow="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Knight">
+			<GameObject _schemaVersion="0" _name="Knight" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent"
+					                       _bActive="true"
+					                       _localPosition="0,0,0"
+					                       _localRotation="0,3.1415927,0"
+					                       _localScale="1,1,1"
+					                       _attachOwner="None"
+					                       _attachOwnerID="0"
+					                       _attachComponent="None"
+					                       _meshID="common/models/kaykit/knight.mesh"
+					                       _materialPath="common/materials/kaykit_knight.material"
+					                       _boundsRadius="2"
+					                       _blendMode="Opaque"
+					                       _gpuSpinSeed="0"
+					                       _bVisible="true"
+					                       _skeletonPath="common/models/kaykit/knight/knight.skeleton.xml"
+					                       _updateRateDivisor="1"
+					                       _bFollowParentPose="false"
+					                       _bAnimateWhenOffscreen="false" />
+					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
+					                           _bActive="true"
+					                           _animationGraphPath="game/empty/data/anim/animgraphlod.animgraph.xml"
+					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
+					                           _initialState="Idle"
+					                           _currentState=""
+					                           _stateTime="0"
+					                           _playRate="1"
+					                           _blendSeconds="0.2"
+					                           _syncGroup=""
+					                           _syncWeight="1"
+					                           _bExtractRootMotion="false"
+					                           _bPlayOnBegin="true">
+						<_listLinkedLayer>
+							<AnimationLinkedLayerBinding _slot="Weapon" _graphPath="game/empty/data/anim/animvariant_weapon.animgraph.xml" />
+						</_listLinkedLayer>
+					</SkeletalAnimatorComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  애니메이션 그래프 노드 LOD — 기사의 그래프는 바탕 그래프에 상체 연결 레이어의 LOD 규칙(max_lod="1")만 더한 차이다(_base).
+  ① 기본 판정(가까운 기사, 등급 0)과 등급 0 고정은 같은 그림이어야 한다 — LOD 규칙을 적어도 가까이에서는 그림이 그대로다.
+  ② 등급 2 를 고정하면(gv_animationLODGrade) 상체 레이어가 꺼져 상체가 Idle 로 돌아가야 한다 — 다르지 않으면 규칙을 실행이 읽지 않은 것이다.
+  ③ 등급 1 은 규칙의 경계 안이라 ① 과 같다.
+  시간을 멈춰(gv_timeScale=0) 장마다 같은 시각의 포즈를 견준다. 같아야 하는 두 장의 상한(0.2%)은 포즈가 아닌 렌더 흔들림 몫이다. 고정한 등급은 페이드 없이 바로 끝 상태다. 대기는 갱신 주기의 배수(240)다.
+  실행: App -scenario=game/empty/automation/animgraphlod.scenario.xml -unattended (체인: ctest -R Scenario.game.empty.animgraphlod)
+-->
+<Scenario name="game.empty.animgraphlod" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/animgraphlod.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="0"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="30"/>
+	<Variable name="gv_timeScale" value="0"/>
+	<Wait frames="240"/>
+	<Screenshot file="animgraphlod_judged.ppm"/>
+	<Variable name="gv_animationLODGrade" value="0"/>
+	<Wait frames="240"/>
+	<Screenshot file="animgraphlod_grade0.ppm"/>
+	<Variable name="gv_animationLODGrade" value="2"/>
+	<Wait frames="240"/>
+	<Screenshot file="animgraphlod_grade2.ppm"/>
+	<Variable name="gv_animationLODGrade" value="1"/>
+	<Wait frames="240"/>
+	<Screenshot file="animgraphlod_grade1.ppm"/>
+	<Variable name="gv_animationLODGrade" value="-1"/>
+	<Wait frames="5"/>
+	<ExpectImagesDiffer first="animgraphlod_judged.ppm" second="animgraphlod_grade0.ppm" minDiffering="0" maxDiffering="0.002"/>
+	<ExpectImagesDiffer first="animgraphlod_grade0.ppm" second="animgraphlod_grade2.ppm" region="0.3,0.1,0.4,0.8" minDiffering="0.005"/>
+	<ExpectImagesDiffer first="animgraphlod_grade0.ppm" second="animgraphlod_grade1.ppm" minDiffering="0" maxDiffering="0.002"/>
+	<Pass/>
+</Scenario>

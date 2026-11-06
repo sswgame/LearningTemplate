@@ -1,0 +1,6 @@
+<!-- 시나리오 automation/animgraphlod 의 그래프 — 바탕 그래프의 상체 연결 레이어에 LOD 규칙만 더한 차이다(등급 1 까지 얹고, 2 부터 페이드로 내려 끈다). -->
+<AnimationGraphAsset _base="game/empty/data/anim/animvariant_base.animgraph.xml">
+	<layers>
+		<layer name="Upper" max_lod="1" />
+	</layers>
+</AnimationGraphAsset>

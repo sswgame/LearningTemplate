@@ -28,7 +28,7 @@ namespace sw
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_animationForceVertexAnimation, 0, "Draw every crowd-shared unit with vertex animation regardless of distance (verification)" );
     /**
-     * @brief `-gv_animationLODGrade=2` — 모든 유닛의 LOD 등급을 이 값으로 둡니다(그래프 · 리그 노드의 `max_lod` 검증 · 측정용). -1 이면 판정한 등급입니다.
+     * @brief `-gv_animationLODGrade=2` — 모든 유닛의 LOD 등급을 이 값으로 두고 노드를 페이드 없이 바로 바꿉니다(그래프 · 리그 노드의 `max_lod` 검증 · 측정용). -1 이면 판정한 등급입니다.
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_animationLODGrade, -1, "Force every unit's animation LOD grade (graph layers, blend branches and rig nodes compare it with max_lod; -1 = judged grade)" );
 
@@ -370,8 +370,12 @@ namespace sw
                 state._bVertexAnimation = SW_TRUE;
             if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
                 state.applyBudgetDivisor( _listScratchBudgetItem[budgetIndex++]._updateRateDivisor );
+            // 고정한 등급은 페이드 없이 바로 그 등급의 끝 상태다 — 시간을 멈춘(gv_timeScale=0) 검증이 같은 시각의 두 장을 견줄 수 있게.
             if ( gv_animationLODGrade >= 0 )
-                state._lodGrade = static_cast<uint8>( MathUtil::min( gv_animationLODGrade, 255 ) );
+            {
+                state._lodGrade        = static_cast<uint8>( MathUtil::min( gv_animationLODGrade, 255 ) );
+                state._nodeFadeSeconds = 0.0f;
+            }
         }
         // 적용 단계 — 훅이 등록 · 해제를 불러도 안전하도록 `forEach` 로 돈다. 위치는 위 판정과 같고(접지 않는다), 해제된 칸은 건너뛴다.
         // 위 `listLODClient` 참조는 여기서 쓰지 않는다 — 훅이 더하면 저장소가 다시 잡힌다.
