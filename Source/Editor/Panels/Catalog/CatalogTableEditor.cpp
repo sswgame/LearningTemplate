@@ -94,6 +94,8 @@ namespace sw::editor
             return false;
         }
 
+        if ( inoutDocument.getInheritanceError().empty() == false )
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", inoutDocument.getInheritanceError().c_str() );
         // 언리얼 Data Table 의 행 검색처럼 칸 값으로 거른다.
         EditorWidgets::drawSearchField( "##catalogRowFilter", _rowFilter, SW_LOCKEY( "EdCommon", "SearchHint" ), -1.0f, false );
 
@@ -172,6 +174,12 @@ namespace sw::editor
             _pending = CatalogTableEdit{ CatalogTableEdit::Kind::RemoveRow, elementIndex, string(), string() };
         if ( rowPosition == 0 && bFirstGroup )
             EditorSelfTestMarks::note( "catalog.row.remove.first" );
+        if ( document.canCreateVariant( elementIndex ) )
+        {
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "CreateVariant" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "CreateVariant" ) ) )
+                _pending = CatalogTableEdit{ CatalogTableEdit::Kind::CreateVariant, elementIndex, string(), string() };
+        }
 
         for ( size_t columnIndex = 0; columnIndex < group._listColumn.size(); ++columnIndex )
         {
@@ -219,13 +227,18 @@ namespace sw::editor
     void CatalogTableEditor::drawCell( const CatalogDocument& document, int32 elementIndex, const string& column, bool bFirstCell, float32 width )
     {
         ImGui::PushID( column.c_str() );
-        const string* pValue   = document.findCellValue( elementIndex, column );
-        const ImGuiID cellID   = ImGui::GetID( "##cell" );
-        const bool    bEditing = _editID == cellID;
-        string        display  = bEditing ? _editText : ( pValue != nullptr ? *pValue : string() );
+        const string* pValue     = document.findCellValue( elementIndex, column );
+        const utf8*   pInherited = pValue == nullptr ? document.findInheritedValue( elementIndex, column ) : nullptr;
+        const ImGuiID cellID     = ImGui::GetID( "##cell" );
+        const bool    bEditing   = _editID == cellID;
+        string        display    = bEditing ? _editText : ( pValue != nullptr ? *pValue : ( pInherited != nullptr ? string( pInherited ) : string() ) );
         if ( pValue == nullptr && bEditing == false )
             ImGui::PushStyleColor( ImGuiCol_FrameBg, ImVec4{ 0.0f, 0.0f, 0.0f, 0.12f } ); // 속성이 없는 칸은 어둡게 — 비어 있는 값과 다르다
+        if ( pInherited != nullptr && bEditing == false )
+            ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) ); // 물려받은 값은 흐리게 — 이 행이 적은 값이 아니다
         const bool bChanged = EditorWidgets::drawTextField( "##cell", display, width );
+        if ( pInherited != nullptr && bEditing == false )
+            ImGui::PopStyleColor();
         if ( pValue == nullptr && bEditing == false )
             ImGui::PopStyleColor();
         if ( bFirstCell )
@@ -237,7 +250,8 @@ namespace sw::editor
         }
         if ( ImGui::IsItemDeactivatedAfterEdit() )
         {
-            const bool bUnchanged = ( pValue == nullptr && _editText.empty() ) || ( pValue != nullptr && *pValue == _editText );
+            const string_view shown      = pValue != nullptr ? string_view( *pValue ) : ( pInherited != nullptr ? string_view( pInherited ) : string_view{} );
+            const bool        bUnchanged = shown == string_view( _editText );
             if ( bUnchanged == false )
                 _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetCell, elementIndex, column, _editText };
             _editID = 0;

@@ -83,6 +83,7 @@ namespace sw::editor
         , _listUndo{}
         , _listRedo{}
         , _bTextEditOpen{ SW_FALSE }
+        , _inheritance{}
     {
     }
 
@@ -147,6 +148,24 @@ namespace sw::editor
         return attributeIndex >= 0 ? &element._listAttribute[static_cast<size_t>( attributeIndex )]._value : nullptr;
     }
 
+    const utf8* CatalogDocument::findInheritedValue( int32 elementIndex, string_view column ) const
+    {
+        const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();
+        if ( bInvalidElementIndex || _parsed.getElement( elementIndex )._parent != _parsed.getRootIndex() )
+            return nullptr;
+        return _inheritance.findInherited( _parsed.getElement( elementIndex ), column );
+    }
+
+    bool CatalogDocument::canCreateVariant( int32 elementIndex ) const
+    {
+        const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();
+        if ( bInvalidElementIndex || _parsed.getElement( elementIndex )._parent != _parsed.getRootIndex() )
+            return false;
+        const CatalogXMLElement& row  = _parsed.getElement( elementIndex );
+        const string*            pKey = _inheritance.findKeyAttribute( row._name );
+        return pKey != nullptr && row.findAttribute( *pKey ) >= 0;
+    }
+
     void CatalogDocument::collectVisibleRows( const Group& group, string_view filter, vector<int32>& outListRow ) const
     {
         outListRow.clear();
@@ -173,7 +192,9 @@ namespace sw::editor
     {
         _listGroup.clear();
         _error.clear();
-        if ( _parsed.parse( _text, _error ) == false )
+        const bool bParsed = _parsed.parse( _text, _error );
+        _inheritance.rebuild( _text, _parsed );
+        if ( bParsed == false )
             return;
         for ( const int32 rowIndex : _parsed.getRowIndices() )
         {
@@ -199,6 +220,7 @@ namespace sw::editor
                 if ( VectorUtil::contains( pGroup->_listColumn, attribute._name ) == false )
                     pGroup->_listColumn.push_back( attribute._name );
             }
+            _inheritance.collectInheritedColumns( row, pGroup->_listColumn ); // 물려받은 칸도 보이고 고칠 수 있어야 한다
         }
         for ( Group& group : _listGroup )
         {
@@ -238,6 +260,13 @@ namespace sw::editor
             _error = "the document is not parsed";
             return false;
         }
+        // 부모와 같은 값은 적지 않는다 — 부모를 고치면 따라가야 할 칸이 굳는다. 열쇠와 `_base` 는 항목 자신의 칸이라 물려받지 않는다.
+        const CatalogXMLElement& target     = _parsed.getElement( elementIndex );
+        const string*            pKey       = _inheritance.findKeyAttribute( target._name );
+        const bool               bOwnColumn = column == DataInheritance::kBaseAttribute || ( pKey != nullptr && column == string_view( *pKey ) );
+        const utf8*              pInherited = bOwnColumn ? nullptr : findInheritedValue( elementIndex, column );
+        if ( pInherited != nullptr && value == string_view( pInherited ) )
+            return target.findAttribute( column ) >= 0 ? unsetCell( elementIndex, column ) : true;
         string edited;
         string error;
         if ( CatalogXMLText::setAttributeValue( _text, _parsed.getElement( elementIndex ), column, value, edited, error ) == false )
@@ -386,6 +415,29 @@ namespace sw::editor
             edited = std::move( editedAgain );
         }
         return replaceTextChecked( edited );
+    }
+
+    bool CatalogDocument::createVariant( int32 elementIndex )
+    {
+        if ( canCreateVariant( elementIndex ) == false )
+        {
+            _error = "only a row of a catalog listed in the inheritance rules can have a variant";
+            return false;
+        }
+        const CatalogXMLElement& row    = _parsed.getElement( elementIndex );
+        const string&            key    = *_inheritance.findKeyAttribute( row._name );
+        const string&            id     = row._listAttribute[static_cast<size_t>( row.findAttribute( key ) )]._value;
+        const Group*             pGroup = CatalogDocumentInternal::findGroup( _listGroup, row._name );
+        if ( pGroup == nullptr )
+        {
+            _error = "only a table row can have a variant";
+            return false;
+        }
+        const vector<CatalogXMLNewAttribute> listAttribute{
+            CatalogXMLNewAttribute{ key, CatalogDocumentInternal::makeUniqueValue( *this, *pGroup, key, id + "_variant" ) },
+            CatalogXMLNewAttribute{ DataInheritance::kBaseAttribute, id }
+        };
+        return addChild( _parsed.getRootIndex(), row._name, listAttribute );
     }
 
     void CatalogDocument::replaceText( string_view text )

@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Panels/Catalog/Model/CatalogInheritanceView.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
 namespace sw::editor
@@ -57,12 +58,21 @@ namespace sw::editor
         string getRootName() const;
         /** @brief 원소 하나의 속성 값입니다. 속성이 없으면 nullptr 입니다(포인터는 다음 편집까지 유효합니다). */
         const string* findCellValue( int32 elementIndex, string_view column ) const;
+        /** @brief 부모 파일을 읽는 곳을 줍니다(`load` 전에). 없으면 상속을 보지 않고 원문만 봅니다. 소유하지 않습니다. */
+        void setInheritanceSource( IDataInheritanceSource* pSource ) { _inheritance.setSource( pSource ); }
+        /** @brief 원소가 칸 @p column 을 적지 않으면 물려받을 값입니다(카탈로그 항목 상속). 없으면 nullptr 이고, 포인터는 다음 편집까지 유효합니다. */
+        const utf8* findInheritedValue( int32 elementIndex, string_view column ) const;
+        /** @brief 항목 상속을 펼치지 못한 이유입니다. 없으면 빈 글입니다. */
+        const string& getInheritanceError() const { return _inheritance.getError(); }
+        /** @brief 이 원소를 부모로 하는 변형을 만들 수 있으면(규칙 표에 있는 종류의 행이면) true 입니다. */
+        bool canCreateVariant( int32 elementIndex ) const;
         /** @brief 표의 행 중 속성 값이 @p filter 를 포함하는 행을 문서 순서로 모읍니다(대소문자 무시). 필터가 비면 모두입니다. 먼저 출력 목록을 비웁니다. */
         void collectVisibleRows( const Group& group, string_view filter, vector<int32>& outListRow ) const;
 
         // ------------------------------------------------------------------------------
         // 편집 — 성공하면 되돌리기 스택에 이전 원문을 한 단계 쌓습니다. 실패하면 아무것도 바뀌지 않고 `getError` 에 이유가 있습니다.
         // ------------------------------------------------------------------------------
+        /** @brief 칸을 고칩니다. 물려받을 값과 같은 값이면 적지 않고 그 칸을 지웁니다 — 저장은 부모와 다른 칸만 쓴다(이미 없으면 그대로 두고 true). */
         [[nodiscard]] bool setCell( int32 elementIndex, string_view column, string_view value );
         [[nodiscard]] bool unsetCell( int32 elementIndex, string_view column );
         /**
@@ -74,6 +84,8 @@ namespace sw::editor
         [[nodiscard]] bool removeRow( int32 elementIndex );
         /** @brief 루트의 자식 원소 하나를 자식째 복사해 바로 뒤에 놓습니다(언리얼 Data Table 의 Duplicate). 이름 칸은 `<값>_copy` 로 겹치지 않게 바꿉니다. */
         [[nodiscard]] bool duplicateRow( int32 elementIndex );
+        /** @brief 이 행을 `_base` 로 가리키고 id 만 적은 새 행을 바로 표 끝에 더합니다(언리얼 Create Child Blueprint · 유니티 Prefab Variant). */
+        [[nodiscard]] bool createVariant( int32 elementIndex );
         /** @brief 어느 깊이의 원소든 @p parentIndex 의 마지막 자식으로 `<name a="…" />` 를 더합니다(곡선 키처럼 중첩된 원소를 고치는 길). 부모가 없으면 false 입니다. */
         [[nodiscard]] bool addChild( int32 parentIndex, string_view name, const vector<CatalogXMLNewAttribute>& listAttribute );
         /** @brief 여러 단계로 고친 원문을 한 단계로 넣습니다. 훑지 못하는 글이면 거절합니다. */
@@ -99,13 +111,14 @@ namespace sw::editor
         void pushUndo();
 
     private:
-        string         _text;
-        string         _savedText;
-        string         _error;
-        CatalogXMLText _parsed;
-        vector<Group>  _listGroup;
-        vector<string> _listUndo;
-        vector<string> _listRedo;
-        uint8          _bTextEditOpen : 1; ///< 글 상자 입력이 이어지는 중이다 — 이미 되돌리기 단계를 쌓았다
+        string                 _text;
+        string                 _savedText;
+        string                 _error;
+        CatalogXMLText         _parsed;
+        vector<Group>          _listGroup;
+        vector<string>         _listUndo;
+        vector<string>         _listRedo;
+        uint8                  _bTextEditOpen : 1; ///< 글 상자 입력이 이어지는 중이다 — 이미 되돌리기 단계를 쌓았다
+        CatalogInheritanceView _inheritance;
     };
 } // namespace sw::editor

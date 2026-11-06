@@ -789,6 +789,7 @@
 		<entry key="EdLabel.Bodies" text="바디" sourceHash="e3707cdd2dd42549" />
 		<entry key="EdLabel.BoneMarkers" text="뼈 표시" sourceHash="93f13345e2ad4494" />
 		<entry key="EdLabel.ClearOnPlay" text="플레이 때 지우기" sourceHash="beece2dfe156c8cb" />
+		<entry key="EdLabel.CreateVariant" text="변형" sourceHash="bcabce7030eb33c6" />
 		<entry key="EdLabel.CollapseAll" text="모두 접기" sourceHash="62006d0c66337241" />
 		<entry key="EdLabel.Collect" text="모으기" sourceHash="828e9e42981c5891" />
 		<entry key="EdLabel.CopyFullLogLine" text="로그 줄 전체 복사" sourceHash="e782d27f233f5e83" />

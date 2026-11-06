@@ -2320,6 +2320,11 @@
 				<item>Source/Editor/Panels/Console/ConsolePanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdLabel.CreateVariant" source="Variant">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdLabel.CollapseAll" source="Collapse All">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>

@@ -71,6 +71,12 @@ namespace sw::editor
                 outDescription = Internal::describe( "Duplicated row in", groupName, string_view() );
                 break;
             }
+            case Kind::CreateVariant:
+            {
+                bChanged       = inoutDocument.createVariant( _element );
+                outDescription = Internal::describe( "Created a variant in", groupName, string_view() );
+                break;
+            }
             case Kind::AddCurveKey:
             {
                 bChanged       = CatalogCurveModel::addKey( inoutDocument, _element );

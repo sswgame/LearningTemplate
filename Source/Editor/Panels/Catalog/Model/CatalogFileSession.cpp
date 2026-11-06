@@ -17,10 +17,11 @@ namespace sw::editor
     {
     }
 
-    void CatalogFileSession::open( string_view assetID, string_view kindLabel, string_view text )
+    void CatalogFileSession::open( string_view assetID, string_view kindLabel, string_view text, IDataInheritanceSource* pInheritanceSource )
     {
         _assetID   = string( assetID );
         _kindLabel = string( kindLabel );
+        _document.setInheritanceSource( pInheritanceSource );
         (void)_document.load( text );
         _previousText = string( text );
         _conflictDiskText.clear();

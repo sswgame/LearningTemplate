@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
@@ -685,4 +686,117 @@ SW_TEST_CASE( CatalogFileSessionTest, ValidationNeedsALoadWithoutWarningsAndSays
     session.open( "game/b.xml", "Items", "<r/>" ); // 다른 파일을 열면 앞 결과가 남지 않는다
     SW_EXPECT_TRUE( session.getValidationState() == CatalogFileSession::ValidationState::None );
     SW_EXPECT_TRUE( session.getWarnings().empty() );
+}
+
+namespace
+{
+    /** @brief 항목 상속의 다른 파일 부모를 글 표에서 읽습니다. */
+    class CatalogInheritanceTestSource final : public IDataInheritanceSource
+    {
+    public:
+        [[nodiscard]] bool readText( string_view assetID, string& outText ) override
+        {
+            if ( assetID != "common/data/items.xml" )
+                return false;
+            outText = R"(<ItemCatalog><Item id="far" category="Armor" slot="Head" /></ItemCatalog>)";
+            return true;
+        }
+    };
+
+    struct CatalogInheritanceTestUtil
+    {
+        static constexpr const utf8* kItems = "<ItemCatalog>\n"
+                                              "\t<Item id=\"a\" name=\"A\" category=\"Armor\"/>\n"
+                                              "\t<Item id=\"b\" _base=\"a\" name=\"B\"/>\n"
+                                              "\t<Item id=\"c\" _base=\"common/data/items.xml#far\"/>\n"
+                                              "</ItemCatalog>\n";
+
+        /** @brief 표에서 id 가 @p id 인 행의 번호입니다. */
+        static int32 findRow( const CatalogDocument& document, string_view id )
+        {
+            for ( const int32 rowIndex : document.getParsed().getRowIndices() )
+            {
+                const string* pID = document.findCellValue( rowIndex, "id" );
+                if ( pID != nullptr && string_view( *pID ) == id )
+                    return rowIndex;
+            }
+            return -1;
+        }
+    };
+} // namespace
+
+/** @brief [CatalogDocumentTest] 항목 상속 - 물려받은 값이 보이고(같은 파일 · 다른 파일), 표의 열이 되며, 원문은 적은 칸만 든다 */
+SW_TEST_CASE( CatalogDocumentTest, ShowsInheritedValues )
+{
+    using Util = CatalogInheritanceTestUtil;
+    CatalogInheritanceTestSource source;
+    CatalogDocument              document;
+    document.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( document.load( Util::kItems ) );
+    SW_EXPECT_TRUE( document.getInheritanceError().empty() );
+
+    const int32 b = Util::findRow( document, "b" );
+    SW_EXPECT_TRUE( document.findCellValue( b, "category" ) == nullptr );
+    SW_REQUIRE_TRUE( document.findInheritedValue( b, "category" ) != nullptr );
+    SW_EXPECT_EQUAL( string( "Armor" ), string( document.findInheritedValue( b, "category" ) ) );
+
+    const int32 c = Util::findRow( document, "c" );
+    SW_REQUIRE_TRUE( document.findInheritedValue( c, "slot" ) != nullptr );
+    SW_EXPECT_EQUAL( string( "Head" ), string( document.findInheritedValue( c, "slot" ) ) );
+    SW_REQUIRE_EQUAL( document.getGroups().size(), static_cast<size_t>( 1 ) );
+    SW_EXPECT_TRUE( VectorUtil::contains( document.getGroups()[0]._listColumn, string( "slot" ) ) ); // 다른 파일의 칸도 열이 된다
+
+    SW_EXPECT_TRUE( document.findInheritedValue( Util::findRow( document, "a" ), "category" ) == nullptr ); // 부모가 없다
+}
+
+/** @brief [CatalogDocumentTest] 항목 상속의 왕복 저장 - 다른 값은 적고, 부모와 같은 값을 적으면 칸을 지우며, 부모를 고치면 적지 않은 칸이 따라간다 */
+SW_TEST_CASE( CatalogDocumentTest, SavesOnlyDifferences )
+{
+    using Util = CatalogInheritanceTestUtil;
+    CatalogInheritanceTestSource source;
+    CatalogDocument              document;
+    document.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( document.load( Util::kItems ) );
+
+    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "b" ), "category", "Weapon" ) );
+    SW_REQUIRE_TRUE( document.findCellValue( Util::findRow( document, "b" ), "category" ) != nullptr );
+    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "b" ), "category", "Armor" ) );
+    SW_EXPECT_TRUE( document.findCellValue( Util::findRow( document, "b" ), "category" ) == nullptr );
+    SW_EXPECT_EQUAL( string( Util::kItems ), document.getText() ); // 부모와 같아지면 원문이 처음과 같다
+
+    // 이미 없는 칸에 부모 값을 적으면 아무것도 바뀌지 않는다.
+    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "b" ), "category", "Armor" ) );
+    SW_EXPECT_EQUAL( string( Util::kItems ), document.getText() );
+
+    // 부모를 고치면 적지 않은 칸이 따라간다.
+    SW_REQUIRE_TRUE( document.setCell( Util::findRow( document, "a" ), "category", "Cloth" ) );
+    SW_EXPECT_EQUAL( string( "Cloth" ), string( document.findInheritedValue( Util::findRow( document, "b" ), "category" ) ) );
+
+    // 저장본을 다시 열어도 같다.
+    const string    saved = document.getText();
+    CatalogDocument reopened;
+    reopened.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( reopened.load( saved ) );
+    SW_EXPECT_EQUAL( string( "Cloth" ), string( reopened.findInheritedValue( Util::findRow( reopened, "b" ), "category" ) ) );
+}
+
+/** @brief [CatalogDocumentTest] 변형 만들기 - 이 행을 `_base` 로 가리키고 id 만 적은 행이 생기며, 값은 물려받는다. 규칙에 없는 문서에는 만들 수 없다 */
+SW_TEST_CASE( CatalogDocumentTest, CreatesVariantRows )
+{
+    using Util = CatalogInheritanceTestUtil;
+    CatalogInheritanceTestSource source;
+    CatalogDocument              document;
+    document.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( document.load( Util::kItems ) );
+    SW_REQUIRE_TRUE( document.createVariant( Util::findRow( document, "a" ) ) );
+    const int32 variant = Util::findRow( document, "a_variant" );
+    SW_REQUIRE_TRUE( variant >= 0 );
+    SW_EXPECT_EQUAL( string( "a" ), *document.findCellValue( variant, "_base" ) );
+    SW_EXPECT_TRUE( document.findCellValue( variant, "name" ) == nullptr );
+    SW_EXPECT_EQUAL( string( "A" ), string( document.findInheritedValue( variant, "name" ) ) );
+
+    CatalogDocument notListed;
+    notListed.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( notListed.load( "<Items><Item id=\"a\"/></Items>" ) );
+    SW_EXPECT_FALSE( notListed.canCreateVariant( notListed.getParsed().getRowIndices()[0] ) );
 }

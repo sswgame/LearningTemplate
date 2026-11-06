@@ -131,6 +131,7 @@ namespace sw::editor
         , _fileList{}
         , _listFileGroup{}
         , _indexJob{}
+        , _inheritanceSource{}
         , _session{}
         , _tableEditor{}
         , _bIndexLoaded{ SW_FALSE }
@@ -373,7 +374,7 @@ namespace sw::editor
         }
         vector<const AssetDataKind*> listKind;
         AssetDataKind::collectMatches( assetID, listKind );
-        _session.open( assetID, listKind.size() == 1 ? string_view( listKind[0]->_pLabel ) : string_view(), text );
+        _session.open( assetID, listKind.size() == 1 ? string_view( listKind[0]->_pLabel ) : string_view(), text, &_inheritanceSource );
         _tableEditor.reset();
         syncDirty();
         SW_LOG_INFO_ID( "Catalog.Opened", "Catalog opened %#", assetID.c_str() );

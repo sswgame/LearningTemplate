@@ -22,7 +22,8 @@ namespace sw::editor
             AddRow,
             RemoveRow,
             DuplicateRow,
-            AddCurveKey ///< `_element` 곡선의 끝에 키를 더한다
+            CreateVariant, ///< `_element` 를 `_base` 로 가리키는 새 행
+            AddCurveKey    ///< `_element` 곡선의 끝에 키를 더한다
         };
 
         Kind   _kind{ Kind::None };

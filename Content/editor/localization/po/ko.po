@@ -2640,6 +2640,11 @@ msgid "The audio service is not running"
 msgstr "오디오 서비스가 돌지 않습니다"
 
 #: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdLabel.CreateVariant"
+msgid "Variant"
+msgstr "변형"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
 msgctxt "EdLabel.UnsetAttribute"
 msgid "Unset attribute"
 msgstr "속성 지우기"

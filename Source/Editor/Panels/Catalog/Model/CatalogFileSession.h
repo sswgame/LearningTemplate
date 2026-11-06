@@ -27,8 +27,11 @@ namespace sw::editor
 
         CatalogFileSession();
 
-        /** @brief 파일을 엽니다. 깨진 원문도 글 상자로 고치게 열립니다(이유는 문서가 안다). */
-        void open( string_view assetID, string_view kindLabel, string_view text );
+        /**
+         * @brief 파일을 엽니다. 깨진 원문도 글 상자로 고치게 열립니다(이유는 문서가 안다).
+         * @param pInheritanceSource 항목 상속의 부모 파일을 읽는 곳입니다. 없으면 원문만 봅니다. 소유하지 않습니다.
+         */
+        void open( string_view assetID, string_view kindLabel, string_view text, IDataInheritanceSource* pInheritanceSource = nullptr );
 
         bool                   hasFile() const { return _assetID.empty() == false; }
         const string&          getAssetID() const { return _assetID; }

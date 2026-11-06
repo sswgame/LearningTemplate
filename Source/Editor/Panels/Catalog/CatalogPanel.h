@@ -18,6 +18,8 @@
 #include "Editor/Panels/Catalog/Model/CatalogFileList.h"
 #include "Editor/Panels/Catalog/Model/CatalogFileSession.h"
 
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+
 namespace sw::editor
 {
     /**
@@ -64,6 +66,7 @@ namespace sw::editor
         CatalogFileList                         _fileList;
         vector<CatalogFileGroup>                _listFileGroup; ///< 거르개에 맞는 파일의 재사용 버퍼
         EditorAssetIndexJob                     _indexJob;
+        DataInheritanceResourceSource           _inheritanceSource; ///< 항목 상속의 부모 파일을 읽는 곳(`_session` 의 문서가 가리킨다)
         CatalogFileSession                      _session;
         CatalogTableEditor                      _tableEditor;
         uint8                                   _bIndexLoaded : 1;
