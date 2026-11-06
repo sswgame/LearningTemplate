@@ -196,14 +196,14 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | 교체표 | 애니메이션 셋을 `_base` · 열쇠 목록으로 두고, 그래프는 슬롯 이름만 쓴다 | 유니티 Animator Override Controller |
 | 교체표 | 애니메이션 그래프의 상태를 열쇠로 두고, 연결 레이어 슬롯을 둔다 | 언리얼 Linked Anim Layers |
 | 교체표 | 스프라이트 라이브러리: 분류 · 라벨 → 프레임. 클립은 라벨만 쓴다 | 유니티 Sprite Library |
-| 파라미터 | 머티리얼 파라미터 묶음: 파일 하나의 값을 머티리얼 여럿이 읽는다 | 언리얼 Material Parameter Collection |
+| 파라미터 | 머티리얼 파라미터 묶음(`*.matparams.xml`): 프로퍼티가 묶음의 이름을 가리키고 값이 바뀌면 다시 패킹한다. 슬롯을 새로 두지 않아 네 백엔드가 같은 길이다. 구현됨 | 언리얼 Material Parameter Collection(묶음마다 유니폼 버퍼 — 값 바꾸기가 O(1) 이지만 셰이더가 배치를 안다) |
 | 파라미터 | 머티리얼 층: 머티리얼 그래프 뒤에 한다 | 언리얼 Material Layers |
-| 파라미터 | VFX 이미터 `_base` 와 사용자 파라미터, 오디오 이벤트 `_base` | 언리얼 Niagara 부모 이미터 · MetaSound Preset |
-| 인스턴스 값 | 파일 없이 인스턴스마다 float4 몇 개. 배치를 깨지 않는다(`MaterialInstance` 와의 관계는 구현 때 확인) | 언리얼 Custom Primitive Data · 유니티 MaterialPropertyBlock |
+| 파라미터 | VFX 방출기 `InheritKey` 와 사용자 파라미터(색 · 크기 곱, 재생 중 덮기), 오디오 라이브러리 · 믹서 `_base`, 이벤트 프리셋 `_parentEvent`. 구현됨 | 언리얼 Niagara 부모 이미터 · User Parameters · MetaSound Preset |
+| 인스턴스 값 | 파일 없이 인스턴스마다 float4 둘(`GPUInstanceCustomData`, 인스턴스 원소 160 바이트). 내용이고 배치 키가 아니다. `MaterialInstance` 는 값 · 텍스처 · 키워드를 덮는 드로우 단위로 남는다. 구현됨 | 언리얼 Custom Primitive Data · 유니티 MaterialPropertyBlock |
 | 조립 | 씬 인스턴스(`<entity scene="…">` + `<Part path>`): 씬을 다른 씬에 넣고 덮어쓴다. 읽을 때 평평한 엔티티로 펼치고 쿠킹본도 펼친 것을 담는다 | 언리얼 Level Instance · Godot 씬 상속 |
 | 조립 | 씬 상속(루트 `_base`): 엔티티 id 가 열쇠인 차이만 적는다. 씬 템플릿 자리를 겸한다 | Godot 씬 상속 |
 | 조립 | 데이터 레이어(`layers="Winter,Night"`): 켜진 이름 집합의 객체만 올린다(계절 · 이벤트). 단계 5 의 문맥 태그가 이 이름을 켠다 | 언리얼 Data Layers |
-| UI | 스타일 시트 · 테마 토큰 `_base`, 위젯 형식 변형 | Godot Theme Type Variation · 유니티 USS |
+| UI | 스타일 시트 `_base`(규칙 표 한 줄), `<TypeVariation>`(읽을 때 규칙 복제), 에디터 테마 토큰 `_base`(JSON 이라 키 덮기). 구현됨 | Godot Theme Type Variation · 유니티 USS |
 | 기타 | 리그 · 리타겟 · 물리 · 소켓 · 알림 표 · 입력 레이어에 `InheritKey` | — |
 
 구현에서 정한 것:
@@ -271,6 +271,5 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 
 구현 전에 코드를 읽어 정한다. 사용자 결정이 필요한 항목은 없다.
 
-- `MaterialInstance` 가 인스턴스 값을 어디까지 다루는지.
 - 메시 런타임 조립(언리얼 Mutable)은 `BodyShape` · 메시 병합 코드를 조사한 뒤 넣을지 정한다. 이 설계에 포함하지 않았다.
 - `XMLCatalog` 계열 중 멤버 · 지역 변수 패턴에 잡히지 않은 약 20 종의 사용 방식.
