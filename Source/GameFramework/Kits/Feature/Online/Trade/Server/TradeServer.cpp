@@ -193,6 +193,14 @@ namespace sw
     void TradeServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
     {
         (void)host;
+        // 이름 찾기를 기다리던 신청도 함께 거둔다 — 찾기가 뒤에 끝나면 떠난 계정이 신청한 거래가 열려 아무도 닫지 않는다(초대 시한까지 양쪽이 "거래 중" 이다).
+        for ( auto lookupIt = _mapLookupToCall.begin(); lookupIt != _mapLookupToCall.end(); )
+        {
+            if ( lookupIt->second._accountID == accountID )
+                lookupIt = _mapLookupToCall.erase( lookupIt );
+            else
+                ++lookupIt;
+        }
         _pTradeService->closeForAccount( accountID, TradeCloseReason::PartyLeft, _nowMs );
     }
 
