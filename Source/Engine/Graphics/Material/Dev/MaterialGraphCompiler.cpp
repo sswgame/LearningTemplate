@@ -804,7 +804,7 @@ namespace sw
                         }
                         const string field{ pAttribute->_field };
                         const string blended = "lerp( output." + field + ", " + expression + ", " + maskName.c_str() + " )";
-                        _outputLines.append( "    output." ).append( field ).append( " = " ).append( pAttribute->_field == "_normal" ? "normalize( " + blended + " )" : blended ).append( ";\n" );
+                        _outputLines.append( "    output." ).append( field ).append( " = " ).append( pAttribute->_field == "_normal" ? string{ "normalize( " + blended + " )" } : blended ).append( ";\n" );
                         _bEmissive = _bEmissive || pAttribute->_field == "_emissive";
                     }
                 }

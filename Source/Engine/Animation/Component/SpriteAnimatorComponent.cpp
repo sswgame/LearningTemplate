@@ -84,7 +84,6 @@ namespace sw
         , _graph{}
         , _currentAnimation{}
         , _listAnimation{}
-        , _frameRate{ 12.0f }
         , _clipSource{ *this }
         , _playable{}
         , _graphPlayer{}
@@ -97,6 +96,7 @@ namespace sw
         , _pAnimationSystem{ nullptr }
         , _firstClipFrame{ 0 }
         , _updatePhase{ 0 }
+        , _frameRate{ 12.0f }
         , _lodState{}
         , _bRepeat{ SW_FALSE }
         , _bPlaying{ SW_FALSE }

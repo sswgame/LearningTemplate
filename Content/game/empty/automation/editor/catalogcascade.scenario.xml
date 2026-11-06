@@ -3,10 +3,10 @@
   에디터 시나리오 — 카탈로그 연쇄 리로드: 부모 표를 바깥에서 고치면 항목 _base · 루트 _base 로 물려받은 표가 감시를 따라 다시 읽히고 적지 않은 칸의 값이 바뀐다. 적은 칸은 그대로다.
   공유 캐시는 쥔 동안만 표를 들므로 플레이 중인 상호작용 대상 넷이 두 자식 표를 쥔다(catalogcascade.scene.xml). 부모는 아무도 읽지 않았다 — 그래도 부모의 저장을 감시가 알려 연쇄가 돈다.
   판정은 쥔 쪽이 읽는 값이다(골든 없음). 상호작용 표는 다시 읽으면 떼어 내고 대상은 틱에서 다시 받으므로 플레이 중에 본다.
-  실행: App -EnableEditor -scenario=engine/automation/editor/catalogcascade.scenario.xml -unattended
+  실행: App -EnableEditor -scenario=game/empty/automation/editor/catalogcascade.scenario.xml -unattended
 -->
 <Scenario name="editor.catalogcascade" fixedDelta="0.0166667" timeoutFrames="1500" startAfter="Immediately" input="exclusive">
-	<Scratch from="engine/automation/editor/catalogcascade" as="scratch/catalogcascade"/>
+	<Scratch from="game/empty/automation/editor/catalogcascade" as="scratch/catalogcascade"/>
 	<EditorWaitSettled/>
 	<!-- 역색인이 사본 복사를 따라와야 부모의 참조자를 안다. 콘텐츠 브라우저를 앞에 두면 따라오기 전에는 시계가 멈춘다(ContentBrowserReferenceIndex) -->
 	<DevCommand line="panel.focus content_browser"/>

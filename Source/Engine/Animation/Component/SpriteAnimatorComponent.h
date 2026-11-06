@@ -176,10 +176,7 @@ namespace sw
         PROPERTY( Category = "Animation", DisplayName = "Current Animation", Tooltip = "Currently playing animation name" )
         string _currentAnimation;
         PROPERTY( Category = "Animation", DisplayName = "Animation List", Tooltip = "Available animation names" )
-        vector<string> _listAnimation;
-        PROPERTY( Category = "Playback", DisplayName = "Frame Rate", Tooltip = "Playback speed in FPS for frames without their own duration", Min = 1.0, Max = 120.0,
-                  Units = fps )
-        float32                      _frameRate;
+        vector<string>               _listAnimation;
         SpriteAnimatorClipSource     _clipSource;      ///< 상태 이름을 `_playable` 로 해석한다
         SpriteClipPlayable           _playable;        ///< 현재 구간(재생 항목)이다. 스프라이트는 섞지 않으므로 하나면 된다
         AnimationGraphPlayer         _graphPlayer;     ///< 시간, 반복, 끝, 다음 상태를 처리한다. 스켈레탈 애니메이터와 같은 코드다
@@ -196,7 +193,10 @@ namespace sw
         AnimationSystem*       _pAnimationSystem; ///< 등록한 애니메이션 시스템(등록된 동안만 유효하다)
         int32                  _firstClipFrame;   ///< 현재 구간이 시작하는 클립 프레임이다. 저장하지 않으며 클립에서 다시 잡는다
         uint32                 _updatePhase;      ///< LOD 주기 위상이다. 핸들에서 구하며, 같은 주기의 애니메이터가 한 프레임에 몰리지 않게 한다
-        AnimationLODState      _lodState;         ///< 마지막 LOD 판정
+        PROPERTY( Category = "Playback", DisplayName = "Frame Rate", Tooltip = "Playback speed in FPS for frames without their own duration", Min = 1.0, Max = 120.0,
+                  Units = fps )
+        float32           _frameRate; ///< 4 바이트 칸끼리 둔다 - 8 바이트 정렬 칸 앞이면 구멍이 생긴다
+        AnimationLODState _lodState;  ///< 마지막 LOD 판정
         PROPERTY( Category = "Playback", DisplayName = "Loop", Tooltip = "Loop playback when reaching the end" )
         uint8                  _bRepeat       : 1;
         uint8                  _bPlaying      : 1;
