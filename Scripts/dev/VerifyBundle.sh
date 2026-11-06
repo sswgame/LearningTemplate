@@ -4,7 +4,7 @@ cd "$(dirname "$0")/../.." || exit 2
 # Linux 는 함께 돈다(Xvfb 라 Windows GPU 테스트와 겹쳐도 된다). 먼저 끝나도 결과는 맨 끝에 낸다.
 SHA=$(git rev-parse HEAD)
 mkdir -p build
-PYTHONUTF8=1 py -3 Scripts/dev/LinuxScenarios.py all > build/verify.linux.log 2>&1 &
+PYTHONUTF8=1 py -3 Scripts/dev/LinuxScenarios.py all "$@" > build/verify.linux.log 2>&1 &
 LINUX_PID=$!
 for P in Ninja-Debug Ninja-Release; do
   mkdir -p build/$P/Testing/Logs
