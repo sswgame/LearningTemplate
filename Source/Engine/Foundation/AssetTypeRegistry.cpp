@@ -223,7 +223,7 @@ namespace sw
     AssetTypeRegistrar::AssetTypeRegistrar( const AssetTypeDef& def )
         : _def{ def }
     {
-        AssetTypeRegistry::registerType( def );
+        AssetTypeRegistry::registerType( _def ); // 인자는 등록 줄의 임시값일 수 있다 — 레지스트리는 주소를 들므로 자기 사본을 올린다
     }
 
     AssetTypeRegistrar::~AssetTypeRegistrar()

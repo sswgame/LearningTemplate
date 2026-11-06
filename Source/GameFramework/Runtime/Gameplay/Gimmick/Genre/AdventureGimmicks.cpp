@@ -126,7 +126,7 @@ namespace sw
         if ( _grid.initialize( 1, 1, pTable.get() ) == false )
             return; // 이유는 ElementGrid 가 남겼다
         _pTable              = std::move( pTable );
-        const int32 material = pTable->findMaterial( _material );
+        const int32 material = _pTable->findMaterial( _material );
         if ( material < 0 )
         {
             SW_LOG_ERROR_ID( "AdventureGimmicks.ElementMaterialNotRule", "Element material '%#' is not in the rule table", _material.c_str() );
