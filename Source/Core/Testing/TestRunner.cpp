@@ -97,11 +97,31 @@ namespace sw::test
              * @brief 실행 하나가 소유하는 케이스 상태입니다 — 실행이 끝나면 함께 사라진다.
              * @details 예전에는 함수 안 static 이라 실행 밖(시나리오의 로그 경로)에서도 만들어지고, 실행 뒤에도 남아 종료 누수 보고에 찍혔다(MSVC Debug 컨테이너 프록시까지).
              */
+            /** @brief 지금 도는 케이스가 `SW_EXPECT_LOG` 로 적은 id 이면 true 입니다. 시나리오 안에서 단위 테스트를 돌릴 때(`editor.unitTests`) 로그 게이트가 묻는다(`Logger::isExpectedLog`). */
+            static bool isExpectedByActiveCase( const utf8* pLogID )
+            {
+                CaseState* const pState = s_pActiveState.load( std::memory_order_acquire );
+                if ( pLogID == nullptr || pState == nullptr )
+                    return false;
+                CaseState&        state = *pState;
+                ScopedLock<mutex> lock{ state._mutex };
+                return state._bActive && VectorUtil::containsIf( state._listExpectedLog, [&]( const ExpectedLog& expected )
+                { return expected._id == pLogID; } );
+            }
+
             struct ActiveRunState
             {
                 CaseState _state;
-                ActiveRunState() { s_pActiveState.store( &_state, std::memory_order_release ); }
-                ~ActiveRunState() { s_pActiveState.store( nullptr, std::memory_order_release ); }
+                ActiveRunState()
+                {
+                    s_pActiveState.store( &_state, std::memory_order_release );
+                    Logger::setExpectedLogQuery( &isExpectedByActiveCase );
+                }
+                ~ActiveRunState()
+                {
+                    Logger::setExpectedLogQuery( nullptr );
+                    s_pActiveState.store( nullptr, std::memory_order_release );
+                }
                 ActiveRunState( const ActiveRunState& )            = delete;
                 ActiveRunState& operator=( const ActiveRunState& ) = delete;
             };
@@ -542,17 +562,6 @@ namespace sw::test
             hash = HashUtil::fnvStep32( hash, static_cast<uint8>( ch ) );
         }
         return shardCount <= 1 ? 0 : hash % shardCount;
-    }
-
-    bool TestRunner::isExpectedByActiveCase( const utf8* pLogID )
-    {
-        TestRunnerInternal::CaseState* const pState = TestRunnerInternal::s_pActiveState.load( std::memory_order_acquire );
-        if ( pLogID == nullptr || pState == nullptr ) // 테스트 실행이 아니다(시나리오 · 게임)
-            return false;
-        TestRunnerInternal::CaseState& state = *pState;
-        ScopedLock<mutex>              lock{ state._mutex };
-        return state._bActive && VectorUtil::containsIf( state._listExpectedLog, [&]( const TestRunnerInternal::ExpectedLog& expected )
-        { return expected._id == pLogID; } );
     }
 
     vector<string> TestRunner::collectCaseNamesOutside( std::initializer_list<string_view> listFolder )

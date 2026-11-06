@@ -322,10 +322,11 @@ namespace sw
         }
 
         CookJobDesc desc;
-        desc._cookerName    = "Pack";
-        desc._cookerVersion = kCookerVersion;
-        desc._target        = params._buildTarget + "-" + params._shaderFolder;
-        desc._settingsHash  = PackCookerInternal::computeSettingsHash( config, params );
+        desc._cookerName          = "Pack";
+        desc._cookerVersion       = kCookerVersion;
+        desc._outputFormatVersion = kPackFormatVersion;
+        desc._target              = params._buildTarget + "-" + params._shaderFolder;
+        desc._settingsHash        = PackCookerInternal::computeSettingsHash( config, params );
 
         uint32                             failedCount = 0;
         PackCookerInternal::PackCookTiming timing;

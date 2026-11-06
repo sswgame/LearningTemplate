@@ -247,7 +247,7 @@ namespace sw
     public:
         /** @brief 레지스트리의 종류 이름입니다. `AssetManager::getAssetCache<T>()` 가 이것으로 찾습니다. */
         static constexpr const utf8* kAssetKindName = "Prefab";
-        /** @brief 프리팹 쿠커 버전입니다. 쿠킹본 형식(`saveToBinaryFile`)이나 펼치기 규칙을 바꾸면 올립니다 — 모든 프리팹이 다시 베이크됩니다. */
+        /** @brief 프리팹 쿠킹 규칙 버전입니다. 펼치기 규칙을 바꾸면 올립니다(쿠킹본 형식은 `kBinVersion` 이 키에 따로 들어간다) — 모든 프리팹이 다시 베이크됩니다. */
         static constexpr uint32 kCookVersion = 1;
         /** @brief 빈 프리팹 캐시로 만듭니다. */
         PrefabCache();

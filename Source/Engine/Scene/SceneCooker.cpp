@@ -659,19 +659,21 @@ namespace sw
     CookJobDesc SceneCooker::makePreloadCookJobDesc()
     {
         CookJobDesc desc;
-        desc._cookerName    = "ScenePreload";
-        desc._cookerVersion = ScenePreloadList::kVersion;
-        desc._target        = "Any";
-        desc._settingsHash  = 0; // 목록은 컴포넌트의 경로 프로퍼티 값이 정한다 — 타입 표가 바뀌어 프로퍼티가 달라지면 입력(씬 · 프리팹)을 다시 읽어 알게 된다
+        desc._cookerName          = "ScenePreload";
+        desc._cookerVersion       = 1;
+        desc._outputFormatVersion = ScenePreloadList::kVersion;
+        desc._target              = "Any";
+        desc._settingsHash        = 0; // 목록은 컴포넌트의 경로 프로퍼티 값이 정한다 — 타입 표가 바뀌어 프로퍼티가 달라지면 입력(씬 · 프리팹)을 다시 읽어 알게 된다
         return desc;
     }
 
     CookJobDesc SceneCooker::makeCookJobDesc( const TypeRegistry& registry )
     {
         CookJobDesc desc;
-        desc._cookerName    = "Scene";
-        desc._cookerVersion = kCookVersion;
-        desc._target        = "Any";
+        desc._cookerName          = "Scene";
+        desc._cookerVersion       = kCookVersion;
+        desc._outputFormatVersion = kSceneBinaryVersion;
+        desc._target              = "Any";
         // 쿠킹된 상태는 리플렉션 표로 쓴다 — 타입 · 프로퍼티가 바뀌면 같은 XML 이라도 다시 베이크한다.
         desc._settingsHash = SceneCookerInternal::computeReflectionFingerprint( registry );
         return desc;

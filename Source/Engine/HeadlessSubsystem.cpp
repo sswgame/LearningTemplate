@@ -103,17 +103,19 @@ namespace sw
                 return RHI::getShaderTargetFormat( backend );
             }
 
+#if defined( SW_WITH_CLIENT_CODE )
             /** @brief 쿠킹 스테이징(@p cookedDir)의 @p format 셰이더 바이너리를 판정하고 문제를 오류로 남깁니다. 문제가 없으면 true 입니다. */
             static bool verifyShaderTarget( string_view cookedDir, ShaderTargetFormat format )
             {
                 vector<string> listProblem;
-                ShaderCookStamp::verifyCookedShaders( engine::getSubsystem<AssetPaths>(), cookedDir, format, listProblem );
+                ShaderCookDriver::verifyCookedShaders( cookedDir, format, listProblem );
                 for ( const string& problem : listProblem )
                 {
                     SW_LOG_ERROR_ID( "Headless.ShaderCookProblem", "[%#] %#", ShaderCooker::getSubfolderForFormat( format ), problem );
                 }
                 return listProblem.empty();
             }
+#endif
 
             /**
              * @brief 팩에 담을 셰이더를 쿠킹 스테이징에 굽고(바뀐 것만 — 내용 해시) 소스와 맞는지 판정합니다. 맞지 않으면 false 입니다.
@@ -387,6 +389,7 @@ namespace sw
             /** @brief 셰이더 판정만 — 쿠킹 스테이징(`-cooked-dir`)의 쿠킹 표 모든 백엔드를 본다. 고치지 않는다. 쿠킹과 함께 주어지면 쿠킹이 먼저다. */
             [[nodiscard]] static bool runVerifyShadersTask( CommandLineManager& commandLine, HeadlessTaskState& inoutState )
             {
+#if defined( SW_WITH_CLIENT_CODE ) // 셰이더 쿠커는 렌더러에 있고 Server 타깃은 그 폴더를 짓지 않는다
                 bool bVerifyShaders = false;
                 commandLine.getArgument( CommandLineArgument::VERIFY_SHADERS, bVerifyShaders );
                 if ( bVerifyShaders == false || isAnyCookRequested( commandLine ) )
@@ -403,6 +406,11 @@ namespace sw
                     SW_LOG_INFO_ID( "Headless.CookedShaderBinariesMatch", "Cooked shader binaries in '%#' match their sources for every backend", cookedDir );
                 inoutState._bFailed = bAllCurrent == false;
                 return true;
+#else
+                (void)commandLine;
+                (void)inoutState;
+                return false;
+#endif
             }
 
             /** @brief 패치 만들기(`-make-patch`) — 베이크한 팩끼리만 보므로 씬 쿠킹도 에셋 로드도 필요 없다. 로그와 명령줄이 있는 이 단계에서 한다. */

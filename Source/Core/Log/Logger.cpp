@@ -129,6 +129,25 @@ namespace sw
         return s_globalSink.load( std::memory_order_acquire );
     }
 
+    namespace
+    {
+        struct LoggerExpectedLogState
+        {
+            inline static atomic<Logger::ExpectedLogQuery> s_pfnQuery{ nullptr };
+        };
+    } // namespace
+
+    void Logger::setExpectedLogQuery( ExpectedLogQuery pfnQuery )
+    {
+        LoggerExpectedLogState::s_pfnQuery.store( pfnQuery, std::memory_order_release );
+    }
+
+    bool Logger::isExpectedLog( const utf8* pID )
+    {
+        const ExpectedLogQuery pfnQuery = LoggerExpectedLogState::s_pfnQuery.load( std::memory_order_acquire );
+        return pfnQuery != nullptr && pfnQuery( pID );
+    }
+
     void Logger::printAssertFailureToStderr( const utf8* pExpression, const utf8* pMessage, const utf8* pFile, int32 line, const utf8* pFunction ) noexcept
     {
         std::fprintf( stderr, "\n[SW_LOG_ASSERT] %s\n  %s\n  at %s:%d\n  in %s\n", pExpression, pMessage, pFile, line, pFunction );

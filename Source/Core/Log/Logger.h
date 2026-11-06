@@ -128,6 +128,15 @@ namespace sw
          *          2 초 뒤 stderr 경고로 풀린다. 리스너 콜백 안에서 푸는 것은 기다리지 않는다(자기 방송을 기다리지 않게 막아 두었다).
          */
         [[nodiscard]] static Subscription registerGlobalListener( const LogWrittenDelegate& listener );
+        /** @brief 로그 id 를 기대하는 쪽(`isExpectedLog`)이 거는 질의입니다. */
+        using ExpectedLogQuery = bool ( * )( const utf8* pID );
+        /**
+         * @brief 어떤 줄이 지금 기대된 줄인지 답하는 질의를 겁니다. nullptr 이면 풉니다.
+         * @details 테스트 실행기가 실행 동안 건다. 로그를 모으는 쪽(시나리오 로그 게이트)은 테스트 틀을 모른 채 묻는다 — 테스트 틀이 없는 배포 구성에서는 아무도 걸지 않아 늘 false 다.
+         */
+        static void setExpectedLogQuery( ExpectedLogQuery pfnQuery );
+        /** @brief 건 질의가 @p pID 를 기대하면 true 입니다. 질의가 없으면 false 입니다. */
+        [[nodiscard]] static bool isExpectedLog( const utf8* pID );
         /** @brief 현재 전역 싱크를 반환합니다. 없으면 nullptr 입니다. */
         static ILogSink* getGlobalSink();
 

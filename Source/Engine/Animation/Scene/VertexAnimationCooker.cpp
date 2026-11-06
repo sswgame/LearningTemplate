@@ -169,10 +169,11 @@ namespace sw
     CookJobDesc VertexAnimationCooker::makeCookJobDesc( float32 framesPerSecond )
     {
         CookJobDesc desc;
-        desc._cookerName    = "VertexAnimation";
-        desc._cookerVersion = kCookVersion;
-        desc._target        = "Any";
-        desc._settingsHash  = BitUtil::floatToBits( framesPerSecond ); // 설정 해시는 프레임율의 비트 그대로다
+        desc._cookerName          = "VertexAnimation";
+        desc._cookerVersion       = kCookVersion;
+        desc._outputFormatVersion = MeshVertexAnimation::kVersion;
+        desc._target              = "Any";
+        desc._settingsHash        = BitUtil::floatToBits( framesPerSecond ); // 설정 해시는 프레임율의 비트 그대로다
         return desc;
     }
 

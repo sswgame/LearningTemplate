@@ -33,7 +33,6 @@ namespace sw
             // 배치: 이름 · 월드 설정(리플렉션 바이너리) · 기본 엔티티 목록 · 셀 목록(셀 좌표 x · z, 그 셀의 엔티티 목록).
             // 엔티티 하나: 이름 · 프리팹 경로 · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`). 프리팹은 경로 하나로 가리킨다(판 5 에서 GUID 칸을 지웠다).
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
-            static constexpr uint32 kBinVersion = 5;
             // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯과 파일 id(8바이트)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
             static constexpr uint64 kMinBytesPerEntity = 5u * sizeof( uint32 ) + sizeof( uint64 );
             /** @brief 지운 칸입니다. 프리팹은 경로로만 가리킨다 — 이 속성이 남은 씬은 오류로 읽지 않는다(옛 GUID 를 말없이 버리면 그 엔티티가 무엇을 가리켰는지 모른다). */
@@ -340,10 +339,10 @@ namespace sw
 
         uint32 version{ 0 };
         arch >> version;
-        if ( version != SceneDocumentInternal::kBinVersion )
+        if ( version != kSceneBinaryVersion )
         {
             SW_LOG_ERROR_ID( "Scene.UnsupportedBinaryVersion", "Unsupported binary version %# in %# (this build reads %#) - cook the scene again", version, absPath,
-                             SceneDocumentInternal::kBinVersion );
+                             kSceneBinaryVersion );
             return false;
         }
 
@@ -415,7 +414,7 @@ namespace sw
 
         Archive arch;
         arch << SceneDocumentInternal::kBinMagic;
-        arch << SceneDocumentInternal::kBinVersion;
+        arch << kSceneBinaryVersion;
         arch << _name;
         if ( BinarySerializer::serialize( &_sceneSettings, *SceneSettings::StaticType(), arch ) == false )
         {

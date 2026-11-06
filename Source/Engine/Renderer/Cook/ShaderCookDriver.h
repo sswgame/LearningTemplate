@@ -56,6 +56,14 @@ namespace sw
                                                  ShaderTargetFormat targetFormat = ShaderTargetFormat::Count,
                                                  bool               bForceAll    = false );
 
+        /** @brief 요청 @p listRequest 가 쿠킹하는 도메인(`engine` · `game/<팩>`)을 처음 나온 순서로 모읍니다. `shaders` 폴더 칸이 없는 요청은 쿠킹도 실패하므로 여기서는 건너뜁니다. */
+        static void collectCookedDomains( const vector<ShaderCookRequest>& listRequest, vector<string>& outListDomain );
+        /**
+         * @brief 이 리소스 트리의 요청이 굽는 도메인마다 쿠킹 스테이징(@p cookedDir)의 @p targetFormat 바이너리가 소스와 맞는지 판정해 문제를 @p outListProblem 에 적습니다.
+         * @details 굽는 것(`collectAllRequests`)과 판정하는 것이 같은 목록을 본다 — 설정의 도메인을 따로 훑으면 굽지 않는 폴더(에디터가 실행 때 컴파일하는 `editor/shaders`)를 "쿠킹되지 않음" 으로 잡는다.
+         */
+        static void verifyCookedShaders( string_view cookedDir, ShaderTargetFormat targetFormat, vector<string>& outListProblem );
+
         /**
          * @brief 요청 목록을 모두 쿠킹하고, 리플렉션 매니페스트를 쓰고, 매니페스트에 없는 옛 바이너리를 지우고, 쿠킹 스탬프를 씁니다(`cookAllShaders` 의 본체).
          * @param cookedDir 쿠킹 출력의 루트(`cookAllShaders` 와 같다). 비면 실패다

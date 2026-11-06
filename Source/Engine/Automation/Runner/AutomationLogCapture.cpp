@@ -5,8 +5,6 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
-#include "Core/Testing/TestFramework.h"
-#include "Core/Testing/TestRunner.h"
 
 #include "Engine/Automation/Runner/AutomationLogPolicy.h"
 
@@ -86,10 +84,8 @@ namespace sw
         if ( StringUtil::startsWith( string_view{ entry._message }, AutomationLogPolicy::kRunnerPrefix ) )
             return;
         // 시나리오 안에서 도는 단위 테스트(에디터 `editor.unitTests`)의 케이스가 기대한 줄은 그 케이스가 판정한다 — 두 번 세지 않는다.
-#if SW_TESTS_ENABLED // 배포 구성에는 테스트 틀이 없다(자동화는 있다)
-        if ( test::TestRunner::isExpectedByActiveCase( entry._pID ) )
+        if ( Logger::isExpectedLog( entry._pID ) )
             return;
-#endif
         ScopedLock<mutex> lock{ _mutex };
         if ( _listLogLine.size() >= AutomationLogCaptureInternal::kMaxLogLine )
             return;

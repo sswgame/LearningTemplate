@@ -66,10 +66,5 @@ namespace sw::test
          * @param pOutListFailure 비지 않으면 실패 줄(`<케이스>: <파일>(<줄>): error: …`)을 받는다 — 표준 출력을 남기지 않는 실행(에디터 자체 테스트)이 로그에 사유를 적는다.
          */
         [[nodiscard]] static bool run( const TestRunOptions& options, vector<string>* pOutListFailure = nullptr );
-        /**
-         * @brief 지금 도는 케이스가 `SW_EXPECT_LOG` 로 적은 id 의 줄이면 true 입니다(케이스가 없거나 id 없는 줄이면 false). 세지 않는 질의라 여러 스레드 · 리스너 순서와 상관없다.
-         * @details 시나리오 안에서 단위 테스트를 돌릴 때(에디터 `editor.unitTests`) 시나리오 로그 게이트가 케이스가 이미 처리한 줄을 다시 "처리 안 된 로그" 로 세지 않게 묻는다.
-         */
-        [[nodiscard]] static bool isExpectedByActiveCase( const utf8* pLogID );
     };
 } // namespace sw::test

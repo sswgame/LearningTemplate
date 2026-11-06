@@ -652,36 +652,6 @@ namespace sw
 
 namespace sw
 {
-    bool ShaderCookStamp::collectShaderDomains( string_view resourceRoot, const vector<string>& listPriority, vector<string>& outListDomain )
-    {
-        outListDomain.clear();
-        if ( ShaderCookStampInternal::validatePriority( listPriority ) == false )
-            return false;
-        for ( const string& token : listPriority )
-        {
-            // 에디터 셰이더(`imgui.hlsl`)는 쿠킹하지 않는다 — 에디터가 실행할 때 컴파일하고, 에디터가 없는 배포 구성은 쓰지 않는다.
-            if ( token == constant::path::kEditorPack )
-                continue;
-            if ( token != constant::path::kGamePack )
-            {
-                if ( VectorUtil::contains( outListDomain, token ) == false )
-                    outListDomain.push_back( token );
-                continue;
-            }
-            // 게임 도메인은 이름을 코드가 알지 않고 game/ 아래 폴더를 훑어 찾는다. 폴더가 없으면 게임 도메인이 없을 뿐이다.
-            // 도중에 멈춘 목록이면 빠진 게임 도메인을 모른 채 넘어가므로 실패다(경로는 collectFolders 가 알린다).
-            vector<string> listGameDomain;
-            if ( AssetPaths::collectGamePackDomains( resourceRoot, listGameDomain ) == false )
-                return false;
-            for ( string& domain : listGameDomain )
-            {
-                if ( VectorUtil::contains( outListDomain, domain ) == false )
-                    outListDomain.push_back( std::move( domain ) );
-            }
-        }
-        return true;
-    }
-
     bool ShaderCookStamp::collectIncludeRootDomains( const vector<string>& listPriority, vector<string>& outListDomain )
     {
         outListDomain.clear();
@@ -878,7 +848,7 @@ namespace sw
         return true;
     }
 
-    void ShaderCookStamp::verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, vector<string>& outListProblem )
+    void ShaderCookStamp::verifyCookedShaders( const AssetPaths& assetPaths, string_view cookedDir, ShaderTargetFormat format, const vector<string>& listDomain, vector<string>& outListProblem )
     {
         const string& resourceRoot = assetPaths.getRootFolderPath();
         if ( resourceRoot.empty() || cookedDir.empty() )
@@ -887,8 +857,7 @@ namespace sw
             return;
         }
         const std::optional<ShaderSourceResolver> resolver = ShaderSourceResolver::make( assetPaths );
-        vector<string>                            listDomain;
-        if ( resolver.has_value() == false || collectShaderDomains( resourceRoot, assetPaths.getSearchPriority(), listDomain ) == false )
+        if ( resolver.has_value() == false )
         {
             ShaderCookStampInternal::appendProblem( outListProblem, "shader domains cannot be found: _listResourcePriority must list the engine and common domains and their shaders folders must exist" );
             return;

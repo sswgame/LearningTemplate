@@ -143,10 +143,11 @@ namespace sw
     CookJobDesc SceneNavigationCooker::makeCookJobDesc()
     {
         CookJobDesc desc;
-        desc._cookerName    = "NavMesh";
-        desc._cookerVersion = kCookVersion;
-        desc._target        = "Any";
-        desc._settingsHash  = 0; // 베이크 설정은 리소스(내비 설정 표)라 읽기로 입력에 든다
+        desc._cookerName          = "NavMesh";
+        desc._cookerVersion       = kCookVersion;
+        desc._outputFormatVersion = NavMeshAsset::kVersion;
+        desc._target              = "Any";
+        desc._settingsHash        = 0; // 베이크 설정은 리소스(내비 설정 표)라 읽기로 입력에 든다
         return desc;
     }
 } // namespace sw

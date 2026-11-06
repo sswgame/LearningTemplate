@@ -18,7 +18,7 @@ SW_TEST_CASE( CookJobTest, RecordsDiskReadsAsAbsoluteDiskInputs )
     const string filePath = FileUtil::joinPath( folder, "a.txt" );
     SW_REQUIRE_TRUE( FileUtil::ensureDirectoryExists( folder ) && FileUtil::writeTextFile( filePath, "one" ) );
 
-    CookJob        job( CookJobDesc{ ._cookerName = "Fake", ._cookerVersion = 1, ._target = "Test", ._settingsHash = 0 } );
+    CookJob        job( CookJobDesc{ ._cookerName = "Fake", ._cookerVersion = 1, ._outputFormatVersion = 1, ._target = "Test", ._settingsHash = 0 } );
     vector<uint8>  bytes;
     vector<string> listFile;
     SW_REQUIRE_TRUE( AssetIO::readBinaryFile( filePath, bytes ) );

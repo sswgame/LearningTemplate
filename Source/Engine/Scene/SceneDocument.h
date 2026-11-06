@@ -18,6 +18,9 @@
 
 namespace sw
 {
+    /** @brief 씬 쿠킹본(.scene.bin)의 형식 버전입니다. 읽기 · 쓰기와 쿠킹 키(`SceneCooker`)가 같이 봅니다. */
+    inline constexpr uint32 kSceneBinaryVersion = 5;
+
     /** @brief 씬 루트(`<Scene formatVersion name>`)의 칸입니다. 이름을 적지 않으면 파일 이름이다. `formatVersion` 은 에셋 형식이 읽는다. */
     REFLECT()
     struct SW_API SceneRootFields

@@ -18,6 +18,7 @@
 #include "Engine/Renderer/Cook/ShaderCookDriver.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Container/vector.h"
@@ -393,6 +394,36 @@ namespace sw
             return nothingCooked;
         }
         return cookRequests( cookedDir, listRequest, targetFormat, bForceAll );
+    }
+
+    void ShaderCookDriver::collectCookedDomains( const vector<ShaderCookRequest>& listRequest, vector<string>& outListDomain )
+    {
+        static constexpr string_view kShadersSuffix = "/shaders";
+        outListDomain.clear();
+        for ( const ShaderCookRequest& request : listRequest )
+        {
+            const ShaderSourceID             source{ request._shaderPath }; // 폴더 값은 이 객체의 글을 가리킨다
+            const std::optional<string_view> shadersFolder = source.getShadersFolder();
+            if ( shadersFolder.has_value() == false || StringUtil::endsWith( *shadersFolder, kShadersSuffix ) == false )
+                continue;
+            string domain{ shadersFolder->substr( 0, shadersFolder->size() - kShadersSuffix.size() ) };
+            if ( VectorUtil::contains( outListDomain, domain ) == false )
+                outListDomain.push_back( std::move( domain ) );
+        }
+    }
+
+    void ShaderCookDriver::verifyCookedShaders( string_view cookedDir, ShaderTargetFormat targetFormat, vector<string>& outListProblem )
+    {
+        const AssetPaths&         assetPaths = engine::getSubsystem<AssetPaths>();
+        vector<ShaderCookRequest> listRequest;
+        if ( ShaderCookRequestCollector::collectAllRequests( assetPaths.getRootFolderPath(), listRequest ) == false )
+        {
+            outListProblem.emplace_back( "shader cook requests could not be collected - cannot tell which domains are cooked" );
+            return;
+        }
+        vector<string> listDomain;
+        collectCookedDomains( listRequest, listDomain );
+        ShaderCookStamp::verifyCookedShaders( assetPaths, cookedDir, targetFormat, listDomain, outListProblem );
     }
 
     ShaderCookSummary ShaderCookDriver::cookRequests( string_view                      cookedDir,
