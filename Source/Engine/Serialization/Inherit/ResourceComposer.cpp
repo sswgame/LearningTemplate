@@ -84,10 +84,25 @@ namespace sw
                         outbComposed = true;
                         return flattenFromResources( text, id, context._pfnMakeSchema(), outText );
                     case ResourceContext::ParentRule::KnownType:
+                    {
                         if ( DataInheritance::findBasePath( text ).empty() )
                             return true;
                         outbComposed = true;
-                        return flattenFromResources( text, id, DataInheritanceSchema::makeFromType( *context._pTypeInfo ), outText );
+                        // 쿠커와 같은 규칙을 쓴다 — 리플렉션 형식의 규칙은 문서 표에만 있다(쿠커는 리플렉션을 보지 않는다). 표에 없으면 개발 실행도 쿠킹처럼 멈춰야 쿠킹에서야 드러나지 않는다.
+                        // 표가 리플렉션과 같은지는 `ResourceComposerTest.DocumentTableMatchesReflection` 이 본다.
+                        const utf8*           pRootName = context._pTypeInfo->_name.c_str();
+                        DataInheritanceSchema schema{ pRootName };
+                        bool                  bListed = false;
+                        if ( DataCatalogInheritance::loadDocumentRule( pRootName, schema, bListed ) == false )
+                            return false;
+                        if ( bListed == false )
+                        {
+                            SW_LOG_ERROR_ID( "DataInheritance.NoSchema", "'%#': <%#> has %# but no row in listDocument of %# - the cook could not flatten it either", id, pRootName, DataInheritance::kBaseAttribute,
+                                             DataCatalogInheritance::kConfigPath );
+                            return false;
+                        }
+                        return flattenFromResources( text, id, schema, outText );
+                    }
                     case ResourceContext::ParentRule::KnownMerge:
                     {
                         if ( DataInheritance::findBasePath( text ).empty() )

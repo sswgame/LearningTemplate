@@ -1,6 +1,13 @@
 {
     "listDocument": [
-        { "root": "RenderPipelineDesc", "listField": [ { "name": "_listAttachment", "key": "_name" }, { "name": "_listPass", "key": "_name" } ] }
+        { "root": "AudioEventLibrary", "listField": [{ "name": "_listParameter", "key": "_name" }, { "name": "_listAttenuation", "key": "_name" }, { "name": "_listEvent", "key": "_name" }]},
+        { "root": "AudioMixerDesc", "listField": [{ "name": "_listBus", "key": "_name", "listField": [{ "name": "_listSend", "key": "_bus" }, { "name": "_listDuck", "key": "_sourceBus" }]}, { "name": "_listAttenuation", "key": "_name" }, { "name": "_occlusion" }, { "name": "_listSnapshot", "key": "_name", "listField": [{ "name": "_listBusVolume", "key": "_bus" }]}]},
+        { "root": "MaterialGraphDef", "listField": [{ "name": "_listNode", "key": "_name", "listField": [{ "name": "_listLink", "key": "_pin" }, { "name": "_listValue", "key": "_name" }]}]},
+        { "root": "MaterialParameterCollectionDesc", "listField": [{ "name": "_listParameter", "key": "_name" }]},
+        { "root": "PhysicsAsset", "listField": [{ "name": "_listBody", "key": "_bone", "listField": [{ "name": "_joint" }, { "name": "_hitZone" }]}]},
+        { "root": "RenderPipelineDesc", "listField": [{ "name": "_listAttachment", "key": "_name" }, { "name": "_listPass", "key": "_name" }]},
+        { "root": "SpriteLibrary", "listField": [{ "name": "_listCategory", "key": "_name", "listField": [{ "name": "_listLabel", "key": "_name" }]}]},
+        { "root": "VFXEffectDef", "listField": [{ "name": "_listEmitter", "key": "_name", "listField": [{ "name": "_mesh" }, { "name": "_sizeOverLife" }, { "name": "_colorOverLife", "listField": [{ "name": "_red" }, { "name": "_green" }, { "name": "_blue" }, { "name": "_alpha" }]}, { "name": "_collision" }, { "name": "_light" }]}, { "name": "_listUserParameter", "key": "_name" }]}
     ],
     "listCatalog": [
         {
