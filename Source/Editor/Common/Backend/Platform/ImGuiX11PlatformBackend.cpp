@@ -190,6 +190,16 @@ namespace sw::editor
                     }
                     return io.WantCaptureKeyboard;
                 }
+                case FocusIn:
+                case FocusOut:
+                {
+                    // 창이 초점을 잃으면 뗌이 그 창으로 오지 않아 눌린 키가 남는다(Win32 · Wayland 와 같다). 우리 창 사이를 옮기면 잃음 · 얻음이 같은 프레임에 와 ImGui 가 지우지 않는다.
+                    // 배타 시나리오는 이 사건도 `ScopedImGuiOSInputFilter` 가 지워 누르고 있는 가상 입력이 끊기지 않는다(focusloss 시나리오). Grab · Ungrab 은 키보드를 잠깐 쥔 것이다(`X11Window::processMessages` 와 같다).
+                    const bool bGrab = pEvent->xfocus.mode == NotifyGrab || pEvent->xfocus.mode == NotifyUngrab;
+                    if ( bGrab == false )
+                        io.AddFocusEvent( pEvent->type == FocusIn );
+                    return false;
+                }
                 case ButtonPress:
                 case ButtonRelease:
                 {
