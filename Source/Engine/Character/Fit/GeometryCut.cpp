@@ -203,10 +203,11 @@ namespace sw
             {
                 targetMorph._listPositionDelta.push_back( pSourceMorph != nullptr ? pSourceMorph->_listPositionDelta[vertex] : float3::Zero );
             }
-            if ( targetMorph._listNormalDelta.empty() == false )
+            // 법선 델타도 한쪽에만 있으면 없는 쪽 구간이 0 이다. 앞쪽에 없다고 건너뛰면 붙이는 순서에 따라 뒤 부품의 델타가 사라진다.
+            const bool bSourceNormal = pSourceMorph != nullptr && pSourceMorph->_listNormalDelta.size() == sourceVertexCount;
+            if ( targetMorph._listNormalDelta.empty() == false || bSourceNormal )
             {
                 targetMorph._listNormalDelta.resize( baseVertex, float3::Zero );
-                const bool bSourceNormal = pSourceMorph != nullptr && pSourceMorph->_listNormalDelta.size() == sourceVertexCount;
                 for ( uint32 vertex = 0; vertex < sourceVertexCount; ++vertex )
                 {
                     targetMorph._listNormalDelta.push_back( bSourceNormal ? pSourceMorph->_listNormalDelta[vertex] : float3::Zero );

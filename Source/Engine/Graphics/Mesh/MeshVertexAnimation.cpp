@@ -54,6 +54,7 @@ namespace sw
         if ( elementCount == 0 || listPosition.size() != elementCount || listNormal.size() != elementCount )
         {
             SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationQuantizeExpected", "Vertex animation quantize: expected %# elements, got %# positions and %# normals", elementCount, listPosition.size(), listNormal.size() );
+            *this = MeshVertexAnimation{}; // 프레임 수를 남기면 비어 보이지 않은 채 빈 표를 읽는다(`readFromBytes` 와 같은 약속).
             return false;
         }
         float3 minimum = listPosition[0];
@@ -166,8 +167,12 @@ namespace sw
                                    MeshVertexAnimationInternal::readValue<float32>( pData, 36 ) };
         const float3  boundsHalfExtent{ MeshVertexAnimationInternal::readValue<float32>( pData, 40 ), MeshVertexAnimationInternal::readValue<float32>( pData, 44 ),
                                        MeshVertexAnimationInternal::readValue<float32>( pData, 48 ) };
-        const size_t  elementCount              = static_cast<size_t>( frameCount ) * vertexCount;
-        const bool    bMalformedVertexAnimation = frameCount == 0 || vertexCount == 0 || frameRate <= 0.0f || byteCount != MeshVertexAnimationInternal::kHeaderSize + elementCount * sizeof( MeshVertexAnimationElement );
+        const size_t  elementCount = static_cast<size_t>( frameCount ) * vertexCount;
+        // 길이는 나눠서 맞춘다. 원소 수에 8 을 곱하면 2^30 프레임 × 2^31 정점이 0 으로 넘쳐 머리만 있는 파일이 통과하고 거대한 표를 잡는다.
+        const size_t tableByteCount            = byteCount - MeshVertexAnimationInternal::kHeaderSize;
+        const bool   bTableLengthMismatch      = tableByteCount % sizeof( MeshVertexAnimationElement ) != 0 || tableByteCount / sizeof( MeshVertexAnimationElement ) != elementCount;
+        const bool   bBadFrameRate             = MathUtil::isFinite( frameRate ) == false || frameRate <= 0.0f; // NaN 은 `<= 0` 을 지나 샘플링에서 미정의 정수 변환이 된다.
+        const bool   bMalformedVertexAnimation = frameCount == 0 || vertexCount == 0 || bBadFrameRate || bTableLengthMismatch;
         if ( bMalformedVertexAnimation )
         {
             SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationMalformedFrames", "Vertex animation '%#' is malformed (%# frames x %# vertices, %# bytes)", sourceLabel, frameCount, vertexCount, byteCount );
