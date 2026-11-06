@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Rig/RigNodeFields.h"
+#include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -120,10 +121,10 @@ namespace sw
         float3                 _worldGravity{ 0.0f, -constant::physics::kDefaultGravity, 0.0f }; ///< 월드 중력이다. 호스트가 설정된 물리 중력을 넣는다(애니메이션 계층은 물리를 모른다).
         float32                _deltaSeconds{ 0.0f };
         /**
-         * @brief 유닛의 화면 크기(`AnimationLODState::_screenSize`, 경계 구 지름 / 화면 높이)입니다. 노드의 `min_screen_size` 와 비교합니다.
-         * @details LOD 판정을 하지 않는 호스트(테스트, 서버)는 기본값 1 을 두어 모든 노드를 켭니다.
+         * @brief 유닛의 LOD 판정입니다. 등급(`_lodGrade`)을 노드의 `max_lod` 와 견주고, 꺼지고 켜지는 노드는 `_nodeFadeSeconds` 동안 가중치를 옮깁니다.
+         * @details LOD 판정을 하지 않는 호스트(테스트, 서버)는 기본값(등급 0)을 두어 모든 노드를 켭니다.
          */
-        float32 _screenSize{ 1.0f };
+        AnimationLODState _lodState{};
     };
 } // namespace sw
 
@@ -254,8 +255,9 @@ namespace sw
      * @brief 노드 하나입니다. 데이터(파라미터)와 실행 상태(스프링 입자, 부모 바꾸기 오프셋 등)를 함께 보관합니다. 에셋이 원형을 가지고 인스턴스가 복제합니다.
      * @details 가중치 = `_weight` × (커브가 있으면 그 값) × (시퀀서 슬롯이 있으면 그 값, 정하지 않았으면 1)이다. 가중치가 1 보다 작으면 노드가 쓴
      *          본(`collectWrittenBones`)의 로컬을 노드 앞의 값과 섞는다. 가중치가 0 이면 노드를 실행하지 않는다(상태도 멈춘다).
-     *          화면 크기가 `_minScreenSize` 보다 작으면 노드를 끄고, 꺼지는 순간 `reset` 한다(다시 켜지면 애니메이션 포즈에서 시작한다).
-     *          언리얼 애니메이션 노드의 LOD Threshold 에 해당하며, 거리 대신 화면 크기를 써서 시야각과 해상도가 달라도 같은 기준이 된다.
+     *          유닛의 LOD 등급이 `max_lod` 보다 높으면 노드 가중치를 페이드로 0 까지 내려 끄고, 다 꺼지는 순간 `reset` 한다(다시 켜지면 애니메이션 포즈에서
+     *          가중치 0 부터 오른다). 언리얼 애니메이션 노드의 LOD Threshold 에 해당한다 — 등급은 화면 크기(시야각 · 해상도와 무관)와 예산이 정하는 한 축이고
+     *          (`AnimationLODState::_lodGrade`), 언리얼과 달리 경계에서 끊지 않고 잇는다.
      */
     class SW_API RigNode
     {
@@ -298,9 +300,9 @@ namespace sw
         void                 setEnabled( bool bEnabled ) { _common._bEnabled = bEnabled; }
         const hashed_string& getWeightCurve() const { return _common._weightCurve; }
         const hashed_string& getWeightSlot() const { return _common._weightSlot; }
-        /** @brief 노드를 켜 두는 가장 작은 화면 크기입니다. 0 이면 항상 켭니다. */
-        float32 getMinScreenSize() const { return _common._minScreenSize; }
-        /** @brief 공통 키(name, weight, weight_curve, weight_slot, min_screen_size, enabled — 적지 않으면 켜짐)를 읽습니다(에셋이 호출합니다). */
+        /** @brief 노드를 켜 두는 가장 높은 LOD 등급입니다. -1 이면 항상 켭니다. */
+        int32 getMaxLODGrade() const { return _common._maxLODGrade; }
+        /** @brief 공통 키(name, weight, weight_curve, weight_slot, max_lod, enabled — 적지 않으면 켜짐)를 읽습니다(에셋이 호출합니다). */
         [[nodiscard]] bool parseCommon( RigXMLReader& reader );
 
     protected:

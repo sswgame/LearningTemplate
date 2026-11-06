@@ -116,13 +116,14 @@ namespace
             refreshModel();
         }
 
-        /** @brief 준비와 평가를 한 번 돌립니다. */
-        void run( const IRigGroundQuery* pGround = nullptr, float32 deltaSeconds = 1.0f / 60.0f )
+        /** @brief 준비와 평가를 한 번 돌립니다. @p lodState 는 유닛의 LOD 판정입니다(기본은 등급 0 — 모든 노드가 켜진다). */
+        void run( const IRigGroundQuery* pGround = nullptr, float32 deltaSeconds = 1.0f / 60.0f, const AnimationLODState& lodState = AnimationLODState{} )
         {
             RigPrepareContext prepare{};
             prepare._worldFromModel = float4x4::Identity;
             prepare._pGroundQuery   = pGround;
             prepare._deltaSeconds   = deltaSeconds;
+            prepare._lodState       = lodState;
             _instance.prepare( prepare );
             _instance.evaluate( _pose, _skeleton.getParentIndices(), float4x4::Identity );
             refreshModel();
@@ -184,6 +185,41 @@ SW_TEST_CASE_F( RigIKTest, TwoBoneReachesAndKeepsSegmentLengths )
     SW_EXPECT_NEAR( segment( kKneeL, kFootL ), shin, 1.0e-3f );
     SW_EXPECT_NEAR( similarity( rotation( kFootL ), quaternion::Identity ), 1.0f, 1.0e-3f );
     SW_EXPECT_NEAR( position( kFootR )._y, 0.1f, 1.0e-4f ); // 다른 다리는 건드리지 않는다
+}
+
+// LOD 등급이 `max_lod` 를 넘으면 노드 가중치가 페이드로 내려가 끝에 꺼지고(평가하지 않는다), 다시 켜지면 지금 값에서 이어 오른다. 기본 등급(0)은 켠 그대로다.
+SW_TEST_CASE_F( RigIKTest, NodeFadesOutAboveMaxLODAndBackIn )
+{
+    SW_REQUIRE_TRUE( load( R"(<item type="TwoBoneIK" name="Leg" root="hip.l" mid="knee.l" end="foot.l" target="Goal" max_lod="0" />)" ) );
+    AnimationLODState nearState{};
+    nearState._nodeFadeSeconds = 0.2f;
+    AnimationLODState farState = nearState;
+    farState._lodGrade         = 1;
+    setBone( kGoal, float3{ -0.2f, 0.3f, 0.3f } );
+    run( nullptr, 0.05f, nearState );
+    SW_EXPECT_NEAR( _instance.getNodeLODWeight( 0 ), 1.0f, 0.0f );
+    SW_EXPECT_NEAR( ( position( kFootL ) - position( kGoal ) ).getLength(), 0.0f, 1.0e-3f );
+
+    run( nullptr, 0.05f, farState );
+    run( nullptr, 0.05f, farState );
+    SW_EXPECT_NEAR( _instance.getNodeLODWeight( 0 ), 0.5f, 1.0e-5f );
+    SW_EXPECT_NEAR( _instance.computeNodeWeight( 0 ), 0.5f, 1.0e-5f );
+    run( nullptr, 0.05f, nearState ); // 도중에 다시 켠다 — 0.5 에서 이어 오른다
+    SW_EXPECT_NEAR( _instance.getNodeLODWeight( 0 ), 0.75f, 1.0e-5f );
+
+    run( nullptr, 1.0f, farState );
+    SW_EXPECT_NEAR( _instance.getNodeLODWeight( 0 ), 0.0f, 0.0f );
+    SW_EXPECT_FALSE( _instance.canWritePose() );
+    const uint32 evaluationCount = _instance.getEvaluationCount();
+    _pose.setToReference( _skeleton );
+    refreshModel();
+    run( nullptr, 0.05f, farState );
+    SW_EXPECT_EQUAL( evaluationCount, _instance.getEvaluationCount() ); // 꺼진 노드는 비용이 없다
+    SW_EXPECT_NEAR( position( kFootL )._y, 0.1f, 1.0e-4f );             // 포즈를 건드리지 않았다
+
+    run( nullptr, 0.05f, nearState );
+    SW_EXPECT_NEAR( _instance.getNodeLODWeight( 0 ), 0.25f, 1.0e-5f );
+    SW_EXPECT_TRUE( _instance.canWritePose() );
 }
 
 // 닿지 않는 목표로는 다리가 늘어나지 않고 그쪽으로 뻗는다.

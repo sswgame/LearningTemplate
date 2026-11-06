@@ -17,6 +17,7 @@
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Animation/Rig/RigPoseBuffer.h"
 #include "Engine/Animation/Rig/RigSpringChain.h"
+#include "Engine/Animation/Scene/AnimationLOD.h"
 
 namespace sw
 {
@@ -102,7 +103,7 @@ namespace sw
         void clearSlotWeight( const hashed_string& slotName );
         /** @brief 시퀀서 슬롯 가중치입니다. 정하지 않았거나 해제한 슬롯은 1 입니다(곱해도 노드 가중치가 그대로인 값 — `clearSlotWeight` 와 같은 뜻). */
         float32 getSlotWeight( const hashed_string& slotName ) const;
-        /** @brief 노드의 이번 프레임 가중치입니다(0..1). */
+        /** @brief 노드의 이번 프레임 가중치입니다(0..1, 켜짐 · 기본 가중치 · 커브 · 슬롯 · LOD 가중치의 곱). */
         float32 computeNodeWeight( uint32 nodeIndex ) const;
         /**
          * @brief 이번 프레임 평가가 포즈를 바꿀 수 있는 노드가 하나라도 있는지 반환합니다(마지막 `prepare` 기준, 게임 스레드에서 정해진 값만 본다).
@@ -134,11 +135,12 @@ namespace sw
         // --- 실행 ---
         /**
          * @brief 게임 스레드 준비 단계입니다. 프레임마다 호출하며, LOD 로 평가를 건너뛰는 프레임에도 호출합니다. 지난 평가 뒤의 시간을 모읍니다.
-         * @details 화면 크기가 노드의 `min_screen_size` 보다 작으면 그 노드를 끄고, 꺼지는 순간 상태를 버린다(`RigNode::reset`).
+         * @details LOD 등급이 노드의 `max_lod` 보다 높으면 그 노드의 LOD 가중치를 페이드로 내리고, 0 에 닿는 순간 상태를 버린다(`RigNode::reset`).
+         *          다시 켜지면 0 부터 오르므로 스프링 · IK 가 애니메이션 포즈에서 튀지 않고 섞여 들어온다.
          */
         void prepare( const RigPrepareContext& context );
-        /** @brief 노드가 화면 크기 LOD 로 꺼져 있는지 반환합니다(마지막 `prepare` 기준). */
-        bool isNodeLODOff( uint32 nodeIndex ) const { return _listNodeLODOff[nodeIndex] == SW_TRUE; }
+        /** @brief 노드의 LOD 가중치(마지막 `prepare` 기준, 0 이면 LOD 로 꺼짐)입니다. `computeNodeWeight` 가 이미 곱한다. */
+        float32 getNodeLODWeight( uint32 nodeIndex ) const { return _listNodeLODFade[nodeIndex]._weight; }
         /** @brief 노드를 순서대로 평가해 @p inoutLocalPose 를 고칩니다(워커). */
         void evaluate( Pose& inoutLocalPose, const vector<int32>& listParent, const float4x4& worldFromModel );
         /** @brief 노드 상태를 모두 버립니다(순간이동이나 다시 켤 때). */
@@ -169,7 +171,7 @@ namespace sw
         vector<BoneTransform>       _listTargetOffset; ///< 자기 유닛 대상의 본 기준 오프셋이다(소켓 로컬이나 데이터 오프셋).
         vector<unique_ptr<RigNode>> _listNode;
         vector<vector<uint32>>      _listNodeWrittenBone;
-        vector<uint8>               _listNodeLODOff; ///< 노드마다 화면 크기 LOD 로 꺼졌는지다(`_listNode` 와 인덱스가 같다).
+        vector<AnimationLODFade>    _listNodeLODFade; ///< 노드마다 LOD 가중치다(`_listNode` 와 인덱스가 같다).
         vector<SlotWeight>          _listSlotWeight;
         vector<RigMorphWeight>      _listMorphWeight;
         vector<RigSpringCollider>   _listSharedCollider;

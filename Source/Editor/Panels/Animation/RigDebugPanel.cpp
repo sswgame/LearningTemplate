@@ -404,7 +404,7 @@ namespace sw::editor
 
             ImGui::TableNextColumn();
             // 커브 · 슬롯 · LOD 를 모두 곱한 이번 프레임 값 — 시퀀서 리그 슬롯 트랙이 움직이는 것이 여기 보인다.
-            const float32 effective = instance.isNodeLODOff( nodeIndex ) ? 0.0f : instance.computeNodeWeight( nodeIndex );
+            const float32 effective = instance.computeNodeWeight( nodeIndex );
             ImGui::Text( "%.2f", static_cast<float64>( effective ) );
             if ( node.getWeightSlot().empty() == false )
             {

@@ -40,7 +40,7 @@ namespace sw
         , _listTargetOffset{}
         , _listNode{}
         , _listNodeWrittenBone{}
-        , _listNodeLODOff{}
+        , _listNodeLODFade{}
         , _listSlotWeight{}
         , _listMorphWeight{}
         , _listSharedCollider{}
@@ -131,7 +131,7 @@ namespace sw
             vector<uint32> listWritten;
             node->collectWrittenBones( listWritten );
             _listNodeWrittenBone.push_back( std::move( listWritten ) );
-            _listNodeLODOff.push_back( SW_FALSE );
+            _listNodeLODFade.push_back( AnimationLODFade{} );
             _listNode.push_back( std::move( node ) );
         }
         if ( bOk == false )
@@ -151,7 +151,7 @@ namespace sw
         _listTargetOffset.clear();
         _listNode.clear();
         _listNodeWrittenBone.clear();
-        _listNodeLODOff.clear();
+        _listNodeLODFade.clear();
         _listMorphWeight.clear();
         _pendingDeltaSeconds = 0.0f;
     }
@@ -272,6 +272,7 @@ namespace sw
             weight *= curveFactor;
         if ( node.getWeightSlot().empty() == false )
             weight *= getSlotWeight( node.getWeightSlot() );
+        weight *= _listNodeLODFade[nodeIndex]._weight;
         return MathUtil::saturate( weight );
     }
 
@@ -290,8 +291,6 @@ namespace sw
             return false;
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
         {
-            if ( _listNodeLODOff[nodeIndex] == SW_TRUE )
-                continue;
             // 커브 값은 아직 모른다 — 커브 출처가 있으면 1 로 보고, 없으면 평가가 0 으로 읽는 대로 0 이다.
             const bool    bCurveUnreadable = _listNode[nodeIndex]->getWeightCurve().empty() == false && _pCurveSource == nullptr;
             const float32 weight           = computeNodeWeightWithCurve( nodeIndex, bCurveUnreadable ? 0.0f : 1.0f );
@@ -336,13 +335,17 @@ namespace sw
         _worldGravity = context._worldGravity;
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
         {
-            RigNode&   node = *_listNode[nodeIndex];
-            const bool bOff = context._screenSize < node.getMinScreenSize();
-            if ( bOff && _listNodeLODOff[nodeIndex] == SW_FALSE )
-                node.reset(); // 다시 켤 때 애니메이션 포즈에서 시작한다
-            _listNodeLODOff[nodeIndex] = bOff ? SW_TRUE : SW_FALSE;
-            if ( bOff == false )
-                node.prepare( context );
+            RigNode&          node    = *_listNode[nodeIndex];
+            AnimationLODFade& fade    = _listNodeLODFade[nodeIndex];
+            const bool        bWasOff = fade.isOff();
+            fade.update( context._lodState.isNodeOn( node.getMaxLODGrade() ), context._deltaSeconds, context._lodState._nodeFadeSeconds );
+            if ( fade.isOff() )
+            {
+                if ( bWasOff == false )
+                    node.reset(); // 다 꺼진 순간 상태를 버린다 — 다시 켤 때 애니메이션 포즈에서 가중치 0 부터 시작한다
+                continue;
+            }
+            node.prepare( context );
         }
     }
 
@@ -372,9 +375,7 @@ namespace sw
         context._worldGravity   = _worldGravity;
         for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( _listNode.size() ); ++nodeIndex )
         {
-            if ( _listNodeLODOff[nodeIndex] == SW_TRUE )
-                continue;
-            const float32 weight = computeNodeWeight( nodeIndex );
+            const float32 weight = computeNodeWeight( nodeIndex ); // LOD 로 꺼진 노드는 0 이다
             if ( weight <= 0.0f )
                 continue;
             const vector<uint32>& listWritten = _listNodeWrittenBone[nodeIndex];

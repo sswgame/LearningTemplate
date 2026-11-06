@@ -84,7 +84,7 @@ namespace sw
          * @brief 스프링 체인(꼬리, 머리 가닥, 망토)입니다. 키는 `bones`, `stiffness`, `axis_pull`, `damping`, `gravity`, `particle_radius`, `fixed_step`, `max_substeps`,
          *        `joints`(`[{ "stiffness", "axis_pull", "damping", "gravity", "radius" }]` — 본 수 − 1 개, 입자마다 값),
          *        `teleport_distance`, `colliders`(`[{ "bone" 또는 "target", "shape", "a", "b", "radius" }]` — `target` 은 리그 목표라 다른 유닛의 본(망토가 몸의 엉덩이 · 다리)에 붙는다),
-         *        `use_shared_colliders`(호스트가 준 충돌체, 즉 물리 에셋의 구와 캡슐도 사용)입니다. 멀리서 끄는 것은 공통 키 `min_screen_size` 입니다.
+         *        `use_shared_colliders`(호스트가 준 충돌체, 즉 물리 에셋의 구와 캡슐도 사용)입니다. 멀리서 끄는 것은 공통 키 `max_lod`(LOD 등급, 꺼지고 켜질 때 페이드)입니다.
          */
         class RigSpringChainNode final : public RigNode
         {

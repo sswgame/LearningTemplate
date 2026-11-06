@@ -65,8 +65,9 @@ namespace sw
         hashed_string _weightCurve{};
         PROPERTY( Name = "weight_slot" )
         hashed_string _weightSlot{};
-        PROPERTY( Name = "min_screen_size", Min = 0.0 )
-        float32 _minScreenSize{ 0.0f };
+        /** @brief 이 노드가 켜지는 가장 높은 LOD 등급(`AnimationLODState::_lodGrade`)입니다. -1 이면 모든 등급에서 켠다(언리얼 노드 LOD Threshold 의 -1). */
+        PROPERTY( Name = "max_lod", Min = -1 )
+        int32 _maxLODGrade{ -1 };
         PROPERTY( Name = "enabled" )
         bool _bEnabled{ SW_TRUE }; ///< 적지 않으면 켜짐(에디터가 끈 노드만 `enabled="false"` 를 쓴다)
     };

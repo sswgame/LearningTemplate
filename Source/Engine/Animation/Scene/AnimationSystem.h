@@ -552,7 +552,7 @@ namespace sw
 #endif
         /**
          * @brief 주 시점 위치(보통 카메라 월드 위치)를 정합니다. `setLODViews` 가 첫 뷰로 채우고, 뷰를 넣지 않는 벤치는 직접 넣습니다.
-         * @details 리그 노드의 LOD 는 이 위치가 아니라 유닛의 화면 크기(`AnimationLODState::_screenSize`)로 판정한다(노드 키 `min_screen_size`).
+         * @details 리그 · 그래프 노드의 LOD 는 이 위치가 아니라 유닛의 LOD 등급(`AnimationLODState::_lodGrade` — 화면 크기와 예산)으로 판정한다(노드 키 `max_lod`).
          */
         void setLODViewPosition( const float3& position );
         /** @brief 주 시점 위치를 지웁니다. */
