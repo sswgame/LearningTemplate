@@ -750,6 +750,19 @@ namespace sw
     DataInheritanceSchemaRegistrar::DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MakeSchemaFunction pfnMakeSchema )
         : _pRootName{ pRootName }
         , _pfnMakeSchema{ pfnMakeSchema }
+        , _pfnMerge{ nullptr }
+        , _pNext{ nullptr }
+    {
+        DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
+        const ScopedLock<mutex>     lock( chain._mutex );
+        _pNext       = chain._pHead;
+        chain._pHead = this;
+    }
+
+    DataInheritanceSchemaRegistrar::DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MergeFunction pfnMerge )
+        : _pRootName{ pRootName }
+        , _pfnMakeSchema{ nullptr }
+        , _pfnMerge{ pfnMerge }
         , _pNext{ nullptr }
     {
         DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
@@ -780,6 +793,18 @@ namespace sw
         {
             if ( rootName == pEntry->_pRootName )
                 return pEntry->_pfnMakeSchema;
+        }
+        return nullptr;
+    }
+
+    DataInheritance::MergeFunction DataInheritanceSchemaRegistrar::findMerge( string_view rootName )
+    {
+        DataInheritanceSchemaChain& chain = DataInheritanceSchemaChain::get();
+        const ScopedLock<mutex>     lock( chain._mutex );
+        for ( const DataInheritanceSchemaRegistrar* pEntry = chain._pHead; pEntry != nullptr; pEntry = pEntry->_pNext )
+        {
+            if ( rootName == pEntry->_pRootName )
+                return pEntry->_pfnMerge;
         }
         return nullptr;
     }

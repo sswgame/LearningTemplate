@@ -88,38 +88,21 @@ SW_TEST_CASE( ResourceComposerTest, CookStopsWhenNoRuleIsVisible )
     SW_EXPECT_LOG( "DataInheritance.NoSchema" );
 }
 
-/** @brief [ResourceComposerTest] 층이 쌓이는 스켈레톤 변형은 쿠커가 글 그대로 담는다 — 부모의 루트가 달라 칸으로 합칠 수 없고, 런타임이 부모를 읽어 쌓는다 */
-SW_TEST_CASE( ResourceComposerTest, CookKeepsOwnMergeFormatsAsWritten )
-{
-    ResourceComposerTestSource source;
-    source.add( "base.skeleton.xml", R"(<Skeleton />)" );
-    string outText;
-    bool   bComposed = true;
-    SW_REQUIRE_TRUE( ResourceComposer::compose( R"(<SkeletonVariant _base="base.skeleton.xml" />)", "a", ResourceContext::forPackCook( source ), outText, bComposed ) );
-    SW_EXPECT_FALSE( bComposed );
-}
-
 /** @brief [ResourceComposerTest] 문서 표의 줄이 규칙이 되고, 그 규칙으로 쿠킹이 펼친다 */
 SW_TEST_CASE( ResourceComposerTest, DocumentTableRowParses )
 {
     constexpr const utf8* kJson = R"({ "listDocument": [
-        { "root": "Own", "merge": "Own" },
         { "root": "Kit", "listField": [ { "name": "_listX", "key": "_name" } ] }
     ] })";
 
     DataInheritanceSchema schema{ "Kit" };
-    bool                  bListed   = false;
-    bool                  bOwnMerge = false;
-    SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( kJson, "Kit", schema, bListed, bOwnMerge ) );
+    bool                  bListed = false;
+    SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( kJson, "Kit", schema, bListed ) );
     SW_EXPECT_TRUE( bListed );
-    SW_EXPECT_FALSE( bOwnMerge );
     SW_REQUIRE_TRUE( schema.findField( "_listX" ) != nullptr );
     SW_EXPECT_EQUAL( string( "_name" ), schema.findField( "_listX" )->_keyAttribute );
 
-    SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( kJson, "Own", schema, bListed, bOwnMerge ) );
-    SW_EXPECT_TRUE( bOwnMerge );
-
-    SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( kJson, "Other", schema, bListed, bOwnMerge ) );
+    SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( kJson, "Other", schema, bListed ) );
     SW_EXPECT_FALSE( bListed );
 }
 
@@ -139,11 +122,10 @@ SW_TEST_CASE( ResourceComposerTest, DocumentTableMatchesReflection )
     {
         const string          rootName = listDocument.at( index ).get( "root" ).asString();
         DataInheritanceSchema schema{ rootName };
-        bool                  bListed   = false;
-        bool                  bOwnMerge = false;
-        SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( text, rootName, schema, bListed, bOwnMerge ) );
+        bool                  bListed = false;
+        SW_REQUIRE_TRUE( DataCatalogInheritance::parseDocumentRule( text, rootName, schema, bListed ) );
         const TypeInfo* pTypeInfo = engine::getSubsystem<TypeRegistry>().findType( hashed_string( rootName.c_str() ) );
-        if ( bOwnMerge == false && pTypeInfo != nullptr )
+        if ( pTypeInfo != nullptr )
             SW_EXPECT_TRUE( ResourceComposerTestUtil::isSameMergeRule( schema, DataInheritanceSchema::makeFromType( *pTypeInfo ) ) );
     }
 }

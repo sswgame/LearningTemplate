@@ -14,6 +14,7 @@
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -49,12 +50,32 @@ namespace sw
         return XMLSerializer::serialize( this, *StaticType() );
     }
 
+    SkeletonClipRule::SkeletonClipRule()
+        : _sourceTranslation{}
+        , _translation{}
+        , _rotation{ quaternion::Identity }
+        , _scale{ 1.0f, 1.0f, 1.0f }
+        , _translationMode{ RetargetTranslationMode::Copy }
+        , _bActive{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
+    SkeletonVariantState::SkeletonVariantState()
+        : _listClipRule{}
+        , _listBasePath{}
+        , _firstAddedBone{ SkeletonInternal::kNoAddedBone }
+        , _translationRatio{ 1.0f }
+    {
+    }
+
     Skeleton::Skeleton()
         : _listBone{}
         , _listParentIndex{}
         , _listHierarchyHash{}
         , _listAttachment{}
         , _listSocket{}
+        , _listVariantState{}
         , _listClipRule{}
         , _listBasePath{}
         , _firstAddedBone{ SkeletonInternal::kNoAddedBone }
@@ -128,6 +149,7 @@ namespace sw
         _listHierarchyHash.clear();
         _listAttachment.clear();
         _listSocket.clear();
+        _listVariantState.clear();
         _listClipRule.clear();
         _listBasePath.clear();
         _firstAddedBone   = SkeletonInternal::kNoAddedBone;
@@ -282,26 +304,36 @@ namespace sw
     bool Skeleton::parseXML( string_view xml, string_view sourceLabel )
     {
         clear();
-        XMLDocument document;
-        if ( document.parse( xml, sourceLabel ) == false || document.getRoot( SkeletonInternal::kVariantRootName ).isValid() == false )
-            return parseFlat( xml, sourceLabel );
-        // 사슬의 순환 · 깊이 · 없는 부모는 공통 `_base` 의 규칙이다. 층의 차이는 덮어쓰기가 아니라 쌓임(뼈 비율 곱 · 클립 규칙)이라 글로 합치지 않고 위 층부터 차례로 얹는다.
-        DataInheritanceResourceSource source;
-        vector<DataInheritanceLayer>  listLayer;
-        if ( DataInheritance::collectChain( xml, sourceLabel, source, listLayer ) == false || parseFlat( listLayer.front()._text, listLayer.front()._id ) == false )
+        string flatText;
+        bool   bComposed = false;
+        if ( ResourceComposer::compose( xml, sourceLabel, ResourceContext::forMerge( &Skeleton::mergeVariantText ), flatText, bComposed ) == false )
+            return false;
+        return parseFlat( bComposed ? string_view( flatText ) : xml, sourceLabel );
+    }
+
+    bool Skeleton::mergeVariantText( string_view text, string_view sourceName, IDataInheritanceSource& source, string& outText )
+    {
+        // 사슬의 순환 · 깊이 · 없는 부모는 공통 `_base` 의 규칙이다. 층의 차이는 덮어쓰기가 아니라 쌓임(뼈 비율 곱 · 클립 규칙)이라 칸으로 합치지 않고 위 층부터 차례로 얹는다.
+        vector<DataInheritanceLayer> listLayer;
+        Skeleton                     skeleton;
+        if ( DataInheritance::collectChain( text, sourceName, source, listLayer ) == false || skeleton.parseFlat( listLayer.front()._text, listLayer.front()._id ) == false )
             return false;
         for ( size_t index = 1; index < listLayer.size(); ++index )
         {
             const DataInheritanceLayer& layer = listLayer[index];
             SkeletonVariant             variant;
             Skeleton                    merged;
-            if ( ConfigManager::readConfigXMLDocument( &variant, *SkeletonVariant::StaticType(), layer._text, layer._id.c_str() ) == false || merged.applyVariant( variant, *this, layer._id ) == false )
-            {
-                clear();
+            if ( ConfigManager::readConfigXMLDocument( &variant, *SkeletonVariant::StaticType(), layer._text, layer._id.c_str() ) == false || merged.applyVariant( variant, skeleton, layer._id ) == false )
                 return false;
-            }
-            *this = std::move( merged );
+            skeleton = std::move( merged );
         }
+        SkeletonVariantState state;
+        state._listClipRule     = skeleton._listClipRule;
+        state._listBasePath     = skeleton._listBasePath;
+        state._firstAddedBone   = skeleton._firstAddedBone;
+        state._translationRatio = skeleton._translationRatio;
+        skeleton._listVariantState.push_back( std::move( state ) );
+        outText = skeleton.toXML();
         return true;
     }
 
@@ -337,10 +369,11 @@ namespace sw
             return false;
         }
         // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어서 구할 수 없다. `addBone` 이 거르므로 그 길로 다시 쌓는다.
-        const vector<SkeletonBone>       listLoadedBone       = std::move( _listBone );
-        const vector<SkeletonAttachment> listLoadedAttachment = std::move( _listAttachment );
-        const vector<SkeletonSocket>     listLoadedSocket     = std::move( _listSocket );
-        const uint8                      bPartial             = _bPartial;
+        const vector<SkeletonBone>         listLoadedBone       = std::move( _listBone );
+        const vector<SkeletonAttachment>   listLoadedAttachment = std::move( _listAttachment );
+        const vector<SkeletonSocket>       listLoadedSocket     = std::move( _listSocket );
+        const vector<SkeletonVariantState> listLoadedState      = std::move( _listVariantState );
+        const uint8                        bPartial             = _bPartial;
         clear();
         _bPartial = bPartial;
         for ( const SkeletonBone& bone : listLoadedBone )
@@ -365,6 +398,19 @@ namespace sw
             if ( addSocket( socket, sourceLabel ) == false )
                 return false;
         }
+        if ( listLoadedState.empty() )
+            return true;
+        const SkeletonVariantState& state       = listLoadedState.front();
+        const bool                  bStateValid = listLoadedState.size() == 1 && ( state._listClipRule.empty() || state._listClipRule.size() == _listBone.size() );
+        if ( bStateValid == false )
+        {
+            SW_LOG_ERROR_ID( "Skeleton.VariantStateInvalid", "Skeleton '%#': _listVariantState must be one entry with a clip rule per bone", sourceLabel );
+            return false;
+        }
+        _listClipRule     = state._listClipRule;
+        _listBasePath     = state._listBasePath;
+        _firstAddedBone   = state._firstAddedBone;
+        _translationRatio = state._translationRatio;
         return true;
     }
 
@@ -384,4 +430,5 @@ namespace sw
 namespace sw
 {
     SW_ASSET_TYPE( Skeleton, Skeleton::kAssetType );
+    SW_DATA_INHERITANCE_MERGE( SkeletonVariant, &Skeleton::mergeVariantText );
 } // namespace sw

@@ -17,21 +17,27 @@ namespace sw
     {
         struct ResourceComposerInternal
         {
-            /** @brief 읽는 쪽이 아는 규칙으로 펼칩니다. 쿠킹본만 읽는 구성에서 `_base` 가 남아 있으면 오류입니다 — 런타임은 펼친 결과만 읽는다(`PackCooker`). */
+            /** @brief 쿠킹본만 읽는 구성에서 `_base` 가 남아 있으면 오류를 남기고 false 입니다 — 런타임은 펼친 결과만 읽는다(`PackCooker`). */
+            [[nodiscard]] static bool canFlattenAtRuntime( string_view id )
+            {
+                if ( AssetIO::readsSource() )
+                    return true;
+                SW_LOG_ERROR_ID( "DataInheritance.NotFlattened", "'%#' still has %# in cooked content - the pack cook flattens it (PackCooker)", id, DataInheritance::kBaseAttribute );
+                return false;
+            }
+
+            /** @brief 읽는 쪽이 아는 규칙으로 펼칩니다. */
             [[nodiscard]] static bool flattenFromResources( string_view text, string_view id, const DataInheritanceSchema& schema, string& outText )
             {
-                if ( AssetIO::readsSource() == false )
-                {
-                    SW_LOG_ERROR_ID( "DataInheritance.NotFlattened", "'%#' still has %# in cooked content - the pack cook flattens it (PackCooker)", id, DataInheritance::kBaseAttribute );
+                if ( canFlattenAtRuntime( id ) == false )
                     return false;
-                }
                 DataInheritanceResourceSource source;
                 return DataInheritance::flatten( text, id, schema, source, outText );
             }
 
             /**
-             * @brief 루트 이름으로 규칙을 찾아 펼칩니다. 문서 표 → 손 형식 → 리플렉션 형식 차례입니다. 셋 다 없으면 오류입니다.
-             * @details 문서 표가 먼저다 — 쿠킹은 Engine 의 등록만 보므로, 표는 쿠킹과 개발 실행이 같은 답을 내는 유일한 출처다. 자기 입구가 합치는 형식(`SkeletonVariant`)은 표가 그렇게 적어 글 그대로 담는다.
+             * @brief 루트 이름으로 규칙을 찾아 펼칩니다. 문서 표 → 합치기 함수 → 손 형식 → 리플렉션 형식 차례입니다. 모두 없으면 오류입니다.
+             * @details 문서 표가 먼저다 — 쿠킹은 Engine 의 등록만 보므로, 표는 쿠킹과 개발 실행이 같은 답을 내는 유일한 출처다.
              */
             [[nodiscard]] static bool flattenByRootName( string_view text, string_view id, IDataInheritanceSource& source, string& outText, bool& outbComposed )
             {
@@ -43,15 +49,15 @@ namespace sw
                 }
                 const string_view     rootName = doc.getRoot().getName();
                 DataInheritanceSchema schema{ rootName };
-                bool                  bListed   = false;
-                bool                  bOwnMerge = false;
-                if ( DataCatalogInheritance::loadDocumentRule( rootName, schema, bListed, bOwnMerge ) == false )
+                bool                  bListed = false;
+                if ( DataCatalogInheritance::loadDocumentRule( rootName, schema, bListed ) == false )
                     return false;
-                if ( bOwnMerge )
-                    return true;
                 outbComposed = true;
                 if ( bListed )
                     return DataInheritance::flatten( text, id, schema, source, outText );
+                const DataInheritance::MergeFunction pfnMerge = DataInheritanceSchemaRegistrar::findMerge( rootName );
+                if ( pfnMerge != nullptr )
+                    return pfnMerge( text, id, source, outText );
                 const DataInheritance::MakeSchemaFunction pfnMakeSchema = DataInheritanceSchemaRegistrar::find( rootName );
                 if ( pfnMakeSchema != nullptr )
                     return DataInheritance::flatten( text, id, pfnMakeSchema(), source, outText );
@@ -89,6 +95,16 @@ namespace sw
                             return true;
                         outbComposed = true;
                         return flattenFromResources( text, id, DataInheritanceSchema::makeFromType( *context._pTypeInfo ), outText );
+                    case ResourceContext::ParentRule::KnownMerge:
+                    {
+                        if ( DataInheritance::findBasePath( text ).empty() )
+                            return true;
+                        outbComposed = true;
+                        if ( canFlattenAtRuntime( id ) == false )
+                            return false;
+                        DataInheritanceResourceSource source;
+                        return context._pfnMerge( text, id, source, outText );
+                    }
                     case ResourceContext::ParentRule::RootName:
                         if ( DataCatalogInheritance::flattenIfListed( text, id, *context._pSource, outbComposed, outText ) == false )
                             return false;
@@ -106,22 +122,27 @@ namespace sw
 {
     ResourceContext ResourceContext::forDocument()
     {
-        return ResourceContext{ ParentRule::CatalogTable, nullptr, nullptr, nullptr };
+        return ResourceContext{ ParentRule::CatalogTable, nullptr, nullptr, nullptr, nullptr };
     }
 
     ResourceContext ResourceContext::forSchema( DataInheritance::MakeSchemaFunction pfnMakeSchema )
     {
-        return ResourceContext{ ParentRule::KnownSchema, pfnMakeSchema, nullptr, nullptr };
+        return ResourceContext{ ParentRule::KnownSchema, pfnMakeSchema, nullptr, nullptr, nullptr };
     }
 
     ResourceContext ResourceContext::forType( const TypeInfo& typeInfo )
     {
-        return ResourceContext{ ParentRule::KnownType, nullptr, &typeInfo, nullptr };
+        return ResourceContext{ ParentRule::KnownType, nullptr, &typeInfo, nullptr, nullptr };
+    }
+
+    ResourceContext ResourceContext::forMerge( DataInheritance::MergeFunction pfnMerge )
+    {
+        return ResourceContext{ ParentRule::KnownMerge, nullptr, nullptr, pfnMerge, nullptr };
     }
 
     ResourceContext ResourceContext::forPackCook( IDataInheritanceSource& source )
     {
-        return ResourceContext{ ParentRule::RootName, nullptr, nullptr, &source };
+        return ResourceContext{ ParentRule::RootName, nullptr, nullptr, nullptr, &source };
     }
 
     bool ResourceComposer::compose( string_view text, string_view id, const ResourceContext& context, string& outText, bool& outbComposed )

@@ -13,6 +13,8 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 using namespace sw;
@@ -333,4 +335,50 @@ SW_TEST_CASE( SkeletonVariantTest, ChainStacksThroughCommonBase )
     Skeleton looped;
     SW_EXPECT_FALSE( looped.loadFromAsset( AssetID{ idLoop } ) );
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
+}
+
+/**
+ * @brief [SkeletonVariantTest] 팩 쿠커는 변형을 부모 없는 평평한 글로 펼치고, 그 글은 비율 · 더한 본 · 클립 규칙 · 부모 경로까지 원본을 합쳐 읽은 것과 같은지 검증(부모와 루트 형식이 달라도 된다)
+ */
+SW_TEST_CASE( SkeletonVariantTest, CookFlattensToAPlainSkeleton )
+{
+    using Util = SkeletonVariantTestUtil;
+    const test::ScopedScratchDomain domain;
+    const string                    idBase = test::ScopedScratchDomain::makeID( "cook_base.skeleton.xml" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "cook_base.skeleton.xml" ), Util::makeBase().toXML() ) );
+
+    SkeletonVariant      variant{};
+    SkeletonBoneOverride boneOverride{};
+    boneOverride._bone             = hashed_string( "bone1" );
+    boneOverride._translationScale = 2.0f;
+    SkeletonAddedBone added{};
+    added._name       = hashed_string( "tail" );
+    added._parentBone = hashed_string( "bone2" );
+    variant._base     = idBase;
+    variant._listBoneOverride.push_back( boneOverride );
+    variant._listAddedBone.push_back( added );
+
+    DataInheritanceResourceSource source;
+    string                        flatText;
+    bool                          bComposed = false;
+    SW_REQUIRE_TRUE( ResourceComposer::compose( variant.toXML(), "variant", ResourceContext::forPackCook( source ), flatText, bComposed ) );
+    SW_EXPECT_TRUE( bComposed );
+    SW_EXPECT_TRUE( DataInheritance::findBasePath( flatText ).empty() );
+
+    Skeleton fromSource;
+    Skeleton fromCooked;
+    SW_REQUIRE_TRUE( fromSource.parseXML( variant.toXML(), "variant" ) );
+    SW_REQUIRE_TRUE( fromCooked.parseXML( flatText, "cooked" ) );
+    SW_EXPECT_EQUAL( fromSource.getBoneCount(), fromCooked.getBoneCount() );
+    SW_EXPECT_EQUAL( fromSource.getHierarchyHash( fromSource.getBoneCount() ), fromCooked.getHierarchyHash( fromSource.getBoneCount() ) );
+    SW_EXPECT_TRUE( fromCooked.isAddedBone( fromCooked.getBoneCount() - 1 ) );
+    SW_EXPECT_FALSE( fromCooked.isAddedBone( 0 ) );
+    SW_EXPECT_TRUE( fromCooked.hasClipRules() );
+    SW_REQUIRE_EQUAL( static_cast<size_t>( 1 ), fromCooked.getBasePaths().size() );
+    SW_EXPECT_TRUE( fromCooked.getBasePaths()[0] == idBase );
+    const BoneTransform sampled = fromSource.getBone( 1 )._referencePose;
+    SW_EXPECT_NEAR( fromSource.applyClipRule( 1, sampled )._translation._x, fromCooked.applyClipRule( 1, sampled )._translation._x, 0.0001f );
+
+    // 평범한 스켈레톤의 글에는 이 칸이 없다 — 공용 스켈레톤 파일 이름이 글의 지문이다.
+    SW_EXPECT_TRUE( Util::makeBase().toXML().find( "_listVariantState" ) == string::npos );
 }

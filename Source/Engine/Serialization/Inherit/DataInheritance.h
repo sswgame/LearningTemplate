@@ -147,12 +147,14 @@ namespace sw
 
         /**
          * @brief @p text 의 부모 사슬을 위(부모가 없는 문서)부터 @p text 까지 모읍니다. 칸을 합치지 않습니다.
-         * @details 층마다의 차이가 덮어쓰기가 아니라 쌓임이어서 글로 합칠 수 없는 형식(`SkeletonVariant`)이 쓴다. 순환 · 깊이 초과 · 없는 부모는 `flatten` 과 같은 오류입니다. 형식은 부르는 쪽이 층마다 봅니다.
+         * @details 층마다의 차이가 덮어쓰기가 아니라 쌓임이어서 칸으로 합칠 수 없는 형식의 합치기 함수(`SW_DATA_INHERITANCE_MERGE`)가 쓴다. 순환 · 깊이 초과 · 없는 부모는 `flatten` 과 같은 오류입니다. 형식은 부르는 쪽이 층마다 봅니다.
          */
         [[nodiscard]] static bool collectChain( string_view text, string_view sourceName, IDataInheritanceSource& source, vector<DataInheritanceLayer>& outListLayer );
 
         /** @brief 규칙을 돌려주는 함수입니다. Engine 의 손 XML 형식이 `SW_DATA_INHERITANCE_SCHEMA` 로 올립니다. */
         using MakeSchemaFunction = DataInheritanceSchema ( * )();
+        /** @brief 칸 규칙으로 풀리지 않는 형식의 합치기입니다. @p text 를 사슬 끝까지 합쳐 부모가 없는 한 벌을 씁니다(부모와 루트 형식이 달라도 된다). Engine 형식이 `SW_DATA_INHERITANCE_MERGE` 로 올립니다. */
+        using MergeFunction = bool ( * )( string_view text, string_view sourceName, IDataInheritanceSource& source, string& outText );
 
         /**
          * @brief @p fullText 가 @p parentFullText 와 다른 칸만 담은 문서를 만듭니다. @p baseID 가 있으면 루트에 `_base` 로 적고, 없으면 @p parentFullText 는 형식 기본값입니다.
@@ -188,16 +190,20 @@ namespace sw
     {
     public:
         DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MakeSchemaFunction pfnMakeSchema );
+        DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MergeFunction pfnMerge );
         ~DataInheritanceSchemaRegistrar();
         DataInheritanceSchemaRegistrar( const DataInheritanceSchemaRegistrar& )            = delete;
         DataInheritanceSchemaRegistrar& operator=( const DataInheritanceSchemaRegistrar& ) = delete;
 
         /** @brief 루트 이름이 @p rootName 인 규칙 함수입니다. 없으면 nullptr 입니다. */
         [[nodiscard]] static DataInheritance::MakeSchemaFunction find( string_view rootName );
+        /** @brief 루트 이름이 @p rootName 인 합치기 함수입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] static DataInheritance::MergeFunction findMerge( string_view rootName );
 
     private:
         const utf8*                         _pRootName;
         DataInheritance::MakeSchemaFunction _pfnMakeSchema;
+        DataInheritance::MergeFunction      _pfnMerge;
         DataInheritanceSchemaRegistrar*     _pNext;
     };
 } // namespace sw
@@ -211,4 +217,15 @@ namespace sw
     static const ::sw::DataInheritanceSchemaRegistrar s_dataInheritanceSchema##RootName                                                                             \
     {                                                                                                                                                               \
         #RootName, pfnMakeSchema                                                                                                                                    \
+    }
+
+/**
+ * @brief 칸 규칙으로 풀리지 않는 Engine 형식의 합치기 함수를 올립니다. 읽기(`ResourceContext::forMerge`)와 팩 쿠커가 같은 함수로 부모 없는 한 벌을 만듭니다.
+ * @details 예외 길이 아니다 — 결과는 다른 형식과 똑같이 펼친 글이고, 런타임은 그 글만 읽는다. 게임 · 키트 형식은 쓸 수 없다(`SW_DATA_INHERITANCE_SCHEMA` 와 같은 까닭).
+ */
+#define SW_DATA_INHERITANCE_MERGE( RootName, pfnMerge )                                                                                          \
+    static_assert( ::sw::string_view( SW_REGISTRAR_MODULE ) == ::sw::string_view( "Engine" ), "the pack cook cannot see a module's registrar" ); \
+    static const ::sw::DataInheritanceSchemaRegistrar s_dataInheritanceMerge##RootName                                                           \
+    {                                                                                                                                            \
+        #RootName, pfnMerge                                                                                                                      \
     }

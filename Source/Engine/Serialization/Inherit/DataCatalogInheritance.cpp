@@ -420,10 +420,9 @@ namespace sw
         return flatten( text, sourceName, schema, source, outText );
     }
 
-    bool DataCatalogInheritance::parseDocumentRule( string_view jsonText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed, bool& outbOwnMerge )
+    bool DataCatalogInheritance::parseDocumentRule( string_view jsonText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed )
     {
-        outbListed   = false;
-        outbOwnMerge = false;
+        outbListed = false;
         JSONDocument doc;
         if ( doc.parse( jsonText, kConfigPath ) == false )
             return false;
@@ -441,15 +440,14 @@ namespace sw
             DataInheritanceSchema schema{ rootName };
             if ( DataCatalogInheritanceInternal::readSchemaFields( document, "listField", schema, false ) == false )
                 return false;
-            outSchema    = std::move( schema );
-            outbListed   = true;
-            outbOwnMerge = document.get( "merge" ).asString() == "Own";
+            outSchema  = std::move( schema );
+            outbListed = true;
             return true;
         }
         return true;
     }
 
-    bool DataCatalogInheritance::loadDocumentRule( string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed, bool& outbOwnMerge )
+    bool DataCatalogInheritance::loadDocumentRule( string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed )
     {
         const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kConfigPath );
         string       text;
@@ -458,6 +456,6 @@ namespace sw
             SW_LOG_ERROR_ID( "DataCatalogInheritance.TableUnreadable", "Catalog inheritance rules '%#' could not be read", path );
             return false;
         }
-        return parseDocumentRule( text, rootName, outSchema, outbListed, outbOwnMerge );
+        return parseDocumentRule( text, rootName, outSchema, outbListed );
     }
 } // namespace sw

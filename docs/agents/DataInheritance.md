@@ -65,7 +65,7 @@ struct RenderGraphPassDesc
 ]
 ```
 
-읽는 쪽이 부모를 스스로 합치는 형식은 `"merge": "Own"` 으로 적는다. 쿠커는 글 그대로 담고 런타임이 부모를 읽는다. 층의 차이가 덮어쓰기가 아니라 쌓임인 `SkeletonVariant` 가 그렇다(공통은 사슬 규칙 `DataInheritance::collectChain` 이다).
+칸 덮어쓰기로 풀리지 않는 Engine 형식은 `SW_DATA_INHERITANCE_MERGE` 로 합치기 함수를 올린다. 결과는 다른 형식과 같은 부모 없는 글이고 읽기와 쿠커가 같은 함수를 지난다. 층의 차이가 쌓임이고 부모(`<Skeleton>`)와 루트가 다른 `SkeletonVariant` 가 그렇다(사슬 규칙은 공통 `DataInheritance::collectChain`).
 
 **Engine 의 손 XML 형식(`XMLFields::readFields` 로 칸을 읽는 것).** 규칙을 값으로 적고 `ResourceComposer` 로 읽는다. 본보기는 `MaterialXML::makeInheritanceSchema` 와 `Material::loadFromXML` 이다. `SW_DATA_INHERITANCE_SCHEMA` 는 Engine 에서만 컴파일된다.
 
@@ -178,7 +178,7 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 | `_listRenderPassRef` | 부모 하나가 아니라 여러 파일을 섞는 믹스인이다. 단일 부모로 옮기면 첨부 묶음을 파이프라인마다 베껴야 한다. 합친 결과의 이름이 겹치면 오류인 것도 다르다(덮어쓰지 않는다) |
 | JSON 형식 | 설정은 층(`ConfigManager`)으로 겹친다. 프리팹 JSON 은 변형을 읽고 쓰지만 기본값은 빼지 않는다 |
 
-| `SkeletonVariant` 의 칸 | 뼈 비율은 곱해지고 클립 규칙은 쌓이며 본은 뒤에 붙는다. 덮어쓰면 변형의 변형이 다른 값이 된다. 사슬(순환 · 깊이 · 없는 부모)만 공통이고 칸은 `Skeleton::applyVariant` 가 얹는다. 부모 본 번호를 바꾸지 않는지는 합친 뒤에 본다 |
+| `SkeletonVariant` 의 칸 | 뼈 비율은 곱해지고 클립 규칙은 쌓이며 본은 뒤에 붙는다. 덮어쓰면 변형의 변형이 다른 값이 된다. 사슬(순환 · 깊이 · 없는 부모)만 공통이고 칸은 `Skeleton::mergeVariantText` 가 얹어 평평한 `<Skeleton>` 글을 낸다(쿠킹본에 `_base` 가 남지 않는다). 부모 본 번호를 바꾸지 않는지는 합친 뒤에 본다 |
 
 머티리얼의 `parent` 는 합쳤다(`_base`).
 

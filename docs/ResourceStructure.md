@@ -57,9 +57,9 @@
 
 **프리팹:** `PrefabOverrides` 는 열쇠 모양이 달라 유지한다(`DataInheritance.md`). 대신 문서 머리의 조건 · 층 단계는 같은 길을 지난다.
 
-**스켈레톤:** `SkeletonVariant` 의 자체 사슬과 깊이 검사를 지우고 공통 사슬(`DataInheritance::collectChain`)로 옮겼다. "부모 본 번호를 바꾸지 않는다" 는 합친 뒤의 검증으로 남긴다. 칸을 글로 합치지는 않는다 — 뼈 비율은 곱해지고 클립 규칙은 쌓여 덮어쓰기로 풀리지 않고, 부모의 루트(`<Skeleton>`)도 형식이 다르다. 쿠커는 글 그대로 담는다(문서 표 `"merge": "Own"`).
+**스켈레톤:** `SkeletonVariant` 의 자체 사슬과 깊이 검사를 지우고 공통 사슬(`DataInheritance::collectChain`)로 옮겼다. "부모 본 번호를 바꾸지 않는다" 는 합친 뒤의 검증으로 남긴다. 칸 덮어쓰기로는 풀리지 않으므로(뼈 비율은 곱해지고 클립 규칙은 쌓이며 부모 루트 `<Skeleton>` 과 형식도 다르다) 합치기 함수(`SW_DATA_INHERITANCE_MERGE`)가 평평한 `<Skeleton>` 글을 낸다. 예외 길은 없다 — 읽기와 쿠커가 같은 함수를 지나고 쿠킹본에 `_base` 가 남지 않는다. 임포터의 54 개 파일은 고치지 않는다. 쌓인 값(`SkipIfEmpty` 칸 `_listVariantState`)은 펼친 글에만 있어 공용 스켈레톤의 글 지문은 그대로다.
 
-**규칙 출처의 순서:** 문서 표 · 카탈로그 표(`Config/Dev/DataCatalogInheritance.json`) → 손 형식 → 리플렉션 형식. 쿠킹은 Engine 코드만 보므로 게임 · 키트 형식은 표에만 있어도 되고, 표와 코드가 어긋나지 않는지는 테스트가 본다.
+**규칙 출처의 순서:** 문서 표 · 카탈로그 표(`Config/Dev/DataCatalogInheritance.json`) → 합치기 함수 → 손 형식 → 리플렉션 형식. 쿠킹은 Engine 코드만 보므로 게임 · 키트 형식은 표에만 있어도 되고, 표와 코드가 어긋나지 않는지는 테스트가 본다.
 
 #### 조건별 값
 

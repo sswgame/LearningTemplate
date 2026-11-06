@@ -153,7 +153,7 @@ namespace sw
 
             /**
              * @brief 소스 파일 하나를 팩에 담습니다. 부모를 가리키는 데이터(`_base`)는 펼친 한 벌을 담습니다 — 런타임은 펼친 결과만 읽어 비용이 없다(`DataInheritance`).
-             * @details 부모도 디스크 입구로 읽으므로 이 작업의 입력이 되어, 부모가 바뀌면 팩을 다시 굽는다. 스스로 쿠킹본을 만드는 종류(프리팹 변형 — `cookAllPrefabs`)는 그 쿠커가 펼쳤다. 층이 쌓이는 형식(`SkeletonVariant`)은 문서 표가 글 그대로 담게 한다.
+             * @details 부모도 디스크 입구로 읽으므로 이 작업의 입력이 되어, 부모가 바뀌면 팩을 다시 굽는다. 스스로 쿠킹본을 만드는 종류(프리팹 변형 — `cookAllPrefabs`)는 그 쿠커가 펼쳤다.
              *          펼치지 못하면 쿠킹 실패다 — 부모 없이 자식 칸만 담지 않는다.
              */
             static bool addSourceFile( PackWriter& writer, string_view relativePath, const string& absPath, string_view contentRoot, PackCookTiming& ioTiming )

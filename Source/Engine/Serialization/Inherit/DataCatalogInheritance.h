@@ -56,11 +56,10 @@ namespace sw
         /**
          * @brief 표의 `listDocument` 에서 문서 형식 @p rootName 의 규칙을 찾습니다. 게임 · 키트 형식은 쿠킹이 코드를 보지 못해 여기 적습니다(`ResourceComposer`).
          * @param outbListed 표에 있으면 true 입니다. `listField` 가 @p outSchema 가 됩니다(리플렉션 형식의 표 줄은 `TestDataCatalogInheritance` 가 코드와 대조합니다).
-         * @param outbOwnMerge 그 형식의 읽는 쪽이 부모를 스스로 합치면(`"merge": "Own"`) true 입니다. 쿠커는 글 그대로 담고 런타임이 부모를 읽습니다.
          * @return 표가 깨졌으면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] static bool parseDocumentRule( string_view jsonText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed, bool& outbOwnMerge );
+        [[nodiscard]] static bool parseDocumentRule( string_view jsonText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed );
         /** @brief `kConfigPath` 를 읽어 `parseDocumentRule` 합니다. */
-        [[nodiscard]] static bool loadDocumentRule( string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed, bool& outbOwnMerge );
+        [[nodiscard]] static bool loadDocumentRule( string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed );
     };
 } // namespace sw

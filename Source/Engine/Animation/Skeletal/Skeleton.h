@@ -19,6 +19,8 @@
 
 namespace sw
 {
+    class IDataInheritanceSource;
+
     struct MeshSkinBinding;
 
     /**
@@ -128,7 +130,7 @@ namespace sw
      *          차이는 뒤에 붙이는 본 · 본 고치기 · 소켓뿐이다. **본 삭제는 받지 않는다** — 번호가 밀리면 부모의 메시(`MeshSkinVertex`) · 클립 지문 · 본 배치 지문(`getHierarchyHash`)이 모두 깨진다.
      *          평가를 빼려면 본 LOD(`SkeletonBoneLOD`), 섞기에서 빼려면 마스크(`AnimationBoneMaskDef`), 보이지 않게 하려면 `_scale` 0 을 쓴다.
      *          `_base` 의 사슬(순환 · 깊이 · 없는 부모)은 공통 데이터 상속의 것이다(`DataInheritance::collectChain`). 칸 합치기만 칸별 덮어쓰기로 풀리지 않아(본을 뒤에 붙이고 비율 · 클립 규칙을 쌓는다) `applyVariant` 한 함수에 있다.
-     *          그래서 쿠커는 이 파일을 글 그대로 담고(`Config/Dev/DataCatalogInheritance.json` 의 `listDocument`) 런타임이 부모를 읽어 합친다. "부모의 본 번호를 바꾸지 않는다" 는 합친 뒤에 본다.
+     *          합친 결과는 부모와 같은 평평한 `<Skeleton>` 글이다(`Skeleton::mergeVariantText`, `SW_DATA_INHERITANCE_MERGE`) — 읽기와 팩 쿠커가 같은 함수를 지나므로 쿠킹본에 `_base` 가 남지 않는다. "부모의 본 번호를 바꾸지 않는다" 는 합친 뒤에 본다.
      */
     REFLECT()
     struct SW_API SkeletonVariant
@@ -157,14 +159,47 @@ namespace sw
     };
 
     /** @brief 변형이 본 하나에 거는 클립 재생 규칙을 합친 것입니다(변형의 변형이면 쌓입니다). `Skeleton::applyClipRule` 이 씁니다. */
-    struct SkeletonClipRule
+    REFLECT()
+    struct SW_API SkeletonClipRule
     {
-        float3                  _sourceTranslation{}; ///< 클립이 저작된 맨 위 스켈레톤의 기준 이동
-        float3                  _translation{};       ///< 이 스켈레톤의 기준 이동
-        quaternion              _rotation{ quaternion::Identity };
-        float3                  _scale{ 1.0f, 1.0f, 1.0f };
-        RetargetTranslationMode _translationMode{ RetargetTranslationMode::Copy };
-        uint8                   _bActive{ SW_FALSE };
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Translation of the top skeleton the clips were authored on" )
+        float3 _sourceTranslation;
+        PROPERTY( Tooltip = "Reference translation of this skeleton" )
+        float3 _translation;
+        PROPERTY( Tooltip = "Rotation multiplied onto clip rotation tracks" )
+        quaternion _rotation;
+        PROPERTY( Tooltip = "Scale multiplied onto clip scale tracks" )
+        float3 _scale;
+        PROPERTY( Tooltip = "How clip translation tracks reach this bone" )
+        RetargetTranslationMode _translationMode;
+        PROPERTY( Tooltip = "A variant changed this bone" )
+        uint8                  _bActive  : 1;
+        [[maybe_unused]] uint8 _reserved : 7;
+
+        SkeletonClipRule();
+    };
+
+    /**
+     * @brief 변형을 펼친 글에만 있는 값입니다. 평평한 스켈레톤의 칸으로는 알 수 없는, 층을 쌓아 나온 결과입니다.
+     * @details 저장 · 임포트가 쓰는 평범한 스켈레톤에는 이 칸이 없다(`SkipIfEmpty`) — 공용 스켈레톤 파일 이름이 글의 지문이라 글이 바뀌면 안 된다.
+     */
+    REFLECT()
+    struct SW_API SkeletonVariantState
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Tooltip = "Clip rules per bone" )
+        vector<SkeletonClipRule> _listClipRule;
+        PROPERTY( Tooltip = "Bases, nearest first" )
+        vector<string> _listBasePath;
+        PROPERTY( Tooltip = "First bone a variant appended" )
+        uint32 _firstAddedBone;
+        PROPERTY( Tooltip = "Pelvis height ratio to the top skeleton" )
+        float32 _translationRatio;
+
+        SkeletonVariantState();
     };
 } // namespace sw
 
@@ -245,6 +280,11 @@ namespace sw
          * @return 모르는 본을 고치거나, 있는 이름의 본 · 소켓을 더하거나, 골반 없이 ScaleByPelvisHeight 를 쓰면 오류를 남기고 내용을 비운 채 false 입니다.
          */
         [[nodiscard]] bool applyVariant( const SkeletonVariant& variant, const Skeleton& base, string_view sourceLabel );
+        /**
+         * @brief `<SkeletonVariant>` 글의 사슬을 위 층부터 쌓아 부모 없는 평평한 `<Skeleton>` 글을 씁니다. 읽기와 팩 쿠커가 지나는 합치기입니다(`SW_DATA_INHERITANCE_MERGE`).
+         * @return 사슬 오류(순환 · 깊이 · 없는 부모)이거나 층이 틀리면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool mergeVariantText( string_view text, string_view sourceName, IDataInheritanceSource& source, string& outText );
         /** @brief 리소스 경로(또는 절대 경로)의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
@@ -272,6 +312,8 @@ namespace sw
         vector<SkeletonAttachment> _listAttachment;
         PROPERTY( Tooltip = "Sockets this skeleton defines" )
         vector<SkeletonSocket> _listSocket;
+        PROPERTY( SkipIfEmpty, Tooltip = "What stacking variants produced; only a flattened variant has it (read into the fields below)" )
+        vector<SkeletonVariantState> _listVariantState;
         /** @brief 변형의 클립 재생 규칙입니다(본 번호 순). 변형이 본을 고치지 않았으면 비어 있고, 파일에는 차이로 적습니다. */
         vector<SkeletonClipRule> _listClipRule;
         /** @brief 변형의 부모 경로입니다(`getBasePaths`). */
