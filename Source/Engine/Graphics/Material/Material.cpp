@@ -25,6 +25,7 @@
 #include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Reflection/EnumName.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -1051,7 +1052,7 @@ namespace sw
         const shared_ptr<Material> parent = Material::create();
         string                     deltaText;
         if ( parent->loadFromFile( AssetID{ _desc._parentPath } ) &&
-             MaterialXML::makeParentDelta( fullText, parent->saveFullToString(), _desc._parentPath, deltaText ) )
+             DataInheritance::makeDelta( fullText, parent->saveFullToString(), MaterialXML::makeInheritanceSchema(), _desc._parentPath, deltaText ) )
             return deltaText;
         // 모든 칸을 적어 부모를 끊지 않는다 — 빈 글을 돌려 저장이 실패로 드러나게 한다.
         SW_LOG_ERROR_ID( "Material.SaveParentDeltaFailed", "Material '%#' could not be written as a delta of parent '%#' - it is not saved", _desc._name, _desc._parentPath );
@@ -1066,7 +1067,7 @@ namespace sw
         XMLNode     root = doc.appendRoot( "MaterialDesc" );
 
         AssetXMLFormat::writeXMLVersion( root, Material::kAssetType._formatVersion );
-        // 루트 칸은 기본값도 모두 쓴다 — 부모와 다른 칸만 남기는 차이(`makeParentDelta`)가 적지 않은 칸을 부모 값으로 읽는다.
+        // 루트 칸은 기본값도 모두 쓴다 — 부모와 다른 칸만 남기는 차이(`DataInheritance::makeDelta`)가 적지 않은 칸을 부모 값으로 읽는다.
         MaterialRootFields rootFields;
         rootFields._name       = _desc._name;
         rootFields._shaderPath = _desc._shaderPath;
@@ -1134,13 +1135,13 @@ namespace sw
 
     bool Material::loadFromXML( string_view xmlText )
     {
-        // 부모를 가리키면(`parent="..."`) 부모 칸 위에 자식이 적은 칸만 덮은 한 벌로 펼친 뒤 읽는다 — 손 머티리얼이 견본 칸을 베끼지 않게.
-        string flatText;
-        string parentPath;
-        if ( MaterialXML::flattenParent( xmlText, flatText, parentPath ) == false )
+        // 부모를 가리키면(`_base="..."`) 부모 칸 위에 자식이 적은 칸만 덮은 한 벌로 펼친 뒤 읽는다 — 손 머티리얼이 견본 칸을 베끼지 않게.
+        const string parentPath = DataInheritance::findBasePath( xmlText );
+        string       flatText;
+        if ( parentPath.empty() == false && DataInheritance::flattenFromResources( xmlText, "<material>", MaterialXML::makeInheritanceSchema(), flatText ) == false )
             return false;
         XMLDocument doc;
-        if ( doc.parse( flatText ) == false )
+        if ( doc.parse( parentPath.empty() ? xmlText : string_view( flatText ) ) == false )
             return false;
 
         XMLNode root = doc.getRoot( "MaterialDesc" );
@@ -1152,7 +1153,7 @@ namespace sw
 
         // 루트 칸(이름 · 셰이더 · 블렌드)은 스키마로 읽는다 — 적지 않은 블렌드는 불투명이고, 모르는 이름은 로드 오류다(불투명으로 조용히 가지 않는다).
         MaterialRootFields rootFields;
-        if ( XMLFields::readFields( root, rootFields, string_view{ root.getAttributeText( "name" ) }, { "formatVersion", "parent" } ) == false )
+        if ( XMLFields::readFields( root, rootFields, string_view{ root.getAttributeText( "name" ) }, { "formatVersion" } ) == false )
             return false;
         _desc             = MaterialDesc{};
         _desc._name       = rootFields._name;

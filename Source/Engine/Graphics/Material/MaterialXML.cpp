@@ -186,7 +186,7 @@ namespace sw
     void MaterialXML::appendPermutationNode( XMLNode root, const MaterialPermutationDesc& permutationsNode )
     {
         XMLNode node = root.appendChild( "_permutations" );
-        // 순열은 부모 것을 통째로 바꾸므로 기본값을 생략해도 되지만, 차이(`makeParentDelta`)는 글을 맞대므로 늘 같은 꼴로 모두 쓴다.
+        // 순열은 부모 것을 통째로 바꾸므로 기본값을 생략해도 되지만, 차이(`DataInheritance::makeDelta`)는 글을 맞대므로 늘 같은 꼴로 모두 쓴다.
         XMLFields::writeEveryField( node, MaterialPermutationFields{ permutationsNode._quality, permutationsNode._shaderLOD, permutationsNode._usage } );
         MaterialXMLInternal::appendMaterialStringList( node, "_alwaysDefines", permutationsNode._listAlwaysDefine );
 
@@ -220,212 +220,18 @@ namespace sw
 
 namespace sw
 {
-    namespace
+    DataInheritanceSchema MaterialXML::makeInheritanceSchema()
     {
-        /** @brief 부모 상속(`MaterialXML::flattenParent` · `makeParentDelta`)의 TU 로컬 도우미입니다. */
-        struct MaterialParentInternal
-        {
-            static constexpr const utf8* kRootName       = "MaterialDesc";
-            static constexpr const utf8* kParentAttr     = "parent";
-            static constexpr const utf8* kPropertiesName = "_properties";
-            static constexpr const utf8* kItemName       = "item";
-            static constexpr const utf8* kPermutations   = "_permutations";
-
-            static XMLNode findItem( XMLNode properties, string_view name )
-            {
-                for ( XMLNode item = properties.findChild( kItemName ); item; item = item.findNextSibling( kItemName ) )
-                {
-                    if ( item.getAttributeText( "name" ) == name )
-                        return item;
-                }
-                return XMLNode{};
-            }
-
-            static void copyAttributes( XMLNode source, XMLNode target, bool bSkipParent )
-            {
-                for ( XMLAttribute attribute = source.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-                {
-                    if ( bSkipParent && string_view( attribute.getName() ) == kParentAttr )
-                        continue;
-                    target.setAttribute( attribute.getName(), attribute.getValue() );
-                }
-            }
-
-            /** @brief 원소가 하위 원소를 가지는지 봅니다(`_enumEntries` 같은 목록). */
-            static bool hasChildElement( XMLNode node ) { return node.findChild().isValid(); }
-
-            static bool sameAttributes( XMLNode a, XMLNode b )
-            {
-                uint32 countA = 0;
-                for ( XMLAttribute attribute = a.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-                {
-                    ++countA;
-                    const utf8* pOther = b.findAttribute( attribute.getName() );
-                    if ( pOther == nullptr || string_view( pOther ) != string_view( attribute.getValue() ) )
-                        return false;
-                }
-                uint32 countB = 0;
-                for ( XMLAttribute attribute = b.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-                {
-                    ++countB;
-                }
-                return countA == countB;
-            }
-
-            /** @brief @p text 를 사슬 끝까지 펼칩니다. @p inoutChain 은 지나온 부모 경로(순환 검사)입니다. */
-            static bool flatten( string_view text, vector<string>& inoutChain, string& outText, string& outParentPath )
-            {
-                XMLDocument child;
-                if ( child.parse( text ) == false )
-                    return false;
-                const XMLNode childRoot = child.getRoot( kRootName );
-                if ( childRoot.isValid() == false )
-                    return false;
-                outParentPath = string( childRoot.getAttributeText( kParentAttr ) );
-                if ( outParentPath.empty() )
-                {
-                    outText = string( text );
-                    return true;
-                }
-                for ( const string& visited : inoutChain )
-                {
-                    if ( visited == outParentPath )
-                    {
-                        SW_LOG_ERROR_ID( "Material.ParentCycle", "Material parent chain loops at '%#' - the material is not loaded", outParentPath );
-                        return false;
-                    }
-                }
-                if ( inoutChain.size() >= MaterialXML::kMaxParentDepth )
-                {
-                    SW_LOG_ERROR_ID( "Material.ParentTooDeep", "Material parent chain is deeper than %# at '%#' - the material is not loaded", MaterialXML::kMaxParentDepth,
-                                     outParentPath );
-                    return false;
-                }
-                inoutChain.push_back( outParentPath );
-
-                XMLDocument parentSource;
-                if ( parentSource.loadResource( AssetID{ outParentPath } ) == false )
-                {
-                    SW_LOG_ERROR_ID( "Material.ParentNotFound", "Material parent '%#' could not be read - the material is not loaded", outParentPath );
-                    return false;
-                }
-                string parentText;
-                string grandParentPath;
-                if ( flatten( parentSource.saveToString(), inoutChain, parentText, grandParentPath ) == false )
-                    return false;
-                XMLDocument parent;
-                if ( parent.parse( parentText ) == false )
-                    return false;
-                const XMLNode parentRoot = parent.getRoot( kRootName );
-                if ( parentRoot.isValid() == false )
-                {
-                    SW_LOG_ERROR_ID( "Material.ParentNotMaterial", "Material parent '%#' is not a MaterialDesc - the material is not loaded", outParentPath );
-                    return false;
-                }
-
-                XMLDocument   merged;
-                const XMLNode mergedRoot = merged.appendRoot( kRootName );
-                copyAttributes( parentRoot, mergedRoot, true );
-                copyAttributes( childRoot, mergedRoot, true );
-
-                // 프로퍼티: 부모 줄 순서를 지키고 자식이 적은 속성만 덮는다. 부모에 없는 이름은 뒤에 더한다.
-                const XMLNode parentProps = parentRoot.findChild( kPropertiesName );
-                const XMLNode childProps  = childRoot.findChild( kPropertiesName );
-                const XMLNode mergedProps = mergedRoot.appendChild( kPropertiesName );
-                for ( XMLNode item = parentProps.findChild( kItemName ); item; item = item.findNextSibling( kItemName ) )
-                {
-                    const XMLNode overrideItem = findItem( childProps, item.getAttributeText( "name" ) );
-                    if ( overrideItem.isValid() && hasChildElement( overrideItem ) )
-                    {
-                        (void)mergedProps.appendClone( overrideItem );
-                        continue;
-                    }
-                    const XMLNode copy = mergedProps.appendClone( item );
-                    if ( overrideItem.isValid() )
-                        copyAttributes( overrideItem, copy, false );
-                }
-                for ( XMLNode item = childProps.findChild( kItemName ); item; item = item.findNextSibling( kItemName ) )
-                {
-                    if ( findItem( parentProps, item.getAttributeText( "name" ) ).isValid() == false )
-                        (void)mergedProps.appendClone( item );
-                }
-                const XMLNode childPermutations = childRoot.findChild( kPermutations );
-                const XMLNode permutations      = childPermutations.isValid() ? childPermutations : parentRoot.findChild( kPermutations );
-                if ( permutations.isValid() )
-                    (void)mergedRoot.appendClone( permutations );
-                outText = merged.saveToString();
-                return true;
-            }
-        };
-    } // namespace
-
-    bool MaterialXML::flattenParent( string_view xmlText, string& outText, string& outParentPath )
-    {
-        vector<string> listChain;
-        return MaterialParentInternal::flatten( xmlText, listChain, outText, outParentPath );
+        DataInheritanceSchema schema{ "MaterialDesc" };
+        schema._listKeptAttribute.emplace_back( "formatVersion" ); // 판 · 이름은 자기 에셋의 것이다
+        schema._listKeptAttribute.emplace_back( "name" );
+        schema._bEmptyClears = SW_FALSE;
+        DataInheritanceSchema properties{ "_properties" };
+        properties._keyAttribute = "name";
+        properties._bEmptyClears = SW_FALSE;
+        schema._listField.push_back( std::move( properties ) );
+        return schema;
     }
 
-    bool MaterialXML::makeParentDelta( string_view fullText, string_view parentFullText, string_view parentPath, string& outText )
-    {
-        using Internal = MaterialParentInternal;
-        const string parentID( parentPath );
-        XMLDocument  full;
-        XMLDocument  parent;
-        if ( full.parse( fullText ) == false || parent.parse( parentFullText ) == false )
-            return false;
-        const XMLNode fullRoot   = full.getRoot( Internal::kRootName );
-        const XMLNode parentRoot = parent.getRoot( Internal::kRootName );
-        if ( fullRoot.isValid() == false || parentRoot.isValid() == false )
-            return false;
-
-        XMLDocument   delta;
-        const XMLNode deltaRoot = delta.appendRoot( Internal::kRootName );
-        for ( XMLAttribute attribute = fullRoot.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-        {
-            const string_view name = attribute.getName();
-            if ( name == Internal::kParentAttr )
-                continue;
-            // 판 · 이름은 늘 적는다(자기 에셋이다). 나머지(셰이더 · 블렌드)는 부모와 다를 때만 적는다.
-            const utf8* pInherit       = parentRoot.findAttribute( attribute.getName() );
-            const bool  bAlwaysWritten = name == "formatVersion" || name == "name";
-            if ( bAlwaysWritten || pInherit == nullptr || string_view( pInherit ) != string_view( attribute.getValue() ) )
-                deltaRoot.setAttribute( attribute.getName(), attribute.getValue() );
-            if ( name == "name" )
-                deltaRoot.setAttribute( Internal::kParentAttr, string_view( parentID ) );
-        }
-        const XMLNode parentProps = parentRoot.findChild( Internal::kPropertiesName );
-        const XMLNode fullProps   = fullRoot.findChild( Internal::kPropertiesName );
-        XMLNode       deltaProps{};
-        for ( XMLNode item = fullProps.findChild( Internal::kItemName ); item; item = item.findNextSibling( Internal::kItemName ) )
-        {
-            const XMLNode inherited = Internal::findItem( parentProps, item.getAttributeText( "name" ) );
-            const bool    bChildren = Internal::hasChildElement( item ) || ( inherited.isValid() && Internal::hasChildElement( inherited ) );
-            const bool    bSameList = bChildren == false || ( inherited.isValid() && item.toString() == inherited.toString() );
-            if ( inherited.isValid() && bSameList && Internal::sameAttributes( item, inherited ) )
-                continue;
-            if ( deltaProps.isValid() == false )
-                deltaProps = deltaRoot.appendChild( Internal::kPropertiesName );
-            if ( inherited.isValid() == false || bSameList == false )
-            {
-                (void)deltaProps.appendClone( item );
-                continue;
-            }
-            const XMLNode line = deltaProps.appendChild( Internal::kItemName );
-            line.setAttribute( "name", item.getAttributeText( "name" ) );
-            for ( XMLAttribute attribute = item.getFirstAttribute(); attribute; attribute = attribute.getNext() )
-            {
-                const utf8* pInherit = inherited.findAttribute( attribute.getName() );
-                if ( pInherit == nullptr || string_view( pInherit ) != string_view( attribute.getValue() ) )
-                    line.setAttribute( attribute.getName(), attribute.getValue() );
-            }
-        }
-        const XMLNode fullPermutations   = fullRoot.findChild( Internal::kPermutations );
-        const XMLNode parentPermutations = parentRoot.findChild( Internal::kPermutations );
-        const bool    bSamePermutations  = fullPermutations.isValid() == parentPermutations.isValid() &&
-                                       ( fullPermutations.isValid() == false || fullPermutations.toString() == parentPermutations.toString() );
-        if ( bSamePermutations == false && fullPermutations.isValid() )
-            (void)deltaRoot.appendClone( fullPermutations );
-        outText = delta.saveToString();
-        return true;
-    }
+    SW_DATA_INHERITANCE_SCHEMA( MaterialDesc, &MaterialXML::makeInheritanceSchema );
 } // namespace sw

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 끌어 고르기 상자 — 반투명 유리 머티리얼에 초록을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="StarSkirmishDrag" parent="engine/materials/glassmaterial.material">
+<MaterialDesc formatVersion="0" name="StarSkirmishDrag" _base="engine/materials/glassmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.3 1.0 0.4 0.3" />
 	</_properties>

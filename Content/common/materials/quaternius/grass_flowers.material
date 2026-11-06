@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Quaternius Stylized Nature 의 식생(FoliageComponent) 구간 머티리얼 — 꽃 무리의 꽃 — 그림자를 드리우지 않는다(grass.material 과 같은 까닭). 부모(grass.material)에 알베도 · 알파 컷오프(glTF MASK 0.2)만 바꾸고 양면으로 그린다. -->
-<MaterialDesc formatVersion="0" name="grass_flowers" parent="engine/materials/grass.material">
+<MaterialDesc formatVersion="0" name="grass_flowers" _base="engine/materials/grass.material">
 	<_properties>
 		<item name="_alphaCutoff" defaultValue="0.2" />
 		<item name="_albedoMap" assetPath="common/textures/quaternius/nature/flowers.dds" />

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 농장 풀밭 — 기본 머티리얼에 풀밭 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="HarvestValleyMeadow" parent="engine/materials/defaultmaterial.material">
+<MaterialDesc formatVersion="0" name="HarvestValleyMeadow" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.42 0.62 0.30 1.0" />
 	</_properties>

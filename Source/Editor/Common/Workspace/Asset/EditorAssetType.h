@@ -112,7 +112,7 @@ namespace sw::editor
     enum class AssetReferenceUse : uint8
     {
         ResolvedAtUse, ///< 경로로 들고 쓸 때 캐시에서 푼다(메시 → 머티리얼, 스프라이트 → 텍스처, 프리팹 중첩은 스폰 때). 대상의 캐시 리로드로 따라가므로 연쇄하지 않는다
-        InlinedAtLoad, ///< 로드할 때 대상의 글을 펼쳐 넣는다(머티리얼 `parent=`). 대상이 바뀌면 이 에셋도 다시 읽는다
+        InlinedAtLoad, ///< 로드할 때 대상의 글을 펼쳐 넣는다(`_base=`, `DataInheritance`). 대상이 바뀌면 이 에셋도 다시 읽는다
     };
 
     /**

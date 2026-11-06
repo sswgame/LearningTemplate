@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- KayKit Dungeon 모델의 아틀라스 머티리얼 — _albedoMap 이 묶음의 텍스처다(모델 UV 가 칸을 고른다). 전시 줄과 엄폐물이 나눠 쓴다. -->
-<MaterialDesc formatVersion="0" name="ShooterKayKitDungeon" parent="engine/materials/benchtextured.material">
+<MaterialDesc formatVersion="0" name="ShooterKayKitDungeon" _base="engine/materials/benchtextured.material">
 	<_properties>
 		<item name="_roughness" defaultValue="0.6" />
 		<item name="_albedoMap" assetPath="game/shooter3d/textures/kaykit_dungeon.dds" />

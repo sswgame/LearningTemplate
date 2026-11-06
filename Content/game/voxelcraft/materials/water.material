@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 블록 청크의 물(반투명) 머티리얼 — 유리 머티리얼과 같은 블렌드에 _albedoMap 이 블록 아틀라스다. 알파는 메셔의 정점 색이 준다. -->
-<MaterialDesc formatVersion="0" name="VoxelWater" parent="engine/materials/benchtextured.material" blendMode="Transparent">
+<MaterialDesc formatVersion="0" name="VoxelWater" _base="engine/materials/benchtextured.material" blendMode="Transparent">
 	<_properties>
 		<item name="_albedoMap" assetPath="game/voxelcraft/textures/blocks.dds" />
 	</_properties>

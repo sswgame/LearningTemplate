@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 기수 모자(가죽색) — 기본 머티리얼에 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="WildWestHat" parent="engine/materials/defaultmaterial.material">
+<MaterialDesc formatVersion="0" name="WildWestHat" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.36 0.23 0.12 1.0" />
 		<item name="_roughness" defaultValue="0.7" />

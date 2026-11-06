@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Quaternius Stylized Nature 의 식생(FoliageComponent) 구간 머티리얼 — Rock_Medium(glTF OPAQUE · 양면). 부모(foliage.material)에 알베도만 바꾸고 양면으로 그린다. -->
-<MaterialDesc formatVersion="0" name="foliage_rocks" parent="engine/materials/foliage.material">
+<MaterialDesc formatVersion="0" name="foliage_rocks" _base="engine/materials/foliage.material">
 	<_properties>
 		<item name="_albedoMap" assetPath="common/textures/quaternius/nature/rocks_diffuse.dds" />
 	</_properties>

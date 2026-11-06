@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  에디터 시나리오 — 연쇄 리로드: 조부모 머티리얼(grand)을 바깥에서 고치면 그것을 로드할 때 펼쳐 넣은 부모 · 자식 머티리얼(parent=)이 감시를 따라 다시 읽힌다.
+  에디터 시나리오 — 연쇄 리로드: 조부모 머티리얼(grand)을 바깥에서 고치면 그것을 로드할 때 펼쳐 넣은 부모 · 자식 머티리얼(_base=)이 감시를 따라 다시 읽힌다.
   테스트 폴더 engine/automation/editor/assetcascade 의 씬은 parent.material · child.material 을 쓰는 메시 둘이다(grand 는 아무 메시도 직접 쓰지 않는다 — 그래도 연쇄는 돈다).
   사본(scratch/assetcascade)의 grand.material 을 grand_edited.material(거칠기만 다르다)의 글로 덮어쓰면(바깥 편집기의 저장과 같은 원자적 쓰기) 파일 감시가 알리고,
   핫 리로드가 역색인으로 grand 를 펼쳐 넣은 로드된 머티리얼 둘을 의존 순서로 다시 읽는다(Editor.AssetCascadeReloadCount — 파일 감시를 따르는 감시 값이라 벽시계로 기다린다).

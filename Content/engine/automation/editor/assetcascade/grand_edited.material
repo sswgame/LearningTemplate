@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 연쇄 리로드 시나리오(assetcascade)의 조부모 머티리얼 — 엔진 기준(defaultmaterial, forward_lit 의 칸을 모두 가진다)의 자식이라 바꾼 값만 적는다.
      grand_edited.material 은 거칠기만 다른 같은 머티리얼이다(asset.overwriteScratch 가 덮어쓴다). -->
-<MaterialDesc formatVersion="0" name="CascadeGrand" parent="engine/materials/defaultmaterial.material">
+<MaterialDesc formatVersion="0" name="CascadeGrand" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_roughness" defaultValue="0.8"/>
 	</_properties>

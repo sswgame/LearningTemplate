@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 갈기 · 꼬리 · 발굽 — 기본 머티리얼에 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="WildWestMane" parent="engine/materials/defaultmaterial.material">
+<MaterialDesc formatVersion="0" name="WildWestMane" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.08 0.06 0.05 1.0" />
 		<item name="_roughness" defaultValue="0.7" />

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Kenney Nature Kit · Fantasy Town 모델의 머티리얼 — 색은 모델 정점 색이다(텍스처 없음). 화면 확인 전 추정. -->
-<MaterialDesc formatVersion="0" name="MeadowNature" parent="engine/materials/defaultmaterial.material">
+<MaterialDesc formatVersion="0" name="MeadowNature" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_roughness" defaultValue="0.6" />
 	</_properties>

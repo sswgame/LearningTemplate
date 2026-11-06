@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 마을 사람 — 기본 머티리얼에 보라 옷 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="HarvestValleyVillager" parent="engine/materials/defaultmaterial.material">
+<MaterialDesc formatVersion="0" name="HarvestValleyVillager" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.7 0.3 0.75 1.0" />
 	</_properties>

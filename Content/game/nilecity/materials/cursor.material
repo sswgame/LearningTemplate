@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 짓기 커서 — 반투명 유리 머티리얼에 노란 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="NileCityCursor" parent="engine/materials/glassmaterial.material">
+<MaterialDesc formatVersion="0" name="NileCityCursor" _base="engine/materials/glassmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="1.0 0.9 0.2 0.45" />
 	</_properties>

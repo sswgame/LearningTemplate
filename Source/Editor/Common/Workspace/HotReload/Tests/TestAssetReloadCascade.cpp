@@ -80,7 +80,7 @@ namespace
     {
         sw::string text = "<MaterialDesc formatVersion=\"0\" name=\"" + sw::string( pName ) + "\"";
         if ( parentID.empty() == false )
-            text += " parent=\"" + parentID + "\"";
+            text += " _base=\"" + parentID + "\"";
         else
             text += " shaderPath=\"engine/shaders/forward_lit.hlsl\" blendMode=\"Opaque\"";
         text += "><_properties>";

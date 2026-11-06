@@ -125,7 +125,7 @@ SW_TEST_CASE( MaterialXMLTest, ChildInheritsParentAndOverridesOnlyWrittenValues 
     const sw::test::ScopedScratchDomain domain;
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "parent.material" ), kParentMaterial ) );
     const sw::string child = R"(<?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="ChildMat" parent=")" +
+<MaterialDesc formatVersion="0" name="ChildMat" _base=")" +
                              sw::test::ScopedScratchDomain::makeID( "parent.material" ).str() +
                              R"(">
 	<_properties>
@@ -151,7 +151,7 @@ SW_TEST_CASE( MaterialXMLTest, ChildInheritsParentAndOverridesOnlyWrittenValues 
 
     // 저장은 부모와 다른 칸만 적는다 — 다시 읽으면 같은 값이다.
     const sw::string saved = material->saveToString();
-    SW_EXPECT_TRUE( saved.find( "parent=" ) != sw::string::npos );
+    SW_EXPECT_TRUE( saved.find( "_base=" ) != sw::string::npos );
     SW_EXPECT_TRUE( saved.find( "_roughness" ) == sw::string::npos );
     SW_EXPECT_TRUE( saved.find( "_permutations" ) == sw::string::npos );
     sw::shared_ptr<sw::Material> reread = sw::Material::create();
@@ -169,16 +169,16 @@ SW_TEST_CASE( MaterialXMLTest, MissingOrCyclicParentFailsToLoad )
     const sw::test::ScopedScratchDomain domain;
     const sw::string                    idA = sw::test::ScopedScratchDomain::makeID( "a.material" ).str();
     const sw::string                    idB = sw::test::ScopedScratchDomain::makeID( "b.material" ).str();
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "a.material" ), "<MaterialDesc formatVersion=\"0\" name=\"A\" parent=\"" + idB + "\"/>" ) );
-    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "b.material" ), "<MaterialDesc formatVersion=\"0\" name=\"B\" parent=\"" + idA + "\"/>" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "a.material" ), "<MaterialDesc formatVersion=\"0\" name=\"A\" _base=\"" + idB + "\"/>" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "b.material" ), "<MaterialDesc formatVersion=\"0\" name=\"B\" _base=\"" + idA + "\"/>" ) );
     sw::shared_ptr<sw::Material> cyclic = sw::Material::create();
-    SW_EXPECT_LOG( "Material.ParentCycle" );
+    SW_EXPECT_LOG( "DataInheritance.Cycle" );
     SW_EXPECT_FALSE( cyclic->loadFromFile( sw::test::ScopedScratchDomain::makeID( "a.material" ) ) );
 
     SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( domain.makeDiskPath( "orphan.material" ),
-                                                  "<MaterialDesc formatVersion=\"0\" name=\"Orphan\" parent=\"" + sw::test::ScopedScratchDomain::makeID( "missing.material" ).str() + "\"/>" ) );
+                                                  "<MaterialDesc formatVersion=\"0\" name=\"Orphan\" _base=\"" + sw::test::ScopedScratchDomain::makeID( "missing.material" ).str() + "\"/>" ) );
     sw::shared_ptr<sw::Material> orphan = sw::Material::create();
-    SW_EXPECT_LOG( "Material.ParentNotFound" );
+    SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
     SW_EXPECT_FALSE( orphan->loadFromFile( sw::test::ScopedScratchDomain::makeID( "orphan.material" ) ) );
 }
 

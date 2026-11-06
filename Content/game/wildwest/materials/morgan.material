@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 모건 말(밤색) — 기본 머티리얼에 색을 기본값으로 둔 것이다. -->
-<MaterialDesc formatVersion="0" name="WildWestMorgan" parent="engine/materials/defaultmaterial.material">
+<MaterialDesc formatVersion="0" name="WildWestMorgan" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.55 0.32 0.17 1.0" />
 		<item name="_roughness" defaultValue="0.7" />
