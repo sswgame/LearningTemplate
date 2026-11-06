@@ -3,8 +3,9 @@
  * @brief 자동화 시나리오의 창 단계를 구현합니다. 자기 창에 OS 창 메시지를 보내고(`PostWindowMessage`), OS 커서 클립(`ExpectCursorClip`)을 확인하고,
  *        화면에 합성된 창 내용을 PNG 로 찍습니다(`CaptureWindow`). 전경은 단계가 아니라 시나리오 루트 속성(`requireForeground`)이고 실행기가 이 파일의
  *        `AutomationWindowUtil::bringToForeground` 로 가져온다.
- * @details 사람의 마우스나 포그라운드와 무관하게 같은 창 처리기를 탄다(바깥 스크립트의 `SendInput` 은 포그라운드 창에만 간다). Windows 에만 구현이 있고,
- *          다른 플랫폼에서는 같은 이름의 단계가 시나리오를 건너뜀(13)으로 끝낸다. 이 기계에서 볼 수 없는 것을 초록으로 두지 않기 위해서다.
+ * @details 사람의 마우스나 포그라운드와 무관하게 같은 창 처리기를 탄다(바깥 스크립트의 `SendInput` 은 포그라운드 창에만 간다). 포커스 메시지(`KillFocus` · `SetFocus`)는
+ *          창의 `IWindow::sendFocusEvent` 로 보내 Windows 와 X11 에서 돈다. 나머지는 Windows 에만 구현이 있고, 구현이 없는 플랫폼(포커스도 Wayland 는 없다)에서는 같은 이름의 단계가
+ *          시나리오를 건너뜀(13)으로 끝낸다. 이 기계에서 볼 수 없는 것을 초록으로 두지 않기 위해서다.
  *          등록은 이 .cpp 의 정적 등록자가 한다(Shipping 은 Engine 을 통째로 링크한다 — `sw_linkWholeArchive`).
  */
 #include "pch.h"
@@ -56,6 +57,18 @@ namespace sw
                     return true;
                 outError = step.describe() + ": file must end with .png";
                 return false;
+            }
+
+            /** @brief 자기 창에 포커스 이벤트를 보냅니다. 창 시스템이 보낼 길이 없으면(Wayland) 시나리오를 건너뜀으로 끝냅니다. */
+            static bool runFocusMessage( AutomationStepContext& runner, const AutomationStep& step, bool bFocused )
+            {
+                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                if ( pWindow == nullptr )
+                    runner.recordFailure( step, "there is no window to send a message to" );
+                else if ( pWindow->sendFocusEvent( bFocused ) == false )
+                    runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": this window cannot send itself a focus event" );
+                return true;
             }
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -111,11 +124,9 @@ namespace sw
                         SendMessageW( hwnd, WM_ACTIVATE, WA_ACTIVE, 0 );
                         break;
                     case AutomationWindowMessage::KillFocus:
-                        SendMessageW( hwnd, WM_KILLFOCUS, 0, 0 );
-                        break;
+                        return runFocusMessage( runner, step, false );
                     case AutomationWindowMessage::SetFocus:
-                        SendMessageW( hwnd, WM_SETFOCUS, 0, 0 );
-                        break;
+                        return runFocusMessage( runner, step, true );
                     case AutomationWindowMessage::LeftButtonDownClient:
                         SendMessageW( hwnd, WM_LBUTTONDOWN, MK_LBUTTON, center );
                         break;
@@ -304,13 +315,19 @@ namespace sw
                 return true;
             }
 #else
-            /** @brief 창 메시지와 커서 클립을 볼 구현이 없는 플랫폼입니다. 시나리오를 건너뜀으로 끝냅니다. */
+            /** @brief 포커스 밖의 창 메시지 · 커서 클립 · 화면 찍기를 볼 구현이 없는 플랫폼입니다. 시나리오를 건너뜀으로 끝냅니다. */
             static bool runUnsupported( AutomationStepContext& runner, const AutomationStep& step )
             {
-                runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": window steps are implemented for Windows only" );
+                runner.endScenario( AutomationStepEnd::Skip, step.describe() + ": this window step is implemented for Windows only" );
                 return true;
             }
-            static bool runMessage( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
+            static bool runMessage( AutomationStepContext& runner, const AutomationStep& step )
+            {
+                const AutomationWindowMessage message = step.readValidatedFields<AutomationWindowMessageFields>()._message;
+                if ( message == AutomationWindowMessage::KillFocus || message == AutomationWindowMessage::SetFocus )
+                    return runFocusMessage( runner, step, message == AutomationWindowMessage::SetFocus );
+                return runUnsupported( runner, step );
+            }
             static bool runClip( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
             static bool runCapture( AutomationStepContext& runner, const AutomationStep& step ) { return runUnsupported( runner, step ); }
 #endif

@@ -132,6 +132,14 @@ namespace sw
         return true;
     }
 
+    bool Win32Window::sendFocusEvent( bool bFocused )
+    {
+        if ( _hWnd == nullptr )
+            return false;
+        SendMessageW( _hWnd, bFocused ? WM_SETFOCUS : WM_KILLFOCUS, 0, 0 );
+        return true;
+    }
+
     bool Win32Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
     {
         if ( _hWnd == nullptr )

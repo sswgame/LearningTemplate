@@ -349,6 +349,23 @@ namespace sw
         return bRequested;
     }
 
+    bool X11Window::sendFocusEvent( bool bFocused )
+    {
+        if ( _pX11Display == nullptr || _x11Window == 0 )
+            return false;
+        Display* pDisplay = static_cast<Display*>( _pX11Display );
+        XEvent   event{};
+        event.xfocus.type   = bFocused ? FocusIn : FocusOut;
+        event.xfocus.window = static_cast<Window>( _x11Window );
+        event.xfocus.mode   = NotifyNormal; // Grab · Ungrab 이면 `processMessages` 가 포커스 변화로 보지 않는다
+        event.xfocus.detail = NotifyNonlinear;
+        // 세 번째 0 == False(propagate, X11MacroUndef.h 가 False 매크로를 지운다). 마스크 0 은 창을 만든 연결, 곧 이 프로세스에만 보낸다 — 창 관리자에게 닿지 않는다.
+        const bool bSent = XSendEvent( pDisplay, static_cast<Window>( _x11Window ), 0, 0, &event ) != 0;
+        // 두 번째 0 == False(큐를 버리지 않는다). 왕복을 기다려 돌아올 때 이벤트가 큐에 있게 한다 — 시나리오의 프레임 수가 서버 응답 시간에 달리지 않는다.
+        XSync( pDisplay, 0 );
+        return bSent;
+    }
+
     bool X11Window::setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height )
     {
         if ( _pX11Display == nullptr || _x11Window == 0 )

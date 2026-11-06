@@ -277,6 +277,17 @@ namespace sw
             (void)bMinimized;
             return false;
         }
+        /**
+         * @brief 자기 창에 포커스를 잃거나(@p bFocused false) 얻는 OS 이벤트를 보내 실제 이벤트 경로를 타게 합니다. OS 포커스는 그대로입니다. **창 스레드(메인 스레드)에서만 부른다.**
+         * @details 자동화 시나리오(`PostWindowMessage` 의 `KillFocus` · `SetFocus`)가 부른다. Win32 는 이 호출 안에서 처리기가 돌고(`SendMessageW`), X11 은 다음 `processMessages` 가 받는다.
+         *          언리얼 `FGenericWindow` · Godot `DisplayServer` 처럼 창 시스템 일은 창의 가상 함수에 두어 자동화 층이 플랫폼을 모른다.
+         * @return 지원하지 않는 플랫폼이면 false 입니다(Wayland 는 클라이언트가 자기 키보드 enter · leave 를 보낼 길이 없다).
+         */
+        [[nodiscard]] virtual bool sendFocusEvent( bool bFocused )
+        {
+            (void)bFocused;
+            return false;
+        }
         /** @brief 마지막 `setDisplayMode` 가 고른 창 방식입니다. */
         WindowDisplayMode getDisplayMode() const { return _displayMode; }
         /**

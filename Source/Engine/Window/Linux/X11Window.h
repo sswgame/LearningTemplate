@@ -82,6 +82,8 @@ namespace sw
         bool               setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
         [[nodiscard]] bool canMinimize() const override;
         bool               setMinimized( bool bMinimized ) override;
+        /** @brief 자기 창에 `FocusIn` · `FocusOut` 을 `XSendEvent` 로 보냅니다. 돌아올 때 이벤트는 큐에 있고 다음 `processMessages` 가 처리합니다. */
+        [[nodiscard]] bool sendFocusEvent( bool bFocused ) override;
         /**
          * @brief 창 관리자가 적는 `_NET_FRAME_EXTENTS`(EWMH)입니다. 아직 없으면(띄우기 전) `_NET_REQUEST_FRAME_EXTENTS` 로 청하고 그 속성의 `PropertyNotify` 를 잠깐 기다린다(GLFW 와 같은 길).
          * @details EWMH 창 관리자가 없으면(`_NET_SUPPORTING_WM_CHECK` 없음) 틀을 알 길이 없어 오류다 — 창 관리자 없는 X 서버의 틀 0 과 EWMH 를 모르는 창 관리자의 틀을 가르지 못한다.

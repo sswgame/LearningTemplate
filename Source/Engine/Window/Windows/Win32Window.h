@@ -60,6 +60,8 @@ namespace sw
         bool               setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
         [[nodiscard]] bool canMinimize() const override { return true; }
         bool               setMinimized( bool bMinimized ) override;
+        /** @brief `WM_SETFOCUS` · `WM_KILLFOCUS` 를 자기 창에 `SendMessageW` 로 보냅니다. 처리기는 이 호출 안에서 돈다. */
+        [[nodiscard]] bool sendFocusEvent( bool bFocused ) override;
         /** @brief `GetWindowRect` 와 화면 좌표의 클라이언트 사각형(`GetClientRect` + `ClientToScreen`) 차이입니다. 숨은 창에도 맞는 값이다. */
         [[nodiscard]] bool tryGetFrameExtents( WindowFrameExtents& outExtents ) const override;
         [[nodiscard]] bool canPlaceWindow() const override { return true; }
