@@ -517,7 +517,8 @@ namespace sw
             if ( bMapChange )
             {
                 SW_LOG_INFO_ID( "X11Window.MapChanged", "[Window] main window %#", event.type == UnmapNotify ? "unmapped" : "mapped" );
-                setMinimizedState( event.type == UnmapNotify );
+                // 우리가 숨긴 창(무인 실행의 showWindow( false ))은 최소화가 아니다 - Win32 의 SW_HIDE 와 같다. 보이라고 한 창이 내려갔을 때만 창 관리자의 아이콘화다.
+                setMinimizedState( event.type == UnmapNotify && isVisibleRequested() );
                 if ( event.type == MapNotify )
                     requestInputFocus();
             }
