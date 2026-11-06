@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Shooter3D 의 장비 아이템(게임플레이 정의). 외형은 visual 이 가리키는 data/appearance/itemvisuals.xml 의 항목이다 — 아티스트는 이 파일을 건드리지 않는다.
      블래스터 셋은 플레이어 무기(weapons.xml 의 rifle · shotgun · pistol)의 외형이다 — weapons.xml 의 item 이 이 id 를 가리키고, 무기를 바꾸면 MainHand 칸의 아이템이 바뀐다.
-     무기의 표시 이름은 여기 name 이 유일한 원본이다(HUD 의 WeaponName · ItemName 두 줄이 모두 이것을 읽는다). -->
+     무기의 표시 이름은 여기 name 이 유일한 원본이다(HUD 의 WeaponName · ItemName 두 줄이 모두 이것을 읽는다).
+     _base 는 다른 칸만 적는 부모 항목이다(docs/agents/DataInheritance.md). 다른 게임 팩은 _base="common/data/items.xml#helmet_knight" 로 물려받는다. -->
 
 <ItemCatalog>
   <Item id="helmet_knight" name="Knight Helmet" category="Armor" slot="Head" visual="helmet_knight" tags="Armor.Heavy,Set.Knight"><Stats armor="3"/></Item>
   <Item id="cape_rogue" name="Travel Cape" category="Armor" slot="Back" visual="cape_rogue" tags="Cloth,Set.Knight"/>
   <Item id="shield_round" name="Round Shield" category="Armor" slot="Shield" visual="shield_round" tags="Armor.Light,Set.Knight"><Stats armor="2"/></Item>
-  <Item id="helmet_knight_merged" name="Knight Helmet (Merged)" category="Armor" slot="Head" visual="helmet_knight_merged" tags="Armor.Heavy"><Stats armor="3"/></Item>
-  <Item id="shield_round_merged" name="Round Shield (Merged)" category="Armor" slot="Shield" visual="shield_round_merged" tags="Armor.Light"><Stats armor="2"/></Item>
+  <Item id="helmet_knight_merged" _base="helmet_knight" name="Knight Helmet (Merged)" visual="helmet_knight_merged" tags="Armor.Heavy"/>
+  <Item id="shield_round_merged" _base="shield_round" name="Round Shield (Merged)" visual="shield_round_merged" tags="Armor.Light"/>
   <Item id="sword_knight_merged" name="Knight Sword (Merged)" category="Weapon" slot="Weapon" visual="sword_knight_merged"/>
   <Item id="scifi_rifle" name="Assault Rifle" category="Weapon" slot="Weapon" visual="scifi_rifle"/>
   <Item id="scifi_shotgun" name="Pump Shotgun" category="Weapon" slot="Weapon" visual="scifi_shotgun"/>

@@ -3,6 +3,7 @@
   AbilityArena 의 어빌리티 카탈로그 — 이펙트 · 어빌리티 · 어빌리티 세트.
   형식은 Source/GameFramework/Runtime/Gameplay/Ability/README.md 에 있다. 클래스 이름(class="...")은 게임이 등록한다(ArenaAbilities::registerClasses).
   "ApplyEffects" 는 프레임워크 기본 클래스라 코드 없이 데이터만으로 돈다(회복 · 가시).
+  _base 는 다른 칸만 적는 부모 항목이다(docs/agents/DataInheritance.md). 태그 · 매개변수는 이름으로 합치고 _op="Remove" 로 뺀다.
 -->
 <AbilityCatalog>
 
@@ -79,12 +80,8 @@
   <AbilityEffect id="GE_Cooldown_Dash" duration="HasDuration" seconds="1.5">
     <GrantedTag tag="Cooldown.Skill.Dash"/>
   </AbilityEffect>
-  <AbilityEffect id="GE_Cooldown_EnemyMelee" duration="HasDuration" seconds="1.2">
-    <GrantedTag tag="Cooldown.Melee"/>
-  </AbilityEffect>
-  <AbilityEffect id="GE_Cooldown_EnemyBolt" duration="HasDuration" seconds="2.5">
-    <GrantedTag tag="Cooldown.Skill.Fireball"/>
-  </AbilityEffect>
+  <AbilityEffect id="GE_Cooldown_EnemyMelee" _base="GE_Cooldown_Melee" seconds="1.2"/>
+  <AbilityEffect id="GE_Cooldown_EnemyBolt" _base="GE_Cooldown_Fireball" seconds="2.5"/>
 
   <!-- ===================================================================== -->
   <!-- 어빌리티                                                               -->
@@ -136,21 +133,17 @@
   </Ability>
 
   <!-- 적 근접 · 적 화염탄 — 같은 클래스, 다른 데이터. -->
-  <Ability id="GA_EnemyMelee" class="MeleeStrike" cooldown="GE_Cooldown_EnemyMelee">
-    <AbilityTag tag="Ability.Attack.Melee"/>
-    <BlockedTag tag="State.Dead"/>
+  <Ability id="GA_EnemyMelee" _base="GA_Melee" cooldown="GE_Cooldown_EnemyMelee">
+    <BlockedTag tag="State.Dashing" _op="Remove"/>
     <Param name="range" value="1.8"/>
     <Param name="damage" value="6"/>
-    <Param name="damageEffect" text="GE_Damage_Melee"/>
   </Ability>
 
-  <Ability id="GA_EnemyBolt" class="Projectile" cooldown="GE_Cooldown_EnemyBolt">
-    <AbilityTag tag="Ability.Skill.Fireball"/>
-    <BlockedTag tag="State.Dead"/>
+  <Ability id="GA_EnemyBolt" _base="GA_Fireball" cost="" cooldown="GE_Cooldown_EnemyBolt">
     <Param name="speed" value="8"/>
     <Param name="range" value="14"/>
     <Param name="damage" value="8"/>
-    <Param name="damageEffect" text="GE_Damage_Fireball"/>
+    <Param name="extraEffect" _op="Remove"/>
   </Ability>
 
   <!-- ===================================================================== -->

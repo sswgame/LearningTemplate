@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 아이템 외형. ItemDef 는 visual id 만 가리키고 한 외형을 여러 아이템이 나눈다(형상 변경은 이 id 를 바꾼다).
+     _base 는 다른 칸만 적는 부모 항목이다(docs/agents/DataInheritance.md) — Part 는 이름으로 합치고 _before · _after · _op 를 쓴다.
      Part kind: Skinned(캐릭터 스켈레톤을 따르는 mesh) · SocketPrefab(prefab 을 socket 에 — 후보는 쉼표, 앞의 것이 있으면 그것) ·
      BodyModification(Morph · Material · HideRegion) · Sprite(2D). sockets 는 부품의 소켓 에셋 — 해석된 외형에서는 "<칸>.<소켓>" 이름이 된다(MainHand.Muzzle).
      몸은 KayKit 캐릭터(41 관절 리그 — 몸 소켓은 data/sockets/kaykit_humanoid.sockets.xml)를 임포트한 models/kaykit/*.mesh, 장비는 원본에서 본에 붙어 있던
@@ -26,20 +27,18 @@
     <Part name="Body" kind="Skinned" mesh="common/models/kaykit/skeleton_minion.mesh" skeleton="common/models/kaykit/skeleton_minion/skeleton_minion.skeleton.xml"
           material="common/materials/kaykit_skeleton.material" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"/>
   </ItemVisual>
-  <ItemVisual id="body_skeleton_warrior">
-    <Part name="Body" kind="Skinned" mesh="common/models/kaykit/skeleton_warrior.mesh" skeleton="common/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.xml"
-          material="common/materials/kaykit_skeleton.material" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"/>
+  <ItemVisual id="body_skeleton_warrior" _base="body_skeleton_minion">
+    <Part name="Body" mesh="common/models/kaykit/skeleton_warrior.mesh" skeleton="common/models/kaykit/skeleton_warrior/skeleton_warrior.skeleton.xml"/>
   </ItemVisual>
-  <ItemVisual id="body_skeleton_rogue">
-    <Part name="Body" kind="Skinned" mesh="common/models/kaykit/skeleton_rogue.mesh" skeleton="common/models/kaykit/skeleton_rogue/skeleton_rogue.skeleton.xml"
-          material="common/materials/kaykit_skeleton.material" sockets="common/data/sockets/kaykit_humanoid.sockets.xml"/>
+  <ItemVisual id="body_skeleton_rogue" _base="body_skeleton_minion">
+    <Part name="Body" mesh="common/models/kaykit/skeleton_rogue.mesh" skeleton="common/models/kaykit/skeleton_rogue/skeleton_rogue.skeleton.xml"/>
   </ItemVisual>
 
   <ItemVisual id="helmet_knight" tags="Helmet.Full">
     <Part name="Shell" kind="SocketPrefab" prefab="common/prefabs/kaykit/knight_helmet.prefab.xml" socket="Helmet"/>
   </ItemVisual>
-  <ItemVisual id="helmet_skeleton" tags="Helmet.Full">
-    <Part name="Shell" kind="SocketPrefab" prefab="common/prefabs/kaykit/skeleton_warrior_helmet.prefab.xml" socket="Helmet"/>
+  <ItemVisual id="helmet_skeleton" _base="helmet_knight">
+    <Part name="Shell" prefab="common/prefabs/kaykit/skeleton_warrior_helmet.prefab.xml"/>
   </ItemVisual>
   <ItemVisual id="hood_skeleton" tags="Hood">
     <Part name="Hood" kind="SocketPrefab" prefab="common/prefabs/kaykit/skeleton_rogue_hood.prefab.xml" socket="Helmet"/>
@@ -56,14 +55,14 @@
     <Part name="Cape" kind="Skinned" mesh="common/models/kaykit/ubc_cape_chain.mesh" skeleton="common/models/kaykit/ubc_cape_chain/ubc_cape_chain.skeleton.xml"
           rig="common/rigs/ubc_cape.rig.xml" material="common/materials/kaykit_knight.material" socket="Back"/>
   </ItemVisual>
-  <ItemVisual id="cape_skeleton" tags="Cape">
-    <Part name="Cape" kind="SocketPrefab" prefab="common/prefabs/kaykit/skeleton_rogue_cape.prefab.xml" socket="Back"/>
+  <ItemVisual id="cape_skeleton" _base="cape_rogue">
+    <Part name="Cape" prefab="common/prefabs/kaykit/skeleton_rogue_cape.prefab.xml"/>
   </ItemVisual>
   <ItemVisual id="shield_round" tags="Shield">
     <Part name="Shield" kind="SocketPrefab" prefab="common/prefabs/kaykit/round_shield.prefab.xml" socket="Shield"/>
   </ItemVisual>
-  <ItemVisual id="shield_skeleton" tags="Shield">
-    <Part name="Shield" kind="SocketPrefab" prefab="common/prefabs/kaykit/skeleton_shield.prefab.xml" socket="Shield"/>
+  <ItemVisual id="shield_skeleton" _base="shield_round">
+    <Part name="Shield" prefab="common/prefabs/kaykit/skeleton_shield.prefab.xml"/>
   </ItemVisual>
   <ItemVisual id="blade_skeleton" tags="Weapon.Melee">
     <Part name="Blade" kind="SocketPrefab" prefab="common/prefabs/kaykit/skeleton_blade.prefab.xml" socket="Blade"/>
@@ -89,13 +88,11 @@
     <Part name="Body" kind="SocketPrefab" prefab="common/prefabs/quaternius/scifi/gun_rifle.prefab.xml" sockets="common/data/sockets/gun_rifle.sockets.xml" socket="Gun"
           offset="0 0 0"/>
   </ItemVisual>
-  <ItemVisual id="scifi_shotgun" customization="Gun" tags="Weapon.Gun">
-    <Part name="Body" kind="SocketPrefab" prefab="common/prefabs/quaternius/scifi/gun_sniper.prefab.xml" sockets="common/data/sockets/gun_sniper.sockets.xml" socket="Gun"
-          offset="0 0 0"/>
+  <ItemVisual id="scifi_shotgun" _base="scifi_rifle">
+    <Part name="Body" prefab="common/prefabs/quaternius/scifi/gun_sniper.prefab.xml" sockets="common/data/sockets/gun_sniper.sockets.xml"/>
   </ItemVisual>
-  <ItemVisual id="scifi_pistol" customization="Gun" tags="Weapon.Gun">
-    <Part name="Body" kind="SocketPrefab" prefab="common/prefabs/quaternius/scifi/gun_pistol.prefab.xml" sockets="common/data/sockets/gun_pistol.sockets.xml" socket="Gun"
-          offset="0 0 0"/>
+  <ItemVisual id="scifi_pistol" _base="scifi_rifle">
+    <Part name="Body" prefab="common/prefabs/quaternius/scifi/gun_pistol.prefab.xml" sockets="common/data/sockets/gun_pistol.sockets.xml"/>
   </ItemVisual>
 
   <!-- 활 쇼케이스(maps/bowshowcase.scene.xml) — 활과 메긴 화살이 앞으로 뻗은 왼손 소켓(BowGrip)에 붙고, 둘 다 페어드 애니메이션 역할(Bow · Arrow)을 프리팹 데이터로 든다. -->
@@ -124,26 +121,21 @@
     <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_simpleparted.mesh" material="common/models/quaternius/hair/hair_simpleparted/materials/mi_hair_1.material"/>
     <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_regular.mesh" material="common/models/quaternius/hair/eyebrows_regular/materials/mi_hair_1.material"/>
   </ItemVisual>
-  <ItemVisual id="hair_buzzed">
-    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_buzzed.mesh" material="common/models/quaternius/hair/hair_buzzed/materials/mi_hair_1.material"/>
-    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_regular.mesh" material="common/models/quaternius/hair/eyebrows_regular/materials/mi_hair_1.material"/>
+  <ItemVisual id="hair_buzzed" _base="hair_simpleparted">
+    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buzzed.mesh" material="common/models/quaternius/hair/hair_buzzed/materials/mi_hair_1.material"/>
   </ItemVisual>
-  <ItemVisual id="hair_bearded">
-    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_buzzed.mesh" material="common/models/quaternius/hair/hair_buzzed/materials/mi_hair_1.material"/>
-    <Part name="Beard" kind="Skinned" mesh="common/models/quaternius/hair/hair_beard.mesh" material="common/models/quaternius/hair/hair_beard/materials/mi_hair_1.material"/>
-    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_regular.mesh" material="common/models/quaternius/hair/eyebrows_regular/materials/mi_hair_1.material"/>
+  <ItemVisual id="hair_bearded" _base="hair_buzzed">
+    <Part name="Beard" kind="Skinned" mesh="common/models/quaternius/hair/hair_beard.mesh" material="common/models/quaternius/hair/hair_beard/materials/mi_hair_1.material" _before="Brows"/>
   </ItemVisual>
   <ItemVisual id="hair_long">
     <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_long.mesh" material="common/models/quaternius/hair/hair_long/materials/mi_hair_2.material"/>
     <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_female.mesh" material="common/models/quaternius/hair/eyebrows_female/materials/mi_hair_2.material"/>
   </ItemVisual>
-  <ItemVisual id="hair_buns">
-    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_buns.mesh" material="common/models/quaternius/hair/hair_buns/materials/mi_hair_2.material"/>
-    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_female.mesh" material="common/models/quaternius/hair/eyebrows_female/materials/mi_hair_2.material"/>
+  <ItemVisual id="hair_buns" _base="hair_long">
+    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buns.mesh" material="common/models/quaternius/hair/hair_buns/materials/mi_hair_2.material"/>
   </ItemVisual>
-  <ItemVisual id="hair_buzzed_female">
-    <Part name="Hair" kind="Skinned" mesh="common/models/quaternius/hair/hair_buzzedfemale.mesh" material="common/models/quaternius/hair/hair_buzzedfemale/materials/mi_hair_1.material"/>
-    <Part name="Brows" kind="Skinned" mesh="common/models/quaternius/hair/eyebrows_female.mesh" material="common/models/quaternius/hair/eyebrows_female/materials/mi_hair_2.material"/>
+  <ItemVisual id="hair_buzzed_female" _base="hair_long">
+    <Part name="Hair" mesh="common/models/quaternius/hair/hair_buzzedfemale.mesh" material="common/models/quaternius/hair/hair_buzzedfemale/materials/mi_hair_1.material"/>
   </ItemVisual>  <ItemVisual id="outfit_peasant_male" tags="Outfit.Peasant">
     <Part name="Arms" kind="Skinned" mesh="common/models/quaternius/outfits/male_peasant_arms.mesh" fit="common/characters/ubc/outfits/male_peasant_arms.partfit.xml">
       <Section name="mi_peasant" material="common/models/quaternius/outfits/male_peasant_arms/materials/mi_peasant.material"/>
