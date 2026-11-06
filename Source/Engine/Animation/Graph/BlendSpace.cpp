@@ -133,4 +133,21 @@ namespace sw
         }
         return ( totalWeight > MathUtil::kEpsilon ) ? length / totalWeight : 0.0f;
     }
+
+    void BlendSpace::foldToHeaviest( vector<float32>& inoutListWeight, float32 blendWeight )
+    {
+        const float32 keep = MathUtil::saturate( blendWeight );
+        if ( inoutListWeight.empty() || keep >= 1.0f )
+            return;
+        size_t heaviest = 0;
+        for ( size_t index = 1; index < inoutListWeight.size(); ++index )
+        {
+            if ( inoutListWeight[index] > inoutListWeight[heaviest] )
+                heaviest = index;
+        }
+        for ( size_t index = 0; index < inoutListWeight.size(); ++index )
+        {
+            inoutListWeight[index] = inoutListWeight[index] * keep + ( index == heaviest ? 1.0f - keep : 0.0f );
+        }
+    }
 } // namespace sw

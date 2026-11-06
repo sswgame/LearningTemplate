@@ -3,6 +3,7 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Animation/Graph/BlendSpace.h"
 #include "Engine/Animation/Scene/AnimationLOD.h"
 
 using namespace sw;
@@ -83,4 +84,27 @@ SW_TEST_CASE( AnimationNodeLODTest, FadeContinuesFromCurrentWeight )
     SW_EXPECT_NEAR( 1.0f, fade._weight, 0.0f );
     fade.update( false, 0.0f, 0.0f );
     SW_EXPECT_TRUE( fade.isOff() );
+}
+
+/** @brief [AnimationNodeLODTest] 블렌드 스페이스 가지 접기 — LOD 가중치 1 은 그대로, 0 은 가장 무거운 표본 하나, 사이는 섞이며 합은 늘 1 이다 */
+SW_TEST_CASE( AnimationNodeLODTest, BlendSpaceFoldsToHeaviestSample )
+{
+    const vector<float32> listOriginal{ 0.3f, 0.7f };
+    vector<float32>       listWeight = listOriginal;
+    BlendSpace::foldToHeaviest( listWeight, 1.0f );
+    SW_EXPECT_NEAR( 0.3f, listWeight[0], 0.0f );
+    SW_EXPECT_NEAR( 0.7f, listWeight[1], 0.0f );
+    listWeight = listOriginal;
+    BlendSpace::foldToHeaviest( listWeight, 0.5f );
+    SW_EXPECT_NEAR( 0.15f, listWeight[0], 1.0e-6f );
+    SW_EXPECT_NEAR( 0.85f, listWeight[1], 1.0e-6f );
+    listWeight = listOriginal;
+    BlendSpace::foldToHeaviest( listWeight, 0.0f );
+    SW_EXPECT_NEAR( 0.0f, listWeight[0], 0.0f );
+    SW_EXPECT_NEAR( 1.0f, listWeight[1], 0.0f );
+    // 같은 무게면 앞 표본이 남는다(결정적).
+    listWeight = { 0.5f, 0.5f };
+    BlendSpace::foldToHeaviest( listWeight, 0.0f );
+    SW_EXPECT_NEAR( 1.0f, listWeight[0], 0.0f );
+    SW_EXPECT_NEAR( 0.0f, listWeight[1], 0.0f );
 }

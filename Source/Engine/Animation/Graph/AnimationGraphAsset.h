@@ -54,6 +54,7 @@ namespace sw
         hashed_string       _weightParameter{}; ///< 비었으면 `_weight` 를 그대로 쓴다.
         float32             _weight{ 1.0f };
         float32             _halfLifeSeconds{ 0.0f }; ///< XML "half_life"(선택, 0 보다 커야 함). 다시 시작할 때 끊긴 포즈에서 이어 가는 반감기다. 적지 않으면 즉시 새 포즈다
+        int32               _maxLODGrade{ -1 };       ///< XML "max_lod"(선택). 유닛의 LOD 등급이 이보다 높으면 가중치를 페이드로 내려 끈다(-1 = 항상 얹는다)
         AnimationLayerBlend _blend{ AnimationLayerBlend::Override };
         uint8               _bLoop{ SW_TRUE };
     };
@@ -145,6 +146,11 @@ namespace sw
          * @brief 이 상태의 반복 여부입니다(XML "loop", 선택). -1 은 적지 않았다는 뜻입니다. 직접 재생은 호출한 쪽이 정하고, "끝나면 다음"으로 들어오면 반복하지 않습니다.
          */
         int8 _loopOverride{ -1 };
+        /**
+         * @brief 블렌드 스페이스 상태가 모든 표본을 섞는 가장 높은 LOD 등급입니다(XML "max_lod", 선택, 블렌드 스페이스 상태만 — 다른 상태에 적으면 로드 오류).
+         * @details 등급이 넘으면 가장 무거운 표본 하나로 페이드해 접는다(섞는 표본 수만큼 샘플 비용이 준다). -1 이면 항상 섞는다.
+         */
+        int32 _maxLODGrade{ -1 };
 
         /** @brief 블렌드 스페이스 상태인지 반환합니다. */
         bool hasBlendSpace() const { return _blendSpace._space.getSampleCount() > 0; }
@@ -218,6 +224,8 @@ namespace sw
      *          상태의 열쇠가 id 가 아니라 이름인 까닭: 부모와 자식이 따로 더한 상태의 id 가 겹치면 조용히 한 상태로 합쳐지지 않고 "id 가 겹친다" 는 오류로 드러난다.
      *          `blend_space` · `pose_node` · `condition` 은 통째로 바뀐다(빈 원소는 비운다). 표본 일부만 다른 상태보다, 상태를 바꾸는 쪽이 뜻이 분명하다.
      *          언리얼 Animation Blueprint 자식(Asset Override 로 클립만 바꾼다)과 유니티 Override Controller 는 구조를 못 바꾸지만 여기는 상태와 전이도 더하고 뺀다(기억에 의존).
+     *          LOD 규칙(레이어 · 블렌드 스페이스 상태의 `max_lod`)도 칸이라 변형은 `<layer name="Aim" max_lod="1" />` 처럼 그 칸만 적는다 — 먼 NPC 변형이 바탕 그래프를
+     *          복사하지 않고 끄는 등급만 바꾼다(언리얼은 노드마다 LOD Threshold 를 그래프 안에 적어 자식 블루프린트가 바꿀 수 없다, 기억에 의존).
      */
     class SW_API AnimationGraphAsset
     {

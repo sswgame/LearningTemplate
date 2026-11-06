@@ -59,6 +59,11 @@ namespace sw
         void computeSampleWeights( const float2& parameter, vector<float32>& outListWeight ) const;
         /** @brief 표본 길이(초)를 가중치로 평균한 한 바퀴 길이입니다. 두 목록의 길이가 다르면 짧은 쪽까지 봅니다. */
         static float32 computeBlendedLength( const vector<float32>& listSampleLength, const vector<float32>& listWeight );
+        /**
+         * @brief LOD 로 섞는 가지를 접습니다. 가중치 = @p blendWeight × 원래 가중치 + (1 − @p blendWeight) × (가장 무거운 표본만 1)이라 합은 1 그대로입니다.
+         * @details @p blendWeight 가 1 이면 그대로, 0 이면 가장 무거운 표본 하나만 남아 샘플 수가 하나가 된다. 같은 무게면 앞 표본이다(결정적).
+         */
+        static void foldToHeaviest( vector<float32>& inoutListWeight, float32 blendWeight );
 
     private:
         vector<BlendSpaceSample> _listSample;

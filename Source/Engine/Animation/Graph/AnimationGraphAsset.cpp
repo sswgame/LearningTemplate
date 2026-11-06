@@ -332,10 +332,11 @@ namespace sw
                 continue;
             }
             AnimationGraphNode node{};
-            node._id        = fields._id;
-            node._name      = fields._name;
-            node._position  = float2{ fields._x, fields._y };
-            node._syncGroup = fields._syncGroup;
+            node._id          = fields._id;
+            node._name        = fields._name;
+            node._position    = float2{ fields._x, fields._y };
+            node._syncGroup   = fields._syncGroup;
+            node._maxLODGrade = fields._maxLod;
             if ( loop.has_value() )
                 node._loopOverride = *loop ? 1 : 0;
             const XMLNode blendSpaceXML = Internal::findFilledChild( nodeXML, "blend_space" );
@@ -347,6 +348,12 @@ namespace sw
             if ( node.hasBlendSpace() && node.hasPoseNode() )
             {
                 SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeBoth", "Animation graph node '%#' has both blend_space and pose_node", node._name.c_str() );
+                bValid = false;
+            }
+            // 등급이 접는 것은 섞는 표본이다 — 클립 하나인 상태에는 접을 것이 없다(조용히 무시하지 않는다).
+            if ( node._maxLODGrade >= 0 && node.hasBlendSpace() == false )
+            {
+                SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeMaxLOD", "Animation graph '%#': node '%#' sets 'max_lod' but is not a blend space state", sourceLabel, node._name.c_str() );
                 bValid = false;
             }
             _listNode.push_back( std::move( node ) );
@@ -516,6 +523,7 @@ namespace sw
             layer._weightParameter = fields._weightParam;
             layer._weight          = fields._weight;
             layer._halfLifeSeconds = fields._halfLife;
+            layer._maxLODGrade     = fields._maxLod;
             layer._blend           = fields._blend;
             layer._bLoop           = fields._bLoop ? SW_TRUE : SW_FALSE;
             _listLayer.push_back( layer );
@@ -552,6 +560,7 @@ namespace sw
             fields._weightParam = layer._weightParameter;
             fields._weight      = layer._weight;
             fields._halfLife    = layer._halfLifeSeconds;
+            fields._maxLod      = layer._maxLODGrade;
             fields._blend       = layer._blend;
             fields._bLoop       = layer._bLoop == SW_TRUE;
             XMLFields::writeFields( layersXML.appendChild( "layer" ), fields );
@@ -576,6 +585,7 @@ namespace sw
         fields._x             = node._position._x;
         fields._y             = node._position._y;
         fields._syncGroup     = node._syncGroup;
+        fields._maxLod        = node._maxLODGrade;
         const XMLNode nodeXML = nodesXML.appendChild( "node" );
         XMLFields::writeFields( nodeXML, fields );
         if ( node._loopOverride >= 0 )

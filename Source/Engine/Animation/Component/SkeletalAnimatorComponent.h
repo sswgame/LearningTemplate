@@ -15,6 +15,7 @@
 
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
+#include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/CurveAccumulator.h"
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -63,8 +64,11 @@ namespace sw
     class SW_API SkeletalBlendSpaceState final : public IAnimationPlayable
     {
     public:
-        /** @brief @p listClip 은 표본 순서의 클립이고 모두 있어야 합니다(빌린 포인터, 애니메이터의 클립 표가 소유). */
-        SkeletalBlendSpaceState( const hashed_string& stateName, const AnimationGraphBlendSpaceDef& def, vector<const AnimationClip*>&& listClip );
+        /**
+         * @brief @p listClip 은 표본 순서의 클립이고 모두 있어야 합니다(빌린 포인터, 애니메이터의 클립 표가 소유).
+         * @param maxLODGrade 모든 표본을 섞는 가장 높은 LOD 등급(그래프 노드의 "max_lod")입니다. 넘으면 가장 무거운 표본 하나로 접습니다(-1 = 항상 섞는다).
+         */
+        SkeletalBlendSpaceState( const hashed_string& stateName, const AnimationGraphBlendSpaceDef& def, vector<const AnimationClip*>&& listClip, int32 maxLODGrade );
 
         float32 getPlayLength() const override { return _playLength; }
         bool    isLoopingByDefault() const override { return true; }
@@ -73,8 +77,10 @@ namespace sw
         /** @brief 지금 알림을 내는 표본 클립을 @p inoutListPlayable 에 덧붙입니다(알림의 출처와 같은 집합). */
         void appendNotifySources( vector<const IAnimationPlayable*>& inoutListPlayable ) const;
 
-        /** @brief 축 파라미터로 표본 가중치와 한 바퀴 길이를 다시 구합니다. */
+        /** @brief 축 파라미터로 표본 가중치와 한 바퀴 길이를 다시 구합니다. LOD 가중치가 1 보다 작으면 가장 무거운 표본 쪽으로 접습니다(`BlendSpace::foldToHeaviest`). */
         void updateWeights( const AnimationParameterSet& parameters );
+        /** @brief 유닛의 LOD 판정으로 섞는 가지의 LOD 가중치를 @p deltaSeconds 만큼 옮깁니다(시간 단계마다 한 번, `updateWeights` 앞). */
+        void updateLODFade( const AnimationLODState& lodState, float32 deltaSeconds ) { _lodFade.update( lodState.isNodeOn( _maxLODGrade ), deltaSeconds, lodState._nodeFadeSeconds ); }
         /** @brief 이 상태의 이름(그래프 노드 이름)입니다. */
         const hashed_string& getStateName() const { return _stateName; }
         uint32               getSampleCount() const { return static_cast<uint32>( _listClip.size() ); }
@@ -94,6 +100,8 @@ namespace sw
         vector<float32>                    _listLength;
         vector<float32>                    _listWeight;
         float32                            _playLength;
+        int32                              _maxLODGrade; ///< 모든 표본을 섞는 가장 높은 LOD 등급(-1 = 항상)
+        AnimationLODFade                   _lodFade;     ///< 섞는 가지의 LOD 가중치(0 이면 가장 무거운 표본 하나)
     };
 } // namespace sw
 
@@ -383,7 +391,11 @@ namespace sw
             Pose                            _additiveReference;           ///< 가산 기준(클립 시각 0, 본 포즈)
             PoseInertializer                _inertializer;                ///< 다시 시작할 때 끊긴 레이어 포즈에서 이어 간다(`_desc._halfLifeSeconds` 가 0 보다 클 때)
             PoseHistory                     _history;                     ///< 화면에 얹힌 지난 레이어 포즈다(inertialization 의 출발 · 속도)
+            AnimationLODFade                _lodFade;                     ///< 그래프 레이어의 LOD 가중치다(`max_lod`). 코드 레이어는 1 그대로다
             uint8                           _bRestartPending{ SW_FALSE }; ///< 다음 평가에서 inertialization 을 시작한다
+
+            /** @brief 이번 프레임에 얹는 가중치입니다(레이어 가중치 × LOD 가중치). */
+            float32 computeAppliedWeight() const { return _desc._weight * _lodFade._weight; }
         };
 
         /** @brief 같은 오브젝트의 유닛에 붙습니다. */
@@ -465,6 +477,11 @@ namespace sw
         void refreshLayerMask( LayerState& layer, const Skeleton& skeleton );
         /** @brief 시간 단계입니다. */
         void advanceTime( const AnimationFrameContext& context );
+        /**
+         * @brief 유닛의 LOD 등급으로 그래프 레이어와 블렌드 스페이스 상태(주 그래프 · 연결 레이어 그래프)의 LOD 가중치를 @p deltaSeconds(벽시계, 재생 속도 전)만큼 옮깁니다.
+         * @details 유닛이 없으면 기본 판정(등급 0 — 모두 켜짐)입니다. 시간 단계는 포즈를 건너뛰는 프레임에도 돌아 페이드가 끊기지 않는다.
+         */
+        void updateLODFades( float32 deltaSeconds );
         /** @brief 기본 포즈 단계입니다. */
         void populateBasePose( SkeletalMeshComponent& unit );
         /** @brief 이름에서 파일 경로를 찾습니다(셋의 표, 이름에 '/' 가 있으면 그 경로). 셋에 없으면 빈 글입니다 — 노드 이름이 클립이 아닌 상태가 있다. */

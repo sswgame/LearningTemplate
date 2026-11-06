@@ -205,3 +205,43 @@ SW_TEST_CASE( AnimationGraphAssetTest, SaveWritesOnlyTheDifference )
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( childPath, written ) );
     SW_EXPECT_TRUE( written.find( "_base=" ) == sw::string::npos );
 }
+
+/**
+ * @brief [AnimationGraphAssetTest] LOD 규칙(`max_lod`)은 칸이라 변형은 그 칸만 적는다 — 블렌드 스페이스 · 다른 칸은 물려받고, 적지 않은 레이어는 -1(항상) 이다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, ChildSetsOnlyLODGrades )
+{
+    const sw::test::ScopedScratchDomain domain;
+    sw::AnimationGraphAsset             graph;
+    SW_REQUIRE_TRUE( AnimationGraphTestUtil::parseChild( graph, domain, "<nodes><node name=\"Move\" max_lod=\"1\"/></nodes><layers><layer name=\"Breath\" max_lod=\"0\"/></layers>" ) );
+    SW_REQUIRE_EQUAL( size_t{ 2 }, graph._listNode.size() );
+    SW_EXPECT_EQUAL( int32{ -1 }, graph._listNode[0]._maxLODGrade );
+    SW_EXPECT_EQUAL( int32{ 1 }, graph._listNode[1]._maxLODGrade );
+    SW_EXPECT_EQUAL( uint32{ 1 }, graph._listNode[1]._blendSpace._space.getSampleCount() ); // 블렌드 스페이스는 물려받음
+    SW_REQUIRE_EQUAL( size_t{ 2 }, graph._listLayer.size() );
+    SW_EXPECT_EQUAL( int32{ 0 }, graph._listLayer[0]._maxLODGrade );
+    SW_EXPECT_EQUAL( 0.5f, graph._listLayer[0]._weight ); // 다른 칸은 물려받음
+    SW_EXPECT_EQUAL( int32{ -1 }, graph._listLayer[1]._maxLODGrade );
+
+    const sw::string        written = graph.toXML();
+    sw::AnimationGraphAsset reread;
+    SW_REQUIRE_TRUE( reread.parseXML( written ) );
+    SW_EXPECT_EQUAL( written, reread.toXML() );
+    SW_EXPECT_TRUE( written.find( "max_lod=\"1\"" ) != sw::string::npos );
+
+    // 기본값(-1)은 쓰지 않는다 — LOD 를 적지 않은 그래프의 파일은 그대로다.
+    sw::AnimationGraphAsset plain;
+    SW_REQUIRE_TRUE( plain.parseXML( kGraph ) );
+    SW_EXPECT_TRUE( plain.toXML().find( "max_lod" ) == sw::string::npos );
+}
+
+/**
+ * @brief [AnimationGraphAssetTest] 노드의 `max_lod` 는 블렌드 스페이스 상태만 받는다 — 클립 하나인 상태에는 접을 가지가 없다
+ */
+SW_TEST_CASE( AnimationGraphAssetTest, RejectsMaxLODOnClipState )
+{
+    SW_EXPECT_LOG( "AnimationGraphAsset.AnimationGraphNodeMaxLOD" );
+    sw::AnimationGraphAsset graph;
+    SW_EXPECT_FALSE( graph.parseXML( "<AnimationGraphAsset><nodes><node id=\"1\" name=\"Idle\" max_lod=\"1\"/></nodes></AnimationGraphAsset>" ) );
+    SW_EXPECT_TRUE( graph._listNode.empty() );
+}

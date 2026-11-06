@@ -31,6 +31,9 @@ namespace sw
         float32 _y{ 40.0f };
         PROPERTY( Name = "sync_group" )
         hashed_string _syncGroup{};
+        /** @brief 블렌드 스페이스 상태가 모든 표본을 섞는 가장 높은 LOD 등급입니다. 넘으면 가장 무거운 표본 하나로 접는다(-1 = 항상 섞는다, 블렌드 스페이스 상태만). */
+        PROPERTY( Name = "max_lod", Min = -1 )
+        int32 _maxLod{ -1 };
     };
 
     /** @brief `<blend_space>` 입니다. `y` 를 적지 않으면 1D 다. */
@@ -136,6 +139,9 @@ namespace sw
         /** @brief 다시 시작할 때 끊긴 포즈에서 이어 가는 반감기입니다. 0 이면 즉시 새 포즈다. */
         PROPERTY( Name = "half_life", Min = 0.0, Units = s )
         float32 _halfLife{ 0.0f };
+        /** @brief 이 레이어를 얹는 가장 높은 LOD 등급입니다. 넘으면 가중치를 페이드로 내려 끈다(-1 = 항상 얹는다). */
+        PROPERTY( Name = "max_lod", Min = -1 )
+        int32 _maxLod{ -1 };
     };
 
     /** @brief `<comments><comment>` 입니다(`GraphCommentBox` 의 파일 모양 — 자리와 크기를 칸 넷으로 적는다). */

@@ -130,13 +130,15 @@ namespace sw
         _player.setPlayableSource( &_source );
     }
 
-    SkeletalBlendSpaceState::SkeletalBlendSpaceState( const hashed_string& stateName, const AnimationGraphBlendSpaceDef& def, vector<const AnimationClip*>&& listClip )
+    SkeletalBlendSpaceState::SkeletalBlendSpaceState( const hashed_string& stateName, const AnimationGraphBlendSpaceDef& def, vector<const AnimationClip*>&& listClip, int32 maxLODGrade )
         : _stateName{ stateName }
         , _pDef{ &def }
         , _listClip{ std::move( listClip ) }
         , _listLength{}
         , _listWeight{}
         , _playLength{ 0.0f }
+        , _maxLODGrade{ maxLODGrade }
+        , _lodFade{}
     {
         _listLength.reserve( _listClip.size() );
         for ( const AnimationClip* pClip : _listClip )
@@ -150,6 +152,7 @@ namespace sw
     {
         const float2 parameter{ parameters.getFloat( _pDef->_parameterX ), _pDef->_parameterY.empty() ? 0.0f : parameters.getFloat( _pDef->_parameterY ) };
         _pDef->_space.computeSampleWeights( parameter, _listWeight );
+        BlendSpace::foldToHeaviest( _listWeight, _lodFade._weight ); // 접는 가지가 길이에도 들어가야 위상이 맞는다
         _playLength = BlendSpace::computeBlendedLength( _listLength, _listWeight );
     }
 
@@ -585,7 +588,7 @@ namespace sw
                 bPlayable = false;
                 continue;
             }
-            unique_ptr<SkeletalBlendSpaceState> state = sw::make_unique<SkeletalBlendSpaceState>( hashed_string( node._name ), node._blendSpace, std::move( listClip ) );
+            unique_ptr<SkeletalBlendSpaceState> state = sw::make_unique<SkeletalBlendSpaceState>( hashed_string( node._name ), node._blendSpace, std::move( listClip ), node._maxLODGrade );
             state->updateWeights( _parameters );
             outListBlendSpace.push_back( std::move( state ) );
         }
@@ -1087,6 +1090,7 @@ namespace sw
             }
         }
         _listFiredNotify.clear();
+        updateLODFades( context._deltaSeconds );
         updateBlendSpaceWeights( _listBlendSpace, _graphPlayer.getPlayer() );
         _graphPlayer.update( deltaSeconds, &_parameters, &_listFiredNotify );
         for ( LayerState& layer : _listGraphLayer )
@@ -1166,6 +1170,26 @@ namespace sw
 
         // 핫 리로드가 복원할 상태 · 시각을 PROPERTY 에 비춘다(게임 스레드가 아니어도 이 컴포넌트만의 칸이다).
         _stateTime = player.getCurrentTime();
+    }
+
+    void SkeletalAnimatorComponent::updateLODFades( float32 deltaSeconds )
+    {
+        const AnimationLODState lodState = _pUnit != nullptr ? _pUnit->getAnimationLODState() : AnimationLODState{};
+        for ( LayerState& layer : _listGraphLayer )
+        {
+            layer._lodFade.update( lodState.isNodeOn( layer._pGraphLayer->_maxLODGrade ), deltaSeconds, lodState._nodeFadeSeconds );
+        }
+        for ( const unique_ptr<SkeletalBlendSpaceState>& state : _listBlendSpace )
+        {
+            state->updateLODFade( lodState, deltaSeconds );
+        }
+        for ( const unique_ptr<LinkedLayerGraph>& linked : _listLinkedGraph )
+        {
+            for ( const unique_ptr<SkeletalBlendSpaceState>& state : linked->_listBlendSpace )
+            {
+                state->updateLODFade( lodState, deltaSeconds );
+            }
+        }
     }
 
     const vector<int32>& SkeletalAnimatorComponent::getTrackMap( const AnimationClip& clip, const Skeleton& skeleton )
@@ -1366,8 +1390,9 @@ namespace sw
         // inertialization 의 시간은 가중치가 0 이어도 흐른다(다시 켰을 때 오래된 오프셋이 남지 않게).
         layer._inertializer.update( _lastDeltaSeconds );
         // 비어 있는 슬롯 · 재생할 것이 없는 연결 그래프는 얹을 포즈가 없다 — 기준 포즈를 덮어 쓰지 않는다.
-        const bool bLinkedPose = layer._pLinkedGraph != nullptr && layer._pLinkedGraph->_player.getPlayer().getCurrentPlayable() != nullptr;
-        if ( ( layer._clip == nullptr && bLinkedPose == false ) || layer._desc._weight <= 0.0f )
+        const bool    bLinkedPose = layer._pLinkedGraph != nullptr && layer._pLinkedGraph->_player.getPlayer().getCurrentPlayable() != nullptr;
+        const float32 weight      = layer.computeAppliedWeight(); // LOD 로 다 꺼진 레이어는 샘플하지 않는다
+        if ( ( layer._clip == nullptr && bLinkedPose == false ) || weight <= 0.0f )
         {
             layer._history.invalidate(); // 얹지 않은 프레임이다 — 다시 켰을 때 옛 레이어 포즈에서 출발하지 않는다
             return;
@@ -1397,12 +1422,12 @@ namespace sw
         }
         if ( layer._desc._blend == AnimationLayerBlend::Override )
         {
-            Pose::blendMasked( inoutPose, _scratchLayerPose, layer._desc._weight, layer._listBoneWeight.data(), inoutPose );
+            Pose::blendMasked( inoutPose, _scratchLayerPose, weight, layer._listBoneWeight.data(), inoutPose );
         }
         else
         {
             Pose::makeAdditive( _scratchLayerPose, layer._additiveReference, _scratchPose );
-            inoutPose.applyAdditive( _scratchPose, layer._desc._weight, layer._listBoneWeight.data() );
+            inoutPose.applyAdditive( _scratchPose, weight, layer._listBoneWeight.data() );
         }
     }
 
