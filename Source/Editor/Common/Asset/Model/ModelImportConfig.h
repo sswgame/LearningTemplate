@@ -133,6 +133,8 @@ namespace sw::editor
 
         /** @brief 원본 해시에 섞을 애니메이션과 부착 규칙의 문자열입니다. 규칙만 바꿔도 다시 임포트하게 합니다. */
         string makeAnimationHashText() const;
+        /** @brief 클립 바이트를 정하는 설정의 글입니다(코덱 · 루트 모션 · 샘플 간격 · 정밀도). 클립의 공유 키에 섞는다 — 설정이 다르면 다른 결과다(`ImportedAssetStore`). */
+        string makeClipSettingsText() const;
         /** @brief 원본 해시에 섞을 파쇄 규칙의 문자열입니다. 파쇄가 없으면 빈 문자열입니다. */
         string makeFractureHashText() const;
         /** @brief 원본 해시에 섞을 LOD 규칙의 문자열입니다. LOD 가 없으면 빈 문자열입니다. */

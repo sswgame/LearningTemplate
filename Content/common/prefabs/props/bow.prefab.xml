@@ -22,7 +22,7 @@
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath=""
-			                           _clipFolder="common/models/props/bow/clips"
+			                           _animationSetPath="common/models/props/bow/bow.animset.xml"
 			                           _initialState="Bow_Idle"
 			                           _currentState=""
 			                           _stateTime="0"

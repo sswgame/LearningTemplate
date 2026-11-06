@@ -777,7 +777,7 @@
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/ubc_farmer.animgraph.xml"
-					                           _clipFolder="common/models/quaternius/animations/ual1_standard/clips"
+					                           _animationSetPath="common/data/anim/ubc_farmer.animset.xml"
 					                           _initialState="Locomotion"
 					                           _currentState=""
 					                           _stateTime="0"

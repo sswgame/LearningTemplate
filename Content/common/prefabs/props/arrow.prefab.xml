@@ -22,7 +22,7 @@
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath=""
-			                           _clipFolder="common/models/props/arrow/clips"
+			                           _animationSetPath="common/models/props/arrow/arrow.animset.xml"
 			                           _initialState="Arrow_Hidden"
 			                           _currentState=""
 			                           _stateTime="0"

@@ -44,6 +44,12 @@ namespace sw::editor
         return text;
     }
 
+    string ModelImportRule::makeClipSettingsText() const
+    {
+        return formatToString( "codec=%#;root=%#;rate=%#;precision=%#;shell=%#", _animationCodec, _rootMotionBone, BitUtil::floatToBits( _animationSampleRate ), BitUtil::floatToBits( _animationPrecision ),
+                               BitUtil::floatToBits( _animationShellDistance ) );
+    }
+
     string ModelImportRule::makeFractureHashText() const
     {
         if ( _bFracture == SW_FALSE )

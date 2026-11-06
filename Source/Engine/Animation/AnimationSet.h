@@ -1,0 +1,110 @@
+/**
+ * @file AnimationSet.h
+ * @brief 애니메이션 셋(`.animset.xml`)입니다. 이름 → 클립 표이고, 다른 셋을 바탕으로 차이만 적을 수 있습니다.
+ * @details 캐릭터와 그래프는 경로가 아니라 셋의 이름으로 클립을 찾는다. 클립 파일은 내용 키의 공유 저장소에 한 벌만 있어(`ImportedAssetStore`) 모델 수만큼 생기지 않고, 뼈는 이름으로 찾으므로
+ *          (`AnimationClip::makeTrackToBoneMap`) 스켈레톤이 달라도 나눠 쓴다.
+ *          상용 엔진 비교(기억에 의존): 언리얼은 Animation Sequence 를 스켈레톤 에셋이 나눠 쓰게 하고 Animation Blueprint 가 슬롯 이름으로 고른다. 유니티는 Avatar 로 근육 공간을 나누고
+ *          AnimatorOverrideController 가 "기반 + 바꾼 클립" 이다. 여기는 뼈 이름 일치로 나누고(Avatar 의 근육 공간 없음), 셋의 `base` 가 오버라이드 컨트롤러 자리다.
+ */
+#pragma once
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Foundation/Macros.h"
+#include "Core/Foundation/Types.h"
+#include "Core/String/hashed_string.h"
+
+#include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Reflection/ReflectionMacros.h"
+
+namespace sw
+{
+    class XMLNode;
+
+    /**
+     * @brief 셋의 클립 한 줄(`<clip name path/>` · `<clip name set [source]/>`)입니다. 경로와 셋 중 하나만 적는다.
+     * @details `path` 는 임포트가 쓰는 공유 파일이다 — 손으로 쓰는 셋은 키가 내용과 함께 바뀌는 경로를 적지 않고 `set`(그 셋의 같은 이름, 또는 `source` 이름)으로 가리킨다.
+     */
+    REFLECT()
+    struct SW_API AnimationSetClipFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _name{};
+        PROPERTY()
+        string _path{};
+        PROPERTY()
+        string _set{};
+        PROPERTY()
+        string _source{};
+    };
+
+    /** @brief 셋 루트(`<AnimationSet formatVersion base>`)의 칸입니다. */
+    REFLECT()
+    struct SW_API AnimationSetRootFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        string _base{};
+    };
+
+    /**
+     * @struct AnimationSetEntry
+     * @brief 펼친 셋의 한 줄입니다(이름은 소문자 — 애니메이터의 클립 이름 규칙).
+     */
+    struct AnimationSetEntry
+    {
+        string _name;
+        string _clipPath;
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @class AnimationSet
+     * @brief 이름 → 클립 경로 표입니다. 읽을 때 `base` · `set` 을 모두 펼쳐 표 하나로 둡니다.
+     */
+    class SW_API AnimationSet
+    {
+    public:
+        /** @brief 셋 파일의 확장자입니다. */
+        static constexpr string_view kExtension = ".animset.xml";
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { kExtension, AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `AnimationSet.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "AnimationSet", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+        /** @brief `base` · `set` 사슬의 최대 길이입니다. 넘으면 순환으로 보고 오류입니다. */
+        static constexpr uint32 kMaxChainDepth = 8;
+
+        /** @brief 이름의 클립 경로입니다(대소문자 무시). 없으면 nullptr 입니다. */
+        [[nodiscard]] const string* findClipPath( const hashed_string& name ) const;
+        /** @brief 이름순 표입니다. */
+        [[nodiscard]] const vector<AnimationSetEntry>& getEntries() const { return _listEntry; }
+
+        /** @brief 클립 한 줄을 넣습니다(임포트가 쓴다). 같은 이름이면 바꿉니다. */
+        void setClip( string_view name, string_view clipPath );
+        /** @brief 파일 글입니다(`path` 줄만 — 이미 펼친 표다). 이름순이라 같은 표는 같은 바이트입니다. */
+        [[nodiscard]] string saveToString() const;
+
+        /** @brief XML 을 읽고 `base` · `set` 을 펼칩니다. 틀리면 오류를 남기고 false 이며 내용은 비웁니다. */
+        [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
+        /** @brief 리소스 경로의 파일을 읽습니다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+
+    private:
+        /** @brief @p depth 번째 사슬 칸을 읽습니다. */
+        [[nodiscard]] bool parseChained( string_view xml, string_view sourceLabel, uint32 depth );
+        /** @brief 리소스 경로의 셋 파일을 @p depth 번째 사슬 칸으로 읽습니다. */
+        [[nodiscard]] bool loadChained( string_view path, uint32 depth );
+        /** @brief 정렬을 지키며 한 줄을 넣습니다. */
+        void insertEntry( string name, string clipPath );
+
+    private:
+        vector<AnimationSetEntry> _listEntry;
+    };
+} // namespace sw

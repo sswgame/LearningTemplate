@@ -58,12 +58,7 @@ namespace sw::editor
 
     const AnimationClip* AnimationClipPreviewModel::findOpenClip( const SkeletalAnimatorComponent& animator, string_view clipPath )
     {
-        string_view directory;
-        string_view fileName;
-        FileUtil::splitPath( clipPath, directory, fileName );
-        string_view stem;
-        FileUtil::removeExtension( fileName, stem );
-        return animator.findClip( hashed_string( stem ) );
+        return animator.findClip( hashed_string( FileUtil::removeExtension( clipPath ) ) ); // '/' 가 든 이름은 파일 경로다(`SkeletalAnimatorComponent::makeClipPath`)
     }
 
     void AnimationClipPreviewModel::syncBody( Scene* pScene, string_view clipPath )
@@ -107,27 +102,18 @@ namespace sw::editor
     {
         _playedClipPath = clipPath; // 실패해도 같은 클립을 매 프레임 다시 읽지 않는다(Restart 나 다른 클립)
         _clipSeconds    = 0.0f;
-        string_view directory;
-        string_view fileName;
-        FileUtil::splitPath( clipPath, directory, fileName );
-        string_view stem;
-        FileUtil::removeExtension( fileName, stem );
-        while ( directory.empty() == false && directory.back() == '/' )
-        {
-            directory.remove_suffix( 1 );
-        }
-
-        const hashed_string clipName{ stem };
-        animator.setClipFolder( directory );
+        // 클립은 공유 저장소에 키 이름으로 있어 폴더가 묶음이 아니다 — 고른 파일 하나를 경로로 재생한다.
+        const string         stem = FileUtil::removeExtension( FileUtil::getFileNamePart( clipPath ) );
+        const hashed_string  clipName{ FileUtil::removeExtension( clipPath ) };
         const AnimationClip* pClip = animator.preloadClip( clipName ) ? animator.findClip( clipName ) : nullptr;
         if ( pClip == nullptr )
         {
-            _status = string( "The clip '" ) + string{ stem } + "' could not be read from its folder - see the log";
+            _status = string( "The clip '" ) + stem + "' could not be read - see the log";
             return;
         }
         if ( animator.play( clipName, _bLoop, 0.0f ) == false )
         {
-            _status = string( "The body could not play the clip '" ) + string{ stem } + "' - see the log";
+            _status = string( "The body could not play the clip '" ) + stem + "' - see the log";
             return;
         }
         _clipSeconds = pClip->getDuration();

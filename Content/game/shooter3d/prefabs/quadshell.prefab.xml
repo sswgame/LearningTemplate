@@ -23,7 +23,7 @@
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/quadshell.animgraph.xml"
-			                           _clipFolder="common/models/quaternius/scifi/enemy_quadshell/clips"
+			                           _animationSetPath="common/models/quaternius/scifi/enemy_quadshell/enemy_quadshell.animset.xml"
 			                           _initialState="Look"
 			                           _currentState=""
 			                           _stateTime="0"

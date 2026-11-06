@@ -11,6 +11,7 @@
 #include "Editor/Common/Workspace/Asset/EditorAssetType.h"
 
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -65,6 +66,7 @@ namespace sw::editor
         const EditorAssetMatchRule kArrSequenceRule[]      = { EditorAssetMatchRule::engineType( SequenceAsset::kAssetType ) };
         const EditorAssetMatchRule kArrSkeletonRule[]      = { EditorAssetMatchRule::engineType( Skeleton::kAssetType, { "Skeleton" } ) };
         const EditorAssetMatchRule kArrAnimationClipRule[] = { EditorAssetMatchRule::engineType( AnimationClip::kAssetType, { "AnimationClip" } ) };
+        const EditorAssetMatchRule kArrAnimationSetRule[]  = { EditorAssetMatchRule::engineType( AnimationSet::kAssetType, { "AnimationSet" } ) };
         const EditorAssetMatchRule kArrRigRule[]           = { EditorAssetMatchRule::engineType( RigAsset::kAssetType, { "Rig" } ) };
 
         const EditorAssetMatchRule kArrHeightfieldRule[] = { BuiltinAssetTypesInternal::makeRawHeightfieldRule(), EditorAssetMatchRule::engineType( HeightfieldAsset::kAssetType ) };
@@ -109,6 +111,8 @@ namespace sw::editor
                           kArrSkeletonRule, SW_COUNT_OF( kArrSkeletonRule ), nullptr, nullptr );
     SW_EDITOR_ASSET_TYPE( AnimationClip, AnimationClip::kAssetType._name.data(), 1400, "AnimationClip", "Clips", nullptr, SW_EDITORICON_NAME( "AnimationClip" ), SW_THEMECOLOR_KEY( "Asset", "AnimationClip" ),
                           true, true, kArrAnimationClipRule, SW_COUNT_OF( kArrAnimationClipRule ), nullptr, nullptr );
+    SW_EDITOR_ASSET_TYPE( AnimationSet, AnimationSet::kAssetType._name.data(), 1450, "AnimationSet", "Clip Sets", nullptr, SW_EDITORICON_NAME( "AnimationClip" ), SW_THEMECOLOR_KEY( "Asset", "AnimationClip" ),
+                          true, true, kArrAnimationSetRule, SW_COUNT_OF( kArrAnimationSetRule ), nullptr, nullptr );
     SW_EDITOR_ASSET_TYPE( Rig, RigAsset::kAssetType._name.data(), 1500, "Rig", "Rigs", nullptr, SW_EDITORICON_NAME( "Rig" ), SW_THEMECOLOR_KEY( "Asset", "Rig" ), true, true, kArrRigRule,
                           SW_COUNT_OF( kArrRigRule ), nullptr, nullptr );
     SW_EDITOR_ASSET_TYPE( Heightfield, HeightfieldAsset::kAssetType._name.data(), 1600, "Heightfield", "Heightfields", nullptr, SW_EDITORICON_NAME( "Heightfield" ), SW_THEMECOLOR_KEY( "Asset", "Heightfield" ), true, false, kArrHeightfieldRule, SW_COUNT_OF( kArrHeightfieldRule ), nullptr, nullptr );

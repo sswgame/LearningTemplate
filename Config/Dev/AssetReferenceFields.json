@@ -10,10 +10,10 @@
     "listCMakeFile": [ "Test/CMakeLists.txt", "Test/Scenario/CMakeLists.txt" ],
     "listCMakeArgument": [ "--render-portraits", "-scenario" ],
     "listField": [
-        "_aiControllerPrefab", "_albedo", "_animationCrowdSettings", "_animationGraphPath", "_animationLODSettings", "appearance", "assetPath", "assetRoots",
+        "_animationSetPath", "animationSet", "base", "set", "_aiControllerPrefab", "_albedo", "_animationCrowdSettings", "_animationGraphPath", "_animationLODSettings", "appearance", "assetPath", "assetRoots",
         "atlas", "_atlasPath", "audioEvents", "_autoBattleAIPrefab", "_autoFarmerPrefab", "_autoPlanPath", "_base", "_blockBuildingPrefab", "_bodyPrefab",
         "_carFrontPrefab", "_carPrefab", "_casterAIPrefab", "_casterPrefab", "_catalogPath", "_characterLODSettings", "_chunkPrefab", "_cityDataPath",
-        "_cliffPrefab", "_clipFolder", "clipFolder", "_clipPath", "_coasterDataPath", "_combatEnemyClips", "_combatEnemyMaterial", "_combatEnemyMesh",
+        "_cliffPrefab", "_clipPath", "_coasterDataPath", "_combatEnemyClips", "_combatEnemyMaterial", "_combatEnemyMesh",
         "_combatEnemySkeleton", "_combatSwordMaterial", "_combatSwordMesh", "_commanderTreePath", "_cookieTexturePath", "_cropDataPath", "_cropPrefab",
         "_cultureTable", "_debugHUDSettingsSchema", "_debugKeyInputMap", "_defaultDeferredPipeline", "_defaultDestructionProfile", "_defaultForwardPipeline",
         "_defaultMaterial", "_defaultSocketKinds", "_defaultSurfaceChannels", "_detailTexturePath", "_document", "_documentPath",

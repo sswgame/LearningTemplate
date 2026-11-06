@@ -2,6 +2,7 @@
 
 #include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
@@ -195,6 +196,41 @@ namespace sw::editor
 
     TextureImportRuleMatch TextureImportConfig::findMatchingRule( string_view relativePath ) const
     {
-        return AssetImportRuleUtil::select( _listRule, relativePath, "TextureImportConfig" );
+        // 공유 원본은 폴더에 적힌 규칙으로 임포트한다 — 패턴은 모델 옆 자리로 이미 골랐다. 폴더의 규칙이 설정에서 사라졌으면 다른 규칙으로 읽지 않고 오류다.
+        const string sharedRule = findSharedRuleName( relativePath );
+        if ( sharedRule.empty() )
+            return AssetImportRuleUtil::select( _listRule, relativePath, "TextureImportConfig" );
+        TextureImportRuleMatch match{};
+        if ( sharedRule == kSharedDefaultRuleName )
+            return match;
+        for ( const TextureImportRule& rule : _listRule )
+        {
+            if ( StringUtil::toLower( rule._name.c_str() ) == sharedRule )
+            {
+                match._rule     = rule;
+                match._bMatched = true;
+                return match;
+            }
+        }
+        match._error = "TextureImportConfig: shared source '" + string( relativePath ) + "' names rule '" + sharedRule + "' which is not in the config. Import its model again.";
+        return match;
+    }
+
+    string TextureImportConfig::makeSharedSourcePath( string_view domainFolder, string_view ruleName, string_view key, string_view extension )
+    {
+        const string rule = ruleName.empty() ? string( kSharedDefaultRuleName ) : StringUtil::toLower( string( ruleName ).c_str() );
+        return string( domainFolder ) + "/textures_raw/" + string( kSharedFolderName ) + "/" + rule + "/" + string( key ) + string( extension );
+    }
+
+    string TextureImportConfig::findSharedRuleName( string_view relativePath )
+    {
+        const string normalized = "/" + FileUtil::normalizeSeparators( relativePath );
+        const string marker     = "/textures_raw/" + string( kSharedFolderName ) + "/";
+        const size_t at         = normalized.find( marker );
+        if ( at == string::npos )
+            return {};
+        const size_t begin = at + marker.size();
+        const size_t end   = normalized.find( '/', begin );
+        return end == string::npos ? string{} : normalized.substr( begin, end - begin );
     }
 } // namespace sw::editor

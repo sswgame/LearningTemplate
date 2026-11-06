@@ -88,7 +88,7 @@
 					<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 					                           _bActive="true"
 					                           _animationGraphPath="common/data/anim/adventurer.animgraph.xml"
-					                           _clipFolder="common/models/kaykit/knight/clips"
+					                           _animationSetPath="common/models/kaykit/knight/knight.animset.xml"
 					                           _initialState="Idle"
 					                           _currentState=""
 					                           _stateTime="0"

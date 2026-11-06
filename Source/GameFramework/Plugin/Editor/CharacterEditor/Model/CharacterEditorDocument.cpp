@@ -8,7 +8,7 @@
 
 #include "Editor/Common/Workspace/EditorService.h"
 
-#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/AnimationSet.h"
 #include "Engine/Character/CharacterDataCache.h"
 #include "Engine/Character/Fit/FitSolver.h"
 #include "Engine/Config/GameConfig.h"
@@ -112,7 +112,7 @@ namespace sw::editor
         _paths._refPosePath      = data._refPosePath;
         _paths._itemsPath        = data._itemsPath;
         _paths._appearanceFolder = data._appearanceFolder;
-        _paths._clipFolder       = data._clipFolder;
+        _paths._animationSet     = data._animationSet;
         _paths._rigPath          = data._rigPath;
         _bClipNamesLoaded        = SW_FALSE; // 팩 데이터가 바뀌면 클립 목록을 다시 모은다
         _selectedClip            = hashed_string{};
@@ -555,21 +555,15 @@ namespace sw::editor
     {
         _listClipName.clear();
         _bClipNamesLoaded = SW_TRUE;
-        if ( _paths._clipFolder.empty() )
+        if ( _paths._animationSet.empty() )
             return;
-        // 클립 목록은 나열 규칙 하나로 얻는다(`AssetIO::collectAssets` - 도메인 없는 폴더는 모든 도메인의 합집합). 예전에는 이긴 도메인 폴더 하나만 디스크에서 훑었다.
-        vector<AssetID> listFile;
-        if ( AssetIO::collectAssets( AssetID{ string_view( _paths._clipFolder.c_str() ) }, AnimationClip::kExtension, listFile ) != AssetFolderListing::Listed )
-            return;
-        const size_t extensionLength = AnimationClip::kExtension.size();
-        for ( const AssetID& filePath : listFile )
+        AnimationSet animationSet;
+        if ( animationSet.loadFromAsset( AssetID{ string_view( _paths._animationSet.c_str() ) } ) == false )
+            return;                                                        // 셋이 까닭을 남겼다
+        for ( const AnimationSetEntry& entry : animationSet.getEntries() ) // 표는 이름순이다
         {
-            const string fileName = FileUtil::getFileNamePart( filePath.view() );
-            if ( fileName.size() > extensionLength )
-                _listClipName.push_back( hashed_string( string_view( fileName ).substr( 0, fileName.size() - extensionLength ) ) );
+            _listClipName.push_back( hashed_string( string_view{ entry._name } ) );
         }
-        VectorUtil::sort( _listClipName, []( const hashed_string& left, const hashed_string& right )
-        { return string_view( left.c_str() ) < string_view( right.c_str() ); } );
     }
 
     void CharacterEditorDocument::reportEdit( bool bSucceeded )

@@ -23,7 +23,7 @@
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/skeleton.animgraph.xml"
-			                           _clipFolder="common/models/kaykit/skeleton_warrior/clips"
+			                           _animationSetPath="common/models/kaykit/skeleton_warrior/skeleton_warrior.animset.xml"
 			                           _initialState="Idle_Combat"
 			                           _currentState=""
 			                           _stateTime="0"

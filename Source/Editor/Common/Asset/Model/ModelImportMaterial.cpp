@@ -12,15 +12,21 @@
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/Model/ModelImportGeometry.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
 #include "Editor/Common/Asset/Model/VrmMaterialImporter.h"
+#include "Editor/Common/Asset/Texture/TextureImportConfig.h"
 #include "Editor/Common/Asset/Texture/TextureImporter.h"
 
+#include "Engine/Asset/AssetFormat.h"
+#include "Engine/Config/ConfigManager.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Serialization/JSON/JSONDocument.h"
 
@@ -296,18 +302,8 @@ namespace sw::editor
             const ModelImportTexture& texture = result._listTexture[textureIndex];
             if ( texture._bytes.empty() || rawTextureFolder.empty() )
                 continue;
-            const string  rawPath = FileUtil::joinPath( rawTextureFolder, texture._fileStem + texture._extension );
-            vector<uint8> existingBytes;
-            const bool    bSame = FileUtil::exists( rawPath ) && FileUtil::readFile( rawPath, existingBytes ) && existingBytes == texture._bytes;
-            if ( bSame == false )
-            {
-                if ( FileUtil::ensureDirectoryExists( rawTextureFolder ) == false || FileUtil::writeFile( rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
-                {
-                    SW_LOG_ERROR_ID( "ModelImporter.FailedWriteTextureSource", "Failed to write texture source %#", rawPath.c_str() );
-                    return false;
-                }
-            }
-            listTexturePath[textureIndex] = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
+            if ( writeEmbeddedImage( assetPaths, texture, rawTextureFolder, listTexturePath[textureIndex] ) == false )
+                return false;
         }
 
         // 툰 머티리얼 견본의 경로는 엔진 기본 에셋 표에 있다. 이 함수는 워커에서도 도므로 서비스를 찾지 않고 데이터에서 표를 읽는다.
@@ -315,6 +311,12 @@ namespace sw::editor
         if ( pDefaultAssets == nullptr )
         {
             SW_LOG_ERROR_ID( "ModelImporter.GlTFEngineDefaultAssets", "glTF '%#': the engine default assets could not be read - no toon material template for the sections", sourcePath );
+            return false;
+        }
+        string toonTemplateText;
+        if ( AssetIO::readTextAsset( AssetID{ pDefaultAssets->_toonMaterialTemplate.get() }, toonTemplateText ) == false )
+        {
+            SW_LOG_ERROR_ID( "ModelImporter.ToonTemplateUnreadable", "glTF '%#': the toon material template could not be read", sourcePath );
             return false;
         }
 
@@ -326,11 +328,9 @@ namespace sw::editor
                 continue;
             listWrittenStem.push_back( section._fileStem );
             const string materialText = VrmMaterialImporter::makeMaterialXML( result._listToonMaterial[section._materialIndex], listTexturePath, pDefaultAssets->_toonMaterialTemplate );
-            const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), section._fileStem + ".material" );
-            const bool   bWritten     = materialText.empty() == false && FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, materialText );
-            if ( bWritten == false )
+            if ( materialText.empty() || writeSharedMaterial( assetPaths, materialText, toonTemplateText, pDefaultAssets->_toonMaterialTemplate.get(), section._fileStem, sourcePath, sideFolder ) == false )
             {
-                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteToonMaterial", "Failed to write toon material %#", materialPath.c_str() );
+                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteToonMaterial", "Failed to write toon material '%#' of %#", section._fileStem.c_str(), sourcePath );
                 return false;
             }
         }
@@ -456,16 +456,7 @@ namespace sw::editor
                 outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( texture._sourcePath ) );
                 return true;
             }
-            const string  rawPath = FileUtil::joinPath( rawTextureFolder, texture._fileStem + texture._extension );
-            vector<uint8> existingBytes;
-            const bool    bSame = FileUtil::exists( rawPath ) && FileUtil::readFile( rawPath, existingBytes ) && existingBytes == texture._bytes;
-            if ( bSame == false && ( FileUtil::ensureDirectoryExists( rawTextureFolder ) == false || FileUtil::writeFile( rawPath, texture._bytes.data(), texture._bytes.size() ) == false ) )
-            {
-                SW_LOG_ERROR_ID( "ModelImporter.FailedWriteTextureSource", "Failed to write texture source %#", rawPath.c_str() );
-                return false;
-            }
-            outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
-            return true;
+            return writeEmbeddedImage( assetPaths, texture, rawTextureFolder, outAssetPath );
         };
         string albedoPath;
         string normalPath;
@@ -525,14 +516,95 @@ namespace sw::editor
             return false;
         }
         const string materialPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );
-        const bool   bWritten     = FileUtil::ensureParentDirectoryExists( materialPath ) && FileUtil::writeTextFile( materialPath, document.saveToString() );
-        if ( bWritten == false )
+        if ( writeSharedMaterial( assetPaths, document.saveToString(), templateText, pDefaultAssets->_pbrMaterialTemplate.get(), fileStem, sourcePath, sideFolder ) == false )
         {
             SW_LOG_ERROR_ID( "ModelImporter.FailedWritePBRMaterial", "Failed to write PBR material %#", materialPath.c_str() );
             return false;
         }
         SW_LOG_INFO_ID( "ModelImporter.GlTFPBRMaterialAlbedo", "glTF '%#': PBR material %# (albedo%#%#)", sourcePath, materialPath.c_str(), normalPath.empty() ? "" : ", normal", ormPath.empty() ? "" : ", orm" );
         return true;
+    }
+
+    bool ModelImportMaterial::writeEmbeddedImage( const AssetPaths& assetPaths, const ModelImportTexture& texture, string_view rawTextureFolder, string& outAssetPath )
+    {
+        // 규칙은 모델 옆에 꺼냈을 경로로 고른다(이름 꼬리 `_normal` · 모델 폴더 패턴). 고른 규칙을 저장소 폴더 이름에 남겨 텍스처 임포트가 같은 규칙으로 임포트한다(`TextureImportConfig::findMatchingRule`).
+        TextureImportConfig config{};
+        if ( config.loadFromFile( TextureImporter::makeDefaultImportConfigPath() ) == ConfigReadResult::Invalid )
+            return false; // 로드가 오류를 남겼다 — 깨진 설정을 기본 규칙으로 읽지 않는다
+        const string           logicalPath = FileUtil::joinPath( rawTextureFolder, texture._fileStem + texture._extension );
+        TextureImportRuleMatch match       = config.findMatchingRule( assetPaths.toAssetID( logicalPath ) );
+        if ( match.hasError() )
+        {
+            SW_LOG_ERROR_ID( "ModelImporter.TextureImportRuleRejected", "%#", match._error.c_str() );
+            return false;
+        }
+        const string rawMarker = "/" + string( ModelImportUtil::kRawTextureFolder ) + "/";
+        const string domain    = logicalPath.substr( 0, logicalPath.find( rawMarker ) );
+        const string key       = ImportedAssetStore::makeKey( texture._bytes.data(), texture._bytes.size(), string_view{} );
+        const string rawPath   = TextureImportConfig::makeSharedSourcePath( domain, match._rule._name, key, texture._extension );
+        if ( ImportedAssetStore::writeIfAbsent( rawPath, texture._bytes.data(), texture._bytes.size() ) == false )
+            return false;
+        outAssetPath = assetPaths.toAssetID( TextureImporter::makeImportedTexturePath( rawPath ) );
+        return true;
+    }
+
+    bool ModelImportMaterial::makeSharedMaterialText( string_view fullText, string_view templateText, string_view templatePath, SharedMaterialText& outShared )
+    {
+        string deltaText;
+        if ( MaterialXML::makeParentDelta( fullText, templateText, templatePath, deltaText ) == false )
+            return false;
+        XMLDocument document;
+        if ( document.parse( deltaText ) == false )
+            return false;
+        const XMLNode root = document.getRoot( "MaterialDesc" );
+        if ( root.isValid() == false )
+            return false;
+        // 이름은 슬롯의 것이라 키에서 뺀다 — 값이 같으면 이름이 달라도 한 파일이다.
+        root.setAttribute( "name", "" );
+        const string nameless = document.saveToString();
+        outShared._key        = ImportedAssetStore::makeKey( nameless.data(), nameless.size(), string_view{} );
+        root.setAttribute( "name", string_view{ outShared._key } );
+        outShared._text = document.saveToString();
+        return true;
+    }
+
+    string ModelImportMaterial::makeSlotMaterialText( string_view fileStem, string_view sharedAssetID )
+    {
+        XMLDocument   document;
+        const XMLNode root = document.appendRoot( "MaterialDesc" );
+        AssetXMLFormat::writeXMLVersion( root, Material::kAssetType._formatVersion );
+        root.appendAttribute( "name", fileStem );
+        root.appendAttribute( "_base", sharedAssetID );
+        return document.saveToString();
+    }
+
+    bool ModelImportMaterial::writeSharedMaterial( const AssetPaths& assetPaths, string_view fullText, string_view templateText, string_view templatePath, string_view fileStem, string_view sourcePath, string_view sideFolder )
+    {
+        SharedMaterialText shared;
+        if ( makeSharedMaterialText( fullText, templateText, templatePath, shared ) == false )
+            return false;
+        const string domain = ImportedAssetStore::findDomainFolder( sourcePath );
+        if ( domain.empty() )
+        {
+            SW_LOG_ERROR_ID( "ModelImporter.MaterialSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its material", sourcePath, ModelImportUtil::kRawModelFolder.data() );
+            return false;
+        }
+        const string sharedPath = ImportedAssetStore::makeStorePath( domain, kSharedMaterialKind, shared._key, ".material" );
+        if ( ImportedAssetStore::writeIfAbsent( sharedPath, shared._text.data(), shared._text.size() ) == false )
+            return false;
+        // 손 데이터(씬 · 프리팹)가 부르는 슬롯 주소는 그대로 둔다 — 값은 공유 파일 한 벌이고 슬롯 파일은 그것을 가리키는 한 줄이다(언리얼 Redirector · 덮어쓰기 없는 Material Instance).
+        const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );
+        return FileUtil::ensureParentDirectoryExists( slotPath ) && FileUtil::writeTextFile( slotPath, makeSlotMaterialText( fileStem, assetPaths.toAssetID( sharedPath ) ) );
+    }
+
+    string ModelImportMaterial::findSharedMaterial( string_view sideFolder, string_view fileStem )
+    {
+        const string slotPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), string( fileStem ) + ".material" );
+        string       text;
+        XMLDocument  document;
+        if ( FileUtil::readTextFile( slotPath, text ) == false || document.parse( text ) == false )
+            return {};
+        return string( document.getRoot( "MaterialDesc" ).getAttributeText( "_base" ) );
     }
 
     string ModelImportMaterial::makeRawTextureFolder( string_view sourcePath )

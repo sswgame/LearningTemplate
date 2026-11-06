@@ -21,7 +21,7 @@ namespace sw::editor
 {
     /**
      * @struct CharacterEditorPackData
-     * @brief `<CharacterEditor sockets="…" skeleton="…" items="…" appearance="…" clipFolder="…" previewPreset="…" [rig="…"]/>` 한 줄입니다(`rig` 만 선택). 경로 값은 도메인을 포함한 리소스 경로이고 `previewPreset` 은 프리셋 id 입니다.
+     * @brief `<CharacterEditor sockets="…" skeleton="…" items="…" appearance="…" animationSet="…" previewPreset="…" [rig="…"]/>` 한 줄입니다(`rig` 만 선택). 경로 값은 도메인을 포함한 리소스 경로이고 `previewPreset` 은 프리셋 id 입니다.
      */
     REFLECT()
     struct CharacterEditorPackData
@@ -41,7 +41,7 @@ namespace sw::editor
         PROPERTY( Name = "appearance", Required )
         string _appearanceFolder{}; ///< 외형 데이터 폴더(`data/appearance`)
         PROPERTY( Required )
-        string _clipFolder{}; ///< 미리보기 몸이 재생하는 애니메이션 클립 폴더(`<이름>.animclip` 파일이 든 폴더 — 임포트가 스켈레톤 옆 `clips/` 에 쓴다)
+        string _animationSet{}; ///< 미리보기 몸이 재생하는 애니메이션 셋(`*.animset.xml` — 임포트가 스켈레톤 옆에 쓴다)
         /**
          * @brief 미리보기 몸의 외형 프리셋 id(`presets.xml` 의 것)입니다. 외형 선택에 기준 프리셋이 없을 때 창의 미리보기 씬이 이 프리셋 위에 선택을 입힌다.
          * @details 몸은 프리팹이 아니라 외형 조립(`CharacterAppearanceComponent::previewSelection`)으로 세운다 — 몸 메시 · 스켈레톤 · 소켓은 프리셋의 몸 아이템이 정한다.

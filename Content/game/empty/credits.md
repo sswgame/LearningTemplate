@@ -8,7 +8,7 @@
 | 환경 쇼케이스 식생(`maps/envshowcase.scene.xml` 의 꽃 · 덤불 · 나무 · 바위 레이어) | Quaternius "Stylized Nature MegaKit" — 공용 원본 `common/models_raw/quaternius/nature/`(출처는 `common/credits.md`). 식생 구간 머티리얼은 `common/materials/quaternius/`(foliage.hlsl — 바람 · 페이드). 예전 Kenney Nature Kit 나무 · 덤불 · 꽃 · 그루터기 · 통나무는 지웠다 | CC0 1.0 |
 | `heightfields_raw/valley*.png` · `heightfields/valley.layerweights` | `Scripts/dev/MakeTerrainShowcase.py` 가 만든 절차 생성 데이터 | 이 저장소 |
 | `rigs_raw/*.glb` · `rigs_raw/*.rig.xml` | `Scripts/dev/MakeSyntheticRig.py --representatives` 가 만든 애니메이션 비용 측정용 합성 리그 | 이 저장소 |
-| `models_raw/avatarsample_d.vrm` · `textures_raw/avatarsample_d/*.png` | VRoid Project "AvatarSample_D"(VRoid Studio 알파판 샘플, VRM 0.x) — <https://opengameart.org/content/vroid-studio-cc0-models> 에서 받음. 원 출처 · 조건: <https://vroid.pixiv.help/hc/en-us/articles/4402614652569-Do-VRoid-Studio-s-sample-models-come-with-conditions-of-use>. 텍스처 원본은 모델 임포트가 VRM 에 든 이미지를 그대로 꺼낸 것 | CC0 1.0 |
+| `models_raw/avatarsample_d.vrm` · `textures_raw/_shared/vrm_character_textures/*.png`(임포트가 꺼낸 내장 이미지, 이름은 내용 키) | VRoid Project "AvatarSample_D"(VRoid Studio 알파판 샘플, VRM 0.x) — <https://opengameart.org/content/vroid-studio-cc0-models> 에서 받음. 원 출처 · 조건: <https://vroid.pixiv.help/hc/en-us/articles/4402614652569-Do-VRoid-Studio-s-sample-models-come-with-conditions-of-use>. 텍스처 원본은 모델 임포트가 VRM 에 든 이미지를 그대로 꺼낸 것 | CC0 1.0 |
 | `models_raw/crate_medium.glb` | Kenney "Blaster Kit" (<https://kenney.nl/assets/blaster-kit>) — 나무 상자(shooter3d 의 것과 같은 파일, 파괴 쇼케이스) | CC0 1.0 |
 | `models_raw/brick_wall.gltf` · `models_raw/barrel.gltf` | 이 저장소에서 만든 상자 · 원기둥(파괴 쇼케이스) | 이 저장소 |
 | `textures/twod/*.dds` | 이 저장소에서 코드로 그린 2D 데모 픽셀 아트(스프라이트 · 타일 · 노멀 맵, 커밋 `1fb09535c`) | 이 저장소 |

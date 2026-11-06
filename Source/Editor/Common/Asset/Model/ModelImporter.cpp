@@ -20,6 +20,7 @@
 #include "Core/Task/TaskManager.h"
 
 #include "Editor/Common/Asset/AssetImportStamp.h"
+#include "Editor/Common/Asset/ImportedAssetStore.h"
 #include "Editor/Common/Asset/Model/MeshFracture.h"
 #include "Editor/Common/Asset/Model/ModelImportAnimation.h"
 #include "Editor/Common/Asset/Model/ModelImportConfig.h"
@@ -32,6 +33,8 @@
 #include "Editor/Common/EditorUtil.h"
 #include "Editor/Common/Workspace/EditorService.h"
 
+#include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Codec/AnimationCodec.h"
 #include "Engine/Character/Fit/CharacterMeshUtil.h"
 #include "Engine/Config/ConfigManager.h"
@@ -618,23 +621,46 @@ namespace sw::editor
                 return true;
             }
 
-            /** @brief 클립을 옆 폴더에 쓰고 원본 · 압축 바이트 합을 더합니다. 쓰기에 실패하면 오류를 남기고 false 입니다. */
-            [[nodiscard]] static bool writeClips( const ModelImportResult& result, const ModelImportRule& rule, const string& sideFolder, uint64& inoutRawByteTotal, uint64& inoutCompressedByteTotal )
+            /**
+             * @brief 클립을 공유 저장소에 한 벌만 쓰고(같은 내용 · 같은 설정이면 모델 수와 상관없이 파일 하나다) 이름 → 파일 표(`<옆 폴더>/<y>.animset.xml`)를 쓰며 원본 · 압축 바이트 합을 더합니다.
+             * @return 쓰기에 실패하면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool writeClips( const AssetPaths& assetPaths, const ModelImportResult& result, const ModelImportRule& rule, string_view sourcePath, const string& sideFolder, string_view stem, uint64& inoutRawByteTotal,
+                                                  uint64& inoutCompressedByteTotal )
             {
+                if ( result._listClip.empty() )
+                    return true;
+                const string domain = ImportedAssetStore::findDomainFolder( sourcePath );
+                if ( domain.empty() )
+                {
+                    SW_LOG_ERROR_ID( "ModelImporter.ClipSourceNotUnderRaw", "'%#' is not under %#/ - there is no shared store for its clips", sourcePath, ModelImportUtil::kRawModelFolder.data() );
+                    return false;
+                }
+                const string settingsText = rule.makeClipSettingsText();
+                AnimationSet animationSet;
                 for ( const ModelImportClip& imported : result._listClip )
                 {
-                    const string                      clipPath = FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kClipFolder ), imported._fileStem + string( AnimationClip::kExtension ) );
-                    const std::optional<AbsolutePath> clipFile = FileUtil::requireAbsolutePath( clipPath );
-                    if ( clipFile.has_value() == false || imported._clip.saveToFile( *clipFile ) == false )
+                    vector<uint8> bytes;
+                    imported._clip.makeBytes( bytes );
+                    const string key      = ImportedAssetStore::makeKey( bytes.data(), bytes.size(), settingsText );
+                    const string clipPath = ImportedAssetStore::makeStorePath( domain, ModelImportUtil::kClipFolder, key, AnimationClip::kExtension );
+                    if ( ImportedAssetStore::writeIfAbsent( clipPath, bytes.data(), bytes.size() ) == false )
                     {
                         SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAnimationClip", "Failed to write animation clip %#", clipPath.c_str() );
                         return false;
                     }
+                    animationSet.setClip( imported._fileStem, assetPaths.toAssetID( clipPath ) );
                     inoutRawByteTotal += imported._stats._rawByteCount;
                     inoutCompressedByteTotal += imported._stats._compressedByteCount;
                     SW_LOG_INFO_ID( "ModelImporter.ClipBytesXMax", "Clip '%#' (%#): %# s, %# -> %# bytes (x%#), max error %# mm", imported._clip.getName().c_str(), rule._animationCodec.c_str(),
                                     imported._clip.getDuration(), imported._stats._rawByteCount, imported._stats._compressedByteCount, imported._stats.computeRatio(),
                                     imported._stats._maxError * 1000.0f );
+                }
+                const string setPath = FileUtil::joinPath( sideFolder, string( stem ) + string( AnimationSet::kExtension ) );
+                if ( FileUtil::writeTextFile( setPath, animationSet.saveToString() ) == false )
+                {
+                    SW_LOG_ERROR_ID( "ModelImporter.FailedWriteAnimationSet", "Failed to write animation set %#", setPath.c_str() );
+                    return false;
                 }
                 return true;
             }
@@ -823,7 +849,7 @@ namespace sw::editor
             return false;
         [[maybe_unused]] uint64 rawByteTotal        = 0;
         [[maybe_unused]] uint64 compressedByteTotal = 0;
-        if ( Internal::writeClips( result, rule, sideFolder, rawByteTotal, compressedByteTotal ) == false )
+        if ( Internal::writeClips( assetPaths, result, rule, sourcePath, sideFolder, stem, rawByteTotal, compressedByteTotal ) == false )
             return false;
         SW_LOG_INFO_ID( "ModelImporter.ImportedSkinnedModelTriangles", "Imported skinned model: %# -> %# (%# triangles, %# bones, %# attachments, %# clips, clips %# -> %# bytes)", sourcePath, outputPath,
                         result._mesh._listIndex.size() / 3, result._skeleton.getBoneCount(), result._listAttachment.size(), result._listClip.size(), rawByteTotal,
@@ -865,6 +891,8 @@ namespace sw::editor
     {
         const ModelRawImporter importer{ assetPaths, config };
         AssetImportSummary     summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, editor::findSubsystem<TaskManager>() ); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
+        if ( mode == AssetImportMode::ImportStale )
+            (void)ImportedAssetStore::removeUnreferenced( resourceRoot, summary._listProblem ); // 원본을 고치면 옛 키의 공유 파일이 남는다 — 전체를 다 본 지금 지운다(범위 임포트는 다른 원본의 참조를 몰라 하지 않는다)
         for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( config.getRules(), AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer ) ) )
         {
             summary._listProblem.push_back( "ModelImportConfig: rule " + rule + " matches no model source - its patterns are dead (a moved folder?)" );
@@ -995,6 +1023,10 @@ namespace sw::editor
             hash                  = HashUtil::computeStringHash64( relative.c_str(), relative.size(), false, hash );
             const uint64 fileHash = AssetImportStampUtil::computeFileHash( file );
             hash                  = HashUtil::computeStringHash64( reinterpret_cast<const utf8*>( &fileHash ), sizeof( fileHash ), false, hash );
+            // 옆 폴더 파일이 가리키는 공유 파일도 결과다 — 지우거나 손대면 어긋남이다.
+            string text;
+            if ( ImportedAssetStore::isReferrer( file ) && FileUtil::readTextFile( file, text ) )
+                hash = ImportedAssetStore::mixReferencedFiles( importedMeshPath, text, hash );
         }
         return hash;
     }

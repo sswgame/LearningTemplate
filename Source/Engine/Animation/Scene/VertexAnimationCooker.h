@@ -12,6 +12,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Animation/AnimationSet.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -25,7 +26,7 @@ namespace sw
 
     /**
      * @struct VertexAnimationCookList
-     * @brief 쿠킹 목록 하나(`<이름>.vertexanimation.xml`): `<VertexAnimationCookList mesh skeleton clip_folder><clips><item>클립 이름</item>…</clips></VertexAnimationCookList>`.
+     * @brief 쿠킹 목록 하나(`<이름>.vertexanimation.xml`): `<VertexAnimationCookList mesh skeleton animation_set><clips><item>클립 이름</item>…</clips></VertexAnimationCookList>`.
      * @details 모르는 속성 · 자식 · 없는 메시 · 스켈레톤 · 클립 파일은 오류입니다(`ResourceDataSchemaTest` 가 확인합니다). 루트 모션은 묶지 않고 베이크합니다
      *          (루트 모션을 뽑는 유닛은 쿠킹본을 쓰지 않고 처음 쓸 때 베이크한다).
      */
@@ -47,15 +48,16 @@ namespace sw
         string _meshPath;
         PROPERTY( Name = "skeleton", Required )
         string _skeletonPath;
-        PROPERTY( Name = "clip_folder", Required )
-        string                _clipFolder;
-        vector<hashed_string> _listClip; ///< `<clips><item>` 자식(칸이 아니다)
+        PROPERTY( Name = "animation_set", Required )
+        string                _animationSetPath;
+        AnimationSet          _animationSet; ///< 읽기가 채운다(칸이 아니다)
+        vector<hashed_string> _listClip;     ///< `<clips><item>` 자식(칸이 아니다)
 
         /** @brief XML 을 읽습니다(가리키는 파일이 있는지도 봅니다). 틀리면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 리소스 경로의 파일을 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief 클립 이름의 파일 경로입니다(`<clip_folder>/<소문자>.animclip` — 애니메이터와 같은 규칙). */
+        /** @brief 클립 이름의 파일 경로입니다(셋의 표 — 애니메이터와 같은 규칙). 셋에 없으면 빈 글입니다. */
         string makeClipPath( const hashed_string& clipName ) const;
 
     private:

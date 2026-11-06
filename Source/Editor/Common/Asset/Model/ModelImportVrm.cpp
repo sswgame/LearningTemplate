@@ -12,6 +12,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
+#include "Editor/Common/Asset/Model/ModelImportMaterial.h"
 #include "Editor/Common/Asset/Model/ModelImportUtil.h"
 #include "Editor/Common/Asset/Model/ModelImporter.h"
 #include "Editor/Common/Asset/Model/VrmAvatarImporter.h"
@@ -222,8 +223,14 @@ namespace sw::editor
         const bool bSkinned   = result._bSkinned != SW_FALSE;
         auto       resourceOf = [&]( string_view extension )
         { return assetPaths.toAssetID( FileUtil::joinPath( sideFolder, string( stem ) + string( extension ) ) ); };
-        auto materialOf = [&]( const ModelImportSection& section )
-        { return assetPaths.toAssetID( FileUtil::joinPath( FileUtil::joinPath( sideFolder, ModelImportUtil::kMaterialFolder ), section._fileStem + ".material" ) ); };
+        // 임포트가 쓰는 프리팹은 공유 머티리얼을 바로 가리킨다 — 같은 값의 구간이 머티리얼 객체 하나를 나눠 쓴다(인스턴스 값은 `MaterialInstance` 사본에 있어 섞이지 않는다).
+        bool bMissingMaterial = false;
+        auto materialOf       = [&]( const ModelImportSection& section )
+        {
+            string shared    = ModelImportMaterial::findSharedMaterial( sideFolder, section._fileStem );
+            bMissingMaterial = bMissingMaterial || shared.empty();
+            return shared;
+        };
         const string meshID       = assetPaths.toAssetID( meshPath );
         const string skeletonPath = resourceOf( Skeleton::kExtension );
 
@@ -261,6 +268,11 @@ namespace sw::editor
         if ( VrmRuntimeAssets::hasSpringRig( result._avatar, result._skeleton ) )
             Internal::appendComponent( listComponent, "PoseModifierComponent" ).appendAttribute( "_rigPath", string_view{ resourceOf( RigAsset::kExtension ) } );
 
+        if ( bMissingMaterial )
+        {
+            SW_LOG_ERROR_ID( "ModelImporter.SectionMaterialMissing", "Section prefab of '%#': a section material was not written", meshPath );
+            return false;
+        }
         const string prefabPath = FileUtil::joinPath( sideFolder, string( stem ) + ".prefab.xml" );
         const bool   bWritten   = prefabDocument.saveFile( prefabPath );
         if ( bWritten == false )

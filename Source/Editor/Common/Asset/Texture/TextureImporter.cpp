@@ -562,7 +562,18 @@ namespace sw::editor
         TaskManager* const       pTaskManager = editor::findSubsystem<TaskManager>(); // 선택: 없으면 이 스레드가 직렬로 임포트한다(계약)
         const TextureRawImporter importer{ config, pTaskManager };
         AssetImportSummary       summary = AssetImportStampUtil::importAll( resourceRoot, importer, mode, pTaskManager );
-        for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( config.getRules(), AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer ) ) )
+        // 공유 원본이 쓰는 규칙은 패턴에 맞는 파일이 없어도(모델 옆 자리로 골랐다) 살아 있다.
+        const vector<string>      listSourcePath = AssetImportStampUtil::collectSourceAssetPaths( resourceRoot, importer );
+        vector<TextureImportRule> listCheckedRule;
+        for ( const TextureImportRule& rule : config.getRules() )
+        {
+            const string ruleName = StringUtil::toLower( rule._name.c_str() );
+            const bool   bShared  = VectorUtil::containsIf( listSourcePath, [&ruleName]( const string& path )
+               { return TextureImportConfig::findSharedRuleName( path ) == ruleName; } );
+            if ( bShared == false )
+                listCheckedRule.push_back( rule );
+        }
+        for ( const string& rule : AssetImportRuleUtil::findRulesMatchingNothing( listCheckedRule, listSourcePath ) )
         {
             summary._listProblem.push_back( "TextureImportConfig: rule " + rule + " matches no texture source - its patterns are dead (a moved folder?)" );
         }

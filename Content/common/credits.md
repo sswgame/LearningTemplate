@@ -47,7 +47,7 @@
   원본은 `models_raw/` · `textures_raw/` 에 두고, 엔진이 읽는 `models/*.mesh` · `textures/*.dds` 는 `App --import-models` · `App --import-textures` 가 만든다(스탬프는 각 폴더의 `import.stamp`).
   활 · 화살은 한 장의 팔레트 텍스처(`blaster_colormap`)에서 색을 읽는다.
 - KayKit 캐릭터는 스킨드 모델이라 `App --import-models` 가 `models/kaykit/<이름>.mesh` 와 옆 폴더 `models/kaykit/<이름>/`(스켈레톤 `<이름>.skeleton.xml` ·
-  본에 붙은 무기 · 투구 · 망토 `parts/*.mesh` · 클립 `clips/*.animclip`)를 만든다. 파일 이름은 원본의 `kaykit_` 접두어를 뗀 것이다. 원본 GLB 에 든 아틀라스
+  본에 붙은 무기 · 투구 · 망토 `parts/*.mesh` · 클립 표 `<이름>.animset.xml`)를 만든다. 파일 이름은 원본의 `kaykit_` 접두어를 뗀 것이다. 원본 GLB 에 든 아틀라스
   텍스처(`knight_texture` · `rogue_texture` · `skeleton_texture`)는 `textures_raw/kaykit_knight.png` · `kaykit_rogue.png` · `kaykit_skeleton.png` 로 꺼냈다(바이트 그대로). CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Kay Lousberg.
 - Poly Haven 은 모든 에셋이 CC0 다(<https://polyhaven.com/license> — "Our assets are all licensed as CC0, which is effectively Public Domain"). 원본 바이너리(JPG · bin)는 Git LFS 에 둔다(`.gitattributes`).
   모델은 `App --import-models` 가 `models/polyhaven/<에셋>.mesh` 와 PBR 머티리얼 `models/polyhaven/<에셋>/materials/*.material`(견본 `engine/materials/pbrmaterial.material`)을 만든다. CC0 는 표기 의무가 없지만 고마움을 적어 둡니다 — Poly Haven 과 위 만든 이들.

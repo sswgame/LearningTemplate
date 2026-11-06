@@ -158,6 +158,14 @@ namespace sw::editor
 
         /** @brief 등록된 규칙 목록을 반환합니다. */
         const vector<TextureImportRule>& getRules() const { return _listRule; }
+        /** @brief 공유 원본 폴더 이름입니다(`textures_raw/_shared/<규칙>/`). 모델이 꺼낸 내장 이미지가 여기에 내용 키 이름으로 한 벌만 있다. */
+        static constexpr string_view kSharedFolderName = "_shared";
+        /** @brief 규칙이 없을 때(설정 파일 없음)의 공유 원본 폴더 이름입니다. */
+        static constexpr string_view kSharedDefaultRuleName = "default";
+        /** @brief 규칙 @p ruleName 으로 임포트할 공유 원본의 경로입니다(`<x>/textures_raw/_shared/<소문자 규칙>/<키><확장자>`). */
+        static string makeSharedSourcePath( string_view domainFolder, string_view ruleName, string_view key, string_view extension );
+        /** @brief @p relativePath 가 공유 원본이면 폴더에 적힌 규칙 이름(소문자)을, 아니면 빈 글을 돌려줍니다. */
+        static string findSharedRuleName( string_view relativePath );
 
         /**
          * @brief 이 규칙이 무엇에나 매칭되는지 확인합니다. 네 목록이 모두 비어 있으면 매칭됩니다.

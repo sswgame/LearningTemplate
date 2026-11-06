@@ -22,7 +22,7 @@
 			<SkeletalAnimatorComponent _componentName="SkeletalAnimatorComponent"
 			                           _bActive="true"
 			                           _animationGraphPath="common/data/anim/ubc_townsfolk.animgraph.xml"
-			                           _clipFolder="common/models/quaternius/animations/ual1_standard/clips"
+			                           _animationSetPath="common/models/quaternius/animations/ual1_standard/ual1_standard.animset.xml"
 			                           _initialState="Locomotion"
 			                           _currentState=""
 			                           _stateTime="0"

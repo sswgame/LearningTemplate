@@ -6,6 +6,6 @@
                  skeleton="common/models/kaykit/knight/knight.skeleton.xml"
                  items="common/data/items.xml"
                  appearance="common/data/appearance"
-                 clipFolder="common/models/kaykit/knight/clips"
+                 animationSet="common/models/kaykit/knight/knight.animset.xml"
                  previewPreset="Adventurer"
                  rig="common/rigs/player_body.rig.xml"/>

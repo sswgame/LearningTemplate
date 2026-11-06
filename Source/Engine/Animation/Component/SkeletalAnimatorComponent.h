@@ -26,6 +26,7 @@
 namespace sw
 {
     class AnimationClip;
+    class AnimationSet;
     class IAnimationNotifyListener;
     class IRootMotionModifier;
     class SkeletalAnimatorComponent;
@@ -146,8 +147,8 @@ namespace sw
     /**
      * @class SkeletalAnimatorComponent
      * @brief 같은 오브젝트의 `SkeletalMeshComponent`(유닛)에 단계 작업으로 붙어 포즈를 냅니다. 자기 onTick 에서 평가하지 않습니다.
-     * @details - **클립**: 상태 이름이 곧 클립 이름이고, 파일은 `_clipFolder/<소문자 이름>.animclip` 입니다(임포트가 그렇게 씁니다).
-     *            이름에 '/' 가 있으면 다른 묶음의 콘텐츠 경로(확장자 없이)다 — 한 그래프가 두 클립 묶음(UAL1 · UAL2)을 함께 쓴다.
+     * @details - **클립**: 상태 이름이 곧 클립 이름이고, 파일은 `_animationSetPath` 의 셋이 정합니다(`AnimationSet` — 임포트가 모델 옆에 쓰고, 묶음을 섞는 셋은 손으로 쓴다).
+     *            이름에 '/' 가 있으면 클립 파일의 콘텐츠 경로(확장자 없이)다 — 미리보기 창이 고른 파일 하나를 재생할 때 쓴다.
      *          - **그래프**: `_animationGraphPath` 의 노드가 상태, 링크가 전이입니다(`AnimationGraphPlayer`). 그래프가 없으면 `play( 이름 )` 이 바로 재생합니다.
      *          - **단계**: 시간(상태 기계, 알림, 루트 모션, 커브. 매 프레임) → 기본 포즈(샘플, 크로스페이드, 레이어, 시퀀서 덮어쓰기. LOD 가
      *            허락한 프레임) → 게임 스레드에서 루트 모션을 오브젝트 트랜스폼에 씁니다.
@@ -179,9 +180,9 @@ namespace sw
         bool play( const hashed_string& stateName, bool bLoop = true, float32 blendSeconds = -1.0f );
         FUNCTION( Category = "Playback", DisplayName = "Stop", CallInEditor )
         void stop();
-        /** @brief 클립 폴더를 바꿉니다(읽어 둔 클립은 비웁니다). */
-        void          setClipFolder( string_view folder );
-        const string& getClipFolder() const { return _clipFolder; }
+        /** @brief 애니메이션 셋을 바꿉니다(읽어 둔 클립은 비웁니다). */
+        void          setAnimationSetPath( string_view path );
+        const string& getAnimationSetPath() const { return _animationSetPath; }
         /** @brief 시작 상태를 바꿉니다(다음 시작부터). */
         void setInitialState( string_view stateName ) { _initialState = string{ stateName }; }
         /** @brief 시작 상태를 이 시각(초)부터 재생합니다(다음 시작부터 적용하며, 군중이 모두 같은 프레임으로 시작하지 않게 합니다). */
@@ -198,7 +199,7 @@ namespace sw
         /**
          * @brief 시작 때 요청한 클립(그래프가 이름 붙인 것과 시작 상태)을 아직 읽는 중이면 true 입니다. 그동안 유닛은 그리지 않고(캐릭터는 애니메이션이 준비된 뒤
          *        나타난다), 다 읽히면 그래프를 짓고 미뤄 둔 시작 재생을 합니다(씬 프레임의 도착 단계, `SkeletalMeshComponent::pollReadyToAppear`).
-         * @details 시작(`onBeginPlay`)만 비동기다 — 스폰이 디스크를 기다리지 않게. 코드가 부르는 세터(`setAnimationGraphPath` · `setClipFolder`)와 `play` 의 그래프 밖 클립은
+         * @details 시작(`onBeginPlay`)만 비동기다 — 스폰이 디스크를 기다리지 않게. 코드가 부르는 세터(`setAnimationGraphPath` · `setAnimationSetPath`)와 `play` 의 그래프 밖 클립은
          *          같은 로드 블록을 그 자리에서 기다린다(동기 API).
          */
         bool isWaitingForAnimationAssets() const { return _bClipsPending == SW_TRUE; }
@@ -397,8 +398,10 @@ namespace sw
         void advanceTime( const AnimationFrameContext& context );
         /** @brief 기본 포즈 단계입니다. */
         void populateBasePose( SkeletalMeshComponent& unit );
-        /** @brief 이름에서 파일 경로를 만듭니다(`_clipFolder/<소문자>.animclip`). */
+        /** @brief 이름에서 파일 경로를 찾습니다(셋의 표, 이름에 '/' 가 있으면 그 경로). 셋에 없으면 빈 글입니다 — 노드 이름이 클립이 아닌 상태가 있다. */
         string makeClipPath( const hashed_string& clipName ) const;
+        /** @brief `_animationSetPath` 의 셋을 읽어 둡니다(게임 스레드, 시작 · 그래프 읽기 · 경로 변경). 비었으면 놓습니다. */
+        void refreshAnimationSet();
         /** @brief 이번 프레임의 알림을 받는 쪽에 넘깁니다(게임 스레드). */
         void dispatchNotifies();
         /** @brief 루트 모션을 오브젝트에 옮깁니다(게임 스레드). */
@@ -406,8 +409,8 @@ namespace sw
 
         PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "State machine graph; nodes name clips" )
         string _animationGraphPath;
-        PROPERTY( Category = "Animation", DisplayName = "Clip Folder", Tooltip = "Folder holding <clip>.animclip files (lowercase names)" )
-        string _clipFolder;
+        PROPERTY( Category = "Animation", DisplayName = "Animation Set", AssetPath, Tooltip = "Name to clip table (*.animset.xml); the import writes one beside each model" )
+        string _animationSetPath;
         PROPERTY( Category = "Animation", DisplayName = "Initial State", Tooltip = "State (or clip) played at begin play; empty uses the graph entry node" )
         string _initialState;
         PROPERTY( Category = "Animation", DisplayName = "Current State", Tooltip = "Currently playing state (kept across hot reload)", ReadOnly )
@@ -423,12 +426,13 @@ namespace sw
         PROPERTY( Category = "Sync", DisplayName = "Sync Weight", Tooltip = "Leader is the member with the largest weight", Min = 0.0 )
         float32 _syncWeight;
 
-        SkeletalAnimatorBinding    _binding;
-        SkeletalAnimatorClipSource _clipSource;          ///< 상태 이름을 블렌드 스페이스 상태 · 클립으로 해석한다(`_graphPlayer` 가 빌린다)
-        Subscription               _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
-        AnimationGraphAsset        _graph;
-        AnimationGraphPlayer       _graphPlayer;
-        AnimationParameterSet      _parameters;
+        SkeletalAnimatorBinding        _binding;
+        SkeletalAnimatorClipSource     _clipSource;          ///< 상태 이름을 블렌드 스페이스 상태 · 클립으로 해석한다(`_graphPlayer` 가 빌린다)
+        Subscription                   _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)
+        AnimationGraphAsset            _graph;
+        AnimationGraphPlayer           _graphPlayer;
+        AnimationParameterSet          _parameters;
+        shared_ptr<const AnimationSet> _animationSet; ///< `_animationSetPath` 의 셋(`refreshAnimationSet`)
         /** @brief 시작 때 요청한 클립 하나입니다. */
         struct ClipLoad
         {

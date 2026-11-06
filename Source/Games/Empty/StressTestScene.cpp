@@ -813,7 +813,7 @@ namespace sw
             pMesh->resolveRenderAssets();
             pMesh->setLocalPosition( position );
             pMesh->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
-            pAnimator->setClipFolder( _settings._knightClips.c_str() );
+            pAnimator->setAnimationSetPath( _settings._knightClips.c_str() );
             pAnimator->setInitialState( ( index % 2u ) == 0 ? _settings._characterEvenClip.c_str() : _settings._characterOddClip.c_str() );
             if ( gv_stressTestCharacterStagger != 0 )
             {
@@ -1019,7 +1019,7 @@ namespace sw
                 SkeletalAnimatorComponent* pAnimator = pObject->addComponent<SkeletalAnimatorComponent>();
                 if ( pAnimator != nullptr )
                 {
-                    pAnimator->setClipFolder( _settings._faceClips.c_str() );
+                    pAnimator->setAnimationSetPath( _settings._faceClips.c_str() );
                     pAnimator->setInitialState( _settings._faceTalkClip.c_str() );
                 }
             }
@@ -1867,7 +1867,7 @@ namespace sw
         const float32 x = origin + static_cast<float32>( index ) * _settings._rigSpacing;
         pBody->setLocalPosition( float3{ x, MathUtil::tan( _settings._rigSlopeAngle ) * x, 0.0f } );
         pBody->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
-        pAnimator->setClipFolder( _settings._knightClips.c_str() );
+        pAnimator->setAnimationSetPath( _settings._knightClips.c_str() );
         pAnimator->setInitialState( _settings._rigAimState.c_str() );
         _listRigBody.push_back( TComponentHandle<SkeletalMeshComponent>{ pBody } );
         _listBenchExtra.push_back( pBody->getHandle() );

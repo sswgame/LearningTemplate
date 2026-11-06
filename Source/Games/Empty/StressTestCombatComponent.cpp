@@ -73,7 +73,7 @@ namespace sw
         pUnit->setLocalPosition( position );
         // KayKit 모델은 +Z 방향을 봅니다. 카메라(-Z 쪽)를 보도록 돌립니다.
         pUnit->setLocalRotation( float3{ 0.0f, MathUtil::kPi, 0.0f } );
-        pAnimator->setClipFolder( settings._combatEnemyClips );
+        pAnimator->setAnimationSetPath( settings._combatEnemyClips );
         pAnimator->setInitialState( "Walking_A" );
         pNotify->setNotifyTablePath( settings._combatEnemyData + ".notifies.xml" );
         pSockets->setSocketSetPath( settings._combatEnemyData + ".sockets.xml" );

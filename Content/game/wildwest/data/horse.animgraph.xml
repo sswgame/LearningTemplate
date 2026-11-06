@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   WildWest 말의 걸음새 그래프 — MountMovementComponent 가 애니메이터 Float 파라미터 Gait(0 Idle · 1 Walk · 4 Run)를 매 프레임 쓰고,
-  블렌드 스페이스 하나가 그 값으로 걸음새 클립(models/horse/clips)을 섞는다. 걸음새가 바뀔 때 두 클립이 값 사이에서 섞여 이어진다.
+  블렌드 스페이스 하나가 그 값으로 걸음새 클립(models/horse/horse.animset.xml)을 섞는다. 걸음새가 바뀔 때 두 클립이 값 사이에서 섞여 이어진다.
   표본 범위(0 ~ 4)를 벗어난 값은 가장자리 표본으로 잘린다. 말 모델(Quaternius Farm Animals, CC0)에는 Trot · Canter 가 없어
   Gait 2 · 3 은 Walk 와 Run 사이에서 섞인다. 클립 이름은 임포트가 붙인 접두어(armature_)를 가진다.
 -->

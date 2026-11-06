@@ -68,11 +68,9 @@ namespace sw::editor
 
         /**
          * @brief 머티리얼 구간의 머티리얼(VRM 은 툰, 일반 glTF 는 PBR)과 그 텍스처 원본을 씁니다. 구간 자체는 본 메시(`<y>.mesh`)의 `SECT` 덩어리다 — 구간 메시를 따로 쓰지 않는다.
-         * @details 머티리얼은 `<옆 폴더>/materials/<머티리얼>.material` 에 쓴다(엔진 툰 · PBR 머티리얼이 틀이다). 같은 머티리얼의 구간 여럿(1인칭 가시성이 다른)은 파일 하나를 쓴다.
-         *          PBR 구간의 텍스처는 `writePbrMaterial` 과 같은 규칙이다. 아래는 툰 구간의 규칙이다.
-         *          텍스처 원본(내장 이미지 바이트 그대로)은 `<x>/textures_raw/<y>/<이미지>.png` 에 꺼내 두며, 바이트가 같으면 건드리지 않는다.
-         *          머티리얼은 텍스처 임포트(`App --import-textures`)가 만들 `<x>/textures/<y>/<이미지>.dds` 를 가리킨다.
-         *          원본은 텍스처 임포트의 스탬프가 지킨다.
+         * @details 머티리얼 값은 공유 저장소에 한 벌(`writeSharedMaterial`)이고 슬롯은 `<옆 폴더>/materials/<머티리얼>.material` 한 줄이다(엔진 툰 · PBR 머티리얼이 부모다). 같은 머티리얼의 구간 여럿(1인칭 가시성이 다른)은 파일 하나를 쓴다.
+         *          PBR 구간의 텍스처는 `writePbrMaterial` 과 같은 규칙이다. 내장 이미지는 공유 원본으로 꺼낸다(`writeEmbeddedImage`).
+         *          머티리얼은 텍스처 임포트(`App --import-textures`)가 만들 DDS 를 가리킨다. 원본은 텍스처 임포트의 스탬프가 지킨다.
          */
         [[nodiscard]] static bool writeMaterialSections( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
 
@@ -85,16 +83,45 @@ namespace sw::editor
         /** @brief 기본색 텍스처가 있는 첫 금속도 · 거칠기 머티리얼입니다(구간 없는 메시가 PBR 머티리얼로 옮기는 것). 없으면 nullptr 입니다. */
         [[nodiscard]] static const cgltf_material* findTexturedPbrMaterial( const cgltf_data& data );
         /**
-         * @brief 읽은 PBR 머티리얼의 텍스처 원본(`<x>/textures_raw/<y>/<이름>_albedo|_normal|_orm.<확장자>`)과 머티리얼(`<옆 폴더>/materials/<이름>.material`)을 씁니다.
-         * @details 텍스처 이름 꼬리가 텍스처 임포트 규칙을 고른다(`_normal` → BC5 선형, `_orm` → 선형). 머티리얼은 엔진 PBR 견본(`EngineDefaultAssets::_pbrMaterialTemplate`)에 값을 채운다.
+         * @brief 읽은 PBR 머티리얼의 내장 텍스처 원본(`writeEmbeddedImage`)과 머티리얼(`writeSharedMaterial`)을 씁니다.
+         * @details 텍스처 이름 꼬리가 텍스처 임포트 규칙을 고른다(`_normal` → BC5 선형, `_orm` → 선형). 머티리얼은 엔진 PBR 견본(`EngineDefaultAssets::_pbrMaterialTemplate`)을 부모로 다른 칸만 적는다.
          */
         [[nodiscard]] static bool writePbrMaterial( const AssetPaths& assetPaths, const ModelImportResult& result, string_view sourcePath, string_view sideFolder );
         /** @brief glTF 머티리얼 하나를 PBR 머티리얼 값으로 읽습니다(@p rawName 이 머티리얼 · 텍스처 파일 이름의 바탕이다). 바깥 이미지 파일을 못 읽으면 false 입니다. */
         [[nodiscard]] static bool readPbrMaterialValues( const cgltf_material& material, const string& rawName, string_view sourcePath, ModelImportPbrMaterial& outPbr );
-        /** @brief PBR 머티리얼 하나의 텍스처 원본과 머티리얼 파일(`<옆 폴더>/materials/<@p fileStem>.material`)을 씁니다(`writePbrMaterial` 의 몸). */
+        /** @brief PBR 머티리얼 하나의 텍스처 원본과 머티리얼(슬롯 `<옆 폴더>/materials/<@p fileStem>.material` + 공유 값)을 씁니다(`writePbrMaterial` 의 몸). */
         [[nodiscard]] static bool writePbrMaterialFile( const AssetPaths& assetPaths, const ModelImportPbrMaterial& pbr, string_view fileStem, string_view sourcePath, string_view sideFolder );
         /** @brief glTF 이미지 하나의 원본 바이트를 읽습니다(내장은 그대로, 바깥 파일은 원본 옆에서). 바깥 파일을 못 읽으면 오류를 남기고 false 입니다. */
         [[nodiscard]] static bool readImageBytes( const cgltf_image& image, string_view sourcePath, ModelImportTexture& outTexture );
+
+        /** @brief 공유 머티리얼의 저장소 종류 폴더입니다(`ImportedAssetStore`). */
+        static constexpr string_view kSharedMaterialKind = "materials";
+
+        /** @brief 공유 머티리얼 한 벌입니다. */
+        struct SharedMaterialText
+        {
+            string _key;  ///< 이름을 뺀 내용의 키이자 파일 이름 · 머티리얼 이름
+            string _text; ///< 부모(견본)와 다른 칸만 적은 XML
+        };
+
+        /**
+         * @brief 견본 @p templateText(경로 @p templatePath)에 값을 채운 @p fullText 를 견본과 다른 칸만 남긴 공유 머티리얼로 줄입니다(`MaterialXML::makeParentDelta`). 값까지 같으면 이름이 달라도 같은 키입니다.
+         * @details 두 글은 같은 견본을 읽어 고친 것이라 안 고친 속성의 글자가 같다. 칸 형식은 적지 않는다 — 셰이더 리플렉션이 정한다.
+         * @return 글을 읽지 못하면 false 입니다.
+         */
+        [[nodiscard]] static bool makeSharedMaterialText( string_view fullText, string_view templateText, string_view templatePath, SharedMaterialText& outShared );
+        /** @brief 공유 머티리얼을 가리키는 슬롯 파일 한 줄(`<MaterialDesc formatVersion name parent/>`)입니다. */
+        [[nodiscard]] static string makeSlotMaterialText( string_view fileStem, string_view sharedAssetID );
+        /** @brief 공유 머티리얼(`<x>/models/_shared/materials/<키>.material`)과 슬롯 파일을 씁니다. 원본이 `models_raw/` 아래가 아니거나 쓰지 못하면 false 입니다. */
+        [[nodiscard]] static bool writeSharedMaterial( const AssetPaths& assetPaths, string_view fullText, string_view templateText, string_view templatePath, string_view fileStem, string_view sourcePath, string_view sideFolder );
+        /** @brief 슬롯 파일이 가리키는 공유 머티리얼의 리소스 경로입니다(임포트가 쓰는 프리팹은 공유 파일을 바로 가리킨다). 읽지 못하면 빈 글입니다. */
+        [[nodiscard]] static string findSharedMaterial( string_view sideFolder, string_view fileStem );
+        /**
+         * @brief 내장 이미지를 공유 원본(`<x>/textures_raw/_shared/<규칙>/<키>.<확장자>`)으로 꺼내고 텍스처 임포트가 만들 DDS 의 리소스 경로를 @p outAssetPath 에 담습니다.
+         * @details 모델마다 꺼내면 같은 아틀라스를 쓰는 모델 수만큼 DDS 가 생긴다(KayKit Dungeon 19 벌). 규칙은 폴더 이름에 남아 설정이 다르면 다른 원본이다. 바이트가 같으면 건드리지 않는다.
+         * @return 임포트 설정이 깨졌거나 규칙이 겹치거나 쓰지 못하면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool writeEmbeddedImage( const AssetPaths& assetPaths, const ModelImportTexture& texture, string_view rawTextureFolder, string& outAssetPath );
 
         /**
          * @brief 원본 경로에서 원본 텍스처 폴더를 구합니다(`<x>/models_raw/<y>.vrm` → `<x>/textures_raw/<y>`). `models_raw/` 구간이 없으면 빈 문자열입니다.

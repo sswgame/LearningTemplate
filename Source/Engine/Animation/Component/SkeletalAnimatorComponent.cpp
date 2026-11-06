@@ -11,6 +11,7 @@
 
 #include "Engine/Animation/AnimationAssetCache.h"
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Notify/AnimationNotifyListener.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
@@ -187,7 +188,7 @@ namespace sw
 
     SkeletalAnimatorComponent::SkeletalAnimatorComponent()
         : _animationGraphPath{}
-        , _clipFolder{}
+        , _animationSetPath{}
         , _initialState{}
         , _currentState{}
         , _stateTime{ 0.0f }
@@ -200,6 +201,7 @@ namespace sw
         , _graph{}
         , _graphPlayer{}
         , _parameters{}
+        , _animationSet{}
         , _mapClip{}
         , _listClipLoad{}
         , _deferredPlayState{}
@@ -296,8 +298,16 @@ namespace sw
             _graphPlayer.getPlayer().setCurrentTime( _initialTime );
     }
 
+    void SkeletalAnimatorComponent::refreshAnimationSet()
+    {
+        _animationSet.reset();
+        if ( _animationSetPath.empty() == false )
+            _animationSet = SharedAssetCache<AnimationSet>::acquire( _animationSetPath ); // 못 읽으면 읽는 쪽이 오류를 남겼다 — 클립을 찾는 쪽도 이름마다 오류를 남긴다
+    }
+
     void SkeletalAnimatorComponent::loadGraphForBeginPlay()
     {
+        refreshAnimationSet();
         _graph = AnimationGraphAsset{};
         if ( _animationGraphPath.empty() == false && _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
             SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphCouldNot", "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
@@ -320,9 +330,12 @@ namespace sw
             if ( existing._clipName == clipName )
                 return;
         }
+        const string clipPath = makeClipPath( clipName );
+        if ( clipPath.empty() )
+            return; // 셋에 없는 이름 — 노드 이름이 클립이 아닌 상태가 있다. 재생할 때 못 찾으면 play 가 오류를 남긴다
         ClipLoad& added = _listClipLoad.emplace_back();
         added._clipName = clipName;
-        added._load     = SharedAssetCache<AnimationClip>::request( makeClipPath( clipName ) );
+        added._load     = SharedAssetCache<AnimationClip>::request( clipPath );
     }
 
     void SkeletalAnimatorComponent::requestClipLoads()
@@ -414,11 +427,19 @@ namespace sw
     {
         Component::onPropertyChanged( propertyName );
         static const hashed_string s_graphPathName( "_animationGraphPath" );
+        static const hashed_string s_setPathName( "_animationSetPath" );
         static const hashed_string s_blendName( "_blendSeconds" );
         if ( propertyName == s_graphPathName )
         {
             const hashed_string state = _graphPlayer.getCurrentStateName();
             loadGraph();
+            (void)play( state.empty() ? hashed_string( _initialState ) : state, true, 0.0f );
+        }
+        else if ( propertyName == s_setPathName )
+        {
+            const hashed_string state = _graphPlayer.getCurrentStateName();
+            const string        path  = _animationSetPath;
+            setAnimationSetPath( path );
             (void)play( state.empty() ? hashed_string( _initialState ) : state, true, 0.0f );
         }
         else if ( propertyName == s_blendName )
@@ -448,7 +469,8 @@ namespace sw
         const bool bWasPending = _bClipsPending == SW_TRUE;
         _listClipLoad.clear();
         _bClipsPending = SW_FALSE;
-        _graph         = AnimationGraphAsset{};
+        refreshAnimationSet();
+        _graph = AnimationGraphAsset{};
         if ( _animationGraphPath.empty() == false && _graph.loadFromFile( AssetID{ _animationGraphPath } ) == false )
             SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphCouldNot", "Animation graph '%#' could not be loaded", _animationGraphPath.c_str() );
         applyGraphPlayables();
@@ -465,7 +487,7 @@ namespace sw
             _graphPlayer.setGraph( _graph._listNode.empty() ? nullptr : &_graph );
             return;
         }
-        // 빠진 것만 빼고 돌지 않는다 — 파일을 못 읽은 그래프와 같이 플레이어에 그래프를 걸지 않는다. 데이터는 남겨 클립 폴더를 바꾸면 다시 맞춰 본다.
+        // 빠진 것만 빼고 돌지 않는다 — 파일을 못 읽은 그래프와 같이 플레이어에 그래프를 걸지 않는다. 데이터는 남겨 셋을 바꾸면 다시 맞춰 본다.
         SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphNotUsed", "Animation graph '%#' is not used - it names what SkeletalAnimatorComponent cannot play (errors above)", _animationGraphPath.c_str() );
         _listBlendSpace.clear();
         _listGraphLayer.clear();
@@ -495,7 +517,7 @@ namespace sw
             {
                 const bool bLoaded = preloadClip( sample._clipName );
                 if ( bLoaded == false )
-                    SW_LOG_ERROR_ID( "SkeletalAnimator.BlendSpaceStateSample", "Blend space state '%#' sample clip '%#' was not found in '%#'", node._name.c_str(), sample._clipName.c_str(), _clipFolder.c_str() );
+                    SW_LOG_ERROR_ID( "SkeletalAnimator.BlendSpaceStateSample", "Blend space state '%#' sample clip '%#' was not found in '%#'", node._name.c_str(), sample._clipName.c_str(), _animationSetPath.c_str() );
                 listClip.push_back( bLoaded ? findClip( sample._clipName ) : nullptr );
             }
             // 표본 클립이 하나라도 없으면 그래프를 쓰지 않는다 — 없는 표본을 빼고 섞으면 데이터가 말한 것과 다른 포즈가 된다.
@@ -519,7 +541,7 @@ namespace sw
         {
             if ( preloadClip( def._clipName ) == false )
             {
-                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphLayerClip", "Animation graph layer '%#' clip '%#' was not found in '%#'", def._name.c_str(), def._clipName.c_str(), _clipFolder.c_str() );
+                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationGraphLayerClip", "Animation graph layer '%#' clip '%#' was not found in '%#'", def._name.c_str(), def._clipName.c_str(), _animationSetPath.c_str() );
                 bPlayable = false;
                 continue;
             }
@@ -538,14 +560,15 @@ namespace sw
         return bPlayable;
     }
 
-    void SkeletalAnimatorComponent::setClipFolder( string_view folder )
+    void SkeletalAnimatorComponent::setAnimationSetPath( string_view path )
     {
         // 플레이어가 빌린 클립 포인터를 먼저 놓고 표를 비운다.
         _graphPlayer.stop();
-        _clipFolder = string{ folder };
+        _animationSetPath = string{ path };
+        refreshAnimationSet();
         _mapClip.clear();
         _mapTrackToBone.clear();
-        // 시작 때 요청해 둔 클립은 옛 폴더의 것이다 — 버리고 새 폴더에서 그 자리에서 읽는다(동기 API).
+        // 시작 때 요청해 둔 클립은 옛 셋의 것이다 — 버리고 새 셋에서 그 자리에서 읽는다(동기 API).
         const bool bWasPending = _bClipsPending == SW_TRUE;
         _listClipLoad.clear();
         _bClipsPending = SW_FALSE;
@@ -562,10 +585,11 @@ namespace sw
 
     string SkeletalAnimatorComponent::makeClipPath( const hashed_string& clipName ) const
     {
-        const string fileName = StringUtil::toLower( clipName.c_str() ) + string( AnimationClip::kExtension );
-        // '/' 가 든 이름은 다른 클립 묶음의 콘텐츠 경로다(언리얼 애님 그래프가 시퀀스 에셋을 경로로 가리키는 것과 같다) — 이 애니메이터의 폴더를 붙이지 않는다.
-        const bool bContentPath = StringUtil::contains( clipName.c_str(), "/" );
-        return _clipFolder.empty() || bContentPath ? fileName : FileUtil::joinPath( _clipFolder, fileName );
+        // '/' 가 든 이름은 클립 파일의 콘텐츠 경로다 — 셋을 거치지 않는다(미리보기 창이 고른 파일).
+        if ( StringUtil::contains( clipName.c_str(), "/" ) )
+            return StringUtil::toLower( clipName.c_str() ) + string( AnimationClip::kExtension );
+        const string* const pClipPath = _animationSet != nullptr ? _animationSet->findClipPath( clipName ) : nullptr;
+        return pClipPath != nullptr ? *pClipPath : string{};
     }
 
     bool SkeletalAnimatorComponent::preloadClip( const hashed_string& clipName )
@@ -574,7 +598,12 @@ namespace sw
             return false;
         if ( _mapClip.find( clipName ) != _mapClip.end() )
             return true;
-        shared_ptr<const AnimationClip> clip = SharedAssetCache<AnimationClip>::acquire( makeClipPath( clipName ) );
+        if ( _animationSet == nullptr && _animationSetPath.empty() == false )
+            refreshAnimationSet(); // 시작 전에 부르는 코드(`play` · `addLayer`)
+        const string clipPath = makeClipPath( clipName );
+        if ( clipPath.empty() )
+            return false;
+        shared_ptr<const AnimationClip> clip = SharedAssetCache<AnimationClip>::acquire( clipPath );
         if ( clip == nullptr )
             return false;
         _mapClip.emplace( clipName, std::move( clip ) );
@@ -608,7 +637,7 @@ namespace sw
         _currentState     = _graphPlayer.getCurrentStateName().c_str();
         _stateTime        = 0.0f;
         if ( bFound == false && stateName.empty() == false )
-            SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationClipNotFound", "Animation clip '%#' was not found in '%#'", stateName.c_str(), _clipFolder.c_str() );
+            SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationClipNotFound", "Animation clip '%#' was not found in '%#'", stateName.c_str(), _animationSetPath.c_str() );
         if ( _pUnit != nullptr )
             _pUnit->markPoseDirty();
         return bFound;
@@ -650,7 +679,7 @@ namespace sw
     {
         if ( preloadClip( desc._clipName ) == false )
         {
-            SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationLayerClipNot", "Animation layer clip '%#' was not found in '%#'", desc._clipName.c_str(), _clipFolder.c_str() );
+            SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationLayerClipNot", "Animation layer clip '%#' was not found in '%#'", desc._clipName.c_str(), _animationSetPath.c_str() );
             return -1;
         }
         LayerState layer{};

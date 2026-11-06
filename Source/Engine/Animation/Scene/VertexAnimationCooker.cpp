@@ -90,11 +90,14 @@ namespace sw
             SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListMesh", "Vertex animation list '%#': mesh '%#' or skeleton '%#' does not exist", sourceLabel, _meshPath.c_str(), _skeletonPath.c_str() );
             return false;
         }
+        if ( _animationSet.loadFromAsset( AssetID{ _animationSetPath } ) == false )
+            return false; // 셋이 까닭을 남겼다
         for ( const hashed_string& clipName : _listClip )
         {
-            if ( AssetIO::hasAsset( AssetID{ makeClipPath( clipName ) } ) == false )
+            const string clipPath = makeClipPath( clipName );
+            if ( clipPath.empty() || AssetIO::hasAsset( AssetID{ clipPath } ) == false )
             {
-                SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListClip", "Vertex animation list '%#': clip '%#' does not exist in '%#'", sourceLabel, clipName.c_str(), _clipFolder.c_str() );
+                SW_LOG_ERROR_ID( "VertexAnimationCooker.VertexAnimationListClip", "Vertex animation list '%#': clip '%#' does not exist in '%#'", sourceLabel, clipName.c_str(), _animationSetPath.c_str() );
                 return false;
             }
         }
@@ -103,8 +106,8 @@ namespace sw
 
     string VertexAnimationCookList::makeClipPath( const hashed_string& clipName ) const
     {
-        const string fileName = StringUtil::toLower( clipName.c_str() ) + string( AnimationClip::kExtension );
-        return _clipFolder.empty() ? fileName : FileUtil::joinPath( _clipFolder, fileName );
+        const string* const pClipPath = _animationSet.findClipPath( clipName );
+        return pClipPath != nullptr ? *pClipPath : string{};
     }
 
     bool VertexAnimationCooker::cookClip( const VertexAnimationCookList& list, const hashed_string& clipName, const AbsolutePath& outputPath, float32 framesPerSecond )

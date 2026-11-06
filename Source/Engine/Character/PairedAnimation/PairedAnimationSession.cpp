@@ -206,7 +206,7 @@ namespace sw
         const AnimationClip* pClip = pAnimator->preloadClip( roleDef._clip ) ? pAnimator->findClip( roleDef._clip ) : nullptr;
         if ( pClip == nullptr )
         {
-            SW_LOG_ERROR_ID( "PairedAnimation.RoleClipNotFound", "'%#': role '%#' clip '%#' was not found in '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._clip.c_str(), pAnimator->getClipFolder().c_str() );
+            SW_LOG_ERROR_ID( "PairedAnimation.RoleClipNotFound", "'%#': role '%#' clip '%#' was not found in '%#'", ownerName.c_str(), roleDef._name.c_str(), roleDef._clip.c_str(), pAnimator->getAnimationSetPath().c_str() );
             return PairedAnimationStartResult::ClipNotFound;
         }
         role._pClip       = pClip;

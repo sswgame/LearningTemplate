@@ -1,7 +1,7 @@
 <Prefab formatVersion="0" _base="game/shooter3d/prefabs/quadshell.prefab.xml" name="Trilobite">
 	<PrefabOverrides>
 		<Override key="SkeletalAnimatorComponent#0">
-			<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/trilobite.animgraph.xml" _clipFolder="common/models/quaternius/scifi/enemy_trilobite/clips" />
+			<SkeletalAnimatorComponent _animationGraphPath="common/data/anim/trilobite.animgraph.xml" _animationSetPath="common/models/quaternius/scifi/enemy_trilobite/enemy_trilobite.animset.xml" />
 		</Override>
 		<Override key="AnimationNotifyComponent#0">
 			<AnimationNotifyComponent _notifyTablePath="common/characters/trilobite/trilobite.notifies.xml" />

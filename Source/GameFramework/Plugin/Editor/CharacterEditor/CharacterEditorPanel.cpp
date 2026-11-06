@@ -658,7 +658,7 @@ namespace sw::editor
                 _document.setStatus( "The preview body could not take its components" );
                 return;
             }
-            pAnimator->setClipFolder( string_view( _document.getPaths()._clipFolder.c_str() ) );
+            pAnimator->setAnimationSetPath( string_view( _document.getPaths()._animationSet.c_str() ) );
             _previewBody         = pBody->getHandle();
             _bPreviewBodyDressed = SW_FALSE;
         }
@@ -683,7 +683,7 @@ namespace sw::editor
         const vector<hashed_string>& listClipName = _document.getClipNames();
         if ( listClipName.empty() )
         {
-            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "NoAnimationClipsIn", TextArgumentList().addText( "clipFolder", _document.getPaths()._clipFolder.c_str() ) ).c_str() );
+            ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "NoAnimationClipsIn", TextArgumentList().addText( "clipFolder", _document.getPaths()._animationSet.c_str() ) ).c_str() );
             return;
         }
         const hashed_string selectedClip = _document.getSelectedClip();

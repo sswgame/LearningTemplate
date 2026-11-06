@@ -5,6 +5,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/AnimationClip.h"
+#include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Skeletal/SkeletonBoneLOD.h"
@@ -39,6 +40,19 @@ namespace sw
 namespace sw
 {
     template <>
+    struct SharedAssetCacheTraits<AnimationSet>
+    {
+        static constexpr const utf8*           kKindName   = "AnimationSet";
+        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
+
+        [[nodiscard]] static bool load( const AssetID& assetID, AnimationSet& outSet ) { return outSet.loadFromAsset( assetID ); }
+    };
+} // namespace sw
+
+namespace sw
+{
+    template <>
     struct SharedAssetCacheTraits<SkeletonBoneLOD>
     {
         static constexpr const utf8*           kKindName   = "SkeletonBoneLOD";
@@ -66,6 +80,7 @@ namespace sw
 {
     SW_SHARED_ASSET_CACHE( Skeleton );
     SW_SHARED_ASSET_CACHE( AnimationClip );
+    SW_SHARED_ASSET_CACHE( AnimationSet );
     SW_SHARED_ASSET_CACHE( SkeletonBoneLOD );
     SW_SHARED_ASSET_CACHE( RigAsset );
 } // namespace sw

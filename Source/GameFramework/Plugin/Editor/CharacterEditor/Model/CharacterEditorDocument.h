@@ -44,8 +44,8 @@ namespace sw::editor
         fixed_string<constant::file::kMaxPathSize> _refPosePath;
         fixed_string<constant::file::kMaxPathSize> _itemsPath;
         fixed_string<constant::file::kMaxPathSize> _appearanceFolder;
-        fixed_string<constant::file::kMaxPathSize> _clipFolder; ///< 미리보기 몸 애니메이터의 클립 폴더(팩 데이터의 `clipFolder`)
-        fixed_string<constant::file::kMaxPathSize> _rigPath;    ///< 미리보기 몸에 얹어 볼 제약 리그(팩 데이터의 선택 칸 `rig`, 비면 리그 단추가 없다)
+        fixed_string<constant::file::kMaxPathSize> _animationSet; ///< 미리보기 몸 애니메이터의 셋(팩 데이터의 `animationSet`)
+        fixed_string<constant::file::kMaxPathSize> _rigPath;      ///< 미리보기 몸에 얹어 볼 제약 리그(팩 데이터의 선택 칸 `rig`, 비면 리그 단추가 없다)
         fixed_string<constant::buffer::kMax128>    _presetName;
         fixed_string<constant::file::kMaxPathSize> _exportFolder; ///< 데이터 프리셋을 쓸 폴더(리소스 id). 기본은 외형 폴더의 `presets/`
         fixed_string<constant::buffer::kMax128>    _exportID;     ///< 데이터 프리셋 id — 씬의 컴포넌트가 가리키는 이름
@@ -171,7 +171,7 @@ namespace sw::editor
         void                   setFitResult( const FitResult& result );
         bool                   hasFit() const { return _bHasFit; }
         const FitCheckSummary& getFit() const { return _fit; }
-        /** @brief 팩 데이터의 클립 폴더에서 모은 클립 이름(`.animclip` 파일 이름, 이름순)입니다. 처음 부를 때 폴더를 훑습니다. 폴더가 디스크에 없으면 빕니다(팩만 있는 배포본). */
+        /** @brief 팩 데이터의 셋에 든 클립 이름(이름순)입니다. 처음 부를 때 셋을 읽습니다. 읽지 못하면 빕니다. */
         const vector<hashed_string>& getClipNames();
 
         // ------------------------------------------------------------------------------

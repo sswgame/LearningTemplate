@@ -1,6 +1,5 @@
 <!-- 농부(Quaternius 기본 캐릭터 · UAL 클립) — 마을 사람과 같은 이동 섞기(Speed)에 농사 동작 셋을 더한다. 디렉터가 도구 사용을 끝내면 농부 몸(FarmerComponent)이
-     트리거(Sow · Water · Harvest)를 걸고, 동작이 끝나면 이동으로 돌아간다. 이동 클립은 애니메이터의 _clipFolder(UAL1), 농사 클립은 UAL2 묶음의 콘텐츠 경로다
-     (이름에 '/' 가 있으면 폴더를 붙이지 않는다 — SkeletalAnimatorComponent::makeClipPath). 괭이질 클립이 없어 괭이는 씨앗 심기(Sow)를 쓴다. -->
+     트리거(Sow · Water · Harvest)를 걸고, 동작이 끝나면 이동으로 돌아간다. 클립 이름은 애니메이터의 셋(ubc_farmer.animset.xml — UAL1 위에 UAL2 농사 클립)에서 찾는다. 괭이질 클립이 없어 괭이는 씨앗 심기(Sow)를 쓴다. -->
 <AnimationGraphAsset>
 	<nodes>
 		<node id="1" name="Locomotion" x="40.0" y="40.0" loop="true">
@@ -15,21 +14,21 @@
 		<node id="2" name="FarmPlantSeed" x="260.0" y="40.0" loop="false">
 			<blend_space x="Speed">
 				<samples>
-					<sample clip="common/models/quaternius/animations/ual2_standard/clips/farm_plantseed" x="0" />
+					<sample clip="farm_plantseed" x="0" />
 				</samples>
 			</blend_space>
 		</node>
 		<node id="3" name="FarmWatering" x="260.0" y="200.0" loop="false">
 			<blend_space x="Speed">
 				<samples>
-					<sample clip="common/models/quaternius/animations/ual2_standard/clips/farm_watering" x="0" />
+					<sample clip="farm_watering" x="0" />
 				</samples>
 			</blend_space>
 		</node>
 		<node id="4" name="FarmHarvest" x="260.0" y="360.0" loop="false">
 			<blend_space x="Speed">
 				<samples>
-					<sample clip="common/models/quaternius/animations/ual2_standard/clips/farm_harvest" x="0" />
+					<sample clip="farm_harvest" x="0" />
 				</samples>
 			</blend_space>
 		</node>
