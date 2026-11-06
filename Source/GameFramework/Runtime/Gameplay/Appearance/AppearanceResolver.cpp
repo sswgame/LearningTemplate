@@ -132,13 +132,14 @@ namespace sw
                 out._listMorph.push_back( ResolvedMorph{ owner, name, weight } );
             }
 
-            static void addMaterialValue( ResolvedAppearance& out, const hashed_string& owner, const hashed_string& part, const hashed_string& name, const float4& value,
+            static void addMaterialValue( ResolvedAppearance& out, const hashed_string& owner, const hashed_string& part, const hashed_string& section, const hashed_string& name, const float4& value,
                                           ResolvedMaterialTarget target, int32 channel, ResolvedMaterialShape shape = ResolvedMaterialShape::Vector )
             {
                 ResolvedMaterialValue entry;
                 entry._shape   = shape;
                 entry._owner   = owner;
                 entry._part    = part;
+                entry._section = section;
                 entry._name    = name;
                 entry._value   = value;
                 entry._target  = target;
@@ -211,23 +212,23 @@ namespace sw
                                     }
                                     case CustomizationDriveKind::MaterialScalar:
                                     {
-                                        addMaterialValue( out, owner, hashed_string{}, drive._target, float4( driven, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter, 0,
+                                        addMaterialValue( out, owner, hashed_string{}, hashed_string{}, drive._target, float4( driven, 0.0f, 0.0f, 0.0f ), ResolvedMaterialTarget::Parameter, 0,
                                                           ResolvedMaterialShape::Scalar );
                                         break;
                                     }
                                     case CustomizationDriveKind::MaterialColor:
                                     {
-                                        addMaterialValue( out, owner, hashed_string{}, drive._target, pValue->_number, ResolvedMaterialTarget::Parameter, 0 );
+                                        addMaterialValue( out, owner, hashed_string{}, hashed_string{}, drive._target, pValue->_number, ResolvedMaterialTarget::Parameter, 0 );
                                         break;
                                     }
                                     case CustomizationDriveKind::DyeChannel:
                                     {
-                                        addMaterialValue( out, owner, hashed_string{}, drive._target, pValue->_number, ResolvedMaterialTarget::DyeChannel, drive._channel );
+                                        addMaterialValue( out, owner, hashed_string{}, hashed_string{}, drive._target, pValue->_number, ResolvedMaterialTarget::DyeChannel, drive._channel );
                                         break;
                                     }
                                     case CustomizationDriveKind::PaletteSwap:
                                     {
-                                        addMaterialValue( out, owner, hashed_string{}, drive._target, pValue->_number, ResolvedMaterialTarget::PaletteSwap, 0 );
+                                        addMaterialValue( out, owner, hashed_string{}, hashed_string{}, drive._target, pValue->_number, ResolvedMaterialTarget::PaletteSwap, 0 );
                                         break;
                                     }
                                 }
@@ -397,7 +398,7 @@ namespace sw
                 }
                 for ( const AppearanceMaterialValueDef& value : part._listMaterialValue )
                 {
-                    addMaterialValue( out, hashed_string{}, hashed_string{}, value._name, value._value, ResolvedMaterialTarget::Parameter, 0 );
+                    addMaterialValue( out, hashed_string{}, hashed_string{}, value._section, value._name, value._value, ResolvedMaterialTarget::Parameter, 0 );
                 }
                 for ( const hashed_string& region : part._listHiddenRegion )
                 {
@@ -454,16 +455,15 @@ namespace sw
                     resolved._variant = pVariant->_name;
                     if ( pVariant->_asset.empty() == false )
                         resolved._asset = pVariant->_asset;
-                    if ( pVariant->_material.empty() == false )
-                        resolved._material = pVariant->_material;
                     if ( pVariant->_skeleton.empty() == false )
                         resolved._skeleton = pVariant->_skeleton;
+                    applyVariantMaterials( entry, part, *pVariant, resolved, out );
                 }
                 const AppearancePartVariantDef* pMaterialVariant = entry._customMaterialVariant.empty() ? nullptr : part.findMaterialVariant( entry._customMaterialVariant );
                 if ( pMaterialVariant != nullptr )
                 {
                     resolved._materialVariant = pMaterialVariant->_name;
-                    resolved._material        = pMaterialVariant->_material;
+                    applyVariantMaterials( entry, part, *pMaterialVariant, resolved, out );
                 }
                 const Decision* pSwapMesh = findDecision( listDecision, AppearanceRuleActionKind::SwapMesh, entry._owner, part._name );
                 if ( pSwapMesh != nullptr )
@@ -471,14 +471,81 @@ namespace sw
                     resolved._asset = pSwapMesh->_pAction->_value;
                     addTrace( out, AppearanceTraceStep::Rule, pSwapMesh->_pRule->_id, "mesh of '%#.%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(), resolved._asset.c_str() );
                 }
-                const Decision* pSwapMaterial = findDecision( listDecision, AppearanceRuleActionKind::SwapMaterial, entry._owner, part._name );
-                if ( pSwapMaterial != nullptr )
-                {
-                    resolved._material = pSwapMaterial->_pAction->_value;
-                    addTrace( out, AppearanceTraceStep::Rule, pSwapMaterial->_pRule->_id, "material of '%#.%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(),
-                              resolved._material.c_str() );
-                }
+                applyMaterialSwaps( entry, part, listDecision, resolved, out );
                 return resolved;
+            }
+
+            /** @brief 부품 머티리얼을 바꿉니다. 구간이 있는 부품은 모든 구간의 것을 바꾼다(부품 머티리얼과 구간은 함께 쓰지 않는다 — `Appearance.SectionWithPartMaterial`). */
+            static void setPartMaterial( ResolvedPart& inoutPart, const hashed_string& material )
+            {
+                if ( inoutPart._listSection.empty() )
+                {
+                    inoutPart._material = material;
+                    return;
+                }
+                for ( AppearanceSectionDef& section : inoutPart._listSection )
+                {
+                    section._material = material;
+                }
+            }
+
+            /** @brief 이름이 @p section 인 구간의 머티리얼을 바꿉니다. 부품에 그 구간이 없으면 false 입니다. */
+            static bool setSectionMaterial( ResolvedPart& inoutPart, const hashed_string& section, const hashed_string& material )
+            {
+                AppearanceSectionDef* pSection = VectorUtil::findBy<&AppearanceSectionDef::_name>( inoutPart._listSection, section );
+                if ( pSection == nullptr )
+                    return false;
+                pSection->_material = material;
+                return true;
+            }
+
+            /** @brief 고른 변형 @p variant 의 머티리얼(부품 전체), 구간 머티리얼, 머티리얼 값을 겁니다. 구간 이름은 로드가 부품의 구간인지 봤다(`Appearance.SectionUnknown`). */
+            static void applyVariantMaterials( const Entry& entry, const AppearancePartDef& part, const AppearancePartVariantDef& variant, ResolvedPart& inoutResolved, ResolvedAppearance& out )
+            {
+                if ( variant._material.empty() == false )
+                    setPartMaterial( inoutResolved, variant._material );
+                for ( const AppearanceSectionDef& section : variant._listSection )
+                {
+                    (void)setSectionMaterial( inoutResolved, section._name, section._material );
+                }
+                for ( const AppearanceMaterialValueDef& value : variant._listMaterialValue )
+                {
+                    addMaterialValue( out, entry._owner, part._name, value._section, value._name, value._value, ResolvedMaterialTarget::Parameter, 0 );
+                }
+            }
+
+            /**
+             * @brief 규칙의 머티리얼 교체(`<SwapMaterial>`)를 넓은 대상부터 좁은 대상 순으로 겁니다 — 주인 전체, 부품, 구간, 부품의 구간. 좁은 것이 넓은 것 위에 덮는다.
+             * @details 언리얼 Material Slot 덮어쓰기(슬롯 이름) · 유니티 `Renderer.materials`(서브메시 번호)와 같은 자리를 이름으로 짚는다. 대상이 다르면 충돌이 아니므로(`hasSameTarget`)
+             *          한 부품에 여러 교체가 함께 걸린다. 그 구간이 없는 부품은 건너뛰고 설명에 남긴다.
+             */
+            static void applyMaterialSwaps( const Entry& entry, const AppearancePartDef& part, const vector<Decision>& listDecision, ResolvedPart& inoutResolved, ResolvedAppearance& out )
+            {
+                for ( int32 specificity = 0; specificity < 4; ++specificity )
+                {
+                    for ( const Decision& decision : listDecision )
+                    {
+                        const AppearanceRuleAction& action            = *decision._pAction;
+                        const bool                  bTargets          = action._kind == AppearanceRuleActionKind::SwapMaterial && action._target == entry._owner && ( action._part.empty() || action._part == part._name );
+                        const int32                 actionSpecificity = ( action._section.empty() ? 0 : 2 ) + ( action._part.empty() ? 0 : 1 );
+                        if ( bTargets == false || actionSpecificity != specificity )
+                            continue;
+                        if ( action._section.empty() )
+                        {
+                            setPartMaterial( inoutResolved, action._value );
+                            addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "material of '%#.%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(), action._value.c_str() );
+                        }
+                        else if ( setSectionMaterial( inoutResolved, action._section, action._value ) )
+                        {
+                            addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "material of '%#.%#' section '%#' swapped to '%#'", entry._owner.c_str(), part._name.c_str(), action._section.c_str(),
+                                      action._value.c_str() );
+                        }
+                        else if ( action._part.empty() == false )
+                        {
+                            addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "part '%#.%#' has no section '%#' - material swap ignored", entry._owner.c_str(), part._name.c_str(), action._section.c_str() );
+                        }
+                    }
+                }
             }
 
             static void emitParts( const ItemVisualDef& visual, const Entry& entry, int32 stageIndex, const vector<Decision>& listDecision, ResolvedAppearance& out )
@@ -509,7 +576,7 @@ namespace sw
                 {
                     for ( const AppearanceMaterialValueDef& value : pStage->_listMaterialValue )
                     {
-                        addMaterialValue( out, entry._owner, value._part, value._name, value._value, ResolvedMaterialTarget::Parameter, 0 );
+                        addMaterialValue( out, entry._owner, value._part, value._section, value._name, value._value, ResolvedMaterialTarget::Parameter, 0 );
                     }
                 }
             }
@@ -751,6 +818,13 @@ namespace sw
                     {
                         addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "variant '%#' chosen for '%#'", action._name.c_str(), action._target.c_str() );
                     }
+                    else if ( action._kind == AppearanceRuleActionKind::MaterialValue )
+                    {
+                        // 부품 · 피해 단계 · 꾸미기 값 뒤에 넣는다 — 같은 매개변수면 규칙이 이긴다(적용은 목록 순서다).
+                        addMaterialValue( out, action._target, action._part, action._section, action._name, action._materialValue, ResolvedMaterialTarget::Parameter, 0 );
+                        addTrace( out, AppearanceTraceStep::Rule, decision._pRule->_id, "material value '%#' set on '%#.%#' section '%#'", action._name.c_str(), action._target.c_str(), action._part.c_str(),
+                                  action._section.c_str() );
+                    }
                 }
                 out._listSocketOverride = spec._listSocketOverride;
                 for ( const Decision& decision : listDecision )
@@ -876,7 +950,7 @@ namespace sw
             // LOD 규칙은 합친 메시의 낮은 단계를 바꾼다 — 같은 차림을 나누는 캐시 키(`AppearanceBakedMeshCache`)에 든다.
             builder.addFloat( part._lodDetail );
             builder.addUint64( part._lodDropLevel );
-            for ( const AppearancePartVariantDef& section : part._listSection ) // 구간 머티리얼은 병합 메시의 구간이 된다
+            for ( const AppearanceSectionDef& section : part._listSection ) // 구간 머티리얼(변형 · 규칙 반영)은 병합 메시의 구간이 된다 — 병합 캐시 키가 이 해시다
             {
                 builder.addName( section._name );
                 builder.addName( section._material );
@@ -894,6 +968,7 @@ namespace sw
         {
             builder.addName( value._owner );
             builder.addName( value._part );
+            builder.addName( value._section );
             builder.addName( value._name );
             builder.addFloat4( value._value );
             builder.addInt( value._channel );

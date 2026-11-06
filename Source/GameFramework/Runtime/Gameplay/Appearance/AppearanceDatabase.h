@@ -113,6 +113,7 @@ namespace sw
         void               validateItemValues( const CustomizationValueSet& values, const hashed_string& schemaID, const utf8* pWhere );
         bool               isVariantDeclared( const hashed_string& variant ) const;
         bool               isPartDeclared( const hashed_string& part ) const;
+        bool               isSectionDeclared( const hashed_string& section ) const;
 
     private:
         SlotTable                  _slotTable;

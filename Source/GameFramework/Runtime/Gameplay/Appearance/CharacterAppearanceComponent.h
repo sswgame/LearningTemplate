@@ -230,17 +230,21 @@ namespace sw
         /** @brief 스폰한 부품 하나입니다. */
         struct SpawnedPart
         {
-            GameObjectHandle                               _object{};
-            hashed_string                                  _owner{};
-            hashed_string                                  _partName{};
-            hashed_string                                  _asset{};
-            hashed_string                                  _material{}; ///< 부품이 입은 머티리얼(비면 메시 · 프리팹의 것). 바뀌면 다른 부품이다
-            uint32                                         _partIndex{ 0 };
-            uint32                                         _holderUnit{ AppearanceSocketRig::kNoUnit }; ///< 붙은 유닛(몸이면 0). 몸이면 포즈마다 위치를 고친다
-            uint8                                          _bSocketPart{ SW_TRUE };                     ///< 소켓에 붙는 부품인지 여부(아니면 몸을 따르는 스킨드 부품)
-            uint8                                          _bBaked{ SW_FALSE };                         ///< 베이크한 메시(체형 · 피팅)를 그린다 — 다시 조립하는 동안 숨기지 않는다
-            uint8                                          _bMerged{ SW_FALSE };                        ///< 몸 메시에 합쳐 구간으로 그린다(오브젝트가 없다). `_listSection` 은 병합한 메시를 건 뒤에 생긴다
-            vector<TComponentHandle<MeshSectionComponent>> _listSection{};                              ///< 병합한 부품의 조각마다 구간 컴포넌트(몸 오브젝트에 붙는다 — `<Section>` 이 없으면 하나)
+            GameObjectHandle _object{};
+            hashed_string    _owner{};
+            hashed_string    _partName{};
+            hashed_string    _asset{};
+            hashed_string    _material{}; ///< 부품이 입은 머티리얼(비면 메시 · 프리팹의 것). 바뀌면 다른 부품이다
+            uint32           _partIndex{ 0 };
+            uint32           _holderUnit{ AppearanceSocketRig::kNoUnit }; ///< 붙은 유닛(몸이면 0). 몸이면 포즈마다 위치를 고친다
+            uint8            _bSocketPart{ SW_TRUE };                     ///< 소켓에 붙는 부품인지 여부(아니면 몸을 따르는 스킨드 부품)
+            uint8            _bBaked{ SW_FALSE };                         ///< 베이크한 메시(체형 · 피팅)를 그린다 — 다시 조립하는 동안 숨기지 않는다
+            uint8            _bMerged{ SW_FALSE };                        ///< 몸 메시에 합쳐 구간으로 그린다(오브젝트가 없다). `_listSection` 은 병합한 메시를 건 뒤에 생긴다
+            /**
+             * @brief 부품의 구간 컴포넌트입니다. 합친 부품은 조각마다 하나(몸 오브젝트에 붙는다 — `<Section>` 이 없으면 하나), 합치지 않은 스킨드 부품은 둘째 `<Section>` 부터 하나씩
+             *        (부품 오브젝트에 붙는다 — 구간 머티리얼만 바뀌면 다시 만들지 않고 이것을 고친다).
+             */
+            vector<TComponentHandle<MeshSectionComponent>> _listSection{};
         };
 
         /** @brief 슬롯 덮어쓰기 하나입니다. */
@@ -276,8 +280,9 @@ namespace sw
          * @param listDetachEvent 이번 해석에서 떨어져 나간 부품입니다. 없어진 것 가운데 여기 있는 소켓 부품은 지우지 않고 물리로 뗍니다.
          */
         void syncParts( GameObjectManager& manager, SkeletalMeshComponent& body, int32 bodyPart, const vector<AppearanceDetachEvent>& listDetachEvent );
-        /** @brief 스킨드 부품 오브젝트를 만들어 몸에 잇고 돌려줍니다(`syncParts` 의 일부). @p pBodyScene 이 없으면 붙이지 않습니다. */
-        GameObject* spawnSkinnedPart( GameObjectManager& manager, SkeletalMeshComponent& body, SceneComponent* pBodyScene, const ResolvedPart& part );
+        /** @brief 스킨드 부품 오브젝트를 만들어 몸에 잇고 돌려줍니다(`syncParts` 의 일부). @p pBodyScene 이 없으면 붙이지 않습니다. 만든 구간 컴포넌트는 @p outListSection 에 담습니다. */
+        GameObject* spawnSkinnedPart( GameObjectManager& manager, SkeletalMeshComponent& body, SceneComponent* pBodyScene, const ResolvedPart& part,
+                                      vector<TComponentHandle<MeshSectionComponent>>& outListSection );
         /**
          * @brief 해석에서 빠진 부품 @p spawned 가 이번에 떨어져 나간 소켓 부품이면 물리로 떼고 true 입니다. 떼어 낸 오브젝트는 더 이상 이 컴포넌트의 것이 아닙니다.
          * @return 떨어져 나간 부품이 아니거나 뗄 수 없으면(물리 바디 없음 — 알린다) false 이고, 부르는 쪽이 지웁니다.
@@ -296,7 +301,7 @@ namespace sw
         void bindRigUnits( GameObjectManager& manager );
         /** @brief 리그에 이은 칸을 모두 풉니다. */
         void unbindRigUnits();
-        /** @brief 머티리얼 값을 주인의 부품마다 적용합니다. */
+        /** @brief 머티리얼 값을 주인의 부품마다 적용합니다. 구간을 적은 값(`ResolvedMaterialValue::_section`)은 그 구간을 그리는 메시에만 겁니다. */
         void applyMaterialValues( GameObjectManager& manager, SkeletalMeshComponent& body );
         /** @brief 보임 여부를 몸과 부품에 적용합니다. */
         void applyVisibility( GameObjectManager& manager );
@@ -351,7 +356,10 @@ namespace sw
         [[nodiscard]] bool applyMergedMeshes( GameObjectManager& manager, SkeletalMeshComponent& body, const CharacterAppearanceMeshBuild& build );
         /** @brief 합친 부품의 구간 컴포넌트를 몸 오브젝트에서 뗍니다. */
         void retireMergedPart( GameObjectManager& manager, const SpawnedPart& spawned ) const;
-        /** @brief 부품 하나가 그리는 메시 컴포넌트마다 @p func 를 부릅니다 — 합친 부품은 구간 컴포넌트 하나, 아니면 부품 오브젝트의 메시 전부입니다. */
+        /**
+         * @brief 부품 하나가 그리는 메시 컴포넌트마다 `func( MeshComponent&, const hashed_string& source )` 를 부릅니다 — 합친 부품은 조각의 구간 컴포넌트, 아니면 부품 오브젝트의 메시 전부입니다.
+         * @details `source` 는 그 메시가 그리는 원본 구간 이름이다(구간을 짚는 머티리얼 값이 견준다). 구간 없이 메시 전체를 그리면 비어 있다.
+         */
         template <typename Func>
         void forEachPartMesh( GameObjectManager& manager, const SpawnedPart& spawned, Func&& func ) const;
         /** @brief 피팅 표 · 피팅 데이터 캐시의 다시 읽은 횟수 합입니다(오르기만 한다). */

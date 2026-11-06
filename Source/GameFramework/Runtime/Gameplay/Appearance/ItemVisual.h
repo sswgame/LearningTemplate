@@ -29,26 +29,64 @@ namespace sw
         Sprite            ///< 2D 종이 인형 조각(스프라이트, 그리기 순서, 소켓 기준점)
     };
 
-    /** @brief 이름 붙은 변형입니다. 메시(또는 스프라이트) · 머티리얼 · 스켈레톤을 바꿉니다. 비워 둔 항목은 기본값을 씁니다. */
+    /**
+     * @brief 메시 구간 하나의 머티리얼입니다(`<Section name material>`). `_name` 은 메시의 구간 이름이다 — 임포터가 머티리얼마다 나눈 구간(`ModelImportMaterial::readSectionPbrMaterials`).
+     * @details 언리얼 Material Slot(슬롯 이름으로 덮기) · 유니티 `Renderer.materials`(서브메시 번호)의 자리다. 번호가 아니라 이름으로 짚어 메시를 다시 임포트해 구간 순서가 바뀌어도 데이터가 그대로 맞다.
+     */
     REFLECT()
-    struct AppearancePartVariantDef
+    struct AppearanceSectionDef
     {
         REFLECT_BODY();
 
         PROPERTY( Required )
         hashed_string _name{};
+        PROPERTY( Required )
+        hashed_string _material{};
+        /** @brief 합친 메시의 LOD 에서 이 구간을 늦게(> 1) 또는 빨리(< 1) 줄입니다(`CharacterLODSectionRule::_detail`). 적지 않으면 부품의 값입니다. */
+        PROPERTY( Min = 0.05 )
+        float32 _lodDetail{ 1.0f };
+        /** @brief 이 LOD 단계(1 부터)부터 이 구간을 그리지 않습니다(`CharacterLODSectionRule::_dropLevel`). 0 이면 부품의 값입니다. */
+        PROPERTY()
+        uint32 _lodDropLevel{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 머티리얼 값 하나입니다. 스칼라이면 x 만 씁니다. */
+    REFLECT()
+    struct AppearanceMaterialValueDef
+    {
+        REFLECT_BODY();
+
+        float4 _value{};
+        PROPERTY()
+        hashed_string _part{}; ///< 피해 단계의 대상 부품(비어 있으면 아이템의 모든 부품)
+        PROPERTY()
+        hashed_string _section{}; ///< 대상 메시 구간 이름(비어 있으면 부품의 모든 구간). 구간마다 셰이더 효과를 달리할 때 쓴다
+        PROPERTY( Required )
+        hashed_string _name{};
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 이름 붙은 변형입니다. 메시(또는 스프라이트) · 머티리얼 · 스켈레톤 · 구간 머티리얼 · 머티리얼 값을 바꿉니다. 비워 둔 항목은 기본값을 씁니다. */
+    REFLECT()
+    struct AppearancePartVariantDef
+    {
+        REFLECT_BODY();
+
+        vector<AppearanceSectionDef>       _listSection{};       ///< 이 변형을 고르면 이름이 같은 구간의 머티리얼을 바꾼다(`<Section name material>` — 부품이 적은 구간만)
+        vector<AppearanceMaterialValueDef> _listMaterialValue{}; ///< 이 변형을 고르면 이 부품에 거는 머티리얼 값(`<Material name value section>`)
+        PROPERTY( Required )
+        hashed_string _name{};
         hashed_string _asset{};
         PROPERTY()
-        hashed_string _material{};
+        hashed_string _material{}; ///< 구간이 있는 부품이면 모든 구간의 머티리얼을 바꾼다
         /** @brief 스킨드 부품(`<Variant>`)이 이 변형에서 쓰는 스켈레톤입니다 — 스켈레톤 변형(`SkeletonVariant`)을 적으면 외형이 런타임에 뼈 비율을 고릅니다(꾸미기 선택 · 규칙 · 피해 단계가 고르는 변형과 같은 길). */
         PROPERTY()
         hashed_string _skeleton{};
-        /** @brief `<Section>` 만: 합친 메시의 LOD 에서 이 구간을 늦게(> 1) 또는 빨리(< 1) 줄입니다(`CharacterLODSectionRule::_detail`). 적지 않으면 부품의 값입니다. */
-        PROPERTY( Min = 0.05 )
-        float32 _lodDetail{ 1.0f };
-        /** @brief `<Section>` 만: 이 LOD 단계(1 부터)부터 이 구간을 그리지 않습니다(`CharacterLODSectionRule::_dropLevel`). 0 이면 부품의 값입니다. */
-        PROPERTY()
-        uint32 _lodDropLevel{ 0 };
     };
 } // namespace sw
 
@@ -69,22 +107,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 머티리얼 값 하나입니다. 스칼라이면 x 만 씁니다. */
-    REFLECT()
-    struct AppearanceMaterialValueDef
-    {
-        REFLECT_BODY();
-
-        float4 _value{};
-        PROPERTY()
-        hashed_string _part{}; ///< 피해 단계의 대상 부품(비어 있으면 아이템의 모든 부품)
-        PROPERTY( Required )
-        hashed_string _name{};
-    };
-} // namespace sw
-
-namespace sw
-{
     /** @brief 부품 하나입니다. */
     REFLECT()
     struct SW_GF_API AppearancePartDef
@@ -97,8 +119,9 @@ namespace sw
          * @brief 스킨드 부품의 메시 구간마다 머티리얼입니다(`<Section name material>` — `_name` 은 구간 이름). 적으면 이 구간들만 그린다.
          * @details 머티리얼이 여럿인 모델(몸 · 머리카락 · 눈)을 임포터가 구간으로 나눈 메시다(`ModelImportMaterial::readSectionPbrMaterials`). 주 메시가 첫 구간을,
          *          `MeshSectionComponent` 가 나머지를 그린다(임포터의 구간 프리팹과 같은 모양). 부품의 `material` 과 함께 쓸 수 없다(어느 구간의 것인지 모른다).
+         *          변형(`<Variant>` · `<MaterialVariant>` 의 `<Section>`)과 규칙(`<SwapMaterial section>`)이 구간 이름으로 머티리얼을 바꾸고, 머티리얼 값(`section`)이 구간 하나에만 걸린다.
          */
-        vector<AppearancePartVariantDef>   _listSection{};
+        vector<AppearanceSectionDef>       _listSection{};
         vector<AppearanceMorphDef>         _listMorph{};         ///< 몸 수정: 몸에 적용하는 모프
         vector<AppearanceMaterialValueDef> _listMaterialValue{}; ///< 몸 수정: 몸 머티리얼 값
         vector<hashed_string>              _listHiddenRegion{};  ///< 몸 수정: 숨길 몸 영역
@@ -136,6 +159,7 @@ namespace sw
 
         const AppearancePartVariantDef* findVariant( const hashed_string& name ) const;
         const AppearancePartVariantDef* findMaterialVariant( const hashed_string& name ) const;
+        const AppearanceSectionDef*     findSection( const hashed_string& name ) const;
     };
 } // namespace sw
 

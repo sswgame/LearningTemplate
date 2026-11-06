@@ -39,9 +39,10 @@ namespace sw
         HideRegion,     ///< 몸 영역을 숨긴다
         ChooseVariant,  ///< 주인의 메시 변형 이름(주인이 비어 있으면 몸)
         SwapMesh,       ///< 주인 부품의 메시를 바꾼다
-        SwapMaterial,   ///< 주인 부품의 머티리얼을 바꾼다
+        SwapMaterial,   ///< 주인 부품의 머티리얼을 바꾼다. `_section` 이 있으면 그 구간 하나만
         ApplyMorph,     ///< 주인(비어 있으면 몸)에 모프를 적용한다
-        OverrideSocket  ///< 소켓 하나를 옮기거나 새로 만든다
+        OverrideSocket, ///< 소켓 하나를 옮기거나 새로 만든다
+        MaterialValue   ///< 주인(비어 있으면 몸) 부품 · 구간의 머티리얼 매개변수 `_name` 에 `_materialValue` 를 건다
     };
 
     /** @brief `targetTag(Head, Helmet.FullFace)` 의 칸입니다. */
@@ -80,13 +81,15 @@ namespace sw
     /** @brief 동작 하나입니다. */
     struct SW_GF_API AppearanceRuleAction
     {
-        AppearancePlacement      _placement{};    ///< OverrideSocket
-        hashed_string            _target{};       ///< 주인(슬롯 또는 꾸미기 매개변수). 비어 있으면 몸
-        hashed_string            _part{};         ///< SwapMesh, SwapMaterial, HideTarget 에서 쓴다(비어 있으면 주인의 모든 부품)
-        hashed_string            _name{};         ///< 변형, 모프, 영역, 소켓 이름
-        hashed_string            _value{};        ///< 메시나 머티리얼 경로
-        TagID                    _tag{};          ///< HideItemTag
-        float32                  _weight{ 1.0f }; ///< ApplyMorph — `weight` 를 적지 않으면 모프를 다 건다
+        AppearancePlacement      _placement{};     ///< OverrideSocket
+        float4                   _materialValue{}; ///< MaterialValue — 스칼라이면 x 만 쓴다
+        hashed_string            _target{};        ///< 주인(슬롯 또는 꾸미기 매개변수). 비어 있으면 몸
+        hashed_string            _part{};          ///< SwapMesh, SwapMaterial, MaterialValue, HideTarget 에서 쓴다(비어 있으면 주인의 모든 부품)
+        hashed_string            _section{};       ///< SwapMaterial, MaterialValue 의 메시 구간 이름(비어 있으면 부품의 모든 구간)
+        hashed_string            _name{};          ///< 변형, 모프, 영역, 소켓, 머티리얼 매개변수 이름
+        hashed_string            _value{};         ///< 메시나 머티리얼 경로
+        TagID                    _tag{};           ///< HideItemTag
+        float32                  _weight{ 1.0f };  ///< ApplyMorph — `weight` 를 적지 않으면 모프를 다 건다
         AppearanceRuleActionKind _kind{ AppearanceRuleActionKind::HideTarget };
 
         /** @brief 숨기기는 여러 번 겹쳐도 결과가 같으므로 충돌하지 않습니다. */
@@ -136,8 +139,9 @@ namespace sw
     };
 
     /**
-     * @brief 규칙 동작(`<Hide>` · `<Variant>` · `<SwapMesh>` · `<SwapMaterial>` · `<Morph>` · `<OverrideSocket>`)이 함께 받는 칸입니다.
-     * @details 동작마다 받는 칸이 다르다 — 그 동작이 받지 않는 칸을 적으면 읽기가 오류로 낸다(`AppearanceRuleInternal::kArrActionField`). 배치(`parent` · `offset` · `rotation`)는 손으로 푼다.
+     * @brief 규칙 동작(`<Hide>` · `<Variant>` · `<SwapMesh>` · `<SwapMaterial>` · `<Morph>` · `<OverrideSocket>` · `<MaterialValue>`)이 함께 받는 칸입니다.
+     * @details 동작마다 받는 칸이 다르다 — 그 동작이 받지 않는 칸을 적으면 읽기가 오류로 낸다(`AppearanceRuleInternal::kArrActionField`). 배치(`parent` · `offset` · `rotation`)와
+     *          머티리얼 값(`value`, 스칼라 · 벡터 네 모양)은 손으로 푼다.
      */
     REFLECT()
     struct SW_GF_API AppearanceRuleActionFields
@@ -148,6 +152,8 @@ namespace sw
         hashed_string _target{};
         PROPERTY()
         hashed_string _part{};
+        PROPERTY()
+        hashed_string _section{};
         PROPERTY()
         string _itemTag{};
         PROPERTY()

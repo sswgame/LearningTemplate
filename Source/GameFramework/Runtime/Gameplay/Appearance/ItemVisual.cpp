@@ -61,8 +61,70 @@ namespace sw
                 return false;
             }
 
-            /** @brief LOD 규칙(`lodDetail` · `lodDropLevel`)을 적었는지입니다 — 메시 · 머티리얼 변형은 구간이 아니라 받지 않는다. */
-            static bool hasLODRule( const AppearancePartVariantDef& def ) { return def._lodDetail != 1.0f || def._lodDropLevel != 0; }
+            /** @brief 머티리얼 값 원소(`<Material name value part section>`) 하나를 읽습니다. 값은 스칼라 · 벡터 네 모양이다(`readRequiredShaderValue`). */
+            static AppearanceMaterialValueDef readMaterialValue( const XMLNode& node, AppearanceLoadReport& report, string_view sourceName )
+            {
+                AppearanceMaterialValueDef value;
+                (void)AppearanceXMLUtil::readFields( node, value, report, sourceName, { "value" } );
+                AppearanceXMLUtil::readRequiredShaderValue( node, "value", value._value, report, sourceName );
+                return value;
+            }
+
+            /** @brief 구간 원소(`<Section name material>`)를 @p inoutListSection 에 더합니다. 같은 이름이 이미 있으면 오류입니다. */
+            static void readSection( const XMLNode& node, vector<AppearanceSectionDef>& inoutListSection, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualID,
+                                     const hashed_string& partName )
+            {
+                AppearanceSectionDef section;
+                if ( AppearanceXMLUtil::readFields( node, section, report, sourceName ) == false )
+                    return; // 빠진 이름 · 머티리얼은 위 읽기가 보고서에 남겼다
+                if ( VectorUtil::containsBy<&AppearanceSectionDef::_name>( inoutListSection, section._name ) )
+                    report.addErrorWithID( "Appearance.SectionInvalid", "%#: visual '%#' part '%#' has a duplicate section '%#'", sourceName, visualID.c_str(), partName.c_str(), section._name.c_str() );
+                else
+                    inoutListSection.push_back( section );
+            }
+
+            /** @brief 변형의 자식(`<Section>` 구간 머티리얼, `<Material>` 머티리얼 값)을 읽습니다. 구간 이름이 부품에 있는지는 부품을 다 읽은 뒤 `reportUnknownSections` 가 본다. */
+            static void readVariantChildren( const XMLNode& node, const AppearancePartDef& part, AppearancePartVariantDef& inoutVariant, AppearanceLoadReport& report, string_view sourceName,
+                                             const hashed_string& visualID )
+            {
+                for ( XMLNode child = node.findChild(); child; child = child.findNextSibling() )
+                {
+                    if ( StringUtil::equals( child.getName(), "Section" ) && part._kind == AppearancePartKind::Skinned )
+                    {
+                        readSection( child, inoutVariant._listSection, report, sourceName, visualID, part._name );
+                    }
+                    else if ( StringUtil::equals( child.getName(), "Material" ) )
+                    {
+                        const AppearanceMaterialValueDef value = readMaterialValue( child, report, sourceName );
+                        if ( value._part.empty() == false )
+                            report.addErrorWithID( "Appearance.VariantMaterialPart", "%#: visual '%#' part '%#' variant '%#' <Material> cannot name a part - it applies to its own part", sourceName,
+                                                   visualID.c_str(), part._name.c_str(), inoutVariant._name.c_str() );
+                        else
+                            inoutVariant._listMaterialValue.push_back( value );
+                    }
+                    else
+                    {
+                        AppearanceXMLUtil::reportUnknownChild( node, child, report, sourceName );
+                    }
+                }
+            }
+
+            /** @brief 변형 @p variant 가 적은 구간 이름(`<Section>` · `<Material section>`)이 부품 @p part 의 구간인지 봅니다. 없는 구간이면 오류입니다(조용히 아무것도 바꾸지 않게). */
+            static void reportUnknownVariantSections( const AppearancePartDef& part, const AppearancePartVariantDef& variant, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualID )
+            {
+                for ( const AppearanceSectionDef& section : variant._listSection )
+                {
+                    if ( part.findSection( section._name ) == nullptr )
+                        report.addErrorWithID( "Appearance.SectionUnknown", "%#: visual '%#' part '%#' variant '%#' names section '%#' the part does not list", sourceName, visualID.c_str(), part._name.c_str(),
+                                               variant._name.c_str(), section._name.c_str() );
+                }
+                for ( const AppearanceMaterialValueDef& value : variant._listMaterialValue )
+                {
+                    if ( value._section.empty() == false && part.findSection( value._section ) == nullptr )
+                        report.addErrorWithID( "Appearance.SectionUnknown", "%#: visual '%#' part '%#' variant '%#' <Material> names section '%#' the part does not list", sourceName, visualID.c_str(),
+                                               part._name.c_str(), variant._name.c_str(), value._section.c_str() );
+                }
+            }
 
             static void readPartChild( const XMLNode& child, const XMLNode& partNode, AppearancePartDef& inoutPart, AppearanceLoadReport& report, string_view sourceName, const hashed_string& visualID )
             {
@@ -73,11 +135,10 @@ namespace sw
                     reportMisplacedAssetAttributes( child, inoutPart._kind, report, sourceName, visualID );
                     AppearancePartVariantDef variant;
                     (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName, { "mesh", "prefab", "sprite" } ); // 에셋 속성은 부품 종류가 정한다
+                    readVariantChildren( child, inoutPart, variant, report, sourceName, visualID );
                     variant._asset = XMLReadUtil::readOptionalName( child, getAssetAttribute( inoutPart._kind ) );
                     if ( variant._skeleton.empty() == false && inoutPart._kind != AppearancePartKind::Skinned )
                         report.addErrorWithID( "Appearance.VariantSkeletonNotSkinned", "%#: visual '%#' part '%#' variant '%#' names a skeleton but the part is not Skinned", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
-                    if ( hasLODRule( variant ) )
-                        report.addErrorWithID( "Appearance.LODRuleNotAllowed", "%#: visual '%#' part '%#' variant '%#' cannot have lodDetail / lodDropLevel (only <Part> and <Section>)", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     if ( variant._name.empty() || inoutPart.findVariant( variant._name ) != nullptr )
                         report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a variant without a name or a duplicate '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
@@ -87,8 +148,10 @@ namespace sw
                 {
                     AppearancePartVariantDef variant;
                     (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName, {} );
-                    const bool bInvalidVariant = variant._name.empty() || variant._material.empty() || variant._skeleton.empty() == false || hasLODRule( variant ) ||
-                                                 inoutPart.findMaterialVariant( variant._name ) != nullptr;
+                    readVariantChildren( child, inoutPart, variant, report, sourceName, visualID );
+                    // 머티리얼 변형은 머티리얼 · 구간 머티리얼 · 머티리얼 값 가운데 하나는 바꿔야 한다(아무것도 바꾸지 않는 변형은 철자 실수다).
+                    const bool bChangesNothing = variant._material.empty() && variant._listSection.empty() && variant._listMaterialValue.empty();
+                    const bool bInvalidVariant = variant._name.empty() || bChangesNothing || variant._skeleton.empty() == false || inoutPart.findMaterialVariant( variant._name ) != nullptr;
                     if ( bInvalidVariant )
                         report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a bad or duplicate material variant '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
@@ -96,15 +159,7 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "Section" ) && inoutPart._kind == AppearancePartKind::Skinned )
                 {
-                    AppearancePartVariantDef section;
-                    (void)AppearanceXMLUtil::readFields( child, section, report, sourceName, {} );
-                    const bool bDuplicateSection = VectorUtil::containsIf( inoutPart._listSection, [&]( const AppearancePartVariantDef& other )
-                    { return other._name == section._name; } );
-                    if ( section._name.empty() || section._material.empty() || section._skeleton.empty() == false || bDuplicateSection )
-                        report.addErrorWithID( "Appearance.SectionInvalid", "%#: visual '%#' part '%#' has a section without a name or material, or a duplicate '%#'", sourceName, visualID.c_str(),
-                                               inoutPart._name.c_str(), section._name.c_str() );
-                    else
-                        inoutPart._listSection.push_back( section );
+                    readSection( child, inoutPart._listSection, report, sourceName, visualID, inoutPart._name );
                 }
                 else if ( StringUtil::equals( pName, "Morph" ) && bModification )
                 {
@@ -114,10 +169,7 @@ namespace sw
                 }
                 else if ( StringUtil::equals( pName, "Material" ) && bModification )
                 {
-                    AppearanceMaterialValueDef value;
-                    (void)AppearanceXMLUtil::readFields( child, value, report, sourceName, { "value" } ); // 값은 스칼라 · 벡터 네 모양이다(`readRequiredShaderValue`)
-                    AppearanceXMLUtil::readRequiredShaderValue( child, "value", value._value, report, sourceName );
-                    inoutPart._listMaterialValue.push_back( value );
+                    inoutPart._listMaterialValue.push_back( readMaterialValue( child, report, sourceName ) );
                 }
                 else if ( StringUtil::equals( pName, "HideRegion" ) && bModification )
                 {
@@ -181,6 +233,15 @@ namespace sw
                 if ( part._listSection.empty() == false && part._material.empty() == false )
                     report.addErrorWithID( "Appearance.SectionWithPartMaterial", "%#: visual '%#' part '%#' has both 'material' and <Section> - give each section its material", sourceName,
                                            inoutVisual._id.c_str(), part._name.c_str() );
+                // 구간은 변형보다 뒤에 적을 수 있다 — 다 읽은 뒤 변형이 짚는 구간을 본다.
+                for ( const AppearancePartVariantDef& variant : part._listVariant )
+                {
+                    reportUnknownVariantSections( part, variant, report, sourceName, inoutVisual._id );
+                }
+                for ( const AppearancePartVariantDef& variant : part._listMaterialVariant )
+                {
+                    reportUnknownVariantSections( part, variant, report, sourceName, inoutVisual._id );
+                }
                 inoutVisual._listPart.push_back( part );
             }
 
@@ -250,11 +311,18 @@ namespace sw
                     }
                     else if ( StringUtil::equals( child.getName(), "Material" ) )
                     {
-                        AppearanceMaterialValueDef value;
-                        (void)AppearanceXMLUtil::readFields( child, value, report, sourceName, { "value" } );
-                        AppearanceXMLUtil::readRequiredShaderValue( child, "value", value._value, report, sourceName );
-                        if ( value._part.empty() || hasPart( inoutVisual, value._part, report, sourceName, "damage <Material>" ) )
-                            stage._listMaterialValue.push_back( value );
+                        const AppearanceMaterialValueDef value = readMaterialValue( child, report, sourceName );
+                        if ( value._part.empty() == false && hasPart( inoutVisual, value._part, report, sourceName, "damage <Material>" ) == false )
+                            continue;
+                        // 구간은 부품 안의 이름이라 부품을 함께 적는다(어느 부품의 구간인지 모르면 조용히 빗나간다).
+                        const AppearancePartDef* pPart = value._part.empty() ? nullptr : inoutVisual.findPart( value._part );
+                        if ( value._section.empty() == false && ( pPart == nullptr || pPart->findSection( value._section ) == nullptr ) )
+                        {
+                            report.addErrorWithID( "Appearance.SectionUnknown", "%#: visual '%#' damage stage '%#' <Material> names section '%#' without a part that lists it", sourceName, inoutVisual._id.c_str(),
+                                                   stage._name.c_str(), value._section.c_str() );
+                            continue;
+                        }
+                        stage._listMaterialValue.push_back( value );
                     }
                     else
                     {
@@ -309,6 +377,11 @@ namespace sw
     const AppearancePartVariantDef* AppearancePartDef::findMaterialVariant( const hashed_string& name ) const
     {
         return VectorUtil::findBy<&AppearancePartVariantDef::_name>( _listMaterialVariant, name );
+    }
+
+    const AppearanceSectionDef* AppearancePartDef::findSection( const hashed_string& name ) const
+    {
+        return VectorUtil::findBy<&AppearanceSectionDef::_name>( _listSection, name );
     }
 
     const AppearancePartDef* ItemVisualDef::findPart( const hashed_string& name ) const

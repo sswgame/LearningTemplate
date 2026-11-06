@@ -20,8 +20,8 @@
                             "name": "Part",
                             "key": "name",
                             "listField": [
-                                { "name": "Variant", "key": "name" },
-                                { "name": "MaterialVariant", "key": "name" },
+                                { "name": "Variant", "key": "name", "listField": [ { "name": "Section", "key": "name" } ] },
+                                { "name": "MaterialVariant", "key": "name", "listField": [ { "name": "Section", "key": "name" } ] },
                                 { "name": "Section", "key": "name" }
                             ]
                         },

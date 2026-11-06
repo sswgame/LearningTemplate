@@ -280,6 +280,19 @@ namespace sw
         return false;
     }
 
+    bool AppearanceDatabase::isSectionDeclared( const hashed_string& section ) const
+    {
+        for ( const ItemVisualDef& visual : _visuals.getVisuals() )
+        {
+            for ( const AppearancePartDef& part : visual._listPart )
+            {
+                if ( part.findSection( section ) != nullptr )
+                    return true;
+            }
+        }
+        return false;
+    }
+
     void AppearanceDatabase::validateItems()
     {
         if ( _pItemCatalog == nullptr )
@@ -403,6 +416,8 @@ namespace sw
                     _report.addErrorWithID( "Appearance.VisualUndeclared", "rule '%#' chooses variant '%#' no visual declares", rule._id.c_str(), action._name.c_str() );
                 if ( action._part.empty() == false && isPartDeclared( action._part ) == false )
                     _report.addErrorWithID( "Appearance.VisualUndeclared", "rule '%#' names part '%#' no visual declares", rule._id.c_str(), action._part.c_str() );
+                if ( action._section.empty() == false && isSectionDeclared( action._section ) == false )
+                    _report.addErrorWithID( "Appearance.VisualUndeclared", "rule '%#' names section '%#' no visual part lists", rule._id.c_str(), action._section.c_str() );
                 const bool bUnknownBodyRegion = action._kind == AppearanceRuleActionKind::HideRegion && pListKnownBodyRegion != nullptr && VectorUtil::contains( *pListKnownBodyRegion, action._name ) == false;
                 if ( bUnknownBodyRegion )
                     _report.addErrorWithID( "Appearance.BodyRegionUnknown", "rule '%#' hides unknown body region '%#'", rule._id.c_str(), action._name.c_str() );

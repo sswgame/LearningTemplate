@@ -120,7 +120,7 @@ namespace sw
             static MeshMergePart makeMergePart( const ResolvedPart& part, const Mesh& mesh, bool bBody )
             {
                 MeshMergePart merge{ makeSectionName( part ), part._material, &mesh };
-                for ( const AppearancePartVariantDef& section : part._listSection )
+                for ( const AppearanceSectionDef& section : part._listSection ) // 변형 · 규칙을 반영한 구간 머티리얼 — 병합해도 구간마다 머티리얼이 남는다
                 {
                     const hashed_string name = bBody ? section._name : hashed_string( ( string( merge._name.c_str() ) + "/" + section._name.c_str() ).c_str() );
                     merge._listSection.push_back( MeshMergeSectionPick{ section._name, name, section._material } );
@@ -141,9 +141,9 @@ namespace sw
                 }
                 for ( size_t index = 0; index < merge._listSection.size() && index < part._listSection.size(); ++index )
                 {
-                    const AppearancePartVariantDef& section = part._listSection[index]; // `makeMergePart` 가 같은 순서로 조각을 만들었다
-                    const float32                   detail  = section._lodDetail != 1.0f ? section._lodDetail : part._lodDetail;
-                    const uint32                    drop    = section._lodDropLevel != 0 ? section._lodDropLevel : part._lodDropLevel;
+                    const AppearanceSectionDef& section = part._listSection[index]; // `makeMergePart` 가 같은 순서로 조각을 만들었다
+                    const float32               detail  = section._lodDetail != 1.0f ? section._lodDetail : part._lodDetail;
+                    const uint32                drop    = section._lodDropLevel != 0 ? section._lodDropLevel : part._lodDropLevel;
                     inoutListRule.push_back( CharacterLODSectionRule{ merge._listSection[index]._name, detail, drop } );
                 }
             }
@@ -569,17 +569,21 @@ namespace sw
     {
         if ( spawned._bMerged == SW_TRUE )
         {
-            for ( const TComponentHandle<MeshSectionComponent>& handle : spawned._listSection )
+            // 합친 조각 i 는 부품의 i 번째 `<Section>` 이다(`makeMergePart` 순서). 합친 구간 이름은 조립이 만든 것이라 원본 구간 이름을 따로 넘긴다.
+            const ResolvedPart& part = _state.getResolved()._listPart[spawned._partIndex];
+            for ( size_t index = 0; index < spawned._listSection.size(); ++index )
             {
-                MeshSectionComponent* pSection = manager.resolveComponent( handle );
+                MeshSectionComponent* pSection = manager.resolveComponent( spawned._listSection[index] );
+                const hashed_string   source   = index < part._listSection.size() ? part._listSection[index]._name : hashed_string{};
                 if ( pSection != nullptr )
-                    func( *pSection ); // 아직 합친 메시를 걸기 전이면 구간 컴포넌트가 없다
+                    func( *pSection, source ); // 아직 합친 메시를 걸기 전이면 구간 컴포넌트가 없다
             }
             return;
         }
         GameObject* pObject = manager.resolveGameObject( spawned._object );
         if ( pObject != nullptr )
-            CharacterAppearanceComponentInternal::forEachMesh( *pObject, func );
+            CharacterAppearanceComponentInternal::forEachMesh( *pObject, [&func]( MeshComponent& mesh )
+            { func( mesh, mesh.getSectionName() ); } ); // 합치지 않은 부품은 주 메시 · 구간 컴포넌트가 원본 구간 이름을 그대로 가진다(`applyPartSections`)
     }
 
     bool CharacterAppearanceComponent::isMergedPart( const ResolvedPart& part, int32 partIndex ) const
@@ -857,7 +861,8 @@ namespace sw
         return false;
     }
 
-    GameObject* CharacterAppearanceComponent::spawnSkinnedPart( GameObjectManager& manager, SkeletalMeshComponent& body, SceneComponent* pBodyScene, const ResolvedPart& part )
+    GameObject* CharacterAppearanceComponent::spawnSkinnedPart( GameObjectManager& manager, SkeletalMeshComponent& body, SceneComponent* pBodyScene, const ResolvedPart& part,
+                                                                vector<TComponentHandle<MeshSectionComponent>>& outListSection )
     {
         // 스킨드 부품이다. 몸의 자식이 되고 위치는 몸과 같다. 자기 리그가 없으면 몸을 리더로 따르고(옷, 머리카락), 있으면 자기 스켈레톤을
         // 그 리그가 움직인다(스프링 망토 — 리그의 `Body` 유닛이 이 몸이다).
@@ -868,8 +873,9 @@ namespace sw
         pSkinned->setMeshID( part._asset.c_str() );
         if ( part._material.empty() == false )
             pSkinned->setMaterialPath( part._material.c_str() );
-        vector<TComponentHandle<MeshSectionComponent>> listSection; // 새 오브젝트라 지울 것이 없다 — 부품 오브젝트와 함께 사라진다
-        CharacterAppearanceComponentInternal::applyPartSections( manager, *pObject, *pSkinned, part, listSection, _presetID );
+        // 새 오브젝트라 지울 것이 없다. 구간 컴포넌트는 부품 오브젝트와 함께 사라지고, 다시 조립할 때 구간 머티리얼만 바뀌면 이 목록으로 고친다(`syncParts`).
+        outListSection.clear();
+        CharacterAppearanceComponentInternal::applyPartSections( manager, *pObject, *pSkinned, part, outListSection, _presetID );
         if ( part._rig.empty() )
         {
             // 군중 공유는 몸을 따른다 — 몸이 묶음을 나누면 부품도 같은 클립 · 위상의 자기 묶음을 나눈다(`AnimationCrowd::joinFollowerBucket`). 값의 기준은 몸 프리팹이다.
@@ -934,6 +940,11 @@ namespace sw
             listPartCovered[static_cast<size_t>( matched )] = SW_TRUE;
             SpawnedPart kept                                = spawned;
             kept._partIndex                                 = static_cast<uint32>( matched );
+            // 구간 머티리얼만 바뀐 스킨드 부품(변형 · 규칙의 구간 교체)은 같은 부품이다 — 다시 만들지 않고 구간만 고친다(같으면 그대로 둔다).
+            // 합친 부품은 구간 머티리얼이 메시 해시에 들어가 다시 짓기가 고친다(`applyMergedSections`).
+            SkeletalMeshComponent* pKeptSkinned = kept._bMerged == SW_FALSE && kept._bSocketPart == SW_FALSE && pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
+            if ( pKeptSkinned != nullptr )
+                Internal::applyPartSections( manager, *pObject, *pKeptSkinned, _state.getResolved()._listPart[static_cast<size_t>( matched )], kept._listSection, _presetID );
             listKeep.push_back( kept );
         }
         _listSpawnedPart = std::move( listKeep );
@@ -977,7 +988,7 @@ namespace sw
             }
             else if ( part._kind == AppearancePartKind::Skinned )
             {
-                pObject              = spawnSkinnedPart( manager, body, pBodyScene, part );
+                pObject              = spawnSkinnedPart( manager, body, pBodyScene, part, spawned._listSection );
                 spawned._bSocketPart = SW_FALSE;
             }
             if ( pObject == nullptr )
@@ -1064,19 +1075,36 @@ namespace sw
 
     void CharacterAppearanceComponent::applyMaterialValues( GameObjectManager& manager, SkeletalMeshComponent& body )
     {
-        using Internal = CharacterAppearanceComponentInternal;
-        for ( const ResolvedMaterialValue& value : _state.getResolved()._listMaterialValue )
+        using Internal                     = CharacterAppearanceComponentInternal;
+        const ResolvedAppearance& resolved = _state.getResolved();
+        const ResolvedPart*       pBody    = _bodyPart >= 0 ? &resolved._listPart[static_cast<size_t>( _bodyPart )] : nullptr;
+        for ( const ResolvedMaterialValue& value : resolved._listMaterialValue )
         {
             if ( value._target != ResolvedMaterialTarget::Parameter )
                 continue; // 염색 마스크 채널과 팔레트 슬롯은 그것을 읽는 머티리얼이 생기면 적용한다
-            if ( value._owner.empty() && ( value._part.empty() || ( _bodyPart >= 0 && _state.getResolved()._listPart[static_cast<size_t>( _bodyPart )]._partName == value._part ) ) )
-                Internal::applyParameter( body, value );
+            // 구간을 적은 값은 그 구간을 그리는 메시에만 건다(@p source 는 그 메시가 그리는 원본 구간 이름) — 부품마다, 구간마다 셰이더 효과를 달리한다.
+            const auto applyToMesh = [&value]( MeshComponent& mesh, const hashed_string& source )
+            {
+                if ( value._section.empty() || value._section == source )
+                    Internal::applyParameter( mesh, value );
+            };
+            const bool bBodyValue = value._owner.empty() && pBody != nullptr && ( value._part.empty() || pBody->_partName == value._part );
+            if ( bBodyValue )
+            {
+                // 몸은 주 메시가 첫 구간을, `_listBodySection` 이 나머지를 원본 구간 이름으로 그린다(합쳐도 몸 구간 이름은 원본이다 — `makeMergePart`).
+                applyToMesh( body, pBody->_listSection.empty() ? hashed_string{} : body.getSectionName() );
+                for ( const TComponentHandle<MeshSectionComponent>& handle : _listBodySection )
+                {
+                    MeshSectionComponent* pSection = manager.resolveComponent( handle );
+                    if ( pSection != nullptr )
+                        applyToMesh( *pSection, pSection->getSectionName() );
+                }
+            }
             for ( const SpawnedPart& spawned : _listSpawnedPart )
             {
                 const bool bOwned = spawned._owner == value._owner && ( value._part.empty() || spawned._partName == value._part );
                 if ( bOwned )
-                    forEachPartMesh( manager, spawned, [&value]( MeshComponent& mesh )
-                    { Internal::applyParameter( mesh, value ); } );
+                    forEachPartMesh( manager, spawned, applyToMesh );
             }
         }
     }
@@ -1093,7 +1121,7 @@ namespace sw
             // 숨기는 칸의 부품은 몸이 보여도 숨긴다(1인칭의 머리 · 손 무기).
             const hashed_string& owner    = _state.getResolved()._listPart[spawned._partIndex]._owner;
             const bool           bVisible = _bPartsVisible && ( owner.empty() || VectorUtil::contains( _listHiddenSlot, owner ) == false );
-            forEachPartMesh( manager, spawned, [bVisible]( MeshComponent& mesh )
+            forEachPartMesh( manager, spawned, [bVisible]( MeshComponent& mesh, const hashed_string& /*source*/ )
             { mesh.setVisible( bVisible ); } );
         }
     }
@@ -1144,7 +1172,7 @@ namespace sw
         bool              bComplete = true; // 머티리얼이 아직 없는 메시가 있으면 번호를 남기지 않아 다음 틱에 다시 시도한다
         for ( uint32 partIndex = 0; partIndex < _surface.getPartCount() && partIndex < _state.getResolved()._listPart.size(); ++partIndex )
         {
-            const auto applyToMesh = [this, ownerKey, partIndex, &bComplete]( MeshComponent& mesh )
+            const auto applyToMesh = [this, ownerKey, partIndex, &bComplete]( MeshComponent& mesh, const hashed_string& /*source*/ )
             {
                 MaterialInstance* pInstance = CharacterSurfaceBinding::acquireInstance( mesh );
                 if ( pInstance == nullptr )
@@ -1159,7 +1187,7 @@ namespace sw
             {
                 SkeletalMeshComponent* pBody = pOwner != nullptr ? pOwner->getComponent<SkeletalMeshComponent>() : nullptr;
                 if ( pBody != nullptr )
-                    applyToMesh( *pBody );
+                    applyToMesh( *pBody, hashed_string{} );
                 continue;
             }
             for ( const SpawnedPart& spawned : _listSpawnedPart )

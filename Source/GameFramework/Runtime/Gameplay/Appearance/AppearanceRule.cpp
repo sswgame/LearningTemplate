@@ -23,9 +23,10 @@ namespace sw
             static constexpr const utf8* kArrHideField[]     = { "target", "part", "itemTag", "region" };
             static constexpr const utf8* kArrVariantField[]  = { "target", "name" };
             static constexpr const utf8* kArrMeshField[]     = { "target", "part", "mesh" };
-            static constexpr const utf8* kArrMaterialField[] = { "target", "part", "material" };
+            static constexpr const utf8* kArrMaterialField[] = { "target", "part", "section", "material" };
             static constexpr const utf8* kArrMorphField[]    = { "target", "name", "weight" };
             static constexpr const utf8* kArrSocketField[]   = { "name", "parent", "offset", "rotation" };
+            static constexpr const utf8* kArrValueField[]    = { "target", "part", "section", "name", "value" };
             struct ActionFieldSet
             {
                 const utf8*        _pElement;
@@ -39,6 +40,7 @@ namespace sw
                 {  "SwapMaterial", kArrMaterialField, SW_COUNT_OF( kArrMaterialField )},
                 {         "Morph",    kArrMorphField,    SW_COUNT_OF( kArrMorphField )},
                 {"OverrideSocket",   kArrSocketField,   SW_COUNT_OF( kArrSocketField )},
+                { "MaterialValue",    kArrValueField,    SW_COUNT_OF( kArrValueField )},
             };
 
             /** @brief 동작 원소 @p node 의 칸을 읽습니다. 그 동작이 받지 않는 칸은 오류입니다. 모르는 동작이면 false 입니다. */
@@ -49,7 +51,7 @@ namespace sw
                     if ( StringUtil::equals( node.getName(), set._pElement ) == false )
                         continue;
                     (void)AppearanceXMLUtil::reportUnknownAttributes( node, set._ppField, set._fieldCount, report, sourceName );
-                    (void)AppearanceXMLUtil::readFields( node, outFields, report, sourceName, { "parent", "offset", "rotation" } );
+                    (void)AppearanceXMLUtil::readFields( node, outFields, report, sourceName, { "parent", "offset", "rotation", "value" } );
                     return true;
                 }
                 return false;
@@ -143,8 +145,9 @@ namespace sw
                     report.addErrorWithID( "Appearance.UnknownElement", "%#: rule '%#' has unknown element <%#>", sourceName, ruleID.c_str(), pName );
                     return false;
                 }
-                outAction._target = fields._target; // 동작 종류마다 필수 여부가 달라 아래에서 확인한다
-                outAction._part   = fields._part;
+                outAction._target  = fields._target; // 동작 종류마다 필수 여부가 달라 아래에서 확인한다
+                outAction._part    = fields._part;
+                outAction._section = fields._section; // SwapMaterial · MaterialValue 만 받는다(kArrActionField)
                 if ( StringUtil::equals( pName, "Hide" ) )
                 {
                     const bool  bItemTag  = node.findAttribute( "itemTag" ) != nullptr;
@@ -199,6 +202,14 @@ namespace sw
                     outAction._weight = fields._weight;
                     return outAction._name.empty() == false;
                 }
+                if ( StringUtil::equals( pName, "MaterialValue" ) )
+                {
+                    // 주인이 비면 몸이다(`Morph` 와 같다). 값은 스칼라 · 벡터 네 모양이다 — 빠지면 읽기가 보고서에 남긴다.
+                    outAction._kind = AppearanceRuleActionKind::MaterialValue;
+                    outAction._name = fields._name;
+                    AppearanceXMLUtil::readRequiredShaderValue( node, "value", outAction._materialValue, report, sourceName );
+                    return outAction._name.empty() == false;
+                }
                 // OverrideSocket(남은 하나 — readActionFields 가 모르는 원소를 걸렀다)
                 outAction._kind = AppearanceRuleActionKind::OverrideSocket;
                 outAction._name = fields._name;
@@ -228,8 +239,11 @@ namespace sw
         switch ( _kind )
         {
             case AppearanceRuleActionKind::SwapMesh:
-            case AppearanceRuleActionKind::SwapMaterial:
                 return _part == other._part;
+            case AppearanceRuleActionKind::SwapMaterial:
+                return _part == other._part && _section == other._section; // 구간 하나를 바꾸는 것과 부품 전체를 바꾸는 것은 겹쳐 건다(넓은 것 먼저)
+            case AppearanceRuleActionKind::MaterialValue:
+                return _part == other._part && _section == other._section && _name == other._name;
             case AppearanceRuleActionKind::ApplyMorph:
             case AppearanceRuleActionKind::OverrideSocket:
                 return _name == other._name;
@@ -240,7 +254,7 @@ namespace sw
 
     bool AppearanceRuleAction::hasSameValue( const AppearanceRuleAction& other ) const
     {
-        return _name == other._name && _value == other._value && _weight == other._weight && _placement == other._placement;
+        return _name == other._name && _value == other._value && _weight == other._weight && _placement == other._placement && _materialValue == other._materialValue;
     }
 
     bool AppearanceRuleTable::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
