@@ -42,8 +42,8 @@ namespace sw
 /**
  * @brief 씬의 첫 @p TComponent 에서 수를 읽는 감시 값을 등록합니다(.cpp 의 파일 범위, `namespace sw` 안). @p pRead 는 `bool ( const TComponent&, float64& )` 입니다.
  * @code
- *     static bool readKillCount( const ArenaDirectorComponent& director, float64& outValue ) { outValue = director.getKillCount(); return true; }
- *     SW_AUTOMATION_COMPONENT_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaDirectorComponent, &readKillCount );
+ *     static bool readKillCount( const ArenaGameModeComponent& director, float64& outValue ) { outValue = director.getKillCount(); return true; }
+ *     SW_AUTOMATION_COMPONENT_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaGameModeComponent, &readKillCount );
  * @endcode
  */
 #define SW_AUTOMATION_COMPONENT_WATCH( id, pName, pTooltip, TComponent, pRead ) SW_AUTOMATION_WATCH( id, pName, pTooltip, (&::sw::AutomationComponentWatch::read<TComponent, pRead>))

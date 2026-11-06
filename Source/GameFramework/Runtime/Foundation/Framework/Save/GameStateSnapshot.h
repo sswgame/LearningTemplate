@@ -66,9 +66,9 @@ namespace sw
             type._pDespawn = &GameStateSnapshot::despawnViewsOf<TComponent>;
             _listStatefulType.push_back( type );
         }
-        /** @brief 디렉터(`GameDirectorComponent` 파생) 하나를 올립니다. 상태를 싣고 돌려주며, 저장하기 전에 세운 것을 걷습니다. */
+        /** @brief 디렉터(`GameModeComponent` 파생) 하나를 올립니다. 상태를 싣고 돌려주며, 저장하기 전에 세운 것을 걷습니다. */
         template <typename TDirector>
-        void registerDirector()
+        void registerGameMode()
         {
             StatefulComponentType type;
             type._pCapture = &GameStateSnapshot::captureStateOf<TDirector>;

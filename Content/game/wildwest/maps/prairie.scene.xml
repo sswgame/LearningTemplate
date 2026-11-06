@@ -450,7 +450,7 @@
 		<entity id="9" name="Ranch">
 			<GameObject _schemaVersion="0" _name="Ranch" _bActive="true" _bAlwaysLoaded="true">
 				<_listComponent>
-					<WildWestDirectorComponent _componentName="WildWestDirectorComponent"
+					<WildWestGameModeComponent _componentName="WildWestGameModeComponent"
 					                           _bActive="true"
 					                           _bAutoPlay="false"
 					                           _westernDataPath="game/wildwest/data/western.xml"

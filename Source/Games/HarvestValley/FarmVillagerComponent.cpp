@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/HarvestValley/FarmVillageDirectorComponent.h"
+#include "Games/HarvestValley/FarmVillageGameModeComponent.h"
 
 namespace sw
 {
@@ -44,7 +44,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const FarmVillageDirectorComponent* pDirector         = GameDirectorComponent::resolve<FarmVillageDirectorComponent>( *pManager, _director );
+        const FarmVillageGameModeComponent* pDirector         = GameModeComponent::resolve<FarmVillageGameModeComponent>( *pManager, _director );
         const bool                          bFollowsAVillager = pDirector != nullptr && 0 <= _npcIndex && _npcIndex < pDirector->getVillagerCount();
         if ( bFollowsAVillager == false )
             return;

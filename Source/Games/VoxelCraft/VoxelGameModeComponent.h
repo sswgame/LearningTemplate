@@ -1,5 +1,5 @@
 /**
- * @file VoxelDirectorComponent.h
+ * @file VoxelGameModeComponent.h
  * @brief VoxelCraft 의 월드를 담당하는 컴포넌트입니다. 지형 생성, 꾸미기(광석, 눈), 블록 바꾸기, 청크 컴포넌트 스폰과 다시 메싱 지시, 로그를 맡습니다.
  *
  * @details 언리얼의 GameMode와 GameState에 해당합니다. 씬에 하나만 둡니다.
@@ -24,14 +24,14 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 
 namespace sw
 {
     class GameObjectManager;
 
     /**
-     * @class VoxelDirectorComponent
+     * @class VoxelGameModeComponent
      * @brief 월드 한 판을 맡습니다. 플레이가 시작되면 시드로 지형을 생성하고 청크 오브젝트를 스폰합니다.
      * @details 블록(부수거나 놓은 것 포함)은 PROPERTY 가 아니라 `writeState` 로 저장합니다.
      *          게임 상태 스냅샷의 컴포넌트 섹션에 실려서 핫 리로드와 세이브를 거쳐도 유지됩니다(`VoxelCraftGame`).
@@ -43,7 +43,7 @@ namespace sw
      *          켜면 `VoxelAutoPlayControllerComponent`(스폰한 오브젝트)에게, 끄면 플레이어 0의 조종자(`ControlSystem::findOrCreatePlayerController`)에게 넘깁니다.
      */
     REFLECT( Category = "VoxelCraft", DisplayName = "Voxel Director", Tooltip = "Owns the voxel world: terrain, block edits, chunk spawns and rebuild scheduling" )
-    class VoxelDirectorComponent : public GameDirectorComponent
+    class VoxelGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -51,8 +51,8 @@ namespace sw
         static constexpr int32 kChunkCountX = 8;
         static constexpr int32 kChunkCountZ = 8;
 
-        VoxelDirectorComponent();
-        virtual ~VoxelDirectorComponent() override;
+        VoxelGameModeComponent();
+        virtual ~VoxelGameModeComponent() override;
 
         /** @brief 블록(부수거나 놓은 것 포함)을 기록합니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;

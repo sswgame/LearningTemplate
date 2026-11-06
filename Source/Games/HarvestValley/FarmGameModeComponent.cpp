@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/HarvestValley/FarmDirectorComponent.h"
+#include "Games/HarvestValley/FarmGameModeComponent.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -41,7 +41,7 @@ namespace sw
 {
     namespace
     {
-        struct FarmDirectorComponentInternal
+        struct FarmGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCcUtil::make( "FARM" );
             static constexpr uint32 kStateVersion = 3;
@@ -77,24 +77,24 @@ namespace sw
             }
         };
 
-        [[nodiscard]] bool readFarmerX( const FarmDirectorComponent& director, float64& outValue )
+        [[nodiscard]] bool readFarmerX( const FarmGameModeComponent& director, float64& outValue )
         {
             outValue = static_cast<float64>( director.getPlayerPosition()._x );
             return true;
         }
 
-        [[nodiscard]] bool readFarmerTool( const FarmDirectorComponent& director, float64& outValue )
+        [[nodiscard]] bool readFarmerTool( const FarmGameModeComponent& director, float64& outValue )
         {
             outValue = static_cast<float64>( director.getTool() );
             return true;
         }
 
-        [[nodiscard]] bool readTilledCount( const FarmDirectorComponent& director, float64& outValue )
+        [[nodiscard]] bool readTilledCount( const FarmGameModeComponent& director, float64& outValue )
         {
             int32 tilledCount = 0;
-            for ( int32 y = 0; y < FarmDirectorComponent::kFieldHeight; ++y )
+            for ( int32 y = 0; y < FarmGameModeComponent::kFieldHeight; ++y )
             {
-                for ( int32 x = 0; x < FarmDirectorComponent::kFieldWidth; ++x )
+                for ( int32 x = 0; x < FarmGameModeComponent::kFieldWidth; ++x )
                 {
                     const FarmTile* pTile = director.getField().findTile( x, y );
                     tilledCount += pTile != nullptr && pTile->_bTilled != SW_FALSE ? 1 : 0;
@@ -104,13 +104,13 @@ namespace sw
             return true;
         }
 
-        [[nodiscard]] bool readCropCount( const FarmDirectorComponent& director, float64& outValue )
+        [[nodiscard]] bool readCropCount( const FarmGameModeComponent& director, float64& outValue )
         {
             outValue = director.getField().getCropCount();
             return true;
         }
 
-        [[nodiscard]] bool readFarmerControllerKind( const FarmDirectorComponent& director, float64& outValue )
+        [[nodiscard]] bool readFarmerControllerKind( const FarmGameModeComponent& director, float64& outValue )
         {
             outValue = director.isFarmerDrivenByAI() ? 1.0 : 0.0;
             return true;
@@ -124,16 +124,16 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_farmAutoPlay, 0, "HarvestValley: 농부도 AI 가 조종 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_farmAutoPlay, "HarvestValley", "The auto farmer AI controller possesses the farmer" );
 
-    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerX, "Farm.FarmerX", "World X of the farmer", FarmDirectorComponent, &readFarmerX );
-    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", FarmDirectorComponent, &readFarmerTool );
-    SW_AUTOMATION_COMPONENT_WATCH( farmTilledCount, "Farm.TilledCount", "Tilled field tiles", FarmDirectorComponent, &readTilledCount );
-    SW_AUTOMATION_COMPONENT_WATCH( farmCropCount, "Farm.CropCount", "Field tiles with a crop", FarmDirectorComponent, &readCropCount );
-    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerControllerKind, "Farm.FarmerControllerKind", "0 = the player controller holds the farmer, 1 = the auto farmer AI", FarmDirectorComponent, &readFarmerControllerKind );
+    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerX, "Farm.FarmerX", "World X of the farmer", FarmGameModeComponent, &readFarmerX );
+    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerTool, "Farm.FarmerTool", "Tool in the farmer's hand (0 hoe, 1 watering can, 2 seeds, 3 hand)", FarmGameModeComponent, &readFarmerTool );
+    SW_AUTOMATION_COMPONENT_WATCH( farmTilledCount, "Farm.TilledCount", "Tilled field tiles", FarmGameModeComponent, &readTilledCount );
+    SW_AUTOMATION_COMPONENT_WATCH( farmCropCount, "Farm.CropCount", "Field tiles with a crop", FarmGameModeComponent, &readCropCount );
+    SW_AUTOMATION_COMPONENT_WATCH( farmFarmerControllerKind, "Farm.FarmerControllerKind", "0 = the player controller holds the farmer, 1 = the auto farmer AI", FarmGameModeComponent, &readFarmerControllerKind );
 } // namespace sw
 
 namespace sw
 {
-    FarmDirectorComponent::FarmDirectorComponent()
+    FarmGameModeComponent::FarmGameModeComponent()
         : _cropDataPath{}
         , _soilPrefab{}
         , _cropPrefab{}
@@ -196,16 +196,16 @@ namespace sw
     {
     }
 
-    FarmDirectorComponent::~FarmDirectorComponent() = default;
+    FarmGameModeComponent::~FarmGameModeComponent() = default;
 
-    void FarmDirectorComponent::onGameStarted()
+    void FarmGameModeComponent::onGameStarted()
     {
         updateCameraFocus();
-        SW_LOG_INFO_ID( "FarmDirector.FarmReadyWASDMove", "[Farm] farm is ready - WASD move, Space use tool, 1-4 tool (hoe/can/seeds/hand), Q/E seed, B buy, F ship, Z sleep" );
+        SW_LOG_INFO_ID( "FarmGameMode.FarmReadyWASDMove", "[Farm] farm is ready - WASD move, Space use tool, 1-4 tool (hoe/can/seeds/hand), Q/E seed, B buy, F ship, Z sleep" );
         logStatus( true );
     }
 
-    void FarmDirectorComponent::updateGame( float32 deltaTime )
+    void FarmGameModeComponent::updateGame( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;
@@ -227,7 +227,7 @@ namespace sw
             const bool bPassedOut   = _dayStarted < clock.getDay() && _passOutHour <= clock.getHour();
             if ( bPassedOut )
             {
-                SW_LOG_INFO_ID( "FarmDirector.AMFarmerPassedOut", "[Farm] it is 2 AM - the farmer passed out" );
+                SW_LOG_INFO_ID( "FarmGameMode.AMFarmerPassedOut", "[Farm] it is 2 AM - the farmer passed out" );
                 endDay( true );
             }
         }
@@ -235,15 +235,15 @@ namespace sw
         logStatus( false );
     }
 
-    void FarmDirectorComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
+    void FarmGameModeComponent::foldStateHash( StateHashBuilder& inoutBuilder ) const
     {
-        GameDirectorComponent::foldStateHash( inoutBuilder );
+        GameModeComponent::foldStateHash( inoutBuilder );
         inoutBuilder.addUint32( _random.getState() );
     }
 
-    void FarmDirectorComponent::writeState( Archive& outArchive ) const
+    void FarmGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, FarmDirectorComponentInternal::kStateTag, FarmDirectorComponentInternal::kStateVersion );
+        StateArchiveUtil::writeHeader( outArchive, FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion );
         Archive fieldBody;
         _field.writeState( fieldBody );
         StateArchiveUtil::writeSection( outArchive, FarmField::kStateTag, FarmField::kStateVersion, fieldBody );
@@ -260,9 +260,9 @@ namespace sw
         outArchive << _dayStarted;
     }
 
-    bool FarmDirectorComponent::readState( Archive& archive )
+    bool FarmGameModeComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, FarmDirectorComponentInternal::kStateTag, FarmDirectorComponentInternal::kStateVersion ) == false )
+        if ( StateArchiveUtil::readHeader( archive, FarmGameModeComponentInternal::kStateTag, FarmGameModeComponentInternal::kStateVersion ) == false )
             return false;
         FarmField       field;
         FarmShippingBin shipment;
@@ -307,16 +307,16 @@ namespace sw
         return true;
     }
 
-    void FarmDirectorComponent::onStateRestored( bool bRestored )
+    void FarmGameModeComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO_ID( "FarmDirector.FarmStateRestoredStarted", "[Farm] farm state restored - started on day %#", _dayStarted );
+            SW_LOG_INFO_ID( "FarmGameMode.FarmStateRestoredStarted", "[Farm] farm state restored - started on day %#", _dayStarted );
         else
-            SW_LOG_WARNING_ID( "FarmDirector.SavedFarmStateDoes", "[Farm] the saved farm state does not match this build - starting a new farm" );
+            SW_LOG_WARNING_ID( "FarmGameMode.SavedFarmStateDoes", "[Farm] the saved farm state does not match this build - starting a new farm" );
         _lastLoggedHour = -1;
     }
 
-    bool FarmDirectorComponent::findTargetTile( int32& outX, int32& outY ) const
+    bool FarmGameModeComponent::findTargetTile( int32& outX, int32& outY ) const
     {
         const float3 target = _playerPosition + _facing * _reach;
         outX                = static_cast<int32>( MathUtil::floor( target._x ) );
@@ -324,12 +324,12 @@ namespace sw
         return _field.findTile( outX, outY ) != nullptr;
     }
 
-    const shared_ptr<MaterialInstance>& FarmDirectorComponent::getSoilLook( int32 soilState ) const
+    const shared_ptr<MaterialInstance>& FarmGameModeComponent::getSoilLook( int32 soilState ) const
     {
         return _arrSoilLook[MathUtil::clamp( soilState, 0, 2 )];
     }
 
-    const shared_ptr<MaterialInstance>& FarmDirectorComponent::findCropLook( const hashed_string& cropID, bool bWithered, bool bCropColored ) const
+    const shared_ptr<MaterialInstance>& FarmGameModeComponent::findCropLook( const hashed_string& cropID, bool bWithered, bool bCropColored ) const
     {
         if ( bWithered )
             return _witheredCropLook;
@@ -346,12 +346,12 @@ namespace sw
         return _plainCropLook;
     }
 
-    float3 FarmDirectorComponent::computeTileCenter( int32 x, int32 y )
+    float3 FarmGameModeComponent::computeTileCenter( int32 x, int32 y )
     {
         return float3{ static_cast<float32>( x ) + 0.5f, 0.0f, static_cast<float32>( y ) + 0.5f };
     }
 
-    const string* FarmDirectorComponent::findReadyModel( const hashed_string& cropID ) const
+    const string* FarmGameModeComponent::findReadyModel( const hashed_string& cropID ) const
     {
         for ( const FarmCropModel& model : _listCropModel )
         {
@@ -361,7 +361,7 @@ namespace sw
         return nullptr;
     }
 
-    const string& FarmDirectorComponent::findGrowingModel( const hashed_string& cropID, int32 stage ) const
+    const string& FarmGameModeComponent::findGrowingModel( const hashed_string& cropID, int32 stage ) const
     {
         const vector<string>* pList = &_listDefaultGrowingModel;
         for ( const FarmCropModel& model : _listCropModel )
@@ -377,50 +377,50 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
-    bool FarmDirectorComponent::startGame()
+    bool FarmGameModeComponent::startGame()
     {
         // 작물이 적을 수 있는 계절은 작물 파일의 루트(`seasons`)가 정한다 — 공유 캐시가 읽으므로 읽기 전에 알려 줄 자리가 없다.
         _pCropCatalog = SharedAssetCache<CropCatalog>::acquire( _cropDataPath );
         if ( _pCropCatalog == nullptr )
         {
-            SW_LOG_ERROR_ID( "FarmDirector.CouldNotLoadedFarm", "[Farm] %# could not be loaded - the farm cannot start", _cropDataPath.c_str() );
+            SW_LOG_ERROR_ID( "FarmGameMode.CouldNotLoadedFarm", "[Farm] %# could not be loaded - the farm cannot start", _cropDataPath.c_str() );
             return false;
         }
         if ( _pCropCatalog->getCrops().empty() )
         {
-            SW_LOG_ERROR_ID( "FarmDirector.ReadButListsNo", "[Farm] %# was read but lists no crop - the farm cannot start", _cropDataPath.c_str() );
+            SW_LOG_ERROR_ID( "FarmGameMode.ReadButListsNo", "[Farm] %# was read but lists no crop - the farm cannot start", _cropDataPath.c_str() );
             return false;
         }
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
         {
-            SW_LOG_ERROR_ID( "FarmDirector.NoSessionStateComponentBeforeDirector", "[Farm] no SessionStateComponent before the director on this object - the farm cannot start" );
+            SW_LOG_ERROR_ID( "FarmGameMode.NoSessionStateComponentBeforeDirector", "[Farm] no SessionStateComponent before the director on this object - the farm cannot start" );
             return false;
         }
         // 출하함과 가게는 씬에 놓인 오브젝트다(필수 참조). 에디터에서 옮기면 농부가 서는 위치가 따라온다.
         if ( tryGetObjectPosition( _shippingBin, _shippingBinPosition ) == false || tryGetObjectPosition( _shop, _shopPosition ) == false )
         {
-            SW_LOG_ERROR_ID( "FarmDirector.DirectorShippingBinShop", "[Farm] the director's Shipping Bin and Shop must point at objects in the scene - the farm cannot start" );
+            SW_LOG_ERROR_ID( "FarmGameMode.DirectorShippingBinShop", "[Farm] the director's Shipping Bin and Shop must point at objects in the scene - the farm cannot start" );
             return false;
         }
         // 작물 모델 표는 씬 데이터다. 기본 자라는 모델이 없으면 뷰가 고를 모델이 없다 — 시작하지 않는다.
         if ( _listDefaultGrowingModel.empty() )
         {
-            SW_LOG_ERROR_ID( "FarmDirector.DirectorDefaultGrowingModels", "[Farm] the director's Default Growing Models is empty - the farm cannot start" );
+            SW_LOG_ERROR_ID( "FarmGameMode.DirectorDefaultGrowingModels", "[Farm] the director's Default Growing Models is empty - the farm cannot start" );
             return false;
         }
         for ( const FarmCropModel& model : _listCropModel )
         {
             if ( _pCropCatalog->findCrop( model._cropID ) == nullptr )
             {
-                SW_LOG_ERROR_ID( "FarmDirector.DirectorCropModelsNames", "[Farm] the director's Crop Models names crop '%#', which %# does not have - the farm cannot start", model._cropID.c_str(), _cropDataPath.c_str() );
+                SW_LOG_ERROR_ID( "FarmGameMode.DirectorCropModelsNames", "[Farm] the director's Crop Models names crop '%#', which %# does not have - the farm cannot start", model._cropID.c_str(), _cropDataPath.c_str() );
                 return false;
             }
         }
         _itemCatalog = ItemCatalog{};
         _pCropCatalog->fillItemCatalog( _itemCatalog, _itemStackSize );
         SessionStateSettings settings;
-        settings._clock._listSeason             = FarmDirectorComponentInternal::makeSeasons();
+        settings._clock._listSeason             = FarmGameModeComponentInternal::makeSeasons();
         settings._clock._secondsPerDay          = _secondsPerDay;
         settings._clock._startHour              = _wakeHour;
         settings._clock._daysPerSeason          = _daysPerSeason;
@@ -455,40 +455,40 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 스폰(틱이 끝난 뒤, 게임 스레드)
     // ------------------------------------------------------------------------------
-    void FarmDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void FarmGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews )
             spawnField( manager );
         syncFarmerPossession( manager );
     }
 
-    void FarmDirectorComponent::onViewsDespawned()
+    void FarmGameModeComponent::onViewsDespawned()
     {
         _autoFarmerObject = GameObjectHandle{};
         _bPossessionDirty = SW_FALSE;
     }
 
-    PawnComponent* FarmDirectorComponent::findFarmerPawn() const
+    PawnComponent* FarmGameModeComponent::findFarmerPawn() const
     {
         GameObjectManager* pManager = getObjectManager();
         GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( _farmer ) : nullptr;
         return pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
     }
 
-    bool FarmDirectorComponent::isFarmerDrivenByAI() const
+    bool FarmGameModeComponent::isFarmerDrivenByAI() const
     {
         const GameObjectManager* pManager = getObjectManager();
         const PawnComponent*     pPawn    = findFarmerPawn();
         return pManager != nullptr && pPawn != nullptr && ControlSystem::isPawnControlledBy( *pManager, *pPawn, _autoFarmerObject );
     }
 
-    const utf8* FarmDirectorComponent::getButtonName( FarmButton button )
+    const utf8* FarmGameModeComponent::getButtonName( FarmButton button )
     {
         const size_t index = static_cast<size_t>( button );
-        return index < static_cast<size_t>( FarmButton::Count ) ? FarmDirectorComponentInternal::kArrButtonName[index] : "";
+        return index < static_cast<size_t>( FarmButton::Count ) ? FarmGameModeComponentInternal::kArrButtonName[index] : "";
     }
 
-    void FarmDirectorComponent::syncFarmerPossession( GameObjectManager& manager )
+    void FarmGameModeComponent::syncFarmerPossession( GameObjectManager& manager )
     {
         _bPossessionDirty    = SW_FALSE;
         PawnComponent* pPawn = findFarmerPawn();
@@ -506,7 +506,7 @@ namespace sw
             }
             if ( pAI == nullptr )
             {
-                SW_LOG_WARNING_ID( "FarmDirector.AutoFarmerPrefabNo", "[Farm] auto farmer prefab '%#' has no FarmAutoFarmerAIComponent - auto play cannot take the farmer", _autoFarmerPrefab.c_str() );
+                SW_LOG_WARNING_ID( "FarmGameMode.AutoFarmerPrefabNo", "[Farm] auto farmer prefab '%#' has no FarmAutoFarmerAIComponent - auto play cannot take the farmer", _autoFarmerPrefab.c_str() );
                 return;
             }
             pAI->assignDirector( getOwner()->getHandle() );
@@ -518,7 +518,7 @@ namespace sw
         (void)ControlSystem::returnPawnToPlayer( manager, *pPawn, _autoFarmerObject );
     }
 
-    void FarmDirectorComponent::spawnField( GameObjectManager& manager )
+    void FarmGameModeComponent::spawnField( GameObjectManager& manager )
     {
         // 타일마다 흙과 작물을 하나씩 둔다. 각 뷰가 밭의 같은 타일을 따라 모습을 맞춘다(PostUpdate).
         const GameObjectHandle director = getOwner()->getHandle();
@@ -551,7 +551,7 @@ namespace sw
         }
     }
 
-    void FarmDirectorComponent::prepareLooks( Material* pSoilMaterial, Material* pCropMaterial )
+    void FarmGameModeComponent::prepareLooks( Material* pSoilMaterial, Material* pCropMaterial )
     {
         const float4 arrSoilColor[3] = { _grassSoilColor, _tilledSoilColor, _wateredSoilColor };
         for ( int32 soilState = 0; soilState < 3; ++soilState )
@@ -588,9 +588,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 농부 폰의 의도(PrePhysics, 워커). 의도는 조종 시스템이 틱 전에 채웠다.
     // ------------------------------------------------------------------------------
-    void FarmDirectorComponent::applyFarmerIntent( float32 deltaTime, const PawnComponent& pawn )
+    void FarmGameModeComponent::applyFarmerIntent( float32 deltaTime, const PawnComponent& pawn )
     {
-        using Internal              = FarmDirectorComponentInternal;
+        using Internal              = FarmGameModeComponentInternal;
         const ControlIntent& intent = pawn.getIntent();
         const float3         move   = intent.computeWorldMove();
         movePlayer( float3{ move._x, 0.0f, move._z }, deltaTime );
@@ -613,7 +613,7 @@ namespace sw
                 _tool = kArrTool[toolIndex];
                 if ( isAutoPlayOn() == false )
                 {
-                    SW_LOG_INFO_ID( "FarmDirector.Tool", "[Farm] tool: %#", Internal::toToolName( _tool ) );
+                    SW_LOG_INFO_ID( "FarmGameMode.Tool", "[Farm] tool: %#", Internal::toToolName( _tool ) );
                     getSoundQueue().queueEvent( Internal::kEventSelect );
                 }
             }
@@ -634,7 +634,7 @@ namespace sw
             logStatus( true );
     }
 
-    void FarmDirectorComponent::movePlayer( const float3& direction, float32 deltaTime )
+    void FarmGameModeComponent::movePlayer( const float3& direction, float32 deltaTime )
     {
         // 길이는 걷는 속도의 비율이다(스틱을 반만 기울이면 반 속도). 1 을 넘으면(대각선 키) 1 로 자른다.
         const float32 length = direction.getLength();
@@ -653,9 +653,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 행동
     // ------------------------------------------------------------------------------
-    void FarmDirectorComponent::useTool()
+    void FarmGameModeComponent::useTool()
     {
-        using Internal = FarmDirectorComponentInternal;
+        using Internal = FarmGameModeComponentInternal;
         int32 x        = 0;
         int32 y        = 0;
         if ( findTargetTile( x, y ) == false )
@@ -663,7 +663,7 @@ namespace sw
         const int32 cost = getToolStaminaCost( _tool );
         if ( _stamina < cost )
         {
-            SW_LOG_INFO_ID( "FarmDirector.TooTiredPressZ", "[Farm] too tired - press Z to sleep" );
+            SW_LOG_INFO_ID( "FarmGameMode.TooTiredPressZ", "[Farm] too tired - press Z to sleep" );
             return;
         }
 
@@ -686,12 +686,12 @@ namespace sw
                 const hashed_string& seed = getSelectedSeed();
                 if ( pState == nullptr || pState->getInventory().getItemCount( seed ) <= 0 )
                 {
-                    SW_LOG_INFO_ID( "FarmDirector.NoLeftBuyMore", "[Farm] no %# left - buy more at the shop (B)", seed.c_str() );
+                    SW_LOG_INFO_ID( "FarmGameMode.NoLeftBuyMore", "[Farm] no %# left - buy more at the shop (B)", seed.c_str() );
                     return;
                 }
                 result = _field.plant( x, y, seed, pState->getClock().getSeasonName() );
                 if ( result == FarmActionResult::Done && pState->getInventory().removeItem( seed, 1 ) == false )
-                    SW_LOG_WARNING_ID( "FarmDirector.PlantedWithoutSeedBag", "[Farm] planted without a seed in the bag" );
+                    SW_LOG_WARNING_ID( "FarmGameMode.PlantedWithoutSeedBag", "[Farm] planted without a seed in the bag" );
                 if ( result == FarmActionResult::Done )
                     getSoundQueue().queueEvent( Internal::kEventPlant );
                 break;
@@ -705,7 +705,7 @@ namespace sw
                 {
                     // 가방이 차면 덜 들어간다(남은 것은 밭에서 사라진다). 실제로 넣은 수를 적는다.
                     const int32 added = pState != nullptr ? pState->getInventory().addItem( produce, count ) : 0;
-                    SW_LOG_INFO_ID( "FarmDirector.HarvestedXBag", "[Farm] harvested %# x%# (%# into the bag)", produce.c_str(), count, added );
+                    SW_LOG_INFO_ID( "FarmGameMode.HarvestedXBag", "[Farm] harvested %# x%# (%# into the bag)", produce.c_str(), count, added );
                     getSoundQueue().queueEvent( Internal::kEventHarvest );
                 }
                 break;
@@ -718,14 +718,14 @@ namespace sw
             ++_toolUseCount;
         }
         else if ( isAutoPlayOn() == false )
-            SW_LOG_INFO_ID( "FarmDirector.ToolUsed", "[Farm] %# at (%#, %#): %#", Internal::toToolName( _tool ), x, y, getEnumName( result ) );
+            SW_LOG_INFO_ID( "FarmGameMode.ToolUsed", "[Farm] %# at (%#, %#): %#", Internal::toToolName( _tool ), x, y, getEnumName( result ) );
     }
 
-    int32 FarmDirectorComponent::shipAllProduce()
+    int32 FarmGameModeComponent::shipAllProduce()
     {
         if ( isNearShippingBin() == false )
         {
-            SW_LOG_INFO_ID( "FarmDirector.StandNextShippingBin", "[Farm] stand next to the shipping bin to ship" );
+            SW_LOG_INFO_ID( "FarmGameMode.StandNextShippingBin", "[Farm] stand next to the shipping bin to ship" );
             return 0;
         }
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
@@ -741,17 +741,17 @@ namespace sw
         }
         if ( shipped > 0 )
         {
-            SW_LOG_INFO_ID( "FarmDirector.ShippedItemsPaidTonight", "[Farm] shipped %# items - paid tonight", shipped );
-            getSoundQueue().queueEvent( FarmDirectorComponentInternal::kEventShip );
+            SW_LOG_INFO_ID( "FarmGameMode.ShippedItemsPaidTonight", "[Farm] shipped %# items - paid tonight", shipped );
+            getSoundQueue().queueEvent( FarmGameModeComponentInternal::kEventShip );
         }
         return shipped;
     }
 
-    bool FarmDirectorComponent::buySelectedSeed()
+    bool FarmGameModeComponent::buySelectedSeed()
     {
         if ( isNearShop() == false )
         {
-            SW_LOG_INFO_ID( "FarmDirector.StandNextShopBuy", "[Farm] stand next to the shop to buy seeds" );
+            SW_LOG_INFO_ID( "FarmGameMode.StandNextShopBuy", "[Farm] stand next to the shop to buy seeds" );
             return false;
         }
         const CropDef* pCrop = _pCropCatalog->findCropBySeed( getSelectedSeed() );
@@ -764,20 +764,20 @@ namespace sw
         Wallet&    wallet = pState->getWallet();
         if ( bag.hasRoomFor( pCrop->_seedItem, 1 ) == false )
         {
-            SW_LOG_INFO_ID( "FarmDirector.BagFullNoRoom", "[Farm] the bag is full - no room for %#", pCrop->_seedItem.c_str() );
+            SW_LOG_INFO_ID( "FarmGameMode.BagFullNoRoom", "[Farm] the bag is full - no room for %#", pCrop->_seedItem.c_str() );
             return false;
         }
         if ( wallet.trySpend( _shipment.getCurrency(), pCrop->_seedPrice ) == false )
         {
-            SW_LOG_INFO_ID( "FarmDirector.NotEnoughGoldG", "[Farm] not enough gold for %# (%#G)", pCrop->_seedItem.c_str(), pCrop->_seedPrice );
+            SW_LOG_INFO_ID( "FarmGameMode.NotEnoughGoldG", "[Farm] not enough gold for %# (%#G)", pCrop->_seedItem.c_str(), pCrop->_seedPrice );
             return false;
         }
         (void)bag.addItem( pCrop->_seedItem, 1 );
-        SW_LOG_INFO_ID( "FarmDirector.BoughtGGLeft", "[Farm] bought %# (%#G) - %#G left", pCrop->_seedItem.c_str(), pCrop->_seedPrice, wallet.getBalance( _shipment.getCurrency() ) );
+        SW_LOG_INFO_ID( "FarmGameMode.BoughtGGLeft", "[Farm] bought %# (%#G) - %#G left", pCrop->_seedItem.c_str(), pCrop->_seedPrice, wallet.getBalance( _shipment.getCurrency() ) );
         return true;
     }
 
-    void FarmDirectorComponent::endDay( bool bPassedOut )
+    void FarmGameModeComponent::endDay( bool bPassedOut )
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
@@ -795,13 +795,13 @@ namespace sw
         _stamina        = bPassedOut ? _maxStamina / 2 : _maxStamina;
         _playerPosition = _playerStart;
         _facing         = float3{ 0.0f, 0.0f, 1.0f };
-        SW_LOG_INFO_ID( "FarmDirector.GoodMorningYearShipped", "[Farm] good morning - %# %#, year %# · shipped for %#G · gold %#G · %#%#", clock.getSeasonName().c_str(), clock.getDayOfSeason() + 1,
+        SW_LOG_INFO_ID( "FarmGameMode.GoodMorningYearShipped", "[Farm] good morning - %# %#, year %# · shipped for %#G · gold %#G · %#%#", clock.getSeasonName().c_str(), clock.getDayOfSeason() + 1,
                         clock.getYear(), earned, pState->getWallet().getBalance( _shipment.getCurrency() ), bRaining ? "rain" : "sunny",
                         bSeasonChange ? " · a new season - out-of-season crops withered" : "" );
         _lastLoggedHour = -1;
     }
 
-    void FarmDirectorComponent::selectSeed( int32 offset )
+    void FarmGameModeComponent::selectSeed( int32 offset )
     {
         if ( _listSeed.empty() )
             return;
@@ -811,11 +811,11 @@ namespace sw
             return; // 자동 농부는 씨앗을 하나씩 넘겨 가며 고른다. 그 줄은 로그에 남기지 않는다.
         [[maybe_unused]] const CropDef*               pCrop  = _pCropCatalog->findCropBySeed( getSelectedSeed() );
         [[maybe_unused]] const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
-        SW_LOG_INFO_ID( "FarmDirector.SeedG", "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pState != nullptr ? pState->getInventory().getItemCount( getSelectedSeed() ) : 0,
+        SW_LOG_INFO_ID( "FarmGameMode.SeedG", "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pState != nullptr ? pState->getInventory().getItemCount( getSelectedSeed() ) : 0,
                         pCrop != nullptr ? pCrop->_seedPrice : 0, pCrop != nullptr && pState != nullptr && pCrop->growsIn( pState->getClock().getSeasonName() ) ? "" : " - not this season" );
     }
 
-    void FarmDirectorComponent::updateCameraFocus()
+    void FarmGameModeComponent::updateCameraFocus()
     {
         // 비스듬히 내려다보는 직교 시점으로, 밭 중심과 농부 사이를 본다. 카메라 디렉터는 PostPhysics 틱 뒤에 이 초점을 읽고, 카메라 오브젝트에는 다른 쓰기가 없다.
         GameObjectManager*       pManager   = getObjectManager();
@@ -827,7 +827,7 @@ namespace sw
         pRig->setFocusPoint( fieldCenter + ( _playerPosition - fieldCenter ) * _cameraFollow );
     }
 
-    void FarmDirectorComponent::logStatus( bool bForce )
+    void FarmGameModeComponent::logStatus( bool bForce )
     {
         const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
@@ -838,23 +838,23 @@ namespace sw
             return;
         _lastLoggedHour                       = hour;
         [[maybe_unused]] const CropDef* pCrop = _pCropCatalog->findCropBySeed( getSelectedSeed() );
-        SW_LOG_INFO_ID( "FarmDirector.YGoldGStamina", "[Farm] %# %# Y%# %#:%# · gold %#G · stamina %#/%# · tool %# · seed %# x%# · crops %# (ready %#)", clock.getSeasonName().c_str(),
+        SW_LOG_INFO_ID( "FarmGameMode.YGoldGStamina", "[Farm] %# %# Y%# %#:%# · gold %#G · stamina %#/%# · tool %# · seed %# x%# · crops %# (ready %#)", clock.getSeasonName().c_str(),
                         clock.getDayOfSeason() + 1, clock.getYear(), hour, clock.getMinute(), pState->getWallet().getBalance( _shipment.getCurrency() ), _stamina, _maxStamina,
-                        FarmDirectorComponentInternal::toToolName( _tool ), pCrop != nullptr ? pCrop->_name.c_str() : "-", pState->getInventory().getItemCount( getSelectedSeed() ),
+                        FarmGameModeComponentInternal::toToolName( _tool ), pCrop != nullptr ? pCrop->_name.c_str() : "-", pState->getInventory().getItemCount( getSelectedSeed() ),
                         _field.getCropCount(), _field.getReadyCount() );
     }
 
-    bool FarmDirectorComponent::isNearShippingBin() const
+    bool FarmGameModeComponent::isNearShippingBin() const
     {
         return float3::getHorizontalDistance( _playerPosition, _shippingBinPosition ) < _nearDistance;
     }
 
-    bool FarmDirectorComponent::isNearShop() const
+    bool FarmGameModeComponent::isNearShop() const
     {
         return float3::getHorizontalDistance( _playerPosition, _shopPosition ) < _nearDistance + 0.5f;
     }
 
-    const hashed_string& FarmDirectorComponent::getSelectedSeed() const
+    const hashed_string& FarmGameModeComponent::getSelectedSeed() const
     {
         static const hashed_string kNoSeed{};
         if ( _listSeed.empty() )
@@ -862,7 +862,7 @@ namespace sw
         return _listSeed[static_cast<size_t>( MathUtil::clamp( _selectedSeedIndex, 0, static_cast<int32>( _listSeed.size() ) - 1 ) )];
     }
 
-    int32 FarmDirectorComponent::getToolStaminaCost( FarmTool tool ) const
+    int32 FarmGameModeComponent::getToolStaminaCost( FarmTool tool ) const
     {
         switch ( tool )
         {
@@ -877,7 +877,7 @@ namespace sw
         return _handStaminaCost;
     }
 
-    bool FarmDirectorComponent::tryGetObjectPosition( GameObjectHandle handle, float3& outPosition ) const
+    bool FarmGameModeComponent::tryGetObjectPosition( GameObjectHandle handle, float3& outPosition ) const
     {
         GameObjectManager*    pManager = getObjectManager();
         const GameObject*     pObject  = pManager != nullptr ? pManager->resolveGameObject( handle ) : nullptr;

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/Shooter3D/ShooterDirectorComponent.h"
+#include "Games/Shooter3D/ShooterGameModeComponent.h"
 
 #include "Core/File/FileUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -39,7 +39,7 @@ namespace sw
 {
     namespace
     {
-        struct ShooterDirectorComponentInternal
+        struct ShooterGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCcUtil::make( "SHOT" );
             static constexpr uint32 kStateVersion = 3;
@@ -86,7 +86,7 @@ namespace sw
             {
                 if ( resolved._y >= box._max._y )
                     continue; // 상자 위다. 뛰어 오른 경우는 막지 않는다(높이가 낮은 상자).
-                const float3  closest = ShooterDirectorComponentInternal::closestPointXz( resolved, box._min, box._max );
+                const float3  closest = ShooterGameModeComponentInternal::closestPointXz( resolved, box._min, box._max );
                 float3        offset  = float3{ resolved._x - closest._x, 0.0f, resolved._z - closest._z };
                 const float32 length  = offset.getLength();
                 if ( length >= radius )
@@ -117,7 +117,7 @@ namespace sw
         return resolved;
     }
 
-    ShooterDirectorComponent::ShooterDirectorComponent()
+    ShooterGameModeComponent::ShooterGameModeComponent()
         : _effectPrefab{}
         , _tracerPrefab{}
         , _listEnemyKind{}
@@ -162,9 +162,9 @@ namespace sw
     {
     }
 
-    ShooterDirectorComponent::~ShooterDirectorComponent() = default;
+    ShooterGameModeComponent::~ShooterGameModeComponent() = default;
 
-    bool ShooterDirectorComponent::startGame()
+    bool ShooterGameModeComponent::startGame()
     {
         collectBoxes();
         startPacing();
@@ -178,25 +178,25 @@ namespace sw
         return true;
     }
 
-    void ShooterDirectorComponent::onGameStarted()
+    void ShooterGameModeComponent::onGameStarted()
     {
         updatePlayerView();
     }
 
-    void ShooterDirectorComponent::writeState( Archive& outArchive ) const
+    void ShooterGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion );
+        StateArchiveUtil::writeHeader( outArchive, ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion );
         outArchive << _killCount;
         outArchive << static_cast<uint8>( _bPacingReady );
         if ( _bPacingReady == SW_TRUE )
             _director.writeState( outArchive );
     }
 
-    bool ShooterDirectorComponent::readState( Archive& archive )
+    bool ShooterGameModeComponent::readState( Archive& archive )
     {
         uint32 killCount = 0;
         uint8  bPacing   = SW_FALSE;
-        if ( StateArchiveUtil::readHeader( archive, ShooterDirectorComponentInternal::kStateTag, ShooterDirectorComponentInternal::kStateVersion ) == false )
+        if ( StateArchiveUtil::readHeader( archive, ShooterGameModeComponentInternal::kStateTag, ShooterGameModeComponentInternal::kStateVersion ) == false )
             return false;
         archive >> killCount;
         archive >> bPacing;
@@ -211,30 +211,30 @@ namespace sw
         return true;
     }
 
-    void ShooterDirectorComponent::onStateRestored( bool bRestored )
+    void ShooterGameModeComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
         {
-            SW_LOG_INFO_ID( "ShooterDirector.ArenaStateRestoredKills", "[Shooter] arena state restored - %# kills, wave %#", _killCount, getWave() );
+            SW_LOG_INFO_ID( "ShooterGameMode.ArenaStateRestoredKills", "[Shooter] arena state restored - %# kills, wave %#", _killCount, getWave() );
         }
         else
         {
             // 감독은 읽었는데 끝 바이트가 남은 경우도 여기로 온다. 새 판으로 되돌린다.
-            SW_LOG_WARNING_ID( "ShooterDirector.SavedArenaStateDoes", "[Shooter] the saved arena state does not match this build - starting a new round" );
+            SW_LOG_WARNING_ID( "ShooterGameMode.SavedArenaStateDoes", "[Shooter] the saved arena state does not match this build - starting a new round" );
             _killCount = 0;
             if ( _bPacingReady == SW_TRUE )
                 _director.restart();
         }
     }
 
-    void ShooterDirectorComponent::onEndPlay()
+    void ShooterGameModeComponent::onEndPlay()
     {
         if ( _motionTrace.empty() == false && FileUtil::writeTextFile( gv_shooterMotionTrace, _motionTrace ) == false )
-            SW_LOG_WARNING_ID( "ShooterDirector.MotionTraceCouldNot", "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.c_str() );
-        GameDirectorComponent::onEndPlay();
+            SW_LOG_WARNING_ID( "ShooterGameMode.MotionTraceCouldNot", "[Shooter] motion trace '%#' could not be written", gv_shooterMotionTrace.c_str() );
+        GameModeComponent::onEndPlay();
     }
 
-    void ShooterDirectorComponent::updateGame( float32 deltaTime )
+    void ShooterGameModeComponent::updateGame( float32 deltaTime )
     {
         const float32 step = MathUtil::min( deltaTime, 0.1f );
         if ( gv_shooterMotionTrace.empty() == false )
@@ -252,13 +252,13 @@ namespace sw
         }
     }
 
-    bool ShooterDirectorComponent::hasPendingSpawn() const
+    bool ShooterGameModeComponent::hasPendingSpawn() const
     {
         const bool bAutoPlayChanged = _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 );
         return _listPendingEnemy.empty() == false || _listPendingEffect.empty() == false || _bAmmoPending == SW_TRUE || _pendingHeal > 0.0f || bAutoPlayChanged;
     }
 
-    void ShooterDirectorComponent::onViewsDespawned()
+    void ShooterGameModeComponent::onViewsDespawned()
     {
         // 자동 플레이 AI 오브젝트도 정리됐다. 다시 스폰할 때 빙의를 다시 맞춘다.
         _autoPlayController = GameObjectHandle{};
@@ -281,7 +281,7 @@ namespace sw
         }
     }
 
-    void ShooterDirectorComponent::restartRound()
+    void ShooterGameModeComponent::restartRound()
     {
         clearEnemies();
         _killCount   = 0;
@@ -291,7 +291,7 @@ namespace sw
         _listDirectorEvent.clear();
     }
 
-    void ShooterDirectorComponent::clearEnemies()
+    void ShooterGameModeComponent::clearEnemies()
     {
         GameObjectManager* pManager = getObjectManager();
         for ( EnemyRecord& enemy : _listEnemy )
@@ -304,13 +304,13 @@ namespace sw
         _listPendingEnemy.clear();
     }
 
-    void ShooterDirectorComponent::reportPlayerDamage( float32 amount )
+    void ShooterGameModeComponent::reportPlayerDamage( float32 amount )
     {
         if ( _bPacingReady == SW_TRUE )
             (void)_director.getBuiltinIntensityModel().addSignal( hashed_string( "damageTaken" ), amount );
     }
 
-    void ShooterDirectorComponent::spawnEffect( const float3& position, float32 size, const float4& color, float32 lifetime )
+    void ShooterGameModeComponent::spawnEffect( const float3& position, float32 size, const float4& color, float32 lifetime )
     {
         GameObjectManager* pManager = getObjectManager();
         MeshComponent*     pMesh    = pManager != nullptr ? acquirePooledMesh( *pManager, _effectPool, lifetime ) : nullptr;
@@ -323,7 +323,7 @@ namespace sw
         pMesh->setVisible( true );
     }
 
-    void ShooterDirectorComponent::spawnTracer( const float3& from, const float3& to, float32 width, const float4& color, float32 lifetime )
+    void ShooterGameModeComponent::spawnTracer( const float3& from, const float3& to, float32 width, const float4& color, float32 lifetime )
     {
         const float3  span   = to - from;
         const float32 length = span.getLength();
@@ -347,7 +347,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 배치 · 스폰
     // ------------------------------------------------------------------------------
-    void ShooterDirectorComponent::collectBoxes()
+    void ShooterGameModeComponent::collectBoxes()
     {
         _listBox.clear();
         GameObjectManager* pManager = getObjectManager();
@@ -359,39 +359,39 @@ namespace sw
         { listBox.push_back( pBlocker->computeBox() ); } );
     }
 
-    void ShooterDirectorComponent::startPacing()
+    void ShooterGameModeComponent::startPacing()
     {
-        using Internal = ShooterDirectorComponentInternal;
+        using Internal = ShooterGameModeComponentInternal;
         _bPacingReady  = SW_FALSE;
         // 적 종류(프리팹 + 프리셋)는 씬 데이터가 정본이다(C++ 에 기본값이 없다). 비었거나 외형 표에 없는 프리셋이면 이유를 남기고 적을 내지 않는다.
         const AppearanceDatabase* pAppearance = game::findSubsystem<AppearanceDatabase>();
         const bool                bEnemiesSet = _listEnemyKind.empty() == false && _eliteEnemyKind._prefab.empty() == false;
         if ( pAppearance == nullptr || bEnemiesSet == false )
         {
-            SW_LOG_ERROR_ID( "ShooterDirector.EnemyPresetsNotSet", "[Shooter] enemy kinds are not set (or no appearance database) - no enemies will come" );
+            SW_LOG_ERROR_ID( "ShooterGameMode.EnemyPresetsNotSet", "[Shooter] enemy kinds are not set (or no appearance database) - no enemies will come" );
             return;
         }
         bool bPresetsKnown = pAppearance->getPresets().findPreset( hashed_string( _eliteEnemyKind._preset ) ) != nullptr;
         if ( bPresetsKnown == false )
-            SW_LOG_ERROR_ID( "ShooterDirector.ElitePresetNotAppearance", "[Shooter] elite preset '%#' is not in the appearance presets", _eliteEnemyKind._preset.c_str() );
+            SW_LOG_ERROR_ID( "ShooterGameMode.ElitePresetNotAppearance", "[Shooter] elite preset '%#' is not in the appearance presets", _eliteEnemyKind._preset.c_str() );
         for ( const ShooterEnemyKind& kind : _listEnemyKind )
         {
             if ( pAppearance->getPresets().findPreset( hashed_string( kind._preset ) ) != nullptr )
                 continue;
-            SW_LOG_ERROR_ID( "ShooterDirector.EnemyPresetNotAppearance", "[Shooter] enemy preset '%#' is not in the appearance presets", kind._preset.c_str() );
+            SW_LOG_ERROR_ID( "ShooterGameMode.EnemyPresetNotAppearance", "[Shooter] enemy preset '%#' is not in the appearance presets", kind._preset.c_str() );
             bPresetsKnown = false;
         }
         if ( bPresetsKnown == false )
             return;
         if ( _profile.loadFromAsset( AssetID{ _pacingProfile } ) == false )
         {
-            SW_LOG_ERROR_ID( "ShooterDirector.PacingProfileCouldNot", "[Shooter] pacing profile '%#' could not be loaded - no enemies will come", _pacingProfile.c_str() );
+            SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileCouldNot", "[Shooter] pacing profile '%#' could not be loaded - no enemies will come", _pacingProfile.c_str() );
             return;
         }
         _pTable = SharedAssetCache<SpawnTable>::acquire( _spawnTable );
         if ( _pTable == nullptr )
         {
-            SW_LOG_ERROR_ID( "ShooterDirector.SpawnTableCouldNot", "[Shooter] spawn table '%#' could not be loaded - no enemies will come", _spawnTable.c_str() );
+            SW_LOG_ERROR_ID( "ShooterGameMode.SpawnTableCouldNot", "[Shooter] spawn table '%#' could not be loaded - no enemies will come", _spawnTable.c_str() );
             return;
         }
         // 감독은 ID 만 낸다. 이 게임이 모르는 ID 는 아무 일도 하지 않으므로 데이터 오타를 여기서 알린다.
@@ -400,19 +400,19 @@ namespace sw
         for ( const hashed_string& id : listID )
         {
             if ( Internal::isKnownID( id, Internal::kArrKnownEncounter ) == false )
-                SW_LOG_ERROR_ID( "ShooterDirector.PacingProfileNamesEncounter", "[Shooter] pacing profile '%#' names encounter '%#' this game does not know", _pacingProfile.c_str(), id.c_str() );
+                SW_LOG_ERROR_ID( "ShooterGameMode.PacingProfileNamesEncounter", "[Shooter] pacing profile '%#' names encounter '%#' this game does not know", _pacingProfile.c_str(), id.c_str() );
         }
         for ( const SpawnEntryDef& entry : _pTable->getEntries() )
         {
             if ( Internal::isKnownID( entry._id, Internal::kArrKnownSpawn ) == false )
-                SW_LOG_ERROR_ID( "ShooterDirector.SpawnTableNamesGame", "[Shooter] spawn table '%#' names '%#' this game does not know", _spawnTable.c_str(), entry._id.c_str() );
+                SW_LOG_ERROR_ID( "ShooterGameMode.SpawnTableNamesGame", "[Shooter] spawn table '%#' names '%#' this game does not know", _spawnTable.c_str(), entry._id.c_str() );
         }
         _director.initialize( &_profile, _pTable.get(), static_cast<uint32>( _pacingSeed ) );
         _bPacingReady = SW_TRUE;
         applyDirectorEvents(); // 시작 단계 사건
     }
 
-    void ShooterDirectorComponent::requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite )
+    void ShooterGameModeComponent::requestEnemies( int32 count, float32 healthScale, uint32 spawnID, bool bElite )
     {
         // 웨이브(감독 순환 + 1)마다 체력과 속도가 오른다. 감독이 정하는 것은 언제 몇 기를 낼지이고, 적 한 기의 세기는 게임 규칙이다.
         const float32 wave   = static_cast<float32>( getWave() );
@@ -430,7 +430,7 @@ namespace sw
         }
     }
 
-    void ShooterDirectorComponent::applyDirectorEvents()
+    void ShooterGameModeComponent::applyDirectorEvents()
     {
         _listDirectorEvent.clear();
         _director.drainEvents( _listDirectorEvent );
@@ -449,7 +449,7 @@ namespace sw
                         waveReached.setInt( "wave", getWave() ).setInt( "kills", _killCount ).setFloat( "seconds", static_cast<float64>( _director.getTime() ) );
                         (void)pTelemetry->record( waveReached );
                     }
-                    SW_LOG_INFO_ID( "ShooterDirector.PacingWaveIntensity", "[Shooter] pacing '%#' -> '%#' (wave %#, intensity %.2f)", event._source.empty() ? "start" : event._source.c_str(), event._id.c_str(), getWave(),
+                    SW_LOG_INFO_ID( "ShooterGameMode.PacingWaveIntensity", "[Shooter] pacing '%#' -> '%#' (wave %#, intensity %.2f)", event._source.empty() ? "start" : event._source.c_str(), event._id.c_str(), getWave(),
                                     event._intensity );
                     break;
                 }
@@ -461,7 +461,7 @@ namespace sw
                 case AIDirectorEventKind::Encounter:
                 {
                     requestEnemies( event._count, event._scale, 0, event._id == hashed_string( "elite" ) );
-                    SW_LOG_INFO_ID( "ShooterDirector.SkeletonsXHealthWave", "[Shooter] %# - %# skeletons (x%.1f health) on wave %#", event._id.c_str(), event._count, event._scale, getWave() );
+                    SW_LOG_INFO_ID( "ShooterGameMode.SkeletonsXHealthWave", "[Shooter] %# - %# skeletons (x%.1f health) on wave %#", event._id.c_str(), event._count, event._scale, getWave() );
                     break;
                 }
                 case AIDirectorEventKind::Reward:
@@ -480,7 +480,7 @@ namespace sw
         }
     }
 
-    void ShooterDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void ShooterGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews )
             spawnEffectPools( manager );
@@ -510,7 +510,7 @@ namespace sw
         }
     }
 
-    void ShooterDirectorComponent::syncAutoPlayPossession( GameObjectManager& manager )
+    void ShooterGameModeComponent::syncAutoPlayPossession( GameObjectManager& manager )
     {
         const bool     bAutoPlay     = isAutoPlayOn();
         GameObject*    pPlayerObject = manager.resolveGameObject( _player );
@@ -533,7 +533,7 @@ namespace sw
             if ( pAI != nullptr && pAI->getPawn() != pPawn->getHandle() )
             {
                 pAI->possess( *pPawn );
-                SW_LOG_INFO_ID( "ShooterDirector.AutoPlayTookPlayer", "[Shooter] auto play took the player" );
+                SW_LOG_INFO_ID( "ShooterGameMode.AutoPlayTookPlayer", "[Shooter] auto play took the player" );
             }
             return;
         }
@@ -544,14 +544,14 @@ namespace sw
             destroySpawned( manager, _autoPlayController );
     }
 
-    void ShooterDirectorComponent::spawnEffectPools( GameObjectManager& manager )
+    void ShooterGameModeComponent::spawnEffectPools( GameObjectManager& manager )
     {
         // 탄착과 섬광 구, 탄도선 상자를 미리 스폰하고 숨긴다(오브젝트를 매 발 만들고 지우지 않는다).
         spawnPool( manager, _effectPrefab.path(), _effectPoolSize, "ShotEffect", _effectPool );
         spawnPool( manager, _tracerPrefab.path(), _tracerPoolSize, "Tracer", _tracerPool );
     }
 
-    void ShooterDirectorComponent::spawnPool( GameObjectManager& manager, const string& prefab, int32 count, const utf8* pName, EffectPool& outPool )
+    void ShooterGameModeComponent::spawnPool( GameObjectManager& manager, const string& prefab, int32 count, const utf8* pName, EffectPool& outPool )
     {
         outPool = EffectPool{};
         for ( int32 effectIndex = 0; effectIndex < count; ++effectIndex )
@@ -565,7 +565,7 @@ namespace sw
         }
     }
 
-    MeshComponent* ShooterDirectorComponent::acquirePooledMesh( GameObjectManager& manager, EffectPool& inoutPool, float32 lifetime )
+    MeshComponent* ShooterGameModeComponent::acquirePooledMesh( GameObjectManager& manager, EffectPool& inoutPool, float32 lifetime )
     {
         const uint32 poolSize = static_cast<uint32>( inoutPool._listObject.size() );
         if ( poolSize == 0 )
@@ -593,7 +593,7 @@ namespace sw
         return pMesh;
     }
 
-    void ShooterDirectorComponent::spawnEnemy( GameObjectManager& manager, const EnemyRequest& request )
+    void ShooterGameModeComponent::spawnEnemy( GameObjectManager& manager, const EnemyRequest& request )
     {
         // 종류는 정예면 정예, 나머지는 목록을 차례로 쓴다. 시드는 스폰 순번이라 같은 판은 같은 얼굴이 나온다.
         const ShooterEnemyKind&       kind        = request._bElite == SW_TRUE ? _eliteEnemyKind : _listEnemyKind[request._slot % static_cast<uint32>( _listEnemyKind.size() )];
@@ -639,7 +639,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 갱신(PrePhysics). 플레이어와 적이 쓰지 않는 그룹이다.
     // ------------------------------------------------------------------------------
-    void ShooterDirectorComponent::updateEnemies()
+    void ShooterGameModeComponent::updateEnemies()
     {
         GameObjectManager* pManager = getObjectManager();
         _listEnemyView.clear();
@@ -663,7 +663,7 @@ namespace sw
                     if ( record._spawnID != 0 )
                         (void)_director.notifyDespawned( record._spawnID );
                 }
-                getSoundQueue().queueEventAt( ShooterDirectorComponentInternal::kEventEnemyDown, pEnemy->getPosition() );
+                getSoundQueue().queueEventAt( ShooterGameModeComponentInternal::kEventEnemyDown, pEnemy->getPosition() );
             }
             const bool bGone = pEnemy == nullptr || pEnemy->isRemovable();
             if ( bGone )
@@ -697,7 +697,7 @@ namespace sw
             (void)_director.getBuiltinIntensityModel().setSignal( hashed_string( "enemiesNear" ), static_cast<float32>( nearCount ) );
     }
 
-    void ShooterDirectorComponent::updatePlayerView()
+    void ShooterGameModeComponent::updatePlayerView()
     {
         GameObjectManager*            pManager = getObjectManager();
         const GameObject*             pObject  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
@@ -711,7 +711,7 @@ namespace sw
             (void)_director.getBuiltinIntensityModel().setSignal( hashed_string( "lowAmmo" ), pPlayer->computeAmmoShortage() );
     }
 
-    void ShooterDirectorComponent::logStatus( float32 deltaTime )
+    void ShooterGameModeComponent::logStatus( float32 deltaTime )
     {
         _statusTimer += deltaTime;
         if ( _statusTimer < _statusLogInterval )
@@ -724,12 +724,12 @@ namespace sw
             return;
         [[maybe_unused]] const WeaponState& weapon  = pPlayer->getCurrentWeapon();
         [[maybe_unused]] const uint32       percent = pPlayer->getShotCount() > 0u ? pPlayer->getHitCount() * 100u / pPlayer->getShotCount() : 0u;
-        SW_LOG_INFO_ID( "ShooterDirector.WaveIntensityKillsHP", "[Shooter] wave %# (%#, intensity %.2f) · kills %# · HP %# · %# %#/%# · skeletons %# · accuracy %#%%", getWave(), _director.getPhase().c_str(),
+        SW_LOG_INFO_ID( "ShooterGameMode.WaveIntensityKillsHP", "[Shooter] wave %# (%#, intensity %.2f) · kills %# · HP %# · %# %#/%# · skeletons %# · accuracy %#%%", getWave(), _director.getPhase().c_str(),
                         _director.getIntensity(), _killCount, static_cast<int32>( pPlayer->getHealth() ), weapon.getDef()._name.c_str(), weapon.getMagazineAmmo(),
                         weapon.getReserveAmmo(), static_cast<uint32>( _listEnemyView.size() ), percent );
     }
 
-    void ShooterDirectorComponent::appendMotionTrace( float32 deltaTime )
+    void ShooterGameModeComponent::appendMotionTrace( float32 deltaTime )
     {
         // 디렉터는 앞 그룹(PrePhysics)이라 여기서 읽는 월드 · 본은 지난 프레임에 그려진 그대로다.
         GameObjectManager*            pManager = getObjectManager();

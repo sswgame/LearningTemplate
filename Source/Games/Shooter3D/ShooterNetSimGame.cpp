@@ -25,7 +25,7 @@
 #include "GameFramework/Kits/Feature/Network/NetSimulation/NetSimHarness.h"
 
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"
-#include "Games/Shooter3D/ShooterDirectorComponent.h"
+#include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterNetPawnComponent.h"
 
 namespace sw
@@ -113,7 +113,7 @@ namespace sw
             manager.getAllGameObjects( listObject );
             for ( GameObject* pObject : listObject )
             {
-                if ( ShooterDirectorComponent* pDirector = pObject->getComponent<ShooterDirectorComponent>() )
+                if ( ShooterGameModeComponent* pDirector = pObject->getComponent<ShooterGameModeComponent>() )
                     pDirector->setActive( false );
             }
         }

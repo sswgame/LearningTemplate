@@ -3,7 +3,7 @@
  * @brief 기반의 무기 규칙(GameFramework/Runtime/Character/Combat)을 실제로 쓰는 테스트 게임 — 상자가 놓인 아레나에서 웨이브로 몰려오는 스켈레톤을 히트스캔 무기로 막는 슈터입니다.
  *
  * @details 실행: `App.exe -game=Shooter3D`(`Ninja-Debug` 빌드). 조작은 `Source/Games/Shooter3D/README.md`. `-gv_shooterAutoPlay=1` 이면 조준 · 사격도 AI 가 한다.
- *          아레나는 씬(`game/shooter3d/maps/arena.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ShooterDirectorComponent` ·
+ *          아레나는 씬(`game/shooter3d/maps/arena.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ShooterGameModeComponent` ·
  *          `ShooterPlayerComponent` 가 섭니다. 이 클래스는 무기 카탈로그를 게임 서비스로 걸고(장비 아이템 · 외형 데이터는 바탕 `GameInstance` 가 gamesettings 로 건다), 첫 씬을 열고, 상태 저장 전에 판의 진행(웨이브 · 처치 수)을 싣고 디렉터가 세운 것을 걷으며, 복원 뒤 진행을 돌려줍니다.
  */
 #include "pch.h"
@@ -16,7 +16,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
 
-#include "Games/Shooter3D/ShooterDirectorComponent.h"
+#include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
@@ -50,7 +50,7 @@ namespace sw
         , _pProjectileCatalog{}
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
-        getStateSnapshot().registerDirector<ShooterDirectorComponent>();
+        getStateSnapshot().registerGameMode<ShooterGameModeComponent>();
         getStateSnapshot().registerViewOwner<ShooterPlayerComponent>();
     }
 

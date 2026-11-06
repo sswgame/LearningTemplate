@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/ThemeParkTycoon/ParkDirectorComponent.h"
+#include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -35,7 +35,7 @@ namespace sw
 {
     namespace
     {
-        struct ParkDirectorComponentInternal
+        struct ParkGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCcUtil::make( "PARK" );
             static constexpr uint32 kStateVersion = 2;
@@ -59,10 +59,10 @@ namespace sw
             /** @brief 시나리오 프로브입니다. 첫 공원 디렉터의 손님 수를 반환하며, 그림자 장면이 비어 있지 않다는 전제를 확인합니다. */
             [[nodiscard]] static bool readGuestCount( const GameObjectManager* pManager, float64& outValue )
             {
-                const ParkDirectorComponent* pFound = nullptr;
+                const ParkGameModeComponent* pFound = nullptr;
                 if ( pManager == nullptr )
                     return false;
-                pManager->forEachComponentOfType<ParkDirectorComponent>( [&pFound]( ParkDirectorComponent* pDirector )
+                pManager->forEachComponentOfType<ParkGameModeComponent>( [&pFound]( ParkGameModeComponent* pDirector )
                 {
                     if ( pFound == nullptr )
                         pFound = pDirector;
@@ -82,7 +82,7 @@ namespace sw
 
 namespace sw
 {
-    ParkDirectorComponent::ParkDirectorComponent()
+    ParkGameModeComponent::ParkGameModeComponent()
         : _coasterDataPath{}
         , _parkDataPath{}
         , _guestPrefab{}
@@ -130,16 +130,16 @@ namespace sw
     {
     }
 
-    ParkDirectorComponent::~ParkDirectorComponent() = default;
+    ParkGameModeComponent::~ParkGameModeComponent() = default;
 
-    void ParkDirectorComponent::onGameStarted()
+    void ParkGameModeComponent::onGameStarted()
     {
-        SW_LOG_INFO_ID( "ParkDirector.ParkOpenWASDPan", "[Park] park is open - WASD pan, Q/E rotate, wheel zoom, Tab select ride, O open/close, [ ] ride price, - = entry fee, "
+        SW_LOG_INFO_ID( "ParkGameMode.ParkOpenWASDPan", "[Park] park is open - WASD pan, Q/E rotate, wheel zoom, Tab select ride, O open/close, [ ] ride price, - = entry fee, "
                                                         "B build next, V ride the coaster, G guest thoughts" );
         logStatus( 0.0f, true );
     }
 
-    void ParkDirectorComponent::updateGame( float32 deltaTime )
+    void ParkGameModeComponent::updateGame( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;
@@ -162,17 +162,17 @@ namespace sw
         logStatus( deltaTime, false );
     }
 
-    void ParkDirectorComponent::onViewsDespawned()
+    void ParkGameModeComponent::onViewsDespawned()
     {
         _listPendingRideView.clear();
     }
 
-    const shared_ptr<MaterialInstance>& ParkDirectorComponent::getGuestLook( int32 bucket ) const
+    const shared_ptr<MaterialInstance>& ParkGameModeComponent::getGuestLook( int32 bucket ) const
     {
         return _arrGuestLook[MathUtil::clamp( bucket, 0, 2 )];
     }
 
-    const CoasterTrain* ParkDirectorComponent::findCoasterTrain( int32 coasterIndex ) const
+    const CoasterTrain* ParkGameModeComponent::findCoasterTrain( int32 coasterIndex ) const
     {
         if ( coasterIndex < 0 || coasterIndex >= static_cast<int32>( _listCoaster.size() ) )
             return nullptr;
@@ -181,7 +181,7 @@ namespace sw
         return pCoaster != nullptr ? &pCoaster->_train : nullptr;
     }
 
-    int32 ParkDirectorComponent::computeHappinessBucket( float32 happiness )
+    int32 ParkGameModeComponent::computeHappinessBucket( float32 happiness )
     {
         if ( happiness >= 0.6f )
             return 0;
@@ -191,18 +191,18 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 데이터와 건설
     // ------------------------------------------------------------------------------
-    bool ParkDirectorComponent::startGame()
+    bool ParkGameModeComponent::startGame()
     {
         ParkLayout layout;
         _pLayoutCatalog = SharedAssetCache<CoasterLayoutCatalog>::acquire( _coasterDataPath );
         if ( _pLayoutCatalog == nullptr )
         {
-            SW_LOG_ERROR_ID( "ParkDirector.CoasterCatalogCouldNot", "[Park] the coaster catalog '%#' could not be loaded - the park cannot open", _coasterDataPath.c_str() );
+            SW_LOG_ERROR_ID( "ParkGameMode.CoasterCatalogCouldNot", "[Park] the coaster catalog '%#' could not be loaded - the park cannot open", _coasterDataPath.c_str() );
             return false;
         }
         if ( layout.loadFromAsset( AssetID{ _parkDataPath }, *_pLayoutCatalog ) == false )
         {
-            SW_LOG_ERROR_ID( "ParkDirector.ParkLayoutCouldNot", "[Park] the park layout '%#' could not be loaded - the park cannot open", _parkDataPath.c_str() );
+            SW_LOG_ERROR_ID( "ParkGameMode.ParkLayoutCouldNot", "[Park] the park layout '%#' could not be loaded - the park cannot open", _parkDataPath.c_str() );
             return false;
         }
         _settings._gatePosition = layout.getGatePosition();
@@ -224,7 +224,7 @@ namespace sw
         }
         if ( _listPlacement.empty() )
         {
-            SW_LOG_ERROR_ID( "ParkDirector.PlacesNoRidesPark", "[Park] %# places no rides - the park cannot open", _parkDataPath.c_str() );
+            SW_LOG_ERROR_ID( "ParkGameMode.PlacesNoRidesPark", "[Park] %# places no rides - the park cannot open", _parkDataPath.c_str() );
             return false;
         }
         _wallet.clear();
@@ -249,7 +249,7 @@ namespace sw
         return true;
     }
 
-    bool ParkDirectorComponent::buildPlacement( int32 placementIndex )
+    bool ParkGameModeComponent::buildPlacement( int32 placementIndex )
     {
         if ( placementIndex < 0 || placementIndex >= static_cast<int32>( _listPlacement.size() ) )
             return false;
@@ -258,8 +258,8 @@ namespace sw
             return false;
         if ( _wallet.canAfford( _settings._currency, placement._buildCost ) == false )
         {
-            SW_LOG_INFO_ID( "ParkDirector.NotEnoughCashNeeded", "[Park] not enough cash for %# ($%# needed, $%# in the bank)", placement._ride._name.c_str(), placement._buildCost, _wallet.getBalance( _settings._currency ) );
-            getSoundQueue().queueEvent( ParkDirectorComponentInternal::kEventBlocked );
+            SW_LOG_INFO_ID( "ParkGameMode.NotEnoughCashNeeded", "[Park] not enough cash for %# ($%# needed, $%# in the bank)", placement._ride._name.c_str(), placement._buildCost, _wallet.getBalance( _settings._currency ) );
+            getSoundQueue().queueEvent( ParkGameModeComponentInternal::kEventBlocked );
             return false;
         }
 
@@ -275,7 +275,7 @@ namespace sw
                 return false;
             if ( stats._bCompleted == SW_FALSE )
             {
-                SW_LOG_WARNING_ID( "ParkDirector.FailedTestRunStalled", "[Park] %# failed its test run (stalled) - not built", pLayout->_name.c_str() );
+                SW_LOG_WARNING_ID( "ParkGameMode.FailedTestRunStalled", "[Park] %# failed its test run (stalled) - not built", pLayout->_name.c_str() );
                 return false;
             }
             ride = ThemeParkSimulation::makeRideFromCoaster( placement._layoutID, pLayout->_name, stats, placement._ride._capacity, placement._loadTime );
@@ -284,7 +284,7 @@ namespace sw
             ride._entrance                       = stationFrame._position - stationFrame._right * 5.0f;
             ride._entrance._y                    = 0.0f;
             ride._runningCostPerMinute           = 8 + static_cast<int32>( stats._length / 60.0f );
-            SW_LOG_INFO_ID( "ParkDirector.TestRunMLap", "[Park] test run of %#: %# m, %# s lap, top speed %# m/s, %# inversions, airtime %# s -> excitement %# · intensity %# · nausea %#",
+            SW_LOG_INFO_ID( "ParkGameMode.TestRunMLap", "[Park] test run of %#: %# m, %# s lap, top speed %# m/s, %# inversions, airtime %# s -> excitement %# · intensity %# · nausea %#",
                             pLayout->_name.c_str(), static_cast<int32>( stats._length ), static_cast<int32>( stats._lapTime ), static_cast<int32>( stats._maxSpeed ),
                             stats._inversionCount, stats._airtime, stats._excitement, stats._intensity, stats._nausea );
         }
@@ -296,13 +296,13 @@ namespace sw
         placement._ride      = ride;
         if ( pCoaster != nullptr )
             _listCoaster.push_back( std::move( pCoaster ) );
-        SW_LOG_INFO_ID( "ParkDirector.BuiltTicketLeft", "[Park] built %# for $%# - ticket $%#, $%# left", ride._name.c_str(), placement._buildCost, ride._price, _wallet.getBalance( _settings._currency ) );
-        getSoundQueue().queueEvent( ParkDirectorComponentInternal::kEventBuilt );
+        SW_LOG_INFO_ID( "ParkGameMode.BuiltTicketLeft", "[Park] built %# for $%# - ticket $%#, $%# left", ride._name.c_str(), placement._buildCost, ride._price, _wallet.getBalance( _settings._currency ) );
+        getSoundQueue().queueEvent( ParkGameModeComponentInternal::kEventBuilt );
         _listPendingRideView.push_back( placementIndex );
         return true;
     }
 
-    unique_ptr<ParkDirectorComponent::CoasterRuntime> ParkDirectorComponent::createCoaster( int32 placementIndex, CoasterRideStats& outStats ) const
+    unique_ptr<ParkGameModeComponent::CoasterRuntime> ParkGameModeComponent::createCoaster( int32 placementIndex, CoasterRideStats& outStats ) const
     {
         if ( placementIndex < 0 || placementIndex >= static_cast<int32>( _listPlacement.size() ) )
             return nullptr;
@@ -325,9 +325,9 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태 쓰기 · 복원하기(핫 리로드 · 세이브)
     // ------------------------------------------------------------------------------
-    void ParkDirectorComponent::writeState( Archive& outArchive ) const
+    void ParkGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, ParkDirectorComponentInternal::kStateTag, ParkDirectorComponentInternal::kStateVersion );
+        StateArchiveUtil::writeHeader( outArchive, ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion );
         _simulation.writeState( outArchive );
         outArchive << static_cast<uint32>( _listPlacement.size() );
         for ( const RidePlacement& placement : _listPlacement )
@@ -347,9 +347,9 @@ namespace sw
         _wallet.writeState( outArchive );
     }
 
-    bool ParkDirectorComponent::readState( Archive& archive )
+    bool ParkGameModeComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, ParkDirectorComponentInternal::kStateTag, ParkDirectorComponentInternal::kStateVersion ) == false )
+        if ( StateArchiveUtil::readHeader( archive, ParkGameModeComponentInternal::kStateTag, ParkGameModeComponentInternal::kStateVersion ) == false )
             return false;
         ThemeParkSimulation simulation;
         simulation.initialize( _settings, makeRefs() );
@@ -414,23 +414,23 @@ namespace sw
         return true;
     }
 
-    void ParkDirectorComponent::onStateRestored( bool bRestored )
+    void ParkGameModeComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO_ID( "ParkDirector.ParkStateRestoredGuests", "[Park] park state restored - %# guests, $%#, %#s open", _simulation.getGuestCount(), _wallet.getBalance( _settings._currency ),
+            SW_LOG_INFO_ID( "ParkGameMode.ParkStateRestoredGuests", "[Park] park state restored - %# guests, $%#, %#s open", _simulation.getGuestCount(), _wallet.getBalance( _settings._currency ),
                             static_cast<int32>( _simulation.getElapsedTime() ) );
         else
-            SW_LOG_WARNING_ID( "ParkDirector.SavedParkStateDoes", "[Park] the saved park state does not match this build - opening a new park" );
+            SW_LOG_WARNING_ID( "ParkGameMode.SavedParkStateDoes", "[Park] the saved park state does not match this build - opening a new park" );
     }
 
-    SessionStateRefs ParkDirectorComponent::makeRefs()
+    SessionStateRefs ParkGameModeComponent::makeRefs()
     {
         SessionStateRefs refs;
         refs._pWallet = &_wallet;
         return refs;
     }
 
-    bool ParkDirectorComponent::buildCheapestRemaining()
+    bool ParkGameModeComponent::buildCheapestRemaining()
     {
         int32 cheapest = -1;
         for ( int32 placementIndex = 0; placementIndex < static_cast<int32>( _listPlacement.size() ); ++placementIndex )
@@ -449,7 +449,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 스폰(틱 뒤 · 게임 스레드)
     // ------------------------------------------------------------------------------
-    void ParkDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void ParkGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews )
         {
@@ -471,14 +471,14 @@ namespace sw
         _listPendingRideView.clear();
     }
 
-    void ParkDirectorComponent::spawnGuestPool( GameObjectManager& manager )
+    void ParkGameModeComponent::spawnGuestPool( GameObjectManager& manager )
     {
         // 최대 손님 수만큼 미리 스폰하고 숨긴다(오브젝트를 매 프레임 만들고 지우지 않는다). 손님 하나는 뷰 컴포넌트 하나가 시뮬레이션의 같은 번호를 따라간다.
         const GameObjectHandle director = getOwner()->getHandle();
         for ( int32 guestIndex = 0; guestIndex < _settings._maxGuests; ++guestIndex )
         {
             GameObject*    pGuest = spawnPrefab( manager, _guestPrefab, "ParkGuest" );
-            MeshComponent* pMesh  = ParkDirectorComponentInternal::placeMesh( pGuest, _settings._gatePosition, float3{ 0.0f, 0.0f, 0.0f } );
+            MeshComponent* pMesh  = ParkGameModeComponentInternal::placeMesh( pGuest, _settings._gatePosition, float3{ 0.0f, 0.0f, 0.0f } );
             if ( pMesh == nullptr )
                 continue;
             if ( _arrGuestLook[0] == nullptr && pMesh->getMaterial() != nullptr )
@@ -500,9 +500,9 @@ namespace sw
         }
     }
 
-    void ParkDirectorComponent::spawnRideView( GameObjectManager& manager, int32 placementIndex )
+    void ParkGameModeComponent::spawnRideView( GameObjectManager& manager, int32 placementIndex )
     {
-        using Internal                 = ParkDirectorComponentInternal;
+        using Internal                 = ParkGameModeComponentInternal;
         const RidePlacement& placement = _listPlacement[static_cast<size_t>( placementIndex )];
         spawnPath( manager, _settings._gatePosition, placement._ride._entrance );
         (void)Internal::placeMesh( spawnPrefab( manager, _rideEntrancePrefab, "RideEntrance" ), placement._ride._entrance, float3{ 0.0f, 0.0f, 0.0f } );
@@ -527,9 +527,9 @@ namespace sw
         }
     }
 
-    void ParkDirectorComponent::spawnCoasterView( GameObjectManager& manager, int32 coasterIndex )
+    void ParkGameModeComponent::spawnCoasterView( GameObjectManager& manager, int32 coasterIndex )
     {
-        using Internal                = ParkDirectorComponentInternal;
+        using Internal                = ParkGameModeComponentInternal;
         const CoasterRuntime& coaster = *_listCoaster[static_cast<size_t>( coasterIndex )];
         const CoasterTrack&   track   = *coaster._pTrack;
 
@@ -575,14 +575,14 @@ namespace sw
         }
     }
 
-    void ParkDirectorComponent::spawnPath( GameObjectManager& manager, const float3& from, const float3& to )
+    void ParkGameModeComponent::spawnPath( GameObjectManager& manager, const float3& from, const float3& to )
     {
         const float3  delta  = float3{ to._x - from._x, 0.0f, to._z - from._z };
         const float32 length = delta.getLength();
         if ( length < 0.5f )
             return;
         const float32  yaw   = MathUtil::atan2( delta._x, delta._z );
-        MeshComponent* pPath = ParkDirectorComponentInternal::placeMesh( spawnPrefab( manager, _pathPrefab, "ParkPath" ),
+        MeshComponent* pPath = ParkGameModeComponentInternal::placeMesh( spawnPrefab( manager, _pathPrefab, "ParkPath" ),
                                                                          float3{ ( from._x + to._x ) * 0.5f, 0.0f, ( from._z + to._z ) * 0.5f }, float3{ 0.0f, yaw, 0.0f } );
         if ( pPath != nullptr )
             pPath->setLocalScale( float3{ 2.4f, 0.3f, length + 2.4f } );
@@ -591,16 +591,16 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 갱신(PrePhysics, 워커)
     // ------------------------------------------------------------------------------
-    void ParkDirectorComponent::updateInput( const InputManager& input )
+    void ParkGameModeComponent::updateInput( const InputManager& input )
     {
         // 키는 입력 맵(`data/park.input.xml` 과 공통 묶음)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
         const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
         if ( inputMap.wasActionTriggered( hashed_string( "Park.NextRide" ) ) && _listPlacement.empty() == false )
         {
             _selectedPlacement = ( _selectedPlacement + 1 ) % static_cast<int32>( _listPlacement.size() );
-            getSoundQueue().queueEvent( ParkDirectorComponentInternal::kEventSelect );
+            getSoundQueue().queueEvent( ParkGameModeComponentInternal::kEventSelect );
             [[maybe_unused]] const RidePlacement& placement = _listPlacement[static_cast<size_t>( _selectedPlacement )];
-            SW_LOG_INFO_ID( "ParkDirector.Selected", "[Park] selected %# (%#)", placement._ride._name.c_str(), placement._rideIndex >= 0 ? "built" : "not built - B to build" );
+            SW_LOG_INFO_ID( "ParkGameMode.Selected", "[Park] selected %# (%#)", placement._ride._name.c_str(), placement._rideIndex >= 0 ? "built" : "not built - B to build" );
         }
         const int32 rideIndex = findSelectedRideIndex();
         if ( rideIndex >= 0 )
@@ -609,20 +609,20 @@ namespace sw
             if ( inputMap.wasActionTriggered( hashed_string( "Park.ToggleOpen" ) ) )
             {
                 _simulation.setRideOpen( rideIndex, ride._bOpen == SW_FALSE );
-                SW_LOG_INFO_ID( "ParkDirector.Now", "[Park] %# is now %#", ride._name.c_str(), ride._bOpen != SW_FALSE ? "open" : "closed" );
+                SW_LOG_INFO_ID( "ParkGameMode.Now", "[Park] %# is now %#", ride._name.c_str(), ride._bOpen != SW_FALSE ? "open" : "closed" );
             }
             const bool bPriceUp = inputMap.wasActionTriggered( hashed_string( "Park.PriceUp" ) );
             if ( bPriceUp || inputMap.wasActionTriggered( hashed_string( "Park.PriceDown" ) ) )
             {
                 _simulation.setRidePrice( rideIndex, ride._price + ( bPriceUp ? 1 : -1 ) );
-                SW_LOG_INFO_ID( "ParkDirector.TicketWorthAbout", "[Park] %# ticket $%# (worth about $%#)", ride._name.c_str(), ride._price, static_cast<int32>( ThemeParkSimulation::computeRideValue( ride ) ) );
+                SW_LOG_INFO_ID( "ParkGameMode.TicketWorthAbout", "[Park] %# ticket $%# (worth about $%#)", ride._name.c_str(), ride._price, static_cast<int32>( ThemeParkSimulation::computeRideValue( ride ) ) );
             }
         }
         const bool bFeeUp = inputMap.wasActionTriggered( hashed_string( "Park.FeeUp" ) );
         if ( bFeeUp || inputMap.wasActionTriggered( hashed_string( "Park.FeeDown" ) ) )
         {
             _simulation.setEntryFee( _simulation.getSettings()._entryFee + ( bFeeUp ? 5 : -5 ) );
-            SW_LOG_INFO_ID( "ParkDirector.EntryFee", "[Park] entry fee $%#", _simulation.getSettings()._entryFee );
+            SW_LOG_INFO_ID( "ParkGameMode.EntryFee", "[Park] entry fee $%#", _simulation.getSettings()._entryFee );
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Park.Build" ) ) )
         {
@@ -645,7 +645,7 @@ namespace sw
                         _ridingCoaster = coasterIndex;
                 }
             }
-            SW_LOG_INFO_ID( "ParkDirector.CoasterViewToggled", "[Park] %#", _ridingCoaster >= 0 ? "riding the coaster - V again to get off" : "back to the park view" );
+            SW_LOG_INFO_ID( "ParkGameMode.CoasterViewToggled", "[Park] %#", _ridingCoaster >= 0 ? "riding the coaster - V again to get off" : "back to the park view" );
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Park.Thoughts" ) ) )
             logThoughts();
@@ -653,7 +653,7 @@ namespace sw
             logStatus( 0.0f, true );
     }
 
-    void ParkDirectorComponent::updateRides( float32 deltaTime )
+    void ParkGameModeComponent::updateRides( float32 deltaTime )
     {
         // 열차만 나아간다. 차 · 평지 놀이기구의 모습은 뷰가 PostUpdate 에서 이 상태를 읽어 맞춘다.
         for ( unique_ptr<CoasterRuntime>& pCoaster : _listCoaster )
@@ -662,7 +662,7 @@ namespace sw
         }
     }
 
-    void ParkDirectorComponent::updateCameraOverride()
+    void ParkGameModeComponent::updateCameraOverride()
     {
         // 카메라 디렉터는 PostPhysics 틱 뒤에 포즈를 쓴다. 이 그룹(PrePhysics)에서 넣은 시점을 같은 프레임에 읽는다. 카메라 오브젝트에는 다른 쓰기가 없다.
         const bool bRiding = 0 <= _ridingCoaster && _ridingCoaster < static_cast<int32>( _listCoaster.size() );
@@ -686,24 +686,24 @@ namespace sw
                                _rideFarPlane );
     }
 
-    void ParkDirectorComponent::logStatus( float32 deltaTime, bool bForce )
+    void ParkGameModeComponent::logStatus( float32 deltaTime, bool bForce )
     {
         _statusTimer += deltaTime;
         if ( bForce == false && _statusTimer < _statusLogInterval )
             return;
         _statusTimer = 0.0f;
-        SW_LOG_INFO_ID( "ParkDirector.MinCashGuestsVisited", "[Park] %# min · cash $%# · guests %# (visited %#) · happiness %#%% · rating %# · rides %# · entry $%#",
+        SW_LOG_INFO_ID( "ParkGameMode.MinCashGuestsVisited", "[Park] %# min · cash $%# · guests %# (visited %#) · happiness %#%% · rating %# · rides %# · entry $%#",
                         static_cast<int32>( _simulation.getElapsedTime() / 60.0f ), _wallet.getBalance( _settings._currency ), _simulation.getGuestCount(),
                         _simulation.getTotalVisitorCount(), static_cast<int32>( _simulation.getAverageHappiness() * 100.0f ), _simulation.getParkRating(),
                         static_cast<uint32>( _simulation.getRides().size() ), _simulation.getSettings()._entryFee );
         for ( [[maybe_unused]] const ParkRide& ride : _simulation.getRides() )
         {
-            SW_LOG_INFO_ID( "ParkDirector.QueueRidersTotalIncome", "[Park]   %# - %# · queue %# · riders %# · total %# · income $%# · ticket $%#", ride._name.c_str(), ride._bOpen != SW_FALSE ? "open" : "closed",
+            SW_LOG_INFO_ID( "ParkGameMode.QueueRidersTotalIncome", "[Park]   %# - %# · queue %# · riders %# · total %# · income $%# · ticket $%#", ride._name.c_str(), ride._bOpen != SW_FALSE ? "open" : "closed",
                             static_cast<uint32>( ride._listQueue.size() ), static_cast<uint32>( ride._listRider.size() ), ride._totalRiders, ride._totalIncome, ride._price );
         }
     }
 
-    void ParkDirectorComponent::logThoughts() const
+    void ParkGameModeComponent::logThoughts() const
     {
         constexpr ParkGuestThought kArrThought[] = { ParkGuestThought::GreatRide, ParkGuestThought::TooIntense, ParkGuestThought::TooTame,
                                                      ParkGuestThought::TooExpensive, ParkGuestThought::QueueTooLong, ParkGuestThought::Sick,
@@ -712,11 +712,11 @@ namespace sw
         {
             const uint32 count = _simulation.countGuestsThinking( thought );
             if ( count > 0 )
-                SW_LOG_INFO_ID( "ParkDirector.GuestsThink", "[Park] %# guests think: %#", count, getEnumName( thought ) );
+                SW_LOG_INFO_ID( "ParkGameMode.GuestsThink", "[Park] %# guests think: %#", count, getEnumName( thought ) );
         }
     }
 
-    int32 ParkDirectorComponent::findSelectedRideIndex() const
+    int32 ParkGameModeComponent::findSelectedRideIndex() const
     {
         if ( _selectedPlacement < 0 || _selectedPlacement >= static_cast<int32>( _listPlacement.size() ) )
             return -1;
@@ -726,5 +726,5 @@ namespace sw
 
 namespace sw
 {
-    SW_AUTOMATION_WATCH( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park director", &ParkDirectorComponentInternal::readGuestCount );
+    SW_AUTOMATION_WATCH( parkGuestCount, "ThemePark.GuestCount", "Guests in the park of the first park director", &ParkGameModeComponentInternal::readGuestCount );
 } // namespace sw

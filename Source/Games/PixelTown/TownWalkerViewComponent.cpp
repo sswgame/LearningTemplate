@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/PixelTown/TownDirectorComponent.h"
+#include "Games/PixelTown/TownGameModeComponent.h"
 
 namespace sw
 {
@@ -56,7 +56,7 @@ namespace sw
         SceneComponent*    pScene   = pOwner != nullptr ? pOwner->getPrimarySceneComponent() : nullptr;
         if ( pManager == nullptr || pScene == nullptr )
             return;
-        const TownDirectorComponent* pDirector = GameDirectorComponent::resolve<TownDirectorComponent>( *pManager, _director );
+        const TownGameModeComponent* pDirector = GameModeComponent::resolve<TownGameModeComponent>( *pManager, _director );
         if ( pDirector == nullptr || pDirector->isStarted() == false )
             return;
         const float3& feet = pDirector->getHeroPosition();

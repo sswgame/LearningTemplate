@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/HarvestValley/FarmDirectorComponent.h"
+#include "Games/HarvestValley/FarmGameModeComponent.h"
 
 namespace sw
 {
@@ -57,7 +57,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const FarmDirectorComponent* pDirector = GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director );
+        const FarmGameModeComponent* pDirector = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
         const float3 lift{ 0.0f, _heightOffset, 0.0f };
@@ -77,6 +77,6 @@ namespace sw
         if ( pMesh->isVisible() != bOnTile )
             pMesh->setVisible( bOnTile );
         if ( bOnTile )
-            pMesh->setLocalPosition( FarmDirectorComponent::computeTileCenter( x, y ) + lift );
+            pMesh->setLocalPosition( FarmGameModeComponent::computeTileCenter( x, y ) + lift );
     }
 } // namespace sw

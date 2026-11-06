@@ -45,7 +45,7 @@ namespace sw
         static string makeModelPath( const utf8* pName );
 
     private:
-        PROPERTY( Category = "Building", DisplayName = "Director", Tooltip = "Object with the NileDirectorComponent" )
+        PROPERTY( Category = "Building", DisplayName = "Director", Tooltip = "Object with the NileGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Building", DisplayName = "Building Index", Tooltip = "Slot in the simulation building list" )
         int32 _buildingIndex;

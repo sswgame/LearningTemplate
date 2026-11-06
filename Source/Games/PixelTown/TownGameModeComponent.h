@@ -1,5 +1,5 @@
 /**
- * @file TownDirectorComponent.h
+ * @file TownGameModeComponent.h
  * @brief PixelTown 의 규칙을 돌리는 컴포넌트입니다. 주인공의 타일 걸음(오버월드 키트), 충돌, 주민과의 대화를 맡습니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 한 칸 걸음 · 바라보는 칸 · 상호작용 요청은 키트(`OverworldTileMover`)가,
  *          걸을 수 있는 칸은 키트 타일맵(`TileMap`)이 정합니다. 이 컴포넌트는 그 둘을 씬의 데이터에 잇습니다.
@@ -23,7 +23,7 @@
 
 #include "GameFramework/Kits/Feature/World/Overworld/OverworldTileMover.h"
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Utility/Grid/FacingDir.h"
 
 namespace sw
@@ -34,19 +34,19 @@ namespace sw
     class TileMapRendererComponent;
 
     /**
-     * @class TownDirectorComponent
+     * @class TownGameModeComponent
      * @brief 마을 한 판을 진행합니다. 플레이가 시작되면 씬의 타일 레이어로 걷는 맵을 만들고, 주인공을 맵의 스폰 칸에 세웁니다.
      * @details 걸음 상태(칸, 바라보는 방향, 걷는 중)는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷에 실려 핫 리로드와 세이브를 넘긴다.
      *          대화는 저장하지 않는다(복원하면 대화 밖에서 시작한다).
      */
     REFLECT( Category = "Overworld", DisplayName = "Town Director", Tooltip = "Runs the tile-step town: hero walking, tile collision and talking to villagers" )
-    class TownDirectorComponent : public GameDirectorComponent
+    class TownGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
 
-        TownDirectorComponent();
-        virtual ~TownDirectorComponent() override;
+        TownGameModeComponent();
+        virtual ~TownGameModeComponent() override;
 
         /** @brief 걸음 상태(키트 이동기의 바이트)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;

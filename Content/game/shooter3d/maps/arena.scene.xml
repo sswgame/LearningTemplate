@@ -598,10 +598,10 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="51" name="ShooterDirector">
-			<GameObject _schemaVersion="0" _name="ShooterDirector" _bActive="true">
+		<entity id="51" name="ShooterGameMode">
+			<GameObject _schemaVersion="0" _name="ShooterGameMode" _bActive="true">
 				<_listComponent>
-					<ShooterDirectorComponent _componentName="ShooterDirectorComponent"
+					<ShooterGameModeComponent _componentName="ShooterGameModeComponent"
 					                          _bActive="true"
 					                          _effectPrefab="game/shooter3d/prefabs/effect.prefab.xml"
 					                          _tracerPrefab="game/shooter3d/prefabs/tracer.prefab.xml"
@@ -630,7 +630,7 @@
 							<item>48</item>
 							<item>49</item>
 						</_listSpawnPoint>
-					</ShooterDirectorComponent>
+					</ShooterGameModeComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

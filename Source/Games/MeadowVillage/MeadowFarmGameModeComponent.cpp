@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/MeadowVillage/MeadowFarmDirectorComponent.h"
+#include "Games/MeadowVillage/MeadowFarmGameModeComponent.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
@@ -42,7 +42,7 @@ namespace sw
 
 namespace sw
 {
-    MeadowFarmDirectorComponent::MeadowFarmDirectorComponent()
+    MeadowFarmGameModeComponent::MeadowFarmGameModeComponent()
         : _tilePrefab{}
         , _startingGold{ 20 }
         , _fastTimeScale{ 8.0f }
@@ -59,9 +59,9 @@ namespace sw
     {
     }
 
-    MeadowFarmDirectorComponent::~MeadowFarmDirectorComponent() = default;
+    MeadowFarmGameModeComponent::~MeadowFarmGameModeComponent() = default;
 
-    void MeadowFarmDirectorComponent::writeState( Archive& outArchive ) const
+    void MeadowFarmGameModeComponent::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
         Archive body;
@@ -69,7 +69,7 @@ namespace sw
         StateArchiveUtil::writeSection( outArchive, FarmField::kStateTag, FarmField::kStateVersion, body );
     }
 
-    bool MeadowFarmDirectorComponent::startGame()
+    bool MeadowFarmGameModeComponent::startGame()
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         const CropCatalog*     pCrops = game::findSubsystem<CropCatalog>();
@@ -97,7 +97,7 @@ namespace sw
         return true;
     }
 
-    bool MeadowFarmDirectorComponent::readState( Archive& archive )
+    bool MeadowFarmGameModeComponent::readState( Archive& archive )
     {
         Archive    body;
         const bool bFrameRead = StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) &&
@@ -114,12 +114,12 @@ namespace sw
         return true;
     }
 
-    void MeadowFarmDirectorComponent::onGameStarted()
+    void MeadowFarmGameModeComponent::onGameStarted()
     {
         SW_LOG_INFO_ID( "MeadowFarm.VillageOpenHoldSpace", "[Meadow] the village is open - hold Space to fast-forward, E to talk to a visitor" );
     }
 
-    void MeadowFarmDirectorComponent::updateGame( float32 deltaTime )
+    void MeadowFarmGameModeComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
@@ -139,7 +139,7 @@ namespace sw
         }
     }
 
-    void MeadowFarmDirectorComponent::startNextDay( SessionStateComponent& state )
+    void MeadowFarmGameModeComponent::startNextDay( SessionStateComponent& state )
     {
         const hashed_string season = state.getClock().getSeasonName(); // 계절은 공유 시계의 데이터
         _field.advanceDay( season, false );
@@ -175,14 +175,14 @@ namespace sw
         _bViewsDirty = SW_TRUE;
     }
 
-    void MeadowFarmDirectorComponent::replant( int32 x, int32 y, const hashed_string& season )
+    void MeadowFarmGameModeComponent::replant( int32 x, int32 y, const hashed_string& season )
     {
         (void)_field.till( x, y );
         (void)_field.water( x, y );
         (void)_field.plant( x, y, "turnip_seed", season );
     }
 
-    void MeadowFarmDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void MeadowFarmGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
@@ -195,12 +195,12 @@ namespace sw
         _bViewsDirty = SW_FALSE;
     }
 
-    void MeadowFarmDirectorComponent::onViewsDespawned()
+    void MeadowFarmGameModeComponent::onViewsDespawned()
     {
         _listTileView.clear();
     }
 
-    void MeadowFarmDirectorComponent::spawnField( GameObjectManager& manager )
+    void MeadowFarmGameModeComponent::spawnField( GameObjectManager& manager )
     {
         for ( int32 y = 0; y < kFieldHeight; ++y )
         {

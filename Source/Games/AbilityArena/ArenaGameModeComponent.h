@@ -1,5 +1,5 @@
 /**
- * @file ArenaDirectorComponent.h
+ * @file ArenaGameModeComponent.h
  * @brief AbilityArena 의 규칙을 돌리는 컴포넌트입니다. 웨이브, 쓰러뜨린 수, 플레이어 다시 스폰, 투사체 스폰, 로그를 맡고 유닛 프리팹 스폰을 지시합니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 어빌리티, 이펙트, 어트리뷰트는 프레임워크(`AbilityComponent`)와 데이터
  *          (`Content/game/abilityarena/data/abilities.xml`)가 맡습니다. 유닛 하나의 몸은 폰 쪽 `ArenaUnitComponent`(의도만 읽는다)가, 판단은 조종자
@@ -23,7 +23,7 @@
 #include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityEffect.h"
 
@@ -54,7 +54,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ArenaDirectorComponent
+     * @class ArenaGameModeComponent
      * @brief 아레나 한 판을 진행합니다. 플레이가 시작되면 플레이어와 첫 웨이브를 스폰합니다.
      * @details 판의 상태(웨이브, 쓰러뜨린 수)는 PROPERTY 가 아닌 런타임 상태이므로 핫 리로드 뒤 처음부터 다시 시작한다. 스폰한 유닛, AI 조종자, 투사체는 핸들로 보관하고,
      *          상태를 저장하기 전에 정리한다(`despawnViews`). 남은 디렉터는 다음 틱에 플레이어와 현재 웨이브를 다시 스폰한다.
@@ -63,13 +63,13 @@ namespace sw
      *          자동 전투 AI(`_autoBattleAIPrefab`)가, 꺼지면 다시 플레이어 조종자가 조종한다. 몸 안에 자동 플레이 분기는 없다.
      */
     REFLECT( Category = "AbilityArena", DisplayName = "Arena Director", Tooltip = "Runs the arena waves, kills, respawns and the runtime spawns" )
-    class ArenaDirectorComponent : public GameDirectorComponent
+    class ArenaGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
 
-        ArenaDirectorComponent();
-        virtual ~ArenaDirectorComponent() override;
+        ArenaGameModeComponent();
+        virtual ~ArenaGameModeComponent() override;
 
         /** @brief 판의 진행(웨이브, 처치 수)을 씁니다. `ComponentStateStore::capture` 가 부릅니다. 유닛과 투사체는 모습이라 정리하고 다시 스폰합니다. */
         void writeState( Archive& outArchive ) const override;
@@ -120,9 +120,9 @@ namespace sw
          * @brief 유닛(어빌리티 시스템)이 따르는 디렉터를 반환합니다. 같은 오브젝트의 `ArenaUnitComponent` 가 가진 핸들로 씬에서 찾으며, 없으면 nullptr 입니다.
          * @details 어빌리티가 디렉터를 찾는 경로다. 게임 모듈의 정적 서비스 포인터에 기대지 않으므로 핫 리로드가 디렉터를 다시 만들어도 이어진다.
          */
-        static const ArenaDirectorComponent* findForUnit( const AbilityComponent& unit );
+        static const ArenaGameModeComponent* findForUnit( const AbilityComponent& unit );
         /** @brief 폰(유닛)이 따르는 디렉터를 반환합니다. 조종자가 판단할 때 찾는 경로이며, 없으면 nullptr 입니다. */
-        static const ArenaDirectorComponent* findForPawn( const PawnComponent& pawn );
+        static const ArenaGameModeComponent* findForPawn( const PawnComponent& pawn );
 
     protected:
         /** @brief 어빌리티 카탈로그가 로드돼 있으면 판을 엽니다(웨이브 0이며, 첫 틱이 플레이어와 웨이브 1 을 스폰합니다). */

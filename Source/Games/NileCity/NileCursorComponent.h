@@ -28,7 +28,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
     private:
-        PROPERTY( Category = "Cursor", DisplayName = "Director", Tooltip = "Object with the NileDirectorComponent" )
+        PROPERTY( Category = "Cursor", DisplayName = "Director", Tooltip = "Object with the NileGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Cursor", DisplayName = "Height", Tooltip = "Box centre above the ground", Units = m )
         float32 _height;

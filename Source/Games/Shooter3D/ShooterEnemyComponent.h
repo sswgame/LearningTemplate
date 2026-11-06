@@ -101,7 +101,7 @@ namespace sw
         void requestDropSocketParts() const;
 
     private:
-        PROPERTY( Category = "Enemy", DisplayName = "Director", Tooltip = "Object with the ShooterDirectorComponent" )
+        PROPERTY( Category = "Enemy", DisplayName = "Director", Tooltip = "Object with the ShooterGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Enemy", DisplayName = "Radius", Tooltip = "Capsule radius of the hit box and the body", Min = 0.0, Units = m )
         float32 _radius;

@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 
 namespace sw
 {
@@ -44,9 +44,9 @@ namespace sw
         DirectionalLightComponent* pSun     = pOwner != nullptr ? pOwner->getComponent<DirectionalLightComponent>() : nullptr;
         if ( pManager == nullptr || pSun == nullptr )
             return;
-        const GameDirectorComponent* pDirector    = GameDirectorComponent::resolve<GameDirectorComponent>( *pManager, _director );
-        float32                      hour         = 0.0f;
-        bool                         bPrecipitate = false;
+        const GameModeComponent* pDirector    = GameModeComponent::resolve<GameModeComponent>( *pManager, _director );
+        float32                  hour         = 0.0f;
+        bool                     bPrecipitate = false;
         if ( pDirector == nullptr || pDirector->readDaylight( hour, bPrecipitate ) == false )
             return;
         const float32 dayLength  = MathUtil::max( _sunsetHour - _sunriseHour, MathUtil::kEpsilon );

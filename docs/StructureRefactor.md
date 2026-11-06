@@ -131,7 +131,7 @@
 | 3 | **끝(2026-10-31)** 조사 로그: OS 경계에서 상대 경로 입력을 기록 → 전체 ctest + **작업 폴더를 바꾸고 상대 경로 인자로 띄우는 CTest**(러너는 절대 경로만 넘겨 이 경우를 못 모은다) | 위반 지점 목록 |
 | 4 | **끝(2026-10-31)** T4 쿠킹 입력 종류 | `findLooseFile` 절대 분기를 지우면 조용히 늘 재베이크 |
 | 5 | **끝(2026-10-31)** T5 의 추측 제거(컴파일 입력 형식 · `exists` 추측 두 곳) | 7 단계에서 셰이더 컴파일마다 위반 → 기동 정지 |
-| 6 | **끝(2026-10-31)** 작업 폴더 상대 경로 사용처 정리: GameInstance · Autosave · ControlIntentHistory · Chat · NetSecurity · WorldWarp · PointCache · ShooterDirector · 녹화 쓰기 · `EditorScenarioRecordCommands` · `resolveScenePath` 작업 폴더 갈래 · `PortraitBatchUtil` · 콘솔 `screenshot` | 7 단계에서 바로 깨진다 |
+| 6 | **끝(2026-10-31)** 작업 폴더 상대 경로 사용처 정리: GameInstance · Autosave · ControlIntentHistory · Chat · NetSecurity · WorldWarp · PointCache · ShooterGameMode · 녹화 쓰기 · `EditorScenarioRecordCommands` · `resolveScenePath` 작업 폴더 갈래 · `PortraitBatchUtil` · 콘솔 `screenshot` | 7 단계에서 바로 깨진다 |
 | 7 | **끝(2026-10-31)** R2 를 오류로(OS 경계 한 곳) | |
 | 8 | **끝(2026-10-31)** T2 리소스 경로 · 팩(팩 형식 2 - 마운트 도메인, 쿠커 설정 해시에 형식 버전) | |
 | 9 | **끝(2026-10-31)** T3 읽기 · 쓰기 분리 — 저장 입구 `save*(AbsolutePath)` 44 개, `AssetPaths` 해석 `toDiskPath` · `findLooseFile`(`optional<AbsolutePath>`), 씬 소스는 늘 리소스 id, 문서 패널의 읽을 문서 · 디스크 자리 하나(`acceptDocumentToLoad` · `getDocumentDiskPath`), 런타임 읽기 `AssetIO`. 남긴 것(이유는 아래 결정): `isMountedDiskDomainID`(붙인 디스크 도메인은 팩을 보지 않는다), 자체 저장 패널 8 개 | 8 의 형식 위에서 |
@@ -206,7 +206,7 @@
 | 10 | 자동화 탐침 보일러플레이트 | `findProbeDirector` + `read*` 감싸기 4 게임 | **끝** — `SW_AUTOMATION_COMPONENT_WATCH`(`AutomationComponentWatch::findFirst<T>` · `read<T, 읽기>`), 읽기 함수는 디렉터 참조만 받는다 | |
 | 11 | 온라인 키트 서비스 골격 복사 | LiveOps · ServerDirectory 의 다시 읽기 · 감사 쓰기 · 주기 리로드 약 150 줄씩, `makeActor` 셋 | 일부 **끝(2026-11-01)** — 감사 행위자 이름은 형식이 만든다(`ServiceAuditLog::makeAccountActor` · `makeOperatorActor` · `kSystemActor`, 손으로 만들던 다섯 곳). 다시 읽기 일정(요청 · 주기 · 읽는 중)은 `ServiceReloadSchedule` 하나. 쓰기 작업(감사 줄을 함께 넣는 트랜잭션)은 표마다 줄 형식 · 결과 형식이 달라 서비스에 둔다 — 공통 기반은 템플릿 매개변수만 늘린다 | 끝 |
 | 12 | 온라인 소도우미 복사 | JSON `readText` 넷, HTTP `isTransientStatus` 둘, `encodeID` 둘 | **닫음(2026-11-01, 같은 일이 아니다)** — `encodeID` 는 저장 형식이 다르고(16 진 글 · 버전 + varint, 합치면 저장된 값이 바뀐다), `isTransientStatus` 는 제공자마다 뜻이 다르다(애플 401 · 스팀 401 · 403). `readText` 는 `JSONValue::findPathText` 의 한 줄 포장이고, 기본값을 받는 것(로그인 제공자 설정)은 종류마다 정한 문서화된 기본이며 필수 칸은 `isValidSettings` 가 따로 본다 | 끝 |
-| 13 | 게임 안의 범용 기능 | `FarmSunComponent`(시각 → 해), `ArenaCameraComponent`(궤도 추적), `WildWestHorseComponent`(키트의 `WesternHorse` 소유 · 저장), WildWest 탈것 감시 값 | **끝** — Runtime `DaylightComponent`(디렉터 기반 `readDaylight`) · `FollowCameraComponent`(`readCameraFocus`), 키트 `WesternHorseComponent` + 추상 기반 `WesternDirectorComponent`(카탈로그를 답한다), 감시 값 `Mount.Gait` · `Mount.Speed`(VehicleWatches) · `Western.Stamina`(키트) | 언리얼 SkyAtmosphere 구동은 엔진 쪽 |
+| 13 | 게임 안의 범용 기능 | `FarmSunComponent`(시각 → 해), `ArenaCameraComponent`(궤도 추적), `WildWestHorseComponent`(키트의 `WesternHorse` 소유 · 저장), WildWest 탈것 감시 값 | **끝** — Runtime `DaylightComponent`(디렉터 기반 `readDaylight`) · `FollowCameraComponent`(`readCameraFocus`), 키트 `WesternHorseComponent` + 추상 기반 `WesternGameModeComponent`(카탈로그를 답한다), 감시 값 `Mount.Gait` · `Mount.Speed`(VehicleWatches) · `Western.Stamina`(키트) | 언리얼 SkyAtmosphere 구동은 엔진 쪽 |
 | 14 | Runtime 에 장르 기믹 | `Runtime/Gameplay/Gimmick/Genre/*` 약 2.2k 줄 | **닫음(2026-11-01, 두기로)** — 콘텐츠를 보니 이 컴포넌트들은 장르 키트 하나가 아니라 공용 프리팹 라이브러리(`common/prefabs/gimmicks/{shooter,platformer,racing,horror,…}`)가 쓰고, 쇼케이스와 여러 게임이 장르를 가리지 않고 가져다 쓴다. 장르 키트로 쪼개면 공용 프리팹을 쓰는 게임마다 그 키트를 매니페스트에 넣어야 해 결합이 는다 — 언리얼 GameplayFramework · 스타터 콘텐츠처럼 공용 런타임 라이브러리로 둔다 | 끝 |
 | 15 | 런타임 키트에 편집기 기능 | `NetSimulation` 의 `NetSimPreviewSceneSource` · `NetSimGameRegistry` | **끝(2026-11-01)** — 미리보기 씬 빌려주기(`NetSimPreviewSceneSource`)는 키트 `Editor/` 로(쓰는 곳이 한 프로세스 재생 탭뿐). `NetSimGameRegistry` 는 게임(Shooter3D)이 런타임에 등록하는 자리라 런타임에 둔다 | 끝 |
 | 16 | 큰 패널 · 정적 모음(SRP) | CharacterEditorPanel 1389 줄 · ContentBrowser 1174 · UIPreview 1169 · ProfilerPanel 1120 · InputMapPanel 1015, 정적 모음 몇 | **닫음(2026-11-01, 쪼개지 않는다)** — 패널의 상태는 이미 Model 클래스(ImGui 없는 층)가 들고 패널은 그리기만 한다. 탭마다 클래스 · 파일로 더 가르면 파일 수만 늘고(사용자 판단: 분리가 과하다) 얻는 검사가 없다. 탭이 독립된 상태 · 수명을 갖게 될 때만 그 탭을 뗀다. 사용처가 하나인 도우미는 반대로 그 .cpp 안으로 합친다(`docs/agents/Helpers.md`) | 끝 |
@@ -221,7 +221,7 @@
 
 - `GameFramework/Base` 를 `Runtime` 으로: 폴더만 바꾸고 대상 이름(`GameFramework`) · 내보내기 매크로(`SW_GF_API`) · 매니페스트는 그대로다. 언리얼 플러그인의 `Source/Runtime` · `Source/Editor` 와 같은 뜻이고 형제 `Kits/` · `Plugin/` 와 겹치지 않는다. 층을 하나 걷어 Runtime 내용을 `GameFramework/` 바로 아래 두는 안은 키트 · 플러그인과 섞여 버렸다.
 - `Plugin/Editor/Base` 를 `GameplayTools` 로: 내용이 행동 트리 · 어빌리티 · 기믹 · 일정 도구이고 다른 확장이 기대지 않는다(기반이 아니다). 형제 폴더(CharacterEditor · MeshModifiers …)처럼 내용 이름을 쓴다.
-- 자동 플레이 되돌리기는 디렉터 기반(`GameDirectorComponent`)이 아니라 조종 영역(`ControlSystem`)에 둔다 — 빙의 넘기기는 디렉터가 아니어도 쓰는 일이다. AI 조종자를 찾거나 만드는 쪽은 게임마다 달라(프리팹 · 코드) 그대로 둔다.
+- 자동 플레이 되돌리기는 디렉터 기반(`GameModeComponent`)이 아니라 조종 영역(`ControlSystem`)에 둔다 — 빙의 넘기기는 디렉터가 아니어도 쓰는 일이다. AI 조종자를 찾거나 만드는 쪽은 게임마다 달라(프리팹 · 코드) 그대로 둔다.
 - 소리 그래프는 그래프 문서 템플릿(`EditorGraphDocumentPanel<T>`)이 아니라 문서 기반을 쓴다 — 링크 표(`_listLink`)가 없고 연결이 받는 노드의 입력 목록이라 템플릿의 요구를 맞추지 못한다.
 
 ### 8.3 큰 클래스의 상태 묶음 (2026-11-01)

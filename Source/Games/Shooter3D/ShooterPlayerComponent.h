@@ -29,7 +29,7 @@ namespace sw
     class GameObjectManager;
     class PawnComponent;
     class ShooterBodyMovementComponent;
-    class ShooterDirectorComponent;
+    class ShooterGameModeComponent;
 
     /**
      * @class ShooterPlayerComponent
@@ -173,9 +173,9 @@ namespace sw
         /** @brief 같은 오브젝트의 몸 이동입니다. 없으면 nullptr 입니다. */
         ShooterBodyMovementComponent* findMovement() const;
         /** @brief 방아쇠를 당깁니다. 눈에서 @p aimDirection 으로 쏘고, 반동은 @p camera 에 준다. */
-        void fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed );
+        void fireWeapon( const ShooterGameModeComponent& director, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed );
         /** @brief 광선 하나가 막는 상자 · 바닥에 닿는 거리입니다(닿지 않으면 사거리). 틱 안에서 부르며 물리를 묻지 않습니다. */
-        float32 traceCover( const ShooterDirectorComponent& director, const Ray& ray ) const;
+        float32 traceCover( const ShooterGameModeComponent& director, const Ray& ray ) const;
         /**
          * @brief 쌓인 광선을 적의 히트박스(래그돌 바디, 레이어 `_hitboxLayer`)에 물리 질의로 쏘고, 맞은 적에 맞음을 보내며 탄도선 · 탄착 · 소리를 쌓습니다(게임 스레드).
          * @details 질의 거리는 막는 상자까지라 엄폐물 뒤의 적은 맞지 않는다. 피해 배율은 맞은 바디의 히트 존(머리 ×2 등)이 정한다(`CharacterRayHit::makeHitInfo`).
@@ -200,7 +200,7 @@ namespace sw
         void syncViewWeapon();
 
     private:
-        PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the ShooterDirectorComponent" )
+        PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the ShooterGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Player", DisplayName = "Spawn Position", Tooltip = "Feet position at the start and after being overrun", Units = m )
         float3 _spawnPosition;

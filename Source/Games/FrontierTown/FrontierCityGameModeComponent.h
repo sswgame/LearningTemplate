@@ -1,5 +1,5 @@
 /**
- * @file FrontierCityDirectorComponent.h
+ * @file FrontierCityGameModeComponent.h
  * @brief 개척 마을의 도시 디렉터 — 공유 상태(`SessionStateComponent`)를 여는 첫 디렉터. 도시 키트(`CitySimulation`)를 공유 땅 · 지갑 · 시계 위에 돌립니다.
  */
 #pragma once
@@ -14,7 +14,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 namespace sw
@@ -22,14 +22,14 @@ namespace sw
     class SessionStateComponent;
 
     /**
-     * @class FrontierCityDirectorComponent
+     * @class FrontierCityGameModeComponent
      * @brief 도시 한 판입니다. 같은 오브젝트의 맨 앞 `SessionStateComponent` 를 열고(새 판이면 두 통화의 시작 돈), 첫 틱에 기념 건물(막힌 땅)과 도로(막히지 않은 땅)를 놓습니다.
      * @details 도시는 공유 땅을 빌린다(`CitySimulation::bindLand`, 원점 (0, 0)) — 같은 땅을 RTS 디렉터가 빌리므로 도시가 지은 칸에 RTS 는 짓지 못하고 유닛은 돌아간다.
      *          공유 시계의 날 넘김이 도시의 달 결산이다(`settleMonth`). `FastForward`(Space)를 누르는 동안, 또는 자동 플레이면 시계가 `_fastTimeScale` 배로 흐른다.
      *          시계를 미는 것은 이 디렉터 하나다(RTS 는 읽기만). 상태는 도시 하나(구간 'CITY')와 배치를 마쳤는지이고, 돈 · 시계 · 땅은 공유 상태에 있다.
      */
     REFLECT( Category = "Frontier", DisplayName = "Frontier City Director", Tooltip = "Runs the city kit on the shared land, wallet and clock and spawns the building tiles" )
-    class FrontierCityDirectorComponent : public GameDirectorComponent
+    class FrontierCityGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -37,8 +37,8 @@ namespace sw
         static constexpr uint32 kStateTag     = FourCcUtil::make( "FTCT" );
         static constexpr uint32 kStateVersion = 1;
 
-        FrontierCityDirectorComponent();
-        virtual ~FrontierCityDirectorComponent() override;
+        FrontierCityGameModeComponent();
+        virtual ~FrontierCityGameModeComponent() override;
 
         void writeState( Archive& outArchive ) const override;
 

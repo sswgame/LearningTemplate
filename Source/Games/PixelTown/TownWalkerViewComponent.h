@@ -34,7 +34,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
     private:
-        PROPERTY( Category = "Walker", DisplayName = "Director", Tooltip = "Object with the TownDirectorComponent" )
+        PROPERTY( Category = "Walker", DisplayName = "Director", Tooltip = "Object with the TownGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Walker", DisplayName = "Sprite Offset", Tooltip = "Sprite center from the feet (a 16x32 hero stands half a tile above its tile center)", Units = m )
         float2 _spriteOffset;

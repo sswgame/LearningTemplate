@@ -8,7 +8,7 @@
 
 #include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 
-#include "Games/ThemeParkTycoon/ParkDirectorComponent.h"
+#include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
 
 namespace sw
 {
@@ -44,7 +44,7 @@ namespace sw
         const bool         bMissingCarContext = pManager == nullptr || pMesh == nullptr || _carIndex < 0;
         if ( bMissingCarContext )
             return;
-        const ParkDirectorComponent* pDirector = GameDirectorComponent::resolve<ParkDirectorComponent>( *pManager, _director );
+        const ParkGameModeComponent* pDirector = GameModeComponent::resolve<ParkGameModeComponent>( *pManager, _director );
         const CoasterTrain*          pTrain    = pDirector != nullptr ? pDirector->findCoasterTrain( _coasterIndex ) : nullptr;
         if ( pTrain == nullptr )
             return;

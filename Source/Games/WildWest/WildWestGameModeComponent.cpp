@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/WildWest/WildWestDirectorComponent.h"
+#include "Games/WildWest/WildWestGameModeComponent.h"
 
 #include "Core/Container/formatString.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -27,7 +27,7 @@ namespace sw
 {
     namespace
     {
-        struct WildWestDirectorComponentInternal
+        struct WildWestGameModeComponentInternal
         {
             /** @brief HUD 에 보이는 걸음새 이름입니다(`MountGait` 순서). */
             static const utf8* findGaitName( MountGait gait )
@@ -57,7 +57,7 @@ namespace sw
 
 namespace sw
 {
-    WildWestDirectorComponent::WildWestDirectorComponent()
+    WildWestGameModeComponent::WildWestGameModeComponent()
         : _westernDataPath{}
         , _player{}
         , _cameraRig{}
@@ -68,47 +68,47 @@ namespace sw
     {
     }
 
-    WildWestDirectorComponent::~WildWestDirectorComponent() = default;
+    WildWestGameModeComponent::~WildWestGameModeComponent() = default;
 
-    void WildWestDirectorComponent::writeState( Archive& outArchive ) const
+    void WildWestGameModeComponent::writeState( Archive& outArchive ) const
     {
         // 판 상태가 없다 — 말 상태는 말 컴포넌트가, 자리는 씬 오브젝트가 싣는다.
         StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
     }
 
-    bool WildWestDirectorComponent::readState( Archive& archive )
+    bool WildWestGameModeComponent::readState( Archive& archive )
     {
         return StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) && archive.getRemainingBytes() == 0;
     }
 
-    bool WildWestDirectorComponent::startGame()
+    bool WildWestGameModeComponent::startGame()
     {
         _pWesternCatalog = _westernDataPath.empty() ? nullptr : SharedAssetCache<WesternCatalog>::acquire( _westernDataPath );
         if ( _pWesternCatalog == nullptr )
         {
-            SW_LOG_ERROR_ID( "WildWestDirector.WesternCatalogCouldNot", "[WildWest] the western catalog '%#' could not be loaded - the prairie cannot open", _westernDataPath.c_str() );
+            SW_LOG_ERROR_ID( "WildWestGameMode.WesternCatalogCouldNot", "[WildWest] the western catalog '%#' could not be loaded - the prairie cannot open", _westernDataPath.c_str() );
             return false;
         }
         const PawnComponent* pPlayerPawn = findPlayerPawn();
         if ( pPlayerPawn == nullptr )
         {
-            SW_LOG_ERROR_ID( "WildWestDirector.PlayerDoesNotPoint", "[WildWest] Player does not point at an object with a pawn - the prairie cannot open" );
+            SW_LOG_ERROR_ID( "WildWestGameMode.PlayerDoesNotPoint", "[WildWest] Player does not point at an object with a pawn - the prairie cannot open" );
             return false;
         }
         if ( pPlayerPawn->findButton( _whistleButton ) < 0 )
         {
-            SW_LOG_ERROR_ID( "WildWestDirector.RiderPawnNoWhistle", "[WildWest] the rider pawn has no whistle button '%#' - the prairie cannot open", _whistleButton.c_str() );
+            SW_LOG_ERROR_ID( "WildWestGameMode.RiderPawnNoWhistle", "[WildWest] the rider pawn has no whistle button '%#' - the prairie cannot open", _whistleButton.c_str() );
             return false;
         }
         return true;
     }
 
-    void WildWestDirectorComponent::onGameStarted()
+    void WildWestGameModeComponent::onGameStarted()
     {
-        SW_LOG_INFO_ID( "WildWestDirector.PrairieOpenWalkWASD", "[WildWest] the prairie is open - walk with WASD, E to mount or dismount, hold Shift to gallop, F to whistle" );
+        SW_LOG_INFO_ID( "WildWestGameMode.PrairieOpenWalkWASD", "[WildWest] the prairie is open - walk with WASD, E to mount or dismount, hold Shift to gallop, F to whistle" );
     }
 
-    void WildWestDirectorComponent::updateGame( float32 deltaTime )
+    void WildWestGameModeComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
         const PawnComponent* pPlayerPawn = findPlayerPawn();
@@ -119,34 +119,34 @@ namespace sw
         // 다른 오브젝트(말 AI · 좌석)를 바꾸는 일과 UI 바인딩은 틱 뒤에 한다.
         const bool bWhistle = pPlayerPawn->wasButtonTriggered( pPlayerPawn->findButton( _whistleButton ) );
         if ( bWhistle )
-            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestDirectorComponent& director )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& director )
             { director.whistleHorses(); } );
         const bool bAutoMount = isAutoPlayOn() && _bAutoMountRequested == SW_FALSE;
         if ( bAutoMount )
         {
             _bAutoMountRequested = SW_TRUE;
-            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestDirectorComponent& director )
+            pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& director )
             { director.mountNearestHorse(); } );
         }
-        pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestDirectorComponent& director )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( WildWestGameModeComponent& director )
         { director.updateHUD(); } );
     }
 
-    void WildWestDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void WildWestGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         // 세우는 런타임 오브젝트가 없다 — 말과 기수는 씬에 있다.
         (void)manager;
         (void)bRespawnViews;
     }
 
-    const PawnComponent* WildWestDirectorComponent::findPlayerPawn() const
+    const PawnComponent* WildWestGameModeComponent::findPlayerPawn() const
     {
         const GameObjectManager* pManager = getObjectManager();
         const GameObject*        pPlayer  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
         return pPlayer != nullptr ? pPlayer->getComponent<PawnComponent>() : nullptr;
     }
 
-    void WildWestDirectorComponent::updateCameraFocus( const PawnComponent& playerPawn )
+    void WildWestGameModeComponent::updateCameraFocus( const PawnComponent& playerPawn )
     {
         // 카메라 디렉터는 PostPhysics 틱 뒤에 이 초점을 읽고, 카메라 오브젝트에는 다른 쓰기가 없다. 탔으면 기수 루트가 말 좌석에 붙어 있으므로 같은 자리를 따라간다.
         const GameObjectManager* pManager    = getObjectManager();
@@ -159,7 +159,7 @@ namespace sw
         pRig->setFocusPoint( float3{ position._x, 0.0f, position._z } );
     }
 
-    void WildWestDirectorComponent::whistleHorses()
+    void WildWestGameModeComponent::whistleHorses()
     {
         GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr )
@@ -172,10 +172,10 @@ namespace sw
             pAI->whistle();
             ++calledCount;
         } );
-        SW_LOG_INFO_ID( "WildWestDirector.WhistleHorseComing", "[WildWest] whistle - %# horse(s) coming", calledCount );
+        SW_LOG_INFO_ID( "WildWestGameMode.WhistleHorseComing", "[WildWest] whistle - %# horse(s) coming", calledCount );
     }
 
-    void WildWestDirectorComponent::mountNearestHorse()
+    void WildWestGameModeComponent::mountNearestHorse()
     {
         GameObjectManager* pManager = getObjectManager();
         GameObject*        pPlayer  = pManager != nullptr ? pManager->resolveGameObject( _player ) : nullptr;
@@ -185,15 +185,15 @@ namespace sw
         VehicleSeatComponent* pSeat = VehicleSeatComponent::findNearestFreeSeat( *pPawn );
         if ( pSeat == nullptr )
         {
-            SW_LOG_WARNING_ID( "WildWestDirector.AutoPlayNoHorse", "[WildWest] auto play: no horse within reach of the rider" );
+            SW_LOG_WARNING_ID( "WildWestGameMode.AutoPlayNoHorse", "[WildWest] auto play: no horse within reach of the rider" );
             return;
         }
         const MountResult result = VehicleSeatComponent::mount( *pPawn, *pSeat );
         if ( result != MountResult::Mounted )
-            SW_LOG_WARNING_ID( "WildWestDirector.AutoPlayRiderCould", "[WildWest] auto play: the rider could not mount '%#' (result %#)", pSeat->getOwner()->getName().c_str(), static_cast<int32>( result ) );
+            SW_LOG_WARNING_ID( "WildWestGameMode.AutoPlayRiderCould", "[WildWest] auto play: the rider could not mount '%#' (result %#)", pSeat->getOwner()->getName().c_str(), static_cast<int32>( result ) );
     }
 
-    void WildWestDirectorComponent::updateHUD()
+    void WildWestGameModeComponent::updateHUD()
     {
         GameObject*             pOwner      = getOwner();
         HUDControllerComponent* pHUD        = pOwner != nullptr ? pOwner->getComponent<HUDControllerComponent>() : nullptr;
@@ -218,7 +218,7 @@ namespace sw
         const float32                 speed           = pMovement != nullptr ? pMovement->getForwardSpeed() : 0.0f;
         utf8                          arrStatus[constant::buffer::kMax128]{};
         formatstring( arrStatus, constant::buffer::kMax128, "Riding %s - %s %.1f m/s - E: dismount  Shift: gallop", pHorseObject->getName().c_str(),
-                      WildWestDirectorComponentInternal::findGaitName( gait ), speed );
+                      WildWestGameModeComponentInternal::findGaitName( gait ), speed );
         pViewModel->setRideStatus( arrStatus );
         pViewModel->setStamina( pHorse != nullptr ? pHorse->getStamina().getValue() : 0.0f, pHorse != nullptr ? pHorse->getStamina().getRatio() : 0.0f );
     }

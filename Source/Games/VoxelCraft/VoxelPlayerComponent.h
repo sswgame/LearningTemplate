@@ -25,7 +25,7 @@ namespace sw
     class FirstPersonCameraComponent;
     class PawnComponent;
     class VoxelBlockCatalog;
-    class VoxelDirectorComponent;
+    class VoxelGameModeComponent;
 
     /**
      * @class VoxelPlayerComponent
@@ -90,23 +90,23 @@ namespace sw
         };
 
     private:
-        void initializeBody( const VoxelDirectorComponent& director );
+        void initializeBody( const VoxelGameModeComponent& director );
         /** @brief 폰의 의도 이름(PROPERTY)을 슬롯 번호로 바꿉니다. 폰 스키마에 없는 이름은 모두 오류로 남기고 false 를 반환합니다. */
         [[nodiscard]] bool resolveIntentSlots( const PawnComponent& pawn );
         /** @brief 블록 이름(PROPERTY: 물, 처음 핫바)이 카탈로그에 모두 있으면 핫바와 몸에 넣고 true 를 반환합니다. 하나라도 없으면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool applyBlockNames( const VoxelBlockCatalog& catalog );
         /** @brief 의도에서 이번 틱의 이동과 손동작을 읽고 핫바 슬롯을 고릅니다. */
         void readIntent( const PawnComponent& pawn, const VoxelBlockCatalog& catalog, float3& outWish, bool& outJump, bool& outSprint, bool& outBreak, bool& outPlace );
-        void updateTarget( const VoxelDirectorComponent& director, const FirstPersonCameraComponent& camera );
+        void updateTarget( const VoxelGameModeComponent& director, const FirstPersonCameraComponent& camera );
         void updateBreaking( float32 deltaTime, const VoxelBlockCatalog& catalog, bool bBreakHeld );
-        void placeBlock( const VoxelDirectorComponent& director, const VoxelBlockCatalog& catalog );
+        void placeBlock( const VoxelGameModeComponent& director, const VoxelBlockCatalog& catalog );
         void scheduleFlush();
         void flushPending();
         /** @brief 보관해 둔 복원 바이트를 적용합니다. */
         void applyPendingState();
 
     private:
-        PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the VoxelDirectorComponent" )
+        PROPERTY( Category = "Player", DisplayName = "Director", Tooltip = "Object with the VoxelGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Player", DisplayName = "Reach", Tooltip = "Blocks within this distance can be broken or built on", Min = 0.0, Units = m )
         float32 _reachDistance;

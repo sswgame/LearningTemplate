@@ -11,7 +11,7 @@
 
 #include "GameFramework/Runtime/Character/Camera/CameraMode.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 
 namespace sw
 {
@@ -34,11 +34,11 @@ namespace sw
     void FollowCameraComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        GameObject*                  pOwner    = getOwner();
-        GameObjectManager*           pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const GameDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<GameDirectorComponent>( *pManager, _director ) : nullptr;
-        GameObjectHandle             focusObject{};
-        float3                       focusPosition{ 0.0f, 0.0f, 0.0f };
+        GameObject*              pOwner    = getOwner();
+        GameObjectManager*       pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
+        const GameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<GameModeComponent>( *pManager, _director ) : nullptr;
+        GameObjectHandle         focusObject{};
+        float3                   focusPosition{ 0.0f, 0.0f, 0.0f };
         if ( pDirector == nullptr || pDirector->readCameraFocus( focusObject, focusPosition ) == false )
         {
             applyToCamera( float3{ 0.0f, 0.0f, 0.0f } );

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/AbilityArena/ArenaDirectorComponent.h"
+#include "Games/AbilityArena/ArenaGameModeComponent.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
@@ -31,7 +31,7 @@ namespace sw
 {
     namespace
     {
-        struct ArenaDirectorComponentInternal
+        struct ArenaGameModeComponentInternal
         {
             static constexpr uint32 kStateTag       = FourCcUtil::make( "ARNA" );
             static constexpr uint32 kStateVersion   = 1;
@@ -42,7 +42,7 @@ namespace sw
             static constexpr const utf8* kEventPlayerFell = "PlayerFell";
             static constexpr const utf8* kEventEnemyFell  = "EnemyFell";
 
-            [[nodiscard]] static bool readPlayerX( const ArenaDirectorComponent& director, float64& outValue )
+            [[nodiscard]] static bool readPlayerX( const ArenaGameModeComponent& director, float64& outValue )
             {
                 float3 position{};
                 if ( director.findUnitPosition( director.getPlayerObject(), position ) == false )
@@ -51,7 +51,7 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool readPlayerZ( const ArenaDirectorComponent& director, float64& outValue )
+            [[nodiscard]] static bool readPlayerZ( const ArenaGameModeComponent& director, float64& outValue )
             {
                 float3 position{};
                 if ( director.findUnitPosition( director.getPlayerObject(), position ) == false )
@@ -60,19 +60,19 @@ namespace sw
                 return true;
             }
 
-            [[nodiscard]] static bool readPlayerShotCount( const ArenaDirectorComponent& director, float64& outValue )
+            [[nodiscard]] static bool readPlayerShotCount( const ArenaGameModeComponent& director, float64& outValue )
             {
                 outValue = director.getPlayerShotCount();
                 return true;
             }
 
-            [[nodiscard]] static bool readKillCount( const ArenaDirectorComponent& director, float64& outValue )
+            [[nodiscard]] static bool readKillCount( const ArenaGameModeComponent& director, float64& outValue )
             {
                 outValue = director.getKillCount();
                 return true;
             }
 
-            [[nodiscard]] static bool readPlayerControllerKind( const ArenaDirectorComponent& director, float64& outValue )
+            [[nodiscard]] static bool readPlayerControllerKind( const ArenaGameModeComponent& director, float64& outValue )
             {
                 outValue = director.isPlayerDrivenByAI() ? 1.0 : 0.0;
                 return true;
@@ -87,16 +87,16 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_arenaAutoPlay, 0, "AbilityArena: 플레이어도 AI 가 조종 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_arenaAutoPlay, "AbilityArena", "The auto battle AI controller possesses the player" );
 
-    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerX, "Arena.PlayerX", "World X of the arena player", ArenaDirectorComponent, &ArenaDirectorComponentInternal::readPlayerX );
-    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerZ, "Arena.PlayerZ", "World Z of the arena player", ArenaDirectorComponent, &ArenaDirectorComponentInternal::readPlayerZ );
-    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerShotCount, "Arena.PlayerShotCount", "Projectiles the player team fired this game", ArenaDirectorComponent, &ArenaDirectorComponentInternal::readPlayerShotCount );
-    SW_AUTOMATION_COMPONENT_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaDirectorComponent, &ArenaDirectorComponentInternal::readKillCount );
-    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerControllerKind, "Arena.PlayerControllerKind", "0 = the player controller holds the player, 1 = the auto battle AI", ArenaDirectorComponent, &ArenaDirectorComponentInternal::readPlayerControllerKind );
+    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerX, "Arena.PlayerX", "World X of the arena player", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerX );
+    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerZ, "Arena.PlayerZ", "World Z of the arena player", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerZ );
+    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerShotCount, "Arena.PlayerShotCount", "Projectiles the player team fired this game", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerShotCount );
+    SW_AUTOMATION_COMPONENT_WATCH( arenaKillCount, "Arena.KillCount", "Enemies felled this game", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readKillCount );
+    SW_AUTOMATION_COMPONENT_WATCH( arenaPlayerControllerKind, "Arena.PlayerControllerKind", "0 = the player controller holds the player, 1 = the auto battle AI", ArenaGameModeComponent, &ArenaGameModeComponentInternal::readPlayerControllerKind );
 } // namespace sw
 
 namespace sw
 {
-    ArenaDirectorComponent::ArenaDirectorComponent()
+    ArenaGameModeComponent::ArenaGameModeComponent()
         : _playerAbilitySet{}
         , _gruntAbilitySet{}
         , _casterAbilitySet{}
@@ -140,14 +140,14 @@ namespace sw
     {
     }
 
-    ArenaDirectorComponent::~ArenaDirectorComponent() = default;
+    ArenaGameModeComponent::~ArenaGameModeComponent() = default;
 
-    bool ArenaDirectorComponent::startGame()
+    bool ArenaGameModeComponent::startGame()
     {
         const AbilityCatalog* pCatalog = game::findSubsystem<AbilityCatalog>();
         if ( pCatalog == nullptr || pCatalog->getAbilitySetCount() == 0 )
         {
-            SW_LOG_ERROR_ID( "ArenaDirector.AbilityCatalogNotLoaded", "[Arena] the ability catalog is not loaded - the arena cannot start" );
+            SW_LOG_ERROR_ID( "ArenaGameMode.AbilityCatalogNotLoaded", "[Arena] the ability catalog is not loaded - the arena cannot start" );
             return false;
         }
         bool bSetsKnown = true;
@@ -155,7 +155,7 @@ namespace sw
         {
             if ( pCatalog->findAbilitySet( *pSetID ) != nullptr )
                 continue;
-            SW_LOG_ERROR_ID( "ArenaDirector.DirectorAbilitySetNot", "[Arena] the director's ability set '%#' is not in the ability catalog - the arena cannot start", pSetID->c_str() );
+            SW_LOG_ERROR_ID( "ArenaGameMode.DirectorAbilitySetNot", "[Arena] the director's ability set '%#' is not in the ability catalog - the arena cannot start", pSetID->c_str() );
             bSetsKnown = false;
         }
         if ( bSetsKnown == false )
@@ -164,7 +164,7 @@ namespace sw
         return true;
     }
 
-    const hashed_string& ArenaDirectorComponent::findAbilitySetID( ArenaUnitKind kind ) const
+    const hashed_string& ArenaGameModeComponent::findAbilitySetID( ArenaUnitKind kind ) const
     {
         switch ( kind )
         {
@@ -178,23 +178,23 @@ namespace sw
         return _playerAbilitySet; // 열거자는 셋뿐이다(covered-switch) — 닿지 않는다
     }
 
-    void ArenaDirectorComponent::onGameStarted()
+    void ArenaGameModeComponent::onGameStarted()
     {
-        SW_LOG_INFO_ID( "ArenaDirector.ArenaReadyWASDMove", "[Arena] arena is ready - WASD move, J/Space melee, K/2 fireball, L/3 heal, LeftShift/4 dash" );
+        SW_LOG_INFO_ID( "ArenaGameMode.ArenaReadyWASDMove", "[Arena] arena is ready - WASD move, J/Space melee, K/2 fireball, L/3 heal, LeftShift/4 dash" );
     }
 
-    void ArenaDirectorComponent::writeState( Archive& outArchive ) const
+    void ArenaGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, ArenaDirectorComponentInternal::kStateTag, ArenaDirectorComponentInternal::kStateVersion );
+        StateArchiveUtil::writeHeader( outArchive, ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion );
         outArchive << _wave;
         outArchive << _killCount;
     }
 
-    bool ArenaDirectorComponent::readState( Archive& archive )
+    bool ArenaGameModeComponent::readState( Archive& archive )
     {
         uint32 wave      = 0;
         uint32 killCount = 0;
-        if ( StateArchiveUtil::readHeader( archive, ArenaDirectorComponentInternal::kStateTag, ArenaDirectorComponentInternal::kStateVersion ) == false )
+        if ( StateArchiveUtil::readHeader( archive, ArenaGameModeComponentInternal::kStateTag, ArenaGameModeComponentInternal::kStateVersion ) == false )
             return false;
         archive >> wave;
         archive >> killCount;
@@ -205,16 +205,16 @@ namespace sw
         return true;
     }
 
-    void ArenaDirectorComponent::onStateRestored( bool bRestored )
+    void ArenaGameModeComponent::onStateRestored( bool bRestored )
     {
         // 어느 쪽이든 정리된다. 다음 틱이 플레이어와 현재 웨이브를 다시 스폰한다.
         if ( bRestored )
-            SW_LOG_INFO_ID( "ArenaDirector.ArenaStateRestoredWave", "[Arena] arena state restored - wave %#, %# kills", _wave, _killCount );
+            SW_LOG_INFO_ID( "ArenaGameMode.ArenaStateRestoredWave", "[Arena] arena state restored - wave %#, %# kills", _wave, _killCount );
         else
-            SW_LOG_WARNING_ID( "ArenaDirector.SavedArenaStateDoes", "[Arena] the saved arena state does not match this build - starting from wave 1" );
+            SW_LOG_WARNING_ID( "ArenaGameMode.SavedArenaStateDoes", "[Arena] the saved arena state does not match this build - starting from wave 1" );
     }
 
-    void ArenaDirectorComponent::updateGame( float32 deltaTime )
+    void ArenaGameModeComponent::updateGame( float32 deltaTime )
     {
         if ( _bUnitsRequested == SW_FALSE )
         {
@@ -241,7 +241,7 @@ namespace sw
         }
     }
 
-    void ArenaDirectorComponent::onViewsDespawned()
+    void ArenaGameModeComponent::onViewsDespawned()
     {
         _listUnit.clear();
         _listUnitView.clear();
@@ -256,7 +256,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 다른 컴포넌트가 읽는 것
     // ------------------------------------------------------------------------------
-    const ArenaUnitView* ArenaDirectorComponent::findUnitView( GameObjectHandle object ) const
+    const ArenaUnitView* ArenaGameModeComponent::findUnitView( GameObjectHandle object ) const
     {
         const ArenaUnitView* pView = _listUnitView.data();
         for ( size_t viewIndex = 0; viewIndex < _listUnitView.size(); ++viewIndex )
@@ -267,7 +267,7 @@ namespace sw
         return nullptr;
     }
 
-    const ArenaUnitView* ArenaDirectorComponent::findNearestHostileView( GameObjectHandle from, float32 maxRange ) const
+    const ArenaUnitView* ArenaGameModeComponent::findNearestHostileView( GameObjectHandle from, float32 maxRange ) const
     {
         const ArenaUnitView* pFrom = findUnitView( from );
         if ( pFrom == nullptr )
@@ -293,7 +293,7 @@ namespace sw
         return pNearest;
     }
 
-    bool ArenaDirectorComponent::findUnitPosition( GameObjectHandle object, float3& outPosition ) const
+    bool ArenaGameModeComponent::findUnitPosition( GameObjectHandle object, float3& outPosition ) const
     {
         const GameObjectManager* pManager = getObjectManager();
         const GameObject*        pObject  = pManager != nullptr && findUnitView( object ) != nullptr ? pManager->resolveGameObject( object ) : nullptr;
@@ -304,27 +304,27 @@ namespace sw
         return true;
     }
 
-    bool ArenaDirectorComponent::findNearestHostilePosition( GameObjectHandle from, float3& outPosition ) const
+    bool ArenaGameModeComponent::findNearestHostilePosition( GameObjectHandle from, float3& outPosition ) const
     {
         const ArenaUnitView* pNearest = findNearestHostileView( from, 100.0f );
         return pNearest != nullptr && findUnitPosition( pNearest->_object, outPosition );
     }
 
-    bool ArenaDirectorComponent::isPlayerDrivenByAI() const
+    bool ArenaGameModeComponent::isPlayerDrivenByAI() const
     {
         const GameObjectManager* pManager    = getObjectManager();
         const PawnComponent*     pPlayerPawn = findPlayerPawn();
         return pManager != nullptr && pPlayerPawn != nullptr && ControlSystem::isPawnControlledBy( *pManager, *pPlayerPawn, _autoBattleObject );
     }
 
-    PawnComponent* ArenaDirectorComponent::findPlayerPawn() const
+    PawnComponent* ArenaGameModeComponent::findPlayerPawn() const
     {
         GameObjectManager* pManager = getObjectManager();
         GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( _playerObject ) : nullptr;
         return pObject != nullptr ? pObject->getComponent<PawnComponent>() : nullptr;
     }
 
-    AbilityComponent* ArenaDirectorComponent::findNearestHostile( const AbilityComponent& from, float32 maxRange ) const
+    AbilityComponent* ArenaGameModeComponent::findNearestHostile( const AbilityComponent& from, float32 maxRange ) const
     {
         const GameObject*    pFromOwner = from.getOwner();
         GameObjectManager*   pManager   = getObjectManager();
@@ -333,7 +333,7 @@ namespace sw
         return pTarget != nullptr ? pTarget->getComponent<AbilityComponent>() : nullptr;
     }
 
-    void ArenaDirectorComponent::launchProjectile( const AbilityComponent& from, const float3& facing, const AbilityEffectSpec& spec,
+    void ArenaGameModeComponent::launchProjectile( const AbilityComponent& from, const float3& facing, const AbilityEffectSpec& spec,
                                                    const AbilityEffectSpec& extraSpec, float32 speed, float32 range ) const
     {
         const GameObject*    pFrom     = from.getOwner();
@@ -350,43 +350,43 @@ namespace sw
         request._range       = range;
         request._bFromPlayer = from.getOwnedTagCounts().hasMatchingTag( "Team.Player"_tag ) ? SW_TRUE : SW_FALSE;
         // 어빌리티는 워커(유닛의 틱)에서 쏘고, 오브젝트는 틱이 끝난 뒤 게임 스레드에서 스폰한다. 그 사이 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
-        const TComponentHandle<ArenaDirectorComponent> self{ this };
+        const TComponentHandle<ArenaGameModeComponent> self{ this };
         pManager->executeOrDeferPostTick( SW_DELEGATE_LAMBDA( GameObjectManager::PostTickDelegate, [pManager, self, request]()
         {
-            ArenaDirectorComponent* pDirector = pManager->resolveComponent( self );
+            ArenaGameModeComponent* pDirector = pManager->resolveComponent( self );
             if ( pDirector != nullptr )
                 pDirector->spawnProjectile( request );
         } ) );
     }
 
-    const ArenaDirectorComponent* ArenaDirectorComponent::findForUnit( const AbilityComponent& unit )
+    const ArenaGameModeComponent* ArenaGameModeComponent::findForUnit( const AbilityComponent& unit )
     {
         const GameObject*         pOwner   = unit.getOwner();
         const GameObjectManager*  pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const ArenaUnitComponent* pUnit    = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
         if ( pManager == nullptr || pUnit == nullptr )
             return nullptr;
-        return resolve<ArenaDirectorComponent>( *pManager, pUnit->getDirector() );
+        return resolve<ArenaGameModeComponent>( *pManager, pUnit->getDirector() );
     }
 
-    const ArenaDirectorComponent* ArenaDirectorComponent::findForPawn( const PawnComponent& pawn )
+    const ArenaGameModeComponent* ArenaGameModeComponent::findForPawn( const PawnComponent& pawn )
     {
         const GameObject*         pOwner   = pawn.getOwner();
         const GameObjectManager*  pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const ArenaUnitComponent* pUnit    = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
         if ( pManager == nullptr || pUnit == nullptr )
             return nullptr;
-        return resolve<ArenaDirectorComponent>( *pManager, pUnit->getDirector() );
+        return resolve<ArenaGameModeComponent>( *pManager, pUnit->getDirector() );
     }
 
     // ------------------------------------------------------------------------------
     // 스폰. 요청은 틱 안에서 하고, 스폰은 틱이 끝난 뒤 게임 스레드에서 한다.
     // ------------------------------------------------------------------------------
-    void ArenaDirectorComponent::requestWave( bool bAdvance )
+    void ArenaGameModeComponent::requestWave( bool bAdvance )
     {
         if ( bAdvance || _wave == 0 )
             ++_wave;
-        getSoundQueue().queueEvent( ArenaDirectorComponentInternal::kEventWave );
+        getSoundQueue().queueEvent( ArenaGameModeComponentInternal::kEventWave );
         const uint32 gruntCount  = _baseGruntCount + _wave;
         const uint32 casterCount = _wave / _wavesPerCaster;
         const uint32 totalCount  = gruntCount + casterCount;
@@ -398,10 +398,10 @@ namespace sw
             const ArenaUnitKind kind = spawnIndex < gruntCount ? ArenaUnitKind::Grunt : ArenaUnitKind::Caster;
             requestUnit( kind, position, level );
         }
-        SW_LOG_INFO_ID( "ArenaDirector.WaveGruntsCastersLevel", "[Arena] wave %# - %# grunts, %# casters (level %#)", _wave, gruntCount, casterCount, level );
+        SW_LOG_INFO_ID( "ArenaGameMode.WaveGruntsCastersLevel", "[Arena] wave %# - %# grunts, %# casters (level %#)", _wave, gruntCount, casterCount, level );
     }
 
-    void ArenaDirectorComponent::requestUnit( ArenaUnitKind kind, const float3& position, int32 level )
+    void ArenaGameModeComponent::requestUnit( ArenaUnitKind kind, const float3& position, int32 level )
     {
         SpawnRequest request;
         request._kind     = kind;
@@ -410,7 +410,7 @@ namespace sw
         _listPendingUnit.push_back( request );
     }
 
-    void ArenaDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void ArenaGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         (void)bRespawnViews; // 플레이어와 웨이브는 틱이 요청한다(`_bUnitsRequested`). 여기서는 쌓인 것만 스폰한다.
         for ( const SpawnRequest& request : _listPendingUnit )
@@ -421,7 +421,7 @@ namespace sw
         syncPlayerPossession( manager );
     }
 
-    bool ArenaDirectorComponent::spawnUnit( GameObjectManager& manager, const SpawnRequest& request )
+    bool ArenaGameModeComponent::spawnUnit( GameObjectManager& manager, const SpawnRequest& request )
     {
         const bool          bPlayer             = request._kind == ArenaUnitKind::Player;
         const string&       prefabPath          = ( bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab ) ).path();
@@ -434,7 +434,7 @@ namespace sw
         const bool          bMissingPrefabParts = pMesh == nullptr || pAbilitySystem == nullptr || pUnitComponent == nullptr || pPawn == nullptr;
         if ( bMissingPrefabParts )
         {
-            SW_LOG_WARNING_ID( "ArenaDirector.PrefabNeedsMeshAbility", "[Arena] prefab '%#' needs a mesh, an ability system, a pawn and an arena unit", prefabPath.c_str() );
+            SW_LOG_WARNING_ID( "ArenaGameMode.PrefabNeedsMeshAbility", "[Arena] prefab '%#' needs a mesh, an ability system, a pawn and an arena unit", prefabPath.c_str() );
             if ( pObject != nullptr )
                 manager.destroyObject( pObject );
             return false;
@@ -444,7 +444,7 @@ namespace sw
         const hashed_string& setID = findAbilitySetID( request._kind );
         if ( pAbilitySystem->grantAbilitySet( setID ) == false )
         {
-            SW_LOG_WARNING_ID( "ArenaDirector.AbilitySetMissingAbilities", "[Arena] ability set '%#' is missing - is abilities.xml loaded?", setID.c_str() );
+            SW_LOG_WARNING_ID( "ArenaGameMode.AbilitySetMissingAbilities", "[Arena] ability set '%#' is missing - is abilities.xml loaded?", setID.c_str() );
             manager.destroyObject( pObject );
             return false;
         }
@@ -456,7 +456,7 @@ namespace sw
             const std::optional<float32> attackPower = pAbilitySystem->getAttributeBaseValue( CombatAttributes::attackPower() );
             if ( maxHealth.has_value() == false || attackPower.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "ArenaDirector.AbilitySetGivesNo", "[Arena] ability set '%#' gives no MaxHealth / AttackPower - the unit is not spawned", setID.c_str() );
+                SW_LOG_ERROR_ID( "ArenaGameMode.AbilitySetGivesNo", "[Arena] ability set '%#' gives no MaxHealth / AttackPower - the unit is not spawned", setID.c_str() );
                 manager.destroyObject( pObject );
                 return false;
             }
@@ -479,14 +479,14 @@ namespace sw
         return true;
     }
 
-    GameObjectHandle ArenaDirectorComponent::spawnEnemyController( GameObjectManager& manager, ArenaUnitKind kind, PawnComponent& pawn )
+    GameObjectHandle ArenaGameModeComponent::spawnEnemyController( GameObjectManager& manager, ArenaUnitKind kind, PawnComponent& pawn )
     {
         const string&          prefabPath = ( kind == ArenaUnitKind::Caster ? _casterAIPrefab : _gruntAIPrefab ).path();
         GameObject*            pObject    = spawnPrefab( manager, prefabPath, kind == ArenaUnitKind::Caster ? "ArenaCasterAI" : "ArenaGruntAI" );
         AIControllerComponent* pAI        = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
         if ( pAI == nullptr )
         {
-            SW_LOG_WARNING_ID( "ArenaDirector.AIPrefabNoAI", "[Arena] AI prefab '%#' has no AI controller - the enemy stands still", prefabPath.c_str() );
+            SW_LOG_WARNING_ID( "ArenaGameMode.AIPrefabNoAI", "[Arena] AI prefab '%#' has no AI controller - the enemy stands still", prefabPath.c_str() );
             if ( pObject != nullptr )
                 manager.destroyObject( pObject );
             return GameObjectHandle{};
@@ -495,7 +495,7 @@ namespace sw
         return pObject->getHandle();
     }
 
-    void ArenaDirectorComponent::syncPlayerPossession( GameObjectManager& manager )
+    void ArenaGameModeComponent::syncPlayerPossession( GameObjectManager& manager )
     {
         _bPossessionDirty    = SW_FALSE;
         PawnComponent* pPawn = findPlayerPawn();
@@ -513,7 +513,7 @@ namespace sw
             }
             if ( pAI == nullptr )
             {
-                SW_LOG_WARNING_ID( "ArenaDirector.AutoBattlePrefabNo", "[Arena] auto battle prefab '%#' has no AI controller - auto play cannot take the player", _autoBattleAIPrefab.c_str() );
+                SW_LOG_WARNING_ID( "ArenaGameMode.AutoBattlePrefabNo", "[Arena] auto battle prefab '%#' has no AI controller - auto play cannot take the player", _autoBattleAIPrefab.c_str() );
                 return;
             }
             if ( isPlayerDrivenByAI() == false )
@@ -524,7 +524,7 @@ namespace sw
         (void)ControlSystem::returnPawnToPlayer( manager, *pPawn, _autoBattleObject );
     }
 
-    void ArenaDirectorComponent::spawnProjectile( const ProjectileRequest& request )
+    void ArenaGameModeComponent::spawnProjectile( const ProjectileRequest& request )
     {
         GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr || isStarted() == false )
@@ -539,7 +539,7 @@ namespace sw
         }
         MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
         if ( pMesh != nullptr )
-            applyTint( *pMesh, ArenaDirectorComponentInternal::kProjectileTint );
+            applyTint( *pMesh, ArenaGameModeComponentInternal::kProjectileTint );
         pProjectile->launch( getOwner()->getHandle(), request._position, request._velocity, request._range, request._spec, request._extraSpec,
                              request._bFromPlayer == SW_TRUE );
         if ( request._bFromPlayer == SW_TRUE )
@@ -548,16 +548,16 @@ namespace sw
         _listProjectile.push_back( pObject->getHandle() );
     }
 
-    void ArenaDirectorComponent::applyTint( MeshComponent& mesh, int32 tintIndex )
+    void ArenaGameModeComponent::applyTint( MeshComponent& mesh, int32 tintIndex )
     {
         const float4 arrColor[4] = { _playerTint, _gruntTint, _casterTint, _projectileTint };
-        _tintCache.apply( mesh, arrColor[MathUtil::clamp( tintIndex, 0, ArenaDirectorComponentInternal::kProjectileTint )] );
+        _tintCache.apply( mesh, arrColor[MathUtil::clamp( tintIndex, 0, ArenaGameModeComponentInternal::kProjectileTint )] );
     }
 
     // ------------------------------------------------------------------------------
     // 갱신(PrePhysics). 이 그룹에서는 디렉터만 돈다.
     // ------------------------------------------------------------------------------
-    void ArenaDirectorComponent::updateUnits( float32 deltaTime )
+    void ArenaGameModeComponent::updateUnits( float32 deltaTime )
     {
         GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr )
@@ -579,13 +579,13 @@ namespace sw
                 unit._deathTimer = _deathLinger;
                 if ( unit._kind == ArenaUnitKind::Player )
                 {
-                    SW_LOG_INFO_ID( "ArenaDirector.PlayerFellWaveAfter", "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );
-                    getSoundQueue().queueEvent( ArenaDirectorComponentInternal::kEventPlayerFell );
+                    SW_LOG_INFO_ID( "ArenaGameMode.PlayerFellWaveAfter", "[Arena] the player fell on wave %# after %# kills", _wave, _killCount );
+                    getSoundQueue().queueEvent( ArenaGameModeComponentInternal::kEventPlayerFell );
                 }
                 else
                 {
                     ++_killCount;
-                    getSoundQueue().queueEvent( ArenaDirectorComponentInternal::kEventEnemyFell );
+                    getSoundQueue().queueEvent( ArenaGameModeComponentInternal::kEventEnemyFell );
                 }
             }
             if ( unit._deathTimer >= 0.0f )
@@ -611,7 +611,7 @@ namespace sw
             requestWave( true );
     }
 
-    void ArenaDirectorComponent::updateUnitViews()
+    void ArenaGameModeComponent::updateUnitViews()
     {
         // 이번 프레임의 스냅샷이다. 유닛과 투사체가 뒤 그룹에서 읽으며 틱 전 위치다(틱 안의 쓰기는 틱이 끝난 뒤에 보인다). 이번 프레임 위치가 필요한 쪽은
         // 트랜스폼을 읽는다. 조종자의 판단은 다음 틱 전에(`findUnitPosition`), 카메라는 물리 뒤 단계에서 읽는다.
@@ -646,7 +646,7 @@ namespace sw
         }
     }
 
-    void ArenaDirectorComponent::updatePlayerRespawn( float32 deltaTime )
+    void ArenaGameModeComponent::updatePlayerRespawn( float32 deltaTime )
     {
         bool bPlayerPresent = hasPendingUnit( ArenaUnitKind::Player );
         for ( const ArenaUnit& unit : _listUnit )
@@ -669,7 +669,7 @@ namespace sw
         }
     }
 
-    void ArenaDirectorComponent::logStatus( float32 deltaTime )
+    void ArenaGameModeComponent::logStatus( float32 deltaTime )
     {
         _statusLogTimer += deltaTime;
         if ( _statusLogTimer < _statusLogInterval )
@@ -690,17 +690,17 @@ namespace sw
                 continue; // 전투 세트가 없는 플레이어는 상태 줄이 없다
             [[maybe_unused]] const int32 health = static_cast<int32>( *healthValue );
             [[maybe_unused]] const int32 mana   = static_cast<int32>( *manaValue );
-            SW_LOG_INFO_ID( "ArenaDirector.WaveKillsPlayerHP", "[Arena] wave %# · kills %# · player HP %# · MP %# · units %# · projectiles %#", _wave, _killCount, health, mana,
+            SW_LOG_INFO_ID( "ArenaGameMode.WaveKillsPlayerHP", "[Arena] wave %# · kills %# · player HP %# · MP %# · units %# · projectiles %#", _wave, _killCount, health, mana,
                             static_cast<uint32>( _listUnit.size() ), static_cast<uint32>( _listProjectile.size() ) );
         }
     }
 
-    bool ArenaDirectorComponent::hasPendingUnit( ArenaUnitKind kind ) const
+    bool ArenaGameModeComponent::hasPendingUnit( ArenaUnitKind kind ) const
     {
         return VectorUtil::containsBy<&SpawnRequest::_kind>( _listPendingUnit, kind );
     }
 
-    void ArenaDirectorComponent::pruneProjectiles()
+    void ArenaGameModeComponent::pruneProjectiles()
     {
         // 다 쓴 투사체는 스스로 지운다. 목록에는 상태를 저장하기 전에 정리할 것만 남기므로, 유효하지 않은 핸들은 덜어 낸다.
         GameObjectManager* pManager = getObjectManager();

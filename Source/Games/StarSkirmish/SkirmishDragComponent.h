@@ -28,7 +28,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
     private:
-        PROPERTY( Category = "Drag", DisplayName = "Director", Tooltip = "Object with the SkirmishDirectorComponent" )
+        PROPERTY( Category = "Drag", DisplayName = "Director", Tooltip = "Object with the SkirmishGameModeComponent" )
         GameObjectHandle _director;
     };
 } // namespace sw

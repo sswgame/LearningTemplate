@@ -9,7 +9,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/NileCity/NileDirectorComponent.h"
+#include "Games/NileCity/NileGameModeComponent.h"
 
 namespace sw
 {
@@ -143,7 +143,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const NileDirectorComponent* pDirector = GameDirectorComponent::resolve<NileDirectorComponent>( *pManager, _director );
+        const NileGameModeComponent* pDirector = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
         // 같은 그룹의 다른 건물과 함께 읽는다 — 첨자 대신 포인터로(쓰기로 잡히지 않게).

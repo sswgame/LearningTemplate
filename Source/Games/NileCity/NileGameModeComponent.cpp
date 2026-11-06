@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/NileCity/NileDirectorComponent.h"
+#include "Games/NileCity/NileGameModeComponent.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -34,7 +34,7 @@ namespace sw
 {
     namespace
     {
-        struct NileDirectorComponentInternal
+        struct NileGameModeComponentInternal
         {
             static constexpr int32  kWalkerLookStride = 16; ///< 일꾼 모습 번호 = 종류 × 16 + 서비스
             static constexpr int32  kWalkerKindCount  = 3;
@@ -63,19 +63,19 @@ namespace sw
                 return pMesh;
             }
 
-            [[nodiscard]] static bool readPopulation( const NileDirectorComponent& director, float64& outValue )
+            [[nodiscard]] static bool readPopulation( const NileGameModeComponent& director, float64& outValue )
             {
                 outValue = static_cast<float64>( director.getPopulation() );
                 return true;
             }
 
-            [[nodiscard]] static bool readMoney( const NileDirectorComponent& director, float64& outValue )
+            [[nodiscard]] static bool readMoney( const NileGameModeComponent& director, float64& outValue )
             {
                 outValue = static_cast<float64>( director.getMoney() );
                 return true;
             }
 
-            [[nodiscard]] static bool readMonth( const NileDirectorComponent& director, float64& outValue )
+            [[nodiscard]] static bool readMonth( const NileGameModeComponent& director, float64& outValue )
             {
                 outValue = static_cast<float64>( director.getMonthCount() );
                 return true;
@@ -90,14 +90,14 @@ namespace sw
     SW_TEST_GLOBAL_VARIABLE_SHIPPED( int32, gv_nileAutoPlay, 0, "NileCity: 자동 계획으로 도시를 짓고 돌리기 (1=켜기)" );
     SW_GAME_AUTOPLAY( gv_nileAutoPlay, "NileCity", "Build and run the city from the auto plan" );
 
-    SW_AUTOMATION_COMPONENT_WATCH( nilePopulation, "Nile.Population", "Population of the city", NileDirectorComponent, &NileDirectorComponentInternal::readPopulation );
-    SW_AUTOMATION_COMPONENT_WATCH( nileMoney, "Nile.Money", "Money in the city treasury", NileDirectorComponent, &NileDirectorComponentInternal::readMoney );
-    SW_AUTOMATION_COMPONENT_WATCH( nileMonth, "Nile.Month", "Months the city has run", NileDirectorComponent, &NileDirectorComponentInternal::readMonth );
+    SW_AUTOMATION_COMPONENT_WATCH( nilePopulation, "Nile.Population", "Population of the city", NileGameModeComponent, &NileGameModeComponentInternal::readPopulation );
+    SW_AUTOMATION_COMPONENT_WATCH( nileMoney, "Nile.Money", "Money in the city treasury", NileGameModeComponent, &NileGameModeComponentInternal::readMoney );
+    SW_AUTOMATION_COMPONENT_WATCH( nileMonth, "Nile.Month", "Months the city has run", NileGameModeComponent, &NileGameModeComponentInternal::readMonth );
 } // namespace sw
 
 namespace sw
 {
-    NileDirectorComponent::NileDirectorComponent()
+    NileGameModeComponent::NileGameModeComponent()
         : _cityDataPath{}
         , _autoPlanPath{}
         , _groundPrefab{}
@@ -176,25 +176,25 @@ namespace sw
     {
     }
 
-    NileDirectorComponent::~NileDirectorComponent() = default;
+    NileGameModeComponent::~NileGameModeComponent() = default;
 
-    void NileDirectorComponent::onBeginPlay()
+    void NileGameModeComponent::onBeginPlay()
     {
-        GameDirectorComponent::onBeginPlay(); // 패드 가상 커서는 입력 맵(`virtualCursor`)이 켠다
+        GameModeComponent::onBeginPlay(); // 패드 가상 커서는 입력 맵(`virtualCursor`)이 켠다
     }
 
-    void NileDirectorComponent::onEndPlay()
+    void NileGameModeComponent::onEndPlay()
     {
-        GameDirectorComponent::onEndPlay();
+        GameModeComponent::onEndPlay();
     }
 
-    void NileDirectorComponent::onGameStarted()
+    void NileGameModeComponent::onGameStarted()
     {
-        SW_LOG_INFO_ID( "NileDirector.CityFoundedNileWASD", "[Nile] the city is founded on the Nile - WASD pan, wheel zoom, Q/E pick building, R road, left click build, right click demolish, "
+        SW_LOG_INFO_ID( "NileGameMode.CityFoundedNileWASD", "[Nile] the city is founded on the Nile - WASD pan, wheel zoom, Q/E pick building, R road, left click build, right click demolish, "
                                                             "P auto plan, Space pause, - = speed, F1 status" );
     }
 
-    void NileDirectorComponent::updateGame( float32 deltaTime )
+    void NileGameModeComponent::updateGame( float32 deltaTime )
     {
         if ( deltaTime <= 0.0f )
             return;
@@ -215,12 +215,12 @@ namespace sw
             collectViewChanges();
     }
 
-    bool NileDirectorComponent::hasPendingSpawn() const
+    bool NileGameModeComponent::hasPendingSpawn() const
     {
         return _listPendingRoad.empty() == false || _listPendingBuilding.empty() == false || _wantedWalkerCount > _listWalkerObject.size();
     }
 
-    void NileDirectorComponent::onViewsDespawned()
+    void NileGameModeComponent::onViewsDespawned()
     {
         _listRoadObject.clear();
         _listRoadShown.clear();
@@ -230,7 +230,7 @@ namespace sw
         _listPendingBuilding.clear();
     }
 
-    bool NileDirectorComponent::findCursor( int2& outTile, int32& outSize ) const
+    bool NileGameModeComponent::findCursor( int2& outTile, int32& outSize ) const
     {
         if ( _bCursorValid == SW_FALSE || _listTool.empty() )
             return false;
@@ -241,10 +241,10 @@ namespace sw
         return true;
     }
 
-    const shared_ptr<MaterialInstance>& NileDirectorComponent::findWalkerLook( const CityWalker& walker ) const
+    const shared_ptr<MaterialInstance>& NileGameModeComponent::findWalkerLook( const CityWalker& walker ) const
     {
         static const shared_ptr<MaterialInstance> kNoLook{};
-        const int32                               key = NileDirectorComponentInternal::makeWalkerLookKey( walker._kind, walker._service );
+        const int32                               key = NileGameModeComponentInternal::makeWalkerLookKey( walker._kind, walker._service );
         if ( key < 0 || key >= static_cast<int32>( _listWalkerLook.size() ) )
             return kNoLook;
         return _listWalkerLook.data()[key];
@@ -253,12 +253,12 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 데이터
     // ------------------------------------------------------------------------------
-    bool NileDirectorComponent::startGame()
+    bool NileGameModeComponent::startGame()
     {
         _pCatalog = SharedAssetCache<CityCatalog>::acquire( _cityDataPath );
         if ( _pCatalog == nullptr )
         {
-            SW_LOG_ERROR_ID( "NileDirector.CouldNotLoadedCity", "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
+            SW_LOG_ERROR_ID( "NileGameMode.CouldNotLoadedCity", "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return false;
         }
         if ( _clock.initialize( makeClockSettings() ) == false )
@@ -288,7 +288,7 @@ namespace sw
         return true;
     }
 
-    WorldClockSettings NileDirectorComponent::makeClockSettings() const
+    WorldClockSettings NileGameModeComponent::makeClockSettings() const
     {
         WorldClockSettings settings;
         for ( const utf8* pMonth : { "Akhet1", "Akhet2", "Akhet3", "Akhet4", "Peret1", "Peret2", "Peret3", "Peret4", "Shemu1", "Shemu2", "Shemu3", "Shemu4" } )
@@ -301,7 +301,7 @@ namespace sw
         return settings;
     }
 
-    void NileDirectorComponent::settleMonths()
+    void NileGameModeComponent::settleMonths()
     {
         _listClockEvent.clear();
         _clock.drainEvents( _listClockEvent );
@@ -319,14 +319,14 @@ namespace sw
         }
     }
 
-    SessionStateRefs NileDirectorComponent::makeRefs()
+    SessionStateRefs NileGameModeComponent::makeRefs()
     {
         SessionStateRefs refs;
         refs._pWallet = &_wallet;
         return refs;
     }
 
-    CitySettings NileDirectorComponent::makeCitySettings() const
+    CitySettings NileGameModeComponent::makeCitySettings() const
     {
         // 순회 서비스가 남는 시간을 키트 기본값(30초)보다 길게 잡는다. 이 도시의 도로망에서 일꾼 하나가 고리를 다 도는 데 그만큼 걸리기 때문이다.
         CitySettings settings;
@@ -334,7 +334,7 @@ namespace sw
         return settings;
     }
 
-    NileCityLayout NileDirectorComponent::makeCityLayout() const
+    NileCityLayout NileGameModeComponent::makeCityLayout() const
     {
         NileCityLayout layout;
         layout._riverCenterX      = _riverCenterX;
@@ -357,7 +357,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 색(PROPERTY)
     // ------------------------------------------------------------------------------
-    float4 NileDirectorComponent::computeServiceColor( CityService service ) const
+    float4 NileGameModeComponent::computeServiceColor( CityService service ) const
     {
         switch ( service )
         {
@@ -379,7 +379,7 @@ namespace sw
         return float4{ 0.6f, 0.6f, 0.6f, 1.0f }; // 서비스 없음 — 칠할 일이 없는 칸이다.
     }
 
-    float4 NileDirectorComponent::computeModelTint( const CityBuildingDef& def ) const
+    float4 NileGameModeComponent::computeModelTint( const CityBuildingDef& def ) const
     {
         const float4 white{ 1.0f, 1.0f, 1.0f, 1.0f };
         switch ( def._kind )
@@ -399,7 +399,7 @@ namespace sw
         return white;
     }
 
-    float4 NileDirectorComponent::computeBlockColor( const CityBuildingDef& def ) const
+    float4 NileGameModeComponent::computeBlockColor( const CityBuildingDef& def ) const
     {
         switch ( def._kind )
         {
@@ -419,7 +419,7 @@ namespace sw
         return float4{ 1.0f, 0.0f, 1.0f, 1.0f }; // 모르는 종류 — 눈에 띄는 자홍색
     }
 
-    float4 NileDirectorComponent::computeTerrainColor( CityTerrain terrain ) const
+    float4 NileGameModeComponent::computeTerrainColor( CityTerrain terrain ) const
     {
         switch ( terrain )
         {
@@ -437,7 +437,7 @@ namespace sw
         return float4{ 1.0f, 0.0f, 1.0f, 1.0f }; // 모르는 땅 — 눈에 띄는 자홍색
     }
 
-    float4 NileDirectorComponent::computeWalkerColor( CityWalkerKind kind, CityService service ) const
+    float4 NileGameModeComponent::computeWalkerColor( CityWalkerKind kind, CityService service ) const
     {
         switch ( kind )
         {
@@ -454,19 +454,19 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 상태 쓰기 · 복원하기(핫 리로드 · 세이브)
     // ------------------------------------------------------------------------------
-    int32 NileDirectorComponent::getPopulation() const
+    int32 NileGameModeComponent::getPopulation() const
     {
         return _city.getPopulation();
     }
 
-    int64 NileDirectorComponent::getMoney() const
+    int64 NileGameModeComponent::getMoney() const
     {
         return _wallet.getBalance( _city.getCurrency() );
     }
 
-    void NileDirectorComponent::writeState( Archive& outArchive ) const
+    void NileGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, NileDirectorComponentInternal::kStateTag, NileDirectorComponentInternal::kStateVersion );
+        StateArchiveUtil::writeHeader( outArchive, NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion );
         _city.writeState( outArchive );
         _planner.writeState( outArchive );
         _wallet.writeState( outArchive );
@@ -479,9 +479,9 @@ namespace sw
         outArchive << static_cast<uint8>( _bAutoPlanToggle );
     }
 
-    bool NileDirectorComponent::readState( Archive& archive )
+    bool NileGameModeComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, NileDirectorComponentInternal::kStateTag, NileDirectorComponentInternal::kStateVersion ) == false )
+        if ( StateArchiveUtil::readHeader( archive, NileGameModeComponentInternal::kStateTag, NileGameModeComponentInternal::kStateVersion ) == false )
             return false;
         CitySimulation  city;
         NileCityPlanner planner;
@@ -525,18 +525,18 @@ namespace sw
         return true;
     }
 
-    void NileDirectorComponent::onStateRestored( bool bRestored )
+    void NileGameModeComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO_ID( "NileDirector.CityStateRestoredMonth", "[Nile] city state restored - month %#, population %#, money %#", _monthCount, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ) );
+            SW_LOG_INFO_ID( "NileGameMode.CityStateRestoredMonth", "[Nile] city state restored - month %#, population %#, money %#", _monthCount, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ) );
         else
-            SW_LOG_WARNING_ID( "NileDirector.SavedCityStateDoes", "[Nile] the saved city state does not match this build - founding a new city" );
+            SW_LOG_WARNING_ID( "NileGameMode.SavedCityStateDoes", "[Nile] the saved city state does not match this build - founding a new city" );
     }
 
     // ------------------------------------------------------------------------------
     // 스폰(틱 뒤 · 게임 스레드)
     // ------------------------------------------------------------------------------
-    void NileDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void NileGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews )
         {
@@ -562,7 +562,7 @@ namespace sw
         _listPendingBuilding.clear();
     }
 
-    void NileDirectorComponent::spawnAll( GameObjectManager& manager )
+    void NileGameModeComponent::spawnAll( GameObjectManager& manager )
     {
         preloadModels();
         spawnTerrain( manager );
@@ -590,10 +590,10 @@ namespace sw
         spawnWalkers( manager, _wantedWalkerCount );
     }
 
-    void NileDirectorComponent::spawnTerrain( GameObjectManager& manager )
+    void NileGameModeComponent::spawnTerrain( GameObjectManager& manager )
     {
         // 줄마다 같은 땅이 이어지는 구간을 상자 하나로 만든다(타일마다 스폰하면 2000개가 되며, 땅은 바뀌지 않는다). 바위는 타일마다 솟은 상자다.
-        using Internal = NileDirectorComponentInternal;
+        using Internal = NileGameModeComponentInternal;
         for ( int32 y = 0; y < _city.getHeight(); ++y )
         {
             int32 runStart = 0;
@@ -625,17 +625,17 @@ namespace sw
         }
     }
 
-    void NileDirectorComponent::spawnRoad( GameObjectManager& manager, int32 tileIndex )
+    void NileGameModeComponent::spawnRoad( GameObjectManager& manager, int32 tileIndex )
     {
         // 도로 타일은 보도 조각을 타일 크기만큼 늘려 쓴다(팔레트 머티리얼 그대로).
         const int2  cell  = _city.getTopology().toCell( tileIndex );
         GameObject* pRoad = spawnPrefab( manager, _roadPrefab, "NileRoad" );
-        (void)NileDirectorComponentInternal::placeMesh( pRoad, float3{ static_cast<float32>( cell._x ) + 0.5f, 0.0f, static_cast<float32>( cell._y ) + 0.5f },
+        (void)NileGameModeComponentInternal::placeMesh( pRoad, float3{ static_cast<float32>( cell._x ) + 0.5f, 0.0f, static_cast<float32>( cell._y ) + 0.5f },
                                                         float3{ _roadTileScale } );
         _listRoadObject[static_cast<size_t>( tileIndex )] = pRoad != nullptr ? pRoad->getHandle() : GameObjectHandle{};
     }
 
-    void NileDirectorComponent::spawnBuilding( GameObjectManager& manager, int32 buildingIndex )
+    void NileGameModeComponent::spawnBuilding( GameObjectManager& manager, int32 buildingIndex )
     {
         BuildingSlot&          slot = _listBuildingSlot[static_cast<size_t>( buildingIndex )];
         const CityBuildingDef* pDef = slot._pShownDef;
@@ -655,7 +655,7 @@ namespace sw
             pView->assignBuilding( getOwner()->getHandle(), buildingIndex );
     }
 
-    void NileDirectorComponent::spawnWalkers( GameObjectManager& manager, size_t count )
+    void NileGameModeComponent::spawnWalkers( GameObjectManager& manager, size_t count )
     {
         // 일꾼 수만큼 미리 스폰하고 남으면 뷰가 숨긴다(오브젝트를 매 프레임 만들고 지우지 않는다). 목록 슬롯은 다른 일꾼에게 넘어갈 수 있다.
         const GameObjectHandle director = getOwner()->getHandle();
@@ -674,9 +674,9 @@ namespace sw
         }
     }
 
-    void NileDirectorComponent::prepareWalkerLooks( Material* pMaterial )
+    void NileGameModeComponent::prepareWalkerLooks( Material* pMaterial )
     {
-        using Internal = NileDirectorComponentInternal;
+        using Internal = NileGameModeComponentInternal;
         _listWalkerLook.assign( static_cast<size_t>( Internal::kWalkerKindCount * Internal::kWalkerLookStride ), nullptr );
         for ( int32 kind = 0; kind < Internal::kWalkerKindCount; ++kind )
         {
@@ -690,7 +690,7 @@ namespace sw
         }
     }
 
-    void NileDirectorComponent::preloadModels()
+    void NileGameModeComponent::preloadModels()
     {
         if ( _listModelMesh.empty() == false )
             return;
@@ -707,7 +707,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 갱신(PrePhysics, 워커)
     // ------------------------------------------------------------------------------
-    void NileDirectorComponent::collectViewChanges()
+    void NileGameModeComponent::collectViewChanges()
     {
         // 도로 타일은 깔렸거나 철거된 타일만 처리한다. 건물 타일은 새 건물이거나 허물렸거나 다른 건물로 다시 쓰인 타일만 처리한다. 단계와 사람은 뷰가 맞춘다.
         const GridTopology& topology = _city.getTopology();
@@ -737,7 +737,7 @@ namespace sw
         _wantedWalkerCount = MathUtil::max( _wantedWalkerCount, _city.getWalkers().size() );
     }
 
-    void NileDirectorComponent::updateInput( float32 deltaTime, const InputManager& input )
+    void NileGameModeComponent::updateInput( float32 deltaTime, const InputManager& input )
     {
         // 카메라 이동과 확대는 리그(PostUpdate)가 읽는다. 여기서는 도구, 속도, 건설을 처리한다.
         (void)deltaTime;
@@ -758,23 +758,23 @@ namespace sw
         {
             [[maybe_unused]] const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
             SW_LOG_INFO_ID( "Nile.ToolSelected", "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _pCatalog->getRoadCost() );
-            getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventSelect );
+            getSoundQueue().queueEvent( NileGameModeComponentInternal::kEventSelect );
         }
         if ( inputMap.wasActionTriggered( hashed_string( CommonInputActions::kPause ) ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
-            SW_LOG_INFO_ID( "NileDirector.PauseToggled", "[Nile] %#", _bPaused == SW_TRUE ? "paused" : "running" );
+            SW_LOG_INFO_ID( "NileGameMode.PauseToggled", "[Nile] %#", _bPaused == SW_TRUE ? "paused" : "running" );
         }
         const bool bFaster = inputMap.wasActionTriggered( hashed_string( CommonInputActions::kFaster ) );
         if ( bFaster || inputMap.wasActionTriggered( hashed_string( CommonInputActions::kSlower ) ) )
         {
             _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
-            SW_LOG_INFO_ID( "NileDirector.SpeedX", "[Nile] speed x%#", _timeScale );
+            SW_LOG_INFO_ID( "NileGameMode.SpeedX", "[Nile] speed x%#", _timeScale );
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Nile.ToggleAutoPlan" ) ) )
         {
             _bAutoPlanToggle = _bAutoPlanToggle == SW_TRUE ? SW_FALSE : SW_TRUE;
-            SW_LOG_INFO_ID( "NileDirector.AutoPlanStep", "[Nile] auto plan %# (step %# of %#)", _bAutoPlanToggle == SW_TRUE ? "on" : "off", _planner.getNextStep(), _planner.getStepCount() );
+            SW_LOG_INFO_ID( "NileGameMode.AutoPlanStep", "[Nile] auto plan %# (step %# of %#)", _bAutoPlanToggle == SW_TRUE ? "on" : "off", _planner.getNextStep(), _planner.getStepCount() );
         }
         if ( inputMap.wasActionTriggered( hashed_string( CommonInputActions::kStatus ) ) )
             logStatus();
@@ -790,7 +790,7 @@ namespace sw
             SW_LOG_INFO_ID( "Nile.Demolished", "[Nile] demolished (%#, %#)", _cursorTile._x, _cursorTile._y );
     }
 
-    void NileDirectorComponent::updateCursor( const InputManager& input )
+    void NileGameModeComponent::updateCursor( const InputManager& input )
     {
         // 카메라 디렉터가 지금 낸 포즈로 포인터 아래 땅 타일을 찾는다. 디렉터는 PostPhysics 틱 뒤에 쓰므로 여기서 읽는 것은 지난 프레임의 시점이다.
         _bCursorValid                             = SW_FALSE;
@@ -806,7 +806,7 @@ namespace sw
         _bCursorValid = _city.findTile( _cursorTile._x, _cursorTile._y ) != nullptr ? SW_TRUE : SW_FALSE;
     }
 
-    void NileDirectorComponent::placeSelected()
+    void NileGameModeComponent::placeSelected()
     {
         const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
         if ( pDef == nullptr )
@@ -814,23 +814,23 @@ namespace sw
             // 도로는 끌어서 깐다. 이미 도로인 타일은 조용히 넘어간다.
             const CityPlaceResult result = _city.placeRoad( _cursorTile._x, _cursorTile._y );
             if ( result == CityPlaceResult::NotEnoughMoney || result == CityPlaceResult::BadTerrain )
-                SW_LOG_INFO_ID( "NileDirector.CannotLayRoad", "[Nile] cannot lay road at (%#, %#): %#", _cursorTile._x, _cursorTile._y, getEnumName( result ) );
+                SW_LOG_INFO_ID( "NileGameMode.CannotLayRoad", "[Nile] cannot lay road at (%#, %#): %#", _cursorTile._x, _cursorTile._y, getEnumName( result ) );
             return;
         }
         const CityPlaceResult result = _city.placeBuilding( pDef->_id, _cursorTile._x, _cursorTile._y );
         if ( result == CityPlaceResult::Ok )
         {
-            SW_LOG_INFO_ID( "NileDirector.BuiltLeft", "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _wallet.getBalance( _city.getCurrency() ) );
-            getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventBuilt );
+            SW_LOG_INFO_ID( "NileGameMode.BuiltLeft", "[Nile] built %# at (%#, %#) - $%# left", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, _wallet.getBalance( _city.getCurrency() ) );
+            getSoundQueue().queueEvent( NileGameModeComponentInternal::kEventBuilt );
         }
         else
         {
-            SW_LOG_INFO_ID( "NileDirector.CannotBuild", "[Nile] cannot build %# at (%#, %#): %#", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, getEnumName( result ) );
-            getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventBlocked );
+            SW_LOG_INFO_ID( "NileGameMode.CannotBuild", "[Nile] cannot build %# at (%#, %#): %#", pDef->_name.c_str(), _cursorTile._x, _cursorTile._y, getEnumName( result ) );
+            getSoundQueue().queueEvent( NileGameModeComponentInternal::kEventBlocked );
         }
     }
 
-    void NileDirectorComponent::drainEvents()
+    void NileGameModeComponent::drainEvents()
     {
         _listEvent.clear(); // drainEvents 는 뒤에 붙인다
         _city.drainEvents( _cityEventLease, _listEvent );
@@ -842,7 +842,7 @@ namespace sw
                 case CityEvent::Kind::MonthEnded:
                 {
                     ++_monthCount;
-                    SW_LOG_INFO_ID( "NileDirector.MonthPopMoneyNet", "[Nile] month %# pop %# money %# (net %#, workers %#/%#, houses up %#, avg level %#, culture %#%%)", _monthCount, _city.getPopulation(),
+                    SW_LOG_INFO_ID( "NileGameMode.MonthPopMoneyNet", "[Nile] month %# pop %# money %# (net %#, workers %#/%#, houses up %#, avg level %#, culture %#%%)", _monthCount, _city.getPopulation(),
                                     _wallet.getBalance( _city.getCurrency() ), event._value, _city.getEmployed(), _city.getWorkforce(), _evolvedCount, _city.computeAverageHouseLevel(),
                                     static_cast<int32>( _city.computeCultureCoverage() * 100.0f ) );
                     _evolvedCount = 0;
@@ -856,7 +856,7 @@ namespace sw
                 }
                 case CityEvent::Kind::Flood:
                 {
-                    SW_LOG_INFO_ID( "NileDirector.YearNileFloodedFarm", "[Nile] year %# - the Nile flooded, farm fertility %#%%", _clock.getYear(), event._value );
+                    SW_LOG_INFO_ID( "NileGameMode.YearNileFloodedFarm", "[Nile] year %# - the Nile flooded, farm fertility %#%%", _clock.getYear(), event._value );
                     break;
                 }
                 case CityEvent::Kind::HouseDevolved:
@@ -868,24 +868,24 @@ namespace sw
         }
         // 한 프레임에 여럿이 올라도 소리는 한 번.
         if ( bHouseEvolved )
-            getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventEvolved );
+            getSoundQueue().queueEvent( NileGameModeComponentInternal::kEventEvolved );
     }
 
-    void NileDirectorComponent::logStatus() const
+    void NileGameModeComponent::logStatus() const
     {
-        SW_LOG_INFO_ID( "NileDirector.YearMonthPopMoney", "[Nile] year %# month %# · pop %# · money $%# · workers %#/%# · avg house level %# · culture %#%% · fertility %#%% · tool %# · plan %#/%#",
+        SW_LOG_INFO_ID( "NileGameMode.YearMonthPopMoney", "[Nile] year %# month %# · pop %# · money $%# · workers %#/%# · avg house level %# · culture %#%% · fertility %#%% · tool %# · plan %#/%#",
                         _clock.getYear(), _clock.getSeasonIndex() + 1, _city.getPopulation(), _wallet.getBalance( _city.getCurrency() ), _city.getEmployed(), _city.getWorkforce(),
                         _city.computeAverageHouseLevel(), static_cast<int32>( _city.computeCultureCoverage() * 100.0f ), static_cast<int32>( _city.getFloodFertility() * 100.0f ),
                         getToolName(), _planner.getNextStep(), _planner.getStepCount() );
     }
 
-    const utf8* NileDirectorComponent::getToolName() const
+    const utf8* NileGameModeComponent::getToolName() const
     {
         const CityBuildingDef* pDef = _listTool.empty() ? nullptr : _listTool[static_cast<size_t>( _selectedTool )];
         return pDef != nullptr ? pDef->_name.c_str() : "Road";
     }
 
-    bool NileDirectorComponent::isAutoPlanOn() const
+    bool NileGameModeComponent::isAutoPlanOn() const
     {
         return isAutoPlayOn() || _bAutoPlanToggle == SW_TRUE;
     }

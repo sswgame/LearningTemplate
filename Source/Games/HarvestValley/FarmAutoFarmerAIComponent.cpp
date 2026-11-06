@@ -12,7 +12,7 @@
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
 
-#include "Games/HarvestValley/FarmDirectorComponent.h"
+#include "Games/HarvestValley/FarmGameModeComponent.h"
 
 namespace sw
 {
@@ -112,7 +112,7 @@ namespace sw
             }
 
             /** @brief 출하 할 일입니다(출하함 옆자리). */
-            static Task makeShipTask( const FarmDirectorComponent& director )
+            static Task makeShipTask( const FarmGameModeComponent& director )
             {
                 Task task;
                 task._kind          = TaskKind::Ship;
@@ -127,17 +127,17 @@ namespace sw
             static int32 chooseTileTask( const FarmField& field, int32 cultivateLimit, int32 seasonalSeed, bool bHasSeed, Task& inoutTask )
             {
                 int32 cultivatedCount = 0;
-                for ( int32 y = 0; y < FarmDirectorComponent::kFieldHeight; ++y )
+                for ( int32 y = 0; y < FarmGameModeComponent::kFieldHeight; ++y )
                 {
-                    for ( int32 x = 0; x < FarmDirectorComponent::kFieldWidth; ++x )
+                    for ( int32 x = 0; x < FarmGameModeComponent::kFieldWidth; ++x )
                     {
                         cultivatedCount += field.findTile( x, y )->_bTilled != SW_FALSE ? 1 : 0;
                     }
                 }
                 int32 bestPriority = 0;
-                for ( int32 y = 0; y < FarmDirectorComponent::kFieldHeight; ++y )
+                for ( int32 y = 0; y < FarmGameModeComponent::kFieldHeight; ++y )
                 {
-                    for ( int32 x = 0; x < FarmDirectorComponent::kFieldWidth; ++x )
+                    for ( int32 x = 0; x < FarmGameModeComponent::kFieldWidth; ++x )
                     {
                         const FarmTile* pTile         = field.findTile( x, y );
                         int32           priority      = 0;
@@ -169,7 +169,7 @@ namespace sw
                             bestPriority             = priority;
                             inoutTask._kind          = TaskKind::Tile;
                             inoutTask._tool          = tool;
-                            inoutTask._standPosition = FarmDirectorComponent::computeTileCenter( x, y ) + float3{ 0.0f, 0.0f, -1.0f };
+                            inoutTask._standPosition = FarmGameModeComponent::computeTileCenter( x, y ) + float3{ 0.0f, 0.0f, -1.0f };
                         }
                     }
                 }
@@ -180,7 +180,7 @@ namespace sw
              * @brief 지금 할 일을 고릅니다 — 늦었거나 지쳤으면 출하하고 잔다, 거둘 것 → 물 → 심기 → 갈기 → 씨앗 사기. 할 일이 없으면 종류가 `None` 입니다.
              * @param seasonalSeed 이번 계절 씨앗의 번호입니다(없으면 음수).
              */
-            static Task chooseTask( const FarmDirectorComponent& director, const SessionStateComponent& state, const vector<hashed_string>& listSeed, int32 seasonalSeed, bool bHasSeed,
+            static Task chooseTask( const FarmGameModeComponent& director, const SessionStateComponent& state, const vector<hashed_string>& listSeed, int32 seasonalSeed, bool bHasSeed,
                                     int32 cultivateLimit )
             {
                 const Inventory&   bag          = state.getInventory();
@@ -231,7 +231,7 @@ namespace sw
     {
     }
 
-    bool FarmAutoFarmerAIComponent::walkTo( const FarmDirectorComponent& director, const float3& standPosition )
+    bool FarmAutoFarmerAIComponent::walkTo( const FarmGameModeComponent& director, const float3& standPosition )
     {
         if ( float3::getHorizontalDistance( director.getPlayerPosition(), standPosition ) <= _standTolerance )
         {
@@ -242,7 +242,7 @@ namespace sw
         return false;
     }
 
-    bool FarmAutoFarmerAIComponent::walkUpTo( const FarmDirectorComponent& director, const float3& standPosition )
+    bool FarmAutoFarmerAIComponent::walkUpTo( const FarmGameModeComponent& director, const float3& standPosition )
     {
         const float3& position  = director.getPlayerPosition();
         const bool    bFacingUp = director.getFacing()._z > 0.5f;
@@ -266,7 +266,7 @@ namespace sw
         using Internal                          = FarmAutoFarmerAIComponentInternal;
         const GameObject*            pPawnOwner = pawn.getOwner();
         const GameObjectManager*     pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
-        const FarmDirectorComponent* pDirector  = pManager != nullptr ? GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director ) : nullptr;
+        const FarmGameModeComponent* pDirector  = pManager != nullptr ? GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _director ) : nullptr;
         const SessionStateComponent* pState     = pDirector != nullptr ? SessionStateComponent::findOnOwner( *pDirector ) : nullptr;
         if ( pState == nullptr || pDirector->isStarted() == false )
         {
@@ -274,7 +274,7 @@ namespace sw
             return;
         }
         _actionTimer -= context._deltaTime;
-        const FarmDirectorComponent& director = *pDirector;
+        const FarmGameModeComponent& director = *pDirector;
         const Inventory&             bag      = pState->getInventory();
         const CropCatalog&           catalog  = director.getCropCatalog();
         const hashed_string          season   = pState->getClock().getSeasonName();
@@ -288,7 +288,7 @@ namespace sw
         {
             setStateName( "Buy" );
             stopMoving();
-            pressButton( hashed_string( FarmDirectorComponent::getButtonName( FarmButton::Buy ) ) );
+            pressButton( hashed_string( FarmGameModeComponent::getButtonName( FarmButton::Buy ) ) );
             _seedCountAtBuy = selectedSeedCount;
             --_buyRemaining;
             return;
@@ -299,7 +299,7 @@ namespace sw
         const int32 seasonalSeed  = Internal::findSeasonalSeed( catalog, bag, listSeed, season );
         const bool  bSeedSelected = seasonalSeed < 0 || director.getSelectedSeedIndex() == seasonalSeed;
         if ( bSeedSelected == false )
-            pressButton( hashed_string( FarmDirectorComponent::getButtonName( FarmButton::SeedNext ) ) );
+            pressButton( hashed_string( FarmGameModeComponent::getButtonName( FarmButton::SeedNext ) ) );
         const bool bHasSeed = seasonalSeed >= 0 && bag.getItemCount( listSeed[static_cast<size_t>( seasonalSeed )] ) > 0;
         // 할 일 — 늦었거나 지쳤으면 출하하고 잔다, 거둘 것 → 물 → 심기 → 갈기 → 씨앗 사기.
         const Internal::Task task = Internal::chooseTask( director, *pState, listSeed, seasonalSeed, bHasSeed, _cultivateLimit );
@@ -309,7 +309,7 @@ namespace sw
         {
             getBlackboard().clearValue( "StandPosition" );
             stopMoving();
-            pressButton( hashed_string( FarmDirectorComponent::getButtonName( FarmButton::Sleep ) ) );
+            pressButton( hashed_string( FarmGameModeComponent::getButtonName( FarmButton::Sleep ) ) );
             return;
         }
 
@@ -322,7 +322,7 @@ namespace sw
             case Internal::TaskKind::Ship:
             {
                 _actionTimer = _actionInterval;
-                pressButton( hashed_string( FarmDirectorComponent::getButtonName( FarmButton::Ship ) ) );
+                pressButton( hashed_string( FarmGameModeComponent::getButtonName( FarmButton::Ship ) ) );
                 break;
             }
             case Internal::TaskKind::Shop:
@@ -339,8 +339,8 @@ namespace sw
                 _actionTimer = _actionInterval;
                 // 도구 버튼과 쓰기를 같은 틱에 — 디렉터는 도구를 먼저 바꾸고 쓴다.
                 if ( director.getTool() != task._tool )
-                    pressButton( hashed_string( FarmDirectorComponent::getButtonName( Internal::findToolButton( task._tool ) ) ) );
-                pressButton( hashed_string( FarmDirectorComponent::getButtonName( FarmButton::Use ) ) );
+                    pressButton( hashed_string( FarmGameModeComponent::getButtonName( Internal::findToolButton( task._tool ) ) ) );
+                pressButton( hashed_string( FarmGameModeComponent::getButtonName( FarmButton::Use ) ) );
                 break;
             }
             case Internal::TaskKind::None:

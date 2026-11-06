@@ -415,10 +415,10 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="18" name="ParkDirector">
-			<GameObject _schemaVersion="0" _name="ParkDirector" _bActive="true">
+		<entity id="18" name="ParkGameMode">
+			<GameObject _schemaVersion="0" _name="ParkGameMode" _bActive="true">
 				<_listComponent>
-					<ParkDirectorComponent _componentName="ParkDirectorComponent"
+					<ParkGameModeComponent _componentName="ParkGameModeComponent"
 					                       _bActive="true"
 					                       _coasterDataPath="game/themepark/data/coasters.xml"
 					                       _parkDataPath="game/themepark/data/rides.xml"

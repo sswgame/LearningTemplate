@@ -10,7 +10,7 @@
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
-#include "Games/VoxelCraft/VoxelDirectorComponent.h"
+#include "Games/VoxelCraft/VoxelGameModeComponent.h"
 #include "Games/VoxelCraft/VoxelPlayerComponent.h"
 
 namespace sw
@@ -35,8 +35,8 @@ namespace sw
         GameObject*                   pOwner   = pawn.getOwner();
         GameObjectManager*            pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const VoxelPlayerComponent*   pPlayer  = pOwner != nullptr ? pOwner->getComponent<VoxelPlayerComponent>() : nullptr;
-        const VoxelDirectorComponent* pDirector =
-            pManager != nullptr && pPlayer != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, pPlayer->getDirector() ) : nullptr;
+        const VoxelGameModeComponent* pDirector =
+            pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, pPlayer->getDirector() ) : nullptr;
         const bool bNotPlaying = pDirector == nullptr || pDirector->isStarted() == false || context._deltaTime <= 0.0f;
         if ( bNotPlaying )
             return;

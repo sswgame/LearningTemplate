@@ -40,8 +40,8 @@
 
 #include "Games/Shooter3D/ShooterAvatarComponent.h"
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"
-#include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
+#include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterHUDViewModel.h"
 
 namespace sw
@@ -424,7 +424,7 @@ namespace sw
         GameObject*                     pOwner                = getOwner();
         GameObjectManager*              pManager              = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*     pCamera               = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const ShooterDirectorComponent* pDirector             = pManager != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, _director ) : nullptr;
+        const ShooterGameModeComponent* pDirector             = pManager != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, _director ) : nullptr;
         const bool                      bMissingCameraContext = pCamera == nullptr || pDirector == nullptr || deltaTime <= 0.0f;
         if ( bMissingCameraContext )
             return;
@@ -497,7 +497,7 @@ namespace sw
         GameObject*                pOwner    = getOwner();
         GameObjectManager*         pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const GameObject*          pObject   = pManager != nullptr ? pManager->resolveGameObject( _director ) : nullptr;
-        ShooterDirectorComponent*  pDirector = pObject != nullptr ? pObject->getComponent<ShooterDirectorComponent>() : nullptr;
+        ShooterGameModeComponent*  pDirector = pObject != nullptr ? pObject->getComponent<ShooterGameModeComponent>() : nullptr;
         if ( result._bIgnored == SW_TRUE )
             return;
         ++_hitReactionCount;
@@ -669,7 +669,7 @@ namespace sw
             SW_LOG_INFO_ID( "ShooterPlayer.Reloading", "[Shooter] reloading %#", _arrWeapon[_weaponIndex].getDef()._name.c_str() );
     }
 
-    void ShooterPlayerComponent::fireWeapon( const ShooterDirectorComponent& director, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed )
+    void ShooterPlayerComponent::fireWeapon( const ShooterGameModeComponent& director, FirstPersonCameraComponent& camera, const float3& aimDirection, bool bJustPressed )
     {
         WeaponState& weapon = _arrWeapon[_weaponIndex];
         Ray          aim;
@@ -715,7 +715,7 @@ namespace sw
         camera.addRecoil( kick, kick * 0.25f * ( ( _shotCount % 2u ) == 0u ? 1.0f : -1.0f ) );
     }
 
-    float32 ShooterPlayerComponent::traceCover( const ShooterDirectorComponent& director, const Ray& ray ) const
+    float32 ShooterPlayerComponent::traceCover( const ShooterGameModeComponent& director, const Ray& ray ) const
     {
         float32 nearest = _arrWeapon[_weaponIndex].getShot()._range;
         for ( const ShooterArenaBox& box : director.getBoxes() )
@@ -952,7 +952,7 @@ namespace sw
         // 쏜 광선을 적의 히트박스에 묻고 맞음을 보낸다. 적은 움찔하거나 쓰러지고, 디렉터가 다음 틱에 센다. 탄도선 · 탄착 · 소리도 여기서 쌓인다.
         resolveShots( *pManager );
         const GameObject*         pDirectorObject = pManager->resolveGameObject( _director );
-        ShooterDirectorComponent* pDirector       = pDirectorObject != nullptr ? pDirectorObject->getComponent<ShooterDirectorComponent>() : nullptr;
+        ShooterGameModeComponent* pDirector       = pDirectorObject != nullptr ? pDirectorObject->getComponent<ShooterGameModeComponent>() : nullptr;
         if ( pDirector != nullptr )
         {
             for ( const EffectRequest& effect : _listPendingEffect )

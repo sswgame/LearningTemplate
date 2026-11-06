@@ -10,7 +10,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 
-#include "Games/AbilityArena/ArenaDirectorComponent.h"
+#include "Games/AbilityArena/ArenaGameModeComponent.h"
 
 namespace sw
 {
@@ -58,7 +58,7 @@ namespace sw
             return;
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ArenaDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<ArenaDirectorComponent>( *pManager, _director ) : nullptr;
+        const ArenaGameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<ArenaGameModeComponent>( *pManager, _director ) : nullptr;
         if ( pDirector == nullptr )
         {
             finish();

@@ -20,7 +20,7 @@
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include "Games/VoxelCraft/VoxelAutoPlayControllerComponent.h"
-#include "Games/VoxelCraft/VoxelDirectorComponent.h"
+#include "Games/VoxelCraft/VoxelGameModeComponent.h"
 
 namespace sw
 {
@@ -213,7 +213,7 @@ namespace sw
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera   = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
-        const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
+        const VoxelGameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _director ) : nullptr;
         // 자동 플레이에서는 플레이어 조종자가 폰을 조종하지 않으므로 마우스도 잠그지 않습니다. 시점은 AI 가 정하며 `setAngles` 가 조종 회전을 요청합니다.
         PawnComponent* pPawn = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
         if ( pPawn != nullptr )
@@ -291,7 +291,7 @@ namespace sw
         GameObjectManager*            pManager        = pOwner != nullptr ? pOwner->getManager() : nullptr;
         FirstPersonCameraComponent*   pCamera         = pOwner != nullptr ? pOwner->getComponent<FirstPersonCameraComponent>() : nullptr;
         const PawnComponent*          pPawn           = pOwner != nullptr ? pOwner->getComponent<PawnComponent>() : nullptr;
-        const VoxelDirectorComponent* pDirector       = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
+        const VoxelGameModeComponent* pDirector       = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _director ) : nullptr;
         const VoxelBlockCatalog*      pCatalog        = game::findSubsystem<VoxelBlockCatalog>();
         const bool                    bNotReadyToTick = pCamera == nullptr || pPawn == nullptr || pDirector == nullptr || pCatalog == nullptr || pDirector->isStarted() == false || deltaTime <= 0.0f;
         if ( bNotReadyToTick )
@@ -336,7 +336,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 몸과 손(DuringPhysics): 자기 오브젝트를 바꾸고, 월드는 읽기만 합니다.
     // ------------------------------------------------------------------------------
-    void VoxelPlayerComponent::initializeBody( const VoxelDirectorComponent& director )
+    void VoxelPlayerComponent::initializeBody( const VoxelGameModeComponent& director )
     {
         _body.setPosition( director.findSpawnPosition() );
         _startPosition                      = _body.getPosition();
@@ -414,7 +414,7 @@ namespace sw
         }
     }
 
-    void VoxelPlayerComponent::updateTarget( const VoxelDirectorComponent& director, const FirstPersonCameraComponent& camera )
+    void VoxelPlayerComponent::updateTarget( const VoxelGameModeComponent& director, const FirstPersonCameraComponent& camera )
     {
         VoxelRayHit hit;
         const bool  bHit             = VoxelRaycast::raycast( director.getWorld(), _body.getEyePosition(), camera.getLook().getForward(), _reachDistance, hit );
@@ -451,7 +451,7 @@ namespace sw
         _bHasTarget = SW_FALSE;
     }
 
-    void VoxelPlayerComponent::placeBlock( const VoxelDirectorComponent& director, const VoxelBlockCatalog& catalog )
+    void VoxelPlayerComponent::placeBlock( const VoxelGameModeComponent& director, const VoxelBlockCatalog& catalog )
     {
         if ( _bHasTarget == SW_FALSE )
             return;
@@ -490,7 +490,7 @@ namespace sw
         GameObject*             pOwner    = getOwner();
         GameObjectManager*      pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const GameObject*       pObject   = pManager != nullptr ? pManager->resolveGameObject( _director ) : nullptr;
-        VoxelDirectorComponent* pDirector = pObject != nullptr ? pObject->getComponent<VoxelDirectorComponent>() : nullptr;
+        VoxelGameModeComponent* pDirector = pObject != nullptr ? pObject->getComponent<VoxelGameModeComponent>() : nullptr;
         for ( const BlockEdit& edit : _listPendingEdit )
         {
             if ( pDirector != nullptr )

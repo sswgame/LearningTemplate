@@ -1,11 +1,11 @@
 /**
- * @file ParkDirectorComponent.h
+ * @file ParkGameModeComponent.h
  * @brief ThemeParkTycoon 의 규칙을 돌리는 컴포넌트입니다. 시뮬레이션, 건설, 입력, 자동 건설, 로그를 맡고 런타임 오브젝트(프리팹) 스폰을 지시합니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 손님, 대기줄, 티켓, 평점은 키트의 `ThemeParkSimulation` 이, 코스터 트랙, 물리, 평가는
  *          `CoasterTrackBuilder`, `CoasterTrain`, `CoasterRideAnalyzer` 가 맡는다. 이 컴포넌트는 무엇을 언제 건설하는지와 그 모습(프리팹)을 어디에 스폰하는지를 안다.
  *          모습을 매 프레임 맞추는 일은 뷰 컴포넌트(`ParkGuestComponent`, `CoasterCarComponent`, `FlatRideComponent`)가 이 컴포넌트를 **읽기만** 해서 처리한다.
  *
- *          틱 규칙, 틱이 끝난 뒤의 스폰, 상태 바이트 보류, 정리는 베이스 `GameDirectorComponent` 가 맡는다. 디렉터는 `PrePhysics` 에서 상태를 쓰고,
+ *          틱 규칙, 틱이 끝난 뒤의 스폰, 상태 바이트 보류, 정리는 베이스 `GameModeComponent` 가 맡는다. 디렉터는 `PrePhysics` 에서 상태를 쓰고,
  *          뷰와 카메라 리그는 `PostUpdate` 에서 읽는다(그룹은 차례로 돈다).
  */
 #pragma once
@@ -24,7 +24,7 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrain.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ThemePark.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -39,19 +39,19 @@ namespace sw
     class MeshComponent;
 
     /**
-     * @class ParkDirectorComponent
+     * @class ParkGameModeComponent
      * @brief 공원 한 판을 진행합니다. 플레이가 시작되면 데이터를 읽고 시뮬레이션을 열어, 처음 두 개(가장 싼 평지 놀이기구와 코스터)를 건설합니다.
      * @details 시뮬레이션, 건설한 것, 열차 위치는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와 세이브를
      *          넘긴다(`ThemeParkTycoonGame`). 코스터 트랙은 배치 데이터에서 다시 만든다. 스폰한 오브젝트는 핸들로 보관하고, 상태를 저장하기 전에 정리한다.
      */
     REFLECT( Category = "ThemePark", DisplayName = "Park Director", Tooltip = "Runs the park simulation, building, input and the runtime spawns" )
-    class ParkDirectorComponent : public GameDirectorComponent
+    class ParkGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
 
-        ParkDirectorComponent();
-        virtual ~ParkDirectorComponent() override;
+        ParkGameModeComponent();
+        virtual ~ParkGameModeComponent() override;
 
         /** @brief 공원 상태(시뮬레이션, 건설한 배치, 열차 위치, 타이머, 선택한 배치)를 씁니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;

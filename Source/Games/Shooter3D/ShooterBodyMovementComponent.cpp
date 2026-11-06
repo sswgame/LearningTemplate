@@ -8,7 +8,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
-#include "Games/Shooter3D/ShooterDirectorComponent.h"
+#include "Games/Shooter3D/ShooterGameModeComponent.h"
 
 namespace sw
 {

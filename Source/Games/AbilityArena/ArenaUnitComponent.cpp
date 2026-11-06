@@ -13,7 +13,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 #include "GameFramework/Runtime/Gameplay/Ability/CombatAttributeSet.h"
 
-#include "Games/AbilityArena/ArenaDirectorComponent.h"
+#include "Games/AbilityArena/ArenaGameModeComponent.h"
 
 namespace sw
 {
@@ -66,7 +66,7 @@ namespace sw
         const bool           bMissingComponents = pManager == nullptr || pMesh == nullptr || pAbilitySystem == nullptr || pPawn == nullptr || deltaTime <= 0.0f;
         if ( bMissingComponents )
             return;
-        const ArenaDirectorComponent* pDirector = GameDirectorComponent::resolve<ArenaDirectorComponent>( *pManager, _director );
+        const ArenaGameModeComponent* pDirector = GameModeComponent::resolve<ArenaGameModeComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
         if ( _deathTimer >= 0.0f || pAbilitySystem->getOwnedTagCounts().hasMatchingTag( CombatAttributeSet::getDeadTag() ) )
@@ -130,7 +130,7 @@ namespace sw
         _previousButtonDown = intent._buttonDown;
     }
 
-    void ArenaUnitComponent::separateFromEnemies( const ArenaDirectorComponent& director, float3& inoutPosition ) const
+    void ArenaUnitComponent::separateFromEnemies( const ArenaGameModeComponent& director, float3& inoutPosition ) const
     {
         const GameObjectHandle       self     = getOwner()->getHandle();
         const vector<ArenaUnitView>& listView = director.getUnitViews();

@@ -150,7 +150,7 @@ namespace sw
         virtual void onAfterStateDeserialize() {}
 
         /**
-         * @brief 상태 스냅샷 봉투입니다 — 파생 생성자가 PROPERTY 밖의 상태를 가진 컴포넌트 타입을 올린다(`registerStatefulComponent` · `registerViewOwner` · `registerDirector`).
+         * @brief 상태 스냅샷 봉투입니다 — 파생 생성자가 PROPERTY 밖의 상태를 가진 컴포넌트 타입을 올린다(`registerStatefulComponent` · `registerViewOwner` · `registerGameMode`).
          * @details 훅(`onBeforeStateSerialize` · `onAfterStateDeserialize`)은 그 봉투의 컴포넌트 상태 저장소(`getComponentStateStore`)로 그 밖의 상태를 싣고 넘긴다.
          */
         GameStateSnapshot& getStateSnapshot() { return _stateSnapshot; }

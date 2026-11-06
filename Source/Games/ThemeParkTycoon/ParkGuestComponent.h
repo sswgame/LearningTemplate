@@ -32,7 +32,7 @@ namespace sw
         void assignGuest( GameObjectHandle director, int32 guestIndex );
 
     private:
-        PROPERTY( Category = "Guest", DisplayName = "Director", Tooltip = "Object with the ParkDirectorComponent" )
+        PROPERTY( Category = "Guest", DisplayName = "Director", Tooltip = "Object with the ParkGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Guest", DisplayName = "Guest Index", Tooltip = "Slot in the simulation's guest list" )
         int32 _guestIndex;

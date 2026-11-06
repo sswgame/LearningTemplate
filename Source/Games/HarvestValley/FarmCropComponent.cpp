@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/HarvestValley/FarmDirectorComponent.h"
+#include "Games/HarvestValley/FarmGameModeComponent.h"
 
 namespace sw
 {
@@ -45,7 +45,7 @@ namespace sw
         const bool         bMissingTile = pManager == nullptr || pMesh == nullptr || _tileIndex < 0;
         if ( bMissingTile )
             return;
-        const FarmDirectorComponent* pDirector = GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director );
+        const FarmGameModeComponent* pDirector = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
         const FarmField&    field    = pDirector->getField();
@@ -85,7 +85,7 @@ namespace sw
         pMesh->setMeshID( model );
         pMesh->setMaterialInstance( look );
         pMesh->setLocalScale( float3{ size } );
-        pMesh->setLocalPosition( FarmDirectorComponent::computeTileCenter( x, y ) + float3{ 0.0f, _soilTop + _modelFloor * size, 0.0f } );
+        pMesh->setLocalPosition( FarmGameModeComponent::computeTileCenter( x, y ) + float3{ 0.0f, _soilTop + _modelFloor * size, 0.0f } );
         pMesh->setVisible( true );
         _cropState = cropState;
     }

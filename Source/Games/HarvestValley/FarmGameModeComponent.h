@@ -1,5 +1,5 @@
 /**
- * @file FarmDirectorComponent.h
+ * @file FarmGameModeComponent.h
  * @brief HarvestValley 의 규칙을 돌리는 컴포넌트입니다. 농부 이동, 도구, 체력, 시간, 가게, 출하, 수면, 날씨, 자동 농부, 로그를 맡고 밭 타일(프리팹) 스폰을 지시합니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 밭, 달력, 인벤토리, 작물 카탈로그의 규칙은 키트(`GF_Farming`)가 맡는다.
  *          이 컴포넌트는 "농부가 어디 서서 무엇을 하는가"의 규칙과 타일의 모습(프리팹)을 어디에 스폰하는지를 안다. 농부가 **무엇을 누르는가는 농부 폰의 의도**
@@ -7,7 +7,7 @@
  *          (`FarmSoilComponent`, `FarmCropComponent`, `FarmerComponent`, `FarmTargetComponent`, 해는 Runtime `DaylightComponent`)가 이 컴포넌트를 **읽기만** 해서 처리한다.
  *
  *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고 카메라 리그의 초점을 넣으며, 뷰와 리그는 `PostUpdate` 에서 읽는다.
- *          틱이 끝난 뒤의 스폰, 상태 바이트 보류, 정리, 효과음은 베이스 `GameDirectorComponent` 가 맡는다.
+ *          틱이 끝난 뒤의 스폰, 상태 바이트 보류, 정리, 효과음은 베이스 `GameModeComponent` 가 맡는다.
  */
 #pragma once
 #include "Core/Container/GameObjectHandle.h"
@@ -27,7 +27,7 @@
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmShippingBin.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
@@ -70,7 +70,7 @@ namespace sw
         Hand         ///< 거두기.
     };
 
-    /** @brief 농부 폰의 버튼입니다. 폰 스키마(씬의 `PawnComponent`)의 이름은 `FarmDirectorComponent::getButtonName` 이고, 입력 맵 묶음(`data/gamesettings.xml` 의 `<inputMap>`)의 액션 이름과 같습니다. */
+    /** @brief 농부 폰의 버튼입니다. 폰 스키마(씬의 `PawnComponent`)의 이름은 `FarmGameModeComponent::getButtonName` 이고, 입력 맵 묶음(`data/gamesettings.xml` 의 `<inputMap>`)의 액션 이름과 같습니다. */
     enum class FarmButton : uint8
     {
         Tool1 = 0, ///< 괭이
@@ -88,7 +88,7 @@ namespace sw
     };
 
     /**
-     * @class FarmDirectorComponent
+     * @class FarmGameModeComponent
      * @brief 농장 한 판을 진행합니다. 플레이가 시작되면 작물 카탈로그를 읽고 밭, 달력, 인벤토리를 새로 만듭니다(봄 1일, 첫 씨앗 10개).
      * @details 농장 상태(달력, 밭, 인벤토리, 농부)는 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와
      *          세이브를 넘긴다(`HarvestValleyGame`). 스폰한 타일 오브젝트는 핸들로 보관하고, 상태를 저장하기 전에 정리한다.
@@ -96,7 +96,7 @@ namespace sw
      *          자동 농부 AI(`_autoFarmerPrefab`)가, 꺼지면 다시 플레이어 조종자가 조종한다. 디렉터 안에 자동 플레이 분기는 없다.
      */
     REFLECT( Category = "Farming", DisplayName = "Farm Director", Tooltip = "Runs the farm rules, the farmer, time and weather, and spawns the field tiles" )
-    class FarmDirectorComponent : public GameDirectorComponent
+    class FarmGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -106,8 +106,8 @@ namespace sw
         static constexpr int32 kBagSlotCount = 24; ///< 플레이어 가방 슬롯 수(공유 상태).
         static constexpr int32 kButtonCount  = static_cast<int32>( FarmButton::Count );
 
-        FarmDirectorComponent();
-        virtual ~FarmDirectorComponent() override;
+        FarmGameModeComponent();
+        virtual ~FarmGameModeComponent() override;
 
         /** @brief 농장 상태(밭, 출하함 구간, 농부, 날씨)를 씁니다. 달력, 가방, 돈은 공유 상태(`SessionStateComponent`)가 싣습니다. `ComponentStateStore::capture` 가 부릅니다. */
         void writeState( Archive& outArchive ) const override;

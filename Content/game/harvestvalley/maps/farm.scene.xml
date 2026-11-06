@@ -851,11 +851,11 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="35" name="FarmDirector">
-			<GameObject _schemaVersion="0" _name="FarmDirector" _bActive="true">
+		<entity id="35" name="FarmGameMode">
+			<GameObject _schemaVersion="0" _name="FarmGameMode" _bActive="true">
 				<_listComponent>
 					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
-					<FarmDirectorComponent _componentName="FarmDirectorComponent"
+					<FarmGameModeComponent _componentName="FarmGameModeComponent"
 					                       _bActive="true"
 					                       _cropDataPath="game/harvestvalley/data/crops.xml"
 					                       _soilPrefab="game/harvestvalley/prefabs/farmsoil.prefab.xml"
@@ -888,8 +888,8 @@
 							<item>game/harvestvalley/models/crops_leafs_stage_a.mesh</item>
 							<item>game/harvestvalley/models/crops_leafs_stage_b.mesh</item>
 						</_listDefaultGrowingModel>
-					</FarmDirectorComponent>
-					<FarmVillageDirectorComponent _componentName="FarmVillageDirectorComponent"
+					</FarmGameModeComponent>
+					<FarmVillageGameModeComponent _componentName="FarmVillageGameModeComponent"
 					                              _bActive="true"
 					                              _scheduleDataPath="game/harvestvalley/data/villagers.schedules.xml"
 					                              _villagerPrefab="game/harvestvalley/prefabs/villager.prefab.xml"
@@ -906,7 +906,7 @@
 							<item>TownsfolkMale</item>
 							<item>TownsfolkFemale</item>
 						</_listVillagerPreset>
-					</FarmVillageDirectorComponent>
+					</FarmVillageGameModeComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

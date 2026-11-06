@@ -24,7 +24,7 @@ namespace sw
 {
     /**
      * @class IBehaviorTreeDebugSource
-     * @brief 행동 트리 실행기 목록을 내놓는 쪽의 계약입니다. 디렉터(`GameDirectorComponent::findBehaviorTreeDebugSource`)가 자기 자신을 돌려줍니다.
+     * @brief 행동 트리 실행기 목록을 내놓는 쪽의 계약입니다. 디렉터(`GameModeComponent::findBehaviorTreeDebugSource`)가 자기 자신을 돌려줍니다.
      * @details 실행기의 노드 번호는 깊이 우선 번호라 창에 연 파일과 실행기가 쥔 트리가 같은 파일일 때만 맞다 — 그래서 경로를 함께 내놓고 창이 다르면 표시하지 않는다.
      */
     class IBehaviorTreeDebugSource

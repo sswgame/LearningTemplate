@@ -144,10 +144,10 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="5" name="VoxelDirector">
-			<GameObject _schemaVersion="0" _name="VoxelDirector" _bActive="true">
+		<entity id="5" name="VoxelGameMode">
+			<GameObject _schemaVersion="0" _name="VoxelGameMode" _bActive="true">
 				<_listComponent>
-					<VoxelDirectorComponent _componentName="VoxelDirectorComponent"
+					<VoxelGameModeComponent _componentName="VoxelGameModeComponent"
 					                        _bActive="true"
 					                        _chunkPrefab="game/voxelcraft/prefabs/chunk.prefab.xml"
 					                        _player="3"

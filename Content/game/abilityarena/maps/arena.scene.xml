@@ -6697,10 +6697,10 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="334" name="ArenaDirector">
-			<GameObject _schemaVersion="0" _name="ArenaDirector" _bActive="true">
+		<entity id="334" name="ArenaGameMode">
+			<GameObject _schemaVersion="0" _name="ArenaGameMode" _bActive="true">
 				<_listComponent>
-					<ArenaDirectorComponent _componentName="ArenaDirectorComponent"
+					<ArenaGameModeComponent _componentName="ArenaGameModeComponent"
 					                        _bActive="true"
 					                        _playerAbilitySet="Player"
 					                        _gruntAbilitySet="Grunt"

@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/ThemeParkTycoon/ParkDirectorComponent.h"
+#include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
 
 namespace sw
 {
@@ -43,7 +43,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const ParkDirectorComponent* pDirector = GameDirectorComponent::resolve<ParkDirectorComponent>( *pManager, _director );
+        const ParkGameModeComponent* pDirector = GameModeComponent::resolve<ParkGameModeComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
         const vector<ParkRide>& listRide = pDirector->getSimulation().getRides();

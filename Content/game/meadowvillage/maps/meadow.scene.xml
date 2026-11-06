@@ -56,11 +56,11 @@
 			<GameObject _schemaVersion="0" _name="VillageState" _bActive="true">
 				<_listComponent>
 					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
-					<MeadowFarmDirectorComponent _componentName="MeadowFarmDirectorComponent"
+					<MeadowFarmGameModeComponent _componentName="MeadowFarmGameModeComponent"
 					                             _bActive="true"
 					                             _bAutoPlay="false"
 					                             _tilePrefab="game/meadowvillage/prefabs/tile.prefab.xml" />
-					<MeadowTownDirectorComponent _componentName="MeadowTownDirectorComponent"
+					<MeadowTownGameModeComponent _componentName="MeadowTownGameModeComponent"
 					                             _bActive="true"
 					                             _bAutoPlay="false">
 						<_listObjectView>
@@ -70,7 +70,7 @@
 						<_listCreatureView>
 							<MeadowTownView _id="sprout" _prefab="game/meadowvillage/prefabs/sprout.prefab.xml" />
 						</_listCreatureView>
-					</MeadowTownDirectorComponent>
+					</MeadowTownGameModeComponent>
 				</_listComponent>
 			</GameObject>
 		</entity>

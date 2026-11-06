@@ -29,7 +29,7 @@
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 #include <imgui.h>
@@ -615,8 +615,8 @@ namespace sw::editor
 
             // 컴포넌트에 안 붙은 실행기(지휘관 AI 등) — 노드 번호는 깊이 우선 번호라 창에 연 파일과 같은 트리 파일을 쥔 실행기만 맞다.
             listDebugRunner.clear();
-            pObject->forEachComponentOfType<GameDirectorComponent>(
-                [&listDebugRunner]( GameDirectorComponent* pDirector )
+            pObject->forEachComponentOfType<GameModeComponent>(
+                [&listDebugRunner]( GameModeComponent* pDirector )
             {
                 const IBehaviorTreeDebugSource* pSource = pDirector->findBehaviorTreeDebugSource();
                 if ( pSource != nullptr )

@@ -4,7 +4,7 @@
  *
  * @details 실행: `App.exe -game=AbilityArena`(`Ninja-Debug` 빌드). 조작: WASD 이동, J/Space 근접, K/2 화염구(마나 · 화상), L/3 회복(데이터만),
  *          LeftShift/4 대시(무적). `-gv_arenaAutoPlay=1` 이면 플레이어도 AI 가 움직인다. 자세한 것은 `Source/Games/AbilityArena/README.md`.
- *          아레나는 씬(`game/abilityarena/maps/arena.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ArenaDirectorComponent` 가 섭니다.
+ *          아레나는 씬(`game/abilityarena/maps/arena.scene.xml` — 팩의 `data/gamesettings.xml` 시작 맵)과 그 안의 `ArenaGameModeComponent` 가 섭니다.
  *          이 클래스는 어빌리티 카탈로그를 들고 게임 서비스로 걸고, 첫 씬을 열고, 상태 저장 전에 판의 진행(웨이브 · 처치 수)을 싣고 디렉터가 세운 런타임 오브젝트를 걷으며, 복원 뒤 진행을 돌려줍니다.
  */
 #include "pch.h"
@@ -16,7 +16,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 
 #include "Games/AbilityArena/ArenaAbilities.h"
-#include "Games/AbilityArena/ArenaDirectorComponent.h"
+#include "Games/AbilityArena/ArenaGameModeComponent.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
 
@@ -45,7 +45,7 @@ namespace sw
         , _pAbilityCatalog{}
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
-        getStateSnapshot().registerDirector<ArenaDirectorComponent>();
+        getStateSnapshot().registerGameMode<ArenaGameModeComponent>();
     }
 
     AbilityArenaGame::~AbilityArenaGame() = default;

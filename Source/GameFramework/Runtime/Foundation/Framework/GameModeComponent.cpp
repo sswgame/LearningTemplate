@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 
 #include "Core/Math/MathUtil.h"
 
@@ -17,7 +17,7 @@ namespace sw
 {
     namespace
     {
-        struct GameDirectorComponentInternal
+        struct GameModeComponentInternal
         {
             /** @brief 세운 핸들 목록을 덜어 내기 시작하는 크기입니다(그 뒤로는 덜어 낸 크기의 두 배마다). */
             static constexpr uint32 kMinCompactThreshold = 64;
@@ -27,13 +27,13 @@ namespace sw
 
 namespace sw
 {
-    GameDirectorComponent::GameDirectorComponent()
+    GameModeComponent::GameModeComponent()
         : _bAutoPlay{ false }
         , _tickAfter{}
         , _listSpawned{}
         , _pendingStateBytes{}
         , _soundQueue{}
-        , _compactThreshold{ GameDirectorComponentInternal::kMinCompactThreshold }
+        , _compactThreshold{ GameModeComponentInternal::kMinCompactThreshold }
         , _bStarted{ SW_FALSE }
         , _bViewsSpawned{ SW_FALSE }
         , _bFlushScheduled{ SW_FALSE }
@@ -43,9 +43,9 @@ namespace sw
         setCanEverTick( true );
     }
 
-    GameDirectorComponent::~GameDirectorComponent() = default;
+    GameModeComponent::~GameModeComponent() = default;
 
-    void GameDirectorComponent::onBeginPlay()
+    void GameModeComponent::onBeginPlay()
     {
         Component::onBeginPlay();
         // 규칙은 앞 그룹 — 뷰 · 컨트롤러 · 카메라 리그(뒤 그룹)가 같은 프레임에 이 결과를 읽는다.
@@ -60,28 +60,28 @@ namespace sw
         onGameStarted();
     }
 
-    void GameDirectorComponent::onEndPlay()
+    void GameModeComponent::onEndPlay()
     {
         despawnViews();
         _bStarted = SW_FALSE;
         Component::onEndPlay();
     }
 
-    void GameDirectorComponent::onTick( float32 deltaTime )
+    void GameModeComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
         if ( _bRuleOnSubTick == SW_FALSE )
             runRules( deltaTime );
     }
 
-    void GameDirectorComponent::onSubTick( uint32 subTickID, float32 deltaTime )
+    void GameModeComponent::onSubTick( uint32 subTickID, float32 deltaTime )
     {
         Component::onSubTick( subTickID, deltaTime );
         if ( subTickID == kRuleSubTick && _bRuleOnSubTick == SW_TRUE )
             runRules( deltaTime );
     }
 
-    SubTickHandle GameDirectorComponent::getRuleTickHandle() const
+    SubTickHandle GameModeComponent::getRuleTickHandle() const
     {
         SubTickHandle handle = getTickHandle();
         // 걸 대상이 있으면 아직 시작 전이어도 서브틱 핸들 — 먼저 시작한 뒤쪽 디렉터가 이것을 걸어도 맞는다.
@@ -90,16 +90,16 @@ namespace sw
         return handle;
     }
 
-    void GameDirectorComponent::hookTickAfter()
+    void GameModeComponent::hookTickAfter()
     {
         if ( _tickAfter.isValid() == false )
             return;
-        GameObjectManager*           pManager = getObjectManager();
-        const GameObject*            pObject  = pManager != nullptr ? pManager->resolveGameObject( _tickAfter ) : nullptr;
-        const GameDirectorComponent* pBefore  = pObject != nullptr ? pObject->getComponent<GameDirectorComponent>() : nullptr;
+        GameObjectManager*       pManager = getObjectManager();
+        const GameObject*        pObject  = pManager != nullptr ? pManager->resolveGameObject( _tickAfter ) : nullptr;
+        const GameModeComponent* pBefore  = pObject != nullptr ? pObject->getComponent<GameModeComponent>() : nullptr;
         if ( pBefore == nullptr || pBefore == this )
         {
-            SW_LOG_WARNING_ID( "GameDirector.GameDirectorTickAfterDoesNot", "GameDirector: _tickAfter does not point at another director - the rules stay on the main tick" );
+            SW_LOG_WARNING_ID( "GameMode.GameDirectorTickAfterDoesNot", "GameMode: _tickAfter does not point at another director - the rules stay on the main tick" );
             return;
         }
         (void)registerSubTick( TickGroup::PrePhysics, kRuleSubTick ); // 핸들은 쓰지 않는다 — id 로 다룬다
@@ -107,7 +107,7 @@ namespace sw
         _bRuleOnSubTick = SW_TRUE;
     }
 
-    void GameDirectorComponent::runRules( float32 deltaTime )
+    void GameModeComponent::runRules( float32 deltaTime )
     {
         if ( _bStarted == SW_FALSE )
             return;
@@ -118,14 +118,14 @@ namespace sw
             scheduleFlush();
     }
 
-    void GameDirectorComponent::restoreState( vector<uint8>&& bytes )
+    void GameModeComponent::restoreState( vector<uint8>&& bytes )
     {
         _pendingStateBytes = std::move( bytes );
         if ( _bStarted == SW_TRUE )
             applyPendingState();
     }
 
-    void GameDirectorComponent::despawnViews()
+    void GameModeComponent::despawnViews()
     {
         GameObjectManager* pManager = getObjectManager();
         if ( pManager != nullptr )
@@ -136,17 +136,17 @@ namespace sw
             }
         }
         _listSpawned.clear();
-        _compactThreshold = GameDirectorComponentInternal::kMinCompactThreshold;
+        _compactThreshold = GameModeComponentInternal::kMinCompactThreshold;
         _bViewsSpawned    = SW_FALSE;
         onViewsDespawned();
     }
 
-    bool GameDirectorComponent::isAutoPlayOn() const
+    bool GameModeComponent::isAutoPlayOn() const
     {
         return _bAutoPlay || GameAutoplay::isOn();
     }
 
-    void GameDirectorComponent::applyPendingState()
+    void GameModeComponent::applyPendingState()
     {
         Archive    archive( _pendingStateBytes.data(), _pendingStateBytes.size() );
         const bool bRestored = readState( archive );
@@ -160,7 +160,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 틱 뒤 플러시(게임 스레드)
     // ------------------------------------------------------------------------------
-    void GameDirectorComponent::scheduleFlush()
+    void GameModeComponent::scheduleFlush()
     {
         if ( _bFlushScheduled == SW_TRUE )
             return;
@@ -169,11 +169,11 @@ namespace sw
             return;
         _bFlushScheduled = SW_TRUE;
         // 틱 안이면 틱 뒤로 미뤄진다. 그 사이에 디렉터가 사라질 수 있으니 핸들로 다시 찾는다.
-        pManager->executeOrDeferPostTickOnComponent( *this, []( GameDirectorComponent& director )
+        pManager->executeOrDeferPostTickOnComponent( *this, []( GameModeComponent& director )
         { director.flushPending(); } );
     }
 
-    void GameDirectorComponent::flushPending()
+    void GameModeComponent::flushPending()
     {
         _bFlushScheduled            = SW_FALSE;
         GameObjectManager* pManager = getObjectManager();
@@ -186,7 +186,7 @@ namespace sw
         compactSpawned( *pManager );
     }
 
-    GameObject* GameDirectorComponent::spawnPrefab( GameObjectManager& manager, string_view prefabPath, const utf8* pName )
+    GameObject* GameModeComponent::spawnPrefab( GameObjectManager& manager, string_view prefabPath, const utf8* pName )
     {
         AssetManager* pAssetManager = game::findSubsystem<AssetManager>();
         if ( pAssetManager == nullptr || prefabPath.empty() )
@@ -197,12 +197,12 @@ namespace sw
         return pObject;
     }
 
-    void GameDirectorComponent::trackSpawned( const GameObject& object )
+    void GameModeComponent::trackSpawned( const GameObject& object )
     {
         _listSpawned.push_back( object.getHandle() );
     }
 
-    void GameDirectorComponent::destroySpawned( GameObjectManager& manager, GameObjectHandle& inoutHandle )
+    void GameModeComponent::destroySpawned( GameObjectManager& manager, GameObjectHandle& inoutHandle )
     {
         GameObject* pObject = manager.resolveGameObject( inoutHandle );
         if ( pObject != nullptr )
@@ -210,7 +210,7 @@ namespace sw
         inoutHandle = GameObjectHandle{};
     }
 
-    void GameDirectorComponent::compactSpawned( const GameObjectManager& manager )
+    void GameModeComponent::compactSpawned( const GameObjectManager& manager )
     {
         if ( _listSpawned.size() < _compactThreshold )
             return;
@@ -222,10 +222,10 @@ namespace sw
                 _listSpawned.data()[keptCount++] = handle;
         }
         _listSpawned.resize( keptCount );
-        _compactThreshold = MathUtil::max( GameDirectorComponentInternal::kMinCompactThreshold, static_cast<uint32>( keptCount * 2 ) );
+        _compactThreshold = MathUtil::max( GameModeComponentInternal::kMinCompactThreshold, static_cast<uint32>( keptCount * 2 ) );
     }
 
-    GameObjectManager* GameDirectorComponent::getObjectManager() const
+    GameObjectManager* GameModeComponent::getObjectManager() const
     {
         GameObject* pOwner = getOwner();
         return pOwner != nullptr ? pOwner->getManager() : nullptr;

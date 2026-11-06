@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/ThemeParkTycoon/ParkDirectorComponent.h"
+#include "Games/ThemeParkTycoon/ParkGameModeComponent.h"
 
 namespace sw
 {
@@ -42,7 +42,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const ParkDirectorComponent* pDirector = GameDirectorComponent::resolve<ParkDirectorComponent>( *pManager, _director );
+        const ParkGameModeComponent* pDirector = GameModeComponent::resolve<ParkGameModeComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
 
@@ -56,7 +56,7 @@ namespace sw
         if ( bShown == false )
             return;
         pMesh->setLocalPosition( pGuest->_position + float3{ 0.0f, _heightOffset, 0.0f } );
-        const int32 bucket = ParkDirectorComponent::computeHappinessBucket( pGuest->_happiness );
+        const int32 bucket = ParkGameModeComponent::computeHappinessBucket( pGuest->_happiness );
         if ( bucket == _colorBucket )
             return;
         const shared_ptr<MaterialInstance>& look = pDirector->getGuestLook( bucket );

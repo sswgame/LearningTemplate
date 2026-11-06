@@ -10,7 +10,7 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternDirectorComponent.h"
+#include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternGameModeComponent.h"
 #include "GameFramework/Kits/Genre/RPG/OpenWorldWestern/Component/WesternHorseMountComponent.h"
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
@@ -116,7 +116,7 @@ namespace sw
     {
         GameObject*                     pOwner    = getOwner();
         const GameObjectManager*        pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const WesternDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<WesternDirectorComponent>( *pManager, _director ) : nullptr;
+        const WesternGameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<WesternGameModeComponent>( *pManager, _director ) : nullptr;
         const WesternCatalog*           pCatalog  = pDirector != nullptr ? pDirector->findWesternCatalog() : nullptr;
         WesternHorseMountComponent*     pMount    = pOwner != nullptr ? pOwner->getComponent<WesternHorseMountComponent>() : nullptr;
         const utf8*                     pName     = pOwner != nullptr ? pOwner->getName().c_str() : "?";

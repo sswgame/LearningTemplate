@@ -12,7 +12,7 @@
 #include "GameFramework/Runtime/Foundation/Utility/Math/OrientationUtil.h"
 #include "GameFramework/Runtime/Foundation/Utility/Math/RayMath.h"
 
-#include "Games/Shooter3D/ShooterDirectorComponent.h"
+#include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 namespace sw
@@ -70,8 +70,8 @@ namespace sw
         const GameObject*               pPawnOwner = pawn.getOwner();
         const GameObjectManager*        pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
         const ShooterPlayerComponent*   pPlayer    = pPawnOwner != nullptr ? pPawnOwner->getComponent<ShooterPlayerComponent>() : nullptr;
-        const ShooterDirectorComponent* pDirector =
-            pManager != nullptr && pPlayer != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, pPlayer->getDirector() ) : nullptr;
+        const ShooterGameModeComponent* pDirector =
+            pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getDirector() ) : nullptr;
         if ( pDirector == nullptr || pPlayer->isAlive() == false )
         {
             stopMoving();

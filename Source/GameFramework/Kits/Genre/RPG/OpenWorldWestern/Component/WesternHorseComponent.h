@@ -22,7 +22,7 @@ namespace sw
 
     /**
      * @class WesternHorseComponent
-     * @brief 말 오브젝트(폰, `MountMovementComponent`, 좌석, `WesternHorseMountComponent`)에 붙습니다. 품종(`_breed`)은 디렉터(`WesternDirectorComponent`)가 연 서부극 카탈로그의 `<Horse id>` 입니다. WildWest 게임에서 키트로 옮겼다.
+     * @brief 말 오브젝트(폰, `MountMovementComponent`, 좌석, `WesternHorseMountComponent`)에 붙습니다. 품종(`_breed`)은 디렉터(`WesternGameModeComponent`)가 연 서부극 카탈로그의 `<Horse id>` 입니다. WildWest 게임에서 키트로 옮겼다.
      * @details 첫 틱에 디렉터(`_director`)의 카탈로그로 말을 열고 같은 오브젝트의 `WesternHorseMountComponent` 에 빌려 준다(`bindHorse`). 디렉터가 판을 열지 못했거나
      *          품종이 카탈로그에 없거나 탈것 컴포넌트가 없으면 오류를 한 번 남기고 서지 않는다(기본 품종으로 바꾸지 않는다).
      *          PostUpdate 틱에서 시간을 흘린다 — 탈것 컴포넌트(PostPhysics)가 그 프레임의 질주로 스태미나를 쓴 뒤다. 게임 시간은 실제 초 × `_gameHoursPerSecond` 이다.

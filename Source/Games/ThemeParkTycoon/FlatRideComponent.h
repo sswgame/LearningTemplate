@@ -31,7 +31,7 @@ namespace sw
         void assignRide( GameObjectHandle director, int32 rideIndex, float32 spin );
 
     private:
-        PROPERTY( Category = "Ride", DisplayName = "Director", Tooltip = "Object with the ParkDirectorComponent" )
+        PROPERTY( Category = "Ride", DisplayName = "Director", Tooltip = "Object with the ParkGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Ride", DisplayName = "Ride Index", Tooltip = "Ride slot in the simulation" )
         int32 _rideIndex;

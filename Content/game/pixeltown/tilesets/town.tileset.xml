@@ -1,7 +1,7 @@
 <!--
 	PixelTown 땅 타일셋 — Shade "16x16 Puny World Tileset"(engine/textures/pixel/puny_world, 27 x 65 칸, 16 px). 타일 한 변 = 월드 1.
 	길과 물은 규칙 타일이다: 위 · 아래 · 왼 · 오른 이웃이 같은 브러시가 아니면 그쪽에 풀 테두리가 있는 칸을 고른다(모서리가 먼저). 맵 밖은 같은 브러시로 본다.
-	물은 단단하다 — 오버월드 걸음(TownDirectorComponent)과 렌더러 충돌체가 같은 solid 를 읽는다.
+	물은 단단하다 — 오버월드 걸음(TownGameModeComponent)과 렌더러 충돌체가 같은 solid 를 읽는다.
 -->
 <TileSet atlas="engine/textures/pixel/puny_world/puny_world.dds" columns="27" rows="65" tileSize="1">
 	<Tile name="grass" cell="0" />

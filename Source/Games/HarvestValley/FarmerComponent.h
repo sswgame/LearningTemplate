@@ -39,7 +39,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
 
     private:
-        PROPERTY( Category = "Farmer", DisplayName = "Director", Tooltip = "Object with the FarmDirectorComponent" )
+        PROPERTY( Category = "Farmer", DisplayName = "Director", Tooltip = "Object with the FarmGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Farmer", DisplayName = "Height Offset", Tooltip = "Lift above the ground point", Units = m )
         float32 _heightOffset;

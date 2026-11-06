@@ -1,5 +1,5 @@
 /**
- * @file GameDirectorComponent.h
+ * @file GameModeComponent.h
  * @brief 게임 한 판의 규칙을 돌리고 런타임 오브젝트(프리팹)를 스폰하는 디렉터 컴포넌트의 베이스입니다.
  * @details 언리얼의 `AGameModeBase` 와 `AGameStateBase` 에 해당한다.
  */
@@ -24,7 +24,7 @@ namespace sw
     class IBehaviorTreeDebugSource;
 
     /**
-     * @class GameDirectorComponent
+     * @class GameModeComponent
      * @brief 씬에 하나 두는 디렉터의 공통 골격입니다.
      * @details 파생 클래스는 규칙(시작, 틱, 상태 바이트)과 무엇을 스폰하는지만 적는다. 베이스는 다음을 맡는다.
      *          - **수명**: `onBeginPlay` 가 틱 그룹을 `PrePhysics` 로 두고(뷰와 컨트롤러는 뒤 그룹에서 읽는다) `startGame` 을 부른다.
@@ -32,7 +32,7 @@ namespace sw
      *          - **상태 바이트**: `restoreState` 는 시작 전이면 바이트를 보관했다가 시작할 때 적용하고, 시작 뒤면 바로 `readState` 로 적용한다.
      *            적용한 뒤에는 뷰 오브젝트를 정리해 다시 스폰하게 한다.
      *            `writeState` 와 `restoreState` 는 `ComponentStateStore` 가 이름으로 부르는 계약이다.
-     *            게임 인스턴스는 `GameStateSnapshot::registerDirector<T>()`(게임 인스턴스의 `getStateSnapshot()`) 한 줄로 이 디렉터를 상태 스냅샷에 등록한다.
+     *            게임 인스턴스는 `GameStateSnapshot::registerGameMode<T>()`(게임 인스턴스의 `getStateSnapshot()`) 한 줄로 이 디렉터를 상태 스냅샷에 등록한다.
      *          - **틱 뒤 플러시**: 틱(워커) 안에서는 구조를 바꾸지 못하므로 `scheduleFlush` 가 `executeOrDeferPostTick` 한 번으로 `onFlush` 를 게임 스레드에서 부른다.
      *            이때 쌓인 소리(`getSoundQueue`)도 낸다.
      *            뷰 오브젝트가 정리돼 있으면 다음 틱이 스스로 플러시를 예약하고, `onFlush` 가 다시 스폰한다.
@@ -48,15 +48,15 @@ namespace sw
      *          Lyra 는 게임 상태를 GameState 컴포넌트에 붙이는데, 여기서는 디렉터 하나가 그 역할을 한다.
      */
     REFLECT( Abstract, Category = "Framework", DisplayName = "Game Director", Tooltip = "Base of the components that run a game's rules and spawn its runtime objects" )
-    class SW_GF_API GameDirectorComponent : public Component
+    class SW_GF_API GameModeComponent : public Component
     {
     public:
         REFLECT_BODY();
 
         static constexpr uint32 kRuleSubTick = 0x52554C45u; ///< 규칙을 도는 서브틱 id(`_tickAfter` 를 걸었을 때만)
 
-        GameDirectorComponent();
-        virtual ~GameDirectorComponent() override;
+        GameModeComponent();
+        virtual ~GameModeComponent() override;
 
         /** @brief 틱 그룹을 정하고 판을 시작합니다(`startGame`). 보관하던 복원 바이트를 적용하고 첫 플러시를 예약합니다. */
         void onBeginPlay() override;

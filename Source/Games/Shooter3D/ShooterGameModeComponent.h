@@ -1,5 +1,5 @@
 /**
- * @file ShooterDirectorComponent.h
+ * @file ShooterGameModeComponent.h
  * @brief Shooter3D 의 규칙을 돌리는 컴포넌트입니다. 페이싱 감독이 정한 스켈레톤 스폰, 쓰러뜨린 수, 막는 상자, 효과 풀(탄착, 총구 섬광, 탄도선), 로그를 맡습니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 무기 규칙(연사, 탄창, 재장전, 퍼짐, 반동)은 기반 코드(`GameFramework/Runtime/Character/Combat`)가,
  *          이동, 사격, 체력은 플레이어 컴포넌트(`ShooterPlayerComponent`)가, 적 하나의 움직임은 `ShooterEnemyComponent` 가 맡는다.
@@ -24,7 +24,7 @@
 #include "GameFramework/Runtime/Character/AI/Director/AIDirector.h"
 #include "GameFramework/Runtime/Character/AI/Director/AIDirectorProfile.h"
 #include "GameFramework/Runtime/Character/AI/SpawnDirector.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 #include "Games/Shooter3D/ShooterBlockerComponent.h"
@@ -80,7 +80,7 @@ namespace sw
 namespace sw
 {
     /**
-     * @class ShooterDirectorComponent
+     * @class ShooterGameModeComponent
      * @brief 아레나 한 판을 진행합니다. 플레이가 시작되면 막는 상자를 모으고 페이싱 감독(`AIDirector`, 데이터 `_pacingProfile` 과 `_spawnTable`)을 시작합니다.
      * @details 감독은 쌓기, 절정, 쉼 단계를 돌며 적 스폰(예산), 무리(절정 진입), 탄 채우기(쉼 진입), 수리(예산)를 정한다. 이 컴포넌트는 그 사건을 스켈레톤,
      *          탄, 체력으로 바꾼다. 적은 종류(`ShooterEnemyKind` — 프리팹 + 외형 프리셋)이고, 보통 적은 `_listEnemyKind` 를 차례로 쓰고 정예는 `_eliteEnemyKind` 이며 모습은 외형 프리셋과
@@ -93,13 +93,13 @@ namespace sw
      *          플레이어 몸에는 자동 플레이 분기가 없다.
      */
     REFLECT( Category = "Shooter3D", DisplayName = "Shooter Director", Tooltip = "Runs the skeleton waves, kills, blockers, the effect pools and the runtime spawns" )
-    class ShooterDirectorComponent : public GameDirectorComponent
+    class ShooterGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
 
-        ShooterDirectorComponent();
-        virtual ~ShooterDirectorComponent() override;
+        ShooterGameModeComponent();
+        virtual ~ShooterGameModeComponent() override;
 
         /** @brief 움직임 기록(`-gv_shooterMotionTrace`)을 파일로 쓰고 판을 닫습니다. */
         void onEndPlay() override;

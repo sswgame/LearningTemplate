@@ -7,7 +7,7 @@
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Ability/AbilityComponent.h"
 
-#include "Games/AbilityArena/ArenaDirectorComponent.h"
+#include "Games/AbilityArena/ArenaGameModeComponent.h"
 #include "Games/AbilityArena/ArenaUnitComponent.h"
 
 namespace sw
@@ -22,7 +22,7 @@ namespace sw
         }
 
         AbilityComponent*             pAbilitySystem = getAbilitySystem();
-        const ArenaDirectorComponent* pDirector      = pAbilitySystem != nullptr ? ArenaDirectorComponent::findForUnit( *pAbilitySystem ) : nullptr;
+        const ArenaGameModeComponent* pDirector      = pAbilitySystem != nullptr ? ArenaGameModeComponent::findForUnit( *pAbilitySystem ) : nullptr;
         // 사거리 · 피해는 어빌리티 데이터(`<Param>`)가 반드시 적는다.
         const std::optional<float32> range  = getParameter( "range" );
         const std::optional<float32> damage = getParameter( "damage" );
@@ -55,7 +55,7 @@ namespace sw
         }
 
         AbilityComponent*             pAbilitySystem = getAbilitySystem();
-        const ArenaDirectorComponent* pDirector      = pAbilitySystem != nullptr ? ArenaDirectorComponent::findForUnit( *pAbilitySystem ) : nullptr;
+        const ArenaGameModeComponent* pDirector      = pAbilitySystem != nullptr ? ArenaGameModeComponent::findForUnit( *pAbilitySystem ) : nullptr;
         const GameObject*             pOwner         = pAbilitySystem != nullptr ? pAbilitySystem->getOwner() : nullptr;
         const ArenaUnitComponent*     pUnit          = pOwner != nullptr ? pOwner->getComponent<ArenaUnitComponent>() : nullptr;
         // 피해 · 속도 · 사거리는 어빌리티 데이터(`<Param>`)가 반드시 적는다.

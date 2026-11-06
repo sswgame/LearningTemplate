@@ -1,4 +1,4 @@
-<!-- 생물 sprout — Quaternius Stylized Nature Plant_1(CC0, 1 m)을 0.5 배. 머무는 서식지 가운데에 선다(MeadowTownDirectorComponent). -->
+<!-- 생물 sprout — Quaternius Stylized Nature Plant_1(CC0, 1 m)을 0.5 배. 머무는 서식지 가운데에 선다(MeadowTownGameModeComponent). -->
 <Prefab formatVersion="0" name="MeadowSprout">
 	<GameObject _schemaVersion="0" _name="MeadowSprout" _bActive="true">
 		<_listComponent>

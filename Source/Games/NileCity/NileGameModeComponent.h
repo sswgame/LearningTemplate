@@ -1,12 +1,12 @@
 /**
- * @file NileDirectorComponent.h
+ * @file NileGameModeComponent.h
  * @brief NileCity 의 규칙을 돌리는 컴포넌트입니다. 도시 시뮬레이션, 자동 계획, 마우스 건설과 철거, 속도, 월별 로그를 맡고 땅, 도로, 건물, 일꾼(프리팹) 스폰을 지시합니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 규칙(노동, 순회 일꾼, 물자 사슬, 집 진화, 범람)은 키트의 `CitySimulation` 이,
  *          땅 형태와 자동 계획은 `NileCityPlanner` 가 맡는다. 이 컴포넌트는 무엇을 언제 건설하는지와 그 모습(프리팹)을 어디에 스폰하는지를 안다.
  *          모습을 매 프레임 맞추는 일은 뷰 컴포넌트(`NileBuildingComponent`, `NileWalkerComponent`, `NileCursorComponent`)가 이 컴포넌트를 **읽기만** 해서 처리한다.
  *
  *          틱 규칙은 다음과 같다. 디렉터는 `TickGroup::PrePhysics` 에서 상태를 쓰고, 뷰와 카메라 리그는 `PostUpdate` 에서 읽는다(그룹은 차례로 돈다).
- *          바뀐 도로 타일과 건물 타일을 쌓아 두면 베이스 `GameDirectorComponent` 가 틱이 끝난 뒤 `onFlush` 로 스폰한다. 효과음도 그때 낸다.
+ *          바뀐 도로 타일과 건물 타일을 쌓아 두면 베이스 `GameModeComponent` 가 틱이 끝난 뒤 `onFlush` 로 스폰한다. 효과음도 그때 낸다.
  */
 #pragma once
 #include "Core/Container/GameObjectHandle.h"
@@ -23,7 +23,7 @@
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 #include "GameFramework/Runtime/Foundation/Framework/SessionStateRefs.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Shop.h"
@@ -42,18 +42,18 @@ namespace sw
     class MeshComponent;
 
     /**
-     * @class NileDirectorComponent
+     * @class NileGameModeComponent
      * @brief 도시 한 판을 진행합니다. 플레이가 시작되면 도시 데이터를 읽고 땅을 칠한 새 도시를 엽니다.
      * @details 도시는 PROPERTY 가 아닌 런타임 상태이므로 핫 리로드 뒤 처음부터 다시 만든다. 스폰한 오브젝트는 핸들로 보관하고, 상태를 저장하기 전에 정리한다.
      */
     REFLECT( Category = "CityBuilder", DisplayName = "Nile Director", Tooltip = "Runs the Nile city simulation, the auto plan and mouse building, and spawns the city views" )
-    class NileDirectorComponent : public GameDirectorComponent
+    class NileGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
 
-        NileDirectorComponent();
-        virtual ~NileDirectorComponent() override;
+        NileGameModeComponent();
+        virtual ~NileGameModeComponent() override;
 
         /** @brief 판을 열고 패드 가상 커서를 켭니다(왼쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽, 오른쪽 스틱 = 카메라 이동). 패드만으로 놓기 · 헐기를 씁니다. */
         void onBeginPlay() override;

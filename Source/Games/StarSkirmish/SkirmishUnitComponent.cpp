@@ -16,7 +16,7 @@
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "Games/StarSkirmish/SkirmishDirectorComponent.h"
+#include "Games/StarSkirmish/SkirmishGameModeComponent.h"
 
 namespace sw
 {
@@ -144,7 +144,7 @@ namespace sw
         const bool               bNotMeasurable = pManager == nullptr || pMesh == nullptr || _bPlaced == SW_FALSE;
         if ( bNotMeasurable )
             return -1.0f;
-        const SkirmishDirectorComponent* pDirector = GameDirectorComponent::resolve<SkirmishDirectorComponent>( *pManager, _director );
+        const SkirmishGameModeComponent* pDirector = GameModeComponent::resolve<SkirmishGameModeComponent>( *pManager, _director );
         const RTSUnit*                   pUnit     = pDirector != nullptr ? pDirector->getWorld().findUnit( _unitID ) : nullptr;
         if ( pUnit == nullptr )
             return -1.0f;
@@ -162,7 +162,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const SkirmishDirectorComponent* pDirector = GameDirectorComponent::resolve<SkirmishDirectorComponent>( *pManager, _director );
+        const SkirmishGameModeComponent* pDirector = GameModeComponent::resolve<SkirmishGameModeComponent>( *pManager, _director );
         const RTSUnit*                   pUnit     = pDirector != nullptr ? pDirector->getWorld().findUnit( _unitID ) : nullptr;
         if ( pUnit == nullptr )
             return;

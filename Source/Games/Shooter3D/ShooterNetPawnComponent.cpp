@@ -11,11 +11,11 @@
 #include "Engine/Object/GameObject/Service/SceneNetLink.h"
 
 #include "GameFramework/Runtime/Character/Control/ControlSystem.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Gimmick/TickedPathMoverComponent.h"
 
-#include "Games/Shooter3D/ShooterDirectorComponent.h"
+#include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 namespace sw
@@ -303,7 +303,7 @@ namespace sw
         GameObject*                     pOwner    = getOwner();
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
         const ShooterPlayerComponent*   pPlayer   = pOwner != nullptr ? pOwner->getComponent<ShooterPlayerComponent>() : nullptr;
-        const ShooterDirectorComponent* pDirector = pManager != nullptr && pPlayer != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, pPlayer->getDirector() ) : nullptr;
+        const ShooterGameModeComponent* pDirector = pManager != nullptr && pPlayer != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pPlayer->getDirector() ) : nullptr;
         return pDirector != nullptr ? &pDirector->getBoxes() : nullptr;
     }
 

@@ -7,7 +7,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/HarvestValley/FarmDirectorComponent.h"
+#include "Games/HarvestValley/FarmGameModeComponent.h"
 
 namespace sw
 {
@@ -42,7 +42,7 @@ namespace sw
         const bool         bMissingTile = pManager == nullptr || pMesh == nullptr || _tileIndex < 0;
         if ( bMissingTile )
             return;
-        const FarmDirectorComponent* pDirector = GameDirectorComponent::resolve<FarmDirectorComponent>( *pManager, _director );
+        const FarmGameModeComponent* pDirector = GameModeComponent::resolve<FarmGameModeComponent>( *pManager, _director );
         if ( pDirector == nullptr )
             return;
         const FarmField&    field    = pDirector->getField();

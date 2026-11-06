@@ -1,5 +1,5 @@
 /**
- * @file FrontierSkirmishDirectorComponent.h
+ * @file FrontierSkirmishGameModeComponent.h
  * @brief 개척 마을의 RTS 디렉터 — 공유 지갑을 플레이어 0 에 빌려 주고, 공유 땅 위에서 일꾼이 병영을 짓고 해병이 도시 건물을 돌아 순찰합니다.
  */
 #pragma once
@@ -14,7 +14,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 namespace sw
@@ -22,14 +22,14 @@ namespace sw
     class SessionStateComponent;
 
     /**
-     * @class FrontierSkirmishDirectorComponent
+     * @class FrontierSkirmishGameModeComponent
      * @brief RTS 한 판입니다. 도시 디렉터가 연 공유 상태를 읽고(이미 열렸으면 그대로), 새 판이면 일꾼과 해병을 놓습니다.
      * @details RTS 는 공유 땅을 빌린다(`RTSWorld::bindLand`, 원점 (0, 0)) — 도시가 지은 칸은 막혀 짓지 못하고 경로가 돌아간다. 돈은 공유 지갑(플레이어 0)이다.
      *          둘째 틱에 일꾼에게 `_barracksX`, `_barracksY` 에 병영 짓기를, 해병에게 두 지점(`_patrol*`) 사이 이동을 준다. 해병은 도착할 때마다 반대쪽으로 다시 간다.
      *          이 디렉터는 입력과 시계를 만지지 않는다(도시 디렉터가 민다). 모습은 유닛마다 판 하나이고, 유닛이 있으면 틱마다 위치를 옮긴다.
      */
     REFLECT( Category = "Frontier", DisplayName = "Frontier Skirmish Director", Tooltip = "Runs the RTS kit on the shared land and wallet and spawns the unit tiles" )
-    class FrontierSkirmishDirectorComponent : public GameDirectorComponent
+    class FrontierSkirmishGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -37,8 +37,8 @@ namespace sw
         static constexpr uint32 kStateTag     = FourCcUtil::make( "FTSK" );
         static constexpr uint32 kStateVersion = 1;
 
-        FrontierSkirmishDirectorComponent();
-        virtual ~FrontierSkirmishDirectorComponent() override;
+        FrontierSkirmishGameModeComponent();
+        virtual ~FrontierSkirmishGameModeComponent() override;
 
         void writeState( Archive& outArchive ) const override;
 

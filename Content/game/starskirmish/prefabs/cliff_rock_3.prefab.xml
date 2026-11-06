@@ -1,4 +1,4 @@
-<!-- 절벽 타일 하나 — Quaternius Stylized Nature Rock_Medium_3(CC0, 약 3 × 2 × 3 m)을 0.55 배(약 1.7 m 폭 · 1.1 m 높이 — 이웃 타일 바위와 겹쳐 능선이 이어진다). 디렉터가 타일 자리에 놓고 요를 돌린다(SkirmishDirectorComponent::spawnCliffs). -->
+<!-- 절벽 타일 하나 — Quaternius Stylized Nature Rock_Medium_3(CC0, 약 3 × 2 × 3 m)을 0.55 배(약 1.7 m 폭 · 1.1 m 높이 — 이웃 타일 바위와 겹쳐 능선이 이어진다). 디렉터가 타일 자리에 놓고 요를 돌린다(SkirmishGameModeComponent::spawnCliffs). -->
 <Prefab formatVersion="0" name="SkirmishCliffRock3">
 	<GameObject _schemaVersion="0" _name="SkirmishCliffRock3" _bActive="true">
 		<_listComponent>

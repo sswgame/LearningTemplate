@@ -54,7 +54,8 @@ namespace sw
             uint64 _liveID{ 0 };
         };
 
-        static constexpr uint32 kVersion = 1;
+        /** @brief 저장 형식 판입니다. 키는 형식 이름이라 컴포넌트 이름을 바꾸면 올린다(2: 게임 규칙 컴포넌트 *DirectorComponent → *GameModeComponent). 옛 판은 읽지 않는다 — 옛 이름 표는 두지 않는다. */
+        static constexpr uint32 kVersion = 2;
 
         ComponentStateStore();
 

@@ -8,7 +8,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/VoxelCraft/VoxelDirectorComponent.h"
+#include "Games/VoxelCraft/VoxelGameModeComponent.h"
 
 namespace sw
 {
@@ -93,7 +93,7 @@ namespace sw
             return;
         GameObject*                   pOwner    = getOwner();
         GameObjectManager*            pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const VoxelDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<VoxelDirectorComponent>( *pManager, _director ) : nullptr;
+        const VoxelGameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<VoxelGameModeComponent>( *pManager, _director ) : nullptr;
         if ( pDirector == nullptr || pDirector->isStarted() == false )
             return;
         // 메싱은 월드를 읽기만 하므로 같은 그룹의 다른 청크와 나란히 실행됩니다. 블록은 틱이 끝난 뒤에만 바뀝니다.

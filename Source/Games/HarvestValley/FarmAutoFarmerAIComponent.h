@@ -14,7 +14,7 @@
 
 namespace sw
 {
-    class FarmDirectorComponent;
+    class FarmGameModeComponent;
 
     /**
      * @class FarmAutoFarmerAIComponent
@@ -40,9 +40,9 @@ namespace sw
 
     private:
         /** @brief 칸 아래 자리로 갔다가 위로 걸어 들어갑니다. 섰고 위를 보면 true 입니다. */
-        bool walkUpTo( const FarmDirectorComponent& director, const float3& standPosition );
+        bool walkUpTo( const FarmGameModeComponent& director, const float3& standPosition );
         /** @brief @p standPosition 으로 갑니다. 섰으면 true 입니다. */
-        bool walkTo( const FarmDirectorComponent& director, const float3& standPosition );
+        bool walkTo( const FarmGameModeComponent& director, const float3& standPosition );
 
     private:
         PROPERTY( Category = "Auto Play", DisplayName = "Action Interval", Tooltip = "Seconds between actions on a tile or at the bin", Min = 0.0, Units = s )

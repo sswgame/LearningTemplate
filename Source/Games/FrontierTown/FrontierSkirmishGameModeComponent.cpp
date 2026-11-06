@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/FrontierTown/FrontierSkirmishDirectorComponent.h"
+#include "Games/FrontierTown/FrontierSkirmishGameModeComponent.h"
 
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -20,7 +20,7 @@ namespace sw
 
 namespace sw
 {
-    FrontierSkirmishDirectorComponent::FrontierSkirmishDirectorComponent()
+    FrontierSkirmishGameModeComponent::FrontierSkirmishGameModeComponent()
         : _unitPrefab{}
         , _workerUnit{}
         , _soldierUnit{}
@@ -44,9 +44,9 @@ namespace sw
     {
     }
 
-    FrontierSkirmishDirectorComponent::~FrontierSkirmishDirectorComponent() = default;
+    FrontierSkirmishGameModeComponent::~FrontierSkirmishGameModeComponent() = default;
 
-    void FrontierSkirmishDirectorComponent::writeState( Archive& outArchive ) const
+    void FrontierSkirmishGameModeComponent::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
         const uint8 bPatrolToB = _bPatrolToB;
@@ -57,7 +57,7 @@ namespace sw
         _world.writeState( outArchive );
     }
 
-    bool FrontierSkirmishDirectorComponent::initializeWorld( RTSWorld& outWorld, SessionStateComponent& state )
+    bool FrontierSkirmishGameModeComponent::initializeWorld( RTSWorld& outWorld, SessionStateComponent& state )
     {
         const RTSCatalog* pCatalog = game::findSubsystem<RTSCatalog>();
         if ( pCatalog == nullptr )
@@ -69,7 +69,7 @@ namespace sw
         return true;
     }
 
-    bool FrontierSkirmishDirectorComponent::startGame()
+    bool FrontierSkirmishGameModeComponent::startGame()
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
@@ -108,7 +108,7 @@ namespace sw
         return true;
     }
 
-    bool FrontierSkirmishDirectorComponent::readState( Archive& archive )
+    bool FrontierSkirmishGameModeComponent::readState( Archive& archive )
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr || StateArchiveUtil::readHeader( archive, kStateTag, kStateVersion ) == false )
@@ -136,7 +136,7 @@ namespace sw
         return true;
     }
 
-    void FrontierSkirmishDirectorComponent::issueOpeningOrders()
+    void FrontierSkirmishGameModeComponent::issueOpeningOrders()
     {
         // 도시가 첫 틱에 땅을 칠한 뒤다 — 병영 자리가 도시 땅이면 RTS 가 거절한다(Occupied 계열). 그러면 씬 배치를 고친다.
         const RTSCommandResult buildResult = _world.issueBuild( _worker, hashed_string( _barracksUnit ), int2{ _barracksX, _barracksY } );
@@ -147,7 +147,7 @@ namespace sw
             SW_LOG_ERROR_ID( "FrontierSkirmish.SoldierCannotStartPatrol", "[Frontier] the soldier cannot start its patrol (%#)", static_cast<int32>( moveResult ) );
     }
 
-    void FrontierSkirmishDirectorComponent::continuePatrol()
+    void FrontierSkirmishGameModeComponent::continuePatrol()
     {
         const RTSUnit* pSoldier = _world.findUnit( _soldier );
         if ( pSoldier == nullptr || pSoldier->isIdle() == false )
@@ -156,7 +156,7 @@ namespace sw
         (void)_world.issueMove( _soldier, _bPatrolToB == SW_TRUE ? _patrolB : _patrolA ); // 경로가 막혀 거절되면 다음 틱에 반대쪽으로 다시 해 본다
     }
 
-    void FrontierSkirmishDirectorComponent::updateGame( float32 deltaTime )
+    void FrontierSkirmishGameModeComponent::updateGame( float32 deltaTime )
     {
         if ( ++_tickCount == 2 )
             issueOpeningOrders();
@@ -166,7 +166,7 @@ namespace sw
         _bViewsDirty = SW_TRUE; // 유닛이 움직였을 수 있다 — 틱 뒤 플러시가 모습을 옮긴다
     }
 
-    void FrontierSkirmishDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void FrontierSkirmishGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
@@ -174,12 +174,12 @@ namespace sw
         _bViewsDirty = SW_FALSE;
     }
 
-    void FrontierSkirmishDirectorComponent::onViewsDespawned()
+    void FrontierSkirmishGameModeComponent::onViewsDespawned()
     {
         _listUnitView.clear();
     }
 
-    void FrontierSkirmishDirectorComponent::syncUnitViews( GameObjectManager& manager )
+    void FrontierSkirmishGameModeComponent::syncUnitViews( GameObjectManager& manager )
     {
         // shortcut: 살아 있는 유닛 수가 그대로면 모습을 순서대로 옮기고, 바뀌면(병영이 서거나 유닛이 죽으면) 모두 다시 세운다 — 유닛이 많아지면 유닛마다의 모습 컴포넌트로 바꾼다.
         vector<const RTSUnit*> listUnit;

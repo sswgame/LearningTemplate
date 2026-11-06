@@ -56,7 +56,7 @@
 			<GameObject _schemaVersion="0" _name="TownState" _bActive="true">
 				<_listComponent>
 					<SessionStateComponent _componentName="SessionStateComponent" _bActive="true" />
-					<FrontierCityDirectorComponent _componentName="FrontierCityDirectorComponent"
+					<FrontierCityGameModeComponent _componentName="FrontierCityGameModeComponent"
 					                               _bActive="true"
 					                               _bAutoPlay="false"
 					                               _tilePrefab="game/frontiertown/prefabs/tile.prefab.xml"
@@ -67,7 +67,7 @@
 					                               _roadFromY="10"
 					                               _roadToX="15"
 					                               _roadToY="10" />
-					<FrontierSkirmishDirectorComponent _componentName="FrontierSkirmishDirectorComponent"
+					<FrontierSkirmishGameModeComponent _componentName="FrontierSkirmishGameModeComponent"
 					                                   _bActive="true"
 					                                   _bAutoPlay="false"
 					                                   _unitPrefab="game/frontiertown/prefabs/tile.prefab.xml"

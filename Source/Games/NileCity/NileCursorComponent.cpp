@@ -6,7 +6,7 @@
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 
-#include "Games/NileCity/NileDirectorComponent.h"
+#include "Games/NileCity/NileGameModeComponent.h"
 
 namespace sw
 {
@@ -33,7 +33,7 @@ namespace sw
         MeshComponent*     pMesh    = pOwner != nullptr ? pOwner->getComponent<MeshComponent>() : nullptr;
         if ( pManager == nullptr || pMesh == nullptr )
             return;
-        const NileDirectorComponent* pDirector = GameDirectorComponent::resolve<NileDirectorComponent>( *pManager, _director );
+        const NileGameModeComponent* pDirector = GameModeComponent::resolve<NileGameModeComponent>( *pManager, _director );
         int2                         tile{};
         int32                        size   = 1;
         const bool                   bShown = pDirector != nullptr && pDirector->findCursor( tile, size );

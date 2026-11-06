@@ -31,7 +31,7 @@ namespace sw
         void assignCar( GameObjectHandle director, int32 coasterIndex, int32 carIndex );
 
     private:
-        PROPERTY( Category = "Car", DisplayName = "Director", Tooltip = "Object with the ParkDirectorComponent" )
+        PROPERTY( Category = "Car", DisplayName = "Director", Tooltip = "Object with the ParkGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Car", DisplayName = "Coaster Index", Tooltip = "Which built coaster" )
         int32 _coasterIndex;

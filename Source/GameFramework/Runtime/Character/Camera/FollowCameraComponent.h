@@ -1,6 +1,6 @@
 /**
  * @file FollowCameraComponent.h
- * @brief 초점을 비스듬히 위에서 따라가는 카메라 — 디렉터가 답하는 초점(`GameDirectorComponent::readCameraFocus`)을 궤도 모드(오프셋 = 요 · 피치 · 거리)로 봅니다.
+ * @brief 초점을 비스듬히 위에서 따라가는 카메라 — 디렉터가 답하는 초점(`GameModeComponent::readCameraFocus`)을 궤도 모드(오프셋 = 요 · 피치 · 거리)로 봅니다.
  * @details AbilityArena 의 `FollowCameraComponent` 를 옮겼다 — 초점만 디렉터에게 묻고 오프셋은 씬 데이터라 어느 게임이든 쓴다.
  */
 #pragma once

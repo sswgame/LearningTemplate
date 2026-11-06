@@ -43,7 +43,7 @@ namespace sw
         void finish();
 
     private:
-        PROPERTY( Category = "Projectile", DisplayName = "Director", Tooltip = "Object with the ArenaDirectorComponent" )
+        PROPERTY( Category = "Projectile", DisplayName = "Director", Tooltip = "Object with the ArenaGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Projectile", DisplayName = "Radius", Tooltip = "Hit radius", Min = 0.0, Units = m )
         float32 _radius;

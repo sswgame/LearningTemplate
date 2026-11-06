@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/MeadowVillage/MeadowTownDirectorComponent.h"
+#include "Games/MeadowVillage/MeadowTownGameModeComponent.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
@@ -37,7 +37,7 @@ namespace sw
 
 namespace sw
 {
-    MeadowTownDirectorComponent::MeadowTownDirectorComponent()
+    MeadowTownGameModeComponent::MeadowTownGameModeComponent()
         : _listObjectView{}
         , _listCreatureView{}
         , _orchardPrice{ 50 }
@@ -49,9 +49,9 @@ namespace sw
     {
     }
 
-    MeadowTownDirectorComponent::~MeadowTownDirectorComponent() = default;
+    MeadowTownGameModeComponent::~MeadowTownGameModeComponent() = default;
 
-    void MeadowTownDirectorComponent::writeState( Archive& outArchive ) const
+    void MeadowTownGameModeComponent::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
         Archive body;
@@ -59,7 +59,7 @@ namespace sw
         StateArchiveUtil::writeSection( outArchive, CreatureTown::kStateTag, CreatureTown::kStateVersion, body );
     }
 
-    bool MeadowTownDirectorComponent::startGame()
+    bool MeadowTownGameModeComponent::startGame()
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
@@ -81,7 +81,7 @@ namespace sw
         return true;
     }
 
-    bool MeadowTownDirectorComponent::readState( Archive& archive )
+    bool MeadowTownGameModeComponent::readState( Archive& archive )
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         Archive                body;
@@ -100,7 +100,7 @@ namespace sw
         return true;
     }
 
-    void MeadowTownDirectorComponent::updateGame( float32 deltaTime )
+    void MeadowTownGameModeComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
@@ -149,7 +149,7 @@ namespace sw
         }
     }
 
-    void MeadowTownDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void MeadowTownGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
@@ -162,12 +162,12 @@ namespace sw
         _bViewsDirty = SW_FALSE;
     }
 
-    void MeadowTownDirectorComponent::onViewsDespawned()
+    void MeadowTownGameModeComponent::onViewsDespawned()
     {
         _listView.clear();
     }
 
-    bool MeadowTownDirectorComponent::initializeTown( CreatureTown& outTown, SessionStateComponent& state )
+    bool MeadowTownGameModeComponent::initializeTown( CreatureTown& outTown, SessionStateComponent& state )
     {
         const CreatureLifeCatalog* pCatalog = game::findSubsystem<CreatureLifeCatalog>();
         if ( pCatalog == nullptr )
@@ -178,7 +178,7 @@ namespace sw
         return outTown.initialize( pCatalog, state.makeRefs(), kTownSize, kTownSize, CreatureTownSettings{} );
     }
 
-    bool MeadowTownDirectorComponent::validateViews( const CreatureLifeCatalog& catalog ) const
+    bool MeadowTownGameModeComponent::validateViews( const CreatureLifeCatalog& catalog ) const
     {
         bool bValid = true;
         for ( const HabitatDef& habitat : catalog.getHabitats() )
@@ -201,7 +201,7 @@ namespace sw
         return bValid;
     }
 
-    void MeadowTownDirectorComponent::spawnTown( GameObjectManager& manager )
+    void MeadowTownGameModeComponent::spawnTown( GameObjectManager& manager )
     {
         for ( int32 y = 0; y < _town.getHeight(); ++y )
         {
@@ -233,7 +233,7 @@ namespace sw
         }
     }
 
-    void MeadowTownDirectorComponent::spawnView( GameObjectManager& manager, const vector<MeadowTownView>& listView, const hashed_string& id, const float3& position )
+    void MeadowTownGameModeComponent::spawnView( GameObjectManager& manager, const vector<MeadowTownView>& listView, const hashed_string& id, const float3& position )
     {
         const MeadowTownView* pRow = findView( listView, id );
         if ( pRow == nullptr )

@@ -32,7 +32,7 @@ namespace sw
         void assignWalker( GameObjectHandle director, int32 walkerIndex );
 
     private:
-        PROPERTY( Category = "Walker", DisplayName = "Director", Tooltip = "Object with the NileDirectorComponent" )
+        PROPERTY( Category = "Walker", DisplayName = "Director", Tooltip = "Object with the NileGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Walker", DisplayName = "Walker Index", Tooltip = "Slot in the simulation walker list" )
         int32 _walkerIndex;

@@ -19,7 +19,7 @@
 
 #include "Games/Shooter3D/ShooterAnimationParameter.h"
 #include "Games/Shooter3D/ShooterBodyMovementComponent.h"
-#include "Games/Shooter3D/ShooterDirectorComponent.h"
+#include "Games/Shooter3D/ShooterGameModeComponent.h"
 #include "Games/Shooter3D/ShooterPlayerComponent.h"
 
 namespace sw
@@ -195,7 +195,7 @@ namespace sw
             return;
         GameObject*                     pOwner    = getOwner();
         GameObjectManager*              pManager  = pOwner != nullptr ? pOwner->getManager() : nullptr;
-        const ShooterDirectorComponent* pDirector = pManager != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, _director ) : nullptr;
+        const ShooterGameModeComponent* pDirector = pManager != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, _director ) : nullptr;
         if ( pDirector == nullptr )
             return;
         const float32 step = MathUtil::min( deltaTime, 0.1f );

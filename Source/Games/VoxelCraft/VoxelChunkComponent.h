@@ -47,7 +47,7 @@ namespace sw
         MeshComponent* findWaterMesh() const;
 
     private:
-        PROPERTY( Category = "Chunk", DisplayName = "Director", Tooltip = "Object with the VoxelDirectorComponent" )
+        PROPERTY( Category = "Chunk", DisplayName = "Director", Tooltip = "Object with the VoxelGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Chunk", DisplayName = "Chunk X", Min = 0 )
         int32 _chunkX;

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/FrontierTown/FrontierCityDirectorComponent.h"
+#include "Games/FrontierTown/FrontierCityGameModeComponent.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
@@ -30,7 +30,7 @@ namespace sw
 
 namespace sw
 {
-    FrontierCityDirectorComponent::FrontierCityDirectorComponent()
+    FrontierCityGameModeComponent::FrontierCityGameModeComponent()
         : _tilePrefab{}
         , _startingDeben{ 500 }
         , _startingMinerals{ 500 }
@@ -53,9 +53,9 @@ namespace sw
     {
     }
 
-    FrontierCityDirectorComponent::~FrontierCityDirectorComponent() = default;
+    FrontierCityGameModeComponent::~FrontierCityGameModeComponent() = default;
 
-    void FrontierCityDirectorComponent::writeState( Archive& outArchive ) const
+    void FrontierCityGameModeComponent::writeState( Archive& outArchive ) const
     {
         StateArchiveUtil::writeHeader( outArchive, kStateTag, kStateVersion );
         const uint8 bLaidOut = _bLaidOut;
@@ -65,7 +65,7 @@ namespace sw
         StateArchiveUtil::writeSection( outArchive, CitySimulation::kStateTag, CitySimulation::kStateVersion, body );
     }
 
-    bool FrontierCityDirectorComponent::initializeCity( CitySimulation& outCity, SessionStateComponent& state )
+    bool FrontierCityGameModeComponent::initializeCity( CitySimulation& outCity, SessionStateComponent& state )
     {
         const CityCatalog* pCatalog = game::findSubsystem<CityCatalog>();
         if ( pCatalog == nullptr )
@@ -77,7 +77,7 @@ namespace sw
         return true;
     }
 
-    bool FrontierCityDirectorComponent::startGame()
+    bool FrontierCityGameModeComponent::startGame()
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
@@ -104,7 +104,7 @@ namespace sw
         return true;
     }
 
-    bool FrontierCityDirectorComponent::readState( Archive& archive )
+    bool FrontierCityGameModeComponent::readState( Archive& archive )
     {
         SessionStateComponent* pState   = SessionStateComponent::findOnOwner( *this );
         uint8                  bLaidOut = SW_FALSE;
@@ -128,12 +128,12 @@ namespace sw
         return true;
     }
 
-    void FrontierCityDirectorComponent::onGameStarted()
+    void FrontierCityGameModeComponent::onGameStarted()
     {
         SW_LOG_INFO_ID( "FrontierCity.TownOpenHoldSpace", "[Frontier] the town is open - hold Space to fast-forward; the city and the skirmish share one land, one wallet and one clock" );
     }
 
-    void FrontierCityDirectorComponent::layOutTown()
+    void FrontierCityGameModeComponent::layOutTown()
     {
         _bLaidOut                    = SW_TRUE;
         const CityPlaceResult result = _city.placeBuilding( hashed_string( _landmarkBuilding ), _landmarkX, _landmarkY );
@@ -146,7 +146,7 @@ namespace sw
         _bViewsDirty = SW_TRUE;
     }
 
-    void FrontierCityDirectorComponent::updateGame( float32 deltaTime )
+    void FrontierCityGameModeComponent::updateGame( float32 deltaTime )
     {
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
@@ -168,7 +168,7 @@ namespace sw
         }
     }
 
-    void FrontierCityDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void FrontierCityGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews == false && _bViewsDirty == SW_FALSE )
             return;
@@ -181,12 +181,12 @@ namespace sw
         _bViewsDirty = SW_FALSE;
     }
 
-    void FrontierCityDirectorComponent::onViewsDespawned()
+    void FrontierCityGameModeComponent::onViewsDespawned()
     {
         _listTileView.clear();
     }
 
-    void FrontierCityDirectorComponent::spawnTiles( GameObjectManager& manager )
+    void FrontierCityGameModeComponent::spawnTiles( GameObjectManager& manager )
     {
         // 건물은 크기만큼 늘린 판 하나, 도로는 칸마다 판 하나 — 위에서 보는 직교 카메라라 높이는 얕다.
         for ( const CityBuilding& building : _city.getBuildings() )

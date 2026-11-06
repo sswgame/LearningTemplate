@@ -38,7 +38,7 @@ namespace sw
         void assignVillager( GameObjectHandle director, int32 npcIndex );
 
     private:
-        PROPERTY( Category = "Villager", DisplayName = "Director", Tooltip = "Object with the FarmVillageDirectorComponent" )
+        PROPERTY( Category = "Villager", DisplayName = "Director", Tooltip = "Object with the FarmVillageGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Villager", DisplayName = "NPC Index", Tooltip = "Index of the schedule NPC this body follows" )
         int32 _npcIndex;

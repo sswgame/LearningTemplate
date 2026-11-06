@@ -129,10 +129,10 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
-		<entity id="6" name="TownDirector">
-			<GameObject _schemaVersion="0" _name="TownDirector" _bActive="true">
+		<entity id="6" name="TownGameMode">
+			<GameObject _schemaVersion="0" _name="TownGameMode" _bActive="true">
 				<_listComponent>
-					<TownDirectorComponent _ground="2" _props="3" _hero="4" _interactButton="Interact" _stepSeconds="0.18" />
+					<TownGameModeComponent _ground="2" _props="3" _hero="4" _interactButton="Interact" _stepSeconds="0.18" />
 				</_listComponent>
 			</GameObject>
 		</entity>

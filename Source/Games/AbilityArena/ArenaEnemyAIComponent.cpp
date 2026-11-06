@@ -6,7 +6,7 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
-#include "Games/AbilityArena/ArenaDirectorComponent.h"
+#include "Games/AbilityArena/ArenaGameModeComponent.h"
 
 namespace sw
 {
@@ -22,7 +22,7 @@ namespace sw
     void ArenaEnemyAIComponent::think( const ControlFrameContext& context, const PawnComponent& pawn )
     {
         (void)context;
-        const ArenaDirectorComponent* pDirector = ArenaDirectorComponent::findForPawn( pawn );
+        const ArenaGameModeComponent* pDirector = ArenaGameModeComponent::findForPawn( pawn );
         const GameObject*             pOwner    = pawn.getOwner();
         float3                        selfPosition{};
         float3                        targetPosition{};

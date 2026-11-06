@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/HarvestValley/FarmVillageDirectorComponent.h"
+#include "Games/HarvestValley/FarmVillageGameModeComponent.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"
@@ -18,14 +18,14 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.h"
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
-#include "Games/HarvestValley/FarmDirectorComponent.h"
+#include "Games/HarvestValley/FarmGameModeComponent.h"
 #include "Games/HarvestValley/FarmVillagerComponent.h"
 
 namespace sw
 {
     namespace
     {
-        struct FarmVillageDirectorComponentInternal
+        struct FarmVillageGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCcUtil::make( "FVIL" );
             static constexpr uint32 kStateVersion = 2; ///< 2 판: 머리 뒤에 `ScheduleSaveState`(리플렉션 바이너리)
@@ -61,7 +61,7 @@ namespace sw
 
 namespace sw
 {
-    FarmVillageDirectorComponent::FarmVillageDirectorComponent()
+    FarmVillageGameModeComponent::FarmVillageGameModeComponent()
         : _scheduleDataPath{}
         , _villagerPrefab{}
         , _listVillagerPreset{}
@@ -87,14 +87,14 @@ namespace sw
     {
     }
 
-    FarmVillageDirectorComponent::~FarmVillageDirectorComponent() = default;
+    FarmVillageGameModeComponent::~FarmVillageGameModeComponent() = default;
 
-    bool FarmVillageDirectorComponent::rebuildNavGrid()
+    bool FarmVillageGameModeComponent::rebuildNavGrid()
     {
         const bool bNoGrid = _navWidth <= 0 || _navHeight <= 0 || _navCellSize <= 0.0f;
         if ( bNoGrid )
         {
-            SW_LOG_ERROR_ID( "FarmVillageDirector.VillageNavGridNeeds", "[Village] the village nav grid needs _navWidth, _navHeight and _navCellSize - the villagers stay home" );
+            SW_LOG_ERROR_ID( "FarmVillageGameMode.VillageNavGridNeeds", "[Village] the village nav grid needs _navWidth, _navHeight and _navCellSize - the villagers stay home" );
             return false;
         }
         if ( _navGrid.initialize( _navWidth, _navHeight, _navCellSize, _navOrigin ) == false )
@@ -112,7 +112,7 @@ namespace sw
             const string_view     objectName = pObject->getName().c_str();
             for ( const string_view obstacleName : listObstacleName )
             {
-                bObstacle = bObstacle || FarmVillageDirectorComponentInternal::matchesObstacleName( objectName, obstacleName );
+                bObstacle = bObstacle || FarmVillageGameModeComponentInternal::matchesObstacleName( objectName, obstacleName );
             }
             if ( bObstacle == false || pScene == nullptr )
                 return;
@@ -131,27 +131,27 @@ namespace sw
                 }
             }
         } );
-        SW_LOG_INFO_ID( "FarmVillageDirector.NavGridXM", "[Village] nav grid %#x%# (%# m cells), %# cell(s) blocked by obstacles", _navWidth, _navHeight, _navCellSize, blockedCount );
+        SW_LOG_INFO_ID( "FarmVillageGameMode.NavGridXM", "[Village] nav grid %#x%# (%# m cells), %# cell(s) blocked by obstacles", _navWidth, _navHeight, _navCellSize, blockedCount );
         return true;
     }
 
-    bool FarmVillageDirectorComponent::startGame()
+    bool FarmVillageGameModeComponent::startGame()
     {
         const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr || pState->isInitialized() == false )
         {
-            SW_LOG_ERROR_ID( "FarmVillageDirector.NoOpenSessionStateComponentObject", "[Village] no open SessionStateComponent on this object (put the village director after the farm director) - the villagers stay home" );
+            SW_LOG_ERROR_ID( "FarmVillageGameMode.NoOpenSessionStateComponentObject", "[Village] no open SessionStateComponent on this object (put the village director after the farm director) - the villagers stay home" );
             return false;
         }
         _pCatalog = SharedAssetCache<ScheduleCatalog>::acquire( _scheduleDataPath );
         if ( _pCatalog == nullptr )
         {
-            SW_LOG_ERROR_ID( "FarmVillageDirector.CouldNotLoadedVillagers", "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
+            SW_LOG_ERROR_ID( "FarmVillageGameMode.CouldNotLoadedVillagers", "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
         }
         if ( _pCatalog->getNPCs().empty() )
         {
-            SW_LOG_ERROR_ID( "FarmVillageDirector.ReadButListsNo", "[Village] %# was read but lists no villager - the villagers stay home", _scheduleDataPath.c_str() );
+            SW_LOG_ERROR_ID( "FarmVillageGameMode.ReadButListsNo", "[Village] %# was read but lists no villager - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
         }
         if ( rebuildNavGrid() == false )
@@ -161,7 +161,7 @@ namespace sw
         settings._clock = clock.getSettings();
         // 계획은 곧은 선(기본), 화면 안 걸음은 격자 길 — 도착 시각은 계획이 정하므로 격자를 바꿔도 일정이 갈리지 않는다.
         _schedule.setPathing( nullptr, &_finePathing );
-        if ( _schedule.initialize( _pCatalog.get(), settings, FarmVillageDirectorComponentInternal::computeAbsoluteMinute( clock ) ) == false )
+        if ( _schedule.initialize( _pCatalog.get(), settings, FarmVillageGameModeComponentInternal::computeAbsoluteMinute( clock ) ) == false )
             return false; // 범위 밖 설정은 일정 시스템이 오류를 남겼다
         _listPosition.assign( static_cast<size_t>( _schedule.getNPCCount() ), float3{} );
         _listBodySpeed.assign( static_cast<size_t>( _schedule.getNPCCount() ), 0.0f );
@@ -177,14 +177,14 @@ namespace sw
             _schedule.setNPCLOD( npcIndex, ScheduleLOD::Near );
             _listPosition[static_cast<size_t>( npcIndex )] = _schedule.getNPCView( npcIndex )._location._position;
         }
-        SW_LOG_INFO_ID( "FarmVillageDirector.VillagerFollowDay", "[Village] %# villager(s) follow %# from day %# %#:%#", _schedule.getNPCCount(), _scheduleDataPath.c_str(), clock.getDay(), clock.getHourInt(),
+        SW_LOG_INFO_ID( "FarmVillageGameMode.VillagerFollowDay", "[Village] %# villager(s) follow %# from day %# %#:%#", _schedule.getNPCCount(), _scheduleDataPath.c_str(), clock.getDay(), clock.getHourInt(),
                         clock.getMinute() );
         return true;
     }
 
-    void FarmVillageDirectorComponent::writeState( Archive& outArchive ) const
+    void FarmVillageGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, FarmVillageDirectorComponentInternal::kStateTag, FarmVillageDirectorComponentInternal::kStateVersion );
+        StateArchiveUtil::writeHeader( outArchive, FarmVillageGameModeComponentInternal::kStateTag, FarmVillageGameModeComponentInternal::kStateVersion );
         ScheduleSaveState state;
         if ( _bHasPendingSave )
             state = _pendingSave; // 아직 걸지 않은 저장은 그대로 다시 싣는다(일정이 서기 전의 핫 리로드)
@@ -192,12 +192,12 @@ namespace sw
             _schedule.fillSaveState( state );
         // 실을 수 없으면 직렬화기가 아카이브를 오류 상태로 두어 저장 전체가 실패한다(이유는 직렬화기가 알린다).
         if ( BinarySerializer::serialize( &state, *ScheduleSaveState::StaticType(), outArchive, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) == false )
-            SW_LOG_ERROR_ID( "FarmVillageDirector.ScheduleSaveStateCould", "[Village] the schedule save state could not be written" );
+            SW_LOG_ERROR_ID( "FarmVillageGameMode.ScheduleSaveStateCould", "[Village] the schedule save state could not be written" );
     }
 
-    bool FarmVillageDirectorComponent::readState( Archive& archive )
+    bool FarmVillageGameModeComponent::readState( Archive& archive )
     {
-        using Internal = FarmVillageDirectorComponentInternal;
+        using Internal = FarmVillageGameModeComponentInternal;
         // 판이 정확히 같을 때만 읽는다(첫 출시 전이라 옛 판 리더가 없다).
         if ( StateArchiveUtil::readHeader( archive, Internal::kStateTag, Internal::kStateVersion ) == false )
             return false;
@@ -205,7 +205,7 @@ namespace sw
         ScheduleSaveState state;
         if ( BinarySerializer::deserialize( &state, *ScheduleSaveState::StaticType(), archive, SerializeContext::getDefault( SerializePurpose::SaveGame ) ) == false )
         {
-            SW_LOG_ERROR_ID( "FarmVillageDirector.ScheduleSaveStateCould2", "[Village] the schedule save state could not be read" );
+            SW_LOG_ERROR_ID( "FarmVillageGameMode.ScheduleSaveStateCould2", "[Village] the schedule save state could not be read" );
             return false;
         }
         if ( _schedule.getNPCCount() > 0 )
@@ -218,14 +218,14 @@ namespace sw
         return true;
     }
 
-    void FarmVillageDirectorComponent::updateGame( float32 deltaTime )
+    void FarmVillageGameModeComponent::updateGame( float32 deltaTime )
     {
         (void)deltaTime;
         const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return;
         // 농장 디렉터는 같은 오브젝트의 앞 컴포넌트라 이번 틱의 날씨를 이미 정했다.
-        const FarmDirectorComponent* pFarm = getOwner()->getComponent<FarmDirectorComponent>();
+        const FarmGameModeComponent* pFarm = getOwner()->getComponent<FarmGameModeComponent>();
         _schedule.setWeather( hashed_string( pFarm != nullptr && pFarm->isRaining() ? "rain" : "sunny" ) );
         const WorldClock& clock = pState->getClock();
         _schedule.update( clock );
@@ -239,7 +239,7 @@ namespace sw
         }
     }
 
-    void FarmVillageDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void FarmVillageGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews == false )
             return;
@@ -261,13 +261,13 @@ namespace sw
         }
     }
 
-    float3 FarmVillageDirectorComponent::getVillagerPosition( int32 npcIndex ) const
+    float3 FarmVillageGameModeComponent::getVillagerPosition( int32 npcIndex ) const
     {
         const bool bInRange = 0 <= npcIndex && npcIndex < static_cast<int32>( _listPosition.size() );
         return bInRange ? _listPosition[static_cast<size_t>( npcIndex )] : float3{};
     }
 
-    NavAgentSettings FarmVillageDirectorComponent::makeBodySettings( int32 npcIndex ) const
+    NavAgentSettings FarmVillageGameModeComponent::makeBodySettings( int32 npcIndex ) const
     {
         const bool       bInRange = 0 <= npcIndex && npcIndex < static_cast<int32>( _listBodySpeed.size() );
         NavAgentSettings settings;
@@ -277,7 +277,7 @@ namespace sw
         return settings;
     }
 
-    void FarmVillageDirectorComponent::collectNeighborPositions( int32 npcIndex, vector<float3>& outListPosition ) const
+    void FarmVillageGameModeComponent::collectNeighborPositions( int32 npcIndex, vector<float3>& outListPosition ) const
     {
         outListPosition.clear();
         for ( int32 otherIndex = 0; otherIndex < static_cast<int32>( _listPosition.size() ); ++otherIndex )

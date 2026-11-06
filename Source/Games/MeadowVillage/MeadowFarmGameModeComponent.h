@@ -1,5 +1,5 @@
 /**
- * @file MeadowFarmDirectorComponent.h
+ * @file MeadowFarmGameModeComponent.h
  * @brief 마을 밭 디렉터 — 공유 상태(`SessionStateComponent`)를 여는 첫 디렉터. 하루가 넘어가면 밭이 자라고, 다 자란 칸을 거둬 공유 지갑에 팔고 다시 심습니다.
  */
 #pragma once
@@ -15,7 +15,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 namespace sw
@@ -23,13 +23,13 @@ namespace sw
     class SessionStateComponent;
 
     /**
-     * @class MeadowFarmDirectorComponent
+     * @class MeadowFarmGameModeComponent
      * @brief 밭(4 × 2) 한 판입니다. 같은 오브젝트의 맨 앞 `SessionStateComponent` 를 열고(새 판이면 시작 돈), 공유 시계의 하루 넘김에 밭을 돌립니다.
      * @details 상태는 밭 하나(구간 'FFLD')이고, 돈 · 시계 · 수확 수(`farm.harvested`)는 공유 상태에 있다. `FastForward`(Space)를 누르는 동안,
      *          또는 자동 플레이면 시계가 8 배로 흐른다. 카메라는 이 디렉터도 마을 디렉터도 만지지 않는다(씬의 고정 카메라).
      */
     REFLECT( Category = "Meadow", DisplayName = "Meadow Farm Director", Tooltip = "Runs the farm kit on the shared game state and spawns the field tiles" )
-    class MeadowFarmDirectorComponent : public GameDirectorComponent
+    class MeadowFarmGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
@@ -39,8 +39,8 @@ namespace sw
         static constexpr int32  kFieldWidth   = 4;
         static constexpr int32  kFieldHeight  = 2;
 
-        MeadowFarmDirectorComponent();
-        virtual ~MeadowFarmDirectorComponent() override;
+        MeadowFarmGameModeComponent();
+        virtual ~MeadowFarmGameModeComponent() override;
 
         void writeState( Archive& outArchive ) const override;
 

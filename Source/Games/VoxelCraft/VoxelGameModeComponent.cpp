@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Games/VoxelCraft/VoxelDirectorComponent.h"
+#include "Games/VoxelCraft/VoxelGameModeComponent.h"
 
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
@@ -27,7 +27,7 @@ namespace sw
 {
     namespace
     {
-        struct VoxelDirectorComponentInternal
+        struct VoxelGameModeComponentInternal
         {
             static constexpr uint32 kStateTag     = FourCcUtil::make( "VOXL" );
             static constexpr uint32 kStateVersion = 1;
@@ -50,7 +50,7 @@ namespace sw
 
 namespace sw
 {
-    VoxelDirectorComponent::VoxelDirectorComponent()
+    VoxelGameModeComponent::VoxelGameModeComponent()
         : _chunkPrefab{}
         , _player{}
         , _terrainSeed{ 20261003 }
@@ -70,14 +70,14 @@ namespace sw
     {
     }
 
-    VoxelDirectorComponent::~VoxelDirectorComponent() = default;
+    VoxelGameModeComponent::~VoxelGameModeComponent() = default;
 
-    void VoxelDirectorComponent::onGameStarted()
+    void VoxelGameModeComponent::onGameStarted()
     {
-        SW_LOG_INFO_ID( "VoxelDirector.WorldReadyWASDMove", "[Voxel] world is ready - WASD move, mouse look, Space jump, Shift sprint, LMB hold to break, RMB place, 1-9 or wheel hotbar, Esc mouse" );
+        SW_LOG_INFO_ID( "VoxelGameMode.WorldReadyWASDMove", "[Voxel] world is ready - WASD move, mouse look, Space jump, Shift sprint, LMB hold to break, RMB place, 1-9 or wheel hotbar, Esc mouse" );
     }
 
-    void VoxelDirectorComponent::updateGame( float32 deltaTime )
+    void VoxelGameModeComponent::updateGame( float32 deltaTime )
     {
         if ( areViewsSpawned() == false )
             return; // 상태를 저장하기 전에 청크를 정리했습니다. 베이스가 청크를 다시 스폰합니다(블록은 그대로입니다).
@@ -85,7 +85,7 @@ namespace sw
         logStatus( deltaTime );
     }
 
-    void VoxelDirectorComponent::onViewsDespawned()
+    void VoxelGameModeComponent::onViewsDespawned()
     {
         _listChunk.clear();
         // 자동 플레이 AI 오브젝트도 정리되었습니다. 다시 스폰할 때 빙의를 다시 맞춥니다.
@@ -93,12 +93,12 @@ namespace sw
         _appliedAutoPlay    = -1;
     }
 
-    bool VoxelDirectorComponent::hasPendingSpawn() const
+    bool VoxelGameModeComponent::hasPendingSpawn() const
     {
         return _appliedAutoPlay != ( isAutoPlayOn() ? 1 : 0 );
     }
 
-    void VoxelDirectorComponent::syncAutoPlayPossession( GameObjectManager& manager )
+    void VoxelGameModeComponent::syncAutoPlayPossession( GameObjectManager& manager )
     {
         const bool     bAutoPlay     = isAutoPlayOn();
         GameObject*    pPlayerObject = manager.resolveGameObject( _player );
@@ -120,23 +120,23 @@ namespace sw
             VoxelAutoPlayControllerComponent* pAI = pAIObject->getComponent<VoxelAutoPlayControllerComponent>();
             if ( pAI != nullptr && pAI->getPawn() != pPawn->getHandle() )
                 pAI->possess( *pPawn );
-            SW_LOG_INFO_ID( "VoxelDirector.AutoPlayTookPlayer", "[Voxel] auto play took the player" );
+            SW_LOG_INFO_ID( "VoxelGameMode.AutoPlayTookPlayer", "[Voxel] auto play took the player" );
             return;
         }
         // 끄는 경우입니다. 플레이어 조종자에게 폰을 돌려주고 AI 를 정리합니다. 이미 다른 조종자(플레이어)가 폰을 가지고 있으면 그대로 둡니다.
         if ( ControlSystem::returnPawnToPlayer( manager, *pPawn, _autoPlayController ) )
-            SW_LOG_INFO_ID( "VoxelDirector.PlayerTookBodyBack", "[Voxel] the player took the body back" );
+            SW_LOG_INFO_ID( "VoxelGameMode.PlayerTookBodyBack", "[Voxel] the player took the body back" );
         if ( pAIObject != nullptr )
             destroySpawned( manager, _autoPlayController );
     }
 
-    bool VoxelDirectorComponent::applyBlockEdit( const VoxelCoord& coord, VoxelBlockIndex block )
+    bool VoxelGameModeComponent::applyBlockEdit( const VoxelCoord& coord, VoxelBlockIndex block )
     {
         // 바뀐 청크는 월드가 표시합니다. 경계면에 맞닿은 이웃 청크도 표시합니다. 표시된 청크는 다음 틱에 다시 메싱하도록 요청합니다.
         return _world.setBlock( coord, block );
     }
 
-    float3 VoxelDirectorComponent::findSpawnPosition() const
+    float3 VoxelGameModeComponent::findSpawnPosition() const
     {
         // 가운데에서 시작해 나선으로 찾은, 물이 아닌 첫 땅입니다.
         // 게임이 시작되었다면 카탈로그와 블록 이름은 startGame 이 이미 확인했습니다.
@@ -163,36 +163,36 @@ namespace sw
         return float3{ static_cast<float32>( centerX ) + 0.5f, static_cast<float32>( kVoxelChunkHeight ) - 2.0f, static_cast<float32>( centerZ ) + 0.5f };
     }
 
-    void VoxelDirectorComponent::writeState( Archive& outArchive ) const
+    void VoxelGameModeComponent::writeState( Archive& outArchive ) const
     {
-        StateArchiveUtil::writeHeader( outArchive, VoxelDirectorComponentInternal::kStateTag, VoxelDirectorComponentInternal::kStateVersion );
+        StateArchiveUtil::writeHeader( outArchive, VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion );
         _world.writeState( outArchive );
     }
 
-    bool VoxelDirectorComponent::readState( Archive& archive )
+    bool VoxelGameModeComponent::readState( Archive& archive )
     {
-        if ( StateArchiveUtil::readHeader( archive, VoxelDirectorComponentInternal::kStateTag, VoxelDirectorComponentInternal::kStateVersion ) == false )
+        if ( StateArchiveUtil::readHeader( archive, VoxelGameModeComponentInternal::kStateTag, VoxelGameModeComponentInternal::kStateVersion ) == false )
             return false;
         return _world.readState( archive ) && archive.getRemainingBytes() == 0;
     }
 
-    void VoxelDirectorComponent::onStateRestored( bool bRestored )
+    void VoxelGameModeComponent::onStateRestored( bool bRestored )
     {
         if ( bRestored )
-            SW_LOG_INFO_ID( "VoxelDirector.WorldStateRestoredChunks", "[Voxel] world state restored - %# chunks", _world.getChunkCountX() * _world.getChunkCountZ() );
+            SW_LOG_INFO_ID( "VoxelGameMode.WorldStateRestoredChunks", "[Voxel] world state restored - %# chunks", _world.getChunkCountX() * _world.getChunkCountZ() );
         else
-            SW_LOG_WARNING_ID( "VoxelDirector.SavedWorldStateDoes", "[Voxel] the saved world state does not match this build - keeping the seeded island" );
+            SW_LOG_WARNING_ID( "VoxelGameMode.SavedWorldStateDoes", "[Voxel] the saved world state does not match this build - keeping the seeded island" );
     }
 
     // ------------------------------------------------------------------------------
     // 지형
     // ------------------------------------------------------------------------------
-    bool VoxelDirectorComponent::startGame()
+    bool VoxelGameModeComponent::startGame()
     {
         const VoxelBlockCatalog* pCatalog = game::findSubsystem<VoxelBlockCatalog>();
         if ( pCatalog == nullptr || pCatalog->getBlocks().empty() )
         {
-            SW_LOG_ERROR_ID( "VoxelDirector.BlockCatalogNotLoaded", "[Voxel] the block catalog is not loaded - the world cannot start" );
+            SW_LOG_ERROR_ID( "VoxelGameMode.BlockCatalogNotLoaded", "[Voxel] the block catalog is not loaded - the world cannot start" );
             return false;
         }
         bool bBlocksKnown = true;
@@ -200,7 +200,7 @@ namespace sw
         {
             if ( pCatalog->findBlockIndex( *pBlockID ) != kVoxelAirBlock )
                 continue;
-            SW_LOG_ERROR_ID( "VoxelDirector.DirectorBlockNotBlock", "[Voxel] the director's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
+            SW_LOG_ERROR_ID( "VoxelGameMode.DirectorBlockNotBlock", "[Voxel] the director's block '%#' is not in the block catalog - the world cannot start", pBlockID->c_str() );
             bBlocksKnown = false;
         }
         if ( bBlocksKnown == false )
@@ -211,12 +211,12 @@ namespace sw
         settings._seed                                   = static_cast<uint32>( _terrainSeed );
         [[maybe_unused]] const VoxelTerrainReport report = VoxelTerrainGenerator::fillWorld( _world, settings );
         decorateTerrain();
-        SW_LOG_INFO_ID( "VoxelDirector.TerrainXXHeights", "[Voxel] terrain %# x %# x %# - heights %#..%#, %# trees", _world.getSizeX(), _world.getSizeY(), _world.getSizeZ(), report._minHeight,
+        SW_LOG_INFO_ID( "VoxelGameMode.TerrainXXHeights", "[Voxel] terrain %# x %# x %# - heights %#..%#, %# trees", _world.getSizeX(), _world.getSizeY(), _world.getSizeZ(), report._minHeight,
                         report._maxHeight, report._treeCount );
         return true;
     }
 
-    void VoxelDirectorComponent::decorateTerrain()
+    void VoxelGameModeComponent::decorateTerrain()
     {
         // 돌 속의 광석(깊을수록 철)과 높은 봉우리의 눈입니다. 지형 생성기는 장르 공통이라서, 이런 꾸밈은 게임이 추가합니다.
         const VoxelBlockCatalog& catalog = *_world.getCatalog();
@@ -237,7 +237,7 @@ namespace sw
                 {
                     if ( _world.getBlock( x, y, z ) != stone )
                         continue;
-                    const uint32 roll       = VoxelDirectorComponentInternal::hashCoord( x, y, z ) % 1000u;
+                    const uint32 roll       = VoxelGameModeComponentInternal::hashCoord( x, y, z ) % 1000u;
                     const bool   bPlaceIron = roll < 18u && y < 12 && iron != kVoxelAirBlock;
                     if ( roll < 12u && coal != kVoxelAirBlock )
                         (void)_world.setBlock( x, y, z, coal );
@@ -251,7 +251,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 청크: 스폰은 틱이 끝난 뒤 게임 스레드에서, 다시 메싱하라는 요청은 PrePhysics 에서 합니다.
     // ------------------------------------------------------------------------------
-    void VoxelDirectorComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
+    void VoxelGameModeComponent::onFlush( GameObjectManager& manager, bool bRespawnViews )
     {
         if ( bRespawnViews )
             spawnChunks( manager );
@@ -259,7 +259,7 @@ namespace sw
             syncAutoPlayPossession( manager );
     }
 
-    void VoxelDirectorComponent::spawnChunks( GameObjectManager& manager )
+    void VoxelGameModeComponent::spawnChunks( GameObjectManager& manager )
     {
         // 청크마다 오브젝트 하나를 스폰합니다. 처음에는 전부 메싱하고, 이후에는 바뀐 청크만 한 프레임에 몇 개씩 메싱합니다.
         const GameObjectHandle director = getOwner()->getHandle();
@@ -292,7 +292,7 @@ namespace sw
         }
     }
 
-    void VoxelDirectorComponent::scheduleRebuilds()
+    void VoxelGameModeComponent::scheduleRebuilds()
     {
         GameObjectManager* pManager = getObjectManager();
         if ( pManager == nullptr )
@@ -324,7 +324,7 @@ namespace sw
         }
     }
 
-    void VoxelDirectorComponent::logStatus( float32 deltaTime )
+    void VoxelGameModeComponent::logStatus( float32 deltaTime )
     {
         _statusTimer += deltaTime;
         if ( _statusTimer < _statusLogInterval )
@@ -338,7 +338,7 @@ namespace sw
         const VoxelBody&                      body     = pPlayer->getBody();
         [[maybe_unused]] const float3&        position = body.getPosition();
         [[maybe_unused]] const VoxelBlockDef* pBlock   = _world.getCatalog()->findBlock( pPlayer->getHotbar().getSelectedSlot()._block );
-        SW_LOG_INFO_ID( "VoxelDirector.BrokenPlacedHandX", "[Voxel] at (%#, %#, %#)%#%# · broken %# · placed %# · hand %# x%#", static_cast<int32>( position._x ), static_cast<int32>( position._y ),
+        SW_LOG_INFO_ID( "VoxelGameMode.BrokenPlacedHandX", "[Voxel] at (%#, %#, %#)%#%# · broken %# · placed %# · hand %# x%#", static_cast<int32>( position._x ), static_cast<int32>( position._y ),
                         static_cast<int32>( position._z ), body.isOnGround() ? " on ground" : "", body.isInWater() ? " swimming" : "", pPlayer->getBrokenCount(),
                         pPlayer->getPlacedCount(), pBlock != nullptr ? pBlock->_name.c_str() : "empty", pPlayer->getHotbar().getSelectedSlot()._count );
     }

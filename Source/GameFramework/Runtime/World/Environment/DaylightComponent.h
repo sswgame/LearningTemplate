@@ -1,6 +1,6 @@
 /**
  * @file DaylightComponent.h
- * @brief 해 — 디렉터가 답하는 하루의 시각과 강수(`GameDirectorComponent::readDaylight`)로 같은 오브젝트의 방향광 높이 · 방향 · 세기를 맞춥니다.
+ * @brief 해 — 디렉터가 답하는 하루의 시각과 강수(`GameModeComponent::readDaylight`)로 같은 오브젝트의 방향광 높이 · 방향 · 세기를 맞춥니다.
  * @details HarvestValley 의 `DaylightComponent` 를 옮겼다 — 시각만 디렉터에게 묻고 곡선은 씬 데이터라 어느 게임이든 쓴다(언리얼 SkyAtmosphere 의 해 구동이 엔진 쪽인 것과 같은 자리).
  */
 #pragma once

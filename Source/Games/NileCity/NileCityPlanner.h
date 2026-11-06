@@ -23,7 +23,7 @@ namespace sw
     class Wallet;
 
     /**
-     * @brief 땅 모양과 자동 계획의 튜닝값입니다. 값은 `NileDirectorComponent` 의 PROPERTY 가 채운다(기본값도 그 생성자에 있다).
+     * @brief 땅 모양과 자동 계획의 튜닝값입니다. 값은 `NileGameModeComponent` 의 PROPERTY 가 채운다(기본값도 그 생성자에 있다).
      * @details 길이 단위는 칸입니다. 계획표의 다른 좌표(구역 경계 · 집 줄)는 순서표 자체라 코드에 둔다.
      */
     struct NileCityLayout

@@ -32,7 +32,7 @@ namespace sw
         void assignTile( GameObjectHandle director, int32 tileIndex );
 
     private:
-        PROPERTY( Category = "Tile", DisplayName = "Director", Tooltip = "Object with the FarmDirectorComponent" )
+        PROPERTY( Category = "Tile", DisplayName = "Director", Tooltip = "Object with the FarmGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Tile", DisplayName = "Tile Index", Tooltip = "Row-major tile of the director's field" )
         int32 _tileIndex;

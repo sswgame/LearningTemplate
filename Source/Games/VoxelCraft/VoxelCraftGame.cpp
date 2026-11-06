@@ -5,7 +5,7 @@
  * @details 실행은 `App.exe -game=VoxelCraft` 이고 `Ninja-Debug` 빌드를 씁니다. 조작은 `Source/Games/VoxelCraft/README.md` 에 있습니다.
  *          `-gv_voxelAutoPlay=1` 을 주면 걷기, 점프, 부수기, 놓기를 AI 가 대신합니다.
  *          섬은 씬(`game/voxelcraft/maps/island.scene.xml`, 팩의 `data/gamesettings.xml` 에 적힌 시작 맵)이 만들고,
- *          그 안의 `VoxelDirectorComponent` 와 `VoxelPlayerComponent` 가 동작시킵니다.
+ *          그 안의 `VoxelGameModeComponent` 와 `VoxelPlayerComponent` 가 동작시킵니다.
  *          이 클래스는 블록 카탈로그를 게임 서비스로 등록하고 첫 씬을 엽니다.
  *          상태를 저장하기 전에는 블록과 플레이어 상태를 기록하고 디렉터가 스폰한 청크를 정리합니다. 복원한 뒤에는 그 상태를 되돌려 줍니다.
  */
@@ -17,7 +17,7 @@
 #include "GameFramework/Runtime/Foundation/Framework/Flow/GameInstance.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
-#include "Games/VoxelCraft/VoxelDirectorComponent.h"
+#include "Games/VoxelCraft/VoxelGameModeComponent.h"
 #include "Games/VoxelCraft/VoxelPlayerComponent.h"
 
 #include "ModuleAPI/Export/GameModuleExports.h"
@@ -45,7 +45,7 @@ namespace sw
         : _pBlockCatalog{}
     {
         // 상태 스냅샷에 들어가는 컴포넌트입니다. 저장하기 전에 상태를 기록하고 스폰한 오브젝트를 정리하며, 복원한 뒤에 되돌려 줍니다.
-        getStateSnapshot().registerDirector<VoxelDirectorComponent>();
+        getStateSnapshot().registerGameMode<VoxelGameModeComponent>();
         getStateSnapshot().registerStatefulComponent<VoxelPlayerComponent>();
     }
 

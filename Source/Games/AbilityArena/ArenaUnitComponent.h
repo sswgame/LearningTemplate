@@ -28,7 +28,7 @@ namespace sw
 namespace sw
 {
     class AbilityComponent;
-    class ArenaDirectorComponent;
+    class ArenaGameModeComponent;
     class MeshComponent;
     class PawnComponent;
 
@@ -39,7 +39,7 @@ namespace sw
      *          한 틱의 차례: (1) 바라보는 쪽 — `_facingMode` 가 `MoveDirection` 이면 움직이는 쪽, `ControlYaw` 면 조종 요(AI 가 초점으로 돌린다)
      *          (2) 폰 버튼(스키마 순서 = `kArrAbilityButton`)의 발동 · 해제을 어빌리티 입력 번호로 — 같은 오브젝트의 어빌리티 시스템과 같은 워커라 그 자리에서 발동한다
      *          (3) 이동 — 이동 속도는 `MoveSpeed` current, 대시 중(`State.Dashing`)에는 의도와 상관없이 바라보는 쪽으로 (4) 적끼리 겹치지 않게 밀기 (5) 아레나 안으로.
-     *          자기 오브젝트에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다. 어빌리티가 디렉터를 찾는 길도 이 핸들입니다(`ArenaDirectorComponent::findForUnit`).
+     *          자기 오브젝트에만 씁니다. 디렉터는 핸들로 들고 매 프레임 풉니다. 어빌리티가 디렉터를 찾는 길도 이 핸들입니다(`ArenaGameModeComponent::findForUnit`).
      */
     REFLECT( Category = "AbilityArena", DisplayName = "Arena Unit", Tooltip = "Pawn side of an arena unit: moves and presses ability inputs from the control intent" )
     class ArenaUnitComponent : public Component
@@ -82,12 +82,12 @@ namespace sw
         /** @brief 폰 버튼의 발동 · 뗌을 어빌리티 입력 번호의 눌림 · 뗌으로 넘깁니다. */
         void pressAbilityButtons( const PawnComponent& pawn, AbilityComponent& abilitySystem );
         /** @brief 다른 적과 겹친 만큼의 절반을 자기 쪽으로 밀어냅니다(상대도 같은 일을 한다 — 물리 없이, 유닛 수가 적다). */
-        void separateFromEnemies( const ArenaDirectorComponent& director, float3& inoutPosition ) const;
+        void separateFromEnemies( const ArenaGameModeComponent& director, float3& inoutPosition ) const;
         /** @brief 쓰러진 뒤 — 납작해지다가 디렉터가 걷는다. */
         void updateDeath( float32 deltaTime, MeshComponent& mesh, float32 deathLinger );
 
     private:
-        PROPERTY( Category = "Arena", DisplayName = "Director", Tooltip = "Object with the ArenaDirectorComponent" )
+        PROPERTY( Category = "Arena", DisplayName = "Director", Tooltip = "Object with the ArenaGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Arena", DisplayName = "Kind", Tooltip = "Player units are not pushed apart; enemies are" )
         ArenaUnitKind _kind;

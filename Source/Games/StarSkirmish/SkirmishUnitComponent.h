@@ -82,7 +82,7 @@ namespace sw
         static string makeModelPath( const utf8* pName );
 
     private:
-        PROPERTY( Category = "Unit", DisplayName = "Director", Tooltip = "Object with the SkirmishDirectorComponent" )
+        PROPERTY( Category = "Unit", DisplayName = "Director", Tooltip = "Object with the SkirmishGameModeComponent" )
         GameObjectHandle _director;
         PROPERTY( Category = "Unit", DisplayName = "Air Height", Tooltip = "Flying units hover this high", Units = m )
         float32 _airHeight;

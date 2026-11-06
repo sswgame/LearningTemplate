@@ -1,5 +1,5 @@
 /**
- * @file SkirmishDirectorComponent.h
+ * @file SkirmishGameModeComponent.h
  * @brief StarSkirmish 의 판을 돌리는 컴포넌트입니다. 한 판(`SkirmishMatch`), 선택, 명령, 생산, 건설, 부대 입력, 속도, 알림을 맡고 절벽과 유닛(프리팹) 스폰을 지시합니다.
  * @details 언리얼의 GameMode/GameState 에 해당합니다. 씬에 하나만 둡니다. 규칙(채취, 생산, 전투, 안개, AI)은 키트의 `RTSWorld`, `RTSCommanderAI`,
  *          `SkirmishMatch` 가 맡고, 이 컴포넌트는 사람의 입력과 무엇을 어디에 스폰할지를 안다. 유닛 모습은 뷰(`SkirmishUnitComponent`)가, 끌어서 선택하는 상자는
@@ -26,7 +26,7 @@
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSSelection.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
+#include "GameFramework/Runtime/Foundation/Framework/GameModeComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/Presentation/MaterialTintCache.h"
 
 #include "Games/StarSkirmish/SkirmishMatch.h"
@@ -43,19 +43,19 @@ namespace sw
     class MaterialInstance;
 
     /**
-     * @class SkirmishDirectorComponent
+     * @class SkirmishGameModeComponent
      * @brief 1 대 1 한 판을 진행합니다. 플레이가 시작되면 유닛 데이터를 읽고 판을 엽니다. 사람(파랑) 대 컴퓨터이며, 자동 플레이면 컴퓨터 대 컴퓨터입니다.
      * @details 판(월드, AI 진행, 선택, 속도)은 PROPERTY 가 아니라 `writeState` 로 게임 상태 스냅샷의 컴포넌트 섹션에 실려 핫 리로드와 세이브를
      *          넘긴다(`StarSkirmishGame`). 움직이던 유닛은 앞 명령의 경로를 다시 구한다. 스폰한 오브젝트는 핸들로 보관하고, 상태를 저장하기 전에 정리한다.
      */
     REFLECT( Category = "RealTimeStrategy", DisplayName = "Skirmish Director", Tooltip = "Runs the skirmish match, the human commands and spawns the unit views" )
-    class SkirmishDirectorComponent : public GameDirectorComponent
+    class SkirmishGameModeComponent : public GameModeComponent
     {
     public:
         REFLECT_BODY();
 
-        SkirmishDirectorComponent();
-        virtual ~SkirmishDirectorComponent() override;
+        SkirmishGameModeComponent();
+        virtual ~SkirmishGameModeComponent() override;
 
         /** @brief 판을 열고 패드 가상 커서를 켭니다(왼쪽 스틱 = 커서, A/B = 마우스 왼쪽/오른쪽, 오른쪽 스틱 = 카메라 이동). 패드만으로 고르기 · 명령을 씁니다. */
         void onBeginPlay() override;
@@ -93,14 +93,14 @@ namespace sw
         class CommanderDebugSource final : public IBehaviorTreeDebugSource
         {
         public:
-            explicit CommanderDebugSource( const SkirmishDirectorComponent& owner )
+            explicit CommanderDebugSource( const SkirmishGameModeComponent& owner )
                 : _owner{ owner }
             {
             }
             void collectBehaviorTreeRunners( vector<BehaviorTreeDebugRunner>& outList ) const override;
 
         private:
-            const SkirmishDirectorComponent& _owner;
+            const SkirmishGameModeComponent& _owner;
         };
 
         /** @brief 유닛 ID 슬롯 하나의 모습입니다. 틱이 보일 유닛을 정하고, 틱이 끝난 뒤 오브젝트를 맞춥니다. */

@@ -9,8 +9,8 @@
 
 #include "GameFramework/Runtime/Character/Control/Pawn/PawnComponent.h"
 
-#include "Games/Shooter3D/ShooterDirectorComponent.h"
 #include "Games/Shooter3D/ShooterEnemyComponent.h"
+#include "Games/Shooter3D/ShooterGameModeComponent.h"
 
 namespace sw
 {
@@ -57,8 +57,8 @@ namespace sw
         const GameObject*               pPawnOwner = pawn.getOwner();
         const GameObjectManager*        pManager   = pPawnOwner != nullptr ? pPawnOwner->getManager() : nullptr;
         const ShooterEnemyComponent*    pEnemy     = pPawnOwner != nullptr ? pPawnOwner->getComponent<ShooterEnemyComponent>() : nullptr;
-        const ShooterDirectorComponent* pDirector =
-            pManager != nullptr && pEnemy != nullptr ? GameDirectorComponent::resolve<ShooterDirectorComponent>( *pManager, pEnemy->getDirector() ) : nullptr;
+        const ShooterGameModeComponent* pDirector =
+            pManager != nullptr && pEnemy != nullptr ? GameModeComponent::resolve<ShooterGameModeComponent>( *pManager, pEnemy->getDirector() ) : nullptr;
         const hashed_string attack( Internal::kAttack );
         if ( pDirector == nullptr || pEnemy->isAlive() == false )
         {
