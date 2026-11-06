@@ -236,7 +236,7 @@ namespace sw
             return false;
         for ( const AreaLink& link : _graph.getLinks() )
         {
-            if ( link._to == roomID && link._requires.empty() == false )
+            if ( link._to == roomID && link._requires.isEmpty() == false )
             {
                 _pFlags->setFlag( flag );
                 _listUnlockedFlag.push_back( flag );

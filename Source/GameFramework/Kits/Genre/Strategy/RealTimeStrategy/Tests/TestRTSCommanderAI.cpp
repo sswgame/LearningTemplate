@@ -4,6 +4,7 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Vocabulary/ActionRegistry.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommanderAI.h"
@@ -68,12 +69,23 @@ namespace
             return true;
         }
 
-        /** @brief @p function 하나로 된 트리로 AI 를 시작합니다. 설정(`_settings`)을 고친 뒤에 부릅니다. */
+        /** @brief 테스트가 만든 작업 @p function 하나로 된 트리로 AI 를 시작합니다(생각 횟수를 세는 작업 등). */
         void start( BehaviorTaskFunction function, int32 player = 0 )
         {
             BehaviorTree tree;
             const int32  root = tree.addSequence( -1, "Root" );
             (void)tree.addAction( root, "Task", function );
+            _ai.initialize( &_world, player, _settings, tree );
+        }
+
+        /** @brief 등록된 동작 @p pAction(`rts.defend` 등) 하나로 된 트리로 AI 를 시작합니다. 설정(`_settings`)을 고친 뒤에 부릅니다. */
+        void start( const utf8* pAction, int32 player = 0 )
+        {
+            GameActionCall call;
+            SW_REQUIRE_TRUE( GameActionCall::compileText( pAction, "RTSCommanderAITest", call ) );
+            BehaviorTree tree;
+            const int32  root = tree.addSequence( -1, "Root" );
+            (void)tree.addAction( root, "Task", call );
             _ai.initialize( &_world, player, _settings, tree );
         }
 
@@ -215,7 +227,7 @@ SW_TEST_CASE( RTSCommanderAITest, DefendSendsArmyAndClearsThreat )
     SW_REQUIRE_TRUE( rig.setUp() );
     const RTSUnitID marineID = rig.spawnMarine();
     const RTSUnitID workerID = rig.spawnWorker();
-    rig.start( &RTSCommanderAI::taskDefend );
+    rig.start( "rts.defend" );
     rig.think();
     SW_EXPECT_NULL( rig.findOrder( marineID ) );
 
@@ -239,7 +251,7 @@ SW_TEST_CASE( RTSCommanderAITest, GatherIdleSendsOnlyWorkersWhenDepotAndMinerals
     SW_REQUIRE_TRUE( rig.setUp() );
     const RTSUnitID workerID = rig.spawnWorker();
     const RTSUnitID marineID = rig.spawnMarine();
-    rig.start( &RTSCommanderAI::taskGatherIdle );
+    rig.start( "rts.gatherIdle" );
 
     SW_REQUIRE_TRUE( rig.spawnDepot( 1 ).isValid() ); // 남의 본진은 내 본진이 아니다
     rig.think();
@@ -249,7 +261,7 @@ SW_TEST_CASE( RTSCommanderAITest, GatherIdleSendsOnlyWorkersWhenDepotAndMinerals
     SW_REQUIRE_TRUE( noMinerals.setUp() );
     const RTSUnitID loneWorkerID = noMinerals.spawnWorker();
     SW_REQUIRE_TRUE( noMinerals.spawnDepot().isValid() );
-    noMinerals.start( &RTSCommanderAI::taskGatherIdle );
+    noMinerals.start( "rts.gatherIdle" );
     noMinerals.think();
     SW_EXPECT_NULL( noMinerals.findOrder( loneWorkerID ) );
 
@@ -260,7 +272,7 @@ SW_TEST_CASE( RTSCommanderAITest, GatherIdleSendsOnlyWorkersWhenDepotAndMinerals
     SW_REQUIRE_TRUE( ready.spawnDepot().isValid() );
     const RTSUnitID mineralID = ready.spawnMinerals();
     SW_REQUIRE_TRUE( mineralID.isValid() );
-    ready.start( &RTSCommanderAI::taskGatherIdle );
+    ready.start( "rts.gatherIdle" );
     ready.think();
     const RTSOrder* pOrder = ready.findOrder( readyWorkerID );
     SW_REQUIRE_NOT_NULL( pOrder );
@@ -280,7 +292,7 @@ SW_TEST_CASE( RTSCommanderAITest, TrainWorkersStopsAtTargetAndOneAtATime )
     rig._settings._workerTarget = 3;
     const RTSUnitID depotID     = rig.spawnDepot();
     SW_REQUIRE_TRUE( rig.spawnWorker().isValid() );
-    rig.start( &RTSCommanderAI::taskTrainWorkers );
+    rig.start( "rts.trainWorkers" );
     const int64 mineralsBefore = rig._world.getMinerals( 0 );
 
     rig.think();
@@ -294,7 +306,7 @@ SW_TEST_CASE( RTSCommanderAITest, TrainWorkersStopsAtTargetAndOneAtATime )
     atTarget._settings._workerTarget = 1;
     const RTSUnitID fullDepotID      = atTarget.spawnDepot();
     SW_REQUIRE_TRUE( atTarget.spawnWorker().isValid() );
-    atTarget.start( &RTSCommanderAI::taskTrainWorkers );
+    atTarget.start( "rts.trainWorkers" );
     atTarget.think();
     SW_EXPECT_EQUAL( size_t( 0 ), atTarget.countProduction( fullDepotID ) );
 }
@@ -313,13 +325,13 @@ SW_TEST_CASE( RTSCommanderAITest, BuildSupplyWaitsForMarginAndDoesNotRepeat )
     rig._world.update( 0.1f ); // 보급을 센다: 상한 10, 쓴 2
 
     rig._settings._supplyMargin = 3;
-    rig.start( &RTSCommanderAI::taskBuildSupply );
+    rig.start( "rts.buildSupply" );
     rig.think();
     SW_EXPECT_NULL( rig.findOrder( workerID ) );
     SW_EXPECT_NULL( rig.findOrder( spareID ) );
 
     rig._settings._supplyMargin = 8;
-    rig.start( &RTSCommanderAI::taskBuildSupply );
+    rig.start( "rts.buildSupply" );
     rig.think();
     const RTSOrder* pFirst  = rig.findOrder( workerID );
     const RTSOrder* pSecond = rig.findOrder( spareID );
@@ -348,7 +360,7 @@ SW_TEST_CASE( RTSCommanderAITest, ConstructionPrefersIdleWorkerAndSkipsBusyOnes 
     const RTSUnitID idleID    = rig.spawnWorker( 14.5f );
     SW_REQUIRE_TRUE( rig._world.issueGather( gatherID, mineralID ) == RTSCommandResult::Ok );
     rig._settings._workerTarget = 2;
-    rig.start( &RTSCommanderAI::taskBuildProduction );
+    rig.start( "rts.buildProduction" );
     rig.think();
     SW_EXPECT_TRUE( rig.findOrder( gatherID )->_type == RTSOrderType::Gather );
     SW_REQUIRE_NOT_NULL( rig.findOrder( idleID ) );
@@ -360,7 +372,7 @@ SW_TEST_CASE( RTSCommanderAITest, ConstructionPrefersIdleWorkerAndSkipsBusyOnes 
     const RTSUnitID movingID = busy.spawnWorker();
     SW_REQUIRE_TRUE( busy._world.issueMove( movingID, float3{ 30.5f, 0.0f, 30.5f } ) == RTSCommandResult::Ok );
     busy._settings._workerTarget = 2;
-    busy.start( &RTSCommanderAI::taskBuildProduction );
+    busy.start( "rts.buildProduction" );
     busy.think();
     SW_EXPECT_TRUE( busy.findOrder( movingID )->_type == RTSOrderType::Move );
     SW_EXPECT_EQUAL( 0, busy._world.countPlanned( 0, Rig::kBarracks ) );
@@ -376,7 +388,7 @@ SW_TEST_CASE( RTSCommanderAITest, BuildProductionChecksTargetAndWorkerCount )
     SW_REQUIRE_TRUE( tooFewWorkers.spawnDepot().isValid() );
     const RTSUnitID loneID                = tooFewWorkers.spawnWorker();
     tooFewWorkers._settings._workerTarget = 4; // 2 명은 있어야 시작한다
-    tooFewWorkers.start( &RTSCommanderAI::taskBuildProduction );
+    tooFewWorkers.start( "rts.buildProduction" );
     tooFewWorkers.think();
     SW_EXPECT_NULL( tooFewWorkers.findOrder( loneID ) );
 
@@ -387,12 +399,12 @@ SW_TEST_CASE( RTSCommanderAITest, BuildProductionChecksTargetAndWorkerCount )
     const RTSUnitID idleID               = atTarget.spawnWorker();
     atTarget._settings._workerTarget     = 2;
     atTarget._settings._productionTarget = 1;
-    atTarget.start( &RTSCommanderAI::taskBuildProduction );
+    atTarget.start( "rts.buildProduction" );
     atTarget.think();
     SW_EXPECT_NULL( atTarget.findOrder( idleID ) );
 
     atTarget._settings._productionTarget = 2;
-    atTarget.start( &RTSCommanderAI::taskBuildProduction );
+    atTarget.start( "rts.buildProduction" );
     atTarget.think();
     SW_REQUIRE_NOT_NULL( atTarget.findOrder( idleID ) );
     SW_EXPECT_TRUE( atTarget.findOrder( idleID )->_buildID == Rig::kBarracks );
@@ -408,7 +420,7 @@ SW_TEST_CASE( RTSCommanderAITest, TrainArmyFillsEachIdleProducerOnce )
     const RTSUnitID firstID  = rig._world.spawnUnit( Rig::kBarracks, 0, float3{ 20.5f, 0.0f, 20.5f } );
     const RTSUnitID secondID = rig._world.spawnUnit( Rig::kBarracks, 0, float3{ 30.5f, 0.0f, 20.5f } );
     SW_REQUIRE_TRUE( firstID.isValid() && secondID.isValid() );
-    rig.start( &RTSCommanderAI::taskTrainArmy );
+    rig.start( "rts.trainArmy" );
     rig.think();
     SW_EXPECT_EQUAL( size_t( 1 ), rig.countProduction( firstID ) );
     SW_EXPECT_EQUAL( size_t( 1 ), rig.countProduction( secondID ) );
@@ -426,7 +438,7 @@ SW_TEST_CASE( RTSCommanderAITest, AttackWaitsForArmyAndTargetsNearestEnemy )
     SW_REQUIRE_TRUE( rig.setUp() );
     rig._settings._attackArmySize = 2;
     const RTSUnitID firstID       = rig.spawnMarine( 12.5f );
-    rig.start( &RTSCommanderAI::taskAttack );
+    rig.start( "rts.attack" );
     rig.think();
     SW_EXPECT_EQUAL( 0, rig._ai.getAttackWaveCount() );
     SW_EXPECT_NULL( rig.findOrder( firstID ) );
