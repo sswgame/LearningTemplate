@@ -195,11 +195,10 @@ namespace sw
         : _clipboardText{}
         , _listClipboardIncr{}
         , _monitors{}
+        , _inputMethod{}
         , _pX11Display{ nullptr }
         , _x11Window{ 0 }
         , _x11WmDelete{ 0 }
-        , _pInputMethod{ nullptr }
-        , _pInputContext{ nullptr }
         , _invisibleCursor{ 0 }
         , _arrShapeCursor{}
         , _reservedX11{ 0 }
@@ -256,7 +255,10 @@ namespace sw
         _bShouldClose = SW_FALSE;
         _monitors.initialize( pDisplay );
         _monitors.selectChangeEvents();
-        notifyMonitorsChanged();  // 다시 만든 창은 새 연결이다 - 값을 든 쪽이 다시 읽는다
+        notifyMonitorsChanged(); // 다시 만든 창은 새 연결이다 - 값을 든 쪽이 다시 읽는다
+        _inputMethod.initialize( pDisplay, win, SW_DELEGATE_METHOD( X11InputMethodTextDelegate, &X11Window::onInputMethodText, this ) );
+        _inputMethod.setWanted( isTextInputWanted() ); // 다시 만든 창도 받는 쪽의 뜻을 잇는다
+        _inputMethod.setArea( _textInputArea );
         applyMinimumClientSize(); // 다시 만든 창(recreate)도 같은 하한을 가진다
         applyTitle();
 
@@ -568,6 +570,16 @@ namespace sw
                 continue;
             }
 
+            // 입력기가 먼저 본다(GLFW · SDL 과 같다). 가져간 키는 조합이 되어 콜백으로 돌아온다.
+            if ( _inputMethod.filterEvent( &event ) )
+                continue;
+            // 키 코드 0 은 입력기가 확정 글을 건네려고 만든 가짜 누름이다 - 키가 아니다.
+            if ( event.type == KeyPress && event.xkey.keycode == 0 )
+            {
+                _inputMethod.emitKeyText( &event );
+                continue;
+            }
+
             // 최소화 · 포커스는 외부 처리기(ImGui)가 이벤트를 먹기 전에 적는다. 최소화(iconify)는 창 관리자가 창을 내리는(unmap) 것으로 온다.
             // 포커스의 Grab · Ungrab 은 키보드를 잠깐 쥔 것이라(메뉴 · 드래그) 포커스 변화로 보지 않는다.
             const bool bOwnWindowEvent = event.xany.window == static_cast<Window>( _x11Window );
@@ -588,10 +600,16 @@ namespace sw
                 setFocusState( event.type == FocusIn );
             }
 
+            // 입력기에는 우리 창 모두의 포커스를 알린다 - 떼어 낸 창의 글 칸도 조합을 받는다. Grab · Ungrab 은 위와 같이 포커스 변화가 아니다.
+            const bool bAnyWindowFocusChange = ( event.type == FocusIn || event.type == FocusOut ) && event.xfocus.mode != NotifyGrab && event.xfocus.mode != NotifyUngrab;
+            if ( bAnyWindowFocusChange )
+                _inputMethod.onFocusChanged( static_cast<uint64>( event.xany.window ), event.type == FocusIn );
+
             // 선택 이벤트는 입력이 아니다 — 외부 처리기(ImGui)가 먹기 전에 답한다. 답하지 않으면 붙여넣는 프로그램이 시간 제한까지 기다린다.
             if ( handleSelectionEvent( &event ) || handleIncrPropertyEvent( &event ) )
                 continue;
 
+            bool bConsumed = false;
             if ( _customHandler.isBound() )
             {
                 NativeWindowEvent windowEvent{};
@@ -599,9 +617,13 @@ namespace sw
                 windowEvent._message = NativeWindowEvent::kMessageX11;
                 windowEvent._wParam  = 0;
                 windowEvent._lParam  = reinterpret_cast<intptr_t>( &event );
-                if ( _customHandler.get()( windowEvent ) )
-                    continue;
+                bConsumed            = _customHandler.get()( windowEvent );
             }
+            // 키 뒤에 그 글자가 온다(Win32 의 WM_KEYDOWN 뒤 WM_CHAR 와 같다). 글을 읽는 곳은 여기 하나다 - 머리말 `X11InputMethod.h`.
+            if ( event.type == KeyPress )
+                _inputMethod.emitKeyText( &event );
+            if ( bConsumed )
+                continue;
 
             if ( event.type == ClientMessage )
             {
@@ -934,37 +956,18 @@ namespace sw
         return true;
     }
 
-    uint32 X11Window::readCommittedText( const void* pKeyPressEvent, utf8* pOutBuffer, uint32 capacity )
+    void X11Window::applyTextInputWanted( bool bWanted )
     {
-        const bool bCannotRead = _pX11Display == nullptr || _x11Window == 0 || pKeyPressEvent == nullptr || pOutBuffer == nullptr || capacity == 0;
-        if ( bCannotRead )
-            return 0;
-        if ( _pInputContext == nullptr )
-        {
-            if ( _pInputMethod == nullptr )
-            {
-                XSetLocaleModifiers( "" );
-                _pInputMethod = XOpenIM( static_cast<Display*>( _pX11Display ), nullptr, nullptr, nullptr );
-                if ( _pInputMethod == nullptr )
-                    return 0;
-            }
-            _pInputContext = XCreateIC( static_cast<XIM>( _pInputMethod ),
-                                        XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
-                                        XNClientWindow, static_cast<Window>( _x11Window ),
-                                        XNFocusWindow, static_cast<Window>( _x11Window ),
-                                        nullptr );
-            if ( _pInputContext == nullptr )
-                return 0;
-        }
-        KeySym      lookupKeySym{};
-        Status      lookupStatus{};
-        const int32 byteCount  = Xutf8LookupString( static_cast<XIC>( _pInputContext ), const_cast<XKeyPressedEvent*>( static_cast<const XKeyPressedEvent*>( pKeyPressEvent ) ),
-                                                    pOutBuffer, static_cast<int32>( capacity - 1 ), &lookupKeySym, &lookupStatus );
-        const bool  bCommitted = ( lookupStatus == XLookupChars || lookupStatus == XLookupBoth ) && byteCount > 0;
-        if ( bCommitted == false )
-            return 0;
-        pOutBuffer[byteCount] = '\0';
-        return static_cast<uint32>( byteCount );
+        _inputMethod.setWanted( bWanted );
+        if ( _pX11Display != nullptr )
+            XFlush( static_cast<Display*>( _pX11Display ) );
+    }
+
+    void X11Window::applyTextInputArea( const WindowTextInputArea& area )
+    {
+        _inputMethod.setArea( area );
+        if ( _pX11Display != nullptr )
+            XFlush( static_cast<Display*>( _pX11Display ) );
     }
 
     void X11Window::releaseInputResources()
@@ -979,12 +982,7 @@ namespace sw
         if ( _invisibleCursor != 0 )
             XFreeCursor( pDisplay, _invisibleCursor );
         _invisibleCursor = 0;
-        if ( _pInputContext != nullptr )
-            XDestroyIC( static_cast<XIC>( _pInputContext ) );
-        _pInputContext = nullptr;
-        if ( _pInputMethod != nullptr )
-            XCloseIM( static_cast<XIM>( _pInputMethod ) );
-        _pInputMethod = nullptr;
+        _inputMethod.shutdown();
     }
 } // namespace sw
 #endif

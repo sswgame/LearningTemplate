@@ -37,10 +37,12 @@ namespace sw
 
     bool NativeWindowEvent::isKeyboardInput() const
     {
+        if ( _message == kMessageTextInput )
+            return true;
         if ( const WaylandInputEvent* pWayland = findWaylandInputEvent( *this ) )
         {
             const WaylandInputKind kind = pWayland->_kind;
-            return kind == WaylandInputKind::KeyDown || kind == WaylandInputKind::KeyUp || kind == WaylandInputKind::Text;
+            return kind == WaylandInputKind::KeyDown || kind == WaylandInputKind::KeyUp;
         }
         if ( _message != kMessageX11 || _lParam == 0 )
             return false;

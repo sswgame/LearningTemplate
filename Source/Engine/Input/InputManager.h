@@ -27,6 +27,8 @@
 namespace sw
 {
     struct NativeWindowEvent;
+    struct WindowTextInputArea;
+    struct WindowTextInputEvent;
 
     class InputMap;
 
@@ -216,6 +218,14 @@ namespace sw
         [[nodiscard]] bool findFirstPressedSlot( InputSlot& outSlot ) const;
         void               onTextInput( string_view text );
         void               onTextComposition( string_view text );
+        /**
+         * @brief 창이 낸 조합 · 확정 글(`NativeWindowEvent::kMessageTextInput`)을 큐에 넣습니다.
+         * @details 글 이벤트의 칸보다 긴 확정 글은 글자 경계에서 나눠 넣는다(입력기는 문장을 한 번에 확정할 수 있다 - 자르면 글을 잃는다).
+         *          shortcut: 조합 글은 칸(`RawInputEvent::kMaxTextBytes`)에서 잘린다, 보여 주는 글이고 확정 글은 온전하다 - 일본어 긴 변환을 게임 UI 에서 보이게 되면 칸을 늘린다.
+         */
+        void postWindowTextInput( const WindowTextInputEvent& event );
+        /** @brief 글 커서의 자리를 주 창의 입력기에 알립니다(창 픽셀). 창이 없으면 아무것도 하지 않습니다. 런타임 UI 글자 입력이 부른다. */
+        void setTextInputArea( const WindowTextInputArea& area );
 
         void setInputMuted( bool bMuted ) { _bInputMuted = bMuted ? SW_TRUE : SW_FALSE; }
         bool isInputMuted() const { return _bInputMuted == SW_TRUE; }

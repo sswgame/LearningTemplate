@@ -277,6 +277,9 @@ namespace sw
             return event;
         }
 
+        /** @brief 글 이벤트 하나에 실리는 최대 바이트입니다(`makeTextInput` 은 넘치면 글자 경계에서 자른다). 더 긴 글은 나눠 올린다(`InputManager::postWindowTextInput`). */
+        static constexpr size_t kMaxTextBytes = constant::buffer::kMax32 - 1;
+
         static RawInputEvent makeTextInput( string_view text )
         {
             RawInputEvent event{};
@@ -303,8 +306,7 @@ namespace sw
          */
         static void copyTextPayload( RawInputEvent& outEvent, string_view text )
         {
-            constexpr size_t kMaxTextBytes = constant::buffer::kMax32 - 1;
-            size_t           len           = text.size() < kMaxTextBytes ? text.size() : kMaxTextBytes;
+            size_t len = text.size() < kMaxTextBytes ? text.size() : kMaxTextBytes;
             if ( len < text.size() )
             {
                 // 잘리는 위치가 연속 바이트(10xxxxxx)면 그 글자의 선두 바이트 앞까지 물러난다.

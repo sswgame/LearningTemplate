@@ -7,6 +7,7 @@
 #include "Engine/Window/Linux/LinuxWindowBackend.h"
 #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 #include "Engine/Window/Linux/X11Window.h"
+#include "Engine/Window/NativeWindowEvent.h"
 #include "Engine/Window/WindowMonitor.h"
 #include "Engine/Window/Windows/Win32Window.h"
 
@@ -30,7 +31,9 @@ namespace sw
         , _bFocused{ SW_FALSE }
         , _reserved{ 0 }
         , _displayMode{ WindowDisplayMode::Windowed }
+        , _textInputClientMask{ 0 }
         , _arrReserved{}
+        , _textInputArea{}
         , _restoreX{ 0 }
         , _restoreY{ 0 }
         , _minClientWidth{ 0 }
@@ -43,6 +46,37 @@ namespace sw
     {
         outListMonitor.clear();
         return false;
+    }
+
+    void IWindow::requestTextInput( WindowTextInputClient client, bool bWanted )
+    {
+        const bool  bWasWanted = isTextInputWanted();
+        const uint8 clientBit  = static_cast<uint8>( 1u << static_cast<uint32>( client ) );
+        _textInputClientMask   = bWanted ? static_cast<uint8>( _textInputClientMask | clientBit ) : static_cast<uint8>( _textInputClientMask & ~clientBit );
+        if ( isTextInputWanted() != bWasWanted )
+            applyTextInputWanted( isTextInputWanted() );
+    }
+
+    void IWindow::setTextInputArea( const WindowTextInputArea& area )
+    {
+        if ( area == _textInputArea )
+            return;
+        _textInputArea = area;
+        applyTextInputArea( area );
+    }
+
+    void IWindow::dispatchTextInput( WindowTextInputKind kind, string_view text )
+    {
+        if ( _customHandler.isBound() == false )
+            return;
+        WindowTextInputEvent input;
+        input._kind = kind;
+        input._text = text;
+        NativeWindowEvent event{};
+        event.setNativeWindow( getSurfaceKind(), getNativeHandle() );
+        event._message = NativeWindowEvent::kMessageTextInput;
+        event._lParam  = reinterpret_cast<intptr_t>( &input );
+        (void)_customHandler.get()( event ); // 글은 소비되어도 창이 달리 할 일이 없다
     }
 
     void IWindow::setMinimumClientSize( uint32 width, uint32 height )

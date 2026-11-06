@@ -315,7 +315,7 @@ namespace sw
             (void)openScreen<PauseMenuScreen>( _pauseMenuDocument ); // 실패는 문서 생성 단계가 로그에 남긴다
         _input.processActions( pActive, deltaSeconds );
         applyPendingCloses();
-        _input.updateKeyboardFocus();
+        _input.updateKeyboardFocus( _viewport );
     }
 
     void UISystem::update( float32 deltaSeconds, const UIViewport& viewport )

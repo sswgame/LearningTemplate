@@ -81,6 +81,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 			"unstable/tablet/tablet-unstable-v2.xml"
 			"unstable/pointer-constraints/pointer-constraints-unstable-v1.xml" # 포인터 잠금 · 가둠
 			"unstable/relative-pointer/relative-pointer-unstable-v1.xml" # 잠긴 동안의 상대 이동
+			"unstable/text-input/text-input-unstable-v3.xml" # 입력기(`zwp_text_input_v3`)
 		)
 		set(swWaylandGenDir "${CMAKE_BINARY_DIR}/generated/wayland")
 		file(MAKE_DIRECTORY "${swWaylandGenDir}")
@@ -110,7 +111,7 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 		target_link_libraries(sw_wayland_protocols PUBLIC PkgConfig::SW_WAYLAND)
 		target_link_libraries(sw_platform_linux INTERFACE sw_wayland_protocols)
 		target_compile_definitions(sw_platform_linux INTERFACE SW_WITH_WAYLAND)
-		message(STATUS "[Linux] Wayland window layer enabled (protocols from ${SW_WAYLAND_PROTOCOLS_DIR}: xdg-shell, fractional-scale, cursor-shape, tablet, pointer-constraints, relative-pointer)")
+		message(STATUS "[Linux] Wayland window layer enabled (protocols from ${SW_WAYLAND_PROTOCOLS_DIR}: xdg-shell, fractional-scale, cursor-shape, tablet, pointer-constraints, relative-pointer, text-input)")
 	endif()
 endif()
 

@@ -39,6 +39,8 @@ namespace sw::editor
 
         /** @brief 플랫폼 네이티브 이벤트를 ImGui로 전달합니다. */
         virtual bool processEvent( const NativeWindowEvent& event ) = 0;
+        /** @brief 패널을 다 그린 뒤 `ImGui::Render` 앞에 부릅니다. OS 가 그려 주지 않는 것(X11 · Wayland 의 조합 중 글)을 덧그립니다. */
+        virtual void drawOverlay() {}
 
         /** @brief 메인 창이 놓인 모니터의 DPI 배율(96 DPI = 1)입니다. 모르는 플랫폼은 1 입니다. `initialize` 뒤에 부릅니다. */
         virtual float32 getDPIScale() const { return 1.0f; }

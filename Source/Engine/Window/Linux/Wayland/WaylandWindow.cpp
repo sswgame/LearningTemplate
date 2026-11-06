@@ -8,6 +8,7 @@
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
 #include "Engine/Window/Linux/Wayland/WaylandShell.h"
 #include "Engine/Window/NativeWindowEvent.h"
+#include "Engine/Window/WindowTextInput.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
     #include <fcntl.h>
@@ -24,6 +25,7 @@
     #include "fractional-scale-v1-client-protocol.h"
     #include "pointer-constraints-unstable-v1-client-protocol.h"
     #include "relative-pointer-unstable-v1-client-protocol.h"
+    #include "text-input-unstable-v3-client-protocol.h"
     #include "xdg-shell-client-protocol.h"
 
     #include <cerrno>
@@ -44,6 +46,18 @@ namespace sw
         wl_output* _pOutput{ nullptr };
         int32      _scale{ 1 };
         bool       _bEntered{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 처리기에 넘길 차례를 기다리는 입력 하나입니다. 글은 키 뒤에 와야 해서 한 줄에 함께 줄 선다. 글 길이는 정해지지 않아(입력기는 문장을 확정한다) `WaylandInputEvent` 에 싣지 않는다. */
+    struct WaylandQueuedInput
+    {
+        WaylandInputEvent   _input;
+        string              _text;
+        WindowTextInputKind _textKind{ WindowTextInputKind::Commit };
+        bool                _bText{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -87,26 +101,70 @@ namespace sw
         zwp_locked_pointer_v1*           _pLockedPointer{ nullptr };
         zwp_confined_pointer_v1*         _pConfinedPointer{ nullptr };
         wp_cursor_shape_manager_v1*      _pCursorShapeManager{ nullptr };
+        zwp_text_input_manager_v3*       _pTextInputManager{ nullptr };               ///< 입력기 확장. 없으면 키가 낸 글자만 온다
+        zwp_text_input_v3*               _pTextInput{ nullptr };                      ///< 자리(seat)마다 하나다
+        WindowTextInputFrame             _textInputFrame;                             ///< `done` 까지 모으는 조합 · 확정 글
+        WindowTextInputArea              _textInputArea;                              ///< 입력기에 알릴 글 커서(`applyTextInputArea`)
+        bool                             _bTextInputWanted{ false };                  ///< 받는 쪽이 원한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                             _bTextInputEntered{ false };                 ///< 컴포지터가 이 표면에 키보드 포커스를 주었다(`enter`) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                             _bTextInputEnabled{ false };                 ///< `enable` 을 보낸 상태다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         wp_cursor_shape_device_v1*       _pCursorShapeDevice{ nullptr };              ///< 포인터 장치가 생길 때 만든다
         CursorShape                      _cursorShape{ CursorShape::Arrow };          ///< 기억해 둔 모양(들어올 때 · 보일 때 적용한다)
         WindowPointerLock                _pointerLock{ WindowPointerLock::Released }; ///< 걸어 둔 방식
         bool                             _bPointerLocked{ false };                    ///< 컴포지터가 잠금을 켰다(`locked`) — 이 동안 포인터 움직임 대신 상대 이동이 온다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
-        vector<WaylandOutput>     _listOutput;                   ///< 바인드한 출력과 그 배율
-        vector<WaylandInputEvent> _listPendingInput;             ///< 리스너가 쌓고 `processMessages` 가 넘긴다
-        uint32                    _inputSerial{ 0 };             ///< 마지막 키 · 버튼 · 들어옴의 일련번호(선택을 내놓을 때 컴포지터가 요구한다)
-        bool                      _bIntroducedHasUTF8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                      _bIntroducedHasPlain{ false }; ///< 위와 같이 text/plain NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                      _bSelectionHasUTF8{ false };   ///< `_pSelectionOffer` 가 내놓는 형식(선택이 된 순간 소개 때 모은 값을 옮긴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                      _bSelectionHasPlain{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        uint32                    _pointerSerial{ 0 };           ///< 마지막 포인터 들어옴의 일련번호(커서를 바꿀 때 쓴다)
-        int32                     _configuredWidth{ 0 };         ///< 컴포지터가 정한 크기(0 이면 클라이언트가 정한다)
-        int32                     _configuredHeight{ 0 };
-        bool                      _bConfigured{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                      _bCloseRequested{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        bool                      _bCursorVisible{ true };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        vector<WaylandOutput>      _listOutput;                   ///< 바인드한 출력과 그 배율
+        vector<WaylandQueuedInput> _listPendingInput;             ///< 리스너가 쌓고 `processMessages` 가 넘긴다
+        uint32                     _inputSerial{ 0 };             ///< 마지막 키 · 버튼 · 들어옴의 일련번호(선택을 내놓을 때 컴포지터가 요구한다)
+        bool                       _bIntroducedHasUTF8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                       _bIntroducedHasPlain{ false }; ///< 위와 같이 text/plain NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                       _bSelectionHasUTF8{ false };   ///< `_pSelectionOffer` 가 내놓는 형식(선택이 된 순간 소개 때 모은 값을 옮긴다) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                       _bSelectionHasPlain{ false };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        uint32                     _pointerSerial{ 0 };           ///< 마지막 포인터 들어옴의 일련번호(커서를 바꿀 때 쓴다)
+        int32                      _configuredWidth{ 0 };         ///< 컴포지터가 정한 크기(0 이면 클라이언트가 정한다)
+        int32                      _configuredHeight{ 0 };
+        bool                       _bConfigured{ SW_FALSE };  ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                       _bCloseRequested{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        bool                       _bCursorVisible{ true };   ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
-        void pushInput( const WaylandInputEvent& event ) { _listPendingInput.push_back( event ); }
+        void pushInput( const WaylandInputEvent& event )
+        {
+            WaylandQueuedInput queued;
+            queued._input = event;
+            _listPendingInput.push_back( std::move( queued ) );
+        }
+
+        void pushText( WindowTextInputKind kind, string_view text )
+        {
+            WaylandQueuedInput queued;
+            queued._text.assign( text.data(), text.size() );
+            queued._textKind = kind;
+            queued._bText    = true;
+            _listPendingInput.push_back( std::move( queued ) );
+        }
+
+        /** @brief 입력기의 켜짐을 맞춥니다. 프로토콜상 `enter` 와 `leave` 사이에만 켤 수 있다 - 켜기는 상태를 초기화하므로 바뀔 때만 보낸다. */
+        void syncTextInput()
+        {
+            const bool bEnable = _bTextInputWanted && _bTextInputEntered;
+            if ( _pTextInput == nullptr || bEnable == _bTextInputEnabled )
+                return;
+            _bTextInputEnabled = bEnable;
+            if ( bEnable )
+            {
+                zwp_text_input_v3_enable( _pTextInput );
+                zwp_text_input_v3_set_cursor_rectangle( _pTextInput, _textInputArea._position._x, _textInputArea._position._y, 1, _textInputArea._lineHeight );
+            }
+            else
+                zwp_text_input_v3_disable( _pTextInput );
+            zwp_text_input_v3_commit( _pTextInput );
+        }
+
+        void clearComposition()
+        {
+            if ( _textInputFrame.reset() )
+                pushText( WindowTextInputKind::Composition, string_view{} );
+        }
 
         WaylandOutput* findOutput( const wl_output* pOutput )
         {
@@ -181,6 +239,7 @@ namespace sw
             static constexpr uint32 kSubcompositorVersion = 1;
             static constexpr uint32 kWmBaseVersion        = 1;
             static constexpr uint32 kOutputVersion        = 2; ///< 2 에서 `scale` 이벤트가 생긴다
+            static constexpr uint32 kTextInputVersion     = 1;
             /** @brief 1 로 바인드해 끌어다 놓기(판 3) 이벤트가 오지 않게 한다 — 선택(클립보드)만 쓴다. */
             static constexpr uint32 kDataDeviceManagerVersion = 1;
             /** @brief 세 확장은 모두 판 1 만 있다 — 리스너 구조체도 판 1 의 이벤트를 모두 채운다. 판이 오르면 여기와 리스너를 함께 올린다(컴파일러가 알려 주지 않는다). */
@@ -246,6 +305,8 @@ namespace sw
                     state._pPointerConstraints = static_cast<zwp_pointer_constraints_v1*>( wl_registry_bind( pRegistry, name, &zwp_pointer_constraints_v1_interface, kPointerConstraintsVersion ) );
                 else if ( std::strcmp( pInterface, zwp_relative_pointer_manager_v1_interface.name ) == 0 )
                     state._pRelativePointerManager = static_cast<zwp_relative_pointer_manager_v1*>( wl_registry_bind( pRegistry, name, &zwp_relative_pointer_manager_v1_interface, kRelativePointerVersion ) );
+                else if ( std::strcmp( pInterface, zwp_text_input_manager_v3_interface.name ) == 0 )
+                    state._pTextInputManager = static_cast<zwp_text_input_manager_v3*>( wl_registry_bind( pRegistry, name, &zwp_text_input_manager_v3_interface, kTextInputVersion ) );
                 else if ( std::strcmp( pInterface, wl_output_interface.name ) == 0 )
                 {
                     WaylandOutput output;
@@ -587,12 +648,68 @@ namespace sw
                 state.pushInput( event );
                 if ( bDown == false )
                     return;
-                WaylandInputEvent text;
-                text._kind             = WaylandInputKind::Text;
-                const int32 byteCount  = xkb_state_key_get_utf8( state._pXkbState, keyCode, text._arrText, WaylandInputEvent::kTextCapacity );
-                const bool  bPrintable = byteCount > 0 && static_cast<uint8>( text._arrText[0] ) >= 0x20 && text._arrText[0] != 0x7F;
+                utf8        arrText[constant::buffer::kMax32]{};
+                const int32 byteCount  = xkb_state_key_get_utf8( state._pXkbState, keyCode, arrText, constant::buffer::kMax32 );
+                const bool  bPrintable = byteCount > 0 && static_cast<uint8>( arrText[0] ) >= 0x20 && arrText[0] != 0x7F;
                 if ( bPrintable )
-                    state.pushInput( text );
+                    state.pushText( WindowTextInputKind::Commit, string_view( arrText, static_cast<size_t>( byteCount ) ) );
+            }
+
+            static void onTextInputEnter( void* pData, zwp_text_input_v3* pTextInput, wl_surface* pSurface )
+            {
+                (void)pTextInput;
+                (void)pSurface;
+                State& state             = *static_cast<State*>( pData );
+                state._bTextInputEntered = true;
+                state.syncTextInput();
+            }
+
+            static void onTextInputLeave( void* pData, zwp_text_input_v3* pTextInput, wl_surface* pSurface )
+            {
+                (void)pTextInput;
+                (void)pSurface;
+                State& state             = *static_cast<State*>( pData );
+                state._bTextInputEntered = false;
+                state.syncTextInput();
+                state.clearComposition();
+            }
+
+            static void onTextInputPreedit( void* pData, zwp_text_input_v3* pTextInput, const utf8* pText, int32 cursorBegin, int32 cursorEnd )
+            {
+                (void)pTextInput;
+                (void)cursorBegin; // 조합 글 안의 커서는 쓰지 않는다 - 받는 쪽은 글 전체만 받는다(`WindowTextInputEvent`)
+                (void)cursorEnd;
+                static_cast<State*>( pData )->_textInputFrame.setPendingPreedit( pText != nullptr ? string_view{ pText } : string_view{} );
+            }
+
+            static void onTextInputCommit( void* pData, zwp_text_input_v3* pTextInput, const utf8* pText )
+            {
+                (void)pTextInput;
+                static_cast<State*>( pData )->_textInputFrame.setPendingCommit( pText != nullptr ? string_view{ pText } : string_view{} );
+            }
+
+            static void onTextInputDeleteSurrounding( void* pData, zwp_text_input_v3* pTextInput, uint32 beforeLength, uint32 afterLength )
+            {
+                // 주변 글을 알리지 않으므로(`set_surrounding_text`) 입력기가 지우라고 할 글이 없다.
+                (void)pData;
+                (void)pTextInput;
+                (void)beforeLength;
+                (void)afterLength;
+            }
+
+            static void onTextInputDone( void* pData, zwp_text_input_v3* pTextInput, uint32 serial )
+            {
+                (void)pTextInput;
+                (void)serial;
+                State&     state = *static_cast<State*>( pData );
+                string     commit;
+                string     preedit;
+                const bool bPreeditChanged = state._textInputFrame.finish( commit, preedit );
+                // 프로토콜의 순서다 - 확정 글이 먼저이고, 새 조합이 뒤다.
+                if ( commit.empty() == false )
+                    state.pushText( WindowTextInputKind::Commit, commit );
+                if ( bPreeditChanged )
+                    state.pushText( WindowTextInputKind::Composition, preedit );
             }
 
             static void onKeyboardModifiers( void* pData, wl_keyboard* pKeyboard, uint32 serial, uint32 depressed, uint32 latched, uint32 locked, uint32 group )
@@ -762,6 +879,18 @@ namespace sw
                 return listener;
             }
 
+            static zwp_text_input_v3_listener makeTextInputListener()
+            {
+                zwp_text_input_v3_listener listener{};
+                listener.enter                   = &onTextInputEnter;
+                listener.leave                   = &onTextInputLeave;
+                listener.preedit_string          = &onTextInputPreedit;
+                listener.commit_string           = &onTextInputCommit;
+                listener.delete_surrounding_text = &onTextInputDeleteSurrounding;
+                listener.done                    = &onTextInputDone;
+                return listener;
+            }
+
             static wl_output_listener makeOutputListener()
             {
                 wl_output_listener listener{};
@@ -864,6 +993,7 @@ namespace sw
             static const zwp_locked_pointer_v1_listener   s_lockedPointerListener;
             static const zwp_confined_pointer_v1_listener s_confinedPointerListener;
             static const zwp_relative_pointer_v1_listener s_relativePointerListener;
+            static const zwp_text_input_v3_listener       s_textInputListener;
         };
 
         const wl_registry_listener             WaylandWindowInternal::s_registryListener        = WaylandWindowInternal::makeRegistryListener();
@@ -880,6 +1010,7 @@ namespace sw
         const zwp_locked_pointer_v1_listener   WaylandWindowInternal::s_lockedPointerListener   = WaylandWindowInternal::makeLockedPointerListener();
         const zwp_confined_pointer_v1_listener WaylandWindowInternal::s_confinedPointerListener = WaylandWindowInternal::makeConfinedPointerListener();
         const zwp_relative_pointer_v1_listener WaylandWindowInternal::s_relativePointerListener = WaylandWindowInternal::makeRelativePointerListener();
+        const zwp_text_input_v3_listener       WaylandWindowInternal::s_textInputListener       = WaylandWindowInternal::makeTextInputListener();
 
         void WaylandWindowInternal::onSeatCapabilities( void* pData, wl_seat* pSeat, uint32 capabilities )
         {
@@ -961,6 +1092,13 @@ namespace sw
             state._pDataDevice = wl_data_device_manager_get_data_device( state._pDataDeviceManager, state._pSeat );
             wl_data_device_add_listener( state._pDataDevice, &Internal::s_dataDeviceListener, &state );
         }
+        state._bTextInputWanted = isTextInputWanted(); // 다시 만든 창도 받는 쪽의 뜻을 잇는다
+        state._textInputArea    = _textInputArea;
+        if ( state._pSeat != nullptr && state._pTextInputManager != nullptr )
+        {
+            state._pTextInput = zwp_text_input_manager_v3_get_text_input( state._pTextInputManager, state._pSeat );
+            zwp_text_input_v3_add_listener( state._pTextInput, &Internal::s_textInputListener, &state );
+        }
 
         state._pSurface = wl_compositor_create_surface( state._pCompositor );
         wl_surface_add_listener( state._pSurface, &Internal::s_surfaceListener, &state );
@@ -997,8 +1135,8 @@ namespace sw
         _bShouldClose = SW_FALSE;
         SW_LOG_INFO_ID( "WaylandWindow.NativeWaylandWindowCreated", "Native Wayland Window created successfully! (%#×%#)", _width, _height );
         // 없는 확장은 오류가 아니라 능력 차이다 — 소수 배율이 없으면 정수 배율을 쓰고, 포인터 잠금이 없으면 요청하는 쪽(입력 관리자)이 알린다.
-        SW_LOG_INFO_ID( "WaylandWindow.WaylandExtensionsFractionalScale", "Wayland extensions: fractional scale %#, cursor shape %#, pointer constraints %#, relative pointer %#", state._pFractionalScaleManager != nullptr ? "yes" : "no",
-                        state._pCursorShapeManager != nullptr ? "yes" : "no", state._pPointerConstraints != nullptr ? "yes" : "no", state._pRelativePointerManager != nullptr ? "yes" : "no" );
+        SW_LOG_INFO_ID( "WaylandWindow.WaylandExtensionsFractionalScale", "Wayland extensions: fractional scale %#, cursor shape %#, pointer constraints %#, relative pointer %#, text input %#", state._pFractionalScaleManager != nullptr ? "yes" : "no",
+                        state._pCursorShapeManager != nullptr ? "yes" : "no", state._pPointerConstraints != nullptr ? "yes" : "no", state._pRelativePointerManager != nullptr ? "yes" : "no", state._pTextInputManager != nullptr ? "yes" : "no" );
         return true;
     }
 
@@ -1018,6 +1156,10 @@ namespace sw
             wl_output_destroy( output._pOutput );
         }
         state.releasePointerConstraint();
+        if ( state._pTextInput != nullptr )
+            zwp_text_input_v3_destroy( state._pTextInput );
+        if ( state._pTextInputManager != nullptr )
+            zwp_text_input_manager_v3_destroy( state._pTextInputManager );
         if ( state._pCursorShapeDevice != nullptr )
             wp_cursor_shape_device_v1_destroy( state._pCursorShapeDevice );
         if ( state._pCursorShapeManager != nullptr )
@@ -1079,10 +1221,16 @@ namespace sw
         }
 
         // 입력은 X11 과 같이 처리기(입력 관리자 · 에디터)에 하나씩 넘긴다.
-        vector<WaylandInputEvent> listInput;
+        vector<WaylandQueuedInput> listInput;
         listInput.swap( state._listPendingInput );
-        for ( const WaylandInputEvent& input : listInput )
+        for ( const WaylandQueuedInput& queued : listInput )
         {
+            if ( queued._bText )
+            {
+                dispatchTextInput( queued._textKind, queued._text );
+                continue;
+            }
+            const WaylandInputEvent& input = queued._input;
             // 포커스는 처리기가 없어도 적는다(앱 루프의 프레임 페이싱이 읽는다).
             if ( input._kind == WaylandInputKind::FocusGained || input._kind == WaylandInputKind::FocusLost )
                 setFocusState( input._kind == WaylandInputKind::FocusGained );
@@ -1122,6 +1270,25 @@ namespace sw
         wl_display_flush( state._pDisplay );
         pollfd pollEntry{ wl_display_get_fd( state._pDisplay ), POLLIN, 0 };
         (void)poll( &pollEntry, 1, static_cast<int32>( timeoutMilliseconds ) );
+    }
+
+    void WaylandWindow::applyTextInputWanted( bool bWanted )
+    {
+        State& state            = *_pState;
+        state._bTextInputWanted = bWanted;
+        state.syncTextInput();
+        if ( bWanted == false )
+            state.clearComposition(); // X11 과 같다 - 끈 뒤 옛 조합이 남지 않는다
+    }
+
+    void WaylandWindow::applyTextInputArea( const WindowTextInputArea& area )
+    {
+        State& state         = *_pState;
+        state._textInputArea = area;
+        if ( state._bTextInputEnabled == false )
+            return; // 켤 때 보낸다
+        zwp_text_input_v3_set_cursor_rectangle( state._pTextInput, area._position._x, area._position._y, 1, area._lineHeight );
+        zwp_text_input_v3_commit( state._pTextInput );
     }
 
     void WaylandWindow::applyWindowVisibility( bool bShow )

@@ -9,7 +9,6 @@
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Foundation/X11Headers.h"
     #include "Core/Concurrency/atomic.h"
-    #include "Core/String/fixed_string.h"
 
     #include "Engine/Input/Devices/GamepadDevice.h"
     #include "Engine/Input/Devices/KeyboardDevice.h"
@@ -19,8 +18,8 @@
     #include "Engine/Input/Linux/LinuxGamepadDevice.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
-    #include "Engine/Window/Linux/X11Window.h"
     #include "Engine/Window/NativeWindowEvent.h"
+    #include "Engine/Window/WindowTextInput.h"
 
     #include <X11/XKBlib.h>
     #include <linux/input-event-codes.h>
@@ -161,19 +160,6 @@ namespace sw
                     }
                 }
             }
-
-            /** @brief 텍스트 입력: 창의 입력기(XIM)가 커밋한 UTF-8 문자열을 얻어 큐에 넣습니다(완전한 프리에딧 후보 창 렌더링은 구현하지 않음). */
-            static void postTextInput( InputManager& manager, const XEvent& xev )
-            {
-                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
-                X11Window*           pX11Window  = X11Window::tryCast( pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr );
-                if ( pX11Window == nullptr )
-                    return;
-                fixed_string<constant::buffer::kMax32> utf8Buf;
-                const uint32                           byteCount = pX11Window->readCommittedText( &xev.xkey, utf8Buf.data(), static_cast<uint32>( utf8Buf.capacity() ) );
-                if ( byteCount > 0 )
-                    manager.postRawEvent( RawInputEvent::makeTextInput( string_view( utf8Buf.data(), byteCount ) ) );
-            }
         };
     } // namespace
 } // namespace sw
@@ -223,6 +209,11 @@ namespace sw
     // 길이를 나누지 않는다: Win32 짝과 같이 이벤트 종류별로 갈라 주는 `switch` 디스패처다.
     void InputManager::processNativeEvent( const NativeWindowEvent& event )
     {
+        if ( event._message == NativeWindowEvent::kMessageTextInput && event._lParam != 0 )
+        {
+            postWindowTextInput( *reinterpret_cast<const WindowTextInputEvent*>( event._lParam ) );
+            return;
+        }
         if ( event._message == NativeWindowEvent::kMessageWayland && event._lParam != 0 )
         {
             const WaylandInputEvent& input = *reinterpret_cast<const WaylandInputEvent*>( event._lParam );
@@ -237,11 +228,6 @@ namespace sw
                     if ( key == Key::LeftAlt || key == Key::RightAlt )
                         onPlatformAltChanged( bDown );
                     postRawEvent( bDown ? RawInputEvent::makeKeyDown( key ) : RawInputEvent::makeKeyUp( key ) );
-                    break;
-                }
-                case WaylandInputKind::Text:
-                {
-                    postRawEvent( RawInputEvent::makeTextInput( string_view{ input._arrText } ) );
                     break;
                 }
                 case WaylandInputKind::PointerMove:
@@ -317,9 +303,7 @@ namespace sw
                     postRawEvent( RawInputEvent::makeKeyDown( key ) );
                 else
                     postRawEvent( RawInputEvent::makeKeyUp( key ) );
-
-                if ( bDown )
-                    X11InputInternal::postTextInput( *this, *pXev );
+                // 글자는 창이 키 뒤에 글 이벤트로 낸다(`X11InputMethod`).
                 break;
             }
             case ButtonPress:

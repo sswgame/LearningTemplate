@@ -1084,6 +1084,8 @@ namespace sw::editor
         if ( _bInitialized == SW_FALSE )
             return;
 
+        if ( _platformBackend != nullptr )
+            _platformBackend->drawOverlay();
         ImGui::Render();
     }
 

@@ -2,17 +2,22 @@
 
 #include "Engine/Input/InputManager.h"
 
+#include "Core/Container/UTF8Util.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Time/MonotonicClock.h"
 
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Input/Devices/GamepadDevice.h"
 #include "Engine/Input/Devices/KeyboardDevice.h"
 #include "Engine/Input/Devices/MouseDevice.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
 #include "Engine/Window/NativeWindowEvent.h"
+#include "Engine/Window/WindowTextInput.h"
 
 // 이 파일은 플랫폼에 독립적이다. 플랫폼별 구현(게임패드 백엔드, 커서 잠금과 표시,
 // 접근성 단축키 억제)은 InputManager.h 의 "플랫폼별 구현" 절에 있는 훅(registerPlatformGamepads() 등)으로만
@@ -699,6 +704,11 @@ namespace sw
         if ( focus == InputKeyboardFocus::Count )
             return;
         _keyboardFocus = focus;
+        // 글을 받는 포커스만 입력기를 켠다 - 게임이 키보드를 가진 동안 입력기가 WASD 를 조합으로 가져가지 않는다(언리얼 · SDL 도 글 칸에서만 켠다). 도구 창은 에디터가 글 칸마다 따로 알린다.
+        const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow* const                   pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        if ( pWindow != nullptr )
+            pWindow->requestTextInput( WindowTextInputClient::Engine, focus == InputKeyboardFocus::UI || focus == InputKeyboardFocus::DevConsole );
         // 개발 콘솔이나 텍스트 입력이 키보드를 가진 동안은 마우스도 놓는다(커서로 창 밖이나 제목 표시줄에 갈 수 있게).
         syncMouseLock();
     }
@@ -855,9 +865,36 @@ namespace sw
 
     void InputManager::onTextComposition( string_view text )
     {
+        // 빈 글도 넘긴다 - 조합이 취소됐다는 소식이다. 막으면 위젯에 지운 조합 글이 남는다.
         const TextInputDelegate& onTextComposition = _arrOnTextComposition[static_cast<size_t>( _keyboardFocus )].get();
-        if ( text.empty() == false && onTextComposition.isBound() )
+        if ( onTextComposition.isBound() )
             onTextComposition( text );
+    }
+
+    void InputManager::postWindowTextInput( const WindowTextInputEvent& event )
+    {
+        if ( event._kind == WindowTextInputKind::Composition )
+        {
+            (void)postRawEvent( RawInputEvent::makeTextComposition( event._text ) );
+            return;
+        }
+        string_view rest = event._text;
+        while ( rest.empty() == false )
+        {
+            const size_t length = rest.size() <= RawInputEvent::kMaxTextBytes ? rest.size() : UTF8Util::backOffToCharacterStart( rest.data(), RawInputEvent::kMaxTextBytes );
+            if ( length == 0 )
+                return; // UTF-8 이 아닌 글이다(연속 바이트만 있다) - 나눌 경계가 없다
+            (void)postRawEvent( RawInputEvent::makeTextInput( rest.substr( 0, length ) ) );
+            rest.remove_prefix( length );
+        }
+    }
+
+    void InputManager::setTextInputArea( const WindowTextInputArea& area )
+    {
+        const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        IWindow* const                   pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        if ( pWindow != nullptr )
+            pWindow->setTextInputArea( area );
     }
 
     float2 InputManager::getMousePositionNormalized() const

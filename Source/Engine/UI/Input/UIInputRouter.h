@@ -91,7 +91,7 @@ namespace sw
         /** @brief UI 액션을 활성 화면 @p pActive 로 보냅니다(탐색, 스틱, 스크롤, 확인, 탭, 지우기, 뒤로). 없거나 액션을 받지 않는 화면이면 스틱 상태만 지웁니다. */
         void processActions( UIScreen* pActive, float32 deltaSeconds );
         /** @brief 포커스 위젯이 텍스트 입력 위젯이면 키보드 포커스 `UI` 를 잡고, 아니면 놓습니다. */
-        void updateKeyboardFocus();
+        void updateKeyboardFocus( const UIViewport& viewport );
         /** @brief @p screen 이 활성이 될 때의 포커스를 돌려줍니다. 기억한 위젯이 있으면 그것이고, 없고 탐색 방식이면 기본 포커스(없으면 첫 위젯)입니다. */
         void restoreFocus( UIScreen& screen );
         /** @brief UI 맵 레이어를 맞춥니다. `UI` 는 활성 화면이 있을 때 켜고, `UIGlobal`(일시정지)은 활성 화면이 없고 일시정지 메뉴가 있을 때 켭니다. */

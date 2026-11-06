@@ -10,6 +10,7 @@
     #include "Core/Time/GameTimer.h"
 
     #include "Editor/Common/Backend/ImGuiKeyForward.h"
+    #include "Editor/Common/Backend/Platform/ImGuiTextInputBridge.h"
 
     #include "Engine/Input/Map/InputKeyTable.h"
     #include "Engine/Window/IWindow.h"
@@ -35,6 +36,7 @@ namespace sw::editor
             , _wmDelete{ 0 }
             , _timer{}
             , _clipboardText{}
+            , _textInput{}
             , _lastPointer{}
             , _lastPointerMask{ 0 }
             , _monitorGeneration{ 0 }
@@ -96,6 +98,7 @@ namespace sw::editor
             platformIO.Platform_SetWindowTitle     = setWindowTitleThunk;
             platformIO.Platform_GetClipboardTextFn = &getClipboardTextThunk;
             platformIO.Platform_SetClipboardTextFn = &setClipboardTextThunk;
+            _textInput.initialize( *pWindow );
 
             // 모니터를 하나도 못 읽으면 가짜 모니터로 계속하지 않고 초기화 실패로 멈춘다(호출 쪽이 실패를 처리한다)
             if ( updateMonitors() == false )
@@ -106,8 +109,11 @@ namespace sw::editor
             return true;
         }
 
+        void drawOverlay() override { _textInput.drawComposition(); }
+
         void shutdown() override
         {
+            _textInput.shutdown();
             ImGuiViewport* pMainViewport = ImGui::GetMainViewport();
             if ( pMainViewport != nullptr && pMainViewport->PlatformUserData != nullptr )
             {
@@ -174,6 +180,8 @@ namespace sw::editor
 
         bool processEvent( const NativeWindowEvent& event ) override
         {
+            if ( _textInput.processEvent( event ) )
+                return ImGui::GetIO().WantCaptureKeyboard;
             if ( event._message != NativeWindowEvent::kMessageX11 )
                 return false;
 
@@ -203,14 +211,8 @@ namespace sw::editor
                 case KeyPress:
                 case KeyRelease:
                 {
-                    const bool bIsDown = ( pEvent->type == KeyPress );
-                    submitKey( io, pEvent->xkey, bIsDown );
-                    if ( bIsDown )
-                    {
-                        const uint32 codepoint = readCodepoint( pEvent->xkey );
-                        if ( codepoint != 0 )
-                            io.AddInputCharacter( codepoint );
-                    }
+                    // 글자는 창이 키 뒤에 글 이벤트로 낸다(`X11InputMethod`) - 위의 `_textInput` 이 받는다.
+                    submitKey( io, pEvent->xkey, pEvent->type == KeyPress );
                     return io.WantCaptureKeyboard;
                 }
                 case FocusIn:
@@ -444,28 +446,6 @@ namespace sw::editor
             const ImGuiKey imguiKey = ImGuiKeyForward::toImGuiKey( key );
             if ( imguiKey != ImGuiKey_None )
                 io.AddKeyEvent( imguiKey, bIsDown );
-        }
-
-        /**
-         * @brief 키 누름이 내는 글자의 코드 포인트입니다. 글자가 없으면 0 입니다.
-         * @details shortcut: 입력기(XIM)를 거치지 않아 한글 조합과 옛 키심 번호의 레이아웃(키릴 등)은 글자가 나오지 않는다 - 입력기 문맥은 창의 것(`X11Window::readCommittedText`)이고 그 함수가 `IWindow` 에 오면 그쪽으로 바꾼다.
-         */
-        static uint32 readCodepoint( XKeyEvent& keyEvent )
-        {
-            if ( ( keyEvent.state & ControlMask ) != 0 )
-                return 0; // Ctrl 조합은 글자가 아니다
-            utf8        arrBytes[8]{};
-            KeySym      keySym{ 0 };
-            const int32 byteCount = XLookupString( &keyEvent, arrBytes, static_cast<int32>( sizeof( arrBytes ) ), &keySym, nullptr );
-            // ASCII 는 로캘과 무관하게 같은 바이트다(숫자 패드도 여기로 온다). 그 밖의 바이트는 로캘 인코딩이라 키심으로 읽는다.
-            const uint8 firstByte = static_cast<uint8>( arrBytes[0] );
-            if ( byteCount == 1 && 0x20 <= firstByte && firstByte <= 0x7E )
-                return firstByte;
-            const uint64 sym      = static_cast<uint64>( keySym );
-            const bool   bLatin1  = 0xA0 <= sym && sym <= 0xFF;           // Latin-1 키심은 코드 포인트와 번호가 같다
-            const bool   bUnicode = ( sym & 0xFF000000u ) == 0x01000000u; // 유니코드 키심(0x01000000 + 코드 포인트)
-            return bLatin1 ? static_cast<uint32>( sym ) : bUnicode ? static_cast<uint32>( sym & 0x00FFFFFFu )
-                                                                   : 0;
         }
 
         ImGuiViewport* findViewportByWindow( Window window ) const
@@ -704,18 +684,19 @@ namespace sw::editor
         }
 
     private:
-        IWindow*         _pWindow;
-        Display*         _pDisplay;
-        Window           _mainWindow;
-        Atom             _wmDelete;
-        GameTimer        _timer;
-        string           _clipboardText;                     ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
-        int2             _lastPointer;                       ///< 마지막으로 ImGui 에 알린 실제 포인터 위치
-        uint32           _lastPointerMask;                   ///< 마지막으로 ImGui 에 알린 실제 버튼 상태
-        uint32           _monitorGeneration;                 ///< `platformIO.Monitors` 를 읽은 때의 `IWindow::getMonitorGeneration`
-        uint64           _arrCursor[ImGuiMouseCursor_COUNT]; ///< 모양마다 만든 X 커서(0 이면 아직 없음). 이 연결의 자원이라 `shutdown` 이 놓는다
-        ImGuiMouseCursor _lastCursor;                        ///< 창에 건 커서. 처음에는 `ImGuiMouseCursor_COUNT` 라 첫 프레임에 건다
-        uint8            _bPointerRead : 1;                  ///< 포인터를 한 번이라도 읽었는지
+        IWindow*             _pWindow;
+        Display*             _pDisplay;
+        Window               _mainWindow;
+        Atom                 _wmDelete;
+        GameTimer            _timer;
+        string               _clipboardText;                     ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
+        ImGuiTextInputBridge _textInput;                         ///< 창의 입력기와 ImGui 를 잇는다
+        int2                 _lastPointer;                       ///< 마지막으로 ImGui 에 알린 실제 포인터 위치
+        uint32               _lastPointerMask;                   ///< 마지막으로 ImGui 에 알린 실제 버튼 상태
+        uint32               _monitorGeneration;                 ///< `platformIO.Monitors` 를 읽은 때의 `IWindow::getMonitorGeneration`
+        uint64               _arrCursor[ImGuiMouseCursor_COUNT]; ///< 모양마다 만든 X 커서(0 이면 아직 없음). 이 연결의 자원이라 `shutdown` 이 놓는다
+        ImGuiMouseCursor     _lastCursor;                        ///< 창에 건 커서. 처음에는 `ImGuiMouseCursor_COUNT` 라 첫 프레임에 건다
+        uint8                _bPointerRead : 1;                  ///< 포인터를 한 번이라도 읽었는지
     };
 
     unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackend()

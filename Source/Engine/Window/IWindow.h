@@ -10,6 +10,7 @@
 #include "Engine/EngineMinimal.h"
 #include "Engine/Window/CursorShape.h"
 #include "Engine/Window/IRenderSurface.h"
+#include "Engine/Window/WindowTextInput.h"
 
 namespace sw
 {
@@ -261,6 +262,17 @@ namespace sw
             return false;
         }
 
+        // ---- 입력기(IME). 모양은 `WindowTextInput.h` 머리말. 글은 `NativeWindowEvent::kMessageTextInput` 으로 외부 처리기에 온다 ----
+        /**
+         * @brief @p client 가 글 입력을 원하는지 알립니다. 어느 쪽이든 원하면 입력기가 켜집니다. 가상이 아니다 - 원하는 쪽을 세는 일을 플랫폼이 빠뜨릴 수 없게 하고, 실제 켜고 끄기만 `applyTextInputWanted` 로 내려간다.
+         * @details 꺼진 동안 입력기는 키를 가져가지 않는다(게임의 WASD 가 한글 조합에 먹히지 않는다). 키가 낸 글자는 입력기가 꺼져도 확정 글로 온다. **창 스레드(메인 스레드)에서만 부릅니다.**
+         */
+        void requestTextInput( WindowTextInputClient client, bool bWanted );
+        /** @brief 입력기를 원하는 쪽이 있는지입니다. */
+        [[nodiscard]] bool isTextInputWanted() const { return _textInputClientMask != 0; }
+        /** @brief 글 커서의 자리를 알립니다. 같은 자리면 아무것도 하지 않는다. 다시 만든 창에도 그대로 적용된다. **창 스레드(메인 스레드)에서만 부릅니다.** */
+        void setTextInputArea( const WindowTextInputArea& area );
+
         /**
          * @brief 창 방식과 (창 모드일 때의) 클라이언트 크기를 바꿉니다.
          * @details 크기가 바뀌면 플랫폼의 크기 통보가 `bindResizeCallback` 의 콜백을 부른다. 스왑체인은 이 경로(Engine::onMainWindowResize 가 렌더 스레드를
@@ -437,6 +449,12 @@ namespace sw
         }
         /** @brief `_arrTitle` 을 플랫폼 창의 제목 줄에 겁니다. 창이 아직 없으면 아무것도 하지 않습니다(만들 때 `_arrTitle` 로 겁니다). */
         virtual void applyTitle() {}
+        /** @brief 입력기를 켜거나 끕니다. 값이 바뀔 때만 불린다. 창을 만들 때는 플랫폼의 `initializeWindow` 가 `isTextInputWanted` 로 맞춘다. */
+        virtual void applyTextInputWanted( bool bWanted ) { (void)bWanted; }
+        /** @brief 입력기에 글 커서의 자리를 알립니다. */
+        virtual void applyTextInputArea( const WindowTextInputArea& area ) { (void)area; }
+        /** @brief 조합 · 확정 글을 외부 처리기(`bindCustomMessageHandler`)에 넘깁니다. 플랫폼 창만 부른다. */
+        void dispatchTextInput( WindowTextInputKind kind, string_view text );
 
         /**
          * @brief @p pTitle 을 `_arrTitle` 에 담습니다(nullptr 은 빈 제목). 플랫폼의 `initializeWindow` 가 처음에 부릅니다.
@@ -475,8 +493,10 @@ namespace sw
         uint8                  _bMinimized        : 1; /**< 창 이벤트가 알린 최소화 상태(`isMinimized`). */
         uint8                  _bFocused          : 1; /**< 창 이벤트가 알린 포커스 상태(`hasFocus`). */
         [[maybe_unused]] uint8 _reserved          : 3;
-        WindowDisplayMode      _displayMode; /**< 마지막 `setDisplayMode` 가 고른 방식. */
-        uint8                  _arrReserved[6];
+        WindowDisplayMode      _displayMode;         /**< 마지막 `setDisplayMode` 가 고른 방식. */
+        uint8                  _textInputClientMask; /**< 입력기를 원하는 쪽(`WindowTextInputClient` 비트). */
+        uint8                  _arrReserved[5];
+        WindowTextInputArea    _textInputArea; /**< 마지막 `setTextInputArea` 의 값. */
         /** @brief 다시 만들 때 놓을 위치입니다. 플랫폼 생성자가 자기 "알아서" 값으로 채웁니다. */
         int32  _restoreX;
         int32  _restoreY;

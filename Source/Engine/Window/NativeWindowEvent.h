@@ -17,6 +17,8 @@ namespace sw
         static constexpr uint32 kMessageX11 = 0x8001;
         /** @brief Wayland: processMessages 가 `WaylandInputEvent*` 를 lParam 에 실을 때 쓰는 메시지 코드입니다(`Window/Linux/Wayland/WaylandInputEvent.h`). */
         static constexpr uint32 kMessageWayland = 0x8002;
+        /** @brief 창이 낸 조합 · 확정 글입니다. lParam 이 `WindowTextInputEvent*` 입니다(`IWindow::dispatchTextInput`). 키 이벤트와 같은 경로로 오고 `isKeyboardInput` 이 true 입니다. */
+        static constexpr uint32 kMessageTextInput = 0x8003;
 
         /** @brief 첫 번째 파라미터입니다(Win32: WPARAM). */
         uintptr_t _wParam{ 0 };

@@ -83,6 +83,10 @@ namespace sw
         void clearRestorePosition() override;
         /** @brief `SetWindowTextW` 로 제목 줄을 바꿉니다. */
         void applyTitle() override;
+        /** @brief `ImmAssociateContextEx` 로 이 창의 입력기를 켜거나 끕니다. 조합 · 확정 글은 Win32 메시지(`WM_IME_COMPOSITION` · `WM_CHAR`)로 와서 입력 관리자가 읽는다. */
+        void applyTextInputWanted( bool bWanted ) override;
+        /** @brief `ImmSetCompositionWindow` · `ImmSetCandidateWindow` 로 조합 · 후보 창을 글 커서에 놓습니다. */
+        void applyTextInputArea( const WindowTextInputArea& area ) override;
 
     private:
         static LRESULT CALLBACK wndProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam );

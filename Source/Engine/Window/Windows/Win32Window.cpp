@@ -9,6 +9,9 @@
 #include "Engine/Window/WindowMonitor.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
+    #include <imm.h>
+    #pragma comment( lib, "imm32.lib" )
+
 namespace sw
 {
     namespace
@@ -131,6 +134,8 @@ namespace sw
 
         if ( _hWnd == nullptr )
             return false;
+        // 원하는 쪽이 없으면 입력기는 꺼 둔다(X11 · Wayland 와 같다) - 한글 입력기가 켜진 채 게임을 해도 WASD 가 조합으로 가지 않는다.
+        applyTextInputWanted( isTextInputWanted() );
 
         SW_LOG_INFO_ID( "Win32Window.NativeWin32WindowCreated", "Native Win32 Window created successfully! (%#×%#)", width, height );
         return true;
@@ -194,6 +199,32 @@ namespace sw
             SW_LOG_WARNING_ID( "Win32Window.EnumDisplayMonitorsFailed", "EnumDisplayMonitors failed (error %#) - the monitor list is incomplete", GetLastError() );
         WindowMonitor::orderPrimaryFirst( outListMonitor );
         return true;
+    }
+
+    void Win32Window::applyTextInputWanted( bool bWanted )
+    {
+        if ( _hWnd != nullptr )
+            (void)ImmAssociateContextEx( _hWnd, nullptr, bWanted ? IACE_DEFAULT : 0 );
+    }
+
+    void Win32Window::applyTextInputArea( const WindowTextInputArea& area )
+    {
+        if ( _hWnd == nullptr )
+            return;
+        HIMC hImc = ImmGetContext( _hWnd );
+        if ( hImc == nullptr )
+            return; // 입력기가 꺼진 동안이다 - 켜진 뒤 다음 자리 변화가 놓는다
+        const POINT     position{ area._position._x, area._position._y };
+        COMPOSITIONFORM composition{};
+        composition.dwStyle      = CFS_FORCE_POSITION;
+        composition.ptCurrentPos = position;
+        (void)ImmSetCompositionWindow( hImc, &composition );
+        CANDIDATEFORM candidate{};
+        candidate.dwStyle        = CFS_CANDIDATEPOS;
+        candidate.ptCurrentPos.x = area._position._x;
+        candidate.ptCurrentPos.y = area._position._y + area._lineHeight;
+        (void)ImmSetCandidateWindow( hImc, &candidate );
+        ImmReleaseContext( _hWnd, hImc );
     }
 
     bool Win32Window::setMinimized( bool bMinimized )

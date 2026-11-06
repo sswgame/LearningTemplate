@@ -15,6 +15,7 @@
 #include "Engine/UI/WidgetTree/UINavigationSolver.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/WidgetTree/WidgetTree.h"
+#include "Engine/Window/WindowTextInput.h"
 
 namespace sw
 {
@@ -492,7 +493,7 @@ namespace sw
         return reply.isHandled();
     }
 
-    void UIInputRouter::updateKeyboardFocus()
+    void UIInputRouter::updateKeyboardFocus( const UIViewport& viewport )
     {
         const Widget* pFocused = nullptr;
         if ( _focus.getFocusedTree() != nullptr )
@@ -503,6 +504,17 @@ namespace sw
             _pInput->setKeyboardFocus( InputKeyboardFocus::UI );
         else if ( bWantsText == false && current == InputKeyboardFocus::UI )
             _pInput->setKeyboardFocus( InputKeyboardFocus::Game );
+        if ( bWantsText == false )
+            return;
+        // 후보 창을 글 칸 아래에 놓는다(`processPointer` 의 픽셀 → UI 단위 변환을 거꾸로 한다).
+        // shortcut: 자리는 위젯 왼쪽이다 - 글자 배치는 위젯 안의 일이라 라우터가 모른다, 긴 글에서 후보 창이 커서를 따라가야 하면 위젯이 커서 자리를 내놓게 한다.
+        const WidgetGeometry& geometry = pFocused->getGeometry();
+        const float2          origin   = geometry.transformPoint( float2{} );
+        const float32         uiScale  = viewport._uiScale > 0.0f ? viewport._uiScale : 1.0f;
+        WindowTextInputArea   area;
+        area._position   = int2{ static_cast<int32>( origin._x * uiScale ) + viewport._pointerOrigin._x, static_cast<int32>( origin._y * uiScale ) + viewport._pointerOrigin._y };
+        area._lineHeight = static_cast<int32>( geometry._size._y * uiScale );
+        _pInput->setTextInputArea( area );
     }
 
     void UIInputRouter::onTextInput( string_view text )

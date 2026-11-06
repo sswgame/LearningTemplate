@@ -7,6 +7,7 @@
     #include "Core/Time/GameTimer.h"
 
     #include "Editor/Common/Backend/ImGuiKeyForward.h"
+    #include "Editor/Common/Backend/Platform/ImGuiTextInputBridge.h"
 
     #include "Engine/Input/Map/InputKeyTable.h"
     #include "Engine/Window/CursorShape.h"
@@ -96,6 +97,7 @@ namespace sw::editor
             : _pWindow{ nullptr }
             , _timer{}
             , _clipboardText{}
+            , _textInput{}
             , _lastCursor{ CursorShape::Arrow }
             , _bCursorKnown{ SW_FALSE }
         {
@@ -127,6 +129,7 @@ namespace sw::editor
             ImGuiPlatformIO& platformIO            = ImGui::GetPlatformIO();
             platformIO.Platform_GetClipboardTextFn = &getClipboardTextThunk;
             platformIO.Platform_SetClipboardTextFn = &setClipboardTextThunk;
+            _textInput.initialize( *pWindow );
 
             updateMonitor();
             return true;
@@ -135,6 +138,7 @@ namespace sw::editor
         void shutdown() override
         {
             // 초기화한 적이 없어도(실패를 수습하는 경로) 안전해야 한다 — 활성 백엔드가 이 백엔드일 때만 ImGui 쪽 끈을 푼다.
+            _textInput.shutdown();
             ImGuiIO& io = ImGui::GetIO();
             if ( io.BackendPlatformUserData == this )
             {
@@ -162,8 +166,12 @@ namespace sw::editor
             updateCursor( io );
         }
 
+        void drawOverlay() override { _textInput.drawComposition(); }
+
         bool processEvent( const NativeWindowEvent& event ) override
         {
+            if ( _textInput.processEvent( event ) )
+                return ImGui::GetIO().WantCaptureKeyboard;
             if ( event._message != NativeWindowEvent::kMessageWayland || event._lParam == 0 )
                 return false;
             const WaylandInputEvent& input = *reinterpret_cast<const WaylandInputEvent*>( event._lParam );
@@ -211,11 +219,6 @@ namespace sw::editor
                     const ImGuiKey key = ImGuiKeyForward::toImGuiKey( engineKey );
                     if ( key != ImGuiKey_None )
                         io.AddKeyEvent( key, bIsDown );
-                    return io.WantCaptureKeyboard;
-                }
-                case WaylandInputKind::Text:
-                {
-                    io.AddInputCharactersUTF8( input._arrText );
                     return io.WantCaptureKeyboard;
                 }
                 case WaylandInputKind::PointerEnter:
@@ -293,11 +296,12 @@ namespace sw::editor
         }
 
     private:
-        IWindow*    _pWindow;
-        GameTimer   _timer;
-        string      _clipboardText; ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
-        CursorShape _lastCursor;
-        uint8       _bCursorKnown : 1;
+        IWindow*             _pWindow;
+        GameTimer            _timer;
+        string               _clipboardText; ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
+        ImGuiTextInputBridge _textInput;     ///< 창의 입력기와 ImGui 를 잇는다
+        CursorShape          _lastCursor;
+        uint8                _bCursorKnown : 1;
     };
 
     unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackendFor( const IWindow& window )

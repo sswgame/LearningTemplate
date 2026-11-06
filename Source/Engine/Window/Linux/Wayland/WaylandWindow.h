@@ -106,6 +106,10 @@ namespace sw
         void applyMinimumClientSize() override;
         /** @brief `xdg_toplevel_set_title` 입니다. */
         void applyTitle() override;
+        /** @brief `zwp_text_input_v3` 를 켜거나 끕니다(키보드 포커스가 있을 때만 켜진다). 컴포지터에 확장이 없으면 키가 낸 글자만 온다 - 정상이다. */
+        void applyTextInputWanted( bool bWanted ) override;
+        /** @brief `zwp_text_input_v3.set_cursor_rectangle` 입니다. */
+        void applyTextInputArea( const WindowTextInputArea& area ) override;
 
     public:
         /** @brief 라이브러리 객체 · 리스너가 쌓은 입력입니다(.cpp 에만 정의가 있다). 리스너 묶음(.cpp 의 익명 구조체)이 이름을 쓰도록 공개 선언만 둔다. */
