@@ -40,7 +40,7 @@ namespace sw
             uint32             _width{ 0 };                     ///< 이 첨부의 실제 크기(풀 크기를 나눗수로 나눈 값, 올림)
             uint32             _height{ 0 };
             RHIFormat          _format{ RHIFormat::Unknown }; ///< 만들 때의 포맷(파이프라인 XML 의 선언)
-            float4             _clearColor{};                 ///< 클리어 색 · 깊이(`_x`) — 파이프라인 XML 의 선언
+            RHIAttachmentOps   _ops{};                        ///< 초기값 · 로드 · 저장 동작 — 파이프라인 XML 의 선언
             uint32             _idleFrames{ 0 };              ///< 쓰는 패스가 이어서 돌지 않은 프레임 수(`releaseIfIdle`)
         };
 
@@ -86,12 +86,12 @@ namespace sw
          * @brief 이름으로 첨부를 만듭니다. 크기는 현재 크기를 `resolutionDivisor` 로 나눈 값(올림)입니다.
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
-        bool allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 resolutionDivisor, bool bUnorderedAccess = false );
+        bool allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 resolutionDivisor, bool bUnorderedAccess = false );
         /**
          * @brief 프레임 크기와 상관없는 크기(width × height)로 첨부를 만듭니다. 그림자 맵처럼 화면이 아니라 빛의 볼륨을 담는 타깃용입니다.
          * @return 이미 있으면 그대로 true 이고, 못 만들면 경고를 남기고 false 입니다.
          */
-        bool allocateSized( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 width, uint32 height, bool bUnorderedAccess = false );
+        bool allocateSized( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width, uint32 height, bool bUnorderedAccess = false );
         /** @brief 이름의 첨부(텍스처 + SRV)입니다. 원본을 가리키는 이름(`forward`)은 원본의 첨부입니다. 없으면 빈 값입니다. */
         Attachment find( string_view name ) const;
         /** @brief 이름의 텍스처 핸들입니다. 원본을 가리키는 이름은 원본의 핸들입니다. 없으면 0 입니다. */

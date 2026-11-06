@@ -81,7 +81,7 @@ namespace sw
                     case RenderPassType::ForwardOpaque:
                     {
                         info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
-                        info._flags          = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
+                        info._flags          = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kMaterialBlend | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::GBuffer:
@@ -92,7 +92,7 @@ namespace sw
                         info._pExcludedMaterialDefine = kMaterialForwardOnlyDefine;
                         info._pColorFormat            = kArrGBufferColorFormat;
                         info._colorTargetCount        = static_cast<uint32>( sizeof( kArrGBufferColorFormat ) / sizeof( kArrGBufferColorFormat[0] ) );
-                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
+                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::Lighting:
@@ -106,7 +106,7 @@ namespace sw
                     {
                         // 블렌드를 켜고 깊이 쓰기를 끄는 것까지가 패스의 몫이다. 어떤 퍼뮤테이션으로 그릴지는 머티리얼이 정한다.
                         info._pDefaultShader = &EngineDefaultAssets::_shaderForwardLit;
-                        info._flags          = Flag::kDepthTest | Flag::kBlend | Flag::kDrawsTransparentBatch | kSceneColorPassFlags;
+                        info._flags          = Flag::kDepthTest | Flag::kBlend | Flag::kDrawsTransparentBatch | Flag::kMaterialFixedState | Flag::kMaterialBlend | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::SSAO:
@@ -429,7 +429,7 @@ namespace sw
                     if ( row._pColorFormat != nullptr && row._colorTargetCount == 0 )
                         return false;
                     // 머티리얼 셰이더 · 뷰 모드 · 반투명 배치는 씬 메시를 그리는 패스의 성질이다.
-                    const uint32 kMeshOnlyFlags = Flag::kUsesMaterialShader | Flag::kAppliesViewMode | Flag::kDrawsTransparentBatch | Flag::kDepthOnly | Flag::kCullFront;
+                    const uint32 kMeshOnlyFlags = Flag::kUsesMaterialShader | Flag::kAppliesViewMode | Flag::kDrawsTransparentBatch | Flag::kDepthOnly | Flag::kCullFront | Flag::kMaterialFixedState | Flag::kMaterialBlend;
                     if ( row.hasFlag( kMeshOnlyFlags ) && row.hasFlag( Flag::kDrawsSceneMeshes ) == false )
                         return false;
                     // 머티리얼로 배치를 거르는 것도 씬 메시 패스의 성질이다.
@@ -510,9 +510,9 @@ namespace sw
 
     bool passAppliesTonemap( const RenderGraphPassDesc& passDesc )
     {
-        if ( passDesc._resolvedType == RenderPassType::Tonemap )
+        if ( passDesc._type == RenderPassType::Tonemap )
             return true;
-        if ( passDesc._resolvedType != RenderPassType::Present )
+        if ( passDesc._type != RenderPassType::Present )
             return false;
         const string_view define{ kPostTonemapDefine };
         for ( const string& permutation : passDesc._listPermutation )

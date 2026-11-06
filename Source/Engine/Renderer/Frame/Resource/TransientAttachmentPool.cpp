@@ -25,14 +25,14 @@ namespace sw
         _height = height;
     }
 
-    bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
+    bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops,
                                             uint32 resolutionDivisor, bool bUnorderedAccess )
     {
-        return allocateSized( pDevice, name, format, bDepth, clearColor, computeScaledExtent( _width, resolutionDivisor ),
+        return allocateSized( pDevice, name, format, bDepth, ops, computeScaledExtent( _width, resolutionDivisor ),
                               computeScaledExtent( _height, resolutionDivisor ), bUnorderedAccess );
     }
 
-    bool TransientAttachmentPool::allocateSized( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 width,
+    bool TransientAttachmentPool::allocateSized( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const RHIAttachmentOps& ops, uint32 width,
                                                  uint32 height, bool bUnorderedAccess )
     {
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
@@ -49,8 +49,9 @@ namespace sw
         desc._bIsShaderResource       = SW_TRUE;
         desc._bIsUnorderedAccess      = bUnorderedAccess ? SW_TRUE : SW_FALSE;
         desc._bIsTransient            = SW_TRUE;
-        desc._clearDepth              = clearColor._x;
-        desc._clearColor              = clearColor;
+        desc._clearDepth              = ops._clearDepth;
+        desc._clearStencil            = ops._clearStencil;
+        desc._clearColor              = ops._clearColor;
         const RHITextureHandle handle = pDevice->getResourceFactory()->createTexture2D( desc );
         if ( handle == 0 )
         {
@@ -59,7 +60,7 @@ namespace sw
         }
         const RHIDescriptorIndex srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );
         const RHIDescriptorIndex uav = bUnorderedAccess ? pDevice->getResourceFactory()->registerBindlessTextureUAV( handle ) : kInvalidDescriptorIndex;
-        _mapAttachment.emplace( name, Attachment{ handle, srv, uav, desc._width, desc._height, format, clearColor } );
+        _mapAttachment.emplace( name, Attachment{ handle, srv, uav, desc._width, desc._height, format, ops } );
         ++_allocationCount;
         return true;
     }

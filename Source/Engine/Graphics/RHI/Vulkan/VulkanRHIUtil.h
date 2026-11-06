@@ -73,6 +73,106 @@ namespace sw
             return VK_FORMAT_UNDEFINED;
         }
 
+        /** @brief 블렌드 계수를 Vulkan 값으로 바꿉니다. */
+        static inline VkBlendFactor toVulkanBlendFactor( RHIBlendFactor factor )
+        {
+            switch ( factor )
+            {
+                case RHIBlendFactor::Zero:
+                    return VK_BLEND_FACTOR_ZERO;
+                case RHIBlendFactor::One:
+                    return VK_BLEND_FACTOR_ONE;
+                case RHIBlendFactor::SrcColor:
+                    return VK_BLEND_FACTOR_SRC_COLOR;
+                case RHIBlendFactor::InvSrcColor:
+                    return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+                case RHIBlendFactor::SrcAlpha:
+                    return VK_BLEND_FACTOR_SRC_ALPHA;
+                case RHIBlendFactor::InvSrcAlpha:
+                    return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+                case RHIBlendFactor::DstColor:
+                    return VK_BLEND_FACTOR_DST_COLOR;
+                case RHIBlendFactor::InvDstColor:
+                    return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+                case RHIBlendFactor::DstAlpha:
+                    return VK_BLEND_FACTOR_DST_ALPHA;
+                case RHIBlendFactor::InvDstAlpha:
+                    return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+                case RHIBlendFactor::SrcAlphaSaturate:
+                    return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+            }
+            return VK_BLEND_FACTOR_ONE;
+        }
+
+        /** @brief 블렌드 연산을 Vulkan 값으로 바꿉니다. */
+        static inline VkBlendOp toVulkanBlendOp( RHIBlendOp op )
+        {
+            switch ( op )
+            {
+                case RHIBlendOp::Add:
+                    return VK_BLEND_OP_ADD;
+                case RHIBlendOp::Subtract:
+                    return VK_BLEND_OP_SUBTRACT;
+                case RHIBlendOp::ReverseSubtract:
+                    return VK_BLEND_OP_REVERSE_SUBTRACT;
+                case RHIBlendOp::Min:
+                    return VK_BLEND_OP_MIN;
+                case RHIBlendOp::Max:
+                    return VK_BLEND_OP_MAX;
+            }
+            return VK_BLEND_OP_ADD;
+        }
+
+        /** @brief 비교 함수를 Vulkan 값으로 바꿉니다. */
+        static inline VkCompareOp toVulkanCompareOp( RHICompareFunc func )
+        {
+            switch ( func )
+            {
+                case RHICompareFunc::Never:
+                    return VK_COMPARE_OP_NEVER;
+                case RHICompareFunc::Less:
+                    return VK_COMPARE_OP_LESS;
+                case RHICompareFunc::Equal:
+                    return VK_COMPARE_OP_EQUAL;
+                case RHICompareFunc::LessEqual:
+                    return VK_COMPARE_OP_LESS_OR_EQUAL;
+                case RHICompareFunc::Greater:
+                    return VK_COMPARE_OP_GREATER;
+                case RHICompareFunc::NotEqual:
+                    return VK_COMPARE_OP_NOT_EQUAL;
+                case RHICompareFunc::GreaterEqual:
+                    return VK_COMPARE_OP_GREATER_OR_EQUAL;
+                case RHICompareFunc::Always:
+                    return VK_COMPARE_OP_ALWAYS;
+            }
+            return VK_COMPARE_OP_LESS_OR_EQUAL;
+        }
+
+        /** @brief 스텐실 연산을 Vulkan 값으로 바꿉니다. */
+        static inline VkStencilOp toVulkanStencilOp( RHIStencilOp op )
+        {
+            switch ( op )
+            {
+                case RHIStencilOp::Keep:
+                    return VK_STENCIL_OP_KEEP;
+                case RHIStencilOp::Zero:
+                    return VK_STENCIL_OP_ZERO;
+                case RHIStencilOp::Replace:
+                    return VK_STENCIL_OP_REPLACE;
+                case RHIStencilOp::IncrementClamp:
+                    return VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+                case RHIStencilOp::DecrementClamp:
+                    return VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+                case RHIStencilOp::Invert:
+                    return VK_STENCIL_OP_INVERT;
+                case RHIStencilOp::IncrementWrap:
+                    return VK_STENCIL_OP_INCREMENT_AND_WRAP;
+                case RHIStencilOp::DecrementWrap:
+                    return VK_STENCIL_OP_DECREMENT_AND_WRAP;
+            }
+            return VK_STENCIL_OP_KEEP;
+        }
+
         /** @brief 렌더 패스 로드 동작을 Vulkan 값으로 바꿉니다. */
         static inline VkAttachmentLoadOp toVulkanLoadOp( RHIRenderPassLoadOp loadOp )
         {

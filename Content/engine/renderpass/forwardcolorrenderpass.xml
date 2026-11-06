@@ -1,7 +1,7 @@
 <!-- 포워드 파이프라인의 HDR 색 첨부 — 장면 색과 모션 블러 출력(원본을 가리킬 수 있어 같은 형식이다). -->
 <RenderPassDesc _name="ForwardColorPass">
 	<_listAttachment>
-		<RenderPassAttachment _name="SceneColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
-		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
+		<RenderPassAttachment _name="SceneColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
 	</_listAttachment>
 </RenderPassDesc>

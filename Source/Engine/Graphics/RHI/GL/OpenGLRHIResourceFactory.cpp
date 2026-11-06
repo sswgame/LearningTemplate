@@ -1073,16 +1073,8 @@ namespace sw
         if ( record._program == 0 )
             return 0;
 
-        record._topology             = request._bHasTessellation != SW_FALSE ? RHIPrimitiveTopology::PatchList3 : desc._topology;
-        record._fillMode             = desc._fillMode;
-        record._cullMode             = desc._cullMode;
-        record._depthBias            = desc._depthBias;
-        record._slopeScaledDepthBias = desc._slopeScaledDepthBias;
-        record._bEnableDepthTest     = desc._bEnableDepthTest ? 1 : 0;
-        record._bEnableDepthWrite    = desc._bEnableDepthWrite ? 1 : 0;
-        record._bEnableBlend         = desc._bEnableBlend ? 1 : 0;
-        record._bPremultipliedAlpha  = ( desc._bPremultipliedAlpha != SW_FALSE ) ? SW_TRUE : SW_FALSE;
-        record._reserved             = 0;
+        record._topology    = request._bHasTessellation != SW_FALSE ? RHIPrimitiveTopology::PatchList3 : desc._topology;
+        record._renderState = desc._renderState;
 
         return _pDevice->_pipelineStates.insert( record );
     }

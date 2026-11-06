@@ -8,6 +8,7 @@
 #include "Core/Math/VectorMath.h"
 
 #include "Engine/Foundation/Foundation.h"
+#include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -20,8 +21,7 @@ namespace sw
      *          문자열과 값의 변환을 제공하므로 파서도 검증도 이 테이블만 보면 된다.
      * @note 이름은 널리 쓰이는 표기 하나로 통일한다. 아직 개발 중이라 여러 표기를
      *       받아 줄 이유가 없고, 표기가 갈리는 순간 "어느 쪽으로 적었나" 를 매번 확인해야 한다.
-     *       XML 에 적히는 철자가 곧 열거자 이름이고, 여기에 없는 표기는 Invalid 로 파싱되어
-     *       RenderPipelineAsset::validate 가 잡는다.
+     *       XML 에 적히는 철자가 곧 열거자 이름이고, 여기에 없는 표기는 읽기 오류다. 적지 않으면 Invalid 로 남아 RenderPipelineAsset::validate 가 잡는다.
      * @note 이름을 바꾸면 XML 을 새 이름으로 다시 쓴다. `ENUM( ValueAlias = "Old:New" )` 는 실제 게임 데이터가 생겨
      *       다시 쓸 수 없게 된 뒤에 쓰는 수단이다.
      */
@@ -173,7 +173,7 @@ namespace sw
         return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Compute );
     }
 
-    /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 클리어 색, 클리어 여부)입니다.
+    /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 첫 사용의 로드 · 저장 동작, 초기값)입니다.
 
     REFLECT()
     struct RenderPassAttachment
@@ -183,13 +183,30 @@ namespace sw
         string _name = "ColorAttachment0";
 
         PROPERTY()
-        string _format = "R8G8B8A8_UNORM";
+        RHIFormat _format{ RHIFormat::R8G8B8A8_UNORM };
 
         PROPERTY()
         float4 _clearColor = { 0.1f, 0.2f, 0.3f, 1.0f };
 
         PROPERTY()
-        bool _bClear{ true };
+        float32 _clearDepth{ 1.0f }; ///< 깊이 첨부를 지우는 값
+
+        PROPERTY()
+        uint8 _clearStencil{ 0 }; ///< 깊이 · 스텐실 첨부를 지우는 스텐실 값
+
+        /**
+         * @brief 프레임에 이 첨부를 처음 여는 패스의 로드 동작입니다. 그 뒤의 패스는 앞 패스가 쓴 것을 읽는다(`Load`).
+         * @details `DontCare` 는 패스가 모든 픽셀을 다시 쓸 때, `Load` 는 지난 프레임 내용을 이어 쓸 때 고른다(언리얼 RDG 의 ERenderTargetLoadAction, 유니티 RenderBufferLoadAction).
+         */
+        PROPERTY()
+        RHIRenderPassLoadOp _loadOp{ RHIRenderPassLoadOp::Clear };
+
+        /** @brief 이 첨부를 여는 패스의 저장 동작입니다. `DontCare` 는 이 첨부를 쓰는 패스가 하나이고 읽는 패스가 없을 때만 받습니다(검증). */
+        PROPERTY()
+        RHIRenderPassStoreOp _storeOp{ RHIRenderPassStoreOp::Store };
+
+        /** @brief 첨부를 만들고 여는 데 쓰는 값들입니다. */
+        [[nodiscard]] RHIAttachmentOps getOps() const { return RHIAttachmentOps{ _clearColor, _clearDepth, _clearStencil, _loadOp, _storeOp }; }
 
         /**
          * @brief 이 첨부가 패스에 바인딩될 때의 역할입니다(`RenderPassInputRole` 이름: GBufferAlbedo, GBufferNormal, GBufferMaterial, ShadowMap, AmbientOcclusion,
@@ -222,18 +239,20 @@ namespace sw
 
     /**
      * @brief 렌더 파이프라인 그래프 안의 패스 노드 하나입니다.
-     * @details 그래프 연결(입력과 출력)과 PSO 설정(셰이더, 진입점, 깊이 · 블렌드 · 컬, 퍼뮤테이션)을 담는다. **여기 적힌 값이 곧 실행되는 값이다**(`FramePSOManager::applyPassRenderState`) —
+     * @details 그래프 연결(입력과 출력)과 PSO 설정(셰이더, 진입점, 렌더 상태, 퍼뮤테이션)을 담는다. 렌더 상태의 칸은 기반 `RHIFixedRenderState` 이고 머티리얼과 같은 형식이다.
+     *          **여기 적힌 값이 곧 실행되는 값이다**(`FramePSOManager::applyPassRenderState`) —
      *          코드를 고치지 않고 데이터로 패스를 바꾼다. 패스 실행이 받아 줄 수 없는 조합(깊이를 붙이지 않는 패스의 깊이 테스트 등)은 무시하지 않고 읽기 오류다(`RenderPipelineAsset::validate`).
      */
     REFLECT()
-    struct RenderGraphPassDesc
+    struct RenderGraphPassDesc : public RHIFixedRenderState
     {
         REFLECT_BODY();
         PROPERTY( InheritKey )
         string _name = "Pass";
 
+        /** @brief 패스 종류입니다. 디스패치와 PSO 생성이 같은 값을 본다. */
         PROPERTY()
-        string _type = "Opaque";
+        RenderPassType _type{ RenderPassType::Invalid };
 
         PROPERTY( SkipIfEmpty )
         vector<string> _listInput;
@@ -255,8 +274,7 @@ namespace sw
 
         /**
          * @brief `_depthAttachment` 를 intern 해 둔 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
-         * @details 직렬화 대상이 아니다(원본 철자는 `_depthAttachment` 가 가지고 있다). `_resolvedType` 과
-         *          같은 이유로 한 번만 해석해 둔다. 이 이름은 패스마다 어태치먼트 클리어 여부를
+         * @details 직렬화 대상이 아니다(원본 철자는 `_depthAttachment` 가 가지고 있다). 이 이름은 패스마다 어태치먼트 클리어 여부를
          *          판정하는 데 쓰이는데, 매 프레임 다시 intern 하면 그때마다 전역 문자열 레지스트리의
          *          샤드 뮤텍스를 잡게 된다.
          */
@@ -328,25 +346,19 @@ namespace sw
         PROPERTY( SkipIfEmpty )
         vector<string> _listPermutation;
 
-        PROPERTY()
-        string _cullMode = "Back"; ///< None, Front, Back 중 하나. 풀스크린 패스는 None 이어야 한다(삼각형 와인딩에 앞뒤 의미가 없다 — 검증)
-
         /**
-         * @brief `_type` 을 해석한 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
-         * @details 직렬화 대상이 아니다(원본 철자는 `_type` 이 그대로 가지고 있다). 디스패치와 PSO
-         *          생성이 같은 값을 보게 하려고 한 번만 해석해 둔다(두 곳이 각자 문자열을 비교하면 받아 주는
-         *          표기가 갈려 어긋난다).
+         * @brief 모든 렌더 타깃의 블렌드 프리셋 이름입니다(`engine/renderstate/blendpresets.xml`). 비면 불투명입니다. `_listBlendTarget` 과 함께 적을 수 없습니다(검증).
+         * @details 셰이더의 출력 규약(알파를 곱했는가)에 맞춰 고른다 — 캔버스 · 안개는 `Premultiplied` 다.
          */
-        RenderPassType _resolvedType{ RenderPassType::Invalid };
+        PROPERTY( SkipIfEmpty )
+        string _blendPreset;
 
-        PROPERTY()
-        bool _bEnableDepthTest{ true }; ///< 깊이 테스트. 켜면 `_depthAttachment` 가 있어야 하고, 깊이를 붙이는 패스 종류여야 한다(검증)
+        /** @brief 렌더 타깃마다 따로 적는 블렌드입니다. 하나면 모든 타깃에 같은 값이고, 둘 이상이면 컬러 출력 수와 같아야 합니다(검증). */
+        PROPERTY( SkipIfEmpty )
+        vector<RHIBlendTargetState> _listBlendTarget;
 
-        PROPERTY()
-        bool _bEnableDepthWrite{ true }; ///< 깊이 쓰기. 켜면 깊이 테스트도 켜져 있어야 한다(검증)
-
-        PROPERTY()
-        bool _bEnableBlend{ false }; ///< 블렌드. 곧은 알파인지 프리멀티플라이인지는 셰이더의 출력 규약이라 표(`kPremultipliedAlpha`)가 정한다
+        /** @brief `RHIFixedRenderState` 칸과 블렌드를 합친 PSO 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다(직렬화 대상이 아니다). */
+        RHIRenderState _resolvedRenderState;
 
         /**
          * @brief 이 패스가 도는 최소 후처리 품질(`gv_postQuality`, 사용자 설정 graphics.postQuality 의 선택지 순번 0 낮음 ~ 3 최고)입니다. 0 이면 늘 돕니다.

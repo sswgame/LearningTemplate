@@ -41,7 +41,7 @@ namespace sw
     class SW_API FramePSOManager
     {
     public:
-        /** @brief 패스의 깊이 · 블렌드 · 컬을 @p desc 에 정합니다. 파이프라인 패스(@p pPassDesc)는 XML 값 그대로이고, 내부 슬롯(nullptr)은 표의 값입니다. 프리멀티플라이는 언제나 표입니다. */
+        /** @brief 패스의 렌더 상태를 @p desc 에 정합니다. 파이프라인 패스(@p pPassDesc)는 XML 값 그대로이고, 내부 슬롯(nullptr)은 표의 값입니다. */
         static void applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassType passType, const RenderGraphPassDesc* pPassDesc );
 
         /**
@@ -218,7 +218,7 @@ namespace sw
         bool hasRenderTargetFormatSource( RenderPassType passType ) const;
         /**
          * @brief 패스 PSO 에 머티리얼 퍼뮤테이션, 뷰 모드, 컬 반전을 적용한 변형을 만듭니다. 적용할 것이 없으면 패스 PSO 를 그대로 반환합니다.
-         * @details 렌더 상태(블렌드, 뎁스, RT 포맷)는 **패스의 것을 그대로 물려받고** 셰이더만 교체한다. 예외는 컬 모드 하나다(`bReverseCulling` 이면 Back 과 Front 를 맞바꾼다).
+         * @details 렌더 상태는 패스 → 머티리얼 → 보기 모드 → 컬 반전 순서로 합친다. RT 포맷은 패스의 것이다.
          */
         RenderPSOCache::MaterialPSOEntry createMaterialPSOVariant( RHIPipelineStateHandle passPSO, RenderPassType passType, const GPUShaderPermutation* pPermutation,
                                                                    RenderViewMode viewMode, bool bReverseCulling, RHIMeshVertexFormat vertexFormat, RHIPipelineStateDesc* pOutDeferredDesc );

@@ -19,6 +19,106 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
+    namespace
+    {
+        /** @brief 렌더 상태 값을 D3D12 값으로 옮깁니다. */
+        struct D3D12RenderStateInternal
+        {
+            static D3D12_BLEND toBlend( RHIBlendFactor factor )
+            {
+                switch ( factor )
+                {
+                    case RHIBlendFactor::Zero:
+                        return D3D12_BLEND_ZERO;
+                    case RHIBlendFactor::One:
+                        return D3D12_BLEND_ONE;
+                    case RHIBlendFactor::SrcColor:
+                        return D3D12_BLEND_SRC_COLOR;
+                    case RHIBlendFactor::InvSrcColor:
+                        return D3D12_BLEND_INV_SRC_COLOR;
+                    case RHIBlendFactor::SrcAlpha:
+                        return D3D12_BLEND_SRC_ALPHA;
+                    case RHIBlendFactor::InvSrcAlpha:
+                        return D3D12_BLEND_INV_SRC_ALPHA;
+                    case RHIBlendFactor::DstColor:
+                        return D3D12_BLEND_DEST_COLOR;
+                    case RHIBlendFactor::InvDstColor:
+                        return D3D12_BLEND_INV_DEST_COLOR;
+                    case RHIBlendFactor::DstAlpha:
+                        return D3D12_BLEND_DEST_ALPHA;
+                    case RHIBlendFactor::InvDstAlpha:
+                        return D3D12_BLEND_INV_DEST_ALPHA;
+                    case RHIBlendFactor::SrcAlphaSaturate:
+                        return D3D12_BLEND_SRC_ALPHA_SAT;
+                }
+                return D3D12_BLEND_ONE;
+            }
+            static D3D12_BLEND_OP toBlendOp( RHIBlendOp op )
+            {
+                switch ( op )
+                {
+                    case RHIBlendOp::Add:
+                        return D3D12_BLEND_OP_ADD;
+                    case RHIBlendOp::Subtract:
+                        return D3D12_BLEND_OP_SUBTRACT;
+                    case RHIBlendOp::ReverseSubtract:
+                        return D3D12_BLEND_OP_REV_SUBTRACT;
+                    case RHIBlendOp::Min:
+                        return D3D12_BLEND_OP_MIN;
+                    case RHIBlendOp::Max:
+                        return D3D12_BLEND_OP_MAX;
+                }
+                return D3D12_BLEND_OP_ADD;
+            }
+            static D3D12_COMPARISON_FUNC toCompare( RHICompareFunc func )
+            {
+                switch ( func )
+                {
+                    case RHICompareFunc::Never:
+                        return D3D12_COMPARISON_FUNC_NEVER;
+                    case RHICompareFunc::Less:
+                        return D3D12_COMPARISON_FUNC_LESS;
+                    case RHICompareFunc::Equal:
+                        return D3D12_COMPARISON_FUNC_EQUAL;
+                    case RHICompareFunc::LessEqual:
+                        return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+                    case RHICompareFunc::Greater:
+                        return D3D12_COMPARISON_FUNC_GREATER;
+                    case RHICompareFunc::NotEqual:
+                        return D3D12_COMPARISON_FUNC_NOT_EQUAL;
+                    case RHICompareFunc::GreaterEqual:
+                        return D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+                    case RHICompareFunc::Always:
+                        return D3D12_COMPARISON_FUNC_ALWAYS;
+                }
+                return D3D12_COMPARISON_FUNC_LESS_EQUAL;
+            }
+            static D3D12_STENCIL_OP toStencilOp( RHIStencilOp op )
+            {
+                switch ( op )
+                {
+                    case RHIStencilOp::Keep:
+                        return D3D12_STENCIL_OP_KEEP;
+                    case RHIStencilOp::Zero:
+                        return D3D12_STENCIL_OP_ZERO;
+                    case RHIStencilOp::Replace:
+                        return D3D12_STENCIL_OP_REPLACE;
+                    case RHIStencilOp::IncrementClamp:
+                        return D3D12_STENCIL_OP_INCR_SAT;
+                    case RHIStencilOp::DecrementClamp:
+                        return D3D12_STENCIL_OP_DECR_SAT;
+                    case RHIStencilOp::Invert:
+                        return D3D12_STENCIL_OP_INVERT;
+                    case RHIStencilOp::IncrementWrap:
+                        return D3D12_STENCIL_OP_INCR;
+                    case RHIStencilOp::DecrementWrap:
+                        return D3D12_STENCIL_OP_DECR;
+                }
+                return D3D12_STENCIL_OP_KEEP;
+            }
+        };
+    } // namespace
+
     RHIBufferHandle D3D12RHIResourceFactory::createConstantBuffer( uint32 size )
     {
         const UINT                             alignedSize = MathUtil::align( size, constant::render::kConstantBufferAlignment );
@@ -1445,49 +1545,62 @@ namespace sw
             }
             if ( bHasPixelShader )
                 psoDesc.PS = { psResult._bytecode.data(), psResult._bytecode.size() };
-            // 다른 백엔드와 같이 desc._fillMode 를 읽는다. SOLID 로 고정하면 Wireframe 요청이 DX12 에서만 조용히 솔리드가 된다.
-            psoDesc.RasterizerState.FillMode = ( desc._fillMode == RHIFillMode::Wireframe )
-                                                 ? D3D12_FILL_MODE_WIREFRAME
-                                                 : D3D12_FILL_MODE_SOLID;
-            psoDesc.RasterizerState.CullMode = ( desc._cullMode == RHICullMode::Front )
-                                                 ? D3D12_CULL_MODE_FRONT
-                                                 : ( ( desc._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
-            // 가까운 · 먼 평면에서 자른다 — DX11(DepthClipEnable) · Vulkan(depthClampEnable 끔) · GL(GL_DEPTH_CLAMP 끔)과 같다. 0 으로 두면 DX12 만 평면 밖 기하를 깊이 1 로 눌러 그린다
+            const RHIRenderState& renderState = desc._renderState;
+            // 다른 백엔드와 같이 채우기 모드를 읽는다. SOLID 로 고정하면 Wireframe 요청이 DX12 에서만 조용히 솔리드가 된다.
+            psoDesc.RasterizerState.FillMode              = ( renderState._fillMode == RHIFillMode::Wireframe )
+                                                              ? D3D12_FILL_MODE_WIREFRAME
+                                                              : D3D12_FILL_MODE_SOLID;
+            psoDesc.RasterizerState.CullMode              = ( renderState._cullMode == RHICullMode::Front )
+                                                              ? D3D12_CULL_MODE_FRONT
+                                                              : ( ( renderState._cullMode == RHICullMode::Back ) ? D3D12_CULL_MODE_BACK : D3D12_CULL_MODE_NONE );
+            psoDesc.RasterizerState.FrontCounterClockwise = renderState._frontFace == RHIFrontFace::CounterClockwise ? TRUE : FALSE;
+            // 기본은 가까운 · 먼 평면에서 자른다 — DX11(DepthClipEnable) · Vulkan(depthClampEnable 끔) · GL(GL_DEPTH_CLAMP 끔)과 같다. 0 으로 두면 DX12 만 평면 밖 기하를 깊이 1 로 눌러 그린다
             // (psoDesc{} 의 기본값이 FALSE 다). 시야 거리 설정(gv_viewDistanceScale)이 먼 평면을 당겨도 DX12 에서만 먼 기하가 남았다(useroptions distance 0.307, 나머지 0.665).
-            psoDesc.RasterizerState.DepthClipEnable = TRUE;
-            // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIPipelineStateDesc::_depthBias).
-            psoDesc.RasterizerState.DepthBias            = desc._depthBias;
-            psoDesc.RasterizerState.SlopeScaledDepthBias = desc._slopeScaledDepthBias;
+            psoDesc.RasterizerState.DepthClipEnable = renderState._bEnableDepthClip != SW_FALSE ? TRUE : FALSE;
+            // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIFixedRenderState::_depthBias).
+            psoDesc.RasterizerState.DepthBias            = renderState._depthBias;
+            psoDesc.RasterizerState.SlopeScaledDepthBias = renderState._slopeScaledDepthBias;
             psoDesc.SampleMask                           = MathUtil::kMaxUInt32;
             psoDesc.PrimitiveTopologyType                = request._bHasTessellation != SW_FALSE ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH : D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             // 뎁스 전용은 RT 가 0 개다. 1 로 두고 R8G8B8A8 을 선언하면 실제로는 DSV 만 바인딩되는 것과 어긋난다.
             psoDesc.NumRenderTargets = request._numRenderTargets;
             if ( psoDesc.NumRenderTargets > 8 )
                 psoDesc.NumRenderTargets = 8;
+            psoDesc.BlendState.IndependentBlendEnable = TRUE; // 꺼 두면 0 번 값이 모든 타깃에 간다
             for ( UINT rtvIndex = 0; rtvIndex < psoDesc.NumRenderTargets; ++rtvIndex )
             {
-                auto& rtBlend                 = psoDesc.BlendState.RenderTarget[rtvIndex];
-                rtBlend.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-                psoDesc.RTVFormats[rtvIndex]  = toDxgiFormat( desc._arrRTVFormat[rtvIndex] );
-                if ( desc._bEnableBlend != 0 )
-                {
-                    rtBlend.BlendEnable    = TRUE;
-                    rtBlend.SrcBlend       = ( desc._bPremultipliedAlpha != SW_FALSE ) ? D3D12_BLEND_ONE : D3D12_BLEND_SRC_ALPHA;
-                    rtBlend.DestBlend      = D3D12_BLEND_INV_SRC_ALPHA;
-                    rtBlend.BlendOp        = D3D12_BLEND_OP_ADD;
-                    rtBlend.SrcBlendAlpha  = D3D12_BLEND_ONE;
-                    rtBlend.DestBlendAlpha = D3D12_BLEND_INV_SRC_ALPHA;
-                    rtBlend.BlendOpAlpha   = D3D12_BLEND_OP_ADD;
-                }
+                auto&                      rtBlend = psoDesc.BlendState.RenderTarget[rtvIndex];
+                const RHIBlendTargetState& source  = renderState._arrBlendTarget[rtvIndex < kMaxColorAttachments ? rtvIndex : 0u];
+                rtBlend.RenderTargetWriteMask      = static_cast<UINT8>( source._colorWriteMask ); // 비트가 같다(RHIColorWriteMask)
+                psoDesc.RTVFormats[rtvIndex]       = toDxgiFormat( desc._arrRTVFormat[rtvIndex] );
+                rtBlend.BlendEnable                = source._bEnableBlend != SW_FALSE ? TRUE : FALSE;
+                rtBlend.SrcBlend                   = D3D12RenderStateInternal::toBlend( source._srcColor );
+                rtBlend.DestBlend                  = D3D12RenderStateInternal::toBlend( source._dstColor );
+                rtBlend.BlendOp                    = D3D12RenderStateInternal::toBlendOp( source._colorOp );
+                rtBlend.SrcBlendAlpha              = D3D12RenderStateInternal::toBlend( source._srcAlpha );
+                rtBlend.DestBlendAlpha             = D3D12RenderStateInternal::toBlend( source._dstAlpha );
+                rtBlend.BlendOpAlpha               = D3D12RenderStateInternal::toBlendOp( source._alphaOp );
             }
-            if ( desc._bEnableDepthTest != 0 )
+            if ( renderState._bEnableDepthTest != SW_FALSE )
             {
                 psoDesc.DepthStencilState.DepthEnable    = TRUE;
-                psoDesc.DepthStencilState.DepthWriteMask = ( desc._bEnableDepthWrite != 0 )
+                psoDesc.DepthStencilState.DepthWriteMask = ( renderState._bEnableDepthWrite != SW_FALSE )
                                                              ? D3D12_DEPTH_WRITE_MASK_ALL
                                                              : D3D12_DEPTH_WRITE_MASK_ZERO;
-                psoDesc.DepthStencilState.DepthFunc      = D3D12_COMPARISON_FUNC_LESS_EQUAL;
+                psoDesc.DepthStencilState.DepthFunc      = D3D12RenderStateInternal::toCompare( renderState._depthCompare );
                 psoDesc.DSVFormat                        = toDxgiFormat( desc._depthStencilFormat );
+                // 스텐실 참조 값은 PSO 밖의 상태다 — 레코드에 두고 PSO 를 걸 때 함께 건다.
+                psoDesc.DepthStencilState.StencilEnable                = renderState._bEnableStencil != SW_FALSE ? TRUE : FALSE;
+                psoDesc.DepthStencilState.StencilReadMask              = renderState._stencilReadMask;
+                psoDesc.DepthStencilState.StencilWriteMask             = renderState._stencilWriteMask;
+                psoDesc.DepthStencilState.FrontFace.StencilFailOp      = D3D12RenderStateInternal::toStencilOp( renderState._stencilFrontFail );
+                psoDesc.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12RenderStateInternal::toStencilOp( renderState._stencilFrontDepthFail );
+                psoDesc.DepthStencilState.FrontFace.StencilPassOp      = D3D12RenderStateInternal::toStencilOp( renderState._stencilFrontPass );
+                psoDesc.DepthStencilState.FrontFace.StencilFunc        = D3D12RenderStateInternal::toCompare( renderState._stencilFrontCompare );
+                psoDesc.DepthStencilState.BackFace.StencilFailOp       = D3D12RenderStateInternal::toStencilOp( renderState._stencilBackFail );
+                psoDesc.DepthStencilState.BackFace.StencilDepthFailOp  = D3D12RenderStateInternal::toStencilOp( renderState._stencilBackDepthFail );
+                psoDesc.DepthStencilState.BackFace.StencilPassOp       = D3D12RenderStateInternal::toStencilOp( renderState._stencilBackPass );
+                psoDesc.DepthStencilState.BackFace.StencilFunc         = D3D12RenderStateInternal::toCompare( renderState._stencilBackCompare );
             }
             else
             {
@@ -1513,7 +1626,8 @@ namespace sw
             return 0;
         return _pDevice->_pipelineStates.insert( {
             pso, RHIVertexLayout{ vertexSlotMask, desc._meshVertexFormat },
-            request._bHasTessellation != SW_FALSE ? D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
+            request._bHasTessellation != SW_FALSE ? D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST,
+            desc._renderState._stencilRef
         } );
     }
 

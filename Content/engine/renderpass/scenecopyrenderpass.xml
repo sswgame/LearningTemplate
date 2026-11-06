@@ -1,7 +1,7 @@
 <!-- 반투명 앞의 장면 사본 — 반투명(물의 굴절 · 화면 공간 두께)이 읽는다. 복사 패스가 쓰므로 지우지 않는다. 깊이 사본은 R32 실수다(반투명은 장면 깊이를 깊이 붙임으로 쥐고 있어 직접 읽을 수 없다). -->
 <RenderPassDesc _name="SceneCopyPass">
 	<_listAttachment>
-		<RenderPassAttachment _name="SceneColorCopy" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="false" />
-		<RenderPassAttachment _name="SceneDepthCopy" _format="R32_FLOAT" _clearColor="1,0,0,0" _bClear="false" />
+		<RenderPassAttachment _name="SceneColorCopy" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="DontCare" />
+		<RenderPassAttachment _name="SceneDepthCopy" _format="R32_FLOAT" _clearColor="1,0,0,0" _loadOp="DontCare" />
 	</_listAttachment>
 </RenderPassDesc>

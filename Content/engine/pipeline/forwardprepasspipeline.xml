@@ -12,7 +12,7 @@
 -->
 <RenderPipelineDesc _base="engine/pipeline/forwardpipeline.xml" _name="ForwardPrepassPipeline">
 	<_listPass>
-		<RenderGraphPassDesc _name="DepthPrepass" _after="Shadow" _type="DepthPrepass" _depthAttachment="SceneDepth" _shaderPath="engine/shaders/shadow_depth.hlsl" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false" _minPostQuality="0">
+		<RenderGraphPassDesc _name="DepthPrepass" _after="Shadow" _type="DepthPrepass" _depthAttachment="SceneDepth" _shaderPath="engine/shaders/shadow_depth.hlsl" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _minPostQuality="0">
 			<_listInput />
 			<_listOutput>
 				<item>SceneDepth</item>

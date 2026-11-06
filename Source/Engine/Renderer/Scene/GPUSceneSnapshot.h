@@ -287,7 +287,9 @@ namespace sw
         string _shaderPath;
         /// @brief always-define, 정적 스위치, 멀티컴파일 선택을 합친 것입니다. 그대로 PSO 의 셰이더 define 이 됩니다.
         vector<string> _listDefine;
-        /// @brief (경로, define) 해시입니다. PSO 캐시 키이자 **배치 병합 키**입니다.
+        /// @brief 머티리얼이 패스 위에 덮는 렌더 상태입니다(`Material::getRenderStateOverride`). 패스 → 머티리얼 순서로 합쳐 변형 PSO 를 만듭니다(`FramePSOManager::createMaterialPSOVariant`).
+        RHIRenderStateOverride _renderStateOverride{};
+        /// @brief (경로, define, 렌더 상태) 해시입니다. PSO 캐시 키이자 **배치 병합 키**입니다.
         uint64 _hash{ 0 };
     };
 } // namespace sw

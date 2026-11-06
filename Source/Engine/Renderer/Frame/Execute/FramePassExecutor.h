@@ -260,7 +260,7 @@ namespace sw
                                 const RHIRenderPassLoadOp* pColorLoad, uint32 colorCount, string_view depthName,
                                 RHIRenderPassLoadOp depthLoad );
         /** @brief 깊이 전용 패스를 시작합니다. */
-        void beginDepthOnlyPass( FramePassContext& context, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad );
+        void beginDepthOnlyPass( FramePassContext& context, string_view depthName, RHIRenderPassLoadOp depthLoad );
         /**
          * @brief 트랜지언트 텍스처를 리소스 레지스트리에 canonicalName 으로 등록합니다(bindless SRV 자동 매칭).
          * @param canonicalName **미리 intern 해 둔** 이름입니다. 문자열을 받으면 패스마다 다시 intern 하게 되므로

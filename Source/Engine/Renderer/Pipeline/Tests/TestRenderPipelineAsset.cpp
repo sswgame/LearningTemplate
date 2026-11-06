@@ -22,15 +22,15 @@ namespace
 {
     struct RenderPipelineTestUtil
     {
-        static constexpr const utf8* kOpaqueState = "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"true\" _bEnableBlend=\"false\" _cullMode=\"Back\"";
+        static constexpr const utf8* kOpaqueState = "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"true\" _cullMode=\"Back\"";
 
         /** @brief 메시 패스 하나를 든 파이프라인 XML 입니다. @p pipelineExtra 는 루트 안에 그대로 넣습니다. */
         static string makeXML( string_view passAttributes, string_view rootAttributes = "", string_view pipelineExtra = "",
-                               string_view attachments = "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearColor=\"1,0,0,0\" _bClear=\"true\"/>" )
+                               string_view attachments = "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>" )
         {
             string xml = "<RenderPipelineDesc _name=\"Test\" ";
             xml.append( rootAttributes );
-            xml += "><_listAttachment><RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _bClear=\"true\"/>";
+            xml += "><_listAttachment><RenderPassAttachment _name=\"SceneColor\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"Clear\"/>";
             xml.append( attachments );
             xml += "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Pass\" ";
             xml.append( passAttributes );
@@ -65,42 +65,43 @@ namespace
 SW_TEST_CASE( RenderPipelineAssetTest, XMLStateReachesThePSO )
 {
     RenderPipelineAsset asset;
-    SW_REQUIRE_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"false\" _bEnableBlend=\"true\" _cullMode=\"None\"" ) );
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"false\" _blendPreset=\"Transparent\" _cullMode=\"None\"" ) );
     RHIPipelineStateDesc desc{};
     FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaque, &asset.getGraphPass()[0] );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( desc._bEnableDepthTest ) );
-    SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._bEnableDepthWrite ) ); // 표는 깊이를 쓴다
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( desc._bEnableBlend ) );      // 표는 섞지 않는다
-    SW_EXPECT_TRUE( desc._cullMode == RHICullMode::None );               // 표는 뒷면 컬링이다
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthWrite ) );                   // 표는 깊이를 쓴다
+    SW_EXPECT_TRUE( desc._renderState._arrBlendTarget[0] == RHIBlendTargetState::makeStraightAlpha() ); // 표는 섞지 않는다
+    SW_EXPECT_TRUE( desc._renderState._cullMode == RHICullMode::None );                                 // 표는 뒷면 컬링이다
     SW_EXPECT_TRUE( desc._depthStencilFormat != RHIFormat::Unknown );
 
     RenderPipelineAsset noDepth;
-    SW_REQUIRE_TRUE( RenderPipelineTestUtil::loadMeshState( noDepth, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _bEnableBlend=\"false\" _cullMode=\"Front\"", "ForwardOpaque", false ) );
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::loadMeshState( noDepth, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _cullMode=\"Front\"", "ForwardOpaque", false ) );
     FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaque, &noDepth.getGraphPass()[0] );
-    SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._bEnableDepthTest ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
     SW_EXPECT_TRUE( desc._depthStencilFormat == RHIFormat::Unknown );
-    SW_EXPECT_TRUE( desc._cullMode == RHICullMode::Front );
+    SW_EXPECT_TRUE( desc._renderState._cullMode == RHICullMode::Front );
 }
 
-/** @brief [RenderPipelineAssetTest] XML 이 없는 내부 슬롯은 표의 값이다. 프리멀티플라이는 언제나 표의 값이다 */
+/** @brief [RenderPipelineAssetTest] XML 이 없는 내부 슬롯은 표의 값이다 */
 SW_TEST_CASE( RenderPipelineAssetTest, InternalSlotsUseTheTable )
 {
     RHIPipelineStateDesc desc{};
     FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaqueNoDepthWrite, nullptr );
-    SW_EXPECT_EQUAL( 1, static_cast<int32>( desc._bEnableDepthTest ) );
-    SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._bEnableDepthWrite ) );
-    SW_EXPECT_TRUE( desc._cullMode == RHICullMode::Back );
+    SW_EXPECT_EQUAL( 1, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthWrite ) );
+    SW_EXPECT_TRUE( desc._renderState._cullMode == RHICullMode::Back );
 
     FramePSOManager::applyPassRenderState( desc, RenderPassType::Canvas, nullptr );
-    SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._bEnableDepthTest ) );
-    SW_EXPECT_TRUE( desc._bPremultipliedAlpha == SW_TRUE );
-    SW_EXPECT_TRUE( desc._cullMode == RHICullMode::None );
+    SW_EXPECT_EQUAL( 0, static_cast<int32>( desc._renderState._bEnableDepthTest ) );
+    SW_EXPECT_TRUE( desc._renderState._arrBlendTarget[0] == RHIBlendTargetState::makePremultipliedAlpha() );
+    SW_EXPECT_TRUE( desc._renderState._cullMode == RHICullMode::None );
 }
 
 /** @brief [RenderPipelineAssetTest] 실행이 받아 줄 수 없는 조합은 무시하지 않고 읽기 오류다 */
 SW_TEST_CASE( RenderPipelineAssetTest, ImpossibleStateIsRejected )
 {
-    SW_EXPECT_LOG( "RenderPipelineAsset.PassCullModeUnknown" );
+    SW_EXPECT_LOG( "Serialization.UnknownEnumerator" ); // 오타는 enum 이 읽기에서 거절한다
+    SW_EXPECT_LOG( "Serialization.OrphanValue" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PassFullscreenCull" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PassRequiredInputRole" ); // 아래 Tonemap 패스는 입력을 적지 않았다
     SW_EXPECT_LOG( "RenderPipelineAsset.PassDepthTestNoDepth" );
@@ -109,11 +110,11 @@ SW_TEST_CASE( RenderPipelineAssetTest, ImpossibleStateIsRejected )
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
     SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
     RenderPipelineAsset asset;
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"true\" _bEnableBlend=\"false\" _cullMode=\"Sideways\"" ) );
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _bEnableBlend=\"false\" _cullMode=\"Back\"", "Tonemap", false ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"true\" _cullMode=\"Sideways\"" ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _cullMode=\"Back\"", "Tonemap", false ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, RenderPipelineTestUtil::kOpaqueState, "ForwardOpaque", false ) );
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _bEnableBlend=\"false\" _cullMode=\"Back\"" ) );
-    SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"true\" _bEnableBlend=\"false\" _cullMode=\"Back\"", "ForwardOpaque", false ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _cullMode=\"Back\"" ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"true\" _cullMode=\"Back\"", "ForwardOpaque", false ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 반투명의 블렌드를 끄는 것은 고를 수 있지만 경고한다 */
@@ -121,7 +122,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, TransparentWithoutBlendWarns )
 {
     SW_EXPECT_LOG( "RenderPipelineAsset.PassBlendOff" );
     RenderPipelineAsset asset;
-    SW_EXPECT_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"false\" _bEnableBlend=\"false\" _cullMode=\"Back\"", "Transparent" ) );
+    SW_EXPECT_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"false\" _cullMode=\"Back\"", "Transparent" ) );
 }
 
 /** @brief [RenderPipelineAssetTest] 렌더 패스의 첨부가 파이프라인 첨부 앞에 합쳐져 패스가 그 첨부를 쓴다 */
@@ -172,15 +173,15 @@ namespace
 {
     struct ComputePassTestUtil
     {
-        static constexpr const utf8* kNoState = "_cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _bEnableBlend=\"false\"";
+        static constexpr const utf8* kNoState = "_cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\"";
 
         /** @brief 컴퓨트 패스 하나의 파이프라인 XML 입니다. */
         static string makeXML( string_view attributes, string_view inputs, string_view outputs )
         {
             string xml = "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
-                         "<RenderPassAttachment _name=\"A\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _bClear=\"false\"/>"
-                         "<RenderPassAttachment _name=\"B\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _bClear=\"false\"/>"
-                         "<RenderPassAttachment _name=\"D\" _format=\"D24_UNORM_S8_UINT\" _clearColor=\"1,0,0,0\" _bClear=\"true\"/>"
+                         "<RenderPassAttachment _name=\"A\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                         "<RenderPassAttachment _name=\"B\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _loadOp=\"DontCare\"/>"
+                         "<RenderPassAttachment _name=\"D\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"1\" _loadOp=\"Clear\"/>"
                          "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Pass\" _type=\"Compute\" ";
             xml.append( attributes );
             xml += "><_listInput>";
@@ -208,7 +209,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputePassLoads )
     RenderPipelineAsset asset;
     SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, ComputePassTestUtil::makeXML( ComputePassTestUtil::withShader( "_computeEntryPoint=\"MyCS\" _threadGroupSize=\"4\"" ), "<item>A</item>", "<item>B</item>" ) ) );
     const RenderGraphPassDesc& pass = asset.getGraphPass()[0];
-    SW_EXPECT_TRUE( pass._resolvedType == RenderPassType::Compute );
+    SW_EXPECT_TRUE( pass._type == RenderPassType::Compute );
     SW_EXPECT_EQUAL( string( "MyCS" ), pass._computeEntryPoint );
     SW_EXPECT_EQUAL( 4u, pass._threadGroupSize );
     SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::Compute ).hasFlag( RenderPassTraitFlag::kPipelineCompute ) );
@@ -234,7 +235,7 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputePassRejectsBadDeclarations )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "<item>A</item><item>A</item><item>A</item>", "<item>B</item>" ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "<item>D</item>", "<item>B</item>" ) ) );
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "<item>B</item>", "<item>B</item>" ) ) );
-    const string blended = "_shaderPath=\"game/empty/shaders/compute_channelswap.hlsl\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _bEnableBlend=\"true\"";
+    const string blended = "_shaderPath=\"game/empty/shaders/compute_channelswap.hlsl\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _blendPreset=\"Transparent\"";
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( blended, "", "<item>B</item>" ) ) );
     const string passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _computeEntryPoint=\"CSMain\" " ) + RenderPipelineTestUtil::kOpaqueState;
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes ) ) );
@@ -281,8 +282,8 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesLoad )
     SW_REQUIRE_TRUE( deferred.loadFromXMLFile( AssetID{ string_view( "engine/pipeline/deferredpipeline.xml" ) } ) );
     for ( const RenderGraphPassDesc& pass : deferred.getGraphPass() )
     {
-        if ( pass._resolvedType == RenderPassType::Transparent )
-            SW_EXPECT_TRUE( pass._bEnableBlend );
+        if ( pass._type == RenderPassType::Transparent )
+            SW_EXPECT_TRUE( pass._resolvedRenderState.isAnyBlendEnabled() );
     }
 }
 
@@ -357,4 +358,82 @@ SW_TEST_CASE( RenderPipelineAssetTest, SavedChildRoundTrips )
     RenderPipelineDesc rereadFull;
     SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( fullPath, rereadFull ) );
     SW_EXPECT_EQUAL( XMLSerializer::serialize( &source, typeInfo ), XMLSerializer::serialize( &rereadFull, typeInfo ) );
-}
+    /** @brief [RenderPipelineAssetTest] 문자열이던 칸은 enum 이다 — 오타는 읽기 오류이고 받는 철자는 enum 하나에서 나온다 */
+    SW_TEST_CASE( RenderPipelineAssetTest, MistypedEnumsAreLoadErrors )
+    {
+        SW_EXPECT_LOG( "Serialization.UnknownEnumerator" );
+        SW_EXPECT_LOG( "Serialization.OrphanValue" );
+        RenderPipelineAsset asset;
+        SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( string( "_type=\"ForwardOpaqe\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState ) ) );
+        SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState, "", "",
+                                                                                               "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM\"/>" ) ) );
+        SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"true\" _bEnableDepthWrite=\"true\" _cullMode=\"Back\" _depthCompare=\"Lesser\"" ) );
+    }
+
+    /** @brief [RenderPipelineAssetTest] 블렌드 칸: 프리셋 · 타깃별 값이 PSO 값이 되고, 없는 프리셋 · 함께 적기 · 수가 맞지 않는 타깃 · 알파 자리의 색 계수는 읽기 오류다 */
+    SW_TEST_CASE( RenderPipelineAssetTest, BlendDeclarationsFollowTheRules )
+    {
+        SW_EXPECT_LOG( "RenderPipelineAsset.PassBlendPresetUnknown" );
+        SW_EXPECT_LOG( "RenderPipelineAsset.PassBlendPresetAndTargets" );
+        SW_EXPECT_LOG( "RenderPipelineAsset.PassBlendTargetCount" );
+        SW_EXPECT_LOG( "RenderPipelineAsset.PassBlendTargetInvalid" );
+        SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+        SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+        RenderPipelineAsset asset;
+        SW_REQUIRE_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthWrite=\"false\" _blendPreset=\"Additive\"" ) );
+        const RHIBlendTargetState& additive = asset.getGraphPass()[0]._resolvedRenderState._arrBlendTarget[3];
+        SW_EXPECT_TRUE( additive._dstColor == RHIBlendFactor::One );
+        SW_EXPECT_TRUE( additive._bEnableBlend == SW_TRUE );
+        SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_blendPreset=\"Plasma\"" ) );
+
+        const auto makeWithTargets = []( string_view passExtra, string_view targets )
+        {
+            string            xml    = RenderPipelineTestUtil::makeXML( string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + string( passExtra ) );
+            const string_view marker = "<_listPermutation/>";
+            xml.insert( xml.find( marker ), string( "<_listBlendTarget>" ) + string( targets ) + "</_listBlendTarget>" );
+            return xml;
+        };
+        constexpr string_view kTarget = "<RHIBlendTargetState _bEnableBlend=\"true\" _srcColor=\"One\" _dstColor=\"One\" _colorWriteMask=\"RGB\"/>";
+        SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", kTarget ) ) );
+        SW_EXPECT_TRUE( asset.getGraphPass()[0]._resolvedRenderState._arrBlendTarget[2]._colorWriteMask == RHIColorWriteMask::RGB ); // 하나면 모든 타깃이다
+        SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "_blendPreset=\"Opaque\"", kTarget ) ) );
+        SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", string( kTarget ) + string( kTarget ) ) ) ); // 컬러 출력은 하나다
+        SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, makeWithTargets( "", "<RHIBlendTargetState _bEnableBlend=\"true\" _srcAlpha=\"SrcColor\"/>" ) ) );
+    }
+
+    /** @brief [RenderPipelineAssetTest] 스텐실은 깊이 첨부가 있어야 하고, 스텐실 칸은 PSO 값까지 간다 */
+    SW_TEST_CASE( RenderPipelineAssetTest, StencilNeedsTheDepthAttachment )
+    {
+        SW_EXPECT_LOG( "RenderPipelineAsset.PassRenderStateInvalid" );
+        SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+        SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+        RenderPipelineAsset asset;
+        SW_REQUIRE_TRUE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableStencil=\"true\" _stencilRef=\"7\" _stencilFrontCompare=\"Equal\" _stencilFrontPass=\"Replace\"" ) );
+        RHIPipelineStateDesc desc{};
+        FramePSOManager::applyPassRenderState( desc, RenderPassType::ForwardOpaque, &asset.getGraphPass()[0] );
+        SW_EXPECT_EQUAL( 7, static_cast<int32>( desc._renderState._stencilRef ) );
+        SW_EXPECT_TRUE( desc._renderState._stencilFrontCompare == RHICompareFunc::Equal );
+        SW_EXPECT_TRUE( desc._renderState._stencilFrontPass == RHIStencilOp::Replace );
+        SW_EXPECT_FALSE( RenderPipelineTestUtil::loadMeshState( asset, "_bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _bEnableStencil=\"true\"", "ForwardOpaque", false ) );
+    }
+
+    /** @brief [RenderPipelineAssetTest] 첨부의 로드 · 저장 동작 · 초기값을 읽고, 저장하지 않는 첨부를 뒤 패스가 쓰면 읽기 오류다 */
+    SW_TEST_CASE( RenderPipelineAssetTest, DiscardedAttachmentCannotBeRead )
+    {
+        SW_EXPECT_LOG( "RenderPipelineAsset.AttachmentDiscardedButUsed" );
+        SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+        SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+        using Util                         = RenderPipelineTestUtil;
+        const string        passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + Util::kOpaqueState;
+        RenderPipelineAsset asset;
+        SW_REQUIRE_TRUE( Util::load( asset, Util::makeXML( passAttributes, "", "", "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _clearDepth=\"0.5\" _clearStencil=\"3\" _storeOp=\"DontCare\"/>" ) ) );
+        const RHIAttachmentOps ops = asset.getDesc()._listAttachment[1].getOps();
+        SW_EXPECT_NEAR( 0.5f, ops._clearDepth, 1e-6f );
+        SW_EXPECT_EQUAL( 3, static_cast<int32>( ops._clearStencil ) );
+        SW_EXPECT_TRUE( ops._storeOp == RHIRenderPassStoreOp::DontCare );
+
+        // 같은 첨부를 여는 패스가 둘이면 뒤 패스가 정의되지 않은 값을 읽는다.
+        string xml = Util::makeXML( passAttributes, "", "", "<RenderPassAttachment _name=\"SceneDepth\" _format=\"D24_UNORM_S8_UINT\" _storeOp=\"DontCare\"/>" );
+        xml.insert( xml.find( "</_listPass>" ), string( "<RenderGraphPassDesc _name=\"Second\" " ) + passAttributes + "><_listOutput><item>SceneColor</item></_listOutput></RenderGraphPassDesc>" );
+        SW_EXPECT_FALSE( Util::load( asset, xml ) );
+    }

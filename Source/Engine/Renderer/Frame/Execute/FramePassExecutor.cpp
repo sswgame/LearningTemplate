@@ -526,7 +526,7 @@ namespace sw
         // 기본값(뎁스 1, 노멀 0.5 · 0.5 · 1, SSAO 흰색)은 선언과 갈라질 수 있어 지웠다. 풀에 없는 이름은 백버퍼(핸들 0)이고,
         // 백버퍼의 클리어 색은 렌더러의 클리어 색(SceneColor 선언에서 온다) 하나다.
         const TransientAttachmentPool::Attachment attachment = activePool().find( attachmentName );
-        return attachment._texture != 0 ? attachment._clearColor : _state._clearColor;
+        return attachment._texture != 0 ? attachment._ops._clearColor : _state._clearColor;
     }
 
     TransientAttachmentPool::Attachment FramePassExecutor::findTransientAttachment( string_view name ) const
@@ -544,7 +544,7 @@ namespace sw
         // Present 의 SourceColor 입력이 원본이다(계약의 필수 입력 — 로드가 선언을 요구한다). 이름 후보로 "가장 나중 컬러" 를 짐작하지 않는다.
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
         {
-            if ( pass._resolvedType != RenderPassType::Present )
+            if ( pass._type != RenderPassType::Present )
                 continue;
             for ( const RenderGraphPassDesc::ResolvedAttachment& input : pass._listResolvedInput )
             {
@@ -622,7 +622,7 @@ namespace sw
         size_t       anchorOutput = listPass.size();
         for ( size_t anchorIndex = 0; anchorIndex < listPass.size(); ++anchorIndex )
         {
-            const RenderPassTypeInfo& anchorInfo = getRenderPassTypeInfo( listPass[anchorIndex]._resolvedType );
+            const RenderPassTypeInfo& anchorInfo = getRenderPassTypeInfo( listPass[anchorIndex]._type );
             if ( anchorPost == listPass.size() && ( anchorInfo.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) || anchorInfo.hasFlag( RenderPassTraitFlag::kOutputPass ) ) )
                 anchorPost = anchorIndex;
             if ( anchorOutput == listPass.size() && anchorInfo.hasFlag( RenderPassTraitFlag::kOutputPass ) )
@@ -886,7 +886,7 @@ namespace sw
     {
         SW_PROFILE_SCOPE( "RT.Pass.execute" );
         // 타입은 로드 시점에 한 번 해석해 둔 값을 쓴다. 여기서 문자열을 다시 비교하면 디스패치와 PSO 생성이 서로 다른 표기를 받아 줄 여지가 생긴다.
-        const RenderPassType passType        = passDesc._resolvedType;
+        const RenderPassType passType        = passDesc._type;
         const string_view    passName        = string_view( passDesc._name );
         const hashed_string& depthAttachment = passDesc._resolvedDepthAttachment;
 
@@ -945,8 +945,7 @@ namespace sw
                 case RenderPassType::Shadow:
                 {
                     // 클리어 값은 실제로 바인딩하는 뎁스 첨부의 선언에서 읽는다(이름 ShadowMap 으로 찾지 않는다).
-                    const float4 clearVal = getTargetClearColor( passDepth.view() );
-                    beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth ) );
+                    beginDepthOnlyPass( context, passDepth.view(), colorLoadFor( passDepth ) );
                     // 그림자를 끈 뷰는 지우기만 한다. 깊이 1(가장 멀다)이면 모두 빛을 받는다.
                     if ( _pActiveView->_settings._bShadows == SW_TRUE )
                         drawShadowTiles( context, input._bTransparentBatch );
@@ -955,8 +954,7 @@ namespace sw
                 }
                 case RenderPassType::DepthPrepass:
                 {
-                    const float4 clearVal = getTargetClearColor( passDepth.view() );
-                    beginDepthOnlyPass( context, passDepth.view(), clearVal._x, colorLoadFor( passDepth ) );
+                    beginDepthOnlyPass( context, passDepth.view(), colorLoadFor( passDepth ) );
                     drawSceneMeshes( context, _psoManager.getEnginePSO( RenderPassType::DepthPrepass ), input._bTransparentBatch );
                     context._pCmd->endRenderPass();
                     _bHasExecutedDepthPrepass.store( 1 );
@@ -1067,7 +1065,8 @@ namespace sw
     {
         // 이름은 **이미 intern 된 것**만 받는다. string_view 를 받으면 패스마다 여기서 다시 intern 하게
         // 된다(FNV + 32-way 샤드 뮤텍스). 타깃 이름은 모두 코드 리터럴이라 attachmentNames() 캐시로 충분하다.
-        return markAttachmentCleared( name ) ? RHIRenderPassLoadOp::Clear : RHIRenderPassLoadOp::Load;
+        // 프레임의 첫 사용만 선언의 로드 동작을 따르고(풀에 없는 이름 — 백버퍼 — 은 Clear), 그 뒤의 패스는 앞 패스가 쓴 것을 읽는다.
+        return markAttachmentCleared( name ) ? findTransientAttachment( name.view() )._ops._loadOp : RHIRenderPassLoadOp::Load;
     }
 
     void FramePassExecutor::executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor )
@@ -1537,13 +1536,16 @@ namespace sw
             return false;
 
         RHIRenderPassBeginInfo beginInfo{};
-        beginInfo._bBindColor       = SW_TRUE;
-        beginInfo._depthLoadOp      = depthLoad;
-        beginInfo._clearDepth       = 1.0f;
-        beginInfo._depthTarget      = depthName.empty() ? 0 : findTransient( depthName );
-        beginInfo._width            = activePool().getWidth();
-        beginInfo._height           = activePool().getHeight();
-        beginInfo._colorTargetCount = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
+        beginInfo._bBindColor                           = SW_TRUE;
+        const TransientAttachmentPool::Attachment depth = depthName.empty() ? TransientAttachmentPool::Attachment{} : findTransientAttachment( depthName );
+        beginInfo._depthLoadOp                          = depthLoad;
+        beginInfo._depthStoreOp                         = depth._ops._storeOp;
+        beginInfo._clearDepth                           = depth._ops._clearDepth;
+        beginInfo._clearStencil                         = depth._ops._clearStencil;
+        beginInfo._depthTarget                          = depth._texture;
+        beginInfo._width                                = activePool().getWidth();
+        beginInfo._height                               = activePool().getHeight();
+        beginInfo._colorTargetCount                     = colorCount > kMaxColorAttachments ? kMaxColorAttachments : colorCount;
         for ( uint32 colorTargetIndex = 0; colorTargetIndex < beginInfo._colorTargetCount; ++colorTargetIndex )
         {
             const TransientAttachmentPool::Attachment target = findTransientAttachment( pColorNames[colorTargetIndex] );
@@ -1563,7 +1565,8 @@ namespace sw
                                      pColorNames[colorTargetIndex] );
                 return false;
             }
-            beginInfo._arrLoadOp[colorTargetIndex] = pColorLoad != nullptr ? pColorLoad[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
+            beginInfo._arrLoadOp[colorTargetIndex]  = pColorLoad != nullptr ? pColorLoad[colorTargetIndex] : RHIRenderPassLoadOp::Clear;
+            beginInfo._arrStoreOp[colorTargetIndex] = target._ops._storeOp;
             if ( pTargetClearColor != nullptr )
                 beginInfo._arrClearColor[colorTargetIndex] = pTargetClearColor[colorTargetIndex];
         }
@@ -1571,7 +1574,7 @@ namespace sw
         return true;
     }
 
-    void FramePassExecutor::beginDepthOnlyPass( FramePassContext& context, string_view depthName, float32 clearDepth, RHIRenderPassLoadOp depthLoad )
+    void FramePassExecutor::beginDepthOnlyPass( FramePassContext& context, string_view depthName, RHIRenderPassLoadOp depthLoad )
     {
         if ( context._pCmd == nullptr )
             return;
@@ -1581,7 +1584,9 @@ namespace sw
         beginInfo._colorTargetCount                     = 0;
         beginInfo._depthTarget                          = depth._texture;
         beginInfo._depthLoadOp                          = depthLoad;
-        beginInfo._clearDepth                           = clearDepth;
+        beginInfo._depthStoreOp                         = depth._ops._storeOp;
+        beginInfo._clearDepth                           = depth._ops._clearDepth;
+        beginInfo._clearStencil                         = depth._ops._clearStencil;
         beginInfo._width                                = depth._texture != 0 ? depth._width : activePool().getWidth();
         beginInfo._height                               = depth._texture != 0 ? depth._height : activePool().getHeight();
         context._pCmd->beginRenderPass( beginInfo );
@@ -1726,10 +1731,10 @@ namespace sw
 
     const RenderGraphPassDesc* FramePassExecutor::findPassDescByType( RenderPassType passType ) const
     {
-        // 표기 흔들림은 로드 시점의 _resolvedType 이 이미 흡수했다. 여기서는 값만 비교하면 된다.
+        // 값만 비교한다 — 표기는 읽을 때 enum 으로 검사했다.
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getGraphPass() )
         {
-            if ( pass._resolvedType == passType )
+            if ( pass._type == passType )
                 return &pass;
         }
         return nullptr;

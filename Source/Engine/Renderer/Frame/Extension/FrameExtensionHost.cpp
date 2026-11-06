@@ -95,7 +95,7 @@ namespace sw
             {
                 if ( attachment._name == name )
                 {
-                    outFormat = FrameRendererUtil::parseAttachmentFormat( attachment._format );
+                    outFormat = attachment._format;
                     return true;
                 }
             }
@@ -275,8 +275,11 @@ namespace sw
         {
             if ( view._transientPool.contains( texture._name ) )
                 continue;
-            (void)view._transientPool.allocate( _pDevice, texture._name, texture._format, FrameRendererUtil::isDepthFormat( texture._format ), texture._clearColor,
-                                                texture._resolutionDivisor );
+            // 확장 텍스처는 클리어 값 하나를 적는다 — 깊이 형식이면 그 첫 성분이 깊이다.
+            RHIAttachmentOps ops{};
+            ops._clearColor = texture._clearColor;
+            ops._clearDepth = texture._clearColor._x;
+            (void)view._transientPool.allocate( _pDevice, texture._name, texture._format, FrameRendererUtil::isDepthFormat( texture._format ), ops, texture._resolutionDivisor );
         }
     }
 

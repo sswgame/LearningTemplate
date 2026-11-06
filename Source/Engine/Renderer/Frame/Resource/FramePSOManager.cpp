@@ -53,11 +53,11 @@ namespace sw
             const RenderViewModeInfo& info = getRenderViewModeInfo( viewMode );
             if ( info._bWireframe )
             {
-                desc._fillMode = RHIFillMode::Wireframe;
+                desc._renderState._fillMode = RHIFillMode::Wireframe;
                 // 와이어프레임은 뒷면도 보여야 형태를 읽을 수 있다. 컬링을 남기면 뒤쪽 선이 사라져
                 // 상자가 열린 것처럼 보인다. 에디터의 와이어프레임은 관례적으로 양면이다.
-                desc._cullMode = RHICullMode::None;
-                bChanged       = true;
+                desc._renderState._cullMode = RHICullMode::None;
+                bChanged                    = true;
             }
             if ( info._bOverlay )
             {
@@ -65,9 +65,9 @@ namespace sw
                 // z-fighting 한다 — 카메라 쪽으로 미는 바이어스를 걸고, 선이 면의 깊이를 바꾸지 않게 깊이 쓰기를 끈다.
                 static constexpr int32   kOverlayDepthBias            = -4;
                 static constexpr float32 kOverlaySlopeScaledDepthBias = -1.0f;
-                desc._depthBias                                       = kOverlayDepthBias;
-                desc._slopeScaledDepthBias                            = kOverlaySlopeScaledDepthBias;
-                desc._bEnableDepthWrite                               = 0;
+                desc._renderState._depthBias                          = kOverlayDepthBias;
+                desc._renderState._slopeScaledDepthBias               = kOverlaySlopeScaledDepthBias;
+                desc._renderState._bEnableDepthWrite                  = SW_FALSE;
                 bChanged                                              = true;
             }
             if ( info._bAdditiveNoDepth )
@@ -75,12 +75,11 @@ namespace sw
                 // 겹쳐 그린 수를 세려면 가려진 것도 그려야 한다. 깊이를 쓰지 않고 단색을 더한다(유니티 Overdraw 와 같다).
                 // 깊이 테스트는 남긴다. 패스가 깊이를 클리어(1)하고 아무도 쓰지 않으니 모든 면이 통과한다. 테스트를 끄면 백엔드가 깊이 첨부 없는
                 // PSO 로 만들어(Vulkan 렌더 패스 호환) 깊이를 바인딩한 패스에서 검증 오류가 난다. 깊이 프리패스가 있는 파이프라인에서는 보이는 면만 센다.
-                // RHI 에 더하기 블렌드가 따로 없다. 프리멀티플라이(색 One / InvSrcAlpha)에 셰이더가 알파 0을 내면 그것이 더하기다.
-                desc._bEnableBlend        = 1;
-                desc._bPremultipliedAlpha = SW_TRUE;
-                desc._bEnableDepthWrite   = 0;
-                desc._cullMode            = RHICullMode::None;
-                bChanged                  = true;
+                // 프리멀티플라이(색 One / InvSrcAlpha)에 셰이더가 알파 0을 내면 그것이 더하기다.
+                desc._renderState.setAllBlendTargets( RHIBlendTargetState::makePremultipliedAlpha() );
+                desc._renderState._bEnableDepthWrite = SW_FALSE;
+                desc._renderState._cullMode          = RHICullMode::None;
+                bChanged                             = true;
             }
 
             // 셰이딩을 바꾸는 모드(Unlit, Normals, Depth, Overdraw)는 조명 항을 셰이더에서 **컴파일 아웃**한다. 런타임 분기가 아니라 퍼뮤테이션이다.
@@ -104,14 +103,14 @@ namespace sw
          */
         bool reverseCullMode( RHIPipelineStateDesc& desc )
         {
-            if ( desc._cullMode == RHICullMode::Back )
+            if ( desc._renderState._cullMode == RHICullMode::Back )
             {
-                desc._cullMode = RHICullMode::Front;
+                desc._renderState._cullMode = RHICullMode::Front;
                 return true;
             }
-            if ( desc._cullMode == RHICullMode::Front )
+            if ( desc._renderState._cullMode == RHICullMode::Front )
             {
-                desc._cullMode = RHICullMode::Back;
+                desc._renderState._cullMode = RHICullMode::Back;
                 return true;
             }
             return false;
@@ -120,25 +119,27 @@ namespace sw
         /** @brief 파이프라인에 없는 내부 슬롯(`pPassDesc` 없음)의 깊이 · 블렌드 · 컬을 표에서 정합니다. 파이프라인 패스는 XML 값이 그대로 들어간다(`applyPassRenderState`). */
         void applyInternalPassRenderState( RHIPipelineStateDesc& desc, const RenderPassTypeInfo& info, RenderPassType passType )
         {
-            desc._bEnableDepthTest  = info.hasFlag( RenderPassTraitFlag::kDepthTest ) ? 1 : 0;
-            desc._bEnableDepthWrite = ( info.hasFlag( RenderPassTraitFlag::kDepthTest ) && info.hasFlag( RenderPassTraitFlag::kDepthWrite ) ) ? 1 : 0;
-            desc._bEnableBlend      = info.hasFlag( RenderPassTraitFlag::kBlend ) ? 1 : 0;
+            RHIRenderState& state    = desc._renderState;
+            state                    = RHIRenderState{};
+            state._bEnableDepthTest  = info.hasFlag( RenderPassTraitFlag::kDepthTest ) ? SW_TRUE : SW_FALSE;
+            state._bEnableDepthWrite = ( info.hasFlag( RenderPassTraitFlag::kDepthTest ) && info.hasFlag( RenderPassTraitFlag::kDepthWrite ) ) ? SW_TRUE : SW_FALSE;
+            if ( info.hasFlag( RenderPassTraitFlag::kBlend ) )
+                state.setAllBlendTargets( info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) ? RHIBlendTargetState::makePremultipliedAlpha() : RHIBlendTargetState::makeStraightAlpha() );
             // 풀스크린 삼각형의 와인딩에는 앞뒤 의미가 없다. 컬링하면 화면이 빈다.
             if ( FrameRendererUtil::drawsSceneMeshes( passType ) == false )
-                desc._cullMode = RHICullMode::None;
+                state._cullMode = RHICullMode::None;
             else
-                desc._cullMode = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? RHICullMode::Front : RHICullMode::Back;
+                state._cullMode = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? RHICullMode::Front : RHICullMode::Back;
         }
 
-        /** @brief 깊이 테스트에 맞춰 깊이 형식을 정하고, 표의 프리멀티플라이를 적용합니다(곧은 알파로 섞으면 알파가 두 번 곱해진다 — 셰이더의 출력 규약이라 표가 정한다). */
-        void finishPassRenderState( RHIPipelineStateDesc& desc, const RenderPassTypeInfo& info )
+        /**
+         * @brief 깊이 테스트에 맞춰 깊이 형식을 정합니다.
+         * @details 뎁스를 쓰지 않는 패스(풀스크린)는 렌더 패스에 DSV 를 붙이지 않는데, desc 의 기본값이 D24 라서
+         *          PSO 는 "뎁스 있음" 으로 만들어졌다. DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만 허용하므로 그런 패스의 드로우마다 검증 오류가 났다.
+         */
+        void finishPassRenderState( RHIPipelineStateDesc& desc )
         {
-            desc._bPremultipliedAlpha = ( desc._bEnableBlend != 0 && info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) ) ? SW_TRUE : SW_FALSE;
-
-            // 뎁스를 쓰지 않는 패스(풀스크린)는 렌더 패스에 DSV 를 붙이지 않는데, desc 의 기본값이 D24 라서
-            // PSO 는 "뎁스 있음" 으로 만들어졌다. DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만
-            // 허용하므로 그런 패스의 드로우마다 검증 오류가 났다.
-            desc._depthStencilFormat = ( desc._bEnableDepthTest != 0 ) ? constant::render::kDepthStencilFormat : RHIFormat::Unknown;
+            desc._depthStencilFormat = ( desc._renderState._bEnableDepthTest != SW_FALSE ) ? constant::render::kDepthStencilFormat : RHIFormat::Unknown;
         }
 
         /** @brief 셋업의 셰이더 미리 데우기 잡입니다(`FramePSOManager::warmShaders`). 워커는 요청 배열을 읽기만 하고, 캐시는 자기 잠금으로 같은 요청을 한 번만 컴파일한다. */
@@ -166,66 +167,57 @@ namespace sw
             desc._vertexEntryPoint    = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
             desc._pixelEntryPoint     = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
             desc._listShaderDefine.clear();
-            desc._cullMode            = RHICullMode::None;
-            desc._fillMode            = RHIFillMode::Solid;
-            desc._bEnableBlend        = 1;
-            desc._bPremultipliedAlpha = SW_TRUE;
-            desc._bEnableDepthWrite   = 0;
+            desc._renderState._cullMode = RHICullMode::None;
+            desc._renderState._fillMode = RHIFillMode::Solid;
+            desc._renderState.setAllBlendTargets( RHIBlendTargetState::makePremultipliedAlpha() );
+            desc._renderState._bEnableDepthWrite = SW_FALSE;
             return desc;
-        }
-
-        /** @brief 확장 프로그램 PSO 의 저장소 키입니다 — 셰이더 · 고정 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다(`findOrCreateExtensionProgramPSO` · `warmExtensionPrograms`). */
-        hashed_string makeExtensionProgramKey( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
-        {
-            string key = program._shaderPath;
-            key.append( "|" );
-            key.push_back( program._bCullBack ? 'c' : 'n' );
-            key.push_back( bDepthTest ? 't' : 'f' );
-            key.push_back( program._bDepthWrite ? 'w' : 'r' );
-            key.push_back( program._bBlend ? 'b' : 'o' );
-            key.append( "|" );
-            for ( uint32 formatValue = static_cast<uint32>( colorFormat );; formatValue /= 10u )
-            {
-                key.push_back( static_cast<char>( '0' + ( formatValue % 10u ) ) );
-                if ( formatValue < 10u )
-                    break;
-            }
-            return hashed_string{ string_view{ key } };
         }
 
         /** @brief 확장 프로그램 PSO 의 desc 입니다(진입점은 스테이지 기본값, define 없음 — 쿠커가 그 한 벌만 굽는다). */
         RHIPipelineStateDesc makeExtensionProgramDesc( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
         {
             RHIPipelineStateDesc desc{};
-            desc._vertexShaderPath    = program._shaderPath;
-            desc._pixelShaderPath     = program._shaderPath;
-            desc._vertexEntryPoint    = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
-            desc._pixelEntryPoint     = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
-            desc._numRenderTargets    = 1;
-            desc._arrRTVFormat[0]     = colorFormat;
-            desc._bEnableDepthTest    = bDepthTest ? 1 : 0;
-            desc._bEnableDepthWrite   = ( bDepthTest && program._bDepthWrite ) ? 1 : 0;
-            desc._depthStencilFormat  = bDepthTest ? constant::render::kDepthStencilFormat : RHIFormat::Unknown;
-            desc._bEnableBlend        = program._bBlend ? 1 : 0;
-            desc._bPremultipliedAlpha = program._bBlend ? SW_TRUE : SW_FALSE;
-            desc._cullMode            = program._bCullBack ? RHICullMode::Back : RHICullMode::None;
+            desc._vertexShaderPath   = program._shaderPath;
+            desc._pixelShaderPath    = program._shaderPath;
+            desc._vertexEntryPoint   = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
+            desc._pixelEntryPoint    = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+            desc._numRenderTargets   = 1;
+            desc._arrRTVFormat[0]    = colorFormat;
+            desc._depthStencilFormat = bDepthTest ? constant::render::kDepthStencilFormat : RHIFormat::Unknown;
+            RHIRenderState& state    = desc._renderState;
+            state._bEnableDepthTest  = bDepthTest ? SW_TRUE : SW_FALSE;
+            state._bEnableDepthWrite = ( bDepthTest && program._bDepthWrite ) ? SW_TRUE : SW_FALSE;
+            state._cullMode          = program._bCullBack ? RHICullMode::Back : RHICullMode::None;
+            if ( program._bBlend )
+                state.setAllBlendTargets( RHIBlendTargetState::makePremultipliedAlpha() );
             return desc;
+        }
+
+        /** @brief 확장 프로그램 PSO 의 저장소 키입니다 — 셰이더 · 렌더 상태 · 타깃 포맷이 같으면 한 PSO 를 나눈다(`findOrCreateExtensionProgramPSO` · `warmExtensionPrograms`). 상태를 칸마다 글자로 적지 않아 칸이 늘어도 따라온다. */
+        hashed_string makeExtensionProgramKey( const ExtensionProgramDesc& program, RHIFormat colorFormat, bool bDepthTest )
+        {
+            const RHIPipelineStateDesc desc = makeExtensionProgramDesc( program, colorFormat, bDepthTest );
+            string                     key  = program._shaderPath;
+            key.append( "|" );
+            key.append( to_string( desc._renderState.computeHash() ) );
+            key.append( "|" );
+            key.append( to_string( static_cast<uint32>( colorFormat ) ) );
+            return hashed_string{ string_view{ key } };
         }
 
         /** @brief 2D 빛 쿠키 아틀라스 칸에 옮겨 그리는 PSO 의 desc 입니다 — 전체 화면 블릿 셰이더를 @p atlasFormat 으로(`findOrCreateCookieAtlasPSO` · 셋업의 셰이더 데우기). */
         RHIPipelineStateDesc makeCookieAtlasPSODesc( const string& shaderPath, RHIFormat atlasFormat )
         {
             RHIPipelineStateDesc desc{};
-            desc._vertexShaderPath   = shaderPath;
-            desc._pixelShaderPath    = shaderPath;
-            desc._vertexEntryPoint   = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
-            desc._pixelEntryPoint    = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
-            desc._numRenderTargets   = 1;
-            desc._arrRTVFormat[0]    = atlasFormat;
-            desc._depthStencilFormat = RHIFormat::Unknown;
-            desc._bEnableDepthTest   = 0;
-            desc._bEnableDepthWrite  = 0;
-            desc._cullMode           = RHICullMode::None;
+            desc._vertexShaderPath               = shaderPath;
+            desc._pixelShaderPath                = shaderPath;
+            desc._vertexEntryPoint               = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
+            desc._pixelEntryPoint                = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+            desc._numRenderTargets               = 1;
+            desc._arrRTVFormat[0]                = atlasFormat;
+            desc._depthStencilFormat             = RHIFormat::Unknown;
+            desc._renderState._bEnableDepthWrite = SW_FALSE;
             return desc;
         }
 
@@ -239,20 +231,11 @@ namespace sw
 
     void FramePSOManager::applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassType passType, const RenderGraphPassDesc* pPassDesc )
     {
-        const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
         if ( pPassDesc != nullptr )
-        {
-            desc._bEnableDepthTest  = pPassDesc->_bEnableDepthTest ? 1 : 0;
-            desc._bEnableDepthWrite = pPassDesc->_bEnableDepthWrite ? 1 : 0;
-            desc._bEnableBlend      = pPassDesc->_bEnableBlend ? 1 : 0;
-            desc._cullMode          = pPassDesc->_cullMode == "None" ? RHICullMode::None : pPassDesc->_cullMode == "Front" ? RHICullMode::Front
-                                                                                                                           : RHICullMode::Back; // 표기는 읽을 때 검사했다
-        }
+            desc._renderState = pPassDesc->_resolvedRenderState; // 조합은 읽을 때 검사했다(`RenderPipelineAsset::validate`)
         else
-        {
-            applyInternalPassRenderState( desc, info, passType );
-        }
-        finishPassRenderState( desc, info );
+            applyInternalPassRenderState( desc, getRenderPassTypeInfo( passType ), passType );
+        finishPassRenderState( desc );
     }
 
     FramePSOManager::FramePSOManager( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const GPUScene& gpuScene )
@@ -327,7 +310,7 @@ namespace sw
         // 파이프라인 컴퓨트 패스는 셰이더가 패스마다 달라 표가 아니라 그래프를 돈다. 컴퓨트 능력이 없는 백엔드는 이 패스를 돌리지 못한다.
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
-            if ( pass._resolvedType != RenderPassType::Compute )
+            if ( pass._type != RenderPassType::Compute )
                 continue;
             RenderPassShaderSelection computeShader = selectRenderPassShader( RenderPassType::Compute, &pass, engineDefaultAssets );
             ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
@@ -475,10 +458,10 @@ namespace sw
 
     const RenderGraphPassDesc* FramePSOManager::findPassDescByType( RenderPassType passType ) const
     {
-        // 표기 흔들림은 로드 시점의 _resolvedType 이 이미 흡수했다. 여기서는 값만 비교하면 된다.
+        // 값만 비교한다 — 표기는 읽을 때 enum 으로 검사했다.
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
-            if ( pass._resolvedType == passType )
+            if ( pass._type == passType )
                 return &pass;
         }
         return nullptr;
@@ -777,12 +760,12 @@ namespace sw
         bool bChanged{ false };
         if ( pPermutation != nullptr )
         {
-            // 양면 머티리얼은 후면 컬링을 끈다(언리얼 머티리얼의 Two Sided). 앞면 컬링 패스(외곽선 껍질)는 그대로 둔다. 껍질은 뒤집어 그려야 외곽선이다.
-            const bool bTwoSided = VectorUtil::contains( pPermutation->_listDefine, string( kMaterialTwoSidedDefine ) );
-            if ( bTwoSided && desc._cullMode == RHICullMode::Back )
+            // 패스 → 머티리얼 순서로 합친다. 무엇을 덮는지는 패스 종류의 표가 정한다(`RHIRenderStateOverride::Scope`). 값이 같으면 PSO 를 더 만들지 않는다.
+            const RHIRenderState merged = pPermutation->_renderStateOverride.applyTo( desc._renderState, FrameRendererUtil::getMaterialStateScope( passType ) );
+            if ( merged != desc._renderState )
             {
-                desc._cullMode = RHICullMode::None;
-                bChanged       = true;
+                desc._renderState = merged;
+                bChanged          = true;
             }
             // 머티리얼 셰이더를 쓰는 패스만 경로를 교체한다. 그림자와 뎁스는 자기 지오메트리 셰이더가 기준이고, 모양을 머티리얼 코드가 정하는
             // 배치(알파 컷오프 · 정점 변형)만 머티리얼 셰이더의 깊이 퍼뮤테이션으로 그린다(drawsDepthWithMaterialShader — 쿠커와 같은 판정).

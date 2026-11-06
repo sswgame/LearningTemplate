@@ -1,7 +1,7 @@
 <!-- 장면 깊이와 그림자 맵 — 파이프라인이 `_listRenderPassRef` 로 가져오는 첨부 묶음이다. 여기를 고치면 가져오는 모든 파이프라인의 첨부가 바뀐다. -->
 <RenderPassDesc _name="DefaultMainPass">
 	<_listAttachment>
-		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
-		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
+		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearDepth="1" _loadOp="Clear" />
+		<RenderPassAttachment _name="ShadowMap" _format="D24_UNORM_S8_UINT" _clearDepth="1" _loadOp="Clear" />
 	</_listAttachment>
 </RenderPassDesc>

@@ -864,7 +864,7 @@ namespace sw
             if ( attachment._name == attachmentName )
             {
                 outClearColor = attachment._clearColor;
-                return attachment._bClear;
+                return attachment._loadOp == RHIRenderPassLoadOp::Clear;
             }
         }
         return false;
@@ -910,7 +910,7 @@ namespace sw
     {
         for ( const RenderGraphPassDesc& pass : _pipelineResource.getDesc()._listPass )
         {
-            if ( pass._resolvedType == RenderPassType::Present && pass._listInput.empty() == false )
+            if ( pass._type == RenderPassType::Present && pass._listInput.empty() == false )
                 return string_view{ pass._listInput.front() };
         }
         return string_view{};

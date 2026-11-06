@@ -83,7 +83,7 @@ namespace sw
         const bool                     bSmaller         = pool.getWidth() < viewportWidth || pool.getHeight() < viewportHeight;
         const bool                     bCandidate       = _pDevice != nullptr && bSpatial && bSmaller && view._settings._upscaleZoom == 0 && pool.isEmpty() == false;
         const RenderGraphPassDesc*     pTonemap         = FrameAutoExposure::findTonemapPass( _pipeline );
-        const bool                     bPostChain       = pTonemap != nullptr && pTonemap->_resolvedType == RenderPassType::Present;
+        const bool                     bPostChain       = pTonemap != nullptr && pTonemap->_type == RenderPassType::Present;
         const bool                     bReportPostChain = bCandidate && bPostChain && _bUpscalePostChainLogged == SW_FALSE;
         if ( bReportPostChain )
         {

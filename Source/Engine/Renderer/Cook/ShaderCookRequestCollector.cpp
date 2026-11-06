@@ -163,7 +163,7 @@ namespace sw
             static void appendPipelinePassStages( vector<ShaderCookRequest>& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline,
                                                   const string& shaderPath, const vector<string>& listPassDefine )
             {
-                if ( pass._resolvedType == RenderPassType::Compute )
+                if ( pass._type == RenderPassType::Compute )
                 {
                     appendRequestUnique( outListRequest, shaderPath, string( resolveEntryPoint( pass._computeEntryPoint, ShaderStage::Compute ) ), ShaderStage::Compute, listPassDefine );
                     return;
@@ -212,21 +212,21 @@ namespace sw
                         // 셰이더 경로와 define 은 런타임 PSO 생성(createPSOForPassType)과 **같은 함수**로 정한다. 경로는 XML 의
                         // `_shaderPath`, 비어 있으면 패스 종류 표의 기본 셰이더다. define 은 XML 퍼뮤테이션 + 패스 define(G버퍼의
                         // `SW_PASS_GBUFFER=1` 처럼 C++ 이 얹는 것)이다. 패스 종류는 로드 때 enum 으로 해석한 값을 본다.
-                        const RenderPassShaderSelection passShader = selectRenderPassShader( pass._resolvedType, &pass, engineDefaultAssets );
+                        const RenderPassShaderSelection passShader = selectRenderPassShader( pass._type, &pass, engineDefaultAssets );
                         if ( passShader._shaderPath.empty() )
                             continue;
 
                         // 씬 메시를 그리는 패스는 머티리얼과의 조합까지 쿠킹해야 한다(5단계).
-                        if ( FrameRendererUtil::drawsSceneMeshes( pass._resolvedType ) )
+                        if ( FrameRendererUtil::drawsSceneMeshes( pass._type ) )
                         {
                             MeshPassInfo passInfo;
                             passInfo._shaderPath          = passShader._shaderPath;
                             passInfo._vertexEntryPoint    = string( resolveEntryPoint( pass._vertexEntryPoint, ShaderStage::Vertex ) );
                             passInfo._pixelEntryPoint     = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
                             passInfo._listPermutation     = passShader._listDefine;
-                            passInfo._passType            = pass._resolvedType;
-                            passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._resolvedType );
-                            passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( pass._resolvedType );
+                            passInfo._passType            = pass._type;
+                            passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._type );
+                            passInfo._bAppliesViewMode    = FrameRendererUtil::appliesViewMode( pass._type );
                             passInfo._bHasPixelStage      = FrameRendererUtil::hasPixelStage( pass, pipelineResource.getDesc()._listAttachment );
                             outListMeshPass.push_back( std::move( passInfo ) );
                         }

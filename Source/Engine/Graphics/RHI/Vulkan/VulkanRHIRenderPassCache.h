@@ -30,7 +30,7 @@ namespace sw
          * @details 스왑체인(CLEAR/LOAD), 공용 오프스크린, 포맷별 오프스크린, PSO 호환용, 합성 프레임버퍼, desc 기반 생성이
          *          모두 이것으로 `VkAttachmentDescription` 과 서브패스 의존성을 만듭니다(곳마다 손으로 적으면 의존성 마스크가
          *          조금씩 달라지고 한 곳을 고칠 때 나머지를 빠뜨립니다). 단일 서브패스, 샘플 1,
-         *          스텐실 DONT_CARE 는 여기서 고정이고, 곳마다 다른 것(포맷, loadOp, storeOp, 레이아웃)만 필드입니다.
+         *          곳마다 다른 것(포맷, loadOp, storeOp, 레이아웃)만 필드입니다. 깊이 첨부의 스텐실은 깊이와 같은 loadOp · storeOp 입니다.
          */
         struct RenderPassSpec
         {
@@ -42,6 +42,7 @@ namespace sw
             uint32 _arrColorFinalLayout[kMaxColorAttachments]{};   ///< VkImageLayout
             uint32 _depthFormat{ 0 };                              ///< VkFormat; 0 = 깊이 없음
             uint32 _depthLoadOp{ 0 };                              ///< VkAttachmentLoadOp
+            uint32 _depthStoreOp{ 0 };                             ///< VkAttachmentStoreOp. 기본 0 은 STORE 이고, 다르게 쓰려면 `setDepth` 뒤에 고칩니다
             uint32 _depthInitialLayout{ 0 };                       ///< VkImageLayout
             uint32 _depthFinalLayout{ 0 };                         ///< VkImageLayout
 
@@ -59,7 +60,9 @@ namespace sw
             RHITextureHandle _depth{ 0 };
             uint8            _arrColorLoadOp[kMaxColorAttachments]{};
             uint8            _depthLoadOp{ 0 };
-            uint16           _arrColorSlice[kMaxColorAttachments]{}; ///< 첨부마다 그릴 면
+            uint8            _arrColorStoreOp[kMaxColorAttachments]{}; ///< `RHIRenderPassStoreOp`
+            uint8            _depthStoreOp{ 0 };                       ///< `RHIRenderPassStoreOp`
+            uint16           _arrColorSlice[kMaxColorAttachments]{};   ///< 첨부마다 그릴 면
             uint16           _depthSlice{ 0 };
             /** @brief 키가 같으면 true 를 반환합니다. */
             bool operator==( const CompositeKey& other ) const;

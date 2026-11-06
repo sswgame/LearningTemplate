@@ -1,28 +1,28 @@
 <RenderPipelineDesc _name="DeferredPipeline" _shadingModel="Deferred">
 	<_listAttachment>
-		<RenderPassAttachment _name="GBufferAlbedo" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _bClear="true" />
+		<RenderPassAttachment _name="GBufferAlbedo" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
 		<!-- G버퍼 노멀 칸 — 옥타헤드럴 좌표 snorm16 둘(binding.hlsli Octahedral::encode). 클리어 (0, 0) 은 +z 로 풀린다. -->
-		<RenderPassAttachment _name="GBufferNormal" _format="R16G16_SNORM" _clearColor="0,0,0,0" _bClear="true" />
+		<RenderPassAttachment _name="GBufferNormal" _format="R16G16_SNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
 		<!-- G버퍼 머티리얼 칸 — r 금속도, g 거칠기, a "그려졌다" 표시(binding.hlsli SurfaceOutput::encodeGbufferMaterial). 디퍼드 조명이 PBR 식에 넘긴다. -->
-		<RenderPassAttachment _name="GBufferMaterial" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _bClear="true" />
-		<RenderPassAttachment _name="LitColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
-		<RenderPassAttachment _name="AOColor" _format="R8G8B8A8_UNORM" _clearColor="1,1,1,1" _bClear="true" />
+		<RenderPassAttachment _name="GBufferMaterial" _format="R8G8B8A8_UNORM" _clearColor="0,0,0,0" _loadOp="Clear" />
+		<RenderPassAttachment _name="LitColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="AOColor" _format="R8G8B8A8_UNORM" _clearColor="1,1,1,1" _loadOp="Clear" />
 		<!-- 블룸의 밝은 부분은 반해상도로 구한다(BloomDownsample) — PostBloom 이 업샘플해 더한다. -->
 		<RenderPassAttachment _name="BloomBright"
 		                      _format="R16G16B16A16_FLOAT"
 		                      _clearColor="0,0,0,1"
-		                      _bClear="true"
+		                      _loadOp="Clear"
 		                      _resolutionDivisor="2" />
-		<RenderPassAttachment _name="BloomColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
-		<RenderPassAttachment _name="TAAColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
-		<RenderPassAttachment _name="DepthOfFieldColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
-		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" />
+		<RenderPassAttachment _name="BloomColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="TAAColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="DepthOfFieldColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
+		<RenderPassAttachment _name="MotionBlurColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" />
 		<!-- 외곽선은 톤맵 앞의 HDR 색에 그린다 — 원본(BloomColor)과 같은 형식이어야 꺼진 뷰에서 출력이 원본을 가리킬 수 있다(RGBA8 이면 TAA · 톤맵 앞에서 1 이 넘는 색이 잘렸다). -->
 		<RenderPassAttachment _name="OutlineColor"
 		                      _format="R16G16B16A16_FLOAT"
 		                      _clearColor="0.12,0.15,0.18,1"
-		                      _bClear="true" />
-		<RenderPassAttachment _name="TonemapColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
+		                      _loadOp="Clear" />
+		<RenderPassAttachment _name="TonemapColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" />
 	</_listAttachment>
 	<_listPass>
 		<RenderGraphPassDesc _name="Shadow"
@@ -32,8 +32,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
 		                     _bEnableDepthTest="true"
-		                     _bEnableDepthWrite="true"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="true">
 			<_listInput />
 			<_listOutput>
 				<item>ShadowMap</item>
@@ -47,8 +46,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
 		                     _bEnableDepthTest="true"
-		                     _bEnableDepthWrite="true"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="true">
 			<_listInput />
 			<_listOutput>
 				<item>GBufferAlbedo</item>
@@ -64,8 +62,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>GBufferAlbedo</item>
 				<item>GBufferNormal</item>
@@ -87,8 +84,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Back"
 		                     _bEnableDepthTest="true"
-		                     _bEnableDepthWrite="true"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="true">
 			<_listInput>
 				<item>LitColor</item>
 				<item>SceneDepth</item>
@@ -108,7 +104,6 @@
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
 		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false"
 		                     _minPostQuality="2">
 			<_listInput>
 				<item>GBufferNormal</item>
@@ -128,8 +123,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Front"
 		                     _bEnableDepthTest="true"
-		                     _bEnableDepthWrite="true"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="true">
 			<_listInput>
 				<item>LitColor</item>
 				<item>SceneDepth</item>
@@ -148,8 +142,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Front"
 		                     _bEnableDepthTest="true"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>LitColor</item>
 				<item>SceneDepth</item>
@@ -169,8 +162,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="true"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>LitColor</item>
 				<item>SceneDepth</item>
@@ -187,8 +179,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>LitColor</item>
 			</_listInput>
@@ -204,8 +195,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>SceneDepth</item>
 			</_listInput>
@@ -222,7 +212,7 @@
 		                     _cullMode="Back"
 		                     _bEnableDepthTest="true"
 		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="true">
+		                     _blendPreset="Transparent">
 			<_listInput>
 				<item>LitColor</item>
 				<item>SceneDepth</item>
@@ -241,8 +231,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="Front"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>LitColor</item>
 				<item>SceneDepth</item>
@@ -262,7 +251,7 @@
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
 		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="true">
+		                     _blendPreset="Premultiplied">
 			<_listInput>
 				<item>SceneDepth</item>
 			</_listInput>
@@ -277,8 +266,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>LitColor</item>
 			</_listInput>
@@ -295,7 +283,6 @@
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
 		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false"
 		                     _minPostQuality="1">
 			<_listInput>
 				<item>LitColor</item>
@@ -313,8 +300,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>BloomColor</item>
 				<item>SceneDepth</item>
@@ -331,8 +317,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>OutlineColor</item>
 				<item>SceneDepth</item>
@@ -349,8 +334,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>TAAColor</item>
 				<item>SceneDepth</item>
@@ -368,7 +352,6 @@
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
 		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false"
 		                     _minPostQuality="1">
 			<_listInput>
 				<item>DepthOfFieldColor</item>
@@ -385,8 +368,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>MotionBlurColor</item>
 			</_listInput>
@@ -401,8 +383,7 @@
 		                     _pixelEntryPoint="PSMain"
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		                     _bEnableDepthWrite="false">
 			<_listInput>
 				<item>TonemapColor</item>
 			</_listInput>
@@ -419,7 +400,7 @@
 		                     _cullMode="None"
 		                     _bEnableDepthTest="false"
 		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="true">
+		                     _blendPreset="Premultiplied">
 			<_listInput />
 			<_listOutput>
 				<item>Swapchain</item>

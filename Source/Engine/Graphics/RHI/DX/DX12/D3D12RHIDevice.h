@@ -376,6 +376,7 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D12PipelineState> _pso;
             RHIVertexLayout                             _vertexLayout;                                    ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
             D3D_PRIMITIVE_TOPOLOGY                      _topology{ D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST }; ///< 드로우가 거는 위상입니다
+            uint8                                       _stencilRef{ 0 };                                 ///< PSO 를 걸 때 함께 거는 스텐실 참조 값입니다(`OMSetStencilRef`)
         };
 
         // 셰이더 가시 힙 하나는 [레지스트리 구간 | 온라인 블록 구간]으로 나뉜다. 레지스트리는 bindless 인덱스가 곧 힙 슬롯이다(텍스처 배열이 힙 시작을

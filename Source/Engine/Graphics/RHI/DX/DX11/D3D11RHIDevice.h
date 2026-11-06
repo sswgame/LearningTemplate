@@ -370,6 +370,7 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D11RasterizerState>   _rasterizerState;
             Microsoft::WRL::ComPtr<ID3D11BlendState>        _blendState;
             Microsoft::WRL::ComPtr<ID3D11DepthStencilState> _depthStencilState;
+            uint8                                           _stencilRef{ 0 }; ///< 깊이 · 스텐실 상태를 걸 때 함께 넘긴다
         };
 
         /**

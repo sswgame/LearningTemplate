@@ -124,7 +124,7 @@ namespace sw
         static constexpr uint32 kRequiresGPUCulling    = SW_BIT( 10 ); ///< 컴퓨트 PSO 를 `_bGPUCulling` 일 때만 만든다(아니면 `_bCompute`).
         static constexpr uint32 kHasInputContract      = SW_BIT( 11 ); ///< `_inputContract` 가 이 패스의 입력을 검사한다.
         static constexpr uint32 kCullFront             = SW_BIT( 12 ); ///< PSO 기본값으로 앞면 컬링을 쓴다(인버티드 헐 외곽선). XML 은 None 으로만 바꿀 수 있다.
-        static constexpr uint32 kPremultipliedAlpha    = SW_BIT( 13 ); ///< 블렌드가 켜지면 원본 색이 이미 알파를 곱한 값이다(One/InvSrcAlpha, `_bPremultipliedAlpha`).
+        static constexpr uint32 kPremultipliedAlpha    = SW_BIT( 13 ); ///< XML 이 없는 내부 슬롯의 블렌드가 프리멀티플라이다. 파이프라인 패스는 XML 의 `_blendPreset` 이 정한다.
         /**
          * @brief 후처리를 끈 뷰(CCTV, 표면 값 보기)와 품질(`_minPostQuality`)로 꺼지는 효과 패스다(SSAO, 블룸, 외곽선, 피사계 심도, 모션 블러)와 TAA 다. TAA 말고는 `kGenericFullscreen` 에만 붙는다.
          * @details 꺼진 패스는 기록하지 않는다 — 어떻게 빠지는지는 `kBypassesToSource`(출력이 원본을 가리킨다) 또는 `kOmittedWhenOff`(출력이 없다) 가 정하고, 둘 중 하나가 꼭 붙는다.
@@ -177,6 +177,13 @@ namespace sw
         static constexpr uint32 kRequiresNativeBindless = SW_BIT( 22 );
         /** @brief 파이프라인 XML 의 패스가 컴퓨트 셰이더를 고른다(`RenderPassType::Compute`). 셰이더가 패스마다 달라 PSO 를 패스 이름으로 찾는다(`FramePSOManager::findPipelineComputePSO`). */
         static constexpr uint32 kPipelineCompute = SW_BIT( 23 );
+        /**
+         * @brief 머티리얼이 렌더 타깃과 상관없는 렌더 상태(깊이 · 스텐실 · 채우기)를 덮을 수 있는 색 패스다. 없는 씬 메시 패스(그림자 · 깊이 프리패스 · 외곽선)는 컬 · 앞면 방향만 받는다.
+         * @details 그림자 · 프리패스에 머티리얼의 깊이 비교 · 스텐실이 들어가면 깊이의 모양이 색 패스와 어긋난다. 언리얼도 머티리얼의 Two Sided 만 깊이 패스에 넘긴다(기억에 의존한 비교).
+         */
+        static constexpr uint32 kMaterialFixedState = SW_BIT( 24 );
+        /** @brief 머티리얼이 블렌드까지 덮을 수 있는 색 패스다(한 첨부에 그리는 포워드 · 반투명). G버퍼는 첨부 셋의 의미가 정해져 있어 받지 않는다. */
+        static constexpr uint32 kMaterialBlend = SW_BIT( 25 );
     };
 } // namespace sw
 

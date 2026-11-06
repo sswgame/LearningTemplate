@@ -5,11 +5,11 @@
 <RenderPipelineDesc _base="game/empty/pipeline/tessellationstagepipeline.xml" _name="ComputePassPipeline">
 	<_listAttachment>
 		<RenderPassAttachment _name="TonemapColor" _op="Remove" />
-		<RenderPassAttachment _name="SwappedColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="false" _role="" _resolutionDivisor="1" />
+		<RenderPassAttachment _name="SwappedColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Load" _role="" _resolutionDivisor="1" />
 	</_listAttachment>
 	<_listPass>
 		<RenderGraphPassDesc _name="Tonemap" _op="Remove" />
-		<RenderGraphPassDesc _name="ChannelSwap" _after="ForwardOpaque" _type="Compute" _depthAttachment="" _shaderPath="game/empty/shaders/compute_channelswap.hlsl" _vertexEntryPoint="" _pixelEntryPoint="" _computeEntryPoint="CSMain" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _bEnableBlend="false" _minPostQuality="0">
+		<RenderGraphPassDesc _name="ChannelSwap" _after="ForwardOpaque" _type="Compute" _depthAttachment="" _shaderPath="game/empty/shaders/compute_channelswap.hlsl" _vertexEntryPoint="" _pixelEntryPoint="" _computeEntryPoint="CSMain" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _minPostQuality="0">
 			<_listInput>
 				<item>SceneColor</item>
 			</_listInput>

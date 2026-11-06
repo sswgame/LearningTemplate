@@ -128,7 +128,7 @@ namespace sw
         {
             if ( attachment._name == attachmentName )
             {
-                outFormat = FrameRendererUtil::parseAttachmentFormat( attachment._format );
+                outFormat = attachment._format;
                 break;
             }
         }

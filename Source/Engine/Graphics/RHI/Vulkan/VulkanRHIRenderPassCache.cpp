@@ -31,12 +31,12 @@ namespace sw
 
     bool VulkanRHIRenderPassCache::CompositeKey::operator==( const CompositeKey& other ) const
     {
-        const bool bCompositeKeyMismatch = _colorCount != other._colorCount || _depth != other._depth || _depthLoadOp != other._depthLoadOp || _depthSlice != other._depthSlice;
+        const bool bCompositeKeyMismatch = _colorCount != other._colorCount || _depth != other._depth || _depthLoadOp != other._depthLoadOp || _depthStoreOp != other._depthStoreOp || _depthSlice != other._depthSlice;
         if ( bCompositeKeyMismatch )
             return false;
         for ( uint32 colorIndex = 0; colorIndex < _colorCount; ++colorIndex )
         {
-            const bool bSameAttachment = _arrColor[colorIndex] == other._arrColor[colorIndex] && _arrColorLoadOp[colorIndex] == other._arrColorLoadOp[colorIndex] &&
+            const bool bSameAttachment = _arrColor[colorIndex] == other._arrColor[colorIndex] && _arrColorLoadOp[colorIndex] == other._arrColorLoadOp[colorIndex] && _arrColorStoreOp[colorIndex] == other._arrColorStoreOp[colorIndex] &&
                                          _arrColorSlice[colorIndex] == other._arrColorSlice[colorIndex];
             if ( bSameAttachment == false )
                 return false;
@@ -49,11 +49,13 @@ namespace sw
         size_t hash = static_cast<size_t>( key._depth ) * 1315423911u;
         hash ^= static_cast<size_t>( key._colorCount ) + HashUtil::kGoldenRatio32;
         hash ^= static_cast<size_t>( key._depthLoadOp ) + HashUtil::kGoldenRatio32;
+        hash ^= ( static_cast<size_t>( key._depthStoreOp ) << 3 ) + HashUtil::kGoldenRatio32;
         hash ^= static_cast<size_t>( key._depthSlice ) * 2654435761u;
         for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
         {
             hash ^= static_cast<size_t>( key._arrColor[colorIndex] ) + HashUtil::kGoldenRatio32 + ( hash << 6 ) + ( hash >> 2 );
             hash ^= static_cast<size_t>( key._arrColorLoadOp[colorIndex] ) + HashUtil::kGoldenRatio32;
+            hash ^= ( static_cast<size_t>( key._arrColorStoreOp[colorIndex] ) << 3 ) + HashUtil::kGoldenRatio32;
             hash ^= static_cast<size_t>( key._arrColorSlice[colorIndex] ) * 2246822519u;
         }
         return hash;
@@ -118,12 +120,13 @@ namespace sw
         uint32                attachCount = spec._colorCount;
         if ( bHasDepth )
         {
-            arrAttachment[attachCount].format         = static_cast<VkFormat>( spec._depthFormat );
-            arrAttachment[attachCount].samples        = VK_SAMPLE_COUNT_1_BIT;
-            arrAttachment[attachCount].loadOp         = static_cast<VkAttachmentLoadOp>( spec._depthLoadOp );
-            arrAttachment[attachCount].storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
-            arrAttachment[attachCount].stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-            arrAttachment[attachCount].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            arrAttachment[attachCount].format  = static_cast<VkFormat>( spec._depthFormat );
+            arrAttachment[attachCount].samples = VK_SAMPLE_COUNT_1_BIT;
+            arrAttachment[attachCount].loadOp  = static_cast<VkAttachmentLoadOp>( spec._depthLoadOp );
+            arrAttachment[attachCount].storeOp = static_cast<VkAttachmentStoreOp>( spec._depthStoreOp );
+            // 스텐실은 깊이와 함께 다룬다 — 앞 패스가 쓴 스텐실 마스크를 뒤 패스가 읽는다. 스텐실이 없는 형식에서는 무시된다.
+            arrAttachment[attachCount].stencilLoadOp  = static_cast<VkAttachmentLoadOp>( spec._depthLoadOp );
+            arrAttachment[attachCount].stencilStoreOp = static_cast<VkAttachmentStoreOp>( spec._depthStoreOp );
             arrAttachment[attachCount].initialLayout  = static_cast<VkImageLayout>( spec._depthInitialLayout );
             arrAttachment[attachCount].finalLayout    = static_cast<VkImageLayout>( spec._depthFinalLayout );
             depthRef.attachment                       = attachCount;

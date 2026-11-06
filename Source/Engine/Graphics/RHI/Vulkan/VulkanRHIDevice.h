@@ -798,6 +798,7 @@ namespace sw
         uint16                  _bDrawIndirectCount      : 1;
         uint16                  _bSamplerAnisotropy      : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
         uint16                  _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
+        uint16                  _bDepthClamp             : 1; ///< 깊이 클립을 끌 수 있는가(렌더 상태의 `_bEnableDepthClip`)
         uint16                  _bGeometryShader         : 1; ///< 지오메트리 스테이지를 쓸 수 있는가
         uint16                  _bTessellationShader     : 1; ///< 헐 · 도메인 스테이지를 쓸 수 있는가
         uint16                  _bSwapChainDirty         : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청

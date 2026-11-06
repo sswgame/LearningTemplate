@@ -157,19 +157,16 @@ namespace sw::editor
 
         // 곧은 알파(ImGui 의 규약 — 글꼴 아틀라스 · 색 모두 곱하지 않은 알파다), 깊이 · 컬링 없음. 캡처 텍스처와 보조 창도 백버퍼 포맷이라 PSO 는 하나다.
         RHIPipelineStateDesc desc{};
-        desc._vertexShaderPath    = Internal::kShaderPath;
-        desc._pixelShaderPath     = Internal::kShaderPath;
-        desc._vertexEntryPoint    = "VSMain";
-        desc._pixelEntryPoint     = "PSMain";
-        desc._numRenderTargets    = 1;
-        desc._arrRTVFormat[0]     = pRHIDevice->getBackBufferFormat();
-        desc._depthStencilFormat  = RHIFormat::Unknown;
-        desc._bEnableDepthTest    = 0;
-        desc._bEnableDepthWrite   = 0;
-        desc._bEnableBlend        = 1;
-        desc._bPremultipliedAlpha = SW_FALSE;
-        desc._cullMode            = RHICullMode::None;
-        _pso                      = pRHIDevice->getResourceFactory()->createPipelineState( desc );
+        desc._vertexShaderPath               = Internal::kShaderPath;
+        desc._pixelShaderPath                = Internal::kShaderPath;
+        desc._vertexEntryPoint               = "VSMain";
+        desc._pixelEntryPoint                = "PSMain";
+        desc._numRenderTargets               = 1;
+        desc._arrRTVFormat[0]                = pRHIDevice->getBackBufferFormat();
+        desc._depthStencilFormat             = RHIFormat::Unknown;
+        desc._renderState._bEnableDepthWrite = SW_FALSE;
+        desc._renderState.setAllBlendTargets( RHIBlendTargetState::makeStraightAlpha() );
+        _pso = pRHIDevice->getResourceFactory()->createPipelineState( desc );
         if ( _pso == 0 )
         {
             SW_LOG_ERROR_ID( "ImGuiRenderer.PSOFailed", "The editor UI pipeline (%#) could not be created - see the shader error above", Internal::kShaderPath );

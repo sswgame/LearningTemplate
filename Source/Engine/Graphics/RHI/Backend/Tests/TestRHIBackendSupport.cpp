@@ -181,14 +181,14 @@ SW_TEST_CASE( RHIShaderRequestTest, ResolvesEntryPointsDefinesAndDepthOnly )
 
     // 3) 뎁스 전용(RT 0 + 뎁스 테스트): RT 0. PS 경로가 있으면 PS 를 둔다(알파 컷오프의 버리기) — 패스 PSO 는 FrameRenderer 가 경로를 비운다.
     desc._numRenderTargets                   = 0;
-    desc._bEnableDepthTest                   = SW_TRUE;
+    desc._renderState._bEnableDepthTest      = SW_TRUE;
     const RHIGraphicsShaderRequest depthOnly = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::DXBC_D3D11 );
     SW_EXPECT_TRUE( depthOnly._bDepthOnly != SW_FALSE );
     SW_EXPECT_TRUE( depthOnly._bHasPixelShader != SW_FALSE );
     SW_EXPECT_EQUAL( 0u, depthOnly._numRenderTargets );
 
     // 4) RT 0 인데 뎁스 테스트가 없으면 뎁스 전용이 아니다 — RT 는 1 로 올리고 PS 는 붙는다.
-    desc._bEnableDepthTest                 = SW_FALSE;
+    desc._renderState._bEnableDepthTest    = SW_FALSE;
     const RHIGraphicsShaderRequest noDepth = RHIShaderRequest::resolveGraphics( desc, ShaderTargetFormat::SPIRV_OpenGL );
     SW_EXPECT_TRUE( noDepth._bDepthOnly == SW_FALSE );
     SW_EXPECT_TRUE( noDepth._bHasPixelShader != SW_FALSE );

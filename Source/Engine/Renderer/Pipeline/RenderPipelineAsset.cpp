@@ -8,7 +8,8 @@
 #include "Engine/Asset/AssetFormat.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineServices.h"
-#include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Graphics/Material/RenderBlendPreset.h"
+#include "Engine/Reflection/EnumName.h"
 #include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
@@ -95,26 +96,20 @@ namespace sw
 
             static bool isDepthAttachment( const RenderPassAttachment* pAttachment )
             {
-                return pAttachment != nullptr && engine::getSubsystem<TypeRegistry>().enumFromString<RHIFormat>( pAttachment->_format ) == constant::render::kDepthStencilFormat;
+                return pAttachment != nullptr && pAttachment->_format == constant::render::kDepthStencilFormat;
             }
 
-            /** @brief 1) 첨부: 포맷 표기가 RHIFormat 으로 해석되는가, 렌더 타깃이 될 수 있는가, 이름이 겹치지 않는가, 나눗수 · 역할 표기가 맞는가. */
+            /** @brief 1) 첨부: 포맷이 렌더 타깃이 될 수 있는가, 이름이 겹치지 않는가, 나눗수 · 역할 표기가 맞는가. */
             static uint32 checkAttachments( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
                 for ( uint32 attachmentIndex = 0; attachmentIndex < desc._listAttachment.size(); ++attachmentIndex )
                 {
                     const RenderPassAttachment& attachment = desc._listAttachment[attachmentIndex];
-                    RHIFormat                   parsed{};
-                    if ( engine::getSubsystem<TypeRegistry>().enumFromString( attachment._format, parsed ) == false )
-                    {
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentUnknownFormat", "[%#] attachment '%#': unknown format '%#'", sourcePath, attachment._name, attachment._format );
-                        ++issueCount;
-                    }
-                    else if ( isRHIFormatRenderable( parsed ) == false )
+                    if ( isRHIFormatRenderable( attachment._format ) == false )
                     {
                         // 이름은 맞지만 첨부가 될 수 없는 포맷(Unknown · 블록 압축 · R32G32B32_FLOAT) — 트랜지언트를 만들 때 백엔드가 실패한다.
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentFormatCannotRender", "[%#] attachment '%#': format '%#' cannot be a render target", sourcePath, attachment._name, attachment._format );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentFormatCannotRender", "[%#] attachment '%#': format '%#' cannot be a render target", sourcePath, attachment._name, getEnumName( attachment._format ) );
                         ++issueCount;
                     }
                     for ( uint32 otherIndex = 0; otherIndex < attachmentIndex; ++otherIndex )
@@ -147,7 +142,7 @@ namespace sw
             /** @brief 셰이딩 방식이 아는 글이고 패스 구성과 맞는가. 이름만 Deferred 인 파이프라인을 막는다. */
             static uint32 checkShadingModel( const RenderPipelineDesc& desc, string_view sourcePath )
             {
-                const auto hasPassType = [&desc]( string_view type )
+                const auto hasPassType = [&desc]( RenderPassType type )
                 {
                     for ( const RenderGraphPassDesc& pass : desc._listPass )
                     {
@@ -163,8 +158,8 @@ namespace sw
                     SW_LOG_ERROR_ID( "RenderPipelineAsset.ShadingModelUnknown", "[%#] _shadingModel '%#' - must be Forward, Deferred or Custom", sourcePath, desc._shadingModel );
                     return 1;
                 }
-                const bool bHasGBuffer = hasPassType( "GBuffer" );
-                if ( ( bForward && bHasGBuffer ) || ( bDeferred && ( bHasGBuffer == false || hasPassType( "Lighting" ) == false ) ) )
+                const bool bHasGBuffer = hasPassType( RenderPassType::GBuffer );
+                if ( ( bForward && bHasGBuffer ) || ( bDeferred && ( bHasGBuffer == false || hasPassType( RenderPassType::Lighting ) == false ) ) )
                 {
                     SW_LOG_ERROR_ID( "RenderPipelineAsset.ShadingModelPassMismatch", "[%#] _shadingModel '%#' does not match its passes - Deferred needs GBuffer and Lighting passes, Forward has no GBuffer pass", sourcePath,
                                      desc._shadingModel );
@@ -173,31 +168,103 @@ namespace sw
                 return 0;
             }
 
+            /** @brief 패스의 칸과 블렌드 선언을 PSO 값(`_resolvedRenderState`)으로 합칩니다. 받아 줄 수 없는 블렌드 선언의 수를 돌려줍니다. */
+            static uint32 resolvePassRenderState( RenderGraphPassDesc& pass, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                pass._resolvedRenderState                                      = RHIRenderState{};
+                static_cast<RHIFixedRenderState&>( pass._resolvedRenderState ) = pass;
+                if ( pass._blendPreset.empty() == false && pass._listBlendTarget.empty() == false )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassBlendPresetAndTargets", "[%#] pass '%#': _blendPreset and _listBlendTarget go separately - write one of them", sourcePath, pass._name );
+                    ++issueCount;
+                }
+                if ( pass._blendPreset.empty() == false )
+                {
+                    const RenderBlendPreset* const pPreset = RenderBlendPresetTable::find( pass._blendPreset );
+                    if ( pPreset != nullptr )
+                    {
+                        pass._resolvedRenderState.setAllBlendTargets( *pPreset );
+                    }
+                    else
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassBlendPresetUnknown", "[%#] pass '%#': _blendPreset '%#' is not in %#", sourcePath, pass._name, pass._blendPreset, RenderBlendPresetTable::kAssetPath );
+                        ++issueCount;
+                    }
+                }
+                const size_t targetCount = pass._listBlendTarget.size();
+                // 스왑체인 출력은 컬러 출력 목록에 들지 않는다 — 그 패스는 타깃이 하나다.
+                const size_t colorCount = VectorUtil::contains( pass._listOutput, string( kSwapchainOutputName ) ) ? 1u : pass._listResolvedColorOutput.size();
+                if ( targetCount > 1 && targetCount != colorCount )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassBlendTargetCount", "[%#] pass '%#': %# blend targets for %# color outputs - write one (for all) or one per output", sourcePath, pass._name,
+                                     static_cast<uint32>( targetCount ), static_cast<uint32>( colorCount ) );
+                    ++issueCount;
+                }
+                for ( size_t targetIndex = 0; targetIndex < targetCount && targetIndex < kMaxColorAttachments; ++targetIndex )
+                {
+                    const RHIBlendTargetState& target  = pass._listBlendTarget[targetIndex];
+                    const utf8* const          pReason = target.findInvalidReason();
+                    if ( pReason != nullptr )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassBlendTargetInvalid", "[%#] pass '%#': blend target %#: %#", sourcePath, pass._name, static_cast<uint32>( targetIndex ), pReason );
+                        ++issueCount;
+                    }
+                    pass._resolvedRenderState._arrBlendTarget[targetIndex] = target;
+                }
+                if ( targetCount == 1 )
+                    pass._resolvedRenderState.setAllBlendTargets( pass._listBlendTarget[0] );
+                return issueCount;
+            }
+
+            /**
+             * @brief 3-8) 저장하지 않는 첨부(`_storeOp` DontCare)는 쓰는 패스가 하나이고 읽는 패스가 없어야 한다. 그렇지 않으면 다음 패스가 정의되지 않은 값을 읽는다.
+             */
+            static uint32 checkAttachmentStoreOps( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( const RenderPassAttachment& attachment : desc._listAttachment )
+                {
+                    if ( attachment._storeOp != RHIRenderPassStoreOp::DontCare )
+                        continue;
+                    uint32 useCount{ 0 };
+                    bool   bRead{ false };
+                    for ( const RenderGraphPassDesc& pass : desc._listPass )
+                    {
+                        bRead = bRead || VectorUtil::contains( pass._listInput, attachment._name );
+                        if ( VectorUtil::contains( pass._listOutput, attachment._name ) || pass._depthAttachment == attachment._name )
+                            ++useCount;
+                    }
+                    if ( bRead || useCount > 1 )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.AttachmentDiscardedButUsed", "[%#] attachment '%#': _storeOp DontCare leaves its contents undefined, but a pass reads it or more than one pass opens it", sourcePath, attachment._name );
+                        ++issueCount;
+                    }
+                }
+                return issueCount;
+            }
+
             /**
              * @brief 패스의 렌더 상태 조합을 실행이 받아 줄 수 있는가. XML 값이 곧 PSO 값이라, 실행과 어긋나면 무시하지 않고 오류다.
              * @details 깊이 테스트는 그 패스 실행이 깊이를 붙일 때만 켤 수 있고(표의 kDepthTest), 깊이를 시험하지 않으면 붙이지 않는다 — 어긋나면 PSO 와 렌더 패스의 깊이 형식이 달라 백엔드 검증 오류가 난다.
              *          풀스크린 삼각형에는 앞뒤 의미가 없어 컬링이 화면을 비운다. 반투명 패스의 블렌드를 끄는 것은 고를 수 있지만 대개 실수라 경고한다.
              */
-            static uint32 checkPassRenderState( const RenderPipelineDesc& desc, string_view sourcePath )
+            static uint32 checkPassRenderState( RenderPipelineDesc& desc, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
-                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                for ( RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    const RenderPassTypeInfo& info   = getRenderPassTypeInfo( pass._resolvedType );
+                    const RenderPassTypeInfo& info   = getRenderPassTypeInfo( pass._type );
                     const bool                bDepth = pass._depthAttachment.empty() == false;
-                    if ( pass._cullMode != "None" && pass._cullMode != "Front" && pass._cullMode != "Back" )
+                    issueCount += resolvePassRenderState( pass, sourcePath );
+                    if ( info.hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes ) == false && pass._cullMode != RHICullMode::None )
                     {
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassCullModeUnknown", "[%#] pass '%#': _cullMode '%#' - must be None, Front or Back", sourcePath, pass._name, pass._cullMode );
-                        ++issueCount;
-                    }
-                    else if ( info.hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes ) == false && pass._cullMode != "None" )
-                    {
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassFullscreenCull", "[%#] pass '%#' draws a fullscreen triangle - _cullMode must be None, not '%#'", sourcePath, pass._name, pass._cullMode );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassFullscreenCull", "[%#] pass '%#' draws a fullscreen triangle - _cullMode must be None, not '%#'", sourcePath, pass._name, getEnumName( pass._cullMode ) );
                         ++issueCount;
                     }
                     if ( pass._bEnableDepthTest && ( bDepth == false || info.hasFlag( RenderPassTraitFlag::kDepthTest ) == false ) )
                     {
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthTestNoDepth", "[%#] pass '%#': _bEnableDepthTest needs a _depthAttachment and a pass type that binds depth (%#)", sourcePath, pass._name, pass._type );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthTestNoDepth", "[%#] pass '%#': _bEnableDepthTest needs a _depthAttachment and a pass type that binds depth (%#)", sourcePath, pass._name, getEnumName( pass._type ) );
                         ++issueCount;
                     }
                     if ( pass._bEnableDepthTest == false && bDepth )
@@ -210,8 +277,15 @@ namespace sw
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthWriteNoTest", "[%#] pass '%#': _bEnableDepthWrite needs _bEnableDepthTest", sourcePath, pass._name );
                         ++issueCount;
                     }
-                    if ( pass._bEnableBlend == false && info.hasFlag( RenderPassTraitFlag::kBlend ) )
-                        SW_LOG_WARNING_ID( "RenderPipelineAsset.PassBlendOff", "[%#] pass '%#': blending is off on a %# pass - its colors overwrite the scene", sourcePath, pass._name, pass._type );
+                    // 같은 규칙을 머티리얼을 합친 값에도 건다(`RHIFixedRenderState::findInvalidReason`). 깊이 쓰기는 위가 알렸다.
+                    const utf8* const pStateReason = pass._bEnableDepthWrite && pass._bEnableDepthTest == false ? nullptr : pass.findInvalidReason();
+                    if ( pStateReason != nullptr )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassRenderStateInvalid", "[%#] pass '%#': %#", sourcePath, pass._name, pStateReason );
+                        ++issueCount;
+                    }
+                    if ( pass._resolvedRenderState.isAnyBlendEnabled() == false && info.hasFlag( RenderPassTraitFlag::kBlend ) )
+                        SW_LOG_WARNING_ID( "RenderPipelineAsset.PassBlendOff", "[%#] pass '%#': blending is off on a %# pass - its colors overwrite the scene", sourcePath, pass._name, getEnumName( pass._type ) );
                 }
                 return issueCount;
             }
@@ -232,9 +306,9 @@ namespace sw
                     if ( pass._hullEntryPoint.empty() != pass._domainEntryPoint.empty() )
                         report( "RenderPipelineAsset.PassHullNeedsDomain", pass, "_hullEntryPoint and _domainEntryPoint go together" );
                     // 머티리얼 변형은 머티리얼 셰이더의 정점 출력으로 만들어져 패스 셰이더의 스테이지와 신호가 맞지 않는다.
-                    if ( bHasOptionalStage && ( pass._resolvedType == RenderPassType::Compute || getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kUsesMaterialShader ) ) )
+                    if ( bHasOptionalStage && ( pass._type == RenderPassType::Compute || getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kUsesMaterialShader ) ) )
                         report( "RenderPipelineAsset.PassOptionalStageNotAllowed", pass, "geometry, hull and domain stages need a pass that draws with its own shader (not a material shader, not a Compute pass)" );
-                    if ( pass._resolvedType != RenderPassType::Compute )
+                    if ( pass._type != RenderPassType::Compute )
                     {
                         if ( pass._computeEntryPoint.empty() == false )
                             report( "RenderPipelineAsset.PassComputeEntryOnCompute", pass, "_computeEntryPoint is only for a Compute pass" );
@@ -253,7 +327,7 @@ namespace sw
                         if ( VectorUtil::contains( pass._listOutput, inputName ) )
                             report( "RenderPipelineAsset.PassComputeInputIsOutput", pass, "a Compute pass cannot read the attachment it writes" );
                     }
-                    if ( pass._bEnableBlend )
+                    if ( pass._resolvedRenderState.isAnyBlendEnabled() )
                         report( "RenderPipelineAsset.PassComputeBlend", pass, "a Compute pass has no blend state" );
                 }
                 return issueCount;
@@ -282,7 +356,6 @@ namespace sw
             /** @brief 패스 하나의 타입 · 뎁스 · 입출력 역할을 해석해 `_resolved*` 에 채웁니다. 역할은 첨부의 선언(`_role`)이 먼저, 그다음 원본 이름 · 포맷이다. */
             static void resolvePass( const RenderPipelineDesc& desc, RenderGraphPassDesc& pass )
             {
-                pass._resolvedType = engine::getSubsystem<TypeRegistry>().enumFromString<RenderPassType>( pass._type );
                 pass._resolvedDepthAttachment =
                     pass._depthAttachment.empty() ? hashed_string{} : hashed_string( pass._depthAttachment.c_str() );
                 pass._listResolvedInput.clear();
@@ -314,10 +387,10 @@ namespace sw
             static uint32 checkPassTypeAndAttachments( const RenderPipelineDesc& desc, const RenderGraphPassDesc& pass, string_view sourcePath )
             {
                 uint32 issueCount{ 0 };
-                if ( isPipelinePassType( pass._resolvedType ) == false )
+                if ( isPipelinePassType( pass._type ) == false )
                 {
-                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassUnknownTypeNot", "[%#] pass '%#': unknown type '%#' - not a RenderPassType spelling",
-                                     sourcePath, pass._name, pass._type );
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.PassUnknownTypeNot", "[%#] pass '%#': type '%#' cannot be used in a pipeline - write a RenderPassType that is not an internal slot",
+                                     sourcePath, pass._name, getEnumName( pass._type ) );
                     ++issueCount;
                 }
                 for ( const string& inputName : pass._listInput )
@@ -334,9 +407,9 @@ namespace sw
                     // 출력 패스(kOutputPass)만 쓸 수 있다 — 다른 패스가 쓰면 PSO 의 렌더 타깃 포맷을 정할 근거가 없다(짐작하지 않는다).
                     if ( outputName == kSwapchainOutputName )
                     {
-                        if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kOutputPass ) == false )
+                        if ( getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kOutputPass ) == false )
                         {
-                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOnlyOutputPasses", "[%#] pass '%#': only output passes (Present, Canvas) can write the Swapchain (type '%#')", sourcePath, pass._name, pass._type );
+                            SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOnlyOutputPasses", "[%#] pass '%#': only output passes (Present, Canvas) can write the Swapchain (type '%#')", sourcePath, pass._name, getEnumName( pass._type ) );
                             ++issueCount;
                         }
                         continue;
@@ -369,7 +442,7 @@ namespace sw
                     else if ( isDepthAttachment( pDepthAttachment ) == false )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthAttachmentFormat", "[%#] pass '%#': depth attachment '%#' has format '%#' - it must be a depth format",
-                                         sourcePath, pass._name, pass._depthAttachment, pDepthAttachment->_format );
+                                         sourcePath, pass._name, pass._depthAttachment, getEnumName( pDepthAttachment->_format ) );
                         ++issueCount;
                     }
                     return issueCount;
@@ -436,8 +509,7 @@ namespace sw
                         const RenderPassAttachment* pAttachment = findAttachment( desc, outputName );
                         if ( pAttachment == nullptr )
                             continue;
-                        RHIFormat fmt{};
-                        if ( engine::getSubsystem<TypeRegistry>().enumFromString( pAttachment->_format, fmt ) && fmt != RHIFormat::D24_UNORM_S8_UINT )
+                        if ( pAttachment->_format != RHIFormat::D24_UNORM_S8_UINT )
                             ++colorCount;
                     }
                     if ( colorCount > kMaxColorAttachments )
@@ -499,20 +571,20 @@ namespace sw
                 {
                     // 컬러를 그리는 패스(표의 kDrawsDeclaredColor — 지오메트리 · 하늘 · 외곽선 껍질 · TAA · 일반 풀스크린)는 선언한 컬러 출력에 그린다.
                     // 실행은 이름으로 타깃을 짐작하지 않으므로 선언이 없으면 그릴 곳이 없다(옛 짐작은 없는 첨부의 핸들 0 — 백버퍼 — 를 열었다).
-                    const bool bDrawsColor = isPipelinePassType( pass._resolvedType ) &&
-                                             getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor );
+                    const bool bDrawsColor = isPipelinePassType( pass._type ) &&
+                                             getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kDrawsDeclaredColor );
                     if ( bDrawsColor && pass._listResolvedColorOutput.empty() )
                     {
                         SW_LOG_ERROR_ID( "Renderer.PassNoColorOutput", "[%#] pass '%#' (%#): no color output - this pass draws to the color attachments declared in _listOutput",
-                                         sourcePath, pass._name, pass._type );
+                                         sourcePath, pass._name, getEnumName( pass._type ) );
                         ++issueCount;
                     }
-                    const bool bSkipGBufferOutputCheck = pass._resolvedType != RenderPassType::GBuffer || pass._listResolvedColorOutput.empty() ||
+                    const bool bSkipGBufferOutputCheck = pass._type != RenderPassType::GBuffer || pass._listResolvedColorOutput.empty() ||
                                                          pass._listResolvedColorOutput.size() == expectedGBufferColorCount;
                     if ( bSkipGBufferOutputCheck )
                         continue;
                     SW_LOG_ERROR_ID( "RenderPipelineAsset.PassColorOutputsG", "[%#] pass '%#' (%#): %# color outputs - the G-buffer writes albedo, normal and material (%#) in one MRT pass",
-                                     sourcePath, pass._name, pass._type, static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedGBufferColorCount );
+                                     sourcePath, pass._name, getEnumName( pass._type ), static_cast<uint32>( pass._listResolvedColorOutput.size() ), expectedGBufferColorCount );
                     ++issueCount;
                 }
                 return issueCount;
@@ -527,7 +599,7 @@ namespace sw
                 uint32 issueCount{ 0 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    const RenderPassInputSignature* pContract = findRenderPassInputSignature( pass._resolvedType );
+                    const RenderPassInputSignature* pContract = findRenderPassInputSignature( pass._type );
                     if ( pContract == nullptr )
                         continue;
 
@@ -540,13 +612,13 @@ namespace sw
                         if ( pContract->reads( role ) )
                             continue;
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassInputRoleNot", "[%#] pass '%#' (%#): input '%#' (role %#) is not read by this pass type - it is declared but never bound",
-                                         sourcePath, pass._name, pass._type, input._attachment.c_str(), getRenderPassInputRoleName( role ) );
+                                         sourcePath, pass._name, getEnumName( pass._type ), input._attachment.c_str(), getRenderPassInputRoleName( role ) );
                         ++issueCount;
                     }
                     if ( sourceColorCount > 1 )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassColorInputsProcess", "[%#] pass '%#' (%#): %# color inputs to process (SourceColor role) - the shader reads only one",
-                                         sourcePath, pass._name, pass._type, sourceColorCount );
+                                         sourcePath, pass._name, getEnumName( pass._type ), sourceColorCount );
                         ++issueCount;
                     }
                     for ( uint32 requiredIndex = 0; requiredIndex < pContract->_requiredCount; ++requiredIndex )
@@ -557,7 +629,7 @@ namespace sw
                         if ( bFound )
                             continue;
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassRequiredInputRole", "[%#] pass '%#' (%#): required input (role %#) is not declared - the shader reads kInvalidIndex",
-                                         sourcePath, pass._name, pass._type, getRenderPassInputRoleName( required ) );
+                                         sourcePath, pass._name, getEnumName( pass._type ), getRenderPassInputRoleName( required ) );
                         ++issueCount;
                     }
                 }
@@ -576,7 +648,7 @@ namespace sw
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
                     const bool bWritesSwapchain = VectorUtil::contains( pass._listOutput, string( kSwapchainOutputName ) );
-                    if ( pass._resolvedType == RenderPassType::Canvas )
+                    if ( pass._type == RenderPassType::Canvas )
                     {
                         if ( bWritesSwapchain == false )
                         {
@@ -595,7 +667,7 @@ namespace sw
                 }
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    if ( pass._resolvedType != RenderPassType::Sky || pass._depthAttachment.empty() == false )
+                    if ( pass._type != RenderPassType::Sky || pass._depthAttachment.empty() == false )
                         continue;
                     SW_LOG_ERROR_ID( "RenderPipelineAsset.PassSkyDepthAttachmentEmpty", "[%#] pass '%#' (Sky): _depthAttachment is empty - the sky paints only where nothing was drawn, using the depth test", sourcePath, pass._name );
                     ++issueCount;
@@ -612,7 +684,7 @@ namespace sw
                 uint32 issueCount{ 0 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
-                    const bool bSkippable = getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess );
+                    const bool bSkippable = getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess );
                     if ( pass._minPostQuality < 0 )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassMinPostQualityMustGreater", "[%#] pass '%#': _minPostQuality %# - must be 0 or greater", sourcePath, pass._name, pass._minPostQuality );
@@ -620,7 +692,7 @@ namespace sw
                     }
                     else if ( pass._minPostQuality > 0 && bSkippable == false )
                     {
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassMinPostQualityAcceptedOnly", "[%#] pass '%#' (%#): _minPostQuality is accepted only for types whose post-processing can be skipped (SSAO, Bloom, Outline, MotionBlur)", sourcePath, pass._name, pass._type );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassMinPostQualityAcceptedOnly", "[%#] pass '%#' (%#): _minPostQuality is accepted only for types whose post-processing can be skipped (SSAO, Bloom, Outline, MotionBlur)", sourcePath, pass._name, getEnumName( pass._type ) );
                         ++issueCount;
                     }
                 }
@@ -639,7 +711,7 @@ namespace sw
                 for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
                 {
                     const RenderGraphPassDesc& pass = desc._listPass[passIndex];
-                    if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
+                    if ( getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kBypassesToSource ) == false )
                         continue;
                     const RenderGraphPassDesc::ResolvedAttachment* pSource     = nullptr;
                     uint32                                         sourceCount = 0;
@@ -657,7 +729,7 @@ namespace sw
                     if ( pass._listResolvedColorOutput.size() != 1 )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassNeedsOneColor", "[%#] pass '%#' (%#): needs one color output - when the effect is off the output names the source",
-                                         sourcePath, pass._name, pass._type );
+                                         sourcePath, pass._name, getEnumName( pass._type ) );
                         ++issueCount;
                         continue;
                     }
@@ -669,7 +741,7 @@ namespace sw
                     if ( bSameShape == false )
                     {
                         SW_LOG_ERROR_ID( "RenderPipelineAsset.PassOutputSourceDiffer", "[%#] pass '%#' (%#): output '%#' and source '%#' differ in format or divisor - when the effect is off the output names the source",
-                                         sourcePath, pass._name, pass._type, outputName, sourceName );
+                                         sourcePath, pass._name, getEnumName( pass._type ), outputName, sourceName );
                         ++issueCount;
                     }
                     for ( size_t otherIndex = 0; otherIndex < desc._listPass.size(); ++otherIndex )
@@ -678,13 +750,13 @@ namespace sw
                         if ( otherIndex != passIndex && VectorUtil::contains( other._listOutput, outputName ) )
                         {
                             SW_LOG_ERROR_ID( "RenderPipelineAsset.PassAlsoWritesOutput", "[%#] pass '%#' also writes '%#', the output of '%#' (%#) - that output may name the source texture", sourcePath, other._name, outputName,
-                                             pass._name, pass._type );
+                                             pass._name, getEnumName( pass._type ) );
                             ++issueCount;
                         }
                         if ( otherIndex > passIndex && VectorUtil::contains( other._listOutput, sourceName ) )
                         {
                             SW_LOG_ERROR_ID( "RenderPipelineAsset.PassWritesAfterReads", "[%#] pass '%#' writes '%#' after '%#' (%#) reads it - readers of '%#' would see the later version when the effect is off", sourcePath,
-                                             other._name, sourceName, pass._name, pass._type, outputName );
+                                             other._name, sourceName, pass._name, getEnumName( pass._type ), outputName );
                             ++issueCount;
                         }
                     }
@@ -703,11 +775,11 @@ namespace sw
                 for ( size_t passIndex = 0; passIndex < desc._listPass.size(); ++passIndex )
                 {
                     const RenderGraphPassDesc& pass = desc._listPass[passIndex];
-                    if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kOmittedWhenOff ) == false )
+                    if ( getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kOmittedWhenOff ) == false )
                         continue;
                     if ( pass._listResolvedColorOutput.size() != 1 )
                     {
-                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassNeedsOneColor2", "[%#] pass '%#' (%#): needs one color output - when the effect is off that output is absent", sourcePath, pass._name, pass._type );
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassNeedsOneColor2", "[%#] pass '%#' (%#): needs one color output - when the effect is off that output is absent", sourcePath, pass._name, getEnumName( pass._type ) );
                         ++issueCount;
                         continue;
                     }
@@ -721,10 +793,10 @@ namespace sw
                         if ( VectorUtil::contains( other._listOutput, outputName ) )
                         {
                             SW_LOG_ERROR_ID( "RenderPipelineAsset.PassAlsoWritesOutput2", "[%#] pass '%#' also writes '%#', the output of '%#' (%#) - that output may be absent", sourcePath, other._name, outputName, pass._name,
-                                             pass._type );
+                                             getEnumName( pass._type ) );
                             ++issueCount;
                         }
-                        const RenderPassInputSignature* pContract = findRenderPassInputSignature( other._resolvedType );
+                        const RenderPassInputSignature* pContract = findRenderPassInputSignature( other._type );
                         for ( const RenderGraphPassDesc::ResolvedAttachment& input : other._listResolvedInput )
                         {
                             if ( input._attachment != output )
@@ -739,7 +811,7 @@ namespace sw
                             if ( bOptionalRead )
                                 continue;
                             SW_LOG_ERROR_ID( "RenderPipelineAsset.PassReadsRoleNot", "[%#] pass '%#' reads '%#' (role %#) not as an optional input - when '%#' (%#) is off that input is absent", sourcePath, other._name,
-                                             outputName, getRenderPassInputRoleName( role ), pass._name, pass._type );
+                                             outputName, getRenderPassInputRoleName( role ), pass._name, getEnumName( pass._type ) );
                             ++issueCount;
                         }
                     }
@@ -768,6 +840,7 @@ namespace sw
         issueCount += Internal::checkMinPostQuality( _desc, sourcePath );
         issueCount += Internal::checkBypassPasses( _desc, sourcePath );
         issueCount += Internal::checkOmittedPasses( _desc, sourcePath );
+        issueCount += Internal::checkAttachmentStoreOps( _desc, sourcePath );
         if ( issueCount > 0 )
             SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineValidationFoundIssues", "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",
                              sourcePath, issueCount );

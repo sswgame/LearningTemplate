@@ -8,11 +8,11 @@
 -->
 <RenderPipelineDesc _base="engine/pipeline/forwardpipeline.xml" _name="ForwardPipelineStaged">
 	<_listAttachment>
-		<RenderPassAttachment _name="BloomColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="true" _role="" _resolutionDivisor="1" />
-		<RenderPassAttachment _name="OutlineColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" _role="" _resolutionDivisor="1" />
+		<RenderPassAttachment _name="BloomColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _loadOp="Clear" _role="" _resolutionDivisor="1" />
+		<RenderPassAttachment _name="OutlineColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _loadOp="Clear" _role="" _resolutionDivisor="1" />
 	</_listAttachment>
 	<_listPass>
-		<RenderGraphPassDesc _name="PostBloom" _after="MotionBlur" _type="Bloom" _depthAttachment="" _shaderPath="engine/shaders/post_bloom.hlsl" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _bEnableBlend="false" _minPostQuality="0">
+		<RenderGraphPassDesc _name="PostBloom" _after="MotionBlur" _type="Bloom" _depthAttachment="" _shaderPath="engine/shaders/post_bloom.hlsl" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _minPostQuality="0">
 			<_listInput>
 				<item>MotionBlurColor</item>
 			</_listInput>
@@ -21,7 +21,7 @@
 			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Outline" _after="PostBloom" _type="Outline" _depthAttachment="" _shaderPath="engine/shaders/post_outline.hlsl" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _bEnableBlend="false" _minPostQuality="0">
+		<RenderGraphPassDesc _name="Outline" _after="PostBloom" _type="Outline" _depthAttachment="" _shaderPath="engine/shaders/post_outline.hlsl" _vertexEntryPoint="VSMain" _pixelEntryPoint="PSMain" _computeEntryPoint="" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _minPostQuality="0">
 			<_listInput>
 				<item>BloomColor</item>
 				<item>SceneDepth</item>

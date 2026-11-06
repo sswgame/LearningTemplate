@@ -87,20 +87,15 @@ namespace sw
         , _domainEntryPoint{}
         , _listShaderDefine{}
         , _topology{ RHIPrimitiveTopology::TriangleList }
-        , _fillMode{ RHIFillMode::Solid }
-        , _cullMode{ RHICullMode::None }
         , _numRenderTargets{ 1 }
         , _arrRTVFormat{}
         , _depthStencilFormat{ RHIFormat::D24_UNORM_S8_UINT }
-        , _depthBias{ 0 }
-        , _slopeScaledDepthBias{ 0.0f }
-        , _bEnableDepthTest{ SW_FALSE }
-        , _bEnableDepthWrite{ SW_TRUE }
-        , _bEnableBlend{ SW_FALSE }
-        , _bPremultipliedAlpha{ SW_FALSE }
-        , _reservedFlags{ 0 }
+        , _renderState{}
         , _meshVertexFormat{ RHIMeshVertexFormat::Packed }
     {
+        // 렌더 상태의 기본값은 패스의 일반적인 값이다. 코드가 짓는 PSO(풀스크린 · UI)는 컬링도 깊이도 없이 시작한다.
+        _renderState._cullMode         = RHICullMode::None;
+        _renderState._bEnableDepthTest = SW_FALSE;
         for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
         {
             _arrRTVFormat[attachmentIndex] = RHIFormat::R8G8B8A8_UNORM;
@@ -159,14 +154,17 @@ namespace sw
         , _depthLoadOp{ RHIRenderPassLoadOp::Clear }
         , _arrColorTargetSlice{}
         , _depthTargetSlice{ 0 }
+        , _clearStencil{ 0 }
         , _bBindColor{ SW_TRUE }
         , _reservedFlags{ 0 }
-        , _arrReserved{ 0 }
+        , _arrStoreOp{}
+        , _depthStoreOp{ RHIRenderPassStoreOp::Store }
     {
         for ( uint32 attachmentIndex = 0; attachmentIndex < kMaxColorAttachments; ++attachmentIndex )
         {
             _arrClearColor[attachmentIndex] = kDefaultClearColor;
             _arrLoadOp[attachmentIndex]     = RHIRenderPassLoadOp::Clear;
+            _arrStoreOp[attachmentIndex]    = RHIRenderPassStoreOp::Store;
         }
     }
 

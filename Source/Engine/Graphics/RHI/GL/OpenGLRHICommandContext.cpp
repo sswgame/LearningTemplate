@@ -13,6 +13,174 @@ namespace sw
 {
     namespace
     {
+        /** @brief PSO 의 렌더 상태를 GL 상태로 겁니다. GL 은 PSO 가 없어 상태를 모두 다시 건다 — 앞 PSO 의 값이 다음 드로우로 새지 않게 칸을 빠뜨리지 않는다. */
+        struct OpenGLRenderStateInternal
+        {
+            static GLenum toBlendFactor( RHIBlendFactor factor )
+            {
+                switch ( factor )
+                {
+                    case RHIBlendFactor::Zero:
+                        return GL_ZERO;
+                    case RHIBlendFactor::One:
+                        return GL_ONE;
+                    case RHIBlendFactor::SrcColor:
+                        return GL_SRC_COLOR;
+                    case RHIBlendFactor::InvSrcColor:
+                        return GL_ONE_MINUS_SRC_COLOR;
+                    case RHIBlendFactor::SrcAlpha:
+                        return GL_SRC_ALPHA;
+                    case RHIBlendFactor::InvSrcAlpha:
+                        return GL_ONE_MINUS_SRC_ALPHA;
+                    case RHIBlendFactor::DstColor:
+                        return GL_DST_COLOR;
+                    case RHIBlendFactor::InvDstColor:
+                        return GL_ONE_MINUS_DST_COLOR;
+                    case RHIBlendFactor::DstAlpha:
+                        return GL_DST_ALPHA;
+                    case RHIBlendFactor::InvDstAlpha:
+                        return GL_ONE_MINUS_DST_ALPHA;
+                    case RHIBlendFactor::SrcAlphaSaturate:
+                        return GL_SRC_ALPHA_SATURATE;
+                }
+                return GL_ONE;
+            }
+            static GLenum toBlendOp( RHIBlendOp op )
+            {
+                switch ( op )
+                {
+                    case RHIBlendOp::Add:
+                        return GL_FUNC_ADD;
+                    case RHIBlendOp::Subtract:
+                        return GL_FUNC_SUBTRACT;
+                    case RHIBlendOp::ReverseSubtract:
+                        return GL_FUNC_REVERSE_SUBTRACT;
+                    case RHIBlendOp::Min:
+                        return GL_MIN;
+                    case RHIBlendOp::Max:
+                        return GL_MAX;
+                }
+                return GL_FUNC_ADD;
+            }
+            static GLenum toCompare( RHICompareFunc func )
+            {
+                switch ( func )
+                {
+                    case RHICompareFunc::Never:
+                        return GL_NEVER;
+                    case RHICompareFunc::Less:
+                        return GL_LESS;
+                    case RHICompareFunc::Equal:
+                        return GL_EQUAL;
+                    case RHICompareFunc::LessEqual:
+                        return GL_LEQUAL;
+                    case RHICompareFunc::Greater:
+                        return GL_GREATER;
+                    case RHICompareFunc::NotEqual:
+                        return GL_NOTEQUAL;
+                    case RHICompareFunc::GreaterEqual:
+                        return GL_GEQUAL;
+                    case RHICompareFunc::Always:
+                        return GL_ALWAYS;
+                }
+                return GL_LEQUAL;
+            }
+            static GLenum toStencilOp( RHIStencilOp op )
+            {
+                switch ( op )
+                {
+                    case RHIStencilOp::Keep:
+                        return GL_KEEP;
+                    case RHIStencilOp::Zero:
+                        return GL_ZERO;
+                    case RHIStencilOp::Replace:
+                        return GL_REPLACE;
+                    case RHIStencilOp::IncrementClamp:
+                        return GL_INCR;
+                    case RHIStencilOp::DecrementClamp:
+                        return GL_DECR;
+                    case RHIStencilOp::Invert:
+                        return GL_INVERT;
+                    case RHIStencilOp::IncrementWrap:
+                        return GL_INCR_WRAP;
+                    case RHIStencilOp::DecrementWrap:
+                        return GL_DECR_WRAP;
+                }
+                return GL_KEEP;
+            }
+
+            static void apply( const RHIRenderState& state )
+            {
+                glPolygonMode( GL_FRONT_AND_BACK, state._fillMode == RHIFillMode::Wireframe ? GL_LINE : GL_FILL );
+
+                // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIFixedRenderState::_depthBias). 채우기 · 선 다각형 모드 모두에 건다.
+                if ( state._depthBias != 0 || state._slopeScaledDepthBias != 0.0f )
+                {
+                    glEnable( GL_POLYGON_OFFSET_FILL );
+                    glEnable( GL_POLYGON_OFFSET_LINE );
+                    glPolygonOffset( state._slopeScaledDepthBias, static_cast<GLfloat>( state._depthBias ) );
+                }
+                else
+                {
+                    glDisable( GL_POLYGON_OFFSET_FILL );
+                    glDisable( GL_POLYGON_OFFSET_LINE );
+                }
+
+                glFrontFace( state._frontFace == RHIFrontFace::CounterClockwise ? GL_CCW : GL_CW ); // 기본은 DirectX · 클립 제어 경로와 같은 앞면 방향
+                if ( state._cullMode == RHICullMode::None )
+                    glDisable( GL_CULL_FACE );
+                else
+                {
+                    glEnable( GL_CULL_FACE );
+                    glCullFace( state._cullMode == RHICullMode::Front ? GL_FRONT : GL_BACK );
+                }
+
+                if ( state._bEnableDepthClip != SW_FALSE )
+                    glDisable( GL_DEPTH_CLAMP );
+                else
+                    glEnable( GL_DEPTH_CLAMP );
+
+                if ( state._bEnableDepthTest != SW_FALSE )
+                {
+                    glEnable( GL_DEPTH_TEST );
+                    glDepthFunc( toCompare( state._depthCompare ) );
+                    glDepthMask( state._bEnableDepthWrite != SW_FALSE ? GL_TRUE : GL_FALSE );
+                }
+                else
+                {
+                    glDisable( GL_DEPTH_TEST );
+                    glDepthMask( GL_FALSE );
+                }
+
+                if ( state._bEnableStencil != SW_FALSE )
+                {
+                    glEnable( GL_STENCIL_TEST );
+                    glStencilFuncSeparate( GL_FRONT, toCompare( state._stencilFrontCompare ), state._stencilRef, state._stencilReadMask );
+                    glStencilFuncSeparate( GL_BACK, toCompare( state._stencilBackCompare ), state._stencilRef, state._stencilReadMask );
+                    glStencilOpSeparate( GL_FRONT, toStencilOp( state._stencilFrontFail ), toStencilOp( state._stencilFrontDepthFail ), toStencilOp( state._stencilFrontPass ) );
+                    glStencilOpSeparate( GL_BACK, toStencilOp( state._stencilBackFail ), toStencilOp( state._stencilBackDepthFail ), toStencilOp( state._stencilBackPass ) );
+                    glStencilMask( state._stencilWriteMask );
+                }
+                else
+                    glDisable( GL_STENCIL_TEST );
+
+                for ( uint32 targetIndex = 0; targetIndex < kMaxColorAttachments; ++targetIndex )
+                {
+                    const RHIBlendTargetState& target = state._arrBlendTarget[targetIndex];
+                    const uint32               mask   = static_cast<uint32>( target._colorWriteMask );
+                    glColorMaski( targetIndex, ( mask & 1u ) != 0, ( mask & 2u ) != 0, ( mask & 4u ) != 0, ( mask & 8u ) != 0 );
+                    if ( target._bEnableBlend == SW_FALSE )
+                    {
+                        glDisablei( GL_BLEND, targetIndex );
+                        continue;
+                    }
+                    glEnablei( GL_BLEND, targetIndex );
+                    glBlendFuncSeparatei( targetIndex, toBlendFactor( target._srcColor ), toBlendFactor( target._dstColor ), toBlendFactor( target._srcAlpha ), toBlendFactor( target._dstAlpha ) );
+                    glBlendEquationSeparatei( targetIndex, toBlendOp( target._colorOp ), toBlendOp( target._alphaOp ) );
+                }
+            }
+        };
+
         GLenum toGlPrimitive( RHIPrimitiveTopology topology )
         {
             switch ( topology )
@@ -130,52 +298,7 @@ namespace sw
         else if ( _pDevice->_vao != 0 )
             glBindVertexArray( _pDevice->_vao );
 
-        glPolygonMode( GL_FRONT_AND_BACK, pRecord->_fillMode == RHIFillMode::Wireframe ? GL_LINE : GL_FILL );
-
-        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIPipelineStateDesc::_depthBias). 채우기 · 선 다각형 모드 모두에 건다.
-        const bool bDepthBias = pRecord->_depthBias != 0 || pRecord->_slopeScaledDepthBias != 0.0f;
-        if ( bDepthBias )
-        {
-            glEnable( GL_POLYGON_OFFSET_FILL );
-            glEnable( GL_POLYGON_OFFSET_LINE );
-            glPolygonOffset( pRecord->_slopeScaledDepthBias, static_cast<GLfloat>( pRecord->_depthBias ) );
-        }
-        else
-        {
-            glDisable( GL_POLYGON_OFFSET_FILL );
-            glDisable( GL_POLYGON_OFFSET_LINE );
-        }
-
-        if ( pRecord->_cullMode == RHICullMode::None )
-            glDisable( GL_CULL_FACE );
-        else
-        {
-            glEnable( GL_CULL_FACE );
-            glCullFace( pRecord->_cullMode == RHICullMode::Front ? GL_FRONT : GL_BACK );
-            glFrontFace( GL_CW ); // DirectX · 클립 제어 경로와 같은 앞면 방향
-        }
-
-        if ( pRecord->_bEnableDepthTest )
-        {
-            glEnable( GL_DEPTH_TEST );
-            glDepthFunc( GL_LEQUAL ); // DX11 · DX12 · Vulkan 과 같은 LessEqual — 깊이 프리패스 뒤 같은 깊이를 다시 그린다
-            glDepthMask( pRecord->_bEnableDepthWrite ? GL_TRUE : GL_FALSE );
-        }
-        else
-        {
-            glDisable( GL_DEPTH_TEST );
-            glDepthMask( GL_FALSE );
-        }
-
-        if ( pRecord->_bEnableBlend )
-        {
-            glEnable( GL_BLEND );
-            // 알파 채널은 One/InvSrcAlpha — DX11 · DX12 · Vulkan 과 같은 규칙이다(glBlendFunc 하나면 알파에도 SrcAlpha 가 곱해져 GL 만 알파가 달라진다).
-            const GLenum colorSource = ( pRecord->_bPremultipliedAlpha == SW_TRUE ) ? GL_ONE : GL_SRC_ALPHA;
-            glBlendFuncSeparate( colorSource, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA );
-        }
-        else
-            glDisable( GL_BLEND );
+        OpenGLRenderStateInternal::apply( pRecord->_renderState );
     }
 
     void OpenGLRHICommandContext::setComputePipelineStateNative( RHIPipelineStateHandle pso )
@@ -316,6 +439,8 @@ namespace sw
             // 버려진다. G버퍼 패스에서는 알베도가 노멀 첨부에 써져 디퍼드 조명이 **OpenGL 만 거의 검게** 나온다.
             //
             // `glClearBufferfv` 는 드로우 버퍼 **인덱스**로 직접 지우므로 목록을 바꿀 이유가 없다.
+            // 다만 쓰기 마스크는 지우기에도 걸린다 — 앞 PSO 의 마스크가 남아 있으면 지운 값이 일부 채널만 들어간다(다른 API 의 지우기는 마스크를 보지 않는다).
+            glColorMask( GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE );
             for ( uint32 attachmentIndex = 0; attachmentIndex < colorCount; ++attachmentIndex )
             {
                 const RHIRenderPassLoadOp loadOp = beginInfo._arrLoadOp[attachmentIndex];
@@ -330,7 +455,9 @@ namespace sw
         if ( ( bHasDepth || bDepthOnly ) && beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear )
         {
             glDepthMask( GL_TRUE );
+            glStencilMask( 0xFFu ); // 쓰기 마스크는 지우기에도 걸린다(위 컬러와 같다)
             glClearDepth( static_cast<GLclampd>( beginInfo._clearDepth ) );
+            glClearStencil( static_cast<GLint>( beginInfo._clearStencil ) );
             glClear( GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT );
         }
         return RHIRenderPassBeginResult::Begun;

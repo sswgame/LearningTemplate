@@ -366,7 +366,7 @@ namespace sw
         // MRT · 컬러+깊이 · 깊이 전용은 합성 프레임버퍼를 쓴다. 그 밖에는 단일 RT · 스왑체인 경로를 그대로 쓴다.
         // 주의: 텍스처 하나짜리 프레임버퍼의 렌더 패스는 지우기(CLEAR)로 고정이다 — 지우지 않는 패스(Load · DontCare)는 load op 을 키로 드는
         // 합성 경로로 보낸다. 그러지 않으면 Load 로 연 패스가 앞 패스의 그림을 지운다(Present 가 그린 캡처 위의 Canvas).
-        const bool bSingleTextureKeepsContent = colorCount == 1 && colorHandles[0] != 0 && beginInfo._arrLoadOp[0] != RHIRenderPassLoadOp::Clear;
+        const bool bSingleTextureKeepsContent = colorCount == 1 && colorHandles[0] != 0 && ( beginInfo._arrLoadOp[0] != RHIRenderPassLoadOp::Clear || beginInfo._arrStoreOp[0] != RHIRenderPassStoreOp::Store );
         const bool bUseComposite              = ( colorCount > 1 ) || ( colorCount == 1 && colorHandles[0] != 0 && bHasDepth ) ||
                                    ( colorCount == 0 && bHasDepth ) || bSingleTextureKeepsContent;
 
@@ -382,13 +382,15 @@ namespace sw
             key._colorCount = ( colorCount > kMaxColorAttachments ) ? kMaxColorAttachments : colorCount;
             for ( uint32 colorIndex = 0; colorIndex < key._colorCount; ++colorIndex )
             {
-                key._arrColor[colorIndex]       = colorHandles[colorIndex];
-                key._arrColorLoadOp[colorIndex] = static_cast<uint8>( beginInfo._arrLoadOp[colorIndex] );
-                key._arrColorSlice[colorIndex]  = beginInfo._arrColorTargetSlice[colorIndex];
+                key._arrColor[colorIndex]        = colorHandles[colorIndex];
+                key._arrColorLoadOp[colorIndex]  = static_cast<uint8>( beginInfo._arrLoadOp[colorIndex] );
+                key._arrColorStoreOp[colorIndex] = static_cast<uint8>( beginInfo._arrStoreOp[colorIndex] );
+                key._arrColorSlice[colorIndex]   = beginInfo._arrColorTargetSlice[colorIndex];
             }
-            key._depth       = beginInfo._depthTarget;
-            key._depthLoadOp = static_cast<uint8>( beginInfo._depthLoadOp );
-            key._depthSlice  = beginInfo._depthTargetSlice;
+            key._depth        = beginInfo._depthTarget;
+            key._depthLoadOp  = static_cast<uint8>( beginInfo._depthLoadOp );
+            key._depthStoreOp = static_cast<uint8>( beginInfo._depthStoreOp );
+            key._depthSlice   = beginInfo._depthTargetSlice;
 
             if ( _pState->_bRenderPassActive == SW_TRUE )
             {
@@ -428,7 +430,7 @@ namespace sw
             if ( key._depth != 0 )
             {
                 clearValues[clearCount].depthStencil.depth   = beginInfo._clearDepth;
-                clearValues[clearCount].depthStencil.stencil = 0;
+                clearValues[clearCount].depthStencil.stencil = beginInfo._clearStencil;
                 ++clearCount;
             }
         }

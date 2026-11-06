@@ -96,6 +96,7 @@ namespace sw
         , _bDrawIndirectCount{ SW_FALSE }
         , _bSamplerAnisotropy{ SW_FALSE }
         , _bFillModeNonSolid{ SW_FALSE }
+        , _bDepthClamp{ SW_FALSE }
         , _bGeometryShader{ 0 }
         , _bTessellationShader{ 0 }
         , _bSwapChainDirty{ SW_FALSE }
@@ -1113,6 +1114,8 @@ namespace sw
         // Vulkan 만 디바이스 생성 때 켜야 한다. 안 켜면 파이프라인 생성이 검증 오류로 거절되고,
         // 그 PSO 가 0 으로 돌아와 조용히 솔리드로 그려진다.
         deviceFeatures.fillModeNonSolid = availableFeatures.fillModeNonSolid;
+        // 깊이 클립을 끄는 렌더 상태(depthClampEnable)도 마찬가지다.
+        deviceFeatures.depthClamp = availableFeatures.depthClamp;
         // 파이프라인 XML 이 고르는 선택 스테이지다. 없는 장치에서 그런 패스의 PSO 는 오류로 만들어지지 않는다.
         deviceFeatures.geometryShader     = availableFeatures.geometryShader;
         deviceFeatures.tessellationShader = availableFeatures.tessellationShader;
@@ -1129,6 +1132,7 @@ namespace sw
         _bMultiDrawIndirect                                    = availableFeatures.multiDrawIndirect ? 1 : 0;
         _bSamplerAnisotropy                                    = availableFeatures.samplerAnisotropy ? 1 : 0;
         _bFillModeNonSolid                                     = availableFeatures.fillModeNonSolid ? 1 : 0;
+        _bDepthClamp                                           = availableFeatures.depthClamp ? 1 : 0;
 
         // pickPhysicalDevice 가 요구 판(1.3) 미만 디바이스를 건너뛰므로 1.3 기능 구조체는 늘 체인에 넣을 수 있다.
         VkPhysicalDeviceVulkan13Features available13{};
@@ -3286,7 +3290,7 @@ namespace sw
     VkRenderPass VulkanRHIDevice::ensurePipelineRenderPass( const RHIPipelineStateDesc& desc )
     {
         VulkanRHIRenderPassCache::PipelineKey key{};
-        const bool                            bDepthOnly = ( desc._numRenderTargets == 0 && desc._bEnableDepthTest != 0 );
+        const bool                            bDepthOnly = ( desc._numRenderTargets == 0 && desc._renderState._bEnableDepthTest != 0 );
         key._colorCount                                  = bDepthOnly ? 0u : ( desc._numRenderTargets > 0 ? desc._numRenderTargets : 1u );
         if ( key._colorCount > kMaxColorAttachments )
             key._colorCount = kMaxColorAttachments;
@@ -3297,7 +3301,7 @@ namespace sw
                 colorFmt = VK_FORMAT_R8G8B8A8_UNORM;
             key._arrColorFormat[colorIndex] = static_cast<uint32>( colorFmt );
         }
-        if ( desc._bEnableDepthTest != 0 )
+        if ( desc._renderState._bEnableDepthTest != 0 )
         {
             // FrameRenderer 는 RHI D24 를 요청하지만 GPU 가 지원하지 않을 수 있다 → 디바이스가 고른 포맷을 쓴다.
             VkFormat   depthFmt              = VulkanRHIUtil::toVulkanTextureFormat( desc._depthStencilFormat );
@@ -3340,6 +3344,7 @@ namespace sw
             height                      = pTex->_height;
             spec.addColor( pTex->_format, VulkanRHIUtil::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._arrColorLoadOp[colorIndex] ) ),
                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL );
+            spec._arrColorStoreOp[colorIndex] = VulkanRHIUtil::toVulkanStoreOp( static_cast<RHIRenderPassStoreOp>( key._arrColorStoreOp[colorIndex] ) );
         }
 
         uint32 attachCount = key._colorCount;
@@ -3358,6 +3363,7 @@ namespace sw
             }
             spec.setDepth( pTex->_format, VulkanRHIUtil::toVulkanLoadOp( static_cast<RHIRenderPassLoadOp>( key._depthLoadOp ) ),
                            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL );
+            spec._depthStoreOp = VulkanRHIUtil::toVulkanStoreOp( static_cast<RHIRenderPassStoreOp>( key._depthStoreOp ) );
         }
         if ( attachCount == 0 )
             return false;

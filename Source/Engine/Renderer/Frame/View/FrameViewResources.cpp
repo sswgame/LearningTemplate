@@ -48,7 +48,7 @@ namespace sw
                 {
                     if ( VectorUtil::contains( pass._listResolvedOutput, name ) == false )
                         continue;
-                    if ( getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kGenericFullscreen ) == false )
+                    if ( getRenderPassTypeInfo( pass._type ).hasFlag( RenderPassTraitFlag::kGenericFullscreen ) == false )
                         return false;
                     bWritten = true;
                 }
@@ -61,7 +61,7 @@ namespace sw
              */
             static bool isSelectable( const vector<RenderGraphPassDesc>& listPass, const RenderGraphPassDesc& pass )
             {
-                const RenderPassTypeInfo& info            = getRenderPassTypeInfo( pass._resolvedType );
+                const RenderPassTypeInfo& info            = getRenderPassTypeInfo( pass._type );
                 const bool                bSelectableType = info.hasFlag( RenderPassTraitFlag::kGenericFullscreen ) || info.hasFlag( RenderPassTraitFlag::kBypassesToSource );
                 if ( bSelectableType == false || pass._listResolvedColorOutput.empty() )
                     return false;
@@ -147,9 +147,9 @@ namespace sw
             {
                 if ( settings.usesPostProcess() == false || pass._minPostQuality > static_cast<int32>( gv_postQuality ) )
                     return true;
-                if ( pass._resolvedType == RenderPassType::DepthOfField )
+                if ( pass._type == RenderPassType::DepthOfField )
                     return settings._depthOfField.hasDepthOfField() == false || settings._projectionScaleY <= 0.0f; // 핀홀(조리개 0) · 직교
-                if ( pass._resolvedType == RenderPassType::MotionBlur )
+                if ( pass._type == RenderPassType::MotionBlur )
                     return static_cast<bool>( gv_motionBlur ) == false || bCameraStill;
                 return false;
             }
@@ -190,12 +190,12 @@ namespace sw
         {
             if ( FrameViewResourcesInternal::isMadeOnFirstUse( _pipeline.getGraphPass(), hashed_string( attachment._name.c_str() ) ) )
                 continue;
-            const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
+            const RHIFormat format = attachment._format;
             const bool      bDepth = FrameRendererUtil::isDepthFormat( format );
             if ( resolveRenderPassInputRole( attachment._name, bDepth, attachment._role ) == RenderPassInputRole::ShadowMap )
-                (void)pool.allocateSized( _pDevice, attachment._name, format, bDepth, attachment._clearColor, shadowResolution, shadowResolution );
+                (void)pool.allocateSized( _pDevice, attachment._name, format, bDepth, attachment.getOps(), shadowResolution, shadowResolution );
             else
-                pool.allocate( _pDevice, attachment._name, format, bDepth, attachment._clearColor, attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
+                pool.allocate( _pDevice, attachment._name, format, bDepth, attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
         }
 
         // 패스가 쓰는 첨부는 모두 위에서 만들었다 — 파이프라인 로드가 선언하지 않은 입출력을 거절한다(`RenderPipelineAsset::validate`).
@@ -241,7 +241,7 @@ namespace sw
         const RenderGraphPassDesc* pTAAPass = nullptr;
         for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
         {
-            if ( pass._resolvedType == RenderPassType::TAA )
+            if ( pass._type == RenderPassType::TAA )
             {
                 pTAAPass = &pass;
                 break;
@@ -372,8 +372,8 @@ namespace sw
             {
                 if ( string_view( attachment._name ) != name.view() )
                     continue;
-                const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
-                pool.allocate( _pDevice, attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor, attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
+                const RHIFormat format = attachment._format;
+                pool.allocate( _pDevice, attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment.getOps(), attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
                 bAllocated = true;
             }
         };
@@ -383,7 +383,7 @@ namespace sw
             const RenderGraphPassDesc& pass = listPass[passIndex];
             if ( Internal::isSelectable( listPass, pass ) == false )
             {
-                if ( pass._resolvedType == RenderPassType::TAA )
+                if ( pass._type == RenderPassType::TAA )
                     view._bTAAHistoryWritten = SW_TRUE;
                 Internal::markReads( listAttachment, pass, true, listNeeded );
                 for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
@@ -392,7 +392,7 @@ namespace sw
                 }
                 continue;
             }
-            const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._resolvedType );
+            const RenderPassTypeInfo& info          = getRenderPassTypeInfo( pass._type );
             const bool                bOff          = info.hasFlag( RenderPassTraitFlag::kSkipsWithoutPostProcess ) && Internal::isEffectOff( pass, view._settings, bCameraStill );
             const bool                bOutputNeeded = VectorUtil::containsIf( pass._listResolvedColorOutput, [&]( const RenderGraphPassDesc::ResolvedAttachment& output )
                            { return Internal::isNeeded( listAttachment, output._attachment, listNeeded ); } );
@@ -417,7 +417,7 @@ namespace sw
                 }
                 continue;
             }
-            if ( pass._resolvedType == RenderPassType::TAA )
+            if ( pass._type == RenderPassType::TAA )
                 view._bTAAHistoryWritten = SW_TRUE;
             for ( const RenderGraphPassDesc::ResolvedAttachment& output : pass._listResolvedColorOutput )
             {

@@ -340,15 +340,7 @@ namespace sw
             uint32               _program{ 0 };
             uint32               _vao{ 0 };
             RHIPrimitiveTopology _topology = RHIPrimitiveTopology::TriangleList;
-            RHIFillMode          _fillMode = RHIFillMode::Solid;
-            RHICullMode          _cullMode = RHICullMode::None;
-            int32                _depthBias{ 0 };               ///< RHIPipelineStateDesc::_depthBias — glPolygonOffset 의 units
-            float32              _slopeScaledDepthBias{ 0.0f }; ///< RHIPipelineStateDesc::_slopeScaledDepthBias — glPolygonOffset 의 factor
-            uint8                _bEnableDepthTest    : 1;
-            uint8                _bEnableDepthWrite   : 1;
-            uint8                _bEnableBlend        : 1;
-            uint8                _bPremultipliedAlpha : 1; ///< 블렌드 색 원본 계수가 One 이다(아니면 SrcAlpha 이다).
-            uint8                _reserved            : 4;
+            RHIRenderState       _renderState;  ///< 블렌드 · 깊이 · 래스터 · 스텐실(`setPipelineState` 가 GL 상태로 건다)
             RHIVertexLayout      _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
         };
 

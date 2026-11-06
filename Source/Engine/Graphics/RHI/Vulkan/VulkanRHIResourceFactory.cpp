@@ -1301,9 +1301,16 @@ namespace sw
     RHIPipelineStateHandle VulkanRHIResourceFactory::createPipelineState( const RHIPipelineStateDesc& desc )
     {
         // 와이어프레임 채우기는 디바이스 기능 fillModeNonSolid 가 있어야 한다. 없으면 솔리드로 바꾸지 않고 셰이더 모듈을 만들기 전에 거절한다(아래 래스터 상태 주석).
-        if ( desc._fillMode == RHIFillMode::Wireframe && _pDevice->_bFillModeNonSolid == 0 )
+        const RHIRenderState& renderState = desc._renderState;
+        if ( renderState._fillMode == RHIFillMode::Wireframe && _pDevice->_bFillModeNonSolid == 0 )
         {
             SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateWireframeFillNeeds", "createPipelineState: wireframe fill needs the fillModeNonSolid device feature ('%#')", desc._vertexShaderPath );
+            return 0;
+        }
+        // 깊이 클립을 끄는 것(depthClampEnable)도 장치 기능이다. 없으면 켠 채로 그리지 않고 거절한다 — 다른 그림이 통과하면 안 된다.
+        if ( renderState._bEnableDepthClip == SW_FALSE && _pDevice->_bDepthClamp == 0 )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateDepthClampNeeds", "createPipelineState: turning depth clip off needs the depthClamp device feature ('%#')", desc._vertexShaderPath );
             return 0;
         }
         // 서술체 해석(진입점 기본값 · define · 깊이 전용 판정 · RT 수)은 RHIShaderRequest 하나가 한다. 백엔드는 받기만 한다.
@@ -1471,19 +1478,19 @@ namespace sw
 
         VkPipelineRasterizationStateCreateInfo rasterizer{};
         rasterizer.sType                   = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-        rasterizer.depthClampEnable        = VK_FALSE;
+        rasterizer.depthClampEnable        = renderState._bEnableDepthClip != SW_FALSE ? VK_FALSE : VK_TRUE;
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
         // 기능을 못 켠 디바이스에서 LINE 을 요청하면 솔리드로 바꾸지 않고 거절한다 — 다른 그림이 와이어프레임으로 통과하면 안 된다.
         // 렌더러는 능력(RHICapabilities::_bWireframeFill)을 보고 와이어프레임 보기 모드를 받지 않으므로 여기 닿으면 결함이다.
-        const bool bUseWireframe = desc._fillMode == RHIFillMode::Wireframe;
+        const bool bUseWireframe = renderState._fillMode == RHIFillMode::Wireframe;
         rasterizer.polygonMode   = bUseWireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
         rasterizer.lineWidth     = 1.0f;
-        rasterizer.cullMode      = ( desc._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( desc._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
-        rasterizer.frontFace     = VK_FRONT_FACE_CLOCKWISE;
-        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIPipelineStateDesc::_depthBias). LINE 다각형 모드에도 걸린다.
-        rasterizer.depthBiasEnable         = ( desc._depthBias != 0 || desc._slopeScaledDepthBias != 0.0f ) ? VK_TRUE : VK_FALSE;
-        rasterizer.depthBiasConstantFactor = static_cast<float32>( desc._depthBias );
-        rasterizer.depthBiasSlopeFactor    = desc._slopeScaledDepthBias;
+        rasterizer.cullMode      = ( renderState._cullMode == RHICullMode::Front ) ? VK_CULL_MODE_FRONT_BIT : ( ( renderState._cullMode == RHICullMode::Back ) ? VK_CULL_MODE_BACK_BIT : VK_CULL_MODE_NONE );
+        rasterizer.frontFace     = renderState._frontFace == RHIFrontFace::CounterClockwise ? VK_FRONT_FACE_COUNTER_CLOCKWISE : VK_FRONT_FACE_CLOCKWISE;
+        // 깊이 바이어스 — 다른 백엔드와 같은 상수 · 기울기 두 칸이다(RHIFixedRenderState::_depthBias). LINE 다각형 모드에도 걸린다.
+        rasterizer.depthBiasEnable         = ( renderState._depthBias != 0 || renderState._slopeScaledDepthBias != 0.0f ) ? VK_TRUE : VK_FALSE;
+        rasterizer.depthBiasConstantFactor = static_cast<float32>( renderState._depthBias );
+        rasterizer.depthBiasSlopeFactor    = renderState._slopeScaledDepthBias;
 
         VkPipelineMultisampleStateCreateInfo multisampling{};
         multisampling.sType                = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -1496,8 +1503,8 @@ namespace sw
         VkPipelineColorBlendAttachmentState arrColorBlendAttachment[kMaxColorAttachments]{};
         for ( uint32 blendIndex = 0; blendIndex < blendCount; ++blendIndex )
         {
-            arrColorBlendAttachment[blendIndex].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                                                                 VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+            const RHIBlendTargetState& source                  = renderState._arrBlendTarget[blendIndex];
+            arrColorBlendAttachment[blendIndex].colorWriteMask = static_cast<VkColorComponentFlags>( source._colorWriteMask ); // 비트가 같다(RHIColorWriteMask)
             // 블렌드 지원은 형식마다 선택이다(R16G16_SNORM 등, lavapipe 는 없다). 못 섞는 첨부는 덮어쓴다 - 겹침 보기가 G버퍼 전체에 블렌드를 켜도 값을 보는 것은 알베도 칸이다.
             // 형식이 없으면 ensurePipelineRenderPass 가 R8G8B8A8_UNORM 으로 두며 그 형식은 블렌드가 필수다.
             const VkFormat     attachmentFormat = VulkanRHIUtil::toVulkanTextureFormat( desc._arrRTVFormat[blendIndex] );
@@ -1505,13 +1512,13 @@ namespace sw
             vkGetPhysicalDeviceFormatProperties( _pDevice->_physicalDevice, attachmentFormat, &formatProperties );
             const bool bBlendable = attachmentFormat == VK_FORMAT_UNDEFINED || ( formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT ) != 0;
 
-            arrColorBlendAttachment[blendIndex].blendEnable         = ( desc._bEnableBlend && bBlendable ) ? VK_TRUE : VK_FALSE;
-            arrColorBlendAttachment[blendIndex].srcColorBlendFactor = ( desc._bPremultipliedAlpha != SW_FALSE ) ? VK_BLEND_FACTOR_ONE : VK_BLEND_FACTOR_SRC_ALPHA;
-            arrColorBlendAttachment[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-            arrColorBlendAttachment[blendIndex].colorBlendOp        = VK_BLEND_OP_ADD;
-            arrColorBlendAttachment[blendIndex].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-            arrColorBlendAttachment[blendIndex].dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-            arrColorBlendAttachment[blendIndex].alphaBlendOp        = VK_BLEND_OP_ADD;
+            arrColorBlendAttachment[blendIndex].blendEnable         = ( source._bEnableBlend != SW_FALSE && bBlendable ) ? VK_TRUE : VK_FALSE;
+            arrColorBlendAttachment[blendIndex].srcColorBlendFactor = VulkanRHIUtil::toVulkanBlendFactor( source._srcColor );
+            arrColorBlendAttachment[blendIndex].dstColorBlendFactor = VulkanRHIUtil::toVulkanBlendFactor( source._dstColor );
+            arrColorBlendAttachment[blendIndex].colorBlendOp        = VulkanRHIUtil::toVulkanBlendOp( source._colorOp );
+            arrColorBlendAttachment[blendIndex].srcAlphaBlendFactor = VulkanRHIUtil::toVulkanBlendFactor( source._srcAlpha );
+            arrColorBlendAttachment[blendIndex].dstAlphaBlendFactor = VulkanRHIUtil::toVulkanBlendFactor( source._dstAlpha );
+            arrColorBlendAttachment[blendIndex].alphaBlendOp        = VulkanRHIUtil::toVulkanBlendOp( source._alphaOp );
         }
 
         VkPipelineColorBlendStateCreateInfo colorBlending{};
@@ -1525,14 +1532,26 @@ namespace sw
             pipelineRp = _pDevice->_renderPass;
 
         VkPipelineDepthStencilStateCreateInfo depthStencil{};
-        depthStencil.sType            = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthStencil.depthTestEnable  = desc._bEnableDepthTest ? VK_TRUE : VK_FALSE;
-        depthStencil.depthWriteEnable = ( depthStencil.depthTestEnable != VK_FALSE && desc._bEnableDepthWrite ) ? VK_TRUE : VK_FALSE;
-        // LessEqual — 네 백엔드가 같다. Less 로 두면 깊이 프리패스 뒤 같은 깊이를 다시 그리는 기본 패스가 **모두 탈락**하고,
-        // 같은 깊이의 겹친 면은 백엔드마다 먼저 그린 것 · 나중 그린 것이 갈린다.
-        depthStencil.depthCompareOp        = VK_COMPARE_OP_LESS_OR_EQUAL;
+        depthStencil.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+        depthStencil.depthTestEnable       = renderState._bEnableDepthTest != SW_FALSE ? VK_TRUE : VK_FALSE;
+        depthStencil.depthWriteEnable      = ( depthStencil.depthTestEnable != VK_FALSE && renderState._bEnableDepthWrite != SW_FALSE ) ? VK_TRUE : VK_FALSE;
+        depthStencil.depthCompareOp        = VulkanRHIUtil::toVulkanCompareOp( renderState._depthCompare );
         depthStencil.depthBoundsTestEnable = VK_FALSE;
-        depthStencil.stencilTestEnable     = VK_FALSE;
+        depthStencil.stencilTestEnable     = renderState._bEnableStencil != SW_FALSE ? VK_TRUE : VK_FALSE;
+        depthStencil.front.failOp          = VulkanRHIUtil::toVulkanStencilOp( renderState._stencilFrontFail );
+        depthStencil.front.depthFailOp     = VulkanRHIUtil::toVulkanStencilOp( renderState._stencilFrontDepthFail );
+        depthStencil.front.passOp          = VulkanRHIUtil::toVulkanStencilOp( renderState._stencilFrontPass );
+        depthStencil.front.compareOp       = VulkanRHIUtil::toVulkanCompareOp( renderState._stencilFrontCompare );
+        depthStencil.front.compareMask     = renderState._stencilReadMask;
+        depthStencil.front.writeMask       = renderState._stencilWriteMask;
+        depthStencil.front.reference       = renderState._stencilRef;
+        depthStencil.back.failOp           = VulkanRHIUtil::toVulkanStencilOp( renderState._stencilBackFail );
+        depthStencil.back.depthFailOp      = VulkanRHIUtil::toVulkanStencilOp( renderState._stencilBackDepthFail );
+        depthStencil.back.passOp           = VulkanRHIUtil::toVulkanStencilOp( renderState._stencilBackPass );
+        depthStencil.back.compareOp        = VulkanRHIUtil::toVulkanCompareOp( renderState._stencilBackCompare );
+        depthStencil.back.compareMask      = renderState._stencilReadMask;
+        depthStencil.back.writeMask        = renderState._stencilWriteMask;
+        depthStencil.back.reference        = renderState._stencilRef;
 
         vector<VkDynamicState>           listDynamicState = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
         VkPipelineDynamicStateCreateInfo dynamicState{};

@@ -108,7 +108,7 @@ namespace sw
             _pContext->OMSetBlendState( pRecord->_blendState.Get(), arrBlendFactor, MathUtil::kMaxUInt32 );
         }
         if ( pRecord->_depthStencilState )
-            _pContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), 0 );
+            _pContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), pRecord->_stencilRef );
     }
 
     void D3D11RHICommandContext::setComputePipelineStateNative( RHIPipelineStateHandle pso )
@@ -176,7 +176,7 @@ namespace sw
         }
 
         if ( beginInfo._depthLoadOp == RHIRenderPassLoadOp::Clear && pDSV != nullptr )
-            _pContext->ClearDepthStencilView( pDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, beginInfo._clearDepth, 0 );
+            _pContext->ClearDepthStencilView( pDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, beginInfo._clearDepth, beginInfo._clearStencil );
 
         if ( rtCount > 0 )
             _pContext->OMSetRenderTargets( rtCount, arrRTV, pDSV );
@@ -189,7 +189,7 @@ namespace sw
         if ( pRecord != nullptr )
         {
             if ( pRecord->_depthStencilState )
-                _pContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), 0 );
+                _pContext->OMSetDepthStencilState( pRecord->_depthStencilState.Get(), pRecord->_stencilRef );
             if ( pRecord->_blendState )
             {
                 constexpr float32 arrBlendFactor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };

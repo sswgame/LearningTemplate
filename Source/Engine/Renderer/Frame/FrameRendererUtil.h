@@ -198,7 +198,7 @@ namespace sw
         {
             for ( const RenderGraphPassDesc& pass : listPass )
             {
-                if ( pass._resolvedType != RenderPassType::Compute )
+                if ( pass._type != RenderPassType::Compute )
                     continue;
                 for ( const string& name : pass._listOutput )
                 {
@@ -229,15 +229,7 @@ namespace sw
             return unorm8::fromFloat( value.toFloat() ).getRaw();
         }
 
-        /**
-         * @brief 파이프라인 XML 의 포맷 이름을 RHIFormat 으로 해석합니다. 이름은 리플렉션된 열거자 이름 하나뿐입니다(대소문자 무시, ValueAlias 포함).
-         * @details 모르는 이름은 R8G8B8A8_UNORM 으로 대체한다. 그 이름은 로드할 때 `RenderPipelineAsset::validate` 가 같은 이름으로 이미 오류로
-         *          알렸고, 여기는 PSO 와 트랜지언트를 만들 때마다 불리는 곳이라 다시 알리지 않는다. 이름을 따로 두면 검증은 통과하는데 여기서는
-         *          모르는 포맷이 생긴다.
-         */
-        SW_API static RHIFormat parseAttachmentFormat( string_view formatName );
-
-        /** @brief `parseAttachmentFormat` 의 역함수입니다. 포맷을 파이프라인 XML 이 쓰는 이름(리플렉션된 열거자 이름)으로 반환합니다. */
+        /** @brief 포맷을 파이프라인 XML 이 쓰는 이름(리플렉션된 열거자 이름)으로 반환합니다. */
         SW_API static const utf8* attachmentFormatName( RHIFormat format );
 
         /** @brief 뎁스만 쓰는 패스 타입인지 반환합니다. 출력 선언이 없을 때 컬러 RT 수를 정하는 기본값(0)의 근거입니다. */
@@ -281,7 +273,7 @@ namespace sw
                 {
                     if ( attachment._name != outName )
                         continue;
-                    const RHIFormat format = parseAttachmentFormat( attachment._format );
+                    const RHIFormat format = attachment._format;
                     if ( isDepthFormat( format ) == false )
                     {
                         if ( pOutFormat != nullptr )
@@ -306,7 +298,7 @@ namespace sw
          */
         static bool hasPixelStage( const RenderGraphPassDesc& pass, const vector<RenderPassAttachment>& listAttachment )
         {
-            const uint32 fallbackCount = isDepthOnlyPassType( pass._resolvedType ) ? 0u : 1u;
+            const uint32 fallbackCount = isDepthOnlyPassType( pass._type ) ? 0u : 1u;
             return collectColorOutputFormats( pass, listAttachment, nullptr, kMaxColorAttachments, fallbackCount ) > 0;
         }
 
@@ -328,6 +320,15 @@ namespace sw
         static bool usesMaterialShader( RenderPassType passType )
         {
             return getRenderPassTypeInfo( passType ).hasFlag( RenderPassTraitFlag::kUsesMaterialShader );
+        }
+
+        /** @brief 이 패스 종류가 머티리얼에게 내주는 렌더 상태의 범위입니다(표: `docs/agents/RenderPipelineXml.md`). 그리는 쪽과 테스트가 같은 답을 본다. */
+        static RHIRenderStateOverride::Scope getMaterialStateScope( RenderPassType passType )
+        {
+            const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
+            if ( info.hasFlag( RenderPassTraitFlag::kMaterialBlend ) )
+                return RHIRenderStateOverride::Scope::FixedAndBlend;
+            return info.hasFlag( RenderPassTraitFlag::kMaterialFixedState ) ? RHIRenderStateOverride::Scope::FixedState : RHIRenderStateOverride::Scope::CullOnly;
         }
 
         /**

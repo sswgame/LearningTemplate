@@ -44,6 +44,12 @@ namespace sw
                 }
                 return D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_PRESERVE;
             }
+
+            /** @brief 엔진 store op 을 네이티브 패스의 끝 접근으로 옮깁니다. */
+            static D3D12_RENDER_PASS_ENDING_ACCESS_TYPE toEndingAccess( RHIRenderPassStoreOp storeOp )
+            {
+                return storeOp == RHIRenderPassStoreOp::DontCare ? D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_DISCARD : D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+            }
         };
     } // namespace
 
@@ -527,6 +533,7 @@ namespace sw
         if ( _pState->_boundNativeGraphicsPSO != _pState->_activeGraphicsPSO )
         {
             commandListForRecord()->SetPipelineState( pPSORecord->_pso.Get() );
+            commandListForRecord()->OMSetStencilRef( pPSORecord->_stencilRef );
             _pState->_boundNativeGraphicsPSO = _pState->_activeGraphicsPSO;
         }
         return true;
@@ -798,6 +805,7 @@ namespace sw
 
         // 루트 시그니처는 리스트가 열릴 때 이미 걸렸다(bindBindlessRootState). PSO 만 바꾼다. 루트 CBV 인자는 유지된다.
         commandListForRecord()->SetPipelineState( pRecord->_pso.Get() );
+        commandListForRecord()->OMSetStencilRef( pRecord->_stencilRef );
         // 드로우가 같은 PSO 로 다시 SetPipelineState 하지 않도록 이미 바인딩된 것으로 표시한다.
         _pState->_boundNativeGraphicsPSO = pso;
     }
@@ -898,7 +906,7 @@ namespace sw
                 colorDesc.BeginningAccess.Clear.ClearValue.Format = format;
                 Memory::copy( colorDesc.BeginningAccess.Clear.ClearValue.Color, &beginInfo._arrClearColor[attachmentIndex]._x, sizeof( float32 ) * 4u );
             }
-            colorDesc.EndingAccess.Type = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+            colorDesc.EndingAccess.Type = D3D12RHICommandContextInternal::toEndingAccess( beginInfo._arrStoreOp[attachmentIndex] );
         }
 
         D3D12_RENDER_PASS_DEPTH_STENCIL_DESC depthDesc{};
@@ -917,12 +925,12 @@ namespace sw
                 bDepthBound                         = true;
                 depthDesc.cpuDescriptor             = depthView._dsvHandle;
                 depthDesc.DepthBeginningAccess.Type = D3D12RHICommandContextInternal::toBeginningAccess( beginInfo._depthLoadOp );
-                depthDesc.DepthEndingAccess.Type    = D3D12_RENDER_PASS_ENDING_ACCESS_TYPE_PRESERVE;
+                depthDesc.DepthEndingAccess.Type    = D3D12RHICommandContextInternal::toEndingAccess( beginInfo._depthStoreOp );
                 if ( depthDesc.DepthBeginningAccess.Type == D3D12_RENDER_PASS_BEGINNING_ACCESS_TYPE_CLEAR )
                 {
                     depthDesc.DepthBeginningAccess.Clear.ClearValue.Format               = depthView._format;
                     depthDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Depth   = beginInfo._clearDepth;
-                    depthDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Stencil = 0;
+                    depthDesc.DepthBeginningAccess.Clear.ClearValue.DepthStencil.Stencil = beginInfo._clearStencil;
                 }
                 // 스텐실이 있는 포맷이면 깊이와 같이 다룬다(예전 ClearDepthStencilView 가 둘 다 지웠다). 없는 포맷은 접근하지 않는다.
                 const bool bStencil = depthView._format == DXGI_FORMAT_D24_UNORM_S8_UINT || depthView._format == DXGI_FORMAT_D32_FLOAT_S8X24_UINT;

@@ -13,6 +13,7 @@
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
+#include "Engine/Graphics/RHI/RHIRenderState.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Window/IRenderSurface.h"
 
@@ -493,9 +494,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief beginRenderPass 와 PSO 가 동시에 바인딩할 수 있는 컬러 RT 의 최대 개수입니다(MRT). */
-    inline constexpr uint32 kMaxColorAttachments = 4;
-
     /**
      * @struct RHIPipelineStateDesc
      * @brief 그래픽스 파이프라인과 컴퓨트 파이프라인의 상태를 만들 때 쓰는 서술체입니다.
@@ -516,29 +514,10 @@ namespace sw
         vector<string> _listShaderDefine; ///< 컴파일 매크로("NAME" 또는 "NAME=VALUE"). 셰이더 퍼뮤테이션을 만든다.
 
         RHIPrimitiveTopology _topology;                           ///< 프리미티브 위상
-        RHIFillMode          _fillMode;                           ///< 채우기 모드
-        RHICullMode          _cullMode;                           ///< 컬링 모드
         uint32               _numRenderTargets;                   ///< 컬러 RT 개수 (MRT)
         RHIFormat            _arrRTVFormat[kMaxColorAttachments]; ///< RT별 포맷
         RHIFormat            _depthStencilFormat;
-        /**
-         * @brief 깊이 바이어스입니다. 깊이 테스트 전에 래스터 깊이에 더합니다(음수면 카메라 쪽, 깊이 비교는 네 백엔드 모두 LessEqual). 둘 다 0 이면 없습니다.
-         * @details 상수 칸은 깊이 형식의 최소 단위(D24 는 2^-24) 배수이고 기울기 칸은 삼각형의 최대 깊이 기울기에 곱한다. D3D `DepthBias` · `SlopeScaledDepthBias`,
-         *          Vulkan `depthBiasConstantFactor` · `depthBiasSlopeFactor`, GL `glPolygonOffset( factor, units )` 가 같은 식이다. 같은 삼각형을 선으로 겹쳐 그릴 때
-         *          (보기 모드 ShadedWireframe) 선이 면과 z-fighting 하지 않게 한다.
-         */
-        int32   _depthBias;
-        float32 _slopeScaledDepthBias;
-        uint8   _bEnableDepthTest  : 1; ///< 깊이 테스트
-        uint8   _bEnableDepthWrite : 1; ///< 깊이 쓰기 (Transparent=0)
-        uint8   _bEnableBlend      : 1; ///< 알파 블렌딩(색은 SrcAlpha/InvSrcAlpha, 알파 채널은 One/InvSrcAlpha). 네 백엔드가 같다.
-        /**
-         * @brief 블렌드가 켜졌을 때 원본 색이 이미 알파를 곱한 값인지 나타냅니다(색 One/InvSrcAlpha). `_bEnableBlend` 가 꺼져 있으면 의미가 없습니다.
-         * @details 렌더 텍스처에 반투명을 그린 뒤 다시 합성하면 곧은 알파(straight alpha)는 알파를 두 번 곱한다. UI 와 캔버스는 이 방식으로 그린다
-         *          (언리얼 `BF_One, BF_InverseSourceAlpha`, 유니티 `Blend One OneMinusSrcAlpha`).
-         */
-        uint8                  _bPremultipliedAlpha : 1;
-        [[maybe_unused]] uint8 _reservedFlags       : 4;
+        RHIRenderState       _renderState; ///< 블렌드 · 깊이 · 래스터 · 스텐실. 칸은 `RHIRenderState` 한 곳에서 더한다
         /**
          * @brief 정점 셰이더가 메시 속성을 읽을 때 쓸 속성 스트림 형식입니다(입력 레이아웃 표를 고른다). 정점 입력이 없는 셰이더는 쓰지 않는다.
          * @details 그리는 메시의 형식과 같아야 한다 — 머티리얼 PSO 는 배치의 형식으로 짓는다(`RenderPSOCache::materialPSOKey`). 다르면 속성 스트림 원소 크기가 달라
@@ -546,7 +525,7 @@ namespace sw
          */
         RHIMeshVertexFormat _meshVertexFormat;
 
-        /** @brief 기본 토폴로지, 컬링, 깊이 플래그로 만듭니다. */
+        /** @brief 기본 토폴로지로, 컬링 · 깊이 테스트 없이 만듭니다. */
         RHIPipelineStateDesc() noexcept;
     };
 } // namespace sw
@@ -555,6 +534,16 @@ namespace sw
 {
     /** @brief 렌더 타깃 기본 클리어 색(RGBA)입니다. */
     inline constexpr float4 kDefaultClearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
+
+    /** @brief 첨부 하나를 만들고 여는 데 쓰는 값들입니다(`TransientAttachmentPool`). 파이프라인 XML 의 선언에서 온다(`RenderPassAttachment::getOps`). */
+    struct RHIAttachmentOps
+    {
+        float4               _clearColor{};
+        float32              _clearDepth{ 1.0f };
+        uint8                _clearStencil{ 0 };
+        RHIRenderPassLoadOp  _loadOp{ RHIRenderPassLoadOp::Clear };
+        RHIRenderPassStoreOp _storeOp{ RHIRenderPassStoreOp::Store };
+    };
 
     /**
      * @struct RHIRenderPassAttachment
@@ -976,9 +965,11 @@ namespace sw
         RHIRenderPassLoadOp    _depthLoadOp;                               ///< 깊이 로드 동작 (4 bytes)
         uint16                 _arrColorTargetSlice[kMaxColorAttachments]; ///< RT별로 그릴 면(배열 원소, 큐브 면). 2D 는 0 (8 bytes)
         uint16                 _depthTargetSlice;                          ///< 깊이 타깃의 그릴 면 (2 bytes)
+        uint8                  _clearStencil;                              ///< 스텐실 클리어 값. 깊이 로드가 Clear 일 때 함께 쓴다 (1 byte)
         uint8                  _bBindColor    : 1;                         ///< 컬러 바인딩 여부 (1 byte)
         [[maybe_unused]] uint8 _reservedFlags : 7;
-        uint8                  _arrReserved[1]; ///< 4바이트 정렬 패딩 (1 byte)
+        RHIRenderPassStoreOp   _arrStoreOp[kMaxColorAttachments]; ///< RT별 저장 동작 (16 bytes)
+        RHIRenderPassStoreOp   _depthStoreOp;                     ///< 깊이 · 스텐실 저장 동작 (4 bytes)
 
         /** @brief 기본값(렌더 패스 0, 컬러 타깃 0개, 로드 동작 Clear, 깊이 클리어 1.0)으로 만듭니다. */
         RHIRenderPassBeginInfo() noexcept;
