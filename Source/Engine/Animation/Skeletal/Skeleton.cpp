@@ -13,6 +13,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -21,8 +22,6 @@ namespace sw
     {
         struct SkeletonInternal
         {
-            /** @brief 변형 사슬 깊이의 상한입니다 — 파일이 서로를 가리키는 고리를 끊습니다(이만큼 쌓는 데이터는 설계가 틀렸다). */
-            static constexpr uint32 kMaxVariantDepth = 8;
             /** @brief 변형 파일의 루트 요소 이름입니다. */
             static constexpr const utf8* kVariantRootName = "SkeletonVariant";
             /** @brief `_firstAddedBone` 의 "붙인 본 없음" 입니다. */
@@ -251,6 +250,13 @@ namespace sw
             _firstAddedBone = MathUtil::min( _firstAddedBone, getBoneCount() );
             (void)addBone( added._name, parentBone, added._referencePose ); // 부모가 있는 번호다
         }
+        // 합친 뒤의 검증이다 — 부모의 메시 · 클립은 본 번호로 잇는다(`getHierarchyHash`). 차이 칸이 번호를 바꾸는 꼴을 더하면 여기서 멈춘다.
+        const uint32 baseBoneCount = base.getBoneCount();
+        if ( getHierarchyHash( baseBoneCount ) != base.getHierarchyHash( baseBoneCount ) )
+        {
+            SW_LOG_ERROR_ID( "Skeleton.VariantMovedBaseBones", "Skeleton variant '%#': the base bones must keep their numbers and parents", sourceLabel );
+            bValid = false;
+        }
         // 더한 본은 규칙이 없다 — 클립에 없는 본이고 있어도 그대로 재생한다.
         if ( _listClipRule.empty() == false )
             _listClipRule.resize( _listBone.size() );
@@ -275,33 +281,34 @@ namespace sw
 
     bool Skeleton::parseXML( string_view xml, string_view sourceLabel )
     {
-        return parseAtDepth( xml, sourceLabel, 0 );
+        clear();
+        XMLDocument document;
+        if ( document.parse( xml, sourceLabel ) == false || document.getRoot( SkeletonInternal::kVariantRootName ).isValid() == false )
+            return parseFlat( xml, sourceLabel );
+        // 사슬의 순환 · 깊이 · 없는 부모는 공통 `_base` 의 규칙이다. 층의 차이는 덮어쓰기가 아니라 쌓임(뼈 비율 곱 · 클립 규칙)이라 글로 합치지 않고 위 층부터 차례로 얹는다.
+        DataInheritanceResourceSource source;
+        vector<DataInheritanceLayer>  listLayer;
+        if ( DataInheritance::collectChain( xml, sourceLabel, source, listLayer ) == false || parseFlat( listLayer.front()._text, listLayer.front()._id ) == false )
+            return false;
+        for ( size_t index = 1; index < listLayer.size(); ++index )
+        {
+            const DataInheritanceLayer& layer = listLayer[index];
+            SkeletonVariant             variant;
+            Skeleton                    merged;
+            if ( ConfigManager::readConfigXMLDocument( &variant, *SkeletonVariant::StaticType(), layer._text, layer._id.c_str() ) == false || merged.applyVariant( variant, *this, layer._id ) == false )
+            {
+                clear();
+                return false;
+            }
+            *this = std::move( merged );
+        }
+        return true;
     }
 
-    bool Skeleton::parseAtDepth( string_view xml, string_view sourceLabel, uint32 depth )
+    bool Skeleton::parseFlat( string_view xml, string_view sourceLabel )
     {
-        clear();
-        const string label{ sourceLabel };
-        XMLDocument  document;
-        if ( document.parse( xml, sourceLabel ) && document.getRoot( SkeletonInternal::kVariantRootName ) )
-        {
-            if ( depth >= SkeletonInternal::kMaxVariantDepth )
-            {
-                SW_LOG_ERROR_ID( "Skeleton.VariantChainTooDeep", "Skeleton variant '%#': the _base chain is deeper than %# - do the files point at each other?", sourceLabel, SkeletonInternal::kMaxVariantDepth );
-                return false;
-            }
-            SkeletonVariant variant;
-            if ( ConfigManager::readConfigXMLDocument( &variant, *SkeletonVariant::StaticType(), xml, label.c_str() ) == false )
-                return false;
-            Skeleton base;
-            if ( base.loadAtDepth( AssetID{ variant._base }, depth + 1 ) == false )
-            {
-                SW_LOG_ERROR_ID( "Skeleton.VariantBaseUnreadable", "Skeleton variant '%#': base skeleton '%#' could not be read", sourceLabel, variant._base.c_str() );
-                return false;
-            }
-            return applyVariant( variant, base, sourceLabel );
-        }
         // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 빠진 칸 · 읽지 못한 값은 오류다(`readConfigXMLDocument` 가 로그로 알린다).
+        const string label{ sourceLabel };
         if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) && rebuildFromLoaded( sourceLabel ) )
             return true;
         clear();
@@ -309,11 +316,6 @@ namespace sw
     }
 
     bool Skeleton::loadFromAsset( const AssetID& assetID )
-    {
-        return loadAtDepth( assetID, 0 );
-    }
-
-    bool Skeleton::loadAtDepth( const AssetID& assetID, uint32 depth )
     {
         const string_view path = assetID.view();
         SW_MEMORY_SCOPE( Animation );
@@ -324,7 +326,7 @@ namespace sw
             clear();
             return false;
         }
-        return parseAtDepth( text, path, depth );
+        return parseXML( text, path );
     }
 
     bool Skeleton::rebuildFromLoaded( string_view sourceLabel )

@@ -2,9 +2,10 @@
  * @file DataInheritance.h
  * @brief 데이터 파일이 `_base="<리소스 id>"` 로 부모를 가리키고 차이만 적는 공통 구현입니다. 형식마다 합치기 코드를 쓰지 않습니다.
  * @details 규칙과 새 형식을 올리는 법은 `docs/agents/DataInheritance.md` 입니다.
- *          - 칸(속성)은 자식이 적은 것만 덮고, 스키마가 구조체 칸이라고 한 자식 원소는 안으로 들어가 합치고, 그 밖의 자식 원소는 자식이 적으면 통째로 바뀝니다.
+ *          - 칸(속성)은 자식이 적은 것만 덮고, 스키마가 구조체 칸이라고 한 자식 원소는 안으로 들어가 합치고, 그 밖의 자식 원소는 자식이 적으면 같은 이름의 형제까지 통째로 바뀝니다.
  *          - 열쇠가 있는 목록(`PROPERTY( InheritKey )`)은 원소의 이름으로 합칩니다. 적으면 합치거나 더하고, `_op="Replace"` 는 바꾸고, `_op="Remove"` 는 지우며, `_before` · `_after` 는 자리를 옮깁니다.
  *          - 순환 · 없는 부모 · 없는 열쇠의 삭제와 교체 · 깊이 초과(`EngineConfig::_dataInheritanceMaxDepth`)는 오류입니다.
+ *          - 읽는 쪽과 쿠커는 `ResourceComposer::compose` 한 길로 이 펼치기에 닿습니다. 이 파일은 합치기 규칙만 가집니다.
  *          - 쿠킹이 펼칩니다(`PackCooker`). 런타임은 펼친 결과만 읽고 에디터 · 개발 실행은 원본을 읽어 합칩니다. 합칠 때 읽는 부모는 `AssetIO` 를 거쳐 쿠킹 작업의 입력이 되므로 부모가 바뀌면 자식의 쿠킹 키도 바뀝니다.
  *
  *          언리얼 델타 직렬화(아키타입과 다른 칸만 쓴다) · 유니티 Prefab Variant(`m_Modifications`) · Godot 씬 상속(부모 씬 + 바뀐 값)과 같은 일입니다. 다른 점은 목록을 인덱스가 아니라 이름으로 짚는 것입니다 —
@@ -113,6 +114,13 @@ namespace sw
         vector<FieldOrigin> _listOrigin;
     };
 
+    /** @brief 부모 사슬의 파일 하나입니다(`DataInheritance::collectChain`). */
+    struct DataInheritanceLayer
+    {
+        string _id;   ///< 리소스 id(맨 아래 층은 넘긴 이름)
+        string _text; ///< 파일의 글
+    };
+
     /**
      * @struct DataInheritance
      * @brief 펼치기와 차이 만들기입니다.
@@ -138,20 +146,12 @@ namespace sw
                                            DataInheritanceProvenance* pOutProvenance = nullptr );
 
         /**
-         * @brief 런타임 · 에디터 읽기의 펼치기입니다. 부모는 리소스로 읽습니다.
-         * @details 쿠킹본만 읽는 구성에서 `_base` 가 남아 있으면 오류입니다 — 런타임은 펼친 결과만 읽는다(`PackCooker`).
+         * @brief @p text 의 부모 사슬을 위(부모가 없는 문서)부터 @p text 까지 모읍니다. 칸을 합치지 않습니다.
+         * @details 층마다의 차이가 덮어쓰기가 아니라 쌓임이어서 글로 합칠 수 없는 형식(`SkeletonVariant`)이 쓴다. 순환 · 깊이 초과 · 없는 부모는 `flatten` 과 같은 오류입니다. 형식은 부르는 쪽이 층마다 봅니다.
          */
-        [[nodiscard]] static bool flattenFromResources( string_view text, string_view sourceName, const DataInheritanceSchema& schema, string& outText );
+        [[nodiscard]] static bool collectChain( string_view text, string_view sourceName, IDataInheritanceSource& source, vector<DataInheritanceLayer>& outListLayer );
 
-        /** @brief 리플렉션 형식의 읽기(`ReflectedXMLFile` · `XMLSerializer::loadFile`)가 부르는 펼치기입니다. */
-        [[nodiscard]] static bool flattenReflected( string_view text, string_view sourceName, const TypeInfo& typeInfo, string& outText );
-
-        /**
-         * @brief 루트 이름으로 규칙을 찾아 펼칩니다(팩 쿠커). 등록한 손 형식(`SW_DATA_INHERITANCE_SCHEMA`)이 먼저이고 그다음 같은 이름의 리플렉션 형식입니다. 둘 다 없으면 오류입니다.
-         */
-        [[nodiscard]] static bool flattenByRootName( string_view text, string_view sourceName, IDataInheritanceSource& source, string& outText );
-
-        /** @brief 규칙을 돌려주는 함수입니다. 손으로 읽는 XML 형식이 `SW_DATA_INHERITANCE_SCHEMA` 로 올립니다. */
+        /** @brief 규칙을 돌려주는 함수입니다. Engine 의 손 XML 형식이 `SW_DATA_INHERITANCE_SCHEMA` 로 올립니다. */
         using MakeSchemaFunction = DataInheritanceSchema ( * )();
 
         /**
@@ -202,9 +202,13 @@ namespace sw
     };
 } // namespace sw
 
-/** @brief 루트 이름 @p RootName 의 손 XML 형식이 부모를 가리킬 수 있게 올립니다. 팩 쿠커가 이 규칙으로 펼칩니다. */
-#define SW_DATA_INHERITANCE_SCHEMA( RootName, pfnMakeSchema )                           \
-    static const ::sw::DataInheritanceSchemaRegistrar s_dataInheritanceSchema##RootName \
-    {                                                                                   \
-        #RootName, pfnMakeSchema                                                        \
+/**
+ * @brief 루트 이름 @p RootName 의 손 XML 형식이 부모를 가리킬 수 있게 올립니다. 팩 쿠커가 이 규칙으로 펼칩니다.
+ * @details 팩 쿠킹은 게임 모듈을 올리기 전에 돌아 모듈의 정적 등록을 보지 못하므로 Engine 만 쓴다. 게임 · 키트 형식은 `Config/Dev/DataCatalogInheritance.json` 의 `listDocument` 에 적는다.
+ */
+#define SW_DATA_INHERITANCE_SCHEMA( RootName, pfnMakeSchema )                                                                                                       \
+    static_assert( ::sw::string_view( SW_REGISTRAR_MODULE ) == ::sw::string_view( "Engine" ), "the pack cook cannot see a module's registrar - use listDocument" ); \
+    static const ::sw::DataInheritanceSchemaRegistrar s_dataInheritanceSchema##RootName                                                                             \
+    {                                                                                                                                                               \
+        #RootName, pfnMakeSchema                                                                                                                                    \
     }

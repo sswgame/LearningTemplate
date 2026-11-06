@@ -26,6 +26,7 @@
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -1142,12 +1143,12 @@ namespace sw
     bool Material::loadFromXML( string_view xmlText )
     {
         // 부모를 가리키면(`_base="..."`) 부모 칸 위에 자식이 적은 칸만 덮은 한 벌로 펼친 뒤 읽는다 — 손 머티리얼이 견본 칸을 베끼지 않게.
-        const string parentPath = DataInheritance::findBasePath( xmlText );
-        string       flatText;
-        if ( parentPath.empty() == false && DataInheritance::flattenFromResources( xmlText, "<material>", MaterialXML::makeInheritanceSchema(), flatText ) == false )
+        string flatText;
+        bool   bComposed = false;
+        if ( ResourceComposer::compose( xmlText, "<material>", ResourceContext::forSchema( &MaterialXML::makeInheritanceSchema ), flatText, bComposed ) == false )
             return false;
         XMLDocument doc;
-        if ( doc.parse( parentPath.empty() ? xmlText : string_view( flatText ) ) == false )
+        if ( doc.parse( bComposed ? string_view( flatText ) : xmlText ) == false )
             return false;
 
         XMLNode root = doc.getRoot( "MaterialDesc" );

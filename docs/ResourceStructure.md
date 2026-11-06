@@ -39,6 +39,8 @@
 | 로더 · 다시 읽기 방식 · 메모리 태그 | `SharedAssetCacheTraits` |
 
 - 검증 로더는 따로 두지 않는다. 스키마 테스트도 진짜 로더를 부른다.
+- 등록은 `SW_ASSET_TYPE( id, 정의.withPathRule( … ).withLoader( AssetTypeLoader::of<T>( 태그, 방식 ) ) )` 한 줄이다. 헤더의 `kAssetType` 은 쿠킹이 쓰는 사실만 들고, 로더는 표의 사본에만 있다(로더 함수가 기능 .cpp 에 있다).
+- 공유 캐시의 종류 이름은 이 정의의 이름이다. 이름이 둘이면(`Rig` · `RigAsset`) 찾기가 갈라진다.
 - 제약: 팩 쿠킹은 게임 모듈을 올리기 전에 돈다(`HeadlessSubsystem::runCookTask`). 쿠킹이 알아야 하는 합성 규칙은 정적 등록이 아니라 데이터(`Config/Dev/`)에 둔다. 이 까닭은 `DataCatalogInheritance.json` 과 같다.
 
 ### 2. 합성 읽기 `ResourceComposer`
@@ -55,7 +57,9 @@
 
 **프리팹:** `PrefabOverrides` 는 열쇠 모양이 달라 유지한다(`DataInheritance.md`). 대신 문서 머리의 조건 · 층 단계는 같은 길을 지난다.
 
-**스켈레톤:** `SkeletonVariant` 의 자체 사슬과 깊이 검사를 지우고 `_base` 로 옮긴다. "부모 본 번호를 바꾸지 않는다" 는 합친 뒤의 검증으로 남긴다.
+**스켈레톤:** `SkeletonVariant` 의 자체 사슬과 깊이 검사를 지우고 공통 사슬(`DataInheritance::collectChain`)로 옮겼다. "부모 본 번호를 바꾸지 않는다" 는 합친 뒤의 검증으로 남긴다. 칸을 글로 합치지는 않는다 — 뼈 비율은 곱해지고 클립 규칙은 쌓여 덮어쓰기로 풀리지 않고, 부모의 루트(`<Skeleton>`)도 형식이 다르다. 쿠커는 글 그대로 담는다(문서 표 `"merge": "Own"`).
+
+**규칙 출처의 순서:** 문서 표 · 카탈로그 표(`Config/Dev/DataCatalogInheritance.json`) → 손 형식 → 리플렉션 형식. 쿠킹은 Engine 코드만 보므로 게임 · 키트 형식은 표에만 있어도 되고, 표와 코드가 어긋나지 않는지는 테스트가 본다.
 
 #### 조건별 값
 

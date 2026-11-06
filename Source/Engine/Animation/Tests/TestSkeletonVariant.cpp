@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
@@ -9,6 +10,8 @@
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Tests/AnimationTestUtil.h"
+#include "Engine/Content/AssetID.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -289,4 +292,45 @@ SW_TEST_CASE( SkeletonVariantTest, FilesRoundTrip )
                           "<_listSocket><SkeletonSocket _name=\"s\" _parentBone=\"nope\"><_localTransform _translation=\"0,0,0\" _rotation=\"0,0,0,1\" _scale=\"1,1,1\" /></SkeletonSocket></_listSocket></Skeleton>";
     SW_EXPECT_LOG( "Skeleton.SocketNamesUnknownBone" );
     SW_EXPECT_FALSE( bad.parseXML( badXML, "test" ) );
+}
+
+/**
+ * @brief [SkeletonVariantTest] 변형의 변형은 공통 `_base` 사슬로 읽어 위 층부터 쌓고(뼈 길이 비율이 곱해진다), 고리는 공통 오류로 멈추는지 검증
+ */
+SW_TEST_CASE( SkeletonVariantTest, ChainStacksThroughCommonBase )
+{
+    using Util = SkeletonVariantTestUtil;
+    const test::ScopedScratchDomain domain;
+    const string                    idBase = test::ScopedScratchDomain::makeID( "chain_base.skeleton.xml" ).str();
+    const string                    idMid  = test::ScopedScratchDomain::makeID( "chain_mid.skeleton.xml" ).str();
+    const string                    idLoop = test::ScopedScratchDomain::makeID( "chain_loop.skeleton.xml" ).str();
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "chain_base.skeleton.xml" ), Util::makeBase().toXML() ) );
+
+    const auto writeScaled = [&]( const utf8* pFile, const string& baseID )
+    {
+        SkeletonVariant      variant{};
+        SkeletonBoneOverride boneOverride{};
+        boneOverride._bone             = hashed_string( "bone1" );
+        boneOverride._translationScale = 2.0f;
+        variant._base                  = baseID;
+        variant._listBoneOverride.push_back( boneOverride );
+        return FileUtil::writeTextFile( domain.makeDiskPath( pFile ), variant.toXML() );
+    };
+    SW_REQUIRE_TRUE( writeScaled( "chain_mid.skeleton.xml", idBase ) );
+    SW_REQUIRE_TRUE( writeScaled( "chain_leaf.skeleton.xml", idMid ) );
+    SW_REQUIRE_TRUE( writeScaled( "chain_loop.skeleton.xml", idLoop ) );
+
+    const Skeleton base = Util::makeBase();
+    Skeleton       leaf;
+    SW_REQUIRE_TRUE( leaf.loadFromAsset( test::ScopedScratchDomain::makeID( "chain_leaf.skeleton.xml" ) ) );
+    SW_EXPECT_EQUAL( base.getBoneCount(), leaf.getBoneCount() );
+    SW_EXPECT_EQUAL( base.getHierarchyHash( base.getBoneCount() ), leaf.getHierarchyHash( base.getBoneCount() ) );
+    SW_EXPECT_EQUAL( static_cast<size_t>( 2 ), leaf.getBasePaths().size() );
+    const float3 expected = base.getBone( 1 )._referencePose._translation * 4.0f;
+    SW_EXPECT_NEAR( expected._x, leaf.getBone( 1 )._referencePose._translation._x, 0.0001f );
+    SW_EXPECT_NEAR( expected._y, leaf.getBone( 1 )._referencePose._translation._y, 0.0001f );
+
+    Skeleton looped;
+    SW_EXPECT_FALSE( looped.loadFromAsset( AssetID{ idLoop } ) );
+    SW_EXPECT_LOG( "DataInheritance.Cycle" );
 }

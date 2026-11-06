@@ -127,7 +127,8 @@ namespace sw
      * @details 언리얼 USkeleton 은 뼈가 메시를 따라 합쳐지고 Virtual Bone 이 그 위에 더해지며, Godot SkeletonProfile · 유니티 Avatar 는 매핑표다 — 여기서는 파일 하나가 차이를 적어 데이터로 쌓는다(변형의 변형도 된다).
      *          차이는 뒤에 붙이는 본 · 본 고치기 · 소켓뿐이다. **본 삭제는 받지 않는다** — 번호가 밀리면 부모의 메시(`MeshSkinVertex`) · 클립 지문 · 본 배치 지문(`getHierarchyHash`)이 모두 깨진다.
      *          평가를 빼려면 본 LOD(`SkeletonBoneLOD`), 섞기에서 빼려면 마스크(`AnimationBoneMaskDef`), 보이지 않게 하려면 `_scale` 0 을 쓴다.
-     *          `_base` 는 공통 데이터 상속과 같은 칸 이름이다. 합치기는 칸별 덮어쓰기로 풀리지 않아(본을 뒤에 붙이고 클립 규칙을 쌓는다) `applyVariant` 한 함수에 있다.
+     *          `_base` 의 사슬(순환 · 깊이 · 없는 부모)은 공통 데이터 상속의 것이다(`DataInheritance::collectChain`). 칸 합치기만 칸별 덮어쓰기로 풀리지 않아(본을 뒤에 붙이고 비율 · 클립 규칙을 쌓는다) `applyVariant` 한 함수에 있다.
+     *          그래서 쿠커는 이 파일을 글 그대로 담고(`Config/Dev/DataCatalogInheritance.json` 의 `listDocument`) 런타임이 부모를 읽어 합친다. "부모의 본 번호를 바꾸지 않는다" 는 합친 뒤에 본다.
      */
     REFLECT()
     struct SW_API SkeletonVariant
@@ -254,10 +255,8 @@ namespace sw
     private:
         /** @brief 읽은 본과 부착을 검증하며 다시 쌓습니다(부모가 앞에 있는지, 부착 · 소켓 본이 있는지). `_listParentIndex` 도 여기서 채웁니다. */
         [[nodiscard]] bool rebuildFromLoaded( string_view sourceLabel );
-        /** @brief `parseXML` 의 본체입니다. @p depth 는 변형 사슬의 깊이입니다(고리를 끊습니다). */
-        [[nodiscard]] bool parseAtDepth( string_view xml, string_view sourceLabel, uint32 depth );
-        /** @brief `loadFromAsset` 의 본체입니다. */
-        [[nodiscard]] bool loadAtDepth( const AssetID& assetID, uint32 depth );
+        /** @brief 평평한 `<Skeleton>` 문서를 읽습니다. 사슬의 맨 위 층입니다. 실패하면 내용을 비웁니다. */
+        [[nodiscard]] bool parseFlat( string_view xml, string_view sourceLabel );
         /** @brief 소켓 하나를 더합니다. 이름이 겹치거나 부모 본이 없으면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool addSocket( const SkeletonSocket& socket, string_view sourceLabel );
         /** @brief 본 고치기 하나를 기준 포즈와 클립 규칙에 겁니다. 모르는 본이면 오류를 남기고 false 입니다. */

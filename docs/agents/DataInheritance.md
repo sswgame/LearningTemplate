@@ -4,7 +4,7 @@
 > 독자: 파이프라인 · 머티리얼 · 프리팹 데이터를 쓰거나, 새 데이터 형식(아이템 · 어빌리티)을 이 구조에 올리는 사람과 에이전트.
 > 결론: 루트에 `_base="<리소스 id>"` 를 적고 다른 칸만 쓴다. 카탈로그 항목은 `_base="<id>"` 다. 형식마다 합치기 코드를 쓰지 않는다 — 리플렉션 형식은 `PROPERTY( InheritKey )` 한 줄이면 되고, 손으로 읽는 XML 형식은 규칙을 값으로 적으며, 카탈로그는 설정 표에 한 줄을 더한다. 런타임은 쿠킹이 펼친 결과만 읽는다.
 
-구현: `Source/Engine/Serialization/Inherit/DataInheritance.h`.
+구현: `Source/Engine/Serialization/Inherit/DataInheritance.h`(합치기), `ResourceComposer.h`(읽는 쪽과 쿠커가 지나는 한 길).
 
 ## 파일에 적는 법
 
@@ -25,7 +25,7 @@
 | 속성 | 자식이 적은 것만 덮는다. 빈 값(`attr=""`)도 적은 것이다 |
 | 구조체 칸(자식 원소) | 안으로 들어가 같은 규칙으로 합친다 |
 | 열쇠 있는 목록 | 원소의 열쇠 칸(`InheritKey`)으로 합친다. 아래 표 |
-| 그 밖의 자식 원소(열쇠 없는 목록 · 글 값) | 자식이 적으면 통째로 바뀐다. 빈 원소(`<_listInput />`)는 비운다 |
+| 그 밖의 자식 원소(열쇠 없는 목록 · 글 값) | 자식이 적으면 같은 이름의 형제까지 통째로 바뀐다. 빈 원소(`<_listInput />`)는 비운다 |
 
 | 목록 원소에 적는 것 | 뜻 | 오류 |
 |---|---|---|
@@ -36,49 +36,61 @@
 
 위에서 아래로 차례로 얹는다. 앞 줄이 더하거나 지운 결과를 뒤 줄이 본다.
 
-오류: 순환, 없는 부모, 형식이 다른 부모, 깊이 초과(`Config/Engine/EngineConfig.json` 의 `_dataInheritanceMaxDepth`). 오류면 로드 실패다. 부모 없이 자식 칸만으로 읽지 않는다.
+오류: 순환, 없는 부모, 형식이 다른 부모, 구조체 칸을 두 번 적음(`DataInheritance.FieldRepeated`), 깊이 초과(`Config/Engine/EngineConfig.json` 의 `_dataInheritanceMaxDepth`). 오류면 로드 실패다. 부모 없이 자식 칸만으로 읽지 않는다.
 
 열쇠를 잘못 적으면 "없는 원소를 더한 것" 이 된다. 삭제 · 교체만 없는 열쇠가 오류인 까닭은, 차이 파일에 새 원소를 적을 때마다 표시를 강제하지 않기 위해서다. 더해진 원소의 빈 칸은 그 형식의 검증(파이프라인은 `validate`)이 잡는다.
 
 ## 새 형식을 올리는 법
 
-**리플렉션 형식(`ReflectedXMLFile::loadDesc` · `XMLSerializer::loadFile` 로 읽는 것).** 읽기는 이미 합친다. 할 일은 목록 원소의 이름 칸에 표시를 하는 것뿐이다.
+**리플렉션 형식(`ReflectedXMLFile::loadDesc` · `XMLSerializer::loadFile` 로 읽는 것).** 읽기는 이미 합친다. 할 일은 목록 원소의 이름 칸에 표시를 하는 것뿐이다. 본보기는 `RenderGraphPassDesc` 다.
 
 ```cpp
 REFLECT()
-struct ItemDef
+struct RenderGraphPassDesc
 {
     REFLECT_BODY();
     PROPERTY( InheritKey )
     string _name;
-    PROPERTY()
-    float32 _weight{ 1.0f };
+    // ...
 };
 ```
 
-열쇠가 없는 목록은 통째로 바뀐다. 문서 루트 이름이 형식 이름이므로 팩 쿠커도 알아서 펼친다.
+열쇠가 없는 목록은 통째로 바뀐다. 문서 루트 이름이 형식 이름이므로 Engine 형식은 팩 쿠커도 알아서 펼친다.
 
-**손으로 읽는 XML 형식(`XMLFields::readFields` 로 칸을 읽는 것).** 규칙을 값으로 적고 파일을 읽기 전에 펼친다. 본보기는 `MaterialXML::makeInheritanceSchema` 다.
+**게임 · 키트 형식은 문서 표에 한 줄을 더 적는다.** 팩 쿠킹은 게임 모듈을 올리기 전에 돌아(`HeadlessSubsystem::runCookTask`) 모듈의 리플렉션 타입과 정적 등록을 보지 못한다. 안 적으면 쿠킹이 `DataInheritance.NoSchema` 로 멈춘다. 표 줄이 코드와 다르면 `ResourceComposerTest` 가 진다.
+
+```json
+"listDocument": [
+    { "root": "MyKitDesc", "listField": [ { "name": "_listStage", "key": "_name" } ] }
+]
+```
+
+읽는 쪽이 부모를 스스로 합치는 형식은 `"merge": "Own"` 으로 적는다. 쿠커는 글 그대로 담고 런타임이 부모를 읽는다. 층의 차이가 덮어쓰기가 아니라 쌓임인 `SkeletonVariant` 가 그렇다(공통은 사슬 규칙 `DataInheritance::collectChain` 이다).
+
+**Engine 의 손 XML 형식(`XMLFields::readFields` 로 칸을 읽는 것).** 규칙을 값으로 적고 `ResourceComposer` 로 읽는다. 본보기는 `MaterialXML::makeInheritanceSchema` 와 `Material::loadFromXML` 이다. `SW_DATA_INHERITANCE_SCHEMA` 는 Engine 에서만 컴파일된다.
 
 ```cpp
-DataInheritanceSchema makeSchema()
+DataInheritanceSchema MaterialXML::makeInheritanceSchema()
 {
-    DataInheritanceSchema schema{ "ItemTable" };
+    DataInheritanceSchema schema{ "MaterialDesc" };
     schema._listKeptAttribute.emplace_back( "formatVersion" );
-    DataInheritanceSchema items{ "_items" };
-    items._keyAttribute = "id";
-    schema._listField.push_back( std::move( items ) );
+    DataInheritanceSchema properties{ "_properties" };
+    properties._keyAttribute = "name";
+    schema._listField.push_back( std::move( properties ) );
     return schema;
 }
-SW_DATA_INHERITANCE_SCHEMA( ItemTable, &makeSchema ); // 팩 쿠커가 루트 이름으로 찾는다
+SW_DATA_INHERITANCE_SCHEMA( MaterialDesc, &MaterialXML::makeInheritanceSchema ); // 팩 쿠커가 루트 이름으로 찾는다
 
 // 읽기
 string flatText;
-if ( DataInheritance::findBasePath( text ).empty() == false && DataInheritance::flattenFromResources( text, sourceName, makeSchema(), flatText ) == false )
+bool   bComposed = false;
+if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &MaterialXML::makeInheritanceSchema ), flatText, bComposed ) == false )
     return false;
 ```
 
 맨 위 노드의 `_keyAttribute` 를 채우면 루트의 자식들이 곧 목록이다(래퍼 원소가 없는 형식).
+
+**게임 · 키트의 손 XML 형식**은 코드 규칙 없이 문서 표의 줄만으로 읽고 쿠킹한다.
 
 그 밖에 형식마다 해야 할 일은 둘이다.
 
@@ -123,7 +135,7 @@ if ( DataInheritance::findBasePath( text ).empty() == false && DataInheritance::
 
 규칙은 코드가 아니라 `Config/Dev/DataCatalogInheritance.json` 에 있다. 팩 쿠킹은 게임 모듈을 올리기 전에 돌기(`HeadlessSubsystem::runCookTask`) 때문에 `GameFramework` 나 키트의 정적 등록을 볼 수 없다. 새 카탈로그는 이 표에 한 줄을 더하면 된다. 읽는 코드는 고치지 않는다.
 
-읽기는 `XMLDocument::loadResource` · `parseData` 한 곳이 펼친다. 그래서 `XMLCatalog` · `AppearanceDatabase` · 데이터 종류 검증이 모두 펼친 결과만 본다. 항목 id 를 바꾸지 않으므로 세이브는 그대로다. 팩 쿠커도 같은 함수로 펼쳐 담는다. 쿠킹본에 `_base` 가 남으면 읽기가 모르는 칸 오류를 낸다.
+읽기는 `XMLDocument::loadResource` · `parseData` 가 `ResourceComposer` 로 펼친다. 그래서 `XMLCatalog` · `AppearanceDatabase` · 데이터 종류 검증이 모두 펼친 결과만 본다. 항목 id 를 바꾸지 않으므로 세이브는 그대로다. 팩 쿠커도 같은 함수로 펼쳐 담는다. 쿠킹본에 `_base` 가 남으면 읽기가 모르는 칸 오류를 낸다.
 
 에디터 카탈로그 창(`CatalogDocument`)은 원문을 고치므로 적은 칸만 저장한다. 물려받은 칸은 흐린 글로 보이고, 부모와 같은 값을 적으면 그 칸을 지운다. 행의 Variant 단추가 이 행을 부모로 하는 새 행을 만든다. 표는 행의 속성만 보이므로 물려받은 자식 원소(`<Part>`)는 글 상자에서 고친다.
 
@@ -165,6 +177,8 @@ if ( DataInheritance::findBasePath( text ).empty() == false && DataInheritance::
 | `PrefabOverrides` 의 합치기 | 컴포넌트 목록의 열쇠가 칸 값이 아니라 `이름#n` 이고 원소 이름이 타입이다. 씬 인스턴스는 프리팹에서 사라진 대상을 오류가 아니라 경고로 넘겨야 한다(프리팹을 고쳤다고 씬이 읽히지 않으면 안 된다). 변형은 같은 형식을 쓰되 `checkOverrideTargets` 로 엄격하게 먼저 본다 |
 | `_listRenderPassRef` | 부모 하나가 아니라 여러 파일을 섞는 믹스인이다. 단일 부모로 옮기면 첨부 묶음을 파이프라인마다 베껴야 한다. 합친 결과의 이름이 겹치면 오류인 것도 다르다(덮어쓰지 않는다) |
 | JSON 형식 | 설정은 층(`ConfigManager`)으로 겹친다. 프리팹 JSON 은 변형을 읽고 쓰지만 기본값은 빼지 않는다 |
+
+| `SkeletonVariant` 의 칸 | 뼈 비율은 곱해지고 클립 규칙은 쌓이며 본은 뒤에 붙는다. 덮어쓰면 변형의 변형이 다른 값이 된다. 사슬(순환 · 깊이 · 없는 부모)만 공통이고 칸은 `Skeleton::applyVariant` 가 얹는다. 부모 본 번호를 바꾸지 않는지는 합친 뒤에 본다 |
 
 머티리얼의 `parent` 는 합쳤다(`_base`).
 

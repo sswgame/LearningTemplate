@@ -1,4 +1,7 @@
 {
+    "listDocument": [
+        { "root": "SkeletonVariant", "merge": "Own" }
+    ],
     "listCatalog": [
         {
             "root": "ItemCatalog",

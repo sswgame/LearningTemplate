@@ -352,3 +352,64 @@ SW_TEST_CASE( DataInheritanceTest, CollectChildrenFindsDirectChildren )
     SW_REQUIRE_EQUAL( size_t{ 1 }, listChild.size() );
     SW_EXPECT_EQUAL( string( "mid.xml" ), listChild[0] );
 }
+
+/** @brief [DataInheritanceTest] 규칙에 없는 이름은 같은 이름의 형제까지 묶음이다 — 자식이 적으면 부모의 묶음을 통째로 바꾸고, 안 적으면 부모 자리 그대로다 */
+SW_TEST_CASE( DataInheritanceTest, RepeatedSiblingsAreReplacedAsAGroup )
+{
+    DataInheritanceTestSource source;
+    source.add( "base.xml", R"(<Doc><Tag v="a" /><Other /><Tag v="b" /></Doc>)" );
+
+    const auto collectTags = []( const string& text )
+    {
+        XMLDocument doc;
+        string      tags;
+        if ( doc.parse( text ) )
+        {
+            for ( XMLNode tag = doc.getRoot().findChild( "Tag" ); tag.isValid(); tag = tag.findNextSibling( "Tag" ) )
+            {
+                tags += tag.getAttributeText( "v" );
+            }
+        }
+        return tags;
+    };
+
+    string flat;
+    SW_REQUIRE_TRUE( Util::flatten( source, R"(<Doc _base="base.xml"><Tag v="c" /></Doc>)", flat ) );
+    SW_EXPECT_EQUAL( string( "c" ), collectTags( flat ) );
+    SW_REQUIRE_TRUE( Util::flatten( source, R"(<Doc _base="base.xml"><Tag v="c" /><Tag v="d" /><Tag v="e" /></Doc>)", flat ) );
+    SW_EXPECT_EQUAL( string( "cde" ), collectTags( flat ) );
+    SW_REQUIRE_TRUE( Util::flatten( source, R"(<Doc _base="base.xml" _x="1" />)", flat ) );
+    SW_EXPECT_EQUAL( string( "ab" ), collectTags( flat ) );
+    XMLDocument kept;
+    SW_REQUIRE_TRUE( kept.parse( flat ) );
+    SW_EXPECT_TRUE( kept.getRoot().findChild( "Other" ).isValid() );
+}
+
+/** @brief [DataInheritanceTest] 차이 만들기도 묶음으로 맞대어, 되풀이되는 원소가 부모와 같으면 적지 않고 다르면 모두 적는다(펼치면 원래 글) */
+SW_TEST_CASE( DataInheritanceTest, DeltaComparesRepeatedSiblingsAsAGroup )
+{
+    constexpr const utf8* kParent = R"(<Doc><Tag v="a" /><Tag v="b" /></Doc>)";
+    string                delta;
+    SW_REQUIRE_TRUE( DataInheritance::makeDelta( kParent, kParent, Util::makeSchema(), {}, delta ) );
+    XMLDocument same;
+    SW_REQUIRE_TRUE( same.parse( delta ) );
+    SW_EXPECT_FALSE( same.getRoot().findChild( "Tag" ).isValid() );
+
+    SW_REQUIRE_TRUE( DataInheritance::makeDelta( R"(<Doc><Tag v="a" /><Tag v="c" /></Doc>)", kParent, Util::makeSchema(), {}, delta ) );
+    XMLDocument changed;
+    SW_REQUIRE_TRUE( changed.parse( delta ) );
+    const XMLNode first = changed.getRoot().findChild( "Tag" );
+    SW_REQUIRE_TRUE( first.isValid() );
+    SW_EXPECT_EQUAL( string( "a" ), string( first.getAttributeText( "v" ) ) );
+    SW_EXPECT_EQUAL( string( "c" ), string( first.findNextSibling( "Tag" ).getAttributeText( "v" ) ) );
+}
+
+/** @brief [DataInheritanceTest] 규칙이 구조체 칸이라고 한 이름을 두 번 적으면 오류다 — 첫 원소만 합치면 뒤 원소가 말없이 사라진다 */
+SW_TEST_CASE( DataInheritanceTest, RepeatedStructFieldIsAnError )
+{
+    DataInheritanceTestSource source;
+    source.add( "base.xml", R"(<Doc><_inner _a="1" /></Doc>)" );
+    string flat;
+    SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="base.xml"><_inner _a="2" /><_inner _a="3" /></Doc>)", flat ) );
+    SW_EXPECT_LOG( "DataInheritance.FieldRepeated" );
+}

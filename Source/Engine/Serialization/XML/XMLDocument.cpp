@@ -9,7 +9,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 #include <pugixml.hpp>
 
@@ -609,6 +609,17 @@ namespace sw
         return parse( text, absPath );
     }
 
+    bool XMLDocument::loadDataFile( string_view absPath )
+    {
+        string text;
+        if ( AssetIO::readTextFile( absPath, text ) == false )
+        {
+            _lastError = string( absPath ) + ": cannot read the file (or it was read during cooking outside a cook job)";
+            return false;
+        }
+        return parseData( text, absPath );
+    }
+
     bool XMLDocument::loadResource( const AssetID& assetID, string* pOutAbsPath )
     {
         const string_view relativePath = assetID.view();
@@ -634,15 +645,15 @@ namespace sw
     bool XMLDocument::parseData( string_view xmlText, string_view sourceName )
     {
         string flatText;
-        bool   bFlattened = false;
-        if ( DataCatalogInheritance::flattenResourceIfListed( xmlText, sourceName, bFlattened, flatText ) == false )
+        bool   bComposed = false;
+        if ( ResourceComposer::compose( xmlText, sourceName, ResourceContext::forDocument(), flatText, bComposed ) == false )
         {
             clear();
             _lastError          = string( sourceName ) + ": its catalog inheritance could not be flattened (the log says why)";
             _bLastErrorNotFound = SW_FALSE;
             return false;
         }
-        return parse( bFlattened ? string_view( flatText ) : xmlText, sourceName );
+        return parse( bComposed ? string_view( flatText ) : xmlText, sourceName );
     }
 
     uint32 XMLDocument::computeLineNumber( string_view text, int64 offset )

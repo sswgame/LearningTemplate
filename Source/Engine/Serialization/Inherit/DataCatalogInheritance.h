@@ -53,7 +53,14 @@ namespace sw
          */
         [[nodiscard]] static bool flattenIfListed( string_view text, string_view sourceName, IDataInheritanceSource& source, bool& outbFlattened, string& outText );
 
-        /** @brief `flattenIfListed` 의 런타임 · 에디터 읽기 판입니다. 부모는 리소스로 읽습니다. 쿠킹본만 읽는 구성은 펼친 결과만 있으므로 보지 않습니다(남은 `_base` 는 읽기의 모르는 칸 오류다). */
-        [[nodiscard]] static bool flattenResourceIfListed( string_view text, string_view sourceName, bool& outbFlattened, string& outText );
+        /**
+         * @brief 표의 `listDocument` 에서 문서 형식 @p rootName 의 규칙을 찾습니다. 게임 · 키트 형식은 쿠킹이 코드를 보지 못해 여기 적습니다(`ResourceComposer`).
+         * @param outbListed 표에 있으면 true 입니다. `listField` 가 @p outSchema 가 됩니다(리플렉션 형식의 표 줄은 `TestDataCatalogInheritance` 가 코드와 대조합니다).
+         * @param outbOwnMerge 그 형식의 읽는 쪽이 부모를 스스로 합치면(`"merge": "Own"`) true 입니다. 쿠커는 글 그대로 담고 런타임이 부모를 읽습니다.
+         * @return 표가 깨졌으면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool parseDocumentRule( string_view jsonText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed, bool& outbOwnMerge );
+        /** @brief `kConfigPath` 를 읽어 `parseDocumentRule` 합니다. */
+        [[nodiscard]] static bool loadDocumentRule( string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed, bool& outbOwnMerge );
     };
 } // namespace sw

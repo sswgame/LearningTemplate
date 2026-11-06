@@ -14,9 +14,10 @@
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
+
+#include <algorithm>
 
 namespace sw
 {
@@ -78,11 +79,44 @@ namespace sw
                 }
             }
 
-            /** @brief 칸 원소들을 합칩니다. 부모 순서를 지키고 자식에만 있는 칸은 뒤에 더합니다. */
+            /** @brief @p parent 아래 이름이 @p pName 인 자식 원소를 모두 @p out 에 옮깁니다. */
+            static void appendAllNamed( const XMLNode& parent, const utf8* pName, const XMLNode& out )
+            {
+                for ( XMLNode element = parent.findChild( pName ); element.isValid(); element = element.findNextSibling( pName ) )
+                {
+                    (void)out.appendClone( element );
+                }
+            }
+
+            /** @brief @p parent 아래 이름이 @p pName 인 자식 원소를 이어 쓴 글입니다. 같은 이름의 형제 묶음을 맞댈 때 씁니다. */
+            static string joinAllNamed( const XMLNode& parent, const utf8* pName )
+            {
+                string text;
+                for ( XMLNode element = parent.findChild( pName ); element.isValid(); element = element.findNextSibling( pName ) )
+                {
+                    text += element.toString();
+                }
+                return text;
+            }
+
+            /** @brief 구조체 칸은 하나다 — 같은 이름을 또 적었으면 오류를 남기고 false 입니다(첫 원소만 합치면 뒤 원소가 말없이 사라진다). */
+            [[nodiscard]] static bool isSingleField( const XMLNode& element, string_view sourceName )
+            {
+                if ( element.isValid() == false || element.findNextSibling( element.getName() ).isValid() == false )
+                    return true;
+                SW_LOG_ERROR_ID( "DataInheritance.FieldRepeated", "'%#': <%#> is written twice - its merge rule says it is a single field", sourceName, element.getName() );
+                return false;
+            }
+
+            /**
+             * @brief 칸 원소들을 합칩니다. 부모 순서를 지키고 자식에만 있는 칸은 뒤에 더합니다.
+             * @details 규칙에 없는 이름은 같은 이름의 형제까지 묶음 하나다 — 자식이 하나라도 적으면 부모의 첫 자리에 자식의 묶음이 들어가고 부모의 묶음은 모두 빠진다. 자식이 적지 않은 이름은 부모 자리 그대로다.
+             */
             [[nodiscard]] static bool mergeFieldElements( const XMLNode& parent, const XMLNode& child, const DataInheritanceSchema& schema, const XMLNode& out, string_view sourceName )
             {
                 if ( parent.isValid() )
                 {
+                    vector<string> listReplacedName;
                     for ( XMLNode element = parent.findChild(); element.isValid(); element = element.findNextSibling() )
                     {
                         if ( isElement( element ) == false )
@@ -90,11 +124,22 @@ namespace sw
                         const XMLNode                childElement = findChildElement( child, element.getName() );
                         const DataInheritanceSchema* pField       = schema.findField( element.getName() );
                         if ( childElement.isValid() == false )
+                        {
                             (void)out.appendClone( element );
+                        }
                         else if ( pField == nullptr )
-                            (void)out.appendClone( childElement );
-                        else if ( mergeElement( element, childElement, *pField, out.appendChild( element.getName() ), sourceName ) == false )
+                        {
+                            const string name{ element.getName() };
+                            if ( VectorUtil::contains( listReplacedName, name ) )
+                                continue;
+                            listReplacedName.push_back( name );
+                            appendAllNamed( child, element.getName(), out );
+                        }
+                        else if ( isSingleField( element, sourceName ) == false || isSingleField( childElement, sourceName ) == false ||
+                                  mergeElement( element, childElement, *pField, out.appendChild( element.getName() ), sourceName ) == false )
+                        {
                             return false;
+                        }
                     }
                 }
                 if ( child.isValid() == false )
@@ -106,7 +151,7 @@ namespace sw
                     const DataInheritanceSchema* pField = schema.findField( element.getName() );
                     if ( pField == nullptr )
                         (void)out.appendClone( element );
-                    else if ( mergeElement( XMLNode{}, element, *pField, out.appendChild( element.getName() ), sourceName ) == false )
+                    else if ( isSingleField( element, sourceName ) == false || mergeElement( XMLNode{}, element, *pField, out.appendChild( element.getName() ), sourceName ) == false )
                         return false;
                 }
                 return true;
@@ -338,6 +383,7 @@ namespace sw
             /** @brief 다른 칸 원소만 적습니다. */
             [[nodiscard]] static bool writeFieldDelta( const XMLNode& full, const XMLNode& parent, const DataInheritanceSchema& schema, const XMLNode& out )
             {
+                vector<string> listComparedName;
                 for ( XMLNode element = full.findChild(); element.isValid(); element = element.findNextSibling() )
                 {
                     if ( isElement( element ) == false )
@@ -351,8 +397,13 @@ namespace sw
                     }
                     if ( pField == nullptr )
                     {
-                        if ( inherited.toString() != element.toString() )
-                            (void)out.appendClone( element );
+                        // 합치기가 같은 이름의 형제를 묶음으로 바꾸므로 묶음으로 맞대고 묶음으로 적는다.
+                        const string name{ element.getName() };
+                        if ( VectorUtil::contains( listComparedName, name ) )
+                            continue;
+                        listComparedName.push_back( name );
+                        if ( joinAllNamed( parent, element.getName() ) != joinAllNamed( full, element.getName() ) )
+                            appendAllNamed( full, element.getName(), out );
                         continue;
                     }
                     if ( writeElementDeltaIfAny( element, inherited, *pField, out ) == false )
@@ -662,42 +713,38 @@ namespace sw
         return DataInheritanceInternal::flattenChain( text, sourceName, schema, source, listChain, outText, pOutProvenance );
     }
 
-    bool DataInheritance::flattenFromResources( string_view text, string_view sourceName, const DataInheritanceSchema& schema, string& outText )
+    bool DataInheritance::collectChain( string_view text, string_view sourceName, IDataInheritanceSource& source, vector<DataInheritanceLayer>& outListLayer )
     {
-        if ( AssetIO::readsSource() == false )
+        outListLayer.clear();
+        outListLayer.push_back( DataInheritanceLayer{ string{ sourceName }, string{ text } } );
+        vector<string> listChain;
+        while ( true )
         {
-            SW_LOG_ERROR_ID( "DataInheritance.NotFlattened", "'%#' still has %# in cooked content - the pack cook flattens it (PackCooker)", sourceName, kBaseAttribute );
-            return false;
+            const string baseID  = findBasePath( outListLayer.back()._text );
+            const string childID = outListLayer.back()._id;
+            if ( baseID.empty() )
+                break;
+            if ( VectorUtil::contains( listChain, baseID ) )
+            {
+                reportCycle( baseID, childID );
+                return false;
+            }
+            if ( listChain.size() >= getMaxDepth() )
+            {
+                reportTooDeep( baseID, childID );
+                return false;
+            }
+            listChain.push_back( baseID );
+            string baseText;
+            if ( source.readText( baseID, baseText ) == false )
+            {
+                reportBaseNotFound( baseID, childID );
+                return false;
+            }
+            outListLayer.push_back( DataInheritanceLayer{ baseID, std::move( baseText ) } );
         }
-        DataInheritanceResourceSource source;
-        return flatten( text, sourceName, schema, source, outText );
-    }
-
-    bool DataInheritance::flattenReflected( string_view text, string_view sourceName, const TypeInfo& typeInfo, string& outText )
-    {
-        return flattenFromResources( text, sourceName, DataInheritanceSchema::makeFromType( typeInfo ), outText );
-    }
-
-    bool DataInheritance::flattenByRootName( string_view text, string_view sourceName, IDataInheritanceSource& source, string& outText )
-    {
-        XMLDocument doc;
-        if ( doc.parse( text, sourceName ) == false || doc.getRoot().isValid() == false )
-        {
-            SW_LOG_ERROR_ID( "DataInheritance.NotXML2", "'%#' could not be parsed: %#", sourceName, doc.getLastError() );
-            return false;
-        }
-        const string_view        rootName      = doc.getRoot().getName();
-        const MakeSchemaFunction pfnMakeSchema = DataInheritanceSchemaRegistrar::find( rootName );
-        if ( pfnMakeSchema != nullptr )
-            return flatten( text, sourceName, pfnMakeSchema(), source, outText );
-        const string    rootNameText{ rootName };
-        const TypeInfo* pTypeInfo = engine::getSubsystem<TypeRegistry>().findType( hashed_string( rootNameText.c_str() ) );
-        if ( pTypeInfo == nullptr )
-        {
-            SW_LOG_ERROR_ID( "DataInheritance.NoSchema", "'%#': <%#> has %# but no merge rule - it is neither a reflected type nor registered (SW_DATA_INHERITANCE_SCHEMA)", sourceName, rootName, kBaseAttribute );
-            return false;
-        }
-        return flatten( text, sourceName, DataInheritanceSchema::makeFromType( *pTypeInfo ), source, outText );
+        std::reverse( outListLayer.begin(), outListLayer.end() );
+        return true;
     }
 
     DataInheritanceSchemaRegistrar::DataInheritanceSchemaRegistrar( const utf8* pRootName, DataInheritance::MakeSchemaFunction pfnMakeSchema )

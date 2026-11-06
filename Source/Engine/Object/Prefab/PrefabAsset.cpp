@@ -695,7 +695,7 @@ namespace sw
         {
             AssetLoadScope loadScope( "Prefab", diskPath );
             XMLDocument    doc;
-            const bool     bRead = doc.loadFile( diskPath );
+            const bool     bRead = doc.loadDataFile( diskPath ); // 머리의 조건 · 층 단계는 리소스 읽기와 같은 길을 지난다. 부모(`_base`)는 `resolveVariant` 가 합친다
             return readXMLSource( doc, bRead, string( diskPath ), loadScope );
         }
         SW_LOG_ERROR_ID( "PrefabAsset.NotPrefabSourceFile", "Not a prefab source file (.prefab.xml / .prefab.json): %#", diskPath );

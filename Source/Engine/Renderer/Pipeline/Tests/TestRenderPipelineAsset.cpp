@@ -15,6 +15,7 @@
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/Inherit/ResourceComposer.h"
 
 using namespace sw;
 
@@ -317,7 +318,9 @@ SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
 
         DataInheritanceDiskSource source{ contentRoot };
         string                    flatText;
-        SW_REQUIRE_TRUE( DataInheritance::flattenByRootName( sourceText, pID, source, flatText ) );
+        bool                      bComposed = false;
+        SW_REQUIRE_TRUE( ResourceComposer::compose( sourceText, pID, ResourceContext::forPackCook( source ), flatText, bComposed ) );
+        SW_EXPECT_TRUE( bComposed );
         SW_EXPECT_TRUE( DataInheritance::findBasePath( flatText ).empty() );
 
         RenderPipelineAsset cooked;

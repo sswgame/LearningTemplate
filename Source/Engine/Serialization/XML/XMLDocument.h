@@ -316,13 +316,15 @@ namespace sw
          */
         [[nodiscard]] bool parse( string_view xmlText, string_view sourceName = {} );
         /**
-         * @brief 데이터 문서로 파싱합니다. 카탈로그 상속(`DataCatalogInheritance`)이 있으면 펼친 결과를 파싱합니다. `loadResource` 와 같은 읽기의 글 판입니다.
+         * @brief 데이터 문서로 파싱합니다. 합칠 것이 있으면 합친 결과를 파싱합니다(`ResourceComposer`). `loadResource` 와 같은 읽기의 글 판입니다.
          * @return 펼치지 못하면 false 입니다. 부모 없이 자식 칸만으로 읽지 않습니다.
          */
         [[nodiscard]] bool parseData( string_view xmlText, string_view sourceName = {} );
 
         /** @brief 디스크의 절대 경로를 그대로 읽고 파싱합니다. 팩을 보지 않습니다(도구 · 설정 · Saved 파일용). */
         [[nodiscard]] bool loadFile( string_view absPath );
+        /** @brief `loadFile` 의 데이터 문서 판입니다(`parseData`). 리소스 id 가 아니라 디스크 경로로 고른 데이터 파일을 리소스 읽기와 같은 길로 읽습니다. */
+        [[nodiscard]] bool loadDataFile( string_view absPath );
 
         /**
          * @brief 리소스 id · OS 절대 경로 · 작업 경로를 `AssetIO::readTextAsset` 로 읽고 `parseData` 합니다(낱개 파일 · 팩).

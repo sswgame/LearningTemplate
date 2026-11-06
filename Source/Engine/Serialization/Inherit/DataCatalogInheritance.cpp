@@ -420,12 +420,44 @@ namespace sw
         return flatten( text, sourceName, schema, source, outText );
     }
 
-    bool DataCatalogInheritance::flattenResourceIfListed( string_view text, string_view sourceName, bool& outbFlattened, string& outText )
+    bool DataCatalogInheritance::parseDocumentRule( string_view jsonText, string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed, bool& outbOwnMerge )
     {
-        outbFlattened = false;
-        if ( text.find( DataInheritance::kBaseAttribute ) == string_view::npos || AssetIO::readsSource() == false )
+        outbListed   = false;
+        outbOwnMerge = false;
+        JSONDocument doc;
+        if ( doc.parse( jsonText, kConfigPath ) == false )
+            return false;
+        const JSONValue listDocument = doc.getRoot().get( "listDocument" );
+        if ( listDocument.isArray() == false )
+        {
+            SW_LOG_ERROR_ID( "DataCatalogInheritance.DocumentTableInvalid", "%#: 'listDocument' is missing", kConfigPath );
+            return false;
+        }
+        for ( size_t index = 0; index < listDocument.size(); ++index )
+        {
+            const JSONValue document = listDocument.at( index );
+            if ( document.get( "root" ).asString() != rootName )
+                continue;
+            DataInheritanceSchema schema{ rootName };
+            if ( DataCatalogInheritanceInternal::readSchemaFields( document, "listField", schema, false ) == false )
+                return false;
+            outSchema    = std::move( schema );
+            outbListed   = true;
+            outbOwnMerge = document.get( "merge" ).asString() == "Own";
             return true;
-        DataInheritanceResourceSource source;
-        return flattenIfListed( text, sourceName, source, outbFlattened, outText );
+        }
+        return true;
+    }
+
+    bool DataCatalogInheritance::loadDocumentRule( string_view rootName, DataInheritanceSchema& outSchema, bool& outbListed, bool& outbOwnMerge )
+    {
+        const string path = FileUtil::joinPath( ProcessRoots::get()._project.str(), kConfigPath );
+        string       text;
+        if ( AssetIO::readTextFile( path, text ) == false )
+        {
+            SW_LOG_ERROR_ID( "DataCatalogInheritance.TableUnreadable", "Catalog inheritance rules '%#' could not be read", path );
+            return false;
+        }
+        return parseDocumentRule( text, rootName, outSchema, outbListed, outbOwnMerge );
     }
 } // namespace sw
