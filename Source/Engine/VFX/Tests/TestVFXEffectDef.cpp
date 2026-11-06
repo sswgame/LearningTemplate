@@ -380,10 +380,10 @@ SW_TEST_CASE( VFXEffectDefTest, UnknownAttributeLeavesAnEmptyEffect )
     SW_EXPECT_TRUE( effect._listEmitter.empty() );
 }
 
-/** @brief [VFXEffectDefTest] 읽기는 지나도 필수 칸이 빠지면 검증이 지고 효과가 빈다 */
+/** @brief [VFXEffectDefTest] 필수 칸이 빠지면 칸의 최솟값 검사가 읽기에서 거절하고 효과가 빈다 */
 SW_TEST_CASE( VFXEffectDefTest, MissingRequiredFieldLeavesAnEmptyEffect )
 {
-    SW_EXPECT_LOG( "VFXEffectDef.VFXEmitter" );
+    SW_EXPECT_LOG( "Serialization.ValueOutOfRange" );
     const string path = test::makeScratchPath( "partial.vfx.xml" );
     SW_REQUIRE_TRUE( Util::writeScratchFile( path, Util::makeEffectXml( "_name=\"Sparks\" _duration=\"1\" _spawnRate=\"40\"" ) ) );
     VFXEffectDef effect;
@@ -396,6 +396,7 @@ SW_TEST_CASE( VFXEffectDefTest, MissingOrEmptyFilesFail )
 {
     SW_EXPECT_LOG( "File.NotFound" );
     SW_EXPECT_LOG( "Xml.FileNotFound" );
+    SW_EXPECT_LOG( "Xml.ParseError" );
     SW_EXPECT_LOG( "Xml.WrongRoot" );
     SW_EXPECT_LOG( "VFXEffectDef.VFXNoEmittersListEmitter" );
 

@@ -609,8 +609,7 @@ SW_TEST_CASE( AudioVoiceTest, StreamedClipMatchesMemoryClip )
             differingCount += ( bSameLeft && bSameRight ) ? 0u : 1u;
         }
     }
-    SW_EXPECT_EQUAL( 0u, differingCount );
-    SW_EXPECT_TRUE( streamVoice.getStreamWindow().getSeekCount() >= 2u ); // 여는 되감기 + 루프마다 처음으로
+    SW_EXPECT_EQUAL( 0u, differingCount ); // 창이 짧은 클립을 다 담으면 루프에 되감기가 없다 - 되감기 횟수는 여기서 보지 않는다(TestAudioStream)
 }
 
 /** @brief [AudioVoiceTest] 스트리밍을 중간에서 시작하면 첫 프레임을 읽은 적이 없어 루프 이음매는 보간하지 않고 끝 값을 잡는다 */
