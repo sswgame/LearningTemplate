@@ -222,13 +222,14 @@ namespace sw
         ObjectStateBatch& operator=( const ObjectStateBatch& ) = delete;
 
         /**
-         * @brief 상태를 읽은(또는 프리팹으로 만든) 오브젝트 하나를 기록합니다. 로드가 부르고, 상태 없이 만든 오브젝트는 부르는 쪽이 직접 기록합니다.
+         * @brief 이 배치가 상태를 읽지 않은 오브젝트를 가리킴 대상으로만 기록합니다(상태 없는 엔티티, 셀 · 레이어 묶음이 가리키는 이미 올라 있는 오브젝트).
+         * @details `finish` 는 이름만 되찾고 부착 · 핸들은 다시 풀지 않는다 — 그 연결은 그 오브젝트를 읽은 배치가 이미 풀었다(다시 풀면 씬 인스턴스 멤버의 부모를 잃는다).
          * @param savedID 같은 배치의 다른 상태가 이 오브젝트를 가리킬 때 쓰는 id 입니다. 0 이면 id 로는 찾을 수 없습니다(id 가 없는 데이터).
          * @param savedName 상태에 적힌 이름입니다. 매니저가 유일하게 바꾸기 **전**의 이름입니다.
          */
-        void add( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed = true );
+        void addReferenceTarget( GameObject* pObject, uint64 savedID, hashed_string savedName );
         /**
-         * @brief 상태를 읽은 오브젝트 하나를 기록합니다. `add` 와 같지만 `finish` 가 이 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 로더가 부릅니다.
+         * @brief 상태를 읽은 오브젝트 하나를 기록합니다. `finish` 가 부착 · 핸들을 잇고 이 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 로더가 부릅니다.
          * @details `onPostLoad` 는 부착과 핸들 PROPERTY 가 해석된 **뒤에** 온다. 읽는 시점에 부르면 다른 오브젝트를 가리키는 필드가 아직 저장된 id 다.
          */
         void addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed = true, uint64 savedIDScope = 0 );

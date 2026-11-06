@@ -3,7 +3,7 @@
 		<item>game/empty/ui/stylevariant_child.uistyle.xml</item>
 	</_listStyleSheet>
 	<!-- stylevariant_base.ui.xml 과 같고 자식 시트를 건다. -->
-	<UIScreenDesc _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
+	<UIScreenDesc _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
 	<SafeZonePanel>
 		<CanvasPanel>
 			<BorderPanel _name="Swatch" _styleClass="swatch">

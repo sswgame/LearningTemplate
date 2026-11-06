@@ -704,9 +704,9 @@ namespace sw
         SW_ASSERT( _listEntry.empty() || _bFinished );
     }
 
-    void ObjectStateBatch::add( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed )
+    void ObjectStateBatch::addReferenceTarget( GameObject* pObject, uint64 savedID, hashed_string savedName )
     {
-        addEntry( pObject, savedID, savedName, bExternalParentAllowed, std::nullopt, 0 );
+        addEntry( pObject, savedID, savedName, true, std::nullopt, 0 );
     }
 
     void ObjectStateBatch::addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed, uint64 savedIDScope )
@@ -753,17 +753,19 @@ namespace sw
         // 2) 부착. 모든 오브젝트가 생긴 뒤라 자식이 부모보다 먼저 읽혔어도 부모를 찾는다.
         for ( const Entry& entry : _listEntry )
         {
-            resolveEntry( entry );
+            if ( entry._loadedPurpose.has_value() ) // 가리킴 대상으로만 기록한 오브젝트는 읽은 배치가 이미 이었다
+                resolveEntry( entry );
         }
 
         // 3) 핸들 PROPERTY. 부착과 같은 규칙으로 저장된 id 를 이 실행의 오브젝트로 옮긴다. 가리키던 오브젝트가 나중에 읽혔어도 찾는다.
         for ( const Entry& entry : _listEntry )
         {
-            _bReferencesResolved = resolveObjectReferences( entry ) && _bReferencesResolved;
+            if ( entry._loadedPurpose.has_value() )
+                _bReferencesResolved = resolveObjectReferences( entry ) && _bReferencesResolved;
         }
 
         // 4) 값을 다 읽고 연결했다. 컴포넌트가 값을 리소스로 바꾼다(`Component::onPostLoad`, 편집 중에도). 부착과 핸들이 해석된 뒤라 그것을 읽어도
-        //    이 실행의 오브젝트다(언리얼의 `PostLoad` 도 패키지의 오브젝트를 모두 읽고 연결한 뒤에 온다). 상태 없이 만든 항목(프리팹 스폰)은 스폰이 이미 불렀다.
+        //    이 실행의 오브젝트다(언리얼의 `PostLoad` 도 패키지의 오브젝트를 모두 읽고 연결한 뒤에 온다). 상태를 읽지 않은 항목(가리킴 대상)은 건너뛴다.
         for ( const Entry& entry : _listEntry )
         {
             if ( entry._loadedPurpose.has_value() == false || entry._pObject->isPendingDestroy() )

@@ -299,7 +299,7 @@ namespace sw
                 }
                 else
                 {
-                    batch.add( pGo, entity._fileID, hashed_string( entity._name.c_str() ), false );
+                    batch.addReferenceTarget( pGo, entity._fileID, hashed_string( entity._name.c_str() ) );
                 }
             }
 
@@ -718,7 +718,7 @@ namespace sw
             {
                 GameObject* pExisting = _objectManager->findGameObjectByID( objectID );
                 if ( pExisting != nullptr && pExisting->isPendingDestroy() == false )
-                    batch.add( pExisting, fileID, pExisting->getName(), false );
+                    batch.addReferenceTarget( pExisting, fileID, pExisting->getName() );
             }
         }
 

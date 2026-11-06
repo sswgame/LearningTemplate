@@ -3,7 +3,7 @@
 		<item>game/empty/ui/stylevariant_base.uistyle.xml</item>
 	</_listStyleSheet>
 	<!-- 시나리오 automation/uistylevariant 의 화면 — 왼쪽은 swatch, 오른쪽은 그 형식 변형 warm 이다. 색은 모두 시트가 정한다. -->
-	<UIScreenDesc _layer="Overlay" _bTakesFocus="false" _bShowCursor="false" />
+	<UIScreenDesc _layer="HUD" _bTakesFocus="false" _bShowCursor="false" />
 	<SafeZonePanel>
 		<CanvasPanel>
 			<BorderPanel _name="Swatch" _styleClass="swatch">
