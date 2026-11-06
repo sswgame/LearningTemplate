@@ -2,12 +2,14 @@
 
 #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 
+#include "Core/Container/formatString.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Constants.h"
 
 #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
 #include "Engine/Window/Linux/Wayland/WaylandShell.h"
 #include "Engine/Window/NativeWindowEvent.h"
+#include "Engine/Window/WindowMonitor.h"
 #include "Engine/Window/WindowTextInput.h"
 
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
@@ -40,12 +42,17 @@ namespace sw
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE ) && defined( SW_WITH_WAYLAND )
 namespace sw
 {
-    /** @brief 바인드한 `wl_output` 하나와 그 정수 배율입니다. `_bEntered` 는 창(wl_surface)이 이 출력에 걸쳐 있는지입니다. */
+    /** @brief 바인드한 `wl_output` 하나와 그 값입니다(`IWindow::tryGetMonitors`). `_bEntered` 는 창(wl_surface)이 이 출력에 걸쳐 있는지입니다. */
     struct WaylandOutput
     {
-        wl_output* _pOutput{ nullptr };
-        int32      _scale{ 1 };
-        bool       _bEntered{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
+        wl_output*   _pOutput{ nullptr };
+        uint32       _registryName{ 0 }; ///< 레지스트리 이름(`global_remove` 가 이것으로 알린다)
+        string       _name;              ///< 제조사 · 모델(판 4 의 `name` 은 바인드하지 않는다)
+        vector<int2> _listResolution;    ///< 알린 모드(요즘 컴포지터는 지금 모드 하나만 알린다)
+        int2         _position{};        ///< 컴포지터 공간의 자리
+        int2         _size{};            ///< 지금 모드의 픽셀 크기
+        int32        _scale{ 1 };
+        bool         _bEntered{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };
 } // namespace sw
 
@@ -113,7 +120,8 @@ namespace sw
         WindowPointerLock                _pointerLock{ WindowPointerLock::Released }; ///< 걸어 둔 방식
         bool                             _bPointerLocked{ false };                    ///< 컴포지터가 잠금을 켰다(`locked`) — 이 동안 포인터 움직임 대신 상대 이동이 온다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
 
-        vector<WaylandOutput>      _listOutput;                   ///< 바인드한 출력과 그 배율
+        vector<WaylandOutput>      _listOutput;                   ///< 바인드한 출력과 그 값
+        bool                       _bOutputsChanged{ false };     ///< 출력 값이 바뀌었다 - `processMessages` 가 세대를 올린다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         vector<WaylandQueuedInput> _listPendingInput;             ///< 리스너가 쌓고 `processMessages` 가 넘긴다
         uint32                     _inputSerial{ 0 };             ///< 마지막 키 · 버튼 · 들어옴의 일련번호(선택을 내놓을 때 컴포지터가 요구한다)
         bool                       _bIntroducedHasUTF8{ false };  ///< `_pIntroducedOffer` 가 text/plain;charset=utf-8 을 내놓는지 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -310,7 +318,8 @@ namespace sw
                 else if ( std::strcmp( pInterface, wl_output_interface.name ) == 0 )
                 {
                     WaylandOutput output;
-                    output._pOutput = static_cast<wl_output*>( wl_registry_bind( pRegistry, name, &wl_output_interface, version < kOutputVersion ? version : kOutputVersion ) );
+                    output._registryName = name;
+                    output._pOutput      = static_cast<wl_output*>( wl_registry_bind( pRegistry, name, &wl_output_interface, version < kOutputVersion ? version : kOutputVersion ) );
                     state._listOutput.push_back( output );
                     wl_output_add_listener( output._pOutput, &s_outputListener, &state );
                 }
@@ -318,32 +327,37 @@ namespace sw
 
             static void onOutputGeometry( void* pData, wl_output* pOutput, int32 x, int32 y, int32 physicalWidth, int32 physicalHeight, int32 subpixel, const utf8* pMake, const utf8* pModel, int32 transform )
             {
-                (void)pData;
-                (void)pOutput;
-                (void)x;
-                (void)y;
-                (void)physicalWidth;
+                (void)physicalWidth; // 배율은 컴포지터가 알린다(`scale`) - 물리 크기로 재지 않는다
                 (void)physicalHeight;
                 (void)subpixel;
-                (void)pMake;
-                (void)pModel;
                 (void)transform;
+                State&         state  = *static_cast<State*>( pData );
+                WaylandOutput* pEntry = state.findOutput( pOutput );
+                if ( pEntry == nullptr )
+                    return;
+                pEntry->_position = int2{ x, y };
+                utf8 arrName[constant::buffer::kMax128]{};
+                formatstring( arrName, constant::buffer::kMax128, "%# %#", pMake != nullptr ? pMake : "", pModel != nullptr ? pModel : "" );
+                pEntry->_name = arrName;
             }
 
             static void onOutputMode( void* pData, wl_output* pOutput, uint32 flags, int32 width, int32 height, int32 refresh )
             {
-                (void)pData;
-                (void)pOutput;
-                (void)flags;
-                (void)width;
-                (void)height;
                 (void)refresh;
+                State&         state  = *static_cast<State*>( pData );
+                WaylandOutput* pEntry = state.findOutput( pOutput );
+                if ( pEntry == nullptr )
+                    return;
+                pEntry->_listResolution.push_back( int2{ width, height } );
+                if ( ( flags & WL_OUTPUT_MODE_CURRENT ) != 0 )
+                    pEntry->_size = int2{ width, height };
             }
 
+            /** @brief 출력의 값이 한 묶음 끝났습니다(`done`). 받는 쪽은 `IWindow::getMonitorGeneration` 으로 다시 읽는다. */
             static void onOutputDone( void* pData, wl_output* pOutput )
             {
-                (void)pData;
                 (void)pOutput;
+                static_cast<State*>( pData )->_bOutputsChanged = true;
             }
 
             static void onOutputScale( void* pData, wl_output* pOutput, int32 factor )
@@ -559,9 +573,18 @@ namespace sw
 
             static void onRegistryGlobalRemove( void* pData, wl_registry* pRegistry, uint32 name )
             {
-                (void)pData;
                 (void)pRegistry;
-                (void)name; // 합성기 · 셸이 사라지는 일은 세션 끝이다 — 다음 요청이 실패로 알린다
+                // 모니터를 뺐다. 합성기 · 셸이 사라지는 일은 세션 끝이다 — 다음 요청이 실패로 알린다.
+                State& state = *static_cast<State*>( pData );
+                for ( size_t index = 0; index < state._listOutput.size(); ++index )
+                {
+                    if ( state._listOutput[index]._registryName != name )
+                        continue;
+                    wl_output_destroy( state._listOutput[index]._pOutput );
+                    state._listOutput.erase( state._listOutput.begin() + static_cast<ptrdiff_t>( index ) );
+                    state._bOutputsChanged = true;
+                    return;
+                }
             }
 
             static void onToplevelConfigure( void* pData, xdg_toplevel* pToplevel, int32 width, int32 height, wl_array* pStates )
@@ -1220,6 +1243,12 @@ namespace sw
             return false;
         }
 
+        if ( state._bOutputsChanged )
+        {
+            state._bOutputsChanged = false;
+            notifyMonitorsChanged();
+        }
+
         // 입력은 X11 과 같이 처리기(입력 관리자 · 에디터)에 하나씩 넘긴다.
         vector<WaylandQueuedInput> listInput;
         listInput.swap( state._listPendingInput );
@@ -1350,6 +1379,29 @@ namespace sw
                 scale = output._scale;
         }
         return static_cast<float32>( scale );
+    }
+
+    bool WaylandWindow::tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const
+    {
+        outListMonitor.clear();
+        if ( _pState->_pDisplay == nullptr )
+            return false;
+        // 출력이 없는 컴포지터(모니터를 뺀 데스크톱 · 출력 없는 headless)는 정상이다 - 빈 목록을 돌려주고 값을 지어내지 않는다. 설정 화면은 스키마의 고정 선택지를 쓴다.
+        for ( const WaylandOutput& output : _pState->_listOutput )
+        {
+            if ( output._size._x <= 0 || output._size._y <= 0 )
+                continue; // `mode` 를 아직 받지 못했다
+            WindowMonitor monitor;
+            monitor._name           = output._name;
+            monitor._area           = WindowMonitorRect{ output._position, output._size };
+            monitor._workArea       = monitor._area; // xdg-shell 에는 작업 영역을 알리는 길이 없다 - 패널을 피하는 일은 컴포지터가 창을 놓을 때 한다
+            monitor._contentScale   = static_cast<float32>( output._scale );
+            monitor._listResolution = output._listResolution;
+            monitor.normalizeResolutions();
+            outListMonitor.push_back( std::move( monitor ) );
+        }
+        WindowMonitor::orderPrimaryFirst( outListMonitor ); // Wayland 에는 주 출력이 없다 - 첫 출력이다
+        return true;
     }
 
     bool WaylandWindow::supportsFractionalScale() const

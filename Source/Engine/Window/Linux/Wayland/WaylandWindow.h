@@ -67,6 +67,8 @@ namespace sw
          * @details 알려 주기만 한다 — 버퍼 배율은 바꾸지 않아 컴포지터가 확대한다. 소수 배율 프로토콜이 없는 컴포지터는 정상이며(오래된 컴포지터) 정수 배율이 그 길이다.
          */
         float32 getContentScale() const override;
+        /** @brief 바인드한 `wl_output` 들입니다. 자리는 컴포지터 공간이고 배율은 출력의 `scale` 이다(소수 배율은 표면마다 와서 창의 `getContentScale` 이 읽는다). 해상도는 컴포지터가 알린 모드뿐이다. */
+        [[nodiscard]] bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const override;
         /** @brief 컴포지터가 `wp_fractional_scale_manager_v1` 을 내놓았으면 true 입니다(없으면 `getContentScale` 은 정수 배율이다). */
         [[nodiscard]] bool supportsFractionalScale() const;
         /** @brief 컴포지터에 `zwp_pointer_constraints_v1` 과 `zwp_relative_pointer_manager_v1` 이 둘 다 있고 포인터 장치가 있으면 true 입니다. */
