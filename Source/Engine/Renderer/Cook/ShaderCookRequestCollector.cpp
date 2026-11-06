@@ -159,10 +159,15 @@ namespace sw
                 }
             }
 
-            /** @brief 파이프라인 패스 하나의 스테이지 요청(VS · PS)을 더합니다. 진입점은 런타임 `makePassPSODesc` 와 같게 XML 값(비면 스테이지 기본값)이다. */
+            /** @brief 파이프라인 패스 하나의 스테이지 요청(컴퓨트, 또는 VS · PS)을 더합니다. 진입점은 런타임 `makePassPSODesc` 와 같게 XML 값(비면 스테이지 기본값)이다. */
             static void appendPipelinePassStages( vector<ShaderCookRequest>& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline,
                                                   const string& shaderPath, const vector<string>& listPassDefine )
             {
+                if ( pass._resolvedType == RenderPassType::Compute )
+                {
+                    appendRequestUnique( outListRequest, shaderPath, string( resolveEntryPoint( pass._computeEntryPoint, ShaderStage::Compute ) ), ShaderStage::Compute, listPassDefine );
+                    return;
+                }
                 const string vsEntry = string( resolveEntryPoint( pass._vertexEntryPoint, ShaderStage::Vertex ) );
                 appendRequestUnique( outListRequest, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine );
 

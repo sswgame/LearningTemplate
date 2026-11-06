@@ -161,11 +161,83 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShadingModelMatchesPasses )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes, "_shadingModel=\"Ray\"" ) ) );
 }
 
+namespace
+{
+    struct ComputePassTestUtil
+    {
+        static constexpr const utf8* kNoState = "_cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _bEnableBlend=\"false\"";
+
+        /** @brief 컴퓨트 패스 하나의 파이프라인 XML 입니다. */
+        static string makeXML( string_view attributes, string_view inputs, string_view outputs )
+        {
+            string xml = "<RenderPipelineDesc _name=\"Test\"><_listAttachment>"
+                         "<RenderPassAttachment _name=\"A\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _bClear=\"false\"/>"
+                         "<RenderPassAttachment _name=\"B\" _format=\"R16G16B16A16_FLOAT\" _clearColor=\"0,0,0,1\" _bClear=\"false\"/>"
+                         "<RenderPassAttachment _name=\"D\" _format=\"D24_UNORM_S8_UINT\" _clearColor=\"1,0,0,0\" _bClear=\"true\"/>"
+                         "</_listAttachment><_listPass><RenderGraphPassDesc _name=\"Pass\" _type=\"Compute\" ";
+            xml.append( attributes );
+            xml += "><_listInput>";
+            xml.append( inputs );
+            xml += "</_listInput><_listOutput>";
+            xml.append( outputs );
+            xml += "</_listOutput></RenderGraphPassDesc></_listPass></RenderPipelineDesc>";
+            return xml;
+        }
+
+        static string withShader( string_view extra = "" )
+        {
+            string attributes = "_shaderPath=\"game/empty/shaders/compute_channelswap.hlsl\" ";
+            attributes.append( kNoState );
+            attributes += " ";
+            attributes.append( extra );
+            return attributes;
+        }
+    };
+} // namespace
+
+/** @brief [RenderPipelineAssetTest] 컴퓨트 패스: 셰이더 · 입력 · 출력 하나면 읽힌다. 진입점 · 그룹 크기는 적은 값이다 */
+SW_TEST_CASE( RenderPipelineAssetTest, ComputePassLoads )
+{
+    RenderPipelineAsset asset;
+    SW_REQUIRE_TRUE( RenderPipelineTestUtil::load( asset, ComputePassTestUtil::makeXML( ComputePassTestUtil::withShader( "_computeEntryPoint=\"MyCS\" _threadGroupSize=\"4\"" ), "<item>A</item>", "<item>B</item>" ) ) );
+    const RenderGraphPassDesc& pass = asset.getGraphPass()[0];
+    SW_EXPECT_TRUE( pass._resolvedType == RenderPassType::Compute );
+    SW_EXPECT_EQUAL( string( "MyCS" ), pass._computeEntryPoint );
+    SW_EXPECT_EQUAL( 4u, pass._threadGroupSize );
+    SW_EXPECT_TRUE( getRenderPassTypeInfo( RenderPassType::Compute ).hasFlag( RenderPassTraitFlag::kPipelineCompute ) );
+}
+
+/** @brief [RenderPipelineAssetTest] 컴퓨트 패스: 실행이 받아 줄 수 없는 선언은 읽기 오류다. 진입점 칸은 컴퓨트 패스만 쓴다 */
+SW_TEST_CASE( RenderPipelineAssetTest, ComputePassRejectsBadDeclarations )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeNeedsShader" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeOneOutput" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeTooManyInputs" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeDepthInput" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeInputIsOutput" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeBlend" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassComputeEntryOnCompute" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    SW_EXPECT_LOG( "Renderer.PassNoColorOutput" );
+    using Util = ComputePassTestUtil;
+    RenderPipelineAsset asset;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::kNoState, "", "<item>B</item>" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "", "" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "<item>A</item><item>A</item><item>A</item>", "<item>B</item>" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "<item>D</item>", "<item>B</item>" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( Util::withShader(), "<item>B</item>", "<item>B</item>" ) ) );
+    const string blended = "_shaderPath=\"game/empty/shaders/compute_channelswap.hlsl\" _cullMode=\"None\" _bEnableDepthTest=\"false\" _bEnableDepthWrite=\"false\" _bEnableBlend=\"true\"";
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, Util::makeXML( blended, "", "<item>B</item>" ) ) );
+    const string passAttributes = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" _computeEntryPoint=\"CSMain\" " ) + RenderPipelineTestUtil::kOpaqueState;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 엔진 파이프라인이 모두 렌더 패스를 합쳐 검증을 통과한다. 디퍼드 반투명은 섞는다 */
 SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesLoad )
 {
     for ( const utf8* pPath : { "engine/pipeline/forwardpipeline.xml", "engine/pipeline/forwardpipelinestaged.xml", "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forwardtoonpipeline.xml",
-                                "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/deferredpipeline.xml" } )
+                                "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/deferredpipeline.xml", "game/empty/pipeline/computepasspipeline.xml", "game/empty/pipeline/extensionpasspipeline.xml" } )
     {
         RenderPipelineAsset asset;
         SW_EXPECT_TRUE_MSG( asset.loadFromXMLFile( AssetID{ string_view( pPath ) } ), pPath );

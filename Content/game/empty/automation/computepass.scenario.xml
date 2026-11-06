@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  파이프라인 XML 의 컴퓨트 패스 — 코드 없이 XML 한 줄로 더한 효과가 돈다. 주황 상자가 파랗게 나오면 컴퓨트 패스가 장면 색을 읽어 출력에 쓴 것이다(빨강 · 파랑 맞바꿈).
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.computepass" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Launch variable="gv_renderPipeline" value="game/empty/pipeline/computepasspipeline.xml"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="40"/>
+	<Screenshot file="computeswap.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImage file="computeswap.ppm" golden="computeswap"/>
+	<Pass/>
+</Scenario>

@@ -175,6 +175,8 @@ namespace sw
          * @brief 컴퓨트가 엔진 텍스처를 읽어야 해서 네이티브 bindless 샘플링(DX12 · Vulkan)이 있는 백엔드에서만 PSO 를 만든다. 에뮬 백엔드(DX11 · GL)의 컴퓨트는 샘플 텍스처를 읽지 못한다(binding.hlsli).
          */
         static constexpr uint32 kRequiresNativeBindless = SW_BIT( 22 );
+        /** @brief 파이프라인 XML 의 패스가 컴퓨트 셰이더를 고른다(`RenderPassType::Compute`). 셰이더가 패스마다 달라 PSO 를 패스 이름으로 찾는다(`FramePSOManager::findPipelineComputePSO`). */
+        static constexpr uint32 kPipelineCompute = SW_BIT( 23 );
     };
 } // namespace sw
 

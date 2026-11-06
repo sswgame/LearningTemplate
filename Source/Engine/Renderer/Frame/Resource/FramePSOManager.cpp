@@ -324,6 +324,20 @@ namespace sw
             computeJob._passType                    = passType;
         }
 
+        // 파이프라인 컴퓨트 패스는 셰이더가 패스마다 달라 표가 아니라 그래프를 돈다. 컴퓨트 능력이 없는 백엔드는 이 패스를 돌리지 못한다.
+        for ( const RenderGraphPassDesc& pass : _pipeline.getGraphPass() )
+        {
+            if ( pass._resolvedType != RenderPassType::Compute )
+                continue;
+            RenderPassShaderSelection computeShader = selectRenderPassShader( RenderPassType::Compute, &pass, engineDefaultAssets );
+            ComputePSOJob&            computeJob    = listComputeJob.emplace_back();
+            computeJob._shaderPath                  = std::move( computeShader._shaderPath );
+            computeJob._entryPoint                  = pass._computeEntryPoint;
+            computeJob._listDefine                  = std::move( computeShader._listDefine );
+            computeJob._pipelinePassName            = hashed_string( pass._name.c_str() );
+            computeJob._passType                    = RenderPassType::Compute;
+        }
+
         // 출력 패스(Present · Canvas)의 포맷별 변종도 PSO 등록 단계에서 만든다. 기록 중에는 PSO 를 만들 수 없다(findOutputPSO 주석 참고).
         collectOutputPSOJobs( listJob );
 
@@ -344,21 +358,24 @@ namespace sw
         const ShaderTargetFormat targetFormat = RHI::getShaderTargetFormat( _pDevice->getBackendType() );
         for ( const ComputePSOJob& computeJob : listComputeJob )
         {
-            listShader.push_back( RHIShaderRequest::resolveCompute( computeJob._shaderPath, string_view{}, computeJob._listDefine, targetFormat ) );
+            listShader.push_back( RHIShaderRequest::resolveCompute( computeJob._shaderPath, string_view( computeJob._entryPoint ), computeJob._listDefine, targetFormat ) );
         }
         warmShaders( listShader );
 
         // 3) PSO 생성 — 이 스레드가 차례로(드라이버 생성은 직렬이고 GL 은 컨텍스트가 이 스레드에 묶인다).
         for ( const ComputePSOJob& computeJob : listComputeJob )
         {
-            const RHIPipelineStateHandle pso = _pDevice->getResourceFactory()->createComputePipelineState( computeJob._shaderPath, string_view{}, computeJob._listDefine );
+            const RHIPipelineStateHandle pso = _pDevice->getResourceFactory()->createComputePipelineState( computeJob._shaderPath, string_view( computeJob._entryPoint ), computeJob._listDefine );
             // 다른 패스의 PSO 로 대신하지 않는다 — 이 패스는 그리지 않고 여기서 이유를 한 번 남긴다.
             if ( pso == 0 )
             {
                 SW_LOG_ERROR_ID( "FramePSOManager.EnginePSOPassCould", "Engine PSO for pass %# could not be created (shader '%#') - the pass draws nothing", computeJob._passType, computeJob._shaderPath.c_str() );
                 continue;
             }
-            _pCache->setEnginePSO( computeJob._passType, pso );
+            if ( computeJob._pipelinePassName.empty() == false )
+                _pCache->setExtensionProgramPSO( computeJob._pipelinePassName, pso ); // 패스 이름이 키다 — 확장 프로그램과 같은 저장소(같이 해제한다)
+            else
+                _pCache->setEnginePSO( computeJob._passType, pso );
         }
         for ( const PassPSOJob& job : listJob )
         {
@@ -404,6 +421,12 @@ namespace sw
         // 빌려 쓰는 저장소(미리보기 씬 렌더러)는 소유자인 주 렌더러가 이미 무효화하고 다시 채웠다.
         if ( ownsCache() )
             _pCache->invalidateLayoutsByShaderPath( shaderPath );
+    }
+
+    RHIPipelineStateHandle FramePSOManager::findPipelineComputePSO( const hashed_string& passName ) const
+    {
+        RHIPipelineStateHandle pso{ 0 };
+        return _pCache->findExtensionProgramPSO( passName, pso ) ? pso : RHIPipelineStateHandle{ 0 };
     }
 
     RHIPipelineStateHandle FramePSOManager::getEnginePSO( RenderPassType passType ) const

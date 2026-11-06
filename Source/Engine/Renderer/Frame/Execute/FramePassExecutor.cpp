@@ -978,6 +978,11 @@ namespace sw
                     executeTransparentPass( input );
                     break;
                 }
+                case RenderPassType::Compute:
+                {
+                    executeComputePass( input );
+                    break;
+                }
                 case RenderPassType::SceneColorCopy:
                 {
                     executeSceneColorCopyPass( input );
@@ -1094,6 +1099,60 @@ namespace sw
         // 클리어 색은 타깃 첨부의 선언이다(SSAO 의 흰색 = 가림 없음도 AOColor 선언에 있다).
         const float4 targetClear = getTargetClearColor( pTarget->view() );
         executeFullscreenInto( context, pso, *pTarget, targetClear );
+    }
+
+    void FramePassExecutor::executeComputePass( const PassExecuteInput& input )
+    {
+        // compute_pass.hlsli 의 SwRootConstants 와 같은 배치다.
+        struct RootConstants
+        {
+            uint32 _outputIndex{ 0 };
+            uint32 _arrInputIndex[2]{ kInvalidDescriptorIndex, kInvalidDescriptorIndex };
+            uint32 _width{ 0 };
+            uint32 _height{ 0 };
+        };
+        FramePassContext&                         context  = input._context;
+        const RenderGraphPassDesc&                passDesc = input._passDesc;
+        const hashed_string&                      target   = input._declaredColor[0]._attachment;
+        const RHIPipelineStateHandle              pso      = _psoManager.findPipelineComputePSO( hashed_string( passDesc._name.c_str() ) );
+        const TransientAttachmentPool::Attachment output   = activePool().find( target.view() );
+        if ( pso == 0 || output._uav == kInvalidDescriptorIndex )
+        {
+            SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputePassNotReady", "Compute pass '%#' has no PSO or no RW output - it does not run", passDesc._name );
+            return;
+        }
+        // 네이티브는 RW 텍스처 배열의 번호로, 에뮬은 RW 슬롯 서수로 고른다(Bindless::storeRwTexture2D). 슬롯 0 이 출력, 그 뒤가 입력이다.
+        const bool    bNative = _pDevice->supportsNativeBindlessSampling();
+        RootConstants constants{};
+        constants._outputIndex = bNative ? static_cast<uint32>( output._uav ) : 0u;
+        constants._width       = output._width;
+        constants._height      = output._height;
+        context._pCmd->prepareTextureForUnorderedAccess( output._texture );
+        context._pCmd->bindComputeUAV( output._uav, shaderslot::kComputeTextureUAV0 );
+        vector<RHITextureHandle> listInputTexture;
+        for ( uint32 inputIndex = 0; inputIndex < passDesc._listResolvedInput.size(); ++inputIndex )
+        {
+            const TransientAttachmentPool::Attachment source = activePool().find( passDesc._listResolvedInput[inputIndex]._attachment.view() );
+            if ( source._uav == kInvalidDescriptorIndex )
+            {
+                SW_LOG_ERROR_ONCE_ID( "FramePassExecutor.ComputePassInputNotReady", "Compute pass '%#' input %# has no RW view - it does not run", passDesc._name, inputIndex );
+                return;
+            }
+            constants._arrInputIndex[inputIndex] = bNative ? static_cast<uint32>( source._uav ) : inputIndex + 1u;
+            context._pCmd->prepareTextureForUnorderedAccess( source._texture );
+            context._pCmd->bindComputeUAV( source._uav, shaderslot::kComputeTextureUAV0 + inputIndex + 1u );
+            listInputTexture.push_back( source._texture );
+        }
+        context._pCmd->setComputePipelineState( pso );
+        context._pCmd->setComputeRootConstants( 0, sizeof( constants ) / sizeof( uint32 ), &constants );
+        context._pCmd->dispatchCompute( FrameRendererUtil::divideRoundUp( output._width, passDesc._threadGroupSize ), FrameRendererUtil::divideRoundUp( output._height, passDesc._threadGroupSize ), 1 );
+        // 뒤 패스가 샘플한다. 컴퓨트가 칠했으니 이번 프레임 첫 렌더 패스가 지우면 안 된다.
+        context._pCmd->prepareTextureForShaderRead( output._texture );
+        for ( const RHITextureHandle texture : listInputTexture )
+        {
+            context._pCmd->prepareTextureForShaderRead( texture );
+        }
+        (void)markAttachmentCleared( target );
     }
 
     void FramePassExecutor::executeForwardOpaquePass( const PassExecuteInput& input )

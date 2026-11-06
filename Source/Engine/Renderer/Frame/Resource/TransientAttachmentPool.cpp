@@ -26,14 +26,14 @@ namespace sw
     }
 
     bool TransientAttachmentPool::allocate( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor,
-                                            uint32 resolutionDivisor )
+                                            uint32 resolutionDivisor, bool bUnorderedAccess )
     {
         return allocateSized( pDevice, name, format, bDepth, clearColor, computeScaledExtent( _width, resolutionDivisor ),
-                              computeScaledExtent( _height, resolutionDivisor ) );
+                              computeScaledExtent( _height, resolutionDivisor ), bUnorderedAccess );
     }
 
     bool TransientAttachmentPool::allocateSized( IRHIDevice* pDevice, string_view name, RHIFormat format, bool bDepth, const float4& clearColor, uint32 width,
-                                                 uint32 height )
+                                                 uint32 height, bool bUnorderedAccess )
     {
         if ( pDevice == nullptr || pDevice->getResourceFactory() == nullptr )
             return false;
@@ -47,6 +47,7 @@ namespace sw
         desc._bIsRenderTarget         = bDepth ? SW_FALSE : SW_TRUE;
         desc._bIsDepthStencil         = bDepth ? SW_TRUE : SW_FALSE;
         desc._bIsShaderResource       = SW_TRUE;
+        desc._bIsUnorderedAccess      = bUnorderedAccess ? SW_TRUE : SW_FALSE;
         desc._bIsTransient            = SW_TRUE;
         desc._clearDepth              = clearColor._x;
         desc._clearColor              = clearColor;
@@ -57,7 +58,8 @@ namespace sw
             return false;
         }
         const RHIDescriptorIndex srv = pDevice->getResourceFactory()->registerBindlessTexture( handle );
-        _mapAttachment.emplace( name, Attachment{ handle, srv, desc._width, desc._height, format, clearColor } );
+        const RHIDescriptorIndex uav = bUnorderedAccess ? pDevice->getResourceFactory()->registerBindlessTextureUAV( handle ) : kInvalidDescriptorIndex;
+        _mapAttachment.emplace( name, Attachment{ handle, srv, uav, desc._width, desc._height, format, clearColor } );
         ++_allocationCount;
         return true;
     }
@@ -70,6 +72,8 @@ namespace sw
         // 앞 프레임들이 아직 GPU 에서 이 타깃을 읽을 수 있다 — 백엔드의 해제 큐가 그 프레임들이 끝난 뒤에 지운다(release 와 같은 순서: SRV 먼저).
         if ( pDevice != nullptr && pDevice->getResourceFactory() != nullptr )
         {
+            if ( it->second._uav != kInvalidDescriptorIndex )
+                pDevice->getResourceFactory()->unregisterBindlessUAV( it->second._uav );
             if ( it->second._srv != kInvalidDescriptorIndex )
                 pDevice->getResourceFactory()->unregisterBindlessTexture( it->second._srv );
             if ( it->second._texture != 0 )
@@ -142,6 +146,8 @@ namespace sw
             {
                 // 텍스처 SRV 인덱스다. 주의: 버퍼용 해제로 넘기면 버퍼 프리리스트가 오염되고, 그 자리를 다른 구조버퍼가
                 // 차지해 살아 있는 패스 CB 슬롯이 STORAGE 세트로 바뀐다(Vulkan 검증 에러).
+                if ( attachment._uav != kInvalidDescriptorIndex )
+                    pDevice->getResourceFactory()->unregisterBindlessUAV( attachment._uav );
                 if ( attachment._srv != kInvalidDescriptorIndex )
                     pDevice->getResourceFactory()->unregisterBindlessTexture( attachment._srv );
                 if ( attachment._texture != 0 )

@@ -78,6 +78,8 @@ namespace sw
 
         /** @brief 패스 타입에 해당하는 엔진 PSO 입니다. 없으면 0 입니다. */
         RHIPipelineStateHandle getEnginePSO( RenderPassType passType ) const;
+        /** @brief 파이프라인 컴퓨트 패스(`RenderPassType::Compute`) @p passName 의 PSO 입니다. 없으면 0 입니다. */
+        RHIPipelineStateHandle findPipelineComputePSO( const hashed_string& passName ) const;
         /**
          * @brief 주 출력에 그리는 패스(Present, Canvas, RCAS)의 PSO 를 **대상 포맷별로** 찾습니다.
          * @details **조회만 한다.** 패스 실행(태스크 워커) 중에 불리므로 없다고 만들면 안 된다. 셋업에 없는 포맷이면 대신 그리지 않고 멈춘다(`SW_FATAL`) —
@@ -185,7 +187,9 @@ namespace sw
         struct ComputePSOJob
         {
             string         _shaderPath;
+            string         _entryPoint; ///< 비면 스테이지 기본값입니다
             vector<string> _listDefine;
+            hashed_string  _pipelinePassName; ///< 파이프라인 컴퓨트 패스면 그 이름입니다(비면 엔진 슬롯 `_passType`)
             RenderPassType _passType{ RenderPassType::Invalid };
         };
 

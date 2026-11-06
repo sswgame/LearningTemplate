@@ -195,7 +195,7 @@ namespace sw
             if ( resolveRenderPassInputRole( attachment._name, bDepth, attachment._role ) == RenderPassInputRole::ShadowMap )
                 (void)pool.allocateSized( _pDevice, attachment._name, format, bDepth, attachment._clearColor, shadowResolution, shadowResolution );
             else
-                pool.allocate( _pDevice, attachment._name, format, bDepth, attachment._clearColor, attachment._resolutionDivisor );
+                pool.allocate( _pDevice, attachment._name, format, bDepth, attachment._clearColor, attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
         }
 
         // 패스가 쓰는 첨부는 모두 위에서 만들었다 — 파이프라인 로드가 선언하지 않은 입출력을 거절한다(`RenderPipelineAsset::validate`).
@@ -373,7 +373,7 @@ namespace sw
                 if ( string_view( attachment._name ) != name.view() )
                     continue;
                 const RHIFormat format = FrameRendererUtil::parseAttachmentFormat( attachment._format );
-                pool.allocate( _pDevice, attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor, attachment._resolutionDivisor );
+                pool.allocate( _pDevice, attachment._name, format, FrameRendererUtil::isDepthFormat( format ), attachment._clearColor, attachment._resolutionDivisor, FrameRendererUtil::isComputeOutputOrInput( _pipeline.getGraphPass(), attachment._name ) );
                 bAllocated = true;
             }
         };

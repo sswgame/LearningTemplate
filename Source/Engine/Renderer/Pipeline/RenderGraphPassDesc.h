@@ -100,6 +100,11 @@ namespace sw
          *        물의 화면 공간 두께(`g_SceneDepthCopyIndex`)가 읽습니다. 반투명 앞에 둡니다(언리얼의 Scene Depth 사본 · 유니티 URP 의 Depth Texture 와 같은 자리).
          */
         SceneDepthCopy,
+        /**
+         * @brief 파이프라인 XML 이 고른 컴퓨트 셰이더(`_shaderPath` · `_computeEntryPoint`)를 돌립니다 — 코드 없이 데이터만으로 효과를 더하는 패스입니다(언리얼 RDG 의 컴퓨트 패스 자리).
+         *        선언한 컬러 출력 하나에 쓰고 입력(최대 둘, 깊이 형식 제외)을 읽습니다. 첨부는 RW 텍스처로 묶입니다(`compute_pass.hlsli` 의 루트 상수). 그룹 수는 첨부 크기를 `_threadGroupSize` 로 나눈 값입니다.
+         */
+        Compute,
 
         // --- 엔진 내부 PSO 슬롯. 파이프라인 XML 에는 나올 수 없다(검증이 거부한다). ---
         ForwardOpaqueNoDepthWrite,
@@ -165,7 +170,7 @@ namespace sw
     /** @brief 파이프라인 XML 의 `_type` 으로 쓸 수 있는 값인지 확인합니다(내부 슬롯과 Invalid 는 제외합니다). */
     constexpr bool isPipelinePassType( RenderPassType type )
     {
-        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::SceneDepthCopy );
+        return type != RenderPassType::Invalid && static_cast<uint32>( type ) <= static_cast<uint32>( RenderPassType::Compute );
     }
 
     /// @brief 렌더 패스 어태치먼트 하나(이름, 포맷, 클리어 색, 클리어 여부)입니다.
@@ -298,6 +303,14 @@ namespace sw
         /** @brief 픽셀 셰이더 진입점입니다. 비면 스테이지 기본값입니다. */
         PROPERTY( SkipIfEmpty )
         string _pixelEntryPoint;
+
+        /** @brief 컴퓨트 진입점입니다(`Compute` 패스만 적는다). 비면 스테이지 기본값입니다. */
+        PROPERTY( SkipIfEmpty )
+        string _computeEntryPoint;
+
+        /** @brief `Compute` 패스의 스레드 그룹 한 변(`numthreads` 와 같아야 한다)입니다. 그룹 수는 출력 크기를 이 값으로 나눠 올림합니다. */
+        PROPERTY( Min = 1 )
+        uint32 _threadGroupSize{ 8 };
 
         /** @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. */
         PROPERTY( SkipIfEmpty )

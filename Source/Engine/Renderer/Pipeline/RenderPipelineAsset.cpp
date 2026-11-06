@@ -216,6 +216,43 @@ namespace sw
                 return issueCount;
             }
 
+            /** @brief 컴퓨트 패스의 선언이 실행과 맞는가. 컬러 출력 하나, 깊이 형식이 아닌 입력 최대 둘(RW 슬롯 — 에뮬 백엔드의 슬롯이 셋이다), 고른 셰이더, 블렌드 없음. 진입점 칸은 컴퓨트 패스만 쓴다. */
+            static uint32 checkComputePasses( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                static constexpr size_t kMaxInputCount = 2;
+                uint32                  issueCount{ 0 };
+                const auto              report = [&]( const utf8* pID, const RenderGraphPassDesc& pass, const utf8* pReason )
+                {
+                    Logger::writeLogGlobal( LogLevel::Error, SW_LOG_TAG, formatToString( "[%#] pass '%#': %#", sourcePath, pass._name, pReason ).c_str(), __FILE__, __LINE__, pID );
+                    ++issueCount;
+                };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    if ( pass._resolvedType != RenderPassType::Compute )
+                    {
+                        if ( pass._computeEntryPoint.empty() == false )
+                            report( "RenderPipelineAsset.PassComputeEntryOnCompute", pass, "_computeEntryPoint is only for a Compute pass" );
+                        continue;
+                    }
+                    if ( pass._shaderPath.empty() )
+                        report( "RenderPipelineAsset.PassComputeNeedsShader", pass, "a Compute pass needs _shaderPath - there is no default compute shader" );
+                    if ( pass._listOutput.size() != 1 || pass._listResolvedColorOutput.size() != 1 )
+                        report( "RenderPipelineAsset.PassComputeOneOutput", pass, "a Compute pass writes exactly one color attachment (not Swapchain, not depth)" );
+                    if ( pass._listInput.size() > kMaxInputCount )
+                        report( "RenderPipelineAsset.PassComputeTooManyInputs", pass, "a Compute pass reads at most two attachments" );
+                    for ( const string& inputName : pass._listInput )
+                    {
+                        if ( isDepthAttachment( findAttachment( desc, inputName ) ) )
+                            report( "RenderPipelineAsset.PassComputeDepthInput", pass, "a Compute pass cannot bind a depth format as a RW texture - read a SceneDepthCopy instead" );
+                        if ( VectorUtil::contains( pass._listOutput, inputName ) )
+                            report( "RenderPipelineAsset.PassComputeInputIsOutput", pass, "a Compute pass cannot read the attachment it writes" );
+                    }
+                    if ( pass._bEnableBlend )
+                        report( "RenderPipelineAsset.PassComputeBlend", pass, "a Compute pass has no blend state" );
+                }
+                return issueCount;
+            }
+
             /** @brief 2-0) 패스 이름은 하나뿐이어야 한다 — 이름이 패스의 열쇠라 뒤의 것은 버려진다. */
             static uint32 checkPassNamesUnique( const RenderPipelineDesc& desc, string_view sourcePath )
             {
@@ -715,6 +752,7 @@ namespace sw
         issueCount += Internal::checkPassNamesUnique( _desc, sourcePath );
         issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
         issueCount += Internal::checkPassRenderState( _desc, sourcePath );
+        issueCount += Internal::checkComputePasses( _desc, sourcePath );
         issueCount += Internal::checkModuleShaderList( _desc, sourcePath );
         issueCount += Internal::checkColorOutputLimit( _desc, sourcePath );
         issueCount += Internal::checkOutputDivisors( _desc, sourcePath );

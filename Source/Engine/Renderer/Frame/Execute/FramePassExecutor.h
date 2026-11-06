@@ -211,6 +211,8 @@ namespace sw
         void executeFullscreenInto( FramePassContext& context, RHIPipelineStateHandle pso, const hashed_string& targetName, const float4& passClearColor );
         /** @brief 일반 풀스크린 패스(테이블의 kGenericFullscreen)입니다. 선언한 입력을 모두 바인딩하고 선언한 첫 컬러 출력에 그립니다. 이 뷰에서 빠진 패스(`FrameViewResources::applyViewPassSelection`)는 기록하지 않습니다. */
         void executeGenericFullscreenPass( const PassExecuteInput& input );
+        /** @brief 파이프라인 컴퓨트 패스입니다. 첨부를 RW 텍스처로 묶고 출력 크기만큼 디스패치합니다(`compute_pass.hlsli` 의 루트 상수). */
+        void executeComputePass( const PassExecuteInput& input );
         /** @brief ForwardOpaque · ForwardOnlyOpaque 입니다. 그림자 맵 입력을 바인딩하고 선언한 첫 컬러 출력에 그립니다. */
         void executeForwardOpaquePass( const PassExecuteInput& input );
         /** @brief G버퍼(알베도 · 노멀 MRT)입니다. 노멀 출력이 없거나 PSO 가 없으면 그리지 않습니다. */

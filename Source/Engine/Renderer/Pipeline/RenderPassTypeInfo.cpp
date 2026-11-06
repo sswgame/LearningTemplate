@@ -261,6 +261,12 @@ namespace sw
                         info._flags          = Flag::kGenericFullscreen | Flag::kDrawsDeclaredColor | Flag::kHasInputContract | Flag::kSkipsWithoutPostProcess | Flag::kBypassesToSource;
                         break;
                     }
+                    case RenderPassType::Compute:
+                    {
+                        // 셰이더는 XML 이 고른다 — 표의 기본값이 없고, 첨부를 RW 텍스처로 묶는 전용 실행이다(`FramePassExecutor::executeComputePass`).
+                        info._flags = Flag::kPipelineCompute | Flag::kDrawsDeclaredColor;
+                        break;
+                    }
                     case RenderPassType::ForwardOpaqueNoDepthWrite:
                     {
                         // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 하고, 그리는 대상은 ForwardOpaque 패스의 선언이다.

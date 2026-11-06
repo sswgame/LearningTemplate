@@ -659,6 +659,10 @@ namespace sw
         if ( _pContext == nullptr )
             return;
 
+        // 컴퓨트가 RW 로 쓴 텍스처도 같다 — 슬롯에 남겨 두면 픽셀 셰이더가 읽을 때 런타임이 그 SRV 를 비운다. 읽기로 넘기는 지금 RW 슬롯을 비운다.
+        ID3D11UnorderedAccessView* arrNullUAV[shaderslot::kComputeTextureUAVSlotCount] = {};
+        _pContext->CSSetUnorderedAccessViews( shaderslot::kComputeTextureUAV0, shaderslot::kComputeTextureUAVSlotCount, arrNullUAV, nullptr );
+
         ID3D11ShaderResourceView* arrNullSRV[D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT] = {};
         _pContext->PSSetShaderResources( 0, D3D11_COMMONSHADER_INPUT_RESOURCE_SLOT_COUNT, arrNullSRV );
         // 머티리얼 슬롯은 정점 셰이더에도 걸린다(bindShaderResource) — 같은 범위만 뗀다(정점 셰이더의 구조버퍼 t4..t11 은 그대로 둔다).

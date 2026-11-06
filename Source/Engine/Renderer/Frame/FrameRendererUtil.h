@@ -193,6 +193,26 @@ namespace sw
         };
 
         static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
+        /** @brief 첨부 @p attachmentName 을 컴퓨트 패스가 읽거나 쓰면 true 입니다 — RW 텍스처로 묶을 수 있게 만들어야 합니다. */
+        static bool isComputeOutputOrInput( const vector<RenderGraphPassDesc>& listPass, string_view attachmentName )
+        {
+            for ( const RenderGraphPassDesc& pass : listPass )
+            {
+                if ( pass._resolvedType != RenderPassType::Compute )
+                    continue;
+                for ( const string& name : pass._listOutput )
+                {
+                    if ( name == attachmentName )
+                        return true;
+                }
+                for ( const string& name : pass._listInput )
+                {
+                    if ( name == attachmentName )
+                        return true;
+                }
+            }
+            return false;
+        }
 
         /**
          * @brief IEEE half(16비트) 한 채널을 [0,1] 로 자른 8비트 값으로 바꿉니다.
