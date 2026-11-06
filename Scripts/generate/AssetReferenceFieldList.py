@@ -46,7 +46,8 @@ def mergeOwners(listExisting: list[dict], mapBuilt: dict[str, set[str]]) -> list
     mapMerged = {entry["owner"]: sorted(entry["listField"]) for entry in listExisting}
     for owner, setField in mapBuilt.items():
         mapMerged[owner] = sorted(setField)
-    return [{"owner": owner, "listField": mapMerged[owner]} for owner in sorted(mapMerged)]
+    # 칸이 없는 주인은 적지 않는다 — 칸을 모두 잃은 주인도 이 구성이 지었으면 빈 줄로 갈아 끼워져 함께 빠진다.
+    return [{"owner": owner, "listField": mapMerged[owner]} for owner in sorted(mapMerged) if mapMerged[owner]]
 
 
 def formatTable(listOwner: list[dict]) -> str:

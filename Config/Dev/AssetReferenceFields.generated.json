@@ -156,18 +156,6 @@
       ]
     },
     {
-      "owner": "GF_EditorPlugin_CharacterEditor",
-      "listField": []
-    },
-    {
-      "owner": "GF_NetDestruction",
-      "listField": []
-    },
-    {
-      "owner": "GF_NetPairedAnimation",
-      "listField": []
-    },
-    {
       "owner": "GameFramework",
       "listField": [
         "_aiControllerPrefab",
@@ -245,6 +233,7 @@
         "_autoFarmerPrefab",
         "_cropDataPath",
         "_cropPrefab",
+        "_listDefaultGrowingModel",
         "_readyModel",
         "_scheduleDataPath",
         "_soilPrefab",
@@ -285,6 +274,7 @@
       "owner": "game:StarSkirmish",
       "listField": [
         "_commanderTreePath",
+        "_listCliffPrefab",
         "_unitDataPath",
         "_unitModelPath",
         "_unitPrefab"
