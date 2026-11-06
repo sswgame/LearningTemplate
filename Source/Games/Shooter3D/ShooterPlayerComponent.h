@@ -120,6 +120,8 @@ namespace sw
         /** @brief 지금 무기의 탄(탄창과 예비)이 탄창 네 개에 비해 얼마나 모자란지 반환합니다. 0(넉넉)부터 1(없음)까지이며 디렉터의 "탄 부족" 신호입니다. */
         float32 computeAmmoShortage() const;
         uint32  getShotCount() const { return _shotCount; }
+        /** @brief 마지막으로 그리게 넘긴 탄도선의 두께입니다(탄의 궤적 칸). 쏜 적이 없으면 0 입니다. */
+        float32 getLastTracerWidth() const { return _lastTracerWidth; }
         /** @brief 스폰해 둔 몸 오브젝트입니다. 없으면 nullptr 입니다. */
         GameObject* findBodyObject() const;
         uint32      getHitCount() const { return _hitCount; }
@@ -240,6 +242,7 @@ namespace sw
         float32                  _downTimer;     ///< 쓰러진 뒤 지난 시간(쓰러졌을 때만).
         float32                  _bodyEyeHeight; ///< 몸 소켓 Eyes 의 높이(0은 아직 모른다는 뜻).
         float32                  _lookYaw;
+        float32                  _lastTracerWidth; ///< 마지막 탄도선 두께(감시 값 `Shooter3D.TracerWidth`)
         int32                    _weaponIndex;
         uint32                   _shotCount;
         uint32                   _hitCount;

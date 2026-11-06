@@ -144,6 +144,16 @@ namespace sw
                 return true;
             }
 
+            /** @brief 첫 슈터 플레이어가 마지막으로 그리게 넘긴 탄도선의 두께입니다. 1 인칭 총에 가려 그림으로는 볼 수 없어 값으로 본다. */
+            [[nodiscard]] static bool readTracerWidth( const GameObjectManager* pManager, float64& outValue )
+            {
+                const ShooterPlayerComponent* pPlayer = findFirstPlayer( pManager );
+                if ( pPlayer == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPlayer->getLastTracerWidth() );
+                return true;
+            }
+
             /** @brief 첫 슈터 플레이어가 쏜 발 수입니다(판을 다시 시작해도 이어 센다). */
             [[nodiscard]] static bool readShotCount( const GameObjectManager* pManager, float64& outValue )
             {
@@ -326,6 +336,7 @@ namespace sw
         , _downTimer{ 0.0f }
         , _bodyEyeHeight{ 0.0f }
         , _lookYaw{ 0.0f }
+        , _lastTracerWidth{ 0.0f }
         , _weaponIndex{ 0 }
         , _shotCount{ 0 }
         , _hitCount{ 0 }
@@ -769,6 +780,7 @@ namespace sw
                 const float3 end = shot._ray._origin + shot._ray._direction * distance;
                 // 탄도선은 총구에서 맞은 위치까지 이은 선이다. 색 · 두께는 탄의 궤적이다.
                 _listPendingTracer.push_back( TracerRequest{ shot._tracerColor, shot._muzzle, end, shot._tracerWidth } );
+                _lastTracerWidth = shot._tracerWidth;
                 // 탄착 효과는 탄과 표면의 조합이다(맞음 표). 표면 이름은 이 게임이 정한다: 적의 몸은 Body, 상자 · 바닥은 Cover.
                 const ProjectileImpactDef* pImpact =
                     pProjectile != nullptr ? pProjectiles->findImpact( hashed_string( bHitBody ? Internal::kSurfaceBody : Internal::kSurfaceCover ), pProjectile->_tags ) : nullptr;
@@ -1062,6 +1074,8 @@ namespace sw
     SW_AUTOMATION_WATCH( shooterShotCount, "Shooter3D.ShotCount", "Shots the first shooter player fired", &ShooterPlayerComponentInternal::readShotCount );
     SW_AUTOMATION_WATCH( shooterShotDamage, "Shooter3D.ShotDamage", "Damage of one pellet of the projectile loaded in the first shooter player's weapon",
                          &ShooterPlayerComponentInternal::readShotDamage );
+    SW_AUTOMATION_WATCH( shooterTracerWidth, "Shooter3D.TracerWidth", "Width of the last tracer the first shooter player drew (the projectile's trail)",
+                         &ShooterPlayerComponentInternal::readTracerWidth );
     SW_DEV_COMMAND( ShooterProjectile, "cheat.shooter.projectile", "cheat.shooter.projectile [projectile id]",
                     "Load a projectile into the current weapon of every shooter player (no id: the weapon's own projectile)", &ShooterDevCommandsInternal::runProjectile );
     SW_AUTOMATION_WATCH( shooterEnemyHitCount, "Shooter3D.EnemyHitCount", "Shots of the first shooter player that hit an enemy", &ShooterPlayerComponentInternal::readEnemyHitCount );
