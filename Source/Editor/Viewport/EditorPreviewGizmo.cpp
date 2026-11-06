@@ -18,7 +18,6 @@
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
-#include <ImGuizmo.h>
 
 // EditorPreviewPick — 이 파일만 쓴다(한 파일 전용 도우미는 따로 헤더를 두지 않는다)
 namespace sw::editor
@@ -97,7 +96,7 @@ namespace sw::editor
         const float2&            imagePos       = viewport.getImagePosition();
         const float2&            mouse          = pointer._position;
         const bool               bInsideImage   = imagePos._x <= mouse._x && mouse._x < imagePos._x + imageSize._x && imagePos._y <= mouse._y && mouse._y < imagePos._y + imageSize._y;
-        const bool               bOverGizmo     = hasMouse() || ImGuizmo::IsOver() || ImGuizmo::IsUsing();
+        const bool               bOverGizmo     = hasMouse();
         const bool               bClickToPick   = pointer.wasClickedWithoutDrag( EditorMouseButton::Left ) && bOverGizmo == false; // 끌었으면 오빗이었다(입력 맵의 끌기 문턱)
         const bool               bPickThisClick = bClickToPick && bInsideImage && ImGui::IsWindowHovered( ImGuiHoveredFlags_RootAndChildWindows );
         if ( bPickThisClick == false )

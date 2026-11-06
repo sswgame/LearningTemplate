@@ -31,7 +31,6 @@
 #include "Engine/Scene/Scene.h"
 
 #include <imgui.h>
-#include <ImGuizmo.h>
 
 namespace sw::editor
 {
@@ -69,14 +68,14 @@ namespace sw::editor
     {
     }
 
-    void EditorViewportPicker::processClick( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasClicked,
+    void EditorViewportPicker::processClick( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasClicked, bool bGizmoBusy,
                                              const ViewportToolbarSettings& settings )
     {
         if ( pCamera == nullptr )
             return;
         if ( bCanvasClicked == false )
             return;
-        if ( ImGuizmo::IsOver() || ImGuizmo::IsUsing() )
+        if ( bGizmoBusy )
             return;
         if ( ( EditorInputGUI::getModifierMask() & ModifierKey::Alt ) != 0 )
             return;
@@ -147,14 +146,13 @@ namespace sw::editor
             editor::getMainSceneSelection().selectObjects( listInside, static_cast<SelectionMode>( _marqueeMode ) );
     }
 
-    void EditorViewportPicker::processHover( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered, bool bGizmoDragging,
+    void EditorViewportPicker::processHover( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered, bool bGizmoBusy,
                                              const ViewportToolbarSettings& settings )
     {
         // 호버는 마우스가 씬 뷰 위에만 있고(다른 패널이나 팝업이 마우스를 가지고 있지 않고) 드래그, 비행, 궤도, 기즈모 위가 아닐 때만 처리한다(언리얼과 유니티의 호버 강조).
         const EditorPointerState pointer     = EditorInputGUI::readPointer();
         const bool               bAnyButton  = pointer.isDown( EditorMouseButton::Left ) || pointer.isDown( EditorMouseButton::Right ) || pointer.isDown( EditorMouseButton::Middle );
         const bool               bNavigating = pointer.hasModifier( ModifierKey::Alt ) || bAnyButton;
-        const bool               bGizmoBusy  = ImGuizmo::IsOver() || ImGuizmo::IsUsing() || bGizmoDragging;
         const bool               bBlocked    = bCanvasHovered == false || pCamera == nullptr || bNavigating || ImGui::IsAnyItemActive() || bGizmoBusy;
         if ( bBlocked )
         {

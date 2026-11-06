@@ -34,12 +34,12 @@ namespace sw::editor
          * @brief 캔버스를 왼쪽 단추로 눌렀으면 마우스 아래 오브젝트를 선택하고, 빈 곳이면 선택을 비우고 상자 선택을 시작합니다. 기즈모 위나 Alt 중이면 하지 않습니다.
          * @details Ctrl 은 그 오브젝트를 넣고 빼고(Toggle), Shift 는 더한다(Add) — 언리얼 뷰포트와 같다. 수정 키가 있으면 빈 곳을 눌러도 선택을 비우지 않는다.
          */
-        void processClick( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasClicked, const ViewportToolbarSettings& settings );
+        void processClick( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasClicked, bool bGizmoBusy, const ViewportToolbarSettings& settings );
         /**
          * @brief 호버 오브젝트를 정합니다. 마우스가 움직였을 때만 피킹하며 프레임당 많아야 한 번입니다.
-         * @param bGizmoDragging 기즈모를 끄는 중이면 true 입니다. 그동안은 호버를 막습니다.
+         * @param bGizmoBusy 지난 프레임에 그린 기즈모 위에 있거나 끄는 중이면 true 입니다. ImGuizmo::IsOver 를 직접 보지 않는다 - 기즈모를 그리지 않는 프레임에도 마지막 행렬로 답해, 선택을 푼 뒤 그 자리의 클릭이 먹지 않는다.
          */
-        void processHover( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered, bool bGizmoDragging,
+        void processHover( const float2& canvasPos, const float2& canvasSize, CameraComponent* pCamera, bool bCanvasHovered, bool bGizmoBusy,
                            const ViewportToolbarSettings& settings );
 
         /**
