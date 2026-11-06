@@ -477,6 +477,46 @@ namespace sw::editor
             return nullptr;
         }
 
+        /**
+         * @brief 뷰포트 깃발을 창 관리자 힌트로 적습니다(Win32 의 창 스타일 자리). 매핑하기 전에 적어야 창 관리자가 읽는다.
+         * @details 힌트가 없으면 패널 · 팝업 · 툴팁마다 제목 줄이 붙고, 틀 때문에 ImGui 가 놓은 자리와 어긋나고, 처음 놓을 자리를 창 관리자가 정했다. 창 관리자가 없으면(Xvfb) 읽는 쪽이 없을 뿐 해가 없다.
+         *          shortcut: 만들 때 한 번만 적는다(GLFW 백엔드와 같다). 깃발을 실행 중에 바꾸는 설정(`ConfigViewportsNo*`)을 쓰면 `Platform_UpdateWindow` 로 옮긴다.
+         */
+        void applyWindowHints( const ImGuiViewport& viewport, Window window )
+        {
+            XSizeHints sizeHints{};
+            sizeHints.flags = USPosition;
+            sizeHints.x     = static_cast<int32>( viewport.Pos.x );
+            sizeHints.y     = static_cast<int32>( viewport.Pos.y );
+            XSetWMNormalHints( _pDisplay, window, &sizeHints );
+
+            if ( ( viewport.Flags & ImGuiViewportFlags_NoDecoration ) != 0 )
+            {
+                // `_MOTIF_WM_HINTS` 의 다섯 칸(flags · functions · decorations · input_mode · status) - flags 의 1 번 비트가 "decorations 칸을 봐라" 이고 그 값 0 이 장식 없음이다. EWMH 에는 장식을 끄는 힌트가 없어 GLFW · SDL · Godot 모두 이것을 쓴다.
+                constexpr long kMotifHintsDecorations = 1L << 1;
+                const long     arrMotifHints[5]       = { kMotifHintsDecorations, 0, 0, 0, 0 };
+                const Atom     motifHints             = XInternAtom( _pDisplay, "_MOTIF_WM_HINTS", 0 );
+                XChangeProperty( _pDisplay, window, motifHints, motifHints, 32, PropModeReplace, reinterpret_cast<const uint8*>( arrMotifHints ), 5 );
+            }
+
+            Atom  arrState[3]{};
+            int32 stateCount = 0;
+            if ( ( viewport.Flags & ImGuiViewportFlags_NoTaskBarIcon ) != 0 )
+            {
+                arrState[stateCount++] = XInternAtom( _pDisplay, "_NET_WM_STATE_SKIP_TASKBAR", 0 );
+                arrState[stateCount++] = XInternAtom( _pDisplay, "_NET_WM_STATE_SKIP_PAGER", 0 );
+            }
+            if ( ( viewport.Flags & ImGuiViewportFlags_TopMost ) != 0 )
+                arrState[stateCount++] = XInternAtom( _pDisplay, "_NET_WM_STATE_ABOVE", 0 );
+            if ( stateCount > 0 )
+                XChangeProperty( _pDisplay, window, XInternAtom( _pDisplay, "_NET_WM_STATE", 0 ), XA_ATOM, 32, PropModeReplace, reinterpret_cast<const uint8*>( arrState ), stateCount );
+
+            // 부모(팝업을 연 창) 위에 머문다 - Win32 의 소유 창 자리다.
+            const ViewportData* pParent = viewport.ParentViewport != nullptr ? static_cast<const ViewportData*>( viewport.ParentViewport->PlatformUserData ) : nullptr;
+            if ( pParent != nullptr && pParent->_windowHandle != 0 )
+                XSetTransientForHint( _pDisplay, window, pParent->_windowHandle );
+        }
+
         void createWindow( ImGuiViewport* pViewport )
         {
             if ( _pDisplay == nullptr || pViewport == nullptr )
@@ -490,10 +530,11 @@ namespace sw::editor
             const int32 height   = static_cast<int32>( pViewport->Size.y ) > 0 ? static_cast<int32>( pViewport->Size.y ) : 1;
             Window      root     = DefaultRootWindow( _pDisplay );
             pData->_windowHandle = XCreateSimpleWindow(
-                _pDisplay, root, static_cast<int32>( pViewport->Pos.x ), static_cast<int32>( pViewport->Pos.y ), static_cast<uint32>( width ), static_cast<uint32>( height ), 1,
+                _pDisplay, root, static_cast<int32>( pViewport->Pos.x ), static_cast<int32>( pViewport->Pos.y ), static_cast<uint32>( width ), static_cast<uint32>( height ), 0, // 테두리 0 - 있으면 XMoveWindow 의 자리와 그리는 자리가 그만큼 어긋난다
                 BlackPixel( _pDisplay, DefaultScreen( _pDisplay ) ),
                 WhitePixel( _pDisplay, DefaultScreen( _pDisplay ) ) );
 
+            applyWindowHints( *pViewport, pData->_windowHandle );
             XDefineCursor( _pDisplay, pData->_windowHandle, findOrCreateCursor( _lastCursor ) ); // 지금 커서가 바뀔 때까지 기다리지 않는다
             XSelectInput( _pDisplay, pData->_windowHandle,
                           ExposureMask | StructureNotifyMask | ButtonPressMask | ButtonReleaseMask | PointerMotionMask | FocusChangeMask | KeyPressMask | KeyReleaseMask );
@@ -541,6 +582,12 @@ namespace sw::editor
             const bool    bWindowAvailable = pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0;
             if ( bWindowAvailable )
             {
+                // 첫 프레임들과 툴팁은 초점을 가져가면 안 된다(Win32 SW_SHOWNA 자리) - 사용자 시각 0 은 "띄울 때 초점을 주지 말라" 는 뜻이다(EWMH). 깃발이 show 직전에 켜질 수 있어 여기서 적는다.
+                if ( ( pViewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing ) != 0 )
+                {
+                    const long userTime = 0; // 형식 32 는 C `long` 이다
+                    XChangeProperty( _pDisplay, pData->_windowHandle, XInternAtom( _pDisplay, "_NET_WM_USER_TIME", 0 ), XA_CARDINAL, 32, PropModeReplace, reinterpret_cast<const uint8*>( &userTime ), 1 );
+                }
                 XMapRaised( _pDisplay, pData->_windowHandle );
                 XFlush( _pDisplay );
             }
