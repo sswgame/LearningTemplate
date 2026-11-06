@@ -28,15 +28,17 @@ namespace sw
 
     bool DevCommandRegistry::readCountArgument( string_view argument, uint32& outValue )
     {
+        constexpr uint64 kMaxCountArgument = 1000000;
         if ( argument.empty() )
             return false;
         uint64 value = 0;
         for ( const utf8 ch : argument )
         {
-            const bool bInvalidCountDigit = ch < '0' || '9' < ch || value > 1000000;
-            if ( bInvalidCountDigit )
+            if ( ch < '0' || '9' < ch )
                 return false;
             value = value * 10 + static_cast<uint64>( ch - '0' );
+            if ( value > kMaxCountArgument ) // 더한 뒤에 본다 - 앞에서 보면 상한의 열 배까지 지나간다
+                return false;
         }
         outValue = static_cast<uint32>( value );
         return true;

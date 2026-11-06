@@ -188,6 +188,14 @@ namespace sw
         replayName.assign( reinterpret_cast<const utf8*>( pCursor ), header._nameLength );
         pCursor += header._nameLength;
 
+        // 프레임은 적어도 시간과 이벤트 수를 쓴다. 남은 바이트로 담을 수 없는 수는 자리를 잡기 전에 거절한다(망가진 머리말이 큰 할당을 일으키지 않게).
+        constexpr size_t kMinFrameBytes = sizeof( float32 ) + sizeof( uint32 );
+        if ( static_cast<size_t>( pEnd - pCursor ) / kMinFrameBytes < header._frameCount )
+        {
+            SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedFrame", "Input replay promises %# frames but is too short — refusing to load: %#", header._frameCount, filePath );
+            return false;
+        }
+
         vector<InputReplayFrame> listFrame;
         listFrame.reserve( header._frameCount );
         for ( uint32 frameIndex = 0; frameIndex < header._frameCount; ++frameIndex )
