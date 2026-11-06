@@ -88,7 +88,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Preset name sounds pick it by" )
+        PROPERTY( InheritKey, Tooltip = "Preset name sounds pick it by" )
         hashed_string _name{};
         PROPERTY( Tooltip = "Custom curve: (distance m, volume dB) points" )
         vector<AudioCurvePoint> _listCustomPoint{};

@@ -88,7 +88,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Parameter name" )
+        PROPERTY( InheritKey, Tooltip = "Parameter name" )
         hashed_string _name{};
         PROPERTY( Tooltip = "Lowest value" )
         float32 _minValue{ 0.0f };
@@ -127,14 +127,17 @@ namespace sw
      *                     _priority="40" _cooldownSeconds="0.05" _volumeDbMin="-3" _pitchMin="-1" _pitchMax="1">
      *         <_listClip><AudioClipEntry _path="game/x/sounds/step_0.ogg" /><AudioClipEntry _path="game/x/sounds/step_1.ogg" /></_listClip>
      *     </AudioEventDesc>
+     *     <AudioEventDesc _name="FootstepHeavy" _parentEvent="Footstep" _volumeDbMin="0" _pitchMin="-4" _pitchMax="-2" />
      * @endcode
+     * @details `_parentEvent` 는 같은 라이브러리(파일 상속을 합친 결과)의 다른 이벤트를 부모로 삼아 다른 칸만 적는 프리셋이다(언리얼 MetaSound Preset 자리). 클립 목록은 적으면 통째로 바뀐다.
+     *          칸이 아니라 읽기 앞 단계가 지우는 표시다(`AudioEventLibrary::loadFromXMLText`) — 합치기는 `DataInheritance` 하나이고, 순환 · 없는 부모는 같은 오류다.
      */
     REFLECT()
     struct SW_API AudioEventDesc
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Event name game code posts" )
+        PROPERTY( InheritKey, Tooltip = "Event name game code posts" )
         hashed_string _name{};
         PROPERTY( Tooltip = "Bus the voices go to" )
         hashed_string _bus{};
@@ -184,6 +187,7 @@ namespace sw
      * @details 이름이 비었거나 겹치거나, 이벤트가 모르는 파라미터를 쓰거나, 클립이 없거나, 범위가 거꾸로면 읽기 오류다.
      *          화자 키(`_subtitleSpeakerKey`)가 있는데 자막 키(`AudioClipEntry::_subtitleKey`)를 가진 클립이 없어도 오류다(화자만 있는 자막은 없다).
      *          버스와 감쇠 이름은 로드하는 엔진의 그래프와 대조한다(`AudioEngine::loadEventLibrary`).
+     *          루트의 `_base="<부모 라이브러리>"` 는 파일 전체를 물려받고 이름으로 합친다(`docs/agents/DataInheritance.md`). 게임 라이브러리가 공통 라이브러리의 이벤트만 고칠 때 쓴다.
      */
     REFLECT()
     struct SW_API AudioEventLibrary
@@ -207,7 +211,7 @@ namespace sw
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
+        /** @brief XML 문자열을 펼쳐(파일 `_base`, 이벤트 `_parentEvent`) 읽고 검사합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
         /** @brief 파일 안에서만 정해지는 규칙(이름, 클립, 범위, 파라미터 이름, 곡선 순서)을 검사합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
@@ -216,6 +220,8 @@ namespace sw
         /**
          * @brief 검사(`validate`)를 통과한 라이브러리를 리소스 경로의 파일에 씁니다. 에디터의 오디오 이벤트 창이 고친 데이터를 저장하는 길입니다.
          * @details 검사를 통과하지 못하면 쓰지 않는다 — 읽을 수 없는 파일을 남기지 않는다. 저장한 파일은 에셋 핫 리로드가 엔진에 다시 올린다.
+         *          지금 파일이 `_base` 를 적었으면 부모와 다른 칸만 쓴다 — 변형을 모든 칸을 적은 파일로 끊지 않는다. 부모를 읽지 못하면 쓰지 않는다.
+         *          shortcut: 이벤트의 `_parentEvent` 는 펼친 칸으로 쓰여 저장 뒤 끊긴다. 에디터가 프리셋을 고치게 되면 이벤트 차이 저장을 더한다.
          * @return 검사 실패나 쓰기 실패면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] bool saveToAsset( const AbsolutePath& absPath ) const;

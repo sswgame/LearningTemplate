@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioEvent.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 
@@ -12,9 +13,121 @@
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
+    namespace
+    {
+        /** @brief 이벤트 프리셋(`_parentEvent`)을 `DataInheritance` 의 입력으로 옮깁니다. 이벤트 하나가 가상의 문서이고 부모는 같은 파일의 이벤트입니다. */
+        struct AudioEventLibraryInternal
+        {
+            static constexpr const utf8* kParentEventAttribute = "_parentEvent";
+            static constexpr const utf8* kEventListElement     = "_listEvent";
+            static constexpr const utf8* kEventNameAttribute   = "_name";
+
+            /** @brief 이벤트 원소를 문서 하나로 씁니다. 부모 표시는 `_base` 로 옮깁니다(파일 상속의 합치기가 목록 원소의 `_base` 를 지우므로 데이터에는 다른 이름으로 적는다). */
+            [[nodiscard]] static string makeEventDocument( const XMLNode& event )
+            {
+                XMLDocument   doc;
+                const XMLNode out = doc.appendRoot( event.getName() );
+                for ( XMLAttribute attribute = event.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                {
+                    const bool bParent = StringUtil::equals( attribute.getName(), kParentEventAttribute );
+                    out.setAttribute( bParent ? DataInheritance::kBaseAttribute : attribute.getName(), string_view( attribute.getValue() ) );
+                }
+                for ( XMLNode child = event.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    (void)out.appendClone( child );
+                }
+                return doc.saveToString();
+            }
+
+            /** @brief 부모 이벤트를 이름으로 찾아 문서로 돌려줍니다. */
+            class EventSource final : public IDataInheritanceSource
+            {
+            public:
+                explicit EventSource( const XMLNode& eventList )
+                    : _eventList{ eventList }
+                {
+                }
+
+                [[nodiscard]] bool readText( string_view assetID, string& outText ) override
+                {
+                    for ( XMLNode event = _eventList.findChild(); event.isValid(); event = event.findNextSibling() )
+                    {
+                        if ( event.getAttributeText( kEventNameAttribute ) == assetID )
+                        {
+                            outText = makeEventDocument( event );
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+
+            private:
+                XMLNode _eventList;
+            };
+
+            /**
+             * @brief `_parentEvent` 가 있는 이벤트를 펼칩니다. 없으면 @p outText 가 비고 글 검색 한 번으로 끝납니다.
+             * @details 부모가 같은 글 안에 있어 쿠킹본에서도 그대로 돈다 — 쿠커가 펼치는 것은 파일 `_base` 까지다.
+             * @return 없는 부모 · 순환이면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool flattenPresets( string_view text, string_view sourceName, string& outText )
+            {
+                outText.clear();
+                if ( text.find( kParentEventAttribute ) == string_view::npos )
+                    return true;
+                XMLDocument doc;
+                if ( doc.parse( text, sourceName ) == false )
+                {
+                    SW_LOG_ERROR_ID( "AudioEventLibrary.PresetNotParsed", "%#: %#", sourceName, doc.getLastError() );
+                    return false;
+                }
+                const XMLNode               root      = doc.getRoot();
+                const XMLNode               eventList = root.findChild( kEventListElement );
+                EventSource                 source{ eventList };
+                const DataInheritanceSchema schema = DataInheritanceSchema::makeFromType( *AudioEventDesc::StaticType() );
+
+                XMLDocument   outDoc;
+                const XMLNode outRoot = outDoc.appendRoot( root.getName() );
+                for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                {
+                    outRoot.setAttribute( attribute.getName(), string_view( attribute.getValue() ) );
+                }
+                for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    if ( StringUtil::equals( child.getName(), kEventListElement ) == false )
+                    {
+                        (void)outRoot.appendClone( child );
+                        continue;
+                    }
+                    const XMLNode outList = outRoot.appendChild( kEventListElement );
+                    for ( XMLNode event = child.findChild(); event.isValid(); event = event.findNextSibling() )
+                    {
+                        if ( event.getAttributeText( kParentEventAttribute ).empty() )
+                        {
+                            (void)outList.appendClone( event );
+                            continue;
+                        }
+                        string entryName{ sourceName };
+                        entryName += "#";
+                        entryName += event.getAttributeText( kEventNameAttribute );
+                        string      mergedText;
+                        XMLDocument mergedDoc;
+                        if ( DataInheritance::flatten( makeEventDocument( event ), entryName, schema, source, mergedText ) == false || mergedDoc.parse( mergedText, entryName ) == false )
+                            return false;
+                        (void)outList.appendClone( mergedDoc.getRoot() );
+                    }
+                }
+                outText = outDoc.saveToString();
+                return true;
+            }
+        };
+    } // namespace
+
     bool AudioEventLibrary::loadFromAsset( const AssetID& assetID )
     {
         const string_view assetPath = assetID.view();
@@ -30,7 +143,15 @@ namespace sw
     bool AudioEventLibrary::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = AudioEventLibrary{};
-        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        // 파일 상속을 먼저 합친다 — 프리셋의 부모는 합친 결과에서 찾는다(자식 파일이 부모 파일의 이벤트를 고치고 부모로 삼는다).
+        string fileText;
+        if ( DataInheritance::findBasePath( xmlText ).empty() == false && DataInheritance::flattenReflected( xmlText, sourceName, *StaticType(), fileText ) == false )
+            return false;
+        const string_view mergedFile = fileText.empty() ? xmlText : string_view( fileText );
+        string            presetText;
+        if ( AudioEventLibraryInternal::flattenPresets( mergedFile, sourceName, presetText ) == false )
+            return false;
+        if ( XMLSerializer::deserialize( this, *StaticType(), presetText.empty() ? mergedFile : string_view( presetText ) ) == false )
         {
             SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryCould", "%#: audio event library could not be read or holds unknown keys / values", sourceName );
             return false;
@@ -147,7 +268,25 @@ namespace sw
             SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryNot2", "%#: audio event library not saved - it does not pass validation", absPath.str() );
             return false;
         }
-        if ( FileUtil::writeTextFile( absPath.str(), toXMLText() ) == false )
+        // 변형은 변형으로 저장한다 — 부모와 다른 칸만 쓴다(`ReflectedXMLFile::saveDescAsChild` 와 같은 규칙).
+        string existingText;
+        string saveText = toXMLText();
+        if ( FileUtil::readOptionalTextFile( absPath.str(), existingText ) == OptionalFileRead::Read )
+        {
+            const string      baseID = DataInheritance::findBasePath( existingText );
+            AudioEventLibrary parent;
+            if ( baseID.empty() == false )
+            {
+                string deltaText;
+                if ( parent.loadFromAsset( AssetID{ baseID } ) == false || DataInheritance::makeDelta( saveText, parent.toXMLText(), DataInheritanceSchema::makeFromType( *StaticType() ), baseID, deltaText ) == false )
+                {
+                    SW_LOG_ERROR_ID( "AudioEventLibrary.VariantNotSaved", "%#: audio event library not saved - its parent '%#' could not be read", absPath.str(), baseID );
+                    return false;
+                }
+                saveText = std::move( deltaText );
+            }
+        }
+        if ( FileUtil::writeTextFile( absPath.str(), saveText ) == false )
         {
             SW_LOG_ERROR_ID( "AudioEventLibrary.AudioEventLibraryCould2", "%#: audio event library could not be written to '%#'", absPath.str(), absPath.str() );
             return false;

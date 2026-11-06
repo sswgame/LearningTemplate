@@ -1,0 +1,147 @@
+#include "pch.h"
+
+#include "Core/Container/string.h"
+#include "Core/Testing/TestFramework.h"
+
+#include "Engine/Audio/AudioEvent.h"
+#include "Engine/Audio/AudioMixerDesc.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+
+using namespace sw;
+
+namespace
+{
+    /** @brief 부모 글을 한 벌 돌려주는 곳입니다(`DataInheritance::flatten` 의 입력). */
+    class AudioParentSource final : public IDataInheritanceSource
+    {
+    public:
+        explicit AudioParentSource( string_view text )
+            : _text{ text }
+        {
+        }
+        [[nodiscard]] bool readText( string_view /*assetID*/, string& outText ) override
+        {
+            outText = _text;
+            return true;
+        }
+
+    private:
+        string _text;
+    };
+
+    struct AudioDataVariantTestUtil
+    {
+        static constexpr string_view kLibrary = R"(<AudioEventLibrary>
+            <_listParameter><AudioParameterDesc _name="Speed" _maxValue="10" /></_listParameter>
+            <_listEvent>
+                <AudioEventDesc _name="Step" _bus="sfx" _pitchMax="2" _priority="40">
+                    <_listClip><AudioClipEntry _path="a.ogg" /></_listClip>
+                </AudioEventDesc>
+                <AudioEventDesc _name="Fire" _bus="sfx"><_listClip><AudioClipEntry _path="b.ogg" /></_listClip></AudioEventDesc>
+            </_listEvent>
+        </AudioEventLibrary>)";
+    };
+    using Util = AudioDataVariantTestUtil;
+} // namespace
+
+/** @brief [AudioDataVariantTest] 라이브러리 변형은 이벤트를 이름으로 합친다 — 적은 칸만 바뀌고, 클립은 물려받으며, _op="Remove" 는 지우고 새 이름은 더한다 */
+SW_TEST_CASE( AudioDataVariantTest, LibraryVariantMergesEventsByName )
+{
+    AudioParentSource source{ Util::kLibrary };
+    const string_view child = R"(<AudioEventLibrary _base="parent.audioevents.xml"><_listEvent>
+        <AudioEventDesc _name="Step" _pitchMax="5" />
+        <AudioEventDesc _name="Fire" _op="Remove" />
+        <AudioEventDesc _name="New" _bus="ui"><_listClip><AudioClipEntry _path="c.ogg" /></_listClip></AudioEventDesc>
+    </_listEvent></AudioEventLibrary>)";
+    string            flat;
+    SW_REQUIRE_TRUE( DataInheritance::flatten( child, "child", DataInheritanceSchema::makeFromType( *AudioEventLibrary::StaticType() ), source, flat ) );
+
+    AudioEventLibrary library;
+    SW_REQUIRE_TRUE( library.loadFromXMLText( flat ) );
+    SW_REQUIRE_EQUAL( 2u, static_cast<uint32>( library._listEvent.size() ) );
+    const AudioEventDesc* pStep = library.findEvent( hashed_string( "Step" ) );
+    SW_REQUIRE_NOT_NULL( pStep );
+    SW_EXPECT_NEAR( 5.0f, pStep->_pitchMax, 0.0f );
+    SW_EXPECT_EQUAL( 40, pStep->_priority );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pStep->_listClip.size() ) );
+    SW_EXPECT_TRUE( library.findEvent( hashed_string( "Fire" ) ) == nullptr );
+    SW_EXPECT_TRUE( library.findEvent( hashed_string( "New" ) ) != nullptr );
+}
+
+/** @brief [AudioDataVariantTest] 프리셋은 같은 라이브러리의 이벤트를 부모로 삼는다 — 뒤에 있는 부모도 찾고, 사슬도 된다 */
+SW_TEST_CASE( AudioDataVariantTest, PresetInheritsAnotherEvent )
+{
+    AudioEventLibrary library;
+    SW_REQUIRE_TRUE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent>
+        <AudioEventDesc _name="Heavy" _parentEvent="Step" _pitchMax="1" />
+        <AudioEventDesc _name="Heaviest" _parentEvent="Heavy" _priority="90" />
+        <AudioEventDesc _name="Step" _bus="sfx" _pitchMax="2" _priority="40"><_listClip><AudioClipEntry _path="a.ogg" /></_listClip></AudioEventDesc>
+    </_listEvent></AudioEventLibrary>)" ) );
+    const AudioEventDesc* pHeaviest = library.findEvent( hashed_string( "Heaviest" ) );
+    SW_REQUIRE_NOT_NULL( pHeaviest );
+    SW_EXPECT_EQUAL( 90, pHeaviest->_priority );
+    SW_EXPECT_NEAR( 1.0f, pHeaviest->_pitchMax, 0.0f );
+    SW_EXPECT_TRUE( pHeaviest->_bus == hashed_string( "sfx" ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pHeaviest->_listClip.size() ) );
+}
+
+/** @brief [AudioDataVariantTest] 없는 부모와 순환은 읽기 실패다 — 부모 없이 자식 칸만으로 읽지 않는다 */
+SW_TEST_CASE( AudioDataVariantTest, PresetErrors )
+{
+    SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
+    SW_EXPECT_LOG( "DataInheritance.Cycle" );
+    AudioEventLibrary library;
+    SW_EXPECT_FALSE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="A" _parentEvent="Missing" /></_listEvent></AudioEventLibrary>)" ) );
+    SW_EXPECT_FALSE( library.loadFromXMLText(
+        R"(<AudioEventLibrary><_listEvent><AudioEventDesc _name="A" _parentEvent="B" /><AudioEventDesc _name="B" _parentEvent="A" /></_listEvent></AudioEventLibrary>)" ) );
+}
+
+/** @brief [AudioDataVariantTest] 믹서 변형은 버스 · 센드를 이름으로 합치고 검사는 합친 결과에 걸린다 */
+SW_TEST_CASE( AudioDataVariantTest, MixerVariantMergesBusesByName )
+{
+    AudioParentSource source{ R"(<AudioMixerDesc _maxVoiceCount="32"><_listBus>
+        <AudioBusDesc _name="master" />
+        <AudioBusDesc _name="reverb" _parent="master" />
+        <AudioBusDesc _name="sfx" _parent="master" _volumeDb="-3"><_listSend><AudioSendDesc _bus="reverb" _levelDb="-14" /></_listSend></AudioBusDesc>
+    </_listBus></AudioMixerDesc>)" };
+    const string_view child = R"(<AudioMixerDesc _base="parent.audiomixer.xml" _maxVoiceCount="16"><_listBus>
+        <AudioBusDesc _name="sfx" _volumeDb="-6"><_listSend><AudioSendDesc _bus="reverb" _levelDb="-6" /></_listSend></AudioBusDesc>
+        <AudioBusDesc _name="ui" _parent="master" />
+    </_listBus></AudioMixerDesc>)";
+    string            flat;
+    SW_REQUIRE_TRUE( DataInheritance::flatten( child, "child", DataInheritanceSchema::makeFromType( *AudioMixerDesc::StaticType() ), source, flat ) );
+
+    AudioMixerDesc mixer;
+    SW_REQUIRE_TRUE( mixer.loadFromXMLText( flat ) );
+    SW_EXPECT_EQUAL( 16u, mixer._maxVoiceCount );
+    SW_REQUIRE_EQUAL( 4u, static_cast<uint32>( mixer._listBus.size() ) );
+    const AudioBusDesc& sfx = mixer._listBus[static_cast<size_t>( mixer.findBusIndex( hashed_string( "sfx" ) ) )];
+    SW_EXPECT_NEAR( -6.0f, sfx._volumeDb, 0.0f );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( sfx._listSend.size() ) );
+    SW_EXPECT_NEAR( -6.0f, sfx._listSend[0]._levelDb, 0.0f );
+}
+
+/** @brief [AudioDataVariantTest] 변형의 차이 글을 부모 위에 펼치면 고친 값이 나온다 — `saveToAsset` 이 변형을 변형으로 쓰는 근거다 */
+SW_TEST_CASE( AudioDataVariantTest, DeltaRoundTrips )
+{
+    AudioEventLibrary parent;
+    SW_REQUIRE_TRUE( parent.loadFromXMLText( Util::kLibrary ) );
+    AudioEventLibrary edited                               = parent;
+    edited.findEvent( hashed_string( "Step" ) )->_pitchMax = 7.0f;
+
+    const DataInheritanceSchema schema = DataInheritanceSchema::makeFromType( *AudioEventLibrary::StaticType() );
+    string                      delta;
+    SW_REQUIRE_TRUE( DataInheritance::makeDelta( edited.toXMLText(), parent.toXMLText(), schema, "parent.audioevents.xml", delta ) );
+    SW_EXPECT_TRUE( delta.find( "_base=\"parent.audioevents.xml\"" ) != string::npos );
+    SW_EXPECT_TRUE( delta.find( "Fire" ) == string::npos );
+
+    AudioParentSource source{ parent.toXMLText() };
+    string            flat;
+    SW_REQUIRE_TRUE( DataInheritance::flatten( delta, "child", schema, source, flat ) );
+    AudioEventLibrary reloaded;
+    SW_REQUIRE_TRUE( reloaded.loadFromXMLText( flat ) );
+    const AudioEventDesc* pStep = reloaded.findEvent( hashed_string( "Step" ) );
+    SW_REQUIRE_NOT_NULL( pStep );
+    SW_EXPECT_NEAR( 7.0f, pStep->_pitchMax, 0.0f );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( reloaded._listEvent.size() ) );
+}

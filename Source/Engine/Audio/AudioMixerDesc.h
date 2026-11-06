@@ -49,7 +49,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Bus that receives the send" )
+        PROPERTY( InheritKey, Tooltip = "Bus that receives the send" )
         hashed_string _bus{};
         PROPERTY( Tooltip = "Send level", Meta = "Units=dB" )
         float32 _levelDb{ 0.0f };
@@ -84,6 +84,7 @@ namespace sw
      *     <AudioEffectDesc _type="ConvolutionReverb" _impulse="game/mygame/audio/hall_ir.wav" />
      * @endcode
      * @details 컨볼루션 리버브는 임펄스 응답 클립(`_impulse`)이 필수다. 없으면 믹서 에셋을 읽을 때(`validate`) 오류로 멈추고, 읽지 못하면 믹서를 만들 때 멈춘다.
+     *          열쇠 칸을 두지 않았다 — 이름이 비면 종류 이름을 쓰는 규칙이라 열쇠가 비는 원소가 있다. 믹서 변형이 버스의 `_listEffect` 를 적으면 통째로 바뀐다(이펙트는 순서가 곧 의미이기도 하다).
      */
     REFLECT()
     struct SW_API AudioEffectDesc
@@ -123,7 +124,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Bus whose output level ducks this bus (dialogue ducks music)" )
+        PROPERTY( InheritKey, Tooltip = "Bus whose output level ducks this bus (dialogue ducks music)" )
         hashed_string _sourceBus{};
         PROPERTY( Tooltip = "Source level above which the duck engages", Meta = "Units=dB" )
         float32 _thresholdDb{ -40.0f };
@@ -152,7 +153,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Bus name (sounds and settings pick the bus by it)" )
+        PROPERTY( InheritKey, Tooltip = "Bus name (sounds and settings pick the bus by it)" )
         hashed_string _name{};
         PROPERTY( Tooltip = "Parent bus; only the master bus has none" )
         hashed_string _parent{};
@@ -181,7 +182,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Bus name" )
+        PROPERTY( InheritKey, Tooltip = "Bus name" )
         hashed_string _bus{};
         PROPERTY( Tooltip = "Fader offset at full intensity (intensities add in dB)", Meta = "Units=dB" )
         float32 _volumeDb{ 0.0f };
@@ -241,7 +242,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Snapshot name" )
+        PROPERTY( InheritKey, Tooltip = "Snapshot name" )
         hashed_string _name{};
         PROPERTY( Tooltip = "Bus fader offsets" )
         vector<AudioSnapshotBusDesc> _listBusVolume{};
@@ -262,6 +263,7 @@ namespace sw
      * @brief 믹서 그래프 하나입니다. 버스 목록과 보이스 상한을 담습니다.
      * @details 버스 이름은 겹치지 않아야 하고, `master` 가 유일한 루트여야 한다. 부모와 센드 대상은 테이블에 있는 이름이어야 하며, 부모와 센드가 고리를 만들면 안 된다.
      *          어긋나면 오류를 남기고 읽기가 실패한다.
+     *          루트의 `_base="<부모 믹서>"` 는 그래프를 물려받고 버스 · 감쇠 · 스냅샷을 이름으로 합친다(언리얼 서브믹스 프리셋 자리, `docs/agents/DataInheritance.md`). 검사는 합친 결과에 걸린다.
      */
     REFLECT()
     struct SW_API AudioMixerDesc
@@ -295,7 +297,7 @@ namespace sw
 
         /** @brief 리소스 경로의 XML 을 읽고 검사합니다. 실패하면 오류를 남기고 false 입니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
-        /** @brief XML 문자열을 읽고 검사합니다(테스트용). */
+        /** @brief XML 문자열을 펼쳐(`_base`) 읽고 검사합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
         /** @brief 이름, 루트, 부모, 센드, 고리를 검사합니다. 어긋나면 오류를 남기고 false 를 반환합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
