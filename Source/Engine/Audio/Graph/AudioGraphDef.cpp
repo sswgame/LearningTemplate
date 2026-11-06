@@ -145,10 +145,15 @@ namespace sw
         }
         if ( bValid )
         {
-            vector<uint32> listOrder;
-            if ( makeProcessingOrder( listOrder ) == false )
+            const DependencyOrder order = makeDependencyGraph().sortInDataOrder();
+            if ( order.isSorted() == false )
             {
-                SW_LOG_ERROR_ID( "AudioGraphDef.NodeInputsFormCycle", "%#: node inputs form a cycle", sourceName );
+                string cycle;
+                for ( const uint32 nodeIndex : order._listCycle )
+                {
+                    cycle.append( cycle.empty() ? "" : " -> " ).append( _listNode[nodeIndex]._name.c_str() );
+                }
+                SW_LOG_ERROR_ID( "AudioGraphDef.NodeInputsFormCycle", "%#: node inputs form a cycle: %#", sourceName, cycle.c_str() );
                 bValid = false;
             }
         }
@@ -177,43 +182,35 @@ namespace sw
 
     bool AudioGraphDef::makeProcessingOrder( vector<uint32>& outListNodeIndex ) const
     {
-        // 칸 비우기 순서(Kahn): 아직 처리하지 않은 입력이 없는 노드를 데이터 순서대로 꺼낸다. 같은 데이터면 같은 순서다.
         outListNodeIndex.clear();
-        const size_t   nodeCount = _listNode.size();
-        vector<uint32> listPending( nodeCount, 0 );
-        for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
+        for ( const AudioGraphNodeDesc& node : _listNode )
         {
-            for ( const hashed_string& input : _listNode[nodeIndex]._listInput )
+            for ( const hashed_string& input : node._listInput )
             {
                 if ( findNodeIndex( input ) < 0 )
                     return false;
-                ++listPending[nodeIndex];
             }
         }
-        vector<uint8> listDone( nodeCount, SW_FALSE );
-        while ( outListNodeIndex.size() < nodeCount )
-        {
-            bool bProgress = false;
-            for ( size_t nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
-            {
-                if ( listDone[nodeIndex] == SW_TRUE || listPending[nodeIndex] != 0 )
-                    continue;
-                listDone[nodeIndex] = SW_TRUE;
-                bProgress           = true;
-                outListNodeIndex.push_back( static_cast<uint32>( nodeIndex ) );
-                for ( size_t readerIndex = 0; readerIndex < nodeCount; ++readerIndex )
-                {
-                    for ( const hashed_string& input : _listNode[readerIndex]._listInput )
-                    {
-                        if ( input == _listNode[nodeIndex]._name )
-                            --listPending[readerIndex];
-                    }
-                }
-            }
-            if ( bProgress == false )
-                return false;
-        }
+        DependencyOrder order = makeDependencyGraph().sortInDataOrder();
+        if ( order.isSorted() == false )
+            return false;
+        outListNodeIndex = std::move( order._listOrder );
         return true;
+    }
+
+    DependencyGraph AudioGraphDef::makeDependencyGraph() const
+    {
+        DependencyGraph graph{ static_cast<uint32>( _listNode.size() ) };
+        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
+        {
+            for ( const hashed_string& input : _listNode[nodeIndex]._listInput )
+            {
+                const int32 inputIndex = findNodeIndex( input );
+                if ( inputIndex >= 0 )
+                    graph.addDependency( static_cast<uint32>( nodeIndex ), static_cast<uint32>( inputIndex ) );
+            }
+        }
+        return graph;
     }
 
     int32 AudioGraphDef::findNodeIndex( const hashed_string& name ) const

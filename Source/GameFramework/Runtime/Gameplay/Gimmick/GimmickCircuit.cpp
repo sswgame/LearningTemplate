@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickCircuit.h"
 
+#include "Core/Container/DependencyGraph.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
@@ -226,65 +227,44 @@ namespace sw
 
     void GimmickCircuit::computeEvaluationOrder( const GimmickCircuitDef& def, vector<string>& outListError )
     {
-        vector<uint32> listIndegree( _listNode.size(), 0 );
+        // 고리를 끊는 노드(Delay)는 앞 스텝의 입력을 쓰므로 맨 앞에 두고 간선에서 뺀다. 나머지는 배선의 원천이 먼저인 위상 순서다(준비된 것은 데이터 차례).
+        const auto isEvaluated = []( const NodeRuntime& node )
+        { return node._pKind != nullptr && node._pKind->breaksCycle() == false; };
+        DependencyGraph graph{ static_cast<uint32>( _listNode.size() ) };
         for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
         {
             const NodeRuntime& node = _listNode[nodeIndex];
-            if ( node._pKind == nullptr || node._pKind->breaksCycle() )
+            if ( isEvaluated( node ) == false )
+            {
+                if ( node._pKind != nullptr )
+                    _listOrder.push_back( static_cast<uint32>( nodeIndex ) );
                 continue;
+            }
             for ( uint32 wireIndex = 0; wireIndex < node._wireCount; ++wireIndex )
             {
-                const NodeRuntime& source = _listNode[_listInputWire[node._wireStart + wireIndex]._sourceNode];
-                if ( source._pKind != nullptr && source._pKind->breaksCycle() == false )
-                    ++listIndegree[nodeIndex];
+                const uint32 sourceIndex = _listInputWire[node._wireStart + wireIndex]._sourceNode;
+                if ( isEvaluated( _listNode[sourceIndex] ) )
+                    graph.addDependency( static_cast<uint32>( nodeIndex ), sourceIndex );
             }
         }
-        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
+        const DependencyOrder order = graph.sortInDataOrder();
+        if ( order.isSorted() == false )
         {
-            if ( _listNode[nodeIndex]._pKind != nullptr && _listNode[nodeIndex]._pKind->breaksCycle() )
-                _listOrder.push_back( static_cast<uint32>( nodeIndex ) );
-        }
-        vector<uint8> listPlaced( _listNode.size(), SW_FALSE );
-        bool          bProgress = true;
-        while ( bProgress )
-        {
-            bProgress = false;
-            for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
+            string cycleNodes;
+            for ( const uint32 nodeIndex : order._listCycle )
             {
-                const NodeRuntime& node     = _listNode[nodeIndex];
-                const bool         bSkipped = node._pKind == nullptr || node._pKind->breaksCycle() || listPlaced[nodeIndex] == SW_TRUE;
-                if ( bSkipped || listIndegree[nodeIndex] != 0 )
-                    continue;
-                listPlaced[nodeIndex] = SW_TRUE;
-                _listOrder.push_back( static_cast<uint32>( nodeIndex ) );
-                bProgress = true;
-                // 이 노드를 원천으로 하는 배선의 받는 쪽 진입 차수를 줄인다.
-                for ( size_t targetIndex = 0; targetIndex < _listNode.size(); ++targetIndex )
-                {
-                    const NodeRuntime& target = _listNode[targetIndex];
-                    if ( target._pKind == nullptr || target._pKind->breaksCycle() )
-                        continue;
-                    for ( uint32 wireIndex = 0; wireIndex < target._wireCount; ++wireIndex )
-                    {
-                        if ( _listInputWire[target._wireStart + wireIndex]._sourceNode == nodeIndex )
-                            --listIndegree[targetIndex];
-                    }
-                }
+                if ( cycleNodes.empty() == false )
+                    cycleNodes += " -> ";
+                cycleNodes += _listNode[nodeIndex]._id.c_str();
             }
-        }
-        string cycleNodes;
-        for ( size_t nodeIndex = 0; nodeIndex < _listNode.size(); ++nodeIndex )
-        {
-            const NodeRuntime& node      = _listNode[nodeIndex];
-            const bool         bSkipNode = node._pKind == nullptr || node._pKind->breaksCycle() || listPlaced[nodeIndex] == SW_TRUE;
-            if ( bSkipNode )
-                continue;
-            if ( cycleNodes.empty() == false )
-                cycleNodes += ", ";
-            cycleNodes += node._id.c_str();
-        }
-        if ( cycleNodes.empty() == false )
             outListError.push_back( def.describeSource() + ": signal loop without a Delay through nodes " + cycleNodes );
+            return;
+        }
+        for ( const uint32 nodeIndex : order._listOrder )
+        {
+            if ( isEvaluated( _listNode[nodeIndex] ) )
+                _listOrder.push_back( nodeIndex );
+        }
     }
 
     GimmickNodeContext GimmickCircuit::makeContext( NodeRuntime& node )

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Inventory/EquipCondition.h"
 
+#include "Core/Container/DependencyGraph.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/String/FourCcUtil.h"
 
@@ -64,12 +65,6 @@ namespace sw
                 }
                 return false;
             }
-
-            /** @brief 깊이 우선 탐색 상태입니다. 0 은 아직 안 봄, 1 은 보는 중(스택에 있음), 2 는 끝남입니다. */
-            static constexpr uint8 kVisitNone   = 0;
-            static constexpr uint8 kVisitActive = 1;
-            static constexpr uint8 kVisitDone   = 2;
-
             /** @brief 조건이 있는 아이템 @p fromIndex 의 조건을 채울 수 있는, 조건이 있는 아이템 목록입니다. */
             static void collectEdges( const vector<ItemDef>& listItem, size_t fromIndex, const IEquipSetLookup* pSetLookup, vector<size_t>& outListTarget )
             {
@@ -104,36 +99,6 @@ namespace sw
                     }
                 }
             }
-
-            static bool visit( const vector<ItemDef>& listItem, size_t index, const IEquipSetLookup* pSetLookup, vector<uint8>& inoutState, vector<size_t>& inoutStack,
-                               vector<hashed_string>& outListCycle )
-            {
-                inoutState[index] = kVisitActive;
-                inoutStack.push_back( index );
-                vector<size_t> listTarget;
-                collectEdges( listItem, index, pSetLookup, listTarget );
-                for ( const size_t target : listTarget )
-                {
-                    if ( inoutState[target] == kVisitActive )
-                    {
-                        // 스택에서 target 부터 지금까지가 순환 경로이다.
-                        bool bInCycle = false;
-                        for ( const size_t stackIndex : inoutStack )
-                        {
-                            bInCycle = bInCycle || stackIndex == target;
-                            if ( bInCycle )
-                                outListCycle.push_back( listItem[stackIndex]._id );
-                        }
-                        outListCycle.push_back( listItem[target]._id );
-                        return true;
-                    }
-                    if ( inoutState[target] == kVisitNone && visit( listItem, target, pSetLookup, inoutState, inoutStack, outListCycle ) )
-                        return true;
-                }
-                inoutStack.pop_back();
-                inoutState[index] = kVisitDone;
-                return false;
-            }
         };
     } // namespace
 } // namespace sw
@@ -158,17 +123,27 @@ namespace sw
 
     bool EquipCondition::findConditionCycle( const ItemCatalog& catalog, const IEquipSetLookup* pSetLookup, vector<hashed_string>& outListCycle )
     {
+        // 간선은 조건이 있는 아이템끼리만 생긴다 — 조건이 있는 아이템을 후보로 순환을 찾는다.
         outListCycle.clear();
         const vector<ItemDef>& listItem = catalog.getAll();
-        vector<uint8>          listState( listItem.size(), EquipConditionInternal::kVisitNone );
-        vector<size_t>         listStack;
+        DependencyGraph        graph{ static_cast<uint32>( listItem.size() ) };
+        vector<uint32>         listCandidate;
+        vector<size_t>         listTarget;
         for ( size_t index = 0; index < listItem.size(); ++index )
         {
-            if ( listItem[index].hasEquipConditions() == false || listState[index] != EquipConditionInternal::kVisitNone )
+            if ( listItem[index].hasEquipConditions() == false )
                 continue;
-            if ( EquipConditionInternal::visit( listItem, index, pSetLookup, listState, listStack, outListCycle ) )
-                return true;
+            listCandidate.push_back( static_cast<uint32>( index ) );
+            EquipConditionInternal::collectEdges( listItem, index, pSetLookup, listTarget );
+            for ( const size_t target : listTarget )
+            {
+                graph.addDependency( static_cast<uint32>( index ), static_cast<uint32>( target ) );
+            }
         }
-        return false;
+        for ( const uint32 index : graph.findCycle( listCandidate ) )
+        {
+            outListCycle.push_back( listItem[index]._id );
+        }
+        return outListCycle.empty() == false;
     }
 } // namespace sw

@@ -29,6 +29,7 @@
  * @endcode
  */
 #pragma once
+#include "Core/Container/DependencyGraph.h"
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
@@ -156,10 +157,13 @@ namespace sw
          */
         [[nodiscard]] bool saveToAsset( const AbsolutePath& absPath ) const;
         /**
-         * @brief 처리 순서(입력이 먼저)를 노드 번호로 만듭니다. 입력을 간선으로 본 위상 정렬입니다.
+         * @brief 처리 순서(입력이 먼저)를 노드 번호로 만듭니다. 입력을 간선으로 본 위상 정렬이고 준비된 노드는 데이터 차례로 꺼낸다(`DependencyGraph::sortInDataOrder` —
+         *        잡음 · 그래뉼러가 한 난수를 차례로 쓰므로 같은 파일이면 같은 소리다).
          * @return 없는 노드를 가리키거나 고리가 있으면 false 입니다.
          */
         [[nodiscard]] bool makeProcessingOrder( vector<uint32>& outListNodeIndex ) const;
+        /** @brief 입력을 간선으로 본 의존 그래프입니다(노드 번호는 `_listNode` 와 같다). 없는 노드를 가리키는 입력은 빠진다 — 검사(`validate`)가 따로 잡는다. */
+        [[nodiscard]] DependencyGraph makeDependencyGraph() const;
         /** @brief 이름의 노드 번호입니다. 없으면 -1 입니다. */
         int32 findNodeIndex( const hashed_string& name ) const;
     };

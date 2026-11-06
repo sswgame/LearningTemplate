@@ -77,13 +77,13 @@ SW_TEST_CASE( LiveReloadLogicTest, DependentClosure )
     SW_EXPECT_EQUAL( size_t( 2 ), listRing.size() );
 }
 
-/** @brief [LiveReloadLogicTest] 정렬: 의존되는 쪽이 먼저이고, 같은 단계는 이름순이라 입력 순서와 상관없다. 그래프에 없는 이름은 빠진다 */
+/** @brief [LiveReloadLogicTest] 정렬: 의존되는 쪽이 먼저이고, 준비된 것은 이름순이라(모듈 적재 순서와 같은 규칙) 입력 순서와 상관없다. 그래프에 없는 이름은 빠진다 */
 SW_TEST_CASE( LiveReloadLogicTest, SortsByDependency )
 {
     const ModuleDependencyGraph graph = makeGraph();
     vector<string>              listFirst;
     SW_REQUIRE_TRUE( graph.sortByDependency( { "D", "C", "B", "A", "Nothing" }, listFirst ) );
-    const vector<string> listExpected{ "A", "B", "D", "C" };
+    const vector<string> listExpected{ "A", "B", "C", "D" }; // B 를 꺼내면 C 와 D 가 함께 준비되고 이름이 앞인 C 가 먼저다
     SW_EXPECT_TRUE( listFirst == listExpected );
 
     vector<string> listSecond;

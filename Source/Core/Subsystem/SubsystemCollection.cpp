@@ -2,7 +2,7 @@
 
 #include "Core/Subsystem/SubsystemCollection.h"
 
-#include "Core/Container/TopologicalSortUtil.h"
+#include "Core/Container/DependencyGraph.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Foundation/Constants.h"
 
@@ -317,25 +317,31 @@ namespace sw
             }
         }
 
-        // 남은 의존이 0 인 노드 중 **이름이 가장 앞인** 것을 고른다(`TopologicalSortUtil` — 모듈 적재 순서와 같은 규칙). 목록 순서를 보지 않으므로
+        // 남은 의존이 0 인 노드 중 **이름이 가장 앞인** 것을 고른다(`DependencyGraph::sortByName` — 모듈 적재 순서와 같은 규칙). 목록 순서를 보지 않으므로
         // 순서는 의존만이 정한다 — 추가한 순서는 뜻이 없다.
         vector<string_view> listName;
         listName.reserve( nodeCount );
-        for ( const SubsystemNode& node : listNode )
+        DependencyGraph graph{ nodeCount };
+        for ( uint32 nodeIndex = 0; nodeIndex < nodeCount; ++nodeIndex )
         {
-            listName.push_back( node._pName );
+            listName.push_back( listNode[nodeIndex]._pName );
+            for ( const uint32 dependency : outGraph._listDependency[nodeIndex] )
+            {
+                graph.addDependency( nodeIndex, dependency );
+            }
         }
-        vector<uint32> listUnsorted;
-        if ( TopologicalSortUtil::sortByDependency( listName, outGraph._listDependency, outGraph._listOrder, listUnsorted ) == false )
+        DependencyOrder order = graph.sortByName( listName );
+        if ( order.isSorted() == false )
         {
             // 남은 노드는 모두 서로를 기다린다 — 순환(이나 순환에 매달린 노드)이다.
             outError = "Subsystems in or behind a dependency cycle:";
-            for ( const uint32 nodeIndex : listUnsorted )
+            for ( const uint32 nodeIndex : order._listUnsorted )
             {
                 outError += string( " " ) + listNode[nodeIndex]._pName;
             }
             return false;
         }
+        outGraph._listOrder = std::move( order._listOrder );
         return true;
     }
 } // namespace sw

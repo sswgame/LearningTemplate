@@ -14,7 +14,7 @@
 # 그리고 이 빌드 타깃(`SW_TARGET_TYPE` — Game 은 Client · Server 둘 다)이 `_listTarget`(Client | Server)과 겹침. 프로젝트는 늘 켜져 있다.
 # 그리고 (`SW_BUILD_UNUSED_KITS=OFF` 이면) 키트는 켜진 비키트 모듈이나 함께 짓는 게임 팩(`SW_GAMES`)에서 의존으로 닿음 — 이 조건만 빌드 쪽에 있고, 뺀 키트는 매니페스트도 복사하지 않는다.
 # 켜진 모듈의 의존은 있어야 하고 · 켜져 있어야 하고 · `_minVersion` 이상이어야 하며 · 순환이 없어야 한다 — 아니면 구성이 선다.
-# 적재 순서 = 의존이 먼저, 동점은 이름 순(`TopologicalSortUtil::sortByDependency` 와 같다).
+# 적재 순서 = 의존이 먼저, 동점은 이름 순(`DependencyGraph::sortByName` 와 같다).
 #
 # 주의: `cmake -P` 스크립트(테스트)도 이 파일을 include 한다. 스크립트 모드는 cmake_minimum_required 가 없으면 정책이 전부 OLD 라
 # `IN_LIST`(CMP0057)가 "Unknown arguments" 가 된다 — 조용히 다르게 돌지 않게 여기서 세운다.
@@ -529,7 +529,7 @@ function(sw_resolveModuleManifests)
 	message(STATUS "[Module] ${swActiveCount} of ${swManifestCount} modules active (${sw_platform_name} ${sw_configuration_name} ${SW_TARGET_TYPE})")
 endfunction()
 
-# 모듈 이름 목록(LIST_VAR)을 의존이 먼저 · 동점은 이름 순으로 줄 세운다(Kahn — 런타임 `TopologicalSortUtil::sortByDependency` 와 같다).
+# 모듈 이름 목록(LIST_VAR)을 의존이 먼저 · 동점은 이름 순으로 줄 세운다(Kahn — 런타임 `DependencyGraph::sortByName` 와 같다).
 # 목록 밖의 의존은 보지 않는다(키트 목록에서 GameFramework 같은 것). 아무도 못 고르면 순환이다 — 구성을 세운다.
 function(sw_sortModulesByDependency LIST_VAR)
 	set(swRemaining ${${LIST_VAR}})

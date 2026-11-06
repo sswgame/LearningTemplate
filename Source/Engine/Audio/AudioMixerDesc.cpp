@@ -2,6 +2,7 @@
 
 #include "Engine/Audio/AudioMixerDesc.h"
 
+#include "Core/Container/DependencyGraph.h"
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Audio/DSP/AudioEffect.h"
@@ -363,55 +364,24 @@ namespace sw
 
     bool AudioMixerDesc::makeProcessingOrder( vector<uint32>& outListBusIndex ) const
     {
-        // 간선은 보내는 버스에서 받는 버스(부모, 센드 대상)로 향한다. 받는 쪽은 들어오는 간선이 모두 처리된 뒤에 처리한다(Kahn).
-        const size_t   busCount = _listBus.size();
-        vector<uint32> listIncoming( busCount, 0u );
-        for ( const AudioBusDesc& bus : _listBus )
+        // 받는 버스(부모, 센드 대상)는 보내는 버스가 모두 처리된 뒤에 처리한다. 작은 번호부터 꺼내 순서를 데이터 순서에 묶는다(같은 파일이면 같은 합산 순서).
+        DependencyGraph graph{ static_cast<uint32>( _listBus.size() ) };
+        for ( size_t busIndex = 0; busIndex < _listBus.size(); ++busIndex )
         {
-            const int32 parentIndex = findBusIndex( bus._parent );
+            const AudioBusDesc& bus         = _listBus[busIndex];
+            const int32         parentIndex = findBusIndex( bus._parent );
             if ( parentIndex >= 0 )
-                ++listIncoming[static_cast<size_t>( parentIndex )];
+                graph.addDependency( static_cast<uint32>( parentIndex ), static_cast<uint32>( busIndex ) );
             for ( const AudioSendDesc& send : bus._listSend )
             {
                 const int32 targetIndex = findBusIndex( send._bus );
                 if ( targetIndex >= 0 )
-                    ++listIncoming[static_cast<size_t>( targetIndex )];
+                    graph.addDependency( static_cast<uint32>( targetIndex ), static_cast<uint32>( busIndex ) );
             }
         }
-
-        outListBusIndex.clear();
-        outListBusIndex.reserve( busCount );
-        vector<uint32> listReady;
-        for ( size_t busIndex = 0; busIndex < busCount; ++busIndex )
-        {
-            if ( listIncoming[busIndex] == 0 )
-                listReady.push_back( static_cast<uint32>( busIndex ) );
-        }
-        while ( listReady.empty() == false )
-        {
-            // 작은 번호부터 꺼내 순서를 데이터 순서에 묶는다(같은 파일이면 같은 순서).
-            size_t pickSlot = 0;
-            for ( size_t slot = 1; slot < listReady.size(); ++slot )
-            {
-                if ( listReady[slot] < listReady[pickSlot] )
-                    pickSlot = slot;
-            }
-            const uint32 busIndex = listReady[pickSlot];
-            listReady.erase( listReady.begin() + static_cast<ptrdiff_t>( pickSlot ) );
-            outListBusIndex.push_back( busIndex );
-
-            const AudioBusDesc& bus         = _listBus[busIndex];
-            const int32         parentIndex = findBusIndex( bus._parent );
-            if ( parentIndex >= 0 && --listIncoming[static_cast<size_t>( parentIndex )] == 0 )
-                listReady.push_back( static_cast<uint32>( parentIndex ) );
-            for ( const AudioSendDesc& send : bus._listSend )
-            {
-                const int32 targetIndex = findBusIndex( send._bus );
-                if ( targetIndex >= 0 && --listIncoming[static_cast<size_t>( targetIndex )] == 0 )
-                    listReady.push_back( static_cast<uint32>( targetIndex ) );
-            }
-        }
-        return outListBusIndex.size() == busCount;
+        DependencyOrder order = graph.sortInDataOrder();
+        outListBusIndex       = std::move( order._listOrder );
+        return order.isSorted();
     }
 
     AudioMixerDesc AudioMixerDesc::makeDefault()

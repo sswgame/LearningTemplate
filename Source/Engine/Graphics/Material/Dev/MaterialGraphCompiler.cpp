@@ -2,6 +2,7 @@
 
 #include "Engine/Graphics/Material/Dev/MaterialGraphCompiler.h"
 
+#include "Core/Container/DependencyGraph.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/Foundation/Constants.h"
@@ -234,42 +235,6 @@ namespace sw
                             report( scope, node._name, "BadValue", "asset path holds a character that cannot be written to the material" );
                     }
                     return _listIssue.size() == issueCount;
-                }
-
-                /** @brief 위상 정렬의 깊이 우선 방문입니다. 순환이면 그 길을 노드 이름으로 알리고 false 입니다. */
-                [[nodiscard]] bool visit( const MaterialGraphDef& graph, uint32 nodeIndex, string_view scope, vector<uint8>& inoutListState, vector<uint32>& inoutListPath, vector<uint32>& outListOrder )
-                {
-                    static constexpr uint8 kVisiting = 1;
-                    static constexpr uint8 kDone     = 2;
-                    if ( inoutListState[nodeIndex] == kDone )
-                        return true;
-                    const MaterialGraphNodeDesc& node = graph._listNode[nodeIndex];
-                    if ( inoutListState[nodeIndex] == kVisiting )
-                    {
-                        string message{ "cycle: " };
-                        bool   bInCycle = false;
-                        for ( const uint32 pathIndex : inoutListPath )
-                        {
-                            bInCycle = bInCycle || pathIndex == nodeIndex;
-                            if ( bInCycle )
-                                message.append( graph._listNode[pathIndex]._name ).append( " -> " );
-                        }
-                        message.append( node._name );
-                        report( scope, node._name, "Cycle", std::move( message ) );
-                        return false;
-                    }
-                    inoutListState[nodeIndex] = kVisiting;
-                    inoutListPath.push_back( nodeIndex );
-                    for ( const MaterialGraphLink& link : node._listLink )
-                    {
-                        const int32 fromIndex = graph.findNodeIndex( link._fromNode );
-                        if ( fromIndex >= 0 && visit( graph, static_cast<uint32>( fromIndex ), scope, inoutListState, inoutListPath, outListOrder ) == false )
-                            return false;
-                    }
-                    inoutListPath.pop_back();
-                    inoutListState[nodeIndex] = kDone;
-                    outListOrder.push_back( nodeIndex );
-                    return true;
                 }
 
                 /**
@@ -647,19 +612,30 @@ namespace sw
                         return false;
                     }
 
-                    vector<uint8>  listState;
-                    vector<uint32> listPath;
-                    vector<uint32> listOrder;
-                    listState.resize( graph._listNode.size() );
-                    for ( const uint32 rootIndex : listRoot )
+                    // 링크가 간선이다(받는 노드가 내는 노드를 기다린다). 깊이 우선이라 링크 차례가 생성 HLSL 의 차례이고 내용 해시에 든다.
+                    DependencyGraph dependencyGraph{ static_cast<uint32>( graph._listNode.size() ) };
+                    for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( graph._listNode.size() ); ++nodeIndex )
                     {
-                        if ( visit( graph, rootIndex, scope, listState, listPath, listOrder ) == false )
-                            return false;
+                        for ( const MaterialGraphLink& link : graph._listNode[nodeIndex]._listLink )
+                        {
+                            dependencyGraph.addDependency( nodeIndex, static_cast<uint32>( graph.findNodeIndex( link._fromNode ) ) ); // 없는 노드는 `validateNodes` 가 거절했다
+                        }
+                    }
+                    const DependencyOrder order = dependencyGraph.sortDepthFirst( listRoot );
+                    if ( order.isSorted() == false )
+                    {
+                        string message{ "cycle: " };
+                        for ( size_t step = 0; step < order._listCycle.size(); ++step )
+                        {
+                            message.append( step == 0 ? "" : " -> " ).append( graph._listNode[order._listCycle[step]]._name );
+                        }
+                        report( scope, graph._listNode[order._listCycle.front()]._name, "Cycle", std::move( message ) );
+                        return false;
                     }
 
                     vector<NodeResult> listResult;
                     listResult.resize( graph._listNode.size() );
-                    for ( const uint32 nodeIndex : listOrder )
+                    for ( const uint32 nodeIndex : order._listOrder )
                     {
                         const MaterialGraphNodeDesc& node = graph._listNode[nodeIndex];
                         const MaterialGraphNodeKind& kind = *MaterialGraphNodeRegistry::find( node._kind );

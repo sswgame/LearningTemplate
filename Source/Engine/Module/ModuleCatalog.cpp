@@ -2,8 +2,8 @@
 
 #include "Engine/Module/ModuleCatalog.h"
 
+#include "Core/Container/DependencyGraph.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/TopologicalSortUtil.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/BuildInfo.h"
@@ -326,11 +326,10 @@ namespace sw
             [[nodiscard]] static bool sortLoadOrder( const ModuleCatalog& catalog, const vector<uint8>& listActive, const vector<vector<uint32>>& listDependency, vector<string>& outListLoadOrder,
                                                      string& outError )
             {
-                const size_t           manifestCount = catalog.getManifestCount();
-                vector<uint32>         listActiveIndex;
-                vector<string_view>    listActiveName;
-                vector<vector<uint32>> listActiveDependency;
-                vector<uint32>         listCompactOf( manifestCount, 0 );
+                const size_t        manifestCount = catalog.getManifestCount();
+                vector<uint32>      listActiveIndex;
+                vector<string_view> listActiveName;
+                vector<uint32>      listCompactOf( manifestCount, 0 );
                 for ( size_t index = 0; index < manifestCount; ++index )
                 {
                     if ( listActive[index] == SW_FALSE )
@@ -339,32 +338,26 @@ namespace sw
                     listActiveIndex.push_back( static_cast<uint32>( index ) );
                     listActiveName.push_back( catalog.getManifests()[index]._name );
                 }
-                for ( const uint32 index : listActiveIndex )
+                DependencyGraph graph{ static_cast<uint32>( listActiveIndex.size() ) };
+                for ( uint32 compactIndex = 0; compactIndex < static_cast<uint32>( listActiveIndex.size() ); ++compactIndex )
                 {
-                    vector<uint32> listCompact;
-                    for ( const uint32 dependencyIndex : listDependency[index] )
+                    for ( const uint32 dependencyIndex : listDependency[listActiveIndex[compactIndex]] )
                     {
-                        listCompact.push_back( listCompactOf[dependencyIndex] );
+                        graph.addDependency( compactIndex, listCompactOf[dependencyIndex] );
                     }
-                    listActiveDependency.push_back( std::move( listCompact ) );
                 }
 
-                vector<uint32> listOrder;
-                vector<uint32> listUnsorted;
-                if ( TopologicalSortUtil::sortByDependency( listActiveName, listActiveDependency, listOrder, listUnsorted ) == false )
+                const DependencyOrder order = graph.sortByName( listActiveName );
+                if ( order.isSorted() == false )
                 {
-                    vector<uint32> listCycle;
                     outError = "Module dependency cycle:";
-                    if ( TopologicalSortUtil::findCycle( listActiveDependency, listUnsorted, listCycle ) )
+                    for ( size_t step = 0; step < order._listCycle.size(); ++step )
                     {
-                        for ( size_t step = 0; step < listCycle.size(); ++step )
-                        {
-                            outError += ( step == 0 ? " " : " -> " ) + string( listActiveName[listCycle[step]] );
-                        }
+                        outError += ( step == 0 ? " " : " -> " ) + string( listActiveName[order._listCycle[step]] );
                     }
                     return false;
                 }
-                for ( const uint32 compactIndex : listOrder )
+                for ( const uint32 compactIndex : order._listOrder )
                 {
                     outListLoadOrder.push_back( string( listActiveName[compactIndex] ) );
                 }

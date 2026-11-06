@@ -26,7 +26,7 @@ namespace sw::editor
      *          경로만 적은 칸(`EditorAssetReference::_bInlined` 가 false)은 따라가지 않는다 — 카탈로그 둘이 서로의 경로를 적는 일은 순환이 아니다.
      *          파일 단위 계획이라 두 카탈로그가 서로 다른 항목을 부모로 삼아도 순환이다. 항목 순환은 읽기(`DataCatalogInheritance`)가 따로 잡는다.
      *          중간 고리가 로드되지 않았어도 따라간다 — 손자는 사슬 전체를 디스크에서 펼쳐 읽었으므로 조부모가 바뀌면 다시 읽어야 한다. 로드됐는지는 실행하는 쪽(`AssetHotReload`)이 본다.
-     *          순서는 위상 정렬(`TopologicalSortUtil`)이다 — 참조자는 자기가 펼쳐 넣는 대상보다 뒤에 온다(부모 → 자식 → 손자). 순환은 오류다.
+     *          순서는 위상 정렬(`DependencyGraph::sortByName`)이다 — 참조자는 자기가 펼쳐 넣는 대상보다 뒤에 온다(부모 → 자식 → 손자). 순환은 오류다.
      */
     struct SW_EDITOR_API AssetReloadCascade
     {

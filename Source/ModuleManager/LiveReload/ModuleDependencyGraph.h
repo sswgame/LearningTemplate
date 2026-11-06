@@ -47,8 +47,8 @@ namespace sw
         void collectDependentClosure( string_view root, vector<string>& outListUnique ) const;
         /**
          * @brief @p listModuleName 가운데 그래프에 든 모듈을 의존 순서(의존되는 쪽 먼저)로 정렬합니다.
-         * @details 같은 단계 안에서는 이름순이라 입력 순서와 무관하게 결과가 같습니다.
-         * @return 순환이 있으면 순환에 든 모듈을 로그로 남기고 false 입니다(@p outListOrdered 는 빕니다).
+         * @details 준비된 모듈 가운데 이름이 앞인 것이 먼저라(`DependencyGraph::sortByName` — 모듈 적재 순서와 같은 규칙) 입력 순서와 무관하게 결과가 같습니다.
+         * @return 순환이 있으면 그 경로를 로그로 남기고 false 입니다(@p outListOrdered 는 빕니다).
          */
         bool sortByDependency( const vector<string>& listModuleName, vector<string>& outListOrdered ) const;
 

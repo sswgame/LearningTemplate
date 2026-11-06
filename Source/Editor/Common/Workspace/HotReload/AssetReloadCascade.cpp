@@ -2,7 +2,7 @@
 
 #include "Editor/Common/Workspace/HotReload/AssetReloadCascade.h"
 
-#include "Core/Container/TopologicalSortUtil.h"
+#include "Core/Container/DependencyGraph.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/File/FileUtil.h"
@@ -36,16 +36,16 @@ namespace sw::editor
             return true;
 
         // 노드마다 집합 안에서 그것이 펼쳐 넣는 대상이 먼저 온다. 바뀐 에셋 자신의 의존도 넣어야 그것을 거쳐 도는 순환이 드러난다.
-        vector<vector<uint32>> listDependency( listNode.size() );
+        DependencyGraph graph{ static_cast<uint32>( listNode.size() ) };
         for ( uint32 nodeIndex = 0; nodeIndex < listNode.size(); ++nodeIndex )
         {
             index.findDependencies( listNode[nodeIndex], listReference );
             for ( const EditorAssetReference& reference : listReference )
             {
                 const auto itTarget = mapNodeIndex.find( reference._targetPath );
-                if ( reference._bInlined == false || itTarget == mapNodeIndex.end() || itTarget->second == nodeIndex || VectorUtil::contains( listDependency[nodeIndex], itTarget->second ) )
+                if ( reference._bInlined == false || itTarget == mapNodeIndex.end() || itTarget->second == nodeIndex || VectorUtil::contains( graph.getDependencies( nodeIndex ), itTarget->second ) )
                     continue;
-                listDependency[nodeIndex].push_back( itTarget->second );
+                graph.addDependency( nodeIndex, itTarget->second );
             }
         }
 
@@ -55,26 +55,21 @@ namespace sw::editor
         {
             listName.push_back( node );
         }
-        vector<uint32> listOrder;
-        vector<uint32> listUnsorted;
-        if ( TopologicalSortUtil::sortByDependency( listName, listDependency, listOrder, listUnsorted ) == false )
+        const DependencyOrder order = graph.sortByName( listName );
+        if ( order.isSorted() == false )
         {
-            vector<uint32> listCycle;
-            string         cycleText;
-            if ( TopologicalSortUtil::findCycle( listDependency, listUnsorted, listCycle ) )
+            string cycleText;
+            for ( const uint32 nodeIndex : order._listCycle )
             {
-                for ( const uint32 nodeIndex : listCycle )
-                {
-                    cycleText += cycleText.empty() ? "" : " -> ";
-                    cycleText += listNode[nodeIndex];
-                }
+                cycleText += cycleText.empty() ? "" : " -> ";
+                cycleText += listNode[nodeIndex];
             }
             SW_LOG_ERROR_ID( "AssetReloadCascade.ReferenceCycle", "Asset references loop (%#) - assets that inline %# are not reloaded", cycleText.c_str(), listNode[0].c_str() );
             return false;
         }
 
-        outListOrder.reserve( listOrder.size() - 1 );
-        for ( const uint32 nodeIndex : listOrder )
+        outListOrder.reserve( order._listOrder.size() - 1 );
+        for ( const uint32 nodeIndex : order._listOrder )
         {
             if ( nodeIndex != 0 )
                 outListOrder.push_back( listNode[nodeIndex] );

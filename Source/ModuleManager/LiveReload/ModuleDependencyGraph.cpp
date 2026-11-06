@@ -2,6 +2,7 @@
 
 #include "ModuleManager/LiveReload/ModuleDependencyGraph.h"
 
+#include "Core/Container/DependencyGraph.h"
 #include "Core/Container/VectorUtil.h"
 #include "Core/Container/unordered_set.h"
 #include "Core/Foundation/StdHeaders.h"
@@ -87,91 +88,48 @@ namespace sw
     bool ModuleDependencyGraph::sortByDependency( const vector<string>& listModuleName, vector<string>& outListOrdered ) const
     {
         outListOrdered.clear();
-        unordered_set<string> uniqueSubgraph;
-        uniqueSubgraph.reserve( listModuleName.size() );
+        // 고른 이름 가운데 그래프에 든 것만 중복 없이 노드가 된다. 정렬은 이름으로 동점을 깨므로 이 목록의 차례는 결과에 뜻이 없다.
+        vector<string_view> listSubgraph;
+        listSubgraph.reserve( listModuleName.size() );
         for ( const string& name : listModuleName )
         {
-            if ( _mapDependsOn.find( name ) != _mapDependsOn.end() )
-                uniqueSubgraph.insert( name );
+            if ( _mapDependsOn.contains( name ) && VectorUtil::contains( listSubgraph, string_view{ name } ) == false )
+                listSubgraph.push_back( name );
         }
-        if ( uniqueSubgraph.empty() )
+        if ( listSubgraph.empty() )
             return true;
 
-        unordered_map<string, uint32> mapIndegree;
-        for ( const string& name : uniqueSubgraph )
+        DependencyGraph graph{ static_cast<uint32>( listSubgraph.size() ) };
+        for ( uint32 nodeIndex = 0; nodeIndex < static_cast<uint32>( listSubgraph.size() ); ++nodeIndex )
         {
-            mapIndegree[name] = 0;
-        }
-
-        for ( const string& name : uniqueSubgraph )
-        {
-            const auto found = _mapDependsOn.find( name );
-            for ( const string& dep : found->second )
+            for ( const string& dependency : _mapDependsOn.find( string{ listSubgraph[nodeIndex] } )->second )
             {
-                if ( uniqueSubgraph.find( dep ) != uniqueSubgraph.end() )
-                    mapIndegree[name] += 1;
+                const std::optional<size_t> dependencyIndex = VectorUtil::findIndex( listSubgraph, string_view{ dependency } );
+                if ( dependencyIndex.has_value() )
+                    graph.addDependency( nodeIndex, static_cast<uint32>( *dependencyIndex ) );
             }
         }
 
-        vector<string> listReady;
-        for ( const string& name : uniqueSubgraph )
-        {
-            if ( mapIndegree[name] == 0 )
-                listReady.push_back( name );
-        }
-        VectorUtil::sort( listReady );
-
-        vector<string> listOrder;
-        listOrder.reserve( uniqueSubgraph.size() );
-        size_t cursor{ 0 };
-        while ( cursor < listReady.size() )
-        {
-            const size_t levelBegin = cursor;
-            const size_t levelEnd   = listReady.size();
-            for ( size_t levelIndex = levelBegin; levelIndex < levelEnd; ++levelIndex )
-            {
-                const string readyModuleName = listReady[levelIndex];
-                listOrder.push_back( readyModuleName );
-                for ( const string& name : uniqueSubgraph )
-                {
-                    const auto found = _mapDependsOn.find( name );
-                    for ( const string& dep : found->second )
-                    {
-                        if ( dep != readyModuleName )
-                            continue;
-
-                        uint32& deg = mapIndegree[name];
-                        if ( deg == 0 )
-                            continue;
-                        deg -= 1;
-                        if ( deg == 0 )
-                            listReady.push_back( name );
-                    }
-                }
-            }
-            cursor = levelEnd;
-            if ( listReady.size() > levelEnd )
-                std::sort( listReady.begin() + static_cast<std::ptrdiff_t>( levelEnd ), listReady.end() );
-        }
-
-        if ( listOrder.size() != uniqueSubgraph.size() )
+        const DependencyOrder order = graph.sortByName( listSubgraph );
+        if ( order.isSorted() == false )
         {
             string cycleModules;
-            for ( const string& name : uniqueSubgraph )
+            for ( const uint32 nodeIndex : order._listCycle )
             {
-                if ( VectorUtil::contains( listOrder, name ) == false )
-                {
-                    if ( cycleModules.empty() == false )
-                        cycleModules += ", ";
-                    cycleModules += name;
-                }
+                if ( cycleModules.empty() == false )
+                    cycleModules += " -> ";
+                cycleModules += listSubgraph[nodeIndex];
             }
-            SW_LOG_ERROR_ID( "LiveReloadManager.DependencyCycleModuleGraph", "Dependency cycle in module graph (sorted %# / %#). Cyclic modules: %s",
-                             static_cast<uint32>( listOrder.size() ), static_cast<uint32>( uniqueSubgraph.size() ), cycleModules.c_str() );
+            SW_LOG_ERROR_ID( "LiveReloadManager.DependencyCycleModuleGraph", "Dependency cycle in module graph (%# of %# modules cannot be ordered): %#",
+                             static_cast<uint32>( order._listUnsorted.size() ), static_cast<uint32>( listSubgraph.size() ), cycleModules.c_str() );
             return false;
         }
 
-        outListOrdered = std::move( listOrder );
+        outListOrdered.reserve( order._listOrder.size() );
+        for ( const uint32 nodeIndex : order._listOrder )
+        {
+            outListOrdered.push_back( string{ listSubgraph[nodeIndex] } );
+        }
         return true;
     }
 } // namespace sw
