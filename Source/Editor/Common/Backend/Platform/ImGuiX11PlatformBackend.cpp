@@ -425,7 +425,7 @@ namespace sw::editor
         /** @brief 키 하나를 ImGui 에 넣습니다. 번호 표는 입력 관리자와 같은 `InputKeyTable` 이고 레이아웃 0 번 칸(시프트 없는 값)으로 읽는다. 수정 키는 `xkey.state` 로 맞춰 포커스 밖에서 바뀐 것도 다음 키에서 바로잡힌다. */
         static void submitKey( ImGuiIO& io, XKeyEvent& keyEvent, bool bIsDown )
         {
-            const Key key = InputKeyTable::mapX11KeySym( static_cast<uint64>( XLookupKeysym( &keyEvent, 0 ) ) );
+            const Key key = InputKeyTable::mapX11Key( static_cast<uint64>( XLookupKeysym( &keyEvent, 0 ) ), keyEvent.keycode );
             io.AddKeyEvent( ImGuiMod_Ctrl, ( keyEvent.state & ControlMask ) != 0 );
             io.AddKeyEvent( ImGuiMod_Shift, ( keyEvent.state & ShiftMask ) != 0 );
             io.AddKeyEvent( ImGuiMod_Alt, ( keyEvent.state & Mod1Mask ) != 0 );

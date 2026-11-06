@@ -26,6 +26,12 @@ namespace sw
         static Key mapScanCodeToKey( uint32 scanCode, bool bExtended = false );
         /** @brief X11 KeySym 을 Key 로 바꿉니다. */
         static Key mapX11KeySym( uint64 keySym );
+        /**
+         * @brief X11 · Wayland 키 이벤트의 키심과 키 코드를 Key 로 바꿉니다. 키 이벤트를 읽는 곳은 모두 이 함수를 쓴다.
+         * @details 표에 있는 키심이면 그 키이고, 아니면(러시아어 배열의 Cyrillic_ef, 프랑스어 배열의 숫자 줄 ampersand) 키 코드의 물리 자리로 읽는다 - 표에 없는 키심을 `Key::Unknown` 으로 두면
+         *          그 배열에서 WASD · 단축키가 통째로 죽는다. Win32 가 비라틴 배열에서도 라틴 VK 를 주는 것, GLFW 가 키 코드 표를 쓰는 것과 같은 자리다.
+         */
+        static Key mapX11Key( uint64 keySym, uint32 keyCode );
         /** @brief Win32 마우스 메시지를 MouseButton 으로 바꿉니다. */
         static MouseButton mapWin32MouseButton( uint32 message, uintptr_t wParam );
 

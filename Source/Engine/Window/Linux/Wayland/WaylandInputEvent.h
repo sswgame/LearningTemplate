@@ -34,8 +34,9 @@ namespace sw
         static constexpr uint32 kTextCapacity = 32;
 
         WaylandInputKind _kind{ WaylandInputKind::KeyDown };
-        uint32           _keySym{ 0 }; ///< xkb keysym(= X11 KeySym)
-        uint32           _button{ 0 }; ///< 리눅스 이벤트 버튼 번호
+        uint32           _keySym{ 0 };  ///< xkb keysym(= X11 KeySym)
+        uint32           _keyCode{ 0 }; ///< xkb 키 코드(evdev + 8, X11 키 코드와 같다) - `InputKeyTable::mapX11Key`
+        uint32           _button{ 0 };  ///< 리눅스 이벤트 버튼 번호
         int32            _x{ 0 };
         int32            _y{ 0 };
         float32          _wheel{ 0.0f };

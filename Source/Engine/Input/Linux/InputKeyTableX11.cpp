@@ -7,8 +7,127 @@
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Foundation/X11Headers.h"
 
+    #include <linux/input-event-codes.h>
+
 namespace sw
 {
+    namespace
+    {
+        /** @brief 레이아웃에 따라 키심이 달라지는 글자 · 숫자 · 구두점 키를 evdev 번호(자판의 물리 자리, 미국 배열 이름)로 읽습니다. 그 밖의 키는 `Key::Unknown` 입니다. */
+        Key mapPhysicalKeyCode( uint32 evdevCode )
+        {
+            switch ( evdevCode )
+            {
+                case KEY_A:
+                    return Key::A;
+                case KEY_B:
+                    return Key::B;
+                case KEY_C:
+                    return Key::C;
+                case KEY_D:
+                    return Key::D;
+                case KEY_E:
+                    return Key::E;
+                case KEY_F:
+                    return Key::F;
+                case KEY_G:
+                    return Key::G;
+                case KEY_H:
+                    return Key::H;
+                case KEY_I:
+                    return Key::I;
+                case KEY_J:
+                    return Key::J;
+                case KEY_K:
+                    return Key::K;
+                case KEY_L:
+                    return Key::L;
+                case KEY_M:
+                    return Key::M;
+                case KEY_N:
+                    return Key::N;
+                case KEY_O:
+                    return Key::O;
+                case KEY_P:
+                    return Key::P;
+                case KEY_Q:
+                    return Key::Q;
+                case KEY_R:
+                    return Key::R;
+                case KEY_S:
+                    return Key::S;
+                case KEY_T:
+                    return Key::T;
+                case KEY_U:
+                    return Key::U;
+                case KEY_V:
+                    return Key::V;
+                case KEY_W:
+                    return Key::W;
+                case KEY_X:
+                    return Key::X;
+                case KEY_Y:
+                    return Key::Y;
+                case KEY_Z:
+                    return Key::Z;
+                case KEY_0:
+                    return Key::Digit0;
+                case KEY_1:
+                    return Key::Digit1;
+                case KEY_2:
+                    return Key::Digit2;
+                case KEY_3:
+                    return Key::Digit3;
+                case KEY_4:
+                    return Key::Digit4;
+                case KEY_5:
+                    return Key::Digit5;
+                case KEY_6:
+                    return Key::Digit6;
+                case KEY_7:
+                    return Key::Digit7;
+                case KEY_8:
+                    return Key::Digit8;
+                case KEY_9:
+                    return Key::Digit9;
+                case KEY_MINUS:
+                    return Key::Minus;
+                case KEY_EQUAL:
+                    return Key::Equal;
+                case KEY_LEFTBRACE:
+                    return Key::LeftBracket;
+                case KEY_RIGHTBRACE:
+                    return Key::RightBracket;
+                case KEY_BACKSLASH:
+                    return Key::Backslash;
+                case KEY_SEMICOLON:
+                    return Key::Semicolon;
+                case KEY_APOSTROPHE:
+                    return Key::Apostrophe;
+                case KEY_GRAVE:
+                    return Key::Grave;
+                case KEY_COMMA:
+                    return Key::Comma;
+                case KEY_DOT:
+                    return Key::Period;
+                case KEY_SLASH:
+                    return Key::Slash;
+                default:
+                    return Key::Unknown;
+            }
+        }
+    } // namespace
+
+    Key InputKeyTable::mapX11Key( uint64 keySym, uint32 keyCode )
+    {
+        const Key key = mapX11KeySym( keySym );
+        if ( key != Key::Unknown )
+            return key;
+        // X 키 코드 · xkb 키 코드는 evdev 번호 + 8 이다(xkbcommon 규약, evdev 규칙을 쓰는 X 서버 전부).
+        constexpr uint32 kEvdevOffset = 8;
+        return keyCode >= kEvdevOffset ? mapPhysicalKeyCode( keyCode - kEvdevOffset ) : Key::Unknown;
+    }
+
     // X11 KeySym 에서 Key 로 가는 switch 표이고 케이스마다 한 줄이라 나누지 않는다.
     Key InputKeyTable::mapX11KeySym( uint64 keySym )
     {
@@ -226,25 +345,36 @@ namespace sw
 
             case XK_Num_Lock:
                 return Key::NumLock;
+            // 숫자 패드 키의 0 번 칸은 NumLock 이 꺼진 쪽(XK_KP_Home …)이고, 숫자는 NumLock 칸이다. 키 이름은 두 칸 모두 같은 물리 키다(Win32 의 VK_NUMPAD 와 스캔코드처럼).
             case XK_KP_0:
+            case XK_KP_Insert:
                 return Key::Numpad0;
             case XK_KP_1:
+            case XK_KP_End:
                 return Key::Numpad1;
             case XK_KP_2:
+            case XK_KP_Down:
                 return Key::Numpad2;
             case XK_KP_3:
+            case XK_KP_Page_Down:
                 return Key::Numpad3;
             case XK_KP_4:
+            case XK_KP_Left:
                 return Key::Numpad4;
             case XK_KP_5:
+            case XK_KP_Begin:
                 return Key::Numpad5;
             case XK_KP_6:
+            case XK_KP_Right:
                 return Key::Numpad6;
             case XK_KP_7:
+            case XK_KP_Home:
                 return Key::Numpad7;
             case XK_KP_8:
+            case XK_KP_Up:
                 return Key::Numpad8;
             case XK_KP_9:
+            case XK_KP_Page_Up:
                 return Key::Numpad9;
             case XK_KP_Divide:
                 return Key::NumpadDivide;
@@ -256,6 +386,7 @@ namespace sw
                 return Key::NumpadAdd;
             case XK_KP_Decimal:
             case XK_KP_Separator:
+            case XK_KP_Delete:
                 return Key::NumpadDecimal;
             case XK_KP_Enter:
                 return Key::NumpadEnter;

@@ -232,7 +232,7 @@ namespace sw
                 case WaylandInputKind::KeyDown:
                 case WaylandInputKind::KeyUp:
                 {
-                    const Key  key   = InputKeyTable::mapX11KeySym( static_cast<uint64>( input._keySym ) );
+                    const Key  key   = InputKeyTable::mapX11Key( static_cast<uint64>( input._keySym ), input._keyCode );
                     const bool bDown = input._kind == WaylandInputKind::KeyDown;
                     if ( key == Key::LeftAlt || key == Key::RightAlt )
                         onPlatformAltChanged( bDown );
@@ -309,7 +309,7 @@ namespace sw
             {
                 // 반복 이벤트는 Press 만 온다 — 창이 연결을 열 때 감지 가능한 자동 반복을 켠다(`X11Window::initializeWindow`).
                 const KeySym keySym = XLookupKeysym( const_cast<XKeyEvent*>( &pXev->xkey ), 0 );
-                const Key    key    = InputKeyTable::mapX11KeySym( static_cast<uint64>( keySym ) );
+                const Key    key    = InputKeyTable::mapX11Key( static_cast<uint64>( keySym ), pXev->xkey.keycode );
                 const bool   bDown  = ( pXev->type == KeyPress );
                 if ( key == Key::LeftAlt || key == Key::RightAlt )
                     onPlatformAltChanged( bDown );

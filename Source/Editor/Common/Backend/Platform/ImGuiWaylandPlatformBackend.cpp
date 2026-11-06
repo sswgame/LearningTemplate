@@ -204,7 +204,7 @@ namespace sw::editor
                 case WaylandInputKind::KeyUp:
                 {
                     const bool     bIsDown   = input._kind == WaylandInputKind::KeyDown;
-                    const Key      engineKey = InputKeyTable::mapX11KeySym( static_cast<uint64>( input._keySym ) );
+                    const Key      engineKey = InputKeyTable::mapX11Key( static_cast<uint64>( input._keySym ), input._keyCode );
                     const ImGuiKey modifier  = ImGuiKeyForward::toImGuiModifier( engineKey );
                     if ( modifier != ImGuiKey_None )
                         io.AddKeyEvent( modifier, bIsDown ); // shortcut: 좌우를 함께 누른 채 하나만 떼면 수정 키가 풀린다, 입력에 xkb 수정 상태가 실리면 그것으로 바꾼다

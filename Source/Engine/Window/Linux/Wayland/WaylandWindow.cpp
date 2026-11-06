@@ -581,8 +581,9 @@ namespace sw
                 const xkb_keycode_t keyCode = key + 8;
                 const bool          bDown   = keyState == WL_KEYBOARD_KEY_STATE_PRESSED;
                 WaylandInputEvent   event;
-                event._kind   = bDown ? WaylandInputKind::KeyDown : WaylandInputKind::KeyUp;
-                event._keySym = xkb_state_key_get_one_sym( state._pXkbState, keyCode );
+                event._kind    = bDown ? WaylandInputKind::KeyDown : WaylandInputKind::KeyUp;
+                event._keySym  = xkb_state_key_get_one_sym( state._pXkbState, keyCode );
+                event._keyCode = keyCode;
                 state.pushInput( event );
                 if ( bDown == false )
                     return;
