@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 인스턴스 사용자 값 본보기 — 색을 머티리얼이 아니라 인스턴스(MeshComponent 의 _customData0)가 정한다. 스프라이트와 같은 투명 경로를 탄다(값의 알파가 곧 알파다). -->
+<MaterialDesc formatVersion="0" name="InstanceCustomColor" shaderPath="engine/shaders/instance_custom_color.hlsl" alphaMode="Blend">
+	<_properties>
+		<item name="_color" type="Color" defaultValue="1.0 1.0 1.0 1.0" displayName="Tint Color" group="Instance"/>
+	</_properties>
+	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
+		<_alwaysDefines>
+			<item>MATERIAL_BLEND_TRANSLUCENT</item>
+		</_alwaysDefines>
+	</_permutations>
+</MaterialDesc>

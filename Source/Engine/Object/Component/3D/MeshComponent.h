@@ -13,6 +13,7 @@
 
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Binding/GPUInstanceCustomData.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -139,6 +140,13 @@ namespace sw
          *          (`SpriteComponent`)이다. 그래서 세터는 protected 이다(읽는 셰이더가 없는 메시에 색을 줄 수 있는 것처럼 보이지 않게 하려는 것이다).
          */
         const GPUSpriteInstanceData& getSpriteInstanceData() const { return _spriteInstanceData; }
+        /**
+         * @brief 인스턴스 사용자 값 @p index (0 또는 1)를 정합니다(언리얼 `SetCustomPrimitiveDataVector4`). 파일도 머티리얼 인스턴스도 없이 인스턴스마다 다른 값을 머티리얼 셰이더에 줍니다.
+         * @details 머티리얼이 같으면 값이 달라도 한 배치이고, 값이 달라졌을 때만 그 인스턴스가 더티가 된다. 뜻은 읽는 셰이더가 정한다(`instance_custom_color.hlsl`). 번호가 틀리면 오류입니다.
+         */
+        void setCustomData( uint32 index, const float4& value );
+        /** @brief 빌더가 `GPUInstance::_customData` 로 옮기는 사용자 값입니다. */
+        GPUInstanceCustomData getInstanceCustomData() const;
         /**
          * @brief 2D 픽셀 스냅 단위(에셋 픽셀 하나의 월드 길이 = 1 / PPU, 0 이면 끔)를 정합니다. 값이 달라졌을 때만 렌더 상태를 더티로 표시합니다.
          * @details 픽셀 퍼펙트 카메라가 줌이 바뀔 때 씬의 모든 메시에 알리고, 새로 등록되는 메시는 카메라 레지스트리의 값을 읽는다. 읽는 셰이더는 sprite_2d 이다.
@@ -317,6 +325,10 @@ namespace sw
         hashed_string _sectionName;
         /** @brief GPU 인스턴스의 스프라이트 슬롯 데이터입니다. 저장하지 않으며, 파생 타입의 저장되는 값(프레임, 색)에서 만듭니다. */
         GPUSpriteInstanceData _spriteInstanceData;
+        PROPERTY( Category = "Rendering", DisplayName = "Custom Data 0", Tooltip = "Per-instance value the material shader reads; does not split the batch" )
+        float4 _customData0;
+        PROPERTY( Category = "Rendering", DisplayName = "Custom Data 1", Tooltip = "Per-instance value the material shader reads; does not split the batch" )
+        float4 _customData1;
         /** @brief 정점 애니메이션 시각 오프셋(초)입니다. 저장하지 않습니다(setVertexAnimationPhase). */
         float32 _vertexAnimationPhase;
         /** @brief 투명 큐의 정렬 키입니다(0 = 기본). 저장하지 않습니다. */

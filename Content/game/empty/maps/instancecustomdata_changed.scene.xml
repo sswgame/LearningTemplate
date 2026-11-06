@@ -1,0 +1,29 @@
+<Scene formatVersion="2" name="InstanceCustomDataChanged">
+	<!-- 시나리오 automation/instancecustomdata 의 둘째 무대 — 오른쪽 상자의 인스턴스 값만 다르다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1,-6" _localRotation="0.1,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Left">
+			<GameObject _schemaVersion="0" _name="Left" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-1.3,0,0" _localRotation="0,0.4,0" _localScale="1.5,1.5,1.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/instancecustomcolor.material" _boundsRadius="1.5" _blendMode="Transparent" _customData0="0.9,0.5,0.1,1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Right">
+			<GameObject _schemaVersion="0" _name="Right" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="1.3,0,0" _localRotation="0,-0.4,0" _localScale="1.5,1.5,1.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/instancecustomcolor.material" _boundsRadius="1.5" _blendMode="Transparent" _customData0="0.1,0.9,0.2,1" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

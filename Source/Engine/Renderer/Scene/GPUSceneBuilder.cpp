@@ -123,7 +123,7 @@ namespace sw
                 return Memory::compare( &instance._world, &raw._world, sizeof( instance._world ) ) != 0 ||
                        Memory::compare( &instance._boundsCenter, &raw._boundsCenter, sizeof( instance._boundsCenter ) ) != 0 ||
                        Memory::compare( &instance._boundsRadius, &raw._boundsRadius, sizeof( instance._boundsRadius ) ) != 0 ||
-                       instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite ||
+                       instance._blendMode != raw._blendMode || instance._spinSeed != raw._spinSeed || instance._sprite != raw._sprite || instance._customData != raw._customData ||
                        instance._highlight != raw._highlight || instance._skinSlot != raw._skinSlot ||
                        Memory::compare( &instance._vertexAnimationPhase, &raw._vertexAnimationPhase, sizeof( instance._vertexAnimationPhase ) ) != 0 ||
                        Memory::compare( &instance._appearance, &raw._appearance, sizeof( instance._appearance ) ) != 0;
@@ -138,6 +138,7 @@ namespace sw
                 outInstance._blendMode            = raw._blendMode;
                 outInstance._spinSeed             = raw._spinSeed;
                 outInstance._sprite               = raw._sprite;
+                outInstance._customData           = raw._customData;
                 outInstance._highlight            = raw._highlight;
                 outInstance._skinSlot             = raw._skinSlot;
                 outInstance._vertexAnimationPhase = raw._vertexAnimationPhase;
@@ -360,6 +361,7 @@ namespace sw
         candidate._bReverseCulling      = GPUSceneBuilderInternal::computeReverseCulling( world );
         candidate._spinSeed             = pMeshComp->getGPUSpinSeed();
         candidate._sprite               = pMeshComp->getSpriteInstanceData();
+        candidate._customData           = pMeshComp->getInstanceCustomData();
         candidate._highlight            = pMeshComp->getHighlight();
         candidate._skinSlot             = pMeshComp->getSkinSlot();
         candidate._vertexAnimationPhase = pMeshComp->getVertexAnimationPhase();
@@ -422,6 +424,7 @@ namespace sw
         candidate._bReverseCulling           = GPUSceneBuilderInternal::computeReverseCulling( item._world );
         candidate._spinSeed                  = item._spinSeed;
         candidate._sprite                    = item._sprite;
+        candidate._customData                = item._customData;
         candidate._highlight                 = 0;                                // 인스턴스 배치 항목(데미지 숫자 · HP 바)은 강조하지 않는다
         candidate._skinSlot                  = constant::invalid_index::kUint32; // 인스턴스 배치 항목은 스키닝하지 않는다
         candidate._vertexAnimationPhase      = 0.0f;
@@ -516,6 +519,7 @@ namespace sw
         outInstance._blendMode            = candidate._blendMode;
         outInstance._spinSeed             = candidate._spinSeed;
         outInstance._sprite               = candidate._sprite;
+        outInstance._customData           = candidate._customData;
         outInstance._highlight            = candidate._highlight;
         outInstance._skinSlot             = candidate._skinSlot;
         outInstance._vertexAnimationPhase = candidate._vertexAnimationPhase;

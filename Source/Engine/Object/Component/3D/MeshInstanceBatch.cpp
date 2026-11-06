@@ -86,6 +86,15 @@ namespace sw
         markEntryDirty( index );
     }
 
+    void MeshInstanceBatch::setCustomData( uint32 index, const GPUInstanceCustomData& customData )
+    {
+        const bool bUnchanged = index >= _listEntry.size() || _listEntry[index]._customData == customData;
+        if ( bUnchanged || acceptsCPUWrite() == false )
+            return;
+        _listEntry[index]._customData = customData;
+        markEntryDirty( index );
+    }
+
     void MeshInstanceBatch::setEntryVisible( uint32 index, bool bVisible )
     {
         const uint8 newValue = bVisible ? SW_TRUE : SW_FALSE;

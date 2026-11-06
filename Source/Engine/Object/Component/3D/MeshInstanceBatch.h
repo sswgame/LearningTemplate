@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/Shader/Binding/GPUInstanceCustomData.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Object/GameObject/Registry/ScenePrimitive.h"
 
@@ -47,6 +48,7 @@ namespace sw
             float32               _boundsRadius{ 0.866f }; ///< 단위 큐브의 반지름. MeshComponent 의 기본값과 같습니다
             uint32                _spinSeed{ 0 };          ///< GPU 회전 시드(0 이면 없음). instance_animation.hlsl 이 해시합니다
             GPUSpriteInstanceData _sprite{};               ///< 스프라이트 프레임 · 색(sprite_2d.hlsl 이 읽습니다). 기본은 텍스처 전체 · 흰색
+            GPUInstanceCustomData _customData{};           ///< 항목마다의 사용자 값(머티리얼 셰이더의 `getCustomData`). 배치 키가 아닙니다
             uint8                 _bVisible{ SW_TRUE };    ///< 이 항목만 숨깁니다. 숨긴 항목은 후보에서 빠집니다
         };
 
@@ -81,6 +83,8 @@ namespace sw
          * @details 머티리얼 인스턴스가 아니라 항목에 싣습니다 — 항목마다 프레임 · 색이 달라도 배치는 하나입니다(`GPUSpriteInstanceData`).
          */
         void setSprite( uint32 index, const GPUSpriteInstanceData& sprite );
+        /** @brief 항목의 사용자 값을 바꿉니다(`GPUInstanceCustomData`). 항목마다 값이 달라도 배치는 하나입니다. */
+        void setCustomData( uint32 index, const GPUInstanceCustomData& customData );
         /**
          * @brief 항목 하나를 보이거나 숨깁니다. 값이 그대로면 아무것도 하지 않습니다.
          * @details 항목 수는 만들 때 정해지므로(언리얼 ISM 도 추가 · 제거가 재구성입니다) 쓰지 않는 자리는 숨깁니다 — 데미지 숫자의 남는 자릿수,

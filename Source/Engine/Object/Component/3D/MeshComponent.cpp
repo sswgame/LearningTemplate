@@ -38,6 +38,8 @@ namespace sw
         , _gpuSpinSeed{ 0 }
         , _sectionName{}
         , _spriteInstanceData{}
+        , _customData0{}
+        , _customData1{}
         , _vertexAnimationPhase{ 0.0f }
         , _sortKey{ 0 }
         , _highlight{ 0 }
@@ -475,6 +477,28 @@ namespace sw
             return;
         _spriteInstanceData = merged;
         markRenderStateDirty();
+    }
+
+    void MeshComponent::setCustomData( uint32 index, const float4& value )
+    {
+        if ( index >= GPUInstanceCustomData::kCount )
+        {
+            SW_LOG_ERROR_ID( "MeshComponent.CustomDataIndex", "Custom data index %# is out of range (%# slots)", index, GPUInstanceCustomData::kCount );
+            return;
+        }
+        float4& slot = index == 0u ? _customData0 : _customData1;
+        if ( Memory::compare( &slot, &value, sizeof( float4 ) ) == 0 )
+            return;
+        slot = value;
+        markRenderStateDirty();
+    }
+
+    GPUInstanceCustomData MeshComponent::getInstanceCustomData() const
+    {
+        GPUInstanceCustomData data{};
+        data._arrValue[0] = _customData0;
+        data._arrValue[1] = _customData1;
+        return data;
     }
 
     void MeshComponent::setPixelSnapUnit( float32 unit )

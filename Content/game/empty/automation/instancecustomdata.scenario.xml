@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  인스턴스 사용자 값 — 같은 머티리얼의 두 상자가 파일 없이 인스턴스 값으로 색을 받는다(언리얼 Custom Primitive Data · 유니티 MaterialPropertyBlock).
+  오른쪽 값만 바꾼 둘째 무대와 견주면 오른쪽 영역이 달라진다. 왼쪽 영역은 바뀌지 않아 다른 인스턴스로 번지지 않음을 함께 본다. 골든은 두지 않는다.
+  실행: ctest -R Scenario.game.empty.instancecustomdata
+-->
+<Scenario name="game.empty.instancecustomdata" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/instancecustomdata.scene.xml"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="instancecustom_off.ppm"/>
+	<LoadScene path="game/empty/maps/instancecustomdata_changed.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="instancecustom_on.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="instancecustom_off.ppm" second="instancecustom_on.ppm" region="0.55,0.3,0.8,0.7" minDiffering="0.2"/>
+	<Pass/>
+</Scenario>

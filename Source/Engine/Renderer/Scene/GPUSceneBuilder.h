@@ -250,6 +250,8 @@ namespace sw
              *          제자리 갱신(더티 구간 하나)으로 끝난다. 키에 넣으면 프레임마다 정렬과 나누기를 다시 하게 된다.
              */
             GPUSpriteInstanceData _sprite{};
+            /** @brief 인스턴스 사용자 값입니다(GPUInstance::_customData 로 전달됩니다). 스프라이트 칸과 같이 **내용**이며 배치 키가 아닙니다. */
+            GPUInstanceCustomData _customData{};
             /**
              * @brief (셰이더 경로 + define) 해시입니다. **어느 PSO 로 그릴지**를 정하는 값입니다.
              * @details 배치 키에 들어가야 한다. 머티리얼과 인스턴스 **포인터가 그대로여도** 인스턴스의
@@ -298,7 +300,7 @@ namespace sw
             {
                 return _mesh == other._mesh && _material == other._material && _instance == other._instance &&
                        _sectionFirstIndex == other._sectionFirstIndex && _sectionIndexCount == other._sectionIndexCount &&
-                       _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite && _highlight == other._highlight && _skinSlot == other._skinSlot &&
+                       _blendMode == other._blendMode && _spinSeed == other._spinSeed && _sprite == other._sprite && _customData == other._customData && _highlight == other._highlight && _skinSlot == other._skinSlot &&
                        Memory::compare( &_vertexAnimationPhase, &other._vertexAnimationPhase, sizeof( _vertexAnimationPhase ) ) == 0 &&
                        Memory::compare( &_appearance, &other._appearance, sizeof( _appearance ) ) == 0 &&
                        _permutationHash == other._permutationHash && _lodContentID == other._lodContentID && _bLODDither == other._bLODDither && _sortKey == other._sortKey &&

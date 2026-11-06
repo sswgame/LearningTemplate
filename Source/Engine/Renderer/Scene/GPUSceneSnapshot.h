@@ -17,6 +17,7 @@
 #include "Engine/Graphics/Material/MaterialRenderProxy.h"
 #include "Engine/Graphics/RHI/RHIRenderState.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Shader/Binding/GPUInstanceCustomData.h"
 #include "Engine/Graphics/Shader/Binding/GPUSpriteInstanceData.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/VFX/VFXParticle.h"
@@ -78,6 +79,8 @@ namespace sw
          * @details 스킨 결과는 메시가 아니라 칸마다 하나라(모프 풀이 칸마다 결과 구간, RT 의 칸 → 시작 표 `g_SwSkinResultOffsets`) 같은 메시를 그리는 캐릭터들이 한 배치다.
          */
         uint32 _skinSlot{ constant::invalid_index::kUint32 };
+        /** @brief 인스턴스 사용자 값입니다(`GPUInstanceCustomData`). 스프라이트 칸처럼 내용이고 배치 키가 아닙니다. 셰이더의 `customData0` · `customData1` 입니다. */
+        GPUInstanceCustomData _customData{};
     };
 } // namespace sw
 
@@ -86,7 +89,7 @@ namespace sw
     /// @brief GPU 인스턴스 LOD 그룹이 받는 메시의 최대 단계 수(LOD 0 포함)입니다. 더 많으면 그 메시는 CPU 가 단계를 고른다(`GPUSceneBuilder::applyGPULODGroup`).
     inline constexpr uint32 kGPULODMaxLevels = 8;
 
-    static_assert( sizeof( GPUInstance ) == 128, "GPUInstance must match InstanceData (instance_data.hlsli) byte for byte" );
+    static_assert( sizeof( GPUInstance ) == 160, "GPUInstance must match InstanceData (instance_data.hlsli) byte for byte" );
 
     /// @brief 같은 메시, 머티리얼, 퍼뮤테이션으로 그리는 인스턴스 배치입니다.
     struct GPUMeshBatch
