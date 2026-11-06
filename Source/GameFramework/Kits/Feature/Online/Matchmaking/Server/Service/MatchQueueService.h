@@ -187,7 +187,9 @@ namespace sw
         };
 
         void onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party );
-        void submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
+        /** @brief 파티 찾기를 기다리는 그 계정의 줄 서기를 NotQueued 로 끝냅니다. 있었으면 true 입니다. */
+        [[nodiscard]] bool dropPendingJoin( AccountID accountID );
+        void               submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
         /** @brief 백필로 채운 티켓을 게임 서버(배정)와 티켓을 낸 서버(결과)에 알립니다. */
         void               deliverBackfill( const MatchBackfilled& backfilled );
         void               updateLease( const string& modeID, ModeState& state, UnixMilliseconds nowMs );

@@ -10,6 +10,7 @@
 #include "GameFramework/Runtime/Online/Bus/ServerBusTopic.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStore.h"
 #include "GameFramework/Runtime/Online/Cache/EphemeralStoreRouter.h"
+#include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Identity/AccountStatSource.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -245,6 +246,11 @@ namespace sw
         if ( hasMode( modeID ) == false )
         {
             _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingResult::UnknownMode } );
+            return;
+        }
+        if ( ServerRecord::isValidName( region ) == false ) // 와이어에서 온 값이다. 서버 지역 이름이 될 수 없는 값은 어떤 서버에도 배정되지 않아 시한까지 기다리기만 한다
+        {
+            _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingResult::Invalid } );
             return;
         }
         bool bLookupPending = false;
@@ -629,8 +635,26 @@ namespace sw
         }
     }
 
+    bool MatchQueueService::dropPendingJoin( AccountID accountID )
+    {
+        for ( auto joinIt = _mapLookupToJoin.begin(); joinIt != _mapLookupToJoin.end(); ++joinIt )
+        {
+            if ( joinIt->second._accountID != accountID )
+                continue;
+            _completionBuffer.push( MatchQueueCompletion{ joinIt->second._requestTag, 0, MatchmakingResult::NotQueued } );
+            _mapLookupToJoin.erase( joinIt ); // 늦게 온 파티 답(`onPartyFound`)은 찾지 못하고 버려진다
+            return true;
+        }
+        return false;
+    }
+
     void MatchQueueService::leaveQueue( AccountID accountID, uint64 requestTag )
     {
+        if ( dropPendingJoin( accountID ) ) // 파티를 찾는 동안 빠졌다. 티켓은 아직 없다
+        {
+            _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingResult::Ok } );
+            return;
+        }
         const auto accountIt = _mapAccountToTicket.find( accountID );
         if ( accountIt == _mapAccountToTicket.end() )
         {
@@ -666,6 +690,7 @@ namespace sw
 
     void MatchQueueService::removeAccount( AccountID accountID )
     {
+        (void)dropPendingJoin( accountID ); // 떠난 계정의 티켓이 파티 답 뒤에 생기면 없는 사람이 경기에 묶인다
         const auto accountIt = _mapAccountToTicket.find( accountID );
         if ( accountIt != _mapAccountToTicket.end() )
             cancelTicket( accountIt->second );
