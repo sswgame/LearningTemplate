@@ -115,7 +115,7 @@ namespace sw
                     return;
                 for ( const LoginCredential& credential : _listSeedAccount )
                 {
-                    _loginService.registerAccount( credential, nowMs, AccountOnlineServerKitInternal::kSeedRequestTag );
+                    _loginService.seedAccount( credential, nowMs, AccountOnlineServerKitInternal::kSeedRequestTag );
                 }
                 SW_LOG_INFO_ID( "AccountOnlineServerKit.SeededTestAccountDevelopment", "Seeded %# test account(s) (development option seedTestAccounts)", static_cast<uint32>( _listSeedAccount.size() ) );
                 _listSeedAccount.clear();

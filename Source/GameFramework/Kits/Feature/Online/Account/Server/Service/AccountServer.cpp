@@ -56,7 +56,7 @@ namespace sw
                     case AccountMethod::kRegister:
                     {
                         return readThen<AccountCredentialRequest>( body, [&]( const AccountCredentialRequest& request )
-                        { loginService.registerAccount( LoginCredential{ request._loginName, request._password }, nowMs, tag ); } );
+                        { loginService.registerAccount( LoginCredential{ request._loginName, request._password }, context._remoteKey, nowMs, tag ); } );
                     }
                     case AccountMethod::kLogin:
                     {

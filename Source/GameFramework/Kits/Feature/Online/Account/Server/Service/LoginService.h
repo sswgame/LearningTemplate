@@ -106,7 +106,10 @@ namespace sw
         void update( UnixMilliseconds nowMs );
 
         // 요청 함수들이다. 결과는 같은 @p requestTag 로 `drainCompletions` 에서 받는다. 시도 제한이나 빌드 버전에 걸리면 작업을 맡기지 않고 바로 완료를 쌓는다.
-        void registerAccount( const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag );
+        /** @brief 이름 · 비밀번호로 가입합니다. @p clientKey 는 로그인과 같은 시도 제한의 단위입니다. */
+        void registerAccount( const LoginCredential& credential, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag );
+        /** @brief 서버가 스스로 계정을 만듭니다(개발용 시드 계정). 클라이언트 요청이 아니라 시도 제한을 쓰지 않습니다. */
+        void seedAccount( const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 비밀번호로 로그인합니다. @p clientKey 는 시도 제한의 단위이며 원격 주소 해시로, 바인딩이 정합니다. */
         void login( const LoginCredential& credential, const AccountClientInfo& clientInfo, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag );
         /** @brief 장치 비밀로 들어옵니다. 장치 비밀은 32 B 이며 클라이언트가 로컬에 봉인해 저장합니다. 그 장치의 게스트 계정이 없으면 만듭니다. */

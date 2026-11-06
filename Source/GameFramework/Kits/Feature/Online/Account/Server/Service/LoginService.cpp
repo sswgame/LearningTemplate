@@ -433,11 +433,22 @@ namespace sw
             pending._queueKey          = std::move( entry._key );
             pending._pProvider         = pProvider;
             pending._revocationID      = pProvider->submitRevocation( secret, nowMs );
-            Memory::set( secret.data(), 0, secret.size() ); // 풀어 낸 비밀을 남기지 않는다
+            StringUtil::wipeSecret( secret ); // 풀어 낸 비밀을 남기지 않는다
         }
     }
 
-    void LoginService::registerAccount( const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag )
+    void LoginService::registerAccount( const LoginCredential& credential, uint64 clientKey, UnixMilliseconds nowMs, uint64 requestTag )
+    {
+        LoginGrant limited; // 가입도 비싼 비밀번호 해시를 돌린다 - 로그인과 같은 버킷으로 막지 않으면 해시로 서버를 묶을 수 있다
+        if ( consumeAttempt( clientKey, nowMs, limited._retryAfterMs ) == false )
+        {
+            pushImmediate( LoginOperation::Register, requestTag, LoginResult::RateLimited, limited );
+            return;
+        }
+        seedAccount( credential, nowMs, requestTag );
+    }
+
+    void LoginService::seedAccount( const LoginCredential& credential, UnixMilliseconds nowMs, uint64 requestTag )
     {
         unique_ptr<LoginServiceInternal::LoginWork> work = make_unique<LoginServiceInternal::LoginWork>( this, _pCrypto, _settings, LoginOperation::Register, requestTag, nowMs );
         work->_credential                                = credential;
