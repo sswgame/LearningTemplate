@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -1180,6 +1181,7 @@ SW_TEST_CASE( SkillTreeCatalogTest, ReportsBrokenSkills )
     SW_EXPECT_LOG( "SkillTree.SkillInvalidFieldsSkipped" );
     SW_EXPECT_LOG( "SkillTree.SkillDuplicateSkipped" );
     SW_EXPECT_LOG( "SkillTree.SkillRequiresUnknown" );
+    SW_EXPECT_LOG( "SkillTree.SkillNeverLearnable" );
 
     sw::SkillTreeCatalog  catalog;
     constexpr const utf8* kBrokenXML = R"(<SkillTreeCatalog><Tree id="t">
@@ -1202,6 +1204,33 @@ SW_TEST_CASE( SkillTreeCatalogTest, ReportsBrokenSkills )
     state.initialize( pTree );
     state.addPoints( 1 );
     SW_EXPECT_EQUAL( sw::SkillResult::RequirementMissing, state.rankUp( "orphan", 1 ) );
+}
+
+/**
+ * @brief [SkillTreeCatalogTest] 순환 · 자기 참조 · 도달 못 할 랭크 · 그것에 기대는 스킬은 영원히 못 배우는 것으로 찾아 알린다. 멀쩡한 사슬은 순서와 상관없이 지난다
+ */
+SW_TEST_CASE( SkillTreeCatalogTest, FindsUnlearnableSkills )
+{
+    SW_EXPECT_LOG( "SkillTree.SkillNeverLearnable" );
+    sw::SkillTreeCatalog  catalog;
+    constexpr const utf8* kXML = R"(<SkillTreeCatalog><Tree id="t">
+  <Skill id="late" requires="early:2"/>
+  <Skill id="early" maxRank="2"/>
+  <Skill id="ringA" requires="ringB"/>
+  <Skill id="ringB" requires="ringA"/>
+  <Skill id="self" requires="self"/>
+  <Skill id="tooHigh" requires="early:3"/>
+  <Skill id="afterRing" requires="ringA,early"/>
+</Tree></SkillTreeCatalog>)";
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( kXML, "MonsterHuntTest" ) );
+    const sw::SkillTreeDef* pTree = catalog.find( "t" );
+    SW_REQUIRE_TRUE( pTree != nullptr );
+    const sw::vector<sw::hashed_string> listUnlearnable = pTree->collectUnlearnableSkills();
+    SW_EXPECT_EQUAL( size_t( 5 ), listUnlearnable.size() );
+    for ( const utf8* pLearnable : { "late", "early" } )
+    {
+        SW_EXPECT_FALSE( sw::VectorUtil::contains( listUnlearnable, sw::hashed_string( pLearnable ) ) );
+    }
 }
 
 /**

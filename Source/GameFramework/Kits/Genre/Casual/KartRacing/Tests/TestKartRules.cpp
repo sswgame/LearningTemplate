@@ -918,6 +918,31 @@ SW_TEST_CASE_F( KartRaceTest, PlacesAndFinishTimeout )
 }
 
 /**
+ * @brief [KartRaceTest] 역주행 시간은 이어서 거꾸로 달린 시간이다 - 끊기면 처음부터 센다
+ */
+SW_TEST_CASE_F( KartRaceTest, WrongWayTimerCountsOnlyUnbrokenReversing )
+{
+    _settings._wrongWayDelay = 10.0f;
+    open( KartTestUtil::makeRingDef( 3, {} ), 1 );
+    sw::KartRacerInput input;
+    input._vehicle._throttle = 1.0f;
+    const float32 yaw        = KartTestUtil::computeTrackYaw( _track, 200.0f ) + sw::MathUtil::kPi;
+    _race.placeRacer( 0, _track.sample( 200.0f )._position, yaw );
+    for ( int32 stepIndex = 0; stepIndex < 120 && racer( 0 )._wrongWayTime <= 0.0f; ++stepIndex )
+    {
+        _race.setInput( 0, input );
+        _race.step();
+    }
+    SW_REQUIRE_TRUE( racer( 0 )._wrongWayTime > 0.0f );
+
+    // 멈추면(앞으로 달리지 않아도) 처음부터 다시 센다
+    _race.placeRacer( 0, _track.sample( 200.0f )._position, yaw );
+    _race.setInput( 0, sw::KartRacerInput{} );
+    _race.step();
+    SW_EXPECT_NEAR( 0.0f, racer( 0 )._wrongWayTime, 1.0e-5f );
+}
+
+/**
  * @brief [KartRaceTest] 역주행: 정한 시간 동안 거꾸로 달리면 알리고, 앞으로 달리면 풀린다
  */
 SW_TEST_CASE_F( KartRaceTest, WrongWayDetection )

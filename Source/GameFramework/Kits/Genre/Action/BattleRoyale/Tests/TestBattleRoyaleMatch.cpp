@@ -442,6 +442,20 @@ SW_TEST_CASE( BattleRoyaleMatchTest, MatchEndStopsTheTick )
 }
 
 /**
+ * @brief [BattleRoyaleMatchTest] 자기장에 한 틱에 함께 죽으면 체력이 적은 쪽이 먼저 쓰러진다 - 입장 순서로 이기지 않는다
+ */
+SW_TEST_CASE( BattleRoyaleMatchTest, ZoneTieLosesByLowerHealth )
+{
+    MatchBench bench;
+    SW_REQUIRE_TRUE( bench.setUp( kLethalXML, 1 ) );
+    (void)bench._match.findPlayerMutable( 1 )->_vitality.applyDamage( 10.0f, 0.0f, -1 );
+    bench.stepFor( 1 );
+    SW_EXPECT_TRUE( bench.player( 1 ).isDead() );
+    SW_EXPECT_TRUE( bench.player( 0 ).isAlive() );
+    SW_EXPECT_EQUAL( 0, bench._match.getMatchState().getWinningTeam() );
+}
+
+/**
  * @brief [BattleRoyaleMatchTest] 보급 상자는 적힌 시각이 지나면 오름차순으로 떨어져 내용물과 위치를 갖고, 시작 전에는 떨어지지 않는다
  */
 SW_TEST_CASE( BattleRoyaleMatchTest, SupplyDropsFollowTheSchedule )

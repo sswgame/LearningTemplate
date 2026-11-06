@@ -76,6 +76,8 @@ namespace sw
         vector<SkillDef> _listSkill{};
 
         const SkillDef* findSkill( const hashed_string& skillID ) const;
+        /** @brief 영원히 배울 수 없는 스킬의 id 입니다. 선행이 없거나, 선행의 최대 랭크보다 높은 랭크를 요구하거나, 순환이거나, 그런 스킬에 기대는 경우입니다. */
+        vector<hashed_string> collectUnlearnableSkills() const;
     };
 } // namespace sw
 

@@ -10,6 +10,8 @@
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/Gameplay/Match/TeamAttitude.h"
 
+#include <algorithm>
+
 namespace sw
 {
     BattleRoyaleMatch::BattleRoyaleMatch()
@@ -227,16 +229,30 @@ namespace sw
         _zone.update( deltaTime );
 
         // 판이 끝난 틱에는 남은 사람을 더 깎지 않는다. 이긴 팀이 끝난 뒤에 죽는 킬 피드가 나오면 안 된다.
-        for ( size_t index = 0; index < _listPlayer.size() && _matchState.getPhase() == MatchPhase::InProgress; ++index )
+        // 한 틱에 함께 죽을 때 먼저 쓰러지는 사람이 지는 사람이다. 입장 순서가 아니라 체력이 적은 쪽부터 깎는다(같으면 입장 순서 - 결정적이다).
+        vector<int32> listZoneOrder;
+        for ( size_t index = 0; index < _listPlayer.size(); ++index )
         {
-            BattleRoyalePlayer& player = _listPlayer[index];
+            listZoneOrder.push_back( static_cast<int32>( index ) );
+        }
+        std::stable_sort( listZoneOrder.begin(), listZoneOrder.end(), [this]( int32 left, int32 right )
+        {
+            const BattleRoyalePlayer& leftPlayer  = _listPlayer[static_cast<size_t>( left )];
+            const BattleRoyalePlayer& rightPlayer = _listPlayer[static_cast<size_t>( right )];
+            if ( leftPlayer.isDowned() != rightPlayer.isDowned() )
+                return leftPlayer.isDowned();
+            return leftPlayer.isDowned() ? leftPlayer._vitality.getDownedHealth() < rightPlayer._vitality.getDownedHealth() : leftPlayer._vitality.getHealth() < rightPlayer._vitality.getHealth();
+        } );
+        for ( size_t order = 0; order < listZoneOrder.size() && _matchState.getPhase() == MatchPhase::InProgress; ++order )
+        {
+            BattleRoyalePlayer& player = _listPlayer[static_cast<size_t>( listZoneOrder[order] )];
             if ( player.isDead() )
                 continue;
             const float32 zoneDamage = _zone.computeDamagePerSecond( player._position ) * deltaTime;
             if ( zoneDamage > 0.0f )
             {
                 (void)player._vitality.applyDamage( zoneDamage, 0.0f, -1 ); // 결과는 processVitality 가 사건으로 읽는다
-                processVitality( static_cast<int32>( index ) );
+                processVitality( listZoneOrder[order] );
             }
         }
         for ( size_t index = 0; index < _listPlayer.size() && _matchState.getPhase() == MatchPhase::InProgress; ++index )

@@ -17,6 +17,40 @@ namespace sw
         return VectorUtil::findBy<&SkillDef::_id>( _listSkill, skillID );
     }
 
+    vector<hashed_string> SkillTreeDef::collectUnlearnableSkills() const
+    {
+        // 배울 수 있는 스킬에서 넓혀 간다. 끝까지 남는 것은 선행이 없거나, 도달 못 할 랭크를 요구하거나, 순환이다.
+        vector<uint8> listLearnable( _listSkill.size(), SW_FALSE );
+        bool          bChanged = true;
+        while ( bChanged )
+        {
+            bChanged = false;
+            for ( size_t index = 0; index < _listSkill.size(); ++index )
+            {
+                if ( listLearnable[index] == SW_TRUE )
+                    continue;
+                bool bReady = true;
+                for ( const SkillRequirement& requirement : _listSkill[index]._listRequirement )
+                {
+                    const SkillDef* pRequired = findSkill( requirement._skillID );
+                    const bool      bKnown    = pRequired != nullptr && requirement._rank <= pRequired->_maxRank;
+                    bReady                    = bReady && bKnown && listLearnable[static_cast<size_t>( pRequired - _listSkill.data() )] == SW_TRUE;
+                }
+                if ( bReady == false )
+                    continue;
+                listLearnable[index] = SW_TRUE;
+                bChanged             = true;
+            }
+        }
+        vector<hashed_string> listUnlearnable;
+        for ( size_t index = 0; index < _listSkill.size(); ++index )
+        {
+            if ( listLearnable[index] == SW_FALSE )
+                listUnlearnable.push_back( _listSkill[index]._id );
+        }
+        return listUnlearnable;
+    }
+
     // ------------------------------------------------------------------------------
     // SkillTreeCatalog
     // ------------------------------------------------------------------------------
@@ -79,6 +113,10 @@ namespace sw
                     if ( tree.findSkill( requirement._skillID ) == nullptr )
                         SW_LOG_WARNING_ID( "SkillTree.SkillRequiresUnknown", "%#: skill '%#' requires unknown '%#'", sourceName, skill._id.c_str(), requirement._skillID.c_str() );
                 }
+            }
+            for ( const hashed_string& skillID : tree.collectUnlearnableSkills() )
+            {
+                SW_LOG_ERROR_ID( "SkillTree.SkillNeverLearnable", "%#: skill '%#' of tree '%#' can never be learned (missing, unreachable or circular requirements)", sourceName, skillID.c_str(), tree._id.c_str() );
             }
             (void)add( tree );
             ++loadedCount;

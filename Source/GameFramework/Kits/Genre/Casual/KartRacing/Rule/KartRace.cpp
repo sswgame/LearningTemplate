@@ -411,10 +411,10 @@ namespace sw
                 pushEvent( KartRaceEvent::Kind::WrongWay, racer, -1, 1, _raceTime );
             }
         }
-        else if ( alongSpeed > _settings._wrongWaySpeed )
+        else
         {
-            kart._wrongWayTime = 0.0f;
-            if ( kart._bWrongWay == SW_TRUE )
+            kart._wrongWayTime = 0.0f; // 이어서 거꾸로 달린 시간이다 - 벽에 튕겨 잠깐씩 뒤로 밀린 것이 쌓이면 안 된다
+            if ( alongSpeed > _settings._wrongWaySpeed && kart._bWrongWay == SW_TRUE )
             {
                 kart._bWrongWay = SW_FALSE;
                 pushEvent( KartRaceEvent::Kind::WrongWay, racer, -1, 0, _raceTime );
