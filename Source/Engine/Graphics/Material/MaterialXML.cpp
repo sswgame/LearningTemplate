@@ -81,8 +81,6 @@ namespace sw
         uint32 size{ 0 };
         if ( fields._type.empty() == false )
             prop._type = MaterialPacking::stringToType( fields._type, size );
-        if ( fields._shaderType.empty() == false )
-            prop._shaderType = MaterialPacking::stringToType( fields._shaderType, size );
         // 기본값과 현재 값은 한쪽만 적으면 다른 쪽이 따라간다.
         prop._defaultValue  = fields._defaultValue.empty() ? fields._value : fields._defaultValue;
         prop._value         = fields._value.empty() ? prop._defaultValue : fields._value;

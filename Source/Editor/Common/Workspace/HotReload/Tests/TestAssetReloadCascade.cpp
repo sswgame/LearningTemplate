@@ -85,7 +85,7 @@ namespace
             text += " shaderPath=\"engine/shaders/forward_lit.hlsl\" alphaMode=\"Opaque\"";
         text += "><_properties>";
         if ( pRoughness != nullptr )
-            text += "<item name=\"_roughness\" type=\"Range\" shaderType=\"Float\" defaultValue=\"" + sw::string( pRoughness ) + "\" min=\"0.0\" max=\"1.0\" />";
+            text += "<item name=\"_roughness\" type=\"Range\" defaultValue=\"" + sw::string( pRoughness ) + "\" min=\"0.0\" max=\"1.0\" />";
         text += "</_properties></MaterialDesc>";
         return text;
     }

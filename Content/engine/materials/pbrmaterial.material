@@ -4,13 +4,13 @@
      glTF alphaMode MASK 는 alphaMode="Mask"(알파가 _alphaCutoff 보다 작으면 버린다), doubleSided 는 cullMode="None" twoSidedLighting="true" 다. 임포트가 머티리얼마다 적는다. -->
 <MaterialDesc formatVersion="0" name="PBRMaterial" shaderPath="engine/shaders/pbr_lit.hlsl" alphaMode="Opaque">
 	<_properties>
-		<item name="_color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
-		<item name="_roughness" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="1.0" group="Surface"/>
-		<item name="_metallic" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="1.0" group="Surface"/>
-		<item name="_normalScale" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="2.0" group="Surface"/>
-		<item name="_occlusionStrength" type="Range" shaderType="Float" defaultValue="1.0" min="0.0" max="1.0" group="Surface"/>
-		<item name="_worldTileSize" type="Float" shaderType="Float" defaultValue="0.0" displayName="World Tile Size (m, 0 = mesh UV)" group="Surface"/>
-		<item name="_alphaCutoff" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" displayName="Alpha Cutoff" group="Surface"/>
+		<item name="_color" type="Color" defaultValue="1.0 1.0 1.0 1.0" displayName="Base Color" group="Surface" bHdr="0" bSrgb="1"/>
+		<item name="_roughness" type="Range" defaultValue="1.0" min="0.0" max="1.0" group="Surface"/>
+		<item name="_metallic" type="Range" defaultValue="1.0" min="0.0" max="1.0" group="Surface"/>
+		<item name="_normalScale" type="Range" defaultValue="1.0" min="0.0" max="2.0" group="Surface"/>
+		<item name="_occlusionStrength" type="Range" defaultValue="1.0" min="0.0" max="1.0" group="Surface"/>
+		<item name="_worldTileSize" type="Float" defaultValue="0.0" displayName="World Tile Size (m, 0 = mesh UV)" group="Surface"/>
+		<item name="_alphaCutoff" type="Range" defaultValue="0.5" min="0.0" max="1.0" displayName="Alpha Cutoff" group="Surface"/>
 		<item name="_albedoMap" type="Texture2D" displayName="Albedo" group="Surface" bSrgb="1"/>
 		<item name="_normalMap" type="Texture2D" displayName="Normal" group="Surface" bSrgb="0"/>
 		<item name="_ormMap" type="Texture2D" displayName="Occlusion Roughness Metallic" group="Surface" bSrgb="0"/>

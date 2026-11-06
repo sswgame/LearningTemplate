@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="plain_blue" parent="engine/materials/defaultmaterial.material">
+<MaterialDesc formatVersion="0" name="plain_blue" _base="engine/materials/defaultmaterial.material">
 	<_properties>
 		<item name="_color" defaultValue="0.1 0.2 0.9 1"/>
 	</_properties>

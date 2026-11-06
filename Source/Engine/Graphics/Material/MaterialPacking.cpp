@@ -202,9 +202,9 @@ namespace sw
              * @brief 확보된 칸(`packSize`) 안에 들어갈 때만 씁니다.
              * @details `writeNumericValue` 뿐 아니라 switch 안에서 **직접 `Memory::copy` 하는 형제 경로들**도 이것을 거쳐야 합니다.
              *          칸 크기는 셰이더 리플렉션이 정하고(`ShaderVariableInfo::_size`) 쓰는 크기는
-             *          머티리얼 XML 의 `shaderType` 이 정하므로 **둘이 어긋날 수 있습니다.**
-             *          예를 들어 셰이더가 `uint`(4바이트)로 선언한 자리에 XML 이
-             *          `ChannelMask` + `shaderType="Float4"` 를 적으면 4바이트 칸에 16바이트를 씁니다.
+             *          `_shaderType`(리플렉션 전에는 `defaultShaderTypeFor`)이 정하므로 **둘이 어긋날 수 있습니다.**
+             *          예를 들어 셰이더가 `uint`(4바이트)로 선언한 자리에 `_shaderType` 이
+             *          `Float4` 인 `ChannelMask` 를 쓰면 4바이트 칸에 16바이트를 씁니다.
              *          조용히 넘치는 대신 쓰지 않고 false 를 반환합니다(부르는 쪽이 경고합니다).
              */
             [[nodiscard]] static bool writeBoundedValue( void* pDst, size_t packSize, const void* pSrc, size_t byteCount )

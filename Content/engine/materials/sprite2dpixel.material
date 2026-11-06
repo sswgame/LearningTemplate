@@ -1,16 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<MaterialDesc formatVersion="0" name="Sprite2DPixel" shaderPath="engine/shaders/sprite_2d.hlsl" alphaMode="Blend">
+<MaterialDesc formatVersion="0" name="Sprite2DPixel" _base="engine/materials/sprite2d.material">
 	<_properties>
-		<item name="_color" type="Color" shaderType="Float4" defaultValue="1.0 1.0 1.0 1.0" displayName="Tint Color" group="Sprite"/>
-		<item name="_uvRect" type="Vector4" shaderType="Float4" defaultValue="0.0 0.0 1.0 1.0" displayName="UV Rect" group="Sprite"/>
-		<item name="_albedoMap" type="Texture2D" displayName="Sprite Texture" group="Sprite"/>
-		<item name="_pointFilter" type="Bool" shaderType="Uint" defaultValue="1" displayName="Point Filter (pixel art)" group="Sprite"/>
-		<item name="_premultipliedTexture" type="Bool" shaderType="Uint" defaultValue="0" displayName="Premultiplied Texture (world UI render target)" group="Sprite"/>
+		<item name="_pointFilter" defaultValue="1" />
 	</_properties>
-	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
-		<_alwaysDefines>
-			<item>MATERIAL_BLEND_TRANSLUCENT</item>
-			<item>MATERIAL_VERTEX_DEFORM</item>
-		</_alwaysDefines>
-	</_permutations>
 </MaterialDesc>

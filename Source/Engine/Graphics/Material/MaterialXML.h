@@ -28,8 +28,6 @@ namespace sw
         PROPERTY()
         string _type{};
         PROPERTY()
-        string _shaderType{};
-        PROPERTY()
         string _defaultValue{};
         PROPERTY()
         string _value{};

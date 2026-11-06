@@ -69,6 +69,23 @@ SW_TEST_CASE( MaterialXMLTest, RejectsMisspelledPropertyAttribute )
 }
 
 /**
+ * @brief [MaterialXMLTest] 칸 형식(`shaderType`)은 파일에 적지 않는다 — 셰이더 리플렉션이 정하므로 적으면 읽기 실패이고, 읽기 전에는 CPU 형식의 기본 형식이다
+ */
+SW_TEST_CASE( MaterialXMLTest, ShaderTypeIsNotAFileField )
+{
+    sw::XMLDocument written;
+    SW_REQUIRE_TRUE( written.parse( "<item name=\"_color\" type=\"Color\" shaderType=\"Float4\" defaultValue=\"1 1 1 1\"/>" ) );
+    sw::MaterialProperty prop{};
+    SW_EXPECT_LOG( "XMLFields.UnknownField" );
+    SW_EXPECT_FALSE( sw::MaterialXML::parsePropertyNode( written.getRoot( "item" ), prop ) );
+
+    sw::XMLDocument plain;
+    SW_REQUIRE_TRUE( plain.parse( "<item name=\"_color\" type=\"Color\" defaultValue=\"1 1 1 1\"/>" ) );
+    SW_REQUIRE_TRUE( sw::MaterialXML::parsePropertyNode( plain.getRoot( "item" ), prop ) );
+    SW_EXPECT_TRUE( prop._shaderType == sw::MaterialPropertyType::Unknown ); // 패킹 · 리플렉션이 채운다(`defaultShaderTypeFor` · `matchPropertiesToSchema`)
+}
+
+/**
  * @brief [MaterialXMLTest] 현재 판(formatVersion=0)의 XML 을 리소스 id 로 읽는다 — 이름 · 셰이더 경로가 그대로다
  */
 SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
@@ -79,7 +96,7 @@ SW_TEST_CASE( MaterialXMLTest, AssetFormatAcceptsCurrentMaterialXML )
                                shaderPath +
                                R"(" alphaMode="Opaque">
 	<_properties>
-		<item name="_color" type="Color" shaderType="Float4" defaultValue="1 0 0 1"/>
+		<item name="_color" type="Color" defaultValue="1 0 0 1"/>
 	</_properties>
 </MaterialDesc>
 )";
@@ -105,8 +122,8 @@ namespace
     constexpr const utf8* kParentMaterial = R"(<?xml version="1.0" encoding="utf-8"?>
 <MaterialDesc formatVersion="0" name="ParentMat" shaderPath="engine/shaders/forward_lit.hlsl" alphaMode="Opaque">
 	<_properties>
-		<item name="_color" type="Color" shaderType="Float4" defaultValue="1 1 1 1" displayName="Base Color" group="Surface" bSrgb="1" />
-		<item name="_roughness" type="Range" shaderType="Float" defaultValue="0.5" min="0.0" max="1.0" group="Surface" />
+		<item name="_color" type="Color" defaultValue="1 1 1 1" displayName="Base Color" group="Surface" bSrgb="1" />
+		<item name="_roughness" type="Range" defaultValue="0.5" min="0.0" max="1.0" group="Surface" />
 	</_properties>
 	<_permutations quality="High" shaderLOD="300" usage="StaticMesh">
 		<_alwaysDefines>
