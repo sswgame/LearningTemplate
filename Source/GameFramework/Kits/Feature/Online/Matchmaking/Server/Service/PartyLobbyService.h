@@ -213,6 +213,8 @@ namespace sw
         void   completeParty( const Request& request, MatchmakingResult result, const PartySnapshot& party );
         void   completeLobby( const Request& request, MatchmakingResult result, const LobbySnapshot& lobby );
         uint64 allocateID() { return ( _serverID << 32 ) | ++_sequence; }
+        /** @brief 계정의 로비를 기록합니다. 다른 로비에 있었으면 거기서 뺍니다. */
+        void moveAccountToLobby( AccountID accountID, uint64 lobbyID );
 
     private:
         CacheRecordUpdater                  _updater;

@@ -840,12 +840,12 @@ namespace sw
                 {
                     const string listKey = makeLobbyListKey( lobby._modeID );
                     submitFireAndForget( EphemeralRequest::makeScoreSet( listKey, ServiceKeyUtil::makeHex64( lobby._lobbyID ), lobby._createdMs ) );
-                    _mapAccountToLobby[request._actorID] = lobby._lobbyID;
+                    moveAccountToLobby( request._actorID, lobby._lobbyID );
                     break;
                 }
                 case PartyLobbyOperation::LobbyJoin:
                 {
-                    _mapAccountToLobby[request._actorID] = lobby._lobbyID;
+                    moveAccountToLobby( request._actorID, lobby._lobbyID );
                     notifyLobby( lobby, kInvalidAccountID );
                     break;
                 }
@@ -877,6 +877,15 @@ namespace sw
         if ( request._operation == PartyLobbyOperation::LobbyReopen )
             return; // 완료는 없다
         completeLobby( request, result, lobby );
+    }
+
+    void PartyLobbyService::moveAccountToLobby( AccountID accountID, uint64 lobbyID )
+    {
+        // 한 계정은 로비 하나에 든다(Steam 로비와 같다). 앞 로비에 남으면 준비하지 않는 유령 멤버가 되어 그 로비를 시작하지 못한다.
+        const auto lobbyIt = _mapAccountToLobby.find( accountID );
+        if ( lobbyIt != _mapAccountToLobby.end() && lobbyIt->second != lobbyID )
+            leaveLobby( accountID, lobbyIt->second, 0 );
+        _mapAccountToLobby[accountID] = lobbyID;
     }
 
     void PartyLobbyService::refreshIndexTTL( const PartySnapshot& party )
