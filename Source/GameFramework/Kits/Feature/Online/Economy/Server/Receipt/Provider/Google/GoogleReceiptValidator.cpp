@@ -15,8 +15,7 @@ namespace sw
     {
         struct GoogleReceiptValidatorInternal
         {
-            static constexpr size_t kMaxFieldSize           = 512;
-            static constexpr size_t kMaxNotifiedRefundCount = 100000;
+            static constexpr size_t kMaxFieldSize = 512;
 
             static bool isFieldText( string_view text )
             {
@@ -38,11 +37,6 @@ namespace sw
                 string text;
                 (void)object.findPathText( pKey, text );
                 return text;
-            }
-
-            static bool isAuthFailure( const HTTPClientResponse& response )
-            {
-                return response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
             }
 
             static HTTPClientRequest makeRequest( const string& url, int64 timeoutMs, const string& token, HTTPMethod method )
@@ -68,19 +62,12 @@ namespace sw
 namespace sw
 {
     GoogleReceiptValidator::GoogleReceiptValidator( GoogleReceiptSettings settings, INetSecurityProvider* pSecurity, HTTPClient* pHTTPClient )
-        : _settings{ std::move( settings ) }
-        , _tokenSource{ std::move( _settings._credentials ), GoogleReceiptSettings::kScope, pSecurity, pHTTPClient, _settings._requestTimeoutMs }
-        , _mapRequestToCall{}
-        , _listWaiting{}
-        , _listDone{}
-        , _listRefund{}
-        , _uniqueSetNotifiedRefund{}
-        , _pHTTPClient{ pHTTPClient }
-        , _nextVoidedMs{ 0 }
-        , _lastVoidedUnixMs{ 0 }
-        , _voidedStartUnixMs{ 0 }
-        , _bVoidedInFlight{ SW_FALSE }
-        , _bStopped{ SW_FALSE }
+        : StoreReceiptValidator{
+              settings._buyerRule, ReceiptPollWindow{ settings._voidedPollIntervalMs, settings._voidedLookbackMs, settings._voidedMaxAgeMs },
+              pHTTPClient
+    },
+        _settings{ std::move( settings ) },
+        _tokenSource{ std::move( _settings._credentials ), GoogleReceiptSettings::kScope, pSecurity, pHTTPClient, _settings._requestTimeoutMs }
     {
     }
 
@@ -122,115 +109,78 @@ namespace sw
         return makeProductURL( productID, purchaseToken ) + ":acknowledge";
     }
 
-    string GoogleReceiptValidator::makeVoidedURL( int64 sinceUnixMs ) const
+    string GoogleReceiptValidator::makeVoidedURL( int64 sinceUnixMs, string_view pageToken ) const
     {
-        return _settings._baseURL + "/androidpublisher/v3/applications/" + HTTPUtil::encodePercent( _settings._packageName ) +
-               formatToString( "/purchases/voidedpurchases?startTime=%#&maxResults=%#&type=0", sinceUnixMs, kVoidedMaxResults );
+        string url = _settings._baseURL + "/androidpublisher/v3/applications/" + HTTPUtil::encodePercent( _settings._packageName ) +
+                     formatToString( "/purchases/voidedpurchases?startTime=%#&maxResults=%#&type=0", sinceUnixMs, kVoidedMaxResults );
+        if ( pageToken.empty() == false )
+            url += "&token=" + HTTPUtil::encodePercent( pageToken );
+        return url;
     }
 
-    void GoogleReceiptValidator::submitCall( const WaitingCall& call, UnixMilliseconds /*now*/ )
+    bool GoogleReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk, string& outFailureText ) const
+    {
+        if ( splitPayload( payload, outAsk._productID, outAsk._askedKey ) == false )
+        {
+            outFailureText = "google receipt must be <product id>|<purchase token>";
+            return false;
+        }
+        return true;
+    }
+
+    StoreReceiptValidator::AuthState GoogleReceiptValidator::prepareAuth( UnixMilliseconds now )
+    {
+        if ( _tokenSource.hasValidToken( now ) )
+            return AuthState::Ready;
+        return _tokenSource.request( now ) ? AuthState::Waiting : AuthState::Failed;
+    }
+
+    bool GoogleReceiptValidator::consumeAuthResponse( const HTTPClientResponse& response, UnixMilliseconds now )
+    {
+        const ServiceAccountTokenSource::Outcome outcome = _tokenSource.handleResponse( response, now );
+        if ( outcome == ServiceAccountTokenSource::Outcome::None )
+            return false;
+        flushWaiting( outcome == ServiceAccountTokenSource::Outcome::Granted, now );
+        return true;
+    }
+
+    HTTPClientRequest GoogleReceiptValidator::makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds /*now*/ )
     {
         using Internal = GoogleReceiptValidatorInternal;
         string     url;
         HTTPMethod method = HTTPMethod::Get;
-        if ( call._kind == WaitingCall::Kind::Validate )
-            url = makeProductURL( call._pending._productID, call._pending._purchaseToken );
-        else if ( call._kind == WaitingCall::Kind::Acknowledge )
+        switch ( call._kind )
         {
-            url    = makeAcknowledgeURL( call._pending._productID, call._pending._purchaseToken );
-            method = HTTPMethod::Post;
-        }
-        else
-            url = makeVoidedURL( ( _lastVoidedUnixMs != 0 ? _lastVoidedUnixMs : _voidedStartUnixMs ) - _settings._voidedLookbackMs );
-        _mapRequestToCall[_pHTTPClient->submitRequest( Internal::makeRequest( url, _settings._requestTimeoutMs, _tokenSource.getToken(), method ) )] = call;
-    }
-
-    void GoogleReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
-    {
-        WaitingCall call;
-        call._kind             = WaitingCall::Kind::Validate;
-        call._pending._request = request;
-        if ( splitPayload( request._payload, call._pending._productID, call._pending._purchaseToken ) == false )
-        {
-            ReceiptValidationResult& result = _listDone.emplace_back();
-            result._storeName               = request._storeName;
-            result._ticket                  = request._ticket;
-            result._accountID               = request._accountID;
-            result._status                  = ReceiptStatus::Invalid;
-            result._failureText             = "google receipt must be <product id>|<purchase token>";
-            return;
-        }
-        if ( _tokenSource.hasValidToken( now ) )
-        {
-            submitCall( call, now );
-            return;
-        }
-        _listWaiting.push_back( std::move( call ) );
-        if ( _tokenSource.request( now ) == false )
-            flushWaiting( ServiceAccountTokenSource::Outcome::Rejected, now );
-    }
-
-    void GoogleReceiptValidator::completeRetry( const PendingValidation& pending, const utf8* pText )
-    {
-        ReceiptValidationResult& result = _listDone.emplace_back();
-        result._storeName               = pending._request._storeName;
-        result._ticket                  = pending._request._ticket;
-        result._accountID               = pending._request._accountID;
-        result._status                  = ReceiptStatus::Retry;
-        result._failureText             = pText;
-    }
-
-    void GoogleReceiptValidator::flushWaiting( ServiceAccountTokenSource::Outcome outcome, UnixMilliseconds now )
-    {
-        vector<WaitingCall> listWaiting;
-        listWaiting.swap( _listWaiting );
-        for ( const WaitingCall& call : listWaiting )
-        {
-            if ( outcome == ServiceAccountTokenSource::Outcome::Granted )
+            case ReceiptCall::Kind::Validate:
             {
-                submitCall( call, now );
-                continue;
+                url = makeProductURL( call._ask._productID, call._ask._askedKey );
+                break;
             }
-            // 토큰을 받지 못했다 — 검증은 같은 영수증으로 다시 시도하게 하고, 확인 · 조회는 다음 기회에 한다.
-            if ( call._kind == WaitingCall::Kind::Validate )
-                completeRetry( call._pending, "google access token is not available" );
-            else if ( call._kind == WaitingCall::Kind::Voided )
-                _bVoidedInFlight = SW_FALSE;
+            case ReceiptCall::Kind::FollowUp:
+            {
+                url    = makeAcknowledgeURL( call._ask._productID, call._ask._askedKey );
+                method = HTTPMethod::Post;
+                break;
+            }
+            case ReceiptCall::Kind::RefundPage:
+            {
+                url = makeVoidedURL( getRefundWindow().getFromMs(), call._pageToken );
+                break;
+            }
         }
+        return Internal::makeRequest( url, _settings._requestTimeoutMs, _tokenSource.getToken(), method );
     }
 
-    void GoogleReceiptValidator::finishValidation( const PendingValidation& pending, const HTTPClientResponse& response, UnixMilliseconds now )
+    void GoogleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds /*now*/, ReceiptOrderFacts& outFacts )
     {
-        using Internal = GoogleReceiptValidatorInternal;
-        if ( Internal::isAuthFailure( response ) )
-        {
-            _tokenSource.invalidate(); // 토큰이 거절됐다 — 다음 요청이 새로 받는다
-            SW_LOG_ERROR_ID( "GoogleReceiptValidator.GoogleRejectedAccessToken", "Google rejected the access token or the service account has no access to '%#' (status %#)", _settings._packageName.c_str(), response._statusCode );
-            completeRetry( pending, "google rejected the access token" );
-            return;
-        }
-        if ( response.isTransientFailure() )
-        {
-            completeRetry( pending, response._bTransportFailed == SW_TRUE ? response._failureText.c_str() : "google is not available" );
-            return;
-        }
-        ReceiptValidationResult& result = _listDone.emplace_back();
-        result._storeName               = pending._request._storeName;
-        result._ticket                  = pending._request._ticket;
-        result._accountID               = pending._request._accountID;
-        result._productID               = pending._productID;
-        JSONDocument document;
-        if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
-        {
-            result._status      = ReceiptStatus::Invalid; // 모르는 토큰(400 · 404 · 410)
-            result._failureText = formatToString( "google does not know this purchase (status %#)", response._statusCode );
-            return;
-        }
-        const JSONValue root  = document.getRoot();
-        result._transactionID = Internal::readText( root, "orderId" );
-        int64 purchaseMs      = 0;
+        using Internal          = GoogleReceiptValidatorInternal;
+        outFacts._transactionID = Internal::readText( root, "orderId" );
+        outFacts._productID     = Internal::readText( root, "productId" );                   // 구글 문서: 없을 수 있다. 없으면 주소에 넣은 상품이다
+        outFacts._answeredKey   = Internal::readText( root, "purchaseToken" );               // 구글 문서: 없을 수 있다
+        outFacts._storeBuyerID  = Internal::readText( root, "obfuscatedExternalAccountId" ); // 클라이언트가 구매 때 찍은 값(`ReceiptBuyerToken`)
+        int64 purchaseMs        = 0;
         if ( StringUtil::parseInt64( Internal::readText( root, "purchaseTimeMillis" ), purchaseMs ) )
-            result._purchaseTimeMs = purchaseMs;
+            outFacts._purchaseTimeMs = purchaseMs;
         int32      purchaseState        = -1;
         int32      purchaseType         = -1;
         int32      acknowledgementState = 1;
@@ -240,143 +190,44 @@ namespace sw
         const bool bFieldsOk            = bPurchaseStateOk && bPurchaseTypeOk && bAcknowledgementOk;
         if ( bFieldsOk == false )
         {
-            result._status      = ReceiptStatus::Invalid; // 구글이 이런 칸을 이렇게 주지 않는다 — 읽을 수 없는 응답이다(오류는 JSON 읽기가 남겼다)
-            result._failureText = "google purchase has fields of the wrong type";
+            outFacts._status      = ReceiptStatus::Invalid; // 구글이 이런 칸을 이렇게 주지 않는다 — 읽을 수 없는 응답이다(오류는 JSON 읽기가 남겼다)
+            outFacts._failureText = "google purchase has fields of the wrong type";
             return;
         }
-        result._status   = mapPurchaseState( purchaseState );
-        result._bSandbox = purchaseType == 0 ? SW_TRUE : SW_FALSE; // 라이선스 테스트 구매
-        if ( result._status != ReceiptStatus::Valid )
-            result._failureText = formatToString( "google purchase state %#", purchaseState );
-        if ( result._transactionID.empty() && result._status != ReceiptStatus::Retry )
-        {
-            result._status      = ReceiptStatus::Invalid; // 주문 번호가 없으면 분개 키를 만들 수 없다
-            result._failureText = "google purchase has no order id";
-        }
-        if ( result._status == ReceiptStatus::Valid && acknowledgementState == 0 )
-        {
-            WaitingCall call;
-            call._kind    = WaitingCall::Kind::Acknowledge;
-            call._pending = pending;
-            submitCall( call, now );
-        }
+        outFacts._status   = mapPurchaseState( purchaseState );
+        outFacts._bSandbox = purchaseType == 0 ? SW_TRUE : SW_FALSE; // 라이선스 테스트 구매
+        if ( outFacts._status != ReceiptStatus::Valid )
+            outFacts._failureText = formatToString( "google purchase state %#", purchaseState );
+        outFacts._bNeedsFollowUp = acknowledgementState == 0 ? SW_TRUE : SW_FALSE;
     }
 
-    void GoogleReceiptValidator::finishVoided( const HTTPClientResponse& response, UnixMilliseconds now )
+    void GoogleReceiptValidator::parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage )
     {
-        using Internal   = GoogleReceiptValidatorInternal;
-        _bVoidedInFlight = SW_FALSE;
-        if ( Internal::isAuthFailure( response ) )
-        {
-            _tokenSource.invalidate();
-            SW_LOG_ERROR_ID( "GoogleReceiptValidator.GoogleRejectedVoidedPurchases", "Google rejected the voided purchases query for '%#' (status %#)", _settings._packageName.c_str(), response._statusCode );
-        }
-        JSONDocument document;
-        if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
-        {
-            SW_LOG_WARNING_ID( "GoogleReceiptValidator.GoogleVoidedPurchasesQuery", "Google voided purchases query failed (status %#) - the next poll reads from the last successful one", response._statusCode );
-            return; // 지난 성공 시각을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
-        }
-        _lastVoidedUnixMs      = _voidedStartUnixMs;
-        const JSONValue voided = document.getRoot().get( "voidedPurchases" );
-        if ( voided.isArray() && voided.size() >= static_cast<size_t>( kVoidedMaxResults ) )
-            SW_LOG_WARNING_ID( "GoogleReceiptValidator.GoogleReturnedVoidedPurchases", "Google returned %# voided purchases (the limit) - some may be read at the next overlapping poll only", static_cast<int32>( voided.size() ) );
+        using Internal         = GoogleReceiptValidatorInternal;
+        const JSONValue voided = root.get( "voidedPurchases" );
         for ( size_t index = 0; voided.isArray() && index < voided.size(); ++index )
         {
-            const JSONValue entry   = voided.at( index );
-            const string    orderID = Internal::readText( entry, "orderId" );
-            if ( orderID.empty() || _uniqueSetNotifiedRefund.count( orderID ) != 0 )
-                continue;
-            if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )
-                _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
-            _uniqueSetNotifiedRefund.insert( orderID );
-            int64 voidedMs     = now.count();
-            int64 parsedVoided = 0;
+            const JSONValue entry        = voided.at( index );
+            int64           voidedMs     = now.count();
+            int64           parsedVoided = 0;
             if ( StringUtil::parseInt64( Internal::readText( entry, "voidedTimeMillis" ), parsedVoided ) )
                 voidedMs = parsedVoided;
-            _listRefund.push_back( ReceiptRefundNotice{ getStoreName(), orderID, voidedMs } );
+            addRefund( Internal::readText( entry, "orderId" ), voidedMs );
         }
+        outPage._nextPageToken = Internal::readText( root, "tokenPagination.nextPageToken" );
+        // 다음 쪽 토큰 없이 상한까지 찼으면 뒤쪽을 이을 길이 없다 — 틀이 구간을 옮기지 않는다.
+        const bool bFull    = voided.isArray() && voided.size() >= static_cast<size_t>( kVoidedMaxResults );
+        outPage._bTruncated = bFull && outPage._nextPageToken.empty() ? SW_TRUE : SW_FALSE;
     }
 
-    void GoogleReceiptValidator::update( UnixMilliseconds now )
+    void GoogleReceiptValidator::onCredentialRejected( const HTTPClientResponse& response )
     {
-        // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 토큰 만료 · 조회 주기 · 취소 목록 구간을 모두 잰다.
-        _pHTTPClient->update();
-        const bool bMayPoll = _bStopped == SW_FALSE && _bVoidedInFlight == SW_FALSE;
-        if ( bMayPoll && now.count() >= _nextVoidedMs )
-        {
-            // 처음에는 바로, 그 뒤로는 주기마다. 이번 조회의 시작 시각을 먼저 정해 두고, 응답이 성공하면 다음 조회의 기준이 된다.
-            _voidedStartUnixMs = now.count();
-            WaitingCall call;
-            call._kind       = WaitingCall::Kind::Voided;
-            _bVoidedInFlight = SW_TRUE;
-            _nextVoidedMs    = now.count() + _settings._voidedPollIntervalMs;
-            if ( _tokenSource.hasValidToken( now ) )
-                submitCall( call, now );
-            else
-            {
-                _listWaiting.push_back( std::move( call ) );
-                if ( _tokenSource.request( now ) == false )
-                    flushWaiting( ServiceAccountTokenSource::Outcome::Rejected, now );
-            }
-        }
-        vector<HTTPClientResponse> listResponse;
-        (void)_pHTTPClient->pollResponses( listResponse );
-        for ( const HTTPClientResponse& response : listResponse )
-        {
-            const ServiceAccountTokenSource::Outcome outcome = _tokenSource.handleResponse( response, now );
-            if ( outcome != ServiceAccountTokenSource::Outcome::None )
-            {
-                flushWaiting( outcome, now );
-                continue;
-            }
-            const auto callIt = _mapRequestToCall.find( response._requestID );
-            if ( callIt == _mapRequestToCall.end() )
-                continue;
-            const WaitingCall call = std::move( callIt->second );
-            _mapRequestToCall.erase( callIt );
-            if ( call._kind == WaitingCall::Kind::Validate )
-                finishValidation( call._pending, response, now );
-            else if ( call._kind == WaitingCall::Kind::Voided )
-                finishVoided( response, now );
-            else if ( response.isSuccess() == false )
-                SW_LOG_WARNING_ID( "GoogleReceiptValidator.GooglePurchaseAcknowledgeFailed", "Google purchase acknowledge failed (status %#) - it is sent again when the token is validated again", response._statusCode );
-        }
+        _tokenSource.invalidate(); // 토큰이 거절됐다 — 다음 요청이 새로 받는다
+        SW_LOG_ERROR_ID( "GoogleReceiptValidator.GoogleRejectedAccessToken", "Google rejected the access token or the service account has no access to '%#' (status %#)", _settings._packageName.c_str(), response._statusCode );
     }
 
-    void GoogleReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )
+    void GoogleReceiptValidator::onFollowUpFailed( const HTTPClientResponse& response )
     {
-        for ( ReceiptValidationResult& result : _listDone )
-        {
-            outListResult.push_back( std::move( result ) );
-        }
-        _listDone.clear();
-    }
-
-    void GoogleReceiptValidator::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
-    {
-        for ( ReceiptRefundNotice& notice : _listRefund )
-        {
-            outListNotice.push_back( std::move( notice ) );
-        }
-        _listRefund.clear();
-    }
-
-    void GoogleReceiptValidator::shutdown()
-    {
-        // 날아가던 검증은 같은 영수증으로 다시 시도하게 Retry 로 끝낸다.
-        for ( const auto& [requestID, call] : _mapRequestToCall )
-        {
-            if ( call._kind == WaitingCall::Kind::Validate )
-                completeRetry( call._pending, "google validation was interrupted by shutdown" );
-        }
-        for ( const WaitingCall& call : _listWaiting )
-        {
-            if ( call._kind == WaitingCall::Kind::Validate )
-                completeRetry( call._pending, "google validation was interrupted by shutdown" );
-        }
-        _mapRequestToCall.clear();
-        _listWaiting.clear();
-        _bStopped = SW_TRUE;
+        SW_LOG_WARNING_ID( "GoogleReceiptValidator.GooglePurchaseAcknowledgeFailed", "Google purchase acknowledge failed (status %#) - it is sent again when the token is validated again", response._statusCode );
     }
 } // namespace sw

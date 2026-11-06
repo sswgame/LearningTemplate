@@ -19,16 +19,11 @@ namespace sw
     {
         struct AppleReceiptValidatorInternal
         {
-            static constexpr size_t      kMaxTransactionIDSize   = 20;
-            static constexpr int64       kAuthLifetimeMs         = 20 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
-            static constexpr int64       kAuthRefreshMarginMs    = 5 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
-            static constexpr size_t      kMaxNotifiedRefundCount = 100000;
-            static constexpr const utf8* kEnvironmentSandbox     = "Sandbox";
-
-            static bool isTransientStatus( const HTTPClientResponse& response )
-            {
-                return response.isTransientFailure() || response._statusCode == HTTPConstant::kStatusUnauthorized; // 401 = 서명한 토큰이 만료됐다 — 새로 서명해 다시 보낸다
-            }
+            static constexpr size_t      kMaxTransactionIDSize  = 20;
+            static constexpr int64       kAuthLifetimeMs        = 20 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
+            static constexpr int64       kAuthRefreshMarginMs   = 5 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
+            static constexpr const utf8* kEnvironmentProduction = "Production";
+            static constexpr const utf8* kEnvironmentSandbox    = "Sandbox";
         };
     } // namespace
 } // namespace sw
@@ -36,20 +31,14 @@ namespace sw
 namespace sw
 {
     AppleReceiptValidator::AppleReceiptValidator( AppleReceiptSettings settings, INetSecurityProvider* pSecurity, HTTPClient* pHTTPClient )
-        : _settings{ std::move( settings ) }
-        , _authorization{}
-        , _mapRequestToCall{}
-        , _listDone{}
-        , _listRefund{}
-        , _uniqueSetNotifiedRefund{}
-        , _pSecurity{ pSecurity }
-        , _pHTTPClient{ pHTTPClient }
-        , _authExpiresWallMs{ 0 }
-        , _nextHistoryMs{ 0 }
-        , _lastHistoryUnixMs{ 0 }
-        , _historyStartUnixMs{ 0 }
-        , _bHistoryInFlight{ SW_FALSE }
-        , _bStopped{ SW_FALSE }
+        : StoreReceiptValidator{
+              settings._buyerRule, ReceiptPollWindow{ settings._historyPollIntervalMs, settings._historyLookbackMs, settings._historyMaxAgeMs },
+              pHTTPClient
+    },
+        _settings{ std::move( settings ) },
+        _authorization{},
+        _pSecurity{ pSecurity },
+        _authExpiresWallMs{ 0 }
     {
     }
 
@@ -134,260 +123,150 @@ namespace sw
         return _authorization;
     }
 
-    void AppleReceiptValidator::submitCall( const Call& call, string_view paginationToken, UnixMilliseconds now )
+    bool AppleReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk, string& outFailureText ) const
+    {
+        if ( isTransactionID( payload ) == false )
+        {
+            outFailureText = "apple receipt must be the numeric transaction id";
+            return false;
+        }
+        outAsk._transactionID = string( payload );
+        return true;
+    }
+
+    HTTPClientRequest AppleReceiptValidator::makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds now )
     {
         HTTPClientRequest request;
         request._timeoutMs = _settings._requestTimeoutMs;
         request._listHeader.push_back( HTTPHeader{ "Authorization", makeAuthorization( now ) } );
         request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        if ( call._kind == Call::Kind::Validate )
-            request._url = makeTransactionURL( call._transactionID );
-        else
+        if ( call._kind != ReceiptCall::Kind::RefundPage )
         {
-            string     body;
-            JSONWriter writer{ body };
-            writer.beginObject();
-            writer.key( "startDate" );
-            writer.valueInt( ( _lastHistoryUnixMs != 0 ? _lastHistoryUnixMs : _historyStartUnixMs ) - _settings._historyLookbackMs );
-            writer.key( "endDate" );
-            writer.valueInt( _historyStartUnixMs );
-            writer.key( "notificationType" );
-            writer.valueString( "REFUND" );
-            writer.endObject();
-            request._method    = HTTPMethod::Post;
-            request._url       = makeHistoryURL( paginationToken );
-            request._bodyBytes = StringUtil::toBytes( body );
-            request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/json" } );
+            request._url = makeTransactionURL( call._ask._transactionID );
+            return request;
         }
-        _mapRequestToCall[_pHTTPClient->submitRequest( request )] = call;
+        string     body;
+        JSONWriter writer{ body };
+        writer.beginObject();
+        writer.key( "startDate" );
+        writer.valueInt( getRefundWindow().getFromMs() );
+        writer.key( "endDate" );
+        writer.valueInt( getRefundWindow().getToMs() );
+        writer.key( "notificationType" );
+        writer.valueString( "REFUND" );
+        writer.endObject();
+        request._method    = HTTPMethod::Post;
+        request._url       = makeHistoryURL( call._pageToken );
+        request._bodyBytes = StringUtil::toBytes( body );
+        request._listHeader.push_back( HTTPHeader{ "Content-Type", "application/json" } );
+        return request;
     }
 
-    void AppleReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )
+    void AppleReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& call, UnixMilliseconds now, ReceiptOrderFacts& outFacts )
     {
-        if ( isTransactionID( request._payload ) == false )
-        {
-            // 경로에 실을 수 없는 영수증은 애플에 묻지 않고 거절한다.
-            ReceiptValidationResult& result = _listDone.emplace_back();
-            result._storeName               = request._storeName;
-            result._ticket                  = request._ticket;
-            result._accountID               = request._accountID;
-            result._status                  = ReceiptStatus::Invalid;
-            result._failureText             = "apple receipt must be the numeric transaction id";
-            return;
-        }
-        Call call;
-        call._kind          = Call::Kind::Validate;
-        call._request       = request;
-        call._transactionID = request._payload;
-        submitCall( call, {}, now );
-    }
-
-    void AppleReceiptValidator::completeRetry( const ReceiptValidationRequest& request, const utf8* pText )
-    {
-        ReceiptValidationResult& result = _listDone.emplace_back();
-        result._storeName               = request._storeName;
-        result._ticket                  = request._ticket;
-        result._accountID               = request._accountID;
-        result._transactionID           = request._payload;
-        result._status                  = ReceiptStatus::Retry;
-        result._failureText             = pText;
-    }
-
-    void AppleReceiptValidator::finishValidation( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now )
-    {
-        using Internal = AppleReceiptValidatorInternal;
-        if ( response._statusCode == HTTPConstant::kStatusUnauthorized )
-        {
-            _authorization.clear(); // 우리 토큰이 거절됐다 — 다음 요청이 새로 만든다
-            SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleRejectedAppStore", "Apple rejected the App Store Server API token (issuer '%#', key '%#') - check issuerId, keyId and the signing key", _settings._issuerID.c_str(),
-                             _settings._keyID.c_str() );
-        }
-        if ( Internal::isTransientStatus( response ) )
-        {
-            completeRetry( call._request, response._bTransportFailed == SW_TRUE ? response._failureText.c_str() : "apple is not available" );
-            return;
-        }
-        ReceiptValidationResult& result = _listDone.emplace_back();
-        result._storeName               = call._request._storeName;
-        result._ticket                  = call._request._ticket;
-        result._accountID               = call._request._accountID;
-        result._transactionID           = call._transactionID;
-        result._status                  = ReceiptStatus::Invalid;
-        JSONDocument document;
-        if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
-        {
-            result._failureText = formatToString( "apple does not know this transaction (status %#)", response._statusCode );
-            return;
-        }
-        const JSONValue                  signedInfo = document.getRoot().get( "signedTransactionInfo" );
-        const std::optional<JWTVerified> verified =
-            signedInfo.isString() ? verifyJws( signedInfo.asString(), now.toSeconds() ) : std::nullopt;
+        using Internal                              = AppleReceiptValidatorInternal;
+        const JSONValue                  signedInfo = root.get( "signedTransactionInfo" );
+        const std::optional<JWTVerified> verified   = signedInfo.isString() ? verifyJws( signedInfo.asString(), now.toSeconds() ) : std::nullopt;
         if ( verified.has_value() == false )
         {
-            result._failureText = "the signed transaction does not verify against the Apple root";
-            SW_LOG_ERROR_ID( "AppleReceiptValidator.SignedTransactionAppleDoes", "The signed transaction %# from Apple does not verify - check rootCertificateFile", call._transactionID.c_str() );
+            // 영수증은 거래 id 뿐이고 이 글은 TLS 너머 애플이 준다 — 확인이 안 되면 루트 파일이나 중간 장비 탓이지 "그런 거래가 없다" 가 아니다. Invalid 면 결제한 사람의 영수증을 버린다.
+            outFacts._status      = ReceiptStatus::Retry;
+            outFacts._failureText = "the signed transaction does not verify against the Apple root";
+            SW_LOG_ERROR_ID( "AppleReceiptValidator.SignedTransactionAppleDoes", "The signed transaction %# from Apple does not verify - check rootCertificateFile", call._ask._transactionID.c_str() );
             return;
         }
         const JWTVerified& token = *verified;
-        string             transactionID;
-        string             bundleID;
-        const bool         bIDsOk           = token.findText( "transactionId", transactionID ) && token.findText( "bundleId", bundleID );
-        const bool         bSameTransaction = bIDsOk && transactionID == call._transactionID && bundleID == _settings._bundleID;
-        if ( bSameTransaction == false )
-        {
-            result._failureText = "the signed transaction belongs to another transaction or bundle";
-            return;
-        }
-        const bool bHasProduct = token.findText( "productId", result._productID );
-        string     environment;
-        if ( token.findText( "environment", environment ) )
-            result._bSandbox = environment == Internal::kEnvironmentSandbox ? SW_TRUE : SW_FALSE;
-        result._bSandbox = result._bSandbox == SW_TRUE || _settings._bSandboxServer == SW_TRUE ? SW_TRUE : SW_FALSE;
+        (void)token.findText( "transactionId", outFacts._transactionID );  // 없으면 틀이 거절한다
+        (void)token.findText( "productId", outFacts._productID );          // 없으면 틀이 거절한다(환불이면 상관없다)
+        (void)token.findText( "appAccountToken", outFacts._storeBuyerID ); // 클라이언트가 구매 때 찍은 값(`ReceiptBuyerToken`)
         int64 purchaseMs = 0;
         if ( token.findInteger( "purchaseDate", purchaseMs ) )
-            result._purchaseTimeMs = purchaseMs; // 이 숫자는 밀리초다(findInteger 가 초 클레임용으로 쓰지만 값은 그대로 읽는다)
+            outFacts._purchaseTimeMs = purchaseMs; // 이 숫자는 밀리초다(findInteger 가 초 클레임용으로 쓰지만 값은 그대로 읽는다)
+        string bundleID;
+        if ( token.findText( "bundleId", bundleID ) == false || bundleID != _settings._bundleID )
+        {
+            outFacts._status      = ReceiptStatus::Invalid;
+            outFacts._failureText = "the signed transaction belongs to another bundle";
+            return;
+        }
+        string environment;
+        if ( token.findText( "environment", environment ) == false )
+        {
+            outFacts._status      = ReceiptStatus::Invalid; // 서명한 답이 환경을 말하지 않으면 운영 결제로 치지 않는다
+            outFacts._failureText = "the signed transaction has no environment";
+            return;
+        }
+        // 운영이라고 정확히 말한 것만 운영 결제다 — Sandbox 말고도 Xcode · LocalTesting 같은 시험 환경이 있다(기억에 의존). 샌드박스 서버의 답은 모두 샌드박스다.
+        outFacts._bSandbox = environment != Internal::kEnvironmentProduction || _settings._bSandboxServer == SW_TRUE ? SW_TRUE : SW_FALSE;
         int64 revocationMs = 0;
         if ( token.findInteger( "revocationDate", revocationMs ) )
         {
-            result._status      = ReceiptStatus::Refunded;
-            result._failureText = "apple revoked this transaction";
+            outFacts._status      = ReceiptStatus::Refunded;
+            outFacts._failureText = "apple revoked this transaction";
             return;
         }
-        if ( bHasProduct == false || result._productID.empty() )
-        {
-            result._failureText = "apple transaction has no product";
-            return;
-        }
-        result._status = ReceiptStatus::Valid;
+        outFacts._status = ReceiptStatus::Valid;
     }
 
-    void AppleReceiptValidator::startHistory( UnixMilliseconds now )
+    void AppleReceiptValidator::parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage )
     {
-        _historyStartUnixMs = now.count();
-        _bHistoryInFlight   = SW_TRUE;
-        _nextHistoryMs      = now.count() + _settings._historyPollIntervalMs;
-        Call call;
-        call._kind = Call::Kind::History;
-        call._page = 0;
-        submitCall( call, {}, now );
-    }
-
-    void AppleReceiptValidator::finishHistory( const Call& call, const HTTPClientResponse& response, UnixMilliseconds now )
-    {
-        using Internal = AppleReceiptValidatorInternal;
-        JSONDocument document;
-        if ( response._statusCode == HTTPConstant::kStatusUnauthorized )
-        {
-            _authorization.clear();
-            SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleRejectedAppStore2", "Apple rejected the App Store Server API token for the notification history - check issuerId, keyId and the signing key" );
-        }
-        if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
-        {
-            SW_LOG_WARNING_ID( "AppleReceiptValidator.AppleNotificationHistoryFailed", "Apple notification history failed (status %#) - the next poll reads from the last successful one", response._statusCode );
-            _bHistoryInFlight = SW_FALSE; // 지난 성공 시각을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
-            return;
-        }
-        const JSONValue history = document.getRoot().get( "notificationHistory" );
+        using Internal                  = AppleReceiptValidatorInternal;
+        const utf8*     pOurEnvironment = _settings._bSandboxServer == SW_TRUE ? Internal::kEnvironmentSandbox : Internal::kEnvironmentProduction;
+        const JSONValue history         = root.get( "notificationHistory" );
         for ( size_t index = 0; history.isArray() && index < history.size(); ++index )
         {
-            const JSONValue                  item          = history.at( index );
-            const JSONValue                  signedPayload = item.get( "signedPayload" );
-            const std::optional<JWTVerified> notification =
-                signedPayload.isString() ? verifyJws( signedPayload.asString(), now.toSeconds() ) : std::nullopt;
+            const JSONValue                  signedPayload = history.at( index ).get( "signedPayload" );
+            const std::optional<JWTVerified> notification  = signedPayload.isString() ? verifyJws( signedPayload.asString(), now.toSeconds() ) : std::nullopt;
             if ( notification.has_value() == false )
             {
-                SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleNotificationDoesNot", "An Apple notification does not verify against the Apple root - it is skipped" );
+                outPage._bIncomplete = SW_TRUE; // 읽지 못한 알림이 환불일 수 있다 — 구간을 옮기지 않는다
+                SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleNotificationDoesNot", "An Apple notification does not verify against the Apple root - the next poll reads it again" );
                 continue;
             }
             string     notificationType;
             string     bundleID;
+            string     environment;
             string     signedTransaction;
             const bool bShapeOk = notification->findText( "notificationType", notificationType ) && notification->findTextPath( "data.bundleId", bundleID ) &&
-                                  notification->findTextPath( "data.signedTransactionInfo", signedTransaction );
-            const bool bOurRefund = bShapeOk && notificationType == "REFUND" && bundleID == _settings._bundleID;
+                                  notification->findTextPath( "data.environment", environment ) && notification->findTextPath( "data.signedTransactionInfo", signedTransaction );
+            const bool bOurRefund = bShapeOk && notificationType == "REFUND" && bundleID == _settings._bundleID && environment == pOurEnvironment;
             if ( bOurRefund == false )
                 continue;
             const std::optional<JWTVerified> transaction = verifyJws( signedTransaction, now.toSeconds() );
-            string                           transactionID;
-            if ( transaction.has_value() == false || transaction->findText( "transactionId", transactionID ) == false )
+            if ( transaction.has_value() == false )
+            {
+                outPage._bIncomplete = SW_TRUE;
+                SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleRefundTransactionDoesNot", "The transaction of an Apple refund notification does not verify - the next poll reads it again" );
                 continue;
-            if ( _uniqueSetNotifiedRefund.count( transactionID ) != 0 )
+            }
+            string     transactionID;
+            string     transactionBundleID;
+            const bool bOurTransaction = transaction->findText( "transactionId", transactionID ) && isTransactionID( transactionID ) &&
+                                         transaction->findText( "bundleId", transactionBundleID ) && transactionBundleID == _settings._bundleID;
+            if ( bOurTransaction == false ) // 지급 때의 거래 id 는 늘 숫자 글이다 — 다른 모양 · 다른 앱은 깨진 줄이다
                 continue;
-            if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )
-                _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
-            _uniqueSetNotifiedRefund.insert( transactionID );
             int64 refundedMs   = now.count();
             int64 revocationMs = 0;
             if ( transaction->findInteger( "revocationDate", revocationMs ) )
                 refundedMs = revocationMs;
-            _listRefund.push_back( ReceiptRefundNotice{ getStoreName(), transactionID, refundedMs } );
+            addRefund( transactionID, refundedMs );
         }
         bool       bHasMore = false;
         string     paginationToken;
-        const bool bMoreRead = document.getRoot().readOptionalInto( "hasMore", bHasMore ) && document.getRoot().readOptionalInto( "paginationToken", paginationToken );
-        const bool bNextPage = bMoreRead && bHasMore && paginationToken.empty() == false && call._page + 1 < kHistoryMaxPages;
-        if ( bNextPage )
+        const bool bMoreRead = root.readOptionalInto( "hasMore", bHasMore ) && root.readOptionalInto( "paginationToken", paginationToken );
+        if ( bMoreRead == false || ( bHasMore && paginationToken.empty() ) )
         {
-            Call next  = call;
-            next._page = call._page + 1;
-            submitCall( next, paginationToken, now );
+            outPage._bIncomplete = SW_TRUE; // 쪽이 더 있다는데 이을 수 없다
             return;
         }
-        _lastHistoryUnixMs = _historyStartUnixMs;
-        _bHistoryInFlight  = SW_FALSE;
+        if ( bHasMore )
+            outPage._nextPageToken = paginationToken;
     }
 
-    void AppleReceiptValidator::update( UnixMilliseconds now )
+    void AppleReceiptValidator::onCredentialRejected( const HTTPClientResponse& response )
     {
-        // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 토큰 · 서명 검증 시각 · 조회 주기 · 이력 구간을 모두 잰다.
-        _pHTTPClient->update();
-        const bool bMayPoll = _bStopped == SW_FALSE && _bHistoryInFlight == SW_FALSE;
-        if ( bMayPoll && now.count() >= _nextHistoryMs )
-            startHistory( now );
-        vector<HTTPClientResponse> listResponse;
-        (void)_pHTTPClient->pollResponses( listResponse );
-        for ( const HTTPClientResponse& response : listResponse )
-        {
-            const auto callIt = _mapRequestToCall.find( response._requestID );
-            if ( callIt == _mapRequestToCall.end() )
-                continue;
-            const Call call = std::move( callIt->second );
-            _mapRequestToCall.erase( callIt );
-            if ( call._kind == Call::Kind::Validate )
-                finishValidation( call, response, now );
-            else
-                finishHistory( call, response, now );
-        }
-    }
-
-    void AppleReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )
-    {
-        for ( ReceiptValidationResult& result : _listDone )
-        {
-            outListResult.push_back( std::move( result ) );
-        }
-        _listDone.clear();
-    }
-
-    void AppleReceiptValidator::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
-    {
-        for ( ReceiptRefundNotice& notice : _listRefund )
-        {
-            outListNotice.push_back( std::move( notice ) );
-        }
-        _listRefund.clear();
-    }
-
-    void AppleReceiptValidator::shutdown()
-    {
-        // 날아가던 검증은 같은 영수증으로 다시 시도하게 Retry 로 끝낸다.
-        for ( const auto& [requestID, call] : _mapRequestToCall )
-        {
-            if ( call._kind == Call::Kind::Validate )
-                completeRetry( call._request, "apple validation was interrupted by shutdown" );
-        }
-        _mapRequestToCall.clear();
-        _bHistoryInFlight = SW_FALSE;
-        _bStopped         = SW_TRUE;
+        _authorization.clear(); // 우리 토큰이 거절됐다 — 다음 요청이 새로 만든다
+        SW_LOG_ERROR_ID( "AppleReceiptValidator.AppleRejectedAppStore", "Apple rejected the App Store Server API token (status %#, issuer '%#', key '%#') - check issuerId, keyId and the signing key", response._statusCode, _settings._issuerID.c_str(),
+                         _settings._keyID.c_str() );
     }
 } // namespace sw

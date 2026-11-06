@@ -19,7 +19,9 @@ namespace sw
 
         const utf8* getStoreName() const override { return "fake"; }
         bool        isDevelopmentOnly() const override { return true; }
-        void        submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override;
+        /** @brief 가짜 스토어의 영수증에는 구매자가 없다 — 먼저 낸 계정이 받는다(`ReceiptBuyerBinding::None`). */
+        const ReceiptBuyerRule& getBuyerRule() const override { return _buyerRule; }
+        void                    submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override;
         /** @brief 스토어 통신이 없어 할 일이 없습니다. 결과는 맡길 때 이미 정해진다. */
         void update( UnixMilliseconds now ) override { (void)now; }
         void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override;
@@ -29,6 +31,7 @@ namespace sw
         int32 getPendingCount() const { return static_cast<int32>( _listPending.size() ); }
 
     private:
+        ReceiptBuyerRule                _buyerRule;
         vector<ReceiptValidationResult> _listPending;
         vector<ReceiptRefundNotice>     _listRefund;
     };

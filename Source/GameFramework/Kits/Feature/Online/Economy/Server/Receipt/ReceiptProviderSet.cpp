@@ -29,9 +29,14 @@ namespace sw
 
             static constexpr const utf8* kKnownKeys[] = { "kind", "appId", "keySecretEnvironment", "packageName", "serviceAccountEnvironment",
                                                           "baseUrl", "tokenUrl", "sandbox", "reportPollSeconds", "voidedPollSeconds", "issuerId",
-                                                          "keyId", "bundleId", "signingKeySecretEnvironment", "rootCertificateFile", "historyPollSeconds" };
+                                                          "keyId", "bundleId", "signingKeySecretEnvironment", "rootCertificateFile", "historyPollSeconds", "buyerBinding",
+                                                          "buyerLoginProvider" };
 
             static constexpr int64 kMinPollSeconds = 60;
+
+            static constexpr const utf8* kBuyerNone         = "none";
+            static constexpr const utf8* kBuyerLinkedLogin  = "linkedLogin";
+            static constexpr const utf8* kBuyerAccountToken = "accountToken";
 
             static string readText( const JSONValue& object, const utf8* pKey )
             {
@@ -52,7 +57,8 @@ namespace sw
                     outError = "the steam publisher key has characters that cannot go into a query";
                     return nullptr;
                 }
-                settings._appID = config._appID;
+                settings._appID     = config._appID;
+                settings._buyerRule = config._buyerRule;
                 if ( config._baseURL.empty() == false )
                     settings._baseURL = config._baseURL;
                 settings._bSandbox             = config._bSandbox;
@@ -80,10 +86,11 @@ namespace sw
                     outError = "cannot read the apple root certificate file " + rootPath;
                     return nullptr;
                 }
-                settings._issuerID = config._issuerID;
-                settings._keyID    = config._keyID;
-                settings._bundleID = config._bundleID;
-                settings._baseURL  = config._bSandbox == SW_TRUE ? AppleReceiptSettings::kSandboxBaseURL : AppleReceiptSettings::kProductionBaseURL;
+                settings._issuerID  = config._issuerID;
+                settings._keyID     = config._keyID;
+                settings._bundleID  = config._bundleID;
+                settings._buyerRule = config._buyerRule;
+                settings._baseURL   = config._bSandbox == SW_TRUE ? AppleReceiptSettings::kSandboxBaseURL : AppleReceiptSettings::kProductionBaseURL;
                 if ( config._baseURL.empty() == false )
                     settings._baseURL = config._baseURL;
                 settings._bSandboxServer        = config._bSandbox;
@@ -107,6 +114,7 @@ namespace sw
                 if ( bRead == false )
                     return nullptr;
                 settings._packageName = config._packageName;
+                settings._buyerRule   = config._buyerRule;
                 if ( config._tokenURL.empty() == false )
                     settings._credentials._tokenURL = config._tokenURL;
                 if ( config._baseURL.empty() == false )
@@ -131,12 +139,36 @@ namespace sw
                 return true;
             }
 
+            /**
+             * @brief 항목의 구매자 규칙을 읽습니다. 필수 키입니다 — 묶지 않는 것도 `none` 으로 적어야 한다. 그 스토어가 줄 수 없는 묶기(@p allowedBinding 밖)나 모르는 값은 오류입니다.
+             * @details 대응 데이터가 없는 경우를 조용히 넘기지 않으려는 것이다 — 키를 빠뜨린 설정이 "먼저 낸 계정이 받는다" 로 뜨면 그 결함을 다시 만든다.
+             */
+            [[nodiscard]] static bool readBuyerRule( const JSONValue& entry, ReceiptBuyerBinding allowedBinding, ReceiptProviderConfig& outConfig, string& outError )
+            {
+                const string binding                = readText( entry, "buyerBinding" );
+                outConfig._buyerRule._loginProvider = readText( entry, "buyerLoginProvider" );
+                const bool bLinked                  = binding == kBuyerLinkedLogin && allowedBinding == ReceiptBuyerBinding::LinkedLogin;
+                const bool bToken                   = binding == kBuyerAccountToken && allowedBinding == ReceiptBuyerBinding::AccountToken;
+                if ( bLinked == false && bToken == false && binding != kBuyerNone )
+                {
+                    outError = formatToString( "receipt provider '%#' needs buyerBinding '%#' or '%#'", outConfig._kind, allowedBinding == ReceiptBuyerBinding::LinkedLogin ? kBuyerLinkedLogin : kBuyerAccountToken, kBuyerNone );
+                    return false;
+                }
+                if ( bLinked != ( outConfig._buyerRule._loginProvider.empty() == false ) )
+                {
+                    outError = formatToString( "receipt provider '%#' needs buyerLoginProvider exactly when buyerBinding is '%#'", outConfig._kind, kBuyerLinkedLogin );
+                    return false;
+                }
+                outConfig._buyerRule._binding = bLinked ? ReceiptBuyerBinding::LinkedLogin : ( bToken ? ReceiptBuyerBinding::AccountToken : ReceiptBuyerBinding::None );
+                return true;
+            }
+
             /** @brief 스팀 항목의 설정을 읽고 검사합니다. 틀리면 오류를 남기고 false 입니다. */
             [[nodiscard]] static bool readSteamEntry( const JSONValue& entry, ReceiptProviderConfig& outConfig, string& outError )
             {
                 outConfig._appID                = readText( entry, "appId" );
                 outConfig._keySecretEnvironment = readText( entry, "keySecretEnvironment" );
-                if ( readSandbox( entry, kKindSteam, outConfig, outError ) == false )
+                if ( readSandbox( entry, kKindSteam, outConfig, outError ) == false || readBuyerRule( entry, ReceiptBuyerBinding::LinkedLogin, outConfig, outError ) == false )
                     return false;
                 if ( SteamReceiptValidator::isOrderID( outConfig._appID ) == false || outConfig._keySecretEnvironment.empty() )
                 {
@@ -154,7 +186,7 @@ namespace sw
                 outConfig._bundleID                    = readText( entry, "bundleId" );
                 outConfig._signingKeySecretEnvironment = readText( entry, "signingKeySecretEnvironment" );
                 outConfig._rootCertificateFile         = readText( entry, "rootCertificateFile" );
-                if ( readSandbox( entry, kKindApple, outConfig, outError ) == false )
+                if ( readSandbox( entry, kKindApple, outConfig, outError ) == false || readBuyerRule( entry, ReceiptBuyerBinding::AccountToken, outConfig, outError ) == false )
                     return false;
                 const bool bIdentityGiven = outConfig._issuerID.empty() == false && outConfig._keyID.empty() == false && outConfig._bundleID.empty() == false;
                 const bool bFilesGiven    = outConfig._signingKeySecretEnvironment.empty() == false && outConfig._rootCertificateFile.empty() == false;
@@ -172,6 +204,8 @@ namespace sw
                 outConfig._packageName               = readText( entry, "packageName" );
                 outConfig._serviceAccountEnvironment = readText( entry, "serviceAccountEnvironment" );
                 outConfig._tokenURL                  = readText( entry, "tokenUrl" );
+                if ( readBuyerRule( entry, ReceiptBuyerBinding::AccountToken, outConfig, outError ) == false )
+                    return false;
                 if ( outConfig._packageName.empty() || outConfig._serviceAccountEnvironment.empty() )
                 {
                     outError = "receipt provider 'google' needs packageName and serviceAccountEnvironment";
@@ -236,6 +270,8 @@ namespace sw
         shutdown();
         for ( const ReceiptProviderConfig& config : listSettings )
         {
+            if ( config._buyerRule._binding == ReceiptBuyerBinding::None )
+                SW_LOG_WARNING_ID( "ReceiptProviderSet.ReceiptProviderHasNoBuyerBinding", "Receipt provider '%#' does not bind receipts to buyers - the first account to submit a receipt receives it", config._kind );
             Entry& entry      = _listEntry.emplace_back();
             entry._httpClient = make_unique<OwnedHTTPClient>( clock );
             if ( entry._httpClient->initialize() == false )

@@ -15,8 +15,7 @@ namespace sw
     {
         struct SteamReceiptValidatorInternal
         {
-            static constexpr size_t kMaxOrderIDSize         = 20;
-            static constexpr size_t kMaxNotifiedRefundCount = 100000; ///< 겹친 조회에서 같은 주문을 두 번 알리지 않으려고 기억하는 상한
+            static constexpr size_t kMaxOrderIDSize = 20;
 
             /** @brief 비어 있지 않고 모두 십진 숫자면 true 입니다. 부호 · 공백을 받아 주는 `StringUtil::parseInt64` 앞에서 거른다. */
             static bool isAllDigits( string_view text )
@@ -73,11 +72,6 @@ namespace sw
                 (void)object.findPathText( path, text );
                 return text;
             }
-
-            static bool isTransientStatus( const HTTPClientResponse& response )
-            {
-                return response.isTransientFailure() || response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
-            }
         };
     } // namespace
 } // namespace sw
@@ -85,17 +79,11 @@ namespace sw
 namespace sw
 {
     SteamReceiptValidator::SteamReceiptValidator( SteamReceiptSettings settings, HTTPClient* pHTTPClient )
-        : _settings{ std::move( settings ) }
-        , _mapRequestToPending{}
-        , _listDone{}
-        , _listRefund{}
-        , _uniqueSetNotifiedRefund{}
-        , _pHTTPClient{ pHTTPClient }
-        , _nextReportMs{ 0 }
-        , _lastReportUnixMs{ 0 }
-        , _reportStartUnixMs{ 0 }
-        , _reportRequestID{ 0 }
-        , _bStopped{ SW_FALSE }
+        : StoreReceiptValidator{
+              settings._buyerRule, ReceiptPollWindow{ settings._reportPollIntervalMs, settings._reportLookbackMs, 0 },
+              pHTTPClient
+    },
+        _settings{ std::move( settings ) }
     {
     }
 
@@ -184,183 +172,81 @@ namespace sw
                formatToString( "&maxresults=%#", kReportMaxResults );
     }
 
-    void SteamReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds /*now*/ )
+    bool SteamReceiptValidator::readPayload( string_view payload, ReceiptAsk& outAsk, string& outFailureText ) const
     {
-        if ( isOrderID( request._payload ) == false )
+        if ( isOrderID( payload ) == false )
         {
-            // 쿼리에 실을 수 없는 영수증은 스팀에 묻지 않고 거절한다(다른 인자를 끼워 넣는 길을 막는다).
-            ReceiptValidationResult& result = _listDone.emplace_back();
-            result._storeName               = request._storeName;
-            result._ticket                  = request._ticket;
-            result._accountID               = request._accountID;
-            result._status                  = ReceiptStatus::Invalid;
-            result._failureText             = "steam receipt must be the numeric order id";
-            return;
+            outFailureText = "steam receipt must be the numeric order id";
+            return false;
         }
-        HTTPClientRequest httpRequest;
-        httpRequest._url       = makeQueryURL( request._payload );
-        httpRequest._timeoutMs = _settings._requestTimeoutMs;
-        httpRequest._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-        PendingValidation& pending = _mapRequestToPending[_pHTTPClient->submitRequest( httpRequest )];
-        pending._request           = request;
-        pending._orderID           = request._payload;
+        outAsk._transactionID = string( payload );
+        return true;
     }
 
-    void SteamReceiptValidator::finishValidation( const PendingValidation& pending, const HTTPClientResponse& response )
+    HTTPClientRequest SteamReceiptValidator::makeHTTPRequest( const ReceiptCall& call, UnixMilliseconds /*now*/ )
     {
-        using Internal                  = SteamReceiptValidatorInternal;
-        ReceiptValidationResult& result = _listDone.emplace_back();
-        result._storeName               = pending._request._storeName;
-        result._ticket                  = pending._request._ticket;
-        result._accountID               = pending._request._accountID;
-        result._transactionID           = pending._orderID;
-        if ( Internal::isTransientStatus( response ) )
-        {
-            result._status      = ReceiptStatus::Retry;
-            result._failureText = response._bTransportFailed == SW_TRUE ? response._failureText : string( formatToString( "steam answered status %#", response._statusCode ) );
-            if ( response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden )
-                SW_LOG_ERROR_ID( "SteamReceiptValidator.SteamRejectedPublisherKey", "Steam rejected the publisher key (status %#) - check the key environment variable", response._statusCode );
-            return;
-        }
-        if ( response.isSuccess() == false )
-        {
-            result._status      = ReceiptStatus::Invalid; // 주문이 없으면(4xx) 스팀이 에러로 답한다
-            result._failureText = formatToString( "steam does not know this order (status %#)", response._statusCode );
-            return;
-        }
-        JSONDocument document;
-        if ( document.tryParse( response.getBodyText() ) == false )
-        {
-            result._status      = ReceiptStatus::Retry; // 2xx 인데 읽을 수 없다 — 주문이 없다는 답이 아니다(프록시 · 잘린 몸). Invalid 면 결제한 사람의 영수증을 버린다
-            result._failureText = "steam answered a body that is not JSON";
-            return;
-        }
-        const JSONValue root = document.getRoot();
-        if ( Internal::readText( root, "response.result" ) != "OK" )
-        {
-            result._status      = ReceiptStatus::Invalid;
-            result._failureText = "steam answered " + Internal::readText( root, "response.error.errordesc" );
-            return;
-        }
-        const string status   = Internal::readText( root, "response.params.status" );
-        result._status        = mapOrderStatus( status );
-        result._failureText   = result._status == ReceiptStatus::Valid ? string() : "steam order status " + status;
-        const JSONValue items = root.get( "response" ).get( "params" ).get( "items" );
-        if ( items.isArray() && items.size() > 0 )
-            result._productID = Internal::readText( items.at( 0 ), "itemid" );
-        int64 purchaseMs = 0;
-        if ( parseTime( Internal::readText( root, "response.params.time" ), purchaseMs ) )
-            result._purchaseTimeMs = purchaseMs;
-        result._bSandbox = _settings._bSandbox;
-        if ( result._status == ReceiptStatus::Valid && result._productID.empty() )
-        {
-            result._status      = ReceiptStatus::Invalid; // 상품이 없는 주문은 지급할 것이 없다
-            result._failureText = "steam order has no item";
-        }
-        if ( result._status == ReceiptStatus::Valid && Internal::readText( root, "response.params.orderid" ) != pending._orderID )
-        {
-            result._status      = ReceiptStatus::Invalid; // 묻지 않은 주문의 답으로 지급하지 않는다
-            result._failureText = "steam answered for another order";
-        }
+        HTTPClientRequest request;
+        request._url       = call._kind == ReceiptCall::Kind::RefundPage ? makeReportURL( getRefundWindow().getFromMs() ) : makeQueryURL( call._ask._transactionID );
+        request._timeoutMs = _settings._requestTimeoutMs;
+        request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
+        return request;
     }
 
-    void SteamReceiptValidator::update( UnixMilliseconds now )
+    void SteamReceiptValidator::parseOrder( const JSONValue& root, const ReceiptCall& /*call*/, UnixMilliseconds /*now*/, ReceiptOrderFacts& outFacts )
     {
         using Internal = SteamReceiptValidatorInternal;
-        // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 조회 주기 · 보고서 구간을 모두 잰다.
-        _pHTTPClient->update();
-        // 보고서 조회 — 처음에는 바로, 그 뒤로는 주기마다. 앞 요청이 끝나기 전에는 새로 보내지 않는다.
-        const bool bMayReport = _bStopped == SW_FALSE && _reportRequestID == 0;
-        if ( bMayReport && now.count() >= _nextReportMs )
+        if ( Internal::readText( root, "response.result" ) != "OK" )
         {
-            const int64       sinceMs = ( _lastReportUnixMs != 0 ? _lastReportUnixMs : now.count() ) - _settings._reportLookbackMs;
-            HTTPClientRequest request;
-            request._url       = makeReportURL( sinceMs );
-            request._timeoutMs = _settings._requestTimeoutMs;
-            request._listHeader.push_back( HTTPHeader{ "Accept", "application/json" } );
-            _reportRequestID   = _pHTTPClient->submitRequest( request );
-            _reportStartUnixMs = now.count();
-            _nextReportMs      = now.count() + _settings._reportPollIntervalMs;
+            outFacts._status      = ReceiptStatus::Invalid;
+            outFacts._failureText = "steam answered " + Internal::readText( root, "response.error.errordesc" );
+            return;
         }
-        vector<HTTPClientResponse> listResponse;
-        (void)_pHTTPClient->pollResponses( listResponse );
-        for ( const HTTPClientResponse& response : listResponse )
+        const string status     = Internal::readText( root, "response.params.status" );
+        outFacts._status        = mapOrderStatus( status );
+        outFacts._failureText   = outFacts._status == ReceiptStatus::Valid ? string() : "steam order status " + status;
+        outFacts._transactionID = Internal::readText( root, "response.params.orderid" );
+        outFacts._storeBuyerID  = Internal::readText( root, "response.params.steamid" );
+        outFacts._bSandbox      = _settings._bSandbox;
+        const JSONValue items   = root.get( "response" ).get( "params" ).get( "items" );
+        if ( items.isArray() && items.size() > 0 )
+            outFacts._productID = Internal::readText( items.at( 0 ), "itemid" );
+        int64 purchaseMs = 0;
+        if ( parseTime( Internal::readText( root, "response.params.time" ), purchaseMs ) )
+            outFacts._purchaseTimeMs = purchaseMs;
+    }
+
+    void SteamReceiptValidator::parseRefundPage( const JSONValue& root, UnixMilliseconds now, ReceiptRefundPage& outPage )
+    {
+        using Internal = SteamReceiptValidatorInternal;
+        // 결과가 OK 가 아닌 200 도 실패다 — 성공으로 치면 읽지 못한 구간을 지나쳐 그 환불을 영영 놓친다.
+        if ( Internal::readText( root, "response.result" ) != "OK" )
         {
-            if ( _reportRequestID != 0 && response._requestID == _reportRequestID )
-            {
-                _reportRequestID = 0;
-                JSONDocument document;
-                // 결과가 OK 가 아닌 200 도 실패다 — 성공으로 치면 읽지 못한 구간을 지나쳐 그 환불을 영영 놓친다.
-                if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false || Internal::readText( document.getRoot(), "response.result" ) != "OK" )
-                {
-                    SW_LOG_WARNING_ID( "SteamReceiptValidator.SteamRefundReportFailed", "Steam refund report failed (status %#) - the next poll reads from the last successful one", response._statusCode );
-                    continue; // 지난 성공 시각을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
-                }
-                _lastReportUnixMs      = _reportStartUnixMs;
-                const JSONValue orders = document.getRoot().get( "response" ).get( "params" ).get( "orders" );
-                if ( orders.isArray() && orders.size() >= static_cast<size_t>( kReportMaxResults ) )
-                    SW_LOG_WARNING_ID( "SteamReceiptValidator.SteamRefundReportReturned", "Steam refund report returned %# orders (the limit) - some refunds may be read at the next overlapping poll only", static_cast<int32>( orders.size() ) );
-                for ( size_t index = 0; orders.isArray() && index < orders.size(); ++index )
-                {
-                    const JSONValue order = orders.at( index );
-                    if ( isRefundStatus( Internal::readText( order, "status" ) ) == false )
-                        continue;
-                    const string orderID = Internal::readText( order, "orderid" );
-                    if ( isOrderID( orderID ) == false || _uniqueSetNotifiedRefund.count( orderID ) != 0 ) // 지급 때의 거래 id 는 늘 주문 번호다 — 다른 모양은 깨진 줄이다
-                        continue;
-                    if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )
-                        _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
-                    _uniqueSetNotifiedRefund.insert( orderID );
-                    int64 refundedMs   = now.count();
-                    int64 parsedRefund = 0;
-                    if ( parseTime( Internal::readText( order, "time" ), parsedRefund ) )
-                        refundedMs = parsedRefund;
-                    _listRefund.push_back( ReceiptRefundNotice{ getStoreName(), orderID, refundedMs } );
-                }
+            outPage._bIncomplete = SW_TRUE;
+            SW_LOG_WARNING_ID( "SteamReceiptValidator.SteamRefundReportNotOk", "Steam refund report answered '%#' - the next poll reads from the last successful one", Internal::readText( root, "response.error.errordesc" ) );
+            return;
+        }
+        const JSONValue orders = root.get( "response" ).get( "params" ).get( "orders" );
+        if ( orders.isArray() == false )
+            return;
+        for ( size_t index = 0; index < orders.size(); ++index )
+        {
+            const JSONValue order    = orders.at( index );
+            int64           orderMs  = 0;
+            const bool      bHasTime = parseTime( Internal::readText( order, "time" ), orderMs );
+            if ( bHasTime && orderMs > outPage._cursorMs )
+                outPage._cursorMs = orderMs; // 잘리면 다음 조회는 여기서 잇는다(스팀 보고서는 쪽 토큰이 없다)
+            if ( isRefundStatus( Internal::readText( order, "status" ) ) == false )
                 continue;
-            }
-            const auto pendingIt = _mapRequestToPending.find( response._requestID );
-            if ( pendingIt == _mapRequestToPending.end() )
+            const string orderID = Internal::readText( order, "orderid" );
+            if ( isOrderID( orderID ) == false ) // 지급 때의 거래 id 는 늘 주문 번호다 — 다른 모양은 깨진 줄이다
                 continue;
-            const PendingValidation pending = std::move( pendingIt->second );
-            _mapRequestToPending.erase( pendingIt );
-            finishValidation( pending, response );
+            addRefund( orderID, bHasTime ? orderMs : now.count() );
         }
+        outPage._bTruncated = orders.size() >= static_cast<size_t>( kReportMaxResults ) ? SW_TRUE : SW_FALSE;
     }
 
-    void SteamReceiptValidator::pollCompletions( vector<ReceiptValidationResult>& outListResult )
+    void SteamReceiptValidator::onCredentialRejected( const HTTPClientResponse& response )
     {
-        for ( ReceiptValidationResult& result : _listDone )
-        {
-            outListResult.push_back( std::move( result ) );
-        }
-        _listDone.clear();
-    }
-
-    void SteamReceiptValidator::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
-    {
-        for ( ReceiptRefundNotice& notice : _listRefund )
-        {
-            outListNotice.push_back( std::move( notice ) );
-        }
-        _listRefund.clear();
-    }
-
-    void SteamReceiptValidator::shutdown()
-    {
-        // 날아가던 검증은 같은 영수증으로 다시 시도하게 Retry 로 끝낸다.
-        for ( auto& [requestID, pending] : _mapRequestToPending )
-        {
-            ReceiptValidationResult& result = _listDone.emplace_back();
-            result._storeName               = pending._request._storeName;
-            result._ticket                  = pending._request._ticket;
-            result._accountID               = pending._request._accountID;
-            result._transactionID           = pending._orderID;
-            result._status                  = ReceiptStatus::Retry;
-            result._failureText             = "steam validation was interrupted by shutdown";
-        }
-        _mapRequestToPending.clear();
-        _reportRequestID = 0;
-        _bStopped        = SW_TRUE;
+        SW_LOG_ERROR_ID( "SteamReceiptValidator.SteamRejectedPublisherKey", "Steam rejected the publisher key (status %#) - check the key environment variable", response._statusCode );
     }
 } // namespace sw

@@ -44,7 +44,7 @@ namespace
         int64                             _nowMs{ kNowMs };
 
         /** @brief @p pBaseURL 이 있으면 그 주소로 묻습니다(없으면 가짜 스팀). */
-        explicit SteamRig( bool bSandbox = false, const utf8* pBaseURL = nullptr )
+        explicit SteamRig( bool bSandbox = false, const utf8* pBaseURL = nullptr, ReceiptBuyerBinding binding = ReceiptBuyerBinding::None )
         {
             StreamTransportConfig transportSettings;
             transportSettings._ioThreadCount = 0;
@@ -57,7 +57,10 @@ namespace
             settings._reportPollIntervalMs = kPollMs;
             settings._reportLookbackMs     = kLookbackMs;
             settings._bSandbox             = bSandbox ? SW_TRUE : SW_FALSE;
-            _pValidator                    = make_unique<SteamReceiptValidator>( settings, &_client );
+            settings._buyerRule._binding   = binding;
+            if ( binding == ReceiptBuyerBinding::LinkedLogin )
+                settings._buyerRule._loginProvider = "steam";
+            _pValidator = make_unique<SteamReceiptValidator>( settings, &_client );
         }
 
         void onRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse )
@@ -124,6 +127,19 @@ namespace
         {
             return string( R"({"response":{"result":"OK","params":{"orderid":")" ) + pOrderID + R"(","status":")" + pStatus +
                    R"(","time":"2023-11-14T22:13:20Z","items":[{"itemid":"100","qty":1},{"itemid":"200","qty":1}]}}})";
+        }
+
+        /** @brief 상한만큼 찬 환불 보고입니다. @p pExtraField 를 줄마다 덧붙입니다. */
+        static string makeFullReport( const utf8* pExtraField )
+        {
+            string body = R"({"response":{"result":"OK","params":{"orders":[)";
+            for ( int32 index = 0; index < SteamReceiptValidator::kReportMaxResults; ++index )
+            {
+                body += index == 0 ? "" : ",";
+                body += R"({"orderid":")" + to_string( index + 1 ) + R"(","status":"Refunded")" + pExtraField + "}";
+            }
+            body += "]}}}";
+            return body;
         }
     };
 } // namespace
@@ -404,7 +420,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, RejectedKeyIsRetryAndLogged )
 /** @brief [SteamReceiptValidatorTest] 전송 실패(틀린 주소)는 Retry 이고 전송의 이유를 싣는다. 보고서 실패는 경고다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, TransportFailureIsRetry )
 {
-    SW_EXPECT_LOG( "SteamReceiptValidator.SteamRefundReportFailed" );
+    SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryFailed" );
     SteamRig                      rig( false, "not a url" );
     const ReceiptValidationResult result = rig.validate();
     SW_EXPECT_TRUE( result._status == ReceiptStatus::Retry );
@@ -460,7 +476,8 @@ SW_TEST_CASE( SteamReceiptValidatorTest, RefundReportShapeIsChecked )
 /** @brief [SteamReceiptValidatorTest] 조회 구간: 성공한 조회만 시작점을 옮긴다. 5xx · 깨진 몸 · 결과가 OK 아닌 200 뒤에는 지난 성공부터 다시 읽어 환불을 놓치지 않는다 */
 SW_TEST_CASE( SteamReceiptValidatorTest, FailedReportKeepsTheWindow )
 {
-    SW_EXPECT_LOG( "SteamReceiptValidator.SteamRefundReportFailed" );
+    SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryFailed" );
+    SW_EXPECT_LOG( "SteamReceiptValidator.SteamRefundReportNotOk" );
     SteamRig rig;
     rig.pump(); // 첫 조회는 지금에서 겹침만큼 앞이다
     const int64 firstMs = kNowMs;
@@ -512,21 +529,78 @@ SW_TEST_CASE( SteamReceiptValidatorTest, ReportPollIntervalAndNoOverlap )
     SW_EXPECT_EQUAL( 1, rig._client.getPendingCount() );
 }
 
-/** @brief [SteamReceiptValidatorTest] 보고서가 한 번에 읽는 상한까지 차면 다음 겹친 조회에 맡긴다고 경고한다 */
-SW_TEST_CASE( SteamReceiptValidatorTest, FullReportWarns )
+/** @brief [SteamReceiptValidatorTest] 보고서가 상한까지 찼는데 이을 시각이 없으면 구간을 옮기지 않고 경고한다 — 옮기면 잘린 뒤쪽의 환불을 영영 놓친다 */
+SW_TEST_CASE( SteamReceiptValidatorTest, FullReportWithoutTimesKeepsTheWindow )
 {
-    SW_EXPECT_LOG( "SteamReceiptValidator.SteamRefundReportReturned" );
+    SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryTruncated" );
     SteamRig rig;
-    string   body = R"({"response":{"result":"OK","params":{"orders":[)";
-    for ( int32 index = 0; index < SteamReceiptValidator::kReportMaxResults; ++index )
-    {
-        body += index == 0 ? "" : ",";
-        body += R"({"orderid":")" + to_string( index + 1 ) + R"(","status":"Refunded"})";
-    }
-    body += "]}}}";
-    rig._reportBody = body;
+    rig._reportBody = SteamBodyTestUtil::makeFullReport( "" );
     rig.pump();
     SW_EXPECT_EQUAL( static_cast<size_t>( SteamReceiptValidator::kReportMaxResults ), rig.takeRefunds().size() );
+
+    rig._nowMs += kPollMs;
+    rig.pump();
+    SW_REQUIRE_EQUAL( size_t( 2 ), rig._listReportTime.size() );
+    SW_EXPECT_EQUAL( rig._listReportTime[0], rig._listReportTime[1] );
+}
+
+/** @brief [SteamReceiptValidatorTest] 보고서가 상한까지 차면 읽은 가장 늦은 시각에서 바로 잇고, 잇는 조회가 끝나야 구간이 옮겨진다 */
+SW_TEST_CASE( SteamReceiptValidatorTest, FullReportContinuesFromTheLastTime )
+{
+    SteamRig rig;
+    rig._reportBody = SteamBodyTestUtil::makeFullReport( R"(,"time":"2023-11-14T22:13:20Z")" );
+    rig._pValidator->update( UnixMilliseconds{ rig._nowMs } );
+    rig._server.update();
+    for ( int32 round = 0; round < 16; ++round )
+    {
+        // 첫 답이 나간 뒤에 답을 바꿔 둔다 — 잇는 조회는 빈 보고를 받아 끝난다.
+        if ( rig._listReportTime.size() == 1 )
+            rig._reportBody = kEmptyReport;
+        rig._pValidator->update( UnixMilliseconds{ rig._nowMs } );
+        rig._server.update();
+    }
+    SW_REQUIRE_EQUAL( size_t( 2 ), rig._listReportTime.size() );
+    SW_EXPECT_EQUAL( SteamReceiptValidator::formatTime( kNowMs - kLookbackMs ), rig._listReportTime[0] );
+    SW_EXPECT_EQUAL( SteamReceiptValidator::formatTime( kNowMs ), rig._listReportTime[1] ); // 겹침 없이 그 시각부터
+
+    rig._nowMs += kPollMs;
+    rig.pump();
+    SW_REQUIRE_EQUAL( size_t( 3 ), rig._listReportTime.size() );
+    SW_EXPECT_EQUAL( SteamReceiptValidator::formatTime( kNowMs - kLookbackMs ), rig._listReportTime[2] ); // 구간의 기준은 첫 조회의 시작 시각이다
+}
+
+/** @brief [SteamReceiptValidatorTest] 회수하지 못한 환불을 잊으면 겹친 조회가 다시 알린다 — 겹침 거름이 회수할 기회를 없애지 않게 한다 */
+SW_TEST_CASE( SteamReceiptValidatorTest, ForgottenRefundIsReportedAgain )
+{
+    SteamRig rig;
+    rig._reportBody = R"({"response":{"result":"OK","params":{"orders":[{"orderid":"1","status":"Refunded"}]}}})";
+    rig.pump();
+    SW_EXPECT_EQUAL( size_t( 1 ), rig.takeRefunds().size() );
+    rig._nowMs += kPollMs;
+    rig.pump();
+    SW_EXPECT_TRUE( rig.takeRefunds().empty() );
+
+    rig._pValidator->forgetRefund( "1" );
+    rig._nowMs += kPollMs;
+    rig.pump();
+    SW_EXPECT_EQUAL( size_t( 1 ), rig.takeRefunds().size() );
+}
+
+/** @brief [SteamReceiptValidatorTest] 답의 `steamid` 가 결과의 구매자가 되고 설정의 규칙이 결과에 실린다(대조는 지급 논리가 한다). 답에 없으면 비어 있다 */
+SW_TEST_CASE( SteamReceiptValidatorTest, SteamIDBecomesTheBuyer )
+{
+    SteamRig rig( false, nullptr, ReceiptBuyerBinding::LinkedLogin );
+    SW_EXPECT_TRUE( rig._pValidator->getBuyerRule()._binding == ReceiptBuyerBinding::LinkedLogin );
+    rig._queryBody                = R"({"response":{"result":"OK","params":{"orderid":"1234","steamid":"76561190000000001","status":"Succeeded","items":[{"itemid":"100"}]}}})";
+    ReceiptValidationResult first = rig.validate();
+    SW_EXPECT_TRUE( first._status == ReceiptStatus::Valid );
+    SW_EXPECT_EQUAL( string( "76561190000000001" ), first._storeBuyerID );
+    SW_EXPECT_TRUE( first._buyerRule._binding == ReceiptBuyerBinding::LinkedLogin );
+    SW_EXPECT_EQUAL( string( "steam" ), first._buyerRule._loginProvider );
+
+    rig._queryBody                 = SteamBodyTestUtil::makeOrder( kOrder, "Succeeded" );
+    ReceiptValidationResult second = rig.validate();
+    SW_EXPECT_TRUE( second._storeBuyerID.empty() );
 }
 
 /** @brief [SteamReceiptValidatorTest] 종료: 날아가던 검증은 한 번만 Retry 로 끝나고, 늦게 온 답은 결과를 더 내지 않으며, 새 보고서를 보내지 않는다 */

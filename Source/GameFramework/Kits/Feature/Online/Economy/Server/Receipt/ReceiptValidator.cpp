@@ -66,6 +66,16 @@ namespace sw
         return false;
     }
 
+    bool ReceiptValidatorRegistry::requiresExternalLinks() const
+    {
+        for ( const IReceiptValidator* pValidator : _listValidator )
+        {
+            if ( pValidator->getBuyerRule()._binding == ReceiptBuyerBinding::LinkedLogin )
+                return true;
+        }
+        return false;
+    }
+
     uint64 ReceiptValidatorRegistry::submitValidation( string_view storeName, string_view payload, uint64 accountID, UnixMilliseconds now )
     {
         IReceiptValidator* pValidator = findValidator( storeName );
@@ -102,6 +112,13 @@ namespace sw
         {
             pValidator->pollRefunds( outListNotice );
         }
+    }
+
+    void ReceiptValidatorRegistry::forgetRefund( const ReceiptRefundNotice& notice )
+    {
+        IReceiptValidator* pValidator = findValidator( notice._storeName );
+        if ( pValidator != nullptr )
+            pValidator->forgetRefund( notice._transactionID );
     }
 
     void ReceiptValidatorRegistry::shutdown()

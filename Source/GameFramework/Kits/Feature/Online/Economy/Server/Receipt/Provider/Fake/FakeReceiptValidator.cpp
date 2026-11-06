@@ -51,7 +51,8 @@ namespace sw
 namespace sw
 {
     FakeReceiptValidator::FakeReceiptValidator()
-        : _listPending{}
+        : _buyerRule{}
+        , _listPending{}
         , _listRefund{}
     {
     }
