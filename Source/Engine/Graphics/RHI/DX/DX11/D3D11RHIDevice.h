@@ -361,6 +361,10 @@ namespace sw
             Microsoft::WRL::ComPtr<ID3D11VertexShader>      _vs;
             Microsoft::WRL::ComPtr<ID3D11PixelShader>       _ps;
             Microsoft::WRL::ComPtr<ID3D11ComputeShader>     _cs;
+            Microsoft::WRL::ComPtr<ID3D11GeometryShader>    _gs;
+            Microsoft::WRL::ComPtr<ID3D11HullShader>        _hs;
+            Microsoft::WRL::ComPtr<ID3D11DomainShader>      _ds;
+            D3D11_PRIMITIVE_TOPOLOGY                        _topology{ D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST };
             Microsoft::WRL::ComPtr<ID3D11InputLayout>       _inputLayout;  ///< 셰이더가 읽는 속성만 담는다. 정점 입력이 없는 셰이더는 비어 있다(nullptr)
             RHIVertexLayout                                 _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
             Microsoft::WRL::ComPtr<ID3D11RasterizerState>   _rasterizerState;

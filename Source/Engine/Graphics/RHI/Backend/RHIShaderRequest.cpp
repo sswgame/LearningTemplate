@@ -14,9 +14,14 @@ namespace sw
     RHIGraphicsShaderRequest::RHIGraphicsShaderRequest() noexcept
         : _vertex{}
         , _pixel{}
+        , _geometry{}
+        , _hull{}
+        , _domain{}
         , _numRenderTargets{ 1 }
         , _bHasPixelShader{ SW_FALSE }
         , _bDepthOnly{ SW_FALSE }
+        , _bHasGeometryShader{ SW_FALSE }
+        , _bHasTessellation{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -46,13 +51,38 @@ namespace sw
             request._pixel._targetFormat = targetFormat;
         }
 
-        // define 은 두 스테이지에 같이 붙는다. 퍼뮤테이션은 파이프라인 단위다.
+        // 선택 스테이지의 소스는 정점 스테이지와 같은 파일이다.
+        const auto fillOptional = [&]( ShaderCompileDesc& outStage, const string& entryPoint, ShaderStage stage )
+        {
+            outStage._source       = request._vertex._source;
+            outStage._entryPoint   = entryPoint;
+            outStage._stage        = stage;
+            outStage._targetFormat = targetFormat;
+        };
+        request._bHasGeometryShader = desc._geometryEntryPoint.empty() ? SW_FALSE : SW_TRUE;
+        request._bHasTessellation   = ( desc._hullEntryPoint.empty() || desc._domainEntryPoint.empty() ) ? SW_FALSE : SW_TRUE;
+        if ( request._bHasGeometryShader != SW_FALSE )
+            fillOptional( request._geometry, desc._geometryEntryPoint, ShaderStage::Geometry );
+        if ( request._bHasTessellation != SW_FALSE )
+        {
+            fillOptional( request._hull, desc._hullEntryPoint, ShaderStage::Hull );
+            fillOptional( request._domain, desc._domainEntryPoint, ShaderStage::Domain );
+        }
+
+        // define 은 모든 스테이지에 같이 붙는다. 퍼뮤테이션은 파이프라인 단위다.
         for ( const string& define : desc._listShaderDefine )
         {
             const ShaderMacroDefine parsed = ShaderMacroDefine::parse( define );
             request._vertex._listDefine.push_back( parsed );
             if ( request._bHasPixelShader != SW_FALSE )
                 request._pixel._listDefine.push_back( parsed );
+            if ( request._bHasGeometryShader != SW_FALSE )
+                request._geometry._listDefine.push_back( parsed );
+            if ( request._bHasTessellation != SW_FALSE )
+            {
+                request._hull._listDefine.push_back( parsed );
+                request._domain._listDefine.push_back( parsed );
+            }
         }
         return request;
     }
@@ -88,6 +118,23 @@ namespace sw
         if ( request._bHasPixelShader != SW_FALSE )
             outPixel = compile( request._pixel );
         return outVertex._bSuccess && ( request._bHasPixelShader == SW_FALSE || outPixel._bSuccess );
+    }
+
+    bool RHIShaderRequest::compileOptionalStages( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outGeometry, ShaderCompileResult& outHull, ShaderCompileResult& outDomain )
+    {
+        bool bSuccess = true;
+        if ( request._bHasGeometryShader != SW_FALSE )
+        {
+            outGeometry = compile( request._geometry );
+            bSuccess    = bSuccess && outGeometry._bSuccess;
+        }
+        if ( request._bHasTessellation != SW_FALSE )
+        {
+            outHull   = compile( request._hull );
+            outDomain = compile( request._domain );
+            bSuccess  = bSuccess && outHull._bSuccess && outDomain._bSuccess;
+        }
+        return bSuccess;
     }
 
     uint32 RHIShaderRequest::computeConsumedVertexAttributeMask( const vector<uint8>& vertexBytecode, ShaderTargetFormat targetFormat )

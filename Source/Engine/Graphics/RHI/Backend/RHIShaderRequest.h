@@ -22,12 +22,17 @@ namespace sw
      */
     struct SW_API RHIGraphicsShaderRequest
     {
-        ShaderCompileDesc      _vertex;              /**< 정점 스테이지 요청. 진입점 기본값과 define 이 채워져 있음 */
-        ShaderCompileDesc      _pixel;               /**< 픽셀 스테이지 요청. `_bHasPixelShader` 가 0 이면 쓰지 않음 */
-        uint32                 _numRenderTargets;    /**< 파이프라인이 선언할 컬러 RT 수 (뎁스 전용이면 0, 그 밖엔 1 이상) */
-        uint8                  _bHasPixelShader : 1; /**< 픽셀 스테이지를 붙이는가 */
-        uint8                  _bDepthOnly      : 1; /**< 뎁스만 쓰는 파이프라인인가 (RT 0 개 + 뎁스 테스트) */
-        [[maybe_unused]] uint8 _reserved        : 6;
+        ShaderCompileDesc      _vertex;                 /**< 정점 스테이지 요청. 진입점 기본값과 define 이 채워져 있음 */
+        ShaderCompileDesc      _pixel;                  /**< 픽셀 스테이지 요청. `_bHasPixelShader` 가 0 이면 쓰지 않음 */
+        ShaderCompileDesc      _geometry;               /**< 지오메트리 스테이지 요청. `_bHasGeometryShader` 가 0 이면 쓰지 않는다 */
+        ShaderCompileDesc      _hull;                   /**< 헐 스테이지 요청. `_bHasTessellation` 이 0 이면 쓰지 않는다 */
+        ShaderCompileDesc      _domain;                 /**< 도메인 스테이지 요청 */
+        uint32                 _numRenderTargets;       /**< 파이프라인이 선언할 컬러 RT 수 (뎁스 전용이면 0, 그 밖엔 1 이상) */
+        uint8                  _bHasPixelShader    : 1; /**< 픽셀 스테이지를 붙이는가 */
+        uint8                  _bDepthOnly         : 1; /**< 뎁스만 쓰는 파이프라인인가 (RT 0 개 + 뎁스 테스트) */
+        uint8                  _bHasGeometryShader : 1; /**< 지오메트리 스테이지를 붙이는가 */
+        uint8                  _bHasTessellation   : 1; /**< 헐 · 도메인 스테이지를 붙이는가 */
+        [[maybe_unused]] uint8 _reserved           : 4;
 
         RHIGraphicsShaderRequest() noexcept;
     };
@@ -62,6 +67,8 @@ namespace sw
          * @brief 그래픽스 요청의 정점 스테이지와 (있으면) 픽셀 스테이지를 컴파일합니다. DX12, GL, Vulkan 이 같이 씁니다.
          * @return 정점 스테이지가 성공했고 픽셀 스테이지는 없거나 성공했으면 true 입니다. 실패한 쪽의 메시지는 그 결과에 남습니다.
          */
+        /** @brief 선택 스테이지(지오메트리 · 헐 · 도메인) 중 요청에 있는 것을 컴파일합니다. 없는 스테이지는 건드리지 않습니다. 하나라도 실패하면 false 입니다. */
+        [[nodiscard]] static bool compileOptionalStages( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outGeometry, ShaderCompileResult& outHull, ShaderCompileResult& outDomain );
         [[nodiscard]] static bool compileGraphics( const RHIGraphicsShaderRequest& request, ShaderCompileResult& outVertex, ShaderCompileResult& outPixel );
 
         /**

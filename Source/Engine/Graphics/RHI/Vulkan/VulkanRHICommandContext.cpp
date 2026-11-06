@@ -917,9 +917,7 @@ namespace sw
         const uint32 maxCount = shaderslot::kRootConstantDwords - destOffsetIn32BitValues;
         const uint32 count    = num32BitValues < maxCount ? num32BitValues : maxCount;
 
-        constexpr VkShaderStageFlags kPushStages =
-            VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
-        vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, kPushStages, destOffsetIn32BitValues * 4, count * 4, pData );
+        vkCmdPushConstants( cmd, _pDevice->_pipelineLayout, _pDevice->getAllShaderStages(), destOffsetIn32BitValues * 4, count * 4, pData );
     }
 
     bool VulkanRHICommandContext::bindIndexedMeshForDraw()

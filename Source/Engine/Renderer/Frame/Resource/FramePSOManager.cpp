@@ -688,6 +688,14 @@ namespace sw
         desc._vertexEntryPoint     = string( resolveEntryPoint( pPassDesc != nullptr ? string_view( pPassDesc->_vertexEntryPoint ) : string_view{}, ShaderStage::Vertex ) );
         desc._pixelEntryPoint      = string( resolveEntryPoint( pPassDesc != nullptr ? string_view( pPassDesc->_pixelEntryPoint ) : string_view{}, ShaderStage::Pixel ) );
         applyPassRenderState( desc, passType, pPassDesc );
+        if ( pPassDesc != nullptr )
+        {
+            desc._geometryEntryPoint = pPassDesc->_geometryEntryPoint;
+            desc._hullEntryPoint     = pPassDesc->_hullEntryPoint;
+            desc._domainEntryPoint   = pPassDesc->_domainEntryPoint;
+            if ( desc._hullEntryPoint.empty() == false )
+                desc._topology = RHIPrimitiveTopology::PatchList3;
+        }
         desc._listShaderDefine = shader._listDefine;
         // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷을 정한다(`_targetSourceType`).
         const RenderGraphPassDesc* pTargetDesc =

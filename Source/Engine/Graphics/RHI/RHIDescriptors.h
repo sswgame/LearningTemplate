@@ -508,6 +508,10 @@ namespace sw
         string _pixelEntryPoint;   ///< 픽셀 셰이더 진입점
         string _computeShaderPath; ///< 컴퓨트 셰이더 소스 경로
         string _computeEntryPoint; ///< 컴퓨트 셰이더 진입점
+        /// 선택 스테이지의 진입점입니다. 비면 그 스테이지가 없습니다. 소스는 `_vertexShaderPath` 와 같은 파일입니다. 헐과 도메인은 함께 있고, 그때 위상은 `PatchList3` 입니다.
+        string _geometryEntryPoint;
+        string _hullEntryPoint;
+        string _domainEntryPoint;
 
         vector<string> _listShaderDefine; ///< 컴파일 매크로("NAME" 또는 "NAME=VALUE"). 셰이더 퍼뮤테이션을 만든다.
 

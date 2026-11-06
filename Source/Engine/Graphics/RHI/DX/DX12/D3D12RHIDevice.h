@@ -74,6 +74,7 @@ namespace sw
         uint32                 _onlineEnd;
         RHIGeometryBindings    _geometry; ///< setVertexBuffer · setIndexBuffer 로 건 정점 슬롯과 인덱스 버퍼(드로우 때 건다 — RHIGeometryBindings)
         RHIPipelineStateHandle _activeGraphicsPSO;
+        D3D_PRIMITIVE_TOPOLOGY _activeTopology;   ///< 지금 PSO 의 위상입니다(드로우가 건다)
         RHIPipelineStateHandle _activeComputePSO; ///< `setComputePipelineState` 가 마지막으로 받은 핸들. 디스패치는 이 핸들의 레코드가 없으면 멈춘다(드로우의 그래픽스 PSO 와 같은 계약).
         /** @brief _pCmdList 에 실제로 SetPipelineState 가 나간 PSO 핸들입니다.
          *  드로우가 _activeGraphicsPSO 와 같으면 다시 설정하지 않습니다. Reset() 직후에는
@@ -99,6 +100,7 @@ namespace sw
             , _onlineEnd{ 0 }
             , _geometry{}
             , _activeGraphicsPSO{ 0 }
+            , _activeTopology{ D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST }
             , _activeComputePSO{ 0 }
             , _boundNativeGraphicsPSO{ 0 }
             , _arrActiveColorTarget{}
@@ -372,7 +374,8 @@ namespace sw
         struct D3D12PipelineStateRecord
         {
             Microsoft::WRL::ComPtr<ID3D12PipelineState> _pso;
-            RHIVertexLayout                             _vertexLayout; ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
+            RHIVertexLayout                             _vertexLayout;                                    ///< 셰이더가 읽는 정점 버퍼 슬롯과 입력을 지은 메시 정점 형식(드로우가 `RHIGeometryBindings::bindVertexBuffersForDraw` 에 넘긴다)
+            D3D_PRIMITIVE_TOPOLOGY                      _topology{ D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST }; ///< 드로우가 거는 위상입니다
         };
 
         // 셰이더 가시 힙 하나는 [레지스트리 구간 | 온라인 블록 구간]으로 나뉜다. 레지스트리는 bindless 인덱스가 곧 힙 슬롯이다(텍스처 배열이 힙 시작을

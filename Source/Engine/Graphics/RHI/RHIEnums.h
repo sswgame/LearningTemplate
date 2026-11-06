@@ -111,7 +111,8 @@ namespace sw
     {
         TriangleList, ///< 삼각형 리스트
         LineList,     ///< 선 리스트
-        PointList     ///< 점 리스트
+        PointList,    ///< 점 리스트
+        PatchList3    ///< 제어점 셋의 패치 리스트(헐 · 도메인 스테이지가 있는 파이프라인)
     };
 
     /**

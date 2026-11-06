@@ -543,7 +543,7 @@ namespace sw
         // b0/b1 은 부르는 쪽이 bindConstantBuffer( index, shaderslot::k*ConstantBuffer ) 로 건다(루트 CBV). t 슬롯은 여기서 테이블로 굳힌다.
         if ( flushSlotTables( false ) == false )
             return;
-        commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        commandListForRecord()->IASetPrimitiveTopology( _pState->_activeTopology );
         if ( bindMeshVertexBufferForDraw() == false )
             return;
         commandListForRecord()->DrawInstanced( vertexCount, 1, startVertex, 0 );
@@ -559,7 +559,7 @@ namespace sw
             return;
         if ( flushSlotTables( false ) == false )
             return;
-        commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        commandListForRecord()->IASetPrimitiveTopology( _pState->_activeTopology );
         if ( bindMeshVertexBufferForDraw() == false )
             return;
         commandListForRecord()->DrawInstanced( vertexCount, instanceCount, startVertex, startInstance );
@@ -653,7 +653,7 @@ namespace sw
             return;
         if ( bindMeshVertexBufferForDraw() == false )
             return;
-        commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        commandListForRecord()->IASetPrimitiveTopology( _pState->_activeTopology );
 
         // countBuffer 가 있으면 GPU 가 적어 둔 개수를 쓴다(drawCount 는 상한). ExecuteIndirect 는 둘을 같이 받는다.
         ID3D12Resource* pCountResource = ( countBuffer != 0 ) ? _pDevice->resolveBuffer( countBuffer ) : nullptr;
@@ -702,7 +702,7 @@ namespace sw
             return;
         if ( bindIndexBufferForDraw() == false )
             return;
-        commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        commandListForRecord()->IASetPrimitiveTopology( _pState->_activeTopology );
         commandListForRecord()->DrawIndexedInstanced( indexCount, instanceCount, startIndex, baseVertex, startInstance );
     }
 
@@ -725,7 +725,7 @@ namespace sw
             return;
         if ( bindIndexBufferForDraw() == false )
             return;
-        commandListForRecord()->IASetPrimitiveTopology( D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        commandListForRecord()->IASetPrimitiveTopology( _pState->_activeTopology );
         // 개수 버퍼가 있으면 GPU 가 적어 둔 개수를 쓴다(drawCount 는 상한) — `drawIndirect` 와 같다.
         ID3D12Resource* pCountResource = ( countBuffer != 0 ) ? _pDevice->resolveBuffer( countBuffer ) : nullptr;
         commandListForRecord()->ExecuteIndirect( _pDevice->_drawIndexedCommandSignature.Get(), drawCount, pArgs, argumentBufferOffset, pCountResource,
@@ -794,6 +794,7 @@ namespace sw
         const D3D12RHIDevice::D3D12PipelineStateRecord* pRecord = _pDevice->_pipelineStates.get( pso );
         if ( pRecord == nullptr || pRecord->_pso == nullptr )
             return;
+        _pState->_activeTopology = pRecord->_topology; // 드로우가 IASetPrimitiveTopology 로 건다
 
         // 루트 시그니처는 리스트가 열릴 때 이미 걸렸다(bindBindlessRootState). PSO 만 바꾼다. 루트 CBV 인자는 유지된다.
         commandListForRecord()->SetPipelineState( pRecord->_pso.Get() );

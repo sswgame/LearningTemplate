@@ -159,7 +159,7 @@ namespace sw
                 }
             }
 
-            /** @brief 파이프라인 패스 하나의 스테이지 요청(컴퓨트, 또는 VS · PS)을 더합니다. 진입점은 런타임 `makePassPSODesc` 와 같게 XML 값(비면 스테이지 기본값)이다. */
+            /** @brief 파이프라인 패스 하나의 스테이지 요청(컴퓨트, 또는 VS · PS · GS · HS · DS)을 더합니다. 진입점은 런타임 `makePassPSODesc` 와 같게 XML 값(비면 스테이지 기본값)이다. */
             static void appendPipelinePassStages( vector<ShaderCookRequest>& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline,
                                                   const string& shaderPath, const vector<string>& listPassDefine )
             {
@@ -178,6 +178,14 @@ namespace sw
                     const string psEntry = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
                     appendRequestUnique( outListRequest, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine );
                 }
+
+                // 선택 스테이지는 진입점을 적은 패스만 쓴다.
+                if ( pass._geometryEntryPoint.empty() == false )
+                    appendRequestUnique( outListRequest, shaderPath, pass._geometryEntryPoint, ShaderStage::Geometry, listPassDefine );
+                if ( pass._hullEntryPoint.empty() == false )
+                    appendRequestUnique( outListRequest, shaderPath, pass._hullEntryPoint, ShaderStage::Hull, listPassDefine );
+                if ( pass._domainEntryPoint.empty() == false )
+                    appendRequestUnique( outListRequest, shaderPath, pass._domainEntryPoint, ShaderStage::Domain, listPassDefine );
             }
 
             /** @brief 1) 렌더 파이프라인 XML(`pipeline` 폴더)의 패스마다 셰이더 요청을 더하고, 씬 메시 패스는 머티리얼과 곱할 목록에 넣습니다. */

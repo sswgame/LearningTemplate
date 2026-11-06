@@ -1428,6 +1428,21 @@ namespace sw
             psoDesc.InputLayout    = { elementCount > 0 ? arrInputElement : nullptr, elementCount };
             psoDesc.pRootSignature = _pDevice->_rootSignature.Get();
             psoDesc.VS             = { vsResult._bytecode.data(), vsResult._bytecode.size() };
+            ShaderCompileResult gsResult{};
+            ShaderCompileResult hsResult{};
+            ShaderCompileResult dsResult{};
+            if ( RHIShaderRequest::compileOptionalStages( request, gsResult, hsResult, dsResult ) == false )
+            {
+                SW_LOG_ERROR_ID( "D3D12RHIResourceFactory.CreatePipelineStateOptionalStageFailed", "createPipelineState: optional stage compile failed (%#)", desc._vertexShaderPath.c_str() );
+                return 0;
+            }
+            if ( request._bHasGeometryShader != SW_FALSE )
+                psoDesc.GS = { gsResult._bytecode.data(), gsResult._bytecode.size() };
+            if ( request._bHasTessellation != SW_FALSE )
+            {
+                psoDesc.HS = { hsResult._bytecode.data(), hsResult._bytecode.size() };
+                psoDesc.DS = { dsResult._bytecode.data(), dsResult._bytecode.size() };
+            }
             if ( bHasPixelShader )
                 psoDesc.PS = { psResult._bytecode.data(), psResult._bytecode.size() };
             // 다른 백엔드와 같이 desc._fillMode 를 읽는다. SOLID 로 고정하면 Wireframe 요청이 DX12 에서만 조용히 솔리드가 된다.
@@ -1444,7 +1459,7 @@ namespace sw
             psoDesc.RasterizerState.DepthBias            = desc._depthBias;
             psoDesc.RasterizerState.SlopeScaledDepthBias = desc._slopeScaledDepthBias;
             psoDesc.SampleMask                           = MathUtil::kMaxUInt32;
-            psoDesc.PrimitiveTopologyType                = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            psoDesc.PrimitiveTopologyType                = request._bHasTessellation != SW_FALSE ? D3D12_PRIMITIVE_TOPOLOGY_TYPE_PATCH : D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
             // 뎁스 전용은 RT 가 0 개다. 1 로 두고 R8G8B8A8 을 선언하면 실제로는 DSV 만 바인딩되는 것과 어긋난다.
             psoDesc.NumRenderTargets = request._numRenderTargets;
             if ( psoDesc.NumRenderTargets > 8 )
@@ -1497,7 +1512,8 @@ namespace sw
         if ( pso == nullptr )
             return 0;
         return _pDevice->_pipelineStates.insert( {
-            pso, RHIVertexLayout{ vertexSlotMask, desc._meshVertexFormat }
+            pso, RHIVertexLayout{ vertexSlotMask, desc._meshVertexFormat },
+            request._bHasTessellation != SW_FALSE ? D3D_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST
         } );
     }
 

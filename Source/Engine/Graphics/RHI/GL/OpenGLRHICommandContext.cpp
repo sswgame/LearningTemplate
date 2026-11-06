@@ -23,6 +23,8 @@ namespace sw
                     return GL_LINES;
                 case RHIPrimitiveTopology::PointList:
                     return GL_POINTS;
+                case RHIPrimitiveTopology::PatchList3:
+                    return GL_PATCHES;
             }
             return GL_TRIANGLES;
         }
@@ -600,6 +602,8 @@ namespace sw
             SW_FATAL( "GL draw without a registered graphics PSO (handle %#)", _pDevice->_recordingState._boundGraphicsPSO );
         outProgram = pPSO->_program;
         outMode    = toGlPrimitive( pPSO->_topology );
+        if ( outMode == GL_PATCHES )
+            glPatchParameteri( GL_PATCH_VERTICES, 3 );
     }
 
     uint32 OpenGLRHICommandContext::resolveComputeProgram() const

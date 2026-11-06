@@ -358,7 +358,11 @@ namespace sw
             return false;
 
         _pContext->IASetInputLayout( pIl );
-        _pContext->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
+        _pContext->IASetPrimitiveTopology( pPSO->_topology );
+        // 선택 스테이지는 없는 PSO 에서 비운다 — 남겨 두면 다음 드로우가 앞 PSO 의 스테이지를 지난다.
+        _pContext->GSSetShader( pPSO->_gs.Get(), nullptr, 0 );
+        _pContext->HSSetShader( pPSO->_hs.Get(), nullptr, 0 );
+        _pContext->DSSetShader( pPSO->_ds.Get(), nullptr, 0 );
         _pContext->VSSetShader( pVs, nullptr, 0 );
         _pContext->PSSetShader( pPs, nullptr, 0 );
         return true;

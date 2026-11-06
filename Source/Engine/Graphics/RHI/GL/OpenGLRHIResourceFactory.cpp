@@ -983,16 +983,59 @@ namespace sw
                 glSpecializeShader( pixelShader, psDesc._entryPoint.c_str(), 0, nullptr, nullptr );
             }
 
+            // 선택 스테이지(지오메트리 · 헐 · 도메인)는 같은 SPIR-V 경로로 프로그램에 붙인다.
+            ShaderCompileResult gsResult{};
+            ShaderCompileResult hsResult{};
+            ShaderCompileResult dsResult{};
+            if ( RHIShaderRequest::compileOptionalStages( request, gsResult, hsResult, dsResult ) == false )
+            {
+                SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.OptionalStageCompileFailed", "Optional stage compile failed (%#)", desc._vertexShaderPath.c_str() );
+                glDeleteShader( vertexShader );
+                if ( pixelShader != 0 )
+                    glDeleteShader( pixelShader );
+                return 0;
+            }
+            GLuint     arrOptionalShader[3]{ 0, 0, 0 };
+            uint32     optionalCount{ 0 };
+            bool       bOptionalReady   = true;
+            const auto addOptionalStage = [&]( GLenum stage, const ShaderCompileResult& result, const ShaderCompileDesc& stageDesc )
+            {
+                const GLuint shader = glCreateShader( stage );
+                glShaderBinary( 1, &shader, GL_SHADER_BINARY_FORMAT_SPIR_V, result._bytecode.data(), static_cast<GLsizei>( result._bytecode.size() ) );
+                glSpecializeShader( shader, stageDesc._entryPoint.c_str(), 0, nullptr, nullptr );
+                GLint compiled = GL_FALSE;
+                glGetShaderiv( shader, GL_COMPILE_STATUS, &compiled );
+                if ( compiled != GL_TRUE )
+                {
+                    GLchar infoLog[constant::buffer::kMax1024];
+                    glGetShaderInfoLog( shader, sizeof( infoLog ), nullptr, infoLog );
+                    SW_LOG_ERROR_ID( "OpenGLRHIResourceFactory.OptionalStageSpecializeFailed", "Optional stage specialize failed (%#): %#", stageDesc._entryPoint, infoLog );
+                    bOptionalReady = false;
+                }
+                arrOptionalShader[optionalCount++] = shader;
+            };
+            if ( request._bHasGeometryShader != SW_FALSE )
+                addOptionalStage( GL_GEOMETRY_SHADER, gsResult, request._geometry );
+            if ( request._bHasTessellation != SW_FALSE )
+            {
+                addOptionalStage( GL_TESS_CONTROL_SHADER, hsResult, request._hull );
+                addOptionalStage( GL_TESS_EVALUATION_SHADER, dsResult, request._domain );
+            }
+
             GLint vsCompiled = GL_FALSE;
             GLint psCompiled = GL_FALSE;
             glGetShaderiv( vertexShader, GL_COMPILE_STATUS, &vsCompiled );
             if ( bHasPixelShader )
                 glGetShaderiv( pixelShader, GL_COMPILE_STATUS, &psCompiled );
 
-            if ( vsCompiled == GL_TRUE && ( bHasPixelShader == false || psCompiled == GL_TRUE ) )
+            if ( bOptionalReady && vsCompiled == GL_TRUE && ( bHasPixelShader == false || psCompiled == GL_TRUE ) )
             {
                 GLuint program = glCreateProgram();
                 glAttachShader( program, vertexShader );
+                for ( uint32 optionalIndex = 0; optionalIndex < optionalCount; ++optionalIndex )
+                {
+                    glAttachShader( program, arrOptionalShader[optionalIndex] );
+                }
                 if ( bHasPixelShader )
                     glAttachShader( program, pixelShader );
                 StringBuilder<constant::buffer::kMax512> linkLabel;
@@ -1021,12 +1064,16 @@ namespace sw
             glDeleteShader( vertexShader );
             if ( pixelShader != 0 )
                 glDeleteShader( pixelShader );
+            for ( uint32 optionalIndex = 0; optionalIndex < optionalCount; ++optionalIndex )
+            {
+                glDeleteShader( arrOptionalShader[optionalIndex] );
+            }
         }
 
         if ( record._program == 0 )
             return 0;
 
-        record._topology             = desc._topology;
+        record._topology             = request._bHasTessellation != SW_FALSE ? RHIPrimitiveTopology::PatchList3 : desc._topology;
         record._fillMode             = desc._fillMode;
         record._cullMode             = desc._cullMode;
         record._depthBias            = desc._depthBias;

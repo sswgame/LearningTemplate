@@ -216,7 +216,7 @@ namespace sw
                 return issueCount;
             }
 
-            /** @brief 컴퓨트 패스의 선언이 실행과 맞는가. 컬러 출력 하나, 깊이 형식이 아닌 입력 최대 둘(RW 슬롯 — 에뮬 백엔드의 슬롯이 셋이다), 고른 셰이더, 블렌드 없음. 진입점 칸은 컴퓨트 패스만 쓴다. */
+            /** @brief 선택 스테이지 칸과 컴퓨트 패스의 선언이 실행과 맞는가. 컬러 출력 하나, 깊이 형식이 아닌 입력 최대 둘(RW 슬롯 — 에뮬 백엔드의 슬롯이 셋이다), 고른 셰이더, 블렌드 없음. 진입점 칸은 컴퓨트 패스만 쓴다. */
             static uint32 checkComputePasses( const RenderPipelineDesc& desc, string_view sourcePath )
             {
                 static constexpr size_t kMaxInputCount = 2;
@@ -228,6 +228,12 @@ namespace sw
                 };
                 for ( const RenderGraphPassDesc& pass : desc._listPass )
                 {
+                    const bool bHasOptionalStage = pass._geometryEntryPoint.empty() == false || pass._hullEntryPoint.empty() == false || pass._domainEntryPoint.empty() == false;
+                    if ( pass._hullEntryPoint.empty() != pass._domainEntryPoint.empty() )
+                        report( "RenderPipelineAsset.PassHullNeedsDomain", pass, "_hullEntryPoint and _domainEntryPoint go together" );
+                    // 머티리얼 변형은 머티리얼 셰이더의 정점 출력으로 만들어져 패스 셰이더의 스테이지와 신호가 맞지 않는다.
+                    if ( bHasOptionalStage && ( pass._resolvedType == RenderPassType::Compute || getRenderPassTypeInfo( pass._resolvedType ).hasFlag( RenderPassTraitFlag::kUsesMaterialShader ) ) )
+                        report( "RenderPipelineAsset.PassOptionalStageNotAllowed", pass, "geometry, hull and domain stages need a pass that draws with its own shader (not a material shader, not a Compute pass)" );
                     if ( pass._resolvedType != RenderPassType::Compute )
                     {
                         if ( pass._computeEntryPoint.empty() == false )

@@ -926,6 +926,20 @@ namespace sw
                                    desc._vertexShaderPath.c_str() );
                 return 0;
             }
+            ShaderCompileResult gsResult{};
+            ShaderCompileResult hsResult{};
+            ShaderCompileResult dsResult{};
+            const bool          bOptionalFailed =
+                RHIShaderRequest::compileOptionalStages( request, gsResult, hsResult, dsResult ) == false ||
+                ( request._bHasGeometryShader != SW_FALSE && isHrSuccess( _pDevice->_device->CreateGeometryShader( gsResult._bytecode.data(), gsResult._bytecode.size(), nullptr, pso._gs.GetAddressOf() ), "CreateGeometryShader" ) == false ) ||
+                ( request._bHasTessellation != SW_FALSE && ( isHrSuccess( _pDevice->_device->CreateHullShader( hsResult._bytecode.data(), hsResult._bytecode.size(), nullptr, pso._hs.GetAddressOf() ), "CreateHullShader" ) == false ||
+                                                             isHrSuccess( _pDevice->_device->CreateDomainShader( dsResult._bytecode.data(), dsResult._bytecode.size(), nullptr, pso._ds.GetAddressOf() ), "CreateDomainShader" ) == false ) );
+            if ( bOptionalFailed )
+            {
+                SW_LOG_ERROR_ID( "D3D11.CreatePipelineStateOptionalStageFailed", "createPipelineState: optional stage compile/create failed (%#)", desc._vertexShaderPath.c_str() );
+                return 0;
+            }
+            pso._topology = request._bHasTessellation != SW_FALSE ? D3D11_PRIMITIVE_TOPOLOGY_3_CONTROL_POINT_PATCHLIST : D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
             // 입력 레이아웃은 메시 정점 형식의 공용 테이블에서 셰이더가 읽는 속성만 골라 만든다(`fillDxgiInputElements` — DX12 와 같은 함수, Vulkan · GL 도 같은 규칙).
             // 정점 입력이 없는 셰이더(SV_VertexID 로 정점을 만든다)는 빈 레이아웃이라 정점 버퍼 없이 그린다.
             const uint32             consumedMask = RHIShaderRequest::computeConsumedVertexAttributeMask( vsResult._bytecode, ShaderTargetFormat::DXBC_D3D11 );

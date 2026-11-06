@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  파이프라인 XML 의 헐 · 도메인 스테이지 — 패스 칸에 진입점만 적었다. 그림이 반으로 줄고 둘레에 출력 첨부의 자주색 클리어가 보이면 그 스테이지가 돈 것이다.
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.tessellationstage" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/rendertest3d.scene.xml"/>
+	<Launch variable="gv_renderPipeline" value="game/empty/pipeline/tessellationstagepipeline.xml"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="40"/>
+	<Screenshot file="tessellationstage.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImage file="tessellationstage.ppm" golden="tessellationstage"/>
+	<Pass/>
+</Scenario>

@@ -1371,7 +1371,56 @@ namespace sw
             fragShaderStageInfo.pName  = psDesc._entryPoint.c_str();
         }
 
-        VkPipelineShaderStageCreateInfo arrShaderStage[] = { vertShaderStageInfo, fragShaderStageInfo };
+        // 선택 스테이지(지오메트리 · 헐 · 도메인). 진입점 글은 요청이 이 함수 끝까지 들고 있다.
+        ShaderCompileResult             gsResult{};
+        ShaderCompileResult             hsResult{};
+        ShaderCompileResult             dsResult{};
+        const bool                      bOptionalUnsupported = ( request._bHasGeometryShader != SW_FALSE && _pDevice->_bGeometryShader == 0 ) || ( request._bHasTessellation != SW_FALSE && _pDevice->_bTessellationShader == 0 );
+        VkPipelineShaderStageCreateInfo arrShaderStage[5]{};
+        uint32                          shaderStageCount{ 0 };
+        arrShaderStage[shaderStageCount++] = vertShaderStageInfo;
+        if ( bHasPixelShader )
+            arrShaderStage[shaderStageCount++] = fragShaderStageInfo;
+        VkShaderModule arrOptionalModule[3]{ VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE };
+        uint32         optionalModuleCount{ 0 };
+        const auto     destroyShaderModules = [&]()
+        {
+            vkDestroyShaderModule( _pDevice->_device, vertShaderModule, nullptr );
+            if ( fragShaderModule != VK_NULL_HANDLE )
+                vkDestroyShaderModule( _pDevice->_device, fragShaderModule, nullptr );
+            for ( uint32 moduleIndex = 0; moduleIndex < optionalModuleCount; ++moduleIndex )
+            {
+                vkDestroyShaderModule( _pDevice->_device, arrOptionalModule[moduleIndex], nullptr );
+            }
+        };
+        const auto addOptionalStage = [&]( VkShaderStageFlagBits stage, const ShaderCompileResult& result, const ShaderCompileDesc& stageDesc )
+        {
+            VkShaderModuleCreateInfo moduleInfo{};
+            moduleInfo.sType    = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+            moduleInfo.codeSize = result._bytecode.size();
+            moduleInfo.pCode    = reinterpret_cast<const uint32*>( result._bytecode.data() );
+            VkShaderModule shaderModule{ VK_NULL_HANDLE };
+            if ( vkCreateShaderModule( _pDevice->_device, &moduleInfo, nullptr, &shaderModule ) != VK_SUCCESS )
+                return false;
+            arrOptionalModule[optionalModuleCount++]   = shaderModule;
+            VkPipelineShaderStageCreateInfo& stageInfo = arrShaderStage[shaderStageCount++];
+            stageInfo.sType                            = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+            stageInfo.stage                            = stage;
+            stageInfo.module                           = shaderModule;
+            stageInfo.pName                            = stageDesc._entryPoint.c_str();
+            return true;
+        };
+        bool bOptionalReady = bOptionalUnsupported == false && RHIShaderRequest::compileOptionalStages( request, gsResult, hsResult, dsResult );
+        if ( bOptionalReady && request._bHasGeometryShader != SW_FALSE )
+            bOptionalReady = addOptionalStage( VK_SHADER_STAGE_GEOMETRY_BIT, gsResult, request._geometry );
+        if ( bOptionalReady && request._bHasTessellation != SW_FALSE )
+            bOptionalReady = addOptionalStage( VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, hsResult, request._hull ) && addOptionalStage( VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, dsResult, request._domain );
+        if ( bOptionalReady == false )
+        {
+            SW_LOG_ERROR_ID( "VulkanRHIResourceFactory.CreatePipelineStateOptionalStageFailed", "createPipelineState: optional stage unsupported by the device or failed to compile (%#)", desc._vertexShaderPath.c_str() );
+            destroyShaderModules();
+            return 0;
+        }
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
         vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -1412,7 +1461,7 @@ namespace sw
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType                  = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssembly.topology               = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        inputAssembly.topology               = request._bHasTessellation != SW_FALSE ? VK_PRIMITIVE_TOPOLOGY_PATCH_LIST : VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
         VkPipelineViewportStateCreateInfo viewportState{};
@@ -1492,28 +1541,30 @@ namespace sw
         dynamicState.pDynamicStates    = listDynamicState.data();
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
-        pipelineInfo.sType               = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        pipelineInfo.stageCount          = bHasPixelShader ? 2 : 1;
-        pipelineInfo.pStages             = arrShaderStage;
-        pipelineInfo.pVertexInputState   = &vertexInputInfo;
-        pipelineInfo.pInputAssemblyState = &inputAssembly;
-        pipelineInfo.pViewportState      = &viewportState;
-        pipelineInfo.pRasterizationState = &rasterizer;
-        pipelineInfo.pMultisampleState   = &multisampling;
-        pipelineInfo.pDepthStencilState  = &depthStencil;
-        pipelineInfo.pColorBlendState    = &colorBlending;
-        pipelineInfo.pDynamicState       = &dynamicState;
-        pipelineInfo.layout              = _pDevice->_pipelineLayout;
-        pipelineInfo.renderPass          = pipelineRp;
-        pipelineInfo.subpass             = 0;
-        pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
+        pipelineInfo.sType      = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipelineInfo.stageCount = shaderStageCount;
+        VkPipelineTessellationStateCreateInfo tessellationState{};
+        tessellationState.sType              = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+        tessellationState.patchControlPoints = 3;
+        pipelineInfo.pTessellationState      = request._bHasTessellation != SW_FALSE ? &tessellationState : nullptr;
+        pipelineInfo.pStages                 = arrShaderStage;
+        pipelineInfo.pVertexInputState       = &vertexInputInfo;
+        pipelineInfo.pInputAssemblyState     = &inputAssembly;
+        pipelineInfo.pViewportState          = &viewportState;
+        pipelineInfo.pRasterizationState     = &rasterizer;
+        pipelineInfo.pMultisampleState       = &multisampling;
+        pipelineInfo.pDepthStencilState      = &depthStencil;
+        pipelineInfo.pColorBlendState        = &colorBlending;
+        pipelineInfo.pDynamicState           = &dynamicState;
+        pipelineInfo.layout                  = _pDevice->_pipelineLayout;
+        pipelineInfo.renderPass              = pipelineRp;
+        pipelineInfo.subpass                 = 0;
+        pipelineInfo.basePipelineHandle      = VK_NULL_HANDLE;
 
         VkPipeline     newPipeline{ VK_NULL_HANDLE };
         const VkResult createResult = vkCreateGraphicsPipelines( _pDevice->_device, _pDevice->_pipelineCache, 1, &pipelineInfo, nullptr, &newPipeline );
 
-        vkDestroyShaderModule( _pDevice->_device, vertShaderModule, nullptr );
-        if ( fragShaderModule != VK_NULL_HANDLE )
-            vkDestroyShaderModule( _pDevice->_device, fragShaderModule, nullptr );
+        destroyShaderModules();
 
         // 실패하면 PSO 를 만들지 않는다(핸들 0, 다른 세 백엔드와 같은 규칙). 빈 파이프라인을 등록해 두면 드로우가 다른 것으로 대신 그려진다.
         if ( createResult != VK_SUCCESS || newPipeline == VK_NULL_HANDLE )

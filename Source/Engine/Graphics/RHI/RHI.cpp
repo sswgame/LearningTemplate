@@ -82,6 +82,9 @@ namespace sw
         , _pixelEntryPoint{}
         , _computeShaderPath{}
         , _computeEntryPoint{}
+        , _geometryEntryPoint{}
+        , _hullEntryPoint{}
+        , _domainEntryPoint{}
         , _listShaderDefine{}
         , _topology{ RHIPrimitiveTopology::TriangleList }
         , _fillMode{ RHIFillMode::Solid }

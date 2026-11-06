@@ -582,7 +582,10 @@ namespace sw
         /** @brief 텍스처 배열 세트(set 1: 무제한 텍스처 배열과 immutable sampler)를 확보합니다. */
         [[nodiscard]] bool ensureTextureSet();
         /** @brief 정적 샘플러, 세트 레이아웃 2개, 파이프라인 레이아웃, 풀(텍스처용 1개와 프레임별 슬롯용), 더미 UBO 를 만듭니다. */
-        [[nodiscard]] bool createDescriptorResources();
+        [[nodiscard]] /** @brief 파이프라인 레이아웃의 푸시 상수 · 슬롯 세트가 보이는 스테이지입니다. 레이아웃과 `vkCmdPushConstants` 가 같은 값을 써야 합니다. */
+        uint32
+             getAllShaderStages() const;
+        bool createDescriptorResources();
         /** @brief 텍스처 배열(set 1 binding 0)의 원소 하나를 갱신합니다. */
         void writeBindlessTextureSlot( RHIDescriptorIndex index, VkImageView view, uint32 imageLayout );
         /** @brief RW 텍스처 배열(set 1 binding 3)의 원소 하나를 갱신합니다(GENERAL 레이아웃). */
@@ -795,6 +798,8 @@ namespace sw
         uint16                  _bDrawIndirectCount      : 1;
         uint16                  _bSamplerAnisotropy      : 1; ///< 정적 샘플러 ANISO_WRAP 을 실제로 이방성으로 만들 수 있는가
         uint16                  _bFillModeNonSolid       : 1; ///< VK_POLYGON_MODE_LINE 을 쓸 수 있는가(와이어프레임 뷰 모드)
+        uint16                  _bGeometryShader         : 1; ///< 지오메트리 스테이지를 쓸 수 있는가
+        uint16                  _bTessellationShader     : 1; ///< 헐 · 도메인 스테이지를 쓸 수 있는가
         uint16                  _bSwapChainDirty         : 1; ///< resize 나 present 결과로 예약된 스왑체인 재생성 요청
         uint16                  _bDepthHasStencil        : 1; ///< _depthFormat 에 스텐실 plane 이 있는가
         [[maybe_unused]] uint16 _reservedSwapChainBit    : 1;

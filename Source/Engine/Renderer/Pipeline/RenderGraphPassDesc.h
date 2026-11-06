@@ -308,6 +308,18 @@ namespace sw
         PROPERTY( SkipIfEmpty )
         string _computeEntryPoint;
 
+        /** @brief 지오메트리 진입점입니다. 적으면 이 패스에 그 스테이지가 붙습니다(소스는 패스 셰이더). 머티리얼 셰이더로 그리는 패스 · 컴퓨트 패스는 쓸 수 없습니다(검증). */
+        PROPERTY( SkipIfEmpty )
+        string _geometryEntryPoint;
+
+        /** @brief 헐 진입점입니다. 도메인과 함께 적고, 제어점 셋의 패치로 그립니다(검증). */
+        PROPERTY( SkipIfEmpty )
+        string _hullEntryPoint;
+
+        /** @brief 도메인 진입점입니다. */
+        PROPERTY( SkipIfEmpty )
+        string _domainEntryPoint;
+
         /** @brief `Compute` 패스의 스레드 그룹 한 변(`numthreads` 와 같아야 한다)입니다. 그룹 수는 출력 크기를 이 값으로 나눠 올림합니다. */
         PROPERTY( Min = 1 )
         uint32 _threadGroupSize{ 8 };

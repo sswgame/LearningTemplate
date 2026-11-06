@@ -233,6 +233,34 @@ SW_TEST_CASE( RenderPipelineAssetTest, ComputePassRejectsBadDeclarations )
     SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( passAttributes ) ) );
 }
 
+/** @brief [RenderPipelineAssetTest] 선택 스테이지: 패스 칸의 진입점을 그대로 가진다. 헐은 도메인과 함께 적고, 머티리얼 셰이더로 그리는 패스 · 컴퓨트 패스에는 쓸 수 없다 */
+SW_TEST_CASE( RenderPipelineAssetTest, OptionalStagesFollowTheRules )
+{
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassHullNeedsDomain" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PassOptionalStageNotAllowed" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineValidationFoundIssues" );
+    SW_EXPECT_LOG( "RenderPipelineAsset.PipelineIssueNotLoaded" );
+    RenderPipelineAsset stages;
+    SW_REQUIRE_TRUE( stages.loadFromXMLFile( AssetID{ string_view( "game/empty/pipeline/tessellationstagepipeline.xml" ) } ) );
+    bool bFoundHull = false;
+    for ( const RenderGraphPassDesc& pass : stages.getGraphPass() )
+    {
+        if ( pass._hullEntryPoint.empty() == false )
+        {
+            bFoundHull = true;
+            SW_EXPECT_EQUAL( string( "HSMain" ), pass._hullEntryPoint );
+            SW_EXPECT_EQUAL( string( "DSMain" ), pass._domainEntryPoint );
+        }
+    }
+    SW_EXPECT_TRUE( bFoundHull );
+
+    RenderPipelineAsset asset;
+    const string        opaque = string( "_type=\"ForwardOpaque\" _depthAttachment=\"SceneDepth\" " ) + RenderPipelineTestUtil::kOpaqueState;
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaque + " _hullEntryPoint=\"HSMain\"" ) ) ); // 도메인이 없고 머티리얼 패스다
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, RenderPipelineTestUtil::makeXML( opaque + " _geometryEntryPoint=\"GSMain\"" ) ) );
+    SW_EXPECT_FALSE( RenderPipelineTestUtil::load( asset, ComputePassTestUtil::makeXML( ComputePassTestUtil::withShader( "_geometryEntryPoint=\"GSMain\"" ), "", "<item>B</item>" ) ) );
+}
+
 /** @brief [RenderPipelineAssetTest] 엔진 파이프라인이 모두 렌더 패스를 합쳐 검증을 통과한다. 디퍼드 반투명은 섞는다 */
 SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesLoad )
 {
