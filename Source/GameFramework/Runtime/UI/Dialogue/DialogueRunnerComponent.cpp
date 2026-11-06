@@ -121,13 +121,17 @@ namespace sw
         if ( _state != DialogueRunnerState::ShowingDialogue )
             return false;
 
-        stepFrom( _currentNodeID, DialogueStepInput{}, 0 );
+        executeNode( findNextNode( _currentNodeID, DialogueStepInput{} ) );
         return true;
     }
 
     bool DialogueRunnerComponent::selectChoice( int32 choiceIndex )
     {
         if ( _state != DialogueRunnerState::WaitingForChoice )
+            return false;
+
+        // 없는 번호는 호출한 쪽의 잘못이다 - 대화를 끝내지 않고 선택을 계속 기다린다.
+        if ( choiceIndex < 0 || static_cast<size_t>( choiceIndex ) >= _listCurrentChoice.size() )
             return false;
 
         const DialogueAssetNode* pNode = _graph.findNode( _currentNodeID );
@@ -287,27 +291,33 @@ namespace sw
         }
     }
 
-    void DialogueRunnerComponent::stepFrom( int32 nodeID, const DialogueStepInput& input, int32 recursionDepth )
+    int32 DialogueRunnerComponent::findNextNode( int32 nodeID, const DialogueStepInput& input ) const
     {
         // 노드를 다시 찾는다 — Action 핸들러가 그래프를 갈았으면 앞서 찾은 노드 참조는 죽은 메모리다.
         const DialogueAssetNode* pNode = _graph.findNode( nodeID );
-        executeNode( pNode != nullptr ? DialogueCursor::step( _graph, *pNode, input ) : 0, recursionDepth );
+        return pNode != nullptr ? DialogueCursor::step( _graph, *pNode, input ) : 0;
     }
 
-    void DialogueRunnerComponent::executeNode( int32 nodeID, int32 recursionDepth )
+    void DialogueRunnerComponent::executeNode( int32 startNodeID )
+    {
+        // 재귀로 따라가면 깊이 제한에 닿기 전에 스택이 넘친다(Debug 에서 프레임이 크다) — 지나가는 노드는 반복으로 돈다.
+        int32 nodeID = startNodeID;
+        for ( int32 chainedCount = 0; chainedCount <= kMaxChainedNodes; ++chainedCount )
+        {
+            if ( runNode( nodeID, nodeID ) == false )
+                return;
+        }
+        SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueRunnerCyclicNodeTransition", "DialogueRunner: Cyclic node transition detected at node %#; breaking loop.", nodeID );
+        finishDialogue();
+    }
+
+    bool DialogueRunnerComponent::runNode( int32 nodeID, int32& outNextNodeID )
     {
         ++_transitionSerial;
-        if ( recursionDepth > 64 )
-        {
-            SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueRunnerCyclicNodeTransition", "DialogueRunner: Cyclic node transition detected at node %#; breaking loop.", nodeID );
-            finishDialogue();
-            return;
-        }
-
         if ( nodeID <= 0 )
         {
             finishDialogue();
-            return;
+            return false;
         }
 
         const DialogueAssetNode* pNode = _graph.findNode( nodeID );
@@ -315,7 +325,7 @@ namespace sw
         {
             SW_LOG_WARNING_ID( "DialogueRunnerComponent.NodeNotFoundGraph", "Node %# not found in graph.", nodeID );
             finishDialogue();
-            return;
+            return false;
         }
 
         _currentNodeID                = nodeID;
@@ -335,7 +345,7 @@ namespace sw
                 _currentText    = DialogueGraphAsset::resolveLocalizedText( node._text );
                 _listCurrentChoice.clear();
                 notifyLine();
-                return;
+                return false;
             }
             case DialogueAssetNodeType::Choice:
             {
@@ -350,7 +360,7 @@ namespace sw
                 }
 
                 notifyChoices();
-                return;
+                return false;
             }
             case DialogueAssetNodeType::Branch:
             {
@@ -364,22 +374,23 @@ namespace sw
                 const uint32 serialBeforeAction = _transitionSerial;
                 executeAction( node._actionCommand );
                 if ( _transitionSerial != serialBeforeAction )
-                    return;
+                    return false;
                 break;
             }
             case DialogueAssetNodeType::End:
             {
                 finishDialogue();
-                return;
+                return false;
             }
             case DialogueAssetNodeType::Count:
             {
                 SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueRunnerNodeUnknownType", "DialogueRunner: node %# has unknown type %#; finishing the dialogue.", nodeID, static_cast<uint32>( node._type ) );
                 finishDialogue();
-                return;
+                return false;
             }
         }
 
-        stepFrom( nodeID, input, recursionDepth + 1 );
+        outNextNodeID = findNextNode( nodeID, input );
+        return true;
     }
 } // namespace sw

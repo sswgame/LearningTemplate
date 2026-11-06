@@ -58,6 +58,8 @@ namespace sw
         PROPERTY( Category = "Dialogue", DisplayName = "Post Subtitles", Tooltip = "Also show each line as a subtitle (leave off when a dialogue UI already shows the text)" )
         bool _bPostSubtitles;
 
+        static constexpr int32 kMaxChainedNodes = 64; ///< 사람을 기다리지 않고 한 번에 지나가는 노드 수의 상한
+
         using OnDialogueLineFunc     = OnDialogueLineDelegate;
         using OnDialogueChoicesFunc  = OnDialogueChoicesDelegate;
         using OnDialogueEventFunc    = OnDialogueEventDelegate;
@@ -113,13 +115,15 @@ namespace sw
         bool evaluateCondition( const string& condition ) const;
         /** @brief `_graphPath` 의 그래프를 엽니다. 경로가 비었으면 아무것도 하지 않고, 못 열면 경고합니다. */
         void loadGraphFromPath();
+        /** @brief 노드 @p startNodeID 부터 실행합니다. 지나가는 노드(시작 · 분기 · 행동)는 이어서 돌고, 사람을 기다리거나 끝나면 멈춥니다. 서로를 가리키는 노드는 상한에서 경고하고 끝냅니다. */
+        void executeNode( int32 startNodeID );
         /**
-         * @brief 노드 하나를 실행합니다. 노드 종류별 할 일은 빠짐없는 switch 로 처리하고, 다음 노드는 `DialogueCursor::step` 이 정합니다.
+         * @brief 노드 하나를 실행합니다. 이어서 돌 노드가 있으면 true 와 그 id 입니다.
          * @details 모르는 타입은 경고하고 대화를 끝낸다. 대화가 멈춘 채 남지 않게 하려는 것이다.
          */
-        void executeNode( int32 nodeID, int32 recursionDepth = 0 );
-        /** @brief 노드를 지나 다음 노드를 실행합니다. 노드가 그새 사라졌으면 대화를 끝냅니다. */
-        void stepFrom( int32 nodeID, const DialogueStepInput& input, int32 recursionDepth );
+        [[nodiscard]] bool runNode( int32 nodeID, int32& outNextNodeID );
+        /** @brief 노드를 지나 다음 노드의 id 입니다. 노드가 그새 사라졌거나 다음이 없으면 0 입니다. */
+        int32 findNextNode( int32 nodeID, const DialogueStepInput& input ) const;
         /** @brief 상태를 Finished 로 두고 `_onFinished` 를 부릅니다. */
         void finishDialogue();
         void executeAction( string actionCmd );
