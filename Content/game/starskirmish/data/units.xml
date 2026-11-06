@@ -8,7 +8,7 @@
 <RTSCatalog supplyMax="200">
   <!-- 자원 -->
   <Unit id="minerals" name="Mineral Field" kind="Resource" resource="Minerals" amount="1500" footprint="1"/>
-  <Unit id="rich_minerals" name="Rich Mineral Field" kind="Resource" resource="Minerals" amount="900" footprint="1"/>
+  <Unit id="rich_minerals" _base="minerals" name="Rich Mineral Field" amount="900"/>
   <Unit id="geyser" name="Vespene Geyser" kind="Resource" resource="Gas" amount="2500" footprint="2"/>
 
   <!-- 건물 -->
@@ -16,9 +16,9 @@
   <Unit id="supply_depot" name="Supply Depot" kind="Building" hp="500" armor="1" footprint="2" provides="8" producedBy="worker" minerals="100" buildTime="25" sight="6"/>
   <Unit id="refinery" name="Refinery" kind="Building" extractor="true" hp="750" armor="1" footprint="2" producedBy="worker" minerals="75" buildTime="25"/>
   <Unit id="barracks" name="Barracks" kind="Building" hp="1000" armor="1" footprint="3" producedBy="worker" minerals="150" buildTime="50" requires="command_center"/>
-  <Unit id="academy" name="Academy" kind="Building" hp="600" armor="1" footprint="3" producedBy="worker" minerals="150" buildTime="50" requires="barracks"/>
-  <Unit id="factory" name="Factory" kind="Building" hp="1250" armor="1" footprint="3" producedBy="worker" minerals="200" gas="100" buildTime="60" requires="barracks"/>
-  <Unit id="starport" name="Starport" kind="Building" hp="1300" armor="1" footprint="3" producedBy="worker" minerals="150" gas="100" buildTime="55" requires="factory"/>
+  <Unit id="academy" _base="barracks" name="Academy" hp="600" requires="barracks"/>
+  <Unit id="factory" _base="barracks" name="Factory" hp="1250" minerals="200" gas="100" buildTime="60" requires="barracks"/>
+  <Unit id="starport" _base="factory" name="Starport" hp="1300" minerals="150" buildTime="55" requires="factory"/>
   <Unit id="bunker" name="Bunker" kind="Building" hp="350" armor="1" footprint="2" damage="12" range="5" cooldown="1" targets="Ground,Air" producedBy="worker" minerals="100" buildTime="25" requires="barracks" sight="8"/>
   <Unit id="missile_turret" name="Missile Turret" kind="Building" hp="200" footprint="2" damage="20" range="7" cooldown="1.2" targets="Air" producedBy="worker" minerals="75" buildTime="25" requires="academy" sight="11"/>
 

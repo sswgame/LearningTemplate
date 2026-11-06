@@ -20,17 +20,17 @@
   <Building id="water_supply" name="Water Supply" kind="Service" service="Water" range="40" walkerInterval="3" workers="4" size="2" cost="60" desirability="2" desirabilityRadius="2"/>
 
   <!-- 순회 서비스 -->
-  <Building id="shrine" name="Shrine to Osiris" kind="Service" service="Religion" range="40" walkerInterval="3" workers="2" size="1" cost="40" desirability="4" desirabilityRadius="2"/>
+  <Building id="shrine" _base="water_supply" name="Shrine to Osiris" service="Religion" workers="2" size="1" cost="40" desirability="4"/>
   <Building id="juggler" name="Juggler School" kind="Service" service="Entertainment" range="40" walkerInterval="3" workers="3" size="2" cost="50"/>
-  <Building id="apothecary" name="Apothecary" kind="Service" service="Health" range="40" walkerInterval="3" workers="3" size="1" cost="40" desirability="1" desirabilityRadius="1"/>
-  <Building id="scribe_school" name="Scribal School" kind="Service" service="Education" range="40" walkerInterval="4" workers="4" size="2" cost="80" desirability="3" desirabilityRadius="2"/>
+  <Building id="apothecary" _base="shrine" name="Apothecary" service="Health" workers="3" desirability="1" desirabilityRadius="1"/>
+  <Building id="scribe_school" _base="water_supply" name="Scribal School" service="Education" walkerInterval="4" cost="80" desirability="3"/>
   <Building id="tax_collector" name="Tax Collector" kind="Service" service="Tax" range="48" walkerInterval="3" workers="4" size="2" cost="80"/>
 
   <!-- 생산 — 범람원 농장은 해마다의 범람이 양을 정한다 -->
   <Building id="grain_farm" name="Grain Farm" kind="Producer" goods="grain" productionTime="10" amount="16" terrain="Floodplain" workers="6" size="3" cost="40" desirability="-2" desirabilityRadius="2"/>
-  <Building id="fig_farm" name="Fig Farm" kind="Producer" goods="figs" productionTime="10" amount="14" terrain="Floodplain" workers="6" size="3" cost="40" desirability="-2" desirabilityRadius="2"/>
+  <Building id="fig_farm" _base="grain_farm" name="Fig Farm" goods="figs" amount="14"/>
   <Building id="potter" name="Potter" kind="Producer" goods="pottery" productionTime="16" amount="6" workers="5" size="2" cost="60" desirability="-4" desirabilityRadius="2"/>
-  <Building id="brewery" name="Brewery" kind="Producer" goods="beer" productionTime="18" amount="6" workers="5" size="2" cost="60" desirability="-4" desirabilityRadius="2"/>
+  <Building id="brewery" _base="potter" name="Brewery" goods="beer" productionTime="18"/>
 
   <!-- 저장 · 시장 -->
   <Building id="granary" name="Granary" kind="Storage" goods="grain,figs" capacity="400" workers="4" size="3" cost="80" desirability="-2" desirabilityRadius="1"/>
@@ -39,7 +39,7 @@
 
   <!-- 장식 — 매력도만 -->
   <Building id="garden" name="Garden" kind="Decoration" size="1" cost="12" desirability="4" desirabilityRadius="3"/>
-  <Building id="statue" name="Small Statue" kind="Decoration" size="1" cost="30" desirability="6" desirabilityRadius="3"/>
+  <Building id="statue" _base="garden" name="Small Statue" cost="30" desirability="6"/>
   <Building id="plaza" name="Plaza" kind="Decoration" size="2" cost="40" desirability="8" desirabilityRadius="4"/>
 
   <!-- 집 단계 — 파라오의 이름(Crude Hut … Spacious Homestead) -->
