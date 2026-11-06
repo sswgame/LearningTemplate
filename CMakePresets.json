@@ -49,6 +49,15 @@
       }
     },
     {
+      "name": "Linux-Release",
+      "displayName": "Linux Ninja Release (Clang)",
+      "description": "Linux Release build — 텍스처 임포트가 Debug 보다 훨씬 빨라 게임 시나리오 체인은 이 구성으로 돈다",
+      "inherits": "base-linux",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
       "name": "base-shipping",
       "hidden": true,
       "cacheVariables": {
@@ -154,6 +163,10 @@
     {
       "name": "Linux-Debug",
       "configurePreset": "Linux-Debug"
+    },
+    {
+      "name": "Linux-Release",
+      "configurePreset": "Linux-Release"
     }
   ],
   "testPresets": [

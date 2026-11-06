@@ -351,41 +351,14 @@ namespace sw
         _settings._pDirectoryControl->drainControlCompletions( listCompletion );
         for ( const ServerDirectoryControlCompletion& completion : listCompletion )
         {
-            AdminReply reply;
-            switch ( completion._result )
-            {
-                case ServerDirectoryControlResult::Ok:
-                {
-                    reply._result = AdminResult::Ok;
-                    break;
-                }
-                case ServerDirectoryControlResult::Invalid:
-                {
-                    reply._result = AdminResult::InvalidRequest;
-                    break;
-                }
-                case ServerDirectoryControlResult::NotFound:
-                {
-                    reply._result = AdminResult::NotFound;
-                    break;
-                }
-                case ServerDirectoryControlResult::Unavailable:
-                {
-                    reply._result = AdminResult::Unavailable;
-                    break;
-                }
-            }
-            bool bFound = false;
-            for ( size_t pendingIndex = 0; pendingIndex < _listPendingCall.size(); ++pendingIndex )
-            {
-                if ( _listPendingCall[pendingIndex]._callID != completion._requestTag )
-                    continue;
-                finishCall( pendingIndex, reply );
-                bFound = true;
-                break;
-            }
-            if ( bFound == false )
-                SW_LOG_WARNING_ID( "AdminService.AdminServiceGotServerDirectory", "AdminService got a server directory completion for an unknown call %#", completion._requestTag );
+            AdminResult result = AdminResult::Unavailable;
+            if ( completion._result == ServerDirectoryControlResult::Ok )
+                result = AdminResult::Ok;
+            else if ( completion._result == ServerDirectoryControlResult::Invalid )
+                result = AdminResult::InvalidRequest;
+            else if ( completion._result == ServerDirectoryControlResult::NotFound )
+                result = AdminResult::NotFound;
+            finishForwardedCall( completion._requestTag, result );
         }
     }
 

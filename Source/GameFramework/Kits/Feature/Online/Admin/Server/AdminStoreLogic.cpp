@@ -142,10 +142,11 @@ namespace sw
                 if ( request._reasonCode.empty() == false )
                     state._reasonCode = request._reasonCode;
                 ServiceSanction::stageWrite( inoutTransaction, request._accountID, state );
-                inoutAudit._action        = "admin.sanction";
-                inoutAudit._after         = formatSanction( state );
-                outReply._sanction        = state;
-                const bool bLocksAccount  = request._sanctionKind != ServiceSanctionKind::ChatMute && request._untilMs > command._nowMs;
+                inoutAudit._action = "admin.sanction";
+                inoutAudit._after  = formatSanction( state );
+                outReply._sanction = state;
+                // 저장한 값으로 본다 - 영구 정지는 요청의 시각이 지났어도 영구로 남는다
+                const bool bLocksAccount  = request._sanctionKind != ServiceSanctionKind::ChatMute && state._arrUntilMs[static_cast<int32>( request._sanctionKind )] > command._nowMs;
                 outReply._bRevokeSessions = bLocksAccount ? SW_TRUE : SW_FALSE;
                 return AdminResult::Ok;
             }

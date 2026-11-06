@@ -142,7 +142,7 @@ namespace sw
         PROPERTY( MaxCount = AdminProtocol::kMaxBulkCount )
         vector<AccountID> _listAccountID{}; ///< BulkMail 에서 쓰며 12개 이하이다. 우편 하나가 쓰기 넷이라 감사와 멱등 기록까지 한 트랜잭션(64) 안에 들어간다
         PROPERTY( MaxCount = AdminProtocol::kMaxTextSize )
-        string _displayName{}; ///< LookupAccount 에서 계정 id 대신 쓴다. 이 프로세스에 접속해 있는 계정만 찾을 수 있다
+        string _displayName{}; ///< LookupAccount 에서 계정 id 대신 쓴다. 계정 키트의 이름 색인으로 찾으므로 접속하지 않은 계정도 찾는다
         PROPERTY( MaxCount = ServiceAuditEntry::kMaxTextSize )
         string _subject{}; ///< ListAudit 의 주체 접두어이다(예: `acct.<16진>/`)
         PROPERTY( MaxCount = LedgerConstant::kMaxAssetIDSize )
@@ -192,9 +192,9 @@ namespace sw
         PROPERTY()
         ServiceReportStatus _reportStatus{ ServiceReportStatus::Open }; ///< ListReports 는 Open 이면 열린 목록, ResolveReport 는 Resolved 나 Dismissed
         PROPERTY( Min = 0, Max = 1 )
-        uint8 _bRefund{ SW_FALSE };
+        uint8 _bRefund{ SW_FALSE }; ///< AdjustAsset 회수에서 환불이나 결제 취소로 회수하는 경우이다. 잔액이 모자라면 빚으로 남기며 사유는 "refund.revoke" 이다
         PROPERTY( Min = 0, Max = 1 )
-        uint8 _bLiteralText{ SW_FALSE }; ///< PostNotice 의 `_body` 가 GM 이 쓴 문구면 1, 로컬라이제이션 키면 0 이다 ///< AdjustAsset 회수에서 환불이나 결제 취소로 회수하는 경우이다. 잔액이 모자라면 빚으로 남기며 사유는 "refund.revoke" 이다
+        uint8 _bLiteralText{ SW_FALSE }; ///< PostNotice 의 `_body` 가 GM 이 쓴 문구면 1, 로컬라이제이션 키면 0 이다
     };
 } // namespace sw
 

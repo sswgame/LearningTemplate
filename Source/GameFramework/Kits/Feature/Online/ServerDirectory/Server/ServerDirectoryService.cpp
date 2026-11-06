@@ -289,6 +289,7 @@ namespace sw
                 continue;
             hash = Internal::combineText( hash, window._scope );
             hash = Internal::combineText( hash, window._messageKey );
+            hash = HashUtil::combine( hash, static_cast<uint64>( window._startMs ) );
             hash = HashUtil::combine( hash, static_cast<uint64>( window._endMs ) );
         }
         for ( const ServiceNotice& notice : _listNotice )
@@ -298,6 +299,9 @@ namespace sw
             hash = HashUtil::combine( hash, notice._noticeID );
             hash = Internal::combineText( hash, notice._text );
             hash = HashUtil::combine( hash, static_cast<uint64>( static_cast<int64>( notice._priority ) ) );
+            hash = HashUtil::combine( hash, static_cast<uint64>( notice._startMs ) );
+            hash = HashUtil::combine( hash, static_cast<uint64>( notice._endMs ) );
+            hash = HashUtil::combine( hash, notice._bLiteralText );
         }
         return hash;
     }
