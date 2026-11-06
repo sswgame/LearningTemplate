@@ -303,9 +303,10 @@ namespace
         vector<string>                    _listHistoryToken{};
         vector<string>                    _listTransactionPath{};
         int32                             _transactionStatus{ HTTPConstant::kStatusOk };
+        int32                             _historyStatus{ HTTPConstant::kStatusOk };
         int64                             _nowMs{ kNowMs };
 
-        AppleRig()
+        explicit AppleRig( bool bSandboxServer = false )
         {
             StoreTestUtil::startServer( _http, HTTPRequestFunction::create<&AppleRig::onRequest>( this ) );
             AppleReceiptSettings settings;
@@ -318,13 +319,14 @@ namespace
             settings._historyPollIntervalMs = kPollMs;
             settings._historyLookbackMs     = kLookbackMs;
             settings._bRequireAppleMarkers  = SW_FALSE;
+            settings._bSandboxServer        = bSandboxServer ? SW_TRUE : SW_FALSE;
             _pValidator                     = make_unique<AppleReceiptValidator>( std::move( settings ), &_security, &_http._client );
         }
 
         void onRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse )
         {
             string body;
-            if ( request._path.find( "/notification/history" ) != string::npos )
+            if ( request._path == "/inApps/v1/notifications/history" ) // 애플 문서의 주소 그대로다 — 전에는 단수(`notification`)로 보내 모든 조회가 404 였다
             {
                 JSONDocument document;
                 int64        startMs = 0;
@@ -342,6 +344,7 @@ namespace
                 {
                     body = R"({"hasMore":false,"notificationHistory":[]})";
                 }
+                outResponse._statusCode = _historyStatus;
             }
             else
             {
@@ -876,6 +879,25 @@ SW_TEST_CASE( AppleReceiptValidatorTest, MoreWithoutTokenKeepsTheWindow )
     SW_REQUIRE_EQUAL( size_t( 3 ), rig._listHistoryStart.size() );
     SW_EXPECT_EQUAL( kNowMs - kLookbackMs, rig._listHistoryStart[1] );
     SW_EXPECT_EQUAL( kNowMs + kPollMs - kLookbackMs, rig._listHistoryStart[2] );
+}
+
+/** @brief [AppleReceiptValidatorTest] 알림 이력의 시작점 한계는 환경을 따른다(애플 문서: 운영 180 일, 샌드박스 30 일, 코드는 하루 여유) — 샌드박스에 180 일을 쓰면 긴 중단 뒤 조회가 영원히 거절된다 */
+SW_TEST_CASE( AppleReceiptValidatorTest, HistoryLimitFollowsTheEnvironment )
+{
+    SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryFailed" );
+    constexpr int64      kDayMs = 24ll * 60 * 60 * 1000;
+    AppleReceiptSettings settings;
+    SW_EXPECT_EQUAL( 179 * kDayMs, settings.getHistoryMaxAgeMs() );
+    settings._bSandboxServer = SW_TRUE;
+    SW_EXPECT_EQUAL( 29 * kDayMs, settings.getHistoryMaxAgeMs() );
+
+    AppleRig rig( true );
+    rig._historyStatus = 500;
+    rig.pump();
+    rig._nowMs += 40 * kDayMs; // 샌드박스 한계를 넘은 중단
+    rig.pump();
+    SW_REQUIRE_EQUAL( size_t( 2 ), rig._listHistoryStart.size() );
+    SW_EXPECT_EQUAL( rig._nowMs - 29 * kDayMs, rig._listHistoryStart[1] );
 }
 
 /** @brief [AppleReceiptValidatorTest] 종료: 날아가던 검증은 한 번만 Retry 로 끝나고 새 조회를 보내지 않는다 */

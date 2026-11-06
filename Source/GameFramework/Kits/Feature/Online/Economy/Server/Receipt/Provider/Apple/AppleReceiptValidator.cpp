@@ -32,7 +32,7 @@ namespace sw
 {
     AppleReceiptValidator::AppleReceiptValidator( AppleReceiptSettings settings, INetSecurityProvider* pSecurity, HTTPClient* pHTTPClient )
         : StoreReceiptValidator{
-              settings._buyerRule, ReceiptPollWindow{ settings._historyPollIntervalMs, settings._historyLookbackMs, settings._historyMaxAgeMs },
+              settings._buyerRule, ReceiptPollWindow{ settings._historyPollIntervalMs, settings._historyLookbackMs, settings.getHistoryMaxAgeMs() },
               pHTTPClient
     },
         _settings{ std::move( settings ) },
@@ -67,7 +67,7 @@ namespace sw
 
     string AppleReceiptValidator::makeHistoryURL( string_view paginationToken ) const
     {
-        string url = _settings._baseURL + "/inApps/v1/notification/history";
+        string url = _settings._baseURL + "/inApps/v1/notifications/history";
         if ( paginationToken.empty() == false )
             url += "?paginationToken=" + HTTPUtil::encodePercent( paginationToken );
         return url;
