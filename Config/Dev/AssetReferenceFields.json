@@ -14,6 +14,6 @@
         "_clipPath", "_cookieTexturePath", "_enemyPrefab", "_faceVoice", "fit", "fitTables", "from", "inputMap", "items", "_layoutPath",
         "_listDefaultGrowingModel", "_listExtensionShader", "_listGrowingModel", "_listRenderPassRef", "loadingScreen", "localizationProject",
         "material", "mesh", "normalAtlas", "_path", "path", "prefab", "rig", "_rigWeaponSockets", "screen", "_shaderPath", "shaderPath", "skeleton",
-        "sockets", "source_skeleton", "startMap", "target_skeleton", "_texture", "tileSet", "_spriteLibraryPath"
+        "sockets", "source_skeleton", "startMap", "target_skeleton", "_texture", "tileSet", "_spriteLibraryPath", "collection"
     ]
 }

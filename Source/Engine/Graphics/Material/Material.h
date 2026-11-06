@@ -42,6 +42,7 @@ namespace sw
     };
 
     class IRHIDevice;
+    class MaterialParameterCollection;
 
     /// @brief 셰이더 퍼뮤테이션과 패킹한 머티리얼 바이트를 가진 머티리얼 에셋입니다. 게임 스레드 객체입니다.
     /*
@@ -315,12 +316,27 @@ namespace sw
 
         /** @brief Desc 를 런타임 상태에 적용합니다. */
         void applyDescToRuntime();
+        /** @brief 프로퍼티의 묶음 칸으로 묶음 목록을 다시 만듭니다(값은 다음 동기화에 받는다). */
+        void rebuildCollectionBindings();
+        /** @brief 묶음의 세대가 바뀐 프로퍼티를 지금 값으로 다시 패킹합니다(`syncRenderState`). 그래서 직접 그리는 길과 인스턴스가 부모 바이트를 복사하는 길이 함께 따른다. */
+        void syncParameterCollections();
         /** @brief 서수 @p ordinal 의 텍스처 로드가 끝났으면 대신 빌린 텍스처를 놓고 진짜(실패면 누락 체커)로 바꿉니다(`refreshTextureBindings`). */
         void resolveArrivedTexture( TextureCache& textures, size_t ordinal );
         /** @brief 런타임 프로퍼티를 Desc 에 다시 씁니다(저장용). */
         void syncDescFromRuntime() const;
 
     private:
+        /** @brief 프로퍼티 하나와 머티리얼 파라미터 묶음의 연결입니다. */
+        struct CollectionBinding
+        {
+            hashed_string                           _property{};
+            hashed_string                           _parameter{};
+            string                                  _path{};
+            shared_ptr<MaterialParameterCollection> _collection{};
+            uint32                                  _appliedGeneration{ 0 }; ///< 마지막으로 패킹한 묶음 세대(묶음의 세대는 1 부터다)
+            uint8                                   _bFailed{ SW_FALSE };    ///< 묶음 · 이름이 틀렸다. 오류는 한 번 남겼고 파일의 값으로 그린다
+        };
+
         /** @brief initialize 가 받은 에셋 경로입니다. 디바이스가 바뀌면 이 경로만으로 스스로 복원합니다. */
         string                               _assetPath;
         MaterialDesc                         _desc;
@@ -340,6 +356,7 @@ namespace sw
         vector<string>                       _listBorrowedTexturePath; ///< 위와 같은 순서로 대신 빌린 경로(`acquire` · `release` 짝) — 로드 중이면 로드 중 텍스처, 실패면 누락 텍스처, 진짜가 붙었으면 빈 문자열
         vector<RHIDescriptorIndex>           _listMaterialTextureSRV;  ///< 위 경로와 같은 순서의 백엔드 SRV 인덱스(에뮬레이션 백엔드의 슬롯 바인딩용)
         vector<hashed_string>                _listMaterialTextureName; ///< 위와 같은 순서의 프로퍼티 이름(인스턴스가 같은 슬롯을 덮어쓴다)
+        vector<CollectionBinding>            _listCollectionBinding;   ///< 묶음을 가리키는 프로퍼티(`MaterialParameterCollection`)
 
         mutable vector<string> _listCachedDefine;
         mutable uint64         _cachedPermutationHash;

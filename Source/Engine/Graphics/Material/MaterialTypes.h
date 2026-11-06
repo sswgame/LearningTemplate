@@ -114,6 +114,10 @@ namespace sw
         string _group;
         string _tooltip;
         string _shaderKeyword;
+        /** @brief 값을 주는 머티리얼 파라미터 묶음(`MaterialParameterCollection`)입니다. 비면 묶지 않습니다. */
+        string _collectionPath;
+        /** @brief 묶음 안의 이름입니다. `_collectionPath` 와 함께 적습니다. */
+        string _collectionParameter;
 
         float32            _min;
         float32            _max;

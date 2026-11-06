@@ -11,6 +11,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Material/MaterialPacking.h"
+#include "Engine/Graphics/Material/MaterialParameterCollection.h"
 #include "Engine/Graphics/Material/MaterialPermutation.h"
 #include "Engine/Graphics/Material/MaterialXML.h"
 #include "Engine/Graphics/RHI/Diagnostics/BindlessIndexValidator.h"
@@ -78,6 +79,7 @@ namespace sw
         , _listBorrowedTexturePath{}
         , _listMaterialTextureSRV{}
         , _listMaterialTextureName{}
+        , _listCollectionBinding{}
         , _listCachedDefine{}
         , _cachedPermutationHash{ 0 }
         , _cachedShaderPathHash{ 0 }
@@ -373,6 +375,58 @@ namespace sw
         if ( _pRHIDevice != nullptr )
             (void)ensureShaderLayout( _pRHIDevice->getBackendType() ); // 실패 오류는 맞추는 쪽이 남겼고, 바이트가 비어 렌더 스레드가 건너뛴다
         (void)refreshTextureBindings();                                // 다시 올리거나 비동기 로드가 끝난 텍스처의 새 SRV(캐시 세대가 그대로면 비교만)
+        syncParameterCollections();                                    // 묶음의 값이 바뀌었으면 프로퍼티를 다시 패킹한다(묶은 칸이 없으면 빈 순회)
+    }
+
+    void Material::rebuildCollectionBindings()
+    {
+        _listCollectionBinding.clear();
+        for ( const MaterialProperty& prop : _data._listProperty )
+        {
+            if ( prop._collectionPath.empty() )
+                continue;
+            CollectionBinding& binding = _listCollectionBinding.emplace_back();
+            binding._property          = hashed_string( string_view( prop._name ) );
+            binding._parameter         = hashed_string( string_view( prop._collectionParameter ) );
+            binding._path              = prop._collectionPath;
+        }
+    }
+
+    void Material::syncParameterCollections()
+    {
+        for ( CollectionBinding& binding : _listCollectionBinding )
+        {
+            if ( binding._bFailed )
+                continue;
+            if ( binding._collection == nullptr )
+                binding._collection = MaterialParameterCollection::acquire( AssetID{ binding._path } );
+            binding._bFailed = binding._collection == nullptr ? SW_TRUE : SW_FALSE; // 이유는 읽기가 남겼다 — 프로퍼티는 파일의 값으로 그린다
+            // 레이아웃 오류로 바이트를 비웠으면 쓰지 않는다 — 틀린 바이트가 GPU 에 올라가지 않게 한 상태를 되살리지 않는다.
+            if ( binding._bFailed || binding._appliedGeneration == binding._collection->getGeneration() || _data._bytes.empty() )
+                continue;
+            const float4*           pValue = binding._collection->findValue( binding._parameter );
+            const MaterialProperty* pProp  = findProperty( binding._property );
+            uint32                  count{ 0 };
+            if ( pProp != nullptr )
+            {
+                const bool bScalar = pProp->_type == MaterialPropertyType::Float || pProp->_type == MaterialPropertyType::Range;
+                const bool bVector = pProp->_type == MaterialPropertyType::Float4 || pProp->_type == MaterialPropertyType::Color;
+                count              = bScalar ? 1u : pProp->_type == MaterialPropertyType::Float2 ? 2u
+                                              : pProp->_type == MaterialPropertyType::Float3     ? 3u
+                                              : bVector                                          ? 4u
+                                                                                                 : 0u;
+            }
+            if ( pValue == nullptr || count == 0 )
+            {
+                SW_LOG_ERROR_ID( "Material.CollectionBindingInvalid", "Material '%#': property '%#' binds '%#' of '%#' - no such parameter, or the property is not a float, vector or colour", _desc._name, binding._property.c_str(), binding._parameter.c_str(), binding._path );
+                binding._bFailed = SW_TRUE;
+                continue;
+            }
+            if ( setParameter( binding._property, MaterialParameterCollection::makePropertyText( *pValue, count ) ) )
+                binding._appliedGeneration = binding._collection->getGeneration();
+            else
+                binding._bFailed = SW_TRUE; // 패커가 이유를 남겼다
+        }
     }
 
     MaterialRenderBinding Material::getRenderBinding()
@@ -1107,6 +1161,11 @@ namespace sw
                 MaterialXML::appendAttribute( item, "tooltip", prop._tooltip );
             if ( prop._shaderKeyword.empty() == false )
                 MaterialXML::appendAttribute( item, "shaderKeyword", prop._shaderKeyword );
+            if ( prop._collectionPath.empty() == false )
+            {
+                MaterialXML::appendAttribute( item, "collection", prop._collectionPath );
+                MaterialXML::appendAttribute( item, "collectionParameter", prop._collectionParameter );
+            }
             if ( prop._type == MaterialPropertyType::Range )
             {
                 item.appendAttribute( "min", prop._min );
@@ -1217,6 +1276,7 @@ namespace sw
         // 표시가 남으면 XML 순서 바이트와 옛 stride 가 함께 GPUScene 에 올라간다(셰이더가 읽는 자리에 다른 프로퍼티 값).
         _bShaderLayoutSynced = SW_FALSE;
         _elementStride       = 0;
+        rebuildCollectionBindings();
         rebuildPackedBuffer();
     }
 

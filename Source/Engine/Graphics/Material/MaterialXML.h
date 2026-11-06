@@ -43,6 +43,10 @@ namespace sw
         string _tooltip{};
         PROPERTY()
         string _shaderKeyword{};
+        PROPERTY( Tooltip = "Material parameter collection (.matparams.xml) that gives this property its value" )
+        string _collection{};
+        PROPERTY( Tooltip = "Name inside the collection; required with _collection" )
+        string _collectionParameter{};
         PROPERTY()
         float32 _min{ 0.0f };
         PROPERTY()

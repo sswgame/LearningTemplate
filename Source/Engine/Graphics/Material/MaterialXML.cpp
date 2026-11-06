@@ -82,20 +82,27 @@ namespace sw
         if ( fields._type.empty() == false )
             prop._type = MaterialPacking::stringToType( fields._type, size );
         // 기본값과 현재 값은 한쪽만 적으면 다른 쪽이 따라간다.
-        prop._defaultValue  = fields._defaultValue.empty() ? fields._value : fields._defaultValue;
-        prop._value         = fields._value.empty() ? prop._defaultValue : fields._value;
-        prop._assetPath     = fields._assetPath;
-        prop._enumType      = fields._enumType;
-        prop._displayName   = fields._displayName;
-        prop._group         = fields._group;
-        prop._tooltip       = fields._tooltip;
-        prop._shaderKeyword = fields._shaderKeyword;
-        prop._min           = fields._min;
-        prop._max           = fields._max;
-        prop._bHDR          = fields._bHdr ? SW_TRUE : SW_FALSE;
-        prop._bSRGB         = fields._bSrgb ? SW_TRUE : SW_FALSE;
-        prop._bHidden       = fields._bHidden ? SW_TRUE : SW_FALSE;
-        prop._bAdvanced     = fields._bAdvanced ? SW_TRUE : SW_FALSE;
+        prop._defaultValue        = fields._defaultValue.empty() ? fields._value : fields._defaultValue;
+        prop._value               = fields._value.empty() ? prop._defaultValue : fields._value;
+        prop._assetPath           = fields._assetPath;
+        prop._enumType            = fields._enumType;
+        prop._displayName         = fields._displayName;
+        prop._group               = fields._group;
+        prop._tooltip             = fields._tooltip;
+        prop._shaderKeyword       = fields._shaderKeyword;
+        prop._collectionPath      = fields._collection;
+        prop._collectionParameter = fields._collectionParameter;
+        if ( prop._collectionPath.empty() != prop._collectionParameter.empty() )
+        {
+            SW_LOG_ERROR_ID( "Material.CollectionBindingHalf", "Material property '%#' needs both collection and collectionParameter", prop._name );
+            return false;
+        }
+        prop._min       = fields._min;
+        prop._max       = fields._max;
+        prop._bHDR      = fields._bHdr ? SW_TRUE : SW_FALSE;
+        prop._bSRGB     = fields._bSrgb ? SW_TRUE : SW_FALSE;
+        prop._bHidden   = fields._bHidden ? SW_TRUE : SW_FALSE;
+        prop._bAdvanced = fields._bAdvanced ? SW_TRUE : SW_FALSE;
         if ( MaterialXMLInternal::parseEnumEntries( item, string_view{ item.getAttributeText( "name" ) }, prop._listEnumEntry ) == false )
             return false;
         // 불리언 · 키워드 값은 읽을 때 확인한다 — 틀린 글이 패킹 · 순열 계산에서 조용히 false 가 되지 않게.
