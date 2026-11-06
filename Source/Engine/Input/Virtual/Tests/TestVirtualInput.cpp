@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Input/Virtual/InputReplay.h"
@@ -207,4 +208,20 @@ SW_TEST_CASE( InputReplayTest, BrokenFilesAreRefused )
     vector<uint8> hugeCount = good;
     writeFrameCount( hugeCount, 0xFFFFFFFFu );
     refuses( hugeCount );
+
+    // 어느 길이로 잘려도 거절한다. 머리말 뒤의 이름 · 프레임 시간 · 이벤트 수는 형식이 정한 차례다.
+    for ( size_t length = 1; length < good.size(); ++length )
+    {
+        refuses( vector<uint8>( good.begin(), good.begin() + static_cast<ptrdiff_t>( length ) ) );
+    }
+
+    // 머리말 16 바이트 · 이름 "kept" 뒤가 프레임 시간이고 그 뒤가 이벤트 수다.
+    const uint32  nanBits   = 0x7FC00000u;
+    const uint32  hugeEvent = 0xFFFFFFFFu;
+    vector<uint8> nanDelta  = good;
+    Memory::copy( nanDelta.data() + 20, &nanBits, sizeof( nanBits ) );
+    refuses( nanDelta );
+    vector<uint8> forgedEvents = good;
+    Memory::copy( forgedEvents.data() + 24, &hugeEvent, sizeof( hugeEvent ) );
+    refuses( forgedEvents );
 }

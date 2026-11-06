@@ -5,6 +5,7 @@
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Hash/HashUtil.h"
+#include "Core/Serialization/ByteStream.h"
 #include "Core/String/hashed_string.h"
 
 namespace sw
@@ -87,41 +88,40 @@ namespace sw
         _mapText.clear();
         if ( pData == nullptr || size < Internal::kHeaderFixedBytes + Internal::kCountBytes + Internal::kChecksumBytes )
             return Internal::fail( pOutError, "locres is too small" );
-        if ( LittleEndianUtil::readUint32( pData ) != kMagic )
+        // 끝의 체크섬을 뺀 앞부분만 읽는다 — 표가 체크섬 자리를 읽지 못한다.
+        const size_t checksumPos = size - Internal::kChecksumBytes;
+        ByteReader   reader{ pData, checksumPos };
+        ByteReader   checksumReader{ pData + checksumPos, Internal::kChecksumBytes };
+        if ( reader.readUint32() != kMagic )
             return Internal::fail( pOutError, "locres magic mismatch" );
-        if ( LittleEndianUtil::readUint32( pData + 4 ) != kVersion )
+        if ( reader.readUint32() != kVersion )
             return Internal::fail( pOutError, "locres version is not supported" );
 
-        const size_t checksumPos = size - Internal::kChecksumBytes;
-        if ( LittleEndianUtil::readUint64( pData + checksumPos ) != Internal::computeChecksum( pData, checksumPos ) )
+        if ( checksumReader.readUint64() != Internal::computeChecksum( pData, checksumPos ) )
             return Internal::fail( pOutError, "locres checksum mismatch" );
 
-        const uint32 cultureLength = LittleEndianUtil::readUint32( pData + 8 );
-        size_t       position      = Internal::kHeaderFixedBytes;
-        if ( cultureLength > checksumPos - position )
+        string_view cultureView;
+        if ( reader.readStringView( cultureView ) == false )
             return Internal::fail( pOutError, "locres culture is out of range" );
-        string culture( reinterpret_cast<const utf8*>( pData + position ), cultureLength );
-        position += cultureLength;
+        string culture( cultureView );
 
-        if ( Internal::kCountBytes > checksumPos - position )
+        const uint32 entryCount = reader.readUint32();
+        const uint32 blobBytes  = reader.readUint32();
+        if ( reader.hasOverflowed() )
             return Internal::fail( pOutError, "locres header is truncated" );
-        const uint32 entryCount = LittleEndianUtil::readUint32( pData + position );
-        const uint32 blobBytes  = LittleEndianUtil::readUint32( pData + position + 4 );
-        position += Internal::kCountBytes;
 
         const uint64 tableBytes = static_cast<uint64>( entryCount ) * Internal::kEntryBytes;
-        if ( tableBytes + blobBytes != checksumPos - position )
+        if ( tableBytes + blobBytes != reader.getRemainingByteCount() )
             return Internal::fail( pOutError, "locres sizes do not match the file" );
-        const uint8* pTable = pData + position;
-        const uint8* pBlob  = pTable + tableBytes;
+        ByteReader   table{ pData + reader.getOffset(), static_cast<size_t>( tableBytes ) };
+        const uint8* pBlob = pData + reader.getOffset() + tableBytes;
 
         map<uint64, string> mapText;
         for ( uint32 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
         {
-            const uint8* pEntry = pTable + static_cast<size_t>( entryIndex ) * Internal::kEntryBytes;
-            const uint64 hash   = LittleEndianUtil::readUint64( pEntry );
-            const uint32 offset = LittleEndianUtil::readUint32( pEntry + 8 );
-            const uint32 length = LittleEndianUtil::readUint32( pEntry + 12 );
+            const uint64 hash   = table.readUint64();
+            const uint32 offset = table.readUint32();
+            const uint32 length = table.readUint32();
             if ( static_cast<uint64>( offset ) + length > blobBytes )
                 return Internal::fail( pOutError, "locres text is out of range" );
             mapText[hash] = string( reinterpret_cast<const utf8*>( pBlob + offset ), length );

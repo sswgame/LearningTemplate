@@ -333,6 +333,30 @@ SW_TEST_CASE( MeshVertexAnimationTest, ReadRejectsBadFrameRate )
     }
 }
 
+/** @brief [MeshVertexAnimationTest] 어느 길이로 잘려도, 경계에 NaN 이 있어도 읽지 않고 비운다 */
+SW_TEST_CASE( MeshVertexAnimationTest, EveryTruncatedLengthAndNonFiniteBoundsAreRejected )
+{
+    SW_EXPECT_LOG( "MeshVertexAnimation.VertexAnimationNotSWVA" );
+    SW_EXPECT_LOG( "MeshVertexAnimation.VertexAnimationMalformedFrames" );
+    vector<uint8> bytes;
+    MeshVertexAnimationTestUtil::makeRamp( SW_FALSE ).makeBytes( bytes );
+    for ( size_t length = 0; length < bytes.size(); ++length )
+    {
+        MeshVertexAnimation read;
+        SW_EXPECT_FALSE( read.readFromBytes( bytes.data(), length, "truncated" ) );
+        SW_EXPECT_TRUE( read.isEmpty() );
+    }
+    // 머리의 경계 중심(28) · 반 크기(40)는 그대로 샘플 위치가 된다.
+    for ( const size_t offset : { size_t{ 28 }, size_t{ 40 } } )
+    {
+        vector<uint8> patched = bytes;
+        MeshVertexAnimationTestUtil::patch( patched, offset, std::numeric_limits<float32>::quiet_NaN() );
+        MeshVertexAnimation read;
+        SW_EXPECT_FALSE( read.readFromBytes( patched.data(), patched.size(), "bounds" ) );
+        SW_EXPECT_TRUE( read.isEmpty() );
+    }
+}
+
 /**
  * @brief [MeshVertexAnimationTest] 쿠킹본 경로는 메시 확장자를 클립 소문자 + `.vat` 로 바꾼다. `.mesh` 가 아니거나 클립 이름이 없으면 빈 문자열이다
  */

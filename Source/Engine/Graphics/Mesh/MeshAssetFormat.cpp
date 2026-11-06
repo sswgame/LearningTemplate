@@ -8,6 +8,7 @@
 #include "Core/Math/NormalizedInt.h"
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Content/AssetIO.h"
 
@@ -70,19 +71,13 @@ namespace sw
             }
 
             /** @brief UV 경계를 머리에서 읽습니다. 유한하지 않거나 최대가 최소보다 작으면 false 입니다. */
-            [[nodiscard]] static bool readUvBounds( const uint8* pData, UvBounds& outBounds )
+            [[nodiscard]] static bool readUvBounds( ByteReader& reader, UvBounds& outBounds )
             {
-                outBounds._arrMin[0] = LittleEndianUtil::readFloat32( pData + 0 );
-                outBounds._arrMin[1] = LittleEndianUtil::readFloat32( pData + 4 );
-                outBounds._arrMax[0] = LittleEndianUtil::readFloat32( pData + 8 );
-                outBounds._arrMax[1] = LittleEndianUtil::readFloat32( pData + 12 );
-                for ( uint32 axis = 0; axis < 2; ++axis )
-                {
-                    const bool bValid = MathUtil::isFinite( outBounds._arrMin[axis] ) && MathUtil::isFinite( outBounds._arrMax[axis] ) && outBounds._arrMin[axis] <= outBounds._arrMax[axis];
-                    if ( bValid == false )
-                        return false;
-                }
-                return true;
+                outBounds._arrMin[0] = reader.readFloat32();
+                outBounds._arrMin[1] = reader.readFloat32();
+                outBounds._arrMax[0] = reader.readFloat32();
+                outBounds._arrMax[1] = reader.readFloat32();
+                return reader.hasOverflowed() == false && outBounds._arrMin[0] <= outBounds._arrMax[0] && outBounds._arrMin[1] <= outBounds._arrMax[1];
             }
 
             /** @brief UV 한 성분을 경계 안의 [0, 1] 로 옮겨 `unorm16` 으로 담습니다. 경계 폭이 0 이면 0 입니다. */
@@ -106,11 +101,12 @@ namespace sw
                 LittleEndianUtil::appendUint16( outBytes, static_cast<uint16>( packed._v.getRaw() ) );
             }
 
-            /** @brief `appendOctahedral` 로 쓴 4 바이트를 단위 벡터로 풀고 @p pCursor 를 옮깁니다. */
-            static float3 readOctahedral( const uint8*& pCursor )
+            /** @brief `appendOctahedral` 로 쓴 4 바이트를 단위 벡터로 풉니다. */
+            static float3 readOctahedral( ByteReader& reader )
             {
-                const OctahedralNormal packed{ snorm16::fromRaw( static_cast<int16>( LittleEndianUtil::readUint16( pCursor ) ) ), snorm16::fromRaw( static_cast<int16>( LittleEndianUtil::readUint16( pCursor + 2 ) ) ) };
-                pCursor += 4;
+                const int16            u = static_cast<int16>( reader.readUint16() );
+                const int16            v = static_cast<int16>( reader.readUint16() );
+                const OctahedralNormal packed{ snorm16::fromRaw( u ), snorm16::fromRaw( v ) };
                 return packed.toNormal();
             }
             /** @brief 모프 타깃 덩어리의 이름입니다. */
@@ -162,20 +158,16 @@ namespace sw
                 }
             }
 
-            /** @brief 인덱스 @p indexCount 개를 읽어 @p pCursor 를 옮깁니다. 삼각형이 아니거나 번호가 @p vertexCount 를 넘으면 false 입니다. */
-            [[nodiscard]] static bool readIndices( const uint8*& pCursor, uint32 indexCount, uint32 vertexCount, vector<uint32>& outListIndex )
+            /** @brief 인덱스 @p indexCount 개를 읽습니다. 삼각형이 아니거나 번호가 @p vertexCount 를 넘으면 false 입니다. */
+            [[nodiscard]] static bool readIndices( ByteReader& reader, uint32 indexCount, uint32 vertexCount, vector<uint32>& outListIndex )
             {
                 if ( indexCount == 0 || indexCount % 3 != 0 )
                     return false;
-                outListIndex.resize( indexCount );
-                for ( uint32& index : outListIndex )
+                return reader.readList( outListIndex, indexCount, sizeof( uint32 ), [&]( uint32& index ) -> bool
                 {
-                    index = LittleEndianUtil::readUint32( pCursor );
-                    pCursor += sizeof( uint32 );
-                    if ( index >= vertexCount )
-                        return false;
-                }
-                return true;
+                    index = reader.readUint32();
+                    return index < vertexCount;
+                } );
             }
 
             /** @brief 낮은 상세 단계 덩어리(`LODS`)를 씁니다 — 단계 수, 단계마다 임계값 · 정점 수 · 인덱스 수 · 정점 · 인덱스. 단계가 없으면 쓰지 않습니다. */
@@ -200,29 +192,16 @@ namespace sw
              * @brief 낮은 상세 단계 덩어리 내용을 읽습니다. 길이 · 탄젠트가 맞지 않으면 false 입니다.
              * @details 정점 수와 임계값의 뜻(삼각형 · 내려가는 임계값 · 스킨 없는 메시)은 메시가 다시 본다(`Mesh::setLODs`) — 규칙은 한 곳에 둔다.
              */
-            [[nodiscard]] static bool readLODChunk( const uint8* pChunk, const uint8* pChunkEnd, const UvBounds& uvBounds, vector<MeshLODLevel>& outListLevel )
+            [[nodiscard]] static bool readLODChunk( ByteReader& chunk, const UvBounds& uvBounds, vector<MeshLODLevel>& outListLevel )
             {
-                if ( pChunkEnd - pChunk < 4 )
-                    return false;
-                const uint32 levelCount = LittleEndianUtil::readUint32( pChunk );
-                pChunk += 4;
-                for ( uint32 levelIndex = 0; levelIndex < levelCount; ++levelIndex )
+                const bool bRead = chunk.readCountedList( outListLevel, sizeof( uint32 ) * 3, [&]( MeshLODLevel& level ) -> bool
                 {
-                    if ( pChunkEnd - pChunk < 12 )
-                        return false;
-                    MeshLODLevel level{};
-                    level._screenSize        = LittleEndianUtil::readFloat32( pChunk );
-                    const uint32 vertexCount = LittleEndianUtil::readUint32( pChunk + 4 );
-                    const uint32 indexCount  = LittleEndianUtil::readUint32( pChunk + 8 );
-                    pChunk += 12;
-                    const uint64 bodySize = static_cast<uint64>( vertexCount ) * MeshAssetFormat::kVertexSize + static_cast<uint64>( indexCount ) * sizeof( uint32 );
-                    if ( static_cast<uint64>( pChunkEnd - pChunk ) < bodySize )
-                        return false;
-                    if ( readVertices( pChunk, vertexCount, uvBounds, level._listVertex ) == false || readIndices( pChunk, indexCount, vertexCount, level._listIndex ) == false )
-                        return false;
-                    outListLevel.push_back( std::move( level ) );
-                }
-                return pChunk == pChunkEnd;
+                    level._screenSize        = chunk.readFloat32();
+                    const uint32 vertexCount = chunk.readUint32();
+                    const uint32 indexCount  = chunk.readUint32();
+                    return readVertices( chunk, vertexCount, uvBounds, level._listVertex ) && readIndices( chunk, indexCount, vertexCount, level._listIndex );
+                } );
+                return bRead && chunk.isFullyRead();
             }
 
             /** @brief 스킨 정점을 씁니다(뼈 번호 uint16 넷 + 가중치 float32 넷 — `MeshAssetFormat::kSkinVertexSize`). */
@@ -264,26 +243,20 @@ namespace sw
             /**
              * @brief 낮은 상세 단계의 스킨 덩어리 내용을 읽어 이미 읽은 단계(`LODS`)에 붙입니다. 단계 수 · 정점 수가 맞지 않거나 뼈 번호가 @p skinBoneCount 를 넘으면 false 입니다.
              */
-            [[nodiscard]] static bool readLODSkinChunk( const uint8* pChunk, const uint8* pChunkEnd, uint32 skinBoneCount, vector<MeshLODLevel>& ioListLevel )
+            [[nodiscard]] static bool readLODSkinChunk( ByteReader& chunk, uint32 skinBoneCount, vector<MeshLODLevel>& ioListLevel )
             {
-                if ( pChunkEnd - pChunk < 4 || skinBoneCount == 0 )
-                    return false;
-                const uint32 levelCount = LittleEndianUtil::readUint32( pChunk );
-                pChunk += 4;
-                if ( levelCount != ioListLevel.size() )
+                const uint32 levelCount = chunk.readUint32();
+                if ( chunk.hasOverflowed() || skinBoneCount == 0 || levelCount != ioListLevel.size() )
                     return false;
                 for ( MeshLODLevel& level : ioListLevel )
                 {
-                    if ( pChunkEnd - pChunk < 4 )
+                    const uint32 vertexCount = chunk.readUint32();
+                    if ( chunk.hasOverflowed() || vertexCount != level._listVertex.size() )
                         return false;
-                    const uint32 vertexCount = LittleEndianUtil::readUint32( pChunk );
-                    pChunk += 4;
-                    if ( vertexCount != level._listVertex.size() || static_cast<uint64>( pChunkEnd - pChunk ) < static_cast<uint64>( vertexCount ) * MeshAssetFormat::kSkinVertexSize )
-                        return false;
-                    if ( readSkinVertices( pChunk, vertexCount, skinBoneCount, level._listSkinVertex ) == false )
+                    if ( readSkinVertices( chunk, vertexCount, skinBoneCount, level._listSkinVertex ) == false )
                         return false;
                 }
-                return pChunk == pChunkEnd;
+                return chunk.isFullyRead();
             }
 
             /** @brief 덩어리 이름 넷과 길이 자리를 쓰고, 길이 자리의 위치를 돌려줍니다(내용을 쓴 뒤 `finishChunk` 가 채운다). */
@@ -327,34 +300,25 @@ namespace sw
             }
 
             /** @brief 구간 덩어리 내용을 읽습니다. 길이 · 범위 · 가시성 값이 맞지 않으면 false 입니다(범위와 이름 중복은 `Mesh::setSections` 가 다시 본다). */
-            [[nodiscard]] static bool readSectionChunk( const uint8* pChunk, const uint8* pChunkEnd, uint32 indexCount, vector<MeshSection>& outListSection )
+            [[nodiscard]] static bool readSectionChunk( ByteReader& chunk, uint32 indexCount, vector<MeshSection>& outListSection )
             {
-                if ( pChunkEnd - pChunk < 4 )
-                    return false;
-                const uint32 sectionCount = LittleEndianUtil::readUint32( pChunk );
-                pChunk += 4;
-                for ( uint32 sectionIndex = 0; sectionIndex < sectionCount; ++sectionIndex )
+                const bool bRead = chunk.readCountedList( outListSection, sizeof( uint32 ) * 4, [&]( MeshSection& section ) -> bool
                 {
-                    if ( pChunkEnd - pChunk < 4 )
+                    string_view name;
+                    if ( chunk.readStringView( name ) == false )
                         return false;
-                    const uint32 nameLength = LittleEndianUtil::readUint32( pChunk );
-                    if ( static_cast<size_t>( pChunkEnd - pChunk ) < 16u + nameLength )
-                        return false;
-                    MeshSection section{};
-                    section._name = hashed_string( string( reinterpret_cast<const utf8*>( pChunk + 4 ), nameLength ) );
-                    pChunk += 4 + nameLength;
-                    section._firstIndex     = LittleEndianUtil::readUint32( pChunk );
-                    section._indexCount     = LittleEndianUtil::readUint32( pChunk + 4 );
-                    const uint32 visibility = LittleEndianUtil::readUint32( pChunk + 8 );
-                    pChunk += 12;
-                    const bool bValidSection = visibility < static_cast<uint32>( MeshPersonVisibility::Count ) && section._firstIndex <= indexCount &&
+                    section._name              = hashed_string( string( name ) );
+                    section._firstIndex        = chunk.readUint32();
+                    section._indexCount        = chunk.readUint32();
+                    const uint32 visibility    = chunk.readUint32();
+                    const bool   bValidSection = visibility < static_cast<uint32>( MeshPersonVisibility::Count ) && section._firstIndex <= indexCount &&
                                                section._indexCount <= indexCount - section._firstIndex;
                     if ( bValidSection == false )
                         return false;
                     section._personVisibility = static_cast<MeshPersonVisibility>( visibility );
-                    outListSection.push_back( std::move( section ) );
-                }
-                return pChunk == pChunkEnd;
+                    return true;
+                } );
+                return bRead && chunk.isFullyRead();
             }
 
             // 파일의 정점은 압축 배치이고 메모리의 `RHIVertex`(float32 16 개)와 크기가 다르다 — 배치를 바꾸면 `kVersion` 을 올리고 모델을 다시 임포트한다.
@@ -377,36 +341,31 @@ namespace sw
             }
 
             /**
-             * @brief 정점 @p vertexCount 개를 읽어 풀고 @p pCursor 를 옮깁니다. 플래그에 모르는 비트가 있으면 false 입니다.
+             * @brief 정점 @p vertexCount 개를 읽어 풉니다. 잘렸거나 유한하지 않은 위치가 있거나 플래그에 모르는 비트가 있으면 false 입니다.
              * @details 법선 · 탄젠트는 옥타헤드럴을 풀어 단위 길이이고 탄젠트 w 는 플래그에서 ±1 로 복원한다.
              */
-            [[nodiscard]] static bool readVertices( const uint8*& pCursor, uint32 vertexCount, const UvBounds& uvBounds, vector<RHIVertex>& outListVertex )
+            [[nodiscard]] static bool readVertices( ByteReader& reader, uint32 vertexCount, const UvBounds& uvBounds, vector<RHIVertex>& outListVertex )
             {
-                outListVertex.resize( vertexCount );
-                for ( RHIVertex& vertex : outListVertex )
+                return reader.readList( outListVertex, vertexCount, MeshAssetFormat::kVertexSize, [&]( RHIVertex& vertex ) -> bool
                 {
                     for ( float32& value : vertex._arrPosition )
                     {
-                        value = LittleEndianUtil::readFloat32( pCursor );
-                        pCursor += sizeof( float32 );
+                        value = reader.readFloat32();
                     }
-                    const float3 normal  = readOctahedral( pCursor );
-                    const float3 tangent = readOctahedral( pCursor );
+                    const float3 normal  = readOctahedral( reader );
+                    const float3 tangent = readOctahedral( reader );
                     vertex._arrNormal[0] = normal._x;
                     vertex._arrNormal[1] = normal._y;
                     vertex._arrNormal[2] = normal._z;
                     for ( uint32 axis = 0; axis < 2; ++axis )
                     {
-                        vertex._arrUv[axis] = unpackUv( LittleEndianUtil::readUint16( pCursor ), uvBounds._arrMin[axis], uvBounds._arrMax[axis] );
-                        pCursor += sizeof( uint16 );
+                        vertex._arrUv[axis] = unpackUv( reader.readUint16(), uvBounds._arrMin[axis], uvBounds._arrMax[axis] );
                     }
                     for ( float32& value : vertex._arrColor )
                     {
-                        value = unorm8::fromRaw( *pCursor ).toFloat();
-                        ++pCursor;
+                        value = unorm8::fromRaw( reader.readUint8() ).toFloat();
                     }
-                    const uint32 flags = LittleEndianUtil::readUint32( pCursor );
-                    pCursor += sizeof( uint32 );
+                    const uint32 flags = reader.readUint32();
                     if ( ( flags & ~kFlagBitangentNegative ) != 0u )
                     {
                         SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetUnknownVertex", "Mesh asset has unknown vertex flags %# - re-import the model", flags );
@@ -416,20 +375,18 @@ namespace sw
                     vertex._arrTangent[1] = tangent._y;
                     vertex._arrTangent[2] = tangent._z;
                     vertex._arrTangent[3] = ( flags & kFlagBitangentNegative ) != 0u ? -1.0f : 1.0f;
-                }
-                return true;
+                    return true;
+                } );
             }
 
-            /** @brief 스킨 정점 @p vertexCount 개를 읽어 @p pCursor 를 옮깁니다. 뼈 번호가 뼈 수를 넘으면 false 입니다. */
-            [[nodiscard]] static bool readSkinVertices( const uint8*& pCursor, uint32 vertexCount, uint32 skinBoneCount, vector<MeshSkinVertex>& outListSkin )
+            /** @brief 스킨 정점 @p vertexCount 개를 읽습니다. 뼈 번호가 뼈 수를 넘으면 false 입니다. */
+            [[nodiscard]] static bool readSkinVertices( ByteReader& reader, uint32 vertexCount, uint32 skinBoneCount, vector<MeshSkinVertex>& outListSkin )
             {
-                outListSkin.resize( vertexCount );
-                for ( MeshSkinVertex& skin : outListSkin )
+                return reader.readList( outListSkin, vertexCount, MeshAssetFormat::kSkinVertexSize, [&]( MeshSkinVertex& skin ) -> bool
                 {
                     for ( uint16& joint : skin._arrJoint )
                     {
-                        joint = LittleEndianUtil::readUint16( pCursor );
-                        pCursor += sizeof( uint16 );
+                        joint = reader.readUint16();
                         if ( joint >= skinBoneCount )
                         {
                             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetSkinNames", "Mesh asset skin names bone %# but the skeleton has %# bones", joint, skinBoneCount );
@@ -438,111 +395,92 @@ namespace sw
                     }
                     for ( float32& weight : skin._arrWeight )
                     {
-                        weight = LittleEndianUtil::readFloat32( pCursor );
-                        pCursor += sizeof( float32 );
+                        weight = reader.readFloat32();
                     }
-                }
-                return true;
+                    return true;
+                } );
             }
 
-            /** @brief 모프 타깃 덩어리 본문([@p pChunk, @p pChunkEnd))을 읽습니다. 길이 · 정점 번호가 맞지 않거나 본문을 다 쓰지 않으면 false 입니다. */
-            [[nodiscard]] static bool readMorphChunk( const uint8* pChunk, const uint8* pChunkEnd, uint32 vertexCount, vector<MeshMorphTarget>& outListTarget )
+            /** @brief 모프 타깃 덩어리 본문을 읽습니다. 길이 · 정점 번호가 맞지 않거나 본문을 다 쓰지 않으면 false 입니다. */
+            [[nodiscard]] static bool readMorphChunk( ByteReader& chunk, uint32 vertexCount, vector<MeshMorphTarget>& outListTarget )
             {
-                bool   bValid      = pChunkEnd - pChunk >= 4;
-                uint32 targetCount = bValid ? LittleEndianUtil::readUint32( pChunk ) : 0u;
-                pChunk += 4;
-                for ( uint32 targetIndex = 0; bValid && targetIndex < targetCount; ++targetIndex )
+                const bool bRead = chunk.readCountedList( outListTarget, sizeof( uint32 ) * 2, [&]( MeshMorphTarget& target ) -> bool
                 {
-                    bValid                  = pChunkEnd - pChunk >= 4;
-                    const uint32 nameLength = bValid ? LittleEndianUtil::readUint32( pChunk ) : 0u;
-                    bValid                  = bValid && static_cast<size_t>( pChunkEnd - pChunk ) >= 8u + nameLength;
-                    if ( bValid == false )
-                        break;
-                    MeshMorphTarget target{};
-                    target._name = hashed_string( string( reinterpret_cast<const utf8*>( pChunk + 4 ), nameLength ) );
-                    pChunk += 4 + nameLength;
-                    const uint32 deltaCount = LittleEndianUtil::readUint32( pChunk );
-                    pChunk += 4;
-                    bValid = static_cast<uint64>( pChunkEnd - pChunk ) >= static_cast<uint64>( deltaCount ) * kMorphDeltaSize;
-                    for ( uint32 deltaIndex = 0; bValid && deltaIndex < deltaCount; ++deltaIndex )
+                    string_view name;
+                    if ( chunk.readStringView( name ) == false )
+                        return false;
+                    target._name = hashed_string( string( name ) );
+                    return chunk.readCountedList( target._listDelta, kMorphDeltaSize, [&]( MeshMorphDelta& delta ) -> bool
                     {
-                        MeshMorphDelta delta{};
-                        delta._vertexIndex = LittleEndianUtil::readUint32( pChunk );
-                        float32 arrValue[6]{};
-                        for ( uint32 valueIndex = 0; valueIndex < 6; ++valueIndex )
-                        {
-                            arrValue[valueIndex] = LittleEndianUtil::readFloat32( pChunk + 4 + valueIndex * 4 );
-                        }
-                        delta._position = float3{ arrValue[0], arrValue[1], arrValue[2] };
-                        delta._normal   = float3{ arrValue[3], arrValue[4], arrValue[5] };
-                        pChunk += kMorphDeltaSize;
-                        bValid = delta._vertexIndex < vertexCount;
-                        target._listDelta.push_back( delta );
-                    }
-                    outListTarget.push_back( std::move( target ) );
-                }
-                return bValid && pChunk == pChunkEnd;
+                        delta._vertexIndex = chunk.readUint32();
+                        delta._position._x = chunk.readFloat32();
+                        delta._position._y = chunk.readFloat32();
+                        delta._position._z = chunk.readFloat32();
+                        delta._normal._x   = chunk.readFloat32();
+                        delta._normal._y   = chunk.readFloat32();
+                        delta._normal._z   = chunk.readFloat32();
+                        return delta._vertexIndex < vertexCount;
+                    } );
+                } );
+                return bRead && chunk.isFullyRead();
             }
 
-            /** @brief 정점 · 스킨 뒤의 선택 덩어리를 모두 읽습니다. 모르는 이름 · 길이가 맞지 않는 덩어리는 깨진 파일로 보고 false 입니다. */
-            [[nodiscard]] static bool readOptionalChunks( const uint8* pCursor, const uint8* pEnd, uint32 vertexCount, uint32 indexCount, const UvBounds& uvBounds, MeshAssetData& ioData )
+            /** @brief 정점 · 스킨 뒤의 선택 덩어리를 모두 읽습니다. 모르는 이름 · 길이가 맞지 않는 덩어리 · 같은 덩어리가 두 번 오면 깨진 파일로 보고 false 입니다. */
+            [[nodiscard]] static bool readOptionalChunks( ByteReader& reader, uint32 vertexCount, uint32 indexCount, const UvBounds& uvBounds, MeshAssetData& ioData )
             {
-                while ( pCursor < pEnd )
+                while ( reader.getRemainingByteCount() > 0 )
                 {
-                    if ( static_cast<size_t>( pEnd - pCursor ) < 8 )
+                    const uint8* pChunkName = nullptr;
+                    if ( reader.readView( sizeof( kArrMorphChunk ), pChunkName ) == false || reader.getRemainingByteCount() < sizeof( uint32 ) )
                     {
                         SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetTruncatedChunk", "Mesh asset has a truncated chunk header" );
                         return false;
                     }
-                    const bool   bMorph      = Memory::compare( pCursor, kArrMorphChunk, 4 ) == 0;
-                    const bool   bSection    = Memory::compare( pCursor, kArrSectionChunk, 4 ) == 0;
-                    const bool   bLOD        = Memory::compare( pCursor, kArrLODChunk, 4 ) == 0;
-                    const bool   bLODSkin    = Memory::compare( pCursor, kArrLODSkinChunk, 4 ) == 0;
-                    const uint32 chunkLength = LittleEndianUtil::readUint32( pCursor + 4 );
-                    const uint8* pChunk      = pCursor + 8;
+                    const bool   bMorph      = Memory::compare( pChunkName, kArrMorphChunk, 4 ) == 0;
+                    const bool   bSection    = Memory::compare( pChunkName, kArrSectionChunk, 4 ) == 0;
+                    const bool   bLOD        = Memory::compare( pChunkName, kArrLODChunk, 4 ) == 0;
+                    const bool   bLODSkin    = Memory::compare( pChunkName, kArrLODSkinChunk, 4 ) == 0;
+                    const uint32 chunkLength = reader.readUint32();
+                    const uint8* pChunk      = nullptr;
                     const bool   bKnownChunk = bMorph || bSection || bLOD || bLODSkin;
-                    if ( bKnownChunk == false || chunkLength > static_cast<size_t>( pEnd - pChunk ) )
+                    if ( bKnownChunk == false || reader.readView( chunkLength, pChunk ) == false )
                     {
                         SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetUnknownTruncated", "Mesh asset has an unknown or truncated chunk" );
                         return false;
                     }
-                    const uint8* pChunkEnd = pChunk + chunkLength;
+                    ByteReader chunk{ pChunk, chunkLength };
                     if ( bLOD )
                     {
-                        if ( readLODChunk( pChunk, pChunkEnd, uvBounds, ioData._listLOD ) == false )
+                        if ( ioData._listLOD.empty() == false || readLODChunk( chunk, uvBounds, ioData._listLOD ) == false )
                         {
                             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedLOD", "Mesh asset has a malformed LOD chunk" );
                             return false;
                         }
-                        pCursor = pChunkEnd;
                         continue;
                     }
                     if ( bLODSkin )
                     {
-                        if ( readLODSkinChunk( pChunk, pChunkEnd, ioData._skinBoneCount, ioData._listLOD ) == false )
+                        if ( readLODSkinChunk( chunk, ioData._skinBoneCount, ioData._listLOD ) == false )
                         {
                             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedLOD2", "Mesh asset has a malformed LOD skin chunk (it must follow the LOD chunk and match its levels)" );
                             return false;
                         }
-                        pCursor = pChunkEnd;
                         continue;
                     }
                     if ( bSection )
                     {
-                        if ( readSectionChunk( pChunk, pChunkEnd, indexCount, ioData._listSection ) == false )
+                        if ( ioData._listSection.empty() == false || readSectionChunk( chunk, indexCount, ioData._listSection ) == false )
                         {
                             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedSection", "Mesh asset has a malformed section chunk" );
                             return false;
                         }
-                        pCursor = pChunkEnd;
                         continue;
                     }
-                    if ( readMorphChunk( pChunk, pChunkEnd, vertexCount, ioData._listMorphTarget ) == false )
+                    if ( ioData._listMorphTarget.empty() == false || readMorphChunk( chunk, vertexCount, ioData._listMorphTarget ) == false )
                     {
                         SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedMorph", "Mesh asset has a malformed morph target chunk" );
                         return false;
                     }
-                    pCursor = pChunkEnd;
                 }
                 return true;
             }
@@ -648,12 +586,14 @@ namespace sw
             return false;
         }
 
-        const uint32  version        = LittleEndianUtil::readUint32( pData + 4 );
-        const uint32  vertexCount    = LittleEndianUtil::readUint32( pData + 8 );
-        const uint32  indexCount     = LittleEndianUtil::readUint32( pData + 12 );
-        const uint32  vertexSize     = LittleEndianUtil::readUint32( pData + 16 );
-        const float32 boundingRadius = LittleEndianUtil::readFloat32( pData + 20 );
-        const uint32  skinBoneCount  = LittleEndianUtil::readUint32( pData + 24 );
+        ByteReader reader{ pData, size };
+        (void)reader.skipBytes( sizeof( Internal::kArrMagic ) ); // 위에서 길이와 매직을 봤다
+        const uint32  version        = reader.readUint32();
+        const uint32  vertexCount    = reader.readUint32();
+        const uint32  indexCount     = reader.readUint32();
+        const uint32  vertexSize     = reader.readUint32();
+        const float32 boundingRadius = reader.readFloat32();
+        const uint32  skinBoneCount  = reader.readUint32();
         if ( version != kVersion || vertexSize != kVertexSize )
         {
             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetVersionVertex", "Mesh asset version %# / vertex size %# is not the current %# / %# - re-import the model", version, vertexSize, kVersion, kVertexSize );
@@ -672,33 +612,36 @@ namespace sw
                                expectedSize );
             return false;
         }
-        if ( MathUtil::isFinite( boundingRadius ) == false || boundingRadius < 0.0f )
+        // 머리 길이는 위에서 봤다 — 여기까지의 실패는 유한하지 않은 경계 반지름이다.
+        if ( reader.hasOverflowed() || boundingRadius < 0.0f )
         {
             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetInvalidBounding", "Mesh asset has an invalid bounding radius" );
             return false;
         }
 
         Internal::UvBounds uvBounds{};
-        if ( Internal::readUvBounds( pData + 28, uvBounds ) == false )
+        if ( Internal::readUvBounds( reader, uvBounds ) == false )
         {
             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetInvalidUV", "Mesh asset has invalid UV bounds" );
             return false;
         }
 
         // 본문이 하나라도 깨졌으면 반쯤 읽은 데이터를 남기지 않는다.
-        const uint8* pCursor = pData + kHeaderSize;
-        bool         bRead   = Internal::readVertices( pCursor, vertexCount, uvBounds, outData._listVertex );
+        bool bRead = Internal::readVertices( reader, vertexCount, uvBounds, outData._listVertex );
         if ( bRead && skinBoneCount > 0 )
         {
-            bRead                  = Internal::readSkinVertices( pCursor, vertexCount, skinBoneCount, outData._listSkinVertex );
+            bRead                  = Internal::readSkinVertices( reader, vertexCount, skinBoneCount, outData._listSkinVertex );
             outData._skinBoneCount = skinBoneCount;
         }
-        if ( bRead && Internal::readIndices( pCursor, indexCount, vertexCount, outData._listIndex ) == false )
+        if ( bRead && Internal::readIndices( reader, indexCount, vertexCount, outData._listIndex ) == false )
         {
             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetIndexOutOfRange", "Mesh asset has an index past its %# vertices - re-import the model", vertexCount );
             bRead = false;
         }
-        bRead = bRead && Internal::readOptionalChunks( pCursor, pData + size, vertexCount, indexCount, uvBounds, outData );
+        // 길이는 머리에서 맞췄다 — 여기까지의 넘침은 정점 · 스킨의 유한하지 않은 값이다(모르는 플래그 · 뼈 번호는 넘침이 아니고 위에서 이미 알렸다).
+        if ( reader.hasOverflowed() )
+            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetNonFinite", "Mesh asset holds a non-finite value - re-import the model" );
+        bRead = bRead && Internal::readOptionalChunks( reader, vertexCount, indexCount, uvBounds, outData );
         if ( bRead == false )
         {
             outData = MeshAssetData{};

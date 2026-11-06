@@ -5,7 +5,7 @@
 #include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
-#include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Virtual/VirtualInputScript.h"
@@ -39,16 +39,6 @@ namespace sw
             {
                 const uint8* pBytes = reinterpret_cast<const uint8*>( &value );
                 outBytes.insert( outBytes.end(), pBytes, pBytes + sizeof( T ) );
-            }
-
-            template <typename T>
-            [[nodiscard]] static bool readBytes( const uint8*& pCursor, const uint8* pEnd, T& outValue )
-            {
-                if ( static_cast<size_t>( pEnd - pCursor ) < sizeof( T ) )
-                    return false;
-                Memory::copy( &outValue, pCursor, sizeof( T ) );
-                pCursor += sizeof( T );
-                return true;
             }
         };
     } // namespace
@@ -162,11 +152,9 @@ namespace sw
         if ( FileUtil::readFile( filePath, bytes ) == false )
             return false;
 
-        const uint8* pCursor = bytes.data();
-        const uint8* pEnd    = bytes.data() + bytes.size();
-
+        ByteReader   reader{ bytes.data(), bytes.size() };
         ReplayHeader header{};
-        if ( InputReplayInternal::readBytes( pCursor, pEnd, header ) == false )
+        if ( reader.readPod( header ) == false )
             return false;
         const bool bBadMagic = header._arrMagic[0] != 'S' || header._arrMagic[1] != 'W' || header._arrMagic[2] != 'R' || header._arrMagic[3] != 'P';
         if ( bBadMagic )
@@ -178,44 +166,28 @@ namespace sw
             SW_LOG_WARNING_ID( "InputReplay.InputReplayVersionNot", "Input replay version %# is not %# — refusing to load: %#", header._version, kReplayVersion, filePath );
             return false;
         }
-        if ( static_cast<size_t>( pEnd - pCursor ) < header._nameLength )
+        const uint8* pName = nullptr;
+        if ( reader.readView( header._nameLength, pName ) == false )
         {
             SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedName", "Input replay is truncated in its name — refusing to load: %#", filePath );
             return false;
         }
-
-        string replayName;
-        replayName.assign( reinterpret_cast<const utf8*>( pCursor ), header._nameLength );
-        pCursor += header._nameLength;
+        string replayName( reinterpret_cast<const utf8*>( pName ), header._nameLength );
 
         // 프레임은 적어도 시간과 이벤트 수를 쓴다. 남은 바이트로 담을 수 없는 수는 자리를 잡기 전에 거절한다(망가진 머리말이 큰 할당을 일으키지 않게).
-        constexpr size_t kMinFrameBytes = sizeof( float32 ) + sizeof( uint32 );
-        if ( static_cast<size_t>( pEnd - pCursor ) / kMinFrameBytes < header._frameCount )
-        {
-            SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedFrame", "Input replay promises %# frames but is too short — refusing to load: %#", header._frameCount, filePath );
-            return false;
-        }
-
+        // 잘린 프레임에서도 멈춘다. 그 뒤를 읽으면 엉뚱한 입력이 재생된다.
+        constexpr size_t         kMinFrameBytes = sizeof( float32 ) + sizeof( uint32 );
         vector<InputReplayFrame> listFrame;
-        listFrame.reserve( header._frameCount );
-        for ( uint32 frameIndex = 0; frameIndex < header._frameCount; ++frameIndex )
+        const bool               bFramesRead = reader.readList( listFrame, header._frameCount, kMinFrameBytes, [&]( InputReplayFrame& frame ) -> bool
+                      {
+            frame._deltaTime  = reader.readFloat32();
+            uint32 eventCount = 0;
+            return reader.readPod( eventCount ) && reader.readPodList( frame._listRawEvent, eventCount );
+        } );
+        if ( bFramesRead == false )
         {
-            InputReplayFrame frame{};
-            uint32           eventCount = 0;
-            // 잘린 프레임에서 멈춘다. 그 뒤를 읽으면 엉뚱한 입력이 재생된다.
-            const bool bTruncatedFrame = InputReplayInternal::readBytes( pCursor, pEnd, frame._deltaTime ) == false || InputReplayInternal::readBytes( pCursor, pEnd, eventCount ) == false ||
-                                         static_cast<size_t>( pEnd - pCursor ) / sizeof( RawInputEvent ) < eventCount;
-            if ( bTruncatedFrame )
-            {
-                SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedFrame", "Input replay is truncated at frame %# — refusing to load: %#", frameIndex, filePath );
-                return false;
-            }
-            frame._listRawEvent.resize( eventCount );
-            for ( RawInputEvent& event : frame._listRawEvent )
-            {
-                (void)InputReplayInternal::readBytes( pCursor, pEnd, event ); // 남은 바이트가 eventCount 개 이상임을 위에서 확인했으므로 실패하지 않는다
-            }
-            listFrame.push_back( std::move( frame ) );
+            SW_LOG_WARNING_ID( "InputReplay.InputReplayTruncatedFrame", "Input replay promises %# frames but is truncated or holds a non-finite frame time — refusing to load: %#", header._frameCount, filePath );
+            return false;
         }
 
         _listFrame       = std::move( listFrame );

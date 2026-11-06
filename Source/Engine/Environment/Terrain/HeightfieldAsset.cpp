@@ -4,6 +4,7 @@
 
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Content/AssetIO.h"
 
@@ -41,44 +42,39 @@ namespace sw
     {
         using Internal = HeightfieldAssetInternal;
         *this          = HeightfieldAsset{};
-        if ( bytes.size() < Internal::kHeaderBytes || LittleEndianUtil::readUint32( bytes.data() ) != kMagic )
+        ByteReader reader{ bytes.data(), bytes.size() };
+        if ( bytes.size() < Internal::kHeaderBytes || reader.readUint32() != kMagic )
         {
             SW_LOG_ERROR_ID( "HeightfieldAsset.NotHeightfieldMagicSWHF", "'%#' is not a heightfield (magic SWHF missing)", sourceName );
             return false;
         }
-        const uint32 version = LittleEndianUtil::readUint32( bytes.data() + 4 );
+        const uint32 version = reader.readUint32();
         if ( version != kVersion )
         {
             SW_LOG_ERROR_ID( "HeightfieldAsset.HeightfieldVersionBuildReads", "'%#' is heightfield version %# - this build reads version %# only (re-import it)", sourceName, version, kVersion );
             return false;
         }
-        const uint32 resolution = LittleEndianUtil::readUint32( bytes.data() + 8 );
-        const uint32 flags      = LittleEndianUtil::readUint32( bytes.data() + 12 );
+        const uint32 resolution = reader.readUint32();
+        const uint32 flags      = reader.readUint32();
         if ( resolution < 2 || resolution > kMaxResolution )
         {
             SW_LOG_ERROR_ID( "HeightfieldAsset.ResolutionExpected", "'%#' has resolution %# - expected 2..%#", sourceName, resolution, kMaxResolution );
             return false;
         }
-        const size_t sampleCount = static_cast<size_t>( resolution ) * resolution;
-        const size_t cellCount   = ( flags & kFlagHoleMask ) != 0u ? static_cast<size_t>( resolution - 1 ) * ( resolution - 1 ) : 0u;
-        if ( bytes.size() != Internal::kHeaderBytes + sampleCount * 2 + cellCount )
+        const size_t   sampleCount = static_cast<size_t>( resolution ) * resolution;
+        const size_t   cellCount   = ( flags & kFlagHoleMask ) != 0u ? static_cast<size_t>( resolution - 1 ) * ( resolution - 1 ) : 0u;
+        vector<uint16> listHeight;
+        vector<uint8>  listHoleCell;
+        const bool     bBodyRead = reader.readPodList( listHeight, sampleCount ) && reader.readPodList( listHoleCell, cellCount ) && reader.isFullyRead();
+        if ( bBodyRead == false )
         {
             SW_LOG_ERROR_ID( "HeightfieldAsset.BytesResolutionNeeds", "'%#' has %# bytes - resolution %# needs %#", sourceName, static_cast<uint64>( bytes.size() ), resolution,
                              static_cast<uint64>( Internal::kHeaderBytes + sampleCount * 2 + cellCount ) );
             return false;
         }
-        _resolution = resolution;
-        _listHeight.resize( sampleCount );
-        const uint8* pSample = bytes.data() + Internal::kHeaderBytes;
-        for ( size_t sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
-        {
-            _listHeight[sampleIndex] = static_cast<uint16>( pSample[sampleIndex * 2] | ( pSample[sampleIndex * 2 + 1] << 8 ) );
-        }
-        if ( cellCount > 0 )
-        {
-            const uint8* pHole = pSample + sampleCount * 2;
-            _listHoleCell.assign( pHole, pHole + cellCount );
-        }
+        _resolution   = resolution;
+        _listHeight   = std::move( listHeight );
+        _listHoleCell = std::move( listHoleCell );
         return true;
     }
 

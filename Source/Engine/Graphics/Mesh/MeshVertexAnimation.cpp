@@ -9,6 +9,7 @@
 #include "Core/Math/NormalizedInt.h"
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
@@ -32,14 +33,6 @@ namespace sw
                 const size_t offset = outBytes.size();
                 outBytes.resize( offset + sizeof( T ) );
                 Memory::copy( outBytes.data() + offset, &value, sizeof( T ) );
-            }
-
-            template <typename T>
-            static T readValue( const uint8* pData, size_t offset )
-            {
-                T value{};
-                Memory::copy( &value, pData + offset, sizeof( T ) );
-                return value;
             }
         };
     } // namespace
@@ -152,34 +145,36 @@ namespace sw
             SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationNotSWVA", "Vertex animation '%#' is not a SWVA file", sourceLabel );
             return false;
         }
-        const uint32 version = MeshVertexAnimationInternal::readValue<uint32>( pData, 4 );
+        ByteReader reader{ pData, byteCount };
+        (void)reader.skipBytes( sizeof( MeshVertexAnimationInternal::kArrMagic ) ); // 위에서 길이와 매직을 봤다
+        const uint32 version = reader.readUint32();
         if ( version != kVersion )
         {
             SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationVersionNot", "Vertex animation '%#' is version %#, not the current %# - cook again", sourceLabel, version, kVersion );
             return false;
         }
-        const uint32  frameCount  = MeshVertexAnimationInternal::readValue<uint32>( pData, 8 );
-        const uint32  vertexCount = MeshVertexAnimationInternal::readValue<uint32>( pData, 12 );
-        const float32 frameRate   = MeshVertexAnimationInternal::readValue<float32>( pData, 16 );
-        const float32 duration    = MeshVertexAnimationInternal::readValue<float32>( pData, 20 );
-        const uint32  flags       = MeshVertexAnimationInternal::readValue<uint32>( pData, 24 );
-        const float3  boundsCenter{ MeshVertexAnimationInternal::readValue<float32>( pData, 28 ), MeshVertexAnimationInternal::readValue<float32>( pData, 32 ),
-                                   MeshVertexAnimationInternal::readValue<float32>( pData, 36 ) };
-        const float3  boundsHalfExtent{ MeshVertexAnimationInternal::readValue<float32>( pData, 40 ), MeshVertexAnimationInternal::readValue<float32>( pData, 44 ),
-                                       MeshVertexAnimationInternal::readValue<float32>( pData, 48 ) };
-        const size_t  elementCount = static_cast<size_t>( frameCount ) * vertexCount;
-        // 길이는 나눠서 맞춘다. 원소 수에 8 을 곱하면 2^30 프레임 × 2^31 정점이 0 으로 넘쳐 머리만 있는 파일이 통과하고 거대한 표를 잡는다.
-        const size_t tableByteCount            = byteCount - MeshVertexAnimationInternal::kHeaderSize;
-        const bool   bTableLengthMismatch      = tableByteCount % sizeof( MeshVertexAnimationElement ) != 0 || tableByteCount / sizeof( MeshVertexAnimationElement ) != elementCount;
-        const bool   bBadFrameRate             = MathUtil::isFinite( frameRate ) == false || frameRate <= 0.0f; // NaN 은 `<= 0` 을 지나 샘플링에서 미정의 정수 변환이 된다.
-        const bool   bMalformedVertexAnimation = frameCount == 0 || vertexCount == 0 || bBadFrameRate || bTableLengthMismatch;
+        const uint32  frameCount  = reader.readUint32();
+        const uint32  vertexCount = reader.readUint32();
+        const float32 frameRate   = reader.readFloat32(); // NaN 은 `<= 0` 을 지나 샘플링에서 미정의 정수 변환이 된다 — 읽기가 거절한다.
+        const float32 duration    = reader.readFloat32();
+        const uint32  flags       = reader.readUint32();
+        float3        boundsCenter{};
+        boundsCenter._x = reader.readFloat32();
+        boundsCenter._y = reader.readFloat32();
+        boundsCenter._z = reader.readFloat32();
+        float3 boundsHalfExtent{};
+        boundsHalfExtent._x = reader.readFloat32();
+        boundsHalfExtent._y = reader.readFloat32();
+        boundsHalfExtent._z = reader.readFloat32();
+        // 원소 수는 나눠서 맞춘다(`readPodList`) — 곱하면 2^30 프레임 × 2^31 정점이 0 바이트로 넘쳐 머리만 있는 파일이 통과하고 거대한 표를 잡는다.
+        const bool bReadable                 = reader.hasOverflowed() == false && frameCount > 0 && vertexCount > 0 && frameRate > 0.0f;
+        const bool bMalformedVertexAnimation = bReadable == false || reader.readPodList( _listFrameVertex, static_cast<uint64>( frameCount ) * vertexCount ) == false || reader.isFullyRead() == false;
         if ( bMalformedVertexAnimation )
         {
             SW_LOG_ERROR_ID( "MeshVertexAnimation.VertexAnimationMalformedFrames", "Vertex animation '%#' is malformed (%# frames x %# vertices, %# bytes)", sourceLabel, frameCount, vertexCount, byteCount );
+            *this = MeshVertexAnimation{};
             return false;
         }
-        _listFrameVertex.resize( elementCount );
-        Memory::copy( _listFrameVertex.data(), pData + MeshVertexAnimationInternal::kHeaderSize, elementCount * sizeof( MeshVertexAnimationElement ) );
         _boundsCenter      = boundsCenter;
         _boundsHalfExtent  = boundsHalfExtent;
         _frameCount        = frameCount;

@@ -128,31 +128,32 @@ namespace sw
             return false;
         }
         LightProbeGridLayout layout{};
-        layout._origin._x         = reader.readFloat32();
-        layout._origin._y         = reader.readFloat32();
-        layout._origin._z         = reader.readFloat32();
-        layout._spacing._x        = reader.readFloat32();
-        layout._spacing._y        = reader.readFloat32();
-        layout._spacing._z        = reader.readFloat32();
-        layout._countX            = reader.readUint32();
-        layout._countY            = reader.readUint32();
-        layout._countZ            = reader.readUint32();
-        const uint64 probeCount   = static_cast<uint64>( layout._countX ) * layout._countY * layout._countZ;
-        const bool   bSizeMatches = probeCount <= Internal::kMaxProbeCount && reader.getRemainingByteCount() == probeCount * Internal::kProbeBytes;
-        if ( bSizeMatches == false )
-        {
-            Internal::setError( pOutError, "probe file length does not match its grid size" );
-            return false;
-        }
-        _layout = layout;
-        _listProbe.resize( static_cast<size_t>( probeCount ) );
-        for ( SH9Color& probe : _listProbe )
-        {
+        layout._origin._x  = reader.readFloat32();
+        layout._origin._y  = reader.readFloat32();
+        layout._origin._z  = reader.readFloat32();
+        layout._spacing._x = reader.readFloat32();
+        layout._spacing._y = reader.readFloat32();
+        layout._spacing._z = reader.readFloat32();
+        layout._countX     = reader.readUint32();
+        layout._countY     = reader.readUint32();
+        layout._countZ     = reader.readUint32();
+        // 셋의 곱은 64 비트로도 넘친다 — 2^31 × 2^31 × 4 는 0 이 되어 머리만 있는 파일이 "길이가 맞아" 보인다.
+        uint64     probeCount = 0;
+        const bool bCountOk   = ByteReader::tryMultiplyCounts( { layout._countX, layout._countY, layout._countZ }, probeCount ) && probeCount <= Internal::kMaxProbeCount;
+        const bool bRead      = bCountOk && reader.readList( _listProbe, probeCount, Internal::kProbeBytes, [&]( SH9Color& probe )
+             {
             for ( float32& coefficient : probe._arrCoefficient )
             {
                 coefficient = reader.readFloat32();
             }
+        } );
+        if ( bRead == false || reader.isFullyRead() == false )
+        {
+            Internal::setError( pOutError, "probe file length does not match its grid size, or it holds a non-finite value" );
+            clear();
+            return false;
         }
+        _layout = layout;
         if ( isValid( pOutError ) == false )
         {
             clear();

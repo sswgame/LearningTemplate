@@ -78,8 +78,9 @@ namespace sw
         const float32 sampleRate    = header.readFloat32();
         const uint32  trackCount    = header.readUint32();
         const size_t  transformSize = RawAnimationCodecInternal::kFloatPerTransform * sizeof( float32 );
-        const size_t  expectedSize  = RawAnimationCodecInternal::kHeaderSize + static_cast<size_t>( sampleCount ) * trackCount * transformSize;
-        if ( sampleCount == 0 || expectedSize != byteCount )
+        // 곱해서 맞추지 않는다 — 샘플 수 × 트랙 수 × 40 은 64 비트로 넘쳐 작은 바이트와 "맞아" 보이고, 아래 표본 자리가 버퍼 밖이 된다.
+        const size_t bodySize = byteCount - RawAnimationCodecInternal::kHeaderSize;
+        if ( header.hasOverflowed() || sampleCount == 0 || bodySize % transformSize != 0 || bodySize / transformSize != static_cast<uint64>( sampleCount ) * trackCount )
             return false;
 
         outPose.resize( trackCount );

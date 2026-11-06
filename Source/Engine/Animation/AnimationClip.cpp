@@ -7,6 +7,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Content/AssetIO.h"
@@ -44,68 +45,19 @@ namespace sw
                 }
             };
 
-            /** @brief 범위를 지키는 바이트 읽개입니다. 넘치면 실패 상태가 되고 그 뒤 읽기는 모두 0 입니다. */
-            struct Reader
+            /** @brief 길이 붙은 이름을 읽습니다. 상한을 넘으면 실패로 표시합니다 — 깨진 파일의 긴 글을 이름 표에 넣지 않습니다. */
+            static hashed_string readName( ByteReader& reader )
             {
-                const uint8* _pData;
-                size_t       _size;
-                size_t       _offset;
-                bool         _bFailed; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-
-                /** @brief 읽습니다. 실패는 `_bFailed` 에 남고 값은 0 입니다 — 호출자가 읽기를 마친 뒤 `_bFailed` 를 확인한다(결과를 돌려주는 길이 없다). */
-                void readRaw( void* pOut, size_t size )
+                string_view text;
+                if ( reader.readStringView( text ) == false )
+                    return hashed_string{};
+                if ( text.size() > kMaxStringLength )
                 {
-                    if ( _bFailed || _offset + size > _size )
-                    {
-                        _bFailed = SW_TRUE;
-                        Memory::set( pOut, 0, size );
-                        return;
-                    }
-                    Memory::copy( pOut, _pData + _offset, size );
-                    _offset += size;
+                    reader.markFailed();
+                    return hashed_string{};
                 }
-                uint32 readUint()
-                {
-                    uint32 value = 0;
-                    readRaw( &value, sizeof( value ) );
-                    return value;
-                }
-                int32 readInt()
-                {
-                    int32 value = 0;
-                    readRaw( &value, sizeof( value ) );
-                    return value;
-                }
-                /** @brief 유한한 실수만 받습니다. NaN · 무한대는 깨진 파일로 보고 실패 상태가 되며 0 입니다(NaN 은 시각 비교를 모두 빠져나간다). */
-                float32 readFiniteFloat()
-                {
-                    float32 value = 0.0f;
-                    readRaw( &value, sizeof( value ) );
-                    if ( MathUtil::isFinite( value ) )
-                        return value;
-                    _bFailed = SW_TRUE;
-                    return 0.0f;
-                }
-                string readString()
-                {
-                    const uint32 length = readUint();
-                    if ( length > kMaxStringLength || _offset + length > _size )
-                    {
-                        _bFailed = SW_TRUE;
-                        return {};
-                    }
-                    string text( reinterpret_cast<const utf8*>( _pData + _offset ), length );
-                    _offset += length;
-                    return text;
-                }
-                /** @brief 원소 수가 남은 바이트로 담길 수 있는지 확인합니다(원소 하나가 @p minElementSize 바이트 이상). */
-                bool canHold( uint32 count, size_t minElementSize )
-                {
-                    if ( _bFailed || static_cast<uint64>( count ) * minElementSize > _size - _offset )
-                        _bFailed = SW_TRUE;
-                    return _bFailed == false;
-                }
-            };
+                return hashed_string( string( text ) );
+            }
         };
     } // namespace
 } // namespace sw
@@ -322,70 +274,55 @@ namespace sw
             return false;
         }
 
-        AnimationClipInternal::Reader reader{ pData, byteCount, sizeof( AnimationClipInternal::kArrMagic ), false };
-        const uint32                  version = reader.readUint();
+        ByteReader reader{ pData, byteCount };
+        (void)reader.skipBytes( sizeof( AnimationClipInternal::kArrMagic ) ); // 위에서 길이와 매직을 봤다
+        const uint32 version = reader.readUint32();
         if ( version != kVersion )
         {
             SW_LOG_ERROR_ID( "AnimationClip.AnimationClipVersionNot", "Animation clip '%#' is version %#, not the current %# - re-import the model", sourceLabel, version, kVersion );
             return false;
         }
-        const uint32 flags      = reader.readUint();
-        _bLoop                  = ( flags & AnimationClipInternal::kFlagLoop ) != 0 ? SW_TRUE : SW_FALSE;
-        _duration               = reader.readFiniteFloat();
-        _name                   = hashed_string( reader.readString() );
-        const uint32 trackCount = reader.readUint();
-        if ( reader.canHold( trackCount, sizeof( uint32 ) ) )
+        const uint32 flags = reader.readUint32();
+        _bLoop             = ( flags & AnimationClipInternal::kFlagLoop ) != 0 ? SW_TRUE : SW_FALSE;
+        _duration          = reader.readFloat32();
+        _name              = AnimationClipInternal::readName( reader );
+        // 실패는 끈적하다 — 아래 끝의 `isFullyRead` 가 한 번에 본다.
+        (void)reader.readCountedList( _listTrackName, sizeof( uint32 ), [&]( hashed_string& trackName )
         {
-            _listTrackName.reserve( trackCount );
-            for ( uint32 trackIndex = 0; trackIndex < trackCount; ++trackIndex )
-            {
-                _listTrackName.push_back( hashed_string( reader.readString() ) );
-            }
-        }
-        _rootMotionTrack           = reader.readInt();
-        const uint32 codecValue    = reader.readUint();
-        const uint32 codecByteSize = reader.readUint();
-        if ( reader.canHold( codecByteSize, 1 ) )
-        {
-            assignCodecBytes( pData + reader._offset, codecByteSize );
-            reader._offset += codecByteSize;
-        }
-        const uint32 notifyCount = reader.readUint();
+            trackName = AnimationClipInternal::readName( reader );
+        } );
+        _rootMotionTrack           = static_cast<int32>( reader.readUint32() );
+        const uint32 codecValue    = reader.readUint32();
+        const uint32 codecByteSize = reader.readUint32();
+        const uint8* pCodecBytes   = nullptr;
+        if ( reader.readView( codecByteSize, pCodecBytes ) )
+            assignCodecBytes( pCodecBytes, codecByteSize );
+        const uint32 notifyCount = reader.readUint32();
         if ( reader.canHold( notifyCount, sizeof( uint32 ) * 3 ) )
         {
-            for ( uint32 notifyIndex = 0; notifyIndex < notifyCount; ++notifyIndex )
+            for ( uint32 notifyIndex = 0; notifyIndex < notifyCount && reader.hasOverflowed() == false; ++notifyIndex )
             {
                 AnimationNotifyEvent event{};
-                event._name     = hashed_string( reader.readString() );
-                event._time     = reader.readFiniteFloat();
-                event._duration = reader.readFiniteFloat();
+                event._name     = AnimationClipInternal::readName( reader );
+                event._time     = reader.readFloat32();
+                event._duration = reader.readFloat32();
                 _notifyTrack.addEvent( event );
             }
         }
-        const uint32 curveCount = reader.readUint();
-        if ( reader.canHold( curveCount, sizeof( uint32 ) * 2 ) )
+        (void)reader.readCountedList( _listCurve, sizeof( uint32 ) * 2, [&]( AnimationClipCurve& curve ) -> bool
         {
-            for ( uint32 curveIndex = 0; curveIndex < curveCount; ++curveIndex )
+            curve._name = AnimationClipInternal::readName( reader );
+            return reader.readCountedList( curve._listKey, sizeof( float32 ) * 2, [&]( AnimationClipCurveKey& key )
             {
-                AnimationClipCurve curve{};
-                curve._name           = hashed_string( reader.readString() );
-                const uint32 keyCount = reader.readUint();
-                if ( reader.canHold( keyCount, sizeof( float32 ) * 2 ) == false )
-                    break;
-                curve._listKey.resize( keyCount );
-                for ( AnimationClipCurveKey& key : curve._listKey )
-                {
-                    key._time  = reader.readFiniteFloat();
-                    key._value = reader.readFiniteFloat();
-                }
-                _listCurve.push_back( std::move( curve ) );
-            }
-        }
+                key._time  = reader.readFloat32();
+                key._value = reader.readFloat32();
+            } );
+        } );
 
         const bool bCodecKnown    = codecValue < static_cast<uint32>( AnimationCodecID::Count );
         const bool bRootInRange   = _rootMotionTrack >= -1 && _rootMotionTrack < static_cast<int32>( _listTrackName.size() );
-        const bool bValidHeader   = MathUtil::isFinite( _duration ) && _duration >= 0.0f;
-        const bool bMalformedClip = reader._bFailed || reader._offset != byteCount || bCodecKnown == false || bRootInRange == false || bValidHeader == false;
+        const bool bValidHeader   = _duration >= 0.0f;
+        const bool bMalformedClip = reader.isFullyRead() == false || bCodecKnown == false || bRootInRange == false || bValidHeader == false;
         if ( bMalformedClip )
         {
             SW_LOG_ERROR_ID( "AnimationClip.AnimationClipMalformed", "Animation clip '%#' is malformed", sourceLabel );

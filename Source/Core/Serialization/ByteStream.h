@@ -297,6 +297,8 @@ namespace sw
             return readBytes( reinterpret_cast<uint8*>( &outValue ), sizeof( T ) );
         }
 
+        /** @brief 값이 형식에 맞지 않으면(길이 상한을 넘은 글 등) 부르는 쪽이 실패로 표시합니다. 넘침과 같은 끈적한 실패입니다. */
+        void   markFailed() { _bOverflow = SW_TRUE; }
         bool   hasOverflowed() const { return _bOverflow != SW_FALSE; }
         size_t getOffset() const { return _offset; }
         size_t getRemainingByteCount() const { return _byteCount - _offset; }

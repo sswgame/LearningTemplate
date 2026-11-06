@@ -351,6 +351,13 @@ SW_TEST_CASE( LocalizationBinaryTableTest, RoundTripAndCorruption )
     wrongMagic[0]                = 'X';
     SW_EXPECT_FALSE( loaded.parse( wrongMagic.data(), wrongMagic.size(), &error ) );
     SW_EXPECT_TRUE( error.find( "magic" ) != sw::string::npos );
+
+    // 어느 길이로 잘려도 거절한다(끝의 검사합이 먼저 지지만 길이가 머리보다 짧으면 거기서 진다).
+    for ( size_t length = 0; length < bytes.size(); ++length )
+    {
+        SW_EXPECT_FALSE( loaded.parse( bytes.data(), length, &error ) );
+        SW_EXPECT_TRUE( loaded.getTexts().empty() );
+    }
 }
 
 /**

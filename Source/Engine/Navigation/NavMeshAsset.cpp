@@ -28,6 +28,8 @@ namespace sw
             static constexpr string_view kArrSceneSuffix[] = { ".scene.xml", ".scene.bin" };
             /** @brief 타일 하나의 가장 작은 바이트 수입니다(x · z · 바이트 길이). 깨진 타일 수를 할당 전에 남은 바이트로 거른다. */
             static constexpr size_t kMinTileBytes = sizeof( int32 ) * 2 + sizeof( uint32 );
+            /** @brief 항목 하나의 최소 바이트입니다(종류 이름 길이 · 두 해시 · 경계 · 타일 수). */
+            static constexpr size_t kMinEntryBytes = sizeof( uint32 ) + sizeof( uint64 ) * 2 + sizeof( AABB ) + sizeof( uint32 );
             /** @brief 타일 베이크 한 덩어리입니다. 워커는 자기 구간의 슬롯만 씁니다. */
             struct BakeJob
             {
@@ -121,33 +123,27 @@ namespace sw
                                NavMeshBackend::getBackendName(), NavMeshBackend::getBackendFormatVersion() );
             return false;
         }
-        for ( uint32 entryIndex = 0; entryIndex < entryCount; ++entryIndex )
+        const bool bEntriesRead = reader.readList( _listEntry, entryCount, NavMeshAssetInternal::kMinEntryBytes, [&]( NavMeshAssetEntry& entry ) -> bool
         {
-            NavMeshAssetEntry entry;
-            string            agentType;
-            uint32            tileCount       = 0;
-            const bool        bTruncatedEntry = reader.readString( agentType ) == false || reader.readPod( entry._settingsHash ) == false || reader.readPod( entry._inputHash ) == false ||
-                                         reader.readPod( entry._bounds ) == false || reader.readPod( tileCount ) == false ||
-                                         tileCount > reader.getRemainingByteCount() / NavMeshAssetInternal::kMinTileBytes;
-            if ( bTruncatedEntry )
-            {
-                SW_LOG_ERROR_ID( "NavMeshAsset.Truncated", "'%#' is truncated", sourceLabel );
-                _listEntry.clear();
+            string     agentType;
+            uint32     tileCount = 0;
+            const bool bHead     = reader.readString( agentType ) && reader.readPod( entry._settingsHash ) && reader.readPod( entry._inputHash ) && reader.readPod( entry._bounds ) && reader.readPod( tileCount );
+            // 경계는 통째로 읽었다 — 유한한지는 여기서 본다(`readFloat32` 의 규칙).
+            const bool bFiniteBounds = MathUtil::isFinite( entry._bounds._min._x ) && MathUtil::isFinite( entry._bounds._min._y ) && MathUtil::isFinite( entry._bounds._min._z ) &&
+                                       MathUtil::isFinite( entry._bounds._max._x ) && MathUtil::isFinite( entry._bounds._max._y ) && MathUtil::isFinite( entry._bounds._max._z );
+            if ( bHead == false || bFiniteBounds == false )
                 return false;
-            }
             entry._agentType = hashed_string( agentType );
-            entry._listTile.resize( tileCount );
-            for ( NavTileData& tile : entry._listTile )
+            return reader.readList( entry._listTile, tileCount, NavMeshAssetInternal::kMinTileBytes, [&]( NavTileData& tile ) -> bool
             {
-                const bool bTruncatedTile = reader.readPod( tile._tileX ) == false || reader.readPod( tile._tileZ ) == false || reader.readByteVector( tile._bytes ) == false;
-                if ( bTruncatedTile )
-                {
-                    SW_LOG_ERROR_ID( "NavMeshAsset.Truncated", "'%#' is truncated", sourceLabel );
-                    _listEntry.clear();
-                    return false;
-                }
-            }
-            _listEntry.push_back( std::move( entry ) );
+                return reader.readPod( tile._tileX ) && reader.readPod( tile._tileZ ) && reader.readByteVector( tile._bytes );
+            } );
+        } );
+        if ( bEntriesRead == false || reader.isFullyRead() == false )
+        {
+            SW_LOG_ERROR_ID( "NavMeshAsset.Truncated", "'%#' is truncated, longer than its entries or holds non-finite bounds", sourceLabel );
+            _listEntry.clear();
+            return false;
         }
         return true;
     }

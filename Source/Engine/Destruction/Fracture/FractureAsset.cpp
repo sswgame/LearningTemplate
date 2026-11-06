@@ -37,16 +37,16 @@ namespace sw
              */
             static constexpr uint64 kStoredVertexBytes = 12 * sizeof( float32 );
 
-            /** @brief 원소 수가 남은 바이트로 담길 수 있는지 확인합니다. 잘린 파일이 큰 할당을 일으키지 않게 하려는 것입니다. */
-            static bool canHold( const ByteReader& reader, uint64 count, uint64 elementSize ) { return count * elementSize <= reader.getRemainingByteCount(); }
+            static constexpr size_t kStoredNodeBytes  = 10 * sizeof( float32 ); ///< 중심 3 · 부피 · 부모 · 첫 자식 · 자식 수 · 첫 잎 · 잎 수 · 깊이
+            static constexpr size_t kStoredLinkBytes  = 3 * sizeof( float32 );  ///< 잎 둘 · 면적
+            static constexpr size_t kStoredPieceBytes = 10 * sizeof( float32 ); ///< 경계 6 · 정점 구간 2 · 껍질 구간 2
 
             /** @brief 노드 · 자식 번호 · 연결을 읽습니다. */
-            static void readGraph( ByteReader& reader, uint32 leafCount, uint32 nodeCount, uint32 childCount, uint32 linkCount, FractureGraph& outGraph )
+            [[nodiscard]] static bool readGraph( ByteReader& reader, uint32 leafCount, uint32 nodeCount, uint32 childCount, uint32 linkCount, FractureGraph& outGraph )
             {
                 outGraph._leafCount = leafCount;
-                outGraph._listNode.resize( nodeCount );
-                for ( FractureNode& node : outGraph._listNode )
-                {
+                const bool bNodes   = reader.readList( outGraph._listNode, nodeCount, kStoredNodeBytes, [&]( FractureNode& node )
+                  {
                     node._centroid   = readFloat3( reader );
                     node._volume     = reader.readFloat32();
                     node._parent     = static_cast<int32>( reader.readUint32() );
@@ -55,26 +55,19 @@ namespace sw
                     node._firstLeaf  = reader.readUint32();
                     node._leafCount  = reader.readUint32();
                     node._depth      = static_cast<uint8>( reader.readUint32() );
-                }
-                outGraph._listChildNode.resize( childCount );
-                for ( uint32& child : outGraph._listChildNode )
-                {
-                    child = reader.readUint32();
-                }
-                outGraph._listLink.resize( linkCount );
-                for ( FractureLink& link : outGraph._listLink )
+                } );
+                return bNodes && reader.readPodList( outGraph._listChildNode, childCount ) && reader.readList( outGraph._listLink, linkCount, kStoredLinkBytes, [&]( FractureLink& link )
                 {
                     link._leafA = reader.readUint32();
                     link._leafB = reader.readUint32();
                     link._area  = reader.readFloat32();
-                }
+                } );
             }
 
             /** @brief 조각마다 경계와 정점 · 껍질 점 구간을 읽습니다. */
-            static void readPieces( ByteReader& reader, uint32 leafCount, vector<FracturePiece>& outListPiece )
+            [[nodiscard]] static bool readPieces( ByteReader& reader, uint32 leafCount, vector<FracturePiece>& outListPiece )
             {
-                outListPiece.resize( leafCount );
-                for ( FracturePiece& piece : outListPiece )
+                return reader.readList( outListPiece, leafCount, kStoredPieceBytes, [&]( FracturePiece& piece )
                 {
                     piece._boundsMin      = readFloat3( reader );
                     piece._boundsMax      = readFloat3( reader );
@@ -82,14 +75,13 @@ namespace sw
                     piece._vertexCount    = reader.readUint32();
                     piece._firstHullPoint = reader.readUint32();
                     piece._hullPointCount = reader.readUint32();
-                }
+                } );
             }
 
             /** @brief 정점 · 삼각형 슬롯 · 껍질 점을 읽습니다. */
-            static void readMesh( ByteReader& reader, uint32 vertexCount, uint32 hullCount, FractureAsset& inoutAsset )
+            [[nodiscard]] static bool readMesh( ByteReader& reader, uint32 vertexCount, uint32 hullCount, FractureAsset& inoutAsset )
             {
-                inoutAsset._listVertex.resize( vertexCount );
-                for ( RHIVertex& vertex : inoutAsset._listVertex )
+                const bool bVertices = reader.readList( inoutAsset._listVertex, vertexCount, kStoredVertexBytes, [&]( RHIVertex& vertex )
                 {
                     for ( float32& value : vertex._arrPosition )
                     {
@@ -107,17 +99,11 @@ namespace sw
                     {
                         value = reader.readFloat32();
                     }
-                }
-                inoutAsset._listTriangleSlot.resize( vertexCount / 3 );
-                for ( uint8& slot : inoutAsset._listTriangleSlot )
-                {
-                    slot = reader.readUint8();
-                }
-                inoutAsset._listHullPoint.resize( hullCount );
-                for ( float3& point : inoutAsset._listHullPoint )
+                } );
+                return bVertices && reader.readPodList( inoutAsset._listTriangleSlot, vertexCount / 3 ) && reader.readList( inoutAsset._listHullPoint, hullCount, 3 * sizeof( float32 ), [&]( float3& point )
                 {
                     point = readFloat3( reader );
-                }
+                } );
             }
         };
     } // namespace
@@ -294,24 +280,20 @@ namespace sw
         _seed                    = reader.readUint64();
         _boundsMin               = FractureAssetInternal::readFloat3( reader );
         _boundsMax               = FractureAssetInternal::readFloat3( reader );
-        const bool bFits         = reader.hasOverflowed() == false && FractureAssetInternal::canHold( reader, nodeCount, 36 ) && FractureAssetInternal::canHold( reader, childCount, 4 ) &&
-                           FractureAssetInternal::canHold( reader, linkCount, 12 ) && FractureAssetInternal::canHold( reader, leafCount, 40 ) &&
-                           FractureAssetInternal::canHold( reader, vertexCount, FractureAssetInternal::kStoredVertexBytes ) && FractureAssetInternal::canHold( reader, hullCount, 12 );
-        if ( bFits == false )
+        if ( reader.hasOverflowed() )
         {
-            SW_LOG_ERROR_ID( "FractureAsset.FractureAssetTruncated", "Fracture asset is truncated" );
+            SW_LOG_ERROR_ID( "FractureAsset.FractureAssetTruncated", "Fracture asset is truncated or its header holds a non-finite value" );
             clear();
             return false;
         }
-        FractureAssetInternal::readGraph( reader, leafCount, nodeCount, childCount, linkCount, _graph );
-        FractureAssetInternal::readPieces( reader, leafCount, _listPiece );
-        FractureAssetInternal::readMesh( reader, vertexCount, hullCount, *this );
+        const bool bLengthsFit = FractureAssetInternal::readGraph( reader, leafCount, nodeCount, childCount, linkCount, _graph ) && FractureAssetInternal::readPieces( reader, leafCount, _listPiece ) &&
+                                 FractureAssetInternal::readMesh( reader, vertexCount, hullCount, *this ) && reader.isFullyRead();
 
         string     error;
-        const bool bMalformedFractureAsset = reader.hasOverflowed() || reader.getRemainingByteCount() != 0 || isValid( &error ) == false;
+        const bool bMalformedFractureAsset = bLengthsFit == false || isValid( &error ) == false;
         if ( bMalformedFractureAsset )
         {
-            SW_LOG_ERROR_ID( "FractureAsset.FractureAssetMalformed", "Fracture asset is malformed: %#", reader.hasOverflowed() || reader.getRemainingByteCount() != 0 ? "length mismatch" : error.c_str() );
+            SW_LOG_ERROR_ID( "FractureAsset.FractureAssetMalformed", "Fracture asset is malformed: %#", bLengthsFit ? error.c_str() : "length mismatch or a non-finite value" );
             clear();
             return false;
         }

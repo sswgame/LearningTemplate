@@ -217,22 +217,22 @@ namespace sw
         const uint32 resolution   = reader.readUint32();
         const uint32 levelCount   = reader.readUint32();
         const bool   bSizeInRange = kMinResolution <= resolution && resolution <= kMaxResolution && kMinLevelCount <= levelCount && levelCount <= kMaxLevelCount;
-        const uint64 texelCount   = static_cast<uint64>( resolution ) * resolution * levelCount;
-        if ( bSizeInRange == false || reader.getRemainingByteCount() != texelCount * Internal::kTexelBytes )
+        const uint64 texelCount   = static_cast<uint64>( resolution ) * resolution * levelCount; // 범위 안이라 넘치지 않는다
+        const bool   bRead        = bSizeInRange && reader.readList( _listTexel, texelCount, Internal::kTexelBytes, [&]( float3& texel )
+                 {
+            texel._x = reader.readFloat32();
+            texel._y = reader.readFloat32();
+            texel._z = reader.readFloat32();
+        } );
+        if ( bRead == false || reader.isFullyRead() == false )
         {
-            Internal::setError( pOutError, "reflection probe file length does not match its size" );
+            Internal::setError( pOutError, "reflection probe file length does not match its size, or it holds a non-finite value" );
+            clear();
             return false;
         }
         _capturePosition = capturePosition;
         _resolution      = resolution;
         _levelCount      = levelCount;
-        _listTexel.resize( static_cast<size_t>( texelCount ) );
-        for ( float3& texel : _listTexel )
-        {
-            texel._x = reader.readFloat32();
-            texel._y = reader.readFloat32();
-            texel._z = reader.readFloat32();
-        }
         return true;
     }
 

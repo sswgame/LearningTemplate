@@ -4,6 +4,7 @@
 
 #include "Core/Container/LittleEndianUtil.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Serialization/ByteStream.h"
 
 #include "Engine/Content/AssetIO.h"
 
@@ -30,29 +31,31 @@ namespace sw
     {
         using Internal = LayerWeightsAssetInternal;
         *this          = LayerWeightsAsset{};
-        if ( bytes.size() < Internal::kHeaderBytes || LittleEndianUtil::readUint32( bytes.data() ) != kMagic )
+        ByteReader reader{ bytes.data(), bytes.size() };
+        if ( bytes.size() < Internal::kHeaderBytes || reader.readUint32() != kMagic )
         {
             SW_LOG_ERROR_ID( "LayerWeightsAsset.NotLayerWeightMap", "'%#' is not a layer weight map (magic SWLW missing)", sourceName );
             return false;
         }
         // 옛 판(레이어 넷, 버전 1)은 읽지 않는다 — 저장소의 파일은 현재 판으로 다시 썼다.
-        const uint32 version = LittleEndianUtil::readUint32( bytes.data() + 4 );
+        const uint32 version = reader.readUint32();
         if ( version != kVersion )
         {
             SW_LOG_ERROR_ID( "LayerWeightsAsset.LayerWeightMapVersion", "'%#' is layer weight map version %# - this build reads version %# only", sourceName, version, kVersion );
             return false;
         }
-        const uint32 width      = LittleEndianUtil::readUint32( bytes.data() + 8 );
-        const uint32 height     = LittleEndianUtil::readUint32( bytes.data() + 12 );
-        const uint32 layerCount = LittleEndianUtil::readUint32( bytes.data() + 16 );
+        const uint32 width      = reader.readUint32();
+        const uint32 height     = reader.readUint32();
+        const uint32 layerCount = reader.readUint32();
         const bool   bSizeOk    = width >= 1 && width <= kMaxResolution && height >= 1 && height <= kMaxResolution;
         if ( bSizeOk == false || layerCount != kLayerCount )
         {
             SW_LOG_ERROR_ID( "LayerWeightsAsset.XLayersExpectedPer", "'%#' is %#x%# with %# layers - expected 1..%# per side and %# layers", sourceName, width, height, layerCount, kMaxResolution, kLayerCount );
             return false;
         }
-        const size_t weightBytes = static_cast<size_t>( width ) * height * kLayerCount;
-        if ( bytes.size() != Internal::kHeaderBytes + weightBytes )
+        const size_t  weightBytes = static_cast<size_t>( width ) * height * kLayerCount;
+        vector<uint8> listByte;
+        if ( reader.readPodList( listByte, weightBytes ) == false || reader.isFullyRead() == false )
         {
             SW_LOG_ERROR_ID( "LayerWeightsAsset.BytesXNeeds", "'%#' has %# bytes - %#x%# needs %#", sourceName, static_cast<uint64>( bytes.size() ), width, height,
                              static_cast<uint64>( Internal::kHeaderBytes + weightBytes ) );
@@ -60,7 +63,7 @@ namespace sw
         }
         _width  = width;
         _height = height;
-        _bytes.assign( bytes.begin() + static_cast<ptrdiff_t>( Internal::kHeaderBytes ), bytes.end() );
+        _bytes  = std::move( listByte );
         return true;
     }
 

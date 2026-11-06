@@ -1,6 +1,7 @@
 #include "pch.h"
 
 #include "Core/Math/SphericalHarmonics.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Graphics/Lighting/LightProbeGrid.h"
@@ -76,6 +77,54 @@ SW_TEST_CASE( LightProbeGridTest, RejectsBrokenFiles )
     sw::vector<uint8> wrongVersion = bytes;
     wrongVersion[4]                = static_cast<uint8>( sw::LightProbeGrid::kVersion + 1 );
     SW_EXPECT_FALSE( loaded.readFromBytes( wrongVersion.data(), wrongVersion.size() ) );
+}
+
+/**
+ * @brief [LightProbeGridTest] 어느 길이로 잘려도 거절하고, 곱이 64 비트로 넘치는 격자 · NaN 도 거절한다(`.probes` 는 신뢰 경계다)
+ */
+SW_TEST_CASE( LightProbeGridTest, TruncationForgedCountsAndNonFiniteAreRefused )
+{
+    const sw::LightProbeGrid source = sw::makeLightProbeGridForTest();
+    sw::vector<uint8>        bytes;
+    source.makeBytes( bytes );
+
+    for ( size_t length = 0; length < bytes.size(); ++length )
+    {
+        sw::LightProbeGrid loaded{};
+        sw::string         error;
+        SW_EXPECT_FALSE( loaded.readFromBytes( bytes.data(), length, &error ) );
+        SW_EXPECT_TRUE( loaded._listProbe.empty() );
+        SW_EXPECT_FALSE( error.empty() );
+    }
+
+    // 바이트 자리: 매직(0) · 버전(4) · 원점(8) · 간격(20) · 축마다 수(32 · 36 · 40) · 계수(44).
+    const auto refused = []( sw::vector<uint8> forged )
+    {
+        sw::LightProbeGrid loaded{};
+        sw::string         error;
+        SW_EXPECT_FALSE( loaded.readFromBytes( forged.data(), forged.size(), &error ) );
+        SW_EXPECT_TRUE( loaded._listProbe.empty() );
+        SW_EXPECT_FALSE( error.empty() );
+    };
+    const auto patched = [&]( size_t offset, uint32 value )
+    {
+        sw::vector<uint8> forged = bytes;
+        sw::Memory::copy( forged.data() + offset, &value, sizeof( value ) );
+        return forged;
+    };
+    // 2^31 × 2^31 × 4 = 2^64 → 그대로 곱하면 0 이라 머리만 있는 파일이 통과한다.
+    sw::vector<uint8> wrapped( bytes.begin(), bytes.begin() + 44 );
+    const uint32      arrWrapCount[3] = { 0x80000000u, 0x80000000u, 4u };
+    sw::Memory::copy( wrapped.data() + 32, arrWrapCount, sizeof( arrWrapCount ) );
+    refused( wrapped );
+    refused( patched( 32, 0xFFFFFFFFu ) );
+    refused( patched( 8, 0x7FC00000u ) );  // NaN 원점
+    refused( patched( 20, 0x7F800000u ) ); // 무한대 간격
+    refused( patched( 44, 0x7FC00000u ) ); // NaN 계수
+
+    sw::vector<uint8> longer = bytes;
+    longer.push_back( 0 );
+    refused( longer );
 }
 
 /**

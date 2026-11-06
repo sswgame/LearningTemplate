@@ -197,6 +197,24 @@ SW_TEST_CASE( NavMeshAssetTest, HugeCountsAreRejectedBeforeAllocating )
     SW_EXPECT_TRUE( asset.getEntries().empty() );
 }
 
+/** @brief [NavMeshAssetTest] 항목 뒤에 남는 바이트와 NaN 경계는 읽지 않는다 */
+SW_TEST_CASE( NavMeshAssetTest, TrailingBytesAndNonFiniteBoundsAreRejected )
+{
+    SW_EXPECT_LOG( "NavMeshAsset.Truncated" );
+    const vector<uint8> listByte = Util::makeBytes();
+    NavMeshAsset        asset;
+
+    vector<uint8> listLonger = listByte;
+    listLonger.push_back( 0 );
+    SW_EXPECT_FALSE( asset.readBytes( listLonger.data(), listLonger.size(), "test" ) );
+    SW_EXPECT_TRUE( asset.getEntries().empty() );
+
+    vector<uint8> listBounds = listByte;
+    Util::patchUint32( listBounds, Util::getFirstTileCountOffset() - sizeof( AABB ), 0x7FC00000u );
+    SW_EXPECT_FALSE( asset.readBytes( listBounds.data(), listBounds.size(), "test" ) );
+    SW_EXPECT_TRUE( asset.getEntries().empty() );
+}
+
 /** @brief [NavMeshAssetTest] 남은 바이트로 꼭 맞는 타일 수는 받는다 — 빈 타일(12 바이트)들이 거름의 경계다 */
 SW_TEST_CASE( NavMeshAssetTest, TileCountExactlyFittingTheRestIsAccepted )
 {

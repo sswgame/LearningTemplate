@@ -165,6 +165,18 @@ SW_TEST_CASE( ReflectionProbeAssetTest, OutOfRangeSizesAreRejected )
     }
 }
 
+/** @brief [ReflectionProbeAssetTest] NaN · 무한대는 위치에서도 텍셀에서도 읽지 않는다 */
+SW_TEST_CASE( ReflectionProbeAssetTest, NonFiniteValuesAreRejected )
+{
+    vector<uint8> listPosition = Util::makeBytes();
+    Util::patchUint32( listPosition, 8, 0x7FC00000u );
+    Util::expectRejected( listPosition );
+
+    vector<uint8> listTexel = Util::makeBytes();
+    Util::patchUint32( listTexel, Util::kHeaderBytes + 4, 0x7F800000u );
+    Util::expectRejected( listTexel );
+}
+
 /** @brief [ReflectionProbeAssetTest] 머리말은 범위 안인데 길이가 그 크기와 다르면 읽지 않는다 */
 SW_TEST_CASE( ReflectionProbeAssetTest, HeaderSizeMustMatchTheLength )
 {
