@@ -26,7 +26,7 @@ namespace sw
         Skinned = 0,      ///< 캐릭터 스켈레톤을 따르는 메시(피팅과 병합을 거친다)
         SocketPrefab,     ///< 소켓에 붙이는 프리팹(견갑, 칼집, 총)
         BodyModification, ///< 몸 수정. 모프, 머티리얼 값, 숨김 영역을 바꾸며 직접 그려지는 것은 없다
-        Sprite            ///< 2D 종이 인형 조각(스프라이트, 그리기 순서, 소켓 기준점)
+        Sprite            ///< 2D 종이 인형 조각. `sprite` 는 스프라이트 클립(`.sprite.xml`)이고, 소켓에 붙어 `layer` 순서로 그린다(유니티 2D 종이 인형의 Sprite Renderer 묶음 자리)
     };
 
     /**
@@ -147,14 +147,14 @@ namespace sw
         PROPERTY()
         hashed_string _breakStage{}; ///< 이 피해 단계에 이르면 저절로 떨어진다. 비어 있으면 맞아서만 떨어진다
         PROPERTY()
-        int32 _layer{ 0 }; ///< 스프라이트 그리기 순서
+        int32 _layer{ 0 }; ///< 스프라이트 부품의 레이어 안 그리기 순서(클수록 위). 스프라이트만 적는다
         PROPERTY( Min = 0.05 )
         float32 _lodDetail{ 1.0f }; ///< 병합하는 스킨드 부품: 합친 메시 LOD 에서 늦게(> 1, 얼굴) 또는 빨리(< 1) 줄인다(`CharacterLODSectionRule::_detail`)
         PROPERTY()
         uint32 _lodDropLevel{ 0 }; ///< 병합하는 스킨드 부품: 이 LOD 단계(1 부터)부터 그리지 않는다(눈썹 · 장식). 0 이면 빼지 않는다
         PROPERTY( Required )
         AppearancePartKind _kind{ AppearancePartKind::Skinned };
-        uint8              _bDeforms{ SW_TRUE };    ///< 스킨드로 휘는지 여부(아니면 본 하나를 따르는 단단한 조각)
+        uint8              _bDeforms{ SW_TRUE };    ///< 스킨드로 휘는지 여부. 스킨드만 휘며, `deforms="false"` 인 스킨드는 소켓(본 이름 포함) 하나를 따르는 단단한 메시 조각이다(소켓 필수)
         uint8              _bBreakable{ SW_FALSE }; ///< 떨어져 나갈 수 있는지 여부(맞아서, 또는 피해 단계로)
 
         const AppearancePartVariantDef* findVariant( const hashed_string& name ) const;

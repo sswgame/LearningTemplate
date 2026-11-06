@@ -105,6 +105,9 @@ namespace sw
      *          - **리그 유닛**: 같은 오브젝트의 후처리 리그에 소켓 에셋을 가진 소켓 부품을 칸 이름의 강체 유닛으로 잇는다(왼손 IK 가 `MainHand` 의 `SupportHand` 를 따른다).
      *          - **부품 풀**: 바꾼 소켓 부품과 `destroyOwnerStowingParts` 로 거둔 소켓 부품은 씬의 `SocketPartPool` 에 쉬게 하고, 다음 스폰이 같은 에셋을 꺼낸다.
      *            소켓 부품(`SocketPrefab`)은 프리팹을 스폰해서 `SocketBindingComponent` 로 소켓에 붙인다. 다시 조립할 때 같은 부품(주인, 이름, 에셋)은 그대로 둔다.
+     *            휘지 않는 스킨드 부품(`deforms="false"`)은 메시 하나(`MeshComponent`, 구간 머티리얼 포함)로, 스프라이트 부품은 `SpriteComponent`(클립 · 그리기 순서 `layer`)로 만들어
+     *            같은 길로 소켓에 붙인다(풀에는 쉬지 않는다).
+     *          - **구간 머티리얼**: 부품 · 변형 · 규칙이 메시 구간 이름마다 머티리얼과 매개변수를 정한다(`ResolvedPart::_listSection`, `ResolvedMaterialValue::_section`). 합쳐도 구간마다 머티리얼이 남는다.
      *          - **소켓**: 몸과 부품의 소켓 에셋이 하나의 이름 공간을 이룬다(`AppearanceSocketRig`, 예: `MainHand.Muzzle`). 몸의 포즈가 끝난 프레임마다(단계 작업) 부품의
      *            소켓 위치를 고친다. `findSocketWorldTransform` 은 지난 프레임의 포즈와 월드로 답하며, 틱 안에서는 읽기만 한다.
      *          - **체형 · 피팅**: 해석의 모프(체형)와, 몸 부품에 피팅 표(`fitTables`)가 있으면 피팅 데이터(`fit`)를 가진 스킨드 부품의 피팅을 베이크한 메시 사본으로 그린다
@@ -238,6 +241,7 @@ namespace sw
             uint32           _partIndex{ 0 };
             uint32           _holderUnit{ AppearanceSocketRig::kNoUnit }; ///< 붙은 유닛(몸이면 0). 몸이면 포즈마다 위치를 고친다
             uint8            _bSocketPart{ SW_TRUE };                     ///< 소켓에 붙는 부품인지 여부(아니면 몸을 따르는 스킨드 부품)
+            uint8            _bPooled{ SW_FALSE };                        ///< 프리팹에서 스폰한 소켓 부품이라 거둘 때 부품 풀에 쉰다(단단한 조각 · 스프라이트는 아니다)
             uint8            _bBaked{ SW_FALSE };                         ///< 베이크한 메시(체형 · 피팅)를 그린다 — 다시 조립하는 동안 숨기지 않는다
             uint8            _bMerged{ SW_FALSE };                        ///< 몸 메시에 합쳐 구간으로 그린다(오브젝트가 없다). `_listSection` 은 병합한 메시를 건 뒤에 생긴다
             /**
@@ -283,6 +287,12 @@ namespace sw
         /** @brief 스킨드 부품 오브젝트를 만들어 몸에 잇고 돌려줍니다(`syncParts` 의 일부). @p pBodyScene 이 없으면 붙이지 않습니다. 만든 구간 컴포넌트는 @p outListSection 에 담습니다. */
         GameObject* spawnSkinnedPart( GameObjectManager& manager, SkeletalMeshComponent& body, SceneComponent* pBodyScene, const ResolvedPart& part,
                                       vector<TComponentHandle<MeshSectionComponent>>& outListSection );
+        /** @brief 휘지 않는 스킨드 부품(`deforms="false"`)의 단단한 메시 오브젝트를 만들어 돌려줍니다. 소켓 하나를 따른다(`bindSocketParts`). 만든 구간 컴포넌트는 @p outListSection 에 담습니다. */
+        GameObject* spawnRigidPart( GameObjectManager& manager, const ResolvedPart& part, vector<TComponentHandle<MeshSectionComponent>>& outListSection );
+        /** @brief 스프라이트 부품의 오브젝트(`SpriteComponent` — 클립 · 그리기 순서 `layer`)를 만들어 돌려줍니다. 소켓에 붙인다(`bindSocketParts`). */
+        GameObject* spawnSpritePart( GameObjectManager& manager, const ResolvedPart& part );
+        /** @brief 다시 조립해도 그대로 둔 부품 @p inoutKept 에 같은 부품 안에서 바뀔 수 있는 것(구간 머티리얼, 스프라이트 그리기 순서)을 맞춥니다. */
+        void refreshKeptPart( GameObjectManager& manager, SpawnedPart& inoutKept );
         /**
          * @brief 해석에서 빠진 부품 @p spawned 가 이번에 떨어져 나간 소켓 부품이면 물리로 떼고 true 입니다. 떼어 낸 오브젝트는 더 이상 이 컴포넌트의 것이 아닙니다.
          * @return 떨어져 나간 부품이 아니거나 뗄 수 없으면(물리 바디 없음 — 알린다) false 이고, 부르는 쪽이 지웁니다.

@@ -38,17 +38,22 @@ namespace sw
         vector<AppearanceSectionDef> _listSection{};     ///< 스킨드 부품의 구간마다 머티리얼. 부품의 것 위에 변형 · 머티리얼 변형 · 규칙(`SwapMaterial section`)을 반영했다
         hashed_string                _skeleton{};        ///< 비어 있으면 루트 본 하나짜리 암묵 스켈레톤
         hashed_string                _socketSet{};
-        hashed_string                _rig{};         ///< 스킨드 부품의 자기 후처리 리그(있으면 몸을 리더로 따르지 않는다)
-        hashed_string                _fit{};         ///< 피팅 데이터(`*.partfit.xml`). 비어 있으면 피팅하지 않는다
-        hashed_string                _fitTables{};   ///< 피팅 표(`*.fit.xml`). 몸 부품만 가진다
-        hashed_string                _bodyShapes{};  ///< 체형 축 데이터(`*.bodyshape.xml`). 몸 부품만 가진다
-        hashed_string                _state{};       ///< 외형 상태
-        hashed_string                _damageStage{}; ///< 피해 단계(비어 있으면 멀쩡함)
-        int32                        _layer{ 0 };
+        hashed_string                _rig{};             ///< 스킨드 부품의 자기 후처리 리그(있으면 몸을 리더로 따르지 않는다)
+        hashed_string                _fit{};             ///< 피팅 데이터(`*.partfit.xml`). 비어 있으면 피팅하지 않는다
+        hashed_string                _fitTables{};       ///< 피팅 표(`*.fit.xml`). 몸 부품만 가진다
+        hashed_string                _bodyShapes{};      ///< 체형 축 데이터(`*.bodyshape.xml`). 몸 부품만 가진다
+        hashed_string                _state{};           ///< 외형 상태
+        hashed_string                _damageStage{};     ///< 피해 단계(비어 있으면 멀쩡함)
+        int32                        _layer{ 0 };        ///< 스프라이트 부품의 레이어 안 그리기 순서(`SpriteComponent::setOrderInLayer` — 클수록 위)
         float32                      _lodDetail{ 1.0f }; ///< 병합 메시 LOD 규칙(`AppearancePartDef::_lodDetail`)
         uint32                       _lodDropLevel{ 0 }; ///< 병합 메시 LOD 규칙(`AppearancePartDef::_lodDropLevel`)
         AppearancePartKind           _kind{ AppearancePartKind::Skinned };
-        uint8                        _bDeforms{ SW_TRUE };
+        uint8                        _bDeforms{ SW_TRUE }; ///< 스킨드 부품이 스키닝으로 휘는지 여부. 아니면 소켓(본 이름 포함) 하나를 따르는 단단한 메시 조각이다
+
+        /** @brief 몸 스켈레톤으로 스키닝하는 부품(휘는 스킨드)이면 true 입니다. 몸 · 리더 포즈 · 피팅 · 병합은 이 부품만 다룬다. */
+        bool isSkinnedFollower() const { return _kind == AppearancePartKind::Skinned && _bDeforms == SW_TRUE; }
+        /** @brief 소켓에 붙여 두는 부품이면 true 입니다 — 프리팹, 스프라이트, 휘지 않는 스킨드 조각. 몸 수정은 그려지는 것이 없어 아니다. */
+        bool isSocketBound() const { return _kind == AppearancePartKind::SocketPrefab || _kind == AppearancePartKind::Sprite || ( _kind == AppearancePartKind::Skinned && _bDeforms == SW_FALSE ); }
     };
 } // namespace sw
 

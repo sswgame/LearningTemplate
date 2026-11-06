@@ -16,13 +16,13 @@ namespace sw
         {
             static constexpr const utf8* kRigidRootBone = "root";
 
-            /** @brief 몸 부품입니다. 주인이 비어 있는 첫 스킨드 부품이며, 없으면 -1 입니다. */
+            /** @brief 몸 부품입니다. 주인이 비어 있는 첫 휘는 스킨드 부품이며, 없으면 -1 입니다. */
             static int32 findBodyPart( const ResolvedAppearance& resolved )
             {
                 for ( size_t partIndex = 0; partIndex < resolved._listPart.size(); ++partIndex )
                 {
                     const ResolvedPart& part = resolved._listPart[partIndex];
-                    if ( part._owner.empty() && part._kind == AppearancePartKind::Skinned )
+                    if ( part._owner.empty() && part.isSkinnedFollower() )
                         return static_cast<int32>( partIndex );
                 }
                 return -1;

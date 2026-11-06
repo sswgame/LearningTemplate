@@ -936,8 +936,8 @@ namespace sw
         builder.addName( resolved._face );
         for ( const ResolvedPart& part : resolved._listPart )
         {
-            if ( part._kind != AppearancePartKind::Skinned )
-                continue;
+            if ( part.isSkinnedFollower() == false )
+                continue; // 휘지 않는 조각 · 프리팹 · 스프라이트는 병합 · 베이크 메시에 들지 않는다
             builder.addName( part._owner );
             builder.addName( part._partName );
             builder.addName( part._asset );

@@ -8,6 +8,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Hash/HashUtil.h"
 
+#include "Engine/2D/SpriteComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Character/CharacterDataCache.h"
@@ -538,9 +539,10 @@ namespace sw
 
     void CharacterAppearanceComponent::retirePart( GameObjectManager& manager, GameObject& object, const SpawnedPart& spawned, bool bPool ) const
     {
-        // 소켓 부품만 풀에 넣는다 — 스킨드 부품은 이 컴포넌트가 만든 빈 오브젝트라 다시 세우는 비용이 작다. 풀이 거절하면(물리로 떨어짐) 지운다.
+        // 프리팹에서 스폰한 소켓 부품만 풀에 넣는다 — 스킨드 · 단단한 조각 · 스프라이트는 이 컴포넌트가 만든 작은 오브젝트라 다시 세우는 비용이 작다
+        // (풀 열쇠가 에셋 · 머티리얼뿐이라 구간 머티리얼을 담지 못한다). 풀이 거절하면(물리로 떨어짐) 지운다.
         using Internal       = CharacterAppearanceComponentInternal;
-        const bool bPoolable = bPool && spawned._bSocketPart == SW_TRUE;
+        const bool bPoolable = bPool && spawned._bPooled == SW_TRUE;
         if ( bPoolable )
         {
             // 염색은 이 외형이 만든 런타임 인스턴스다(`applyParameter`) — 버려서 프리팹 그대로 쉬게 한다. 꺼낸 쪽의 외형이 자기 값을 다시 입힌다.
@@ -590,7 +592,7 @@ namespace sw
     {
         const bool bBodyPartKnown = _bodyPart >= 0 && static_cast<size_t>( _bodyPart ) < _state.getResolved()._listPart.size();
         const bool bOwnsRig       = part._rig.empty() == false;
-        const bool bFollowsBody   = part._kind == AppearancePartKind::Skinned && bOwnsRig == false && partIndex != _bodyPart;
+        const bool bFollowsBody   = part.isSkinnedFollower() && bOwnsRig == false && partIndex != _bodyPart;
         const bool bMergeable     = _bMergeParts == SW_TRUE && bBodyPartKnown;
         if ( bMergeable == false || bFollowsBody == false )
             return false;
@@ -774,8 +776,8 @@ namespace sw
         for ( size_t partIndex = 0; partIndex < _state.getResolved()._listPart.size(); ++partIndex )
         {
             const ResolvedPart& part = _state.getResolved()._listPart[partIndex];
-            if ( part._owner.empty() == false || part._kind != AppearancePartKind::Skinned )
-                continue;
+            if ( part._owner.empty() == false || part.isSkinnedFollower() == false )
+                continue; // 몸은 휘는 스킨드다(`AppearanceSocketRig` 의 몸 부품과 같은 판정)
             // 스켈레톤을 먼저 적용한다. 메시의 스킨 사본이 그 본 수를 참조하기 때문이다.
             // 적지 않은 스켈레톤은 빈 경로(암묵 스켈레톤)다 — 빈 이름의 `c_str()` 은 "None" 이라 그대로 넘기면 경로 "None" 이 된다(C-59).
             const string_view skeletonPath = part._skeleton.empty() ? string_view{} : string_view( part._skeleton.c_str() );
@@ -902,6 +904,65 @@ namespace sw
         return pObject;
     }
 
+    GameObject* CharacterAppearanceComponent::spawnRigidPart( GameObjectManager& manager, const ResolvedPart& part, vector<TComponentHandle<MeshSectionComponent>>& outListSection )
+    {
+        // 스키닝하지 않는 메시 조각이다(견갑판 · 투구 장식). 몸 뼈 대신 소켓 하나를 따르므로 소켓 부품과 같은 길로 붙인다(`bindSocketParts`).
+        GameObject*    pObject = manager.createGameObject( part._partName );
+        MeshComponent* pMesh   = pObject != nullptr ? pObject->addComponent<MeshComponent>() : nullptr;
+        if ( pMesh == nullptr )
+        {
+            if ( pObject != nullptr )
+                manager.destroyObject( pObject );
+            return nullptr; // 부르는 쪽이 스폰하지 못했다고 알린다
+        }
+        pMesh->setMeshID( part._asset.c_str() );
+        if ( part._material.empty() == false )
+            pMesh->setMaterialPath( part._material.c_str() );
+        outListSection.clear();
+        CharacterAppearanceComponentInternal::applyPartSections( manager, *pObject, *pMesh, part, outListSection, _presetID );
+        (void)pObject->addComponent<SocketBindingComponent>();
+        return pObject;
+    }
+
+    GameObject* CharacterAppearanceComponent::spawnSpritePart( GameObjectManager& manager, const ResolvedPart& part )
+    {
+        // 2D 종이 인형 조각이다. 클립(`.sprite.xml`)의 첫 프레임을 그리고, 순서는 부품의 `layer` 다. 클립을 넘기는 애니메이터는 붙이지 않는다 — 조각은 몸 소켓을 따라 움직인다.
+        GameObject*      pObject = manager.createGameObject( part._partName );
+        SpriteComponent* pSprite = pObject != nullptr ? pObject->addComponent<SpriteComponent>() : nullptr;
+        if ( pSprite == nullptr )
+        {
+            if ( pObject != nullptr )
+                manager.destroyObject( pObject );
+            return nullptr;
+        }
+        pSprite->setClipPath( part._asset.c_str() );
+        pSprite->setOrderInLayer( part._layer );
+        if ( part._material.empty() == false )
+            pSprite->setMaterialPath( part._material.c_str() );
+        (void)pObject->addComponent<SocketBindingComponent>();
+        return pObject;
+    }
+
+    void CharacterAppearanceComponent::refreshKeptPart( GameObjectManager& manager, SpawnedPart& inoutKept )
+    {
+        GameObject* pObject = manager.resolveGameObject( inoutKept._object );
+        if ( inoutKept._bMerged == SW_TRUE || pObject == nullptr )
+            return; // 합친 부품은 구간 머티리얼이 메시 해시에 들어가 다시 짓기가 고친다(`applyMergedSections`)
+        const ResolvedPart& part = _state.getResolved()._listPart[inoutKept._partIndex];
+        // 구간 머티리얼만 바뀐 메시 부품(변형 · 규칙의 구간 교체)은 같은 부품이다 — 다시 만들지 않고 구간만 고친다(같으면 그대로 둔다).
+        MeshComponent* pMain = nullptr;
+        if ( part.isSkinnedFollower() )
+            pMain = pObject->getComponent<SkeletalMeshComponent>();
+        else if ( part._kind == AppearancePartKind::Skinned )
+            pMain = pObject->getComponent<MeshComponent>(); // 단단한 조각은 주 메시를 먼저 붙였다(`spawnRigidPart`)
+        if ( pMain != nullptr )
+            CharacterAppearanceComponentInternal::applyPartSections( manager, *pObject, *pMain, part, inoutKept._listSection, _presetID );
+        // 그리기 순서만 바뀐 스프라이트도 같은 부품이다.
+        SpriteComponent* pSprite = part._kind == AppearancePartKind::Sprite ? pObject->getComponent<SpriteComponent>() : nullptr;
+        if ( pSprite != nullptr && pSprite->getOrderInLayer() != part._layer )
+            pSprite->setOrderInLayer( part._layer );
+    }
+
     void CharacterAppearanceComponent::syncParts( GameObjectManager& manager, SkeletalMeshComponent& body, int32 bodyPart,
                                                   const vector<AppearanceDetachEvent>& listDetachEvent )
     {
@@ -940,11 +1001,7 @@ namespace sw
             listPartCovered[static_cast<size_t>( matched )] = SW_TRUE;
             SpawnedPart kept                                = spawned;
             kept._partIndex                                 = static_cast<uint32>( matched );
-            // 구간 머티리얼만 바뀐 스킨드 부품(변형 · 규칙의 구간 교체)은 같은 부품이다 — 다시 만들지 않고 구간만 고친다(같으면 그대로 둔다).
-            // 합친 부품은 구간 머티리얼이 메시 해시에 들어가 다시 짓기가 고친다(`applyMergedSections`).
-            SkeletalMeshComponent* pKeptSkinned = kept._bMerged == SW_FALSE && kept._bSocketPart == SW_FALSE && pObject != nullptr ? pObject->getComponent<SkeletalMeshComponent>() : nullptr;
-            if ( pKeptSkinned != nullptr )
-                Internal::applyPartSections( manager, *pObject, *pKeptSkinned, _state.getResolved()._listPart[static_cast<size_t>( matched )], kept._listSection, _presetID );
+            refreshKeptPart( manager, kept );
             listKeep.push_back( kept );
         }
         _listSpawnedPart = std::move( listKeep );
@@ -985,11 +1042,20 @@ namespace sw
                 }
                 if ( pObject != nullptr && pObject->getComponent<SocketBindingComponent>() == nullptr )
                     (void)pObject->addComponent<SocketBindingComponent>();
+                spawned._bPooled = SW_TRUE;
             }
-            else if ( part._kind == AppearancePartKind::Skinned )
+            else if ( part.isSkinnedFollower() )
             {
                 pObject              = spawnSkinnedPart( manager, body, pBodyScene, part, spawned._listSection );
                 spawned._bSocketPart = SW_FALSE;
+            }
+            else if ( part._kind == AppearancePartKind::Skinned )
+            {
+                pObject = spawnRigidPart( manager, part, spawned._listSection ); // 휘지 않는 스킨드 — 소켓 하나를 따르는 단단한 메시
+            }
+            else if ( part._kind == AppearancePartKind::Sprite )
+            {
+                pObject = spawnSpritePart( manager, part );
             }
             if ( pObject == nullptr )
             {

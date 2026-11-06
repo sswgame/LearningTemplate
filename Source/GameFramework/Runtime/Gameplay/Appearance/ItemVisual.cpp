@@ -214,11 +214,27 @@ namespace sw
                 part._bBreakable = part._breakStage.empty() == false ? SW_TRUE : SW_FALSE;
                 if ( XMLReadUtil::readOptionalFlag( node, "deforms", part._bDeforms ) == false || XMLReadUtil::readOptionalFlag( node, "breakable", part._bBreakable ) == false )
                     report.addErrorWithID( "Appearance.PartDeformsInvalid", "%#: visual '%#' part '%#' has an invalid deforms / breakable", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
+                // 휘는 것은 스킨드 메시뿐이다(2D 스프라이트 스키닝 · 프리팹 변형은 없다). 휘지 않는 스킨드는 소켓(본 이름 포함) 하나를 따르는 단단한 조각이라
+                // 몸 스켈레톤으로 피팅 · 리그하지 않는다 — 언리얼 소켓에 붙인 Static Mesh, 유니티 본 아래 둔 MeshRenderer 의 자리.
+                if ( part._bDeforms == SW_TRUE && part._kind != AppearancePartKind::Skinned )
+                    report.addErrorWithID( "Appearance.PartDeformsInvalid", "%#: visual '%#' part '%#' of kind %# cannot deform - only Skinned parts skin", sourceName, inoutVisual._id.c_str(), part._name.c_str(),
+                                           getEnumName( part._kind ) );
+                const bool bRigidSkinned = part._kind == AppearancePartKind::Skinned && part._bDeforms == SW_FALSE;
+                const bool bRigidFitted  = part._rig.empty() == false || part._fit.empty() == false || part._fitTables.empty() == false || part._bodyShapes.empty() == false;
+                if ( bRigidSkinned && bRigidFitted )
+                    report.addErrorWithID( "Appearance.PartDeformsInvalid", "%#: visual '%#' part '%#' does not deform - it cannot have 'rig', 'fit', 'fitTables' or 'bodyShapes'", sourceName, inoutVisual._id.c_str(),
+                                           part._name.c_str() );
+                // 그리기 순서는 스프라이트만 가진다(3D 메시는 깊이 · 정렬 레이어로 정한다).
+                if ( node.findAttribute( "layer" ) != nullptr && part._kind != AppearancePartKind::Sprite )
+                    report.addErrorWithID( "Appearance.PartAttributeNotAllowed", "%#: visual '%#' part '%#' of kind %# cannot have 'layer' (only Sprite parts have a draw order)", sourceName,
+                                           inoutVisual._id.c_str(), part._name.c_str(), getEnumName( part._kind ) );
                 AppearanceXMLUtil::readOptionalFloat3( node, "impulse", part._breakImpulse, report, sourceName );
                 AppearanceXMLUtil::readPlacement( node, "socket", part._placement, report, sourceName );
                 if ( pAssetAttribute != nullptr && part._asset.empty() )
                     report.addErrorWithID( "Appearance.PartAssetMissing", "%#: visual '%#' part '%#' needs '%#'", sourceName, inoutVisual._id.c_str(), part._name.c_str(), pAssetAttribute );
-                if ( part._kind == AppearancePartKind::SocketPrefab && part._placement.isEmpty() )
+                // 소켓에 붙는 부품(프리팹 · 스프라이트 · 휘지 않는 스킨드 조각)은 붙을 소켓을 적는다.
+                const bool bSocketBound = part._kind == AppearancePartKind::SocketPrefab || part._kind == AppearancePartKind::Sprite || bRigidSkinned;
+                if ( bSocketBound && part._placement.isEmpty() )
                     report.addErrorWithID( "Appearance.PartSocketMissing", "%#: visual '%#' part '%#' needs a socket", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
                 if ( part._kind == AppearancePartKind::BodyModification && ( part._placement.isEmpty() == false || part._bBreakable == SW_TRUE ) )
                     report.addErrorWithID( "Appearance.PartBodyModificationInvalid", "%#: visual '%#' body modification '%#' cannot have a socket or break off", sourceName, inoutVisual._id.c_str(), part._name.c_str() );
