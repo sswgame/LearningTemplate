@@ -113,9 +113,8 @@ namespace sw::editor
             if ( _pDisplay == nullptr || _mainWindow == 0 )
                 return;
 
-            XWindowAttributes attrs{};
-            XGetWindowAttributes( _pDisplay, _mainWindow, &attrs );
-            io.DisplaySize = ImVec2( static_cast<float32>( attrs.width ), static_cast<float32>( attrs.height ) );
+            // 창이 ConfigureNotify 로 아는 크기다(Wayland 와 같다) - 스왑체인도 이 값으로 바뀌고, 서버에 묻는 XGetWindowAttributes 는 프레임마다 왕복이다.
+            io.DisplaySize = ImVec2( static_cast<float32>( _pWindow->getWidth() ), static_cast<float32>( _pWindow->getHeight() ) );
 
             _timer.updateTimer();
             io.DeltaTime = _timer.getDeltaTime();
