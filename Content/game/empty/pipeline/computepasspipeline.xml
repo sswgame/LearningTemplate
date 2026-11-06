@@ -2,44 +2,29 @@
 	파이프라인 XML 만으로 컴퓨트 효과를 더한 포워드 파이프라인 — 코드 없이 패스 한 줄과 셰이더 하나다. 시나리오: automation/computepass.
 	고르는 법: `-gv_renderPipeline=game/empty/pipeline/computepasspipeline.xml`.
 -->
-<RenderPipelineDesc _name="ComputePassPipeline" _shadingModel="Forward">
+<RenderPipelineDesc _base="game/empty/pipeline/tessellationstagepipeline.xml" _name="ComputePassPipeline">
 	<_listAttachment>
-		<RenderPassAttachment _name="SceneColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
-		<RenderPassAttachment _name="SwappedColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="false" />
+		<RenderPassAttachment _name="TonemapColor" _op="Remove" />
+		<RenderPassAttachment _name="SwappedColor" _format="R16G16B16A16_FLOAT" _clearColor="0,0,0,1" _bClear="false" _role="" _resolutionDivisor="1" />
 	</_listAttachment>
 	<_listPass>
-		<RenderGraphPassDesc _name="ForwardOpaque" _type="ForwardOpaque" _depthAttachment="SceneDepth" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
-			<_listOutput>
-				<item>SceneColor</item>
-				<item>SceneDepth</item>
-			</_listOutput>
-		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="ChannelSwap" _type="Compute" _shaderPath="game/empty/shaders/compute_channelswap.hlsl" _computeEntryPoint="CSMain" _threadGroupSize="8" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _bEnableBlend="false">
+		<RenderGraphPassDesc _name="Tonemap" _op="Remove" />
+		<RenderGraphPassDesc _name="ChannelSwap" _after="ForwardOpaque" _type="Compute" _depthAttachment="" _shaderPath="game/empty/shaders/compute_channelswap.hlsl" _vertexEntryPoint="" _pixelEntryPoint="" _computeEntryPoint="CSMain" _geometryEntryPoint="" _hullEntryPoint="" _domainEntryPoint="" _threadGroupSize="8" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _bEnableBlend="false" _minPostQuality="0">
 			<_listInput>
 				<item>SceneColor</item>
 			</_listInput>
 			<_listOutput>
 				<item>SwappedColor</item>
 			</_listOutput>
+			<_listPermutation />
 		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Present" _type="Present" _shaderPath="engine/shaders/post_chain.hlsl" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _bEnableBlend="false">
+		<RenderGraphPassDesc _name="Present" _shaderPath="engine/shaders/post_chain.hlsl">
 			<_listInput>
 				<item>SwappedColor</item>
 			</_listInput>
-			<_listOutput>
-				<item>Swapchain</item>
-			</_listOutput>
 			<_listPermutation>
 				<item>SW_POST_TONEMAP=1</item>
 			</_listPermutation>
 		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Canvas" _type="Canvas" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _bEnableBlend="true">
-			<_listOutput>
-				<item>Swapchain</item>
-			</_listOutput>
-		</RenderGraphPassDesc>
 	</_listPass>
-	<_listRenderPassRef>
-		<item>engine/renderpass/defaultrenderpass.xml</item>
-	</_listRenderPassRef>
 </RenderPipelineDesc>

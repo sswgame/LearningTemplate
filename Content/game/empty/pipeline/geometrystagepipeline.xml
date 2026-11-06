@@ -1,41 +1,8 @@
 <!--
 	파이프라인 XML 의 지오메트리 스테이지 — 패스 칸에 진입점을 적으면 그 스테이지가 붙는다. 시나리오: automation/geometrystage.
 -->
-<RenderPipelineDesc _name="GeometryStagePipeline" _shadingModel="Forward">
-	<_listAttachment>
-		<RenderPassAttachment _name="SceneColor" _format="R16G16B16A16_FLOAT" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
-		<RenderPassAttachment _name="TonemapColor" _format="R8G8B8A8_UNORM" _clearColor="0.8,0.1,0.8,1" _bClear="true" />
-	</_listAttachment>
+<RenderPipelineDesc _base="game/empty/pipeline/tessellationstagepipeline.xml" _name="GeometryStagePipeline">
 	<_listPass>
-		<RenderGraphPassDesc _name="ForwardOpaque" _type="ForwardOpaque" _depthAttachment="SceneDepth" _cullMode="Back" _bEnableDepthTest="true" _bEnableDepthWrite="true" _bEnableBlend="false">
-			<_listOutput>
-				<item>SceneColor</item>
-				<item>SceneDepth</item>
-			</_listOutput>
-		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Tonemap" _type="Tonemap" _shaderPath="game/empty/shaders/optional_stages.hlsl" _geometryEntryPoint="GSMain" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _bEnableBlend="false">
-			<_listInput>
-				<item>SceneColor</item>
-			</_listInput>
-			<_listOutput>
-				<item>TonemapColor</item>
-			</_listOutput>
-		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Present" _type="Present" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _bEnableBlend="false">
-			<_listInput>
-				<item>TonemapColor</item>
-			</_listInput>
-			<_listOutput>
-				<item>Swapchain</item>
-			</_listOutput>
-		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Canvas" _type="Canvas" _cullMode="None" _bEnableDepthTest="false" _bEnableDepthWrite="false" _bEnableBlend="true">
-			<_listOutput>
-				<item>Swapchain</item>
-			</_listOutput>
-		</RenderGraphPassDesc>
+		<RenderGraphPassDesc _name="Tonemap" _vertexEntryPoint="" _geometryEntryPoint="GSMain" _hullEntryPoint="" _domainEntryPoint="" />
 	</_listPass>
-	<_listRenderPassRef>
-		<item>engine/renderpass/defaultrenderpass.xml</item>
-	</_listRenderPassRef>
 </RenderPipelineDesc>

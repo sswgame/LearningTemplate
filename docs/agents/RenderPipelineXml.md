@@ -13,6 +13,8 @@
 
 이름이 겹치는 첨부는 오류다 — 파이프라인이 덮어쓰지 않는다.
 
+비슷한 파이프라인은 `_base="engine/pipeline/forwardpipeline.xml"` 로 부모를 가리키고 차이만 적는다. 패스 · 첨부 목록은 `_name` 으로 합치고(`_op="Remove"` · `_op="Replace"` · `_before` · `_after`), 쿠킹이 펼친다. 규칙은 [DataInheritance](DataInheritance.md).
+
 ## 패스 칸
 
 | 칸 | 뜻 | 받아 주지 않는 조합(읽기 오류) |

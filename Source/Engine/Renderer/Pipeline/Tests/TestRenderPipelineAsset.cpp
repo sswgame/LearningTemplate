@@ -1,13 +1,20 @@
 // RenderPipelineAssetTest — 파이프라인 · 렌더 패스 XML 이 실제 동작을 정하는지: 상태 값이 PSO 에 그대로 들어가고, 받아 줄 수 없는 조합은 읽기 오류이며, 렌더 패스의 첨부가 합쳐진다(nogpu).
 #include "pch.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Content/AssetIO.h"
+#include "Engine/Content/AssetPaths.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/RHIDescriptors.h"
 #include "Engine/Renderer/Frame/Resource/FramePSOManager.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
+#include "Engine/Serialization/Format/ReflectedXMLFile.h"
+#include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 
 using namespace sw;
 
@@ -277,4 +284,77 @@ SW_TEST_CASE( RenderPipelineAssetTest, ShippedPipelinesLoad )
         if ( pass._resolvedType == RenderPassType::Transparent )
             SW_EXPECT_TRUE( pass._bEnableBlend );
     }
+}
+
+/** @brief [RenderPipelineAssetTest] 부모를 가리키는 파이프라인은 부모 패스 위에 차이만 얹어 읽힌다(forwardtoon 은 forward 에서 피사계 심도를 지우고 톤맵 define 을 비운다) */
+SW_TEST_CASE( RenderPipelineAssetTest, ChildPipelineMergesItsBase )
+{
+    RenderPipelineAsset toon;
+    SW_REQUIRE_TRUE( toon.loadFromXMLFile( AssetID{ "engine/pipeline/forwardtoonpipeline.xml" } ) );
+    SW_EXPECT_EQUAL( string( "ForwardToonPipeline" ), toon.getDesc()._name );
+    const vector<RenderGraphPassDesc>& listPass = toon.getGraphPass();
+    SW_EXPECT_FALSE( VectorUtil::containsIf( listPass, []( const RenderGraphPassDesc& pass )
+    { return pass._name == "DepthOfField"; } ) );
+    const RenderGraphPassDesc* pPresent = VectorUtil::findIf( listPass, []( const RenderGraphPassDesc& pass )
+    { return pass._name == "Present"; } );
+    SW_REQUIRE_TRUE( pPresent != nullptr );
+    SW_EXPECT_TRUE( pPresent->_listPermutation.empty() );
+    SW_EXPECT_EQUAL( string( "engine/shaders/post_chain.hlsl" ), pPresent->_shaderPath ); // 적지 않은 칸은 부모 것
+}
+
+/** @brief [RenderPipelineAssetTest] 쿠킹이 펼친 글은 원본을 합쳐 읽은 것과 같은 값이고, 부모를 가리키지 않는다(팩 쿠커의 펼치기와 같은 함수) */
+SW_TEST_CASE( RenderPipelineAssetTest, CookedFlatTextReadsLikeTheSource )
+{
+    const string&   contentRoot = engine::getSubsystem<AssetPaths>().getRootFolderPath();
+    const TypeInfo& typeInfo    = *RenderPipelineDesc::StaticType();
+    for ( const utf8* pID : { "engine/pipeline/forwardtoonpipeline.xml", "engine/pipeline/forwardprepasspipeline.xml", "engine/pipeline/forward2dpipeline.xml", "engine/pipeline/forwardpipelinestaged.xml",
+                              "game/empty/pipeline/extensionpasspipeline.xml", "game/empty/pipeline/geometrystagepipeline.xml", "game/empty/pipeline/computepasspipeline.xml" } )
+    {
+        string sourceText;
+        SW_REQUIRE_TRUE( AssetIO::readTextAsset( AssetID{ pID }, sourceText ) );
+        SW_EXPECT_FALSE( DataInheritance::findBasePath( sourceText ).empty() );
+
+        DataInheritanceDiskSource source{ contentRoot };
+        string                    flatText;
+        SW_REQUIRE_TRUE( DataInheritance::flattenByRootName( sourceText, pID, source, flatText ) );
+        SW_EXPECT_TRUE( DataInheritance::findBasePath( flatText ).empty() );
+
+        RenderPipelineAsset cooked;
+        RenderPipelineAsset merged;
+        const string        flatPath = test::makeScratchPath( "flat.xml" );
+        SW_REQUIRE_TRUE( FileUtil::writeTextFile( flatPath, flatText ) );
+        SW_REQUIRE_TRUE( cooked.loadFromDiskFile( flatPath ) );
+        SW_REQUIRE_TRUE( merged.loadFromXMLFile( AssetID{ pID } ) );
+        SW_EXPECT_EQUAL( XMLSerializer::serialize( &merged.getDesc(), typeInfo ), XMLSerializer::serialize( &cooked.getDesc(), typeInfo ) );
+    }
+}
+
+/** @brief [RenderPipelineAssetTest] 자식으로 저장한 파일은 부모와 다른 칸만 적고, 다시 읽으면 같은 값이다. 기본값을 생략한 저장도 왕복한다 */
+SW_TEST_CASE( RenderPipelineAssetTest, SavedChildRoundTrips )
+{
+    const TypeInfo&    typeInfo = *RenderPipelineDesc::StaticType();
+    RenderPipelineDesc source;
+    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDesc( AssetID{ "engine/pipeline/forwardtoonpipeline.xml" }, source ) );
+    source._listPass[0]._cullMode = "Front";
+
+    const string                      childPath = test::makeScratchPath( "child.xml" );
+    const std::optional<AbsolutePath> childFile = FileUtil::requireAbsolutePath( childPath );
+    SW_REQUIRE_TRUE( childFile.has_value() );
+    SW_REQUIRE_TRUE( ReflectedXMLFile::saveDescAsChild( *childFile, source, AssetID{ "engine/pipeline/forwardpipeline.xml" } ) );
+    string childText;
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( childPath, childText ) );
+    SW_EXPECT_EQUAL( string( "engine/pipeline/forwardpipeline.xml" ), DataInheritance::findBasePath( childText ) );
+    SW_EXPECT_TRUE( childText.find( "Canvas" ) == string::npos ); // 같은 패스는 적지 않는다
+
+    RenderPipelineDesc rereadChild;
+    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( childPath, rereadChild ) );
+    SW_EXPECT_EQUAL( XMLSerializer::serialize( &source, typeInfo ), XMLSerializer::serialize( &rereadChild, typeInfo ) );
+
+    const string                      fullPath = test::makeScratchPath( "full.xml" );
+    const std::optional<AbsolutePath> fullFile = FileUtil::requireAbsolutePath( fullPath );
+    SW_REQUIRE_TRUE( fullFile.has_value() );
+    SW_REQUIRE_TRUE( ReflectedXMLFile::saveDesc( *fullFile, source ) );
+    RenderPipelineDesc rereadFull;
+    SW_REQUIRE_TRUE( ReflectedXMLFile::loadDescFromDiskFile( fullPath, rereadFull ) );
+    SW_EXPECT_EQUAL( XMLSerializer::serialize( &source, typeInfo ), XMLSerializer::serialize( &rereadFull, typeInfo ) );
 }

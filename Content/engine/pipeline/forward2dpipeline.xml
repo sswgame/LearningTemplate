@@ -3,84 +3,39 @@
 	톤맵(Reinhard)은 흰색을 0.5 로 누른다 — 픽셀 아트의 색이 그대로 나와야 하는 2D 에는 맞지 않는다(유니티 2D URP 의 기본도 톤맵 없음).
 	고르는 법: `-gv_renderPipeline=engine/pipeline/forward2dpipeline.xml` (FrameRenderer 초기화).
 -->
-<RenderPipelineDesc _name="Forward2DPipeline" _shadingModel="Forward">
+<RenderPipelineDesc _base="engine/pipeline/forwardpipeline.xml" _name="Forward2DPipeline">
 	<_listAttachment>
-		<RenderPassAttachment _name="SceneColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" />
-		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
+		<RenderPassAttachment _name="DepthOfFieldColor" _op="Remove" />
+		<RenderPassAttachment _name="SceneColor" _format="R8G8B8A8_UNORM" _clearColor="0.12,0.15,0.18,1" _bClear="true" _role="" _resolutionDivisor="1" />
+		<RenderPassAttachment _name="SceneDepth" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" _role="" _resolutionDivisor="1" />
 	</_listAttachment>
 	<_listPass>
-		<RenderGraphPassDesc _name="ForwardOpaque"
-		                     _type="ForwardOpaque"
-		                     _depthAttachment="SceneDepth"
-		                     _shaderPath="engine/shaders/forward_lit.hlsl"
-		                     _vertexEntryPoint="VSMain"
-		                     _pixelEntryPoint="PSMain"
-		                     _cullMode="Back"
-		                     _bEnableDepthTest="true"
-		                     _bEnableDepthWrite="true"
-		                     _bEnableBlend="false">
+		<RenderGraphPassDesc _name="MotionBlur" _op="Remove" />
+		<RenderGraphPassDesc _name="DepthOfField" _op="Remove" />
+		<RenderGraphPassDesc _name="Fog" _op="Remove" />
+		<RenderGraphPassDesc _name="HighlightSense" _op="Remove" />
+		<RenderGraphPassDesc _name="SceneDepthCopy" _op="Remove" />
+		<RenderGraphPassDesc _name="SceneColorCopy" _op="Remove" />
+		<RenderGraphPassDesc _name="Sky" _op="Remove" />
+		<RenderGraphPassDesc _name="HighlightOutline" _op="Remove" />
+		<RenderGraphPassDesc _name="MeshOutline" _op="Remove" />
+		<RenderGraphPassDesc _name="Shadow" _op="Remove" />
+		<RenderGraphPassDesc _name="ForwardOpaque">
 			<_listInput />
-			<_listOutput>
-				<item>SceneColor</item>
-				<item>SceneDepth</item>
-			</_listOutput>
-			<_listPermutation>
-				<item>SW_FORWARD=1</item>
-			</_listPermutation>
 		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Transparent"
-		                     _type="Transparent"
-		                     _depthAttachment="SceneDepth"
-		                     _shaderPath="engine/shaders/forward_lit.hlsl"
-		                     _vertexEntryPoint="VSMain"
-		                     _pixelEntryPoint="PSMain"
-		                     _cullMode="Back"
-		                     _bEnableDepthTest="true"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="true">
+		<RenderGraphPassDesc _name="Transparent">
 			<_listInput>
 				<item>SceneColor</item>
 				<item>SceneDepth</item>
 			</_listInput>
-			<_listOutput>
-				<item>SceneColor</item>
-			</_listOutput>
-			<_listPermutation>
-				<item>SW_TRANSPARENT=1</item>
-			</_listPermutation>
 		</RenderGraphPassDesc>
-		<RenderGraphPassDesc _name="Present"
-		                     _type="Present"
-		                     _shaderPath="engine/shaders/post_chain.hlsl"
-		                     _vertexEntryPoint="VSMain"
-		                     _pixelEntryPoint="PSMain"
-		                     _cullMode="None"
-		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="false">
+		<RenderGraphPassDesc _name="Present">
 			<_listInput>
 				<item>SceneColor</item>
 				<item>SceneDepth</item>
 			</_listInput>
-			<_listOutput>
-				<item>Swapchain</item>
-			</_listOutput>
-			<_listPermutation />
-		</RenderGraphPassDesc>
-		<!-- 화면 2D(UI · 월드 글자) — Present(톤맵) 뒤 같은 출력에 불러온 채 그린다. Swapchain 을 쓰는 마지막 패스여야 한다(스크린샷 캡처 복사도 이 뒤). -->
-		<RenderGraphPassDesc _name="Canvas"
-		                     _type="Canvas"
-		                     _vertexEntryPoint="VSMain"
-		                     _pixelEntryPoint="PSMain"
-		                     _cullMode="None"
-		                     _bEnableDepthTest="false"
-		                     _bEnableDepthWrite="false"
-		                     _bEnableBlend="true">
-			<_listInput />
-			<_listOutput>
-				<item>Swapchain</item>
-			</_listOutput>
 			<_listPermutation />
 		</RenderGraphPassDesc>
 	</_listPass>
+	<_listRenderPassRef />
 </RenderPipelineDesc>
