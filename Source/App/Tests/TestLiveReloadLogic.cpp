@@ -2,9 +2,13 @@
 // ModuleManager 는 정적 라이브러리라 그 안의 테스트 등록은 링크에서 빠진다 - 실행 파일인 App 에 둔다.
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
+#include "Core/Module/ModuleLibraryUtil.h"
 #include "Core/Testing/TestFramework.h"
 
+#include "ModuleManager/LiveReload/DeferredLibraryUnloadQueue.h"
 #include "ModuleManager/LiveReload/ModuleDependencyGraph.h"
+#include "ModuleManager/LiveReload/ModuleShadowCopy.h"
 #include "ModuleManager/LiveReload/ShadowCopyName.h"
 
 using namespace sw;
@@ -126,4 +130,106 @@ SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyNames )
     {
         SW_EXPECT_FALSE( ShadowCopyName::parse( pNot, processID ) );
     }
+}
+
+namespace
+{
+    /** @brief 언로드 큐 테스트의 재료입니다. */
+    struct DeferredUnloadTestUtil
+    {
+        /** @brief 언제나 있는 시스템 라이브러리를 한 번 더 엽니다. 참조 수만 오르므로 큐가 내려도 프로세스에는 남습니다. */
+        static void* openSystemLibrary()
+        {
+#if defined( SW_PLATFORM_WINDOWS )
+            return ModuleLibraryUtil::loadSystemLibrary( "kernel32.dll" );
+#else
+            return ModuleLibraryUtil::loadSystemLibrary( "libc.so.6" );
+#endif
+        }
+
+        /** @brief 내려갈 때 지워지는지 볼 섀도 복사본 자리의 파일을 만듭니다. */
+        static string makeShadowFile( string_view name )
+        {
+            const string path = test::makeScratchPath( name );
+            SW_EXPECT_TRUE( FileUtil::writeTextFile( path, "shadow" ) );
+            return path;
+        }
+    };
+} // namespace
+
+/** @brief [LiveReloadLogicTest] 언로드 큐: 상한을 넘으면 가장 오래된 배치가 통째로 내려가고 복사본이 지워진다. 비어 있어도 안전하고 unloadAll 은 전부 내린다 */
+SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadKeepsRecentBatches )
+{
+    DeferredLibraryUnloadQueue queue( 2 );
+    queue.unloadOldestBatch(); // 비어 있으면 아무 일도 없다
+    queue.deferUnload( "Null", nullptr, "ignored" );
+    SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
+
+    const string a1 = DeferredUnloadTestUtil::makeShadowFile( "a1" );
+    const string a2 = DeferredUnloadTestUtil::makeShadowFile( "a2" );
+    const string b  = DeferredUnloadTestUtil::makeShadowFile( "b" );
+    const string c  = DeferredUnloadTestUtil::makeShadowFile( "c" );
+
+    queue.beginBatch();
+    queue.deferUnload( "A1", DeferredUnloadTestUtil::openSystemLibrary(), a1 );
+    queue.deferUnload( "A2", DeferredUnloadTestUtil::openSystemLibrary(), a2 );
+    queue.beginBatch();
+    queue.deferUnload( "B", DeferredUnloadTestUtil::openSystemLibrary(), b );
+    SW_EXPECT_EQUAL( 3u, queue.getLibraryCount() );
+    SW_EXPECT_TRUE( FileUtil::exists( a1 ) );
+
+    queue.beginBatch();
+    queue.deferUnload( "C", DeferredUnloadTestUtil::openSystemLibrary(), c ); // 배치 A 가 최근 둘 밖으로 나간다
+    SW_EXPECT_EQUAL( 2u, queue.getLibraryCount() );
+    SW_EXPECT_FALSE( FileUtil::exists( a1 ) );
+    SW_EXPECT_FALSE( FileUtil::exists( a2 ) );
+    SW_EXPECT_TRUE( FileUtil::exists( b ) );
+
+    queue.unloadOldestBatch();
+    SW_EXPECT_EQUAL( 1u, queue.getLibraryCount() );
+    SW_EXPECT_FALSE( FileUtil::exists( b ) );
+    SW_EXPECT_TRUE( FileUtil::exists( c ) );
+
+    queue.unloadAll();
+    SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
+    SW_EXPECT_FALSE( FileUtil::exists( c ) );
+}
+
+/** @brief [LiveReloadLogicTest] 언로드 큐: 상한이 0 이면 넣자마자 내려간다(비운 목록의 끝을 읽지 않는다) */
+SW_TEST_CASE( LiveReloadLogicTest, DeferredUnloadWithoutKeepingAnyBatch )
+{
+    DeferredLibraryUnloadQueue queue( 0 );
+    const string               path = DeferredUnloadTestUtil::makeShadowFile( "now" );
+    queue.deferUnload( "Now", DeferredUnloadTestUtil::openSystemLibrary(), path );
+    SW_EXPECT_EQUAL( 0u, queue.getLibraryCount() );
+    SW_EXPECT_FALSE( FileUtil::exists( path ) );
+}
+
+/** @brief [LiveReloadLogicTest] 섀도 복사본: 엔진 ABI 스탬프가 없는 파일은 복사본을 만들지 않고 이름 상태도 그대로다. 복사본 지우기는 빈 경로에 아무 일도 하지 않는다 */
+SW_TEST_CASE( LiveReloadLogicTest, ShadowCopyRefusesUnstampedFile )
+{
+    SW_EXPECT_LOG( "LiveReloadManager.ModuleBuiltAgainstDifferent" );
+    const string original = test::makeScratchPath( "NotAModule.bin" );
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( original, "no stamp in here" ) );
+
+    ShadowCopyParams params{};
+    params._moduleName         = "NotAModule";
+    params._originalModulePath = original;
+    ShadowLibraryNameState name{};
+    name._current = "current";
+    name._loaded  = "loaded";
+    string shadowPath{ "untouched" };
+    SW_EXPECT_FALSE( ModuleShadowCopy::writeShadowCopy( params, name, shadowPath ) );
+    SW_EXPECT_EQUAL( string( "untouched" ), shadowPath );
+    SW_EXPECT_EQUAL( string( "current" ), name._current );
+
+    vector<uint8> bytes;
+    SW_REQUIRE_TRUE( ModuleShadowCopy::readModuleFile( original, bytes ) );
+    SW_EXPECT_EQUAL( size_t( 16 ), bytes.size() );
+    SW_EXPECT_FALSE( ModuleShadowCopy::rejectsDelayImports( "NotAModule", original, bytes ) ); // PE 가 아니면 지연 import 표도 없다
+
+    ModuleShadowCopy::removeArtifacts( {} );
+    SW_EXPECT_TRUE( FileUtil::exists( original ) );
+    ModuleShadowCopy::removeArtifacts( original );
+    SW_EXPECT_FALSE( FileUtil::exists( original ) );
 }

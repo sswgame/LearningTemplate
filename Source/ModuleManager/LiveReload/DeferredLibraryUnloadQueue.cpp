@@ -34,7 +34,7 @@ namespace sw
         _listLibrary.push_back( std::move( deferredLibrary ) );
 
         // 목록은 배치 순서이고 배치 번호는 연쇄마다 하나씩 오른다. 가장 오래된 것이 마지막 N 번의 연쇄 밖이면 내린다.
-        while ( _listLibrary.back()._batchID - _listLibrary.front()._batchID >= _maxBatchCount )
+        while ( _listLibrary.empty() == false && _listLibrary.back()._batchID - _listLibrary.front()._batchID >= _maxBatchCount )
         {
             unloadOldestBatch();
         }

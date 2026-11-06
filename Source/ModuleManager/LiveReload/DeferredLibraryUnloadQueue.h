@@ -19,7 +19,7 @@ namespace sw
     class DeferredLibraryUnloadQueue final
     {
     public:
-        /** @param maxBatchCount 남겨 둘 배치 수입니다. 이보다 오래된 배치는 언로드합니다. */
+        /** @param maxBatchCount 남겨 둘 배치 수입니다. 이보다 오래된 배치는 언로드합니다. 0 이면 넣자마자 언로드합니다. */
         explicit DeferredLibraryUnloadQueue( uint32 maxBatchCount );
 
         /** @brief 새 연쇄 리로드를 시작합니다. 이 뒤에 넣는 라이브러리는 새 배치에 듭니다. */
