@@ -6530,6 +6530,46 @@
 				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorMaterialGraph.AssetSlot" source="Asset">
+			<origins>
+				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterialGraph.CanvasFailed" source="The node canvas could not be drawn">
+			<origins>
+				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterialGraph.CompiledStatus" source="Compiled - no problems">
+			<origins>
+				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterialGraph.NoGraph" source="Open a material graph (.matgraph.xml) to edit it">
+			<origins>
+				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterialGraph.ReloadTip" source="Reload the graph from its file, discarding unsaved edits">
+			<origins>
+				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterialGraph.SaveTip" source="Save the graph if it compiles; the generated shader and material follow">
+			<origins>
+				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterialGraph.SelectNodeHint" source="Select a node to edit its values">
+			<origins>
+				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorMaterialGraph.SubgraphStatus" source="Subgraph - it compiles inside the graphs that use it">
+			<origins>
+				<item>Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorMultiplayer.ArrangeWindows"
 		       source="Place the client windows side by side (window size and position per App process) instead of letting them overlap">
 			<origins>

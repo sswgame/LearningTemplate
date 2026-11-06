@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 머티리얼 그래프 패널(materialgraph): 패널을 열면 그려지고(에디터 UI 캡처에 마젠타 자리표시가 없다) 닫으면 닫힌다.
+  그래프 컴파일 · 편집 규칙은 단위 테스트(MaterialGraphCompilerTest · MaterialGraphModelTest)가 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/materialgraphpanel.scenario.xml -unattended
+-->
+<Scenario name="editor.materialgraphpanel" fixedDelta="0.0166667" timeoutFrames="400" startAfter="Immediately" input="exclusive">
+	<ResizeWindow width="1920" height="1080"/>
+	<Variable name="gv_editorUiScale" value="1"/>
+	<Variable name="gv_editorWatchPanel" value="materialgraph"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.focus materialgraph"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.PanelOpen" equals="1" timeoutSeconds="10"/>
+	<!-- 눈 확인용(GPU 검증): 열린 머티리얼 그래프 패널 -->
+	<EditorWaitSettled/>
+	<CaptureEditorUI file="materialgraphpanel/open.png" maxMagentaFraction="0"/>
+	<EditorWaitSettled/>
+	<DevCommand line="panel.close materialgraph"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.PanelOpen" equals="0" timeoutSeconds="10"/>
+	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
+	<Pass/>
+</Scenario>

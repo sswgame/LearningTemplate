@@ -6368,6 +6368,46 @@ msgctxt "EditorMaterial.ShaderTip"
 msgid "HLSL shader this material renders with. Drop a .hlsl file here or pick one from the Content Browser."
 msgstr "이 머티리얼이 렌더링에 쓰는 HLSL 셰이더입니다. .hlsl 파일을 여기에 놓거나 콘텐츠 브라우저에서 고릅니다."
 
+#: Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp
+msgctxt "EditorMaterialGraph.AssetSlot"
+msgid "Asset"
+msgstr "에셋"
+
+#: Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp
+msgctxt "EditorMaterialGraph.CanvasFailed"
+msgid "The node canvas could not be drawn"
+msgstr "노드 캔버스를 그리지 못했습니다"
+
+#: Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp
+msgctxt "EditorMaterialGraph.CompiledStatus"
+msgid "Compiled - no problems"
+msgstr "컴파일됨 - 문제 없음"
+
+#: Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp
+msgctxt "EditorMaterialGraph.NoGraph"
+msgid "Open a material graph (.matgraph.xml) to edit it"
+msgstr "편집할 머티리얼 그래프(.matgraph.xml)를 여세요"
+
+#: Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp
+msgctxt "EditorMaterialGraph.ReloadTip"
+msgid "Reload the graph from its file, discarding unsaved edits"
+msgstr "파일에서 그래프를 다시 읽습니다. 저장하지 않은 편집은 버립니다"
+
+#: Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp
+msgctxt "EditorMaterialGraph.SaveTip"
+msgid "Save the graph if it compiles; the generated shader and material follow"
+msgstr "컴파일되면 그래프를 저장합니다. 생성된 셰이더와 머티리얼이 뒤따릅니다"
+
+#: Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp
+msgctxt "EditorMaterialGraph.SelectNodeHint"
+msgid "Select a node to edit its values"
+msgstr "값을 고칠 노드를 고르세요"
+
+#: Source/Editor/Panels/MaterialGraph/MaterialGraphPanel.cpp
+msgctxt "EditorMaterialGraph.SubgraphStatus"
+msgid "Subgraph - it compiles inside the graphs that use it"
+msgstr "하위 그래프 - 쓰는 그래프 안에서 컴파일됩니다"
+
 #: Source/Editor/Panels/Multiplayer/MultiplayerSessionTab.cpp
 msgctxt "EditorMultiplayer.ArrangeWindows"
 msgid "Place the client windows side by side (window size and position per App process) instead of letting them overlap"
