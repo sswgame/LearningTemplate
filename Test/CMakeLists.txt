@@ -164,6 +164,33 @@ if(TARGET OnlineLoadBot)
 	endif()
 endif()
 
+# 리플렉션 파서 — Engine 을 링크하지 못해 단위 테스트 틀에 들어가지 못한다. 사례 헤더 하나마다 실제 실행 파일을 돌려 산출물 · 오류를 대조한다(`ReflectionParser/RunParserFixture.cmake`, 왜 이 모양인지 거기 적었다).
+if(TARGET ReflectionParser)
+	file(GLOB listParserFixture CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/Fixtures/*.h")
+	foreach(swParserFixture IN LISTS listParserFixture)
+		get_filename_component(swParserFixtureName "${swParserFixture}" NAME_WE)
+		add_test(NAME ReflectionParser.${swParserFixtureName}
+			COMMAND ${CMAKE_COMMAND}
+				"-DPARSER=$<TARGET_FILE:ReflectionParser>"
+				"-DFIXTURE=${swParserFixture}"
+				"-DWORK_DIR=${CMAKE_BINARY_DIR}/Testing/ReflectionParser/${swParserFixtureName}"
+				"-DSOURCE_ROOT=${CMAKE_SOURCE_DIR}"
+				"-DGENERATED_DIR=${CMAKE_BINARY_DIR}/generated"
+				"-DBUILTINS=${CMAKE_SOURCE_DIR}/${SW_FILE_REFLECT_BUILTINS}"
+				"-DANNOTATION_META=${CMAKE_SOURCE_DIR}/${SW_FILE_ANNOTATION_META}"
+				"-DTEMPLATES=${CMAKE_SOURCE_DIR}/${SW_DIR_TOOLS_REFLECTION_TEMPLATES}"
+				"-DCONFIG=${CMAKE_SOURCE_DIR}/${SW_DIR_CONFIG_ENV}/${SW_FILE_PARSER_DEFAULTS}"
+				"-DTYPES_LIST_NAME=${SW_FILE_REFLECTED_TYPES_LIST}"
+				"-DGEN_CPP_SUFFIX=${SW_EXT_REFLECTION_GEN_CPP}"
+				-P "${CMAKE_CURRENT_SOURCE_DIR}/ReflectionParser/RunParserFixture.cmake")
+		set_tests_properties(ReflectionParser.${swParserFixtureName} PROPERTIES LABELS nogpu TIMEOUT 120)
+	endforeach()
+	# 틀린 명령줄은 파서를 멈춘다 — 모르는 인자 · 필수 인자 빠짐. 입력을 읽기 전이라 사례 헤더가 필요 없다.
+	add_test(NAME ReflectionParser.RejectsUnknownArgument COMMAND $<TARGET_FILE:ReflectionParser> --no-such-argument)
+	add_test(NAME ReflectionParser.RejectsMissingOutput COMMAND $<TARGET_FILE:ReflectionParser> --input nothing.h)
+	set_tests_properties(ReflectionParser.RejectsUnknownArgument ReflectionParser.RejectsMissingOutput PROPERTIES LABELS nogpu TIMEOUT 60 WILL_FAIL TRUE)
+endif()
+
 # 임포트 밖의 모든 테스트가 임포트한 산출물을 요구한다(맨 위 `Import.*`).
 get_property(swAllTest DIRECTORY PROPERTY TESTS)
 list(FILTER swAllTest EXCLUDE REGEX "^Import\.")

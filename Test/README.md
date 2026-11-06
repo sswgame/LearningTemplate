@@ -81,6 +81,10 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 
 케이스 하나는 이럴 때 실패다: 단언 실패 · 단언이 하나도 없음 · 적지 않은 Warning · Error 로그 · 적었는데 나오지 않은 로그 · 다른 스냅숏. 거르개에 맞는 케이스가 없으면 실행이 실패다(샤드가 빈 것은 실패가 아니다). 보고 JSON 은 `Saved/Test/<프로세스>/report.json`(찍힌다).
 
+## 리플렉션 파서
+
+`ReflectionParser` 는 Engine 을 링크하지 못해 위 틀에 들어가지 못한다. `Test/ReflectionParser/Fixtures/<이름>.h` 하나가 `ReflectionParser.<이름>` 하나이고(`ctest -L nogpu`), 실제 실행 파일을 빌드와 같은 인자로 돌려 헤더 맨 앞의 기대 줄(`// EXPECT-ERROR:` · `EXPECT-GEN:` · `EXPECT-NOT-GEN:` · `EXPECT-TYPE:`)과 대조한다 — 형식은 `RunParserFixture.cmake`. 잘못된 입력을 일부러 담으므로 린트 범위(`Source/`) 밖에 둔다.
+
 ## 시나리오
 
 ```xml
