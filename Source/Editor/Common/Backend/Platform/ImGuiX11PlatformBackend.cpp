@@ -7,6 +7,9 @@
     #include "Core/Container/StringUtil.h"
     #include "Core/Time/GameTimer.h"
 
+    #include "Editor/Common/Backend/ImGuiKeyForward.h"
+
+    #include "Engine/Input/Map/InputKeyTable.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
 
@@ -177,11 +180,14 @@ namespace sw::editor
                 case KeyPress:
                 case KeyRelease:
                 {
-                    const bool   bIsDown           = ( pEvent->type == KeyPress );
-                    const KeySym sym               = XLookupKeysym( &pEvent->xkey, 0 );
-                    const bool   bPrintableKeyDown = bIsDown && 0x20 <= sym && sym <= 0x7E;
-                    if ( bPrintableKeyDown )
-                        io.AddInputCharacter( static_cast<uint32>( sym ) );
+                    const bool bIsDown = ( pEvent->type == KeyPress );
+                    submitKey( io, pEvent->xkey, bIsDown );
+                    if ( bIsDown )
+                    {
+                        const uint32 codepoint = readCodepoint( pEvent->xkey );
+                        if ( codepoint != 0 )
+                            io.AddInputCharacter( codepoint );
+                    }
                     return io.WantCaptureKeyboard;
                 }
                 case ButtonPress:
@@ -313,6 +319,45 @@ namespace sw::editor
         {
             (void)pViewport;
             return false;
+        }
+
+        /** @brief 키 하나를 ImGui 에 넣습니다. 번호 표는 입력 관리자와 같은 `InputKeyTable` 이고 레이아웃 0 번 칸(시프트 없는 값)으로 읽는다. 수정 키는 `xkey.state` 로 맞춰 포커스 밖에서 바뀐 것도 다음 키에서 바로잡힌다. */
+        static void submitKey( ImGuiIO& io, XKeyEvent& keyEvent, bool bIsDown )
+        {
+            const Key key = InputKeyTable::mapX11KeySym( static_cast<uint64>( XLookupKeysym( &keyEvent, 0 ) ) );
+            io.AddKeyEvent( ImGuiMod_Ctrl, ( keyEvent.state & ControlMask ) != 0 );
+            io.AddKeyEvent( ImGuiMod_Shift, ( keyEvent.state & ShiftMask ) != 0 );
+            io.AddKeyEvent( ImGuiMod_Alt, ( keyEvent.state & Mod1Mask ) != 0 );
+            io.AddKeyEvent( ImGuiMod_Super, ( keyEvent.state & Mod4Mask ) != 0 );
+            // state 는 이 사건 앞의 상태다 - 수정 키 자신의 사건은 그 키의 값이 이긴다.
+            const ImGuiKey modifier = ImGuiKeyForward::toImGuiModifier( key );
+            if ( modifier != ImGuiKey_None )
+                io.AddKeyEvent( modifier, bIsDown );
+            const ImGuiKey imguiKey = ImGuiKeyForward::toImGuiKey( key );
+            if ( imguiKey != ImGuiKey_None )
+                io.AddKeyEvent( imguiKey, bIsDown );
+        }
+
+        /**
+         * @brief 키 누름이 내는 글자의 코드 포인트입니다. 글자가 없으면 0 입니다.
+         * @details shortcut: 입력기(XIM)를 거치지 않아 한글 조합과 옛 키심 번호의 레이아웃(키릴 등)은 글자가 나오지 않는다 - 입력기 문맥은 창의 것(`X11Window::readCommittedText`)이고 그 함수가 `IWindow` 에 오면 그쪽으로 바꾼다.
+         */
+        static uint32 readCodepoint( XKeyEvent& keyEvent )
+        {
+            if ( ( keyEvent.state & ControlMask ) != 0 )
+                return 0; // Ctrl 조합은 글자가 아니다
+            utf8        arrBytes[8]{};
+            KeySym      keySym{ 0 };
+            const int32 byteCount = XLookupString( &keyEvent, arrBytes, static_cast<int32>( sizeof( arrBytes ) ), &keySym, nullptr );
+            // ASCII 는 로캘과 무관하게 같은 바이트다(숫자 패드도 여기로 온다). 그 밖의 바이트는 로캘 인코딩이라 키심으로 읽는다.
+            const uint8 firstByte = static_cast<uint8>( arrBytes[0] );
+            if ( byteCount == 1 && 0x20 <= firstByte && firstByte <= 0x7E )
+                return firstByte;
+            const uint64 sym      = static_cast<uint64>( keySym );
+            const bool   bLatin1  = 0xA0 <= sym && sym <= 0xFF;           // Latin-1 키심은 코드 포인트와 번호가 같다
+            const bool   bUnicode = ( sym & 0xFF000000u ) == 0x01000000u; // 유니코드 키심(0x01000000 + 코드 포인트)
+            return bLatin1 ? static_cast<uint32>( sym ) : bUnicode ? static_cast<uint32>( sym & 0x00FFFFFFu )
+                                                                   : 0;
         }
 
         ImGuiViewport* findViewportByWindow( Window window ) const

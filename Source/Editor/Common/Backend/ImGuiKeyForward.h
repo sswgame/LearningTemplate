@@ -12,6 +12,8 @@
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/RawInputEvent.h"
 
+enum ImGuiKey : int;
+
 namespace sw::editor
 {
     /**
@@ -20,6 +22,10 @@ namespace sw::editor
      */
     struct ImGuiKeyForward
     {
+        /** @brief 엔진 키에 짝인 ImGui 키입니다. 짝이 없으면 `ImGuiKey_None` 입니다. OS 키를 ImGui 에 넣는 플랫폼 백엔드도 이 짝을 쓴다(키 번호 → `Key` 는 `InputKeyTable`). */
+        [[nodiscard]] static ImGuiKey toImGuiKey( Key key );
+        /** @brief 수정 키(좌우 Ctrl · Shift · Alt · Super)면 그 `ImGuiMod_*` 이고, 아니면 `ImGuiKey_None` 입니다. ImGui 의 `io.KeyCtrl` · 단축키는 좌우 키가 아니라 이 값을 읽으므로 백엔드가 함께 넣어야 합니다. */
+        [[nodiscard]] static ImGuiKey toImGuiModifier( Key key );
         /** @brief 엔진 키가 지금 ImGui 에서 눌려 있으면 true 입니다. 짝이 없는 키(`Key::Unknown`)는 false 입니다. */
         [[nodiscard]] static bool isKeyDown( Key key );
         /** @brief 이번 프레임에 새로 눌린 키(자동 반복 제외) 하나를 돌려줍니다. 없으면 `Key::Unknown` 입니다. */

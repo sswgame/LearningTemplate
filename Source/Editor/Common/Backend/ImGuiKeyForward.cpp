@@ -122,6 +122,32 @@ namespace sw::editor
         };
     } // namespace
 
+    ImGuiKey ImGuiKeyForward::toImGuiKey( Key key )
+    {
+        return ImGuiKeyForwardInternal::toImGuiKey( key );
+    }
+
+    ImGuiKey ImGuiKeyForward::toImGuiModifier( Key key )
+    {
+        switch ( key )
+        {
+            case Key::LeftControl:
+            case Key::RightControl:
+                return ImGuiMod_Ctrl;
+            case Key::LeftShift:
+            case Key::RightShift:
+                return ImGuiMod_Shift;
+            case Key::LeftAlt:
+            case Key::RightAlt:
+                return ImGuiMod_Alt;
+            case Key::LeftSuper:
+            case Key::RightSuper:
+                return ImGuiMod_Super;
+            default:
+                return ImGuiKey_None;
+        }
+    }
+
     bool ImGuiKeyForward::isKeyDown( Key key )
     {
         const ImGuiKey imguiKey = ImGuiKeyForwardInternal::toImGuiKey( key );
