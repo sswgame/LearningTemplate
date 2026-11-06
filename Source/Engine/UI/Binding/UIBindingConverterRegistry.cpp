@@ -99,7 +99,6 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
-    // 화면 스택(`UISystem`, 뒷 자리)이 변환기 표에 의존한다.
-    SW_ENGINE_SUBSYSTEM_DEFAULT( UIBindingConverterRegistry, UIBindingConverterRegistry );
+    // 화면 스택(`UISystem`)이 변환기 표에 의존한다.
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIBindingConverterRegistry, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIBindingConverterRegistry ) );
 } // namespace sw

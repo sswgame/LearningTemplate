@@ -20,7 +20,7 @@ namespace sw
     namespace
     {
         /**
-         * @brief 마운트된 팩을 든 매니저입니다 — 에셋 매니저가 소유하고 엔진 범위에 건 것을 서비스 표의 칸으로 읽는다(`EngineServiceList.xxx`).
+         * @brief 마운트된 팩을 든 매니저입니다 — 에셋 매니저가 소유하고 엔진 범위에 건 것을 서비스 칸으로 읽는다(선택 칸 — `AssetManager.cpp` 의 등록).
          *        엔진 범위가 없으면(엔진 없이 도는 도구 · 쿠커 · 테스트) nullptr 이고, 그때는 마운트된 팩이 없다.
          * @details 낱개 파일 정책은 이 함수와 `isLooseFileAllowed` 한 곳에서만 본다 — 부르는 쪽이 `AssetIO` 가 실패한 뒤 디스크를 다시 읽지 않게.
          */

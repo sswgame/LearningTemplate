@@ -13,6 +13,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Console/DevCommandsEnabled.h"
 #include "Engine/Module/ModuleObjectRegistrar.h"
@@ -92,6 +93,8 @@ namespace sw
         mutable mutex                                                _mutex;                  ///< 등록 목록을 지킨다(명령 실행은 잠금 밖)
         RegistrationList<const DevCommandRegistration> _registration SW_GUARDED_BY( _mutex ); ///< 이름은 대소문자를 무시하고, 이름 없는 등록은 거절한다
     };
+
+    SW_SERVICE_SLOT( DevCommandRegistry, Required );
 } // namespace sw
 
 namespace sw

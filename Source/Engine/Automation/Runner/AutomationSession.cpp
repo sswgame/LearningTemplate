@@ -4,6 +4,7 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/File/FileUtil.h"
+#include "Core/Foundation/BuildInfo.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Log/Logger.h"
 #include "Core/Subsystem/SubsystemScope.h"
@@ -348,8 +349,13 @@ namespace sw
 
     uint32 AutomationSession::findCompletedScreenshotCount()
     {
-        const ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
-        return pMailbox != nullptr ? pMailbox->getCompletedPacketSerial() : 0u;
+        uint32 completedCount = 0u;
+        if constexpr ( build::kWithClientCode ) // 우편함의 칸 정의는 Renderer 폴더에 있다 — 그 폴더를 짓지 않는 Server 타깃은 묻지 않는다(찍을 그림도 없다)
+        {
+            const ScreenshotRequestQueue* const pMailbox = engine::findSubsystem<ScreenshotRequestQueue>();
+            completedCount                               = pMailbox != nullptr ? pMailbox->getCompletedPacketSerial() : 0u;
+        }
+        return completedCount;
     }
 
     void AutomationSession::updateRunTitle()

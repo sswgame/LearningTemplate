@@ -31,6 +31,7 @@
 #include "Engine/Text/GlyphCache.h"
 #include "Engine/Text/TextLayout.h"
 #include "Engine/UI/Animation/UIStyleTransition.h"
+#include "Engine/UI/Binding/UIBindingConverterRegistry.h"
 #include "Engine/UI/Binding/UIBindingSet.h"
 #include "Engine/UI/Binding/UIViewModel.h"
 #include "Engine/UI/Document/UIDocument.h"
@@ -1038,9 +1039,8 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
-    // 화면 스택 — 위의 UI 서비스(뒷 자리)가 이것에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens` …)에 건다.
-    SW_ENGINE_SUBSYSTEM( UISystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    // 화면 스택 — 위의 UI 서비스가 이것에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens` …)에 건다.
+    SW_ENGINE_SERVICE_SUBSYSTEM( UISystem, GameVisible, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pStartupParts->_pUISystem = &scope.emplaceSubsystem<UISystem>();
     } );

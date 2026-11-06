@@ -201,7 +201,6 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
-    // 렌더러 폴더와 같이 클라이언트에만 있다(자리 표의 클라이언트 전용).
-    SW_ENGINE_SUBSYSTEM_DEFAULT( RenderExtensionRegistry, RenderExtensionRegistry );
+    // 렌더러 폴더와 같이 클라이언트에만 있다(Server 타깃은 이 폴더를 짓지 않아 이 등록도 없다).
+    SW_ENGINE_SERVICE_SUBSYSTEM( RenderExtensionRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderExtensionRegistry ) );
 } // namespace sw

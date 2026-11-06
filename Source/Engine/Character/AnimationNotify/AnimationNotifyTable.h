@@ -27,6 +27,7 @@
 #include "Core/String/RegistrationList.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Animation/Notify/AnimationFootContact.h"
@@ -233,4 +234,6 @@ namespace sw
     private:
         NameRegistry<unique_ptr<IAnimationNotifyHandler>> _registry; ///< 이름 → 처리기(등록 순서)
     };
+
+    SW_SERVICE_SLOT( AnimationNotifyHandlerRegistry, Required );
 } // namespace sw

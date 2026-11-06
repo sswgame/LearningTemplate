@@ -851,9 +851,8 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 게임 네트워크 세션 — 게임 모듈 리로드를 넘어 연결을 지킨다.
-    SW_ENGINE_SUBSYSTEM( GameNetSession, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( GameNetSession, GameVisible, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pStartupParts->_pNetSession = &scope.emplaceSubsystem<GameNetSession>();
     } );

@@ -334,11 +334,14 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
-    SW_ENGINE_SUBSYSTEM( AssetManager, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( AssetManager, GameVisible, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         AssetManager& assetManager = scope.emplaceSubsystem<AssetManager>();
-        (void)scope.bind( &assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 표의 칸으로 찾는다
+        (void)scope.bind( &assetManager.getPackManager() ); // 새 범위 — 겹치지 않는다. 리소스 입구(`AssetIO`)가 서비스 칸으로 찾는다
     } );
+
+    // 위 공장이 건 팩 매니저의 서비스 칸(아래 층 · 아무 스레드의 리소스 입구가 읽는다). 비어 있을 수 있다 — 엔진 없이 도는 도구 · 쿠커 · 테스트는 팩이 없고
+    // 빌드 기본 정책을 읽는다(언리얼 `FPakPlatformFile` 이 플랫폼 파일 계층에 걸리는 자리).
+    SW_ENGINE_SERVICE( PackManager, HostOnly );
 } // namespace sw

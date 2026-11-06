@@ -11,6 +11,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 #include <algorithm>
 

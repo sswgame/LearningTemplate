@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Console/DevCommandsEnabled.h"
 #include "Engine/Module/ModuleObjectRegistrar.h"
@@ -145,6 +146,8 @@ namespace sw
         RegistrationList<const DebugHUDSectionRegistration> _registration SW_GUARDED_BY( _mutex ); ///< (순서, 이름) 순 · 이름은 대소문자 무시
         uint64 _revision                                                  SW_GUARDED_BY( _mutex );
     };
+
+    SW_SERVICE_SLOT( DebugHUDRegistry, Required );
 } // namespace sw
 
 namespace sw

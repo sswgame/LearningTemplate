@@ -16,6 +16,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -71,4 +72,6 @@ namespace sw
         mutex                                  _mutex;
         unordered_map<string, Entry> _mapEntry SW_GUARDED_BY( _mutex );
     };
+
+    SW_SERVICE_SLOT( ContentHashCache, Required );
 } // namespace sw

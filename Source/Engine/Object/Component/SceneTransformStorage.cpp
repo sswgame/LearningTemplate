@@ -163,7 +163,6 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
-    // 트랜스폼 칸 저장소가 서비스 범위의 맨 처음이다 — 해제는 역순이라 서비스 · 엔진 범위의 어느 컴포넌트보다 나중에 내려간다.
-    SW_ENGINE_SUBSYSTEM_DEFAULT( SceneTransformStorage, SceneTransformStorage );
+    // 트랜스폼 칸 저장소 — 서비스 범위라 엔진 범위의 어느 컴포넌트보다 나중에 내려간다(범위 안의 순서는 서브시스템이 선언한 의존이 정한다).
+    SW_ENGINE_SERVICE_SUBSYSTEM( SceneTransformStorage, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( SceneTransformStorage ) );
 } // namespace sw

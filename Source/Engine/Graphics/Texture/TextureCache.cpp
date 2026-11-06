@@ -1199,9 +1199,8 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
-    // 렌더 타깃 크기를 받는 쪽 — 카메라(컴포넌트 모델 코어, Graphics 아래 층)가 인터페이스로 찾는다. 캐시는 에셋 매니저(앞 자리)와 수명이 같다.
-    SW_ENGINE_SUBSYSTEM( TextureRenderTargetSink, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    // 렌더 타깃 크기를 받는 쪽 — 카메라(컴포넌트 모델 코어, Graphics 아래 층)가 인터페이스로 찾는다. 캐시는 에셋 매니저와 수명이 같다 — 공장이 그 매니저를 찾으므로 먼저 만든다.
+    SW_ENGINE_SUBSYSTEM( IRenderTargetDeclarationSink, Startup, ( AssetManager ), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         (void)scope.bind( &scope.get<AssetManager>().getAssetCache<TextureCache>().getRenderTargetDeclarationSink() );

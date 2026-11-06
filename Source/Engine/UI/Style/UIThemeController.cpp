@@ -183,7 +183,6 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 테마 — 화면 스택과 오프스크린 화면이 같이 본다.
-    SW_ENGINE_SUBSYSTEM_DEFAULT( UIThemeController, UIThemeController );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIThemeController, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIThemeController ) );
 } // namespace sw

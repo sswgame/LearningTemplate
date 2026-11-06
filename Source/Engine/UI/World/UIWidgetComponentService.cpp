@@ -237,7 +237,6 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 위젯 컴포넌트(화면 마커 · World 위젯) — 포인터 뒤 · 레이아웃 앞 · 그리기 뒤 칸에 건다.
-    SW_ENGINE_SUBSYSTEM_DEFAULT( UIWidgetComponentService, UIWidgetComponentService );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIWidgetComponentService, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIWidgetComponentService ) );
 } // namespace sw

@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Document/UITextAssetCache.h"
@@ -58,4 +59,6 @@ namespace sw
         UITextAssetCache _cache;                  ///< 문서 캐시(레지스트리에 오르는 에셋 캐시)
         Subscription     _assetCacheRegistration; ///< 에셋 캐시 레지스트리 등록 구독(기동이 받고 종료가 놓는다 — 캐시보다 먼저 풀린다, 나중에 선언)
     };
+
+    SW_SERVICE_SLOT( UIDocumentCache, Required );
 } // namespace sw

@@ -246,5 +246,5 @@ namespace sw
         _bRegistered = SW_FALSE;
     }
 
-    SW_ENGINE_SUBSYSTEM_DEFAULT( DebugHUDRegistry, DebugHUDRegistry );
+    SW_ENGINE_SERVICE_SUBSYSTEM( DebugHUDRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DebugHUDRegistry ) );
 } // namespace sw

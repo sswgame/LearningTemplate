@@ -82,7 +82,7 @@ namespace sw
         (void)RigNodeLibrary::registerEngineNodes( *this );
     }
 
-    SW_ENGINE_SUBSYSTEM_DEFAULT( RigNodeRegistry, RigNodeRegistry );
+    SW_ENGINE_SERVICE_SUBSYSTEM( RigNodeRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( RigNodeRegistry ) );
 
     void RigNodeRegistry::registerNode( const hashed_string& typeName, RigNodeFactory factory )
     {

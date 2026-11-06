@@ -2,6 +2,7 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Config/IConfig.h"
 #include "Engine/Config/RHIBackendType.h"
@@ -96,4 +97,6 @@ namespace sw
         PROPERTY()
         string _patchTrustPublicKeyYHex{};
     };
+
+    SW_SERVICE_SLOT_CONST( EngineConfig, Required );
 } // namespace sw

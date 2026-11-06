@@ -13,6 +13,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Config/RHIBackendType.h"
 #include "Engine/Graphics/RHI/RHICapabilities.h"
@@ -124,4 +125,6 @@ namespace sw
         vector<RHIBackendEntry> _listEntry;
         vector<LoadedModule>    _listLoadedModule;
     };
+
+    SW_SERVICE_SLOT( RHIBackendRegistry, Required );
 } // namespace sw

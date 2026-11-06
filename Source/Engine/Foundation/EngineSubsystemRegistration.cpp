@@ -2,90 +2,185 @@
 
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 
-#include "Core/Container/array.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
+#include "Core/Subsystem/SubsystemCollection.h"
 
 namespace sw::engine
 {
     namespace
     {
-        struct SlotInfo
+        struct EngineRegistrationListInternal
         {
-            const utf8*          _pName;
-            EngineSubsystemStage _stage;
-            bool                 _bClientOnly; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-        };
+            /** @brief @p pScope 부터 상위로 올라가며 @p typeHash 를 찾습니다(`locateSubsystem` 의 해시 판). */
+            static void* locate( const ISubsystemLocator* pScope, uint64 typeHash )
+            {
+                for ( ; pScope != nullptr; pScope = pScope->getParentScope() )
+                {
+                    void* const pFound = pScope->findInScope( typeHash );
+                    if ( pFound != nullptr )
+                        return pFound;
+                }
+                return nullptr;
+            }
 
-        constexpr SlotInfo kArrSlotInfo[] = {
-#define SW_ENGINE_SUBSYSTEM_SLOT_INFO( Name, Stage, bClientOnly ) SlotInfo{ #Name, EngineSubsystemStage::Stage, bClientOnly },
-            SW_ENGINE_SUBSYSTEM_SLOTS( SW_ENGINE_SUBSYSTEM_SLOT_INFO )
-#undef SW_ENGINE_SUBSYSTEM_SLOT_INFO
-        };
-        static_assert( sizeof( kArrSlotInfo ) / sizeof( kArrSlotInfo[0] ) == static_cast<size_t>( EngineSubsystemSlot::Count ), "자리 표와 열거형의 개수가 다릅니다" );
+            /** @brief 이름 순으로 앞인지입니다(링크 순서와 무관하게 결정적인 보고 · 동점 순서). */
+            static bool isNameBefore( const utf8* pLeft, const utf8* pRight ) { return string_view{ pLeft } < string_view{ pRight }; }
 
-        /** @brief 이 빌드가 그 자리를 등록해야 하는지입니다 — 클라이언트 전용 자리는 클라이언트 코드 빌드에서만 있다. */
-        constexpr bool isSlotBuilt( const SlotInfo& info )
-        {
-#if defined( SW_WITH_CLIENT_CODE )
-            (void)info;
-            return true;
-#else
-            return info._bClientOnly == false;
-#endif
-        }
+            /** @brief 목록에서 @p typeHash 의 공장 등록입니다. 없으면 nullptr 입니다. */
+            static const EngineSubsystemRecord* findSubsystem( const EngineSubsystemRecord* pHead, uint64 typeHash )
+            {
+                for ( const EngineSubsystemRecord* pRecord = pHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+                {
+                    if ( pRecord->_typeHash == typeHash )
+                        return pRecord;
+                }
+                return nullptr;
+            }
+        };
     } // namespace
 
-    const EngineSubsystemRegistrar*& EngineSubsystemRegistrar::getHead()
+    EngineServiceRecord::EngineServiceRecord( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, ServiceSlot& slot, bool ( *pfnBind )( SubsystemScope&, void* ),
+                                              ServiceRequirement requirement, EngineServiceVisibility visibility )
+        : _pTypeName{ pTypeName }
+        , _typeHash{ typeHash }
+        , _pSlot{ &slot }
+        , _pfnBind{ pfnBind }
+        , _requirement{ requirement }
+        , _visibility{ visibility }
+        , _pNext{ list._pServiceHead }
     {
-        static const EngineSubsystemRegistrar* s_pHead = nullptr;
-        return s_pHead;
+        list._pServiceHead = this;
     }
 
-    EngineSubsystemRegistrar::EngineSubsystemRegistrar( EngineSubsystemSlot slot, EngineSubsystemFactory pfnFactory )
-        : _slot{ slot }
+    EngineSubsystemRecord::EngineSubsystemRecord( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, EngineSubsystemStage stage, span<const uint64> listAfterHash,
+                                                  const utf8* pAfterNames, EngineSubsystemFactory pfnFactory )
+        : _pTypeName{ pTypeName }
+        , _typeHash{ typeHash }
+        , _stage{ stage }
+        , _listAfterHash{ listAfterHash }
+        , _pAfterNames{ pAfterNames }
         , _pfnFactory{ pfnFactory }
-        , _pNext{ getHead() }
+        , _pNext{ list._pSubsystemHead }
     {
-        getHead() = this;
+        list._pSubsystemHead = this;
     }
 
-    const utf8* getEngineSubsystemSlotName( EngineSubsystemSlot slot )
+    EngineRegistrationList::EngineRegistrationList()
+        : _pServiceHead{ nullptr }
+        , _pSubsystemHead{ nullptr }
     {
-        return kArrSlotInfo[static_cast<size_t>( slot )]._pName;
     }
 
-    EngineSubsystemStage getEngineSubsystemSlotStage( EngineSubsystemSlot slot )
+    EngineRegistrationList& EngineRegistrationList::getGlobal()
     {
-        return kArrSlotInfo[static_cast<size_t>( slot )]._stage;
+        static EngineRegistrationList s_list;
+        return s_list;
     }
 
-    bool isEngineSubsystemSlotClientOnly( EngineSubsystemSlot slot )
+    const utf8* EngineRegistrationList::bindServices( const ISubsystemLocator& subsystems )
     {
-        return kArrSlotInfo[static_cast<size_t>( slot )]._bClientOnly;
-    }
-
-    void buildEngineSubsystems( EngineSubsystemStage stage, SubsystemScope& scope, EngineSubsystemBuild& build )
-    {
-        // 자리 → 공장. 링크 순서(목록의 순서)는 쓰지 않는다 — 만드는 순서는 자리 표의 줄 순서다.
-        array<EngineSubsystemFactory, static_cast<size_t>( EngineSubsystemSlot::Count )> arrFactory{};
-        for ( const EngineSubsystemRegistrar* pRegistrar = EngineSubsystemRegistrar::getHead(); pRegistrar != nullptr; pRegistrar = pRegistrar->_pNext )
+        for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
-            const size_t index = static_cast<size_t>( pRegistrar->_slot );
-            if ( arrFactory[index] != nullptr )
-                SW_FATAL( "Engine subsystem slot '%#' is registered twice (SW_ENGINE_SUBSYSTEM) - one registration per slot", kArrSlotInfo[index]._pName );
-            arrFactory[index] = pRegistrar->_pfnFactory;
+            pRecord->_pSlot->_pBound = EngineRegistrationListInternal::locate( &subsystems, pRecord->_typeHash );
         }
-        for ( size_t index = 0; index < arrFactory.size(); ++index )
+        return findMissingRequiredService();
+    }
+
+    void EngineRegistrationList::unbindServices()
+    {
+        for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
         {
-            const SlotInfo& info = kArrSlotInfo[index];
-            if ( info._stage != stage )
-                continue;
-            const bool bBuilt = isSlotBuilt( info );
-            if ( bBuilt && arrFactory[index] == nullptr )
-                SW_FATAL( "Engine subsystem slot '%#' has no registration (SW_ENGINE_SUBSYSTEM in its .cpp) - the object file was dropped or the line was removed", info._pName );
-            if ( bBuilt == false && arrFactory[index] != nullptr )
-                SW_FATAL( "Engine subsystem slot '%#' is client-only but this build registered it", info._pName );
-            if ( bBuilt )
-                arrFactory[index]( scope, build );
+            pRecord->_pSlot->_pBound = nullptr;
+        }
+    }
+
+    const utf8* EngineRegistrationList::findMissingRequiredService() const
+    {
+        const utf8* pMissing = nullptr;
+        for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+        {
+            const bool bMissing = pRecord->_requirement == ServiceRequirement::Required && pRecord->_pSlot->_pBound == nullptr;
+            if ( bMissing && ( pMissing == nullptr || EngineRegistrationListInternal::isNameBefore( pRecord->_pTypeName, pMissing ) ) )
+                pMissing = pRecord->_pTypeName;
+        }
+        return pMissing;
+    }
+
+    void EngineRegistrationList::bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly, bool bSkipAlreadyBound ) const
+    {
+        for ( const EngineServiceRecord* pRecord = _pServiceHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+        {
+            void* const pService  = pRecord->_pSlot->_pBound;
+            const bool  bVisible  = bGameModuleOnly == false || pRecord->_visibility == EngineServiceVisibility::GameVisible;
+            const bool  bFresh    = bSkipAlreadyBound == false || outScope.findInScope( pRecord->_typeHash ) == nullptr;
+            const bool  bBindable = pService != nullptr && bVisible;
+            if ( bBindable && bFresh )
+                SW_LOW_LEVEL_ASSERT( pRecord->_pfnBind( outScope, pService ), "Engine service %s is bound twice - each registration is a distinct type and the caller passes a fresh scope",
+                                     pRecord->_pTypeName );
+        }
+    }
+
+    bool EngineRegistrationList::orderSubsystems( EngineSubsystemStage stage, vector<const EngineSubsystemRecord*>& outListOrder, string& outError ) const
+    {
+        outListOrder.clear();
+        outError.clear();
+        vector<const EngineSubsystemRecord*> listRecord;
+        for ( const EngineSubsystemRecord* pRecord = _pSubsystemHead; pRecord != nullptr; pRecord = pRecord->_pNext )
+        {
+            if ( pRecord->_stage == stage )
+                listRecord.push_back( pRecord );
+        }
+        // 의존 해시를 이름으로 푼다 — 정렬 · 같은 이름 · 순환 판정은 서브시스템 목록과 같은 함수(`SubsystemCollection::computeGraph`)다.
+        vector<vector<const utf8*>> listDependencyName( listRecord.size() );
+        for ( size_t recordIndex = 0; recordIndex < listRecord.size(); ++recordIndex )
+        {
+            const EngineSubsystemRecord& record = *listRecord[recordIndex];
+            for ( const uint64 afterHash : record._listAfterHash )
+            {
+                const EngineSubsystemRecord* const pAfter = EngineRegistrationListInternal::findSubsystem( _pSubsystemHead, afterHash );
+                if ( pAfter == nullptr )
+                {
+                    outError = string( "Engine subsystem '" ) + record._pTypeName + "' is built after " + record._pAfterNames + ", but one of them has no registration (SW_ENGINE_SUBSYSTEM)";
+                    return false;
+                }
+                if ( pAfter->_stage != stage )
+                {
+                    outError = string( "Engine subsystem '" ) + record._pTypeName + "' is built after '" + pAfter->_pTypeName + "', which is built in another stage - list only same-stage types";
+                    return false;
+                }
+                listDependencyName[recordIndex].push_back( pAfter->_pTypeName );
+            }
+        }
+        vector<SubsystemNode> listNode;
+        listNode.reserve( listRecord.size() );
+        for ( size_t recordIndex = 0; recordIndex < listRecord.size(); ++recordIndex )
+        {
+            listNode.push_back( { listRecord[recordIndex]->_pTypeName, listDependencyName[recordIndex] } );
+        }
+        SubsystemGraph graph{};
+        if ( SubsystemCollection::computeGraph( listNode, graph, outError ) == false )
+        {
+            outError = "Engine subsystem build order: " + outError;
+            return false;
+        }
+        outListOrder.reserve( graph._listOrder.size() );
+        for ( const uint32 nodeIndex : graph._listOrder )
+        {
+            outListOrder.push_back( listRecord[nodeIndex] );
+        }
+        return true;
+    }
+
+    void EngineRegistrationList::buildSubsystems( EngineSubsystemStage stage, SubsystemScope& scope, EngineSubsystemBuild& build ) const
+    {
+        vector<const EngineSubsystemRecord*> listOrder;
+        string                               error;
+        if ( orderSubsystems( stage, listOrder, error ) == false )
+            SW_FATAL( "%#", error.c_str() );
+        for ( const EngineSubsystemRecord* const pRecord : listOrder )
+        {
+            pRecord->_pfnFactory( scope, build );
         }
     }
 } // namespace sw::engine

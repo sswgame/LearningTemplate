@@ -2,7 +2,13 @@
 
 #include "Engine/Object/GameObject/Service/SceneEngineServices.h"
 
+#include "Core/Task/TaskManager.h"
+
+#include "Engine/Asset/AssetManager.h"
+#include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Object/GameObject/Tick/TickBatchRegistry.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {

@@ -6,6 +6,8 @@
 #include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Foundation/BuildInfo.h"
 
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
+
 namespace sw
 {
     DiagnosticsSubsystem::DiagnosticsSubsystem( bool bDiagnostics )
@@ -58,4 +60,10 @@ namespace sw
             _deadlockDetector->shutdown();
         _deadlockDetector.reset();
     }
+} // namespace sw
+
+namespace sw
+{
+    // 이 서브시스템이 든 메모리 프로파일러의 서비스 칸. 비어 있을 수 있다 — 진단 도구를 끈 구성(배포본)은 만들지 않는다(`engine::initializeCoreSubsystems` 가 건다).
+    SW_ENGINE_SERVICE( MemoryProfiler, HostOnly );
 } // namespace sw

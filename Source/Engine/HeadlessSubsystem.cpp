@@ -592,9 +592,8 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 헤드리스 작업(셰이더 · 씬 쿠킹, 임포트)이면 그에 기대는 단계(창 · RHI · 렌더러)를 건너뛴다 — 결과는 호스트가 준 상태에 적는다.
-    SW_ENGINE_SUBSYSTEM( HeadlessSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( HeadlessSubsystem, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         const engine::StartupSetup& setup = *build._pStartupSetup;
         (void)scope.emplaceSubsystem<HeadlessSubsystem>( setup._bDedicatedServer, setup._headlessState );

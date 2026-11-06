@@ -10,6 +10,7 @@
 #include "Core/Math/Ray.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -104,4 +105,6 @@ namespace sw
         Subscription             _beforeLayoutSubscription; ///< 레이아웃 앞 칸(`UISystem::onUpdateBeforeLayout`) 구독
         Subscription             _afterPaintSubscription;   ///< 그리기 뒤 칸(`UISystem::onUpdateAfterPaint`) 구독
     };
+
+    SW_SERVICE_SLOT( UIWidgetComponentService, Required );
 } // namespace sw

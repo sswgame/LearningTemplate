@@ -7,6 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/ContentSource.h"
 #include "Engine/Content/Pack/PackPatch.h"
@@ -174,5 +175,7 @@ namespace sw
         atomic<ContentSource>                _contentSource; ///< 기동 때 정하고 로드 스레드가 잠금 없이 읽는다 — 원자값
         PackPatchTrust                       _patchTrust;    ///< 기동 스레드가 마운트 전에 한 번 정한다(`setPatchTrust`). `_pProvider` 가 null 이면 서명을 보지 않는다
     };
+
+    SW_SERVICE_SLOT( PackManager, Optional );
 
 } // namespace sw

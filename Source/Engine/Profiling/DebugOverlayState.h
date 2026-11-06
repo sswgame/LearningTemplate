@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -65,4 +66,6 @@ namespace sw
          */
         void collectRows( vector<DebugOverlayRow>& outListRow ) const;
     };
+
+    SW_SERVICE_SLOT( DebugOverlayState, Required );
 } // namespace sw

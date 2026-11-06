@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -117,4 +118,6 @@ namespace sw
         UIStyleSheetCache*  _pStyleSheets;   ///< 테마 · 문서 시트를 읽는 캐시(기동이 찾는다)
         UIThemeChangedEvent _onThemeChanged; ///< 테마가 바뀐 알림(화면 스택 · 오프스크린 화면)
     };
+
+    SW_SERVICE_SLOT( UIThemeController, Required );
 } // namespace sw

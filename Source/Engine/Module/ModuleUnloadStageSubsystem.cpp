@@ -44,9 +44,8 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 모듈 라이브러리 창구는 호스트 범위에 있다 — 두 단계가 자기 범위에서 부모로 올라가며 찾는다(호스트 범위가 없으면 올리고 내릴 모듈이 없다).
-    SW_ENGINE_SUBSYSTEM( ModuleUnloadStageSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( ModuleUnloadStageSubsystem, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         (void)build;
         (void)scope.emplaceSubsystem<ModuleUnloadStageSubsystem>( &scope );

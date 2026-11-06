@@ -7,6 +7,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/Canvas/CanvasTestPattern.h"
 #include "Engine/Graphics/Canvas/DebugDrawCanvas.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
 #include "Engine/Renderer/Frame/Packet/RenderFramePacket.h"

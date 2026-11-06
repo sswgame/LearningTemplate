@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Window/FramePacer.h"
 #include "Engine/Window/IWindowTitleTarget.h"
@@ -96,4 +97,6 @@ namespace sw
         FramePacer          _framePacer;
         TitleTarget         _titleTarget; ///< 제목을 거는 이음매(`getTitleTarget`)
     };
+
+    SW_SERVICE_SLOT( MainWindowSubsystem, Optional );
 } // namespace sw

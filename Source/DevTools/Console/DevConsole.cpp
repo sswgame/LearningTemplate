@@ -8,6 +8,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Network/DebugReplyLine.h"
 
+#include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 
 namespace sw

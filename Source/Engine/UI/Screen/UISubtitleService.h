@@ -10,6 +10,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
@@ -117,4 +118,6 @@ namespace sw
         IDAllocator<uint32>    _lineIDAllocator;
         uint8                  _bDocumentFailed : 1; ///< 문서를 만들지 못했는지 나타냅니다. 같은 오류를 매 프레임 내지 않기 위한 값입니다.
     };
+
+    SW_SERVICE_SLOT( UISubtitleService, Required );
 } // namespace sw

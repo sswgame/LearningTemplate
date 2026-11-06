@@ -24,6 +24,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -131,4 +132,6 @@ namespace sw
         uint32 _lastRequestSerial                SW_GUARDED_BY( _readbackMutex ){ 0 }; ///< 마지막으로 낸 요청 번호(`_readbackMutex`)
         atomic<uint32>                           _readbackSerial{ 0 };                 ///< 마지막 결과의 번호
     };
+
+    SW_SERVICE_SLOT( RenderTargetRegistry, Optional );
 } // namespace sw

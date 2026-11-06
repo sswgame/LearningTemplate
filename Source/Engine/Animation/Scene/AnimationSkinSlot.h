@@ -13,6 +13,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -34,6 +35,8 @@ namespace sw
         void                shutdownSubsystem() override {}
         const utf8*         getSubsystemName() const override { return kSubsystemName; }
     };
+
+    SW_SERVICE_SLOT( AnimationSkinSlotRegistry, Required );
 
     /**
      * @class AnimationSkinSlot

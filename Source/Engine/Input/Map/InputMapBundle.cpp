@@ -60,7 +60,7 @@ namespace sw
         _bRegistered = SW_FALSE;
     }
 
-    SW_ENGINE_SUBSYSTEM_DEFAULT( InputMapExtensionRegistry, InputMapExtensionRegistry );
+    SW_ENGINE_SERVICE_SUBSYSTEM( InputMapExtensionRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( InputMapExtensionRegistry ) );
 } // namespace sw
 
 namespace sw

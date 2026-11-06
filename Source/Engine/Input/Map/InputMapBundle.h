@@ -14,6 +14,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Module/ModuleObjectRegistrar.h"
@@ -53,6 +54,8 @@ namespace sw
         mutable mutex                                           _mutex;                  ///< 등록 목록을 지킨다
         RegistrationList<const InputMapExtension> _registration SW_GUARDED_BY( _mutex ); ///< (0, id) 순서, 이름 없는 등록은 거절한다
     };
+
+    SW_SERVICE_SLOT( InputMapExtensionRegistry, Required );
 
     /** @brief `SW_INPUT_MAP_EXTENSION` 이 두는 정적 등록자입니다. 링크 때 목록에 달리고, 모듈을 올릴 때 붙고 내리기 전에 뗍니다. */
     class SW_API InputMapExtensionRegistrar final : public ModuleObjectRegistrar

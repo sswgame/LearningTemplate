@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -118,4 +119,6 @@ namespace sw
         string               _userBindingsPath; ///< 맵을 만들 때 정한 사용자 바인딩 파일 경로입니다(빈 값 = 저장하지 않는다).
         uint8                _bBound : 1;
     };
+
+    SW_SERVICE_SLOT( DebugKeyActions, Required );
 } // namespace sw

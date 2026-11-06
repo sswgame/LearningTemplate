@@ -93,7 +93,7 @@ namespace sw
 
     bool GameInstance::checkEngineServices( const IWindow* pWindow )
     {
-        // 네트워크 세션은 필수 엔진 서비스다(`EngineServiceList.xxx` 의 `Required` 행). 없으면 세션 없이 조용히 도는 대신 아무것도 걸기 전에 멈춘다.
+        // 네트워크 세션은 필수 엔진 서비스다(`SW_SERVICE_SLOT( GameNetSession, Required )`, 게임 노출). 없으면 세션 없이 조용히 도는 대신 아무것도 걸기 전에 멈춘다.
         if ( game::findSubsystem<GameNetSession>() == nullptr )
         {
             SW_LOG_ERROR_ID( "GameInstance.GameInstanceCannotStart", "Game instance cannot start - the required engine service GameNetSession is not bound to the game services" );

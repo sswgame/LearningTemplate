@@ -16,6 +16,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/EngineFrameHooks.h"
@@ -233,4 +234,6 @@ namespace sw
         uint8                               _bConsent        : 1 SW_GUARDED_BY( _mutex );
         uint8                               _bSessionSampled : 1 SW_GUARDED_BY( _mutex );
     };
+
+    SW_SERVICE_SLOT( TelemetryService, Required );
 } // namespace sw

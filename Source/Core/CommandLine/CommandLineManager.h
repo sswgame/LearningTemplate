@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Log/Logger.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include <variant>
 
@@ -263,6 +264,8 @@ namespace sw
         /** @brief `parse` 가 거절한 인자의 이유입니다(`getParseErrors`). `initialize` 가 비웁니다. */
         vector<string> _listParseError;
     };
+
+    SW_SERVICE_SLOT( CommandLineManager, Required );
 
     template <typename T>
     bool CommandLineManager::readValue( const ArgumentInfo& argument, T& outValue )

@@ -25,6 +25,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Task/TaskFuture.h"
 
 namespace sw
@@ -258,4 +259,6 @@ namespace sw
         unique_ptr<IAsyncFileIOBackend> _backend;
         AsyncFileIOConfig               _subsystemSettings; ///< `initializeSubsystem` 이 넘길 설정(`setSubsystemSettings`)
     };
+
+    SW_SERVICE_SLOT( AsyncFileIO, Required );
 } // namespace sw

@@ -82,6 +82,5 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
-    SW_ENGINE_SUBSYSTEM_DEFAULT( RenderTargetRegistry, RenderTargetRegistry );
+    SW_ENGINE_SERVICE_SUBSYSTEM( RenderTargetRegistry, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( RenderTargetRegistry ) );
 } // namespace sw

@@ -22,6 +22,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include <optional>
 
@@ -191,4 +192,6 @@ namespace sw
     private:
         unique_ptr<State> _pState;
     };
+
+    SW_SERVICE_SLOT( AssetPaths, Required );
 } // namespace sw

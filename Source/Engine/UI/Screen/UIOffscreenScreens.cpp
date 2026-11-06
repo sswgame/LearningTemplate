@@ -288,7 +288,6 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 화면 스택 밖 화면(에디터 UI 미리보기) — UI 갱신의 그리기 뒤 칸에 건다.
-    SW_ENGINE_SUBSYSTEM_DEFAULT( UIOffscreenScreens, UIOffscreenScreens );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIOffscreenScreens, HostOnly, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIOffscreenScreens ) );
 } // namespace sw

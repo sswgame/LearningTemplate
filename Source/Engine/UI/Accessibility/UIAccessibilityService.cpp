@@ -116,7 +116,6 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 스크린 리더 — 알림이 이것으로 읽힌다.
-    SW_ENGINE_SUBSYSTEM_DEFAULT( UIAccessibilityService, UIAccessibilityService );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UIAccessibilityService, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UIAccessibilityService ) );
 } // namespace sw

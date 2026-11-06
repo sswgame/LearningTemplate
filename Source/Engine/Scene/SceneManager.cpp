@@ -1007,9 +1007,8 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 씬 매니저가 서브시스템이다 — 씬이 바뀌면 되돌리기 기록을 비우는 구독도 그것이 건다.
-    SW_ENGINE_SUBSYSTEM( SceneManager, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SERVICE_SUBSYSTEM( SceneManager, GameVisible, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         build._pStartupParts->_pSceneManager = &scope.emplaceSubsystem<SceneManager>();
     } );

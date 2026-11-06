@@ -53,6 +53,7 @@
 #include "Core/Network/NetTypes.h"
 #include "Core/Network/Transport/NetEmulation.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Task/TaskFuture.h"
 
 #include "Engine/Net/GameConnectSecurity.h"
@@ -361,4 +362,6 @@ namespace sw
         uint8                             _bShutdownNoticeKnown;    ///< 클라이언트 — 서버 종료 통지를 받았다
         uint8                             _bServerTickKnown;        ///< 클라이언트 — 서버 틱을 한 번이라도 받았다
     };
+
+    SW_SERVICE_SLOT( GameNetSession, Required );
 } // namespace sw

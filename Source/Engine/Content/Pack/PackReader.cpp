@@ -6,6 +6,7 @@
 #include "Core/Compression/ICompressionCodec.h"
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/array.h"
+#include "Core/File/AsyncFileIO.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/Constants.h"
 #include "Core/Foundation/StdHeaders.h"

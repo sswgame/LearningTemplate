@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/UI/Accessibility/IUIAccessibilityBridge.h"
@@ -76,4 +77,6 @@ namespace sw
         UIScreenHandle                     _focusScreen;              ///< 브리지에 마지막으로 알린 포커스 위젯의 화면입니다.
         WidgetID                           _focusWidget;              ///< 브리지에 마지막으로 알린 포커스 위젯입니다(없으면 `kInvalidWidgetID`).
     };
+
+    SW_SERVICE_SLOT( UIAccessibilityService, Required );
 } // namespace sw

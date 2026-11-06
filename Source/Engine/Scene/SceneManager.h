@@ -11,6 +11,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -355,6 +356,8 @@ namespace sw
         uint32                 _preloadHeldFrames; ///< 로드가 끝난 뒤 프리로드를 붙들고 지난 프레임 수
         SceneLoadLeakProbe     _leakProbe;         ///< 씬 로드 누수 곡선 감시 값(`startLoadLeakProbe`)
     };
+
+    SW_SERVICE_SLOT( SceneManager, Required );
 } // namespace sw
 
 namespace sw

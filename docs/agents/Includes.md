@@ -42,9 +42,14 @@ clang-cl defines both `__clang__` and `_MSC_VER`, so "may I use an MSVC extensio
 
 Reach a service through the window of its lifetime: `getSubsystem<T>()` (must exist, `T&`) or `findSubsystem<T>()` (may be missing, `T*`) on `engine::`, `game::`, `editor::` or the owning object.
 
-- A new service is a subsystem added to a scope; an engine service read on hot paths also gets a row in `EngineServiceList.xxx`.
+- A new engine service registers itself — there is no central list. Its header declares the slot after the class (`SW_SERVICE_SLOT( T, Required | Optional )` or `SW_SERVICE_SLOT_CONST`, `Core/Subsystem/ServiceSlot.h`), and the `.cpp` that puts the object into a scope has one registration line (`Engine/Foundation/EngineSubsystemRegistration.h`):
+  - `SW_ENGINE_SERVICE_SUBSYSTEM( T, GameVisible | HostOnly, Services | Startup, ( TypesBuiltFirst... ), factory )` — builds the subsystem and fills its slot (`SW_ENGINE_DEFAULT_FACTORY( T )` for a plain `emplaceSubsystem<T>()`).
+  - `SW_ENGINE_SUBSYSTEM( T, Services | Startup, ( TypesBuiltFirst... ), factory )` — builds a subsystem without a slot (found only through scopes).
+  - `SW_ENGINE_SERVICE( T, GameVisible | HostOnly )` — a slot for an object another subsystem binds (a value bundle, an object inside a subsystem); the line sits next to that `bind`.
+  - Put a type in the parentheses only when the factory looks it up (`scope.get<T>()`); the build order is a topological sort of those (ties by name), and a cycle, an unregistered type or a type from another stage stops startup. Init/shutdown order still comes from `ISubsystem::getSubsystemDependencies`.
+  - `engine::getSubsystem<T>()` reads the slot in O(1) and compiles only for a `Required` slot whose header is included; `engine::findSubsystem<T>()` reads an `Optional` slot, or walks the scopes for a type without a slot. A required slot left empty stops startup with the type name (`engine::bindEngineServices`). `GameVisible` slots are bound into game module scopes (`game::findSubsystem<T>()`); editor scopes get every slot.
 - No named accessors, no `static getInstance()`.
-- Tests inject mocks through scopes (`test::ScopedEngineServiceOverride`, `game::ScopedGameScope`, `editor::ScopedEditorScope`).
+- Tests inject mocks through scopes (`game::ScopedGameScope`, `editor::ScopedEditorScope`); the registration rules are tested with a local `engine::EngineRegistrationList` (`Engine/Foundation/Tests/TestEngineSubsystemRegistration.cpp`).
 - A dynamically loaded module (GameFramework, a kit) owns its services as **module subsystems**: `SW_MODULE_SUBSYSTEM( Process | Engine, T, PublishedTypes... )` in a `.cpp`. Loading the module mounts them in a child scope named after the module (`ModuleRegistrationHost`); unloading removes the child scope. Only published types are visible from the parent scope, so a lower layer finds a higher layer's implementation by interface type (`engine::findSubsystem<INetSecurityProvider>()`) — no function slot, no function-local static provider. `Process` is the root of the scope chain (the host scope) and outlives engine and game restarts.
 
 ### Memory and ownership

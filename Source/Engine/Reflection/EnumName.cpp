@@ -3,6 +3,7 @@
 #include "Engine/Reflection/EnumName.h"
 
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {

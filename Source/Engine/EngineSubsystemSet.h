@@ -1,10 +1,10 @@
 /**
  * @file Engine/EngineSubsystemSet.h
- * @brief 호스트의 세 범위(코어 · 서비스 · 기동 단계)에 넣을 서브시스템의 **단 하나뿐인 목록**입니다.
+ * @brief 호스트의 세 범위(코어 · 서비스 · 기동 단계)를 채우는 함수입니다.
  *
- * @details 엔진 루프(`Engine::initialize`) · 테스트 하네스(`TestHostRuntime`) · 기동 순서 테스트(`EngineInitSequenceTest`)가 모두 이 세 함수로 범위를 채운다.
- *          서비스 · 기동 단계의 서브시스템을 더하거나 빼려면 자리 표(`Engine/Foundation/EngineSubsystemRegistration.h` 의 `SW_ENGINE_SUBSYSTEM_SLOTS`)에 자리를 두고
- *          그 서브시스템의 .cpp 에 `SW_ENGINE_SUBSYSTEM` 등록을 둔다 — 호스트마다 목록을 따로 두지 않으므로 한 곳에서 빠뜨리는 일이 없고, 빠지면 목록 함수가 멈춘다.
+ * @details 엔진 루프(`Engine::initialize`)가 이 세 함수로 범위를 채운다.
+ *          서비스 · 기동 단계의 서브시스템을 더하거나 빼려면 그 서브시스템의 .cpp 에 등록 줄(`SW_ENGINE_SUBSYSTEM` · `SW_ENGINE_SERVICE_SUBSYSTEM`,
+ *          `Engine/Foundation/EngineSubsystemRegistration.h`) 하나를 두거나 지운다 — 중앙 목록이 없으므로 두 곳을 맞출 일이 없고, 먼저 만들 타입은 그 줄이 말한다.
  *          범위 값(`ServiceParts` · `StartupSetup` · `StartupParts`)은 공장이 쓰므로 그 헤더(바닥 층)에 있다. 이 헤더는 `StartupSetup` 의 대역 형식을 완전하게 한다.
  *          호스트마다 다른 것은 아래 `*Setup` 에 이름 붙은 값으로만 준다(인자 · 켜고 끄는 단계 · 본문을 바꾼 대역). 서는지 여부는 서브시스템 클래스가 선언한 호스트
  *          비트(`EngineSubsystemHost`)가 `initializeAll` 에서 가른다 — 목록은 그것을 따로 판단하지 않는다.

@@ -21,6 +21,7 @@
 #include "Core/String/HexUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Config/EngineConfig.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Content/ContentHash.h"
 #include "Engine/Content/CookCodeFingerprint.h"

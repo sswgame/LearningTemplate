@@ -13,6 +13,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -65,4 +66,6 @@ namespace sw
         vector<Entry>  _listEntry;
         atomic<uint32> _count; ///< `_listEntry` 의 크기를 렌더 스레드가 공개한 값
     };
+
+    SW_SERVICE_SLOT( OffscreenSceneRenderers, Optional );
 } // namespace sw

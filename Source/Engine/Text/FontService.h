@@ -14,6 +14,7 @@
 #include "Core/Log/LogOnce.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
@@ -160,4 +161,6 @@ namespace sw
         const LocalizationManager*              _pLocalization;       ///< 문화권 출처(생성자 주입, 엔진 서브시스템은 `initializeSubsystem` 이 한 번 받음. nullptr = 대체 없음)
         uint8                                   _bInitialized : 1;    ///< 기본 패밀리를 열었는지 나타냅니다.
     };
+
+    SW_SERVICE_SLOT( FontService, Required );
 } // namespace sw

@@ -188,14 +188,18 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 설정 표는 Config 서브시스템이다 — 엔진 · 게임 설정을 읽어 자기 자리에 둔다(Resource 가 그 뒤에 서서 팩 루트를 안다).
-    SW_ENGINE_SUBSYSTEM( ConfigManager, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( ConfigManager, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         ConfigManager& configManager          = scope.emplaceSubsystem<ConfigManager>();
         build._pStartupParts->_pConfigManager = &configManager;
-        // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 표(`engine::getSubsystem<EngineConfig>()`)는 이 자리의 주소를 묶는다.
+        // 호스트 설정 둘은 Config 가 소유한다 - 읽는 것은 Config 의 초기화이고, 서비스 칸(`engine::getSubsystem<EngineConfig>()`)은 이 자리의 주소를 묶는다.
         (void)scope.bind( &configManager.getHostEngineConfig() ); // 새 범위 - 겹치지 않는다
         (void)scope.bind( &configManager.getHostGameConfig() );   // 새 범위 - 겹치지 않는다
     } );
+
+    // 위 공장이 건 호스트 설정 둘의 서비스 칸(읽기 전용). 정적 활성본(`EngineConfig::getActive()` 따위)을 대신한다 — 다시 읽기는 같은 자리에서 일어나 칸의 주소가 바뀌지 않는다.
+    // 엔진 설정은 엔진과 에디터가 읽고, 게임은 게임 설정만 본다.
+    SW_ENGINE_SERVICE( EngineConfig, HostOnly );
+    SW_ENGINE_SERVICE( GameConfig, GameVisible );
 } // namespace sw

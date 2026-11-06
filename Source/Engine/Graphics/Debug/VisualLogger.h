@@ -20,6 +20,7 @@
 #include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -132,4 +133,6 @@ namespace sw
         uint32 _capacity                 SW_GUARDED_BY( _mutex );
         uint8                            _bEnabled;
     };
+
+    SW_SERVICE_SLOT( VisualLogger, Required );
 } // namespace sw

@@ -15,6 +15,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -144,4 +145,6 @@ namespace sw
         /** @brief 문서를 실제로 열어 본 횟수입니다. `getLoadAttemptCount` 가 이것을 반환합니다. */
         atomic<uint32> _loadAttemptCount;
     };
+
+    SW_SERVICE_SLOT( ComponentDefaults, Required );
 } // namespace sw

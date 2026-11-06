@@ -11,6 +11,7 @@
 
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
+#include "Engine/Reflection/TypeRegistry.h"
 
 namespace sw
 {

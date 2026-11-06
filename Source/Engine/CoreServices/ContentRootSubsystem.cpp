@@ -3,8 +3,10 @@
 #include "Engine/CoreServices/ContentRootSubsystem.h"
 
 #include "Engine/Config/GameSelection.h"
+#include "Engine/Content/AssetPaths.h"
 #include "Engine/CoreServices/CommandLineSubsystem.h"
 #include "Engine/CoreServices/CrashHandlerSubsystem.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -36,4 +38,10 @@ namespace sw
         static constexpr const utf8* kArrDependency[] = { CrashHandlerSubsystem::kSubsystemName };
         return kArrDependency;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 이 서브시스템이 든 리소스 경로 상태의 서비스 칸(경로 표 · 검색 우선순위 · 붙인 디스크 도메인 · 해석 캐시). 워커(디코드 · 쿠킹)도 경로를 풀므로 칸으로 읽는다.
+    SW_ENGINE_SERVICE( AssetPaths, GameVisible );
 } // namespace sw

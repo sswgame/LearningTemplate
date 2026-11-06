@@ -3,12 +3,14 @@
 #include "Engine/CoreServices/CrashHandlerSubsystem.h"
 
 #include "Core/CommandLine/CommandLineManager.h"
+#include "Core/Diagnostics/CrashHandler.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Log/Logger.h"
 #include "Core/Module/ModuleBuildID.h"
 
 #include "Engine/CoreServices/CommandLineSubsystem.h"
 #include "Engine/CoreServices/LoggerSubsystem.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -59,4 +61,10 @@ namespace sw
             return kArrAfterCommandLine;
         return kArrAfterLogger;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 이 서브시스템이 든 크래시 처리기의 서비스 칸(문맥 값 · 빵부스러기 · 행 보고). 게임도 빵부스러기를 남긴다.
+    SW_ENGINE_SERVICE( CrashHandler, GameVisible );
 } // namespace sw

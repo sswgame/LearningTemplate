@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -36,4 +37,6 @@ namespace sw
         int32 _exitCode;
         uint8 _bRequested : 1;
     };
+
+    SW_SERVICE_SLOT( QuitRequest, Required );
 } // namespace sw

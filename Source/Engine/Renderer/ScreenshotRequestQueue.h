@@ -12,6 +12,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Graphics/RHI/RHITypes.h"
 
@@ -108,4 +109,6 @@ namespace sw
         atomic<uint32>                   _finishedCaptureMask{ 0 };
         atomic<uint32>                   _failedCaptureMask{ 0 };
     };
+
+    SW_SERVICE_SLOT( ScreenshotRequestQueue, Optional );
 } // namespace sw

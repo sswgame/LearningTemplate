@@ -14,6 +14,7 @@
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -197,4 +198,6 @@ namespace sw
         /** @brief 슬롯 받기, 반환, 페이지 만들기를 보호합니다. */
         mutable mutex _mutex;
     };
+
+    SW_SERVICE_SLOT( SceneTransformStorage, Required );
 } // namespace sw

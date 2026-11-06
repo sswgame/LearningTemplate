@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -106,6 +107,8 @@ namespace sw
         vector<AssetLoadRecord> _listSlowest SW_GUARDED_BY( _mutex ); ///< 느린 것부터(최대 kSlowestCount)
         uint32 _loadCount                    SW_GUARDED_BY( _mutex );
     };
+
+    SW_SERVICE_SLOT( AssetLoadProfiler, Optional );
 } // namespace sw
 
 namespace sw

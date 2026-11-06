@@ -9,6 +9,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -131,4 +132,6 @@ namespace sw
         uint32                _defaultLayerIndex; ///< `Default` 의 순번
         TransparencySortMode  _sortMode;
     };
+
+    SW_SERVICE_SLOT_CONST( Render2DSettings, Required );
 } // namespace sw

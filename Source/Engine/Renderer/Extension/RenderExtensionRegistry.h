@@ -21,6 +21,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Renderer/Extension/RenderExtension.h"
 
@@ -34,7 +35,7 @@ namespace sw
     /**
      * @class RenderExtensionRegistry
      * @brief 엔진 서비스 범위의 서브시스템입니다. 엔진이 소유하므로 모듈이 내려가도 사라지지 않습니다.
-     * @details 렌더러는 `engine::getSubsystem<RenderExtensionRegistry>()`, 모듈은 `game::findSubsystem<RenderExtensionRegistry>()` 로 찾습니다(`EngineServiceList.xxx` 의 GameVisible 행).
+     * @details 렌더러는 `engine::findSubsystem<RenderExtensionRegistry>()`, 모듈은 `game::findSubsystem<RenderExtensionRegistry>()` 로 찾습니다(아래 선택 칸, 등록은 GameVisible).
      */
     class SW_API RenderExtensionRegistry : public ISubsystem
     {
@@ -108,6 +109,8 @@ namespace sw
         ExtensionSceneProxyID _nextProxyID       SW_GUARDED_BY( _mutex ) = 1;
         OnceKeySet                               _failureLogged; ///< 실패를 알린 키(`noteFailureOnce`)
     };
+
+    SW_SERVICE_SLOT( RenderExtensionRegistry, Optional );
 } // namespace sw
 
 namespace sw

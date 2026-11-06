@@ -17,6 +17,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Audio/AudioChannelLayout.h"
 #include "Engine/Audio/AudioTypes.h"
@@ -246,6 +247,8 @@ namespace sw
         uint8                   _bOutputOpen  : 1; /**< 장치가 엔진을 당기고 있는지입니다. */
         uint8                   _bInitialized : 1; /**< initialize 가 끝났는지입니다. */
     };
+
+    SW_SERVICE_SLOT( IAudioService, Required );
 } // namespace sw
 
 namespace sw

@@ -72,7 +72,6 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 일괄 틱 함수 표 — 데이터 종류와 같이 모듈을 올리는 길이 정적 등록자를 붙인다.
-    SW_ENGINE_SUBSYSTEM_DEFAULT( TickBatchRegistry, TickBatchRegistry );
+    SW_ENGINE_SERVICE_SUBSYSTEM( TickBatchRegistry, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( TickBatchRegistry ) );
 } // namespace sw

@@ -538,7 +538,6 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
-    // 스트리밍 큐의 소멸자는 태스크를 기다리므로 Task 보다 먼저 놓는다(뒷 자리).
-    SW_ENGINE_SUBSYSTEM_DEFAULT( AssetStreamingQueue, AssetStreamingQueue );
+    // 스트리밍 큐의 소멸자는 태스크를 기다리므로 Task 보다 먼저 놓는다(그 의존은 `getSubsystemDependencies` 가 선언한다).
+    SW_ENGINE_SERVICE_SUBSYSTEM( AssetStreamingQueue, HostOnly, Startup, (), SW_ENGINE_DEFAULT_FACTORY( AssetStreamingQueue ) );
 } // namespace sw

@@ -77,7 +77,7 @@ namespace sw::editor
 
             /**
              * @brief 호스트가 내준 FrameRenderer 입니다(없으면 nullptr).
-             * @details 렌더러는 **호스트 서비스**입니다(`EngineServiceList.xxx` 의 선택 행) — 씬 계층은 렌더러를 모릅니다
+             * @details 렌더러는 **호스트 서비스**입니다(선택 서비스 칸 — `FrameRendererSubsystem.cpp` 의 등록) — 씬 계층은 렌더러를 모릅니다
              *          (Scene::update 주석). 테스트 하네스처럼 렌더러가 없는 호스트에서는 nullptr 이고, 그때 콤보는
              *          비활성입니다.
              */

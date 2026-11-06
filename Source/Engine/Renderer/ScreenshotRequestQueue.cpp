@@ -88,7 +88,6 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
     // 렌더 스레드의 스크린샷 요청이 쓰는 우편함 — 클라이언트 전용.
-    SW_ENGINE_SUBSYSTEM_DEFAULT( ScreenshotRequestQueue, ScreenshotRequestQueue );
+    SW_ENGINE_SERVICE_SUBSYSTEM( ScreenshotRequestQueue, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( ScreenshotRequestQueue ) );
 } // namespace sw

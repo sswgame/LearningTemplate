@@ -11,6 +11,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Debug/DebugDrawQueue.h"
 #include "Engine/Navigation/Component/NavAgentCrowdSync.h"
 #include "Engine/Navigation/Component/NavGeometryCollector.h"
 #include "Engine/Navigation/Component/NavMeshAgentComponent.h"

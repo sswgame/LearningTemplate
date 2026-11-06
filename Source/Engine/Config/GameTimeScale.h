@@ -7,6 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -61,4 +62,6 @@ namespace sw
         atomic<uint32> _pauseRequestCount;    ///< 걸린 정지 요청 수(`addPauseRequest`)
         float32        _unscaledDeltaSeconds; ///< 이번 프레임의 실제 경과(-1 = 아직 적지 않았다)
     };
+
+    SW_SERVICE_SLOT( GameTimeScale, Required );
 } // namespace sw

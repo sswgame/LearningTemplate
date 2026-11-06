@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -140,4 +141,6 @@ namespace sw
         uint64              _nextOrder;
         UIScreenHandle      _screen;
     };
+
+    SW_SERVICE_SLOT( UINotificationService, Required );
 } // namespace sw

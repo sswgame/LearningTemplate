@@ -112,5 +112,5 @@ namespace sw
         _bRegistered = SW_FALSE;
     }
 
-    SW_ENGINE_SUBSYSTEM_DEFAULT( DevCommandRegistry, DevCommandRegistry );
+    SW_ENGINE_SERVICE_SUBSYSTEM( DevCommandRegistry, GameVisible, Services, (), SW_ENGINE_DEFAULT_FACTORY( DevCommandRegistry ) );
 } // namespace sw

@@ -1,4 +1,6 @@
 #pragma once
+#include "Core/Subsystem/ServiceSlot.h"
+
 #include "Engine/Config/IConfig.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Serialization/Serializer/DataPath.h"
@@ -21,4 +23,6 @@ namespace sw
         DataPath _packRoot; ///< 활성 게임 팩의 리소스 경로(`game/<팩 폴더>`) — 팩 마운트 · 게임 도메인 경로가 이것으로 풀린다
         // 정적 창구는 두지 않는다 — 소유자는 `ConfigManager` 이고 쓰는 쪽이 범위 창구(`engine::` · `editor::` · `game::getSubsystem<const GameConfig>()`)로 찾는다.
     };
+
+    SW_SERVICE_SLOT_CONST( GameConfig, Required );
 } // namespace sw

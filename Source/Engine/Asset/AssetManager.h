@@ -21,6 +21,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/RegistrationList.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/Asset/AssetFormat.h"
@@ -209,4 +210,6 @@ namespace sw
         RegistrationList<AssetCacheBase> _registeredAssetCache;
         vector<ReloadEntry>              _listReloadEntry; ///< 리로드 함수가 있는 캐시만(배포는 늘 비었다)
     };
+
+    SW_SERVICE_SLOT( AssetManager, Required );
 } // namespace sw

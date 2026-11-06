@@ -31,5 +31,5 @@ namespace sw
         registry._listFree.push_back( _slot );
     }
 
-    SW_ENGINE_SUBSYSTEM_DEFAULT( AnimationSkinSlotRegistry, AnimationSkinSlotRegistry );
+    SW_ENGINE_SERVICE_SUBSYSTEM( AnimationSkinSlotRegistry, HostOnly, Services, (), SW_ENGINE_DEFAULT_FACTORY( AnimationSkinSlotRegistry ) );
 } // namespace sw

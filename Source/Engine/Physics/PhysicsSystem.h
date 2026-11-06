@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Physics/IPhysicsScene.h"
@@ -82,4 +83,6 @@ namespace sw
         PhysicsSettings _settings;
         uint8           _bInitialized : 1;
     };
+
+    SW_SERVICE_SLOT( PhysicsSystem, Required );
 } // namespace sw

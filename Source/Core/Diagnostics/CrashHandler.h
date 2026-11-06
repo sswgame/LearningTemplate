@@ -13,6 +13,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -204,4 +205,6 @@ namespace sw
         CrashHandler*                            _pOuter; ///< 설치했을 때 앞서 설치돼 있던 처리기(떼면 그것이 다시 보고한다)
         uint8                                    _bInstalled : 1;
     };
+
+    SW_SERVICE_SLOT( CrashHandler, Required );
 } // namespace sw

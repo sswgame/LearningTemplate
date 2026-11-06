@@ -17,6 +17,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -216,4 +217,6 @@ namespace sw
         /** @brief 제공자 등록의 구독입니다. 풀리면 `releaseProvider` 가 불린다. 맨 끝 멤버라 먼저 사라져 남은 구독을 무효화한다. */
         ItemSubscriptionList<const IStateHashProvider> _subscriptions{ ItemSubscriptionList<const IStateHashProvider>::ReleaseFunction::create<&StateHashHistory::releaseProvider>( this ) };
     };
+
+    SW_SERVICE_SLOT( StateHashHistory, Optional );
 } // namespace sw

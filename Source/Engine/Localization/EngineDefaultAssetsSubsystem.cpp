@@ -62,8 +62,7 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
-    SW_ENGINE_SUBSYSTEM( EngineDefaultAssetsSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( EngineDefaultAssetsSubsystem, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         engine::StartupSetup& setup = *build._pStartupSetup;
         if ( setup._defaultAssets == nullptr )
@@ -71,4 +70,7 @@ namespace sw
         const EngineDefaultAssetsSubsystem& defaultAssets = scope.addSubsystem( std::move( setup._defaultAssets ) );
         (void)scope.bind( &defaultAssets.getDefaultAssets() ); // 새 범위 — 겹치지 않는다
     } );
+
+    // 위 공장이 건 엔진 기본 에셋 경로 표의 서비스 칸(읽기 전용). 게임 프레임워크도 엔진 데이터(포토 모드 입력 맵 등)의 경로를 여기서 읽는다.
+    SW_ENGINE_SERVICE( EngineDefaultAssets, GameVisible );
 } // namespace sw

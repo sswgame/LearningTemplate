@@ -15,6 +15,7 @@
 #include "Core/Memory/MemoryBlock.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include <thread>
 
@@ -254,4 +255,6 @@ namespace sw
 
     private:
     };
+
+    SW_SERVICE_SLOT( EventDispatcher, Required );
 } // namespace sw

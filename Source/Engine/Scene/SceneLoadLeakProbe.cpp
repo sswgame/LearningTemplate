@@ -2,6 +2,7 @@
 
 #include "Engine/Scene/SceneLoadLeakProbe.h"
 
+#include "Core/Diagnostics/MemoryProfiler.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Foundation/EngineServices.h"

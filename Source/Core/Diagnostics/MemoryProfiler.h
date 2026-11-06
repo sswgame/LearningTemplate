@@ -15,6 +15,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Memory/MemoryTag.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -430,4 +431,6 @@ namespace sw
         mutable mutex                                                    _stackMapMutex;
         unordered_map<uint64, CallStackAllocInfo> _mapCallStackAllocInfo SW_GUARDED_BY( _stackMapMutex );
     };
+
+    SW_SERVICE_SLOT( MemoryProfiler, Optional );
 } // namespace sw

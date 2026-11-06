@@ -21,6 +21,7 @@
 #include "Engine/Reflection/ReflectedValueWalk.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionCast.h"
+#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Serializer/Serializer.h"

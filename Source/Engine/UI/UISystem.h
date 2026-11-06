@@ -13,6 +13,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Console/DevCommandsEnabled.h"
 #include "Engine/Content/AssetID.h"
@@ -401,4 +402,6 @@ namespace sw
         uint8                        _bGlyphStyleKnown    : 1; ///< `_glyphStyle` 을 한 번 읽었는지 나타냅니다.
         uint8                        _bOnScreenSuppressed : 1; ///< 화면 그리기와 포인터 입력을 막는지 나타냅니다(`setOnScreenSuppressed`).
     };
+
+    SW_SERVICE_SLOT( UISystem, Required );
 } // namespace sw

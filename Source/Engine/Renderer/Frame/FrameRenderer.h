@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
@@ -458,4 +459,6 @@ namespace sw
         /** @brief 에디터 씬 뷰의 보기 모드(`RenderViewMode`)입니다. UI 스레드가 쓰고, 게임 스레드가 패킷을 만들 때 읽습니다. */
         atomic<uint8> _sceneViewMode;
     };
+
+    SW_SERVICE_SLOT( FrameRenderer, Optional );
 } // namespace sw

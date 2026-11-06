@@ -18,6 +18,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Localization/CultureInfo.h"
@@ -273,4 +274,6 @@ namespace sw
         /** @brief 텍스트 바뀜 콜백입니다(`registerLanguageChangedCallback`). 자기 잠금을 가진 스레드 안전 멀티캐스트라 `_mutex` 밖에서 부른다. */
         LockedMulticastDelegate<void( string_view, string_view )> _onLanguageChanged;
     };
+
+    SW_SERVICE_SLOT( LocalizationManager, Required );
 } // namespace sw

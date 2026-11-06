@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Asset/AssetHandle.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
@@ -159,4 +160,6 @@ namespace sw
         unordered_map<string, weak_ptr<ShaderLoadOperation>> _mapLoading SW_GUARDED_BY( _mutexCache ); ///< 읽거나 컴파일 중인 로드(같은 요청은 같은 로드 작업). `_mutexCache` 로 지킨다
         mutable mutex                                                    _mutexCache;
     };
+
+    SW_SERVICE_SLOT( ShaderCache, Required );
 } // namespace sw

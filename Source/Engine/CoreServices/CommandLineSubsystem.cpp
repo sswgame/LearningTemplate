@@ -7,6 +7,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/CoreServices/NamePoolSubsystem.h"
+#include "Engine/Foundation/EngineSubsystemRegistration.h"
 
 namespace sw
 {
@@ -70,4 +71,11 @@ namespace sw
         static constexpr const utf8* kArrDependency[] = { NamePoolSubsystem::kSubsystemName };
         return kArrDependency;
     }
+} // namespace sw
+
+namespace sw
+{
+    // 이 서브시스템이 든 명령줄 · 전역 변수 표의 서비스 칸 — 엔진 범위의 코어 범위에 건다(`engine::addCoreSubsystems`). 게임은 전역 변수만 본다.
+    SW_ENGINE_SERVICE( CommandLineManager, HostOnly );
+    SW_ENGINE_SERVICE( GlobalVariableManager, GameVisible );
 } // namespace sw

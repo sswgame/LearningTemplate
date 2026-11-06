@@ -3,6 +3,7 @@
 #include "Core/Delegate/Delegate.h"
 #include "Core/File/AsyncFileIO.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Task/TaskFuture.h"
 #include "Core/Task/TaskTypes.h"
 
@@ -173,4 +174,6 @@ namespace sw
         deque<CompletedItem> _listCompleted;
         bool _bInitialized   SW_GUARDED_BY( _mutex );
     };
+
+    SW_SERVICE_SLOT( AssetStreamingQueue, Required );
 } // namespace sw

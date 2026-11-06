@@ -8,6 +8,7 @@
 #include "Core/Foundation/EnumUtil.h"
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Task/TaskTypes.h"
 
 #include "Engine/EngineMinimal.h"
@@ -322,6 +323,8 @@ namespace sw
         /** @brief 모든 타입 공급자가 등록을 끝냈는지 나타냅니다(`markAllModuleTypesRegistered`). 기동 스레드가 쓰고 씬을 읽는 쪽이 읽습니다. */
         atomic<bool> _bAllModuleTypesRegistered;
     };
+
+    SW_SERVICE_SLOT( TypeRegistry, Required );
 } // namespace sw
 
 namespace sw

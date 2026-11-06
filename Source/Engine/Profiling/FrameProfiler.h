@@ -28,6 +28,7 @@
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Profiling/ProfilerBackend.h"
 
@@ -235,6 +236,8 @@ namespace sw
         atomic<uint64>       _frameCount{ 0 };
         atomic<bool>         _bEnabled{ SW_FALSE };
     };
+
+    SW_SERVICE_SLOT( FrameProfiler, Required );
 } // namespace sw
 
 namespace sw

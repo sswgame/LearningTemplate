@@ -19,6 +19,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/fixed_string.h"
 #include "Core/Subsystem/ISubsystem.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 namespace sw
 {
@@ -108,4 +109,6 @@ namespace sw
         atomic<uint32>                            _lastRecordedID{ 0 };
         atomic<uint32>                            _bLostReported{ 0 };
     };
+
+    SW_SERVICE_SLOT( GPUBreadcrumbLog, Optional );
 } // namespace sw

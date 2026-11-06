@@ -127,8 +127,7 @@ namespace sw
 
 namespace sw
 {
-    // 서브시스템 자리 등록(Engine/Foundation/EngineSubsystemRegistration.h) — 만드는 순서는 자리 표가 정한다.
-    SW_ENGINE_SUBSYSTEM( FrameRendererSubsystem, []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    SW_ENGINE_SUBSYSTEM( FrameRendererSubsystem, Startup, ( RHISubsystem ), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
         if ( build._pStartupSetup->_bRenderer == false )
             return;
@@ -142,4 +141,8 @@ namespace sw
         (void)scope.bind( &frameRendererSubsystem.getFrameRenderer() );      // 새 범위 — 겹치지 않는다
         (void)scope.bind( &frameRendererSubsystem.getOffscreenRenderers() ); // 화면 밖 씬 렌더러(진단 감시 값이 수를 읽는다)
     } );
+
+    // 위 공장이 건 렌더러 둘의 서비스 칸. 비어 있을 수 있다 — 렌더러를 두지 않는 호스트(헤드리스 · 테스트 하네스)는 만들지 않는다.
+    SW_ENGINE_SERVICE( FrameRenderer, HostOnly );
+    SW_ENGINE_SERVICE( OffscreenSceneRenderers, HostOnly );
 } // namespace sw

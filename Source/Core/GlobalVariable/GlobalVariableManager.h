@@ -13,6 +13,7 @@
 #include "Core/Foundation/StdHeaders.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Subsystem/ServiceSlot.h"
 
 #include <variant>
 
@@ -319,6 +320,8 @@ namespace sw
         /** @brief enum 변수의 글 값 파서입니다(`setEnumTextParser`). 등록한 enum 변수가 이 주소를 가리키므로 매니저는 옮겨지지 않습니다(복사 금지). */
         GlobalVariableEnumTextParser _enumTextParser SW_GUARDED_BY( _mutex );
     };
+
+    SW_SERVICE_SLOT( GlobalVariableManager, Required );
 } // namespace sw
 
 namespace sw

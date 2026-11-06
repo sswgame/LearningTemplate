@@ -1,21 +1,33 @@
 /**
  * @file Engine/Foundation/EngineSubsystemRegistration.h
- * @brief 서비스 · 기동 단계 범위의 서브시스템이 **자기 .cpp 에서** 만드는 법을 등록하는 틀입니다(언리얼 `USubsystem` 이 모듈 안에서 스스로 등록되는 것과 같은 모양).
+ * @brief 엔진 서브시스템과 서비스 칸을 **그 객체를 범위에 넣는 .cpp 에서** 등록하는 틀입니다 — 중앙 목록이 없습니다.
  *
- * @details 예전에는 `EngineSubsystemSet.cpp` 한 파일이 모든 서브시스템 헤더를 include 해 만들었다 — 그 헤더들의 인라인 함수를 이 TU 가 코드로 내어 가장 느린 TU 였다.
- *          이제 서브시스템마다 제 .cpp 에 `SW_ENGINE_SUBSYSTEM` 한 줄을 두고, 목록 함수(`addServiceSubsystems` · `addStartupSubsystems`)는 등록을 자리 순서대로 부르기만 한다.
- *
- *          **순서는 데이터가 아니라 이 파일의 자리 표(`SW_ENGINE_SUBSYSTEM_SLOTS`)가 정한다.** 정적 등록자가 달리는 순서(링크 순서)에 기대지 않는다 —
- *          자리마다 만드는 순서가 고정이고(범위의 소멸은 그 역순), 앞 자리가 만든 것을 뒷 자리 공장이 범위에서 찾아 쓴다(`SubsystemScope::get`).
- *          자리마다 등록이 정확히 하나여야 한다. 빠진 자리(링커가 오브젝트를 버렸거나 등록 줄을 지웠다) · 두 번 등록한 자리는 목록 함수가 오류로 멈춘다 — 폴백이 없다.
- *          클라이언트 전용 자리(렌더러 폴더 · 창)는 클라이언트 코드 빌드에서만 등록이 있어야 한다(Server 타깃은 그 폴더를 짓지 않는다).
+ * @details 언리얼 `UEngineSubsystem` 이 모듈 안에서 스스로 등록되고 `GEngine->GetEngineSubsystem<T>()` 로 타입으로 찾히는 것과 같은 모양입니다.
+ *          등록 줄 하나가 그 타입의 모든 것을 말합니다.
+ *          | 줄 | 하는 일 |
+ *          | --- | --- |
+ *          | `SW_ENGINE_SERVICE_SUBSYSTEM( Type, 노출, 단계, ( 먼저 만들 타입… ), 공장 )` | 서브시스템을 만들고 서비스 칸에 묶는다(가장 흔한 모양) |
+ *          | `SW_ENGINE_SUBSYSTEM( Type, 단계, ( 먼저 만들 타입… ), 공장 )` | 서브시스템을 만들기만 한다(서비스 칸이 없다 — 범위로만 찾는다) |
+ *          | `SW_ENGINE_SERVICE( Type, 노출 )` | 다른 서브시스템이 범위에 건 객체(값 묶음 · 안의 객체)를 서비스 칸에 묶는다 |
+ *          - **필수 여부 · const** 는 타입 헤더의 칸 선언(`SW_SERVICE_SLOT`, `Core/Subsystem/ServiceSlot.h`)이 말한다 — 부르는 TU 가 컴파일 때 알아야 한다.
+ *          - **노출**: `GameVisible` 이면 게임 모듈(SWGame)의 범위에도 건다(`engine::bindModuleServices`), `HostOnly` 면 호스트 · 에디터 전용.
+ *          - **단계**: `Services`(초기화 · 종료할 것이 없고 수명만 있는 공용 서비스 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다) · `Startup`(기동 단계).
+ *          - **만드는 순서**: 공장이 범위에서 다른 서브시스템을 찾으면(`scope.get<T>()`) 그 타입을 괄호 안에 적는다(언리얼 `Collection.InitializeDependency<T>()`).
+ *            같은 단계 안에서 그 순서로 위상 정렬하고, 동점은 이름 순이다(링크 순서에 기대지 않는다). 모르는 타입 · 다른 단계 · 순환은 기동 오류다.
+ *            초기화 · 종료 · 소멸 순서는 이것이 아니라 서브시스템이 선언한 의존(`ISubsystem::getSubsystemDependencies`)이 정한다 — 이 순서는 공장의 찾기만 맞춘다.
+ *          서비스를 더하려면 헤더에 칸 선언 한 줄, 범위에 넣는 .cpp 에 등록 한 줄이다. 줄이 빠지면 그 칸을 읽는 쪽이 링크 오류이고, 필수 칸이 비면 엔진이
+ *          그 이름을 대며 서지 않는다(`engine::bindEngineServices`). 클라이언트 전용 폴더(Renderer)는 Server 타깃이 짓지 않으므로 그 등록도 없다.
  *
  *          이 헤더는 엔진 바닥 층(0)이다 — 위 층의 형식은 앞으로 선언만 한다. 공장이 쓰는 범위 · 호스트 값(`ServiceParts` · `StartupSetup` · `StartupParts`)도 여기 둔다.
  */
 #pragma once
+#include "Core/Container/span.h"
+#include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ServiceSlot.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
 namespace sw
@@ -92,149 +104,169 @@ namespace sw
     } // namespace engine
 } // namespace sw
 
-/**
- * @brief 자리 표입니다 — `X( 자리 이름, 범위, 클라이언트 전용 )`. 줄 순서가 만드는 순서다. 자리를 더하면 그 서브시스템의 .cpp 에 `SW_ENGINE_SUBSYSTEM( 자리 이름, ... )` 를 둔다.
- * @details 서비스 범위는 초기화 · 종료할 것이 없고 수명만 있는 공용 서비스다 — 엔진 범위의 어느 것보다 먼저 서고 나중에 사라진다. 기동 단계는 엔진이 쓰는 서브시스템이다.
- *          각 자리의 까닭(왜 그 자리인가)은 그 공장 옆 주석에 둔다.
- */
-#define SW_ENGINE_SUBSYSTEM_SLOTS( X )                   \
-    X( SceneTransformStorage, Services, false )          \
-    X( EventDispatcher, Services, false )                \
-    X( LocalizationManager, Services, false )            \
-    X( DebugOverlayState, Services, false )              \
-    X( AnimationSkinSlotRegistry, Services, false )      \
-    X( RigNodeRegistry, Services, false )                \
-    X( AnimationNotifyHandlerRegistry, Services, false ) \
-    X( ComponentDefaults, Services, false )              \
-    X( FrameProfiler, Services, false )                  \
-    X( ProfilerBackendSubsystem, Services, false )       \
-    X( CrashReportService, Services, false )             \
-    X( AssetLoadProfiler, Services, false )              \
-    X( TickBatchRegistry, Services, false )              \
-    X( DevCommandRegistry, Services, false )             \
-    X( InputMapExtensionRegistry, Services, false )      \
-    X( DebugHUDRegistry, Services, false )               \
-    X( ContentHashCache, Services, false )               \
-    X( GameTimeScale, Services, false )                  \
-    X( QuitRequest, Services, false )                    \
-    X( StateHashHistory, Services, false )               \
-    X( DebugKeyActions, Services, false )                \
-    X( PhysicsMeshShapeTable, Services, false )          \
-    X( DebugDrawQueue, Services, false )                 \
-    X( VisualLogger, Services, false )                   \
-    X( RenderTargetRegistry, Services, false )           \
-    X( GPUBreadcrumbLog, Services, false )               \
-    X( RHIBackendRegistry, Services, false )             \
-    X( RenderExtensionRegistry, Services, true )         \
-    X( ScreenshotRequestQueue, Services, true )          \
-    X( CompressionCodecRegistry, Startup, false )        \
-    X( ReflectionSubsystem, Startup, false )             \
-    X( TaskManager, Startup, false )                     \
-    X( AsyncFileIO, Startup, false )                     \
-    X( ModuleUnloadStageSubsystem, Startup, false )      \
-    X( ModuleLoadStageSubsystem, Startup, false )        \
-    X( MainWindowSubsystem, Startup, true )              \
-    X( SplashSubsystem, Startup, true )                  \
-    X( RHISubsystem, Startup, true )                     \
-    X( FrameRendererSubsystem, Startup, true )           \
-    X( RenderThreadSubsystem, Startup, true )            \
-    X( SceneRHISubsystem, Startup, true )                \
-    X( InputManager, Startup, false )                    \
-    X( ConfigManager, Startup, false )                   \
-    X( AssetManager, Startup, false )                    \
-    X( TextureRenderTargetSink, Startup, false )         \
-    X( EngineDefaultAssetsSubsystem, Startup, false )    \
-    X( PackEngineSettingsSubsystem, Startup, false )     \
-    X( Render2DSettingsSubsystem, Startup, false )       \
-    X( AudioService, Startup, false )                    \
-    X( AssetStreamingQueue, Startup, false )             \
-    X( SceneManager, Startup, false )                    \
-    X( HeadlessSubsystem, Startup, false )               \
-    X( UserSettingsManager, Startup, false )             \
-    X( ShaderCache, Startup, false )                     \
-    X( PhysicsSystem, Startup, false )                   \
-    X( GameNetSession, Startup, false )                  \
-    X( FontService, Startup, false )                     \
-    X( TelemetryService, Startup, false )                \
-    X( UIClipboardService, Startup, false )              \
-    X( UIGlobalCommandRegistry, Startup, false )         \
-    X( UIBindingConverterRegistry, Startup, false )      \
-    X( UIDocumentCache, Startup, false )                 \
-    X( UIStyleSheetCache, Startup, false )               \
-    X( UIThemeController, Startup, false )               \
-    X( UISystem, Startup, false )                        \
-    X( UIAccessibilityService, Startup, false )          \
-    X( UISubtitleService, Startup, false )               \
-    X( UITooltipService, Startup, false )                \
-    X( UINotificationService, Startup, false )           \
-    X( UIOffscreenScreens, Startup, false )              \
-    X( UIWidgetComponentService, Startup, false )
-
 namespace sw::engine
 {
-    /** @brief 서브시스템 자리입니다. 값의 순서가 만드는 순서다(`SW_ENGINE_SUBSYSTEM_SLOTS`). */
-    enum class EngineSubsystemSlot : uint16
+    /** @brief 서비스 칸을 게임 모듈에도 보이는지입니다. */
+    enum class EngineServiceVisibility : uint8
     {
-#define SW_ENGINE_SUBSYSTEM_SLOT_ENUM( Name, Stage, bClientOnly ) Name,
-        SW_ENGINE_SUBSYSTEM_SLOTS( SW_ENGINE_SUBSYSTEM_SLOT_ENUM )
-#undef SW_ENGINE_SUBSYSTEM_SLOT_ENUM
-            Count
+        GameVisible, ///< 게임 모듈(SWGame)의 범위에도 건다
+        HostOnly,    ///< 호스트 · 에디터 전용 — 게임 모듈은 찾지 못한다
     };
 
-    /** @brief 자리가 속한 범위입니다. */
+    /** @brief 서브시스템을 만드는 범위(단계)입니다. 단계 사이의 순서는 호스트가 정한다(서비스 범위가 먼저 선다). */
     enum class EngineSubsystemStage : uint8
     {
         Services,
-        Startup
+        Startup,
     };
 
     /** @brief 공장입니다. 범위에 서브시스템을 넣고, 호스트가 직접 쓰는 것이면 `build` 의 범위 값에 적고, 안의 객체를 범위에 겁니다. */
     using EngineSubsystemFactory = void ( * )( SubsystemScope& scope, EngineSubsystemBuild& build );
 
+    class EngineRegistrationList;
+
     /**
-     * @struct EngineSubsystemRegistrar
-     * @brief `SW_ENGINE_SUBSYSTEM` 이 두는 정적 등록자입니다. 만들 때 엔진 이미지의 목록(`getHead`)에 달리기만 합니다 — 목록 함수가 자리 순서로 고쳐 부릅니다.
-     * @details 엔진 이미지 안에서만 쓴다(개발은 DLL 이라 오브젝트가 모두 들어가고, 배포 정적 링크는 Engine 을 통째로 링크한다 — `sw_linkWholeArchive`).
+     * @struct EngineServiceRecord
+     * @brief 서비스 칸 하나의 등록입니다(`SW_ENGINE_SERVICE*` 가 정적으로 둔다). 만들 때 목록에 달리기만 한다.
      */
-    struct SW_API EngineSubsystemRegistrar
+    struct SW_API EngineServiceRecord
     {
-        EngineSubsystemSlot             _slot;
-        EngineSubsystemFactory          _pfnFactory;
-        const EngineSubsystemRegistrar* _pNext; ///< 목록의 다음(먼저 만든 쪽)
+        const utf8*  _pTypeName;                            ///< 오류 문구 · 정렬에 쓰는 타입 이름
+        uint64       _typeHash;                             ///< 범위에서 찾는 타입 해시(`getSubsystemTypeHash`)
+        ServiceSlot* _pSlot;                                ///< 그 타입의 칸(`ServiceSlotOf<T>::s_slot`)
+        bool ( *_pfnBind )( SubsystemScope& scope, void* ); ///< 모듈 범위에 그 타입으로 건다(`SubsystemScope::bind<T>`)
+        ServiceRequirement         _requirement;            ///< 헤더의 칸 선언이 정한 필수 여부
+        EngineServiceVisibility    _visibility;             ///< 게임 모듈 노출
+        const EngineServiceRecord* _pNext;                  ///< 목록의 다음(먼저 단 쪽)
 
-        static const EngineSubsystemRegistrar*& getHead();
-
-        EngineSubsystemRegistrar( EngineSubsystemSlot slot, EngineSubsystemFactory pfnFactory );
-        EngineSubsystemRegistrar( const EngineSubsystemRegistrar& )            = delete;
-        EngineSubsystemRegistrar& operator=( const EngineSubsystemRegistrar& ) = delete;
+        EngineServiceRecord( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, ServiceSlot& slot, bool ( *pfnBind )( SubsystemScope&, void* ),
+                             ServiceRequirement requirement, EngineServiceVisibility visibility );
+        EngineServiceRecord( const EngineServiceRecord& )            = delete;
+        EngineServiceRecord& operator=( const EngineServiceRecord& ) = delete;
     };
 
-    /** @brief 자리의 이름(오류 문구)입니다. */
-    SW_API const utf8* getEngineSubsystemSlotName( EngineSubsystemSlot slot );
-    /** @brief 자리의 범위입니다. */
-    SW_API EngineSubsystemStage getEngineSubsystemSlotStage( EngineSubsystemSlot slot );
-    /** @brief 자리가 클라이언트 코드 빌드에만 있는지 나타냅니다(렌더러 폴더 · 창 — Server 타깃은 짓지 않는다). */
-    SW_API bool isEngineSubsystemSlotClientOnly( EngineSubsystemSlot slot );
+    /**
+     * @struct EngineSubsystemRecord
+     * @brief 서브시스템 공장 하나의 등록입니다(`SW_ENGINE_SUBSYSTEM` · `SW_ENGINE_SERVICE_SUBSYSTEM` 이 정적으로 둔다).
+     */
+    struct SW_API EngineSubsystemRecord
+    {
+        const utf8*                  _pTypeName;     ///< 오류 문구 · 동점 순서에 쓰는 타입 이름
+        uint64                       _typeHash;      ///< 의존이 가리키는 타입 해시
+        EngineSubsystemStage         _stage;         ///< 만드는 단계
+        span<const uint64>           _listAfterHash; ///< 먼저 만들 타입의 해시(같은 단계)
+        const utf8*                  _pAfterNames;   ///< 먼저 만들 타입들의 글(`( A, B )`, 오류 문구용)
+        EngineSubsystemFactory       _pfnFactory;    ///< 만드는 법
+        const EngineSubsystemRecord* _pNext;         ///< 목록의 다음(먼저 단 쪽)
+
+        EngineSubsystemRecord( EngineRegistrationList& list, const utf8* pTypeName, uint64 typeHash, EngineSubsystemStage stage, span<const uint64> listAfterHash,
+                               const utf8* pAfterNames, EngineSubsystemFactory pfnFactory );
+        EngineSubsystemRecord( const EngineSubsystemRecord& )            = delete;
+        EngineSubsystemRecord& operator=( const EngineSubsystemRecord& ) = delete;
+    };
 
     /**
-     * @brief @p stage 의 자리를 순서대로 부릅니다. 자리마다 등록이 정확히 하나여야 하고(이 빌드에 없는 클라이언트 전용 자리는 없어야 한다), 어긋나면 이유를 남기고 멈춥니다.
-     * @details 목록 함수(`EngineSubsystemSet.cpp`)만 부른다.
+     * @class EngineRegistrationList
+     * @brief 등록 목록입니다. 엔진은 이미지 하나의 전역 목록(`getGlobal`)만 쓰고, 테스트는 자기 목록에 자기 등록을 달아 같은 규칙을 시험한다.
+     * @details 엔진 이미지 안에서만 등록한다(개발은 DLL 이라 오브젝트가 모두 들어가고, 배포 정적 링크는 Engine 을 통째로 링크한다 — `sw_linkWholeArchive`).
      */
-    SW_API void buildEngineSubsystems( EngineSubsystemStage stage, SubsystemScope& scope, EngineSubsystemBuild& build );
+    class SW_API EngineRegistrationList
+    {
+    public:
+        EngineRegistrationList();
+        EngineRegistrationList( const EngineRegistrationList& )            = delete;
+        EngineRegistrationList& operator=( const EngineRegistrationList& ) = delete;
+
+        /** @brief 엔진 이미지의 목록입니다(등록 매크로가 단다). 처음 부를 때 만든다 — 정적 등록자의 초기화 순서에 기대지 않는다. */
+        static EngineRegistrationList& getGlobal();
+
+        /**
+         * @brief @p subsystems(부모 범위까지)에서 칸마다 그 타입을 한 번 찾아 둡니다.
+         * @return 비어 있는 필수 칸의 타입 이름(이름 순으로 첫 것)입니다. 모두 찾았으면 nullptr 입니다.
+         */
+        [[nodiscard]] const utf8* bindServices( const ISubsystemLocator& subsystems );
+        /** @brief 칸을 모두 비웁니다. */
+        void unbindServices();
+        /** @brief 지금 칸에서 비어 있는 필수 칸의 타입 이름(이름 순으로 첫 것)입니다. 모두 있으면 nullptr 입니다. */
+        [[nodiscard]] const utf8* findMissingRequiredService() const;
+        /**
+         * @brief 지금 칸의 객체를 @p outScope 에 그 타입으로 빌려 겁니다. 빈 칸은 걸지 않는다.
+         * @param bGameModuleOnly true 면 `GameVisible` 칸만 건다.
+         * @param bSkipAlreadyBound true 면 @p outScope 에 이미 걸린 타입은 건너뛴다. false 면 겹침은 결함이라 멈춘다.
+         */
+        void bindModuleServices( SubsystemScope& outScope, bool bGameModuleOnly, bool bSkipAlreadyBound ) const;
+
+        /**
+         * @brief @p stage 의 공장을 만드는 순서로 늘어놓습니다(선언한 먼저 만들 타입으로 위상 정렬, 동점은 이름 순).
+         * @return 같은 타입 둘 · 모르는 타입 · 다른 단계의 타입 · 순환이면 false 이고 @p outError 에 무엇인지 적습니다.
+         */
+        [[nodiscard]] bool orderSubsystems( EngineSubsystemStage stage, vector<const EngineSubsystemRecord*>& outListOrder, string& outError ) const;
+        /** @brief @p stage 의 공장을 만드는 순서로 부릅니다. 순서를 정하지 못하면 이유를 남기고 멈춘다 — 폴백이 없다. */
+        void buildSubsystems( EngineSubsystemStage stage, SubsystemScope& scope, EngineSubsystemBuild& build ) const;
+
+    private:
+        friend struct EngineServiceRecord;
+        friend struct EngineSubsystemRecord;
+
+        const EngineServiceRecord*   _pServiceHead;   ///< 서비스 칸 등록(나중에 단 것이 앞). 칸은 등록이 가리키는 곳에 있어 등록은 읽기만 한다
+        const EngineSubsystemRecord* _pSubsystemHead; ///< 공장 등록(나중에 단 것이 앞)
+    };
+
+    /** @brief 등록 줄이 쓰는 타입별 함수입니다. */
+    template <class T>
+    struct EngineRegistrationOps
+    {
+        /** @brief @p pObject 를 @p scope 에 타입 @p T 로 겁니다. */
+        static bool bind( SubsystemScope& scope, void* pObject ) { return scope.bind( static_cast<T*>( pObject ) ); }
+        /** @brief 인자 없이 만들어 범위에 넣습니다(호스트가 직접 쓰지 않는 서브시스템 — 가장 흔한 공장). */
+        static void emplace( SubsystemScope& scope, EngineSubsystemBuild& build )
+        {
+            (void)build;
+            (void)scope.emplaceSubsystem<T>();
+        }
+    };
+
+    /** @brief 먼저 만들 타입들의 해시입니다. 타입 이름이라 철자가 틀리면 컴파일 오류다(선언만 있으면 된다). */
+    template <class... TAfter>
+    struct EngineSubsystemAfter
+    {
+        /// @brief 해시 배열입니다. 끝의 0 은 빈 묶음도 배열이게 하는 자리다. 등록은 주소만 들고 값은 기동(정적 초기화가 끝난 뒤)에 읽는다 — 초기화 순서에 기대지 않는다.
+        static inline const uint64 kArrHash[sizeof...( TAfter ) + 1] = { getSubsystemTypeHash<TAfter>()..., 0 };
+        static span<const uint64>  getHashes() { return span<const uint64>{ kArrHash, sizeof...( TAfter ) }; }
+    };
 } // namespace sw::engine
 
-/**
- * @brief 서브시스템을 만드는 법을 그 서브시스템의 .cpp 에 등록합니다. @p Function 은 `void( SubsystemScope&, EngineSubsystemBuild& )` 이다(포획 없는 람다 · 함수).
- * @code
- *     SW_ENGINE_SUBSYSTEM( FontService, []( SubsystemScope& scope, EngineSubsystemBuild& build ) { build._pStartupParts->_pFontService = &scope.emplaceSubsystem<FontService>(); } );
- * @endcode
- */
-#define SW_ENGINE_SUBSYSTEM( Slot, Function )                                             \
-    static const ::sw::engine::EngineSubsystemRegistrar s_engineSubsystemRegistrar_##Slot \
-    {                                                                                     \
-        ::sw::engine::EngineSubsystemSlot::Slot, Function                                 \
+// 인자가 **타입 이름**이라 괄호를 씌울 수 없다(`ServiceSlotOf<(Type)>` 는 올바른 문법이 아니다).
+// NOLINTBEGIN(bugprone-macro-parentheses)
+#define SW_ENGINE_REGISTRATION_UNPAREN( ... ) __VA_ARGS__
+
+/** @brief 서비스 칸을 정의하고 목록에 답니다. namespace `sw` 안에 둔다. */
+#define SW_ENGINE_SERVICE( Type, visibility )                                                                                                                                           \
+    ServiceSlot                                    ServiceSlotOf<Type>::s_slot{ nullptr }; /* 정의는 namespace `sw` 안이라야 한다(`::sw::ServiceSlot ::sw::…` 는 한 이름으로 읽힌다) */ \
+    static const ::sw::engine::EngineServiceRecord s_engineServiceRecord_##Type                                                                                                         \
+    {                                                                                                                                                                                   \
+        ::sw::engine::EngineRegistrationList::getGlobal(), ServiceSlotOf<Type>::kTypeName, ::sw::getSubsystemTypeHash<Type>(), ServiceSlotOf<Type>::s_slot,                             \
+            &::sw::engine::EngineRegistrationOps<Type>::bind, ServiceSlotOf<Type>::kRequirement, ::sw::engine::EngineServiceVisibility::visibility                                      \
     }
 
-/** @brief 인자 없이 만들고 호스트가 직접 쓰지 않는 서브시스템의 등록입니다(가장 흔한 모양). */
-#define SW_ENGINE_SUBSYSTEM_DEFAULT( Slot, Type ) \
-    SW_ENGINE_SUBSYSTEM( Slot, []( ::sw::SubsystemScope& scope, ::sw::engine::EngineSubsystemBuild& ) { (void)scope.emplaceSubsystem<Type>(); } )
+/**
+ * @brief 서브시스템을 만드는 법을 목록에 답니다. @p after 는 괄호로 싼 타입 목록(`()` · `( TaskManager )`)이고, @p Function 은 `void( SubsystemScope&, EngineSubsystemBuild& )` 다.
+ * @code
+ *     SW_ENGINE_SUBSYSTEM( SceneRHISubsystem, Startup, ( RHISubsystem ), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build ) { ... } );
+ * @endcode
+ */
+#define SW_ENGINE_SUBSYSTEM( Type, stage, after, Function )                                                                                      \
+    static const ::sw::engine::EngineSubsystemRecord s_engineSubsystemRecord_##Type                                                              \
+    {                                                                                                                                            \
+        ::sw::engine::EngineRegistrationList::getGlobal(), #Type, ::sw::getSubsystemTypeHash<Type>(), ::sw::engine::EngineSubsystemStage::stage, \
+            ::sw::engine::EngineSubsystemAfter<SW_ENGINE_REGISTRATION_UNPAREN after>::getHashes(), #after, Function                              \
+    }
+
+/** @brief 서브시스템을 만들고 그 타입의 서비스 칸에 묶습니다(위 둘을 한 줄로). @p Function 이 넣은 것(또는 건 객체)이 @p Type 으로 찾혀야 한다. */
+#define SW_ENGINE_SERVICE_SUBSYSTEM( Type, visibility, stage, after, Function ) \
+    SW_ENGINE_SERVICE( Type, visibility );                                      \
+    SW_ENGINE_SUBSYSTEM( Type, stage, after, Function )
+
+/** @brief 인자 없이 만들고 호스트가 직접 쓰지 않는 공장입니다(`SW_ENGINE_SUBSYSTEM` 의 @p Function 자리). */
+#define SW_ENGINE_DEFAULT_FACTORY( Type ) &::sw::engine::EngineRegistrationOps<Type>::emplace
+// NOLINTEND(bugprone-macro-parentheses)
