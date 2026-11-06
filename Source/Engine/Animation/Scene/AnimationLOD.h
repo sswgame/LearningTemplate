@@ -3,6 +3,8 @@
  * @brief 애니메이션 LOD — 뷰(카메라 절두체) 가시성 · 화면 크기별 갱신 주기(URO) · 본 LOD · 중요도 예산(언리얼 Animation Budget Allocator)의 데이터와 식입니다.
  * @details 판정은 `AnimationSystem::updateLOD` 가 게임 스레드에서 프레임마다 한 번 합니다. 뷰는 엔진 루프가 주 시점 + 추가 뷰(화면 사각형 · 렌더 텍스처)로
  *          넣습니다(`AnimationSystem::setLODViews`). 표(단계 · 예산)는 데이터(`engine/animation/animationlod.xml`)입니다.
+ *          등급(`AnimationLODState::_lodGrade`)은 한 축이다 — 주기 단계와 예산이 정하고, 그래프 레이어 · 블렌드 스페이스 · 리그 노드(IK · 룩앳 · 스프링 본)가
+ *          데이터의 `max_lod` 로 그 등급에서 꺼진다(`AnimationLODFade` 로 잇는다).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -34,8 +36,10 @@ namespace sw
     {
         float32 _screenSize{ 1.0f };           ///< 보이는 뷰들 중 가장 큰 화면 크기(경계 구 지름 / 화면 높이). 안 보이면 0
         float32 _significance{ 1.0f };         ///< 예산 배분의 우선순위(지금은 화면 크기)
+        float32 _nodeFadeSeconds{ 0.0f };      ///< 등급으로 꺼지고 켜지는 노드 · 레이어가 가중치를 옮기는 시간(`AnimationLODSettings::_nodeFadeSeconds`, 0 이면 즉시)
         uint32  _updateRateDivisor{ 1 };       ///< 포즈를 만드는 주기(프레임). 예산이 늘렸을 수 있다
         uint8   _rateLevel{ 0 };               ///< 고른 주기 단계(`AnimationLODSettings::_listRateLevel`)
+        uint8   _lodGrade{ 0 };                ///< LOD 등급 — 주기 단계에 예산이 주기를 두 배로 늘린 횟수를 더한 것. 그래프 · 리그 노드의 `max_lod` 와 견준다(0 = 가장 가깝다)
         uint8   _boneLODLevel{ 0 };            ///< 본 LOD 단계(0 = 모든 본)
         uint8   _bInterpolate{ SW_FALSE };     ///< 건너뛴 프레임을 직전 두 포즈 사이 보간으로 채운다
         uint8   _bVisible{ SW_TRUE };          ///< 어느 뷰에라도 보인다
@@ -53,6 +57,33 @@ namespace sw
         static bool isOnUpdateFrame( uint64 frameIndex, uint32 phase, uint32 divisor ) { return divisor <= 1 || ( ( frameIndex + phase ) % divisor ) == 0; }
         /** @brief 화면 크기와 표로 상태 하나를 만듭니다(가시성 · 주기 단계 · 보간 · 본 LOD · VAT). 예산은 따로입니다. */
         static AnimationLODState makeState( const AnimationLODSettings& settings, float32 screenSize, bool bVisible, const SkeletonBoneLOD* pBoneLOD );
+        /**
+         * @brief 예산이 고른 주기를 받습니다. 표의 주기보다 늘었으면 보간을 켜고, 두 배로 늘린 횟수만큼 등급을 올립니다(예산에 밀린 유닛도 먼 유닛처럼 노드를 끈다).
+         * @details 언리얼 Animation Budget Allocator 는 주기만 늘리지만, 여기서는 같은 축(등급)으로 노드 LOD 까지 내린다 — 한 유닛의 비용을 주기와 노드 수 둘로 줄인다.
+         */
+        void applyBudgetDivisor( uint32 budgetedDivisor );
+        /** @brief `max_lod` 가 @p maxLODGrade 인 노드가 이 등급에서 켜지는지입니다. 음수는 모든 등급에서 켠다(언리얼 LOD Threshold 의 -1). */
+        bool isNodeOn( int32 maxLODGrade ) const { return maxLODGrade < 0 || static_cast<int32>( _lodGrade ) <= maxLODGrade; }
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct AnimationLODFade
+     * @brief 등급으로 꺼지고 켜지는 노드 하나의 LOD 가중치입니다(그래프 레이어 · 블렌드 스페이스 가지 · 리그 노드가 하나씩 든다).
+     * @details 등급이 바뀌는 순간 노드를 끊지 않고 `_nodeFadeSeconds` 동안 가중치를 옮긴다 — 꺼질 때는 끝까지 줄어든 뒤 비용이 사라지고, 켜질 때는 0 에서 다시 오른다.
+     *          가는 중에 방향이 바뀌면 지금 값에서 이어 간다(튀지 않는다). 언리얼 애님 그래프의 LOD Threshold 는 끊어 끄고(블렌드 없음), 유니티 Animator 컬링은
+     *          통째로 멈춘다 — 둘 다 경계에서 튀므로 여기서는 가중치로 잇는다.
+     */
+    struct SW_API AnimationLODFade
+    {
+        float32 _weight{ 1.0f }; ///< 지금 LOD 가중치(0..1). 노드의 다른 가중치에 곱한다
+
+        /** @brief 등급 판정(@p bOn)으로 @p deltaSeconds 만큼 가중치를 옮깁니다. @p fadeSeconds 가 0 이하면 바로 목표값입니다. */
+        void update( bool bOn, float32 deltaSeconds, float32 fadeSeconds );
+        /** @brief 끝까지 꺼졌는지입니다(노드를 평가하지 않아도 된다). */
+        bool isOff() const { return _weight <= 0.0f; }
     };
 } // namespace sw
 
@@ -104,6 +135,8 @@ namespace sw
         float32 _unitCostMicroseconds{ 0.0f };
         PROPERTY( Min = 0.0, Tooltip = "Crowd units smaller than this on screen are drawn with vertex animation (0: never)" )
         float32 _vertexAnimationScreenSize{ 0.0f };
+        PROPERTY( Min = 0.0, Units = s, Tooltip = "Seconds a graph layer, blend branch or rig node takes to fade out or back in when the LOD grade crosses its max_lod (0: switch at once)" )
+        float32 _nodeFadeSeconds{ 0.0f };
 
         /** @brief XML 을 읽고 검사합니다. 모르는 속성 · 자식 · 순서가 틀린 단계는 오류이고 false 입니다(내용은 기본값으로 돌아갑니다). */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );

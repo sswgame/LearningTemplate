@@ -117,14 +117,16 @@ namespace sw
     AnimationLODState AnimationLODState::makeState( const AnimationLODSettings& settings, float32 screenSize, bool bVisible, const SkeletonBoneLOD* pBoneLOD )
     {
         AnimationLODState state{};
-        state._bVisible     = bVisible ? SW_TRUE : SW_FALSE;
-        state._screenSize   = bVisible ? screenSize : 0.0f;
-        state._significance = state._screenSize;
+        state._bVisible        = bVisible ? SW_TRUE : SW_FALSE;
+        state._screenSize      = bVisible ? screenSize : 0.0f;
+        state._significance    = state._screenSize;
+        state._nodeFadeSeconds = settings._nodeFadeSeconds;
         if ( settings._listRateLevel.empty() == false )
         {
             const uint32                 levelIndex = settings.selectRateLevel( state._screenSize );
             const AnimationLODRateLevel& level      = settings._listRateLevel[levelIndex];
             state._rateLevel                        = static_cast<uint8>( levelIndex );
+            state._lodGrade                         = static_cast<uint8>( levelIndex );
             state._updateRateDivisor                = level._updateRateDivisor;
             state._bInterpolate                     = level._bInterpolate ? SW_TRUE : SW_FALSE;
         }
@@ -137,6 +139,33 @@ namespace sw
             state._boneLODLevel = static_cast<uint8>( pBoneLOD->selectLevel( state._screenSize ) );
         state._bVertexAnimation = ( settings._vertexAnimationScreenSize > 0.0f && state._screenSize < settings._vertexAnimationScreenSize ) ? SW_TRUE : SW_FALSE;
         return state;
+    }
+
+    void AnimationLODState::applyBudgetDivisor( uint32 budgetedDivisor )
+    {
+        // 예산이 늘린 주기는 보간을 켠다 — 덜 중요한 유닛이 뚝뚝 끊기지 않게(언리얼 예산 배분기의 보간과 같은 자리).
+        uint32 divisor = MathUtil::max( _updateRateDivisor, 1u );
+        if ( budgetedDivisor > divisor )
+            _bInterpolate = SW_TRUE;
+        uint32 grade = _lodGrade;
+        for ( ; divisor < budgetedDivisor; divisor *= 2u )
+        {
+            ++grade;
+        }
+        _lodGrade          = static_cast<uint8>( MathUtil::min( grade, 255u ) );
+        _updateRateDivisor = budgetedDivisor;
+    }
+
+    void AnimationLODFade::update( bool bOn, float32 deltaSeconds, float32 fadeSeconds )
+    {
+        const float32 target = bOn ? 1.0f : 0.0f;
+        if ( fadeSeconds <= 0.0f )
+        {
+            _weight = target;
+            return;
+        }
+        const float32 step = MathUtil::max( deltaSeconds, 0.0f ) / fadeSeconds;
+        _weight            = bOn ? MathUtil::min( _weight + step, target ) : MathUtil::max( _weight - step, target );
     }
 
     /** @brief 애니메이션 LOD 표 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */

@@ -2,7 +2,8 @@
                       _budgetMilliseconds="2.0"
                       _unitCostMicroseconds="20.0"
                       _maxUpdateRateDivisor="16"
-                      _vertexAnimationScreenSize="0.05">
+                      _vertexAnimationScreenSize="0.05"
+                      _nodeFadeSeconds="0.25">
 	<_listRateLevel>
 		<AnimationLODRateLevel _minScreenSize="0.25" _updateRateDivisor="1" _bInterpolate="false" />
 		<AnimationLODRateLevel _minScreenSize="0.10" _updateRateDivisor="2" _bInterpolate="true" />

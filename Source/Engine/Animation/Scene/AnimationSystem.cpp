@@ -27,6 +27,10 @@ namespace sw
      * @brief `-gv_animationForceVertexAnimation=1` — 군중 공유를 켠 모든 유닛을 거리와 상관없이 VAT 로 그립니다(VAT 경로 검증 · 측정용).
      */
     SW_TEST_GLOBAL_VARIABLE( int32, gv_animationForceVertexAnimation, 0, "Draw every crowd-shared unit with vertex animation regardless of distance (verification)" );
+    /**
+     * @brief `-gv_animationLODGrade=2` — 모든 유닛의 LOD 등급을 이 값으로 둡니다(그래프 · 리그 노드의 `max_lod` 검증 · 측정용). -1 이면 판정한 등급입니다.
+     */
+    SW_TEST_GLOBAL_VARIABLE( int32, gv_animationLODGrade, -1, "Force every unit's animation LOD grade (graph layers, blend branches and rig nodes compare it with max_lod; -1 = judged grade)" );
 
     namespace
     {
@@ -365,13 +369,9 @@ namespace sw
             if ( gv_animationForceVertexAnimation != 0 )
                 state._bVertexAnimation = SW_TRUE;
             if ( state._bVisible == SW_TRUE || _lodSettings._offscreenUpdateRateDivisor > 0 )
-            {
-                const uint32 budgeted = _listScratchBudgetItem[budgetIndex++]._updateRateDivisor;
-                // 예산이 늘린 주기는 보간을 켠다 — 덜 중요한 유닛이 뚝뚝 끊기지 않게(언리얼 예산 배분기의 보간과 같은 자리).
-                if ( budgeted > state._updateRateDivisor )
-                    state._bInterpolate = SW_TRUE;
-                state._updateRateDivisor = budgeted;
-            }
+                state.applyBudgetDivisor( _listScratchBudgetItem[budgetIndex++]._updateRateDivisor );
+            if ( gv_animationLODGrade >= 0 )
+                state._lodGrade = static_cast<uint8>( MathUtil::min( gv_animationLODGrade, 255 ) );
         }
         // 적용 단계 — 훅이 등록 · 해제를 불러도 안전하도록 `forEach` 로 돈다. 위치는 위 판정과 같고(접지 않는다), 해제된 칸은 건너뛴다.
         // 위 `listLODClient` 참조는 여기서 쓰지 않는다 — 훅이 더하면 저장소가 다시 잡힌다.
