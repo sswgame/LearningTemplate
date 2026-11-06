@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Fcm/FcmPushProvider.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/JSON/JSONWriter.h"
@@ -16,6 +17,7 @@ namespace sw
     {
         struct FcmPushProviderInternal
         {
+            static constexpr int64 kQuotaMinimumRetryMs = constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
         };
     } // namespace
 } // namespace sw
@@ -129,6 +131,14 @@ namespace sw
         return PushDeliveryStatus::Rejected; // 401 · 403 과 그 밖의 4xx
     }
 
+    int64 FcmPushProvider::computeRetryAfterMs( int32 statusCode, string_view retryAfterHeader )
+    {
+        int64 seconds = 0;
+        if ( StringUtil::parseInt64( retryAfterHeader, seconds ) && seconds > 0 )
+            return seconds * constant::time::kMillisecondsPerSecond;
+        return statusCode == HTTPConstant::kStatusTooManyRequests ? FcmPushProviderInternal::kQuotaMinimumRetryMs : 0;
+    }
+
     void FcmPushProvider::send( uint64 deliveryID, const string& deviceToken, const string& locale, const PushNotificationMessage& message, UnixMilliseconds nowMs )
     {
         (void)locale; // 문구는 현지화 키라 기기가 푼다
@@ -190,14 +200,9 @@ namespace sw
     void FcmPushProvider::finishSend( uint64 deliveryID, const HTTPClientResponse& response )
     {
         const PushDeliveryStatus status       = mapStatus( response._statusCode, response._bTransportFailed == SW_TRUE, response.getBodyText() );
-        int64                    retryAfterMs = 0;
-        if ( const HTTPHeader* pRetryAfter = response.findHeader( "Retry-After" ) )
-        {
-            int64 seconds = 0;
-            if ( StringUtil::parseInt64( pRetryAfter->_value, seconds ) && seconds > 0 )
-                retryAfterMs = seconds * constant::time::kMillisecondsPerSecond;
-        }
-        const bool bAuthFailed = response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
+        const HTTPHeader*        pRetryAfter  = response.findHeader( "Retry-After" );
+        const int64              retryAfterMs = computeRetryAfterMs( response._statusCode, pRetryAfter != nullptr ? string_view( pRetryAfter->_value ) : string_view{} );
+        const bool               bAuthFailed  = response._statusCode == HTTPConstant::kStatusUnauthorized || response._statusCode == HTTPConstant::kStatusForbidden;
         if ( bAuthFailed )
         {
             // 토큰이 거절됐다 — 버려서 다음 배달이 새로 받게 한다.

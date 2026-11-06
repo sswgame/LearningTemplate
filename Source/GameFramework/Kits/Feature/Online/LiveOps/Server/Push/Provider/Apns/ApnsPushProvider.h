@@ -7,7 +7,7 @@
  *          - 문구는 현지화 키다. `aps.alert` 의 `title-loc-key` · `loc-key` · `loc-args` 에 싣고 기기가 자기 언어로 푼다 — 서버는 언어를 모르고 `send` 의 @p locale 을 쓰지 않는다.
  *            문구가 없으면 조용한 알림(`apns-push-type: background`, `content-available`, 우선순위 5)이다. `deep_link` 와 인자는 사용자 키로 싣는다(앱이 화면을 연다).
  *          - 기기 토큰은 16진 글자만 받는다(경로에 들어가므로). 아니면 요청을 보내지 않고 `InvalidToken` 이다.
- *          - 상태 대응: 200 Delivered, 410 InvalidToken(앱이 지워졌다), 429 RateLimited(`Retry-After` 가 있으면 그 초), 5xx · 전송 실패 Transient, 403 Rejected(제공자 토큰을 버려 다음 배달이 새로 서명),
+ *          - 상태 대응: 200 Delivered, 410 InvalidToken(앱이 지워졌다), 429 RateLimited(`Retry-After` 가 있으면 그 초), 5xx Transient(애플 문서: 15 분 뒤에 다시), 전송 실패 Transient, 403 Rejected(제공자 토큰을 버려 다음 배달이 새로 서명),
  *            그 밖의 4xx Rejected(400 `BadDeviceToken` 은 개발 · 운영 환경이 어긋난 토큰일 수 있어 기기를 지우지 않는다).
  *          - 토픽 발송은 없다(APNs 에 토픽 구독이 없다) — `supportsTopics` 는 false 다.
  *          제품 이름(`apns`)은 이 설정의 `kind` 값과 `Provider/Apns/` 안에만 쓴다.
@@ -70,6 +70,8 @@ namespace sw
         static bool isValidDeviceToken( string_view token );
         /** @brief 응답을 배달 결과로 바꿉니다(`Retry-After` 는 따로 읽는다). */
         static PushDeliveryStatus mapStatus( int32 statusCode, bool bTransportFailed );
+        /** @brief 다시 보내기 전에 기다릴 시간입니다. `retry-after`(초)를 따르고, 없는데 5xx 면 애플 문서가 정한 15 분입니다. 그 밖에는 0(발송기의 백오프)입니다. */
+        static int64 computeRetryAfterMs( int32 statusCode, string_view retryAfterHeader );
 
     private:
         /** @brief 제공자 토큰이 없거나 낡았으면 새로 서명합니다. 서명하지 못하면 false 입니다. */

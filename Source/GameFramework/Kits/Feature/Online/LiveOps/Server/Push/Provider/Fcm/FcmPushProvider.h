@@ -5,7 +5,7 @@
  *          - 토큰은 `ServiceAccountTokenSource`(범위 `firebase.messaging`)가 받아 캐시한다. 토큰을 기다리는 배달은 토큰이 오면 보낸다.
  *          - 문구는 현지화 키다. 안드로이드 `title_loc_key` · `body_loc_key` 와 iOS(`apns`) `title-loc-key` · `loc-key` 에 싣고, 기기가 자기 언어로 푼다 —
  *            그래서 서버는 언어를 모르고 `send` 의 @p locale 을 쓰지 않는다. `deep_link` 와 인자는 `data` 에도 싣는다(앱이 화면을 연다).
- *          - 상태 대응: 200 Delivered, 404 · `UNREGISTERED` InvalidToken, 429 RateLimited(`Retry-After` 초), 5xx · 전송 실패 Transient, 401 · 403 Rejected(토큰을 버려 다음에 다시 받는다),
+ *          - 상태 대응: 200 Delivered, 404 · `UNREGISTERED` InvalidToken, 429 RateLimited(`Retry-After` 초, 없으면 FCM 문서의 최소 1 분), 5xx · 전송 실패 Transient, 401 · 403 Rejected(토큰을 버려 다음에 다시 받는다),
  *            그 밖의 4xx Rejected. 토큰 요청이 5xx · 전송 실패면 기다리던 배달이 Transient, 4xx 면 Rejected 다.
  *          - 토픽 발송(`sendToTopic`): `message.topic` 으로 한 번 보낸다. 토픽 이름은 `[A-Za-z0-9-_.~%]+` 이다.
  *          APNs 는 HTTP/2 가 필수라 이 제공자가 아니라 `Provider/Apns/` 의 제공자가 HTTP/2 클라이언트(`HTTP2Client`)로 보낸다.
@@ -65,6 +65,8 @@ namespace sw
         static bool isValidTopic( string_view topic );
         /** @brief 응답을 배달 결과로 바꿉니다(`Retry-After` 는 따로 읽는다). */
         static PushDeliveryStatus mapStatus( int32 statusCode, bool bTransportFailed, string_view body );
+        /** @brief 다시 보내기 전에 기다릴 시간입니다. `Retry-After`(초)를 따르고, 없는데 429 면 FCM 문서가 정한 최소 1 분입니다. 그 밖에는 0(발송기의 백오프)입니다. */
+        static int64 computeRetryAfterMs( int32 statusCode, string_view retryAfterHeader );
 
     private:
         struct Waiting

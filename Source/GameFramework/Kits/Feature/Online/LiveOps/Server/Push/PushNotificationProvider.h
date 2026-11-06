@@ -3,7 +3,7 @@
  * @brief 푸시 알림 제공자 계약입니다. 기기 토큰으로 보내고 결과는 나중에 회수합니다. 구현은 `Provider/<제품>/` 안에 있으며 제품 이름은 그 폴더 밖에 쓰지 않습니다.
  * @details `send` 와 `sendToTopic` 은 서비스 스레드를 막지 않는다. 실제 제공자는 자기 HTTP 클라이언트(기반 계층의 `Online/HTTP`), 인증, 재시도 상태를 가진다.
  *          발송기가 서비스 스레드의 틱마다 `update` 로 제공자를 돌리고 `pollResults` 로 끝난 배달을 회수한다. 시각(@p nowMs)은 서비스 시각(UTC 밀리초)이다.
- *          제공자는 `Provider/Fake/`(테스트와 개발)와 `Provider/Fcm/` 이다. 자격(서비스 계정 키)은 운영 비밀(환경 변수)에서만 읽는다.
+ *          제공자는 `Provider/Fake/`(테스트와 개발) · `Provider/Fcm/` · `Provider/Apns/` 이다. 자격(서비스 계정 키 · 인증 키)은 운영 비밀(환경 변수)에서만 읽는다.
  */
 #pragma once
 #include "Core/Container/string.h"

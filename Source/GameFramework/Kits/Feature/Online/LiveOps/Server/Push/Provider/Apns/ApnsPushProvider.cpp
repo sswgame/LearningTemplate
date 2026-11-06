@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/LiveOps/Server/Push/Provider/Apns/ApnsPushProvider.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Foundation/Constants.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/String/StringBuilder.h"
 
@@ -23,6 +24,7 @@ namespace sw
             static constexpr const utf8* kPushTypeAlert      = "alert";
             static constexpr const utf8* kPushTypeBackground = "background";
             static constexpr const utf8* kBackgroundPriority = "5"; ///< 조용한 알림은 우선순위 5 여야 한다(APNs 규칙)
+            static constexpr int64       kServerErrorRetryMs = 15 * constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond;
         };
     } // namespace
 } // namespace sw
@@ -121,6 +123,14 @@ namespace sw
         return PushDeliveryStatus::Rejected; // 403(제공자 토큰)과 그 밖의 4xx
     }
 
+    int64 ApnsPushProvider::computeRetryAfterMs( int32 statusCode, string_view retryAfterHeader )
+    {
+        int64 seconds = 0;
+        if ( StringUtil::parseInt64( retryAfterHeader, seconds ) && seconds > 0 )
+            return seconds * constant::time::kMillisecondsPerSecond;
+        return statusCode >= HTTPConstant::kStatusServerError ? ApnsPushProviderInternal::kServerErrorRetryMs : 0;
+    }
+
     bool ApnsPushProvider::ensureProviderToken( UnixMilliseconds nowMs )
     {
         if ( _providerToken.empty() == false && nowMs.count() - _tokenIssuedMs < kTokenRefreshMs )
@@ -177,13 +187,8 @@ namespace sw
     void ApnsPushProvider::finishSend( uint64 deliveryID, const HTTPClientResponse& response )
     {
         const PushDeliveryStatus status       = mapStatus( response._statusCode, response._bTransportFailed == SW_TRUE );
-        int64                    retryAfterMs = 0;
-        if ( const HTTPHeader* pRetryAfter = response.findHeader( "retry-after" ) )
-        {
-            int64 seconds = 0;
-            if ( StringUtil::parseInt64( pRetryAfter->_value, seconds ) && seconds > 0 )
-                retryAfterMs = seconds * constant::time::kMillisecondsPerSecond;
-        }
+        const HTTPHeader*        pRetryAfter  = response.findHeader( "retry-after" );
+        const int64              retryAfterMs = computeRetryAfterMs( response._statusCode, pRetryAfter != nullptr ? string_view( pRetryAfter->_value ) : string_view{} );
         if ( response._statusCode == HTTPConstant::kStatusForbidden )
         {
             // 제공자 토큰이 거절됐다(만료 · 서명 불일치) — 버려서 다음 배달이 새로 서명하게 한다.

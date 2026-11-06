@@ -2,7 +2,6 @@
 // 실제 HTTP 클라이언트가 루프백 망의 가짜 스토어(`HTTPServer`)와 말한다 — 바깥 서비스는 없다. 서명은 가짜 제공자가 답한다(규칙만 본다). 스팀은 `TestSteamReceiptValidator.cpp`. 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
-#include "Core/Network/Security/INetSecurityProvider.h"
 #include "Core/Network/Transport/LoopbackStreamTransport.h"
 #include "Core/Network/Transport/StreamTypes.h"
 #include "Core/String/Base64Util.h"
@@ -17,6 +16,7 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/StoreReceiptValidator.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPClient.h"
 #include "GameFramework/Runtime/Online/HTTP/HTTPServer.h"
+#include "GameFramework/Runtime/Online/Security/Tests/FakeNetSecurityProvider.h"
 
 using namespace sw;
 
@@ -28,126 +28,6 @@ namespace
     constexpr uint64      kBuyer      = 42;
     constexpr uint64      kTicket     = 9;
     constexpr const utf8* kBundle     = "com.x.game";
-
-    /** @brief 서명 쪽만 답하는 가짜 제공자입니다. 사슬 확인은 `_bChainOk` 를 따르고 서명은 늘 맞다. 나머지 연산은 쓰이지 않는다. */
-    class FakeStoreSecurity final : public INetSecurityProvider
-    {
-    public:
-        uint8 _bChainOk{ SW_TRUE };
-
-        const utf8* getName() const override { return "FakeStore"; }
-        bool        fillRandomBytes( uint8* pOut, int32 size ) override
-        {
-            (void)pOut;
-            (void)size;
-            return false;
-        }
-        bool makeX25519KeyPair( NetX25519KeyPair& outKeyPair ) override
-        {
-            (void)outKeyPair;
-            return false;
-        }
-        bool computeX25519SharedSecret( const uint8* pPrivateKey, const uint8* pPeerPublicKey, uint8* pOutSecret ) override
-        {
-            (void)pPrivateKey;
-            (void)pPeerPublicKey;
-            (void)pOutSecret;
-            return false;
-        }
-        bool computeHkdfSHA256( const uint8* pSecret, int32 secretSize, const uint8* pSalt, int32 saltSize, const uint8* pInfo, int32 infoSize, uint8* pOut, int32 outSize ) override
-        {
-            (void)pSecret;
-            (void)secretSize;
-            (void)pSalt;
-            (void)saltSize;
-            (void)pInfo;
-            (void)infoSize;
-            (void)pOut;
-            (void)outSize;
-            return false;
-        }
-        bool computePasswordHash( const uint8* pPassword, int32 passwordSize, const uint8* pSalt, int32 saltSize, const NetPasswordHashParams& params, uint8* pOut, int32 outSize ) override
-        {
-            (void)pPassword;
-            (void)passwordSize;
-            (void)pSalt;
-            (void)saltSize;
-            (void)params;
-            (void)pOut;
-            (void)outSize;
-            return false;
-        }
-        unique_ptr<INetAead> createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) override
-        {
-            (void)algorithm;
-            (void)pKey;
-            return nullptr;
-        }
-        unique_ptr<ITLSContext> createTLSContext( const TLSContextConfig& settings, string& outError ) override
-        {
-            (void)settings;
-            outError = "not supported";
-            return nullptr;
-        }
-        bool createSelfSignedCertificate( string_view commonName, int32 validDays, string& outCertificatePem, string& outPrivateKeyPem ) override
-        {
-            (void)commonName;
-            (void)validDays;
-            (void)outCertificatePem;
-            (void)outPrivateKeyPem;
-            return false;
-        }
-        bool computeCertificateSHA256( const string& certificatePem, string& outHex ) override
-        {
-            (void)certificatePem;
-            (void)outHex;
-            return false;
-        }
-        bool computeSHA256( const uint8* pData, int32 dataSize, uint8* pOutDigest ) override
-        {
-            (void)pData;
-            (void)dataSize;
-            (void)pOutDigest;
-            return false;
-        }
-        bool verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize ) override
-        {
-            (void)publicKey;
-            (void)pData;
-            (void)dataSize;
-            (void)pSignature;
-            (void)signatureSize;
-            return true;
-        }
-        bool createSigningKeyPair( NetSignatureAlgorithm algorithm, string& outPrivateKeyPem, NetPublicKey& outPublicKey ) override
-        {
-            (void)algorithm;
-            (void)outPrivateKeyPem;
-            (void)outPublicKey;
-            return false;
-        }
-        bool signData( NetSignatureAlgorithm algorithm, const string& privateKeyPem, const uint8* pData, int32 dataSize, vector<uint8>& outSignatureBytes ) override
-        {
-            (void)algorithm;
-            (void)privateKeyPem;
-            (void)pData;
-            (void)dataSize;
-            outSignatureBytes.assign( 1, uint8( 's' ) );
-            return true;
-        }
-        bool verifyCertificateChain( const vector<vector<uint8>>& listChainDer, const string& trustedRootsPem, int64 unixSeconds, string_view leafRequiredOid, string_view issuerRequiredOid,
-                                     NetPublicKey& outLeafPublicKey ) override
-        {
-            (void)listChainDer;
-            (void)trustedRootsPem;
-            (void)unixSeconds;
-            (void)leafRequiredOid;
-            (void)issuerRequiredOid;
-            outLeafPublicKey            = NetPublicKey{};
-            outLeafPublicKey._algorithm = NetSignatureAlgorithm::EcdsaP256Sha256;
-            return _bChainOk == SW_TRUE;
-        }
-    };
 
     /** @brief 망 · 시계 · 가짜 서버 · 실제 HTTP 클라이언트의 묶음입니다. 선언 순서가 수명이다 — 망이 전송들보다 오래 산다. */
     struct LoopbackHTTP
@@ -208,7 +88,7 @@ namespace
     struct GoogleRig
     {
         LoopbackHTTP                       _http{};
-        FakeStoreSecurity                  _security{};
+        test::FakeNetSecurityProvider      _security{};
         unique_ptr<GoogleReceiptValidator> _pValidator{};
         string                             _productBody{};
         vector<string>                     _listVoidedBody{}; ///< 쪽마다의 답. 순서대로 쓰고 다 쓰면 빈 답이다
@@ -318,7 +198,7 @@ namespace
     struct AppleRig
     {
         LoopbackHTTP                      _http{};
-        FakeStoreSecurity                 _security{};
+        test::FakeNetSecurityProvider     _security{};
         unique_ptr<AppleReceiptValidator> _pValidator{};
         string                            _transactionBody{};
         vector<string>                    _listHistoryBody{}; ///< 쪽마다의 답. 순서대로 쓰고 다 쓰면 빈 답이다
