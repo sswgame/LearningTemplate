@@ -29,6 +29,7 @@
 #include "GameFramework/Kits/Genre/Casual/KartRacing/Rule/KartItems.h"
 #include "GameFramework/Runtime/Character/Movement/ArcadeVehicleMotor.h"
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
+#include "GameFramework/Runtime/Gameplay/Match/MatchPhase.h"
 
 namespace sw
 {
@@ -65,15 +66,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 경기 단계입니다. */
-    enum class KartRacePhase : uint8
-    {
-        Setup = 0, ///< `start` 전이며 이때 차를 추가한다
-        Countdown, ///< 차가 서 있다
-        Racing,
-        Ended
-    };
-
     /** @brief 사람 차가 한 걸음에 받는 입력입니다. 눌림(`_bBoostPressed`, `_bJumpPressed`, `_bUseItem`)은 다음 걸음 하나에만 반영합니다. */
     struct KartRacerInput
     {
@@ -187,7 +179,7 @@ namespace sw
         KartRace();
 
         void initialize( const KartRaceSettings& settings, const KartTrack* pTrack, const KartItemCatalog* pItemCatalog );
-        /** @brief 차를 추가하고 차 번호를 반환합니다(`Setup` 단계에서만 가능합니다). 실패하면 -1 입니다. 반환한 `KartRacer` 포인터는 다음 `addRacer` 까지만 유효합니다. */
+        /** @brief 차를 추가하고 차 번호를 반환합니다(`Waiting` 단계에서만 가능합니다). 실패하면 -1 입니다. 반환한 `KartRacer` 포인터는 다음 `addRacer` 까지만 유효합니다. */
         int32 addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAI );
         void  setRacerAI( int32 racer, const KartAISettings& settings );
         /** @brief 차를 출발 격자에 세우고 카운트다운을 시작합니다. 차가 없으면 아무것도 하지 않습니다. */
@@ -224,7 +216,8 @@ namespace sw
         /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 차 수나 상자 수가 다르거나, 모르는 아이템 id 이거나, 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
-        KartRacePhase    getPhase() const { return _phase; }
+        /** @brief 단계입니다. `Waiting` 은 차를 더하는 때, `Warmup` 은 카운트다운(차가 서 있다), `InProgress` 는 경기 중이고 `Ended` 는 끝입니다(장르 공통 `MatchPhase`). */
+        MatchPhase       getPhase() const { return _phase; }
         float32          getRaceTime() const { return _raceTime; }
         float32          getCountdown() const { return _countdown.getRemaining(); }
         float32          getBestLapTime() const { return _bestLapTime; }
@@ -274,6 +267,6 @@ namespace sw
         float32                    _firstFinishTime; ///< 0 보다 작으면 아직 아무도 들어오지 않은 것이다
         int32                      _ghostRacer;
         int32                      _finishedCount;
-        KartRacePhase              _phase;
+        MatchPhase                 _phase;
     };
 } // namespace sw

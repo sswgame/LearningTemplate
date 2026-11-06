@@ -147,7 +147,7 @@ namespace sw
         , _firstFinishTime{ -1.0f }
         , _ghostRacer{ -1 }
         , _finishedCount{ 0 }
-        , _phase{ KartRacePhase::Setup }
+        , _phase{ MatchPhase::Waiting }
     {
     }
 
@@ -172,12 +172,12 @@ namespace sw
         _bestLapTime     = 0.0f;
         _firstFinishTime = -1.0f;
         _finishedCount   = 0;
-        _phase           = KartRacePhase::Setup;
+        _phase           = MatchPhase::Waiting;
     }
 
     int32 KartRace::addRacer( const ArcadeVehicleSettings& vehicleSettings, bool bAI )
     {
-        const bool bCannotAddRacer = _phase != KartRacePhase::Setup || _pTrack == nullptr || _pTrack->isValid() == false;
+        const bool bCannotAddRacer = _phase != MatchPhase::Waiting || _pTrack == nullptr || _pTrack->isValid() == false;
         if ( bCannotAddRacer )
             return -1;
         _listRacer.emplace_back();
@@ -197,7 +197,7 @@ namespace sw
 
     void KartRace::start()
     {
-        const bool bCannotStartRace = _phase != KartRacePhase::Setup || _listRacer.empty() || _pTrack == nullptr;
+        const bool bCannotStartRace = _phase != MatchPhase::Waiting || _listRacer.empty() || _pTrack == nullptr;
         if ( bCannotStartRace )
             return;
         // 격자: 결승선 뒤로 두 줄씩, 왼쪽과 오른쪽을 번갈아 세운다.
@@ -221,13 +221,13 @@ namespace sw
         // 격자에 서기 전에 기록을 걸었으면 출발 위치가 틀려 재생이 다른 길로 간다 — 선 자리로 다시 시작한다.
         if ( _pGhost != nullptr )
             startGhostRecording( _ghostRacer, _pGhost );
-        _phase = KartRacePhase::Countdown;
+        _phase = MatchPhase::Warmup;
         _countdown.start( _settings._countdownTime );
         _raceTime = 0.0f;
         updatePlaces();
         if ( _countdown.isActive() == false )
         {
-            _phase = KartRacePhase::Racing;
+            _phase = MatchPhase::InProgress;
             pushEvent( KartRaceEvent::Kind::RaceStarted, -1, -1, 0, 0.0f );
         }
     }
@@ -260,19 +260,19 @@ namespace sw
     void KartRace::step()
     {
         const float32 deltaTime = _settings._step;
-        if ( _phase == KartRacePhase::Countdown )
+        if ( _phase == MatchPhase::Warmup )
         {
             _countdown.update( deltaTime );
             if ( _countdown.isActive() == false )
             {
-                _phase = KartRacePhase::Racing;
+                _phase = MatchPhase::InProgress;
                 pushEvent( KartRaceEvent::Kind::RaceStarted, -1, -1, 0, 0.0f );
             }
             return;
         }
-        if ( _phase != KartRacePhase::Racing && _phase != KartRacePhase::Ended )
+        if ( _phase != MatchPhase::InProgress && _phase != MatchPhase::Ended )
             return;
-        if ( _phase == KartRacePhase::Racing )
+        if ( _phase == MatchPhase::InProgress )
             _raceTime += deltaTime;
 
         // 1) 차: 입력, 아이템, 러버밴딩, 걸음, 부스트 패드, 진행 순서로 처리한다.
@@ -528,7 +528,7 @@ namespace sw
 
     bool KartRace::useItem( int32 racer )
     {
-        if ( isValidRacer( racer ) == false || _pItemCatalog == nullptr || _phase != KartRacePhase::Racing )
+        if ( isValidRacer( racer ) == false || _pItemCatalog == nullptr || _phase != MatchPhase::InProgress )
             return false;
         KartRacer& kart = _listRacer[static_cast<size_t>( racer )];
         if ( kart._bFinished == SW_TRUE ) // 들어온 차는 경기 밖이다 — 남은 차를 맞히지 않는다
@@ -759,7 +759,7 @@ namespace sw
             const int32 newPlace = place + 1;
             if ( kart._place != newPlace )
             {
-                const bool bAnnounce = kart._place != 0 && _phase == KartRacePhase::Racing;
+                const bool bAnnounce = kart._place != 0 && _phase == MatchPhase::InProgress;
                 kart._place          = newPlace;
                 if ( bAnnounce )
                     pushEvent( KartRaceEvent::Kind::PlaceChanged, _listPlaceOrder[static_cast<size_t>( place )], -1, newPlace, _raceTime );
@@ -807,7 +807,7 @@ namespace sw
 
     void KartRace::resolveRaceEnd()
     {
-        if ( _phase != KartRacePhase::Racing )
+        if ( _phase != MatchPhase::InProgress )
             return;
         const bool bAllFinished = _finishedCount >= static_cast<int32>( _listRacer.size() );
         const bool bTimedOut    = _firstFinishTime >= 0.0f && _raceTime - _firstFinishTime >= _settings._finishTimeout;
@@ -823,7 +823,7 @@ namespace sw
             kart._finishPlace = ++_finishedCount;
             pushEvent( KartRaceEvent::Kind::Finished, racer, -1, kart._finishPlace, 0.0f );
         }
-        _phase = KartRacePhase::Ended;
+        _phase = MatchPhase::Ended;
         updatePlaces();
         pushEvent( KartRaceEvent::Kind::RaceEnded, findRacerAtPlace( 1 ), -1, 0, _raceTime );
     }
@@ -990,10 +990,10 @@ namespace sw
         const bool bFinishedValid    = 0 <= race._finishedCount && race._finishedCount <= count;
         const bool bFirstFinishValid = race._firstFinishTime < 0.0f || 0.0f <= race._firstFinishTime; // 둘 다 거짓이면 NaN 이다 — 시한이 영영 끝나지 않는다
         const bool bTimesValid       = 0.0f <= race._raceTime && 0.0f <= race._bestLapTime && bFirstFinishValid;
-        const bool bInvalidRaceState = bRandomRead == false || bCountdownRead == false || archive.isError() || bFinishedValid == false || bTimesValid == false || phase > static_cast<uint8>( KartRacePhase::Ended );
+        const bool bInvalidRaceState = bRandomRead == false || bCountdownRead == false || archive.isError() || bFinishedValid == false || bTimesValid == false || phase > static_cast<uint8>( MatchPhase::Ended );
         if ( bInvalidRaceState )
             return false;
-        race._phase = static_cast<KartRacePhase>( phase );
+        race._phase = static_cast<MatchPhase>( phase );
         race._eventBuffer.clear();
         *this = std::move( race );
         return true;

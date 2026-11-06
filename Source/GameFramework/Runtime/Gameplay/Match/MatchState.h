@@ -12,6 +12,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "GameFramework/GameFrameworkExports.h"
+#include "GameFramework/Runtime/Gameplay/Match/MatchPhase.h"
 
 namespace sw
 {
@@ -33,15 +34,6 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 판의 단계입니다. */
-    enum class MatchPhase : uint8
-    {
-        Waiting = 0, ///< `start` 전
-        Warmup,
-        InProgress,
-        Ended
-    };
-
     /** @brief 팀 하나입니다. */
     struct MatchTeam
     {

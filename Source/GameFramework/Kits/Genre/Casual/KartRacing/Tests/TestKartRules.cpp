@@ -757,23 +757,23 @@ SW_TEST_CASE_F( KartRaceTest, PhasesAndCountdown )
     _settings._step          = 0.1f;
     _race.initialize( _settings, &_track, &_items );
     _race.start();
-    SW_EXPECT_EQUAL( sw::KartRacePhase::Setup, _race.getPhase() );
+    SW_EXPECT_EQUAL( sw::MatchPhase::Waiting, _race.getPhase() );
     SW_EXPECT_EQUAL( 0, _race.update( 0.0f ) );
     _race.step();
-    SW_EXPECT_EQUAL( sw::KartRacePhase::Setup, _race.getPhase() );
+    SW_EXPECT_EQUAL( sw::MatchPhase::Waiting, _race.getPhase() );
 
     SW_EXPECT_EQUAL( 0, _race.addRacer( sw::ArcadeVehicleSettings{}, false ) );
     _race.start();
-    SW_EXPECT_EQUAL( sw::KartRacePhase::Countdown, _race.getPhase() );
+    SW_EXPECT_EQUAL( sw::MatchPhase::Warmup, _race.getPhase() );
     SW_EXPECT_EQUAL( -1, _race.addRacer( sw::ArcadeVehicleSettings{}, false ) );
     SW_EXPECT_EQUAL( 1, racer( 0 )._place );
 
     _race.step();
     _race.step();
-    SW_EXPECT_EQUAL( sw::KartRacePhase::Countdown, _race.getPhase() );
+    SW_EXPECT_EQUAL( sw::MatchPhase::Warmup, _race.getPhase() );
     SW_EXPECT_NEAR( 0.0f, _race.getRaceTime(), kKartTolerance );
     _race.step();
-    SW_EXPECT_EQUAL( sw::KartRacePhase::Racing, _race.getPhase() );
+    SW_EXPECT_EQUAL( sw::MatchPhase::InProgress, _race.getPhase() );
     SW_EXPECT_EQUAL( 1, countEvents( sw::KartRaceEvent::Kind::RaceStarted ) );
     _race.step();
     SW_EXPECT_NEAR( 0.1f, _race.getRaceTime(), kKartTolerance );
@@ -825,7 +825,7 @@ SW_TEST_CASE_F( KartRaceTest, LapsRequireEveryCheckpointInOrder )
     SW_REQUIRE_TRUE( driveGate( 0, 2, true ) );
     SW_REQUIRE_TRUE( driveGate( 0, 3, true ) );
     SW_REQUIRE_TRUE( drive( 0, 0.0f, true ) );
-    SW_EXPECT_EQUAL( sw::KartRacePhase::Ended, _race.getPhase() );
+    SW_EXPECT_EQUAL( sw::MatchPhase::Ended, _race.getPhase() );
     SW_EXPECT_TRUE( racer( 0 )._bFinished == SW_TRUE );
     SW_EXPECT_EQUAL( 1, racer( 0 )._finishPlace );
     SW_EXPECT_TRUE( racer( 0 )._finishTime > 0.0f );
@@ -906,7 +906,7 @@ SW_TEST_CASE_F( KartRaceTest, PlacesAndFinishTimeout )
     SW_EXPECT_NEAR( _race.getRaceTime(), racer( 2 )._finishTime, 0.5f );
 
     stepTimes( 10 );
-    SW_REQUIRE_EQUAL( sw::KartRacePhase::Ended, _race.getPhase() );
+    SW_REQUIRE_EQUAL( sw::MatchPhase::Ended, _race.getPhase() );
     SW_EXPECT_EQUAL( 2, racer( 1 )._finishPlace ); // 더 앞에 있었다
     SW_EXPECT_EQUAL( 3, racer( 0 )._finishPlace );
     SW_EXPECT_NEAR( 0.0f, racer( 1 )._finishTime, kKartTolerance ); // 기록 없음
@@ -1284,7 +1284,7 @@ SW_TEST_CASE_F( KartRaceTest, StateRoundTripContinuesSameRace )
     (void)restored.addRacer( sw::ArcadeVehicleSettings{}, false );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored.readState( reading ) );
-    SW_EXPECT_EQUAL( sw::KartRacePhase::Racing, restored.getPhase() );
+    SW_EXPECT_EQUAL( sw::MatchPhase::InProgress, restored.getPhase() );
     SW_REQUIRE_EQUAL( size_t( 1 ), restored.getProjectiles().size() );
 
     for ( int32 stepIndex = 0; stepIndex < 60; ++stepIndex )
@@ -1322,7 +1322,7 @@ SW_TEST_CASE_F( KartRaceTest, ReadStateRefusesCheckpointOutsideTrack )
     SW_REQUIRE_EQUAL( 0, other.addRacer( sw::ArcadeVehicleSettings{}, false ) );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_EXPECT_FALSE( other.readState( reading ) );
-    SW_EXPECT_EQUAL( sw::KartRacePhase::Setup, other.getPhase() );
+    SW_EXPECT_EQUAL( sw::MatchPhase::Waiting, other.getPhase() );
     SW_EXPECT_EQUAL( 0, other.findRacer( 0 )->_nextCheckpoint );
 }
 
