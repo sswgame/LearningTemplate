@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  디퍼드 반투명 — 파이프라인 XML 의 _bEnableBlend 가 Transparent 패스 PSO 를 정한다. 켜져 있으면 유리 상자 뒤의 상자와 물이 비치고, 꺼져 있으면 유리색이 덮어쓴다(예전 deferredpipeline.xml 의 결함).
+  물은 장면 사본을 읽어 스스로 섞고 알파 1 을 내므로 블렌드로 가릴 수 없다 — 그래서 유리로 본다.
+  실행: ctest -R Scenario.game.empty.deferredtransparent
+-->
+<Scenario name="game.empty.deferredtransparent" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/deferredtransparent.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="1"/>
+	<Launch variable="gv_postQuality" value="2"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Launch variable="gv_environmentAnimate" value="0"/>
+	<Wait frames="40"/>
+	<Screenshot file="deferredglass.ppm"/>
+	<Wait frames="5"/>
+	<ExpectImage file="deferredglass.ppm" golden="deferredglass"/>
+	<Pass/>
+</Scenario>
