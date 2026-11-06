@@ -103,6 +103,7 @@
 		<entry key="Creates an organizing folder under the selected object (or the root)"
 		       text="고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만듭니다"
 		       sourceHash="788f45ec38d1c127" />
+		<entry key="Data Layers" text="데이터 레이어" sourceHash="b47513221d8a31b9" />
 		<entry key="Data Table Editor" text="데이터 테이블 편집기" sourceHash="9fa50cb618dc4886" />
 		<entry key="Delete" text="삭제" sourceHash="dc673e73b5c13aea" />
 		<entry key="Delete..." text="삭제..." sourceHash="95189de7377c7838" />
@@ -3222,6 +3223,7 @@
 		<entry key="Load Component Preset" text="컴포넌트 프리셋 불러오기" sourceHash="12d71a0eee04b169" />
 		<entry key="Map Check" text="맵 검사" sourceHash="56e1a696a129d005" />
 		<entry key="Material" text="머티리얼" sourceHash="b19c9290038389c0" />
+		<entry key="Material Graph" text="머티리얼 그래프" sourceHash="1bb691816e07ba24" />
 		<entry key="Mesh Modifiers" text="메시 모디파이어" sourceHash="bc2dcfa204061802" />
 		<entry key="Mesh Preview" text="메시 미리보기" sourceHash="9b1369a9bb3788b0" />
 		<entry key="Modules" text="모듈" sourceHash="3d45160c8fa41e0a" />
@@ -3295,6 +3297,9 @@
 		<entry key="Opens the gimmick circuit graph window"
 		       text="기믹 회로 그래프 창을 엽니다"
 		       sourceHash="596c0e820dae06af" />
+		<entry key="Opens the material graph window (node canvas, live preview, save)"
+		       text="머티리얼 그래프 창을 엽니다(노드 캔버스, 실시간 미리 보기, 저장)"
+		       sourceHash="1006811dc4dc8fc0" />
 		<entry key="Opens the mesh modifier stack panel"
 		       text="메시 모디파이어 스택 패널을 엽니다"
 		       sourceHash="8adefd96853140fd" />

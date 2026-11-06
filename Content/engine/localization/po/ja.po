@@ -394,11 +394,6 @@ msgctxt "EdPlugin.ASceneSCharacterAppearanceComponentNamesThis"
 msgid "A scene's Character Appearance component names this id."
 msgstr "シーンのキャラクター外見コンポーネントがこの id を指します。"
 
-#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
-msgctxt "EdPlugin.Abort"
-msgid "Abort"
-msgstr "中断"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp
 msgctxt "EdPlugin.AddBoneTurn"
 msgid "Add bone turn"
@@ -444,11 +439,6 @@ msgctxt "EdPlugin.AutoLayout"
 msgid "Auto layout"
 msgstr "自動レイアウト"
 
-#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
-msgctxt "EdPlugin.BlackboardKey"
-msgid "Blackboard key"
-msgstr "ブラックボードキー"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPlugin.Check"
 msgid "Check"
@@ -469,21 +459,11 @@ msgctxt "EdPlugin.ClosedReports"
 msgid "Closed reports"
 msgstr "閉じた通報"
 
-#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
-msgctxt "EdPlugin.Compare"
-msgid "Compare"
-msgstr "比較"
-
 #: Source/GameFramework/Kits/Feature/Online/Admin/Editor/AdminToolPanel.cpp
 #: Source/GameFramework/Plugin/Editor/GameplayTools/Gimmick/GimmickGraphPanel.cpp
 msgctxt "EdPlugin.Connect"
 msgid "Connect"
 msgstr "接続"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
-msgctxt "EdPlugin.Count0UntilItFails"
-msgid "Count (0 = until it fails)"
-msgstr "回数(0 = 失敗するまで)"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.CustomizationValues"
@@ -752,11 +732,6 @@ msgctxt "EdPlugin.PutLiveEvent"
 msgid "Put live event"
 msgstr "ライブイベントを登録"
 
-#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
-msgctxt "EdPlugin.ReactiveReCheckHigherPriorityChildrenEveryTick"
-msgid "Reactive (re-check higher priority children every tick)"
-msgstr "リアクティブ(毎ティック優先度の高い子を再チェック)"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/PairedAnimationPanel.cpp
 msgctxt "EdPlugin.Redo"
@@ -817,11 +792,6 @@ msgctxt "EdPlugin.Rename"
 msgid "Rename"
 msgstr "名前を変更"
 
-#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
-msgctxt "EdPlugin.RepathDistance"
-msgid "Repath distance"
-msgstr "再経路探索距離"
-
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.ResetBone"
 msgid "Reset bone"
@@ -862,11 +832,6 @@ msgstr "ポーズを保存"
 msgctxt "EdPlugin.SaveThumbnail"
 msgid "Save thumbnail"
 msgstr "サムネイルを保存"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
-msgctxt "EdPlugin.Seconds"
-msgid "Seconds"
-msgstr "秒"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.SelectABoneToEditItsReferencePose"
@@ -974,11 +939,6 @@ msgstr "上"
 msgctxt "EdPlugin.UseSelectedObject"
 msgid "Use selected object"
 msgstr "選択中のオブジェクトを使う"
-
-#: Source/GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreePanel.cpp
-msgctxt "EdPlugin.Value"
-msgid "Value"
-msgstr "値"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
 msgctxt "EdPlugin.ViewportGizmoEditingNeedsThePreviewSceneEditorMultiWorld"

@@ -907,6 +907,7 @@
 		<entry source="Marker Slots" text="표지 칸" />
 		<entry source="Mask" text="마스크" />
 		<entry source="Material" text="머티리얼" />
+		<entry source="Material Graph" text="머티리얼 그래프" />
 		<entry source="Max" text="최대" />
 		<entry source="Max Size" text="최대 크기" />
 		<entry source="Max instances" text="최대 인스턴스" />
@@ -1196,6 +1197,8 @@
 		<entry source="Opens the character editor panel" text="캐릭터 편집 패널을 엽니다" />
 		<entry source="Opens the editor preferences window" text="에디터 환경설정 창을 엽니다" />
 		<entry source="Opens the gimmick circuit graph window" text="기믹 회로 그래프 창을 엽니다" />
+		<entry source="Opens the material graph window (node canvas, live preview, save)"
+		       text="머티리얼 그래프 창을 엽니다(노드 캔버스, 실시간 미리 보기, 저장)" />
 		<entry source="Opens the mesh modifier stack panel" text="메시 모디파이어 스택 패널을 엽니다" />
 		<entry source="Opens the paired animation editor" text="페어드 애니메이션 편집 창을 엽니다" />
 		<entry source="Opens the project settings window" text="프로젝트 설정 창을 엽니다" />

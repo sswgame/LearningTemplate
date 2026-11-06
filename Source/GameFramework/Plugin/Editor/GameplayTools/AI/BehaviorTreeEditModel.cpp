@@ -364,7 +364,7 @@ namespace sw::editor
             return false;
         }
         XMLDocument document;
-        if ( document.parse( flatText, "BehaviorTreeEditModel" ) == false )
+        if ( document.parse( bComposed ? string_view{ flatText } : xmlText, "BehaviorTreeEditModel" ) == false )
         {
             outError = document.getLastError();
             return false;

@@ -380,6 +380,12 @@ msgstr "고른 오브젝트 아래(없으면 루트)에 정리용 폴더를 만�
 
 #. Context: EditorPanelText._label
 #: editor/panels/editor.panels.xml
+msgctxt "Data Layers"
+msgid "Data Layers"
+msgstr "데이터 레이어"
+
+#. Context: EditorPanelText._label
+#: editor/panels/editor.panels.xml
 msgctxt "Data Table Editor"
 msgid "Data Table Editor"
 msgstr "데이터 테이블 편집기"
@@ -2345,6 +2351,11 @@ msgctxt "EdLabel.CopyVisibleLines"
 msgid "Copy Visible Lines"
 msgstr "보이는 줄 복사"
 
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EdLabel.CreateVariant"
+msgid "Variant"
+msgstr "변형"
+
 #: Source/Editor/Common/Widgets/EditorCurveEditor.cpp
 msgctxt "EdLabel.DeleteKey"
 msgid "Delete Key"
@@ -2638,11 +2649,6 @@ msgstr "쿠킹 건너뛰기"
 msgctxt "EdLabel.TheAudioServiceIsNotRunning"
 msgid "The audio service is not running"
 msgstr "오디오 서비스가 돌지 않습니다"
-
-#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
-msgctxt "EdLabel.CreateVariant"
-msgid "Variant"
-msgstr "변형"
 
 #: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
 msgctxt "EdLabel.UnsetAttribute"
@@ -3168,12 +3174,8 @@ msgctxt "EdText.Curves"
 msgid "Curves"
 msgstr "커브"
 
-#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
-msgctxt "EdText.DataLayers"
-msgid "Data Layers"
-msgstr "데이터 레이어"
-
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+#: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EdText.DataLayers"
 msgid "Data Layers"
 msgstr "데이터 레이어"
@@ -5684,11 +5686,6 @@ msgstr "이 종류의 노드를 그래프에 추가합니다. 캔버스 빈 곳�
 msgctxt "EditorDialogueGraph.AdvancePreviewTip"
 msgid "Move the preview to the next node without waiting."
 msgstr "기다리지 않고 미리보기를 다음 노드로 넘깁니다."
-
-#: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
-msgctxt "EditorDialogueGraph.CommandExample"
-msgid "Ex: give_item:potion:3"
-msgstr "예: give_item:potion:3"
 
 #: Source/Editor/Panels/Dialogue/DialogueGraphPanel.cpp
 msgctxt "EditorDialogueGraph.CommandTip"
@@ -8557,6 +8554,13 @@ msgctxt "Material"
 msgid "Material"
 msgstr "머티리얼"
 
+#. Context: EditorCommandText._label
+#: editor/commands/editor.commands.xml
+#: editor/panels/editor.panels.xml
+msgctxt "Material Graph"
+msgid "Material Graph"
+msgstr "머티리얼 그래프"
+
 #. Context: Editor command name
 #: editor/commands/meshmodifiers.commands.xml
 #: editor/panels/editor.panels.xml
@@ -8708,6 +8712,12 @@ msgctxt "Open the gimmick graph panel"
 msgid "Open the gimmick graph panel"
 msgstr "기믹 그래프 패널을 엽니다"
 
+#. Context: EditorCommandText._detail
+#: editor/commands/editor.commands.xml
+msgctxt "Open the material graph editor"
+msgid "Open the material graph editor"
+msgstr "머티리얼 그래프 편집기를 엽니다"
+
 #. Context: Editor command palette detail
 #: editor/commands/meshmodifiers.commands.xml
 msgctxt "Open the mesh modifier stack panel"
@@ -8773,6 +8783,12 @@ msgstr "에디터 환경설정 창을 엽니다"
 msgctxt "Opens the gimmick circuit graph window"
 msgid "Opens the gimmick circuit graph window"
 msgstr "기믹 회로 그래프 창을 엽니다"
+
+#. Context: EditorCommandText._tooltip
+#: editor/commands/editor.commands.xml
+msgctxt "Opens the material graph window (node canvas, live preview, save)"
+msgid "Opens the material graph window (node canvas, live preview, save)"
+msgstr "머티리얼 그래프 창을 엽니다(노드 캔버스, 실시간 미리 보기, 저장)"
 
 #. Context: Editor command tooltip
 #: editor/commands/meshmodifiers.commands.xml

@@ -343,6 +343,11 @@
 				<item>editor/commands/editor.commands.xml</item>
 			</origins>
 		</entry>
+		<entry key="Data Layers" source="Data Layers" context="EditorPanelText._label">
+			<origins>
+				<item>editor/panels/editor.panels.xml</item>
+			</origins>
+		</entry>
 		<entry key="Data Table Editor" source="Data Table Editor" context="EditorPanelText._label">
 			<origins>
 				<item>editor/panels/editor.panels.xml</item>
@@ -8828,6 +8833,7 @@
 		<entry key="Material Graph" source="Material Graph" context="EditorCommandText._label">
 			<origins>
 				<item>editor/commands/editor.commands.xml</item>
+				<item>editor/panels/editor.panels.xml</item>
 			</origins>
 		</entry>
 		<entry key="Mesh Modifiers" source="Mesh Modifiers" context="Editor command name">
