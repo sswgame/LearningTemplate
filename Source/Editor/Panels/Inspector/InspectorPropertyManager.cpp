@@ -143,6 +143,7 @@ namespace sw::editor
                 ImGui::SetNextItemWidth( ( itemWidth > buttonsWidth + kMinFieldWidth ) ? itemWidth - buttonsWidth : itemWidth );
 
                 drawInput( "##assetInput" );
+                const ImGuiLastItemData inputItem = ImGui::GetCurrentContext()->LastItemData;
 
                 if ( EditorWidgets::acceptAssetDrop( outDroppedPath ) )
                     action = AssetFieldAction::Dropped;
@@ -203,6 +204,8 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ClearAssetReference" ) );
 
                 ImGui::PopID();
+                // 이 묶음의 "마지막 항목" 은 입력란이다(BeginMenu 가 메뉴 머리로 되돌리는 것과 같다). 지우기 단추로 두면 뒤의 값 표시(`inspector.property.*`) · 툴팁 · 되돌리기 추적(`trackString`)이 모두 단추를 봐, 친 글자가 되돌리기에 남지 않았다.
+                ImGui::GetCurrentContext()->LastItemData = inputItem;
                 return action;
             }
 

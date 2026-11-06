@@ -774,6 +774,7 @@ namespace sw::editor
         ImGui::Button( pDisplayPath, ImVec2{ inputWidth, 0.0f } );
         ImGui::PopStyleColor( 2 );
         drawTooltip( SW_LOCKEY( "EdCommon", "AssetSlotDrop" ) );
+        const ImGuiLastItemData slotItem = ImGui::GetCurrentContext()->LastItemData;
 
         string droppedPath;
         // 필터는 쉼표 · 공백으로 나눈 여러 확장자다(".png,.jpg"). 한 개짜리도 같은 규칙이다.
@@ -795,6 +796,8 @@ namespace sw::editor
         }
 
         ImGui::PopID();
+        // 이 묶음의 "마지막 항목" 은 슬롯이다(BeginMenu 가 메뉴 머리로 되돌리는 것과 같다). 지우기 단추로 두면 경로가 있을 때만 뒤의 표시 · 툴팁이 단추로 옮겨 간다.
+        ImGui::GetCurrentContext()->LastItemData = slotItem;
         return bChanged;
     }
 
