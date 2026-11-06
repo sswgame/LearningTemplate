@@ -361,7 +361,7 @@ namespace sw
         request._interactable = _focus;
         request._interaction  = pDef->_id;
         const bool bAllowed   = pAuthority == nullptr || pAuthority->canBeginInteraction( request );
-        if ( bAllowed && _session.begin( pDef, static_cast<uint32>( owner.getObjectID() ) ) )
+        if ( bAllowed && _session.begin( pTarget->shareDefinition(), static_cast<uint32>( owner.getObjectID() ) ) )
             InteractorComponentInternal::setAlignmentWarpTarget( owner, *pTarget, *pDef );
     }
 

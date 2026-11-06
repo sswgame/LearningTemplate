@@ -2,11 +2,12 @@
  * @file SharedAssetCache.h
  * @brief 경로로 읽는 에셋 종류 하나를 나눠 주고 에셋 캐시 레지스트리에 보이는 캐시 템플릿입니다(스켈레톤 · 클립 · 본 LOD · 리그 · 스프라이트 클립 ·
  *        파쇄 · 소켓 · 알림 표 · 페어드 애니메이션 · 물리 에셋).
- * @details 표(`SharedAssetTable`)는 종류마다 캐시 객체가 들고, 캐시는 에셋 매니저가 내장 캐시로 만들어 소유합니다(정적 창구 `request` · `acquire` 는
- *          `engine::getSubsystem<AssetManager>().getAssetCache<SharedAssetCache<에셋>>()` 의 표를 쓴다 — 예전에는 소유자 없는 엔진 수명 값 `ScopeOwned` 였다). 멤버 정의는 이 헤더에 두지 않고
+ * @details 표(`SharedAssetTable`)는 종류마다 캐시 객체가 들고, 캐시는 에셋 매니저의 레지스트리에 종류 이름으로 오릅니다(정적 창구 `request` · `acquire` 는
+ *          그 이름으로 찾은 캐시의 표를 쓴다 — `SharedAssetCacheLookup`). Engine 종류는 매니저가 내장 캐시로 만들어 소유하고(`SW_SHARED_ASSET_CACHE`), GameFramework · 키트 · 게임 종류는
+ *          그 모듈이 인스턴스화해 모듈 서브시스템이 소유하며 모듈 수명으로 오르내립니다(`SW_MODULE_SHARED_ASSET_CACHE`) — 예전 `GameDataCache<T>` 의 자리다. 멤버 정의는 이 헤더에 두지 않고
  *          `SharedAssetCacheDefinition.h` 에 두며, 에셋 종류의 .cpp 하나가 그것을 포함해 명시적으로 인스턴스화합니다. 쓰는 쪽 헤더는
- *          `extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<에셋>;` 만 둡니다 — 모듈(게임 · 키트 · 에디터)이 표를 자기 이미지에 따로 만들 수
- *          없습니다. 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
+ *          `extern template class <그 이미지의 _EXTERN_TEMPLATE 매크로> SharedAssetCache<에셋>;` 만 둡니다 — 한 종류의 표는 한 이미지에만 있습니다.
+ *          옛 객체를 살려 두는 동작은 `SharedAssetReloadMode::Detach` 와 쥔 쪽의 `shared_ptr` 가 맡습니다(세대 수로 옛 표를 들고 있지 않는다). 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
  *
  *          종류마다 다른 것(종류 이름 · 읽는 함수 · 메모리 태그 · 다시 읽기 방식)은 `SharedAssetCacheTraits<에셋>` 특수화 하나에 모읍니다. 특수화는 인스턴스화하는
  *          .cpp 에만 있고, 값이 빠지면 인스턴스화가 컴파일 오류로 멈춥니다. 인스턴스화와 등록은 `SW_SHARED_ASSET_CACHE( 에셋 )` 한 줄입니다.
@@ -27,6 +28,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
@@ -49,6 +51,18 @@ namespace sw
 
 namespace sw
 {
+    /**
+     * @struct SharedAssetCacheLookup
+     * @brief 공유 캐시를 에셋 매니저에서 종류 이름으로 찾고 올리는 한 곳입니다. 템플릿 밖에 두어 모듈 이미지가 엔진 서비스 헤더를 끌지 않게 합니다.
+     */
+    struct SW_API SharedAssetCacheLookup
+    {
+        /** @brief 종류 이름 @p pKindName 의 캐시입니다. 없으면(모듈이 서기 전 · 내려간 뒤의 접근) 오류를 남기고 멈춥니다. */
+        [[nodiscard]] static AssetCacheBase& getCache( const utf8* pKindName );
+        /** @brief 모듈 캐시 @p cache 를 레지스트리에 올립니다(@p pReload 는 핫 리로드 함수 — 배포는 nullptr). 매니저가 없거나 이름이 겹치면 오류를 남기고 빈 구독입니다. */
+        [[nodiscard]] static Subscription registerModuleCache( AssetCacheBase& cache, AssetCacheReloadFunction pReload );
+    };
+
     /** @brief 공유 에셋 로드 핸들입니다(`SharedAssetCache<에셋>::request`). 핸들이 살아 있는 동안 준비된 에셋도 살아 있습니다. */
     template <typename AssetType>
     using SharedAssetHandle = AssetHandle<SharedAssetLoadOperation<AssetType>>;
@@ -65,7 +79,7 @@ namespace sw
     class SharedAssetCache final : public AssetCacheBase
     {
     public:
-        /** @brief 레지스트리의 종류 이름입니다(`AssetManager::getAssetCache<T>()` 가 찾는다). 정의는 `SharedAssetCacheDefinition.h` 입니다(종류의 특수화 값). */
+        /** @brief 레지스트리의 종류 이름입니다(`SharedAssetCacheLookup` · `AssetManager::getAssetCache<T>()` 가 찾는다). 정의는 `SharedAssetCacheDefinition.h` 입니다(종류의 특수화 값). */
         static const utf8* const kAssetKindName;
 
         /** @brief 빈 표를 만들고 종류 이름의 계측 칸을 올립니다(`CacheTracking::counted`). 정의는 `SharedAssetCacheDefinition.h` 라 인스턴스화하는 .cpp 에만 있습니다. */
@@ -102,7 +116,7 @@ namespace sw
     private:
         friend class SharedAssetLoadOperation<AssetType>;
 
-        /** @brief 엔진의 에셋 매니저가 소유한 이 종류 캐시의 표입니다(정적 창구 · 로드 작업이 쓴다). 엔진 서비스가 없으면 멈춘다. */
+        /** @brief 레지스트리에 오른 이 종류 캐시의 표입니다(정적 창구 · 로드 작업이 쓴다). 없으면 멈춘다. */
         static SharedAssetTable<AssetType>& getTable();
         /** @brief @p table 의 @p path 를 종류의 `kReloadMode` 대로 다시 읽습니다(`reloadShared` · `reload` 의 본문). */
         [[nodiscard]] static bool reloadIn( SharedAssetTable<AssetType>& table, string_view path );

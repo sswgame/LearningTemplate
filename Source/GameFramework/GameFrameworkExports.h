@@ -9,13 +9,18 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #if defined( SW_GF_EXPORTS )
         #define SW_GF_API __declspec( dllexport )
+        /** @brief GameFramework.dll 이 명시적으로 인스턴스화해 내보내는 클래스 템플릿의 `extern template` 선언에 붙입니다(`SW_API_EXTERN_TEMPLATE` 와 같다). 내보내는 쪽은 비웁니다. */
+        #define SW_GF_API_EXTERN_TEMPLATE
     #elif defined( SW_GF_IMPORTS )
-        #define SW_GF_API __declspec( dllimport )
+        #define SW_GF_API                 __declspec( dllimport )
+        #define SW_GF_API_EXTERN_TEMPLATE __declspec( dllimport )
     #else
         #define SW_GF_API
+        #define SW_GF_API_EXTERN_TEMPLATE
     #endif
 #else
-    #define SW_GF_API __attribute__( ( visibility( "default" ) ) )
+    #define SW_GF_API                 __attribute__( ( visibility( "default" ) ) )
+    #define SW_GF_API_EXTERN_TEMPLATE __attribute__( ( visibility( "default" ) ) )
 #endif
 
 #if defined( SW_PLATFORM_WINDOWS )

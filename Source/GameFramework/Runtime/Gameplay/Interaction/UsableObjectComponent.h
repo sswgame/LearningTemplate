@@ -115,7 +115,7 @@ namespace sw
 
         UsableObjectSlots _slots;
         mutable mutex     _mutex;
-        uint32            _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `InteractionCatalog::getSharedReloadCount` 값. 달라지면 다시 찾는다
+        uint32            _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `InteractionCatalog::getReloadCount` 값. 달라지면 다시 찾는다
         uint8             _bHasOverride;
     };
 } // namespace sw

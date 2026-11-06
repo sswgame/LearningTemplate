@@ -24,7 +24,7 @@ namespace sw
     {
         SW_GAMESERVICE_API void bindGameService( const ISubsystemLocator& hostServices )
         {
-            // 데이터 표 캐시(상호작용 · 원소 규칙)는 GameFramework 의 모듈 서브시스템이 서며 에셋 캐시 레지스트리에 스스로 오른다(`GameDataCacheSubsystem`).
+            // 데이터 표 캐시(상호작용 · 원소 규칙)는 GameFramework 의 모듈 서브시스템이 서며 에셋 캐시 레지스트리에 스스로 오른다(`SW_MODULE_SHARED_ASSET_CACHE`).
             s_gameServiceState._pHostServices = &hostServices;
         }
 

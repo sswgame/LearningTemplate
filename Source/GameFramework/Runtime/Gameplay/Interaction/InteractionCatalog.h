@@ -171,7 +171,7 @@ namespace sw
 {
     /**
      * @class InteractionCatalog
-     * @brief `<Interactions>` 의 상호작용과 스마트 오브젝트 정의입니다. `findShared` 는 경로마다 한 번 읽어서 공유하므로, 컴포넌트들이 같은 테이블을 봅니다.
+     * @brief `<Interactions>` 의 상호작용과 스마트 오브젝트 정의입니다. `acquire` 는 경로마다 한 번 읽어서 공유하므로, 컴포넌트들이 같은 테이블을 봅니다.
      */
     class SW_GF_API InteractionCatalog : public XMLCatalog<InteractionCatalog>
     {
@@ -186,15 +186,6 @@ namespace sw
         const vector<InteractionDef>&  getInteractions() const { return _interactionCatalog.getAll(); }
         const vector<UsableObjectDef>& getSmartObjects() const { return _smartObjectCatalog.getAll(); }
 
-        /**
-         * @brief 경로의 테이블을 한 번 읽어서 공유합니다. 읽지 못했으면 nullptr 입니다. 다음 호출이 다시 읽지 않으므로 오류도 한 번만 남습니다.
-         * @details 여러 스레드에서 불러도 된다. 반환한 테이블은 바뀌지 않고 GameFramework 모듈을 언로드할 때까지 산다. 파일을 고치면 에디터 핫 리로드가
-         *          캐시("InteractionCatalog", `GameDataCache`)로 새 테이블을 읽고 `getSharedReloadCount` 를 늘린다. 쓰는 쪽은 그때 정의를 다시 찾는다.
-         */
-        static const InteractionCatalog* findShared( string_view path );
-        /** @brief `findShared` 의 테이블을 다시 읽은 횟수입니다. */
-        static uint32 getSharedReloadCount();
-
     private:
         static constexpr const utf8* kXMLRootName = "Interactions"; ///< 루트 원소(`XMLCatalog`)
 
@@ -206,4 +197,7 @@ namespace sw
         GameCatalog<InteractionDef>  _interactionCatalog{};
         GameCatalog<UsableObjectDef> _smartObjectCatalog{};
     };
+
+    /** @brief 공유 캐시("InteractionCatalog")는 GameFramework 가 인스턴스화합니다(`InteractionCatalog.cpp`). 다시 읽으면 떼어 낸다 — 정의를 쥔 컴포넌트 · 세션은 옛 테이블을 끝까지 쥔다. */
+    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<InteractionCatalog>;
 } // namespace sw

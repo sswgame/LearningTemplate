@@ -7,7 +7,7 @@
 namespace sw
 {
     InteractionSession::InteractionSession()
-        : _pDef{ nullptr }
+        : _pDef{}
         , _holdProgress{}
         , _eventBuffer{}
         , _listHoldEvent{}
@@ -18,11 +18,11 @@ namespace sw
     {
     }
 
-    bool InteractionSession::begin( const InteractionDef* pDef, uint32 actorID )
+    bool InteractionSession::begin( shared_ptr<const InteractionDef> pDef, uint32 actorID )
     {
         if ( pDef == nullptr || pDef->_listStep.empty() )
             return false;
-        _pDef      = pDef;
+        _pDef      = std::move( pDef );
         _actorID   = actorID;
         _stepIndex = 0;
         _state     = InteractionSessionState::Active;

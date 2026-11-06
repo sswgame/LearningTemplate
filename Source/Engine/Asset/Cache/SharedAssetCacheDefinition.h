@@ -1,8 +1,8 @@
 /**
  * @file SharedAssetCacheDefinition.h
- * @brief `SharedAssetCache` 의 멤버 정의입니다. 에셋 종류를 명시적으로 인스턴스화하는 Engine 의 .cpp 만 포함합니다.
- * @details 그 .cpp 는 이 헤더를 포함하고 `SharedAssetCacheTraits<에셋>` 을 특수화한 뒤 `SW_SHARED_ASSET_CACHE( 에셋 );` 한 줄로(`namespace sw`
- *          안) 명시적 인스턴스화와 레지스트리 등록을 함께 합니다. 둘 중 하나만 빠질 수 없습니다. 특수화가 갖출 것은 아래와 같습니다.
+ * @brief `SharedAssetCache` 의 멤버 정의입니다. 에셋 종류를 명시적으로 인스턴스화하는 .cpp 만 포함합니다(Engine · GameFramework · 키트 · 게임).
+ * @details 그 .cpp 는 이 헤더를 포함하고 `SharedAssetCacheTraits<에셋>` 을 특수화한 뒤 `SW_SHARED_ASSET_CACHE( 에셋 );`(Engine) 또는
+ *          `SW_MODULE_SHARED_ASSET_CACHE( id, 에셋, 내보내기 매크로 );`(모듈) 한 줄로(`namespace sw` 안) 명시적 인스턴스화와 레지스트리 등록을 함께 합니다. 둘 중 하나만 빠질 수 없습니다. 특수화가 갖출 것은 아래와 같습니다.
  *
  *          - `kKindName`   : 레지스트리의 종류 이름(정적 문자열)
  *          - `kMemoryTag`  : 읽는 동안 거는 할당 태그
@@ -11,15 +11,17 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Delegate/Subscription.h"
 #include "Core/Diagnostics/CacheStats.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
+#include "Core/Subsystem/ISubsystem.h"
 
-#include "Engine/Asset/AssetManager.h"
 #include "Engine/Asset/Cache/BuiltInAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Asset/Cache/SharedAssetTable.h"
-#include "Engine/Foundation/EngineServices.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 namespace sw
 {
@@ -139,8 +141,8 @@ namespace sw
     template <typename AssetType>
     SharedAssetTable<AssetType>& SharedAssetCache<AssetType>::getTable()
     {
-        // 이 헤더는 Engine 의 .cpp 만 포함하므로 캐시 타입이 모두 Engine.dll 안에 있어 모듈 핫 리로드에 사라지지 않는다.
-        return *engine::getSubsystem<AssetManager>().getAssetCache<SharedAssetCache<AssetType>>()._pTable;
+        // 종류 이름이 레지스트리에서 겹치지 않으므로(목록이 거절한다) 그 이름의 캐시는 이 형식이다.
+        return *static_cast<SharedAssetCache<AssetType>&>( SharedAssetCacheLookup::getCache( SharedAssetCacheTraits<AssetType>::kKindName ) )._pTable;
     }
 } // namespace sw
 
@@ -150,3 +152,51 @@ namespace sw
 #define SW_SHARED_ASSET_CACHE( AssetType )             \
     template class SW_API SharedAssetCache<AssetType>; \
     SW_BUILT_IN_ASSET_CACHE_WITH_ID( AssetType, ::sw::SharedAssetCache<AssetType> )
+
+namespace sw
+{
+    /**
+     * @class SharedAssetCacheSubsystem
+     * @brief 모듈 종류의 공유 캐시 하나를 가진 모듈 서브시스템입니다. 기동이 레지스트리에 올리고 종료가 내립니다 — 모듈이 내려가면 캐시도 함께 사라진다.
+     * @details 직접 쓰지 말고 `SW_MODULE_SHARED_ASSET_CACHE` 를 쓴다. 언리얼 `UEngineSubsystem` 이 데이터 레지스트리를 갖는 자리다(기억에 의존).
+     */
+    template <typename AssetType>
+    class SharedAssetCacheSubsystem : public ISubsystem
+    {
+    public:
+        SharedAssetCacheSubsystem()
+            : _cache{}
+            , _registration{}
+        {
+        }
+
+        SubsystemInitResult initializeSubsystem() override
+        {
+            _registration = SharedAssetCacheLookup::registerModuleCache( _cache, SW_ASSET_CACHE_RELOAD_FUNCTION( SharedAssetCache<AssetType> ) );
+            return _registration.isActive() ? SubsystemInitResult::Succeeded : SubsystemInitResult::Failed;
+        }
+        /** @brief 레지스트리에서 내립니다. 쥔 쪽의 에셋은 그 `shared_ptr` 가 놓을 때까지 산다. */
+        void shutdownSubsystem() override { _registration.reset(); }
+
+    private:
+        SharedAssetCache<AssetType> _cache;
+        Subscription                _registration; ///< 레지스트리 등록(캐시보다 먼저 풀린다 — 나중에 선언)
+    };
+} // namespace sw
+
+/**
+ * @brief 모듈(GameFramework · 키트 · 게임)의 종류 @p AssetType 을 그 모듈에서 인스턴스화하고(@p ExportMacro 로 내보낸다) 모듈 서브시스템으로 등록합니다(인스턴스화하는 .cpp, `namespace sw` 안, 특수화 뒤).
+ * @param id 정적 이름 · 서브시스템 이름을 만드는 식별자입니다.
+ */
+#define SW_MODULE_SHARED_ASSET_CACHE( id, AssetType, ExportMacro )                                 \
+    template class ExportMacro           SharedAssetCache<AssetType>;                              \
+    class SharedAssetCacheSubsystem_##id final : public ::sw::SharedAssetCacheSubsystem<AssetType> \
+    {                                                                                              \
+    public:                                                                                        \
+        static constexpr const utf8* kSubsystemName = "SharedAssetCache." #id;                     \
+        const utf8*                  getSubsystemName() const override                             \
+        {                                                                                          \
+            return kSubsystemName;                                                                 \
+        }                                                                                          \
+    };                                                                                             \
+    SW_MODULE_SUBSYSTEM( Engine, SharedAssetCacheSubsystem_##id, SharedAssetCacheSubsystem_##id )

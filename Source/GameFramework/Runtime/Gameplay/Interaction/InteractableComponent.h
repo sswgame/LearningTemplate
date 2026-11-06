@@ -8,6 +8,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Object/Component/Component.h"
@@ -49,6 +50,8 @@ namespace sw
         void setDefinition( const InteractionDef& def );
         /** @brief 현재 정의입니다. 테이블에 없으면 nullptr 입니다. */
         const InteractionDef* getDefinition() const;
+        /** @brief 현재 정의를 테이블째 쥐는 포인터입니다(세션이 쥔다 — 테이블을 다시 읽어도 진행 중인 세션은 옛 정의를 끝까지 읽는다). 코드로 넣은 정의는 이 컴포넌트가 가진다. */
+        shared_ptr<const InteractionDef> shareDefinition() const;
         /** @brief 켜져 있고, 쿨다운이 끝났고, @p interactor 의 태그가 조건을 만족하면 true 입니다. */
         bool isAvailableFor( const GameObject& interactor ) const;
         /**
@@ -100,12 +103,13 @@ namespace sw
         PROPERTY( Category = "Interaction", DisplayName = "Enabled" )
         bool _bEnabled;
 
-        InteractionDef        _overrideDef;
-        const InteractionDef* _pDef;
-        uint32                _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `InteractionCatalog::getSharedReloadCount` 값. 달라지면 다시 찾는다
-        uint32                _appliedHighlight;       ///< 메시에 마지막으로 옮긴 강조(`GPUInstanceHighlight::pack`)
-        atomic<uint32>        _completedCount;         ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
-        atomic<uint8>         _bHighlightRequested;
-        uint8                 _bHasOverride;
+        InteractionDef                       _overrideDef;
+        shared_ptr<const InteractionCatalog> _pCatalog; ///< `_pDef` 가 든 공유 테이블(쥔 동안 산다)
+        const InteractionDef*                _pDef;
+        uint32                               _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `InteractionCatalog::getReloadCount` 값. 달라지면 다시 찾는다
+        uint32                               _appliedHighlight;       ///< 메시에 마지막으로 옮긴 강조(`GPUInstanceHighlight::pack`)
+        atomic<uint32>                       _completedCount;         ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
+        atomic<uint8>                        _bHighlightRequested;
+        uint8                                _bHasOverride;
     };
 } // namespace sw

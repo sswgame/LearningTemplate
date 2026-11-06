@@ -6,6 +6,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
 
@@ -102,7 +103,8 @@ namespace sw
         PROPERTY( Category = "Element", DisplayName = "Start Status", Tooltip = "Stimulus applied at play start (Fire for a lit torch)" )
         hashed_string _startStimulus;
 
-        ElementGrid _grid;
-        uint32      _seenTableReloadCount; ///< 테이블을 찾았을 때의 `ElementRuleTable::getSharedReloadCount` 값. 달라지면 다시 만든다
+        ElementGrid                        _grid;
+        shared_ptr<const ElementRuleTable> _pTable;               ///< `_grid` 가 가리키는 공유 테이블(쥔 동안 산다)
+        uint32                             _seenTableReloadCount; ///< 테이블을 찾았을 때의 `ElementRuleTable::getReloadCount` 값. 달라지면 다시 만든다
     };
 } // namespace sw

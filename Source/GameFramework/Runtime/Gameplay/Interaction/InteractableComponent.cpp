@@ -5,6 +5,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Character/Socket/SocketSetComponent.h"
+#include "Engine/Content/AssetID.h"
 #include "Engine/Graphics/Shader/Binding/GPUInstanceHighlight.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -30,6 +31,7 @@ namespace sw
         , _priority{ 0 }
         , _bEnabled{ SW_TRUE }
         , _overrideDef{}
+        , _pCatalog{}
         , _pDef{ nullptr }
         , _seenCatalogReloadCount{ 0 }
         , _appliedHighlight{ 0 }
@@ -46,8 +48,9 @@ namespace sw
             _pDef = &_overrideDef;
             return;
         }
-        _pDef                   = nullptr;
-        _seenCatalogReloadCount = InteractionCatalog::getSharedReloadCount();
+        _pDef = nullptr;
+        _pCatalog.reset();
+        _seenCatalogReloadCount = InteractionCatalog::getReloadCount();
         if ( _interactionID.empty() )
             return;
         if ( _catalogPath.empty() )
@@ -55,8 +58,8 @@ namespace sw
             SW_LOG_ERROR_ID( "InteractableComponent.InteractionNoCatalogPath", "Interaction '%#' has no catalog path - set Catalog", _interactionID.c_str() );
             return;
         }
-        const InteractionCatalog* pCatalog = InteractionCatalog::findShared( _catalogPath );
-        _pDef                              = pCatalog != nullptr ? pCatalog->findInteraction( _interactionID ) : nullptr;
+        _pCatalog = InteractionCatalog::acquire( AssetID{ _catalogPath } );
+        _pDef     = _pCatalog != nullptr ? _pCatalog->findInteraction( _interactionID ) : nullptr;
         if ( _pDef == nullptr )
             SW_LOG_ERROR_ID( "InteractableComponent.InteractionNot", "Interaction '%#' is not in %#", _interactionID.c_str(), _catalogPath.c_str() );
     }
@@ -95,8 +98,8 @@ namespace sw
     void InteractableComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        // 상호작용 테이블 파일이 바뀌었으므로 새 테이블에서 정의를 다시 찾는다. 이전 테이블은 캐시가 유지하므로, 이 프레임에 이전 정의를 읽은 쪽도 안전하다.
-        if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != InteractionCatalog::getSharedReloadCount() )
+        // 상호작용 테이블 파일이 바뀌었으므로 새 테이블에서 정의를 다시 찾는다. 진행 중인 세션은 옛 테이블을 쥐고 있어(`shareDefinition`) 끝까지 옛 정의를 읽는다.
+        if ( _bHasOverride == SW_FALSE && _seenCatalogReloadCount != InteractionCatalog::getReloadCount() )
             resolveDefinition();
         if ( _cooldownRemaining > 0.0f )
             _cooldownRemaining = MathUtil::max( 0.0f, _cooldownRemaining - deltaTime );
@@ -127,6 +130,12 @@ namespace sw
         _overrideDef  = def;
         _bHasOverride = SW_TRUE;
         _pDef         = &_overrideDef;
+    }
+
+    shared_ptr<const InteractionDef> InteractableComponent::shareDefinition() const
+    {
+        // 코드로 넣은 정의는 이 컴포넌트가 가진다 — 쥘 주인이 없어 빈 주인으로 가리킨다(예전 날 포인터와 같은 수명).
+        return _bHasOverride == SW_TRUE ? shared_ptr<const InteractionDef>{ shared_ptr<const InteractionDef>{}, &_overrideDef } : shared_ptr<const InteractionDef>{ _pCatalog, _pDef };
     }
 
     const InteractionDef* InteractableComponent::getDefinition() const

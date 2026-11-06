@@ -123,7 +123,7 @@ namespace sw::editor
     {
         /**
          * @brief 모듈이 등록한 캐시라 에디터가 이름을 모르는 항목에 쓰는 캐시 이름입니다(빈 문자열). 그 경로를 가진 캐시(`AssetCacheBase::isCached`)가 모두 다시 읽습니다.
-         * @details GameFramework 의 데이터 테이블 캐시(`GameDataCache`: 상호작용 테이블, 원소 규칙 테이블)는 게임 서비스가 연결될 때 레지스트리에 등록된다. 에디터는 GameFramework 를 모른다.
+         * @details 모듈의 공유 캐시(`SW_MODULE_SHARED_ASSET_CACHE`: 상호작용 테이블, 원소 규칙 테이블)는 그 모듈이 올라올 때 레지스트리에 등록된다. 에디터는 GameFramework 를 모른다.
          */
         static constexpr const utf8* kAnyCacheHoldingPath = "";
 

@@ -24,7 +24,7 @@ namespace sw
      *          같은 캐시를 읽으므로 화면 스택의 값 멤버가 아니다(언리얼 에셋 레지스트리 · Godot `ResourceLoader` 캐시처럼 화면과 수명이 따로다).
      *          기동이 에셋 캐시 레지스트리(`AssetManager`)에 등록한다(종료, 진단, 핫 리로드가 다른 캐시와 같은 경로를 쓴다).
      *          찾는 순서, 실패, 다시 읽기 규칙은 `UITextAssetCache` 를 따른다. 게임 스레드에서만 쓴다.
-     *          캐시는 상속하지 않고 값 멤버로 가진다(서브시스템이 캐시 하나를 가지는 `GameDataCacheSubsystem` 과 같은 모양 — 레지스트리에는 멤버를 올린다).
+     *          캐시는 상속하지 않고 값 멤버로 가진다(서브시스템이 캐시 하나를 가지는 `SharedAssetCacheSubsystem` 과 같은 모양 — 레지스트리에는 멤버를 올린다).
      */
     class SW_API UIDocumentCache final : public ISubsystem
     {

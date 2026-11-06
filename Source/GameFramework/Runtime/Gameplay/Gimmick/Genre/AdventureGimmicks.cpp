@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Content/AssetID.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -102,26 +103,29 @@ namespace sw
         , _signalStatus{ "Burning" }
         , _startStimulus{}
         , _grid{}
+        , _pTable{}
         , _seenTableReloadCount{ 0 }
     {
     }
 
     void ElementStatusComponent::rebuild()
     {
-        _seenTableReloadCount = ElementRuleTable::getSharedReloadCount();
+        _seenTableReloadCount = ElementRuleTable::getReloadCount();
         if ( _tablePath.empty() )
         {
             SW_LOG_ERROR_ID( "AdventureGimmicks.ElementStatusNoRule", "Element status '%#' has no rule table path - set Rule Table", _material.c_str() );
             return;
         }
-        const ElementRuleTable* pTable = ElementRuleTable::findShared( _tablePath );
+        // 새 테이블을 받기 전에 격자를 옛 테이블과 함께 쥔 채 둔다 — 받지 못하면 옛 상태 그대로다.
+        shared_ptr<const ElementRuleTable> pTable = ElementRuleTable::acquire( AssetID{ _tablePath } );
         if ( pTable == nullptr )
         {
             SW_LOG_ERROR_ID( "AdventureGimmicks.ElementRuleTableCould", "Element rule table %# could not be read", _tablePath.c_str() );
             return;
         }
-        if ( _grid.initialize( 1, 1, pTable ) == false )
+        if ( _grid.initialize( 1, 1, pTable.get() ) == false )
             return; // 이유는 ElementGrid 가 남겼다
+        _pTable              = std::move( pTable );
         const int32 material = pTable->findMaterial( _material );
         if ( material < 0 )
         {
@@ -150,7 +154,7 @@ namespace sw
     void ElementStatusComponent::onTick( float32 deltaTime )
     {
         Component::onTick( deltaTime );
-        if ( _seenTableReloadCount != ElementRuleTable::getSharedReloadCount() )
+        if ( _seenTableReloadCount != ElementRuleTable::getReloadCount() )
             rebuild(); // 규칙 테이블 파일이 바뀌었으므로 새 테이블로 다시 만든다. 상태는 처음부터 시작한다
         if ( _grid.update( deltaTime ) > 0 )
             publishSignal();

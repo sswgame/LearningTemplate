@@ -107,7 +107,8 @@
 
 `SharedAssetCache<T>` 하나로 합치고 `GameDataCache` 를 지운다. 옛 객체를 살려 두는 동작은 `SharedAssetReloadMode::Detach` 와 `shared_ptr` 가 대신한다.
 
-- **모듈 캐시:** 키트 · 게임 종류의 표를 그 모듈이 인스턴스화하고 모듈 수명으로 등록한다. 핫 리로드의 내림은 `ModuleObjectRegistrar` 와 같은 길이다.
+- **모듈 캐시:** 키트 · 게임 종류의 표를 그 모듈이 인스턴스화하고 모듈 수명으로 등록한다(`SW_MODULE_SHARED_ASSET_CACHE` — 모듈 서브시스템이 캐시를 들고 `AssetManager::registerAssetCache` 로 오르내린다). 핫 리로드의 내림은 `ModuleObjectRegistrar` 와 같은 사슬이다. 상호작용 · 원소 규칙 표가 옮겼다(단계 2).
+- **창구:** `XMLCatalog<T>::acquire( id )` · `request( id )` · `getReloadCount()`. 그 카탈로그의 .cpp 가 캐시를 인스턴스화해야 쓴다.
 - **사본을 못 만들게 한다:** `XMLCatalog::loadFromAsset` 을 공개 API 에서 내리고 `TCatalog::acquire( id )` 로 바꾼다. 로더만 friend 다. 테스트는 `loadFromXMLText` 를 쓴다.
 - **정의와 실행 상태:** 공유 객체는 `const` 다. 실행 상태가 섞인 카탈로그는 컴파일 오류로 드러나고, `BehaviorTree` · `BehaviorTreeRunner` 처럼 나눈다.
 

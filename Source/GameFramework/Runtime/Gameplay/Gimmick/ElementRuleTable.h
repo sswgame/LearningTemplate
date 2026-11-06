@@ -30,6 +30,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -239,13 +240,12 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
         void               clear();
         /**
-         * @brief 경로의 테이블을 한 번 읽어서 공유합니다. 오브젝트 원소 상태가 같은 테이블을 봅니다. 읽지 못했으면 nullptr 입니다. 여러 스레드에서 불러도 됩니다.
-         * @details 반환한 테이블은 GameFramework 모듈을 언로드할 때까지 산다. 파일을 고치면 에디터 핫 리로드가 캐시("ElementRuleTable")로 새 테이블을 읽고
-         *          `getSharedReloadCount` 를 늘린다.
+         * @brief 경로의 테이블을 나눠 받습니다(같은 경로는 같은 객체). 오브젝트 원소 상태가 같은 테이블을 봅니다. 읽지 못했으면 nullptr 입니다. 여러 스레드에서 불러도 됩니다.
+         * @details 쥔 동안 산다. 파일을 고치면 에디터 핫 리로드가 공유 캐시("ElementRuleTable")에서 떼어 내고 `getReloadCount` 를 늘린다 — 쥔 쪽은 다시 받는다.
          */
-        static const ElementRuleTable* findShared( string_view path );
-        /** @brief `findShared` 의 테이블을 다시 읽은 횟수입니다. */
-        static uint32 getSharedReloadCount();
+        [[nodiscard]] static shared_ptr<const ElementRuleTable> acquire( const AssetID& assetID );
+        /** @brief `acquire` 의 테이블을 다시 읽은 횟수입니다. */
+        [[nodiscard]] static uint32 getReloadCount();
 
         /** @brief 플래그를 추가합니다. 이미 있으면 그 번호를 반환하고, 개수가 넘치면 -1 입니다. */
         int32 addFlag( const hashed_string& id );
@@ -287,4 +287,7 @@ namespace sw
         vector<ElementStepRule>    _listStepRule{};
         float32                    _stepTime{ kDefaultStepTime };
     };
+
+    /** @brief 공유 캐시("ElementRuleTable")는 GameFramework 가 인스턴스화합니다(`ElementRuleTable.cpp`). */
+    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<ElementRuleTable>;
 } // namespace sw

@@ -5,15 +5,12 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
-#include "Engine/Module/ModuleSubsystemRegistrar.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
-
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
-#include "GameFramework/Runtime/Foundation/GameData/GameDataCache.h"
 
 namespace sw
 {
@@ -26,31 +23,20 @@ namespace sw
             static bool isNamed( const XMLNode& node, const utf8* pName ) { return StringUtil::equals( node.getName(), pName ); }
         };
 
-        /**
-         * @class ElementRuleTableCache
-         * @brief 경로마다 한 번 읽어서 공유하는 원소 규칙 테이블 캐시입니다 — GameFramework 의 모듈 서브시스템(엔진 범위)이 소유하고 에셋 캐시 레지스트리에 올린다.
-         */
-        class ElementRuleTableCache final : public GameDataCacheSubsystem<ElementRuleTable>
-        {
-        public:
-            static constexpr const utf8* kSubsystemName = "ElementRuleTableCache";
-
-            ElementRuleTableCache()
-                : GameDataCacheSubsystem<ElementRuleTable>{ "ElementRuleTable" }
-            {
-            }
-
-            const utf8* getSubsystemName() const override { return kSubsystemName; }
-        };
-
-        /** @brief 공유 테이블 캐시입니다. 모듈 서브시스템이 서기 전 · 내려간 뒤의 접근은 결함이라 멈춘다 — 테이블을 읽을 엔진이 없다. */
-        GameDataCache<ElementRuleTable>& getSharedTableCache()
-        {
-            return game::getSubsystem<ElementRuleTableCache>().getCache();
-        }
     } // namespace
 
-    SW_MODULE_SUBSYSTEM( Engine, ElementRuleTableCache, ElementRuleTableCache );
+    template <>
+    struct SharedAssetCacheTraits<ElementRuleTable>
+    {
+        static constexpr const utf8* kKindName  = "ElementRuleTable";
+        static constexpr MemoryTag   kMemoryTag = MemoryTag::Game;
+        /** @brief 격자가 옛 테이블을 가리키므로 제자리에서 바꾸지 않는다. */
+        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::Detach;
+
+        [[nodiscard]] static bool load( const AssetID& assetID, ElementRuleTable& outTable ) { return outTable.loadFromAsset( assetID ); }
+    };
+
+    SW_MODULE_SHARED_ASSET_CACHE( ElementRuleTable, ElementRuleTable, SW_GF_API );
 } // namespace sw
 
 namespace sw
@@ -383,14 +369,14 @@ namespace sw
         return bValid;
     }
 
-    const ElementRuleTable* ElementRuleTable::findShared( string_view path )
+    shared_ptr<const ElementRuleTable> ElementRuleTable::acquire( const AssetID& assetID )
     {
-        return getSharedTableCache().find( path );
+        return SharedAssetCache<ElementRuleTable>::acquire( assetID.view() );
     }
 
-    uint32 ElementRuleTable::getSharedReloadCount()
+    uint32 ElementRuleTable::getReloadCount()
     {
-        return getSharedTableCache().getReloadCount();
+        return SharedAssetCache<ElementRuleTable>::getReloadCount();
     }
 } // namespace sw
 
