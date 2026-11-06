@@ -25,6 +25,9 @@ namespace sw::editor
             , _mainWindow{ 0 }
             , _wmDelete{ 0 }
             , _timer{}
+            , _lastPointer{}
+            , _lastPointerMask{ 0 }
+            , _bPointerRead{ SW_FALSE }
         {
         }
 
@@ -121,10 +124,21 @@ namespace sw::editor
             uint32 maskReturn{ 0 };
             if ( XQueryPointer( _pDisplay, _mainWindow, &rootReturn, &childReturn, &rootX, &rootY, &winX, &winY, &maskReturn ) )
             {
-                io.AddMousePosEvent( static_cast<float32>( winX ), static_cast<float32>( winY ) );
-                io.AddMouseButtonEvent( 0, ( maskReturn & Button1Mask ) != 0 );
-                io.AddMouseButtonEvent( 1, ( maskReturn & Button3Mask ) != 0 );
-                io.AddMouseButtonEvent( 2, ( maskReturn & Button2Mask ) != 0 );
+                // 바뀔 때만 알린다(Win32 · Wayland 의 이벤트와 같다). 매 프레임 알리면 움직이지 않은 실제 포인터가 시나리오의 가상 입력(`EditorSelfTestInput`)을 덮는다.
+                const uint32 buttonMask = maskReturn & ( Button1Mask | Button2Mask | Button3Mask );
+                const int2   pointer{ winX, winY };
+                const bool   bPointerMoved = _bPointerRead == SW_FALSE || pointer != _lastPointer;
+                if ( bPointerMoved )
+                    io.AddMousePosEvent( static_cast<float32>( winX ), static_cast<float32>( winY ) );
+                if ( _bPointerRead == SW_FALSE || buttonMask != _lastPointerMask )
+                {
+                    io.AddMouseButtonEvent( 0, ( buttonMask & Button1Mask ) != 0 );
+                    io.AddMouseButtonEvent( 1, ( buttonMask & Button3Mask ) != 0 );
+                    io.AddMouseButtonEvent( 2, ( buttonMask & Button2Mask ) != 0 );
+                }
+                _lastPointer     = pointer;
+                _lastPointerMask = buttonMask;
+                _bPointerRead    = SW_TRUE;
             }
         }
 
@@ -480,6 +494,9 @@ namespace sw::editor
         Window    _mainWindow;
         Atom      _wmDelete;
         GameTimer _timer;
+        int2      _lastPointer;      ///< 마지막으로 ImGui 에 알린 실제 포인터 위치
+        uint32    _lastPointerMask;  ///< 마지막으로 ImGui 에 알린 실제 버튼 상태
+        uint8     _bPointerRead : 1; ///< 포인터를 한 번이라도 읽었는지
     };
 
     unique_ptr<IImGuiPlatformBackend> IImGuiPlatformBackend::createPlatformBackend()

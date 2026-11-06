@@ -897,7 +897,7 @@ namespace sw::editor
                     (void)context.expect( isNear( ImGui::GetMainViewport()->DpiScale, probe._fakeScale, 0.001f ), "the main viewport did not take the window DPI" );
                     (void)context.expect( isNear( ImGui::GetStyle().FontScaleDpi, probe._fakeScale, 0.001f ), "fonts did not follow the window DPI" );
                     (void)context.expect( isNear( EditorThemeUtil::getDPIScale(), probe._fakeScale, 0.001f ), "the theme scale did not follow the window DPI" );
-                    (void)context.expect( isNear( ImGui::GetStyle().FramePadding.x, expectedPadding, 0.01f ), "frame padding stayed at the old DPI while fonts grew" );
+                    (void)context.expect( isNear( ImGui::GetStyle().FramePadding.x, expectedPadding, 0.01f ), formatToString( "%# - padding %# (expected %#, base %# at scale %#, now scale %#)", "frame padding stayed at the old DPI while fonts grew", ImGui::GetStyle().FramePadding.x, expectedPadding, probe._basePaddingX, probe._baseScale, EditorThemeUtil::getDPIScale() ).c_str() );
                     probe.restorePlatformCallback();
 #if defined( SW_PLATFORM_WINDOWS )
                     // 창 쪽에는 OS 가 보내는 것과 같은 메시지(새 DPI 와 그 비율만큼 큰 권장 사각형)를 보낸다. SendMessage 로 보내야 하며, PostMessage 로 게시한 WM_DPICHANGED 는 창 프로시저에 닿지 않는다.
