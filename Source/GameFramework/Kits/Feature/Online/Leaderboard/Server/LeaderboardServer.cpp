@@ -125,14 +125,14 @@ namespace sw
     {
         (void)host;
         if ( _pService != nullptr )
-            _pService->loadAccountStats( accountID ); // 매칭 실력이 메모리에서 읽는다
+            _pService->retainStats( accountID ); // 매칭 실력이 메모리에서 읽는다
     }
 
     void LeaderboardServer::onAccountLeft( OnlineServiceHost& host, AccountID accountID )
     {
         (void)host;
         if ( _pService != nullptr )
-            _pService->dropAccountStats( accountID );
+            _pService->releaseStats( accountID );
     }
 
     void LeaderboardServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )

@@ -1314,18 +1314,22 @@ namespace sw
         _dependencies._pStore->submit( sw::make_unique<LeaderboardStatReadWork>( this, accountID, requestTag, false ) );
     }
 
-    void LeaderboardService::loadAccountStats( AccountID accountID )
+    void LeaderboardService::retainStats( AccountID accountID )
     {
         AccountStats& stats = _mapAccountStats[accountID];
-        stats._bLoaded      = SW_FALSE;
-        stats._mapValue.clear();
+        ++stats._retainCount;
+        if ( stats._bLoaded == SW_TRUE || stats._bLoading == SW_TRUE )
+            return;
+        stats._bLoading = SW_TRUE;
         ++_pendingCount;
         _dependencies._pStore->submit( sw::make_unique<LeaderboardStatReadWork>( this, accountID, 0, true ) );
     }
 
-    void LeaderboardService::dropAccountStats( AccountID accountID )
+    void LeaderboardService::releaseStats( AccountID accountID )
     {
-        _mapAccountStats.erase( accountID );
+        const auto statsIt = _mapAccountStats.find( accountID );
+        if ( statsIt != _mapAccountStats.end() && --statsIt->second._retainCount <= 0 )
+            _mapAccountStats.erase( statsIt );
     }
 
     void LeaderboardService::applyStatCache( AccountID accountID, bool bReadOk, ServiceStoreCompletion completion, vector<LeaderboardStat>&& listStat )
@@ -1334,6 +1338,7 @@ namespace sw
         const auto statsIt = _mapAccountStats.find( accountID );
         if ( statsIt == _mapAccountStats.end() )
             return; // 그사이 떠났다
+        statsIt->second._bLoading = SW_FALSE;
         if ( bReadOk == false )
         {
             if ( completion.isCancelled() == false ) // 종료 때문에 취소된 읽기는 경고하지 않는다

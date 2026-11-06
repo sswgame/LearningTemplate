@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Server/Service/MatchQueueService.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Serialization/BitStream.h"
 
@@ -32,6 +33,7 @@ namespace sw
         , _mapLocalTicket{}
         , _mapAccountToTicket{}
         , _mapLookupToJoin{}
+        , _listRatingWait{}
         , _mapLeaseRequestToMode{}
         , _completionBuffer{}
         , _notificationBuffer{}
@@ -126,6 +128,7 @@ namespace sw
         }
         _mapModeState.clear();
         _mapLookupToJoin.clear();
+        _listRatingWait.clear(); // 통계 창은 내리지 않는다 — 먼저 내려갔을 수 있고, 내려갈 때 메모리를 비운다
         _dependencies._pRouter = nullptr;
         _dependencies._pBus    = nullptr;
     }
@@ -179,6 +182,7 @@ namespace sw
             if ( state._bAuthority != SW_FALSE )
                 placeMatches( state, nowMs );
         }
+        updateRatingWaits( nowMs );
         // 이 서버가 낸 티켓의 시한이다. 권한이 넘어가서 티켓을 잃었으면 결과가 오지 않는다
         vector<uint64> listExpired;
         for ( const auto& [ticketID, ticket] : _mapLocalTicket )
@@ -253,12 +257,7 @@ namespace sw
             _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingResult::Invalid } );
             return;
         }
-        bool bLookupPending = false;
-        for ( const auto& [lookupTag, join] : _mapLookupToJoin )
-        {
-            bLookupPending = bLookupPending || join._accountID == accountID;
-        }
-        if ( _mapAccountToTicket.count( accountID ) != 0 || bLookupPending )
+        if ( _mapAccountToTicket.count( accountID ) != 0 || isJoinPending( accountID ) )
         {
             _completionBuffer.push( MatchQueueCompletion{ requestTag, 0, MatchmakingResult::AlreadyQueued } );
             return;
@@ -271,7 +270,7 @@ namespace sw
         join._nowMs      = nowMs;
         if ( _dependencies._pPartyLobby == nullptr )
         {
-            submitTicket( join, vector<AccountID>{ accountID }, 0 );
+            prepareTicket( join, vector<AccountID>{ accountID }, 0 );
             return;
         }
         // 파티장이면 파티 전체를 넣는다. 파티 기록을 읽은 뒤(onPartyFound)에 처리한다
@@ -289,7 +288,7 @@ namespace sw
         _mapLookupToJoin.erase( joinIt );
         if ( result == MatchmakingResult::NotInParty )
         {
-            submitTicket( join, vector<AccountID>{ join._accountID }, 0 );
+            prepareTicket( join, vector<AccountID>{ join._accountID }, 0 );
             return;
         }
         if ( result != MatchmakingResult::Ok )
@@ -305,14 +304,90 @@ namespace sw
         bool bMemberQueued = party._queuedTicketID != 0;
         for ( const AccountID memberID : party._listMemberID )
         {
-            bMemberQueued = bMemberQueued || _mapAccountToTicket.count( memberID ) != 0;
+            bMemberQueued = bMemberQueued || _mapAccountToTicket.count( memberID ) != 0 || isJoinPending( memberID );
         }
         if ( bMemberQueued )
         {
             _completionBuffer.push( MatchQueueCompletion{ join._requestTag, 0, MatchmakingResult::AlreadyQueued } );
             return;
         }
-        submitTicket( join, party._listMemberID, party._partyID );
+        prepareTicket( join, party._listMemberID, party._partyID );
+    }
+
+    bool MatchQueueService::isJoinPending( AccountID accountID ) const
+    {
+        for ( const auto& [lookupTag, join] : _mapLookupToJoin )
+        {
+            if ( join._accountID == accountID )
+                return true;
+        }
+        for ( const RatingWait& wait : _listRatingWait )
+        {
+            if ( VectorUtil::contains( wait._listAccount, accountID ) )
+                return true;
+        }
+        return false;
+    }
+
+    bool MatchQueueService::isRatingLoaded( const MatchModeDefinition& mode, AccountID accountID ) const
+    {
+        int32 rating = 0;
+        return findRating( accountID, mode, rating );
+    }
+
+    void MatchQueueService::prepareTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID )
+    {
+        const MatchModeDefinition& mode = _mapMode[join._modeID];
+        RatingWait                 wait;
+        for ( const AccountID accountID : listAccount )
+        {
+            if ( isRatingLoaded( mode, accountID ) == false )
+                wait._listRetained.push_back( accountID );
+        }
+        if ( wait._listRetained.empty() || static_cast<int32>( listAccount.size() ) > mode._teamSize ) // 인원이 넘치면 기다릴 것 없이 `submitTicket` 이 거절한다
+        {
+            submitTicket( join, listAccount, partyID );
+            return;
+        }
+        for ( const AccountID accountID : wait._listRetained )
+        {
+            _dependencies._pStatSource->retainStats( accountID );
+        }
+        wait._join        = join;
+        wait._listAccount = listAccount;
+        wait._partyID     = partyID;
+        _listRatingWait.push_back( std::move( wait ) );
+    }
+
+    void MatchQueueService::releaseRetained( const RatingWait& wait )
+    {
+        for ( const AccountID accountID : wait._listRetained )
+        {
+            _dependencies._pStatSource->releaseStats( accountID );
+        }
+    }
+
+    void MatchQueueService::updateRatingWaits( UnixMilliseconds nowMs )
+    {
+        for ( size_t index = 0; index < _listRatingWait.size(); )
+        {
+            const RatingWait&          wait    = _listRatingWait[index];
+            const MatchModeDefinition& mode    = _mapMode[wait._join._modeID];
+            bool                       bLoaded = true;
+            for ( const AccountID accountID : wait._listAccount )
+            {
+                bLoaded = bLoaded && isRatingLoaded( mode, accountID );
+            }
+            if ( bLoaded == false && nowMs.count() - wait._join._nowMs.count() < MatchQueueLimit::kRatingWaitMs )
+            {
+                ++index;
+                continue;
+            }
+            const RatingWait finished = std::move( _listRatingWait[index] );
+            _listRatingWait.erase( _listRatingWait.begin() + static_cast<ptrdiff_t>( index ) );
+            submitTicket( finished._join, finished._listAccount, finished._partyID );
+            releaseRetained( finished );
+        }
     }
 
     void MatchQueueService::submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID )
@@ -643,6 +718,16 @@ namespace sw
                 continue;
             _completionBuffer.push( MatchQueueCompletion{ joinIt->second._requestTag, 0, MatchmakingResult::NotQueued } );
             _mapLookupToJoin.erase( joinIt ); // 늦게 온 파티 답(`onPartyFound`)은 찾지 못하고 버려진다
+            return true;
+        }
+        for ( size_t index = 0; index < _listRatingWait.size(); ++index )
+        {
+            if ( VectorUtil::contains( _listRatingWait[index]._listAccount, accountID ) == false )
+                continue;
+            const RatingWait dropped = std::move( _listRatingWait[index] );
+            _listRatingWait.erase( _listRatingWait.begin() + static_cast<ptrdiff_t>( index ) );
+            _completionBuffer.push( MatchQueueCompletion{ dropped._join._requestTag, 0, MatchmakingResult::NotQueued } );
+            releaseRetained( dropped );
             return true;
         }
         return false;

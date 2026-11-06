@@ -119,7 +119,7 @@ namespace sw
                 dependencies._pBus        = context._pBus;
                 dependencies._pPartyLobby = &_partyLobby;
                 dependencies._serverID    = context._serverID;
-                dependencies._pStatSource = context._kits.find<const IAccountStatSource>(); // 실력 모드의 통계이다. 순위표 키트가 없으면 실력 모드는 기동 오류다
+                dependencies._pStatSource = context._kits.find<IAccountStatSource>(); // 실력 모드의 통계이다. 순위표 키트가 없으면 실력 모드는 기동 오류다
                 if ( _queue.initialize( dependencies, _listMode ) == false )
                 {
                     outError = "matchmaking has a rated mode but the leaderboard kit (stat source) is not assembled";

@@ -536,7 +536,7 @@ SW_TEST_CASE( LeaderboardServiceTest, StatsFeedLinkedBoards )
     SW_EXPECT_EQUAL( int64( 5 ), stats._listStat[0]._value );
 }
 
-/** @brief [LeaderboardServiceTest] 접속한 계정의 통계 메모리: 읽기 전 NotLoaded, 읽은 뒤 Found · Missing, 바뀌면 같이 고치고, 떠나면 지운다. 읽기 실패는 경고하고 NotLoaded 로 남는다 */
+/** @brief [LeaderboardServiceTest] 통계 메모리: 읽기 전 NotLoaded, 읽은 뒤 Found · Missing, 바뀌면 같이 고친다. 잡은 쪽이 모두 놓아야 지운다. 읽기 실패는 경고하고 NotLoaded 로 남으며 다음 잡기가 다시 읽는다 */
 SW_TEST_CASE( LeaderboardServiceTest, AccountStatCacheFollowsConnection )
 {
     SW_EXPECT_LOG( "LeaderboardService.LeaderboardStatsAccountCould" );
@@ -546,7 +546,7 @@ SW_TEST_CASE( LeaderboardServiceTest, AccountStatCacheFollowsConnection )
 
     int64 value = 0;
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::NotLoaded );
-    rig._service.loadAccountStats( 1 );
+    rig._service.retainStats( 1 );
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::NotLoaded ); // 완료 전
     rig.pump();
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::Found );
@@ -557,13 +557,21 @@ SW_TEST_CASE( LeaderboardServiceTest, AccountStatCacheFollowsConnection )
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::Found );
     SW_EXPECT_EQUAL( int64( 1600 ), value );
 
-    rig._service.dropAccountStats( 1 );
+    rig._service.retainStats( 1 ); // 줄 서는 쪽이 같이 잡는다 — 접속이 끊겨도 남는다
+    rig._service.releaseStats( 1 );
+    SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::Found );
+    rig._service.releaseStats( 1 );
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::NotLoaded );
 
     world._database.armFault( ServiceStoreFault::RejectRead );
-    rig._service.loadAccountStats( 1 );
+    rig._service.retainStats( 1 );
     rig.pump();
     SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::NotLoaded );
+    rig._service.retainStats( 1 ); // 실패한 읽기를 다시 한다
+    rig.pump();
+    SW_EXPECT_TRUE( rig._service.findStat( 1, "rating", value ) == AccountStatLookup::Found );
+    rig._service.releaseStats( 1 );
+    rig._service.releaseStats( 1 );
 }
 
 /** @brief [LeaderboardServiceTest] 업적: 임계값을 넘으면 알림과 보상 우편이 한 번만 나가고, 다시 넘어도 그대로다 */

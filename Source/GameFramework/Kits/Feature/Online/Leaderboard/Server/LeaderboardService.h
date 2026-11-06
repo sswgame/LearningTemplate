@@ -7,7 +7,7 @@
  *          - 갱신 방식은 Best, Latest, Sum 이고 기간은 None, Daily, Weekly 이다. 기간은 `ServiceScheduler::computeLatestOccurrence` 라는 같은 규칙 하나로 구하며 기간 id 는 기간 시작 시각이다.
  *          - 통계 `lb_stat`(`<계정>/<이름>`)이 바뀌면 그 통계에 연결된 보드에 같은 값을 낸다.
  *          - 상위와 내 주변 조회는 표시 이름을 캐시 `lb/name/<계정>`(30일)에서 함께 읽는다.
- *          - 이 서버에 접속한 계정의 통계는 접속 때 읽어 메모리에 두고(`loadAccountStats`) 바뀌면 같이 고친다. 매칭 실력(`IAccountStatSource`)이 이것을 읽는다.
+ *          - 이 서버에 접속한 계정과 줄 서는 파티원의 통계는 읽어 메모리에 두고(`retainStats`) 바뀌면 같이 고친다. 매칭 실력(`IAccountStatSource`)이 이것을 읽는다.
  *          - 업적은 통계가 임계값을 넘으면 `lb_achievement` 를 "없어야 함" 조건으로 쓰고 보상 우편(`ServiceMail::stageSend`, 재원 발행, 멱등 키 `ach.<계정>.<업적>`)을 한 트랜잭션에 넣는다. 두 번 넘어도 한 번만 처리된다.
  *          - 시즌 정산은 예약 작업(`lb.settle.<보드>.<시즌 16진 8자리>`, 창 [끝, 끝 + 7일))이 한다. 점수를 모두 읽어 순위(같은 점수는 계정 id 오름차순)대로 결과 `lb_season_result`("없어야 함")와 구간 보상 우편을 15명씩 한 트랜잭션에 쓴다.
  *            결과가 이미 있는 사람은 건너뛰므로 다시 돌아도 한 번만 처리된다.
@@ -135,12 +135,10 @@ namespace sw
         /** @brief 통계를 바꿉니다. @p update 방식을 따르며 Best 는 큰 값을 씁니다. 그 통계에 연결된 보드에 같은 값을 냅니다. */
         void changeStat( AccountID accountID, string_view displayName, string_view statName, int64 value, LeaderboardUpdate update, UnixMilliseconds nowMs, uint64 requestTag );
         void readStats( AccountID accountID, uint64 requestTag );
-        /** @brief 접속한 계정의 통계를 읽어 메모리에 둡니다. 바인딩이 계정이 붙을 때 부릅니다. 읽기가 끝나기 전에는 `findStat` 이 NotLoaded 입니다. */
-        void loadAccountStats( AccountID accountID );
-        /** @brief 떠난 계정의 통계를 메모리에서 지웁니다. */
-        void dropAccountStats( AccountID accountID );
-        // IAccountStatSource
+        // IAccountStatSource. 바인딩이 계정이 붙을 때 · 떠날 때 부르고, 매칭이 다른 서버의 파티원을 줄 세우는 동안 부른다
         AccountStatLookup findStat( AccountID accountID, string_view statName, int64& outValue ) const override;
+        void              retainStats( AccountID accountID ) override;
+        void              releaseStats( AccountID accountID ) override;
 
         /** @brief 시즌 정산 작업을 등록할 예약 테이블을 지정합니다. 빌려 쓰며 `registerBoard` 전에 지정합니다. 없으면 `settleSeason` 을 부르는 쪽이 정산합니다. */
         void setScheduler( ServiceScheduler* pScheduler ) { _pScheduler = pScheduler; }
@@ -208,11 +206,13 @@ namespace sw
             LeaderboardOperation _operation{ LeaderboardOperation::Top };
         };
 
-        /** @brief 접속한 계정 하나의 통계입니다. 읽기가 끝나야 `_bLoaded` 가 켜진다. */
+        /** @brief 메모리에 올린 계정 하나의 통계입니다. 읽기가 끝나야 `_bLoaded` 가 켜진다. */
         struct AccountStats
         {
             unordered_map<string, int64> _mapValue{};
+            int32                        _retainCount{ 0 };
             uint8                        _bLoaded{ SW_FALSE };
+            uint8                        _bLoading{ SW_FALSE };
         };
 
         struct RankQuery

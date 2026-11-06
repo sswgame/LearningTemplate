@@ -47,7 +47,8 @@ namespace
     class FakeStatSource final : public IAccountStatSource
     {
     public:
-        unordered_map<AccountID, int64> _mapStat{}; ///< 음수는 Missing 이다
+        unordered_map<AccountID, int64> _mapStat{};     ///< 음수는 Missing 이다
+        unordered_map<AccountID, int32> _mapRetained{}; ///< 올려 달라고 한 수이다
 
         AccountStatLookup findStat( AccountID accountID, string_view /*statName*/, int64& outValue ) const override
         {
@@ -59,6 +60,9 @@ namespace
             outValue = loadedIt->second;
             return AccountStatLookup::Found;
         }
+
+        void retainStats( AccountID accountID ) override { ++_mapRetained[accountID]; }
+        void releaseStats( AccountID accountID ) override { --_mapRetained[accountID]; }
     };
 
     /** @brief 서버 하나입니다. 캐시 데이터와 버스 허브는 빌립니다. @p pHub 가 없으면 서버 한 대(항상 권한)입니다. */
@@ -367,7 +371,7 @@ SW_TEST_CASE( MatchQueueServiceTest, TicketTimesOutAtModeDeadline )
     SW_EXPECT_EQUAL( 0, world._server._queue.getLocalTicketCount() );
 }
 
-/** @brief [MatchQueueServiceTest] 실력: 통계를 읽지 않은 계정은 RatingUnavailable 이고 티켓이 없다. 값이 있으면 그 값, 읽었지만 없으면 초기 실력으로 묶는다 — 실력 차가 크면 묶이지 않는다 */
+/** @brief [MatchQueueServiceTest] 실력: 값이 있으면 그 값, 읽었지만 없으면 초기 실력으로 묶는다 — 실력 차가 크면 묶이지 않는다 */
 SW_TEST_CASE( MatchQueueServiceTest, RatingComesFromStatSource )
 {
     SoloWorld              world;
@@ -382,9 +386,6 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingComesFromStatSource )
     world._server.pump( kNowMs );
     world._server.tick( kNowMs );
     world._server.tick( kNowMs );
-
-    SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::RatingUnavailable );
-    SW_EXPECT_EQUAL( 0, world._server._queue.getLocalTicketCount() );
 
     stats._mapStat[kAlice] = 3000;
     stats._mapStat[kBob]   = -1; // 한 번도 바뀌지 않았다 — 초기 실력 1500
@@ -664,4 +665,61 @@ SW_TEST_CASE( MatchQueueServiceTest, LeavingDuringPartyLookupLeavesNoTicket )
     party.pump();
     SW_EXPECT_TRUE( party._world._server.takeCompletion()._result == MatchmakingResult::Ok );
     SW_EXPECT_EQUAL( 1, queue.getLocalTicketCount() );
+}
+
+/** @brief [MatchQueueServiceTest] 메모리에 통계가 없는 계정은 올려 달라고 한 뒤 기다렸다 줄을 선다 — 다른 서버의 파티원도 실력 모드에 설 수 있다. 끝나면 내려 달라고 한다 */
+SW_TEST_CASE( MatchQueueServiceTest, MissingRatingIsLoadedBeforeQueueing )
+{
+    SoloWorld              world;
+    FakeStatSource         stats;
+    MatchQueueDependencies dependencies = world._server.makeDependencies();
+    dependencies._pStatSource           = &stats;
+    SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode( "duel", 1, "rating" ) } ) );
+    MatchQueueService& queue = world._server._queue;
+
+    queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+    SW_EXPECT_EQUAL( 1, stats._mapRetained[kAlice] );
+    vector<MatchQueueCompletion> listCompletion;
+    queue.drainCompletions( listCompletion );
+    SW_EXPECT_TRUE( listCompletion.empty() ); // 기다린다
+    queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 8 );
+    SW_EXPECT_TRUE( world._server.takeCompletion()._result == MatchmakingResult::AlreadyQueued );
+
+    world._server.tick( kNowMs + 1 );
+    queue.drainCompletions( listCompletion );
+    SW_EXPECT_TRUE( listCompletion.empty() ); // 아직 읽지 못했다
+
+    stats._mapStat[kAlice] = 1600;
+    world._server.tick( kNowMs + 2 );
+    const MatchQueueCompletion joined = world._server.takeCompletion();
+    SW_EXPECT_TRUE( joined._result == MatchmakingResult::Ok );
+    SW_EXPECT_EQUAL( uint64( 7 ), joined._requestTag );
+    SW_EXPECT_EQUAL( 1, queue.getQueuedTicketCount( "duel" ) );
+    SW_EXPECT_EQUAL( 0, stats._mapRetained[kAlice] );
+}
+
+/** @brief [MatchQueueServiceTest] 시한까지 통계를 읽지 못하면 RatingUnavailable 이고 티켓이 없다. 기다리는 동안 떠나면 NotQueued 로 끝나고 내려 달라고 한다 */
+SW_TEST_CASE( MatchQueueServiceTest, RatingWaitGivesUpOrIsDropped )
+{
+    SoloWorld              world;
+    FakeStatSource         stats;
+    MatchQueueDependencies dependencies = world._server.makeDependencies();
+    dependencies._pStatSource           = &stats;
+    SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode( "duel", 1, "rating" ) } ) );
+    MatchQueueService& queue = world._server._queue;
+
+    queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+    world._server.tick( kNowMs + MatchQueueLimit::kRatingWaitMs );
+    SW_EXPECT_TRUE( world._server.takeCompletion()._result == MatchmakingResult::RatingUnavailable );
+    SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() );
+    SW_EXPECT_EQUAL( 0, stats._mapRetained[kAlice] );
+
+    queue.joinQueue( kBob, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
+    SW_EXPECT_EQUAL( 1, stats._mapRetained[kBob] );
+    queue.removeAccount( kBob );
+    SW_EXPECT_TRUE( world._server.takeCompletion()._result == MatchmakingResult::NotQueued );
+    SW_EXPECT_EQUAL( 0, stats._mapRetained[kBob] );
+    stats._mapStat[kBob] = 1500;
+    world._server.tick( kNowMs + 1 );
+    SW_EXPECT_EQUAL( 0, queue.getLocalTicketCount() ); // 떠난 사람의 티켓이 생기지 않는다
 }

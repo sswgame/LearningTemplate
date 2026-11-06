@@ -4,7 +4,8 @@
  * @details - 권한: 모드마다 임대 `mm/lease/<모드>`(값은 서버 id, 10초)를 없을 때만 잡는다. 잡은 서버는 3초마다 자기 값일 때만 연장한다. 버스가 없으면(서버 한 대) 항상 권한을 가진다.
  *          - 백필: 게임 서버가 빈 슬롯(`MatchBackfillRequest`, 버스 `mm.backfill.<모드>`)를 보내면 권한 매처가 새 경기보다 먼저 채운다. 채운 사람은 같은 경기 id 의 배정으로
  *            게임 서버(배정 주제)와 티켓을 낸 서버(결과 주제)에 알린다.
- *          - 티켓 흐름: 계정이 접속한 서버가 티켓을 만든다. 파티장이면 파티 전체의 티켓이며 실력은 모드의 실력 통계를 순위표 키트의 통계 창(`IAccountStatSource`)에서 읽는다. 아직 읽지 않은 계정이 있으면 RatingUnavailable 이다.
+ *          - 티켓 흐름: 계정이 접속한 서버가 티켓을 만든다. 파티장이면 파티 전체의 티켓이며 실력은 모드의 실력 통계를 순위표 키트의 통계 창(`IAccountStatSource`)에서 읽는다.
+ *            메모리에 없는 계정(다른 서버의 파티원, 막 접속한 사람)은 올려 달라고 한 뒤 3초까지 기다리고, 그래도 없으면 RatingUnavailable 이다.
  *            권한이 있으면 바로 매처에 넣고, 없으면 버스 `mm.queue.<모드>` 로 보낸다. 빠지기는 `mm.cancel.<모드>` 로 보낸다.
  *          - 배정: 경기가 만들어지면 기반 계층의 `ServerRegistryReader` 로 모드의 서버 종류, 경기 지역, 인원 슬롯에 맞는 서버를 고른다.
  *            게임 서버에는 `mm.assign.<서버>`(접속할 사람 목록)로, 티켓을 낸 서버에는 `mm.result.<서버>` 로 결과를 보낸다. 결과를 받은 서버가 멤버에게 알린다.
@@ -46,12 +47,12 @@ namespace sw
     /** @brief 빌려 쓰는 객체들입니다. 대기열보다 오래 살아야 합니다. */
     struct MatchQueueDependencies
     {
-        EphemeralStoreRouter*     _pRouter{ nullptr };     ///< 필수이다. 임대와 서버 목록에 쓴다
-        ServerBus*                _pBus{ nullptr };        ///< 서버가 한 대이면 null 이며 이 서버가 항상 권한을 가진다
-        PartyLobbyService*        _pPartyLobby{ nullptr }; ///< 파티 티켓과 로비 다시 열기에 쓴다. 없으면 혼자 티켓만 다룬다
-        const IAccountStatSource* _pStatSource{ nullptr }; ///< 실력 모드(`_ratingStat` 이 있는 모드)가 있으면 필수이다. 클라이언트는 실력을 보내지 않는다
-        uint64                    _serverID{ 1 };          ///< 32비트 안의 값이다. 티켓과 경기 id 의 위쪽 32비트가 된다
-        int64                     _registryRefreshPeriodMs{ 2000 };
+        EphemeralStoreRouter* _pRouter{ nullptr };     ///< 필수이다. 임대와 서버 목록에 쓴다
+        ServerBus*            _pBus{ nullptr };        ///< 서버가 한 대이면 null 이며 이 서버가 항상 권한을 가진다
+        PartyLobbyService*    _pPartyLobby{ nullptr }; ///< 파티 티켓과 로비 다시 열기에 쓴다. 없으면 혼자 티켓만 다룬다
+        IAccountStatSource*   _pStatSource{ nullptr }; ///< 실력 모드(`_ratingStat` 이 있는 모드)가 있으면 필수이다. 클라이언트는 실력을 보내지 않는다
+        uint64                _serverID{ 1 };          ///< 32비트 안의 값이다. 티켓과 경기 id 의 위쪽 32비트가 된다
+        int64                 _registryRefreshPeriodMs{ 2000 };
     };
 } // namespace sw
 
@@ -64,6 +65,7 @@ namespace sw
         static constexpr int64  kLeaseRenewMs     = 3000; ///< 임대를 연장하거나 잡아 보는 주기이다
         static constexpr int64  kNoServerGiveUpMs = 30000;
         static constexpr int64  kResultGraceMs    = 10000;
+        static constexpr int64  kRatingWaitMs     = 3000;          ///< 줄 서는 사람의 통계를 읽기를 기다리는 시간이다. 넘으면 RatingUnavailable 이다
         static constexpr uint64 kLobbyMatchBit    = 0x80000000ull; ///< 로비 경기 id 의 아래쪽 32비트 중 첫 비트이다. 매처의 순번과 겹치지 않게 한다
     };
 } // namespace sw
@@ -186,8 +188,24 @@ namespace sw
             UnixMilliseconds _nowMs{ 0 };
         };
 
+        /** @brief 통계를 읽기를 기다리는 줄 서기입니다. 다른 서버의 파티원은 이 서버 메모리에 통계가 없습니다. */
+        struct RatingWait
+        {
+            PendingJoin       _join{};
+            vector<AccountID> _listAccount{};
+            vector<AccountID> _listRetained{}; ///< 여기서 올려 달라고 한 계정이다. 끝나면 내린다
+            uint64            _partyID{ 0 };
+        };
+
         void onPartyFound( uint64 lookupTag, MatchmakingResult result, const PartySnapshot& party );
-        /** @brief 파티 찾기를 기다리는 그 계정의 줄 서기를 NotQueued 로 끝냅니다. 있었으면 true 입니다. */
+        /** @brief 통계가 모두 있으면 티켓을 내고, 아니면 올려 달라고 한 뒤 기다립니다. */
+        void prepareTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
+        /** @brief 다 읽었거나 시한이 지난 줄 서기의 티켓을 냅니다. 시한이 지났으면 `submitTicket` 이 RatingUnavailable 로 끝냅니다. */
+        void               updateRatingWaits( UnixMilliseconds nowMs );
+        [[nodiscard]] bool isRatingLoaded( const MatchModeDefinition& mode, AccountID accountID ) const;
+        void               releaseRetained( const RatingWait& wait );
+        [[nodiscard]] bool isJoinPending( AccountID accountID ) const;
+        /** @brief 파티 찾기나 통계 읽기를 기다리는, 그 계정이 든 줄 서기를 NotQueued 로 끝냅니다. 있었으면 true 입니다. */
         [[nodiscard]] bool dropPendingJoin( AccountID accountID );
         void               submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
         /** @brief 백필로 채운 티켓을 게임 서버(배정)와 티켓을 낸 서버(결과)에 알립니다. */
@@ -210,6 +228,7 @@ namespace sw
         unordered_map<uint64, LocalTicket>         _mapLocalTicket; ///< 이 서버가 낸 티켓이다
         unordered_map<AccountID, uint64>           _mapAccountToTicket;
         unordered_map<uint64, PendingJoin>         _mapLookupToJoin; ///< 파티 찾기를 기다리는 줄 서기 요청이다
+        vector<RatingWait>                         _listRatingWait;
         unordered_map<uint64, string>              _mapLeaseRequestToMode;
         EventBuffer<MatchQueueCompletion>          _completionBuffer;
         EventBuffer<MatchQueueNotification>        _notificationBuffer;

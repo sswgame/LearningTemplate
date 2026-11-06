@@ -40,5 +40,12 @@ namespace sw
 
         /** @brief @p accountID 의 통계 @p statName 을 찾습니다. Found 일 때만 @p outValue 를 채웁니다. */
         virtual AccountStatLookup findStat( AccountID accountID, string_view statName, int64& outValue ) const = 0;
+        /**
+         * @brief 계정의 통계를 메모리에 올려 둡니다. 접속한 계정과, 다른 서버에 접속한 파티원을 줄 세울 때 부릅니다. 부른 만큼 `releaseStats` 를 부릅니다.
+         * @details 저장소에서 읽으므로 곧바로 올라오지 않습니다. `findStat` 이 NotLoaded 가 아니면 다 읽은 것입니다. 앞선 읽기가 실패했으면 다시 읽습니다.
+         */
+        virtual void retainStats( AccountID accountID ) = 0;
+        /** @brief 아무도 잡고 있지 않으면 메모리에서 지웁니다. */
+        virtual void releaseStats( AccountID accountID ) = 0;
     };
 } // namespace sw
