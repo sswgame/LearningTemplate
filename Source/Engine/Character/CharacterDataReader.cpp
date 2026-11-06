@@ -14,10 +14,6 @@
 
 namespace sw
 {
-} // namespace sw
-
-namespace sw
-{
     CharacterDataReader::CharacterDataReader( string_view sourceName )
         : _sourceName{ sourceName.empty() ? string_view( "<memory>" ) : sourceName }
         , _listError{}

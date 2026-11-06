@@ -146,6 +146,12 @@ namespace sw
             listKept.push_back( std::move( animation ) );
         }
         _listAnimation = std::move( listKept );
+        // 이름으로 찾으므로(`findAnimation`) 같은 이름의 뒤쪽 구간은 재생할 길이 없다. 에디터는 막으니 손으로 고친 파일에서만 나온다.
+        for ( const SpriteClipAnimation& animation : _listAnimation )
+        {
+            if ( findAnimation( animation._name ) != &animation )
+                SW_LOG_WARNING_ID( "SpriteClip.DuplicateAnimationName", "Sprite clip '%#': animation '%#' is listed twice - only the first can play", sourceLabel, animation._name );
+        }
         if ( clampedCount > 0 )
             SW_LOG_WARNING_ID( "Animation.SpriteClipRangeClamped", "Sprite clip '%#': %# animation range(s) fell outside the %# frame(s) and were clamped or dropped", sourceLabel, clampedCount,
                                frameCount );
