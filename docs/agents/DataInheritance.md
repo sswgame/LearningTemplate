@@ -125,7 +125,7 @@ if ( DataInheritance::findBasePath( text ).empty() == false && DataInheritance::
 
 읽기는 `XMLDocument::loadResource` · `parseData` 한 곳이 펼친다. 그래서 `XMLCatalog` · `AppearanceDatabase` · 데이터 종류 검증이 모두 펼친 결과만 본다. 항목 id 를 바꾸지 않으므로 세이브는 그대로다. 팩 쿠커도 같은 함수로 펼쳐 담는다. 쿠킹본에 `_base` 가 남으면 읽기가 모르는 칸 오류를 낸다.
 
-에디터 카탈로그 창(`CatalogDocument`)은 원문을 고치므로 적은 칸만 저장한다. 물려받은 칸은 흐린 글로 보이고, 부모와 같은 값을 적으면 그 칸을 지운다. 행 메뉴의 Create Variant 가 이 행을 부모로 하는 새 행을 만든다.
+에디터 카탈로그 창(`CatalogDocument`)은 원문을 고치므로 적은 칸만 저장한다. 물려받은 칸은 흐린 글로 보이고, 부모와 같은 값을 적으면 그 칸을 지운다. 행의 Variant 단추가 이 행을 부모로 하는 새 행을 만든다. 표는 행의 속성만 보이므로 물려받은 자식 원소(`<Part>`)는 글 상자에서 고친다.
 
 같은 메시를 머티리얼만 달리한 아이템은 외형 항목을 물려받아 `material` 만 적는다. 소켓 프리팹 부품은 프리팹의 모든 메시에 그 머티리얼을 입히고, 쉬는 부품 풀은 머티리얼별로 나뉜다. 꾸미기로 고르는 변형은 `<MaterialVariant>` 다. 시나리오: `game/shooter3d/automation/showcase/itemvariant`.
 

@@ -10,6 +10,8 @@
 #include "Editor/Panels/Catalog/Model/CatalogTableEdit.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+
 using namespace sw;
 using namespace sw::editor;
 

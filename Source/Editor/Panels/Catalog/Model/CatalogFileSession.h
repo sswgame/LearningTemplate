@@ -11,6 +11,8 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+
 namespace sw::editor
 {
     /** @class CatalogFileSession @brief 파일 머리말을 참고하세요. */

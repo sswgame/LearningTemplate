@@ -13,6 +13,8 @@
 #include "Editor/Panels/Catalog/Model/CatalogInheritanceView.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+
 namespace sw::editor
 {
     /**

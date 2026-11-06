@@ -6,6 +6,8 @@
 
 #include "Editor/Common/Widgets/Model/EditorListFilter.h"
 
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+
 namespace sw::editor
 {
     namespace
