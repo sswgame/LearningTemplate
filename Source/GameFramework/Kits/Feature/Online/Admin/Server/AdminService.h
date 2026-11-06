@@ -8,17 +8,14 @@
  *          - 운영 포트는 GM 전용 호스트로 따로 두는 것을 권한다. 사설망과 TLS 를 쓴다. 첫 관리자는 서버 조립 단계가 기동할 때 `seedRole` 로 넣는다.
  */
 #pragma once
-#include "Core/Container/IDAllocator.h"
-#include "Core/Container/vector.h"
-#include "Core/Delegate/Delegate.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Network/Message/NetRequest.h"
 #include "Core/Time/TimePoint.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Admin/Runtime/AdminProtocol.h"
-#include "GameFramework/Runtime/Online/Observability/ServiceMetrics.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/ServiceServerCallTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
@@ -51,11 +48,25 @@ namespace sw
 
 namespace sw
 {
+    /** @brief GM 명령 하나가 응답을 기다리는 동안 드는 칸입니다(호출 표의 키트 칸). 저장소 완료 뒤 세션 끊기 · 넘기기 · 알림이 읽는다. */
+    struct AdminCallExtra
+    {
+        UnixMilliseconds _nowMs{ 0 };
+        AdminRequest     _request{}; ///< 점검 · 공지 · 라이브 이벤트 명령만 쓴다. 등급 확인 뒤 그 키트에 넘긴다
+        AccountID        _adminID{ kInvalidAccountID };
+        AccountID        _targetID{ kInvalidAccountID };
+        uint16           _method{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @class AdminService @brief GM 명령 처리기입니다. */
     class SW_KIT_SERVER_API AdminService final : public IOnlineServerService
     {
     public:
-        using ReplyDelegate = Delegate<void( const AdminReply& )>;
+        using CallTable     = ServiceServerCallTable<AdminReply, AdminProtocol::MessageTypes, AdminCallExtra>;
+        using ReplyDelegate = CallTable::ReplyDelegate;
 
         AdminService();
         ~AdminService() override;
@@ -84,41 +95,23 @@ namespace sw
         /** @brief 작업의 `complete` 가 호출합니다. */
         void  completeCall( uint64 callID, AdminReply& inoutReply );
         void  completeSeed( AdminResult result, ServiceStoreCompletion completion );
-        int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
+        int32 getPendingCallCount() const { return _calls.getCount(); }
 
     private:
-        struct PendingCall
-        {
-            ReplyDelegate      _onReply{};
-            NetRequestToken    _token{};
-            OnlineServiceHost* _pHost{ nullptr };
-            uint64             _callID{ 0 };
-            int64              _receivedNanoseconds{ 0 };
-            UnixMilliseconds   _nowMs{ 0 };
-            AdminRequest       _request{}; ///< 점검과 공지 명령만 쓴다. 등급 확인 뒤 서버 디렉터리 키트에 넘긴다
-            AccountID          _adminID{ kInvalidAccountID };
-            AccountID          _targetID{ kInvalidAccountID };
-            int32              _methodIndex{ 0 };
-            uint16             _method{ 0 };
-        };
-
-        void startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, PendingCall pending );
+        void startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, const CallTable::Origin& origin );
         /** @brief 등급을 확인한 점검과 공지 명령을 서버 디렉터리 키트에 넘깁니다. 넘겼으면 true 이며 완료는 `update` 가 회수한다. */
-        [[nodiscard]] bool forwardDirectoryCall( const PendingCall& pending );
+        [[nodiscard]] bool forwardDirectoryCall( const CallTable::Call& call );
         /** @brief 등급을 확인한 라이브 이벤트 명령을 라이브 운영 키트에 넘깁니다. 목록은 바로 @p inoutReply 에 채우고 false, 바꾸기는 넘기고 true 입니다. */
-        [[nodiscard]] bool forwardLiveEventCall( const PendingCall& pending, AdminReply& inoutReply );
+        [[nodiscard]] bool forwardLiveEventCall( const CallTable::Call& call, AdminReply& inoutReply );
         /** @brief 넘긴 키트(서버 디렉터리, 라이브 운영)의 완료를 거두어 응답합니다. */
         void pollForwardedCompletions();
         /** @brief 넘긴 명령 하나를 그 결과로 끝냅니다. */
         void finishForwardedCall( uint64 callID, AdminResult result );
-        void finishCall( size_t pendingIndex, const AdminReply& reply );
 
     private:
-        vector<PendingCall> _listPendingCall;
-        ServiceMetrics      _metrics;
-        AdminServiceConfig  _settings;
-        IServiceStore*      _pStore;
-        IDAllocator<uint64> _callIDAllocator;
-        int32               _pendingSeedCount;
+        CallTable          _calls;
+        AdminServiceConfig _settings;
+        IServiceStore*     _pStore;
+        int32              _pendingSeedCount;
     };
 } // namespace sw

@@ -3,9 +3,7 @@
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminService.h"
 
 #include "Core/Serialization/BitStream.h"
-#include "Core/Time/MonotonicClock.h"
 
-#include "Engine/Observability/MetricRegistry.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Kits/Feature/Online/Admin/Server/AdminStoreLogic.h"
@@ -73,18 +71,16 @@ namespace sw
 namespace sw
 {
     AdminService::AdminService()
-        : _listPendingCall{}
-        , _metrics{}
+        : _calls{}
         , _settings{}
         , _pStore{ nullptr }
-        , _callIDAllocator{}
         , _pendingSeedCount{ 0 }
     {
     }
 
     AdminService::~AdminService()
     {
-        SW_ASSERT( _listPendingCall.empty() );
+        SW_ASSERT( _calls.isEmpty() );
     }
 
     bool AdminService::initialize( IServiceStore* pStore, const AdminServiceConfig& settings )
@@ -96,7 +92,7 @@ namespace sw
         }
         _pStore   = pStore;
         _settings = settings;
-        _metrics.initialize<AdminMethodName, AdminResult>( settings._pMetricRegistry, "admin" );
+        _calls.initialize<AdminMethodName, AdminResult>( settings._pMetricRegistry, "admin" );
         return true;
     }
 
@@ -105,36 +101,28 @@ namespace sw
         // 넘긴 점검과 공지 명령은 서버 디렉터리 키트의 저장 완료 뒤에 끝나므로 회수할 때마다 그 완료도 회수한다
         ServiceStoreUtil::drainUntilIdle(
             _pStore, [this]()
-        { return _listPendingCall.empty() && _pendingSeedCount <= 0; }, [this]()
+        { return _calls.isEmpty() && _pendingSeedCount <= 0; }, [this]()
         { pollForwardedCompletions(); } );
-        if ( _listPendingCall.empty() == false )
-        {
-            SW_LOG_ERROR_ID( "AdminService.AdminServiceShutDownCalls", "AdminService shut down with %# calls still pending", _listPendingCall.size() );
-            _listPendingCall.clear();
-        }
+        _calls.abandonAll();
         _pStore = nullptr;
     }
 
     void AdminService::submitCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, ReplyDelegate onReply )
     {
-        PendingCall pending;
-        pending._onReply = onReply;
-        startCall( adminID, method, request, idempotencyKey, nowMs, pending );
+        startCall( adminID, method, request, idempotencyKey, nowMs, CallTable::Origin::fromDelegate( onReply ) );
     }
 
-    void AdminService::startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, PendingCall pending )
+    void AdminService::startCall( AccountID adminID, uint16 method, const AdminRequest& request, const NetIdempotencyKey& idempotencyKey, UnixMilliseconds nowMs, const CallTable::Origin& origin )
     {
-        pending._callID              = _callIDAllocator.allocate();
-        pending._receivedNanoseconds = MonotonicClock::nowNanoseconds(); // 예외 — 지연 지표는 실제 처리 시간을 잰다(가짜 시각으로 재면 뜻이 없다, 프로파일러와 같은 자리)
-        pending._nowMs               = nowMs;                            // 요청의 시각은 필수 인자다 — 마지막 틱 시각으로 메우지 않는다
-        pending._targetID            = request._accountID;
-        pending._adminID             = adminID;
-        pending._methodIndex         = AdminMethod::toIndex( method );
-        pending._method              = method;
+        AdminCallExtra extra;
+        extra._nowMs    = nowMs; // 요청의 시각은 필수 인자다 — 마지막 틱 시각으로 메우지 않는다
+        extra._targetID = request._accountID;
+        extra._adminID  = adminID;
+        extra._method   = method;
         if ( AdminMethod::isForwardedMethod( method ) )
-            pending._request = request;
-        _listPendingCall.push_back( pending );
-        const size_t pendingIndex = _listPendingCall.size() - 1;
+            extra._request = request;
+        const int32  methodIndex = AdminMethod::toIndex( method );
+        const uint64 callID      = _calls.open( origin, methodIndex, extra );
 
         AdminCommand command;
         command._request    = request;
@@ -143,7 +131,7 @@ namespace sw
         command._adminID    = adminID;
         command._keyHigh    = idempotencyKey._high;
         command._keyLow     = idempotencyKey._low;
-        command._nowMs      = pending._nowMs.count();
+        command._nowMs      = nowMs.count();
         command._method     = method;
 
         AdminReply refused;
@@ -152,14 +140,14 @@ namespace sw
             refused._result = AdminResult::Unavailable;
         else if ( adminID == kInvalidAccountID )
             refused._result = AdminResult::NotSignedIn;
-        else if ( pending._methodIndex < 0 )
+        else if ( methodIndex < 0 )
             refused._result = AdminResult::Forbidden; // 모르는 명령이므로 누구도 가질 수 없는 등급이 필요하다
         if ( refused._result != AdminResult::Ok )
         {
-            finishCall( pendingIndex, refused );
+            (void)_calls.finish( callID, refused );
             return;
         }
-        _pStore->submit( make_unique<AdminCommandWork>( this, command, pending._callID ) );
+        _pStore->submit( make_unique<AdminCommandWork>( this, command, callID ) );
     }
 
     void AdminService::seedRole( AccountID accountID, AdminRole role, UnixMilliseconds nowMs )
@@ -175,7 +163,7 @@ namespace sw
     {
         (void)nowMs; // 요청마다 시각을 인자로 받으므로 틱 시각을 들고 있지 않는다
         pollForwardedCompletions();
-        _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
+        _calls.publishPendingCount();
     }
 
     void AdminService::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
@@ -186,10 +174,7 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
         }
-        PendingCall pending;
-        pending._pHost = &host;
-        pending._token = context._token;
-        startCall( context._accountID, context._method, request, context._idempotencyKey, context._nowMs, pending );
+        startCall( context._accountID, context._method, request, context._idempotencyKey, context._nowMs, CallTable::Origin::fromHost( host, context._token ) );
     }
 
     void AdminService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
@@ -200,48 +185,46 @@ namespace sw
 
     void AdminService::completeCall( uint64 callID, AdminReply& inoutReply )
     {
-        for ( size_t pendingIndex = 0; pendingIndex < _listPendingCall.size(); ++pendingIndex )
+        const CallTable::Call* pCall = _calls.find( callID );
+        if ( pCall == nullptr )
+            return;                                          // 표가 경고를 남겼다
+        const CallTable::Call call                 = *pCall; // 알림 · 넘기기가 표를 건드려도 칸이 남게 복사한다
+        const AdminCallExtra& pending              = call._extra;
+        const bool            bLookupWithDirectory = pending._method == AdminMethod::kLookupAccount && inoutReply._result == AdminResult::Ok && _settings._pDirectory != nullptr;
+        if ( bLookupWithDirectory ) // 신원은 저장소 조회가 채웠다(이름으로 찾았으면 계정 id 도). 접속 여부만 이 프로세스로 본다
+            inoutReply._bOnline = _settings._pDirectory->isAccountOnline( inoutReply._identity._accountID ) ? SW_TRUE : SW_FALSE;
+        const bool bRevoke = inoutReply._result == AdminResult::Ok && inoutReply._bRevokeSessions == SW_TRUE && inoutReply._bReplayed == SW_FALSE;
+        if ( bRevoke && _settings._pSessionControl != nullptr )
         {
-            const PendingCall& pending = _listPendingCall[pendingIndex];
-            if ( pending._callID != callID )
-                continue;
-            const bool bLookupWithDirectory = pending._method == AdminMethod::kLookupAccount && inoutReply._result == AdminResult::Ok && _settings._pDirectory != nullptr;
-            if ( bLookupWithDirectory ) // 신원은 저장소 조회가 채웠다(이름으로 찾았으면 계정 id 도). 접속 여부만 이 프로세스로 본다
-                inoutReply._bOnline = _settings._pDirectory->isAccountOnline( inoutReply._identity._accountID ) ? SW_TRUE : SW_FALSE;
-            const bool bRevoke = inoutReply._result == AdminResult::Ok && inoutReply._bRevokeSessions == SW_TRUE && inoutReply._bReplayed == SW_FALSE;
-            if ( bRevoke && _settings._pSessionControl != nullptr )
-            {
-                const string_view reasonCode = inoutReply._sanction._reasonCode.empty() ? string_view( "sanction.suspended" ) : string_view( inoutReply._sanction._reasonCode );
-                _settings._pSessionControl->revokeAccountSessions( pending._targetID, reasonCode, pending._nowMs );
-            }
-            const bool bForwardToDirectory = AdminMethod::isDirectoryMethod( pending._method ) && inoutReply._result == AdminResult::Ok;
-            if ( bForwardToDirectory )
-            {
-                if ( forwardDirectoryCall( pending ) )
-                    return; // 서버 디렉터리 키트의 완료가 응답한다
-                inoutReply._result = AdminResult::Unavailable;
-            }
-            const bool bForwardToLiveOps = AdminMethod::isLiveEventMethod( pending._method ) && inoutReply._result == AdminResult::Ok;
-            if ( bForwardToLiveOps && forwardLiveEventCall( pending, inoutReply ) )
-                return; // 라이브 운영 키트의 완료가 응답한다
-            const bool bBalanceChanged = pending._method == AdminMethod::kAdjustAsset && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
-            if ( bBalanceChanged && _settings._pBalanceNotice != nullptr )
-                _settings._pBalanceNotice->notifyBalancesChanged( pending._targetID, inoutReply._listBalance ); // 대상 계정이 접속해 있으면 지갑이 바로 맞는다
-            const bool bSanctionChanged = pending._method == AdminMethod::kSetSanction && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
-            if ( bSanctionChanged && _settings._pBus != nullptr )
-                (void)ServiceSanctionBus::kChangedTopic.publish( *_settings._pBus, ServiceSanctionChanged{ pending._targetID } ); // 실패는 발행이 로그로 남겼다. 채팅은 묵힘 시한 안에 다시 읽는다
-            finishCall( pendingIndex, inoutReply );
-            return;
+            const string_view reasonCode = inoutReply._sanction._reasonCode.empty() ? string_view( "sanction.suspended" ) : string_view( inoutReply._sanction._reasonCode );
+            _settings._pSessionControl->revokeAccountSessions( pending._targetID, reasonCode, pending._nowMs );
         }
-        SW_LOG_WARNING_ID( "AdminService.AdminServiceCompletedUnknownCall", "AdminService completed an unknown call %#", callID );
+        const bool bForwardToDirectory = AdminMethod::isDirectoryMethod( pending._method ) && inoutReply._result == AdminResult::Ok;
+        if ( bForwardToDirectory )
+        {
+            if ( forwardDirectoryCall( call ) )
+                return; // 서버 디렉터리 키트의 완료가 응답한다
+            inoutReply._result = AdminResult::Unavailable;
+        }
+        const bool bForwardToLiveOps = AdminMethod::isLiveEventMethod( pending._method ) && inoutReply._result == AdminResult::Ok;
+        if ( bForwardToLiveOps && forwardLiveEventCall( call, inoutReply ) )
+            return; // 라이브 운영 키트의 완료가 응답한다
+        const bool bBalanceChanged = pending._method == AdminMethod::kAdjustAsset && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
+        if ( bBalanceChanged && _settings._pBalanceNotice != nullptr )
+            _settings._pBalanceNotice->notifyBalancesChanged( pending._targetID, inoutReply._listBalance ); // 대상 계정이 접속해 있으면 지갑이 바로 맞는다
+        const bool bSanctionChanged = pending._method == AdminMethod::kSetSanction && inoutReply._result == AdminResult::Ok && inoutReply._bReplayed == SW_FALSE;
+        if ( bSanctionChanged && _settings._pBus != nullptr )
+            (void)ServiceSanctionBus::kChangedTopic.publish( *_settings._pBus, ServiceSanctionChanged{ pending._targetID } ); // 실패는 발행이 로그로 남겼다. 채팅은 묵힘 시한 안에 다시 읽는다
+        (void)_calls.finish( callID, inoutReply );
     }
 
-    bool AdminService::forwardDirectoryCall( const PendingCall& pending )
+    bool AdminService::forwardDirectoryCall( const CallTable::Call& call )
     {
         IServerDirectoryControl* const pControl = _settings._pDirectoryControl;
         if ( pControl == nullptr )
             return false;
-        const AdminRequest& request = pending._request;
+        const AdminCallExtra& pending = call._extra;
+        const AdminRequest&   request = pending._request;
         switch ( pending._method )
         {
             case AdminMethod::kSetMaintenance:
@@ -252,12 +235,12 @@ namespace sw
                 change._messageKey         = request._messageKey;
                 change._startMs            = request._startMs;
                 change._endMs              = request._endMs;
-                pControl->setMaintenance( change, pending._adminID, request._memo, pending._nowMs, pending._callID );
+                pControl->setMaintenance( change, pending._adminID, request._memo, pending._nowMs, call._callID );
                 return true;
             }
             case AdminMethod::kClearMaintenance:
             {
-                pControl->clearMaintenance( request._scope, pending._adminID, request._memo, pending._nowMs, pending._callID );
+                pControl->clearMaintenance( request._scope, pending._adminID, request._memo, pending._nowMs, call._callID );
                 return true;
             }
             case AdminMethod::kPostNotice:
@@ -269,12 +252,12 @@ namespace sw
                 change._endMs        = request._endMs;
                 change._priority     = request._priority;
                 change._bLiteralText = request._bLiteralText;
-                pControl->postNotice( change, pending._adminID, pending._nowMs, pending._callID );
+                pControl->postNotice( change, pending._adminID, pending._nowMs, call._callID );
                 return true;
             }
             case AdminMethod::kRemoveNotice:
             {
-                pControl->removeNotice( request._noticeID, pending._adminID, pending._nowMs, pending._callID );
+                pControl->removeNotice( request._noticeID, pending._adminID, pending._nowMs, call._callID );
                 return true;
             }
             default:
@@ -284,7 +267,7 @@ namespace sw
         }
     }
 
-    bool AdminService::forwardLiveEventCall( const PendingCall& pending, AdminReply& inoutReply )
+    bool AdminService::forwardLiveEventCall( const CallTable::Call& call, AdminReply& inoutReply )
     {
         ILiveEventControl* const pControl = _settings._pLiveEventControl;
         if ( pControl == nullptr )
@@ -292,7 +275,8 @@ namespace sw
             inoutReply._result = AdminResult::Unavailable;
             return false;
         }
-        const AdminRequest& request = pending._request;
+        const AdminCallExtra& pending = call._extra;
+        const AdminRequest&   request = pending._request;
         if ( pending._method == AdminMethod::kListLiveEvents )
         {
             vector<string> listJSON;
@@ -307,24 +291,17 @@ namespace sw
             return false;
         }
         if ( pending._method == AdminMethod::kPutLiveEvent )
-            pControl->putEventJSON( request._eventJSON, pending._adminID, request._memo, pending._nowMs, pending._callID );
+            pControl->putEventJSON( request._eventJSON, pending._adminID, request._memo, pending._nowMs, call._callID );
         else
-            pControl->removeEvent( request._eventID, pending._adminID, request._memo, pending._nowMs, pending._callID );
+            pControl->removeEvent( request._eventID, pending._adminID, request._memo, pending._nowMs, call._callID );
         return true;
     }
 
     void AdminService::finishForwardedCall( uint64 callID, AdminResult result )
     {
-        for ( size_t pendingIndex = 0; pendingIndex < _listPendingCall.size(); ++pendingIndex )
-        {
-            if ( _listPendingCall[pendingIndex]._callID != callID )
-                continue;
-            AdminReply reply;
-            reply._result = result;
-            finishCall( pendingIndex, reply );
-            return;
-        }
-        SW_LOG_WARNING_ID( "AdminService.AdminServiceGotForwardedCompletion", "AdminService got a forwarded completion for an unknown call %#", callID );
+        AdminReply reply;
+        reply._result = result;
+        (void)_calls.finish( callID, reply ); // 모르는 id 는 표가 경고한다
     }
 
     void AdminService::pollForwardedCompletions()
@@ -367,19 +344,5 @@ namespace sw
         --_pendingSeedCount;
         if ( result != AdminResult::Ok && completion.isCancelled() == false ) // 종료 때문에 취소된 일은 오류가 아니다
             SW_LOG_ERROR_ID( "AdminService.AdminServiceCouldNotSeed", "AdminService could not seed the first administrator (%#)", getEnumName( result ) );
-    }
-
-    void AdminService::finishCall( size_t pendingIndex, const AdminReply& reply )
-    {
-        const PendingCall pending = _listPendingCall[pendingIndex];
-        _listPendingCall.erase( _listPendingCall.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
-        if ( pending._pHost != nullptr )
-            (void)pending._pHost->respondMessage<AdminProtocol::MessageTypes>( pending._token, reply );
-        else if ( pending._onReply.isBound() )
-            pending._onReply( reply );
-        _metrics.countRequest( pending._methodIndex, static_cast<int32>( reply._result ) );
-        MetricHistogram* pLatency = _metrics.findLatencyHistogram( pending._methodIndex );
-        if ( pLatency != nullptr )
-            pLatency->observe( static_cast<float64>( MonotonicClock::nowNanoseconds() - pending._receivedNanoseconds ) * 1e-9 );
     }
 } // namespace sw

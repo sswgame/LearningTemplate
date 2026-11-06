@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxService.h"
 
 #include "Core/Serialization/BitStream.h"
-#include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Observability/MetricRegistry.h"
 
@@ -161,15 +160,13 @@ namespace sw
 namespace sw
 {
     MailboxService::MailboxService()
-        : _listPendingCall{}
+        : _calls{}
         , _listCampaign{}
-        , _metrics{}
         , _settings{}
         , _mapPresenceRequestToNotice{}
         , _pStore{ nullptr }
         , _pHost{ nullptr }
         , _arrExpiredCounter{}
-        , _callIDAllocator{}
         , _nowMs{ 0 }
         , _nextSweepMs{ 0 }
         , _nextCampaignRefreshMs{ 0 }
@@ -185,7 +182,7 @@ namespace sw
 
     MailboxService::~MailboxService()
     {
-        SW_ASSERT( _listPendingCall.empty() );
+        SW_ASSERT( _calls.isEmpty() );
     }
 
     bool MailboxService::initialize( IServiceStore* pStore, const MailboxServiceConfig& settings )
@@ -198,7 +195,7 @@ namespace sw
         _pStore    = pStore;
         _settings  = settings;
         _findOwner = settings._pPresence != nullptr ? settings._pPresence->openFindOwner() : Subscription{};
-        _metrics.initialize<MailboxMethodName, MailboxResult>( settings._pMetricRegistry, "mailbox" );
+        _calls.initialize<MailboxMethodName, MailboxResult>( settings._pMetricRegistry, "mailbox" );
         if ( settings._pMetricRegistry != nullptr )
         {
             for ( int32 actionIndex = 0; actionIndex < static_cast<int32>( SW_COUNT_OF( _arrExpiredCounter ) ); ++actionIndex )
@@ -228,11 +225,7 @@ namespace sw
     {
         ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
         { return isIdle(); } );
-        if ( isIdle() == false )
-        {
-            SW_LOG_ERROR_ID( "MailboxService.MailboxServiceShutDownCalls", "MailboxService shut down with %# calls still pending", _listPendingCall.size() );
-            _listPendingCall.clear();
-        }
+        _calls.abandonAll();
         _findOwner.reset(); // 기다리던 찾기의 알림을 잃는다. 우편은 목록에 있다
         _mapPresenceRequestToNotice.clear();
         _pStore = nullptr;
@@ -241,9 +234,7 @@ namespace sw
 
     void MailboxService::submitCall( const MailboxCall& call, ReplyDelegate onReply )
     {
-        PendingCall pending;
-        pending._onReply = onReply;
-        startCall( call, pending );
+        startCall( call, CallTable::Origin::fromDelegate( onReply ) );
     }
 
     void MailboxService::update( UnixMilliseconds nowMs )
@@ -273,7 +264,7 @@ namespace sw
             _nextNoticeMs   = nowMs + _settings._noticeIntervalMs;
             _pStore->submit( make_unique<MailboxNoticeWork>( this, _settings._noticeBatchCount ) );
         }
-        _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
+        _calls.publishPendingCount();
     }
 
     void MailboxService::completeNotices( ServiceStoreResult result, vector<ServiceMailNotice>& inoutListNotice )
@@ -346,10 +337,7 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
         }
-        PendingCall pending;
-        pending._pHost = &host;
-        pending._token = context._token;
-        startCall( call, pending );
+        startCall( call, CallTable::Origin::fromHost( host, context._token ) );
     }
 
     void MailboxService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
@@ -358,17 +346,14 @@ namespace sw
         update( nowMs );
     }
 
-    void MailboxService::startCall( const MailboxCall& call, PendingCall pending )
+    void MailboxService::startCall( const MailboxCall& call, const CallTable::Origin& origin )
     {
-        pending._callID              = _callIDAllocator.allocate();
-        pending._receivedNanoseconds = MonotonicClock::nowNanoseconds(); // 예외 — 지연 지표는 실제 처리 시간을 잰다(가짜 시각으로 재면 뜻이 없다, 프로파일러와 같은 자리)
-        pending._methodIndex         = MailboxMethod::toIndex( call._method );
-        _listPendingCall.push_back( pending );
-        const size_t pendingIndex = _listPendingCall.size() - 1;
+        const int32  methodIndex = MailboxMethod::toIndex( call._method );
+        const uint64 callID      = _calls.open( origin, methodIndex );
 
         MailboxReply refused;
         refused._result = MailboxResult::Ok;
-        if ( pending._methodIndex < 0 || _pStore == nullptr )
+        if ( methodIndex < 0 || _pStore == nullptr )
             refused._result = MailboxResult::InvalidRequest;
         else if ( call._accountID == kInvalidAccountID )
             refused._result = MailboxResult::NotSignedIn;
@@ -376,24 +361,16 @@ namespace sw
             refused._result = MailboxResult::InvalidRequest; // 수령에는 멱등 키가 필수이다
         if ( refused._result != MailboxResult::Ok )
         {
-            finishCall( pendingIndex, refused );
+            (void)_calls.finish( callID, refused );
             return;
         }
         const bool bFirstPage = call._method == MailboxMethod::kList && call._request._cursor.empty();
-        _pStore->submit( sw::make_unique<MailboxRequestWork>( this, call, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, pending._callID ) );
+        _pStore->submit( sw::make_unique<MailboxRequestWork>( this, call, bFirstPage ? _listCampaign : vector<ServiceMailCampaign>{}, _settings._pPolicy, callID ) );
     }
 
     void MailboxService::completeCall( uint64 callID, const MailboxReply& reply )
     {
-        for ( size_t pendingIndex = 0; pendingIndex < _listPendingCall.size(); ++pendingIndex )
-        {
-            if ( _listPendingCall[pendingIndex]._callID == callID )
-            {
-                finishCall( pendingIndex, reply );
-                return;
-            }
-        }
-        SW_LOG_WARNING_ID( "MailboxService.MailboxServiceCompletedUnknownCall", "MailboxService completed an unknown call %#", callID );
+        (void)_calls.finish( callID, reply ); // 모르는 id 는 표가 경고한다
     }
 
     void MailboxService::completeSweep( const MailboxSweepStats& stats, ServiceStoreCompletion completion )
@@ -441,23 +418,9 @@ namespace sw
         }
     }
 
-    void MailboxService::finishCall( size_t pendingIndex, const MailboxReply& reply )
-    {
-        const PendingCall pending = _listPendingCall[pendingIndex];
-        _listPendingCall.erase( _listPendingCall.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
-        if ( pending._pHost != nullptr )
-            (void)pending._pHost->respondMessage<MailboxProtocol::MessageTypes>( pending._token, reply );
-        else if ( pending._onReply.isBound() )
-            pending._onReply( reply );
-        _metrics.countRequest( pending._methodIndex, static_cast<int32>( reply._result ) );
-        MetricHistogram* pLatency = _metrics.findLatencyHistogram( pending._methodIndex );
-        if ( pLatency != nullptr )
-            pLatency->observe( static_cast<float64>( MonotonicClock::nowNanoseconds() - pending._receivedNanoseconds ) * 1e-9 );
-    }
-
     bool MailboxService::isIdle() const
     {
-        return _listPendingCall.empty() && _bSweepPending == SW_FALSE && _bCampaignRefreshPending == SW_FALSE && _bNoticePending == SW_FALSE;
+        return _calls.isEmpty() && _bSweepPending == SW_FALSE && _bCampaignRefreshPending == SW_FALSE && _bNoticePending == SW_FALSE;
     }
 } // namespace sw
 

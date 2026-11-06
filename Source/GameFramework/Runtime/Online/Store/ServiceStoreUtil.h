@@ -24,7 +24,7 @@ namespace sw
          * @details 걸음마다 @p onPoll() 을 먼저 부른 뒤 `pollCompletions` 를 부르고, 회수한 것이 없으면 1 ms 쉰다.
          *          @p onPoll 은 저장소 완료 말고도 거둘 것이 있는 서비스(영수증 검증 등)가 넘긴다. 남은 작업의 정리와 오류 로그는 호출부가 한다.
          * @code
-         *     ServiceStoreUtil::drainUntilIdle( _pStore, [this]() { return _listPendingCall.empty(); }, [this]() { pollReceipts(); } );
+         *     ServiceStoreUtil::drainUntilIdle( _pStore, [this]() { return _calls.isEmpty(); }, [this]() { pollReceipts(); } );
          * @endcode
          */
         template <typename TIsIdle, typename TPoll>

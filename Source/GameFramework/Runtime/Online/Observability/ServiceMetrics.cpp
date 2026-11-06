@@ -2,6 +2,8 @@
 
 #include "GameFramework/Runtime/Online/Observability/ServiceMetrics.h"
 
+#include "Core/Time/MonotonicClock.h"
+
 #include "Engine/Observability/MetricRegistry.h"
 
 namespace sw
@@ -44,21 +46,19 @@ namespace sw
         }
     }
 
-    void ServiceMetrics::countRequest( int32 methodIndex, int32 resultIndex )
-    {
-        const bool bInRange = 0 <= methodIndex && methodIndex < _methodCount && 0 <= resultIndex && resultIndex < _resultCount;
-        if ( bInRange == false )
-            return;
-        MetricCounter* pCounter = _listRequestCounter[static_cast<size_t>( methodIndex * _resultCount + resultIndex )];
-        if ( pCounter != nullptr )
-            pCounter->add();
-    }
-
-    MetricHistogram* ServiceMetrics::findLatencyHistogram( int32 methodIndex ) const
+    void ServiceMetrics::observeRequest( int32 methodIndex, int32 resultIndex, int64 receivedNanoseconds )
     {
         if ( methodIndex < 0 || methodIndex >= _methodCount )
-            return nullptr;
-        return _listLatency[static_cast<size_t>( methodIndex )];
+            return;
+        if ( 0 <= resultIndex && resultIndex < _resultCount )
+        {
+            MetricCounter* pCounter = _listRequestCounter[static_cast<size_t>( methodIndex * _resultCount + resultIndex )];
+            if ( pCounter != nullptr )
+                pCounter->add();
+        }
+        MetricHistogram* pLatency = _listLatency[static_cast<size_t>( methodIndex )];
+        if ( pLatency != nullptr ) // 예외 — 지연 지표는 실제 처리 시간을 잰다(가짜 시각으로 재면 뜻이 없다, 프로파일러와 같은 자리)
+            pLatency->observe( static_cast<float64>( MonotonicClock::nowNanoseconds() - receivedNanoseconds ) * 1e-9 );
     }
 
     void ServiceMetrics::setPendingStoreWorkCount( int32 pendingCount )

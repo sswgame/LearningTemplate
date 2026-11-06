@@ -18,7 +18,6 @@
  *          PlayFab Economy v2 의 `PurchaseInventoryItems` 와 `Redeem*` 에 해당한다.
  */
 #pragma once
-#include "Core/Container/IDAllocator.h"
 #include "Core/Container/string.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/unordered_set.h"
@@ -34,9 +33,9 @@
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
 #include "GameFramework/Runtime/Online/Ledger/IBalanceNotice.h"
-#include "GameFramework/Runtime/Online/Observability/ServiceMetrics.h"
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/ServiceServerCallTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
@@ -112,11 +111,22 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 경제 요청 하나가 응답을 기다리는 동안 드는 칸입니다(호출 표의 키트 칸). */
+    struct EconomyCallExtra
+    {
+        uint64    _receiptTicket{ 0 }; ///< 0이 아니면 영수증 검증을 기다리는 중이다
+        AccountID _accountID{ kInvalidAccountID };
+    };
+} // namespace sw
+
+namespace sw
+{
     /** @class EconomyService @brief 경제 요청 처리기입니다. */
     class SW_KIT_SERVER_API EconomyService final : public IOnlineServerService
     {
     public:
-        using ReplyDelegate = Delegate<void( const EconomyReply& )>;
+        using CallTable     = ServiceServerCallTable<EconomyReply, EconomyProtocol::MessageTypes, EconomyCallExtra>;
+        using ReplyDelegate = CallTable::ReplyDelegate;
 
         static constexpr const utf8* kFeatureFlag = "feature.shop_enabled";
         static constexpr const utf8* kAuditJobID  = "ledger.audit";
@@ -158,7 +168,7 @@ namespace sw
         void completeCall( uint64 callID, const EconomyReply& reply );
         /** @brief 환불 회수 작업의 `complete` 가 호출합니다. 지표와 로그를 남기고 회수로 바뀐 잔액을 계정에 알립니다. 회수를 끝내지 못했으면 제공자가 그 환불을 잊어 겹친 조회가 다시 알립니다. */
         void  completeRefund( const ReceiptRefundNotice& notice, EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
-        int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
+        int32 getPendingCallCount() const { return _calls.getCount(); }
         /** @brief 기준 시각 읽기 작업의 `complete` 가 호출합니다. 읽었으면 제공자에 넘기고, 못 읽었으면 다시 읽게 합니다. */
         void completeRefundCursorRead( const vector<EconomyRefundCursor>& listCursor, ServiceStoreResult result, ServiceStoreCompletion completion );
         /** @brief 기준 시각 쓰기 작업의 `complete` 가 호출합니다. */
@@ -186,21 +196,7 @@ namespace sw
             EconomyService& _service;
         };
 
-        /** @brief 응답을 기다리는 요청 하나입니다. 호스트 경로이면 토큰으로, 아니면 델리게이트로 응답합니다. */
-        struct PendingCall
-        {
-            ReplyDelegate      _onReply{};
-            NetRequestToken    _token{};
-            OnlineServiceHost* _pHost{ nullptr };
-            uint64             _callID{ 0 };
-            uint64             _receiptTicket{ 0 }; ///< 0이 아니면 영수증 검증을 기다리는 중이다
-            int64              _receivedNanoseconds{ 0 };
-            AccountID          _accountID{ kInvalidAccountID };
-            int32              _methodIndex{ 0 };
-        };
-
-        void startCall( const EconomyCall& call, PendingCall pending );
-        void finishCall( size_t pendingIndex, const EconomyReply& reply );
+        void startCall( const EconomyCall& call, const CallTable::Origin& origin );
         void pollReceipts();
         /** @brief 환불 알림을 거두어 회수 작업을 맡깁니다. */
         void pollRefunds();
@@ -212,8 +208,7 @@ namespace sw
         void onBalancePresenceFound( const AccountPresenceResult& result );
 
     private:
-        vector<PendingCall>                          _listPendingCall;
-        ServiceMetrics                               _metrics;
+        CallTable                                    _calls;
         EconomyServiceConfig                         _settings;
         Subscription                                 _findOwner;                  ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         unordered_map<uint64, EconomyBalanceChanged> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 잔액 변경 알림(받는 계정은 결과에 있다)
@@ -223,7 +218,6 @@ namespace sw
         OnlineServiceHost*                           _pHost;                      ///< `onServiceTick` 이 붙잡는다. 알림을 이 서버에 붙은 계정에 바로 보낸다
         IServiceStore*                               _pStore;
         MetricRegistry*                              _pMetricRegistry; ///< 환불 결과 지표를 센다(설정에서 복사)
-        IDAllocator<uint64>                          _callIDAllocator;
         int32                                        _pendingRefundCount;
         int32                                        _pendingUpkeepCount;     ///< 응답 없는 저장소 작업(기준 시각 · 지급 확인) 수이다. 종료가 기다린다
         int64                                        _nextRefundCursorReadMs; ///< 읽지 못한 기준 시각을 다시 읽는 시각

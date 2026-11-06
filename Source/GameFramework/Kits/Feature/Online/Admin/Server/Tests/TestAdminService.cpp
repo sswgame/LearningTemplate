@@ -448,7 +448,7 @@ SW_TEST_CASE( AdminServiceTest, ForwardWithoutKitIsUnavailable )
 /** @brief [AdminServiceTest] 모르는 호출의 완료는 경고만 남기고 지나간다 */
 SW_TEST_CASE( AdminServiceTest, UnknownForwardedCompletionWarns )
 {
-    SW_EXPECT_LOG( "AdminService.AdminServiceGotForwardedCompletion" );
+    SW_EXPECT_LOG( "ServiceServerCallTable.UnknownCall" );
     AdminRig rig;
     rig._directoryControl._listCompletion.push_back( ServerDirectoryControlCompletion{ 12345, ServerDirectoryControlResult::Ok } );
     rig.tick();

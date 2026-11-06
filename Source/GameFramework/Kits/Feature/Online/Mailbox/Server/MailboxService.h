@@ -7,7 +7,6 @@
  *          - 캠페인 목록은 메모리에 두고 `_campaignRefreshMs` 마다 다시 읽는다. 서버가 둘이면 그만큼 늦게 보일 수 있으며, 수령은 저장소가 막는다.
  */
 #pragma once
-#include "Core/Container/IDAllocator.h"
 #include "Core/Container/unordered_map.h"
 #include "Core/Container/vector.h"
 #include "Core/Delegate/Delegate.h"
@@ -20,9 +19,9 @@
 #include "GameFramework/Kits/Feature/Online/Mailbox/Runtime/MailboxProtocol.h"
 #include "GameFramework/Kits/Feature/Online/Mailbox/Server/MailboxStoreLogic.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMailCampaign.h"
-#include "GameFramework/Runtime/Online/Observability/ServiceMetrics.h"
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
+#include "GameFramework/Runtime/Online/Service/ServiceServerCallTable.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 
 namespace sw
@@ -82,7 +81,8 @@ namespace sw
     class SW_KIT_SERVER_API MailboxService final : public IOnlineServerService
     {
     public:
-        using ReplyDelegate                      = Delegate<void( const MailboxReply& )>;
+        using CallTable                          = ServiceServerCallTable<MailboxReply, MailboxProtocol::MessageTypes>;
+        using ReplyDelegate                      = CallTable::ReplyDelegate;
         static constexpr const utf8* kSweepJobID = "mail.sweep";
 
         MailboxService();
@@ -119,36 +119,23 @@ namespace sw
         void completeCampaignRefresh( ServiceStoreResult result, vector<ServiceMailCampaign>& inoutListCampaign, ServiceStoreCompletion completion );
 
         const vector<ServiceMailCampaign>& getCampaigns() const { return _listCampaign; }
-        int32                              getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
+        int32                              getPendingCallCount() const { return _calls.getCount(); }
 
     private:
-        struct PendingCall
-        {
-            ReplyDelegate      _onReply{};
-            NetRequestToken    _token{};
-            OnlineServiceHost* _pHost{ nullptr };
-            uint64             _callID{ 0 };
-            int64              _receivedNanoseconds{ 0 };
-            int32              _methodIndex{ 0 };
-        };
-
-        void startCall( const MailboxCall& call, PendingCall pending );
+        void startCall( const MailboxCall& call, const CallTable::Origin& origin );
         void onNoticePresenceFound( const AccountPresenceResult& result );
         void sendOfflinePush( AccountID accountID );
-        void finishCall( size_t pendingIndex, const MailboxReply& reply );
         bool isIdle() const;
 
     private:
-        vector<PendingCall>                   _listPendingCall;
+        CallTable                             _calls;
         vector<ServiceMailCampaign>           _listCampaign;
-        ServiceMetrics                        _metrics;
         MailboxServiceConfig                  _settings;
         Subscription                          _findOwner;                  ///< 접속 상태 찾기의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
         unordered_map<uint64, MailboxNewMail> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 알림(받는 계정은 결과에 있다)
         IServiceStore*                        _pStore;
         OnlineServiceHost*                    _pHost;                ///< 알림을 보낼 호스트이다. 첫 틱에 받는다
         MetricCounter*                        _arrExpiredCounter[3]; ///< discarded · returned · removed
-        IDAllocator<uint64>                   _callIDAllocator;
         UnixMilliseconds                      _nowMs;
         UnixMilliseconds                      _nextSweepMs;
         UnixMilliseconds                      _nextCampaignRefreshMs;

@@ -2,7 +2,7 @@
  * @file ServiceMetrics.h
  * @brief 서비스 하나의 표준 지표입니다. `service_requests_total{service,method,result}`, `service_request_seconds{service,method}`, `service_store_pending{service}` 를 둡니다.
  * @details 메서드와 결과 이름은 서비스가 등록 때 넘기는 닫힌 집합이다(라벨에 계정 id 나 추적 id 를 넣지 않는다). 레지스트리(`Engine/Observability/MetricRegistry`)가
- *          null 이면 모든 호출이 아무것도 하지 않는다. 지연은 응답 시점에 측정하므로 서비스는 받은 시각을 작업 객체에 보관하고 `complete` 에서 `observe` 한다.
+ *          null 이면 모든 호출이 아무것도 하지 않는다. 지연은 응답 시점에 측정한다 — 서버 호출 표(`ServiceServerCallTable`)가 받은 시각을 들고 응답할 때 `observeRequest` 를 부른다.
  */
 #pragma once
 #include "Core/Container/StringUtil.h"
@@ -41,10 +41,9 @@ namespace sw
             initializeWithNames( pRegistry, pServiceName, makeLabelNames<TMethodName>(), makeLabelNames<TResult>() );
         }
 
-        /** @brief 범위 밖 번호는 무시합니다. */
-        void             countRequest( int32 methodIndex, int32 resultIndex );
-        MetricHistogram* findLatencyHistogram( int32 methodIndex ) const;
-        void             setPendingStoreWorkCount( int32 pendingCount );
+        /** @brief 끝난 요청 하나를 셉니다. 요청 수에 더하고 @p receivedNanoseconds(`MonotonicClock`)부터 지금까지를 지연 히스토그램에 넣습니다. 범위 밖 번호는 무시합니다. */
+        void observeRequest( int32 methodIndex, int32 resultIndex, int64 receivedNanoseconds );
+        void setPendingStoreWorkCount( int32 pendingCount );
 
     private:
         /** @brief `ENUM( Count = Count )` 열거형의 열거자 이름을 순서대로 snake_case 로 바꿉니다. */

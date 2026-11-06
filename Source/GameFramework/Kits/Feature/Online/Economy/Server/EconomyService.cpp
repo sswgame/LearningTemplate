@@ -3,7 +3,6 @@
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
 
 #include "Core/Serialization/BitStream.h"
-#include "Core/Time/MonotonicClock.h"
 #include "Core/Time/TimePoint.h"
 
 #include "Engine/Observability/MetricRegistry.h"
@@ -266,8 +265,7 @@ namespace sw
     SW_DEFINE_DEV_ONLINE_EXTENSION( EconomyDevOptions, "fakeReceipts" );
 
     EconomyService::EconomyService()
-        : _listPendingCall{}
-        , _metrics{}
+        : _calls{}
         , _settings{}
         , _mapPresenceRequestToNotice{}
         , _uniqueSetDeliveryInFlight{}
@@ -276,7 +274,6 @@ namespace sw
         , _pHost{ nullptr }
         , _pStore{ nullptr }
         , _pMetricRegistry{ nullptr }
-        , _callIDAllocator{}
         , _pendingRefundCount{ 0 }
         , _pendingUpkeepCount{ 0 }
         , _nextRefundCursorReadMs{ 0 }
@@ -294,7 +291,7 @@ namespace sw
 
     EconomyService::~EconomyService()
     {
-        SW_ASSERT( _listPendingCall.empty() );
+        SW_ASSERT( _calls.isEmpty() );
     }
 
     bool EconomyService::initialize( IServiceStore* pStore, const EconomyServiceConfig& settings )
@@ -334,7 +331,7 @@ namespace sw
                 return false;
             }
         }
-        _metrics.initialize<EconomyMethodName, EconomyResult>( settings._pMetricRegistry, "economy" );
+        _calls.initialize<EconomyMethodName, EconomyResult>( settings._pMetricRegistry, "economy" );
         return true;
     }
 
@@ -342,13 +339,9 @@ namespace sw
     {
         // 영수증 검증 완료도 호출을 끝내므로 단계마다 같이 회수한다.
         ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
-        { return _listPendingCall.empty() && _pendingRefundCount <= 0 && _pendingUpkeepCount <= 0 && _bAuditPending == SW_FALSE; }, [this]()
+        { return _calls.isEmpty() && _pendingRefundCount <= 0 && _pendingUpkeepCount <= 0 && _bAuditPending == SW_FALSE; }, [this]()
         { pollReceipts(); } );
-        if ( _listPendingCall.empty() == false )
-        {
-            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceShutDownCalls", "EconomyService shut down with %# calls still pending", _listPendingCall.size() );
-            _listPendingCall.clear();
-        }
+        _calls.abandonAll();
         _findOwner.reset(); // 잔액 알림 찾기가 이 객체를 부르지 않게 한다(저장 작업을 회수한 뒤 — 그 완료가 찾기를 낼 수 있다)
         _mapPresenceRequestToNotice.clear();
         _pStore = nullptr;
@@ -356,9 +349,7 @@ namespace sw
 
     void EconomyService::submitCall( const EconomyCall& call, ReplyDelegate onReply )
     {
-        PendingCall pending;
-        pending._onReply = onReply;
-        startCall( call, pending );
+        startCall( call, CallTable::Origin::fromDelegate( onReply ) );
     }
 
     void EconomyService::onServiceRequest( OnlineServiceHost& host, const OnlineCallContext& context, BitReader& body )
@@ -409,10 +400,7 @@ namespace sw
             (void)host.respondError( context._token, OnlineError::kInvalidRequest );
             return;
         }
-        PendingCall pending;
-        pending._pHost = &host;
-        pending._token = context._token;
-        startCall( call, pending );
+        startCall( call, CallTable::Origin::fromHost( host, context._token ) );
     }
 
     void EconomyService::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
@@ -433,7 +421,7 @@ namespace sw
         pollRefunds();
         updateRefundCursors( nowMs );
         updateDeliveries( nowMs );
-        _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
+        _calls.publishPendingCount();
     }
 
     void EconomyService::confirmDelivery( const ReceiptValidationResult& receipt )
@@ -563,18 +551,16 @@ namespace sw
             SW_LOG_WARNING_ID( "EconomyService.RefundCursorWriteFailed", "EconomyService: the refund cursor of store '%#' could not be written", cursor._storeName.c_str() );
     }
 
-    void EconomyService::startCall( const EconomyCall& call, PendingCall pending )
+    void EconomyService::startCall( const EconomyCall& call, const CallTable::Origin& origin )
     {
-        pending._callID              = _callIDAllocator.allocate();
-        pending._receivedNanoseconds = MonotonicClock::nowNanoseconds(); // 예외 — 지연 지표는 실제 처리 시간을 잰다(가짜 시각으로 재면 뜻이 없다, 프로파일러와 같은 자리)
-        pending._accountID           = call._accountID;
-        pending._methodIndex         = EconomyMethod::toIndex( call._method );
-        _listPendingCall.push_back( pending );
-        const size_t pendingIndex = _listPendingCall.size() - 1;
+        EconomyCallExtra extra;
+        extra._accountID         = call._accountID;
+        const int32  methodIndex = EconomyMethod::toIndex( call._method );
+        const uint64 callID      = _calls.open( origin, methodIndex, extra );
 
         EconomyReply refused;
         refused._result = EconomyResult::Ok;
-        if ( pending._methodIndex < 0 || _pStore == nullptr )
+        if ( methodIndex < 0 || _pStore == nullptr )
             refused._result = EconomyResult::InvalidRequest;
         else if ( call._accountID == kInvalidAccountID )
             refused._result = EconomyResult::NotSignedIn; // 호스트가 이미 막지만 submitCall 경로도 같은 규칙을 따른다
@@ -582,7 +568,7 @@ namespace sw
             refused._result = EconomyResult::InvalidRequest; // 상태를 바꾸는 요청에는 멱등 키가 필수이다
         if ( refused._result != EconomyResult::Ok )
         {
-            finishCall( pendingIndex, refused );
+            (void)_calls.finish( callID, refused );
             return;
         }
         if ( call._method == EconomyMethod::kRedeemReceipt )
@@ -593,14 +579,16 @@ namespace sw
             if ( ticket == 0 )
             {
                 refused._result = EconomyResult::ReceiptInvalid;
-                finishCall( pendingIndex, refused );
+                (void)_calls.finish( callID, refused );
                 return;
             }
-            _listPendingCall[pendingIndex]._receiptTicket = ticket; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
+            CallTable::Call* pCall = _calls.find( callID ); // 방금 올렸다 — 검증 제출은 표를 건드리지 않는다
+            if ( pCall != nullptr )
+                pCall->_extra._receiptTicket = ticket; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
             return;
         }
         const UnixMilliseconds         nowMs = call._nowMs;
-        unique_ptr<EconomyRequestWork> work  = make_unique<EconomyRequestWork>( this, _settings, pending._callID, pending._methodIndex );
+        unique_ptr<EconomyRequestWork> work  = make_unique<EconomyRequestWork>( this, _settings, callID, methodIndex );
         work->_accountID                     = call._accountID;
         work->_history                       = call._history;
         work->_purchase._offerID             = call._purchase._offerID;
@@ -625,21 +613,21 @@ namespace sw
         _settings._pReceiptRegistry->pollCompletions( listResult );
         for ( ReceiptValidationResult& result : listResult )
         {
-            for ( PendingCall& pending : _listPendingCall )
-            {
-                if ( pending._receiptTicket != result._ticket )
-                    continue;
-                pending._receiptTicket              = 0;
-                unique_ptr<EconomyRequestWork> work = make_unique<EconomyRequestWork>( this, _settings, pending._callID, EconomyServiceInternal::kRedeemIndex );
-                work->_accountID                    = pending._accountID;
-                work->_redeem._receipt              = std::move( result );
-                work->_redeem._pExternalLinks       = _settings._pExternalLinks;
-                work->_redeem._accountID            = pending._accountID;
-                work->_redeem._nowMs                = _nowMs.count();
-                work->_redeem._bAcceptSandbox       = _settings._bAcceptSandboxReceipts;
-                _pStore->submit( std::move( work ) );
-                break;
-            }
+            const uint64     ticket = result._ticket;
+            CallTable::Call* pCall  = _calls.findIf( [ticket]( const CallTable::Call& call )
+            { return call._extra._receiptTicket == ticket; } );
+            if ( pCall == nullptr )
+                continue;
+            pCall->_extra._receiptTicket             = 0;
+            const AccountID                accountID = pCall->_extra._accountID;
+            unique_ptr<EconomyRequestWork> work      = make_unique<EconomyRequestWork>( this, _settings, pCall->_callID, EconomyServiceInternal::kRedeemIndex );
+            work->_accountID                         = accountID;
+            work->_redeem._receipt                   = std::move( result );
+            work->_redeem._pExternalLinks            = _settings._pExternalLinks;
+            work->_redeem._accountID                 = accountID;
+            work->_redeem._nowMs                     = _nowMs.count();
+            work->_redeem._bAcceptSandbox            = _settings._bAcceptSandboxReceipts;
+            _pStore->submit( std::move( work ) );
         }
     }
 
@@ -775,29 +763,7 @@ namespace sw
 
     void EconomyService::completeCall( uint64 callID, const EconomyReply& reply )
     {
-        for ( size_t pendingIndex = 0; pendingIndex < _listPendingCall.size(); ++pendingIndex )
-        {
-            if ( _listPendingCall[pendingIndex]._callID == callID )
-            {
-                finishCall( pendingIndex, reply );
-                return;
-            }
-        }
-        SW_LOG_WARNING_ID( "EconomyService.EconomyServiceCompletedUnknownCall", "EconomyService completed an unknown call %#", callID );
-    }
-
-    void EconomyService::finishCall( size_t pendingIndex, const EconomyReply& reply )
-    {
-        const PendingCall pending = _listPendingCall[pendingIndex];
-        _listPendingCall.erase( _listPendingCall.begin() + static_cast<ptrdiff_t>( pendingIndex ) );
-        if ( pending._pHost != nullptr )
-            (void)pending._pHost->respondMessage<EconomyProtocol::MessageTypes>( pending._token, reply );
-        else if ( pending._onReply.isBound() )
-            pending._onReply( reply );
-        _metrics.countRequest( pending._methodIndex, static_cast<int32>( reply._result ) );
-        MetricHistogram* pLatency = _metrics.findLatencyHistogram( pending._methodIndex );
-        if ( pLatency != nullptr )
-            pLatency->observe( static_cast<float64>( MonotonicClock::nowNanoseconds() - pending._receivedNanoseconds ) * 1e-9 );
+        (void)_calls.finish( callID, reply ); // 모르는 id 는 표가 경고한다
     }
 } // namespace sw
 
