@@ -229,6 +229,16 @@ namespace sw::editor
                     }
                     EditorSelfTestInput::waitNextFrame();
                 }
+                else
+                {
+                    // 사람의 클릭처럼 옮긴 뒤 한 프레임 지나 누른다(`EditorDrag` 와 같다). 옮긴 프레임에 누르면 지난 프레임 자리로 답하는 쪽(ImGuizmo::IsOver)이 옛 자리를 본다.
+                    EditorSelfTestInput::waitNextFrame();
+                    if ( EditorSelfTestInput::moveMouseToMark( mark, anchor ) == false )
+                    {
+                        runner.recordFailure( step, "editor widget '" + mark + "' disappeared before it could be pressed" );
+                        return true;
+                    }
+                }
                 for ( const int32 modifier : listModifier )
                 {
                     EditorSelfTestInput::setKey( modifier, true );
