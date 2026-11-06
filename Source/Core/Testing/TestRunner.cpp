@@ -161,13 +161,24 @@ namespace sw::test
                     ScopedLock<mutex> lock{ state._mutex };
                     if ( state._bActive == false )
                         return;
+                    // 같은 id 를 여러 번 선언하면 선언마다 한 번씩 채운다 - 아직 못 본 선언이 먼저, 다 보았으면 첫 선언이 더 센다.
+                    ExpectedLog* pMatch = nullptr;
                     for ( ExpectedLog& expected : state._listExpectedLog )
                     {
-                        if ( entry._pID != nullptr && expected._id == entry._pID )
+                        if ( entry._pID == nullptr || expected._id != entry._pID )
+                            continue;
+                        if ( pMatch == nullptr )
+                            pMatch = &expected;
+                        if ( expected._seenCount == 0 )
                         {
-                            ++expected._seenCount;
-                            return;
+                            pMatch = &expected;
+                            break;
                         }
+                    }
+                    if ( pMatch != nullptr )
+                    {
+                        ++pMatch->_seenCount;
+                        return;
                     }
                     failure = string( entry._file ) + "(" + to_string( entry._line ) + "): error: unexpected " + ( entry._level == LogLevel::Error ? "Error" : "Warning" ) +
                               " log" + ( entry._pID != nullptr ? string( " [id:" ) + entry._pID + "]" : string( " (no id - give it one to declare it with SW_EXPECT_LOG)" ) ) + ": " +

@@ -17,6 +17,6 @@
 	<Wait frames="10"/>
 	<Screenshot file="spritelibrary_variant.ppm"/>
 	<Wait frames="2"/>
-	<ExpectImagesDiffer first="spritelibrary_base.ppm" second="spritelibrary_variant.ppm" region="0.35,0.25,0.3,0.5" minDiffering="0.5"/>
+	<ExpectImagesDiffer first="spritelibrary_base.ppm" second="spritelibrary_variant.ppm" region="0.35,0.25,0.65,0.75" minDiffering="0.5"/>
 	<Pass/>
 </Scenario>
