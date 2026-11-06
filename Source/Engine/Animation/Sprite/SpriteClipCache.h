@@ -6,7 +6,7 @@
  *
  *          `reloadShared` 는 **제자리로** 다시 읽어 그 클립을 가진 쪽 모두가 새 내용을 본다. 틱 밖(게임 스레드)에서만 부른다 — 틱 중의 스프라이트가 읽는
  *          내용을 바꾸기 때문이다. 클립에서 계산한 컴포넌트 상태(UV, 아틀라스)는 부르는 쪽이 `onPropertyChanged` 로 다시 맞춘다(에디터 핫 리로드가 그렇게
- *          한다). 아무도 쓰지 않으면 false 이고 다음 `acquire` 가 새 내용을 읽는다.
+ *          한다). 아무도 쓰지 않으면 false 이고 다음 `acquire` 가 새 내용을 읽는다. 스프라이트 라이브러리(`.spritelib.xml`, "SpriteLibrary")도 같은 규칙이다.
  */
 #pragma once
 #include "Core/Foundation/Macros.h"
@@ -16,7 +16,10 @@
 namespace sw
 {
     class SpriteClipAsset;
+    class SpriteLibrary;
 
     /** @brief 파일 머리말을 참고하세요. 쓰는 쪽은 `SharedAssetCache<SpriteClipAsset>` 으로 부릅니다. */
     extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SpriteClipAsset>;
+    /** @brief 파일 머리말을 참고하세요. 쓰는 쪽은 `SharedAssetCache<SpriteLibrary>` 로 부릅니다. */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SpriteLibrary>;
 } // namespace sw

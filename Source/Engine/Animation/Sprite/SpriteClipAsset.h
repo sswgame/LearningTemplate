@@ -10,6 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Content/AssetID.h"
@@ -22,6 +23,7 @@ namespace sw
      * @struct SpriteClipFrame
      * @brief 클립의 프레임 하나입니다. 아틀라스 안의 UV 사각형과 보여 줄 시간을 담습니다.
      * @details UV 는 텍스처 크기에 대한 비율(0..1)이고 머티리얼 uvRect 와 같은 형태 (u, v, 폭, 높이)다. 폭이 음수면 좌우가 뒤집힌 프레임이다.
+     *          `_label` 을 적으면 그림은 스프라이트의 라이브러리(`SpriteLibrary`)가 정하고 이 프레임의 UV · 테두리는 쓰지 않는다. 시간(`_durationMs`)은 어느 쪽이든 클립의 것이다.
      */
     REFLECT()
     struct SW_API SpriteClipFrame
@@ -42,12 +44,25 @@ namespace sw
          */
         PROPERTY( Tooltip = "Nine-slice border (left, bottom, right, top) in atlas pixels; all zero is no border" )
         float4 _borderPixels{ 0.0f, 0.0f, 0.0f, 0.0f };
+        /** @brief 라이브러리의 분류입니다. `_label` 을 적으면 필수입니다. */
+        PROPERTY( SkipIfEmpty, Tooltip = "Sprite library category of the label" )
+        hashed_string _category{};
+        /** @brief 라이브러리의 라벨입니다. 적으면 그림은 스프라이트의 라이브러리에서 옵니다. */
+        PROPERTY( SkipIfEmpty, Tooltip = "Sprite library label; set, the sprite's library decides the picture instead of the UV rect" )
+        hashed_string _label{};
         /** @brief 이 프레임을 보여 줄 시간(ms)입니다. 0 이하면 애니메이터의 프레임 속도를 씁니다(`getFrameDurationSeconds`). */
         PROPERTY( Units = ms, Tooltip = "How long the frame shows (0 or less: the animator frame rate)" )
         int32 _durationMs{ 100 };
 
         /** @brief 테두리가 하나라도 있으면 true 입니다. */
         bool hasBorder() const { return _border._x > 0.0f || _border._y > 0.0f || _border._z > 0.0f || _border._w > 0.0f; }
+        /** @brief 그림을 라이브러리에서 가져오는 프레임이면 true 입니다. */
+        bool usesLibrary() const { return _label.empty() == false; }
+        /**
+         * @brief 픽셀 테두리를 프레임의 픽셀 크기(UV 크기 × 아틀라스 크기)로 나눠 비율로 만듭니다. 비율은 0..1 로 자릅니다.
+         * @return 테두리가 있는데 프레임 크기를 모르면(아틀라스 크기 0) false 이고 @p outBorder 는 0 입니다 — 크기를 짐작해 틀린 모서리를 그리지 않는다.
+         */
+        [[nodiscard]] static bool makeBorderFractions( const float4& uvRect, const float4& borderPixels, const float2& atlasPixelSize, float4& outBorder );
     };
 } // namespace sw
 
@@ -140,6 +155,8 @@ namespace sw
         /** @brief 내용을 비웁니다. */
         void clear();
 
+        /** @brief 라이브러리에서 그림을 가져오는 프레임이 있으면 true 입니다. */
+        [[nodiscard]] bool usesLibrary() const;
         /** @brief 프레임 수입니다. */
         int32 getFrameCount() const { return static_cast<int32>( _listFrame.size() ); }
         /** @brief 프레임 하나입니다. 범위 밖이면 nullptr 입니다. */

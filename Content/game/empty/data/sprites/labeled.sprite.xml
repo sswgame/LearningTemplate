@@ -1,0 +1,6 @@
+<!-- 시나리오 automation/spritelibrary 의 클립 — 시간과 라벨만 적는다. 그림은 스프라이트의 라이브러리가 정한다. -->
+<SpriteClipAsset>
+	<_listFrame>
+		<SpriteClipFrame _category="Body" _label="Idle" _durationMs="250" />
+	</_listFrame>
+</SpriteClipAsset>

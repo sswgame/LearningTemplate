@@ -107,7 +107,13 @@ namespace sw
         }
         for ( size_t frameIndex = 0; frameIndex < _listFrame.size(); ++frameIndex )
         {
-            if ( hasNegativeComponent( _listFrame[frameIndex]._borderPixels ) == false )
+            const SpriteClipFrame& frame = _listFrame[frameIndex];
+            if ( frame.usesLibrary() && frame._category.empty() )
+            {
+                SW_LOG_ERROR_ID( "SpriteClip.SpriteClipLabelNeedsCategory", "Sprite clip '%#' frame %#: _label '%#' needs a _category", sourceLabel, frameIndex, frame._label.c_str() );
+                bValid = false;
+            }
+            if ( hasNegativeComponent( frame._borderPixels ) == false )
                 continue;
             SW_LOG_ERROR_ID( "SpriteClip.SpriteClipFrameBorderPixels", "Sprite clip '%#' frame %#: _borderPixels must not be negative", sourceLabel, frameIndex );
             bValid = false;
@@ -158,27 +164,30 @@ namespace sw
         return true;
     }
 
+    bool SpriteClipFrame::makeBorderFractions( const float4& uvRect, const float4& borderPixels, const float2& atlasPixelSize, float4& outBorder )
+    {
+        outBorder = float4{ 0.0f, 0.0f, 0.0f, 0.0f };
+        if ( hasPositiveComponent( borderPixels ) == false )
+            return true;
+        // 프레임의 픽셀 크기 = UV 크기 × 아틀라스 크기(폭이 음수인 뒤집힌 프레임도 크기는 절댓값이다).
+        const float32 frameWidth  = MathUtil::abs( uvRect._z ) * atlasPixelSize._x;
+        const float32 frameHeight = MathUtil::abs( uvRect._w ) * atlasPixelSize._y;
+        if ( frameWidth <= 0.0f || frameHeight <= 0.0f )
+            return false;
+        outBorder._x = MathUtil::saturate( borderPixels._x / frameWidth );
+        outBorder._y = MathUtil::saturate( borderPixels._y / frameHeight );
+        outBorder._z = MathUtil::saturate( borderPixels._z / frameWidth );
+        outBorder._w = MathUtil::saturate( borderPixels._w / frameHeight );
+        return true;
+    }
+
     uint32 SpriteClipAsset::rebuildFrameBorders()
     {
         uint32 droppedCount{ 0 };
         for ( SpriteClipFrame& frame : _listFrame )
         {
-            frame._border        = float4{ 0.0f, 0.0f, 0.0f, 0.0f };
-            const float4& pixels = frame._borderPixels;
-            if ( hasPositiveComponent( pixels ) == false )
-                continue;
-            // 프레임의 픽셀 크기 = UV 크기 × 아틀라스 크기(폭이 음수인 뒤집힌 프레임도 크기는 절댓값이다).
-            const float32 frameWidth  = MathUtil::abs( frame._uvRect._z ) * _atlasPixelSize._x;
-            const float32 frameHeight = MathUtil::abs( frame._uvRect._w ) * _atlasPixelSize._y;
-            if ( frameWidth <= 0.0f || frameHeight <= 0.0f )
-            {
+            if ( SpriteClipFrame::makeBorderFractions( frame._uvRect, frame._borderPixels, _atlasPixelSize, frame._border ) == false )
                 ++droppedCount;
-                continue;
-            }
-            frame._border._x = MathUtil::saturate( pixels._x / frameWidth );
-            frame._border._y = MathUtil::saturate( pixels._y / frameHeight );
-            frame._border._z = MathUtil::saturate( pixels._z / frameWidth );
-            frame._border._w = MathUtil::saturate( pixels._w / frameHeight );
         }
         return droppedCount;
     }
@@ -186,6 +195,12 @@ namespace sw
     string SpriteClipAsset::toXML() const
     {
         return XMLSerializer::serialize( this, *StaticType() );
+    }
+
+    bool SpriteClipAsset::usesLibrary() const
+    {
+        return VectorUtil::containsIf( _listFrame, []( const SpriteClipFrame& frame )
+        { return frame.usesLibrary(); } );
     }
 
     const SpriteClipFrame* SpriteClipAsset::findFrame( int32 frameIndex ) const

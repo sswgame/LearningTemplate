@@ -1,0 +1,41 @@
+<Scene formatVersion="2" name="spritelibrary_base">
+	<!-- 시나리오 automation/spritelibrary 의 무대 — 같은 클립을 라이브러리 base 로 그린다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,0,-10"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _fovY="0.7"
+					                 _nearZ="0.1"
+					                 _farZ="100"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Game"
+					                 _bOrthographic="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sprite">
+			<GameObject _schemaVersion="0" _name="Sprite" _bActive="true">
+				<_listComponent>
+					<SpriteComponent _localPosition="0,0,0"
+					                 _localRotation="0,0,0"
+					                 _localScale="6,6,1"
+					                 _attachOwner="None"
+					                 _attachComponent="None"
+					                 _clipPath="game/empty/data/sprites/labeled.sprite.xml"
+					                 _spriteLibraryPath="game/empty/data/sprites/base.spritelib.xml"
+					                 _sortingLayer="Default"
+					                 _orderInLayer="0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

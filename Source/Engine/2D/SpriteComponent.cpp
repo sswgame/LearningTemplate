@@ -9,6 +9,7 @@
 #include "Engine/2D/SpriteRenderUtil.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
 #include "Engine/Animation/Sprite/SpriteClipCache.h"
+#include "Engine/Animation/Sprite/SpriteLibrary.h"
 #include "Engine/Graphics/2D/Render2DSettings.h"
 #include "Engine/Graphics/2D/SpriteMeshBuilder.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
@@ -26,6 +27,7 @@ namespace sw
         , _appliedTexture{}
         , _appliedNormalMap{}
         , _clipPath{}
+        , _spriteLibraryPath{}
         , _clipFrame{ 0 }
         , _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f }
         , _tint{ 1.0f, 1.0f, 1.0f, 1.0f }
@@ -37,6 +39,8 @@ namespace sw
         , _orderInLayer{ 0 }
         , _clip{}
         , _loadedClipPath{}
+        , _library{}
+        , _loadedLibraryPath{}
     {
     }
 
@@ -50,6 +54,7 @@ namespace sw
     {
         MeshComponent::resolveRenderAssets();
         refreshClip();
+        validateClipLabels();
         refreshTextureInstance();
         refreshSpriteInstanceData();
         refreshDrawModeMesh();
@@ -62,6 +67,7 @@ namespace sw
         static const hashed_string s_textureName( "_textureName" );
         static const hashed_string s_normalMapName( "_normalMapName" );
         static const hashed_string s_clipPath( "_clipPath" );
+        static const hashed_string s_spriteLibraryPath( "_spriteLibraryPath" );
         static const hashed_string s_clipFrame( "_clipFrame" );
         static const hashed_string s_uvRect( "_uvRect" );
         static const hashed_string s_tint( "_tint" );
@@ -72,9 +78,10 @@ namespace sw
         static const hashed_string s_sliceBorder( "_sliceBorder" );
         const bool                 bInstanceDataChanged = propertyName == s_clipFrame || propertyName == s_uvRect || propertyName == s_tint;
         const bool                 bDrawModeMeshChanged = propertyName == s_drawMode || propertyName == s_size || propertyName == s_sliceBorder;
-        if ( propertyName == s_clipPath )
+        if ( propertyName == s_clipPath || propertyName == s_spriteLibraryPath )
         {
             refreshClip();
+            validateClipLabels();
             refreshTextureInstance();
             refreshSpriteInstanceData();
             refreshDrawModeMesh();
@@ -114,6 +121,17 @@ namespace sw
     {
         _clipPath = string{ path };
         refreshClip();
+        validateClipLabels();
+        refreshTextureInstance();
+        refreshSpriteInstanceData();
+        refreshDrawModeMesh();
+    }
+
+    void SpriteComponent::setSpriteLibraryPath( string_view path )
+    {
+        _spriteLibraryPath = string{ path };
+        refreshClip();
+        validateClipLabels();
         refreshTextureInstance();
         refreshSpriteInstanceData();
         refreshDrawModeMesh();
@@ -168,23 +186,39 @@ namespace sw
         refreshDrawModeMesh();
     }
 
+    const SpriteClipFrame* SpriteComponent::findDisplayedFrame() const
+    {
+        if ( _clip == nullptr || _clip->getFrameCount() == 0 )
+            return nullptr;
+        return _clip->findFrame( MathUtil::clamp( _clipFrame, 0, _clip->getFrameCount() - 1 ) );
+    }
+
     float4 SpriteComponent::getEffectiveSliceBorder() const
     {
-        if ( _clip != nullptr && _clip->getFrameCount() > 0 )
+        const SpriteClipFrame* pFrame = findDisplayedFrame();
+        if ( pFrame != nullptr && pFrame->usesLibrary() )
         {
-            const SpriteClipFrame* pFrame = _clip->findFrame( MathUtil::clamp( _clipFrame, 0, _clip->getFrameCount() - 1 ) );
-            if ( pFrame != nullptr && pFrame->hasBorder() )
-                return pFrame->_border;
+            const SpriteLibraryLabel* pLabel = _library != nullptr ? _library->findLabel( pFrame->_category, pFrame->_label ) : nullptr;
+            if ( pLabel != nullptr && pLabel->hasBorder() )
+                return pLabel->_border;
+        }
+        else if ( pFrame != nullptr && pFrame->hasBorder() )
+        {
+            return pFrame->_border;
         }
         return _sliceBorder;
     }
 
     float4 SpriteComponent::getDisplayedUvRect() const
     {
-        if ( _clip == nullptr || _clip->getFrameCount() == 0 )
+        const SpriteClipFrame* pFrame = findDisplayedFrame();
+        if ( pFrame == nullptr )
             return _uvRect;
-        const int32 lastFrame = _clip->getFrameCount() - 1;
-        return _clip->findFrame( MathUtil::clamp( _clipFrame, 0, lastFrame ) )->_uvRect;
+        if ( pFrame->usesLibrary() == false )
+            return pFrame->_uvRect;
+        // 없는 라벨은 `validateClipLabels` 가 이름과 함께 알렸다. 클립을 못 읽었을 때처럼 UV 칸으로 그린다.
+        const SpriteLibraryLabel* pLabel = _library != nullptr ? _library->findLabel( pFrame->_category, pFrame->_label ) : nullptr;
+        return pLabel != nullptr ? pLabel->_uvRect : _uvRect;
     }
 
     hashed_string SpriteComponent::getDefaultMaterialPath() const
@@ -196,11 +230,18 @@ namespace sw
     {
         if ( _textureName.empty() == false || _clip == nullptr )
             return _textureName.path();
+        if ( _library != nullptr && _clip->usesLibrary() )
+            return _library->_atlasPath;
         return _clip->_atlasPath;
     }
 
     void SpriteComponent::refreshClip()
     {
+        if ( _spriteLibraryPath != _loadedLibraryPath )
+        {
+            _loadedLibraryPath = _spriteLibraryPath;
+            _library           = SharedAssetCache<SpriteLibrary>::acquire( _spriteLibraryPath ); // 못 읽으면 로더가 이유를 남겼고, 라벨 검사가 무엇을 대신 그리는지 말한다
+        }
         if ( _clipPath == _loadedClipPath )
             return;
         _loadedClipPath = _clipPath;
@@ -208,6 +249,22 @@ namespace sw
         // 읽지 못한 경로는 `_loadedClipPath` 에 남아 다시 읽지 않는다. 경고는 로더가 이유와 함께 남겼다. 여기서는 무엇을 대신 그리는지만 말한다.
         if ( _clip == nullptr && _clipPath.empty() == false )
             SW_LOG_WARNING_ID( "SpriteComponent.SpriteClipCouldNot", "Sprite clip '%#' could not be read - the sprite shows its UV rect instead", _clipPath );
+    }
+
+    void SpriteComponent::validateClipLabels() const
+    {
+        if ( _clip == nullptr || _clip->usesLibrary() == false )
+            return;
+        if ( _library == nullptr )
+        {
+            SW_LOG_ERROR_ID( "SpriteComponent.SpriteLibraryMissing", "Sprite clip '%#' names library labels but the sprite has no readable library ('%#') - those frames show the UV rect", _clipPath, _spriteLibraryPath );
+            return;
+        }
+        for ( const SpriteClipFrame& frame : _clip->_listFrame )
+        {
+            if ( frame.usesLibrary() && _library->findLabel( frame._category, frame._label ) == nullptr )
+                SW_LOG_ERROR_ID( "SpriteComponent.SpriteLibraryLabelMissing", "Sprite library '%#' has no label '%#/%#' that clip '%#' names - that frame shows the UV rect", _spriteLibraryPath, frame._category.c_str(), frame._label.c_str(), _clipPath );
+        }
     }
 
     void SpriteComponent::refreshTextureInstance()

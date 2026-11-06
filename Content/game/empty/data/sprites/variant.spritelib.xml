@@ -1,0 +1,10 @@
+<!-- 바탕 위에 라벨 하나만 다른 칸으로 바꾼 변형 — 같은 클립이 다른 그림이 된다. -->
+<SpriteLibrary _base="game/empty/data/sprites/base.spritelib.xml">
+	<_listCategory>
+		<SpriteLibraryCategory _name="Body">
+			<_listLabel>
+				<SpriteLibraryLabel _name="Idle" _uvRect="0.5,0.5,0.5,0.5" />
+			</_listLabel>
+		</SpriteLibraryCategory>
+	</_listCategory>
+</SpriteLibrary>

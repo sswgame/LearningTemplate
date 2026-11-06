@@ -16,6 +16,7 @@
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"
+#include "Engine/Animation/Sprite/SpriteLibrary.h"
 #include "Engine/Audio/AudioEvent.h"
 #include "Engine/Audio/AudioMixerDesc.h"
 #include "Engine/Destruction/Fracture/FractureAsset.h"
@@ -71,8 +72,10 @@ namespace sw::editor
         const EditorAssetMatchRule kArrSequenceRule[]      = { EditorAssetMatchRule::engineType( SequenceAsset::kAssetType ) };
         const EditorAssetMatchRule kArrSkeletonRule[]      = { EditorAssetMatchRule::engineType( Skeleton::kAssetType, { "Skeleton", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
         const EditorAssetMatchRule kArrAnimationClipRule[] = { EditorAssetMatchRule::engineType( AnimationClip::kAssetType, { "AnimationClip" } ) };
-        const EditorAssetMatchRule kArrAnimationSetRule[]  = { EditorAssetMatchRule::engineType( AnimationSet::kAssetType, { "AnimationSet" } ) };
-        const EditorAssetMatchRule kArrRigRule[]           = { EditorAssetMatchRule::engineType( RigAsset::kAssetType, { "Rig" } ) };
+        // 바탕(`_base`)을 읽을 때 펼치므로 바탕이 바뀌면 자식도 다시 읽는다.
+        const EditorAssetMatchRule kArrAnimationSetRule[]  = { EditorAssetMatchRule::engineType( AnimationSet::kAssetType, { "AnimationSet", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
+        const EditorAssetMatchRule kArrRigRule[]           = { EditorAssetMatchRule::engineType( RigAsset::kAssetType, { "Rig", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
+        const EditorAssetMatchRule kArrSpriteLibraryRule[] = { EditorAssetMatchRule::engineType( SpriteLibrary::kAssetType, { "SpriteLibrary", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
 
         const EditorAssetMatchRule kArrHeightfieldRule[] = { BuiltinAssetTypesInternal::makeRawHeightfieldRule(), EditorAssetMatchRule::engineType( HeightfieldAsset::kAssetType ) };
         /** @brief 지형이 읽을 때만 읽는다 — 엔진 캐시가 없어 핫 리로드 대상이 아니다(`TerrainComponent::reloadTerrain`). 지형 브러시가 칠해 저장한다. */
@@ -120,6 +123,8 @@ namespace sw::editor
                           true, true, kArrAnimationClipRule, SW_COUNT_OF( kArrAnimationClipRule ), nullptr, nullptr );
     SW_EDITOR_ASSET_TYPE( AnimationSet, AnimationSet::kAssetType._name.data(), 1450, "AnimationSet", "Clip Sets", nullptr, SW_EDITORICON_NAME( "AnimationClip" ), SW_THEMECOLOR_KEY( "Asset", "AnimationClip" ),
                           true, true, kArrAnimationSetRule, SW_COUNT_OF( kArrAnimationSetRule ), nullptr, nullptr );
+    SW_EDITOR_ASSET_TYPE( SpriteLibrary, SpriteLibrary::kAssetType._name.data(), 950, "SpriteLibrary", "Sprite Libraries", nullptr, SW_EDITORICON_NAME( "Sprite" ), SW_THEMECOLOR_KEY( "Asset", "SpriteClip" ), true,
+                          true, kArrSpriteLibraryRule, SW_COUNT_OF( kArrSpriteLibraryRule ), nullptr, nullptr );
     SW_EDITOR_ASSET_TYPE( Rig, RigAsset::kAssetType._name.data(), 1500, "Rig", "Rigs", nullptr, SW_EDITORICON_NAME( "Rig" ), SW_THEMECOLOR_KEY( "Asset", "Rig" ), true, true, kArrRigRule,
                           SW_COUNT_OF( kArrRigRule ), nullptr, nullptr );
     SW_EDITOR_ASSET_TYPE( Heightfield, HeightfieldAsset::kAssetType._name.data(), 1600, "Heightfield", "Heightfields", nullptr, SW_EDITORICON_NAME( "Heightfield" ), SW_THEMECOLOR_KEY( "Asset", "Heightfield" ), true, false, kArrHeightfieldRule, SW_COUNT_OF( kArrHeightfieldRule ), nullptr, nullptr );

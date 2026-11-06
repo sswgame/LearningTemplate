@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  스프라이트 라이브러리 — 클립은 라벨만 적고, 라이브러리를 바꾸면 같은 클립이 다른 그림이 된다(유니티 Sprite Library). 두 장이 같으면 라벨이 그림을 정하지 않는 것이라 진다.
+  라벨을 찾지 못하면 SpriteComponent.SpriteLibraryLabelMissing 오류로 진다.
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.spritelibrary" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/spritelibrary_base.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="spritelibrary_base.ppm"/>
+	<LoadScene path="game/empty/maps/spritelibrary_variant.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="spritelibrary_variant.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="spritelibrary_base.ppm" second="spritelibrary_variant.ppm" region="0.35,0.25,0.3,0.5" minDiffering="0.5"/>
+	<Pass/>
+</Scenario>

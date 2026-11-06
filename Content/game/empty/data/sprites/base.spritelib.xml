@@ -1,0 +1,10 @@
+<!-- 시나리오 automation/spritelibrary 의 바탕 라이브러리 — 라벨 Idle 은 아틀라스의 왼쪽 위 칸이다. -->
+<SpriteLibrary _atlasPath="engine/textures/test/quadrants.dds">
+	<_listCategory>
+		<SpriteLibraryCategory _name="Body">
+			<_listLabel>
+				<SpriteLibraryLabel _name="Idle" _uvRect="0,0,0.5,0.5" />
+			</_listLabel>
+		</SpriteLibraryCategory>
+	</_listCategory>
+</SpriteLibrary>

@@ -17,7 +17,10 @@ namespace sw
 {
     class Texture2D;
     class SpriteClipAsset;
+    class SpriteLibrary;
     class ValidationContext;
+
+    struct SpriteClipFrame;
 
     /**
      * @enum SpriteDrawMode
@@ -42,6 +45,9 @@ namespace sw
      *          (`MeshComponent::getSpriteInstanceData` → `GPUInstance::_sprite`). 그래서 프레임이 넘어가거나 알파가 줄어도 배치는 그대로다.
      *          프레임은 클립(`_clipPath`, `.sprite.xml`)이 있으면 그 클립의 `_clipFrame` 번째 프레임이고, 없으면 `_uvRect` 다.
      *          텍스처 경로가 비어 있으면 클립의 아틀라스를 쓴다. 애니메이터(`SpriteAnimatorComponent`)는 `setClipFrame` 으로 프레임 번호만 넘긴다.
+     *
+     *          **라이브러리.** 클립의 프레임이 라벨(`SpriteClipFrame::_label`)을 적었으면 그림은 `_spriteLibraryPath` 의 라이브러리가 정한다(유니티 Sprite Library · Sprite Resolver).
+     *          라이브러리를 바꾸면 같은 클립 · 같은 애니메이터가 다른 그림을 보인다. 라벨을 쓰는 클립의 아틀라스는 라이브러리의 것이다.
      */
     REFLECT( Category = "Rendering 2D", DisplayName = "Sprite Component", Tooltip = "2D Sprite rendering component", Meta = "Icon=Sprite" )
     class SW_API SpriteComponent : public MeshComponent
@@ -78,6 +84,13 @@ namespace sw
         void setClipPath( string_view path );
         /** @brief 읽은 클립입니다. 경로가 비었거나 읽지 못했으면 nullptr 입니다. */
         const SpriteClipAsset* getClip() const { return _clip.get(); }
+
+        /** @brief 스프라이트 라이브러리(`.spritelib.xml`) 경로입니다. 클립의 라벨 프레임이 여기서 그림을 찾습니다. */
+        const string& getSpriteLibraryPath() const { return _spriteLibraryPath; }
+        /** @brief 라이브러리를 바꾸고 읽습니다. 같은 클립이 다른 그림이 됩니다. 재생 중에 불러도 됩니다. */
+        void setSpriteLibraryPath( string_view path );
+        /** @brief 읽은 라이브러리입니다. 경로가 비었거나 읽지 못했으면 nullptr 입니다. */
+        const SpriteLibrary* getSpriteLibrary() const { return _library.get(); }
 
         /** @brief 보여 줄 클립 프레임 번호입니다. */
         int32 getClipFrame() const { return _clipFrame; }
@@ -137,8 +150,12 @@ namespace sw
          * @details 이 컴포넌트가 등록한 인스턴스만 바꾸거나 해제한다(`_appliedTexture`). 텍스처가 비어 있으면 코드가 등록한 인스턴스는 그대로 둔다.
          */
         void refreshTextureInstance();
-        /** @brief `_clipPath` 의 클립을 잡습니다. 이미 그 경로를 잡았으면 아무것도 하지 않습니다. 읽지 못하면 한 번 알리고 클립 없이 그립니다. */
+        /** @brief `_clipPath` 의 클립과 `_spriteLibraryPath` 의 라이브러리를 잡습니다. 이미 그 경로를 잡았으면 아무것도 하지 않습니다. 읽지 못하면 한 번 알리고 클립 없이 그립니다. */
         void refreshClip();
+        /** @brief 클립의 라벨이 라이브러리에 모두 있는지 봅니다. 라이브러리가 없거나 라벨이 없으면 오류를 남깁니다 — 그 프레임은 `_uvRect` 로 그립니다. */
+        void validateClipLabels() const;
+        /** @brief 지금 보일 클립 프레임입니다. 클립이 없거나 프레임이 없으면 nullptr 입니다. */
+        const SpriteClipFrame* findDisplayedFrame() const;
         /** @brief 보일 프레임과 색을 GPU 인스턴스 슬롯으로 묶어 넘깁니다(`MeshComponent::setSpriteInstanceData`). */
         void refreshSpriteInstanceData();
         /**
@@ -164,6 +181,9 @@ namespace sw
         PROPERTY( Category = "Rendering", DisplayName = "Sprite Clip", AssetPath, AssetType = "SpriteClip",
                   Tooltip = "Sprite clip (.sprite.xml): atlas frames and named animations" )
         string _clipPath;
+        PROPERTY( Category = "Rendering", DisplayName = "Sprite Library", AssetPath, AssetType = "SpriteLibrary",
+                  Tooltip = "Sprite library (.spritelib.xml): category and label to frame; swapping it gives the same clip another picture" )
+        string _spriteLibraryPath;
         PROPERTY( Category = "Rendering", DisplayName = "Clip Frame", Tooltip = "Frame of the sprite clip to show", Min = 0.0 )
         int32 _clipFrame;
         PROPERTY( Category = "Rendering", DisplayName = "UV Rect", Tooltip = "Atlas rectangle (u, v, width, height) shown when there is no clip" )
@@ -187,7 +207,9 @@ namespace sw
         PROPERTY( Category = "Sorting", DisplayName = "Order In Layer", Tooltip = "Draw order inside the sorting layer; higher draws on top", Min = -32767.0,
                   Max = 32767.0 )
         int32                             _orderInLayer;
-        shared_ptr<const SpriteClipAsset> _clip;           ///< 읽은 클립(공유하는 것)이다. 저장하지 않는다
-        string                            _loadedClipPath; ///< `_clip` 이 어느 경로의 것인지 나타낸다. 실패한 경로도 기록해 같은 실패를 되풀이해 읽지 않는다
+        shared_ptr<const SpriteClipAsset> _clip;              ///< 읽은 클립(공유하는 것)이다. 저장하지 않는다
+        string                            _loadedClipPath;    ///< `_clip` 이 어느 경로의 것인지 나타낸다. 실패한 경로도 기록해 같은 실패를 되풀이해 읽지 않는다
+        shared_ptr<const SpriteLibrary>   _library;           ///< 읽은 라이브러리(공유하는 것)다. 저장하지 않는다
+        string                            _loadedLibraryPath; ///< `_library` 가 어느 경로의 것인지 나타낸다. 실패한 경로도 기록한다
     };
 } // namespace sw
