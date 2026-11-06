@@ -55,9 +55,9 @@ struct RenderGraphPassDesc
 };
 ```
 
-열쇠가 없는 목록은 통째로 바뀐다. 문서 루트 이름이 형식 이름이므로 Engine 형식은 팩 쿠커도 알아서 펼친다.
+열쇠가 없는 목록은 통째로 바뀐다.
 
-**게임 · 키트 형식은 문서 표에 한 줄을 더 적는다.** 팩 쿠킹은 게임 모듈을 올리기 전에 돌아(`HeadlessSubsystem::runCookTask`) 모듈의 리플렉션 타입과 정적 등록을 보지 못한다. 안 적으면 쿠킹이 `DataInheritance.NoSchema` 로 멈춘다. 표 줄이 코드와 다르면 `ResourceComposerTest` 가 진다.
+**그리고 문서 표에 한 줄을 적는다(Engine 형식도).** 팩 쿠커는 리플렉션을 읽지 않는다 — 게임 모듈을 올리기 전에 돌고(`HeadlessSubsystem::runCookTask`), 대상마다 지어진 형식이 다르다(서버는 `Renderer/` 가 없어 `RenderPipelineDesc` 가 없다). 안 적으면 쿠킹이 `DataInheritance.NoSchema` 로 멈춘다. 표 줄이 코드와 다르면 `ResourceComposerTest` 가 진다.
 
 ```json
 "listDocument": [

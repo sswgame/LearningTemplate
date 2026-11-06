@@ -5,9 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Content/AssetIO.h"
-#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
-#include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -36,8 +34,8 @@ namespace sw
             }
 
             /**
-             * @brief 루트 이름으로 규칙을 찾아 펼칩니다. 문서 표 → 합치기 함수 → 손 형식 → 리플렉션 형식 차례입니다. 모두 없으면 오류입니다.
-             * @details 문서 표가 먼저다 — 쿠킹은 Engine 의 등록만 보므로, 표는 쿠킹과 개발 실행이 같은 답을 내는 유일한 출처다.
+             * @brief 루트 이름으로 규칙을 찾아 펼칩니다. 문서 표 → 합치기 함수 → 손 형식 차례입니다. 모두 없으면 오류입니다.
+             * @details 리플렉션 형식의 규칙은 문서 표에만 있다 — 쿠커는 대상마다 지어진 형식이 다르고(서버는 Renderer 를 짓지 않는다) 게임 모듈을 올리기 전에 돈다. 표가 코드와 같은지는 `ResourceComposerTest` 가 본다.
              */
             [[nodiscard]] static bool flattenByRootName( string_view text, string_view id, IDataInheritanceSource& source, string& outText, bool& outbComposed )
             {
@@ -61,15 +59,10 @@ namespace sw
                 const DataInheritance::MakeSchemaFunction pfnMakeSchema = DataInheritanceSchemaRegistrar::find( rootName );
                 if ( pfnMakeSchema != nullptr )
                     return DataInheritance::flatten( text, id, pfnMakeSchema(), source, outText );
-                const string    rootNameText{ rootName };
-                const TypeInfo* pTypeInfo = engine::getSubsystem<TypeRegistry>().findType( hashed_string( rootNameText.c_str() ) );
-                if ( pTypeInfo == nullptr )
-                {
-                    SW_LOG_ERROR_ID( "DataInheritance.NoSchema", "'%#': <%#> has %# but no merge rule the cook can see - add it to listDocument in %# (game and kit types are not loaded while cooking)", id, rootName,
-                                     DataInheritance::kBaseAttribute, DataCatalogInheritance::kConfigPath );
-                    return false;
-                }
-                return DataInheritance::flatten( text, id, DataInheritanceSchema::makeFromType( *pTypeInfo ), source, outText );
+                // 리플렉션 형식은 보지 않는다 — 쿠킹 프로세스에 어떤 형식이 지어졌는지(서버는 Renderer 가 없다 · 게임 모듈은 아직 없다)에 쿠킹본이 갈리면 안 된다.
+                SW_LOG_ERROR_ID( "DataInheritance.NoSchema", "'%#': <%#> has %# but no merge rule the cook can see - add it to listDocument in %# (the cook does not read reflection)", id, rootName,
+                                 DataInheritance::kBaseAttribute, DataCatalogInheritance::kConfigPath );
+                return false;
             }
 
             /** @brief 부모 단계입니다. */

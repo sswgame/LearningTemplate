@@ -1,5 +1,7 @@
 {
-    "listDocument": [],
+    "listDocument": [
+        { "root": "RenderPipelineDesc", "listField": [ { "name": "_listAttachment", "key": "_name" }, { "name": "_listPass", "key": "_name" } ] }
+    ],
     "listCatalog": [
         {
             "root": "ItemCatalog",

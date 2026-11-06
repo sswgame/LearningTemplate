@@ -5,8 +5,8 @@
  *          언리얼은 Device Profile · 팩 우선순위 · CDO 가 저마다의 길로 값을 얹고, Godot 은 기능 태그와 씬 상속이 따로다(기억에 의존). 여기는 차이를 얹는 일이 글 수준에서 한 함수를 지나므로
  *          읽는 코드가 변형을 모르고, 쿠킹본과 런타임이 같은 결과를 본다.
  *
- *          규칙의 출처는 문서 루트 이름입니다: 카탈로그 표 · 문서 표(`Config/Dev/DataCatalogInheritance.json`) → 합치기 함수(`SW_DATA_INHERITANCE_MERGE`) → 손 형식(`SW_DATA_INHERITANCE_SCHEMA`) → 리플렉션 형식. 어느 규칙이든 결과는 부모 없는 글입니다.
- *          **팩 쿠킹은 게임 모듈을 올리기 전에 돕니다**(`HeadlessSubsystem::runCookTask`). 정적 등록과 리플렉션은 Engine 것만 보이므로 게임 · 키트 형식이 `_base` 를 쓰면 문서 표에 한 줄을 적습니다.
+ *          규칙의 출처는 문서 루트 이름입니다: 카탈로그 표 · 문서 표(`Config/Dev/DataCatalogInheritance.json`) → 합치기 함수(`SW_DATA_INHERITANCE_MERGE`) → 손 형식(`SW_DATA_INHERITANCE_SCHEMA`). 읽기는 리플렉션 형식에서도 규칙을 만들지만 쿠킹은 그러지 않습니다. 어느 규칙이든 결과는 부모 없는 글입니다.
+ *          **팩 쿠킹은 게임 모듈을 올리기 전에 돕니다**(`HeadlessSubsystem::runCookTask`). 쿠커는 대상마다 지어진 형식도 다릅니다(서버는 Renderer 가 없다). 그래서 리플렉션 형식이 `_base` 를 쓰면 문서 표에 한 줄을 적습니다(Engine 형식도).
  */
 #pragma once
 #include "Core/Container/string.h"
