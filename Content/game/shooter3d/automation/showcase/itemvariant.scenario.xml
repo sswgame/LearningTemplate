@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  아이템 변형 쇼케이스 — 같은 투구 메시(helmet_knight)를 세 캐릭터가 입는다. 왼쪽은 그대로, 가운데는 항목을 물려받아 material 만 적은 helmet_knight_gilded,
+  오른쪽은 꾸미기 고르기로 MaterialVariant 를 고른 helmet_knight_dyeable 이다(common/data/appearance/itemvisuals.xml).
+  기대: 왼쪽 투구는 기사 아틀라스 색이고 가운데와 오른쪽은 같은 금빛이다. 머티리얼이 소켓 프리팹에 닿지 않으면 세 영역이 같아진다 — 골든을 뜰 때 세 장을 견주어 본다.
+  영역은 16:9 창에서 카메라(0,1.3,-4, fovY 0.9)가 머리 높이 2 근처 · 가로 -1.4 · 0 · 1.4 를 놓는 자리다.
+  실행: App -scenario=game/shooter3d/automation/showcase/itemvariant.scenario.xml -unattended -gv_firstScene=game/shooter3d/maps/itemvariantshowcase.scene.xml
+-->
+<Scenario name="game.shooter3d.itemvariant" fixedDelta="0.0166667" timeoutFrames="300" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/shooter3d/maps/itemvariantshowcase.scene.xml"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<WaitUntil watch="Appearance.SlotItem" target="Plain" key="Head" is="helmet_knight" timeoutFrames="5"/>
+	<WaitUntil watch="Appearance.SlotItem" target="Gilded" key="Head" is="helmet_knight_gilded" timeoutFrames="5"/>
+	<WaitUntil watch="Appearance.SlotItem" target="Dyed" key="Head" is="helmet_knight_dyeable" timeoutFrames="5"/>
+	<Wait frames="30"/>
+	<Screenshot file="itemvariant.ppm"/>
+	<Wait frames="1"/>
+	<ExpectImage file="itemvariant.ppm" golden="itemvariant"/>
+	<ExpectImage file="itemvariant.ppm" golden="itemvariant_plain" region="0.22,0.15,0.38,0.45"/>
+	<ExpectImage file="itemvariant.ppm" golden="itemvariant_gilded" region="0.42,0.15,0.58,0.45"/>
+	<ExpectImage file="itemvariant.ppm" golden="itemvariant_dyed" region="0.62,0.15,0.78,0.45"/>
+	<Pass/>
+</Scenario>

@@ -43,9 +43,20 @@ namespace sw
     {
         struct CharacterAppearanceComponentInternal
         {
-            static bool isSamePart( const ResolvedPart& part, const hashed_string& owner, const hashed_string& partName, const hashed_string& asset )
+            static bool isSamePart( const ResolvedPart& part, const hashed_string& owner, const hashed_string& partName, const hashed_string& asset, const hashed_string& material )
             {
-                return part._owner == owner && part._partName == partName && part._asset == asset;
+                return part._owner == owner && part._partName == partName && part._asset == asset && part._material == material;
+            }
+
+            /** @brief 쉬는 소켓 부품 풀의 열쇠입니다. 머티리얼을 입힌 부품은 머티리얼마다 따로 쉰다 - 프리팹 그대로인 부품을 꺼낸 쪽이 남의 머티리얼을 받지 않게 한다. */
+            static hashed_string makePoolKey( const hashed_string& asset, const hashed_string& material )
+            {
+                if ( material.empty() )
+                    return asset;
+                string key{ asset.view() };
+                key += '#';
+                key += material.view();
+                return hashed_string( string_view( key ) );
             }
 
             /** @brief 합친 메시에서 부품이 든 구간의 이름입니다 — 주인(슬롯)과 부품 이름을 이어 차림 안에서 겹치지 않게 한다(몸은 주인이 비어 부품 이름 그대로). */
@@ -513,7 +524,7 @@ namespace sw
             // 염색은 이 외형이 만든 런타임 인스턴스다(`applyParameter`) — 버려서 프리팹 그대로 쉬게 한다. 꺼낸 쪽의 외형이 자기 값을 다시 입힌다.
             Internal::forEachMesh( object, []( MeshComponent& mesh )
             { mesh.setMaterialInstance( nullptr ); } );
-            if ( manager.getSubsystem<SocketPartPool>().storePart( object, spawned._asset ) )
+            if ( manager.getSubsystem<SocketPartPool>().storePart( object, Internal::makePoolKey( spawned._asset, spawned._material ) ) )
                 return;
         }
         manager.destroyObject( &object );
@@ -870,7 +881,7 @@ namespace sw
                 const bool          bCandidate = listPartCovered[partIndex] == SW_FALSE && static_cast<int32>( partIndex ) != bodyPart;
                 // 합친 부품이었는지도 같아야 같은 부품이다 — 병합을 켜거나 끄면 오브젝트로 두던 부품과 구간으로 두던 부품이 바뀐다.
                 const bool bSameMode = ( spawned._bMerged == SW_TRUE ) == isMergedPart( candidate, static_cast<int32>( partIndex ) );
-                const bool bSamePart = bSameMode && Internal::isSamePart( candidate, spawned._owner, spawned._partName, spawned._asset );
+                const bool bSamePart = bSameMode && Internal::isSamePart( candidate, spawned._owner, spawned._partName, spawned._asset, spawned._material );
                 if ( bCandidate && bSamePart )
                 {
                     matched = static_cast<int32>( partIndex );
@@ -907,6 +918,7 @@ namespace sw
             spawned._owner     = part._owner;
             spawned._partName  = part._partName;
             spawned._asset     = part._asset;
+            spawned._material  = part._material;
             spawned._partIndex = static_cast<uint32>( partIndex );
             if ( isMergedPart( part, static_cast<int32>( partIndex ) ) )
             {
@@ -918,9 +930,15 @@ namespace sw
             }
             if ( part._kind == AppearancePartKind::SocketPrefab )
             {
-                pObject = manager.getSubsystem<SocketPartPool>().takePart( part._asset );
+                pObject = manager.getSubsystem<SocketPartPool>().takePart( Internal::makePoolKey( part._asset, part._material ) );
                 if ( pObject == nullptr && pAssetManager != nullptr )
+                {
                     pObject = pAssetManager->getAssetCache<PrefabCache>().spawn( &manager, part._asset.c_str(), part._partName.c_str() );
+                    // 같은 메시를 머티리얼만 달리한 변형(`material` · `<MaterialVariant>`)이다. 풀에서 꺼낸 부품은 열쇠가 머티리얼을 담아 이미 입었다.
+                    if ( pObject != nullptr && part._material.empty() == false )
+                        Internal::forEachMesh( *pObject, [&part]( MeshComponent& mesh )
+                        { mesh.setMaterialPath( part._material.c_str() ); } );
+                }
                 if ( pObject != nullptr && pObject->getComponent<SocketBindingComponent>() == nullptr )
                     (void)pObject->addComponent<SocketBindingComponent>();
             }

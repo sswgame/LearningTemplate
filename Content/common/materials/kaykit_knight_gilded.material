@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기사 아틀라스에 금빛을 곱한 변형 — 메시와 텍스처는 기사 것을 그대로 쓴다. 아이템 변형 쇼케이스(helmet_knight_gilded · helmet_knight_dyeable)가 입는다. -->
+<MaterialDesc formatVersion="0" name="KayKitKnightGilded" _base="common/materials/kaykit_knight.material">
+	<_properties>
+		<item name="_color" defaultValue="1.0 0.72 0.2 1.0" />
+		<item name="_metallic" defaultValue="0.85" />
+	</_properties>
+</MaterialDesc>

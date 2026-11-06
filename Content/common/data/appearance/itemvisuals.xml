@@ -37,6 +37,15 @@
   <ItemVisual id="helmet_knight" tags="Helmet.Full">
     <Part name="Shell" kind="SocketPrefab" prefab="common/prefabs/kaykit/knight_helmet.prefab.xml" socket="Helmet"/>
   </ItemVisual>
+  <!-- 같은 메시 · 다른 머티리얼의 두 길 — 고정된 변형은 항목을 물려받아 material 만 적고, 꾸미기로 고르는 변형은 MaterialVariant 를 둔다(시나리오 showcase/itemvariant). -->
+  <ItemVisual id="helmet_knight_gilded" _base="helmet_knight">
+    <Part name="Shell" material="common/materials/kaykit_knight_gilded.material"/>
+  </ItemVisual>
+  <ItemVisual id="helmet_knight_dyeable" _base="helmet_knight" customization="HelmetFinish">
+    <Part name="Shell">
+      <MaterialVariant name="Gilded" material="common/materials/kaykit_knight_gilded.material"/>
+    </Part>
+  </ItemVisual>
   <ItemVisual id="helmet_skeleton" _base="helmet_knight">
     <Part name="Shell" prefab="common/prefabs/kaykit/skeleton_warrior_helmet.prefab.xml"/>
   </ItemVisual>

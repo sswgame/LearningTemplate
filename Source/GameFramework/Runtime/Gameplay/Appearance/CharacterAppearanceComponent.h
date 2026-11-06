@@ -233,6 +233,7 @@ namespace sw
             hashed_string                                  _owner{};
             hashed_string                                  _partName{};
             hashed_string                                  _asset{};
+            hashed_string                                  _material{}; ///< 부품이 입은 머티리얼(비면 메시 · 프리팹의 것). 바뀌면 다른 부품이다
             uint32                                         _partIndex{ 0 };
             uint32                                         _holderUnit{ AppearanceSocketRig::kNoUnit }; ///< 붙은 유닛(몸이면 0). 몸이면 포즈마다 위치를 고친다
             uint8                                          _bSocketPart{ SW_TRUE };                     ///< 소켓에 붙는 부품인지 여부(아니면 몸을 따르는 스킨드 부품)

@@ -31,6 +31,19 @@
     <Equip slot="MainHand" item="scifi_pistol"/>
   </CharacterAppearance>
 
+  <!-- 아이템 변형 쇼케이스(시나리오 showcase/itemvariant) — 같은 투구 메시를 그대로, 머티리얼만 다른 항목으로, 꾸미기의 머티리얼 변형으로 입는다. -->
+  <CharacterAppearance id="VariantShowcasePlain" parent="Adventurer">
+    <Equip slot="Head" item="helmet_knight"/>
+  </CharacterAppearance>
+  <CharacterAppearance id="VariantShowcaseGilded" parent="Adventurer">
+    <Equip slot="Head" item="helmet_knight_gilded"/>
+  </CharacterAppearance>
+  <CharacterAppearance id="VariantShowcaseDyed" parent="Adventurer">
+    <Equip slot="Head" item="helmet_knight_dyeable">
+      <Value name="Finish" option="Gilded"/>
+    </Equip>
+  </CharacterAppearance>
+
   <!-- Shooter3D 적 생물 — 몸 하나뿐이고 장비 칸이 없다(arena.scene.xml 의 ShooterDirector 가 프리팹과 함께 고른다). -->
   <CharacterAppearance id="QuadShell" body="body_quadshell" tags="Race.Machine"/>
   <CharacterAppearance id="Trilobite" body="body_trilobite" tags="Race.Machine"/>

@@ -21,4 +21,6 @@
   <Item id="blade_skeleton" name="Notched Blade" category="Weapon" slot="Weapon" visual="blade_skeleton"/>
   <Item id="axe_skeleton" name="Bone Axe" category="Weapon" slot="Weapon" visual="axe_skeleton"/>
   <Item id="bow_long" name="Longbow" category="Weapon" slot="Weapon" visual="bow_long"/>
+  <Item id="helmet_knight_gilded" _base="helmet_knight" name="Gilded Knight Helmet" visual="helmet_knight_gilded"/>
+  <Item id="helmet_knight_dyeable" _base="helmet_knight" name="Knight Helmet (Dyeable)" visual="helmet_knight_dyeable"/>
 </ItemCatalog>

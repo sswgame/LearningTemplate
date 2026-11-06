@@ -16,6 +16,12 @@
       <Option name="Hooded" visual="hood_skeleton"/>
     </Choice>
   </Schema>
+  <Schema id="HelmetFinish">
+    <Choice name="Finish" category="Dye" default="Standard">
+      <Option name="Standard"/>
+      <Option name="Gilded" materialVariant="Gilded"/>
+    </Choice>
+  </Schema>
   <Schema id="Gun">
     <Choice name="Finish" category="Dye" default="Standard">
       <Option name="Standard"/>
