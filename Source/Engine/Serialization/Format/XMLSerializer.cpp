@@ -304,6 +304,8 @@ namespace sw
                     if ( prop._bIsContainer && prop.hasContainerWrapper() )
                     {
                         // 프로퍼티 이름이 곧 컨테이너 요소다. 그 안에 원소들이 들어간다.
+                        if ( prop._metadata->_bSkipIfEmpty == SW_TRUE && prop._containerWrapper->getSize( propValue.get() ) == 0 )
+                            return; // 글 칸과 같은 규칙 — 스키마가 생략을 허락한 빈 목록은 쓰지 않는다
                         backend.beginMap( prop._name.c_str() );
                         ContainerWriter writer( backend, context );
                         ContainerVisitor::write( propValue, prop.getContainerShape(), writer, context );

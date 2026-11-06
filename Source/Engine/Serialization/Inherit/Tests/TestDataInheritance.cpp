@@ -410,6 +410,6 @@ SW_TEST_CASE( DataInheritanceTest, RepeatedStructFieldIsAnError )
     DataInheritanceTestSource source;
     source.add( "base.xml", R"(<Doc><_inner _a="1" /></Doc>)" );
     string flat;
-    SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="base.xml"><_inner _a="2" /><_inner _a="3" /></Doc>)", flat ) );
     SW_EXPECT_LOG( "DataInheritance.FieldRepeated" );
+    SW_EXPECT_FALSE( Util::flatten( source, R"(<Doc _base="base.xml"><_inner _a="2" /><_inner _a="3" /></Doc>)", flat ) );
 }

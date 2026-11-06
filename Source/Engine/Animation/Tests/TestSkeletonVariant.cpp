@@ -333,8 +333,8 @@ SW_TEST_CASE( SkeletonVariantTest, ChainStacksThroughCommonBase )
     SW_EXPECT_NEAR( expected._y, leaf.getBone( 1 )._referencePose._translation._y, 0.0001f );
 
     Skeleton looped;
-    SW_EXPECT_FALSE( looped.loadFromAsset( AssetID{ idLoop } ) );
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
+    SW_EXPECT_FALSE( looped.loadFromAsset( AssetID{ idLoop } ) );
 }
 
 /**

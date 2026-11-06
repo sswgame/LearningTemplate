@@ -84,8 +84,8 @@ SW_TEST_CASE( ResourceComposerTest, CookStopsWhenNoRuleIsVisible )
     source.add( "base.xml", "<NoSuchFormatAnywhere />" );
     string outText;
     bool   bComposed = false;
-    SW_EXPECT_FALSE( ResourceComposer::compose( R"(<NoSuchFormatAnywhere _base="base.xml" />)", "a", ResourceContext::forPackCook( source ), outText, bComposed ) );
     SW_EXPECT_LOG( "DataInheritance.NoSchema" );
+    SW_EXPECT_FALSE( ResourceComposer::compose( R"(<NoSuchFormatAnywhere _base="base.xml" />)", "a", ResourceContext::forPackCook( source ), outText, bComposed ) );
 }
 
 /** @brief [ResourceComposerTest] 문서 표의 줄이 규칙이 되고, 그 규칙으로 쿠킹이 펼친다 */
@@ -145,8 +145,8 @@ SW_TEST_CASE( ResourceComposerTest, ChainIsCollectedFromTheTop )
     SW_EXPECT_EQUAL( string( "mid.xml" ), listLayer[1]._id );
     SW_EXPECT_EQUAL( string( "leaf" ), listLayer[2]._id );
 
-    SW_EXPECT_FALSE( DataInheritance::collectChain( R"(<Leaf _base="loop.xml" />)", "leaf", source, listLayer ) );
     SW_EXPECT_LOG( "DataInheritance.Cycle" );
-    SW_EXPECT_FALSE( DataInheritance::collectChain( R"(<Leaf _base="none.xml" />)", "leaf", source, listLayer ) );
+    SW_EXPECT_FALSE( DataInheritance::collectChain( R"(<Leaf _base="loop.xml" />)", "leaf", source, listLayer ) );
     SW_EXPECT_LOG( "DataInheritance.BaseNotFound" );
+    SW_EXPECT_FALSE( DataInheritance::collectChain( R"(<Leaf _base="none.xml" />)", "leaf", source, listLayer ) );
 }
