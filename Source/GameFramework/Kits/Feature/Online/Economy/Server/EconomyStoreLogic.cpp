@@ -31,7 +31,8 @@ namespace sw
 
             /**
              * @brief 스토어 답의 구매자를 지급받을 계정과 대조합니다. 맞으면 Ok, 아니면 NotPurchaser, 연동을 읽지 못하면 Unavailable 입니다.
-             * @details 구매자 대조는 여기 한 곳이다. 스토어는 답이 말한 값을 옮겨 적고 규칙은 제공자 설정이 정한다. 답에 구매자가 없으면 "다르다" 로 읽는다 — 없음을 통과시키면 그 길로 남의 영수증을 받는다.
+             * @details 구매자 대조는 여기 한 곳이다. 스토어는 답이 말한 값을 옮겨 적고 규칙은 제공자 설정이 정한다. 답에 구매자가 없으면 거절한다 — 없음을 통과시키면 그 길로 남의 영수증을 받는다.
+             *          계정 토큰이 없으면 `BuyerTokenMissing` 으로 까닭을 가른다 — 남의 영수증이 아니라 클라이언트가 토큰을 빠뜨린 구매일 때가 많다.
              */
             static EconomyResult compareBuyer( IServiceStoreConnection& connection, const EconomyRedeemInput& input )
             {
@@ -44,6 +45,11 @@ namespace sw
                     }
                     case ReceiptBuyerBinding::AccountToken:
                     {
+                        if ( receipt._storeBuyerID.empty() )
+                        {
+                            SW_LOG_WARNING_ID( "EconomyStoreLogic.BuyerTokenMissing", "The %# answer for transaction '%#' has no account token - the client purchase did not carry ReceiptBuyerToken (obfuscatedAccountId / appAccountToken, see StorePurchaseFlow), the grant is refused", receipt._storeName.c_str(), receipt._transactionID.c_str() );
+                            return EconomyResult::BuyerTokenMissing;
+                        }
                         return HTTPUtil::isEqualIgnoreCase( receipt._storeBuyerID, ReceiptBuyerToken::make( input._accountID ) ) ? EconomyResult::Ok : EconomyResult::NotPurchaser; // UUID 는 대소문자를 가리지 않는다
                     }
                     case ReceiptBuyerBinding::LinkedLogin:

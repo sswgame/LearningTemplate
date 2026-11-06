@@ -83,6 +83,7 @@ namespace sw
         WithdrawalExpired, ///< 청약철회 기한(구매 뒤 7일)이 지났다
         NotPurchaser,      ///< 다른 계정이 받은 거래이거나 받은 적이 없는 거래이다. 영수증의 구매자가 이 계정이 아닐 때도 쓴다
         NothingToWithdraw, ///< 지급한 재화를 모두 써서 돌려받을 것이 없다
+        BuyerTokenMissing, ///< 스토어 답에 구매 때 찍은 계정 토큰이 없다 — 클라이언트의 구매 요청이 `ReceiptBuyerToken` 을 싣지 않았다(`StorePurchaseFlow`)
         Count
     };
 } // namespace sw

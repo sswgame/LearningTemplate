@@ -1,8 +1,8 @@
 /**
  * @file ReceiptBuyerToken.h
  * @brief 구매 때 스토어에 찍어 두는 계정 토큰입니다. 스토어가 서명한 답에 되풀이되므로 서버가 "이 결제를 시작한 계정" 을 압니다.
- * @details 클라이언트는 구글의 `BillingFlowParams.setObfuscatedAccountId` 와 애플의 `Product.PurchaseOption.appAccountToken` 에 이 값을 넣고, 서버는 지급할 계정으로 같은 값을 만들어 답과 비교한다(`ReceiptBuyerBinding::AccountToken`).
- *          한 벌로 두 스토어를 받으려고 UUID 모양이다 — 애플은 UUID 만 받고 구글은 64 자 이하 글이면 받는다.
+ * @details 클라이언트(`StorePurchaseFlow`)는 구글의 `BillingFlowParams.Builder.setObfuscatedAccountId` 와 애플의 `Product.PurchaseOption.appAccountToken` 에 이 값을 넣고, 서버는 지급할 계정으로 같은 값을 만들어 답과 비교한다(`ReceiptBuyerBinding::AccountToken`).
+ *          한 벌로 두 스토어를 받으려고 UUID 모양이다 — 애플은 UUID 만 받고(App Store Server API `appAccountToken`) 구글은 64 자 이하 글이면 받는다.
  *          비밀이 없어도 된다: 막으려는 것은 남의 영수증을 내는 일이고, 찍는 것은 결제하는 사람 자신이다. 계정 id 는 난수이고 개인정보가 아니다(`LoginStoreLogic::makeNonZeroID`).
  */
 #pragma once

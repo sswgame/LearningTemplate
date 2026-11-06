@@ -415,13 +415,14 @@ SW_TEST_CASE( EconomyReceiptsTest, LinkedLoginBuyerMustMatchTheAccount )
     SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
 }
 
-/** @brief [EconomyReceiptsTest] 계정 토큰 묶기: 답의 토큰이 그 계정의 것이어야 받는다(대소문자 무시). 토큰이 없으면 거절한다. 묶지 않는 규칙은 먼저 낸 계정이 받는다 */
+/** @brief [EconomyReceiptsTest] 계정 토큰 묶기: 답의 토큰이 그 계정의 것이어야 받는다(대소문자 무시). 토큰이 없으면 까닭을 말하며 거절한다. 묶지 않는 규칙은 먼저 낸 계정이 받는다 */
 SW_TEST_CASE( EconomyReceiptsTest, AccountTokenBuyerMustMatchTheAccount )
 {
+    SW_EXPECT_LOG( "EconomyStoreLogic.BuyerTokenMissing" );
     ReceiptRig   rig;
     const string token = ReceiptBuyerToken::make( kBuyer );
     SW_EXPECT_TRUE( rig.redeemBound( kOther, ReceiptBuyerBinding::AccountToken, token, nullptr ) == EconomyResult::NotPurchaser );
-    SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::AccountToken, "", nullptr ) == EconomyResult::NotPurchaser );
+    SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::AccountToken, "", nullptr ) == EconomyResult::BuyerTokenMissing );
     string upper = token;
     for ( utf8& character : upper )
     {
