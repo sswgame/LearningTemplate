@@ -102,7 +102,9 @@ namespace sw
 
                 for ( int32 attempt = 0; attempt < kMaxNameAttempt; ++attempt )
                 {
-                    const string name     = attempt == 0 ? baseName : baseName + "." + to_string( attempt );
+                    string name = baseName;
+                    if ( attempt > 0 )
+                        name += "." + to_string( attempt );
                     const string infoPath = trashFolder + "/info/" + name + ".trashinfo";
                     const string destPath = trashFolder + "/files/" + name;
                     const int32  file     = ::open( infoPath.c_str(), O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0600 );
