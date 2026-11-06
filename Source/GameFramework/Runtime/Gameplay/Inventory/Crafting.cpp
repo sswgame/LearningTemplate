@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -325,4 +326,10 @@ namespace sw
         _listJob             = std::move( listJob );
         return true;
     }
+} // namespace sw
+
+namespace sw
+{
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<RecipeCatalog>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( RecipeCatalog, RecipeCatalog, SW_GF_API, AssetTypeDef::makeCacheOnly( "RecipeCatalog", AssetTypeLoader::of<RecipeCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

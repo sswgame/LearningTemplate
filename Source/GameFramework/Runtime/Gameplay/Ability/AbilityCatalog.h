@@ -1,6 +1,6 @@
 /**
  * @file AbilityCatalog.h
- * @brief id 로 찾는 이펙트, 어빌리티, 어빌리티 세트의 정의와 이름으로 클래스를 만드는 레지스트리입니다.
+ * @brief id 로 찾는 이펙트, 어빌리티, 어빌리티 세트의 정의(`AbilityCatalog`, 공유 데이터)와 이름으로 클래스를 만드는 레지스트리(`AbilityClassRegistry`, 게임 코드)입니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -14,6 +14,7 @@
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionCast.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -28,9 +29,11 @@ namespace sw
 {
     class XMLNode;
 
-    /** @brief 어빌리티 클래스 하나를 만드는 함수입니다(`AbilityCatalog::registerAbilityClass`). */
+    class AbilityCatalog;
+
+    /** @brief 어빌리티 클래스 하나를 만드는 함수입니다(`AbilityClassRegistry::registerAbilityClass`). */
     using AbilityFactoryFunc = unique_ptr<Ability> ( * )();
-    /** @brief 어트리뷰트 세트 클래스 하나를 만드는 함수입니다(`AbilityCatalog::registerAttributeSetClass`). */
+    /** @brief 어트리뷰트 세트 클래스 하나를 만드는 함수입니다(`AbilityClassRegistry::registerAttributeSetClass`). */
     using AttributeSetFactoryFunc = unique_ptr<AttributeSet> ( * )();
     /** @brief XML `<Execution class="...">` 노드로 실행 계산을 만드는 함수입니다(`AbilityCatalog::registerExecutionClass`). */
     using ExecutionFactoryFunc = shared_ptr<const IGameplayEffectExecution> ( * )( const XMLNode& node );
@@ -42,7 +45,7 @@ namespace sw
     struct AbilityDef
     {
         hashed_string _id{};
-        hashed_string _className{}; ///< `registerAbilityClass` 로 등록한 이름
+        hashed_string _className{}; ///< `AbilityClassRegistry::registerAbilityClass` 로 등록한 이름
         AbilityConfig _config{};
     };
 } // namespace sw
@@ -307,56 +310,80 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) AbilityCatalog
+    // 2) AbilityClassRegistry · AbilityCatalog
     // ------------------------------------------------------------------------------
     /**
-     * @class AbilityCatalog
-     * @brief 이펙트, 어빌리티, 세트의 정의를 id 로 찾고, 클래스 이름으로 어빌리티, 어트리뷰트 세트, 실행 계산을 만듭니다.
-     * @details **소유자**: 게임이 카탈로그를 하나 만들어 `GameInstance` 의 멤버로 보관하고, 게임 서비스로 등록한다.
-     *          등록은 게임 인스턴스가 `bindScopedService( &_abilityCatalog )` 로 게임 범위에 등록한다. 컴포넌트에 카탈로그를 따로 정하지 않았으면 이 서비스를 쓴다.
-     *          등록한 팩토리는 게임 모듈의 코드이므로 카탈로그의 수명은 게임 모듈과 같아야 한다. 핫 리로드를 하면 새 인스턴스가 다시 등록한다.
-     *
-     *          **기본 등록**: 어트리뷰트 세트는 "Generic"(`AttributeSet`, 어트리뷰트를 데이터가 정함)과 "Combat"(`CombatAttributeSet`),
-     *          어빌리티는 "ApplyEffects"(`ApplyEffectsAbility`), 실행 계산은 "Damage"(`DamageExecution`)이다.
-     *
-     *          **데이터**(`loadFromAsset`, `loadFromXMLText`): 루트 `<AbilityCatalog>` 아래에 `<AbilityEffect>`, `<Ability>`, `<AbilitySet>` 을 둔다.
-     *          파일 안의 순서와 상관없이 이펙트, 어빌리티, 세트 순으로 읽는다. 그래서 비용 이펙트나 쿨다운 이펙트 같은 참조가 앞에 있지 않아도 된다.
-     *          여러 파일을 차례로 읽으면 합쳐지고, 같은 id 는 나중에 읽은 것이 우선한다. 형식은 `Source/GameFramework/Runtime/Gameplay/Ability/README.md` 에 있다.
+     * @class AbilityClassRegistry
+     * @brief 클래스 이름으로 어빌리티 · 어트리뷰트 세트를 만드는 레지스트리입니다. 게임 모듈의 코드(팩토리)이므로 데이터 카탈로그와 나눈다.
+     * @details **소유자**: 게임 인스턴스가 하나 들고 클래스를 등록한 뒤 게임 범위에 건다(`bindScopedService`). 컴포넌트에 따로 정하지 않았으면 이 서비스를 쓴다.
+     *          예전에는 카탈로그가 팩토리를 함께 들어 카탈로그를 게임마다 사본으로 읽어야 했다 — 데이터는 공유 캐시의 한 벌(`SharedAssetCache<AbilityCatalog>`)이고 코드는 여기다.
+     *          언리얼 GAS 도 어빌리티 클래스(코드)와 데이터 에셋을 나눈다(기억에 의존). 등록한 팩토리는 게임 모듈의 코드이므로 레지스트리의 수명은 게임 모듈과 같다.
+     *          **기본 등록**: 어트리뷰트 세트는 "Generic"(`AttributeSet`, 어트리뷰트를 데이터가 정함)과 "Combat"(`CombatAttributeSet`), 어빌리티는 "ApplyEffects"(`ApplyEffectsAbility`)이다.
      */
-    class SW_GF_API AbilityCatalog : public XMLCatalog<AbilityCatalog>
+    class SW_GF_API AbilityClassRegistry
     {
-        friend class XMLCatalog<AbilityCatalog>;
-
     public:
-        /** @brief 데이터 종류 이름입니다(`SW_ASSET_TYPE` 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
-        static constexpr const utf8* kDataKind = "abilities";
+        AbilityClassRegistry();
+        ~AbilityClassRegistry();
 
-        AbilityCatalog();
-        ~AbilityCatalog();
-
-        AbilityCatalog( const AbilityCatalog& )            = delete;
-        AbilityCatalog& operator=( const AbilityCatalog& ) = delete;
-
-        // --------------------------------------------------------------------------
-        // 클래스 등록. 이름과 만드는 함수를 연결한다
-        // --------------------------------------------------------------------------
         void registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory );
         void registerAttributeSetClass( const hashed_string& className, AttributeSetFactoryFunc factory );
-        void registerExecutionClass( const hashed_string& className, ExecutionFactoryFunc factory );
         /** @brief 어빌리티 클래스 T 를 이름으로 등록합니다. 기본 생성자로 만듭니다. */
         template <typename T>
         void registerAbilityClass( const hashed_string& className )
         {
             static_assert( HasOwnReflectBody_v<T>, "ability class needs REFLECT( Abstract ) + REFLECT_BODY() and a getTypeInfo override - hot reload picks module abilities by type" );
-            registerAbilityClass( className, &AbilityCatalog::createDefault<Ability, T> );
+            registerAbilityClass( className, &AbilityClassRegistry::createDefault<Ability, T> );
         }
         /** @brief 어트리뷰트 세트 클래스 T 를 이름으로 등록합니다. 기본 생성자로 만듭니다. */
         template <typename T>
         void registerAttributeSetClass( const hashed_string& className )
         {
             static_assert( HasOwnReflectBody_v<T>, "attribute set class needs REFLECT( Abstract ) + REFLECT_BODY() and a getTypeInfo override - hot reload picks module sets by type" );
-            registerAttributeSetClass( className, &AbilityCatalog::createDefault<AttributeSet, T> );
+            registerAttributeSetClass( className, &AbilityClassRegistry::createDefault<AttributeSet, T> );
         }
+
+        /** @brief @p catalog 의 어빌리티 정의로 인스턴스를 만들고 설정을 줍니다. 정의나 클래스가 없으면 경고를 남기고 nullptr 을 반환합니다. */
+        unique_ptr<Ability> createAbility( const AbilityCatalog& catalog, const hashed_string& abilityID ) const;
+        /** @brief 등록된 이름의 어트리뷰트 세트를 만듭니다. 없으면 경고를 남기고 nullptr 입니다. */
+        unique_ptr<AttributeSet> createAttributeSet( const hashed_string& className ) const;
+        /** @brief 어빌리티 클래스가 등록돼 있으면 true 입니다. */
+        bool hasAbilityClass( const hashed_string& className ) const;
+
+    private:
+        template <typename TBase, typename T>
+        static unique_ptr<TBase> createDefault()
+        {
+            return unique_ptr<TBase>( make_unique<T>() );
+        }
+
+    private:
+        unordered_map<hashed_string, AbilityFactoryFunc>      _mapAbilityFactory;
+        unordered_map<hashed_string, AttributeSetFactoryFunc> _mapAttributeSetFactory;
+    };
+
+    /**
+     * @class AbilityCatalog
+     * @brief 이펙트, 어빌리티, 세트의 정의를 id 로 찾습니다. 데이터만 든다 — 클래스로 만드는 일은 `AbilityClassRegistry` 다.
+     * @details **소유자**: 공유 캐시(`SharedAssetCache<AbilityCatalog>`)의 한 벌을 게임 인스턴스가 쥐고 게임 범위에 건다(`GameInstance::loadRequiredCatalog`).
+     *          컴포넌트에 카탈로그를 따로 정하지 않았으면 이 서비스를 쓴다.
+     *
+     *          **실행 계산**: 이펙트를 읽을 때 `<Execution class="...">` 를 만든다 — 그 어휘("Damage", `DamageExecution`)는 읽기의 일부라 카탈로그가 든다.
+     *
+     *          **데이터**(파일은 공유 캐시, 글은 `loadFromXMLText`): 루트 `<AbilityCatalog>` 아래에 `<AbilityEffect>`, `<Ability>`, `<AbilitySet>` 을 둔다.
+     *          파일 안의 순서와 상관없이 이펙트, 어빌리티, 세트 순으로 읽는다. 그래서 비용 이펙트나 쿨다운 이펙트 같은 참조가 앞에 있지 않아도 된다.
+     *          여러 글을 차례로 읽으면 합쳐지고, 같은 id 는 나중에 읽은 것이 우선한다. 형식은 `Source/GameFramework/Runtime/Gameplay/Ability/README.md` 에 있다.
+     */
+    class SW_GF_API AbilityCatalog : public XMLCatalog<AbilityCatalog>
+    {
+        friend class XMLCatalog<AbilityCatalog>;
+
+    public:
+        /** @brief 데이터 종류 이름입니다(캐시 등록 줄과 팩 경로 `GamePackDataUtil::tryMakeKindPath` 가 이것을 쓴다). */
+        static constexpr const utf8* kDataKind = "abilities";
+
+        AbilityCatalog();
+        ~AbilityCatalog();
 
         // --------------------------------------------------------------------------
         // 정의. 코드로 추가한다
@@ -373,7 +400,7 @@ namespace sw
         // --------------------------------------------------------------------------
         // 데이터. XML 로 읽는다
         // --------------------------------------------------------------------------
-        /** @brief 정의를 모두 지웁니다. 클래스 등록은 그대로 둡니다. */
+        /** @brief 정의를 모두 지웁니다. 실행 계산 어휘는 그대로 둡니다. */
         void clearDefinitions();
 
         // --------------------------------------------------------------------------
@@ -384,12 +411,6 @@ namespace sw
         const AbilitySetDef*               findAbilitySet( const hashed_string& setID ) const;
         /** @brief @p cueTag 나 그 가장 가까운 조상 태그의 큐 정의입니다. 없으면 nullptr 입니다(그 큐는 연출 없이 이벤트만 나간다). */
         const AbilityPresentationDef* findCue( TagID cueTag ) const;
-        /** @brief 어빌리티 정의로 인스턴스를 만들고 설정을 줍니다. 정의나 클래스가 없으면 경고를 남기고 nullptr 을 반환합니다. */
-        unique_ptr<Ability> createAbility( const hashed_string& abilityID ) const;
-        /** @brief 등록된 이름의 어트리뷰트 세트를 만듭니다. 없으면 nullptr 입니다. */
-        unique_ptr<AttributeSet> createAttributeSet( const hashed_string& className ) const;
-        /** @brief 어빌리티 클래스가 등록돼 있으면 true 입니다. */
-        bool hasAbilityClass( const hashed_string& className ) const;
 
         uint32 getEffectCount() const { return static_cast<uint32>( _mapEffect.size() ); }
         uint32 getAbilityCount() const { return static_cast<uint32>( _mapAbility.size() ); }
@@ -399,11 +420,8 @@ namespace sw
     private:
         /** @brief `<AbilityCatalog>` 루트 하나를 읽습니다. 읽은 정의 수를 반환합니다. */
         static constexpr const utf8* kXMLRootName = "AbilityCatalog"; ///< 루트 원소(`XMLCatalog`)
-        template <typename TBase, typename T>
-        static unique_ptr<TBase> createDefault()
-        {
-            return unique_ptr<TBase>( make_unique<T>() );
-        }
+        /** @brief 실행 계산 클래스를 이름으로 등록합니다(생성자가 기본 어휘를 올린다). */
+        void   registerExecutionClass( const hashed_string& className, ExecutionFactoryFunc factory );
         uint32 loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief `<AbilityEffect>` 하나를 읽습니다. */
         [[nodiscard]] bool readEffect( const XMLNode& node, string_view sourceName, AbilityEffectDef& outDef ) const;
@@ -421,8 +439,9 @@ namespace sw
         unordered_map<hashed_string, AbilityDef>                         _mapAbility;
         unordered_map<hashed_string, AbilitySetDef>                      _mapAbilitySet;
         unordered_map<uint64, AbilityPresentationDef>                    _mapCue; ///< 큐 태그 id → 정의
-        unordered_map<hashed_string, AbilityFactoryFunc>                 _mapAbilityFactory;
-        unordered_map<hashed_string, AttributeSetFactoryFunc>            _mapAttributeSetFactory;
         unordered_map<hashed_string, ExecutionFactoryFunc>               _mapExecutionFactory;
     };
+
+    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<AbilityCatalog>::acquire` 로 한 벌을 받습니다. */
+    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<AbilityCatalog>;
 } // namespace sw

@@ -26,21 +26,30 @@
 #if defined( SW_PLATFORM_WINDOWS )
     #if defined( SW_KIT_EXPORTS )
         #define SW_KIT_API __declspec( dllexport )
+        /** @brief 키트가 명시적으로 인스턴스화해 내보내는 클래스 템플릿(공유 캐시)의 `extern template` 선언에 붙입니다(`SW_GF_API_EXTERN_TEMPLATE` 와 같다). 내보내는 쪽은 비웁니다. */
+        #define SW_KIT_API_EXTERN_TEMPLATE
     #elif defined( SW_KIT_IMPORTS )
-        #define SW_KIT_API __declspec( dllimport )
+        #define SW_KIT_API                 __declspec( dllimport )
+        #define SW_KIT_API_EXTERN_TEMPLATE __declspec( dllimport )
     #else
         #define SW_KIT_API
+        #define SW_KIT_API_EXTERN_TEMPLATE
     #endif
     #if defined( SW_KIT_SERVER_EXPORTS )
         #define SW_KIT_SERVER_API __declspec( dllexport )
+        #define SW_KIT_SERVER_API_EXTERN_TEMPLATE
     #elif defined( SW_KIT_IMPORTS )
-        #define SW_KIT_SERVER_API __declspec( dllimport )
+        #define SW_KIT_SERVER_API                 __declspec( dllimport )
+        #define SW_KIT_SERVER_API_EXTERN_TEMPLATE __declspec( dllimport )
     #else
         #define SW_KIT_SERVER_API
+        #define SW_KIT_SERVER_API_EXTERN_TEMPLATE
     #endif
 #else
-    #define SW_KIT_API        __attribute__( ( visibility( "default" ) ) )
-    #define SW_KIT_SERVER_API __attribute__( ( visibility( "default" ) ) )
+    #define SW_KIT_API                        __attribute__( ( visibility( "default" ) ) )
+    #define SW_KIT_API_EXTERN_TEMPLATE        __attribute__( ( visibility( "default" ) ) )
+    #define SW_KIT_SERVER_API                 __attribute__( ( visibility( "default" ) ) )
+    #define SW_KIT_SERVER_API_EXTERN_TEMPLATE __attribute__( ( visibility( "default" ) ) )
 #endif
 
 // `registerGameFrameworkTypes()` 는 두지 않는다. GameFramework 의 리플렉션 타입은

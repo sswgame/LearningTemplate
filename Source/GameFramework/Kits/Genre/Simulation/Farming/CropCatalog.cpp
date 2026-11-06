@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -94,6 +95,13 @@ namespace sw
     {
         // 칸의 기본값은 Def 의 초기값, 범위는 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
+        _listKnownSeason.clear();
+        const utf8* pKnownSeasons = root.findAttribute( "seasons" );
+        if ( pKnownSeasons != nullptr )
+        {
+            StringUtil::forEachToken( string_view( pKnownSeasons ), ",;| ", [this]( string_view token )
+            { _listKnownSeason.push_back( hashed_string( token ) ); } );
+        }
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
             if ( StringUtil::equals( node.getName(), "Crop" ) == false )
@@ -154,5 +162,5 @@ namespace sw
 namespace sw
 {
     /** @brief `CropCatalog` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_ASSET_TYPE( Crops, AssetTypeDef::makeDataFile( CropCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/crops.xml" }, AssetTypeLoader::of<CropCatalog>() ) );
+    SW_MODULE_SHARED_ASSET_CACHE( Crops, CropCatalog, SW_KIT_API, AssetTypeDef::makeDataFile( CropCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/crops.xml" }, AssetTypeLoader::of<CropCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

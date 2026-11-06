@@ -18,10 +18,11 @@ namespace sw
             const string& assetID   = id.str();
             const string  folder    = FileUtil::getDirectoryPart( assetID );
             const string  itemsPath = FileUtil::joinPath( FileUtil::getDirectoryPart( FileUtil::trimTrailingSlashes( folder ) ), "items.xml" );
-            ItemCatalog   items;
-            if ( items.loadFromAsset( AssetID{ itemsPath } ) == false )
+            // 아이템은 공유 캐시의 한 벌이다 — 게임이 쥔 카탈로그와 같은 객체를 대조한다.
+            const shared_ptr<const ItemCatalog> pItems = SharedAssetCache<ItemCatalog>::acquire( itemsPath );
+            if ( pItems == nullptr )
                 return false;
-            return outDatabase.loadFromFolder( folder, &items );
+            return outDatabase.loadFromFolder( folder, pItems.get() );
         }
     } // namespace
 

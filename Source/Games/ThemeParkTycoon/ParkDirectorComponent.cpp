@@ -113,7 +113,7 @@ namespace sw
         , _railBottomDepth{ 1.0f }
         , _simulation{}
         , _wallet{}
-        , _layoutCatalog{}
+        , _pLayoutCatalog{}
         , _settings{}
         , _listPlacement{}
         , _listCoaster{}
@@ -194,12 +194,13 @@ namespace sw
     bool ParkDirectorComponent::startGame()
     {
         ParkLayout layout;
-        if ( _layoutCatalog.loadFromAsset( AssetID{ _coasterDataPath } ) == false )
+        _pLayoutCatalog = SharedAssetCache<CoasterLayoutCatalog>::acquire( _coasterDataPath );
+        if ( _pLayoutCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "ParkDirector.CoasterCatalogCouldNot", "[Park] the coaster catalog '%#' could not be loaded - the park cannot open", _coasterDataPath.c_str() );
             return false;
         }
-        if ( layout.loadFromAsset( AssetID{ _parkDataPath }, _layoutCatalog ) == false )
+        if ( layout.loadFromAsset( AssetID{ _parkDataPath }, *_pLayoutCatalog ) == false )
         {
             SW_LOG_ERROR_ID( "ParkDirector.ParkLayoutCouldNot", "[Park] the park layout '%#' could not be loaded - the park cannot open", _parkDataPath.c_str() );
             return false;
@@ -267,7 +268,7 @@ namespace sw
         if ( placement._layoutID.empty() == false )
         {
             // 코스터는 건설하고 테스트 운행으로 평가를 받는다. 못 돌면(언덕을 못 넘는다) 건설하지 않는다.
-            const CoasterLayoutDef* pLayout = _layoutCatalog.find( placement._layoutID );
+            const CoasterLayoutDef* pLayout = _pLayoutCatalog->find( placement._layoutID );
             CoasterRideStats        stats{};
             pCoaster = createCoaster( placementIndex, stats );
             if ( pLayout == nullptr || pCoaster == nullptr )
@@ -306,7 +307,7 @@ namespace sw
         if ( placementIndex < 0 || placementIndex >= static_cast<int32>( _listPlacement.size() ) )
             return nullptr;
         const RidePlacement&    placement = _listPlacement[static_cast<size_t>( placementIndex )];
-        const CoasterLayoutDef* pLayout   = _layoutCatalog.find( placement._layoutID );
+        const CoasterLayoutDef* pLayout   = _pLayoutCatalog->find( placement._layoutID );
         if ( pLayout == nullptr )
             return nullptr;
         CoasterTrackBuilder builder;

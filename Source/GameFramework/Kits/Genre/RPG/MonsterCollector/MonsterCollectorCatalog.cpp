@@ -6,6 +6,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -352,4 +353,10 @@ namespace sw
         }
         return bValid && GameDataXML::addUnique( def, sourceName, _encounterCatalog );
     }
+} // namespace sw
+
+namespace sw
+{
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<MonsterCollectorCatalog>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( MonsterCollectorCatalog, MonsterCollectorCatalog, SW_KIT_API, AssetTypeDef::makeCacheOnly( "MonsterCollectorCatalog", AssetTypeLoader::of<MonsterCollectorCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

@@ -26,7 +26,7 @@ namespace sw
         {
         public:
             LeaderboardOnlineServerKit()
-                : _catalog{}
+                : _pCatalog{}
                 , _listInlineBoardID{}
                 , _service{}
                 , _server{}
@@ -42,7 +42,8 @@ namespace sw
                 },
                                         outError ) == false )
                     return false;
-                if ( catalogPath.empty() == false && _catalog.loadFromAsset( AssetID{ catalogPath } ) == false )
+                _pCatalog = catalogPath.empty() ? nullptr : SharedAssetCache<LeaderboardCatalog>::acquire( catalogPath );
+                if ( catalogPath.empty() == false && _pCatalog == nullptr )
                 {
                     outError = "the leaderboard catalog '" + catalogPath + "' could not be read";
                     return false;
@@ -100,7 +101,11 @@ namespace sw
             /** @brief 보드 · 업적 정의를 서비스에 올립니다. 규칙을 어긴 정의가 있으면 false 와 까닭입니다. */
             [[nodiscard]] bool registerDefinitions( string& outError )
             {
-                for ( const LeaderboardDefinition& board : _catalog.getBoards() )
+                const vector<LeaderboardDefinition>  listNoBoard;
+                const vector<AchievementDefinition>  listNoAchievement;
+                const vector<LeaderboardDefinition>& listBoard       = _pCatalog != nullptr ? _pCatalog->getBoards() : listNoBoard;
+                const vector<AchievementDefinition>& listAchievement = _pCatalog != nullptr ? _pCatalog->getAchievements() : listNoAchievement;
+                for ( const LeaderboardDefinition& board : listBoard )
                 {
                     if ( _service.registerBoard( board ) == false )
                     {
@@ -118,7 +123,7 @@ namespace sw
                         return false;
                     }
                 }
-                for ( const AchievementDefinition& achievement : _catalog.getAchievements() )
+                for ( const AchievementDefinition& achievement : listAchievement )
                 {
                     if ( _service.registerAchievement( achievement ) == false )
                     {
@@ -130,10 +135,10 @@ namespace sw
             }
 
         private:
-            LeaderboardCatalog _catalog;
-            vector<string>     _listInlineBoardID; ///< 옵션 `board` 의 id
-            LeaderboardService _service;
-            LeaderboardServer  _server;
+            shared_ptr<const LeaderboardCatalog> _pCatalog;          ///< 옵션 `catalog` 의 공유 캐시 한 벌(옵션이 없으면 nullptr)
+            vector<string>                       _listInlineBoardID; ///< 옵션 `board` 의 id
+            LeaderboardService                   _service;
+            LeaderboardServer                    _server;
         };
     } // namespace
 } // namespace sw

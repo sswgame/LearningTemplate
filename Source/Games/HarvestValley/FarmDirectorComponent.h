@@ -139,7 +139,7 @@ namespace sw
         int32                        getDayStarted() const { return _dayStarted; }
         int32                        getSelectedSeedIndex() const { return _selectedSeedIndex; }
         const vector<hashed_string>& getSeeds() const { return _listSeed; }
-        const CropCatalog&           getCropCatalog() const { return _cropCatalog; }
+        const CropCatalog&           getCropCatalog() const { return *_pCropCatalog; }
         const hashed_string&         getCurrency() const { return _shipment.getCurrency(); }
         const float3&                getShippingBinPosition() const { return _shippingBinPosition; }
         const float3&                getShopPosition() const { return _shopPosition; }
@@ -280,33 +280,33 @@ namespace sw
                   Tooltip = "Growing models of crops without their own (the first for stages 0 and 1, then one per stage); required" )
         vector<string> _listDefaultGrowingModel;
 
-        CropCatalog                  _cropCatalog;
-        ItemCatalog                  _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
-        FarmField                    _field;
-        FarmShippingBin              _shipment;  ///< 출하함에 든 것(하루 끝에 팔린다).
-        vector<hashed_string>        _listSeed;  ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
-        MaterialTintCache            _tintCache; ///< 흙과 작물 색(같은 색은 나눠 쓴다).
-        vector<CropLook>             _listCropLook;
-        vector<MeshHandle>           _listCropMesh; ///< 작물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
-        shared_ptr<MaterialInstance> _arrSoilLook[3];
-        shared_ptr<MaterialInstance> _plainCropLook;
-        shared_ptr<MaterialInstance> _witheredCropLook;
-        float3                       _playerPosition;
-        float3                       _facing;
-        float3                       _shippingBinPosition;
-        float3                       _shopPosition;
-        GameRandom                   _random;           ///< 날씨
-        GameObjectHandle             _autoFarmerObject; ///< 자동 농부 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
-        int32                        _stamina;
-        int32                        _selectedSeedIndex;
-        int32                        _lastLoggedHour;
-        int32                        _dayStarted; ///< 농부의 하루가 시작된 공유 시계의 날(쓰러짐 판정에 쓴다).
-        float32                      _hourOfDay;  ///< 뷰가 읽는 시각.
-        FarmTool                     _tool;
-        FarmTool                     _lastUsedTool;
-        uint32                       _toolUseCount;
-        uint8                        _bRaining         : 1;
-        uint8                        _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
-        uint8                        _reserved         : 6;
+        shared_ptr<const CropCatalog> _pCropCatalog;
+        ItemCatalog                   _itemCatalog; ///< 작물 카탈로그가 채운 씨앗과 수확물(공유 가방의 겹침 수).
+        FarmField                     _field;
+        FarmShippingBin               _shipment;  ///< 출하함에 든 것(하루 끝에 팔린다).
+        vector<hashed_string>         _listSeed;  ///< 카탈로그 순서의 씨앗 아이템(가게 진열).
+        MaterialTintCache             _tintCache; ///< 흙과 작물 색(같은 색은 나눠 쓴다).
+        vector<CropLook>              _listCropLook;
+        vector<MeshHandle>            _listCropMesh; ///< 작물 모델 로드를 계속 쥔다(준비되면 메시를 참조한다 — 단계가 바뀔 때 뷰가 다시 읽지 않게 한다).
+        shared_ptr<MaterialInstance>  _arrSoilLook[3];
+        shared_ptr<MaterialInstance>  _plainCropLook;
+        shared_ptr<MaterialInstance>  _witheredCropLook;
+        float3                        _playerPosition;
+        float3                        _facing;
+        float3                        _shippingBinPosition;
+        float3                        _shopPosition;
+        GameRandom                    _random;           ///< 날씨
+        GameObjectHandle              _autoFarmerObject; ///< 자동 농부 AI 조종자의 오브젝트(처음 켤 때 스폰한다).
+        int32                         _stamina;
+        int32                         _selectedSeedIndex;
+        int32                         _lastLoggedHour;
+        int32                         _dayStarted; ///< 농부의 하루가 시작된 공유 시계의 날(쓰러짐 판정에 쓴다).
+        float32                       _hourOfDay;  ///< 뷰가 읽는 시각.
+        FarmTool                      _tool;
+        FarmTool                      _lastUsedTool;
+        uint32                        _toolUseCount;
+        uint8                         _bRaining         : 1;
+        uint8                         _bPossessionDirty : 1; ///< 농부 폰을 조종하는 조종자가 자동 플레이 스위치와 맞지 않는다(틱이 끝난 뒤 플러시가 바꾼다).
+        uint8                         _reserved         : 6;
     };
 } // namespace sw

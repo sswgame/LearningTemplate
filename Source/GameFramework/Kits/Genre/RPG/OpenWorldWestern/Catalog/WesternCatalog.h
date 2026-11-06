@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -490,4 +491,7 @@ namespace sw
         hashed_string                      _currency;
         int32                              _extraHitPenalty; ///< 첫 발 뒤 한 발마다 떨어지는 등급
     };
+
+    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<WesternCatalog>::acquire` 로 한 벌을 받습니다. */
+    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<WesternCatalog>;
 } // namespace sw

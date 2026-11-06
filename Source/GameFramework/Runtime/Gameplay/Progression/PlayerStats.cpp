@@ -7,6 +7,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
@@ -244,4 +245,10 @@ namespace sw
         Archive archive( bytes.data(), bytes.size() );
         return readState( archive );
     }
+} // namespace sw
+
+namespace sw
+{
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<StatCatalog>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( StatCatalog, StatCatalog, SW_GF_API, AssetTypeDef::makeCacheOnly( "StatCatalog", AssetTypeLoader::of<StatCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

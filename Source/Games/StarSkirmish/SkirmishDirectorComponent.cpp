@@ -177,9 +177,9 @@ namespace sw
         , _neutralColor{ 0.7f, 0.7f, 0.7f, 1.0f }
         , _mineralColor{ 0.35f, 0.85f, 1.0f, 1.0f }
         , _gasColor{ 0.3f, 0.8f, 0.4f, 1.0f }
-        , _catalog{}
-        , _unitModelCatalog{}
-        , _commanderTree{}
+        , _pCatalog{}
+        , _pUnitModelCatalog{}
+        , _pCommanderTree{}
         , _commanderDebugSource{ *this }
         , _match{}
         , _selection{}
@@ -233,7 +233,7 @@ namespace sw
         // 처음 짓는 건물 · 유닛의 모델을 게임 스레드가 플레이 중에 디스크에서 읽지 않게 판을 열 때 워커로 미리 읽는다(느린 디스크의 히치).
         if ( _unitModels.getCount() == 0 )
         {
-            for ( const string& path : _unitModelCatalog.makeAllModelPaths() )
+            for ( const string& path : _pUnitModelCatalog->makeAllModelPaths() )
             {
                 _unitModels.add( MeshCache::request( path ) );
             }
@@ -349,18 +349,20 @@ namespace sw
 
     bool SkirmishDirectorComponent::startGame()
     {
-        if ( _catalog.loadFromAsset( AssetID{ _unitDataPath } ) == false )
+        _pCatalog = SharedAssetCache<RTSCatalog>::acquire( _unitDataPath );
+        if ( _pCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "SkirmishDirector.CouldNotLoadedMatch", "[Skirmish] %# could not be loaded - the match cannot start", _unitDataPath.c_str() );
             return false;
         }
-        _unitModelCatalog.clear();
-        if ( _unitModelCatalog.loadFromAsset( AssetID{ _unitModelPath } ) == false )
+        _pUnitModelCatalog = SharedAssetCache<SkirmishUnitModelCatalog>::acquire( _unitModelPath );
+        if ( _pUnitModelCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "SkirmishDirector.UnitModelTableCould", "[Skirmish] the unit model table '%#' could not be loaded - the match cannot start", _unitModelPath.c_str() );
             return false;
         }
-        if ( _commanderTree.loadFromAsset( AssetID{ _commanderTreePath } ) == false )
+        _pCommanderTree = SharedAssetCache<BehaviorTreeAsset>::acquire( _commanderTreePath );
+        if ( _pCommanderTree == nullptr )
         {
             SW_LOG_ERROR_ID( "SkirmishDirector.CommanderBehaviorTreeCould", "[Skirmish] the commander behavior tree '%#' could not be loaded - the match cannot start", _commanderTreePath.c_str() );
             return false;
@@ -390,8 +392,8 @@ namespace sw
         matchSettings._rushAI                = _rushAI;
         matchSettings._macroAI               = _macroAI;
         matchSettings._opponentAI            = _opponentAI;
-        matchSettings._pCommanderTree        = &_commanderTree.getTree();
-        if ( _match.initialize( &_catalog, _bHuman == SW_TRUE, matchSettings ) == false )
+        matchSettings._pCommanderTree        = &_pCommanderTree->getTree();
+        if ( _match.initialize( _pCatalog.get(), _bHuman == SW_TRUE, matchSettings ) == false )
             return false;
         _selection.clear();
         _selection.setPlayer( 0 );
@@ -450,7 +452,7 @@ namespace sw
         const RTSUnit* pUnit = _match.getWorld().findUnit( slot._shownID );
         if ( pUnit == nullptr )
             return;
-        const SkirmishUnitModel* pModel = _unitModelCatalog.find( pUnit->_pDef->_id );
+        const SkirmishUnitModel* pModel = _pUnitModelCatalog->find( pUnit->_pDef->_id );
         if ( pModel == nullptr )
             return;
         GameObject* pObject = spawnPrefab( manager, _unitPrefab, "SkirmishUnit" );
@@ -498,7 +500,7 @@ namespace sw
             const bool bHiddenFromHuman = bHuman && unit._owner != 0 && unit._owner != RTSWorld::kNoOwner && world.isVisibleTo( 0, unit._id ) == false;
             if ( bHiddenFromHuman )
                 return;
-            if ( _unitModelCatalog.find( unit._pDef->_id ) == nullptr )
+            if ( _pUnitModelCatalog->find( unit._pDef->_id ) == nullptr )
                 return; // 모든 유닛에 모델 줄이 있음은 hasValidNames 가 시작할 때 본다
             const size_t slotIndex = static_cast<size_t>( unit._id.index() );
             if ( _listUnitSlot.size() <= slotIndex )
@@ -684,22 +686,22 @@ namespace sw
         // AI 와 건설 단축키가 쓰는 유닛 id 는 유닛 카탈로그에 있어야 한다.
         for ( const hashed_string* pUnitID : { &_workerUnitID, &_depotUnitID, &_supplyUnitID, &_productionUnitID, &_armyUnitID } )
         {
-            if ( _catalog.find( *pUnitID ) != nullptr )
+            if ( _pCatalog->find( *pUnitID ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "SkirmishDirector.UnitIdNot", "%#: unit id '%#' is not in %#", kOwner, pUnitID->c_str(), _unitDataPath.c_str() );
             bValid = false;
         }
         // 모델 표와 유닛 카탈로그는 서로 같은 id 를 가져야 한다. 모델이 없는 유닛은 조용히 그려지지 않으므로 시작할 때 막는다.
-        for ( const RTSUnitDef& def : _catalog.getAll() )
+        for ( const RTSUnitDef& def : _pCatalog->getAll() )
         {
-            if ( _unitModelCatalog.find( def._id ) != nullptr )
+            if ( _pUnitModelCatalog->find( def._id ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "SkirmishDirector.UnitNoRow", "%#: unit '%#' of %# has no row in %#", kOwner, def._id.c_str(), _unitDataPath.c_str(), _unitModelPath.c_str() );
             bValid = false;
         }
-        for ( const SkirmishUnitModel& model : _unitModelCatalog.getAll() )
+        for ( const SkirmishUnitModel& model : _pUnitModelCatalog->getAll() )
         {
-            if ( _catalog.find( model._id ) != nullptr )
+            if ( _pCatalog->find( model._id ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "SkirmishDirector.ModelRowNot", "%#: model row '%#' of %# is not in %#", kOwner, model._id.c_str(), _unitModelPath.c_str(), _unitDataPath.c_str() );
             bValid = false;
@@ -712,7 +714,7 @@ namespace sw
         }
         for ( const hashed_string& unitID : _listBuildUnitID )
         {
-            if ( _catalog.find( unitID ) != nullptr )
+            if ( _pCatalog->find( unitID ) != nullptr )
                 continue;
             SW_LOG_ERROR_ID( "SkirmishDirector.BuildUnitNot", "%#: build unit '%#' is not in %#", kOwner, unitID.c_str(), _unitDataPath.c_str() );
             bValid = false;
@@ -748,7 +750,7 @@ namespace sw
     void SkirmishDirectorComponent::orderBuild( const hashed_string& buildingID, const float3& point )
     {
         RTSWorld&         world = _match.getWorld();
-        const RTSUnitDef* pDef  = _catalog.find( buildingID );
+        const RTSUnitDef* pDef  = _pCatalog->find( buildingID );
         if ( pDef == nullptr )
             return;
         // 선택한 것 중 첫 일꾼이 짓는다. 정제소는 커서에 가까운 빈 간헐천에, 다른 건물은 커서가 중심이 되는 위치에 짓는다.
@@ -782,7 +784,7 @@ namespace sw
         if ( pPrimary == nullptr || pPrimary->isBuilding() == false )
             return;
         vector<const RTSUnitDef*> listProduct;
-        _catalog.findProducts( pPrimary->_pDef->_id, listProduct );
+        _pCatalog->findProducts( pPrimary->_pDef->_id, listProduct );
         if ( productIndex >= static_cast<int32>( listProduct.size() ) )
             return;
         const RTSUnitDef&                       product = *listProduct[static_cast<size_t>( productIndex )];
@@ -826,7 +828,7 @@ namespace sw
         {
             if ( event._player != 0 )
                 continue;
-            const RTSUnitDef*            pDef  = _catalog.find( event._defID );
+            const RTSUnitDef*            pDef  = _pCatalog->find( event._defID );
             [[maybe_unused]] const utf8* pName = pDef != nullptr ? pDef->_name.c_str() : "?";
             switch ( event._kind )
             {

@@ -33,14 +33,14 @@ namespace sw
         bool onInitialize() override;
 
     private:
-        WeaponCatalog _weaponCatalog;
+        shared_ptr<const WeaponCatalog> _pWeaponCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
     };
 } // namespace sw
 
 namespace sw
 {
     Shooter3DGame::Shooter3DGame()
-        : _weaponCatalog{}
+        : _pWeaponCatalog{}
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
         getStateSnapshot().registerDirector<ShooterDirectorComponent>();
@@ -52,7 +52,7 @@ namespace sw
     bool Shooter3DGame::onInitialize()
     {
         // 무기는 필수다. 아이템 · 외형은 gamesettings 의 <RequiredData> 로 바탕(GameInstance)이 이미 읽어 게임 범위에 걸었다 — 무기 표가 가리키는 아이템을 그 카탈로그로 본다.
-        if ( loadRequiredCatalog( _weaponCatalog ) == false )
+        if ( loadRequiredCatalog( _pWeaponCatalog ) == false )
             return false;
         const ItemCatalog*          pItemCatalog = game::findSubsystem<ItemCatalog>();
         vector<WeaponItemReference> listUnknownItem;
@@ -61,7 +61,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Shooter3DGame.ItemCatalogMissing", "[Shooter] no item catalog - gamesettings must declare <RequiredData kind=\"items\">" );
             return false;
         }
-        if ( _weaponCatalog.findUnknownItems( *pItemCatalog, listUnknownItem ) == false )
+        if ( _pWeaponCatalog->findUnknownItems( *pItemCatalog, listUnknownItem ) == false )
         {
             // 무기 표의 item · ammo 가 없는 아이템을 가리키면 이유를 남기고 게임을 띄우지 않는다
             for ( const WeaponItemReference& reference : listUnknownItem )

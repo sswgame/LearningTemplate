@@ -100,14 +100,14 @@ namespace sw
                   Min = 0.0, Units = m )
         float32 _bodySlowDistance;
 
-        ScheduleCatalog        _catalog;
-        NavGrid                _navGrid;
-        GridPathfinder         _pathfinder;
-        NavGridSchedulePathing _finePathing; ///< 화면 안 경로(`_navGrid` · `_pathfinder` 를 빌린다 — 위 두 멤버보다 뒤에 선언한다)
-        ScheduleSystem         _schedule;
-        ScheduleSaveState      _pendingSave;     ///< 일정이 서기 전에 읽은 저장 상태(`startGame` 이 건다)
-        bool                   _bHasPendingSave; ///< `_pendingSave` 를 아직 걸지 않았다
-        vector<float3>         _listPosition;    ///< 마을 사람마다 이번 틱의 일정상 위치(뷰가 읽는다)
-        vector<float32>        _listBodySpeed;   ///< 마을 사람마다 이번 틱 몸의 최고 속도(m/s)
+        shared_ptr<const ScheduleCatalog> _pCatalog;
+        NavGrid                           _navGrid;
+        GridPathfinder                    _pathfinder;
+        NavGridSchedulePathing            _finePathing; ///< 화면 안 경로(`_navGrid` · `_pathfinder` 를 빌린다 — 위 두 멤버보다 뒤에 선언한다)
+        ScheduleSystem                    _schedule;
+        ScheduleSaveState                 _pendingSave;     ///< 일정이 서기 전에 읽은 저장 상태(`startGame` 이 건다)
+        bool                              _bHasPendingSave; ///< `_pendingSave` 를 아직 걸지 않았다
+        vector<float3>                    _listPosition;    ///< 마을 사람마다 이번 틱의 일정상 위치(뷰가 읽는다)
+        vector<float32>                   _listBodySpeed;   ///< 마을 사람마다 이번 틱 몸의 최고 속도(m/s)
     };
 } // namespace sw

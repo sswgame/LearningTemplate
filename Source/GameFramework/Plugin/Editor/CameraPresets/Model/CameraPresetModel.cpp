@@ -33,7 +33,7 @@ namespace sw::editor
 namespace sw::editor
 {
     CameraPresetModel::CameraPresetModel()
-        : _catalog{}
+        : _pCatalog{ make_shared<CameraPresetCatalog>() }
         , _selectedIndex{ -1 }
         , _targetYawDegrees{ 0.0f }
         , _bViewportDirty{ SW_FALSE }
@@ -43,14 +43,16 @@ namespace sw::editor
 
     ToolAssetLoadResult CameraPresetModel::loadAsset( string_view assetPath )
     {
-        _catalog.clear();
         _selectedIndex = -1;
-        if ( _catalog.loadFromAsset( AssetID{ assetPath } ) == false )
+        // 미리 보기는 고치지 않으므로 공유 캐시의 한 벌을 읽는다 — 파일을 고치면 제자리 다시 읽기가 이 표에도 닿는다.
+        shared_ptr<const CameraPresetCatalog> pLoaded = SharedAssetCache<CameraPresetCatalog>::acquire( assetPath );
+        if ( pLoaded == nullptr )
         {
             _status = "The preset file could not be read - see the log";
             return ToolAssetLoadResult::Malformed;
         }
-        if ( _catalog.isEmpty() == false )
+        _pCatalog = std::move( pLoaded );
+        if ( _pCatalog->isEmpty() == false )
             _selectedIndex = 0;
         _bViewportDirty = SW_TRUE;
         _status         = "Loaded";
@@ -73,14 +75,14 @@ namespace sw::editor
 
     const CameraPresetDef* CameraPresetModel::findSelectedPreset() const
     {
-        if ( _selectedIndex < 0 || static_cast<size_t>( _selectedIndex ) >= _catalog.getCount() )
+        if ( _selectedIndex < 0 || static_cast<size_t>( _selectedIndex ) >= _pCatalog->getCount() )
             return nullptr;
-        return &_catalog.getAt( static_cast<size_t>( _selectedIndex ) );
+        return &_pCatalog->getAt( static_cast<size_t>( _selectedIndex ) );
     }
 
     void CameraPresetModel::selectPreset( size_t presetIndex )
     {
-        if ( presetIndex >= _catalog.getCount() )
+        if ( presetIndex >= _pCatalog->getCount() )
             return;
         _selectedIndex  = static_cast<int32>( presetIndex );
         _bViewportDirty = SW_TRUE;

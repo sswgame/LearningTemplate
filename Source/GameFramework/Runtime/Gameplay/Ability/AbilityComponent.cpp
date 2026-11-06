@@ -57,6 +57,7 @@ namespace sw
         , _abilityEndedMulticast{}
         , _gameplayCueMulticast{}
         , _pCatalog{ nullptr }
+        , _pClassRegistry{ nullptr }
         , _time{ 0.0f }
         , _nextHandleID{ 0 }
         , _listLockDepth{ 0 }
@@ -168,6 +169,13 @@ namespace sw
         return game::findSubsystem<AbilityCatalog>();
     }
 
+    const AbilityClassRegistry* AbilityComponent::findClassRegistry() const
+    {
+        if ( _pClassRegistry != nullptr )
+            return _pClassRegistry;
+        return game::findSubsystem<AbilityClassRegistry>();
+    }
+
     bool AbilityComponent::grantAbilitySet( const hashed_string& setID )
     {
         const AbilityCatalog* pCatalog = findCatalog();
@@ -182,11 +190,17 @@ namespace sw
             SW_LOG_WARNING_ID( "AbilityComponent.GrantAbilitySetNoAbilitySet", "grantAbilitySet: no ability set '%#' in the catalog", setID.c_str() );
             return false;
         }
+        const AbilityClassRegistry* pClasses = findClassRegistry();
+        if ( pClasses == nullptr )
+        {
+            SW_LOG_WARNING_ID( "AbilityComponent.GrantAbilitySetNoClassRegistry", "grantAbilitySet '%#': no AbilityClassRegistry (setClassRegistry or bind it as a game service)", setID.c_str() );
+            return false;
+        }
 
         // 세트의 기본값은 붙이기 **전에** 정한다. 붙인 뒤에 정하면 "체력 ≤ 최대 체력" 같은 훅이 값을 정하는 순서에 따라 값을 잘라 버린다.
         for ( const AbilitySetAttributeSetEntry& setEntry : pSet->_listAttributeSet )
         {
-            unique_ptr<AttributeSet> pAttributeSet = pCatalog->createAttributeSet( setEntry._className );
+            unique_ptr<AttributeSet> pAttributeSet = pClasses->createAttributeSet( setEntry._className );
             if ( pAttributeSet == nullptr )
             {
                 SW_LOG_WARNING_ID( "AbilityComponent.GrantAbilitySetAttributeSetClass", "grantAbilitySet '%#': attribute set class '%#' is not registered", setID.c_str(), setEntry._className.c_str() );
@@ -517,7 +531,13 @@ namespace sw
             SW_LOG_WARNING_ID( "AbilityComponent.GiveAbilityByIDNoAbilityCatalog", "giveAbilityByID '%#': no AbilityCatalog", abilityID.c_str() );
             return AbilitySpecHandle{};
         }
-        return giveAbility( pCatalog->createAbility( abilityID ), level, inputID );
+        const AbilityClassRegistry* pClasses = findClassRegistry();
+        if ( pClasses == nullptr )
+        {
+            SW_LOG_WARNING_ID( "AbilityComponent.GiveAbilityByIDNoClassRegistry", "giveAbilityByID '%#': no AbilityClassRegistry", abilityID.c_str() );
+            return AbilitySpecHandle{};
+        }
+        return giveAbility( pClasses->createAbility( *pCatalog, abilityID ), level, inputID );
     }
 
     bool AbilityComponent::clearAbility( AbilitySpecHandle handle )

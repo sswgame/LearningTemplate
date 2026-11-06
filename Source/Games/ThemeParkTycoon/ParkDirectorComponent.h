@@ -179,21 +179,21 @@ namespace sw
         PROPERTY( Category = "Coaster", DisplayName = "Rail Bottom Depth", Tooltip = "How far the rail model's bottom sits below its origin, in kit units", Min = 0.0 )
         float32 _railBottomDepth;
 
-        ThemeParkSimulation                _simulation;
-        Wallet                             _wallet; ///< 공원 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
-        CoasterLayoutCatalog               _layoutCatalog;
-        ThemeParkSettings                  _settings;
-        vector<RidePlacement>              _listPlacement;
-        vector<unique_ptr<CoasterRuntime>> _listCoaster;
-        vector<int32>                      _listPendingRideView; ///< 모습을 스폰할 배치 번호(틱이 끝난 뒤 처리).
-        MaterialTintCache                  _tintCache;           ///< 평지 놀이기구 색(같은 색은 나눠 쓴다. 배치 키가 인스턴스다).
-        shared_ptr<MaterialInstance>       _arrGuestLook[3];
-        float32                            _statusTimer;
-        float32                            _autoBuildTimer;
-        int32                              _startingCash;
-        int32                              _selectedPlacement;
-        int32                              _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다.
-        uint8                              _bWasRiding : 1;
-        uint8                              _reserved   : 7;
+        ThemeParkSimulation                    _simulation;
+        Wallet                                 _wallet; ///< 공원 금고. 키트 하나만 쓰는 게임이라 디렉터가 보관하고 빌려 준다.
+        shared_ptr<const CoasterLayoutCatalog> _pLayoutCatalog;
+        ThemeParkSettings                      _settings;
+        vector<RidePlacement>                  _listPlacement;
+        vector<unique_ptr<CoasterRuntime>>     _listCoaster;
+        vector<int32>                          _listPendingRideView; ///< 모습을 스폰할 배치 번호(틱이 끝난 뒤 처리).
+        MaterialTintCache                      _tintCache;           ///< 평지 놀이기구 색(같은 색은 나눠 쓴다. 배치 키가 인스턴스다).
+        shared_ptr<MaterialInstance>           _arrGuestLook[3];
+        float32                                _statusTimer;
+        float32                                _autoBuildTimer;
+        int32                                  _startingCash;
+        int32                                  _selectedPlacement;
+        int32                                  _ridingCoaster; ///< 0 이상이면 그 코스터에 타고 있다.
+        uint8                                  _bWasRiding : 1;
+        uint8                                  _reserved   : 7;
     };
 } // namespace sw

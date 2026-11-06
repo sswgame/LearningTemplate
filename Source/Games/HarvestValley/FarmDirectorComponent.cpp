@@ -165,7 +165,7 @@ namespace sw
         , _itemStackSize{ 99 }
         , _listCropModel{}
         , _listDefaultGrowingModel{}
-        , _cropCatalog{}
+        , _pCropCatalog{}
         , _itemCatalog{}
         , _field{}
         , _shipment{}
@@ -267,7 +267,7 @@ namespace sw
         FarmField       field;
         FarmShippingBin shipment;
         GameRandom      random;
-        field.initialize( kFieldWidth, kFieldHeight, &_cropCatalog );
+        field.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
         Archive    fieldBody;
         Archive    shipmentBody;
         const bool bSectionsRead = StateArchiveUtil::readExpectedSection( archive, FarmField::kStateTag, FarmField::kStateVersion, fieldBody ) &&
@@ -379,13 +379,14 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool FarmDirectorComponent::startGame()
     {
-        _cropCatalog.setKnownSeasons( FarmDirectorComponentInternal::makeSeasons() );
-        if ( _cropCatalog.loadFromAsset( AssetID{ _cropDataPath } ) == false )
+        // 작물이 적을 수 있는 계절은 작물 파일의 루트(`seasons`)가 정한다 — 공유 캐시가 읽으므로 읽기 전에 알려 줄 자리가 없다.
+        _pCropCatalog = SharedAssetCache<CropCatalog>::acquire( _cropDataPath );
+        if ( _pCropCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "FarmDirector.CouldNotLoadedFarm", "[Farm] %# could not be loaded - the farm cannot start", _cropDataPath.c_str() );
             return false;
         }
-        if ( _cropCatalog.getCrops().empty() )
+        if ( _pCropCatalog->getCrops().empty() )
         {
             SW_LOG_ERROR_ID( "FarmDirector.ReadButListsNo", "[Farm] %# was read but lists no crop - the farm cannot start", _cropDataPath.c_str() );
             return false;
@@ -410,14 +411,14 @@ namespace sw
         }
         for ( const FarmCropModel& model : _listCropModel )
         {
-            if ( _cropCatalog.findCrop( model._cropID ) == nullptr )
+            if ( _pCropCatalog->findCrop( model._cropID ) == nullptr )
             {
                 SW_LOG_ERROR_ID( "FarmDirector.DirectorCropModelsNames", "[Farm] the director's Crop Models names crop '%#', which %# does not have - the farm cannot start", model._cropID.c_str(), _cropDataPath.c_str() );
                 return false;
             }
         }
         _itemCatalog = ItemCatalog{};
-        _cropCatalog.fillItemCatalog( _itemCatalog, _itemStackSize );
+        _pCropCatalog->fillItemCatalog( _itemCatalog, _itemStackSize );
         SessionStateSettings settings;
         settings._clock._listSeason             = FarmDirectorComponentInternal::makeSeasons();
         settings._clock._secondsPerDay          = _secondsPerDay;
@@ -429,10 +430,10 @@ namespace sw
         if ( initResult == SessionStateInitResult::Refused )
             return false; // 범위 밖(하루 길이 · 계절 날 수 등)은 판 상태가 오류를 남겼다
         const bool bFresh = initResult == SessionStateInitResult::Fresh;
-        _field.initialize( kFieldWidth, kFieldHeight, &_cropCatalog );
+        _field.initialize( kFieldWidth, kFieldHeight, _pCropCatalog.get() );
         _shipment = FarmShippingBin{};
         _listSeed.clear();
-        for ( const CropDef& crop : _cropCatalog.getCrops() )
+        for ( const CropDef& crop : _pCropCatalog->getCrops() )
         {
             _listSeed.push_back( crop._seedItem );
         }
@@ -440,7 +441,7 @@ namespace sw
         if ( bFresh )
         {
             pState->getWallet().add( _shipment.getCurrency(), _startingGold );
-            (void)pState->getInventory().addItem( _cropCatalog.getCrops().front()._seedItem, _startingSeedCount );
+            (void)pState->getInventory().addItem( _pCropCatalog->getCrops().front()._seedItem, _startingSeedCount );
         }
         _dayStarted     = pState->getClock().getDay();
         _hourOfDay      = pState->getClock().getHour();
@@ -560,7 +561,7 @@ namespace sw
         _plainCropLook    = _tintCache.acquire( pCropMaterial, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
         _witheredCropLook = _tintCache.acquire( pCropMaterial, _witheredCropColor );
         _listCropLook.clear();
-        for ( const CropDef& crop : _cropCatalog.getCrops() )
+        for ( const CropDef& crop : _pCropCatalog->getCrops() )
         {
             CropLook look;
             look._cropID   = crop._id;
@@ -732,7 +733,7 @@ namespace sw
             return 0;
         Inventory& bag     = pState->getInventory();
         int32      shipped = 0;
-        for ( const CropDef& crop : _cropCatalog.getCrops() )
+        for ( const CropDef& crop : _pCropCatalog->getCrops() )
         {
             const int32 count = bag.getItemCount( crop._produceItem );
             if ( count > 0 && _shipment.shipItem( bag, crop._produceItem, count ) )
@@ -753,7 +754,7 @@ namespace sw
             SW_LOG_INFO_ID( "FarmDirector.StandNextShopBuy", "[Farm] stand next to the shop to buy seeds" );
             return false;
         }
-        const CropDef* pCrop = _cropCatalog.findCropBySeed( getSelectedSeed() );
+        const CropDef* pCrop = _pCropCatalog->findCropBySeed( getSelectedSeed() );
         if ( pCrop == nullptr )
             return false;
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
@@ -782,7 +783,7 @@ namespace sw
         if ( pState == nullptr )
             return;
         WorldClock&                  clock        = pState->getClock();
-        [[maybe_unused]] const int64 earned       = _shipment.settleShipping( _cropCatalog, pState->getWallet() );
+        [[maybe_unused]] const int64 earned       = _shipment.settleShipping( *_pCropCatalog, pState->getWallet() );
         const hashed_string          seasonBefore = clock.getSeasonName();
         clock.advanceToHour( _wakeHour ); // 수면. 다음 날 아침이 된다.
         _dayStarted                               = clock.getDay();
@@ -808,7 +809,7 @@ namespace sw
         _selectedSeedIndex = ( ( _selectedSeedIndex + offset ) % count + count ) % count;
         if ( isAutoPlayOn() )
             return; // 자동 농부는 씨앗을 하나씩 넘겨 가며 고른다. 그 줄은 로그에 남기지 않는다.
-        [[maybe_unused]] const CropDef*               pCrop  = _cropCatalog.findCropBySeed( getSelectedSeed() );
+        [[maybe_unused]] const CropDef*               pCrop  = _pCropCatalog->findCropBySeed( getSelectedSeed() );
         [[maybe_unused]] const SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         SW_LOG_INFO_ID( "FarmDirector.SeedG", "[Farm] seed: %# (have %#, %#G)%#", getSelectedSeed().c_str(), pState != nullptr ? pState->getInventory().getItemCount( getSelectedSeed() ) : 0,
                         pCrop != nullptr ? pCrop->_seedPrice : 0, pCrop != nullptr && pState != nullptr && pCrop->growsIn( pState->getClock().getSeasonName() ) ? "" : " - not this season" );
@@ -836,7 +837,7 @@ namespace sw
         if ( bForce == false && ( hour == _lastLoggedHour || hour % 6 != 0 ) )
             return;
         _lastLoggedHour                       = hour;
-        [[maybe_unused]] const CropDef* pCrop = _cropCatalog.findCropBySeed( getSelectedSeed() );
+        [[maybe_unused]] const CropDef* pCrop = _pCropCatalog->findCropBySeed( getSelectedSeed() );
         SW_LOG_INFO_ID( "FarmDirector.YGoldGStamina", "[Farm] %# %# Y%# %#:%# · gold %#G · stamina %#/%# · tool %# · seed %# x%# · crops %# (ready %#)", clock.getSeasonName().c_str(),
                         clock.getDayOfSeason() + 1, clock.getYear(), hour, clock.getMinute(), pState->getWallet().getBalance( _shipment.getCurrency() ), _stamina, _maxStamina,
                         FarmDirectorComponentInternal::toToolName( _tool ), pCrop != nullptr ? pCrop->_name.c_str() : "-", pState->getInventory().getItemCount( getSelectedSeed() ),

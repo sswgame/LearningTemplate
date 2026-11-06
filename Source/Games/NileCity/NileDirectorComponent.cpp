@@ -146,7 +146,7 @@ namespace sw
         , _rockColor{ 0.5f, 0.47f, 0.44f, 1.0f }
         , _traderColor{ 1.0f, 0.6f, 0.2f, 1.0f }
         , _cartColor{ 0.45f, 0.3f, 0.15f, 1.0f }
-        , _catalog{}
+        , _pCatalog{}
         , _city{}
         , _wallet{}
         , _clock{}
@@ -203,7 +203,7 @@ namespace sw
         if ( pInput != nullptr )
             updateInput( deltaTime, *pInput );
         if ( isAutoPlanOn() )
-            (void)_planner.advance( _city, _wallet, _catalog.getRoadCost() );
+            (void)_planner.advance( _city, _wallet, _pCatalog->getRoadCost() );
         if ( _bPaused == SW_FALSE )
         {
             _city.update( deltaTime * _timeScale );
@@ -255,7 +255,8 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool NileDirectorComponent::startGame()
     {
-        if ( _catalog.loadFromAsset( AssetID{ _cityDataPath } ) == false )
+        _pCatalog = SharedAssetCache<CityCatalog>::acquire( _cityDataPath );
+        if ( _pCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "NileDirector.CouldNotLoadedCity", "[Nile] %# could not be loaded - the city cannot be founded", _cityDataPath.c_str() );
             return false;
@@ -265,7 +266,7 @@ namespace sw
         const CitySettings citySettings = makeCitySettings();
         _wallet.clear();
         _wallet.add( citySettings._currency, _startingMoney );
-        if ( _city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() ) == false )
+        if ( _city.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, citySettings, makeRefs() ) == false )
             return false; // 범위 밖 도시 설정은 도시가 오류를 남겼다
         if ( _city.claimEvents( _cityEventLease ) == false )
             return false; // 이 디렉터의 표뿐이라 일어날 수 없다 — 둘째 소비자가 생기면 게이트가 어서션을 남긴다
@@ -279,7 +280,7 @@ namespace sw
         _evolvedCount = 0;
         _listTool.clear();
         _listTool.push_back( nullptr );
-        for ( const CityBuildingDef& def : _catalog.getBuildings() )
+        for ( const CityBuildingDef& def : _pCatalog->getBuildings() )
         {
             _listTool.push_back( &def );
         }
@@ -490,7 +491,7 @@ namespace sw
             return false; // 자동 계획을 읽지 못했다 — 이유는 플래너가 남겼다
         if ( clock.initialize( makeClockSettings() ) == false )
             return false;
-        if ( city.initialize( &_catalog, NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() ) == false )
+        if ( city.initialize( _pCatalog.get(), NileCityPlanner::kMapWidth, NileCityPlanner::kMapHeight, makeCitySettings(), makeRefs() ) == false )
             return false;
         const bool bStateReadFailed = city.readState( archive ) == false || planner.readState( archive ) == false || wallet.readState( archive ) == false || clock.readState( archive ) == false;
         if ( bStateReadFailed )
@@ -756,7 +757,7 @@ namespace sw
         if ( bToolChanged )
         {
             [[maybe_unused]] const CityBuildingDef* pDef = _listTool[static_cast<size_t>( _selectedTool )];
-            SW_LOG_INFO_ID( "Nile.ToolSelected", "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _catalog.getRoadCost() );
+            SW_LOG_INFO_ID( "Nile.ToolSelected", "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _pCatalog->getRoadCost() );
             getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventSelect );
         }
         if ( inputMap.wasActionTriggered( hashed_string( CommonInputActions::kPause ) ) )

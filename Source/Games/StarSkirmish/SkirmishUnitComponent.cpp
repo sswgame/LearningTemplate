@@ -9,6 +9,7 @@
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshAssetFormat.h"
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
@@ -219,5 +220,5 @@ namespace sw
 namespace sw
 {
     /** @brief StarSkirmish 유닛 모델 표(`SkirmishUnitModelCatalog`)의 데이터 파일 종류입니다(스키마 테스트가 이 줄로 파일을 알아본다). */
-    SW_ASSET_TYPE( SkirmishUnitModels, AssetTypeDef::makeDataFile( "skirmishunitmodels", AssetPathRule{ "game/", {}, "/data/unitmodels.xml" }, AssetTypeLoader::of<SkirmishUnitModelCatalog>() ) );
+    SW_MODULE_SHARED_ASSET_CACHE( SkirmishUnitModels, SkirmishUnitModelCatalog, , AssetTypeDef::makeDataFile( "skirmishunitmodels", AssetPathRule{ "game/", {}, "/data/unitmodels.xml" }, AssetTypeLoader::of<SkirmishUnitModelCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

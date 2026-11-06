@@ -43,7 +43,7 @@ namespace sw
         void writeState( Archive& outArchive ) const override;
 
         /** @brief 판이 열렸으면 읽은 서부극 카탈로그이고, 아니면 nullptr 입니다(말 컴포넌트가 품종을 찾는다). */
-        const WesternCatalog*   findWesternCatalog() const override { return isStarted() ? &_westernCatalog : nullptr; }
+        const WesternCatalog*   findWesternCatalog() const override { return isStarted() ? _pWesternCatalog.get() : nullptr; }
         const GameObjectHandle& getPlayerObject() const { return _player; }
 
     protected:
@@ -75,8 +75,8 @@ namespace sw
         PROPERTY( Category = "Control", DisplayName = "Whistle Button", Tooltip = "Intent button on the rider pawn that calls the horses" )
         hashed_string _whistleButton;
 
-        WesternCatalog         _westernCatalog;
-        uint8                  _bAutoMountRequested : 1; ///< 자동 플레이가 기수를 태우라고 한 번 청했다
-        [[maybe_unused]] uint8 _reserved            : 7;
+        shared_ptr<const WesternCatalog> _pWesternCatalog;
+        uint8                            _bAutoMountRequested : 1; ///< 자동 플레이가 기수를 태우라고 한 번 청했다
+        [[maybe_unused]] uint8           _reserved            : 7;
     };
 } // namespace sw

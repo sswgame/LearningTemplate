@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
 
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -166,4 +167,10 @@ namespace sw
             addRankTable( range._fromPlace, range._toPlace, listEntry );
         return bValid;
     }
+} // namespace sw
+
+namespace sw
+{
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<KartItemCatalog>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( KartItemCatalog, KartItemCatalog, SW_KIT_API, AssetTypeDef::makeCacheOnly( "KartItemCatalog", AssetTypeLoader::of<KartItemCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

@@ -62,7 +62,7 @@ namespace sw
         , _player{}
         , _cameraRig{}
         , _whistleButton{}
-        , _westernCatalog{}
+        , _pWesternCatalog{}
         , _bAutoMountRequested{ SW_FALSE }
         , _reserved{ 0 }
     {
@@ -83,7 +83,8 @@ namespace sw
 
     bool WildWestDirectorComponent::startGame()
     {
-        if ( _westernDataPath.empty() || _westernCatalog.loadFromAsset( AssetID{ _westernDataPath } ) == false )
+        _pWesternCatalog = _westernDataPath.empty() ? nullptr : SharedAssetCache<WesternCatalog>::acquire( _westernDataPath );
+        if ( _pWesternCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "WildWestDirector.WesternCatalogCouldNot", "[WildWest] the western catalog '%#' could not be loaded - the prairie cannot open", _westernDataPath.c_str() );
             return false;

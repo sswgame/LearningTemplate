@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -118,36 +119,82 @@ namespace sw
 
 namespace sw
 {
-    AbilityCatalog::AbilityCatalog()
-        : _mapEffect{}
-        , _mapAbility{}
-        , _mapAbilitySet{}
-        , _mapCue{}
-        , _mapAbilityFactory{}
+    AbilityClassRegistry::AbilityClassRegistry()
+        : _mapAbilityFactory{}
         , _mapAttributeSetFactory{}
-        , _mapExecutionFactory{}
     {
         registerAttributeSetClass<AttributeSet>( "Generic" );
         registerAttributeSetClass<CombatAttributeSet>( "Combat" );
         registerAbilityClass<ApplyEffectsAbility>( "ApplyEffects" );
-        registerExecutionClass( "Damage", &AbilityCatalogInternal::createDamageExecution );
     }
 
-    AbilityCatalog::~AbilityCatalog() = default;
+    AbilityClassRegistry::~AbilityClassRegistry() = default;
 
-    void AbilityCatalog::registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory )
+    void AbilityClassRegistry::registerAbilityClass( const hashed_string& className, AbilityFactoryFunc factory )
     {
         if ( className.empty() || factory == nullptr )
             return;
         _mapAbilityFactory.insert_or_assign( className, factory );
     }
 
-    void AbilityCatalog::registerAttributeSetClass( const hashed_string& className, AttributeSetFactoryFunc factory )
+    void AbilityClassRegistry::registerAttributeSetClass( const hashed_string& className, AttributeSetFactoryFunc factory )
     {
         if ( className.empty() || factory == nullptr )
             return;
         _mapAttributeSetFactory.insert_or_assign( className, factory );
     }
+
+    unique_ptr<Ability> AbilityClassRegistry::createAbility( const AbilityCatalog& catalog, const hashed_string& abilityID ) const
+    {
+        const AbilityDef* pDef = catalog.findAbility( abilityID );
+        if ( pDef == nullptr )
+        {
+            SW_LOG_WARNING_ID( "AbilityCatalog.CreateAbilityNoAbilityCatalog", "createAbility: no ability '%#' in the catalog", abilityID.c_str() );
+            return nullptr;
+        }
+        const auto factoryIter = _mapAbilityFactory.find( pDef->_className );
+        if ( factoryIter == _mapAbilityFactory.end() )
+        {
+            SW_LOG_WARNING_ID( "AbilityCatalog.CreateAbilityAbilityUsesClass", "createAbility: ability '%#' uses class '%#' which is not registered (registerAbilityClass)", abilityID.c_str(),
+                               pDef->_className.c_str() );
+            return nullptr;
+        }
+        unique_ptr<Ability> pAbility = factoryIter->second();
+        if ( pAbility != nullptr )
+            pAbility->setConfig( pDef->_config );
+        return pAbility;
+    }
+
+    unique_ptr<AttributeSet> AbilityClassRegistry::createAttributeSet( const hashed_string& className ) const
+    {
+        const auto factoryIter = _mapAttributeSetFactory.find( className );
+        if ( factoryIter == _mapAttributeSetFactory.end() )
+        {
+            SW_LOG_WARNING_ID( "AbilityCatalog.CreateAttributeSetAttributeSetClass", "createAttributeSet: attribute set class '%#' is not registered (registerAttributeSetClass)", className.c_str() );
+            return nullptr;
+        }
+        return factoryIter->second();
+    }
+
+    bool AbilityClassRegistry::hasAbilityClass( const hashed_string& className ) const
+    {
+        return _mapAbilityFactory.find( className ) != _mapAbilityFactory.end();
+    }
+} // namespace sw
+
+namespace sw
+{
+    AbilityCatalog::AbilityCatalog()
+        : _mapEffect{}
+        , _mapAbility{}
+        , _mapAbilitySet{}
+        , _mapCue{}
+        , _mapExecutionFactory{}
+    {
+        registerExecutionClass( "Damage", &AbilityCatalogInternal::createDamageExecution );
+    }
+
+    AbilityCatalog::~AbilityCatalog() = default;
 
     void AbilityCatalog::registerExecutionClass( const hashed_string& className, ExecutionFactoryFunc factory )
     {
@@ -248,43 +295,6 @@ namespace sw
     {
         const auto mapIter = _mapAbilitySet.find( setID );
         return mapIter != _mapAbilitySet.end() ? &mapIter->second : nullptr;
-    }
-
-    unique_ptr<Ability> AbilityCatalog::createAbility( const hashed_string& abilityID ) const
-    {
-        const AbilityDef* pDef = findAbility( abilityID );
-        if ( pDef == nullptr )
-        {
-            SW_LOG_WARNING_ID( "AbilityCatalog.CreateAbilityNoAbilityCatalog", "createAbility: no ability '%#' in the catalog", abilityID.c_str() );
-            return nullptr;
-        }
-        const auto factoryIter = _mapAbilityFactory.find( pDef->_className );
-        if ( factoryIter == _mapAbilityFactory.end() )
-        {
-            SW_LOG_WARNING_ID( "AbilityCatalog.CreateAbilityAbilityUsesClass", "createAbility: ability '%#' uses class '%#' which is not registered (registerAbilityClass)", abilityID.c_str(),
-                               pDef->_className.c_str() );
-            return nullptr;
-        }
-        unique_ptr<Ability> pAbility = factoryIter->second();
-        if ( pAbility != nullptr )
-            pAbility->setConfig( pDef->_config );
-        return pAbility;
-    }
-
-    unique_ptr<AttributeSet> AbilityCatalog::createAttributeSet( const hashed_string& className ) const
-    {
-        const auto factoryIter = _mapAttributeSetFactory.find( className );
-        if ( factoryIter == _mapAttributeSetFactory.end() )
-        {
-            SW_LOG_WARNING_ID( "AbilityCatalog.CreateAttributeSetAttributeSetClass", "createAttributeSet: attribute set class '%#' is not registered (registerAttributeSetClass)", className.c_str() );
-            return nullptr;
-        }
-        return factoryIter->second();
-    }
-
-    bool AbilityCatalog::hasAbilityClass( const hashed_string& className ) const
-    {
-        return _mapAbilityFactory.find( className ) != _mapAbilityFactory.end();
     }
 
     uint32 AbilityCatalog::loadRoot( const XMLNode& root, string_view sourceName )
@@ -551,5 +561,5 @@ namespace sw
 namespace sw
 {
     /** @brief `AbilityCatalog` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_ASSET_TYPE( Abilities, AssetTypeDef::makeDataFile( AbilityCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/abilities.xml" }, AssetTypeLoader::of<AbilityCatalog>() ) );
+    SW_MODULE_SHARED_ASSET_CACHE( Abilities, AbilityCatalog, SW_GF_API, AssetTypeDef::makeDataFile( AbilityCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/abilities.xml" }, AssetTypeLoader::of<AbilityCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

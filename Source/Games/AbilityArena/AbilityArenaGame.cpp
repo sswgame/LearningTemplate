@@ -22,7 +22,7 @@
 
 namespace sw
 {
-    /** @brief 카탈로그(데이터 + 클래스 등록)를 들고 게임 서비스로 겁니다 — 모듈이 다시 올라오면 새 인스턴스가 다시 건다. */
+    /** @brief 어빌리티 데이터(공유 캐시의 한 벌)와 클래스 레지스트리(이 모듈의 코드)를 들고 게임 서비스로 겁니다 — 모듈이 다시 올라오면 새 인스턴스가 다시 건다. */
     class AbilityArenaGame : public GameInstance
     {
     public:
@@ -33,14 +33,16 @@ namespace sw
         bool onInitialize() override;
 
     private:
-        AbilityCatalog _abilityCatalog;
+        AbilityClassRegistry             _abilityClasses;  ///< 이 게임의 어빌리티 클래스(코드)
+        shared_ptr<const AbilityCatalog> _pAbilityCatalog; ///< 어빌리티 데이터(공유 캐시의 한 벌)
     };
 } // namespace sw
 
 namespace sw
 {
     AbilityArenaGame::AbilityArenaGame()
-        : _abilityCatalog{}
+        : _abilityClasses{}
+        , _pAbilityCatalog{}
     {
         // 상태 스냅샷에 오르는 컴포넌트 — 저장 전에 상태를 싣고 세운 것을 걷으며, 복원 뒤 돌려준다.
         getStateSnapshot().registerDirector<ArenaDirectorComponent>();
@@ -50,10 +52,11 @@ namespace sw
 
     bool AbilityArenaGame::onInitialize()
     {
-        // 클래스를 먼저 등록하고 데이터를 읽는다 — 읽을 때 모르는 클래스 이름은 경고한다.
-        ArenaAbilities::registerClasses( _abilityCatalog );
+        // 클래스는 코드라 데이터와 따로 건다 — 없는 클래스 이름은 만들 때(`AbilityClassRegistry::createAbility`) 경고한다.
+        ArenaAbilities::registerClasses( _abilityClasses );
+        bindScopedService( &_abilityClasses );
         // 어빌리티 데이터는 필수다 — 못 읽으면 게임을 띄우지 않는다. 읽으면 어빌리티 시스템이 찾는 게임 범위에 걸린다.
-        if ( loadRequiredCatalog( _abilityCatalog ) == false )
+        if ( loadRequiredCatalog( _pAbilityCatalog ) == false )
             return false;
         // 아레나 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)getSubsystem<GameSceneFlow>().requestFirstScene();

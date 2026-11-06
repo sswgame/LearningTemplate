@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Subsystem/SubsystemScope.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Serialization/Serializer/SerializePurpose.h"
 
@@ -184,14 +185,21 @@ namespace sw
             reportRequiredDataFailure( kindLabel, AssetID{ path } );
             return false;
         }
-        /** @brief 카탈로그(종류 `TCatalog::kDataKind`)를 `loadFromAsset` 로 읽고 게임 범위에 겁니다. 실패는 `loadRequiredData` 와 같습니다. */
+        /**
+         * @brief 카탈로그(종류 `TCatalog::kDataKind`)를 공유 캐시에서 받아 @p outCatalog 에 쥐고 게임 범위에 겁니다. 실패는 `loadRequiredData` 와 같습니다.
+         * @details 사본을 읽지 않는다 — 같은 파일을 쥔 컴포넌트 · 에디터와 한 벌을 나누고, 제자리 다시 읽기가 게임 범위로 찾는 쪽에도 닿는다(같은 객체).
+         */
         template <class TCatalog>
-        [[nodiscard]] bool loadRequiredCatalog( TCatalog& catalog )
+        [[nodiscard]] bool loadRequiredCatalog( shared_ptr<const TCatalog>& outCatalog )
         {
-            if ( loadRequiredData( TCatalog::kDataKind, [&catalog]( const string& path )
-            { return catalog.loadFromAsset( AssetID{ path } ); } ) == false )
+            if ( loadRequiredData( TCatalog::kDataKind, [&outCatalog]( const string& path )
+            {
+                outCatalog = SharedAssetCache<TCatalog>::acquire( path );
+                return outCatalog != nullptr;
+            } ) == false )
                 return false;
-            bindScopedService( &catalog );
+            // shortcut: 게임 범위 조회(`SubsystemScope::bind`)가 const 객체를 받지 않는다 — 찾는 쪽은 모두 const 로 읽는다. 범위가 const 를 받게 되면 지운다.
+            bindScopedService( const_cast<TCatalog*>( outCatalog.get() ) );
             return true;
         }
 
@@ -241,7 +249,7 @@ namespace sw
     private:
         GameStateSnapshot                 _stateSnapshot;       ///< 상태 스냅샷 봉투와 그 봉투에 오른 컴포넌트 타입
         SubsystemScope                    _gameScope;           ///< 게임 범위 — 인스턴스 서브시스템(화면 전환 · 로딩 화면)을 소유하고, 기동부터 종료까지 `game::findSubsystem<T>()` 의 지금 범위다
-        unique_ptr<ItemCatalog>           _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(게임 범위 서비스)
+        shared_ptr<const ItemCatalog>     _pItemCatalog;        ///< `<RequiredData kind="items">` 를 적은 게임의 아이템 카탈로그(공유 캐시의 한 벌, 게임 범위 서비스)
         unique_ptr<AppearanceDatabase>    _pAppearanceDatabase; ///< `<RequiredData kind="appearance">` 를 적은 게임의 외형 데이터(게임 범위 서비스)
         unique_ptr<AppearanceDataWatcher> _pAppearanceWatcher;  ///< 외형 데이터 핫 리로드(`update` 가 돌린다)
         string                            _loadedAudioEvents;   ///< `loadAudioEvents` 가 올린 사운드 이벤트 파일 — `shutdown` 이 내린다(비면 올린 것 없음)

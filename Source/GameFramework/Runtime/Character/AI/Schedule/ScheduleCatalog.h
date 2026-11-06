@@ -17,6 +17,7 @@
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Vocabulary/ActionRegistry.h"
 
@@ -325,4 +326,7 @@ namespace sw
         ScheduleConditionVocabulary         _vocabulary;
         const ScheduleActivityRegistry*     _pActivityRegistry;
     };
+
+    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<ScheduleCatalog>::acquire` 로 한 벌을 받습니다. */
+    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<ScheduleCatalog>;
 } // namespace sw

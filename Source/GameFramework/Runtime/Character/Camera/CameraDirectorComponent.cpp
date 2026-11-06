@@ -120,7 +120,7 @@ namespace sw
         , _photoInputMap{}
         , _bPhotoModeCut{ false }
         , _photoAppliedHiddenLayers{ UILayerMask::None }
-        , _catalog{}
+        , _pCatalog{ make_shared<CameraPresetCatalog>() }
         , _director{}
         , _pendingStateBytes{}
         , _pExternalProbe{ nullptr }
@@ -159,17 +159,20 @@ namespace sw
         setTickGroup( TickGroup::PostPhysics );
         if ( _catalogPath.empty() == false )
         {
-            _catalog.clear();
-            if ( _catalog.loadFromAsset( AssetID{ _catalogPath } ) == false )
+            // 프리셋 표는 공유 캐시의 한 벌이다 — 같은 표를 쓰는 디렉터 · 에디터가 같은 객체를 읽고, 다시 읽기가 제자리로 닿는다.
+            shared_ptr<const CameraPresetCatalog> pLoaded = SharedAssetCache<CameraPresetCatalog>::acquire( _catalogPath );
+            if ( pLoaded == nullptr )
                 SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetsDidNot", "Camera presets '%#' did not load", _catalogPath );
+            else
+                _pCatalog = std::move( pLoaded );
         }
-        if ( _catalog.getAll().empty() )
+        if ( _pCatalog->getAll().empty() )
             return;
         // 저장한 상태(핫 리로드, 세이브)가 있으면 시작 프리셋 대신 그 스택에서 이어 간다.
         if ( applyPendingState() == false )
         {
             const hashed_string startID = resolveStartPreset();
-            if ( _director.activatePreset( _catalog, startID ) == false )
+            if ( _director.activatePreset( *_pCatalog, startID ) == false )
                 SW_LOG_ERROR_ID( "Camera.UnknownPreset", "Camera preset '%#' is not in '%#'", startID.c_str(), _catalogPath );
         }
         updateCamera( 0.0f );
@@ -204,7 +207,7 @@ namespace sw
         if ( _bViewOverride == false )
             return;
         _bViewOverride = false;
-        if ( _director.activatePreset( _catalog, _presetBeforeOverride, _overrideBlend ) == false )
+        if ( _director.activatePreset( *_pCatalog, _presetBeforeOverride, _overrideBlend ) == false )
             SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetReturnAfter", "Camera preset '%#' to return to after the view override is gone", _presetBeforeOverride.c_str() );
     }
 
@@ -283,7 +286,7 @@ namespace sw
         BlendCurveDef cut;
         cut._curve    = BlendCurve::Cut;
         cut._duration = 0.0f;
-        if ( _director.activatePreset( _catalog, id, cut ) == false )
+        if ( _director.activatePreset( *_pCatalog, id, cut ) == false )
             SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraPresetNot", "Camera preset '%#' is not in '%#'", id.c_str(), _catalogPath );
     }
 
@@ -320,7 +323,7 @@ namespace sw
         if ( _pendingStateBytes.empty() )
             return false;
         Archive    archive( _pendingStateBytes.data(), static_cast<uint64>( _pendingStateBytes.size() ) );
-        const bool bRead = _director.readState( archive, _catalog );
+        const bool bRead = _director.readState( archive, *_pCatalog );
         _pendingStateBytes.clear();
         if ( bRead == false )
             SW_LOG_WARNING_ID( "CameraDirectorComponent.CameraDirectorStateDid", "Camera director state of '%#' did not read - starting fresh", getOwner() != nullptr ? getOwner()->getName().c_str() : "?" );
@@ -335,12 +338,12 @@ namespace sw
         if ( gv_cameraPreset.empty() == false && bCapture == false )
         {
             const hashed_string overrideID( string_view{ gv_cameraPreset.c_str(), gv_cameraPreset.size() } );
-            if ( _catalog.find( overrideID ) != nullptr )
+            if ( _pCatalog->find( overrideID ) != nullptr )
                 return overrideID;
             // 요청한 프리셋이 없으면 기본 프리셋으로 조용히 넘어가지 않는다 - 시나리오가 틀린 화면으로 골든을 뜰 수 있었다.
             SW_LOG_ERROR_ID( "Camera.UnknownPreset", "-gv_cameraPreset='%#' is not a preset in '%#'", gv_cameraPreset.c_str(), _catalogPath );
         }
-        return _initialPreset.empty() ? _catalog.getAll().front()._id : _initialPreset;
+        return _initialPreset.empty() ? _pCatalog->getAll().front()._id : _initialPreset;
     }
 
     void CameraDirectorComponent::onTick( float32 deltaTime )
@@ -351,17 +354,17 @@ namespace sw
 
     bool CameraDirectorComponent::activatePreset( const hashed_string& id )
     {
-        return _director.activatePreset( _catalog, id );
+        return _director.activatePreset( *_pCatalog, id );
     }
 
     bool CameraDirectorComponent::activatePreset( const hashed_string& id, const BlendCurveDef& blend )
     {
-        return _director.activatePreset( _catalog, id, blend );
+        return _director.activatePreset( *_pCatalog, id, blend );
     }
 
     hashed_string CameraDirectorComponent::activateNextPreset()
     {
-        const vector<CameraPresetDef>& listPreset = _catalog.getAll();
+        const vector<CameraPresetDef>& listPreset = _pCatalog->getAll();
         if ( listPreset.empty() )
             return hashed_string{};
         size_t nextIndex = 0;
@@ -374,7 +377,7 @@ namespace sw
             }
         }
         const hashed_string nextID = listPreset[nextIndex]._id;
-        (void)_director.activatePreset( _catalog, nextID );
+        (void)_director.activatePreset( *_pCatalog, nextID );
         return nextID;
     }
 

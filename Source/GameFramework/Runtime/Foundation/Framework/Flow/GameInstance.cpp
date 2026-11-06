@@ -257,8 +257,7 @@ namespace sw
         const map<string, string>& mapRequired = _packConfig._data._mapRequiredDataPack;
         if ( mapRequired.find( ItemCatalog::kDataKind ) != mapRequired.end() )
         {
-            _pItemCatalog = make_unique<ItemCatalog>();
-            if ( loadRequiredCatalog( *_pItemCatalog ) == false )
+            if ( loadRequiredCatalog( _pItemCatalog ) == false )
                 return false;
         }
         if ( mapRequired.find( AppearanceDatabase::kDataKind ) == mapRequired.end() )

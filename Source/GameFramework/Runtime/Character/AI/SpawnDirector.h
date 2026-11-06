@@ -10,6 +10,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Curve/FloatCurve.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -108,6 +109,9 @@ namespace sw
         float32                    _startBudget;
         uint8                      _bRefundOnDespawn;
     };
+
+    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<SpawnTable>::acquire` 로 한 벌을 받습니다. */
+    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<SpawnTable>;
 } // namespace sw
 
 namespace sw

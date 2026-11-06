@@ -43,7 +43,7 @@ namespace sw::editor
         /** @brief 새 미리보기 씬 @p scene 에 대상(캡슐) 하나를 바닥에 세웁니다. 새 씬의 카메라를 프리셋 자리에 다시 놓게 한다. */
         void populateScene( Scene& scene );
 
-        const CameraPresetCatalog& getCatalog() const { return _catalog; }
+        const CameraPresetCatalog& getCatalog() const { return *_pCatalog; }
         int32                      getSelectedIndex() const { return _selectedIndex; }
         /** @brief 고른 프리셋입니다. 고르지 않았으면 nullptr 입니다. */
         const CameraPresetDef* findSelectedPreset() const;
@@ -66,10 +66,10 @@ namespace sw::editor
         [[nodiscard]] static const utf8* getModeName( CameraPresetMode mode );
 
     private:
-        CameraPresetCatalog _catalog;
-        int32               _selectedIndex;
-        float32             _targetYawDegrees;   ///< Follow · FirstPerson · ThirdPerson 이 따르는 대상 요(도)
-        uint8               _bViewportDirty : 1; ///< 다음 `takeViewportPose` 가 뷰포트 카메라를 프리셋 자리에 놓는다
-        string              _status;
+        shared_ptr<const CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(읽기 전에는 빈 표)
+        int32                                 _selectedIndex;
+        float32                               _targetYawDegrees;   ///< Follow · FirstPerson · ThirdPerson 이 따르는 대상 요(도)
+        uint8                                 _bViewportDirty : 1; ///< 다음 `takeViewportPose` 가 뷰포트 카메라를 프리셋 자리에 놓는다
+        string                                _status;
     };
 } // namespace sw::editor

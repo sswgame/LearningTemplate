@@ -6,6 +6,7 @@
 #include "Core/Math/Ray.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -209,5 +210,5 @@ namespace sw
 namespace sw
 {
     /** @brief `WeaponCatalog` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_ASSET_TYPE( Weapons, AssetTypeDef::makeDataFile( WeaponCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/weapons.xml" }, AssetTypeLoader::of<WeaponCatalog>() ) );
+    SW_MODULE_SHARED_ASSET_CACHE( Weapons, WeaponCatalog, SW_GF_API, AssetTypeDef::makeDataFile( WeaponCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/weapons.xml" }, AssetTypeLoader::of<WeaponCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

@@ -8,6 +8,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
@@ -134,5 +135,5 @@ namespace sw
 namespace sw
 {
     /** @brief `ItemCatalog` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_ASSET_TYPE( Items, AssetTypeDef::makeDataFile( ItemCatalog::kDataKind, AssetPathRule{ {}, {}, "/data/items.xml" }, AssetTypeLoader::of<ItemCatalog>() ) );
+    SW_MODULE_SHARED_ASSET_CACHE( Items, ItemCatalog, SW_GF_API, AssetTypeDef::makeDataFile( ItemCatalog::kDataKind, AssetPathRule{ {}, {}, "/data/items.xml" }, AssetTypeLoader::of<ItemCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

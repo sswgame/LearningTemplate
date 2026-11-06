@@ -32,16 +32,16 @@ namespace sw
         bool onInitialize() override;
 
     private:
-        CityCatalog _cityCatalog;
-        RTSCatalog  _unitCatalog;
+        shared_ptr<const CityCatalog> _pCityCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
+        shared_ptr<const RTSCatalog>  _pUnitCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
     };
 } // namespace sw
 
 namespace sw
 {
     FrontierTownGame::FrontierTownGame()
-        : _cityCatalog{}
-        , _unitCatalog{}
+        : _pCityCatalog{}
+        , _pUnitCatalog{}
     {
         // 공유 상태가 먼저 — 복원할 때 디렉터보다 먼저 바이트를 받아 두고, 첫 디렉터가 판을 열며 적용한다.
         getStateSnapshot().registerStatefulComponent<SessionStateComponent>();
@@ -54,7 +54,7 @@ namespace sw
     bool FrontierTownGame::onInitialize()
     {
         // 데이터 둘은 필수다 — 하나라도 못 읽으면 게임을 띄우지 않는다. 읽은 것은 디렉터가 찾는 게임 범위에 걸린다.
-        const bool bLoaded = loadRequiredCatalog( _cityCatalog ) && loadRequiredCatalog( _unitCatalog );
+        const bool bLoaded = loadRequiredCatalog( _pCityCatalog ) && loadRequiredCatalog( _pUnitCatalog );
         if ( bLoaded == false )
             return false;
         (void)getSubsystem<GameSceneFlow>().requestFirstScene(); // 실패는 함수가 알리고, 핫 리로드로 다시 선 인스턴스는 살아 있는 씬을 쓴다

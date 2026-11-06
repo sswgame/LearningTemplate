@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureWorldMap.h"
 
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
@@ -178,4 +179,10 @@ namespace sw
         const int32 index = _catalog.findIndex( landmarkID );
         return index >= 0 && _listCompleted[static_cast<size_t>( index )] == SW_TRUE;
     }
+} // namespace sw
+
+namespace sw
+{
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<AdventureWorldMap>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( AdventureWorldMap, AdventureWorldMap, SW_KIT_API, AssetTypeDef::makeCacheOnly( "AdventureWorldMap", AssetTypeLoader::of<AdventureWorldMap>( MemoryTag::Game ) ) );
 } // namespace sw

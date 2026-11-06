@@ -15,6 +15,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Matchmaking/Runtime/MatchmakingTypes.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
@@ -46,4 +48,7 @@ namespace sw
     private:
         vector<MatchModeDefinition> _listMode{};
     };
+
+    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<MatchModeCatalog>::acquire` 로 한 벌을 받습니다. */
+    extern template class SW_KIT_SERVER_API_EXTERN_TEMPLATE SharedAssetCache<MatchModeCatalog>;
 } // namespace sw

@@ -35,8 +35,8 @@ namespace sw
         {
         public:
             EconomyOnlineServerKit()
-                : _currencyCatalog{}
-                , _offerCatalog{}
+                : _pCurrencyCatalog{}
+                , _pOfferCatalog{}
                 , _pFakeValidator{}
                 , _receiptProviders{}
                 , _receiptRegistry{}
@@ -68,12 +68,14 @@ namespace sw
                     outError = "the economy kit needs the currencyCatalog and offerCatalog options";
                     return false;
                 }
-                if ( _currencyCatalog.loadFromAsset( AssetID{ currencyPath } ) == false )
+                _pCurrencyCatalog = SharedAssetCache<CurrencyCatalog>::acquire( currencyPath );
+                if ( _pCurrencyCatalog == nullptr )
                 {
                     outError = "the currency catalog could not be read ('" + currencyPath + "')";
                     return false;
                 }
-                if ( _offerCatalog.loadFromAsset( AssetID{ offerPath } ) == false )
+                _pOfferCatalog = SharedAssetCache<OfferCatalog>::acquire( offerPath );
+                if ( _pOfferCatalog == nullptr )
                 {
                     outError = "the offer catalog could not be read ('" + offerPath + "')";
                     return false;
@@ -88,8 +90,8 @@ namespace sw
                     return false;
                 }
                 EconomyServiceConfig settings;
-                settings._pCurrencyCatalog       = &_currencyCatalog;
-                settings._pOfferCatalog          = &_offerCatalog;
+                settings._pCurrencyCatalog       = _pCurrencyCatalog.get();
+                settings._pOfferCatalog          = _pOfferCatalog.get();
                 settings._pReceiptRegistry       = &_receiptRegistry;
                 settings._pMetricRegistry        = context._pMetricRegistry;
                 settings._pScheduler             = context._pScheduler;                               // 원장 보존 검사를 매일 서버 하나가 돌린다
@@ -104,7 +106,7 @@ namespace sw
                     return false;
                 }
                 // 원장 정책은 우편함 · GM · 거래가, 잔액 변경 알림은 GM 키트가 지급 · 회수 뒤에 쓴다.
-                const bool bExposed = registerServerService( context, entry, &_service, outError ) && exposeInterface<ILedgerPolicy>( context, entry, _currencyCatalog.getLedgerPolicy(), outError ) && exposeInterface<IBalanceNotice>( context, entry, _service.getBalanceNotice(), outError );
+                const bool bExposed = registerServerService( context, entry, &_service, outError ) && exposeInterface<ILedgerPolicy>( context, entry, const_cast<ILedgerPolicy&>( _pCurrencyCatalog->getLedgerPolicy() ), outError ) && exposeInterface<IBalanceNotice>( context, entry, _service.getBalanceNotice(), outError );
                 if ( bExposed == false )
                 {
                     stop();
@@ -176,12 +178,13 @@ namespace sw
             }
 
         private:
-            CurrencyCatalog               _currencyCatalog;
-            OfferCatalog                  _offerCatalog;
-            unique_ptr<IReceiptValidator> _pFakeValidator;   ///< `fakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)
-            ReceiptProviderSet            _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
-            ReceiptValidatorRegistry      _receiptRegistry;
-            EconomyService                _service;
+            // shortcut: 키트 인터페이스 범위(`SubsystemScope::bind`)가 const 객체를 받지 않아 상한 정책을 const_cast 로 건다 — 정책은 const 함수뿐이다. 범위가 const 를 받게 되면 지운다.
+            shared_ptr<const CurrencyCatalog> _pCurrencyCatalog; ///< 공유 캐시의 한 벌
+            shared_ptr<const OfferCatalog>    _pOfferCatalog;    ///< 공유 캐시의 한 벌
+            unique_ptr<IReceiptValidator>     _pFakeValidator;   ///< `fakeReceipts` 의 가짜 스토어(DevOnline 단위가 만든다). 레지스트리보다 오래 산다(먼저 선언)
+            ReceiptProviderSet                _receiptProviders; ///< 레지스트리보다 오래 산다(먼저 선언)
+            ReceiptValidatorRegistry          _receiptRegistry;
+            EconomyService                    _service;
         };
     } // namespace
 } // namespace sw

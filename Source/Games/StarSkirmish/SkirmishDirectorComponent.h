@@ -233,27 +233,27 @@ namespace sw
         PROPERTY( Category = "Look", DisplayName = "Gas Color" )
         float4 _gasColor;
 
-        RTSCatalog                           _catalog;
-        SkirmishUnitModelCatalog             _unitModelCatalog;
-        BehaviorTreeAsset                    _commanderTree;
-        CommanderDebugSource                 _commanderDebugSource;
-        SkirmishMatch                        _match;
-        RTSSelection                         _selection;
-        vector<RTSEvent>                     _listEvent;
-        vector<UnitSlot>                     _listUnitSlot;
-        vector<int32>                        _listPendingUnit; ///< 모습을 맞출 유닛 슬롯(틱이 끝난 뒤 처리).
-        MaterialTintCache                    _tintCache;       ///< 유닛 색(같은 색은 나눠 쓴다).
-        vector<shared_ptr<MaterialInstance>> _listUnitLook;    ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
-        AssetReadySet                        _unitModels;      ///< 모든 유닛 모델 — 판을 열 때 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
-        float3                               _dragStart;
-        float3                               _dragPoint;
-        float32                              _timeScale;
-        uint32                               _frameStamp;
-        uint8                                _bHuman             : 1;
-        uint8                                _bDragging          : 1;
-        uint8                                _bDragPointValid    : 1;
-        uint8                                _bAttackMovePending : 1;
-        uint8                                _bPaused            : 1;
-        uint8                                _reserved           : 3;
+        shared_ptr<const RTSCatalog>               _pCatalog;
+        shared_ptr<const SkirmishUnitModelCatalog> _pUnitModelCatalog;
+        shared_ptr<const BehaviorTreeAsset>        _pCommanderTree;
+        CommanderDebugSource                       _commanderDebugSource;
+        SkirmishMatch                              _match;
+        RTSSelection                               _selection;
+        vector<RTSEvent>                           _listEvent;
+        vector<UnitSlot>                           _listUnitSlot;
+        vector<int32>                              _listPendingUnit; ///< 모습을 맞출 유닛 슬롯(틱이 끝난 뒤 처리).
+        MaterialTintCache                          _tintCache;       ///< 유닛 색(같은 색은 나눠 쓴다).
+        vector<shared_ptr<MaterialInstance>>       _listUnitLook;    ///< (팀 또는 자원 종류) x 2 + 선택 여부로 만든 유닛 모습 인스턴스.
+        AssetReadySet                              _unitModels;      ///< 모든 유닛 모델 — 판을 열 때 워커가 읽어 둔다(처음 짓는 건물 · 유닛이 게임 스레드에서 디스크를 읽지 않게). 집합이 핸들을 쥐어 약한 참조 캐시에 남긴다.
+        float3                                     _dragStart;
+        float3                                     _dragPoint;
+        float32                                    _timeScale;
+        uint32                                     _frameStamp;
+        uint8                                      _bHuman             : 1;
+        uint8                                      _bDragging          : 1;
+        uint8                                      _bDragPointValid    : 1;
+        uint8                                      _bAttackMovePending : 1;
+        uint8                                      _bPaused            : 1;
+        uint8                                      _reserved           : 3;
     };
 } // namespace sw

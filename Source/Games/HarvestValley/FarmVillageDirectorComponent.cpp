@@ -75,7 +75,7 @@ namespace sw
         , _bodySnapDistance{ 3.0f }
         , _bodyAccelerationPerSpeed{ 10.0f }
         , _bodySlowDistance{ 1.0f }
-        , _catalog{}
+        , _pCatalog{}
         , _navGrid{}
         , _pathfinder{}
         , _finePathing{ &_navGrid, &_pathfinder, SchedulePlane::XZ }
@@ -143,13 +143,13 @@ namespace sw
             SW_LOG_ERROR_ID( "FarmVillageDirector.NoOpenSessionStateComponentObject", "[Village] no open SessionStateComponent on this object (put the village director after the farm director) - the villagers stay home" );
             return false;
         }
-        _catalog.clear();
-        if ( _catalog.loadFromAsset( AssetID{ _scheduleDataPath } ) == false )
+        _pCatalog = SharedAssetCache<ScheduleCatalog>::acquire( _scheduleDataPath );
+        if ( _pCatalog == nullptr )
         {
             SW_LOG_ERROR_ID( "FarmVillageDirector.CouldNotLoadedVillagers", "[Village] %# could not be loaded - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
         }
-        if ( _catalog.getNPCs().empty() )
+        if ( _pCatalog->getNPCs().empty() )
         {
             SW_LOG_ERROR_ID( "FarmVillageDirector.ReadButListsNo", "[Village] %# was read but lists no villager - the villagers stay home", _scheduleDataPath.c_str() );
             return false;
@@ -161,7 +161,7 @@ namespace sw
         settings._clock = clock.getSettings();
         // 계획은 곧은 선(기본), 화면 안 걸음은 격자 길 — 도착 시각은 계획이 정하므로 격자를 바꿔도 일정이 갈리지 않는다.
         _schedule.setPathing( nullptr, &_finePathing );
-        if ( _schedule.initialize( &_catalog, settings, FarmVillageDirectorComponentInternal::computeAbsoluteMinute( clock ) ) == false )
+        if ( _schedule.initialize( _pCatalog.get(), settings, FarmVillageDirectorComponentInternal::computeAbsoluteMinute( clock ) ) == false )
             return false; // 범위 밖 설정은 일정 시스템이 오류를 남겼다
         _listPosition.assign( static_cast<size_t>( _schedule.getNPCCount() ), float3{} );
         _listBodySpeed.assign( static_cast<size_t>( _schedule.getNPCCount() ), 0.0f );
@@ -233,7 +233,7 @@ namespace sw
         const float32 minutesPerSecond = static_cast<float32>( kScheduleMinutesPerDay ) / MathUtil::max( clock.getSettings()._secondsPerDay, 1.0f ) * clock.getTimeScale();
         for ( int32 npcIndex = 0; npcIndex < _schedule.getNPCCount(); ++npcIndex )
         {
-            const ScheduleNPCDef* pDef                      = _catalog.findNPC( _schedule.getNPCID( npcIndex ) );
+            const ScheduleNPCDef* pDef                      = _pCatalog->findNPC( _schedule.getNPCID( npcIndex ) );
             _listPosition[static_cast<size_t>( npcIndex )]  = _schedule.getNPCView( npcIndex )._location._position;
             _listBodySpeed[static_cast<size_t>( npcIndex )] = pDef != nullptr ? pDef->_unitsPerMinute * minutesPerSecond * _bodyCatchUpScale : 0.0f;
         }

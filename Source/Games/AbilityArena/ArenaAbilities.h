@@ -11,7 +11,7 @@
 
 namespace sw
 {
-    class AbilityCatalog;
+    class AbilityClassRegistry;
 
     /**
      * @brief 사거리(`range`) 안의 가장 가까운 적 하나에 피해 이펙트(`damageEffect`, SetByCaller "Damage" = `damage`)를 겁니다.
@@ -71,6 +71,6 @@ namespace sw
     /** @struct ArenaAbilities @brief 카탈로그에 이 게임의 클래스 이름을 등록합니다("MeleeStrike" · "Projectile" · "Dash"). */
     struct ArenaAbilities
     {
-        static void registerClasses( AbilityCatalog& catalog );
+        static void registerClasses( AbilityClassRegistry& classes );
     };
 } // namespace sw

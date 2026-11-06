@@ -296,8 +296,8 @@ namespace sw::editor
         _bDatabaseLoaded = SW_FALSE;
         _bPreviewValid   = SW_FALSE;
         _database.clear();
-        _pItems = make_unique<ItemCatalog>();
-        if ( _pItems->loadFromAsset( AssetID{ string_view( _paths._itemsPath.c_str() ) } ) == false )
+        _pItems = SharedAssetCache<ItemCatalog>::acquire( string_view( _paths._itemsPath.c_str() ) );
+        if ( _pItems == nullptr )
         {
             _status = "Items file could not be loaded (see log)";
             return;

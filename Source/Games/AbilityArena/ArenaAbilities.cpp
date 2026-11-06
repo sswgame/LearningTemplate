@@ -108,10 +108,10 @@ namespace sw
         endAbility();
     }
 
-    void ArenaAbilities::registerClasses( AbilityCatalog& catalog )
+    void ArenaAbilities::registerClasses( AbilityClassRegistry& classes )
     {
-        catalog.registerAbilityClass<ArenaMeleeStrikeAbility>( "MeleeStrike" );
-        catalog.registerAbilityClass<ArenaProjectileAbility>( "Projectile" );
-        catalog.registerAbilityClass<ArenaDashAbility>( "Dash" );
+        classes.registerAbilityClass<ArenaMeleeStrikeAbility>( "MeleeStrike" );
+        classes.registerAbilityClass<ArenaProjectileAbility>( "Projectile" );
+        classes.registerAbilityClass<ArenaDashAbility>( "Dash" );
     }
 } // namespace sw

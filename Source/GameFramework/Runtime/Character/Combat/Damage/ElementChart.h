@@ -12,6 +12,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -108,4 +109,7 @@ namespace sw
         unordered_map<hashed_string, unordered_map<hashed_string, float32>> _mapRule;          ///< 공격 → 방어 → 배율
         vector<ElementStatusChance>                                         _listStatusChance; ///< 적은 순서
     };
+
+    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<ElementChart>::acquire` 로 한 벌을 받습니다. */
+    extern template class SW_GF_API_EXTERN_TEMPLATE SharedAssetCache<ElementChart>;
 } // namespace sw

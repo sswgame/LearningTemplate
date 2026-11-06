@@ -229,31 +229,31 @@ namespace sw
         PROPERTY( Category = "Pacing", DisplayName = "Repair Health Per Scale", Tooltip = "Health one unit of a repair reward restores", Min = 0.0 )
         float32 _repairHealthPerScale;
 
-        vector<ShooterArenaBox>  _listBox;
-        vector<ShooterEnemyView> _listEnemyView;
-        AIDirectorProfile        _profile;
-        SpawnTable               _table;
-        AIDirector               _director;
-        vector<AIDirectorEvent>  _listDirectorEvent;
-        vector<EnemyRecord>      _listEnemy;
-        EffectPool               _effectPool;
-        EffectPool               _tracerPool;
-        vector<EnemyRequest>     _listPendingEnemy;
-        vector<EffectRequest>    _listPendingEffect;
-        MaterialTintCache        _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다).
-        string                   _motionTrace;        ///< 움직임 기록 CSV(진단용이며 끝날 때 파일로 쓴다).
-        GameObjectHandle         _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(스폰한 것이며 정리할 목록에 들어 있다).
-        float3                   _playerEye;
-        float3                   _playerFeet;
-        float32                  _statusTimer;
-        float32                  _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
-        uint32                   _spawnCursor; ///< 다음 적의 스폰 위치 순번.
-        uint32                   _killCount;
-        uint32                   _traceFrame;       ///< 움직임 기록의 프레임 번호.
-        int8                     _appliedAutoPlay;  ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
-        uint8                    _bAmmoPending : 1; ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
-        uint8                    _bPacingReady : 1; ///< 프로필과 스폰 테이블을 읽었다.
-        uint8                    _bPlayerAlive : 1;
-        uint8                    _reserved     : 5;
+        vector<ShooterArenaBox>      _listBox;
+        vector<ShooterEnemyView>     _listEnemyView;
+        AIDirectorProfile            _profile;
+        shared_ptr<const SpawnTable> _pTable;
+        AIDirector                   _director;
+        vector<AIDirectorEvent>      _listDirectorEvent;
+        vector<EnemyRecord>          _listEnemy;
+        EffectPool                   _effectPool;
+        EffectPool                   _tracerPool;
+        vector<EnemyRequest>         _listPendingEnemy;
+        vector<EffectRequest>        _listPendingEffect;
+        MaterialTintCache            _tintCache;          ///< 효과 색(같은 색은 나눠 쓴다).
+        string                       _motionTrace;        ///< 움직임 기록 CSV(진단용이며 끝날 때 파일로 쓴다).
+        GameObjectHandle             _autoPlayController; ///< 자동 플레이 AI 조종자 오브젝트(스폰한 것이며 정리할 목록에 들어 있다).
+        float3                       _playerEye;
+        float3                       _playerFeet;
+        float32                      _statusTimer;
+        float32                      _pendingHeal; ///< 감독의 수리 보상. 틱이 끝난 뒤 플레이어 체력에 반영한다.
+        uint32                       _spawnCursor; ///< 다음 적의 스폰 위치 순번.
+        uint32                       _killCount;
+        uint32                       _traceFrame;       ///< 움직임 기록의 프레임 번호.
+        int8                         _appliedAutoPlay;  ///< 플레이어 폰에 맞춰 둔 자동 플레이(-1 아직, 0 끔, 1 켬).
+        uint8                        _bAmmoPending : 1; ///< 탄 보상. 틱이 끝난 뒤 플레이어 탄을 채운다.
+        uint8                        _bPacingReady : 1; ///< 프로필과 스폰 테이블을 읽었다.
+        uint8                        _bPlayerAlive : 1;
+        uint8                        _reserved     : 5;
     };
 } // namespace sw

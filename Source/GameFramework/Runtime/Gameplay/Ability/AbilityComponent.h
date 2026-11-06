@@ -32,6 +32,7 @@ namespace sw
     struct AbilityEventData;
 
     class AbilityCatalog;
+    class AbilityClassRegistry;
     class Ability;
 
     /** @brief 어트리뷰트의 current 값이 한 번 바뀐 내용입니다(`AbilityComponent::registerAttributeChanged` 가 전달). */
@@ -113,6 +114,10 @@ namespace sw
         void setCatalog( const AbilityCatalog* pCatalog ) { _pCatalog = pCatalog; }
         /** @brief 쓸 카탈로그입니다. 정해 둔 카탈로그가 없으면 게임 서비스를 쓰고, 그것도 없으면 nullptr 입니다. */
         const AbilityCatalog* findCatalog() const;
+        /** @brief 클래스 이름으로 어빌리티 · 어트리뷰트 세트를 만들 레지스트리를 정합니다. nullptr 이면 게임 서비스(`game::findSubsystem<AbilityClassRegistry>()`)를 씁니다. */
+        void setClassRegistry( const AbilityClassRegistry* pClassRegistry ) { _pClassRegistry = pClassRegistry; }
+        /** @brief 쓸 클래스 레지스트리입니다. 정해 둔 것이 없으면 게임 서비스를 쓰고, 그것도 없으면 nullptr 입니다. */
+        const AbilityClassRegistry* findClassRegistry() const;
 
         /** @brief 플레이를 시작할 때 줄 어빌리티 세트의 id 입니다(카탈로그의 `<AbilitySet id="...">`). */
         void                 setAbilitySetID( const hashed_string& setID ) { _abilitySetID = setID; }
@@ -418,6 +423,7 @@ namespace sw
         MulticastDelegate<void( const Ability&, bool )>                                                 _abilityEndedMulticast;
         MulticastDelegate<void( const AbilityPresentationEvent& )>                                      _gameplayCueMulticast;
         const AbilityCatalog*                                                                           _pCatalog;
+        const AbilityClassRegistry*                                                                     _pClassRegistry;
         float32                                                                                         _time;
         uint64                                                                                          _nextHandleID;
         uint32                                                                                          _listLockDepth;

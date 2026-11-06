@@ -12,6 +12,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -67,8 +68,10 @@ namespace sw
 {
     /**
      * @class CropCatalog
-     * @brief `<CropCatalog><Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="4" regrow="0" seasons="Spring,Fall"
+     * @brief `<CropCatalog seasons="Spring,Summer,Fall,Winter"><Crop id="turnip" name="Turnip" seed="turnip_seed" produce="turnip" days="4" regrow="0" seasons="Spring,Fall"
      *        seedPrice="20" sellPrice="60" harvest="1" color="0.92,0.88,0.95,1"/></CropCatalog>` 를 읽습니다. 씨앗이나 수확물 아이템으로도 찾을 수 있습니다.
+     * @details 루트의 `seasons` 는 작물이 적을 수 있는 계절 이름이다(적지 않으면 검사하지 않는다). 예전에는 읽기 전에 게임 코드가 알려 줬지만, 공유 캐시가 읽는 카탈로그는
+     *          읽기 전에 손댈 쪽이 없으므로 그 목록도 데이터가 가진다.
      */
     class SW_KIT_API CropCatalog : public XMLCatalog<CropCatalog>
     {
@@ -92,8 +95,6 @@ namespace sw
         int32                  findSellPrice( const hashed_string& itemID ) const;
         const vector<CropDef>& getCrops() const { return _catalog.getAll(); }
 
-        /** @brief 읽기 전에 알려 둘 계절 이름을 정합니다. 모르는 계절이 적힌 작물은 오류로 뺍니다(비우면 검사하지 않습니다). */
-        void setKnownSeasons( const vector<hashed_string>& listSeason ) { _listKnownSeason = listSeason; }
         /** @brief 작물마다 씨앗과 수확물 아이템을 @p inoutItems 에 더합니다(이미 있으면 그대로 둡니다). 플레이어 가방(`Inventory`)이 겹침 수를 물을 때 씁니다. */
         void fillItemCatalog( ItemCatalog& inoutItems, int32 maxStack ) const;
 
@@ -109,6 +110,9 @@ namespace sw
         GameCatalog<CropDef>                 _catalog;         ///< 읽은 순서이며 가게 진열 순서이다
         unordered_map<hashed_string, uint32> _mapSeedIndex;    ///< 씨앗 아이템에서 index 로 가는 맵
         unordered_map<hashed_string, uint32> _mapProduceIndex; ///< 수확물 아이템에서 index 로 가는 맵
-        vector<hashed_string>                _listKnownSeason; ///< 읽을 때 검사하는 계절 이름이다(비어 있으면 검사하지 않는다)
+        vector<hashed_string>                _listKnownSeason; ///< 읽을 때 검사하는 계절 이름이다(루트 `seasons`, 비어 있으면 검사하지 않는다)
     };
+
+    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<CropCatalog>::acquire` 로 한 벌을 받습니다. */
+    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<CropCatalog>;
 } // namespace sw

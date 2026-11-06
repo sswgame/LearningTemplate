@@ -144,9 +144,8 @@ namespace sw
         const CameraPose&    getPose() const { return _director.getPose(); }
         /** @brief 켠 프리셋의 모드 상태입니다. 입력이 돌린 각, 줌, 팬, 암 길이를 담으며 테스트와 진단이 씁니다. */
         const CameraModeState& getModeState() const { return _director.getModeState(); }
-        /** @brief 프리셋 카탈로그입니다. 코드로 프리셋을 더하거나 테스트가 XML 문자열을 읽을 때 씁니다. 경로 PROPERTY 가 비어 있으면 시작할 때 다시 읽지 않습니다. */
-        CameraPresetCatalog&       getCatalog() { return _catalog; }
-        const CameraPresetCatalog& getCatalog() const { return _catalog; }
+        /** @brief 프리셋 카탈로그입니다(공유 캐시의 한 벌, 경로가 없거나 읽지 못했으면 빈 표). */
+        const CameraPresetCatalog& getCatalog() const { return *_pCatalog; }
 
         /** @brief 시간을 흘려 포즈를 구하고 같은 오브젝트의 카메라에 씁니다. 틱 안이면 틱 뒤로 미루고, 틱 밖이면 바로 보입니다. */
         void updateCamera( float32 deltaTime );
@@ -228,11 +227,11 @@ namespace sw
         bool                 _bPhotoModeCut;            ///< 포토 모드를 켜거나 끈 뒤 첫 쓰기에 컷 표시를 넣는다(TAA 기록을 버린다)
         UILayerMask          _photoAppliedHiddenLayers; ///< 포토 모드가 켤 때 UI 에 건 숨김 요청의 레이어(`enterPhotoMode`). 끌 때 같은 집합으로 푼다 — 켜 있는 동안 속성을 바꿔도 요청 수가 어긋나지 않는다
 
-        CameraPresetCatalog          _catalog;
-        CameraDirector               _director;
-        vector<uint8>                _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
-        const ICameraCollisionProbe* _pExternalProbe;
-        hashed_string                _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
-        float32                      _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
+        shared_ptr<const CameraPresetCatalog> _pCatalog; ///< 공유 캐시의 한 벌(`SharedAssetCache<CameraPresetCatalog>`). 경로가 없으면 빈 표다
+        CameraDirector                        _director;
+        vector<uint8>                         _pendingStateBytes; ///< 시작 전에 받은 상태(`restoreState`). 카탈로그를 읽은 뒤 적용한다
+        const ICameraCollisionProbe*          _pExternalProbe;
+        hashed_string                         _inputCheckedPresetID; ///< 액션을 입력 맵에 대어 본 마지막 프리셋(`warnMissingPresetActions`)
+        float32                               _pendingDeltaTime;     ///< 틱이 모은 시간. 미룬 계산이 쓴다
     };
 } // namespace sw

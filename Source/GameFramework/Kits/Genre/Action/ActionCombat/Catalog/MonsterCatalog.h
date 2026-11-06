@@ -23,6 +23,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -163,6 +164,7 @@ namespace sw
     class SW_KIT_API MonsterCatalog : public XMLCatalog<MonsterCatalog>
     {
         friend class XMLCatalog<MonsterCatalog>;
+        friend struct AssetTypeLoader;
 
     public:
         MonsterCatalog();
@@ -170,14 +172,6 @@ namespace sw
 
         MonsterCatalog( const MonsterCatalog& )            = delete;
         MonsterCatalog& operator=( const MonsterCatalog& ) = delete;
-
-        /**
-         * @brief XML 에서 몬스터 정의 테이블을 로드합니다. 에셋 상대 경로나 실제 파일 경로를 받습니다(`XMLDocument::loadResource`).
-         * @return 하나라도 읽었으면 true 입니다. 하나도 못 읽었으면 오류를 남기고 빈 카탈로그로 false 를 반환합니다(코드 폴백 정의는 없습니다).
-         * @details 실패는 세 가지이고 모두 같게 다룬다. 파일이 없는 경우, 루트가 `<MonsterCatalog>` 가 아닌 경우, **읽었는데 `<Monster>` 가 하나도 없는** 경우다.
-         *          마지막 경우를 성공으로 취급하면 태그 철자를 틀렸을 때 텅 빈 카탈로그가 조용히 만들어진다.
-         */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
 
         /** @brief 몬스터 ID 로 정의를 찾습니다. */
         const MonsterDef* findMonster( const hashed_string& id ) const;
@@ -191,6 +185,14 @@ namespace sw
     private:
         static constexpr const utf8* kXMLRootName = "MonsterCatalog"; ///< 루트 원소(`XMLCatalog`)
 
+        /**
+         * @brief XML 에서 몬스터 정의 테이블을 로드합니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<MonsterCatalog>::acquire` 로 받는다.
+         * @return 하나라도 읽었으면 true 입니다. 하나도 못 읽었으면 오류를 남기고 빈 카탈로그로 false 를 반환합니다(코드 폴백 정의는 없습니다).
+         * @details 실패는 세 가지이고 모두 같게 다룬다. 파일이 없는 경우, 루트가 `<MonsterCatalog>` 가 아닌 경우, **읽었는데 `<Monster>` 가 하나도 없는** 경우다.
+         *          마지막 경우를 성공으로 취급하면 태그 철자를 틀렸을 때 텅 빈 카탈로그가 조용히 만들어진다.
+         */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+
         /** @brief `<MonsterCatalog>` 루트의 `<Monster>` 들을 읽고(`XMLCatalog`), 읽은 수를 반환합니다. 0이면 실패입니다. */
         uint32 loadRoot( const XMLNode& root, string_view sourceName );
 
@@ -203,4 +205,7 @@ namespace sw
     private:
         unordered_map<hashed_string, MonsterDef> _mapMonster;
     };
+
+    /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<MonsterCatalog>::acquire` 로 한 벌을 받습니다. */
+    extern template class SW_KIT_API_EXTERN_TEMPLATE SharedAssetCache<MonsterCatalog>;
 } // namespace sw

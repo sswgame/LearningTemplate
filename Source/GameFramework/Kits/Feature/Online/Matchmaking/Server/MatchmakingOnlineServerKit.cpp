@@ -38,7 +38,7 @@ namespace sw
         {
         public:
             MatchmakingOnlineServerKit()
-                : _catalog{}
+                : _pCatalog{}
                 , _listMode{}
                 , _partyLobby{}
                 , _queue{}
@@ -65,12 +65,13 @@ namespace sw
                     return false;
                 if ( catalogPath.empty() == false )
                 {
-                    if ( _catalog.loadFromAsset( AssetID{ catalogPath } ) == false )
+                    _pCatalog = SharedAssetCache<MatchModeCatalog>::acquire( catalogPath );
+                    if ( _pCatalog == nullptr )
                     {
                         outError = "the match mode catalog '" + catalogPath + "' could not be read";
                         return false;
                     }
-                    _listMode = _catalog.getModes();
+                    _listMode = _pCatalog->getModes();
                 }
                 for ( const string& compact : listCompact )
                 {
@@ -158,15 +159,15 @@ namespace sw
             }
 
         private:
-            MatchModeCatalog            _catalog;
-            vector<MatchModeDefinition> _listMode;
-            PartyLobbyService           _partyLobby;
-            MatchQueueService           _queue;
-            MatchmakingServer           _server;
-            MatchServerAgent            _agent; ///< `gameServer` 일 때만 쓴다 — 배정받은 계정 목록(접속 인증기가 네트워크 스레드에서 묻는다)
-            int32                       _maxPartySize;
-            int32                       _reconnectGraceMs;
-            bool                        _bGameServer; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
+            shared_ptr<const MatchModeCatalog> _pCatalog; ///< 옵션 `catalog` 의 공유 캐시 한 벌
+            vector<MatchModeDefinition>        _listMode;
+            PartyLobbyService                  _partyLobby;
+            MatchQueueService                  _queue;
+            MatchmakingServer                  _server;
+            MatchServerAgent                   _agent; ///< `gameServer` 일 때만 쓴다 — 배정받은 계정 목록(접속 인증기가 네트워크 스레드에서 묻는다)
+            int32                              _maxPartySize;
+            int32                              _reconnectGraceMs;
+            bool                               _bGameServer; ///< NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         };
     } // namespace
 } // namespace sw

@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
@@ -185,4 +186,10 @@ namespace sw
         const LootTableDef* pTable = find( tableID );
         return pTable != nullptr ? computeTableChance( *pTable, itemID, 0 ) : 0.0f;
     }
+} // namespace sw
+
+namespace sw
+{
+    /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<LootCatalog>::acquire`). 파일 규칙이 없는 종류라 카탈로그 편집기에는 나오지 않는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( LootCatalog, LootCatalog, SW_GF_API, AssetTypeDef::makeCacheOnly( "LootCatalog", AssetTypeLoader::of<LootCatalog>( MemoryTag::Game ) ) );
 } // namespace sw

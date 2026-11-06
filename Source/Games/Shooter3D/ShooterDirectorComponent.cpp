@@ -136,7 +136,7 @@ namespace sw
         , _listBox{}
         , _listEnemyView{}
         , _profile{}
-        , _table{}
+        , _pTable{}
         , _director{}
         , _listDirectorEvent{}
         , _listEnemy{}
@@ -388,7 +388,8 @@ namespace sw
             SW_LOG_ERROR_ID( "ShooterDirector.PacingProfileCouldNot", "[Shooter] pacing profile '%#' could not be loaded - no enemies will come", _pacingProfile.c_str() );
             return;
         }
-        if ( _table.loadFromAsset( AssetID{ _spawnTable } ) == false )
+        _pTable = SharedAssetCache<SpawnTable>::acquire( _spawnTable );
+        if ( _pTable == nullptr )
         {
             SW_LOG_ERROR_ID( "ShooterDirector.SpawnTableCouldNot", "[Shooter] spawn table '%#' could not be loaded - no enemies will come", _spawnTable.c_str() );
             return;
@@ -401,12 +402,12 @@ namespace sw
             if ( Internal::isKnownID( id, Internal::kArrKnownEncounter ) == false )
                 SW_LOG_ERROR_ID( "ShooterDirector.PacingProfileNamesEncounter", "[Shooter] pacing profile '%#' names encounter '%#' this game does not know", _pacingProfile.c_str(), id.c_str() );
         }
-        for ( const SpawnEntryDef& entry : _table.getEntries() )
+        for ( const SpawnEntryDef& entry : _pTable->getEntries() )
         {
             if ( Internal::isKnownID( entry._id, Internal::kArrKnownSpawn ) == false )
                 SW_LOG_ERROR_ID( "ShooterDirector.SpawnTableNamesGame", "[Shooter] spawn table '%#' names '%#' this game does not know", _spawnTable.c_str(), entry._id.c_str() );
         }
-        _director.initialize( &_profile, &_table, static_cast<uint32>( _pacingSeed ) );
+        _director.initialize( &_profile, _pTable.get(), static_cast<uint32>( _pacingSeed ) );
         _bPacingReady = SW_TRUE;
         applyDirectorEvents(); // 시작 단계 사건
     }

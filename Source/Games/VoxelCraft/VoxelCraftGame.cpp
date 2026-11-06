@@ -35,14 +35,14 @@ namespace sw
         bool onInitialize() override;
 
     private:
-        VoxelBlockCatalog _blockCatalog;
+        shared_ptr<const VoxelBlockCatalog> _pBlockCatalog; ///< 공유 캐시의 한 벌(게임 범위 서비스)
     };
 } // namespace sw
 
 namespace sw
 {
     VoxelCraftGame::VoxelCraftGame()
-        : _blockCatalog{}
+        : _pBlockCatalog{}
     {
         // 상태 스냅샷에 들어가는 컴포넌트입니다. 저장하기 전에 상태를 기록하고 스폰한 오브젝트를 정리하며, 복원한 뒤에 되돌려 줍니다.
         getStateSnapshot().registerDirector<VoxelDirectorComponent>();
@@ -55,7 +55,7 @@ namespace sw
     {
         // 블록 데이터는 필수입니다. 읽지 못하면 게임을 시작하지 않습니다. 읽으면 디렉터와 플레이어가 찾는 게임 범위에 등록됩니다.
         // 사운드 이벤트는 플레이어 자신의 소리라 2D 입니다. 베이스 클래스가 gamesettings 의 audioEvents 를 읽어 로드했습니다.
-        if ( loadRequiredCatalog( _blockCatalog ) == false )
+        if ( loadRequiredCatalog( _pBlockCatalog ) == false )
             return false;
         // 섬 씬(시작 맵)을 연다. 에디터가 자기 시작 씬을 열면 그 요청이 뒤에 와서 이긴다.
         (void)getSubsystem<GameSceneFlow>().requestFirstScene();
