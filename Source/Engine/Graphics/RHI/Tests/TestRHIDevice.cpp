@@ -310,3 +310,20 @@ SW_TEST_CASE( VulkanAPIVersionTest, DeviceBelowTheShaderTargetIsRejected )
     SW_EXPECT_TRUE( VulkanRHIRequiredVersion::isAPIVersionSupported( VulkanRHIRequiredVersion::makeAPIVersion( kVulkanRequiredMajor, kVulkanRequiredMinor + 1u ) ) );
     SW_EXPECT_EQUAL( ( 1u << 16u ) | ( 6u << 8u ), VulkanRHIRequiredVersion::computeSPIRVVersion( 3u ) ); // vulkan1.3 → SPIR-V 1.6
 }
+
+/** @brief [RHIAvailabilityTest] 다른 백엔드: 지금 것이 아니고 이 플랫폼에서 되는 것이다. Windows 는 DX12 ↔ DX11, Linux 는 Vulkan ↔ OpenGL 이다 */
+SW_TEST_CASE( RHIAvailabilityTest, OtherBackendFitsThePlatform )
+{
+    sw::RHIBackend other{};
+#if defined( SW_PLATFORM_WINDOWS )
+    SW_REQUIRE_TRUE( sw::RHIAvailability::findOtherBackend( sw::RHIBackend::DirectX12, other ) );
+    SW_EXPECT_TRUE( other == sw::RHIBackend::DirectX11 );
+    SW_REQUIRE_TRUE( sw::RHIAvailability::findOtherBackend( sw::RHIBackend::Vulkan, other ) );
+    SW_EXPECT_TRUE( other == sw::RHIBackend::DirectX12 );
+#else
+    SW_REQUIRE_TRUE( sw::RHIAvailability::findOtherBackend( sw::RHIBackend::Vulkan, other ) );
+    SW_EXPECT_TRUE( other == sw::RHIBackend::OpenGL );
+    SW_REQUIRE_TRUE( sw::RHIAvailability::findOtherBackend( sw::RHIBackend::OpenGL, other ) );
+    SW_EXPECT_TRUE( other == sw::RHIBackend::Vulkan );
+#endif
+}

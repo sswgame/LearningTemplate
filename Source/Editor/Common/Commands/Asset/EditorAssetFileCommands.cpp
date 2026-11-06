@@ -302,7 +302,7 @@ namespace sw::editor
 
     bool EditorAssetFileCommands::moveToTrash( string_view absolutePath )
     {
-        // 휴지통이 없는 플랫폼(Linux)은 지운다.
+        // 휴지통을 쓸 수 없는 곳(Linux 에서 홈을 모를 때)은 지운다.
         if ( PlatformFileUtil::hasRecycleBin() == false )
             return deleteAsset( absolutePath );
 

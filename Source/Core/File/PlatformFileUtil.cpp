@@ -12,6 +12,7 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Path/AbsolutePath.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/Time/MonotonicClock.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
@@ -23,7 +24,10 @@
     #include "Core/Foundation/PlatformOSHeaders.h"
 
     #include <cerrno>
+    #include <ctime>
     #include <fcntl.h>
+    #include <sys/stat.h>
+    #include <unistd.h>
 #endif
 
 namespace sw
@@ -36,6 +40,91 @@ namespace sw
             inline static atomic<uint64> s_fileOpenCount{ 0 };
             /** @brief 디스크 흉내의 장치가 비는 시각(`MonotonicClock` 나노초) — 읽기마다 이 뒤에 제 지연을 붙인다. */
             inline static atomic<int64> s_emulatedDiskBusyUntilNano{ 0 };
+
+#if defined( SW_PLATFORM_LINUX )
+            /** @brief freedesktop 휴지통 폴더입니다(`$XDG_DATA_HOME/Trash`, 없으면 `~/.local/share/Trash`). 홈을 모르면 빈 글입니다. */
+            static string findTrashFolder()
+            {
+                string folder;
+                if ( ProcessEnvironment::tryReadNonEmpty( "XDG_DATA_HOME", folder ) )
+                    return folder + "/Trash";
+                if ( ProcessEnvironment::tryReadNonEmpty( "HOME", folder ) )
+                    return folder + "/.local/share/Trash";
+                return {};
+            }
+
+            /** @brief 폴더를 가는 길까지 만듭니다. */
+            [[nodiscard]] static bool ensureFolders( const string& folder )
+            {
+                for ( size_t slash = folder.find( '/', 1 ); slash != string::npos; slash = folder.find( '/', slash + 1 ) )
+                {
+                    (void)::mkdir( folder.substr( 0, slash ).c_str(), 0700 ); // 이미 있으면 실패한다. 마지막 칸의 결과로 판단한다
+                }
+                return ::mkdir( folder.c_str(), 0700 ) == 0 || errno == EEXIST;
+            }
+
+            /** @brief `.trashinfo` 의 Path 형식(URL 퍼센트 인코딩)입니다. */
+            static string encodeTrashPath( const string& path )
+            {
+                static constexpr utf8 kArrHex[] = "0123456789ABCDEF";
+                string                encoded;
+                for ( const utf8 character : path )
+                {
+                    const uint8 byte       = static_cast<uint8>( character );
+                    const bool  bLetter    = ( 'a' <= byte && byte <= 'z' ) || ( 'A' <= byte && byte <= 'Z' ) || ( '0' <= byte && byte <= '9' );
+                    const bool  bUnchanged = bLetter || byte == '/' || byte == '-' || byte == '_' || byte == '.' || byte == '~';
+                    if ( bUnchanged )
+                    {
+                        encoded.push_back( character );
+                        continue;
+                    }
+                    encoded.push_back( '%' );
+                    encoded.push_back( kArrHex[byte >> 4] );
+                    encoded.push_back( kArrHex[byte & 0x0F] );
+                }
+                return encoded;
+            }
+
+            /**
+             * @brief 파일 하나를 휴지통으로 옮깁니다. 정보 파일을 먼저 배타적으로 만들어 이름을 차지하고(같은 이름은 `.1` · `.2`), 옮기지 못하면 정보 파일을 지웁니다.
+             * @details shortcut: 홈과 다른 파일 시스템의 파일은 rename 이 실패해 false 다(지우지 않고 남는다). 볼륨별 `.Trash-<uid>` 는 필요해지면 더한다.
+             */
+            [[nodiscard]] static bool moveToTrash( const string& path, const string& trashFolder )
+            {
+                static constexpr int32 kMaxNameAttempt = 1000;
+                const size_t           slash           = path.rfind( '/' );
+                const string           baseName        = slash != string::npos ? path.substr( slash + 1 ) : path;
+                utf8                   arrDate[32]{};
+                const time_t           nowSeconds = ::time( nullptr );
+                tm                     localTime{};
+                (void)::localtime_r( &nowSeconds, &localTime );
+                (void)::strftime( arrDate, sizeof( arrDate ), "%Y-%m-%dT%H:%M:%S", &localTime );
+
+                for ( int32 attempt = 0; attempt < kMaxNameAttempt; ++attempt )
+                {
+                    const string name     = attempt == 0 ? baseName : baseName + "." + to_string( attempt );
+                    const string infoPath = trashFolder + "/info/" + name + ".trashinfo";
+                    const string destPath = trashFolder + "/files/" + name;
+                    const int32  file     = ::open( infoPath.c_str(), O_CREAT | O_EXCL | O_WRONLY | O_CLOEXEC, 0600 );
+                    if ( file < 0 )
+                    {
+                        if ( errno == EEXIST )
+                            continue;
+                        return false;
+                    }
+                    const string text     = "[Trash Info]\nPath=" + encodeTrashPath( path ) + "\nDeletionDate=" + arrDate + "\n";
+                    const bool   bWritten = ::write( file, text.data(), text.size() ) == static_cast<ssize_t>( text.size() );
+                    ::close( file );
+                    const bool bNameTaken = ::access( destPath.c_str(), F_OK ) == 0; // rename 은 있는 파일을 덮어쓴다
+                    if ( bWritten && bNameTaken == false && ::rename( path.c_str(), destPath.c_str() ) == 0 )
+                        return true;
+                    ::unlink( infoPath.c_str() );
+                    if ( bWritten == false || bNameTaken == false )
+                        return false;
+                }
+                return false;
+            }
+#endif
 
 #if defined( SW_PLATFORM_WINDOWS )
             /** @brief 스레드마다 하나인 수동 리셋 이벤트입니다 — 동기 위치 읽기가 완료를 기다린다. 스레드가 끝나면 닫는다. */
@@ -223,7 +312,7 @@ namespace sw
 #if defined( SW_PLATFORM_WINDOWS )
         return true;
 #else
-        return false;
+        return PlatformFileUtilInternal::findTrashFolder().empty() == false;
 #endif
     }
 
@@ -251,8 +340,15 @@ namespace sw
         operation.fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_SILENT;
         return SHFileOperationW( &operation ) == 0 && operation.fAnyOperationsAborted == FALSE;
 #else
-        // 휴지통 규약(freedesktop Trash)은 데스크톱마다 다르다. 아무것도 건드리지 않는다.
-        return false;
+        const string trashFolder = PlatformFileUtilInternal::findTrashFolder();
+        if ( trashFolder.empty() || PlatformFileUtilInternal::ensureFolders( trashFolder + "/files" ) == false || PlatformFileUtilInternal::ensureFolders( trashFolder + "/info" ) == false )
+            return false;
+        for ( const string& path : listPath )
+        {
+            if ( PlatformFileUtilInternal::moveToTrash( path, trashFolder ) == false )
+                return false;
+        }
+        return true;
 #endif
     }
 

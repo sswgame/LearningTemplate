@@ -256,7 +256,7 @@ namespace sw
         [[nodiscard]] static bool renamePath( string_view from, string_view to );
         /**
          * @brief 파일 · 폴더들을 OS 휴지통으로 한 번에 옮깁니다(사용자가 복원할 수 있는 삭제). 쓰기 게이트가 거절하는 경로가 하나라도 있으면 아무것도 옮기지 않고 false 입니다.
-         * @details 휴지통이 없는 플랫폼은 아무것도 건드리지 않고 false 입니다(`PlatformFileUtil::hasRecycleBin` 으로 먼저 묻는다). 일부만 옮겼어도 `getRemovalEpoch` 이 오릅니다.
+         * @details 휴지통을 쓸 수 없는 곳(Linux 에서 홈을 모를 때)은 아무것도 건드리지 않고 false 입니다(`PlatformFileUtil::hasRecycleBin` 으로 먼저 묻는다). 일부만 옮겼어도 `getRemovalEpoch` 이 오릅니다.
          */
         [[nodiscard]] static bool moveToRecycleBin( const vector<string>& listPath );
         /** @brief 시스템 임시 디렉터리 경로를 반환합니다. */

@@ -20,7 +20,7 @@ namespace sw
     {
         /** @brief 단계의 엘리먼트 이름입니다. */
         static constexpr const utf8* kSwapBackendKind = "SwapBackend";
-        /** @brief `backend="other"` — 지금과 다른 백엔드(DirectX 12 가 아니면 DirectX 12, DirectX 12 면 DirectX 11)입니다. Windows 에서 늘 있는 둘이라 어느 백엔드로 시작해도 건넌다. */
+        /** @brief `backend="other"` — 지금과 다른 백엔드(`RHIAvailability::findOtherBackend` — Windows 는 DirectX 12 가 아니면 DirectX 12, DirectX 12 면 DirectX 11, Linux 는 Vulkan ↔ OpenGL)입니다. 플랫폼마다 늘 있는 둘이라 어느 백엔드로 시작해도 건넌다. */
         static constexpr const utf8* kOtherBackend = "other";
         /** @brief `backend="start"` — 시나리오가 시작할 때의 백엔드입니다. `other` 로 건넌 뒤 돌아와 체인의 다음 시나리오가 같은 백엔드에서 돌게 한다. */
         static constexpr const utf8* kStartBackend = "start";

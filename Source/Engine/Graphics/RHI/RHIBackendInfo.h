@@ -179,6 +179,19 @@ namespace sw
 #endif
         }
 
+        /** @brief 이 OS/빌드에서 @p current 말고 건너갈 백엔드입니다(DirectX 12 → DirectX 11 → Vulkan → OpenGL 순으로 처음 되는 것). 없으면 false 입니다. */
+        [[nodiscard]] static bool findOtherBackend( RHIBackend current, RHIBackend& outBackend ) noexcept
+        {
+            for ( const RHIBackend candidate : { RHIBackend::DirectX12, RHIBackend::DirectX11, RHIBackend::Vulkan, RHIBackend::OpenGL } )
+            {
+                if ( candidate == current || isAvailable( candidate ) == false )
+                    continue;
+                outBackend = candidate;
+                return true;
+            }
+            return false;
+        }
+
         /** @brief 백엔드의 정적 capability 테이블을 반환합니다. 범위 밖 값이면 기본값(컴퓨트만)입니다. */
         static RHICapabilities query( RHIBackend backend ) noexcept
         {

@@ -20,6 +20,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
 #include "Engine/Graphics/RHI/RHI.h"
+#include "Engine/Graphics/RHI/RHIBackendInfo.h"
 #include "Engine/Renderer/RenderThread.h"
 
 #include "sw/config/ConfigConstants.h"
@@ -63,7 +64,13 @@ namespace sw
                 const string& requested = *step.findAttribute( "backend" );
                 RHIBackend    backend{};
                 if ( requested == AutomationBackendSteps::kOtherBackend )
-                    backend = committed == RHIBackend::DirectX12 ? RHIBackend::DirectX11 : RHIBackend::DirectX12;
+                {
+                    if ( RHIAvailability::findOtherBackend( committed, backend ) == false )
+                    {
+                        runner.recordFailure( step, "backend=\"other\" needs a second backend, and this build has only one" );
+                        return true;
+                    }
+                }
                 else if ( requested == AutomationBackendSteps::kStartBackend )
                 {
                     if ( pSwitcher->findStartBackend( backend ) == false )

@@ -66,6 +66,8 @@ namespace sw
         NativeSurfaceKind getSurfaceKind() const override { return NativeSurfaceKind::X11; }
 
         /** @brief X11 창을 화면에 띄우거나 숨깁니다. */
+        /** @brief 창이 보이게 되면 입력 초점을 요청합니다. */
+        void requestInputFocus();
         void applyWindowVisibility( bool bShow ) override;
         /** @brief X11 창이 지금 화면에 보이는지(창 관리자가 매핑했는지) 반환합니다. */
         bool isVisible() const override;

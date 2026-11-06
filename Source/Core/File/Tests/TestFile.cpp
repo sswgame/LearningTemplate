@@ -4,7 +4,9 @@
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/File/FileUtil.h"
+#include "Core/File/PlatformFileUtil.h"
 #include "Core/Foundation/Macros.h"
+#include "Core/Process/ProcessEnvironment.h"
 #include "Core/Testing/TestFramework.h"
 
 // 파일 도우미 — 경로 문자열(이름 · 폴더 · 확장자 · 절대 판정), 읽기 · 쓰기(대소문자 · 한글 경로 · 원자적 바꿔 끼우기 · 실패 · 범위),
@@ -580,3 +582,44 @@ SW_TEST_CASE( FileTest, WriteGateRefusesEveryMutatingEntry )
     SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( path, text ) );
     SW_EXPECT_EQUAL( sw::string( "keep" ), text );
 }
+
+#if defined( SW_PLATFORM_LINUX )
+/** @brief [FileTest] 휴지통: 파일이 files 로 옮겨지고 info 에 원래 경로가 인코딩되어 남는다. 같은 이름은 번호를 붙여 덮어쓰지 않는다. 없는 파일은 실패하고 정보 파일을 남기지 않는다 */
+SW_TEST_CASE( FileTest, LinuxTrashFollowsFreedesktop )
+{
+    sw::string       savedDataHome;
+    const bool       bHadDataHome = sw::ProcessEnvironment::tryRead( "XDG_DATA_HOME", savedDataHome );
+    const sw::string root         = sw::test::makeScratchPath( "TrashRoot" );
+    SW_REQUIRE_TRUE( sw::FileUtil::ensureDirectoryExists( root ) );
+    SW_REQUIRE_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", root + "/data" ) );
+    SW_EXPECT_TRUE( sw::PlatformFileUtil::hasRecycleBin() );
+
+    const sw::string path = root + "/my file.txt";
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "first" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( path ) );
+    sw::string text;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root + "/data/Trash/files/my file.txt", text ) );
+    SW_EXPECT_EQUAL( sw::string( "first" ), text );
+    sw::string info;
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root + "/data/Trash/info/my file.txt.trashinfo", info ) );
+    SW_EXPECT_TRUE( info.find( "[Trash Info]" ) == 0 );
+    SW_EXPECT_TRUE( info.find( "my%20file.txt" ) != sw::string::npos );
+    SW_EXPECT_TRUE( info.find( "DeletionDate=" ) != sw::string::npos );
+
+    SW_REQUIRE_TRUE( sw::FileUtil::writeTextFile( path, "second" ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::moveToRecycleBin( { path } ) );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root + "/data/Trash/files/my file.txt.1", text ) );
+    SW_EXPECT_EQUAL( sw::string( "second" ), text );
+    SW_REQUIRE_TRUE( sw::FileUtil::readTextFile( root + "/data/Trash/files/my file.txt", text ) );
+    SW_EXPECT_EQUAL( sw::string( "first" ), text );
+
+    SW_EXPECT_FALSE( sw::PlatformFileUtil::moveToRecycleBin( { root + "/nothing.txt" } ) );
+    SW_EXPECT_FALSE( sw::FileUtil::exists( root + "/data/Trash/info/nothing.txt.trashinfo" ) );
+
+    if ( bHadDataHome )
+        SW_EXPECT_TRUE( sw::ProcessEnvironment::trySet( "XDG_DATA_HOME", savedDataHome ) );
+    else
+        SW_EXPECT_TRUE( sw::ProcessEnvironment::tryUnset( "XDG_DATA_HOME" ) );
+}
+#endif

@@ -278,6 +278,16 @@ namespace sw
         _listClipboardIncr.clear();
     }
 
+    void X11Window::requestInputFocus()
+    {
+        // Win32Window 의 SetForegroundWindow · SetFocus 자리다. 보통은 창 관리자가 주지만, 주지 않는 곳(WSLg · Xvfb)에서는 키 · 마우스가 영영 오지 않는다.
+        // 보이지 않는 창에 걸면 BadMatch 로 프로세스가 끝나므로 지금 보이는지 먼저 본다.
+        Display*          pDisplay = static_cast<Display*>( _pX11Display );
+        XWindowAttributes attributes{};
+        if ( XGetWindowAttributes( pDisplay, _x11Window, &attributes ) != 0 && attributes.map_state == IsViewable )
+            XSetInputFocus( pDisplay, _x11Window, RevertToParent, CurrentTime );
+    }
+
     void X11Window::applyWindowVisibility( bool bShow )
     {
         if ( _pX11Display == nullptr || _x11Window == 0 )
@@ -505,7 +515,11 @@ namespace sw
             const bool bFocusEvent     = bOwnWindowEvent && ( event.type == FocusIn || event.type == FocusOut );
             const bool bGrabFocus      = bFocusEvent && ( event.xfocus.mode == NotifyGrab || event.xfocus.mode == NotifyUngrab );
             if ( bMapChange )
+            {
                 setMinimizedState( event.type == UnmapNotify );
+                if ( event.type == MapNotify )
+                    requestInputFocus();
+            }
             else if ( bFocusEvent && bGrabFocus == false )
                 setFocusState( event.type == FocusIn );
 
