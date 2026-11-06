@@ -1567,6 +1567,17 @@ namespace sw
             if ( psoDesc.NumRenderTargets > 8 )
                 psoDesc.NumRenderTargets = 8;
             psoDesc.BlendState.IndependentBlendEnable = TRUE; // 꺼 두면 0 번 값이 모든 타깃에 간다
+            // 쓰지 않는 칸도 유효한 계수여야 한다(0 은 D3D12_BLEND 값이 아니다). 쓰기 마스크는 0 이다 — 타깃이 없다.
+            for ( D3D12_RENDER_TARGET_BLEND_DESC& unusedTarget : psoDesc.BlendState.RenderTarget )
+            {
+                unusedTarget.SrcBlend       = D3D12_BLEND_ONE;
+                unusedTarget.DestBlend      = D3D12_BLEND_ZERO;
+                unusedTarget.BlendOp        = D3D12_BLEND_OP_ADD;
+                unusedTarget.SrcBlendAlpha  = D3D12_BLEND_ONE;
+                unusedTarget.DestBlendAlpha = D3D12_BLEND_ZERO;
+                unusedTarget.BlendOpAlpha   = D3D12_BLEND_OP_ADD;
+                unusedTarget.LogicOp        = D3D12_LOGIC_OP_NOOP;
+            }
             for ( UINT rtvIndex = 0; rtvIndex < psoDesc.NumRenderTargets; ++rtvIndex )
             {
                 auto&                      rtBlend = psoDesc.BlendState.RenderTarget[rtvIndex];

@@ -1087,9 +1087,11 @@ namespace sw
             // 렌더 타깃마다 따로 건다. 꺼 두면 0 번 값이 모든 타깃에 간다.
             D3D11_BLEND_DESC blendDesc{};
             blendDesc.IndependentBlendEnable = TRUE;
-            for ( uint32 targetIndex = 0; targetIndex < kMaxColorAttachments; ++targetIndex )
+            const RHIBlendTargetState unusedTarget{};
+            for ( uint32 targetIndex = 0; targetIndex < D3D11_SIMULTANEOUS_RENDER_TARGET_COUNT; ++targetIndex )
             {
-                const RHIBlendTargetState&      source = renderState._arrBlendTarget[targetIndex];
+                // 쓰지 않는 칸도 유효한 계수여야 한다(0 은 D3D11_BLEND 값이 아니다).
+                const RHIBlendTargetState&      source = targetIndex < kMaxColorAttachments ? renderState._arrBlendTarget[targetIndex] : unusedTarget;
                 D3D11_RENDER_TARGET_BLEND_DESC& target = blendDesc.RenderTarget[targetIndex];
                 target.RenderTargetWriteMask           = static_cast<UINT8>( source._colorWriteMask ); // 비트가 같다(RHIColorWriteMask)
                 target.BlendEnable                     = source._bEnableBlend != SW_FALSE ? TRUE : FALSE;

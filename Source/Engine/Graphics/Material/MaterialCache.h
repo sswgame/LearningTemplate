@@ -11,6 +11,7 @@
 
 #include "Engine/Asset/Cache/AssetCacheBase.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Graphics/RHI/RHIRenderState.h"
 
 namespace sw
 

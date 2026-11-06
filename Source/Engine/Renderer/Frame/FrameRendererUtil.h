@@ -12,6 +12,7 @@
 #include "Core/Math/NormalizedInt.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/RHI/RHIRenderState.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/TypeRegistry.h"

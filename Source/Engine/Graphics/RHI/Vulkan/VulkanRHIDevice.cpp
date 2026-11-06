@@ -1116,6 +1116,8 @@ namespace sw
         deviceFeatures.fillModeNonSolid = availableFeatures.fillModeNonSolid;
         // 깊이 클립을 끄는 렌더 상태(depthClampEnable)도 마찬가지다.
         deviceFeatures.depthClamp = availableFeatures.depthClamp;
+        // 렌더 타깃마다 다른 블렌드 · 쓰기 마스크(RHIRenderState::_arrBlendTarget). 켜지 않으면 첨부 상태가 모두 같아야 한다.
+        deviceFeatures.independentBlend = availableFeatures.independentBlend;
         // 파이프라인 XML 이 고르는 선택 스테이지다. 없는 장치에서 그런 패스의 PSO 는 오류로 만들어지지 않는다.
         deviceFeatures.geometryShader     = availableFeatures.geometryShader;
         deviceFeatures.tessellationShader = availableFeatures.tessellationShader;

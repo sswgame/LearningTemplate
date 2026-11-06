@@ -202,7 +202,7 @@ namespace sw
                         // 디퍼드의 G버퍼가 뺀 배치(MATERIAL_FORWARD_ONLY)만 조명 패스 뒤에 포워드로 그린다. 깊이는 G버퍼가 쓴 장면 깊이에 테스트 · 쓰기 한다.
                         info._pDefaultShader          = &EngineDefaultAssets::_shaderForwardLit;
                         info._pRequiredMaterialDefine = kMaterialForwardOnlyDefine;
-                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | kSceneColorPassFlags;
+                        info._flags                   = Flag::kDepthTest | Flag::kDepthWrite | Flag::kMaterialFixedState | Flag::kMaterialBlend | kSceneColorPassFlags;
                         break;
                     }
                     case RenderPassType::DepthOfField:
@@ -271,7 +271,7 @@ namespace sw
                     {
                         // 깊이 프리패스가 돈 프레임의 불투명 패스다. 깊이는 테스트만 하고, 그리는 대상은 ForwardOpaque 패스의 선언이다.
                         info._pDefaultShader   = &EngineDefaultAssets::_shaderForwardLit;
-                        info._flags            = Flag::kDepthTest | kSceneColorPassFlags;
+                        info._flags            = Flag::kDepthTest | Flag::kMaterialFixedState | Flag::kMaterialBlend | kSceneColorPassFlags;
                         info._targetSourceType = RenderPassType::ForwardOpaque;
                         break;
                     }

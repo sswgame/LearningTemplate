@@ -128,6 +128,8 @@ SW_TEST_CASE( MaterialRenderStateTest, ScopeComesFromThePassTable )
     using Scope = RHIRenderStateOverride::Scope;
     SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::Transparent ) == Scope::FixedAndBlend );
     SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::ForwardOpaque ) == Scope::FixedAndBlend );
+    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::ForwardOpaqueNoDepthWrite ) == Scope::FixedAndBlend );
+    SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::ForwardOnlyOpaque ) == Scope::FixedAndBlend );
     SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::GBuffer ) == Scope::FixedState );
     SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::Shadow ) == Scope::CullOnly );
     SW_EXPECT_TRUE( FrameRendererUtil::getMaterialStateScope( RenderPassType::DepthPrepass ) == Scope::CullOnly );
