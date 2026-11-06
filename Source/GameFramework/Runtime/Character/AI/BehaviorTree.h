@@ -11,9 +11,12 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ActionRegistry.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -44,7 +47,8 @@ namespace sw
         Action,              ///< 작업 함수
         Condition,           ///< 조건 함수(성공 또는 실패)
         Wait,                ///< `_seconds` 기다린다
-        MoveTo               ///< 블랙보드 벡터 `_key` 로 러너의 `INavMover` 를 보낸다. 닿으면 성공, 경로가 없으면 실패
+        MoveTo,              ///< 블랙보드 벡터 `_key` 로 러너의 `INavMover` 를 보낸다. 닿으면 성공, 경로가 없으면 실패
+        SubTree              ///< 데이터의 `<SubTree slot="…"/>`: 쓰는 쪽이 채운 트리를 돌린다(언리얼 Run Behavior Dynamic). `<SubTree tree="…"/>` 는 읽을 때 펼쳐 실행에는 없다
     };
 
     /** @brief 블랙보드 조건의 비교 방식입니다. */
@@ -80,7 +84,10 @@ namespace sw
 
     class INavMover;
 
-    /** @brief 작업과 조건 함수입니다. 작업은 끝날 때까지 `Running` 을 반환하고, 중단되면 `_bAborted` 로 한 번 더 불려 뒷정리합니다. */
+    /**
+     * @brief 코드로 짓는 트리의 작업과 조건 함수입니다. 작업은 끝날 때까지 `Running` 을 반환하고, 중단되면 `_bAborted` 로 한 번 더 불려 뒷정리합니다.
+     * @details 데이터 트리의 잎은 공통 어휘(`GameActionCall` · `ConditionExpr`)를 쓴다. 이 함수 형식은 코드로 트리를 짓는 쪽(언리얼 C++ `UBTTask`)을 위해 남긴다 — 이름이 필요 없다.
+     */
     using BehaviorTaskFunction = BehaviorStatus ( * )( BehaviorContext& context );
 
     /** @brief 작업 함수가 받는 인자입니다. */
@@ -102,16 +109,17 @@ namespace sw
     struct BehaviorNode
     {
         string               _name{};
-        hashed_string        _key{}; ///< 블랙보드 조건의 이름
+        ConditionExpr        _condition{}; ///< 조건 데코레이터 · 조건 잎의 식
+        GameActionCall       _action{};    ///< 데이터 트리의 작업 잎
+        hashed_string        _key{};       ///< 이동 노드의 블랙보드 키, 하위 트리 노드의 슬롯 이름
         BehaviorTaskFunction _function{ nullptr };
         float32              _seconds{ 0.0f };
-        float32              _compareValue{ 0.0f };
+        float32              _repathDistance{ 0.0f };
         int32                _parent{ -1 };
         int32                _firstChild{ -1 };
         int32                _nextSibling{ -1 };
         int32                _count{ 0 };
         BehaviorNodeType     _type{ BehaviorNodeType::Sequence };
-        BlackboardCompare    _compare{ BlackboardCompare::IsSet };
         BehaviorAbortMode    _abortMode{ BehaviorAbortMode::None };
         uint8                _bReactive{ SW_FALSE }; ///< 셀렉터가 매 틱 앞 자식부터 다시 본다
     };
@@ -147,8 +155,16 @@ namespace sw
         int32 addTimeLimit( int32 parent, float32 seconds );
         int32 addBlackboardCondition( int32 parent, const hashed_string& key, BlackboardCompare compare, float32 value = 0.0f,
                                       BehaviorAbortMode abortMode = BehaviorAbortMode::None );
+        /** @brief 식 @p condition 이 참일 때만 자식을 돌리는 데코레이터입니다. 데이터의 `<BlackboardCondition test="…">` 가 부릅니다. */
+        int32 addConditionDecorator( int32 parent, const utf8* pName, const ConditionExpr& condition, BehaviorAbortMode abortMode = BehaviorAbortMode::None );
         int32 addAction( int32 parent, const utf8* pName, BehaviorTaskFunction function );
+        /** @brief 등록된 동작을 부르는 작업입니다. */
+        int32 addAction( int32 parent, const utf8* pName, const GameActionCall& action );
         int32 addCondition( int32 parent, const utf8* pName, BehaviorTaskFunction function );
+        /** @brief 식을 평가하는 조건 잎입니다. */
+        int32 addCondition( int32 parent, const utf8* pName, const ConditionExpr& condition );
+        /** @brief 쓰는 쪽이 채우는 하위 트리 자리입니다(`BehaviorTreeRunner::setSlotTree`). 비어 있으면 실패합니다. */
+        int32 addSubTreeSlot( int32 parent, const utf8* pName, const hashed_string& slot );
         int32 addWait( int32 parent, float32 seconds );
         /**
          * @brief 블랙보드 벡터 @p destinationKey 로 가는 이동 노드를 더합니다. 언리얼 `BTTask_MoveTo`(블랙보드 키 + 관찰)에 해당합니다.
@@ -163,8 +179,8 @@ namespace sw
         const BehaviorNode& getNode( int32 index ) const { return _listNode[static_cast<size_t>( index )]; }
         int32               getNodeCount() const { return static_cast<int32>( _listNode.size() ); }
         bool                isDecorator( int32 index ) const;
-        /** @brief 블랙보드 조건이 참인지 봅니다. */
-        static bool evaluateCondition( const BehaviorNode& node, const Blackboard& blackboard );
+        /** @brief 조건 데코레이터의 식이 참인지 봅니다. 블랙보드는 문맥의 칸(`BlackboardSlot`)입니다. */
+        static bool evaluateCondition( const BehaviorNode& node, const GameplayContext& context );
 
     private:
         int32 addNode( int32 parent, BehaviorNodeType type, const utf8* pName );
@@ -190,6 +206,13 @@ namespace sw
         void initialize( const BehaviorTree* pTree );
         /** @brief 이동 노드(`addMoveTo`)가 쓸 행위자의 이동 인터페이스입니다. 행위자보다 먼저 사라지면 nullptr 로 바꿉니다. */
         void setMover( INavMover* pMover ) { _context._pMover = pMover; }
+        /** @brief 조건 · 동작이 쓸 문맥의 바탕입니다(플래그 · 태그 · 달력 칸). 값을 복사합니다. 블랙보드 칸과 씨앗은 틱마다 얹습니다. */
+        void setGameplayContext( const GameplayContext& context ) { _world = context; }
+        /**
+         * @brief 슬롯 @p slot 을 트리 @p pTree 로 채웁니다(언리얼 `SetDynamicSubtree`). nullptr 이면 비웁니다. 도는 트리는 중단합니다. 트리는 이 러너보다 오래 살아야 합니다.
+         * @details 슬롯은 러너마다 다르다 — 같은 트리를 공유하며 행위자마다 전투 가지만 바꾼다.
+         */
+        void setSlotTree( const hashed_string& slot, const BehaviorTree* pTree );
         /** @brief 한 틱 돌리고 루트의 상태를 반환합니다. */
         BehaviorStatus tick( Blackboard& blackboard, void* pOwner, float32 deltaTime );
         /** @brief 도는 작업을 모두 중단하고 처음 상태로 돌립니다. */
@@ -217,6 +240,10 @@ namespace sw
         BehaviorStatus tickSelector( const BehaviorNode& node, int32& inoutCursor );
         /** @brief @p node 의 @p order 번째 자식 노드 번호입니다. 자식이 모자라면 -1 입니다. */
         int32 findChild( const BehaviorNode& node, int32 order ) const;
+        /** @brief 작업 잎 하나를 부릅니다(코드 함수 또는 등록된 동작). */
+        BehaviorStatus runAction( const BehaviorNode& node, int32 index, bool bJustStarted );
+        /** @brief 슬롯 @p slot 의 러너입니다. 비어 있으면 nullptr 입니다. */
+        BehaviorTreeRunner* findSlotRunner( const hashed_string& slot );
         /** @brief 이동 노드 한 틱입니다(목적지를 요청하거나 다시 요청하고, 이동 인터페이스의 상태를 노드 상태로 옮긴다). */
         BehaviorStatus tickMoveTo( int32 index, bool bFirst );
         /** @brief 노드를 끝난 상태로 돌립니다. 커서, 타이머, 횟수를 비우되 쿨다운은 남깁니다. */
@@ -227,8 +254,18 @@ namespace sw
         bool pollHigherPriorityTrigger();
 
     private:
+        /** @brief 채운 슬롯 하나입니다. 러너가 복사될 수 있어 나눠 듭니다. */
+        struct SlotBinding
+        {
+            hashed_string                  _slot{};
+            shared_ptr<BehaviorTreeRunner> _pRunner{};
+        };
+
         const BehaviorTree* _pTree;
         BehaviorContext     _context;
+        ActionContext       _actionContext; ///< 데이터 잎이 받는 문맥. 틱마다 `_world` 에 블랙보드와 씨앗을 얹는다
+        GameplayContext     _world;
+        vector<SlotBinding> _listSlot;
         vector<int32>       _listCursor;
         vector<float32>     _listTimer;
         vector<float32>     _listCooldownUntil;
@@ -237,6 +274,7 @@ namespace sw
         vector<uint8>       _listLastCondition; ///< 관찰 중단 조건의 지난 틱 결과
         vector<float3>      _listMoveTarget;    ///< 이동 노드가 마지막으로 요청한 목적지
         float32             _elapsedTime;
+        int32               _tickCount; ///< 확률 조건의 씨앗
         int32               _activeLeaf;
         int32               _lastSucceededLeaf; ///< 이번 틱에 마지막으로 성공한 작업. 도는 잎이 없을 때 `getActiveLeafName` 이 쓴다
     };

@@ -193,17 +193,18 @@ SW_TEST_CASE( DialogueRunnerTest, BranchReadsFlags )
     SW_EXPECT_EQUAL( string( "yes" ), runner.getCurrentText() );
 }
 
-/** @brief [DialogueRunnerTest] 행동: 알림을 내고 `set_flag:` 를 적용한다. 값이 없으면 1, 0 은 지우기, 숫자가 아니면 경고하고 1 이다 */
+/** @brief [DialogueRunnerTest] 행동: 알림을 내고 등록된 동작을 부른다. 값이 없으면 1, 0 은 지우기다. 모르는 이름이나 숫자가 아닌 값은 로드 오류이고 그래프는 비어 있다 */
 SW_TEST_CASE( DialogueRunnerTest, ActionsSetFlags )
 {
-    SW_EXPECT_LOG( "DialogueRunnerComponent.DialogueActionSetsValue" );
+    SW_EXPECT_LOG( "GameAction.Invalid" );
+    SW_EXPECT_LOG( "DialogueRunnerComponent.DialogueRunnerNoValidNodes" );
     DialogueGraphBuilder builder;
     (void)builder.add( kStart, DialogueAssetNodeType::Start );
-    builder.add( 10, DialogueAssetNodeType::Action )._actionCommand = "set_flag:plain";
-    builder.add( 11, DialogueAssetNodeType::Action )._actionCommand = "set_flag:count:5";
-    builder.add( 12, DialogueAssetNodeType::Action )._actionCommand = "set_flag:gone:0";
-    builder.add( 13, DialogueAssetNodeType::Action )._actionCommand = "set_flag:odd:abc";
-    builder.add( 14, DialogueAssetNodeType::Action )._actionCommand = "play_sound";
+    builder.add( 10, DialogueAssetNodeType::Action )._actionCommand = "flag.set(plain)";
+    builder.add( 11, DialogueAssetNodeType::Action )._actionCommand = "flag.set(count, 5)";
+    builder.add( 12, DialogueAssetNodeType::Action )._actionCommand = "flag.set(gone, 0)";
+    builder.add( 13, DialogueAssetNodeType::Action )._actionCommand = "flag.add(odd)";
+    builder.add( 14, DialogueAssetNodeType::Action )._actionCommand = "event(play_sound)";
     (void)builder.add( kEnd, DialogueAssetNodeType::End );
     builder.connect( kStart, 10 );
     builder.connect( 10, 11 );
@@ -227,6 +228,17 @@ SW_TEST_CASE( DialogueRunnerTest, ActionsSetFlags )
     SW_EXPECT_FALSE( flags.hasFlag( "gone" ) );
     SW_EXPECT_EQUAL( 1, flags.getFlag( "odd" ) );
     SW_EXPECT_TRUE( runner.getState() == DialogueRunnerState::Finished );
+
+    for ( const utf8* pBad : { "flag.set(odd, abc)", "no.such.action" } )
+    {
+        DialogueGraphBuilder bad;
+        (void)bad.add( kStart, DialogueAssetNodeType::Start );
+        bad.add( 10, DialogueAssetNodeType::Action )._actionCommand = pBad;
+        bad.connect( kStart, 10 );
+        DialogueRunnerComponent rejected;
+        rejected.setGraph( bad._asset );
+        SW_EXPECT_FALSE( rejected.startDialogue() );
+    }
 }
 
 /** @brief [DialogueRunnerTest] 행동 핸들러가 대화를 멈추면 뒤의 노드를 실행하지 않는다 */
@@ -234,7 +246,7 @@ SW_TEST_CASE( DialogueRunnerTest, HandlerMayStopDuringAction )
 {
     DialogueGraphBuilder builder;
     (void)builder.add( kStart, DialogueAssetNodeType::Start );
-    builder.add( kAction, DialogueAssetNodeType::Action )._actionCommand = "cut";
+    builder.add( kAction, DialogueAssetNodeType::Action )._actionCommand = "event(cut)";
     builder.add( kLine, DialogueAssetNodeType::Dialogue )._text          = "never";
     builder.connect( kStart, kAction );
     builder.connect( kAction, kLine );
@@ -282,8 +294,8 @@ SW_TEST_CASE( DialogueRunnerTest, BrokenGraphsFinish )
 
     DialogueGraphBuilder loop;
     (void)loop.add( kStart, DialogueAssetNodeType::Start );
-    loop.add( 10, DialogueAssetNodeType::Action )._actionCommand = "a";
-    loop.add( 11, DialogueAssetNodeType::Action )._actionCommand = "b";
+    loop.add( 10, DialogueAssetNodeType::Action )._actionCommand = "event(a)";
+    loop.add( 11, DialogueAssetNodeType::Action )._actionCommand = "event(b)";
     loop.connect( kStart, 10 );
     loop.connect( 10, 11 );
     loop.connect( 11, 10 );

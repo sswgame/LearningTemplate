@@ -4,15 +4,14 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
-#include "Core/Math/MathUtil.h"
+#include "Core/Container/formatString.h"
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
-#include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
-#include "GameFramework/Runtime/World/Query/GameFlags.h"
+#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
 {
@@ -117,18 +116,100 @@ namespace sw
                 }
             }
 
-            static void parseTagList( string_view text, vector<TagID>& outListTag )
+            /** @brief 낱말 목록을 쉼표로 이은 글입니다. 호출 인자로 씁니다. */
+            static string joinTokens( string_view text )
             {
-                outListTag.clear();
+                string joined;
                 StringUtil::forEachToken( text, kNameSeparators, [&]( string_view token )
-                { outListTag.push_back( TagID::request( token ) ); } );
+                {
+                    joined += joined.empty() ? "" : ", ";
+                    joined += token;
+                } );
+                return joined;
             }
 
-            static bool hasTag( const ScheduleConditionContext& context, const TagID& tag )
+            /** @brief 수 목록을 쉼표로 이은 글입니다. */
+            static string joinNumbers( const vector<int32>& listValue )
             {
-                const bool bNPC   = context._pNPCTags != nullptr && context._pNPCTags->hasTag( tag );
-                const bool bWorld = context._pWorldTags != nullptr && context._pWorldTags->hasTag( tag );
-                return bNPC || bWorld;
+                string joined;
+                for ( const int32 value : listValue )
+                {
+                    joined += joined.empty() ? "" : ", ";
+                    joined += formatToString( "%#", value );
+                }
+                return joined;
+            }
+
+            /** @brief 절 하나를 컴파일해 더합니다. */
+            [[nodiscard]] static bool addClause( ScheduleCondition& inoutCondition, ScheduleConditionClause clause, string_view text, string_view sourceName )
+            {
+                ScheduleConditionClauseExpr entry;
+                entry._clause = clause;
+                if ( ConditionExpr::compile( text, sourceName, entry._expr ) == false )
+                    return false;
+                inoutCondition._listClause.push_back( std::move( entry ) );
+                return true;
+            }
+
+            static bool readWeekday( const GameplayContext& context, const ConditionNameListArgs& args )
+            {
+                const ScheduleConditionContext* pSchedule = context.find<ScheduleConditionSlot>();
+                return pSchedule != nullptr && VectorUtil::contains( args._listName, pSchedule->_weekday );
+            }
+
+            static bool readSeason( const GameplayContext& context, const ConditionNameListArgs& args )
+            {
+                const ScheduleConditionContext* pSchedule = context.find<ScheduleConditionSlot>();
+                return pSchedule != nullptr && VectorUtil::contains( args._listName, pSchedule->_season );
+            }
+
+            static bool readWeather( const GameplayContext& context, const ConditionNameListArgs& args )
+            {
+                const ScheduleConditionContext* pSchedule = context.find<ScheduleConditionSlot>();
+                return pSchedule != nullptr && VectorUtil::contains( args._listName, pSchedule->_weather );
+            }
+
+            static bool readPhase( const GameplayContext& context, const ScheduleDayPhaseArgs& args )
+            {
+                const ScheduleConditionContext* pSchedule = context.find<ScheduleConditionSlot>();
+                return pSchedule != nullptr && VectorUtil::contains( args._listPhase, pSchedule->_phase );
+            }
+
+            static bool readDayOfSeason( const GameplayContext& context, const ScheduleNumberListArgs& args )
+            {
+                const ScheduleConditionContext* pSchedule = context.find<ScheduleConditionSlot>();
+                return pSchedule != nullptr && VectorUtil::contains( args._listValue, pSchedule->_dayOfSeason );
+            }
+
+            static bool readWeek( const GameplayContext& context, const ScheduleNumberListArgs& args )
+            {
+                const ScheduleConditionContext* pSchedule = context.find<ScheduleConditionSlot>();
+                return pSchedule != nullptr && VectorUtil::contains( args._listValue, ( pSchedule->_dayOfSeason - 1 ) / kDaysPerWeek + 1 );
+            }
+
+            static float64 readAffinity( const GameplayContext& context, const VocabularyNoFields& /*args*/ )
+            {
+                const ScheduleConditionContext* pSchedule = context.find<ScheduleConditionSlot>();
+                return pSchedule != nullptr ? static_cast<float64>( pSchedule->_affinity ) : 0.0;
+            }
+
+            static bool readDate( const GameplayContext& context, const ScheduleDateArgs& args )
+            {
+                const ScheduleConditionContext* pSchedule = context.find<ScheduleConditionSlot>();
+                if ( pSchedule == nullptr )
+                    return false;
+                // 날짜를 (계절 번호, 날) 열쇠로 바꿔 비교한다. 계절 순서를 모르면(문맥에 없으면) 거짓이다.
+                const int32 currentSeason = findSeasonIndex( pSchedule->_pSeasonOrder, pSchedule->_season );
+                const int32 fromSeason    = args._fromDay > 0 ? findSeasonIndex( pSchedule->_pSeasonOrder, args._fromSeason ) : 0;
+                const int32 toSeason      = args._toDay > 0 ? findSeasonIndex( pSchedule->_pSeasonOrder, args._toSeason ) : 0;
+                if ( currentSeason < 0 || fromSeason < 0 || toSeason < 0 )
+                    return false;
+                const int32 current = currentSeason * kSeasonKeyStride + pSchedule->_dayOfSeason;
+                const int32 from    = fromSeason * kSeasonKeyStride + args._fromDay;
+                const int32 to      = toSeason * kSeasonKeyStride + args._toDay;
+                if ( args._fromDay > 0 && args._toDay > 0 )
+                    return from <= to ? ( from <= current && current <= to ) : ( from <= current || current <= to );
+                return args._fromDay > 0 ? from <= current : current <= to;
             }
 
             static void mark( ScheduleConditionResult& inoutResult, ScheduleConditionClause clause, bool bPassed )
@@ -203,7 +284,7 @@ namespace sw
                 const DayPhase phase = static_cast<DayPhase>( phaseIndex );
                 if ( name == hashed_string( getEnumName( phase ) ) )
                 {
-                    mask   = static_cast<uint8>( mask | makeDayPhaseBit( phase ) );
+                    mask   = static_cast<uint8>( mask | ( 1u << phaseIndex ) );
                     bFound = true;
                 }
             }
@@ -216,24 +297,34 @@ namespace sw
     bool ScheduleCondition::readFromNode( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName )
     {
         using Internal = ScheduleConditionInternal;
-        parseNameList( node.getAttributeText( "days" ), _listWeekday );
-        parseNameList( node.getAttributeText( "seasons" ), _listSeason );
-        parseNameList( node.getAttributeText( "weathers" ), _listWeather );
-        Internal::warnUnknownNames( _listWeekday, vocabulary._listWeekday, "day", "Schedule.DayUnknown", sourceName, ownerName );
-        Internal::warnUnknownNames( _listSeason, vocabulary._listSeason, "season", "Schedule.SeasonUnknown", sourceName, ownerName );
-        Internal::warnUnknownNames( _listWeather, vocabulary._listWeather, "weather", "Schedule.WeatherUnknown", sourceName, ownerName );
+        _listClause.clear();
+        vector<hashed_string> listWeekday;
+        vector<hashed_string> listSeason;
+        vector<hashed_string> listWeather;
+        parseNameList( node.getAttributeText( "days" ), listWeekday );
+        parseNameList( node.getAttributeText( "seasons" ), listSeason );
+        parseNameList( node.getAttributeText( "weathers" ), listWeather );
+        Internal::warnUnknownNames( listWeekday, vocabulary._listWeekday, "day", "Schedule.DayUnknown", sourceName, ownerName );
+        Internal::warnUnknownNames( listSeason, vocabulary._listSeason, "season", "Schedule.SeasonUnknown", sourceName, ownerName );
+        Internal::warnUnknownNames( listWeather, vocabulary._listWeather, "weather", "Schedule.WeatherUnknown", sourceName, ownerName );
 
         // 계절의 날은 1 부터 366 까지(`a-b` 범위 가능). 주는 1 부터 53 까지.
-        Internal::parseDayList( node.getAttributeText( "daysOfSeason" ), _listDayOfSeason, 366, sourceName, ownerName, "day of season" );
-        Internal::parseDayList( node.getAttributeText( "weeks" ), _listWeek, 53, sourceName, ownerName, "week" );
+        vector<int32> listDayOfSeason;
+        vector<int32> listWeek;
+        Internal::parseDayList( node.getAttributeText( "daysOfSeason" ), listDayOfSeason, 366, sourceName, ownerName, "day of season" );
+        Internal::parseDayList( node.getAttributeText( "weeks" ), listWeek, 53, sourceName, ownerName, "week" );
 
         // 계절을 넘나드는 날짜 범위. 둘 다 적으면 `from` 이 `to` 보다 늦을 때 해를 넘는 범위다(Winter 20 ~ Spring 5).
-        if ( Internal::parseDate( node.getAttributeText( "from" ), vocabulary._listSeason, _fromSeason, _fromDay, sourceName, ownerName, "from" ) == false )
-            _fromDay = 0;
-        if ( Internal::parseDate( node.getAttributeText( "to" ), vocabulary._listSeason, _toSeason, _toDay, sourceName, ownerName, "to" ) == false )
-            _toDay = 0;
+        hashed_string fromSeason;
+        hashed_string toSeason;
+        int32         fromDay = 0;
+        int32         toDay   = 0;
+        if ( Internal::parseDate( node.getAttributeText( "from" ), vocabulary._listSeason, fromSeason, fromDay, sourceName, ownerName, "from" ) == false )
+            fromDay = 0;
+        if ( Internal::parseDate( node.getAttributeText( "to" ), vocabulary._listSeason, toSeason, toDay, sourceName, ownerName, "to" ) == false )
+            toDay = 0;
 
-        // 호감도(관계 단계) 범위 — 한쪽만 적어도 된다. 적지 않은 쪽은 형식의 끝(초기값 kMinInt32 · kMaxInt32)이라 "제한 없음" 이다.
+        // 호감도(관계 단계) 범위 — 한쪽만 적어도 된다. 적지 않은 쪽은 제한이 없다.
         bool                   bValid = true;
         std::optional<int32>   minAffinity;
         std::optional<int32>   maxAffinity;
@@ -241,123 +332,115 @@ namespace sw
         bValid = node.readOptionalAttribute( "minAffinity", minAffinity ) && bValid;
         bValid = node.readOptionalAttribute( "maxAffinity", maxAffinity ) && bValid;
         bValid = node.readOptionalAttribute( "chance", chance ) && bValid;
-        if ( minAffinity.has_value() )
-            _minAffinity = *minAffinity;
-        if ( maxAffinity.has_value() )
-            _maxAffinity = *maxAffinity;
-        if ( _minAffinity > _maxAffinity )
+        if ( minAffinity.has_value() && maxAffinity.has_value() && *minAffinity > *maxAffinity )
         {
-            SW_LOG_ERROR_ID( "Schedule.AffinityRangeEmpty", "%#: '%#' has minAffinity %# above maxAffinity %# - it can never match", sourceName, ownerName, _minAffinity, _maxAffinity );
+            SW_LOG_ERROR_ID( "Schedule.AffinityRangeEmpty", "%#: '%#' has minAffinity %# above maxAffinity %# - it can never match", sourceName, ownerName, *minAffinity, *maxAffinity );
+            bValid = false;
+        }
+        if ( chance.has_value() && ( *chance < 0.0f || *chance > 1.0f ) )
+        {
+            SW_LOG_ERROR_ID( "ScheduleCondition.ChanceOutside", "%#: '%#' has chance %# outside [0, 1]", sourceName, ownerName, *chance );
             bValid = false;
         }
 
-        _phaseMask = parsePhaseMask( node.getAttributeText( "phases" ), sourceName, ownerName );
-        Internal::parseTagList( node.getAttributeText( "tags" ), _listRequiredTag );
-        Internal::parseTagList( node.getAttributeText( "notTags" ), _listForbiddenTag );
-        if ( chance.has_value() )
+        // 속성은 공통 어휘의 줄임말이다 — 절마다 식 하나로 컴파일한다. 이름 · 수는 위에서 검사한 값이고, 여기서 틀릴 수 있는 것은 `flags` 뿐이다.
+        const auto addCall = [&]( ScheduleConditionClause clause, const utf8* pName, const string& arguments )
         {
-            const bool bChanceInRange = 0.0f <= *chance && *chance <= 1.0f;
-            if ( bChanceInRange )
-                _chance = *chance;
-            else
-                SW_LOG_ERROR_ID( "ScheduleCondition.ChanceOutside", "%#: '%#' has chance %# outside [0, 1]", sourceName, ownerName, *chance );
-            bValid = bChanceInRange && bValid;
+            if ( arguments.empty() == false )
+                bValid = Internal::addClause( *this, clause, string( pName ) + "(" + arguments + ")", sourceName ) && bValid;
+        };
+        addCall( ScheduleConditionClause::Weekday, "weekday", Internal::joinTokens( node.getAttributeText( "days" ) ) );
+        addCall( ScheduleConditionClause::DayOfSeason, "dayOfSeason", Internal::joinNumbers( listDayOfSeason ) );
+        addCall( ScheduleConditionClause::Week, "week", Internal::joinNumbers( listWeek ) );
+        if ( fromDay > 0 || toDay > 0 )
+        {
+            string arguments;
+            if ( fromDay > 0 )
+                arguments += string( "fromSeason=" ) + fromSeason.c_str() + ", fromDay=" + formatToString( "%#", fromDay );
+            if ( toDay > 0 )
+                arguments += string( arguments.empty() ? "" : ", " ) + "toSeason=" + toSeason.c_str() + ", toDay=" + formatToString( "%#", toDay );
+            addCall( ScheduleConditionClause::DateRange, "date", arguments );
         }
+        if ( minAffinity.has_value() || maxAffinity.has_value() )
+        {
+            string text;
+            if ( minAffinity.has_value() )
+                text += string( "affinity >= " ) + formatToString( "%#", *minAffinity );
+            if ( maxAffinity.has_value() )
+                text += string( text.empty() ? "" : " && " ) + "affinity <= " + formatToString( "%#", *maxAffinity );
+            bValid = Internal::addClause( *this, ScheduleConditionClause::Affinity, text, sourceName ) && bValid;
+        }
+        addCall( ScheduleConditionClause::Season, "season", Internal::joinTokens( node.getAttributeText( "seasons" ) ) );
+        addCall( ScheduleConditionClause::Weather, "weather", Internal::joinTokens( node.getAttributeText( "weathers" ) ) );
+        const uint8 phaseMask = parsePhaseMask( node.getAttributeText( "phases" ), sourceName, ownerName );
+        string      phaseNames;
+        for ( uint32 phaseIndex = 0; phaseIndex <= static_cast<uint32>( DayPhase::Dusk ); ++phaseIndex )
+        {
+            if ( ( phaseMask & ( 1u << phaseIndex ) ) == 0 )
+                continue;
+            phaseNames += phaseNames.empty() ? "" : ", ";
+            phaseNames += getEnumName( static_cast<DayPhase>( phaseIndex ) );
+        }
+        addCall( ScheduleConditionClause::Phase, "phase", phaseNames );
 
         const string_view flags = node.getAttributeText( "flags" );
-        _flags.assign( flags.data(), flags.size() );
-        if ( _flags.empty() == false )
+        if ( StringUtil::trim( flags ).empty() == false && Internal::addClause( *this, ScheduleConditionClause::Flags, flags, sourceName ) == false )
         {
-            const GameFlags noFlags;
-            bool            bIgnored = false;
-            if ( GameFlags::parseCondition( _flags, noFlags, bIgnored ) == false )
-            {
-                SW_LOG_ERROR_ID( "Schedule.FlagsInvalid", "%#: '%#' has an invalid flags expression '%#'", sourceName, ownerName, _flags );
-                bValid = false;
-            }
+            SW_LOG_ERROR_ID( "Schedule.FlagsInvalid", "%#: '%#' has an invalid flags expression '%#'", sourceName, ownerName, flags );
+            bValid = false;
         }
+
+        string tagText;
+        StringUtil::forEachToken( node.getAttributeText( "tags" ), Internal::kNameSeparators, [&]( string_view token )
+        {
+            tagText += tagText.empty() ? "" : " && ";
+            tagText += "tag(" + string( token ) + ")";
+        } );
+        StringUtil::forEachToken( node.getAttributeText( "notTags" ), Internal::kNameSeparators, [&]( string_view token )
+        {
+            tagText += tagText.empty() ? "" : " && ";
+            tagText += "!tag(" + string( token ) + ")";
+        } );
+        if ( tagText.empty() == false )
+            bValid = Internal::addClause( *this, ScheduleConditionClause::Tags, tagText, sourceName ) && bValid;
+
+        if ( chance.has_value() && *chance < 1.0f && *chance >= 0.0f )
+            addCall( ScheduleConditionClause::Chance, "chance", string( node.getAttributeText( "chance" ) ) );
         return bValid;
     }
 
-    bool ScheduleCondition::isEmpty() const
+    void ScheduleConditionContext::fillGameplayContext( GameplayContext& outContext ) const
     {
-        const bool bNoNames    = _listWeekday.empty() && _listSeason.empty() && _listWeather.empty() && _listDayOfSeason.empty() && _listWeek.empty();
-        const bool bNoTags     = _listRequiredTag.empty() && _listForbiddenTag.empty();
-        const bool bNoDates    = _fromDay <= 0 && _toDay <= 0;
-        const bool bNoAffinity = _minAffinity == MathUtil::kMinInt32 && _maxAffinity == MathUtil::kMaxInt32;
-        return bNoNames && bNoTags && bNoDates && bNoAffinity && _flags.empty() && _chance >= 1.0f && _phaseMask == 0;
+        outContext.set<GameFlagsSlot>( _pFlags );
+        outContext.set<SubjectTagsSlot>( _pNPCTags );
+        outContext.set<WorldTagsSlot>( _pWorldTags );
+        outContext.set<ScheduleConditionSlot>( this );
+        outContext.setSeed( GameConditions::makeSeed( _day, static_cast<int32>( _chanceKey ) ) );
     }
 
     ScheduleConditionResult ScheduleCondition::evaluate( const ScheduleConditionContext& context ) const
     {
         using Internal = ScheduleConditionInternal;
         ScheduleConditionResult result;
-        if ( _listWeekday.empty() == false )
-            Internal::mark( result, ScheduleConditionClause::Weekday, VectorUtil::contains( _listWeekday, context._weekday ) );
-        if ( _listDayOfSeason.empty() == false )
+        if ( _listClause.empty() )
+            return result;
+        GameplayContext world;
+        context.fillGameplayContext( world );
+        for ( const ScheduleConditionClauseExpr& entry : _listClause )
         {
-            bool bFound = false;
-            for ( const int32 dayOfSeason : _listDayOfSeason )
-            {
-                bFound = bFound || dayOfSeason == context._dayOfSeason;
-            }
-            Internal::mark( result, ScheduleConditionClause::DayOfSeason, bFound );
-        }
-        if ( _listWeek.empty() == false )
-        {
-            const int32 week = ( context._dayOfSeason - 1 ) / Internal::kDaysPerWeek + 1;
-            Internal::mark( result, ScheduleConditionClause::Week, VectorUtil::contains( _listWeek, week ) );
-        }
-        if ( _fromDay > 0 || _toDay > 0 )
-        {
-            // 날짜를 (계절 번호, 날) 열쇠로 바꿔 비교한다. 계절 순서를 모르면(context 에 없으면) 거짓이다.
-            const int32 currentSeason = Internal::findSeasonIndex( context._pSeasonOrder, context._season );
-            const int32 fromSeason    = _fromDay > 0 ? Internal::findSeasonIndex( context._pSeasonOrder, _fromSeason ) : 0;
-            const int32 toSeason      = _toDay > 0 ? Internal::findSeasonIndex( context._pSeasonOrder, _toSeason ) : 0;
-            bool        bInRange      = false;
-            const bool  bKnownSeasons = currentSeason >= 0 && fromSeason >= 0 && toSeason >= 0;
-            if ( bKnownSeasons )
-            {
-                const int32 current = currentSeason * Internal::kSeasonKeyStride + context._dayOfSeason;
-                const int32 from    = fromSeason * Internal::kSeasonKeyStride + _fromDay;
-                const int32 to      = toSeason * Internal::kSeasonKeyStride + _toDay;
-                if ( _fromDay > 0 && _toDay > 0 )
-                    bInRange = from <= to ? ( from <= current && current <= to ) : ( from <= current || current <= to );
-                else if ( _fromDay > 0 )
-                    bInRange = from <= current;
-                else
-                    bInRange = current <= to;
-            }
-            Internal::mark( result, ScheduleConditionClause::DateRange, bInRange );
-        }
-        if ( _minAffinity != MathUtil::kMinInt32 || _maxAffinity != MathUtil::kMaxInt32 )
-            Internal::mark( result, ScheduleConditionClause::Affinity, _minAffinity <= context._affinity && context._affinity <= _maxAffinity );
-        if ( _listSeason.empty() == false )
-            Internal::mark( result, ScheduleConditionClause::Season, VectorUtil::contains( _listSeason, context._season ) );
-        if ( _listWeather.empty() == false )
-            Internal::mark( result, ScheduleConditionClause::Weather, VectorUtil::contains( _listWeather, context._weather ) );
-        if ( _phaseMask != 0 )
-            Internal::mark( result, ScheduleConditionClause::Phase, ( _phaseMask & makeDayPhaseBit( context._phase ) ) != 0 );
-        if ( _flags.empty() == false )
-            Internal::mark( result, ScheduleConditionClause::Flags, context._pFlags != nullptr && context._pFlags->evaluate( _flags ) );
-        if ( _listRequiredTag.empty() == false || _listForbiddenTag.empty() == false )
-        {
-            bool bPassed = true;
-            for ( const TagID& tag : _listRequiredTag )
-            {
-                bPassed = bPassed && Internal::hasTag( context, tag );
-            }
-            for ( const TagID& tag : _listForbiddenTag )
-            {
-                bPassed = bPassed && Internal::hasTag( context, tag ) == false;
-            }
-            Internal::mark( result, ScheduleConditionClause::Tags, bPassed );
-        }
-        if ( _chance < 1.0f )
-        {
-            const float32 roll = GameHash::toUnitFloat( GameHash::hashCoord( context._day, static_cast<int32>( context._chanceKey ), 0x5c4ed01eu ) );
-            Internal::mark( result, ScheduleConditionClause::Chance, roll < _chance );
+            // 플래그를 받지 못한 문맥에서 플래그 절은 "모름" 이라 거짓이다(`!x` 도 참으로 보지 않는다).
+            const bool bKnown = entry._clause != ScheduleConditionClause::Flags || context._pFlags != nullptr;
+            Internal::mark( result, entry._clause, bKnown && entry._expr.evaluate( world ) );
         }
         return result;
     }
+
+    SW_CONDITION( weekday, ConditionNameListArgs, &ScheduleConditionInternal::readWeekday );
+    SW_CONDITION( season, ConditionNameListArgs, &ScheduleConditionInternal::readSeason );
+    SW_CONDITION( weather, ConditionNameListArgs, &ScheduleConditionInternal::readWeather );
+    SW_CONDITION( phase, ScheduleDayPhaseArgs, &ScheduleConditionInternal::readPhase );
+    SW_CONDITION( dayOfSeason, ScheduleNumberListArgs, &ScheduleConditionInternal::readDayOfSeason );
+    SW_CONDITION( week, ScheduleNumberListArgs, &ScheduleConditionInternal::readWeek );
+    SW_CONDITION( date, ScheduleDateArgs, &ScheduleConditionInternal::readDate );
+    SW_CONDITION( affinity, VocabularyNoFields, &ScheduleConditionInternal::readAffinity );
 } // namespace sw

@@ -3,17 +3,19 @@
  * @brief 일정 조건입니다. 요일, 계절의 날(범위 가능), 주, 날짜 범위, 계절, 날씨, 하루의 때, 게임 플래그 조건식, 태그(관계, 퀘스트), 호감도 단계, 확률을 봅니다.
  * @details 루틴, 일정 블록, 축제, 약속이 같은 조건을 씁니다. 스타듀 밸리의 요일과 비와 하트 일정, 스카이림 Radiant AI 패키지 조건에 해당합니다.
  *          조건은 절(clause)마다 따로 판정해 어느 절이 막았는지 남깁니다. "왜 여기 있나" 추적이 그것을 보여 줍니다.
+ *          절마다 공통 어휘의 식(`ConditionExpr`)입니다. `weathers="rain"` 같은 속성은 `weather(rain)` 으로 컴파일하는 줄임말이라 데이터를 옮기지 않습니다.
+ *          이 파일이 등록하는 달력 어휘(`weekday` · `season` · `weather` · `phase` · `dayOfSeason` · `week` · `date` · `affinity`)는 스케줄 문맥(`ScheduleConditionSlot`)을 채운 실행기라면 어디서든 씁니다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Math/MathUtil.h"
-#include "Core/String/TagID.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"
@@ -61,6 +63,16 @@ namespace sw
         int32                        _affinity{ 0 };           ///< NPC 의 호감도(관계 단계). 게임이 `ScheduleSystem::setNPCAffinity` 로 넣는다.
         uint32                       _chanceKey{ 0 };          ///< 확률 굴림의 키. 시드, NPC, 루틴을 섞은 값이다
         DayPhase                     _phase{ DayPhase::Day };
+
+        /** @brief 이 문맥을 게임플레이 문맥의 칸으로 옮깁니다(플래그 · 태그 · 달력 · 날과 키의 씨앗). 이 객체보다 오래 쓰지 않습니다. 행동 트리 · 대화도 이것으로 달력 어휘를 씁니다. */
+        void fillGameplayContext( GameplayContext& outContext ) const;
+    };
+
+    /** @brief 달력 어휘가 읽는 칸입니다. */
+    struct ScheduleConditionSlot
+    {
+        using Type                      = const ScheduleConditionContext;
+        static constexpr uint32 kSlotID = FourCcUtil::make( "SCHD" );
     };
 } // namespace sw
 
@@ -97,6 +109,52 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 때 목록을 받는 조건의 칸입니다(`phase(Dawn, Day)`). */
+    REFLECT()
+    struct SW_GF_API ScheduleDayPhaseArgs
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        vector<DayPhase> _listPhase{};
+    };
+
+    /** @brief 수 목록을 받는 조건의 칸입니다(`dayOfSeason(1, 2, 5)`, `week(1, 3)`). */
+    REFLECT()
+    struct SW_GF_API ScheduleNumberListArgs
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        vector<int32> _listValue{};
+    };
+
+    /** @brief 계절을 넘나드는 날짜 범위의 칸입니다(`date(fromSeason=Spring, fromDay=20, toSeason=Summer, toDay=5)`). 날이 0 이면 그쪽 한계가 없습니다. */
+    REFLECT()
+    struct SW_GF_API ScheduleDateArgs
+    {
+        REFLECT_BODY();
+
+        PROPERTY()
+        hashed_string _fromSeason{};
+        PROPERTY( Min = 0 )
+        int32 _fromDay{ 0 };
+        PROPERTY()
+        hashed_string _toSeason{};
+        PROPERTY( Min = 0 )
+        int32 _toDay{ 0 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 조건의 절 하나입니다. */
+    struct ScheduleConditionClauseExpr
+    {
+        ConditionExpr           _expr{};
+        ScheduleConditionClause _clause{ ScheduleConditionClause::Weekday };
+    };
+
     /**
      * @struct ScheduleCondition
      * @brief 일정 조건 하나입니다. 모든 절이 참이어야 참이고, 적지 않은 절은 늘 참입니다.
@@ -109,22 +167,7 @@ namespace sw
      */
     struct SW_GF_API ScheduleCondition
     {
-        vector<hashed_string> _listWeekday{};
-        vector<hashed_string> _listSeason{};
-        vector<hashed_string> _listWeather{};
-        vector<int32>         _listDayOfSeason{};
-        vector<int32>         _listWeek{};
-        vector<TagID>         _listRequiredTag{};
-        vector<TagID>         _listForbiddenTag{};
-        string                _flags{}; ///< `GameFlags` 조건식
-        hashed_string         _fromSeason{};
-        hashed_string         _toSeason{};
-        int32                 _fromDay{ 0 };                       ///< 0 이면 시작 한계가 없다
-        int32                 _toDay{ 0 };                         ///< 0 이면 끝 한계가 없다
-        int32                 _minAffinity{ MathUtil::kMinInt32 }; ///< 호감도 하한(없으면 `kMinInt32`)
-        int32                 _maxAffinity{ MathUtil::kMaxInt32 }; ///< 호감도 상한(없으면 `kMaxInt32`)
-        float32               _chance{ 1.0f };
-        uint8                 _phaseMask{ 0 }; ///< `makeDayPhaseBit` 의 합. 0 이면 언제나
+        vector<ScheduleConditionClauseExpr> _listClause{}; ///< 적은 절만 든다. 비면 늘 참이다
 
         /** @brief 조건 속성 이름이면 true 입니다. 읽는 쪽이 모르는 속성을 가려낼 때 씁니다. */
         static bool isConditionAttribute( const utf8* pName );
@@ -135,18 +178,13 @@ namespace sw
 
         /**
          * @brief 조건 속성을 모두 읽습니다. 어휘에 없는 이름은 경고합니다(데이터 검사가 잡는다).
-         * @return 깨진 숫자 · 범위 밖 확률 · 뒤집힌 호감도 범위 · 문법이 틀린 플래그 식이 있으면 오류를 남기고 false 입니다.
+         * @return 깨진 숫자 · 범위 밖 확률 · 뒤집힌 호감도 범위 · 틀린 식이 있으면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] bool readFromNode( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName );
 
-        bool                    isEmpty() const;
+        bool                    isEmpty() const { return _listClause.empty(); }
         ScheduleConditionResult evaluate( const ScheduleConditionContext& context ) const;
         bool                    matches( const ScheduleConditionContext& context ) const { return evaluate( context ).isPassed(); }
     };
 
-    /** @brief 하루의 때에 해당하는 조건 마스크 비트입니다. */
-    constexpr uint8 makeDayPhaseBit( DayPhase phase )
-    {
-        return static_cast<uint8>( 1u << static_cast<uint32>( phase ) );
-    }
 } // namespace sw

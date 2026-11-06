@@ -53,7 +53,7 @@ namespace sw::editor
         void clear();
         /**
          * @brief 파일 글을 읽어 모델을 바꿉니다. 모르는 노드 · 속성 이름, 루트가 둘이거나 없는 글은 읽지 않고 false 이며 @p outError 에 이유를 둡니다(모델은 그대로).
-         * @details 작업 이름이 레지스트리에 있는지는 보지 않는다 - 그것은 `collectIssues` 의 문제 표시다(편집기는 아직 안 만든 작업의 트리도 열 수 있어야 한다).
+         * @details 동작 이름이 레지스트리에 있는지는 보지 않는다 - 그것은 `collectIssues` 의 문제 표시다(편집기는 아직 안 만든 작업의 트리도 열 수 있어야 한다).
          */
         [[nodiscard]] bool parse( string_view xmlText, string& outError );
         /** @brief 파일 글로 씁니다(`<BehaviorTree>` 루트, 노드마다 한 줄, 탭 들여쓰기). 루트가 없으면 빈 `<BehaviorTree/>` 입니다. */
@@ -92,7 +92,7 @@ namespace sw::editor
         /** @brief 루트가 0 인 깊이입니다. 없는 번호면 0 입니다. */
         uint32 getDepth( int32 id ) const;
 
-        /** @brief 저장 전에 고쳐야 할 문제를 모읍니다: 루트 없음, 자식이 모자란 컴포짓, 자식 수가 하나가 아닌 데코레이터, 빈 작업 · 키, 레지스트리에 없는 작업 이름, 음수 시간. */
+        /** @brief 저장 전에 고쳐야 할 문제를 모읍니다: 루트 없음, 자식이 모자란 컴포짓, 자식 수가 하나가 아닌 데코레이터, 빈 작업 · 키, 틀린 조건식, 등록되지 않은 동작 이름, 음수 시간. */
         void collectIssues( vector<BehaviorTreeEditIssue>& outListIssue ) const;
         /** @brief 앞 자식부터 깊이 우선 순서의 노드 번호입니다 - 읽은 `BehaviorTree` 의 노드 번호(`getNode( i )`)와 i 번째가 같은 노드다. */
         void collectPreorder( vector<int32>& outListID ) const;

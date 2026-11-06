@@ -8,6 +8,8 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ActionRegistry.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -42,6 +44,14 @@ namespace sw
 
 namespace sw
 {
+    /** @brief 그래프를 받을 때 Branch · Action 노드를 컴파일해 둔 것입니다. 대화 중에 글을 읽지 않습니다. */
+    struct DialogueCompiledNode
+    {
+        ConditionExpr  _condition{};
+        GameActionCall _action{};
+        int32          _nodeID{ 0 };
+    };
+
     SW_DECLARE_DELEGATE( void, OnDialogueLineDelegate, const string& speaker, const string& text );
     SW_DECLARE_DELEGATE( void, OnDialogueChoicesDelegate, const vector<string>& listChoice );
     SW_DECLARE_DELEGATE( void, OnDialogueEventDelegate, const string& command );
@@ -78,7 +88,7 @@ namespace sw
 
         [[nodiscard]] bool loadGraphFile( const AssetID& assetID );
         [[nodiscard]] bool loadGraphXML( string_view xmlContent );
-        /** @brief 이미 만든 그래프를 씁니다. 코드로 만든 그래프나 에디터에서 넘긴 그래프를 받으며, 진행 중인 대화는 멈추지 않습니다. */
+        /** @brief 이미 만든 그래프를 씁니다. 코드로 만든 그래프나 에디터에서 넘긴 그래프를 받으며, 진행 중인 대화는 멈추지 않습니다. 틀린 조건 · 동작이 있으면 오류를 남기고 빈 그래프가 됩니다. */
         void setGraph( DialogueGraphAsset graph );
 
         FUNCTION( Category = "Playback", DisplayName = "Start Dialogue", CallInEditor )
@@ -89,8 +99,10 @@ namespace sw
         FUNCTION( Category = "Preview", DisplayName = "Preview Line", EditorPreview = "DialogueLine" )
         void previewLine( string speaker, string text );
 
-        /** @brief Branch 조건과 `set_flag:` 명령이 읽고 쓰는 월드 플래그입니다. 빌려 쓰므로 러너보다 오래 살아야 하며, nullptr 이면 모든 플래그가 0 입니다. */
+        /** @brief Branch 조건과 `flag.*` 동작이 읽고 쓰는 월드 플래그입니다. 빌려 쓰므로 러너보다 오래 살아야 하며, nullptr 이면 모든 플래그가 0 입니다. */
         void setFlags( GameFlags* pFlags );
+        /** @brief 조건 · 동작이 쓸 문맥의 바탕입니다(태그 · 달력 칸 등). 값을 복사합니다. 플래그는 `setFlags` 가 얹습니다. */
+        void setGameplayContext( const GameplayContext& context );
         /** @brief `_bPostSubtitles` 가 줄을 보낼 UI 입니다. 테스트가 정하며 nullptr 이면 엔진 서비스를 씁니다. 빌려 씁니다. */
         void setUISystem( UISystem* pUISystem ) { _pUISystemOverride = pUISystem; }
 
@@ -107,12 +119,13 @@ namespace sw
         [[nodiscard]] Subscription bindOnDialogueFinished( OnDialogueFinishedFunc func ) { return _onFinished.bind( std::move( func ) ); }
 
     private:
-        /**
-         * @brief Branch 노드의 조건식을 월드 플래그 조건식으로 평가합니다. 빈 식은 참입니다.
-         * @details 문법은 `GameFlags`(`a && !b || count>=3`) 하나만 쓴다. 이름 하나는 0 이 아니면 참이고, 비교의 오른쪽은 정수나 다른 플래그이다.
-         *          읽지 못한 식은 경고하고 거짓이다. 플래그 저장소가 없으면 모든 이름이 0 이다.
-         */
-        bool evaluateCondition( const string& condition ) const;
+        /** @brief `_graph` 의 Branch · Action 노드를 컴파일합니다. 틀린 글이 하나라도 있으면(오류는 로그에 남는다) 그래프를 비우고 false 입니다. 대화가 틀린 분기를 타지 않게 로드에서 멈춘다. */
+        [[nodiscard]] bool          compileGraph();
+        const DialogueCompiledNode* findCompiled( int32 nodeID ) const;
+        /** @brief 노드 @p nodeID 를 평가할 문맥입니다. 씨앗은 (진행 번호, 노드)입니다. */
+        GameplayContext makeWorld( int32 nodeID ) const;
+        /** @brief Branch 노드의 컴파일된 조건을 평가합니다. 플래그 저장소가 없으면 모든 이름이 0 입니다. */
+        bool evaluateCondition( int32 nodeID ) const;
         /** @brief `_graphPath` 의 그래프를 엽니다. 경로가 비었으면 아무것도 하지 않고, 못 열면 경고합니다. */
         void loadGraphFromPath();
         /** @brief 노드 @p startNodeID 부터 실행합니다. 지나가는 노드(시작 · 분기 · 행동)는 이어서 돌고, 사람을 기다리거나 끝나면 멈춥니다. 서로를 가리키는 노드는 상한에서 경고하고 끝냅니다. */
@@ -126,7 +139,7 @@ namespace sw
         int32 findNextNode( int32 nodeID, const DialogueStepInput& input ) const;
         /** @brief 상태를 Finished 로 두고 `_onFinished` 를 부릅니다. */
         void finishDialogue();
-        void executeAction( string actionCmd );
+        void executeAction( int32 nodeID, string actionCmd );
         /**
          * @brief `_bPostSubtitles` 면 줄을 자막으로 보내고, `_onLine` 을 **사본으로** 부릅니다. 핸들러가 그 안에서 진행시켜도 안전합니다.
          * @details 델리게이트가 받는 `const string&` 가 이 객체의 멤버를 그대로 가리키면,
@@ -138,7 +151,9 @@ namespace sw
         void notifyChoices();
 
         DialogueGraphAsset                   _graph;
+        vector<DialogueCompiledNode>         _listCompiled;
         GameFlags*                           _pFlags;
+        GameplayContext                      _world;
         UISystem*                            _pUISystemOverride; ///< 자막을 보낼 UI(테스트), nullptr 이면 엔진 서비스
         string                               _currentSpeaker;
         string                               _currentText;

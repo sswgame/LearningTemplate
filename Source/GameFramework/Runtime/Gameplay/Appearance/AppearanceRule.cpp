@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
@@ -93,6 +94,42 @@ namespace sw
                 {
                     outCondition._kind = pBodyShape != nullptr ? AppearanceRuleConditionKind::BodyShape : AppearanceRuleConditionKind::BodyType;
                     AppearanceXMLUtil::readNameList( node, pBodyShape != nullptr ? "bodyShape" : "bodyType", outCondition._listName );
+                }
+                // 속성은 공통 어휘의 줄임말이다.
+                string text = outCondition._bNegate == SW_TRUE ? "!" : "";
+                switch ( outCondition._kind )
+                {
+                    case AppearanceRuleConditionKind::TargetTag:
+                        text += formatToString( "targetTag(%#, %#)", outCondition._target.c_str(), fields._tag.c_str() );
+                        break;
+                    case AppearanceRuleConditionKind::AnyTag:
+                        text += formatToString( "anyTag(%#)", fields._tag.c_str() );
+                        break;
+                    case AppearanceRuleConditionKind::CharacterTag:
+                        text += formatToString( "tag(%#)", fields._characterTag.c_str() );
+                        break;
+                    case AppearanceRuleConditionKind::Occupied:
+                        text += formatToString( "occupied(%#)", outCondition._target.c_str() );
+                        break;
+                    case AppearanceRuleConditionKind::BodyShape:
+                    case AppearanceRuleConditionKind::BodyType:
+                    {
+                        text += outCondition._kind == AppearanceRuleConditionKind::BodyShape ? "bodyShape(" : "bodyType(";
+                        for ( size_t nameIndex = 0; nameIndex < outCondition._listName.size(); ++nameIndex )
+                        {
+                            text += nameIndex == 0 ? "" : ", ";
+                            text += outCondition._listName[nameIndex].c_str();
+                        }
+                        text += ")";
+                        break;
+                    }
+                }
+                if ( outCondition._kind == AppearanceRuleConditionKind::Occupied && outCondition._target.empty() )
+                    return false; // 빈 슬롯 이름은 위에서 알렸다
+                if ( ConditionExpr::compile( text, sourceName, outCondition._expr ) == false )
+                {
+                    report.addErrorWithID( "Appearance.RuleConditionInvalid", "%#: rule '%#' <When> could not be read", sourceName, ruleID.c_str() );
+                    return false;
                 }
                 return true;
             }

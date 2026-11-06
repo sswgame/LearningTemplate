@@ -365,9 +365,11 @@ namespace sw
         if ( tailEndMinute > 0 )
         {
             // 자정을 넘는 칸의 다음 날 새벽 쪽이다 — 같은 활동 · 장소 · 조건이고 0:00 에서 시작한다.
-            ScheduleBlockDef tail = block;
-            tail._startMinute     = 0;
-            tail._endMinute       = tailEndMinute;
+            ScheduleBlockDef tail        = block;
+            tail._startMinute            = 0;
+            tail._endMinute              = tailEndMinute;
+            tail._onStart                = GameActionCall{}; // 나뉘어도 활동은 하나다 — 시작은 앞 칸, 끝은 뒤 칸에서 한 번씩 부른다
+            inoutListBlock.back()._onEnd = GameActionCall{};
             inoutListBlock.push_back( tail );
         }
     }
@@ -378,10 +380,14 @@ namespace sw
         using Internal   = ScheduleCatalogInternal;
         outTailEndMinute = -1;
         // 시각은 시계 표기이고 자정 넘김은 칸이 아니라 시각을 고치는 표시다.
-        bool bFieldsValid = XMLFields::readFields( node, outBlock, sourceName, { "start", "end", "overnight" }, &ScheduleCondition::isConditionAttribute );
+        bool bFieldsValid = XMLFields::readFields( node, outBlock, sourceName, { "start", "end", "overnight", "onStart", "onEnd" }, &ScheduleCondition::isConditionAttribute );
         bFieldsValid      = outBlock._condition.readFromNode( node, _vocabulary, sourceName, ownerName ) && bFieldsValid;
-        bool bOvernight   = false;
-        bFieldsValid      = XMLReadUtil::readOptionalBool( node, "overnight", bOvernight ) && bFieldsValid;
+        if ( const utf8* const pOnStart = node.findAttribute( "onStart" ); pOnStart != nullptr )
+            bFieldsValid = GameActionCall::compileText( pOnStart, sourceName, outBlock._onStart ) && bFieldsValid;
+        if ( const utf8* const pOnEnd = node.findAttribute( "onEnd" ); pOnEnd != nullptr )
+            bFieldsValid = GameActionCall::compileText( pOnEnd, sourceName, outBlock._onEnd ) && bFieldsValid;
+        bool bOvernight = false;
+        bFieldsValid    = XMLReadUtil::readOptionalBool( node, "overnight", bOvernight ) && bFieldsValid;
         if ( bFieldsValid == false )
         {
             SW_LOG_ERROR_ID( "ScheduleCatalog.BlockInvalidFieldsSkipped", "%#: '%#' has a block with invalid fields - skipped", sourceName, ownerName );

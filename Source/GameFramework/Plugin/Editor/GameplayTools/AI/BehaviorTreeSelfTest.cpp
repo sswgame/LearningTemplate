@@ -51,15 +51,18 @@ namespace sw::editor
                 context.expect( reread.write() == text, "writing the re-read tree gave a different text" );
 
                 // 칸은 종류마다의 스키마(`BehaviorTreeNodeFields.h`)로 읽고 쓴다 — 열거 이름 · 불리언 · 기본값 생략이 같은 글로 돌아온다.
-                const string_view     kAuthored = "<BehaviorTree><Selector name=\"Root\" reactive=\"true\"><BlackboardCondition key=\"Threat\" compare=\"Greater\" value=\"2\" abort=\"LowerPriority\">"
+                const string_view     kAuthored = "<BehaviorTree><Selector name=\"Root\" reactive=\"true\"><BlackboardCondition test=\"blackboard(Threat) &gt; 2\" abort=\"LowerPriority\">"
                                                   "<MoveTo key=\"Goal\"/></BlackboardCondition></Selector></BehaviorTree>";
                 BehaviorTreeEditModel authored;
                 context.expect( authored.parse( kAuthored, error ), "the model could not read a hand-written tree" );
-                const BehaviorTreeEditNode* pRoot      = authored.find( authored.getRootID() );
-                const BehaviorTreeEditNode* pCondition = pRoot != nullptr && pRoot->_listChild.size() == 1 ? authored.find( pRoot->_listChild[0] ) : nullptr;
-                const BehaviorTreeEditNode* pMove      = pCondition != nullptr && pCondition->_listChild.size() == 1 ? authored.find( pCondition->_listChild[0] ) : nullptr;
-                const bool                  bFields    = pRoot != nullptr && pRoot->_bReactive && pRoot->_name == "Root" && pCondition != nullptr && pCondition->_compare == BlackboardCompare::Greater &&
-                                     pCondition->_value == 2.0f && pCondition->_abort == BehaviorAbortMode::LowerPriority && pMove != nullptr && pMove->_key == "Goal" && pMove->_repathDistance == 0.5f;
+                const BehaviorTreeEditNode*             pRoot      = authored.find( authored.getRootID() );
+                const BehaviorTreeEditNode*             pCondition = pRoot != nullptr && pRoot->_listChild.size() == 1 ? authored.find( pRoot->_listChild[0] ) : nullptr;
+                const BehaviorTreeEditNode*             pMove      = pCondition != nullptr && pCondition->_listChild.size() == 1 ? authored.find( pCondition->_listChild[0] ) : nullptr;
+                const BehaviorSelectorFields*           pSelector  = pRoot != nullptr ? pRoot->_fields.find<BehaviorSelectorFields>() : nullptr;
+                const BehaviorConditionDecoratorFields* pDecorator = pCondition != nullptr ? pCondition->_fields.find<BehaviorConditionDecoratorFields>() : nullptr;
+                const BehaviorMoveToFields*             pMoveTo    = pMove != nullptr ? pMove->_fields.find<BehaviorMoveToFields>() : nullptr;
+                const bool                              bFields    = pSelector != nullptr && pSelector->_bReactive && pRoot->_name == "Root" && pDecorator != nullptr && pDecorator->_test == "blackboard(Threat) > 2" &&
+                                     pDecorator->_abort == BehaviorAbortMode::LowerPriority && pMoveTo != nullptr && pMoveTo->_key == "Goal" && pMoveTo->_repathDistance == 0.5f;
                 context.expect( bFields, "the node fields were not read through the schema" );
                 BehaviorTreeEditModel rewritten;
                 context.expect( rewritten.parse( authored.write(), error ) && rewritten.write() == authored.write(), "a hand-written tree did not survive write and read" );

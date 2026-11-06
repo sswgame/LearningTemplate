@@ -59,8 +59,8 @@ namespace sw
     {
         None,      /**< 본문이 없습니다. */
         Text,      /**< `_text` 입니다. 대사나 선택지 질문이 들어갑니다. */
-        Condition, /**< `_condition` 입니다. Branch 노드의 조건식이 들어갑니다. */
-        Action     /**< `_actionCommand` 입니다. 실행할 명령이 들어갑니다. */
+        Condition, /**< `_condition` 입니다. Branch 노드의 조건식(`ConditionExpr`)이 들어갑니다. */
+        Action     /**< `_actionCommand` 입니다. 부를 동작(`GameActionCall` 글)이 들어갑니다. */
     };
 
     /** @brief 노드 종류 하나의 특성입니다. 이름, 핀, 진행 방식, 편집 필드, 기본값이 모두 이 항목에 있습니다. */
@@ -92,7 +92,7 @@ namespace sw
         {"Dialogue", "NPC", "Enter dialogue text...", float4( 0.4f, 0.7f, 1.0f, 1.0f ), DialogueAssetNodeType::Dialogue, DialogueNodeFlow::WaitAdvance,   DialogueNodeOutput::Next,      DialogueNodeBody::Text,  true,  true,  true, 0},
         {  "Choice",    "",         "Player options", float4( 0.8f, 0.5f, 1.0f, 1.0f ),   DialogueAssetNodeType::Choice,  DialogueNodeFlow::WaitChoice, DialogueNodeOutput::Choice,      DialogueNodeBody::Text,  true, false,  true, 2},
         {  "Branch",    "",           "visited == 1", float4( 1.0f, 0.8f, 0.2f, 1.0f ),   DialogueAssetNodeType::Branch,   DialogueNodeFlow::Condition, DialogueNodeOutput::Branch, DialogueNodeBody::Condition,  true, false,  true, 0},
-        {  "Action",    "",     "give_item:potion:1", float4( 0.2f, 0.9f, 0.9f, 1.0f ),   DialogueAssetNodeType::Action, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,    DialogueNodeBody::Action,  true, false,  true, 0},
+        {  "Action",    "",           "event(ready)", float4( 0.2f, 0.9f, 0.9f, 1.0f ),   DialogueAssetNodeType::Action, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,    DialogueNodeBody::Action,  true, false,  true, 0},
         {     "End",    "",                       "", float4( 0.9f, 0.3f, 0.3f, 1.0f ),      DialogueAssetNodeType::End,      DialogueNodeFlow::Finish,   DialogueNodeOutput::None,      DialogueNodeBody::None,  true, false,  true, 0},
     };
 
@@ -113,9 +113,9 @@ namespace sw
         string _speaker;
         PROPERTY( Tooltip = "Line text or localization key" )
         string _text;
-        PROPERTY( Tooltip = "Condition the Branch node evaluates" )
+        PROPERTY( Tooltip = "Condition expression the Branch node evaluates, for example hasKey && weather(rain)" )
         string _condition;
-        PROPERTY( Tooltip = "Command the Action node runs" )
+        PROPERTY( Tooltip = "Registered action the Action node calls, for example flag.set(hasKey, 1)" )
         string _actionCommand;
         /** @brief Choice 노드의 선택지입니다. 순서가 곧 핀 번호입니다. */
         PROPERTY( Tooltip = "Choices of the Choice node; the order is the pin number" )

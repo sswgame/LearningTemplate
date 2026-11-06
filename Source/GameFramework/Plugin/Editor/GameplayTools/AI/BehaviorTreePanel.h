@@ -15,6 +15,7 @@
 
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorNodeGraph.h"
+#include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
 #include "GameFramework/Plugin/Editor/GameplayTools/AI/BehaviorTreeEditModel.h"
 
@@ -67,6 +68,8 @@ namespace sw::editor
         void drawSidePanel();
         void drawInspector( BehaviorTreeEditNode& node );
         void drawIssueList();
+        /** @brief 칸 그리드가 값을 고쳤습니다. 인스펙터가 한 번의 편집으로 알립니다. */
+        void onGridEdited( const PropertyInfo& prop );
         void handleCanvasInteractions();
         /**
          * @brief 캔버스 단축키 Ctrl+C · X · V · D 와 노드 오른쪽 클릭 메뉴(복제 · 지우기)를 받습니다. 단위는 하위 트리다(언리얼 BT 와 같다).
@@ -92,9 +95,11 @@ namespace sw::editor
         vector<Placement>             _listPlacement;
         vector<int32>                 _listPreorder;
         vector<string>                _listTaskName;
+        EditorPropertyGrid            _grid;
         string                        _statusText;
         int32                         _selectedID;
         uint8                         _bLayoutPending : 1;
         uint8                         _bSelectPending : 1;
+        uint8                         _bGridEdited    : 1;
     };
 } // namespace sw::editor

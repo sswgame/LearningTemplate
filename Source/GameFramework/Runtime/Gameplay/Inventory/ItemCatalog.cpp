@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Container/formatString.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Foundation/AssetTypeRegistry.h"
@@ -34,25 +35,38 @@ namespace sw
                 EquipRequiresFields fields;
                 if ( XMLFields::readFields( node, fields, sourceName, { "bodyShape" } ) == false ) // 모르는 속성 · 깨진 pieces 는 오류다
                     return false;
+                // 속성은 공통 어휘의 줄임말이다. 칸은 읽기 때의 정적 검사(조건 순환 · 없는 세트)가 읽는다.
+                string text;
                 if ( pSet != nullptr )
                 {
-                    outCondition._setID      = fields._set;
-                    outCondition._pieceCount = fields._pieces;
-                    outCondition._kind       = outCondition._pieceCount > 0 ? EquipConditionKind::SetPieces : EquipConditionKind::SetComplete;
-                    return outCondition._setID.empty() == false;
+                    outCondition._setID = fields._set;
+                    outCondition._kind  = fields._pieces > 0 ? EquipConditionKind::SetPieces : EquipConditionKind::SetComplete;
+                    if ( outCondition._setID.empty() )
+                        return false;
+                    text = fields._pieces > 0 ? formatToString( "setPieces(%#, %#)", outCondition._setID.c_str(), fields._pieces ) : formatToString( "setComplete(%#)", outCondition._setID.c_str() );
                 }
-                if ( pEquippedTag != nullptr || pCharacterTag != nullptr )
+                else if ( pEquippedTag != nullptr || pCharacterTag != nullptr )
                 {
-                    outCondition._kind = pEquippedTag != nullptr ? EquipConditionKind::EquippedTag : EquipConditionKind::CharacterTag;
-                    outCondition._tag  = TagID::request( pEquippedTag != nullptr ? fields._equippedTag : fields._characterTag );
-                    return outCondition._tag.isValid();
+                    const string_view tagText = pEquippedTag != nullptr ? string_view( fields._equippedTag ) : string_view( fields._characterTag );
+                    outCondition._kind        = pEquippedTag != nullptr ? EquipConditionKind::EquippedTag : EquipConditionKind::CharacterTag;
+                    outCondition._tag         = TagID::request( tagText );
+                    if ( outCondition._tag.isValid() == false )
+                        return false;
+                    text = string( pEquippedTag != nullptr ? "equippedTag(" : "tag(" ) + string( tagText ) + ")";
                 }
-                outCondition._kind = EquipConditionKind::BodyShape;
-                StringUtil::forEachToken( string_view( pBodyShape ), ",; ", [&]( string_view token )
+                else
                 {
-                    outCondition._listBodyShape.push_back( hashed_string( token ) );
-                } );
-                return outCondition._listBodyShape.empty() == false;
+                    outCondition._kind = EquipConditionKind::BodyShape;
+                    StringUtil::forEachToken( string_view( pBodyShape ), ",; ", [&]( string_view token )
+                    {
+                        text += text.empty() ? "" : ", ";
+                        text += token;
+                    } );
+                    if ( text.empty() )
+                        return false;
+                    text = "bodyShape(" + text + ")";
+                }
+                return ConditionExpr::compile( text, sourceName, outCondition._expr );
             }
         };
     } // namespace

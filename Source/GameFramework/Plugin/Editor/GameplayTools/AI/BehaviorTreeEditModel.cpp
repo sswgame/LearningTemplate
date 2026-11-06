@@ -6,10 +6,11 @@
 
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
+#include "Engine/Vocabulary/ActionRegistry.h"
+#include "Engine/Vocabulary/BehaviorTreeSchema.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
-#include "GameFramework/Runtime/Character/AI/BehaviorTaskRegistry.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw::editor
 {
@@ -17,24 +18,6 @@ namespace sw::editor
     {
         struct BehaviorTreeEditModelInternal
         {
-            /** @brief 새 노드의 기본 값입니다. 시간 노드가 0 초로 시작하면 곧바로 끝나 버려서 눈에 띄지 않으므로 1 초로 둔다. */
-            static constexpr float32 kDefaultSeconds = 1.0f;
-
-            static bool hasSeconds( BehaviorNodeType type )
-            {
-                return type == BehaviorNodeType::Cooldown || type == BehaviorNodeType::TimeLimit || type == BehaviorNodeType::Wait;
-            }
-
-            static bool hasTask( BehaviorNodeType type )
-            {
-                return type == BehaviorNodeType::Action || type == BehaviorNodeType::Condition;
-            }
-
-            static bool hasKey( BehaviorNodeType type )
-            {
-                return type == BehaviorNodeType::BlackboardCondition || type == BehaviorNodeType::MoveTo;
-            }
-
             static bool isComposite( BehaviorNodeType type )
             {
                 return type == BehaviorNodeType::Selector || type == BehaviorNodeType::Sequence;
@@ -118,7 +101,6 @@ namespace sw::editor
 
     int32 BehaviorTreeEditModel::addNode( int32 parentID, BehaviorNodeType type )
     {
-        using Internal = BehaviorTreeEditModelInternal;
         if ( parentID < 0 )
         {
             if ( _rootID >= 0 )
@@ -136,9 +118,7 @@ namespace sw::editor
         BehaviorTreeEditNode node{};
         node._id     = _nextID++;
         node._parent = parentID;
-        node._type   = type;
-        if ( Internal::hasSeconds( type ) )
-            node._seconds = Internal::kDefaultSeconds;
+        BehaviorTreeXML::resetNodeFields( type, node );
         _listNode.push_back( std::move( node ) );
 
         const int32 newID = _listNode.back()._id;
@@ -261,8 +241,9 @@ namespace sw::editor
             return {};
         if ( pNode->_name.empty() == false )
             return pNode->_name;
-        if ( pNode->_task.empty() == false )
-            return pNode->_task;
+        const BehaviorActionFields* pAction = pNode->_fields.find<BehaviorActionFields>();
+        if ( pAction != nullptr && pAction->_task.empty() == false )
+            return pAction->_task;
         return string{ BehaviorTreeNames::toString( pNode->_type ) };
     }
 
@@ -283,22 +264,39 @@ namespace sw::editor
             const bool bDecorator = BehaviorTreeNames::isDecorator( node._type );
             if ( bDecorator && node._listChild.size() != 1 )
                 outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "A decorator needs exactly one child" } );
-            if ( Internal::hasTask( node._type ) )
+            const auto addConditionIssue = [&]( const string& text )
             {
-                if ( node._task.empty() )
+                ConditionExpr expr;
+                string        error;
+                if ( text.empty() )
+                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Write a condition" } );
+                else if ( ConditionExpr::tryCompile( text, expr, error ) == false )
+                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, error } );
+            };
+            if ( const BehaviorActionFields* pAction = node._fields.find<BehaviorActionFields>(); pAction != nullptr )
+            {
+                if ( pAction->_task.empty() )
                     outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Pick a task" } );
-                else if ( game::getSubsystem<BehaviorTaskRegistry>().findTask( node._task ) == nullptr )
-                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, string{ "No task named '" } + node._task + "' is registered - the game would not load this tree" } );
+                else if ( ActionRegistry::find( pAction->_task ) == nullptr )
+                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, string{ "No action named '" } + pAction->_task + "' is registered - the game would not load this tree" } );
             }
-            if ( Internal::hasKey( node._type ) && node._key.empty() )
-                outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Set a blackboard key" } );
-            const bool bTimeNode = Internal::hasSeconds( node._type );
-            if ( bTimeNode && node._seconds < 0.0f )
+            if ( const BehaviorConditionFields* pCondition = node._fields.find<BehaviorConditionFields>(); pCondition != nullptr )
+                addConditionIssue( pCondition->_test );
+            if ( const BehaviorConditionDecoratorFields* pDecorator = node._fields.find<BehaviorConditionDecoratorFields>(); pDecorator != nullptr )
+                addConditionIssue( pDecorator->_test );
+            if ( const BehaviorMoveToFields* pMove = node._fields.find<BehaviorMoveToFields>(); pMove != nullptr )
+            {
+                if ( pMove->_key.empty() )
+                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Set a blackboard key" } );
+                if ( pMove->_repathDistance < 0.0f )
+                    outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "The repath distance must not be negative" } );
+            }
+            if ( const BehaviorTimedFields* pTimed = node._fields.find<BehaviorTimedFields>(); pTimed != nullptr && pTimed->_seconds < 0.0f )
                 outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "Seconds must not be negative" } );
-            if ( node._type == BehaviorNodeType::MoveTo && node._repathDistance < 0.0f )
-                outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "The repath distance must not be negative" } );
-            if ( node._type == BehaviorNodeType::Repeat && node._count < 0 )
+            if ( const BehaviorRepeatFields* pRepeat = node._fields.find<BehaviorRepeatFields>(); pRepeat != nullptr && pRepeat->_count < 0 )
                 outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "The repeat count must not be negative" } );
+            if ( const BehaviorSubTreeFields* pSubTree = node._fields.find<BehaviorSubTreeFields>(); pSubTree != nullptr && pSubTree->_tree.empty() == pSubTree->_slot.empty() )
+                outListIssue.push_back( BehaviorTreeEditIssue{ node._id, "A SubTree needs exactly one of tree / slot" } );
         }
     }
 } // namespace sw::editor
@@ -356,8 +354,15 @@ namespace sw::editor
 
     bool BehaviorTreeEditModel::parse( string_view xmlText, string& outError )
     {
+        // shortcut: `_base` 를 펼쳐 연다 - 저장하면 차이가 아니라 펼친 글이 된다. 물려받은 칸 표시가 필요해지면 `DataInheritance::makeDelta` 로 저장한다.
+        string flatText;
+        if ( DataInheritance::flattenFromResources( xmlText, "BehaviorTreeEditModel", BehaviorTreeSchema::make(), flatText ) == false )
+        {
+            outError = "Its _base chain could not be flattened - see the log";
+            return false;
+        }
         XMLDocument document;
-        if ( document.parse( xmlText, "BehaviorTreeEditModel" ) == false )
+        if ( document.parse( flatText, "BehaviorTreeEditModel" ) == false )
         {
             outError = document.getLastError();
             return false;

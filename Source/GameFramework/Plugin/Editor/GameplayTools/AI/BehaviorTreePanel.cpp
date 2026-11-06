@@ -23,8 +23,9 @@
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"
+#include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Vocabulary/ActionRegistry.h"
 
-#include "GameFramework/Runtime/Character/AI/BehaviorTaskRegistry.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
@@ -73,31 +74,7 @@ namespace sw::editor
                 return "Composite";
             }
 
-            static constexpr uint32 kNodeTypeCount = static_cast<uint32>( BehaviorNodeType::MoveTo ) + 1;
-            static constexpr uint32 kCompareCount  = static_cast<uint32>( BlackboardCompare::GreaterOrEqual ) + 1;
-            static constexpr uint32 kAbortCount    = static_cast<uint32>( BehaviorAbortMode::Both ) + 1;
-
-            /** @brief 열거자 하나를 콤보로 고릅니다. 바꿨으면 true 입니다. */
-            template <typename E>
-            static bool drawEnumCombo( const utf8* pLabel, E& inoutValue, uint32 count )
-            {
-                bool bChanged = false;
-                if ( ImGui::BeginCombo( pLabel, BehaviorTreeNames::toString( inoutValue ) ) )
-                {
-                    for ( uint32 index = 0; index < count; ++index )
-                    {
-                        const E    candidate = static_cast<E>( index );
-                        const bool bSelected = candidate == inoutValue;
-                        if ( ImGui::Selectable( BehaviorTreeNames::toString( candidate ), bSelected ) )
-                        {
-                            inoutValue = candidate;
-                            bChanged   = true;
-                        }
-                    }
-                    ImGui::EndCombo();
-                }
-                return bChanged;
-            }
+            static constexpr uint32 kNodeTypeCount = static_cast<uint32>( BehaviorNodeType::SubTree ) + 1;
         };
     } // namespace
 } // namespace sw::editor
@@ -114,10 +91,12 @@ namespace sw::editor
         , _listPlacement{}
         , _listPreorder{}
         , _listTaskName{}
+        , _grid{}
         , _statusText{}
         , _selectedID{ -1 }
         , _bLayoutPending{ SW_TRUE }
         , _bSelectPending{ SW_FALSE }
+        , _bGridEdited{ SW_FALSE }
     {
         _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Base", "Text" ) } ); // 부모 → 자식 흐름 핀 하나
         _nodeGraph.setAutoLayout( true );                                   // 노드 자리는 트리 배치(layoutTree)가 정한다 — 정렬 메뉴를 감춘다(언리얼 BT 에디터도 자동 배치)
@@ -385,40 +364,19 @@ namespace sw::editor
         const string display = _model.makeDisplayName( node._id );
         if ( display != BehaviorTreeNames::toString( node._type ) )
             ImGui::TextUnformatted( display.c_str() );
-        switch ( node._type )
-        {
-            case BehaviorNodeType::BlackboardCondition:
-            {
-                ImGui::TextDisabled( "%s %s", node._key.c_str(), BehaviorTreeNames::toString( node._compare ) );
-                break;
-            }
-            case BehaviorNodeType::Cooldown:
-            case BehaviorNodeType::TimeLimit:
-            case BehaviorNodeType::Wait:
-            {
-                ImGui::TextDisabled( "%.2f s", node._seconds );
-                break;
-            }
-            case BehaviorNodeType::Repeat:
-            {
-                ImGui::TextDisabled( "x%d", node._count );
-                break;
-            }
-            case BehaviorNodeType::MoveTo:
-            {
-                ImGui::TextDisabled( "-> %s", node._key.c_str() );
-                break;
-            }
-            case BehaviorNodeType::Selector:
-            case BehaviorNodeType::Sequence:
-            case BehaviorNodeType::Inverter:
-            case BehaviorNodeType::ForceSuccess:
-            case BehaviorNodeType::Action:
-            case BehaviorNodeType::Condition:
-            {
-                break;
-            }
-        }
+        // 캔버스의 한 줄 요약. 칸은 종류의 스키마 값에 있다.
+        if ( const BehaviorConditionDecoratorFields* pDecorator = node._fields.find<BehaviorConditionDecoratorFields>(); pDecorator != nullptr )
+            ImGui::TextDisabled( "%s", pDecorator->_test.c_str() );
+        else if ( const BehaviorConditionFields* pCondition = node._fields.find<BehaviorConditionFields>(); pCondition != nullptr )
+            ImGui::TextDisabled( "%s", pCondition->_test.c_str() );
+        else if ( const BehaviorTimedFields* pTimed = node._fields.find<BehaviorTimedFields>(); pTimed != nullptr )
+            ImGui::TextDisabled( "%.2f s", pTimed->_seconds );
+        else if ( const BehaviorRepeatFields* pRepeat = node._fields.find<BehaviorRepeatFields>(); pRepeat != nullptr )
+            ImGui::TextDisabled( "x%d", pRepeat->_count );
+        else if ( const BehaviorMoveToFields* pMove = node._fields.find<BehaviorMoveToFields>(); pMove != nullptr )
+            ImGui::TextDisabled( "-> %s", pMove->_key.c_str() );
+        else if ( const BehaviorSubTreeFields* pSubTree = node._fields.find<BehaviorSubTreeFields>(); pSubTree != nullptr )
+            ImGui::TextDisabled( "%s", pSubTree->_tree.empty() ? pSubTree->_slot.c_str() : pSubTree->_tree.c_str() );
         if ( bActive )
             ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "running" );
         if ( BehaviorTreeNames::isLeaf( node._type ) == false )
@@ -698,71 +656,59 @@ namespace sw::editor
         using Internal = BehaviorTreePanelInternal;
         ImGui::TextColored( Internal::getTypeColor( node._type ), "%s", BehaviorTreeNames::toString( node._type ) );
         bool bEdited = false;
-        if ( BehaviorTreeXML::hasField( node._type, "_name" ) )
-        {
-            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Name" ) );
-            bEdited = EditorWidgets::drawTextField( "##behaviorTree.name", node._name, -1.0f ) || bEdited;
-        }
-        if ( BehaviorTreeXML::hasField( node._type, "_bReactive" ) )
-            bEdited = ImGui::Checkbox( SW_LOCKEY( "EdPlugin", "ReactiveReCheckHigherPriorityChildrenEveryTick" ), &node._bReactive ) || bEdited;
-        if ( BehaviorTreeXML::hasField( node._type, "_task" ) )
+        ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Name" ) );
+        bEdited = EditorWidgets::drawTextField( "##behaviorTree.name", node._name, -1.0f ) || bEdited;
+        ImGui::TextUnformatted( "Id" );
+        bEdited = EditorWidgets::drawTextField( "##behaviorTree.id", node._inheritID, -1.0f ) || bEdited; // 자식 트리가 이 노드를 짚는 열쇠
+
+        // 칸은 스키마와 등록에서 온다 — 칸이나 동작을 더해도 이 패널을 고치지 않는다.
+        _bGridEdited                      = SW_FALSE;
+        const BehaviorActionFields* pTask = node._fields.find<BehaviorActionFields>();
+        if ( pTask != nullptr )
         {
             ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Task" ) );
-            if ( ImGui::BeginCombo( "##behaviorTree.task", node._task.empty() ? "(pick a task)" : node._task.c_str() ) )
+            if ( ImGui::BeginCombo( "##behaviorTree.task", pTask->_task.empty() ? "(pick a task)" : pTask->_task.c_str() ) )
             {
                 _listTaskName.clear();
-                game::getSubsystem<BehaviorTaskRegistry>().collectNames( _listTaskName );
+                ActionRegistry::collectNames( _listTaskName );
                 for ( const string& name : _listTaskName )
                 {
-                    if ( ImGui::Selectable( name.c_str(), name == node._task ) )
+                    if ( ImGui::Selectable( name.c_str(), name == pTask->_task ) )
                     {
-                        node._task = name;
-                        bEdited    = true;
+                        BehaviorTreeXML::selectTask( node, name );
+                        bEdited = true;
                     }
                 }
                 ImGui::EndCombo();
             }
         }
-        if ( BehaviorTreeXML::hasField( node._type, "_key" ) )
+        else
         {
-            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "BlackboardKey" ) );
-            bEdited = EditorWidgets::drawTextField( "##behaviorTree.key", node._key, -1.0f ) || bEdited;
+            EditorPropertyGridTarget target{};
+            target._pInstance = node._fields.getInstance();
+            target._pType     = node._fields.getType();
+            target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &BehaviorTreePanel::onGridEdited, this );
+            _grid.drawProperties( target, nullptr, {} );
         }
-        if ( BehaviorTreeXML::hasField( node._type, "_compare" ) )
+        if ( node._actionParams.isValid() )
         {
-            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Compare" ) );
-            bEdited = Internal::drawEnumCombo( "##behaviorTree.compare", node._compare, Internal::kCompareCount ) || bEdited;
+            EditorPropertyGridTarget target{};
+            target._pInstance = node._actionParams.getInstance();
+            target._pType     = node._actionParams.getType();
+            target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &BehaviorTreePanel::onGridEdited, this );
+            _grid.drawProperties( target, nullptr, {} );
         }
-        if ( BehaviorTreeXML::hasField( node._type, "_value" ) )
-        {
-            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Value" ) );
-            bEdited = ImGui::DragFloat( "##behaviorTree.value", &node._value, 0.05f ) || bEdited;
-        }
-        if ( BehaviorTreeXML::hasField( node._type, "_abort" ) )
-        {
-            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Abort" ) );
-            bEdited = Internal::drawEnumCombo( "##behaviorTree.abort", node._abort, Internal::kAbortCount ) || bEdited;
-        }
-        if ( BehaviorTreeXML::hasField( node._type, "_seconds" ) )
-        {
-            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Seconds" ) );
-            bEdited = ImGui::DragFloat( "##behaviorTree.seconds", &node._seconds, 0.05f, 0.0f, 3600.0f ) || bEdited;
-        }
-        if ( BehaviorTreeXML::hasField( node._type, "_count" ) )
-        {
-            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "Count0UntilItFails" ) );
-            bEdited = ImGui::DragInt( "##behaviorTree.count", &node._count, 0.2f, 0, 100000 ) || bEdited;
-        }
-        if ( BehaviorTreeXML::hasField( node._type, "_repathDistance" ) )
-        {
-            ImGui::TextUnformatted( SW_LOCKEY( "EdPlugin", "RepathDistance" ) );
-            bEdited = ImGui::DragFloat( "##behaviorTree.repath", &node._repathDistance, 0.05f, 0.0f, 1000.0f ) || bEdited;
-        }
+        bEdited = bEdited || _bGridEdited != SW_FALSE;
         if ( bEdited )
         {
             _statusText.clear();
             notifyDocumentEdited( "Edit Behavior Node", "behavior-tree-node-edit" ); // 연속 편집은 한 번의 되돌리기로 합친다
         }
+    }
+
+    void BehaviorTreePanel::onGridEdited( const PropertyInfo& /*prop*/ )
+    {
+        _bGridEdited = SW_TRUE;
     }
 
     void BehaviorTreePanel::drawIssueList()

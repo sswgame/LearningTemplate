@@ -76,8 +76,13 @@ namespace sw
          * @brief 저장이 "부모에 있는데 자식에게 없는 칸" 을 빈 값(`attr=""`)이나 빈 원소로 적어 지웁니다. 기본은 켜짐입니다.
          * @details `SkipIfEmpty` 칸은 빈 값을 쓰지 않아 없음이 곧 비었음이다. 값 없는 깃발을 빈 글로 읽지 못하는 손 형식(머티리얼)은 끈다 — 그때 부모의 값은 자식이 지울 수 없다.
          */
-        uint8                  _bEmptyClears : 1;
-        [[maybe_unused]] uint8 _reserved     : 7;
+        uint8 _bEmptyClears : 1;
+        /**
+         * @brief 열쇠 있는 목록의 원소 안쪽도 같은 규칙의 목록입니다(행동 트리: 노드의 자식이 곧 노드이고 원소 이름이 종류다). 언리얼 Run Behavior 의 가지 교체 자리입니다.
+         * @details 부모에 없는 원소는 안쪽을 그대로 옮긴다 — 새 가지의 모든 노드에 열쇠를 적지 않아도 된다.
+         */
+        uint8                  _bSelfNested : 1;
+        [[maybe_unused]] uint8 _reserved    : 6;
 
         /** @brief 이름 @p name 의 노드를 만듭니다. */
         explicit DataInheritanceSchema( string_view name );

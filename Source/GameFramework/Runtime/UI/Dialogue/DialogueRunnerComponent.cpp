@@ -10,6 +10,7 @@
 #include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
+#include "GameFramework/Runtime/World/Query/GameConditions.h"
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 namespace sw
@@ -18,7 +19,9 @@ namespace sw
         : _graphPath{}
         , _bPostSubtitles{ false }
         , _graph{}
+        , _listCompiled{}
         , _pFlags{ nullptr }
+        , _world{}
         , _pUISystemOverride{ nullptr }
         , _currentSpeaker{}
         , _currentText{}
@@ -78,17 +81,64 @@ namespace sw
     {
         const string_view xmlPath = assetID.view();
         _graphPath                = string( xmlPath );
-        return _graph.loadFromFile( assetID );
+        return _graph.loadFromFile( assetID ) && compileGraph();
     }
 
     bool DialogueRunnerComponent::loadGraphXML( string_view xmlContent )
     {
-        return _graph.parseXML( xmlContent );
+        return _graph.parseXML( xmlContent ) && compileGraph();
     }
 
     void DialogueRunnerComponent::setGraph( DialogueGraphAsset graph )
     {
         _graph = std::move( graph );
+        (void)compileGraph(); // 틀린 글은 오류 로그를 남기고 빈 그래프가 된다 - 시작이 "노드 없음" 으로 거절한다
+    }
+
+    bool DialogueRunnerComponent::compileGraph()
+    {
+        _listCompiled.clear();
+        const string_view sourceName = _graphPath.empty() ? string_view{ "DialogueRunner" } : string_view{ _graphPath };
+        bool              bValid     = true;
+        for ( const DialogueAssetNode& node : _graph._listNode )
+        {
+            const bool bBranch = node._type == DialogueAssetNodeType::Branch;
+            const bool bAction = node._type == DialogueAssetNodeType::Action;
+            if ( bBranch == false && bAction == false )
+                continue;
+            DialogueCompiledNode compiled;
+            compiled._nodeID = node._id;
+            if ( bBranch )
+                bValid = ConditionExpr::compile( node._condition, sourceName, compiled._condition ) && bValid;
+            else if ( node._actionCommand.empty() == false )
+                bValid = GameActionCall::compileText( node._actionCommand, sourceName, compiled._action ) && bValid;
+            _listCompiled.push_back( std::move( compiled ) );
+        }
+        if ( bValid == false )
+        {
+            _graph = DialogueGraphAsset{};
+            _listCompiled.clear();
+        }
+        return bValid;
+    }
+
+    const DialogueCompiledNode* DialogueRunnerComponent::findCompiled( int32 nodeID ) const
+    {
+        for ( const DialogueCompiledNode& compiled : _listCompiled )
+        {
+            if ( compiled._nodeID == nodeID )
+                return &compiled;
+        }
+        return nullptr;
+    }
+
+    GameplayContext DialogueRunnerComponent::makeWorld( int32 nodeID ) const
+    {
+        GameplayContext world = _world;
+        world.set<GameFlagsSlot>( _pFlags );
+        world.set<GameFlagsWriteSlot>( _pFlags );
+        world.setSeed( GameConditions::makeSeed( static_cast<int32>( _transitionSerial ), nodeID ) );
+        return world;
     }
 
     bool DialogueRunnerComponent::startDialogue( int32 startNodeID )
@@ -179,6 +229,11 @@ namespace sw
         _pFlags = pFlags;
     }
 
+    void DialogueRunnerComponent::setGameplayContext( const GameplayContext& context )
+    {
+        _world = context;
+    }
+
     DialogueRunnerState DialogueRunnerComponent::getState() const
     {
         return _state;
@@ -239,20 +294,21 @@ namespace sw
         onChoices( listChoice );
     }
 
-    bool DialogueRunnerComponent::evaluateCondition( const string& condition ) const
+    bool DialogueRunnerComponent::evaluateCondition( int32 nodeID ) const
     {
-        // 문법은 월드 플래그의 조건식 하나다(`GameFlags::parseCondition`). 빈 식은 참이고, 읽지 못한 식은 `GameFlags` 가 경고하고 거짓이다.
-        // 저장소가 없으면 모든 이름이 0 인 빈 플래그로 평가한다.
-        if ( _pFlags != nullptr )
-            return _pFlags->evaluate( condition );
-        const GameFlags noFlags;
-        return noFlags.evaluate( condition );
+        const DialogueCompiledNode* pCompiled = findCompiled( nodeID );
+        return pCompiled != nullptr && pCompiled->_condition.evaluate( makeWorld( nodeID ) );
     }
 
-    void DialogueRunnerComponent::executeAction( string actionCmd )
+    void DialogueRunnerComponent::executeAction( int32 nodeID, string actionCmd )
     {
-        if ( actionCmd.empty() )
+        const DialogueCompiledNode* pCompiled = findCompiled( nodeID );
+        if ( pCompiled == nullptr || pCompiled->_action.isValid() == false )
             return;
+        const GameActionCall call = pCompiled->_action; // 핸들러가 그래프를 갈아도 호출은 산다(칸은 나눠 든다)
+        ActionContext        context;
+        context._world  = makeWorld( nodeID );
+        context._pOwner = this;
 
         // **값으로 받는다.** `const string&` 로 받으면 `node._actionCommand`, 곧 `_graph` 가 가진
         // 문자열을 가리킨다. 아래 `_onEvent` 핸들러가 `loadGraphFile()` 로 그래프를 갈면
@@ -264,21 +320,8 @@ namespace sw
             onEvent( actionCmd );
         }
 
-        if ( _pFlags != nullptr )
-        {
-            constexpr string_view kSetFlag = "set_flag:";
-            if ( StringUtil::startsWith( actionCmd, kSetFlag ) )
-            {
-                const string rest  = actionCmd.substr( kSetFlag.size() );
-                const size_t colon = rest.find( ':' );
-                const string key   = ( colon != string::npos ) ? rest.substr( 0, colon ) : string{ rest };
-                int32        val{ 1 };
-                if ( colon != string::npos && StringUtil::parseInt( rest.substr( colon + 1 ), val ) == false )
-                    SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueActionSetsValue", "Dialogue action '%#' sets a value that is not a number - using 1", rest );
-                // 0 은 지우기다(`GameFlags` 규칙) — 읽는 쪽에는 없는 플래그와 같은 0 이다.
-                _pFlags->setFlag( hashed_string( key ), val );
-            }
-        }
+        // 대화는 사람을 기다릴 뿐 동작을 기다리지 않는다 — `Running` 은 끝난 것으로 본다. 플래그 저장소가 없는 러너의 `flag.*` 실패는 정상이다.
+        (void)call.invoke( context );
     }
 
     void DialogueRunnerComponent::finishDialogue()
@@ -364,7 +407,7 @@ namespace sw
             }
             case DialogueAssetNodeType::Branch:
             {
-                input._bConditionMet = evaluateCondition( node._condition );
+                input._bConditionMet = evaluateCondition( nodeID );
                 break;
             }
             case DialogueAssetNodeType::Action:
@@ -372,7 +415,7 @@ namespace sw
                 // 핸들러가 그 안에서 대화를 멈추거나 · 다시 시작하거나 · 진행시켰으면 여기서 더 가지 않는다.
                 // 상태 값으로는 알 수 없다 — 첫 대사 전의 Action 은 원래 Idle 에서 돈다.
                 const uint32 serialBeforeAction = _transitionSerial;
-                executeAction( node._actionCommand );
+                executeAction( nodeID, node._actionCommand );
                 if ( _transitionSerial != serialBeforeAction )
                     return false;
                 break;

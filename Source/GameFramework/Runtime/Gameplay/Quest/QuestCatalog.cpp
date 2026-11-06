@@ -34,6 +34,17 @@ namespace sw
                 }
                 outReward._items.addItem( hashed_string( row._item ), row._count );
             }
+            for ( XMLNode action = rewardNode.findChild( "Action" ); action; action = action.findNextSibling( "Action" ) )
+            {
+                QuestRewardActionRowDef row;
+                GameActionCall          call;
+                if ( XMLFields::readFields( action, row, sourceName ) == false || GameActionCall::compileText( row._call, sourceName, call ) == false )
+                {
+                    bValid = false;
+                    continue;
+                }
+                outReward._listAction.push_back( std::move( call ) );
+            }
             return bValid;
         }
     } // namespace

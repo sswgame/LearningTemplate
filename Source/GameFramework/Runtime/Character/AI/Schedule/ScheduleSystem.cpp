@@ -202,6 +202,7 @@ namespace sw
         , _listBrokenAppointment{}
         , _listMetAppointment{}
         , _weather{}
+        , _actionWorld{}
         , _lastTraceRequest{}
         , _minuteFraction{ 0.0f }
         , _minute{ 0 }
@@ -475,7 +476,10 @@ namespace sw
             refreshNPC( npcIndex ); // 끼어들기 앞까지의 사건을 맞춘다
             npc._held = computeLogicLocation( npcIndex, _minute );
             if ( npc._bEmitted != SW_FALSE && npc._emittedPhase == ScheduleNPCPhase::Performing )
+            {
                 emitEvent( ScheduleEvent::Kind::ActivityEnded, npcIndex, &npc._emittedSegment, npc._emittedSegment._sourceID );
+                runBlockAction( npcIndex, npc._emittedSegment, false );
+            }
             npc._bEmitted = SW_FALSE;
         }
         Interruption interruption;
@@ -981,6 +985,7 @@ namespace sw
             segment._priority   = pCandidate->_priority;
             segment._ownerIndex = pCandidate->_ownerIndex;
             segment._blockIndex = pCandidate->_blockIndex;
+            segment._pBlock     = pCandidate->_pBlock;
             segment._source     = pCandidate->_source;
         }
         const SchedulePlaceDef*      pPlace        = pBlock != nullptr ? _pCatalog->findPlace( pBlock->_place ) : nullptr;
@@ -1301,7 +1306,10 @@ namespace sw
             if ( bChanged )
             {
                 if ( npc._bEmitted != SW_FALSE && npc._emittedPhase == ScheduleNPCPhase::Performing )
+                {
                     emitEvent( ScheduleEvent::Kind::ActivityEnded, npcIndex, &npc._emittedSegment, npc._emittedSegment._sourceID );
+                    runBlockAction( npcIndex, npc._emittedSegment, false );
+                }
                 if ( phase == ScheduleNPCPhase::Traveling )
                     emitEvent( ScheduleEvent::Kind::Departed, npcIndex, &segment, segment._sourceID );
             }
@@ -1310,6 +1318,7 @@ namespace sw
             {
                 emitEvent( ScheduleEvent::Kind::Arrived, npcIndex, &segment, segment._sourceID );
                 emitEvent( ScheduleEvent::Kind::ActivityStarted, npcIndex, &segment, segment._sourceID );
+                runBlockAction( npcIndex, segment, true );
                 const bool bAppointment = segment._source == ScheduleSegmentSource::Appointment;
                 bool       bMetBefore   = false;
                 for ( const int32 metIndex : _listMetAppointment )
@@ -1393,6 +1402,23 @@ namespace sw
             _services._pAnimator->onActivityStarted( cue );
         else
             _services._pAnimator->onActivityEnded( cue );
+    }
+
+    void ScheduleSystem::runBlockAction( int32 npcIndex, const ScheduleSegment& segment, bool bStart )
+    {
+        if ( _bSuppressEvents != SW_FALSE || segment._pBlock == nullptr )
+            return;
+        const GameActionCall& call = bStart ? segment._pBlock->_onStart : segment._pBlock->_onEnd;
+        if ( call.isValid() == false )
+            return;
+        const ScheduleConditionContext condition = makeContext( npcIndex, _listNPC[static_cast<size_t>( npcIndex )]._planDay, ScheduleHash::computeNameKey( segment._sourceID ) );
+        ActionContext                  context;
+        context._world = _actionWorld;
+        condition.fillGameplayContext( context._world );
+        context._pOwner = this;
+        // 스케줄은 기다릴 수 없다 — `Running` 은 끝난 것으로 본다. 실패는 데이터나 문맥의 잘못이라 알린다.
+        if ( call.invoke( context ) == ActionResult::Failed )
+            SW_LOG_WARNING_ID( "Schedule.BlockActionFailed", "Schedule: '%#' action '%#' of '%#' failed", getNPCID( npcIndex ).c_str(), call.getName(), segment._sourceID.c_str() );
     }
 
     void ScheduleSystem::emitSnapped( int32 npcIndex )

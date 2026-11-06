@@ -15,6 +15,7 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -48,7 +49,8 @@ namespace sw
         PROPERTY( Required )
         hashed_string _flag{}; ///< 공유 플래그라 다른 키트의 같은 id 와 겹치지 않게 적는다(예: `forest.cell`)
         PROPERTY()
-        string _requires{}; ///< `Condition` 문에 쓰는 조건식(`Condition` 이면 반드시 적는다)
+        string        _requires{};  ///< `Condition` 문에 쓰는 조건식(`Condition` 이면 반드시 적는다)
+        ConditionExpr _condition{}; ///< 읽을 때 `_requires` 를 컴파일한 식
         PROPERTY()
         AdventureDoorKind _kind{ AdventureDoorKind::SmallKey };
     };

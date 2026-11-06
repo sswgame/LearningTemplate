@@ -90,6 +90,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "AdventureDungeon.ConditionDoorNeedsRequires", "%#: condition door '%#' needs requires=\"...\"", sourceName, door._id.c_str() );
                 bDoorValid = false;
             }
+            bDoorValid = ConditionExpr::compile( door._requires, sourceName, door._condition ) && bDoorValid;
             if ( bDoorValid )
                 dungeon._listDoor.push_back( door );
             bValid = bDoorValid && bValid;
@@ -210,7 +211,7 @@ namespace sw
             }
             case AdventureDoorKind::Condition:
             {
-                if ( flags.evaluate( pDoor->_requires ) == false )
+                if ( flags.evaluate( pDoor->_condition ) == false )
                     return AdventureDoorResult::ConditionNotMet;
                 break;
             }

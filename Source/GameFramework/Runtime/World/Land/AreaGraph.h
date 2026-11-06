@@ -13,6 +13,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -72,7 +73,7 @@ namespace sw
         hashed_string _from{};
         hashed_string _to{};
         hashed_string _kind{};     ///< `Door`, `Passage`, `Vent` … 게임이 정한다
-        string        _requires{}; ///< `GameFlags` 조건식. 비면 늘 열려 있다
+        ConditionExpr _requires{}; ///< 읽을 때 컴파일한 플래그 조건식. 비면 늘 열려 있다
         int32         _fromIndex{ -1 };
         int32         _toIndex{ -1 };
         uint8         _bOneWay{ SW_FALSE };           ///< `_from` → `_to` 로만 지난다

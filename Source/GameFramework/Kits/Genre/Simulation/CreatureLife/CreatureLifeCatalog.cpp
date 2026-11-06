@@ -271,8 +271,7 @@ namespace sw
     {
         CreatureSpeciesDef species;
         bool               bValid = XMLFields::readFields( node, species, sourceName, { "weathers", "phases" } );
-        ScheduleCondition::parseNameList( node.getAttributeText( "weathers" ), species._visitCondition._listWeather );
-        species._visitCondition._phaseMask = ScheduleCondition::parsePhaseMask( node.getAttributeText( "phases" ), sourceName, species._id.view() );
+        bValid                    = species._visitCondition.readFromNode( node, ScheduleConditionVocabulary{}, sourceName, species._id.view() ) && bValid; // 적은 `weathers` · `phases` 만 절이 된다
         if ( species._listHabitat.empty() )
         {
             SW_LOG_ERROR_ID( "CreatureLifeCatalog.SpeciesLikesNoHabitat", "%#: species '%#' likes no habitat - it would never come", sourceName, species._id.c_str() );

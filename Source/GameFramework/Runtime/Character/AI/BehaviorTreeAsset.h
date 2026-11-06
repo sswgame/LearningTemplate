@@ -7,6 +7,8 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
@@ -24,15 +26,13 @@ namespace sw
     struct SW_GF_API BehaviorTreeNames
     {
         static const utf8* toString( BehaviorNodeType type );
-        static const utf8* toString( BlackboardCompare compare );
         static const utf8* toString( BehaviorAbortMode mode );
         /** @brief 이름(대소문자 무시)으로 열거자를 찾습니다. 없으면 false 이고 @p outValue 는 그대로입니다. */
         [[nodiscard]] static bool parse( string_view text, BehaviorNodeType& outValue );
-        [[nodiscard]] static bool parse( string_view text, BlackboardCompare& outValue );
         [[nodiscard]] static bool parse( string_view text, BehaviorAbortMode& outValue );
         /** @brief 모든 이름을 ", " 로 이은 글입니다(모르는 이름 오류에 보인다). */
         static string joinNodeTypeNames();
-        /** @brief 자식을 가질 수 없는 종류(작업 · 조건 · 대기 · 이동)입니다. */
+        /** @brief 자식을 가질 수 없는 종류(작업 · 조건 · 대기 · 이동 · 하위 트리)입니다. */
         static bool isLeaf( BehaviorNodeType type );
         /** @brief 자식이 정확히 하나인 종류(반전 · 성공 강제 · 반복 · 쿨다운 · 시간 제한 · 블랙보드 조건)입니다. */
         static bool isDecorator( BehaviorNodeType type );
@@ -50,12 +50,14 @@ namespace sw
      */
     struct SW_GF_API BehaviorTreeXML
     {
-        /** @brief 원소 @p node(종류 @p type)의 속성을 @p inoutData 에 읽습니다(`_type` 도 채운다). 틀린 속성이 하나라도 있으면 false 입니다(오류는 로그에 남는다). */
+        /** @brief 종류 @p type 의 스키마 값을 기본값으로 담습니다(`_type` 도 채운다). 칸이 있던 작업 동작은 비웁니다. */
+        static void resetNodeFields( BehaviorNodeType type, BehaviorTreeNodeData& inoutData );
+        /** @brief 원소 @p node(종류 @p type)의 속성을 @p inoutData 에 읽습니다. 틀린 속성이 하나라도 있으면 false 입니다(오류는 로그에 남는다). 등록되지 않은 동작의 칸은 글로 듭니다(`_listRawParam`). */
         [[nodiscard]] static bool readNodeFields( const XMLNode& node, BehaviorNodeType type, string_view sourceName, BehaviorTreeNodeData& inoutData );
-        /** @brief @p data 의 종류에 맞는 칸만 @p node 에 속성으로 씁니다(기본값은 생략 — 손으로 쓴 파일과 같은 모양). */
+        /** @brief @p data 의 칸을 @p node 에 속성으로 씁니다(기본값은 생략 — 손으로 쓴 파일과 같은 모양). */
         static void writeNodeFields( const XMLNode& node, const BehaviorTreeNodeData& data );
-        /** @brief 종류 @p type 이 칸 @p propertyName(`BehaviorTreeNodeData` 의 칸 이름, 예: `_seconds`)을 받으면 true 입니다. 편집기 인스펙터가 보일 칸을 고른다. */
-        static bool hasField( BehaviorNodeType type, string_view propertyName );
+        /** @brief 작업 노드의 동작을 @p task 로 바꿉니다. 칸은 그 동작의 기본값이 됩니다. 등록되지 않은 이름이면 칸이 비어 있습니다. */
+        static void selectTask( BehaviorTreeNodeData& inoutData, string_view task );
     };
 } // namespace sw
 
@@ -67,7 +69,7 @@ namespace sw
      * @code
      *     <BehaviorTree>
      *         <Selector name="Root" reactive="true">
-     *             <BlackboardCondition key="Threat" compare="IsSet" abort="LowerPriority">
+     *             <BlackboardCondition test="hasBlackboard(Threat)" abort="LowerPriority">
      *                 <Action task="rts.defend" name="Defend"/>
      *             </BlackboardCondition>
      *             <Sequence name="Economy">
@@ -80,10 +82,12 @@ namespace sw
      *          종류마다 받는 속성 · 필수 · 범위는 스키마 구조체(`BehaviorTreeNodeFields.h`)가 정본이고 `BehaviorTreeXML` 이 읽는다 — 아래는 그 요약이다(`compare` · `abort` 값은 열거자 이름 그대로):
      *          - `Selector` (`name`, `reactive`) · `Sequence` (`name`) · `Inverter` · `ForceSuccess` — 자식은 컴포짓이 하나 이상, 데코레이터가 정확히 하나다.
      *          - `Repeat` (`count` 필수, 0 이면 실패할 때까지) · `Cooldown` · `TimeLimit` (`seconds` 필수).
-     *          - `BlackboardCondition` (`key` 필수, `compare` 기본 `IsSet`, `value` 기본 0, `abort` 기본 `None` | `Self` | `LowerPriority` | `Both`) — 데코레이터다.
-     *          - `Action` · `Condition` (`task` 필수 — `BehaviorTaskRegistry` 에 등록된 함수 이름, `name` 선택) — 잎이라 자식이 없다.
+     *          - `BlackboardCondition` (`test` 필수 — 공통 조건식, `abort` 기본 `None` | `Self` | `LowerPriority` | `Both`) — 데코레이터다.
+     *          - `Action` (`task` 필수 — `ActionRegistry` 에 등록된 동작 이름, 나머지 속성은 그 동작의 칸) · `Condition` (`test` 필수) — 잎이라 자식이 없다.
      *          - `Wait` (`seconds` 필수) · `MoveTo` (`key` 필수, `repathDistance` 기본 0.5) — 잎이다.
-     *          모르는 원소 · 속성 · 비교 · 중단 이름과 등록되지 않은 `task` 는 오류이고 트리를 읽지 않는다(기본 노드로 바꾸지 않는다). 읽은 트리는 `BehaviorTree::isValid` 를 지나야 한다.
+     *          - `SubTree` (`tree` 또는 `slot`) — `tree` 는 읽을 때 그 자리에 펼친다(순환은 오류). `slot` 은 쓰는 쪽이 `BehaviorTreeRunner::setSlotTree` 로 채운다.
+     *          어느 노드든 `id` · `name` 을 적을 수 있다. 루트의 `_base="<리소스 id>"` 는 부모 트리에서 `id` 가 같은 노드만 고친다(`_op` · `_before` · `_after` — `docs/agents/DataInheritance.md`).
+     *          모르는 원소 · 속성 · 중단 이름, 틀린 식, 등록되지 않은 `task` 는 오류이고 트리를 읽지 않는다(기본 노드로 바꾸지 않는다). 읽은 트리는 `BehaviorTree::isValid` 를 지나야 한다.
      */
     class SW_GF_API BehaviorTreeAsset : public XMLCatalog<BehaviorTreeAsset>
     {
@@ -100,6 +104,13 @@ namespace sw
 
         BehaviorTreeAsset();
 
+        /** @brief 리소스 경로의 트리를 읽습니다. `_base` 를 펼치고 하위 트리를 읽을 때 부모와 하위 파일을 리소스에서 찾습니다. 없으면 false 입니다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
+        /** @brief 글을 읽습니다. 부모와 하위 파일은 리소스에서 찾습니다. */
+        [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = {} );
+        /** @brief 글을 읽습니다. 부모와 하위 파일을 @p source 에서 찾습니다(테스트 · 도구). */
+        [[nodiscard]] bool loadFromText( string_view xmlText, string_view sourceName, IDataInheritanceSource& source );
+
         /** @brief 읽은 트리입니다. 읽기에 실패했거나 읽기 전이면 빈 트리(`isValid` 가 false)입니다. 이 객체보다 오래 쓰려면 복사한다. */
         const BehaviorTree& getTree() const { return _tree; }
 
@@ -108,6 +119,7 @@ namespace sw
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
 
     private:
-        BehaviorTree _tree;
+        BehaviorTree            _tree;
+        IDataInheritanceSource* _pSource; ///< 읽는 동안만 쓴다 — 하위 트리 파일을 찾는 곳
     };
 } // namespace sw

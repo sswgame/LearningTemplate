@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ActionRegistry.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -34,6 +35,19 @@ namespace sw
         string _item{};
         PROPERTY( Min = 1 )
         int32 _count{ 1 };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 보상의 `<Action>` 속성 스키마입니다. */
+    REFLECT()
+    struct QuestRewardActionRowDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        string _call{};
     };
 } // namespace sw
 
@@ -81,8 +95,9 @@ namespace sw
     /** @brief 보상입니다. 아이템은 값 목록(`ItemStackList`)이고, 그 밖의 보상(경험치, 돈, 평판)은 이름과 수치의 쌍입니다. */
     struct QuestReward
     {
-        ItemStackList _items{};
-        StatBlock     _values{}; ///< `xp="100" gold="50" rep.town="10"` 형식이다. 이름의 뜻은 게임이 해석한다
+        ItemStackList          _items{};
+        StatBlock              _values{};     ///< `xp="100" gold="50" rep.town="10"` 형식이다. 이름의 뜻은 게임이 해석한다
+        vector<GameActionCall> _listAction{}; ///< `<Action call="flag.set(wolvesDead)"/>` — 단계에 들어설 때 일지가 부른다(공통 어휘)
     };
 } // namespace sw
 
@@ -149,7 +164,7 @@ namespace sw
      *           <Objective kind="Collect" target="pelt" count="3" optional="true"/>
      *         </Stage>
      *         <Stage id="report"><Objective kind="Talk" target="elder"/><Branch choice="spare" next="mercy"/><Branch choice="kill" next="blood"/></Stage>
-     *         <Stage id="mercy" complete="true"><Reward xp="100" rep.town="10"><Item item="ring" count="1"/></Reward></Stage>
+     *         <Stage id="mercy" complete="true"><Reward xp="100" rep.town="10"><Item item="ring" count="1"/><Action call="flag.set(spared)"/></Reward></Stage>
      *         <Stage id="blood" complete="true"><Reward xp="150"/></Stage>
      *       </Quest>
      *     </QuestCatalog>

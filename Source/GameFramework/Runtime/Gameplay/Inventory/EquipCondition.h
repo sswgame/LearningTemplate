@@ -11,6 +11,7 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -26,7 +27,7 @@ namespace sw
     enum class EquipConditionKind : uint8
     {
         SetComplete = 0, ///< 세트의 모든 조각을 끼고 있다
-        SetPieces,       ///< 세트 조각을 `_pieceCount` 개 이상 끼고 있다
+        SetPieces,       ///< 세트 조각을 `pieces` 개 이상 끼고 있다(`setPieces`)
         EquippedTag,     ///< 다른 슬롯의 장비 하나가 태그(하위 태그 포함)를 가지고 있다
         CharacterTag,    ///< 캐릭터가 태그(하위 태그 포함)를 가지고 있다
         BodyShape        ///< 캐릭터의 체형이 목록에 있는 것 중 하나다
@@ -41,14 +42,29 @@ namespace sw
         RefuseUnequip        ///< 조건을 깨뜨리는 벗기와 바꿔 끼기를 거부한다. 캐릭터 쪽 변화로 깨지면 숨김으로 둔다
     };
 
-    /** @brief 장착 조건 하나입니다. 한 아이템의 조건은 모두 맞아야 합니다(AND). */
+    /** @brief `setPieces(id, n)` 의 칸입니다. */
+    REFLECT()
+    struct SW_GF_API EquipSetPiecesArgs
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _set{};
+        PROPERTY( Required, Min = 1 )
+        int32 _pieces{ 1 };
+    };
+
+    /**
+     * @brief 장착 조건 하나입니다. 한 아이템의 조건은 모두 맞아야 합니다(AND).
+     * @details 판정은 공통 어휘의 식(`_expr`)입니다. `<Requires set="x" pieces="2"/>` 는 `setPieces(x, 2)` 로 컴파일하는 줄임말이고, `tag` · `bodyShape` 는 외형 규칙과 같은 이름입니다.
+     *          나머지 칸은 읽기 때의 정적 검사(조건 순환 · 없는 세트)가 읽습니다 — 식은 함수 포인터라 무엇을 묻는지 답하지 못합니다.
+     */
     struct SW_GF_API EquipCondition
     {
-        vector<hashed_string> _listBodyShape{}; ///< BodyShape
-        hashed_string         _setID{};         ///< SetComplete, SetPieces 에서 쓴다
-        TagID                 _tag{};           ///< EquippedTag, CharacterTag 에서 쓴다
-        int32                 _pieceCount{ 0 }; ///< SetPieces
-        EquipConditionKind    _kind{ EquipConditionKind::SetComplete };
+        ConditionExpr      _expr{};
+        hashed_string      _setID{}; ///< SetComplete, SetPieces 에서 쓴다
+        TagID              _tag{};   ///< EquippedTag 에서 쓴다
+        EquipConditionKind _kind{ EquipConditionKind::SetComplete };
 
         /**
          * @brief 슬롯 @p selfSlotIndex 의 아이템 조건 @p condition 이 @p listSlot 에서 맞는지 판정합니다.

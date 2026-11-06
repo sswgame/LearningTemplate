@@ -3,6 +3,7 @@
 #include "GameFramework/Runtime/Gameplay/Quest/QuestLog.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
@@ -16,6 +17,7 @@ namespace sw
         : _listProgress{}
         , _eventBuffer{}
         , _pCatalog{ nullptr }
+        , _actionWorld{}
     {
     }
 
@@ -121,8 +123,15 @@ namespace sw
         progress._stageTime       = 0.0f;
         progress._bAwaitingChoice = SW_FALSE;
         progress._listCount.assign( pStage->_listObjective.size(), 0 );
-        const bool bHasReward = pStage->_reward._items.isEmpty() == false || pStage->_reward._values.isEmpty() == false;
+        const bool bHasReward = pStage->_reward._items.isEmpty() == false || pStage->_reward._values.isEmpty() == false || pStage->_reward._listAction.empty() == false;
         pushEvent( QuestEvent::Kind::StageEntered, progress, -1, 0, bHasReward ? &pStage->_reward : nullptr );
+        for ( const GameActionCall& call : pStage->_reward._listAction )
+        {
+            ActionContext context;
+            context._world = _actionWorld;
+            if ( call.invoke( context ) == ActionResult::Failed )
+                SW_LOG_WARNING_ID( "QuestLog.RewardActionFailed", "Quest '%#' stage '%#': reward action '%#' failed", quest._id.c_str(), stageID.c_str(), call.getName() );
+        }
         if ( pStage->_bFail )
         {
             progress._status = QuestStatus::Failed;

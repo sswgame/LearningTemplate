@@ -11,6 +11,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/GameplayContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 
@@ -100,6 +101,8 @@ namespace sw
         QuestLog();
 
         void initialize( const QuestCatalog* pCatalog );
+        /** @brief 보상 동작(`<Reward><Action>`)이 쓸 문맥입니다. 값을 복사합니다. 주지 않으면 세계 칸이 없어 동작이 실패합니다. */
+        void setActionContext( const GameplayContext& context ) { _actionWorld = context; }
 
         QuestStartResult evaluateStart( const hashed_string& questID, int32 level ) const;
         QuestStartResult start( const hashed_string& questID, int32 level );
@@ -149,5 +152,6 @@ namespace sw
         vector<QuestProgress>   _listProgress;
         EventBuffer<QuestEvent> _eventBuffer;
         const QuestCatalog*     _pCatalog;
+        GameplayContext         _actionWorld;
     };
 } // namespace sw

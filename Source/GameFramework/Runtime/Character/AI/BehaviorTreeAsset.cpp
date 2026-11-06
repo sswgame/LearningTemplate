@@ -4,16 +4,17 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/Reflection.h"
-#include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
+#include "Engine/Vocabulary/ActionRegistry.h"
+#include "Engine/Vocabulary/BehaviorTreeSchema.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
-#include "GameFramework/Runtime/Character/AI/BehaviorTaskRegistry.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeFields.h"
-#include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 
 namespace sw
 {
@@ -21,51 +22,53 @@ namespace sw
     {
         struct BehaviorTreeAssetInternal
         {
-            /** @brief 스키마 구조체 하나를 값 없이 넘기는 꼬리표입니다(`visitFields` 의 람다가 `typename decltype( tag )::Type` 으로 꺼낸다). */
-            template <typename T>
-            struct FieldsTag
+            /** @brief 원소에 적을 수 있는 공통 속성입니다. 칸 구조체가 아니라 노드가 직접 듭니다. */
+            static bool isHandRead( const utf8* pName )
             {
-                using Type = T;
-            };
+                return StringUtil::equals( pName, "id" ) || StringUtil::equals( pName, "name" );
+            }
 
-            /**
-             * @brief 종류 @p type 의 칸 스키마로 @p fn 을 부릅니다. 칸이 없는 종류(Inverter · ForceSuccess)면 부르지 않고 false 입니다.
-             * @details 종류와 스키마의 짝은 이 switch 하나다 — 읽기 · 쓰기 · 인스펙터가 모두 이것을 지난다.
-             */
-            template <typename Fn>
-            static bool visitFields( BehaviorNodeType type, Fn&& fn )
+            /** @brief 작업 노드에서 동작 칸이 아닌 속성입니다. */
+            static bool isTaskOwnAttribute( const utf8* pName )
+            {
+                return isHandRead( pName ) || StringUtil::equals( pName, "task" );
+            }
+
+            /** @brief 작업 노드의 스키마를 읽을 때 `task` 말고는 모두 동작의 칸이다. */
+            static bool isNotTaskField( const utf8* pName )
+            {
+                return StringUtil::equals( pName, "task" ) == false;
+            }
+
+            /** @brief 종류와 스키마의 짝은 이 switch 하나다 — 읽기 · 쓰기 · 인스펙터가 모두 이것을 지난다. */
+            static const ReflectedStructOps& findFieldsOps( BehaviorNodeType type )
             {
                 switch ( type )
                 {
                     case BehaviorNodeType::Selector:
-                        fn( FieldsTag<BehaviorSelectorFields>{} );
-                        return true;
-                    case BehaviorNodeType::Sequence:
-                        fn( FieldsTag<BehaviorSequenceFields>{} );
-                        return true;
+                        return ReflectedStructOps::of<BehaviorSelectorFields>();
                     case BehaviorNodeType::Repeat:
-                        fn( FieldsTag<BehaviorRepeatFields>{} );
-                        return true;
+                        return ReflectedStructOps::of<BehaviorRepeatFields>();
                     case BehaviorNodeType::Cooldown:
                     case BehaviorNodeType::TimeLimit:
                     case BehaviorNodeType::Wait:
-                        fn( FieldsTag<BehaviorTimedFields>{} );
-                        return true;
+                        return ReflectedStructOps::of<BehaviorTimedFields>();
                     case BehaviorNodeType::BlackboardCondition:
-                        fn( FieldsTag<BehaviorBlackboardConditionFields>{} );
-                        return true;
-                    case BehaviorNodeType::Action:
+                        return ReflectedStructOps::of<BehaviorConditionDecoratorFields>();
                     case BehaviorNodeType::Condition:
-                        fn( FieldsTag<BehaviorTaskFields>{} );
-                        return true;
+                        return ReflectedStructOps::of<BehaviorConditionFields>();
+                    case BehaviorNodeType::Action:
+                        return ReflectedStructOps::of<BehaviorActionFields>();
                     case BehaviorNodeType::MoveTo:
-                        fn( FieldsTag<BehaviorMoveToFields>{} );
-                        return true;
+                        return ReflectedStructOps::of<BehaviorMoveToFields>();
+                    case BehaviorNodeType::SubTree:
+                        return ReflectedStructOps::of<BehaviorSubTreeFields>();
+                    case BehaviorNodeType::Sequence:
                     case BehaviorNodeType::Inverter:
                     case BehaviorNodeType::ForceSuccess:
-                        return false;
+                        break;
                 }
-                return false;
+                return ReflectedStructOps::of<VocabularyNoFields>();
             }
 
             /** @brief 열거자 이름(리플렉션 `ENUM()`)을 그대로 찾습니다. 0 부터 @p last 까지 본다. */
@@ -86,7 +89,7 @@ namespace sw
             /** @brief 잎 노드(자식을 가질 수 없는 종류)인지 판정합니다. */
             static bool isLeaf( BehaviorNodeType type )
             {
-                return type == BehaviorNodeType::Action || type == BehaviorNodeType::Condition || type == BehaviorNodeType::Wait || type == BehaviorNodeType::MoveTo;
+                return type == BehaviorNodeType::Action || type == BehaviorNodeType::Condition || type == BehaviorNodeType::Wait || type == BehaviorNodeType::MoveTo || type == BehaviorNodeType::SubTree;
             }
         };
 
@@ -94,9 +97,11 @@ namespace sw
         class BehaviorTreeReader
         {
         public:
-            BehaviorTreeReader( BehaviorTree& tree, string_view sourceName )
+            BehaviorTreeReader( BehaviorTree& tree, string_view sourceName, IDataInheritanceSource& source )
                 : _tree{ tree }
+                , _source{ source }
                 , _sourceName{ sourceName }
+                , _listChain{}
             {
             }
 
@@ -104,13 +109,55 @@ namespace sw
             [[nodiscard]] bool readNode( const XMLNode& node, int32 parent, uint32 depth );
 
         private:
-            /** @brief 칸을 읽은 노드 하나를 트리에 더합니다. 작업 함수가 없는 Action · Condition 은 더하지 않고 -1 입니다(함수 없는 잎이 트리에 남지 않게 한다). */
+            /** @brief 칸을 읽은 노드 하나를 트리에 더합니다. 틀린 식 · 모르는 동작이면 더하지 않고 -1 입니다. */
             int32 addNode( const BehaviorTreeNodeData& data, const XMLNode& node, int32 parent, bool& inoutbValid );
+            /** @brief `<SubTree tree="…">` 를 그 자리에 펼칩니다. 순환 · 없는 파일 · 틀린 파일은 오류입니다. */
+            [[nodiscard]] bool expandSubTree( const string& treePath, int32 parent, uint32 depth );
 
         private:
-            BehaviorTree& _tree;
-            string_view   _sourceName;
+            BehaviorTree&           _tree;
+            IDataInheritanceSource& _source;
+            string_view             _sourceName;
+            vector<string>          _listChain; ///< 펼치는 중인 하위 트리 파일(순환 검사)
         };
+
+        bool BehaviorTreeReader::expandSubTree( const string& treePath, int32 parent, uint32 depth )
+        {
+            for ( const string& active : _listChain )
+            {
+                if ( active == treePath )
+                {
+                    SW_LOG_ERROR_ID( "BehaviorTreeAsset.SubTreeCycle", "%#: <SubTree tree=\"%#\"> includes itself", _sourceName, treePath.c_str() );
+                    return false;
+                }
+            }
+            string text;
+            if ( _source.readText( treePath, text ) == false )
+            {
+                SW_LOG_ERROR_ID( "BehaviorTreeAsset.SubTreeNotFound", "%#: <SubTree tree=\"%#\"> cannot be read", _sourceName, treePath.c_str() );
+                return false;
+            }
+            string flatText;
+            if ( DataInheritance::flatten( text, treePath, BehaviorTreeSchema::make(), _source, flatText ) == false )
+                return false;
+            XMLDocument document;
+            if ( document.parse( flatText, treePath ) == false )
+            {
+                SW_LOG_ERROR_ID( "BehaviorTreeAsset.SubTreeUnreadable", "%#: <SubTree tree=\"%#\">: %#", _sourceName, treePath.c_str(), document.getLastError().c_str() );
+                return false;
+            }
+            const XMLNode root  = document.getRoot( "BehaviorTree" );
+            const XMLNode first = root.isValid() ? root.findChild() : XMLNode{};
+            if ( first.isValid() == false || first.findNextSibling().isValid() )
+            {
+                SW_LOG_ERROR_ID( "BehaviorTreeAsset.SubTreeNeedsOneRoot", "%#: <SubTree tree=\"%#\"> needs a <BehaviorTree> with exactly one root node", _sourceName, treePath.c_str() );
+                return false;
+            }
+            _listChain.push_back( treePath );
+            const bool bValid = readNode( first, parent, depth );
+            _listChain.pop_back();
+            return bValid;
+        }
 
         int32 BehaviorTreeReader::addNode( const BehaviorTreeNodeData& data, const XMLNode& node, int32 parent, bool& inoutbValid )
         {
@@ -118,7 +165,7 @@ namespace sw
             switch ( data._type )
             {
                 case BehaviorNodeType::Selector:
-                    return _tree.addSelector( parent, name.c_str(), data._bReactive );
+                    return _tree.addSelector( parent, name.c_str(), data._fields.find<BehaviorSelectorFields>()->_bReactive );
                 case BehaviorNodeType::Sequence:
                     return _tree.addSequence( parent, name.c_str() );
                 case BehaviorNodeType::Inverter:
@@ -126,31 +173,48 @@ namespace sw
                 case BehaviorNodeType::ForceSuccess:
                     return _tree.addForceSuccess( parent );
                 case BehaviorNodeType::Repeat:
-                    return _tree.addRepeat( parent, data._count );
+                    return _tree.addRepeat( parent, data._fields.find<BehaviorRepeatFields>()->_count );
                 case BehaviorNodeType::Cooldown:
-                    return _tree.addCooldown( parent, data._seconds );
+                    return _tree.addCooldown( parent, data._fields.find<BehaviorTimedFields>()->_seconds );
                 case BehaviorNodeType::TimeLimit:
-                    return _tree.addTimeLimit( parent, data._seconds );
+                    return _tree.addTimeLimit( parent, data._fields.find<BehaviorTimedFields>()->_seconds );
                 case BehaviorNodeType::Wait:
-                    return _tree.addWait( parent, data._seconds );
-                case BehaviorNodeType::BlackboardCondition:
-                    return _tree.addBlackboardCondition( parent, hashed_string( data._key ), data._compare, data._value, data._abort );
+                    return _tree.addWait( parent, data._fields.find<BehaviorTimedFields>()->_seconds );
                 case BehaviorNodeType::MoveTo:
-                    return _tree.addMoveTo( parent, hashed_string( data._key ), data._repathDistance );
-                case BehaviorNodeType::Action:
-                case BehaviorNodeType::Condition:
+                {
+                    const BehaviorMoveToFields* pFields = data._fields.find<BehaviorMoveToFields>();
+                    return _tree.addMoveTo( parent, hashed_string( pFields->_key ), pFields->_repathDistance );
+                }
+                case BehaviorNodeType::BlackboardCondition:
+                {
+                    const BehaviorConditionDecoratorFields* pFields = data._fields.find<BehaviorConditionDecoratorFields>();
+                    ConditionExpr                           condition;
+                    if ( ConditionExpr::compile( pFields->_test, _sourceName, condition ) )
+                        return _tree.addConditionDecorator( parent, name.c_str(), condition, pFields->_abort );
                     break;
+                }
+                case BehaviorNodeType::Condition:
+                {
+                    ConditionExpr condition;
+                    if ( ConditionExpr::compile( data._fields.find<BehaviorConditionFields>()->_test, _sourceName, condition ) )
+                        return _tree.addCondition( parent, name.c_str(), condition );
+                    break;
+                }
+                case BehaviorNodeType::Action:
+                {
+                    // 동작 이름이 있는지는 런타임만 본다 — 편집기는 아직 안 만든 동작의 트리도 연다(`BehaviorTreeEditModel::collectIssues`).
+                    const string&            task   = data._fields.find<BehaviorActionFields>()->_task;
+                    const ActionEntry* const pEntry = ActionRegistry::find( task );
+                    if ( pEntry != nullptr && data._actionParams.isValid() )
+                        return _tree.addAction( parent, name.c_str(), GameActionCall::make( *pEntry, data._actionParams ) );
+                    SW_LOG_ERROR_ID( "BehaviorTreeAsset.NamesUnknownTaskRegistered", "%#: <%#> names the unknown task '%#' (registered: %#)", _sourceName, node.getName(), task.c_str(), ActionRegistry::joinNames().c_str() );
+                    break;
+                }
+                case BehaviorNodeType::SubTree:
+                    return _tree.addSubTreeSlot( parent, name.c_str(), hashed_string( data._fields.find<BehaviorSubTreeFields>()->_slot ) );
             }
-            // 작업 이름이 레지스트리에 있는지는 런타임만 본다 — 편집기는 아직 안 만든 작업의 트리도 연다(`BehaviorTreeEditModel::collectIssues`).
-            const BehaviorTaskFunction function = game::getSubsystem<BehaviorTaskRegistry>().findTask( data._task );
-            if ( function == nullptr )
-            {
-                SW_LOG_ERROR_ID( "BehaviorTreeAsset.NamesUnknownTaskRegistered", "%#: <%#> names the unknown task '%#' (registered: %#)", _sourceName, node.getName(), data._task.c_str(),
-                                 game::getSubsystem<BehaviorTaskRegistry>().joinNames().c_str() );
-                inoutbValid = false;
-                return -1;
-            }
-            return data._type == BehaviorNodeType::Action ? _tree.addAction( parent, name.c_str(), function ) : _tree.addCondition( parent, name.c_str(), function );
+            inoutbValid = false;
+            return -1;
         }
 
         bool BehaviorTreeReader::readNode( const XMLNode& node, int32 parent, uint32 depth )
@@ -169,7 +233,20 @@ namespace sw
 
             BehaviorTreeNodeData data;
             bool                 bValid = BehaviorTreeXML::readNodeFields( node, type, _sourceName, data );
-            const int32          index  = addNode( data, node, parent, bValid );
+            if ( bValid == false )
+                return false; // 칸이 틀린 노드는 뜻을 모른다 - 스키마 값을 믿고 더하지 않는다
+            if ( type == BehaviorNodeType::SubTree )
+            {
+                const BehaviorSubTreeFields* pFields = data._fields.find<BehaviorSubTreeFields>();
+                if ( pFields->_tree.empty() == pFields->_slot.empty() )
+                {
+                    SW_LOG_ERROR_ID( "BehaviorTreeAsset.SubTreeNeedsOne", "%#: <SubTree> needs exactly one of tree / slot", _sourceName );
+                    return false;
+                }
+                if ( pFields->_tree.empty() == false )
+                    return expandSubTree( pFields->_tree, parent, depth );
+            }
+            const int32 index = addNode( data, node, parent, bValid );
             if ( BehaviorTreeNames::isLeaf( type ) )
             {
                 if ( node.findChild() )
@@ -197,11 +274,6 @@ namespace sw
         return getEnumName( type );
     }
 
-    const utf8* BehaviorTreeNames::toString( BlackboardCompare compare )
-    {
-        return getEnumName( compare );
-    }
-
     const utf8* BehaviorTreeNames::toString( BehaviorAbortMode mode )
     {
         return getEnumName( mode );
@@ -209,12 +281,7 @@ namespace sw
 
     bool BehaviorTreeNames::parse( string_view text, BehaviorNodeType& outValue )
     {
-        return BehaviorTreeAssetInternal::parseEnumName( text, BehaviorNodeType::MoveTo, outValue );
-    }
-
-    bool BehaviorTreeNames::parse( string_view text, BlackboardCompare& outValue )
-    {
-        return BehaviorTreeAssetInternal::parseEnumName( text, BlackboardCompare::GreaterOrEqual, outValue );
+        return BehaviorTreeAssetInternal::parseEnumName( text, BehaviorNodeType::SubTree, outValue );
     }
 
     bool BehaviorTreeNames::parse( string_view text, BehaviorAbortMode& outValue )
@@ -225,7 +292,7 @@ namespace sw
     string BehaviorTreeNames::joinNodeTypeNames()
     {
         string text;
-        for ( int32 value = 0; value <= static_cast<int32>( BehaviorNodeType::MoveTo ); ++value )
+        for ( int32 value = 0; value <= static_cast<int32>( BehaviorNodeType::SubTree ); ++value )
         {
             text += text.empty() ? "" : ", ";
             text += getEnumName( static_cast<BehaviorNodeType>( value ) );
@@ -247,46 +314,67 @@ namespace sw
 
 namespace sw
 {
+    void BehaviorTreeXML::resetNodeFields( BehaviorNodeType type, BehaviorTreeNodeData& inoutData )
+    {
+        inoutData._type         = type;
+        inoutData._fields       = ReflectedFields( BehaviorTreeAssetInternal::findFieldsOps( type ) );
+        inoutData._actionParams = ReflectedFields{};
+        inoutData._listRawParam.clear();
+    }
+
     bool BehaviorTreeXML::readNodeFields( const XMLNode& node, BehaviorNodeType type, string_view sourceName, BehaviorTreeNodeData& inoutData )
     {
-        inoutData._type    = type;
-        bool       bValid  = true;
-        const bool bFields = BehaviorTreeAssetInternal::visitFields( type, [&]( auto tag )
+        using Internal = BehaviorTreeAssetInternal;
+        resetNodeFields( type, inoutData );
+        inoutData._inheritID = string( node.getAttributeText( "id" ) );
+        inoutData._name      = string( node.getAttributeText( "name" ) );
+        if ( type != BehaviorNodeType::Action )
         {
-            using Fields = typename decltype( tag )::Type;
-            Fields fields;
-            bValid = XMLFields::readFields( node, fields, sourceName );
-            bValid = SerializerUtil::copySameNamedProperties( &fields, *Fields::StaticType(), &inoutData, *BehaviorTreeNodeData::StaticType() ) && bValid;
-        } );
-        if ( bFields == false )
-            bValid = XMLNameCheck::reportUnknownAttributes( node, nullptr, 0, sourceName, LogLevel::Error ); // 칸이 없는 종류 — 적힌 속성은 모두 오타다
+            return XMLFields::readFields( node, inoutData._fields.getInstance(), *inoutData._fields.getType(), sourceName, { "id", "name" } );
+        }
+        bool                     bValid = XMLFields::readFields( node, inoutData._fields.getInstance(), *inoutData._fields.getType(), sourceName, {}, &Internal::isNotTaskField );
+        const ActionEntry* const pEntry = ActionRegistry::find( inoutData._fields.find<BehaviorActionFields>()->_task );
+        if ( pEntry != nullptr )
+        {
+            inoutData._actionParams = ReflectedFields( *pEntry->_pParamsOps );
+            return XMLFields::readFields( node, inoutData._actionParams.getInstance(), *inoutData._actionParams.getType(), sourceName, { "id", "name", "task" } ) && bValid;
+        }
+        for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+        {
+            if ( Internal::isTaskOwnAttribute( attribute.getName() ) == false )
+                inoutData._listRawParam.push_back( BehaviorRawParam{ string( attribute.getName() ), string( attribute.getValue() ) } );
+        }
         return bValid;
     }
 
     void BehaviorTreeXML::writeNodeFields( const XMLNode& node, const BehaviorTreeNodeData& data )
     {
-        (void)BehaviorTreeAssetInternal::visitFields( data._type, [&]( auto tag )
+        if ( data._inheritID.empty() == false )
+            node.appendAttribute( "id", string_view{ data._inheritID } );
+        if ( data._name.empty() == false )
+            node.appendAttribute( "name", string_view{ data._name } );
+        const ReflectedFields defaults( BehaviorTreeAssetInternal::findFieldsOps( data._type ) );
+        XMLFields::writeFields( node, data._fields.getInstance(), defaults.getInstance(), *data._fields.getType() );
+        if ( data._actionParams.isValid() )
         {
-            using Fields = typename decltype( tag )::Type;
-            Fields fields;
-            // 이름이 같은 칸끼리 옮긴다 — 같은 형식이라 실패하지 않는다.
-            (void)SerializerUtil::copySameNamedProperties( &data, *BehaviorTreeNodeData::StaticType(), &fields, *Fields::StaticType() );
-            XMLFields::writeFields( node, fields );
-        } );
+            const ReflectedFields defaultParams( *data._actionParams.getOps() );
+            XMLFields::writeFields( node, data._actionParams.getInstance(), defaultParams.getInstance(), *data._actionParams.getType() );
+        }
+        for ( const BehaviorRawParam& param : data._listRawParam )
+        {
+            node.appendAttribute( param._name.c_str(), string_view{ param._value } );
+        }
     }
 
-    bool BehaviorTreeXML::hasField( BehaviorNodeType type, string_view propertyName )
+    void BehaviorTreeXML::selectTask( BehaviorTreeNodeData& inoutData, string_view task )
     {
-        bool bFound = false;
-        (void)BehaviorTreeAssetInternal::visitFields( type, [&]( auto tag )
-        {
-            using Fields = typename decltype( tag )::Type;
-            for ( const PropertyInfo& prop : Fields::StaticType()->getPropertiesWithBase() )
-            {
-                bFound = bFound || prop._name.view() == propertyName;
-            }
-        } );
-        return bFound;
+        BehaviorActionFields* const pFields = inoutData._fields.find<BehaviorActionFields>();
+        if ( pFields == nullptr )
+            return;
+        pFields->_task = string( task );
+        inoutData._listRawParam.clear();
+        const ActionEntry* const pEntry = ActionRegistry::find( task );
+        inoutData._actionParams         = pEntry != nullptr ? ReflectedFields( *pEntry->_pParamsOps ) : ReflectedFields{};
     }
 } // namespace sw
 
@@ -294,7 +382,40 @@ namespace sw
 {
     BehaviorTreeAsset::BehaviorTreeAsset()
         : _tree{}
+        , _pSource{ nullptr }
     {
+    }
+
+    bool BehaviorTreeAsset::loadFromAsset( const AssetID& assetID )
+    {
+        string text;
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
+        {
+            SW_LOG_ERROR_ID( "BehaviorTreeAsset.FileNotFound", "Behavior tree '%#' cannot be read", assetID.view() );
+            return false;
+        }
+        return loadFromXMLText( text, assetID.view() );
+    }
+
+    bool BehaviorTreeAsset::loadFromXMLText( string_view xmlText, string_view sourceName )
+    {
+        DataInheritanceResourceSource source;
+        return loadFromText( xmlText, sourceName, source );
+    }
+
+    bool BehaviorTreeAsset::loadFromText( string_view xmlText, string_view sourceName, IDataInheritanceSource& source )
+    {
+        // 쿠킹본은 이미 펼쳤다 — 글 검색 한 번으로 지나간다.
+        string flatText;
+        if ( DataInheritance::flatten( xmlText, sourceName, BehaviorTreeSchema::make(), source, flatText ) == false )
+        {
+            _tree = BehaviorTree{};
+            return false;
+        }
+        _pSource           = &source;
+        const bool bLoaded = XMLCatalog<BehaviorTreeAsset>::loadFromXMLText( flatText, sourceName );
+        _pSource           = nullptr;
+        return bLoaded;
     }
 
     uint32 BehaviorTreeAsset::loadRoot( const XMLNode& root, string_view sourceName )
@@ -312,7 +433,8 @@ namespace sw
             SW_LOG_ERROR_ID( "BehaviorTreeAsset.BehaviorTreeMoreOne", "%#: the behavior tree has more than one root node - wrap them in a <Selector> or <Sequence>", sourceName );
             bValid = false;
         }
-        BehaviorTreeReader reader( _tree, sourceName );
+        // 쓰는 쪽이 글을 직접 넘기는 길이 없도록 공개 읽기가 모두 `_pSource` 를 채운다.
+        BehaviorTreeReader reader( _tree, sourceName, *_pSource );
         bValid = reader.readNode( first, -1, 0 ) && bValid;
         if ( bValid && _tree.isValid() == false )
         {

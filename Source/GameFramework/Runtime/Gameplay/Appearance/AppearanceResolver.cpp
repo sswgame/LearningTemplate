@@ -7,6 +7,7 @@
 #include "Core/Container/unordered_set.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
 
@@ -14,6 +15,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
 {
@@ -33,6 +35,13 @@ namespace sw
                 hashed_string                _customMaterialVariant{}; ///< 꾸미기 고르기가 정한 머티리얼 변형
                 vector<hashed_string>        _listHiddenPart{};        ///< 규칙이 숨긴 부품(`<Hide target part>`) — 나머지 부품은 그린다
                 uint8                        _bHidden{ SW_FALSE };
+            };
+
+            /** @brief 외형 규칙의 어휘(`targetTag` · `anyTag` · `occupied`)가 읽는 칸입니다. 규칙 판정에 든 외형 목록입니다. */
+            struct AppearanceEntriesSlot
+            {
+                using Type                      = const vector<Entry>;
+                static constexpr uint32 kSlotID = FourCcUtil::make( "APRE" );
             };
 
             /** @brief 규칙 동작 하나의 판정입니다. 같은 대상을 두고 이긴 쪽을 담습니다. */
@@ -271,45 +280,34 @@ namespace sw
                 }
             }
 
-            static bool isConditionMet( const AppearanceRuleCondition& condition, const vector<Entry>& listEntry, const CharacterAppearanceSpec& spec )
+            /** @brief 보이는 외형 중 하나가 태그를 가지면(주인을 주면 그 주인만) 참입니다. */
+            static bool hasVisibleTag( const vector<Entry>& listEntry, const hashed_string* pOwner, TagID tag )
             {
-                bool bMet = false;
-                switch ( condition._kind )
+                for ( const Entry& entry : listEntry )
                 {
-                    case AppearanceRuleConditionKind::TargetTag:
-                    case AppearanceRuleConditionKind::AnyTag:
-                    {
-                        for ( const Entry& entry : listEntry )
-                        {
-                            const bool bOwnerMatches = condition._kind == AppearanceRuleConditionKind::AnyTag || entry._owner == condition._target;
-                            const bool bTagVisible   = entry._bHidden == SW_FALSE && bOwnerMatches && entry._pVisual->_tags.hasTag( condition._tag );
-                            if ( bTagVisible )
-                                bMet = true;
-                        }
-                        break;
-                    }
-                    case AppearanceRuleConditionKind::CharacterTag:
-                    {
-                        bMet = spec._tags.hasTag( condition._tag );
-                        break;
-                    }
-                    case AppearanceRuleConditionKind::Occupied:
-                    {
-                        bMet = findEntry( listEntry, condition._target, true ) >= 0;
-                        break;
-                    }
-                    case AppearanceRuleConditionKind::BodyShape:
-                    {
-                        bMet = VectorUtil::contains( condition._listName, spec._bodyShape );
-                        break;
-                    }
-                    case AppearanceRuleConditionKind::BodyType:
-                    {
-                        bMet = VectorUtil::contains( condition._listName, spec._bodyType );
-                        break;
-                    }
+                    const bool bOwnerMatches = pOwner == nullptr || entry._owner == *pOwner;
+                    if ( entry._bHidden == SW_FALSE && bOwnerMatches && entry._pVisual->_tags.hasTag( tag ) )
+                        return true;
                 }
-                return bMet != ( condition._bNegate == SW_TRUE );
+                return false;
+            }
+
+            static bool readTargetTag( const GameplayContext& context, const AppearanceTargetTagArgs& args )
+            {
+                const vector<Entry>* pListEntry = context.find<AppearanceEntriesSlot>();
+                return pListEntry != nullptr && hasVisibleTag( *pListEntry, &args._target, args._tag );
+            }
+
+            static bool readAnyTag( const GameplayContext& context, const ConditionTagArg& args )
+            {
+                const vector<Entry>* pListEntry = context.find<AppearanceEntriesSlot>();
+                return pListEntry != nullptr && hasVisibleTag( *pListEntry, nullptr, args._tag );
+            }
+
+            static bool readOccupied( const GameplayContext& context, const ConditionNameArg& args )
+            {
+                const vector<Entry>* pListEntry = context.find<AppearanceEntriesSlot>();
+                return pListEntry != nullptr && findEntry( *pListEntry, args._name, true ) >= 0;
             }
 
             /** @brief 규칙의 숨김이 아닌 동작을 대상별 판정에 넣습니다. 우선순위가 높은 쪽이 이기고, 같으면 먼저 온 규칙이 이깁니다. 로드 단계에서 우선순위가 같은 충돌 짝을 막습니다. */
@@ -680,10 +678,15 @@ namespace sw
                 vector<const AppearanceRuleDef*> listFired;
                 for ( const AppearanceRuleDef& rule : database.getRules().getRules() )
                 {
+                    GameplayContext world;
+                    world.set<AppearanceEntriesSlot>( &listSnapshot );
+                    world.set<SubjectTagsSlot>( &spec._tags );
+                    world.set<BodyShapeSlot>( &spec._bodyShape );
+                    world.set<BodyTypeSlot>( &spec._bodyType );
                     bool bFires = true;
                     for ( const AppearanceRuleCondition& condition : rule._listCondition )
                     {
-                        bFires = bFires && isConditionMet( condition, listSnapshot, spec );
+                        bFires = bFires && condition._expr.evaluate( world );
                     }
                     if ( bFires == false )
                         continue;
@@ -772,6 +775,10 @@ namespace sw
             }
         };
     } // namespace
+
+    SW_CONDITION( targetTag, AppearanceTargetTagArgs, &AppearanceResolverInternal::readTargetTag );
+    SW_CONDITION( anyTag, ConditionTagArg, &AppearanceResolverInternal::readAnyTag );
+    SW_CONDITION( occupied, ConditionNameArg, &AppearanceResolverInternal::readOccupied );
 } // namespace sw
 
 namespace sw

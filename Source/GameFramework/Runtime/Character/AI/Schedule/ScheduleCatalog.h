@@ -18,6 +18,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ActionRegistry.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleCondition.h"
@@ -96,6 +97,8 @@ namespace sw
         REFLECT_BODY();
 
         ScheduleCondition _condition{};
+        GameActionCall    _onStart{}; ///< 도착해 활동을 시작할 때 부르는 동작(`onStart="flag.set(open)"`)
+        GameActionCall    _onEnd{};   ///< 활동을 끝낼 때 부르는 동작(`onEnd`)
         PROPERTY()
         hashed_string _activity{};
         PROPERTY()
@@ -233,7 +236,7 @@ namespace sw
      *       <Archetype id="villager"><Routine id="base"><Block start="0:00" end="7:00" activity="Sleep"/></Routine></Archetype>
      *       <NPC id="pierre" archetype="villager" home="pierre_home" speed="60" tags="Job.Shopkeeper">
      *         <Routine id="weekday" priority="0" days="Mon,Tue,Wed,Thu,Fri">
-     *           <Block start="9:00" end="17:00" activity="WorkAt" place="store" animation="Sweep"/>
+     *           <Block start="9:00" end="17:00" activity="WorkAt" place="store" animation="Sweep" onStart="flag.set(storeOpen)" onEnd="flag.set(storeOpen, 0)"/>
      *           <Block activity="Meet" appointment="lunch"/>
      *         </Routine>
      *         <Routine id="rainy" priority="10" weathers="rain"><Block start="17:00" end="22:00" activity="StayHome"/></Routine>

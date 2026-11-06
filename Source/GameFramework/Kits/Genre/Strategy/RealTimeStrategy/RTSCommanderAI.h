@@ -37,7 +37,7 @@ namespace sw
     /**
      * @class RTSCommanderAI
      * @brief 플레이어 한 명을 맡는 AI 입니다. 트리는 데이터(`*.bt.xml`, 게임 팩의 `commander.bt.xml`)이고 아래 모양이 기본 데이터다. 반응형 셀렉터라서 위쪽 노드를 먼저 평가합니다.
-     *        잎이 부르는 작업은 이 클래스가 `rts.defend` 같은 이름으로 `BehaviorTaskRegistry` 에 올린다(`SW_BEHAVIOR_TASK`) - 데이터가 순서 · 중단 규칙 · 가지를 정하고 코드는 작업만 가진다.
+     *        잎이 부르는 작업은 이 클래스가 `rts.defend` 같은 이름으로 `ActionRegistry` 에 올린다(`SW_GAME_ACTION`) - 데이터가 순서 · 중단 규칙 · 가지를 정하고 코드는 작업만 가진다.
      * @code
      *     Root (reactive)
      *     ├─ [Threat IsSet, LowerPriority 중단] Defend: 병력을 위협 위치로 공격 이동
@@ -78,14 +78,14 @@ namespace sw
         /** @brief `writeState` 가 쓴 바이트를 읽어 상태를 복원합니다. 데이터가 깨졌으면 false 를 반환하고 상태는 그대로입니다. */
         [[nodiscard]] bool readState( Archive& archive );
 
-        // 트리 데이터(`*.bt.xml`)가 이름으로 가리키는 작업입니다(`RTSCommanderAI.cpp` 끝의 `SW_BEHAVIOR_TASK` 줄이 `rts.*` 이름을 붙인다).
-        static BehaviorStatus taskDefend( BehaviorContext& context );
-        static BehaviorStatus taskGatherIdle( BehaviorContext& context );
-        static BehaviorStatus taskTrainWorkers( BehaviorContext& context );
-        static BehaviorStatus taskBuildSupply( BehaviorContext& context );
-        static BehaviorStatus taskBuildProduction( BehaviorContext& context );
-        static BehaviorStatus taskTrainArmy( BehaviorContext& context );
-        static BehaviorStatus taskAttack( BehaviorContext& context );
+        // 트리 데이터(`*.bt.xml`)가 이름으로 가리키는 작업입니다(`RTSCommanderAI.cpp` 끝의 `SW_GAME_ACTION` 줄이 `rts.*` 이름을 붙인다).
+        static ActionResult taskDefend( ActionContext& context, const VocabularyNoFields& params );
+        static ActionResult taskGatherIdle( ActionContext& context, const VocabularyNoFields& params );
+        static ActionResult taskTrainWorkers( ActionContext& context, const VocabularyNoFields& params );
+        static ActionResult taskBuildSupply( ActionContext& context, const VocabularyNoFields& params );
+        static ActionResult taskBuildProduction( ActionContext& context, const VocabularyNoFields& params );
+        static ActionResult taskTrainArmy( ActionContext& context, const VocabularyNoFields& params );
+        static ActionResult taskAttack( ActionContext& context, const VocabularyNoFields& params );
 
     private:
         /** @brief 놀거나 채취 중인 일꾼 하나로 @p buildingID 를 본진 둘레에 짓습니다. */

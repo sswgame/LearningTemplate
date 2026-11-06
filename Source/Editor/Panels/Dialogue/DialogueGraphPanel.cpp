@@ -26,6 +26,7 @@
 #include "Engine/Dialogue/DialogueGraphAsset.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/Reflection/ReflectionTypes.h"
 
 #include <imgui.h>
 #include <imgui-node-editor/imgui_node_editor.h>
@@ -102,6 +103,13 @@ namespace sw::editor
         : EditorGraphDocumentPanel{ EditorAssetType{ DialogueGraphAsset::kAssetType }, "Move Dialogue Nodes", "dialogue-graph-layout", &ed::SetCurrentEditor }
         , _selectedNodeID{ 0 }
         , _preview{}
+        , _actionGrid{}
+        , _actionFields{}
+        , _actionFieldsText{}
+        , _actionError{}
+        , _listActionName{}
+        , _pActionEntry{ nullptr }
+        , _pActionTargetText{ nullptr }
     {
         _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Graph", "FlowPin" ) } ); // 흐름 핀 하나
     }
@@ -559,6 +567,60 @@ namespace sw::editor
         }
     }
 
+    void DialogueGraphPanel::drawActionFields( DialogueNode& node )
+    {
+        EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Command" ), "Command" ), node._actionCommand );
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+            notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "CommandTip" ) );
+
+        if ( _actionFieldsText != node._actionCommand || _actionFields.isValid() == false )
+        {
+            _actionFieldsText = node._actionCommand;
+            _actionError.clear();
+            if ( GameActionCall::tryReadFields( node._actionCommand, _pActionEntry, _actionFields, _actionError ) == false )
+                _pActionEntry = nullptr;
+        }
+
+        // 고르기 목록은 등록에서 온다 — 동작을 더하면 코드 한 줄로 여기에 나타난다.
+        const string_view currentName = GameActionCall::getCallName( node._actionCommand );
+        if ( ImGui::BeginCombo( "##dialogue.action", _pActionEntry != nullptr ? _pActionEntry->_pName : "(pick an action)" ) )
+        {
+            _listActionName.clear();
+            ActionRegistry::collectNames( _listActionName );
+            for ( const string& name : _listActionName )
+            {
+                if ( ImGui::Selectable( name.c_str(), string_view{ name } == currentName ) )
+                {
+                    node._actionCommand = name;
+                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+                }
+            }
+            ImGui::EndCombo();
+        }
+        if ( _pActionEntry == nullptr )
+        {
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", _actionError.c_str() );
+            return;
+        }
+        _pActionTargetText = &node._actionCommand;
+        EditorPropertyGridTarget target{};
+        target._pInstance = _actionFields.getInstance();
+        target._pType     = _actionFields.getType();
+        target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &DialogueGraphPanel::onActionFieldEdited, this );
+        _actionGrid.drawProperties( target, nullptr, {} );
+        _pActionTargetText = nullptr;
+    }
+
+    void DialogueGraphPanel::onActionFieldEdited( const PropertyInfo& /*prop*/ )
+    {
+        if ( _pActionTargetText == nullptr || _pActionEntry == nullptr )
+            return;
+        *_pActionTargetText = GameActionCall::formatText( *_pActionEntry, _actionFields );
+        _actionFieldsText   = *_pActionTargetText;
+        notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
+    }
+
     void DialogueGraphPanel::drawNodeFields( DialogueNode& node, const DialogueNodeInfo& info )
     {
         if ( info._bHasSpeaker )
@@ -593,11 +655,7 @@ namespace sw::editor
             }
             case DialogueNodeBody::Action:
             {
-                EditorWidgets::drawTextField( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdWidget", "Command" ), "Command" ), node._actionCommand );
-                if ( ImGui::IsItemDeactivatedAfterEdit() )
-                    notifyDocumentEdited( "Edit Dialogue Node", "dialogue-inspector" );
-                EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDialogueGraph", "CommandTip" ) );
-                ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorDialogueGraph", "CommandExample" ) );
+                drawActionFields( node );
                 break;
             }
             case DialogueNodeBody::None:

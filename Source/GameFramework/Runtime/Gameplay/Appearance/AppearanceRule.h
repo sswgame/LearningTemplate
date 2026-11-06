@@ -10,6 +10,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
@@ -43,9 +44,26 @@ namespace sw
         OverrideSocket  ///< 소켓 하나를 옮기거나 새로 만든다
     };
 
-    /** @brief 조건 하나입니다. */
+    /** @brief `targetTag(Head, Helmet.FullFace)` 의 칸입니다. */
+    REFLECT()
+    struct SW_GF_API AppearanceTargetTagArgs
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _target{};
+        PROPERTY( Required )
+        TagID _tag{};
+    };
+
+    /**
+     * @brief 조건 하나입니다.
+     * @details 판정은 공통 어휘의 식(`_expr`)입니다. `<When tag="…" not="true"/>` 는 `!anyTag(…)` 로 컴파일하는 줄임말이고, `tag` · `bodyShape` · `bodyType` 은 장착 조건과 같은 이름입니다.
+     *          나머지 칸은 충돌 검사가 "같은 질문을 뒤집었는가" 를 볼 때 읽습니다(`isSameQuestion`).
+     */
     struct SW_GF_API AppearanceRuleCondition
     {
+        ConditionExpr               _expr{};
         vector<hashed_string>       _listName{}; ///< BodyShape, BodyType 에서 쓴다
         hashed_string               _target{};   ///< TargetTag, Occupied 에서 쓴다
         TagID                       _tag{};

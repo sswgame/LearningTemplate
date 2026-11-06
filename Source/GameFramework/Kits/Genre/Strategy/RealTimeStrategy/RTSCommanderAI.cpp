@@ -6,8 +6,6 @@
 
 #include "Engine/Serialization/Format/Archive.h"
 
-#include "GameFramework/Runtime/Character/AI/BehaviorTaskRegistry.h"
-
 namespace sw
 {
     namespace
@@ -152,27 +150,28 @@ namespace sw
     // ------------------------------------------------------------------------------
     // 작업
     // ------------------------------------------------------------------------------
-    BehaviorStatus RTSCommanderAI::taskDefend( BehaviorContext& context )
+    ActionResult RTSCommanderAI::taskDefend( ActionContext& context, const VocabularyNoFields& /*params*/ )
     {
         RTSCommanderAI&             self   = *static_cast<RTSCommanderAI*>( context._pOwner );
-        const std::optional<float3> threat = context._pBlackboard->getVector( getThreatKey() );
+        Blackboard&                 board  = *context._world.find<BlackboardWriteSlot>(); // 러너가 틱마다 채운다
+        const std::optional<float3> threat = board.getVector( getThreatKey() );
         if ( threat.has_value() == false )
-            return BehaviorStatus::Failure; // 위협 자리가 없으면 막을 곳이 없다
+            return ActionResult::Failed; // 위협 자리가 없으면 막을 곳이 없다
         vector<RTSUnitID> listArmy;
         self.collectArmy( listArmy );
         if ( listArmy.empty() == false )
             (void)self._pWorld->issueGroupMove( listArmy, *threat, true );
-        context._pBlackboard->clearValue( getThreatKey() );
-        return BehaviorStatus::Success;
+        board.clearValue( getThreatKey() );
+        return ActionResult::Succeeded;
     }
 
-    BehaviorStatus RTSCommanderAI::taskGatherIdle( BehaviorContext& context )
+    ActionResult RTSCommanderAI::taskGatherIdle( ActionContext& context, const VocabularyNoFields& /*params*/ )
     {
         RTSCommanderAI& self   = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&       world  = *self._pWorld;
         const RTSUnit*  pDepot = world.findUnit( self.findDepot() );
         if ( pDepot == nullptr )
-            return BehaviorStatus::Failure;
+            return ActionResult::Failed;
         vector<RTSUnitID> listIdle;
         world.forEachUnit( [&]( const RTSUnit& unit )
         {
@@ -184,49 +183,49 @@ namespace sw
         {
             const RTSUnitID mineralID = world.findNearestResource( pDepot->_position, RTSResourceType::Minerals, 16.0f );
             if ( mineralID.isValid() == false )
-                return BehaviorStatus::Failure;
+                return ActionResult::Failed;
             (void)world.issueGather( workerID, mineralID );
         }
-        return BehaviorStatus::Success;
+        return ActionResult::Succeeded;
     }
 
-    BehaviorStatus RTSCommanderAI::taskTrainWorkers( BehaviorContext& context )
+    ActionResult RTSCommanderAI::taskTrainWorkers( ActionContext& context, const VocabularyNoFields& /*params*/ )
     {
         RTSCommanderAI& self               = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&       world              = *self._pWorld;
         const RTSUnit*  pDepot             = world.findUnit( self.findDepot() );
         const bool      bCannotTrainWorker = pDepot == nullptr || pDepot->_listProduction.empty() == false || world.countPlanned( self._player, self._settings._workerID ) >= self._settings._workerTarget;
         if ( bCannotTrainWorker )
-            return BehaviorStatus::Failure;
-        return world.train( pDepot->_id, self._settings._workerID ) == RTSCommandResult::Ok ? BehaviorStatus::Success : BehaviorStatus::Failure;
+            return ActionResult::Failed;
+        return world.train( pDepot->_id, self._settings._workerID ) == RTSCommandResult::Ok ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
-    BehaviorStatus RTSCommanderAI::taskBuildSupply( BehaviorContext& context )
+    ActionResult RTSCommanderAI::taskBuildSupply( ActionContext& context, const VocabularyNoFields& /*params*/ )
     {
         RTSCommanderAI&  self    = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&        world   = *self._pWorld;
         const RTSPlayer* pPlayer = world.findPlayer( self._player );
         if ( pPlayer->_supplyCap >= world.getCatalog()->getSupplyMax() || pPlayer->_supplyCap - pPlayer->_supplyUsed > self._settings._supplyMargin )
-            return BehaviorStatus::Failure;
+            return ActionResult::Failed;
         // 짓고 있거나 지으러 가는 보급 건물이 있으면 기다린다.
         if ( world.countPlanned( self._player, self._settings._supplyID ) > world.countUnits( self._player, self._settings._supplyID, false ) )
-            return BehaviorStatus::Failure;
-        return self.orderConstruction( self._settings._supplyID ) ? BehaviorStatus::Success : BehaviorStatus::Failure;
+            return ActionResult::Failed;
+        return self.orderConstruction( self._settings._supplyID ) ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
-    BehaviorStatus RTSCommanderAI::taskBuildProduction( BehaviorContext& context )
+    ActionResult RTSCommanderAI::taskBuildProduction( ActionContext& context, const VocabularyNoFields& /*params*/ )
     {
         RTSCommanderAI& self  = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&       world = *self._pWorld;
         if ( world.countPlanned( self._player, self._settings._productionID ) >= self._settings._productionTarget )
-            return BehaviorStatus::Failure;
+            return ActionResult::Failed;
         // 일꾼을 어느 정도 모은 뒤에 시작한다.
         if ( world.countUnits( self._player, self._settings._workerID, false ) < self._settings._workerTarget / 2 )
-            return BehaviorStatus::Failure;
-        return self.orderConstruction( self._settings._productionID ) ? BehaviorStatus::Success : BehaviorStatus::Failure;
+            return ActionResult::Failed;
+        return self.orderConstruction( self._settings._productionID ) ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
-    BehaviorStatus RTSCommanderAI::taskTrainArmy( BehaviorContext& context )
+    ActionResult RTSCommanderAI::taskTrainArmy( ActionContext& context, const VocabularyNoFields& /*params*/ )
     {
         RTSCommanderAI&   self  = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&         world = *self._pWorld;
@@ -242,10 +241,10 @@ namespace sw
         {
             bTrained = world.train( producerID, self._settings._armyUnitID ) == RTSCommandResult::Ok || bTrained;
         }
-        return bTrained ? BehaviorStatus::Success : BehaviorStatus::Failure;
+        return bTrained ? ActionResult::Succeeded : ActionResult::Failed;
     }
 
-    BehaviorStatus RTSCommanderAI::taskAttack( BehaviorContext& context )
+    ActionResult RTSCommanderAI::taskAttack( ActionContext& context, const VocabularyNoFields& /*params*/ )
     {
         RTSCommanderAI&   self  = *static_cast<RTSCommanderAI*>( context._pOwner );
         RTSWorld&         world = *self._pWorld;
@@ -260,7 +259,7 @@ namespace sw
                 listIdle.push_back( unitID );
         }
         if ( static_cast<int32>( listIdle.size() ) < self._settings._attackArmySize )
-            return BehaviorStatus::Failure;
+            return ActionResult::Failed;
         // 가장 가까운 적 플레이어의 시작 지점으로 간다.
         const RTSPlayer* pSelf        = world.findPlayer( self._player );
         float32          bestDistance = MathUtil::kMaxFloat;
@@ -280,18 +279,18 @@ namespace sw
             }
         }
         if ( bFound == false )
-            return BehaviorStatus::Failure;
+            return ActionResult::Failed;
         (void)world.issueGroupMove( listIdle, target, true );
         ++self._attackWaveCount;
-        return BehaviorStatus::Success;
+        return ActionResult::Succeeded;
     }
 
     // 지휘관 트리 데이터(`commander.bt.xml`)가 `task` 속성으로 가리키는 이름이다.
-    SW_BEHAVIOR_TASK( RTSDefend, "rts.defend", &RTSCommanderAI::taskDefend );
-    SW_BEHAVIOR_TASK( RTSGatherIdle, "rts.gatherIdle", &RTSCommanderAI::taskGatherIdle );
-    SW_BEHAVIOR_TASK( RTSTrainWorkers, "rts.trainWorkers", &RTSCommanderAI::taskTrainWorkers );
-    SW_BEHAVIOR_TASK( RTSBuildSupply, "rts.buildSupply", &RTSCommanderAI::taskBuildSupply );
-    SW_BEHAVIOR_TASK( RTSBuildProduction, "rts.buildProduction", &RTSCommanderAI::taskBuildProduction );
-    SW_BEHAVIOR_TASK( RTSTrainArmy, "rts.trainArmy", &RTSCommanderAI::taskTrainArmy );
-    SW_BEHAVIOR_TASK( RTSAttack, "rts.attack", &RTSCommanderAI::taskAttack );
+    SW_GAME_ACTION( RTSDefend, "rts.defend", VocabularyNoFields, &RTSCommanderAI::taskDefend );
+    SW_GAME_ACTION( RTSGatherIdle, "rts.gatherIdle", VocabularyNoFields, &RTSCommanderAI::taskGatherIdle );
+    SW_GAME_ACTION( RTSTrainWorkers, "rts.trainWorkers", VocabularyNoFields, &RTSCommanderAI::taskTrainWorkers );
+    SW_GAME_ACTION( RTSBuildSupply, "rts.buildSupply", VocabularyNoFields, &RTSCommanderAI::taskBuildSupply );
+    SW_GAME_ACTION( RTSBuildProduction, "rts.buildProduction", VocabularyNoFields, &RTSCommanderAI::taskBuildProduction );
+    SW_GAME_ACTION( RTSTrainArmy, "rts.trainArmy", VocabularyNoFields, &RTSCommanderAI::taskTrainArmy );
+    SW_GAME_ACTION( RTSAttack, "rts.attack", VocabularyNoFields, &RTSCommanderAI::taskAttack );
 } // namespace sw

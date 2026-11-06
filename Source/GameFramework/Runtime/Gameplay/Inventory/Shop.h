@@ -15,6 +15,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
@@ -104,7 +105,8 @@ namespace sw
         PROPERTY( Name = "item", Required )
         hashed_string _itemID{};
         PROPERTY( Name = "requires" )
-        string _requirement{}; ///< 잠금 조건 식입니다. 키트나 게임이 평가하며, 예를 들어 GameFlags 조건이 있습니다. 비어 있으면 항상 열려 있습니다
+        string        _requirement{}; ///< 잠금 조건 식입니다(공통 어휘, `ConditionExpr`). 비어 있으면 항상 열려 있습니다
+        ConditionExpr _condition{};   ///< 읽을 때 `_requirement` 를 컴파일한 식
         PROPERTY()
         int32 _price{ -1 }; ///< 단가(-1 이면 `ItemDef::_value`)
         PROPERTY( Min = -1 )
@@ -184,21 +186,6 @@ namespace sw
         NotOwned ///< 팔 만큼 가지고 있지 않다
     };
 
-    /**
-     * @class IShopConditionEvaluator
-     * @brief 진열 항목의 `requires` 식을 평가합니다. 가게는 식을 보관만 하고 뜻은 모릅니다. 키트나 게임이 플래그, 퀘스트, 평판으로 판정해서 답합니다.
-     */
-    class IShopConditionEvaluator
-    {
-    public:
-        IShopConditionEvaluator()          = default;
-        virtual ~IShopConditionEvaluator() = default;
-
-        IShopConditionEvaluator( const IShopConditionEvaluator& )            = default;
-        IShopConditionEvaluator& operator=( const IShopConditionEvaluator& ) = default;
-
-        virtual bool isConditionMet( string_view expression ) const = 0;
-    };
 } // namespace sw
 
 namespace sw
@@ -251,8 +238,8 @@ namespace sw
         ShopState();
 
         void initialize( const ShopCatalog* pShopCatalog, const ItemCatalog* pItemCatalog );
-        /** @brief 잠금 조건을 평가할 쪽입니다. 없으면 조건이 있는 항목은 항상 잠겨 있습니다. */
-        void setConditionEvaluator( const IShopConditionEvaluator* pEvaluator ) { _pConditionEvaluator = pEvaluator; }
+        /** @brief 잠금 조건을 평가할 문맥입니다(플래그 · 태그 칸). 빌려 씁니다. 없으면 조건이 있는 항목은 항상 잠겨 있습니다. */
+        void setConditionContext( const GameplayContext* pContext ) { _pConditionContext = pContext; }
         /** @brief 가격 배율입니다. 평판, 할인, 그날의 매입률(리썰 컴퍼니)에 씁니다. 사기와 팔기를 따로 정합니다. */
         /** @details 음수이거나 없는 가게이면 false 입니다(음수는 오류를 남기고 0 으로 자르지 않습니다). */
         [[nodiscard]] bool setPriceModifier( const hashed_string& shopID, float32 buyModifier, float32 sellModifier );
@@ -294,10 +281,10 @@ namespace sw
         bool         isRefused( const ShopDef& shop, const ShopRuntime& runtime, const hashed_string& itemID ) const;
 
     private:
-        vector<ShopRuntime>            _listRuntime;
-        EventBuffer<ShopEvent>         _eventBuffer;
-        const ShopCatalog*             _pShopCatalog;
-        const ItemCatalog*             _pItemCatalog;
-        const IShopConditionEvaluator* _pConditionEvaluator;
+        vector<ShopRuntime>    _listRuntime;
+        EventBuffer<ShopEvent> _eventBuffer;
+        const ShopCatalog*     _pShopCatalog;
+        const ItemCatalog*     _pItemCatalog;
+        const GameplayContext* _pConditionContext;
     };
 } // namespace sw

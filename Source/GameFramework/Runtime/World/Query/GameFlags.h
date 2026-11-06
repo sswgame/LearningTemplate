@@ -20,6 +20,7 @@
 namespace sw
 {
     class Archive;
+    class ConditionExpr;
 } // namespace sw
 
 namespace sw
@@ -42,17 +43,14 @@ namespace sw
     /**
      * @class GameFlags
      * @brief 이름에서 정수로 가는 플래그 표입니다. 값이 0 인 플래그는 없는 것과 같으므로 0 을 넣으면 지웁니다.
-     * @details 조건식 문법은 우선순위가 낮은 것부터 `a || b`, `a && b`, `!a`, 비교 `count>=3`(`== != < <= > >=`, 오른쪽은 정수나 다른 플래그), 괄호,
-     *          플래그 이름 하나(0 이 아니면 참), 정수 하나이다.
-     *          빈 식은 참이다(조건 없음). 잘못된 식은 경고하고 거짓이다.
+     * @details 조건식은 `ConditionExpr` 이다. 그냥 이름이 플래그 값을 읽으므로(`flag` 조건) `hasKey && count>=3` 이 플래그 식이다. 읽을 때 컴파일하므로 여기는 글을 받지 않는다.
      *          리비전은 값이 실제로 바뀔 때마다 오른다. 조건 결과를 캐시하는 쪽이 다시 셀 때를 알 수 있다.
      */
     class SW_GF_API GameFlags
     {
     public:
-        static constexpr int32  kMaxConditionDepth = 32; ///< 괄호 · `!` 중첩 상한(잘못된 식이 스택을 다 쓰지 않게)
-        static constexpr uint32 kStateTag          = FourCcUtil::make( "FLAG" );
-        static constexpr uint32 kStateVersion      = 1;
+        static constexpr uint32 kStateTag     = FourCcUtil::make( "FLAG" );
+        static constexpr uint32 kStateVersion = 1;
 
         GameFlags();
 
@@ -68,13 +66,8 @@ namespace sw
         bool clearFlag( const hashed_string& name );
         void clear();
 
-        /** @brief 조건식을 이 플래그로 평가합니다. 잘못된 식은 경고하고 false 입니다. */
-        bool evaluate( string_view expression ) const;
-        /**
-         * @brief 조건식을 읽고 @p flags 로 평가합니다.
-         * @return 식이 문법에 맞으면 true 이고 결과는 @p outResult 에 담는다. 틀리면 경고하고 false 를 반환하며 @p outResult 도 false 이다.
-         */
-        [[nodiscard]] static bool parseCondition( string_view expression, const GameFlags& flags, bool& outResult );
+        /** @brief 컴파일된 조건식을 이 플래그로 평가합니다. 빈 식은 참입니다. */
+        bool evaluate( const ConditionExpr& expression ) const;
 
         /** @brief 세이브용 목록을 이름 순(대소문자 무시 사전순)으로 채웁니다. */
         void fillEntries( vector<GameFlagEntry>& outListEntry ) const;

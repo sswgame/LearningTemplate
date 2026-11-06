@@ -8,7 +8,6 @@
 #include "Core/String/RegistrationList.h"
 
 #include "Engine/Reflection/Reflection.h"
-#include "Engine/Serialization/XML/XMLFields.h"
 
 namespace sw
 {
@@ -178,21 +177,12 @@ namespace sw
         return false;
     }
 
-    bool GameActionCall::compileNode( const XMLNode& node, string_view actionName, std::initializer_list<string_view> listHandRead, string_view sourceName, GameActionCall& outCall )
+    GameActionCall GameActionCall::make( const ActionEntry& entry, const ReflectedFields& fields )
     {
-        outCall                   = GameActionCall{};
-        const ActionEntry* pEntry = ActionRegistry::find( actionName );
-        if ( pEntry == nullptr )
-        {
-            SW_LOG_ERROR_ID( "GameAction.Unknown", "%#: unknown action '%#' (registered: %#)", sourceName, actionName, ActionRegistry::joinNames().c_str() );
-            return false;
-        }
-        ReflectedFields fields( *pEntry->_pParamsOps );
-        if ( XMLFields::readFields( node, fields.getInstance(), *fields.getType(), sourceName, listHandRead ) == false )
-            return false;
-        outCall._pEntry  = pEntry;
-        outCall._pParams = fields.share();
-        return true;
+        GameActionCall call;
+        call._pEntry  = &entry;
+        call._pParams = ReflectedFields( fields ).share(); // 편집 값과 나눠 들지 않게 복사한다
+        return call;
     }
 
     ActionResult GameActionCall::invoke( ActionContext& context ) const

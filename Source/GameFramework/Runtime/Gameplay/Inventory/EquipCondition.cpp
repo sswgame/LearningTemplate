@@ -3,18 +3,68 @@
 #include "GameFramework/Runtime/Gameplay/Inventory/EquipCondition.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/String/FourCcUtil.h"
 
 #include "Engine/Reflection/EnumName.h"
 
 #include "GameFramework/Runtime/Gameplay/Inventory/Equipment.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/ItemCatalog.h"
+#include "GameFramework/Runtime/World/Query/GameConditions.h"
 
 namespace sw
 {
     namespace
     {
+        /** @brief 장착 어휘가 읽는 판정 상태입니다. */
+        struct EquipConditionState
+        {
+            const vector<EquipSlot>* _pListSlot;
+            const ItemCatalog*       _pCatalog;
+            const IEquipSetLookup*   _pSetLookup;
+            hashed_string            _bodyType;
+            int32                    _selfSlotIndex;
+        };
+
+        struct EquipConditionSlot
+        {
+            using Type                      = const EquipConditionState;
+            static constexpr uint32 kSlotID = FourCcUtil::make( "EQUP" );
+        };
+
         struct EquipConditionInternal
         {
+            static bool isSetComplete( const GameplayContext& context, const ConditionNameArg& args )
+            {
+                const EquipConditionState* pState = context.find<EquipConditionSlot>();
+                return pState != nullptr && pState->_pSetLookup != nullptr && pState->_pSetLookup->computeProgress( args._name, *pState->_pListSlot, pState->_bodyType ).isComplete();
+            }
+
+            static bool hasSetPieces( const GameplayContext& context, const EquipSetPiecesArgs& args )
+            {
+                const EquipConditionState* pState = context.find<EquipConditionSlot>();
+                return pState != nullptr && pState->_pSetLookup != nullptr && pState->_pSetLookup->computeProgress( args._set, *pState->_pListSlot, pState->_bodyType )._equippedCount >= args._pieces;
+            }
+
+            /** @brief 자기 슬롯과 숨김 슬롯을 빼고, 다른 장비 하나가 태그를 가지고 있으면 참입니다. */
+            static bool hasEquippedTag( const GameplayContext& context, const ConditionTagArg& args )
+            {
+                const EquipConditionState* pState = context.find<EquipConditionSlot>();
+                if ( pState == nullptr )
+                    return false;
+                const vector<EquipSlot>& listSlot = *pState->_pListSlot;
+                for ( size_t slotIndex = 0; slotIndex < listSlot.size(); ++slotIndex )
+                {
+                    const EquipSlot& slot      = listSlot[slotIndex];
+                    const bool       bSkipSlot = static_cast<int32>( slotIndex ) == pState->_selfSlotIndex || slot._item.isEmpty() || slot._bSuppressed == SW_TRUE;
+                    if ( bSkipSlot )
+                        continue;
+                    const ItemDef* pDef = pState->_pCatalog->find( slot._item._itemID );
+                    if ( pDef != nullptr && pDef->hasTagUnder( args._tag ) )
+                        return true;
+                }
+                return false;
+            }
+
             /** @brief 깊이 우선 탐색 상태입니다. 0 은 아직 안 봄, 1 은 보는 중(스택에 있음), 2 는 끝남입니다. */
             static constexpr uint8 kVisitNone   = 0;
             static constexpr uint8 kVisitActive = 1;
@@ -90,48 +140,20 @@ namespace sw
 
 namespace sw
 {
+    SW_CONDITION( setComplete, ConditionNameArg, &EquipConditionInternal::isSetComplete );
+    SW_CONDITION( setPieces, EquipSetPiecesArgs, &EquipConditionInternal::hasSetPieces );
+    SW_CONDITION( equippedTag, ConditionTagArg, &EquipConditionInternal::hasEquippedTag );
+
     bool EquipCondition::isMet( const EquipCondition& condition, const vector<EquipSlot>& listSlot, int32 selfSlotIndex, const ItemCatalog& catalog,
                                 const IEquipSetLookup* pSetLookup, const EquipCharacterContext& context )
     {
-        switch ( condition._kind )
-        {
-            case EquipConditionKind::SetComplete:
-            {
-                return pSetLookup != nullptr && pSetLookup->computeProgress( condition._setID, listSlot, context._bodyType ).isComplete();
-            }
-            case EquipConditionKind::SetPieces:
-            {
-                return pSetLookup != nullptr && pSetLookup->computeProgress( condition._setID, listSlot, context._bodyType )._equippedCount >= condition._pieceCount;
-            }
-            case EquipConditionKind::EquippedTag:
-            {
-                for ( size_t slotIndex = 0; slotIndex < listSlot.size(); ++slotIndex )
-                {
-                    const EquipSlot& slot      = listSlot[slotIndex];
-                    const bool       bSkipSlot = static_cast<int32>( slotIndex ) == selfSlotIndex || slot._item.isEmpty() || slot._bSuppressed == SW_TRUE;
-                    if ( bSkipSlot )
-                        continue;
-                    const ItemDef* pDef = catalog.find( slot._item._itemID );
-                    if ( pDef != nullptr && pDef->hasTagUnder( condition._tag ) )
-                        return true;
-                }
-                return false;
-            }
-            case EquipConditionKind::CharacterTag:
-            {
-                return context._tags.hasTag( condition._tag );
-            }
-            case EquipConditionKind::BodyShape:
-            {
-                for ( const hashed_string& shape : condition._listBodyShape )
-                {
-                    if ( shape == context._bodyShape )
-                        return true;
-                }
-                return false;
-            }
-        }
-        return false;
+        const EquipConditionState state{ &listSlot, &catalog, pSetLookup, context._bodyType, selfSlotIndex };
+        GameplayContext           world;
+        world.set<EquipConditionSlot>( &state );
+        world.set<SubjectTagsSlot>( &context._tags );
+        world.set<BodyShapeSlot>( &context._bodyShape );
+        world.set<BodyTypeSlot>( &context._bodyType );
+        return condition._expr.evaluate( world );
     }
 
     bool EquipCondition::findConditionCycle( const ItemCatalog& catalog, const IEquipSetLookup* pSetLookup, vector<hashed_string>& outListCycle )

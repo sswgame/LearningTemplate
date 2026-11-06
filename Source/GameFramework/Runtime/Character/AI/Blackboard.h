@@ -7,6 +7,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
 #include "GameFramework/GameFrameworkExports.h"
@@ -42,6 +43,22 @@ namespace sw
 
 namespace sw
 {
+    class Blackboard;
+
+    /** @brief 조건(`blackboard` · `hasBlackboard`)이 읽는 칸입니다. */
+    struct BlackboardSlot
+    {
+        using Type                      = const Blackboard;
+        static constexpr uint32 kSlotID = FourCcUtil::make( "BBRD" );
+    };
+
+    /** @brief 동작이 쓰는 칸입니다. */
+    struct BlackboardWriteSlot
+    {
+        using Type                      = Blackboard;
+        static constexpr uint32 kSlotID = FourCcUtil::make( "BBWR" );
+    };
+
     /**
      * @class Blackboard
      * @brief 언리얼 `UBlackboardComponent` 의 자리입니다. 값이 바뀔 때마다 리비전이 올라 행동 트리가 "바뀌었으면 다시 본다" 를 싸게 합니다.

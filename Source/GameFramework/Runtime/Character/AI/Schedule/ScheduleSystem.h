@@ -26,6 +26,7 @@
 
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/GameplayContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleLocator.h"
@@ -77,21 +78,22 @@ namespace sw
     /** @brief 그날 계획의 구간 하나입니다. 시각은 그날의 분입니다. */
     struct ScheduleSegment
     {
-        ScheduleLocation      _target{};
-        hashed_string         _activity{};
-        hashed_string         _animation{};
-        hashed_string         _sourceID{}; ///< 루틴, 행사, 약속의 id
-        uint32                _reservationID{ 0 };
-        int32                 _startMinute{ 0 };
-        int32                 _endMinute{ 0 };
-        int32                 _departMinute{ 0 }; ///< 이 구간의 위치로 나서는 시각. 일찍 나서므로 시작보다 앞설 수 있다
-        int32                 _travelMinutes{ 0 };
-        int32                 _priority{ 0 };
-        int32                 _ownerIndex{ -1 }; ///< 루틴(NPC 의 것), 행사, 약속의 인덱스
-        int32                 _blockIndex{ -1 };
-        ScheduleSegmentSource _source{ ScheduleSegmentSource::Idle };
-        uint8                 _bLeaveEarly{ SW_TRUE }; ///< 돌아다니기의 둘째 위치부터는 그 시각에 나선다
-        uint8                 _bPast{ SW_FALSE };      ///< 계획을 세운 시각보다 앞에 끝난 구간(추적 표시용)
+        ScheduleLocation        _target{};
+        hashed_string           _activity{};
+        hashed_string           _animation{};
+        hashed_string           _sourceID{}; ///< 루틴, 행사, 약속의 id
+        uint32                  _reservationID{ 0 };
+        int32                   _startMinute{ 0 };
+        int32                   _endMinute{ 0 };
+        int32                   _departMinute{ 0 }; ///< 이 구간의 위치로 나서는 시각. 일찍 나서므로 시작보다 앞설 수 있다
+        int32                   _travelMinutes{ 0 };
+        int32                   _priority{ 0 };
+        int32                   _ownerIndex{ -1 }; ///< 루틴(NPC 의 것), 행사, 약속의 인덱스
+        int32                   _blockIndex{ -1 };
+        const ScheduleBlockDef* _pBlock{ nullptr }; ///< 이 구간을 낸 칸(시작 · 끝 동작). 카탈로그가 든다. 빈 시간 · 복원한 구간은 없다
+        ScheduleSegmentSource   _source{ ScheduleSegmentSource::Idle };
+        uint8                   _bLeaveEarly{ SW_TRUE }; ///< 돌아다니기의 둘째 위치부터는 그 시각에 나선다
+        uint8                   _bPast{ SW_FALSE };      ///< 계획을 세운 시각보다 앞에 끝난 구간(추적 표시용)
 
         int32 getArriveMinute() const { return _departMinute + _travelMinutes; }
     };
@@ -264,6 +266,8 @@ namespace sw
         void setActivityAnimator( IScheduleActivityAnimator* pAnimator ) { _services._pAnimator = pAnimator; }
         /** @brief 플래그 조건이 읽는 플래그입니다. 리비전이 바뀌면 다음 시간 흐름에서 계획을 다시 세웁니다. */
         void setFlags( const GameFlags* pFlags );
+        /** @brief 칸의 시작 · 끝 동작이 쓸 문맥의 바탕입니다(쓰기 플래그 같은 칸). 값을 복사합니다. 달력 · 태그 칸은 부를 때 얹습니다. */
+        void setActionContext( const GameplayContext& context ) { _actionWorld = context; }
         /** @brief 세계 태그입니다. 내용이 바뀌면 `notifyConditionsChanged` 를 부릅니다. */
         void setWorldTags( const TagContainer* pTags );
         void setWeather( const hashed_string& weatherID );
@@ -412,11 +416,13 @@ namespace sw
         int32 computeWakeMinute( int32 npcIndex ) const;
         void  emitEvent( ScheduleEvent::Kind kind, int32 npcIndex, const ScheduleSegment* pSegment, const hashed_string& sourceID );
         void  emitSnapped( int32 npcIndex );
-        void  applyConditionChanges();
-        void  updateNearRoutes();
-        void  popExpiredInterruptions( int32 npcIndex, int32 minute );
-        void  resumeNPC( int32 npcIndex );
-        void  logTraceRequest();
+        /** @brief 구간의 칸이 적은 시작 · 끝 동작을 부릅니다. 사건을 내지 않는 동안(복원 · 빨리 감기)과 먼 NPC 를 다시 맞출 때(`emitSnapped`)는 부르지 않습니다. */
+        void runBlockAction( int32 npcIndex, const ScheduleSegment& segment, bool bStart );
+        void applyConditionChanges();
+        void updateNearRoutes();
+        void popExpiredInterruptions( int32 npcIndex, int32 minute );
+        void resumeNPC( int32 npcIndex );
+        void logTraceRequest();
 
     private:
         const ScheduleCatalog*     _pCatalog;
@@ -431,6 +437,7 @@ namespace sw
         vector<int32>              _listBrokenAppointment; ///< 오늘 깨진 약속의 인덱스
         vector<int32>              _listMetAppointment;    ///< 오늘 모인 약속의 인덱스. 사건을 한 번만 내려고 보관한다
         hashed_string              _weather;
+        GameplayContext            _actionWorld;
         string                     _lastTraceRequest;
         float32                    _minuteFraction; ///< `update` 가 준 시간 중 분 아래 나머지. 보이는 위치를 보간할 때 쓴다
         int32                      _minute;

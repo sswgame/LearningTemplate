@@ -323,14 +323,15 @@ SW_TEST_CASE( BehaviorTreeTest, BlackboardComparisonsNeedAValue )
 {
     Blackboard          blackboard;
     const hashed_string key( "Hp" );
-    BehaviorNode        node;
-    node._key          = key;
-    node._compareValue = 5.0f;
+    GameplayContext     world;
+    world.set<BlackboardSlot>( &blackboard );
 
     const auto check = [&]( BlackboardCompare compare )
     {
-        node._compare = compare;
-        return BehaviorTree::evaluateCondition( node, blackboard );
+        BehaviorTree tree;
+        const int32  root  = tree.addSelector( -1, "Root" );
+        const int32  index = tree.addBlackboardCondition( root, key, compare, 5.0f );
+        return BehaviorTree::evaluateCondition( tree.getNode( index ), world );
     };
     SW_EXPECT_FALSE( check( BlackboardCompare::IsSet ) );
     SW_EXPECT_TRUE( check( BlackboardCompare::IsNotSet ) );

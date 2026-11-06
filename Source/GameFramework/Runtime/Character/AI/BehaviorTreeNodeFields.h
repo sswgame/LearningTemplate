@@ -1,71 +1,32 @@
 /**
  * @file BehaviorTreeNodeFields.h
- * @brief 행동 트리 데이터 파일(`*.bt.xml`)의 노드 칸입니다 — 노드 하나의 모든 칸(`BehaviorTreeNodeData`)과, 노드 종류마다 파일에 적을 수 있는 칸의 스키마(`Behavior*Fields`).
+ * @brief 행동 트리 데이터 파일(`*.bt.xml`)의 노드 칸입니다 — 노드 종류마다 파일에 적을 수 있는 칸의 스키마(`Behavior*Fields`)와, 읽은 노드 하나(`BehaviorTreeNodeData`).
  * @details 언리얼 BT 의 노드 클래스가 저마다 UPROPERTY 를 가지는 것과 같은 모양이다. 종류마다 받는 속성 · 필수 · 범위 · 기본값은 스키마 구조체의 `PROPERTY` 가 정본이고,
- *          읽기 · 쓰기는 카탈로그와 같은 `XMLFields::readFields` · `writeFields` 다(속성 이름은 칸 이름에서 앞의 `_` 와 불리언 `b` 를 뗀 것).
- *          런타임 로더(`BehaviorTreeAsset`)와 에디터 모델(`BehaviorTreeEditModel`)이 같은 읽기 · 쓰기(`BehaviorTreeXML`)를 쓴다 — 예전에는 둘이 같은 형식을 따로 손으로 읽었다.
+ *          읽기 · 쓰기는 카탈로그와 같은 `XMLFields::readFields` · `writeFields` 다. 모든 종류의 칸을 모은 고정 구조체를 두지 않는다 — 노드는 자기 종류의 스키마 값 하나와, 작업이면 그 동작의 칸을 든다.
+ *          편집기는 이 값을 리플렉션 그리드로 그리므로 칸을 더해도 패널을 고치지 않는다. 런타임 로더(`BehaviorTreeAsset`)와 에디터 모델(`BehaviorTreeEditModel`)이 같은 읽기 · 쓰기(`BehaviorTreeXML`)를 쓴다.
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
+#include "Engine/Vocabulary/ReflectedFields.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
 
 namespace sw
 {
-    /** @brief 노드 하나의 모든 칸입니다. 종류에 맞는 칸만 뜻이 있다(나머지는 기본값이고 파일에 쓰지 않는다). 종류마다의 스키마와 이름이 같은 칸끼리 옮긴다(`SerializerUtil::copySameNamedProperties`). */
-    REFLECT()
-    struct SW_GF_API BehaviorTreeNodeData
-    {
-        REFLECT_BODY();
-
-        PROPERTY( Tooltip = "Display name (Selector, Sequence, Action, Condition); empty shows the node type" )
-        string _name{};
-        PROPERTY( Tooltip = "Task function name of an Action or Condition (BehaviorTaskRegistry)" )
-        string _task{};
-        PROPERTY( Tooltip = "Blackboard key of a BlackboardCondition or MoveTo" )
-        string _key{};
-        PROPERTY( Tooltip = "Comparison of a BlackboardCondition" )
-        BlackboardCompare _compare{ BlackboardCompare::IsSet };
-        PROPERTY( Tooltip = "What a BlackboardCondition stops when its result changes" )
-        BehaviorAbortMode _abort{ BehaviorAbortMode::None };
-        PROPERTY( Tooltip = "Comparison value of a BlackboardCondition" )
-        float32 _value{ 0.0f };
-        PROPERTY( Tooltip = "Seconds of a Cooldown, TimeLimit or Wait", Units = s )
-        float32 _seconds{ 0.0f };
-        PROPERTY( Tooltip = "Distance the MoveTo goal must move before a new path is asked", Units = m )
-        float32 _repathDistance{ 0.5f };
-        PROPERTY( Tooltip = "Runs of a Repeat; 0 repeats until the child fails" )
-        int32 _count{ 0 };
-        PROPERTY( Tooltip = "A reactive Selector re-checks higher branches every tick" )
-        bool _bReactive{ false };
-        PROPERTY( Tooltip = "Node type (the element name in the file)" )
-        BehaviorNodeType _type{ BehaviorNodeType::Sequence };
-    };
-
     /** @brief `Selector` 의 칸입니다. */
     REFLECT()
     struct SW_GF_API BehaviorSelectorFields
     {
         REFLECT_BODY();
 
-        PROPERTY()
-        string _name{};
-        PROPERTY()
+        PROPERTY( Tooltip = "Re-check higher priority children every tick" )
         bool _bReactive{ false };
-    };
-
-    /** @brief `Sequence` 의 칸입니다. */
-    REFLECT()
-    struct SW_GF_API BehaviorSequenceFields
-    {
-        REFLECT_BODY();
-
-        PROPERTY()
-        string _name{};
     };
 
     /** @brief `Repeat` 의 칸입니다. */
@@ -74,7 +35,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Required, Min = 0 )
+        PROPERTY( Required, Min = 0, Tooltip = "Runs of the child; 0 repeats until it fails" )
         int32 _count{ 0 };
     };
 
@@ -84,35 +45,39 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Required, Min = 0.0, Units = s )
-        float32 _seconds{ 0.0f };
+        PROPERTY( Required, Min = 0.0, Units = s, Tooltip = "Seconds of a Cooldown, TimeLimit or Wait" )
+        float32 _seconds{ 1.0f };
     };
 
-    /** @brief `BlackboardCondition` 의 칸입니다. */
+    /** @brief `BlackboardCondition`(조건 데코레이터)의 칸입니다. 식은 공통 어휘입니다(`hasBlackboard(Threat)`, `blackboard(Hp) < 5 && flag(alarm)`). */
     REFLECT()
-    struct SW_GF_API BehaviorBlackboardConditionFields
+    struct SW_GF_API BehaviorConditionDecoratorFields
     {
         REFLECT_BODY();
 
-        PROPERTY( Required )
-        string _key{};
-        PROPERTY()
-        BlackboardCompare _compare{ BlackboardCompare::IsSet };
-        PROPERTY()
-        float32 _value{ 0.0f };
-        PROPERTY()
+        PROPERTY( Required, Tooltip = "Condition expression that guards the child" )
+        string _test{};
+        PROPERTY( Tooltip = "What stops when the result changes" )
         BehaviorAbortMode _abort{ BehaviorAbortMode::None };
     };
 
-    /** @brief 작업 함수를 부르는 종류(`Action` · `Condition`)입니다. */
+    /** @brief `Condition`(조건 잎)의 칸입니다. */
     REFLECT()
-    struct SW_GF_API BehaviorTaskFields
+    struct SW_GF_API BehaviorConditionFields
     {
         REFLECT_BODY();
 
-        PROPERTY()
-        string _name{};
-        PROPERTY( Required )
+        PROPERTY( Required, Tooltip = "Condition expression" )
+        string _test{};
+    };
+
+    /** @brief `Action` 의 칸입니다. 나머지 속성은 그 동작의 칸입니다(`ActionRegistry`). */
+    REFLECT()
+    struct SW_GF_API BehaviorActionFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Registered action name" )
         string _task{};
     };
 
@@ -122,9 +87,64 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Required )
+        PROPERTY( Required, Tooltip = "Blackboard key of the destination" )
         string _key{};
-        PROPERTY( Min = 0.0, Units = m )
+        PROPERTY( Min = 0.0, Units = m, Tooltip = "Distance the goal must move before a new path is asked" )
         float32 _repathDistance{ 0.5f };
+    };
+
+    /** @brief `SubTree` 의 칸입니다. 둘 중 정확히 하나를 적습니다. */
+    REFLECT()
+    struct SW_GF_API BehaviorSubTreeFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( AssetPath, Tooltip = "Tree file expanded here when the tree is read" )
+        string _tree{};
+        PROPERTY( Tooltip = "Slot name the user of the tree fills (BehaviorTreeRunner::setSlotTree)" )
+        string _slot{};
+    };
+
+    /** @brief `blackboard.clear` 의 칸입니다. */
+    REFLECT()
+    struct SW_GF_API BlackboardClearParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Blackboard key" )
+        hashed_string _key{};
+    };
+
+    /** @brief `blackboard.set` 의 칸입니다. */
+    REFLECT()
+    struct SW_GF_API BlackboardSetParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Blackboard key" )
+        hashed_string _key{};
+        PROPERTY( Tooltip = "Number to store" )
+        float32 _value{ 1.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 등록되지 않은 동작의 칸입니다. 편집기가 아직 안 만든 동작의 트리를 열어도 값이 사라지지 않게 글로 듭니다. */
+    struct BehaviorRawParam
+    {
+        string _name{};
+        string _value{};
+    };
+
+    /** @brief 노드 하나의 칸입니다. `_fields` 는 종류의 스키마 값이고, `_actionParams` 는 작업의 동작 칸입니다. */
+    struct SW_GF_API BehaviorTreeNodeData
+    {
+        string                   _inheritID{}; ///< 파일의 `id`. `_base` 트리에서 이 노드를 짚는 열쇠(`InheritKey`)
+        string                   _name{};      ///< 표시 이름. 비면 종류 이름이다
+        ReflectedFields          _fields{};
+        ReflectedFields          _actionParams{};
+        vector<BehaviorRawParam> _listRawParam{};
+        BehaviorNodeType         _type{ BehaviorNodeType::Sequence };
     };
 } // namespace sw

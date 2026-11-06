@@ -24,6 +24,17 @@ namespace
         return context;
     }
 
+    /** @brief 속성 글 @p pAttributes 로 조건을 읽습니다. 절은 데이터가 적는 줄임말에서 나온다. */
+    sw::ScheduleCondition readCondition( const char* pAttributes )
+    {
+        sw::XMLDocument       document;
+        const sw::string      text = sw::string( "<Routine id=\"test\" " ) + pAttributes + "/>";
+        sw::ScheduleCondition condition;
+        if ( document.parse( text ) )
+            (void)condition.readFromNode( document.getRoot(), sw::ScheduleConditionVocabulary{}, "test", "test" ); // 틀린 읽기는 오류 로그가 시험을 깬다
+        return condition;
+    }
+
     const sw::vector<sw::hashed_string>& getSeasonOrder()
     {
         static const sw::vector<sw::hashed_string> s_listSeason{ sw::hashed_string( "Spring" ), sw::hashed_string( "Summer" ), sw::hashed_string( "Fall" ),
@@ -44,18 +55,15 @@ SW_TEST_CASE( ScheduleConditionTest, ReportsCheckedAndFailedClauses )
     SW_EXPECT_TRUE( empty.isEmpty() );
     SW_EXPECT_TRUE( empty.matches( context ) );
 
-    sw::ScheduleCondition condition;
-    condition._listWeekday                   = { sw::hashed_string( "Sat" ), sw::hashed_string( "Sun" ) };
-    condition._listSeason                    = { sw::hashed_string( "Spring" ) };
-    const sw::ScheduleConditionResult result = condition.evaluate( context );
+    const sw::ScheduleCondition       condition = readCondition( R"(days="Sat,Sun" seasons="Spring")" );
+    const sw::ScheduleConditionResult result    = condition.evaluate( context );
     SW_EXPECT_FALSE( result.isPassed() );
     SW_EXPECT_TRUE( result.hasFailed( sw::ScheduleConditionClause::Weekday ) );
     SW_EXPECT_TRUE( result.hasChecked( sw::ScheduleConditionClause::Season ) );
     SW_EXPECT_FALSE( result.hasFailed( sw::ScheduleConditionClause::Season ) );
     SW_EXPECT_FALSE( result.hasChecked( sw::ScheduleConditionClause::Weather ) );
 
-    condition._listWeekday.push_back( sw::hashed_string( "Mon" ) );
-    SW_EXPECT_TRUE( condition.matches( context ) );
+    SW_EXPECT_TRUE( readCondition( R"(days="Sat,Sun,Mon" seasons="Spring")" ).matches( context ) );
 }
 
 /**
@@ -65,9 +73,8 @@ SW_TEST_CASE( ScheduleConditionTest, WeekWeatherAndPhase )
 {
     sw::ScheduleConditionContext context = makeSpringContext( getSeasonOrder() );
 
-    sw::ScheduleCondition secondWeek;
-    secondWeek._listWeek = { 2 };
-    context._dayOfSeason = 7;
+    const sw::ScheduleCondition secondWeek = readCondition( R"(weeks="2")" );
+    context._dayOfSeason                   = 7;
     SW_EXPECT_FALSE( secondWeek.matches( context ) );
     context._dayOfSeason = 8;
     SW_EXPECT_TRUE( secondWeek.matches( context ) );
@@ -76,11 +83,9 @@ SW_TEST_CASE( ScheduleConditionTest, WeekWeatherAndPhase )
     context._dayOfSeason = 15;
     SW_EXPECT_FALSE( secondWeek.matches( context ) );
 
-    sw::ScheduleCondition rainyEvening;
-    rainyEvening._listWeather = { sw::hashed_string( "Rain" ), sw::hashed_string( "Storm" ) };
-    rainyEvening._phaseMask   = sw::makeDayPhaseBit( sw::DayPhase::Dusk ) | sw::makeDayPhaseBit( sw::DayPhase::Night );
-    context._weather          = sw::hashed_string( "Storm" );
-    context._phase            = sw::DayPhase::Dusk;
+    const sw::ScheduleCondition rainyEvening = readCondition( R"(weathers="Rain,Storm" phases="Dusk,Night")" );
+    context._weather                         = sw::hashed_string( "Storm" );
+    context._phase                           = sw::DayPhase::Dusk;
     SW_EXPECT_TRUE( rainyEvening.matches( context ) );
     context._phase = sw::DayPhase::Day;
     SW_EXPECT_TRUE( rainyEvening.evaluate( context ).hasFailed( sw::ScheduleConditionClause::Phase ) );
@@ -96,12 +101,8 @@ SW_TEST_CASE( ScheduleConditionTest, DateRangeAcrossSeasonsAndYear )
 {
     sw::ScheduleConditionContext context = makeSpringContext( getSeasonOrder() );
 
-    sw::ScheduleCondition springToSummer;
-    springToSummer._fromSeason = sw::hashed_string( "Spring" );
-    springToSummer._fromDay    = 20;
-    springToSummer._toSeason   = sw::hashed_string( "Summer" );
-    springToSummer._toDay      = 5;
-    context._dayOfSeason       = 19;
+    const sw::ScheduleCondition springToSummer = readCondition( R"(from="Spring 20" to="Summer 5")" );
+    context._dayOfSeason                       = 19;
     SW_EXPECT_FALSE( springToSummer.matches( context ) );
     context._dayOfSeason = 20;
     SW_EXPECT_TRUE( springToSummer.matches( context ) );
@@ -111,13 +112,9 @@ SW_TEST_CASE( ScheduleConditionTest, DateRangeAcrossSeasonsAndYear )
     context._dayOfSeason = 6;
     SW_EXPECT_FALSE( springToSummer.matches( context ) );
 
-    sw::ScheduleCondition winterBreak;
-    winterBreak._fromSeason = sw::hashed_string( "Winter" );
-    winterBreak._fromDay    = 20;
-    winterBreak._toSeason   = sw::hashed_string( "Spring" );
-    winterBreak._toDay      = 5;
-    context._season         = sw::hashed_string( "Winter" );
-    context._dayOfSeason    = 25;
+    const sw::ScheduleCondition winterBreak = readCondition( R"(from="Winter 20" to="Spring 5")" );
+    context._season                         = sw::hashed_string( "Winter" );
+    context._dayOfSeason                    = 25;
     SW_EXPECT_TRUE( winterBreak.matches( context ) );
     context._season      = sw::hashed_string( "Spring" );
     context._dayOfSeason = 3;
@@ -138,19 +135,17 @@ SW_TEST_CASE( ScheduleConditionTest, AffinityRangeAndDeterministicChance )
 {
     sw::ScheduleConditionContext context = makeSpringContext( getSeasonOrder() );
 
-    sw::ScheduleCondition friendsOnly;
-    friendsOnly._minAffinity = 4;
-    context._affinity        = 3;
+    const sw::ScheduleCondition friendsOnly = readCondition( R"(minAffinity="4")" );
+    context._affinity                       = 3;
     SW_EXPECT_TRUE( friendsOnly.evaluate( context ).hasFailed( sw::ScheduleConditionClause::Affinity ) );
     context._affinity = 4;
     SW_EXPECT_TRUE( friendsOnly.matches( context ) );
     context._affinity = 1000;
     SW_EXPECT_TRUE( friendsOnly.matches( context ) );
 
-    sw::ScheduleCondition coinFlip;
-    coinFlip._chance   = 0.5f;
-    context._chanceKey = 0x1234u;
-    uint32 passedDays  = 0;
+    const sw::ScheduleCondition coinFlip = readCondition( R"(chance="0.5")" );
+    context._chanceKey                   = 0x1234u;
+    uint32 passedDays                    = 0;
     for ( int32 day = 0; day < 1000; ++day )
     {
         context._day       = day;
@@ -161,8 +156,7 @@ SW_TEST_CASE( ScheduleConditionTest, AffinityRangeAndDeterministicChance )
     }
     SW_EXPECT_TRUE_MSG( passedDays > 400u && passedDays < 600u, "chance 0.5 over 1000 days should pass about half" );
 
-    sw::ScheduleCondition never;
-    never._chance = 0.0f;
+    const sw::ScheduleCondition never = readCondition( R"(chance="0")" );
     SW_EXPECT_FALSE( never.matches( context ) );
 }
 
@@ -178,12 +172,15 @@ SW_TEST_CASE( ScheduleConditionTest, ReadsAttributesAndRejectsBrokenData )
     SW_EXPECT_TRUE( document.parse( R"(<Routine id="rainy" days="Sat,Sun" weathers="rain" daysOfSeason="1,2,5-9" weeks="1,3" from="Spring 20" to="Summer 5" phases="Dawn,Day" minAffinity="2"/>)" ) );
     sw::ScheduleCondition condition;
     SW_EXPECT_TRUE( condition.readFromNode( document.getRoot(), vocabulary, "test", "rainy" ) );
-    SW_EXPECT_EQUAL( size_t( 2 ), condition._listWeekday.size() );
-    SW_EXPECT_EQUAL( size_t( 7 ), condition._listDayOfSeason.size() ); // 1, 2, 5 ~ 9
-    SW_EXPECT_EQUAL( 20, condition._fromDay );
-    SW_EXPECT_EQUAL( 5, condition._toDay );
-    SW_EXPECT_EQUAL( 2, condition._minAffinity );
-    SW_EXPECT_EQUAL( uint8( sw::makeDayPhaseBit( sw::DayPhase::Dawn ) | sw::makeDayPhaseBit( sw::DayPhase::Day ) ), condition._phaseMask );
+    SW_EXPECT_EQUAL( size_t( 7 ), condition._listClause.size() ); // 요일 · 날씨 · 계절의 날 · 주 · 날짜 · 때 · 호감도
+
+    // 범위는 풀어서 읽는다(1, 2, 5 ~ 9) — 맨 끝 날 9 는 참이고 3 은 거짓이다.
+    const sw::ScheduleCondition  daysOfSeason = readCondition( R"(daysOfSeason="1,2,5-9")" );
+    sw::ScheduleConditionContext context      = makeSpringContext( getSeasonOrder() );
+    context._dayOfSeason                      = 9;
+    SW_EXPECT_TRUE( daysOfSeason.matches( context ) );
+    context._dayOfSeason = 3;
+    SW_EXPECT_FALSE( daysOfSeason.matches( context ) );
 
     SW_EXPECT_LOG( "Schedule.AffinityRangeEmpty" );
     sw::XMLDocument inverted;
@@ -192,9 +189,29 @@ SW_TEST_CASE( ScheduleConditionTest, ReadsAttributesAndRejectsBrokenData )
     SW_EXPECT_FALSE( invertedCondition.readFromNode( inverted.getRoot(), vocabulary, "test", "never" ) );
 
     SW_EXPECT_LOG( "Schedule.FlagsInvalid" );
-    SW_EXPECT_LOG( "Flags.InvalidCondition" ); // 식을 읽는 GameFlags 가 어디가 틀렸는지 먼저 경고한다
+    SW_EXPECT_LOG( "ConditionExpr.Invalid" ); // 식을 읽는 쪽이 어디가 틀렸는지 먼저 알린다
     sw::XMLDocument brokenFlags;
     SW_EXPECT_TRUE( brokenFlags.parse( R"(<Routine id="broken" flags="bridgeFixed &amp;&amp;"/>)" ) );
     sw::ScheduleCondition brokenCondition;
     SW_EXPECT_FALSE( brokenCondition.readFromNode( brokenFlags.getRoot(), vocabulary, "test", "broken" ) );
+}
+
+/**
+ * @brief [ScheduleConditionTest] 줄임말과 같은 이름을 식으로 적어도 값이 같다 — 스케줄이 공통 어휘를 쓴다
+ */
+SW_TEST_CASE( ScheduleConditionTest, ShorthandCompilesToSharedVocabulary )
+{
+    sw::ScheduleConditionContext context = makeSpringContext( getSeasonOrder() );
+    sw::GameplayContext          world;
+    context.fillGameplayContext( world );
+
+    sw::ConditionExpr expr;
+    SW_REQUIRE_TRUE( sw::ConditionExpr::compile( "weather(Sunny, Rain) && season(Spring) && weekday(Mon) && dayOfSeason(3) && week(1) && !phase(Dusk)", "test", expr ) );
+    SW_EXPECT_TRUE( expr.evaluate( world ) );
+    SW_REQUIRE_TRUE( sw::ConditionExpr::compile( "date(fromSeason=Spring, fromDay=4)", "test", expr ) );
+    SW_EXPECT_FALSE( expr.evaluate( world ) );
+
+    context._affinity = 5;
+    SW_REQUIRE_TRUE( sw::ConditionExpr::compile( "affinity >= 4", "test", expr ) );
+    SW_EXPECT_TRUE( expr.evaluate( world ) ); // 문맥은 복사가 아니라 주소로 든다
 }

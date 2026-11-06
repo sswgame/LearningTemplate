@@ -273,6 +273,21 @@ namespace sw
                     }
                     const XMLNode item = out.appendChild( entry._childNode.getName() );
                     mergeAttributes( entry._parentNode, entry._childNode, item );
+                    if ( schema._bSelfNested != SW_FALSE )
+                    {
+                        if ( entry._parentNode.isValid() == false )
+                        {
+                            for ( XMLNode element = entry._childNode.findChild(); element.isValid(); element = element.findNextSibling() )
+                            {
+                                (void)item.appendClone( element );
+                            }
+                        }
+                        else if ( mergeKeyedList( entry._parentNode, entry._childNode, schema, item, sourceName ) == false )
+                        {
+                            return false;
+                        }
+                        continue;
+                    }
                     if ( mergeFieldElements( entry._parentNode, entry._childNode, schema, item, sourceName ) == false )
                         return false;
                 }
@@ -595,6 +610,7 @@ namespace sw
         , _listKeptAttribute{}
         , _listField{}
         , _bEmptyClears{ SW_TRUE }
+        , _bSelfNested{ SW_FALSE }
         , _reserved{ 0 }
     {
     }

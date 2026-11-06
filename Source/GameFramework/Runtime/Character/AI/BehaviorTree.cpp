@@ -6,7 +6,11 @@
 
 #include "Engine/Navigation/INavMover.h"
 
+#include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeFields.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"
+#include "GameFramework/Runtime/World/Query/GameConditions.h"
+
+#include <limits>
 
 namespace sw
 {
@@ -14,10 +18,47 @@ namespace sw
     {
         struct BehaviorTreeInternal
         {
+            /** @brief 값이 없으면 NaN 이라 어떤 비교도 참이 아니다 — 없는 키를 0 으로 보지 않는다(있는지는 `hasBlackboard` 로 묻는다). */
+            static float64 readBlackboard( const GameplayContext& context, const ConditionNameArg& args )
+            {
+                const Blackboard*            pBlackboard = context.find<BlackboardSlot>();
+                const std::optional<float32> value       = pBlackboard != nullptr ? pBlackboard->getFloat( args._name ) : std::nullopt;
+                return value.has_value() ? static_cast<float64>( *value ) : std::numeric_limits<float64>::quiet_NaN();
+            }
+
+            static bool hasBlackboard( const GameplayContext& context, const ConditionNameArg& args )
+            {
+                const Blackboard* pBlackboard = context.find<BlackboardSlot>();
+                return pBlackboard != nullptr && pBlackboard->isSet( args._name );
+            }
+
+            static ActionResult runSetBlackboard( ActionContext& context, const BlackboardSetParams& params )
+            {
+                Blackboard* pBlackboard = context._world.find<BlackboardWriteSlot>();
+                if ( pBlackboard == nullptr )
+                    return ActionResult::Failed;
+                pBlackboard->setFloat( params._key, params._value );
+                return ActionResult::Succeeded;
+            }
+
+            static ActionResult runClearBlackboard( ActionContext& context, const BlackboardClearParams& params )
+            {
+                Blackboard* pBlackboard = context._world.find<BlackboardWriteSlot>();
+                if ( pBlackboard == nullptr )
+                    return ActionResult::Failed;
+                pBlackboard->clearValue( params._key );
+                return ActionResult::Succeeded;
+            }
+
             static bool abortsSelf( BehaviorAbortMode mode ) { return mode == BehaviorAbortMode::Self || mode == BehaviorAbortMode::Both; }
             static bool abortsLowerPriority( BehaviorAbortMode mode ) { return mode == BehaviorAbortMode::LowerPriority || mode == BehaviorAbortMode::Both; }
         };
     } // namespace
+
+    SW_CONDITION( blackboard, ConditionNameArg, &BehaviorTreeInternal::readBlackboard );
+    SW_CONDITION( hasBlackboard, ConditionNameArg, &BehaviorTreeInternal::hasBlackboard );
+    SW_GAME_ACTION( BlackboardSet, "blackboard.set", BlackboardSetParams, &BehaviorTreeInternal::runSetBlackboard );
+    SW_GAME_ACTION( BlackboardClear, "blackboard.clear", BlackboardClearParams, &BehaviorTreeInternal::runClearBlackboard );
 } // namespace sw
 
 namespace sw
@@ -110,14 +151,75 @@ namespace sw
 
     int32 BehaviorTree::addBlackboardCondition( int32 parent, const hashed_string& key, BlackboardCompare compare, float32 value, BehaviorAbortMode abortMode )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::BlackboardCondition, key.c_str() );
+        // 코드로 짓는 트리도 같은 식이다. 있는지 묻기와 값 비교는 다른 조건이다(없는 키는 어떤 비교도 참이 아니다).
+        const bool bPresence = compare == BlackboardCompare::IsSet || compare == BlackboardCompare::IsNotSet;
+        string     text      = bPresence ? "hasBlackboard(" : "blackboard(";
+        text += key.c_str();
+        text += ")";
+        if ( compare == BlackboardCompare::IsNotSet )
+            text = "!" + text;
+        ConditionExpr condition;
+        if ( ConditionExpr::compile( text, "BehaviorTree", condition ) == false )
+            return -1;
+        switch ( compare )
+        {
+            case BlackboardCompare::IsSet:
+            case BlackboardCompare::IsNotSet:
+                break;
+            case BlackboardCompare::Equal:
+                condition.appendCompare( ConditionOpCode::Equal, value );
+                break;
+            case BlackboardCompare::NotEqual:
+                condition.appendCompare( ConditionOpCode::NotEqual, value );
+                break;
+            case BlackboardCompare::Less:
+                condition.appendCompare( ConditionOpCode::Less, value );
+                break;
+            case BlackboardCompare::LessOrEqual:
+                condition.appendCompare( ConditionOpCode::LessEqual, value );
+                break;
+            case BlackboardCompare::Greater:
+                condition.appendCompare( ConditionOpCode::Greater, value );
+                break;
+            case BlackboardCompare::GreaterOrEqual:
+                condition.appendCompare( ConditionOpCode::GreaterEqual, value );
+                break;
+        }
+        return addConditionDecorator( parent, key.c_str(), condition, abortMode );
+    }
+
+    int32 BehaviorTree::addConditionDecorator( int32 parent, const utf8* pName, const ConditionExpr& condition, BehaviorAbortMode abortMode )
+    {
+        const int32 index = addNode( parent, BehaviorNodeType::BlackboardCondition, pName );
         if ( index < 0 )
             return index;
         BehaviorNode& node = _listNode[static_cast<size_t>( index )];
-        node._key          = key;
-        node._compare      = compare;
-        node._compareValue = value;
+        node._condition    = condition;
         node._abortMode    = abortMode;
+        return index;
+    }
+
+    int32 BehaviorTree::addAction( int32 parent, const utf8* pName, const GameActionCall& action )
+    {
+        const int32 index = addNode( parent, BehaviorNodeType::Action, pName );
+        if ( index >= 0 )
+            _listNode[static_cast<size_t>( index )]._action = action;
+        return index;
+    }
+
+    int32 BehaviorTree::addCondition( int32 parent, const utf8* pName, const ConditionExpr& condition )
+    {
+        const int32 index = addNode( parent, BehaviorNodeType::Condition, pName );
+        if ( index >= 0 )
+            _listNode[static_cast<size_t>( index )]._condition = condition;
+        return index;
+    }
+
+    int32 BehaviorTree::addSubTreeSlot( int32 parent, const utf8* pName, const hashed_string& slot )
+    {
+        const int32 index = addNode( parent, BehaviorNodeType::SubTree, pName );
+        if ( index >= 0 )
+            _listNode[static_cast<size_t>( index )]._key = slot;
         return index;
     }
 
@@ -150,9 +252,9 @@ namespace sw
         const int32 index = addNode( parent, BehaviorNodeType::MoveTo, destinationKey.c_str() );
         if ( index < 0 )
             return index;
-        BehaviorNode& node = _listNode[static_cast<size_t>( index )];
-        node._key          = destinationKey;
-        node._compareValue = MathUtil::max( 0.0f, repathDistance );
+        BehaviorNode& node   = _listNode[static_cast<size_t>( index )];
+        node._key            = destinationKey;
+        node._repathDistance = MathUtil::max( 0.0f, repathDistance );
         return index;
     }
 
@@ -173,6 +275,7 @@ namespace sw
             case BehaviorNodeType::Condition:
             case BehaviorNodeType::Wait:
             case BehaviorNodeType::MoveTo:
+            case BehaviorNodeType::SubTree:
                 return false;
         }
         return false;
@@ -192,50 +295,26 @@ namespace sw
             }
             const bool bComposite = node._type == BehaviorNodeType::Selector || node._type == BehaviorNodeType::Sequence;
             const bool bLeaf      = node._type == BehaviorNodeType::Action || node._type == BehaviorNodeType::Condition || node._type == BehaviorNodeType::Wait ||
-                               node._type == BehaviorNodeType::MoveTo;
-            const bool bNeedsFunction = node._type == BehaviorNodeType::Action || node._type == BehaviorNodeType::Condition;
+                               node._type == BehaviorNodeType::MoveTo || node._type == BehaviorNodeType::SubTree;
+            // 코드로 지은 잎은 함수를, 데이터로 지은 잎은 동작 · 식을 든다.
+            const bool bMissingAction    = node._type == BehaviorNodeType::Action && node._function == nullptr && node._action.isValid() == false;
+            const bool bMissingCondition = node._type == BehaviorNodeType::Condition && node._function == nullptr && node._condition.isEmpty();
+            const bool bNeedsKey         = node._type == BehaviorNodeType::MoveTo || node._type == BehaviorNodeType::SubTree;
             if ( bComposite && childCount == 0 )
                 return false;
             if ( isDecorator( index ) && childCount != 1 )
                 return false;
-            if ( bLeaf && ( childCount != 0 || ( bNeedsFunction && node._function == nullptr ) ) )
+            if ( bLeaf && ( childCount != 0 || bMissingAction || bMissingCondition ) )
                 return false;
-            if ( node._type == BehaviorNodeType::MoveTo && node._key.empty() )
+            if ( bNeedsKey && node._key.empty() )
                 return false;
         }
         return true;
     }
 
-    bool BehaviorTree::evaluateCondition( const BehaviorNode& node, const Blackboard& blackboard )
+    bool BehaviorTree::evaluateCondition( const BehaviorNode& node, const GameplayContext& context )
     {
-        if ( node._compare == BlackboardCompare::IsSet )
-            return blackboard.isSet( node._key );
-        if ( node._compare == BlackboardCompare::IsNotSet )
-            return blackboard.isSet( node._key ) == false;
-        // 수치 비교는 값이 있을 때만 참일 수 있다 — 없는 키를 0 으로 보고 비교하지 않는다(있는지는 IsSet · IsNotSet 으로 묻는다).
-        const std::optional<float32> number = blackboard.getFloat( node._key );
-        if ( number.has_value() == false )
-            return false;
-        const float32 value = *number;
-        switch ( node._compare )
-        {
-            case BlackboardCompare::IsSet:
-            case BlackboardCompare::IsNotSet:
-                return false; // 위에서 답했다
-            case BlackboardCompare::Equal:
-                return MathUtil::abs( value - node._compareValue ) < 1.0e-5f;
-            case BlackboardCompare::NotEqual:
-                return MathUtil::abs( value - node._compareValue ) >= 1.0e-5f;
-            case BlackboardCompare::Less:
-                return value < node._compareValue;
-            case BlackboardCompare::LessOrEqual:
-                return value <= node._compareValue;
-            case BlackboardCompare::Greater:
-                return value > node._compareValue;
-            case BlackboardCompare::GreaterOrEqual:
-                return value >= node._compareValue;
-        }
-        return false;
+        return node._condition.evaluate( context );
     }
 
     // ------------------------------------------------------------------------------
@@ -244,6 +323,9 @@ namespace sw
     BehaviorTreeRunner::BehaviorTreeRunner()
         : _pTree{ nullptr }
         , _context{}
+        , _actionContext{}
+        , _world{}
+        , _listSlot{}
         , _listCursor{}
         , _listTimer{}
         , _listCooldownUntil{}
@@ -252,6 +334,7 @@ namespace sw
         , _listLastCondition{}
         , _listMoveTarget{}
         , _elapsedTime{ 0.0f }
+        , _tickCount{ 0 }
         , _activeLeaf{ -1 }
         , _lastSucceededLeaf{ -1 }
     {
@@ -296,6 +379,13 @@ namespace sw
         _context._pBlackboard = &blackboard;
         _context._pOwner      = pOwner;
         _context._deltaTime   = deltaTime;
+        GameplayContext world = _world;
+        world.set<BlackboardSlot>( &blackboard );
+        world.set<BlackboardWriteSlot>( &blackboard );
+        world.setSeed( GameConditions::makeSeed( _tickCount++, 0 ) );
+        _actionContext._world     = world;
+        _actionContext._pOwner    = pOwner;
+        _actionContext._deltaTime = deltaTime;
         if ( pollHigherPriorityTrigger() )
             abortNode( 0 ); // 우선순위 높은 가지가 깨어났다 — 처음부터 다시 고른다
         _activeLeaf        = -1;
@@ -311,7 +401,7 @@ namespace sw
             const BehaviorNode& node = _pTree->getNode( index );
             if ( node._type != BehaviorNodeType::BlackboardCondition || BehaviorTreeInternal::abortsLowerPriority( node._abortMode ) == false )
                 continue;
-            const uint8 bNow                                 = BehaviorTree::evaluateCondition( node, *_context._pBlackboard ) ? SW_TRUE : SW_FALSE;
+            const uint8 bNow                                 = BehaviorTree::evaluateCondition( node, _actionContext._world ) ? SW_TRUE : SW_FALSE;
             const bool  bRisen                               = bNow != SW_FALSE && _listLastCondition[static_cast<size_t>( index )] == SW_FALSE;
             _listLastCondition[static_cast<size_t>( index )] = bNow;
             // 노드 번호가 앞 = 깊이 우선 순서가 앞 = 우선순위가 높다. 도는 가지 안의 조건(자기 조상)은 Self 쪽 일이다.
@@ -346,6 +436,19 @@ namespace sw
             _context._bAborted     = SW_TRUE;
             (void)node._function( _context ); // 뒷정리만 — 결과는 쓰지 않는다
             _context._bAborted = SW_FALSE;
+        }
+        if ( node._type == BehaviorNodeType::Action && node._action.isValid() )
+        {
+            _actionContext._bJustStarted = SW_FALSE;
+            _actionContext._bAborted     = SW_TRUE;
+            (void)node._action.invoke( _actionContext ); // 뒷정리만 — 결과는 쓰지 않는다
+            _actionContext._bAborted = SW_FALSE;
+        }
+        if ( node._type == BehaviorNodeType::SubTree )
+        {
+            BehaviorTreeRunner* pSlotRunner = findSlotRunner( node._key );
+            if ( pSlotRunner != nullptr )
+                pSlotRunner->reset();
         }
         if ( node._type == BehaviorNodeType::MoveTo && _context._pMover != nullptr )
             _context._pMover->stopMoving();
@@ -471,7 +574,7 @@ namespace sw
             case BehaviorNodeType::BlackboardCondition:
             {
                 const bool bCheck = bFirst || BehaviorTreeInternal::abortsSelf( node._abortMode );
-                if ( bCheck && BehaviorTree::evaluateCondition( node, *_context._pBlackboard ) == false )
+                if ( bCheck && BehaviorTree::evaluateCondition( node, _actionContext._world ) == false )
                 {
                     if ( bFirst == false )
                         abortNode( node._firstChild ); // 관찰 중단 Self — 조건이 깨졌다
@@ -483,16 +586,21 @@ namespace sw
             }
             case BehaviorNodeType::Condition:
             {
-                _context._nodeIndex    = index;
-                _context._bJustStarted = SW_TRUE;
-                status                 = node._function( _context ) == BehaviorStatus::Success ? BehaviorStatus::Success : BehaviorStatus::Failure;
+                if ( node._function != nullptr )
+                {
+                    _context._nodeIndex    = index;
+                    _context._bJustStarted = SW_TRUE;
+                    status                 = node._function( _context ) == BehaviorStatus::Success ? BehaviorStatus::Success : BehaviorStatus::Failure;
+                }
+                else
+                {
+                    status = node._condition.evaluate( _actionContext._world ) ? BehaviorStatus::Success : BehaviorStatus::Failure;
+                }
                 break;
             }
             case BehaviorNodeType::Action:
             {
-                _context._nodeIndex    = index;
-                _context._bJustStarted = bFirst ? SW_TRUE : SW_FALSE;
-                status                 = node._function( _context );
+                status = runAction( node, index, bFirst );
                 if ( status == BehaviorStatus::Running )
                     _activeLeaf = index;
                 else if ( status == BehaviorStatus::Success )
@@ -514,11 +622,83 @@ namespace sw
                     _activeLeaf = index;
                 break;
             }
+            case BehaviorNodeType::SubTree:
+            {
+                BehaviorTreeRunner* pSlotRunner = findSlotRunner( node._key );
+                if ( pSlotRunner == nullptr )
+                {
+                    // 빈 슬롯은 쓰는 쪽의 빠뜨림이다. 가지를 도는 내내 찍지 않게 한 번만 알린다(`_listLastCondition` 은 조건 노드만 쓴다).
+                    if ( _listLastCondition[static_cast<size_t>( index )] == SW_FALSE )
+                        SW_LOG_WARNING_ID( "BehaviorTree.SlotEmpty", "Behavior tree slot '%#' has no tree (BehaviorTreeRunner::setSlotTree)", node._key.c_str() );
+                    _listLastCondition[static_cast<size_t>( index )] = SW_TRUE;
+                    status                                           = BehaviorStatus::Failure;
+                    break;
+                }
+                pSlotRunner->_world           = _world;
+                pSlotRunner->_context._pMover = _context._pMover;
+                status                        = pSlotRunner->tick( *_context._pBlackboard, _context._pOwner, _context._deltaTime );
+                if ( status == BehaviorStatus::Running )
+                    _activeLeaf = index;
+                break;
+            }
         }
 
         if ( status != BehaviorStatus::Running )
             finishNode( index );
         return status;
+    }
+
+    BehaviorStatus BehaviorTreeRunner::runAction( const BehaviorNode& node, int32 index, bool bJustStarted )
+    {
+        if ( node._function != nullptr )
+        {
+            _context._nodeIndex    = index;
+            _context._bJustStarted = bJustStarted ? SW_TRUE : SW_FALSE;
+            return node._function( _context );
+        }
+        _actionContext._bJustStarted = bJustStarted ? SW_TRUE : SW_FALSE;
+        switch ( node._action.invoke( _actionContext ) )
+        {
+            case ActionResult::Succeeded:
+                return BehaviorStatus::Success;
+            case ActionResult::Failed:
+                return BehaviorStatus::Failure;
+            case ActionResult::Running:
+                return BehaviorStatus::Running;
+        }
+        return BehaviorStatus::Failure;
+    }
+
+    BehaviorTreeRunner* BehaviorTreeRunner::findSlotRunner( const hashed_string& slot )
+    {
+        for ( const SlotBinding& binding : _listSlot )
+        {
+            if ( binding._slot == slot )
+                return binding._pRunner.get();
+        }
+        return nullptr;
+    }
+
+    void BehaviorTreeRunner::setSlotTree( const hashed_string& slot, const BehaviorTree* pTree )
+    {
+        for ( size_t index = 0; index < _listSlot.size(); ++index )
+        {
+            if ( _listSlot[index]._slot != slot )
+                continue;
+            _listSlot[index]._pRunner->reset(); // 도는 가지의 뒷정리
+            if ( pTree != nullptr )
+                _listSlot[index]._pRunner->initialize( pTree );
+            else
+                _listSlot.erase( _listSlot.begin() + static_cast<ptrdiff_t>( index ) );
+            return;
+        }
+        if ( pTree == nullptr )
+            return;
+        SlotBinding binding;
+        binding._slot    = slot;
+        binding._pRunner = sw::make_shared<BehaviorTreeRunner>();
+        binding._pRunner->initialize( pTree );
+        _listSlot.push_back( std::move( binding ) );
     }
 
     BehaviorStatus BehaviorTreeRunner::tickMoveTo( int32 index, bool bFirst )
@@ -537,7 +717,7 @@ namespace sw
         }
         const float3 destination = *target;
         float3&      issued      = _listMoveTarget[static_cast<size_t>( index )];
-        const bool   bRepath     = bFirst || ( destination - issued ).getLength() > node._compareValue;
+        const bool   bRepath     = bFirst || ( destination - issued ).getLength() > node._repathDistance;
         if ( bRepath )
         {
             issued = destination;

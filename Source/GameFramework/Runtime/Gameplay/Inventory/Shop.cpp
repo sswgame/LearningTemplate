@@ -191,6 +191,11 @@ namespace sw
                     bValid = false;
                     continue;
                 }
+                if ( ConditionExpr::compile( stock._requirement, sourceName, stock._condition ) == false )
+                {
+                    bValid = false;
+                    continue;
+                }
                 def._listStock.push_back( stock );
             }
             if ( bValid == false )
@@ -214,7 +219,7 @@ namespace sw
         , _eventBuffer{}
         , _pShopCatalog{ nullptr }
         , _pItemCatalog{ nullptr }
-        , _pConditionEvaluator{ nullptr }
+        , _pConditionContext{ nullptr }
     {
     }
 
@@ -448,9 +453,9 @@ namespace sw
 
     bool ShopState::isUnlocked( const ShopStockDef& stock ) const
     {
-        if ( stock._requirement.empty() )
+        if ( stock._condition.isEmpty() )
             return true;
-        return _pConditionEvaluator != nullptr && _pConditionEvaluator->isConditionMet( string_view( stock._requirement.c_str(), stock._requirement.size() ) );
+        return _pConditionContext != nullptr && stock._condition.evaluate( *_pConditionContext );
     }
 
     hashed_string ShopState::getCurrency( const hashed_string& shopID ) const

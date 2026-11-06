@@ -4,12 +4,26 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Serialization/Format/Archive.h"
+#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 #include <limits>
 
 using namespace sw;
+
+namespace
+{
+    struct XTestUtil
+    {
+        /** @brief 글을 컴파일해 @p flags 로 평가합니다. 틀린 글이면 false 입니다. */
+        static bool check( const GameFlags& flags, string_view text )
+        {
+            ConditionExpr expr;
+            return ConditionExpr::compile( text, "test", expr ) && flags.evaluate( expr );
+        }
+    };
+} // namespace
 
 /** @brief [GameFlagsTest] 값 0 은 없는 것이다. 리비전은 값이 실제로 바뀔 때만 오른다. 더하기는 int32 범위에서 멈춘다 */
 SW_TEST_CASE( GameFlagsTest, ValuesAndRevision )
@@ -48,52 +62,40 @@ SW_TEST_CASE( GameFlagsTest, ConditionGrammar )
     flags.setFlag( "goal", 3 );
     flags.setFlag( "ns:name.part_1", -2 );
 
-    SW_EXPECT_TRUE( flags.evaluate( "" ) );
-    SW_EXPECT_TRUE( flags.evaluate( " \t\r\n" ) );
-    SW_EXPECT_TRUE( flags.evaluate( "hasKey" ) );
-    SW_EXPECT_FALSE( flags.evaluate( "unknown" ) );
-    SW_EXPECT_TRUE( flags.evaluate( "!unknown" ) );
-    SW_EXPECT_FALSE( flags.evaluate( "!!unknown" ) );
-    SW_EXPECT_TRUE( flags.evaluate( "1" ) );
-    SW_EXPECT_FALSE( flags.evaluate( "0" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, " \t\r\n" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "hasKey" ) );
+    SW_EXPECT_FALSE( XTestUtil::check( flags, "unknown" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "!unknown" ) );
+    SW_EXPECT_FALSE( XTestUtil::check( flags, "!!unknown" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "1" ) );
+    SW_EXPECT_FALSE( XTestUtil::check( flags, "0" ) );
 
-    SW_EXPECT_TRUE( flags.evaluate( "hasKey || unknown && unknown" ) ); // && 먼저
-    SW_EXPECT_FALSE( flags.evaluate( "( hasKey || unknown ) && unknown" ) );
-    SW_EXPECT_TRUE( flags.evaluate( "!( unknown && hasKey )" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "hasKey || unknown && unknown" ) ); // && 먼저
+    SW_EXPECT_FALSE( XTestUtil::check( flags, "( hasKey || unknown ) && unknown" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "!( unknown && hasKey )" ) );
 
-    SW_EXPECT_TRUE( flags.evaluate( "count>=3" ) );
-    SW_EXPECT_TRUE( flags.evaluate( "count >= goal" ) );
-    SW_EXPECT_FALSE( flags.evaluate( "count>3" ) );
-    SW_EXPECT_TRUE( flags.evaluate( "count<=3" ) );
-    SW_EXPECT_FALSE( flags.evaluate( "count<3" ) );
-    SW_EXPECT_TRUE( flags.evaluate( "count==goal" ) );
-    SW_EXPECT_FALSE( flags.evaluate( "count!=goal" ) );
-    SW_EXPECT_TRUE( flags.evaluate( "ns:name.part_1==-2" ) );
-    SW_EXPECT_TRUE( flags.evaluate( "-1<0" ) );
-    SW_EXPECT_TRUE( flags.evaluate( "!count==0" ) ); // `!` 뒤는 비교 하나다
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "count>=3" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "count >= goal" ) );
+    SW_EXPECT_FALSE( XTestUtil::check( flags, "count>3" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "count<=3" ) );
+    SW_EXPECT_FALSE( XTestUtil::check( flags, "count<3" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "count==goal" ) );
+    SW_EXPECT_FALSE( XTestUtil::check( flags, "count!=goal" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "ns:name.part_1==-2" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "-1<0" ) );
+    SW_EXPECT_TRUE( XTestUtil::check( flags, "!count==0" ) ); // `!` 뒤는 비교 하나다
 }
 
-/** @brief [GameFlagsTest] 잘못된 식은 경고하고 거짓이다 - 짝 없는 괄호 · 빠진 피연산자 · 남은 글 · 큰 수 · 숫자로 시작한 이름 · 너무 깊은 중첩 */
-SW_TEST_CASE( GameFlagsTest, InvalidConditionsAreFalse )
+/** @brief [GameFlagsTest] 잘못된 식은 읽기 오류다 - 짝 없는 괄호 · 빠진 피연산자 · 남은 글 · 큰 수 · 숫자로 시작한 이름 */
+SW_TEST_CASE( GameFlagsTest, InvalidConditionsFailToCompile )
 {
-    SW_EXPECT_LOG( "Flags.InvalidCondition" );
-    GameFlags flags;
-    flags.setFlag( "a" );
+    SW_EXPECT_LOG( "ConditionExpr.Invalid" );
     for ( const utf8* pBad : { "(a", "a)", "a &&", "|| a", "a >", "> 1", "a b", "()", "-", "-a", "3a", "99999999999", "a = 1", "a & a", "!" } )
     {
-        bool bResult = true;
-        SW_EXPECT_FALSE( GameFlags::parseCondition( pBad, flags, bResult ) );
-        SW_EXPECT_FALSE( bResult );
-        SW_EXPECT_FALSE( flags.evaluate( pBad ) );
+        ConditionExpr expr;
+        SW_EXPECT_FALSE( ConditionExpr::compile( pBad, "test", expr ) );
     }
-
-    string deep( static_cast<size_t>( GameFlags::kMaxConditionDepth ) + 1, '!' );
-    deep += "a";
-    SW_EXPECT_FALSE( flags.evaluate( deep ) );
-    string notTooDeep( static_cast<size_t>( GameFlags::kMaxConditionDepth ) - 2, '!' );
-    notTooDeep += "a";
-    bool bResult = false;
-    SW_EXPECT_TRUE( GameFlags::parseCondition( notTooDeep, flags, bResult ) );
 }
 
 /** @brief [GameFlagsTest] 저장: 넣은 순서와 상관없이 같은 바이트이고 되돌아온다. 깨진 바이트는 거절하고 상태를 두며, 복원은 0 과 빈 이름을 버린다 */

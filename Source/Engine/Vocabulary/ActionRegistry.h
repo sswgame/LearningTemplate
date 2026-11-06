@@ -15,12 +15,8 @@
 #include "Engine/Vocabulary/GameplayContext.h"
 #include "Engine/Vocabulary/ReflectedFields.h"
 
-#include <initializer_list>
-
 namespace sw
 {
-    class XMLNode;
-
     /** @brief 동작의 결과입니다. 즉시 끝나는 동작은 `Succeeded` · `Failed` 를 돌려줍니다. `Running` 은 다시 불러 달라는 뜻이고 기다릴 수 없는 실행기(대화 · 스케줄 · 보상)는 끝난 것으로 봅니다. */
     enum class ActionResult : uint8
     {
@@ -105,8 +101,8 @@ namespace sw
         [[nodiscard]] static bool compileText( string_view text, string_view sourceName, GameActionCall& outCall );
         /** @brief 로그를 남기지 않는 `compileText` 입니다. 틀리면 까닭을 @p outError 에 적습니다. */
         [[nodiscard]] static bool tryCompileText( string_view text, GameActionCall& outCall, string& outError );
-        /** @brief 원소 @p node 의 속성을 동작 @p actionName 의 칸으로 읽습니다. @p listHandRead 의 속성은 부르는 쪽 것입니다. 틀리면 오류 로그를 남기고 false 입니다. */
-        [[nodiscard]] static bool compileNode( const XMLNode& node, string_view actionName, std::initializer_list<string_view> listHandRead, string_view sourceName, GameActionCall& outCall );
+        /** @brief 이미 읽은 칸으로 호출을 만듭니다. 칸을 XML 속성으로 읽는 행동 트리가 씁니다. @p fields 는 @p entry 의 칸 구조체여야 합니다. */
+        [[nodiscard]] static GameActionCall make( const ActionEntry& entry, const ReflectedFields& fields );
 
         /** @brief 글 @p text 의 이름 부분입니다(`flag.set(a)` → `flag.set`). */
         [[nodiscard]] static string_view getCallName( string_view text );

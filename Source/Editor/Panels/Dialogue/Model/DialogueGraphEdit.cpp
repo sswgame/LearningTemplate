@@ -41,7 +41,7 @@ namespace sw::editor
         DialogueAssetNode actionNode{};
         actionNode._id            = 4;
         actionNode._type          = DialogueAssetNodeType::Action;
-        actionNode._actionCommand = "give_item:healing_potion:3";
+        actionNode._actionCommand = "event(give_healing_potion)";
         actionNode._position._x   = 1050.0f;
         actionNode._position._y   = 220.0f;
         outGraph._listNode.push_back( actionNode );

@@ -106,9 +106,8 @@ namespace sw
         const bool bInvalidLink = link._fromIndex < 0 || link._toIndex < 0 || link._fromIndex == link._toIndex;
         if ( bInvalidLink )
             return false;
-        link._requires = string( condition.data(), condition.size() );
-        bool bIgnored  = false;
-        if ( GameFlags::parseCondition( link._requires, GameFlags{}, bIgnored ) == false )
+        string conditionError; // 틀린 조건은 부르는 쪽이 어느 연결인지 함께 경고한다
+        if ( ConditionExpr::tryCompile( condition, link._requires, conditionError ) == false )
         {
             link._bInvalidCondition = SW_TRUE;
             outbInvalidCondition    = true;
@@ -140,7 +139,7 @@ namespace sw
     {
         if ( link._bInvalidCondition == SW_TRUE )
             return false;
-        return link._requires.empty() || flags.evaluate( link._requires );
+        return flags.evaluate( link._requires );
     }
 
     void AreaGraph::markVisited( int32 areaIndex )
