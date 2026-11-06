@@ -77,8 +77,10 @@ class Xvfb:
             sys.exit('Xvfb 가 없다 - setup 을 먼저 돌린다')
         if not os.path.exists(f'{FONT_DIR}/{FONT_FILE}'):
             sys.exit('글꼴이 없다 - setup 을 먼저 돌린다')
-        if not os.path.lexists('/tmp/xkb'):
+        try:
             os.symlink(f'{XVFB_ROOT}/usr/bin', '/tmp/xkb')
+        except FileExistsError:
+            pass  # 앞 실행이나 함께 뜨는 체인이 이미 만들었다
         env = dict(os.environ, PATH=f'{XVFB_ROOT}/usr/bin:{PATH_LINUX}', LD_LIBRARY_PATH=f'{XVFB_ROOT}/usr/lib/x86_64-linux-gnu')
         with open(f'/tmp/xvfb{self.display}.log', 'w') as log:
             self.process = subprocess.Popen([f'{XVFB_ROOT}/usr/bin/Xvfb.p', f':{self.display}', '-screen', '0', SCREEN, '-xkbdir', f'{XVFB_ROOT}/usr/share/X11/xkb', '-nolisten', 'tcp'],
