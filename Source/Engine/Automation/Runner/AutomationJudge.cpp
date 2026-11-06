@@ -381,7 +381,13 @@ namespace sw
             context.recordFailure( step, "could not read the image: " + error );
             return;
         }
-        const string    goldenID = _goldenFolderID + "/" + _goldenPrefix + "." + args._golden + "." + pBackendTag + ".ppm";
+        // Linux 는 골든을 따로 둔다 - 편집기 기본 글꼴이 OS 마다 달라 배치가 다르고, 지금 도는 곳이 소프트웨어 렌더러(lavapipe)다.
+#if defined( SW_PLATFORM_LINUX )
+        static constexpr const utf8* kGoldenPlatformTag = ".linux";
+#else
+        static constexpr const utf8* kGoldenPlatformTag = "";
+#endif
+        const string    goldenID = _goldenFolderID + "/" + _goldenPrefix + "." + args._golden + "." + pBackendTag + kGoldenPlatformTag + ".ppm";
         vector<uint8>   listBytes;
         AutomationImage golden;
         const bool      bHasGolden = AssetIO::hasAsset( AssetID{ goldenID } ) && AssetIO::readBinaryAsset( AssetID{ goldenID }, listBytes ) &&

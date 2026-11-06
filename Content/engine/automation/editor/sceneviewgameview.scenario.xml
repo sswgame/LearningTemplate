@@ -8,6 +8,8 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/sceneviewgameview.scenario.xml -unattended   (CTest Scenario.editor 가 백엔드마다 돈다 — 그린 화소를 판정한다)
 -->
 <Scenario name="editor.sceneviewgameview" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<!-- 그림 판정의 크기는 UI 배율에 달렸다 — 모니터 DPI 와 상관없이 같게 둔다 -->
+	<Variable name="gv_editorUiScale" value="1.5"/>
 	<!-- 위치로 누르는 시나리오 — 앞 시나리오 · 사용자 배치가 패널을 좁혀 두었을 수 있다 -->
 	<DevCommand line="layout.reset"/>
 	<!-- 두 뷰 RT 를 같은 배치에서 새로 짓게 창 크기를 크게 두 번 바꾼다 — RT 는 1 픽셀 떨림을 무시하므로(EditorViewTargetUtil::needsResize) 앞 배치의 RT 가
@@ -71,5 +73,6 @@
 	<EditorWaitSettled/>
 	<DevCommand line="panel.focus scene_view"/>
 	<EditorWaitSettled/>
+	<Variable name="gv_editorUiScale" value="0"/>
 	<Pass/>
 </Scenario>

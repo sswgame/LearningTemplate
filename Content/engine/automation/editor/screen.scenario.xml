@@ -6,6 +6,8 @@
   실행: App -EnableEditor -scenario=engine/automation/editor/screen.scenario.xml -unattended   (CTest Scenario.editor 가 백엔드마다 돈다 — 그린 화소를 판정한다)
 -->
 <Scenario name="editor.screen" fixedDelta="0.0166667" timeoutFrames="900" startAfter="Immediately" input="exclusive">
+	<!-- 그림 판정의 크기는 UI 배율에 달렸다 — 모니터 DPI 와 상관없이 같게 둔다 -->
+	<Variable name="gv_editorUiScale" value="1.5"/>
 	<!-- 1) 뷰 스크린샷 — 까만 빈 그림이 아니다 -->
 	<EditorWaitSettled/>
 	<Screenshot file="gameview.ppm"/>
