@@ -147,6 +147,36 @@ namespace
         }
     };
 
+    /** @brief 환불 조회 기준 시각을 쓰는 가짜 제공자입니다. 서비스와 주고받은 것을 기록하고, 판단은 `StoreReceiptValidator` 쪽 테스트가 본다. */
+    class CursorRecordingValidator final : public IReceiptValidator
+    {
+    public:
+        vector<int64>    _listRestored{};
+        ReceiptBuyerRule _buyerRule{};
+        int64            _movedMs{ 0 }; ///< 0 이 아니면 다음 `takeRefundCursor` 가 내준다
+
+        const utf8*             getStoreName() const override { return "cursor"; }
+        const ReceiptBuyerRule& getBuyerRule() const override { return _buyerRule; }
+        void                    submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) override
+        {
+            (void)request;
+            (void)now;
+        }
+        void update( UnixMilliseconds now ) override { (void)now; }
+        void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override { (void)outListResult; }
+        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override { (void)outListNotice; }
+        bool usesRefundCursor() const override { return true; }
+        void restoreRefundCursor( int64 lastReadMs ) override { _listRestored.push_back( lastReadMs ); }
+        bool takeRefundCursor( int64& outLastReadMs ) override
+        {
+            if ( _movedMs == 0 )
+                return false;
+            outLastReadMs = _movedMs;
+            _movedMs      = 0;
+            return true;
+        }
+    };
+
     /** @brief 서비스 답을 받습니다. */
     struct EconomyReplySink
     {
@@ -500,6 +530,107 @@ SW_TEST_CASE( EconomyReceiptsTest, LedgerAuditStaysBalanced )
     rig._service.requestLedgerAudit();
     rig.pump();
     SW_EXPECT_TRUE( rig._service.wasLastAuditBalanced() );
+}
+
+/** @brief [EconomyReceiptsTest] 환불 조회 기준: 기동 때 저장소에서 읽어 넘기고, 옮겨진 기준을 쓰며, 다시 켠 서비스가 그 값을 받는다 — 전에는 메모리에만 있어 재시작이 구간을 비웠다 */
+SW_TEST_CASE( EconomyReceiptsTest, RefundCursorSurvivesARestart )
+{
+    ReceiptRig         data;
+    MemoryServiceStore store{ &data._database };
+    const auto         makeSettings = [&data]( ReceiptValidatorRegistry& registry )
+    {
+        EconomyServiceConfig settings;
+        settings._pCurrencyCatalog = &data._currencies;
+        settings._pOfferCatalog    = &data._offers;
+        settings._pReceiptRegistry = &registry;
+        return settings;
+    };
+    const auto pump = [&store]( EconomyService& service, int64 nowMs )
+    {
+        for ( int32 round = 0; round < 4; ++round )
+        {
+            service.update( UnixMilliseconds{ nowMs } );
+            while ( store.pollCompletions() > 0 )
+            {
+            }
+        }
+    };
+    {
+        CursorRecordingValidator validator;
+        ReceiptValidatorRegistry registry;
+        SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
+        EconomyService service;
+        SW_EXPECT_TRUE( service.initialize( &store, makeSettings( registry ) ) );
+        pump( service, kNowMs );
+        SW_REQUIRE_EQUAL( size_t( 1 ), validator._listRestored.size() );
+        SW_EXPECT_EQUAL( int64( 0 ), validator._listRestored[0] ); // 첫 기동이라 기준이 없다
+        validator._movedMs = kNowMs + 5;
+        pump( service, kNowMs );
+        service.shutdown();
+    }
+    CursorRecordingValidator validator;
+    ReceiptValidatorRegistry registry;
+    SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
+    EconomyService service;
+    SW_EXPECT_TRUE( service.initialize( &store, makeSettings( registry ) ) );
+    pump( service, kNowMs + 100 );
+    SW_REQUIRE_EQUAL( size_t( 1 ), validator._listRestored.size() ); // 한 번만 넘긴다
+    SW_EXPECT_EQUAL( kNowMs + 5, validator._listRestored[0] );
+    service.shutdown();
+}
+
+/** @brief [EconomyReceiptsTest] 환불 조회 기준을 읽지 못하면 넘기지 않아 조회가 시작되지 않고, 다시 읽어 넘긴다 — 기준 없이 시작하면 구간을 건너뛴다 */
+SW_TEST_CASE( EconomyReceiptsTest, UnreadableRefundCursorHoldsThePolling )
+{
+    SW_EXPECT_LOG( "EconomyService.RefundCursorReadFailed" );
+    ReceiptRig               data;
+    MemoryServiceStore       store{ &data._database };
+    CursorRecordingValidator validator;
+    ReceiptValidatorRegistry registry;
+    SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
+    EconomyServiceConfig settings;
+    settings._pCurrencyCatalog    = &data._currencies;
+    settings._pOfferCatalog       = &data._offers;
+    settings._pReceiptRegistry    = &registry;
+    settings._refundCursorRetryMs = 1000;
+    EconomyService service;
+    SW_EXPECT_TRUE( service.initialize( &store, settings ) );
+
+    data._database.armFault( ServiceStoreFault::RejectRead );
+    service.update( UnixMilliseconds{ kNowMs } );
+    while ( store.pollCompletions() > 0 )
+    {
+    }
+    service.update( UnixMilliseconds{ kNowMs + 999 } ); // 간격 전에는 다시 읽지 않는다
+    while ( store.pollCompletions() > 0 )
+    {
+    }
+    SW_EXPECT_TRUE( validator._listRestored.empty() );
+
+    service.update( UnixMilliseconds{ kNowMs + 1000 } );
+    while ( store.pollCompletions() > 0 )
+    {
+    }
+    SW_EXPECT_EQUAL( size_t( 1 ), validator._listRestored.size() );
+    service.shutdown();
+}
+
+/** @brief [EconomyReceiptsTest] 기준 시각의 저장 규칙: 없으면 0, 쓴 값을 읽고, 깨진 값은 오류와 Invalid 다 */
+SW_TEST_CASE( EconomyReceiptsTest, RefundCursorRecord )
+{
+    SW_EXPECT_LOG( "EconomyStoreLogic.RefundCursorUnreadable" );
+    ReceiptRig rig;
+    int64      lastReadMs = 7;
+    SW_EXPECT_TRUE( EconomyStoreLogic::readRefundCursor( rig._database, "google", lastReadMs ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( int64( 0 ), lastReadMs );
+    SW_EXPECT_TRUE( EconomyStoreLogic::writeRefundCursor( rig._database, "google", kNowMs ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( EconomyStoreLogic::readRefundCursor( rig._database, "google", lastReadMs ) == ServiceStoreResult::Ok );
+    SW_EXPECT_EQUAL( kNowMs, lastReadMs );
+
+    ServiceTransaction broken;
+    broken.put( EconomyStoreLogic::getRefundCursorTable(), "apple", vector<uint8>{} );
+    SW_EXPECT_TRUE( rig._database.commit( broken ) == ServiceStoreResult::Ok );
+    SW_EXPECT_TRUE( EconomyStoreLogic::readRefundCursor( rig._database, "apple", lastReadMs ) == ServiceStoreResult::Invalid );
 }
 
 /** @brief [EconomyReceiptsTest] 시작: 저장소 · 카탈로그가 없으면 서지 않는다 */

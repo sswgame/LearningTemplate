@@ -6,6 +6,7 @@
  *          - 구매에는 멱등 키가 필수이다. 분개 키는 `acct.<계정>/<키>` 이다. 영수증은 레지스트리에 맡기고, `tick` 이 결과를 회수해 지급 작업을 맡긴다.
  *          - 원격 설정 `feature.shop_enabled`(기본값은 켬)가 꺼지면 구매와 지급은 `kFeatureDisabled` 로 끝나고 조회는 된다. Shipping 빌드는 개발 전용 영수증 제공자를 거절한다.
  *          - 환불 알림은 `update` 가 레지스트리에서 거두어 회수 작업(`EconomyStoreLogic::revokeRefund`)을 맡긴다. 응답이 없고 결과는 지표 `economy_refund_total{result}` 이다.
+ *          - 환불 조회의 기준 시각은 저장소(`econ_refund_cursor`)에 남는다. 기동 때 읽어 제공자에 넘기고(`restoreRefundCursor`, 그 전에 제공자는 조회하지 않는다), 끝까지 읽은 조회마다 쓴다. 못 읽으면 조회를 시작하지 않고 다시 읽는다.
  *          - 영수증 구매자를 외부 로그인으로 묶는 제공자가 있는데 계정 연동 포트(`IAccountExternalLinks`)가 없으면 `initialize` 가 실패한다 — 묶지 않은 채로 뜨지 않는다.
  *          - 청약철회(`WithdrawPurchase`)는 설정의 기한(`_withdrawalWindowMs`, 기본 7일) 안에 쓰지 않은 만큼 회수한다.
  *          - 원장 보존 검사(`LedgerAudit`)는 예약 작업 `ledger.audit`(매일 `_auditMinuteOfDay`)으로 서버 하나가 돌린다. 자산마다 발행, 소각, 보유 총량을
@@ -60,10 +61,21 @@ namespace sw
         MetricRegistry*              _pMetricRegistry{ nullptr };                                                                        ///< 없으면 지표를 세지 않는다
         int64                        _withdrawalWindowMs{ 7 * constant::time::kSecondsPerDay * constant::time::kMillisecondsPerSecond }; ///< 청약철회 기한이다(전자상거래법의 7일)
         ServiceScheduler*            _pScheduler{ nullptr };                                                                             ///< 원장 보존 검사를 예약한다. 없으면 검사하지 않는다(테스트는 `requestLedgerAudit`)
+        int64                        _refundCursorRetryMs{ 30000 };                                                                      ///< 환불 조회 기준 시각을 읽지 못했을 때 다시 읽는 간격이다
         int32                        _auditMinuteOfDay{ 4 * 60 + 30 };                                                                   ///< 보존 검사 시각(UTC 분)이다. 테이블 전체를 읽으므로 한가한 시간에 둔다
         IAccountPresence*            _pPresence{ nullptr };                                                                              ///< 다른 서버에 붙은 계정에 잔액 변경 알림을 중계한다. 서버가 하나면 null 이다
         const IAccountExternalLinks* _pExternalLinks{ nullptr };                                                                         ///< 영수증 구매자를 외부 로그인으로 묶는 제공자(`ReceiptBuyerBinding::LinkedLogin`)가 있으면 필수다. 없으면 기동 실패다
         uint8                        _bAcceptSandboxReceipts{ SW_FALSE };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /** @brief 스토어 하나의 환불 조회 기준 시각입니다. */
+    struct EconomyRefundCursor
+    {
+        string _storeName{};
+        int64  _lastReadMs{ 0 };
     };
 } // namespace sw
 
@@ -138,6 +150,10 @@ namespace sw
         /** @brief 환불 회수 작업의 `complete` 가 호출합니다. 지표와 로그를 남기고 회수로 바뀐 잔액을 계정에 알립니다. 회수를 끝내지 못했으면 제공자가 그 환불을 잊어 겹친 조회가 다시 알립니다. */
         void  completeRefund( const ReceiptRefundNotice& notice, EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
         int32 getPendingCallCount() const { return static_cast<int32>( _listPendingCall.size() ); }
+        /** @brief 기준 시각 읽기 작업의 `complete` 가 호출합니다. 읽었으면 제공자에 넘기고, 못 읽었으면 다시 읽게 합니다. */
+        void completeRefundCursorRead( const vector<EconomyRefundCursor>& listCursor, ServiceStoreResult result, ServiceStoreCompletion completion );
+        /** @brief 기준 시각 쓰기 작업의 `complete` 가 호출합니다. */
+        void completeRefundCursorWrite( const EconomyRefundCursor& cursor, ServiceStoreResult result, ServiceStoreCompletion completion );
 
     private:
         /** @brief 잔액 변경 알림 창구입니다. 서비스의 `notifyBalancesChanged` 로 넘깁니다. 서비스가 멤버로 들어 수명이 같다. */
@@ -173,6 +189,8 @@ namespace sw
         void pollReceipts();
         /** @brief 환불 알림을 거두어 회수 작업을 맡깁니다. */
         void pollRefunds();
+        /** @brief 기동 때 환불 조회 기준 시각을 읽어 넘기고, 그 뒤로는 옮겨진 기준을 저장소에 씁니다. */
+        void updateRefundCursors( UnixMilliseconds nowMs );
         void onBalancePresenceFound( const AccountPresenceResult& result );
 
     private:
@@ -187,10 +205,14 @@ namespace sw
         MetricRegistry*                              _pMetricRegistry; ///< 환불 결과 지표를 센다(설정에서 복사)
         IDAllocator<uint64>                          _callIDAllocator;
         int32                                        _pendingRefundCount;
+        int32                                        _pendingUpkeepCount;     ///< 응답 없는 저장소 작업(기준 시각 · 지급 확인) 수이다. 종료가 기다린다
+        int64                                        _nextRefundCursorReadMs; ///< 읽지 못한 기준 시각을 다시 읽는 시각
         ScheduledRun                                 _auditRun;
         uint8                                        _bAuditPending;
         uint8                                        _bAuditRunHeld;
         uint8                                        _bLastAuditBalanced;
+        uint8                                        _bRefundCursorsRestored;   ///< 기준 시각을 제공자에 넘겼다(넘길 제공자가 없어도 선다)
+        uint8                                        _bRefundCursorReadPending; ///< 기준 시각을 읽는 중이다
         UnixMilliseconds                             _nowMs;
     };
 } // namespace sw

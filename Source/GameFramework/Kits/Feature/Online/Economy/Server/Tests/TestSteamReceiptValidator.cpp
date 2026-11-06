@@ -61,6 +61,7 @@ namespace
             if ( binding == ReceiptBuyerBinding::LinkedLogin )
                 settings._buyerRule._loginProvider = "steam";
             _pValidator = make_unique<SteamReceiptValidator>( settings, &_client );
+            _pValidator->restoreRefundCursor( 0 ); // 서비스가 저장소에서 읽어 넘기는 자리다 — 기준이 없는 첫 기동
         }
 
         void onRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse )

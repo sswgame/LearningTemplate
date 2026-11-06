@@ -80,7 +80,13 @@ namespace sw
     {
         static const hashed_string& getPurchaseCountTable(); ///< "econ_purchase" — 키 `<계정 16 진>/<상품 id>`
         static const hashed_string& getRefundTable();        ///< "econ_refund" — 키는 지급 분개 키, 값은 1 바이트(1 환불 회수, 2 청약철회). 같은 거래를 두 번 회수하지 않는다
+        static const hashed_string& getRefundCursorTable();  ///< "econ_refund_cursor" — 키는 스토어 이름, 값은 환불 조회의 기준 시각(가변 정수)
         static EconomyResult        toEconomyResult( LedgerResult result );
+
+        /** @brief 스토어의 환불 조회 기준 시각을 읽습니다. 레코드가 없으면 `Ok` 와 0 입니다. 값을 읽을 수 없으면 오류 로그와 `Invalid` 입니다. */
+        [[nodiscard]] static ServiceStoreResult readRefundCursor( IServiceStoreConnection& connection, string_view storeName, int64& outLastReadMs );
+        /** @brief 스토어의 환불 조회 기준 시각을 씁니다. 서버 여럿이 조건 없이 쓴다 — 뒤처진 값이 이겨도 겹쳐 읽을 뿐이다. */
+        [[nodiscard]] static ServiceStoreResult writeRefundCursor( IServiceStoreConnection& connection, string_view storeName, int64 lastReadMs );
 
         /** @brief 구매를 처리합니다. @p outReply 의 `_listBalance` 는 이 계정의 바뀐 잔액입니다. */
         static EconomyResult purchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyPurchaseInput& input,

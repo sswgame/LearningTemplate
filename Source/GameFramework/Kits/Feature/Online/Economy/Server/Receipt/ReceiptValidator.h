@@ -127,6 +127,16 @@ namespace sw
         virtual void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) = 0;
         /** @brief 회수를 끝내지 못한 환불을 잊습니다 — 겹친 조회가 다시 알리게 한다. 다시 알릴 길이 없는 제공자는 할 일이 없습니다. */
         virtual void forgetRefund( string_view transactionID ) { (void)transactionID; }
+        /** @brief 환불 조회 구간을 저장소에 남겨야 하는 제공자이면 true 입니다. 서비스가 기동 때 읽어 `restoreRefundCursor` 로 넘기고, 옮겨지면 `takeRefundCursor` 로 받아 씁니다. */
+        virtual bool usesRefundCursor() const { return false; }
+        /** @brief 저장소에 남은 조회 기준 시각(유닉스 밀리초, 없으면 0)을 넘깁니다. `usesRefundCursor` 인 제공자는 이것을 받기 전에 조회를 시작하지 않습니다 — 먼저 시작하면 재시작이 구간을 건너뛴다. */
+        virtual void restoreRefundCursor( int64 lastReadMs ) { (void)lastReadMs; }
+        /** @brief 끝까지 읽은 조회로 기준이 옮겨졌으면 그 시각과 true 입니다. 한 번 꺼내면 다음에 옮겨질 때까지 false 입니다. */
+        [[nodiscard]] virtual bool takeRefundCursor( int64& outLastReadMs )
+        {
+            (void)outLastReadMs;
+            return false;
+        }
         virtual void shutdown() {}
     };
 } // namespace sw
@@ -140,8 +150,9 @@ namespace sw
         ReceiptValidatorRegistry();
 
         /** @brief 같은 스토어 이름이 둘이거나 규칙에 맞지 않는 이름이면 오류 로그를 남기고 false 를 반환합니다. */
-        [[nodiscard]] bool registerValidator( IReceiptValidator* pValidator );
-        IReceiptValidator* findValidator( string_view storeName ) const;
+        [[nodiscard]] bool                registerValidator( IReceiptValidator* pValidator );
+        IReceiptValidator*                findValidator( string_view storeName ) const;
+        const vector<IReceiptValidator*>& getValidators() const { return _listValidator; }
         /** @brief 개발 전용 제공자가 하나라도 있으면 true 입니다. */
         bool hasDevelopmentValidator() const;
         /** @brief 외부 로그인 연동(`ReceiptBuyerBinding::LinkedLogin`)으로 구매자를 묶는 제공자가 하나라도 있으면 true 입니다. */

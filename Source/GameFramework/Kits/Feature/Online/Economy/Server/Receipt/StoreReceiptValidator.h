@@ -6,6 +6,7 @@
  *            "스토어가 없다고 답했다" 만 Invalid 이다 — 읽지 못한 답을 Invalid 로 하면 결제한 사람의 영수증이 버려진다.
  *          - **요청과의 대조**(`applyOrderFacts`): 물은 거래 · 상품 · 키와 답이 다르면 Invalid, 판정에 필요한 거래 id · 상품이 없으면 Invalid 이다. 스토어는 답이 말한 값을 옮겨 적기만 한다.
  *          - **조회 구간**(`ReceiptPollWindow`): 끝까지 읽은 조회만 구간을 옮긴다. 실패 · 읽지 못한 항목 · 잇지 못한 잘림은 그대로 둬 다음 조회가 다시 읽는다 — 구간을 지나치면 그 환불을 영영 놓친다.
+ *            기준 시각은 서비스가 저장소(`econ_refund_cursor`)에 남긴다. 받기 전(`restoreRefundCursor`)에는 조회하지 않아 재시작이 구간을 비우지 않고, 스토어의 한계를 넘겨 멈춘 동안 놓친 구간은 경고한다.
  *          - 결과 · 환불 알림의 큐, 겹친 알림 거름, 종료 때 Retry 로 끝내기, 자격이 준비될 때까지 호출을 기다리게 하기.
  *          언리얼 OSS(`IOnlinePurchase`)는 플랫폼마다 영수증 파싱만 다르고 공통 상태(`EPurchaseTransactionState`)를 내며, 유니티 IAP 도 `IPurchaseReceipt` 하나로 모은다(기억에 의존). 둘 다 판단을 플랫폼 코드에
  *          흩어 두는데, 이 틀은 한 걸음 더 가 분류와 대조까지 위로 올린다 — 스토어가 늘 때 같은 결함을 다시 쓰지 못하게 하려는 것이다. 새 스토어는 이 클래스를 상속해 순수 가상 다섯을 적는다.
@@ -96,14 +97,20 @@ namespace sw
     /**
      * @class ReceiptPollWindow
      * @brief 환불 조회의 구간과 주기입니다. 끝까지 읽은 조회만 시작점을 옮깁니다.
-     * @details 첫 조회의 시각이 기준이 된다(첫 조회들이 실패해도 시작점이 뒤로 밀리지 않는다). 시작점은 `기준 - 겹침` 이고 스토어가 받는 가장 오랜 시각(`maxAgeMs`, 0 이면 제한 없음)으로 자른다.
-     *          기준은 메모리에만 있다 — 재시작 뒤에는 그 시각에서 겹침만큼만 거슬러 읽으므로 겹침(기본 2 일)보다 긴 중단의 환불은 놓친다.
+     * @details 저장소에 남은 기준이 없으면 첫 조회의 시각이 기준이 된다(첫 조회들이 실패해도 시작점이 뒤로 밀리지 않는다). 시작점은 `기준 - 겹침` 이고 스토어가 받는 가장 오랜 시각(`maxAgeMs`, 0 이면 제한 없음)으로 자른다.
+     *          잘린 만큼은 스토어에 물을 길이 없는 구간이다(`getLostMs`).
      */
     class SW_KIT_SERVER_API ReceiptPollWindow
     {
     public:
         ReceiptPollWindow( int64 intervalMs, int64 lookbackMs, int64 maxAgeMs );
 
+        /** @brief 저장소에 남은 기준 시각을 넣습니다. 0 이면 기준이 없는 것입니다. */
+        void restore( int64 lastReadMs ) { _lastMs = lastReadMs; }
+        /** @brief 지금 기준 시각입니다. 끝까지 읽은 조회가 옮깁니다. */
+        int64 getLastReadMs() const { return _lastMs; }
+        /** @brief 이번 조회의 시작점이 스토어 한계에 잘려 묻지 못하는 구간의 길이입니다. 잘리지 않았거나 잘린 조회를 잇는 중이면 0 입니다. */
+        int64 getLostMs() const;
         /** @brief 주기가 됐고 진행 중인 조회가 없으면 새 조회를 시작하고 true 입니다. */
         [[nodiscard]] bool tryBegin( int64 nowMs );
         /** @brief 이번 조회의 시작 시각입니다. */
@@ -151,11 +158,14 @@ namespace sw
         const ReceiptBuyerRule& getBuyerRule() const final { return _buyerRule; }
         void                    submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now ) final;
         /** @brief HTTP 클라이언트를 돌리고, 주기가 되면 환불을 조회하고, 끝난 응답을 처리합니다. */
-        void update( UnixMilliseconds now ) final;
-        void pollCompletions( vector<ReceiptValidationResult>& outListResult ) final;
-        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) final;
-        void forgetRefund( string_view transactionID ) final;
-        void shutdown() final;
+        void               update( UnixMilliseconds now ) final;
+        void               pollCompletions( vector<ReceiptValidationResult>& outListResult ) final;
+        void               pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) final;
+        void               forgetRefund( string_view transactionID ) final;
+        bool               usesRefundCursor() const final { return true; }
+        void               restoreRefundCursor( int64 lastReadMs ) final;
+        [[nodiscard]] bool takeRefundCursor( int64& outLastReadMs ) final;
+        void               shutdown() final;
 
     protected:
         /** @brief 자격의 상태입니다. */
@@ -223,5 +233,7 @@ namespace sw
         HTTPClient*                        _pHTTPClient;
         uint8                              _bRefundIncomplete : 1; ///< 지금 조회의 어느 쪽에 읽지 못한 것이 있었다
         uint8                              _bStopped          : 1; ///< `shutdown` 뒤에는 새 요청을 보내지 않는다
+        uint8                              _bCursorRestored   : 1; ///< 저장소의 기준 시각을 받았다. 그 전에는 조회하지 않는다
+        uint8                              _bCursorMoved      : 1; ///< 끝까지 읽은 조회가 기준을 옮겼고 아직 꺼내 가지 않았다
     };
 } // namespace sw

@@ -2,6 +2,7 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/StoreReceiptValidator.h"
 
+#include "Core/Foundation/Constants.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Serialization/JSON/JSONDocument.h"
@@ -64,6 +65,14 @@ namespace sw
         return fromMs < oldestMs ? oldestMs : fromMs; // 스토어가 받지 않는 시작점은 그 조회를 영원히 400 으로 만든다
     }
 
+    int64 ReceiptPollWindow::getLostMs() const
+    {
+        if ( _cursorMs != 0 || _maxAgeMs <= 0 )
+            return 0;
+        const int64 lostMs = ( _startMs - _maxAgeMs ) - ( _lastMs - _lookbackMs );
+        return lostMs > 0 ? lostMs : 0;
+    }
+
     void ReceiptPollWindow::finishRead()
     {
         _lastMs    = _startMs;
@@ -103,10 +112,27 @@ namespace sw
         , _pHTTPClient{ pHTTPClient }
         , _bRefundIncomplete{ SW_FALSE }
         , _bStopped{ SW_FALSE }
+        , _bCursorRestored{ SW_FALSE }
+        , _bCursorMoved{ SW_FALSE }
     {
     }
 
     StoreReceiptValidator::~StoreReceiptValidator() = default;
+
+    void StoreReceiptValidator::restoreRefundCursor( int64 lastReadMs )
+    {
+        _refundWindow.restore( lastReadMs );
+        _bCursorRestored = SW_TRUE;
+    }
+
+    bool StoreReceiptValidator::takeRefundCursor( int64& outLastReadMs )
+    {
+        if ( _bCursorMoved == SW_FALSE )
+            return false;
+        _bCursorMoved = SW_FALSE;
+        outLastReadMs = _refundWindow.getLastReadMs();
+        return true;
+    }
 
     ReceiptResponseKind StoreReceiptValidator::classifyResponse( const HTTPClientResponse& response )
     {
@@ -371,14 +397,18 @@ namespace sw
             return;
         }
         _refundWindow.finishRead();
+        _bCursorMoved = SW_TRUE;
     }
 
     void StoreReceiptValidator::update( UnixMilliseconds now )
     {
         // 서버 루프의 시각(유닉스 밀리초) 하나로 HTTP 시한 · 자격 · 조회 주기 · 조회 구간을 모두 잰다.
         _pHTTPClient->update();
-        if ( _bStopped == SW_FALSE && _refundWindow.tryBegin( now.count() ) )
+        if ( _bStopped == SW_FALSE && _bCursorRestored == SW_TRUE && _refundWindow.tryBegin( now.count() ) )
         {
+            const int64 lostMs = _refundWindow.getLostMs();
+            if ( lostMs > 0 )
+                SW_LOG_WARNING_ID( "StoreReceiptValidator.RefundGapBeyondStoreLimit", "The %# refund query cannot reach far enough back: %# minutes older than the store keeps were never read (polling stopped or failed for too long) - refunds in that span are missed, check them by hand", getStoreName(), lostMs / ( constant::time::kSecondsPerMinute * constant::time::kMillisecondsPerSecond ) );
             ReceiptCall call;
             call._kind = ReceiptCall::Kind::RefundPage;
             dispatch( std::move( call ), now );

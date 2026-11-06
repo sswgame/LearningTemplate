@@ -153,6 +153,55 @@ namespace sw
             EconomyResult                _result;
         };
 
+        /** @brief 저장소에 남은 환불 조회 기준 시각을 스토어마다 읽습니다. */
+        class EconomyRefundCursorReadWork final : public IServiceStoreWork
+        {
+        public:
+            EconomyRefundCursorReadWork( EconomyService* pService, vector<EconomyRefundCursor>&& listCursor )
+                : _listCursor{ std::move( listCursor ) }
+                , _pService{ pService }
+                , _result{ ServiceStoreResult::Unavailable }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override
+            {
+                for ( EconomyRefundCursor& cursor : _listCursor )
+                {
+                    _result = EconomyStoreLogic::readRefundCursor( connection, cursor._storeName, cursor._lastReadMs );
+                    if ( _result != ServiceStoreResult::Ok )
+                        return; // 하나라도 못 읽으면 다시 읽는다 — 그 스토어를 기준 없이 시작하면 구간을 건너뛴다
+                }
+            }
+
+            void complete() override { _pService->completeRefundCursorRead( _listCursor, _result, getCompletion() ); }
+
+        private:
+            vector<EconomyRefundCursor> _listCursor;
+            EconomyService*             _pService;
+            ServiceStoreResult          _result;
+        };
+
+        /** @brief 환불 조회 기준 시각 하나를 씁니다. */
+        class EconomyRefundCursorWriteWork final : public IServiceStoreWork
+        {
+        public:
+            EconomyRefundCursorWriteWork( EconomyService* pService, EconomyRefundCursor cursor )
+                : _cursor{ std::move( cursor ) }
+                , _pService{ pService }
+                , _result{ ServiceStoreResult::Unavailable }
+            {
+            }
+
+            void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::writeRefundCursor( connection, _cursor._storeName, _cursor._lastReadMs ); }
+            void complete() override { _pService->completeRefundCursorWrite( _cursor, _result, getCompletion() ); }
+
+        private:
+            EconomyRefundCursor _cursor;
+            EconomyService*     _pService;
+            ServiceStoreResult  _result;
+        };
+
         struct EconomyDevOnlineInternal
         {
             static unique_ptr<IReceiptValidator> createFakeReceiptValidator()
@@ -180,10 +229,14 @@ namespace sw
         , _pMetricRegistry{ nullptr }
         , _callIDAllocator{}
         , _pendingRefundCount{ 0 }
+        , _pendingUpkeepCount{ 0 }
+        , _nextRefundCursorReadMs{ 0 }
         , _auditRun{}
         , _bAuditPending{ SW_FALSE }
         , _bAuditRunHeld{ SW_FALSE }
         , _bLastAuditBalanced{ SW_FALSE }
+        , _bRefundCursorsRestored{ SW_FALSE }
+        , _bRefundCursorReadPending{ SW_FALSE }
         , _nowMs{ 0 }
     {
     }
@@ -238,7 +291,7 @@ namespace sw
     {
         // 영수증 검증 완료도 호출을 끝내므로 단계마다 같이 회수한다.
         ServiceStoreUtil::drainUntilIdle( _pStore, [this]()
-        { return _listPendingCall.empty() && _pendingRefundCount <= 0 && _bAuditPending == SW_FALSE; }, [this]()
+        { return _listPendingCall.empty() && _pendingRefundCount <= 0 && _pendingUpkeepCount <= 0 && _bAuditPending == SW_FALSE; }, [this]()
         { pollReceipts(); } );
         if ( _listPendingCall.empty() == false )
         {
@@ -327,7 +380,69 @@ namespace sw
             _settings._pReceiptRegistry->update( nowMs );
         pollReceipts();
         pollRefunds();
+        updateRefundCursors( nowMs );
         _metrics.setPendingStoreWorkCount( static_cast<int32>( _listPendingCall.size() ) );
+    }
+
+    void EconomyService::updateRefundCursors( UnixMilliseconds nowMs )
+    {
+        if ( _settings._pReceiptRegistry == nullptr )
+            return;
+        if ( _bRefundCursorsRestored == SW_TRUE )
+        {
+            for ( IReceiptValidator* pValidator : _settings._pReceiptRegistry->getValidators() )
+            {
+                int64 lastReadMs = 0;
+                if ( pValidator->takeRefundCursor( lastReadMs ) == false )
+                    continue;
+                ++_pendingUpkeepCount;
+                _pStore->submit( make_unique<EconomyRefundCursorWriteWork>( this, EconomyRefundCursor{ pValidator->getStoreName(), lastReadMs } ) );
+            }
+            return;
+        }
+        if ( _bRefundCursorReadPending == SW_TRUE || nowMs.count() < _nextRefundCursorReadMs )
+            return;
+        vector<EconomyRefundCursor> listCursor;
+        for ( const IReceiptValidator* pValidator : _settings._pReceiptRegistry->getValidators() )
+        {
+            if ( pValidator->usesRefundCursor() )
+                listCursor.push_back( EconomyRefundCursor{ pValidator->getStoreName(), 0 } );
+        }
+        if ( listCursor.empty() )
+        {
+            _bRefundCursorsRestored = SW_TRUE;
+            return;
+        }
+        _bRefundCursorReadPending = SW_TRUE;
+        ++_pendingUpkeepCount;
+        _pStore->submit( make_unique<EconomyRefundCursorReadWork>( this, std::move( listCursor ) ) );
+    }
+
+    void EconomyService::completeRefundCursorRead( const vector<EconomyRefundCursor>& listCursor, ServiceStoreResult result, ServiceStoreCompletion completion )
+    {
+        --_pendingUpkeepCount;
+        _bRefundCursorReadPending = SW_FALSE;
+        if ( result != ServiceStoreResult::Ok )
+        {
+            _nextRefundCursorReadMs = _nowMs.count() + _settings._refundCursorRetryMs;
+            if ( completion.isCancelled() == false )
+                SW_LOG_WARNING_ID( "EconomyService.RefundCursorReadFailed", "EconomyService: the refund cursors could not be read - refund polling waits and reads them again" );
+            return;
+        }
+        for ( const EconomyRefundCursor& cursor : listCursor )
+        {
+            IReceiptValidator* pValidator = _settings._pReceiptRegistry->findValidator( cursor._storeName );
+            if ( pValidator != nullptr )
+                pValidator->restoreRefundCursor( cursor._lastReadMs );
+        }
+        _bRefundCursorsRestored = SW_TRUE;
+    }
+
+    void EconomyService::completeRefundCursorWrite( const EconomyRefundCursor& cursor, ServiceStoreResult result, ServiceStoreCompletion completion )
+    {
+        --_pendingUpkeepCount;
+        if ( result != ServiceStoreResult::Ok && completion.isCancelled() == false ) // 다음 조회가 다시 쓴다. 그 사이 재시작하면 옛 기준에서 더 겹쳐 읽을 뿐이다
+            SW_LOG_WARNING_ID( "EconomyService.RefundCursorWriteFailed", "EconomyService: the refund cursor of store '%#' could not be written", cursor._storeName.c_str() );
     }
 
     void EconomyService::startCall( const EconomyCall& call, PendingCall pending )

@@ -389,6 +389,41 @@ namespace sw
         return s_table;
     }
 
+    const hashed_string& EconomyStoreLogic::getRefundCursorTable()
+    {
+        static const hashed_string s_table{ "econ_refund_cursor" };
+        return s_table;
+    }
+
+    ServiceStoreResult EconomyStoreLogic::readRefundCursor( IServiceStoreConnection& connection, string_view storeName, int64& outLastReadMs )
+    {
+        outLastReadMs = 0;
+        ServiceRecord            record;
+        const ServiceStoreResult read = connection.readRecord( getRefundCursorTable(), storeName, record );
+        if ( read == ServiceStoreResult::NotFound )
+            return ServiceStoreResult::Ok;
+        if ( read != ServiceStoreResult::Ok )
+            return read;
+        BitReader   reader( record._bytes.data(), static_cast<int32>( record._bytes.size() ) );
+        const int64 lastReadMs = reader.readVarInt();
+        if ( reader.hasOverflowed() || lastReadMs < 0 )
+        {
+            SW_LOG_ERROR_ID( "EconomyStoreLogic.RefundCursorUnreadable", "The refund cursor of store '%#' is unreadable - refund polling for that store waits until the record is fixed", storeName );
+            return ServiceStoreResult::Invalid;
+        }
+        outLastReadMs = lastReadMs;
+        return ServiceStoreResult::Ok;
+    }
+
+    ServiceStoreResult EconomyStoreLogic::writeRefundCursor( IServiceStoreConnection& connection, string_view storeName, int64 lastReadMs )
+    {
+        BitWriter writer;
+        writer.writeVarInt( lastReadMs );
+        ServiceTransaction transaction;
+        transaction.put( getRefundCursorTable(), storeName, writer.getBytes() );
+        return connection.commit( transaction );
+    }
+
     EconomyResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotice& notice, int64 nowMs,
                                                    vector<EconomyBalanceChange>& outListChange )
     {

@@ -220,7 +220,8 @@ namespace
         int32                              _acknowledgeCount{ 0 };
         int64                              _nowMs{ kNowMs };
 
-        GoogleRig()
+        /** @param bRestoreCursor false 면 서비스가 기준 시각을 아직 넘기지 않은 제공자로 선다. */
+        explicit GoogleRig( bool bRestoreCursor = true )
         {
             StoreTestUtil::startServer( _http, HTTPRequestFunction::create<&GoogleRig::onRequest>( this ) );
             GoogleReceiptSettings settings;
@@ -232,6 +233,8 @@ namespace
             settings._voidedPollIntervalMs       = kPollMs;
             settings._voidedLookbackMs           = kLookbackMs;
             _pValidator                          = make_unique<GoogleReceiptValidator>( std::move( settings ), &_security, &_http._client );
+            if ( bRestoreCursor )
+                _pValidator->restoreRefundCursor( 0 ); // 서비스가 저장소에서 읽어 넘기는 자리다 — 기준이 없는 첫 기동
         }
 
         void onRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse )
@@ -321,6 +324,7 @@ namespace
             settings._bRequireAppleMarkers  = SW_FALSE;
             settings._bSandboxServer        = bSandboxServer ? SW_TRUE : SW_FALSE;
             _pValidator                     = make_unique<AppleReceiptValidator>( std::move( settings ), &_security, &_http._client );
+            _pValidator->restoreRefundCursor( 0 ); // 서비스가 저장소에서 읽어 넘기는 자리다 — 기준이 없는 첫 기동
         }
 
         void onRequest( const HTTPServerRequest& request, HTTPServerResponse& outResponse )
@@ -527,6 +531,62 @@ SW_TEST_CASE( StoreReceiptValidatorTest, PollWindowClampsToTheStoreLimit )
     window.finishFailed();
     SW_EXPECT_TRUE( window.tryBegin( 9000 ) );
     SW_EXPECT_EQUAL( int64( 8500 ), window.getFromMs() );
+}
+
+/** @brief [StoreReceiptValidatorTest] 조회 구간의 영속: 넣은 기준에서 잇고, 스토어 한계에 잘린 길이를 알며, 잘린 조회를 잇는 동안에는 다시 세지 않는다 */
+SW_TEST_CASE( StoreReceiptValidatorTest, PollWindowRestoresAndKnowsWhatIsLost )
+{
+    ReceiptPollWindow window( 100, 10, 500 );
+    window.restore( 800 );
+    SW_EXPECT_TRUE( window.tryBegin( 1000 ) );
+    SW_EXPECT_EQUAL( int64( 790 ), window.getFromMs() ); // 재시작 전의 기준에서 잇는다
+    SW_EXPECT_EQUAL( int64( 0 ), window.getLostMs() );
+    window.finishRead();
+    SW_EXPECT_EQUAL( int64( 1000 ), window.getLastReadMs() );
+
+    SW_EXPECT_TRUE( window.tryBegin( 2000 ) );
+    SW_EXPECT_EQUAL( int64( 1500 ), window.getFromMs() );
+    SW_EXPECT_EQUAL( int64( 510 ), window.getLostMs() ); // 990 ~ 1500 은 스토어에 물을 수 없다
+    window.continueFrom( 1700 );
+    SW_EXPECT_TRUE( window.tryBegin( 2001 ) );
+    SW_EXPECT_EQUAL( int64( 0 ), window.getLostMs() );
+
+    ReceiptPollWindow noLimit( 100, 10, 0 );
+    noLimit.restore( 1 );
+    SW_EXPECT_TRUE( noLimit.tryBegin( 1000000 ) );
+    SW_EXPECT_EQUAL( int64( 0 ), noLimit.getLostMs() );
+}
+
+/** @brief [GoogleReceiptValidatorTest] 재시작: 저장소의 기준을 받기 전에는 조회하지 않고, 받으면 그 기준에서 읽는다. 끝까지 읽어야 옮겨진 기준을 한 번 내준다 */
+SW_TEST_CASE( GoogleReceiptValidatorTest, RefundQueryWaitsForTheStoredCursor )
+{
+    GoogleRig rig( false );
+    rig.pump();
+    SW_EXPECT_TRUE( rig._listVoidedStart.empty() );
+
+    int64 cursorMs = 0;
+    SW_EXPECT_FALSE( rig._pValidator->takeRefundCursor( cursorMs ) );
+    const int64 storedMs = kNowMs - kPollMs * 5; // 다섯 주기 동안 꺼져 있었다 — 겹침(두 주기)보다 길다
+    rig._pValidator->restoreRefundCursor( storedMs );
+    rig.pump();
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._listVoidedStart.size() );
+    SW_EXPECT_EQUAL( to_string( storedMs - kLookbackMs ), rig._listVoidedStart[0] );
+
+    SW_EXPECT_TRUE( rig._pValidator->takeRefundCursor( cursorMs ) );
+    SW_EXPECT_EQUAL( kNowMs, cursorMs );
+    SW_EXPECT_FALSE( rig._pValidator->takeRefundCursor( cursorMs ) );
+}
+
+/** @brief [GoogleReceiptValidatorTest] 멈춘 동안 스토어 한계(구글 30 일)를 넘겼으면 잘린 구간을 경고하고, 한계 안에서 조회는 이어진다 */
+SW_TEST_CASE( GoogleReceiptValidatorTest, GapBeyondTheStoreLimitWarns )
+{
+    SW_EXPECT_LOG( "StoreReceiptValidator.RefundGapBeyondStoreLimit" );
+    constexpr int64 kDayMs = 24ll * 60 * 60 * 1000;
+    GoogleRig       rig( false );
+    rig._pValidator->restoreRefundCursor( kNowMs - 40 * kDayMs );
+    rig.pump();
+    SW_REQUIRE_EQUAL( size_t( 1 ), rig._listVoidedStart.size() );
+    SW_EXPECT_EQUAL( to_string( kNowMs - 29 * kDayMs ), rig._listVoidedStart[0] );
 }
 
 /** @brief [StoreReceiptValidatorTest] 설정의 구매자 규칙: 필수이고, 그 스토어가 줄 수 없는 묶기 · 모르는 값은 오류이며, `none` 은 적어야 받는다 */
@@ -885,6 +945,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, MoreWithoutTokenKeepsTheWindow )
 SW_TEST_CASE( AppleReceiptValidatorTest, HistoryLimitFollowsTheEnvironment )
 {
     SW_EXPECT_LOG( "StoreReceiptValidator.RefundQueryFailed" );
+    SW_EXPECT_LOG( "StoreReceiptValidator.RefundGapBeyondStoreLimit" );
     constexpr int64      kDayMs = 24ll * 60 * 60 * 1000;
     AppleReceiptSettings settings;
     SW_EXPECT_EQUAL( 179 * kDayMs, settings.getHistoryMaxAgeMs() );
