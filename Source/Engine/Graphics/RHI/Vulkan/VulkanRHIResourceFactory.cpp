@@ -1449,7 +1449,14 @@ namespace sw
         {
             arrColorBlendAttachment[blendIndex].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                                                                  VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-            arrColorBlendAttachment[blendIndex].blendEnable         = desc._bEnableBlend ? VK_TRUE : VK_FALSE;
+            // 블렌드 지원은 형식마다 선택이다(R16G16_SNORM 등, lavapipe 는 없다). 못 섞는 첨부는 덮어쓴다 - 겹침 보기가 G버퍼 전체에 블렌드를 켜도 값을 보는 것은 알베도 칸이다.
+            // 형식이 없으면 ensurePipelineRenderPass 가 R8G8B8A8_UNORM 으로 두며 그 형식은 블렌드가 필수다.
+            const VkFormat     attachmentFormat = VulkanRHIUtil::toVulkanTextureFormat( desc._arrRTVFormat[blendIndex] );
+            VkFormatProperties formatProperties{};
+            vkGetPhysicalDeviceFormatProperties( _pDevice->_physicalDevice, attachmentFormat, &formatProperties );
+            const bool bBlendable = attachmentFormat == VK_FORMAT_UNDEFINED || ( formatProperties.optimalTilingFeatures & VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT ) != 0;
+
+            arrColorBlendAttachment[blendIndex].blendEnable         = ( desc._bEnableBlend && bBlendable ) ? VK_TRUE : VK_FALSE;
             arrColorBlendAttachment[blendIndex].srcColorBlendFactor = ( desc._bPremultipliedAlpha != SW_FALSE ) ? VK_BLEND_FACTOR_ONE : VK_BLEND_FACTOR_SRC_ALPHA;
             arrColorBlendAttachment[blendIndex].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
             arrColorBlendAttachment[blendIndex].colorBlendOp        = VK_BLEND_OP_ADD;
