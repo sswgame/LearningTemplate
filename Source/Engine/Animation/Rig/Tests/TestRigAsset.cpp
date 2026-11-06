@@ -1,11 +1,13 @@
 // RigAssetTest — 리그 파일(`*.rig.xml`) 읽기: 노드 종류마다의 칸(RigNodeFields.h)과 목록 원소, 모르는 키 · 범위 밖 값 · 모드에 없는 키를 막는지.
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Rig/RigAsset.h"
 #include "Engine/Animation/Rig/RigNode.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 
 using namespace sw;
 
@@ -126,4 +128,56 @@ SW_TEST_CASE( RigAssetTest, RetargetRejectsNonPositiveHeightRatio )
     SW_EXPECT_LOG( "Rig.Rig" );
     RetargetProfile profile;
     SW_EXPECT_FALSE( profile.parseXML( R"(<RetargetProfile height_ratio="0"><root source="a" target="b" /><pelvis source="c" target="d" /><chains /></RetargetProfile>)", "bad.retarget.xml" ) );
+}
+
+/**
+ * @brief [RigAssetTest] 차이 파일 — 노드는 이름으로 합치고(적지 않은 칸은 물려받음), `_before` 로 끼우고 `_op="Remove"` 로 뺀다. 평가 순서가 그대로 따라온다
+ */
+SW_TEST_CASE( RigAssetTest, ChildMergesNodesByName )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.rig.xml" ), R"(<RigAsset><targets><item name="Grip" bone="hand.r" /></targets><nodes>
+        <item type="TwoBoneIK" name="Arm" weight="0.5" root="upperarm.l" mid="lowerarm.l" end="hand.l" target="Grip" />
+        <item type="Position" name="Follow" bone="weapon" target="Grip" />
+        <item type="Position" name="Extra" bone="extra" target="Grip" />
+    </nodes></RigAsset>)" ) );
+    const string baseID = test::ScopedScratchDomain::makeID( "base.rig.xml" ).str();
+    RigAsset     asset;
+    SW_REQUIRE_TRUE( asset.parseXML( "<RigAsset _base=\"" + baseID + "\"><nodes><item name=\"Arm\" weight=\"0.25\" /><item name=\"Extra\" _op=\"Remove\" />"
+                                                                     "<item type=\"Position\" name=\"First\" bone=\"first\" target=\"Grip\" _before=\"Arm\" /></nodes></RigAsset>",
+                                     "child.rig.xml" ) );
+    SW_REQUIRE_EQUAL( 3u, static_cast<uint32>( asset.getNodes().size() ) );
+    SW_EXPECT_TRUE( asset.getNodes()[0]->getName() == hashed_string( "First" ) );
+    SW_EXPECT_TRUE( asset.getNodes()[1]->getName() == hashed_string( "Arm" ) );
+    SW_EXPECT_NEAR( 0.25f, asset.getNodes()[1]->getWeight(), 1e-6f );
+    SW_EXPECT_TRUE( asset.getNodes()[2]->getName() == hashed_string( "Follow" ) );
+    SW_EXPECT_EQUAL( 0, asset.findTargetIndex( hashed_string( "Grip" ) ) ); // 물려받음
+}
+
+/**
+ * @brief [RigAssetTest] 리타겟 차이 파일 — 사슬은 이름, 뼈 짝은 원본 뼈, 자세는 뼈로 합치고 `root` 처럼 하나뿐인 칸은 적은 속성만 덮는다
+ */
+SW_TEST_CASE( RigAssetTest, RetargetChildMergesByKeys )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.retarget.xml" ), R"(<RetargetProfile>
+        <root source="root" target="root" /><pelvis source="pelvis" target="hips" />
+        <chains>
+            <item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item>
+            <item name="RightArm"><source><item>c</item></source><target><item>d</item></target></item>
+        </chains>
+        <bone_map><item source="head" target="head" /></bone_map>
+    </RetargetProfile>)" ) );
+    const string    baseID = test::ScopedScratchDomain::makeID( "base.retarget.xml" ).str();
+    RetargetProfile profile;
+    SW_REQUIRE_TRUE( profile.parseXML( "<RetargetProfile _base=\"" + baseID + "\"><pelvis target=\"pelvis_b\" /><chains><item name=\"RightArm\"><target><item>e</item></target></item></chains>"
+                                                                              "<bone_map><item source=\"head\" target=\"head_b\" /></bone_map></RetargetProfile>",
+                                       "child.retarget.xml" ) );
+    const string written = profile.toXML();
+    SW_EXPECT_TRUE( written.find( "pelvis_b" ) != string::npos );
+    SW_EXPECT_TRUE( written.find( "source=\"pelvis\"" ) != string::npos ); // 물려받음
+    SW_EXPECT_TRUE( written.find( "head_b" ) != string::npos );
+    SW_EXPECT_TRUE( written.find( "LeftArm" ) != string::npos );
+    SW_EXPECT_TRUE( written.find( "<item>e</item>" ) != string::npos );
+    SW_EXPECT_TRUE( written.find( "<item>d</item>" ) == string::npos ); // 뼈 목록은 통째로 바뀐다
 }

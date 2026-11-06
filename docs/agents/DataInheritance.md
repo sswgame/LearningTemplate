@@ -108,6 +108,18 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 - 이 칸이 어디서 왔나: `DataInheritance::flatten` 의 `DataInheritanceProvenance`(`findOrigin( "_listPass[Present]._cullMode" )`), 프리팹은 `PrefabCache::findFieldOrigin`.
 - 이 부모의 자식 목록: `DataInheritance::collectChildren`(파일을 훑는다). 에디터는 `EditorReferenceIndex::findReferrers` 도 같은 답을 준다.
 
+## 애니메이션 · 스프라이트 형식의 열쇠
+
+| 형식 | 열쇠 | 통째로 바뀌는 것 |
+|---|---|---|
+| `.animset.xml` | 클립 `name` | — (`path` 줄을 `set` 줄로 바꾸면 `_op="Replace"`) |
+| `.animgraph.xml` | 상태 `name` · 전이 `id` · 레이어와 마스크 `name` · 주석 `id` | `blend_space` · `pose_node` · `condition`(빈 원소는 비운다) |
+| `.spritelib.xml` | 분류 · 라벨 `_name` | — |
+| `.rig.xml` | 대상 · 노드 `name` | 노드 안의 목록 |
+| `.retarget.xml` | 사슬 `name` · 뼈 짝 `source` · 자세 `bone` | 사슬의 뼈 목록 |
+| `.physics.xml` | 바디 `_bone` | 셰이프 · 충돌 쌍 |
+| `.sockets.xml` · `.notifies.xml` | 소켓 · 가상 뼈 · 알림 `name`, 발 닿음 `notify` | — |
+
 ## 카탈로그 항목 상속
 
 한 파일에 항목이 여럿인 카탈로그(아이템 · 아이템 외형 · 어빌리티)는 항목마다 부모를 가리킨다. 구현은 `Source/Engine/Serialization/Inherit/DataCatalogInheritance.h` 이고 합치기는 위와 같은 `DataInheritance` 다.

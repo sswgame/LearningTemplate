@@ -4,6 +4,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 
 namespace sw
 {
@@ -22,7 +23,10 @@ namespace sw
     bool PhysicsAsset::loadFromXMLText( string_view xmlText, string_view sourceName )
     {
         *this = PhysicsAsset{};
-        if ( XMLSerializer::deserialize( this, *StaticType(), xmlText ) == false )
+        string flatText;
+        if ( DataInheritance::findBasePath( xmlText ).empty() == false && DataInheritance::flattenReflected( xmlText, sourceName, *StaticType(), flatText ) == false )
+            return false;
+        if ( XMLSerializer::deserialize( this, *StaticType(), flatText.empty() ? xmlText : string_view{ flatText } ) == false )
         {
             SW_LOG_ERROR_ID( "PhysicsAsset.PhysicsAssetCouldNot", "%#: physics asset could not be read or holds unknown keys / values", sourceName );
             return false;

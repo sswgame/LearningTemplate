@@ -15,6 +15,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
 
@@ -52,6 +53,26 @@ namespace sw
             static atomic<uint64> s_nextContentID{ 1 };
             return s_nextContentID.fetch_add( 1, std::memory_order_relaxed );
         }
+
+        struct RigAssetInternal
+        {
+            /**
+             * @brief 상속 규칙입니다. 대상과 노드는 이름이 열쇠이고, 순서가 결과를 바꾸는 노드는 `_before` · `_after` 로 끼운다(언리얼 Control Rig 자식 · 유니티 없음 — 기억에 의존).
+             * @details 노드 안의 목록(`bones` · `limits` · `feet`)은 열쇠가 없어 통째로 바뀐다 — 사슬은 순서 자체가 뜻이다. 노드 종류를 바꾸려면 칸이 달라지므로 `_op="Replace"` 다(남은 칸은 읽기의 모르는 칸 오류).
+             */
+            static DataInheritanceSchema makeInheritanceSchema()
+            {
+                DataInheritanceSchema schema{ "RigAsset" };
+                DataInheritanceSchema targets{ "targets" };
+                targets._keyAttribute = "name";
+                schema._listField.push_back( std::move( targets ) );
+                DataInheritanceSchema nodes{ "nodes" };
+                nodes._keyAttribute = "name";
+                schema._listField.push_back( std::move( nodes ) );
+                return schema;
+            }
+        };
+        SW_DATA_INHERITANCE_SCHEMA( RigAsset, &RigAssetInternal::makeInheritanceSchema ); // 팩 쿠커가 루트 이름으로 찾는다
     } // namespace
 
     RigNodeRegistry::RigNodeRegistry()
@@ -135,9 +156,12 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Animation );
         clear();
+        string flatText;
+        if ( DataInheritance::findBasePath( xml ).empty() == false && DataInheritance::flattenFromResources( xml, sourceLabel, RigAssetInternal::makeInheritanceSchema(), flatText ) == false )
+            return false;
         XMLDocument document;
         XMLNode     root;
-        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "RigAsset", root ) != XMLRootStatus::Found )
+        if ( XMLReadUtil::parseRoot( document, flatText.empty() ? xml : string_view{ flatText }, sourceLabel, "RigAsset", root ) != XMLRootStatus::Found )
         {
             SW_LOG_ERROR_ID( "RigAsset.RigMalformedXMLExpected", "Rig '%#': malformed XML (expected a <RigAsset> root)", sourceLabel );
             return false;

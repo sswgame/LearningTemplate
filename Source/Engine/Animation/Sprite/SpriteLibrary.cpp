@@ -76,7 +76,7 @@ namespace sw
         return bValid;
     }
 
-    const SpriteLibraryLabel* SpriteLibrary::findLabel( const hashed_string& category, const hashed_string& label ) const
+    const SpriteLibraryLabel* SpriteLibrary::findLabel( string_view category, string_view label ) const
     {
         const SpriteLibraryCategory* pCategory = VectorUtil::findBy<&SpriteLibraryCategory::_name>( _listCategory, category );
         return pCategory != nullptr ? VectorUtil::findBy<&SpriteLibraryLabel::_name>( pCategory->_listLabel, label ) : nullptr;

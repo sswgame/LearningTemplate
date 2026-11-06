@@ -10,7 +10,6 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/Path/AbsolutePath.h"
-#include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
 #include "Engine/Content/AssetID.h"
@@ -44,12 +43,12 @@ namespace sw
          */
         PROPERTY( Tooltip = "Nine-slice border (left, bottom, right, top) in atlas pixels; all zero is no border" )
         float4 _borderPixels{ 0.0f, 0.0f, 0.0f, 0.0f };
-        /** @brief 라이브러리의 분류입니다. `_label` 을 적으면 필수입니다. */
+        /** @brief 라이브러리의 분류입니다. `_label` 을 적으면 필수입니다. 글 칸인 까닭: 빈 `hashed_string` 은 `None` 으로 쓰여 `SkipIfEmpty` 가 듣지 않는다(라벨 없는 클립의 파일이 바뀐다). */
         PROPERTY( SkipIfEmpty, Tooltip = "Sprite library category of the label" )
-        hashed_string _category{};
+        string _category{};
         /** @brief 라이브러리의 라벨입니다. 적으면 그림은 스프라이트의 라이브러리에서 옵니다. */
         PROPERTY( SkipIfEmpty, Tooltip = "Sprite library label; set, the sprite's library decides the picture instead of the UV rect" )
-        hashed_string _label{};
+        string _label{};
         /** @brief 이 프레임을 보여 줄 시간(ms)입니다. 0 이하면 애니메이터의 프레임 속도를 씁니다(`getFrameDurationSeconds`). */
         PROPERTY( Units = ms, Tooltip = "How long the frame shows (0 or less: the animator frame rate)" )
         int32 _durationMs{ 100 };

@@ -97,6 +97,9 @@
                 }
             ]
         },
+        { "root": "SocketSet", "listEntry": [ { "name": "Socket", "key": "name" }, { "name": "VirtualBone", "key": "name" } ] },
+        { "root": "SocketKinds", "listEntry": [ { "name": "Kind", "key": "name" } ] },
+        { "root": "AnimationNotifies", "listEntry": [ { "name": "Notify", "key": "name" }, { "name": "FootContact", "key": "notify" } ] },
         { "root": "BlockCatalog", "listEntry": [ { "name": "Block", "key": "id" } ] },
         { "root": "CityCatalog", "listEntry": [ { "name": "Building", "key": "id" }, { "name": "Good", "key": "id" } ] },
         { "root": "CoasterCatalog", "listEntry": [ { "name": "Layout", "key": "id" } ] },

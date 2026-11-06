@@ -12,7 +12,6 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
@@ -27,7 +26,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( InheritKey, Required, Tooltip = "Label a clip frame names (unique in the category)" )
-        hashed_string _name{};
+        string _name{};
         PROPERTY( Tooltip = "Frame rectangle in the atlas (u, v, width, height) as fractions of the texture; a negative width mirrors the frame" )
         float4 _uvRect{ 0.0f, 0.0f, 1.0f, 1.0f };
         PROPERTY( Tooltip = "Nine-slice border (left, bottom, right, top) in atlas pixels; all zero is no border" )
@@ -45,7 +44,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( InheritKey, Required, Tooltip = "Category a clip frame names (unique in the library)" )
-        hashed_string _name{};
+        string _name{};
         PROPERTY( Tooltip = "Labels of this category" )
         vector<SpriteLibraryLabel> _listLabel;
     };
@@ -74,7 +73,7 @@ namespace sw
         /** @brief XML 본문을 읽습니다(`_base` 를 펼칩니다). 모르는 칸 · 겹친 이름 · 음수 테두리 · 아틀라스 크기 없는 테두리는 오류이고 내용은 비어 있습니다. */
         [[nodiscard]] bool parseXML( string_view xml, string_view sourceLabel );
         /** @brief 분류 · 라벨의 프레임입니다. 없으면 nullptr 입니다. */
-        [[nodiscard]] const SpriteLibraryLabel* findLabel( const hashed_string& category, const hashed_string& label ) const;
+        [[nodiscard]] const SpriteLibraryLabel* findLabel( string_view category, string_view label ) const;
         /** @brief 내용을 비웁니다. */
         void clear();
 

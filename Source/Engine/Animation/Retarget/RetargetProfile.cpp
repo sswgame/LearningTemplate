@@ -6,6 +6,7 @@
 
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLReadUtil.h"
@@ -30,7 +31,31 @@ namespace sw
             {
                 XMLFields::writeFields( element, RetargetBonePair{ source, target } );
             }
+
+            /** @brief 열쇠 있는 목록의 규칙 하나입니다. */
+            static DataInheritanceSchema makeKeyedList( const utf8* pName, const utf8* pKey )
+            {
+                DataInheritanceSchema list{ pName };
+                list._keyAttribute = pKey;
+                return list;
+            }
+
+            /**
+             * @brief 상속 규칙입니다. `root` · `pelvis` 는 구조체 칸, 사슬은 이름, 뼈 짝은 원본 뼈, 자세는 뼈가 열쇠입니다.
+             * @details 사슬의 뼈 목록은 열쇠가 없어 통째로 바뀐다(순서가 뜻이다). 같은 원본에 대상 뼈 이름만 다른 스켈레톤의 프로필이 차이 파일 하나다.
+             */
+            static DataInheritanceSchema makeInheritanceSchema()
+            {
+                DataInheritanceSchema schema{ "RetargetProfile" };
+                schema._listField.emplace_back( "root" );
+                schema._listField.emplace_back( "pelvis" );
+                schema._listField.push_back( makeKeyedList( "chains", "name" ) );
+                schema._listField.push_back( makeKeyedList( "bone_map", "source" ) );
+                schema._listField.push_back( makeKeyedList( "target_pose", "bone" ) );
+                return schema;
+            }
         };
+        SW_DATA_INHERITANCE_SCHEMA( RetargetProfile, &RetargetProfileInternal::makeInheritanceSchema ); // 팩 쿠커가 루트 이름으로 찾는다
     } // namespace
 } // namespace sw
 
@@ -81,9 +106,12 @@ namespace sw
     bool RetargetProfile::parseXML( string_view xml, string_view sourceLabel )
     {
         clear();
+        string flatText;
+        if ( DataInheritance::findBasePath( xml ).empty() == false && DataInheritance::flattenFromResources( xml, sourceLabel, RetargetProfileInternal::makeInheritanceSchema(), flatText ) == false )
+            return false;
         XMLDocument document;
         XMLNode     root;
-        if ( XMLReadUtil::parseRoot( document, xml, sourceLabel, "RetargetProfile", root ) != XMLRootStatus::Found )
+        if ( XMLReadUtil::parseRoot( document, flatText.empty() ? xml : string_view{ flatText }, sourceLabel, "RetargetProfile", root ) != XMLRootStatus::Found )
         {
             SW_LOG_ERROR_ID( "RetargetProfile.RetargetProfileMalformedXML", "Retarget profile '%#': malformed XML (expected a <RetargetProfile> root)", sourceLabel );
             return false;

@@ -81,7 +81,8 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Tooltip = "Bone name" )
+        /** @brief 차이 파일(`_base`)의 열쇠입니다. 셰이프 · 충돌 쌍 목록은 이름이 없어 통째로 바뀝니다(쌍의 열쇠는 뼈 둘이라 칸 하나로 짚을 수 없다). */
+        PROPERTY( InheritKey, Tooltip = "Bone name" )
         hashed_string _bone{};
         PROPERTY( Tooltip = "Collision shapes in bone space" )
         vector<PhysicsShapeDesc3D> _listShape;

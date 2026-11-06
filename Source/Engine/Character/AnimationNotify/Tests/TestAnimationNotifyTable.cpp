@@ -1,9 +1,12 @@
 // AnimationNotifyTableTest — 알림 테이블(`*.notifies.xml`)의 `<FootContact>` 줄 읽기(칸은 AnimationFootContactDef 의 PROPERTY).
 #include "pch.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
+#include "Engine/Character/Socket/SocketSet.h"
+#include "Engine/Content/Tests/ScopedScratchDomain.h"
 #include "Engine/Foundation/EngineServices.h"
 
 using namespace sw;
@@ -58,4 +61,47 @@ SW_TEST_CASE( AnimationNotifyTableTest, FootContactRejectsHeightOrder )
 {
     SW_EXPECT_LOG( "Character.FootContactHeightOrder" );
     SW_EXPECT_FALSE( loadFootContactLine( R"(<FootContact notify="FootL" bone="foot.l" contact_height="0.2" release_height="0.12" max_vertical_speed="0.6"/>)" ) );
+}
+
+/**
+ * @brief [AnimationNotifyTableTest] 차이 파일 — 알림은 이름, 발 닿음은 알림 이름이 열쇠다. 처리기가 바뀌면 인자가 달라지므로 `_op="Replace"` 다
+ */
+SW_TEST_CASE( AnimationNotifyTableTest, ChildTableMergesByKeys )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.notifies.xml" ), R"(<AnimationNotifies>
+        <Notify name="FootL" handler="Footstep" socket="foot_l"/>
+        <Notify name="FootR" handler="Footstep" socket="foot_r"/>
+        <FootContact notify="FootL" bone="foot.l" contact_height="0.05" release_height="0.12" max_vertical_speed="0.6"/>
+    </AnimationNotifies>)" ) );
+    const string         baseID = test::ScopedScratchDomain::makeID( "base.notifies.xml" ).str();
+    AnimationNotifyTable table;
+    SW_REQUIRE_TRUE( table.loadFromXMLText( "<AnimationNotifies _base=\"" + baseID + "\"><Notify name=\"FootR\" _op=\"Remove\"/><FootContact notify=\"FootL\" bone=\"foot.b\"/></AnimationNotifies>", "child",
+                                            sw::engine::getSubsystem<sw::AnimationNotifyHandlerRegistry>() ) );
+    SW_EXPECT_EQUAL( size_t{ 1 }, table.getEntries().size() );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( table.getFootContacts().size() ) );
+    SW_EXPECT_TRUE( table.getFootContacts()[0]._bone == hashed_string( "foot.b" ) );
+    SW_EXPECT_NEAR( 0.05f, table.getFootContacts()[0]._contactHeight, 1e-6f ); // 물려받음
+}
+
+/**
+ * @brief [AnimationNotifyTableTest] 소켓 세트 차이 파일 — 소켓과 가상 뼈는 이름이 열쇠이고, 적지 않은 칸은 물려받는다
+ */
+SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetMergesByName )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.sockets.xml" ), R"(<SocketSet>
+        <Socket name="Eyes" parent="head" translation="0 1 0" kind="Attach"/>
+        <Socket name="Chest" parent="spine" kind="Attach"/>
+    </SocketSet>)" ) );
+    const string    baseID = test::ScopedScratchDomain::makeID( "base.sockets.xml" ).str();
+    SocketKindTable kinds;
+    kinds.addKind( hashed_string( "Attach" ) );
+    SocketSet sockets;
+    SW_REQUIRE_TRUE( sockets.loadFromXMLText( "<SocketSet _base=\"" + baseID + "\"><Socket name=\"Eyes\" parent=\"head_b\"/><Socket name=\"Chest\" _op=\"Remove\"/></SocketSet>", "child", kinds ) );
+    const SocketDef* pEyes = sockets.findSocket( hashed_string( "Eyes" ) );
+    SW_REQUIRE_TRUE( pEyes != nullptr );
+    SW_EXPECT_TRUE( pEyes->_parent == hashed_string( "head_b" ) );
+    SW_EXPECT_NEAR( 1.0f, pEyes->_translation._y, 1e-6f ); // 물려받음
+    SW_EXPECT_TRUE( sockets.findSocket( hashed_string( "Chest" ) ) == nullptr );
 }

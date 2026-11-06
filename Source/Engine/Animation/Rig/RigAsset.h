@@ -70,6 +70,7 @@ namespace sw
      *            </nodes>
      *          </RigAsset>
      *          @endcode
+     *          루트에 `_base="<리그>"` 를 적으면 차이만 적는다(`DataInheritance`, 대상 · 노드의 `name` 이 열쇠). 같은 노드 줄에 다른 뼈 이름을 얹는 체형 변형이 파일 하나로 끝난다.
      *          대상은 `bone`, `socket`, `object` 중 하나를 쓰고, `rotation` 은 도 단위 [피치, 요, 롤] 이다. 노드 종류별 키는 `README.md` 의 테이블에 있다.
      */
     class SW_API RigAsset
