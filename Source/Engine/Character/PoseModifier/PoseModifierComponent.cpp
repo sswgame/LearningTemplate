@@ -392,7 +392,7 @@ namespace sw
         if ( needsSockets() && _pSocketTable == nullptr && _ownSockets == nullptr )
             return;
 
-        const string label = _rigPath.empty() ? string{ pOwner->getName().c_str() } : _rigPath;
+        const string label = _rigPath.empty() ? string{ pOwner->getName().c_str() } : _rigPath.path();
         if ( _instance.initialize( _asset, _pUnit->getSkeleton(), &_socketResolver, label ) == false )
         {
             SW_LOG_ERROR_ID( "PoseModifier.RigCouldNotBound", "Rig '%#' could not be bound to '%#'", label.c_str(), pOwner->getName().c_str() );

@@ -21,6 +21,7 @@
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsQueryScene.h"
+#include "Engine/UI/Document/UIDocument.h"
 #include "Engine/UI/Layout/UILayoutPass.h"
 #include "Engine/UI/Render/UIPaintPass.h"
 #include "Engine/UI/WidgetTree/Widget.h"

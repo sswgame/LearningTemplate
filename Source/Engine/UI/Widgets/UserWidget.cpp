@@ -2,6 +2,8 @@
 
 #include "Engine/UI/Widgets/UserWidget.h"
 
+#include "Engine/UI/Document/UIDocument.h"
+
 namespace sw
 {
     UserWidget::UserWidget()

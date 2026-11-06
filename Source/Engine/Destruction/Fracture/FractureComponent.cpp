@@ -84,7 +84,7 @@ namespace sw
     string FractureComponent::resolveFracturePath() const
     {
         if ( _fracturePath.empty() == false )
-            return _fracturePath;
+            return _fracturePath.path();
         const GameObject* pOwner = getOwner();
         if ( pOwner == nullptr )
             return {};

@@ -531,7 +531,7 @@ namespace sw
         {
             LayerMaterials materials;
             // 칸이 비면 엔진 기본 풀 · 나무 머티리얼이다(값의 기준은 엔진 기본 에셋 표).
-            const string& materialPath = layer._materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._foliageMaterial.get() : layer._materialPath;
+            const string& materialPath = layer._materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._foliageMaterial.get() : layer._materialPath.path();
             materials._layer           = FoliageComponentInternal::makeLayerMaterial( materialPath, layer._tint );
             materials._listMeshSection.resize( layer._listMesh.size() );
             for ( size_t meshIndex = 0; meshIndex < layer._listMesh.size(); ++meshIndex )

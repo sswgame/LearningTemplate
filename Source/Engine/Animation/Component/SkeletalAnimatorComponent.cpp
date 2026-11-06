@@ -13,6 +13,7 @@
 #include "Engine/Animation/AnimationClip.h"
 #include "Engine/Animation/AnimationSet.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Notify/AnimationNotifyListener.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -438,7 +439,7 @@ namespace sw
         else if ( propertyName == s_setPathName )
         {
             const hashed_string state = _graphPlayer.getCurrentStateName();
-            const string        path  = _animationSetPath;
+            const string        path  = _animationSetPath.path();
             setAnimationSetPath( path );
             (void)play( state.empty() ? hashed_string( _initialState ) : state, true, 0.0f );
         }

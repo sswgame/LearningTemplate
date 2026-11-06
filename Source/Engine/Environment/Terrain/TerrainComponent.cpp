@@ -11,8 +11,10 @@
 #include "Engine/Environment/Terrain/LayerWeightsAsset.h"
 #include "Engine/Foundation/EngineParallel.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Graphics/Texture/TextureCache.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Object/Component/3D/MeshInstanceBatch.h"
@@ -312,7 +314,7 @@ namespace sw
             return false;
 
         HeightfieldAsset data;
-        _loadedHeightfieldPath = _heightfieldPath;
+        _loadedHeightfieldPath = _heightfieldPath.path();
         if ( data.loadFromAsset( AssetID{ _heightfieldPath } ) == false )
             return false;
         if ( _heightfield.initialize( data, getWorldPosition(), _size, _heightMin, _heightMax ) == false )
@@ -734,7 +736,7 @@ namespace sw
         // 칸이 비면 엔진 기본 지형 머티리얼이다 - 지오모프를 켰으면 정점 변형을 켠 쌍둥이 머티리얼이다(둘 다 값의 기준은 엔진 기본 에셋 표).
         const EngineDefaultAssets& defaults     = engine::getSubsystem<EngineDefaultAssets>();
         const string&              defaultPath  = _bGeomorph == SW_TRUE ? defaults._terrainGeomorphMaterial.get() : defaults._terrainMaterial.get();
-        const string&              materialPath = _materialPath.empty() ? defaultPath : _materialPath;
+        const string&              materialPath = _materialPath.empty() ? defaultPath : _materialPath.path();
         if ( _material.acquire( materialPath ) == false )
             return;
         for ( uint32 layerIndex = 0; layerIndex < kMaxLayerCount; ++layerIndex )

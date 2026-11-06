@@ -122,7 +122,7 @@ namespace sw
 
 namespace sw
 {
-    class MeshAssetFormat;
+    struct MeshAssetFormat;
 
     /** @brief `AssetRef<MeshAssetFormat>` 은 메시 캐시로 간다(GPU 수명 때문에 공유 캐시와 합치지 않았다 — `SharedAssetCache.h` 머리말). */
     template <>

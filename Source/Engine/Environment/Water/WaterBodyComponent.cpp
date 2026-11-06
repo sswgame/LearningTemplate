@@ -8,6 +8,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Environment/Terrain/TerrainComponent.h"
 #include "Engine/Foundation/EngineServices.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -322,7 +323,7 @@ namespace sw
         }
 
         // 칸이 비면 엔진 기본 물 머티리얼이다(값의 기준은 엔진 기본 에셋 표).
-        const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._waterMaterial.get() : _materialPath;
+        const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._waterMaterial.get() : _materialPath.path();
         if ( _material.getInstance() == nullptr )
             (void)_material.acquire( materialPath ); // 못 잡으면 씬 기본 머티리얼로 그린다(경고는 안에서)
         shared_ptr<Mesh> mesh = Mesh::create();

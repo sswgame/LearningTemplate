@@ -9,6 +9,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Sequencer/SequencePlayer.h"
@@ -16,6 +17,7 @@
 
 namespace sw
 {
+    class SequenceAsset;
     /** @brief 이벤트 항목 하나를 지났을 때 부르는 델리게이트입니다. 항목은 알림 동안만 유효한 사본입니다. */
     SW_DECLARE_DELEGATE( void, OnSequenceEventDelegate, const SequenceTrackItem& item );
     /** @brief 카메라 신호(컷 바뀜, 시네마틱 시작 · 끝, 대기 뷰, 흔들림) 하나를 냈을 때 부르는 델리게이트입니다. */
@@ -53,7 +55,7 @@ namespace sw
         /** @brief 재생할 시퀀스 파일을 바꾸고 바로 엽니다. 못 열면 경고하고 빈 시퀀스입니다. */
         void setSequencePath( string_view path );
         /** @brief 재생할 시퀀스 파일 경로입니다. */
-        const string& getSequencePath() const { return _sequencePath; }
+        const string& getSequencePath() const { return _sequencePath.path(); }
         /**
          * @brief 이벤트 항목을 지날 때 호출할 델리게이트를 등록합니다(언리얼 시퀀서 이벤트 트랙, 유니티 Timeline Signal 에 해당합니다).
          * @details 한 갱신에 지난 이벤트를 시간 순서로(루프를 되감았으면 되감기 전 끝 구간부터) 모두 알린다. 로그와 달리 Shipping 에서도 호출된다.
@@ -77,8 +79,8 @@ namespace sw
         /** @brief `_sequencePath` 의 시퀀스를 플레이어에 엽니다. 경로가 비었으면 아무것도 하지 않고, 열지 못하면 경고합니다. */
         void loadSequenceFromPath();
 
-        PROPERTY( Category = "Sequence", DisplayName = "Sequence", AssetPath, AssetType = "Sequence", Tooltip = "Sequence asset (.seq.xml)" )
-        string _sequencePath;
+        PROPERTY( Category = "Sequence", DisplayName = "Sequence", Tooltip = "Sequence asset (.seq.xml)" )
+        AssetRef<SequenceAsset> _sequencePath;
         PROPERTY( Category = "Playback", DisplayName = "Frames Per Second", Min = 1.0, Max = 120.0 )
         float32 _framesPerSecond;
         PROPERTY( Category = "Playback", DisplayName = "Loop" )

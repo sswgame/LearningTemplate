@@ -12,6 +12,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -21,6 +22,7 @@
 
 namespace sw
 {
+    struct UIDocumentAsset;
     struct UILayoutContext;
     struct UIPaintContext;
 
@@ -267,7 +269,7 @@ namespace sw
         uint8                     _gpuState;            ///< GPU 투영의 위젯 쪽 상태입니다(0 꺼짐 · 1 접힘 · 2 보임). 상태가 바뀔 때만 위젯을 만진다.
         uint8                     _bGPUSlotDirty;       ///< GPU 투영 마커의 슬롯을 다시 정해야 합니다(그리기 크기 · 피벗이 바뀌었거나 처음).
         PROPERTY( DisplayName = "Document", Tooltip = "UI document to show (document loading is a later stage; code uses setContent)" )
-        string _documentPath;
+        AssetRef<UIDocumentAsset> _documentPath;
         PROPERTY( DisplayName = "Space" )
         WidgetSpace _space;
         PROPERTY( DisplayName = "Draw Size", Tooltip = "Screen: fixed marker size (0 = desired size). World: render texture size", Meta = "Units=ui" )

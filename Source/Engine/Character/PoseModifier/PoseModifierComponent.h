@@ -20,6 +20,7 @@
 #include "Engine/Animation/Rig/RigInstance.h"
 #include "Engine/Animation/Rig/RigNode.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -111,7 +112,7 @@ namespace sw
 
         /** @brief 리그 에셋 경로를 바꾸고 다시 묶습니다. */
         void          setRigPath( string_view path );
-        const string& getRigPath() const { return _rigPath; }
+        const string& getRigPath() const { return _rigPath.path(); }
         /** @brief 리그를 런타임에 정합니다(저장되지 않으며, 테스트와 절차 생성에 씁니다). */
         void setRigAsset( shared_ptr<const RigAsset> asset );
         /** @brief 자기 유닛의 소켓 에셋 경로입니다(`*.sockets.xml`, 소켓 대상이 쓴다). */
@@ -229,8 +230,8 @@ namespace sw
         /** @brief 워커 평가입니다(PostProcess). */
         void evaluateFrame( SkeletalMeshComponent& unit );
 
-        PROPERTY( Category = "Rig", DisplayName = "Rig", AssetPath, AssetType = "Rig", Tooltip = "Post-process rig asset (*.rig.xml): ordered IK / constraint / spring nodes" )
-        string _rigPath;
+        PROPERTY( Category = "Rig", DisplayName = "Rig", Tooltip = "Post-process rig asset (*.rig.xml): ordered IK / constraint / spring nodes" )
+        AssetRef<RigAsset> _rigPath;
         PROPERTY( Category = "Rig", DisplayName = "Sockets", AssetPath, AssetType = "SocketSet", Tooltip = "This unit's socket asset (*.sockets.xml) for socket targets" )
         string _socketSetPath;
         PROPERTY( Category = "Rig", DisplayName = "Physics Asset", AssetPath, AssetType = "PhysicsAsset", Tooltip = "Sphere / capsule bodies used as spring bone colliders" )

@@ -24,6 +24,7 @@
 #include "Engine/Object/GameObject/Registry/PrimitiveRegistry.h"
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
+#include "Engine/VFX/VFXEffectDef.h"
 
 /**
  * @brief 이펙트 입자 생성 배율입니다. 사용자 설정 `graphics.effectsQuality` 선택지의 `targetValue` 가 넣는다(`engine.settings.xml`).
@@ -406,7 +407,7 @@ namespace sw
             if ( mesh == nullptr )
             {
                 // 대신 그릴 메시를 고르지 않는다 — 이 방출기는 그리지 않고(시뮬레이션은 돈다) 원인을 남긴다.
-                SW_LOG_ERROR_ID( "VFXComponent.VFXEmitterMeshCould", "VFX '%#': emitter '%#' mesh '%#' could not be acquired - the emitter is not drawn", _effectPath, def._name, def._mesh._meshID );
+                SW_LOG_ERROR_ID( "VFXComponent.VFXEmitterMeshCould", "VFX '%#': emitter '%#' mesh '%#' could not be acquired - the emitter is not drawn", _effectPath.c_str(), def._name, def._mesh._meshID );
                 continue;
             }
             MeshEmitter& meshEmitter = _listMeshEmitter[emitterIndex];
@@ -418,7 +419,7 @@ namespace sw
             if ( bGPUWritten && VFXComponentInternal::isGPUMeshBlendSupported( meshEmitter._material->getMaterial() ) == false )
             {
                 SW_LOG_ERROR_ID( "VFXComponent.VFXEmitterSimulatesGPU", "VFX '%#': emitter '%#' simulates on the GPU but material '%#' is not opaque - GPU mesh particles need an opaque material; the emitter is not drawn",
-                                 _effectPath, def._name, def._mesh._materialPath );
+                                 _effectPath.c_str(), def._name, def._mesh._materialPath );
                 meshEmitter._material->release();
                 meshEmitter._material.reset();
                 continue;

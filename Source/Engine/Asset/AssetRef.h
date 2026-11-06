@@ -61,19 +61,26 @@ namespace sw
             return *this;
         }
 
-        /** @brief 대상을 지금 읽어 받습니다. 빈 참조면 읽지 않고 캐시의 빈 값입니다. */
-        [[nodiscard]] auto acquire() const -> decltype( AssetRefCache<T>::acquire( string_view{} ) )
+        /**
+         * @brief 대상을 지금 읽어 받습니다. 빈 참조면 읽지 않고 캐시의 빈 값입니다.
+         * @details 멤버 템플릿인 까닭: 칸이 있는 헤더는 `T` 를 앞선 선언으로만 알 수 있다. 칸의 형식을 쓰는 자리에서 `AssetRefCache<T>` 가 인스턴스화되면 뒤에 오는 그 캐시 헤더의 특수화가 컴파일 오류다.
+         */
+        template <typename TTarget = T>
+        [[nodiscard]] auto acquire() const
         {
+            using Result = decltype( AssetRefCache<TTarget>::acquire( string_view{} ) );
             if ( empty() )
-                return {};
-            return AssetRefCache<T>::acquire( path() );
+                return Result{};
+            return AssetRefCache<TTarget>::acquire( path() );
         }
         /** @brief 대상을 비동기로 요청합니다. 빈 참조면 빈 핸들입니다. */
-        [[nodiscard]] auto request() const -> decltype( AssetRefCache<T>::request( string_view{} ) )
+        template <typename TTarget = T>
+        [[nodiscard]] auto request() const
         {
+            using Result = decltype( AssetRefCache<TTarget>::request( string_view{} ) );
             if ( empty() )
-                return {};
-            return AssetRefCache<T>::request( path() );
+                return Result{};
+            return AssetRefCache<TTarget>::request( path() );
         }
     };
 } // namespace sw

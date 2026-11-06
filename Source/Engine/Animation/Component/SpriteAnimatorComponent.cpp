@@ -6,6 +6,7 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/2D/SpriteComponent.h"
+#include "Engine/Animation/Graph/AnimationGraphAsset.h"
 #include "Engine/Animation/Notify/AnimationNotifyListener.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Sprite/SpriteClipAsset.h"

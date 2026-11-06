@@ -6,11 +6,13 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Layout/OverlayPanel.h"
 
 namespace sw
 {
+    struct UIDocumentAsset;
     /**
      * @class UserWidget
      * @brief `_document` 문서의 루트 위젯을 자식 하나로 가집니다. 배치는 겹침 패널과 같습니다(자식이 패널 사각형 전체를 슬롯으로 받습니다).
@@ -29,10 +31,10 @@ namespace sw
         const TypeInfo* getTypeInfo() const override;
 
         /** @brief 끼운 조각 문서 경로입니다. */
-        const string& getDocument() const { return _document; }
+        const string& getDocument() const { return _document.path(); }
 
     private:
-        PROPERTY( DisplayName = "Document", AssetPath, AssetType = "UIDocument", Tooltip = "UI document inserted as this widget's content" )
-        string _document;
+        PROPERTY( DisplayName = "Document", Tooltip = "UI document inserted as this widget's content" )
+        AssetRef<UIDocumentAsset> _document;
     };
 } // namespace sw

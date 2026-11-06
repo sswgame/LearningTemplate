@@ -17,6 +17,7 @@
 #include "Engine/Physics/Component/ScenePhysics.h"
 #include "Engine/Physics/IPhysicsScene.h"
 #include "Engine/Reflection/ReflectionValidation.h"
+#include "Engine/TileMap/TileMapXML.h"
 
 namespace sw
 {
@@ -119,7 +120,7 @@ namespace sw
             return false;
         if ( map._tileSetPath.empty() )
         {
-            SW_LOG_ERROR_ID( "TileMapRenderer.TileMapNoTile", "Tile map '%#' has no tile layer (<tileLayer tileSet=...>)", _tileMapPath );
+            SW_LOG_ERROR_ID( "TileMapRenderer.TileMapNoTile", "Tile map '%#' has no tile layer (<tileLayer tileSet=...>)", _tileMapPath.c_str() );
             return false;
         }
         TileSetAsset tileSet;

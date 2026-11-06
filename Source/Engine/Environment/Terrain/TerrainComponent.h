@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Terrain/TerrainHeightfield.h"
 #include "Engine/Environment/Terrain/TerrainMeshBuilder.h"
@@ -19,6 +20,10 @@
 
 namespace sw
 {
+    struct LayerWeightsAsset;
+    class Material;
+    class Texture2D;
+    struct HeightfieldAsset;
     class Archive;
     class GameObjectManager;
     class MeshInstanceBatch;
@@ -195,8 +200,8 @@ namespace sw
          */
         static TerrainComponent* findTerrainAt( const GameObjectManager& manager, float32 worldX, float32 worldZ );
 
-        const string& getHeightfieldPath() const { return _heightfieldPath; }
-        const string& getLayerWeightsPath() const { return _layerWeightsPath; }
+        const string& getHeightfieldPath() const { return _heightfieldPath.path(); }
+        const string& getLayerWeightsPath() const { return _layerWeightsPath.path(); }
         void          setHeightfieldPath( string_view path ) { _heightfieldPath = path; }
         void          setLayerWeightsPath( string_view path ) { _layerWeightsPath = path; }
         void          setDetailTexturePath( string_view path ) { _detailTexturePath = path; }
@@ -260,14 +265,14 @@ namespace sw
         void releaseCPUSplat();
 
     private:
-        PROPERTY( Category = "Terrain", DisplayName = "Heightfield", AssetPath, FileFilter = "*.heightfield", Tooltip = "Imported .heightfield asset" )
-        string _heightfieldPath;
-        PROPERTY( Category = "Terrain", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Terrain material (terrain.hlsl). Empty uses the engine default terrain material" )
-        string _materialPath; ///< 비면 엔진 기본 에셋 표의 `_terrainMaterial` 이다
-        PROPERTY( Category = "Terrain", DisplayName = "Layer Weights", AssetPath, FileFilter = "*.layerweights", Tooltip = "Layer weights asset (.layerweights, layers 0..7); read by client and dedicated server" )
-        string _layerWeightsPath;
-        PROPERTY( Category = "Terrain", DisplayName = "Detail Map", AssetPath, AssetType = "Texture", Tooltip = "Tileable detail, one channel per layer" )
-        string _detailTexturePath;
+        PROPERTY( Category = "Terrain", DisplayName = "Heightfield", FileFilter = "*.heightfield", Tooltip = "Imported .heightfield asset" )
+        AssetRef<HeightfieldAsset> _heightfieldPath;
+        PROPERTY( Category = "Terrain", DisplayName = "Material", Tooltip = "Terrain material (terrain.hlsl). Empty uses the engine default terrain material" )
+        AssetRef<Material> _materialPath; ///< 비면 엔진 기본 에셋 표의 `_terrainMaterial` 이다
+        PROPERTY( Category = "Terrain", DisplayName = "Layer Weights", FileFilter = "*.layerweights", Tooltip = "Layer weights asset (.layerweights, layers 0..7); read by client and dedicated server" )
+        AssetRef<LayerWeightsAsset> _layerWeightsPath;
+        PROPERTY( Category = "Terrain", DisplayName = "Detail Map", Tooltip = "Tileable detail, one channel per layer" )
+        AssetRef<Texture2D> _detailTexturePath;
         PROPERTY( Category = "Terrain", DisplayName = "Layers", Tooltip = "Up to eight layers, one per splat channel (two RGBA splat maps)" )
         vector<TerrainLayer> _listLayer;
         PROPERTY( Category = "Terrain", DisplayName = "Size", Units = m, Tooltip = "World extent along x and z" )

@@ -10,6 +10,7 @@
 #include "Engine/Animation/Component/SkeletalAnimatorComponent.h"
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
 #include "Engine/Animation/Facial/FacialLiveSource.h"
+#include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Audio/AudioClip.h"
 #include "Engine/Audio/AudioClipDecoder.h"

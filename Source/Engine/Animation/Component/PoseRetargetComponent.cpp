@@ -5,6 +5,7 @@
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Component/SkeletalMeshComponent.h"
+#include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Skeletal/Skeleton.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"

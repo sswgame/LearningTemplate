@@ -12,6 +12,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -69,8 +71,8 @@ namespace sw
         PROPERTY( Tooltip = "Triangle mesh: three vertex indices per triangle" )
         vector<uint32> _listIndex;
         /** @brief 볼록 껍질 · 삼각 메시를 채울 메시 에셋입니다. 점을 직접 적지 않았을 때만 쓴다(`PhysicsMeshShapeCache`). 메시 로컬 좌표가 셰이프 로컬이다. */
-        PROPERTY( AssetPath, AssetType = "Mesh", Tooltip = "Convex hull / triangle mesh: .mesh asset to fill the points from when _listPoint is empty" )
-        string _meshPath;
+        PROPERTY( Tooltip = "Convex hull / triangle mesh: .mesh asset to fill the points from when _listPoint is empty" )
+        AssetRef<MeshAssetFormat> _meshPath;
         PROPERTY( Tooltip = "Physics material name (empty: the body's material)" )
         hashed_string _material{};
     };

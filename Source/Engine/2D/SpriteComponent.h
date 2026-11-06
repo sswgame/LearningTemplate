@@ -9,11 +9,13 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class Texture2D;
     class SpriteClipAsset;
     class ValidationContext;
 
@@ -61,12 +63,12 @@ namespace sw
         bool getWorldBounds( float3& outCenter, float32& outRadius ) const override;
 
         /** @brief 스프라이트 텍스처 경로입니다. 비어 있으면 클립의 아틀라스를 쓰고, 그것도 없으면 흰 사각형(머티리얼의 색)입니다. */
-        const string& getTextureName() const { return _textureName; }
+        const string& getTextureName() const { return _textureName.path(); }
         /** @brief 텍스처를 바꾸고 인스턴스를 다시 맞춥니다. */
         void setTextureName( string_view texture );
 
         /** @brief 노멀 맵 텍스처 경로입니다(라이트를 받는 머티리얼 `sprite2dlit.material` 이 읽습니다). 비어 있으면 N·L 없이 비춥니다. */
-        const string& getNormalMapName() const { return _normalMapName; }
+        const string& getNormalMapName() const { return _normalMapName.path(); }
         /** @brief 노멀 맵을 바꾸고 텍스처 인스턴스를 다시 맞춥니다. */
         void setNormalMapName( string_view normalMap );
 
@@ -149,12 +151,12 @@ namespace sw
         /** @brief 텍스처 경로가 비었으면 클립의 아틀라스, 아니면 텍스처 경로를 반환합니다. */
         string_view getEffectiveTexture() const;
 
-        PROPERTY( Category = "Rendering", DisplayName = "Texture", AssetPath, AssetType = "Texture", Tooltip = "Texture asset name; empty uses the clip atlas" )
-        string _textureName;
-        PROPERTY( Category = "Rendering", DisplayName = "Normal Map", AssetPath, AssetType = "Texture", Tooltip = "Normal map read by the lit sprite material" )
-        string        _normalMapName;
-        hashed_string _appliedTexture;   ///< 이 컴포넌트가 등록한 텍스처 인스턴스의 텍스처다. 비어 있으면 등록한 것이 없다
-        hashed_string _appliedNormalMap; ///< 그 인스턴스의 노멀 맵
+        PROPERTY( Category = "Rendering", DisplayName = "Texture", Tooltip = "Texture asset name; empty uses the clip atlas" )
+        AssetRef<Texture2D> _textureName;
+        PROPERTY( Category = "Rendering", DisplayName = "Normal Map", Tooltip = "Normal map read by the lit sprite material" )
+        AssetRef<Texture2D> _normalMapName;
+        hashed_string       _appliedTexture;   ///< 이 컴포넌트가 등록한 텍스처 인스턴스의 텍스처다. 비어 있으면 등록한 것이 없다
+        hashed_string       _appliedNormalMap; ///< 그 인스턴스의 노멀 맵
         /**
          * @brief 스프라이트 클립(`.sprite.xml`) 경로입니다. 보여 줄 프레임은 번호(`_clipFrame`)로 따로 가집니다. 프레임마다 문자열을 만들어
          *        파싱하지 않고 번호 하나를 넘깁니다.

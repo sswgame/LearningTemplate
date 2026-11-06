@@ -17,12 +17,14 @@
 #include "Engine/Animation/Facial/FacialRig.h"
 #include "Engine/Animation/Facial/LipSync.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class FacialRig;
     class FacialAnimationComponent;
     class IFacialLiveSource;
     class Mesh;
@@ -82,7 +84,7 @@ namespace sw
 
         /** @brief 얼굴 리그 경로를 바꾸고 읽습니다. */
         void          setFacialRigPath( string_view path );
-        const string& getFacialRigPath() const { return _facialRigPath; }
+        const string& getFacialRigPath() const { return _facialRigPath.path(); }
         /** @brief 리그를 런타임에 정합니다(테스트 · 절차 생성). */
         void             setFacialRig( const FacialRig& rig );
         const FacialRig& getFacialRig() const { return _rig; }
@@ -153,8 +155,8 @@ namespace sw
         /** @brief 눈 본을 목표 쪽으로 돌립니다. */
         void applyGaze( SkeletalMeshComponent& unit );
 
-        PROPERTY( Category = "Facial", DisplayName = "Facial Rig", AssetPath, AssetType = "FacialRig", Tooltip = "Facial rig (.facial.xml): expressions, visemes, blink, gaze" )
-        string _facialRigPath;
+        PROPERTY( Category = "Facial", DisplayName = "Facial Rig", Tooltip = "Facial rig (.facial.xml): expressions, visemes, blink, gaze" )
+        AssetRef<FacialRig> _facialRigPath;
 
         FacialAnimationBinding   _binding;
         Subscription             _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)

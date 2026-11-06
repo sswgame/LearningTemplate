@@ -13,11 +13,13 @@
 #include "Engine/Animation/Graph/AnimationGraphPlayer.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Sprite/SpriteClipPlayable.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class AnimationGraphAsset;
     class IAnimationNotifyListener;
     class SpriteAnimatorComponent;
     class SpriteClipAsset;
@@ -121,7 +123,7 @@ namespace sw
 
         string        getCurrentAnimation() const;
         void          setCurrentAnimation( const string& animation );
-        const string& getAnimationGraphPath() const { return _animationGraphPath; }
+        const string& getAnimationGraphPath() const { return _animationGraphPath.path(); }
 
         bool isRepeating() const;
         void setRepeat( bool bLoop );
@@ -168,9 +170,9 @@ namespace sw
         /** @brief 클립의 트랜스폼 키를 현재 시간에서 읽어 스프라이트의 로컬 위치 x, y 와 Z 회전에 씁니다. 키가 없거나 스프라이트가 루트이면 쓰지 않습니다. */
         void applyTransformKeys();
 
-        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "Animation graph asset used by this animator" )
-        string              _animationGraphPath;
-        AnimationGraphAsset _graph;
+        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", Tooltip = "Animation graph asset used by this animator" )
+        AssetRef<AnimationGraphAsset> _animationGraphPath;
+        AnimationGraphAsset           _graph;
         PROPERTY( Category = "Animation", DisplayName = "Current Animation", Tooltip = "Currently playing animation name" )
         string _currentAnimation;
         PROPERTY( Category = "Animation", DisplayName = "Animation List", Tooltip = "Available animation names" )

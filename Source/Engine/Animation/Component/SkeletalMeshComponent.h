@@ -15,6 +15,7 @@
 #include "Engine/Animation/Scene/AnimationSkinSlot.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -79,7 +80,7 @@ namespace sw
 
         /** @brief 스켈레톤 에셋 경로를 바꾸고 읽습니다. 빈 경로이면 본 하나짜리 암묵 스켈레톤입니다. */
         void          setSkeletonPath( string_view path );
-        const string& getSkeletonPath() const { return _skeletonPath; }
+        const string& getSkeletonPath() const { return _skeletonPath.path(); }
         /** @brief 스켈레톤을 런타임에 정합니다. 저장되지 않으며 테스트, 절차 생성, 파괴 조각에 씁니다. 경로가 빈 동안 렌더 에셋을 다시 해석해도 유지됩니다. */
         void setSkeleton( shared_ptr<const Skeleton> skeleton );
         /** @brief 스켈레톤을 반환합니다. 항상 있습니다(없으면 암묵 스켈레톤). */
@@ -282,8 +283,8 @@ namespace sw
         /** @brief 작업을 뗍니다. 그 작업에 `onAnimationUnitDetached` 를 알립니다(작업 구독이 풀릴 때). */
         void detachAnimationPhaseTask( IAnimationPhaseTask* pTask );
 
-        PROPERTY( Category = "Animation", DisplayName = "Skeleton", AssetPath, AssetType = "Skeleton", Tooltip = "Skeleton asset; empty uses a one-bone implicit skeleton" )
-        string _skeletonPath;
+        PROPERTY( Category = "Animation", DisplayName = "Skeleton", Tooltip = "Skeleton asset; empty uses a one-bone implicit skeleton" )
+        AssetRef<Skeleton> _skeletonPath;
         PROPERTY( Category = "Animation", DisplayName = "Update Rate Divisor", Tooltip = "Build the pose every N frames (animation LOD)", Min = 1.0, Max = 16.0 )
         uint32                     _updateRateDivisor;
         shared_ptr<const Skeleton> _skeleton;

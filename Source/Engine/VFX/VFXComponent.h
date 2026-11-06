@@ -8,6 +8,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -20,6 +21,7 @@
 
 namespace sw
 {
+    struct VFXEffectDef;
     struct GPULight;
 
     class EnvironmentMaterial;
@@ -81,7 +83,7 @@ namespace sw
         /** @brief 효과 파일을 바꾸고 바로 읽습니다. 재생은 멈춥니다. */
         void setEffectPath( string_view path );
         /** @brief 효과 파일(리소스 id)입니다. */
-        const string& getEffectPath() const { return _effectPath; }
+        const string& getEffectPath() const { return _effectPath.path(); }
         /** @brief 씨앗을 바꿉니다. 효과를 다시 만들고 재생은 멈춥니다. */
         void setSeed( uint32 seed );
         /** @brief 방출기 씨앗의 바탕입니다. */
@@ -153,8 +155,8 @@ namespace sw
         /** @brief 메시 방출기 @p emitterIndex 의 항목을 @p listParticle(비면 모두 크기 0)로 고칩니다. */
         void writeMeshEntries( uint32 emitterIndex, const vector<GPUParticle>* pListParticle );
 
-        PROPERTY( Category = "VFX", DisplayName = "Effect", AssetPath, FileFilter = "*.vfx.xml", Tooltip = "Particle effect (.vfx.xml)" )
-        string                                        _effectPath;
+        PROPERTY( Category = "VFX", DisplayName = "Effect", FileFilter = "*.vfx.xml", Tooltip = "Particle effect (.vfx.xml)" )
+        AssetRef<VFXEffectDef>                        _effectPath;
         vector<EmitterSimulation>                     _listSimulation;
         vector<shared_ptr<const vector<GPUParticle>>> _listPublished;      ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
         vector<VFXGPUEmitterRequest>                  _listGPURequest;     ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)

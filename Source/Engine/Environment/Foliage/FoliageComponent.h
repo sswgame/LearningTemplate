@@ -11,7 +11,9 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/Placement/PlacementRule.h"
+#include "Engine/Graphics/Material/Material.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -33,8 +35,8 @@ namespace sw
 
         PROPERTY( Tooltip = "Mesh section name (the imported material name, e.g. leaves_normaltree)" )
         string _sectionName{};
-        PROPERTY( AssetPath, AssetType = "Material", Tooltip = "A foliage.hlsl material (wind, fade and bend come from the component)" )
-        string _materialPath{};
+        PROPERTY( Tooltip = "A foliage.hlsl material (wind, fade and bend come from the component)" )
+        AssetRef<Material> _materialPath{};
     };
 
     /**
@@ -71,8 +73,8 @@ namespace sw
         PlacementRule _rule{};
         PROPERTY()
         vector<FoliageMesh> _listMesh{};
-        PROPERTY( AssetPath, AssetType = "Material", Tooltip = "Material of section-less meshes: foliage.material (casts shadows) or grass.material (no shadows). Empty uses the engine default foliage material" )
-        string _materialPath{}; ///< 구간 없는 메시의 머티리얼. 비면 엔진 기본 에셋 표의 `_foliageMaterial` 이다
+        PROPERTY( Tooltip = "Material of section-less meshes: foliage.material (casts shadows) or grass.material (no shadows). Empty uses the engine default foliage material" )
+        AssetRef<Material> _materialPath{}; ///< 구간 없는 메시의 머티리얼. 비면 엔진 기본 에셋 표의 `_foliageMaterial` 이다
         PROPERTY( Tooltip = "Linear RGB tint" )
         float4 _tint{ 1.0f, 1.0f, 1.0f, 1.0f };
         PROPERTY( Min = 0.0, Max = 1.0, Tooltip = "Per-instance brightness variation" )

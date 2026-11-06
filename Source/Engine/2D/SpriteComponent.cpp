@@ -14,6 +14,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Graphics/Mesh/MeshUtil.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionValidation.h"
 
@@ -194,7 +195,7 @@ namespace sw
     string_view SpriteComponent::getEffectiveTexture() const
     {
         if ( _textureName.empty() == false || _clip == nullptr )
-            return _textureName;
+            return _textureName.path();
         return _clip->_atlasPath;
     }
 

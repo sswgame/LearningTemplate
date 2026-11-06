@@ -10,12 +10,14 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Destruction/Fracture/FractureComponentBase.h"
 #include "Engine/Navigation/Component/SceneNavigation.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    struct FractureAsset;
     class FractureComponent;
 
     /**
@@ -56,7 +58,7 @@ namespace sw
 
         /** @brief 파쇄 에셋 경로를 바꿉니다. 다음 물리 프레임에 읽으며, 쪼갠 뒤에는 현재 조각을 유지합니다. */
         void          setFracturePath( string_view path );
-        const string& getFracturePath() const { return _fracturePath; }
+        const string& getFracturePath() const { return _fracturePath.path(); }
         /** @brief 현재 쓰는(또는 쓸) 경로를 반환합니다. 비었으면 오브젝트 메시 옆 경로입니다. 없으면 빈 문자열입니다. */
         string resolveFracturePath() const;
 
@@ -67,8 +69,8 @@ namespace sw
         void                            onAnchoredShapeChanged() override;
 
     private:
-        PROPERTY( Category = "Fracture", DisplayName = "Fracture Asset", AssetPath, Tooltip = "The .fracture asset; empty uses the one beside the object's .mesh" )
-        string                    _fracturePath;
+        PROPERTY( Category = "Fracture", DisplayName = "Fracture Asset", Tooltip = "The .fracture asset; empty uses the one beside the object's .mesh" )
+        AssetRef<FractureAsset>   _fracturePath;
         FractureNavGeometrySource _navGeometrySource;
         SceneNavigation*          _pSceneNavigation;        ///< 기하 소스를 등록한 씬의 내비게이션이다(등록하는 동안만 유효하다).
         uint32                    _seenReloadCount;         ///< 받았을 때의 `SharedAssetCache<FractureAsset>::getReloadCount` 다(핫 리로드 판정에 쓴다).

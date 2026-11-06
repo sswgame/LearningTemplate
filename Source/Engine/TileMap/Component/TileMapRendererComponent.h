@@ -12,6 +12,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Foundation/PhysicsHandle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -21,6 +22,7 @@
 
 namespace sw
 {
+    struct TileMapXMLData;
     class SceneComponent;
     class SpriteInstanceBatch;
     class ValidationContext;
@@ -128,8 +130,8 @@ namespace sw
         float4x4 getOwnerWorld() const;
         size_t   indexOf( int32 x, int32 y ) const { return static_cast<size_t>( y ) * static_cast<size_t>( _map._width ) + static_cast<size_t>( x ); }
 
-        PROPERTY( Category = "Tile Map", DisplayName = "Tile Map", AssetPath, AssetType = "TileMap", Tooltip = "Tile map XML whose tile layer is drawn" )
-        string _tileMapPath;
+        PROPERTY( Category = "Tile Map", DisplayName = "Tile Map", Tooltip = "Tile map XML whose tile layer is drawn" )
+        AssetRef<TileMapXMLData> _tileMapPath;
         PROPERTY( Category = "Tile Map", DisplayName = "Material", AssetPath, AssetType = "Material",
                   Tooltip = "Sprite material for the tiles (point filter or lit). Empty uses the engine default tile map material" )
         string _materialPath; ///< 비면 엔진 기본 에셋 표의 `_tileMapMaterial` 이다

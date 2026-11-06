@@ -19,12 +19,14 @@
 #include "Engine/Animation/Skeletal/CurveAccumulator.h"
 #include "Engine/Animation/Skeletal/Pose.h"
 #include "Engine/Animation/Skeletal/PoseInertializer.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class AnimationGraphAsset;
     class AnimationClip;
     class AnimationSet;
     class IAnimationNotifyListener;
@@ -182,7 +184,7 @@ namespace sw
         void stop();
         /** @brief 애니메이션 셋을 바꿉니다(읽어 둔 클립은 비웁니다). */
         void          setAnimationSetPath( string_view path );
-        const string& getAnimationSetPath() const { return _animationSetPath; }
+        const string& getAnimationSetPath() const { return _animationSetPath.path(); }
         /** @brief 시작 상태를 바꿉니다(다음 시작부터). */
         void setInitialState( string_view stateName ) { _initialState = string{ stateName }; }
         /** @brief 시작 상태를 이 시각(초)부터 재생합니다(다음 시작부터 적용하며, 군중이 모두 같은 프레임으로 시작하지 않게 합니다). */
@@ -407,10 +409,10 @@ namespace sw
         /** @brief 루트 모션을 오브젝트에 옮깁니다(게임 스레드). */
         void applyRootMotion( SkeletalMeshComponent& unit );
 
-        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", AssetPath, AssetType = "AnimationGraph", Tooltip = "State machine graph; nodes name clips" )
-        string _animationGraphPath;
-        PROPERTY( Category = "Animation", DisplayName = "Animation Set", AssetPath, Tooltip = "Name to clip table (*.animset.xml); the import writes one beside each model" )
-        string _animationSetPath;
+        PROPERTY( Category = "Animation", DisplayName = "Animation Graph", Tooltip = "State machine graph; nodes name clips" )
+        AssetRef<AnimationGraphAsset> _animationGraphPath;
+        PROPERTY( Category = "Animation", DisplayName = "Animation Set", Tooltip = "Name to clip table (*.animset.xml); the import writes one beside each model" )
+        AssetRef<AnimationSet> _animationSetPath;
         PROPERTY( Category = "Animation", DisplayName = "Initial State", Tooltip = "State (or clip) played at begin play; empty uses the graph entry node" )
         string _initialState;
         PROPERTY( Category = "Animation", DisplayName = "Current State", Tooltip = "Currently playing state (kept across hot reload)", ReadOnly )

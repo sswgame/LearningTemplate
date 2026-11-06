@@ -13,11 +13,13 @@
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Animation/Skeletal/Pose.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class RetargetProfile;
     class PoseRetargetComponent;
     class SkeletalMeshComponent;
     class Skeleton;
@@ -84,8 +86,8 @@ namespace sw
         /** @brief 기본 포즈 단계입니다(워커). */
         void populateBasePose( SkeletalMeshComponent& unit );
 
-        PROPERTY( Category = "Retarget", DisplayName = "Profile", AssetPath, AssetType = "RetargetProfile", Tooltip = "Retarget profile (*.retarget.xml)" )
-        string _profilePath;
+        PROPERTY( Category = "Retarget", DisplayName = "Profile", Tooltip = "Retarget profile (*.retarget.xml)" )
+        AssetRef<RetargetProfile> _profilePath;
 
         PoseRetargetBinding                     _binding;
         Subscription                            _bindingRegistration; ///< 유닛 단계 작업 등록 구독(놓으면 유닛에서 빠진다)

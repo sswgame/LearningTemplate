@@ -11,6 +11,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Environment/EnvironmentUtil.h"
 #include "Engine/Environment/Water/WaterWaveMath.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -19,6 +20,7 @@
 
 namespace sw
 {
+    class Material;
     struct RHIVertex;
 
     class GameObjectManager;
@@ -146,8 +148,8 @@ namespace sw
     private:
         PROPERTY( Category = "Water", DisplayName = "Shape" )
         WaterBodyShape _shape;
-        PROPERTY( Category = "Water", DisplayName = "Material", AssetPath, AssetType = "Material", Tooltip = "Empty uses the engine default water material" )
-        string _materialPath; ///< 비면 엔진 기본 에셋 표의 `_waterMaterial` 이다
+        PROPERTY( Category = "Water", DisplayName = "Material", Tooltip = "Empty uses the engine default water material" )
+        AssetRef<Material> _materialPath; ///< 비면 엔진 기본 에셋 표의 `_waterMaterial` 이다
         PROPERTY( Category = "Water", DisplayName = "Size", Units = m, Tooltip = "Lake extent along x and z, centered on the owner" )
         float2 _size;
         PROPERTY( Category = "Water", DisplayName = "Cell Size", Min = 0.1, Units = m, Tooltip = "Surface grid spacing (waves need vertices)" )

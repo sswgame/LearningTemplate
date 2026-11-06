@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Character/PairedAnimation/PairedAnimationSession.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -44,7 +45,7 @@ namespace sw
 
         /** @brief 에셋 경로를 바꾸고 다시 읽습니다. */
         void          setPairedAnimationPath( string_view path );
-        const string& getPairedAnimationPath() const { return _pairedAnimationPath; }
+        const string& getPairedAnimationPath() const { return _pairedAnimationPath.path(); }
         /** @brief 에셋을 직접 정합니다(테스트와 절차 생성용이며 저장되지 않습니다). */
         void setPairedAnimationDef( shared_ptr<const PairedAnimationDef> def ) { _def = std::move( def ); }
         /** @brief 이 오브젝트의 애니메이터가 맡을 역할을 정합니다. */
@@ -73,8 +74,8 @@ namespace sw
          */
         [[nodiscard]] bool appendRoleComponentBindings( GameObjectManager& manager, vector<PairedAnimationBinding>& inoutListBinding ) const;
 
-        PROPERTY( Category = "Animation", DisplayName = "Paired Animation", AssetPath, Tooltip = "Roles, clips, alignment and shared notifies (*.pairedanim.xml)" )
-        string _pairedAnimationPath;
+        PROPERTY( Category = "Animation", DisplayName = "Paired Animation", Tooltip = "Roles, clips, alignment and shared notifies (*.pairedanim.xml)" )
+        AssetRef<PairedAnimationDef> _pairedAnimationPath;
         PROPERTY( Category = "Animation", DisplayName = "Role", Tooltip = "Role this object's skeletal animator plays in the paired animation" )
         string _role;
 
