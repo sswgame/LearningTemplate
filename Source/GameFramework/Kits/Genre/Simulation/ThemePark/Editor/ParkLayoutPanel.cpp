@@ -133,8 +133,7 @@ namespace sw::editor
         const EditorListFilter filter{ _filter.c_str() };
         vector<uint32>         listRow;
         model.collectRows( filter, ParkRideSortColumn::FileOrder, false, listRow );
-        (void)EditorWidgets::drawFilterBar( "##ParkRideFilter", _filter, nullptr, static_cast<uint32>( listRow.size() ), rideCount, nullptr );
-        EditorSelfTestMarks::note( "themepark.layout.filter" );
+        (void)EditorWidgets::drawFilterBar( "##ParkRideFilter", _filter, nullptr, static_cast<uint32>( listRow.size() ), rideCount, nullptr, "themepark.layout.filter" );
         if ( listRow.empty() )
         {
             EditorWidgets::drawNoSearchResultHint( filter.getText() );

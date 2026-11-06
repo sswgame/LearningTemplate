@@ -109,12 +109,13 @@ namespace sw::editor
          * @brief 목록 위의 거르개 줄(검색 칸 + 오른쪽 끝 건수)을 그립니다. 검색어가 바뀌었으면 true 입니다.
          * @details 검색 칸이 건수를 뺀 남은 폭을 채운다. 패널마다 검색 칸 · 건수 · 폭 계산을 손으로 이으면 건수가 창 밖으로 밀리거나 칸 폭이 패널마다 달랐다
          *          (언리얼 · 유니티 · Godot 모두 목록 패널 맨 위에 같은 모양의 검색 줄을 둔다). 건수 형식은 `drawCountLabel` 과 같다.
+         *          @p pMark 는 검색 칸 자리의 자체 시험 표시다 — 부른 뒤에 `note` 하면 마지막 항목인 건수 글에 찍혀 글자를 허공에 친다.
          */
-        static bool drawFilterBar( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, uint32 visible, uint32 total, const utf8* pUnit );
+        static bool drawFilterBar( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, uint32 visible, uint32 total, const utf8* pUnit, const utf8* pMark );
         template <uint32 N>
-        static bool drawFilterBar( const utf8* pID, fixed_string<N>& str, const utf8* pHint, uint32 visible, uint32 total, const utf8* pUnit )
+        static bool drawFilterBar( const utf8* pID, fixed_string<N>& str, const utf8* pHint, uint32 visible, uint32 total, const utf8* pUnit, const utf8* pMark )
         {
-            return drawFilterBar( pID, str.data(), str.capacity(), pHint, visible, total, pUnit );
+            return drawFilterBar( pID, str.data(), str.capacity(), pHint, visible, total, pUnit, pMark );
         }
 
         /**

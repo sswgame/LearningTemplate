@@ -653,7 +653,7 @@ namespace sw::editor
         return ImGui::CollapsingHeader( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "Advanced" ), pID != nullptr ? pID : "advanced" ), ImGuiTreeNodeFlags_None );
     }
 
-    bool EditorWidgets::drawFilterBar( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, uint32 visible, uint32 total, const utf8* pUnit )
+    bool EditorWidgets::drawFilterBar( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, uint32 visible, uint32 total, const utf8* pUnit, const utf8* pMark )
     {
         // 건수 글을 먼저 재고, 검색 칸이 그 폭을 뺀 남은 폭을 쓴다. 건수는 줄 오른쪽 끝에 붙는다.
         utf8       countText[64];
@@ -670,7 +670,7 @@ namespace sw::editor
         const float32 spacing    = ImGui::GetStyle().ItemSpacing.x;
         const float32 avail      = ImGui::GetContentRegionAvail().x;
         const float32 fieldWidth = avail - countWidth - spacing;
-        const bool    bChanged   = drawSearchField( pID, pBuffer, bufferBytes, pHint, fieldWidth > 0.0f ? fieldWidth : -1.0f, false );
+        const bool    bChanged   = drawSearchField( pID, pBuffer, bufferBytes, pHint, fieldWidth > 0.0f ? fieldWidth : -1.0f, false, pMark );
         if ( fieldWidth > 0.0f )
         {
             ImGui::SameLine( 0.0f, spacing );

@@ -933,8 +933,7 @@ namespace sw::editor
         const vector<UIPreviewWidgetRow>& listRow = _model.getWidgetRows( screen.getTree() );
         const EditorListFilter            filter{ _treeFilter.c_str() };
         UIPreviewLogic::filterWidgetRows( listRow, filter, _listTreeRow );
-        (void)EditorWidgets::drawFilterBar( "##uipreviewtreefilter", _treeFilter, nullptr, static_cast<uint32>( _listTreeRow.size() ), static_cast<uint32>( listRow.size() ), nullptr );
-        Internal::noteMark( "uipreview.tree", "filter" );
+        (void)EditorWidgets::drawFilterBar( "##uipreviewtreefilter", _treeFilter, nullptr, static_cast<uint32>( _listTreeRow.size() ), static_cast<uint32>( listRow.size() ), nullptr, "uipreview.tree.filter" );
         if ( _listTreeRow.empty() )
             EditorWidgets::drawNoSearchResultHint( filter.getText() );
         for ( const uint32 ordinal : _listTreeRow )
