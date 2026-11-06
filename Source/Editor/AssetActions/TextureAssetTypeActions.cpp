@@ -91,6 +91,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_ASSET_TYPE( Texture, Texture2D::kAssetType._name.data(), 300, "Texture", "Textures", nullptr, SW_EDITORICON_NAME( "Texture" ), SW_THEMECOLOR_KEY( "Asset", "Texture" ), true, true,
+    SW_EDITOR_ASSET_TYPE( Texture, Texture2D::kAssetType._name.data(), 300, "Texture", "Textures", nullptr, SW_EDITOR_ICON_NAME( "Texture" ), SW_THEME_COLOR_KEY( "Asset", "Texture" ), true, true,
                           kArrTextureRule, SW_COUNT_OF( kArrTextureRule ), nullptr, &s_textureActions );
 } // namespace sw::editor

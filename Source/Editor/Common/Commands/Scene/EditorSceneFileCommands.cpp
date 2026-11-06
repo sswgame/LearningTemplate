@@ -47,11 +47,11 @@ namespace sw::editor
                 const std::optional<AbsolutePath> absPath       = FileUtil::requireAbsolutePath( listPath[0] ); // 대화상자는 절대 경로를 돌려준다
                 if ( absPath.has_value() == false || EditorSceneFileCommands::saveActiveSceneAs( *absPath ) == false )
                 {
-                    notifications.push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
+                    notifications.push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationKind::Error );
                     return;
                 }
 
-                notifications.push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
+                notifications.push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationKind::Success );
                 if ( editor::getSubsystem<EditorWorkspace>().getPendingSceneAction() != EditorPendingSceneAction::None )
                     EditorSceneFileCommands::applyUnsavedSceneChoice( EditorUnsavedChoice::Discard );
             }
@@ -61,7 +61,7 @@ namespace sw::editor
                 if ( EditorPlaySession::isStopped() )
                     return true;
                 editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyStopPlayFirst" ),
-                                                                        NotificationType::Warning );
+                                                                        NotificationKind::Warning );
                 return false;
             }
 
@@ -109,7 +109,7 @@ namespace sw::editor
             // 일어나지 않고 로그에도 남지 않는다.
             SW_LOG_ERROR_ID( "EditorSceneFileCommands.OpenSceneLoadRequest", "Open Scene: load request failed - %#", loadPath );
             editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneOpenFailed" ),
-                                                                    NotificationType::Error );
+                                                                    NotificationKind::Error );
             return false;
         }
 
@@ -152,7 +152,7 @@ namespace sw::editor
             return false;
         }
         syncAfterSceneGenerationChange();
-        editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyNewScene" ), NotificationType::Info );
+        editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifyNewScene" ), NotificationKind::Info );
         return true;
     }
 
@@ -174,7 +174,7 @@ namespace sw::editor
         {
             if ( editor::getSubsystem<IEditorPanelService>().saveAllDirtyDocuments() == false )
             {
-                notifications.push( SW_LOCKEY( "EdCommon", "NotifyEditorTitle" ), SW_LOCKEY( "EdCommon", "NotifyDocumentSaveFailed" ), NotificationType::Error );
+                notifications.push( SW_LOCKEY( "EdCommon", "NotifyEditorTitle" ), SW_LOCKEY( "EdCommon", "NotifyDocumentSaveFailed" ), NotificationKind::Error );
                 return;
             }
             if ( ws.isSceneDirty() )
@@ -184,7 +184,7 @@ namespace sw::editor
                 {
                     if ( saveActiveScene() == false )
                     {
-                        notifications.push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
+                        notifications.push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationKind::Error );
                         return;
                     }
                 }
@@ -262,7 +262,7 @@ namespace sw::editor
     {
         if ( FileUtil::isReadOnlyFile( absPath.str() ) == false )
             return false;
-        editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySaveTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneReadOnly" ), NotificationType::Warning );
+        editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySaveTitle" ), SW_LOCKEY( "EdCommon", "NotifySceneReadOnly" ), NotificationKind::Warning );
         SW_LOG_WARNING_ID( "EditorSceneFileCommands.SceneReadOnlyNot", "Scene '%#' is read-only (not checked out) - not saved", absPath.str() );
         return true;
     }
@@ -284,9 +284,9 @@ namespace sw::editor
         if ( pScene != nullptr && pScene->getSourcePath().empty() == false )
         {
             if ( saveActiveScene() )
-                editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationType::Success );
+                editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaved" ), NotificationKind::Success );
             else
-                editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationType::Error );
+                editor::getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifySceneTitle" ), SW_LOCKEY( "EdCommon", "NotifySaveFailed" ), NotificationKind::Error );
             return;
         }
 

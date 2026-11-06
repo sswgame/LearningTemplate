@@ -44,14 +44,14 @@ namespace sw::editor
                 switch ( level )
                 {
                     case LogLevel::Error:
-                        return SW_THEMECOLOR( "Signal", "Error" );
+                        return SW_THEME_COLOR( "Signal", "Error" );
                     case LogLevel::Warning:
-                        return SW_THEMECOLOR( "Signal", "Warning" );
+                        return SW_THEME_COLOR( "Signal", "Warning" );
                     case LogLevel::Trace:
-                        return SW_THEMECOLOR( "Base", "TextMuted" );
+                        return SW_THEME_COLOR( "Base", "TextMuted" );
                     case LogLevel::Info:
                     case LogLevel::Count:
-                        return SW_THEMECOLOR( "Base", "Text" );
+                        return SW_THEME_COLOR( "Base", "Text" );
                 }
             }
 
@@ -378,8 +378,8 @@ namespace sw::editor
     void ConsolePanel::drawLevelChips( const LevelCounts& counts )
     {
         // 신호색은 오류 · 경고가 실제로 있을 때 글자에만 — 0 건이면 본문 색이다(빨간 "Error (0)" 은 문제가 있다고 읽힌다).
-        const Color* pErrorSignal   = counts._error > 0 ? &SW_THEMECOLOR( "Signal", "Error" ) : nullptr;
-        const Color* pWarningSignal = counts._warning > 0 ? &SW_THEMECOLOR( "Signal", "Warning" ) : nullptr;
+        const Color* pErrorSignal   = counts._error > 0 ? &SW_THEME_COLOR( "Signal", "Error" ) : nullptr;
+        const Color* pWarningSignal = counts._warning > 0 ? &SW_THEME_COLOR( "Signal", "Warning" ) : nullptr;
         ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[0], "Error", counts._error, pErrorSignal, SW_LOCKEY( "EditorConsole", "ShowErrors" ), nullptr );
         ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[1], "Warning", counts._warning, pWarningSignal, SW_LOCKEY( "EditorConsole", "ShowWarnings" ), nullptr );
         ConsolePanelInternal::drawLevelChip( _arrLevelEnabled[2], "Info", counts._info, nullptr, SW_LOCKEY( "EditorConsole", "ShowInfo" ), "console.level.info" );
@@ -398,7 +398,7 @@ namespace sw::editor
             formatstring( tagLabel.data(), tagLabel.capacity(), "%####Tags", SW_LOCKEY( "EdWidget", "TagFilter" ) );
         const ImGuiStyle& style         = ImGui::GetStyle();
         const float32     trailing      = EditorChrome::measureSmallButton( tagLabel.c_str() ) + ImGui::GetFrameHeight() + style.ItemSpacing.x * 2.0f;
-        const float32     minSearch     = ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" );
+        const float32     minSearch     = ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" );
         const float32     sameLineWidth = EditorChrome::getRemainingLineWidth() - trailing;
         const bool        bSameLine     = sameLineWidth >= minSearch;
         if ( bSameLine )
@@ -414,7 +414,7 @@ namespace sw::editor
         drawTagFilterPopup();
 
         ImGui::SameLine();
-        if ( ImGui::Button( SW_EDITORICON( "Settings" ), ImVec2{ ImGui::GetFrameHeight(), ImGui::GetFrameHeight() } ) )
+        if ( ImGui::Button( SW_EDITOR_ICON( "Settings" ), ImVec2{ ImGui::GetFrameHeight(), ImGui::GetFrameHeight() } ) )
             EditorInputGUI::openPopup( "##ConsoleOptions" );
         EditorSelfTestMarks::note( "console.options" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "Options" ) );
@@ -544,7 +544,7 @@ namespace sw::editor
         const string      timeOfDay( dateEnd == string_view::npos ? timeStamp : timeStamp.substr( dateEnd + 1 ) );
         ImGui::TextDisabled( "%s", timeOfDay.c_str() );
         ImGui::SameLine( 0.0f, 0.0f );
-        EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Base", "TextMuted" ) ); // 태그는 줄마다 되풀이되는 열이라 강조색을 쓰지 않는다
+        EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Base", "TextMuted" ) ); // 태그는 줄마다 되풀이되는 열이라 강조색을 쓰지 않는다
         ImGui::Text( " %s:", entry._tag.c_str() );
         EditorThemeUtil::popTextColor();
         if ( entry._level != LogLevel::Info )

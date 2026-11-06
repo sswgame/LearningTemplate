@@ -19,9 +19,9 @@ namespace sw::editor
     {
         struct BehaviorTreeEditModelInternal
         {
-            static bool isComposite( BehaviorNodeType type )
+            static bool isComposite( BehaviorNodeKind type )
             {
-                return type == BehaviorNodeType::Selector || type == BehaviorNodeType::Sequence;
+                return type == BehaviorNodeKind::Selector || type == BehaviorNodeKind::Sequence;
             }
 
             static string makeNodeError( const XMLNode& node, string_view reason )
@@ -100,7 +100,7 @@ namespace sw::editor
         return height;
     }
 
-    int32 BehaviorTreeEditModel::addNode( int32 parentID, BehaviorNodeType type )
+    int32 BehaviorTreeEditModel::addNode( int32 parentID, BehaviorNodeKind type )
     {
         if ( parentID < 0 )
         {
@@ -307,7 +307,7 @@ namespace sw::editor
     int32 BehaviorTreeEditModel::parseNode( const XMLNode& node, int32 parentID, uint32 depth, string& outError )
     {
         using Internal = BehaviorTreeEditModelInternal;
-        BehaviorNodeType type{};
+        BehaviorNodeKind type{};
         if ( BehaviorTreeNames::parse( node.getName(), type ) == false )
         {
             outError = Internal::makeNodeError( node, "is not a behavior tree node (known: " + BehaviorTreeNames::joinNodeTypeNames() + ")" );

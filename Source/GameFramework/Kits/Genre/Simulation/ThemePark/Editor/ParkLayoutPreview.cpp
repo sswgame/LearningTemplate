@@ -95,9 +95,9 @@ namespace sw::editor
     void ParkLayoutPreview::appendSegments( vector<EditorWorldSegment>& outListSegment ) const
     {
         ParkLayoutColors colors{};
-        colors._gate     = SW_THEMECOLOR( "Viewport", "ParkGate" ).toFloat4();
-        colors._track    = SW_THEMECOLOR( "Viewport", "ParkTrack" ).toFloat4();
-        colors._selected = SW_THEMECOLOR( "Base", "Highlight" ).toFloat4();
+        colors._gate     = SW_THEME_COLOR( "Viewport", "ParkGate" ).toFloat4();
+        colors._track    = SW_THEME_COLOR( "Viewport", "ParkTrack" ).toFloat4();
+        colors._selected = SW_THEME_COLOR( "Base", "Highlight" ).toFloat4();
         _model.appendSegments( colors, outListSegment );
     }
 

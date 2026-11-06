@@ -384,8 +384,8 @@ namespace sw::editor
             _capture.setPauseOnSpike( bPauseOnSpike );
         EditorSelfTestMarks::note( "profiler.capture.pauseOnSpike" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "PauseOnSpike" ) );
-        EditorChrome::sameLineIfFits( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
+        EditorChrome::sameLineIfFits( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" ) );
         ImGui::DragFloat( "##spikeMs", &_capture.editSpikeThresholdMs(), 0.1f, 0.1f, 1000.0f, "%.1f ms" );
         EditorSelfTestMarks::note( "profiler.capture.spikeMs" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "SpikeThreshold" ) );
@@ -421,7 +421,7 @@ namespace sw::editor
         }
         ImGui::EndDisabled();
         if ( _bTracyTried == SW_TRUE && _lastTracyResult != EditorTracyLaunchResult::Launched )
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", EditorTracyLauncher::describeResult( _lastTracyResult ) );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", EditorTracyLauncher::describeResult( _lastTracyResult ) );
 
         // RenderDoc 으로 GPU 프레임을 캡처한다(네 백엔드 모두). 붙어 있지 않으면 버튼이 회색이고 이유를 툴팁으로 보여 준다.
         EditorWidgets::drawToolbarSeparator();
@@ -736,7 +736,7 @@ namespace sw::editor
             if ( frameOffset > 0 )
             {
                 const float32 lineX = plotMax.x - ( static_cast<float32>( frameOffset ) + 0.5f ) * frameWidth;
-                ImGui::GetWindowDrawList()->AddLine( ImVec2{ lineX, plotMin.y }, ImVec2{ lineX, plotMax.y }, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) ) );
+                ImGui::GetWindowDrawList()->AddLine( ImVec2{ lineX, plotMin.y }, ImVec2{ lineX, plotMax.y }, EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Highlight" ) ) );
             }
         }
         if ( _capture.getSelectedFrameOffset() > 0 )

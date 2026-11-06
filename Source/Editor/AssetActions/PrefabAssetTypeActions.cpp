@@ -74,6 +74,6 @@ namespace sw::editor
         const EditorAssetMatchRule kArrPrefabRule[] = { EditorAssetMatchRule::cookableSource( PrefabAsset::kAssetType, { "Prefab", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
     } // namespace
 
-    SW_EDITOR_ASSET_TYPE( Prefab, PrefabAsset::kAssetType._name.data(), 200, "Prefab", "Prefabs", "Prefab Window", SW_EDITORICON_NAME( "Prefab" ), SW_THEMECOLOR_KEY( "Asset", "Prefab" ), true, true,
+    SW_EDITOR_ASSET_TYPE( Prefab, PrefabAsset::kAssetType._name.data(), 200, "Prefab", "Prefabs", "Prefab Window", SW_EDITOR_ICON_NAME( "Prefab" ), SW_THEME_COLOR_KEY( "Asset", "Prefab" ), true, true,
                           kArrPrefabRule, SW_COUNT_OF( kArrPrefabRule ), &kPrefabTemplate, &s_prefabActions );
 } // namespace sw::editor

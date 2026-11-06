@@ -43,7 +43,7 @@ namespace sw::editor
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolationExited" ),
-                                                                              NotificationType::Info );
+                                                                              NotificationKind::Info );
             }
         };
     } // namespace
@@ -83,7 +83,7 @@ namespace sw::editor
         workspace.setFocusedAssetPath( string{ prefabPath }.c_str() ); // 문서 패널이 다음 그리기에서 문서를 바꾼다
         workspace.requestOpenPanel<PrefabEditorPanel>();
         editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPrefabTitle" ), SW_LOCKEY( "EdCommon", "NotifyPrefabIsolated" ),
-                                                                      NotificationType::Info );
+                                                                      NotificationKind::Info );
         return true;
     }
 

@@ -117,7 +117,7 @@ namespace sw::editor
             static void drawDropIndicator( SiblingDropZone zone, const ImVec2& rowMin, const ImVec2& rowMax )
             {
                 ImDrawList*   pDrawList = ImGui::GetWindowDrawList();
-                const ImU32   color     = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Accent" ) );
+                const ImU32   color     = EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Accent" ) );
                 const float32 thickness = 2.0f;
                 if ( zone == SiblingDropZone::Before )
                     pDrawList->AddLine( ImVec2{ rowMin.x, rowMin.y }, ImVec2{ rowMax.x, rowMin.y }, color, thickness );
@@ -303,7 +303,7 @@ namespace sw::editor
             {
                 // 1) 눈 아이콘은 에디터에서만 숨긴다. 저장, 되돌리기, 게임 동작에 남지 않는다(언리얼과 유니티). 활성 비트는 인스펙터의 Active 체크박스다.
                 const bool bVisible = pObj->isRenderHidden() == false;
-                if ( EditorWidgets::drawRowIconToggle( "##visible", bVisible, true, SW_EDITORICON( "Eye" ), SW_EDITORICON( "EyeSlash" ), SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
+                if ( EditorWidgets::drawRowIconToggle( "##visible", bVisible, true, SW_EDITOR_ICON( "Eye" ), SW_EDITOR_ICON( "EyeSlash" ), SW_LOCKEY( "EditorScene", "VisibleInEditor" ),
                                                        SW_LOCKEY( "EditorScene", "HiddenInEditor" ) ) )
                     EditorSceneCommands::setHiddenInEditor( pObj, bVisible );
                 EditorSelfTestMarks::note( "hierarchy.activeToggle" );
@@ -312,7 +312,7 @@ namespace sw::editor
                 ImGui::SameLine();
                 // 2) 자물쇠 아이콘은 뷰포트에서 선택하지 못하게 한다. Hierarchy 에서는 선택할 수 있다. 저장하지 않는다.
                 const bool bLocked = pContext->getSubsystem<EditorWorkspace>().isObjectLocked( objectID );
-                if ( EditorWidgets::drawRowIconToggle( "##lock", bLocked, false, SW_EDITORICON( "Lock" ), SW_EDITORICON( "Unlock" ), SW_LOCKEY( "EditorScene", "LockedInViewport" ),
+                if ( EditorWidgets::drawRowIconToggle( "##lock", bLocked, false, SW_EDITOR_ICON( "Lock" ), SW_EDITOR_ICON( "Unlock" ), SW_LOCKEY( "EditorScene", "LockedInViewport" ),
                                                        SW_LOCKEY( "EditorScene", "PickableInViewport" ) ) )
                     pContext->getSubsystem<EditorWorkspace>().setObjectLocked( objectID, bLocked == false );
                 if ( EditorSelfTestMarks::isEnabled() )
@@ -343,7 +343,7 @@ namespace sw::editor
                 }
 
                 // 오브젝트 아이콘은 빌보드 종류 컴포넌트(라이트, 카메라, 오디오)가 있으면 그 아이콘이고, 없으면 기본 오브젝트 아이콘이다.
-                const utf8* pIcon = EditorSiblingOrder::isFolder( *pObj ) ? SW_EDITORICON( "Folder" ) : EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
+                const utf8* pIcon = EditorSiblingOrder::isFolder( *pObj ) ? SW_EDITOR_ICON( "Folder" ) : EditorComponentIcon::findObjectRow( *pObj )._pGlyph;
                 formatstring( outLabel.data(), outLabel.capacity(), "%# %###go%#", pIcon, pObj->getName().c_str(), objectID );
             }
 
@@ -610,7 +610,7 @@ namespace sw::editor
             const bool bEditsAllowed = EditorPlaySession::areSceneEditsAllowed();
             if ( bEditsAllowed == false )
             {
-                EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "PlayMode" ), SW_THEMECOLOR( "Signal", "Warning" ) );
+                EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "PlayMode" ), SW_THEME_COLOR( "Signal", "Warning" ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "PlayModeRunning" ) );
                 ImGui::SameLine();
             }

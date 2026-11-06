@@ -24,7 +24,7 @@ namespace sw
      *          테이블은 static_assert 가, 러너의 switch 는 -Wswitch-enum 오류가 누락을 알려 준다.
      */
     ENUM()
-    enum class DialogueAssetNodeType : uint8
+    enum class DialogueAssetNodeKind : uint8
     {
         Start = 0,
         Dialogue,
@@ -70,7 +70,7 @@ namespace sw
         const utf8*           _pDefaultSpeaker;                                                                                     /**< 새 노드의 화자입니다. */
         const utf8*           _pDefaultBody;                                                                                        /**< 새 노드의 본문입니다. `_body` 필드에 들어갑니다. */
         float4                _color;                                                                                               /**< 그래프 노드 머리 색입니다. */
-        DialogueAssetNodeType _type;                                                                                                /**< 노드 타입입니다. 테이블의 순번과 같아야 합니다. */
+        DialogueAssetNodeKind _type;                                                                                                /**< 노드 타입입니다. 테이블의 순번과 같아야 합니다. */
         DialogueNodeFlow      _flow;                                                                                                /**< 다음으로 넘어가는 방식입니다. */
         DialogueNodeOutput    _output;                                                                                              /**< 출력 핀 형태입니다. */
         DialogueNodeBody      _body;                                                                                                /**< 편집하는 본문 필드입니다. */
@@ -84,20 +84,20 @@ namespace sw
 namespace sw
 {
     /**
-     * @brief 노드 종류 테이블입니다. **종류마다 항목이 하나이고, 순서는 `DialogueAssetNodeType` 값 순서입니다.**
+     * @brief 노드 종류 테이블입니다. **종류마다 항목이 하나이고, 순서는 `DialogueAssetNodeKind` 값 순서입니다.**
      * @details 에셋 이름 해석, 런타임 진행(`DialogueCursor`), 에디터 그리기, 추가 메뉴, 인스펙터가 모두 이 테이블을 읽는다.
      */
     inline constexpr DialogueNodeInfo kArrDialogueNodeInfo[] = {
-        {   "Start",    "",                       "", float4( 0.2f, 0.9f, 0.3f, 1.0f ),    DialogueAssetNodeType::Start, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,      DialogueNodeBody::None, false, false, false, 0},
-        {"Dialogue", "NPC", "Enter dialogue text...", float4( 0.4f, 0.7f, 1.0f, 1.0f ), DialogueAssetNodeType::Dialogue, DialogueNodeFlow::WaitAdvance,   DialogueNodeOutput::Next,      DialogueNodeBody::Text,  true,  true,  true, 0},
-        {  "Choice",    "",         "Player options", float4( 0.8f, 0.5f, 1.0f, 1.0f ),   DialogueAssetNodeType::Choice,  DialogueNodeFlow::WaitChoice, DialogueNodeOutput::Choice,      DialogueNodeBody::Text,  true, false,  true, 2},
-        {  "Branch",    "",           "visited == 1", float4( 1.0f, 0.8f, 0.2f, 1.0f ),   DialogueAssetNodeType::Branch,   DialogueNodeFlow::Condition, DialogueNodeOutput::Branch, DialogueNodeBody::Condition,  true, false,  true, 0},
-        {  "Action",    "",           "event(ready)", float4( 0.2f, 0.9f, 0.9f, 1.0f ),   DialogueAssetNodeType::Action, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,    DialogueNodeBody::Action,  true, false,  true, 0},
-        {     "End",    "",                       "", float4( 0.9f, 0.3f, 0.3f, 1.0f ),      DialogueAssetNodeType::End,      DialogueNodeFlow::Finish,   DialogueNodeOutput::None,      DialogueNodeBody::None,  true, false,  true, 0},
+        {   "Start",    "",                       "", float4( 0.2f, 0.9f, 0.3f, 1.0f ),    DialogueAssetNodeKind::Start, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,      DialogueNodeBody::None, false, false, false, 0},
+        {"Dialogue", "NPC", "Enter dialogue text...", float4( 0.4f, 0.7f, 1.0f, 1.0f ), DialogueAssetNodeKind::Dialogue, DialogueNodeFlow::WaitAdvance,   DialogueNodeOutput::Next,      DialogueNodeBody::Text,  true,  true,  true, 0},
+        {  "Choice",    "",         "Player options", float4( 0.8f, 0.5f, 1.0f, 1.0f ),   DialogueAssetNodeKind::Choice,  DialogueNodeFlow::WaitChoice, DialogueNodeOutput::Choice,      DialogueNodeBody::Text,  true, false,  true, 2},
+        {  "Branch",    "",           "visited == 1", float4( 1.0f, 0.8f, 0.2f, 1.0f ),   DialogueAssetNodeKind::Branch,   DialogueNodeFlow::Condition, DialogueNodeOutput::Branch, DialogueNodeBody::Condition,  true, false,  true, 0},
+        {  "Action",    "",           "event(ready)", float4( 0.2f, 0.9f, 0.9f, 1.0f ),   DialogueAssetNodeKind::Action, DialogueNodeFlow::PassThrough,   DialogueNodeOutput::Next,    DialogueNodeBody::Action,  true, false,  true, 0},
+        {     "End",    "",                       "", float4( 0.9f, 0.3f, 0.3f, 1.0f ),      DialogueAssetNodeKind::End,      DialogueNodeFlow::Finish,   DialogueNodeOutput::None,      DialogueNodeBody::None,  true, false,  true, 0},
     };
 
-    static_assert( SW_COUNT_OF( kArrDialogueNodeInfo ) == static_cast<size_t>( DialogueAssetNodeType::Count ),
-                   "DialogueAssetNodeType 을 늘렸으면 kArrDialogueNodeInfo 에도 줄을 더할 것" );
+    static_assert( SW_COUNT_OF( kArrDialogueNodeInfo ) == static_cast<size_t>( DialogueAssetNodeKind::Count ),
+                   "DialogueAssetNodeKind 을 늘렸으면 kArrDialogueNodeInfo 에도 줄을 더할 것" );
 
     /** @brief 대화 그래프 노드입니다. id 와 종류는 파일에 반드시 적습니다(`PROPERTY( Required )`). */
     REFLECT()
@@ -108,7 +108,7 @@ namespace sw
         PROPERTY( Required, Tooltip = "Node id, unique in the graph and 1 or more" )
         int32 _id{ 0 };
         PROPERTY( Required, Tooltip = "Node type" )
-        DialogueAssetNodeType _type{ DialogueAssetNodeType::Dialogue };
+        DialogueAssetNodeKind _type{ DialogueAssetNodeKind::Dialogue };
         PROPERTY( Tooltip = "Speaker name or localization key" )
         string _speaker;
         PROPERTY( Tooltip = "Line text or localization key" )
@@ -181,9 +181,9 @@ namespace sw
         /** @brief XML 본문을 만듭니다(모든 PROPERTY). */
         string toXML() const;
         /** @brief 노드 타입의 화면 이름을 반환합니다. 모르는 값이면 "Unknown" 입니다. */
-        static const utf8* nodeTypeName( DialogueAssetNodeType type );
+        static const utf8* nodeTypeName( DialogueAssetNodeKind type );
         /** @brief 노드 타입의 특성 줄입니다. 범위 밖 값이면 nullptr 입니다. */
-        static const DialogueNodeInfo* findNodeInfo( DialogueAssetNodeType type );
+        static const DialogueNodeInfo* findNodeInfo( DialogueAssetNodeKind type );
         /** @brief Start 노드를 반환합니다. 없으면 nullptr 입니다. */
         const DialogueAssetNode* findStartNode() const;
         /** @brief id 로 노드를 찾습니다. */

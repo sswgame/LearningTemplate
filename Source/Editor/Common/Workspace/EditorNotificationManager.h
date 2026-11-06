@@ -13,7 +13,7 @@
 namespace sw::editor
 {
     /** @brief 알림 유형 */
-    enum class NotificationType : uint8
+    enum class NotificationKind : uint8
     {
         Info = 0,
         Success,
@@ -26,7 +26,7 @@ namespace sw::editor
     {
         string           _title;
         string           _message;
-        NotificationType _type{ NotificationType::Info };
+        NotificationKind _type{ NotificationKind::Info };
         float32          _durationSec{ 4.0f }; ///< 0 보다 커야 한다(`push` 가 단언)
         float32          _elapsedSec{ 0.0f };
         float32          _progress{ -1.0f }; ///< 0.0 ~ 1.0 이면 프로그레스 바 표시, 음수면 미표시
@@ -62,13 +62,13 @@ namespace sw::editor
          *          하십시오(`EditorBackgroundIO` 의 publish 방식. 파일 대화 상자는 `FileUtil::pumpFileDialogResults` 가 그렇게
          *          넘겨줍니다).
          */
-        void push( string_view title, string_view message, NotificationType type = NotificationType::Info,
+        void push( string_view title, string_view message, NotificationKind type = NotificationKind::Info,
                    float32 durationSec = 4.0f, float32 progress = -1.0f );
         /**
          * @brief `push` 와 같되 토스트에 "Show in Explorer" 단추를 답니다. 단추는 @p revealPath(절대 경로)를 탐색기에서 선택합니다.
          * @details 단추를 누르려면 토스트가 입력을 받아야 하므로 이 토스트만 마우스를 받는다(나머지는 입력을 통과시킨다).
          */
-        void pushRevealable( string_view title, string_view message, NotificationType type, string_view revealPath, float32 durationSec = 4.0f );
+        void pushRevealable( string_view title, string_view message, NotificationKind type, string_view revealPath, float32 durationSec = 4.0f );
         /** @brief 시간을 @p deltaTime 초 진행하고 표시 시간이 끝난 알림을 지웁니다. */
         void update( float32 deltaTime );
         void clear() { _listNotification.clear(); }

@@ -92,7 +92,7 @@ namespace sw::editor
         /** @brief 출력 핀 @p fromPin 에서 입력 핀 @p toPin 으로 잇습니다. 규칙(소스 입력 · 겹침 · 고리)이 거절하면 false 입니다. */
         bool connectPins( int32 fromPin, int32 toPin );
         /** @brief 종류 @p type 의 노드를 캔버스 자리 @p canvasPosition 에 넣고 고릅니다. 다음 캔버스 프레임이 그 자리에 놓는다. */
-        bool addNode( AudioGraphNodeType type, const float2& canvasPosition );
+        bool addNode( AudioGraphNodeKind type, const float2& canvasPosition );
         /**
          * @brief 캔버스 노드 id @p listNodeID 의 노드를 비켜 복제합니다(Ctrl+D · 붙여 넣기 — `AudioGraphEditUtil::duplicateNodes`). 한 편집으로 남기고 마지막 사본을 고릅니다.
          * @return 만든 노드 수입니다.

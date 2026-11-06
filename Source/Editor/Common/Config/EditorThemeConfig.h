@@ -25,7 +25,7 @@ namespace sw::editor
 
     /**
      * @brief 해석한 테마 값입니다. 토큰 파일의 표 둘(`_color` · `_metric`)을 키(`Namespace.Key`) → 값으로 듭니다.
-     * @details 키는 `hashed_string` 이다 — 코드의 `SW_THEMECOLOR` · `SW_THEMEMETRIC` 이 리터럴을 한 번 intern 해 두고 해시로 찾는다.
+     * @details 키는 `hashed_string` 이다 — 코드의 `SW_THEME_COLOR` · `SW_THEME_METRIC` 이 리터럴을 한 번 intern 해 두고 해시로 찾는다.
      */
     struct EditorThemeConfig
     {

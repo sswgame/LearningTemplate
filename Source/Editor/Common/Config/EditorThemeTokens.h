@@ -2,7 +2,7 @@
  * @file EditorThemeTokens.h
  * @brief 에디터 테마의 디자인 토큰입니다. 원본은 `Content/editor/theme/<이름>.tokens.json` 이고 이 파일은 그 형식(리플렉션)과 읽기 · 해석을 맡습니다.
  * @details 토큰은 색 · 모서리 · 간격 · 테두리 · 글꼴 크기 · 아이콘 크기 · 밀도이고, 파일에는 키(`Namespace.Key`) → 값 표 둘(`_color` · `_metric`)로 적는다.
- *          ImGui 스타일은 토큰에서만 만든다(`EditorThemeUtil::applyTheme`). 패널 코드는 색이나 간격을 숫자로 적지 않고 키로 가리킨다(`SW_THEMECOLOR` · `SW_THEMEMETRIC`).
+ *          ImGui 스타일은 토큰에서만 만든다(`EditorThemeUtil::applyTheme`). 패널 코드는 색이나 간격을 숫자로 적지 않고 키로 가리킨다(`SW_THEME_COLOR` · `SW_THEME_METRIC`).
  *          언리얼의 에디터 테마 JSON(`EditorThemes` 폴더, `FStyleColors`) · Slate 스타일셋의 이름 키, 유니티 UI Toolkit 의 USS 변수, Godot 의 Theme 리소스(형식 · 이름 키)에 해당한다.
  *
  *          색은 sRGB 16진 글자(`#RRGGBB` · `#RRGGBBAA`)다. ImGui 가 색을 그대로 출력 값으로 쓰므로 선형 변환은 하지 않는다.
@@ -24,7 +24,7 @@ namespace sw::editor
 {
     /**
      * @brief `<이름>.tokens.json` 한 벌입니다(라이트 · 다크 · 고대비 등). 값은 키(`Namespace.Key`) → 값 표 둘이다.
-     * @details 지역화 문구 표(`*.strings.xml` · `SW_LOCKEY`)와 같은 모양이다 — 코드는 키만 가리키고(`SW_THEMECOLOR` · `SW_THEMEMETRIC`), 값은 이 파일에만 있다.
+     * @details 지역화 문구 표(`*.strings.xml` · `SW_LOCKEY`)와 같은 모양이다 — 코드는 키만 가리키고(`SW_THEME_COLOR` · `SW_THEME_METRIC`), 값은 이 파일에만 있다.
      *          토큰을 더할 때 C++ 형식 · 접근자를 늘리지 않고, 테마를 바꾸는 일은 표를 갈아 끼우는 일이다.
      *          모든 벌은 같은 키 묶음을 가져야 한다(읽을 때 대조). 코드가 쓰는 키가 표에 있는지는 단위 테스트(`EditorThemeKeys`)가 소스를 훑어 본다.
      *          `_base` 는 같은 폴더의 다른 벌 이름이고, 이 벌은 다른 값만 적는다(Godot Theme 상속 · 유니티 USS 변수 자리). 합치기는 `loadThemeFile` 의 키 덮기다 — `DataInheritance` 는 XML 합치기라 쓰지 못하고,

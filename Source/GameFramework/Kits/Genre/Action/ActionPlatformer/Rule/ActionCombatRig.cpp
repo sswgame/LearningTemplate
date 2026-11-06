@@ -126,7 +126,7 @@ namespace sw
         if ( _pCatalog == nullptr )
             return;
         _parryFrames = _pCatalog->getParryRules()._windowFrames;
-        pushEvent( ActionCombatEventType::ParryStarted, hashed_string{}, _parryFrames );
+        pushEvent( ActionCombatEventKind::ParryStarted, hashed_string{}, _parryFrames );
     }
 
     WeaponFireResult ActionCombatRig::fireGun( const float2& origin, const float2& aim, bool bTriggerJustPressed )
@@ -153,7 +153,7 @@ namespace sw
             projectile._team = static_cast<int32>( ActionTeam::Player );
             (void)spawnProjectile( projectile ); // 투사체 id 는 쓰지 않는다
         }
-        pushEvent( ActionCombatEventType::GunFired, _gun.getDef()._id, static_cast<int32>( shot._listRay.size() ) );
+        pushEvent( ActionCombatEventKind::GunFired, _gun.getDef()._id, static_cast<int32>( shot._listRay.size() ) );
         return result;
     }
 
@@ -201,7 +201,7 @@ namespace sw
             (void)_timeline.advanceFrame();
             if ( _timeline.isPlaying() == false )
             {
-                pushEvent( ActionCombatEventType::ComboEnded, hashed_string{}, _comboIndex + 1 );
+                pushEvent( ActionCombatEventKind::ComboEnded, hashed_string{}, _comboIndex + 1 );
                 _comboIndex = -1;
             }
         }
@@ -222,7 +222,7 @@ namespace sw
                     continue;
                 projectile.deflect( static_cast<int32>( ActionTeam::Player ), rules._reflectSpeedScale, rules._reflectDamageScale );
                 bReflected = true;
-                pushEvent( ActionCombatEventType::ProjectileReflected, hashed_string{}, static_cast<int32>( projectile._id ) );
+                pushEvent( ActionCombatEventKind::ProjectileReflected, hashed_string{}, static_cast<int32>( projectile._id ) );
             }
             --_parryFrames;
             if ( bReflected )
@@ -265,7 +265,7 @@ namespace sw
         if ( pMove == nullptr || _timeline.start( *pMove ) == false )
             return false;
         _comboIndex = comboIndex;
-        pushEvent( ActionCombatEventType::MoveStarted, moveID, comboIndex );
+        pushEvent( ActionCombatEventKind::MoveStarted, moveID, comboIndex );
         return true;
     }
 
@@ -274,10 +274,10 @@ namespace sw
         if ( frames <= _hitstopFrames )
             return;
         _hitstopFrames = frames;
-        pushEvent( ActionCombatEventType::HitstopStarted, hashed_string{}, frames );
+        pushEvent( ActionCombatEventKind::HitstopStarted, hashed_string{}, frames );
     }
 
-    void ActionCombatRig::pushEvent( ActionCombatEventType type, const hashed_string& id, int32 value )
+    void ActionCombatRig::pushEvent( ActionCombatEventKind type, const hashed_string& id, int32 value )
     {
         ActionCombatEvent event;
         event._type  = type;

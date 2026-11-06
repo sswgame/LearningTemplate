@@ -111,7 +111,7 @@ namespace sw::editor
         , _pActionEntry{ nullptr }
         , _pActionTargetText{ nullptr }
     {
-        _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Graph", "FlowPin" ) } ); // 흐름 핀 하나
+        _nodeGraph.setPinTypeColors( { SW_THEME_COLOR( "Graph", "FlowPin" ) } ); // 흐름 핀 하나
     }
 
     void DialogueGraphPanel::shutdown()
@@ -278,7 +278,7 @@ namespace sw::editor
         float2 canvasPosition{};
         if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) )
         {
-            placeNodeOnNextDraw( addNode( static_cast<DialogueAssetNodeType>( kindID ) ), canvasPosition );
+            placeNodeOnNextDraw( addNode( static_cast<DialogueAssetNodeKind>( kindID ) ), canvasPosition );
             notifyDocumentEdited( "Add Dialogue Node" );
         }
 
@@ -422,7 +422,7 @@ namespace sw::editor
         }
     }
 
-    int32 DialogueGraphPanel::addNode( DialogueAssetNodeType type )
+    int32 DialogueGraphPanel::addNode( DialogueAssetNodeKind type )
     {
         _selectedNodeID = nextNodeID();
         DialogueGraphEdit::addNode( _graph, type, _selectedNodeID );
@@ -600,7 +600,7 @@ namespace sw::editor
         }
         if ( _pActionEntry == nullptr )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", _actionError.c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", _actionError.c_str() );
             return;
         }
         _pActionTargetText = &node._actionCommand;

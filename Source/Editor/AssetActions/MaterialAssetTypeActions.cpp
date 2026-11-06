@@ -52,6 +52,6 @@ namespace sw::editor
         const EditorAssetMatchRule kArrMaterialRule[] = { EditorAssetMatchRule::engineType( Material::kAssetType, { "Material", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
     } // namespace
 
-    SW_EDITOR_ASSET_TYPE( Material, Material::kAssetType._name.data(), 500, "Material", "Materials", "Material", SW_EDITORICON_NAME( "Material" ), SW_THEMECOLOR_KEY( "Asset", "Material" ), true, true,
+    SW_EDITOR_ASSET_TYPE( Material, Material::kAssetType._name.data(), 500, "Material", "Materials", "Material", SW_EDITOR_ICON_NAME( "Material" ), SW_THEME_COLOR_KEY( "Asset", "Material" ), true, true,
                           kArrMaterialRule, SW_COUNT_OF( kArrMaterialRule ), &kMaterialTemplate, &s_materialActions );
 } // namespace sw::editor

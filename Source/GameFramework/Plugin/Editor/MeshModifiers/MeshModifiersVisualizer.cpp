@@ -53,11 +53,11 @@ namespace sw::editor
                 switch ( axis )
                 {
                     case 0:
-                        return themeColor( SW_THEMECOLOR( "Viewport", "AxisX" ) );
+                        return themeColor( SW_THEME_COLOR( "Viewport", "AxisX" ) );
                     case 1:
-                        return themeColor( SW_THEMECOLOR( "Viewport", "AxisY" ) );
+                        return themeColor( SW_THEME_COLOR( "Viewport", "AxisY" ) );
                     default:
-                        return themeColor( SW_THEMECOLOR( "Viewport", "AxisZ" ) );
+                        return themeColor( SW_THEME_COLOR( "Viewport", "AxisZ" ) );
                 }
             }
             static constexpr uint32      kRingSegmentCount = 48;
@@ -300,7 +300,7 @@ namespace sw::editor
                                 {
                                     const float32 angle = MathUtil::kTwoPi * static_cast<float32>( segment ) / static_cast<float32>( kRingSegmentCount );
                                     const float3  next  = toWorld( frame, center + axisU * ( ::cosf( angle ) * radius ) + axisV * ( ::sinf( angle ) * radius ) );
-                                    drawSegment( args, previous, next, themeColor( SW_THEMECOLOR( "Viewport", "ModifierRange" ) ), 1.0f );
+                                    drawSegment( args, previous, next, themeColor( SW_THEME_COLOR( "Viewport", "ModifierRange" ) ), 1.0f );
                                     previous = next;
                                 }
                             }
@@ -313,13 +313,13 @@ namespace sw::editor
                                 break;
                             for ( size_t corner = 0; corner < listCorner.size(); ++corner )
                             {
-                                drawSegment( args, toWorld( frame, listCorner[corner] ), toWorld( frame, listCorner[( corner + 1 ) % listCorner.size()] ), themeColor( SW_THEMECOLOR( "Viewport", "ModifierRange" ) ), 1.5f );
+                                drawSegment( args, toWorld( frame, listCorner[corner] ), toWorld( frame, listCorner[( corner + 1 ) % listCorner.size()] ), themeColor( SW_THEME_COLOR( "Viewport", "ModifierRange" ) ), 1.5f );
                             }
                             break;
                         }
                         case ModifierRangeKind::Center:
                         {
-                            drawMarker( args, toWorld( frame, modifier.getVector3( index ) ), themeColor( SW_THEMECOLOR( "Viewport", "ModifierRange" ) ) );
+                            drawMarker( args, toWorld( frame, modifier.getVector3( index ) ), themeColor( SW_THEME_COLOR( "Viewport", "ModifierRange" ) ) );
                             break;
                         }
                         case ModifierRangeKind::Direction:
@@ -331,7 +331,7 @@ namespace sw::editor
                             const float3 worldStep         = float3::transformVector( modifierDirection, frame._modifierToWorld );
                             if ( worldStep.getLengthSquared() <= MathUtil::kEpsilonSquared )
                                 break;
-                            drawArrow( args, worldFrom, worldFrom + worldStep.normalize() * arrowLength, themeColor( SW_THEMECOLOR( "Viewport", "ModifierRange" ) ), 2.0f );
+                            drawArrow( args, worldFrom, worldFrom + worldStep.normalize() * arrowLength, themeColor( SW_THEME_COLOR( "Viewport", "ModifierRange" ) ), 2.0f );
                             break;
                         }
                         case ModifierRangeKind::None:
@@ -411,22 +411,22 @@ namespace sw::editor
                                 continue;
                             const float3& point = set._listWorld[static_cast<size_t>( index )];
                             if ( indexX + 1 < set._countX )
-                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + 1 )], themeColor( SW_THEMECOLOR( "Viewport", "LatticeLine" ) ), 1.0f );
+                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + 1 )], themeColor( SW_THEME_COLOR( "Viewport", "LatticeLine" ) ), 1.0f );
                             if ( indexY + 1 < set._countY )
-                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + set._countX )], themeColor( SW_THEMECOLOR( "Viewport", "LatticeLine" ) ), 1.0f );
+                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + set._countX )], themeColor( SW_THEME_COLOR( "Viewport", "LatticeLine" ) ), 1.0f );
                             if ( indexZ + 1 < set._countZ )
-                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + set._countX * set._countY )], themeColor( SW_THEMECOLOR( "Viewport", "LatticeLine" ) ), 1.0f );
+                                drawSegment( args, point, set._listWorld[static_cast<size_t>( index + set._countX * set._countY )], themeColor( SW_THEME_COLOR( "Viewport", "LatticeLine" ) ), 1.0f );
                             ImVec2 screen;
                             if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, point, args._canvasPos, args._canvasSize, screen ) == false )
                                 continue;
                             if ( index == selectedPoint )
                             {
-                                args._pDrawList->AddCircleFilled( screen, 6.0f, themeColor( SW_THEMECOLOR( "Viewport", "LatticeSelected" ) ) );
-                                args._pDrawList->AddCircle( screen, 8.0f, themeColor( SW_THEMECOLOR( "Viewport", "ModifierHover" ) ), 0, 1.5f );
+                                args._pDrawList->AddCircleFilled( screen, 6.0f, themeColor( SW_THEME_COLOR( "Viewport", "LatticeSelected" ) ) );
+                                args._pDrawList->AddCircle( screen, 8.0f, themeColor( SW_THEME_COLOR( "Viewport", "ModifierHover" ) ), 0, 1.5f );
                             }
                             else
                             {
-                                args._pDrawList->AddCircleFilled( screen, index == hoveredPoint ? 5.0f : 3.5f, index == hoveredPoint ? themeColor( SW_THEMECOLOR( "Viewport", "ModifierHover" ) ) : themeColor( SW_THEMECOLOR( "Viewport", "LatticePoint" ) ) );
+                                args._pDrawList->AddCircleFilled( screen, index == hoveredPoint ? 5.0f : 3.5f, index == hoveredPoint ? themeColor( SW_THEME_COLOR( "Viewport", "ModifierHover" ) ) : themeColor( SW_THEME_COLOR( "Viewport", "LatticePoint" ) ) );
                             }
                         }
                     }
@@ -522,7 +522,7 @@ namespace sw::editor
 
             static void drawHandle( const EditorViewportVisualizerArgs& args, const Handle& handle, bool bHighlight )
             {
-                const ImU32 color = bHighlight ? themeColor( SW_THEMECOLOR( "Viewport", "ModifierHover" ) ) : axisColor( handle._axis );
+                const ImU32 color = bHighlight ? themeColor( SW_THEME_COLOR( "Viewport", "ModifierHover" ) ) : axisColor( handle._axis );
                 if ( handle._kind == DragKind::GizmoRotate )
                 {
                     // 고리 평면의 두 방향을 법선에서 만든다
@@ -754,7 +754,7 @@ namespace sw::editor
                 noteHandleMarks( args, listHandle );
                 ImVec2 centerScreen;
                 if ( EditorViewportProjectionUtil::projectPoint( *args._pViewProj, frame._centerWorld, args._canvasPos, args._canvasSize, centerScreen ) )
-                    args._pDrawList->AddCircle( centerScreen, 6.0f, themeColor( SW_THEMECOLOR( "Viewport", "ModifierAxis" ) ), 0, 2.0f );
+                    args._pDrawList->AddCircle( centerScreen, 6.0f, themeColor( SW_THEME_COLOR( "Viewport", "ModifierAxis" ) ), 0, 2.0f );
             }
 
             static void draw( const EditorViewportVisualizerArgs& args )
@@ -771,7 +771,7 @@ namespace sw::editor
 
                 vector<float3>& listSegmentPoint = getState()._listSegmentPoint; // 프레임마다 다시 채우는 재사용 버퍼
                 session.makePreviewSegments( listSegmentPoint );
-                drawSegments( args, listSegmentPoint, themeColor( SW_THEMECOLOR( "Viewport", "ModifierPreview" ) ) );
+                drawSegments( args, listSegmentPoint, themeColor( SW_THEME_COLOR( "Viewport", "ModifierPreview" ) ) );
 
                 MeshModifier* pModifier = session.getStack().findModifier( session.getSelectedIndex() );
                 Frame         frame{};
@@ -785,7 +785,7 @@ namespace sw::editor
                 float3 axisDirection{ 0.0f, 0.0f, 0.0f };
                 MeshModifierUtil::setComponent( axisDirection, frame._axisIndex, frame._worldSize * 0.6f );
                 const float3 axisWorld = float3::transformVector( axisDirection, frame._modifierToWorld );
-                drawSegment( args, frame._centerWorld - axisWorld, frame._centerWorld + axisWorld, themeColor( SW_THEMECOLOR( "Viewport", "ModifierAxis" ) ), 1.0f );
+                drawSegment( args, frame._centerWorld - axisWorld, frame._centerWorld + axisWorld, themeColor( SW_THEME_COLOR( "Viewport", "ModifierAxis" ) ), 1.0f );
                 drawRanges( args, frame );
 
                 PointSet& pointSet = getState()._pointSet; // 제어점 월드 목록을 프레임마다 다시 채운다
@@ -802,7 +802,7 @@ namespace sw::editor
                     return;
                 vector<float3>& listStagePoint = getState()._listStagePoint; // 프레임마다 다시 채우는 재사용 버퍼
                 pSession->makeStagePreviewSegments( listStagePoint );
-                drawSegments( args, listStagePoint, themeColor( SW_THEMECOLOR( "Viewport", "ModifierStage" ) ) );
+                drawSegments( args, listStagePoint, themeColor( SW_THEME_COLOR( "Viewport", "ModifierStage" ) ) );
             }
         };
 
@@ -827,7 +827,7 @@ namespace sw::editor
 
     SW_EDITOR_SUBSYSTEM( MeshModifiersVisualizerState, 9500 );
 
-    SW_EDITOR_VISUALIZER( MeshModifiers, "meshmodifiers.preview", 910, SW_EDITORICON_NAME( "Cube" ), SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersLabel" ),
+    SW_EDITOR_VISUALIZER( MeshModifiers, "meshmodifiers.preview", 910, SW_EDITOR_ICON_NAME( "Cube" ), SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersLabel" ),
                           SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersTip" ), true, &MeshModifiersVisualizerInternal::draw );
     SW_EDITOR_VISUALIZER( MeshModifiersStage, "meshmodifiers.stage", 911, ::sw::editor::EditorIconName{}, SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageLabel" ), SW_LOCKEYREF( "EdPluginVisualizer", "MeshModifiersStageTip" ), false,
                           &MeshModifiersVisualizerInternal::drawStage );

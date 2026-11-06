@@ -145,6 +145,6 @@ namespace sw
         ReflectedFields          _fields{};
         ReflectedFields          _actionParams{};
         vector<BehaviorRawParam> _listRawParam{};
-        BehaviorNodeType         _type{ BehaviorNodeType::Sequence };
+        BehaviorNodeKind         _type{ BehaviorNodeKind::Sequence };
     };
 } // namespace sw

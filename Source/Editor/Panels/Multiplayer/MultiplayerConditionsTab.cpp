@@ -406,7 +406,7 @@ namespace sw::editor
             sendToTargets( session, targetIndex, "net.reconnect" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "ConditionsReconnect" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" ) );
         ImGui::InputFloat( "##SpikeSeconds", &_spikeSeconds, 0.0f, 0.0f, "%.1f s" );
         _spikeSeconds = MathUtil::max( 0.0f, _spikeSeconds );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Spike" ) ) );

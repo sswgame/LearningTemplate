@@ -30,7 +30,7 @@ namespace sw
     class Wallet;
 
     /** @brief 죽음과 휴식 알림의 종류입니다. */
-    enum class MetroidvaniaDeathRestEventType : uint8
+    enum class MetroidvaniaDeathRestEventKind : uint8
     {
         Rested = 0,       ///< `_id` 는 지점
         Died,             ///< `_id` 는 되살아날 지점
@@ -48,7 +48,7 @@ namespace sw
     {
         hashed_string                  _id{};
         int32                          _amount{ 0 };
-        MetroidvaniaDeathRestEventType _type{ MetroidvaniaDeathRestEventType::Rested };
+        MetroidvaniaDeathRestEventKind _type{ MetroidvaniaDeathRestEventKind::Rested };
     };
 } // namespace sw
 
@@ -144,7 +144,7 @@ namespace sw
 
     private:
         void          refreshWorld( Vitality& vitality );
-        void          pushEvent( MetroidvaniaDeathRestEventType type, const hashed_string& id, int32 amount );
+        void          pushEvent( MetroidvaniaDeathRestEventKind type, const hashed_string& id, int32 amount );
         hashed_string getCurrencyName() const;
 
     private:

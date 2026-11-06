@@ -126,7 +126,7 @@ namespace sw::editor
     void PackagingPanel::drawActionRow( bool bBusy )
     {
         ImGui::BeginDisabled( bBusy );
-        const bool bPackage = ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "BuildAll" ), SW_LOCKEY( "EdButton", "Package" ), "Package" ) );
+        const bool bPackage = ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "BuildAll" ), SW_LOCKEY( "EdButton", "Package" ), "Package" ) );
         ImGui::EndDisabled();
         EditorSelfTestMarks::note( "packaging.package" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "Package" ) );
@@ -136,7 +136,7 @@ namespace sw::editor
         const PackagingProgress& progress   = _model.getProgress();
         const bool               bHasFolder = progress._state == PackagingState::Succeeded && progress._outputFolder.empty() == false;
         ImGui::BeginDisabled( bHasFolder == false );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "FolderOpen" ), SW_LOCKEY( "EdButton", "OpenFolder" ), "Open Folder" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "FolderOpen" ), SW_LOCKEY( "EdButton", "OpenFolder" ), "Open Folder" ) ) )
             (void)EditorAssetFileCommands::showInFileExplorer( progress._outputFolder ); // 탐색기를 못 띄우면 경고가 남는다
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorPackaging", "OpenFolder" ) );

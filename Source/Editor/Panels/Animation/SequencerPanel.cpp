@@ -316,7 +316,7 @@ namespace sw::editor
                 if ( bEdited && _document.commitItemEdit() )
                     notifyDocumentEdited( "Edit Sequence Item", "sequence-item" );
                 if ( edit.findFieldIssue() != SequenceItemFieldIssue::None )
-                    ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEY( "EditorSequencer", "RequiredFieldHint" ) );
+                    ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_LOCKEY( "EditorSequencer", "RequiredFieldHint" ) );
             }
         }
         EditorChrome::endSection();

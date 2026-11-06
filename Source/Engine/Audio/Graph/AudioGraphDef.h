@@ -5,7 +5,7 @@
  * @details 언리얼 MetaSounds 의 소스 그래프, Wwise SoundSeed Grain · Synth One, FMOD 의 그래뉼러 · 오실레이터 인스트루먼트를 한 모양으로 줄인 것이다.
  *          - **이벤트가 고르는 길.** 이벤트 클립(`AudioClipEntry::_path`)에 이 파일을 적으면 클립 대신 그래프가 소리를 낸다. 컨테이너 · 피치 · 감쇠 · 가상화 ·
  *            버스는 클립과 같다(클립 캐시가 그래프를 읽어 `AudioClipData::_pGraph` 를 단 소리로 만든다). 출력은 모노 48 kHz 이고 3D 패닝 · HRTF 가 그대로 걸린다.
- *          - **노드 형식.** 노드는 이름과 종류(`AudioGraphNodeType`)를 가지고, 신호 입력은 앞 노드 이름의 목록(`_listInput`, 합한다)이다. 값은 이펙트처럼 이름과 값의
+ *          - **노드 형식.** 노드는 이름과 종류(`AudioGraphNodeKind`)를 가지고, 신호 입력은 앞 노드 이름의 목록(`_listInput`, 합한다)이다. 값은 이펙트처럼 이름과 값의
  *            목록(`_listParameter`)이며 종류마다 받는 이름 · 범위 · 기본값은 코드의 종류 표(`AudioGraphRegistry`)에 있다. 모르는 이름 · 고리 · 없는 노드는 읽기 오류다.
  *          - **파라미터 갱신 경로.** 값 하나에 게임 파라미터(`_parameter`)와 곡선(`_listPoint`)을 달면 엔진이 블록(5.3 ms)마다 그 에미터에서 본 파라미터 값을 곡선으로 바꿔
  *            넣는다(`AudioEngine::updateVoiceTargets`). 이벤트의 RTPC 곡선과 같은 모양이고, 늦음은 한 블록 안이다. 엔진이 모르는 파라미터를 읽는 그래프는 시작할 때 오류로 멈춘다.
@@ -49,7 +49,7 @@ namespace sw
 {
     /** @brief 그래프 노드의 종류입니다. 종류마다 받는 값은 `AudioGraphRegistry` 의 종류 표가 정합니다. */
     ENUM()
-    enum class AudioGraphNodeType : uint8
+    enum class AudioGraphNodeKind : uint8
     {
         Sine = 0, ///< 사인 오실레이터(frequencyHz, amplitude). 입력이 없다.
         Saw,      ///< 톱니 오실레이터(PolyBLEP 로 앨리어싱을 줄인다).
@@ -105,7 +105,7 @@ namespace sw
         PROPERTY( Tooltip = "Position of the node on the editor canvas; the sound does not read it" )
         float2 _editorPosition{ 0.0f, 0.0f };
         PROPERTY( Tooltip = "Node type" )
-        AudioGraphNodeType _type{ AudioGraphNodeType::Sine };
+        AudioGraphNodeKind _type{ AudioGraphNodeKind::Sine };
     };
 } // namespace sw
 

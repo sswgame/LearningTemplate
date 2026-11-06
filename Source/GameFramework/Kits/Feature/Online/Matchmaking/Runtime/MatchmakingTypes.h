@@ -52,7 +52,7 @@ namespace sw
      * @details 예전에는 팀 수와 팀 인원을 조용히 1 ~ 16 으로 맞췄다(폴백 금지 원칙). `Max` 는 `MatchmakingLimit` 상수 이름이라 상한과 어긋나지 않는다.
      */
     REFLECT()
-    struct SW_KIT_API MatchModeDefinition
+    struct SW_KIT_API MatchModeDef
     {
         REFLECT_BODY();
         PROPERTY()

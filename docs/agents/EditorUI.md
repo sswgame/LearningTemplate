@@ -4,7 +4,7 @@
 
 ## Tokens, not numbers
 
-- Colours, spacing, radii, borders, font and icon sizes come from `Content/editor/theme/<name>.tokens.json` only (dark · charcoal · midnight · light · highcontrast). Code names a key: `SW_THEMECOLOR( "Base.TextMuted" )`, `SW_THEMEMETRIC( "Spacing.ItemSpacingY" )`. The ImGui style is built from the tokens in `EditorThemeUtil::applyTheme`. A set writes `_base` (another set's name) and only the keys that differ; `dark` is the parent of the others.
+- Colours, spacing, radii, borders, font and icon sizes come from `Content/editor/theme/<name>.tokens.json` only (dark · charcoal · midnight · light · highcontrast). Code names a key: `SW_THEME_COLOR( "Base.TextMuted" )`, `SW_THEME_METRIC( "Spacing.ItemSpacingY" )`. The ImGui style is built from the tokens in `EditorThemeUtil::applyTheme`. A set writes `_base` (another set's name) and only the keys that differ; `dark` is the parent of the others.
 - Every set has the same key set (checked on load); the unit test `EditorThemeKeys` scans the sources for keys the files lack. Adding a key means adding it to all five files in one commit.
 - A defect seen in many panels is fixed once: in a token value, in `EditorThemeUtil`, or in a shared widget (`EditorWidgets` · `EditorChrome`). A per-panel `PushStyleColor` / size literal that patches one screen is the wrong fix.
 - Shared shapes already exist — use them instead of re-drawing (every panel the same, like Unreal · Unity · Godot):

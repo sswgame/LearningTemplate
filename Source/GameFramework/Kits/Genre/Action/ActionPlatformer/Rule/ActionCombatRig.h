@@ -39,7 +39,7 @@ namespace sw
 namespace sw
 {
     /** @brief 싸움 알림의 종류입니다. */
-    enum class ActionCombatEventType : uint8
+    enum class ActionCombatEventKind : uint8
     {
         MoveStarted = 0, ///< `_id` 는 기술이고 `_value` 는 콤보 인덱스
         ComboEnded,      ///< `_value` 는 이어서 낸 기술 수
@@ -54,7 +54,7 @@ namespace sw
     {
         hashed_string         _id{};
         int32                 _value{ 0 };
-        ActionCombatEventType _type{ ActionCombatEventType::MoveStarted };
+        ActionCombatEventKind _type{ ActionCombatEventKind::MoveStarted };
     };
 } // namespace sw
 
@@ -128,7 +128,7 @@ namespace sw
     private:
         [[nodiscard]] bool startMove( int32 comboIndex );
         void               startHitstop( int32 frames );
-        void               pushEvent( ActionCombatEventType type, const hashed_string& id, int32 value );
+        void               pushEvent( ActionCombatEventKind type, const hashed_string& id, int32 value );
 
     private:
         const ActionPlatformerCatalog* _pCatalog;

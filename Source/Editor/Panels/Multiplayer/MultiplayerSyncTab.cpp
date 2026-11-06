@@ -315,10 +315,10 @@ namespace sw::editor
         ImGui::SameLine();
         drawClientSources( sourceIndex );
 
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
         ImGui::InputTextWithHint( "##SyncAddress", "127.0.0.1:<port>", _arrAddress[sourceIndex].data(), _arrAddress[sourceIndex].capacity() );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
         ImGui::InputTextWithHint( "##SyncToken", "token", _arrToken[sourceIndex].data(), _arrToken[sourceIndex].capacity(), ImGuiInputTextFlags_Password );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ReadServer" ) ) );
         if ( ImGui::Button( SW_LOCKEY( "EdText", "ReadServer" ) ) )
@@ -332,7 +332,7 @@ namespace sw::editor
         }
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMultiplayer", "SyncReadServer" ) );
 
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldPathEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldPathEm" ) );
         ImGui::InputTextWithHint( "##SyncPath", "StateHashes/<name>.txt", _arrPath[sourceIndex].data(), _arrPath[sourceIndex].capacity() );
         // 사람이 친 상대 경로는 이 실행의 산출물 폴더(`ProcessRoots::_saved`) 아래다 - 작업 폴더가 아니다. 경로가 아니면(드라이브 상대) 빈 값이라 읽기 · 쓰기가 실패로 알린다.
         const std::optional<AbsolutePath> typedPath = AbsolutePath::tryResolve( _arrPath[sourceIndex].c_str(), ProcessRoots::get()._saved );
@@ -355,7 +355,7 @@ namespace sw::editor
     void MultiplayerSyncTab::drawReplay()
     {
         EditorNetPlaySession& session = MultiplayerSyncTabInternal::getSession();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldPathEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldPathEm" ) );
         ImGui::InputTextWithHint( "##SyncReplayPath", "<name>.swintent", _arrReplayPath.data(), _arrReplayPath.capacity() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "ReplayServer" ) ) );
         ImGui::BeginDisabled( session.isRunning() || _arrReplayPath.empty() );
@@ -364,7 +364,7 @@ namespace sw::editor
         ImGui::EndDisabled();
         // 한 틱씩 진행은 떠 있는 서버가 있을 때만 — 전용 서버는 멈춘 채 떠서 `step` 만큼만 돈다.
         ImGui::BeginDisabled( session.isRunning() == false );
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldStepEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldStepEm" ) );
         ImGui::InputInt( "##SyncReplayStep", &_replayStepCount, 1, 10 );
         _replayStepCount = _replayStepCount < 1 ? 1 : _replayStepCount;
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Step" ) ) );
@@ -380,7 +380,7 @@ namespace sw::editor
         // 어느 줄의 이력을 읽을지 — 씬 줄(`scene`) 말고 키트가 더한 줄(`destruction` · `rollback`)도 같은 비교를 탄다. 읽는 단추를 누를 때 이 이름을 쓴다.
         if ( _arrChannelName.empty() )
             _arrChannelName = MultiplayerSyncTabInternal::getCompare().getHashChannel().c_str();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
         if ( ImGui::InputTextWithHint( "##SyncChannel", "scene | destruction | rollback", _arrChannelName.data(), _arrChannelName.capacity() ) )
         {
             if ( MultiplayerSyncTabInternal::getCompare().setHashChannel( _arrChannelName.c_str() ) == false )

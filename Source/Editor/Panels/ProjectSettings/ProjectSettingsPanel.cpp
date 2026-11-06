@@ -227,17 +227,17 @@ namespace sw::editor
         ImGui::TextUnformatted( page._entry._relativePath.c_str() );
         ImGui::SameLine();
         if ( document.hasFile() )
-            EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "File" ), SW_THEMECOLOR( "Signal", "Success" ) );
+            EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "File" ), SW_THEME_COLOR( "Signal", "Success" ) );
         else
-            EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "NoFileDefaults" ), SW_THEMECOLOR( "Signal", "Warning" ) );
+            EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "NoFileDefaults" ), SW_THEME_COLOR( "Signal", "Warning" ) );
         const uint32 keyCount = document.countNonDefaultKeys();
         ImGui::SameLine();
-        EditorWidgets::drawChip( ( formatToString( "%# non-default", keyCount ) ).c_str(), SW_THEMECOLOR( "Base", "Accent" ) );
+        EditorWidgets::drawChip( ( formatToString( "%# non-default", keyCount ) ).c_str(), SW_THEME_COLOR( "Base", "Accent" ) );
         if ( document.isLoadFailed() )
             EditorThemeUtil::textError( "The file could not be read (see the log). Reset to Default replaces it when saved" );
 
         ImGui::BeginDisabled( page._bDirty == false || document.isLoadFailed() );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Save" ), SW_LOCKEY( "EdVerb", "Save" ), "Save" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Save" ), SW_LOCKEY( "EdVerb", "Save" ), "Save" ) ) )
         {
             bool bApplied = false;
             if ( page.save( bApplied ) )
@@ -252,9 +252,9 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "projectsettings.save" );
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Undo" ), SW_LOCKEY( "EdVerb", "Revert" ), "Revert" ) ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Undo" ), SW_LOCKEY( "EdVerb", "Revert" ), "Revert" ) ) );
         ImGui::BeginDisabled( page._bDirty == false && document.isLoadFailed() == false );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Undo" ), SW_LOCKEY( "EdVerb", "Revert" ), "Revert" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Undo" ), SW_LOCKEY( "EdVerb", "Revert" ), "Revert" ) ) )
         {
             page.revert();
             refreshDirtyState();
@@ -262,8 +262,8 @@ namespace sw::editor
         }
         EditorSelfTestMarks::note( "projectsettings.revert" );
         ImGui::EndDisabled();
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) );
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetToDefault" ), "Reset to Default" ) ) )
         {
             page.resetToDefault();
             refreshDirtyState();

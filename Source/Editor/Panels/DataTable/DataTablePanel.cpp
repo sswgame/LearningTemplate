@@ -214,17 +214,17 @@ namespace sw::editor
         uint32 pushedColorCount = 0;
         if ( state == TranslationState::Stale )
         {
-            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Warning" ) ) );
             ++pushedColorCount;
         }
         else if ( state == TranslationState::Review )
         {
-            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Info" ) ) );
+            ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Info" ) ) );
             ++pushedColorCount;
         }
         if ( bTooLong )
         {
-            ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ) );
+            ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ) );
             ++pushedColorCount;
         }
         // 확인 단추 자리를 남기고 칸이 나머지 폭을 채운다(폭 인자 0 은 이 값을 쓴다).

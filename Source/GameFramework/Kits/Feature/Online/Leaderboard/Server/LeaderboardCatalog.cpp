@@ -20,7 +20,7 @@ namespace sw
             const utf8* pElement = node.getName();
             if ( StringUtil::equals( pElement, "Board" ) )
             {
-                LeaderboardDefinition board;
+                LeaderboardDef board;
                 if ( readBoard( node, sourceName, board ) )
                 {
                     _listBoard.push_back( std::move( board ) );
@@ -29,7 +29,7 @@ namespace sw
             }
             else if ( StringUtil::equals( pElement, "Achievement" ) )
             {
-                AchievementDefinition achievement;
+                AchievementDef achievement;
                 if ( XMLFields::readFields( node, achievement, sourceName ) )
                 {
                     _listAchievement.push_back( std::move( achievement ) );
@@ -46,7 +46,7 @@ namespace sw
         return loadedCount;
     }
 
-    bool LeaderboardCatalog::readBoard( const XMLNode& node, string_view sourceName, LeaderboardDefinition& outBoard )
+    bool LeaderboardCatalog::readBoard( const XMLNode& node, string_view sourceName, LeaderboardDef& outBoard )
     {
         bool bValid = XMLFields::readFields( node, outBoard, sourceName );
         for ( XMLNode seasonNode = node.findChild( "Season" ); seasonNode; seasonNode = seasonNode.findNextSibling( "Season" ) )

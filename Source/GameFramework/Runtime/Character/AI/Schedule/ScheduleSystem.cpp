@@ -1139,9 +1139,9 @@ namespace sw
 
     ScheduleConditionContext ScheduleSystem::makeContext( int32 npcIndex, int32 day, uint32 chanceKey ) const
     {
-        const ScheduleConditionVocabulary& vocabulary = _pCatalog->getVocabulary();
-        const WorldClockSettings&          clock      = _settings._clock;
-        ScheduleConditionContext           context;
+        const ScheduleConditionSchema& vocabulary = _pCatalog->getVocabulary();
+        const WorldClockSettings&      clock      = _settings._clock;
+        ScheduleConditionContext       context;
         context._pFlags       = _services._pFlags;
         context._pNPCTags     = &_listNPC[static_cast<size_t>( npcIndex )]._tags;
         context._pWorldTags   = _services._pWorldTags;

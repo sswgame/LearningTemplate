@@ -31,7 +31,7 @@ namespace
         const sw::string      text = sw::string( "<Routine id=\"test\" " ) + pAttributes + "/>";
         sw::ScheduleCondition condition;
         if ( document.parse( text ) )
-            (void)condition.readFromNode( document.getRoot(), sw::ScheduleConditionVocabulary{}, "test", "test" ); // 틀린 읽기는 오류 로그가 시험을 깬다
+            (void)condition.readFromNode( document.getRoot(), sw::ScheduleConditionSchema{}, "test", "test" ); // 틀린 읽기는 오류 로그가 시험을 깬다
         return condition;
     }
 
@@ -165,7 +165,7 @@ SW_TEST_CASE( ScheduleConditionTest, AffinityRangeAndDeterministicChance )
  */
 SW_TEST_CASE( ScheduleConditionTest, ReadsAttributesAndRejectsBrokenData )
 {
-    sw::ScheduleConditionVocabulary vocabulary;
+    sw::ScheduleConditionSchema vocabulary;
     vocabulary._listSeason = getSeasonOrder();
 
     sw::XMLDocument document;

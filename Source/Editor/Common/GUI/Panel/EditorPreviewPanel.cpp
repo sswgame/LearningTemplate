@@ -221,12 +221,12 @@ namespace sw::editor
         const string  scope  = string{ getDocumentKind().getID() } + ".preview";
         const float32 margin = ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetCursorScreenPos( ImVec2{ origin._x + margin, origin._y + margin } );
-        ImGui::PushStyleColor( ImGuiCol_ChildBg, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "PanelBg" ) ) );
+        ImGui::PushStyleColor( ImGuiCol_ChildBg, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "PanelBg" ) ) );
         const ImGuiChildFlags childFlags = ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding;
         if ( ImGui::BeginChild( "##previewBar", ImVec2{ 0.0f, 0.0f }, childFlags, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings ) )
         {
-            const ImVec4 toggleOn  = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "ToggleActive" ) );
-            const ImVec4 toggleOff = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "ToggleInactive" ) );
+            const ImVec4 toggleOn  = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "ToggleActive" ) );
+            const ImVec4 toggleOff = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "ToggleInactive" ) );
             // 재생 · 멈춤 한 단추(라벨이 상태를 말한다) — 언리얼 Persona · 유니티 미리보기의 재생 단추.
             if ( ImGui::SmallButton( _bPreviewPaused ? EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "PreviewPlay" ), "PreviewPlayPause" )
                                                      : EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "PreviewPause" ), "PreviewPlayPause" ) ) )

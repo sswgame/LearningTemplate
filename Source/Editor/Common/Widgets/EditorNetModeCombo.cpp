@@ -39,7 +39,7 @@ namespace sw::editor
         EditorNetPlaySettings& settings = session.getSettings();
         bool                   bChanged = false;
         ImGui::BeginDisabled( session.isRunning() );
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldModeEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldModeEm" ) );
         if ( ImGui::BeginCombo( "##NetMode", getNetModeDisplayName( settings._mode ) ) )
         {
             constexpr EditorNetMode kArrMode[] = { EditorNetMode::Standalone, EditorNetMode::DedicatedServer, EditorNetMode::ListenHost };

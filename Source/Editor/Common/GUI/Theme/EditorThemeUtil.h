@@ -94,14 +94,14 @@ namespace sw::editor
         static void setAccentColor( const Color& accentColor );
 
         // ----------------------------------------------------------------------
-        // 1) 테마 토큰 조회 — 키로 찾는다(`SW_THEMECOLOR` · `SW_THEMEMETRIC`)
+        // 1) 테마 토큰 조회 — 키로 찾는다(`SW_THEME_COLOR` · `SW_THEME_METRIC`)
         // ----------------------------------------------------------------------
         /**
-         * @brief 지금 테마의 색 토큰 @p key(`Namespace.Key`)입니다. 직접 부르지 않고 `SW_THEMECOLOR` 를 쓴다(키를 한 번만 intern 하고, 테스트가 소스에서 키를 모은다).
+         * @brief 지금 테마의 색 토큰 @p key(`Namespace.Key`)입니다. 직접 부르지 않고 `SW_THEME_COLOR` 를 쓴다(키를 한 번만 intern 하고, 테스트가 소스에서 키를 모은다).
          * @details 표에 없는 키면 키마다 한 번 오류를 남기고 자홍색이다(빠진 텍스처처럼 화면에서 보인다 — 지역화의 빠진 키가 키 글자로 보이는 것과 같은 자리).
          */
         static const Color& findColor( const hashed_string& key );
-        /** @brief 지금 테마의 수치 토큰 @p key 입니다(96 DPI 픽셀 · 비율, DPI 배율은 곱하지 않은 값). 없으면 키마다 한 번 오류를 남기고 0 입니다. `SW_THEMEMETRIC` 을 쓴다. */
+        /** @brief 지금 테마의 수치 토큰 @p key 입니다(96 DPI 픽셀 · 비율, DPI 배율은 곱하지 않은 값). 없으면 키마다 한 번 오류를 남기고 0 입니다. `SW_THEME_METRIC` 을 쓴다. */
         static float32 findMetric( const hashed_string& key );
         /** @brief 씬 뷰 호버 강조 색입니다. 강조색을 밝고 반투명하게 만든 색이며 선택 주황보다 약하고 테마를 따릅니다. */
         static Color getViewportHoverColor();
@@ -137,7 +137,7 @@ namespace sw::editor
         /** @brief 폴더용 테마 색을 반환합니다. */
         static Color getFolderColor();
 
-        /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(SW_EDITORICON( "FolderOpen" ) / kFolder). */
+        /** @brief 열림 · 닫힘 상태에 맞는 폴더 아이콘 문자열을 반환합니다(SW_EDITOR_ICON( "FolderOpen" ) / kFolder). */
         static const utf8* getFolderIcon( bool bOpened = false );
 
         /** @brief 종류의 에디터 아이콘을 반환합니다. 애셋 종류 등록을 따릅니다. 알 수 없음이면 일반 파일 아이콘입니다. */
@@ -172,12 +172,12 @@ namespace sw::editor
     };
 } // namespace sw::editor
 
-/** @brief 호출 자리마다 키 리터럴을 한 번만 intern 해 두는 식입니다(`SW_THEMECOLOR` · `SW_THEMEMETRIC` 가 쓴다). */
+/** @brief 호출 자리마다 키 리터럴을 한 번만 intern 해 두는 식입니다(`SW_THEME_COLOR` · `SW_THEME_METRIC` 가 쓴다). */
 #define SW_THEME_KEY( NamespaceLiteral, KeyLiteral ) []() -> const ::sw::hashed_string& { static const ::sw::hashed_string s_key{ NamespaceLiteral "." KeyLiteral }; return s_key; }()
 /**
  * @brief 테마 색 토큰 `Namespace.Key` 입니다(`Content/editor/theme/` 의 `.tokens.json` 파일 `_color`). 두 인자 모두 문자열 리터럴이어야 한다 — 단위 테스트가 소스에서 키를 모아 모든 벌에 있는지 본다.
  * @details `SW_LOCKEY` 와 같은 모양이다.
  */
-#define SW_THEMECOLOR( NamespaceLiteral, KeyLiteral ) ::sw::editor::EditorThemeUtil::findColor( SW_THEME_KEY( NamespaceLiteral, KeyLiteral ) )
-/** @brief 테마 수치 토큰 `Namespace.Key` 입니다(`_metric`, 96 DPI 픽셀 · 비율). 규칙은 `SW_THEMECOLOR` 와 같다. */
-#define SW_THEMEMETRIC( NamespaceLiteral, KeyLiteral ) ::sw::editor::EditorThemeUtil::findMetric( SW_THEME_KEY( NamespaceLiteral, KeyLiteral ) )
+#define SW_THEME_COLOR( NamespaceLiteral, KeyLiteral ) ::sw::editor::EditorThemeUtil::findColor( SW_THEME_KEY( NamespaceLiteral, KeyLiteral ) )
+/** @brief 테마 수치 토큰 `Namespace.Key` 입니다(`_metric`, 96 DPI 픽셀 · 비율). 규칙은 `SW_THEME_COLOR` 와 같다. */
+#define SW_THEME_METRIC( NamespaceLiteral, KeyLiteral ) ::sw::editor::EditorThemeUtil::findMetric( SW_THEME_KEY( NamespaceLiteral, KeyLiteral ) )

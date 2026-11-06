@@ -128,7 +128,7 @@ namespace
         }
 
         /** @brief 쌓인 이벤트를 `_listEvent` 뒤로 모으고 @p type 의 수를 셉니다. */
-        int32 countEvents( GhostEventType type )
+        int32 countEvents( GhostEventKind type )
         {
             _encounter.drainEvents( _listEvent );
             return VectorUtil::countBy<&GhostEvent::_type>( _listEvent, type );
@@ -184,7 +184,7 @@ namespace
         }
 
         /** @brief 쌓인 이벤트를 `_listEvent` 뒤로 모으고 @p type 의 수를 셉니다. */
-        int32 countEvents( GhostMansionEventType type )
+        int32 countEvents( GhostMansionEventKind type )
         {
             _mansion.drainEvents( _listEvent );
             return VectorUtil::countBy<&GhostMansionEvent::_type>( _listEvent, type );
@@ -438,12 +438,12 @@ SW_TEST_CASE_F( GhostHuntTest, GhostCycles )
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Hidden );
     _encounter.update( 1.0f );
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Visible );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostEventType::Appeared ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::Appeared ) );
     _encounter.update( 1.0f );
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Attacking );
     _encounter.update( 1.0f );
     SW_EXPECT_TRUE( _encounter.findGhost( ghostID )->_state == GhostState::Hidden );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostEventType::AttackLanded ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::AttackLanded ) );
     SW_EXPECT_NEAR( 8.0f, _listEvent.back()._amount, kGhostTolerance );
 }
 
@@ -477,7 +477,7 @@ SW_TEST_CASE_F( GhostHuntTest, BeamStunsOnlyAttackers )
     SW_EXPECT_EQUAL( 0, _encounter.shineBeam( float3{}, float3{ 0.0f, 0.0f, -1.0f } ) ); // 뒤를 비췄다
     SW_EXPECT_EQUAL( 1, _encounter.shineBeam( float3{}, forward ) );
     SW_EXPECT_TRUE( _encounter.findGhost( hiddenID )->_state == GhostState::Stunned );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostEventType::Stunned ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::Stunned ) );
 
     _encounter.clear();
     (void)spawnAttacking( "shy" );
@@ -530,7 +530,7 @@ SW_TEST_CASE_F( GhostHuntTest, SuctionStartGuards )
     SW_EXPECT_TRUE( _encounter.startSuction( ghostID, float3{} ) );
     SW_EXPECT_EQUAL( ghostID, _encounter.getSuctionTarget() );
     SW_EXPECT_FALSE( _encounter.startSuction( ghostID, float3{} ) );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostEventType::SuctionStarted ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::SuctionStarted ) );
 }
 
 /**
@@ -575,8 +575,8 @@ SW_TEST_CASE_F( GhostHuntTest, SurgeNeedsFullGaugeAndCatches )
     SW_EXPECT_EQUAL( 0u, _encounter.getSuctionTarget() );
     SW_EXPECT_EQUAL( 0, _encounter.countRemaining() );
     SW_EXPECT_FALSE( _encounter.triggerSurge() );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostEventType::Surge ) );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostEventType::Caught ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::Surge ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::Caught ) );
     SW_EXPECT_EQUAL( 10, _listEvent.back()._coins );
 
     _encounter.update( 99.0f ); // 잡힌 유령은 깨어나지 않는다
@@ -596,9 +596,9 @@ SW_TEST_CASE_F( GhostHuntTest, StopSuctionLetsGhostEscape )
     SW_EXPECT_NEAR( 30.0f, pGhost->_hp, kGhostTolerance );
     SW_EXPECT_EQUAL( 0u, _encounter.getSuctionTarget() );
     SW_EXPECT_NEAR( 0.0f, _encounter.getSurgeGauge(), kGhostTolerance );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostEventType::Escaped ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::Escaped ) );
     _encounter.stopSuction(); // 흡입이 없으면 아무 일도 없다
-    SW_EXPECT_EQUAL( 1, countEvents( GhostEventType::Escaped ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostEventKind::Escaped ) );
 }
 
 /**
@@ -788,7 +788,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, EnterRoomSpawnsGhosts )
 
     SW_EXPECT_EQUAL( 0, _mansion.enterRoom( "hall" ) );
     SW_EXPECT_TRUE( _mansion.isRoomLit( "hall" ) );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::RoomLit ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::RoomLit ) );
     SW_EXPECT_TRUE( _mansion.getEncounter().getGhosts().empty() ); // 앞 방의 유령은 치웠다
     SW_EXPECT_TRUE( _mansion.isRoomLit( "corridor" ) );            // 정의 없는 방은 늘 밝다
 }
@@ -806,12 +806,12 @@ SW_TEST_CASE_F( GhostHuntRulesTest, ClearingRoomLightsItAndGivesKey )
     SW_EXPECT_TRUE( _flags.hasFlag( "lit.foyer" ) );
     SW_EXPECT_EQUAL( 1, _bag.getItemCount( "parlorKey" ) );
     SW_EXPECT_EQUAL( int64{ 10 }, _wallet.getBalance( "Souls" ) );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::RoomLit ) );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::KeyAwarded ) );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::CoinsCollected ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::RoomLit ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::KeyAwarded ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::CoinsCollected ) );
     vector<GhostEvent> listGhostEvent;
     _mansion.drainGhostEvents( listGhostEvent );
-    SW_EXPECT_EQUAL( 1, VectorUtil::countBy<&GhostEvent::_type>( listGhostEvent, GhostEventType::Caught ) );
+    SW_EXPECT_EQUAL( 1, VectorUtil::countBy<&GhostEvent::_type>( listGhostEvent, GhostEventKind::Caught ) );
 
     SW_EXPECT_EQUAL( 0, _mansion.enterRoom( "foyer" ) );
     SW_EXPECT_EQUAL( 2, _mansion.enterRoom( "parlor" ) );
@@ -832,7 +832,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, LeavingRightAfterCatchKeepsTheCatch )
     SW_EXPECT_EQUAL( 1, _bag.getItemCount( "parlorKey" ) );
     vector<GhostEvent> listGhostEvent;
     _mansion.drainGhostEvents( listGhostEvent );
-    SW_EXPECT_EQUAL( 1, VectorUtil::countBy<&GhostEvent::_type>( listGhostEvent, GhostEventType::Caught ) );
+    SW_EXPECT_EQUAL( 1, VectorUtil::countBy<&GhostEvent::_type>( listGhostEvent, GhostEventKind::Caught ) );
 }
 
 /**
@@ -863,12 +863,12 @@ SW_TEST_CASE_F( GhostHuntRulesTest, FullBagKeepsTheKeyForLater )
     catchRoomGhosts();
     _mansion.update( 0.01f );
     SW_EXPECT_TRUE( _mansion.isRoomLit( "foyer" ) );
-    SW_EXPECT_EQUAL( 0, countEvents( GhostMansionEventType::KeyAwarded ) );
+    SW_EXPECT_EQUAL( 0, countEvents( GhostMansionEventKind::KeyAwarded ) );
     SW_EXPECT_EQUAL( 0, _bag.getItemCount( "parlorKey" ) );
 
     SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) ); // 자리가 났다
     (void)_mansion.enterRoom( "foyer" );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::KeyAwarded ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::KeyAwarded ) );
     SW_EXPECT_EQUAL( 1, _bag.getItemCount( "parlorKey" ) );
 
     (void)_mansion.enterRoom( "foyer" ); // 한 번만 준다
@@ -898,7 +898,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, DoorsUseKeysAndFlags )
     SW_EXPECT_TRUE( _mansion.unlockDoor( "parlorDoor" ) == GhostDoorResult::Opened );
     SW_EXPECT_EQUAL( 0, _bag.getItemCount( "parlorKey" ) );
     SW_EXPECT_TRUE( _graph.canTraverse( "foyer", "parlor", _flags ) );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::DoorOpened ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::DoorOpened ) );
     SW_EXPECT_TRUE( _mansion.unlockDoor( "parlorDoor" ) == GhostDoorResult::AlreadyOpen );
 
     SW_EXPECT_TRUE( _mansion.unlockDoor( "openDoor" ) == GhostDoorResult::Opened );
@@ -917,7 +917,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, FurnitureSearchRules )
     SW_EXPECT_TRUE( _mansion.searchFurniture( "dresser", GhostSearchMode::Shake, loot ) == GhostSearchResult::BooFound );
     SW_EXPECT_TRUE( loot.isEmpty() );
     SW_EXPECT_FALSE( _mansion.isSearched( "dresser" ) );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::BooRevealed ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::BooRevealed ) );
 
     SW_EXPECT_TRUE( _mansion.searchFurniture( "dresser", GhostSearchMode::Shake, loot ) == GhostSearchResult::Found );
     SW_EXPECT_EQUAL( 1, loot.getItemCount( "gold" ) );
@@ -949,7 +949,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, BooCatchRules )
     SW_EXPECT_TRUE( _mansion.damageBoo( "booB", 6.0f ) );
     SW_EXPECT_TRUE( _mansion.findBoo( "booB" )->_state == HidingGhostState::Caught );
     SW_EXPECT_EQUAL( 1, _mansion.countCaughtBoos() );
-    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::BooCaught ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::BooCaught ) );
     SW_EXPECT_FALSE( _mansion.damageBoo( "booB", 1.0f ) );
 }
 
@@ -967,7 +967,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, BooEscapesToNeighbourRoom )
     SW_EXPECT_TRUE( pBoo->_state == HidingGhostState::Hiding );
     SW_EXPECT_TRUE( pBoo->_room == hashed_string( "foyer" ) );        // 이웃은 현관 하나이다
     SW_EXPECT_TRUE( pBoo->_furniture == hashed_string( "curtain" ) ); // 서랍장에는 booA 가 있다
-    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::BooEscaped ) );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventKind::BooEscaped ) );
 
     SW_REQUIRE_TRUE( _mansion.enterRoom( "foyer" ) >= 0 );
     ItemStackList loot;

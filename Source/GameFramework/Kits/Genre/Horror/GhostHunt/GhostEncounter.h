@@ -55,7 +55,7 @@ namespace sw
 namespace sw
 {
     /** @brief 유령 이벤트의 종류입니다. */
-    enum class GhostEventType : uint8
+    enum class GhostEventKind : uint8
     {
         Appeared = 0,
         AttackLanded, ///< `_amount` 는 피해이다(맞았는지는 거리와 무적을 보고 게임이 판단한다)
@@ -72,7 +72,7 @@ namespace sw
         float32        _amount{ 0.0f };
         uint32         _ghostID{ 0 };
         int32          _coins{ 0 };
-        GhostEventType _type{ GhostEventType::Appeared };
+        GhostEventKind _type{ GhostEventKind::Appeared };
     };
 } // namespace sw
 
@@ -159,7 +159,7 @@ namespace sw
         void           enterState( GhostInstance& ghost, GhostState state );
         void           chooseFleeDirection( GhostInstance& ghost );
         void           applySuctionDamage( GhostInstance& ghost, float32 damage );
-        void           pushEvent( GhostEventType type, uint32 ghostID, float32 amount = 0.0f, int32 coins = 0 );
+        void           pushEvent( GhostEventKind type, uint32 ghostID, float32 amount = 0.0f, int32 coins = 0 );
 
     private:
         const GhostCatalog*     _pCatalog;

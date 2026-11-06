@@ -212,6 +212,6 @@ namespace sw::editor
         return 0;
     }
 
-    SW_EDITOR_VISUALIZER( Billboard, EditorViewportBillboard::kVisualizerID, 50, SW_EDITORICON_NAME( "LightPoint" ), SW_LOCKEYREF( "EdVisualizer", "BillboardLabel" ), SW_LOCKEYREF( "EdVisualizer", "BillboardTip" ), true,
+    SW_EDITOR_VISUALIZER( Billboard, EditorViewportBillboard::kVisualizerID, 50, SW_EDITOR_ICON_NAME( "LightPoint" ), SW_LOCKEYREF( "EdVisualizer", "BillboardLabel" ), SW_LOCKEYREF( "EdVisualizer", "BillboardTip" ), true,
                           &EditorViewportBillboardInternal::draw );
 } // namespace sw::editor

@@ -26,15 +26,15 @@ namespace sw::editor
 
     void BugReportPanel::drawRowActions( const BugReportRow& row )
     {
-        if ( ImGui::SmallButton( SW_EDITORICON( "FolderOpen" ) ) )
+        if ( ImGui::SmallButton( SW_EDITOR_ICON( "FolderOpen" ) ) )
             BugReportModel::showInFileExplorer( row );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "ShowInExplorer" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_EDITORICON( "Copy" ) ) );
-        if ( ImGui::SmallButton( SW_EDITORICON( "Copy" ) ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_EDITOR_ICON( "Copy" ) ) );
+        if ( ImGui::SmallButton( SW_EDITOR_ICON( "Copy" ) ) )
             ImGui::SetClipboardText( row._directory.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "CopyPath" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_EDITORICON( "Camera" ) ) );
-        if ( ImGui::SmallButton( SW_EDITORICON( "Camera" ) ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_EDITOR_ICON( "Camera" ) ) );
+        if ( ImGui::SmallButton( SW_EDITOR_ICON( "Camera" ) ) )
             BugReportModel::goTo( row );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "GoTo" ) );
     }
@@ -46,12 +46,12 @@ namespace sw::editor
         (void)EditorWidgets::drawTextFieldMultiline( "##bugreport_note", _model.editNote(), 3, SW_LOCKEY( "EditorBugReport", "NoteHint" ) );
         EditorSelfTestMarks::note( "bugReport.note" );
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Bug" ), SW_LOCKEY( "EdButton", "CollectNow" ), "Collect Now" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Bug" ), SW_LOCKEY( "EdButton", "CollectNow" ), "Collect Now" ) ) )
             (void)_model.captureNow(); // 결과는 알림으로 알린다
         EditorSelfTestMarks::note( "bugReport.capture" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorBugReport", "Capture" ) );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdVerb", "Refresh" ), "Refresh" ) ) );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdVerb", "Refresh" ), "Refresh" ) ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdVerb", "Refresh" ), "Refresh" ) ) );
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdVerb", "Refresh" ), "Refresh" ) ) )
             _model.markDirty();
 
         ImGui::Separator();

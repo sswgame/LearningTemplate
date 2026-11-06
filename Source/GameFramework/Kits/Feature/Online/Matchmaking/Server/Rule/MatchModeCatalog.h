@@ -1,7 +1,7 @@
 /**
  * @file MatchModeCatalog.h
  * @brief 매칭 모드 정의 데이터입니다. 서버 조립이 기동 때 읽어 매칭 대기열에 넘깁니다.
- * @details 형식은 다음과 같습니다. 속성을 빼면 `MatchModeDefinition` 의 기본값입니다. 속성은 `MatchModeDefinition` 스키마로 읽고(`id` 만 손으로 읽는다) 모르는 속성 · 범위 밖 값은 그 모드를 넣지 않는 오류입니다. id 형식은 대기열이 등록할 때 봅니다.
+ * @details 형식은 다음과 같습니다. 속성을 빼면 `MatchModeDef` 의 기본값입니다. 속성은 `MatchModeDef` 스키마로 읽고(`id` 만 손으로 읽는다) 모르는 속성 · 범위 밖 값은 그 모드를 넣지 않는 오류입니다. id 형식은 대기열이 등록할 때 봅니다.
  * @code
  *     <MatchModeCatalog>
  *         <Mode id="duo" teamCount="2" teamSize="2" serverKind="game" regionRelaxMs="30000" maxWaitMs="120000"
@@ -34,10 +34,10 @@ namespace sw
         friend class XMLCatalog<MatchModeCatalog>;
 
     public:
-        const vector<MatchModeDefinition>& getModes() const { return _listMode; }
+        const vector<MatchModeDef>& getModes() const { return _listMode; }
 
         /** @brief `<id>:<팀 수>x<팀 인원>`(예: `duo:2x2`)을 읽습니다. 나머지 값은 기본값입니다. 형식이 틀리거나 범위 밖이면 false 이고 @p outError 에 이유를 적습니다(범위를 못 보는 프로세스면 그 사실). */
-        [[nodiscard]] static bool parseCompactMode( string_view text, MatchModeDefinition& outMode, string& outError );
+        [[nodiscard]] static bool parseCompactMode( string_view text, MatchModeDef& outMode, string& outError );
 
     private:
         static constexpr const utf8* kXMLRootName = "MatchModeCatalog";
@@ -46,7 +46,7 @@ namespace sw
         [[nodiscard]] bool loadMode( const XMLNode& node, string_view sourceName );
 
     private:
-        vector<MatchModeDefinition> _listMode{};
+        vector<MatchModeDef> _listMode{};
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<MatchModeCatalog>::acquire` 로 한 벌을 받습니다. */

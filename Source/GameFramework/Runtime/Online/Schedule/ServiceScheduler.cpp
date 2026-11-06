@@ -236,7 +236,7 @@ namespace sw
         _pStore = nullptr;
     }
 
-    bool ServiceScheduler::registerJob( const ScheduleDefinition& definition, const ScheduledJobFunction& function )
+    bool ServiceScheduler::registerJob( const ScheduleDef& definition, const ScheduledJobFunction& function )
     {
         if ( function.isBound() == false || isValidDefinition( definition ) == false )
         {
@@ -279,7 +279,7 @@ namespace sw
         _pStore->submit( sw::make_unique<FinishWork>( this, run, _serverID, bSucceeded, _lastTickMs.count() ) );
     }
 
-    int64 ServiceScheduler::computeLatestOccurrence( const ScheduleDefinition& definition, int64 nowMs )
+    int64 ServiceScheduler::computeLatestOccurrence( const ScheduleDef& definition, int64 nowMs )
     {
         if ( nowMs < 0 )
             return -1;
@@ -319,7 +319,7 @@ namespace sw
         return occurrenceMs >= 0 ? occurrenceMs : -1;
     }
 
-    bool ServiceScheduler::isValidDefinition( const ScheduleDefinition& definition )
+    bool ServiceScheduler::isValidDefinition( const ScheduleDef& definition )
     {
         const bool bInvalidJobDefinition = definition._jobID.empty() || definition._jobID.size() > static_cast<size_t>( ServiceSchedulerInternal::kMaxJobIDSize ) || definition._leaseMs <= 0;
         if ( bInvalidJobDefinition )

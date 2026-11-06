@@ -25,7 +25,7 @@ namespace sw::editor
         if ( bDisabled && StringUtil::isNullOrEmpty( pDisabledReason ) == false && ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayShort ) )
         {
             ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "TooltipWrapEm" ) );
+            ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "TooltipWrapEm" ) );
             ImGui::TextUnformatted( pDisabledReason );
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
@@ -35,7 +35,7 @@ namespace sw::editor
 
     bool EditorCompactControls::beginViewOptions( const utf8* pID, bool bFiltered, const utf8* pTooltip, const utf8* pMark )
     {
-        if ( EditorWidgets::drawIconToggle( pID, SW_EDITORICON( "Filter" ), bFiltered, pTooltip ) )
+        if ( EditorWidgets::drawIconToggle( pID, SW_EDITOR_ICON( "Filter" ), bFiltered, pTooltip ) )
             EditorInputGUI::openPopup( pID );
         if ( pMark != nullptr )
             EditorSelfTestMarks::note( pMark );
@@ -49,7 +49,7 @@ namespace sw::editor
 
     bool EditorCompactControls::drawResetButton( const utf8* pID, const utf8* pTooltip )
     {
-        const utf8* const pIcon = SW_EDITORICON( "Refresh" );
+        const utf8* const pIcon = SW_EDITOR_ICON( "Refresh" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( pIcon ) );
         ImGui::PushID( pID );
         const bool bPressed = ImGui::SmallButton( pIcon );

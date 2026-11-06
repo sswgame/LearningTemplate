@@ -210,8 +210,8 @@ namespace sw::editor
             const float2 half{ Internal::kHandleHalfSize + ( bHighlight ? 2.0f : 0.0f ), Internal::kHandleHalfSize + ( bHighlight ? 2.0f : 0.0f ) };
             const ImVec2 min{ screen.x - half._x, screen.y - half._y };
             const ImVec2 max{ screen.x + half._x, screen.y + half._y };
-            args._pDrawList->AddRectFilled( min, max, EditorColorUtil::toImU32( bHighlight ? SW_THEMECOLOR( "Viewport", "SelectionOutline" ) : SW_THEMECOLOR( "Base", "Text" ).withAlpha( 0.95f ) ) );
-            args._pDrawList->AddRect( min, max, EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "HandleOutline" ) ) );
+            args._pDrawList->AddRectFilled( min, max, EditorColorUtil::toImU32( bHighlight ? SW_THEME_COLOR( "Viewport", "SelectionOutline" ) : SW_THEME_COLOR( "Base", "Text" ).withAlpha( 0.95f ) ) );
+            args._pDrawList->AddRect( min, max, EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "HandleOutline" ) ) );
         }
 
         if ( state._bDragging )

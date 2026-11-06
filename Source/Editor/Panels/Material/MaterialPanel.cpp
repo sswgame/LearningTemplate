@@ -49,7 +49,7 @@ namespace sw::editor
              */
             static bool drawUnreadableValue( const utf8* pLabel, MaterialProperty& prop )
             {
-                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ), "!" );
+                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Warning" ) ), "!" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "ThisValueDoesNotMatchItsType" ) );
                 ImGui::SameLine();
                 return EditorWidgets::drawTextField( pLabel, prop._value );
@@ -312,14 +312,14 @@ namespace sw::editor
 
         // 문서 경로는 위의 문서 고르기 칸이 보인다 — 같은 경로를 한 줄 더 쓰지 않는다.
         // 글 단추 셋(다시 읽기 · 저장 · 선택에 적용)은 아이콘 단추 + 툴팁으로 줄인다(언리얼 머티리얼 에디터 툴바 · Godot 인스펙터 머리 줄과 같은 모양).
-        if ( EditorCompactControls::drawIconButton( "##materialReload", SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EditorMaterial", "ReloadTip" ) ) )
+        if ( EditorCompactControls::drawIconButton( "##materialReload", SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EditorMaterial", "ReloadTip" ) ) )
             reloadDocument();
         EditorSelfTestMarks::note( "material.reload" );
         ImGui::SameLine();
-        if ( EditorCompactControls::drawIconButton( "##materialSave", SW_EDITORICON( "Save" ), SW_LOCKEY( "EditorMaterial", "SaveTip" ) ) )
+        if ( EditorCompactControls::drawIconButton( "##materialSave", SW_EDITOR_ICON( "Save" ), SW_LOCKEY( "EditorMaterial", "SaveTip" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다(읽지 못한 문서는 막힌다) — 실패는 그것이 알린다
         ImGui::SameLine();
-        if ( EditorCompactControls::drawIconButton( "##materialApply", SW_EDITORICON( "Check" ), SW_LOCKEY( "EditorMaterial", "ApplyToSelectionTip" ) ) )
+        if ( EditorCompactControls::drawIconButton( "##materialApply", SW_EDITOR_ICON( "Check" ), SW_LOCKEY( "EditorMaterial", "ApplyToSelectionTip" ) ) )
             applyLivePreview();
         drawPreview();
         // 렌더러가 그리는 미리보기 씬의 구 — 메인 뷰포트의 선택 오브젝트를 빌리지 않는다.

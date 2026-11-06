@@ -159,7 +159,7 @@ namespace sw::editor
                 const AnimationRewindFrame* pFrame = track.findFrame( viewTime );
                 if ( pFrame != nullptr )
                     AnimationRewindPanelInternal::drawSkeleton( queue, track, *pFrame, _listScratchPosition,
-                                                                bSelected ? SW_THEMECOLOR( "Base", "Highlight" ).toFloat4() : SW_THEMECOLOR( "Base", "Accent" ).toFloat4(),
+                                                                bSelected ? SW_THEME_COLOR( "Base", "Highlight" ).toFloat4() : SW_THEME_COLOR( "Base", "Accent" ).toFloat4(),
                                                                 bSelected );
             }
         }

@@ -298,9 +298,9 @@ namespace sw::editor
         };
         // 테마 색 매크로는 토큰 이름을 글자 그대로 받는다(빌드 때 토큰 표와 맞춘다) — 축마다 따로 적는다.
         const Axis arrAxis[] = {
-            {float3{ 1.0f, 0.0f, 0.0f }, "X", EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "AxisX" ) )},
-            {float3{ 0.0f, 1.0f, 0.0f }, "Y", EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "AxisY" ) )},
-            {float3{ 0.0f, 0.0f, 1.0f }, "Z", EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "AxisZ" ) )},
+            {float3{ 1.0f, 0.0f, 0.0f }, "X", EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "AxisX" ) )},
+            {float3{ 0.0f, 1.0f, 0.0f }, "Y", EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "AxisY" ) )},
+            {float3{ 0.0f, 0.0f, 1.0f }, "Z", EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "AxisZ" ) )},
         };
         ImDrawList* pDrawList = ImGui::GetWindowDrawList();
         for ( const Axis& axis : arrAxis )

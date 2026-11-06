@@ -71,7 +71,7 @@ namespace sw
     {
     }
 
-    int32 BehaviorTree::addNode( int32 parent, BehaviorNodeType type, const utf8* pName )
+    int32 BehaviorTree::addNode( int32 parent, BehaviorNodeKind type, const utf8* pName )
     {
         if ( parent < 0 && _listNode.empty() == false )
             return -1; // 루트는 하나
@@ -104,7 +104,7 @@ namespace sw
 
     int32 BehaviorTree::addSelector( int32 parent, const utf8* pName, bool bReactive )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::Selector, pName );
+        const int32 index = addNode( parent, BehaviorNodeKind::Selector, pName );
         if ( index >= 0 )
             _listNode[static_cast<size_t>( index )]._bReactive = bReactive ? SW_TRUE : SW_FALSE;
         return index;
@@ -112,22 +112,22 @@ namespace sw
 
     int32 BehaviorTree::addSequence( int32 parent, const utf8* pName )
     {
-        return addNode( parent, BehaviorNodeType::Sequence, pName );
+        return addNode( parent, BehaviorNodeKind::Sequence, pName );
     }
 
     int32 BehaviorTree::addInverter( int32 parent )
     {
-        return addNode( parent, BehaviorNodeType::Inverter, "Inverter" );
+        return addNode( parent, BehaviorNodeKind::Inverter, "Inverter" );
     }
 
     int32 BehaviorTree::addForceSuccess( int32 parent )
     {
-        return addNode( parent, BehaviorNodeType::ForceSuccess, "ForceSuccess" );
+        return addNode( parent, BehaviorNodeKind::ForceSuccess, "ForceSuccess" );
     }
 
     int32 BehaviorTree::addRepeat( int32 parent, int32 count )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::Repeat, "Repeat" );
+        const int32 index = addNode( parent, BehaviorNodeKind::Repeat, "Repeat" );
         if ( index >= 0 )
             _listNode[static_cast<size_t>( index )]._count = MathUtil::max( 0, count );
         return index;
@@ -135,7 +135,7 @@ namespace sw
 
     int32 BehaviorTree::addCooldown( int32 parent, float32 seconds )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::Cooldown, "Cooldown" );
+        const int32 index = addNode( parent, BehaviorNodeKind::Cooldown, "Cooldown" );
         if ( index >= 0 )
             _listNode[static_cast<size_t>( index )]._seconds = MathUtil::max( 0.0f, seconds );
         return index;
@@ -143,7 +143,7 @@ namespace sw
 
     int32 BehaviorTree::addTimeLimit( int32 parent, float32 seconds )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::TimeLimit, "TimeLimit" );
+        const int32 index = addNode( parent, BehaviorNodeKind::TimeLimit, "TimeLimit" );
         if ( index >= 0 )
             _listNode[static_cast<size_t>( index )]._seconds = MathUtil::max( 0.0f, seconds );
         return index;
@@ -190,7 +190,7 @@ namespace sw
 
     int32 BehaviorTree::addConditionDecorator( int32 parent, const utf8* pName, const ConditionExpr& condition, BehaviorAbortMode abortMode )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::BlackboardCondition, pName );
+        const int32 index = addNode( parent, BehaviorNodeKind::BlackboardCondition, pName );
         if ( index < 0 )
             return index;
         BehaviorNode& node = _listNode[static_cast<size_t>( index )];
@@ -201,7 +201,7 @@ namespace sw
 
     int32 BehaviorTree::addAction( int32 parent, const utf8* pName, const GameActionCall& action )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::Action, pName );
+        const int32 index = addNode( parent, BehaviorNodeKind::Action, pName );
         if ( index >= 0 )
             _listNode[static_cast<size_t>( index )]._action = action;
         return index;
@@ -209,7 +209,7 @@ namespace sw
 
     int32 BehaviorTree::addCondition( int32 parent, const utf8* pName, const ConditionExpr& condition )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::Condition, pName );
+        const int32 index = addNode( parent, BehaviorNodeKind::Condition, pName );
         if ( index >= 0 )
             _listNode[static_cast<size_t>( index )]._condition = condition;
         return index;
@@ -217,7 +217,7 @@ namespace sw
 
     int32 BehaviorTree::addSubTreeSlot( int32 parent, const utf8* pName, const hashed_string& slot )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::SubTree, pName );
+        const int32 index = addNode( parent, BehaviorNodeKind::SubTree, pName );
         if ( index >= 0 )
             _listNode[static_cast<size_t>( index )]._key = slot;
         return index;
@@ -225,7 +225,7 @@ namespace sw
 
     int32 BehaviorTree::addAction( int32 parent, const utf8* pName, BehaviorTaskFunction function )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::Action, pName );
+        const int32 index = addNode( parent, BehaviorNodeKind::Action, pName );
         if ( index >= 0 )
             _listNode[static_cast<size_t>( index )]._function = function;
         return index;
@@ -233,7 +233,7 @@ namespace sw
 
     int32 BehaviorTree::addCondition( int32 parent, const utf8* pName, BehaviorTaskFunction function )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::Condition, pName );
+        const int32 index = addNode( parent, BehaviorNodeKind::Condition, pName );
         if ( index >= 0 )
             _listNode[static_cast<size_t>( index )]._function = function;
         return index;
@@ -241,7 +241,7 @@ namespace sw
 
     int32 BehaviorTree::addWait( int32 parent, float32 seconds )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::Wait, "Wait" );
+        const int32 index = addNode( parent, BehaviorNodeKind::Wait, "Wait" );
         if ( index >= 0 )
             _listNode[static_cast<size_t>( index )]._seconds = MathUtil::max( 0.0f, seconds );
         return index;
@@ -249,7 +249,7 @@ namespace sw
 
     int32 BehaviorTree::addMoveTo( int32 parent, const hashed_string& destinationKey, float32 repathDistance )
     {
-        const int32 index = addNode( parent, BehaviorNodeType::MoveTo, destinationKey.c_str() );
+        const int32 index = addNode( parent, BehaviorNodeKind::MoveTo, destinationKey.c_str() );
         if ( index < 0 )
             return index;
         BehaviorNode& node   = _listNode[static_cast<size_t>( index )];
@@ -262,20 +262,20 @@ namespace sw
     {
         switch ( getNode( index )._type )
         {
-            case BehaviorNodeType::Inverter:
-            case BehaviorNodeType::ForceSuccess:
-            case BehaviorNodeType::Repeat:
-            case BehaviorNodeType::Cooldown:
-            case BehaviorNodeType::TimeLimit:
-            case BehaviorNodeType::BlackboardCondition:
+            case BehaviorNodeKind::Inverter:
+            case BehaviorNodeKind::ForceSuccess:
+            case BehaviorNodeKind::Repeat:
+            case BehaviorNodeKind::Cooldown:
+            case BehaviorNodeKind::TimeLimit:
+            case BehaviorNodeKind::BlackboardCondition:
                 return true;
-            case BehaviorNodeType::Selector:
-            case BehaviorNodeType::Sequence:
-            case BehaviorNodeType::Action:
-            case BehaviorNodeType::Condition:
-            case BehaviorNodeType::Wait:
-            case BehaviorNodeType::MoveTo:
-            case BehaviorNodeType::SubTree:
+            case BehaviorNodeKind::Selector:
+            case BehaviorNodeKind::Sequence:
+            case BehaviorNodeKind::Action:
+            case BehaviorNodeKind::Condition:
+            case BehaviorNodeKind::Wait:
+            case BehaviorNodeKind::MoveTo:
+            case BehaviorNodeKind::SubTree:
                 return false;
         }
         return false;
@@ -293,13 +293,13 @@ namespace sw
             {
                 ++childCount;
             }
-            const bool bComposite = node._type == BehaviorNodeType::Selector || node._type == BehaviorNodeType::Sequence;
-            const bool bLeaf      = node._type == BehaviorNodeType::Action || node._type == BehaviorNodeType::Condition || node._type == BehaviorNodeType::Wait ||
-                               node._type == BehaviorNodeType::MoveTo || node._type == BehaviorNodeType::SubTree;
+            const bool bComposite = node._type == BehaviorNodeKind::Selector || node._type == BehaviorNodeKind::Sequence;
+            const bool bLeaf      = node._type == BehaviorNodeKind::Action || node._type == BehaviorNodeKind::Condition || node._type == BehaviorNodeKind::Wait ||
+                               node._type == BehaviorNodeKind::MoveTo || node._type == BehaviorNodeKind::SubTree;
             // 코드로 지은 잎은 함수를, 데이터로 지은 잎은 동작 · 식을 든다.
-            const bool bMissingAction    = node._type == BehaviorNodeType::Action && node._function == nullptr && node._action.isValid() == false;
-            const bool bMissingCondition = node._type == BehaviorNodeType::Condition && node._function == nullptr && node._condition.isEmpty();
-            const bool bNeedsKey         = node._type == BehaviorNodeType::MoveTo || node._type == BehaviorNodeType::SubTree;
+            const bool bMissingAction    = node._type == BehaviorNodeKind::Action && node._function == nullptr && node._action.isValid() == false;
+            const bool bMissingCondition = node._type == BehaviorNodeKind::Condition && node._function == nullptr && node._condition.isEmpty();
+            const bool bNeedsKey         = node._type == BehaviorNodeKind::MoveTo || node._type == BehaviorNodeKind::SubTree;
             if ( bComposite && childCount == 0 )
                 return false;
             if ( isDecorator( index ) && childCount != 1 )
@@ -399,7 +399,7 @@ namespace sw
         for ( int32 index = 0; index < _pTree->getNodeCount(); ++index )
         {
             const BehaviorNode& node = _pTree->getNode( index );
-            if ( node._type != BehaviorNodeType::BlackboardCondition || BehaviorTreeInternal::abortsLowerPriority( node._abortMode ) == false )
+            if ( node._type != BehaviorNodeKind::BlackboardCondition || BehaviorTreeInternal::abortsLowerPriority( node._abortMode ) == false )
                 continue;
             const uint8 bNow                                 = BehaviorTree::evaluateCondition( node, _actionContext._world ) ? SW_TRUE : SW_FALSE;
             const bool  bRisen                               = bNow != SW_FALSE && _listLastCondition[static_cast<size_t>( index )] == SW_FALSE;
@@ -429,7 +429,7 @@ namespace sw
         {
             abortNode( child );
         }
-        if ( node._type == BehaviorNodeType::Action && node._function != nullptr )
+        if ( node._type == BehaviorNodeKind::Action && node._function != nullptr )
         {
             _context._nodeIndex    = index;
             _context._bJustStarted = SW_FALSE;
@@ -437,20 +437,20 @@ namespace sw
             (void)node._function( _context ); // 뒷정리만 — 결과는 쓰지 않는다
             _context._bAborted = SW_FALSE;
         }
-        if ( node._type == BehaviorNodeType::Action && node._action.isValid() )
+        if ( node._type == BehaviorNodeKind::Action && node._action.isValid() )
         {
             _actionContext._bJustStarted = SW_FALSE;
             _actionContext._bAborted     = SW_TRUE;
             (void)node._action.invoke( _actionContext ); // 뒷정리만 — 결과는 쓰지 않는다
             _actionContext._bAborted = SW_FALSE;
         }
-        if ( node._type == BehaviorNodeType::SubTree )
+        if ( node._type == BehaviorNodeKind::SubTree )
         {
             BehaviorTreeRunner* pSlotRunner = findSlotRunner( node._key );
             if ( pSlotRunner != nullptr )
                 pSlotRunner->reset();
         }
-        if ( node._type == BehaviorNodeType::MoveTo && _context._pMover != nullptr )
+        if ( node._type == BehaviorNodeKind::MoveTo && _context._pMover != nullptr )
             _context._pMover->stopMoving();
         finishNode( index );
     }
@@ -510,29 +510,29 @@ namespace sw
 
         switch ( node._type )
         {
-            case BehaviorNodeType::Sequence:
+            case BehaviorNodeKind::Sequence:
             {
                 status = tickSequence( node, cursor );
                 break;
             }
-            case BehaviorNodeType::Selector:
+            case BehaviorNodeKind::Selector:
             {
                 status = tickSelector( node, cursor );
                 break;
             }
-            case BehaviorNodeType::Inverter:
+            case BehaviorNodeKind::Inverter:
             {
                 const BehaviorStatus childStatus = tickNode( node._firstChild );
                 status                           = childStatus == BehaviorStatus::Running ? BehaviorStatus::Running
                                                                                           : ( childStatus == BehaviorStatus::Success ? BehaviorStatus::Failure : BehaviorStatus::Success );
                 break;
             }
-            case BehaviorNodeType::ForceSuccess:
+            case BehaviorNodeKind::ForceSuccess:
             {
                 status = tickNode( node._firstChild ) == BehaviorStatus::Running ? BehaviorStatus::Running : BehaviorStatus::Success;
                 break;
             }
-            case BehaviorNodeType::Repeat:
+            case BehaviorNodeKind::Repeat:
             {
                 const BehaviorStatus childStatus = tickNode( node._firstChild );
                 if ( childStatus != BehaviorStatus::Success )
@@ -546,7 +546,7 @@ namespace sw
                 status = ( node._count > 0 && counter >= node._count ) ? BehaviorStatus::Success : BehaviorStatus::Running;
                 break;
             }
-            case BehaviorNodeType::Cooldown:
+            case BehaviorNodeKind::Cooldown:
             {
                 float32& cooldownUntil = _listCooldownUntil[static_cast<size_t>( index )];
                 if ( bFirst && _elapsedTime < cooldownUntil )
@@ -559,7 +559,7 @@ namespace sw
                     cooldownUntil = _elapsedTime + node._seconds;
                 break;
             }
-            case BehaviorNodeType::TimeLimit:
+            case BehaviorNodeKind::TimeLimit:
             {
                 timer += _context._deltaTime;
                 if ( timer > node._seconds )
@@ -571,7 +571,7 @@ namespace sw
                 status = tickNode( node._firstChild );
                 break;
             }
-            case BehaviorNodeType::BlackboardCondition:
+            case BehaviorNodeKind::BlackboardCondition:
             {
                 const bool bCheck = bFirst || BehaviorTreeInternal::abortsSelf( node._abortMode );
                 if ( bCheck && BehaviorTree::evaluateCondition( node, _actionContext._world ) == false )
@@ -584,7 +584,7 @@ namespace sw
                 status = tickNode( node._firstChild );
                 break;
             }
-            case BehaviorNodeType::Condition:
+            case BehaviorNodeKind::Condition:
             {
                 if ( node._function != nullptr )
                 {
@@ -598,7 +598,7 @@ namespace sw
                 }
                 break;
             }
-            case BehaviorNodeType::Action:
+            case BehaviorNodeKind::Action:
             {
                 status = runAction( node, index, bFirst );
                 if ( status == BehaviorStatus::Running )
@@ -607,7 +607,7 @@ namespace sw
                     _lastSucceededLeaf = index;
                 break;
             }
-            case BehaviorNodeType::Wait:
+            case BehaviorNodeKind::Wait:
             {
                 timer += _context._deltaTime;
                 status = timer >= node._seconds ? BehaviorStatus::Success : BehaviorStatus::Running;
@@ -615,14 +615,14 @@ namespace sw
                     _activeLeaf = index;
                 break;
             }
-            case BehaviorNodeType::MoveTo:
+            case BehaviorNodeKind::MoveTo:
             {
                 status = tickMoveTo( index, bFirst );
                 if ( status == BehaviorStatus::Running )
                     _activeLeaf = index;
                 break;
             }
-            case BehaviorNodeType::SubTree:
+            case BehaviorNodeKind::SubTree:
             {
                 BehaviorTreeRunner* pSlotRunner = findSlotRunner( node._key );
                 if ( pSlotRunner == nullptr )

@@ -80,10 +80,10 @@ namespace sw
         return MatchQueueBus::kAssignTopic.makeTopic( ServiceKeyUtil::makeHex64( serverID ) );
     }
 
-    bool MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDefinition>& listMode )
+    bool MatchQueueService::initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDef>& listMode )
     {
         SW_ASSERT( dependencies._pRouter != nullptr );
-        for ( const MatchModeDefinition& mode : listMode )
+        for ( const MatchModeDef& mode : listMode )
         {
             if ( mode._ratingStat.empty() == false && dependencies._pStatSource == nullptr )
             {
@@ -94,7 +94,7 @@ namespace sw
         }
         _dependencies = dependencies;
         _replyOwner   = dependencies._pRouter != nullptr ? dependencies._pRouter->openReplyOwner() : Subscription{};
-        for ( const MatchModeDefinition& mode : listMode )
+        for ( const MatchModeDef& mode : listMode )
         {
             if ( isValidMatchModeID( mode._modeID ) == false )
             {
@@ -156,7 +156,7 @@ namespace sw
         return stateIt == _mapModeState.end() ? 0 : stateIt->second._maker.getTicketCount();
     }
 
-    bool MatchQueueService::findRating( AccountID accountID, const MatchModeDefinition& mode, int32& outRating ) const
+    bool MatchQueueService::findRating( AccountID accountID, const MatchModeDef& mode, int32& outRating ) const
     {
         outRating = mode._initialRating;
         if ( mode._ratingStat.empty() )
@@ -329,7 +329,7 @@ namespace sw
         return false;
     }
 
-    bool MatchQueueService::isRatingLoaded( const MatchModeDefinition& mode, AccountID accountID ) const
+    bool MatchQueueService::isRatingLoaded( const MatchModeDef& mode, AccountID accountID ) const
     {
         int32 rating = 0;
         return findRating( accountID, mode, rating );
@@ -337,8 +337,8 @@ namespace sw
 
     void MatchQueueService::prepareTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID )
     {
-        const MatchModeDefinition& mode = _mapMode[join._modeID];
-        RatingWait                 wait;
+        const MatchModeDef& mode = _mapMode[join._modeID];
+        RatingWait          wait;
         for ( const AccountID accountID : listAccount )
         {
             if ( isRatingLoaded( mode, accountID ) == false )
@@ -371,9 +371,9 @@ namespace sw
     {
         for ( size_t index = 0; index < _listRatingWait.size(); )
         {
-            const RatingWait&          wait    = _listRatingWait[index];
-            const MatchModeDefinition& mode    = _mapMode[wait._join._modeID];
-            bool                       bLoaded = true;
+            const RatingWait&   wait    = _listRatingWait[index];
+            const MatchModeDef& mode    = _mapMode[wait._join._modeID];
+            bool                bLoaded = true;
             for ( const AccountID accountID : wait._listAccount )
             {
                 bLoaded = bLoaded && isRatingLoaded( mode, accountID );
@@ -392,8 +392,8 @@ namespace sw
 
     void MatchQueueService::submitTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID )
     {
-        const MatchModeDefinition& mode = _mapMode[join._modeID];
-        MatchTicket                ticket;
+        const MatchModeDef& mode = _mapMode[join._modeID];
+        MatchTicket         ticket;
         ticket._ticketID       = ( _dependencies._serverID << kMatchQueueIDShift ) | ++_sequence;
         ticket._region         = join._region;
         ticket._partyID        = partyID;
@@ -547,8 +547,8 @@ namespace sw
 
     bool MatchQueueService::placeMatch( ModeState& state, const MatchFormed& match, MatchQueueOutcome failOutcome, UnixMilliseconds nowMs )
     {
-        const MatchModeDefinition& mode = _mapMode[match._modeID];
-        ServerSelectionQuery       query;
+        const MatchModeDef&  mode = _mapMode[match._modeID];
+        ServerSelectionQuery query;
         query._kind         = mode._serverKind;
         query._region       = match._region;
         query._buildVersion = mode._buildVersion;
@@ -605,8 +605,8 @@ namespace sw
         bool         bPlaced = false;
         if ( pState != nullptr )
         {
-            const MatchModeDefinition& mode = _mapMode[lobby._modeID];
-            ServerSelectionQuery       query;
+            const MatchModeDef&  mode = _mapMode[lobby._modeID];
+            ServerSelectionQuery query;
             query._kind              = mode._serverKind;
             query._buildVersion      = mode._buildVersion;
             query._seatCount         = static_cast<int32>( lobby._listMember.size() );

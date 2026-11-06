@@ -57,7 +57,7 @@ namespace sw
             for ( const ServiceRecord& record : listRecord )
             {
                 // 손상된 영속 레코드는 건너뛰지 않는다. 이 읽기를 실패로 두어 이전 값을 지키고 오류 로그를 남긴다
-                LiveEventDefinition definition;
+                LiveEventDef definition;
                 if ( LiveOpsProtocol::decodeEvent( record._key, record._bytes, definition ) == false )
                     return;
                 // 이벤트 정의는 고정 배치형 코덱이 없어 상한을 읽기가 보지 않으므로, 운영 쓰기와 같은 규칙으로 다시 확인한다
@@ -74,10 +74,10 @@ namespace sw
         void complete() override { _pService->applyReload( std::move( _listEvent ), _bReadOk == SW_TRUE, _nowMs ); }
 
     private:
-        vector<LiveEventDefinition> _listEvent;
-        LiveOpsService*             _pService;
-        UnixMilliseconds            _nowMs;
-        uint8                       _bReadOk;
+        vector<LiveEventDef> _listEvent;
+        LiveOpsService*      _pService;
+        UnixMilliseconds     _nowMs;
+        uint8                _bReadOk;
     };
 } // namespace sw
 
@@ -180,7 +180,7 @@ namespace sw
         _dependencies._pStore->submit( make_unique<LiveOpsReloadWork>( this, nowMs ) );
     }
 
-    void LiveOpsService::applyReload( vector<LiveEventDefinition>&& listEvent, bool bReadOk, UnixMilliseconds nowMs )
+    void LiveOpsService::applyReload( vector<LiveEventDef>&& listEvent, bool bReadOk, UnixMilliseconds nowMs )
     {
         --_pendingCount;
         _reloadSchedule.markFinished();
@@ -211,7 +211,7 @@ namespace sw
         vector<OpenWindow> listOpen;
         if ( isKillSwitchOff() == false )
         {
-            for ( const LiveEventDefinition& definition : _listEvent )
+            for ( const LiveEventDef& definition : _listEvent )
             {
                 int64 windowStartMs = 0;
                 int64 windowEndMs   = 0;
@@ -258,7 +258,7 @@ namespace sw
             return hash;
         if ( _dependencies._pRemoteConfig != nullptr )
             hash = HashUtil::combine( hash, _dependencies._pRemoteConfig->getSnapshotHash() ); // '@' 값이 바뀌어도 클라이언트가 다시 받게 한다
-        for ( const LiveEventDefinition& definition : _listEvent )
+        for ( const LiveEventDef& definition : _listEvent )
         {
             int64 windowEndMs = 0;
             if ( LiveEventRules::isWindowOpen( definition, nowMs.count(), windowEndMs ) == false )
@@ -301,9 +301,9 @@ namespace sw
         return text;
     }
 
-    const LiveEventDefinition* LiveOpsService::findEvent( string_view eventID ) const
+    const LiveEventDef* LiveOpsService::findEvent( string_view eventID ) const
     {
-        return VectorUtil::findBy<&LiveEventDefinition::_eventID>( _listEvent, eventID );
+        return VectorUtil::findBy<&LiveEventDef::_eventID>( _listEvent, eventID );
     }
 
     void LiveOpsService::computeActiveEvents( AccountID accountID, string_view region, uint32 buildVersion, UnixMilliseconds nowMs, bool bClientOnly,
@@ -311,7 +311,7 @@ namespace sw
     {
         if ( isKillSwitchOff() )
             return;
-        for ( const LiveEventDefinition& definition : _listEvent )
+        for ( const LiveEventDef& definition : _listEvent )
         {
             int64 windowEndMs = 0;
             if ( bClientOnly && definition._bClientVisible == SW_FALSE )
@@ -331,15 +331,15 @@ namespace sw
 
     bool LiveOpsService::isEventActive( string_view eventID, AccountID accountID, string_view region, uint32 buildVersion, UnixMilliseconds nowMs ) const
     {
-        const LiveEventDefinition* pDefinition = findEvent( eventID );
-        int64                      windowEndMs = 0;
+        const LiveEventDef* pDefinition = findEvent( eventID );
+        int64               windowEndMs = 0;
         return pDefinition != nullptr && isKillSwitchOff() == false && LiveEventRules::isWindowOpen( *pDefinition, nowMs.count(), windowEndMs ) &&
                LiveEventRules::isAudienceMatch( *pDefinition, accountID, region, buildVersion );
     }
 
     bool LiveOpsService::findParameter( string_view eventID, string_view key, string& outValue ) const
     {
-        const LiveEventDefinition* pDefinition = findEvent( eventID );
+        const LiveEventDef* pDefinition = findEvent( eventID );
         if ( pDefinition == nullptr )
             return false;
         for ( const LiveEventParameter& parameter : pDefinition->_listParameter )
@@ -353,7 +353,7 @@ namespace sw
         return false;
     }
 
-    void LiveOpsService::putEvent( const LiveEventDefinition& definition, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
+    void LiveOpsService::putEvent( const LiveEventDef& definition, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
         if ( LiveEventRules::isValid( definition ) == false )
         {
@@ -378,7 +378,7 @@ namespace sw
 
     void LiveOpsService::putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        LiveEventDefinition definition;
+        LiveEventDef definition;
         if ( LiveOpsProtocol::readEventJSON( definitionJSON, definition ) == false )
         {
             _completionBuffer.push( LiveOpsCompletion{ requestTag, LiveOpsResult::Invalid } ); // JSON 이 아니거나 모르는 필드가 있다
@@ -391,7 +391,7 @@ namespace sw
     {
         outListJSON.clear();
         outListJSON.reserve( _listEvent.size() );
-        for ( const LiveEventDefinition& definition : _listEvent )
+        for ( const LiveEventDef& definition : _listEvent )
         {
             outListJSON.push_back( LiveOpsProtocol::writeEventJSON( definition ) );
         }

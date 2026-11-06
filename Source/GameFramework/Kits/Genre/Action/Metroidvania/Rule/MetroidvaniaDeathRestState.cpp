@@ -55,7 +55,7 @@ namespace sw
             return false;
         _respawnSite = pSite->_id;
         refreshWorld( vitality );
-        pushEvent( MetroidvaniaDeathRestEventType::Rested, pSite->_id, 0 );
+        pushEvent( MetroidvaniaDeathRestEventKind::Rested, pSite->_id, 0 );
         return true;
     }
 
@@ -65,7 +65,7 @@ namespace sw
         if ( _corpse._bActive == SW_TRUE )
         {
             _lostCurrency += _corpse._currency;
-            pushEvent( MetroidvaniaDeathRestEventType::CurrencyLost, _corpse._area, _corpse._currency );
+            pushEvent( MetroidvaniaDeathRestEventKind::CurrencyLost, _corpse._area, _corpse._currency );
             _corpse = MetroidvaniaCorpse{};
         }
         const hashed_string currency = getCurrencyName();
@@ -77,10 +77,10 @@ namespace sw
             _corpse._currency = static_cast<int32>( MathUtil::min( carried, int64{ 0x7FFFFFFF } ) );
             _corpse._bActive  = SW_TRUE;
             _pWallet->charge( currency, _corpse._currency );
-            pushEvent( MetroidvaniaDeathRestEventType::CorpseDropped, areaID, _corpse._currency );
+            pushEvent( MetroidvaniaDeathRestEventKind::CorpseDropped, areaID, _corpse._currency );
         }
         refreshWorld( vitality );
-        pushEvent( MetroidvaniaDeathRestEventType::Died, _respawnSite, 0 );
+        pushEvent( MetroidvaniaDeathRestEventKind::Died, _respawnSite, 0 );
         return _respawnSite;
     }
 
@@ -94,7 +94,7 @@ namespace sw
             return false;
         if ( _pWallet != nullptr )
             _pWallet->add( getCurrencyName(), _corpse._currency );
-        pushEvent( MetroidvaniaDeathRestEventType::CorpseRecovered, areaID, _corpse._currency );
+        pushEvent( MetroidvaniaDeathRestEventKind::CorpseRecovered, areaID, _corpse._currency );
         _corpse = MetroidvaniaCorpse{};
         return true;
     }
@@ -105,7 +105,7 @@ namespace sw
             return false;
         --_flaskCharges;
         (void)vitality.heal( computeFlaskHeal() );
-        pushEvent( MetroidvaniaDeathRestEventType::FlaskUsed, hashed_string{}, _flaskCharges );
+        pushEvent( MetroidvaniaDeathRestEventKind::FlaskUsed, hashed_string{}, _flaskCharges );
         return true;
     }
 
@@ -142,11 +142,11 @@ namespace sw
             _pWallet->add( getCurrencyName(), pEnemy->_currency );
         if ( pLoot != nullptr && pEnemy->_lootTable.empty() == false )
             (void)pLoot->roll( pEnemy->_lootTable, random, outDrops );
-        pushEvent( MetroidvaniaDeathRestEventType::EnemyKilled, pEnemy->_id, pEnemy->_currency );
+        pushEvent( MetroidvaniaDeathRestEventKind::EnemyKilled, pEnemy->_id, pEnemy->_currency );
         if ( pEnemy->_bBoss )
         {
             flags.setFlag( pEnemy->_flag, 1 );
-            pushEvent( MetroidvaniaDeathRestEventType::BossDefeated, pEnemy->_flag, 0 );
+            pushEvent( MetroidvaniaDeathRestEventKind::BossDefeated, pEnemy->_flag, 0 );
         }
         return pEnemy->_currency;
     }
@@ -180,10 +180,10 @@ namespace sw
             ++respawnedCount;
         }
         if ( respawnedCount > 0 )
-            pushEvent( MetroidvaniaDeathRestEventType::EnemiesRespawned, hashed_string{}, respawnedCount );
+            pushEvent( MetroidvaniaDeathRestEventKind::EnemiesRespawned, hashed_string{}, respawnedCount );
     }
 
-    void MetroidvaniaDeathRestState::pushEvent( MetroidvaniaDeathRestEventType type, const hashed_string& id, int32 amount )
+    void MetroidvaniaDeathRestState::pushEvent( MetroidvaniaDeathRestEventKind type, const hashed_string& id, int32 amount )
     {
         MetroidvaniaDeathRestEvent event;
         event._type   = type;

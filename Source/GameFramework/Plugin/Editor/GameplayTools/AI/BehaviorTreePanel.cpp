@@ -56,16 +56,16 @@ namespace sw::editor
             static int32 decodeNode( int32 pinID ) { return pinID / 2; }
             static bool  isOutputPin( int32 pinID ) { return pinID % 2 == 1; }
 
-            static ImVec4 getTypeColor( BehaviorNodeType type )
+            static ImVec4 getTypeColor( BehaviorNodeKind type )
             {
                 if ( BehaviorTreeNames::isLeaf( type ) )
-                    return EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) );
+                    return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Warning" ) );
                 if ( BehaviorTreeNames::isDecorator( type ) )
-                    return EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Accent" ) );
-                return EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Info" ) );
+                    return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Accent" ) );
+                return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Info" ) );
             }
 
-            static const utf8* getCategoryName( BehaviorNodeType type )
+            static const utf8* getCategoryName( BehaviorNodeKind type )
             {
                 if ( BehaviorTreeNames::isLeaf( type ) )
                     return "Leaf";
@@ -74,7 +74,7 @@ namespace sw::editor
                 return "Composite";
             }
 
-            static constexpr uint32 kNodeTypeCount = static_cast<uint32>( BehaviorNodeType::SubTree ) + 1;
+            static constexpr uint32 kNodeTypeCount = static_cast<uint32>( BehaviorNodeKind::SubTree ) + 1;
         };
     } // namespace
 } // namespace sw::editor
@@ -98,8 +98,8 @@ namespace sw::editor
         , _bSelectPending{ SW_FALSE }
         , _bGridEdited{ SW_FALSE }
     {
-        _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Base", "Text" ) } ); // 부모 → 자식 흐름 핀 하나
-        _nodeGraph.setAutoLayout( true );                                   // 노드 자리는 트리 배치(layoutTree)가 정한다 — 정렬 메뉴를 감춘다(언리얼 BT 에디터도 자동 배치)
+        _nodeGraph.setPinTypeColors( { SW_THEME_COLOR( "Base", "Text" ) } ); // 부모 → 자식 흐름 핀 하나
+        _nodeGraph.setAutoLayout( true );                                    // 노드 자리는 트리 배치(layoutTree)가 정한다 — 정렬 메뉴를 감춘다(언리얼 BT 에디터도 자동 배치)
     }
 
     void BehaviorTreePanel::shutdown()
@@ -197,7 +197,7 @@ namespace sw::editor
         }
         if ( isDocumentLoadFailed() )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "ThisFileCouldNot", TextArgumentList().addText( "statusText", _statusText.c_str() ) ).c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "ThisFileCouldNot", TextArgumentList().addText( "statusText", _statusText.c_str() ) ).c_str() );
             return;
         }
 
@@ -228,7 +228,7 @@ namespace sw::editor
                 {
                     for ( uint32 index = 0; index < BehaviorTreePanelInternal::kNodeTypeCount; ++index )
                     {
-                        const BehaviorNodeType type = static_cast<BehaviorNodeType>( index );
+                        const BehaviorNodeKind type = static_cast<BehaviorNodeKind>( index );
                         if ( ImGui::Selectable( BehaviorTreeNames::toString( type ) ) )
                             (void)addNodeFromSelection( type ); // 거절하면 상태 줄이 이유를 알린다
                     }
@@ -378,7 +378,7 @@ namespace sw::editor
         else if ( const BehaviorSubTreeFields* pSubTree = node._fields.find<BehaviorSubTreeFields>(); pSubTree != nullptr )
             ImGui::TextDisabled( "%s", pSubTree->_tree.empty() ? pSubTree->_slot.c_str() : pSubTree->_tree.c_str() );
         if ( bActive )
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "running" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Success" ) ), "running" );
         if ( BehaviorTreeNames::isLeaf( node._type ) == false )
         {
             _nodeGraph.beginPin( Internal::makeOutputPin( node._id ), false );
@@ -422,13 +422,13 @@ namespace sw::editor
         vector<EditorGraphNodeKind> listKind;
         for ( uint32 index = 0; index < BehaviorTreePanelInternal::kNodeTypeCount; ++index )
         {
-            const BehaviorNodeType type = static_cast<BehaviorNodeType>( index );
+            const BehaviorNodeKind type = static_cast<BehaviorNodeKind>( index );
             listKind.push_back( EditorGraphNodeKind{ BehaviorTreeNames::toString( type ), BehaviorTreePanelInternal::getCategoryName( type ), index } );
         }
         uint32 kindID{ 0 };
         float2 canvasPosition{};
         if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) )
-            (void)addNodeFromSelection( static_cast<BehaviorNodeType>( kindID ) ); // 거절하면 상태 줄이 이유를 알린다
+            (void)addNodeFromSelection( static_cast<BehaviorNodeKind>( kindID ) ); // 거절하면 상태 줄이 이유를 알린다
 
         handleEditCommands(); // 잘라내기가 지우므로 아래 지우기 처리보다 먼저
 
@@ -523,7 +523,7 @@ namespace sw::editor
             ed::DeleteNode( toNodeID( targetID ) ); // 지우기는 아래 지우기 처리가 같은 프레임에 받는다
     }
 
-    int32 BehaviorTreePanel::addNodeFromSelection( BehaviorNodeType type )
+    int32 BehaviorTreePanel::addNodeFromSelection( BehaviorNodeKind type )
     {
         int32 parentID = _selectedID;
         if ( _model.getRootID() < 0 )
@@ -715,10 +715,10 @@ namespace sw::editor
     {
         if ( _listIssue.empty() )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "No problems" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Success" ) ), "No problems" );
             return;
         }
-        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Problems", TextArgumentList().addInteger( "issueCount", static_cast<int64>( _listIssue.size() ) ) ).c_str() );
+        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "Problems", TextArgumentList().addInteger( "issueCount", static_cast<int64>( _listIssue.size() ) ) ).c_str() );
         for ( const BehaviorTreeEditIssue& issue : _listIssue )
         {
             const string where = issue._nodeID >= 0 ? _model.makeDisplayName( issue._nodeID ) : string{ "Tree" };

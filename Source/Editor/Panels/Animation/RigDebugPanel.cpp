@@ -327,7 +327,7 @@ namespace sw::editor
                     if ( boneIndex >= listModel.size() || boneIndex >= skeleton.getBoneCount() )
                         continue;
                     const float3 position    = float3::transform( listModel[boneIndex].getTranslation(), world );
-                    const float4 markerColor = SW_THEMECOLOR( "Viewport", "Marker" ).toFloat4();
+                    const float4 markerColor = SW_THEME_COLOR( "Viewport", "Marker" ).toFloat4();
                     queue.drawSphere( position, kMarkerRadius, markerColor, 0.0f, category );
                     queue.drawText( position, skeleton.getBone( boneIndex )._name.c_str(), markerColor, 0.0f, category );
                 }

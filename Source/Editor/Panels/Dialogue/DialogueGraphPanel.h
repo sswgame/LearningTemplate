@@ -68,7 +68,7 @@ namespace sw::editor
         [[nodiscard]] bool saveGraphData();
 
         /** @brief 지정한 타입의 노드를 특성 테이블의 기본값으로 추가하고 그 id 를 반환합니다. */
-        int32 addNode( DialogueAssetNodeType type );
+        int32 addNode( DialogueAssetNodeKind type );
         /** @brief 노드 하나의 헤더, 핀, 본문 요약을 그립니다. 모양은 특성 테이블(`kArrDialogueNodeInfo`)이 정합니다. */
         void drawNodeBody( const DialogueNode& node );
         /** @brief 선택한 노드의 편집 항목을 그립니다. 어떤 항목을 보일지는 특성 테이블이 정합니다. */

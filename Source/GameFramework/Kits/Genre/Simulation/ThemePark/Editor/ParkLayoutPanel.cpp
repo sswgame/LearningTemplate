@@ -106,7 +106,7 @@ namespace sw::editor
             return; // 이 확장의 서브시스템이 아직 걸리지 않았다(프레임 앞 sync 전)
         ParkLayoutPreview& preview = *pPreview;
         bool               bForce  = false;
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdPluginButton", "Reload" ), "Reload" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdPluginButton", "Reload" ), "Reload" ) ) )
             bForce = true;
         EditorSelfTestMarks::note( "themepark.layout.reload" );
         // [/doc:panel-draw]
@@ -123,7 +123,7 @@ namespace sw::editor
 
         ParkLayoutModel& model = preview.editModel();
         ImGui::SameLine();
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Map" ), SW_LOCKEY( "EdPluginParkLayout", "FocusGate" ), "FocusGate" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Map" ), SW_LOCKEY( "EdPluginParkLayout", "FocusGate" ), "FocusGate" ) ) )
             (void)EditorSceneViewUtil::focusOn( model.getGatePosition(), ParkLayoutPanelInternal::kGateFocusRadius ); // 씬 뷰가 닫혀 있으면 할 일이 없다
         EditorSelfTestMarks::note( "themepark.layout.gate" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdPluginParkLayout", "FocusGateTip" ) );
@@ -184,7 +184,7 @@ namespace sw::editor
                     ParkLayoutPanelInternal::drawNumberCell( ride._price );
                 ImGui::TableSetColumnIndex( 5 );
                 if ( ride._listIssue.empty() == false )
-                    ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ), "%s", ParkLayoutPanelInternal::makeIssueText( model, ride ).c_str() );
+                    ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Warning" ) ), "%s", ParkLayoutPanelInternal::makeIssueText( model, ride ).c_str() );
             }
             ImGui::EndTable();
         }

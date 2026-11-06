@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Character/Hit/MeleeHitLedger.h"
+#include "Engine/Character/Hit/MeleeSweepHistory.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -30,38 +30,38 @@ namespace sw
         return true;
     }
 
-    MeleeHitLedger::MeleeHitLedger()
+    MeleeSweepHistory::MeleeSweepHistory()
         : _listRecord{}
         , _frame{ 0 }
     {
     }
 
-    MeleeHitLedger* MeleeHitLedger::find( const GameObjectManager& manager )
+    MeleeSweepHistory* MeleeSweepHistory::find( const GameObjectManager& manager )
     {
         // 이 키로는 이 타입만 붙인다(`ensureFor`).
-        return static_cast<MeleeHitLedger*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
+        return static_cast<MeleeSweepHistory*>( manager.findFrameSystem( hashed_string( kFrameSystemKey ) ) );
     }
 
-    MeleeHitLedger& MeleeHitLedger::ensureFor( GameObjectManager& manager )
+    MeleeSweepHistory& MeleeSweepHistory::ensureFor( GameObjectManager& manager )
     {
-        MeleeHitLedger* pLedger = find( manager );
+        MeleeSweepHistory* pLedger = find( manager );
         if ( pLedger != nullptr )
             return *pLedger;
-        unique_ptr<MeleeHitLedger> ledger = make_unique<MeleeHitLedger>();
-        pLedger                           = ledger.get();
-        const bool bAdded                 = manager.addFrameSystem( hashed_string( kFrameSystemKey ), std::move( ledger ) );
+        unique_ptr<MeleeSweepHistory> ledger = make_unique<MeleeSweepHistory>();
+        pLedger                              = ledger.get();
+        const bool bAdded                    = manager.addFrameSystem( hashed_string( kFrameSystemKey ), std::move( ledger ) );
         SW_ASSERT( bAdded ); // 같은 키가 없음을 바로 위에서 보았다
         (void)bAdded;
         return *pLedger;
     }
 
-    void MeleeHitLedger::release( GameObjectManager& manager )
+    void MeleeSweepHistory::release( GameObjectManager& manager )
     {
         if ( find( manager ) != nullptr )
             manager.removeFrameSystem( hashed_string( kFrameSystemKey ) );
     }
 
-    void MeleeHitLedger::runBeforeTick( GameObjectManager& manager, float32 deltaTime )
+    void MeleeSweepHistory::runBeforeTick( GameObjectManager& manager, float32 deltaTime )
     {
         (void)manager;
         (void)deltaTime;
@@ -76,7 +76,7 @@ namespace sw
             _listRecord.erase( _listRecord.begin(), _listRecord.begin() + static_cast<std::ptrdiff_t>( dropCount ) );
     }
 
-    SceneFrameAccess MeleeHitLedger::getFrameAccess() const
+    SceneFrameAccess MeleeSweepHistory::getFrameAccess() const
     {
         SceneFrameAccess access{};
         access._writes = { SceneDataKind::HitRecord };
@@ -85,7 +85,7 @@ namespace sw
         return access;
     }
 
-    void MeleeHitLedger::record( uint64 attackerID, const MeleeHitParams& params, vector_reference<const float3> listPrevious, vector_reference<const float3> listCurrent )
+    void MeleeSweepHistory::record( uint64 attackerID, const MeleeHitParams& params, vector_reference<const float3> listPrevious, vector_reference<const float3> listCurrent )
     {
         SweepRecord& entry = _listRecord.emplace_back();
         entry._attackerID  = attackerID;
@@ -97,7 +97,7 @@ namespace sw
             entry._listPrevious.assign( listPrevious.begin(), listPrevious.end() );
     }
 
-    float32 MeleeHitLedger::computeDistanceSquaredToSegment( const float3& point, const float3& from, const float3& to )
+    float32 MeleeSweepHistory::computeDistanceSquaredToSegment( const float3& point, const float3& from, const float3& to )
     {
         const float3  segment       = to - from;
         const float32 segmentLength = segment.getLengthSquared();
@@ -107,7 +107,7 @@ namespace sw
         return ( point - ( from + segment * along ) ).getLengthSquared();
     }
 
-    bool MeleeHitLedger::coversSphere( const SweepRecord& record, const float3& center, float32 radius )
+    bool MeleeSweepHistory::coversSphere( const SweepRecord& record, const float3& center, float32 radius )
     {
         const float32 reach        = record._params._radius + radius + kClaimToleranceMeters;
         const float32 reachSquared = reach * reach;
@@ -124,7 +124,7 @@ namespace sw
         return false;
     }
 
-    MeleeClaimVerdict MeleeHitLedger::verify( uint64 attackerID, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius, MeleeHitParams* pOutParams ) const
+    MeleeClaimVerdict MeleeSweepHistory::verify( uint64 attackerID, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius, MeleeHitParams* pOutParams ) const
     {
         bool bAnySweep = false;
         for ( const SweepRecord& record : _listRecord )
@@ -142,8 +142,8 @@ namespace sw
         return bAnySweep ? MeleeClaimVerdict::OutOfBlade : MeleeClaimVerdict::NoSweep;
     }
 
-    MeleeClaimVerdict MeleeHitLedger::claimHit( GameObject& attacker, GameObject& target, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius,
-                                                vector<GameObjectHandle>& inoutListHitTarget ) const
+    MeleeClaimVerdict MeleeSweepHistory::claimHit( GameObject& attacker, GameObject& target, const MeleeHitClaim& claim, const float3& targetCenter, float32 targetRadius,
+                                                   vector<GameObjectHandle>& inoutListHitTarget ) const
     {
         MeleeHitParams          params;
         const MeleeClaimVerdict verdict = verify( attacker.getObjectID(), claim, targetCenter, targetRadius, &params );

@@ -10,7 +10,7 @@
  *          - 백필: 새 경기를 만들기 전에 경기 중 빈 슬롯(`MatchBackfillRequest`)를 오래된 요청부터 채운다. 티켓은 오래 기다린 순으로 보고,
  *            파티를 쪼개지 않고 한 팀의 빈 슬롯에 다 들어가야 하며, 평균 실력 차가 티켓의 허용 범위 안이고 지역이 같거나 완화돼야 한다.
  *
- *          PlayFab Matchmaking 의 규칙 세 가지(실력 확장, 지역 완화, 팀 균형)를 데이터 구조체 하나(`MatchModeDefinition`)로 표현한 것이다.
+ *          PlayFab Matchmaking 의 규칙 세 가지(실력 확장, 지역 완화, 팀 균형)를 데이터 구조체 하나(`MatchModeDef`)로 표현한 것이다.
  */
 #pragma once
 #include "Core/Container/IDAllocator.h"
@@ -35,7 +35,7 @@ namespace sw
          * @brief 규칙과 경기 id 시드로 빈 대기열을 만듭니다. 시드는 권한 서버 id 의 아래쪽 32비트이며, 권한이 넘어가도 경기 id 가 겹치지 않습니다.
          * @return 규칙이 선언된 범위 밖이면 오류를 남기고 false 입니다. 대기열은 그대로입니다.
          */
-        [[nodiscard]] bool initialize( const MatchModeDefinition& definition, uint64 matchIDSeed );
+        [[nodiscard]] bool initialize( const MatchModeDef& definition, uint64 matchIDSeed );
 
         /** @brief 경기를 만듭니다. 만든 경기는 @p outListMatch 뒤에, 시한을 넘긴 티켓은 @p outListTimedOut 뒤에 덧붙입니다. */
         void process( int64 nowMs, vector<MatchFormed>& outListMatch, vector<MatchTicket>& outListTimedOut );
@@ -57,8 +57,8 @@ namespace sw
             _listBackfill.clear();
         }
 
-        int32                      getTicketCount() const { return static_cast<int32>( _listTicket.size() ); }
-        const MatchModeDefinition& getDefinition() const { return _definition; }
+        int32               getTicketCount() const { return static_cast<int32>( _listTicket.size() ); }
+        const MatchModeDef& getDefinition() const { return _definition; }
         /** @brief 티켓의 현재 실력 허용 범위입니다. 테스트와 클라이언트의 "넓히는 중" 표시에 씁니다. */
         int32 computeRatingWindow( const MatchTicket& ticket, int64 nowMs ) const;
 
@@ -69,7 +69,7 @@ namespace sw
     private:
         vector<MatchTicket>          _listTicket;
         vector<MatchBackfillRequest> _listBackfill; ///< 들어온 순서(오래된 것 먼저)이다
-        MatchModeDefinition          _definition;
+        MatchModeDef                 _definition;
         IDAllocator<uint64>          _matchIDAllocator;
     };
 } // namespace sw

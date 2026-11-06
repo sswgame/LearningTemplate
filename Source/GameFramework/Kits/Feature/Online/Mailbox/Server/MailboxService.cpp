@@ -208,7 +208,7 @@ namespace sw
         }
         if ( settings._pScheduler != nullptr )
         {
-            ScheduleDefinition schedule;
+            ScheduleDef schedule;
             schedule._jobID      = kSweepJobID;
             schedule._kind       = ScheduleKind::Interval;
             schedule._intervalMs = settings._sweepIntervalMs;

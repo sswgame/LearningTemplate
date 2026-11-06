@@ -111,7 +111,7 @@ namespace sw::editor
                 if ( session.isRunning() == false )
                 {
                     ImGui::BeginDisabled( session.isStopping() ); // 앞 세션을 거두는 동안은 `start` 가 거절한다
-                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdVerb", "Play" ), "Play" ) ) )
+                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdVerb", "Play" ), "Play" ) ) )
                         (void)session.start( session.getSettings() ); // 실패 이유는 세션이 로그에 남긴다
                     ImGui::EndDisabled();
                     EditorSelfTestMarks::note( "toolbar.netPlay" );
@@ -120,10 +120,10 @@ namespace sw::editor
                 }
                 fixed_string<constant::buffer::kMax64> chip;
                 formatstring( chip.data(), chip.capacity(), "Net %d/%d", session.getConnectedClientCount(), session.getProcessCount() - 1 );
-                EditorWidgets::drawChip( chip.c_str(), SW_THEMECOLOR( "Signal", "Success" ) );
+                EditorWidgets::drawChip( chip.c_str(), SW_THEME_COLOR( "Signal", "Success" ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayClients" ) );
                 ImGui::SameLine();
-                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Stop" ), SW_LOCKEY( "EdVerb", "Stop" ), "Stop" ) ) )
+                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Stop" ), SW_LOCKEY( "EdVerb", "Stop" ), "Stop" ) ) )
                     session.requestStop(); // 합친 트레이스는 Profiler 창의 프레임 단계가 Timeline 탭에 연다
                 EditorSelfTestMarks::note( "toolbar.netStop" );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "NetPlayStop" ) );
@@ -144,18 +144,18 @@ namespace sw::editor
                     return;
                 if ( EditorPlaySession::isPlayQueued() )
                 {
-                    EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Starting" ), SW_THEMECOLOR( "Signal", "Warning" ) );
+                    EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Starting" ), SW_THEME_COLOR( "Signal", "Warning" ) );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStarting" ) );
                     ImGui::SameLine();
                 }
                 if ( currentState == PlaySessionState::Playing && bSimulating == false )
                 {
-                    EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Playing" ), SW_THEMECOLOR( "Signal", "Success" ) );
+                    EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Playing" ), SW_THEME_COLOR( "Signal", "Success" ) );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayRunning" ) );
                 }
                 else
                 {
-                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdVerb", "Play" ), "Play" ) ) )
+                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdVerb", "Play" ), "Play" ) ) )
                         requestSession( PendingSession::Play, bSceneDirty );
                     EditorSelfTestMarks::note( "toolbar.play" );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStart" ) );
@@ -164,12 +164,12 @@ namespace sw::editor
                 ImGui::SameLine();
                 if ( currentState == PlaySessionState::Playing && bSimulating )
                 {
-                    EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Simulating" ), SW_THEMECOLOR( "Signal", "Success" ) );
+                    EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Simulating" ), SW_THEME_COLOR( "Signal", "Success" ) );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "SimulateRunning" ) );
                 }
                 else
                 {
-                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Globe" ), SW_LOCKEY( "EdButton", "Simulate" ), "Simulate" ) ) )
+                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Globe" ), SW_LOCKEY( "EdButton", "Simulate" ), "Simulate" ) ) )
                         requestSession( PendingSession::Simulate, bSceneDirty );
                     EditorSelfTestMarks::note( "toolbar.simulate" );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "SimulateStart" ) );
@@ -178,34 +178,34 @@ namespace sw::editor
                 ImGui::SameLine();
                 if ( currentState == PlaySessionState::Paused )
                 {
-                    EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Paused" ), SW_THEMECOLOR( "Signal", "Warning" ) );
+                    EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Paused" ), SW_THEME_COLOR( "Signal", "Warning" ) );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayPaused" ) );
                 }
                 else
                 {
-                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Pause" ), SW_LOCKEY( "EdButton", "Pause" ), "Pause" ) ) )
+                    if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Pause" ), SW_LOCKEY( "EdButton", "Pause" ), "Pause" ) ) )
                         EditorPlaySession::pause();
                     EditorSelfTestMarks::note( "toolbar.pause" );
                     EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayPause" ) );
                 }
 
                 ImGui::SameLine();
-                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "StepForward" ), SW_LOCKEY( "EdButton", "Step" ), "Step" ) ) )
+                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "StepForward" ), SW_LOCKEY( "EdButton", "Step" ), "Step" ) ) )
                     EditorPlaySession::stepOnce();
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStepOnce" ) );
 
                 ImGui::SameLine();
-                ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldTinyEm" ) );
+                ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldTinyEm" ) );
                 ImGui::InputInt( "##StepFrameCount", &getState()._stepFrameCount, 0, 0 );
                 getState()._stepFrameCount = MathUtil::clamp( getState()._stepFrameCount, 1, static_cast<int32>( EditorPlaySession::kMaxStepFrameCount ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStepFrameCount" ) );
                 ImGui::SameLine();
-                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "StepForward" ), SW_LOCKEY( "EdButton", "StepN" ), "Step N" ) ) )
+                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "StepForward" ), SW_LOCKEY( "EdButton", "StepN" ), "Step N" ) ) )
                     EditorPlaySession::stepFrames( static_cast<uint32>( getState()._stepFrameCount ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayStepFrames" ) );
 
                 ImGui::SameLine();
-                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Stop" ), SW_LOCKEY( "EdVerb", "Stop" ), "Stop" ) ) )
+                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Stop" ), SW_LOCKEY( "EdVerb", "Stop" ), "Stop" ) ) )
                 {
                     EditorPlaySession::stop();
                     GameObjectManager* pObjectManager = editor::getActiveObjectManager();
@@ -220,12 +220,12 @@ namespace sw::editor
             static void drawSessionOptions()
             {
                 // 예전 "Cam" 체크 상자 — 빈 상자와 줄임말만 보였다. 카메라 아이콘 토글(켜면 중립 바탕)로 두고 뜻은 툴팁이 말한다.
-                if ( EditorWidgets::drawIconToggle( "##startAtCamera", SW_EDITORICON( "Camera" ), getState()._bStartAtCamera, SW_LOCKEY( "EdCommon", "PlayStartAtCamera" ) ) )
+                if ( EditorWidgets::drawIconToggle( "##startAtCamera", SW_EDITOR_ICON( "Camera" ), getState()._bStartAtCamera, SW_LOCKEY( "EdCommon", "PlayStartAtCamera" ) ) )
                     getState()._bStartAtCamera = getState()._bStartAtCamera == false;
 
                 ImGui::SameLine();
                 float32 timeScale = editor::getSubsystem<GameTimeScale>().get();
-                ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldShortEm" ) );
+                ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldShortEm" ) );
                 if ( ImGui::DragFloat( "##TimeScale", &timeScale, 0.01f, GameTimeScale::kMinScale, GameTimeScale::kMaxScale, "x%.2f" ) )
                     editor::getSubsystem<GameTimeScale>().set( timeScale );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "PlayTimeScale" ) );
@@ -262,7 +262,7 @@ namespace sw::editor
             {
                 const bool bAvailable = RenderDocCapture::isAvailable();
                 ImGui::BeginDisabled( bAvailable == false );
-                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Bug" ), SW_LOCKEY( "EdButton", "Renderdoc" ), "RenderDoc" ) ) )
+                if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Bug" ), SW_LOCKEY( "EdButton", "Renderdoc" ), "RenderDoc" ) ) )
                     RenderDocCapture::triggerCapture();
                 ImGui::EndDisabled();
                 EditorSelfTestMarks::note( "toolbar.renderDoc" );

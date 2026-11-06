@@ -146,7 +146,7 @@ namespace sw::editor
         // 잠그면 선택이 바뀌어도 현재 오브젝트를 계속 보여 준다. 유니티 Inspector 의 자물쇠에 해당하며, 언리얼에서는 Details 창을 여러 개 여는 것과 같은 용도다.
         ImGui::SameLine( ImGui::GetContentRegionAvail().x - ImGui::GetFrameHeight() );
         const bool bLocked = _lockedObjectID != 0;
-        if ( EditorWidgets::drawToggleIconButton( "##inspectorLock", bLocked, SW_EDITORICON( "Lock" ), SW_EDITORICON( "Unlock" ), SW_LOCKEY( "EditorInspector", "LockedToObject" ),
+        if ( EditorWidgets::drawToggleIconButton( "##inspectorLock", bLocked, SW_EDITOR_ICON( "Lock" ), SW_EDITOR_ICON( "Unlock" ), SW_LOCKEY( "EditorInspector", "LockedToObject" ),
                                                   SW_LOCKEY( "EditorInspector", "FollowingSelection" ) ) )
             _lockedObjectID = bLocked ? 0 : editorContext.getSubsystem<EditorWorkspace>().getSelectedObjectID();
         EditorSelfTestMarks::note( "inspector.lock" );
@@ -228,7 +228,7 @@ namespace sw::editor
         // 구조 편집(컴포넌트 추가, 프리팹)은 씬 명령이 플레이 중에 스스로 거절한다.
         if ( EditorPlaySession::areSceneEditsAllowed() )
             return;
-        EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "PlayMode" ), SW_THEMECOLOR( "Signal", "Warning" ) );
+        EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "PlayMode" ), SW_THEME_COLOR( "Signal", "Warning" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "EditsRevertOnStopPlayKeepSimulationChanges" ) );
     }
@@ -328,7 +328,7 @@ namespace sw::editor
     void InspectorPanel::drawPreviewSelection( const EditorSelection& selection )
     {
         const Scene* pScene = selection.getScene();
-        EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Preview" ), SW_THEMECOLOR( "Base", "Accent" ) );
+        EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Preview" ), SW_THEME_COLOR( "Base", "Accent" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", pScene != nullptr ? pScene->getName().c_str() : "?" );
         GameObject* pObj = selection.getPrimaryObject();
@@ -359,7 +359,7 @@ namespace sw::editor
         }
 
         ImGui::Spacing();
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), SW_LOCKEY( "EdButton", "AddComponent" ), "Add Component" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Plus" ), SW_LOCKEY( "EdButton", "AddComponent" ), "Add Component" ) ) )
         {
             _addComponentSearch.clear();
             EditorInputGUI::openPopup( "PreviewAddComponent" );
@@ -390,7 +390,7 @@ namespace sw::editor
 
         if ( bInstanceRelated )
         {
-            EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "SceneInstance" ), SW_THEMECOLOR( "Base", "Accent" ) );
+            EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "SceneInstance" ), SW_THEME_COLOR( "Base", "Accent" ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "SceneInstance" ) );
             ImGui::SameLine();
             const GameObject* pAnchor = anchorObjectID != 0 && pObj->getManager() != nullptr ? pObj->getManager()->findGameObjectByID( anchorObjectID ) : nullptr;
@@ -438,7 +438,7 @@ namespace sw::editor
     void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, const AssetID& assetID )
     {
         const string_view prefabPath = assetID.view();
-        EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Prefab" ), SW_THEMECOLOR( "Base", "Accent" ) );
+        EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "Prefab" ), SW_THEME_COLOR( "Base", "Accent" ) );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "PrefabInstance" ) );
         ImGui::SameLine();
         ImGui::TextDisabled( "%.*s", static_cast<int32>( prefabPath.size() ), prefabPath.data() );
@@ -531,7 +531,7 @@ namespace sw::editor
         ImGui::Spacing();
         const float32 buttonWidth = MathUtil::min( ImGui::GetContentRegionAvail().x, 220.0f * EditorThemeUtil::getDPIScale() );
         ImGui::SetCursorPosX( ImGui::GetCursorPosX() + ( ImGui::GetContentRegionAvail().x - buttonWidth ) * 0.5f );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), SW_LOCKEY( "EdButton", "AddComponent" ), "Add Component" ), ImVec2{ buttonWidth, 0.0f } ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Plus" ), SW_LOCKEY( "EdButton", "AddComponent" ), "Add Component" ), ImVec2{ buttonWidth, 0.0f } ) )
         {
             _addComponentSearch.clear();
             EditorInputGUI::openPopup( "InspectorAddComponent" );
@@ -651,7 +651,7 @@ namespace sw::editor
                 if ( StringUtil::isNullOrEmpty( tag._pString ) == false )
                 {
                     ImGui::SameLine();
-                    EditorWidgets::drawChip( tag._pString, SW_THEMECOLOR( "Signal", "Success" ) );
+                    EditorWidgets::drawChip( tag._pString, SW_THEME_COLOR( "Signal", "Success" ) );
                 }
             }
         }

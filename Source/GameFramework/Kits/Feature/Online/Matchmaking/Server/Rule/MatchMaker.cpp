@@ -75,7 +75,7 @@ namespace sw
     {
     }
 
-    bool MatchMaker::initialize( const MatchModeDefinition& definition, uint64 matchIDSeed )
+    bool MatchMaker::initialize( const MatchModeDef& definition, uint64 matchIDSeed )
     {
         // 값을 범위 안으로 맞춰 돌지 않는다. 팀 수 20 을 준 모드가 16 으로 돌면 아무도 모른다.
         const string rangeError = ConfigRangeUtil::describeRangeErrors( definition );

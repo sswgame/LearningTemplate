@@ -265,17 +265,17 @@ namespace sw::editor
         utf8                       arrMessage[constant::buffer::kMax512];
         if ( volumeCount == 0 )
         {
-            notification.push( "Bake Light Probes", "Nothing to bake - add a Light Probe Volume", NotificationType::Warning );
+            notification.push( "Bake Light Probes", "Nothing to bake - add a Light Probe Volume", NotificationKind::Warning );
         }
         else if ( bCanceled || _bakedCount < volumeCount )
         {
             formatstring( arrMessage, constant::buffer::kMax512, "Baked %# of %# volume(s) - %#", _bakedCount, volumeCount, _lastError.c_str() );
-            notification.push( "Bake Light Probes", arrMessage, bCanceled ? NotificationType::Warning : NotificationType::Error );
+            notification.push( "Bake Light Probes", arrMessage, bCanceled ? NotificationKind::Warning : NotificationKind::Error );
         }
         else
         {
             formatstring( arrMessage, constant::buffer::kMax512, "Baked %# volume(s) - save the scene to keep the paths", _bakedCount );
-            notification.push( "Bake Light Probes", arrMessage, NotificationType::Success );
+            notification.push( "Bake Light Probes", arrMessage, NotificationKind::Success );
         }
     }
 } // namespace sw::editor

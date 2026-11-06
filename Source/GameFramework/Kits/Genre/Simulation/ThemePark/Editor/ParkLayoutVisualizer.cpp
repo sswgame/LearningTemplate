@@ -43,7 +43,7 @@ namespace sw::editor
                 const ImU32 color = ImGui::ColorConvertFloat4ToU32( ImVec4{ segment._color._x, segment._color._y, segment._color._z, segment._color._w } );
                 args._pDrawList->AddLine( screenFrom, screenTo, color, 1.5f );
             }
-            const ImU32 colorLabel = EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "Label" ) );
+            const ImU32 colorLabel = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "Label" ) );
             for ( const ParkRidePreview& ride : preview.getRides() )
             {
                 ImVec2       labelPos;
@@ -54,6 +54,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_VISUALIZER( ParkLayout, "themepark.layout", 900, SW_EDITORICON_NAME( "Map" ), SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutLabel" ), SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutTip" ), false,
+    SW_EDITOR_VISUALIZER( ParkLayout, "themepark.layout", 900, SW_EDITOR_ICON_NAME( "Map" ), SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutLabel" ), SW_LOCKEYREF( "EdPluginVisualizer", "ParkLayoutTip" ), false,
                           &drawParkLayout );
 } // namespace sw::editor

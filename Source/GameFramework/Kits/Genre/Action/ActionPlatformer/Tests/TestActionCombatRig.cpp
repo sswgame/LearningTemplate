@@ -112,12 +112,12 @@ SW_TEST_CASE( ActionCombatRigTest, ComboChainsThroughTheCancelWindow )
     sw::vector<sw::ActionCombatEvent> listEvent;
     rig.drainEvents( listEvent );
     SW_REQUIRE_EQUAL( size_t( 3 ), listEvent.size() );
-    SW_EXPECT_TRUE( listEvent[0]._type == sw::ActionCombatEventType::MoveStarted );
+    SW_EXPECT_TRUE( listEvent[0]._type == sw::ActionCombatEventKind::MoveStarted );
     SW_EXPECT_EQUAL( kSlash1, listEvent[0]._id );
     SW_EXPECT_EQUAL( 0, listEvent[0]._value );
     SW_EXPECT_EQUAL( kSlash2, listEvent[1]._id );
     SW_EXPECT_EQUAL( 1, listEvent[1]._value );
-    SW_EXPECT_TRUE( listEvent[2]._type == sw::ActionCombatEventType::ComboEnded );
+    SW_EXPECT_TRUE( listEvent[2]._type == sw::ActionCombatEventKind::ComboEnded );
     SW_EXPECT_EQUAL( 2, listEvent[2]._value );
 }
 
@@ -266,12 +266,12 @@ SW_TEST_CASE( ActionCombatRigTest, ParryReflectsOnlyEnemyShotsInRadius )
 
     sw::vector<sw::ActionCombatEvent> listEvent;
     rig.drainEvents( listEvent );
-    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventType::ParryStarted ) );
-    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventType::ProjectileReflected ) );
-    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventType::HitstopStarted ) );
+    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventKind::ParryStarted ) );
+    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventKind::ProjectileReflected ) );
+    SW_EXPECT_EQUAL( 1, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventKind::HitstopStarted ) );
     for ( const sw::ActionCombatEvent& event : listEvent )
     {
-        if ( event._type == sw::ActionCombatEventType::ProjectileReflected )
+        if ( event._type == sw::ActionCombatEventKind::ProjectileReflected )
             SW_EXPECT_EQUAL( static_cast<int32>( edgeID ), event._value );
     }
 
@@ -403,7 +403,7 @@ SW_TEST_CASE( ActionCombatRigTest, GunSpawnsPelletsAndReportsWhyItCannot )
 
     sw::vector<sw::ActionCombatEvent> listEvent;
     rig.drainEvents( listEvent );
-    SW_EXPECT_EQUAL( 2, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventType::GunFired ) );
+    SW_EXPECT_EQUAL( 2, sw::VectorUtil::countBy<&sw::ActionCombatEvent::_type>( listEvent, sw::ActionCombatEventKind::GunFired ) );
 }
 
 /**

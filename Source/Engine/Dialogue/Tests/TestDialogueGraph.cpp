@@ -27,19 +27,19 @@ namespace
 
         DialogueAssetNode startNode{};
         startNode._id   = 1;
-        startNode._type = DialogueAssetNodeType::Start;
+        startNode._type = DialogueAssetNodeKind::Start;
         DialogueAssetNode choiceNode{};
         choiceNode._id         = 2;
-        choiceNode._type       = DialogueAssetNodeType::Choice;
+        choiceNode._type       = DialogueAssetNodeKind::Choice;
         choiceNode._text       = "어디로 갈까?";
         choiceNode._listChoice = { "왼쪽", "오른쪽" };
         DialogueAssetNode leftNode{};
         leftNode._id   = 3;
-        leftNode._type = DialogueAssetNodeType::Dialogue;
+        leftNode._type = DialogueAssetNodeKind::Dialogue;
         leftNode._text = "왼쪽으로 갔다.";
         DialogueAssetNode rightNode{};
         rightNode._id   = 4;
-        rightNode._type = DialogueAssetNodeType::Dialogue;
+        rightNode._type = DialogueAssetNodeKind::Dialogue;
         rightNode._text = "오른쪽으로 갔다.";
 
         asset._listNode = { startNode, choiceNode, leftNode, rightNode };
@@ -70,7 +70,7 @@ namespace
      * @details Out → 10, True → 11, False → 12, 선택지 0 → 13, 선택지 1 → 14. 대사 노드들은 끝(나가는 링크 없음)입니다.
      *          조건식은 비어 있어 러너가 참으로 평가합니다(`makeProbeInput` 과 같은 입력).
      */
-    DialogueGraphAsset makeProbeGraph( DialogueAssetNodeType type )
+    DialogueGraphAsset makeProbeGraph( DialogueAssetNodeKind type )
     {
         DialogueGraphAsset asset;
 
@@ -87,7 +87,7 @@ namespace
         {
             DialogueAssetNode target{};
             target._id   = targetID;
-            target._type = DialogueAssetNodeType::Dialogue;
+            target._type = DialogueAssetNodeKind::Dialogue;
             target._text = "target";
             asset._listNode.push_back( target );
         }
@@ -160,11 +160,11 @@ SW_TEST_CASE( DialogueGraphTest, PinRefusesOffsetsThatWouldOverflowTheNodeID )
 SW_TEST_CASE( DialogueGraphTest, NodeTypeNameRoundTripsForEveryValue )
 {
     DialogueGraphAsset source;
-    for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeType::Count ); ++typeIndex )
+    for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeKind::Count ); ++typeIndex )
     {
         DialogueAssetNode node{};
         node._id   = static_cast<int32>( typeIndex ) + 1;
-        node._type = static_cast<DialogueAssetNodeType>( typeIndex );
+        node._type = static_cast<DialogueAssetNodeKind>( typeIndex );
         source._listNode.push_back( node );
     }
     const string       written = source.toXML();
@@ -231,7 +231,7 @@ SW_TEST_CASE( DialogueGraphTest, XMLRoundTripAndLoadFromFileAgree )
     SW_EXPECT_TRUE( parsed.parseXML( source.toXML() ) );
     SW_EXPECT_EQUAL( 4u, static_cast<uint32>( parsed._listNode.size() ) );
     SW_EXPECT_EQUAL( 3u, static_cast<uint32>( parsed._listLink.size() ) );
-    SW_EXPECT_TRUE( parsed._listNode[1]._type == DialogueAssetNodeType::Choice );
+    SW_EXPECT_TRUE( parsed._listNode[1]._type == DialogueAssetNodeKind::Choice );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( parsed._listNode[1]._listChoice.size() ) );
     SW_EXPECT_EQUAL( 3, parsed.findChoiceNextNodeID( 2, 0 ) );
 
@@ -268,15 +268,15 @@ SW_TEST_CASE( DialogueGraphTest, PlainTextResolvesToItself )
  */
 SW_TEST_CASE( DialogueGraphTest, NodeInfoCoversEveryType )
 {
-    for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeType::Count ); ++typeIndex )
+    for ( uint32 typeIndex = 0; typeIndex < static_cast<uint32>( DialogueAssetNodeKind::Count ); ++typeIndex )
     {
-        const DialogueAssetNodeType type  = static_cast<DialogueAssetNodeType>( typeIndex );
+        const DialogueAssetNodeKind type  = static_cast<DialogueAssetNodeKind>( typeIndex );
         const DialogueNodeInfo*     pInfo = DialogueGraphAsset::findNodeInfo( type );
         SW_REQUIRE_NOT_NULL( pInfo );
         SW_EXPECT_TRUE( pInfo->_type == type );
     }
-    SW_EXPECT_NULL( DialogueGraphAsset::findNodeInfo( DialogueAssetNodeType::Count ) );
-    SW_EXPECT_EQUAL( string_view( "Unknown" ), string_view( DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType::Count ) ) );
+    SW_EXPECT_NULL( DialogueGraphAsset::findNodeInfo( DialogueAssetNodeKind::Count ) );
+    SW_EXPECT_EQUAL( string_view( "Unknown" ), string_view( DialogueGraphAsset::nodeTypeName( DialogueAssetNodeKind::Count ) ) );
 }
 
 /**
@@ -285,8 +285,8 @@ SW_TEST_CASE( DialogueGraphTest, NodeInfoCoversEveryType )
  */
 SW_TEST_CASE( DialogueGraphTest, UnlinkedChoiceAndBranchPinsFallBackToOut )
 {
-    const DialogueAssetNodeType arrType[] = { DialogueAssetNodeType::Choice, DialogueAssetNodeType::Branch };
-    for ( DialogueAssetNodeType type : arrType )
+    const DialogueAssetNodeKind arrType[] = { DialogueAssetNodeKind::Choice, DialogueAssetNodeKind::Branch };
+    for ( DialogueAssetNodeKind type : arrType )
     {
         DialogueGraphAsset asset = makeProbeGraph( type );
         asset._listLink.resize( 1 ); // Out(→10) 만 남긴다
@@ -303,8 +303,8 @@ SW_TEST_CASE( DialogueGraphTest, UnlinkedChoiceAndBranchPinsFallBackToOut )
  */
 SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeEndsTheCursor )
 {
-    const DialogueAssetNodeType arrUnknownType[] = { DialogueAssetNodeType::Count, static_cast<DialogueAssetNodeType>( 42 ) };
-    for ( DialogueAssetNodeType unknownType : arrUnknownType )
+    const DialogueAssetNodeKind arrUnknownType[] = { DialogueAssetNodeKind::Count, static_cast<DialogueAssetNodeKind>( 42 ) };
+    for ( DialogueAssetNodeKind unknownType : arrUnknownType )
     {
         const DialogueGraphAsset asset  = makeProbeGraph( unknownType );
         const DialogueAssetNode* pProbe = asset.findNode( 2 );
@@ -319,20 +319,20 @@ SW_TEST_CASE( DialogueGraphTest, UnknownNodeTypeEndsTheCursor )
  */
 SW_TEST_CASE( DialogueGraphTest, MakeNodeFillsTheBodyField )
 {
-    const DialogueAssetNode branchNode = DialogueCursor::makeNode( DialogueAssetNodeType::Branch, 7 );
+    const DialogueAssetNode branchNode = DialogueCursor::makeNode( DialogueAssetNodeKind::Branch, 7 );
     SW_EXPECT_EQUAL( 7, branchNode._id );
     SW_EXPECT_FALSE( branchNode._condition.empty() );
     SW_EXPECT_TRUE( branchNode._text.empty() );
 
-    const DialogueAssetNode actionNode = DialogueCursor::makeNode( DialogueAssetNodeType::Action, 8 );
+    const DialogueAssetNode actionNode = DialogueCursor::makeNode( DialogueAssetNodeKind::Action, 8 );
     SW_EXPECT_FALSE( actionNode._actionCommand.empty() );
     SW_EXPECT_TRUE( actionNode._text.empty() );
 
-    const DialogueAssetNode choiceNode = DialogueCursor::makeNode( DialogueAssetNodeType::Choice, 9 );
+    const DialogueAssetNode choiceNode = DialogueCursor::makeNode( DialogueAssetNodeKind::Choice, 9 );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( choiceNode._listChoice.size() ) );
     SW_EXPECT_EQUAL( "Option 1", choiceNode._listChoice[0] );
 
-    const DialogueAssetNode dialogueNode = DialogueCursor::makeNode( DialogueAssetNodeType::Dialogue, 10 );
+    const DialogueAssetNode dialogueNode = DialogueCursor::makeNode( DialogueAssetNodeKind::Dialogue, 10 );
     SW_EXPECT_FALSE( dialogueNode._speaker.empty() );
     SW_EXPECT_FALSE( dialogueNode._text.empty() );
 }

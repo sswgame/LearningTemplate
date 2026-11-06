@@ -25,7 +25,7 @@ namespace sw::editor
         /** @brief 활성 카메라를 제외한 CameraComponent 의 프러스텀을 그립니다. 카메라 레지스트리만 봅니다(씬 전체를 훑지 않습니다). 색은 테마 토큰 `_cameraWire` 입니다. */
         void drawCameraFrustums( const EditorViewportVisualizerArgs& args )
         {
-            const ImU32 colorCameraWire = EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "CameraWire" ) );
+            const ImU32 colorCameraWire = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "CameraWire" ) );
 
             if ( args._pListCamera == nullptr )
                 return;
@@ -67,6 +67,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_VISUALIZER( CameraFrustum, "camera_frustum", 200, SW_EDITORICON_NAME( "Camera" ), SW_LOCKEYREF( "EdVisualizer", "CameraFrustumLabel" ), SW_LOCKEYREF( "EdVisualizer", "CameraFrustumTip" ), true,
+    SW_EDITOR_VISUALIZER( CameraFrustum, "camera_frustum", 200, SW_EDITOR_ICON_NAME( "Camera" ), SW_LOCKEYREF( "EdVisualizer", "CameraFrustumLabel" ), SW_LOCKEYREF( "EdVisualizer", "CameraFrustumTip" ), true,
                           &drawCameraFrustums );
 } // namespace sw::editor

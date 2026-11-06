@@ -63,7 +63,7 @@ namespace sw
 namespace sw
 {
     /** @brief 화학 알림 종류입니다. */
-    enum class AdventureElementEventType : uint8
+    enum class AdventureElementEventKind : uint8
     {
         Ignited = 0,
         BurnedOut, ///< 다 타서 빈 칸이 됐다
@@ -77,7 +77,7 @@ namespace sw
     struct AdventureElementEvent
     {
         int2                      _cell{};
-        AdventureElementEventType _type{ AdventureElementEventType::Ignited };
+        AdventureElementEventKind _type{ AdventureElementEventKind::Ignited };
     };
 } // namespace sw
 

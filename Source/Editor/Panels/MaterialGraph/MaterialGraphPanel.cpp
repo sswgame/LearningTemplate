@@ -73,7 +73,7 @@ namespace sw::editor
     {
         _nodeGraph.setCommentsEnabled( true );
         // 색은 데이터(값의 형식)에만 쓴다 — float · float2 · float3 · float4 순서다.
-        _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Graph", "FlowPin" ), SW_THEMECOLOR( "Graph", "Sensor" ), SW_THEMECOLOR( "Graph", "Operator" ), SW_THEMECOLOR( "Graph", "Actuator" ) } );
+        _nodeGraph.setPinTypeColors( { SW_THEME_COLOR( "Graph", "FlowPin" ), SW_THEME_COLOR( "Graph", "Sensor" ), SW_THEME_COLOR( "Graph", "Operator" ), SW_THEME_COLOR( "Graph", "Actuator" ) } );
         MaterialGraphNodeRegistry::collectKinds( _listKind );
         for ( uint32 kindIndex = 0; kindIndex < static_cast<uint32>( _listKind.size() ); ++kindIndex )
         {
@@ -136,10 +136,10 @@ namespace sw::editor
 
     void MaterialGraphPanel::drawToolbar()
     {
-        if ( EditorCompactControls::drawIconButton( "##materialGraphReload", SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EditorMaterialGraph", "ReloadTip" ) ) )
+        if ( EditorCompactControls::drawIconButton( "##materialGraphReload", SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EditorMaterialGraph", "ReloadTip" ) ) )
             reloadDocument();
         ImGui::SameLine();
-        if ( EditorCompactControls::drawIconButton( "##materialGraphSave", SW_EDITORICON( "Save" ), SW_LOCKEY( "EditorMaterialGraph", "SaveTip" ) ) )
+        if ( EditorCompactControls::drawIconButton( "##materialGraphSave", SW_EDITOR_ICON( "Save" ), SW_LOCKEY( "EditorMaterialGraph", "SaveTip" ) ) )
             (void)saveDocumentAndClearDirty(); // 저장 경로는 모두 이것을 거친다 — 막힌 까닭은 문제 목록과 로그가 알린다
     }
 
@@ -468,7 +468,7 @@ namespace sw::editor
         }
         for ( const MaterialGraphIssue& issue : listIssue )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", issue._nodeName.c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", issue._nodeName.c_str() );
             ImGui::TextWrapped( "%s", issue._message.c_str() );
         }
     }

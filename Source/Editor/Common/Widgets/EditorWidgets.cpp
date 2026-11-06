@@ -280,9 +280,9 @@ namespace sw::editor
         bool          bChanged{ false };
 
         // 비단락(|=)으로 세 축을 모두 그린다.
-        bChanged |= EditorWidgetsInternal::drawAxis( "X", values._x, SW_THEMECOLOR( "Viewport", "AxisX" ), buttonSize, resetValue, speed );
-        bChanged |= EditorWidgetsInternal::drawAxis( "Y", values._y, SW_THEMECOLOR( "Viewport", "AxisY" ), buttonSize, resetValue, speed );
-        bChanged |= EditorWidgetsInternal::drawAxis( "Z", values._z, SW_THEMECOLOR( "Viewport", "AxisZ" ), buttonSize, resetValue, speed );
+        bChanged |= EditorWidgetsInternal::drawAxis( "X", values._x, SW_THEME_COLOR( "Viewport", "AxisX" ), buttonSize, resetValue, speed );
+        bChanged |= EditorWidgetsInternal::drawAxis( "Y", values._y, SW_THEME_COLOR( "Viewport", "AxisY" ), buttonSize, resetValue, speed );
+        bChanged |= EditorWidgetsInternal::drawAxis( "Z", values._z, SW_THEME_COLOR( "Viewport", "AxisZ" ), buttonSize, resetValue, speed );
 
         ImGui::PopStyleVar();
         ImGui::Columns( 1 );
@@ -299,15 +299,15 @@ namespace sw::editor
         ImGui::PushID( static_cast<int32>( id ) );
         if ( bAccent )
         {
-            const Color accent = SW_THEMECOLOR( "Base", "Accent" );
+            const Color accent = SW_THEME_COLOR( "Base", "Accent" );
             ImGui::PushStyleColor( ImGuiCol_Header, EditorColorUtil::toImVec4( accent.withAlpha( 0.85f ) ) );
             ImGui::PushStyleColor( ImGuiCol_HeaderHovered, EditorColorUtil::toImVec4( accent.scaleBrightness( 1.15f ).withAlpha( 1.0f ) ) );
             ImGui::PushStyleColor( ImGuiCol_HeaderActive, EditorColorUtil::toImVec4( accent.scaleBrightness( 1.30f ).withAlpha( 1.0f ) ) );
         }
         else
         {
-            const Color headerColor = SW_THEMECOLOR( "Base", "HeaderBg" );
-            const Color accent      = SW_THEMECOLOR( "Base", "Accent" );
+            const Color headerColor = SW_THEME_COLOR( "Base", "HeaderBg" );
+            const Color accent      = SW_THEME_COLOR( "Base", "Accent" );
             ImGui::PushStyleColor( ImGuiCol_Header, EditorColorUtil::toImVec4( headerColor.withAlpha( 1.0f ) ) );
             ImGui::PushStyleColor( ImGuiCol_HeaderHovered, EditorColorUtil::toImVec4( accent.withAlpha( 0.70f ) ) );
             ImGui::PushStyleColor( ImGuiCol_HeaderActive, EditorColorUtil::toImVec4( accent.withAlpha( 0.90f ) ) );
@@ -371,9 +371,9 @@ namespace sw::editor
             const utf8*    _pMarkSuffix;
         };
         static constexpr GizmoButton kArrGizmoButton[] = {
-            {"##gizmoTranslate", SW_EDITORICON_NAME( "Translate" ), ".translate"},
-            {   "##gizmoRotate",    SW_EDITORICON_NAME( "Rotate" ),    ".rotate"},
-            {    "##gizmoScale",     SW_EDITORICON_NAME( "Scale" ),     ".scale"},
+            {"##gizmoTranslate", SW_EDITOR_ICON_NAME( "Translate" ), ".translate"},
+            {   "##gizmoRotate",    SW_EDITOR_ICON_NAME( "Rotate" ),    ".rotate"},
+            {    "##gizmoScale",     SW_EDITOR_ICON_NAME( "Scale" ),     ".scale"},
         };
         // 툴팁은 지금 문화권의 글이라 상수 테이블에 넣지 않고 그릴 때 찾는다.
         const utf8* const arrTooltip[] = {
@@ -393,7 +393,7 @@ namespace sw::editor
         }
 
         const bool bLocalSpace = editorContext.getSubsystem<EditorWorkspace>().isGizmoLocalSpace();
-        if ( drawToggleIconButton( "##gizmoSpace", bLocalSpace, SW_EDITORICON( "Axes" ), SW_EDITORICON( "Globe" ),
+        if ( drawToggleIconButton( "##gizmoSpace", bLocalSpace, SW_EDITOR_ICON( "Axes" ), SW_EDITOR_ICON( "Globe" ),
                                    SW_LOCKEY( "EdCommon", "GizmoLocalSpace" ),
                                    SW_LOCKEY( "EdCommon", "GizmoWorldSpace" ) ) )
             editorContext.getSubsystem<EditorWorkspace>().setGizmoLocalSpace( bLocalSpace == false );
@@ -409,7 +409,7 @@ namespace sw::editor
 
     bool EditorWidgets::drawToggleButton( const utf8* pLabel, bool bActive )
     {
-        const Color& color = bActive ? SW_THEMECOLOR( "Base", "ToggleActive" ) : SW_THEMECOLOR( "Base", "ToggleInactive" );
+        const Color& color = bActive ? SW_THEME_COLOR( "Base", "ToggleActive" ) : SW_THEME_COLOR( "Base", "ToggleInactive" );
         ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( color ) );
         const bool bClicked = ImGui::Button( pLabel );
         ImGui::PopStyleColor();
@@ -420,7 +420,7 @@ namespace sw::editor
     {
         // 툴바 아이콘은 상자 없이 둔다(언리얼 · 유니티 뷰포트 툴바) — 켜진 것만 중립 단계 바탕이 깔린다.
         const float32 side = ImGui::GetFrameHeight();
-        ImGui::PushStyleColor( ImGuiCol_Button, bActive ? EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "ToggleActive" ) ) : ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f } );
+        ImGui::PushStyleColor( ImGuiCol_Button, bActive ? EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "ToggleActive" ) ) : ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f } );
         ImGui::PushStyleVar( ImGuiStyleVar_FrameBorderSize, 0.0f );
         ImGui::PushID( pID );
         const bool bPressed = ImGui::Button( pIcon, ImVec2{ side, side } );
@@ -453,7 +453,7 @@ namespace sw::editor
     {
         const bool bDefault = bOn == bDefaultOn;
         if ( bDefault )
-            EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Base", "TextMuted" ) );
+            EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Base", "TextMuted" ) );
         const bool bPressed = drawToggleIconButton( pID, bOn, pIconOn, pIconOff, pTooltipOn, pTooltipOff );
         if ( bDefault )
             EditorThemeUtil::popTextColor();
@@ -577,7 +577,7 @@ namespace sw::editor
         {
             ImGui::SameLine();
             // 글자 "X" 대신 닫기 아이콘을 상자 없이(아이콘 토글과 같은 모양) 둔다.
-            if ( drawToggleIconButton( "##clear", true, SW_EDITORICON( "Close" ), SW_EDITORICON( "Close" ), SW_LOCKEY( "EdCommon", "SearchClear" ), SW_LOCKEY( "EdCommon", "SearchClear" ) ) &&
+            if ( drawToggleIconButton( "##clear", true, SW_EDITOR_ICON( "Close" ), SW_EDITOR_ICON( "Close" ), SW_LOCKEY( "EdCommon", "SearchClear" ), SW_LOCKEY( "EdCommon", "SearchClear" ) ) &&
                  pBuffer[0] != '\0' )
             {
                 pBuffer[0] = '\0';
@@ -599,7 +599,7 @@ namespace sw::editor
 
     void EditorWidgets::drawPropertyRowLabel( const utf8* pLabel, const utf8* pTooltip )
     {
-        const float32 columnWidth = SW_THEMEMETRIC( "Layout", "PropertyLabelWidth" ) * EditorThemeUtil::getDPIScale(); // 예전 고정 120px 은 DPI 를 몰랐다
+        const float32 columnWidth = SW_THEME_METRIC( "Layout", "PropertyLabelWidth" ) * EditorThemeUtil::getDPIScale(); // 예전 고정 120px 은 DPI 를 몰랐다
         const utf8*   pText       = pLabel != nullptr ? pLabel : "";
         ImGui::AlignTextToFramePadding();
         // 라벨은 열 폭 안에서 말줄임으로 자른다 — 길면 입력 칸 위에 겹쳐 그려졌다(uiaudit). 잘렸을 때만 전체 라벨을 툴팁에 더한다.
@@ -618,7 +618,7 @@ namespace sw::editor
             if ( ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
             {
                 ImGui::BeginTooltip();
-                ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "TooltipWrapEm" ) );
+                ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "TooltipWrapEm" ) );
                 if ( bClipped )
                     ImGui::TextUnformatted( pText );
                 if ( StringUtil::isNullOrEmpty( pTooltip ) == false )
@@ -933,7 +933,7 @@ namespace sw::editor
         if ( StringUtil::isNullOrEmpty( pText ) == false && ImGui::IsItemHovered( ImGuiHoveredFlags_DelayShort ) )
         {
             ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "TooltipWrapEm" ) );
+            ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "TooltipWrapEm" ) );
             ImGui::TextUnformatted( pText );
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();

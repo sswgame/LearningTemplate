@@ -91,7 +91,7 @@ namespace sw
         }
         switch ( def._type )
         {
-            case AnimationPoseNodeType::BlendPoses:
+            case AnimationPoseNodeKind::BlendPoses:
             {
                 // 로드(`AnimationGraphAsset::parsePoseNode`)가 확인하지만, 코드로 만든 그래프도 같은 규칙을 지킨다.
                 if ( listInput.size() != 2 || def._weightParameter.empty() )
@@ -101,7 +101,7 @@ namespace sw
                 }
                 return make_unique<BlendPosesNode>( *listInput[0], *listInput[1], def._weightParameter );
             }
-            case AnimationPoseNodeType::None:
+            case AnimationPoseNodeKind::None:
             {
                 break;
             }

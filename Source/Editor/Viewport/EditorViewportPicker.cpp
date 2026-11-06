@@ -110,7 +110,7 @@ namespace sw::editor
             // 끌기 문턱 안이면 아직 클릭이다 — 상자를 보이지 않는다(누를 때의 손떨림이 상자로 보이지 않게).
             if ( pointer.isDragging( EditorMouseButton::Left ) )
             {
-                const Color accent = SW_THEMECOLOR( "Base", "Accent" ); // 선택을 나타내는 상자라 강조색이다(앱 화면 규칙 — 강조색은 선택에)
+                const Color accent = SW_THEME_COLOR( "Base", "Accent" ); // 선택을 나타내는 상자라 강조색이다(앱 화면 규칙 — 강조색은 선택에)
                 pDrawList->AddRectFilled( ImVec2{ minPos._x, minPos._y }, ImVec2{ maxPos._x, maxPos._y }, EditorColorUtil::toImU32( Color{ accent._r, accent._g, accent._b, 0.15f } ) );
                 pDrawList->AddRect( ImVec2{ minPos._x, minPos._y }, ImVec2{ maxPos._x, maxPos._y }, EditorColorUtil::toImU32( accent ) );
             }

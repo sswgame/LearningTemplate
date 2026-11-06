@@ -42,31 +42,31 @@ namespace sw
             }
 
             /** @brief 종류와 스키마의 짝은 이 switch 하나다 — 읽기 · 쓰기 · 인스펙터가 모두 이것을 지난다. */
-            static const ReflectedStructOps& findFieldsOps( BehaviorNodeType type )
+            static const ReflectedStructOps& findFieldsOps( BehaviorNodeKind type )
             {
                 switch ( type )
                 {
-                    case BehaviorNodeType::Selector:
+                    case BehaviorNodeKind::Selector:
                         return ReflectedStructOps::of<BehaviorSelectorFields>();
-                    case BehaviorNodeType::Repeat:
+                    case BehaviorNodeKind::Repeat:
                         return ReflectedStructOps::of<BehaviorRepeatFields>();
-                    case BehaviorNodeType::Cooldown:
-                    case BehaviorNodeType::TimeLimit:
-                    case BehaviorNodeType::Wait:
+                    case BehaviorNodeKind::Cooldown:
+                    case BehaviorNodeKind::TimeLimit:
+                    case BehaviorNodeKind::Wait:
                         return ReflectedStructOps::of<BehaviorTimedFields>();
-                    case BehaviorNodeType::BlackboardCondition:
+                    case BehaviorNodeKind::BlackboardCondition:
                         return ReflectedStructOps::of<BehaviorConditionDecoratorFields>();
-                    case BehaviorNodeType::Condition:
+                    case BehaviorNodeKind::Condition:
                         return ReflectedStructOps::of<BehaviorConditionFields>();
-                    case BehaviorNodeType::Action:
+                    case BehaviorNodeKind::Action:
                         return ReflectedStructOps::of<BehaviorActionFields>();
-                    case BehaviorNodeType::MoveTo:
+                    case BehaviorNodeKind::MoveTo:
                         return ReflectedStructOps::of<BehaviorMoveToFields>();
-                    case BehaviorNodeType::SubTree:
+                    case BehaviorNodeKind::SubTree:
                         return ReflectedStructOps::of<BehaviorSubTreeFields>();
-                    case BehaviorNodeType::Sequence:
-                    case BehaviorNodeType::Inverter:
-                    case BehaviorNodeType::ForceSuccess:
+                    case BehaviorNodeKind::Sequence:
+                    case BehaviorNodeKind::Inverter:
+                    case BehaviorNodeKind::ForceSuccess:
                         break;
                 }
                 return ReflectedStructOps::of<VocabularyNoFields>();
@@ -88,9 +88,9 @@ namespace sw
             }
 
             /** @brief 잎 노드(자식을 가질 수 없는 종류)인지 판정합니다. */
-            static bool isLeaf( BehaviorNodeType type )
+            static bool isLeaf( BehaviorNodeKind type )
             {
-                return type == BehaviorNodeType::Action || type == BehaviorNodeType::Condition || type == BehaviorNodeType::Wait || type == BehaviorNodeType::MoveTo || type == BehaviorNodeType::SubTree;
+                return type == BehaviorNodeKind::Action || type == BehaviorNodeKind::Condition || type == BehaviorNodeKind::Wait || type == BehaviorNodeKind::MoveTo || type == BehaviorNodeKind::SubTree;
             }
         };
 
@@ -165,28 +165,28 @@ namespace sw
             const string name = data._name.empty() ? string( node.getName() ) : data._name; // 이름이 없으면 원소 이름(편집기 표시와 같다)
             switch ( data._type )
             {
-                case BehaviorNodeType::Selector:
+                case BehaviorNodeKind::Selector:
                     return _tree.addSelector( parent, name.c_str(), data._fields.find<BehaviorSelectorFields>()->_bReactive );
-                case BehaviorNodeType::Sequence:
+                case BehaviorNodeKind::Sequence:
                     return _tree.addSequence( parent, name.c_str() );
-                case BehaviorNodeType::Inverter:
+                case BehaviorNodeKind::Inverter:
                     return _tree.addInverter( parent );
-                case BehaviorNodeType::ForceSuccess:
+                case BehaviorNodeKind::ForceSuccess:
                     return _tree.addForceSuccess( parent );
-                case BehaviorNodeType::Repeat:
+                case BehaviorNodeKind::Repeat:
                     return _tree.addRepeat( parent, data._fields.find<BehaviorRepeatFields>()->_count );
-                case BehaviorNodeType::Cooldown:
+                case BehaviorNodeKind::Cooldown:
                     return _tree.addCooldown( parent, data._fields.find<BehaviorTimedFields>()->_seconds );
-                case BehaviorNodeType::TimeLimit:
+                case BehaviorNodeKind::TimeLimit:
                     return _tree.addTimeLimit( parent, data._fields.find<BehaviorTimedFields>()->_seconds );
-                case BehaviorNodeType::Wait:
+                case BehaviorNodeKind::Wait:
                     return _tree.addWait( parent, data._fields.find<BehaviorTimedFields>()->_seconds );
-                case BehaviorNodeType::MoveTo:
+                case BehaviorNodeKind::MoveTo:
                 {
                     const BehaviorMoveToFields* pFields = data._fields.find<BehaviorMoveToFields>();
                     return _tree.addMoveTo( parent, hashed_string( pFields->_key ), pFields->_repathDistance );
                 }
-                case BehaviorNodeType::BlackboardCondition:
+                case BehaviorNodeKind::BlackboardCondition:
                 {
                     const BehaviorConditionDecoratorFields* pFields = data._fields.find<BehaviorConditionDecoratorFields>();
                     ConditionExpr                           condition;
@@ -194,14 +194,14 @@ namespace sw
                         return _tree.addConditionDecorator( parent, name.c_str(), condition, pFields->_abort );
                     break;
                 }
-                case BehaviorNodeType::Condition:
+                case BehaviorNodeKind::Condition:
                 {
                     ConditionExpr condition;
                     if ( ConditionExpr::compile( data._fields.find<BehaviorConditionFields>()->_test, _sourceName, condition ) )
                         return _tree.addCondition( parent, name.c_str(), condition );
                     break;
                 }
-                case BehaviorNodeType::Action:
+                case BehaviorNodeKind::Action:
                 {
                     // 동작 이름이 있는지는 런타임만 본다 — 편집기는 아직 안 만든 동작의 트리도 연다(`BehaviorTreeEditModel::collectIssues`).
                     const string&            task   = data._fields.find<BehaviorActionFields>()->_task;
@@ -211,7 +211,7 @@ namespace sw
                     SW_LOG_ERROR_ID( "BehaviorTreeAsset.NamesUnknownTaskRegistered", "%#: <%#> names the unknown task '%#' (registered: %#)", _sourceName, node.getName(), task.c_str(), ActionRegistry::joinNames().c_str() );
                     break;
                 }
-                case BehaviorNodeType::SubTree:
+                case BehaviorNodeKind::SubTree:
                     return _tree.addSubTreeSlot( parent, name.c_str(), hashed_string( data._fields.find<BehaviorSubTreeFields>()->_slot ) );
             }
             inoutbValid = false;
@@ -225,7 +225,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "BehaviorTreeAsset.NestedDeeperLevels", "%#: <%#> is nested deeper than %# levels", _sourceName, node.getName(), BehaviorTreeNames::kMaxDepth );
                 return false;
             }
-            BehaviorNodeType type{};
+            BehaviorNodeKind type{};
             if ( BehaviorTreeNames::parse( node.getName(), type ) == false )
             {
                 SW_LOG_ERROR_ID( "BehaviorTreeAsset.UnknownBehaviorTreeNode", "%#: unknown behavior tree node <%#> (%#)", _sourceName, node.getName(), BehaviorTreeNames::joinNodeTypeNames().c_str() );
@@ -236,7 +236,7 @@ namespace sw
             bool                 bValid = BehaviorTreeXML::readNodeFields( node, type, _sourceName, data );
             if ( bValid == false )
                 return false; // 칸이 틀린 노드는 뜻을 모른다 - 스키마 값을 믿고 더하지 않는다
-            if ( type == BehaviorNodeType::SubTree )
+            if ( type == BehaviorNodeKind::SubTree )
             {
                 const BehaviorSubTreeFields* pFields = data._fields.find<BehaviorSubTreeFields>();
                 if ( pFields->_tree.empty() == pFields->_slot.empty() )
@@ -270,7 +270,7 @@ namespace sw
 
 namespace sw
 {
-    const utf8* BehaviorTreeNames::toString( BehaviorNodeType type )
+    const utf8* BehaviorTreeNames::toString( BehaviorNodeKind type )
     {
         return getEnumName( type );
     }
@@ -280,9 +280,9 @@ namespace sw
         return getEnumName( mode );
     }
 
-    bool BehaviorTreeNames::parse( string_view text, BehaviorNodeType& outValue )
+    bool BehaviorTreeNames::parse( string_view text, BehaviorNodeKind& outValue )
     {
-        return BehaviorTreeAssetInternal::parseEnumName( text, BehaviorNodeType::SubTree, outValue );
+        return BehaviorTreeAssetInternal::parseEnumName( text, BehaviorNodeKind::SubTree, outValue );
     }
 
     bool BehaviorTreeNames::parse( string_view text, BehaviorAbortMode& outValue )
@@ -293,29 +293,29 @@ namespace sw
     string BehaviorTreeNames::joinNodeTypeNames()
     {
         string text;
-        for ( int32 value = 0; value <= static_cast<int32>( BehaviorNodeType::SubTree ); ++value )
+        for ( int32 value = 0; value <= static_cast<int32>( BehaviorNodeKind::SubTree ); ++value )
         {
             text += text.empty() ? "" : ", ";
-            text += getEnumName( static_cast<BehaviorNodeType>( value ) );
+            text += getEnumName( static_cast<BehaviorNodeKind>( value ) );
         }
         return text;
     }
 
-    bool BehaviorTreeNames::isLeaf( BehaviorNodeType type )
+    bool BehaviorTreeNames::isLeaf( BehaviorNodeKind type )
     {
         return BehaviorTreeAssetInternal::isLeaf( type );
     }
 
-    bool BehaviorTreeNames::isDecorator( BehaviorNodeType type )
+    bool BehaviorTreeNames::isDecorator( BehaviorNodeKind type )
     {
-        const bool bComposite = type == BehaviorNodeType::Selector || type == BehaviorNodeType::Sequence;
+        const bool bComposite = type == BehaviorNodeKind::Selector || type == BehaviorNodeKind::Sequence;
         return bComposite == false && BehaviorTreeAssetInternal::isLeaf( type ) == false;
     }
 } // namespace sw
 
 namespace sw
 {
-    void BehaviorTreeXML::resetNodeFields( BehaviorNodeType type, BehaviorTreeNodeData& inoutData )
+    void BehaviorTreeXML::resetNodeFields( BehaviorNodeKind type, BehaviorTreeNodeData& inoutData )
     {
         inoutData._type         = type;
         inoutData._fields       = ReflectedFields( BehaviorTreeAssetInternal::findFieldsOps( type ) );
@@ -323,13 +323,13 @@ namespace sw
         inoutData._listRawParam.clear();
     }
 
-    bool BehaviorTreeXML::readNodeFields( const XMLNode& node, BehaviorNodeType type, string_view sourceName, BehaviorTreeNodeData& inoutData )
+    bool BehaviorTreeXML::readNodeFields( const XMLNode& node, BehaviorNodeKind type, string_view sourceName, BehaviorTreeNodeData& inoutData )
     {
         using Internal = BehaviorTreeAssetInternal;
         resetNodeFields( type, inoutData );
         inoutData._inheritID = string( node.getAttributeText( "id" ) );
         inoutData._name      = string( node.getAttributeText( "name" ) );
-        if ( type != BehaviorNodeType::Action )
+        if ( type != BehaviorNodeKind::Action )
         {
             return XMLFields::readFields( node, inoutData._fields.getInstance(), *inoutData._fields.getType(), sourceName, { "id", "name" } );
         }

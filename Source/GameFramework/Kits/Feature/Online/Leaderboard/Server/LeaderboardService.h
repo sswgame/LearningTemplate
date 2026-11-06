@@ -122,10 +122,10 @@ namespace sw
         void shutdown();
 
         /** @brief 보드를 등록합니다. 기동할 때 게임 데이터로 부르며, 규칙에 맞지 않으면 false 를 반환합니다. 통계에 연결된 보드는 Sum 일 수 없습니다(통계의 누적값을 또 더한다). */
-        [[nodiscard]] bool           registerBoard( const LeaderboardDefinition& definition );
-        const LeaderboardDefinition* findBoard( string_view boardID ) const;
+        [[nodiscard]] bool    registerBoard( const LeaderboardDef& definition );
+        const LeaderboardDef* findBoard( string_view boardID ) const;
         /** @brief 현재 기간 id 를 반환합니다. 기간 시작 시각이며 None 이면 0입니다. */
-        uint64 computePeriodID( const LeaderboardDefinition& definition, UnixMilliseconds nowMs ) const;
+        uint64 computePeriodID( const LeaderboardDef& definition, UnixMilliseconds nowMs ) const;
 
         /** @brief 점수를 냅니다. 서버 게임 로직이 부르며, 클라이언트 제출은 바인딩이 `_bClientSubmit` 보드만 넘깁니다. 요청 태그가 0이면 완료가 없습니다. */
         void submitScore( string_view boardID, AccountID accountID, string_view displayName, int64 score, UnixMilliseconds nowMs, uint64 requestTag );
@@ -143,7 +143,7 @@ namespace sw
         /** @brief 시즌 정산 작업을 등록할 예약 테이블을 지정합니다. 빌려 쓰며 `registerBoard` 전에 지정합니다. 없으면 `settleSeason` 을 부르는 쪽이 정산합니다. */
         void setScheduler( ServiceScheduler* pScheduler ) { _pScheduler = pScheduler; }
         /** @brief 업적을 등록합니다. 기동할 때 게임 데이터로 부르며, 규칙에 맞지 않으면 false 를 반환합니다. */
-        [[nodiscard]] bool registerAchievement( const AchievementDefinition& definition );
+        [[nodiscard]] bool registerAchievement( const AchievementDef& definition );
         void               readAchievements( AccountID accountID, uint64 requestTag );
         /** @brief 등록한 업적마다 진행률(연결된 통계 값)과 달성 시각을 읽습니다. 숨긴 업적은 달성 전에 가립니다. id 순서입니다. */
         void readAchievementProgress( AccountID accountID, uint64 requestTag );
@@ -172,7 +172,7 @@ namespace sw
          * @details 기간이 끝난 뒤 하루까지 남기고 캐시가 지운다(만료). 지난 기간의 순위는 읽지 않고, 시즌 결과는 영속 저장소(`lb_season_result`)가 원본이기 때문이다.
          *          기간마다 정렬 집합이 쌓여 캐시를 채우지 않게 하는 것이다(Redis 순위표의 기간 키 + EXPIRE 관례).
          */
-        int64 computeRankRetentionMs( const LeaderboardDefinition& definition, uint64 periodID, UnixMilliseconds nowMs ) const;
+        int64 computeRankRetentionMs( const LeaderboardDef& definition, uint64 periodID, UnixMilliseconds nowMs ) const;
         /** @brief 캐시 점수를 구합니다. 오름차순 보드는 부호를 뒤집으며 두 번 부르면 원래 값이 됩니다. */
         static int64  toCacheScore( LeaderboardOrder order, int64 score ) { return order == LeaderboardOrder::Ascending ? -score : score; }
         static string makeRankKey( string_view boardID, uint64 periodID );
@@ -229,7 +229,7 @@ namespace sw
         struct SettlementProgress
         {
             vector<LeaderboardScoreRow> _listRanked{};
-            LeaderboardDefinition       _board{};
+            LeaderboardDef              _board{};
             LeaderboardSeason           _season{};
             string                      _jobID{}; ///< 예약 작업에서 왔으면 그 id, 직접 부른 정산이면 빈 글
             SettlementDelegate          _onDone{};
@@ -247,7 +247,7 @@ namespace sw
         void pushCompletion( uint64 requestTag, LeaderboardOperation operation, LeaderboardResult result );
         void submitCacheScore( const string& rankKey, AccountID accountID, int64 cacheScore );
         /** @brief 정산 하나를 시작합니다. 순위 읽기 일을 맡깁니다. */
-        void startSettlement( const LeaderboardDefinition& board, const LeaderboardSeason& season, string jobID, UnixMilliseconds nowMs, const SettlementDelegate& onDone );
+        void startSettlement( const LeaderboardDef& board, const LeaderboardSeason& season, string jobID, UnixMilliseconds nowMs, const SettlementDelegate& onDone );
         /** @brief 다음 페이지를 맡기거나, 남은 사람이 없으면 성공으로 마칩니다. */
         void submitNextSettlementPage( uint64 settlementID );
         /** @brief 정산을 마치고 예약 작업과 완료 델리게이트에 알립니다. */
@@ -255,14 +255,14 @@ namespace sw
         void applySettlement( const string& jobID, const SettlementDelegate& onDone, bool bSucceeded );
 
     private:
-        unordered_map<string, LeaderboardDefinition>       _mapBoard;
+        unordered_map<string, LeaderboardDef>              _mapBoard;
         unordered_map<string, vector<PendingRead>>         _mapRankKeyToWaitingRead; ///< 다시 채우는 동안 대기 중인 읽기이다
         unordered_map<string, vector<LeaderboardScoreRow>> _mapRankKeyToLateWrite;   ///< 다시 채우는 동안 쓴 점수(캐시 점수)이다. 채운 뒤 한 번 더 싣는다
         unordered_map<uint64, PendingRead>                 _mapReadyRequestToRead;
         unordered_map<uint64, uint64>                      _mapRequestToQuery; ///< 캐시 요청에서 질의(순위, 범위, 이름)로 가는 맵이다
         unordered_map<uint64, int32>                       _mapNameRequestToIndex;
         unordered_map<uint64, RankQuery>                   _mapQuery;
-        unordered_map<string, AchievementDefinition>       _mapAchievement;
+        unordered_map<string, AchievementDef>              _mapAchievement;
         unordered_map<AccountID, AccountStats>             _mapAccountStats;        ///< 이 서버에 접속한 계정의 통계이다
         unordered_map<string, ScheduledRun>                _mapJobToRun;            ///< 정산 작업 id 에서 차지한 회차로 가는 맵이다. 끝나면 completeRun 을 부른다
         unordered_map<uint64, SettlementProgress>          _mapSettlement;          ///< 진행 중인 정산(정산 번호 → 진행)

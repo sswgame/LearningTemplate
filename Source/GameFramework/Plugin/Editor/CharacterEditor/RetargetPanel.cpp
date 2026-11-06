@@ -321,9 +321,9 @@ namespace sw::editor
             if ( _preview.findFrameSphere( center, radius ) )
                 getPreviewViewport().frameSphere( center, radius );
         }
-        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Viewport", "BoneSource" ) ), "source" );
+        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Viewport", "BoneSource" ) ), "source" );
         ImGui::SameLine();
-        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Viewport", "BonePose" ) ),
+        ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Viewport", "BonePose" ) ),
                             "target (with retarget pose)" );
         ImGui::SameLine();
         ImGui::TextDisabled( "target reference" );
@@ -346,13 +346,13 @@ namespace sw::editor
         viewport.computeViewProjection( size._x / size._y, viewProjection, eye );
         EditorProjectedLineRenderer renderer{ ImGui::GetWindowDrawList(), viewProjection, position, size };
         if ( _preview.isSourceReady() )
-            Internal::drawBones( renderer, _preview.getSourceSkeleton(), _preview.getSourcePositions(), SW_THEMECOLOR( "Viewport", "BoneSource" ).toFloat4() );
+            Internal::drawBones( renderer, _preview.getSourceSkeleton(), _preview.getSourcePositions(), SW_THEME_COLOR( "Viewport", "BoneSource" ).toFloat4() );
         if ( _preview.isTargetReady() )
         {
             // 리타깃 포즈가 있을 때만 레퍼런스를 따로 긋는다 — 없으면 둘이 같아 선이 겹친다.
             if ( _profile.getTargetPose().empty() == false )
-                Internal::drawBones( renderer, _preview.getTargetSkeleton(), _preview.getTargetReferencePositions(), SW_THEMECOLOR( "Viewport", "BoneReference" ).toFloat4() );
-            Internal::drawBones( renderer, _preview.getTargetSkeleton(), _preview.getTargetPosePositions(), SW_THEMECOLOR( "Viewport", "BonePose" ).toFloat4() );
+                Internal::drawBones( renderer, _preview.getTargetSkeleton(), _preview.getTargetReferencePositions(), SW_THEME_COLOR( "Viewport", "BoneReference" ).toFloat4() );
+            Internal::drawBones( renderer, _preview.getTargetSkeleton(), _preview.getTargetPosePositions(), SW_THEME_COLOR( "Viewport", "BonePose" ).toFloat4() );
         }
         _published._previewSegmentCount = renderer.getDrawnSegmentCount();
     }
@@ -612,7 +612,7 @@ namespace sw::editor
     {
         if ( _inspectionError.empty() == false )
         {
-            EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Warning" ) );
+            EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Signal", "Warning" ) );
             if ( _inspection._listProblem.empty() )
                 ImGui::TextWrapped( "%s", _inspectionError.c_str() );
             for ( const string& problem : _inspection._listProblem )
@@ -629,7 +629,7 @@ namespace sw::editor
             ImGui::BulletText( "%s", SW_LOCKEYFORMAT( "EdPluginFormat", "SourceMTargetM", TextArgumentList().addText( "name", chain._name.c_str() ).addDecimal( "sourceLength", static_cast<float64>( chain._sourceLength ), 3 ).addDecimal( "targetLength", static_cast<float64>( chain._targetLength ), 3 ).addDecimal( "ratio", static_cast<float64>( ratio ), 2 ) ).c_str() );
         }
         EditorSelfTestMarks::note( "retarget.check" );
-        EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Warning" ) );
+        EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Signal", "Warning" ) );
         for ( const string& warning : _inspection._listWarning )
         {
             ImGui::TextWrapped( "%s", warning.c_str() );

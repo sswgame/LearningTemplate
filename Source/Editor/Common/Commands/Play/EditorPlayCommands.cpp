@@ -44,7 +44,7 @@ namespace sw::editor
                 const uint32   keptCount     = EditorPlayCommands::keepSelectedChanges();
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 if ( keptCount > 0 )
-                    editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyKeepSimulationTitle" ), SW_LOCKEY( "EdCommon", "NotifyKeepSimulation" ), NotificationType::Info );
+                    editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyKeepSimulationTitle" ), SW_LOCKEY( "EdCommon", "NotifyKeepSimulation" ), NotificationKind::Info );
             }
 
             static void runLaunchStandalone() { (void)EditorPlayCommands::launchStandalone(); } // 실패는 알림 · 로그가 알린다
@@ -136,12 +136,12 @@ namespace sw::editor
         const bool     bSceneNotSaved = pScene == nullptr || pScene->getSourcePath().empty();
         if ( bSceneNotSaved )
         {
-            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowSaveFirst" ), NotificationType::Warning );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowSaveFirst" ), NotificationKind::Warning );
             return false;
         }
         // 새 창은 디스크의 씬을 연다(언리얼 Standalone 처럼) — 저장하지 않은 편집은 들어가지 않는다고 알린다.
         if ( editorContext.getSubsystem<EditorWorkspace>().isSceneDirty() )
-            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowUnsaved" ), NotificationType::Warning );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayNewWindowUnsaved" ), NotificationKind::Warning );
         const ProcessCommand command =
             makeStandaloneCommand( FileUtil::getExecutablePath(), pScene->getSourcePath(), getPreferences<EditorPlayPreferences>()._standaloneArguments );
         if ( Process::launchDetached( command ) == false )

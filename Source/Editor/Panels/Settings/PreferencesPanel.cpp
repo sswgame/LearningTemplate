@@ -96,7 +96,7 @@ namespace sw::editor
         target._pType     = pSelected->_pfnGetType();
         target._onEdited  = SW_DELEGATE_METHOD( Delegate<void( const PropertyInfo& )>, &PreferencesPanel::onPropertyEdited, this );
         _grid.drawProperties( target, nullptr, _listHidden ); // 고른 섹션은 왼쪽 목록이 보인다 — 같은 이름을 머리글로 다시 쓰지 않는다
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetSection" ), "Reset Section" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "ResetSection" ), "Reset Section" ) ) )
             _model.resetSelectedSection();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "ResetSection" ) );
         ImGui::EndChild();

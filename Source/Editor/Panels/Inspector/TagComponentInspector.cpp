@@ -35,7 +35,7 @@ namespace sw::editor
                     if ( StringUtil::isNullOrEmpty( tag._pString ) == false )
                     {
                         ImGui::SameLine();
-                        EditorWidgets::drawChip( tag._pString, SW_THEMECOLOR( "Signal", "Success" ) );
+                        EditorWidgets::drawChip( tag._pString, SW_THEME_COLOR( "Signal", "Success" ) );
                     }
                 }
             }

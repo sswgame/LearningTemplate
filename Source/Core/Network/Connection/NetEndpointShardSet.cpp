@@ -191,7 +191,7 @@ namespace sw
         return pShard != nullptr && pShard->isConnectionSaturated( localConnectionID );
     }
 
-    void NetEndpointShardSet::addSentKindTally( NetMessageKindTallyTable& outTable ) const
+    void NetEndpointShardSet::addSentKindTally( NetMessageKindStatsTable& outTable ) const
     {
         for ( const NetEndpoint* pShard : _listShard )
         {

@@ -62,7 +62,7 @@ namespace sw
         }
         if ( context._method == LeaderboardMethod::kSubmitScore )
         {
-            const LeaderboardDefinition* pBoard = _pService->findBoard( request._boardID );
+            const LeaderboardDef* pBoard = _pService->findBoard( request._boardID );
             if ( pBoard == nullptr || pBoard->_bClientSubmit == false )
             {
                 LeaderboardReply reply;

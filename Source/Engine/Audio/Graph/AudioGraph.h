@@ -41,7 +41,7 @@ namespace sw
 namespace sw
 {
     /** @brief 노드 종류 하나입니다(종류 표의 한 줄). */
-    struct AudioGraphNodeTypeInfo
+    struct AudioGraphNodeKindInfo
     {
         const utf8*                    _pName{ nullptr };
         const AudioGraphParameterInfo* _pParameter{ nullptr };
@@ -53,16 +53,16 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 노드 종류 표입니다. 종류(`AudioGraphNodeType`)마다 한 줄이고, 값 이름 · 범위 · 기본값을 담습니다. */
+    /** @brief 노드 종류 표입니다. 종류(`AudioGraphNodeKind`)마다 한 줄이고, 값 이름 · 범위 · 기본값을 담습니다. */
     struct SW_API AudioGraphRegistry
     {
         /** @brief 노드 하나가 가질 수 있는 값의 최대 수입니다. */
         static constexpr uint32 kMaxParameterCount = 8;
 
         /** @brief 종류의 서술입니다. */
-        static const AudioGraphNodeTypeInfo& getNodeType( AudioGraphNodeType type );
+        static const AudioGraphNodeKindInfo& getNodeType( AudioGraphNodeKind type );
         /** @brief 종류의 값 이름의 번호입니다. 없으면 -1 입니다. */
-        static int32 findParameterIndex( const AudioGraphNodeTypeInfo& typeInfo, const hashed_string& name );
+        static int32 findParameterIndex( const AudioGraphNodeKindInfo& typeInfo, const hashed_string& name );
     };
 } // namespace sw
 
@@ -82,7 +82,7 @@ namespace sw
             vector<uint32>     _listInput{};                                            ///< 입력 노드의 번호(처리 순서)다.
             vector<float32>    _listSourceSample{};                                     ///< 그래뉼러 소스의 모노 샘플이다(다른 종류는 비어 있다).
             float64            _sourceRate{ 1.0 };                                      ///< 그래뉼러 소스의 샘플레이트 / 출력 샘플레이트다.
-            AudioGraphNodeType _type{ AudioGraphNodeType::Sine };
+            AudioGraphNodeKind _type{ AudioGraphNodeKind::Sine };
         };
 
         /** @brief 게임 파라미터가 움직이는 노드 값 하나입니다. */

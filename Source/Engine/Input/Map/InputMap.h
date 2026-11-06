@@ -113,7 +113,7 @@ namespace sw
     class SW_API InputMap
     {
     public:
-        using LayerDefinition          = sw::LayerDefinition;
+        using LayerDef                 = sw::LayerDef;
         using ActionCallbackDelegate   = Delegate<void()>;
         using PhaseCallbackDelegate    = Delegate<void( ActionPhase )>;
         using Vector2DCallbackDelegate = Delegate<void( float2 )>;
@@ -555,7 +555,7 @@ namespace sw
         /** @brief `<remove>` 하나를 읽습니다 — 앞 파일의 액션을 지웁니다. */
         void readRemove( const XMLNode& node, string_view absPath, bool& inoutbValid );
         /** @brief 레이어 하나를 `<layer>` 원소로 씁니다. */
-        void writeLayerDefinition( const XMLNode& layersNode, const hashed_string& layerName ) const;
+        void writeLayerDef( const XMLNode& layersNode, const hashed_string& layerName ) const;
         /** @brief `saveSourceToAsset` · `writeSourceText` 의 본문입니다. */
         [[nodiscard]] bool fillSourceDocument( uint32 sourceIndex, XMLDocument& outDoc ) const;
 
@@ -615,11 +615,11 @@ namespace sw
          * @param bTriggerJustPressed true 면 방아쇠 키가 이번 프레임에 눌렸는지(`wasChordTriggered`), false 면 눌려 있는지(`isChordDown`)를 봅니다.
          * @details 두 질의(`wasChordTriggered`, `isChordDown`)는 방아쇠 키를 묻는 한 줄만 다르다.
          */
-        bool             hasActiveChord( const hashed_string& action, bool bTriggerJustPressed ) const;
-        bool             isLayerActiveInternal( const hashed_string& layer ) const;
-        void             ensureActionListed( const hashed_string& action );
-        LayerDefinition& ensureLayer( const hashed_string& name, int32 priority = 0, bool enabled = true, bool blockLower = false, bool alwaysOn = false );
-        ActionEntry&     getOrCreateAction( const hashed_string& action, InputActionValueType valueType = InputActionValueType::Boolean );
+        bool         hasActiveChord( const hashed_string& action, bool bTriggerJustPressed ) const;
+        bool         isLayerActiveInternal( const hashed_string& layer ) const;
+        void         ensureActionListed( const hashed_string& action );
+        LayerDef&    ensureLayer( const hashed_string& name, int32 priority = 0, bool enabled = true, bool blockLower = false, bool alwaysOn = false );
+        ActionEntry& getOrCreateAction( const hashed_string& action, InputActionValueType valueType = InputActionValueType::Boolean );
         /**
          * @brief 바인딩 하나를 만들 때 공통으로 거치는 앞부분입니다. 레이어를 보장하고 액션을 목록에 올린 뒤, 레이어 인덱스를 캐시한 빈 바인딩을 반환합니다.
          * @details 모든 `bind*` 가 이 함수와 `commitBinding` 을 거친다. 세 목록(현재, 기본값, 상태) 중 하나만 빠져도 바인딩과 상태의 인덱스가 어긋나기 때문이다.
@@ -627,11 +627,11 @@ namespace sw
          */
         ActionBinding beginBinding( const hashed_string& action, BindingKind kind, ActionTrigger trigger, const hashed_string& layer );
         /** @brief 바인딩을 액션의 세 목록(현재, 기본값, 상태)에 함께 넣습니다. 그래서 세 목록의 인덱스가 항상 같습니다. */
-        void                   commitBinding( const hashed_string& action, InputActionValueType valueType, const ActionBinding& binding );
-        LayerDefinition*       findLayer( const hashed_string& name );
-        const LayerDefinition* findLayer( const hashed_string& name ) const;
-        ActionEntry*           findAction( const hashed_string& action );
-        const ActionEntry*     findAction( const hashed_string& action ) const;
+        void               commitBinding( const hashed_string& action, InputActionValueType valueType, const ActionBinding& binding );
+        LayerDef*          findLayer( const hashed_string& name );
+        const LayerDef*    findLayer( const hashed_string& name ) const;
+        ActionEntry*       findAction( const hashed_string& action );
+        const ActionEntry* findAction( const hashed_string& action ) const;
 
     private:
         /**
@@ -659,7 +659,7 @@ namespace sw
         unordered_map<hashed_string, uint32> _mapAction;       /**< 액션 이름에서 `_listActionEntry` 인덱스를 찾는 맵입니다. */
         unordered_map<hashed_string, uint32> _mapLayer;        /**< 레이어 이름에서 `_listLayerEntry` 인덱스를 찾는 맵입니다. */
         vector<ActionEntry>                  _listActionEntry; /**< 액션 슬롯을 소유하는 저장소입니다. 안정된 인덱스로만 접근하며 포인터를 보관하지 않으므로 재할당되어도 안전합니다. */
-        vector<LayerDefinition>              _listLayerEntry;  /**< 레이어를 소유하는 저장소입니다. 안정된 인덱스로만 접근하고, `ActionBinding::_cachedLayerIndex` 가 이 인덱스를 참조합니다. */
+        vector<LayerDef>                     _listLayerEntry;  /**< 레이어를 소유하는 저장소입니다. 안정된 인덱스로만 접근하고, `ActionBinding::_cachedLayerIndex` 가 이 인덱스를 참조합니다. */
         vector<hashed_string>                _listActionName;
         vector<hashed_string>                _listLayerName;
         vector<hashed_string>                _listLayerStack;

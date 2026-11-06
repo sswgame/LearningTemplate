@@ -155,7 +155,7 @@ namespace sw
         pGhost->_fleeDirection = GhostEncounterInternal::flatten( toGhost );
         if ( pGhost->_fleeDirection.getLengthSquared() < 0.5f )
             chooseFleeDirection( *pGhost );
-        pushEvent( GhostEventType::SuctionStarted, ghostID );
+        pushEvent( GhostEventKind::SuctionStarted, ghostID );
         return true;
     }
 
@@ -167,7 +167,7 @@ namespace sw
         if ( pGhost == nullptr || pGhost->_state != GhostState::Sucking )
             return;
         enterState( *pGhost, GhostState::Hidden );
-        pushEvent( GhostEventType::Escaped, pGhost->_id, pGhost->_hp );
+        pushEvent( GhostEventKind::Escaped, pGhost->_id, pGhost->_hp );
     }
 
     GhostSuctionTick GhostEncounter::updateSuction( const float3& pullDirection, float32 deltaTime )
@@ -212,7 +212,7 @@ namespace sw
             return false;
         _surgeGauge          = 0.0f;
         const float32 damage = _pCatalog->getVacuum()._surgeDamage;
-        pushEvent( GhostEventType::Surge, pGhost->_id, damage );
+        pushEvent( GhostEventKind::Surge, pGhost->_id, damage );
         applySuctionDamage( *pGhost, damage );
         return true;
     }
@@ -256,7 +256,7 @@ namespace sw
                 }
                 case GhostState::Attacking:
                 {
-                    pushEvent( GhostEventType::AttackLanded, ghost._id, ghost._pDef->_attackDamage );
+                    pushEvent( GhostEventKind::AttackLanded, ghost._id, ghost._pDef->_attackDamage );
                     enterState( ghost, GhostState::Hidden );
                     break;
                 }
@@ -315,7 +315,7 @@ namespace sw
             case GhostState::Visible:
             {
                 ghost._timer.start( def._appearTime );
-                pushEvent( GhostEventType::Appeared, ghost._id );
+                pushEvent( GhostEventKind::Appeared, ghost._id );
                 break;
             }
             case GhostState::Attacking:
@@ -326,7 +326,7 @@ namespace sw
             case GhostState::Stunned:
             {
                 ghost._timer.start( def._stunTime );
-                pushEvent( GhostEventType::Stunned, ghost._id );
+                pushEvent( GhostEventKind::Stunned, ghost._id );
                 break;
             }
             case GhostState::Sucking:
@@ -359,10 +359,10 @@ namespace sw
         enterState( ghost, GhostState::Caught );
         _suctionTarget = 0;
         _surgeGauge    = 0.0f;
-        pushEvent( GhostEventType::Caught, ghost._id, 0.0f, ghost._pDef->_coins );
+        pushEvent( GhostEventKind::Caught, ghost._id, 0.0f, ghost._pDef->_coins );
     }
 
-    void GhostEncounter::pushEvent( GhostEventType type, uint32 ghostID, float32 amount, int32 coins )
+    void GhostEncounter::pushEvent( GhostEventKind type, uint32 ghostID, float32 amount, int32 coins )
     {
         GhostEvent event;
         event._type    = type;

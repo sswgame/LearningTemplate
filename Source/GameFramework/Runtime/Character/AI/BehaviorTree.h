@@ -34,7 +34,7 @@ namespace sw
 
     /** @brief 노드 종류입니다. 이름이 데이터 파일의 노드 원소 이름이다(`BehaviorTreeXML`). */
     ENUM()
-    enum class BehaviorNodeType : uint8
+    enum class BehaviorNodeKind : uint8
     {
         Selector = 0,        ///< 자식을 차례로 돌린다. 하나가 성공하면 성공
         Sequence,            ///< 자식을 차례로 돌린다. 하나가 실패하면 실패
@@ -119,7 +119,7 @@ namespace sw
         int32                _firstChild{ -1 };
         int32                _nextSibling{ -1 };
         int32                _count{ 0 };
-        BehaviorNodeType     _type{ BehaviorNodeType::Sequence };
+        BehaviorNodeKind     _type{ BehaviorNodeKind::Sequence };
         BehaviorAbortMode    _abortMode{ BehaviorAbortMode::None };
         uint8                _bReactive{ SW_FALSE }; ///< 셀렉터가 매 틱 앞 자식부터 다시 본다
     };
@@ -183,7 +183,7 @@ namespace sw
         static bool evaluateCondition( const BehaviorNode& node, const GameplayContext& context );
 
     private:
-        int32 addNode( int32 parent, BehaviorNodeType type, const utf8* pName );
+        int32 addNode( int32 parent, BehaviorNodeKind type, const utf8* pName );
 
     private:
         vector<BehaviorNode> _listNode;

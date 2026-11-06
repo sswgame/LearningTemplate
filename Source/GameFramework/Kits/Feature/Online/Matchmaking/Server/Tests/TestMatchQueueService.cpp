@@ -31,9 +31,9 @@ namespace
     /** @brief 1 대 1 모드입니다. @p teamSize 를 키우면 파티 모드입니다. */
     struct MatchQueueTestUtil
     {
-        static MatchModeDefinition makeMode( string_view modeID = "duel", int32 teamSize = 1, string_view ratingStat = "" )
+        static MatchModeDef makeMode( string_view modeID = "duel", int32 teamSize = 1, string_view ratingStat = "" )
         {
-            MatchModeDefinition mode;
+            MatchModeDef mode;
             mode._modeID     = string( modeID );
             mode._teamCount  = 2;
             mode._teamSize   = teamSize;
@@ -105,7 +105,7 @@ namespace
             return dependencies;
         }
 
-        void start( const vector<MatchModeDefinition>& listMode ) { SW_EXPECT_TRUE( _queue.initialize( makeDependencies(), listMode ) ); }
+        void start( const vector<MatchModeDef>& listMode ) { SW_EXPECT_TRUE( _queue.initialize( makeDependencies(), listMode ) ); }
 
         /** @brief 임대 · 서버 목록 · 매처를 한 번 돌리고, 캐시 답과 버스 메시지를 끝까지 나눠 줍니다. */
         void tick( int64 nowMs )
@@ -205,7 +205,7 @@ namespace
         }
 
         /** @brief 게임 서버를 올리고 목록을 읽어 들입니다. */
-        void startWithGameServer( const vector<MatchModeDefinition>& listMode )
+        void startWithGameServer( const vector<MatchModeDef>& listMode )
         {
             _server.start( listMode );
             _game.start( _server._router, kNowMs );
@@ -245,7 +245,7 @@ namespace
         }
 
         /** @brief A 가 먼저 임대를 잡게 하고 게임 서버를 올립니다. */
-        void start( const vector<MatchModeDefinition>& listMode )
+        void start( const vector<MatchModeDef>& listMode )
         {
             _serverA.start( listMode );
             _serverB.start( listMode );
@@ -264,9 +264,9 @@ SW_TEST_CASE( MatchQueueServiceTest, InitializeChecksModes )
     SW_EXPECT_LOG( "MatchQueueService.MatchQueueModeRatedStat" );
     SW_EXPECT_LOG( "MatchQueueService.MatchQueueModeIdBreaks" );
     SoloWorld world;
-    SW_EXPECT_FALSE( world._server._queue.initialize( world._server.makeDependencies(), vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode( "rated", 1, "rating" ) } ) );
+    SW_EXPECT_FALSE( world._server._queue.initialize( world._server.makeDependencies(), vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "rated", 1, "rating" ) } ) );
 
-    SW_REQUIRE_TRUE( world._server._queue.initialize( world._server.makeDependencies(), vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode( "Bad Mode" ), MatchQueueTestUtil::makeMode( "duel" ) } ) );
+    SW_REQUIRE_TRUE( world._server._queue.initialize( world._server.makeDependencies(), vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "Bad Mode" ), MatchQueueTestUtil::makeMode( "duel" ) } ) );
     SW_EXPECT_FALSE( world._server._queue.hasMode( "Bad Mode" ) );
     SW_EXPECT_TRUE( world._server._queue.hasMode( "duel" ) );
     SW_EXPECT_TRUE( world._server._queue.isAuthority( "duel" ) ); // 버스가 없으면 항상 권한이다
@@ -276,7 +276,7 @@ SW_TEST_CASE( MatchQueueServiceTest, InitializeChecksModes )
 SW_TEST_CASE( MatchQueueServiceTest, JoinAndLeave )
 {
     SoloWorld world;
-    world._server.start( vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode() } );
+    world._server.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     MatchQueueService& queue = world._server._queue;
 
     SW_EXPECT_TRUE( world._server.join( kAlice, kNowMs, "nope" )._result == MatchmakingResult::UnknownMode );
@@ -312,7 +312,7 @@ SW_TEST_CASE( MatchQueueServiceTest, JoinAndLeave )
 SW_TEST_CASE( MatchQueueServiceTest, FormedMatchIsPlacedOnAServer )
 {
     SoloWorld world;
-    world.startWithGameServer( vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode() } );
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
 
@@ -340,7 +340,7 @@ SW_TEST_CASE( MatchQueueServiceTest, UnplacedMatchWaitsThenGivesUp )
 {
     SW_EXPECT_LOG( "MatchQueueService.MatchQueueNoServerMatch" );
     SoloWorld world;
-    world._server.start( vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode() } );
+    world._server.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     SW_EXPECT_TRUE( world._server.join( kBob )._result == MatchmakingResult::Ok );
     world._server.tick( kNowMs );
@@ -361,7 +361,7 @@ SW_TEST_CASE( MatchQueueServiceTest, UnplacedMatchWaitsThenGivesUp )
 SW_TEST_CASE( MatchQueueServiceTest, TicketTimesOutAtModeDeadline )
 {
     SoloWorld world;
-    world.startWithGameServer( vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode() } );
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     SW_EXPECT_TRUE( world._server.join( kAlice )._result == MatchmakingResult::Ok );
     world._server.tick( kNowMs + kMaxWait + 1 );
     const vector<MatchQueueNotification> listTimedOut = world._server.takeNotifications();
@@ -378,10 +378,10 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingComesFromStatSource )
     FakeStatSource         stats;
     MatchQueueDependencies dependencies = world._server.makeDependencies();
     dependencies._pStatSource           = &stats;
-    MatchModeDefinition mode            = MatchQueueTestUtil::makeMode( "duel", 1, "rating" );
+    MatchModeDef mode                   = MatchQueueTestUtil::makeMode( "duel", 1, "rating" );
     mode._ratingWindowPerSecond         = 0;
     mode._baseRatingWindow              = 100;
-    SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDefinition>{ mode } ) );
+    SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDef>{ mode } ) );
     world._game.start( world._server._router, kNowMs );
     world._server.pump( kNowMs );
     world._server.tick( kNowMs );
@@ -409,7 +409,7 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingComesFromStatSource )
 SW_TEST_CASE( MatchQueueServiceTest, AuthorityRunsMatchesAcrossServers )
 {
     PairWorld world;
-    world.start( vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode() } );
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     LocalServerBus gameBus( &world._hub, kGameID );
     gameBus.subscribe( MatchQueueService::makeAssignTopic( kGameID ) );
 
@@ -439,7 +439,7 @@ SW_TEST_CASE( MatchQueueServiceTest, AuthorityRunsMatchesAcrossServers )
 SW_TEST_CASE( MatchQueueServiceTest, CancelReachesAuthorityOverBus )
 {
     PairWorld world;
-    world.start( vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode() } );
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
     world._serverA.pump( kNowMs );
     SW_EXPECT_EQUAL( 1, world._serverA._queue.getQueuedTicketCount( "duel" ) );
@@ -454,7 +454,7 @@ SW_TEST_CASE( MatchQueueServiceTest, CancelReachesAuthorityOverBus )
 SW_TEST_CASE( MatchQueueServiceTest, AuthorityFailsOverAndLostTicketsTimeOut )
 {
     PairWorld world;
-    world.start( vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode() } );
+    world.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
     SW_EXPECT_TRUE( world._serverB.join( kBob )._result == MatchmakingResult::Ok );
     world._serverA.pump( kNowMs );
     SW_EXPECT_EQUAL( 1, world._serverA._queue.getQueuedTicketCount( "duel" ) );
@@ -484,7 +484,7 @@ SW_TEST_CASE( MatchQueueServiceTest, BackfillFillsRunningMatchFirst )
     SW_EXPECT_LOG( "MatchQueueService.MatchQueueBackfillUnknownMode" );
     SW_EXPECT_LOG( "MatchQueueService.MatchQueueBackfillMatchDoes" );
     SoloWorld world;
-    world.startWithGameServer( vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode() } );
+    world.startWithGameServer( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
 
     MatchBackfillRequest request;
     request._matchID       = 77;
@@ -520,7 +520,7 @@ SW_TEST_CASE( MatchQueueServiceTest, BackfillFillsRunningMatchFirst )
 SW_TEST_CASE( MatchQueueServiceTest, LobbyPlacementKeepsTeams )
 {
     SoloWorld world;
-    world._server.start( vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode() } );
+    world._server.start( vector<MatchModeDef>{ MatchQueueTestUtil::makeMode() } );
 
     LobbySnapshot lobby;
     lobby._lobbyID = 9;
@@ -568,7 +568,7 @@ namespace
             SW_EXPECT_TRUE( _party.initialize( &_world._server._router, kServerA ) );
             MatchQueueDependencies dependencies = _world._server.makeDependencies();
             dependencies._pPartyLobby           = &_party;
-            SW_EXPECT_TRUE( _world._server._queue.initialize( dependencies, vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode( "duel", teamSize ) } ) );
+            SW_EXPECT_TRUE( _world._server._queue.initialize( dependencies, vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "duel", teamSize ) } ) );
         }
 
         ~PartyQueueWorld() { _party.shutdown(); }
@@ -674,7 +674,7 @@ SW_TEST_CASE( MatchQueueServiceTest, MissingRatingIsLoadedBeforeQueueing )
     FakeStatSource         stats;
     MatchQueueDependencies dependencies = world._server.makeDependencies();
     dependencies._pStatSource           = &stats;
-    SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode( "duel", 1, "rating" ) } ) );
+    SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "duel", 1, "rating" ) } ) );
     MatchQueueService& queue = world._server._queue;
 
     queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );
@@ -705,7 +705,7 @@ SW_TEST_CASE( MatchQueueServiceTest, RatingWaitGivesUpOrIsDropped )
     FakeStatSource         stats;
     MatchQueueDependencies dependencies = world._server.makeDependencies();
     dependencies._pStatSource           = &stats;
-    SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDefinition>{ MatchQueueTestUtil::makeMode( "duel", 1, "rating" ) } ) );
+    SW_REQUIRE_TRUE( world._server._queue.initialize( dependencies, vector<MatchModeDef>{ MatchQueueTestUtil::makeMode( "duel", 1, "rating" ) } ) );
     MatchQueueService& queue = world._server._queue;
 
     queue.joinQueue( kAlice, "duel", "kr", UnixMilliseconds{ kNowMs }, 7 );

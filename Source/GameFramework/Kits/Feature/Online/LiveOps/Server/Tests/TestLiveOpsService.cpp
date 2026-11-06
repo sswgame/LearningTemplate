@@ -52,7 +52,7 @@ namespace
             pump();
         }
 
-        LiveOpsResult put( const LiveEventDefinition& definition, int64 nowMs = kStartMs )
+        LiveOpsResult put( const LiveEventDef& definition, int64 nowMs = kStartMs )
         {
             _service.putEvent( definition, kGM, "memo", UnixMilliseconds{ nowMs }, 5 );
             pump();
@@ -105,9 +105,9 @@ namespace
 
     struct LiveOpsTestUtil
     {
-        static LiveEventDefinition makeEvent( string_view eventID = "spring.sale" )
+        static LiveEventDef makeEvent( string_view eventID = "spring.sale" )
         {
-            LiveEventDefinition definition;
+            LiveEventDef definition;
             definition._eventID = string( eventID );
             definition._kind    = "shop_sale";
             definition._startMs = kStartMs;
@@ -135,9 +135,9 @@ SW_TEST_CASE( LiveOpsServiceTest, PutReloadRemove )
     SW_EXPECT_TRUE( rig._service.isEventActive( "spring.sale", kPlayer, "kr", 0, UnixMilliseconds{ kStartMs } ) );
     SW_EXPECT_FALSE( rig._service.isEventActive( "none", kPlayer, "kr", 0, UnixMilliseconds{ kStartMs } ) );
 
-    const uint64        hashBefore = rig._database.computeContentHash();
-    LiveEventDefinition bad        = LiveOpsTestUtil::makeEvent();
-    bad._endMs                     = bad._startMs;
+    const uint64 hashBefore = rig._database.computeContentHash();
+    LiveEventDef bad        = LiveOpsTestUtil::makeEvent();
+    bad._endMs              = bad._startMs;
     SW_EXPECT_TRUE( rig.put( bad ) == LiveOpsResult::Invalid );
     SW_EXPECT_EQUAL( hashBefore, rig._database.computeContentHash() );
 
@@ -193,8 +193,8 @@ SW_TEST_CASE( LiveOpsServiceTest, StateChangeFiresOnOpenAndClose )
 /** @brief [LiveOpsServiceTest] 시작 푸시: 창이 열리면 한 번 나가고 지역을 싣는다. 푸시를 달지 않은 이벤트는 없고, 열린 지 오래된 창을 처음 보면(서버 재시작) 내지 않는다 */
 SW_TEST_CASE( LiveOpsServiceTest, StartPushOncePerWindow )
 {
-    LiveOpsRig          rig;
-    LiveEventDefinition withPush = LiveOpsTestUtil::makeEvent( "with.push" );
+    LiveOpsRig   rig;
+    LiveEventDef withPush = LiveOpsTestUtil::makeEvent( "with.push" );
     withPush._listParameter.push_back( LiveOpsTestUtil::makeParameter( LiveOpsPush::kTitleParameter, "push.title.key" ) );
     withPush._listRegion.push_back( "kr" );
     SW_EXPECT_TRUE( rig.put( withPush ) == LiveOpsResult::Ok );
@@ -221,11 +221,11 @@ SW_TEST_CASE( LiveOpsServiceTest, StartPushOncePerWindow )
 /** @brief [LiveOpsServiceTest] 대상: 지역이 다르면 보이지 않고, 클라이언트에게 숨긴 이벤트는 서버 쪽 조회에서만 보인다 */
 SW_TEST_CASE( LiveOpsServiceTest, AudienceFilters )
 {
-    LiveOpsRig          rig;
-    LiveEventDefinition regional = LiveOpsTestUtil::makeEvent( "regional" );
+    LiveOpsRig   rig;
+    LiveEventDef regional = LiveOpsTestUtil::makeEvent( "regional" );
     regional._listRegion.push_back( "kr" );
-    LiveEventDefinition hidden = LiveOpsTestUtil::makeEvent( "hidden" );
-    hidden._bClientVisible     = SW_FALSE;
+    LiveEventDef hidden    = LiveOpsTestUtil::makeEvent( "hidden" );
+    hidden._bClientVisible = SW_FALSE;
     SW_EXPECT_TRUE( rig.put( regional ) == LiveOpsResult::Ok );
     SW_EXPECT_TRUE( rig.put( hidden ) == LiveOpsResult::Ok );
     rig.tick( kStartMs );
@@ -241,7 +241,7 @@ SW_TEST_CASE( LiveOpsServiceTest, ParametersResolveRemoteConfig )
     SW_EXPECT_LOG( "LiveOpsService.LiveOpsRemoteConfigKey" );
     LiveOpsRig rig;
     rig.setConfigText( "sale.percent", "30" );
-    LiveEventDefinition definition = LiveOpsTestUtil::makeEvent();
+    LiveEventDef definition = LiveOpsTestUtil::makeEvent();
     definition._listParameter.push_back( LiveOpsTestUtil::makeParameter( "percent", "@sale.percent" ) );
     definition._listParameter.push_back( LiveOpsTestUtil::makeParameter( "missing", "@no.such.key" ) );
     definition._listParameter.push_back( LiveOpsTestUtil::makeParameter( "plain", "literal" ) );

@@ -152,7 +152,7 @@ namespace sw::editor
     {
         const AudioGraphDef&          graph    = _model.getGraph();
         const AudioGraphNodeDesc&     node     = graph._listNode[nodeIndex];
-        const AudioGraphNodeTypeInfo& typeInfo = AudioGraphRegistry::getNodeType( node._type );
+        const AudioGraphNodeKindInfo& typeInfo = AudioGraphRegistry::getNodeType( node._type );
         const int32                   nodeID   = AudioGraphEditUtil::makeNodeID( nodeIndex );
         _nodeGraph.beginNode( nodeID );
         ImGui::TextUnformatted( node._name.c_str() );
@@ -311,15 +311,15 @@ namespace sw::editor
 
         // 빈 곳 오른쪽 클릭: 노드 종류 검색. 고른 노드는 그 자리에 놓는다.
         vector<EditorGraphNodeKind> listKind;
-        for ( uint32 typeIndex = 0; typeIndex <= static_cast<uint32>( AudioGraphNodeType::Gain ); ++typeIndex )
+        for ( uint32 typeIndex = 0; typeIndex <= static_cast<uint32>( AudioGraphNodeKind::Gain ); ++typeIndex )
         {
-            const AudioGraphNodeTypeInfo& typeInfo = AudioGraphRegistry::getNodeType( static_cast<AudioGraphNodeType>( typeIndex ) );
+            const AudioGraphNodeKindInfo& typeInfo = AudioGraphRegistry::getNodeType( static_cast<AudioGraphNodeKind>( typeIndex ) );
             listKind.push_back( EditorGraphNodeKind{ typeInfo._pName, typeInfo._bSource ? "Sources" : "Processors", typeIndex } );
         }
         uint32 kindID{ 0 };
         float2 canvasPosition{};
         if ( _nodeGraph.drawAddNodePopup( listKind, kindID, canvasPosition ) )
-            (void)_model.addNode( static_cast<AudioGraphNodeType>( kindID ), canvasPosition ); // 노드 수 한도면 넣지 않는다
+            (void)_model.addNode( static_cast<AudioGraphNodeKind>( kindID ), canvasPosition ); // 노드 수 한도면 넣지 않는다
 
         handleEditCommands();
         applyCanvasDeletions();

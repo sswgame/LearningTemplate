@@ -16,9 +16,9 @@ SW_TEST_CASE( AudioGraphEditUtilTest, DuplicateKeepsInnerInputsOnly )
     uint32        sineIndex       = 0;
     uint32        secondSineIndex = 0;
     uint32        gainIndex       = 0;
-    SW_REQUIRE_TRUE( AudioGraphEditUtil::addNode( def, AudioGraphNodeType::Sine, float2{ 0.0f, 0.0f }, sineIndex ) );
-    SW_REQUIRE_TRUE( AudioGraphEditUtil::addNode( def, AudioGraphNodeType::Sine, float2{ 0.0f, 100.0f }, secondSineIndex ) );
-    SW_REQUIRE_TRUE( AudioGraphEditUtil::addNode( def, AudioGraphNodeType::Gain, float2{ 200.0f, 0.0f }, gainIndex ) );
+    SW_REQUIRE_TRUE( AudioGraphEditUtil::addNode( def, AudioGraphNodeKind::Sine, float2{ 0.0f, 0.0f }, sineIndex ) );
+    SW_REQUIRE_TRUE( AudioGraphEditUtil::addNode( def, AudioGraphNodeKind::Sine, float2{ 0.0f, 100.0f }, secondSineIndex ) );
+    SW_REQUIRE_TRUE( AudioGraphEditUtil::addNode( def, AudioGraphNodeKind::Gain, float2{ 200.0f, 0.0f }, gainIndex ) );
     SW_REQUIRE_TRUE( AudioGraphEditUtil::connect( def, sineIndex, gainIndex ) );
     SW_REQUIRE_TRUE( AudioGraphEditUtil::connect( def, secondSineIndex, gainIndex ) );
     const hashed_string sineName = def._listNode[sineIndex]._name;

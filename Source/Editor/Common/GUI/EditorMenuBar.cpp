@@ -117,7 +117,7 @@ namespace sw::editor
             }
 
             ImGui::Separator();
-            if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Layout" ), SW_LOCKEY( "EdButton", "ResetDefaultLayout" ), "Reset Default Layout" ) ) )
+            if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Layout" ), SW_LOCKEY( "EdButton", "ResetDefaultLayout" ), "Reset Default Layout" ) ) )
                 dockLayout.requestResetDefault();
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "ResetLayout" ) );
             drawNamedLayoutMenu( dockLayout );
@@ -132,7 +132,7 @@ namespace sw::editor
             return;
 
         fixed_string<constant::buffer::kMax64>& layoutName = EditorMenuBarInternal::getState()._layoutName;
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldWideEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldWideEm" ) );
         const bool bEnter = ImGui::InputTextWithHint( "##LayoutName", SW_LOCKEY( "EdCommon", "LayoutNameHint" ), layoutName.data(), layoutName.capacity(), ImGuiInputTextFlags_EnterReturnsTrue );
         ImGui::SameLine();
         if ( ( ImGui::Button( SW_LOCKEY( "EdVerb", "Save" ) ) || bEnter ) && dockLayout.saveNamedLayout( layoutName.c_str() ) )
@@ -148,7 +148,7 @@ namespace sw::editor
             ImGui::PushID( name.c_str() );
             if ( ImGui::MenuItem( name.c_str() ) )
                 (void)dockLayout.requestLoadNamedLayout( name ); // 파일이 사라졌으면 경고만 남긴다
-            ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "MenuTrailingIconEm" ) );
+            ImGui::SameLine( ImGui::GetContentRegionAvail().x + ImGui::GetCursorPosX() - ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "MenuTrailingIconEm" ) );
             if ( ImGui::SmallButton( "x" ) && EditorLayoutStore::remove( EditorLayoutStore::getDefaultFolder(), name ) == false )
                 SW_LOG_WARNING_ID( "Editor.CouldNotDeleteLayout", "Could not delete layout '%#'", name.c_str() );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "DeleteLayout" ) );
@@ -197,12 +197,12 @@ namespace sw::editor
                 fixed_string<constant::buffer::kMax32> secondsBuf;
                 formatstring( secondsBuf.data(), secondsBuf.capacity(), "%#", Fmt( static_cast<float64>( duration ), Format().precision( 2 ) ) );
                 const string content = SW_LOCKEYFORMAT( "EdCommon", "LiveCodingSucceeded", TextArgumentList().addText( "target", displayName ).addText( "seconds", secondsBuf.c_str() ) );
-                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingSucceededTitle" ), content, NotificationType::Success, 4.0f );
+                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingSucceededTitle" ), content, NotificationKind::Success, 4.0f );
             }
             else if ( state == BuildState::Failed )
             {
                 const string content = SW_LOCKEYFORMAT( "EdCommon", "LiveCodingFailed", TextArgumentList().addText( "target", displayName ).addInteger( "code", compiler.getLastExitCode() ) );
-                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingFailedTitle" ), content, NotificationType::Error, 6.0f );
+                editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "LiveCodingFailedTitle" ), content, NotificationKind::Error, 6.0f );
             }
         }
 
@@ -220,17 +220,17 @@ namespace sw::editor
             {
                 // 컴파일 중은 진짜 상태라 신호색을 쓴다(토큰). 호버는 누르면 취소라 오류색이다.
                 const float32 elapsed = pCompiler->getElapsedTimeSec();
-                ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ) );
-                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ) );
+                ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Warning" ) ) );
+                ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ) );
                 fixed_string<constant::buffer::kMax64> label;
-                formatstring( label.data(), label.capacity(), "%# Compiling (%#s)", SW_EDITORICON( "Spinner" ), Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
+                formatstring( label.data(), label.capacity(), "%# Compiling (%#s)", SW_EDITOR_ICON( "Spinner" ), Fmt( static_cast<float64>( elapsed ), Format().precision( 1 ) ) );
                 if ( ImGui::SmallButton( label.c_str() ) )
                     pCompiler->cancel();
                 ImGui::PopStyleColor( 2 );
             }
             else
             {
-                if ( ImGui::SmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Hammer" ), SW_LOCKEY( "EdButton", "Compile" ), "Compile" ) ) )
+                if ( ImGui::SmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Hammer" ), SW_LOCKEY( "EdButton", "Compile" ), "Compile" ) ) )
                     pCompiler->compileModule( "SWGame" );
 
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CompileGame" ) );
@@ -239,24 +239,24 @@ namespace sw::editor
             ImGui::SameLine();
             if ( state == BuildState::Compiling )
             {
-                EditorThemeUtil::textWarning( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Spinner" ), SW_LOCKEY( "EdButton", "Compiling" ) ) );
+                EditorThemeUtil::textWarning( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Spinner" ), SW_LOCKEY( "EdButton", "Compiling" ) ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildCompiling" ) );
             }
             else if ( state == BuildState::Success )
             {
-                EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Success" ) );
-                ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "BuiltS", TextArgumentList().addText( "sW_EDITORICON", SW_EDITORICON( "Success" ) ).addDecimal( "lastDurationSec", static_cast<float64>( pCompiler->getLastDurationSec() ), 1 ) ).c_str() );
+                EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Signal", "Success" ) );
+                ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "BuiltS", TextArgumentList().addText( "sW_EDITORICON", SW_EDITOR_ICON( "Success" ) ).addDecimal( "lastDurationSec", static_cast<float64>( pCompiler->getLastDurationSec() ), 1 ) ).c_str() );
                 EditorThemeUtil::popTextColor();
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildSucceeded" ) );
             }
             else if ( state == BuildState::Failed )
             {
-                EditorThemeUtil::textError( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Error" ), SW_LOCKEY( "EdButton", "BuildFailed" ) ) );
+                EditorThemeUtil::textError( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Error" ), SW_LOCKEY( "EdButton", "BuildFailed" ) ) );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildFailed" ) );
             }
             else
             {
-                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Ready", TextArgumentList().addText( "sW_EDITORICON", SW_EDITORICON( "Check" ) ) ).c_str() );
+                ImGui::TextDisabled( "%s", SW_LOCKEYFORMAT( "EdFormat", "Ready", TextArgumentList().addText( "sW_EDITORICON", SW_EDITOR_ICON( "Check" ) ) ).c_str() );
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "BuildReady" ) );
             }
 

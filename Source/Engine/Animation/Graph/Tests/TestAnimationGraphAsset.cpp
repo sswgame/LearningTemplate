@@ -58,7 +58,7 @@ SW_TEST_CASE( AnimationGraphAssetTest, ReadsElementsThroughSchemas )
     SW_EXPECT_TRUE( graph._listNode[1]._position == sw::float2( 40.0f, 40.0f ) ); // 적지 않은 자리는 스키마 기본값
     SW_EXPECT_TRUE( graph._listNode[1]._blendSpace._notifyMode == sw::AnimationBlendSpaceNotifyMode::HighestWeight );
     SW_EXPECT_EQUAL( uint32{ 2 }, graph._listNode[1]._blendSpace._space.getSampleCount() );
-    SW_EXPECT_TRUE( graph._listNode[2]._poseNode._type == sw::AnimationPoseNodeType::BlendPoses );
+    SW_EXPECT_TRUE( graph._listNode[2]._poseNode._type == sw::AnimationPoseNodeKind::BlendPoses );
     SW_REQUIRE_EQUAL( size_t{ 2 }, graph._listLink.size() );
     SW_EXPECT_TRUE( graph._listLink[0]._op == sw::AnimationConditionOp::GreaterEqual );
     SW_EXPECT_EQUAL( -1.0f, graph._listLink[1]._blendSeconds );

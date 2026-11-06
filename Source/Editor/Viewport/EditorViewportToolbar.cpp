@@ -176,7 +176,7 @@ namespace sw::editor
         nextItem( bVertical );
         {
             const bool b2D = settings._bIs2DMode;
-            if ( EditorWidgets::drawToggleIconButton( "##viewDimension", b2D, SW_EDITORICON( "Sprite" ), SW_EDITORICON( "Cube" ),
+            if ( EditorWidgets::drawToggleIconButton( "##viewDimension", b2D, SW_EDITOR_ICON( "Sprite" ), SW_EDITOR_ICON( "Cube" ),
                                                       SW_LOCKEY( "EdCommon", "View2D" ),
                                                       SW_LOCKEY( "EdCommon", "View3D" ) ) )
                 settings._bIs2DMode = ( settings._bIs2DMode == false );
@@ -192,16 +192,16 @@ namespace sw::editor
     void EditorViewportToolbar::drawDisplayBar( ViewportToolbarSettings& settings, bool bVertical )
     {
         // 씬 뷰 HUD — 게임 HUD 와 같은 섹션(언리얼 뷰포트 stat 에 해당). 켜고 끄기는 뷰마다, 섹션은 오른쪽 클릭 팝업(게임 HUD 와 같은 설정).
-        if ( EditorWidgets::drawIconToggle( "##hud", SW_EDITORICON( "Chart" ), settings._bShowHUD,
+        if ( EditorWidgets::drawIconToggle( "##hud", SW_EDITOR_ICON( "Chart" ), settings._bShowHUD,
                                             SW_LOCKEY( "EdCommon", "ViewportHUD" ) ) )
             settings._bShowHUD = ( settings._bShowHUD == false );
         EditorSelfTestMarks::note( "viewport.hud" );
         EditorDebugHUDControls::drawSectionPopupOnRightClick( "##sceneHUDSections" );
         nextItem( bVertical );
-        if ( EditorWidgets::drawIconToggle( "##grid", SW_EDITORICON( "Grid" ), settings._bShowGrid, SW_LOCKEY( "EdCommon", "ViewportGrid" ) ) )
+        if ( EditorWidgets::drawIconToggle( "##grid", SW_EDITOR_ICON( "Grid" ), settings._bShowGrid, SW_LOCKEY( "EdCommon", "ViewportGrid" ) ) )
             settings._bShowGrid = ( settings._bShowGrid == false );
         nextItem( bVertical );
-        if ( EditorWidgets::drawIconToggle( "##cube", SW_EDITORICON( "Axes" ), settings._bShowOrientationCube,
+        if ( EditorWidgets::drawIconToggle( "##cube", SW_EDITOR_ICON( "Axes" ), settings._bShowOrientationCube,
                                             SW_LOCKEY( "EdCommon", "ViewportOrientationCube" ) ) )
             settings._bShowOrientationCube = ( settings._bShowOrientationCube == false );
 
@@ -230,7 +230,7 @@ namespace sw::editor
         }
 
         nextItem( bVertical );
-        if ( EditorWidgets::drawIconToggle( "##surfaceSnap", SW_EDITORICON( "Magnet" ), settings._bSurfaceSnap,
+        if ( EditorWidgets::drawIconToggle( "##surfaceSnap", SW_EDITOR_ICON( "Magnet" ), settings._bSurfaceSnap,
                                             SW_LOCKEY( "EdCommon", "SurfaceSnap" ) ) )
             settings._bSurfaceSnap = ( settings._bSurfaceSnap == false );
     }
@@ -238,7 +238,7 @@ namespace sw::editor
     void EditorViewportToolbar::drawToolsBar( ViewportToolbarSettings& settings, bool bVertical )
     {
         const float32 side = ImGui::GetFrameHeight();
-        if ( ImGui::Button( SW_EDITORICON( "Bookmark" ), ImVec2{ side, side } ) )
+        if ( ImGui::Button( SW_EDITOR_ICON( "Bookmark" ), ImVec2{ side, side } ) )
             EditorInputGUI::openPopup( "##ViewportBookmarksPopup" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "CameraBookmarks" ) );
 
@@ -276,7 +276,7 @@ namespace sw::editor
         const bool bCanAlign = editor::getMainSceneSelection().getSelectedObjectCount() >= 2;
         nextItem( bVertical );
         ImGui::BeginDisabled( bCanAlign == false );
-        if ( ImGui::Button( SW_EDITORICON( "Align" ), ImVec2{ side, side } ) )
+        if ( ImGui::Button( SW_EDITOR_ICON( "Align" ), ImVec2{ side, side } ) )
             EditorInputGUI::openPopup( "##ViewportAlignPopup" );
         ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "AlignSelected" ) );
@@ -298,14 +298,14 @@ namespace sw::editor
         nextItem( bVertical );
         const float32 arrSnapValue[] = { 0.1f, 0.5f, 1.0f, 5.0f, 10.0f };
         const utf8*   arrSnapLabel[] = { "0.1", "0.5", "1.0", "5.0", "10.0" };
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "##gridSnap", SW_EDITORICON( "Grid" ), "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5, 2, bVertical,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "##gridSnap", SW_EDITOR_ICON( "Grid" ), "##GridSnapVal", settings._bGridSnap, settings._gridSnapValue, arrSnapValue, arrSnapLabel, 5, 2, bVertical,
                                                             SW_LOCKEY( "EdCommon", "GridSnap" ),
                                                             SW_LOCKEY( "EdCommon", "GridSnapSize" ), "viewport.gridSnap" );
 
         nextItem( bVertical );
         const float32 arrRotValue[] = { 5.0f, 15.0f, 45.0f, 90.0f };
         const utf8*   arrRotLabel[] = { "5\xc2\xb0", "15\xc2\xb0", "45\xc2\xb0", "90\xc2\xb0" }; // 5° …(UTF-8 도 기호)
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "##rotationSnap", SW_EDITORICON( "Rotate" ), "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "##rotationSnap", SW_EDITOR_ICON( "Rotate" ), "##RotSnapVal", settings._bRotationSnap, settings._rotationSnapValue, arrRotValue, arrRotLabel,
                                                             4, 1, bVertical,
                                                             SW_LOCKEY( "EdCommon", "RotationSnap" ),
                                                             SW_LOCKEY( "EdCommon", "RotationSnapSize" ), "viewport.rotationSnap" );
@@ -314,7 +314,7 @@ namespace sw::editor
         nextItem( bVertical );
         const float32 arrScaleValue[] = { 0.1f, 0.25f, 0.5f, 1.0f };
         const utf8*   arrScaleLabel[] = { "0.1", "0.25", "0.5", "1.0" };
-        EditorViewportToolbarInternal::drawSnapToggleCombo( "##scaleSnap", SW_EDITORICON( "Scale" ), "##ScaleSnapVal", settings._bScaleSnap, settings._scaleSnapValue, arrScaleValue,
+        EditorViewportToolbarInternal::drawSnapToggleCombo( "##scaleSnap", SW_EDITOR_ICON( "Scale" ), "##ScaleSnapVal", settings._bScaleSnap, settings._scaleSnapValue, arrScaleValue,
                                                             arrScaleLabel, 4, 0, bVertical,
                                                             SW_LOCKEY( "EdCommon", "ScaleSnap" ),
                                                             SW_LOCKEY( "EdCommon", "ScaleSnapSize" ), "viewport.scaleSnap" );

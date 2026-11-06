@@ -15,14 +15,14 @@ namespace sw::editor
 
         DialogueAssetNode startNode{};
         startNode._id          = 1;
-        startNode._type        = DialogueAssetNodeType::Start;
+        startNode._type        = DialogueAssetNodeKind::Start;
         startNode._position._x = 50.0f;
         startNode._position._y = 100.0f;
         outGraph._listNode.push_back( startNode );
 
         DialogueAssetNode dialogueNode{};
         dialogueNode._id          = 2;
-        dialogueNode._type        = DialogueAssetNodeType::Dialogue;
+        dialogueNode._type        = DialogueAssetNodeKind::Dialogue;
         dialogueNode._speaker     = "Elder";
         dialogueNode._text        = "Greetings adventurer! The ancient ruins ahead are full of peril.";
         dialogueNode._position._x = 250.0f;
@@ -31,7 +31,7 @@ namespace sw::editor
 
         DialogueAssetNode choiceNode{};
         choiceNode._id          = 3;
-        choiceNode._type        = DialogueAssetNodeType::Choice;
+        choiceNode._type        = DialogueAssetNodeKind::Choice;
         choiceNode._text        = "How do you respond?";
         choiceNode._listChoice  = { "I am ready for any challenge!", "Could you give me some supplies first?" };
         choiceNode._position._x = 650.0f;
@@ -40,7 +40,7 @@ namespace sw::editor
 
         DialogueAssetNode actionNode{};
         actionNode._id            = 4;
-        actionNode._type          = DialogueAssetNodeType::Action;
+        actionNode._type          = DialogueAssetNodeKind::Action;
         actionNode._actionCommand = "event(give_healing_potion)";
         actionNode._position._x   = 1050.0f;
         actionNode._position._y   = 220.0f;
@@ -48,7 +48,7 @@ namespace sw::editor
 
         DialogueAssetNode endNode{};
         endNode._id          = 5;
-        endNode._type        = DialogueAssetNodeType::End;
+        endNode._type        = DialogueAssetNodeKind::End;
         endNode._position._x = 1350.0f;
         endNode._position._y = 120.0f;
         outGraph._listNode.push_back( endNode );
@@ -64,7 +64,7 @@ namespace sw::editor
         outGraph._listLink.push_back( DialogueAssetLink{ 5, pinOut( 4 ), pinIn( 5 ) } );
     }
 
-    void DialogueGraphEdit::addNode( DialogueGraphAsset& inoutGraph, DialogueAssetNodeType type, int32 nodeID )
+    void DialogueGraphEdit::addNode( DialogueGraphAsset& inoutGraph, DialogueAssetNodeKind type, int32 nodeID )
     {
         DialogueAssetNode node = DialogueCursor::makeNode( type, nodeID );
         node._position._x      = 200.0f + static_cast<float32>( ( node._id % 5 ) * 80 );

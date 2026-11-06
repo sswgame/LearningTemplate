@@ -1884,7 +1884,7 @@ namespace sw
         out += '/';
 
         unordered_set<string> uniqueSetWrittenKey; // 중복 판정만 한다 — 출력 순서는 정렬된 `listFile` 가 정한다
-        CookTally             tally;
+        CookStats             tally;
         const CookJobDesc     desc = makeCookJobDesc();
         for ( const string& filePath : listFile )
         {

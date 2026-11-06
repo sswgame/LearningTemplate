@@ -82,7 +82,7 @@ namespace sw::editor
                 EditorContext* pContext = editor::findSubsystem<EditorContext>();
                 if ( listArgument.size() != 1 || pContext == nullptr )
                     return false;
-                pContext->getSubsystem<EditorNotificationManager>().pushRevealable( "Reveal", listArgument[0], NotificationType::Success, listArgument[0] );
+                pContext->getSubsystem<EditorNotificationManager>().pushRevealable( "Reveal", listArgument[0], NotificationKind::Success, listArgument[0] );
                 outReply = "toast with Show in Explorer pushed";
                 return true;
             }

@@ -81,7 +81,7 @@ namespace sw
         _pScheduler = pScheduler;
         _settings   = settings;
         _listRule   = std::move( listRule );
-        ScheduleDefinition schedule;
+        ScheduleDef schedule;
         schedule._jobID       = kJobID;
         schedule._kind        = ScheduleKind::Daily;
         schedule._minuteOfDay = settings._minuteOfDay;

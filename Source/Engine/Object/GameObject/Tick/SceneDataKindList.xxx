@@ -17,4 +17,4 @@ SW_SCENE_DATA_KIND( AnimatorState )    // 애니메이터의 재생 상태(재�
 SW_SCENE_DATA_KIND( ControlIntent )    // 폰의 이번 틱 의도 · 조종 회전 · 빙의 관계
 SW_SCENE_DATA_KIND( Navigation )       // 내비게이션 에이전트의 목적지 · 이동 상태 · 속도
 SW_SCENE_DATA_KIND( InteractionIndex ) // 상호작용 대상의 공간 격자(`InteractionSpatialIndex`)
-SW_SCENE_DATA_KIND( HitRecord )        // 서버 근접 스윕 기록 장부(`MeleeHitLedger`)
+SW_SCENE_DATA_KIND( HitRecord )        // 서버 근접 스윕 기록 장부(`MeleeSweepHistory`)

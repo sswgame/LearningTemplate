@@ -250,7 +250,7 @@ namespace sw
         def                            = AnimationGraphPoseNodeDef{};
         def._type                      = fields._type;
         def._weightParameter           = fields._weight;
-        if ( def._type == AnimationPoseNodeType::None )
+        if ( def._type == AnimationPoseNodeKind::None )
         {
             SW_LOG_ERROR_ID( "AnimationGraphAsset.AnimationGraphNodeUnknown", "Animation graph node '%#' has a pose_node of type None", inoutNode._name.c_str() );
             return false;

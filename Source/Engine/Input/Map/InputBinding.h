@@ -211,7 +211,7 @@ namespace sw
     } // namespace InputMapDefaults
 
     /// @brief XML 레이어 정의입니다(우선순위, enabled, blockLower, alwaysOn).
-    struct LayerDefinition
+    struct LayerDef
     {
         hashed_string          _name;
         int32                  _priority;
@@ -221,7 +221,7 @@ namespace sw
         uint8                  _bAlwaysOn   : 1; /**< 스택이나 enableOnlyLayer 에 영향받지 않고 항상 활성입니다. */
         [[maybe_unused]] uint8 _reserved    : 5;
 
-        LayerDefinition()
+        LayerDef()
             : _name{}
             , _priority{ 0 }
             , _sourceIndex{ 0 }

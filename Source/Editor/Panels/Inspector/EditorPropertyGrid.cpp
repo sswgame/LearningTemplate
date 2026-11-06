@@ -482,7 +482,7 @@ namespace sw::editor
         const bool    bFavorite   = bFavoriteTarget && _pFavorites->contains( favoriteKey );
         if ( bFavorite )
         {
-            ImGui::TextUnformatted( SW_EDITORICON( "Star" ) );
+            ImGui::TextUnformatted( SW_EDITOR_ICON( "Star" ) );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "FavoriteProperty" ) );
             ImGui::SameLine();
         }

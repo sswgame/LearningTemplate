@@ -271,7 +271,7 @@ namespace sw::editor
             const bool bDown     = inputMap.isActionDown( actionName );
             ImGui::PushID( actionName.c_str() );
             if ( bConflict )
-                EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Error" ) );
+                EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Signal", "Error" ) );
             if ( ImGui::Selectable( actionName.c_str(), _document.getSelectedAction() == actionName.view() ) )
                 _document.selectAction( actionName.view() );
             if ( bConflict )
@@ -355,12 +355,12 @@ namespace sw::editor
         const InputMap& inputMap    = _document.getInputMap();
         const bool      bRebindable = inputMap.findRebindSlot( action, bindIndex, slot );
         ImGui::Text( "%u  %s", bindIndex, _document.describeBinding( action, bindIndex ).c_str() );
-        ImGui::SameLine( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "InputMapLayerColumnEm" ) );
+        ImGui::SameLine( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapLayerColumnEm" ) );
         drawBindingLayerCombo( action, bindIndex );
         const bool bTriggerFields = InputMapDocument::savesTriggerFields( binding._kind ); // 파일에 남지 않는 칸은 보이지 않는다
         if ( bTriggerFields )
         {
-            ImGui::SameLine( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "InputMapActionColumnEm" ) );
+            ImGui::SameLine( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapActionColumnEm" ) );
             drawTriggerCombo( action, bindIndex );
         }
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdText", "Rebind" ) ) );
@@ -385,7 +385,7 @@ namespace sw::editor
         const InputMap&     inputMap = _document.getInputMap();
         const hashed_string current  = inputMap.findBindingLayer( action, bindIndex );
         // 레이어 열과 다음 열 사이를 채운다. 다음 열 앞에 한 칸을 띄운다.
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * ( SW_THEMEMETRIC( "Layout", "InputMapActionColumnEm" ) - SW_THEMEMETRIC( "Layout", "InputMapLayerColumnEm" ) - 0.5f ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * ( SW_THEME_METRIC( "Layout", "InputMapActionColumnEm" ) - SW_THEME_METRIC( "Layout", "InputMapLayerColumnEm" ) - 0.5f ) );
         const bool bOpen = ImGui::BeginCombo( "##layer", current.c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "BindingLayerTip" ) );
         if ( bOpen == false )
@@ -436,7 +436,7 @@ namespace sw::editor
         const bool    bWrapToSecondLine = bUsesTime || bUsesTaps || bNegateFits == false;
         if ( bWrapToSecondLine )
         {
-            ImGui::SetCursorPosX( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "InputMapActionColumnEm" ) );
+            ImGui::SetCursorPosX( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapActionColumnEm" ) );
             bLineStart = true;
         }
         if ( bUsesTime )
@@ -445,7 +445,7 @@ namespace sw::editor
             if ( bLineStart == false )
                 ImGui::SameLine();
             bLineStart = false;
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldNumberEm" ) );
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldNumberEm" ) );
             if ( ImGui::DragFloat( "##time", &editTime, 0.01f, 0.01f, 10.0f, "%.2f s" ) )
                 (void)_document.setBindingTriggerTime( action, bindIndex, editTime );
         }
@@ -456,7 +456,7 @@ namespace sw::editor
             if ( bLineStart == false )
                 ImGui::SameLine();
             bLineStart = false;
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldTinyEm" ) );
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldTinyEm" ) );
             if ( ImGui::DragInt( "##taps", &editTaps, 0.1f, 2, 9, "%d taps" ) )
                 (void)_document.setBindingTapCount( action, bindIndex, static_cast<uint8>( MathUtil::clamp( editTaps, 2, 9 ) ) );
         }
@@ -709,7 +709,7 @@ namespace sw::editor
                     if ( pName != nullptr )
                     {
                         ImGui::SameLine();
-                        EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Warning" ) );
+                        EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Signal", "Warning" ) );
                         ImGui::Text( "[%s]", pName );
                         EditorThemeUtil::popTextColor();
                         bAnyKey = true;
@@ -983,7 +983,7 @@ namespace sw::editor
         const InputReplay& replay = _document.getReplay();
         if ( replay.isRecording() )
         {
-            EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Signal", "Error" ) );
+            EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Signal", "Error" ) );
             ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "RECORDINGLIVEINPUTSFrames", TextArgumentList().addInteger( "frameCount", static_cast<int64>( replay.getFrameCount() ) ) ).c_str() );
             EditorThemeUtil::popTextColor();
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( "■ Stop Recording" ) );

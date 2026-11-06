@@ -1,5 +1,5 @@
 /**
- * @file MeleeHitLedger.h
+ * @file MeleeSweepHistory.h
  * @brief 서버가 자기 근접 스윕을 프레임별로 적어 두고, 클라이언트가 예측으로 본 맞음의 주장을 그 기록으로 확인하는 장부입니다(`MeleeHitUnify` M3).
  * @details 클라이언트의 근접 판정은 같은 스윕으로 맞음을 예측해 타격감만 낸다(`MeleeHitAuthority::Predicted`). 서버는 자기 시점의 스윕으로 정하는데,
  *          클라이언트가 지연된 월드를 보고 휘둘렀다면 서버의 칼날이 닿는 순간 표적은 이미 비켜서 있을 수 있다. 그래서 클라이언트가 "내가 휘두른 입력 틱에 이 표적이
@@ -32,7 +32,7 @@ namespace sw
     /** @brief 클라이언트가 예측으로 본 맞음 하나의 주장입니다. 때린 쪽은 연결의 폰이라 싣지 않고, 표적은 게임이 정한 번호로 보냅니다. */
     struct SW_API MeleeHitClaim
     {
-        uint32 _frame{ 0 };    ///< 이 휘두름 입력을 서버가 처리한 서버 프레임(`MeleeHitLedger::getFrame` 와 같은 번호)
+        uint32 _frame{ 0 };    ///< 이 휘두름 입력을 서버가 처리한 서버 프레임(`MeleeSweepHistory::getFrame` 와 같은 번호)
         uint64 _targetID{ 0 }; ///< 게임이 정한 표적 번호(네트워크 엔티티 번호 등). 서버가 오브젝트로 옮긴다
 
         void write( BitWriter& writer ) const;
@@ -52,14 +52,14 @@ namespace sw
     };
 
     /**
-     * @class MeleeHitLedger
+     * @class MeleeSweepHistory
      * @brief 씬 하나의 서버 근접 스윕 기록입니다. 서버가 `ensureFor` 로 켜고 `release` 로 끕니다. 파일 머리말 참고.
      */
-    class SW_API MeleeHitLedger final : public ISceneFrameSystem
+    class SW_API MeleeSweepHistory final : public ISceneFrameSystem
     {
     public:
         /** @brief 매니저의 프레임 시스템 키입니다. */
-        static constexpr const utf8* kFrameSystemKey = "MeleeHitLedger";
+        static constexpr const utf8* kFrameSystemKey = "MeleeSweepHistory";
         /** @brief 기록을 보관하는 프레임 수입니다. 지연 보상이 되감는 범위(`ReplicationServerConfig::_maxViewLagTicks` 의 한도 256)보다 짧게 잡지 않는다. */
         static constexpr uint32 kKeepFrameCount = 256;
         /** @brief 주장의 프레임과 기록의 프레임이 이만큼까지 어긋나도 같은 휘두름으로 본다(입력 틱 → 서버 프레임 옮김의 반올림). */
@@ -67,12 +67,12 @@ namespace sw
         /** @brief 칼날 두께에 더해 주는 여유(미터)입니다. 표적 자리가 지연 보상 표본의 보간이라 생기는 오차다. */
         static constexpr float32 kClaimToleranceMeters = 0.1f;
 
-        MeleeHitLedger();
+        MeleeSweepHistory();
 
         /** @brief 매니저에 붙은 장부입니다. 없으면 nullptr 입니다. */
-        static MeleeHitLedger* find( const GameObjectManager& manager );
+        static MeleeSweepHistory* find( const GameObjectManager& manager );
         /** @brief 장부를 켭니다(이미 있으면 그것). 서버가 씬을 시작할 때 부릅니다. */
-        static MeleeHitLedger& ensureFor( GameObjectManager& manager );
+        static MeleeSweepHistory& ensureFor( GameObjectManager& manager );
         /** @brief 장부를 끕니다. 없으면 아무 일도 없습니다. */
         static void release( GameObjectManager& manager );
 

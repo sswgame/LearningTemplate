@@ -122,12 +122,12 @@ namespace sw::editor
                 const int32         colorDepth   = imguiContext.ColorStack.Size;
 
                 EditorThemeUtil::pushAccentButton();
-                (void)context.expect( isSameRGB( ImGui::GetStyleColorVec4( ImGuiCol_Button ), SW_THEMECOLOR( "Base", "Accent" ) ), "pushAccentButton does not use the accent colour" );
+                (void)context.expect( isSameRGB( ImGui::GetStyleColorVec4( ImGuiCol_Button ), SW_THEME_COLOR( "Base", "Accent" ) ), "pushAccentButton does not use the accent colour" );
                 EditorThemeUtil::popAccentButton();
                 (void)context.expect( imguiContext.ColorStack.Size == colorDepth, "pushAccentButton/popAccentButton do not balance" );
 
                 EditorThemeUtil::pushAccentHeader();
-                (void)context.expect( isSameRGB( ImGui::GetStyleColorVec4( ImGuiCol_Header ), SW_THEMECOLOR( "Base", "Accent" ) ), "pushAccentHeader does not use the accent colour" );
+                (void)context.expect( isSameRGB( ImGui::GetStyleColorVec4( ImGuiCol_Header ), SW_THEME_COLOR( "Base", "Accent" ) ), "pushAccentHeader does not use the accent colour" );
                 EditorThemeUtil::popAccentHeader();
                 (void)context.expect( imguiContext.ColorStack.Size == colorDepth, "pushAccentHeader/popAccentHeader do not balance" );
 
@@ -189,8 +189,8 @@ namespace sw::editor
             static EditorSelfTestStep runIconFontHasGlyphs( EditorSelfTestContext& context )
             {
                 ImFont* pFont = ImGui::GetFont();
-                (void)context.expect( hasGlyph( pFont, decodeFirstCodepoint( SW_EDITORICON( "Save" ) ) ), "editor icon font glyph kSave is missing" );
-                (void)context.expect( hasGlyph( pFont, decodeFirstCodepoint( SW_EDITORICON( "Missing" ) ) ), "editor icon font glyph kMissing is missing" );
+                (void)context.expect( hasGlyph( pFont, decodeFirstCodepoint( SW_EDITOR_ICON( "Save" ) ) ), "editor icon font glyph kSave is missing" );
+                (void)context.expect( hasGlyph( pFont, decodeFirstCodepoint( SW_EDITOR_ICON( "Missing" ) ) ), "editor icon font glyph kMissing is missing" );
                 return EditorSelfTestStep::Done;
             }
 
@@ -209,7 +209,7 @@ namespace sw::editor
 
             static EditorSelfTestStep runPropertyRowPlacesTheValueColumn( EditorSelfTestContext& context )
             {
-                const float32 labelWidth = SW_THEMEMETRIC( "Layout", "PropertyLabelWidth" ) * EditorThemeUtil::getDPIScale(); // 라벨 열은 테마 토큰이다
+                const float32 labelWidth = SW_THEME_METRIC( "Layout", "PropertyLabelWidth" ) * EditorThemeUtil::getDPIScale(); // 라벨 열은 테마 토큰이다
                 beginProbeWindow();
                 EditorWidgets::drawPropertyRowLabel( SW_LOCKEY( "EdField", "Label" ) );
                 (void)context.expect( isNear( ImGui::GetCursorPosX(), labelWidth, 0.5f ), "the value column does not start at the label width" );
@@ -893,7 +893,7 @@ namespace sw::editor
                 {
                     // ScaleAllSizes 가 자르므로(ImTrunc) 비례식이 아니라 같은 규칙으로 잰다 - 배율이 1.04 인 화면(Xvfb)에서 6 은 그대로 6 이고 1.54 에서 9 다.
                     ImGuiStyle scaledStyle{};
-                    scaledStyle.FramePadding.x = SW_THEMEMETRIC( "Spacing", "FramePaddingX" ) * SW_THEMEMETRIC( "Layout", "Density" );
+                    scaledStyle.FramePadding.x = SW_THEME_METRIC( "Spacing", "FramePaddingX" ) * SW_THEME_METRIC( "Layout", "Density" );
                     scaledStyle.ScaleAllSizes( probe._fakeScale );
                     const float32 expectedPadding = scaledStyle.FramePadding.x;
                     (void)context.expect( isNear( ImGui::GetMainViewport()->DpiScale, probe._fakeScale, 0.001f ), "the main viewport did not take the window DPI" );

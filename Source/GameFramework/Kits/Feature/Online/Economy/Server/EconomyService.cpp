@@ -321,7 +321,7 @@ namespace sw
         _pMetricRegistry = settings._pMetricRegistry;
         if ( settings._pScheduler != nullptr )
         {
-            ScheduleDefinition schedule;
+            ScheduleDef schedule;
             schedule._jobID       = kAuditJobID;
             schedule._kind        = ScheduleKind::Daily;
             schedule._minuteOfDay = settings._auditMinuteOfDay;

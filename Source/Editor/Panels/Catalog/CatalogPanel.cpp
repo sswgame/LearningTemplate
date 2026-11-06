@@ -324,7 +324,7 @@ namespace sw::editor
         if ( _bRawMode || document.isParsed() == false )
         {
             if ( document.isParsed() == false )
-                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdFormat", "TheFileIsNot", TextArgumentList().addText( "error", document.getError().c_str() ) ).c_str() );
+                ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdFormat", "TheFileIsNot", TextArgumentList().addText( "error", document.getError().c_str() ) ).c_str() );
             string raw = document.getText();
             // 줄 수를 부호 있게 센다 — 남은 높이가 한 줄도 안 되면 부호 없는 뺄셈이 넘쳐 글 상자가 터무니없는 높이가 되었다.
             const int32 lineCount = MathUtil::max( static_cast<int32>( ImGui::GetContentRegionAvail().y / ImGui::GetTextLineHeightWithSpacing() ) - 1, 4 );
@@ -352,11 +352,11 @@ namespace sw::editor
         const CatalogFileSession::ValidationState state = _session.getValidationState();
         if ( state == CatalogFileSession::ValidationState::Passed )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "Validation passed" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Success" ) ), "Validation passed" );
         }
         else if ( state == CatalogFileSession::ValidationState::Failed )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdFormat", "ValidationFailedWarnings", TextArgumentList().addInteger( "warningCount", static_cast<int64>( _session.getWarnings().size() ) ) ).c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", SW_LOCKEYFORMAT( "EdFormat", "ValidationFailedWarnings", TextArgumentList().addInteger( "warningCount", static_cast<int64>( _session.getWarnings().size() ) ) ).c_str() );
             // 이번 저장 전 글이 없으면(방금 연 파일) 되쓸 것이 없다 — 같은 글을 되쓰는 단추를 보이지 않는다.
             if ( _session.canRestorePrevious() )
             {

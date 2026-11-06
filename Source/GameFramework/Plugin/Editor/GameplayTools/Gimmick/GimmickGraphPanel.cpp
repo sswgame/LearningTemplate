@@ -66,13 +66,13 @@ namespace sw::editor
                 switch ( category )
                 {
                     case GimmickNodeCategory::Sensor:
-                        return EditorColorUtil::toImVec4( SW_THEMECOLOR( "Graph", "Sensor" ) );
+                        return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Graph", "Sensor" ) );
                     case GimmickNodeCategory::Operator:
-                        return EditorColorUtil::toImVec4( SW_THEMECOLOR( "Graph", "Operator" ) );
+                        return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Graph", "Operator" ) );
                     case GimmickNodeCategory::Actuator:
-                        return EditorColorUtil::toImVec4( SW_THEMECOLOR( "Graph", "Actuator" ) );
+                        return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Graph", "Actuator" ) );
                 }
-                return EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Text" ) );
+                return EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Text" ) );
             }
 
             static const utf8* getCategoryName( GimmickNodeCategory category )
@@ -325,7 +325,7 @@ namespace sw::editor
             const int32 inPort  = pToKind->findInput( hashed_string( wire._toPort ) );
             if ( outPort < 0 || inPort < 0 )
                 continue;
-            const ImVec4 color = wire._bInvert ? EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ) : ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f };
+            const ImVec4 color = wire._bInvert ? EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ) : ImVec4{ 1.0f, 1.0f, 1.0f, 1.0f };
             ed::Link( toLinkID( wire._graphID ), toPinID( GimmickGraphPanelInternal::makeOutputPin( wire._fromNode, outPort ) ),
                       toPinID( GimmickGraphPanelInternal::makeInputPin( wire._toNode, inPort ) ), color, wire._bInvert ? 3.0f : 1.0f );
         }
@@ -363,12 +363,12 @@ namespace sw::editor
     {
         const GimmickNodeKind* pKind = _model.findKind( node );
         _nodeGraph.beginNode( node._graphID );
-        ImGui::TextColored( pKind != nullptr ? GimmickGraphPanelInternal::getCategoryColor( pKind->_category ) : EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", node._id.c_str() );
+        ImGui::TextColored( pKind != nullptr ? GimmickGraphPanelInternal::getCategoryColor( pKind->_category ) : EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", node._id.c_str() );
         ImGui::SameLine();
         ImGui::TextDisabled( "%s", node._kind.c_str() );
         if ( pKind == nullptr )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "Unknown node kind" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "Unknown node kind" );
         }
         else
         {
@@ -589,7 +589,7 @@ namespace sw::editor
         {
             StringBuilder<constant::buffer::kMax64> missing;
             missing.appendFormat( "(missing object #%#)", node._target.objectID() );
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", missing.c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", missing.c_str() );
         }
         if ( ImGui::Button( SW_LOCKEY( "EdPlugin", "UseSelectedObject" ) ) )
         {
@@ -705,12 +705,12 @@ namespace sw::editor
         EditorWidgets::drawSectionHeader( SW_LOCKEY( "EdPluginWidget", "Problems" ) );
         if ( _listIssue.empty() )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Success" ) ), "The circuit is valid" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Success" ) ), "The circuit is valid" );
             return;
         }
         for ( const GimmickGraphIssue& issue : _listIssue )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", issue._message.c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", issue._message.c_str() );
         }
         // 가리키는 노드가 없는 배선은 저장 내용에 남아 있다 - 지우면 저장 내용이 바뀌므로 편집(Undo 가능)으로 다룬다
         if ( _model.getOrphanWires().empty() == false && ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "RemoveBrokenWires" ) ) )

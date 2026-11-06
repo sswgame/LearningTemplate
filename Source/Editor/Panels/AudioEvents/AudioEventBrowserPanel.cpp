@@ -51,7 +51,7 @@ namespace sw::editor
                     formatstring( overlay.data(), overlay.capacity(), "%# / -", count );
                 else
                     formatstring( overlay.data(), overlay.capacity(), "%# / %#", count, limit );
-                ImGui::PushStyleColor( ImGuiCol_PlotHistogram, EditorColorUtil::toImVec4( bLimitReached ? SW_THEMECOLOR( "Signal", "Warning" ) : SW_THEMECOLOR( "Signal", "Success" ) ) );
+                ImGui::PushStyleColor( ImGuiCol_PlotHistogram, EditorColorUtil::toImVec4( bLimitReached ? SW_THEME_COLOR( "Signal", "Warning" ) : SW_THEME_COLOR( "Signal", "Success" ) ) );
                 ImGui::ProgressBar( usage, ImVec2{ -1.0f, 0.0f }, overlay.c_str() );
                 ImGui::PopStyleColor();
             }
@@ -270,7 +270,7 @@ namespace sw::editor
         ImGui::TextUnformatted( _selectedEvent.c_str() );
         ImGui::TextDisabled( "%s", _selectedLibrary.c_str() );
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EditorAudioEvents", "PostEvent" ) ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EditorAudioEvents", "PostEvent" ) ) ) )
             (void)engine.postEvent( _selectedEvent, 0 ); // 재생 id 는 쓰지 않는다 — 끝나면 저절로 멈춘다
         EditorSelfTestMarks::note( "audioevents.postEvent" );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorAudioEvents", "OpenDataFile" ) ) );

@@ -329,7 +329,7 @@ namespace sw::editor
                     }
                     default:
                     {
-                        const Color& accent       = SW_THEMECOLOR( "Base", "Accent" );
+                        const Color& accent       = SW_THEME_COLOR( "Base", "Accent" );
                         const bool   bIsVioletNow = accent._r == violet._r && accent._g == violet._g && accent._b == violet._b;
                         (void)context.expect( bIsVioletNow, "clicking a swatch in the light theme dialog did not change the accent" );
                         (void)context.expect( EditorThemeUtil::getActiveTheme()._name == "light", "the swatch switched the theme away from light" );
@@ -396,7 +396,7 @@ namespace sw::editor
                 {
                     const float32 width     = mark._max._x - mark._min._x;
                     const float32 height    = mark._max._y - mark._min._y;
-                    const float32 iconWidth = ImGui::CalcTextSize( SW_EDITORICON( "EyeSlash" ) ).x;
+                    const float32 iconWidth = ImGui::CalcTextSize( SW_EDITOR_ICON( "EyeSlash" ) ).x;
                     string        what{ "the visibility toggle (" };
                     what += formatToString( "%# px) is narrower than its icon (%# px)", width, iconWidth );
                     (void)context.expect( width >= iconWidth, what.c_str() );

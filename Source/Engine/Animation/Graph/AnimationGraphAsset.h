@@ -96,12 +96,12 @@ namespace sw
 namespace sw
 {
     /**
-     * @enum AnimationPoseNodeType
+     * @enum AnimationPoseNodeKind
      * @brief 포즈를 직접 평가해 내는 노드의 종류입니다(XML 노드의 "pose_node"."type"). 모르는 표기는 로드 오류입니다.
      * @details 종류마다 런타임 구현(`IAnimationPoseNode`)이 하나다. 모션 매칭 같은 새 노드는 여기에 종류를 더하고 `AnimationPoseNodeSet` 이 만든다.
      */
     ENUM()
-    enum class AnimationPoseNodeType : uint8
+    enum class AnimationPoseNodeKind : uint8
     {
         None = 0,   ///< 포즈 노드가 아닙니다(이름이 곧 클립이거나 블렌드 스페이스인 보통 상태).
         BlendPoses, ///< `BlendPoses` — 입력 클립 둘을 파라미터 가중치로 섞습니다(`BlendPosesNode`).
@@ -118,7 +118,7 @@ namespace sw
      */
     struct AnimationGraphPoseNodeDef
     {
-        AnimationPoseNodeType _type{ AnimationPoseNodeType::None }; /**< 노드 종류입니다. None 이면 포즈 노드 상태가 아닙니다. */
+        AnimationPoseNodeKind _type{ AnimationPoseNodeKind::None }; /**< 노드 종류입니다. None 이면 포즈 노드 상태가 아닙니다. */
         vector<hashed_string> _listInput;                           /**< 입력 클립 이름입니다(그래프 플레이어의 클립 풀이로 찾습니다). */
         hashed_string         _weightParameter;                     /**< 섞기 가중치 파라미터 이름(`AnimationParameterSet`)입니다. */
     };
@@ -155,7 +155,7 @@ namespace sw
         /** @brief 블렌드 스페이스 상태인지 반환합니다. */
         bool hasBlendSpace() const { return _blendSpace._space.getSampleCount() > 0; }
         /** @brief 포즈 노드 상태인지 반환합니다. */
-        bool hasPoseNode() const { return _poseNode._type != AnimationPoseNodeType::None; }
+        bool hasPoseNode() const { return _poseNode._type != AnimationPoseNodeKind::None; }
     };
 } // namespace sw
 

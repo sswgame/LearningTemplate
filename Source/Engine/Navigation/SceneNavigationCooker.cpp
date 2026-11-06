@@ -103,7 +103,7 @@ namespace sw
         const string      normalizedRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizeSeparators( resourceRoot ) );
         const string      activePackRoot = FileUtil::trimTrailingSlashes( FileUtil::normalizePath( engine::getSubsystem<GameConfig>()._packRoot.get() ) );
         const CookJobDesc desc           = makeCookJobDesc();
-        CookTally         tally;
+        CookStats         tally;
         for ( const string& filePath : listFile )
         {
             if ( StringUtil::endsWith( filePath, Internal::kSceneSuffix, true ) == false )

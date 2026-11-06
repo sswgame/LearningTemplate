@@ -218,7 +218,7 @@ namespace sw
             }
         }
         flags.setFlag( pDoor->_flag, 1 );
-        pushEvent( AdventureDungeonEventType::DoorOpened, dungeonID, doorID );
+        pushEvent( AdventureDungeonEventKind::DoorOpened, dungeonID, doorID );
         return AdventureDoorResult::Opened;
     }
 
@@ -243,7 +243,7 @@ namespace sw
             progress._bCompass = SW_TRUE;
         else
             outReward.addItem( item, pTreasure->_count );
-        pushEvent( AdventureDungeonEventType::TreasureOpened, dungeonID, treasureID, item, pTreasure->_count );
+        pushEvent( AdventureDungeonEventKind::TreasureOpened, dungeonID, treasureID, item, pTreasure->_count );
         return true;
     }
 
@@ -283,7 +283,7 @@ namespace sw
             return;
         device._bActive = bNew;
         flags.setFlag( def._flag, bActive ? 1 : 0 );
-        pushEvent( bActive ? AdventureDungeonEventType::DeviceActivated : AdventureDungeonEventType::DeviceDeactivated, dungeon._id, def._id );
+        pushEvent( bActive ? AdventureDungeonEventKind::DeviceActivated : AdventureDungeonEventKind::DeviceDeactivated, dungeon._id, def._id );
     }
 
     bool AdventureDungeonState::hitSwitch( const hashed_string& dungeonID, const hashed_string& deviceID, GameFlags& flags )
@@ -364,7 +364,7 @@ namespace sw
                     if ( device._timer.isActive() == false )
                     {
                         device._litCount = 0;
-                        pushEvent( AdventureDungeonEventType::TorchesFailed, dungeon._id, def._id );
+                        pushEvent( AdventureDungeonEventKind::TorchesFailed, dungeon._id, def._id );
                     }
                 }
             }
@@ -406,7 +406,7 @@ namespace sw
         return deviceIndex >= 0 ? _listRuntime[static_cast<size_t>( dungeonIndex )]._listDevice[static_cast<size_t>( deviceIndex )]._litCount : 0;
     }
 
-    void AdventureDungeonState::pushEvent( AdventureDungeonEventType type, const hashed_string& dungeonID, const hashed_string& id, const hashed_string& item,
+    void AdventureDungeonState::pushEvent( AdventureDungeonEventKind type, const hashed_string& dungeonID, const hashed_string& id, const hashed_string& item,
                                            int32 count )
     {
         AdventureDungeonEvent event;

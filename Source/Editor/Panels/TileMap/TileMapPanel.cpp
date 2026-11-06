@@ -204,14 +204,14 @@ namespace sw::editor
         const ImVec2  canvasMax( canvasMin.x + canvasSize.x, canvasMin.y + canvasSize.y );
         ImDrawList*   pDl = ImGui::GetWindowDrawList();
         pDl->PushClipRect( canvasMin, canvasMax, true );
-        pDl->AddRectFilled( canvasMin, canvasMax, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "DockingEmptyBg" ) ) );
+        pDl->AddRectFilled( canvasMin, canvasMax, EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "DockingEmptyBg" ) ) );
 
         const TileMapXMLData& map = _document.getMap();
         drawGridCells( pDl, origin, cell, TileMapPaintUtil::computeVisibleCells( pan, float2{ canvasSize.x, canvasSize.y }, cell, map._width, map._height ) );
 
         // 스폰 자리 — 어느 층을 칠하든 보인다(유니티 씬 뷰의 플레이어 시작 표시).
         const ImVec2 spawnMin( origin.x + static_cast<float32>( map._spawnX ) * cell, origin.y + static_cast<float32>( map._spawnY ) * cell );
-        pDl->AddRect( spawnMin, ImVec2( spawnMin.x + cell, spawnMin.y + cell ), EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "Marker" ) ), 0.0f, 0, 2.0f );
+        pDl->AddRect( spawnMin, ImVec2( spawnMin.x + cell, spawnMin.y + cell ), EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "Marker" ) ), 0.0f, 0, 2.0f );
 
         const int2 hoverCell = TileMapPaintUtil::findCellAt( EditorInputGUI::readPointer()._position._x - origin.x, EditorInputGUI::readPointer()._position._y - origin.y, cell );
         drawBrushPreview( pDl, origin, cell, hoverCell, bHovered );
@@ -234,9 +234,9 @@ namespace sw::editor
 
     void TileMapPanel::drawGridCells( ImDrawList* pDl, const ImVec2& origin, float32 cell, const TileCellRange& range )
     {
-        const ImU32           emptyColor  = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "FrameBg" ) );
-        const ImU32           dataColor   = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Accent" ) ); // 강조색은 데이터에 쓴다
-        const ImU32           borderColor = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Border" ) );
+        const ImU32           emptyColor  = EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "FrameBg" ) );
+        const ImU32           dataColor   = EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Accent" ) ); // 강조색은 데이터에 쓴다
+        const ImU32           borderColor = EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Border" ) );
         const TileMapXMLData& map         = _document.getMap();
         const PaintLayer      layer       = _document.getPaintLayer();
         const TileFlagLayer   flagLayer   = _document.getFlagLayer();
@@ -315,7 +315,7 @@ namespace sw::editor
     void TileMapPanel::drawBrushPreview( ImDrawList* pDl, const ImVec2& origin, float32 cell, const int2& hoverCell, bool bHovered )
     {
         // 브러시 미리보기 — 커서 아래 셀, Rect · Line 도구로 끄는 중이면 그 모양(지우기면 빨강).
-        const ImU32 previewColor = EditorColorUtil::toImU32( _document.isErase() ? SW_THEMECOLOR( "Signal", "Error" ) : SW_THEMECOLOR( "Base", "Highlight" ) );
+        const ImU32 previewColor = EditorColorUtil::toImU32( _document.isErase() ? SW_THEME_COLOR( "Signal", "Error" ) : SW_THEME_COLOR( "Base", "Highlight" ) );
         int2        dragStartCell{};
         const bool  bDragging = _document.readDragStart( dragStartCell );
         if ( bDragging && _document.getTool() == PaintTool::Line )
@@ -607,6 +607,6 @@ namespace sw::editor
         const ImU32  color      = EditorColorUtil::toImU32( Color::fromBytes( static_cast<uint8>( 80 + ( hash & 0x7Fu ) ), static_cast<uint8>( 80 + ( ( hash >> 8 ) & 0x7Fu ) ), static_cast<uint8>( 80 + ( ( hash >> 16 ) & 0x7Fu ) ) ) );
         pDrawList->AddRectFilled( cellMin, cellMax, color );
         const string number = to_string( pVisual->computeCellAt( 0.0f ) );
-        pDrawList->AddText( ImVec2( cellMin.x + 2.0f, cellMin.y + 1.0f ), EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Text" ) ), number.c_str() );
+        pDrawList->AddText( ImVec2( cellMin.x + 2.0f, cellMin.y + 1.0f ), EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Text" ) ), number.c_str() );
     }
 } // namespace sw::editor

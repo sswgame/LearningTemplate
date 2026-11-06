@@ -104,7 +104,7 @@ namespace sw::editor
                 if ( counts._errorCount == 0 )
                     return;
                 const string message = SW_LOCKEYFORMAT( "EditorMapCheck", "SceneIssuesToast", TextArgumentList().addInteger( "errorCount", counts._errorCount ).addInteger( "warningCount", counts._warningCount ) );
-                context.getSubsystem<EditorNotificationManager>().push( "Map Check", message.c_str(), NotificationType::Warning, 6.0f );
+                context.getSubsystem<EditorNotificationManager>().push( "Map Check", message.c_str(), NotificationKind::Warning, 6.0f );
             }
 
             /** @brief 상태줄의 맵 검사 수 — 오류가 있으면 빨강, 경고만 있으면 주황, 없으면 흐리게. 누르면 Map Check 창. */
@@ -113,11 +113,11 @@ namespace sw::editor
                 EditorContext&        context = editor::getSubsystem<EditorContext>();
                 const MapCheckCounts& counts  = syncStatusCounts();
                 notifyOnSceneChange( context, counts );
-                const Color                            color = counts._errorCount > 0   ? SW_THEMECOLOR( "Signal", "Error" )
-                                                             : counts._warningCount > 0 ? SW_THEMECOLOR( "Signal", "Warning" )
-                                                                                        : SW_THEMECOLOR( "Base", "TextMuted" );
+                const Color                            color = counts._errorCount > 0   ? SW_THEME_COLOR( "Signal", "Error" )
+                                                             : counts._warningCount > 0 ? SW_THEME_COLOR( "Signal", "Warning" )
+                                                                                        : SW_THEME_COLOR( "Base", "TextMuted" );
                 fixed_string<constant::buffer::kMax64> label;
-                formatstring( label.data(), label.capacity(), "%# %###statusMapCheck", SW_EDITORICON( "Warning" ), counts._errorCount + counts._warningCount );
+                formatstring( label.data(), label.capacity(), "%# %###statusMapCheck", SW_EDITOR_ICON( "Warning" ), counts._errorCount + counts._warningCount );
                 ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( color ) );
                 const bool bOpen = ImGui::SmallButton( label.c_str() );
                 ImGui::PopStyleColor();
@@ -210,7 +210,7 @@ namespace sw::editor
     {
         syncRows();
 
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Refresh" ), SW_LOCKEY( "EdButton", "CheckMap" ), "Check Map" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Refresh" ), SW_LOCKEY( "EdButton", "CheckMap" ), "Check Map" ) ) )
             (void)validateActiveScene(); // 검사한 수는 로그에 남는다
         EditorSelfTestMarks::note( "mapCheck.checkMap" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorMapCheck", "CheckMap" ) );
@@ -269,8 +269,8 @@ namespace sw::editor
             ImGui::TableNextRow();
             ImGui::TableSetColumnIndex( 0 );
             const bool  bError = issue._severity == ValidationSeverity::Error;
-            const Color color  = bError ? SW_THEMECOLOR( "Signal", "Error" ) : SW_THEMECOLOR( "Signal", "Warning" );
-            ImGui::TextColored( EditorColorUtil::toImVec4( color ), "%s", bError ? SW_EDITORICON( "Error" ) : SW_EDITORICON( "Warning" ) );
+            const Color color  = bError ? SW_THEME_COLOR( "Signal", "Error" ) : SW_THEME_COLOR( "Signal", "Warning" );
+            ImGui::TextColored( EditorColorUtil::toImVec4( color ), "%s", bError ? SW_EDITOR_ICON( "Error" ) : SW_EDITOR_ICON( "Warning" ) );
 
             ImGui::TableSetColumnIndex( 1 );
             const bool bSelected = pObject != nullptr && pObject == pPrimary;

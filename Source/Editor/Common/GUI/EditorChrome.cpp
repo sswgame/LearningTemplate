@@ -472,8 +472,8 @@ namespace sw::editor
         overlayDesc._flags      = EditorOverlayFlags::NoTitleBar | EditorOverlayFlags::NoResize |
                              EditorOverlayFlags::NoMove | EditorOverlayFlags::NoSavedSettings;
 
-        ImGui::PushStyleColor( ImGuiCol_WindowBg, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "OverlayBg" ).scaleAlpha( desc._bgAlpha ) ) );
-        ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Accent" ).scaleAlpha( desc._borderAlpha ) ) );
+        ImGui::PushStyleColor( ImGuiCol_WindowBg, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "OverlayBg" ).scaleAlpha( desc._bgAlpha ) ) );
+        ImGui::PushStyleColor( ImGuiCol_Border, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Accent" ).scaleAlpha( desc._borderAlpha ) ) );
 
         const bool bVisible = beginOverlay( overlayDesc );
         if ( bVisible == false )

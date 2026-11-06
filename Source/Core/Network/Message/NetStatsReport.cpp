@@ -46,7 +46,7 @@ namespace sw
                 const bool bValid = StringUtil::parseInt( text.substr( 0, firstColon ), kind ) &&
                                     StringUtil::parseUint64( text.substr( firstColon + 1, secondColon - firstColon - 1 ), outEntry._messageCount ) &&
                                     StringUtil::parseUint64( text.substr( secondColon + 1 ), outEntry._byteCount );
-                const bool bInvalidEntry = bValid == false || kind < 0 || NetMessageKindTallyTable::kKindCount <= kind;
+                const bool bInvalidEntry = bValid == false || kind < 0 || NetMessageKindStatsTable::kKindCount <= kind;
                 if ( bInvalidEntry )
                     return false;
                 outEntry._kind = static_cast<uint8>( kind );
@@ -68,12 +68,12 @@ namespace sw
             }
 
             /** @brief 셈 표에서 바이트가 큰 종류 `kMaxKindEntry` 개로 목록을 채웁니다. 한 번도 세지 않은 종류는 뺍니다. */
-            static void populateEntries( const NetMessageKindTallyTable& tally, vector<NetStatsKindEntry>& outListEntry )
+            static void populateEntries( const NetMessageKindStatsTable& tally, vector<NetStatsKindEntry>& outListEntry )
             {
                 outListEntry.clear();
-                for ( int32 kind = 0; kind < NetMessageKindTallyTable::kKindCount; ++kind )
+                for ( int32 kind = 0; kind < NetMessageKindStatsTable::kKindCount; ++kind )
                 {
-                    const NetMessageKindTally& entry = tally.get( static_cast<uint8>( kind ) );
+                    const NetMessageKindStats& entry = tally.get( static_cast<uint8>( kind ) );
                     if ( entry._messageCount == 0 )
                         continue;
                     outListEntry.push_back( NetStatsKindEntry{ entry._messageCount, entry._byteCount, static_cast<uint8>( kind ) } );
@@ -164,7 +164,7 @@ namespace sw
         return true;
     }
 
-    void NetStatsReport::populateKinds( const NetMessageKindTallyTable& receivedTally, const NetMessageKindTallyTable& sentTally )
+    void NetStatsReport::populateKinds( const NetMessageKindStatsTable& receivedTally, const NetMessageKindStatsTable& sentTally )
     {
         NetStatsReportInternal::populateEntries( receivedTally, _listKindEntry );
         NetStatsReportInternal::populateEntries( sentTally, _listSentKindEntry );

@@ -218,7 +218,7 @@ namespace sw::editor
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Target" ) );
         ImGui::SameLine();
-        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldMediumEm" ) );
+        ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldMediumEm" ) );
         const EditorNetPlayProcessStatus target = session.getProcessStatus( _targetProcessIndex );
         if ( ImGui::BeginCombo( "##MultiplayerTarget", target._label.c_str() ) )
         {

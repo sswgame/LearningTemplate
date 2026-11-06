@@ -2,7 +2,7 @@
  * @file NetStatsReport.h
  * @brief 프로세스 하나의 연결 · 트래픽 수치를 한 줄로 주고받는 형식입니다(개발 명령 `net.stats` 의 답, 에디터 Multiplayer 창 Profiler 탭이 읽는다).
  * @details 쓰는 쪽(게임 세션)과 읽는 쪽(에디터 세션 · 감시 값)이 이 정의 하나를 쓴다. 값은 이미 있는 셈을 옮길 뿐이다 —
- *          연결 통계(`NetConnectionStats`: 패킷 수 · 최근 1 초 대역폭 · RTT · 손실 · 재전송)와 라우터의 종류별 셈(`NetMessageKindTally`).
+ *          연결 통계(`NetConnectionStats`: 패킷 수 · 최근 1 초 대역폭 · RTT · 손실 · 재전송)와 라우터의 종류별 셈(`NetMessageKindStats`).
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    class NetMessageKindTallyTable;
+    class NetMessageKindStatsTable;
 
     /** @brief 메시지 종류 하나의 셈입니다(보고 줄의 `kinds=`(받은 쪽) · `sentKinds=`(보낸 쪽) 칸 한 항목). */
     struct NetStatsKindEntry
@@ -80,7 +80,7 @@ namespace sw
          * @brief 받은 쪽(라우터) · 보낸 쪽(엔드포인트) 종류별 셈에서 바이트가 큰 종류 `kMaxKindEntry` 개씩으로 `_listKindEntry` · `_listSentKindEntry` 를 채웁니다.
          *        한 번도 세지 않은 종류는 뺍니다.
          */
-        void populateKinds( const NetMessageKindTallyTable& receivedTally, const NetMessageKindTallyTable& sentTally );
+        void populateKinds( const NetMessageKindStatsTable& receivedTally, const NetMessageKindStatsTable& sentTally );
         /** @brief 한 방향의 종류별 셈입니다. */
         const vector<NetStatsKindEntry>& getKindEntries( NetStatsKindDirection direction ) const
         {

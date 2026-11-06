@@ -184,7 +184,7 @@ namespace sw
     };
 
     /** @brief 던전 알림 종류입니다. */
-    enum class AdventureDungeonEventType : uint8
+    enum class AdventureDungeonEventKind : uint8
     {
         DoorOpened = 0,
         TreasureOpened, ///< `_item` 과 `_count` 가 나온 것
@@ -200,7 +200,7 @@ namespace sw
         hashed_string             _id{}; ///< 문, 상자, 장치의 id
         hashed_string             _item{};
         int32                     _count{ 0 };
-        AdventureDungeonEventType _type{ AdventureDungeonEventType::DoorOpened };
+        AdventureDungeonEventKind _type{ AdventureDungeonEventKind::DoorOpened };
     };
 } // namespace sw
 
@@ -279,7 +279,7 @@ namespace sw
         vector<DungeonRuntime> makeInitialRuntime() const;
         DungeonRuntime*        findRuntime( const hashed_string& dungeonID, const AdventureDungeonDef** ppOutDef );
         void                   setDeviceActive( const AdventureDungeonDef& dungeon, int32 deviceIndex, bool bActive, GameFlags& flags );
-        void                   pushEvent( AdventureDungeonEventType type, const hashed_string& dungeonID, const hashed_string& id, const hashed_string& item = hashed_string{},
+        void                   pushEvent( AdventureDungeonEventKind type, const hashed_string& dungeonID, const hashed_string& id, const hashed_string& item = hashed_string{},
                                           int32 count = 0 );
 
     private:

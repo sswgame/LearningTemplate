@@ -26,17 +26,17 @@ namespace sw
      */
     struct SW_GF_API BehaviorTreeNames
     {
-        static const utf8* toString( BehaviorNodeType type );
+        static const utf8* toString( BehaviorNodeKind type );
         static const utf8* toString( BehaviorAbortMode mode );
         /** @brief 이름(대소문자 무시)으로 열거자를 찾습니다. 없으면 false 이고 @p outValue 는 그대로입니다. */
-        [[nodiscard]] static bool parse( string_view text, BehaviorNodeType& outValue );
+        [[nodiscard]] static bool parse( string_view text, BehaviorNodeKind& outValue );
         [[nodiscard]] static bool parse( string_view text, BehaviorAbortMode& outValue );
         /** @brief 모든 이름을 ", " 로 이은 글입니다(모르는 이름 오류에 보인다). */
         static string joinNodeTypeNames();
         /** @brief 자식을 가질 수 없는 종류(작업 · 조건 · 대기 · 이동 · 하위 트리)입니다. */
-        static bool isLeaf( BehaviorNodeType type );
+        static bool isLeaf( BehaviorNodeKind type );
         /** @brief 자식이 정확히 하나인 종류(반전 · 성공 강제 · 반복 · 쿨다운 · 시간 제한 · 블랙보드 조건)입니다. */
-        static bool isDecorator( BehaviorNodeType type );
+        static bool isDecorator( BehaviorNodeKind type );
         /** @brief 중첩 깊이 상한입니다. 손으로 쓴 트리가 이보다 깊을 일이 없다 - 깨진 파일이 스택을 먹지 않게 한다(편집기도 이 깊이까지만 더한다). */
         static constexpr uint32 kMaxDepth = 32;
     };
@@ -52,9 +52,9 @@ namespace sw
     struct SW_GF_API BehaviorTreeXML
     {
         /** @brief 종류 @p type 의 스키마 값을 기본값으로 담습니다(`_type` 도 채운다). 칸이 있던 작업 동작은 비웁니다. */
-        static void resetNodeFields( BehaviorNodeType type, BehaviorTreeNodeData& inoutData );
+        static void resetNodeFields( BehaviorNodeKind type, BehaviorTreeNodeData& inoutData );
         /** @brief 원소 @p node(종류 @p type)의 속성을 @p inoutData 에 읽습니다. 틀린 속성이 하나라도 있으면 false 입니다(오류는 로그에 남는다). 등록되지 않은 동작의 칸은 글로 듭니다(`_listRawParam`). */
-        [[nodiscard]] static bool readNodeFields( const XMLNode& node, BehaviorNodeType type, string_view sourceName, BehaviorTreeNodeData& inoutData );
+        [[nodiscard]] static bool readNodeFields( const XMLNode& node, BehaviorNodeKind type, string_view sourceName, BehaviorTreeNodeData& inoutData );
         /** @brief @p data 의 칸을 @p node 에 속성으로 씁니다(기본값은 생략 — 손으로 쓴 파일과 같은 모양). */
         static void writeNodeFields( const XMLNode& node, const BehaviorTreeNodeData& data );
         /** @brief 작업 노드의 동작을 @p task 로 바꿉니다. 칸은 그 동작의 기본값이 됩니다. 등록되지 않은 이름이면 칸이 비어 있습니다. */
@@ -79,7 +79,7 @@ namespace sw
      *         </Selector>
      *     </BehaviorTree>
      * @endcode
-     * @details **노드 원소와 속성**(원소 이름은 `BehaviorNodeType` 의 열거자 이름이고 대소문자를 가리지 않는다. 형제 순서가 곧 우선순위다).
+     * @details **노드 원소와 속성**(원소 이름은 `BehaviorNodeKind` 의 열거자 이름이고 대소문자를 가리지 않는다. 형제 순서가 곧 우선순위다).
      *          종류마다 받는 속성 · 필수 · 범위는 스키마 구조체(`BehaviorTreeNodeFields.h`)가 정본이고 `BehaviorTreeXML` 이 읽는다 — 아래는 그 요약이다(`compare` · `abort` 값은 열거자 이름 그대로):
      *          - `Selector` (`name`, `reactive`) · `Sequence` (`name`) · `Inverter` · `ForceSuccess` — 자식은 컴포짓이 하나 이상, 데코레이터가 정확히 하나다.
      *          - `Repeat` (`count` 필수, 0 이면 실패할 때까지) · `Cooldown` · `TimeLimit` (`seconds` 필수).

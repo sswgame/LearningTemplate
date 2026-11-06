@@ -233,11 +233,11 @@ namespace sw::editor
         // 라이브러리 기본 색(남색 기운의 반투명 바탕 · 흰 테두리 · 주황 선택)은 테마를 따르지 않았다. 바꾼 테마가 다음 프레임에 따르도록 그릴 때마다 칠한다(값 복사뿐이다).
         // 언리얼 그래프 편집기처럼 캔버스는 창 바탕 한 단계, 노드는 패널 면, 격자는 테두리 색, 강조색은 선택 · 호버에만 쓴다.
         ed::Style&   style                               = ed::GetStyle();
-        const ImVec4 windowBg                            = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "WindowBg" ) );
-        const ImVec4 panelBg                             = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "PanelBg" ) );
-        const ImVec4 border                              = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Border" ) );
-        const ImVec4 mutedText                           = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "TextMuted" ) );
-        const ImVec4 accent                              = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Accent" ) );
+        const ImVec4 windowBg                            = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "WindowBg" ) );
+        const ImVec4 panelBg                             = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "PanelBg" ) );
+        const ImVec4 border                              = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Border" ) );
+        const ImVec4 mutedText                           = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "TextMuted" ) );
+        const ImVec4 accent                              = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Accent" ) );
         const ImVec4 accentWash                          = ImVec4{ accent.x, accent.y, accent.z, 0.16f };
         const ImVec4 accentEdge                          = ImVec4{ accent.x, accent.y, accent.z, 0.5f };
         style.Colors[ed::StyleColor_Bg]                  = windowBg;
@@ -357,9 +357,9 @@ namespace sw::editor
     {
         if ( bSeed )
             _listSeededComment.clear();
-        const ImVec4 panel = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "PanelBg" ) );
+        const ImVec4 panel = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "PanelBg" ) );
         ed::PushStyleColor( ed::StyleColor_NodeBg, ImVec4{ panel.x, panel.y, panel.z, EditorNodeGraphInternal::kCommentFillAlpha } );
-        ed::PushStyleColor( ed::StyleColor_NodeBorder, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Border" ) ) );
+        ed::PushStyleColor( ed::StyleColor_NodeBorder, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Border" ) ) );
         for ( const GraphCommentBox& comment : listComment )
         {
             const ed::NodeId nodeID{ static_cast<uintptr_t>( kCommentNodeIDBase + comment._id ) };
@@ -512,7 +512,7 @@ namespace sw::editor
     {
         const float32 margin = ImGui::GetStyle().ItemSpacing.x;
         ImGui::SetCursorScreenPos( ImVec2{ _canvasOrigin._x + _canvasSize._x - _viewBarSize._x - margin, _canvasOrigin._y + margin } );
-        ImGui::PushStyleColor( ImGuiCol_ChildBg, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "PanelBg" ) ) );
+        ImGui::PushStyleColor( ImGuiCol_ChildBg, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "PanelBg" ) ) );
         const ImGuiChildFlags childFlags = ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding;
         if ( ImGui::BeginChild( "##graphViewBar", ImVec2{ 0.0f, 0.0f }, childFlags, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings ) )
         {
@@ -538,7 +538,7 @@ namespace sw::editor
                 EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "GraphCommentTip" ) );
             }
             ImGui::SameLine();
-            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( _bMinimapVisible ? SW_THEMECOLOR( "Base", "ToggleActive" ) : SW_THEMECOLOR( "Base", "ToggleInactive" ) ) );
+            ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( _bMinimapVisible ? SW_THEME_COLOR( "Base", "ToggleActive" ) : SW_THEME_COLOR( "Base", "ToggleInactive" ) ) );
             if ( ImGui::SmallButton( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdCommon", "GraphMinimap" ), "Minimap" ) ) )
                 _bMinimapVisible = _bMinimapVisible == false;
             ImGui::PopStyleColor();
@@ -593,7 +593,7 @@ namespace sw::editor
         const float32 margin = ImGui::GetStyle().ItemSpacing.x;
         const ImVec2  mapMin{ _canvasOrigin._x + _canvasSize._x - width - margin, _canvasOrigin._y + _canvasSize._y - height - margin };
         ImGui::SetCursorScreenPos( mapMin );
-        ImGui::PushStyleColor( ImGuiCol_ChildBg, EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "PanelBg" ) ) );
+        ImGui::PushStyleColor( ImGuiCol_ChildBg, EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "PanelBg" ) ) );
         if ( ImGui::BeginChild( "##graphMinimap", ImVec2{ width, height }, ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoSavedSettings ) )
         {
             const float2                inset{ ImGui::GetStyle().WindowPadding.x, ImGui::GetStyle().WindowPadding.y };
@@ -603,10 +603,10 @@ namespace sw::editor
             if ( EditorNodeGraphRules::fitMinimap( _listMinimapRect, _viewMin, _viewMax, inner, transform ) )
             {
                 ImDrawList*  pDrawList = ImGui::GetWindowDrawList();
-                const ImVec4 muted     = EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "TextMuted" ) );
+                const ImVec4 muted     = EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "TextMuted" ) );
                 const ImU32  nodeColor = ImGui::ColorConvertFloat4ToU32( ImVec4{ muted.x, muted.y, muted.z, 0.55f } );
-                const ImU32  pickColor = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Accent" ) );
-                const ImU32  failColor = EditorColorUtil::toImU32( SW_THEMECOLOR( "Signal", "Error" ) );
+                const ImU32  pickColor = EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Accent" ) );
+                const ImU32  failColor = EditorColorUtil::toImU32( SW_THEME_COLOR( "Signal", "Error" ) );
                 for ( const EditorGraphNodeRect& rect : _listMinimapRect )
                 {
                     const float2 cornerA = EditorNodeGraphRules::canvasToMinimap( transform, rect._position ) + innerMin;
@@ -623,7 +623,7 @@ namespace sw::editor
                 }
                 const float2 viewA = EditorNodeGraphRules::canvasToMinimap( transform, _viewMin ) + innerMin;
                 const float2 viewB = EditorNodeGraphRules::canvasToMinimap( transform, _viewMax ) + innerMin;
-                pDrawList->AddRect( ImVec2{ viewA._x, viewA._y }, ImVec2{ viewB._x, viewB._y }, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Text" ) ) );
+                pDrawList->AddRect( ImVec2{ viewA._x, viewA._y }, ImVec2{ viewB._x, viewB._y }, EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Text" ) ) );
             }
             ImGui::SetCursorScreenPos( mapMin );
             ImGui::InvisibleButton( "##graphMinimapArea", ImVec2{ width, height } );
@@ -738,7 +738,7 @@ namespace sw::editor
                 }
                 else
                 {
-                    ed::RejectNewItem( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), 2.0f );
+                    ed::RejectNewItem( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), 2.0f );
                     ed::Suspend();
                     ImGui::SetTooltip( "%s", pReason );
                     ed::Resume();
@@ -808,7 +808,7 @@ namespace sw::editor
 
     void EditorNodeGraph::drawNodeIssues() const
     {
-        const ImU32      color   = EditorColorUtil::toImU32( SW_THEMECOLOR( "Signal", "Error" ) );
+        const ImU32      color   = EditorColorUtil::toImU32( SW_THEME_COLOR( "Signal", "Error" ) );
         const ed::NodeId hovered = ed::GetHoveredNode();
         for ( const EditorGraphNodeIssue& issue : _listNodeIssue )
         {

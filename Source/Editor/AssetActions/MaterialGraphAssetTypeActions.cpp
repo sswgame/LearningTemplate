@@ -50,6 +50,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_ASSET_TYPE( MaterialGraph, MaterialGraphDef::kAssetType._name.data(), 505, "Material Graph", "Material Graphs", "Material Graph", SW_EDITORICON_NAME( "Material" ), SW_THEMECOLOR_KEY( "Asset", "Material" ), true, false,
+    SW_EDITOR_ASSET_TYPE( MaterialGraph, MaterialGraphDef::kAssetType._name.data(), 505, "Material Graph", "Material Graphs", "Material Graph", SW_EDITOR_ICON_NAME( "Material" ), SW_THEME_COLOR_KEY( "Asset", "Material" ), true, false,
                           kArrMaterialGraphRule, SW_COUNT_OF( kArrMaterialGraphRule ), &kMaterialGraphTemplate, nullptr );
 } // namespace sw::editor

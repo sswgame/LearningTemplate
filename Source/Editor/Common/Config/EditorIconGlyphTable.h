@@ -1,9 +1,9 @@
 /**
  * @file EditorIconGlyphTable.h
  * @brief 에디터 아이콘 글꼴의 이름 → 코드포인트 표(`editor/fonts/sweditoricons.glyphs.xml`)입니다. 글꼴을 바꾸면 이 표를 바꾼다(코드는 이름으로만 찾는다).
- * @details 표는 데이터다 — 고도도 에디터 아이콘을 이름으로 찾고(`get_editor_theme_icon`) 그림은 파일에 둔다. 코드는 이름만 안다(`SW_EDITORICON`) — 글꼴을 바꾸면 표만 바꾼다.
- *          테마 색(`SW_THEMECOLOR`)과 같은 모양이다: 표에 없는 이름은 Missing 아이콘을 그리고 이름마다 한 번 오류를 남기며, 단위 테스트(`EditorIconNames`)가 소스의
- *          이름 리터럴이 모두 표에 있는지 본다. 등록 줄 · 상수 표는 글리프가 아니라 이름(`SW_EDITORICON_NAME`)을 들고 그릴 때 찾는다 — 정적 초기화는 표를 읽기 전이다.
+ * @details 표는 데이터다 — 고도도 에디터 아이콘을 이름으로 찾고(`get_editor_theme_icon`) 그림은 파일에 둔다. 코드는 이름만 안다(`SW_EDITOR_ICON`) — 글꼴을 바꾸면 표만 바꾼다.
+ *          테마 색(`SW_THEME_COLOR`)과 같은 모양이다: 표에 없는 이름은 Missing 아이콘을 그리고 이름마다 한 번 오류를 남기며, 단위 테스트(`EditorIconNames`)가 소스의
+ *          이름 리터럴이 모두 표에 있는지 본다. 등록 줄 · 상수 표는 글리프가 아니라 이름(`SW_EDITOR_ICON_NAME`)을 들고 그릴 때 찾는다 — 정적 초기화는 표를 읽기 전이다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -32,7 +32,7 @@ namespace sw::editor
     struct EditorIconGlyph
     {
         REFLECT_BODY();
-        PROPERTY( Required, Tooltip = "Icon name code looks up (SW_EDITORICON)" )
+        PROPERTY( Required, Tooltip = "Icon name code looks up (SW_EDITOR_ICON)" )
         string _name{};
         PROPERTY( Required, Tooltip = "Codepoint in the icon font, U+XXXX within the basic multilingual plane" )
         string _codepoint{};
@@ -70,7 +70,7 @@ namespace sw::editor
         static const utf8* findPublishedGlyph( const hashed_string& name );
         /** @brief 데이터 · 등록 줄이 든 이름으로 찾습니다(`findGlyph` 와 같은 규칙). @p pName 이 nullptr 이거나 비면 nullptr(아이콘 없음)입니다. */
         static const utf8* findGlyphByName( const utf8* pName );
-        /** @brief 이름 형으로 찾습니다(`SW_EDITORICON_NAME`). 비었으면 nullptr 입니다. */
+        /** @brief 이름 형으로 찾습니다(`SW_EDITOR_ICON_NAME`). 비었으면 nullptr 입니다. */
         static const utf8* findGlyphByName( EditorIconName name ) { return findGlyphByName( name._pName ); }
 
     private:
@@ -81,7 +81,7 @@ namespace sw::editor
 } // namespace sw::editor
 
 /** @brief 아이콘 이름 @p NameLiteral(문자열 리터럴)의 글리프입니다. 호출 자리마다 이름 키를 한 번만 intern 한다. */
-#define SW_EDITORICON( NameLiteral ) \
+#define SW_EDITOR_ICON( NameLiteral ) \
     ::sw::editor::EditorIconGlyphTable::findPublishedGlyph( []() -> const ::sw::hashed_string& {                                                                         \
         static const ::sw::hashed_string s_key{ NameLiteral };                                                                                             \
         return s_key; }() )

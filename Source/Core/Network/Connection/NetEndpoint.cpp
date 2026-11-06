@@ -1108,7 +1108,7 @@ namespace sw
         return bQueued;
     }
 
-    void NetEndpoint::addSentKindTally( NetMessageKindTallyTable& outTable ) const
+    void NetEndpoint::addSentKindTally( NetMessageKindStatsTable& outTable ) const
     {
         ScopedLock<mutex> lock{ _mutex };
         outTable.addTable( _sentKindTally );

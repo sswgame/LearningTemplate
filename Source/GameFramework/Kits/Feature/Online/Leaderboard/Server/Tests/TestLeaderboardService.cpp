@@ -141,7 +141,7 @@ namespace
 
         void addBoard( string_view boardID, LeaderboardOrder order = LeaderboardOrder::Descending, LeaderboardUpdate update = LeaderboardUpdate::Best, LeaderboardReset reset = LeaderboardReset::None )
         {
-            LeaderboardDefinition board;
+            LeaderboardDef board;
             board._boardID = string( boardID );
             board._order   = order;
             board._update  = update;
@@ -171,7 +171,7 @@ namespace
             season._listRewardTier.push_back( first );
             if ( rewardedRankTo >= 2 )
                 season._listRewardTier.push_back( rest );
-            LeaderboardDefinition board;
+            LeaderboardDef board;
             board._boardID = string( boardID );
             board._order   = order;
             board._reset   = LeaderboardReset::Season;
@@ -181,7 +181,7 @@ namespace
 
         void addAchievement( string_view id, string_view statName, int64 threshold, bool bHidden = false, int64 rewardAmount = 5 )
         {
-            AchievementDefinition achievement;
+            AchievementDef achievement;
             achievement._achievementID = string( id );
             achievement._statName      = string( statName );
             achievement._threshold     = threshold;
@@ -220,7 +220,7 @@ SW_TEST_CASE( LeaderboardServiceTest, RegistrationRefusesBrokenDefinitions )
     LeaderboardWorld    world;
     LeaderboardService& service = world._rig._service;
 
-    LeaderboardDefinition board;
+    LeaderboardDef board;
     board._boardID = "Bad Id";
     SW_EXPECT_FALSE( service.registerBoard( board ) );
 
@@ -231,7 +231,7 @@ SW_TEST_CASE( LeaderboardServiceTest, RegistrationRefusesBrokenDefinitions )
     board._update = LeaderboardUpdate::Best;
     SW_EXPECT_TRUE( service.registerBoard( board ) );
 
-    LeaderboardDefinition seasons;
+    LeaderboardDef seasons;
     seasons._boardID = "seasons";
     LeaderboardSeason season;
     season._seasonID = 1;
@@ -247,7 +247,7 @@ SW_TEST_CASE( LeaderboardServiceTest, RegistrationRefusesBrokenDefinitions )
     seasons._listSeason[0]._endMs = 10;
     SW_EXPECT_FALSE( service.registerBoard( seasons ) ); // 시작이 끝보다 앞서야 한다
 
-    AchievementDefinition achievement;
+    AchievementDef achievement;
     achievement._achievementID = "ok";
     achievement._statName      = "kills";
     achievement._rewardAssetID = "cur.gem"; // 보상이 있으면 수량과 제목이 있어야 한다
@@ -478,7 +478,7 @@ SW_TEST_CASE( LeaderboardServiceTest, DailyBoardsResetAtTheirMinute )
     LeaderboardWorld world;
     LeaderboardRig&  rig = world._rig;
     rig.addBoard( "daily", LeaderboardOrder::Descending, LeaderboardUpdate::Best, LeaderboardReset::Daily );
-    const LeaderboardDefinition* pBoard = rig._service.findBoard( "daily" );
+    const LeaderboardDef* pBoard = rig._service.findBoard( "daily" );
     SW_REQUIRE_TRUE( pBoard != nullptr );
 
     const uint64 periodID = rig._service.computePeriodID( *pBoard, UnixMilliseconds{ kNowMs } );
@@ -499,7 +499,7 @@ SW_TEST_CASE( LeaderboardServiceTest, DailyBoardsResetAtTheirMinute )
     SW_EXPECT_EQUAL( nextPeriodMs + kDayMs - kNowMs, rig._service.computeRankRetentionMs( *pBoard, periodID, UnixMilliseconds{ kNowMs } ) );
     SW_EXPECT_EQUAL( int64( 1 ), rig._service.computeRankRetentionMs( *pBoard, periodID, UnixMilliseconds{ nextPeriodMs + 2 * kDayMs } ) );
 
-    LeaderboardDefinition forever;
+    LeaderboardDef forever;
     forever._boardID = "forever";
     SW_EXPECT_EQUAL( int64( 0 ), rig._service.computeRankRetentionMs( forever, 0, UnixMilliseconds{ kNowMs } ) );
     SW_EXPECT_EQUAL( uint64( 0 ), rig._service.computePeriodID( forever, UnixMilliseconds{ kNowMs } ) );
@@ -508,9 +508,9 @@ SW_TEST_CASE( LeaderboardServiceTest, DailyBoardsResetAtTheirMinute )
 /** @brief [LeaderboardServiceTest] 통계: 방식대로 바뀌고 연결된 보드에 누적값이 들어가며, 안 바뀌면 보드도 그대로다. 틀린 이름은 Invalid */
 SW_TEST_CASE( LeaderboardServiceTest, StatsFeedLinkedBoards )
 {
-    LeaderboardWorld      world;
-    LeaderboardRig&       rig = world._rig;
-    LeaderboardDefinition linked;
+    LeaderboardWorld world;
+    LeaderboardRig&  rig = world._rig;
+    LeaderboardDef   linked;
     linked._boardID    = "kills_board";
     linked._sourceStat = "kills";
     linked._update     = LeaderboardUpdate::Latest;

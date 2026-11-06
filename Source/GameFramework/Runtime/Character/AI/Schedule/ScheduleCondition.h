@@ -94,7 +94,7 @@ namespace sw
 {
     /** @brief 조건이 쓰는 이름의 목록입니다. 목록이 비면 그 종류의 이름은 검사하지 않습니다(아무 이름이나 받는다). */
     REFLECT()
-    struct ScheduleConditionVocabulary
+    struct ScheduleConditionSchema
     {
         REFLECT_BODY();
 
@@ -180,7 +180,7 @@ namespace sw
          * @brief 조건 속성을 모두 읽습니다. 어휘에 없는 이름은 경고합니다(데이터 검사가 잡는다).
          * @return 깨진 숫자 · 범위 밖 확률 · 뒤집힌 호감도 범위 · 틀린 식이 있으면 오류를 남기고 false 입니다.
          */
-        [[nodiscard]] bool readFromNode( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName );
+        [[nodiscard]] bool readFromNode( const XMLNode& node, const ScheduleConditionSchema& vocabulary, string_view sourceName, string_view ownerName );
 
         bool                    isEmpty() const { return _listClause.empty(); }
         ScheduleConditionResult evaluate( const ScheduleConditionContext& context ) const;

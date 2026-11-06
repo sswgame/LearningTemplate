@@ -449,8 +449,8 @@ namespace sw::editor
         // 잠금은 누가 걸었든 주황 자물쇠로, 읽기 전용(잠그기 전)은 회색 자물쇠로 그린다. 바로 아래 버튼의 툴팁이 이유를 설명한다.
         const bool   bLocked  = ContentBrowserModel::isLocked( entry );
         const ImU32  color    = bLocked ? EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeLocked ) : EditorColorUtil::toImU32( ContentBrowserPanelInternal::kLockBadgeReadOnly );
-        const ImVec2 textSize = ImGui::CalcTextSize( SW_EDITORICON( "Lock" ) );
-        pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, SW_EDITORICON( "Lock" ) );
+        const ImVec2 textSize = ImGui::CalcTextSize( SW_EDITOR_ICON( "Lock" ) );
+        pDrawList->AddText( ImVec2( topRight._x - textSize.x, topRight._y ), color, SW_EDITOR_ICON( "Lock" ) );
         if ( ImGui::IsItemHovered() )
             ImGui::SetTooltip( "%s", statusText.c_str() );
     }
@@ -510,7 +510,7 @@ namespace sw::editor
         {
             const uint32 referrerCount = referenceIndex.countReferrerFiles( editor::getSubsystem<AssetPaths>().toAssetID( pendingDeleteAbs ) );
             if ( referrerCount > 0 )
-                ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "UsedByFileS", TextArgumentList().addText( "sW_EDITORICON", SW_EDITORICON( "Warning" ) ).addInteger( "referrerCount", static_cast<int64>( referrerCount ) ) ).c_str() );
+                ImGui::TextColored( EditorColorUtil::toImVec4( ContentBrowserPanelInternal::kReferrerWarningText ), "%s", SW_LOCKEYFORMAT( "EdFormat", "UsedByFileS", TextArgumentList().addText( "sW_EDITORICON", SW_EDITOR_ICON( "Warning" ) ).addInteger( "referrerCount", static_cast<int64>( referrerCount ) ) ).c_str() );
             else
                 ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "NoTextAssetNamesIt" ) );
         }
@@ -601,7 +601,7 @@ namespace sw::editor
     {
         if ( ImGui::BeginPopup( "##cb_add" ) == false )
             return;
-        if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Folder" ), SW_LOCKEY( "EdButton", "NewFolder" ), "New Folder" ) ) )
+        if ( ImGui::MenuItem( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Folder" ), SW_LOCKEY( "EdButton", "NewFolder" ), "New Folder" ) ) )
             (void)_model.createNewFolder(); // 실패는 createFolder 가 알린다
         EditorSelfTestMarks::note( "contentBrowser.add.folder" );
         ImGui::Separator();
@@ -754,8 +754,8 @@ namespace sw::editor
             ImGui::EndDisabled();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "NavigateForward" ) );
 
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), SW_LOCKEY( "EdButton", "Add" ), "Add" ) ) );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Plus" ), SW_LOCKEY( "EdButton", "Add" ), "Add" ) ) )
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Plus" ), SW_LOCKEY( "EdButton", "Add" ), "Add" ) ) );
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Plus" ), SW_LOCKEY( "EdButton", "Add" ), "Add" ) ) )
             EditorInputGUI::openPopup( "##cb_add" );
         EditorSelfTestMarks::note( "contentBrowser.add" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "AddAsset" ) );
@@ -1002,8 +1002,8 @@ namespace sw::editor
             const bool bIsLast = ( crumbIndex + 1 == listCrumb.size() );
             if ( bIsLast )
             {
-                const Color accentColor = SW_THEMECOLOR( "Base", "Accent" );
-                ImGui::TextColored( EditorColorUtil::toImVec4( accentColor.withAlpha( 1.0f ) ), "%s", SW_EDITORICON( "FolderOpen" ) );
+                const Color accentColor = SW_THEME_COLOR( "Base", "Accent" );
+                ImGui::TextColored( EditorColorUtil::toImVec4( accentColor.withAlpha( 1.0f ) ), "%s", SW_EDITOR_ICON( "FolderOpen" ) );
                 ImGui::SameLine();
                 ImGui::TextUnformatted( crumb._label.c_str() );
             }
@@ -1057,8 +1057,8 @@ namespace sw::editor
                         ImGui::SameLine();
 
                     const bool  selected = _model.isSelected( entry, true );
-                    const Color accent   = SW_THEMECOLOR( "Base", "Accent" );
-                    const Color frameBg  = SW_THEMECOLOR( "Base", "FrameBg" );
+                    const Color accent   = SW_THEME_COLOR( "Base", "Accent" );
+                    const Color frameBg  = SW_THEME_COLOR( "Base", "FrameBg" );
                     ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( selected ? accent.withAlpha( 0.40f ) : frameBg.withAlpha( 0.60f ) ) );
                     ImGui::PushStyleColor( ImGuiCol_ButtonHovered, EditorColorUtil::toImVec4( accent.withAlpha( 0.60f ) ) );
 
@@ -1122,7 +1122,7 @@ namespace sw::editor
                     const utf8*  pAssetIcon   = EditorThemeUtil::getAssetIconForPath( entry._name, entry._bIsDirectory );
                     const Color  assetColor   = EditorThemeUtil::getAssetColorForPath( entry._name, entry._bIsDirectory );
                     const string statusText   = ContentBrowserModel::describeSourceControlStatus( entry );
-                    const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? string() : string( "  " ) + SW_EDITORICON( "Lock" ) );
+                    const string nameWithIcon = string( pAssetIcon ) + "  " + entry._name + ( statusText.empty() ? string() : string( "  " ) + SW_EDITOR_ICON( "Lock" ) );
                     ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( assetColor ) );
                     const bool bSelected = ImGui::Selectable( nameWithIcon.c_str(), selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowDoubleClick );
                     ImGui::PopStyleColor();

@@ -528,7 +528,7 @@ namespace sw
 
     void InputMap::setLayerEnabled( const hashed_string& layer, bool enabled )
     {
-        LayerDefinition* pLayer = findLayer( layer );
+        LayerDef* pLayer = findLayer( layer );
         if ( pLayer != nullptr )
             pLayer->_bEnabled = enabled ? SW_TRUE : SW_FALSE;
     }
@@ -537,7 +537,7 @@ namespace sw
     {
         const hashed_string hLayer( layer );
         ensureLayer( hLayer, 0, true, blockLower );
-        LayerDefinition* pLayer = findLayer( hLayer );
+        LayerDef* pLayer = findLayer( hLayer );
         if ( pLayer != nullptr )
         {
             pLayer->_bEnabled    = SW_TRUE;
@@ -588,7 +588,7 @@ namespace sw
         const hashed_string hLayer( layer );
         for ( auto& [name, index] : _mapLayer )
         {
-            LayerDefinition& def = _listLayerEntry[index];
+            LayerDef& def = _listLayerEntry[index];
             if ( def._bAlwaysOn == SW_TRUE )
                 continue;
             def._bEnabled = ( name == hLayer ) ? SW_TRUE : SW_FALSE;
@@ -962,7 +962,7 @@ namespace sw
 
     int32 InputMap::getLayerPriority( const hashed_string& layer ) const
     {
-        const LayerDefinition* pLayer = findLayer( layer );
+        const LayerDef* pLayer = findLayer( layer );
         return pLayer != nullptr ? pLayer->_priority : 0;
     }
 
@@ -1231,13 +1231,13 @@ namespace sw
         _listActionName.push_back( action );
     }
 
-    LayerDefinition& InputMap::ensureLayer( const hashed_string& name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )
+    LayerDef& InputMap::ensureLayer( const hashed_string& name, int32 priority, bool enabled, bool blockLower, bool alwaysOn )
     {
         auto it = _mapLayer.find( name );
         if ( it != _mapLayer.end() )
             return _listLayerEntry[it->second];
 
-        LayerDefinition def{};
+        LayerDef def{};
         def._name        = name;
         def._priority    = priority;
         def._bEnabled    = enabled ? SW_TRUE : SW_FALSE;
@@ -1276,13 +1276,13 @@ namespace sw
         return entry;
     }
 
-    LayerDefinition* InputMap::findLayer( const hashed_string& name )
+    LayerDef* InputMap::findLayer( const hashed_string& name )
     {
         auto it = _mapLayer.find( name );
         return it != _mapLayer.end() ? &_listLayerEntry[it->second] : nullptr;
     }
 
-    const LayerDefinition* InputMap::findLayer( const hashed_string& name ) const
+    const LayerDef* InputMap::findLayer( const hashed_string& name ) const
     {
         auto it = _mapLayer.find( name );
         return it != _mapLayer.end() ? &_listLayerEntry[it->second] : nullptr;
@@ -1834,7 +1834,7 @@ namespace sw
 
     bool InputMap::isLayerActiveInternal( const hashed_string& layer ) const
     {
-        const LayerDefinition* pLayer = findLayer( layer );
+        const LayerDef* pLayer = findLayer( layer );
         if ( pLayer == nullptr || pLayer->_bEnabled == SW_FALSE )
             return false;
         if ( pLayer->_bAlwaysOn == SW_TRUE )
@@ -1846,7 +1846,7 @@ namespace sw
             {
                 if ( *it == layer )
                     return true;
-                const LayerDefinition* pTopLayer = findLayer( *it );
+                const LayerDef* pTopLayer = findLayer( *it );
                 if ( pTopLayer != nullptr && pTopLayer->_bBlockLower == SW_TRUE )
                     return false;
             }
@@ -2271,7 +2271,7 @@ namespace sw
         const XMLNode layersNode = root.appendChild( "layers" );
         for ( const hashed_string& layerName : _listLayerName )
         {
-            writeLayerDefinition( layersNode, layerName );
+            writeLayerDef( layersNode, layerName );
         }
 
         // 액션은 등록 순서대로 쓴다. 그래야 다시 읽은 맵의 액션 순서가 같다.
@@ -2290,9 +2290,9 @@ namespace sw
         return true;
     }
 
-    void InputMap::writeLayerDefinition( const XMLNode& layersNode, const hashed_string& layerName ) const
+    void InputMap::writeLayerDef( const XMLNode& layersNode, const hashed_string& layerName ) const
     {
-        const LayerDefinition* pLayer = findLayer( layerName );
+        const LayerDef* pLayer = findLayer( layerName );
         if ( pLayer == nullptr )
             return;
         InputMapLayerFields layerFields;
@@ -2327,7 +2327,7 @@ namespace sw
         vector<hashed_string> listOwnLayer;
         for ( const hashed_string& layerName : _listLayerName )
         {
-            const LayerDefinition* pLayer = findLayer( layerName );
+            const LayerDef* pLayer = findLayer( layerName );
             if ( pLayer != nullptr && pLayer->_sourceIndex == sourceIndex )
                 listOwnLayer.push_back( layerName );
         }
@@ -2336,7 +2336,7 @@ namespace sw
             const XMLNode layersNode = root.appendChild( "layers" );
             for ( const hashed_string& layerName : listOwnLayer )
             {
-                writeLayerDefinition( layersNode, layerName );
+                writeLayerDef( layersNode, layerName );
             }
         }
 

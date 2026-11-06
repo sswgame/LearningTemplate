@@ -27,7 +27,7 @@ namespace
         DialogueGraphAsset _asset{};
         int32              _nextLinkID{ 1 };
 
-        DialogueAssetNode& add( int32 id, DialogueAssetNodeType type )
+        DialogueAssetNode& add( int32 id, DialogueAssetNodeKind type )
         {
             DialogueAssetNode node{};
             node._id   = id;
@@ -51,15 +51,15 @@ namespace
     DialogueGraphAsset makeConversation()
     {
         DialogueGraphBuilder builder;
-        (void)builder.add( kStart, DialogueAssetNodeType::Start );
-        DialogueAssetNode& line                                     = builder.add( kLine, DialogueAssetNodeType::Dialogue );
+        (void)builder.add( kStart, DialogueAssetNodeKind::Start );
+        DialogueAssetNode& line                                     = builder.add( kLine, DialogueAssetNodeKind::Dialogue );
         line._speaker                                               = "Elder";
         line._text                                                  = "Hello";
-        DialogueAssetNode& ask                                      = builder.add( kChoice, DialogueAssetNodeType::Choice );
+        DialogueAssetNode& ask                                      = builder.add( kChoice, DialogueAssetNodeKind::Choice );
         ask._text                                                   = "Where?";
         ask._listChoice                                             = { "Left", "Right" };
-        builder.add( kLeft, DialogueAssetNodeType::Dialogue )._text = "Went left";
-        (void)builder.add( kEnd, DialogueAssetNodeType::End );
+        builder.add( kLeft, DialogueAssetNodeKind::Dialogue )._text = "Went left";
+        (void)builder.add( kEnd, DialogueAssetNodeKind::End );
         builder.connect( kStart, kLine );
         builder.connect( kLine, kChoice );
         builder.connectChoice( kChoice, 0, kLeft );
@@ -173,10 +173,10 @@ SW_TEST_CASE( DialogueRunnerTest, BadChoiceKeepsWaiting )
 SW_TEST_CASE( DialogueRunnerTest, BranchReadsFlags )
 {
     DialogueGraphBuilder builder;
-    (void)builder.add( kStart, DialogueAssetNodeType::Start );
-    builder.add( kBranch, DialogueAssetNodeType::Branch )._condition = "hasKey";
-    builder.add( kLeft, DialogueAssetNodeType::Dialogue )._text      = "yes";
-    builder.add( kRight, DialogueAssetNodeType::Dialogue )._text     = "no";
+    (void)builder.add( kStart, DialogueAssetNodeKind::Start );
+    builder.add( kBranch, DialogueAssetNodeKind::Branch )._condition = "hasKey";
+    builder.add( kLeft, DialogueAssetNodeKind::Dialogue )._text      = "yes";
+    builder.add( kRight, DialogueAssetNodeKind::Dialogue )._text     = "no";
     builder.connect( kStart, kBranch );
     builder.connectBranch( kBranch, true, kLeft );
     builder.connectBranch( kBranch, false, kRight );
@@ -199,13 +199,13 @@ SW_TEST_CASE( DialogueRunnerTest, ActionsSetFlags )
     SW_EXPECT_LOG( "GameAction.Invalid" );
     SW_EXPECT_LOG( "DialogueRunnerComponent.DialogueRunnerNoValidNodes" );
     DialogueGraphBuilder builder;
-    (void)builder.add( kStart, DialogueAssetNodeType::Start );
-    builder.add( 10, DialogueAssetNodeType::Action )._actionCommand = "flag.set(plain)";
-    builder.add( 11, DialogueAssetNodeType::Action )._actionCommand = "flag.set(count, 5)";
-    builder.add( 12, DialogueAssetNodeType::Action )._actionCommand = "flag.set(gone, 0)";
-    builder.add( 13, DialogueAssetNodeType::Action )._actionCommand = "flag.add(odd)";
-    builder.add( 14, DialogueAssetNodeType::Action )._actionCommand = "event(play_sound)";
-    (void)builder.add( kEnd, DialogueAssetNodeType::End );
+    (void)builder.add( kStart, DialogueAssetNodeKind::Start );
+    builder.add( 10, DialogueAssetNodeKind::Action )._actionCommand = "flag.set(plain)";
+    builder.add( 11, DialogueAssetNodeKind::Action )._actionCommand = "flag.set(count, 5)";
+    builder.add( 12, DialogueAssetNodeKind::Action )._actionCommand = "flag.set(gone, 0)";
+    builder.add( 13, DialogueAssetNodeKind::Action )._actionCommand = "flag.add(odd)";
+    builder.add( 14, DialogueAssetNodeKind::Action )._actionCommand = "event(play_sound)";
+    (void)builder.add( kEnd, DialogueAssetNodeKind::End );
     builder.connect( kStart, 10 );
     builder.connect( 10, 11 );
     builder.connect( 11, 12 );
@@ -232,8 +232,8 @@ SW_TEST_CASE( DialogueRunnerTest, ActionsSetFlags )
     for ( const utf8* pBad : { "flag.set(odd, abc)", "no.such.action" } )
     {
         DialogueGraphBuilder bad;
-        (void)bad.add( kStart, DialogueAssetNodeType::Start );
-        bad.add( 10, DialogueAssetNodeType::Action )._actionCommand = pBad;
+        (void)bad.add( kStart, DialogueAssetNodeKind::Start );
+        bad.add( 10, DialogueAssetNodeKind::Action )._actionCommand = pBad;
         bad.connect( kStart, 10 );
         DialogueRunnerComponent rejected;
         rejected.setGraph( bad._asset );
@@ -245,9 +245,9 @@ SW_TEST_CASE( DialogueRunnerTest, ActionsSetFlags )
 SW_TEST_CASE( DialogueRunnerTest, HandlerMayStopDuringAction )
 {
     DialogueGraphBuilder builder;
-    (void)builder.add( kStart, DialogueAssetNodeType::Start );
-    builder.add( kAction, DialogueAssetNodeType::Action )._actionCommand = "event(cut)";
-    builder.add( kLine, DialogueAssetNodeType::Dialogue )._text          = "never";
+    (void)builder.add( kStart, DialogueAssetNodeKind::Start );
+    builder.add( kAction, DialogueAssetNodeKind::Action )._actionCommand = "event(cut)";
+    builder.add( kLine, DialogueAssetNodeKind::Dialogue )._text          = "never";
     builder.connect( kStart, kAction );
     builder.connect( kAction, kLine );
 
@@ -293,9 +293,9 @@ SW_TEST_CASE( DialogueRunnerTest, BrokenGraphsFinish )
     SW_EXPECT_TRUE( runner.getState() == DialogueRunnerState::Finished );
 
     DialogueGraphBuilder loop;
-    (void)loop.add( kStart, DialogueAssetNodeType::Start );
-    loop.add( 10, DialogueAssetNodeType::Action )._actionCommand = "event(a)";
-    loop.add( 11, DialogueAssetNodeType::Action )._actionCommand = "event(b)";
+    (void)loop.add( kStart, DialogueAssetNodeKind::Start );
+    loop.add( 10, DialogueAssetNodeKind::Action )._actionCommand = "event(a)";
+    loop.add( 11, DialogueAssetNodeKind::Action )._actionCommand = "event(b)";
     loop.connect( kStart, 10 );
     loop.connect( 10, 11 );
     loop.connect( 11, 10 );

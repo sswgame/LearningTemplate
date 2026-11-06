@@ -131,12 +131,12 @@ namespace sw
         for ( size_t index = firstNew; index < _listGhostEvent.size(); ++index )
         {
             const GhostEvent& event = _listGhostEvent.data()[index];
-            if ( event._type != GhostEventType::Caught )
+            if ( event._type != GhostEventKind::Caught )
                 continue;
             bCaughtAny = true;
             if ( _pWallet != nullptr && _pCatalog != nullptr )
                 _pWallet->add( _pCatalog->getCurrency(), event._coins );
-            pushEvent( GhostMansionEventType::CoinsCollected, hashed_string{}, _currentRoom, event._coins );
+            pushEvent( GhostMansionEventKind::CoinsCollected, hashed_string{}, _currentRoom, event._coins );
         }
         const bool bCleared = bCaughtAny && _encounter.getGhosts().empty() == false && _encounter.countRemaining() == 0;
         if ( bCleared && isRoomLit( _currentRoom ) == false )
@@ -153,7 +153,7 @@ namespace sw
         if ( pDoor->_key.empty() == false && ( _pInventory == nullptr || _pInventory->removeItem( pDoor->_key, 1 ) == false ) )
             return GhostDoorResult::NeedKey;
         _pFlags->setFlag( pDoor->_flag, 1 );
-        pushEvent( GhostMansionEventType::DoorOpened, doorID );
+        pushEvent( GhostMansionEventKind::DoorOpened, doorID );
         return GhostDoorResult::Opened;
     }
 
@@ -202,7 +202,7 @@ namespace sw
             return false;
         boo._hp    = 0.0f;
         boo._state = HidingGhostState::Caught;
-        pushEvent( GhostMansionEventType::BooCaught, booID, boo._room );
+        pushEvent( GhostMansionEventKind::BooCaught, booID, boo._room );
         return true;
     }
 
@@ -272,7 +272,7 @@ namespace sw
         if ( pRoom == nullptr || _pFlags == nullptr )
             return;
         _pFlags->setFlag( pRoom->_lightFlag, 1 );
-        pushEvent( GhostMansionEventType::RoomLit, roomID, roomID );
+        pushEvent( GhostMansionEventKind::RoomLit, roomID, roomID );
         if ( pRoom->_keyReward.empty() )
             return;
         _listPendingKeyRoom.push_back( roomID );
@@ -292,7 +292,7 @@ namespace sw
                 continue;
             }
             _listPendingKeyRoom.erase( _listPendingKeyRoom.begin() + static_cast<ptrdiff_t>( index ) );
-            pushEvent( GhostMansionEventType::KeyAwarded, pRoom->_keyReward, roomID );
+            pushEvent( GhostMansionEventKind::KeyAwarded, pRoom->_keyReward, roomID );
         }
     }
 
@@ -301,7 +301,7 @@ namespace sw
         HidingGhostRuntime& boo = _listBoo[booIndex];
         boo._state              = HidingGhostState::Revealed;
         boo._timer.start( _pCatalog->getBoos()[booIndex]._escapeTime );
-        pushEvent( GhostMansionEventType::BooRevealed, _pCatalog->getBoos()[booIndex]._id, boo._room );
+        pushEvent( GhostMansionEventKind::BooRevealed, _pCatalog->getBoos()[booIndex]._id, boo._room );
     }
 
     void GhostMansion::moveBooAway( size_t booIndex )
@@ -349,10 +349,10 @@ namespace sw
                                              : listHideout[static_cast<size_t>( _random.nextInt( 0, static_cast<int32>( listHideout.size() ) - 1 ) )];
         boo._state     = HidingGhostState::Hiding;
         boo._timer.clear();
-        pushEvent( GhostMansionEventType::BooEscaped, _pCatalog->getBoos()[booIndex]._id, boo._room );
+        pushEvent( GhostMansionEventKind::BooEscaped, _pCatalog->getBoos()[booIndex]._id, boo._room );
     }
 
-    void GhostMansion::pushEvent( GhostMansionEventType type, const hashed_string& id, const hashed_string& room, int32 count )
+    void GhostMansion::pushEvent( GhostMansionEventKind type, const hashed_string& id, const hashed_string& room, int32 count )
     {
         GhostMansionEvent event;
         event._type  = type;

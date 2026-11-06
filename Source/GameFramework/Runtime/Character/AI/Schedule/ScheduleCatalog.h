@@ -266,7 +266,7 @@ namespace sw
         const ScheduleActivityRegistry& getActivityRegistry() const;
         /** @brief 활동 이름을 검사할 레지스트리를 정합니다. 주지 않으면 기본 종류만 가진 레지스트리를 쓰며, 읽기 전에 정해야 합니다. */
         void                                  setActivityRegistry( const ScheduleActivityRegistry* pRegistry ) { _pActivityRegistry = pRegistry; }
-        const ScheduleConditionVocabulary&    getVocabulary() const { return _vocabulary; }
+        const ScheduleConditionSchema&        getVocabulary() const { return _vocabulary; }
         const SchedulePlaceDef*               findPlace( const hashed_string& id ) const { return _placeCatalog.find( id ); }
         const ScheduleNPCDef*                 findNPC( const hashed_string& id ) const { return _npcCatalog.find( id ); }
         const ScheduleArchetypeDef*           findArchetype( const hashed_string& id ) const { return _archetypeCatalog.find( id ); }
@@ -323,7 +323,7 @@ namespace sw
         GameCatalog<ScheduleArchetypeDef>   _archetypeCatalog;
         GameCatalog<ScheduleNPCDef>         _npcCatalog;
         GameCatalog<ScheduleEventDef>       _eventCatalog;
-        ScheduleConditionVocabulary         _vocabulary;
+        ScheduleConditionSchema             _vocabulary;
         const ScheduleActivityRegistry*     _pActivityRegistry;
     };
 

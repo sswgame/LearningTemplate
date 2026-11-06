@@ -25,9 +25,9 @@ namespace
         void onRun( const ScheduledRun& run ) { _listRun.push_back( run ); }
     };
 
-    ScheduleDefinition makeDaily( int32 minuteOfDay = 0 )
+    ScheduleDef makeDaily( int32 minuteOfDay = 0 )
     {
-        ScheduleDefinition definition;
+        ScheduleDef definition;
         definition._jobID       = "daily.reward";
         definition._kind        = ScheduleKind::Daily;
         definition._minuteOfDay = minuteOfDay;
@@ -43,7 +43,7 @@ namespace
         RunSink               _firstSink;
         RunSink               _secondSink;
 
-        explicit SchedulerRig( const ScheduleDefinition& definition = makeDaily() )
+        explicit SchedulerRig( const ScheduleDef& definition = makeDaily() )
             : _database{}
             , _store{ &_database }
             , _first{}
@@ -120,7 +120,7 @@ SW_TEST_CASE( ServiceSchedulerTest, DailyOccurrence )
 /** @brief [ServiceSchedulerTest] 주간 회차: 요일은 월요일 0 이고, 오늘이 그 요일이어도 시각 전이면 지난주다 */
 SW_TEST_CASE( ServiceSchedulerTest, WeeklyOccurrence )
 {
-    ScheduleDefinition weekly;
+    ScheduleDef weekly;
     weekly._jobID = "weekly.reset";
     weekly._kind  = ScheduleKind::Weekly;
 
@@ -138,7 +138,7 @@ SW_TEST_CASE( ServiceSchedulerTest, WeeklyOccurrence )
 /** @brief [ServiceSchedulerTest] 기간은 [시작, 끝) 안에서 시작 시각 하나이고, 간격은 UTC 0 기준 배수다 */
 SW_TEST_CASE( ServiceSchedulerTest, WindowAndIntervalOccurrence )
 {
-    ScheduleDefinition window;
+    ScheduleDef window;
     window._jobID         = "window.event";
     window._kind          = ScheduleKind::Window;
     window._windowStartMs = kNowMs - 10;
@@ -147,7 +147,7 @@ SW_TEST_CASE( ServiceSchedulerTest, WindowAndIntervalOccurrence )
     SW_EXPECT_EQUAL( int64( -1 ), ServiceScheduler::computeLatestOccurrence( window, window._windowEndMs ) );
     SW_EXPECT_EQUAL( int64( -1 ), ServiceScheduler::computeLatestOccurrence( window, window._windowStartMs - 1 ) );
 
-    ScheduleDefinition interval;
+    ScheduleDef interval;
     interval._jobID      = "interval.sweep";
     interval._kind       = ScheduleKind::Interval;
     interval._intervalMs = 10 * kMinuteMs;
@@ -160,28 +160,28 @@ SW_TEST_CASE( ServiceSchedulerTest, DefinitionRules )
     SW_EXPECT_LOG( "ServiceScheduler.IgnoredScheduledJobInvalid" );
     SW_EXPECT_TRUE( ServiceScheduler::isValidDefinition( makeDaily() ) );
 
-    ScheduleDefinition bad = makeDaily();
-    bad._jobID             = "Upper/Case";
+    ScheduleDef bad = makeDaily();
+    bad._jobID      = "Upper/Case";
     SW_EXPECT_FALSE( ServiceScheduler::isValidDefinition( bad ) );
     bad._jobID.clear();
     SW_EXPECT_FALSE( ServiceScheduler::isValidDefinition( bad ) );
     SW_EXPECT_FALSE( ServiceScheduler::isValidDefinition( makeDaily( 24 * 60 ) ) );
     SW_EXPECT_FALSE( ServiceScheduler::isValidDefinition( makeDaily( -1 ) ) );
 
-    ScheduleDefinition weekly = makeDaily();
-    weekly._kind              = ScheduleKind::Weekly;
-    weekly._dayOfWeek         = 7;
+    ScheduleDef weekly = makeDaily();
+    weekly._kind       = ScheduleKind::Weekly;
+    weekly._dayOfWeek  = 7;
     SW_EXPECT_FALSE( ServiceScheduler::isValidDefinition( weekly ) );
 
-    ScheduleDefinition window = makeDaily();
-    window._kind              = ScheduleKind::Window;
-    window._windowStartMs     = 10;
-    window._windowEndMs       = 10;
+    ScheduleDef window    = makeDaily();
+    window._kind          = ScheduleKind::Window;
+    window._windowStartMs = 10;
+    window._windowEndMs   = 10;
     SW_EXPECT_FALSE( ServiceScheduler::isValidDefinition( window ) );
 
-    ScheduleDefinition interval = makeDaily();
-    interval._kind              = ScheduleKind::Interval;
-    interval._intervalMs        = kMinuteMs - 1;
+    ScheduleDef interval = makeDaily();
+    interval._kind       = ScheduleKind::Interval;
+    interval._intervalMs = kMinuteMs - 1;
     SW_EXPECT_FALSE( ServiceScheduler::isValidDefinition( interval ) );
 
     ServiceScheduler scheduler;
@@ -204,7 +204,7 @@ SW_TEST_CASE( ServiceSchedulerTest, ExactlyOneServerRunsAnOccurrence )
     rig.pump();
     SW_EXPECT_EQUAL( 0, rig._first.getPendingWorkCount() );
 
-    const int64 afterLease = kNowMs + ScheduleDefinition{}._leaseMs + 1;
+    const int64 afterLease = kNowMs + ScheduleDef{}._leaseMs + 1;
     rig.tickBoth( afterLease );
     SW_EXPECT_EQUAL( size_t( 1 ), rig._firstSink._listRun.size() );
     SW_EXPECT_TRUE( rig._secondSink._listRun.empty() );
@@ -225,7 +225,7 @@ SW_TEST_CASE( ServiceSchedulerTest, ExpiredLeaseIsTakenOver )
     rig.pump();
     SW_EXPECT_TRUE( rig._secondSink._listRun.empty() );
 
-    const int64 afterLease = kNowMs + ScheduleDefinition{}._leaseMs;
+    const int64 afterLease = kNowMs + ScheduleDef{}._leaseMs;
     rig._second.update( UnixMilliseconds{ afterLease } );
     rig.pump();
     SW_REQUIRE_EQUAL( size_t( 1 ), rig._secondSink._listRun.size() );

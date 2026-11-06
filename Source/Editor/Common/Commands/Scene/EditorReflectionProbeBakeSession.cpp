@@ -358,17 +358,17 @@ namespace sw::editor
         utf8                       arrMessage[constant::buffer::kMax512];
         if ( probeCount == 0 )
         {
-            notification.push( "Bake Reflection Probes", "Nothing to bake - add a Reflection Probe", NotificationType::Warning );
+            notification.push( "Bake Reflection Probes", "Nothing to bake - add a Reflection Probe", NotificationKind::Warning );
         }
         else if ( bCanceled || _bakedCount < probeCount )
         {
             formatstring( arrMessage, constant::buffer::kMax512, "Baked %# of %# probe(s) - %#", _bakedCount, probeCount, _lastError.c_str() );
-            notification.push( "Bake Reflection Probes", arrMessage, bCanceled ? NotificationType::Warning : NotificationType::Error );
+            notification.push( "Bake Reflection Probes", arrMessage, bCanceled ? NotificationKind::Warning : NotificationKind::Error );
         }
         else
         {
             formatstring( arrMessage, constant::buffer::kMax512, "Baked %# probe(s) - save the scene to keep the paths", _bakedCount );
-            notification.push( "Bake Reflection Probes", arrMessage, NotificationType::Success );
+            notification.push( "Bake Reflection Probes", arrMessage, NotificationKind::Success );
         }
     }
 } // namespace sw::editor

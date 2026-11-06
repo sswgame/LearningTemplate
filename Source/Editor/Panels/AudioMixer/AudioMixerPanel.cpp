@@ -38,10 +38,10 @@ namespace sw::editor
             static Color getMeterColor( float32 decibel )
             {
                 if ( decibel > kClipDb )
-                    return SW_THEMECOLOR( "Signal", "Error" );
+                    return SW_THEME_COLOR( "Signal", "Error" );
                 if ( decibel > kMeterWarnDb )
-                    return SW_THEMECOLOR( "Signal", "Warning" );
-                return SW_THEMECOLOR( "Signal", "Success" );
+                    return SW_THEME_COLOR( "Signal", "Warning" );
+                return SW_THEME_COLOR( "Signal", "Success" );
             }
 
             static void openPanel()
@@ -125,9 +125,9 @@ namespace sw::editor
             }
             ImGui::EndCombo();
         }
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdButton", "PostEvent" ), "Post Event" ) ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "PostEvent" ), "Post Event" ) ) );
         ImGui::BeginDisabled( listEventName.empty() );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdButton", "PostEvent" ), "Post Event" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "PostEvent" ), "Post Event" ) ) )
             _model.postSelectedEvent( engine );
         EditorSelfTestMarks::note( "audiomixer.postEvent" );
         ImGui::EndDisabled();
@@ -137,9 +137,9 @@ namespace sw::editor
         ImGui::SameLine();
         EditorChrome::setNextItemWidthColumns( 32.0f );
         (void)EditorWidgets::drawAssetPathField( "##AudioMixerClip", _clipPath, "audio/sample.wav", ".wav,.ogg", "audiomixer.clipPath" );
-        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdButton", "PlayClip" ), "Play Clip" ) ) );
+        EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "PlayClip" ), "Play Clip" ) ) );
         ImGui::BeginDisabled( _clipPath.empty() );
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Play" ), SW_LOCKEY( "EdButton", "PlayClip" ), "Play Clip" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Play" ), SW_LOCKEY( "EdButton", "PlayClip" ), "Play Clip" ) ) )
             (void)audio.play( AssetID{ _clipPath.c_str() } ); // 파일이 없으면 false 이고 엔진이 로그를 남긴다
         EditorSelfTestMarks::note( "audiomixer.playClip" );
         ImGui::EndDisabled();
@@ -176,23 +176,23 @@ namespace sw::editor
         ImGui::Dummy( meterSize );
         ImDrawList*  pDrawList = ImGui::GetWindowDrawList();
         const ImVec2 meterMax{ meterMin.x + meterSize.x, meterMin.y + meterSize.y };
-        pDrawList->AddRectFilled( meterMin, meterMax, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "FrameBg" ) ) );
+        pDrawList->AddRectFilled( meterMin, meterMax, EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "FrameBg" ) ) );
         const float32 fill = AudioMixerModel::computeMeterFill( heldDb );
         if ( fill > 0.0f )
         {
             const ImVec2 fillMin{ meterMin.x, meterMax.y - meterSize.y * fill };
             pDrawList->AddRectFilled( fillMin, meterMax, EditorColorUtil::toImU32( Internal::getMeterColor( heldDb ) ) );
         }
-        pDrawList->AddRect( meterMin, meterMax, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Border" ) ) );
+        pDrawList->AddRect( meterMin, meterMax, EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Border" ) ) );
 
-        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bMuted ? SW_THEMECOLOR( "Signal", "Error" ) : SW_THEMECOLOR( "Base", "ToggleInactive" ) ) );
+        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bMuted ? SW_THEME_COLOR( "Signal", "Error" ) : SW_THEME_COLOR( "Base", "ToggleInactive" ) ) );
         if ( ImGui::Button( "M", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusMuted( status._name, status._bMuted == false );
         ImGui::PopStyleColor();
         EditorSelfTestMarks::note( ( "audiomixer.mute." + name ).c_str() );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdTip", "Mute" ) );
         ImGui::SameLine();
-        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? SW_THEMECOLOR( "Signal", "Warning" ) : SW_THEMECOLOR( "Base", "ToggleInactive" ) ) );
+        ImGui::PushStyleColor( ImGuiCol_Button, EditorColorUtil::toImVec4( status._bSolo ? SW_THEME_COLOR( "Signal", "Warning" ) : SW_THEME_COLOR( "Base", "ToggleInactive" ) ) );
         if ( ImGui::Button( "S", EditorChrome::measureTextExtent( EditorTextExtent::ofText( 4.0f, 0.0f ) ) ) )
             engine.setBusSolo( status._name, status._bSolo == false );
         ImGui::PopStyleColor();

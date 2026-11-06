@@ -9,6 +9,6 @@
 
 /**
  * @brief 테마 색 키 리터럴 `Ns.Key` 입니다. 등록 줄처럼 색을 나중에 찾는 자리가 키를 들 때 쓴다(찾기는 `EditorThemeUtil::findColor`).
- * @details 두 인자 모두 문자열 리터럴이어야 한다 — 테마 키 테스트(`EditorThemeKeys`)가 `SW_THEMECOLOR` 처럼 훑는다.
+ * @details 두 인자 모두 문자열 리터럴이어야 한다 — 테마 키 테스트(`EditorThemeKeys`)가 `SW_THEME_COLOR` 처럼 훑는다.
  */
-#define SW_THEMECOLOR_KEY( NamespaceLiteral, KeyLiteral ) NamespaceLiteral "." KeyLiteral
+#define SW_THEME_COLOR_KEY( NamespaceLiteral, KeyLiteral ) NamespaceLiteral "." KeyLiteral

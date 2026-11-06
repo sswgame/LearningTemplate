@@ -70,7 +70,7 @@ namespace sw::editor
         return true;
     }
 
-    bool AudioGraphEditUtil::addNode( AudioGraphDef& inoutDef, AudioGraphNodeType type, const float2& canvasPosition, uint32& outNodeIndex )
+    bool AudioGraphEditUtil::addNode( AudioGraphDef& inoutDef, AudioGraphNodeKind type, const float2& canvasPosition, uint32& outNodeIndex )
     {
         if ( inoutDef._listNode.size() >= AudioGraphDef::kMaxNodeCount )
             return false;

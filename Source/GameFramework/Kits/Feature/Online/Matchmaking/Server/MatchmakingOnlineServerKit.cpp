@@ -75,8 +75,8 @@ namespace sw
                 }
                 for ( const string& compact : listCompact )
                 {
-                    MatchModeDefinition mode;
-                    string              modeError;
+                    MatchModeDef mode;
+                    string       modeError;
                     if ( MatchModeCatalog::parseCompactMode( compact, mode, modeError ) == false )
                     {
                         outError = "mode option '" + compact + "': " + modeError;
@@ -160,7 +160,7 @@ namespace sw
 
         private:
             shared_ptr<const MatchModeCatalog> _pCatalog; ///< 옵션 `catalog` 의 공유 캐시 한 벌
-            vector<MatchModeDefinition>        _listMode;
+            vector<MatchModeDef>               _listMode;
             PartyLobbyService                  _partyLobby;
             MatchQueueService                  _queue;
             MatchmakingServer                  _server;

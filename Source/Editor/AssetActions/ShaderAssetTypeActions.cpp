@@ -50,6 +50,6 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_ASSET_TYPE( Shader, EditorAssetTypeIDs::kShader, 400, "Shader", "Shaders", nullptr, SW_EDITORICON_NAME( "Shader" ), SW_THEMECOLOR_KEY( "Asset", "Shader" ), true, true, kArrShaderRule,
+    SW_EDITOR_ASSET_TYPE( Shader, EditorAssetTypeIDs::kShader, 400, "Shader", "Shaders", nullptr, SW_EDITOR_ICON_NAME( "Shader" ), SW_THEME_COLOR_KEY( "Asset", "Shader" ), true, true, kArrShaderRule,
                           SW_COUNT_OF( kArrShaderRule ), nullptr, &s_shaderActions );
 } // namespace sw::editor

@@ -112,11 +112,11 @@ namespace sw
          *          서버가 읽은 정의를 운영 쓰기와 같은 규칙(`LiveEventRules::isValid`)으로 다시 확인합니다.
          *          필드를 더하면 옛 레코드의 그 필드는 기본값으로 채워집니다. 필드를 빼거나 뜻을 바꾸면 버전을 올리고 데이터를 다시 씁니다.
          */
-        [[nodiscard]] static bool encodeEvent( const LiveEventDefinition& definition, vector<uint8>& outBytes );
-        [[nodiscard]] static bool decodeEvent( string_view key, const vector<uint8>& bytes, LiveEventDefinition& outDefinition );
+        [[nodiscard]] static bool encodeEvent( const LiveEventDef& definition, vector<uint8>& outBytes );
+        [[nodiscard]] static bool decodeEvent( string_view key, const vector<uint8>& bytes, LiveEventDef& outDefinition );
         /** @brief 이벤트 정의를 리플렉션 JSON 글로 읽고 씁니다(GM 의 이벤트 운영). 읽기는 JSON 이 아니면 false 이며, 규칙 검사는 쓰기 길(`LiveEventRules::isValid`)이 합니다. */
-        [[nodiscard]] static bool readEventJSON( string_view definitionJSON, LiveEventDefinition& outDefinition );
-        static string             writeEventJSON( const LiveEventDefinition& definition );
+        [[nodiscard]] static bool readEventJSON( string_view definitionJSON, LiveEventDef& outDefinition );
+        static string             writeEventJSON( const LiveEventDef& definition );
         [[nodiscard]] static bool encodeDevice( const PushDeviceRegistration& registration, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeDevice( string_view key, const vector<uint8>& bytes, PushDeviceRegistration& outRegistration );
 

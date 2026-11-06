@@ -168,7 +168,7 @@ namespace sw::editor
                 if ( bWarnUnsavedBeforePlay )
                 {
                     editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyPlayTitle" ), SW_LOCKEY( "EdCommon", "NotifyPlayUnsaved" ),
-                                                                                  NotificationType::Warning );
+                                                                                  NotificationKind::Warning );
                     return;
                 }
                 EditorPlaySession::play();
@@ -197,7 +197,7 @@ namespace sw::editor
             static void warn( const utf8* pTitle, const utf8* pDetail )
             {
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
-                editorContext.getSubsystem<EditorNotificationManager>().push( pTitle, pDetail, NotificationType::Warning );
+                editorContext.getSubsystem<EditorNotificationManager>().push( pTitle, pDetail, NotificationKind::Warning );
             }
 
             static void commandPasteComponentValues()
@@ -632,7 +632,7 @@ namespace sw::editor
             string shortcutLabel;
             inputActions.formatShortcutLabel( pDesc->_inputAction, shortcutLabel );
             ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "TooltipWrapEm" ) );
+            ImGui::PushTextWrapPos( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "TooltipWrapEm" ) );
             ImGui::TextUnformatted( pDesc->_label.c_str() );
             if ( shortcutLabel.empty() == false )
             {

@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    bool MatchModeCatalog::parseCompactMode( string_view text, MatchModeDefinition& outMode, string& outError )
+    bool MatchModeCatalog::parseCompactMode( string_view text, MatchModeDef& outMode, string& outError )
     {
         constexpr const utf8* kShapeError = "must be <id>:<team count>x<team size>";
         const size_t          colon       = text.find( ':' );
@@ -28,14 +28,14 @@ namespace sw
             outError = kShapeError;
             return false;
         }
-        MatchModeDefinition mode;
-        const bool          bNumbers = StringUtil::parseInt( shape.substr( 0, cross ), mode._teamCount ) && StringUtil::parseInt( shape.substr( cross + 1 ), mode._teamSize );
+        MatchModeDef mode;
+        const bool   bNumbers = StringUtil::parseInt( shape.substr( 0, cross ), mode._teamCount ) && StringUtil::parseInt( shape.substr( cross + 1 ), mode._teamSize );
         if ( bNumbers == false )
         {
             outError = kShapeError;
             return false;
         }
-        // 팀 수 · 인원의 범위는 `MatchModeDefinition` 의 `PROPERTY` 하나가 원본이다. 손으로 다시 적지 않는다.
+        // 팀 수 · 인원의 범위는 `MatchModeDef` 의 `PROPERTY` 하나가 원본이다. 손으로 다시 적지 않는다.
         // 범위를 볼 수 없는 프로세스(타입 레지스트리 없음)는 그 사실이 이유로 나온다 — 올바른 형식을 형식 오류로 오해하지 않게 한다.
         outError = ConfigRangeUtil::describeRangeErrors( mode );
         if ( outError.empty() == false )
@@ -48,7 +48,7 @@ namespace sw
 
     uint32 MatchModeCatalog::loadRoot( const XMLNode& root, string_view sourceName )
     {
-        // 칸의 기본값은 `MatchModeDefinition` 의 초기값, 범위는 그 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
+        // 칸의 기본값은 `MatchModeDef` 의 초기값, 범위는 그 `PROPERTY( Min · Max )` 다. 범위 밖 · 모르는 속성 · 깨진 값은 그 원소를 넣지 않고 오류다(readFields 가 남긴다).
         uint32 loadedCount = 0;
         for ( XMLNode node = root.findChild(); node; node = node.findNextSibling() )
         {
@@ -65,9 +65,9 @@ namespace sw
     bool MatchModeCatalog::loadMode( const XMLNode& node, string_view sourceName )
     {
         // 정의의 id 필드(`_modeID`)은 와이어 · 저장 이름이라 데이터의 `id` 속성은 손으로 읽는다.
-        MatchModeDefinition mode;
-        bool                bValid = XMLFields::readFields( node, mode, sourceName, { "id" } );
-        const utf8*         pID    = node.findAttribute( "id" );
+        MatchModeDef mode;
+        bool         bValid = XMLFields::readFields( node, mode, sourceName, { "id" } );
+        const utf8*  pID    = node.findAttribute( "id" );
         if ( StringUtil::isNullOrEmpty( pID ) )
         {
             SW_LOG_ERROR_ID( "MatchModeCatalog.ModeNeedsId", "%#: <Mode> needs id=\"...\"", sourceName );

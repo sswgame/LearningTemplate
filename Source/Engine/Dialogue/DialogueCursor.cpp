@@ -35,7 +35,7 @@ namespace sw
         return 0;
     }
 
-    DialogueAssetNode DialogueCursor::makeNode( DialogueAssetNodeType type, int32 nodeID )
+    DialogueAssetNode DialogueCursor::makeNode( DialogueAssetNodeKind type, int32 nodeID )
     {
         DialogueAssetNode node{};
         node._id   = nodeID;

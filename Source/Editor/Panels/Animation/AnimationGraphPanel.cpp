@@ -104,7 +104,7 @@ namespace sw::editor
         , _selectedLinkID{ 0 }
         , _canvasLinkID{ 0 }
     {
-        _nodeGraph.setPinTypeColors( { SW_THEMECOLOR( "Graph", "TransitionPin" ) } ); // 상태 전환 핀 하나
+        _nodeGraph.setPinTypeColors( { SW_THEME_COLOR( "Graph", "TransitionPin" ) } ); // 상태 전환 핀 하나
     }
 
     void AnimationGraphPanel::shutdown()

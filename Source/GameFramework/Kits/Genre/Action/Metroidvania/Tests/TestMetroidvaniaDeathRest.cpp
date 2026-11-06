@@ -74,7 +74,7 @@ namespace
 
         int32 kill( const sw::hashed_string& spawnID, const sw::hashed_string& enemyID ) { return _state.registerKill( spawnID, enemyID, _flags, &_loot, _random, _drops ); }
 
-        int32 countEvents( sw::MetroidvaniaDeathRestEventType type )
+        int32 countEvents( sw::MetroidvaniaDeathRestEventKind type )
         {
             sw::vector<sw::MetroidvaniaDeathRestEvent> listEvent;
             _state.drainEvents( listEvent );
@@ -127,7 +127,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, RestingRefreshesTheWorld )
     SW_EXPECT_EQUAL( 5, bench.kill( kSpawnA, kHusk ) );
     SW_EXPECT_EQUAL( 300, bench.kill( kSpawnB, kHornet ) );
     SW_EXPECT_FALSE( bench._state.isSpawnAlive( kSpawnA ) );
-    (void)bench.countEvents( sw::MetroidvaniaDeathRestEventType::Rested );
+    (void)bench.countEvents( sw::MetroidvaniaDeathRestEventKind::Rested );
 
     SW_EXPECT_TRUE( bench._state.rest( kBench, bench._vitality ) );
     SW_EXPECT_NEAR( 100.0f, bench._vitality.getHealth(), kDuelTolerance );
@@ -162,7 +162,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, DeathDropsACorpse )
     SW_EXPECT_NEAR( 3.0f, corpse._position._x, kDuelTolerance );
     SW_EXPECT_EQUAL( int64( 0 ), bench._wallet.getBalance( kGeo ) );
     SW_EXPECT_TRUE( bench._state.isSpawnAlive( kSpawnA ) ); // 죽어도 적이 다시 나온다
-    SW_EXPECT_EQUAL( 1, bench.countEvents( sw::MetroidvaniaDeathRestEventType::CorpseDropped ) );
+    SW_EXPECT_EQUAL( 1, bench.countEvents( sw::MetroidvaniaDeathRestEventKind::CorpseDropped ) );
 }
 
 /**
@@ -180,7 +180,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, SecondDeathLosesTheFirstCorpse )
     SW_EXPECT_EQUAL( 100, bench._state.getLostCurrency() );
     SW_EXPECT_EQUAL( 30, bench._state.getCorpse()._currency );
     SW_EXPECT_EQUAL( kCave, bench._state.getCorpse()._area );
-    SW_EXPECT_EQUAL( 1, bench.countEvents( sw::MetroidvaniaDeathRestEventType::CurrencyLost ) );
+    SW_EXPECT_EQUAL( 1, bench.countEvents( sw::MetroidvaniaDeathRestEventKind::CurrencyLost ) );
 
     (void)bench._state.die( kCave, sw::float2{}, bench._vitality );
     SW_EXPECT_EQUAL( 130, bench._state.getLostCurrency() );
@@ -258,7 +258,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, KillsRewardOncePerSpawn )
     SW_EXPECT_FALSE( bench._flags.hasFlag( sw::hashed_string( "boss.hornet" ) ) );
     SW_EXPECT_EQUAL( 300, bench.kill( kSpawnB, kHornet ) );
     SW_EXPECT_TRUE( bench._flags.hasFlag( sw::hashed_string( "boss.hornet" ) ) );
-    SW_EXPECT_EQUAL( 1, bench.countEvents( sw::MetroidvaniaDeathRestEventType::BossDefeated ) );
+    SW_EXPECT_EQUAL( 1, bench.countEvents( sw::MetroidvaniaDeathRestEventKind::BossDefeated ) );
 
     sw::ItemStackList drops;
     SW_EXPECT_EQUAL( 5, bench._state.registerKill( sw::hashed_string( "spawnD" ), kHusk, bench._flags, nullptr, bench._random, drops ) );
@@ -309,7 +309,7 @@ SW_TEST_CASE( MetroidvaniaDeathRestTest, StateRoundTripResumes )
     (void)restored.kill( sw::hashed_string( "other" ), kHusk );
     sw::Archive reading( written.getData(), written.getSize() );
     SW_REQUIRE_TRUE( restored._state.readState( reading ) );
-    SW_EXPECT_EQUAL( 0, restored.countEvents( sw::MetroidvaniaDeathRestEventType::EnemyKilled ) );
+    SW_EXPECT_EQUAL( 0, restored.countEvents( sw::MetroidvaniaDeathRestEventKind::EnemyKilled ) );
     SW_EXPECT_TRUE( restored._state.isSpawnAlive( sw::hashed_string( "other" ) ) );
     SW_EXPECT_FALSE( restored._state.isSpawnAlive( kSpawnA ) );
     SW_EXPECT_EQUAL( 40, restored._state.getCorpse()._currency );

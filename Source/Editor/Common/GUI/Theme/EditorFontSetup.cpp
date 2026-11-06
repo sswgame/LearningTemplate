@@ -40,7 +40,7 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "EditorFontSetup.EditorFontSizeNeeds", "Editor font size needs the theme '%#' tokens: %#", themeName.c_str(), error.c_str() );
                     return false;
                 }
-                // 테마 서브시스템보다 먼저라 `SW_THEMEMETRIC` 이 아니라 읽은 벌에서 찾는다. 두 키는 해석이 양수로 확인했다(`EditorThemeTokens::resolve`).
+                // 테마 서브시스템보다 먼저라 `SW_THEME_METRIC` 이 아니라 읽은 벌에서 찾는다. 두 키는 해석이 양수로 확인했다(`EditorThemeTokens::resolve`).
                 outFontSize  = *theme.findMetric( hashed_string( "Typography.FontSize" ) );
                 outIconScale = *theme.findMetric( hashed_string( "Typography.IconScale" ) );
                 return true;

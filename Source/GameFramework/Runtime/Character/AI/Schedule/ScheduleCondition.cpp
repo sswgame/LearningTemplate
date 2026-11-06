@@ -294,7 +294,7 @@ namespace sw
         return mask;
     }
 
-    bool ScheduleCondition::readFromNode( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName, string_view ownerName )
+    bool ScheduleCondition::readFromNode( const XMLNode& node, const ScheduleConditionSchema& vocabulary, string_view sourceName, string_view ownerName )
     {
         using Internal = ScheduleConditionInternal;
         _listClause.clear();

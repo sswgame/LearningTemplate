@@ -87,7 +87,7 @@ namespace sw::editor
         };
     } // namespace
 
-    SW_EDITOR_VISUALIZER( PhysicsShapes, "physics_shapes", 110, SW_EDITORICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesLabel" ),
+    SW_EDITOR_VISUALIZER( PhysicsShapes, "physics_shapes", 110, SW_EDITOR_ICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesLabel" ),
                           SW_LOCKEYREF( "EdVisualizer", "PhysicsShapesTip" ), false,
                           &PhysicsShapeVisualizerInternal::draw );
 } // namespace sw::editor

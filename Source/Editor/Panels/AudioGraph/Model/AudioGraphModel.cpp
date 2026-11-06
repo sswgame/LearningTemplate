@@ -113,7 +113,7 @@ namespace sw::editor
         return true;
     }
 
-    bool AudioGraphModel::addNode( AudioGraphNodeType type, const float2& canvasPosition )
+    bool AudioGraphModel::addNode( AudioGraphNodeKind type, const float2& canvasPosition )
     {
         uint32 newIndex{ 0 };
         if ( AudioGraphEditUtil::addNode( _editGraph, type, canvasPosition, newIndex ) == false )

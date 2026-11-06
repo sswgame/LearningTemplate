@@ -16,28 +16,28 @@ namespace sw
 
 namespace sw
 {
-    bool LiveOpsProtocol::encodeEvent( const LiveEventDefinition& definition, vector<uint8>& outBytes )
+    bool LiveOpsProtocol::encodeEvent( const LiveEventDef& definition, vector<uint8>& outBytes )
     {
         return ServiceRecordUtil::encode( kLiveOpsRecordVersion, definition, outBytes );
     }
 
-    bool LiveOpsProtocol::decodeEvent( const string_view key, const vector<uint8>& bytes, LiveEventDefinition& outDefinition )
+    bool LiveOpsProtocol::decodeEvent( const string_view key, const vector<uint8>& bytes, LiveEventDef& outDefinition )
     {
         return ServiceRecordUtil::readDurable( key, bytes, kLiveOpsRecordVersion, outDefinition );
     }
 
-    bool LiveOpsProtocol::readEventJSON( string_view definitionJSON, LiveEventDefinition& outDefinition )
+    bool LiveOpsProtocol::readEventJSON( string_view definitionJSON, LiveEventDef& outDefinition )
     {
-        LiveEventDefinition definition;
-        if ( JSONSerializer::deserialize( &definition, *LiveEventDefinition::StaticType(), definitionJSON ) == false )
+        LiveEventDef definition;
+        if ( JSONSerializer::deserialize( &definition, *LiveEventDef::StaticType(), definitionJSON ) == false )
             return false;
         outDefinition = std::move( definition );
         return true;
     }
 
-    string LiveOpsProtocol::writeEventJSON( const LiveEventDefinition& definition )
+    string LiveOpsProtocol::writeEventJSON( const LiveEventDef& definition )
     {
-        return JSONSerializer::serialize( &definition, *LiveEventDefinition::StaticType() );
+        return JSONSerializer::serialize( &definition, *LiveEventDef::StaticType() );
     }
 
     bool LiveOpsProtocol::encodeDevice( const PushDeviceRegistration& registration, vector<uint8>& outBytes )

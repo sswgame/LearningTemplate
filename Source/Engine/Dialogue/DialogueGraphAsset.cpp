@@ -22,13 +22,13 @@ namespace sw
         {
             for ( size_t index = 0; index < SW_COUNT_OF( kArrDialogueNodeInfo ); ++index )
             {
-                if ( kArrDialogueNodeInfo[index]._type != static_cast<DialogueAssetNodeType>( index ) )
+                if ( kArrDialogueNodeInfo[index]._type != static_cast<DialogueAssetNodeKind>( index ) )
                     return false;
             }
             return true;
         }
 
-        static_assert( isInfoTableOrdered(), "kArrDialogueNodeInfo must be ordered by DialogueAssetNodeType" );
+        static_assert( isInfoTableOrdered(), "kArrDialogueNodeInfo must be ordered by DialogueAssetNodeKind" );
     } // namespace
 } // namespace sw
 
@@ -139,7 +139,7 @@ namespace sw
     {
         for ( const DialogueAssetNode& node : _listNode )
         {
-            if ( node._type == DialogueAssetNodeType::Start )
+            if ( node._type == DialogueAssetNodeKind::Start )
                 return &node;
         }
         if ( _listNode.empty() )
@@ -217,13 +217,13 @@ namespace sw
         return findLinkedNodeID( fromNodeID, bTrue ? kPinOffsetTrue : kPinOffsetFalse );
     }
 
-    const utf8* DialogueGraphAsset::nodeTypeName( DialogueAssetNodeType type )
+    const utf8* DialogueGraphAsset::nodeTypeName( DialogueAssetNodeKind type )
     {
         const DialogueNodeInfo* pInfo = findNodeInfo( type );
         return pInfo != nullptr ? pInfo->_pName : "Unknown";
     }
 
-    const DialogueNodeInfo* DialogueGraphAsset::findNodeInfo( DialogueAssetNodeType type )
+    const DialogueNodeInfo* DialogueGraphAsset::findNodeInfo( DialogueAssetNodeKind type )
     {
         const size_t index = static_cast<size_t>( type );
         if ( index >= SW_COUNT_OF( kArrDialogueNodeInfo ) )

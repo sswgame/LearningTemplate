@@ -29,7 +29,7 @@ namespace sw::editor
         {
             if ( args._pListCollider == nullptr )
                 return;
-            const ImU32 colorWire = EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "ColliderWire" ) );
+            const ImU32 colorWire = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "ColliderWire" ) );
 
             for ( const BoxCollider2DComponent* pBox : *args._pListCollider )
             {
@@ -57,6 +57,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_VISUALIZER( BoxCollider2D, "box_collider_2d", 100, SW_EDITORICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "BoxCollider2DLabel" ), SW_LOCKEYREF( "EdVisualizer", "BoxCollider2DTip" ), true,
+    SW_EDITOR_VISUALIZER( BoxCollider2D, "box_collider_2d", 100, SW_EDITOR_ICON_NAME( "Collider" ), SW_LOCKEYREF( "EdVisualizer", "BoxCollider2DLabel" ), SW_LOCKEYREF( "EdVisualizer", "BoxCollider2DTip" ), true,
                           &drawBoxCollider2DWire );
 } // namespace sw::editor

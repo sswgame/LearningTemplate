@@ -53,7 +53,7 @@ namespace sw::editor
          * @brief 종류 @p type 의 노드를 @p canvasPosition 에 넣고 번호를 돌려줍니다. 이름은 종류 이름 + 겹치지 않는 번호입니다(`Sine2`).
          * @return 노드 수 상한이면 false 이고 모델은 그대로입니다.
          */
-        [[nodiscard]] static bool addNode( AudioGraphDef& inoutDef, AudioGraphNodeType type, const float2& canvasPosition, uint32& outNodeIndex );
+        [[nodiscard]] static bool addNode( AudioGraphDef& inoutDef, AudioGraphNodeKind type, const float2& canvasPosition, uint32& outNodeIndex );
         /**
          * @brief 노드 @p listName 을 @p offset 만큼 비켜 복제합니다(언리얼 MetaSound · 그래프의 Duplicate). 값 · 클립은 같고 이름은 종류 이름 + 새 번호다.
          * @details 입력은 복제한 노드끼리의 것만 새 이름으로 잇는다(바깥 노드에서 오던 입력은 버린다 — 사본이 원본 신호를 몰래 더하지 않게). 노드 수 상한이면 거기서 멈춘다.

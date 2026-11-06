@@ -22,16 +22,16 @@ SW_TEST_CASE( LeaderboardCatalogTest, ReadsSeasonBoardWithRewardTiers )
   <Board id="daily_score" order="Ascending" update="Latest" reset="Daily" resetMinute="90"/>
 </LeaderboardCatalog>)",
                                               "test" ) );
-    const vector<LeaderboardDefinition>& listBoard = catalog.getBoards();
+    const vector<LeaderboardDef>& listBoard = catalog.getBoards();
     SW_REQUIRE_EQUAL( size_t( 2 ), listBoard.size() );
-    const LeaderboardDefinition& arena = listBoard[0];
+    const LeaderboardDef& arena = listBoard[0];
     SW_EXPECT_EQUAL( string( "arena_kills" ), arena._boardID );
     SW_EXPECT_TRUE( arena._reset == LeaderboardReset::Season );
     SW_REQUIRE_EQUAL( size_t( 1 ), arena._listSeason.size() );
     SW_EXPECT_EQUAL( 1u, arena._listSeason[0]._seasonID );
     SW_REQUIRE_EQUAL( size_t( 2 ), arena._listSeason[0]._listRewardTier.size() );
     SW_EXPECT_EQUAL( 10, arena._listSeason[0]._listRewardTier[1]._rankTo );
-    const LeaderboardDefinition& daily = listBoard[1];
+    const LeaderboardDef& daily = listBoard[1];
     SW_EXPECT_TRUE( daily._order == LeaderboardOrder::Ascending );
     SW_EXPECT_TRUE( daily._reset == LeaderboardReset::Daily );
     SW_EXPECT_EQUAL( 90, daily._resetMinuteOfDay );
@@ -54,7 +54,7 @@ SW_TEST_CASE( LeaderboardCatalogTest, RejectsBoardsWithBadRewardTiers )
   <Board id="good"/>
 </LeaderboardCatalog>)",
                                    "test" );
-    const vector<LeaderboardDefinition>& listBoard = catalog.getBoards();
+    const vector<LeaderboardDef>& listBoard = catalog.getBoards();
     SW_REQUIRE_EQUAL( size_t( 1 ), listBoard.size() );
     SW_EXPECT_EQUAL( string( "good" ), listBoard[0]._boardID );
 }

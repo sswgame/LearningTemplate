@@ -31,9 +31,9 @@ namespace sw::editor
         struct HistoryPanelInternal
         {
             /** @brief 지금 위치 표시입니다. 선택과 같은 뜻이라 강조색이다(앱 화면 규칙 — 강조색은 데이터 · 선택에만, 예전 고정 초록은 테마를 따르지 않았다). */
-            static Color getCurrentMarker() { return SW_THEMECOLOR( "Base", "Accent" ); }
+            static Color getCurrentMarker() { return SW_THEME_COLOR( "Base", "Accent" ); }
             /** @brief 되돌린(다시 실행할 수 있는) 항목의 흐린 글입니다. */
-            static Color getUndoneText() { return SW_THEMECOLOR( "Base", "TextMuted" ); }
+            static Color getUndoneText() { return SW_THEME_COLOR( "Base", "TextMuted" ); }
 
             /** @brief 위쪽 막대(실행 취소 · 다시 실행 · 지우기 · 위치 표시)를 그립니다. */
             static void drawToolbar( CommandStack& cmdStack )
@@ -47,17 +47,17 @@ namespace sw::editor
                 // 막힌 단추는 왜 막혔는지 툴팁에 쓴다.
                 if ( EditorChrome::beginToolbar( "##HistoryToolbar" ) )
                 {
-                    if ( EditorCompactControls::drawIconButton( "##historyUndo", SW_EDITORICON( "Undo" ), SW_LOCKEY( "EditorScene", "HistoryUndo" ),
+                    if ( EditorCompactControls::drawIconButton( "##historyUndo", SW_EDITOR_ICON( "Undo" ), SW_LOCKEY( "EditorScene", "HistoryUndo" ),
                                                                 bCanUndo ? nullptr : SW_LOCKEY( "EditorScene", "HistoryNothingToUndo" ) ) )
                         cmdStack.undo();
                     EditorSelfTestMarks::note( "history.undo" );
                     ImGui::SameLine();
-                    if ( EditorCompactControls::drawIconButton( "##historyRedo", SW_EDITORICON( "Redo" ), SW_LOCKEY( "EditorScene", "HistoryRedo" ),
+                    if ( EditorCompactControls::drawIconButton( "##historyRedo", SW_EDITOR_ICON( "Redo" ), SW_LOCKEY( "EditorScene", "HistoryRedo" ),
                                                                 bCanRedo ? nullptr : SW_LOCKEY( "EditorScene", "HistoryNothingToRedo" ) ) )
                         cmdStack.redo();
                     EditorSelfTestMarks::note( "history.redo" );
                     ImGui::SameLine();
-                    if ( EditorCompactControls::drawIconButton( "##historyClear", SW_EDITORICON( "Trash" ), SW_LOCKEY( "EditorScene", "HistoryClear" ),
+                    if ( EditorCompactControls::drawIconButton( "##historyClear", SW_EDITOR_ICON( "Trash" ), SW_LOCKEY( "EditorScene", "HistoryClear" ),
                                                                 cmdCount > 0 ? nullptr : SW_LOCKEY( "EditorScene", "HistoryNothingToUndo" ) ) )
                         cmdStack.clear();
                     EditorSelfTestMarks::note( "history.clear" );

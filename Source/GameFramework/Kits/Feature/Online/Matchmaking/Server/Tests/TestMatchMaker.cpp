@@ -12,9 +12,9 @@ using namespace sw;
 
 namespace
 {
-    MatchModeDefinition makeMode( int32 teamCount, int32 teamSize )
+    MatchModeDef makeMode( int32 teamCount, int32 teamSize )
     {
-        MatchModeDefinition definition;
+        MatchModeDef definition;
         definition._modeID                = "duel";
         definition._teamCount             = teamCount;
         definition._teamSize              = teamSize;
@@ -147,18 +147,18 @@ SW_TEST_CASE( MatchMakerTest, PartiesStayTogetherAndTeamsBalance )
 /** @brief [MatchModeCatalogTest] 짧은 모드 글(`<id>:<팀 수>x<팀 인원>`)은 팀 모양만 정하고, 형식이 틀리거나 범위 밖이면 읽지 않는다 */
 SW_TEST_CASE( MatchModeCatalogTest, CompactModeTextSetsTheTeamShapeOrIsRejected )
 {
-    MatchModeDefinition mode;
-    string              error;
+    MatchModeDef mode;
+    string       error;
     SW_REQUIRE_TRUE_MSG( MatchModeCatalog::parseCompactMode( "duo:2x2", mode, error ), error.c_str() );
     SW_EXPECT_EQUAL( string( "duo" ), mode._modeID );
     SW_EXPECT_EQUAL( 2, mode._teamCount );
     SW_EXPECT_EQUAL( 2, mode._teamSize );
-    SW_EXPECT_EQUAL( MatchModeDefinition{}._maxWaitMs, mode._maxWaitMs ); // 나머지는 정의의 기본값이다
+    SW_EXPECT_EQUAL( MatchModeDef{}._maxWaitMs, mode._maxWaitMs ); // 나머지는 정의의 기본값이다
 
     for ( const utf8* pBad : { "duo", "duo:2", "duo:2x", ":2x2", "duo:0x2", "duo:2x0", "duo:axb", "duo:99x99" } )
     {
-        MatchModeDefinition rejected;
-        string              reason;
+        MatchModeDef rejected;
+        string       reason;
         SW_EXPECT_FALSE_MSG( MatchModeCatalog::parseCompactMode( pBad, rejected, reason ), pBad );
         SW_EXPECT_FALSE_MSG( reason.empty(), pBad );
     }

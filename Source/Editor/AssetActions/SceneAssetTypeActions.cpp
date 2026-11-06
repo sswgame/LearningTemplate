@@ -62,6 +62,6 @@ namespace sw::editor
         const EditorAssetMatchRule kArrSceneRule[] = { EditorAssetMatchRule::cookableSource( SceneDocument::kAssetType ) };
     } // namespace
 
-    SW_EDITOR_ASSET_TYPE( Scene, SceneDocument::kAssetType._name.data(), 100, "Scene", "Scenes", nullptr, SW_EDITORICON_NAME( "Scene" ), SW_THEMECOLOR_KEY( "Base", "Accent" ), true, false, kArrSceneRule,
+    SW_EDITOR_ASSET_TYPE( Scene, SceneDocument::kAssetType._name.data(), 100, "Scene", "Scenes", nullptr, SW_EDITOR_ICON_NAME( "Scene" ), SW_THEME_COLOR_KEY( "Base", "Accent" ), true, false, kArrSceneRule,
                           SW_COUNT_OF( kArrSceneRule ), &kSceneTemplate, &s_sceneActions );
 } // namespace sw::editor

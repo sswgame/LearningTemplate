@@ -13,20 +13,20 @@ namespace sw
         struct AdventureElementGridInternal
         {
             /** @brief 알림 이름을 열거형으로 바꿉니다. 테이블의 알림 이름은 열거자 이름과 같습니다. */
-            [[nodiscard]] static bool findEventType( const hashed_string& name, AdventureElementEventType& outType )
+            [[nodiscard]] static bool findEventType( const hashed_string& name, AdventureElementEventKind& outType )
             {
                 struct NameType
                 {
                     const utf8*               _pName;
-                    AdventureElementEventType _type;
+                    AdventureElementEventKind _type;
                 };
                 static constexpr NameType kArrEvent[] = {
-                    {     "Ignited",      AdventureElementEventType::Ignited},
-                    {   "BurnedOut",    AdventureElementEventType::BurnedOut},
-                    {"Extinguished", AdventureElementEventType::Extinguished},
-                    {      "Melted",       AdventureElementEventType::Melted},
-                    {      "Frozen",       AdventureElementEventType::Frozen},
-                    { "Electrified",  AdventureElementEventType::Electrified},
+                    {     "Ignited",      AdventureElementEventKind::Ignited},
+                    {   "BurnedOut",    AdventureElementEventKind::BurnedOut},
+                    {"Extinguished", AdventureElementEventKind::Extinguished},
+                    {      "Melted",       AdventureElementEventKind::Melted},
+                    {      "Frozen",       AdventureElementEventKind::Frozen},
+                    { "Electrified",  AdventureElementEventKind::Electrified},
                 };
                 for ( const NameType& entry : kArrEvent )
                 {

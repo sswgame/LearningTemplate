@@ -262,7 +262,7 @@ namespace sw::editor
             ImGui::TextColored( ImVec4( 1.0f, 0.55f, 0.35f, 1.0f ), "%s", _document.getStatus().c_str() );
         if ( _document.hasExternalChange() )
         {
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ), "A socket file was changed on disk while this window has unsaved edits." );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Warning" ) ), "A socket file was changed on disk while this window has unsaved edits." );
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdPlugin", "ReloadFromDiskDiscardEdits" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdPlugin", "ReloadFromDiskDiscardEdits" ) ) && _document.loadSocketFile() == false )
                 SW_LOG_WARNING_ID( "CharacterEditorPanel.CharacterEditorSocketFile", "Character Editor: the socket file '%#' could not be reloaded - the edits stay", _document.getPaths()._socketPath.c_str() ); // 까닭은 상태 줄에 남았다
@@ -607,7 +607,7 @@ namespace sw::editor
             _document.setStatus( string_view{} );
         _socketResolveError.clear();
         const float4x4 bodyWorld       = pBodyScene->getWorldMatrix();
-        const float4   arrAxisColor[3] = { SW_THEMECOLOR( "Viewport", "AxisX" ).toFloat4(), SW_THEMECOLOR( "Viewport", "AxisY" ).toFloat4(), SW_THEMECOLOR( "Viewport", "AxisZ" ).toFloat4() };
+        const float4   arrAxisColor[3] = { SW_THEME_COLOR( "Viewport", "AxisX" ).toFloat4(), SW_THEME_COLOR( "Viewport", "AxisY" ).toFloat4(), SW_THEME_COLOR( "Viewport", "AxisZ" ).toFloat4() };
         const float3   arrAxis[3]      = {
             float3{1.0f, 0.0f, 0.0f},
             float3{0.0f, 1.0f, 0.0f},

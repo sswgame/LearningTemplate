@@ -41,8 +41,8 @@ namespace sw::editor
             static EditorSelfTestStep runModelRoundTrips( EditorSelfTestContext& context )
             {
                 BehaviorTreeEditModel model;
-                const int32           root = model.addNode( -1, BehaviorNodeType::Selector );
-                const int32           wait = model.addNode( root, BehaviorNodeType::Wait );
+                const int32           root = model.addNode( -1, BehaviorNodeKind::Selector );
+                const int32           wait = model.addNode( root, BehaviorNodeKind::Wait );
                 context.expect( root >= 0 && wait >= 0, "the model rejected a Selector with a Wait child" );
                 string                text = model.write();
                 BehaviorTreeEditModel reread;

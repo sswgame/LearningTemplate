@@ -307,7 +307,7 @@ namespace sw::editor
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSpriteClip", "AtlasCellTip" ) );
 
         // 셀 격자와 고른 프레임 사각형을 이미지 위에 그린다.
-        const ImU32 gridColor    = EditorColorUtil::toImU32( SW_THEMECOLOR( "Viewport", "Label" ) );
+        const ImU32 gridColor    = EditorColorUtil::toImU32( SW_THEME_COLOR( "Viewport", "Label" ) );
         ImDrawList* pDrawList    = ImGui::GetWindowDrawList();
         const int32 sliceColumns = _model.getSliceColumns();
         const int32 sliceRows    = _model.getSliceRows();
@@ -325,7 +325,7 @@ namespace sw::editor
         {
             const float4& uvRect = pFrame->_uvRect;
             pDrawList->AddRect( ImVec2( imageMin.x + uvRect._x * side, imageMin.y + uvRect._y * side ),
-                                ImVec2( imageMin.x + ( uvRect._x + uvRect._z ) * side, imageMin.y + ( uvRect._y + uvRect._w ) * side ), EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) ),
+                                ImVec2( imageMin.x + ( uvRect._x + uvRect._z ) * side, imageMin.y + ( uvRect._y + uvRect._w ) * side ), EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Highlight" ) ),
                                 0.0f, 0, 2.0f );
         }
 

@@ -38,18 +38,18 @@ namespace sw
         friend class XMLCatalog<LeaderboardCatalog>;
 
     public:
-        const vector<LeaderboardDefinition>& getBoards() const { return _listBoard; }
-        const vector<AchievementDefinition>& getAchievements() const { return _listAchievement; }
+        const vector<LeaderboardDef>& getBoards() const { return _listBoard; }
+        const vector<AchievementDef>& getAchievements() const { return _listAchievement; }
 
     private:
         static constexpr const utf8* kXMLRootName = "LeaderboardCatalog";
         uint32                       loadRoot( const XMLNode& root, string_view sourceName );
         /** @brief `<Board>` 와 그 `<Season>` · `<Reward>` 를 스키마로 읽습니다. 하나라도 틀리면 오류를 남기고 false 입니다(그 보드는 넣지 않는다). */
-        [[nodiscard]] static bool readBoard( const XMLNode& node, string_view sourceName, LeaderboardDefinition& outBoard );
+        [[nodiscard]] static bool readBoard( const XMLNode& node, string_view sourceName, LeaderboardDef& outBoard );
 
     private:
-        vector<LeaderboardDefinition> _listBoard{};
-        vector<AchievementDefinition> _listAchievement{};
+        vector<LeaderboardDef> _listBoard{};
+        vector<AchievementDef> _listAchievement{};
     };
 
     /** @brief 공유 캐시는 이 카탈로그의 .cpp 가 인스턴스화합니다. 쓰는 쪽은 사본을 읽지 않고 `SharedAssetCache<LeaderboardCatalog>::acquire` 로 한 벌을 받습니다. */

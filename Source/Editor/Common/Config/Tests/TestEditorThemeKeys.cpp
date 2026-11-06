@@ -1,4 +1,4 @@
-// EditorThemeKeys — 코드가 키로 가리키는 테마 토큰(`SW_THEMECOLOR` · `SW_THEMECOLOR_KEY` · `SW_THEMEMETRIC`)과 데이터가 이름으로 가리키는 색(컴포넌트 아이콘 `Component.<이름>`)이
+// EditorThemeKeys — 코드가 키로 가리키는 테마 토큰(`SW_THEME_COLOR` · `SW_THEME_COLOR_KEY` · `SW_THEME_METRIC`)과 데이터가 이름으로 가리키는 색(컴포넌트 아이콘 `Component.<이름>`)이
 // 모든 토큰 벌에 있고, 벌에 있는 키는 코드나 데이터 어딘가가 쓴다.
 // 지역화의 gather-text 검사(코드의 `SW_LOCKEY` ↔ `*.strings.xml`)와 같은 자리다. 키가 문자열이라 컴파일러가 보지 못하는 오타 · 빠진 줄 · 남은 줄을 여기서 잡는다.
 #include "pch.h"
@@ -83,9 +83,9 @@ namespace
             string     text;
             if ( bCode == false || StringUtil::contains( filePath, "graphify-out" ) || FileUtil::readTextFile( filePath, text ) == false )
                 continue;
-            collectMacroKeys( text, "SW_THEMECOLOR_KEY", scan._setColorKey );
-            collectMacroKeys( text, "SW_THEMECOLOR", scan._setColorKey );
-            collectMacroKeys( text, "SW_THEMEMETRIC", scan._setMetricKey );
+            collectMacroKeys( text, "SW_THEME_COLOR_KEY", scan._setColorKey );
+            collectMacroKeys( text, "SW_THEME_COLOR", scan._setColorKey );
+            collectMacroKeys( text, "SW_THEME_METRIC", scan._setMetricKey );
             scan._allText += text;
         }
         // 데이터가 이름으로 드는 색: 컴포넌트 아이콘 표의 색과 컴포넌트 선언의 `IconColor=` 메타(키는 `Component.<이름>`).

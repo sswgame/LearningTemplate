@@ -165,7 +165,7 @@ namespace sw::editor
         if ( EditorChrome::beginToolbar( "##GameViewToolbar" ) )
         {
             const utf8* pCurrentLabel = EditorViewTargetUtil::getAspectLabel( _model.getAspect() );
-            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEMEMETRIC( "Layout", "FieldComboEm" ) );
+            ImGui::SetNextItemWidth( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "FieldComboEm" ) );
             if ( ImGui::BeginCombo( "##GameViewAspect", pCurrentLabel ) )
             {
                 for ( uint32 aspectIndex = 0; aspectIndex < static_cast<uint32>( EditorGameViewAspect::Count ); ++aspectIndex )
@@ -194,13 +194,13 @@ namespace sw::editor
             ImGui::SameLine();
             // 디버그 드로우 겹치기(서버 디버깅 S6) — 이 에디터의 게임 뷰와, 멀티 프로세스 재생이 띄운 자식 프로세스(클라이언트의 권위 고스트) 모두에 같은 값을 건다.
             const bool bDebugDrawShown = DebugDrawCanvasUtil::isGameViewOverlayEnabled();
-            if ( EditorWidgets::drawIconToggle( "##gameViewDebugDraw", SW_EDITORICON( "Bug" ), bDebugDrawShown,
+            if ( EditorWidgets::drawIconToggle( "##gameViewDebugDraw", SW_EDITOR_ICON( "Bug" ), bDebugDrawShown,
                                                 "Debug draw in the game view - lines, spheres and text from DebugDrawQueue (authority ghosts too). Sent to net play children" ) )
                 GameViewModel::setDebugDrawShown( bDebugDrawShown == false );
             EditorSelfTestMarks::note( "gameView.debugDraw" );
 
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Camera" ), "##GameViewScreenshot" ) ) );
-            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Camera" ), "##GameViewScreenshot" ) ) )
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Camera" ), "##GameViewScreenshot" ) ) );
+            if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Camera" ), "##GameViewScreenshot" ) ) )
                 EditorScreenshotCommands::captureGameView();
             EditorSelfTestMarks::note( "gameView.screenshot" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "GameViewScreenshot" ) );

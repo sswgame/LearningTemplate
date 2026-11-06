@@ -47,9 +47,9 @@ namespace sw::editor
         _bRowsDirty                  = SW_TRUE;
         EditorContext& editorContext = editor::getSubsystem<EditorContext>();
         if ( bCaptured )
-            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationType::Success );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportSaved" ), directory, NotificationKind::Success );
         else
-            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationType::Error );
+            editorContext.getSubsystem<EditorNotificationManager>().push( SW_LOCKEY( "EdCommon", "NotifyBugReportTitle" ), SW_LOCKEY( "EdCommon", "NotifyBugReportFailed" ), NotificationKind::Error );
         if ( bCaptured )
             _note.clear(); // 모은 메모는 info.txt 에 남았다
         return bCaptured;

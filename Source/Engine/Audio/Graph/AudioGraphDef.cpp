@@ -21,7 +21,7 @@ namespace sw
         bool validateAudioGraphNode( const AudioGraphDef& def, size_t nodeIndex, string_view sourceName )
         {
             const AudioGraphNodeDesc&     node     = def._listNode[nodeIndex];
-            const AudioGraphNodeTypeInfo& typeInfo = AudioGraphRegistry::getNodeType( node._type );
+            const AudioGraphNodeKindInfo& typeInfo = AudioGraphRegistry::getNodeType( node._type );
             const utf8*                   pName    = node._name.c_str();
             bool                          bValid   = true;
             if ( node._name.empty() )

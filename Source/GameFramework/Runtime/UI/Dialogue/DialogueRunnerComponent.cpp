@@ -103,8 +103,8 @@ namespace sw
         bool              bValid     = true;
         for ( const DialogueAssetNode& node : _graph._listNode )
         {
-            const bool bBranch = node._type == DialogueAssetNodeType::Branch;
-            const bool bAction = node._type == DialogueAssetNodeType::Action;
+            const bool bBranch = node._type == DialogueAssetNodeKind::Branch;
+            const bool bAction = node._type == DialogueAssetNodeKind::Action;
             if ( bBranch == false && bAction == false )
                 continue;
             DialogueCompiledNode compiled;
@@ -378,11 +378,11 @@ namespace sw
 
         switch ( node._type )
         {
-            case DialogueAssetNodeType::Start:
+            case DialogueAssetNodeKind::Start:
             {
                 break;
             }
-            case DialogueAssetNodeType::Dialogue:
+            case DialogueAssetNodeKind::Dialogue:
             {
                 _state          = DialogueRunnerState::ShowingDialogue;
                 _currentSpeaker = DialogueGraphAsset::resolveLocalizedText( node._speaker );
@@ -391,7 +391,7 @@ namespace sw
                 notifyLine();
                 return false;
             }
-            case DialogueAssetNodeType::Choice:
+            case DialogueAssetNodeKind::Choice:
             {
                 _state          = DialogueRunnerState::WaitingForChoice;
                 _currentSpeaker = DialogueGraphAsset::resolveLocalizedText( node._speaker );
@@ -406,12 +406,12 @@ namespace sw
                 notifyChoices();
                 return false;
             }
-            case DialogueAssetNodeType::Branch:
+            case DialogueAssetNodeKind::Branch:
             {
                 input._bConditionMet = evaluateCondition( nodeID );
                 break;
             }
-            case DialogueAssetNodeType::Action:
+            case DialogueAssetNodeKind::Action:
             {
                 // 핸들러가 그 안에서 대화를 멈추거나 · 다시 시작하거나 · 진행시켰으면 여기서 더 가지 않는다.
                 // 상태 값으로는 알 수 없다 — 첫 대사 전의 Action 은 원래 Idle 에서 돈다.
@@ -421,12 +421,12 @@ namespace sw
                     return false;
                 break;
             }
-            case DialogueAssetNodeType::End:
+            case DialogueAssetNodeKind::End:
             {
                 finishDialogue();
                 return false;
             }
-            case DialogueAssetNodeType::Count:
+            case DialogueAssetNodeKind::Count:
             {
                 SW_LOG_WARNING_ID( "DialogueRunnerComponent.DialogueRunnerNodeUnknownType", "DialogueRunner: node %# has unknown type %#; finishing the dialogue.", nodeID, static_cast<uint32>( node._type ) );
                 finishDialogue();

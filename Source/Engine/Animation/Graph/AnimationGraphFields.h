@@ -71,7 +71,7 @@ namespace sw
         REFLECT_BODY();
 
         PROPERTY( Required )
-        AnimationPoseNodeType _type{ AnimationPoseNodeType::None };
+        AnimationPoseNodeKind _type{ AnimationPoseNodeKind::None };
         PROPERTY()
         hashed_string _weight{};
     };

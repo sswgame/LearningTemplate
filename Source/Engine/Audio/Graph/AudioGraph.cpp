@@ -64,8 +64,8 @@ namespace sw
                 { "volumeDb", 0.0f, -96.0f, 24.0f },
             };
 
-            /** @brief 종류 표입니다. `AudioGraphNodeType` 의 순서와 같다(아래 static_assert). */
-            static constexpr AudioGraphNodeTypeInfo kArrNodeType[] = {
+            /** @brief 종류 표입니다. `AudioGraphNodeKind` 의 순서와 같다(아래 static_assert). */
+            static constexpr AudioGraphNodeKindInfo kArrNodeType[] = {
                 {    "Sine", kArrOscillatorParameter, SW_COUNT_OF( kArrOscillatorParameter ),  true, false},
                 {     "Saw", kArrOscillatorParameter, SW_COUNT_OF( kArrOscillatorParameter ),  true, false},
                 {  "Square", kArrOscillatorParameter, SW_COUNT_OF( kArrOscillatorParameter ),  true, false},
@@ -78,7 +78,7 @@ namespace sw
                 {"BandPass",     kArrFilterParameter,     SW_COUNT_OF( kArrFilterParameter ), false, false},
                 {    "Gain",       kArrGainParameter,       SW_COUNT_OF( kArrGainParameter ), false, false},
             };
-            static_assert( SW_COUNT_OF( kArrNodeType ) == static_cast<size_t>( AudioGraphNodeType::Gain ) + 1, "kArrNodeType must list every AudioGraphNodeType in order" );
+            static_assert( SW_COUNT_OF( kArrNodeType ) == static_cast<size_t>( AudioGraphNodeKind::Gain ) + 1, "kArrNodeType must list every AudioGraphNodeKind in order" );
             static_assert( SW_COUNT_OF( kArrGranularParameter ) <= AudioGraphRegistry::kMaxParameterCount, "a node type declares more values than a node can hold" );
 
             /** @brief PolyBLEP 보정입니다(위상 @p phase, 한 프레임의 위상 증가 @p step). 불연속 근처에서만 0 이 아니다. */
@@ -98,21 +98,21 @@ namespace sw
             }
 
             /** @brief 오실레이터 하나의 샘플입니다(위상 [0, 1)). */
-            static float32 computeOscillator( AudioGraphNodeType type, float64 phase, float64 step )
+            static float32 computeOscillator( AudioGraphNodeKind type, float64 phase, float64 step )
             {
                 switch ( type )
                 {
-                    case AudioGraphNodeType::Saw:
+                    case AudioGraphNodeKind::Saw:
                     {
                         return static_cast<float32>( phase + phase - 1.0 ) - computePolyBlep( phase, step );
                     }
-                    case AudioGraphNodeType::Square:
+                    case AudioGraphNodeKind::Square:
                     {
                         const float64 shifted = phase + 0.5 < 1.0 ? phase + 0.5 : phase - 0.5;
                         const float32 naive   = phase < 0.5 ? 1.0f : -1.0f;
                         return naive + computePolyBlep( phase, step ) - computePolyBlep( shifted, step );
                     }
-                    case AudioGraphNodeType::Triangle:
+                    case AudioGraphNodeKind::Triangle:
                     {
                         return static_cast<float32>( 4.0 * MathUtil::abs( phase - 0.5 ) - 1.0 );
                     }
@@ -141,11 +141,11 @@ namespace sw
             }
 
             /** @brief 필터 노드 종류의 바이쿼드 형태입니다. */
-            static AudioBiquadType getBiquadType( AudioGraphNodeType type )
+            static AudioBiquadType getBiquadType( AudioGraphNodeKind type )
             {
-                if ( type == AudioGraphNodeType::HighPass )
+                if ( type == AudioGraphNodeKind::HighPass )
                     return AudioBiquadType::HighPass;
-                if ( type == AudioGraphNodeType::BandPass )
+                if ( type == AudioGraphNodeKind::BandPass )
                     return AudioBiquadType::BandPass;
                 return AudioBiquadType::LowPass;
             }
@@ -155,12 +155,12 @@ namespace sw
 
 namespace sw
 {
-    const AudioGraphNodeTypeInfo& AudioGraphRegistry::getNodeType( AudioGraphNodeType type )
+    const AudioGraphNodeKindInfo& AudioGraphRegistry::getNodeType( AudioGraphNodeKind type )
     {
         return AudioGraphInternal::kArrNodeType[static_cast<size_t>( type )];
     }
 
-    int32 AudioGraphRegistry::findParameterIndex( const AudioGraphNodeTypeInfo& typeInfo, const hashed_string& name )
+    int32 AudioGraphRegistry::findParameterIndex( const AudioGraphNodeKindInfo& typeInfo, const hashed_string& name )
     {
         for ( uint32 parameterIndex = 0; parameterIndex < typeInfo._parameterCount; ++parameterIndex )
         {
@@ -198,7 +198,7 @@ namespace sw
         {
             const uint32                  dataIndex = listOrder[orderIndex];
             const AudioGraphNodeDesc&     desc      = def._listNode[dataIndex];
-            const AudioGraphNodeTypeInfo& typeInfo  = AudioGraphRegistry::getNodeType( desc._type );
+            const AudioGraphNodeKindInfo& typeInfo  = AudioGraphRegistry::getNodeType( desc._type );
             Node&                         node      = pGraph->_listNode[orderIndex];
             node._type                              = desc._type;
             for ( uint32 parameterIndex = 0; parameterIndex < typeInfo._parameterCount; ++parameterIndex )
@@ -410,15 +410,15 @@ namespace sw
             float32*                pBuffer    = getNodeBuffer( nodeIndex );
             switch ( node._type )
             {
-                case AudioGraphNodeType::Sine:
-                case AudioGraphNodeType::Saw:
-                case AudioGraphNodeType::Square:
-                case AudioGraphNodeType::Triangle:
+                case AudioGraphNodeKind::Sine:
+                case AudioGraphNodeKind::Saw:
+                case AudioGraphNodeKind::Square:
+                case AudioGraphNodeKind::Triangle:
                 {
                     renderOscillator( node, state, pParameter, pBuffer, frameCount );
                     break;
                 }
-                case AudioGraphNodeType::Noise:
+                case AudioGraphNodeKind::Noise:
                 {
                     const float32 amplitude = pParameter[AudioGraphInternal::kNoiseAmplitude];
                     for ( uint32 frameIndex = 0; frameIndex < frameCount; ++frameIndex )
@@ -427,24 +427,24 @@ namespace sw
                     }
                     break;
                 }
-                case AudioGraphNodeType::Granular:
+                case AudioGraphNodeKind::Granular:
                 {
                     renderGranular( nodeIndex, pParameter, pBuffer, frameCount );
                     break;
                 }
-                case AudioGraphNodeType::Envelope:
+                case AudioGraphNodeKind::Envelope:
                 {
                     renderEnvelope( nodeIndex, pParameter, pBuffer, frameCount );
                     break;
                 }
-                case AudioGraphNodeType::LowPass:
-                case AudioGraphNodeType::HighPass:
-                case AudioGraphNodeType::BandPass:
+                case AudioGraphNodeKind::LowPass:
+                case AudioGraphNodeKind::HighPass:
+                case AudioGraphNodeKind::BandPass:
                 {
                     renderFilter( nodeIndex, state, pParameter, pBuffer, frameCount );
                     break;
                 }
-                case AudioGraphNodeType::Gain:
+                case AudioGraphNodeKind::Gain:
                 {
                     renderGain( nodeIndex, state, pParameter, pBuffer, frameCount );
                     break;

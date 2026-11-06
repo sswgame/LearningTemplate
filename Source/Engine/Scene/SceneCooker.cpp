@@ -637,7 +637,7 @@ namespace sw
         const CookJobDesc desc           = makeCookJobDesc( registry );
         const CookJobDesc preloadDesc    = makePreloadCookJobDesc();
 
-        CookTally tally;
+        CookStats tally;
         for ( const string& scenePath : listSceneFile )
         {
             if ( StringUtil::endsWith( scenePath, ".scene.xml", true ) == false )

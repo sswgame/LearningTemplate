@@ -57,8 +57,8 @@ namespace sw::editor
             static constexpr float32 kPaletteRatio         = 0.22f; ///< 팔레트가 차지하는 높이 비율(나머지는 인스펙터)
             static constexpr float32 kHandleSize           = 9.0f;  ///< 슬롯 손잡이 한 변(96 DPI 픽셀)
             /** @brief 레이아웃 사각형 · 안전 영역 선의 색입니다(테마 토큰 — 정보색 · 오류색을 반투명으로). */
-            static Color getLayoutColor() { return SW_THEMECOLOR( "Signal", "Info" ).withAlpha( 0.45f ); }
-            static Color getSafeZoneColor() { return SW_THEMECOLOR( "Signal", "Error" ).withAlpha( 0.8f ); }
+            static Color getLayoutColor() { return SW_THEME_COLOR( "Signal", "Info" ).withAlpha( 0.45f ); }
+            static Color getSafeZoneColor() { return SW_THEME_COLOR( "Signal", "Error" ).withAlpha( 0.8f ); }
 
             /** @brief 직전 항목에 팔레트 위젯 타입({WidgetType, 이름 id})이 놓였으면 그 타입 이름을 @p outTypeName 에 담고 true 입니다. */
             static bool acceptPaletteType( string& outTypeName )
@@ -689,7 +689,7 @@ namespace sw::editor
             ImGui::PushID( row._pMark );
             ImGui::InvisibleButton( "##handle", ImVec2{ half * 2.0f, half * 2.0f } );
             Internal::noteMark( "uipreview.handle", row._pMark );
-            ImGui::GetWindowDrawList()->AddRectFilled( corner, ImVec2{ corner.x + half * 2.0f, corner.y + half * 2.0f }, EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) ) );
+            ImGui::GetWindowDrawList()->AddRectFilled( corner, ImVec2{ corner.x + half * 2.0f, corner.y + half * 2.0f }, EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Highlight" ) ) );
             if ( ImGui::IsItemActivated() )
             {
                 _bSlotDragging    = SW_TRUE;
@@ -724,7 +724,7 @@ namespace sw::editor
         const UIRect      box      = UIPreviewLogic::mapUIToImage( pWidget->getGeometry().computeScreenBounds(), drawSize, viewport );
         const float32     half     = Internal::kHandleSize * EditorThemeUtil::getDPIScale() * 0.5f;
         const ImVec2      center{ origin._x + ( box._left + box._right ) * 0.5f, origin._y + ( box._top + box._bottom ) * 0.5f };
-        const ImU32       color = EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) );
+        const ImU32       color = EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Highlight" ) );
         ImGui::SetCursorScreenPos( ImVec2{ center.x - half, center.y - half } );
         ImGui::PushID( "layouthandle" );
         ImGui::InvisibleButton( "##reorder", ImVec2{ half * 2.0f, half * 2.0f } );
@@ -1067,7 +1067,7 @@ namespace sw::editor
             }
         }
         if ( pSelected != nullptr )
-            drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, viewport ), EditorColorUtil::toImU32( SW_THEMECOLOR( "Base", "Highlight" ) ), 2.0f );
+            drawBox( UIPreviewLogic::mapUIToImage( pSelected->getGeometry().computeScreenBounds(), drawSize, viewport ), EditorColorUtil::toImU32( SW_THEME_COLOR( "Base", "Highlight" ) ), 2.0f );
         UIRect safeZone{};
         if ( UIPreviewLogic::findSafeZoneRect( viewport, safeZone ) )
             drawBox( UIPreviewLogic::mapUIToImage( safeZone, drawSize, viewport ), EditorColorUtil::toImU32( Internal::getSafeZoneColor() ), 1.0f );

@@ -111,7 +111,7 @@ namespace sw
 {
     /** @brief 보드 하나의 정의입니다. 게임 데이터이며 서버가 기동할 때 등록합니다. `<Board>` 의 스키마이기도 합니다. */
     REFLECT()
-    struct SW_KIT_API LeaderboardDefinition
+    struct SW_KIT_API LeaderboardDef
     {
         REFLECT_BODY();
 
@@ -197,7 +197,7 @@ namespace sw
 {
     /** @brief 업적 하나의 정의입니다. 서버가 기동할 때 등록하며, 통계가 임계값을 넘으면 한 번 달성하고 보상은 우편으로 줍니다. `<Achievement>` 의 스키마이기도 합니다. */
     REFLECT()
-    struct SW_KIT_API AchievementDefinition
+    struct SW_KIT_API AchievementDef
     {
         REFLECT_BODY();
 
@@ -222,7 +222,7 @@ namespace sw
 {
     /**
      * @brief 업적 하나의 진행률입니다. 진행률 응답 목록의 원소이며 등록한 업적마다 하나입니다.
-     * @details 숨긴 업적(`AchievementDefinition::_bHidden`)은 달성하기 전에는 `_bHidden` 만 켜고 id, 진행, 임계값을 비워 보냅니다. UI 는 "숨겨진 업적" 칸으로 그립니다.
+     * @details 숨긴 업적(`AchievementDef::_bHidden`)은 달성하기 전에는 `_bHidden` 만 켜고 id, 진행, 임계값을 비워 보냅니다. UI 는 "숨겨진 업적" 칸으로 그립니다.
      */
     REFLECT()
     struct AchievementProgress

@@ -124,7 +124,7 @@ namespace sw
 
         // 운영 함수들이다. GF_Admin 은 서버 조립 문맥의 `ILiveEventControl` 로 부르고 완료를 `drainControlCompletions` 로 받는다.
         // 같은 프로세스의 코드와 테스트는 직접 부르고 `drainCompletions` 로 받는다. 한 서비스의 완료를 두 쪽이 함께 거두지 않는다. @p actorID 는 감사 기록의 GM 계정이며 0이면 system 이다.
-        void putEvent( const LiveEventDefinition& definition, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
+        void putEvent( const LiveEventDef& definition, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag );
         void removeEvent( string_view eventID, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
         // ILiveEventControl
         void putEventJSON( string_view definitionJSON, AccountID actorID, string_view memo, UnixMilliseconds nowMs, uint64 requestTag ) override;
@@ -132,11 +132,11 @@ namespace sw
         void drainControlCompletions( vector<LiveEventControlCompletion>& outListCompletion ) override;
         void drainCompletions( vector<LiveOpsCompletion>& outListCompletion ) { _completionBuffer.drainTo( outListCompletion ); }
 
-        const vector<LiveEventDefinition>& getEvents() const { return _listEvent; }
-        int32                              getPendingCount() const { return _pendingCount; }
+        const vector<LiveEventDef>& getEvents() const { return _listEvent; }
+        int32                       getPendingCount() const { return _pendingCount; }
 
         /** @brief 저장소 작업의 `complete` 가 호출합니다. 키트 안에서만 씁니다. */
-        void applyReload( vector<LiveEventDefinition>&& listEvent, bool bReadOk, UnixMilliseconds nowMs );
+        void applyReload( vector<LiveEventDef>&& listEvent, bool bReadOk, UnixMilliseconds nowMs );
         void applyWrite( uint64 requestTag, LiveOpsResult result );
 
     private:
@@ -147,17 +147,17 @@ namespace sw
             int64  _windowEndMs{ 0 };
         };
 
-        void                       startReload( UnixMilliseconds nowMs );
-        void                       markIfChanged( UnixMilliseconds nowMs );
-        void                       collectStarts( UnixMilliseconds nowMs );
-        uint64                     computeOpenHash( UnixMilliseconds nowMs ) const;
-        string                     resolveValue( const string& value ) const;
-        bool                       isKillSwitchOff() const;
-        const LiveEventDefinition* findEvent( string_view eventID ) const;
-        void                       submitWrite( unique_ptr<LiveOpsWriteWork> work );
+        void                startReload( UnixMilliseconds nowMs );
+        void                markIfChanged( UnixMilliseconds nowMs );
+        void                collectStarts( UnixMilliseconds nowMs );
+        uint64              computeOpenHash( UnixMilliseconds nowMs ) const;
+        string              resolveValue( const string& value ) const;
+        bool                isKillSwitchOff() const;
+        const LiveEventDef* findEvent( string_view eventID ) const;
+        void                submitWrite( unique_ptr<LiveOpsWriteWork> work );
 
     private:
-        vector<LiveEventDefinition>    _listEvent;
+        vector<LiveEventDef>           _listEvent;
         vector<OpenWindow>             _listOpenWindow; ///< 지난번 판정에서 열려 있던 창
         vector<LiveEventStart>         _listStarted;
         EventBuffer<LiveOpsCompletion> _completionBuffer;

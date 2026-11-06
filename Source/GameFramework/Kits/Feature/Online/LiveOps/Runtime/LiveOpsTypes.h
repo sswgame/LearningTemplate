@@ -65,7 +65,7 @@ namespace sw
      *          지역 목록(`vector<string>`)이 있어 고정 배치형 코덱은 없습니다.
      */
     REFLECT()
-    struct LiveEventDefinition
+    struct LiveEventDef
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = LiveOpsLimit::kMaxParameterCount )

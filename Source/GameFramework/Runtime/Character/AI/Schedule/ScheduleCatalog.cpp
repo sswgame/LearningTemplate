@@ -102,7 +102,7 @@ namespace sw
         _archetypeCatalog.clear();
         _npcCatalog.clear();
         _eventCatalog.clear();
-        _vocabulary = ScheduleConditionVocabulary{};
+        _vocabulary = ScheduleConditionSchema{};
     }
 
     bool ScheduleCatalog::parseClockMinutes( string_view text, int32& outMinutes )

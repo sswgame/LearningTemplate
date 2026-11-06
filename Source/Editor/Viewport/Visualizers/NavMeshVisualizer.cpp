@@ -33,6 +33,6 @@ namespace sw::editor
         }
     } // namespace
 
-    SW_EDITOR_VISUALIZER( NavMesh, "navmesh", 120, SW_EDITORICON_NAME( "Navigation" ), SW_LOCKEYREF( "EdVisualizer", "NavMeshLabel" ), SW_LOCKEYREF( "EdVisualizer", "NavMeshTip" ), false,
+    SW_EDITOR_VISUALIZER( NavMesh, "navmesh", 120, SW_EDITOR_ICON_NAME( "Navigation" ), SW_LOCKEYREF( "EdVisualizer", "NavMeshLabel" ), SW_LOCKEYREF( "EdVisualizer", "NavMeshTip" ), false,
                           &drawNavMesh );
 } // namespace sw::editor

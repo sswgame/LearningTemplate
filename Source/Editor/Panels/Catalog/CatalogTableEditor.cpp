@@ -101,7 +101,7 @@ namespace sw::editor
         }
 
         if ( inoutDocument.getInheritanceError().empty() == false )
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Error" ) ), "%s", inoutDocument.getInheritanceError().c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Error" ) ), "%s", inoutDocument.getInheritanceError().c_str() );
         // 언리얼 Data Table 의 행 검색처럼 칸 값으로 거른다.
         EditorWidgets::drawSearchField( "##catalogRowFilter", _rowFilter, SW_LOCKEY( "EdCommon", "SearchHint" ), -1.0f, false );
 
@@ -129,7 +129,7 @@ namespace sw::editor
             subtitle.appendFormat( "%# / %# rows", _listVisibleRow.size(), group._listRow.size() );
         EditorWidgets::drawSectionHeader( group._name.c_str(), subtitle.c_str() );
         if ( group._duplicateID.empty() == false )
-            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Signal", "Warning" ) ), "Two rows share the id '%s' - the loader refuses this", group._duplicateID.c_str() );
+            ImGui::TextColored( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Signal", "Warning" ) ), "Two rows share the id '%s' - the loader refuses this", group._duplicateID.c_str() );
 
         const int32               columnCount = static_cast<int32>( group._listColumn.size() ) + CatalogTableEditorInternal::kExtraColumnCount;
         constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
@@ -519,7 +519,7 @@ namespace sw::editor
         const ImVec2     origin        = ImGui::GetCursorScreenPos();
         ImGui::Dummy( ImVec2{ width, height } );
         ImDrawList* pDrawList  = ImGui::GetWindowDrawList();
-        const ImU32 frameColor = ImGui::ColorConvertFloat4ToU32( EditorColorUtil::toImVec4( SW_THEMECOLOR( "Base", "Border" ) ) );
+        const ImU32 frameColor = ImGui::ColorConvertFloat4ToU32( EditorColorUtil::toImVec4( SW_THEME_COLOR( "Base", "Border" ) ) );
         if ( CatalogCurveModel::sampleGradient( _listCurve, gradient, kSegmentCount + 1, _listGradientColor ) == false )
         {
             pDrawList->AddRect( origin, ImVec2{ origin.x + width, origin.y + height }, frameColor ); // 네 채널 중 키가 없는 것이 있다 - 띠 대신 빈 틀만 보인다

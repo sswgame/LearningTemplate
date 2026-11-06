@@ -114,7 +114,7 @@ namespace sw
         _startPhase                                  = hashed_string( root.getAttributeText( "startPhase" ) );
 
         // 조건 이름의 어휘는 풀보다 먼저 읽는다(파일 안 순서와 상관없이).
-        ScheduleConditionVocabulary vocabulary;
+        ScheduleConditionSchema vocabulary;
         for ( XMLNode node = root.findChild( "Calendar" ); node; node = node.findNextSibling( "Calendar" ) )
         {
             bValid = XMLFields::readFields( node, vocabulary, sourceName ) && bValid;
@@ -188,7 +188,7 @@ namespace sw
         return bValid;
     }
 
-    bool AIDirectorProfile::readPool( const XMLNode& node, const ScheduleConditionVocabulary& vocabulary, string_view sourceName )
+    bool AIDirectorProfile::readPool( const XMLNode& node, const ScheduleConditionSchema& vocabulary, string_view sourceName )
     {
         using Internal                               = AIDirectorProfileInternal;
         static constexpr const utf8* kArrPoolChild[] = { "Encounter" };

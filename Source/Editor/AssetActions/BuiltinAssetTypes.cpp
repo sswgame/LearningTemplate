@@ -108,32 +108,32 @@ namespace sw::editor
     } // namespace
 
     // 필드는 표시 이름, 브라우저 라벨, 패널 제목, 아이콘 이름, 테마 색 키, Other 제외, 임포트, 규칙, 규칙 수, 새 에셋 틀, 동작 순서다.
-    SW_EDITOR_ASSET_TYPE( AnimationGraph, AnimationGraphAsset::kAssetType._name.data(), 700, "AnimationGraph", "Animation", "Animation Graph", SW_EDITORICON_NAME( "AnimationGraph" ),
-                          SW_THEMECOLOR_KEY( "Asset", "AnimationGraph" ), true, true, kArrAnimationGraphRule, SW_COUNT_OF( kArrAnimationGraphRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( DialogueGraph, DialogueGraphAsset::kAssetType._name.data(), 800, "Dialogue", "Dialogue", "Dialogue Graph", SW_EDITORICON_NAME( "Dialogue" ), SW_THEMECOLOR_KEY( "Asset", "DialogueGraph" ), true, true, kArrDialogueGraphRule, SW_COUNT_OF( kArrDialogueGraphRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( SpriteClip, SpriteClipAsset::kAssetType._name.data(), 900, "SpriteClip", "Sprite", "Sprite Clip", SW_EDITORICON_NAME( "Sprite" ), SW_THEMECOLOR_KEY( "Asset", "SpriteClip" ), true,
+    SW_EDITOR_ASSET_TYPE( AnimationGraph, AnimationGraphAsset::kAssetType._name.data(), 700, "AnimationGraph", "Animation", "Animation Graph", SW_EDITOR_ICON_NAME( "AnimationGraph" ),
+                          SW_THEME_COLOR_KEY( "Asset", "AnimationGraph" ), true, true, kArrAnimationGraphRule, SW_COUNT_OF( kArrAnimationGraphRule ), nullptr, nullptr );
+    SW_EDITOR_ASSET_TYPE( DialogueGraph, DialogueGraphAsset::kAssetType._name.data(), 800, "Dialogue", "Dialogue", "Dialogue Graph", SW_EDITOR_ICON_NAME( "Dialogue" ), SW_THEME_COLOR_KEY( "Asset", "DialogueGraph" ), true, true, kArrDialogueGraphRule, SW_COUNT_OF( kArrDialogueGraphRule ), nullptr, nullptr );
+    SW_EDITOR_ASSET_TYPE( SpriteClip, SpriteClipAsset::kAssetType._name.data(), 900, "SpriteClip", "Sprite", "Sprite Clip", SW_EDITOR_ICON_NAME( "Sprite" ), SW_THEME_COLOR_KEY( "Asset", "SpriteClip" ), true,
                           true, kArrSpriteClipRule, SW_COUNT_OF( kArrSpriteClipRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( TileMap, TileMapXMLData::kAssetType._name.data(), 1000, "TileMap", "Tile Map", "Tile Map Tool", SW_EDITORICON_NAME( "TileMap" ), SW_THEMECOLOR_KEY( "Asset", "TileMap" ), true,
+    SW_EDITOR_ASSET_TYPE( TileMap, TileMapXMLData::kAssetType._name.data(), 1000, "TileMap", "Tile Map", "Tile Map Tool", SW_EDITOR_ICON_NAME( "TileMap" ), SW_THEME_COLOR_KEY( "Asset", "TileMap" ), true,
                           true, kArrTileMapRule, SW_COUNT_OF( kArrTileMapRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( Sequence, SequenceAsset::kAssetType._name.data(), 1100, "Sequence", "Seq", "Sequencer", SW_EDITORICON_NAME( "Sequence" ), SW_THEMECOLOR_KEY( "Asset", "Sequence" ), true, true,
+    SW_EDITOR_ASSET_TYPE( Sequence, SequenceAsset::kAssetType._name.data(), 1100, "Sequence", "Seq", "Sequencer", SW_EDITOR_ICON_NAME( "Sequence" ), SW_THEME_COLOR_KEY( "Asset", "Sequence" ), true, true,
                           kArrSequenceRule, SW_COUNT_OF( kArrSequenceRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( Skeleton, Skeleton::kAssetType._name.data(), 1300, "Skeleton", "Skeletons", nullptr, SW_EDITORICON_NAME( "Skeleton" ), SW_THEMECOLOR_KEY( "Asset", "Skeleton" ), true, true,
+    SW_EDITOR_ASSET_TYPE( Skeleton, Skeleton::kAssetType._name.data(), 1300, "Skeleton", "Skeletons", nullptr, SW_EDITOR_ICON_NAME( "Skeleton" ), SW_THEME_COLOR_KEY( "Asset", "Skeleton" ), true, true,
                           kArrSkeletonRule, SW_COUNT_OF( kArrSkeletonRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( AnimationClip, AnimationClip::kAssetType._name.data(), 1400, "AnimationClip", "Clips", nullptr, SW_EDITORICON_NAME( "AnimationClip" ), SW_THEMECOLOR_KEY( "Asset", "AnimationClip" ),
+    SW_EDITOR_ASSET_TYPE( AnimationClip, AnimationClip::kAssetType._name.data(), 1400, "AnimationClip", "Clips", nullptr, SW_EDITOR_ICON_NAME( "AnimationClip" ), SW_THEME_COLOR_KEY( "Asset", "AnimationClip" ),
                           true, true, kArrAnimationClipRule, SW_COUNT_OF( kArrAnimationClipRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( AnimationSet, AnimationSet::kAssetType._name.data(), 1450, "AnimationSet", "Clip Sets", nullptr, SW_EDITORICON_NAME( "AnimationClip" ), SW_THEMECOLOR_KEY( "Asset", "AnimationClip" ),
+    SW_EDITOR_ASSET_TYPE( AnimationSet, AnimationSet::kAssetType._name.data(), 1450, "AnimationSet", "Clip Sets", nullptr, SW_EDITOR_ICON_NAME( "AnimationClip" ), SW_THEME_COLOR_KEY( "Asset", "AnimationClip" ),
                           true, true, kArrAnimationSetRule, SW_COUNT_OF( kArrAnimationSetRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( SpriteLibrary, SpriteLibrary::kAssetType._name.data(), 950, "SpriteLibrary", "Sprite Libraries", nullptr, SW_EDITORICON_NAME( "Sprite" ), SW_THEMECOLOR_KEY( "Asset", "SpriteClip" ), true,
+    SW_EDITOR_ASSET_TYPE( SpriteLibrary, SpriteLibrary::kAssetType._name.data(), 950, "SpriteLibrary", "Sprite Libraries", nullptr, SW_EDITOR_ICON_NAME( "Sprite" ), SW_THEME_COLOR_KEY( "Asset", "SpriteClip" ), true,
                           true, kArrSpriteLibraryRule, SW_COUNT_OF( kArrSpriteLibraryRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( Rig, RigAsset::kAssetType._name.data(), 1500, "Rig", "Rigs", nullptr, SW_EDITORICON_NAME( "Rig" ), SW_THEMECOLOR_KEY( "Asset", "Rig" ), true, true, kArrRigRule,
+    SW_EDITOR_ASSET_TYPE( Rig, RigAsset::kAssetType._name.data(), 1500, "Rig", "Rigs", nullptr, SW_EDITOR_ICON_NAME( "Rig" ), SW_THEME_COLOR_KEY( "Asset", "Rig" ), true, true, kArrRigRule,
                           SW_COUNT_OF( kArrRigRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( Heightfield, HeightfieldAsset::kAssetType._name.data(), 1600, "Heightfield", "Heightfields", nullptr, SW_EDITORICON_NAME( "Heightfield" ), SW_THEMECOLOR_KEY( "Asset", "Heightfield" ), true, false, kArrHeightfieldRule, SW_COUNT_OF( kArrHeightfieldRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( LayerWeights, LayerWeightsAsset::kAssetType._name.data(), 1700, "LayerWeights", "Layer Weights", nullptr, SW_EDITORICON_NAME( "Palette" ), SW_THEMECOLOR_KEY( "Asset", "LayerWeights" ), true, false, kArrLayerWeightsRule, SW_COUNT_OF( kArrLayerWeightsRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( Fracture, FractureAsset::kAssetType._name.data(), 1800, "Fracture", "Fractures", nullptr, SW_EDITORICON_NAME( "Fracture" ), SW_THEMECOLOR_KEY( "Asset", "Fracture" ), true, true,
+    SW_EDITOR_ASSET_TYPE( Heightfield, HeightfieldAsset::kAssetType._name.data(), 1600, "Heightfield", "Heightfields", nullptr, SW_EDITOR_ICON_NAME( "Heightfield" ), SW_THEME_COLOR_KEY( "Asset", "Heightfield" ), true, false, kArrHeightfieldRule, SW_COUNT_OF( kArrHeightfieldRule ), nullptr, nullptr );
+    SW_EDITOR_ASSET_TYPE( LayerWeights, LayerWeightsAsset::kAssetType._name.data(), 1700, "LayerWeights", "Layer Weights", nullptr, SW_EDITOR_ICON_NAME( "Palette" ), SW_THEME_COLOR_KEY( "Asset", "LayerWeights" ), true, false, kArrLayerWeightsRule, SW_COUNT_OF( kArrLayerWeightsRule ), nullptr, nullptr );
+    SW_EDITOR_ASSET_TYPE( Fracture, FractureAsset::kAssetType._name.data(), 1800, "Fracture", "Fractures", nullptr, SW_EDITOR_ICON_NAME( "Fracture" ), SW_THEME_COLOR_KEY( "Asset", "Fracture" ), true, true,
                           kArrFractureRule, SW_COUNT_OF( kArrFractureRule ), nullptr, nullptr );
-    SW_EDITOR_ASSET_TYPE( UIDocument, UIDocumentAsset::kAssetType._name.data(), 1900, "UIDocument", "UI Documents", "UI Preview", SW_EDITORICON_NAME( "Widget" ), SW_THEMECOLOR_KEY( "Asset", "UIDocument" ),
+    SW_EDITOR_ASSET_TYPE( UIDocument, UIDocumentAsset::kAssetType._name.data(), 1900, "UIDocument", "UI Documents", "UI Preview", SW_EDITOR_ICON_NAME( "Widget" ), SW_THEME_COLOR_KEY( "Asset", "UIDocument" ),
                           true, false, kArrUIDocumentRule, SW_COUNT_OF( kArrUIDocumentRule ), nullptr, nullptr );
     // Data 는 맨 뒤다 — 플러그인 종류는 그 앞(< 9000)에 둔다.
-    SW_EDITOR_ASSET_TYPE( Data, EditorAssetTypeIDs::kData, 9000, "Data", "Data", nullptr, SW_EDITORICON_NAME( "Table" ), SW_THEMECOLOR_KEY( "Asset", "Data" ), false, false, kArrDataRule,
+    SW_EDITOR_ASSET_TYPE( Data, EditorAssetTypeIDs::kData, 9000, "Data", "Data", nullptr, SW_EDITOR_ICON_NAME( "Table" ), SW_THEME_COLOR_KEY( "Asset", "Data" ), false, false, kArrDataRule,
                           SW_COUNT_OF( kArrDataRule ), nullptr, nullptr );
 } // namespace sw::editor

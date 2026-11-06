@@ -147,7 +147,7 @@ namespace sw::editor
     void EditorViewportOverlays::drawOverlaysMenu()
     {
         ensureLoaded();
-        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITORICON( "Layout" ), SW_LOCKEY( "EdButton", "Overlays" ), "Overlays" ) ) )
+        if ( ImGui::Button( EditorThemeUtil::makeIconLabel( SW_EDITOR_ICON( "Layout" ), SW_LOCKEY( "EdButton", "Overlays" ), "Overlays" ) ) )
             EditorInputGUI::openPopup( "##ViewportOverlaysMenu" );
         EditorSelfTestMarks::note( "sceneView.overlays" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EdCommon", "OverlaysMenu" ) );
@@ -257,7 +257,7 @@ namespace sw::editor
         ImGui::SameLine();
         // 손잡이 옆 작은 접기 화살표다 — 상자 없이 흐린 글자로(띠마다 앞에 빈 상자가 하나씩 보였다).
         ImGui::PushStyleColor( ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f } );
-        EditorThemeUtil::pushTextColor( SW_THEMECOLOR( "Base", "TextMuted" ) );
+        EditorThemeUtil::pushTextColor( SW_THEME_COLOR( "Base", "TextMuted" ) );
         const bool bToggle = ImGui::ArrowButton( "##collapse", state._bCollapsed ? ImGuiDir_Right : ImGuiDir_Down );
         EditorThemeUtil::popTextColor();
         ImGui::PopStyleColor();

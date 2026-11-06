@@ -117,7 +117,7 @@ namespace sw
         MatchQueueService& operator=( const MatchQueueService& ) = delete;
 
         /** @brief 실력 모드가 있는데 통계 창이 없으면 오류 로그와 false 입니다(기본 실력으로 조용히 돌지 않는다). */
-        [[nodiscard]] bool initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDefinition>& listMode );
+        [[nodiscard]] bool initialize( const MatchQueueDependencies& dependencies, const vector<MatchModeDef>& listMode );
         /** @brief 기다리던 캐시 요청을 취소합니다. 임대는 놓지 않으며 TTL 이 지나면 넘어갑니다. */
         void shutdown();
         /** @brief 임대, 서버 목록, 매처, 배정, 낸 티켓의 시한을 처리합니다. */
@@ -202,7 +202,7 @@ namespace sw
         void prepareTicket( const PendingJoin& join, const vector<AccountID>& listAccount, uint64 partyID );
         /** @brief 다 읽었거나 시한이 지난 줄 서기의 티켓을 냅니다. 시한이 지났으면 `submitTicket` 이 RatingUnavailable 로 끝냅니다. */
         void               updateRatingWaits( UnixMilliseconds nowMs );
-        [[nodiscard]] bool isRatingLoaded( const MatchModeDefinition& mode, AccountID accountID ) const;
+        [[nodiscard]] bool isRatingLoaded( const MatchModeDef& mode, AccountID accountID ) const;
         void               releaseRetained( const RatingWait& wait );
         [[nodiscard]] bool isJoinPending( AccountID accountID ) const;
         /** @brief 파티 찾기나 통계 읽기를 기다리는, 그 계정이 든 줄 서기를 NotQueued 로 끝냅니다. 있었으면 true 입니다. */
@@ -219,25 +219,25 @@ namespace sw
         void               removeFromQueue( const string& modeID, uint64 ticketID );
         ModeState*         findModeState( string_view modeID );
         /** @brief 모드의 실력입니다. 실력 모드인데 이 서버가 그 계정의 통계를 아직 읽지 않았으면 false 입니다. */
-        [[nodiscard]] bool findRating( AccountID accountID, const MatchModeDefinition& mode, int32& outRating ) const;
+        [[nodiscard]] bool findRating( AccountID accountID, const MatchModeDef& mode, int32& outRating ) const;
         static void        fillTeam( const MatchFormed& match, AccountID accountID, MatchAssignment& inoutAssignment );
 
     private:
-        unordered_map<string, MatchModeDefinition> _mapMode;
-        unordered_map<string, ModeState>           _mapModeState;
-        unordered_map<uint64, LocalTicket>         _mapLocalTicket; ///< 이 서버가 낸 티켓이다
-        unordered_map<AccountID, uint64>           _mapAccountToTicket;
-        unordered_map<uint64, PendingJoin>         _mapLookupToJoin; ///< 파티 찾기를 기다리는 줄 서기 요청이다
-        vector<RatingWait>                         _listRatingWait;
-        unordered_map<uint64, string>              _mapLeaseRequestToMode;
-        EventBuffer<MatchQueueCompletion>          _completionBuffer;
-        EventBuffer<MatchQueueNotification>        _notificationBuffer;
-        EventBuffer<MatchQueueTopicChange>         _topicBuffer;
-        MatchQueueDependencies                     _dependencies;
-        Subscription                               _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
-        uint64                                     _nextLookupTag;
-        uint32                                     _sequence;
-        uint32                                     _lobbySequence;
+        unordered_map<string, MatchModeDef> _mapMode;
+        unordered_map<string, ModeState>    _mapModeState;
+        unordered_map<uint64, LocalTicket>  _mapLocalTicket; ///< 이 서버가 낸 티켓이다
+        unordered_map<AccountID, uint64>    _mapAccountToTicket;
+        unordered_map<uint64, PendingJoin>  _mapLookupToJoin; ///< 파티 찾기를 기다리는 줄 서기 요청이다
+        vector<RatingWait>                  _listRatingWait;
+        unordered_map<uint64, string>       _mapLeaseRequestToMode;
+        EventBuffer<MatchQueueCompletion>   _completionBuffer;
+        EventBuffer<MatchQueueNotification> _notificationBuffer;
+        EventBuffer<MatchQueueTopicChange>  _topicBuffer;
+        MatchQueueDependencies              _dependencies;
+        Subscription                        _replyOwner; ///< 라우터 답의 주인 몫(`initialize` 가 열고 `shutdown` 이 놓는다)
+        uint64                              _nextLookupTag;
+        uint32                              _sequence;
+        uint32                              _lobbySequence;
     };
 } // namespace sw
 

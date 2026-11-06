@@ -67,7 +67,7 @@ namespace sw::editor
 
         static constexpr const utf8* kKindName = "visualizer";
 
-        EditorIconName _pIconName;    ///< 툴바 토글 버튼의 아이콘 이름(`SW_EDITORICON_NAME`). 비었으면 라벨 문자로 된 버튼이다
+        EditorIconName _pIconName;    ///< 툴바 토글 버튼의 아이콘 이름(`SW_EDITOR_ICON_NAME`). 비었으면 라벨 문자로 된 버튼이다
         const utf8*    _pToggleLabel; ///< 짧은 이름. 툴팁의 제목이며, 아이콘이 없으면 버튼 문자로 쓴다
         const utf8*    _pTooltip;
         uint8          _bDefaultOn : 1;
@@ -98,7 +98,7 @@ namespace sw::editor
  * @param name         파일 안에서 유일한 이름 조각입니다. 변수 이름에 씁니다.
  * @param pID          시각화 id 입니다. 리터럴이며 종류 안에서 유일해야 합니다.
  * @param order        툴바 토글 순서입니다. 작을수록 왼쪽입니다.
- * @param pIcon        툴바 토글 버튼 아이콘 이름(`SW_EDITORICON_NAME`)입니다. nullptr 이면 라벨 문자를 씁니다.
+ * @param pIcon        툴바 토글 버튼 아이콘 이름(`SW_EDITOR_ICON_NAME`)입니다. nullptr 이면 라벨 문자를 씁니다.
  * @param pToggleLabel 짧은 이름이며 툴팁의 제목입니다.
  * @param pTooltip     체크박스 툴팁입니다.
  * @param bDefaultOn   처음에 켜져 있는지 정합니다.

@@ -38,7 +38,7 @@ namespace sw::editor
                 {
                     message += " " + listArgument[index];
                 }
-                pContext->getSubsystem<EditorNotificationManager>().push( "notify.push", message, NotificationType::Info, durationSec );
+                pContext->getSubsystem<EditorNotificationManager>().push( "notify.push", message, NotificationKind::Info, durationSec );
                 outReply = "pushed";
                 return true;
             }
@@ -59,7 +59,7 @@ namespace sw::editor
                     &EditorNotificationManagerInternal::runPush );
     SW_AUTOMATION_WATCH( editorNotificationCount, "Editor.NotificationCount", "Toast notifications on screen now", &EditorNotificationManagerInternal::readNotificationCount );
 
-    void EditorNotificationManager::push( string_view title, string_view message, NotificationType type,
+    void EditorNotificationManager::push( string_view title, string_view message, NotificationKind type,
                                           float32 durationSec, float32 progress )
     {
         SW_ASSERT( durationSec > 0.0f ); // 표시 시간이 없는 알림은 호출 오류다 — 조용히 다른 값으로 바꾸지 않는다
@@ -74,7 +74,7 @@ namespace sw::editor
         _listNotification.push_back( std::move( item ) );
     }
 
-    void EditorNotificationManager::pushRevealable( string_view title, string_view message, NotificationType type, string_view revealPath, float32 durationSec )
+    void EditorNotificationManager::pushRevealable( string_view title, string_view message, NotificationKind type, string_view revealPath, float32 durationSec )
     {
         push( title, message, type, durationSec );
         _listNotification.back()._revealPath = string{ revealPath };

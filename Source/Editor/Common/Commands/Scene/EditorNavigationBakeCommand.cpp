@@ -39,9 +39,9 @@ namespace sw::editor
                 EditorContext& editorContext = editor::getSubsystem<EditorContext>();
                 ++getEditorState<BakeRunState>()._count;
                 if ( bakedCount == 0 )
-                    editorContext.getSubsystem<EditorNotificationManager>().push( "Bake Navigation", "Nothing to bake - add a NavMeshSurface and geometry", NotificationType::Warning );
+                    editorContext.getSubsystem<EditorNotificationManager>().push( "Bake Navigation", "Nothing to bake - add a NavMeshSurface and geometry", NotificationKind::Warning );
                 else
-                    editorContext.getSubsystem<EditorNotificationManager>().push( "Bake Navigation", formatToString( "Baked %# agent type(s) - show them with the Nav toggle", bakedCount ), NotificationType::Success );
+                    editorContext.getSubsystem<EditorNotificationManager>().push( "Bake Navigation", formatToString( "Baked %# agent type(s) - show them with the Nav toggle", bakedCount ), NotificationKind::Success );
             }
 
             /** @brief 편집 상태에서만 켠다 — 플레이 중 다시 베이크하면 군중이 내비메시를 잃는다. */

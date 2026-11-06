@@ -78,7 +78,7 @@ namespace sw
 namespace sw
 {
     /** @brief 저택 이벤트의 종류입니다. */
-    enum class GhostMansionEventType : uint8
+    enum class GhostMansionEventKind : uint8
     {
         RoomLit = 0, ///< `_id` 는 방이다
         KeyAwarded,  ///< `_id` 는 열쇠이다
@@ -95,7 +95,7 @@ namespace sw
         hashed_string         _id{};
         hashed_string         _room{};
         int32                 _count{ 0 };
-        GhostMansionEventType _type{ GhostMansionEventType::RoomLit };
+        GhostMansionEventKind _type{ GhostMansionEventKind::RoomLit };
     };
 } // namespace sw
 
@@ -164,7 +164,7 @@ namespace sw
         void grantPendingKeys();
         void moveBooAway( size_t booIndex );
         void revealBoo( size_t booIndex );
-        void pushEvent( GhostMansionEventType type, const hashed_string& id, const hashed_string& room = hashed_string{}, int32 count = 0 );
+        void pushEvent( GhostMansionEventKind type, const hashed_string& id, const hashed_string& room = hashed_string{}, int32 count = 0 );
 
     private:
         GhostEncounter                 _encounter;

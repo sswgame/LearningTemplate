@@ -164,7 +164,7 @@ namespace sw
         PROPERTY( MaxCount = AdminProtocol::kMaxEventIDSize )
         string _eventID{}; ///< RemoveLiveEvent 의 이벤트 id 이다
         PROPERTY( MaxCount = AdminProtocol::kMaxEventJSONSize )
-        string _eventJSON{}; ///< PutLiveEvent 의 정의(`LiveEventDefinition` 의 리플렉션 JSON)이다. 상한은 `AdminProtocol::kMaxEventJSONSize` 와 같다
+        string _eventJSON{}; ///< PutLiveEvent 의 정의(`LiveEventDef` 의 리플렉션 JSON)이다. 상한은 `AdminProtocol::kMaxEventJSONSize` 와 같다
         PROPERTY( MaxCount = ServiceReportConstant::kMaxReportKeySize )
         string _reportKey{}; ///< ResolveReport 의 대상이다. 상한은 `ServiceReportConstant::kMaxReportKeySize` 와 같다
         PROPERTY()

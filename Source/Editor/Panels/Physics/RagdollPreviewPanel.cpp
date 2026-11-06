@@ -307,7 +307,7 @@ namespace sw::editor
                 if ( parentIndex < 0 || static_cast<size_t>( parentIndex ) >= boneCount )
                     continue;
                 renderer.drawLine( float3::transform( listModel[static_cast<size_t>( parentIndex )].getTranslation(), world ), float3::transform( listModel[boneIndex].getTranslation(), world ),
-                                   SW_THEMECOLOR( "Viewport", "Bone" ).toFloat4() );
+                                   SW_THEME_COLOR( "Viewport", "Bone" ).toFloat4() );
             }
         }
 
@@ -326,7 +326,7 @@ namespace sw::editor
                 if ( _model.editDrawJoints() == false || pPhysicsScene->getBodyTransform( ragdoll._listBody[bodyIndex], position, rotation ) == false )
                     continue;
                 const bool   bSelected = _model.getSelectedBody() == static_cast<int32>( bodyIndex );
-                const float4 color     = bSelected ? SW_THEMECOLOR( "Viewport", "BoneSelected" ).toFloat4() : SW_THEMECOLOR( "Viewport", "Joint" ).toFloat4();
+                const float4 color     = bSelected ? SW_THEME_COLOR( "Viewport", "BoneSelected" ).toFloat4() : SW_THEME_COLOR( "Viewport", "Joint" ).toFloat4();
                 const float  radius    = RagdollPreviewPanelInternal::kJointMarkRadius;
                 renderer.drawLine( position - float3{ radius, 0.0f, 0.0f }, position + float3{ radius, 0.0f, 0.0f }, color );
                 renderer.drawLine( position - float3{ 0.0f, radius, 0.0f }, position + float3{ 0.0f, radius, 0.0f }, color );
