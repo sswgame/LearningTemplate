@@ -44,15 +44,17 @@ namespace sw
                     ++stagedCount;
                 }
             }
+            if ( stagedCount > 0 )
+            {
+                const ServiceStoreResult committed = connection.commit( transaction );
+                if ( committed == ServiceStoreResult::Ok )
+                    outReport._deletedCount += stagedCount;
+                else if ( committed != ServiceStoreResult::Conflict )
+                    return committed; // 쓰지 못했으면 커서를 옮기지 않는다 - 옮기면 이 레코드들은 테이블을 한 바퀴 돌 때까지 남는다
+                // Conflict: 그사이 바뀐 레코드가 있다. 이 쪽은 건너뛰고 다음 바퀴에 다시 본다
+            }
             if ( pLastKey != nullptr )
                 inoutRule._cursor = *pLastKey;
-            if ( stagedCount == 0 )
-                continue;
-            const ServiceStoreResult committed = connection.commit( transaction );
-            if ( committed == ServiceStoreResult::Ok )
-                outReport._deletedCount += stagedCount;
-            else if ( committed != ServiceStoreResult::Conflict )
-                return committed; // 그사이 바뀐 레코드가 있으면 이 쪽은 건너뛰고 다음 회차에 다시 본다
         }
         return ServiceStoreResult::Ok;
     }
