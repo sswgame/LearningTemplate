@@ -218,6 +218,7 @@ namespace sw::editor
                                                          TextArgumentList().addInteger( "count", static_cast<int64>( listConflict.size() ) ) );
             EditorThemeUtil::textError( conflictText.c_str() );
         }
+        drawBundleFiles();
         ImGui::Separator();
 
         const float32 availWidth = ImGui::GetContentRegionAvail().x;
@@ -233,6 +234,21 @@ namespace sw::editor
         if ( ImGui::BeginChild( "InputMapRight", ImVec2{ 0.0f, 0.0f }, ImGuiChildFlags_Borders ) )
             drawActionDetails();
         ImGui::EndChild();
+    }
+
+    void InputMapPanel::drawBundleFiles()
+    {
+        const InputMap& inputMap = _document.getInputMap();
+        if ( _document.isBundlePath() == false || inputMap.getSourceCount() == 0 )
+            return;
+        const bool bOpen = ImGui::CollapsingHeader( SW_LOCKEY( "EditorInputMap", "BundleFiles" ) );
+        EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInputMap", "BundleFilesTip" ) );
+        if ( bOpen == false )
+            return;
+        for ( uint32 sourceIndex = 0; sourceIndex < inputMap.getSourceCount(); ++sourceIndex )
+        {
+            ImGui::TextUnformatted( inputMap.getSourceAssetPath( sourceIndex ).c_str() );
+        }
     }
 
     void InputMapPanel::drawActionList()
@@ -286,6 +302,12 @@ namespace sw::editor
         const InputMap&     inputMap = _document.getInputMap();
         const hashed_string action( selectedAction.c_str() );
         ImGui::SeparatorText( selectedAction.c_str() );
+        // 묶음을 고칠 때는 저장이 어느 파일로 가는지 보인다 — 공통 파일을 고치면 다른 게임도 바뀐다.
+        if ( _document.isBundlePath() )
+        {
+            const string sourceText = _document.describeActionSource( action );
+            ImGui::TextDisabled( "%s", sourceText.c_str() );
+        }
         ImGui::TextUnformatted( SW_LOCKEYFORMAT( "EdFormat", "StateHoldS", TextArgumentList().addText( "phase", _document.describeActionState( action ) ).addDecimal( "holdSeconds", static_cast<float64>( inputMap.getActionHoldDuration( action ) ), 2 ) ).c_str() );
         EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) );
         if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "ResetToDefault" ) ) )

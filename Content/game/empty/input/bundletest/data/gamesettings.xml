@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- InputMapBundleTest 의 묶음 — 기본 맵, 공통 맵, 게임 차이 차례다. -->
 <GameSettings>
+  <startMap>game/empty/maps/editortest.scene.xml</startMap>
   <inputMap>game/empty/input/bundletest/base.input.xml</inputMap>
   <inputMap>game/empty/input/bundletest/common.input.xml</inputMap>
   <inputMap>game/empty/input/bundletest/diff.input.xml</inputMap>

@@ -1884,6 +1884,12 @@
 		<entry key="EditorInputMap.BindingLayerTip"
 		       text="이 바인딩이 속한 레이어입니다. 그 레이어가 활성일 때만 발화합니다."
 		       sourceHash="5c09eded0f9462e8" />
+		<entry key="EditorInputMap.BundleFiles"
+		       text="이 묶음의 파일"
+		       sourceHash="9a8d01caebd983db" />
+		<entry key="EditorInputMap.BundleFilesTip"
+		       text="이 게임의 맵을 읽는 차례대로 보입니다. 기본 맵, 공통 맵, 키트 맵, 맨 끝이 게임의 차이입니다. 저장하면 액션은 그것을 정한 파일로 돌아가고, 고치지 않은 파일은 쓰지 않습니다."
+		       sourceHash="00a5bf76bddc1a53" />
 		<entry key="EditorInputMap.CaptureInstruction"
 		       text="바인딩할 키, 키 조합 또는 게임패드 버튼을 누르거나 아래 버튼을 클릭합니다. Esc 는 취소입니다..."
 		       sourceHash="a33ae98350b8864d" />
@@ -1921,8 +1927,8 @@
 		       text="리플레이 파일에서 프레임을 읽어 지금 기록을 바꿉니다. 재생 중이면 먼저 멈춥니다."
 		       sourceHash="7904278dd8250a83" />
 		<entry key="EditorInputMap.MapPathTip"
-		       text="편집할 입력 맵(*.input.xml)의 리소스 경로입니다. 바꾼 뒤에는 Reload 를 누릅니다."
-		       sourceHash="32b03460ca805a5d" />
+		       text="편집할 입력 맵(*.input.xml)이나, 묶음 전체를 고칠 게임의 data/gamesettings.xml 의 리소스 경로입니다. 바꾼 뒤에는 Reload 를 누릅니다."
+		       sourceHash="ccf996b4857df290" />
 		<entry key="EditorInputMap.NewActionNameTip"
 		       text="게임 코드가 새 액션을 조회할 때 쓰는 이름입니다(예: Jump, Move)."
 		       sourceHash="83496480a49ebf96" />

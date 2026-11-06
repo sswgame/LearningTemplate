@@ -15,6 +15,7 @@
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/Map/InputGlyphResolver.h"
+#include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Input/Map/InputRemapSerializer.h"
 
 namespace sw::editor
@@ -101,7 +102,16 @@ namespace sw::editor
     {
         _bLoaded = SW_TRUE;
         // 읽지 못하면 편집 중인 바인딩과 dirty 를 그대로 둔다. dirty 를 지우고 "다시 읽었다" 고 표시하지 않는다.
-        if ( _inputMap.loadFromAsset( AssetID{ _inputMapPath.c_str() } ) == false )
+        // 묶음은 읽기 실패가 맵을 비우므로(`InputMap::loadBundle`) 맵에 넣기 전에 묶음만 먼저 검사한다.
+        const AssetID assetID{ _inputMapPath.c_str() };
+        const bool    bBundle = isBundlePath();
+        if ( bBundle && InputMapBundle::checkSettings( assetID ) == false )
+        {
+            SW_LOG_ERROR_ID( "InputMapDocument.CouldNotReloadInputMap", "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
+            return false;
+        }
+        const bool bLoaded = bBundle ? InputMapBundle::loadFromSettings( _inputMap, assetID ) : _inputMap.loadFromAsset( assetID );
+        if ( bLoaded == false )
         {
             SW_LOG_ERROR_ID( "InputMapDocument.CouldNotReloadInputMap", "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
             return false;
@@ -119,6 +129,16 @@ namespace sw::editor
     {
         // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reload`)와 같은 형식, 같은 위치에 쓴다.
         // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.
+        if ( isBundlePath() )
+        {
+            if ( saveBundle() == false )
+            {
+                SW_LOG_WARNING_ID( "InputMapDocument.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
+                return false;
+            }
+            _bDirty = SW_FALSE;
+            return true;
+        }
         const std::optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.c_str() );
         if ( inputMapFile.has_value() == false || _inputMap.saveToAsset( *inputMapFile ) == false )
         {
@@ -128,6 +148,41 @@ namespace sw::editor
         SW_LOG_INFO_ID( "InputMapDocument.SavedInputMap", "Saved InputMap to %#", _inputMapPath.c_str() );
         _bDirty = SW_FALSE;
         return true;
+    }
+
+    bool InputMapDocument::isBundlePath() const
+    {
+        return InputMapBundle::isSettingsFile( string_view{ _inputMapPath.c_str() } );
+    }
+
+    bool InputMapDocument::saveBundle() const
+    {
+        // 파일마다 원래 몫을 돌려보낸다. 편집이 건드리지 않은 파일은 쓰지 않는다 — 다른 게임과 함께 쓰는 공통 파일의 주석과 차례를 지키고, 함께 쓰는 파일을 말없이 바꾸지 않는다.
+        vector<AssetID> listAsset;
+        InputMap        onDisk;
+        const bool      bHasDisk = InputMapBundle::collectAssets( AssetID{ _inputMapPath.c_str() }, listAsset ) && onDisk.loadBundle( listAsset ) && onDisk.getSourceCount() == _inputMap.getSourceCount();
+        for ( uint32 sourceIndex = 0; sourceIndex < _inputMap.getSourceCount(); ++sourceIndex )
+        {
+            string editedText;
+            string diskText;
+            if ( _inputMap.writeSourceText( sourceIndex, editedText ) == false )
+                return false;
+            if ( bHasDisk && onDisk.writeSourceText( sourceIndex, diskText ) && editedText == diskText )
+                continue;
+            const string&                     assetPath = _inputMap.getSourceAssetPath( sourceIndex );
+            const std::optional<AbsolutePath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath.c_str() );
+            if ( filePath.has_value() == false || _inputMap.saveSourceToAsset( sourceIndex, *filePath ) == false )
+                return false;
+            SW_LOG_INFO_ID( "InputMapDocument.SavedInputMap", "Saved InputMap to %#", assetPath.c_str() );
+        }
+        return true;
+    }
+
+    string InputMapDocument::describeActionSource( const hashed_string& action ) const
+    {
+        if ( _inputMap.hasAction( action ) == false || _inputMap.getSourceCount() == 0 )
+            return {};
+        return _inputMap.getSourceAssetPath( _inputMap.getActionSourceIndex( action ) );
     }
 
     bool InputMapDocument::noteEdit( bool bChanged )

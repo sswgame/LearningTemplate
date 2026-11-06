@@ -64,6 +64,8 @@ namespace sw::editor
         void drawMappingsTab();
         /** @brief 액션 목록을 그립니다. 선택, 충돌 표시, 상태를 보여 줍니다. */
         void drawActionList();
+        /** @brief 경로가 게임의 입력 맵 묶음이면 읽은 파일을 차례대로 보입니다. */
+        void drawBundleFiles();
         /** @brief 선택한 액션의 바인딩, 발화 규칙, 충돌, 플랫폼 글리프를 그립니다. */
         void drawActionDetails();
         /** @brief 바인딩 한 줄(키 글리프 · 레이어 · 트리거 콤보 · 다시 잡기 · 지우기 · 시간 · 횟수 · Negate)을 그립니다. 지우기를 눌렀으면 true 입니다(부르는 쪽이 줄을 다 그린 뒤 지운다). */

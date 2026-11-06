@@ -27,6 +27,20 @@ namespace
     using Util = InputMapDocumentTestUtil;
 } // namespace
 
+/** @brief [InputMapDocumentTest] 경로가 게임 설정 파일이면 묶음을 읽고, 액션마다 그것을 정한 파일을 보인다 */
+SW_TEST_CASE( InputMapDocumentTest, GameSettingsPathOpensTheBundle )
+{
+    InputMapDocument document;
+    SW_EXPECT_FALSE( document.isBundlePath() );
+    SW_REQUIRE_TRUE( document.editInputMapPath().commit( "game/empty/input/bundletest/data/gamesettings.xml" ) );
+    SW_EXPECT_TRUE( document.isBundlePath() );
+    SW_REQUIRE_TRUE( document.reload() );
+    SW_EXPECT_EQUAL( uint32{ 3 }, document.getInputMap().getSourceCount() );
+    SW_EXPECT_EQUAL( string( "game/empty/input/bundletest/diff.input.xml" ), document.describeActionSource( hashed_string( "Use" ) ) );
+    SW_EXPECT_EQUAL( string( "game/empty/input/bundletest/common.input.xml" ), document.describeActionSource( hashed_string( "Move" ) ) );
+    SW_EXPECT_TRUE( document.describeActionSource( hashed_string( "Missing" ) ).empty() );
+}
+
 // 바뀐 편집만 저장하지 않은 표시를 켠다 — 패널이 후속 처리를 쓰지 않아도 표시가 맞다.
 SW_TEST_CASE( InputMapDocumentTest, EditsThatChangeNothingStayClean )
 {

@@ -5805,6 +5805,18 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorInputMap.BundleFiles"
+		       source="Files in this bundle">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInputMap.BundleFilesTip"
+		       source="The maps of this game, in load order: the base map, the shared maps, the kit maps and last the game's own differences. Saving writes each action back to the file that set it, and files you did not change are left alone.">
+			<origins>
+				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorInputMap.CaptureInstruction"
 		       source="Press a key, key combination or gamepad button to bind, Esc to cancel, or click a button below...">
 			<origins>
@@ -5885,7 +5897,7 @@
 			</origins>
 		</entry>
 		<entry key="EditorInputMap.MapPathTip"
-		       source="Resource path of the input map (*.input.xml) to edit. Press Reload after changing it.">
+		       source="Resource path of the input map (*.input.xml) or of a game's data/gamesettings.xml to edit its whole bundle. Press Reload after changing it.">
 			<origins>
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>

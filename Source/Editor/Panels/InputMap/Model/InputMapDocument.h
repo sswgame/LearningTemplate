@@ -80,8 +80,15 @@ namespace sw::editor
         bool needsFirstLoad() const { return _bLoaded == SW_FALSE; }
         /** @brief 확정한 맵 경로에서 다시 읽습니다. 읽지 못하면 편집 중인 바인딩을 그대로 둡니다. */
         [[nodiscard]] bool reload();
-        /** @brief 확정한 맵 경로에 리소스의 기본 바인딩(`<InputMap>`)을 씁니다. */
+        /**
+         * @brief 확정한 맵 경로에 리소스의 기본 바인딩(`<InputMap>`)을 씁니다.
+         * @details 경로가 게임 설정 파일(`gamesettings.xml`)이면 입력 맵 묶음을 고치는 중이다. 액션은 그것을 마지막으로 정한 파일로 돌아가고, 고치지 않은 파일은 쓰지 않습니다.
+         */
         [[nodiscard]] bool save();
+        /** @brief 경로가 맵 파일 하나가 아니라 게임의 입력 맵 묶음을 가리키면 true 입니다. */
+        bool isBundlePath() const;
+        /** @brief 액션을 정한 파일의 리소스 경로입니다. 파일에서 읽지 않은 액션이면 빈 글입니다. */
+        string describeActionSource( const hashed_string& action ) const;
         /** @brief 파일과 달라진 편집이 있으면 true 입니다. 패널은 프레임마다 이 값을 따른다(`syncDocumentDirty`). */
         bool isDirty() const { return _bDirty == SW_TRUE; }
 
@@ -189,6 +196,8 @@ namespace sw::editor
     private:
         /** @brief 이번 프레임의 스틱 · 트리거 · 마우스 변화량을 그래프 고리 버퍼에 담습니다. */
         void sampleInput( InputManager& input );
+        /** @brief 묶음의 파일마다 고친 몫을 원래 자리에 씁니다. */
+        [[nodiscard]] bool saveBundle() const;
         /** @brief 저장하지 않은 표시를 @p bChanged 면 켜고 그대로 돌려줍니다. */
         bool noteEdit( bool bChanged );
         /** @brief 이 바인딩의 발화 칸을 고쳐도 저장에 남으면 true 입니다(`savesTriggerFields`). */
