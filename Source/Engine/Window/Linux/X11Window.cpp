@@ -324,18 +324,18 @@ namespace sw
         if ( _pX11Display == nullptr )
             return false;
         Display*   pDisplay = static_cast<Display*>( _pX11Display );
-        const Atom wmCheck  = XInternAtom( pDisplay, "_NET_SUPPORTING_WM_CHECK", True );
-        if ( wmCheck == None )
+        const Atom wmCheck  = XInternAtom( pDisplay, "_NET_SUPPORTING_WM_CHECK", 1 ); // only_if_exists
+        if ( wmCheck == 0 )
             return false;
-        Atom           actualType{ None };
+        Atom           actualType{ 0 };
         int32          actualFormat{ 0 };
         unsigned long  itemCount{ 0 };
         unsigned long  bytesAfter{ 0 };
         unsigned char* pData{ nullptr };
-        const int32    result = XGetWindowProperty( pDisplay, DefaultRootWindow( pDisplay ), wmCheck, 0, 1, False, XA_WINDOW, &actualType, &actualFormat, &itemCount, &bytesAfter, &pData );
+        const int32    result = XGetWindowProperty( pDisplay, DefaultRootWindow( pDisplay ), wmCheck, 0, 1, 0, XA_WINDOW, &actualType, &actualFormat, &itemCount, &bytesAfter, &pData );
         if ( pData != nullptr )
             XFree( pData );
-        return result == Success && itemCount > 0;
+        return result == 0 && itemCount > 0; // 0 = Success(X11Headers 가 매크로를 지운다)
     }
 
     bool X11Window::setMinimized( bool bMinimized )
