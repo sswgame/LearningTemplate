@@ -2,7 +2,7 @@
 
 > 질문: 데이터 파일이 부모를 가리키고 차이만 적게 하려면 무엇을 하는가?
 > 독자: 파이프라인 · 머티리얼 · 프리팹 데이터를 쓰거나, 새 데이터 형식(아이템 · 어빌리티)을 이 구조에 올리는 사람과 에이전트.
-> 결론: 루트에 `_base="<리소스 id>"` 를 적고 다른 칸만 쓴다. 형식마다 합치기 코드를 쓰지 않는다 — 리플렉션 형식은 `PROPERTY( InheritKey )` 한 줄이면 되고, 손으로 읽는 XML 형식은 규칙을 값으로 적는다. 런타임은 쿠킹이 펼친 결과만 읽는다.
+> 결론: 루트에 `_base="<리소스 id>"` 를 적고 다른 칸만 쓴다. 카탈로그 항목은 `_base="<id>"` 다. 형식마다 합치기 코드를 쓰지 않는다 — 리플렉션 형식은 `PROPERTY( InheritKey )` 한 줄이면 되고, 손으로 읽는 XML 형식은 규칙을 값으로 적으며, 카탈로그는 설정 표에 한 줄을 더한다. 런타임은 쿠킹이 펼친 결과만 읽는다.
 
 구현: `Source/Engine/Serialization/Inherit/DataInheritance.h`.
 
@@ -95,6 +95,46 @@ if ( DataInheritance::findBasePath( text ).empty() == false && DataInheritance::
 
 - 이 칸이 어디서 왔나: `DataInheritance::flatten` 의 `DataInheritanceProvenance`(`findOrigin( "_listPass[Present]._cullMode" )`), 프리팹은 `PrefabCache::findFieldOrigin`.
 - 이 부모의 자식 목록: `DataInheritance::collectChildren`(파일을 훑는다). 에디터는 `EditorReferenceIndex::findReferrers` 도 같은 답을 준다.
+
+## 카탈로그 항목 상속
+
+한 파일에 항목이 여럿인 카탈로그(아이템 · 아이템 외형 · 어빌리티)는 항목마다 부모를 가리킨다. 구현은 `Source/Engine/Serialization/Inherit/DataCatalogInheritance.h` 이고 합치기는 위와 같은 `DataInheritance` 다.
+
+```xml
+<ItemVisual id="helmet_knight_gilded" _base="helmet_knight">
+  <Part name="Shell" material="common/materials/kaykit_knight_gilded.material"/>
+</ItemVisual>
+<Item id="my_helmet" _base="common/data/items.xml#helmet_knight" name="My Helmet"/>
+<Part name="Beard" mesh="…" _before="Brows"/>
+<BlockedTag tag="State.Dashing" _op="Remove"/>
+<Requires _op="Clear"/>
+```
+
+| 적는 것 | 뜻 |
+|---|---|
+| 항목의 `_base="<id>"` | 같은 파일 · 같은 종류의 항목. 파일에서 뒤에 있어도 된다. 종류마다 id 가 따로다(어빌리티와 이펙트) |
+| 항목의 `_base="<리소스 id>#<id>"` | 다른 파일의 항목. 다른 게임 팩이 `common` 을 부모로 쓴다. 그 항목의 `_base` 는 그 파일 기준이다 |
+| 루트의 `_base="<리소스 id>"` | 파일 전체를 물려받는다. 항목을 더하고 고치고 `_op="Remove"` 로 뺀다. 먼저 합친 뒤 항목의 부모를 찾는다 |
+| 규칙의 자식 칸(`key` 있음) | 래퍼 없이 되풀이되는 원소를 그 속성으로 합친다. `_op` · `_before` · `_after` 는 위 표와 같다 |
+| 규칙의 자식 칸(`key` 없음) | 구조체 칸이다. 안으로 들어가 합친다. 두 번 적으면 오류다 |
+| 규칙에 없는 자식 | 자식이 적으면 그 이름의 원소를 통째로 바꾼다. `<X _op="Clear"/>` 는 물려받은 것을 비운다 |
+
+오류는 파일 상속과 같다: 순환, 없는 부모, 깊이 초과. 더해서 규칙에 없는 종류의 `_base`(`DataCatalogInheritance.KindNotListed`), 구조체 칸을 두 번 적음(`FieldRepeated`). 오류면 그 파일을 읽지 못한다.
+
+규칙은 코드가 아니라 `Config/Dev/DataCatalogInheritance.json` 에 있다. 팩 쿠킹은 게임 모듈을 올리기 전에 돌기(`HeadlessSubsystem::runCookTask`) 때문에 `GameFramework` 나 키트의 정적 등록을 볼 수 없다. 새 카탈로그는 이 표에 한 줄을 더하면 된다. 읽는 코드는 고치지 않는다.
+
+읽기는 `XMLDocument::loadResource` · `parseData` 한 곳이 펼친다. 그래서 `XMLCatalog` · `AppearanceDatabase` · 데이터 종류 검증이 모두 펼친 결과만 본다. 항목 id 를 바꾸지 않으므로 세이브는 그대로다. 팩 쿠커도 같은 함수로 펼쳐 담는다. 쿠킹본에 `_base` 가 남으면 읽기가 모르는 칸 오류를 낸다.
+
+에디터 카탈로그 창(`CatalogDocument`)은 원문을 고치므로 적은 칸만 저장한다. 물려받은 칸은 흐린 글로 보이고, 부모와 같은 값을 적으면 그 칸을 지운다. 행 메뉴의 Create Variant 가 이 행을 부모로 하는 새 행을 만든다.
+
+같은 메시를 머티리얼만 달리한 아이템은 외형 항목을 물려받아 `material` 만 적는다. 소켓 프리팹 부품은 프리팹의 모든 메시에 그 머티리얼을 입히고, 쉬는 부품 풀은 머티리얼별로 나뉜다. 꾸미기로 고르는 변형은 `<MaterialVariant>` 다. 시나리오: `game/shooter3d/automation/showcase/itemvariant`.
+
+외형 프리셋(`CharacterAppearance` 의 `parent`)은 여기에 올리지 않았다. 값은 씨앗으로 뽑고 세트는 쌓이는 규칙이라 칸을 덮는 합치기와 다르다(`presets.xml` 머리말).
+
+| 엔진 | 방식 | 여기와 다른 점(기억에 의존) |
+|---|---|---|
+| 언리얼 Data Asset | 자산 하나가 항목 하나, 변형은 자식 클래스나 사본. Data Table 은 행 상속이 없다 | 값만 다른 변형에 자산이 하나씩 든다. 여기는 표 한 줄이고, 표 안의 행끼리 물려받는다 |
+| 유니티 ScriptableObject | Variant 는 프리팹처럼 자산 단위이고 일반 ScriptableObject 는 변형이 없다 | 같은 모델을 행 단위로 쓴다. 리스트를 인덱스가 아니라 이름으로 짚는다 |
 
 ## 프리팹 변형
 

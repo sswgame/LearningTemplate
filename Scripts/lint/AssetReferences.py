@@ -32,7 +32,7 @@ from common.Git import resolveGitExecutable, runGit  # noqa: E402
 kConfigPath = "Config/Dev/AssetReferenceFields.json"
 kContentFolder = "Content"
 # 경로 낱말을 가르는 글자(값 하나에 경로 여럿 — 쉼표 · 세미콜론 · 공백). 경로 안에는 오지 않는다(리소스 이름 규칙 `[a-z0-9_.-/]`).
-kTokenSeparators = ",; \t\r\n"
+kTokenSeparators = ",; \t\r\n#"  # `#` 뒤는 파일 안의 항목 id 다(`_base="common/data/items.xml#helmet_knight"`) - 참조는 앞의 파일이다
 # 이 글자가 든 낱말은 경로가 아니라 틀이다(`{bind:…}` · CMake `${…}` · 와일드카드).
 kTemplateCharacters = "{}$*%<>"
 

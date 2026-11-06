@@ -196,7 +196,7 @@ namespace sw
     bool AppearanceDatabase::loadSectionFromXMLText( string_view xmlText, string_view sourceName )
     {
         XMLDocument doc;
-        if ( doc.parse( xmlText, sourceName ) == false )
+        if ( doc.parseData( xmlText, sourceName ) == false )
         {
             _report.addErrorWithID( "Appearance.DataUnparsable", "%#: cannot parse appearance data (%#)", sourceName, doc.getLastError() );
             return false;

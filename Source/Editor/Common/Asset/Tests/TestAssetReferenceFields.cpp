@@ -31,6 +31,16 @@ namespace
     }
 } // namespace
 
+/** @brief [AssetReferenceFieldsTest] 카탈로그 항목의 `_base` 는 `#` 앞의 파일만 참조이고, 같은 파일의 항목 id 는 경로가 아닌지 검증 */
+SW_TEST_CASE( AssetReferenceFieldsTest, CatalogEntryBaseReferencesTheFileOnly )
+{
+    AssetReferenceFields fields;
+    SW_REQUIRE_TRUE( loadRepositoryFields( fields ) );
+    const vector<string> listPath = extractPaths( fields, R"(<Root><Item _base="common/data/items.xml#helmet_knight"/><Item _base="helmet_knight"/></Root>)", AssetReferenceSyntax::XML );
+    SW_REQUIRE_EQUAL( listPath.size(), static_cast<size_t>( 1 ) );
+    SW_EXPECT_EQUAL( listPath[0], string( "common/data/items.xml" ) );
+}
+
 /**
  * @brief [AssetReferenceFieldsTest] XML 은 목록에 든 속성 · 요소 글 · 목록 원소만 경로이고, 주석 · 목록 밖 칸 · 도메인 없는 값 · 틀(`{…}`)은 아닌지 검증
  */

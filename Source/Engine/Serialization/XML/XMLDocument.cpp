@@ -9,6 +9,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 
 #include <pugixml.hpp>
 
@@ -627,7 +628,21 @@ namespace sw
         }
         if ( pOutAbsPath != nullptr )
             *pOutAbsPath = absPath;
-        return parse( text, absPath );
+        return parseData( text, absPath );
+    }
+
+    bool XMLDocument::parseData( string_view xmlText, string_view sourceName )
+    {
+        string flatText;
+        bool   bFlattened = false;
+        if ( DataCatalogInheritance::flattenResourceIfListed( xmlText, sourceName, bFlattened, flatText ) == false )
+        {
+            clear();
+            _lastError          = string( sourceName ) + ": its catalog inheritance could not be flattened (the log says why)";
+            _bLastErrorNotFound = SW_FALSE;
+            return false;
+        }
+        return parse( bFlattened ? string_view( flatText ) : xmlText, sourceName );
     }
 
     uint32 XMLDocument::computeLineNumber( string_view text, int64 offset )

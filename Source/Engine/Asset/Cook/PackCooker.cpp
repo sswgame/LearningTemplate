@@ -20,6 +20,7 @@
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 
 #include "sw/config/CookContract.gen.h"
@@ -167,13 +168,29 @@ namespace sw
                     return false;
                 }
                 const string_view text( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
-                if ( AssetCookPath::isCookableSource( relativePath ) || DataInheritance::findBasePath( text ).empty() )
+                if ( AssetCookPath::isCookableSource( relativePath ) )
                 {
                     writer.addBytes( relativePath, std::move( bytes ) );
                     return true;
                 }
                 DataInheritanceDiskSource source{ contentRoot };
                 string                    flatText;
+                bool                      bCatalogFlattened = false;
+                if ( DataCatalogInheritance::flattenIfListed( text, absPath, source, bCatalogFlattened, flatText ) == false )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.PackCookCouldNotFlattenCatalog", "Pack cook: could not flatten the catalog '%#'", absPath );
+                    return false;
+                }
+                if ( bCatalogFlattened )
+                {
+                    writer.addBytes( relativePath, vector<uint8>( flatText.begin(), flatText.end() ) );
+                    return true;
+                }
+                if ( DataInheritance::findBasePath( text ).empty() )
+                {
+                    writer.addBytes( relativePath, std::move( bytes ) );
+                    return true;
+                }
                 if ( DataInheritance::flattenByRootName( text, absPath, source, flatText ) == false )
                 {
                     SW_LOG_ERROR_ID( "PackCooker.PackCookCouldNotFlatten", "Pack cook: could not flatten '%#'", absPath );

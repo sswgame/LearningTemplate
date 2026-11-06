@@ -1,0 +1,112 @@
+{
+    "listCatalog": [
+        {
+            "root": "ItemCatalog",
+            "listEntry": [
+                { "name": "Item", "key": "id", "listField": [ { "name": "Stats" } ] }
+            ]
+        },
+        {
+            "root": "ItemVisualCatalog",
+            "listEntry": [
+                {
+                    "name": "ItemVisual",
+                    "key": "id",
+                    "listField": [
+                        {
+                            "name": "Part",
+                            "key": "name",
+                            "listField": [
+                                { "name": "Variant", "key": "name" },
+                                { "name": "MaterialVariant", "key": "name" },
+                                { "name": "Section", "key": "name" }
+                            ]
+                        },
+                        { "name": "State", "key": "name" },
+                        { "name": "DamageStage", "key": "name" }
+                    ]
+                }
+            ]
+        },
+        {
+            "root": "EquipSetCatalog",
+            "listEntry": [
+                { "name": "Set", "key": "id" }
+            ]
+        },
+        {
+            "root": "AbilityCatalog",
+            "listEntry": [
+                {
+                    "name": "AbilityEffect",
+                    "key": "id",
+                    "listField": [
+                        { "name": "AssetTag", "key": "tag" },
+                        { "name": "BlockedTag", "key": "tag" },
+                        { "name": "GrantedTag", "key": "tag" },
+                        { "name": "RemoveEffectsWithTag", "key": "tag" },
+                        { "name": "Cue", "key": "tag" }
+                    ]
+                },
+                {
+                    "name": "Ability",
+                    "key": "id",
+                    "listField": [
+                        { "name": "AbilityTag", "key": "tag" },
+                        { "name": "BlockTag", "key": "tag" },
+                        { "name": "BlockedTag", "key": "tag" },
+                        { "name": "TriggerTag", "key": "tag" },
+                        { "name": "Param", "key": "name" }
+                    ]
+                },
+                {
+                    "name": "AbilitySet",
+                    "key": "id",
+                    "listField": [
+                        { "name": "AttributeSet", "key": "class", "listField": [ { "name": "Attribute", "key": "name" } ] },
+                        { "name": "Ability", "key": "id" },
+                        { "name": "Effect", "key": "id" },
+                        { "name": "Tag", "key": "tag" }
+                    ]
+                }
+            ]
+        },
+        {
+            "root": "CameraPresets",
+            "listEntry": [
+                {
+                    "name": "Preset",
+                    "key": "id",
+                    "listField": [
+                        { "name": "View" },
+                        { "name": "Lens" },
+                        { "name": "Damping" },
+                        { "name": "BlendIn" },
+                        { "name": "Input" },
+                        { "name": "Confiner" },
+                        { "name": "Sweep" },
+                        { "name": "Collision" },
+                        { "name": "Framing" },
+                        { "name": "Noise" },
+                        { "name": "Dolly" },
+                        { "name": "PostProcess" }
+                    ]
+                }
+            ]
+        },
+        { "root": "BlockCatalog", "listEntry": [ { "name": "Block", "key": "id" } ] },
+        { "root": "CityCatalog", "listEntry": [ { "name": "Building", "key": "id" }, { "name": "Good", "key": "id" } ] },
+        { "root": "CoasterCatalog", "listEntry": [ { "name": "Layout", "key": "id" } ] },
+        { "root": "CreatureLifeCatalog", "listEntry": [ { "name": "Habitat", "key": "id" }, { "name": "Species", "key": "id" } ] },
+        { "root": "CropCatalog", "listEntry": [ { "name": "Crop", "key": "id" } ] },
+        { "root": "Interactions", "listEntry": [ { "name": "Interaction", "key": "id" }, { "name": "UsableObject", "key": "id" } ] },
+        { "root": "QuestCatalog", "listEntry": [ { "name": "Quest", "key": "id", "listField": [ { "name": "Stage", "key": "id" } ] } ] },
+        { "root": "RTSCatalog", "listEntry": [ { "name": "Unit", "key": "id" } ] },
+        { "root": "ReputationCatalog", "listEntry": [ { "name": "Faction", "key": "id" } ] },
+        { "root": "Schedules", "listEntry": [ { "name": "Place", "key": "id" }, { "name": "Spot", "key": "id" }, { "name": "Interrupt", "key": "id" }, { "name": "Appointment", "key": "id" }, { "name": "Archetype", "key": "id" }, { "name": "NPC", "key": "id" }, { "name": "Event", "key": "id" } ] },
+        { "root": "SkirmishUnitModels", "listEntry": [ { "name": "Model", "key": "id" } ] },
+        { "root": "SpawnTable", "listEntry": [ { "name": "Entry", "key": "id" } ] },
+        { "root": "WeaponCatalog", "listEntry": [ { "name": "Weapon", "key": "id" } ] },
+        { "root": "WesternCatalog", "listEntry": [ { "name": "Horse", "key": "id" }, { "name": "Food", "key": "id" } ] }
+    ]
+}

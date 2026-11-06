@@ -76,7 +76,7 @@ namespace sw
     XMLRootStatus XMLReadUtil::parseRoot( XMLDocument& outDocument, string_view xmlText, string_view sourceName, const utf8* pRootName,
                                           XMLNode& outRoot )
     {
-        if ( outDocument.parse( xmlText, sourceName ) == false )
+        if ( outDocument.parseData( xmlText, sourceName ) == false )
             return XMLRootStatus::NotLoaded;
         outRoot = outDocument.getRoot( pRootName );
         return outRoot.isValid() ? XMLRootStatus::Found : XMLRootStatus::RootMissing;

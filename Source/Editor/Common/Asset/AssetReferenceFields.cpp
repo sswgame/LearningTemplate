@@ -21,7 +21,7 @@ namespace sw::editor
         struct AssetReferenceFieldsInternal
         {
             /** @brief 경로 낱말을 가르는 글자입니다(값 하나에 경로 여럿 — 쉼표 · 세미콜론 · 공백). 리소스 이름 규칙(`[a-z0-9_.-/]`) 안에는 오지 않는다. */
-            static constexpr string_view kTokenSeparators = ",; \t\r\n";
+            static constexpr string_view kTokenSeparators = ",; \t\r\n#"; // `#` 뒤는 파일 안의 항목 id 다(`DataCatalogInheritance`) - 참조는 앞의 파일이다
             /** @brief 이 글자가 든 낱말은 경로가 아니라 틀입니다(`{bind:…}` · CMake `${…}` · 와일드카드). */
             static constexpr string_view kTemplateCharacters = "{}$*%<>";
             /** @brief CMake 인자 앞에 올 수 있는 글자(줄 처음 말고)와 값이 끝나는 글자입니다. */
