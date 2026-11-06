@@ -23,8 +23,6 @@ namespace sw
     {
         struct SkeletonInternal
         {
-            /** @brief 변형 파일의 루트 요소 이름입니다. */
-            static constexpr const utf8* kVariantRootName = "SkeletonVariant";
             /** @brief `_firstAddedBone` 의 "붙인 본 없음" 입니다. */
             static constexpr uint32 kNoAddedBone = 0xFFFFFFFFu;
         };
