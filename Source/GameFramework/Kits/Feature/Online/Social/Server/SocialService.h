@@ -130,6 +130,7 @@ namespace sw
             SocialPresenceStatus _status{ SocialPresenceStatus::Offline };
             uint8                _bLoaded{ SW_FALSE };
             uint8                _bLoading{ SW_FALSE };
+            uint8                _bReloadPending{ SW_FALSE }; ///< 읽는 도중 관계가 바뀌었다. 끝나면 다시 읽는다
         };
 
         struct PresenceQuery

@@ -398,6 +398,12 @@ namespace sw
             return; // 그사이 떠났다
         Member& member           = memberIt->second;
         member._bSanctionReading = SW_FALSE;
+        if ( member._bSanctionChanged == SW_TRUE )
+        {
+            member._bSanctionChanged = SW_FALSE;
+            startSanctionRead( accountID, member, nowMs ); // 기다리던 말은 새 값을 읽은 뒤에 처리한다
+            return;
+        }
         if ( bReadOk )
         {
             member._muteUntilMs    = muteUntilMs;
@@ -419,8 +425,10 @@ namespace sw
     void ChatService::refreshSanction( AccountID accountID )
     {
         const auto memberIt = _mapAccountToMember.find( accountID );
-        if ( memberIt != _mapAccountToMember.end() )
-            memberIt->second._sanctionReadMs = -1;
+        if ( memberIt == _mapAccountToMember.end() )
+            return;
+        memberIt->second._sanctionReadMs   = -1;
+        memberIt->second._bSanctionChanged = memberIt->second._bSanctionReading;
     }
 
     void ChatService::completeSimple( uint16 method, uint64 requestTag, ChatResult result, int64 retryAfterMs )

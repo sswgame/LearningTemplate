@@ -418,6 +418,11 @@ namespace sw
                 localIt->second._listLink = listLink;
                 localIt->second._bLoaded  = SW_TRUE;
             }
+            if ( localIt->second._bReloadPending == SW_TRUE ) // 이 읽기는 바뀌기 전 값일 수 있다 - 막음이 빠지면 차단이 새므로 다시 읽는다
+            {
+                localIt->second._bReloadPending = SW_FALSE;
+                startLoad( accountID, 0 );
+            }
         }
         if ( requestTag == 0 )
             return; // 내부에서 건 읽기이다. 첫 요청이나 버스 알림에서 시작한 것이다
@@ -548,7 +553,11 @@ namespace sw
     void SocialService::reloadIfLocal( AccountID accountID )
     {
         const auto localIt = _mapAccountToLocal.find( accountID );
-        if ( localIt != _mapAccountToLocal.end() && localIt->second._bLoading == SW_FALSE )
+        if ( localIt == _mapAccountToLocal.end() )
+            return;
+        if ( localIt->second._bLoading == SW_TRUE )
+            localIt->second._bReloadPending = SW_TRUE;
+        else
             startLoad( accountID, 0 );
     }
 

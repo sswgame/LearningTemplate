@@ -207,6 +207,7 @@ namespace sw
             int64               _muteUntilMs{ 0 };
             int64               _sanctionReadMs{ -1 }; ///< -1이면 아직 읽지 않았거나 GM 이 바꿔서 캐시를 버린 것이다
             uint8               _bSanctionReading{ SW_FALSE };
+            uint8               _bSanctionChanged{ SW_FALSE }; ///< 읽는 도중 GM 이 바꿨다. 그 읽기는 이전 값일 수 있어 다시 읽는다
         };
 
         struct PendingWhisper
