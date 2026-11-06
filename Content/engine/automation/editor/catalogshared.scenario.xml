@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  에디터 시나리오 — 공유 카탈로그: 같은 표를 쓰는 상호작용 대상 둘은 공유 캐시의 한 벌을 쥐고(정의 주소가 같다), 표를 바깥에서 고치면 다시 읽기가 쓰는 쪽에 닿는다
+  (쥔 정의의 사거리가 바뀌고 둘은 다시 같은 한 벌을 쥔다). 판정은 쥔 쪽이 읽는 값이다 — 캐시가 든 표를 읽는 editor/catalogcascade 와 다르다. 골든 없음.
+  상호작용 표는 다시 읽으면 떼어 내고(진행 중인 세션이 옛 정의를 읽는다) 대상은 틱에서 다시 읽은 횟수를 보고 다시 받으므로 플레이 중에 본다.
+  실행: App -EnableEditor -scenario=engine/automation/editor/catalogshared.scenario.xml -unattended
+-->
+<Scenario name="editor.catalogshared" fixedDelta="0.0166667" timeoutFrames="1800" startAfter="Immediately" input="exclusive">
+	<Scratch from="engine/automation/editor/catalogshared" as="scratch/catalogshared"/>
+	<EditorWaitSettled/>
+	<DevCommand line="scene.open scratch/catalogshared/catalogshared.scene.xml"/>
+	<EditorWaitSettled/>
+	<DevCommand line="play"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.PlayState" equals="1" timeoutFrames="600"/>
+	<EditorWaitSettled/>
+	<!-- 같은 경로를 쥔 둘은 같은 정의 객체를 읽는다(사본이면 주소가 다르다) -->
+	<Expect watch="Interaction.HeldMaxDistance" target="Left" equals="3"/>
+	<Expect watch="Interaction.HeldMaxDistance" target="Right" equals="3"/>
+	<Remember watch="Interaction.HeldDefinition" target="Left" as="leftBefore"/>
+	<Expect watch="Interaction.HeldDefinition" target="Right" sameAs="leftBefore"/>
+	<DevCommand line="asset.overwriteScratch scratch/catalogshared/table_edited.interactions.xml scratch/catalogshared/table.interactions.xml"/>
+	<!-- 파일 감시는 바깥 일이라 벽시계로 기다린다 -->
+	<WaitUntil watch="Interaction.HeldMaxDistance" target="Left" equals="7" timeoutWallSeconds="30"/>
+	<EditorWaitSettled/>
+	<Expect watch="Interaction.HeldMaxDistance" target="Right" equals="7"/>
+	<Expect watch="Interaction.HeldDefinition" target="Left" differsFrom="leftBefore"/>
+	<Remember watch="Interaction.HeldDefinition" target="Left" as="leftAfter"/>
+	<Expect watch="Interaction.HeldDefinition" target="Right" sameAs="leftAfter"/>
+	<DevCommand line="stop"/>
+	<EditorWaitSettled/>
+	<WaitUntil watch="Editor.PlayState" equals="0" timeoutFrames="600"/>
+	<Pass/>
+</Scenario>

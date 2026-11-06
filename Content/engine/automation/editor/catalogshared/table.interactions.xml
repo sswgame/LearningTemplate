@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 상호작용 대상 둘이 함께 쥐는 표다. table_edited.interactions.xml 은 사거리만 다르다. -->
+<Interactions>
+  <Interaction id="Use" prompt="ui.interact.use" mode="Press" maxDistance="3"/>
+</Interactions>
