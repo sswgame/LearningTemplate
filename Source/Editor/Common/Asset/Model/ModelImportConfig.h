@@ -104,9 +104,11 @@ namespace sw::editor
         PROPERTY()
         uint8 _bImportAttachments : 1; ///< 본 아래 스킨 없는 메시를 따로 임포트한다
         PROPERTY()
-        uint8                  _bImportMaterials : 1; ///< glTF 머티리얼을 모델 옆 머티리얼로 옮긴다(VRM 툰 머티리얼은 늘 옮긴다). 끄면 머티리얼 색을 정점에 굽고 머티리얼 파일을 쓰지 않는다
+        uint8 _bImportMaterials : 1; ///< glTF 머티리얼을 모델 옆 머티리얼로 옮긴다(VRM 툰 머티리얼은 늘 옮긴다). 끄면 머티리얼 색을 정점에 굽고 머티리얼 파일을 쓰지 않는다
+        PROPERTY()
+        uint8                  _bPartialSkeleton : 1; ///< 다른 스켈레톤의 일부인 복장 · 소품 모델이다 — 스켈레톤을 부품으로 선언한다(`Skeleton::isPartial`)
         uint8                  _bFracture        : 1; ///< 규칙에 `fracture` 가 있으면 참이다. `.mesh` 옆에 `.fracture` 를 쓴다
-        [[maybe_unused]] uint8 _reserved         : 4;
+        [[maybe_unused]] uint8 _reserved         : 3;
 
         ModelImportRule()
             : _name{}
@@ -126,6 +128,7 @@ namespace sw::editor
             , _bImportAnimations{ SW_TRUE }
             , _bImportAttachments{ SW_TRUE }
             , _bImportMaterials{ SW_TRUE }
+            , _bPartialSkeleton{ SW_FALSE }
             , _bFracture{ SW_FALSE }
             , _reserved{ 0 }
         {

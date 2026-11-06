@@ -456,6 +456,8 @@ namespace sw
                         resolved._asset = pVariant->_asset;
                     if ( pVariant->_material.empty() == false )
                         resolved._material = pVariant->_material;
+                    if ( pVariant->_skeleton.empty() == false )
+                        resolved._skeleton = pVariant->_skeleton;
                 }
                 const AppearancePartVariantDef* pMaterialVariant = entry._customMaterialVariant.empty() ? nullptr : part.findMaterialVariant( entry._customMaterialVariant );
                 if ( pMaterialVariant != nullptr )

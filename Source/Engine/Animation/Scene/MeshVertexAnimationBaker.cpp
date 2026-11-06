@@ -70,7 +70,8 @@ namespace sw
         const float32 effectiveRate = ( bLoop && duration > 0.0f ) ? static_cast<float32>( frameCount ) / duration : framesPerSecond;
 
         vector<int32> listTrackToBone;
-        clip.makeTrackToBoneMap( skeleton, listTrackToBone );
+        if ( clip.makeTrackToBoneMap( skeleton, listTrackToBone ) == false )
+            return false; // 틀린 스켈레톤으로 표를 굽지 않는다 — 까닭은 함수가 남겼다
         Pose             pose;
         Pose             scratchTrackPose;
         vector<float4x4> listModel;
@@ -86,7 +87,7 @@ namespace sw
         {
             const float32 time = MathUtil::min( static_cast<float32>( frameIndex ) / effectiveRate, duration );
             pose.setToReference( skeleton );
-            if ( clip.samplePose( time, listTrackToBone, pose, scratchTrackPose, bAnchorRootMotion ) == false )
+            if ( clip.samplePose( skeleton, time, listTrackToBone, pose, scratchTrackPose, bAnchorRootMotion ) == false )
                 return false;
             pose.computeModelSpace( skeleton.getParentIndices(), listModel );
             Pose::computeSkinPalette( skinMesh.getSkinBinding()._listInverseBind, listModel, listPalette );

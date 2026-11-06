@@ -18,7 +18,7 @@ namespace
 
     constexpr const utf8* kVisualsXML = R"(<ItemVisualCatalog>
         <ItemVisual id="body">
-          <Part name="Body" kind="Skinned" mesh="body.mesh" material="body.material" sockets="body.sockets"><Variant name="Slim" mesh="slim.mesh"/></Part>
+          <Part name="Body" kind="Skinned" mesh="body.mesh" material="body.material" sockets="body.sockets"><Variant name="Slim" mesh="slim.mesh" skeleton="slim.skeleton.xml"/></Part>
         </ItemVisual>
         <ItemVisual id="helmet" tags="Helmet.Full"><Part name="Shell" kind="SocketPrefab" prefab="helmet.prefab" socket="Head,Neck" offset="0 1 0"/></ItemVisual>
         <ItemVisual id="hood"><Part name="Cloth" kind="SocketPrefab" prefab="hood.prefab" socket="Head"/><Part name="Tie" kind="SocketPrefab" prefab="tie.prefab" socket="Neck"/></ItemVisual>
@@ -389,6 +389,7 @@ SW_TEST_CASE_F( AppearanceResolverTest, CharacterCustomizationDrivesItsTargets )
     _spec._customization.setOption( hashed_string( "Hood" ), hashed_string( "Up" ) );
     resolve();
     SW_EXPECT_TRUE( findPart( "", "Body" )->_asset == hashed_string( "slim.mesh" ) );
+    SW_EXPECT_TRUE( findPart( "", "Body" )->_skeleton == hashed_string( "slim.skeleton.xml" ) ); // 변형이 스켈레톤도 고른다 — 외형이 런타임에 뼈 비율을 고르는 길이다
     SW_EXPECT_TRUE( findPart( "Hood", "Cloth" ) != nullptr );
     SW_EXPECT_TRUE( _resolved.findMorph( hashed_string{}, hashed_string( "Beard" ) ) != nullptr );
 }

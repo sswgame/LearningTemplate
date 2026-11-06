@@ -133,7 +133,7 @@ namespace sw
         const SocketSetComponent* pSockets = object.getComponent<SocketSetComponent>();
         float4x4                  unitTransform;
         const bool                bFound = ( pSockets != nullptr && pSockets->computeSocketUnitTransform( name, pUnit, unitTransform ) ) ||
-                            ( pUnit != nullptr && pUnit->findBoneModelTransform( name, unitTransform ) );
+                            ( pUnit != nullptr && ( pUnit->findSkeletonSocketTransform( name, unitTransform ) || pUnit->findBoneModelTransform( name, unitTransform ) ) );
         if ( bFound == false )
             return false;
         outWorldTransform = unitTransform * pFrame->getWorldMatrix();

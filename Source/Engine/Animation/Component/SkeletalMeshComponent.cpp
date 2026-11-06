@@ -29,6 +29,7 @@ namespace sw
             {
                 shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
                 (void)skeleton->addBone( hashed_string( "root" ), -1, BoneTransform{} );
+                skeleton->setPartial( true ); // 외형을 입기 전 · 전용 서버의 자리다 — 클립과 리더의 본이 없는 것이 정상이다
                 return skeleton;
             }
 
@@ -292,8 +293,14 @@ namespace sw
 
     void SkeletalMeshComponent::resolveBoneLOD()
     {
-        // 본 LOD 는 스켈레톤 곁의 선택 파일이다 — 없으면 조용히 본 LOD 없이 간다.
-        const string path = SkeletonBoneLOD::makePathForSkeleton( _skeletonPath );
+        // 본 LOD 는 스켈레톤 곁의 선택 파일이다 — 없으면 조용히 본 LOD 없이 간다. 변형은 곁에 없으면 부모의 것을 쓴다(이름으로 찾으므로 그대로 맞는다).
+        string path = SkeletonBoneLOD::makePathForSkeleton( _skeletonPath );
+        for ( const string& basePath : _skeleton->getBasePaths() )
+        {
+            if ( path.empty() == false && AssetIO::hasAsset( AssetID{ path } ) )
+                break;
+            path = SkeletonBoneLOD::makePathForSkeleton( basePath );
+        }
         if ( path.empty() || AssetIO::hasAsset( AssetID{ path } ) == false )
         {
             setBoneLOD( nullptr );
@@ -434,6 +441,16 @@ namespace sw
         if ( boneIndex < 0 || static_cast<size_t>( boneIndex ) >= listModelSpace.size() )
             return false;
         outTransform = listModelSpace[static_cast<size_t>( boneIndex )];
+        return true;
+    }
+
+    bool SkeletalMeshComponent::findSkeletonSocketTransform( const hashed_string& socketName, float4x4& outTransform ) const
+    {
+        const SkeletonSocket* pSocket = _skeleton->findSocket( socketName );
+        float4x4              bone;
+        if ( pSocket == nullptr || findBoneModelTransform( pSocket->_parentBone, bone ) == false )
+            return false;
+        outTransform = pSocket->_localTransform.toMatrix() * bone;
         return true;
     }
 
@@ -825,6 +842,11 @@ namespace sw
             for ( uint32 boneIndex = 0; boneIndex < _skeleton->getBoneCount(); ++boneIndex )
             {
                 _listLeaderBone[boneIndex] = leaderSkeleton.findBoneIndex( _skeleton->getBone( boneIndex )._name );
+                // 변형이 뒤에 붙인 본(망토 · 머리카락)과 부품 스켈레톤만 리더에 없어도 된다 — 나머지는 레퍼런스에 얼어 있는 틀린 조합이다.
+                const bool bMissing = _listLeaderBone[boneIndex] < 0 && _skeleton->isAddedBone( boneIndex ) == false && _skeleton->isPartial() == false && leaderSkeleton.isPartial() == false;
+                if ( bMissing )
+                    SW_LOG_ERROR_ID( "SkeletalMeshComponent.LeaderLacksBone", "Skeleton '%#' follows a leader without bone '%#' - the bone stays at its reference pose; add it as a variant bone or declare the skeleton partial", _skeletonPath.c_str(),
+                                     _skeleton->getBone( boneIndex )._name.c_str() );
             }
             _pLeaderSkeletonForMap = &leaderSkeleton;
         }

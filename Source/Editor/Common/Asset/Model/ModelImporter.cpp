@@ -239,6 +239,7 @@ namespace sw::editor
                 vector<float4x4>                        listBoneInverseBind;
                 if ( buildSkeleton( data, outResult._skeleton, mapJointBone, listRootParent, listBoneInverseBind, sourcePath ) == false )
                     return false;
+                outResult._skeleton.setPartial( rule._bPartialSkeleton == SW_TRUE );
                 const uint32 boneCount = outResult._skeleton.getBoneCount();
 
                 const vector<ModelImportUtil::SkinBinding> listBinding = makeSkinBindings( data, mapJointBone );

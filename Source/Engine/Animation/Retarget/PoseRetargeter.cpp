@@ -319,7 +319,8 @@ namespace sw
         raw._listSample.reserve( static_cast<size_t>( sampleCount ) * targetSkeleton.getBoneCount() );
 
         vector<int32> listTrackToBone;
-        sourceClip.makeTrackToBoneMap( sourceSkeleton, listTrackToBone );
+        if ( sourceClip.makeTrackToBoneMap( sourceSkeleton, listTrackToBone ) == false )
+            return false; // 틀린 원본으로 파일을 굽지 않는다 — 까닭은 함수가 남겼다
         Pose trackPose;
         Pose sourcePose;
         Pose targetPose;
@@ -332,7 +333,7 @@ namespace sw
                 SW_LOG_ERROR_ID( "PoseRetargeter.RetargetBakeClipCould", "Retarget bake: clip '%#' could not be sampled", sourceClip.getName().c_str() );
                 return false;
             }
-            AnimationClip::copyTracksToPose( trackPose, listTrackToBone, sourcePose );
+            AnimationClip::copyTracksToPose( sourceSkeleton, trackPose, listTrackToBone, sourcePose );
             retargeter.retarget( sourcePose, targetPose );
             for ( uint32 boneIndex = 0; boneIndex < targetPose.getBoneCount(); ++boneIndex )
             {

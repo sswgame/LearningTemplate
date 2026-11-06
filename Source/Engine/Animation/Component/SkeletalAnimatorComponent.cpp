@@ -990,7 +990,7 @@ namespace sw
         }
         vector<int32>& listBone = _mapTrackToBone[&clip];
         if ( listBone.size() != clip.getTrackCount() )
-            clip.makeTrackToBoneMap( skeleton, listBone );
+            (void)clip.makeTrackToBoneMap( skeleton, listBone ); // 오류는 함수가 남겼고(짝마다 한 번) 있는 본은 재생한다
         return listBone;
     }
 
@@ -1009,7 +1009,7 @@ namespace sw
             }
             pTrackMask = _listScratchTrackMask.data();
         }
-        (void)clip.samplePose( time, listTrackToBone, inoutPose, _scratchTrackPose, _bExtractRootMotion == SW_TRUE, pTrackMask );
+        (void)clip.samplePose( skeleton, time, listTrackToBone, inoutPose, _scratchTrackPose, _bExtractRootMotion == SW_TRUE, pTrackMask );
     }
 
     void SkeletalAnimatorComponent::refreshLayerMask( LayerState& layer, const Skeleton& skeleton )
@@ -1029,7 +1029,7 @@ namespace sw
             layer._listBoneWeight.assign( boneCount, layer._desc._maskRootBone.empty() ? 1.0f : 0.0f );
             const int32 maskRoot = layer._desc._maskRootBone.empty() ? -1 : skeleton.findBoneIndex( layer._desc._maskRootBone );
             if ( layer._desc._maskRootBone.empty() == false && maskRoot < 0 )
-                SW_LOG_WARNING_ID( "SkeletalAnimator.AnimationLayerMaskBone", "Animation layer mask bone '%#' is not in the skeleton", layer._desc._maskRootBone.c_str() );
+                SW_LOG_ERROR_ID( "SkeletalAnimator.AnimationLayerMaskBone", "Animation layer mask bone '%#' is not in the skeleton", layer._desc._maskRootBone.c_str() );
             // 부모가 앞에 있으므로 한 번 훑으면 마스크 본의 자손이 모두 1 이 된다.
             for ( uint32 boneIndex = 0; maskRoot >= 0 && boneIndex < boneCount; ++boneIndex )
             {

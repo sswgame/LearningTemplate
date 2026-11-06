@@ -29,6 +29,8 @@ namespace sw::editor
         text += _bImportAttachments == SW_TRUE ? "1" : "0";
         if ( _bImportMaterials == SW_FALSE )
             text += ";materials=0"; // 켠 값(기본)은 섞지 않는다 — 이 칸이 생기기 전의 스탬프가 그대로 맞는다
+        if ( _bPartialSkeleton == SW_TRUE )
+            text += ";partial=1"; // 끈 값(기본)은 섞지 않는다
         text += ";codec=" + _animationCodec + ";root=" + _rootMotionBone + ";clips=";
         for ( const string& clipName : _listClipName )
         {

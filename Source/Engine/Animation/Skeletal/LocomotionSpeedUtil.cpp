@@ -23,7 +23,7 @@ namespace sw
             return 0.0f;
 
         vector<int32> listTrackToBone;
-        clip.makeTrackToBoneMap( skeleton, listTrackToBone );
+        (void)clip.makeTrackToBoneMap( skeleton, listTrackToBone ); // 오류는 함수가 남겼고 있는 본은 쓴다
         Pose             pose;
         Pose             scratchTrackPose;
         vector<float4x4> listModel;
@@ -35,7 +35,7 @@ namespace sw
         for ( uint32 sampleIndex = 0; sampleIndex < sampleCount; ++sampleIndex )
         {
             pose.setToReference( skeleton );
-            if ( clip.samplePose( step * static_cast<float32>( sampleIndex ), listTrackToBone, pose, scratchTrackPose, true ) == false )
+            if ( clip.samplePose( skeleton, step * static_cast<float32>( sampleIndex ), listTrackToBone, pose, scratchTrackPose, true ) == false )
                 return 0.0f;
             pose.computeModelSpace( skeleton.getParentIndices(), listModel );
             const float3 leftPosition  = listModel[static_cast<size_t>( leftBone )].getTranslation();

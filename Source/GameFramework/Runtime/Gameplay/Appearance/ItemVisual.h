@@ -29,7 +29,7 @@ namespace sw
         Sprite            ///< 2D 종이 인형 조각(스프라이트, 그리기 순서, 소켓 기준점)
     };
 
-    /** @brief 이름 붙은 변형입니다. 메시(또는 스프라이트)와 머티리얼을 바꿉니다. 비워 둔 항목은 기본값을 씁니다. */
+    /** @brief 이름 붙은 변형입니다. 메시(또는 스프라이트) · 머티리얼 · 스켈레톤을 바꿉니다. 비워 둔 항목은 기본값을 씁니다. */
     REFLECT()
     struct AppearancePartVariantDef
     {
@@ -40,6 +40,9 @@ namespace sw
         hashed_string _asset{};
         PROPERTY()
         hashed_string _material{};
+        /** @brief 스킨드 부품(`<Variant>`)이 이 변형에서 쓰는 스켈레톤입니다 — 스켈레톤 변형(`SkeletonVariant`)을 적으면 외형이 런타임에 뼈 비율을 고릅니다(꾸미기 선택 · 규칙 · 피해 단계가 고르는 변형과 같은 길). */
+        PROPERTY()
+        hashed_string _skeleton{};
     };
 } // namespace sw
 

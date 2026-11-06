@@ -71,6 +71,8 @@ namespace sw
                     AppearancePartVariantDef variant;
                     (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName, { "mesh", "prefab", "sprite" } ); // 에셋 속성은 부품 종류가 정한다
                     variant._asset = XMLReadUtil::readOptionalName( child, getAssetAttribute( inoutPart._kind ) );
+                    if ( variant._skeleton.empty() == false && inoutPart._kind != AppearancePartKind::Skinned )
+                        report.addErrorWithID( "Appearance.VariantSkeletonNotSkinned", "%#: visual '%#' part '%#' variant '%#' names a skeleton but the part is not Skinned", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     if ( variant._name.empty() || inoutPart.findVariant( variant._name ) != nullptr )
                         report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a variant without a name or a duplicate '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
@@ -80,7 +82,7 @@ namespace sw
                 {
                     AppearancePartVariantDef variant;
                     (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName, {} );
-                    const bool bInvalidVariant = variant._name.empty() || variant._material.empty() || inoutPart.findMaterialVariant( variant._name ) != nullptr;
+                    const bool bInvalidVariant = variant._name.empty() || variant._material.empty() || variant._skeleton.empty() == false || inoutPart.findMaterialVariant( variant._name ) != nullptr;
                     if ( bInvalidVariant )
                         report.addErrorWithID( "Appearance.VariantNameInvalid", "%#: visual '%#' part '%#' has a bad or duplicate material variant '%#'", sourceName, visualID.c_str(), inoutPart._name.c_str(), variant._name.c_str() );
                     else
@@ -92,7 +94,7 @@ namespace sw
                     (void)AppearanceXMLUtil::readFields( child, section, report, sourceName, {} );
                     const bool bDuplicateSection = VectorUtil::containsIf( inoutPart._listSection, [&]( const AppearancePartVariantDef& other )
                     { return other._name == section._name; } );
-                    if ( section._name.empty() || section._material.empty() || bDuplicateSection )
+                    if ( section._name.empty() || section._material.empty() || section._skeleton.empty() == false || bDuplicateSection )
                         report.addErrorWithID( "Appearance.SectionInvalid", "%#: visual '%#' part '%#' has a section without a name or material, or a duplicate '%#'", sourceName, visualID.c_str(),
                                                inoutPart._name.c_str(), section._name.c_str() );
                     else

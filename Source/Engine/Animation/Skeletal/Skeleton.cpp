@@ -2,18 +2,69 @@
 
 #include "Engine/Animation/Skeletal/Skeleton.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
+#include "Core/Math/MathUtil.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
 {
+    namespace
+    {
+        struct SkeletonInternal
+        {
+            /** @brief 변형 사슬 깊이의 상한입니다 — 파일이 서로를 가리키는 고리를 끊습니다(이만큼 쌓는 데이터는 설계가 틀렸다). */
+            static constexpr uint32 kMaxVariantDepth = 8;
+            /** @brief 변형 파일의 루트 요소 이름입니다. */
+            static constexpr const utf8* kVariantRootName = "SkeletonVariant";
+            /** @brief `_firstAddedBone` 의 "붙인 본 없음" 입니다. */
+            static constexpr uint32 kNoAddedBone = 0xFFFFFFFFu;
+        };
+    } // namespace
+} // namespace sw
+
+namespace sw
+{
+    SkeletonVariant::SkeletonVariant()
+        : _base{}
+        , _listAddedBone{}
+        , _listBoneOverride{}
+        , _listSocket{}
+        , _listAttachment{}
+        , _pelvisBone{}
+        , _bPartial{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
+    string SkeletonVariant::toXML() const
+    {
+        return XMLSerializer::serialize( this, *StaticType() );
+    }
+
+    Skeleton::Skeleton()
+        : _listBone{}
+        , _listParentIndex{}
+        , _listHierarchyHash{}
+        , _listAttachment{}
+        , _listSocket{}
+        , _listClipRule{}
+        , _listBasePath{}
+        , _firstAddedBone{ SkeletonInternal::kNoAddedBone }
+        , _translationRatio{ 1.0f }
+        , _bPartial{ SW_FALSE }
+        , _reserved{ 0 }
+    {
+    }
+
     int32 Skeleton::addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose )
     {
         // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어서 구할 수 없다. 읽을 때 걸러 낸다.
@@ -77,12 +128,179 @@ namespace sw
         _listParentIndex.clear();
         _listHierarchyHash.clear();
         _listAttachment.clear();
+        _listSocket.clear();
+        _listClipRule.clear();
+        _listBasePath.clear();
+        _firstAddedBone   = SkeletonInternal::kNoAddedBone;
+        _translationRatio = 1.0f;
+        _bPartial         = SW_FALSE;
+    }
+
+    const SkeletonSocket* Skeleton::findSocket( const hashed_string& name ) const
+    {
+        return VectorUtil::findBy<&SkeletonSocket::_name>( _listSocket, name );
+    }
+
+    BoneTransform Skeleton::applyClipRule( uint32 boneIndex, const BoneTransform& sampled ) const
+    {
+        if ( boneIndex >= _listClipRule.size() || _listClipRule[boneIndex]._bActive == SW_FALSE )
+            return sampled;
+        const SkeletonClipRule& rule   = _listClipRule[boneIndex];
+        BoneTransform           result = sampled;
+        switch ( rule._translationMode )
+        {
+            case RetargetTranslationMode::None:
+                result._translation = rule._translation;
+                break;
+            case RetargetTranslationMode::ScaleByPelvisHeight:
+                result._translation = rule._translation + ( sampled._translation - rule._sourceTranslation ) * _translationRatio;
+                break;
+            case RetargetTranslationMode::Copy:
+                break;
+        }
+        result._rotation = ( rule._rotation * sampled._rotation ).normalize();
+        result._scale    = float3::multiply( sampled._scale, rule._scale );
+        return result;
+    }
+
+    bool Skeleton::addSocket( const SkeletonSocket& socket, string_view sourceLabel )
+    {
+        if ( findSocket( socket._name ) != nullptr )
+        {
+            SW_LOG_ERROR_ID( "Skeleton.SocketDuplicate", "Skeleton '%#': socket '%#' is defined twice", sourceLabel, socket._name.c_str() );
+            return false;
+        }
+        if ( findBoneIndex( socket._parentBone ) < 0 )
+        {
+            SW_LOG_ERROR_ID( "Skeleton.SocketNamesUnknownBone", "Skeleton '%#': socket '%#' names unknown bone '%#'", sourceLabel, socket._name.c_str(), socket._parentBone.c_str() );
+            return false;
+        }
+        _listSocket.push_back( socket );
+        return true;
+    }
+
+    bool Skeleton::applyBoneOverride( const SkeletonBoneOverride& boneOverride, string_view sourceLabel )
+    {
+        const int32 boneIndex = findBoneIndex( boneOverride._bone );
+        if ( boneIndex < 0 )
+        {
+            SW_LOG_ERROR_ID( "Skeleton.VariantOverrideUnknownBone", "Skeleton variant '%#': bone override names unknown bone '%#'", sourceLabel, boneOverride._bone.c_str() );
+            return false;
+        }
+        _listClipRule.resize( _listBone.size() );
+        SkeletonClipRule& rule = _listClipRule[static_cast<uint32>( boneIndex )];
+        BoneTransform&    pose = _listBone[static_cast<uint32>( boneIndex )]._referencePose;
+        // 변형의 변형이면 클립의 기준은 맨 위 스켈레톤 그대로이고 나머지 차이가 쌓인다.
+        if ( rule._bActive == SW_FALSE )
+            rule._sourceTranslation = pose._translation;
+        pose._translation     = pose._translation * boneOverride._translationScale + boneOverride._translationOffset;
+        pose._rotation        = ( boneOverride._rotation * pose._rotation ).normalize();
+        pose._scale           = float3::multiply( pose._scale, boneOverride._scale );
+        rule._translation     = pose._translation;
+        rule._rotation        = ( boneOverride._rotation * rule._rotation ).normalize();
+        rule._scale           = float3::multiply( rule._scale, boneOverride._scale );
+        rule._translationMode = boneOverride._translationMode;
+        rule._bActive         = SW_TRUE;
+        return true;
+    }
+
+    bool Skeleton::applyVariant( const SkeletonVariant& variant, const Skeleton& base, string_view sourceLabel )
+    {
+        *this = base;
+        _listBasePath.insert( _listBasePath.begin(), variant._base );
+        _bPartial = ( base._bPartial == SW_TRUE || variant._bPartial == SW_TRUE ) ? SW_TRUE : SW_FALSE;
+
+        bool bValid = true;
+        for ( const SkeletonBoneOverride& boneOverride : variant._listBoneOverride )
+        {
+            bValid = applyBoneOverride( boneOverride, sourceLabel ) && bValid;
+        }
+        const bool bScalesByPelvis = VectorUtil::containsIf( variant._listBoneOverride, []( const SkeletonBoneOverride& boneOverride )
+        { return boneOverride._translationMode == RetargetTranslationMode::ScaleByPelvisHeight; } );
+        if ( bValid && bScalesByPelvis )
+        {
+            // 골반 높이 비 — 리타깃(`PoseRetargeter`)과 같은 값이다. 변형의 변형은 부모의 비에 곱해 맨 위 기준을 지킨다.
+            const int32      pelvisBone = findBoneIndex( variant._pelvisBone );
+            vector<float4x4> listBaseModel;
+            vector<float4x4> listModel;
+            Pose             pose;
+            pose.setToReference( base );
+            pose.computeModelSpace( base.getParentIndices(), listBaseModel );
+            pose.setToReference( *this );
+            pose.computeModelSpace( getParentIndices(), listModel );
+            const float32 baseHeight = pelvisBone >= 0 ? listBaseModel[static_cast<uint32>( pelvisBone )].getTranslation()._y : 0.0f;
+            if ( MathUtil::abs( baseHeight ) <= MathUtil::kEpsilon )
+            {
+                SW_LOG_ERROR_ID( "Skeleton.VariantPelvisInvalid", "Skeleton variant '%#': ScaleByPelvisHeight needs _pelvisBone, a bone above the origin in the base (got '%#')", sourceLabel, variant._pelvisBone.c_str() );
+                bValid = false;
+            }
+            else
+            {
+                _translationRatio = base._translationRatio * listModel[static_cast<uint32>( pelvisBone )].getTranslation()._y / baseHeight;
+            }
+        }
+        for ( const SkeletonAddedBone& added : variant._listAddedBone )
+        {
+            const int32 parentBone = findBoneIndex( added._parentBone );
+            if ( findBoneIndex( added._name ) >= 0 || parentBone < 0 )
+            {
+                SW_LOG_ERROR_ID( "Skeleton.VariantAddedBoneInvalid", "Skeleton variant '%#': added bone '%#' already exists or its parent '%#' does not", sourceLabel, added._name.c_str(), added._parentBone.c_str() );
+                bValid = false;
+                continue;
+            }
+            _firstAddedBone = MathUtil::min( _firstAddedBone, getBoneCount() );
+            (void)addBone( added._name, parentBone, added._referencePose ); // 부모가 있는 번호다
+        }
+        // 더한 본은 규칙이 없다 — 클립에 없는 본이고 있어도 그대로 재생한다.
+        if ( _listClipRule.empty() == false )
+            _listClipRule.resize( _listBone.size() );
+        for ( const SkeletonSocket& socket : variant._listSocket )
+        {
+            bValid = addSocket( socket, sourceLabel ) && bValid;
+        }
+        for ( const SkeletonAttachment& attachment : variant._listAttachment )
+        {
+            if ( findBoneIndex( attachment._parentBone ) < 0 )
+            {
+                SW_LOG_ERROR_ID( "Skeleton.SkeletonAttachmentNamesUnknown", "Skeleton '%#': attachment '%#' names unknown bone '%#'", sourceLabel, attachment._name.c_str(), attachment._parentBone.c_str() );
+                bValid = false;
+                continue;
+            }
+            _listAttachment.push_back( attachment );
+        }
+        if ( bValid == false )
+            clear();
+        return bValid;
     }
 
     bool Skeleton::parseXML( string_view xml, string_view sourceLabel )
     {
+        return parseAtDepth( xml, sourceLabel, 0 );
+    }
+
+    bool Skeleton::parseAtDepth( string_view xml, string_view sourceLabel, uint32 depth )
+    {
         clear();
         const string label{ sourceLabel };
+        XMLDocument  document;
+        if ( document.parse( xml, sourceLabel ) && document.getRoot( SkeletonInternal::kVariantRootName ) )
+        {
+            if ( depth >= SkeletonInternal::kMaxVariantDepth )
+            {
+                SW_LOG_ERROR_ID( "Skeleton.VariantChainTooDeep", "Skeleton variant '%#': the _base chain is deeper than %# - do the files point at each other?", sourceLabel, SkeletonInternal::kMaxVariantDepth );
+                return false;
+            }
+            SkeletonVariant variant;
+            if ( ConfigManager::readConfigXMLDocument( &variant, *SkeletonVariant::StaticType(), xml, label.c_str() ) == false )
+                return false;
+            Skeleton base;
+            if ( base.loadAtDepth( AssetID{ variant._base }, depth + 1 ) == false )
+            {
+                SW_LOG_ERROR_ID( "Skeleton.VariantBaseUnreadable", "Skeleton variant '%#': base skeleton '%#' could not be read", sourceLabel, variant._base.c_str() );
+                return false;
+            }
+            return applyVariant( variant, base, sourceLabel );
+        }
         // 키는 대소문자까지 맞아야 하고, 모르는 속성 · 자식 · 빠진 칸 · 읽지 못한 값은 오류다(`readConfigXMLDocument` 가 로그로 알린다).
         if ( ConfigManager::readConfigXMLDocument( this, *StaticType(), xml, label.c_str() ) && rebuildFromLoaded( sourceLabel ) )
             return true;
@@ -91,6 +309,11 @@ namespace sw
     }
 
     bool Skeleton::loadFromAsset( const AssetID& assetID )
+    {
+        return loadAtDepth( assetID, 0 );
+    }
+
+    bool Skeleton::loadAtDepth( const AssetID& assetID, uint32 depth )
     {
         const string_view path = assetID.view();
         SW_MEMORY_SCOPE( Animation );
@@ -101,7 +324,7 @@ namespace sw
             clear();
             return false;
         }
-        return parseXML( text, path );
+        return parseAtDepth( text, path, depth );
     }
 
     bool Skeleton::rebuildFromLoaded( string_view sourceLabel )
@@ -114,7 +337,10 @@ namespace sw
         // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어서 구할 수 없다. `addBone` 이 거르므로 그 길로 다시 쌓는다.
         const vector<SkeletonBone>       listLoadedBone       = std::move( _listBone );
         const vector<SkeletonAttachment> listLoadedAttachment = std::move( _listAttachment );
+        const vector<SkeletonSocket>     listLoadedSocket     = std::move( _listSocket );
+        const uint8                      bPartial             = _bPartial;
         clear();
+        _bPartial = bPartial;
         for ( const SkeletonBone& bone : listLoadedBone )
         {
             if ( addBone( bone._name, bone._parentIndex, bone._referencePose ) < 0 )
@@ -131,6 +357,11 @@ namespace sw
                 return false;
             }
             _listAttachment.push_back( attachment );
+        }
+        for ( const SkeletonSocket& socket : listLoadedSocket )
+        {
+            if ( addSocket( socket, sourceLabel ) == false )
+                return false;
         }
         return true;
     }

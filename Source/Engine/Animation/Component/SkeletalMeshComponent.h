@@ -104,6 +104,8 @@ namespace sw
         const vector<float4x4>& getSkinPalette() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getSkinPalette() : _listSkinPalette; }
         /** @brief 이름이 일치하는 본의 모델 공간 행렬을 반환합니다. 없으면 false 입니다. */
         [[nodiscard]] bool findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const;
+        /** @brief 스켈레톤이 정한 소켓(변형이 더한 자리)의 모델 공간 행렬을 반환합니다. 없으면 false 입니다. */
+        [[nodiscard]] bool findSkeletonSocketTransform( const hashed_string& socketName, float4x4& outTransform ) const;
         /** @brief 포즈를 다시 만들게 합니다(쉬던 유닛도 다음 프레임에 한 번 처리합니다). */
         void markPoseDirty() { _bPoseDirty = SW_TRUE; }
         /**

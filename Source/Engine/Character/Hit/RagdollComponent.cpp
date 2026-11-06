@@ -576,8 +576,8 @@ namespace sw
         if ( pClip->sampleTracks( 0.0f, trackPose ) )
         {
             vector<int32> listTrackToBone;
-            pClip->makeTrackToBoneMap( skeleton, listTrackToBone );
-            AnimationClip::copyTracksToPose( trackPose, listTrackToBone, startPose );
+            (void)pClip->makeTrackToBoneMap( skeleton, listTrackToBone ); // 오류는 함수가 남겼고 있는 본은 쓴다
+            AnimationClip::copyTracksToPose( skeleton, trackPose, listTrackToBone, startPose );
         }
         vector<float4x4> listStartModel;
         startPose.computeModelSpace( skeleton.getParentIndices(), listStartModel );

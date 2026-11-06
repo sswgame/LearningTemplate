@@ -115,9 +115,10 @@ namespace sw
         , _referenceCount{ 0 }
         , _evaluationCount{ 0 }
     {
-        _clip->makeTrackToBoneMap( *_skeleton, _listTrackToBone );
+        // 오류는 함수가 남겼고 있는 본은 재생한다.
+        (void)_clip->makeTrackToBoneMap( *_skeleton, _listTrackToBone );
         if ( _nextClip != nullptr )
-            _nextClip->makeTrackToBoneMap( *_skeleton, _listNextTrackToBone );
+            (void)_nextClip->makeTrackToBoneMap( *_skeleton, _listNextTrackToBone );
         _localPose.setToReference( *_skeleton );
         _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
         refreshSkinPalette();
@@ -150,12 +151,12 @@ namespace sw
     void AnimationCrowdBucket::evaluate( float64 clock )
     {
         _localPose.setToReference( *_skeleton );
-        (void)_clip->samplePose( computeTime( clock ), _listTrackToBone, _localPose, _scratchTrackPose, _key._bAnchorRootMotion == SW_TRUE );
+        (void)_clip->samplePose( *_skeleton, computeTime( clock ), _listTrackToBone, _localPose, _scratchTrackPose, _key._bAnchorRootMotion == SW_TRUE );
         if ( _nextClip != nullptr )
         {
             // 섞기 묶음 — 애니메이터의 페이드와 같은 식(나가는 포즈와 들어가는 포즈를 가중치로 섞는다).
             _nextPose.setToReference( *_skeleton );
-            (void)_nextClip->samplePose( computeNextTime( clock ), _listNextTrackToBone, _nextPose, _scratchTrackPose, _key._bAnchorRootMotion == SW_TRUE );
+            (void)_nextClip->samplePose( *_skeleton, computeNextTime( clock ), _listNextTrackToBone, _nextPose, _scratchTrackPose, _key._bAnchorRootMotion == SW_TRUE );
             Pose::blend( _localPose, _nextPose, _blendAlpha, _localPose );
         }
         _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );

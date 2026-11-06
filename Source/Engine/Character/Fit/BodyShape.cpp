@@ -4,6 +4,7 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Animation/Skeletal/Pose.h"
@@ -118,6 +119,19 @@ namespace sw
             local = CharacterGeometryUtil::makeTransform( translation + entry._offset, rotation, scale );
         }
         inoutBones.computeModelTransforms();
+    }
+
+    bool BoneProportion::checkBones( const Skeleton& skeleton, string_view sourceLabel ) const
+    {
+        bool bValid = true;
+        for ( const BoneProportionEntry& entry : _listEntry )
+        {
+            if ( skeleton.findBoneIndex( entry._bone ) >= 0 )
+                continue;
+            SW_LOG_ERROR_ID( "BoneProportion.BoneNotInSkeleton", "Body shape '%#': bone '%#' is not in the skeleton - the proportion does nothing", sourceLabel, entry._bone.c_str() );
+            bValid = false;
+        }
+        return bValid;
     }
 
     void BoneProportion::applyToPose( const Skeleton& skeleton, Pose& inoutPose ) const
