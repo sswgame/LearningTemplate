@@ -6,6 +6,9 @@
     #include "Core/Container/string.h"
     #include "Core/Time/GameTimer.h"
 
+    #include "Editor/Common/Backend/ImGuiKeyForward.h"
+
+    #include "Engine/Input/Map/InputKeyTable.h"
     #include "Engine/Window/CursorShape.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/Linux/Wayland/WaylandInputEvent.h"
@@ -19,7 +22,7 @@ namespace sw::editor
 {
     namespace
     {
-        /** @brief Wayland 입력 값 · 번호를 ImGui 로 옮기는 표입니다(이 파일은 Wayland · xkbcommon 헤더 없이 짓는다 — 번호만 상수로 둔다). */
+        /** @brief Wayland 입력 값 · 번호를 ImGui 로 옮기는 표입니다(이 파일은 Wayland 헤더 없이 짓는다 — 번호만 상수로 둔다). keysym 은 X11 KeySym 과 번호가 같아 키 표는 `InputKeyTable` 하나를 쓴다. */
         struct ImGuiWaylandInternal
         {
             // 리눅스 입력 이벤트 버튼 번호(`linux/input-event-codes.h` 의 BTN_*, WaylandInputEvent::_button).
@@ -30,101 +33,6 @@ namespace sw::editor
             static constexpr uint32 kButtonExtra       = 0x114; ///< 앞으로
             static constexpr int32  kImGuiMouseBack    = 3;     // ImGuiKey_MouseX1
             static constexpr int32  kImGuiMouseForward = 4;     // ImGuiKey_MouseX2
-
-            // xkb keysym(= X11 KeySym, `xkbcommon-keysyms.h` 의 XKB_KEY_*)의 번호입니다.
-            static constexpr uint32 kKeyBackSpace = 0xff08;
-            static constexpr uint32 kKeyTab       = 0xff09;
-            static constexpr uint32 kKeyReturn    = 0xff0d;
-            static constexpr uint32 kKeyEscape    = 0xff1b;
-            static constexpr uint32 kKeyHome      = 0xff50;
-            static constexpr uint32 kKeyLeft      = 0xff51;
-            static constexpr uint32 kKeyUp        = 0xff52;
-            static constexpr uint32 kKeyRight     = 0xff53;
-            static constexpr uint32 kKeyDown      = 0xff54;
-            static constexpr uint32 kKeyPageUp    = 0xff55;
-            static constexpr uint32 kKeyPageDown  = 0xff56;
-            static constexpr uint32 kKeyEnd       = 0xff57;
-            static constexpr uint32 kKeyInsert    = 0xff63;
-            static constexpr uint32 kKeyKpEnter   = 0xff8d;
-            static constexpr uint32 kKeyF1        = 0xffbe;
-            static constexpr uint32 kKeyF12       = 0xffc9;
-            static constexpr uint32 kKeyShiftL    = 0xffe1;
-            static constexpr uint32 kKeyShiftR    = 0xffe2;
-            static constexpr uint32 kKeyControlL  = 0xffe3;
-            static constexpr uint32 kKeyControlR  = 0xffe4;
-            static constexpr uint32 kKeyAltL      = 0xffe9;
-            static constexpr uint32 kKeyAltR      = 0xffea;
-            static constexpr uint32 kKeySuperL    = 0xffeb;
-            static constexpr uint32 kKeySuperR    = 0xffec;
-            static constexpr uint32 kKeyDelete    = 0xffff;
-            static constexpr uint32 kKeySpace     = 0x0020;
-
-            /** @brief keysym 을 ImGui 키로 바꿉니다. 모르는 키는 `ImGuiKey_None` 입니다(그 키는 ImGui 에 알리지 않는다). */
-            static ImGuiKey mapKeySym( uint32 keySym )
-            {
-                if ( keySym >= 'a' && keySym <= 'z' )
-                    return static_cast<ImGuiKey>( ImGuiKey_A + static_cast<int32>( keySym - 'a' ) );
-                if ( keySym >= 'A' && keySym <= 'Z' )
-                    return static_cast<ImGuiKey>( ImGuiKey_A + static_cast<int32>( keySym - 'A' ) ); // 시프트를 누른 글자 — 키는 같다
-                if ( keySym >= '0' && keySym <= '9' )
-                    return static_cast<ImGuiKey>( ImGuiKey_0 + static_cast<int32>( keySym - '0' ) );
-                if ( keySym >= kKeyF1 && keySym <= kKeyF12 )
-                    return static_cast<ImGuiKey>( ImGuiKey_F1 + static_cast<int32>( keySym - kKeyF1 ) );
-                switch ( keySym )
-                {
-                    case kKeySpace:
-                        return ImGuiKey_Space;
-                    case kKeyBackSpace:
-                        return ImGuiKey_Backspace;
-                    case kKeyTab:
-                        return ImGuiKey_Tab;
-                    case kKeyReturn:
-                        return ImGuiKey_Enter;
-                    case kKeyKpEnter:
-                        return ImGuiKey_KeypadEnter;
-                    case kKeyEscape:
-                        return ImGuiKey_Escape;
-                    case kKeyHome:
-                        return ImGuiKey_Home;
-                    case kKeyEnd:
-                        return ImGuiKey_End;
-                    case kKeyPageUp:
-                        return ImGuiKey_PageUp;
-                    case kKeyPageDown:
-                        return ImGuiKey_PageDown;
-                    case kKeyInsert:
-                        return ImGuiKey_Insert;
-                    case kKeyDelete:
-                        return ImGuiKey_Delete;
-                    case kKeyLeft:
-                        return ImGuiKey_LeftArrow;
-                    case kKeyRight:
-                        return ImGuiKey_RightArrow;
-                    case kKeyUp:
-                        return ImGuiKey_UpArrow;
-                    case kKeyDown:
-                        return ImGuiKey_DownArrow;
-                    case kKeyShiftL:
-                        return ImGuiKey_LeftShift;
-                    case kKeyShiftR:
-                        return ImGuiKey_RightShift;
-                    case kKeyControlL:
-                        return ImGuiKey_LeftCtrl;
-                    case kKeyControlR:
-                        return ImGuiKey_RightCtrl;
-                    case kKeyAltL:
-                        return ImGuiKey_LeftAlt;
-                    case kKeyAltR:
-                        return ImGuiKey_RightAlt;
-                    case kKeySuperL:
-                        return ImGuiKey_LeftSuper;
-                    case kKeySuperR:
-                        return ImGuiKey_RightSuper;
-                    default:
-                        break;
-                }
-                return ImGuiKey_None;
-            }
 
             /** @brief 리눅스 버튼 번호를 ImGui 마우스 버튼 번호로 바꿉니다. 모르는 버튼은 -1 입니다. */
             static int32 mapButton( uint32 button )
@@ -295,9 +203,14 @@ namespace sw::editor
                 case WaylandInputKind::KeyDown:
                 case WaylandInputKind::KeyUp:
                 {
-                    const ImGuiKey key = ImGuiWaylandInternal::mapKeySym( input._keySym );
+                    const bool     bIsDown   = input._kind == WaylandInputKind::KeyDown;
+                    const Key      engineKey = InputKeyTable::mapX11KeySym( static_cast<uint64>( input._keySym ) );
+                    const ImGuiKey modifier  = ImGuiKeyForward::toImGuiModifier( engineKey );
+                    if ( modifier != ImGuiKey_None )
+                        io.AddKeyEvent( modifier, bIsDown ); // shortcut: 좌우를 함께 누른 채 하나만 떼면 수정 키가 풀린다, 입력에 xkb 수정 상태가 실리면 그것으로 바꾼다
+                    const ImGuiKey key = ImGuiKeyForward::toImGuiKey( engineKey );
                     if ( key != ImGuiKey_None )
-                        io.AddKeyEvent( key, input._kind == WaylandInputKind::KeyDown );
+                        io.AddKeyEvent( key, bIsDown );
                     return io.WantCaptureKeyboard;
                 }
                 case WaylandInputKind::Text:
