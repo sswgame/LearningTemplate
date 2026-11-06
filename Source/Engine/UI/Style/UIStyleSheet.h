@@ -94,6 +94,11 @@ namespace sw
      *          ```
      *          규칙의 속성 이름은 `WidgetStyle` 의 PROPERTY 이름이고 값은 그 타입의 텍스트 형식(씬 파일과 같은 변환)이며, `$이름` 은 이 시트의 변수다.
      *          모르는 필드, 변수, 선택자 문법, 읽지 못한 값은 로드 오류(`<경로>:<줄>:`)다.
+     *
+     *          변형 둘. 루트의 `_base="<부모 시트>"` 는 부모를 물려받아 변수(`_name`) · 규칙(`_selector`) · 형식 변형(`_name`)을 열쇠로 합친다 — 테마는 변수만 적은 시트 하나다
+     *          (유니티 USS 변수 · Godot Theme 상속 자리, 규칙은 `Config/Dev/DataCatalogInheritance.json`). 부모를 합친 시트의 오류는 줄 번호 없이 경로만 적는다.
+     *          `<TypeVariation _name="danger" _extends="primary" />` 는 클래스 `danger` 를 `primary` 의 변형으로 둔다(Godot Theme Type Variation). `primary` 를 쓰는 규칙이 상태 · 자손까지
+     *          복제되므로 위젯은 `_styleClass="danger"` 만 적고, 시트는 `danger` 의 차이만 적는다. 한 시트 안의 일이다 — 다른 시트의 규칙은 복제하지 않는다.
      */
     struct UIStyleSheetAsset
     {

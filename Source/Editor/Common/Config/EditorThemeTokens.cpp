@@ -13,6 +13,7 @@
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineDefines.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 
 #include <algorithm>
 
@@ -40,6 +41,56 @@ namespace sw::editor
                 const string_view extension{ EditorThemeTokens::kExtension };
                 if ( entry._bDirectory == false && StringUtil::endsWith( fileName, extension, true ) )
                     static_cast<vector<string>*>( pContext )->emplace_back( fileName.substr( 0, fileName.size() - extension.size() ) );
+                return true;
+            }
+
+            /** @brief 벌 하나를 `_base` 사슬 끝까지 읽어 합칩니다(자식의 키가 이긴다). 없는 부모 · 순환 · 깊이 초과 · 틀린 파일이면 false 와 이유입니다. */
+            [[nodiscard]] static bool readThemeChain( string_view absolutePath, EditorThemeDef& outDef, string& outError )
+            {
+                vector<string>         listPath;
+                vector<EditorThemeDef> listLayer; // 자식부터
+                string                 path{ absolutePath };
+                while ( path.empty() == false )
+                {
+                    if ( VectorUtil::contains( listPath, path ) || listPath.size() >= DataInheritance::getMaxDepth() )
+                    {
+                        outError = path + ": its _base chain is a cycle or too deep";
+                        return false;
+                    }
+                    listPath.push_back( path );
+                    EditorThemeDef&        layer  = listLayer.emplace_back();
+                    const ConfigReadResult result = ConfigManager::readConfigFile( layer, path );
+                    if ( result != ConfigReadResult::Loaded )
+                    {
+                        outError = path + ( result == ConfigReadResult::Missing ? ": file not found" : ": not a valid theme token file" );
+                        return false;
+                    }
+                    if ( layer._base.empty() )
+                        break;
+                    string_view folder;
+                    FileUtil::getDirectoryPart( path, folder );
+                    string fileName = layer._base;
+                    fileName.append( EditorThemeTokens::kExtension );
+                    path = FileUtil::joinPath( folder, fileName );
+                }
+                EditorThemeDef merged = std::move( listLayer.back() );
+                listLayer.pop_back();
+                while ( listLayer.empty() == false )
+                {
+                    const EditorThemeDef& layer = listLayer.back();
+                    merged._name                = layer._name;
+                    merged._displayName         = layer._displayName;
+                    for ( const auto& [key, text] : layer._color )
+                    {
+                        merged._color[key] = text;
+                    }
+                    for ( const auto& [key, value] : layer._metric )
+                    {
+                        merged._metric[key] = value;
+                    }
+                    listLayer.pop_back();
+                }
+                outDef = std::move( merged );
                 return true;
             }
         };
@@ -90,13 +141,9 @@ namespace sw::editor
 
     bool EditorThemeTokens::loadThemeFile( string_view absolutePath, EditorThemeConfig& outConfig, string& outError )
     {
-        EditorThemeDef         def{};
-        const ConfigReadResult result = ConfigManager::readConfigFile( def, absolutePath );
-        if ( result != ConfigReadResult::Loaded )
-        {
-            outError = string{ absolutePath } + ( result == ConfigReadResult::Missing ? ": file not found" : ": not a valid theme token file" );
+        EditorThemeDef def{};
+        if ( EditorThemeTokensInternal::readThemeChain( absolutePath, def, outError ) == false )
             return false;
-        }
         if ( resolve( def, outConfig, outError ) == false )
         {
             outError = string{ absolutePath } + ": " + outError;

@@ -7,6 +7,7 @@
 #include "Core/String/StringBuilder.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializeContext.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
@@ -21,12 +22,14 @@ namespace sw
     {
         struct UIStyleSheetInternal
         {
-            static constexpr utf8 kVariableElement[] = "Variable";
-            static constexpr utf8 kRuleElement[]     = "Rule";
-            static constexpr utf8 kNameAttribute[]   = "_name";
-            static constexpr utf8 kValueAttribute[]  = "_value";
-            static constexpr utf8 kSelectorKey[]     = "_selector";
-            static constexpr utf8 kVariablePrefix    = '$';
+            static constexpr utf8 kVariableElement[]  = "Variable";
+            static constexpr utf8 kRuleElement[]      = "Rule";
+            static constexpr utf8 kVariationElement[] = "TypeVariation";
+            static constexpr utf8 kExtendsAttribute[] = "_extends";
+            static constexpr utf8 kNameAttribute[]    = "_name";
+            static constexpr utf8 kValueAttribute[]   = "_value";
+            static constexpr utf8 kSelectorKey[]      = "_selector";
+            static constexpr utf8 kVariablePrefix     = '$';
 
             /** @brief 특정도 항목(이름, 클래스와 상태, 타입)의 비트 이동량입니다. */
             static constexpr uint32 kNameShift  = 16;
@@ -61,6 +64,7 @@ namespace sw
                 vector<Variable>   _listVariable;
                 UIStyleSheetAsset* _pSheet;
                 string*            _pError;
+                bool               _bFlattened; ///< 부모를 합친 글을 읽었다 — 노드의 위치가 @p _text 의 위치가 아니라 줄 번호를 적지 않는다 NOLINT(sw-bool-flag): 집합체 초기화로 만드는 지역 문맥이다
             };
 
             static bool isIdentifierChar( utf8 ch ) { return std::isalnum( static_cast<uint8>( ch ) ) != 0 || ch == '_' || ch == '-'; }
@@ -161,10 +165,58 @@ namespace sw
                 return error;
             }
 
+            static uint32 findLine( const ParseContext& context, const XMLNode& node )
+            {
+                return context._bFlattened ? 0u : XMLDocument::computeLineNumber( context._text, node.getSourceOffset() );
+            }
+
             static bool fail( const ParseContext& context, const XMLNode& node, string_view message )
             {
-                *context._pError = makeError( context._path, XMLDocument::computeLineNumber( context._text, node.getSourceOffset() ), message );
+                *context._pError = makeError( context._path, findLine( context, node ), message );
                 return false;
+            }
+
+            /**
+             * @brief 형식 변형 하나를 규칙으로 풉니다. @p baseClass 를 쓰는 모든 규칙(`:hover` 같은 상태와 자손 선택자 포함)을 @p variationClass 로 바꿔 복제해 시트 맨 앞에 둡니다.
+             * @details 맨 앞이라 같은 특정도에서 시트에 적은 변형 자신의 규칙이 이긴다 — 차이만 적으면 된다(Godot Theme Type Variation 의 base type, USS 는 이 기능이 없어 클래스를 둘 다 적는다).
+             *          읽을 때 끝나므로 선택자 비교 · 위젯 쪽 코드가 변형을 모른다. 앞서 푼 변형의 복제도 다시 보므로 변형의 변형은 선언 순서대로 적는다.
+             * @return 부모 클래스를 쓰는 규칙이 없으면(철자 오류) 오류이고 false 입니다.
+             */
+            [[nodiscard]] static bool expandTypeVariation( ParseContext& context, const XMLNode& element )
+            {
+                const utf8* pName    = element.findAttribute( kNameAttribute );
+                const utf8* pExtends = element.findAttribute( kExtendsAttribute );
+                if ( StringUtil::isNullOrEmpty( pName ) || StringUtil::isNullOrEmpty( pExtends ) || StringUtil::equals( pName, pExtends ) )
+                    return fail( context, element, "TypeVariation needs _name and a different _extends" );
+                const hashed_string variationClass( pName );
+                const hashed_string baseClass( pExtends );
+                vector<UIStyleRule> listRule;
+                for ( const UIStyleRule& rule : context._pSheet->_listRule )
+                {
+                    UIStyleRule clone = rule;
+                    bool        bUses{ false };
+                    for ( UIStyleSelectorPart& part : clone._selector._listPart )
+                    {
+                        for ( hashed_string& className : part._listClass )
+                        {
+                            if ( className == baseClass )
+                            {
+                                className = variationClass;
+                                bUses     = true;
+                            }
+                        }
+                    }
+                    if ( bUses )
+                        listRule.push_back( std::move( clone ) );
+                }
+                if ( listRule.empty() )
+                    return fail( context, element, string( "TypeVariation '" ) + pName + "' extends class '" + pExtends + "' that no rule uses" );
+                for ( UIStyleRule& rule : context._pSheet->_listRule )
+                {
+                    listRule.push_back( std::move( rule ) );
+                }
+                context._pSheet->_listRule = std::move( listRule );
+                return true;
             }
 
             /** @brief 값 텍스트의 `$변수` 를 해석합니다. 모르는 변수면 false 입니다. */
@@ -228,7 +280,7 @@ namespace sw
             [[nodiscard]] static bool parseRule( ParseContext& context, const XMLNode& element )
             {
                 UIStyleRule rule{};
-                rule._sourceLine      = XMLDocument::computeLineNumber( context._text, element.getSourceOffset() );
+                rule._sourceLine      = findLine( context, element );
                 const utf8* pSelector = element.findAttribute( kSelectorKey );
                 if ( StringUtil::isNullOrEmpty( pSelector ) )
                     return fail( context, element, "Rule needs _selector" );
@@ -353,12 +405,13 @@ namespace sw
         UIStyleSheetAsset sheet{};
         sheet._path = FileUtil::normalizePath( path );
         XMLDocument document;
-        if ( document.parse( text, path ) == false )
+        // 부모(`_base`)는 데이터 읽기가 펼친다 — 규칙은 `Config/Dev/DataCatalogInheritance.json` 한 줄이고 합치기 코드는 여기 없다.
+        if ( document.parseData( text, path ) == false )
         {
             outError = document.getLastError();
             return false;
         }
-        Internal::ParseContext context{ text, path, {}, &sheet, &outError };
+        Internal::ParseContext context{ text, path, {}, &sheet, &outError, text.find( DataInheritance::kBaseAttribute ) != string_view::npos };
         const XMLNode          root = document.getRoot();
         if ( root.isValid() == false || StringUtil::equals( root.getName(), UIStyleSheetAsset::kRootElementName ) == false )
         {
@@ -390,11 +443,17 @@ namespace sw
         for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
         {
             const utf8* pName = child.getName();
-            if ( StringUtil::equals( pName, Internal::kVariableElement ) )
+            if ( StringUtil::equals( pName, Internal::kVariableElement ) || StringUtil::equals( pName, Internal::kVariationElement ) )
                 continue;
             if ( StringUtil::equals( pName, Internal::kRuleElement ) == false )
                 return Internal::fail( context, child, string( "UIStyleSheet has unknown element <" ) + pName + ">" );
             if ( Internal::parseRule( context, child ) == false )
+                return false;
+        }
+        // 변형은 시트의 규칙이 다 모인 뒤에 푼다 — 시트 어디에 적든 같다.
+        for ( XMLNode child = root.findChild( Internal::kVariationElement ); child.isValid(); child = child.findNextSibling( Internal::kVariationElement ) )
+        {
+            if ( Internal::expandTypeVariation( context, child ) == false )
                 return false;
         }
         outSheet = std::move( sheet );

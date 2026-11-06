@@ -1,0 +1,16 @@
+<Scene formatVersion="2" name="UIStyleVariant">
+	<!-- 시나리오 automation/uistylevariant 의 무대 — 부모 시트를 쓰는 화면을 띄운다. uistylevariant_child 는 자식 시트를 쓰는 화면이다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,0,-4" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+					<HUDControllerComponent _componentName="HUDControllerComponent" _bActive="true" _documentPath="game/empty/ui/stylevariant_base.ui.xml" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

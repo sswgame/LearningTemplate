@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  스타일 시트 _base 와 형식 변형 — 자식 시트는 변수 하나만 덮는다. 그 변수를 읽는 부모의 규칙과, 그 규칙을 물려받은 형식 변형(warm)의 그림이 함께 바뀐다.
+  오른쪽 영역(warm)만 본다 — warm 은 자기 규칙에 색을 적지 않았으므로 이 영역이 다르면 _base 와 TypeVariation 이 함께 돈 것이다. 골든은 두지 않는다.
+  실행: ctest -R Scenario.game.empty.uistylevariant
+-->
+<Scenario name="game.empty.uistylevariant" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/uistylevariant.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="uistylevariant_base.ppm"/>
+	<LoadScene path="game/empty/maps/uistylevariant_child.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="uistylevariant_child.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="uistylevariant_base.ppm" second="uistylevariant_child.ppm" region="0.6,0.3,0.85,0.7" minDiffering="0.5"/>
+	<Pass/>
+</Scenario>
