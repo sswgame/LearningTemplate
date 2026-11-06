@@ -103,7 +103,7 @@ namespace sw::editor
 {
     GimmickGraphPanel::GimmickGraphPanel()
         : IEditorPanel( false )
-        , _model{ game::getSubsystem<GimmickNodeKindCatalog>().getRegistry() }
+        , _model{ game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() }
         , _nodeGraph{}
         , _listIssue{}
         , _ownerHandle{}
@@ -252,7 +252,7 @@ namespace sw::editor
             for ( const GimmickNodeCategory category : arrCategory )
             {
                 ImGui::TextDisabled( "%s", GimmickGraphPanelInternal::getCategoryName( category ) );
-                for ( const GimmickNodeKind& kind : game::getSubsystem<GimmickNodeKindCatalog>().getRegistry().getKinds() )
+                for ( const GimmickNodeKind& kind : game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry().getKinds() )
                 {
                     if ( kind._category != category )
                         continue;
@@ -461,7 +461,7 @@ namespace sw::editor
 
         // 빈 곳을 오른쪽 클릭하면 노드 검색 팝업이 열린다. 고른 노드는 오른쪽 클릭한 위치에 놓는다
         vector<EditorGraphNodeKind>    listKind;
-        const vector<GimmickNodeKind>& listRegistryKind = game::getSubsystem<GimmickNodeKindCatalog>().getRegistry().getKinds();
+        const vector<GimmickNodeKind>& listRegistryKind = game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry().getKinds();
         for ( size_t kindIndex = 0; kindIndex < listRegistryKind.size(); ++kindIndex )
         {
             listKind.push_back( EditorGraphNodeKind{ listRegistryKind[kindIndex]._name.c_str(), GimmickGraphPanelInternal::getCategoryName( listRegistryKind[kindIndex]._category ),

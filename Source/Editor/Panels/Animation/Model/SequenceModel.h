@@ -1,5 +1,5 @@
 /**
- * @file SequenceDocument.h
+ * @file SequenceModel.h
  * @brief 시퀀서 패널이 고치는 문서입니다 — 애셋 하나와 고른 번호, 그리고 구간 항목 · 키 트랙 · 키 이동 · 프레임 환산 명령입니다. ImGui 를 모릅니다.
  * @details 그리기 · 시간 막대의 지금 프레임 · 되돌리기 이름 · 커브 편집기 상태는 `SequencerPanel` 에 남습니다.
  *          키 찍기 · 지우기 자체는 `SequenceKeyTrack` 이 맡습니다(런타임 타입이라 값의 규칙은 거기에 있습니다).
@@ -21,12 +21,12 @@ namespace sw
 namespace sw::editor
 {
     /**
-     * @class SequenceDocument
+     * @class SequenceModel
      * @brief 애셋을 통째로 들고 고칩니다.
      * @details 칸을 패널로 하나씩 옮겨 두면 옮기지 않은 칸(카메라 블렌드 · 프리롤)이 저장 때 기본값으로 돌아갑니다.
      *          설계: `_asset` 에는 필수 칸이 빈 항목이 들어가지 않는다 — 칸은 사본(`_itemEdit`)을 고치고 값이 찬 뒤에만 적용한다(언리얼 Sequencer 가 고른 대상으로 스폰 트랙을 만드는 것과 같다). 스냅숏이 편집 중 상태를 받게 하면 저장 · 재생과 읽기 규칙이 갈라진다.
      */
-    class SequenceDocument
+    class SequenceModel
     {
     public:
         SequenceAsset     _asset;
@@ -36,7 +36,7 @@ namespace sw::editor
         int32             _curveTrack;    ///< 커브 편집기가 보는 트랙(-1 이면 닫힘)
         int32             _curveChannel;  ///< 커브 편집기가 보는 채널
 
-        SequenceDocument();
+        SequenceModel();
 
         // 문서 교체
         /** @brief 되돌리기가 준 애셋으로 바꿉니다. 없어진 항목 · 트랙을 가리키지 않게 고른 번호를 맞춥니다. */

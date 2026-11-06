@@ -159,7 +159,7 @@ namespace sw
                 {
                     GameObject* pObject = pManager->resolveGameObject( inoutListSpawned[spawnedIndex]._object );
                     if ( pObject != nullptr )
-                        pManager->destroyObject( pObject );
+                        pManager->destroyGameObject( pObject );
                     inoutListSpawned.erase( inoutListSpawned.begin() + static_cast<std::ptrdiff_t>( spawnedIndex ) );
                 }
                 continue;
@@ -207,7 +207,7 @@ namespace sw
             {
                 GameObject* pObject = pManager->resolveGameObject( spawned._object );
                 if ( pObject != nullptr )
-                    pManager->destroyObject( pObject );
+                    pManager->destroyGameObject( pObject );
             }
         }
         inoutListSpawned.clear();

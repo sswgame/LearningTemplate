@@ -107,7 +107,7 @@ namespace
 
         EconomyResult refund( string_view transactionID = "tx1", vector<EconomyBalanceChange>* pOutListChange = nullptr )
         {
-            ReceiptRefundNotice notice;
+            ReceiptRefundNotification notice;
             notice._storeName     = "fake";
             notice._transactionID = string( transactionID );
             vector<EconomyBalanceChange> listChange;
@@ -166,7 +166,7 @@ namespace
         }
         void update( UnixMilliseconds now ) override { (void)now; }
         void pollCompletions( vector<ReceiptValidationResult>& outListResult ) override { (void)outListResult; }
-        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override { (void)outListNotice; }
+        void pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) override { (void)outListNotice; }
         bool usesRefundCursor() const override { return true; }
         void restoreRefundCursor( int64 lastReadMs ) override { _listRestored.push_back( lastReadMs ); }
         bool takeRefundCursor( int64& outLastReadMs ) override
@@ -212,7 +212,7 @@ namespace
             outListResult.insert( outListResult.end(), _listResult.begin(), _listResult.end() );
             _listResult.clear();
         }
-        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) override { (void)outListNotice; }
+        void pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) override { (void)outListNotice; }
         bool usesDeliveryConfirmation() const override { return true; }
         void confirmDelivery( const ReceiptDeliveryTask& task, UnixMilliseconds now ) override
         {

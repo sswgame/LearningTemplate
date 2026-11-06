@@ -293,7 +293,7 @@ namespace sw
             MeshComponent* pMesh = pProp->addComponent<MeshComponent>();
             if ( pMesh == nullptr )
             {
-                pManager->destroyObject( pProp );
+                pManager->destroyGameObject( pProp );
                 continue;
             }
             const PropScatterModel& model = _listModel[static_cast<size_t>( placement._modelIndex )];
@@ -351,7 +351,7 @@ namespace sw
             {
                 GameObject* pProp = pManager->resolveGameObject( handle );
                 if ( pProp != nullptr )
-                    pManager->destroyObject( pProp );
+                    pManager->destroyGameObject( pProp );
             }
         }
         _listSpawned.clear();

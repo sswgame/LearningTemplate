@@ -8123,7 +8123,7 @@
 		</entry>
 		<entry key="EditorTileMap.DataLayerRejectedStatus" source="Data layer not added: the name is empty or already used">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.DataValueTip" source="Integer to paint on the selected data layer.">
@@ -8223,7 +8223,7 @@
 		</entry>
 		<entry key="EditorTileMap.SaveFailedStatus" source="Save failed">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.SaveTip" source="Write the map to Path.">
@@ -8233,17 +8233,17 @@
 		</entry>
 		<entry key="EditorTileMap.SavedStatus" source="Saved {path}">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.SizeOutOfRange" source="Size is out of range.">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.SpawnOutsideStatus" source="Spawn not changed: the cell is outside the map">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.SpawnXTip" source="Cell column where the player starts on this map.">
@@ -8258,7 +8258,7 @@
 		</entry>
 		<entry key="EditorTileMap.TileSetReadFailed" source="Tile set could not be read: {path}">
 			<origins>
-				<item>Source/Editor/Panels/TileMap/Model/TileMapDocument.cpp</item>
+				<item>Source/Editor/Panels/TileMap/Model/TileMapModel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorTileMap.TileSetTip"

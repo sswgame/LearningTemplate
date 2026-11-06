@@ -72,7 +72,7 @@ namespace sw::editor
         {
             GameObject* pOld = pManager->resolveGameObject( _body );
             if ( pOld != nullptr )
-                pManager->destroyObject( pOld );
+                pManager->destroyGameObject( pOld );
             _body        = GameObjectHandle{};
             _clipSeconds = 0.0f;
             _playedClipPath.clear();

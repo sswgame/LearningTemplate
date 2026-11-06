@@ -317,7 +317,7 @@ namespace sw
             if ( readBytes == 0 )
             {
                 SW_LOG_ERROR_ID( "GameStateSnapshot.FailedLoadBinaryObject", "Failed to load binary object state at index %u", objectIndex );
-                pObjectManager->destroyObject( pObj ); // 읽지 못한 자리에 빈 오브젝트를 남기지 않는다.
+                pObjectManager->destroyGameObject( pObj ); // 읽지 못한 자리에 빈 오브젝트를 남기지 않는다.
                 bComplete = false;
                 break;
             }

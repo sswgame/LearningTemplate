@@ -542,7 +542,7 @@ namespace sw
         return connection.commit( transaction );
     }
 
-    EconomyResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotice& notice, int64 nowMs,
+    EconomyResult EconomyStoreLogic::revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notice, int64 nowMs,
                                                    vector<EconomyBalanceChange>& outListChange )
     {
         using Internal = EconomyStoreLogicInternal;

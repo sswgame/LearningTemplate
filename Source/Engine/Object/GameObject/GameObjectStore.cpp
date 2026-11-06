@@ -332,7 +332,7 @@ namespace sw
         return pObj->findComponentByID( handle.componentID(), true );
     }
 
-    void GameObjectStore::destroyObject( GameObject* pObj, bool bDestroyChildren )
+    void GameObjectStore::destroyGameObject( GameObject* pObj, bool bDestroyChildren )
     {
         if ( pObj == nullptr )
             return;
@@ -359,7 +359,7 @@ namespace sw
             for ( GameObject* pChild : listChildren )
             {
                 if ( pChild != nullptr && pChild->isKeptWhenParentDestroyed() == false )
-                    destroyObject( pChild, true );
+                    destroyGameObject( pChild, true );
             }
         }
 
@@ -373,7 +373,7 @@ namespace sw
     void GameObjectStore::destroyComponent( Component* pComp )
     {
         SW_ASSERT( WalkScope::isInsideWalk() == false );
-        // destroyObject 와 같은 이유로 먼저 선점한다. 여기 목록에 두 번 들어가면
+        // destroyGameObject 와 같은 이유로 먼저 선점한다. 여기 목록에 두 번 들어가면
         // `removeComponent` 가 두 번 불리고 컴포넌트 풀이 같은 블록을 두 번 받는다.
         if ( pComp == nullptr || pComp->tryMarkPendingDestroy() == false )
             return;

@@ -2,7 +2,7 @@
  * @file CharacterEditorPanel.h
  * @brief 캐릭터 편집 창 패널 — 소켓 파일 편집(목록 · 추가 · 이름 바꾸기 · 변환 · 좌우 대칭 · 저장), 스켈레톤 본 트리와 레퍼런스 포즈 편집, 외형 선택 편집(슬롯 · 세트 입히기 ·
  *        체형 · 꾸미기 값 · 규칙 설명 · 프리셋 파일 저장 · 피팅 확인 표시)과, 그 선택을 입은 몸을 보이는 미리보기 씬.
- * @details 상태와 명령(팩 데이터 · 파일 읽기 · 저장 · 프리셋 · 내보내기 · 고른 것)은 모델(`CharacterEditorDocument`, 편집 모델 셋을 든다)이 하고 이 패널은 그리기와 미리보기 동기화만 한다.
+ * @details 상태와 명령(팩 데이터 · 파일 읽기 · 저장 · 프리셋 · 내보내기 · 고른 것)은 모델(`CharacterEditorModel`, 편집 모델 셋을 든다)이 하고 이 패널은 그리기와 미리보기 동기화만 한다.
  *          - **문서**: 소켓 파일(`*.sockets.xml`, 종류 `EditorAssetTypeIDs::kData`)이 이 창의 문서다(`EditorDocumentPanel` 계약). 콘텐츠 브라우저에서 소켓 파일을 고르면 이 창이 그 파일로 바뀌고,
  *            고른 것이 없으면 팩 데이터의 소켓 파일을 연다. 저장은 소켓과 레퍼런스 포즈 둘 다(미저장 확인 · 닫기 확인이 같은 계약).
  *          - **미리보기 몸**: 미리보기 씬(`EditorPreviewPanel`)에 몸 오브젝트 하나(`SkeletalMeshComponent` + `CharacterAppearanceComponent`)를 세우고, 외형 선택이 바뀔 때마다
@@ -20,7 +20,7 @@
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
 
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorDocument.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorModel.h"
 
 namespace sw
 {
@@ -69,13 +69,13 @@ namespace sw::editor
         /** @brief 미리보기 몸 오브젝트입니다. 외형 데이터를 읽기 전이거나 씬이 없으면 무효입니다(자동화 · 테스트). */
         GameObjectHandle getPreviewBody() const { return _previewBody; }
 
-        /** @brief 창의 모델(상태와 명령)입니다. 피팅 결과도 모델에 올린다(`CharacterEditorDocument::setFitResult`). */
-        CharacterEditorDocument&       getDocument() { return _document; }
-        const CharacterEditorDocument& getDocument() const { return _document; }
-        SocketEditModel&               getSocketModel() { return _document.getSocketModel(); }
-        BonePoseEditModel&             getPoseModel() { return _document.getPoseModel(); }
-        AppearanceEditModel&           getAppearanceModel() { return _document.getAppearanceModel(); }
-        const Published&               getPublished() const { return _published; }
+        /** @brief 창의 모델(상태와 명령)입니다. 피팅 결과도 모델에 올린다(`CharacterEditorModel::setFitResult`). */
+        CharacterEditorModel&       getDocument() { return _document; }
+        const CharacterEditorModel& getDocument() const { return _document; }
+        SocketEditModel&            getSocketModel() { return _document.getSocketModel(); }
+        BonePoseEditModel&          getPoseModel() { return _document.getPoseModel(); }
+        AppearanceEditModel&        getAppearanceModel() { return _document.getAppearanceModel(); }
+        const Published&            getPublished() const { return _published; }
         /** @brief 요청한 썸네일 캡처를 아직 거두지 않았으면 true 입니다 — 자동화의 끝 차단(`CharacterEditorThumbnail`)이 캡처 · 저장 사이 틈을 진행 중인 일로 본다. */
         [[nodiscard]] bool isThumbnailCapturePending() const { return _thumbnailCapturePath.empty() == false; }
 
@@ -109,7 +109,7 @@ namespace sw::editor
         /** @brief 뷰포트 위에 소켓 파일의 소켓 축(몸이 조립한 자리)을 긋습니다. 고른 소켓은 길고 밝다. */
         void drawSocketAxes( const CharacterAppearanceComponent& appearance );
         /**
-         * @brief 스켈레톤 탭에서 고른 본(`CharacterEditorDocument::getSelectedBone`)의 기즈모를 미리보기 씬에 놓고, 기즈모로 옮긴 만큼을 레퍼런스 포즈 덮어쓰기(`BonePoseEditModel::setTranslation` · `setRotationDegrees`)로 바꿉니다.
+         * @brief 스켈레톤 탭에서 고른 본(`CharacterEditorModel::getSelectedBone`)의 기즈모를 미리보기 씬에 놓고, 기즈모로 옮긴 만큼을 레퍼런스 포즈 덮어쓰기(`BonePoseEditModel::setTranslation` · `setRotationDegrees`)로 바꿉니다.
          * @details 표시 오브젝트(SceneComponent 하나)를 본의 월드 자리(몸 월드 × 덮어쓴 모델 변환)에 놓고 창 선택에 올린다. 다음 그리기에 그 월드 변환이 놓은 값과 다르면
          *          기즈모가 옮긴 것이다 — 부모 월드의 역으로 로컬을 구해 모델에 넣는다(끄는 동안은 한 되돌리기 단계). 본을 고르지 않았으면 표시 오브젝트를 지운다.
          */
@@ -139,13 +139,13 @@ namespace sw::editor
         /**
          * @brief 꾸미기 스키마(`CustomizationSchema`)의 매개변수마다 슬라이더 · 색 · 고르기를 그립니다 — 카테고리(체형 · 얼굴 · 염색 …)로 가르고, 조건이 맞지 않는 매개변수는 숨깁니다.
          * @details 끄는 동안(`_bCustomizationActive`)은 미리보기 몸을 다시 입히지 않는다 — 피팅은 무거워서 놓을 때 한 번 푼다(설계 문서 단계 5). 스키마는 모델이 고른다
-         *          (`CharacterEditorDocument::findCustomizationSchema` — 선택의 것, 비었으면 기준 프리셋의 것). 스키마가 없으면(데이터를 읽기 전, 프리셋에 스키마가 없음) 이미 있는 값만 숫자로 보인다(`drawCustomizationRows`).
+         *          (`CharacterEditorModel::findCustomizationSchema` — 선택의 것, 비었으면 기준 프리셋의 것). 스키마가 없으면(데이터를 읽기 전, 프리셋에 스키마가 없음) 이미 있는 값만 숫자로 보인다(`drawCustomizationRows`).
          */
         void drawCustomizationSliders( const AppearanceSelection& selection );
         /** @brief 미리보기 몸의 지금 모습 캡처를 요청합니다(`pollThumbnailCapture` 가 받아 같은 이름 프리셋의 썸네일 슬롯에 넣는다). 프리셋을 먼저 저장해야 합니다. */
         void saveThumbnail();
         /**
-         * @brief 요청한 캡처가 끝났으면 그 PNG 를 읽어 문서에 넘기고(`CharacterEditorDocument::attachThumbnail`) 임시 파일을 지웁니다.
+         * @brief 요청한 캡처가 끝났으면 그 PNG 를 읽어 문서에 넘기고(`CharacterEditorModel::attachThumbnail`) 임시 파일을 지웁니다.
          * @details shortcut: 렌더 스레드 스크린샷 창구가 파일로만 내놓아 사용자 데이터 폴더의 임시 파일을 거친다, 창구가 바이트를 내주게 되면 바로 받는다.
          */
         void pollThumbnailCapture();
@@ -156,7 +156,7 @@ namespace sw::editor
         void drawHistoryRow();
 
     private:
-        CharacterEditorDocument                 _document;                 ///< 상태와 명령. 이 패널은 그리기와 미리보기 동기화만 한다
+        CharacterEditorModel                    _document;                 ///< 상태와 명령. 이 패널은 그리기와 미리보기 동기화만 한다
         fixed_string<constant::buffer::kMax128> _newName;                  ///< 새 소켓 · 칸 이름 입력칸
         fixed_string<constant::buffer::kMax128> _renameBuffer;             ///< 고른 소켓의 새 이름 입력칸
         bool                                    _bClipLoop;                ///< 고른 클립을 반복 재생하는지 NOLINT(sw-bool-flag): 주소(`&`)를 넘긴다

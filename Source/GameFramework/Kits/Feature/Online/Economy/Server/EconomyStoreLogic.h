@@ -110,7 +110,7 @@ namespace sw
          * @details 지급 분개(`rcpt.<스토어>` 범위, 거래 id 토큰)를 찾아 같은 다리를 거꾸로 소각으로 보낸다. 환불 표시를 같은 트랜잭션에 쓰므로 두 번 오면 아무것도 하지 않는다.
          *          지급 전에 환불이 먼저 오면 표시만 남기고, 뒤에 온 지급은 ReceiptRefunded 로 거절된다. 청약철회한 거래면 이미 돌려받았으므로 표시만 본다.
          */
-        static EconomyResult revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotice& notice, int64 nowMs,
+        static EconomyResult revokeRefund( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const ReceiptRefundNotification& notice, int64 nowMs,
                                            vector<EconomyBalanceChange>& outListChange );
         /**
          * @brief 유상 구매를 청약철회합니다. 지급한 계정만, 기한 안에, 아직 쓰지 않은 만큼만 회수하며 빚은 만들지 않습니다. 회수한 양은 `_listWithdrawn` 입니다.

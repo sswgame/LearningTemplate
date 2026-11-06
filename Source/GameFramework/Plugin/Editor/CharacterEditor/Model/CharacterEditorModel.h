@@ -1,5 +1,5 @@
 /**
- * @file CharacterEditorDocument.h
+ * @file CharacterEditorModel.h
  * @brief 캐릭터 편집 창의 모델 — 팩 데이터 경로, 소켓 · 레퍼런스 포즈 파일 읽기 · 저장, 외형 데이터 · 프리셋 · 데이터 프리셋 내보내기, 고른 소켓 · 본 · 클립, 규칙 설명 풀이. ImGui 와 미리보기 씬을 모릅니다.
  * @details 패널(`CharacterEditorPanel`)은 그리기와 미리보기 씬 동기화만 하고, 상태와 명령은 모두 이것이 든다 — 인스펙터의 `Model/` 과 같은 선이다(언리얼의 에셋 편집기 툴킷이
  *          `FAssetEditorToolkit`(화면)과 편집 대상 객체(데이터)를 나누는 것과 같다). 결과는 상태 줄(`getStatus`)에 남기고, 실패 이유를 화면이 따로 만들지 않는다.
@@ -55,10 +55,10 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @class CharacterEditorDocument
+     * @class CharacterEditorModel
      * @brief 캐릭터 편집 창의 상태와 명령입니다. 파일 머리말 참고.
      */
-    class CharacterEditorDocument
+    class CharacterEditorModel
     {
     public:
         /** @brief 활성 게임 팩의 캐릭터 편집 데이터 상태입니다. */
@@ -70,7 +70,7 @@ namespace sw::editor
             Ready,   ///< 경로 칸을 채웠다
         };
 
-        CharacterEditorDocument();
+        CharacterEditorModel();
 
         // ------------------------------------------------------------------------------
         // 팩 데이터와 종류 표

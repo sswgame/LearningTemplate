@@ -8,7 +8,7 @@
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/IEditorDocumentPanel.h"
-#include "Editor/Panels/InputMap/Model/InputMapDocument.h"
+#include "Editor/Panels/InputMap/Model/InputMapModel.h"
 
 namespace sw
 {
@@ -20,7 +20,7 @@ namespace sw::editor
     /**
      * @class InputMapPanel
      * @brief 액션, 레이어, 바인딩, 트리거, 모디파이어를 시각적으로 편집하고, 입력 장치 상태를 실시간으로 보여 주는 에디터 패널입니다.
-     * @details 상태와 명령은 `InputMapDocument`(Model/, ImGui 없음)가 들고, 이 패널은 그리기 · 입력칸 · 문서 dirty 만 든다.
+     * @details 상태와 명령은 `InputMapModel`(Model/, ImGui 없음)가 들고, 이 패널은 그리기 · 입력칸 · 문서 dirty 만 든다.
      */
     class InputMapPanel : public IEditorDocumentPanel
     {
@@ -50,7 +50,7 @@ namespace sw::editor
         /** @brief 프로브용입니다. 지난 프레임에 찾은 바인딩 충돌 수를 반환합니다. */
         uint32 getConflictCount() const { return static_cast<uint32>( _document.getConflicts().size() ); }
 
-        /** @brief 패널이 내려갈 때 재생 중인 리플레이를 입력에서 뗍니다(`InputMapDocument::releaseInput`). */
+        /** @brief 패널이 내려갈 때 재생 중인 리플레이를 입력에서 뗍니다(`InputMapModel::releaseInput`). */
         void shutdown() override { _document.releaseInput(); }
 
     protected:
@@ -113,7 +113,7 @@ namespace sw::editor
         [[nodiscard]] bool saveToFile();
 
     private:
-        InputMapDocument             _document; ///< 편집하는 InputMap · 리플레이와 명령
+        InputMapModel                _document; ///< 편집하는 InputMap · 리플레이와 명령
         string                       _newActionName;
         string                       _newLayerName;
         utf8                         _arrActionFilter[constant::buffer::kMax64]; ///< 액션 목록의 검색어

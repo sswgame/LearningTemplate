@@ -128,7 +128,7 @@ namespace sw::editor
 
         GameObject* pOld = pManager->resolveGameObject( _body );
         if ( pOld != nullptr )
-            pManager->destroyObject( pOld );
+            pManager->destroyGameObject( pOld );
         _body                  = GameObjectHandle{};
         _spawnedPrefabPath     = _activePrefabPath; // 실패해도 같은 경로로 매 프레임 다시 놓지 않는다(경로를 고치고 Spawn 을 다시 누른다)
         _spawnedAssetPath      = assetPath;

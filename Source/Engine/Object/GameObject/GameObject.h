@@ -83,7 +83,7 @@ namespace sw
         /** @brief 에디터 · 직렬화가 프로퍼티를 바꿀 때 불리는 콜백입니다. */
         virtual void onPropertyChanged( hashed_string propertyName );
 
-        /** @brief 프레임이 끝날 때 안전하게 파괴되도록 미룹니다(`GameObjectManager::destroyObject`). */
+        /** @brief 프레임이 끝날 때 안전하게 파괴되도록 미룹니다(`GameObjectManager::destroyGameObject`). */
         void destroy();
 
         /** @brief 이름을 설정하고 매니저 이름 맵도 갱신합니다. */
@@ -362,7 +362,7 @@ namespace sw
          *          **컴포넌트가 먼저다.** 컴포넌트 표시(release)가 오브젝트 표시보다 먼저라, 오브젝트가 삭제 예정인 것을 본(acquire) 스레드는 그
          *          컴포넌트들이 삭제 예정인 것도 본다. 반대 순서면 그 사이에 다른 스레드의 순회(`GameObjectStore::forEachComponentOfType`)가
          *          "오브젝트는 삭제 예정, 컴포넌트는 아님" 을 보게 되어 소유 오브젝트를 다시 읽어야 했다. 컴포넌트 표시는 몇 번 해도 같으므로
-         *          선점에 진 스레드가 먼저 표시해도 해가 없다. 저장소(`GameObjectStore::destroyObject`)만 부른다. 표시만 하고 파괴 목록에 넣지 않으면
+         *          선점에 진 스레드가 먼저 표시해도 해가 없다. 저장소(`GameObjectStore::destroyGameObject`)만 부른다. 표시만 하고 파괴 목록에 넣지 않으면
          *          오브젝트가 사라지지 않으므로 공개하지 않는다.
          */
         [[nodiscard]] bool tryMarkPendingDestroy();

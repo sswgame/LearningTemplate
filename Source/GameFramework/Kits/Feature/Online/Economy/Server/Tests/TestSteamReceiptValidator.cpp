@@ -112,9 +112,9 @@ namespace
             return listResult.empty() ? ReceiptValidationResult{} : listResult.front();
         }
 
-        vector<ReceiptRefundNotice> takeRefunds()
+        vector<ReceiptRefundNotification> takeRefunds()
         {
-            vector<ReceiptRefundNotice> listNotice;
+            vector<ReceiptRefundNotification> listNotice;
             _pValidator->pollRefunds( listNotice );
             return listNotice;
         }
@@ -446,7 +446,7 @@ SW_TEST_CASE( SteamReceiptValidatorTest, RefundReportFiltersAndDeduplicates )
         []
     ]}}})";
     rig.pump();
-    const vector<ReceiptRefundNotice> listNotice = rig.takeRefunds();
+    const vector<ReceiptRefundNotification> listNotice = rig.takeRefunds();
     SW_REQUIRE_EQUAL( size_t( 2 ), listNotice.size() );
     SW_EXPECT_EQUAL( string( "steam" ), listNotice[0]._storeName );
     SW_EXPECT_EQUAL( string( "1" ), listNotice[0]._transactionID );

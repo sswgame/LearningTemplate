@@ -135,7 +135,7 @@ SW_TEST_CASE( ConditionExprTest, ActionCallsByName )
     SW_EXPECT_TRUE( unknown.invoke( context ) == ActionResult::Failed );
 
     const ActionEntry* pEntry = nullptr;
-    ReflectedFields    fields;
+    InstancedStruct    fields;
     string             error;
     SW_REQUIRE_TRUE( GameActionCall::tryReadFields( "test.count()", pEntry, fields, error ) );
     SW_EXPECT_EQUAL( string( "test.count" ), GameActionCall::formatText( *pEntry, fields ) );

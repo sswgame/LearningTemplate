@@ -257,7 +257,7 @@ namespace sw
         GimmickCircuitDef def;
         makeDef( def, _listError );
         const bool bParsed = _listError.empty();
-        const bool bBuilt  = _circuit.populate( def, game::getSubsystem<GimmickNodeKindCatalog>().getRegistry(), _listError ) && bParsed;
+        const bool bBuilt  = _circuit.populate( def, game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry(), _listError ) && bParsed;
         if ( bBuilt == false )
             _circuit.clear();
         for ( const string& error : _listError )

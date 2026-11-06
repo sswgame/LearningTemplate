@@ -39,7 +39,7 @@
             ]
         },
         {
-            "root": "EquipSetCatalog",
+            "root": "EquipmentSetCatalog",
             "listEntry": [
                 { "name": "Set", "key": "id" }
             ]

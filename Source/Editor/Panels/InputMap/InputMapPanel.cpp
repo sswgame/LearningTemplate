@@ -357,7 +357,7 @@ namespace sw::editor
         ImGui::Text( "%u  %s", bindIndex, _document.describeBinding( action, bindIndex ).c_str() );
         ImGui::SameLine( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapLayerColumnEm" ) );
         drawBindingLayerCombo( action, bindIndex );
-        const bool bTriggerFields = InputMapDocument::savesTriggerFields( binding._kind ); // 파일에 남지 않는 칸은 보이지 않는다
+        const bool bTriggerFields = InputMapModel::savesTriggerFields( binding._kind ); // 파일에 남지 않는 칸은 보이지 않는다
         if ( bTriggerFields )
         {
             ImGui::SameLine( ImGui::GetFontSize() * SW_THEME_METRIC( "Layout", "InputMapActionColumnEm" ) );

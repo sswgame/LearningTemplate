@@ -21,7 +21,7 @@ namespace sw
         struct ItemCatalogInternal
         {
             /** @brief `<Requires>` 하나를 읽습니다. 조건 속성이 없거나 둘 이상이면 경고를 남기고 false 를 반환합니다. */
-            [[nodiscard]] static bool readRequires( const XMLNode& node, EquipCondition& outCondition, string_view sourceName, const utf8* pItemID )
+            [[nodiscard]] static bool readRequires( const XMLNode& node, EquipmentCondition& outCondition, string_view sourceName, const utf8* pItemID )
             {
                 const utf8* pSet          = node.findAttribute( "set" );
                 const utf8* pEquippedTag  = node.findAttribute( "equippedTag" );
@@ -33,7 +33,7 @@ namespace sw
                     SW_LOG_WARNING_ID( "ItemCatalog.ItemRequiresNeedsExactly", "%#: item '%#' <Requires> needs exactly one of set / equippedTag / characterTag / bodyShape", sourceName, pItemID );
                     return false;
                 }
-                EquipRequiresFields fields;
+                EquipmentRequiresFields fields;
                 if ( XMLFields::readFields( node, fields, sourceName, { "bodyShape" } ) == false ) // 모르는 속성 · 깨진 pieces 는 오류다
                     return false;
                 // 속성은 공통 어휘의 줄임말이다. 칸은 읽기 때의 정적 검사(조건 순환 · 없는 세트)가 읽는다.
@@ -41,7 +41,7 @@ namespace sw
                 if ( pSet != nullptr )
                 {
                     outCondition._setID = fields._set;
-                    outCondition._kind  = fields._pieces > 0 ? EquipConditionKind::SetPieces : EquipConditionKind::SetComplete;
+                    outCondition._kind  = fields._pieces > 0 ? EquipmentConditionKind::SetPieces : EquipmentConditionKind::SetComplete;
                     if ( outCondition._setID.empty() )
                         return false;
                     text = fields._pieces > 0 ? formatToString( "setPieces(%#, %#)", outCondition._setID.c_str(), fields._pieces ) : formatToString( "setComplete(%#)", outCondition._setID.c_str() );
@@ -49,7 +49,7 @@ namespace sw
                 else if ( pEquippedTag != nullptr || pCharacterTag != nullptr )
                 {
                     const string_view tagText = pEquippedTag != nullptr ? string_view( fields._equippedTag ) : string_view( fields._characterTag );
-                    outCondition._kind        = pEquippedTag != nullptr ? EquipConditionKind::EquippedTag : EquipConditionKind::CharacterTag;
+                    outCondition._kind        = pEquippedTag != nullptr ? EquipmentConditionKind::EquippedTag : EquipmentConditionKind::CharacterTag;
                     outCondition._tag         = TagID::request( tagText );
                     if ( outCondition._tag.isValid() == false )
                         return false;
@@ -57,7 +57,7 @@ namespace sw
                 }
                 else
                 {
-                    outCondition._kind = EquipConditionKind::BodyShape;
+                    outCondition._kind = EquipmentConditionKind::BodyShape;
                     StringUtil::forEachToken( string_view( pBodyShape ), ",; ", [&]( string_view token )
                     {
                         text += text.empty() ? "" : ", ";
@@ -112,7 +112,7 @@ namespace sw
                 def._stats.addAttributes( statNode ); // 읽은 속성 수만 반환한다. 속성이 없으면 빈 스탯이다
             for ( XMLNode requiresNode = node.findChild( "Requires" ); requiresNode; requiresNode = requiresNode.findNextSibling( "Requires" ) )
             {
-                EquipCondition condition;
+                EquipmentCondition condition;
                 if ( ItemCatalogInternal::readRequires( requiresNode, condition, sourceName, pID ) )
                     def._listEquipCondition.push_back( condition );
                 else

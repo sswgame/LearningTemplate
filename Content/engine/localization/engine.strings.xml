@@ -1460,7 +1460,7 @@
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.cpp</item>
 			</origins>
 		</entry>
-		<entry key="EdPluginWidget.EquipSet" source="Equip set">
+		<entry key="EdPluginWidget.EquipmentSet" source="Equip set">
 			<origins>
 				<item>Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp</item>
 			</origins>

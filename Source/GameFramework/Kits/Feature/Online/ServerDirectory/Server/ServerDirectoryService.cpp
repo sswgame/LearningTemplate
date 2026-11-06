@@ -48,7 +48,7 @@ namespace sw
             }
 
             /** @brief 공지 규칙입니다. 운영 쓰기와 저장소에서 읽은 레코드가 같은 규칙을 지납니다. */
-            static bool isValidNotice( const ServiceNotice& notice )
+            static bool isValidNotice( const ServiceAnnouncement& notice )
             {
                 const bool bTextOk   = notice._text.empty() == false && static_cast<int32>( notice._text.size() ) <= ServerDirectoryLimit::kMaxNoticeTextSize;
                 const bool bWindowOk = notice._endMs == 0 || notice._startMs < notice._endMs;
@@ -60,7 +60,7 @@ namespace sw
             /** @brief 공지 정렬 기준입니다. 우선순위 내림차순, 같으면 시작 시각 내림차순, 그래도 같으면 id 오름차순이며 결과가 결정적입니다. */
             struct NoticeOrder
             {
-                bool operator()( const ServiceNotice& left, const ServiceNotice& right ) const
+                bool operator()( const ServiceAnnouncement& left, const ServiceAnnouncement& right ) const
                 {
                     if ( left._priority != right._priority )
                         return left._priority > right._priority;
@@ -112,7 +112,7 @@ namespace sw
                 return;
             for ( const ServiceRecord& record : listRecord )
             {
-                ServiceNotice notice;
+                ServiceAnnouncement notice;
                 if ( ServerDirectoryProtocol::decodeNotice( record._key, record._bytes, notice ) == false )
                     return;
                 if ( Internal::isValidNotice( notice ) == false )
@@ -128,11 +128,11 @@ namespace sw
         void complete() override { _pService->applyReload( std::move( _listMaintenance ), std::move( _listNotice ), _bReadOk == SW_TRUE, _nowMs ); }
 
     private:
-        vector<MaintenanceWindow> _listMaintenance;
-        vector<ServiceNotice>     _listNotice;
-        ServerDirectoryService*   _pService;
-        UnixMilliseconds          _nowMs;
-        uint8                     _bReadOk;
+        vector<MaintenanceWindow>   _listMaintenance;
+        vector<ServiceAnnouncement> _listNotice;
+        ServerDirectoryService*     _pService;
+        UnixMilliseconds            _nowMs;
+        uint8                       _bReadOk;
     };
 } // namespace sw
 
@@ -255,7 +255,7 @@ namespace sw
         _dependencies._pStore->submit( make_unique<ServerDirectoryReloadWork>( this, nowMs ) );
     }
 
-    void ServerDirectoryService::applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceNotice>&& listNotice, bool bReadOk, UnixMilliseconds nowMs )
+    void ServerDirectoryService::applyReload( vector<MaintenanceWindow>&& listMaintenance, vector<ServiceAnnouncement>&& listNotice, bool bReadOk, UnixMilliseconds nowMs )
     {
         --_pendingCount;
         _reloadSchedule.markFinished();
@@ -292,7 +292,7 @@ namespace sw
             hash = HashUtil::combine( hash, static_cast<uint64>( window._startMs ) );
             hash = HashUtil::combine( hash, static_cast<uint64>( window._endMs ) );
         }
-        for ( const ServiceNotice& notice : _listNotice )
+        for ( const ServiceAnnouncement& notice : _listNotice )
         {
             if ( notice.isActive( nowMs.count() ) == false )
                 continue;
@@ -325,7 +325,7 @@ namespace sw
                 continue;
             status._listMaintenance.push_back( window.makeView() ); // 보이는 타입에는 허용 목록이 없다
         }
-        for ( const ServiceNotice& notice : _listNotice )
+        for ( const ServiceAnnouncement& notice : _listNotice )
         {
             if ( notice.isActive( nowMs.count() ) && static_cast<int32>( status._listNotice.size() ) < ServerDirectoryLimit::kMaxNoticeCount )
                 status._listNotice.push_back( notice );
@@ -470,7 +470,7 @@ namespace sw
         submitWrite( std::move( work ) );
     }
 
-    void ServerDirectoryService::postNotice( const ServiceNotice& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
+    void ServerDirectoryService::postNotice( const ServiceAnnouncement& notice, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
         using Internal = ServerDirectoryServiceInternal;
         if ( Internal::isValidNotice( notice ) == false )
@@ -522,7 +522,7 @@ namespace sw
 
     void ServerDirectoryService::postNotice( const ServerDirectoryNoticeChange& change, AccountID actorID, UnixMilliseconds nowMs, uint64 requestTag )
     {
-        ServiceNotice notice;
+        ServiceAnnouncement notice;
         notice._text         = change._text;
         notice._noticeID     = change._noticeID;
         notice._startMs      = change._startMs;

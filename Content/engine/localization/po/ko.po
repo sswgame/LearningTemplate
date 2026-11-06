@@ -1427,7 +1427,7 @@ msgid "Check"
 msgstr "검사"
 
 #: Source/GameFramework/Plugin/Editor/CharacterEditor/CharacterEditorPanel.cpp
-msgctxt "EdPluginWidget.EquipSet"
+msgctxt "EdPluginWidget.EquipmentSet"
 msgid "Equip set"
 msgstr "장비 세트"
 

@@ -12,7 +12,7 @@
 #include "GameFramework/Runtime/Foundation/Utility/Random/GameRandom.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceXMLUtil.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/EquipSetCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/SlotTable.h"
 
 namespace sw
@@ -119,7 +119,7 @@ namespace sw
                 if ( setID.empty() == false )
                 {
                     if ( node.findAttribute( "slot" ) != nullptr )
-                        report.addErrorWithID( "Appearance.EquipSetAndSlot", "%#: preset '%#' <Equip> names both a set and a slot", sourceName, inoutDef._id.c_str() );
+                        report.addErrorWithID( "Appearance.EquipmentSetAndSlot", "%#: preset '%#' <Equip> names both a set and a slot", sourceName, inoutDef._id.c_str() );
                     inoutDef._listSet.push_back( setID );
                     return;
                 }
@@ -147,7 +147,7 @@ namespace sw
                 {
                     if ( existing._slot == slot._slot )
                     {
-                        report.addErrorWithID( "Appearance.EquipSlotRepeated", "%#: preset '%#' equips slot '%#' twice", sourceName, inoutDef._id.c_str(), slot._slot.c_str() );
+                        report.addErrorWithID( "Appearance.EquipmentSlotRepeated", "%#: preset '%#' equips slot '%#' twice", sourceName, inoutDef._id.c_str(), slot._slot.c_str() );
                         return;
                     }
                 }
@@ -360,16 +360,16 @@ namespace sw
              * @brief 프리셋 체인의 레이어 하나의 장비 구성을 적용합니다. 세트를 먼저, 그다음 슬롯을 적용합니다.
              * @details 다른 아이템으로 바뀐 슬롯은 요청을 비우고 다시 채운다. 같은 아이템이면 앞 레이어의 상태와 꾸미기를 남긴다.
              */
-            static void applySlotLayer( const CharacterAppearanceDef& level, const EquipSetCatalog& sets, uint32 seed, vector<EquipSetPieceDef>& inoutListPiece,
+            static void applySlotLayer( const CharacterAppearanceDef& level, const EquipmentSetCatalog& sets, uint32 seed, vector<EquipmentSetPieceDef>& inoutListPiece,
                                         CharacterAppearanceSpec& inoutSpec )
             {
                 for ( const hashed_string& setID : level._listSet )
                 {
-                    const EquipSetDef* pSet = sets.findSet( setID );
+                    const EquipmentSetDef* pSet = sets.findSet( setID );
                     if ( pSet == nullptr )
                         continue;
                     sets.computePieces( *pSet, inoutSpec._bodyType, inoutListPiece );
-                    for ( const EquipSetPieceDef& piece : inoutListPiece )
+                    for ( const EquipmentSetPieceDef& piece : inoutListPiece )
                     {
                         AppearanceSlotRequest* pRequest = inoutSpec.findSlot( piece._slot );
                         if ( pRequest == nullptr )
@@ -634,7 +634,7 @@ namespace sw
         return GameHash::toUnitFloat( HashUtil::mix32( seed ^ HashUtil::mix32( key ^ 0x68e31da4u ) ) );
     }
 
-    bool CharacterAppearanceCatalog::expand( const hashed_string& id, uint32 seed, const SlotTable& slotTable, const EquipSetCatalog& sets, const CustomizationSchemaCatalog& schemas,
+    bool CharacterAppearanceCatalog::expand( const hashed_string& id, uint32 seed, const SlotTable& slotTable, const EquipmentSetCatalog& sets, const CustomizationSchemaCatalog& schemas,
                                              CharacterAppearanceSpec& outSpec ) const
     {
         CharacterAppearanceDef merged;
@@ -663,7 +663,7 @@ namespace sw
         vector<const CharacterAppearanceDef*> listChain;
         if ( collectChain( id, listChain ) == false )
             return false;
-        vector<EquipSetPieceDef> listPiece;
+        vector<EquipmentSetPieceDef> listPiece;
         for ( const CharacterAppearanceDef* pLevel : listChain )
         {
             Internal::applySlotLayer( *pLevel, sets, seed, listPiece, outSpec );

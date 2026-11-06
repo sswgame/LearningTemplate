@@ -112,7 +112,7 @@ namespace sw
         if ( bWanted == false )
         {
             if ( pView != nullptr )
-                manager.destroyObject( pView );
+                manager.destroyGameObject( pView );
             _viewObject = GameObjectHandle{};
             return;
         }

@@ -58,7 +58,7 @@ namespace sw
             return;
         if ( _listIdle.size() >= _maxIdleCount )
         {
-            manager.destroyObject( pObject );
+            manager.destroyGameObject( pObject );
             return;
         }
         pObject->setActive( false );
@@ -87,7 +87,7 @@ namespace sw
         {
             GameObject* pObject = manager.resolveGameObject( handle );
             if ( pObject != nullptr && pObject->isPendingDestroy() == false )
-                manager.destroyObject( pObject );
+                manager.destroyGameObject( pObject );
         }
         _listIdle.clear();
     }

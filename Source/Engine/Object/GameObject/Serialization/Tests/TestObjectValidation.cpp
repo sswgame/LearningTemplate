@@ -80,7 +80,7 @@ SW_TEST_CASE( ObjectValidationTest, DestroyedObjectLeavesTheIssueLog )
     SW_EXPECT_EQUAL( 2u, issueLog.getIssueCount() );
 
     const uint64 keptID = pKept->getObjectID();
-    manager.destroyObject( pDestroyed );
+    manager.destroyGameObject( pDestroyed );
     manager.processDeferredDestruction();
     issueLog.collectIssues( listIssue );
     SW_REQUIRE_TRUE_MSG( listIssue.size() == 1, "The result of the destroyed object remains in the table" );

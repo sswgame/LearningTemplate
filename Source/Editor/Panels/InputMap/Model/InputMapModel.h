@@ -1,5 +1,5 @@
 /**
- * @file InputMapDocument.h
+ * @file InputMapModel.h
  * @brief Input Map Editor 의 모델 — 편집하는 InputMap · 리플레이, 경로, 고른 액션, 키 다시 잡기, 충돌, 실시간 그래프 표본, 녹화 · 재생 명령. ImGui 를 모릅니다.
  * @details 패널(`InputMapPanel`)은 그리기와 입력칸만 들고, 상태와 명령은 이것이 든다 — 인스펙터 · 프로파일러 `Model/` 과 같은 선이다(언리얼 Enhanced Input 편집기가
  *          `UInputMappingContext` 에셋을 편집 대상으로 두고 화면이 그것을 고치는 것과 같다). 바인딩 한 칸 고치기(트리거 · 시간 · Negate)는 엔진 `InputMap` 의 API 가 곧 명령이라
@@ -53,14 +53,14 @@ namespace sw::editor
     };
 
     /**
-     * @class InputMapDocument
+     * @class InputMapModel
      * @brief Input Map Editor 의 상태와 명령입니다. 파일 머리말 참고.
      */
-    class InputMapDocument
+    class InputMapModel
     {
     public:
         /** @brief 처음 여는 맵은 디버그 키 맵(enginedefaultassets.xml), 리플레이 파일은 editortooldefaults.json 의 `_inputReplayFile` 입니다. 읽기는 첫 `tick` 전에 합니다. */
-        InputMapDocument();
+        InputMapModel();
 
         /**
          * @brief 패널이 열려 있는 프레임마다 부릅니다. InputMap 을 @p input 에 붙여 갱신하고, 그래프 표본을 담고, 녹화 중이면 입력 프레임을 기록하고, 끝난 재생을 뗍니다.

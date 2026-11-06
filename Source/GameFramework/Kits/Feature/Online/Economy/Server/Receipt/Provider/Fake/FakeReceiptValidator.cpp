@@ -57,9 +57,9 @@ namespace sw
     {
     }
 
-    void FakeReceiptValidator::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
+    void FakeReceiptValidator::pollRefunds( vector<ReceiptRefundNotification>& outListNotice )
     {
-        for ( ReceiptRefundNotice& notice : _listRefund )
+        for ( ReceiptRefundNotification& notice : _listRefund )
         {
             outListNotice.push_back( std::move( notice ) );
         }
@@ -68,7 +68,7 @@ namespace sw
 
     void FakeReceiptValidator::pushRefund( string_view transactionID, int64 refundedMs )
     {
-        _listRefund.push_back( ReceiptRefundNotice{ getStoreName(), string( transactionID ), refundedMs } );
+        _listRefund.push_back( ReceiptRefundNotification{ getStoreName(), string( transactionID ), refundedMs } );
     }
 
     void FakeReceiptValidator::submitValidation( const ReceiptValidationRequest& request, UnixMilliseconds now )

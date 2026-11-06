@@ -10,7 +10,7 @@
 
 #include "Editor/Common/GUI/EditorThumbnailCache.h"
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
-#include "Editor/Panels/TileMap/Model/TileMapDocument.h"
+#include "Editor/Panels/TileMap/Model/TileMapModel.h"
 #include "Editor/Panels/TileMap/Model/TileMapPaintUtil.h"
 
 struct ImDrawList;
@@ -22,7 +22,7 @@ namespace sw::editor
      * @brief Game TileMap XML 의 Visual, Warp, Tile, 플래그 레이어를 페인트합니다.
      * @details Tile 레이어는 타일셋(`.tileset.xml`)의 브러시(일반 타일, 규칙 타일)를 칠한다. 셀에는 브러시만 기록하고, 화면에 보일 아틀라스 셀은 규칙이
      *          고른 값을 셀 위에 숫자로 보여 준다. 이웃을 칠하면 그 숫자가 따라 바뀐다(런타임 `TileMapRendererComponent` 와 같은 `resolveVisual`).
-     *          상태와 명령은 `TileMapDocument`(Model/, ImGui 없음)가 들고, 이 패널은 그리기 · 캔버스 보기(확대 · 이동) · 입력 읽기와 되돌리기 기록만 한다.
+     *          상태와 명령은 `TileMapModel`(Model/, ImGui 없음)가 들고, 이 패널은 그리기 · 캔버스 보기(확대 · 이동) · 입력 읽기와 되돌리기 기록만 한다.
      */
     class TileMapPanel : public EditorDocumentPanel
     {
@@ -60,8 +60,8 @@ namespace sw::editor
         EditorTextExtent getInitialPanelSize() const override { return EditorTextExtent::ofText( 131.0f, 33.0f ); }
 
     private:
-        using PaintLayer = TileMapDocument::PaintLayer;
-        using PaintTool  = TileMapDocument::PaintTool;
+        using PaintLayer = TileMapModel::PaintLayer;
+        using PaintTool  = TileMapModel::PaintTool;
 
         string captureDocumentText() const override { return _document.captureText(); }
         void   applyDocumentText( string_view text ) override { _document.applyText( text ); }
@@ -87,7 +87,7 @@ namespace sw::editor
         void drawTilePalette();
 
     private:
-        TileMapDocument                        _document;            ///< 편집 중인 맵과 칠하기 상태 · 명령
+        TileMapModel                           _document;            ///< 편집 중인 맵과 칠하기 상태 · 명령
         EditorThumbnailCache                   _atlasThumbnail;      ///< 타일셋 아틀라스 이미지
         TileMapCanvasView                      _canvasView;          ///< 캔버스의 확대 · 이동
         string                                 _hoverText;           ///< 커서 아래 칸의 값(캔버스 머리에 보인다)

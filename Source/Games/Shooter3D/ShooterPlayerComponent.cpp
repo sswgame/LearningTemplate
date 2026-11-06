@@ -410,7 +410,7 @@ namespace sw
             CharacterAppearanceComponent* pAppearance = pBody->getComponent<CharacterAppearanceComponent>();
             if ( pAppearance != nullptr )
                 pAppearance->despawnParts();
-            pManager->destroyObject( pBody );
+            pManager->destroyGameObject( pBody );
         }
         _body           = GameObjectHandle{};
         _bodyEyeHeight  = 0.0f;
@@ -1006,7 +1006,7 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "ShooterPlayer.BodyPrefabNoShooterAvatarComponent", "[Shooter] body prefab '%#' has no ShooterAvatarComponent - the player has no visible body", _bodyPrefab.c_str() );
             if ( pBody != nullptr )
-                pManager->destroyObject( pBody );
+                pManager->destroyGameObject( pBody );
             return;
         }
         pAvatar->setPlayer( pOwner->getHandle() );

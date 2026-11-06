@@ -41,7 +41,7 @@ SW_TEST_CASE( ParentDestroyTest, ChildrenGoWithTheirParentByDefault )
 {
     ParentDestroyRig       rig;
     const GameObjectHandle child = rig._pChild->getHandle();
-    rig._manager.destroyObject( rig._pParent );
+    rig._manager.destroyGameObject( rig._pParent );
     rig.flush();
     SW_EXPECT_TRUE( rig._manager.resolveGameObject( child ) == nullptr );
 }
@@ -52,7 +52,7 @@ SW_TEST_CASE( ParentDestroyTest, KeptChildStaysWhereItWas )
     ParentDestroyRig rig;
     rig._pChild->setKeptWhenParentDestroyed( true );
     const GameObjectHandle child = rig._pChild->getHandle();
-    rig._manager.destroyObject( rig._pParent );
+    rig._manager.destroyGameObject( rig._pParent );
     rig.flush();
     SW_REQUIRE_TRUE( rig._manager.resolveGameObject( child ) == rig._pChild );
     SW_EXPECT_TRUE( rig._pChildScene->getParent() == nullptr );
@@ -67,7 +67,7 @@ SW_TEST_CASE( ParentDestroyTest, DestroyingAChildLeavesTheParent )
 {
     ParentDestroyRig       rig;
     const GameObjectHandle parent = rig._pParent->getHandle();
-    rig._manager.destroyObject( rig._pChild );
+    rig._manager.destroyGameObject( rig._pChild );
     rig.flush();
     SW_EXPECT_TRUE( rig._manager.resolveGameObject( parent ) == rig._pParent );
     SW_EXPECT_TRUE( rig._pParent->getPrimarySceneComponent()->getChildren().empty() );

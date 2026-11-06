@@ -172,7 +172,7 @@ namespace sw
         return s_table;
     }
 
-    ServiceStoreResult ServiceMail::claimNotices( IServiceStoreConnection& connection, int32 maxCount, vector<ServiceMailNotice>& outListNotice )
+    ServiceStoreResult ServiceMail::claimNotices( IServiceStoreConnection& connection, int32 maxCount, vector<ServiceMailNotification>& outListNotice )
     {
         outListNotice.clear();
         const int32              batchCount = maxCount < ServiceTransaction::kMaxWriteCount ? maxCount : ServiceTransaction::kMaxWriteCount;
@@ -180,15 +180,15 @@ namespace sw
         const ServiceStoreResult listed = connection.listRecords( getNoticeTable(), string_view{}, string_view{}, batchCount, false, listRecord );
         if ( listed != ServiceStoreResult::Ok || listRecord.empty() )
             return listed;
-        ServiceTransaction        transaction;
-        vector<ServiceMailNotice> listNotice;
+        ServiceTransaction              transaction;
+        vector<ServiceMailNotification> listNotice;
         for ( const ServiceRecord& record : listRecord )
         {
             const size_t separator = record._key.find( '/' );
             if ( separator == string::npos || record._bytes.size() > static_cast<size_t>( ServiceMailConstant::kMaxTitleSize ) )
                 return ServiceStoreResult::Invalid;
-            ServiceMailNotice& notice = listNotice.emplace_back();
-            notice._mailKey           = record._key.substr( separator + 1 );
+            ServiceMailNotification& notice = listNotice.emplace_back();
+            notice._mailKey                 = record._key.substr( separator + 1 );
             notice._titleKey.assign( reinterpret_cast<const utf8*>( record._bytes.data() ), record._bytes.size() );
             if ( parseRecipient( notice._mailKey, notice._recipientAccountID ) == false )
                 return ServiceStoreResult::Invalid;

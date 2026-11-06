@@ -468,7 +468,7 @@ SW_TEST_CASE( AccountServerTest, RevokeNoticeFromAnotherServer )
     { test::updateAll( { &world._server, &other }, world._clients, kNowMs, 12 ); };
     pumpBoth();
 
-    AccountRevokeNotice notice;
+    AccountRevoked notice;
     notice._reasonCode = "gm.kick";
     notice._accountID  = accountID;
     notice._reason     = LoginRevokeReason::Administrative;

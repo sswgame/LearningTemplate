@@ -370,7 +370,7 @@ namespace sw::editor
                 editor::getMainSceneSelection().clearObjectSelection();
                 GameObject* pObject = pManager->findGameObjectByID( probe._objectID );
                 if ( pObject != nullptr )
-                    pManager->destroyObject( pObject );
+                    pManager->destroyGameObject( pObject );
                 (void)editorContext.getSubsystem<EditorPanelManager>().setPanelOpen( MapCheckPanel::kPanelID, false );
                 return EditorSelfTestStep::Done;
             }
@@ -404,7 +404,7 @@ namespace sw::editor
                 (void)context.expect( listOverride.empty(), "a non-prefab object has prefab overrides" );
 
                 workspace.setFocusedAssetPath( savedFocus.c_str() );
-                pManager->destroyObject( pObj );
+                pManager->destroyGameObject( pObj );
                 return EditorSelfTestStep::Done;
             }
 

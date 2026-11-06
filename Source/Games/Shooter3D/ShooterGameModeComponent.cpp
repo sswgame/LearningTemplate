@@ -603,7 +603,7 @@ namespace sw
         if ( pEnemy == nullptr )
         {
             if ( pObject != nullptr )
-                manager.destroyObject( pObject );
+                manager.destroyGameObject( pObject );
             if ( request._spawnID != 0 && _bPacingReady == SW_TRUE )
                 (void)_director.notifyDespawned( request._spawnID ); // 스폰하지 못한 적의 예산 슬롯을 돌려준다.
             return;
@@ -625,7 +625,7 @@ namespace sw
         if ( pEnemy->launch( getOwner()->getHandle(), position, yaw, request._health, request._speed ) == false )
         {
             // 체력 설정이 거절됐다(이유는 Vitality 가 남겼다) — 올려서 대신 세우지 않고 정리한다.
-            manager.destroyObject( pObject );
+            manager.destroyGameObject( pObject );
             if ( request._spawnID != 0 && _bPacingReady == SW_TRUE )
                 (void)_director.notifyDespawned( request._spawnID );
             return;
@@ -676,7 +676,7 @@ namespace sw
                 if ( pAppearance != nullptr )
                     pAppearance->destroyOwnerStowingParts();
                 else if ( pObject != nullptr )
-                    pManager->destroyObject( pObject );
+                    pManager->destroyGameObject( pObject );
                 _listEnemy[enemyIndex] = _listEnemy.back();
                 _listEnemy.pop_back();
                 continue;

@@ -150,11 +150,11 @@ SW_TEST_CASE_F( AppearanceResolverTest, SuppressedAndOccupiedSlotsHide )
 // 세트를 다 갖추면 그 칸이 완성 외형으로 바뀌고, 숨은 조각은 세지 않으며, 몸 종류별 조각을 쓴다.
 SW_TEST_CASE_F( AppearanceResolverTest, SetCompletionReplacesItsSlots )
 {
-    load( R"(<EquipSetCatalog><Set id="Knight">
+    load( R"(<EquipmentSetCatalog><Set id="Knight">
         <Piece slot="Head" items="helmet"/><Piece slot="OffHand" items="shield"/>
         <Variant bodyType="Giant"><Piece slot="Head" items="hood"/></Variant>
         <Complete visual="cape_knight" slots="OffHand"/>
-    </Set></EquipSetCatalog>)" );
+    </Set></EquipmentSetCatalog>)" );
     equip( "Head", "helmet" );
     equip( "OffHand", "shield" );
     resolve();

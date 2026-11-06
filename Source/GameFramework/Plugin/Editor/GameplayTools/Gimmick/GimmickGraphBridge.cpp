@@ -44,7 +44,7 @@ namespace sw::editor
 
     uint64 GimmickGraphBridge::computeSignature( const GimmickCircuitComponent& component )
     {
-        GimmickGraphModel scratch( game::getSubsystem<GimmickNodeKindCatalog>().getRegistry() );
+        GimmickGraphModel scratch( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
         if ( load( component, scratch ) == false )
             return 0;
         return scratch.computeSignature();

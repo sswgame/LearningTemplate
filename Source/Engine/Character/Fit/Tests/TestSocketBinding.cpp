@@ -192,7 +192,7 @@ SW_TEST_CASE( SocketPartPoolTest, StoresDetachedInactivePartsAndRefusesDroppedOn
     SW_EXPECT_EQUAL( 0u, pool.getRestingCount( hashed_string( "p/axe.prefab.xml" ) ) );
 
     // 옛 주인을 지워도 쉬는 부품은 자식이 아니라 남는다.
-    rig._manager.destroyObject( rig._pHolder );
+    rig._manager.destroyGameObject( rig._pHolder );
     rig._manager.update( 0.016f );
     SW_REQUIRE_TRUE( rig._manager.resolveGameObject( unit ) != nullptr );
     SW_EXPECT_TRUE( pool.takePart( hashed_string( "p/axe.prefab.xml" ) ) == nullptr );
@@ -214,7 +214,7 @@ SW_TEST_CASE( SocketPartPoolTest, StoresDetachedInactivePartsAndRefusesDroppedOn
     SW_EXPECT_EQUAL( 0u, dropPool.getRestingCount( sword ) );
 
     // 지울 예정인 부품도 받지 않는다(떼어 둔 상태여도).
-    rig._manager.destroyObject( pTaken );
+    rig._manager.destroyGameObject( pTaken );
     SW_EXPECT_FALSE( pool.storePart( *pTaken, sword ) );
     SW_EXPECT_EQUAL( 0u, pool.getRestingCount( sword ) );
 }

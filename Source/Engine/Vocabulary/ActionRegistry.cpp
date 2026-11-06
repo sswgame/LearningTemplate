@@ -119,10 +119,10 @@ namespace sw
         return name;
     }
 
-    bool GameActionCall::tryReadFields( string_view text, const ActionEntry*& outEntry, ReflectedFields& outFields, string& outError )
+    bool GameActionCall::tryReadFields( string_view text, const ActionEntry*& outEntry, InstancedStruct& outFields, string& outError )
     {
         outEntry  = nullptr;
-        outFields = ReflectedFields{};
+        outFields = InstancedStruct{};
         string_view name;
         string_view arguments;
         if ( ActionRegistryInternal::splitCall( text, name, arguments ) == false )
@@ -136,20 +136,20 @@ namespace sw
             outError = "unknown action '" + string( name ) + "' (registered: " + ActionRegistry::joinNames() + ")";
             return false;
         }
-        ReflectedFields     fields( *pEntry->_pParamsOps );
+        InstancedStruct     fields( *pEntry->_pParamsOps );
         vector<string_view> listToken;
-        ReflectedFieldsText::splitArguments( arguments, listToken );
-        if ( ReflectedFieldsText::read( fields.getInstance(), *fields.getType(), listToken, outError ) == false )
+        InstancedStructText::splitArguments( arguments, listToken );
+        if ( InstancedStructText::read( fields.getInstance(), *fields.getType(), listToken, outError ) == false )
             return false;
         outEntry  = pEntry;
         outFields = std::move( fields );
         return true;
     }
 
-    string GameActionCall::formatText( const ActionEntry& entry, const ReflectedFields& fields )
+    string GameActionCall::formatText( const ActionEntry& entry, const InstancedStruct& fields )
     {
-        const ReflectedFields defaults( *entry._pParamsOps );
-        const string          arguments = ReflectedFieldsText::write( fields.getInstance(), defaults.getInstance(), *fields.getType() );
+        const InstancedStruct defaults( *entry._pParamsOps );
+        const string          arguments = InstancedStructText::write( fields.getInstance(), defaults.getInstance(), *fields.getType() );
         string                text( entry._pName );
         if ( arguments.empty() == false )
             text += "(" + arguments + ")";
@@ -160,7 +160,7 @@ namespace sw
     {
         outCall                   = GameActionCall{};
         const ActionEntry* pEntry = nullptr;
-        ReflectedFields    fields;
+        InstancedStruct    fields;
         if ( tryReadFields( text, pEntry, fields, outError ) == false )
             return false;
         outCall._pEntry  = pEntry;
@@ -177,11 +177,11 @@ namespace sw
         return false;
     }
 
-    GameActionCall GameActionCall::make( const ActionEntry& entry, const ReflectedFields& fields )
+    GameActionCall GameActionCall::make( const ActionEntry& entry, const InstancedStruct& fields )
     {
         GameActionCall call;
         call._pEntry  = &entry;
-        call._pParams = ReflectedFields( fields ).share(); // 편집 값과 나눠 들지 않게 복사한다
+        call._pParams = InstancedStruct( fields ).share(); // 편집 값과 나눠 들지 않게 복사한다
         return call;
     }
 

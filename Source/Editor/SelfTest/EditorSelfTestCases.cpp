@@ -88,7 +88,7 @@ namespace sw::editor
                 editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( objectID ) : nullptr;
                 if ( pObj != nullptr )
-                    pManager->destroyObject( pObj );
+                    pManager->destroyGameObject( pObj );
             }
 
             // ------------------------------------------------------------------------------

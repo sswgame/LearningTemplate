@@ -1,5 +1,5 @@
 /**
- * @file TileMapDocument.h
+ * @file TileMapModel.h
  * @brief 타일맵 페인터의 모델 — 편집 중인 맵 · 타일셋, 고른 레이어 · 도구 · 브러시 값, 칠하기 · 채우기 · 스포이트 · 엣지 워프, 읽기 · 쓰기 · 되돌리기 글. ImGui 를 모릅니다.
  * @details 패널(`TileMapPanel`)은 그리기 · 캔버스 보기(확대 · 이동) · 입력 읽기만 하고, 상태와 명령은 모두 이것이 든다 — 인스펙터 `Model/` 과 같은 선이다
  *          (유니티 Tile Palette 창이 Tilemap 데이터와 브러시를 따로 두는 것과 같다). 편집한 명령은 true 를 반환하고, 되돌리기 기록은 패널이 남긴다(`notifyDocumentEdited`).
@@ -32,10 +32,10 @@ namespace sw::editor
     };
 
     /**
-     * @class TileMapDocument
+     * @class TileMapModel
      * @brief 타일맵 페인터의 상태와 명령입니다. 파일 머리말 참고.
      */
-    class TileMapDocument
+    class TileMapModel
     {
     public:
         /** @brief 현재 브러시가 쓰는 레이어 종류입니다. 플래그 레이어는 `getFlagLayer` 가 고릅니다. */
@@ -72,7 +72,7 @@ namespace sw::editor
         static constexpr int32 kNewMapSide = 8;
 
         /** @brief 에디터 설정의 기본 맵 · 워프 대상을 채우고 8x8 빈 맵으로 시작합니다. */
-        TileMapDocument();
+        TileMapModel();
 
         // ------------------------------------------------------------------------------
         // 1) 읽기 · 쓰기 · 되돌리기 글

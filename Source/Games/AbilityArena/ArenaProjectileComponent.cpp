@@ -122,6 +122,6 @@ namespace sw
         GameObject*        pOwner   = getOwner();
         GameObjectManager* pManager = pOwner != nullptr ? pOwner->getManager() : nullptr;
         if ( pManager != nullptr )
-            pManager->destroyObject( pOwner ); // 지연 삭제 — 틱 안에서도 된다
+            pManager->destroyGameObject( pOwner ); // 지연 삭제 — 틱 안에서도 된다
     }
 } // namespace sw

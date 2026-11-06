@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Prefab/Model/PrefabEditorModel.h"
+#include "Editor/Panels/Prefab/Model/PrefabModel.h"
 
 #include "Core/Log/Logger.h"
 
@@ -17,7 +17,7 @@
 
 namespace sw::editor
 {
-    PrefabEditorModel::PrefabEditorModel()
+    PrefabModel::PrefabModel()
         : _isolation{}
         , _pendingNestedPath{}
         , _spawnedDocumentPath{}
@@ -25,20 +25,20 @@ namespace sw::editor
     {
     }
 
-    void PrefabEditorModel::resetForNewScene()
+    void PrefabModel::resetForNewScene()
     {
         _spawnedDocumentPath.clear(); // 새 씬에는 문서 루트가 아직 없다
         _isolation.clear();
     }
 
-    bool PrefabEditorModel::rebuildRoot( GameObjectManager& manager, EditorSelection& selection, string_view documentPath )
+    bool PrefabModel::rebuildRoot( GameObjectManager& manager, EditorSelection& selection, string_view documentPath )
     {
         // 옛 문서 — 루트를 지우면 중첩 단계의 루트 · 숨긴 오브젝트도 함께 사라진다(모두 문서 루트의 자손이다).
         GameObject* pOldRoot = _isolation.isActive() ? manager.findGameObjectByID( _isolation.getDocumentRootObjectID() ) : nullptr;
         selection.clearObjectSelection();
         _isolation.clear();
         if ( pOldRoot != nullptr )
-            manager.destroyObject( pOldRoot );
+            manager.destroyGameObject( pOldRoot );
         _spawnedDocumentPath = documentPath;
 
         GameObject* pRoot = EditorAssetCommands::spawnPrefabWithoutUndo( &manager, _spawnedDocumentPath.c_str(), nullptr );
@@ -53,7 +53,7 @@ namespace sw::editor
         return true;
     }
 
-    void PrefabEditorModel::enterPendingNested( GameObjectManager* pManager, EditorSelection& selection )
+    void PrefabModel::enterPendingNested( GameObjectManager* pManager, EditorSelection& selection )
     {
         if ( _pendingNestedPath.empty() )
             return;
@@ -63,7 +63,7 @@ namespace sw::editor
             _status = "Could not open the nested prefab";
     }
 
-    bool PrefabEditorModel::enterNested( GameObjectManager* pManager, EditorSelection& selection, string_view prefabPath )
+    bool PrefabModel::enterNested( GameObjectManager* pManager, EditorSelection& selection, string_view prefabPath )
     {
         const bool bCannotEnter = pManager == nullptr || prefabPath.empty() || _isolation.isActive() == false;
         if ( bCannotEnter )
@@ -87,7 +87,7 @@ namespace sw::editor
         return true;
     }
 
-    PrefabFrameExit PrefabEditorModel::exitFrame( GameObjectManager* pManager, EditorSelection& selection, bool bSaveToPrefab )
+    PrefabFrameExit PrefabModel::exitFrame( GameObjectManager* pManager, EditorSelection& selection, bool bSaveToPrefab )
     {
         const PrefabIsolationFrame* pFrame = _isolation.getFrame();
         if ( pManager == nullptr || pFrame == nullptr )
@@ -113,13 +113,13 @@ namespace sw::editor
         if ( bDiscardSpawnedRoot )
         {
             selection.selectObject( pRoot, SelectionMode::Remove );
-            pManager->destroyObject( pRoot );
+            pManager->destroyGameObject( pRoot );
         }
         selection.selectObject( pManager->findGameObjectByID( _isolation.getRootObjectID() ) );
         return PrefabFrameExit::PoppedNested;
     }
 
-    bool PrefabEditorModel::saveFrame( GameObjectManager* pManager )
+    bool PrefabModel::saveFrame( GameObjectManager* pManager )
     {
         const PrefabIsolationFrame* pFrame = _isolation.getFrame();
         GameObject*                 pRoot  = ( pManager != nullptr && pFrame != nullptr ) ? pManager->findGameObjectByID( pFrame->_rootObjectID ) : nullptr;

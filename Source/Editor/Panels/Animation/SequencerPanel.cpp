@@ -45,12 +45,12 @@ namespace sw::editor
      */
     struct ClipSequence : ImSequencer::SequenceInterface
     {
-        SequenceDocument&      _document;
+        SequenceModel&         _document;
         mutable string         _labelScratch;
         uint8                  _bDraftOpened : 1; ///< 이번 `Add` 가 항목 대신 초안을 열었다 — 패널이 위젯의 "끝 항목 고르기" 를 버릴지 본다
         [[maybe_unused]] uint8 _reserved     : 7;
 
-        explicit ClipSequence( SequenceDocument& document )
+        explicit ClipSequence( SequenceModel& document )
             : _document{ document }
             , _labelScratch{}
             , _bDraftOpened{ SW_FALSE }
@@ -454,7 +454,7 @@ namespace sw::editor
         GameObjectManager* pManager = editor::getActiveObjectManager();
         const float32      frame    = static_cast<float32>( _currentFrame );
         float32            arrCurrent[kSequenceTransformChannelCount]{};
-        const bool         bTargetFound = SequenceDocument::readTrackValues( pManager, track, arrCurrent, kSequenceTransformChannelCount );
+        const bool         bTargetFound = SequenceModel::readTrackValues( pManager, track, arrCurrent, kSequenceTransformChannelCount );
 
         drawKeyButtons( track, frame, arrCurrent, bTargetFound );
         drawChannelRows( track, frame, arrCurrent );
@@ -523,10 +523,10 @@ namespace sw::editor
         {
             ImGui::PushID( static_cast<int32>( channelIndex ) );
             const bool bKeyed    = track.findChannelKey( channelIndex, frame ) != constant::invalid_index::kUint32;
-            const bool bRotation = SequenceDocument::isRotationChannel( track, channelIndex );
+            const bool bRotation = SequenceModel::isRotationChannel( track, channelIndex );
             // 키가 없는 채널은 대상의 지금 값을 보인다(트랜스폼 채널만 지금 값이 있다).
             const float32 currentValue = channelIndex < kSequenceTransformChannelCount ? pArrCurrent[channelIndex] : 0.0f;
-            float32       value        = SequenceDocument::computeChannelDisplayValue( track, channelIndex, frame, currentValue );
+            float32       value        = SequenceModel::computeChannelDisplayValue( track, channelIndex, frame, currentValue );
             // 키가 있는 프레임이면 표식을 강조색으로 — 언리얼 Sequencer 채널 줄의 키 마름모에 해당한다.
             ImGui::TextColored( bKeyed ? ImGui::GetStyleColorVec4( ImGuiCol_CheckMark ) : ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ), bKeyed ? "<>" : "--" );
             ImGui::SameLine();
@@ -537,7 +537,7 @@ namespace sw::editor
             const float32 speed = bRotation ? InspectorPropertyLayout::kAngleDragSpeed : 0.05f;
             if ( ImGui::DragFloat( "##value", &value, speed, 0.0f, 0.0f, bRotation ? "%.2f deg" : "%.3f" ) )
             {
-                (void)SequenceDocument::setChannelDisplayValue( track, channelIndex, frame, value );
+                (void)SequenceModel::setChannelDisplayValue( track, channelIndex, frame, value );
                 previewCurrentFrame();
             }
             if ( ImGui::IsItemDeactivatedAfterEdit() )

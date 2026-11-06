@@ -512,9 +512,9 @@ namespace sw::editor
         ImGui::Separator();
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "EdgeWarpPresets" ) );
         const utf8* edges[] = { "N", "E", "S", "W" };
-        for ( int32 edgeIndex = 0; edgeIndex < TileMapDocument::kEdgeCount; ++edgeIndex )
+        for ( int32 edgeIndex = 0; edgeIndex < TileMapModel::kEdgeCount; ++edgeIndex )
         {
-            TileMapDocument::EdgeWarpPreset& preset = _document.editEdgePreset( edgeIndex );
+            TileMapModel::EdgeWarpPreset& preset = _document.editEdgePreset( edgeIndex );
             ImGui::PushID( edgeIndex );
             // 한 줄: 가장자리 이름 · 대상 맵(남은 폭) · 칸 X · 칸 Y(단추 없는 숫자 칸) · 적용 — -/+ 단추가 붙은 숫자 칸 둘이 좁은 칸에서 몇 픽셀로 눌렸다.
             const ImGuiStyle& style       = ImGui::GetStyle();

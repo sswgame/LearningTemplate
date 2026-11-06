@@ -192,7 +192,7 @@ SW_TEST_CASE( VehicleSeatTest, RiderSurvivesTheVehicle )
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
     rig._pVehicleRoot->setLocalPosition( float3{ 2.0f, 0.0f, 0.0f } );
     const GameObjectHandle rider = rig._pRider->getHandle();
-    rig._manager.destroyObject( rig._pVehicle );
+    rig._manager.destroyGameObject( rig._pVehicle );
     rig.tick();
     rig.tick();
     SW_REQUIRE_TRUE( rig._manager.resolveGameObject( rider ) == rig._pRider ); // 탑승자는 탈것의 일부가 아니다
@@ -219,7 +219,7 @@ SW_TEST_CASE( VehicleSeatTest, SeatFreesWhenTheRiderIsGone )
     IntentTrackControllerComponent* pHorseAI = rig._manager.createGameObject( hashed_string( "HorseAI" ) )->addComponent<IntentTrackControllerComponent>();
     pHorseAI->possess( *rig._pVehiclePawn );
     SW_REQUIRE_TRUE( VehicleSeatComponent::mount( *rig._pRiderPawn, *rig._pSeat ) == MountResult::Mounted );
-    rig._manager.destroyObject( rig._pRider );
+    rig._manager.destroyGameObject( rig._pRider );
     rig.tick();
     rig.tick();
     SW_EXPECT_TRUE( rig._pSeat->isFree() );

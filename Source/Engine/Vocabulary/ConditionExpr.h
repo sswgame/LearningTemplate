@@ -22,7 +22,7 @@
 
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/Vocabulary/GameplayContext.h"
-#include "Engine/Vocabulary/ReflectedFields.h"
+#include "Engine/Vocabulary/InstancedStruct.h"
 
 namespace sw
 {
@@ -73,7 +73,7 @@ namespace sw
     struct ConditionEntry
     {
         const utf8*               _pName;
-        const ReflectedStructOps* _pArgsOps;
+        const InstancedStructOps* _pArgsOps;
         ConditionFunction         _function;
     };
 
@@ -192,7 +192,7 @@ namespace sw
  * @param pFunction `float64( const GameplayContext&, const TArgs& )` 함수의 주소(참거짓 반환도 된다)
  */
 #define SW_CONDITION( name, TArgs, pFunction )                                                                                                                 \
-    static const ::sw::ConditionEntry     sw_condition_##name{ #name, &::sw::ReflectedStructOps::of<TArgs>(), &::sw::ConditionThunk<TArgs, pFunction>::call }; \
+    static const ::sw::ConditionEntry     sw_condition_##name{ #name, &::sw::InstancedStructOps::of<TArgs>(), &::sw::ConditionThunk<TArgs, pFunction>::call }; \
     static const ::sw::ConditionRegistrar sw_conditionRegistrar_##name                                                                                         \
     {                                                                                                                                                          \
         &sw_condition_##name                                                                                                                                   \

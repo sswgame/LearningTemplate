@@ -162,7 +162,7 @@ namespace sw
         if ( pCamera == nullptr )
         {
             if ( pCameraObject != nullptr )
-                manager.destroyObject( pCameraObject );
+                manager.destroyGameObject( pCameraObject );
             Internal::setError( pOutError, "the capture camera could not be created" );
             return false;
         }
@@ -189,7 +189,7 @@ namespace sw
             bCaptured                        = captureFace( scene, *pCamera, faceSize, face, pOutError );
         }
         // 카메라를 지우면 직접 고른 카메라가 풀린다(클래스 설명).
-        manager.destroyObject( pCameraObject );
+        manager.destroyGameObject( pCameraObject );
         return bCaptured;
     }
 

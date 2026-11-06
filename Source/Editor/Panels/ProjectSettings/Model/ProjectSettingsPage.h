@@ -7,8 +7,8 @@
 #include "Core/Container/vector.h"
 #include "Core/Memory/Memory.h"
 
-#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsCatalog.h"
 #include "Editor/Panels/ProjectSettings/Model/ProjectSettingsDocument.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsFileList.h"
 
 namespace sw::editor
 {

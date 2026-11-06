@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Vocabulary/ReflectedFields.h"
+#include "Engine/Vocabulary/InstancedStruct.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"
@@ -15,7 +15,7 @@ namespace sw
 {
     namespace
     {
-        struct ReflectedFieldsInternal
+        struct InstancedStructInternal
         {
             /** @brief 원소가 값 글 하나로 읽히는 시퀀스 칸이면 그 시퀀스입니다(`XMLFields` 의 한 줄 목록과 같은 기준). */
             [[nodiscard]] static ISequenceContainerWrapper* findTextList( const PropertyInfo& prop, const SerializeContext& context )
@@ -57,25 +57,25 @@ namespace sw
 
 namespace sw
 {
-    ReflectedFields::ReflectedFields()
+    InstancedStruct::InstancedStruct()
         : _pOps{ nullptr }
         , _pInstance{}
     {
     }
 
-    ReflectedFields::ReflectedFields( const ReflectedStructOps& ops )
+    InstancedStruct::InstancedStruct( const InstancedStructOps& ops )
         : _pOps{ &ops }
         , _pInstance{ ops._pfnCreate() }
     {
     }
 
-    ReflectedFields::ReflectedFields( const ReflectedFields& other )
+    InstancedStruct::InstancedStruct( const InstancedStruct& other )
         : _pOps{ other._pOps }
         , _pInstance{ other._pInstance != nullptr ? other._pOps->_pfnClone( other._pInstance.get() ) : shared_ptr<void>{} }
     {
     }
 
-    ReflectedFields& ReflectedFields::operator=( const ReflectedFields& other )
+    InstancedStruct& InstancedStruct::operator=( const InstancedStruct& other )
     {
         if ( this == &other )
             return *this;
@@ -84,7 +84,7 @@ namespace sw
         return *this;
     }
 
-    const TypeInfo* ReflectedFields::getType() const
+    const TypeInfo* InstancedStruct::getType() const
     {
         return _pOps != nullptr ? _pOps->_pfnGetType() : nullptr;
     }
@@ -92,7 +92,7 @@ namespace sw
 
 namespace sw
 {
-    void ReflectedFieldsText::splitArguments( string_view text, vector<string_view>& outListToken )
+    void InstancedStructText::splitArguments( string_view text, vector<string_view>& outListToken )
     {
         outListToken.clear();
         StringUtil::forEachToken( text, ",", [&]( string_view token )
@@ -103,9 +103,9 @@ namespace sw
         } );
     }
 
-    bool ReflectedFieldsText::read( void* pInstance, const TypeInfo& typeInfo, const vector<string_view>& listToken, string& outError )
+    bool InstancedStructText::read( void* pInstance, const TypeInfo& typeInfo, const vector<string_view>& listToken, string& outError )
     {
-        using Internal                       = ReflectedFieldsInternal;
+        using Internal                       = InstancedStructInternal;
         const SerializeContext& context      = SerializeContext::getDefault( SerializePurpose::Authoring );
         const auto&             listProperty = typeInfo.getPropertiesWithBase();
         vector<uint8>           listWritten( listProperty.size(), uint8{ 0 } );
@@ -171,9 +171,9 @@ namespace sw
         return true;
     }
 
-    string ReflectedFieldsText::write( const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo )
+    string InstancedStructText::write( const void* pInstance, const void* pDefaults, const TypeInfo& typeInfo )
     {
-        using Internal                  = ReflectedFieldsInternal;
+        using Internal                  = InstancedStructInternal;
         const SerializeContext& context = SerializeContext::getDefault( SerializePurpose::Authoring );
         string                  text;
         for ( const PropertyInfo& prop : typeInfo.getPropertiesWithBase() )

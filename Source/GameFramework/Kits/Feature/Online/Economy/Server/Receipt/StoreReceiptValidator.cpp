@@ -188,7 +188,7 @@ namespace sw
         if ( _uniqueSetNotifiedRefund.size() >= StoreReceiptValidatorInternal::kMaxNotifiedRefundCount )
             _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다
         _uniqueSetNotifiedRefund.insert( text );
-        _listRefund.push_back( ReceiptRefundNotice{ getStoreName(), text, refundedMs } );
+        _listRefund.push_back( ReceiptRefundNotification{ getStoreName(), text, refundedMs } );
     }
 
     void StoreReceiptValidator::forgetRefund( string_view transactionID )
@@ -522,9 +522,9 @@ namespace sw
         _listDone.clear();
     }
 
-    void StoreReceiptValidator::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
+    void StoreReceiptValidator::pollRefunds( vector<ReceiptRefundNotification>& outListNotice )
     {
-        for ( ReceiptRefundNotice& notice : _listRefund )
+        for ( ReceiptRefundNotification& notice : _listRefund )
         {
             outListNotice.push_back( std::move( notice ) );
         }

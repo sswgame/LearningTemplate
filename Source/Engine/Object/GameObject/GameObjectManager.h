@@ -534,7 +534,7 @@ namespace sw
          * @param pObj 삭제할 게임 오브젝트
          * @param bDestroyChildren 자식 오브젝트도 함께 지울지 여부
          */
-        void destroyObject( GameObject* pObj, bool bDestroyChildren = true ) { _store.destroyObject( pObj, bDestroyChildren ); }
+        void destroyGameObject( GameObject* pObj, bool bDestroyChildren = true ) { _store.destroyGameObject( pObj, bDestroyChildren ); }
 
         /** @brief Component 를 지연 삭제 큐에 넣습니다. 처리 때 핸들로 다시 찾으므로, 그 사이 다른 경로가 먼저 해제해도 안전합니다. */
         void destroyComponent( Component* pComp ) { _store.destroyComponent( pComp ); }

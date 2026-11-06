@@ -54,7 +54,7 @@ namespace sw::editor
                 (void)context.expect( editor::findSubsystem<IModuleStateStore>() != nullptr, "the host state store is not reachable from the editor module" );
 
                 stack.clear();
-                manager.destroyObject( pObject );
+                manager.destroyGameObject( pObject );
                 return EditorSelfTestStep::Done;
             }
         };

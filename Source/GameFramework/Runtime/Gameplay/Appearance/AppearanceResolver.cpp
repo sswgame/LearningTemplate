@@ -708,12 +708,12 @@ namespace sw
             /** @brief 4 단계입니다. 세트 완성 표현을 요청된 아이템으로 판정합니다. 숨김 정책으로 꺼진 장비는 세지 않습니다. */
             static void applySetCompletion( const AppearanceDatabase& database, const CharacterAppearanceSpec& spec, vector<Entry>& inoutListEntry, ResolvedAppearance& out )
             {
-                for ( const EquipSetDef& set : database.getSets().getSets() )
+                for ( const EquipmentSetDef& set : database.getSets().getSets() )
                 {
                     const ItemVisualDef* pCompleteVisual = set._completeVisual.empty() ? nullptr : database.getVisuals().findVisual( set._completeVisual );
                     if ( pCompleteVisual == nullptr )
                         continue;
-                    const EquipSetProgress progress = database.getSets().computeProgressWith( set, spec._bodyType, [&spec]( const hashed_string& slot )
+                    const EquipmentSetProgress progress = database.getSets().computeProgressWith( set, spec._bodyType, [&spec]( const hashed_string& slot )
                     {
                         const AppearanceSlotRequest* pRequest = spec.findSlot( slot );
                         return pRequest == nullptr || pRequest->_bSuppressed == SW_TRUE ? hashed_string{} : pRequest->_itemID;
@@ -1050,8 +1050,8 @@ namespace sw
         const ItemCatalog* pCatalog = equipment.getCatalog();
         for ( AppearanceSlotRequest& request : inoutSpec._listSlot )
         {
-            const EquipSlot* pEquipSlot = nullptr;
-            for ( const EquipSlot& equipSlot : equipment.getSlots() )
+            const EquipmentSlot* pEquipSlot = nullptr;
+            for ( const EquipmentSlot& equipSlot : equipment.getSlots() )
             {
                 if ( equipSlot._name == request._slot )
                     pEquipSlot = &equipSlot;

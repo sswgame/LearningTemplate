@@ -1,7 +1,7 @@
 /**
  * @file SpriteClipModel.h
  * @brief 스프라이트 클립 창의 모델 — 아틀라스 경로, 프레임 · 변형 키 · 애니메이션 구간 목록과 고른 항목, 아틀라스 셀 나누기, 읽기 · 쓰기 · 되돌리기 글, 상태 줄. ImGui 를 모릅니다.
- * @details 패널(`SpriteClipPanel`)은 그리기 · 아틀라스 썸네일 · 입력 읽기만 하고 문서 dirty · 되돌리기 기록을 남긴다 — 타일맵 페인터(`TileMapDocument`)와 같은 선이다
+ * @details 패널(`SpriteClipPanel`)은 그리기 · 아틀라스 썸네일 · 입력 읽기만 하고 문서 dirty · 되돌리기 기록을 남긴다 — 타일맵 페인터(`TileMapModel`)와 같은 선이다
  *          (유니티 Sprite Editor 의 데이터 제공자와 창이 나뉜 것과 같다). 편집한 명령은 true 를 반환한다.
  */
 #pragma once

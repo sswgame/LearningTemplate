@@ -140,7 +140,7 @@ namespace sw::editor
             return;
         }
         vector<ProjectSettingsEntry> listEntry;
-        ProjectSettingsCatalog::collectLoaded( *pConfigManager, ProcessRoots::get()._project.str(), listEntry );
+        ProjectSettingsFileList::collectLoaded( *pConfigManager, ProcessRoots::get()._project.str(), listEntry );
         for ( ProjectSettingsEntry& entry : listEntry )
         {
             unique_ptr<Page> pPage = make_unique<Page>();

@@ -1,5 +1,5 @@
 /**
- * @file ProjectSettingsCatalog.h
+ * @file ProjectSettingsFileList.h
  * @brief 프로젝트 설정 창이 고칠 수 있는 설정 파일의 목록입니다. 설정 테이블(`ConfigManager`)이 파일에서 읽은 설정에서 만듭니다(ImGui 없음).
  */
 #pragma once
@@ -28,12 +28,12 @@ namespace sw::editor
 namespace sw::editor
 {
     /**
-     * @struct ProjectSettingsCatalog
+     * @struct ProjectSettingsFileList
      * @brief 설정 테이블이 파일에서 읽은 설정 가운데 창이 고칠 수 있는 JSON 설정 파일을 고릅니다.
      * @details 언리얼 Project Settings · 유니티 Project Settings 가 설정 종류마다 페이지를 두는 것과 같습니다. 목록은 로드된 설정이 곧 정본이다 —
      *          생성 문서를 따로 두면 생성기가 사라지거나 늦을 때 창이 빈다(옛 `ConfigReference.json` 이 그랬다).
      */
-    struct ProjectSettingsCatalog
+    struct ProjectSettingsFileList
     {
         /**
          * @brief @p configManager 가 파일에서 읽은 설정 중 고칠 수 있는 것을 모읍니다(먼저 비운다). 순서는 페이지 이름 사전순입니다.

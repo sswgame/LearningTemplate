@@ -48,7 +48,7 @@ namespace sw
     /** @brief 계정 키트의 서버 버스 주제입니다. 내보내는 클래스의 정적 멤버로 두지 않습니다(지연 로드 모듈은 데이터를 가져올 수 없습니다). */
     struct AccountBus
     {
-        static constexpr ServerBusTopic<AccountRevokeNotice> kRevokeTopic{ "account.revoke" }; ///< 다른 서버에서 끊긴 세션이다
+        static constexpr ServerBusTopic<AccountRevoked> kRevokeTopic{ "account.revoke" }; ///< 다른 서버에서 끊긴 세션이다
     };
 } // namespace sw
 

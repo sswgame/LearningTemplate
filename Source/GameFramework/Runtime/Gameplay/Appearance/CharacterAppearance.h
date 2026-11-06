@@ -20,7 +20,7 @@
 namespace sw
 {
     class CustomizationSchemaCatalog;
-    class EquipSetCatalog;
+    class EquipmentSetCatalog;
     class SlotTable;
     class XMLNode;
 
@@ -141,7 +141,7 @@ namespace sw
          * @brief 프리셋을 펼칩니다. 후보를 @p seed 로 뽑고(키마다 따로 섞으므로 매개변수를 하나 더해도 다른 값이 바뀌지 않음), 세트를 슬롯에 풀고,
          *        슬롯별 장비를 덮어씁니다. 레이어마다 세트, 슬롯 순서로 처리하므로 아래 레이어의 세트가 위 레이어의 슬롯을 덮습니다. 결정적이어서 같은 데이터와 같은 시드이면 같은 결과가 나옵니다.
          */
-        [[nodiscard]] bool expand( const hashed_string& id, uint32 seed, const SlotTable& slotTable, const EquipSetCatalog& sets, const CustomizationSchemaCatalog& schemas,
+        [[nodiscard]] bool expand( const hashed_string& id, uint32 seed, const SlotTable& slotTable, const EquipmentSetCatalog& sets, const CustomizationSchemaCatalog& schemas,
                                    CharacterAppearanceSpec& outSpec ) const;
 
         /** @brief 시드와 키로 [0, count) 에서 하나를 뽑습니다. */

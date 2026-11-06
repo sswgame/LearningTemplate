@@ -210,7 +210,7 @@ namespace sw
         ++_revision;
         if ( StringUtil::equals( pName, "SlotTable" ) )
             return _slotTable.loadFromNode( root, _report, sourceName );
-        if ( StringUtil::equals( pName, "EquipSetCatalog" ) )
+        if ( StringUtil::equals( pName, "EquipmentSetCatalog" ) )
             return _sets.loadFromNode( root, _report, sourceName );
         if ( StringUtil::equals( pName, "ItemVisualCatalog" ) )
             return _visuals.loadFromNode( root, _report, sourceName );
@@ -301,15 +301,15 @@ namespace sw
         {
             if ( item._visualID.empty() == false && _visuals.findVisual( item._visualID ) == nullptr )
                 _report.addErrorWithID( "Appearance.VisualUnknown", "item '%#' names unknown visual '%#'", item._id.c_str(), item._visualID.c_str() );
-            for ( const EquipCondition& condition : item._listEquipCondition )
+            for ( const EquipmentCondition& condition : item._listEquipCondition )
             {
-                const bool bSetCondition = condition._kind == EquipConditionKind::SetComplete || condition._kind == EquipConditionKind::SetPieces;
+                const bool bSetCondition = condition._kind == EquipmentConditionKind::SetComplete || condition._kind == EquipmentConditionKind::SetPieces;
                 if ( bSetCondition && _sets.hasSet( condition._setID ) == false )
                     _report.addErrorWithID( "Appearance.SetUnknown", "item '%#' requires unknown set '%#'", item._id.c_str(), condition._setID.c_str() );
             }
         }
         vector<hashed_string> listCycle;
-        if ( EquipCondition::findConditionCycle( *_pItemCatalog, &_sets, listCycle ) )
+        if ( EquipmentCondition::findConditionCycle( *_pItemCatalog, &_sets, listCycle ) )
         {
             string chain;
             for ( const hashed_string& itemID : listCycle )
@@ -318,7 +318,7 @@ namespace sw
                     chain += " -> ";
                 chain += itemID.c_str();
             }
-            _report.addErrorWithID( "Appearance.EquipConditionCycle", "equip conditions form a cycle: %#", chain );
+            _report.addErrorWithID( "Appearance.EquipmentConditionCycle", "equip conditions form a cycle: %#", chain );
         }
         // 공유 코드와 네트워크는 아이템, 외형, 프리셋 id 를 32 비트 해시로 싣는다.
         const vector<ItemDef>& listItem = _pItemCatalog->getAll();
@@ -334,9 +334,9 @@ namespace sw
 
     void AppearanceDatabase::validateSets()
     {
-        for ( const EquipSetDef& set : _sets.getSets() )
+        for ( const EquipmentSetDef& set : _sets.getSets() )
         {
-            for ( const EquipSetPieceDef& piece : set._listPiece )
+            for ( const EquipmentSetPieceDef& piece : set._listPiece )
             {
                 if ( _slotTable.hasSlot( piece._slot ) == false )
                     _report.addErrorWithID( "Appearance.SlotUnknown", "set '%#' names unknown slot '%#'", set._id.c_str(), piece._slot.c_str() );

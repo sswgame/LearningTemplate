@@ -274,7 +274,7 @@ namespace sw
                 if ( pChunk == nullptr || pMesh == nullptr )
                 {
                     if ( pObject != nullptr )
-                        manager.destroyObject( pObject );
+                        manager.destroyGameObject( pObject );
                     continue;
                 }
                 pMesh->setLocalPosition( float3{ static_cast<float32>( chunkX * kVoxelChunkSize ), 0.0f, static_cast<float32>( chunkZ * kVoxelChunkSize ) } );

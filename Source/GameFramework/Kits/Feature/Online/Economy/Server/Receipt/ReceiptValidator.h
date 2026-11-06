@@ -89,7 +89,7 @@ namespace sw
 namespace sw
 {
     /** @brief 스토어가 알린 환불이나 결제 취소 하나입니다. */
-    struct ReceiptRefundNotice
+    struct ReceiptRefundNotification
     {
         string _storeName{};
         string _transactionID{}; ///< 지급 때의 거래 id 와 같다
@@ -155,7 +155,7 @@ namespace sw
         /** @brief 끝난 결과를 @p outListResult 뒤에 붙입니다. 진행은 하지 않습니다(`update`). */
         virtual void pollCompletions( vector<ReceiptValidationResult>& outListResult ) = 0;
         /** @brief 받은 환불 알림을 @p outListNotice 뒤에 붙입니다. 제공자마다 알림을 받는 길(웹훅, 구독, 보고 조회)이 다르므로 기본 구현을 두지 않습니다. */
-        virtual void pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) = 0;
+        virtual void pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) = 0;
         /** @brief 회수를 끝내지 못한 환불을 잊습니다 — 겹친 조회가 다시 알리게 한다. 다시 알릴 길이 없는 제공자는 할 일이 없습니다. */
         virtual void forgetRefund( string_view transactionID ) { (void)transactionID; }
         /** @brief 환불 조회 구간을 저장소에 남겨야 하는 제공자이면 true 입니다. 서비스가 기동 때 읽어 `restoreRefundCursor` 로 넘기고, 옮겨지면 `takeRefundCursor` 로 받아 씁니다. */
@@ -203,9 +203,9 @@ namespace sw
         /** @brief 모든 제공자를 서버 루프의 시각 @p now 로 진행합니다. */
         void update( UnixMilliseconds now );
         void pollCompletions( vector<ReceiptValidationResult>& outListResult );
-        void pollRefunds( vector<ReceiptRefundNotice>& outListNotice );
+        void pollRefunds( vector<ReceiptRefundNotification>& outListNotice );
         /** @brief 회수를 끝내지 못한 환불을 그 제공자에서 잊습니다(겹친 조회가 다시 알린다). */
-        void forgetRefund( const ReceiptRefundNotice& notice );
+        void forgetRefund( const ReceiptRefundNotification& notice );
         /** @brief 지급 뒤 스토어에 알려야 하는 제공자가 하나라도 있으면 true 입니다. */
         bool usesDeliveryConfirmation() const;
         /** @brief 그 스토어의 제공자에 지급 알림을 맡깁니다. 모르는 스토어이면 false 입니다. */

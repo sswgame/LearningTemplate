@@ -176,7 +176,7 @@ namespace sw::editor
         {
             GameObject* pObject = pManager != nullptr ? pManager->resolveGameObject( slot._object ) : nullptr;
             if ( pObject != nullptr )
-                pManager->destroyObject( pObject );
+                pManager->destroyGameObject( pObject );
             slot._object = GameObjectHandle{};
             slot._spawnedPath.clear();
         }
@@ -427,7 +427,7 @@ namespace sw::editor
         if ( pExisting != nullptr && slot._spawnedPath == prefabPath )
             return;
         if ( pExisting != nullptr )
-            manager.destroyObject( pExisting );
+            manager.destroyGameObject( pExisting );
         slot._object = GameObjectHandle{};
         slot._spawnedPath.clear();
         slot._clipSeconds = 0.0f;

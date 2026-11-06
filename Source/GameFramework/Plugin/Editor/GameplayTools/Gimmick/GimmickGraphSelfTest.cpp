@@ -41,7 +41,7 @@ namespace sw::editor
             /** @brief 모델이 확장 이미지 안에서 노드 · 배선을 만들고 내보내는지 확인합니다. 기본 노드 종류 레지스트리가 확장에서도 보여야 합니다. */
             static EditorSelfTestStep runModelBuildsACircuit( EditorSelfTestContext& context )
             {
-                GimmickGraphModel model( game::getSubsystem<GimmickNodeKindCatalog>().getRegistry() );
+                GimmickGraphModel model( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
                 const int32       plate = model.addNode( hashed_string( "Signal" ) );
                 const int32       door  = model.addNode( hashed_string( "Door" ) );
                 context.expect( plate != GimmickGraphModel::kNoGraphID && door != GimmickGraphModel::kNoGraphID, "the default node registry has no Signal or Door" );
@@ -67,7 +67,7 @@ namespace sw::editor
                 vector<GraphCommentBox>  listComment;
                 model.exportTo( listNode, listTarget, listWire, listComment );
                 const uint64      signature = model.computeSignature();
-                GimmickGraphModel reloaded( game::getSubsystem<GimmickNodeKindCatalog>().getRegistry() );
+                GimmickGraphModel reloaded( game::getSubsystem<GimmickNodeRegistrySubsystem>().getRegistry() );
                 reloaded.populate( listNode, listTarget, listWire, listComment );
                 const bool bKept = reloaded.getNodes()[0]._position == float2{ 123.0f, -45.0f } && reloaded.getMutableComments().size() == 1 && reloaded.computeSignature() == signature;
                 context.expect( bKept, "node positions or comment boxes did not survive a component round trip" );

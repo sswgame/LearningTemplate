@@ -436,7 +436,7 @@ namespace sw
         {
             SW_LOG_WARNING_ID( "ArenaGameMode.PrefabNeedsMeshAbility", "[Arena] prefab '%#' needs a mesh, an ability system, a pawn and an arena unit", prefabPath.c_str() );
             if ( pObject != nullptr )
-                manager.destroyObject( pObject );
+                manager.destroyGameObject( pObject );
             return false;
         }
 
@@ -445,7 +445,7 @@ namespace sw
         if ( pAbilitySystem->grantAbilitySet( setID ) == false )
         {
             SW_LOG_WARNING_ID( "ArenaGameMode.AbilitySetMissingAbilities", "[Arena] ability set '%#' is missing - is abilities.xml loaded?", setID.c_str() );
-            manager.destroyObject( pObject );
+            manager.destroyGameObject( pObject );
             return false;
         }
         // 웨이브가 오르면 적의 체력과 공격력이 오른다(이펙트의 perLevel 이 붙은 값만 커진다).
@@ -457,7 +457,7 @@ namespace sw
             if ( maxHealth.has_value() == false || attackPower.has_value() == false )
             {
                 SW_LOG_ERROR_ID( "ArenaGameMode.AbilitySetGivesNo", "[Arena] ability set '%#' gives no MaxHealth / AttackPower - the unit is not spawned", setID.c_str() );
-                manager.destroyObject( pObject );
+                manager.destroyGameObject( pObject );
                 return false;
             }
             (void)pAbilitySystem->setAttributeBaseValue( CombatAttributes::maxHealth(), *maxHealth * levelScale );
@@ -488,7 +488,7 @@ namespace sw
         {
             SW_LOG_WARNING_ID( "ArenaGameMode.AIPrefabNoAI", "[Arena] AI prefab '%#' has no AI controller - the enemy stands still", prefabPath.c_str() );
             if ( pObject != nullptr )
-                manager.destroyObject( pObject );
+                manager.destroyGameObject( pObject );
             return GameObjectHandle{};
         }
         pAI->possess( pawn );
@@ -534,7 +534,7 @@ namespace sw
         if ( pProjectile == nullptr )
         {
             if ( pObject != nullptr )
-                pManager->destroyObject( pObject );
+                pManager->destroyGameObject( pObject );
             return;
         }
         MeshComponent* pMesh = pObject->getComponent<MeshComponent>();
@@ -595,7 +595,7 @@ namespace sw
                 if ( unit._deathTimer <= 0.0f )
                 {
                     destroySpawned( *pManager, unit._controller );
-                    pManager->destroyObject( pObject );
+                    pManager->destroyGameObject( pObject );
                     _listUnit.erase( _listUnit.begin() + static_cast<ptrdiff_t>( unitIndex - 1 ) );
                     continue;
                 }

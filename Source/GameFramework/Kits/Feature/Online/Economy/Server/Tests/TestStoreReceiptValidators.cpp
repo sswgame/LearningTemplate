@@ -186,9 +186,9 @@ namespace
             return listOutcome[0]._status;
         }
 
-        vector<ReceiptRefundNotice> takeRefunds()
+        vector<ReceiptRefundNotification> takeRefunds()
         {
-            vector<ReceiptRefundNotice> listNotice;
+            vector<ReceiptRefundNotification> listNotice;
             _pValidator->pollRefunds( listNotice );
             return listNotice;
         }
@@ -270,9 +270,9 @@ namespace
 
         ReceiptValidationResult validate( string_view payload = "1234" ) { return StoreTestUtil::validate( *this, "apple", payload ); }
 
-        vector<ReceiptRefundNotice> takeRefunds()
+        vector<ReceiptRefundNotification> takeRefunds()
         {
-            vector<ReceiptRefundNotice> listNotice;
+            vector<ReceiptRefundNotification> listNotice;
             _pValidator->pollRefunds( listNotice );
             return listNotice;
         }
@@ -683,7 +683,7 @@ SW_TEST_CASE( GoogleReceiptValidatorTest, VoidedFollowsPagesThenMovesTheWindow )
     rig._listVoidedBody.push_back( R"({"tokenPagination":{"nextPageToken":"P2"},"voidedPurchases":[{"orderId":"A","voidedTimeMillis":"1700000000000"},{"voidedTimeMillis":"1"}]})" );
     rig._listVoidedBody.push_back( R"({"voidedPurchases":[{"orderId":"B"},{"orderId":"A"}]})" );
     rig.pump();
-    const vector<ReceiptRefundNotice> listNotice = rig.takeRefunds();
+    const vector<ReceiptRefundNotification> listNotice = rig.takeRefunds();
     SW_REQUIRE_EQUAL( size_t( 2 ), listNotice.size() );
     SW_EXPECT_EQUAL( string( "A" ), listNotice[0]._transactionID );
     SW_EXPECT_EQUAL( kNowMs, listNotice[0]._refundedMs );
@@ -817,7 +817,7 @@ SW_TEST_CASE( AppleReceiptValidatorTest, RefundHistoryFilters )
     rig._listHistoryBody.push_back( Body::makeHistory( Body::makeRefundItem( "1" ) + "," + Body::makeRefundItem( "2", "Sandbox" ) + "," + Body::makeRefundItem( "3", "Production", "com.other" ) + "," +
                                                        Body::makeRefundItem( "4", "Production", kBundle, "com.other" ) + "," + Body::makeRefundItem( "x5" ) + "," + Body::makeRefundItem( "1" ) ) );
     rig.pump();
-    const vector<ReceiptRefundNotice> listNotice = rig.takeRefunds();
+    const vector<ReceiptRefundNotification> listNotice = rig.takeRefunds();
     SW_REQUIRE_EQUAL( size_t( 1 ), listNotice.size() );
     SW_EXPECT_EQUAL( string( "apple" ), listNotice[0]._storeName );
     SW_EXPECT_EQUAL( string( "1" ), listNotice[0]._transactionID );

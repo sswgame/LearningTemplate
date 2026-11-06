@@ -17,7 +17,7 @@
 #include "GameFramework/Runtime/Gameplay/Appearance/AppearanceTypes.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CharacterAppearance.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/CustomizationSchema.h"
-#include "GameFramework/Runtime/Gameplay/Appearance/EquipSetCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/ItemVisual.h"
 #include "GameFramework/Runtime/Gameplay/Appearance/SlotTable.h"
 
@@ -29,7 +29,7 @@ namespace sw
     /**
      * @class AppearanceDatabase
      * @brief 외형 데이터 폴더 하나(`<게임>/data/appearance/`)를 읽습니다. 파일 하나가 한 종류이고, 루트 원소 이름으로 종류를 구분합니다.
-     * @details 파일은 다음과 같다. `slots.xml`(`SlotTable`, 반드시 필요), `sets.xml`(`EquipSetCatalog`), `itemvisuals.xml`(`ItemVisualCatalog`),
+     * @details 파일은 다음과 같다. `slots.xml`(`SlotTable`, 반드시 필요), `sets.xml`(`EquipmentSetCatalog`), `itemvisuals.xml`(`ItemVisualCatalog`),
      *          `customization.xml`(`CustomizationSchemaCatalog`), `rules.xml`(`AppearanceRuleTable`), `presets.xml`(`CharacterAppearanceCatalog`).
      *          프리셋은 에셋 파일 하나에 하나씩도 둘 수 있다. `presets/` 아래의 `*.appearance.xml`(루트 `<CharacterAppearance>`)을 `presets.xml` 뒤에 읽는다.
      *          캐릭터 편집 창이 내보내는 곳이고(언리얼과 유니티의 프리셋 에셋에 해당), 씬의 `CharacterAppearanceComponent` 는 그 id 를 가리킨다.
@@ -76,7 +76,7 @@ namespace sw
         [[nodiscard]] Subscription registerReloaded( const Delegate<void()>& delegate );
 
         const SlotTable&                  getSlotTable() const { return _slotTable; }
-        const EquipSetCatalog&            getSets() const { return _sets; }
+        const EquipmentSetCatalog&        getSets() const { return _sets; }
         const ItemVisualCatalog&          getVisuals() const { return _visuals; }
         const CustomizationSchemaCatalog& getSchemas() const { return _schemas; }
         const AppearanceRuleTable&        getRules() const { return _rules; }
@@ -117,7 +117,7 @@ namespace sw
 
     private:
         SlotTable                  _slotTable;
-        EquipSetCatalog            _sets;
+        EquipmentSetCatalog        _sets;
         ItemVisualCatalog          _visuals;
         CustomizationSchemaCatalog _schemas;
         AppearanceRuleTable        _rules;

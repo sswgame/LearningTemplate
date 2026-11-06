@@ -8,7 +8,7 @@
 #include "Editor/Common/GUI/Panel/EditorDocumentPanel.h"
 #include "Editor/Common/Widgets/EditorCurveEditor.h"
 #include "Editor/Panels/Animation/Model/SequenceClipTiming.h"
-#include "Editor/Panels/Animation/Model/SequenceDocument.h"
+#include "Editor/Panels/Animation/Model/SequenceModel.h"
 
 #include "Engine/Sequencer/SequenceAsset.h"
 
@@ -80,7 +80,7 @@ namespace sw::editor
 
     private:
         string                         _cinematicNote;
-        SequenceDocument               _document; ///< 애셋 · 고른 번호(`_sequence` 가 참조하므로 먼저 선언한다)
+        SequenceModel                  _document; ///< 애셋 · 고른 번호(`_sequence` 가 참조하므로 먼저 선언한다)
         unique_ptr<ClipSequence>       _sequence;
         unique_ptr<sw::SequencePlayer> _previewPlayer;
         vector<SequenceClipTiming>     _listTimingBefore; ///< 타임라인 위젯을 부르기 전 배치(멤버라 프레임마다 할당하지 않는다)

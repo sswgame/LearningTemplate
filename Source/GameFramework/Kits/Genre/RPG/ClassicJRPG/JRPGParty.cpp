@@ -294,9 +294,9 @@ namespace sw
                 outArchive << progress._proficiency;
             }
             // 장비는 슬롯 순서대로 아이템 id 만 쓴다(빈 슬롯은 빈 이름). 슬롯 구성은 `initialize` 에서 받은 것이다.
-            const vector<EquipSlot>& listSlot = member._equipment.getSlots();
+            const vector<EquipmentSlot>& listSlot = member._equipment.getSlots();
             outArchive << static_cast<uint32>( listSlot.size() );
-            for ( const EquipSlot& slot : listSlot )
+            for ( const EquipmentSlot& slot : listSlot )
             {
                 StateArchiveUtil::writeName( outArchive, slot._item.isEmpty() ? hashed_string{} : slot._item._itemID );
             }

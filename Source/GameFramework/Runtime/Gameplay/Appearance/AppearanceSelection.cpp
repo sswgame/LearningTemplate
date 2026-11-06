@@ -85,9 +85,9 @@ namespace sw
                         addName( outListName, name );
                     }
                 }
-                for ( const EquipSetDef& set : database.getSets().getSets() )
+                for ( const EquipmentSetDef& set : database.getSets().getSets() )
                 {
-                    for ( const EquipSetVariantDef& variant : set._listVariant )
+                    for ( const EquipmentSetVariantDef& variant : set._listVariant )
                     {
                         addName( outListName, variant._bodyType );
                     }

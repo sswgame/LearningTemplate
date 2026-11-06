@@ -12,7 +12,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Vocabulary/ReflectedFields.h"
+#include "Engine/Vocabulary/InstancedStruct.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"
@@ -142,8 +142,8 @@ namespace sw
     {
         string                   _inheritID{}; ///< 파일의 `id`. `_base` 트리에서 이 노드를 짚는 열쇠(`InheritKey`)
         string                   _name{};      ///< 표시 이름. 비면 종류 이름이다
-        ReflectedFields          _fields{};
-        ReflectedFields          _actionParams{};
+        InstancedStruct          _fields{};
+        InstancedStruct          _actionParams{};
         vector<BehaviorRawParam> _listRawParam{};
         BehaviorNodeKind         _type{ BehaviorNodeKind::Sequence };
     };

@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Runtime/Gameplay/Appearance/EquipSetCatalog.h"
+#include "GameFramework/Runtime/Gameplay/Appearance/EquipmentSetCatalog.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
@@ -15,10 +15,10 @@ namespace sw
 {
     namespace
     {
-        struct EquipSetCatalogInternal
+        struct EquipmentSetCatalogInternal
         {
 
-            [[nodiscard]] static bool readPiece( const XMLNode& node, EquipSetPieceDef& outPiece, AppearanceLoadReport& report, string_view sourceName, const hashed_string& setID )
+            [[nodiscard]] static bool readPiece( const XMLNode& node, EquipmentSetPieceDef& outPiece, AppearanceLoadReport& report, string_view sourceName, const hashed_string& setID )
             {
                 (void)AppearanceXMLUtil::readFields( node, outPiece, report, sourceName, { "items" } ); // 오류는 보고서에 쌓인다
                 AppearanceXMLUtil::readNameList( node, "items", outPiece._listItem );
@@ -30,9 +30,9 @@ namespace sw
                 return true;
             }
 
-            static bool hasPieceSlot( const vector<EquipSetPieceDef>& listPiece, const hashed_string& slot )
+            static bool hasPieceSlot( const vector<EquipmentSetPieceDef>& listPiece, const hashed_string& slot )
             {
-                return VectorUtil::containsBy<&EquipSetPieceDef::_slot>( listPiece, slot );
+                return VectorUtil::containsBy<&EquipmentSetPieceDef::_slot>( listPiece, slot );
             }
         };
     } // namespace
@@ -40,7 +40,7 @@ namespace sw
 
 namespace sw
 {
-    bool EquipSetCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
+    bool EquipmentSetCatalog::loadFromNode( const XMLNode& root, AppearanceLoadReport& report, string_view sourceName )
     {
         clear();
         const size_t errorCountBefore = report.getErrors().size();
@@ -52,7 +52,7 @@ namespace sw
                 AppearanceXMLUtil::reportUnknownChild( root, setNode, report, sourceName );
                 continue;
             }
-            EquipSetDef def;
+            EquipmentSetDef def;
             (void)AppearanceXMLUtil::readFields( setNode, def, report, sourceName );
             if ( def._id.empty() )
                 continue; // 빠진 id 는 위 읽기가 보고서에 남겼다
@@ -66,33 +66,33 @@ namespace sw
                 const utf8* pName = child.getName();
                 if ( StringUtil::equals( pName, "Piece" ) )
                 {
-                    EquipSetPieceDef piece;
-                    if ( EquipSetCatalogInternal::readPiece( child, piece, report, sourceName, def._id ) == false )
+                    EquipmentSetPieceDef piece;
+                    if ( EquipmentSetCatalogInternal::readPiece( child, piece, report, sourceName, def._id ) == false )
                         continue;
-                    if ( EquipSetCatalogInternal::hasPieceSlot( def._listPiece, piece._slot ) )
+                    if ( EquipmentSetCatalogInternal::hasPieceSlot( def._listPiece, piece._slot ) )
                         report.addErrorWithID( "Appearance.SetPieceRepeated", "%#: set '%#' has two pieces for slot '%#'", sourceName, def._id.c_str(), piece._slot.c_str() );
                     else
                         def._listPiece.push_back( piece );
                 }
                 else if ( StringUtil::equals( pName, "Variant" ) )
                 {
-                    EquipSetVariantDef variant;
+                    EquipmentSetVariantDef variant;
                     (void)AppearanceXMLUtil::readFields( child, variant, report, sourceName );
                     if ( variant._bodyType.empty() )
                         report.addErrorWithID( "Appearance.SetVariantNoBodyType", "%#: set '%#' <Variant> without a bodyType", sourceName, def._id.c_str() );
                     for ( XMLNode pieceNode = child.findChild(); pieceNode; pieceNode = pieceNode.findNextSibling() )
                     {
-                        EquipSetPieceDef piece;
+                        EquipmentSetPieceDef piece;
                         if ( StringUtil::equals( pieceNode.getName(), "Piece" ) == false )
                             AppearanceXMLUtil::reportUnknownChild( child, pieceNode, report, sourceName );
-                        else if ( EquipSetCatalogInternal::readPiece( pieceNode, piece, report, sourceName, def._id ) )
+                        else if ( EquipmentSetCatalogInternal::readPiece( pieceNode, piece, report, sourceName, def._id ) )
                             variant._listPiece.push_back( piece );
                     }
                     def._listVariant.push_back( variant );
                 }
                 else if ( StringUtil::equals( pName, "Complete" ) )
                 {
-                    EquipSetCompleteFields complete;
+                    EquipmentSetCompleteFields complete;
                     (void)AppearanceXMLUtil::readFields( child, complete, report, sourceName, { "slots" } );
                     def._completeVisual = complete._visual;
                     AppearanceXMLUtil::readNameList( child, "slots", def._listCompleteSlot );
@@ -106,17 +106,17 @@ namespace sw
             }
             if ( def._listPiece.empty() )
                 report.addErrorWithID( "Appearance.SetNoPiece", "%#: set '%#' has no <Piece>", sourceName, def._id.c_str() );
-            for ( const EquipSetVariantDef& variant : def._listVariant )
+            for ( const EquipmentSetVariantDef& variant : def._listVariant )
             {
-                for ( const EquipSetPieceDef& piece : variant._listPiece )
+                for ( const EquipmentSetPieceDef& piece : variant._listPiece )
                 {
-                    if ( EquipSetCatalogInternal::hasPieceSlot( def._listPiece, piece._slot ) == false )
+                    if ( EquipmentSetCatalogInternal::hasPieceSlot( def._listPiece, piece._slot ) == false )
                         report.addErrorWithID( "Appearance.SetVariantSlotUnknown", "%#: set '%#' variant '%#' replaces slot '%#' the set has no piece for", sourceName, def._id.c_str(), variant._bodyType.c_str(), piece._slot.c_str() );
                 }
             }
             for ( const hashed_string& slot : def._listCompleteSlot )
             {
-                if ( EquipSetCatalogInternal::hasPieceSlot( def._listPiece, slot ) == false )
+                if ( EquipmentSetCatalogInternal::hasPieceSlot( def._listPiece, slot ) == false )
                     report.addErrorWithID( "Appearance.SetCompleteSlotUnknown", "%#: set '%#' <Complete> names slot '%#' the set has no piece for", sourceName, def._id.c_str(), slot.c_str() );
             }
             _listSet.push_back( def );
@@ -124,23 +124,23 @@ namespace sw
         return report.getErrors().size() == errorCountBefore;
     }
 
-    const EquipSetDef* EquipSetCatalog::findSet( const hashed_string& id ) const
+    const EquipmentSetDef* EquipmentSetCatalog::findSet( const hashed_string& id ) const
     {
-        return VectorUtil::findBy<&EquipSetDef::_id>( _listSet, id );
+        return VectorUtil::findBy<&EquipmentSetDef::_id>( _listSet, id );
     }
 
-    void EquipSetCatalog::computePieces( const EquipSetDef& def, const hashed_string& bodyType, vector<EquipSetPieceDef>& outListPiece ) const
+    void EquipmentSetCatalog::computePieces( const EquipmentSetDef& def, const hashed_string& bodyType, vector<EquipmentSetPieceDef>& outListPiece ) const
     {
         outListPiece = def._listPiece;
         if ( bodyType.empty() )
             return;
-        for ( const EquipSetVariantDef& variant : def._listVariant )
+        for ( const EquipmentSetVariantDef& variant : def._listVariant )
         {
             if ( variant._bodyType != bodyType )
                 continue;
-            for ( const EquipSetPieceDef& replacement : variant._listPiece )
+            for ( const EquipmentSetPieceDef& replacement : variant._listPiece )
             {
-                for ( EquipSetPieceDef& piece : outListPiece )
+                for ( EquipmentSetPieceDef& piece : outListPiece )
                 {
                     if ( piece._slot == replacement._slot )
                         piece._listItem = replacement._listItem;
@@ -149,14 +149,14 @@ namespace sw
         }
     }
 
-    EquipSetProgress EquipSetCatalog::computeProgress( const hashed_string& setID, const vector<EquipSlot>& listSlot, const hashed_string& bodyType ) const
+    EquipmentSetProgress EquipmentSetCatalog::computeProgress( const hashed_string& setID, const vector<EquipmentSlot>& listSlot, const hashed_string& bodyType ) const
     {
-        const EquipSetDef* pDef = findSet( setID );
+        const EquipmentSetDef* pDef = findSet( setID );
         if ( pDef == nullptr )
-            return EquipSetProgress{};
+            return EquipmentSetProgress{};
         return computeProgressWith( *pDef, bodyType, [&]( const hashed_string& slot )
         {
-            for ( const EquipSlot& equipSlot : listSlot )
+            for ( const EquipmentSlot& equipSlot : listSlot )
             {
                 if ( equipSlot._name == slot )
                     return equipSlot._item.isEmpty() || equipSlot._bSuppressed == SW_TRUE ? hashed_string{} : equipSlot._item._itemID;
@@ -165,18 +165,18 @@ namespace sw
         } );
     }
 
-    void EquipSetCatalog::collectSetItems( const hashed_string& setID, vector<hashed_string>& outListItemID ) const
+    void EquipmentSetCatalog::collectSetItems( const hashed_string& setID, vector<hashed_string>& outListItemID ) const
     {
-        const EquipSetDef* pDef = findSet( setID );
+        const EquipmentSetDef* pDef = findSet( setID );
         if ( pDef == nullptr )
             return;
-        for ( const EquipSetPieceDef& piece : pDef->_listPiece )
+        for ( const EquipmentSetPieceDef& piece : pDef->_listPiece )
         {
             outListItemID.insert( outListItemID.end(), piece._listItem.begin(), piece._listItem.end() );
         }
-        for ( const EquipSetVariantDef& variant : pDef->_listVariant )
+        for ( const EquipmentSetVariantDef& variant : pDef->_listVariant )
         {
-            for ( const EquipSetPieceDef& piece : variant._listPiece )
+            for ( const EquipmentSetPieceDef& piece : variant._listPiece )
             {
                 outListItemID.insert( outListItemID.end(), piece._listItem.begin(), piece._listItem.end() );
             }

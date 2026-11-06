@@ -46,9 +46,9 @@ namespace
         return window;
     }
 
-    ServiceNotice makeNotice( uint64 noticeID = 1, int64 startMs = kNowMs - 1, int64 endMs = kNowMs + 1000, int32 priority = 0 )
+    ServiceAnnouncement makeNotice( uint64 noticeID = 1, int64 startMs = kNowMs - 1, int64 endMs = kNowMs + 1000, int32 priority = 0 )
     {
-        ServiceNotice notice;
+        ServiceAnnouncement notice;
         notice._text     = "notice.key";
         notice._noticeID = noticeID;
         notice._startMs  = startMs;
@@ -156,7 +156,7 @@ namespace
             return finishOne();
         }
 
-        ServerDirectoryResult postNotice( const ServiceNotice& notice )
+        ServerDirectoryResult postNotice( const ServiceAnnouncement& notice )
         {
             _service.postNotice( notice, 7, UnixMilliseconds{ kNowMs }, 1 );
             return finishOne();
@@ -269,7 +269,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, InvalidChangesTouchNothing )
     SW_EXPECT_TRUE( rig.finishOne() == ServerDirectoryResult::Invalid );
 
     SW_EXPECT_TRUE( rig.postNotice( makeNotice( 0 ) ) == ServerDirectoryResult::Invalid );
-    ServiceNotice emptyText = makeNotice();
+    ServiceAnnouncement emptyText = makeNotice();
     emptyText._text.clear();
     SW_EXPECT_TRUE( rig.postNotice( emptyText ) == ServerDirectoryResult::Invalid );
     SW_EXPECT_TRUE( rig.postNotice( makeNotice( 1, 10, 5 ) ) == ServerDirectoryResult::Invalid );
@@ -410,8 +410,8 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StatusChangeCoversEveryVisibleField )
     rig.tick( kNowMs );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );
 
-    ServiceNotice literal = makeNotice( 1, kNowMs - 2, kNowMs + 2000 );
-    literal._bLiteralText = SW_TRUE;
+    ServiceAnnouncement literal = makeNotice( 1, kNowMs - 2, kNowMs + 2000 );
+    literal._bLiteralText       = SW_TRUE;
     SW_REQUIRE_TRUE( rig.postNotice( literal ) == ServerDirectoryResult::Ok );
     rig.tick( kNowMs );
     SW_EXPECT_TRUE( rig._service.takeStatusChange() );

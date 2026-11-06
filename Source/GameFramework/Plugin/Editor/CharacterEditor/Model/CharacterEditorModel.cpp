@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorDocument.h"
+#include "GameFramework/Plugin/Editor/CharacterEditor/Model/CharacterEditorModel.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/File/FileUtil.h"
@@ -29,7 +29,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct CharacterEditorDocumentInternal
+        struct CharacterEditorModelInternal
         {
             static constexpr const utf8* kDefaultPresetName = "MyLook";
             static constexpr const utf8* kDefaultExportID   = "MyCharacter";
@@ -39,7 +39,7 @@ namespace sw::editor
 
 namespace sw::editor
 {
-    CharacterEditorDocument::CharacterEditorDocument()
+    CharacterEditorModel::CharacterEditorModel()
         : _sockets{}
         , _pose{}
         , _appearance{}
@@ -76,12 +76,12 @@ namespace sw::editor
         , _bPreviewValid{ SW_FALSE }
         , _bStagedSelection{ SW_FALSE }
     {
-        _paths._presetName = CharacterEditorDocumentInternal::kDefaultPresetName;
-        _paths._exportID   = CharacterEditorDocumentInternal::kDefaultExportID;
+        _paths._presetName = CharacterEditorModelInternal::kDefaultPresetName;
+        _paths._exportID   = CharacterEditorModelInternal::kDefaultExportID;
         _presetStore.setDatabase( &_database );
     }
 
-    void CharacterEditorDocument::ensurePackData()
+    void CharacterEditorModel::ensurePackData()
     {
         const string& packRoot = editor::getSubsystem<const GameConfig>()._packRoot.get();
         if ( _packDataState != PackDataState::Unread && packRoot == _packRoot )
@@ -123,7 +123,7 @@ namespace sw::editor
         _packDataState            = PackDataState::Ready;
     }
 
-    void CharacterEditorDocument::ensureKindTable()
+    void CharacterEditorModel::ensureKindTable()
     {
         if ( _bKindTableReady )
             return;
@@ -131,18 +131,18 @@ namespace sw::editor
         _reloadGuard.reset( SharedAssetCache<SocketSet>::getReloadCount() );
         SocketKindTable kinds;
         if ( kinds.loadDefault() == false )
-            SW_LOG_WARNING_ID( "CharacterEditorDocument.DefaultSocketKindTable", "Default socket kind table could not be loaded - kinds are not validated" );
+            SW_LOG_WARNING_ID( "CharacterEditorModel.DefaultSocketKindTable", "Default socket kind table could not be loaded - kinds are not validated" );
         else
             _sockets.setKindTable( kinds );
 
         MirrorNameRules rules;
         if ( rules.loadFromAsset( AssetID{ MirrorNameRules::kDefaultPath } ) == false )
-            SW_LOG_WARNING_ID( "CharacterEditorDocument.DefaultMirrorNameTable", "Default mirror name table could not be loaded - left/right pairs are not found" );
+            SW_LOG_WARNING_ID( "CharacterEditorModel.DefaultMirrorNameTable", "Default mirror name table could not be loaded - left/right pairs are not found" );
         else
             _sockets.setMirrorRules( rules );
     }
 
-    bool CharacterEditorDocument::loadSocketFile()
+    bool CharacterEditorModel::loadSocketFile()
     {
         ensureKindTable(); // 문서는 첫 그리기 전에 열릴 수 있다(시나리오 · 콘텐츠 브라우저) — 종류 표 없이 읽으면 모든 kind 가 모르는 종류다
         const std::optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._socketPath.c_str() ) );
@@ -163,7 +163,7 @@ namespace sw::editor
         return true;
     }
 
-    void CharacterEditorDocument::pollExternalChange( float64 nowSeconds )
+    void CharacterEditorModel::pollExternalChange( float64 nowSeconds )
     {
         if ( _reloadGuard.pollExternalChange( SharedAssetCache<SocketSet>::getReloadCount(), nowSeconds ) )
             _bExternalChange = SW_TRUE;
@@ -175,7 +175,7 @@ namespace sw::editor
             _bExternalChange = SW_FALSE;
     }
 
-    bool CharacterEditorDocument::saveFiles( float64 nowSeconds )
+    bool CharacterEditorModel::saveFiles( float64 nowSeconds )
     {
         bool bSaved = true;
         if ( _sockets.isDirty() )
@@ -189,7 +189,7 @@ namespace sw::editor
             else
             {
                 _reloadGuard.onSaved( SharedAssetCache<SocketSet>::getReloadCount(), nowSeconds ); // 파일 감시가 곧 같은 파일을 다시 읽는다 — 그건 외부 변경이 아니다
-                SW_LOG_INFO_ID( "CharacterEditorDocument.SocketFileSaved", "Socket file saved to %#", writePath->c_str() );
+                SW_LOG_INFO_ID( "CharacterEditorModel.SocketFileSaved", "Socket file saved to %#", writePath->c_str() );
             }
         }
         if ( _pose.isDirty() )
@@ -201,31 +201,31 @@ namespace sw::editor
                 bSaved  = false;
             }
             else
-                SW_LOG_INFO_ID( "CharacterEditorDocument.ReferencePoseFileSaved", "Reference pose file saved to %#", writePath->c_str() );
+                SW_LOG_INFO_ID( "CharacterEditorModel.ReferencePoseFileSaved", "Reference pose file saved to %#", writePath->c_str() );
         }
         if ( bSaved )
             _status.clear();
         return bSaved;
     }
 
-    void CharacterEditorDocument::revert()
+    void CharacterEditorModel::revert()
     {
         if ( _sockets.isDirty() && _sockets.revertToSaved() == false )
-            SW_LOG_ERROR_ID( "CharacterEditorDocument.CharacterEditorSocketEdits", "Character Editor: the socket edits could not be discarded - the saved state did not read back" );
+            SW_LOG_ERROR_ID( "CharacterEditorModel.CharacterEditorSocketEdits", "Character Editor: the socket edits could not be discarded - the saved state did not read back" );
         if ( _pose.isDirty() && _pose.revertToSaved() == false )
-            SW_LOG_ERROR_ID( "CharacterEditorDocument.CharacterEditorReferencePose", "Character Editor: the reference pose edits could not be discarded - the saved state did not read back" );
+            SW_LOG_ERROR_ID( "CharacterEditorModel.CharacterEditorReferencePose", "Character Editor: the reference pose edits could not be discarded - the saved state did not read back" );
         _selectedSocket = hashed_string{};
         _status.clear();
     }
 
-    void CharacterEditorDocument::clearSockets()
+    void CharacterEditorModel::clearSockets()
     {
         _sockets.clear();
         _selectedSocket = hashed_string{};
         _status.clear();
     }
 
-    void CharacterEditorDocument::loadReferencePose()
+    void CharacterEditorModel::loadReferencePose()
     {
         const std::optional<AbsolutePath> readPath = editor::getSubsystem<AssetPaths>().findLooseFile( string_view( _paths._refPosePath.c_str() ) );
         if ( readPath.has_value() == false )
@@ -236,7 +236,7 @@ namespace sw::editor
             _status.clear();
     }
 
-    void CharacterEditorDocument::loadSkeleton()
+    void CharacterEditorModel::loadSkeleton()
     {
         if ( _pose.loadSkeleton( AssetID{ string_view( _paths._skeletonPath.c_str() ) } ) == false )
         {
@@ -250,7 +250,7 @@ namespace sw::editor
         _sockets.setBoneNames( listBoneName ); // 이제 소켓 부모 본 이름을 검증한다
     }
 
-    void CharacterEditorDocument::addSocket( const hashed_string& name )
+    void CharacterEditorModel::addSocket( const hashed_string& name )
     {
         const bool bAdded = _sockets.addSocket( name, hashed_string{}, hashed_string{}, _status );
         reportEdit( bAdded );
@@ -258,7 +258,7 @@ namespace sw::editor
             _selectedSocket = name;
     }
 
-    void CharacterEditorDocument::renameSocket( const hashed_string& name, const hashed_string& newName )
+    void CharacterEditorModel::renameSocket( const hashed_string& name, const hashed_string& newName )
     {
         const bool bDone = _sockets.renameSocket( name, newName, _status );
         reportEdit( bDone );
@@ -266,7 +266,7 @@ namespace sw::editor
             _selectedSocket = newName;
     }
 
-    void CharacterEditorDocument::mirrorSocket( const hashed_string& name )
+    void CharacterEditorModel::mirrorSocket( const hashed_string& name )
     {
         hashed_string mirrorName;
         const bool    bDone = _sockets.mirrorSocket( name, mirrorName, _status );
@@ -275,13 +275,13 @@ namespace sw::editor
             _selectedSocket = mirrorName;
     }
 
-    void CharacterEditorDocument::removeSocket( const hashed_string& name )
+    void CharacterEditorModel::removeSocket( const hashed_string& name )
     {
         reportEdit( _sockets.removeSocket( name, _status ) );
         _selectedSocket = hashed_string{};
     }
 
-    void CharacterEditorDocument::mirrorSelectedBone()
+    void CharacterEditorModel::mirrorSelectedBone()
     {
         string        error;
         hashed_string mirrored;
@@ -291,7 +291,7 @@ namespace sw::editor
             _status = error;
     }
 
-    void CharacterEditorDocument::loadAppearanceData()
+    void CharacterEditorModel::loadAppearanceData()
     {
         _bDatabaseLoaded = SW_FALSE;
         _bPreviewValid   = SW_FALSE;
@@ -311,7 +311,7 @@ namespace sw::editor
         _bDatabaseLoaded = SW_TRUE;
     }
 
-    CharacterEditorLocalStore* CharacterEditorDocument::findLocalStore()
+    CharacterEditorLocalStore* CharacterEditorModel::findLocalStore()
     {
         CharacterEditorLocalStore* const pStore = editor::findSubsystem<CharacterEditorLocalStore>(); // 열지 못했으면 없다(오류 로그가 남았다)
         if ( pStore == nullptr )
@@ -319,7 +319,7 @@ namespace sw::editor
         return pStore;
     }
 
-    void CharacterEditorDocument::loadPresets()
+    void CharacterEditorModel::loadPresets()
     {
         if ( isPresetRequestPending() )
         {
@@ -330,11 +330,11 @@ namespace sw::editor
         if ( pStore == nullptr )
             return;
         _presetRequest = pStore->getChannel().submitRead( CharacterEditorLocalStore::kPresetSlot,
-                                                          LocalStoreChannel::CompletionFunction::create<&CharacterEditorDocument::onPresetsRead>( this ) );
+                                                          LocalStoreChannel::CompletionFunction::create<&CharacterEditorModel::onPresetsRead>( this ) );
         _status        = "Loading presets...";
     }
 
-    void CharacterEditorDocument::onPresetsRead( const LocalStoreCompletion& completion )
+    void CharacterEditorModel::onPresetsRead( const LocalStoreCompletion& completion )
     {
         if ( completion._result == LocalStoreResult::NotFound )
         {
@@ -352,7 +352,7 @@ namespace sw::editor
         _status.clear();
     }
 
-    void CharacterEditorDocument::savePreset()
+    void CharacterEditorModel::savePreset()
     {
         const string_view name{ _paths._presetName.c_str() };
         if ( name.empty() || isPresetRequestPending() )
@@ -366,7 +366,7 @@ namespace sw::editor
         submitPresetWrite( std::move( staged ), &selection );
     }
 
-    void CharacterEditorDocument::submitPresetWrite( UserAppearancePresetStore staged, const AppearanceSelection* pSavedSelection )
+    void CharacterEditorModel::submitPresetWrite( UserAppearancePresetStore staged, const AppearanceSelection* pSavedSelection )
     {
         CharacterEditorLocalStore* const pStore = findLocalStore();
         if ( pStore == nullptr )
@@ -378,17 +378,17 @@ namespace sw::editor
         if ( pSavedSelection != nullptr )
             _stagedSelection = *pSavedSelection;
         _presetRequest = pStore->getChannel().submitWrite( CharacterEditorLocalStore::kPresetSlot, std::move( bytes ), LocalStoreWriteOptions{},
-                                                           LocalStoreChannel::CompletionFunction::create<&CharacterEditorDocument::onPresetsWritten>( this ) );
+                                                           LocalStoreChannel::CompletionFunction::create<&CharacterEditorModel::onPresetsWritten>( this ) );
         _status        = "Saving presets...";
     }
 
-    void CharacterEditorDocument::onPresetsWritten( const LocalStoreCompletion& completion )
+    void CharacterEditorModel::onPresetsWritten( const LocalStoreCompletion& completion )
     {
         if ( completion._result != LocalStoreResult::Ok )
         {
             // 목록과 "저장된 상태" 를 그대로 둔다 — 저장된 줄 알고 넘어가지 않게.
             _status = "Preset slot could not be written (see log)";
-            SW_LOG_ERROR_ID( "CharacterEditorDocument.CharacterEditorPresetSlot", "Character Editor: preset slot %# could not be written (result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
+            SW_LOG_ERROR_ID( "CharacterEditorModel.CharacterEditorPresetSlot", "Character Editor: preset slot %# could not be written (result %#)", completion._slot.c_str(), static_cast<int32>( completion._result ) );
             return;
         }
         _presetStore = std::move( _stagedPresetStore );
@@ -399,13 +399,13 @@ namespace sw::editor
         SW_LOG_INFO_ID( "CharacterEditor.PresetsSaved", "Character Editor: presets saved to slot %# (%# presets)", completion._slot.c_str(), static_cast<uint32>( _presetStore.getPresets().size() ) );
     }
 
-    void CharacterEditorDocument::applyPreset( string_view name )
+    void CharacterEditorModel::applyPreset( string_view name )
     {
         (void)_appearance.loadFromPreset( _presetStore, name ); // 목록의 이름이라 항상 있다
         _paths._presetName = name;
     }
 
-    bool CharacterEditorDocument::canAttachThumbnail()
+    bool CharacterEditorModel::canAttachThumbnail()
     {
         if ( _presetStore.findPresetByName( string_view( _paths._presetName.c_str() ) ) == nullptr )
         {
@@ -420,7 +420,7 @@ namespace sw::editor
         return findLocalStore() != nullptr;
     }
 
-    void CharacterEditorDocument::attachThumbnail( string_view presetName, vector<uint8> pngBytes )
+    void CharacterEditorModel::attachThumbnail( string_view presetName, vector<uint8> pngBytes )
     {
         CharacterEditorLocalStore* const pStore = findLocalStore();
         if ( pStore == nullptr || isPresetRequestPending() )
@@ -428,18 +428,18 @@ namespace sw::editor
         _thumbnailPresetName = string{ presetName };
         _thumbnailSlot       = CharacterEditorLocalStore::makeThumbnailSlot( presetName );
         _thumbnailRequest    = pStore->getChannel().submitWrite( _thumbnailSlot, std::move( pngBytes ), LocalStoreWriteOptions{},
-                                                                 LocalStoreChannel::CompletionFunction::create<&CharacterEditorDocument::onThumbnailWritten>( this ) );
+                                                                 LocalStoreChannel::CompletionFunction::create<&CharacterEditorModel::onThumbnailWritten>( this ) );
         _status              = "Saving the thumbnail...";
     }
 
-    void CharacterEditorDocument::onThumbnailWritten( const LocalStoreCompletion& completion )
+    void CharacterEditorModel::onThumbnailWritten( const LocalStoreCompletion& completion )
     {
         UserAppearancePresetStore staged      = _presetStore;
         const bool                bAttachable = completion._result == LocalStoreResult::Ok && staged.setThumbnailSlot( _thumbnailPresetName, _thumbnailSlot );
         if ( bAttachable == false )
         {
             _status = "The thumbnail could not be stored (the slot write failed or the preset was removed)";
-            SW_LOG_ERROR_ID( "CharacterEditorDocument.CharacterEditorThumbnailSlot", "Character Editor: thumbnail slot %# of preset '%#' could not be stored (result %#)", _thumbnailSlot.c_str(), _thumbnailPresetName.c_str(),
+            SW_LOG_ERROR_ID( "CharacterEditorModel.CharacterEditorThumbnailSlot", "Character Editor: thumbnail slot %# of preset '%#' could not be stored (result %#)", _thumbnailSlot.c_str(), _thumbnailPresetName.c_str(),
                              static_cast<int32>( completion._result ) );
             return;
         }
@@ -447,7 +447,7 @@ namespace sw::editor
         submitPresetWrite( std::move( staged ), nullptr );
     }
 
-    bool CharacterEditorDocument::exportDataPreset()
+    bool CharacterEditorModel::exportDataPreset()
     {
         const hashed_string    presetID( string_view( _paths._exportID.c_str() ) );
         CharacterAppearanceDef def;
@@ -477,7 +477,7 @@ namespace sw::editor
         }
         AppearanceDatabase* pGameData = game::findSubsystem<AppearanceDatabase>();
         if ( pGameData == nullptr )
-            SW_LOG_WARNING_ID( "CharacterEditorDocument.ExportedAppearancePresetGame", "Exported appearance preset '%#' - this game has no AppearanceDatabase service, so scenes use it after the game loads it", presetID.c_str() );
+            SW_LOG_WARNING_ID( "CharacterEditorModel.ExportedAppearancePresetGame", "Exported appearance preset '%#' - this game has no AppearanceDatabase service, so scenes use it after the game loads it", presetID.c_str() );
         else if ( pGameData->loadPresetFile( AssetID{ assetID } ) == false )
         {
             _status = "The game's appearance data rejected the preset - " + pGameData->getReport().joined();
@@ -488,7 +488,7 @@ namespace sw::editor
         return true;
     }
 
-    AppearanceSelection CharacterEditorDocument::makePreviewSelection() const
+    AppearanceSelection CharacterEditorModel::makePreviewSelection() const
     {
         AppearanceSelection selection = _appearance.getSelection();
         if ( selection._basePresetID.empty() )
@@ -496,7 +496,7 @@ namespace sw::editor
         return selection;
     }
 
-    const CustomizationSchemaDef* CharacterEditorDocument::findCustomizationSchema( const AppearanceSelection& selection ) const
+    const CustomizationSchemaDef* CharacterEditorModel::findCustomizationSchema( const AppearanceSelection& selection ) const
     {
         if ( _bDatabaseLoaded == false )
             return nullptr;
@@ -510,12 +510,12 @@ namespace sw::editor
         return schemaID.empty() ? nullptr : _database.getSchemas().findSchema( schemaID );
     }
 
-    bool CharacterEditorDocument::hasBasePresetInData() const
+    bool CharacterEditorModel::hasBasePresetInData() const
     {
         return _database.getPresets().findPreset( _appearance.getSelection()._basePresetID ) != nullptr;
     }
 
-    void CharacterEditorDocument::refreshResolvedPreview()
+    void CharacterEditorModel::refreshResolvedPreview()
     {
         const bool bStale = _bPreviewValid == false || _previewRevision != _appearance.getRevision();
         if ( bStale == false )
@@ -527,7 +527,7 @@ namespace sw::editor
         _bPreviewValid   = SW_TRUE;
     }
 
-    uint32 CharacterEditorDocument::countEquippedSlots() const
+    uint32 CharacterEditorModel::countEquippedSlots() const
     {
         uint32 equipped = 0;
         for ( const AppearanceSlotRequest& request : _appearance.getSelection()._listSlot )
@@ -538,20 +538,20 @@ namespace sw::editor
         return equipped;
     }
 
-    void CharacterEditorDocument::setFitResult( const FitResult& result )
+    void CharacterEditorModel::setFitResult( const FitResult& result )
     {
         _fit     = FitCheckSummary::fromResult( result );
         _bHasFit = SW_TRUE;
     }
 
-    const vector<hashed_string>& CharacterEditorDocument::getClipNames()
+    const vector<hashed_string>& CharacterEditorModel::getClipNames()
     {
         if ( _bClipNamesLoaded == false )
             loadClipNames();
         return _listClipName;
     }
 
-    void CharacterEditorDocument::loadClipNames()
+    void CharacterEditorModel::loadClipNames()
     {
         _listClipName.clear();
         _bClipNamesLoaded = SW_TRUE;
@@ -566,7 +566,7 @@ namespace sw::editor
         }
     }
 
-    void CharacterEditorDocument::reportEdit( bool bSucceeded )
+    void CharacterEditorModel::reportEdit( bool bSucceeded )
     {
         if ( bSucceeded )
             _status.clear();

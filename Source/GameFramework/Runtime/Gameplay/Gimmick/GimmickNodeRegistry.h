@@ -133,7 +133,7 @@ namespace sw
 {
     /**
      * @class GimmickNodeRegistry
-     * @brief 종류 이름으로 정의를 찾는 레지스트리입니다. 내장 종류(센서, 연산자, 액추에이터)를 모두 가진 기본 레지스트리는 `GimmickNodeKindCatalog` 가 가진다.
+     * @brief 종류 이름으로 정의를 찾는 레지스트리입니다. 내장 종류(센서, 연산자, 액추에이터)를 모두 가진 기본 레지스트리는 `GimmickNodeRegistrySubsystem` 가 가진다.
      *        게임은 그것을 복사해서 종류를 추가한 레지스트리로 회로를 만들 수 있습니다.
      */
     class SW_GF_API GimmickNodeRegistry
@@ -145,7 +145,7 @@ namespace sw
         const GimmickNodeKind*         findKind( const hashed_string& name ) const;
         const vector<GimmickNodeKind>& getKinds() const { return _registry.getItems(); }
 
-        /** @brief 내장 종류를 @p inoutRegistry 에 추가합니다. `GimmickNodeKindCatalog` 가 씁니다. */
+        /** @brief 내장 종류를 @p inoutRegistry 에 추가합니다. `GimmickNodeRegistrySubsystem` 가 씁니다. */
         static void registerBuiltinKinds( GimmickNodeRegistry& inoutRegistry );
 
     private:
@@ -156,12 +156,12 @@ namespace sw
 namespace sw
 {
     /**
-     * @class GimmickNodeKindCatalog
-     * @brief 내장 종류를 모두 가진 기본 레지스트리를 가진 GameFramework 의 모듈 서브시스템입니다(`game::getSubsystem<GimmickNodeKindCatalog>()`).
+     * @class GimmickNodeRegistrySubsystem
+     * @brief 내장 종류를 모두 가진 기본 레지스트리를 가진 GameFramework 의 모듈 서브시스템입니다(`game::getSubsystem<GimmickNodeRegistrySubsystem>()`).
      * @details 엔진 범위 아래 GameFramework 의 자식 범위에 선다(`SW_MODULE_SUBSYSTEM( Engine, … )` — 언리얼 `UEngineSubsystem`). 기동이 내장 종류를 채우고 그 뒤로 바꾸지 않는다.
      *          예전에는 소유자 없는 엔진 수명 값(`ScopeOwned`)을 정적 함수가 처음 부를 때 만들었다 — 이제 수명과 초기화 시점을 범위가 정한다.
      */
-    class SW_GF_API GimmickNodeKindCatalog final : public ISubsystem
+    class SW_GF_API GimmickNodeRegistrySubsystem final : public ISubsystem
     {
     public:
         /** @brief 서브시스템 이름입니다. */

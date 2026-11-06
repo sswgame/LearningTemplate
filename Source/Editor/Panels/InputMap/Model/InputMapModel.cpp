@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/InputMap/Model/InputMapDocument.h"
+#include "Editor/Panels/InputMap/Model/InputMapModel.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
@@ -20,7 +20,7 @@
 
 namespace sw::editor
 {
-    InputMapDocument::InputMapDocument()
+    InputMapModel::InputMapModel()
         : _inputMap{}
         , _replay{}
         , _listConflict{}
@@ -40,7 +40,7 @@ namespace sw::editor
     {
     }
 
-    void InputMapDocument::tick( InputManager& input, float32 deltaTime )
+    void InputMapModel::tick( InputManager& input, float32 deltaTime )
     {
         if ( _inputMap.getInputManager() != &input )
             _inputMap.setInputManager( &input );
@@ -62,7 +62,7 @@ namespace sw::editor
             input.detachVirtualInput();
     }
 
-    void InputMapDocument::releaseInput()
+    void InputMapModel::releaseInput()
     {
         _replay.stopRecording();
         cancelKeyCapture();
@@ -71,7 +71,7 @@ namespace sw::editor
             pInput->detachVirtualInput();
     }
 
-    void InputMapDocument::sampleInput( InputManager& input )
+    void InputMapModel::sampleInput( InputManager& input )
     {
         // 실시간 시계열 샘플링
         float32        lx = 0.0f, ly = 0.0f, lt = 0.0f, rt = 0.0f;
@@ -98,7 +98,7 @@ namespace sw::editor
         _plot._offset = ( offset + 1 ) % InputMapPlotSamples::kSampleCount;
     }
 
-    bool InputMapDocument::reload()
+    bool InputMapModel::reload()
     {
         _bLoaded = SW_TRUE;
         // 읽지 못하면 편집 중인 바인딩과 dirty 를 그대로 둔다. dirty 를 지우고 "다시 읽었다" 고 표시하지 않는다.
@@ -107,16 +107,16 @@ namespace sw::editor
         const bool    bBundle = isBundlePath();
         if ( bBundle && InputMapBundle::checkSettings( assetID ) == false )
         {
-            SW_LOG_ERROR_ID( "InputMapDocument.CouldNotReloadInputMap", "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
+            SW_LOG_ERROR_ID( "InputMapModel.CouldNotReloadInputMap", "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
             return false;
         }
         const bool bLoaded = bBundle ? InputMapBundle::loadFromSettings( _inputMap, assetID ) : _inputMap.loadFromAsset( assetID );
         if ( bLoaded == false )
         {
-            SW_LOG_ERROR_ID( "InputMapDocument.CouldNotReloadInputMap", "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
+            SW_LOG_ERROR_ID( "InputMapModel.CouldNotReloadInputMap", "Could not reload InputMap from %# - keeping the edited bindings", _inputMapPath.c_str() );
             return false;
         }
-        SW_LOG_INFO_ID( "InputMapDocument.ReloadedInputMap", "Reloaded InputMap from %#", _inputMapPath.c_str() );
+        SW_LOG_INFO_ID( "InputMapModel.ReloadedInputMap", "Reloaded InputMap from %#", _inputMapPath.c_str() );
         cancelKeyCapture();
         // 새 맵에 없는 액션을 든 채면 오른쪽 칸이 없는 액션의 "바인딩 없음" 을 보여 준다.
         if ( _inputMap.hasAction( hashed_string( _selectedAction.c_str() ) ) == false )
@@ -125,7 +125,7 @@ namespace sw::editor
         return true;
     }
 
-    bool InputMapDocument::save()
+    bool InputMapModel::save()
     {
         // 패널은 리소스의 기본 바인딩(`<InputMap>`)을 편집한다. 다시 읽기(`reload`)와 같은 형식, 같은 위치에 쓴다.
         // 플레이어 리매핑은 UserSettings 의 `keyBinding` 설정이 사용자 파일에 보관한다.
@@ -133,7 +133,7 @@ namespace sw::editor
         {
             if ( saveBundle() == false )
             {
-                SW_LOG_WARNING_ID( "InputMapDocument.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
+                SW_LOG_WARNING_ID( "InputMapModel.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
                 return false;
             }
             _bDirty = SW_FALSE;
@@ -142,20 +142,20 @@ namespace sw::editor
         const std::optional<AbsolutePath> inputMapFile = editor::getSubsystem<AssetPaths>().toDiskPath( _inputMapPath.c_str() );
         if ( inputMapFile.has_value() == false || _inputMap.saveToAsset( *inputMapFile ) == false )
         {
-            SW_LOG_WARNING_ID( "InputMapDocument.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
+            SW_LOG_WARNING_ID( "InputMapModel.FailedSaveInputMap", "Failed to save InputMap to %#", _inputMapPath.c_str() );
             return false;
         }
-        SW_LOG_INFO_ID( "InputMapDocument.SavedInputMap", "Saved InputMap to %#", _inputMapPath.c_str() );
+        SW_LOG_INFO_ID( "InputMapModel.SavedInputMap", "Saved InputMap to %#", _inputMapPath.c_str() );
         _bDirty = SW_FALSE;
         return true;
     }
 
-    bool InputMapDocument::isBundlePath() const
+    bool InputMapModel::isBundlePath() const
     {
         return InputMapBundle::isSettingsFile( string_view{ _inputMapPath.c_str() } );
     }
 
-    bool InputMapDocument::saveBundle() const
+    bool InputMapModel::saveBundle() const
     {
         // 파일마다 원래 몫을 돌려보낸다. 편집이 건드리지 않은 파일은 쓰지 않는다 — 다른 게임과 함께 쓰는 공통 파일의 주석과 차례를 지키고, 함께 쓰는 파일을 말없이 바꾸지 않는다.
         vector<AssetID> listAsset;
@@ -173,36 +173,36 @@ namespace sw::editor
             const std::optional<AbsolutePath> filePath  = editor::getSubsystem<AssetPaths>().toDiskPath( assetPath.c_str() );
             if ( filePath.has_value() == false || _inputMap.saveSourceToAsset( sourceIndex, *filePath ) == false )
                 return false;
-            SW_LOG_INFO_ID( "InputMapDocument.SavedInputMap", "Saved InputMap to %#", assetPath.c_str() );
+            SW_LOG_INFO_ID( "InputMapModel.SavedInputMap", "Saved InputMap to %#", assetPath.c_str() );
         }
         return true;
     }
 
-    string InputMapDocument::describeActionSource( const hashed_string& action ) const
+    string InputMapModel::describeActionSource( const hashed_string& action ) const
     {
         if ( _inputMap.hasAction( action ) == false || _inputMap.getSourceCount() == 0 )
             return {};
         return _inputMap.getSourceAssetPath( _inputMap.getActionSourceIndex( action ) );
     }
 
-    bool InputMapDocument::noteEdit( bool bChanged )
+    bool InputMapModel::noteEdit( bool bChanged )
     {
         _bDirty = _bDirty | ( bChanged ? SW_TRUE : SW_FALSE );
         return bChanged;
     }
 
-    void InputMapDocument::resetAllBindingsToDefault()
+    void InputMapModel::resetAllBindingsToDefault()
     {
         _inputMap.resetAllBindingsToDefault();
         _bDirty = SW_TRUE;
     }
 
-    bool InputMapDocument::resetActionToDefault( const hashed_string& action )
+    bool InputMapModel::resetActionToDefault( const hashed_string& action )
     {
         return noteEdit( _inputMap.resetActionToDefault( action ) );
     }
 
-    bool InputMapDocument::setLayerEnabled( const hashed_string& layer, bool bEnabled )
+    bool InputMapModel::setLayerEnabled( const hashed_string& layer, bool bEnabled )
     {
         if ( _inputMap.hasLayer( layer ) == false || _inputMap.isLayerEnabled( layer ) == bEnabled )
             return false;
@@ -210,53 +210,53 @@ namespace sw::editor
         return noteEdit( true );
     }
 
-    bool InputMapDocument::savesTriggerFields( BindingKind kind )
+    bool InputMapModel::savesTriggerFields( BindingKind kind )
     {
         return kind == BindingKind::SingleSlot || kind == BindingKind::Shortcut || kind == BindingKind::Axis1DComposite || kind == BindingKind::Chord;
     }
 
-    bool InputMapDocument::canEditTriggerFields( const hashed_string& action, uint32 bindIndex ) const
+    bool InputMapModel::canEditTriggerFields( const hashed_string& action, uint32 bindIndex ) const
     {
         const ActionBinding* pBinding = _inputMap.getBinding( action, bindIndex );
         return pBinding != nullptr && savesTriggerFields( pBinding->_kind );
     }
 
-    bool InputMapDocument::setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger )
+    bool InputMapModel::setBindingTrigger( const hashed_string& action, uint32 bindIndex, ActionTrigger trigger )
     {
         return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingTrigger( action, bindIndex, trigger ) );
     }
 
-    bool InputMapDocument::setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds )
+    bool InputMapModel::setBindingTriggerTime( const hashed_string& action, uint32 bindIndex, float32 seconds )
     {
         return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingTriggerTime( action, bindIndex, seconds ) );
     }
 
-    bool InputMapDocument::setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate )
+    bool InputMapModel::setBindingNegate( const hashed_string& action, uint32 bindIndex, bool bNegate )
     {
         return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingNegate( action, bindIndex, bNegate ) );
     }
 
-    bool InputMapDocument::setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount )
+    bool InputMapModel::setBindingTapCount( const hashed_string& action, uint32 bindIndex, uint8 tapCount )
     {
         return canEditTriggerFields( action, bindIndex ) && noteEdit( _inputMap.setBindingTapCount( action, bindIndex, tapCount ) );
     }
 
-    bool InputMapDocument::setBindingLayer( const hashed_string& action, uint32 bindIndex, const hashed_string& layer )
+    bool InputMapModel::setBindingLayer( const hashed_string& action, uint32 bindIndex, const hashed_string& layer )
     {
         return noteEdit( _inputMap.setBindingLayer( action, bindIndex, layer ) );
     }
 
-    bool InputMapDocument::removeBinding( const hashed_string& action, uint32 bindIndex )
+    bool InputMapModel::removeBinding( const hashed_string& action, uint32 bindIndex )
     {
         return noteEdit( _inputMap.removeBinding( action, bindIndex ) );
     }
 
-    bool InputMapDocument::canCreateAction( string_view name ) const
+    bool InputMapModel::canCreateAction( string_view name ) const
     {
         return name.empty() == false && _inputMap.hasAction( hashed_string( string( name ).c_str() ) ) == false;
     }
 
-    bool InputMapDocument::createAction( string_view name, InputActionValueType valueType )
+    bool InputMapModel::createAction( string_view name, InputActionValueType valueType )
     {
         // 있는 이름을 다시 만들면 엔진은 그 액션을 돌려준다. 그대로 두면 아무것도 만들지 않고 "만들었다" 고 입력칸을 비운다.
         if ( canCreateAction( name ) == false )
@@ -266,7 +266,7 @@ namespace sw::editor
         return noteEdit( true );
     }
 
-    bool InputMapDocument::deleteAction( const hashed_string& action )
+    bool InputMapModel::deleteAction( const hashed_string& action )
     {
         if ( _inputMap.removeAction( action ) == false )
             return false;
@@ -275,12 +275,12 @@ namespace sw::editor
         return noteEdit( true );
     }
 
-    bool InputMapDocument::canCreateLayer( string_view name ) const
+    bool InputMapModel::canCreateLayer( string_view name ) const
     {
         return name.empty() == false && _inputMap.hasLayer( hashed_string( string( name ).c_str() ) ) == false;
     }
 
-    bool InputMapDocument::createLayer( string_view name, int32 priority )
+    bool InputMapModel::createLayer( string_view name, int32 priority )
     {
         if ( canCreateLayer( name ) == false )
             return false;
@@ -288,7 +288,7 @@ namespace sw::editor
         return noteEdit( true );
     }
 
-    void InputMapDocument::collectVisibleActions( const EditorListFilter& filter, vector<hashed_string>& outListVisibleAction ) const
+    void InputMapModel::collectVisibleActions( const EditorListFilter& filter, vector<hashed_string>& outListVisibleAction ) const
     {
         // 호출한 쪽이 멤버 버퍼를 다시 쓴다. 키 표기로도 찾는다 — "Space 에 뭐가 묶였나" 를 묻는 일이 많다(Godot 입력 맵의 이벤트 검색).
         outListVisibleAction.clear();
@@ -299,7 +299,7 @@ namespace sw::editor
         }
     }
 
-    const utf8* InputMapDocument::describeActionState( const hashed_string& action ) const
+    const utf8* InputMapModel::describeActionState( const hashed_string& action ) const
     {
         if ( _inputMap.wasActionTriggered( action ) )
             return "triggered";
@@ -308,7 +308,7 @@ namespace sw::editor
         return _inputMap.getActionPhase( action ) != ActionPhase::None ? "ongoing" : "idle";
     }
 
-    string InputMapDocument::describeBinding( const hashed_string& action, uint32 bindIndex ) const
+    string InputMapModel::describeBinding( const hashed_string& action, uint32 bindIndex ) const
     {
         const ActionBinding* pBinding = _inputMap.getBinding( action, bindIndex );
         if ( pBinding == nullptr )
@@ -324,7 +324,7 @@ namespace sw::editor
         return string{ BindingKinds::toName( pBinding->_kind ) };
     }
 
-    void InputMapDocument::beginKeyCapture( uint32 bindIndex )
+    void InputMapModel::beginKeyCapture( uint32 bindIndex )
     {
         _capturingBindIndex     = bindIndex;
         _pendingCaptureModifier = Key::Unknown;
@@ -332,7 +332,7 @@ namespace sw::editor
         _bCapturingKey          = SW_TRUE;
     }
 
-    void InputMapDocument::beginNewBindingCapture()
+    void InputMapModel::beginNewBindingCapture()
     {
         if ( _inputMap.hasAction( hashed_string( _selectedAction.c_str() ) ) == false )
             return;
@@ -340,14 +340,14 @@ namespace sw::editor
         _bCaptureNewBinding = SW_TRUE;
     }
 
-    void InputMapDocument::cancelKeyCapture()
+    void InputMapModel::cancelKeyCapture()
     {
         _bCapturingKey          = SW_FALSE;
         _bCaptureNewBinding     = SW_FALSE;
         _pendingCaptureModifier = Key::Unknown;
     }
 
-    void InputMapDocument::advanceKeyCapture( const InputMapCaptureFrame& frame )
+    void InputMapModel::advanceKeyCapture( const InputMapCaptureFrame& frame )
     {
         if ( _bCapturingKey == SW_FALSE )
             return;
@@ -369,7 +369,7 @@ namespace sw::editor
             (void)finishKeyCapture( _pendingCaptureModifier, ModifierKey::None );
     }
 
-    bool InputMapDocument::bindCapturedKey( const hashed_string& action, Key key, uint8 modifierMask, uint32& outBindIndex )
+    bool InputMapModel::bindCapturedKey( const hashed_string& action, Key key, uint8 modifierMask, uint32& outBindIndex )
     {
         const uint32        countBefore = _inputMap.getBindingCount( action );
         const hashed_string layer       = findNewBindingLayer( action );
@@ -381,7 +381,7 @@ namespace sw::editor
         return _inputMap.getBindingCount( action ) > countBefore; // 키가 없으면 엔진이 묶지 않는다
     }
 
-    bool InputMapDocument::rebindCapturedKey( const hashed_string& action, uint32 bindIndex, Key key, uint8 modifierMask )
+    bool InputMapModel::rebindCapturedKey( const hashed_string& action, uint32 bindIndex, Key key, uint8 modifierMask )
     {
         const ActionBinding* pBinding = _inputMap.getBinding( action, bindIndex );
         if ( pBinding == nullptr )
@@ -396,22 +396,22 @@ namespace sw::editor
         return modifierMask == ModifierKey::None || bKeyOrShortcut == false || _inputMap.rebindKeyShortcut( action, bindIndex, key, modifierMask );
     }
 
-    hashed_string InputMapDocument::findNewBindingLayer( const hashed_string& action ) const
+    hashed_string InputMapModel::findNewBindingLayer( const hashed_string& action ) const
     {
         const uint32 bindingCount = _inputMap.getBindingCount( action );
         return bindingCount > 0 ? _inputMap.findBindingLayer( action, bindingCount - 1 ) : _inputMap.getDefaultLayerName();
     }
 
-    bool InputMapDocument::noteCapturedBinding( const hashed_string& action, uint32 bindIndex )
+    bool InputMapModel::noteCapturedBinding( const hashed_string& action, uint32 bindIndex )
     {
         // 겹침 규칙은 충돌 칸과 한 벌이다. 그대로 두는 것은 덮어쓰기를 원할 수 있어서이고, 충돌 칸이 다시 잡기 · 지우기를 준다.
         refreshConflicts();
         if ( InputMapConflicts::involves( _listConflict, action, bindIndex ) )
-            SW_LOG_WARNING_ID( "InputMapDocument.BindingConflictsSameLayer", "Binding %# of '%#' now fires together with another action on the same layer - see Conflicts", bindIndex, action.c_str() );
+            SW_LOG_WARNING_ID( "InputMapModel.BindingConflictsSameLayer", "Binding %# of '%#' now fires together with another action on the same layer - see Conflicts", bindIndex, action.c_str() );
         return noteEdit( true );
     }
 
-    bool InputMapDocument::finishKeyCapture( Key newKey, uint8 modifierMask )
+    bool InputMapModel::finishKeyCapture( Key newKey, uint8 modifierMask )
     {
         if ( _bCapturingKey == SW_FALSE )
             return false;
@@ -424,7 +424,7 @@ namespace sw::editor
         return bChanged && noteCapturedBinding( action, bindIndex );
     }
 
-    bool InputMapDocument::canCaptureSlot() const
+    bool InputMapModel::canCaptureSlot() const
     {
         if ( _bCapturingKey == SW_FALSE )
             return false;
@@ -435,7 +435,7 @@ namespace sw::editor
         return pBinding != nullptr && pBinding->_kind == BindingKind::SingleSlot;
     }
 
-    bool InputMapDocument::finishSlotCapture( const InputSlot& slot )
+    bool InputMapModel::finishSlotCapture( const InputSlot& slot )
     {
         if ( canCaptureSlot() == false )
             return false;
@@ -459,7 +459,7 @@ namespace sw::editor
         return noteCapturedBinding( action, bindIndex );
     }
 
-    void InputMapDocument::pollGamepadCapture( InputManager& input )
+    void InputMapModel::pollGamepadCapture( InputManager& input )
     {
         GamepadDevice* pGamepad = input.getGamepad( 0 );
         if ( canCaptureSlot() == false || pGamepad == nullptr || pGamepad->isConnected() == false )
@@ -475,12 +475,12 @@ namespace sw::editor
         }
     }
 
-    void InputMapDocument::refreshConflicts()
+    void InputMapModel::refreshConflicts()
     {
         InputMapConflicts::collect( _inputMap, _listConflict );
     }
 
-    bool InputMapDocument::readSelectedBindingCount( uint32& outCount ) const
+    bool InputMapModel::readSelectedBindingCount( uint32& outCount ) const
     {
         if ( _selectedAction.empty() )
             return false;
@@ -488,7 +488,7 @@ namespace sw::editor
         return true;
     }
 
-    bool InputMapDocument::readSelectedTrigger( uint32& outTrigger ) const
+    bool InputMapModel::readSelectedTrigger( uint32& outTrigger ) const
     {
         if ( _selectedAction.empty() || _inputMap.getBindingCount( hashed_string( _selectedAction.c_str() ) ) == 0 )
             return false;
@@ -496,45 +496,45 @@ namespace sw::editor
         return true;
     }
 
-    bool InputMapDocument::isReplayPlaying( const InputManager& input ) const
+    bool InputMapModel::isReplayPlaying( const InputManager& input ) const
     {
         return input.getVirtualInput() == &_replay;
     }
 
-    uint32 InputMapDocument::getReplayCurrentFrame( const InputManager& input ) const
+    uint32 InputMapModel::getReplayCurrentFrame( const InputManager& input ) const
     {
         return _replay.getStartFrameIndex() + ( isReplayPlaying( input ) ? input.getVirtualFrameIndex() : 0u );
     }
 
-    void InputMapDocument::startRecording( const InputManager& input )
+    void InputMapModel::startRecording( const InputManager& input )
     {
         _replay.startRecording( "GameplaySession" );
         _recordedBeginFrameCount = input.getBeginFrameCount();
     }
 
-    void InputMapDocument::playReplay( InputManager& input )
+    void InputMapModel::playReplay( InputManager& input )
     {
         if ( getReplayCurrentFrame( input ) >= _replay.getFrameCount() )
             _replay.seekTo( input, 0 );
         input.attachVirtualInput( &_replay, VirtualInputMode::Exclusive, false );
     }
 
-    void InputMapDocument::saveReplay() const
+    void InputMapModel::saveReplay() const
     {
         const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().toDiskPath( _replayFilePath.get() );
         if ( diskPath.has_value() == false || _replay.saveToFile( *diskPath ) == false )
-            SW_LOG_ERROR_ID( "InputMapDocument.CouldNotSaveInput", "Could not save input replay '%#'", _replayFilePath.c_str() );
+            SW_LOG_ERROR_ID( "InputMapModel.CouldNotSaveInput", "Could not save input replay '%#'", _replayFilePath.c_str() );
     }
 
-    void InputMapDocument::loadReplay( InputManager& input )
+    void InputMapModel::loadReplay( InputManager& input )
     {
         if ( input.getVirtualInput() == &_replay )
             input.detachVirtualInput();
         _replay.stopRecording(); // 녹화 중이면 읽은 프레임 뒤에 이어 적는다
         const std::optional<AbsolutePath> diskPath = editor::getSubsystem<AssetPaths>().findLooseFile( _replayFilePath.get() );
         if ( diskPath.has_value() == false )
-            SW_LOG_ERROR_ID( "InputMapDocument.CouldNotLoadInput", "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
+            SW_LOG_ERROR_ID( "InputMapModel.CouldNotLoadInput", "Could not load input replay '%#': no such file on disk", _replayFilePath.c_str() );
         else if ( _replay.loadFromFile( diskPath->str() ) == false )
-            SW_LOG_ERROR_ID( "InputMapDocument.CouldNotLoadInput2", "Could not load input replay '%#' from '%#'", _replayFilePath.c_str(), diskPath->c_str() );
+            SW_LOG_ERROR_ID( "InputMapModel.CouldNotLoadInput2", "Could not load input replay '%#' from '%#'", _replayFilePath.c_str(), diskPath->c_str() );
     }
 } // namespace sw::editor

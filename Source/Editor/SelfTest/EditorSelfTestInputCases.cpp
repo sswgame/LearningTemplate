@@ -95,7 +95,7 @@ namespace sw::editor
                 editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = ( pManager != nullptr ) ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( pObj != nullptr )
-                    pManager->destroyObject( pObj );
+                    pManager->destroyGameObject( pObj );
                 moveMouseAway();
             }
 
@@ -404,7 +404,7 @@ namespace sw::editor
                 }
                 GameObject* pObj = pManager->findGameObjectByID( objectID );
                 if ( pObj != nullptr )
-                    pManager->destroyObject( pObj );
+                    pManager->destroyGameObject( pObj );
                 return EditorSelfTestStep::Done;
             }
 
@@ -456,7 +456,7 @@ namespace sw::editor
                 editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = pManager->findGameObjectByID( objectID );
                 if ( pObj != nullptr )
-                    pManager->destroyObject( pObj );
+                    pManager->destroyGameObject( pObj );
                 return EditorSelfTestStep::Done;
             }
         };

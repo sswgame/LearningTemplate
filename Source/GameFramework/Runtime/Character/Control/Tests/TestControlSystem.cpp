@@ -447,7 +447,7 @@ SW_TEST_CASE( ControlSystemTest, AutoPossessSpawnsAnAIThatDiesWithThePawn )
     SW_EXPECT_TRUE( pController->isSpawnedForPawn() );
     const GameObjectHandle controllerObject = pController->getOwner()->getHandle();
 
-    manager.destroyObject( pObject );
+    manager.destroyGameObject( pObject );
     manager.update( 1.0f / 60.0f );
     manager.update( 1.0f / 60.0f );
     SW_EXPECT_TRUE( manager.resolveGameObject( controllerObject ) == nullptr );
@@ -461,7 +461,7 @@ SW_TEST_CASE( ControlSystemTest, SystemLeavesWhenNothingUsesIt )
     GameObject* pObject = manager.createGameObject( hashed_string( "Hero" ) );
     (void)pObject->addComponent<PawnComponent>();
     SW_EXPECT_TRUE( ControlSystem::find( manager ) != nullptr );
-    manager.destroyObject( pObject );
+    manager.destroyGameObject( pObject );
     manager.update( 1.0f / 60.0f );
     manager.update( 1.0f / 60.0f );
     SW_EXPECT_TRUE( ControlSystem::find( manager ) == nullptr );

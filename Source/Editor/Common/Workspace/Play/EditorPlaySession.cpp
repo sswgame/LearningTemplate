@@ -111,7 +111,7 @@ namespace sw::editor
                 }
                 for ( GameObject* pObj : listToDestroy )
                 {
-                    objects.destroyObject( pObj );
+                    objects.destroyGameObject( pObj );
                 }
             }
 

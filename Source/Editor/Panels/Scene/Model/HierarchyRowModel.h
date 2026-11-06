@@ -41,7 +41,7 @@ namespace sw::editor
      * @brief 계층 창의 행 상태와 명령입니다. 파일 머리말 참고.
      * @details 프레임마다 전 오브젝트를 훑어 루트를 모으고 정렬하면 큐브 수천 개 씬에서 그것만으로 프레임을 먹는다. 필터를 켜면 노드마다 서브트리를
      *          재귀로 다시 물었다. 그래서 루트 순서와 필터 결과는 구조 세대 · 태그 세대 · 필터 글이 바뀔 때만 다시 짓는다(`refresh`). 언리얼 아웃라이너도 트리를 이벤트로 고친다.
-     *          포인터를 들어도 된다. 오브젝트는 해체 전에 늘 구조 세대를 올리고(`GameObjectStore::destroyObject`), 그리기 전에 세대를 먼저 본다.
+     *          포인터를 들어도 된다. 오브젝트는 해체 전에 늘 구조 세대를 올리고(`GameObjectStore::destroyGameObject`), 그리기 전에 세대를 먼저 본다.
      */
     class HierarchyRowModel
     {

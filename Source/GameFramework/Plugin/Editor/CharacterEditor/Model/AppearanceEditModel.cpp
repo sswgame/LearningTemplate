@@ -285,14 +285,14 @@ namespace sw::editor
 
     bool AppearanceEditModel::equipSet( const AppearanceDatabase& database, const hashed_string& setID )
     {
-        const EquipSetDef* pSet = database.getSets().findSet( setID );
+        const EquipmentSetDef* pSet = database.getSets().findSet( setID );
         if ( pSet == nullptr )
             return false;
-        vector<EquipSetPieceDef> listPiece;
+        vector<EquipmentSetPieceDef> listPiece;
         database.getSets().computePieces( *pSet, _selection._bodyType, listPiece );
 
         const AppearanceSelection before = _selection;
-        for ( const EquipSetPieceDef& piece : listPiece )
+        for ( const EquipmentSetPieceDef& piece : listPiece )
         {
             if ( piece._listItem.empty() )
                 continue;

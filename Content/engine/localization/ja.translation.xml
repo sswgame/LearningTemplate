@@ -441,7 +441,7 @@
 		<entry key="EdPluginWidget.BoneMap" text="ボーンマップ" sourceHash="4b8920f82d776b69" />
 		<entry key="EdPluginWidget.Chains" text="チェーン" sourceHash="3a6771172abb34bf" />
 		<entry key="EdPluginWidget.Check" text="チェック" sourceHash="42cbd8dca939a9c7" />
-		<entry key="EdPluginWidget.EquipSet" text="装備セット" sourceHash="647fb99b02fe02df" />
+		<entry key="EdPluginWidget.EquipmentSet" text="装備セット" sourceHash="647fb99b02fe02df" />
 		<entry key="EdPluginWidget.EventId" text="イベント id" sourceHash="9b572c9af0cf6ef8" />
 		<entry key="EdPluginWidget.EventJson" text="イベント JSON" sourceHash="f9211a1af156135b" />
 		<entry key="EdPluginWidget.From" text="送信元" sourceHash="a6ab5184d6315895" />

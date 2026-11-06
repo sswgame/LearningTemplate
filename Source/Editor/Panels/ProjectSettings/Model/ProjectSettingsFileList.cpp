@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsCatalog.h"
+#include "Editor/Panels/ProjectSettings/Model/ProjectSettingsFileList.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
@@ -10,14 +10,14 @@
 
 namespace sw::editor
 {
-    bool ProjectSettingsCatalog::isEditableLocation( string_view relativePath )
+    bool ProjectSettingsFileList::isEditableLocation( string_view relativePath )
     {
         const bool bUnderConfig   = StringUtil::startsWith( relativePath, "Config/" );
         const bool bUnderResource = StringUtil::startsWith( relativePath, "Content/" );
         return ( bUnderConfig || bUnderResource ) && StringUtil::endsWith( relativePath, ".json" );
     }
 
-    void ProjectSettingsCatalog::collectLoaded( const ConfigManager& configManager, string_view projectRoot, vector<ProjectSettingsEntry>& outListEntry )
+    void ProjectSettingsFileList::collectLoaded( const ConfigManager& configManager, string_view projectRoot, vector<ProjectSettingsEntry>& outListEntry )
     {
         outListEntry.clear();
         configManager.forEachFileSource( [projectRoot, &outListEntry]( const hashed_string& typeName, string_view resolvedPath )

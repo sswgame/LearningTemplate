@@ -9,7 +9,7 @@
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
 #include "GameFramework/Runtime/Online/Identity/AccountPresence.h"
 #include "GameFramework/Runtime/Online/Identity/OnlinePushRelay.h"
-#include "GameFramework/Runtime/Online/Ledger/IBalanceNotice.h"
+#include "GameFramework/Runtime/Online/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Mail/ServiceMail.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"
@@ -39,10 +39,10 @@ namespace sw
             void complete() override { _pService->completeNotices( _result, _listNotice ); }
 
         private:
-            vector<ServiceMailNotice> _listNotice;
-            MailboxService*           _pService;
-            int32                     _batchCount;
-            ServiceStoreResult        _result;
+            vector<ServiceMailNotification> _listNotice;
+            MailboxService*                 _pService;
+            int32                           _batchCount;
+            ServiceStoreResult              _result;
         };
 
         /** @brief 우편함 요청 하나의 저장소 왕복입니다. */
@@ -267,7 +267,7 @@ namespace sw
         _calls.publishPendingCount();
     }
 
-    void MailboxService::completeNotices( ServiceStoreResult result, vector<ServiceMailNotice>& inoutListNotice )
+    void MailboxService::completeNotices( ServiceStoreResult result, vector<ServiceMailNotification>& inoutListNotice )
     {
         _bNoticePending = SW_FALSE;
         if ( result == ServiceStoreResult::Invalid )
@@ -276,7 +276,7 @@ namespace sw
             return; // Conflict 는 다른 서버가 가져갔다. 그 밖은 다음 주기에 다시 한다
         if ( static_cast<int32>( inoutListNotice.size() ) == _settings._noticeBatchCount )
             _nextNoticeMs = _nowMs; // 더 있을 수 있으므로 다음 틱에 바로 다시 가져간다
-        for ( ServiceMailNotice& notice : inoutListNotice )
+        for ( ServiceMailNotification& notice : inoutListNotice )
         {
             const AccountID accountID = notice._recipientAccountID;
             MailboxNewMail  newMail{ std::move( notice._mailKey ), std::move( notice._titleKey ) };

@@ -86,7 +86,7 @@ namespace sw
             {
                 GameObject* pObject = manager.findGameObjectByName( hashed_string( makeAvatarName( entityID ) ) );
                 if ( pObject != nullptr )
-                    manager.destroyObject( pObject );
+                    manager.destroyGameObject( pObject );
             }
         };
 

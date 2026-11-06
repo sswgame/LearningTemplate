@@ -16,7 +16,7 @@
 #include "GameFramework/Runtime/Foundation/GameData/GameCatalog.h"
 #include "GameFramework/Runtime/Foundation/GameData/StatBlock.h"
 #include "GameFramework/Runtime/Foundation/GameData/XMLCatalog.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/EquipCondition.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/EquipmentCondition.h"
 
 namespace sw
 {
@@ -25,7 +25,7 @@ namespace sw
     /** @brief 아이템 한 종류입니다. 분류, 장비 슬롯, 태그는 문자열 id 이므로 장르마다 자유롭게 정합니다. */
     /** @brief 장착 조건(`<Requires …/>`)의 칸입니다. `set` · `equippedTag` · `characterTag` · `bodyShape` 중 정확히 하나를 적는다(읽기가 본다). 몸 모양은 이름 목록이라 손으로 푼다. */
     REFLECT()
-    struct SW_GF_API EquipRequiresFields
+    struct SW_GF_API EquipmentRequiresFields
     {
         REFLECT_BODY();
 
@@ -57,9 +57,9 @@ namespace sw
         PROPERTY()
         string _name{};
         PROPERTY( Name = "tags" )
-        vector<hashed_string>  _listTag{};
-        StatBlock              _stats{};
-        vector<EquipCondition> _listEquipCondition{}; ///< 끼려면 모두 맞아야 하는 조건(`<Requires>`)
+        vector<hashed_string>      _listTag{};
+        StatBlock                  _stats{};
+        vector<EquipmentCondition> _listEquipCondition{}; ///< 끼려면 모두 맞아야 하는 조건(`<Requires>`)
         PROPERTY( Min = 0.0 )
         float32 _weight{ 0.0f };
         PROPERTY( Name = "durability", Min = 0.0 )

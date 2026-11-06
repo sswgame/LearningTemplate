@@ -263,8 +263,8 @@ namespace sw::editor
                 (void)context.expect( editor::getMainSceneSelection().getSelectedObjectCount() == 2, "the editor selection does not hold both tagged objects" );
 
                 editorContext.getSubsystem<EditorWorkspace>().clearSelection();
-                pManager->destroyObject( pFirst );
-                pManager->destroyObject( pOther );
+                pManager->destroyGameObject( pFirst );
+                pManager->destroyGameObject( pOther );
                 return EditorSelfTestStep::Done;
             }
 
@@ -330,7 +330,7 @@ namespace sw::editor
                 editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( probe._objectID ) : nullptr;
                 if ( pObj != nullptr )
-                    pManager->destroyObject( pObj );
+                    pManager->destroyGameObject( pObj );
             }
 
             static EditorSelfTestStep runGizmoMovesTheSelection( EditorSelfTestContext& context )
@@ -441,7 +441,7 @@ namespace sw::editor
                 editorContext.getSubsystem<EditorWorkspace>().clearSelection();
                 GameObject* pObj = pManager != nullptr ? pManager->findGameObjectByID( objectID ) : nullptr;
                 if ( pObj != nullptr )
-                    pManager->destroyObject( pObj );
+                    pManager->destroyGameObject( pObj );
             }
 
             /** @brief 격자 · 기즈모 · 게임 뷰 오버레이 테스트가 만든 선택 오브젝트입니다. */

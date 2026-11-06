@@ -94,9 +94,9 @@ namespace sw
         /** @brief 등록 줄 @p entry 를 부르는 명령을 더합니다. 인자는 지금 읽어 들고 있습니다. */
         void emitCall( const ConditionEntry& entry, const vector<string_view>& listToken )
         {
-            ReflectedFields args( *entry._pArgsOps );
+            InstancedStruct args( *entry._pArgsOps );
             string          argsError;
-            if ( ReflectedFieldsText::read( args.getInstance(), *args.getType(), listToken, argsError ) == false )
+            if ( InstancedStructText::read( args.getInstance(), *args.getType(), listToken, argsError ) == false )
             {
                 fail( formatToString( "'%#': %#", entry._pName, argsError.c_str() ) );
                 return;
@@ -168,7 +168,7 @@ namespace sw
                 return;
             }
             vector<string_view> listToken;
-            ReflectedFieldsText::splitArguments( argumentText, listToken );
+            InstancedStructText::splitArguments( argumentText, listToken );
             emitCall( *pEntry, listToken );
         }
 

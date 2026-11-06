@@ -106,7 +106,7 @@ namespace sw
         }
     }
 
-    void ReceiptValidatorRegistry::pollRefunds( vector<ReceiptRefundNotice>& outListNotice )
+    void ReceiptValidatorRegistry::pollRefunds( vector<ReceiptRefundNotification>& outListNotice )
     {
         for ( IReceiptValidator* pValidator : _listValidator )
         {
@@ -114,7 +114,7 @@ namespace sw
         }
     }
 
-    void ReceiptValidatorRegistry::forgetRefund( const ReceiptRefundNotice& notice )
+    void ReceiptValidatorRegistry::forgetRefund( const ReceiptRefundNotification& notice )
     {
         IReceiptValidator* pValidator = findValidator( notice._storeName );
         if ( pValidator != nullptr )

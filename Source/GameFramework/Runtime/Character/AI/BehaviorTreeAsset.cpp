@@ -42,34 +42,34 @@ namespace sw
             }
 
             /** @brief 종류와 스키마의 짝은 이 switch 하나다 — 읽기 · 쓰기 · 인스펙터가 모두 이것을 지난다. */
-            static const ReflectedStructOps& findFieldsOps( BehaviorNodeKind type )
+            static const InstancedStructOps& findFieldsOps( BehaviorNodeKind type )
             {
                 switch ( type )
                 {
                     case BehaviorNodeKind::Selector:
-                        return ReflectedStructOps::of<BehaviorSelectorFields>();
+                        return InstancedStructOps::of<BehaviorSelectorFields>();
                     case BehaviorNodeKind::Repeat:
-                        return ReflectedStructOps::of<BehaviorRepeatFields>();
+                        return InstancedStructOps::of<BehaviorRepeatFields>();
                     case BehaviorNodeKind::Cooldown:
                     case BehaviorNodeKind::TimeLimit:
                     case BehaviorNodeKind::Wait:
-                        return ReflectedStructOps::of<BehaviorTimedFields>();
+                        return InstancedStructOps::of<BehaviorTimedFields>();
                     case BehaviorNodeKind::BlackboardCondition:
-                        return ReflectedStructOps::of<BehaviorConditionDecoratorFields>();
+                        return InstancedStructOps::of<BehaviorConditionDecoratorFields>();
                     case BehaviorNodeKind::Condition:
-                        return ReflectedStructOps::of<BehaviorConditionFields>();
+                        return InstancedStructOps::of<BehaviorConditionFields>();
                     case BehaviorNodeKind::Action:
-                        return ReflectedStructOps::of<BehaviorActionFields>();
+                        return InstancedStructOps::of<BehaviorActionFields>();
                     case BehaviorNodeKind::MoveTo:
-                        return ReflectedStructOps::of<BehaviorMoveToFields>();
+                        return InstancedStructOps::of<BehaviorMoveToFields>();
                     case BehaviorNodeKind::SubTree:
-                        return ReflectedStructOps::of<BehaviorSubTreeFields>();
+                        return InstancedStructOps::of<BehaviorSubTreeFields>();
                     case BehaviorNodeKind::Sequence:
                     case BehaviorNodeKind::Inverter:
                     case BehaviorNodeKind::ForceSuccess:
                         break;
                 }
-                return ReflectedStructOps::of<VocabularyNoFields>();
+                return InstancedStructOps::of<VocabularyNoFields>();
             }
 
             /** @brief 열거자 이름(리플렉션 `ENUM()`)을 그대로 찾습니다. 0 부터 @p last 까지 본다. */
@@ -318,8 +318,8 @@ namespace sw
     void BehaviorTreeXML::resetNodeFields( BehaviorNodeKind type, BehaviorTreeNodeData& inoutData )
     {
         inoutData._type         = type;
-        inoutData._fields       = ReflectedFields( BehaviorTreeAssetInternal::findFieldsOps( type ) );
-        inoutData._actionParams = ReflectedFields{};
+        inoutData._fields       = InstancedStruct( BehaviorTreeAssetInternal::findFieldsOps( type ) );
+        inoutData._actionParams = InstancedStruct{};
         inoutData._listRawParam.clear();
     }
 
@@ -337,7 +337,7 @@ namespace sw
         const ActionEntry* const pEntry = ActionRegistry::find( inoutData._fields.find<BehaviorActionFields>()->_task );
         if ( pEntry != nullptr )
         {
-            inoutData._actionParams = ReflectedFields( *pEntry->_pParamsOps );
+            inoutData._actionParams = InstancedStruct( *pEntry->_pParamsOps );
             return XMLFields::readFields( node, inoutData._actionParams.getInstance(), *inoutData._actionParams.getType(), sourceName, { "id", "name", "task" } ) && bValid;
         }
         for ( XMLAttribute attribute = node.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
@@ -354,11 +354,11 @@ namespace sw
             node.appendAttribute( "id", string_view{ data._inheritID } );
         if ( data._name.empty() == false )
             node.appendAttribute( "name", string_view{ data._name } );
-        const ReflectedFields defaults( BehaviorTreeAssetInternal::findFieldsOps( data._type ) );
+        const InstancedStruct defaults( BehaviorTreeAssetInternal::findFieldsOps( data._type ) );
         XMLFields::writeFields( node, data._fields.getInstance(), defaults.getInstance(), *data._fields.getType() );
         if ( data._actionParams.isValid() )
         {
-            const ReflectedFields defaultParams( *data._actionParams.getOps() );
+            const InstancedStruct defaultParams( *data._actionParams.getOps() );
             XMLFields::writeFields( node, data._actionParams.getInstance(), defaultParams.getInstance(), *data._actionParams.getType() );
         }
         for ( const BehaviorRawParam& param : data._listRawParam )
@@ -375,7 +375,7 @@ namespace sw
         pFields->_task = string( task );
         inoutData._listRawParam.clear();
         const ActionEntry* const pEntry = ActionRegistry::find( task );
-        inoutData._actionParams         = pEntry != nullptr ? ReflectedFields( *pEntry->_pParamsOps ) : ReflectedFields{};
+        inoutData._actionParams         = pEntry != nullptr ? InstancedStruct( *pEntry->_pParamsOps ) : InstancedStruct{};
     }
 } // namespace sw
 

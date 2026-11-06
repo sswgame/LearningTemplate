@@ -11,7 +11,7 @@
 #include "GameFramework/Runtime/Online/Config/LiveEventControl.h"
 #include "GameFramework/Runtime/Online/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Ledger/IBalanceNotice.h"
+#include "GameFramework/Runtime/Online/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Sanction/ServiceSanction.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStore.h"
 #include "GameFramework/Runtime/Online/Store/ServiceStoreUtil.h"

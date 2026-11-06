@@ -81,7 +81,7 @@ namespace sw
                 pController->unpossess();
                 // 자동 빙의가 이 폰을 위해 세운 조종자는 폰과 함께 간다(지연 삭제 — 지금 지우는 중인 목록을 건드리지 않는다).
                 if ( pController->isSpawnedForPawn() && pController->getOwner() != nullptr )
-                    manager.destroyObject( pController->getOwner() );
+                    manager.destroyGameObject( pController->getOwner() );
             }
         }
         _controller = TComponentHandle<ControllerComponent>{};

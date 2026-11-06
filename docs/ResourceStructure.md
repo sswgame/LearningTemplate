@@ -151,7 +151,7 @@ shared_ptr<const BehaviorTreeAsset> tree = _tree.acquire();  // 또는 request()
 - 등록된 이름: `flag` · `tag` · `chance` · `bodyShape` · `bodyType`(GameFramework), `weekday` · `season` · `weather` · `phase` · `dayOfSeason` · `week` · `date` · `affinity`(스케줄 문맥), `blackboard` · `hasBlackboard`(행동 트리), `setComplete` · `setPieces` · `equippedTag`(장착), `targetTag` · `anyTag` · `occupied`(외형).
 - 장착 · 외형 조건의 종류 칸(`_kind` · `_setID` · `_tag`)은 남는다. 식은 함수 포인터라 무엇을 묻는지 답하지 못하는데, 조건 순환 검사와 "같은 질문을 뒤집은 규칙" 검사는 그 답이 필요하다.
 
-합치는 곳: `ScheduleCondition`, `EquipCondition`, `AppearanceRuleCondition`, 대화 `_condition`, `BehaviorBlackboardCondition`, `IShopConditionEvaluator`.
+합치는 곳: `ScheduleCondition`, `EquipmentCondition`, `AppearanceRuleCondition`, 대화 `_condition`, `BehaviorBlackboardCondition`, `IShopConditionEvaluator`.
 
 합치지 않는 곳: `AnimationConditionOp`(매 프레임 캐릭터마다 도는 값 비교), `UserSettingConditionOperator`(게임 문맥이 없는 설정 화면).
 

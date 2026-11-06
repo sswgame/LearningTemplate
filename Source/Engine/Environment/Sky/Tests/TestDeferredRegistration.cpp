@@ -44,7 +44,7 @@ SW_TEST_CASE( DeferredRegistrationTest, DestroyedBeforeRegistrationSkipsBothHook
     GameObject* pObject = manager.createGameObject( hashed_string( "Sky" ) );
     SW_REQUIRE_NOT_NULL( pObject );
     SW_REQUIRE_NOT_NULL( pObject->addComponent<SkyComponent>() );
-    manager.destroyObject( pObject );
+    manager.destroyGameObject( pObject );
     manager.endDeferredRegistration();
     SW_EXPECT_FALSE( SkyComponent::findSky( manager, gradient ) );
 }

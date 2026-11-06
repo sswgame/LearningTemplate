@@ -136,7 +136,7 @@ namespace sw
         class EconomyRefundWork final : public IServiceStoreWork
         {
         public:
-            EconomyRefundWork( EconomyService* pService, const CurrencyCatalog* pCurrencies, ReceiptRefundNotice&& notice, UnixMilliseconds nowMs )
+            EconomyRefundWork( EconomyService* pService, const CurrencyCatalog* pCurrencies, ReceiptRefundNotification&& notice, UnixMilliseconds nowMs )
                 : _notice{ std::move( notice ) }
                 , _pService{ pService }
                 , _pCurrencies{ pCurrencies }
@@ -149,7 +149,7 @@ namespace sw
             void complete() override { _pService->completeRefund( _notice, _result, _listChange, getCompletion() ); }
 
         private:
-            ReceiptRefundNotice          _notice;
+            ReceiptRefundNotification    _notice;
             vector<EconomyBalanceChange> _listChange;
             EconomyService*              _pService;
             const CurrencyCatalog*       _pCurrencies;
@@ -727,16 +727,16 @@ namespace sw
     {
         if ( _settings._pReceiptRegistry == nullptr )
             return;
-        vector<ReceiptRefundNotice> listNotice;
+        vector<ReceiptRefundNotification> listNotice;
         _settings._pReceiptRegistry->pollRefunds( listNotice );
-        for ( ReceiptRefundNotice& notice : listNotice )
+        for ( ReceiptRefundNotification& notice : listNotice )
         {
             ++_pendingRefundCount;
             _pStore->submit( make_unique<EconomyRefundWork>( this, _settings._pCurrencyCatalog, std::move( notice ), _nowMs ) );
         }
     }
 
-    void EconomyService::completeRefund( const ReceiptRefundNotice& notice, EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
+    void EconomyService::completeRefund( const ReceiptRefundNotification& notice, EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
     {
         --_pendingRefundCount;
         for ( const EconomyBalanceChange& change : listChange )

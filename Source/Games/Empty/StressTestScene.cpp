@@ -477,13 +477,13 @@ namespace sw
             {
                 if ( Component* pComp = pObjects->resolveComponent( handle ) )
                 {
-                    pObjects->destroyObject( pComp->getOwner() );
+                    pObjects->destroyGameObject( pComp->getOwner() );
                     ++removedCount;
                 }
             }
             if ( Component* pLight = pObjects->resolveComponent( _keyLight ) )
             {
-                pObjects->destroyObject( pLight->getOwner() );
+                pObjects->destroyGameObject( pLight->getOwner() );
                 ++removedCount;
             }
 
@@ -492,7 +492,7 @@ namespace sw
             {
                 if ( Component* pComp = pObjects->resolveComponent( handle ) )
                 {
-                    pObjects->destroyObject( pComp->getOwner() );
+                    pObjects->destroyGameObject( pComp->getOwner() );
                     ++removedCount;
                 }
             }
@@ -1183,7 +1183,7 @@ namespace sw
             // 지우고 같은 위치에 새로 만듭니다. 이름도 같습니다(총알처럼 같은 이름으로 반복해서 만드는 패턴입니다). 죽은 오브젝트는 아직 지연 파괴 목록에
             // 있지만, 이름은 비어 있는 것으로 봅니다.
             if ( Component* pOld = pObjects->resolveComponent( _listBenchMesh[index] ) )
-                pObjects->destroyObject( pOld->getOwner() );
+                pObjects->destroyGameObject( pOld->getOwner() );
             MeshComponent* pMesh  = spawnCube( pObjects, pScene->getMaterial(), index, side, origin );
             _listBenchMesh[index] = TComponentHandle<MeshComponent>{ pMesh };
         }

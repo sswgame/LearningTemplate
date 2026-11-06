@@ -206,7 +206,7 @@ namespace sw
     {
         GameObject* pObject = manager.resolveGameObject( inoutHandle );
         if ( pObject != nullptr )
-            manager.destroyObject( pObject );
+            manager.destroyGameObject( pObject );
         inoutHandle = GameObjectHandle{};
     }
 

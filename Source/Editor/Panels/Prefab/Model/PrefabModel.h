@@ -1,5 +1,5 @@
 /**
- * @file PrefabEditorModel.h
+ * @file PrefabModel.h
  * @brief 프리팹 창의 모델 — 격리 스택(`EditorPrefabIsolation`), 문서 루트 스폰 · 다시 세우기, 중첩 프리팹 들어가기 요청 · 나가기, 지금 단계 저장, 상태 줄. ImGui 를 모릅니다.
  * @details 패널(`PrefabEditorPanel`)은 미리보기 씬 · 뷰포트 · 기즈모 · 창 Undo 스택을 쥐고(`EditorPreviewPanel`) 막대 · 자식 목록을 그리며, 문서 dirty · 창 닫기 · 알림을 맡는다 —
  *          래그돌 · VFX 미리보기 `Model/` 과 같은 선이다(언리얼 블루프린트 편집기의 툴킷 상태와 뷰포트, 유니티 프리팹 모드의 PrefabStage 와 Scene 뷰가 나뉜 것과 같다).
@@ -20,7 +20,7 @@ namespace sw::editor
 {
     class EditorSelection;
 
-    /** @brief `PrefabEditorModel::exitFrame` 의 결과입니다. 패널이 문서 dirty · 창 닫기 · 알림을 이것으로 고른다. */
+    /** @brief `PrefabModel::exitFrame` 의 결과입니다. 패널이 문서 dirty · 창 닫기 · 알림을 이것으로 고른다. */
     enum class PrefabFrameExit : uint8
     {
         Failed,       ///< 단계가 없거나 저장하지 못했다 — 나가지 않았다
@@ -29,13 +29,13 @@ namespace sw::editor
     };
 
     /**
-     * @class PrefabEditorModel
+     * @class PrefabModel
      * @brief 프리팹 창의 상태와 명령입니다. 파일 머리말 참고.
      */
-    class PrefabEditorModel
+    class PrefabModel
     {
     public:
-        PrefabEditorModel();
+        PrefabModel();
 
         const EditorPrefabIsolation& getIsolation() const { return _isolation; }
         const string&                getStatus() const { return _status; }

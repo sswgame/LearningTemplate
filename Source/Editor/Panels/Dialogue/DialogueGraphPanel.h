@@ -84,7 +84,7 @@ namespace sw::editor
         int32                     _selectedNodeID;
         DialogueGraphPreviewModel _preview;
         EditorPropertyGrid        _actionGrid;        ///< 고른 동작의 칸
-        ReflectedFields           _actionFields;      ///< 지금 그리는 노드의 칸 값
+        InstancedStruct           _actionFields;      ///< 지금 그리는 노드의 칸 값
         string                    _actionFieldsText;  ///< `_actionFields` 를 푼 글. 노드 글이 바뀌면 다시 푼다
         string                    _actionError;       ///< 글을 풀지 못한 까닭
         vector<string>            _listActionName;    ///< 고르기 목록

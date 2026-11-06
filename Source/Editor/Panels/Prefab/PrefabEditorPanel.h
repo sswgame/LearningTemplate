@@ -1,13 +1,13 @@
 /**
  * @file PrefabEditorPanel.h
  * @brief 프리팹을 자기 미리보기 씬에서 편집하는 창입니다 — 메인 씬을 더럽히지 않고, 창마다 Undo 스택 · 선택을 가집니다.
- * @details 격리 스택 · 문서 루트 스폰 · 중첩 들어가기 · 나가기 · 저장은 `PrefabEditorModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 기즈모 · 문서 dirty · 창 닫기만 맡는다.
+ * @details 격리 스택 · 문서 루트 스폰 · 중첩 들어가기 · 나가기 · 저장은 `PrefabModel`(Model/, ImGui 없음)이 들고, 이 창은 그리기와 미리보기 씬 · 기즈모 · 문서 dirty · 창 닫기만 맡는다.
  */
 #pragma once
 #include "Core/Foundation/Types.h"
 
 #include "Editor/Common/GUI/Panel/EditorPreviewPanel.h"
-#include "Editor/Panels/Prefab/Model/PrefabEditorModel.h"
+#include "Editor/Panels/Prefab/Model/PrefabModel.h"
 #include "Editor/Viewport/EditorPreviewGizmo.h"
 
 namespace sw
@@ -81,7 +81,7 @@ namespace sw::editor
         void drawChildTree( GameObject& object, int32 depth );
 
     private:
-        PrefabEditorModel  _model;
+        PrefabModel        _model;
         EditorPreviewGizmo _gizmo;
     };
 } // namespace sw::editor

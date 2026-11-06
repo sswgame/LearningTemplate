@@ -104,7 +104,7 @@ namespace sw
          */
         [[nodiscard]] static bool encodeMaintenance( const MaintenanceWindow& window, vector<uint8>& outBytes );
         [[nodiscard]] static bool decodeMaintenance( string_view key, const vector<uint8>& bytes, MaintenanceWindow& outWindow );
-        [[nodiscard]] static bool encodeNotice( const ServiceNotice& notice, vector<uint8>& outBytes );
-        [[nodiscard]] static bool decodeNotice( string_view key, const vector<uint8>& bytes, ServiceNotice& outNotice );
+        [[nodiscard]] static bool encodeNotice( const ServiceAnnouncement& notice, vector<uint8>& outBytes );
+        [[nodiscard]] static bool decodeNotice( string_view key, const vector<uint8>& bytes, ServiceAnnouncement& outNotice );
     };
 } // namespace sw

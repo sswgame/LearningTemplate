@@ -141,7 +141,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "EditorSceneCommands.DuplicateFailedReadCopied", "Duplicate of '%#' failed to read a copied state - nothing was duplicated", pSrc->getName().c_str() );
             for ( GameObject* pCopy : listCopy )
             {
-                pManager->destroyObject( pCopy );
+                pManager->destroyGameObject( pCopy );
             }
             return nullptr;
         }
@@ -272,7 +272,7 @@ namespace sw::editor
         if ( pManager == nullptr || pObj == nullptr )
             return false;
 
-        // 삭제는 자식까지 지운다(`destroyObject` 기본). 그래서 기록도 서브트리 전체를 남긴다. 이 오브젝트 하나의 스냅샷만 남기면
+        // 삭제는 자식까지 지운다(`destroyGameObject` 기본). 그래서 기록도 서브트리 전체를 남긴다. 이 오브젝트 하나의 스냅샷만 남기면
         // 되돌릴 때 부모만 돌아오고 자식은 영영 사라진다(그대로 저장하면 파일에서도). **자식부터** 기록해 한 배치로 넣는다.
         // 배치의 되돌리기는 역순이라 부모가 원래 id 로 먼저 복원되고, 자식은 그 id 로 부모를 찾아 다시 붙는다.
         vector<GameObject*> listSubtree;
@@ -295,7 +295,7 @@ namespace sw::editor
             EditorTransaction::recordDestruction( pDoomed, "Destroy GameObject" );
         }
         EditorTransaction::endTransaction();
-        pManager->destroyObject( pObj );
+        pManager->destroyGameObject( pObj );
         return true;
     }
 
@@ -675,7 +675,7 @@ namespace sw::editor
             SW_LOG_WARNING_ID( "EditorSceneCommands.PasteFailedReadCopied", "Paste failed to read a copied object - nothing was pasted" );
             for ( GameObject* pCopy : listCopy )
             {
-                pManager->destroyObject( pCopy );
+                pManager->destroyGameObject( pCopy );
             }
             return;
         }

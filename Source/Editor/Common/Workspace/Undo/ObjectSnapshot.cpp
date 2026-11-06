@@ -139,7 +139,7 @@ namespace sw
                 if ( pTarget == nullptr )
                     return;
                 notify( context, pTarget->getObjectID(), ObjectEditKind::Destroyed );
-                target._pManager->destroyObject( pTarget );
+                target._pManager->destroyGameObject( pTarget );
             }
 
             /** @brief 스냅샷으로 오브젝트를 **원래 id 로** 복원합니다. 그래야 그 오브젝트 · 컴포넌트를 가리키던 핸들이 이어진다(데이터 단계). */

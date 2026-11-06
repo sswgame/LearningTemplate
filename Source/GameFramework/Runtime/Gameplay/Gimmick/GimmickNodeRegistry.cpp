@@ -690,7 +690,7 @@ namespace sw
         return -1;
     }
 
-    SubsystemInitResult GimmickNodeKindCatalog::initializeSubsystem()
+    SubsystemInitResult GimmickNodeRegistrySubsystem::initializeSubsystem()
     {
         // 종류 이름이 hashed_string 이라 이름 풀(코어 범위)이 선 뒤에 채운다 — 서브시스템 기동이 그 순서를 지킨다. 다시 세우면 처음부터 채운다.
         _registry = GimmickNodeRegistry{};
@@ -698,7 +698,7 @@ namespace sw
         return SubsystemInitResult::Succeeded;
     }
 
-    void GimmickNodeKindCatalog::shutdownSubsystem()
+    void GimmickNodeRegistrySubsystem::shutdownSubsystem()
     {
         _registry = GimmickNodeRegistry{};
     }
@@ -804,5 +804,5 @@ namespace sw
 namespace sw
 {
     // 엔진 범위 아래 GameFramework 의 자식 범위에 선다 — 기믹 회로 컴포넌트 · 그래프 편집기가 제 타입으로 찾는다.
-    SW_MODULE_SUBSYSTEM( Engine, GimmickNodeKindCatalog, GimmickNodeKindCatalog );
+    SW_MODULE_SUBSYSTEM( Engine, GimmickNodeRegistrySubsystem, GimmickNodeRegistrySubsystem );
 } // namespace sw

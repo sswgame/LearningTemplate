@@ -32,7 +32,7 @@
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/EconomyProtocol.h"
-#include "GameFramework/Runtime/Online/Ledger/IBalanceNotice.h"
+#include "GameFramework/Runtime/Online/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Schedule/ServiceScheduler.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 #include "GameFramework/Runtime/Online/Service/ServiceServerCallTable.h"
@@ -44,7 +44,7 @@ namespace sw
     struct EconomyBalanceChange;
     struct LedgerAuditReport;
     struct ReceiptDeliveryTask;
-    struct ReceiptRefundNotice;
+    struct ReceiptRefundNotification;
     struct ReceiptValidationResult;
 
     class CurrencyCatalog;
@@ -154,7 +154,7 @@ namespace sw
         /** @brief 잔액 변경을 계정에 알립니다. 이 서버에 붙은 계정이면 바로, 다른 서버에 붙었으면 접속 상태를 찾아 중계한다. `getBalanceNotice` 가 이 함수로 넘깁니다. */
         void notifyBalancesChanged( AccountID accountID, const vector<LedgerBalance>& listBalance );
         /** @brief 다른 키트(GM · 우편함)에 거는 잔액 변경 알림 창구입니다. 이 서비스와 수명이 같습니다. */
-        IBalanceNotice& getBalanceNotice() { return _balanceNotice; }
+        IBalanceChangedListener& getBalanceNotice() { return _balanceNotice; }
         // 예약 작업 — 보존 검사 회차를 차지했다
         void onScheduledRun( const ScheduledRun& run );
         /** @brief 보존 검사 한 번을 맡깁니다. 예약 회차와 테스트가 부릅니다. 이미 도는 중이면 무시합니다. */
@@ -167,7 +167,7 @@ namespace sw
         /** @brief 작업(work)의 `complete` 가 호출합니다. 응답과 지표를 처리합니다. */
         void completeCall( uint64 callID, const EconomyReply& reply );
         /** @brief 환불 회수 작업의 `complete` 가 호출합니다. 지표와 로그를 남기고 회수로 바뀐 잔액을 계정에 알립니다. 회수를 끝내지 못했으면 제공자가 그 환불을 잊어 겹친 조회가 다시 알립니다. */
-        void  completeRefund( const ReceiptRefundNotice& notice, EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
+        void  completeRefund( const ReceiptRefundNotification& notice, EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
         int32 getPendingCallCount() const { return _calls.getCount(); }
         /** @brief 기준 시각 읽기 작업의 `complete` 가 호출합니다. 읽었으면 제공자에 넘기고, 못 읽었으면 다시 읽게 합니다. */
         void completeRefundCursorRead( const vector<EconomyRefundCursor>& listCursor, ServiceStoreResult result, ServiceStoreCompletion completion );
@@ -182,10 +182,10 @@ namespace sw
 
     private:
         /** @brief 잔액 변경 알림 창구입니다. 서비스의 `notifyBalancesChanged` 로 넘깁니다. 서비스가 멤버로 들어 수명이 같다. */
-        class BalanceNotice final : public IBalanceNotice
+        class BalanceChangedListener final : public IBalanceChangedListener
         {
         public:
-            explicit BalanceNotice( EconomyService& service )
+            explicit BalanceChangedListener( EconomyService& service )
                 : _service{ service }
             {
             }
@@ -214,7 +214,7 @@ namespace sw
         unordered_map<uint64, EconomyBalanceChanged> _mapPresenceRequestToNotice; ///< 접속 상태를 묻는 중인 잔액 변경 알림(받는 계정은 결과에 있다)
         unordered_set<string>                        _uniqueSetDeliveryInFlight;  ///< 제공자에 맡겨 결과를 기다리는 지급 알림의 레코드 키
         unordered_set<string>                        _uniqueSetDeliveryAlarmed;   ///< 기한 오류 로그를 이미 남긴 레코드 키
-        BalanceNotice                                _balanceNotice;              ///< 잔액 변경 알림 창구(`getBalanceNotice`)
+        BalanceChangedListener                       _balanceNotice;              ///< 잔액 변경 알림 창구(`getBalanceNotice`)
         OnlineServiceHost*                           _pHost;                      ///< `onServiceTick` 이 붙잡는다. 알림을 이 서버에 붙은 계정에 바로 보낸다
         IServiceStore*                               _pStore;
         MetricRegistry*                              _pMetricRegistry; ///< 환불 결과 지표를 센다(설정에서 복사)

@@ -2,7 +2,7 @@
  * @file GameObjectStore.h
  * @brief `GameObjectManager` 가 쓰는 오브젝트 저장소입니다. 오브젝트 생성, 이름 부여(번호 재사용), id 테이블, 조회, 순회, 지연 파괴, 컴포넌트 풀, 플레이 수명(beginPlay 대기열)을 맡습니다.
  * @details 언리얼의 `ULevel::Actors` 와 `FUObjectArray`, 유니티 DOTS 의 `EntityManager` 에 해당한다. `GameObjectManager` 가 소유하고, 게임이 부르는
- *          API(`createGameObject`, `resolveComponent`, `destroyObject` 등)는 매니저가 같은 이름으로 전달한다. 프레임 순서와 틱 중 규칙은 모르고,
+ *          API(`createGameObject`, `resolveComponent`, `destroyGameObject` 등)는 매니저가 같은 이름으로 전달한다. 프레임 순서와 틱 중 규칙은 모르고,
  *          틱 중인지는 `StructuralChangeBuffer::isFrozen` 으로만 읽는다.
  *
  *          **헤더 템플릿(`forEachGameObject`)은 이 타입의 멤버 위치를 부르는 모듈에 컴파일해 넣는다.** 멤버를 바꾸면 모든 모듈(게임, 킷, 에디터, RHI)을
@@ -165,7 +165,7 @@ namespace sw
          * @details 비용은 씬에 있는 정확한 타입 수 K 와 맞는 컴포넌트 수의 합이다. 삭제 대기 컴포넌트와 삭제 대기 오브젝트의 컴포넌트는 건너뛴다(오브젝트 순회와 같은 결과).
          *          **컴포넌트의 표시 하나만 본다.** 삭제 대기 오브젝트의 컴포넌트는 항상 삭제 대기라서(`GameObject::isPendingDestroy` 의 불변식) 소유 오브젝트를
          *          읽지 않는다. 그 읽기는 컴포넌트 풀과 다른 메모리를 건드려, 빼기 전에는 오브젝트 10만 · 말단 질의가 2.8 배 느렸다(8.3 → 3.0 µs).
-         *          병렬 틱의 `destroyObject` 는 저장소 잠금 밖에서 표시하므로 이 순회와 겹칠 수 있다. 그때 표시 전에 읽은 컴포넌트는 방문하는데, 그것은
+         *          병렬 틱의 `destroyGameObject` 는 저장소 잠금 밖에서 표시하므로 이 순회와 겹칠 수 있다. 그때 표시 전에 읽은 컴포넌트는 방문하는데, 그것은
          *          파괴가 방문 뒤에 일어난 것과 같은 답이다(옛 이중 검사도 같은 창이 있었다). 해체는 틱 뒤 게임 스레드의 지연 파괴에서 배타 잠금으로 하므로
          *          방문한 포인터는 콜백 동안 유효하다.
          *          **순서는 약속하지 않는다.** 버킷은 타입이 처음 나온 순서, 버킷 안은 추가 순서지만 제거가 마지막 원소를 빈 자리로 옮긴다.
@@ -209,8 +209,8 @@ namespace sw
         /** @brief 시작 대기열의 컴포넌트에 onBeginPlay 를 부릅니다(게임 스레드, 틱 밖). 실행 중에 대기열에 들어온 것은 다음 번에 실행합니다. */
         void dispatchPendingBeginPlay();
 
-        /** @brief GameObject 를 지연 삭제 큐에 넣습니다(`GameObjectManager::destroyObject`). */
-        void destroyObject( GameObject* pObj, bool bDestroyChildren );
+        /** @brief GameObject 를 지연 삭제 큐에 넣습니다(`GameObjectManager::destroyGameObject`). */
+        void destroyGameObject( GameObject* pObj, bool bDestroyChildren );
         /** @brief Component 를 지연 삭제 큐에 넣습니다. 처리할 때 핸들로 다시 찾으므로, 그 사이에 다른 경로가 먼저 해제해도 안전합니다. */
         void destroyComponent( Component* pComp );
         /**

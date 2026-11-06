@@ -163,7 +163,7 @@ namespace sw
         /** @brief HTTP 클라이언트를 돌리고, 주기가 되면 환불을 조회하고, 끝난 응답을 처리합니다. */
         void               update( UnixMilliseconds now ) final;
         void               pollCompletions( vector<ReceiptValidationResult>& outListResult ) final;
-        void               pollRefunds( vector<ReceiptRefundNotice>& outListNotice ) final;
+        void               pollRefunds( vector<ReceiptRefundNotification>& outListNotice ) final;
         void               forgetRefund( string_view transactionID ) final;
         bool               usesRefundCursor() const final { return true; }
         void               restoreRefundCursor( int64 lastReadMs ) final;
@@ -232,7 +232,7 @@ namespace sw
         unordered_map<uint64, ReceiptCall> _mapRequestToCall;
         vector<ReceiptCall>                _listWaiting;
         vector<ReceiptValidationResult>    _listDone;
-        vector<ReceiptRefundNotice>        _listRefund;
+        vector<ReceiptRefundNotification>  _listRefund;
         vector<ReceiptDeliveryOutcome>     _listDeliveryDone;
         unordered_set<string>              _uniqueSetNotifiedRefund;
         HTTPClient*                        _pHTTPClient;

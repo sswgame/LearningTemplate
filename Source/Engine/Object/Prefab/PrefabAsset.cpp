@@ -1563,14 +1563,14 @@ namespace sw
                 const shared_ptr<const PrefabAsset>       pLaterAsset   = ( pSpawned != nullptr ) ? loadPrefab( resolvedPath ) : nullptr;
                 const bool                                bStateWritten = pLaterAsset != nullptr && applySpawnState( pSpawned, *pLaterAsset, instanceName );
                 if ( pSpawned != nullptr && bStateWritten == false )
-                    pGameObjectManager->destroyObject( pSpawned );
+                    pGameObjectManager->destroyGameObject( pSpawned );
             } );
             return pGameObject;
         }
 
         if ( applySpawnState( pGameObject, *pAsset, pInstanceNameUTF8 ) == false )
         {
-            pGameObjectManager->destroyObject( pGameObject );
+            pGameObjectManager->destroyGameObject( pGameObject );
             return nullptr;
         }
         return pGameObject;
@@ -1698,7 +1698,7 @@ namespace sw
             if ( ObjectStateSerializer::loadFromXMLString( pPart, state, context ) == false )
             {
                 SW_LOG_WARNING_ID( "PrefabAsset.NestedPrefabInstanceState", "Nested prefab instance '%#' (%#) state could not be applied - it is skipped", node._name, node._prefabPath );
-                pManager->destroyObject( pPart );
+                pManager->destroyGameObject( pPart );
                 continue;
             }
             PrefabAssetInternal::attachNestedInstance( pPart, pParent, node._attachKey );

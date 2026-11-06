@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Editor/Panels/Animation/Model/SequenceDocument.h"
+#include "Editor/Panels/Animation/Model/SequenceModel.h"
 
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
@@ -17,7 +17,7 @@ namespace sw::editor
 {
     namespace
     {
-        struct SequenceDocumentInternal
+        struct SequenceModelInternal
         {
             /** @brief 새 항목의 길이(프레임)입니다. 타임라인이 더 짧으면 타임라인 끝까지입니다. */
             static constexpr int32 kNewItemFrameLength = 10;
@@ -53,12 +53,12 @@ namespace sw::editor
             /** @brief 값 칸의 표시 배율입니다(회전은 라디안 → 도). */
             [[nodiscard]] static float32 getChannelDisplayScale( const SequenceKeyTrack& track, uint32 channelIndex )
             {
-                return SequenceDocument::isRotationChannel( track, channelIndex ) ? MathUtil::kRadianToDegree : 1.0f;
+                return SequenceModel::isRotationChannel( track, channelIndex ) ? MathUtil::kRadianToDegree : 1.0f;
             }
         };
     } // namespace
 
-    SequenceDocument::SequenceDocument()
+    SequenceModel::SequenceModel()
         : _asset{}
         , _itemEdit{}
         , _selectedItem{ -1 }
@@ -70,16 +70,16 @@ namespace sw::editor
     {
     }
 
-    void SequenceDocument::restoreAsset( const SequenceAsset& asset )
+    void SequenceModel::restoreAsset( const SequenceAsset& asset )
     {
         _asset         = asset;
-        _selectedItem  = SequenceDocumentInternal::clampSelection( _selectedItem, _asset._listItem.size() );
-        _selectedTrack = SequenceDocumentInternal::clampSelection( _selectedTrack, _asset._listTrack.size() );
+        _selectedItem  = SequenceModelInternal::clampSelection( _selectedItem, _asset._listItem.size() );
+        _selectedTrack = SequenceModelInternal::clampSelection( _selectedTrack, _asset._listTrack.size() );
         if ( _curveTrack >= static_cast<int32>( _asset._listTrack.size() ) )
             _curveTrack = -1;
     }
 
-    void SequenceDocument::resetSelection()
+    void SequenceModel::resetSelection()
     {
         _selectedItem  = -1;
         _selectedTrack = _asset._listTrack.empty() ? -1 : 0;
@@ -87,7 +87,7 @@ namespace sw::editor
         _bItemDraft    = SW_FALSE;
     }
 
-    int32 SequenceDocument::addItem( SequenceItemKind kind, string_view kindName )
+    int32 SequenceModel::addItem( SequenceItemKind kind, string_view kindName )
     {
         _bItemDraft                       = SW_FALSE;
         const SequenceItemKindInfo* pInfo = SequenceAsset::findItemKindInfo( kind );
@@ -96,9 +96,9 @@ namespace sw::editor
         SequenceTrackItem item{};
         item._kind  = kind;
         item._start = _asset._frameMin;
-        item._end   = MathUtil::min( _asset._frameMin + SequenceDocumentInternal::kNewItemFrameLength, _asset._frameMax );
+        item._end   = MathUtil::min( _asset._frameMin + SequenceModelInternal::kNewItemFrameLength, _asset._frameMax );
         item._color = pInfo->_defaultColor;
-        item._name  = SequenceDocumentInternal::makeNumberedName( _asset._listItem, kindName );
+        item._name  = SequenceModelInternal::makeNumberedName( _asset._listItem, kindName );
         if ( item.findFieldIssue() != SequenceItemFieldIssue::None )
         {
             _itemEdit   = std::move( item );
@@ -109,12 +109,12 @@ namespace sw::editor
         return static_cast<int32>( _asset._listItem.size() ) - 1;
     }
 
-    bool SequenceDocument::isDraftingItem() const
+    bool SequenceModel::isDraftingItem() const
     {
         return _bItemDraft == SW_TRUE;
     }
 
-    int32 SequenceDocument::commitItemDraft()
+    int32 SequenceModel::commitItemDraft()
     {
         if ( isDraftingItem() == false || _itemEdit.findFieldIssue() != SequenceItemFieldIssue::None )
             return -1;
@@ -124,23 +124,23 @@ namespace sw::editor
         return _selectedItem;
     }
 
-    void SequenceDocument::cancelItemDraft()
+    void SequenceModel::cancelItemDraft()
     {
         _bItemDraft = SW_FALSE;
     }
 
-    bool SequenceDocument::hasEditedItem() const
+    bool SequenceModel::hasEditedItem() const
     {
         return isDraftingItem() || hasSelectedItem();
     }
 
-    void SequenceDocument::syncItemEdit()
+    void SequenceModel::syncItemEdit()
     {
         if ( isDraftingItem() == false && hasSelectedItem() )
             _itemEdit = _asset._listItem[static_cast<size_t>( _selectedItem )];
     }
 
-    bool SequenceDocument::commitItemEdit()
+    bool SequenceModel::commitItemEdit()
     {
         if ( isDraftingItem() || hasSelectedItem() == false )
             return false;
@@ -160,7 +160,7 @@ namespace sw::editor
         return true;
     }
 
-    bool SequenceDocument::removeItem( int32 itemIndex )
+    bool SequenceModel::removeItem( int32 itemIndex )
     {
         if ( itemIndex < 0 || itemIndex >= static_cast<int32>( _asset._listItem.size() ) )
             return false;
@@ -172,19 +172,19 @@ namespace sw::editor
         return true;
     }
 
-    int32 SequenceDocument::duplicateItem( int32 itemIndex )
+    int32 SequenceModel::duplicateItem( int32 itemIndex )
     {
         if ( itemIndex < 0 || itemIndex >= static_cast<int32>( _asset._listItem.size() ) )
             return -1;
         SequenceTrackItem copy = _asset._listItem[static_cast<size_t>( itemIndex )];
         copy._name += " Copy";
-        if ( SequenceDocumentInternal::isNameTaken( _asset._listItem, copy._name ) )
-            copy._name = SequenceDocumentInternal::makeNumberedName( _asset._listItem, copy._name );
+        if ( SequenceModelInternal::isNameTaken( _asset._listItem, copy._name ) )
+            copy._name = SequenceModelInternal::makeNumberedName( _asset._listItem, copy._name );
         _asset._listItem.push_back( std::move( copy ) );
         return static_cast<int32>( _asset._listItem.size() ) - 1;
     }
 
-    void SequenceDocument::addTrack( SequenceTrackKind kind, string_view targetObject )
+    void SequenceModel::addTrack( SequenceTrackKind kind, string_view targetObject )
     {
         SequenceKeyTrack track{};
         track._kind         = kind;
@@ -194,13 +194,13 @@ namespace sw::editor
             pPrefix = "Transform";
         else if ( kind == SequenceTrackKind::RigSlot )
             pPrefix = "Rig Slot";
-        track._name = SequenceDocumentInternal::makeNumberedName( _asset._listTrack, pPrefix );
+        track._name = SequenceModelInternal::makeNumberedName( _asset._listTrack, pPrefix );
         track.fitChannelsToKind();
         _asset._listTrack.push_back( std::move( track ) );
         _selectedTrack = static_cast<int32>( _asset._listTrack.size() ) - 1;
     }
 
-    bool SequenceDocument::removeSelectedTrack()
+    bool SequenceModel::removeSelectedTrack()
     {
         if ( findSelectedTrack() == nullptr )
             return false;
@@ -210,25 +210,25 @@ namespace sw::editor
         return true;
     }
 
-    SequenceKeyTrack* SequenceDocument::findSelectedTrack()
+    SequenceKeyTrack* SequenceModel::findSelectedTrack()
     {
         const bool bValid = 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _asset._listTrack.size() );
         return bValid ? &_asset._listTrack[static_cast<size_t>( _selectedTrack )] : nullptr;
     }
 
-    const SequenceKeyTrack* SequenceDocument::findSelectedTrack() const
+    const SequenceKeyTrack* SequenceModel::findSelectedTrack() const
     {
         const bool bValid = 0 <= _selectedTrack && _selectedTrack < static_cast<int32>( _asset._listTrack.size() );
         return bValid ? &_asset._listTrack[static_cast<size_t>( _selectedTrack )] : nullptr;
     }
 
-    SequenceKeyTrack* SequenceDocument::findCurveTrack()
+    SequenceKeyTrack* SequenceModel::findCurveTrack()
     {
         const bool bValid = 0 <= _curveTrack && _curveTrack < static_cast<int32>( _asset._listTrack.size() );
         return bValid ? &_asset._listTrack[static_cast<size_t>( _curveTrack )] : nullptr;
     }
 
-    FloatCurve* SequenceDocument::findCurveChannel()
+    FloatCurve* SequenceModel::findCurveChannel()
     {
         SequenceKeyTrack* pTrack = findCurveTrack();
         if ( pTrack == nullptr || _curveChannel < 0 || _curveChannel >= static_cast<int32>( pTrack->_listChannel.size() ) )
@@ -236,7 +236,7 @@ namespace sw::editor
         return &pTrack->_listChannel[static_cast<size_t>( _curveChannel )];
     }
 
-    std::optional<int32> SequenceDocument::findPreviousKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const
+    std::optional<int32> SequenceModel::findPreviousKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const
     {
         const float32 limit = static_cast<float32>( frame ) - kSequenceKeyFrameTolerance;
         for ( auto it = listKeyFrame.rbegin(); it != listKeyFrame.rend(); ++it )
@@ -250,7 +250,7 @@ namespace sw::editor
         return std::nullopt;
     }
 
-    std::optional<int32> SequenceDocument::findNextKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const
+    std::optional<int32> SequenceModel::findNextKeyFrame( const vector<float32>& listKeyFrame, int32 frame ) const
     {
         const float32 limit = static_cast<float32>( frame ) + kSequenceKeyFrameTolerance;
         for ( const float32 keyFrame : listKeyFrame )
@@ -264,34 +264,34 @@ namespace sw::editor
         return std::nullopt;
     }
 
-    int32 SequenceDocument::findFrameAtRatio( float32 ratio ) const
+    int32 SequenceModel::findFrameAtRatio( float32 ratio ) const
     {
         const float32 clamped = MathUtil::clamp( ratio, 0.0f, 1.0f );
         return _asset._frameMin + static_cast<int32>( MathUtil::round( clamped * static_cast<float32>( getFrameSpan() ) ) );
     }
 
-    float32 SequenceDocument::computeRatioAtFrame( float32 frame ) const
+    float32 SequenceModel::computeRatioAtFrame( float32 frame ) const
     {
         return ( frame - static_cast<float32>( _asset._frameMin ) ) / static_cast<float32>( getFrameSpan() );
     }
 
-    bool SequenceDocument::isRotationChannel( const SequenceKeyTrack& track, uint32 channelIndex )
+    bool SequenceModel::isRotationChannel( const SequenceKeyTrack& track, uint32 channelIndex )
     {
         return track._kind == SequenceTrackKind::Transform && channelIndex >= 3 && channelIndex < 6;
     }
 
-    float32 SequenceDocument::computeChannelDisplayValue( const SequenceKeyTrack& track, uint32 channelIndex, float32 frame, float32 currentValue )
+    float32 SequenceModel::computeChannelDisplayValue( const SequenceKeyTrack& track, uint32 channelIndex, float32 frame, float32 currentValue )
     {
         const std::optional<float32> keyedValue = track.evaluateChannel( channelIndex, frame );
-        return ( keyedValue.has_value() ? *keyedValue : currentValue ) * SequenceDocumentInternal::getChannelDisplayScale( track, channelIndex );
+        return ( keyedValue.has_value() ? *keyedValue : currentValue ) * SequenceModelInternal::getChannelDisplayScale( track, channelIndex );
     }
 
-    bool SequenceDocument::setChannelDisplayValue( SequenceKeyTrack& track, uint32 channelIndex, float32 frame, float32 displayValue )
+    bool SequenceModel::setChannelDisplayValue( SequenceKeyTrack& track, uint32 channelIndex, float32 frame, float32 displayValue )
     {
-        return track.setChannelKey( channelIndex, frame, displayValue / SequenceDocumentInternal::getChannelDisplayScale( track, channelIndex ) );
+        return track.setChannelKey( channelIndex, frame, displayValue / SequenceModelInternal::getChannelDisplayScale( track, channelIndex ) );
     }
 
-    bool SequenceDocument::readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity )
+    bool SequenceModel::readTrackValues( GameObjectManager* pManager, const SequenceKeyTrack& track, float32* pOutArrValue, uint32 valueCapacity )
     {
         GameObject* pTarget               = SequenceTimelineUtil::findTarget( pManager, track._targetObject );
         const bool  bInvalidSampleRequest = pTarget == nullptr || pOutArrValue == nullptr || valueCapacity < SequenceKeyTrack::getChannelCount( track._kind );
@@ -332,7 +332,7 @@ namespace sw::editor
         return true;
     }
 
-    std::optional<int32> SequenceDocument::findTimelineFrame( float32 keyFrame ) const
+    std::optional<int32> SequenceModel::findTimelineFrame( float32 keyFrame ) const
     {
         // 비교는 실수로 한다 — 파일 · 커브 편집기의 키는 int32 밖일 수 있어 먼저 바꾸면 값이 깨진다.
         const float32 rounded      = MathUtil::round( keyFrame );
@@ -342,12 +342,12 @@ namespace sw::editor
         return static_cast<int32>( rounded );
     }
 
-    int32 SequenceDocument::getFrameSpan() const
+    int32 SequenceModel::getFrameSpan() const
     {
         return MathUtil::max( _asset._frameMax - _asset._frameMin, 1 );
     }
 
-    bool SequenceDocument::hasSelectedItem() const
+    bool SequenceModel::hasSelectedItem() const
     {
         return 0 <= _selectedItem && _selectedItem < static_cast<int32>( _asset._listItem.size() );
     }

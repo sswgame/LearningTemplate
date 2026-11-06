@@ -234,7 +234,7 @@ namespace sw::editor
 
     void CharacterEditorPanel::drawDocumentContent()
     {
-        using PackDataState = CharacterEditorDocument::PackDataState;
+        using PackDataState = CharacterEditorModel::PackDataState;
         _document.ensurePackData();
         if ( _document.getPaths()._rigPath.empty() )
             _bRigPreview = false; // 리그가 없는 게임으로 바뀌면 켜 둔 단추도 내린다
@@ -433,7 +433,7 @@ namespace sw::editor
         if ( boneIndex < 0 || pBodyScene == nullptr )
         {
             if ( pTarget != nullptr )
-                pManager->destroyObject( pTarget );
+                pManager->destroyGameObject( pTarget );
             _boneGizmoTarget            = GameObjectHandle{};
             _bBoneGizmoPlaced           = SW_FALSE;
             _published._boneGizmoPlaced = 0;
@@ -654,7 +654,7 @@ namespace sw::editor
             const bool                 bComponents  = bUnitAndLook && pAnimator != nullptr;
             if ( bComponents == false )
             {
-                pManager->destroyObject( pBody );
+                pManager->destroyGameObject( pBody );
                 _document.setStatus( "The preview body could not take its components" );
                 return;
             }
@@ -1147,12 +1147,12 @@ namespace sw::editor
 
         // 세트 고르기는 칸 목록 위에 둔다 — 패널이 낮아도 보이게.
         vector<hashed_string> listSet;
-        for ( const EquipSetDef& set : database.getSets().getSets() )
+        for ( const EquipmentSetDef& set : database.getSets().getSets() )
         {
             listSet.push_back( set._id );
         }
         hashed_string pickedSet;
-        const bool    bSetPicked = CharacterEditorPanelInternal::drawNameCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "EquipSet" ), "Equip set" ), hashed_string{}, listSet, pickedSet, "charactereditor.equipSet.first" );
+        const bool    bSetPicked = CharacterEditorPanelInternal::drawNameCombo( EditorThemeUtil::makeStableLabel( SW_LOCKEY( "EdPluginWidget", "EquipmentSet" ), "Equip set" ), hashed_string{}, listSet, pickedSet, "charactereditor.equipSet.first" );
         EditorSelfTestMarks::note( "charactereditor.equipSet" );
         if ( bSetPicked && pickedSet.empty() == false )
             (void)appearance.equipSet( database, pickedSet ); // 이미 입고 있으면 false 이고 그대로 둔다

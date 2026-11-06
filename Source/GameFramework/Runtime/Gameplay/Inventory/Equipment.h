@@ -11,7 +11,7 @@
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/GameFrameworkExports.h"
-#include "GameFramework/Runtime/Gameplay/Inventory/EquipCondition.h"
+#include "GameFramework/Runtime/Gameplay/Inventory/EquipmentCondition.h"
 #include "GameFramework/Runtime/Gameplay/Inventory/Inventory.h"
 
 namespace sw
@@ -22,7 +22,7 @@ namespace sw
     class StatBlock;
 
     /** @brief 장비 슬롯 하나입니다. */
-    struct EquipSlot
+    struct EquipmentSlot
     {
         InventorySlot _item{};
         hashed_string _name{};                  ///< "Ring1"
@@ -54,7 +54,7 @@ namespace sw
      *
      *          장착 조건: 끼기는 "끼운 뒤의 상태" 에서 그 아이템의 조건을 판정한다. 끼기, 벗기, 캐릭터 태그 변경, 체형 변경 같은 모든 변화 뒤에는 다른 장비의 조건을
      *          다시 검사하고, 깨진 것을 아이템의 정책대로 처리한다. 정책은 함께 벗기(@p outListRemoved 로 돌려줌), 낀 채 숨기기, 거부하기 중 하나이다.
-     *          조건끼리 순환하는 데이터는 로드 오류이므로(`EquipCondition::findConditionCycle`) 이 처리는 항상 끝난다. 세트 조건은 `setSetLookup` 으로 받은 세트 정보로 검사한다.
+     *          조건끼리 순환하는 데이터는 로드 오류이므로(`EquipmentCondition::findConditionCycle`) 이 처리는 항상 끝난다. 세트 조건은 `setSetLookup` 으로 받은 세트 정보로 검사한다.
      */
     class SW_GF_API Equipment
     {
@@ -63,9 +63,9 @@ namespace sw
 
         void initialize( const ItemCatalog* pCatalog, string_view slotLayout );
         /** @brief 세트 조건이 참조할 세트 정보입니다. 소유하지 않고 참조만 하며, 없으면 세트 조건은 맞지 않습니다. */
-        void setSetLookup( const IEquipSetLookup* pSetLookup ) { _pSetLookup = pSetLookup; }
+        void setSetLookup( const IEquipmentSetLookup* pSetLookup ) { _pSetLookup = pSetLookup; }
         /** @brief 캐릭터의 태그와 체형을 바꾸고 조건을 다시 검사합니다. 함께 벗겨진 것은 @p outListRemoved 로 나옵니다. */
-        void setCharacterContext( const EquipCharacterContext& context, vector<InventorySlot>& outListRemoved );
+        void setCharacterContext( const EquipmentCharacterContext& context, vector<InventorySlot>& outListRemoved );
 
         /**
          * @brief @p slot 에 @p item 을 낍니다. 원래 끼고 있던 것과 조건이 깨져 함께 벗겨진 것은 @p outListRemoved 로 나옵니다. 원래 끼고 있던 것이 먼저 나옵니다.
@@ -88,33 +88,33 @@ namespace sw
         hashed_string        findSlotFor( const hashed_string& itemID ) const;
         const InventorySlot* findEquipped( const hashed_string& slot ) const;
         /** @brief 슬롯의 아이템이 조건이 깨져 숨김 상태이면 true 입니다. */
-        bool                         isSuppressed( const hashed_string& slot ) const;
-        void                         computeStats( StatBlock& outStats ) const;
-        const vector<EquipSlot>&     getSlots() const { return _listSlot; }
-        const EquipCharacterContext& getCharacterContext() const { return _context; }
-        const ItemCatalog*           getCatalog() const { return _pCatalog; }
-        const IEquipSetLookup*       getSetLookup() const { return _pSetLookup; }
+        bool                             isSuppressed( const hashed_string& slot ) const;
+        void                             computeStats( StatBlock& outStats ) const;
+        const vector<EquipmentSlot>&     getSlots() const { return _listSlot; }
+        const EquipmentCharacterContext& getCharacterContext() const { return _context; }
+        const ItemCatalog*               getCatalog() const { return _pCatalog; }
+        const IEquipmentSetLookup*       getSetLookup() const { return _pSetLookup; }
         /** @brief 슬롯, 아이템, 숨김 상태가 바뀔 때마다 늘어납니다. 외형 해석이 이 값을 보고 다시 계산합니다. */
         uint32 getRevision() const { return _revision; }
 
     private:
         int32 findSlotIndex( const hashed_string& slot ) const;
-        bool  areConditionsMet( const ItemDef& def, const vector<EquipSlot>& listSlot, int32 slotIndex ) const;
+        bool  areConditionsMet( const ItemDef& def, const vector<EquipmentSlot>& listSlot, int32 slotIndex ) const;
         /**
          * @brief @p inoutListSlot 의 깨진 조건을 정책대로 정리합니다. @p bAllowRefuse 가 true 이면 거부 정책이 결과를 `RefusedByDependent` 로 만듭니다.
          * @details 조건이 다시 맞으면 숨김을 해제하는 것도 여기서 한다.
          */
-        EquipResult settleConditions( vector<EquipSlot>& inoutListSlot, bool bAllowRefuse, vector<InventorySlot>& outListRemoved ) const;
+        EquipResult settleConditions( vector<EquipmentSlot>& inoutListSlot, bool bAllowRefuse, vector<InventorySlot>& outListRemoved ) const;
         /** @brief 슬롯 @p slotIndex 에 @p item 을 둔 테스트용 상태를 만들고 판정합니다. */
-        EquipResult makeTrialEquip( int32 slotIndex, const InventorySlot& item, vector<EquipSlot>& outListSlot, vector<InventorySlot>& outListRemoved ) const;
+        EquipResult makeTrialEquip( int32 slotIndex, const InventorySlot& item, vector<EquipmentSlot>& outListSlot, vector<InventorySlot>& outListRemoved ) const;
         /** @brief 테스트용 상태를 실제 상태로 반영하고, 실제로 바뀌었으면 버전을 올립니다. */
-        void commitSlots( vector<EquipSlot>&& listSlot );
+        void commitSlots( vector<EquipmentSlot>&& listSlot );
 
     private:
-        vector<EquipSlot>      _listSlot;
-        EquipCharacterContext  _context;
-        const ItemCatalog*     _pCatalog;
-        const IEquipSetLookup* _pSetLookup;
-        uint32                 _revision;
+        vector<EquipmentSlot>      _listSlot;
+        EquipmentCharacterContext  _context;
+        const ItemCatalog*         _pCatalog;
+        const IEquipmentSetLookup* _pSetLookup;
+        uint32                     _revision;
     };
 } // namespace sw

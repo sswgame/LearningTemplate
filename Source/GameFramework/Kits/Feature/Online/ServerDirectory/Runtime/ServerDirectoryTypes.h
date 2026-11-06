@@ -102,7 +102,7 @@ namespace sw
 {
     /** @brief 공지 하나입니다. 상태 응답(B)과 저장소 레코드(A)가 같은 선언을 씁니다. */
     REFLECT()
-    struct ServiceNotice
+    struct ServiceAnnouncement
     {
         REFLECT_BODY();
         PROPERTY( MaxCount = ServerDirectoryLimit::kMaxNoticeTextSize )
@@ -134,7 +134,7 @@ namespace sw
         PROPERTY( MaxCount = ServerDirectoryLimit::kMaxWindowCount )
         vector<MaintenanceView> _listMaintenance{}; ///< 상한은 `ServerDirectoryLimit::kMaxWindowCount` 와 같다
         PROPERTY( MaxCount = ServerDirectoryLimit::kMaxNoticeCount )
-        vector<ServiceNotice> _listNotice{}; ///< 상한은 `ServerDirectoryLimit::kMaxNoticeCount` 와 같다
+        vector<ServiceAnnouncement> _listNotice{}; ///< 상한은 `ServerDirectoryLimit::kMaxNoticeCount` 와 같다
     };
 } // namespace sw
 

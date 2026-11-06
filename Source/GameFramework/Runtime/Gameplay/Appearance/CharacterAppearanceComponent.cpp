@@ -515,7 +515,7 @@ namespace sw
         pManager->executeOrDeferPostTickOnComponent( *this, []( CharacterAppearanceComponent& appearance, GameObjectManager& manager )
         {
             appearance.removeParts( true );
-            manager.destroyObject( appearance.getOwner() );
+            manager.destroyGameObject( appearance.getOwner() );
         } );
     }
 
@@ -551,7 +551,7 @@ namespace sw
             if ( manager.getSubsystem<SocketPartPool>().storePart( object, Internal::makePoolKey( spawned._asset, spawned._material ) ) )
                 return;
         }
-        manager.destroyObject( &object );
+        manager.destroyGameObject( &object );
     }
 
     void CharacterAppearanceComponent::retireMergedPart( GameObjectManager& manager, const SpawnedPart& spawned ) const
@@ -912,7 +912,7 @@ namespace sw
         if ( pMesh == nullptr )
         {
             if ( pObject != nullptr )
-                manager.destroyObject( pObject );
+                manager.destroyGameObject( pObject );
             return nullptr; // 부르는 쪽이 스폰하지 못했다고 알린다
         }
         pMesh->setMeshID( part._asset.c_str() );
@@ -932,7 +932,7 @@ namespace sw
         if ( pSprite == nullptr )
         {
             if ( pObject != nullptr )
-                manager.destroyObject( pObject );
+                manager.destroyGameObject( pObject );
             return nullptr;
         }
         pSprite->setClipPath( part._asset.c_str() );

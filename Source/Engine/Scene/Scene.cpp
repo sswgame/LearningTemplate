@@ -667,7 +667,7 @@ namespace sw
             GameObject* pGo = _objectManager->findGameObjectByID( objectID );
             // 자식은 같은 셀의 엔티티이거나 이 엔티티의 중첩 프리팹 부품이다 — 늘 올라 있는 오브젝트는 셀의 오브젝트에 붙지 않는다(쿠커가 검사했다).
             if ( pGo != nullptr )
-                _objectManager->destroyObject( pGo, true );
+                _objectManager->destroyGameObject( pGo, true );
         }
     }
 
@@ -1130,7 +1130,7 @@ namespace sw
             for ( GameObject* pObj : _objectManager->getAllGameObjects() )
             {
                 if ( pObj != nullptr )
-                    _objectManager->destroyObject( pObj );
+                    _objectManager->destroyGameObject( pObj );
             }
         }
     }

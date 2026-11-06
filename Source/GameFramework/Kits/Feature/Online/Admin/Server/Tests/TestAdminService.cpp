@@ -9,7 +9,7 @@
 #include "GameFramework/Runtime/Online/Config/LiveEventControl.h"
 #include "GameFramework/Runtime/Online/Directory/ServerDirectoryControl.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
-#include "GameFramework/Runtime/Online/Ledger/IBalanceNotice.h"
+#include "GameFramework/Runtime/Online/Ledger/IBalanceChangedListener.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
 
 using namespace sw;
@@ -32,7 +32,7 @@ namespace
     };
 
     /** @brief 잔액 알림 호출을 셉니다. */
-    class FakeBalanceNotice final : public IBalanceNotice
+    class FakeBalanceNotice final : public IBalanceChangedListener
     {
     public:
         vector<AccountID> _listAccount{};
