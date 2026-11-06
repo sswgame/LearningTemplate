@@ -1,0 +1,39 @@
+<Scene formatVersion="2" name="SectionMaterial">
+	<!-- 시나리오 automation/sectionmaterial 의 무대 — 같은 레인저 옷(SectionShowcase)을 왼쪽은 부품 그대로, 오른쪽은 몸 메시에 합쳐(_bMergeParts) 입는다.
+	     sectionmaterial_gilded 는 프리셋만 SectionShowcaseGilded 로 바꿔 규칙이 팔의 옷 구간(mi_ranger) 하나만 바꾼다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,1.1,-4.5" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.9" _nearZ="0.1" _farZ="60" _orthoHeight="10" _priority="10" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _componentName="DirectionalLightComponent" _bActive="true" _localPosition="0,0,0" _localRotation="0.95,0.7,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _color="1,0.95,0.9" _intensity="1.8" _ambient="0.45" _shadowExtent="8" _shadowDistance="16" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Parts">
+			<GameObject _schemaVersion="0" _name="Parts" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="-1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="None" _boundsRadius="2" _blendMode="Opaque" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _bAnimateWhenOffscreen="false" />
+					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="SectionShowcase" _seed="0" _bMergeParts="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Merged">
+			<GameObject _schemaVersion="0" _name="Merged" _bActive="true">
+				<_listComponent>
+					<SkeletalMeshComponent _componentName="SkeletalMeshComponent" _bActive="true" _localPosition="1,0,0" _localRotation="0,3.1415927,0" _localScale="1,1,1" _attachOwner="None" _attachOwnerID="0" _attachComponent="None" _meshID="" _materialPath="None" _boundsRadius="2" _blendMode="Opaque" _gpuSpinSeed="0" _bVisible="true" _skeletonPath="" _updateRateDivisor="1" _bFollowParentPose="false" _bAnimateWhenOffscreen="false" />
+					<CharacterAppearanceComponent _componentName="CharacterAppearanceComponent" _bActive="true" _presetID="SectionShowcase" _seed="0" _bMergeParts="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

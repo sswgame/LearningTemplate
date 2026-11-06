@@ -155,6 +155,8 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 같은 메시를 머티리얼만 달리한 아이템은 외형 항목을 물려받아 `material` 만 적는다. 소켓 프리팹 부품은 프리팹의 모든 메시에 그 머티리얼을 입히고, 쉬는 부품 풀은 머티리얼별로 나뉜다. 꾸미기로 고르는 변형은 `<MaterialVariant>` 다. 시나리오: `game/shooter3d/automation/showcase/itemvariant`.
 
+머티리얼이 여럿인 스킨드 부품은 메시 구간 이름마다 머티리얼을 적는다(`<Section name material>`). 변형(`<Variant>` · `<MaterialVariant>`)은 안에 `<Section>` 을 적어 그 구간만 바꾸고 `<Material section>` 으로 그 구간에만 매개변수를 건다. 규칙은 `<SwapMaterial section>` · `<MaterialValue section>` 이고, 넓은 교체(부품 전체) 위에 좁은 교체(구간)가 덮는다. 구간은 번호가 아니라 이름이다(언리얼 Material Slot · 유니티 `Renderer.materials` 는 슬롯 · 번호) — 다시 임포트해 구간 순서가 바뀌어도 데이터가 맞다. 병합(`_bMergeParts`)해도 구간마다 머티리얼이 남고, 구간 머티리얼은 메시 해시(병합 캐시 키)에 든다. 물려받은 항목은 변형의 `<Section>` 을 이름으로 덮는다(`DataCatalogInheritance.json`). 시나리오: `game/empty/automation/sectionmaterial`.
+
 외형 프리셋(`CharacterAppearance` 의 `parent`)은 여기에 올리지 않았다. 값은 씨앗으로 뽑고 세트는 쌓이는 규칙이라 칸을 덮는 합치기와 다르다(`presets.xml` 머리말).
 
 | 엔진 | 방식 | 여기와 다른 점(기억에 의존) |

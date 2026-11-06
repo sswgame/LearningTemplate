@@ -14,4 +14,10 @@
     <When target="Hood" tag="Hood.Ranger"/>
     <Hide target="Hair" part="Hair"/>
   </Rule>
+  <!-- 구간 머티리얼 쇼케이스 — 태그를 단 캐릭터만 레인저 팔(꾸미기 "Outfit" 의 "Arms" 부품)의 옷 구간 mi_ranger 를 금빛으로 바꾼다. 피부 구간 mi_regular_male 은 그대로다
+       (시나리오 game/empty/automation/sectionmaterial). -->
+  <Rule id="SectionShowcaseGilded" priority="0">
+    <When characterTag="Showcase.SectionGilded"/>
+    <SwapMaterial target="Outfit" part="Arms" section="mi_ranger" material="common/materials/kaykit_knight_gilded.material"/>
+  </Rule>
 </AppearanceRuleTable>

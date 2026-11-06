@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  구간 머티리얼 — 같은 레인저 옷을 두 번 입힌다. 둘째 무대는 태그가 규칙(<SwapMaterial target="Outfit" part="Arms" section="mi_ranger">)을 켜 팔 부품의 옷 구간 하나만 바꾼다.
+  왼쪽은 부품 그대로(구간 컴포넌트), 오른쪽은 몸 메시에 합친 캐릭터(합친 조각)다 — 두 영역이 모두 달라야 병합해도 구간 머티리얼이 남은 것이다.
+  같은 실행의 두 장을 견주는 음성 대조다(`ExpectImagesDiffer`) — 구간 교체가 그림에 닿지 않으면 진다. 골든은 두지 않는다.
+  실행: ctest -R Scenario.game.empty.sectionmaterial
+-->
+<Scenario name="game.empty.sectionmaterial" fixedDelta="0.0166667" timeoutFrames="1200" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/sectionmaterial.scene.xml"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="30"/>
+	<Screenshot file="sectionmaterial_base.ppm"/>
+	<LoadScene path="game/empty/maps/sectionmaterial_gilded.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="30"/>
+	<Screenshot file="sectionmaterial_gilded.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="sectionmaterial_base.ppm" second="sectionmaterial_gilded.ppm" region="0,0,0.5,1" minDiffering="0.005"/>
+	<ExpectImagesDiffer first="sectionmaterial_base.ppm" second="sectionmaterial_gilded.ppm" region="0.5,0,1,1" minDiffering="0.005"/>
+	<Pass/>
+</Scenario>

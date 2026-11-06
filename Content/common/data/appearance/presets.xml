@@ -89,4 +89,10 @@
   <CharacterAppearance id="Farmer" parent="TownsfolkMale" tags="Faction.Player">
     <Value name="Hair" option="Bearded"/>
     <Value name="Outfit" option="Peasant"/>
-  </CharacterAppearance></CharacterAppearanceCatalog>
+  </CharacterAppearance>
+  <!-- 구간 머티리얼 쇼케이스(시나리오 game/empty/automation/sectionmaterial) — 같은 레인저 옷이다. Gilded 의 태그가 규칙 SectionShowcaseGilded 를 켜 팔의 옷 구간만 바꾼다. -->
+  <CharacterAppearance id="SectionShowcase" parent="TownsfolkMale">
+    <Value name="Hair" option="Buzzed"/>
+    <Value name="Outfit" option="Ranger"/>
+  </CharacterAppearance>
+  <CharacterAppearance id="SectionShowcaseGilded" parent="SectionShowcase" tags="Showcase.SectionGilded"/></CharacterAppearanceCatalog>
