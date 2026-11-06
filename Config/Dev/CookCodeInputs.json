@@ -4,6 +4,6 @@
     "Prefab": [ "Source/Engine/Object/Prefab", "Source/Engine/Serialization" ],
     "NavMesh": [ "Source/Engine/Navigation", "Source/Engine/Scene" ],
     "VertexAnimation": [ "Source/Engine/Animation/Scene", "Source/Engine/Graphics/Mesh" ],
-    "Pack": [ "Source/Engine/Asset/Cook", "Source/Engine/Content/Pack" ],
+    "Pack": [ "Source/Engine/Asset/Cook", "Source/Engine/Content/Pack", "Source/Engine/Serialization/Inherit" ],
     "ShaderCompiler": [ "Source/Engine/Graphics/Shader/Compile/ShaderCompiler.cpp", "Source/Engine/Graphics/Shader/Compile/SPIRVOpenGLPatch.cpp" ]
 }

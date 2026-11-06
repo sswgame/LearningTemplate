@@ -153,6 +153,11 @@ namespace sw
          */
         uint8 _bRequired : 1;
         /**
+         * @brief 이 칸이 목록 원소의 열쇠입니다(`PROPERTY( InheritKey )`). 부모를 가리키는 데이터(`_base`)가 이 원소의 목록을 이 칸의 값으로 합칩니다(`DataInheritance`).
+         * @details 열쇠가 없는 목록은 합치지 않고 자식이 적으면 통째로 바뀝니다. 언리얼은 배열 원소에 열쇠가 없어 통째로 델타를 쓰고, 유니티는 인덱스로 짚어 끼워 넣으면 어긋납니다 — 이름으로 짚으면 둘 다 없습니다.
+         */
+        uint8 _bInheritKey : 1;
+        /**
          * @brief 세이브 대상입니다(`SaveGame`).
          * @details 타입(기반 포함)에 `SaveGame` 프로퍼티가 하나라도 있으면 세이브 직렬화(`SerializePurpose::SaveGame`)는 그 프로퍼티만 쓴다.
          *          하나도 없는 타입은 모든 프로퍼티를 쓴다(`TypeInfo::hasSaveGameProperty`).
@@ -166,7 +171,7 @@ namespace sw
          *          `Transient` · `Required` 와 함께 붙이면 파서가 멈춘다.
          */
         uint8                  _bRuntimeState : 1;
-        [[maybe_unused]] uint8 _reservedRoles : 3;
+        [[maybe_unused]] uint8 _reservedRoles : 2;
 
         /** @brief 범위와 플래그를 끈 기본값으로 만듭니다. */
         PropertyMetadata() noexcept;

@@ -55,14 +55,29 @@ namespace sw
         }
 
         /**
-         * @brief 리플렉션 desc 를 XML 로 씁니다.
+         * @brief 리플렉션 desc 를 XML 로 씁니다. 형식 기본값과 같은 칸은 쓰지 않습니다(필수 칸은 씁니다).
          * @param absPath 쓸 디스크 경로(리소스 id 를 디스크 자리로 푸는 일은 부르는 쪽 - `AssetPaths::toDiskPath`)
          * @return 성공 여부.
+         * @note 그래서 코드의 기본값을 바꾸면 그 칸을 적지 않은 파일의 값도 바뀝니다(`docs/agents/DataInheritance.md`).
          */
         template <typename DescType>
         [[nodiscard]] static bool saveDesc( const AbsolutePath& absPath, const DescType& desc )
         {
-            return saveDescInternal( absPath, &desc, DescType::StaticType() );
+            const DescType defaults{};
+            return saveDescInternal( absPath, &desc, &defaults, {}, DescType::StaticType() );
+        }
+
+        /**
+         * @brief 리플렉션 desc 를 @p baseID 의 자식으로 씁니다. 부모와 같은 칸은 쓰지 않고 루트에 `_base` 를 적습니다.
+         * @return 부모를 읽지 못하면 쓰지 않고 false 입니다 — 모든 칸을 적어 부모를 끊지 않습니다.
+         */
+        template <typename DescType>
+        [[nodiscard]] static bool saveDescAsChild( const AbsolutePath& absPath, const DescType& desc, const AssetID& baseID )
+        {
+            DescType base{};
+            if ( loadDesc( baseID, base ) == false )
+                return false;
+            return saveDescInternal( absPath, &desc, &base, baseID.view(), DescType::StaticType() );
         }
 
     private:
@@ -75,7 +90,7 @@ namespace sw
         [[nodiscard]] static bool loadDescFromDiskFileInternal( string_view diskPath, void* pDesc, const TypeInfo* pTypeInfo );
         /** @brief 두 입구가 읽은 본문을 desc 로 풉니다. @p sourceName 은 로그에 찍는 이름입니다. */
         [[nodiscard]] static bool parseDesc( string_view sourceName, const string& text, void* pDesc, const TypeInfo* pTypeInfo );
-        /** @brief 쓰기 쪽의 같은 구현입니다. */
-        [[nodiscard]] static bool saveDescInternal( const AbsolutePath& absPath, const void* pDesc, const TypeInfo* pTypeInfo );
+        /** @brief 쓰기 쪽의 같은 구현입니다. @p pParent 와 같은 칸은 쓰지 않습니다. @p baseID 가 있으면 @p pParent 는 그 부모이고, 없으면 형식 기본값입니다. */
+        [[nodiscard]] static bool saveDescInternal( const AbsolutePath& absPath, const void* pDesc, const void* pParent, string_view baseID, const TypeInfo* pTypeInfo );
     };
 } // namespace sw

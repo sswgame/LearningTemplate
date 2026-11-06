@@ -96,6 +96,7 @@ namespace sw
                             {    prop._bPolymorphic,     "Polymorphic"},
                             {    prop._bSkipIfEmpty,     "SkipIfEmpty"},
                             {       prop._bRequired,        "Required"},
+                            {     prop._bInheritKey,      "InheritKey"},
                             {prop._bHideInInspector, "HideInInspector"},
                             {     prop._bReplicated,      "Replicated"},
                             {       prop._bSaveGame,        "SaveGame"},

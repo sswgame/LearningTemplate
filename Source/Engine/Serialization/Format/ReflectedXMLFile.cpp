@@ -2,10 +2,13 @@
 
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
 
+#include "Core/File/FileUtil.h"
+
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Content/AssetPaths.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 
 namespace sw
@@ -45,8 +48,12 @@ namespace sw
 
         // PROPERTY 그래프를 그대로 읽는다 — 필드를 손으로 읽으면 필드를 더할 때마다 파서와 라이터를 같이 고쳐야 하고,
         // 하나만 빠뜨리면 조용히 빈 값이 된다. 모르는 이름 · 읽지 못한 값 · `Min`/`Max` 밖 값은 이름과 함께 오류다(설정 JSON 과 같은 계약).
+        // 부모를 가리키면 한 벌로 펼친 뒤 읽는다 — 읽기 규칙(모르는 이름 · 범위)은 펼친 결과에 그대로 걸린다.
+        string flatText;
+        if ( DataInheritance::findBasePath( text ).empty() == false && DataInheritance::flattenReflected( text, sourceName, *pTypeInfo, flatText ) == false )
+            return false;
         vector<SchemaOrphanValue> listOrphan;
-        const SoftReadResult      result = XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, text, &listOrphan );
+        const SoftReadResult      result = XMLSerializer::deserializeSoft( pDesc, *pTypeInfo, flatText.empty() ? string_view( text ) : string_view( flatText ), &listOrphan );
         if ( result == SoftReadResult::NotParsed )
         {
             // 왜 못 읽었는지(`Xml.ParseError` · `Xml.WrongRoot`)는 안쪽이 이미 알렸다 — 어느 파일인지를 더한다. 빈 글은 이 줄만 남는다.
@@ -63,7 +70,7 @@ namespace sw
         return result == SoftReadResult::Read && listOrphan.empty();
     }
 
-    bool ReflectedXMLFile::saveDescInternal( const AbsolutePath& absPath, const void* pDesc, const TypeInfo* pTypeInfo )
+    bool ReflectedXMLFile::saveDescInternal( const AbsolutePath& absPath, const void* pDesc, const void* pParent, const string_view baseID, const TypeInfo* pTypeInfo )
     {
         if ( pTypeInfo == nullptr )
         {
@@ -71,7 +78,9 @@ namespace sw
             return false;
         }
 
-        if ( XMLSerializer::saveFile( absPath.str(), pDesc, *pTypeInfo ) == false )
+        string deltaText;
+        if ( DataInheritance::makeDelta( XMLSerializer::serialize( pDesc, *pTypeInfo ), XMLSerializer::serialize( pParent, *pTypeInfo ), DataInheritanceSchema::makeFromType( *pTypeInfo ), baseID, deltaText ) == false ||
+             FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeTextFile( absPath.str(), deltaText ) == false )
         {
             SW_LOG_ERROR_ID( "Xml.WriteFailed", "XML write failed: %# (%#)", absPath.str(), pTypeInfo->_name.c_str() );
             return false;

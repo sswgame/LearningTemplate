@@ -10,6 +10,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Serializer/ContainerVisitor.h"
 #include "Engine/Serialization/Serializer/SchemaMigrate.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
@@ -1038,7 +1039,11 @@ namespace sw
         // 낱개 파일 허용 정책은 `AssetIO` 한 곳이 본다(OS 절대 경로 · 작업 경로도 거기서 읽는다) — 실패 뒤 디스크를 다시 읽지 않는다.
         if ( AssetIO::readTextAsset( assetID, text ) == false )
             return false;
-        return deserialize( pInstance, typeInfo, text, context );
+        // 부모를 가리키면 한 벌로 펼친 뒤 읽는다(`DataInheritance`).
+        if ( DataInheritance::findBasePath( text ).empty() )
+            return deserialize( pInstance, typeInfo, text, context );
+        string flatText;
+        return DataInheritance::flattenReflected( text, assetID.view(), typeInfo, flatText ) && deserialize( pInstance, typeInfo, flatText, context );
     }
 
     SoftReadResult XMLSerializer::deserializeSoft( void* pInstance, const TypeInfo& typeInfo, string_view xmlStr,

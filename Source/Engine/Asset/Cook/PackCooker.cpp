@@ -20,6 +20,7 @@
 #include "Engine/Content/Pack/PackWriter.h"
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Serialization/Format/JSONSerializer.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 
 #include "sw/config/CookContract.gen.h"
 
@@ -150,6 +151,39 @@ namespace sw
             }
 
             /**
+             * @brief 소스 파일 하나를 팩에 담습니다. 부모를 가리키는 데이터(`_base`)는 펼친 한 벌을 담습니다 — 런타임은 펼친 결과만 읽어 비용이 없다(`DataInheritance`).
+             * @details 부모도 디스크 입구로 읽으므로 이 작업의 입력이 되어, 부모가 바뀌면 팩을 다시 굽는다. 스스로 쿠킹본을 만드는 종류(프리팹 변형 — `cookAllPrefabs`)는 그 쿠커가 펼쳤다.
+             *          펼치지 못하면 쿠킹 실패다 — 부모 없이 자식 칸만 담지 않는다.
+             */
+            static bool addSourceFile( PackWriter& writer, string_view relativePath, const string& absPath, string_view contentRoot, PackCookTiming& ioTiming )
+            {
+                vector<uint8>   bytes;
+                const Stopwatch readWatch;
+                const bool      bRead = AssetIO::readBinaryFile( absPath, bytes );
+                ioTiming._readNanos += readWatch.getElapsedNanoseconds();
+                if ( bRead == false )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.PackCookCouldNot2", "Pack cook: could not read '%#'", absPath );
+                    return false;
+                }
+                const string_view text( reinterpret_cast<const utf8*>( bytes.data() ), bytes.size() );
+                if ( AssetCookPath::isCookableSource( relativePath ) || DataInheritance::findBasePath( text ).empty() )
+                {
+                    writer.addBytes( relativePath, std::move( bytes ) );
+                    return true;
+                }
+                DataInheritanceDiskSource source{ contentRoot };
+                string                    flatText;
+                if ( DataInheritance::flattenByRootName( text, absPath, source, flatText ) == false )
+                {
+                    SW_LOG_ERROR_ID( "PackCooker.PackCookCouldNotFlatten", "Pack cook: could not flatten '%#'", absPath );
+                    return false;
+                }
+                writer.addBytes( relativePath, vector<uint8>( flatText.begin(), flatText.end() ) );
+                return true;
+            }
+
+            /**
              * @brief 팩 쿠킹 요약 한 줄을 남깁니다 — 단계별 ms 로 병렬 압축의 효과를 잰다.
              * @details `compress` 는 `벽시계 / CPU 합` 이다(CPU 합이 직렬로 돌았다면 든 시간이라 둘의 비가 병렬 효과). `hash` 는 입력 내용 해시(`addFile`)와 출력 내용 해시(`CookStore` 의 재사용 판정 · 기록)에 쓴 시간이고,
              *          바뀐 것 없는 실행에서는 출력 해시가 거의 전부다. `other` 는 총 시간에서 나머지 단계를 뺀 몫이다 — 출력 읽기 · DDC 저장 · 기록 쓰기 · 폴더 훑기.
@@ -200,7 +234,7 @@ namespace sw
                         listStale.push_back( relativePath );
                         continue;
                     }
-                    if ( addFile( writer, relativePath, absPath, ioTiming ) == false )
+                    if ( addSourceFile( writer, relativePath, absPath, params._resourceRoot, ioTiming ) == false )
                         return CookStep::Failed;
                 }
                 if ( listStale.empty() == false )

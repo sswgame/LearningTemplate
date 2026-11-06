@@ -193,6 +193,7 @@ namespace sw
 #endif
         , _bReplicated{ SW_FALSE }
         , _bRequired{ SW_FALSE }
+        , _bInheritKey{ SW_FALSE }
         , _bSaveGame{ SW_FALSE }
         , _bInterp{ SW_FALSE }
         , _bRuntimeState{ SW_FALSE }
@@ -962,6 +963,7 @@ namespace sw
                     { prop._metadata->_bPolymorphic != SW_FALSE,  "Polymorphic"},
                     { prop._metadata->_bSkipIfEmpty != SW_FALSE,  "SkipIfEmpty"},
                     {    prop._metadata->_bRequired != SW_FALSE,     "Required"},
+                    {  prop._metadata->_bInheritKey != SW_FALSE,   "InheritKey"},
                     {prop._metadata->_bRuntimeState != SW_FALSE, "RuntimeState"},
                 };
                 for ( const auto& [bSet, pFlagName] : arrFlag )

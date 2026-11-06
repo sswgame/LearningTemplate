@@ -179,7 +179,7 @@ namespace sw
     struct RenderPassAttachment
     {
         REFLECT_BODY();
-        PROPERTY()
+        PROPERTY( InheritKey )
         string _name = "ColorAttachment0";
 
         PROPERTY()
@@ -229,7 +229,7 @@ namespace sw
     struct RenderGraphPassDesc
     {
         REFLECT_BODY();
-        PROPERTY()
+        PROPERTY( InheritKey )
         string _name = "Pass";
 
         PROPERTY()
