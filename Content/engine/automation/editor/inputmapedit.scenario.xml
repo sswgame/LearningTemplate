@@ -15,8 +15,15 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="inputMap.filter"/>
 	<EditorWaitSettled/>
+	<!-- 칸이 글자를 받아 거르는지 본다 - 고를 줄은 거르지 않아도 보여 클릭만으로는 글자를 잃어도 통과한다 -->
+	<EditorText value="zzz"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.NoSearchResultHintShown" equals="1"/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitSettled/>
 	<EditorText value="Confirm"/>
 	<EditorWaitSettled/>
+	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<Expect watch="Editor.InputMapConflicts" equals="0"/>
 	<EditorClick mark="inputMap.action.Confirm"/>
 	<WaitUntil watch="Editor.InputMapBindingCount" equals="2" timeoutFrames="60"/>

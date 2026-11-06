@@ -73,8 +73,15 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="uipreview.inspector.search"/>
 	<EditorWaitSettled/>
+	<!-- 칸이 글자를 받아 거르는지 본다 - 고칠 줄은 거르지 않아도 보여 값 고치기만으로는 글자를 잃어도 통과한다 -->
+	<EditorText value="zzz"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.NoSearchResultHintShown" equals="1"/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitSettled/>
 	<EditorText value="opacity"/>
 	<EditorWaitSettled/>
+	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<EditorClick mark="inspector.property.BorderPanel._opacity" mods="ctrl"/>
 	<EditorWaitSettled/>
 	<EditorKey key="Ctrl+A"/>

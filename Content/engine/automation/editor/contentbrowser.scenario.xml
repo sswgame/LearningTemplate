@@ -32,8 +32,15 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="contentBrowser.search"/>
 	<EditorWaitSettled/>
+	<!-- 칸이 글자를 받아 거르는지 본다 - 누를 타일은 거르지 않아도 보일 수 있어 클릭만으로는 글자를 잃어도 통과한다 -->
+	<EditorText value="zzz"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.NoSearchResultHintShown" equals="1"/>
+	<EditorKey key="Ctrl+A"/>
+	<EditorWaitSettled/>
 	<EditorText value="crate_medium.mesh"/>
 	<EditorWaitSettled/>
+	<Expect watch="Editor.NoSearchResultHintShown" equals="0"/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="Down"/>
 	<Wait frames="3"/>
 	<EditorClick mark="contentBrowser.asset.crate_medium.mesh" button="1" state="Up"/>
