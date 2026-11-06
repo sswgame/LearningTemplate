@@ -236,6 +236,11 @@ namespace sw
                                static_cast<GLXContext>( _pRenderContext ) ) != 0;
     }
 
+    OpenGLProc GLXPlatformContext::findProc( const char* pName ) const
+    {
+        return glXGetProcAddressARB( reinterpret_cast<const GLubyte*>( pName ) );
+    }
+
     bool GLXPlatformContext::isCurrent() const
     {
         if ( _pRenderContext == nullptr )

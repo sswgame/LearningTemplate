@@ -22,6 +22,9 @@ namespace sw
 {
     struct RHISwapChainDesc;
 
+    /** @brief 플랫폼의 함수 찾기가 돌려주는 값입니다. 쓰는 쪽이 실제 함수 형식으로 바꿉니다. */
+    using OpenGLProc = void ( * )();
+
     /** @brief 플랫폼이 만들어 낸 불투명 컨텍스트 핸들 한 쌍입니다. */
     struct OpenGLContextHandles
     {
@@ -75,6 +78,9 @@ namespace sw
         virtual bool isCurrent() const = 0;
         /** @brief 이 스레드의 바인딩을 해제합니다. */
         virtual void clearCurrent() = 0;
+
+        /** @brief GL 함수를 이름으로 찾습니다. 확장을 내주는지는 답하지 않으므로 부르는 쪽이 확장 목록을 먼저 봅니다. */
+        [[nodiscard]] virtual OpenGLProc findProc( const char* pName ) const = 0;
 
         /**
          * @brief 프레임 시작에 컨텍스트를 되찾습니다. 필요 없는 플랫폼은 아무것도 하지 않습니다.

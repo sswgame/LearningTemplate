@@ -28,6 +28,8 @@ namespace sw
         bool isCurrent() const override;
         void clearCurrent() override;
 
+        [[nodiscard]] OpenGLProc findProc( const char* pName ) const override;
+
         void reacquireForFrame() override;
         void resize( uint32 width, uint32 height ) override;
         void present() override;

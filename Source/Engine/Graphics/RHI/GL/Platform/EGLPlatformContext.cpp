@@ -169,6 +169,11 @@ namespace sw
         return eglMakeCurrent( static_cast<EGLDisplay>( _pEGLDisplay ), static_cast<EGLSurface>( _pEGLSurface ), static_cast<EGLSurface>( _pEGLSurface ), static_cast<EGLContext>( _pEGLContext ) ) != EGL_FALSE;
     }
 
+    OpenGLProc EGLPlatformContext::findProc( const char* pName ) const
+    {
+        return eglGetProcAddress( pName );
+    }
+
     bool EGLPlatformContext::isCurrent() const
     {
         if ( _pEGLContext == nullptr )

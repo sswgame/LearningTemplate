@@ -27,6 +27,8 @@ namespace sw
         bool isCurrent() const override;
         void clearCurrent() override;
 
+        [[nodiscard]] OpenGLProc findProc( const char* pName ) const override;
+
         void reacquireForFrame() override;
         void present() override;
         void setSwapInterval( bool bVSync ) override;

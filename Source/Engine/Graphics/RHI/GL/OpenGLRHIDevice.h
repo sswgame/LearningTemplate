@@ -397,6 +397,13 @@ namespace sw
          * @param soloMaxBytes 링보다 큰 업로드 한 장을 일회성 버퍼로 받는 상한입니다(`RHIStagingAllocator::initialize`).
          * @return `GL_ARB_buffer_storage`(GL 4.4)가 없어 링을 만들지 않았어도 true 입니다(그때 업로드는 모두 `Rejected`). 용량 설정이 0 이거나 GL 이 버퍼를 만들지 못하면 false 입니다.
          */
+        /**
+         * @brief 4.6 핵심 함수를 문맥이 확장으로 내주면 glad 의 같은 칸에 넣습니다.
+         * @details glad 는 문맥 판이 4.6 일 때만 4.6 함수를 채운다. Mesa llvmpipe 처럼 4.5 문맥에 같은 기능을
+         *          확장으로 내주는 드라이버에서는 칸이 비어 기능이 없는 것으로 보인다.
+         */
+        void loadCore46Extensions();
+
         [[nodiscard]] bool initializeStagingRing( uint64 capacityBytes, uint64 soloMaxBytes );
         /** @brief 링의 매핑을 풀고 버퍼를 지웁니다. 컨텍스트를 쥔 채, 전송이 모두 끝난 뒤(`waitIdle` 다음) 부릅니다. */
         void shutdownStagingRing();

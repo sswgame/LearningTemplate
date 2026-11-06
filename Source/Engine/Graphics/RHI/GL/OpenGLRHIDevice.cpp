@@ -457,11 +457,12 @@ namespace sw
             return false;
         }
 
+        loadCore46Extensions();
+
         // 이 백엔드는 셰이더를 SPIR-V 로만 올린다(DXC → SPIR-V → glSpecializeShader). ARB_gl_spirv 가
         // 없으면 PSO 를 단 하나도 만들지 못해 "초기화는 성공했는데 화면이 텅 비는" 상태가 된다.
         // 그대로 두면 부르는 쪽이 이 백엔드를 멀쩡한 것으로 믿고 계속 쓴다. 여기서 실패로 끊어야
         // initialize 가 false 를 반환해 부르는 쪽(RHI · 테스트)이 이 백엔드를 쓸 수 없다는 것을 안다.
-        // WSL 의 Mesa 드라이버(llvmpipe/d3d12)가 이 확장을 노출하지 않아 실제로 걸린다.
         if ( glad_glShaderBinary == nullptr || glad_glSpecializeShader == nullptr )
         {
             SW_LOG_WARNING_ID( "OpenGL.OpenGLBackendUnusableGL", "The OpenGL backend is unusable - GL_ARB_gl_spirv is missing (glShaderBinary/glSpecializeShader are null)." );
@@ -548,6 +549,25 @@ namespace sw
         SW_LOG_INFO_ID( "OpenGL.AdapterSelected", "OpenGL renderer: %# (%#)", reinterpret_cast<const char*>( glGetString( GL_RENDERER ) ),
                         reinterpret_cast<const char*>( glGetString( GL_VENDOR ) ) );
         return true;
+    }
+
+    void OpenGLRHIDevice::loadCore46Extensions()
+    {
+        GLint extensionCount{ 0 };
+        glGetIntegerv( GL_NUM_EXTENSIONS, &extensionCount );
+        for ( GLint index = 0; index < extensionCount; ++index )
+        {
+            const string_view extension{ reinterpret_cast<const char*>( glGetStringi( GL_EXTENSIONS, static_cast<GLuint>( index ) ) ) };
+            if ( extension == "GL_ARB_gl_spirv" && glad_glSpecializeShader == nullptr )
+            {
+                glad_glSpecializeShader = reinterpret_cast<PFNGLSPECIALIZESHADERPROC>( _platformContext->findProc( "glSpecializeShaderARB" ) );
+            }
+            else if ( extension == "GL_ARB_indirect_parameters" && glad_glMultiDrawArraysIndirectCount == nullptr )
+            {
+                glad_glMultiDrawArraysIndirectCount   = reinterpret_cast<PFNGLMULTIDRAWARRAYSINDIRECTCOUNTPROC>( _platformContext->findProc( "glMultiDrawArraysIndirectCountARB" ) );
+                glad_glMultiDrawElementsIndirectCount = reinterpret_cast<PFNGLMULTIDRAWELEMENTSINDIRECTCOUNTPROC>( _platformContext->findProc( "glMultiDrawElementsIndirectCountARB" ) );
+            }
+        }
     }
 
     bool OpenGLRHIDevice::initializeStagingRing( uint64 capacityBytes, uint64 soloMaxBytes )

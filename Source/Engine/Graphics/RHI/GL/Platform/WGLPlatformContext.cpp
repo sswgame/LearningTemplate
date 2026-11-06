@@ -166,6 +166,11 @@ namespace sw
         return wglMakeCurrent( static_cast<HDC>( _pDeviceContext ), static_cast<HGLRC>( _pRenderContext ) ) != FALSE;
     }
 
+    OpenGLProc WGLPlatformContext::findProc( const char* pName ) const
+    {
+        return reinterpret_cast<OpenGLProc>( wglGetProcAddress( pName ) );
+    }
+
     bool WGLPlatformContext::isCurrent() const
     {
         if ( _pRenderContext == nullptr )
