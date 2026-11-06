@@ -97,6 +97,8 @@ namespace sw::editor
          *        단계(`EditorClick state="down"`, 뷰포트 비행)에서 플랫폼이 넣는 실제 커서가 호버를 풀지 않게 하기 위해서입니다. 레이블이 없으면 false 입니다.
          */
         [[nodiscard]] static bool holdMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
+        /** @brief ImGui 가 본 포인터가 지금 레이블의 @p anchor 자리에 있으면 true 입니다. 레이블이 없으면 false 입니다. */
+        [[nodiscard]] static bool isMouseAtMark( string_view key, const float2& anchor = float2{ 0.5f, 0.5f } );
         static void               releaseMouseHold();
         /** @brief 앞 단계가 넣은 이벤트가 아직 ImGui 에 다 들어가지 않았으면 true 입니다. 입력 단계는 앞 입력이 다 들어간 뒤에 자리를 본다. */
         [[nodiscard]] static bool hasPendingEvents();

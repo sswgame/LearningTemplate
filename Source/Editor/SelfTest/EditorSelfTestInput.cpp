@@ -395,6 +395,18 @@ namespace sw::editor
         return true;
     }
 
+    bool EditorSelfTestInput::isMouseAtMark( string_view key, const float2& anchor )
+    {
+        EditorSelfTestMark mark;
+        if ( EditorSelfTestMarks::find( key, mark ) == false )
+            return false;
+        constexpr float32 kAimTolerance = 1.0f; ///< 픽셀. ImGui 는 마우스 좌표를 정수로 내린다
+        const ImVec2      mouse         = ImGui::GetIO().MousePos;
+        const float32     targetX       = mark._min._x + ( mark._max._x - mark._min._x ) * anchor._x;
+        const float32     targetY       = mark._min._y + ( mark._max._y - mark._min._y ) * anchor._y;
+        return fabsf( mouse.x - targetX ) <= kAimTolerance && fabsf( mouse.y - targetY ) <= kAimTolerance;
+    }
+
     bool EditorSelfTestInput::holdMouseAtMark( string_view key, const float2& anchor )
     {
         EditorSelfTestMark mark;

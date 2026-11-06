@@ -133,6 +133,34 @@ namespace sw::editor
                 return hold;
             }
 
+            /**
+             * @brief 클릭은 포인터를 레이블에 옮기고, 포인터가 거기 있는 상태로 레이블이 멈출 때까지 시나리오 시계를 붙잡습니다.
+             * @details 사람의 클릭과 같다: 포인터가 먼저 도착한다. 포인터가 오면 호버 때문에 배치가 바뀌기도 하므로(선택 동기화 · 툴팁) 옛 좌표를 큐에 넣어 누르면
+             *          엉뚱한 칸을 누른다. 지난 프레임 자리로 답하는 쪽(ImGuizmo::IsOver)도 포인터가 한 프레임 먼저 와 있어야 맞게 답한다. 언리얼 Automation Driver 의 "이동 후 클릭" 과 같은 자리다.
+             */
+            static AutomationStepHold holdUntilClickAimed( AutomationStepContext& runner, const AutomationStep& step, InputManager& input )
+            {
+                if ( isRelease( step ) )
+                    return holdUntilMarkSettled( runner, step, input );
+                if ( EditorSelfTestMarks::setEnabled( true ) == false )
+                    return AutomationStepHold::Run; // 에디터 컨텍스트가 없다 — 단계가 돌며 실패를 적는다
+                const EditorClickFields fields   = step.readValidatedFields<EditorClickFields>();
+                bool                    bDrawn   = true;
+                bool                    bSettled = true;
+                checkMark( &fields._mark, bDrawn, bSettled );
+                const bool bInputDrained = EditorSelfTestInput::hasPendingEvents() == false;
+                const bool bAimed        = EditorSelfTestInput::isMouseAtMark( fields._mark, fields._anchor );
+                // 플랫폼이 다음 프레임에 실제 커서를 다시 넣으므로 옮기기 한 번으로는 머물지 않는다 - 프레임마다 붙잡는다. 누르는 `runClick` 이 놓는다.
+                if ( bDrawn )
+                    (void)EditorSelfTestInput::holdMouseAtMark( fields._mark, fields._anchor );
+                const bool               bReady = bSettled && bInputDrained && bAimed;
+                const AutomationStepHold hold   = runner.holdUntilReady( step, input, bReady, kSettleWaitFrames,
+                                                                         "the pointer to reach editor widget '" + fields._mark + ( bDrawn ? "' and it to settle" : "' (not drawn yet)" ) );
+                if ( hold == AutomationStepHold::Run && bReady == false && bDrawn )
+                    runner.recordFailure( step, formatToString( "editor widget '%#' did not settle under the pointer within %# frame(s)", fields._mark, kSettleWaitFrames ) );
+                return hold;
+            }
+
             /** @brief `EditorWaitSettled` 가 붙잡은 동안의 상태입니다(`EditorSettleWait` — 자체 테스트의 정지 대기와 같은 재료 · 판정). */
             struct SettleWaitState final : IAutomationStepState
             {
@@ -219,6 +247,8 @@ namespace sw::editor
                     EditorSelfTestInput::releaseMouseHold();
                     return true;
                 }
+                if ( state != PressState::Down )
+                    EditorSelfTestInput::releaseMouseHold(); // 아래 이동과 누름 이벤트가 이어받는다
                 if ( state == PressState::Down )
                 {
                     // 커서를 먼저 레이블에 붙잡아 한 프레임 둔 뒤 누른다. 누른 프레임의 마우스 이동량이 0 이어야 뷰포트 비행이 시점을 돌리지 않는다.
@@ -228,16 +258,6 @@ namespace sw::editor
                         return true;
                     }
                     EditorSelfTestInput::waitNextFrame();
-                }
-                else
-                {
-                    // 사람의 클릭처럼 옮긴 뒤 한 프레임 지나 누른다(`EditorDrag` 와 같다). 옮긴 프레임에 누르면 지난 프레임 자리로 답하는 쪽(ImGuizmo::IsOver)이 옛 자리를 본다.
-                    EditorSelfTestInput::waitNextFrame();
-                    if ( EditorSelfTestInput::moveMouseToMark( mark, anchor ) == false )
-                    {
-                        runner.recordFailure( step, "editor widget '" + mark + "' disappeared before it could be pressed" );
-                        return true;
-                    }
                 }
                 for ( const int32 modifier : listModifier )
                 {
@@ -600,7 +620,7 @@ namespace sw::editor
     } // namespace
 
     SW_AUTOMATION_STEP_WITH_HOOKS( editorClick, EditorScenarioStepValidation::kClickKind, &EditorScenarioStepsInternal::runClick, &EditorScenarioStepValidation::validateClick,
-                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarkSettled, false );
+                                   &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilClickAimed, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorDrag, EditorScenarioStepValidation::kDragKind, &EditorScenarioStepsInternal::runDrag, &EditorScenarioStepValidation::validateDrag,
                                    &EditorScenarioStepsInternal::prepareMarks, &EditorScenarioStepsInternal::holdUntilMarkSettled, false );
     SW_AUTOMATION_STEP_WITH_HOOKS( editorHover, EditorScenarioStepValidation::kHoverKind, &EditorScenarioStepsInternal::runHover, &EditorScenarioStepValidation::validateHover,
