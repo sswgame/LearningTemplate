@@ -1,7 +1,7 @@
 /**
  * @file AccountDirectory.h
  * @brief 신원 기본 타입입니다. 계정 id, 공개 신원, 계정 디렉터리 인터페이스(이 프로세스에 접속한 계정)를 둡니다.
- *        계정을 다루는 다른 포트(차단 목록 `IAccountBlockList`, 세션 끊기 `IAccountSessionControl`, 이름 색인 `IAccountNameIndex`, 오프라인 푸시 `IOfflinePushSender`)도 여기 둔다.
+ *        계정을 다루는 다른 포트(차단 목록 `IAccountBlockList`, 세션 끊기 `IAccountSessionControl`, 이름 색인 `IAccountNameIndex`, 외부 로그인 연동 `IAccountExternalLinks`, 오프라인 푸시 `IOfflinePushSender`)도 여기 둔다.
  * @details 발급은 계정 키트(GF_Account, GF_Server_Account)가 한다. 다른 키트(Trade, Economy, Mailbox, Admin)는 이 인터페이스만 보고 계정 키트를 include 하지 않는다
  *          (키트끼리는 include 하지 않는다). 서버가 여럿이면 다른 서버에 붙은 계정은 캐시 층의 접속 상태(`IEphemeralStore`)로 본다.
  *          세션 토큰 검증은 따로 인터페이스를 두지 않는다. 스트림 연결은 로그인할 때 한 번 확인되고 그 뒤로는 연결의 주체로 다니며, UDP 게임 서버는 계정 키트의 접속 테이블이 확인한다.
@@ -146,6 +146,30 @@ namespace sw
                                                                             AccountIdentity& outIdentity ) const = 0;
         /** @brief 계정 id 의 공개 신원을 읽습니다(게스트 · 외부 계정 포함). 없으면 NotFound. */
         [[nodiscard]] virtual ServiceStoreResult readIdentity( IServiceStoreConnection& connection, AccountID accountID, AccountIdentity& outIdentity ) const = 0;
+    };
+} // namespace sw
+
+namespace sw
+{
+    // 외부 로그인 연동 포트 — 계정 키트(서버)가 구현하고, 스토어 신원과 계정을 이어야 하는 키트(경제의 영수증 구매자 대조)가 서버 조립 문맥에서 받는다. 연동 테이블의 형식은 계정 키트만 안다.
+    // **저장소 스레드에서 부른다**: `IAccountNameIndex` 와 같이 부르는 쪽의 저장소 작업 안에서 그 연결로 읽고, 구현은 상태가 없다.
+    // 언리얼 `IOnlineIdentity`(플랫폼 사용자 id)를 게임 서버가 대조하는 자리다. 주체는 다이제스트만 저장되므로 "이 주체인가" 로만 묻는다 — 저장된 값을 꺼내 줄 수 없다.
+    /**
+     * @class IAccountExternalLinks
+     * @brief 외부 로그인 연동 인터페이스입니다(저장소 스레드).
+     */
+    class IAccountExternalLinks
+    {
+        // 순수 인터페이스라 내보내지 않는다. 인라인 생성자와 소멸자를 GameFramework.dll 이 내보내지 않으므로 dllimport 로 해석되면 키트 링크가 깨진다(C-3).
+    public:
+        IAccountExternalLinks()          = default;
+        virtual ~IAccountExternalLinks() = default;
+
+        IAccountExternalLinks( const IAccountExternalLinks& )            = delete;
+        IAccountExternalLinks& operator=( const IAccountExternalLinks& ) = delete;
+
+        /** @brief @p accountID 가 제공자 @p provider 의 주체 @p subject 에 연동돼 있으면 @p outbLinked 가 true 입니다. 연동이 없거나 다른 주체면 false 이고 결과는 Ok 입니다. 저장소가 아프면 Unavailable. */
+        [[nodiscard]] virtual ServiceStoreResult readIsLinked( IServiceStoreConnection& connection, AccountID accountID, string_view provider, string_view subject, bool& outbLinked ) const = 0;
     };
 } // namespace sw
 

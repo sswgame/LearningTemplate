@@ -15,4 +15,14 @@ namespace sw
     {
         return LoginStoreLogic::readIdentity( connection, accountID, outIdentity );
     }
+
+    AccountExternalLinks::AccountExternalLinks( ILoginCrypto* pCrypto )
+        : _pCrypto{ pCrypto }
+    {
+    }
+
+    ServiceStoreResult AccountExternalLinks::readIsLinked( IServiceStoreConnection& connection, AccountID accountID, string_view provider, string_view subject, bool& outbLinked ) const
+    {
+        return LoginStoreLogic::readIsLinked( connection, *_pCrypto, accountID, provider, subject, outbLinked );
+    }
 } // namespace sw

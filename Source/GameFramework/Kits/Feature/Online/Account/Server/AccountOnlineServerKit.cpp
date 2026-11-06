@@ -16,7 +16,7 @@
 #include "GameFramework/Runtime/Online/Server/OnlineServerKit.h"
 #include "GameFramework/Runtime/Online/Service/OnlineServiceHost.h"
 
-// 계정 키트의 서버 조립 — 로그인 서비스 · 바인딩을 만들고 신원(디렉터리) · 접속 상태 · 세션 끊기 · 이름 찾기를 문맥에 내놓는다.
+// 계정 키트의 서버 조립 — 로그인 서비스 · 바인딩을 만들고 신원(디렉터리) · 접속 상태 · 세션 끊기 · 이름 찾기 · 외부 로그인 연동 조회를 문맥에 내놓는다.
 // 옵션:
 //   ticketKeySecretEnvironment  게임 접속 티켓 주 키(32 B, 16 진수 64 자)를 담은 환경 변수 이름. 비우면 개발 키(DevOnline 단위), 그 단위가 없는 구성(배포)은 기동 실패.
 //   attemptBurst                주소마다 한꺼번에 받는 로그인 시도 수(부하 봇은 크게).
@@ -52,6 +52,7 @@ namespace sw
                 , _loginService{}
                 , _accountServer{}
                 , _nameIndex{}
+                , _externalLinks{ &_crypto }
             {
             }
 
@@ -136,12 +137,12 @@ namespace sw
             }
 
         private:
-            /** @brief 바인딩을 호스트에 올리고 신원 · 접속 상태 · 세션 끊기 · 이름 찾기를 문맥에 겁니다. */
+            /** @brief 바인딩을 호스트에 올리고 신원 · 접속 상태 · 세션 끊기 · 이름 찾기 · 외부 로그인 연동 조회를 문맥에 겁니다. */
             [[nodiscard]] bool exposeAccount( OnlineServerKitContext& context, const OnlineServerKitEntry& entry, string& outError )
             {
                 _loginService.setRemoteConfig( context._pRemoteConfig );
                 _accountServer.initialize( &_loginService, AccountServerConfig{} );
-                return registerServerService( context, entry, &_accountServer, outError ) && exposeInterface<IAccountDirectory>( context, entry, _loginService, outError ) && exposeInterface<IAccountPresence>( context, entry, *_accountServer.getPresence(), outError ) && exposeInterface<IAccountSessionControl>( context, entry, _accountServer.getSessionControl(), outError ) && exposeInterface<IAccountNameIndex>( context, entry, _nameIndex, outError );
+                return registerServerService( context, entry, &_accountServer, outError ) && exposeInterface<IAccountDirectory>( context, entry, _loginService, outError ) && exposeInterface<IAccountPresence>( context, entry, *_accountServer.getPresence(), outError ) && exposeInterface<IAccountSessionControl>( context, entry, _accountServer.getSessionControl(), outError ) && exposeInterface<IAccountNameIndex>( context, entry, _nameIndex, outError ) && exposeInterface<IAccountExternalLinks>( context, entry, _externalLinks, outError );
             }
 
             /** @brief 제공자 설정 파일을 읽어 제공자를 만들고 로그인 서비스에 등록합니다. 파일을 정하지 않았으면 외부 로그인이 없습니다. */
@@ -188,6 +189,7 @@ namespace sw
             LoginService             _loginService;
             AccountServer            _accountServer;
             AccountNameIndex         _nameIndex;
+            AccountExternalLinks     _externalLinks;
             vector<LoginCredential>  _listSeedAccount; ///< 첫 틱에 가입시킬 개발용 계정(`seedTestAccounts`)
         };
 

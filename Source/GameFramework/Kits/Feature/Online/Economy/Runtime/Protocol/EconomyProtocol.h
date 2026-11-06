@@ -81,7 +81,7 @@ namespace sw
         UpdateRequired,    ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         AlreadyRefunded,   ///< 이미 환불되었거나 청약철회한 거래이다
         WithdrawalExpired, ///< 청약철회 기한(구매 뒤 7일)이 지났다
-        NotPurchaser,      ///< 다른 계정이 받은 거래이거나 받은 적이 없는 거래이다
+        NotPurchaser,      ///< 다른 계정이 받은 거래이거나 받은 적이 없는 거래이다. 영수증의 구매자가 이 계정이 아닐 때도 쓴다
         NothingToWithdraw, ///< 지급한 재화를 모두 써서 돌려받을 것이 없다
         Count
     };

@@ -6,6 +6,8 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/ReceiptBuyerToken.h"
+#include "GameFramework/Runtime/Online/HTTP/HTTPTypes.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/ServiceKeyUtil.h"
 
@@ -25,6 +27,43 @@ namespace sw
             [[nodiscard]] static bool makeRedeemKey( string_view storeName, string_view transactionID, string& outKey )
             {
                 return LedgerJournalKey::makeFromToken( string( kReceiptScopePrefix ) + string( storeName ), transactionID, outKey );
+            }
+
+            /**
+             * @brief 스토어 답의 구매자를 지급받을 계정과 대조합니다. 맞으면 Ok, 아니면 NotPurchaser, 연동을 읽지 못하면 Unavailable 입니다.
+             * @details 구매자 대조는 여기 한 곳이다. 스토어는 답이 말한 값을 옮겨 적고 규칙은 제공자 설정이 정한다. 답에 구매자가 없으면 "다르다" 로 읽는다 — 없음을 통과시키면 그 길로 남의 영수증을 받는다.
+             */
+            static EconomyResult compareBuyer( IServiceStoreConnection& connection, const EconomyRedeemInput& input )
+            {
+                const ReceiptValidationResult& receipt = input._receipt;
+                switch ( receipt._buyerRule._binding )
+                {
+                    case ReceiptBuyerBinding::None:
+                    {
+                        return EconomyResult::Ok;
+                    }
+                    case ReceiptBuyerBinding::AccountToken:
+                    {
+                        return HTTPUtil::isEqualIgnoreCase( receipt._storeBuyerID, ReceiptBuyerToken::make( input._accountID ) ) ? EconomyResult::Ok : EconomyResult::NotPurchaser; // UUID 는 대소문자를 가리지 않는다
+                    }
+                    case ReceiptBuyerBinding::LinkedLogin:
+                    {
+                        if ( receipt._storeBuyerID.empty() )
+                            return EconomyResult::NotPurchaser;
+                        if ( input._pExternalLinks == nullptr )
+                            return EconomyResult::Unavailable; // 서비스가 기동 때 거절한다 — 바로 부른 쪽의 실수이므로 지급하지 않는다
+                        bool                     bLinked = false;
+                        const ServiceStoreResult read    = input._pExternalLinks->readIsLinked( connection, input._accountID, receipt._buyerRule._loginProvider, receipt._storeBuyerID, bLinked );
+                        if ( read != ServiceStoreResult::Ok )
+                            return EconomyResult::Unavailable;
+                        return bLinked ? EconomyResult::Ok : EconomyResult::NotPurchaser;
+                    }
+                    case ReceiptBuyerBinding::Count:
+                    {
+                        return EconomyResult::ReceiptInvalid;
+                    }
+                }
+                return EconomyResult::ReceiptInvalid;
             }
 
             static EconomyResult finish( EconomyReply& outReply, EconomyResult result )
@@ -306,6 +345,9 @@ namespace sw
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::ReceiptInvalid );
         if ( input._accountID == 0 )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::InvalidRequest );
+        const EconomyResult buyer = EconomyStoreLogicInternal::compareBuyer( connection, input );
+        if ( buyer != EconomyResult::Ok )
+            return EconomyStoreLogicInternal::finish( outReply, buyer );
         const OfferDef* pOffer = offers.findOfferByProduct( receipt._storeName, receipt._productID );
         if ( pOffer == nullptr )
             return EconomyStoreLogicInternal::finish( outReply, EconomyResult::UnknownProduct );

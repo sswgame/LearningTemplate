@@ -186,6 +186,35 @@ SW_TEST_CASE( LoginStoreLogicTest, LastLoginMethodStays )
     SW_EXPECT_TRUE( summary._listProvider.empty() );
 }
 
+/** @brief [LoginStoreLogicTest] 연동 조회: 그 계정 · 그 제공자 · 그 주체일 때만 true 다. 연동이 없거나 틀린 제공자 이름도 저장소 오류가 아니라 false 이고, 떼면 false 가 된다(영수증 구매자 대조가 쓴다) */
+SW_TEST_CASE( LoginStoreLogicTest, ReadIsLinkedMatchesOnlyTheLinkedSubject )
+{
+    Fixture           fixture;
+    LoginStoreOutcome outcome;
+    LoginStoreLogic   logic( fixture.database, fixture.crypto, fixture.settings, fixture.ticketAuthority, outcome );
+    LoginGrant        grant;
+    SW_REQUIRE_TRUE( logic.platformLogin( "steam", "76561190000000001", "Heidi", nullptr, kNowMs, grant ) == LoginResult::Ok );
+    const uint64 accountID = grant._identity._accountID;
+
+    const auto isLinked = [&fixture]( uint64 account, string_view provider, string_view subject )
+    {
+        bool bLinked = false;
+        SW_EXPECT_TRUE( LoginStoreLogic::readIsLinked( fixture.database, fixture.crypto, account, provider, subject, bLinked ) == ServiceStoreResult::Ok );
+        return bLinked;
+    };
+    SW_EXPECT_TRUE( isLinked( accountID, "steam", "76561190000000001" ) );
+    SW_EXPECT_FALSE( isLinked( accountID, "steam", "76561190000000002" ) );
+    SW_EXPECT_FALSE( isLinked( accountID, "epic", "76561190000000001" ) );
+    SW_EXPECT_FALSE( isLinked( accountID + 1, "steam", "76561190000000001" ) );
+    SW_EXPECT_FALSE( isLinked( accountID, "Not A Token", "76561190000000001" ) );
+    SW_EXPECT_FALSE( isLinked( accountID, "steam", "" ) );
+
+    AccountIdentity identity;
+    SW_REQUIRE_TRUE( logic.linkCredential( grant._token, LoginCredential{ "Heidi_11", "correct horse" }, kNowMs + 1, identity ) == LoginResult::Ok );
+    SW_REQUIRE_TRUE( logic.unlinkPlatform( grant._token, "steam", kNowMs + 2 ) == LoginResult::Ok );
+    SW_EXPECT_FALSE( isLinked( accountID, "steam", "76561190000000001" ) );
+}
+
 /** @brief [LoginStoreLogicTest] 탈퇴 예약은 세션을 끊고 유예 시각을 정한다. 유예 안에 다시 들어와 취소하면 지우지 않고, 취소하지 않으면 시각이 지난 뒤 지워 그 이름으로 들어오지 못한다 */
 SW_TEST_CASE( LoginStoreLogicTest, DeletionWaitsForGraceAndCanBeCancelled )
 {

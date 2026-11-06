@@ -1,5 +1,5 @@
 // EconomyReceiptsTest — 결제 저장 규칙과 서비스(메모리 저장소 + 가짜 스토어): 영수증 지급은 거래당 한 번(다른 계정이면 AlreadyRedeemed), 샌드박스 · 모르는 상품 거절, 환불 회수는 빚을 허용하고 한 번만,
-// 지급 전에 온 환불이 지급을 막음, 청약철회는 쓰지 않은 만큼 · 기한 안 · 구매자만 · 환불과 겹치지 않음, 지갑 · 내역, 서비스의 멱등 키 요구 · 원장 보존 검사.
+// 지급 전에 온 환불이 지급을 막음, 구매자 대조(외부 로그인 연동 · 계정 토큰 · 묶지 않음), 청약철회는 쓰지 않은 만큼 · 기한 안 · 구매자만 · 환불과 겹치지 않음, 지갑 · 내역, 서비스의 멱등 키 요구 · 원장 보존 검사.
 // 온라인 키트라 `UnitTests.OnlineKits` 가 돌린다(nogpu).
 #include "pch.h"
 
@@ -7,9 +7,11 @@
 
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/CurrencyCatalog.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Runtime/Catalog/OfferCatalog.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Runtime/Protocol/ReceiptBuyerToken.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyService.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/EconomyStoreLogic.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Fake/FakeReceiptValidator.h"
+#include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/Provider/Steam/SteamReceiptValidator.h"
 #include "GameFramework/Kits/Feature/Online/Economy/Server/Receipt/ReceiptValidator.h"
 #include "GameFramework/Runtime/Online/Ledger/Ledger.h"
 #include "GameFramework/Runtime/Online/Store/MemoryServiceStore.h"
@@ -35,6 +37,21 @@ namespace
     <Grant asset="cur.gold" amount="10"/>
   </Offer>
 </OfferCatalog>)";
+
+    /** @brief 계정 @p _linkedAccount 만 제공자 "steam" 의 주체 "S1" 에 연동된 가짜 연동 조회입니다. */
+    class FakeExternalLinks final : public IAccountExternalLinks
+    {
+    public:
+        AccountID          _linkedAccount{ kBuyer };
+        ServiceStoreResult _read{ ServiceStoreResult::Ok };
+
+        ServiceStoreResult readIsLinked( IServiceStoreConnection& connection, AccountID accountID, string_view provider, string_view subject, bool& outbLinked ) const override
+        {
+            (void)connection;
+            outbLinked = accountID == _linkedAccount && provider == "steam" && subject == "S1";
+            return _read;
+        }
+    };
 
     /** @brief 저장 규칙을 바로 부르는 묶음입니다. */
     struct ReceiptRig
@@ -66,6 +83,24 @@ namespace
             EconomyReply reply;
             (void)EconomyStoreLogic::redeemReceipt( _database, _currencies, _offers, input, reply );
             return reply;
+        }
+
+        /** @brief 규칙 @p binding 과 답의 구매자 @p storeBuyerID 로 지급합니다. */
+        EconomyResult redeemBound( AccountID accountID, ReceiptBuyerBinding binding, string_view storeBuyerID, const IAccountExternalLinks* pLinks, string_view transactionID = "tx1" )
+        {
+            EconomyRedeemInput input;
+            input._receipt._storeName                = "fake";
+            input._receipt._transactionID            = string( transactionID );
+            input._receipt._productID                = "com.x.gem100";
+            input._receipt._status                   = ReceiptStatus::Valid;
+            input._receipt._storeBuyerID             = string( storeBuyerID );
+            input._receipt._buyerRule._binding       = binding;
+            input._receipt._buyerRule._loginProvider = "steam";
+            input._pExternalLinks                    = pLinks;
+            input._accountID                         = accountID;
+            input._nowMs                             = kNowMs;
+            EconomyReply reply;
+            return EconomyStoreLogic::redeemReceipt( _database, _currencies, _offers, input, reply );
         }
 
         EconomyResult refund( string_view transactionID = "tx1", vector<EconomyBalanceChange>* pOutListChange = nullptr )
@@ -206,6 +241,84 @@ SW_TEST_CASE( EconomyReceiptsTest, RedeemGrantsOncePerTransaction )
 
     SW_EXPECT_TRUE( rig.redeem( kOther )._result == EconomyResult::AlreadyRedeemed );
     SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kOther ) );
+}
+
+/** @brief [EconomyReceiptsTest] 외부 로그인 묶기: 답의 스토어 신원이 그 계정에 연동된 주체여야 받는다 — 남의 주문 번호를 먼저 낸 계정이 받던 결함이다. 진 뒤에도 진짜 구매자는 받는다 */
+SW_TEST_CASE( EconomyReceiptsTest, LinkedLoginBuyerMustMatchTheAccount )
+{
+    ReceiptRig        rig;
+    FakeExternalLinks links;
+    SW_EXPECT_TRUE( rig.redeemBound( kOther, ReceiptBuyerBinding::LinkedLogin, "S1", &links ) == EconomyResult::NotPurchaser );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kOther ) );
+    SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::LinkedLogin, "S2", &links ) == EconomyResult::NotPurchaser );
+    SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::LinkedLogin, "", &links ) == EconomyResult::NotPurchaser ); // 답이 구매자를 말하지 않으면 통과시키지 않는다
+    SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::LinkedLogin, "S1", nullptr ) == EconomyResult::Unavailable );
+    SW_EXPECT_EQUAL( int64( 0 ), rig.balanceOf( kBuyer ) );
+
+    links._read = ServiceStoreResult::Unavailable;
+    SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::LinkedLogin, "S1", &links ) == EconomyResult::Unavailable );
+    links._read = ServiceStoreResult::Ok;
+    SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::LinkedLogin, "S1", &links ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+}
+
+/** @brief [EconomyReceiptsTest] 계정 토큰 묶기: 답의 토큰이 그 계정의 것이어야 받는다(대소문자 무시). 토큰이 없으면 거절한다. 묶지 않는 규칙은 먼저 낸 계정이 받는다 */
+SW_TEST_CASE( EconomyReceiptsTest, AccountTokenBuyerMustMatchTheAccount )
+{
+    ReceiptRig   rig;
+    const string token = ReceiptBuyerToken::make( kBuyer );
+    SW_EXPECT_TRUE( rig.redeemBound( kOther, ReceiptBuyerBinding::AccountToken, token, nullptr ) == EconomyResult::NotPurchaser );
+    SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::AccountToken, "", nullptr ) == EconomyResult::NotPurchaser );
+    string upper = token;
+    for ( utf8& character : upper )
+    {
+        character = 'a' <= character && character <= 'f' ? static_cast<utf8>( character - 'a' + 'A' ) : character;
+    }
+    SW_EXPECT_TRUE( rig.redeemBound( kBuyer, ReceiptBuyerBinding::AccountToken, upper, nullptr ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kBuyer ) );
+
+    SW_EXPECT_TRUE( rig.redeemBound( kOther, ReceiptBuyerBinding::None, "", nullptr, "tx2" ) == EconomyResult::Ok );
+    SW_EXPECT_EQUAL( int64( 100 ), rig.balanceOf( kOther ) );
+}
+
+/** @brief [EconomyReceiptsTest] 계정 토큰: 애플이 받는 UUID 모양(36 자)이고 구글 상한(64 자) 안이며 계정의 모든 자리가 값을 바꾼다 */
+SW_TEST_CASE( EconomyReceiptsTest, BuyerTokenIsAUUIDPerAccount )
+{
+    const string token = ReceiptBuyerToken::make( 0x0123456789ABCDEFull );
+    SW_EXPECT_EQUAL( string( "01234567-89ab-4000-8000-00000000cdef" ), token );
+    SW_EXPECT_EQUAL( size_t( 36 ), ReceiptBuyerToken::make( 1 ).size() );
+    for ( int32 shift = 0; shift < 64; shift += 4 )
+    {
+        SW_EXPECT_NOT_EQUAL( ReceiptBuyerToken::make( 0 ), ReceiptBuyerToken::make( uint64( 1 ) << shift ) );
+    }
+}
+
+/** @brief [EconomyReceiptsTest] 구매자를 외부 로그인으로 묶는 제공자가 있는데 연동 포트가 없으면 서비스가 기동을 거절한다 — 묶지 않은 채로 뜨지 않는다 */
+SW_TEST_CASE( EconomyReceiptsTest, ServiceRefusesLinkedBindingWithoutThePort )
+{
+    SW_EXPECT_LOG( "EconomyService.EconomyServiceNeedsExternalLinks" );
+    ReceiptRig           data;
+    MemoryServiceStore   store{ &data._database };
+    SteamReceiptSettings steam;
+    steam._buyerRule._binding       = ReceiptBuyerBinding::LinkedLogin;
+    steam._buyerRule._loginProvider = "steam";
+    SteamReceiptValidator    validator( steam, nullptr ); // 묻지 않으므로 클라이언트를 쓰지 않는다
+    ReceiptValidatorRegistry registry;
+    SW_EXPECT_TRUE( registry.registerValidator( &validator ) );
+    SW_EXPECT_TRUE( registry.requiresExternalLinks() );
+
+    EconomyServiceConfig settings;
+    settings._pCurrencyCatalog = &data._currencies;
+    settings._pOfferCatalog    = &data._offers;
+    settings._pReceiptRegistry = &registry;
+    EconomyService refused;
+    SW_EXPECT_FALSE( refused.initialize( &store, settings ) );
+
+    FakeExternalLinks links;
+    settings._pExternalLinks = &links;
+    EconomyService accepted;
+    SW_EXPECT_TRUE( accepted.initialize( &store, settings ) );
+    accepted.shutdown();
 }
 
 /** @brief [EconomyReceiptsTest] 지급 거절: 검증 결과 · 샌드박스 · 모르는 상품 · 계정 0 은 아무것도 주지 않는다 */

@@ -6,6 +6,7 @@
  *          - 가상 화폐의 가격은 재원 자산의 현재 잔액을 적힌 순서대로 나눠서 분개 항목을 만든다. 무상 재화를 먼저 쓰는 것이 관례이다.
  *            커밋 사이에 잔액이 바뀌면 버전 충돌이 나므로 다시 짠다. 재원 중 하나라도 빚(환불 회수로 생긴 음수)이면 그 가상 화폐로는 살 수 없으며(`InsufficientFunds`) 빚을 먼저 갚아야 한다.
  *          - 영수증 지급의 분개 키는 거래 id(`rcpt.<스토어>/<거래 id 16진>`)이다. 그래서 같은 영수증은 어느 계정으로든 한 번만 지급된다.
+ *            "누구에게" 는 구매자 대조가 정한다(`ReceiptBuyerBinding`) — 스토어 답의 구매자가 이 계정이 아니면 `NotPurchaser` 이고 지급 분개를 쓰지 않는다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -51,10 +52,11 @@ namespace sw
     /** @brief 영수증 지급 입력입니다. 검증이 끝난 결과를 담습니다. */
     struct EconomyRedeemInput
     {
-        ReceiptValidationResult _receipt{};
-        uint64                  _accountID{ 0 };
-        int64                   _nowMs{ 0 };
-        uint8                   _bAcceptSandbox{ SW_FALSE };
+        ReceiptValidationResult      _receipt{};
+        const IAccountExternalLinks* _pExternalLinks{ nullptr }; ///< 구매자를 외부 로그인으로 묶는 제공자가 있으면 필수다(서비스가 기동 때 확인한다)
+        uint64                       _accountID{ 0 };
+        int64                        _nowMs{ 0 };
+        uint8                        _bAcceptSandbox{ SW_FALSE };
     };
 } // namespace sw
 
@@ -83,7 +85,7 @@ namespace sw
         /** @brief 구매를 처리합니다. @p outReply 의 `_listBalance` 는 이 계정의 바뀐 잔액입니다. */
         static EconomyResult purchase( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyPurchaseInput& input,
                                        EconomyReply& outReply );
-        /** @brief 검증이 끝난 영수증으로 지급합니다. */
+        /** @brief 검증이 끝난 영수증으로 지급합니다. 구매자가 이 계정이 아니면 `NotPurchaser` 입니다. */
         static EconomyResult redeemReceipt( IServiceStoreConnection& connection, const CurrencyCatalog& currencies, const OfferCatalog& offers, const EconomyRedeemInput& input,
                                             EconomyReply& outReply );
         /**

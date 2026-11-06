@@ -956,6 +956,26 @@ namespace sw
         return LoginResult::StoreUnavailable;
     }
 
+    ServiceStoreResult LoginStoreLogic::readIsLinked( IServiceStoreConnection& connection, ILoginCrypto& crypto, uint64 accountID, string_view provider, string_view subject, bool& outbLinked )
+    {
+        using Internal = LoginStoreLogicInternal;
+        outbLinked     = false;
+        if ( AccountUtil::isValidLowerToken( provider, LoginConstant::kMaxProviderNameSize ) == false || subject.empty() )
+            return ServiceStoreResult::Ok; // 이런 제공자 · 주체로는 연동할 수 없다
+        string digestHex;
+        if ( Internal::computeSubjectDigestHex( crypto, provider, subject, digestHex ) == false )
+            return ServiceStoreResult::Unavailable;
+        ServiceRecord            raw;
+        const ServiceStoreResult read = connection.readRecord( Internal::getAccountExternalTable(), Internal::makeAccountExternalKey( accountID, provider ), raw );
+        if ( read == ServiceStoreResult::NotFound )
+            return ServiceStoreResult::Ok;
+        if ( read != ServiceStoreResult::Ok )
+            return read;
+        const string_view stored( reinterpret_cast<const utf8*>( raw._bytes.data() ), raw._bytes.size() );
+        outbLinked = stored == digestHex;
+        return ServiceStoreResult::Ok;
+    }
+
     LoginResult LoginStoreLogic::linkPlatform( const LoginSessionToken& token, string_view provider, string_view subject, const vector<uint8>* pSealedLinkSecret, int64 nowMs,
                                                AccountIdentity& outIdentity )
     {

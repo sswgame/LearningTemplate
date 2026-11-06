@@ -142,7 +142,7 @@ namespace sw
             }
 
             void run( IServiceStoreConnection& connection ) override { _result = EconomyStoreLogic::revokeRefund( connection, *_pCurrencies, _notice, _nowMs.count(), _listChange ); }
-            void complete() override { _pService->completeRefund( _result, _listChange, getCompletion() ); }
+            void complete() override { _pService->completeRefund( _notice, _result, _listChange, getCompletion() ); }
 
         private:
             ReceiptRefundNotice          _notice;
@@ -206,6 +206,12 @@ namespace sw
         if ( bDevValidatorRefused )
         {
             SW_LOG_ERROR_ID( "EconomyService.EconomyServiceRefusesDevelopmentOnly", "EconomyService refuses a development-only receipt validator in a build without the DevOnline unit (Shipping)" );
+            return false;
+        }
+        const bool bBuyerLinksMissing = settings._pReceiptRegistry != nullptr && settings._pReceiptRegistry->requiresExternalLinks() && settings._pExternalLinks == nullptr;
+        if ( bBuyerLinksMissing )
+        {
+            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceNeedsExternalLinks", "EconomyService: a receipt validator binds buyers to linked logins but the account kit's link port is missing" );
             return false;
         }
         _pStore          = pStore;
@@ -394,6 +400,7 @@ namespace sw
                 unique_ptr<EconomyRequestWork> work = make_unique<EconomyRequestWork>( this, _settings, pending._callID, EconomyServiceInternal::kRedeemIndex );
                 work->_accountID                    = pending._accountID;
                 work->_redeem._receipt              = std::move( result );
+                work->_redeem._pExternalLinks       = _settings._pExternalLinks;
                 work->_redeem._accountID            = pending._accountID;
                 work->_redeem._nowMs                = _nowMs.count();
                 work->_redeem._bAcceptSandbox       = _settings._bAcceptSandboxReceipts;
@@ -508,7 +515,7 @@ namespace sw
         }
     }
 
-    void EconomyService::completeRefund( EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
+    void EconomyService::completeRefund( const ReceiptRefundNotice& notice, EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
     {
         --_pendingRefundCount;
         for ( const EconomyBalanceChange& change : listChange )
@@ -516,8 +523,13 @@ namespace sw
             notifyBalancesChanged( change._accountID, vector<LedgerBalance>{ change._balance } );
         }
         const bool bFailed = result != EconomyResult::Ok && result != EconomyResult::AlreadyRefunded;
-        if ( bFailed && completion.isCancelled() == false ) // 종료 때문에 취소된 회수는 오류가 아니다(스토어가 다시 보낸다)
-            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceStoreRefundCould", "EconomyService: a store refund could not be revoked (%#) - the store will resend or an operator revokes it", static_cast<int32>( result ) );
+        if ( bFailed && completion.isCancelled() == false ) // 종료 때문에 취소된 회수는 오류가 아니다(다음 기동의 겹친 조회가 다시 읽는다)
+        {
+            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceStoreRefundCould", "EconomyService: a store refund could not be revoked (%#) - the next overlapping poll reports it again", static_cast<int32>( result ) );
+            // 제공자의 겹침 거름이 이 거래를 기억하면 겹친 조회가 다시 알리지 않아 회수할 기회가 없어진다.
+            if ( _settings._pReceiptRegistry != nullptr )
+                _settings._pReceiptRegistry->forgetRefund( notice );
+        }
         if ( _pMetricRegistry == nullptr )
             return;
         const vector<MetricLabel> listLabel = {

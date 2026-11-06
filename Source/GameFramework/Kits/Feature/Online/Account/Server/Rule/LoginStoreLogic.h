@@ -117,6 +117,8 @@ namespace sw
         [[nodiscard]] static ServiceStoreResult eraseRevocation( IServiceStoreConnection& connection, string_view key );
         /** @brief 계정 id 의 공개 신원을 반환합니다. 이름 인덱스 `AccountNameIndex` 가 다른 키트의 저장소 작업 안에서 부릅니다. */
         [[nodiscard]] static ServiceStoreResult readIdentity( IServiceStoreConnection& connection, uint64 accountID, AccountIdentity& outIdentity );
+        /** @brief 계정이 그 제공자의 그 주체에 연동돼 있는지 읽습니다. `AccountExternalLinks` 가 다른 키트의 저장소 작업 안에서 부릅니다. 연동이 없으면 Ok 와 false 입니다. */
+        [[nodiscard]] static ServiceStoreResult readIsLinked( IServiceStoreConnection& connection, ILoginCrypto& crypto, uint64 accountID, string_view provider, string_view subject, bool& outbLinked );
         /** @brief 정식 계정을 이름으로 찾습니다. 정식 계정은 소문자 로그인 이름이 곧 표시 이름입니다. 규칙에 맞지 않는 이름이면 NotFound 를 반환합니다. */
         [[nodiscard]] static ServiceStoreResult readIdentityByDisplayName( IServiceStoreConnection& connection, string_view displayName, AccountIdentity& outIdentity );
 
