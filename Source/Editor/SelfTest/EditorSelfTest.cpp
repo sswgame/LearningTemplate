@@ -325,4 +325,5 @@ namespace sw::editor
 namespace sw
 {
     SW_AUTOMATION_STAGE_RESET( editorSelfTestResults, "editor self test results", &editor::EditorSelfTestInternal::resetFinishedRun );
+    SW_AUTOMATION_STAGE_RESET( editorHeldInput, "editor held virtual input", &editor::EditorSelfTestInput::releaseHeldInput );
 } // namespace sw
