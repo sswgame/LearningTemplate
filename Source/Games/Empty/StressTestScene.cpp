@@ -571,7 +571,7 @@ namespace sw
         for ( const StressTestScanProp& prop : _settings._listScanProp )
         {
             // 머티리얼은 컴포넌트가 경로로 캐시에서 확보해야 GPU 자원이 만들어진다(`MaterialCache::requestInitialize`) — 직접 읽은 Material 은 그려지지 않는다.
-            MeshVariant variant{ MeshCache::acquire( prop._mesh ), prop._material };
+            MeshVariant variant{ MeshCache::acquire( prop._mesh ), prop._material.path() };
             if ( variant._mesh == nullptr || AssetIO::hasAsset( AssetID{ prop._material.c_str() } ) == false )
             {
                 SW_LOG_ERROR_ID( "StressTestScene.FailedReadScanProp", "[Bench] Failed to read scan prop %# (material %#) - run App --import-models.", prop._mesh.c_str(), prop._material.c_str() );
@@ -1811,7 +1811,7 @@ namespace sw
     {
         // 무기 유닛입니다. 리그(CopyTransform)가 오른손 소켓 위치를 따라갑니다. 스킨이 없는 쇠뇌를 루트 본에 묶은 사본으로 그립니다.
         GameObject*            pWeapon     = objects.createGameObject( "RigWeapon" );
-        SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? StressTestSceneInternal::addUnit( *pWeapon, _settings._rigWeaponMesh, _settings._rigWeaponMaterial ) : nullptr;
+        SkeletalMeshComponent* pWeaponUnit = ( pWeapon != nullptr ) ? StressTestSceneInternal::addUnit( *pWeapon, _settings._rigWeaponMesh.path(), _settings._rigWeaponMaterial.path() ) : nullptr;
         // 사본을 만들 원본은 지금 있어야 한다 — 컴포넌트의 비동기 로드를 기다리지 않고 같은 로드를 동기로 받는다(`MeshCache::acquire`).
         const shared_ptr<Mesh> weaponSource = MeshCache::acquire( _settings._rigWeaponMesh );
         if ( pWeaponUnit == nullptr || weaponSource == nullptr )
@@ -1837,7 +1837,7 @@ namespace sw
     {
         // 망토 유닛입니다. 데모 데이터에는 사슬 뼈가 네 개 있습니다. 루트 뼈는 가슴 위치를 따라가고(CopyTransform) 나머지는 스프링으로 움직입니다.
         GameObject*            pCape      = objects.createGameObject( "RigCape" );
-        SkeletalMeshComponent* pCapeUnit  = ( pCape != nullptr ) ? StressTestSceneInternal::addUnit( *pCape, _settings._rigCapeMesh, _settings._rigCapeMaterial ) : nullptr;
+        SkeletalMeshComponent* pCapeUnit  = ( pCape != nullptr ) ? StressTestSceneInternal::addUnit( *pCape, _settings._rigCapeMesh.path(), _settings._rigCapeMaterial.path() ) : nullptr;
         const shared_ptr<Mesh> capeSource = MeshCache::acquire( _settings._rigCapeMesh ); // 무기와 같다 — 사본의 원본은 동기로 받는다
         if ( pCapeUnit == nullptr || capeSource == nullptr )
             return;
@@ -1862,7 +1862,7 @@ namespace sw
         GameObject* pKnight = objects.createGameObject( hashed_string( name.c_str(), name.size() ) );
         if ( pKnight == nullptr )
             return;
-        SkeletalMeshComponent*     pBody     = StressTestSceneInternal::addUnit( *pKnight, _settings._knightMesh, _settings._knightMaterial );
+        SkeletalMeshComponent*     pBody     = StressTestSceneInternal::addUnit( *pKnight, _settings._knightMesh.path(), _settings._knightMaterial.path() );
         SkeletalAnimatorComponent* pAnimator = pKnight->addComponent<SkeletalAnimatorComponent>();
         if ( pBody == nullptr || pAnimator == nullptr )
             return;

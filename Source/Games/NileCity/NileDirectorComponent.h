@@ -16,7 +16,9 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
@@ -138,16 +140,16 @@ namespace sw
         string _cityDataPath;
         PROPERTY( Category = "Data", DisplayName = "Auto Plan", AssetPath, Tooltip = "Build order the auto plan follows (roads, buildings and population thresholds); required" )
         string _autoPlanPath;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _groundPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _roadPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Building drawn with a kit model (palette material)" )
-        string _modelBuildingPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Building drawn as a coloured block (fields, statues)" )
-        string _blockBuildingPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _walkerPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _groundPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _roadPrefab;
+        PROPERTY( Category = "Prefabs", Tooltip = "Building drawn with a kit model (palette material)" )
+        AssetRef<PrefabAsset> _modelBuildingPrefab;
+        PROPERTY( Category = "Prefabs", Tooltip = "Building drawn as a coloured block (fields, statues)" )
+        AssetRef<PrefabAsset> _blockBuildingPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _walkerPrefab;
         PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the mouse cursor is picked through" )
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "City", DisplayName = "Starting Money", Min = 0 )

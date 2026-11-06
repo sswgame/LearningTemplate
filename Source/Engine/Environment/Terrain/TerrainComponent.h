@@ -265,11 +265,11 @@ namespace sw
         void releaseCPUSplat();
 
     private:
-        PROPERTY( Category = "Terrain", DisplayName = "Heightfield", FileFilter = "*.heightfield", Tooltip = "Imported .heightfield asset" )
+        PROPERTY( Category = "Terrain", DisplayName = "Heightfield", Tooltip = "Imported .heightfield asset" )
         AssetRef<HeightfieldAsset> _heightfieldPath;
         PROPERTY( Category = "Terrain", DisplayName = "Material", Tooltip = "Terrain material (terrain.hlsl). Empty uses the engine default terrain material" )
         AssetRef<Material> _materialPath; ///< 비면 엔진 기본 에셋 표의 `_terrainMaterial` 이다
-        PROPERTY( Category = "Terrain", DisplayName = "Layer Weights", FileFilter = "*.layerweights", Tooltip = "Layer weights asset (.layerweights, layers 0..7); read by client and dedicated server" )
+        PROPERTY( Category = "Terrain", DisplayName = "Layer Weights", Tooltip = "Layer weights asset (.layerweights, layers 0..7); read by client and dedicated server" )
         AssetRef<LayerWeightsAsset> _layerWeightsPath;
         PROPERTY( Category = "Terrain", DisplayName = "Detail Map", Tooltip = "Tileable detail, one channel per layer" )
         AssetRef<Texture2D> _detailTexturePath;

@@ -546,8 +546,8 @@ namespace sw
     void ShooterDirectorComponent::spawnEffectPools( GameObjectManager& manager )
     {
         // 탄착과 섬광 구, 탄도선 상자를 미리 스폰하고 숨긴다(오브젝트를 매 발 만들고 지우지 않는다).
-        spawnPool( manager, _effectPrefab, _effectPoolSize, "ShotEffect", _effectPool );
-        spawnPool( manager, _tracerPrefab, _tracerPoolSize, "Tracer", _tracerPool );
+        spawnPool( manager, _effectPrefab.path(), _effectPoolSize, "ShotEffect", _effectPool );
+        spawnPool( manager, _tracerPrefab.path(), _tracerPoolSize, "Tracer", _tracerPool );
     }
 
     void ShooterDirectorComponent::spawnPool( GameObjectManager& manager, const string& prefab, int32 count, const utf8* pName, EffectPool& outPool )

@@ -18,7 +18,10 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
@@ -49,8 +52,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( Tooltip = "Crop catalog id" )
         hashed_string _cropID{};
-        PROPERTY( AssetPath, Tooltip = "Model of the ready crop; empty keeps the growing model tinted with the crop colour" )
-        string _readyModel{};
+        PROPERTY( Tooltip = "Model of the ready crop; empty keeps the growing model tinted with the crop colour" )
+        AssetRef<MeshAssetFormat> _readyModel{};
         PROPERTY( Tooltip = "Growing models by stage: the first for stages 0 and 1, then one per stage, the last repeats; empty uses the default growing models" )
         vector<string> _listGrowingModel{};
     };
@@ -215,10 +218,10 @@ namespace sw
     private:
         PROPERTY( Category = "Data", DisplayName = "Crop Data", AssetPath, Tooltip = "Crop catalog XML" )
         string _cropDataPath;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _soilPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _cropPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _soilPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _cropPrefab;
         PROPERTY( Category = "Look", DisplayName = "Grass Soil", Tooltip = "Tile colour before tilling" )
         float4 _grassSoilColor;
         PROPERTY( Category = "Look", DisplayName = "Tilled Soil", Tooltip = "Tile colour once tilled" )
@@ -235,8 +238,8 @@ namespace sw
         GameObjectHandle _shop;
         PROPERTY( Category = "Scene", DisplayName = "Farmer", Tooltip = "Object with the farmer pawn whose intent drives the farmer" )
         GameObjectHandle _farmer;
-        PROPERTY( Category = "Prefabs", DisplayName = "Auto Farmer Prefab", AssetPath, AssetType = "Prefab", Tooltip = "AI controller that possesses the farmer while auto play is on" )
-        string _autoFarmerPrefab;
+        PROPERTY( Category = "Prefabs", DisplayName = "Auto Farmer Prefab", Tooltip = "AI controller that possesses the farmer while auto play is on" )
+        AssetRef<PrefabAsset> _autoFarmerPrefab;
         PROPERTY( Category = "Farmer", DisplayName = "Player Start", Tooltip = "Where the farmer wakes up", Units = m )
         float3 _playerStart;
         PROPERTY( Category = "Farmer", DisplayName = "Walk Speed", Min = 0.0, Units = "m/s" )

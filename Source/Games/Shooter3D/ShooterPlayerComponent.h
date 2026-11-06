@@ -12,7 +12,9 @@
 #include "Core/Math/Ray.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/Combat/Health/Vitality.h"
@@ -188,8 +190,8 @@ namespace sw
         GameObjectHandle _director;
         PROPERTY( Category = "Player", DisplayName = "Spawn Position", Tooltip = "Feet position at the start and after being overrun", Units = m )
         float3 _spawnPosition;
-        PROPERTY( Category = "Player", AssetPath, AssetType = "Prefab", DisplayName = "Body Prefab", Tooltip = "Visible body (skeletal mesh, animator, appearance, ShooterAvatarComponent)" )
-        string _bodyPrefab;
+        PROPERTY( Category = "Player", DisplayName = "Body Prefab", Tooltip = "Visible body (skeletal mesh, animator, appearance, ShooterAvatarComponent)" )
+        AssetRef<PrefabAsset> _bodyPrefab;
         PROPERTY( Category = "Player", DisplayName = "Weapon IDs", Tooltip = "Weapon catalog id of each slot (keys Weapon1..Weapon3) - every id must be in weapons.xml" )
         vector<string> _listWeaponID;
         PROPERTY( Category = "View", DisplayName = "Eye Height", Tooltip = "Used until the body's Eyes socket is known", Min = 0.0, Units = m )

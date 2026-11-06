@@ -11,12 +11,9 @@
     "listCMakeArgument": [ "--render-portraits", "-scenario" ],
     "listField": [
         "animationSet", "base", "set", "_albedo", "appearance", "assetPath", "_assetPath", "assetRoots", "atlas", "_atlasPath", "audioEvents", "_cliffPrefab",
-        "_clipPath", "_combatEnemyClips", "_combatEnemyMaterial", "_combatEnemyMesh", "_combatEnemySkeleton", "_combatSwordMaterial",
-        "_combatSwordMesh", "_cookieTexturePath", "_enemyPrefab", "_faceClips", "_faceMesh", "_faceRig", "_faceSkeleton", "_faceVoice", "fit",
-        "fitTables", "from", "_glassMaterial", "inputMap", "items", "_knightClips", "_knightMaterial", "_knightMesh", "_knightSkeleton",
-        "_layoutPath", "_listDefaultGrowingModel", "_listExtensionShader", "_listGrowingModel", "_listRenderPassRef", "loadingScreen",
-        "localizationProject", "material", "mesh", "normalAtlas", "_path", "path", "prefab", "rig", "_rigCapeMaterial", "_rigCapeMesh",
-        "_rigCapeRig", "_rigCapeSkeleton", "_rigKnightRig", "_rigWeaponMaterial", "_rigWeaponMesh", "_rigWeaponRig", "_rigWeaponSockets", "screen",
-        "_shaderPath", "shaderPath", "skeleton", "sockets", "source_skeleton", "startMap", "target_skeleton", "_texture", "tileSet"
+        "_clipPath", "_cookieTexturePath", "_enemyPrefab", "_faceVoice", "fit", "fitTables", "from", "inputMap", "items", "_layoutPath",
+        "_listDefaultGrowingModel", "_listExtensionShader", "_listGrowingModel", "_listRenderPassRef", "loadingScreen", "localizationProject",
+        "material", "mesh", "normalAtlas", "_path", "path", "prefab", "rig", "_rigWeaponSockets", "screen", "_shaderPath", "shaderPath", "skeleton",
+        "sockets", "source_skeleton", "startMap", "target_skeleton", "_texture", "tileSet"
     ]
 }

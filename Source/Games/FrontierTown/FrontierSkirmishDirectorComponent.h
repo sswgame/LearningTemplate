@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
@@ -60,8 +62,8 @@ namespace sw
         void syncUnitViews( GameObjectManager& manager );
 
     private:
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "One unit view (a cube)" )
-        string _unitPrefab;
+        PROPERTY( Category = "Prefabs", Tooltip = "One unit view (a cube)" )
+        AssetRef<PrefabAsset> _unitPrefab;
         PROPERTY( Category = "Units", DisplayName = "Worker", Tooltip = "RTS catalog id of the starting worker" )
         string _workerUnit;
         PROPERTY( Category = "Units", DisplayName = "Soldier", Tooltip = "RTS catalog id of the patrolling soldier" )

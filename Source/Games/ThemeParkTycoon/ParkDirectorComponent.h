@@ -16,6 +16,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
@@ -119,24 +121,24 @@ namespace sw
         string _coasterDataPath;
         PROPERTY( Category = "Data", DisplayName = "Park Layout", AssetPath, Tooltip = "Gate, cash and ride placement XML" )
         string _parkDataPath;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _guestPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _carFrontPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _carPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _railPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _supportPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _stationPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _rideEntrancePrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _pathPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _flatRidePrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _guestPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _carFrontPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _carPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _railPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _supportPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _stationPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _rideEntrancePrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _pathPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _flatRidePrefab;
         PROPERTY( Category = "Look", DisplayName = "Happy Guest", Tooltip = "Guest colour at happiness 0.6 and above" )
         float4 _happyColor;
         PROPERTY( Category = "Look", DisplayName = "Content Guest", Tooltip = "Guest colour at happiness 0.35 to 0.6" )

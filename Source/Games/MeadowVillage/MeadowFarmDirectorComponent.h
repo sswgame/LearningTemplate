@@ -10,6 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/FarmField.h"
@@ -60,8 +62,8 @@ namespace sw
         void spawnField( GameObjectManager& manager );
 
     private:
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "One tile view (a cube)" )
-        string _tilePrefab;
+        PROPERTY( Category = "Prefabs", Tooltip = "One tile view (a cube)" )
+        AssetRef<PrefabAsset> _tilePrefab;
         PROPERTY( Category = "Economy", DisplayName = "Starting Gold", Min = 0 )
         int32 _startingGold;
         PROPERTY( Category = "Time", DisplayName = "Fast Time Scale", Tooltip = "Clock speed while fast forward is held", Min = 1.0 )

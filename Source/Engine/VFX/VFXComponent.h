@@ -155,7 +155,7 @@ namespace sw
         /** @brief 메시 방출기 @p emitterIndex 의 항목을 @p listParticle(비면 모두 크기 0)로 고칩니다. */
         void writeMeshEntries( uint32 emitterIndex, const vector<GPUParticle>* pListParticle );
 
-        PROPERTY( Category = "VFX", DisplayName = "Effect", FileFilter = "*.vfx.xml", Tooltip = "Particle effect (.vfx.xml)" )
+        PROPERTY( Category = "VFX", DisplayName = "Effect", Tooltip = "Particle effect (.vfx.xml)" )
         AssetRef<VFXEffectDef>                        _effectPath;
         vector<EmitterSimulation>                     _listSimulation;
         vector<shared_ptr<const vector<GPUParticle>>> _listPublished;      ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)

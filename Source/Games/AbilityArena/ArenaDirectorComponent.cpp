@@ -424,7 +424,7 @@ namespace sw
     bool ArenaDirectorComponent::spawnUnit( GameObjectManager& manager, const SpawnRequest& request )
     {
         const bool          bPlayer             = request._kind == ArenaUnitKind::Player;
-        const string&       prefabPath          = bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab );
+        const string&       prefabPath          = ( bPlayer ? _playerPrefab : ( request._kind == ArenaUnitKind::Caster ? _casterPrefab : _gruntPrefab ) ).path();
         const utf8*         pName               = bPlayer ? "ArenaPlayer" : ( request._kind == ArenaUnitKind::Caster ? "ArenaCaster" : "ArenaGrunt" );
         GameObject*         pObject             = spawnPrefab( manager, prefabPath, pName );
         MeshComponent*      pMesh               = pObject != nullptr ? pObject->getComponent<MeshComponent>() : nullptr;
@@ -481,7 +481,7 @@ namespace sw
 
     GameObjectHandle ArenaDirectorComponent::spawnEnemyController( GameObjectManager& manager, ArenaUnitKind kind, PawnComponent& pawn )
     {
-        const string&          prefabPath = kind == ArenaUnitKind::Caster ? _casterAIPrefab : _gruntAIPrefab;
+        const string&          prefabPath = ( kind == ArenaUnitKind::Caster ? _casterAIPrefab : _gruntAIPrefab ).path();
         GameObject*            pObject    = spawnPrefab( manager, prefabPath, kind == ArenaUnitKind::Caster ? "ArenaCasterAI" : "ArenaGruntAI" );
         AIControllerComponent* pAI        = pObject != nullptr ? pObject->getComponent<AIControllerComponent>() : nullptr;
         if ( pAI == nullptr )

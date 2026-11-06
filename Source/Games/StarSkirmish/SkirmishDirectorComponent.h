@@ -18,6 +18,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/AssetHandle.h"
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
@@ -145,8 +147,8 @@ namespace sw
         PROPERTY( Category = "Prefabs", DisplayName = "Cliff Prefabs", AssetPath, AssetType = "Prefab",
                   Tooltip = "One is placed on every cliff tile, picked and turned by the tile position (rocks); at least one" )
         vector<string> _listCliffPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _unitPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _unitPrefab;
         PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the mouse is picked through" )
         GameObjectHandle _cameraRig;
         PROPERTY( Category = "Scene", DisplayName = "Watch Focus", Tooltip = "Camera focus when both players are AI (the whole map); the height is the Watch Camera Preset", Units = m )

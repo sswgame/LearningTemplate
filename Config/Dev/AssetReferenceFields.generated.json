@@ -21,6 +21,7 @@
         "_defaultSurfaceChannels",
         "_detailTexturePath",
         "_document",
+        "_documentPath",
         "_effectPath",
         "_facialRigPath",
         "_foliageMaterial",
@@ -159,6 +160,7 @@
         "_materialPath",
         "_meshID",
         "_packRoot",
+        "_projectilePrefab",
         "_regionTablePath",
         "_sound",
         "_startMap",
@@ -181,8 +183,31 @@
     {
       "owner": "game:Empty",
       "listField": [
+        "_combatEnemyClips",
+        "_combatEnemyMaterial",
+        "_combatEnemyMesh",
+        "_combatEnemySkeleton",
+        "_combatSwordMaterial",
+        "_combatSwordMesh",
+        "_faceClips",
+        "_faceMesh",
+        "_faceRig",
+        "_faceSkeleton",
+        "_glassMaterial",
+        "_knightClips",
+        "_knightMaterial",
+        "_knightMesh",
+        "_knightSkeleton",
         "_material",
-        "_mesh"
+        "_mesh",
+        "_rigCapeMaterial",
+        "_rigCapeMesh",
+        "_rigCapeRig",
+        "_rigCapeSkeleton",
+        "_rigKnightRig",
+        "_rigWeaponMaterial",
+        "_rigWeaponMesh",
+        "_rigWeaponRig"
       ]
     },
     {

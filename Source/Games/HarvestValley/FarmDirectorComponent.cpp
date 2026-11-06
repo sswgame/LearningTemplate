@@ -356,7 +356,7 @@ namespace sw
         for ( const FarmCropModel& model : _listCropModel )
         {
             if ( model._cropID == cropID )
-                return model._readyModel.empty() ? nullptr : &model._readyModel;
+                return model._readyModel.empty() ? nullptr : &model._readyModel.path();
         }
         return nullptr;
     }
@@ -573,7 +573,7 @@ namespace sw
         for ( const FarmCropModel& model : _listCropModel )
         {
             if ( model._readyModel.empty() == false )
-                listModelPath.push_back( model._readyModel );
+                listModelPath.push_back( model._readyModel.path() );
             listModelPath.insert( listModelPath.end(), model._listGrowingModel.begin(), model._listGrowingModel.end() );
         }
         // 게임 스레드가 디스크를 기다리지 않게 워커가 읽는다 — 미리 쥐는 것이 목적이라 지금 쓰지 않는다(뷰의 `MeshComponent` 가 같은 로드를 받는다).

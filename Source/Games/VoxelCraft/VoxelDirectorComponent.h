@@ -19,6 +19,8 @@
 #include "Core/Math/Math.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Feature/World/Voxel/Rule/VoxelWorld.h"
@@ -86,8 +88,8 @@ namespace sw
         void syncAutoPlayPossession( GameObjectManager& manager );
 
     private:
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _chunkPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _chunkPrefab;
         PROPERTY( Category = "Scene", DisplayName = "Player", Tooltip = "Object with the VoxelPlayerComponent" )
         GameObjectHandle _player;
         PROPERTY( Category = "World", DisplayName = "Terrain Seed", Tooltip = "Same seed, same island" )

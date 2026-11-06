@@ -19,6 +19,8 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameDirectorComponent.h"
@@ -196,20 +198,20 @@ namespace sw
         hashed_string _gruntAbilitySet;
         PROPERTY( Category = "Abilities", DisplayName = "Caster Ability Set" )
         hashed_string _casterAbilitySet;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _playerPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _gruntPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _casterPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab" )
-        string _projectilePrefab;
-        PROPERTY( Category = "Prefabs", DisplayName = "Grunt AI Prefab", AssetPath, AssetType = "Prefab", Tooltip = "AI controller spawned to possess each grunt" )
-        string _gruntAIPrefab;
-        PROPERTY( Category = "Prefabs", DisplayName = "Caster AI Prefab", AssetPath, AssetType = "Prefab", Tooltip = "AI controller spawned to possess each caster" )
-        string _casterAIPrefab;
-        PROPERTY( Category = "Prefabs", DisplayName = "Auto Battle AI Prefab", AssetPath, AssetType = "Prefab", Tooltip = "AI controller that possesses the player while auto play is on" )
-        string _autoBattleAIPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _playerPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _gruntPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _casterPrefab;
+        PROPERTY( Category = "Prefabs" )
+        AssetRef<PrefabAsset> _projectilePrefab;
+        PROPERTY( Category = "Prefabs", DisplayName = "Grunt AI Prefab", Tooltip = "AI controller spawned to possess each grunt" )
+        AssetRef<PrefabAsset> _gruntAIPrefab;
+        PROPERTY( Category = "Prefabs", DisplayName = "Caster AI Prefab", Tooltip = "AI controller spawned to possess each caster" )
+        AssetRef<PrefabAsset> _casterAIPrefab;
+        PROPERTY( Category = "Prefabs", DisplayName = "Auto Battle AI Prefab", Tooltip = "AI controller that possesses the player while auto play is on" )
+        AssetRef<PrefabAsset> _autoBattleAIPrefab;
         PROPERTY( Category = "Arena", DisplayName = "Arena Half Size", Tooltip = "Units are kept inside this square", Min = 1.0, Units = m )
         float32 _arenaHalfSize;
         PROPERTY( Category = "Arena", DisplayName = "Wave Radius", Tooltip = "Radius of the circle the enemies spawn on", Min = 0.0, Units = m )

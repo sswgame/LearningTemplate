@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureTown.h"
@@ -30,8 +32,8 @@ namespace sw
         REFLECT_BODY();
         PROPERTY( Tooltip = "Town object id (a habitat key object) or creature species id" )
         hashed_string _id{};
-        PROPERTY( AssetPath, AssetType = "Prefab", Tooltip = "Prefab spawned for it; its root scene component is placed on the town grid" )
-        string _prefab{};
+        PROPERTY( Tooltip = "Prefab spawned for it; its root scene component is placed on the town grid" )
+        AssetRef<PrefabAsset> _prefab{};
     };
 
     /**

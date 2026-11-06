@@ -9,6 +9,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CitySimulation.h"
@@ -59,8 +61,8 @@ namespace sw
         void spawnTiles( GameObjectManager& manager );
 
     private:
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "One tile view (a cube)" )
-        string _tilePrefab;
+        PROPERTY( Category = "Prefabs", Tooltip = "One tile view (a cube)" )
+        AssetRef<PrefabAsset> _tilePrefab;
         PROPERTY( Category = "Economy", DisplayName = "Starting Deben", Tooltip = "City money a fresh game starts with", Min = 0 )
         int32 _startingDeben;
         PROPERTY( Category = "Economy", DisplayName = "Starting Minerals", Tooltip = "RTS money a fresh game starts with (the same shared wallet)", Min = 0 )

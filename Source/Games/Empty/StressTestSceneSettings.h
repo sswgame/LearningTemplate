@@ -12,6 +12,13 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
 
+#include "Engine/Animation/AnimationSet.h"
+#include "Engine/Animation/Facial/FacialRig.h"
+#include "Engine/Animation/Rig/RigAsset.h"
+#include "Engine/Animation/Skeletal/Skeleton.h"
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Graphics/Material/Material.h"
+#include "Engine/Graphics/Mesh/MeshAssetFormat.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -24,10 +31,10 @@ namespace sw
     struct StressTestScanProp
     {
         REFLECT_BODY();
-        PROPERTY( AssetPath, Tooltip = "Imported scan mesh" )
-        string _mesh{};
-        PROPERTY( AssetPath, Tooltip = "Its PBR material (written by the model import next to the mesh)" )
-        string _material{};
+        PROPERTY( Tooltip = "Imported scan mesh" )
+        AssetRef<MeshAssetFormat> _mesh{};
+        PROPERTY( Tooltip = "Its PBR material (written by the model import next to the mesh)" )
+        AssetRef<Material> _material{};
     };
 
     /**
@@ -41,25 +48,25 @@ namespace sw
 
         // ---- 에셋 ----
         PROPERTY( Category = "Assets", Tooltip = "Skinned knight mesh used by the character and rig benches" )
-        string _knightMesh{};
+        AssetRef<MeshAssetFormat> _knightMesh{};
         PROPERTY( Category = "Assets", Tooltip = "Material of the knight (KayKit atlas)" )
-        string _knightMaterial{};
+        AssetRef<Material> _knightMaterial{};
         PROPERTY( Category = "Assets" )
-        string _knightSkeleton{};
+        AssetRef<Skeleton> _knightSkeleton{};
         PROPERTY( Category = "Assets" )
-        string _knightClips{};
+        AssetRef<AnimationSet> _knightClips{};
         PROPERTY( Category = "Assets", Tooltip = "Clip played by even-numbered bench characters" )
         string _characterEvenClip{};
         PROPERTY( Category = "Assets", Tooltip = "Clip played by odd-numbered bench characters" )
         string _characterOddClip{};
         PROPERTY( Category = "Assets" )
-        string _faceMesh{};
+        AssetRef<MeshAssetFormat> _faceMesh{};
         PROPERTY( Category = "Assets" )
-        string _faceSkeleton{};
+        AssetRef<Skeleton> _faceSkeleton{};
         PROPERTY( Category = "Assets" )
-        string _faceClips{};
+        AssetRef<AnimationSet> _faceClips{};
         PROPERTY( Category = "Assets" )
-        string _faceRig{};
+        AssetRef<FacialRig> _faceRig{};
         PROPERTY( Category = "Assets", Tooltip = "Voice line spoken by odd-numbered heads" )
         string _faceVoice{};
         PROPERTY( Category = "Assets", Tooltip = "Clip played by even-numbered heads" )
@@ -67,43 +74,43 @@ namespace sw
         PROPERTY( Category = "Assets", Tooltip = "Expression worn by even-numbered heads" )
         string _faceExpression{};
         PROPERTY( Category = "Assets", Tooltip = "Material of the transparent cubes" )
-        string _glassMaterial{};
+        AssetRef<Material> _glassMaterial{};
         PROPERTY( Category = "Assets", Tooltip = "Scanned props the mesh bench draws with -gv_stressTestScanProps=1 (one batch each)" )
         vector<StressTestScanProp> _listScanProp{};
         PROPERTY( Category = "Assets", Tooltip = "Animator state of the rig knights" )
         string _rigAimState{};
         PROPERTY( Category = "Assets" )
-        string _rigWeaponMesh{};
+        AssetRef<MeshAssetFormat> _rigWeaponMesh{};
         PROPERTY( Category = "Assets", Tooltip = "Material of the rig weapon (KayKit atlas)" )
-        string _rigWeaponMaterial{};
+        AssetRef<Material> _rigWeaponMaterial{};
         PROPERTY( Category = "Assets" )
-        string _rigCapeMesh{};
+        AssetRef<MeshAssetFormat> _rigCapeMesh{};
         PROPERTY( Category = "Assets", Tooltip = "Material of the rig cape (KayKit atlas)" )
-        string _rigCapeMaterial{};
+        AssetRef<Material> _rigCapeMaterial{};
         PROPERTY( Category = "Assets" )
-        string _rigKnightRig{};
+        AssetRef<RigAsset> _rigKnightRig{};
         PROPERTY( Category = "Assets" )
-        string _rigWeaponRig{};
+        AssetRef<RigAsset> _rigWeaponRig{};
         PROPERTY( Category = "Assets" )
-        string _rigCapeRig{};
+        AssetRef<RigAsset> _rigCapeRig{};
         PROPERTY( Category = "Assets" )
-        string _rigCapeSkeleton{};
+        AssetRef<Skeleton> _rigCapeSkeleton{};
         PROPERTY( Category = "Assets" )
         string _rigWeaponSockets{};
         PROPERTY( Category = "Assets", Tooltip = "Skinned enemy mesh of the combat bench" )
-        string _combatEnemyMesh{};
+        AssetRef<MeshAssetFormat> _combatEnemyMesh{};
         PROPERTY( Category = "Assets", Tooltip = "Material of the combat enemy (KayKit atlas)" )
-        string _combatEnemyMaterial{};
+        AssetRef<Material> _combatEnemyMaterial{};
         PROPERTY( Category = "Assets" )
-        string _combatEnemySkeleton{};
+        AssetRef<Skeleton> _combatEnemySkeleton{};
         PROPERTY( Category = "Assets" )
-        string _combatEnemyClips{};
+        AssetRef<AnimationSet> _combatEnemyClips{};
         PROPERTY( Category = "Assets", Tooltip = "Path stem of the enemy's character data (.notifies.xml, .sockets.xml, .physics.xml are appended)" )
         string _combatEnemyData{};
         PROPERTY( Category = "Assets", Tooltip = "Sword mesh held in the enemy's right hand" )
-        string _combatSwordMesh{};
+        AssetRef<MeshAssetFormat> _combatSwordMesh{};
         PROPERTY( Category = "Assets", Tooltip = "Material of the sword (KayKit atlas)" )
-        string _combatSwordMaterial{};
+        AssetRef<Material> _combatSwordMaterial{};
         PROPERTY( Category = "Characters", Tooltip = "Distance in front of the combat enemy the bench shots are fired from", Min = 0.0, Units = m )
         float32 _combatShooterRange{};
 

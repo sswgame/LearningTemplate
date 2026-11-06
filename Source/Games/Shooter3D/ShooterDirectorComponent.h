@@ -17,6 +17,8 @@
 #include "Core/Math/Math.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
+#include "Engine/Object/Prefab/PrefabAsset.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 #include "GameFramework/Runtime/Character/AI/Director/AIDirector.h"
@@ -68,8 +70,8 @@ namespace sw
     struct ShooterEnemyKind
     {
         REFLECT_BODY();
-        PROPERTY( Required, AssetPath, AssetType = "Prefab", Tooltip = "Enemy prefab (skeletal mesh, animator, appearance, ragdoll hitboxes, ShooterEnemyComponent)" )
-        string _prefab{};
+        PROPERTY( Required, Tooltip = "Enemy prefab (skeletal mesh, animator, appearance, ragdoll hitboxes, ShooterEnemyComponent)" )
+        AssetRef<PrefabAsset> _prefab{};
         PROPERTY( Required, Tooltip = "Appearance preset of the body (presets.xml)" )
         string _preset{};
     };
@@ -196,10 +198,10 @@ namespace sw
         void appendMotionTrace( float32 deltaTime );
 
     private:
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Pooled sphere for hits and muzzle flashes" )
-        string _effectPrefab;
-        PROPERTY( Category = "Prefabs", AssetPath, AssetType = "Prefab", Tooltip = "Pooled box stretched along each shot" )
-        string _tracerPrefab;
+        PROPERTY( Category = "Prefabs", Tooltip = "Pooled sphere for hits and muzzle flashes" )
+        AssetRef<PrefabAsset> _effectPrefab;
+        PROPERTY( Category = "Prefabs", Tooltip = "Pooled box stretched along each shot" )
+        AssetRef<PrefabAsset> _tracerPrefab;
         PROPERTY( Category = "Enemies", DisplayName = "Enemies", Tooltip = "Enemy kinds the regular spawns cycle through (seeded by the spawn order)" )
         vector<ShooterEnemyKind> _listEnemyKind;
         PROPERTY( Category = "Enemies", DisplayName = "Elite Enemy", Tooltip = "Enemy kind of the elite encounter" )
