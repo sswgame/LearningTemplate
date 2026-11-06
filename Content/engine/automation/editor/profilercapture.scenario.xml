@@ -51,6 +51,10 @@
 	<EditorWaitSettled/>
 	<EditorClick mark="profiler.capture.pause"/>
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="0" timeoutFrames="60"/>
+	<!-- 친 문턱이 먹었는지 본다 - 글자를 잃으면 기본 33.3 ms 라 100 ms 에서 멈춘다. 400 ms 만 보면 어느 문턱이든 멈춰 통과한다 -->
+	<DevCommand line="profile.stall 100"/>
+	<EditorWaitSettled/>
+	<Expect watch="Editor.ProfilerCapturePaused" equals="0"/>
 	<DevCommand line="profile.stall 400"/>
 	<WaitUntil watch="Editor.ProfilerCapturePaused" equals="1" timeoutFrames="120"/>
 	<ExpectLog id="Profiler.SpikePaused" atLeast="1"/>
