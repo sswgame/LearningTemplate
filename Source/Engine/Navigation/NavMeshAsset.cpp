@@ -13,6 +13,7 @@
 
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineParallel.h"
+#include "Engine/Navigation/INavMesh.h"
 #include "Engine/Navigation/NavMeshGeometry.h"
 #include "Engine/Navigation/NavMeshSettings.h"
 
