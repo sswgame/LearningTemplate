@@ -186,7 +186,9 @@ namespace sw
                     writer.addBytes( relativePath, vector<uint8>( flatText.begin(), flatText.end() ) );
                     return true;
                 }
-                if ( DataInheritance::findBasePath( text ).empty() )
+                // shortcut: 스켈레톤 변형은 부모(`<Skeleton>`)와 형식이 달라 공통 펼치기가 받지 않고 로더가 합친다(부모도 팩에 든다). `_base` 공통 합성으로 옮기면 지운다.
+                const bool bLoaderMerges = StringUtil::contains( text, "<SkeletonVariant" );
+                if ( bLoaderMerges || DataInheritance::findBasePath( text ).empty() )
                 {
                     writer.addBytes( relativePath, std::move( bytes ) );
                     return true;

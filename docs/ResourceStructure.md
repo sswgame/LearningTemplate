@@ -184,6 +184,24 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | UI | 스타일 시트 · 테마 토큰 `_base`, 위젯 형식 변형 | Godot Theme Type Variation · 유니티 USS |
 | 기타 | 리그 · 리타겟 · 물리 · 소켓 · 입력 레이어에 `InheritKey` | — |
 
+### 7. 무기와 발사체 조합
+
+지금은 탄속 · 낙차 · 피해가 `WeaponDef` 안에 있어 "소총 + 폭발탄" 하나에 무기 정의 하나가 든다. 발사체 구조체도 키트마다 따로다(`Ballistics::Projectile`, `ProjectileComponent`, `MechProjectile`, `KartProjectile`, `ActionProjectile`, `ArenaProjectileComponent`). 정의를 나눠 무기 N 종과 발사체 M 종이 파일 N + M 개로 조합되게 한다.
+
+| 정의 | 가지는 것 |
+|---|---|
+| `WeaponDef`(쏘는 법) | 연사 · 탄창 · 재장전 · 퍼짐 · 반동 · 알 수 · 총구 효과, 받는 탄의 태그 조건, 기본 탄, 탄 값에 곱하는 배율 |
+| `ProjectileDef`(날아가는 것) | 운동(광선 · 탄도 · 유도), 탄속 · 중력 · 저항 · 수명, 관통 · 튕김 · 폭발, 궤적 · 충돌 효과, 태그, 맞을 때의 동작 목록(`ActionRegistry` + `ConditionExpr`) |
+| 부착물 · 버프 | 수정자 목록(칸, 더하기 · 곱하기). 합치는 순서는 탄 → 무기 → 수정자로 한 벌이다 |
+
+- 호환은 조합 표가 아니라 태그 조건이다(`accepts="Ammo.Rifle"`). 표로 적으면 M × N 이 그대로 돌아온다.
+- 조합 결과(`ResolvedShot`)는 장전 · 부착물이 바뀔 때 한 번 계산해 든다. 쏠 때마다 계산하지 않는다.
+- 충돌 효과는 탄과 표면의 조합이라 발사체가 직접 들지 않고 표면 표에서 찾는다(언리얼 Physical Material 과 같은 자리).
+- 런타임은 발사체 시뮬레이션 하나로 모은다. 탄을 게임 오브젝트로 만들지 않아 탄 수가 많아도 비용이 오르지 않고, 롤백 · 복제가 같은 결과를 내도록 결정적으로 돈다. 키트별 구조체는 옮기기 전에 복제 · 롤백 규칙을 읽어, 옮길 수 없으면 까닭을 적는다.
+- 세이브의 탄 id 는 지금 `_ammoID` 를 그대로 잇는다.
+
+언리얼 Lyra 의 무기 조각 · 유니티 ScriptableObject 탄 정의와 같은 방향이다(기억에 의존한 비교).
+
 ## 순서
 
 | 단계 | 내용 | 끝났다고 보는 조건 |
