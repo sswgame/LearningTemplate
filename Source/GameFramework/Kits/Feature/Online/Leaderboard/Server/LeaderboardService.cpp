@@ -117,6 +117,15 @@ namespace sw
             static string makeScorePrefix( string_view boardID, uint64 periodID ) { return string( boardID ) + "/" + ServiceKeyUtil::makeHex64( periodID ) + "/"; }
             static string makeNameKey( AccountID accountID ) { return string( "lb/name/" ) + ServiceKeyUtil::makeHex64( accountID ); }
             static string makeReadyKey( const string& rankKey ) { return rankKey + "/ready"; }
+            /** @brief 캐시 순위의 멤버입니다. 캐시가 같은 점수를 멤버 역순으로 세우므로 보수를 써서 계정 id 오름차순이 되게 합니다. */
+            static string             makeRankMember( AccountID accountID ) { return ServiceKeyUtil::makeHex64( ~accountID ); }
+            [[nodiscard]] static bool parseRankMember( string_view member, AccountID& outAccountID )
+            {
+                uint64     inverted = 0;
+                const bool bParsed  = ServiceKeyUtil::parseHex64( member, inverted );
+                outAccountID        = ~inverted;
+                return bParsed;
+            }
 
             static vector<uint8> encodeScore( int64 score, int64 updatedMs, string_view displayName )
             {
@@ -197,6 +206,20 @@ namespace sw
                         return true;
                     cursor = listRecord.back()._key;
                 }
+            }
+        };
+
+        /** @brief 순위 규칙 하나입니다. 정렬 방향으로 세우고 같은 점수는 계정 id 오름차순입니다. 다시 돌아도 같은 순위여야 하고, 캐시 순위(`makeRankMember`)도 이 순서입니다. */
+        struct LeaderboardRankOrder
+        {
+            LeaderboardOrder _order{ LeaderboardOrder::Descending };
+
+            template <typename TRow>
+            bool operator()( const TRow& left, const TRow& right ) const
+            {
+                if ( left._score != right._score )
+                    return _order == LeaderboardOrder::Descending ? left._score > right._score : left._score < right._score;
+                return left._accountID < right._accountID;
             }
         };
 
@@ -535,10 +558,7 @@ namespace sw
                     }
                     _listEntry.push_back( std::move( entry ) );
                 }
-                if ( _order == LeaderboardOrder::Descending )
-                    VectorUtil::sort( _listEntry, isHigherFirst );
-                else
-                    VectorUtil::sort( _listEntry, isLowerFirst );
+                VectorUtil::sort( _listEntry, LeaderboardRankOrder{ _order } );
                 for ( size_t index = 0; index < _listEntry.size(); ++index )
                 {
                     _listEntry[index]._rank = static_cast<int32>( index ) + 1;
@@ -549,17 +569,6 @@ namespace sw
             void complete() override { _pService->applyScoresOf( _requestTag, _periodID, _result, std::move( _listEntry ) ); }
 
         private:
-            /** @brief 같은 점수는 계정 id 오름차순입니다(정산과 같은 규칙). */
-            static bool isHigherFirst( const LeaderboardEntry& left, const LeaderboardEntry& right )
-            {
-                return left._score != right._score ? left._score > right._score : left._accountID < right._accountID;
-            }
-
-            static bool isLowerFirst( const LeaderboardEntry& left, const LeaderboardEntry& right )
-            {
-                return left._score != right._score ? left._score < right._score : left._accountID < right._accountID;
-            }
-
             vector<AccountID>        _listAccountID;
             vector<LeaderboardEntry> _listEntry;
             string                   _prefix;
@@ -617,7 +626,6 @@ namespace sw
 
         /**
          * @brief 정산의 첫 단계입니다. 시즌 점수를 모두 읽어 순위대로 정렬합니다. 쓰기는 하지 않고, 정렬한 목록을 서비스에 넘겨 페이지 일로 나눠 쓰게 합니다.
-         * @details 순위는 정렬 방향으로 정하고 같은 점수는 계정 id 오름차순으로 정한다. 정산이 다시 돌아도 같은 순위여야 하기 때문이다.
          */
         class SeasonRankReadWork final : public IServiceStoreWork
         {
@@ -636,26 +644,13 @@ namespace sw
             {
                 if ( LeaderboardServiceInternal::readAllScores( connection, _scorePrefix, _listRanked ) == false )
                     return;
-                if ( _order == LeaderboardOrder::Descending )
-                    VectorUtil::sort( _listRanked, isHigherFirst );
-                else
-                    VectorUtil::sort( _listRanked, isLowerFirst );
+                VectorUtil::sort( _listRanked, LeaderboardRankOrder{ _order } );
                 _bReadOk = SW_TRUE;
             }
 
             void complete() override { _pService->applySettlementRanking( _settlementID, _bReadOk == SW_TRUE, std::move( _listRanked ) ); }
 
         private:
-            static bool isHigherFirst( const LeaderboardScoreRow& left, const LeaderboardScoreRow& right )
-            {
-                return left._score != right._score ? left._score > right._score : left._accountID < right._accountID;
-            }
-
-            static bool isLowerFirst( const LeaderboardScoreRow& left, const LeaderboardScoreRow& right )
-            {
-                return left._score != right._score ? left._score < right._score : left._accountID < right._accountID;
-            }
-
             vector<LeaderboardScoreRow> _listRanked;
             string                      _scorePrefix;
             LeaderboardService*         _pService;
@@ -808,7 +803,9 @@ namespace sw
         const bool bValid = LeaderboardNameRule::isValidID( definition._boardID ) &&
                             ( definition._sourceStat.empty() || LeaderboardNameRule::isValidID( definition._sourceStat ) ) &&
                             definition._order < LeaderboardOrder::Count && definition._update < LeaderboardUpdate::Count && definition._reset < LeaderboardReset::Count;
-        if ( bValid == false || LeaderboardServiceInternal::areSeasonsValid( definition ) == false )
+        // 통계에 연결된 보드는 통계의 누적값을 받는다 — Sum 이면 누적값을 또 더해 부풀린다.
+        const bool bSourceOk = definition._sourceStat.empty() || definition._update != LeaderboardUpdate::Sum;
+        if ( bValid == false || bSourceOk == false || LeaderboardServiceInternal::areSeasonsValid( definition ) == false )
             return false;
         const bool bAlreadyRegistered  = _mapBoard.find( definition._boardID ) != _mapBoard.end();
         _mapBoard[definition._boardID] = definition;
@@ -1044,7 +1041,7 @@ namespace sw
         const auto waitIt = _mapRankKeyToWaitingRead.find( rankKey );
         if ( waitIt != _mapRankKeyToWaitingRead.end() )
             _mapRankKeyToLateWrite[rankKey].push_back( LeaderboardScoreRow{ accountID, cacheScore } ); // 다시 채우는 중이므로 채운 뒤에 한 번 더 싣는다. 이전 값을 덮기 위해서이다
-        _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( accountID ), cacheScore ) );
+        _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, LeaderboardServiceInternal::makeRankMember( accountID ), cacheScore ) );
     }
 
     void LeaderboardService::readTop( string_view boardID, int32 offset, int32 count, UnixMilliseconds nowMs, uint64 requestTag )
@@ -1136,7 +1133,7 @@ namespace sw
             _mapRequestToQuery[requestID] = queryID;
             return;
         }
-        const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRank( rankKey, ServiceKeyUtil::makeHex64( read._accountID ) ),
+        const uint64 requestID        = _dependencies._pRouter->submit( EphemeralRequest::makeScoreRank( rankKey, LeaderboardServiceInternal::makeRankMember( read._accountID ) ),
                                                                         EphemeralStoreRouter::ReplyDelegate::create<&LeaderboardService::onRankReply>( this ), _replyOwner );
         _mapRequestToQuery[requestID] = queryID;
     }
@@ -1170,11 +1167,11 @@ namespace sw
         const LeaderboardOrder       order  = pBoard != nullptr ? pBoard->_order : LeaderboardOrder::Descending;
         for ( const LeaderboardScoreRow& row : listScore )
         {
-            _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), toCacheScore( order, row._score ) ) );
+            _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, LeaderboardServiceInternal::makeRankMember( row._accountID ), toCacheScore( order, row._score ) ) );
         }
         for ( const LeaderboardScoreRow& row : listLateWrite ) // 다시 채우는 동안 쓴 점수이다. 영속 저장소에서 읽은 이전 값을 덮으며 이미 캐시 점수이다
         {
-            _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, ServiceKeyUtil::makeHex64( row._accountID ), row._score ) );
+            _dependencies._pRouter->submit( EphemeralRequest::makeScoreSet( rankKey, LeaderboardServiceInternal::makeRankMember( row._accountID ), row._score ) );
         }
         // 기간 보드면 다시 채운 집합과 준비 표시도 기간이 끝나면 사라지게 한다(0 이면 만료 없음).
         const int64 retentionMs = pBoard != nullptr ? computeRankRetentionMs( *pBoard, listWaiting.front()._periodID, listWaiting.front()._nowMs ) : 0;
@@ -1237,7 +1234,7 @@ namespace sw
         for ( size_t memberIndex = 0; memberIndex < reply._listMember.size(); ++memberIndex )
         {
             LeaderboardEntry entry;
-            if ( ServiceKeyUtil::parseHex64( reply._listMember[memberIndex]._member, entry._accountID ) == false )
+            if ( LeaderboardServiceInternal::parseRankMember( reply._listMember[memberIndex]._member, entry._accountID ) == false )
                 continue;
             entry._score = toCacheScore( order, reply._listMember[memberIndex]._score ); // 같은 함수로 부호를 되돌린다
             entry._rank  = query._read._offset + static_cast<int32>( memberIndex ) + 1;

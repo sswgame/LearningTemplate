@@ -2,7 +2,7 @@
  * @file LeaderboardService.h
  * @brief 순위표 로직입니다. 점수와 통계는 영속 저장소에 버전 조건으로 쓰며 충돌이 나면 다시 시도합니다. 순위는 캐시 정렬 집합에 두며 잃으면 영속 저장소에서 다시 채웁니다. 전송은 모르며 서비스 스레드 하나에서 씁니다.
  * @details - 원본은 영속 테이블 `lb_score` 이다. 키는 `<보드>/<기간 16진>/<계정 16진>` 이고 값은 점수, 시각, 이름이다.
- *            순위는 캐시 `lb/<보드>/<기간>` 에 두며 멤버는 계정 16진 문자열이다. 오름차순 보드는 부호를 뒤집어 저장한다.
+ *            순위는 캐시 `lb/<보드>/<기간>` 에 두며 멤버는 계정 id 의 보수 16진 문자열이다. 캐시는 같은 점수를 멤버 역순으로 줄 세우므로(Redis ZREVRANGE) 보수를 쓰면 계정 id 오름차순이 되어 정산과 같은 순위가 된다. 오름차순 보드는 부호를 뒤집어 저장한다.
  *            준비 표시(`lb/<보드>/<기간>/ready`)가 없으면 영속 저장소에서 모두 읽어 다시 채운 뒤 응답한다. 그동안 온 읽기는 대기시키고, 그동안 쓴 점수는 다시 채운 뒤 한 번 더 싣는다.
  *          - 갱신 방식은 Best, Latest, Sum 이고 기간은 None, Daily, Weekly 이다. 기간은 `ServiceScheduler::computeLatestOccurrence` 라는 같은 규칙 하나로 구하며 기간 id 는 기간 시작 시각이다.
  *          - 통계 `lb_stat`(`<계정>/<이름>`)이 바뀌면 그 통계에 연결된 보드에 같은 값을 낸다.
@@ -121,7 +121,7 @@ namespace sw
         /** @brief 기다리는 캐시 요청을 취소하고 메모리를 비웁니다. 맡긴 저장소 작업은 호출하는 쪽이 먼저 회수합니다. */
         void shutdown();
 
-        /** @brief 보드를 등록합니다. 기동할 때 게임 데이터로 부르며, 규칙에 맞지 않으면 false 를 반환합니다. */
+        /** @brief 보드를 등록합니다. 기동할 때 게임 데이터로 부르며, 규칙에 맞지 않으면 false 를 반환합니다. 통계에 연결된 보드는 Sum 일 수 없습니다(통계의 누적값을 또 더한다). */
         [[nodiscard]] bool           registerBoard( const LeaderboardDefinition& definition );
         const LeaderboardDefinition* findBoard( string_view boardID ) const;
         /** @brief 현재 기간 id 를 반환합니다. 기간 시작 시각이며 None 이면 0입니다. */
