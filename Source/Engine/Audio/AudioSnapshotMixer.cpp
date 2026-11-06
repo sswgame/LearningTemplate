@@ -73,8 +73,8 @@ namespace sw
         SnapshotState* pSnapshot = getOrCreateSnapshot( mixer, name );
         if ( pSnapshot == nullptr )
             return;
-        pSnapshot->_intensity = intensity;
-        pSnapshot->_target    = intensity;
+        pSnapshot->_intensity = MathUtil::clamp( intensity, 0.0f, 1.0f ); // 세기는 데이터 값 사이를 섞는 비율이다 - 1 을 넘으면 데이터에 없는 값으로 나간다
+        pSnapshot->_target    = pSnapshot->_intensity;
         pSnapshot->_bDriven   = true;
     }
 
