@@ -65,16 +65,14 @@ namespace sw
     void PairedAnimationNetSessionComponent::reportReplicaStats()
     {
         // 복제 표(프로파일러의 `replicas=`)는 전역 세션의 것이다 - 이 월드의 링크가 전역 세션의 창구일 때만 올린다(가상 서버 하니스의 월드는 올리지 않는다).
-        GameNetSession*     pNetSession  = game::findSubsystem<GameNetSession>();
-        const SceneNetLink* pLink        = SceneNetLink::findFor( *this );
-        const bool          bGlobalWorld = pNetSession != nullptr && pLink != nullptr && pLink->isBound() && pLink->get()._pPeers == &pNetSession->getPeers();
-        if ( bGlobalWorld == false )
+        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
+        if ( pNetSession == nullptr )
             return;
         // 이 키트는 바이트를 세지 않는다(0) — 갱신 수만 오른다. 서버는 보낸 상태 · 끝 메시지, 클라이언트는 복원 · 끝으로 중단한 수이다.
         const PairedAnimationReplicationStats& stats       = _bServer == SW_TRUE ? _server.getStats() : _client.getStats();
         const uint64                           updateCount = _bServer == SW_TRUE ? static_cast<uint64>( stats._stateSentCount ) + stats._endSentCount
                                                                                  : static_cast<uint64>( stats._appliedCount ) + stats._endAppliedCount;
-        (void)pNetSession->setReplicaStats( "paired_animation", updateCount, 0 );
+        (void)pNetSession->setWorldReplicaStats( *this, "paired_animation", updateCount, 0 ); // 다른 월드(하니스 · 에디터의 가상 서버)면 올리지 않는다
     }
 
     void PairedAnimationNetSessionComponent::onTick( float32 deltaTime )

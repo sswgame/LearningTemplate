@@ -22,6 +22,7 @@
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Foundation/EngineSubsystemRegistration.h"
 #include "Engine/Net/GameConnectSecurity.h"
+#include "Engine/Object/GameObject/Service/SceneNetLink.h"
 #include "Engine/Reflection/EnumName.h"
 
 #include <algorithm>
@@ -805,6 +806,15 @@ namespace sw
             0
         } );
         return true;
+    }
+
+    bool GameNetSession::setWorldReplicaStats( const Component& component, string_view name, uint64 updateCount, uint64 byteCount )
+    {
+        const SceneNetLink* pLink        = SceneNetLink::findFor( component );
+        const bool          bGlobalWorld = pLink != nullptr && pLink->isBound() && pLink->get()._pPeers == &getPeers();
+        if ( bGlobalWorld == false )
+            return false;
+        return setReplicaStats( name, updateCount, byteCount );
     }
 
     void GameNetSession::reportConnectResult()

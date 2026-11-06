@@ -67,6 +67,8 @@ namespace sw
     struct NetStatsReport;
     struct ServerConfig;
 
+    class Component;
+
     /** @brief 게임 인스턴스의 네트워크 역할입니다. */
     ENUM()
     enum class GameNetRole : uint8
@@ -278,6 +280,12 @@ namespace sw
          * @return 이름이 형식(`NetStatsReport::isValidReplicaName`)에 맞지 않거나, 올린 이름이 상한(`kMaxReplicaSources`)을 넘으면 false 입니다(조용히 버리지 않고 경고를 남긴다).
          */
         [[nodiscard]] bool setReplicaStats( string_view name, uint64 updateCount, uint64 byteCount );
+        /**
+         * @brief @p component 가 사는 월드의 넷 링크(`SceneNetLink`)가 이 세션의 창구일 때만 `setReplicaStats` 합니다. 월드에 붙은 복제 컴포넌트가 부르는 길입니다.
+         * @details 표는 전역 세션의 것이라 하니스 · 에디터의 다른 월드(가상 서버 · 클라이언트) 셈은 올리지 않는다 — 같은 이름을 서로 덮는다.
+         * @return 올렸으면 true 입니다. 다른 월드이거나 링크가 없으면 로그 없이 false 이고, 이름이 틀리면 `setReplicaStats` 처럼 경고와 false 입니다.
+         */
+        bool setWorldReplicaStats( const Component& component, string_view name, uint64 updateCount, uint64 byteCount );
         /** @brief 올릴 수 있는 이름의 수입니다(키트 수보다 넉넉하게 — 이름이 계속 늘면 결함이다). */
         static constexpr size_t kMaxReplicaSources = 32;
 

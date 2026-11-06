@@ -98,14 +98,12 @@ namespace sw
     void DestructionNetSessionComponent::reportReplicaStats()
     {
         // 복제 표(프로파일러의 `replicas=`)는 전역 세션의 것이다 - 이 월드의 링크가 전역 세션의 창구일 때만 올린다(가상 서버 하니스의 월드는 올리지 않는다).
-        GameNetSession*     pNetSession  = game::findSubsystem<GameNetSession>();
-        const SceneNetLink* pLink        = SceneNetLink::findFor( *this );
-        const bool          bGlobalWorld = pNetSession != nullptr && pLink != nullptr && pLink->isBound() && pLink->get()._pPeers == &pNetSession->getPeers();
-        if ( bGlobalWorld == false )
+        GameNetSession* pNetSession = game::findSubsystem<GameNetSession>();
+        if ( pNetSession == nullptr )
             return;
         // 누적 셈을 틱마다 올린다(같은 이름은 덮는다). 서버는 보낸 양, 클라이언트는 받아 적용한 자세 · 사건 수가 갱신 수이다.
         const DestructionReplicationStats& stats       = _session.getStats();
         const uint64                       updateCount = stats._eventMessageCount + stats._poseMessageCount + stats._restPoseCount + stats._snapshotCount + stats._hashMessageCount;
-        (void)pNetSession->setReplicaStats( "destruction", updateCount, stats._sentBytes );
+        (void)pNetSession->setWorldReplicaStats( *this, "destruction", updateCount, stats._sentBytes ); // 다른 월드(하니스 · 에디터의 가상 서버)면 올리지 않는다
     }
 } // namespace sw
