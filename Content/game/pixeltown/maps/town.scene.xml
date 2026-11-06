@@ -91,7 +91,7 @@
 					                         _attachComponent="None"
 					                         _bRepeat="true" />
 					<TownWalkerViewComponent _director="6" _spriteOffset="0,0.6" _depthPerUnitY="0.01" />
-					<PawnComponent _moveAction="Town.Move"
+					<PawnComponent _moveAction="Move"
 					               _lookAction="None"
 					               _upAction="None"
 					               _inputLayer="None"
@@ -99,7 +99,7 @@
 					               _maxPitch="1.4"
 					               _autoPossess="Player0">
 						<_listButton>
-							<item>Town.Interact</item>
+							<item>Interact</item>
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
@@ -132,7 +132,7 @@
 		<entity id="6" name="TownDirector">
 			<GameObject _schemaVersion="0" _name="TownDirector" _bActive="true">
 				<_listComponent>
-					<TownDirectorComponent _ground="2" _props="3" _hero="4" _interactButton="Town.Interact" _stepSeconds="0.18" />
+					<TownDirectorComponent _ground="2" _props="3" _hero="4" _interactButton="Interact" _stepSeconds="0.18" />
 				</_listComponent>
 			</GameObject>
 		</entity>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 게임 메뉴 조작 — 현황 창과 일시정지. 게임 코드 · 씬이 이 이름을 읽는다(Engine/Input/Map/CommonInputActions.h). -->
+<InputMap>
+	<layers>
+		<layer name="Menu" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Status" layer="Menu" trigger="Pressed">
+		<bind source="Key" code="F1"/>
+	</action>
+	<action name="Pause" layer="Menu" trigger="Pressed">
+		<bind source="Key" code="P"/>
+	</action>
+</InputMap>

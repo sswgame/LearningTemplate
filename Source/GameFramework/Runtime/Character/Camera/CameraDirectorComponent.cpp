@@ -9,6 +9,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -97,11 +98,11 @@ namespace sw
         , _listGroupTarget{}
         , _focusPoint{ 0.0f, 0.0f, 0.0f }
         , _cycleAction{}
-        , _panAction{ "Camera.Pan" }
-        , _rotateAction{ "Camera.Rotate" }
-        , _lookAction{ "Camera.Look" }
-        , _lookHoldAction{ "Camera.LookHold" }
-        , _zoomAction{ "Camera.Zoom" }
+        , _panAction{ CommonInputActions::kCameraPan }
+        , _rotateAction{ CommonInputActions::kCameraRotate }
+        , _lookAction{ CommonInputActions::kCameraLook }
+        , _lookHoldAction{ CommonInputActions::kCameraLookHold }
+        , _zoomAction{ CommonInputActions::kCameraZoom }
         , _photoMoveSpeed{ PhotoModeSettings{}._moveSpeed }
         , _photoLookSensitivity{ PhotoModeSettings{}._lookSensitivity }
         , _photoZoomStep{ PhotoModeSettings{}._zoomStep }

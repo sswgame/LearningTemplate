@@ -10,6 +10,7 @@
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
+#include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Localization/LocalizationManager.h"
 #include "Engine/Net/GameNetSession.h"
 #include "Engine/Object/Component/ComponentDefaults.h"
@@ -218,19 +219,22 @@ namespace sw
             }
         }
 
-        // 게임플레이 입력 맵은 `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵이며, `PlayerController` 가 읽는다.
-        if ( settings._inputMap.isSet() == false )
+        // 게임플레이 입력 맵은 `InputManager::beginFrame` 이 프레임마다 갱신하는 통합 맵이며, `PlayerController` 가 읽는다. 공통 맵 · 키트 맵 · 게임 차이의 묶음이다(`InputMapBundle`).
+        // 묶음이 깨졌으면 게임을 띄우지 않는다 — 앞 게임의 바인딩을 그대로 들고 도는 것이 가장 찾기 어렵다. 겹침 검사가 여기서 게임 시작 전에 돈다.
+        const AssetID   settingsAssetID{ _packConfig.resolve( constant::path::kGameSettingsFile ) };
+        vector<AssetID> listInputMap;
+        if ( InputMapBundle::collectAssets( settingsAssetID, listInputMap ) == false )
+            return false;
+        if ( listInputMap.empty() )
             return true;
         InputManager* const pInput = game::findSubsystem<InputManager>();
         if ( pInput == nullptr )
         {
-            SW_LOG_ERROR_ID( "GameInstance.GameSettingsInputMapNeeds", "GameSettings input map '%#' needs the engine service InputManager, which is not bound to the game services - the game does not start",
-                             settings._inputMap.c_str() );
+            SW_LOG_ERROR_ID( "GameInstance.GameSettingsInputMapNeeds", "GameSettings input maps of '%#' need the engine service InputManager, which is not bound to the game services - the game does not start",
+                             settingsAssetID.c_str() );
             return false;
         }
-        if ( pInput->getInputMap().loadFromAsset( AssetID{ settings._inputMap.get() } ) == false )
-            SW_LOG_WARNING_ID( "GameInstance.GameSettingsInputMapCould", "GameSettings input map '%#' could not be loaded - gameplay actions keep their current bindings", settings._inputMap.c_str() );
-        return true;
+        return pInput->getInputMap().loadBundle( listInputMap );
     }
 
     bool GameInstance::loadAudioEvents()

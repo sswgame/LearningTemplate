@@ -43,8 +43,8 @@
 					                 _bOrthographic="false" />
 					<PawnComponent _componentName="PawnComponent"
 					               _bActive="true"
-					               _moveAction="Voxel.Move"
-					               _lookAction="Voxel.Look"
+					               _moveAction="Move"
+					               _lookAction="Look"
 					               _upAction="None"
 					               _inputLayer="None"
 					               _aiControllerPrefab=""
@@ -52,8 +52,8 @@
 					               _autoPossess="Player0"
 					               _bLockMouse="true">
 						<_listButton>
-							<item>Voxel.Jump</item>
-							<item>Voxel.Sprint</item>
+							<item>Jump</item>
+							<item>Sprint</item>
 							<item>Voxel.Break</item>
 							<item>Voxel.Place</item>
 							<item>Voxel.Slot1</item>
@@ -94,8 +94,8 @@
 					                      _placeInterval="0.25"
 					                      _startYaw="0.6"
 					                      _startPitch="-0.2"
-					                      _jumpButton="Voxel.Jump"
-					                      _sprintButton="Voxel.Sprint"
+					                      _jumpButton="Jump"
+					                      _sprintButton="Sprint"
 					                      _breakButton="Voxel.Break"
 					                      _placeButton="Voxel.Place"
 					                      _hotbarScrollAnalog="Voxel.HotbarScroll"

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 1 · 3인칭 시선 — Look 은 폰의 _lookAction(플레이어 조종자가 조종 회전에 더한다), ToggleMouseLock 은 플레이어 조종자의 _mouseLockAction. -->
+<InputMap>
+	<layers>
+		<layer name="Look" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Look" layer="Look">
+		<mouseDelta scale="1"/>
+		<stick stick="Right" deadzone="0.15" scaleX="700" scaleY="-700" scaleByDelta="true"/>
+	</action>
+	<action name="ToggleMouseLock" layer="Look" trigger="Pressed">
+		<bind source="Key" code="Escape"/>
+	</action>
+</InputMap>

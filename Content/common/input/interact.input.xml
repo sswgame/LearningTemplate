@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 상호작용 — 말 걸기 · 타기 · 내리기처럼 앞의 것에 하는 일. 폰의 _interactButton 과 의도 버튼 이름이 같다. -->
+<InputMap>
+	<layers>
+		<layer name="Interaction" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Interact" layer="Interaction" trigger="Pressed">
+		<bind source="Key" code="E"/>
+	</action>
+</InputMap>

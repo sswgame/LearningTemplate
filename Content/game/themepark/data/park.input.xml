@@ -1,23 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  ThemeParkTycoon 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstance 가 통합 맵(InputManager::getInputMap)에 읽는다.
-  게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다(키 바꾸기는 이 파일 · 사용자 설정의 키 바인딩). 이름은 게임 접두(Park.) — 섞인 게임에서 디렉터 둘이 같은 이름을 나눠 쓰지 않게.
-  Camera.Pan · Camera.Rotate · Camera.Zoom 은 카메라 디렉터(CameraDirectorComponent 의 _panAction · _rotateAction · _zoomAction)가 프리셋 <Input> 이 받는 것만 읽는다.
+  ThemeParkTycoon 의 입력 차이 — 공통 묶음(gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다. 한 게임만 쓰는 이름은 게임 접두(Park.)다.
 -->
-<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
-	<layers>
-		<layer name="Gameplay" enabled="1" blockLower="0"/>
-	</layers>
-
-	<action name="Camera.Pan" layer="Gameplay">
-		<vector2d up="W" down="S" left="A" right="D"/>
-		<vector2d up="Up" down="Down" left="Left" right="Right"/>
-	</action>
-
-	<action name="Camera.Rotate" layer="Gameplay" trigger="Pressed">
-		<axis1d negative="Q" positive="E"/>
-	</action>
-
+<InputMap>
 	<action name="Park.NextRide" layer="Gameplay" trigger="Pressed">
 		<bind source="Key" code="Tab"/>
 	</action>
@@ -53,13 +38,6 @@
 	<action name="Park.Thoughts" layer="Gameplay" trigger="Pressed">
 		<bind source="Key" code="G"/>
 	</action>
-
-	<action name="Park.Status" layer="Gameplay" trigger="Pressed">
-		<bind source="Key" code="F1"/>
-	</action>
-	<!-- 확대 — 휠(굴린 칸만큼), 패드 D 패드 위 · 아래(누름 · 반복마다 한 칸). 기반 카메라의 _zoomAction 이 읽는다. -->
-	<action name="Camera.Zoom" layer="Gameplay">
-		<mouseWheel scale="1"/>
-		<axis1d source="Gamepad" negative="DPadDown" positive="DPadUp" trigger="Repeat"/>
-	</action>
+	<!-- 일시정지는 UI 메뉴만 쓴다. -->
+	<remove name="Pause"/>
 </InputMap>

@@ -48,7 +48,7 @@
 			                    _bShowWhenHurt="true" />
 			<PawnComponent _componentName="PawnComponent"
 			               _bActive="true"
-			               _moveAction="Arena.Move"
+			               _moveAction="Move"
 			               _lookAction="None"
 			               _upAction="None"
 			               _inputLayer="None"

@@ -67,7 +67,7 @@ namespace sw
         Hand         ///< 거두기.
     };
 
-    /** @brief 농부 폰의 버튼입니다. 폰 스키마(씬의 `PawnComponent`)의 이름은 `FarmDirectorComponent::getButtonName` 이고, 입력 맵(`data/farm.input.xml`)의 액션 이름과 같습니다. */
+    /** @brief 농부 폰의 버튼입니다. 폰 스키마(씬의 `PawnComponent`)의 이름은 `FarmDirectorComponent::getButtonName` 이고, 입력 맵 묶음(`data/gamesettings.xml` 의 `<inputMap>`)의 액션 이름과 같습니다. */
     enum class FarmButton : uint8
     {
         Tool1 = 0, ///< 괭이

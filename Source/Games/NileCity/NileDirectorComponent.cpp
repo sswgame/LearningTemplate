@@ -13,6 +13,7 @@
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -739,7 +740,7 @@ namespace sw
     {
         // 카메라 이동과 확대는 리그(PostUpdate)가 읽는다. 여기서는 도구, 속도, 건설을 처리한다.
         (void)deltaTime;
-        // 키는 입력 맵(`data/nile.input.xml`)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
+        // 키는 입력 맵(`data/nile.input.xml` 과 공통 묶음)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
         const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
         const int32          toolCount = static_cast<int32>( _listTool.size() );
         const bool           bNextTool = inputMap.wasActionTriggered( hashed_string( "Nile.NextTool" ) );
@@ -758,13 +759,13 @@ namespace sw
             SW_LOG_INFO_ID( "Nile.ToolSelected", "[Nile] tool: %# ($%#)", getToolName(), pDef != nullptr ? pDef->_cost : _catalog.getRoadCost() );
             getSoundQueue().queueEvent( NileDirectorComponentInternal::kEventSelect );
         }
-        if ( inputMap.wasActionTriggered( hashed_string( "Nile.Pause" ) ) )
+        if ( inputMap.wasActionTriggered( hashed_string( CommonInputActions::kPause ) ) )
         {
             _bPaused = _bPaused == SW_TRUE ? SW_FALSE : SW_TRUE;
             SW_LOG_INFO_ID( "NileDirector.PauseToggled", "[Nile] %#", _bPaused == SW_TRUE ? "paused" : "running" );
         }
-        const bool bFaster = inputMap.wasActionTriggered( hashed_string( "Nile.Faster" ) );
-        if ( bFaster || inputMap.wasActionTriggered( hashed_string( "Nile.Slower" ) ) )
+        const bool bFaster = inputMap.wasActionTriggered( hashed_string( CommonInputActions::kFaster ) );
+        if ( bFaster || inputMap.wasActionTriggered( hashed_string( CommonInputActions::kSlower ) ) )
         {
             _timeScale = MathUtil::clamp( _timeScale * ( bFaster ? 2.0f : 0.5f ), 0.25f, 8.0f );
             SW_LOG_INFO_ID( "NileDirector.SpeedX", "[Nile] speed x%#", _timeScale );
@@ -774,7 +775,7 @@ namespace sw
             _bAutoPlanToggle = _bAutoPlanToggle == SW_TRUE ? SW_FALSE : SW_TRUE;
             SW_LOG_INFO_ID( "NileDirector.AutoPlanStep", "[Nile] auto plan %# (step %# of %#)", _bAutoPlanToggle == SW_TRUE ? "on" : "off", _planner.getNextStep(), _planner.getStepCount() );
         }
-        if ( inputMap.wasActionTriggered( hashed_string( "Nile.Status" ) ) )
+        if ( inputMap.wasActionTriggered( hashed_string( CommonInputActions::kStatus ) ) )
             logStatus();
 
         updateCursor( input );

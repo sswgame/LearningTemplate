@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  모든 게임 입력 맵 묶음의 기본 맵 — 맵 전체 값(시간 · 거리 문턱)과 기본 레이어는 여기 한 곳이 정한다. 게임의 gamesettings.xml 에서 첫 <inputMap> 줄이다.
+  묶음 규칙은 docs/InputMapBundle.md. 공통 파일은 파일마다 자기 레이어 하나를 갖는다 — 다른 레이어면 같은 키를 함께 쓸 수 있고, 같은 레이어면 묶음 읽기가 오류로 멈춘다.
+-->
+<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
+	<layers>
+		<layer name="Gameplay" enabled="1" blockLower="0"/>
+	</layers>
+</InputMap>

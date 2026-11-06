@@ -125,7 +125,7 @@ namespace sw
         SessionStateComponent* pState = SessionStateComponent::findOnOwner( *this );
         if ( pState == nullptr )
             return;
-        // 키는 입력 맵(`data/meadow.input.xml`)이 정한다. 시계를 미는 것은 밭 디렉터 하나다(마을은 읽기만).
+        // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 시계를 미는 것은 밭 디렉터 하나다(마을은 읽기만).
         const InputManager* pInput = game::findSubsystem<InputManager>();
         const bool          bFastForward =
             isAutoPlayOn() ||

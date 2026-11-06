@@ -7,6 +7,7 @@
 
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMetadata.h"
 #include "Engine/Reflection/ReflectionTypes.h"
@@ -71,6 +72,9 @@ namespace sw
                 continue;
             // 엔진 칸(창 제목 · 스키마 · UI 규칙) — 엔진의 `PackEngineSettings` 가 같은 파일에서 읽는다. 이 구조체는 읽지 않는다.
             if ( StringUtil::equals( pName, PackEngineSettings::kElementName ) )
+                continue;
+            // 입력 맵 묶음 — 엔진의 `InputMapBundle` 이 같은 파일에서 읽는다. 게임 시작 · 쿠킹 · 패널이 같은 길을 쓴다.
+            if ( StringUtil::equals( pName, InputMapBundle::kSettingsElement ) )
                 continue;
             // 팩 밖에서 읽는 필수 데이터 — 종류 하나에 팩 하나다. 자리는 읽는 쪽(`GameInstance::makeRequiredDataPath`)이 등록 줄의 규칙으로 만든다.
             if ( StringUtil::equals( pName, "RequiredData" ) )

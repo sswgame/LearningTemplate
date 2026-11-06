@@ -8,9 +8,9 @@
 	<Setting id="controls.nileNextTool" category="controls" type="KeyBinding" action="Nile.NextTool" bindIndex="0" default=""/>
 	<Setting id="controls.nilePrevTool" category="controls" type="KeyBinding" action="Nile.PrevTool" bindIndex="0" default=""/>
 	<Setting id="controls.nileRoadTool" category="controls" type="KeyBinding" action="Nile.RoadTool" bindIndex="0" default=""/>
-	<Setting id="controls.nilePause" category="controls" type="KeyBinding" action="Nile.Pause" bindIndex="0" default=""/>
-	<Setting id="controls.nileSlower" category="controls" type="KeyBinding" action="Nile.Slower" bindIndex="0" default=""/>
-	<Setting id="controls.nileFaster" category="controls" type="KeyBinding" action="Nile.Faster" bindIndex="0" default=""/>
+	<Setting id="controls.nilePause" category="controls" type="KeyBinding" action="Pause" bindIndex="0" default=""/>
+	<Setting id="controls.nileSlower" category="controls" type="KeyBinding" action="Slower" bindIndex="0" default=""/>
+	<Setting id="controls.nileFaster" category="controls" type="KeyBinding" action="Faster" bindIndex="0" default=""/>
 	<Setting id="controls.nileToggleAutoPlan" category="controls" type="KeyBinding" action="Nile.ToggleAutoPlan" bindIndex="0" default=""/>
-	<Setting id="controls.nileStatus" category="controls" type="KeyBinding" action="Nile.Status" bindIndex="0" default=""/>
+	<Setting id="controls.nileStatus" category="controls" type="KeyBinding" action="Status" bindIndex="0" default=""/>
 </UserSettingsSchema>

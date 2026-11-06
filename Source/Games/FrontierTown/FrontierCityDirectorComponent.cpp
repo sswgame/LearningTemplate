@@ -154,7 +154,7 @@ namespace sw
         // 첫 틱에 놓는다 — RTS 는 시작할 때 땅을 칠했으므로 땅 리비전으로 다시 칠해야 보인다(RTSWorld::bindLand).
         if ( _bLaidOut == SW_FALSE )
             layOutTown();
-        // 키는 입력 맵(`data/frontier.input.xml`)이 정한다. 시계를 미는 것은 이 디렉터 하나다.
+        // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 시계를 미는 것은 이 디렉터 하나다.
         const InputManager* pInput       = game::findSubsystem<InputManager>();
         const bool          bFastForward = isAutoPlayOn() || ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() )
                                                                                .isActionDown( hashed_string( FrontierTownData::kFastForwardAction ) ) );

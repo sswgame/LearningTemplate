@@ -166,7 +166,7 @@
 					               _bVisible="true" />
 					<PawnComponent _componentName="PawnComponent"
 					               _bActive="true"
-					               _moveAction="West.Move"
+					               _moveAction="Move"
 					               _lookAction="None"
 					               _upAction="None"
 					               _inputLayer="None"
@@ -175,7 +175,7 @@
 					               _autoPossess="Player0"
 					               _bLockMouse="false">
 						<_listButton>
-							<item>West.Interact</item>
+							<item>Interact</item>
 							<item>West.Whistle</item>
 						</_listButton>
 						<_listAnalog />
@@ -193,7 +193,7 @@
 					                                _facingMode="MoveDirection" />
 					<MountInteractionComponent _componentName="MountInteractionComponent"
 					                           _bActive="true"
-					                           _interactButton="West.Interact" />
+					                           _interactButton="Interact" />
 				</_listComponent>
 			</GameObject>
 		</entity>
@@ -255,7 +255,7 @@
 					               _bVisible="true" />
 					<PawnComponent _componentName="PawnComponent"
 					               _bActive="true"
-					               _moveAction="West.Move"
+					               _moveAction="Move"
 					               _lookAction="None"
 					               _upAction="None"
 					               _inputLayer="None"
@@ -264,14 +264,14 @@
 					               _autoPossess="None"
 					               _bLockMouse="false">
 						<_listButton>
-							<item>West.Gallop</item>
-							<item>West.Interact</item>
+							<item>Sprint</item>
+							<item>Interact</item>
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
 					<MountMovementComponent _componentName="MountMovementComponent"
 					                        _bActive="true"
-					                        _sprintButton="West.Gallop"
+					                        _sprintButton="Sprint"
 					                        _gaitParameter="Gait"
 					                        _turnParameter="None"
 					                        _walkSpeed="1.8"
@@ -294,7 +294,7 @@
 					                      _exitOffset="-1.6,0,0"
 					                      _enterDistance="2.5"
 					                      _bDriverSeat="true" />
-					<VehicleExitComponent _componentName="VehicleExitComponent" _bActive="true" _exitButton="West.Interact" />
+					<VehicleExitComponent _componentName="VehicleExitComponent" _bActive="true" _exitButton="Interact" />
 					<WesternHorseMountComponent _componentName="WesternHorseMountComponent"
 					                            _bActive="true"
 					                            _gallopAbility="None"
@@ -366,7 +366,7 @@
 					               _bVisible="true" />
 					<PawnComponent _componentName="PawnComponent"
 					               _bActive="true"
-					               _moveAction="West.Move"
+					               _moveAction="Move"
 					               _lookAction="None"
 					               _upAction="None"
 					               _inputLayer="None"
@@ -375,14 +375,14 @@
 					               _autoPossess="None"
 					               _bLockMouse="false">
 						<_listButton>
-							<item>West.Gallop</item>
-							<item>West.Interact</item>
+							<item>Sprint</item>
+							<item>Interact</item>
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
 					<MountMovementComponent _componentName="MountMovementComponent"
 					                        _bActive="true"
-					                        _sprintButton="West.Gallop"
+					                        _sprintButton="Sprint"
 					                        _gaitParameter="Gait"
 					                        _turnParameter="None"
 					                        _walkSpeed="1.8"
@@ -405,7 +405,7 @@
 					                      _exitOffset="-1.6,0,0"
 					                      _enterDistance="2.5"
 					                      _bDriverSeat="true" />
-					<VehicleExitComponent _componentName="VehicleExitComponent" _bActive="true" _exitButton="West.Interact" />
+					<VehicleExitComponent _componentName="VehicleExitComponent" _bActive="true" _exitButton="Interact" />
 					<WesternHorseMountComponent _componentName="WesternHorseMountComponent"
 					                            _bActive="true"
 					                            _gallopAbility="None"

@@ -4,6 +4,12 @@
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
   <Engine _windowTitle="Nile City" _userSettingsSchema="game/nilecity/data/nile.settings.xml" _bUIPauseMenu="true" />
   <startMap>game/nilecity/maps/nile.scene.xml</startMap>
+  <inputMap>common/input/base.input.xml</inputMap>
+  <inputMap>common/input/virtualcursor.input.xml</inputMap>
+  <inputMap>common/input/camera.input.xml</inputMap>
+  <inputMap>common/input/camerapan.input.xml</inputMap>
+  <inputMap>common/input/menu.input.xml</inputMap>
+  <inputMap>common/input/time.input.xml</inputMap>
   <inputMap>game/nilecity/data/nile.input.xml</inputMap>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>
   <audioEvents>game/nilecity/audio/nilecity.audioevents.xml</audioEvents>

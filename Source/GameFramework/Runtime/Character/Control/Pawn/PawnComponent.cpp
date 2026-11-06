@@ -4,6 +4,7 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 
@@ -38,8 +39,8 @@ namespace sw
     PawnComponent::PawnComponent()
         : _listButton{}
         , _listAnalog{}
-        , _moveAction{ "Move" }
-        , _lookAction{ "Look" }
+        , _moveAction{ CommonInputActions::kMove }
+        , _lookAction{ CommonInputActions::kLook }
         , _upAction{}
         , _inputLayer{}
         , _triggerLookButton{}

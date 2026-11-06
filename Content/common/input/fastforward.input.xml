@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 누르는 동안 빨리 감기 — 시계를 미는 디렉터가 읽는다. -->
+<InputMap>
+	<layers>
+		<layer name="FastForward" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="FastForward" layer="FastForward" trigger="Down">
+		<bind source="Key" code="Space"/>
+	</action>
+</InputMap>

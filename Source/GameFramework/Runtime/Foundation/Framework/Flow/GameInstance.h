@@ -49,7 +49,7 @@ namespace sw
          * @brief configurePackConfig 으로 팩 설정을 채우고 gamesettings 를 읽은 뒤 onInitialize 를 부릅니다.
          * @details 팩 루트는 게임 프리셋 `Config/Game/<게임>.json` 의 값이다(그 파일의 유일한 칸). gamesettings 를 못 읽으면 false 다(기본값 폴백 없음).
          *          읽은 `GameSettings` 는 게임 서비스(`game::findSubsystem<GameSettings>()`)로 등록하고, 다국어(`_localizationProject`)와
-         *          게임플레이 입력 맵(`_inputMap`)도 여기서 적용한다.
+         *          게임플레이 입력 맵 묶음(`InputMapBundle`)도 여기서 적용한다. 묶음이 깨졌으면 게임을 띄우지 않는다.
          *          커스텀 칸을 읽는 킷 코드는 이 서비스로 읽는다. 서비스로 등록하지 않으면 제품에서 늘 기본값을 쓴다.
          *          사운드 이벤트 라이브러리(`_audioEvents`)도 `onInitialize` 앞에 올리고 `shutdown` 이 내린다. 적었는데 못 읽거나 `onInitialize` 가 false 면 false 다
          *          (필수 데이터 — `loadRequiredData` — 를 못 읽은 게임은 뜨지 않는다).

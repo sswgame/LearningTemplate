@@ -1,18 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  HarvestValley 의 게임플레이 입력 맵 — 팩의 gamesettings.xml <inputMap> 이 가리키고, GameInstance 가 통합 맵(InputManager::getInputMap)에 읽는다.
-  게임 코드는 키를 직접 묻지 않고 액션 이름만 묻는다(키 바꾸기는 이 파일 · 사용자 설정의 키 바인딩). 이름은 게임 접두(Farm.) — 섞인 게임에서 디렉터 둘이 같은 이름을 나눠 쓰지 않게.
+  HarvestValley 의 입력 차이 — 공통 묶음(gamesettings.xml 의 <inputMap> 줄) 위에 얹힌다. 게임 코드는 키를 묻지 않고 액션 이름만 묻는다. 한 게임만 쓰는 이름은 게임 접두(Farm.)다.
 -->
-<InputMap defaultLayer="Gameplay" doubleClickTime="0.35" doubleClickMaxDistance="6" holdThreshold="0.4">
-	<layers>
-		<layer name="Gameplay" enabled="1" blockLower="0"/>
-	</layers>
-
-	<action name="Farm.Move" layer="Gameplay">
-		<vector2d up="W" down="S" left="A" right="D"/>
-		<vector2d up="Up" down="Down" left="Left" right="Right"/>
-	</action>
-
+<InputMap>
 	<action name="Farm.Tool1" layer="Gameplay" trigger="Pressed">
 		<bind source="Key" code="Digit1"/>
 	</action>
@@ -53,8 +43,9 @@
 	<action name="Farm.Sleep" layer="Gameplay" trigger="Pressed">
 		<bind source="Key" code="Z"/>
 	</action>
-
-	<action name="Farm.Status" layer="Gameplay" trigger="Pressed">
+	<!-- 현황 창은 Tab 이다(F1 이 아니다). 일시정지는 UI 메뉴만 쓴다. -->
+	<override name="Status" trigger="Pressed">
 		<bind source="Key" code="Tab"/>
-	</action>
+	</override>
+	<remove name="Pause"/>
 </InputMap>

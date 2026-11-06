@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 걷기 — 폰의 _moveAction. WASD · 방향키 · 왼쪽 스틱. 가상 커서를 켠 게임은 왼쪽 스틱이 커서라 이 파일을 쓰지 않는다. -->
+<InputMap>
+	<layers>
+		<layer name="Movement" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Move" layer="Movement">
+		<vector2d up="W" down="S" left="A" right="D"/>
+		<vector2d up="Up" down="Down" left="Left" right="Right"/>
+		<stick stick="Left" deadzone="0.15"/>
+	</action>
+</InputMap>

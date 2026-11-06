@@ -10,6 +10,7 @@
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -591,7 +592,7 @@ namespace sw
     // ------------------------------------------------------------------------------
     void ParkDirectorComponent::updateInput( const InputManager& input )
     {
-        // 키는 입력 맵(`data/park.input.xml`)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
+        // 키는 입력 맵(`data/park.input.xml` 과 공통 묶음)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
         const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
         if ( inputMap.wasActionTriggered( hashed_string( "Park.NextRide" ) ) && _listPlacement.empty() == false )
         {
@@ -647,7 +648,7 @@ namespace sw
         }
         if ( inputMap.wasActionTriggered( hashed_string( "Park.Thoughts" ) ) )
             logThoughts();
-        if ( inputMap.wasActionTriggered( hashed_string( "Park.Status" ) ) )
+        if ( inputMap.wasActionTriggered( hashed_string( CommonInputActions::kStatus ) ) )
             logStatus( 0.0f, true );
     }
 

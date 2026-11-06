@@ -68,8 +68,7 @@ namespace sw
         PROPERTY()
         string _fallbackLanguage{ "en_us" }; ///< 대체(Fallback) 언어
 
-        PROPERTY()
-        DataPath _inputMap; ///< 게임플레이 InputMap 경로(통합 맵 `InputManager::getInputMap()` 에 읽힌다). 없으면 입력 맵을 바꾸지 않는다
+        // 입력 맵 묶음(`<inputMap>` 여러 줄)은 이 구조체의 칸이 아니다 — 쿠킹 · 패널도 게임 설정 없이 읽으므로 엔진의 `InputMapBundle` 이 같은 파일에서 읽는다(`<Engine>` 과 같다).
 
         PROPERTY()
         DataPath _loadingScreen; ///< 씬을 비동기로 바꾸는 동안 띄우는 로딩 화면 문서(Loading 층 — `LoadingScreenController`). 기준은 팩의 gamesettings 이고 적지 않으면 로딩 화면 없음

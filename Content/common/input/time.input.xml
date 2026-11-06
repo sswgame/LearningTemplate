@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 게임 시간 빠르기를 한 단계씩 — 명령형 게임(RTS · 도시 건설). -->
+<InputMap>
+	<layers>
+		<layer name="Time" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Slower" layer="Time" trigger="Pressed">
+		<bind source="Key" code="Minus"/>
+	</action>
+	<action name="Faster" layer="Time" trigger="Pressed">
+		<bind source="Key" code="Equal"/>
+	</action>
+</InputMap>

@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Input/Map/CommonInputActions.h"
+
 #include "GameFramework/Runtime/Gameplay/SessionState/SessionStateComponent.h"
 
 namespace sw
@@ -16,7 +18,7 @@ namespace sw
      */
     struct FrontierTownData
     {
-        static constexpr const utf8* kFastForwardAction = "Frontier.FastForward"; ///< 누르는 동안 빨리 감기
+        static constexpr const utf8* kFastForwardAction = CommonInputActions::kFastForward; ///< 누르는 동안 빨리 감기
         static constexpr int32       kLandSize          = 32;
 
         static SessionStateSettings makeStateSettings()

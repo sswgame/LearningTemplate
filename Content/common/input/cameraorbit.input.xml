@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 궤도 카메라 — 카메라 디렉터의 _lookAction · _lookHoldAction. 오른쪽 버튼을 누른 동안 시점. -->
+<InputMap>
+	<layers>
+		<layer name="CameraOrbit" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Camera.Look" layer="CameraOrbit">
+		<mouseDelta scale="1"/>
+	</action>
+	<action name="Camera.LookHold" layer="CameraOrbit" trigger="Down">
+		<bind source="Mouse" code="Right"/>
+	</action>
+</InputMap>

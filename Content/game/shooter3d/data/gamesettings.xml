@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Shooter3D 팩의 설정 — 시작 맵은 아레나 씬이다(게임마다 팩의 data/gamesettings.xml 하나다).
-     inputMap 은 게임플레이 액션(이동 · 시점 · 사격 · 점프 · 재장전 · 카메라 · 무기)의 기본 바인딩이다. -->
+     inputMap 줄들은 입력 맵 묶음이다 — 기본 맵, 공통 파일들, 맨 끝이 게임 차이다(docs/InputMapBundle.md). -->
 <GameSettings>
   <!-- 엔진이 읽는 칸(PackEngineSettings) — 창 제목 · 렌더 파이프라인 · 사용자 설정과 텔레메트리 스키마 · UI 규칙 -->
   <Engine _windowTitle="Shooter 3D" _userSettingsSchema="game/shooter3d/data/shooter3d.settings.xml" _telemetrySchema="game/shooter3d/data/shooter3d.telemetry.xml" _bUIPauseMenu="true">
@@ -9,6 +9,12 @@
     </_mapUserSettingDefault>
   </Engine>
   <startMap>game/shooter3d/maps/arena.scene.xml</startMap>
+  <inputMap>common/input/base.input.xml</inputMap>
+  <inputMap>common/input/move.input.xml</inputMap>
+  <inputMap>common/input/traversal.input.xml</inputMap>
+  <inputMap>common/input/look.input.xml</inputMap>
+  <inputMap>common/input/camera.input.xml</inputMap>
+  <inputMap>common/input/cameraorbit.input.xml</inputMap>
   <inputMap>game/shooter3d/data/shooter.input.xml</inputMap>
   <localizationProject>game/shooter3d/data/localization/shooter3d.locproject.xml</localizationProject>
   <loadingScreen>engine/ui/loading.ui.xml</loadingScreen>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 내려다보는 카메라 — 카메라 디렉터의 _panAction · _rotateAction. 프리셋 <Input> 이 받는 것만 읽는다. 오른쪽 스틱은 패드 RTS 관례다(결정 D4-3.3). -->
+<InputMap>
+	<layers>
+		<layer name="CameraPan" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Camera.Pan" layer="CameraPan">
+		<vector2d up="W" down="S" left="A" right="D"/>
+		<vector2d up="Up" down="Down" left="Left" right="Right"/>
+		<stick stick="Right" deadzone="0.15"/>
+	</action>
+	<action name="Camera.Rotate" layer="CameraPan" trigger="Pressed">
+		<axis1d negative="Q" positive="E"/>
+	</action>
+</InputMap>

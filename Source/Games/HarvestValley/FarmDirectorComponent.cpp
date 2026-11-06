@@ -13,6 +13,7 @@
 #include "Engine/Foundation/StateHashBuilder.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Input/Map/CommonInputActions.h"
 #include "Engine/Object/Component/3D/MeshComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -45,9 +46,9 @@ namespace sw
             static constexpr uint32 kStateTag     = FourCcUtil::make( "FARM" );
             static constexpr uint32 kStateVersion = 3;
 
-            /** @brief 폰 버튼 이름입니다. `FarmButton` 순서이며 입력 맵 `data/farm.input.xml` 의 액션 이름과 같습니다. */
+            /** @brief 폰 버튼 이름입니다. `FarmButton` 순서이며 입력 맵 묶음의 액션 이름과 같습니다. */
             static constexpr const utf8* kArrButtonName[] = { "Farm.Tool1", "Farm.Tool2", "Farm.Tool3", "Farm.Tool4", "Farm.SeedPrev", "Farm.SeedNext",
-                                                              "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep", "Farm.Status" };
+                                                              "Farm.Use", "Farm.Ship", "Farm.Buy", "Farm.Sleep", CommonInputActions::kStatus };
             static_assert( sizeof( kArrButtonName ) / sizeof( kArrButtonName[0] ) == static_cast<size_t>( FarmButton::Count ), "one name per farm button" );
 
             // 사운드 이벤트 이름 — 클립 · 범위 · 상한은 harvestvalley.audioevents.xml 이 정한다.

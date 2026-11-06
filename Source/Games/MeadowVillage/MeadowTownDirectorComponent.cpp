@@ -140,7 +140,7 @@ namespace sw
             _bViewsDirty = SW_TRUE;
         }
 
-        // 키는 입력 맵(`data/meadow.input.xml`)이 정한다. 대화는 하루 한 번(키트가 막는다).
+        // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 대화는 하루 한 번(키트가 막는다).
         const InputManager* pInput = game::findSubsystem<InputManager>();
         if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
         {

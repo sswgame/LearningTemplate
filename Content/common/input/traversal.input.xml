@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 몸 이동 동작 — 점프 · 달리기. 폰의 _jumpButton · _sprintButton 과 의도 버튼 이름이 같다. -->
+<InputMap>
+	<layers>
+		<layer name="Traversal" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Jump" layer="Traversal" trigger="Pressed">
+		<bind source="Key" code="Space"/>
+		<bind source="Gamepad" code="A"/>
+	</action>
+	<action name="Sprint" layer="Traversal" trigger="Down">
+		<bind source="Key" code="LeftShift"/>
+		<bind source="Gamepad" code="LeftThumb"/>
+	</action>
+</InputMap>

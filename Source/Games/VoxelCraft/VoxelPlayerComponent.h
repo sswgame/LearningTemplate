@@ -33,7 +33,7 @@ namespace sw
      * @details 기본 틱 그룹(`DuringPhysics`)에서 실행합니다. 같은 오브젝트의 1인칭 카메라가 `PrePhysics` 에서 폰의 조종 회전으로 시점을 정해 두므로,
      *          이 컴포넌트는 그 시점으로 걷고 블록을 겨눈 다음 `setEyePosition` 으로 눈 위치를 넘깁니다.
      *          **입력은 직접 읽지 않습니다.** 같은 오브젝트의 `PawnComponent` 에 있는 의도만 읽습니다.
-     *          의도는 이동, 버튼(`Voxel.Jump`, `Voxel.Sprint`, `Voxel.Break`, `Voxel.Place`, `Voxel.Slot1..9`), 아날로그(`Voxel.HotbarScroll`)입니다.
+     *          의도는 이동, 버튼(`Jump`, `Sprint`, `Voxel.Break`, `Voxel.Place`, `Voxel.Slot1..9`), 아날로그(`Voxel.HotbarScroll`)입니다.
      *          이 의도를 내는 쪽은 플레이어 조종자(입력 맵)이거나, 디렉터가 빙의시킨 자동 플레이 AI(`VoxelAutoPlayControllerComponent`)입니다.
      *          월드는 디렉터가 가진 것을 읽기만 합니다. 블록 바꾸기와 효과음은 모아 두었다가 틱이 끝난 뒤 게임 스레드에서 디렉터에게 넘기고,
      *          디렉터가 월드를 바꾸고 청크의 다시 메싱을 요청합니다. 블록 카탈로그는 게임 서비스(`VoxelBlockCatalog`)로 읽습니다.

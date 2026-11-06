@@ -5,6 +5,8 @@
 #pragma once
 #include "Core/Foundation/Types.h"
 
+#include "Engine/Input/Map/CommonInputActions.h"
+
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Gameplay/Progression/Reputation.h"
 #include "GameFramework/Runtime/Gameplay/Quest/QuestCatalog.h"
@@ -15,9 +17,9 @@ namespace sw
     /** @struct MeadowVillageData @brief 하루 2 분(1 초 = 게임 12 분), 계절 넷 × 28 일. 카탈로그는 게임 인스턴스가 게임 범위에 건 것. */
     struct MeadowVillageData
     {
-        static constexpr const utf8* kFastForwardAction = "Village.FastForward"; ///< 누르는 동안 8 배속
-        static constexpr const utf8* kTalkAction        = "Town.Talk";           ///< 생물과 대화(하루 한 번)
-        static constexpr const utf8* kHarvestedFlag     = "farm.harvested";      ///< 밭이 거둔 수(공유 플래그)
+        static constexpr const utf8* kFastForwardAction = CommonInputActions::kFastForward; ///< 누르는 동안 8 배속
+        static constexpr const utf8* kTalkAction        = CommonInputActions::kInteract;    ///< 생물과 대화(하루 한 번)
+        static constexpr const utf8* kHarvestedFlag     = "farm.harvested";                 ///< 밭이 거둔 수(공유 플래그)
         static constexpr const utf8* kSproutSpecies     = "sprout";
         static constexpr const utf8* kRequestQuest      = "meadow_request";
 

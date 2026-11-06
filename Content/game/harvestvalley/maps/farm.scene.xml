@@ -801,7 +801,7 @@
 					                 _kind="Farmer" />
 					<PawnComponent _componentName="PawnComponent"
 					               _bActive="true"
-					               _moveAction="Farm.Move"
+					               _moveAction="Move"
 					               _lookAction="None"
 					               _upAction="None"
 					               _inputLayer="None"
@@ -819,7 +819,7 @@
 							<item>Farm.Ship</item>
 							<item>Farm.Buy</item>
 							<item>Farm.Sleep</item>
-							<item>Farm.Status</item>
+							<item>Status</item>
 						</_listButton>
 						<_listAnalog />
 					</PawnComponent>
