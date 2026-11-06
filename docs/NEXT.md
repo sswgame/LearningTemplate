@@ -32,8 +32,8 @@
 | R1 | a8e58f767d10d2b37 | 종류 정의 통합, `ResourceComposer`, 캐시 통합, `GameDataCache` 삭제, `SkeletonVariant` 를 `_base` 로, `acquire` | 2 · 0 |
 | R2 | ac2074812e245adb5 | `AssetRef<T>`, 생성 표, 약 90 칸 전환 — **끝남** | 5 · 0 |
 | R3 | a06832697f2987cbe | `ConditionExpr` · `ActionRegistry`, 행동 트리 하위 트리 · 슬롯, 스케줄 상속 | 1 · 36 |
-| R4 | a71c6174df7b87919 | 애니메이션 셋 · 그래프 상속 · 연결 레이어, 스프라이트 라이브러리, 리그 등 상속, 1 인칭 손 조사 | 4 · 11 |
-| R5 | a85a59b8cef89fa94 | 머티리얼 파라미터 묶음 · 인스턴스 값, VFX · 오디오 · UI 상속 | 5 · 3 |
+| R4 | a71c6174df7b87919 | 애니메이션 셋 · 그래프 상속 · 연결 레이어, 스프라이트 라이브러리, 리그 등 상속, 1 인칭 손 수정 — **끝남** | 5 · 0 |
+| R5 | a85a59b8cef89fa94 | 머티리얼 파라미터 묶음 · 인스턴스 값, VFX · 오디오 · UI 상속 — **끝남** | 6 · 0 |
 | R6 | a153b0bfd83a8f4c2 | 씬 인스턴스 · 씬 상속 · 데이터 레이어 | 0 · 29 |
 | R7 | a1d5203ab55b285e3 | 머티리얼 그래프 | 0 · 12 |
 | R8 | ab7513adb9ade55bc | 판매 전: Apple 샌드박스 구간(포럼에 30 일 답, 공식 근거 아님), Google 승인을 지급 뒤로, 환불 구간 영속, 구매자 토큰, 푸시 | 4 · 0 |
@@ -51,9 +51,16 @@
 - 구간별 효과: `ResolvedMaterialValue` 에 `_section`, 변형 · 규칙이 구간 머티리얼을 바꾸게 한다(지금은 부품까지만, `AppearancePartDef::_listSection` 은 변형이 못 바꾼다).
 - 애니메이션 그래프 노드 · 레이어 LOD(R4 뒤), 2 차 물리 LOD 조사.
 - 머티리얼 층(R7 뒤).
-- 1 인칭에서 아래를 볼 때 손이 총을 잡지 않고 뜬다(`bodyviews.firstperson_down_a`, 옛 골든에도 있다). R4 가 조사 중이다.
+- 1 인칭 손: R4 가 코드를 읽어 고쳤고(두 손이 시점 총의 `Grip` · `SupportHand` 를 잡는다) 그림으로 보지 못했다. `Grip` 수치 · 요 부호는 짐작이다. `bodyviews` 골든을 다시 뜨고 눈으로 본다.
 - 병합의 바인드 자세 옮기기(`MeshSkinBinding::rebindVertex`)는 여러 본에 걸친 정점에서 근사다. 그 결과로 shooter3d 골든을 다시 기록했다.
 - `editor.floatingwindow` 은 앞 단계 실패가 번진 것으로 끝났으나 원인 단계만 고쳤다. 다시 지면 체인에서 본다.
+
+**끝난 작업자가 넘긴 확인거리(모두 컴파일 전).**
+- R2: `string` 을 기대하는 호출 · `%#` 로그 인자 · `.gen.cpp` 의 incomplete type 에서 오류가 날 것이다. 칸 형식 이름이 바뀌어 다시 쿠킹한다. R1 이 `SharedAssetCache` 를 바꾸면 `AssetRefCache` 를 맞춘다.
+- R4: 애니메이션 셋의 `base` 는 이제 모르는 속성 오류다(`_base`). 시나리오 `animvariant` · `spritelibrary` 의 문턱값은 그림 없이 정했다. 리타겟 · 소켓 · 물리를 에디터로 저장하면 펼친 한 벌로 저장되어 `_base` 를 잃는다. 자식이 더한 전이 id 가 부모와 겹치면 조용히 합쳐진다. R1 이 읽는 길을 합치면 `AnimationGraphAsset` · `RigAsset` · `AnimationSet` · `RetargetProfile` 의 펼치기 호출을 지운다.
+- R5: `GPUInstance` 가 128 → 160 바이트다(레이아웃 검사 `ShaderBindingValidatorTest.InstanceElementLayoutMatchesCPUStruct` 는 실제 테스트를 찾지 못했다고 보고했다 — 확인한다). 머티리얼 파라미터 묶음은 핫 리로드가 없고 자체 약한 참조 표를 쓴다(R1 뒤 `SharedAssetCache` 로). 오디오 이벤트 `_parentEvent` 는 에디터 저장에서 끊긴다. `AudioMusicDesc` · `AudioGraphDef` 도 `_base` 를 거절할 수 있다. 시나리오 `uistylevariant`(`HUDControllerComponent` 등록), `vfxvariant` 문턱값 0.005, `instance_custom_color.hlsl` 컴파일이 의심스럽다.
+- 충돌이 예상되는 파일: `Config/Dev/DataCatalogInheritance.json`, `Config/Dev/AssetReferenceFields.json`, 컴포넌트 헤더들, `docs/ResourceStructure.md`.
+- R9 · R3 · R6 · R7 · R8 · R1 · R10 의 보고는 이 세션이 끊기면 받지 못한다. 코드 · 커밋 메시지 · 문서를 읽어 파악한다.
 
 **5. 그 다음.** Linux 체인 · `.linux` 골든을 한 번에(5 절의 18 단계 포함).
 
