@@ -79,7 +79,7 @@ namespace sw::test
 {
     /**
      * @brief 서명 쪽을 답하는 가짜 제공자입니다. 사슬 확인은 `_bChainOk`, 서명 만들기는 `_bSignOk` 를 따르고 서명 확인은 늘 맞다.
-     * @details 난수(`_bRandomOk`, 셈 값으로 채운다)와 AEAD(`_bAeadOk`, `FakeAead`)는 켠 테스트만 쓴다 — 기본은 실패라 쓰지 않는 테스트의 길이 바뀌지 않는다. 나머지 연산은 쓰이지 않는다.
+     * @details 난수(`_bRandomOk`, 셈 값으로 채운다), AEAD(`_bAeadOk`, `FakeAead`), SHA-256(`_bHashOk`, `computeFakeDigest`)은 켠 테스트만 쓴다 — 기본은 실패라 쓰지 않는 테스트의 길이 바뀌지 않는다. 나머지 연산은 쓰이지 않는다.
      */
     class FakeNetSecurityProvider final : public INetSecurityProvider
     {
@@ -88,6 +88,7 @@ namespace sw::test
         uint8 _bSignOk{ SW_TRUE };
         uint8 _bRandomOk{ SW_FALSE };
         uint8 _bAeadOk{ SW_FALSE };
+        uint8 _bHashOk{ SW_FALSE }; ///< 참이면 computeSHA256 이 가짜 요약(`computeFakeDigest`)을 준다
         uint8 _nextRandomByte{ 1 }; ///< 난수 대신 채우는 셈 값이다. 부를 때마다 이어지므로 nonce 가 겹치지 않는다
 
         const utf8* getName() const override { return "FakeNetSecurity"; }
@@ -165,10 +166,25 @@ namespace sw::test
         }
         bool computeSHA256( const uint8* pData, int32 dataSize, uint8* pOutDigest ) override
         {
-            (void)pData;
-            (void)dataSize;
-            (void)pOutDigest;
-            return false;
+            if ( _bHashOk == SW_FALSE )
+                return false;
+            computeFakeDigest( pData, dataSize, pOutDigest );
+            return true;
+        }
+
+        /** @brief 가짜 SHA-256(`_bHashOk` 일 때 `computeSHA256` 이 쓰는 값) — 입력을 FNV-1a 로 섞어 32 바이트로 편다. 테스트가 기대값을 같은 식으로 만든다. */
+        static void computeFakeDigest( const uint8* pData, int32 dataSize, uint8* pOutDigest )
+        {
+            uint64 hash = HashUtil::kFNVOffset64;
+            for ( int32 index = 0; index < dataSize; ++index )
+            {
+                hash = HashUtil::fnvStep64( hash, pData[index] );
+            }
+            for ( int32 index = 0; index < NetSecurityConstant::kSHA256Size; ++index )
+            {
+                hash              = HashUtil::fnvStep64( hash, static_cast<uint64>( index ) );
+                pOutDigest[index] = static_cast<uint8>( hash >> 56 );
+            }
         }
         bool verifySignature( const NetPublicKey& publicKey, const uint8* pData, int32 dataSize, const uint8* pSignature, int32 signatureSize ) override
         {
