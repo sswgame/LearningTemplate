@@ -83,6 +83,8 @@ namespace sw::editor
         /** @brief @p parent 의 마지막 자식으로 `<name a="…" />` 를 더합니다. 부모가 자기 닫힘이면 열고 닫는 쌍으로 바꿉니다. 줄 끝(CRLF · LF)과 들여쓰기는 문서를 따릅니다. */
         [[nodiscard]] static bool appendChildElement( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view name,
                                                       const vector<CatalogXMLNewAttribute>& listAttribute, string& outText, string& outError );
+        /** @brief @p parent 의 마지막 자식으로 원문 @p childText(원소 하나)를 그대로 넣습니다. 나머지는 `appendChildElement` 와 같습니다. */
+        [[nodiscard]] static bool appendChildText( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view childText, string& outText, string& outError );
         /** @brief 원소를 통째로 뺍니다. 그 원소만 있던 줄이면 줄째 뺍니다. */
         [[nodiscard]] static bool removeElement( string_view text, const CatalogXMLElement& element, string& outText, string& outError );
         /** @brief 원소의 원문(자식 · 주석 포함)을 그대로 복사해 바로 뒤 새 줄에 놓습니다. 루트는 false 입니다. 복사본은 다시 훑은 문서에서 다음 형제입니다. */

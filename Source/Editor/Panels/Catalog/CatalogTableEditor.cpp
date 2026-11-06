@@ -15,6 +15,7 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Localization/LocText.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 
 #include <imgui.h>
 
@@ -24,12 +25,13 @@ namespace sw::editor
     {
         struct CatalogTableEditorInternal
         {
-            static constexpr float32 kColumnWidth        = 130.0f; ///< 96 DPI 기준입니다
-            static constexpr float32 kActionColumnWidth  = 150.0f; ///< Duplicate · Remove 두 단추
-            static constexpr float32 kCurveKeyFieldWidth = 110.0f; ///< 곡선 키 줄의 칸 폭(96 DPI)
-            static constexpr float32 kChildColumnWidth   = 64.0f;
-            static constexpr int32   kExtraColumnCount   = 2;  ///< 자식 수 · 행 동작
-            static constexpr int32   kMaxVisibleRows     = 12; ///< 넘으면 테이블 안에서 세로로 스크롤한다
+            static constexpr float32 kColumnWidth            = 130.0f; ///< 96 DPI 기준입니다
+            static constexpr float32 kActionColumnWidth      = 150.0f; ///< Duplicate · Remove 두 단추
+            static constexpr float32 kCurveKeyFieldWidth     = 110.0f; ///< 곡선 키 줄의 칸 폭(96 DPI)
+            static constexpr float32 kChildColumnWidth       = 120.0f; ///< 수와 Children · Curves 단추
+            static constexpr float32 kChildActionColumnWidth = 210.0f; ///< 자식 창의 Up · Down · Reset · Remove 단추
+            static constexpr int32   kExtraColumnCount       = 2;      ///< 자식 수 · 행 동작
+            static constexpr int32   kMaxVisibleRows         = 12;     ///< 넘으면 테이블 안에서 세로로 스크롤한다
 
             /**
              * @brief 그룹 테이블의 바깥 높이입니다 — 행 수만큼(최대 `kMaxVisibleRows`)만 차지합니다.
@@ -58,8 +60,11 @@ namespace sw::editor
         , _listSample{}
         , _listGradientColor{}
         , _listVisibleRow{}
+        , _listChildSection{}
         , _curveOwner{ -1 }
+        , _childOwner{ -1 }
         , _bOpenCurvePopup{ SW_FALSE }
+        , _bOpenChildPopup{ SW_FALSE }
         , _bEditFailed{ SW_FALSE }
         , _editText{}
         , _lastActionText{}
@@ -75,7 +80,9 @@ namespace sw::editor
         _editID          = 0;
         _pending         = CatalogTableEdit{};
         _curveOwner      = -1;
+        _childOwner      = -1;
         _bOpenCurvePopup = SW_FALSE;
+        _bOpenChildPopup = SW_FALSE;
         _bEditFailed     = SW_FALSE;
     }
 
@@ -101,15 +108,17 @@ namespace sw::editor
 
         bool bFirstCell        = true;
         bool bFirstCurveButton = true;
+        bool bFirstVariantRow  = true;
         for ( const CatalogDocument::Group& group : inoutDocument.getGroups() )
         {
-            drawGroup( inoutDocument, group, &group == &inoutDocument.getGroups().front(), bFirstCell, bFirstCurveButton );
+            drawGroup( inoutDocument, group, &group == &inoutDocument.getGroups().front(), bFirstCell, bFirstCurveButton, bFirstVariantRow );
         }
         drawCurvePopup( inoutDocument );
+        drawChildPopup( inoutDocument );
         return applyPending( inoutDocument );
     }
 
-    void CatalogTableEditor::drawGroup( const CatalogDocument& document, const CatalogDocument::Group& group, bool bFirstGroup, bool& inoutbFirstCell, bool& inoutbFirstCurveButton )
+    void CatalogTableEditor::drawGroup( const CatalogDocument& document, const CatalogDocument::Group& group, bool bFirstGroup, bool& inoutbFirstCell, bool& inoutbFirstCurveButton, bool& inoutbFirstVariantButton )
     {
         const float32 dpiScale = EditorThemeUtil::getDPIScale();
         ImGui::PushID( group._name.c_str() );
@@ -144,7 +153,7 @@ namespace sw::editor
             {
                 for ( int32 rowPosition = clipper.DisplayStart; rowPosition < clipper.DisplayEnd; ++rowPosition )
                 {
-                    drawRow( document, group, _listVisibleRow[static_cast<size_t>( rowPosition )], rowPosition, bFirstGroup, inoutbFirstCell, inoutbFirstCurveButton );
+                    drawRow( document, group, _listVisibleRow[static_cast<size_t>( rowPosition )], rowPosition, bFirstGroup, inoutbFirstCell, inoutbFirstCurveButton, inoutbFirstVariantButton );
                 }
             }
             ImGui::EndTable();
@@ -160,7 +169,7 @@ namespace sw::editor
     }
 
     void CatalogTableEditor::drawRow( const CatalogDocument& document, const CatalogDocument::Group& group, int32 elementIndex, int32 rowPosition, bool bFirstGroup, bool& inoutbFirstCell,
-                                      bool& inoutbFirstCurveButton )
+                                      bool& inoutbFirstCurveButton, bool& inoutbFirstVariantButton )
     {
         ImGui::PushID( elementIndex );
         ImGui::TableNextRow();
@@ -194,7 +203,25 @@ namespace sw::editor
             ImGui::TextDisabled( "-" );
         else
             ImGui::Text( "%d", static_cast<int32>( element._listChild.size() ) );
-        const bool bHovered = element._listChild.empty() == false && ImGui::IsItemHovered();
+        const bool bListedRow = document.canCreateVariant( elementIndex );
+        const bool bHovered   = bListedRow == false && element._listChild.empty() == false && ImGui::IsItemHovered();
+        if ( bListedRow )
+        {
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorCatalog", "Children" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "Children" ) ) )
+            {
+                _childOwner      = elementIndex;
+                _bOpenChildPopup = SW_TRUE;
+            }
+            if ( rowPosition == 0 && bFirstGroup )
+                EditorSelfTestMarks::note( "catalog.children.open" );
+            // 시나리오가 "물려받는 첫 행" 을 고를 수 있게 한다.
+            if ( inoutbFirstVariantButton && element.findAttribute( DataInheritance::kBaseAttribute ) >= 0 )
+            {
+                EditorSelfTestMarks::note( "catalog.children.open.variant" );
+                inoutbFirstVariantButton = false;
+            }
+        }
         if ( element._listChild.empty() == false )
         {
             CatalogCurveModel::collectCurves( document.getParsed(), elementIndex, _listProbeCurve );
@@ -227,45 +254,244 @@ namespace sw::editor
     void CatalogTableEditor::drawCell( const CatalogDocument& document, int32 elementIndex, const string& column, bool bFirstCell, float32 width )
     {
         ImGui::PushID( column.c_str() );
-        const string* pValue     = document.findCellValue( elementIndex, column );
-        const utf8*   pInherited = pValue == nullptr ? document.findInheritedValue( elementIndex, column ) : nullptr;
-        const ImGuiID cellID     = ImGui::GetID( "##cell" );
-        const bool    bEditing   = _editID == cellID;
-        string        display    = bEditing ? _editText : ( pValue != nullptr ? *pValue : ( pInherited != nullptr ? string( pInherited ) : string() ) );
-        if ( pValue == nullptr && bEditing == false )
-            ImGui::PushStyleColor( ImGuiCol_FrameBg, ImVec4{ 0.0f, 0.0f, 0.0f, 0.12f } ); // 속성이 없는 칸은 어둡게 — 비어 있는 값과 다르다
-        if ( pInherited != nullptr && bEditing == false )
-            ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) ); // 물려받은 값은 흐리게 — 이 행이 적은 값이 아니다
-        const bool bChanged = EditorWidgets::drawTextField( "##cell", display, width );
-        if ( pInherited != nullptr && bEditing == false )
-            ImGui::PopStyleColor();
-        if ( pValue == nullptr && bEditing == false )
-            ImGui::PopStyleColor();
+        const string*     pValue     = document.findCellValue( elementIndex, column );
+        const utf8*       pInherited = pValue == nullptr ? document.findInheritedValue( elementIndex, column ) : nullptr;
+        const string_view shown      = pValue != nullptr ? string_view( *pValue ) : ( pInherited != nullptr ? string_view( pInherited ) : string_view{} );
+        string            committed;
+        if ( drawValueField( shown, pValue == nullptr, pInherited != nullptr, width, false, committed ) )
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetCell, elementIndex, column, committed };
         if ( bFirstCell )
             EditorSelfTestMarks::note( "catalog.cell.first" );
-        if ( bChanged )
-        {
-            _editID   = cellID;
-            _editText = display;
-        }
-        if ( ImGui::IsItemDeactivatedAfterEdit() )
-        {
-            const string_view shown      = pValue != nullptr ? string_view( *pValue ) : ( pInherited != nullptr ? string_view( pInherited ) : string_view{} );
-            const bool        bUnchanged = shown == string_view( _editText );
-            if ( bUnchanged == false )
-                _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetCell, elementIndex, column, _editText };
-            _editID = 0;
-        }
-        else if ( ImGui::IsItemDeactivated() && bEditing )
-        {
-            _editID = 0;
-        }
 
         if ( pValue != nullptr && EditorInputGUI::beginItemContextMenu( "##cellMenu" ) )
         {
             if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "UnsetAttribute" ) ) )
                 _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetCell, elementIndex, column, string() };
             ImGui::EndPopup();
+        }
+        ImGui::PopID();
+    }
+
+    bool CatalogTableEditor::drawValueField( string_view shown, bool bAbsent, bool bDim, float32 width, bool bMarkFirst, string& outCommitted )
+    {
+        const ImGuiID cellID   = ImGui::GetID( "##cell" );
+        const bool    bEditing = _editID == cellID;
+        string        display  = bEditing ? _editText : string( shown );
+        if ( bAbsent && bEditing == false )
+            ImGui::PushStyleColor( ImGuiCol_FrameBg, ImVec4{ 0.0f, 0.0f, 0.0f, 0.12f } ); // 속성이 없는 칸은 어둡게 — 비어 있는 값과 다르다
+        if ( bDim && bEditing == false )
+            ImGui::PushStyleColor( ImGuiCol_Text, ImGui::GetStyleColorVec4( ImGuiCol_TextDisabled ) ); // 물려받은 값은 흐리게 — 이 행이 적은 값이 아니다
+        const bool bChanged = EditorWidgets::drawTextField( "##cell", display, width );
+        if ( bDim && bEditing == false )
+            ImGui::PopStyleColor();
+        if ( bAbsent && bEditing == false )
+            ImGui::PopStyleColor();
+        if ( bMarkFirst )
+            EditorSelfTestMarks::note( "catalog.children.cell" );
+        if ( bChanged )
+        {
+            _editID   = cellID;
+            _editText = display;
+        }
+        bool bCommitted = false;
+        if ( ImGui::IsItemDeactivatedAfterEdit() )
+        {
+            if ( shown != string_view( _editText ) )
+            {
+                outCommitted = _editText;
+                bCommitted   = true;
+            }
+            _editID = 0;
+        }
+        else if ( ImGui::IsItemDeactivated() && bEditing )
+        {
+            _editID = 0;
+        }
+        return bCommitted;
+    }
+
+    void CatalogTableEditor::drawChildPopup( const CatalogDocument& document )
+    {
+        constexpr const utf8* kPopupName = "Children##catalogChildren";
+        if ( _bOpenChildPopup )
+        {
+            EditorInputGUI::openPopup( kPopupName );
+            _bOpenChildPopup = SW_FALSE;
+        }
+        EditorChrome::setNextWindowExtent( EditorTextExtent::ofText( 100.0f, 30.0f ), false );
+        bool bOpen = true;
+        if ( ImGui::BeginPopupModal( kPopupName, &bOpen ) == false )
+            return;
+        document.collectChildSections( _childOwner, _listChildSection );
+        if ( _listChildSection.empty() )
+        {
+            EditorWidgets::drawEmptyHint( document.getInheritanceError().empty() ? SW_LOCKEY( "EditorCatalog", "NoChildRules" ) : document.getInheritanceError().c_str() );
+        }
+        else
+        {
+            ImGui::BeginChild( "##childList", ImVec2{ 0.0f, -ImGui::GetFrameHeightWithSpacing() } );
+            bool bFirstCell   = true;
+            bool bFirstAdd    = true;
+            bool bFirstRemove = true;
+            for ( const CatalogChildSection& section : _listChildSection )
+            {
+                drawChildSection( section, bFirstCell, bFirstAdd, bFirstRemove );
+            }
+            ImGui::EndChild();
+        }
+        const bool bCloseClicked = ImGui::Button( SW_LOCKEY( "EdText", "Close" ) );
+        EditorSelfTestMarks::note( "catalog.children.close" );
+        if ( bCloseClicked || bOpen == false )
+        {
+            _childOwner = -1;
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    void CatalogTableEditor::drawChildSectionActions( const CatalogChildSection& section, bool& inoutbFirstAdd )
+    {
+        // 구조체 칸은 하나뿐이라 더할 것이 없다.
+        if ( section._kind == CatalogChildSectionKind::Field )
+            return;
+        const auto groupEdit = [this, &section]( CatalogTableEdit::Kind kind )
+        { _pending = CatalogTableEdit{ kind, _childOwner, section._name, string(), section._ownerPath }; };
+        if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "AddChild" ) ) )
+            _pending = CatalogTableEdit{ CatalogTableEdit::Kind::AddChildNode, _childOwner, section._name, section._keyAttribute, section._ownerPath };
+        if ( inoutbFirstAdd )
+            EditorSelfTestMarks::note( "catalog.children.add" );
+        inoutbFirstAdd = false;
+        if ( section._kind != CatalogChildSectionKind::Whole || section._bHasParent == false )
+            return;
+        // 규칙에 없는 칸: 물려받는다 · 적어서 바꾼다 · 비운다 가운데 하나다.
+        if ( section._bOverridden || section._bCleared )
+        {
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "UseInherited" ) ) )
+                groupEdit( CatalogTableEdit::Kind::InheritChildGroup );
+        }
+        if ( section._bOverridden == false && section._bCleared == false && section._listNode.empty() == false )
+        {
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "OverrideInherited" ) ) )
+                groupEdit( CatalogTableEdit::Kind::OverrideChildGroup );
+        }
+        if ( section._bCleared == false )
+        {
+            ImGui::SameLine();
+            if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "ClearInherited" ) ) )
+                groupEdit( CatalogTableEdit::Kind::ClearChildGroup );
+            EditorSelfTestMarks::note( "catalog.children.clear" );
+        }
+    }
+
+    void CatalogTableEditor::drawChildSection( const CatalogChildSection& section, bool& inoutbFirstCell, bool& inoutbFirstAdd, bool& inoutbFirstRemove )
+    {
+        const float32 dpiScale = EditorThemeUtil::getDPIScale();
+        ImGui::PushID( section._title.c_str() );
+        const utf8* pState = nullptr;
+        if ( section._bCleared )
+            pState = SW_LOCKEY( "EditorCatalog", "ChildCleared" );
+        else if ( section._bOverridden && section._bHasParent )
+            pState = SW_LOCKEY( "EditorCatalog", "ChildOverridden" );
+        StringBuilder<constant::buffer::kMax64> subtitle;
+        subtitle.appendFormat( "%# rows", section._listNode.size() );
+        EditorWidgets::drawSectionHeader( section._title.c_str(), pState != nullptr ? pState : subtitle.c_str() );
+        drawChildSectionActions( section, inoutbFirstAdd );
+        if ( section._listNode.empty() == false && section._listColumn.empty() == false )
+        {
+            const bool                bActions    = section._kind != CatalogChildSectionKind::Field;
+            const int32               columnCount = static_cast<int32>( section._listColumn.size() ) + ( bActions ? 1 : 0 );
+            constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
+            if ( ImGui::BeginTable( "##ChildRows", columnCount, kTableFlags, ImVec2{ 0.0f, CatalogTableEditorInternal::computeOuterHeight( section._listNode.size() ) } ) )
+            {
+                if ( bActions )
+                    ImGui::TableSetupColumn( "##actions", ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kChildActionColumnWidth * dpiScale );
+                for ( const string& column : section._listColumn )
+                {
+                    ImGui::TableSetupColumn( column.c_str(), ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kColumnWidth * dpiScale );
+                }
+                ImGui::TableSetupScrollFreeze( bActions ? 1 : 0, 1 );
+                ImGui::TableHeadersRow();
+                for ( size_t nodeIndex = 0; nodeIndex < section._listNode.size(); ++nodeIndex )
+                {
+                    drawChildNode( section, section._listNode[nodeIndex], static_cast<int32>( nodeIndex ), inoutbFirstCell, inoutbFirstRemove );
+                }
+                ImGui::EndTable();
+            }
+        }
+        ImGui::PopID();
+    }
+
+    void CatalogTableEditor::drawChildNode( const CatalogChildSection& section, const CatalogChildNode& node, int32 nodePosition, bool& inoutbFirstCell, bool& inoutbFirstRemove )
+    {
+        ImGui::PushID( nodePosition );
+        ImGui::TableNextRow();
+        const bool bActions = section._kind != CatalogChildSectionKind::Field;
+        const bool bLocked  = node._bRemoved || ( section._kind == CatalogChildSectionKind::Whole && section._bOverridden == false );
+        if ( bActions )
+        {
+            ImGui::TableSetColumnIndex( 0 );
+            const auto nodeEdit = [this, &node]( CatalogTableEdit::Kind kind )
+            { _pending = CatalogTableEdit{ kind, _childOwner, string(), string(), node._path }; };
+            if ( node._bRemoved )
+            {
+                ImGui::TextDisabled( "%s", SW_LOCKEY( "EditorCatalog", "ChildRemoved" ) );
+                ImGui::SameLine();
+                if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "RestoreChild" ) ) )
+                    nodeEdit( CatalogTableEdit::Kind::RestoreChildNode );
+                EditorSelfTestMarks::note( "catalog.children.restore" );
+            }
+            else if ( bLocked == false )
+            {
+                if ( section._kind == CatalogChildSectionKind::List && section._bHasParent )
+                {
+                    if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "MoveEarlier" ) ) )
+                        nodeEdit( CatalogTableEdit::Kind::MoveChildEarlier );
+                    ImGui::SameLine();
+                    if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "MoveLater" ) ) )
+                        nodeEdit( CatalogTableEdit::Kind::MoveChildLater );
+                    if ( node._bMoved )
+                    {
+                        ImGui::SameLine();
+                        if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "ResetOrder" ) ) )
+                            nodeEdit( CatalogTableEdit::Kind::ResetChildOrder );
+                    }
+                    ImGui::SameLine();
+                }
+                if ( ImGui::SmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) )
+                    nodeEdit( CatalogTableEdit::Kind::RemoveChildNode );
+                if ( inoutbFirstRemove )
+                    EditorSelfTestMarks::note( "catalog.children.remove" );
+                inoutbFirstRemove = false;
+            }
+        }
+        const int32 firstColumn = bActions ? 1 : 0;
+        for ( size_t cellIndex = 0; cellIndex < node._listCell.size(); ++cellIndex )
+        {
+            const CatalogChildCell& cell = node._listCell[cellIndex];
+            ImGui::TableSetColumnIndex( firstColumn + static_cast<int32>( cellIndex ) );
+            ImGui::PushID( cell._column.c_str() );
+            const bool bReadOnly = bLocked || ( cell._bKey && node._bInherited );
+            if ( bReadOnly )
+            {
+                // 물려받은 원소의 열쇠와 뺀 원소는 고칠 수 없다 - 글로만 보인다.
+                ImGui::TextDisabled( "%s", cell._value.c_str() );
+            }
+            else
+            {
+                string committed;
+                if ( drawValueField( cell._value, cell._bWritten == false, cell._bInherited, -1.0f, inoutbFirstCell, committed ) )
+                    _pending = CatalogTableEdit{ CatalogTableEdit::Kind::SetChildCell, _childOwner, cell._column, committed, node._path };
+                inoutbFirstCell = false;
+                if ( cell._bWritten && cell._bKey == false && EditorInputGUI::beginItemContextMenu( "##cellMenu" ) )
+                {
+                    if ( ImGui::MenuItem( SW_LOCKEY( "EdLabel", "UnsetAttribute" ) ) )
+                        _pending = CatalogTableEdit{ CatalogTableEdit::Kind::UnsetChildCell, _childOwner, cell._column, string(), node._path };
+                    ImGui::EndPopup();
+                }
+            }
+            ImGui::PopID();
         }
         ImGui::PopID();
     }

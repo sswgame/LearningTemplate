@@ -45,6 +45,8 @@ namespace sw::editor
         uint32 getFileCount() const { return static_cast<uint32>( _fileList.getRows().size() ); }
         /** @brief 열린 파일의 행 수입니다(감시 값). */
         uint32 countRows() const { return _session.getDocument().countRows(); }
+        /** @brief 고치는 원문의 크기입니다(감시 값). */
+        size_t getTextByteCount() const { return _session.getDocument().getText().size(); }
         /** @brief 마지막 검증의 결과입니다(감시 값). */
         CatalogFileSession::ValidationState getValidationState() const { return _session.getValidationState(); }
 

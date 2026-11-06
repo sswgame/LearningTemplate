@@ -109,6 +109,16 @@ namespace sw::editor
                 return true;
             }
 
+            /** @brief 감시 값 `Editor.CatalogTextBytes` - 고치는 원문의 크기입니다. 부모와 같은 값을 적으면 원문이 처음과 같아지는지 시나리오가 봅니다. */
+            [[nodiscard]] static bool readTextBytes( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const CatalogPanel* pPanel = findOpenPanel();
+                if ( pPanel == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pPanel->getTextByteCount() );
+                return true;
+            }
+
             [[nodiscard]] static bool readValidation( const GameObjectManager* /*pManager*/, float64& outValue )
             {
                 const CatalogPanel* pPanel = findOpenPanel();
@@ -239,6 +249,7 @@ namespace sw::editor
     void CatalogPanel::drawFileList()
     {
         EditorWidgets::drawSearchField( "##catalogFilter", _filter, SW_LOCKEY( "EditorCatalog", "FilterHint" ), -1.0f, false );
+        EditorSelfTestMarks::note( "catalog.filter" );
         if ( _bIndexLoaded == false )
         {
             EditorWidgets::drawEmptyHint( SW_LOCKEY( "EditorCatalog", "Scanning" ) );
@@ -491,6 +502,7 @@ namespace sw
                          &editor::CatalogPanelInternal::readFileCount );
     SW_AUTOMATION_WATCH( catalogRowCount, "Editor.CatalogRowCount", "Rows (elements under the root) of the catalog file open in the Catalog Editor",
                          &editor::CatalogPanelInternal::readRowCount );
+    SW_AUTOMATION_WATCH( catalogTextBytes, "Editor.CatalogTextBytes", "Size in bytes of the text of the catalog file open in the Catalog Editor", &editor::CatalogPanelInternal::readTextBytes );
     SW_AUTOMATION_WATCH( catalogValidation, "Editor.CatalogValidation", "Last validation of the open catalog file: 0 not run, 1 passed, 2 failed",
                          &editor::CatalogPanelInternal::readValidation );
 } // namespace sw

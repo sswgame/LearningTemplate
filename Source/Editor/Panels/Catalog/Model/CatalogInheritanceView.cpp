@@ -2,10 +2,282 @@
 
 #include "Editor/Panels/Catalog/Model/CatalogInheritanceView.h"
 
+#include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
 
 namespace sw::editor
 {
+    namespace
+    {
+        struct CatalogInheritanceViewInternal
+        {
+            /** @brief 합치기 작업 칸이면 true 입니다. 값 칸이 아니다. */
+            static bool isMetaAttribute( string_view name )
+            {
+                return name == DataInheritance::kBaseAttribute || name == DataInheritance::kOpAttribute || name == DataInheritance::kBeforeAttribute || name == DataInheritance::kAfterAttribute;
+            }
+
+            static void addUnique( vector<string>& inoutList, string_view name )
+            {
+                const string text{ name };
+                if ( VectorUtil::contains( inoutList, text ) == false )
+                    inoutList.push_back( text );
+            }
+
+            static bool isElement( const XMLNode& node ) { return node.isValid() && StringUtil::isNullOrEmpty( node.getName() ) == false; }
+
+            /** @brief 원소의 글 값 칸들을 @p inoutListColumn 에 더합니다. */
+            static void addNodeColumns( const XMLNode& node, vector<string>& inoutListColumn )
+            {
+                if ( node.isValid() == false )
+                    return;
+                for ( XMLAttribute attribute = node.getFirstAttribute(); attribute; attribute = attribute.getNext() )
+                {
+                    if ( isMetaAttribute( attribute.getName() ) == false )
+                        addUnique( inoutListColumn, attribute.getName() );
+                }
+            }
+
+            static void addWrittenColumns( const CatalogXMLElement* pWritten, vector<string>& inoutListColumn )
+            {
+                if ( pWritten == nullptr )
+                    return;
+                for ( const CatalogXMLAttribute& attribute : pWritten->_listAttribute )
+                {
+                    if ( isMetaAttribute( attribute._name ) == false )
+                        addUnique( inoutListColumn, attribute._name );
+                }
+            }
+
+            static const CatalogXMLElement* findWritten( const CatalogXMLText& parsed, int32 ownerIndex, const CatalogChildStep& step )
+            {
+                const int32 index = ownerIndex >= 0 ? CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, step ) : -1;
+                return index >= 0 ? &parsed.getElement( index ) : nullptr;
+            }
+
+            static string_view readWrittenAttribute( const CatalogXMLElement* pWritten, string_view name )
+            {
+                const int32 index = pWritten != nullptr ? pWritten->findAttribute( name ) : -1;
+                return index >= 0 ? string_view( pWritten->_listAttribute[static_cast<size_t>( index )]._value ) : string_view{};
+            }
+
+            /** @brief 줄의 칸을 구역의 열 순서로 채웁니다. 합친 값이 없는 칸(뺀 원소)은 적은 값 · 빈 글입니다. */
+            static void fillCells( const CatalogChildSection& section, const CatalogXMLElement* pWritten, const XMLNode& flat, const XMLNode& parent, CatalogChildNode& inoutNode )
+            {
+                inoutNode._listCell.clear();
+                for ( const string& column : section._listColumn )
+                {
+                    CatalogChildCell cell;
+                    cell._column                 = column;
+                    cell._bKey                   = column == section._keyAttribute;
+                    const int32 writtenAttribute = pWritten != nullptr ? pWritten->findAttribute( column ) : -1;
+                    if ( writtenAttribute >= 0 )
+                    {
+                        cell._value    = pWritten->_listAttribute[static_cast<size_t>( writtenAttribute )]._value;
+                        cell._bWritten = true;
+                    }
+                    else
+                    {
+                        const utf8* pFlat = flat.isValid() ? flat.findAttribute( column.c_str() ) : nullptr;
+                        cell._value       = pFlat != nullptr ? string( pFlat ) : string();
+                        cell._bInherited  = parent.isValid() && parent.findAttribute( column.c_str() ) != nullptr;
+                    }
+                    inoutNode._listCell.push_back( std::move( cell ) );
+                }
+            }
+
+            /** @brief 칸 이름을 모읍니다. 규칙의 칸이 먼저라 원소가 없어도 구역이 선다. */
+            static void collectNames( const DataInheritanceSchema& schema, const CatalogXMLText& parsed, int32 ownerIndex, const XMLNode& flat, const XMLNode& parent, vector<string>& outListName )
+            {
+                for ( const DataInheritanceSchema& field : schema._listField )
+                {
+                    addUnique( outListName, field._name );
+                }
+                for ( const XMLNode* pNode : { &flat, &parent } )
+                {
+                    if ( pNode->isValid() == false )
+                        continue;
+                    for ( XMLNode child = pNode->findChild(); child.isValid(); child = child.findNextSibling() )
+                    {
+                        if ( isElement( child ) )
+                            addUnique( outListName, child.getName() );
+                    }
+                }
+                if ( ownerIndex < 0 )
+                    return;
+                for ( const int32 childIndex : parsed.getElement( ownerIndex )._listChild )
+                {
+                    addUnique( outListName, parsed.getElement( childIndex )._name );
+                }
+            }
+
+            static void appendList( const DataInheritanceSchema& field, const CatalogXMLText& parsed, int32 ownerIndex, const XMLNode& flat, const XMLNode& parent, CatalogChildSection&& section, vector<CatalogChildSection>& outListSection )
+            {
+                const utf8* pKey      = field._keyAttribute.c_str();
+                section._kind         = CatalogChildSectionKind::List;
+                section._keyAttribute = field._keyAttribute;
+                addUnique( section._listColumn, field._keyAttribute );
+
+                struct Row
+                {
+                    CatalogChildStep         _step;
+                    const CatalogXMLElement* _pWritten;
+                    XMLNode                  _flat;
+                    XMLNode                  _parent;
+                };
+                vector<Row> listRow;
+                const utf8* pName = section._name.c_str();
+                for ( XMLNode child = flat.isValid() ? flat.findChild( pName ) : XMLNode{}; child.isValid(); child = child.findNextSibling( pName ) )
+                {
+                    CatalogChildStep step{ section._name, field._keyAttribute, string( child.getAttributeText( pKey ) ), 0 };
+                    Row              row{ step, findWritten( parsed, ownerIndex, step ), child, parent.isValid() ? CatalogInheritanceView::walkPath( parent, CatalogChildPath{ step } ) : XMLNode{} };
+                    // `_op="Replace"` 는 부모 칸을 물려받지 않는다.
+                    if ( readWrittenAttribute( row._pWritten, DataInheritance::kOpAttribute ) == DataInheritance::kOpReplace )
+                        row._parent = XMLNode{};
+                    addNodeColumns( row._flat, section._listColumn );
+                    addWrittenColumns( row._pWritten, section._listColumn );
+                    listRow.push_back( std::move( row ) );
+                }
+                // 합친 결과에 없는 원소는 뺀 원소다 — 되돌릴 수 있게 끝에 보인다.
+                vector<Row> listRemoved;
+                if ( ownerIndex >= 0 )
+                {
+                    for ( const int32 childIndex : parsed.getElement( ownerIndex )._listChild )
+                    {
+                        const CatalogXMLElement& written = parsed.getElement( childIndex );
+                        if ( written._name != section._name || readWrittenAttribute( &written, DataInheritance::kOpAttribute ) != DataInheritance::kOpRemove )
+                            continue;
+                        CatalogChildStep step{ section._name, field._keyAttribute, string( readWrittenAttribute( &written, field._keyAttribute ) ), 0 };
+                        listRemoved.push_back( Row{ step, &written, XMLNode{}, parent.isValid() ? CatalogInheritanceView::walkPath( parent, CatalogChildPath{ step } ) : XMLNode{} } );
+                    }
+                }
+
+                const size_t sectionIndex = outListSection.size();
+                const string ownerTitle   = section._title;
+                outListSection.push_back( std::move( section ) );
+                for ( const Row& row : listRow )
+                {
+                    CatalogChildSection& target = outListSection[sectionIndex];
+                    CatalogChildNode     node;
+                    node._path = target._ownerPath;
+                    node._path.push_back( row._step );
+                    node._bInherited = row._parent.isValid();
+                    node._bMoved     = readWrittenAttribute( row._pWritten, DataInheritance::kBeforeAttribute ).empty() == false || readWrittenAttribute( row._pWritten, DataInheritance::kAfterAttribute ).empty() == false;
+                    fillCells( target, row._pWritten, row._flat, row._parent, node );
+                    target._listNode.push_back( std::move( node ) );
+                }
+                for ( const Row& row : listRemoved )
+                {
+                    CatalogChildSection& target = outListSection[sectionIndex];
+                    CatalogChildNode     node;
+                    node._path = target._ownerPath;
+                    node._path.push_back( row._step );
+                    node._bInherited = true;
+                    node._bRemoved   = true;
+                    fillCells( target, nullptr, row._parent, row._parent, node );
+                    // 뺀 원소의 열쇠는 뺀 표시에 적혀 있다.
+                    for ( CatalogChildCell& cell : node._listCell )
+                    {
+                        if ( cell._bKey )
+                            cell._value = row._step._key;
+                    }
+                    target._listNode.push_back( std::move( node ) );
+                }
+                if ( field._listField.empty() )
+                    return;
+                for ( const Row& row : listRow )
+                {
+                    CatalogChildPath path = outListSection[sectionIndex]._ownerPath;
+                    path.push_back( row._step );
+                    const int32 writtenIndex = ownerIndex >= 0 ? CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, row._step ) : -1;
+                    appendSections( field, parsed, writtenIndex, row._flat, row._parent, path, ownerTitle + " " + row._step._key, outListSection );
+                }
+            }
+
+            static void appendField( const DataInheritanceSchema& field, const CatalogXMLText& parsed, int32 ownerIndex, const XMLNode& flat, const XMLNode& parent, CatalogChildSection&& section, vector<CatalogChildSection>& outListSection )
+            {
+                section._kind = CatalogChildSectionKind::Field;
+                const CatalogChildStep   step{ section._name, string(), string(), 0 };
+                const CatalogChildPath   stepPath{ step };
+                const XMLNode            flatChild   = flat.isValid() ? CatalogInheritanceView::walkPath( flat, stepPath ) : XMLNode{};
+                const XMLNode            parentChild = parent.isValid() ? CatalogInheritanceView::walkPath( parent, stepPath ) : XMLNode{};
+                const CatalogXMLElement* pWritten    = findWritten( parsed, ownerIndex, step );
+                addNodeColumns( flatChild, section._listColumn );
+                addWrittenColumns( pWritten, section._listColumn );
+
+                CatalogChildNode node;
+                node._path = section._ownerPath;
+                node._path.push_back( step );
+                node._bInherited = parentChild.isValid();
+                fillCells( section, pWritten, flatChild, parentChild, node );
+                CatalogChildPath path  = node._path;
+                const string     title = section._title;
+                section._listNode.push_back( std::move( node ) );
+                outListSection.push_back( std::move( section ) );
+                const int32 writtenIndex = ownerIndex >= 0 ? CatalogInheritanceView::findWrittenChild( parsed, ownerIndex, step ) : -1;
+                appendSections( field, parsed, writtenIndex, flatChild, parentChild, path, title, outListSection );
+            }
+
+            static void appendWhole( const CatalogXMLText& parsed, int32 ownerIndex, const XMLNode& flat, CatalogChildSection&& section, vector<CatalogChildSection>& outListSection )
+            {
+                section._kind = CatalogChildSectionKind::Whole;
+                if ( ownerIndex >= 0 )
+                {
+                    for ( const int32 childIndex : parsed.getElement( ownerIndex )._listChild )
+                    {
+                        const CatalogXMLElement& written = parsed.getElement( childIndex );
+                        if ( written._name != section._name )
+                            continue;
+                        if ( readWrittenAttribute( &written, DataInheritance::kOpAttribute ) == DataCatalogInheritance::kOpClear )
+                            section._bCleared = true;
+                        else
+                            section._bOverridden = true;
+                    }
+                }
+                const utf8* pName = section._name.c_str();
+                for ( XMLNode child = flat.isValid() ? flat.findChild( pName ) : XMLNode{}; child.isValid(); child = child.findNextSibling( pName ) )
+                {
+                    addNodeColumns( child, section._listColumn );
+                }
+                int32 index = 0;
+                for ( XMLNode child = flat.isValid() ? flat.findChild( pName ) : XMLNode{}; child.isValid(); child = child.findNextSibling( pName ) )
+                {
+                    const CatalogChildStep step{ section._name, string(), string(), index };
+                    CatalogChildNode       node;
+                    node._path = section._ownerPath;
+                    node._path.push_back( step );
+                    node._bInherited = section._bOverridden == false;
+                    fillCells( section, section._bOverridden ? findWritten( parsed, ownerIndex, step ) : nullptr, child, section._bOverridden ? XMLNode{} : child, node );
+                    section._listNode.push_back( std::move( node ) );
+                    ++index;
+                }
+                outListSection.push_back( std::move( section ) );
+            }
+
+            static void appendSections( const DataInheritanceSchema& schema, const CatalogXMLText& parsed, int32 ownerIndex, const XMLNode& flat, const XMLNode& parent, const CatalogChildPath& ownerPath, const string& ownerTitle,
+                                        vector<CatalogChildSection>& outListSection )
+            {
+                vector<string> listName;
+                collectNames( schema, parsed, ownerIndex, flat, parent, listName );
+                for ( const string& name : listName )
+                {
+                    CatalogChildSection section;
+                    section._name                       = name;
+                    section._title                      = ownerTitle.empty() ? name : ownerTitle + " / " + name;
+                    section._ownerPath                  = ownerPath;
+                    section._bHasParent                 = parent.isValid();
+                    const DataInheritanceSchema* pField = schema.findField( name );
+                    if ( pField == nullptr )
+                        appendWhole( parsed, ownerIndex, flat, std::move( section ), outListSection );
+                    else if ( pField->_keyAttribute.empty() )
+                        appendField( *pField, parsed, ownerIndex, flat, parent, std::move( section ), outListSection );
+                    else
+                        appendList( *pField, parsed, ownerIndex, flat, parent, std::move( section ), outListSection );
+                }
+            }
+        };
+    } // namespace
+
     CatalogInheritanceView::CatalogInheritanceView()
         : _schema{ string_view{} }
         , _flatDoc{}
@@ -123,6 +395,92 @@ namespace sw::editor
                 return entry;
         }
         return {};
+    }
+
+    XMLNode CatalogInheritanceView::findFlatEntry( const CatalogXMLElement& row ) const
+    {
+        const string* pKey     = findKeyAttribute( row._name );
+        const int32   keyIndex = pKey != nullptr ? row.findAttribute( *pKey ) : -1;
+        if ( keyIndex < 0 || _flatDoc.getRoot().isValid() == false )
+            return {};
+        const string_view id = row._listAttribute[static_cast<size_t>( keyIndex )]._value;
+        for ( XMLNode entry = _flatDoc.getRoot().findChild( row._name.c_str() ); entry.isValid(); entry = entry.findNextSibling( row._name.c_str() ) )
+        {
+            if ( entry.getAttributeText( pKey->c_str() ) == id )
+                return entry;
+        }
+        return {};
+    }
+
+    const DataInheritanceSchema* CatalogInheritanceView::findChildSchema( const CatalogXMLElement& row, const CatalogChildPath& path ) const
+    {
+        const DataInheritanceSchema* pField = _bActive == SW_TRUE ? _schema.findField( row._name ) : nullptr;
+        for ( const CatalogChildStep& step : path )
+        {
+            if ( pField == nullptr )
+                return nullptr;
+            pField = pField->findField( step._name );
+        }
+        return pField;
+    }
+
+    int32 CatalogInheritanceView::findWrittenChild( const CatalogXMLText& parsed, int32 ownerIndex, const CatalogChildStep& step )
+    {
+        int32 occurrence = 0;
+        for ( const int32 childIndex : parsed.getElement( ownerIndex )._listChild )
+        {
+            const CatalogXMLElement& child = parsed.getElement( childIndex );
+            if ( child._name != step._name )
+                continue;
+            if ( step._keyAttribute.empty() )
+            {
+                if ( occurrence == step._index )
+                    return childIndex;
+                ++occurrence;
+                continue;
+            }
+            const int32 keyIndex = child.findAttribute( step._keyAttribute );
+            if ( keyIndex >= 0 && child._listAttribute[static_cast<size_t>( keyIndex )]._value == step._key )
+                return childIndex;
+        }
+        return -1;
+    }
+
+    XMLNode CatalogInheritanceView::walkPath( const XMLNode& start, const CatalogChildPath& path )
+    {
+        XMLNode node = start;
+        for ( const CatalogChildStep& step : path )
+        {
+            if ( node.isValid() == false )
+                return {};
+            int32   occurrence = 0;
+            XMLNode found;
+            for ( XMLNode child = node.findChild( step._name.c_str() ); child.isValid(); child = child.findNextSibling( step._name.c_str() ) )
+            {
+                const bool bMatch = step._keyAttribute.empty() ? occurrence == step._index : child.getAttributeText( step._keyAttribute.c_str() ) == string_view( step._key );
+                if ( bMatch )
+                {
+                    found = child;
+                    break;
+                }
+                ++occurrence;
+            }
+            node = found;
+        }
+        return node;
+    }
+
+    void CatalogInheritanceView::collectChildSections( const CatalogXMLText& parsed, int32 rowIndex, vector<CatalogChildSection>& outListSection ) const
+    {
+        outListSection.clear();
+        if ( _bActive == SW_FALSE || _error.empty() == false )
+            return;
+        const CatalogXMLElement&     row   = parsed.getElement( rowIndex );
+        const DataInheritanceSchema* pKind = _schema.findField( row._name );
+        const XMLNode                flat  = findFlatEntry( row );
+        if ( pKind == nullptr || flat.isValid() == false )
+            return;
+        CatalogInheritanceViewInternal::appendSections( *pKind, parsed, rowIndex, flat, findParentEntry( row ), CatalogChildPath{}, string(), outListSection );
     }
 
     const utf8* CatalogInheritanceView::findInherited( const CatalogXMLElement& row, string_view column ) const

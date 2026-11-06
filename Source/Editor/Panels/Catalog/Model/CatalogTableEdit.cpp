@@ -83,6 +83,67 @@ namespace sw::editor
                 outDescription = Internal::describe( "Added a key to", groupName, string_view() );
                 break;
             }
+            case Kind::SetChildCell:
+            {
+                bChanged       = inoutDocument.setChildCell( _element, _path, _column, _text );
+                outDescription = Internal::describe( "Edited child of", groupName, _column );
+                break;
+            }
+            case Kind::UnsetChildCell:
+            {
+                bChanged       = inoutDocument.unsetChildCell( _element, _path, _column );
+                outDescription = Internal::describe( "Unset child of", groupName, _column );
+                break;
+            }
+            case Kind::AddChildNode:
+            {
+                bChanged       = inoutDocument.addChildNode( _element, _path, _column, _text );
+                outDescription = Internal::describe( "Added child to", groupName, _column );
+                break;
+            }
+            case Kind::RemoveChildNode:
+            {
+                bChanged       = inoutDocument.removeChildNode( _element, _path );
+                outDescription = Internal::describe( "Removed child of", groupName, string_view() );
+                break;
+            }
+            case Kind::RestoreChildNode:
+            {
+                bChanged       = inoutDocument.restoreChildNode( _element, _path );
+                outDescription = Internal::describe( "Restored child of", groupName, string_view() );
+                break;
+            }
+            case Kind::MoveChildEarlier:
+            case Kind::MoveChildLater:
+            {
+                bChanged       = inoutDocument.moveChildNode( _element, _path, _kind == Kind::MoveChildEarlier );
+                outDescription = Internal::describe( "Moved child of", groupName, string_view() );
+                break;
+            }
+            case Kind::ResetChildOrder:
+            {
+                bChanged       = inoutDocument.resetChildOrder( _element, _path );
+                outDescription = Internal::describe( "Reset the order of child of", groupName, string_view() );
+                break;
+            }
+            case Kind::ClearChildGroup:
+            {
+                bChanged       = inoutDocument.clearChildGroup( _element, _path, _column );
+                outDescription = Internal::describe( "Cleared children of", groupName, _column );
+                break;
+            }
+            case Kind::InheritChildGroup:
+            {
+                bChanged       = inoutDocument.inheritChildGroup( _element, _path, _column );
+                outDescription = Internal::describe( "Inherited children of", groupName, _column );
+                break;
+            }
+            case Kind::OverrideChildGroup:
+            {
+                bChanged       = inoutDocument.overrideChildGroup( _element, _path, _column );
+                outDescription = Internal::describe( "Overrode children of", groupName, _column );
+                break;
+            }
         }
         if ( bChanged == false )
             outDescription = inoutDocument.getError();

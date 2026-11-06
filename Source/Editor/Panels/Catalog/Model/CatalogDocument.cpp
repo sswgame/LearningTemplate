@@ -158,6 +158,13 @@ namespace sw::editor
         return _inheritance.findInherited( _parsed.getElement( elementIndex ), column );
     }
 
+    void CatalogDocument::collectChildSections( int32 elementIndex, vector<CatalogChildSection>& outListSection ) const
+    {
+        outListSection.clear();
+        if ( canCreateVariant( elementIndex ) )
+            _inheritance.collectChildSections( _parsed, elementIndex, outListSection );
+    }
+
     bool CatalogDocument::canCreateVariant( int32 elementIndex ) const
     {
         const bool bInvalidElementIndex = _parsed.isParsed() == false || elementIndex < 0 || static_cast<size_t>( elementIndex ) >= _parsed.getElements().size();

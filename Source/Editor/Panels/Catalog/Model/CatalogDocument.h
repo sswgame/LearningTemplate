@@ -10,6 +10,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
 #include "Editor/Panels/Catalog/Model/CatalogInheritanceView.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
@@ -68,6 +69,8 @@ namespace sw::editor
         const string& getInheritanceError() const { return _inheritance.getError(); }
         /** @brief 이 원소를 부모로 하는 변형을 만들 수 있으면(규칙 표에 있는 종류의 행이면) true 입니다. */
         bool canCreateVariant( int32 elementIndex ) const;
+        /** @brief 행의 자식 원소를 규칙대로 펼친 표들입니다(`CatalogInheritanceView::collectChildSections`). 먼저 출력 목록을 비웁니다. */
+        void collectChildSections( int32 elementIndex, vector<CatalogChildSection>& outListSection ) const;
         /** @brief 표의 행 중 속성 값이 @p filter 를 포함하는 행을 문서 순서로 모읍니다(대소문자 무시). 필터가 비면 모두입니다. 먼저 출력 목록을 비웁니다. */
         void collectVisibleRows( const Group& group, string_view filter, vector<int32>& outListRow ) const;
 
@@ -88,6 +91,29 @@ namespace sw::editor
         [[nodiscard]] bool duplicateRow( int32 elementIndex );
         /** @brief 이 행을 `_base` 로 가리키고 id 만 적은 새 행을 바로 표 끝에 더합니다(언리얼 Create Child Blueprint · 유니티 Prefab Variant). */
         [[nodiscard]] bool createVariant( int32 elementIndex );
+        // ------------------------------------------------------------------------------
+        // 자식 원소 편집 — 언제나 적은 칸만 바꾼다. 물려받은 원소를 고치면 그 원소만 열쇠와 함께 적고, 부모와 같아지면 칸 · 빈 원소를 지운다. 한 번이 되돌리기 한 단계다.
+        // 고친 글이 펼쳐지지 않으면(`_before` 의 없는 열쇠 등) 없던 일로 하고 false 다. 구현은 `CatalogDocumentChildEdit.cpp`.
+        // ------------------------------------------------------------------------------
+        /** @brief 행 아래 @p path 원소의 칸을 고칩니다. 물려받은 원소의 열쇠는 고칠 수 없습니다. 규칙에 없는 칸은 먼저 `overrideChildGroup` 합니다. */
+        [[nodiscard]] bool setChildCell( int32 rowIndex, const CatalogChildPath& path, string_view column, string_view value );
+        [[nodiscard]] bool unsetChildCell( int32 rowIndex, const CatalogChildPath& path, string_view column );
+        /** @brief @p ownerPath 원소 아래에 @p name 원소를 더합니다. 열쇠 칸이면 표 안에서 겹치지 않는 열쇠(`new`, `new_2`)이고, 규칙에 없는 칸이면 마지막 원소의 값을 따릅니다. */
+        [[nodiscard]] bool addChildNode( int32 rowIndex, const CatalogChildPath& ownerPath, string_view name, string_view keyAttribute );
+        /** @brief 물려받은 원소는 `_op="Remove"` 로 빼고, 이 항목이 더한 원소는 지웁니다. */
+        [[nodiscard]] bool removeChildNode( int32 rowIndex, const CatalogChildPath& path );
+        /** @brief `_op="Remove"` 를 지워 물려받은 원소를 되돌립니다. */
+        [[nodiscard]] bool restoreChildNode( int32 rowIndex, const CatalogChildPath& path );
+        /** @brief 합친 순서에서 한 칸 앞(@p bEarlier) · 뒤로 옮깁니다(`_before` · `_after`). 이미 끝이면 아무것도 바뀌지 않습니다. */
+        [[nodiscard]] bool moveChildNode( int32 rowIndex, const CatalogChildPath& path, bool bEarlier );
+        /** @brief `_before` · `_after` 를 지웁니다. */
+        [[nodiscard]] bool resetChildOrder( int32 rowIndex, const CatalogChildPath& path );
+        /** @brief 규칙에 없는 칸의 물려받은 원소를 비웁니다(`<X _op="Clear"/>`). */
+        [[nodiscard]] bool clearChildGroup( int32 rowIndex, const CatalogChildPath& ownerPath, string_view name );
+        /** @brief 규칙에 없는 칸에 적은 것을 모두 지워 다시 물려받습니다. */
+        [[nodiscard]] bool inheritChildGroup( int32 rowIndex, const CatalogChildPath& ownerPath, string_view name );
+        /** @brief 규칙에 없는 칸의 물려받은 원소를 이 항목에 그대로 적어 고칠 수 있게 합니다. 글 값이 있는 원소는 글 상자에서 고칩니다(false). */
+        [[nodiscard]] bool overrideChildGroup( int32 rowIndex, const CatalogChildPath& ownerPath, string_view name );
         /** @brief 어느 깊이의 원소든 @p parentIndex 의 마지막 자식으로 `<name a="…" />` 를 더합니다(곡선 키처럼 중첩된 원소를 고치는 길). 부모가 없으면 false 입니다. */
         [[nodiscard]] bool addChild( int32 parentIndex, string_view name, const vector<CatalogXMLNewAttribute>& listAttribute );
         /** @brief 여러 단계로 고친 원문을 한 단계로 넣습니다. 훑지 못하는 글이면 거절합니다. */
@@ -111,6 +137,10 @@ namespace sw::editor
         void rebuildFromText();
         /** @brief 지금 원문을 되돌리기 스택에 쌓고 다시 하기를 비웁니다. 열린 글 상자 편집도 닫습니다. */
         void pushUndo();
+        /** @brief 자식 편집의 글을 넣습니다. 펼치지 못하게 되는 글이면 없던 일로 하고 false 입니다. */
+        [[nodiscard]] bool commitChildEdit( string_view text );
+        /** @brief 항목 표의 행이고 훑은 문서면 true 이고, 아니면 `_error` 를 적고 false 입니다. */
+        [[nodiscard]] bool checkChildRow( int32 rowIndex );
 
     private:
         string                 _text;

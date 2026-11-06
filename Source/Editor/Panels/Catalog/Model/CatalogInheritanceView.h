@@ -9,6 +9,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
 #include "Editor/Panels/Catalog/Model/CatalogXMLText.h"
 
 #include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
@@ -37,6 +38,23 @@ namespace sw::editor
         const utf8* findInherited( const CatalogXMLElement& row, string_view column ) const;
         /** @brief 행이 물려받는 칸 이름을 목록에 더합니다(겹치면 더하지 않습니다). 표의 열이 됩니다. */
         void collectInheritedColumns( const CatalogXMLElement& row, vector<string>& inoutListColumn ) const;
+        /**
+         * @brief 행의 자식 원소를 규칙대로 펼친 표들입니다. 먼저 출력 목록을 비웁니다. 펼치지 못했거나 규칙에 없는 행이면 비어 있습니다.
+         * @details 규칙의 칸은 원소가 없어도 구역이 선다(더할 수 있어야 한다). 줄의 순서는 합친 결과의 순서이고, 합친 결과에서 빠진 `_op="Remove"` 원소는 그 구역 끝에 온다.
+         */
+        void collectChildSections( const CatalogXMLText& parsed, int32 rowIndex, vector<CatalogChildSection>& outListSection ) const;
+
+        /** @brief 행의 부모 항목입니다(같은 파일 · 다른 파일 · 파일 상속의 같은 id). 없으면 무효입니다. */
+        XMLNode findParentEntry( const CatalogXMLElement& row ) const;
+        /** @brief 행을 합친 결과입니다. 펼치지 못했으면 무효입니다. */
+        XMLNode findFlatEntry( const CatalogXMLElement& row ) const;
+        /** @brief 행 아래 @p path 원소의 규칙입니다. 규칙에 없는 칸이면(통째로 바뀐다) nullptr 입니다. */
+        const DataInheritanceSchema* findChildSchema( const CatalogXMLElement& row, const CatalogChildPath& path ) const;
+
+        /** @brief 원문의 원소 @p ownerIndex 아래에서 @p step 원소의 번호입니다. 없으면 -1 입니다. */
+        static int32 findWrittenChild( const CatalogXMLText& parsed, int32 ownerIndex, const CatalogChildStep& step );
+        /** @brief @p start 에서 @p path 를 따라 내려간 원소입니다. 없으면 무효입니다. */
+        static XMLNode walkPath( const XMLNode& start, const CatalogChildPath& path );
 
     private:
         struct ParentFile
@@ -45,8 +63,7 @@ namespace sw::editor
             XMLDocument _doc;
         };
 
-        void    addParentFile( string_view assetID );
-        XMLNode findParentEntry( const CatalogXMLElement& row ) const;
+        void addParentFile( string_view assetID );
 
     private:
         DataInheritanceSchema   _schema;

@@ -12,6 +12,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/fixed_string.h"
 
+#include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
 #include "Editor/Panels/Catalog/Model/CatalogCurveModel.h"
 #include "Editor/Panels/Catalog/Model/CatalogDocument.h"
 #include "Editor/Panels/Catalog/Model/CatalogTableEdit.h"
@@ -38,11 +39,22 @@ namespace sw::editor
 
     private:
         /** @brief 그룹 하나의 제목 · 표 · "Add row" 단추를 그립니다. 자체 시험 표식(`bFirstCell` · `bFirstCurveButton`)은 문서 전체에서 처음 한 번만 남기도록 호출 사이로 이어 받습니다. */
-        void drawGroup( const CatalogDocument& document, const CatalogDocument::Group& group, bool bFirstGroup, bool& inoutbFirstCell, bool& inoutbFirstCurveButton );
+        void drawGroup( const CatalogDocument& document, const CatalogDocument::Group& group, bool bFirstGroup, bool& inoutbFirstCell, bool& inoutbFirstCurveButton, bool& inoutbFirstVariantButton );
         /** @brief 표의 한 행(칸 · 자식 수 · 곡선 단추 · 제거 단추)을 그립니다. */
-        void drawRow( const CatalogDocument& document, const CatalogDocument::Group& group, int32 elementIndex, int32 rowPosition, bool bFirstGroup, bool& inoutbFirstCell, bool& inoutbFirstCurveButton );
+        void drawRow( const CatalogDocument& document, const CatalogDocument::Group& group, int32 elementIndex, int32 rowPosition, bool bFirstGroup, bool& inoutbFirstCell, bool& inoutbFirstCurveButton, bool& inoutbFirstVariantButton );
         /** @param width 칸 폭입니다. 음수면 남은 폭 전부(표 칸), 양수면 그 폭(곡선 키 줄 — 한 줄에 칸 셋이 선다)입니다. */
         void drawCell( const CatalogDocument& document, int32 elementIndex, const string& column, bool bFirstCell, float32 width );
+        /**
+         * @brief 고칠 수 있는 칸 하나를 그립니다. 입력 칸을 떠날 때 값이 바뀌었으면 @p outCommitted 에 담아 true 입니다.
+         * @param bAbsent 이 항목이 적지 않은 칸입니다(어둡게 — 비어 있는 값과 다르다).
+         * @param bDim 물려받은 값입니다(흐리게 — 이 항목이 적은 값이 아니다).
+         */
+        [[nodiscard]] bool drawValueField( string_view shown, bool bAbsent, bool bDim, float32 width, bool bMarkFirst, string& outCommitted );
+        /** @brief "자식 원소" 창입니다 - 행의 자식 원소를 규칙대로 펼쳐 보이고 고칩니다. 적은 칸만 저장합니다(`CatalogDocument::setChildCell`). */
+        void drawChildPopup( const CatalogDocument& document );
+        void drawChildSection( const CatalogChildSection& section, bool& inoutbFirstCell, bool& inoutbFirstAdd, bool& inoutbFirstRemove );
+        void drawChildSectionActions( const CatalogChildSection& section, bool& inoutbFirstAdd );
+        void drawChildNode( const CatalogChildSection& section, const CatalogChildNode& node, int32 nodePosition, bool& inoutbFirstCell, bool& inoutbFirstRemove );
         /** @brief "곡선 편집" 창입니다 - @p _curveOwner 원소 아래의 모든 곡선을 그래프 · 그래디언트 띠 · 키 표로 고칩니다(키 칸은 `drawCell` 과 같은 길이라 되돌리기 한 단계 = 칸 편집 한 번). */
         void               drawCurvePopup( const CatalogDocument& document );
         void               drawGradientBar( const CatalogGradient& gradient );
@@ -56,8 +68,11 @@ namespace sw::editor
         vector<float32>                         _listSample;          ///< 곡선 표본 재사용 버퍼
         vector<float4>                          _listGradientColor;   ///< 그래디언트 표본 재사용 버퍼
         vector<int32>                           _listVisibleRow;      ///< 행 거르개에 맞는 행 재사용 버퍼
+        vector<CatalogChildSection>             _listChildSection;    ///< 자식 창이 이번 프레임에 그리는 표들
         int32                                   _curveOwner;          ///< 곡선 창이 보는 원소(-1 이면 닫힘)
+        int32                                   _childOwner;          ///< 자식 창이 보는 행(-1 이면 닫힘). 고쳐도 번호가 그대로다 - 행 안쪽만 고치고 원소 번호는 문서 순서다
         uint8                                   _bOpenCurvePopup : 1; ///< 다음 그리기에서 창을 연다
+        uint8                                   _bOpenChildPopup : 1; ///< 다음 그리기에서 자식 창을 연다
         uint8                                   _bEditFailed     : 1; ///< 지난 편집이 거절되었다(`takeEditFailed`)
         string                                  _editText;
         string                                  _lastActionText;

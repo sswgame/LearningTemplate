@@ -7,6 +7,8 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 
+#include "Editor/Panels/Catalog/Model/CatalogChildSection.h"
+
 namespace sw::editor
 {
     class CatalogDocument;
@@ -23,13 +25,26 @@ namespace sw::editor
             RemoveRow,
             DuplicateRow,
             CreateVariant, ///< `_element` 를 `_base` 로 가리키는 새 행
-            AddCurveKey    ///< `_element` 곡선의 끝에 키를 더한다
+            AddCurveKey,   ///< `_element` 곡선의 끝에 키를 더한다
+            // 자식 원소 편집 — `_element` 는 행, `_path` 는 원소(또는 담는 원소), `_column` 은 칸 이름(그룹 편집이면 원소 이름)이다.
+            SetChildCell,
+            UnsetChildCell,
+            AddChildNode, ///< `_text` 는 열쇠 칸 이름
+            RemoveChildNode,
+            RestoreChildNode,
+            MoveChildEarlier,
+            MoveChildLater,
+            ResetChildOrder,
+            ClearChildGroup,
+            InheritChildGroup,
+            OverrideChildGroup
         };
 
-        Kind   _kind{ Kind::None };
-        int32  _element{ -1 };
-        string _column{};
-        string _text{}; ///< 칸의 새 값(`SetCell`) 또는 표 이름(`AddRow`)
+        Kind             _kind{ Kind::None };
+        int32            _element{ -1 };
+        string           _column{};
+        string           _text{}; ///< 칸의 새 값(`SetCell`) 또는 표 이름(`AddRow`)
+        CatalogChildPath _path{};
 
         /**
          * @brief 문서에 넣습니다.

@@ -802,3 +802,265 @@ SW_TEST_CASE( CatalogDocumentTest, CreatesVariantRows )
     SW_REQUIRE_TRUE( notListed.load( "<Items><Item id=\"a\"/></Items>" ) );
     SW_EXPECT_FALSE( notListed.canCreateVariant( notListed.getParsed().getRowIndices()[0] ) );
 }
+
+namespace
+{
+    struct CatalogChildTestUtil
+    {
+        static constexpr const utf8* kVisuals = "<ItemVisualCatalog>\n"
+                                                "\t<ItemVisual id=\"a\">\n"
+                                                "\t\t<Part name=\"Shell\" mesh=\"m\" material=\"x\">\n"
+                                                "\t\t\t<Variant name=\"v1\" mesh=\"n\"/>\n"
+                                                "\t\t</Part>\n"
+                                                "\t\t<Part name=\"Trim\" mesh=\"t\"/>\n"
+                                                "\t</ItemVisual>\n"
+                                                "\t<ItemVisual id=\"b\" _base=\"a\"/>\n"
+                                                "</ItemVisualCatalog>\n";
+        static constexpr const utf8* kItems   = "<ItemCatalog>\n"
+                                                "\t<Item id=\"a\" name=\"A\">\n"
+                                                "\t\t<Stats armor=\"3\"/>\n"
+                                                "\t\t<Requires tag=\"x\"/>\n"
+                                                "\t\t<Requires tag=\"y\"/>\n"
+                                                "\t</Item>\n"
+                                                "\t<Item id=\"b\" _base=\"a\"/>\n"
+                                                "</ItemCatalog>\n";
+
+        static int32 findRow( const CatalogDocument& document, string_view id )
+        {
+            for ( const int32 rowIndex : document.getParsed().getRowIndices() )
+            {
+                const string* pID = document.findCellValue( rowIndex, "id" );
+                if ( pID != nullptr && string_view( *pID ) == id )
+                    return rowIndex;
+            }
+            return -1;
+        }
+
+        static const CatalogChildSection* findSection( const vector<CatalogChildSection>& listSection, string_view title )
+        {
+            return VectorUtil::findIf( listSection, [title]( const CatalogChildSection& section )
+            { return string_view( section._title ) == title; } );
+        }
+
+        static const CatalogChildCell* findCell( const CatalogChildNode& node, string_view column )
+        {
+            return VectorUtil::findIf( node._listCell, [column]( const CatalogChildCell& cell )
+            { return string_view( cell._column ) == column; } );
+        }
+
+        static CatalogChildPath part( string_view name )
+        {
+            return CatalogChildPath{
+                CatalogChildStep{ "Part", "name", string( name ), 0 }
+            };
+        }
+
+        static bool contains( const CatalogDocument& document, string_view text ) { return string_view( document.getText() ).find( text ) != string_view::npos; }
+
+        /** @brief 표 @p title 의 열쇠를 합친 순서로 잇습니다(뺀 원소 제외). */
+        static string joinKeys( const CatalogDocument& document, int32 row, string_view title )
+        {
+            vector<CatalogChildSection> listSection;
+            document.collectChildSections( row, listSection );
+            const CatalogChildSection* pSection = findSection( listSection, title );
+            string                     keys;
+            if ( pSection == nullptr )
+                return keys;
+            for ( const CatalogChildNode& node : pSection->_listNode )
+            {
+                if ( node._bRemoved == false )
+                    keys += node._path.back()._key + ",";
+            }
+            return keys;
+        }
+    };
+} // namespace
+
+/** @brief [CatalogDocumentTest] 자식 원소를 규칙대로 펼친다 - 적지 않은 원소도 물려받은 값으로 줄이 서고, 중첩 칸은 자기 표가 되며, 원문은 그대로다 */
+SW_TEST_CASE( CatalogDocumentTest, ChildSectionsShowInheritedElements )
+{
+    using Util = CatalogChildTestUtil;
+    CatalogInheritanceTestSource source;
+    CatalogDocument              document;
+    document.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( document.load( Util::kVisuals ) );
+    const int32 b = Util::findRow( document, "b" );
+
+    vector<CatalogChildSection> listSection;
+    document.collectChildSections( b, listSection );
+    const CatalogChildSection* pParts = Util::findSection( listSection, "Part" );
+    SW_REQUIRE_TRUE( pParts != nullptr );
+    SW_EXPECT_TRUE( pParts->_kind == CatalogChildSectionKind::List );
+    SW_REQUIRE_EQUAL( pParts->_listNode.size(), static_cast<size_t>( 2 ) );
+    const CatalogChildNode& shell = pParts->_listNode[0];
+    SW_EXPECT_TRUE( shell._bInherited );
+    const CatalogChildCell* pMaterial = Util::findCell( shell, "material" );
+    SW_REQUIRE_TRUE( pMaterial != nullptr );
+    SW_EXPECT_EQUAL( string( "x" ), pMaterial->_value );
+    SW_EXPECT_TRUE( pMaterial->_bInherited );
+    SW_EXPECT_FALSE( pMaterial->_bWritten );
+
+    const CatalogChildSection* pVariants = Util::findSection( listSection, "Part Shell / Variant" );
+    SW_REQUIRE_TRUE( pVariants != nullptr );
+    SW_REQUIRE_EQUAL( pVariants->_listNode.size(), static_cast<size_t>( 1 ) );
+    SW_EXPECT_EQUAL( string( "v1" ), pVariants->_listNode[0]._path.back()._key );
+    SW_EXPECT_EQUAL( string( Util::kVisuals ), document.getText() );
+
+    // 부모가 없는 행은 모두 적은 칸이다.
+    document.collectChildSections( Util::findRow( document, "a" ), listSection );
+    pParts = Util::findSection( listSection, "Part" );
+    SW_REQUIRE_TRUE( pParts != nullptr );
+    SW_EXPECT_FALSE( pParts->_bHasParent );
+    SW_EXPECT_TRUE( Util::findCell( pParts->_listNode[0], "material" )->_bWritten );
+}
+
+/** @brief [CatalogDocumentTest] 자식 칸의 저장 - 다른 값만 그 원소의 열쇠와 함께 적고, 부모와 같은 값을 적으면 칸과 빈 원소를 지워 원문이 처음과 같다. 한 번이 되돌리기 한 단계다 */
+SW_TEST_CASE( CatalogDocumentTest, ChildCellSavesOnlyDifferences )
+{
+    using Util = CatalogChildTestUtil;
+    CatalogInheritanceTestSource source;
+    CatalogDocument              document;
+    document.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( document.load( Util::kVisuals ) );
+    const int32 b = Util::findRow( document, "b" );
+
+    SW_REQUIRE_TRUE( document.setChildCell( b, Util::part( "Shell" ), "material", "y" ) );
+    SW_EXPECT_TRUE( Util::contains( document, "<Part name=\"Shell\" material=\"y\" />" ) );
+    SW_EXPECT_FALSE( Util::contains( document, "mesh=\"m\" material=\"y\"" ) ); // 물려받은 칸은 베끼지 않는다
+    SW_EXPECT_TRUE( document.getInheritanceError().empty() );
+
+    vector<CatalogChildSection> listSection;
+    document.collectChildSections( b, listSection );
+    const CatalogChildCell* pMaterial = Util::findCell( Util::findSection( listSection, "Part" )->_listNode[0], "material" );
+    SW_EXPECT_EQUAL( string( "y" ), pMaterial->_value );
+    SW_EXPECT_TRUE( pMaterial->_bWritten );
+
+    document.undo();
+    SW_EXPECT_EQUAL( string( Util::kVisuals ), document.getText() );
+    document.redo();
+
+    SW_REQUIRE_TRUE( document.setChildCell( b, Util::part( "Shell" ), "material", "x" ) ); // 부모와 같다
+    SW_EXPECT_EQUAL( string( Util::kVisuals ), document.getText() );
+
+    // 중첩 칸은 위 원소까지 만든다.
+    CatalogChildPath variant = Util::part( "Shell" );
+    variant.push_back( CatalogChildStep{ "Variant", "name", "v1", 0 } );
+    SW_REQUIRE_TRUE( document.setChildCell( b, variant, "mesh", "z" ) );
+    SW_EXPECT_TRUE( Util::contains( document, "<Variant name=\"v1\" mesh=\"z\" />" ) );
+    SW_REQUIRE_TRUE( document.setChildCell( b, variant, "mesh", "n" ) );
+    SW_EXPECT_EQUAL( string( Util::kVisuals ), document.getText() );
+
+    // 물려받은 원소의 열쇠는 고칠 수 없다.
+    SW_EXPECT_FALSE( document.setChildCell( b, Util::part( "Shell" ), "name", "Other" ) );
+    SW_EXPECT_EQUAL( string( Util::kVisuals ), document.getText() );
+}
+
+/** @brief [CatalogDocumentTest] 목록 원소의 더하기 · 지우기 · 되살리기 - 물려받은 원소는 `_op="Remove"` 로 빼고, 더한 원소는 지우면 원문에서 사라진다 */
+SW_TEST_CASE( CatalogDocumentTest, ChildNodesAddAndRemove )
+{
+    using Util = CatalogChildTestUtil;
+    CatalogInheritanceTestSource source;
+    CatalogDocument              document;
+    document.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( document.load( Util::kVisuals ) );
+    const int32 b = Util::findRow( document, "b" );
+
+    SW_REQUIRE_TRUE( document.removeChildNode( b, Util::part( "Trim" ) ) );
+    SW_EXPECT_TRUE( Util::contains( document, "<Part name=\"Trim\" _op=\"Remove\" />" ) );
+    SW_EXPECT_EQUAL( string( "Shell," ), Util::joinKeys( document, b, "Part" ) );
+    vector<CatalogChildSection> listSection;
+    document.collectChildSections( b, listSection );
+    const CatalogChildSection* pParts = Util::findSection( listSection, "Part" );
+    SW_REQUIRE_EQUAL( pParts->_listNode.size(), static_cast<size_t>( 2 ) );
+    SW_EXPECT_TRUE( pParts->_listNode[1]._bRemoved ); // 되살릴 수 있게 끝에 보인다
+
+    SW_REQUIRE_TRUE( document.restoreChildNode( b, Util::part( "Trim" ) ) );
+    SW_EXPECT_EQUAL( string( Util::kVisuals ), document.getText() );
+
+    SW_REQUIRE_TRUE( document.addChildNode( b, {}, "Part", "name" ) );
+    SW_EXPECT_EQUAL( string( "Shell,Trim,new," ), Util::joinKeys( document, b, "Part" ) );
+    SW_REQUIRE_TRUE( document.addChildNode( b, {}, "Part", "name" ) );
+    SW_EXPECT_EQUAL( string( "Shell,Trim,new,new_2," ), Util::joinKeys( document, b, "Part" ) );
+    SW_REQUIRE_TRUE( document.setChildCell( b, Util::part( "new_2" ), "name", "Extra" ) ); // 더한 원소의 열쇠는 고칠 수 있다
+    SW_REQUIRE_TRUE( document.removeChildNode( b, Util::part( "Extra" ) ) );
+    SW_REQUIRE_TRUE( document.removeChildNode( b, Util::part( "new" ) ) );
+    SW_EXPECT_FALSE( Util::contains( document, "_op=" ) );
+    SW_EXPECT_EQUAL( string( "Shell,Trim," ), Util::joinKeys( document, b, "Part" ) );
+}
+
+/** @brief [CatalogDocumentTest] 순서 - 앞 · 뒤로 옮기면 `_before` · `_after` 를 적고, 되돌리면 지운다. 더한 원소를 기준으로 삼아도 펼쳐진다. 끝에서는 바뀌지 않는다 */
+SW_TEST_CASE( CatalogDocumentTest, ChildNodesMoveWithBeforeAfter )
+{
+    using Util = CatalogChildTestUtil;
+    CatalogInheritanceTestSource source;
+    CatalogDocument              document;
+    document.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( document.load( Util::kVisuals ) );
+    const int32 b = Util::findRow( document, "b" );
+
+    SW_REQUIRE_TRUE( document.moveChildNode( b, Util::part( "Trim" ), true ) );
+    SW_EXPECT_TRUE( Util::contains( document, "<Part name=\"Trim\" _before=\"Shell\" />" ) );
+    SW_EXPECT_EQUAL( string( "Trim,Shell," ), Util::joinKeys( document, b, "Part" ) );
+
+    SW_REQUIRE_TRUE( document.moveChildNode( b, Util::part( "Trim" ), true ) ); // 이미 맨 앞이다
+    SW_EXPECT_EQUAL( string( "Trim,Shell," ), Util::joinKeys( document, b, "Part" ) );
+
+    SW_REQUIRE_TRUE( document.resetChildOrder( b, Util::part( "Trim" ) ) );
+    SW_EXPECT_EQUAL( string( Util::kVisuals ), document.getText() );
+
+    SW_REQUIRE_TRUE( document.addChildNode( b, {}, "Part", "name" ) );
+    SW_REQUIRE_TRUE( document.moveChildNode( b, Util::part( "Trim" ), false ) ); // 뒤에 적은 원소가 기준이다
+    SW_EXPECT_TRUE( document.getInheritanceError().empty() );
+    SW_EXPECT_EQUAL( string( "Shell,new,Trim," ), Util::joinKeys( document, b, "Part" ) );
+}
+
+/** @brief [CatalogDocumentTest] 규칙에 없는 칸 - 물려받거나, 덮어써 고치거나, 비운다. 부모와 같아지면 적은 것을 지운다 */
+SW_TEST_CASE( CatalogDocumentTest, ChildGroupWithoutRuleReplacesWhole )
+{
+    using Util = CatalogChildTestUtil;
+    CatalogInheritanceTestSource source;
+    CatalogDocument              document;
+    document.setInheritanceSource( &source );
+    SW_REQUIRE_TRUE( document.load( Util::kItems ) );
+    const int32 b = Util::findRow( document, "b" );
+
+    vector<CatalogChildSection> listSection;
+    document.collectChildSections( b, listSection );
+    const CatalogChildSection* pRequires = Util::findSection( listSection, "Requires" );
+    SW_REQUIRE_TRUE( pRequires != nullptr );
+    SW_EXPECT_TRUE( pRequires->_kind == CatalogChildSectionKind::Whole );
+    SW_EXPECT_FALSE( pRequires->_bOverridden );
+    SW_REQUIRE_EQUAL( pRequires->_listNode.size(), static_cast<size_t>( 2 ) );
+
+    const CatalogChildPath second{
+        CatalogChildStep{ "Requires", "", "", 1 }
+    };
+    SW_EXPECT_FALSE( document.setChildCell( b, second, "tag", "z" ) ); // 덮어쓰기 전에는 고칠 수 없다
+
+    SW_REQUIRE_TRUE( document.overrideChildGroup( b, {}, "Requires" ) );
+    SW_REQUIRE_TRUE( document.setChildCell( b, second, "tag", "z" ) );
+    document.collectChildSections( b, listSection );
+    pRequires = Util::findSection( listSection, "Requires" );
+    SW_EXPECT_TRUE( pRequires->_bOverridden );
+    SW_EXPECT_EQUAL( string( "z" ), Util::findCell( pRequires->_listNode[1], "tag" )->_value );
+    SW_REQUIRE_TRUE( document.setChildCell( b, second, "tag", "y" ) ); // 부모와 같아졌다
+    SW_EXPECT_EQUAL( string( Util::kItems ), document.getText() );
+
+    SW_REQUIRE_TRUE( document.clearChildGroup( b, {}, "Requires" ) );
+    SW_EXPECT_TRUE( Util::contains( document, "<Requires _op=\"Clear\" />" ) );
+    document.collectChildSections( b, listSection );
+    pRequires = Util::findSection( listSection, "Requires" );
+    SW_EXPECT_TRUE( pRequires->_bCleared );
+    SW_EXPECT_TRUE( pRequires->_listNode.empty() );
+    SW_REQUIRE_TRUE( document.inheritChildGroup( b, {}, "Requires" ) );
+    SW_EXPECT_EQUAL( string( Util::kItems ), document.getText() );
+
+    // 구조체 칸도 부모와 같으면 빈 원소를 남기지 않는다.
+    const CatalogChildPath stats{
+        CatalogChildStep{ "Stats", "", "", 0 }
+    };
+    SW_REQUIRE_TRUE( document.setChildCell( b, stats, "armor", "5" ) );
+    SW_EXPECT_TRUE( Util::contains( document, "<Stats armor=\"5\" />" ) );
+    SW_REQUIRE_TRUE( document.setChildCell( b, stats, "armor", "3" ) );
+    SW_EXPECT_EQUAL( string( Util::kItems ), document.getText() );
+}

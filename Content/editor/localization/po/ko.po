@@ -5225,15 +5225,75 @@ msgctxt "EditorBugReport.ShowInExplorer"
 msgid "Open this folder in the file explorer"
 msgstr "이 폴더를 파일 탐색기에서 엽니다"
 
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.AddChild"
+msgid "Add"
+msgstr "더하기"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.ChildCleared"
+msgid "Cleared"
+msgstr "비움"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.ChildOverridden"
+msgid "Overridden"
+msgstr "덮어씀"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.ChildRemoved"
+msgid "Removed"
+msgstr "뺌"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.Children"
+msgid "Children"
+msgstr "자식"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.ClearInherited"
+msgid "Clear"
+msgstr "비우기"
+
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
 msgctxt "EditorCatalog.FilterHint"
 msgid "Filter files"
 msgstr "파일 거르기"
 
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.MoveEarlier"
+msgid "Up"
+msgstr "위로"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.MoveLater"
+msgid "Down"
+msgstr "아래로"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.NoChildRules"
+msgid "This row has no child fields to show"
+msgstr "이 행에는 보일 자식 칸이 없습니다"
+
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
 msgctxt "EditorCatalog.NoKinds"
 msgid "No catalog kinds are registered"
 msgstr "등록된 카탈로그 종류가 없습니다"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.OverrideInherited"
+msgid "Override"
+msgstr "덮어쓰기"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.ResetOrder"
+msgid "Reset order"
+msgstr "순서 되돌리기"
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.RestoreChild"
+msgid "Restore"
+msgstr "되살리기"
 
 #: Source/Editor/Panels/Catalog/CatalogPanel.cpp
 msgctxt "EditorCatalog.SaveOrRevertFirst"
@@ -5244,6 +5304,11 @@ msgstr "열린 파일을 먼저 저장하거나 되돌리세요"
 msgctxt "EditorCatalog.Scanning"
 msgid "Scanning Resource..."
 msgstr "리소스를 훑는 중..."
+
+#: Source/Editor/Panels/Catalog/CatalogTableEditor.cpp
+msgctxt "EditorCatalog.UseInherited"
+msgid "Use inherited"
+msgstr "물려받기"
 
 #: Source/Editor/Panels/Console/ConsolePanel.cpp
 msgctxt "EditorConsole.AllLevelsHidden"

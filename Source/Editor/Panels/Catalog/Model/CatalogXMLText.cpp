@@ -369,12 +369,6 @@ namespace sw::editor
             outError = "element name is empty";
             return false;
         }
-        const string_view newline      = CatalogXMLTextInternal::detectNewline( text );
-        const string      parentIndent = CatalogXMLTextInternal::readLineIndent( text, parent._begin );
-        string            indent       = parentIndent + "\t";
-        if ( parent._listChild.empty() == false )
-            indent = CatalogXMLTextInternal::readLineIndent( text, listElement[static_cast<size_t>( parent._listChild.back() )]._begin );
-
         string child = "<";
         child.append( name.data(), name.size() );
         for ( const CatalogXMLNewAttribute& attribute : listAttribute )
@@ -382,6 +376,18 @@ namespace sw::editor
             child += CatalogXMLTextInternal::makeAttributeText( attribute._name, attribute._value );
         }
         child += " />";
+        return appendChildText( text, parent, listElement, child, outText, outError );
+    }
+
+    bool CatalogXMLText::appendChildText( string_view text, const CatalogXMLElement& parent, const vector<CatalogXMLElement>& listElement, string_view childText, string& outText, string& outError )
+    {
+        outError.clear();
+        const string_view newline      = CatalogXMLTextInternal::detectNewline( text );
+        const string      parentIndent = CatalogXMLTextInternal::readLineIndent( text, parent._begin );
+        string            indent       = parentIndent + "\t";
+        if ( parent._listChild.empty() == false )
+            indent = CatalogXMLTextInternal::readLineIndent( text, listElement[static_cast<size_t>( parent._listChild.back() )]._begin );
+        const string child{ childText };
 
         if ( parent._bSelfClosing )
         {

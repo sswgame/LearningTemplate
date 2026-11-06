@@ -5322,14 +5322,74 @@
 				<item>Source/Editor/Panels/BugReport/BugReportPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorCatalog.AddChild" source="Add">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.ChildCleared" source="Cleared">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.ChildOverridden" source="Overridden">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.ChildRemoved" source="Removed">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.Children" source="Children">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.ClearInherited" source="Clear">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorCatalog.FilterHint" source="Filter files">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorCatalog.MoveEarlier" source="Up">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.MoveLater" source="Down">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.NoChildRules" source="This row has no child fields to show">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorCatalog.NoKinds" source="No catalog kinds are registered">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.OverrideInherited" source="Override">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.ResetOrder" source="Reset order">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.RestoreChild" source="Restore">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorCatalog.SaveOrRevertFirst" source="Save or revert the open file first">
@@ -5340,6 +5400,11 @@
 		<entry key="EditorCatalog.Scanning" source="Scanning Resource...">
 			<origins>
 				<item>Source/Editor/Panels/Catalog/CatalogPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorCatalog.UseInherited" source="Use inherited">
+			<origins>
+				<item>Source/Editor/Panels/Catalog/CatalogTableEditor.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EditorConsole.AllLevelsHidden" source="All log levels are hidden. Re-enable one in the toolbar.">
