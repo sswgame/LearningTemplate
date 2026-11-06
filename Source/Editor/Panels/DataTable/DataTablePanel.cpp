@@ -175,8 +175,7 @@ namespace sw::editor
                 ImGui::EndCombo();
             }
             EditorChrome::sameLineIfFits( 240.0f ); // 검색 칸 폭(아래 인자와 같다)
-            EditorWidgets::drawSearchField( "##locFilter", _localizationFilter, SW_LOCKEY( "EditorDataTable", "SearchHint" ), 240.0f, false );
-            EditorSelfTestMarks::note( "dataTable.search" );
+            EditorWidgets::drawSearchField( "##locFilter", _localizationFilter, SW_LOCKEY( "EditorDataTable", "SearchHint" ), 240.0f, false, "dataTable.search" );
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EditorDataTable", "NeedsWorkOnly" ) ) );
             (void)ImGui::Checkbox( SW_LOCKEY( "EditorDataTable", "NeedsWorkOnly" ), &_bNeedsWorkOnly );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorDataTable", "NeedsWorkOnlyTip" ) );

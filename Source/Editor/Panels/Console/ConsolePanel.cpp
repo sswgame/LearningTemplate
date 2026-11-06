@@ -404,8 +404,7 @@ namespace sw::editor
         if ( bSameLine )
             ImGui::SameLine();
         const float32 searchWidth = bSameLine ? sameLineWidth : ImGui::GetContentRegionAvail().x - trailing;
-        EditorWidgets::drawSearchField( "##log_filter", _filterBuffer, SW_LOCKEY( "EditorConsole", "FilterHint" ), MathUtil::max( searchWidth, minSearch ), false );
-        EditorSelfTestMarks::note( "console.filter" );
+        EditorWidgets::drawSearchField( "##log_filter", _filterBuffer, SW_LOCKEY( "EditorConsole", "FilterHint" ), MathUtil::max( searchWidth, minSearch ), false, "console.filter" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorConsole", "FilterTooltip" ) );
 
         ImGui::SameLine();

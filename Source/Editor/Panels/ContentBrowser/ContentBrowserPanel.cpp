@@ -762,8 +762,7 @@ namespace sw::editor
         drawAddMenu();
 
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, SW_LOCKEY( "EditorContentBrowser", "SearchHint" ), 160.0f, false );
-        EditorSelfTestMarks::note( "contentBrowser.search" );
+        EditorWidgets::drawSearchField( "##cb_search", _searchBuffer, SW_LOCKEY( "EditorContentBrowser", "SearchHint" ), 160.0f, false, "contentBrowser.search" );
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorContentBrowser", "SearchTooltip" ) );
     }
 

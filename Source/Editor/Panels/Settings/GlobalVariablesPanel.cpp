@@ -244,9 +244,7 @@ namespace sw::editor
         // 1) 상단 툴바. 검색, 모듈 그룹화, 기본값 리셋, 프리셋 메뉴가 있다
         if ( EditorChrome::beginToolbar( "##GvToolbar" ) )
         {
-            EditorWidgets::drawSearchField( "##GvSearch", _searchFilter,
-                                            SW_LOCKEY( "EditorSettings", "FilterVariablesHint" ), 200.0f, true );
-            EditorSelfTestMarks::note( "globalVariables.search" );
+            EditorWidgets::drawSearchField( "##GvSearch", _searchFilter, SW_LOCKEY( "EditorSettings", "FilterVariablesHint" ), 200.0f, true, "globalVariables.search" );
 
             EditorChrome::sameLineIfFits( EditorChrome::measureCheckbox( SW_LOCKEY( "EdLabel", "GroupByModule" ) ) );
             (void)ImGui::Checkbox( SW_LOCKEY( "EdLabel", "GroupByModule" ), &_bGroupByModule );

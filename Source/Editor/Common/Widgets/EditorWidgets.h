@@ -140,18 +140,19 @@ namespace sw::editor
         /**
          * @brief C 버퍼를 쓰는 검색 필드를 그립니다. width 가 0 이면 사용 가능한 너비, 음수면 한 줄 전체입니다.
          * @details @p pHint 가 nullptr 이면 현재 로케일의 "Search..." 를 쓴다.
+         * @param pMark 시나리오가 누를 레이블입니다. 입력 칸에 찍는다 - 부르는 쪽이 뒤에 찍으면 마지막 항목인 지우기 단추에 찍힌다.
          */
         static bool drawSearchField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint = nullptr,
-                                     float32 width = 0.0f, bool bShowClear = true );
+                                     float32 width = 0.0f, bool bShowClear = true, const utf8* pMark = nullptr );
 
         /**
          * @brief fixed_string 검색 필드 오버로드입니다.
          */
         template <uint32 N>
         static bool drawSearchField( const utf8* pID, fixed_string<N>& str, const utf8* pHint = nullptr,
-                                     float32 width = 0.0f, bool bShowClear = true )
+                                     float32 width = 0.0f, bool bShowClear = true, const utf8* pMark = nullptr )
         {
-            return drawSearchField( pID, str.data(), str.capacity(), pHint, width, bShowClear );
+            return drawSearchField( pID, str.data(), str.capacity(), pHint, width, bShowClear, pMark );
         }
 
         /**

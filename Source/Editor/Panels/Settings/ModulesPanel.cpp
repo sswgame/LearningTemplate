@@ -56,8 +56,7 @@ namespace sw::editor
             _model.reload();
         EditorWidgets::drawTooltip( SW_LOCKEY( "EditorSettings", "RefreshModules" ) );
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##ModuleFilter", _filter, SW_LOCKEY( "EditorSettings", "SearchModulesHint" ), 0.0f, false );
-        EditorSelfTestMarks::note( "modules.search" );
+        EditorWidgets::drawSearchField( "##ModuleFilter", _filter, SW_LOCKEY( "EditorSettings", "SearchModulesHint" ), 0.0f, false, "modules.search" );
         drawFilters();
         const EditorListFilter filter{ _filter.c_str() };
 

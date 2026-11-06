@@ -360,8 +360,7 @@ namespace sw::editor
         // 머티리얼은 프로퍼티가 수십 개라 이름으로 찾는 칸을 둔다(언리얼 머티리얼 인스턴스 에디터 · 유니티 머티리얼 인스펙터의 검색과 같은 자리).
         ImGui::TextUnformatted( SW_LOCKEY( "EdText", "Properties" ) );
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##materialPropFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ), 0.0f, false );
-        EditorSelfTestMarks::note( "material.propertyFilter" );
+        EditorWidgets::drawSearchField( "##materialPropFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ), 0.0f, false, "material.propertyFilter" );
 
         const EditorListFilter          filter{ _propertyFilter.c_str() };
         Material&                       material = _model.editMaterial();

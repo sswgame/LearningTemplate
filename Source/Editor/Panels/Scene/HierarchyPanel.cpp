@@ -644,9 +644,7 @@ namespace sw::editor
             }
 
             ImGui::SameLine();
-            EditorWidgets::drawSearchField( "##HierarchyFilter", _filterBuffer,
-                                            SW_LOCKEY( "EditorScene", "HierarchySearchHint" ), 0.0f, false );
-            EditorSelfTestMarks::note( "hierarchy.filter" );
+            EditorWidgets::drawSearchField( "##HierarchyFilter", _filterBuffer, SW_LOCKEY( "EditorScene", "HierarchySearchHint" ), 0.0f, false, "hierarchy.filter" );
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorScene", "HierarchySearch" ) );
         }
         EditorChrome::endToolbar();

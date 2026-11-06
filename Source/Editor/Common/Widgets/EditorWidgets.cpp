@@ -551,7 +551,7 @@ namespace sw::editor
     }
 
     bool EditorWidgets::drawSearchField( const utf8* pID, utf8* pBuffer, uint32 bufferBytes, const utf8* pHint, float32 width,
-                                         bool bShowClear )
+                                         bool bShowClear, const utf8* pMark )
     {
         if ( pBuffer == nullptr || bufferBytes == 0 )
             return false;
@@ -571,6 +571,8 @@ namespace sw::editor
 
         const utf8* pHintText = ( pHint != nullptr ) ? pHint : SW_LOCKEY( "EdCommon", "SearchHint" );
         bool        bChanged  = ImGui::InputTextWithHint( "##search", pHintText, pBuffer, bufferBytes );
+        if ( pMark != nullptr )
+            EditorSelfTestMarks::note( pMark );
         if ( bShowClear )
         {
             ImGui::SameLine();

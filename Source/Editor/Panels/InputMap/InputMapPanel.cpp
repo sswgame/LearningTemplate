@@ -238,8 +238,7 @@ namespace sw::editor
     void InputMapPanel::drawActionList()
     {
         ImGui::SeparatorText( SW_LOCKEY( "EdSection", "Actions" ) );
-        EditorWidgets::drawSearchField( "##inputMapActionFilter", _arrActionFilter, constant::buffer::kMax64, SW_LOCKEY( "EditorInputMap", "FilterActionsHint" ) );
-        EditorSelfTestMarks::note( "inputMap.filter" );
+        EditorWidgets::drawSearchField( "##inputMapActionFilter", _arrActionFilter, constant::buffer::kMax64, SW_LOCKEY( "EditorInputMap", "FilterActionsHint" ), 0.0f, true, "inputMap.filter" );
         const EditorListFilter filter{ string_view( _arrActionFilter ) };
         const InputMap&        inputMap = _document.getInputMap();
         _document.collectVisibleActions( filter, _listVisibleAction );

@@ -525,8 +525,7 @@ namespace sw::editor
             EditorWidgets::drawTooltip( SW_LOCKEY( "EditorProfiler", "UnloadTrace" ) );
         }
         ImGui::SameLine();
-        EditorWidgets::drawSearchField( "##traceSearch", _timeline.editTraceSearch(), constant::buffer::kMax128, SW_LOCKEY( "EditorProfiler", "FindScopeHint" ), 140.0f * EditorThemeUtil::getDPIScale(), false );
-        EditorSelfTestMarks::note( "profiler.timeline.traceSearch" );
+        EditorWidgets::drawSearchField( "##traceSearch", _timeline.editTraceSearch(), constant::buffer::kMax128, SW_LOCKEY( "EditorProfiler", "FindScopeHint" ), 140.0f * EditorThemeUtil::getDPIScale(), false, "profiler.timeline.traceSearch" );
         if ( _timeline.getTraceStatus().empty() == false )
             ImGui::TextDisabled( "%s", _timeline.getTraceStatus().c_str() );
     }

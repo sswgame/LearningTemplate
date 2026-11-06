@@ -263,8 +263,7 @@ namespace sw::editor
     {
         if ( pMarkKey != nullptr )
         {
-            EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ), 0.0f, false );
-            EditorSelfTestMarks::note( pMarkKey );
+            EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ), 0.0f, false, pMarkKey );
             return;
         }
         EditorWidgets::drawSearchField( "##propFilter", _propertyFilter, SW_LOCKEY( "EditorInspector", "SearchPropertiesHint" ) );
