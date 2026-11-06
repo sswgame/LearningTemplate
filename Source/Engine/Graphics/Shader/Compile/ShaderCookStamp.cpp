@@ -659,6 +659,9 @@ namespace sw
             return false;
         for ( const string& token : listPriority )
         {
+            // 에디터 셰이더(`imgui.hlsl`)는 쿠킹하지 않는다 — 에디터가 실행할 때 컴파일하고, 에디터가 없는 배포 구성은 쓰지 않는다.
+            if ( token == constant::path::kEditorPack )
+                continue;
             if ( token != constant::path::kGamePack )
             {
                 if ( VectorUtil::contains( outListDomain, token ) == false )
