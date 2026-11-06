@@ -21,7 +21,8 @@ namespace sw::editor
         static constexpr const utf8* kPlatformName = "imgui_impl_x11";
 
         ImGuiX11PlatformBackend()
-            : _pDisplay{ nullptr }
+            : _pWindow{ nullptr }
+            , _pDisplay{ nullptr }
             , _mainWindow{ 0 }
             , _wmDelete{ 0 }
             , _timer{}
@@ -47,6 +48,7 @@ namespace sw::editor
             Display* pDisplay = static_cast<Display*>( x11Surface._pDisplay );
             Window   window   = static_cast<Window>( x11Surface._window );
 
+            _pWindow    = pWindow;
             _pDisplay   = pDisplay;
             _mainWindow = window;
             _wmDelete   = XInternAtom( pDisplay, "WM_DELETE_WINDOW", 0 );
@@ -98,6 +100,7 @@ namespace sw::editor
                 IM_DELETE( static_cast<ViewportData*>( pMainViewport->PlatformUserData ) );
                 pMainViewport->PlatformUserData = nullptr;
             }
+            _pWindow                               = nullptr;
             _pDisplay                              = nullptr;
             _mainWindow                            = 0;
             _wmDelete                              = 0;
@@ -227,6 +230,9 @@ namespace sw::editor
             }
             return false;
         }
+
+        /** @brief 데스크톱의 `Xft.dpi` / 96 입니다(`X11Window::getContentScale`). 리소스가 없는 화면(Xvfb · 설정하지 않은 데스크톱)은 1 이 맞는 값이다 - GLFW · Godot 도 같은 출처를 읽는다. */
+        float32 getDPIScale() const override { return _pWindow->getContentScale(); }
 
     private:
         struct ViewportData
@@ -470,17 +476,8 @@ namespace sw::editor
                 monitor.MainSize = ImVec2( static_cast<float32>( DisplayWidth( _pDisplay, screen ) ), static_cast<float32>( DisplayHeight( _pDisplay, screen ) ) );
                 monitor.WorkPos  = monitor.MainPos;
                 monitor.WorkSize = monitor.MainSize;
-                monitor.DpiScale = 1.0f;
-
-                const int32 widthMm = DisplayWidthMM( _pDisplay, screen );
-                if ( widthMm > 0 && monitor.MainSize.x > 0.0f )
-                {
-                    const float32 dpi = ( monitor.MainSize.x * 25.4f ) / static_cast<float32>( widthMm );
-                    if ( dpi > 0.0f )
-                        monitor.DpiScale = dpi / 96.0f;
-                }
-                if ( monitor.DpiScale <= 0.0f )
-                    continue;
+                // 물리 크기로 잰 밀도(DisplayWidthMM)는 배율이 아니다 - 모니터 값대로 1.04 · 1.13 이 나와 ImGui 가 글자와 테마를 그만큼 키웠다. Xft.dpi 는 데스크톱에 하나라 `Platform_GetWindowDpiScale` 은 두지 않는다.
+                monitor.DpiScale = getDPIScale();
 
                 monitor.PlatformHandle = reinterpret_cast<void*>( static_cast<uintptr_t>( screen ) );
                 platformIO.Monitors.push_back( monitor );
@@ -490,6 +487,7 @@ namespace sw::editor
         }
 
     private:
+        IWindow*  _pWindow;
         Display*  _pDisplay;
         Window    _mainWindow;
         Atom      _wmDelete;
