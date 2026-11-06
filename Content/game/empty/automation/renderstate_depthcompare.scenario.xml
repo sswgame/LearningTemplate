@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  깊이 비교 — 가림막 뒤 상자의 depthCompare 가 Always 면 비쳐 보이고, 기본(LessEqual)이면 가려진다.
+  같은 실행의 두 장을 견주는 음성 대조다(`ExpectImagesDiffer`) — 칸이 그림을 바꾸지 않으면 진다. 바뀐 그림은 골든으로도 지킨다.
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.renderstate_depthcompare" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/renderstate_base.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="0"/>
+	<Launch variable="gv_postQuality" value="0"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="renderstate_depthcompare_off.ppm"/>
+	<LoadScene path="game/empty/maps/renderstate_depthcompare.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="renderstate_depthcompare_on.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="renderstate_depthcompare_off.ppm" second="renderstate_depthcompare_on.ppm" region="0.55,0,0.8,1" minDiffering="0.02"/>
+	<ExpectImage file="renderstate_depthcompare_on.ppm" golden="depthcompare"/>
+	<Pass/>
+</Scenario>

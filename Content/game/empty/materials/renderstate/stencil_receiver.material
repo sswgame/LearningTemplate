@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MaterialDesc formatVersion="0" name="stencil_receiver" parent="game/empty/materials/renderstate/plain_blue.material" enableStencil="true" stencilRef="1" stencilFrontCompare="Equal" stencilBackCompare="Equal" renderQueue="10">
+</MaterialDesc>

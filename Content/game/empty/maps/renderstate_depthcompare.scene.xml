@@ -1,0 +1,78 @@
+<Scene formatVersion="2" name="RenderState_depthcompare">
+	<!-- 시나리오 automation/renderstate_* 의 무대 — 다섯 자리가 왼쪽부터 양면 · 가산 · 스텐실 · 깊이 비교 · 쓰기 마스크를 하나씩 보인다. renderstate_base 와 나머지 맵은 한 자리의 머티리얼만 다르다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,6,-9" _localRotation="0.55,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="TwoSided">
+			<GameObject _schemaVersion="0" _name="TwoSided" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-4,1,0" _localRotation="3.14159,0,0" _localScale="1.5,1,1.5" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="1.5" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Glass">
+			<GameObject _schemaVersion="0" _name="Glass" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="-2,0.75,0" _localRotation="0,0.4,0" _localScale="1.3,1.3,1.3" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/glass.material" _boundsRadius="1.2" _blendMode="Transparent" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="StencilMask">
+			<GameObject _schemaVersion="0" _name="StencilMask" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0.9,-0.5" _localRotation="0,0,0" _localScale="0.6,0.6,0.6" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/stencil_mask.material" _boundsRadius="0.6" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="StencilReceiver">
+			<GameObject _schemaVersion="0" _name="StencilReceiver" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0.75,0.8" _localRotation="0,0,0" _localScale="1.6,1.5,1" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/stencil_receiver_always.material" _boundsRadius="1.3" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="8" name="Occluder">
+			<GameObject _schemaVersion="0" _name="Occluder" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2,0.8,-0.8" _localRotation="0,0,0" _localScale="1.4,1.6,0.3" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="1.2" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="9" name="Behind">
+			<GameObject _schemaVersion="0" _name="Behind" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="2,0.6,0.6" _localRotation="0,0,0" _localScale="0.9,1.2,0.9" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/depthalways_green.material" _boundsRadius="0.9" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="10" name="WriteMask">
+			<GameObject _schemaVersion="0" _name="WriteMask" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="4,0.75,0" _localRotation="0,0.4,0" _localScale="1.3,1.3,1.3" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_white.material" _boundsRadius="1.2" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

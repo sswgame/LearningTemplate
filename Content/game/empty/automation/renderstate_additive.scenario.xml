@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  가산 — 유리 상자의 blendPreset 이 Additive 면 땅이 밝아지고, 패스의 곧은 알파면 유리색이 섞인다.
+  같은 실행의 두 장을 견주는 음성 대조다(`ExpectImagesDiffer`) — 칸이 그림을 바꾸지 않으면 진다. 바뀐 그림은 골든으로도 지킨다.
+  실행: ctest -R Scenario.empty
+-->
+<Scenario name="game.empty.renderstate_additive" fixedDelta="0.0166667" timeoutFrames="900" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Launch variable="gv_firstScene" value="game/empty/maps/renderstate_base.scene.xml"/>
+	<Launch variable="gv_deferredShading" value="0"/>
+	<Launch variable="gv_postQuality" value="0"/>
+	<Launch variable="gv_renderScale" value="1"/>
+	<Launch variable="gv_viewDistanceScale" value="1"/>
+	<Wait frames="20"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<Wait frames="10"/>
+	<Screenshot file="renderstate_additive_off.ppm"/>
+	<LoadScene path="game/empty/maps/renderstate_additive.scene.xml" timeoutFrames="600"/>
+	<WaitUntil watch="Scene.Transitioning" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
+	<WaitUntil watch="Scene.ObjectCount" atLeast="1" timeoutFrames="60"/>
+	<Wait frames="20"/>
+	<Screenshot file="renderstate_additive_on.ppm"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="renderstate_additive_off.ppm" second="renderstate_additive_on.ppm" region="0.2,0,0.45,1" minDiffering="0.02"/>
+	<ExpectImage file="renderstate_additive_on.ppm" golden="additive"/>
+	<Pass/>
+</Scenario>

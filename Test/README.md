@@ -98,6 +98,7 @@ SW_TEST_CASE( LogTest, ConsoleReachesStdout, ._timeoutSeconds = 90 )            
 	<Tap slot="Key.F3"/>
 	<Screenshot file="hud.ppm"/>
 	<ExpectImage file="hud.ppm" golden="hud" region="0,0,0.3,0.45"/>                    <!-- 백엔드별 골든과 비교 -->
+	<ExpectImagesDiffer first="off.ppm" second="on.ppm" region="0,0,1,1" minDiffering="0.02"/> <!-- 같은 실행의 두 장이 정말 다른지(음성 대조, 골든 없음) -->
 	<Pass/>
 </Scenario>
 ```
