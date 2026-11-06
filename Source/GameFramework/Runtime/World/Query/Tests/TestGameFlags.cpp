@@ -3,8 +3,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
 

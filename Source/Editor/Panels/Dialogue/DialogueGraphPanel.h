@@ -8,7 +8,7 @@
 #include "Editor/Panels/Inspector/EditorPropertyGrid.h"
 
 #include "Engine/Dialogue/DialogueGraphAsset.h"
-#include "Engine/Vocabulary/ActionRegistry.h"
+#include "Engine/Gameplay/ActionRegistry.h"
 
 namespace sw::editor
 {

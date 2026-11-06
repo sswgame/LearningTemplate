@@ -5,15 +5,15 @@
 #include "Core/Container/StringUtil.h"
 
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Gameplay/ActionRegistry.h"
+#include "Engine/Gameplay/BehaviorTreeSchema.h"
+#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Module/ModuleSharedAssetCache.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
-#include "Engine/Vocabulary/ActionRegistry.h"
-#include "Engine/Vocabulary/BehaviorTreeSchema.h"
-#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeNodeFields.h"
 

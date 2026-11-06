@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Vocabulary/InstancedStruct.h"
+#include "Engine/Gameplay/InstancedStruct.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/formatString.h"

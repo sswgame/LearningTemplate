@@ -11,8 +11,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Gameplay/InstancedStruct.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Vocabulary/InstancedStruct.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/BehaviorTree.h"

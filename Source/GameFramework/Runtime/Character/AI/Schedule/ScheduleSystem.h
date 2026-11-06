@@ -24,9 +24,9 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Gameplay/GameplayContext.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Vocabulary/GameplayContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/AI/Schedule/ScheduleLocator.h"

@@ -5,8 +5,8 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/World/Query/GameConditions.h"

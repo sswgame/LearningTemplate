@@ -4,12 +4,12 @@
 
 #include "Core/Container/VectorUtil.h"
 
+#include "Engine/Gameplay/ActionRegistry.h"
+#include "Engine/Gameplay/BehaviorTreeSchema.h"
+#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLNameCheck.h"
-#include "Engine/Vocabulary/ActionRegistry.h"
-#include "Engine/Vocabulary/BehaviorTreeSchema.h"
-#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 

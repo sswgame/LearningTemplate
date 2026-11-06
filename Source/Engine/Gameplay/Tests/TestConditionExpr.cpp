@@ -2,8 +2,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
-#include "Engine/Vocabulary/ActionRegistry.h"
-#include "Engine/Vocabulary/ConditionExpr.h"
+#include "Engine/Gameplay/ActionRegistry.h"
+#include "Engine/Gameplay/ConditionExpr.h"
 
 using namespace sw;
 

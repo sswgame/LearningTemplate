@@ -14,9 +14,9 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Gameplay/ActionRegistry.h"
+#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Vocabulary/ActionRegistry.h"
-#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

@@ -9,9 +9,9 @@
 #include "Core/String/TagID.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

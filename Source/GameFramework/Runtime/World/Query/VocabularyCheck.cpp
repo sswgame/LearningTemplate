@@ -13,7 +13,7 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Console/DevCommandRegistry.h"
 #include "Engine/Content/AssetID.h"
-#include "Engine/Vocabulary/GameplayContext.h"
+#include "Engine/Gameplay/GameplayContext.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/Blackboard.h"

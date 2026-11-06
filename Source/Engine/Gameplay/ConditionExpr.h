@@ -21,8 +21,8 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Vocabulary/GameplayContext.h"
-#include "Engine/Vocabulary/InstancedStruct.h"
+#include "Engine/Gameplay/GameplayContext.h"
+#include "Engine/Gameplay/InstancedStruct.h"
 
 namespace sw
 {

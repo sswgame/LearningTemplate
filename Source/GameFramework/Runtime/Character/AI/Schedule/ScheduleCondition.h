@@ -14,8 +14,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/World/Environment/WorldClock.h"

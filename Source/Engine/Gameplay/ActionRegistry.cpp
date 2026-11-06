@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Vocabulary/ActionRegistry.h"
+#include "Engine/Gameplay/ActionRegistry.h"
 
 #include "Core/Concurrency/mutex.h"
 #include "Core/Container/StringUtil.h"

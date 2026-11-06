@@ -7,10 +7,10 @@
 #include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Dialogue/DialogueGraphAsset.h"
+#include "Engine/Gameplay/ActionRegistry.h"
+#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Vocabulary/ActionRegistry.h"
-#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

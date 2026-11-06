@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "Engine/Vocabulary/BehaviorTreeSchema.h"
+#include "Engine/Gameplay/BehaviorTreeSchema.h"
 
 namespace sw
 {

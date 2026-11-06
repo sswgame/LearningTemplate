@@ -10,8 +10,8 @@
 #include "Core/String/FourCcUtil.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Gameplay/GameplayContext.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Vocabulary/GameplayContext.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 

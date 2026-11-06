@@ -3,8 +3,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Gameplay/ActionRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/Vocabulary/ActionRegistry.h"
 
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSCommanderAI.h"

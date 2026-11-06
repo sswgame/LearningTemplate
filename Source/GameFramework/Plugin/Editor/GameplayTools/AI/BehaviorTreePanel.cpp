@@ -20,11 +20,11 @@
 #include "Editor/SelfTest/EditorSelfTestInput.h"
 
 #include "Engine/Content/AssetPaths.h"
+#include "Engine/Gameplay/ActionRegistry.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Reflection/ReflectionTypes.h"
-#include "Engine/Vocabulary/ActionRegistry.h"
 
 #include "GameFramework/Runtime/Character/AI/BehaviorTreeAsset.h"
 #include "GameFramework/Runtime/Character/AI/IBehaviorTreeDebugSource.h"

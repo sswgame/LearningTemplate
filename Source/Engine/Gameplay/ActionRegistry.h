@@ -12,8 +12,8 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Memory/Memory.h"
 
-#include "Engine/Vocabulary/GameplayContext.h"
-#include "Engine/Vocabulary/InstancedStruct.h"
+#include "Engine/Gameplay/GameplayContext.h"
+#include "Engine/Gameplay/InstancedStruct.h"
 
 namespace sw
 {

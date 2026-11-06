@@ -15,8 +15,8 @@
 #include "Core/Time/Countdown.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
+#include "Engine/Gameplay/ConditionExpr.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Vocabulary/ConditionExpr.h"
 
 #include "GameFramework/GameFrameworkExports.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
