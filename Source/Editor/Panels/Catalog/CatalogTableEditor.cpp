@@ -26,7 +26,6 @@ namespace sw::editor
         struct CatalogTableEditorInternal
         {
             static constexpr float32 kColumnWidth            = 130.0f; ///< 96 DPI 기준입니다
-            static constexpr float32 kActionColumnWidth      = 150.0f; ///< Duplicate · Remove 두 단추
             static constexpr float32 kCurveKeyFieldWidth     = 110.0f; ///< 곡선 키 줄의 칸 폭(96 DPI)
             static constexpr float32 kChildColumnWidth       = 120.0f; ///< 수와 Children · Curves 단추
             static constexpr float32 kChildActionColumnWidth = 210.0f; ///< 자식 창의 Up · Down · Reset · Remove 단추
@@ -138,7 +137,11 @@ namespace sw::editor
         if ( ImGui::BeginTable( "##CatalogRows", columnCount, kTableFlags, outerSize ) )
         {
             // 동작 칸은 맨 앞에 고정한다 - 맨 뒤면 칸이 많은 표에서 가로 스크롤 밖으로 밀려 행을 복사 · 삭제하지 못한다.
-            ImGui::TableSetupColumn( "##actions", ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kActionColumnWidth * dpiScale );
+            // 폭은 줄 동작 단추를 모두 한 줄에 담는 값이다 - 고정 폭이면 글꼴 · 번역에 따라 뒤 단추가 칸 밖으로 잘린다.
+            const float32 spacing     = ImGui::GetStyle().ItemSpacing.x;
+            const float32 actionWidth = EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "Duplicate" ) ) + EditorChrome::measureSmallButton( SW_LOCKEY( "EdVerb", "Remove" ) ) +
+                                        EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "CreateVariant" ) ) + EditorChrome::measureSmallButton( SW_LOCKEY( "EditorCatalog", "Children" ) ) + spacing * 3.0f;
+            ImGui::TableSetupColumn( "##actions", ImGuiTableColumnFlags_WidthFixed, actionWidth );
             for ( const string& column : group._listColumn )
             {
                 ImGui::TableSetupColumn( column.c_str(), ImGuiTableColumnFlags_WidthFixed, CatalogTableEditorInternal::kColumnWidth * dpiScale );
@@ -188,6 +191,21 @@ namespace sw::editor
             EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EdLabel", "CreateVariant" ) ) );
             if ( ImGui::SmallButton( SW_LOCKEY( "EdLabel", "CreateVariant" ) ) )
                 _pending = CatalogTableEdit{ CatalogTableEdit::Kind::CreateVariant, elementIndex, string(), string() };
+            // 자식 창 버튼은 줄 동작과 함께 고정 열에 둔다 - 끝 열이면 칸이 많은 표에서 가로로 스크롤해야 보인다.
+            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorCatalog", "Children" ) ) );
+            if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "Children" ) ) )
+            {
+                _childOwner      = elementIndex;
+                _bOpenChildPopup = SW_TRUE;
+            }
+            if ( rowPosition == 0 && bFirstGroup )
+                EditorSelfTestMarks::note( "catalog.children.open" );
+            // 시나리오가 "물려받는 첫 행" 을 고를 수 있게 한다.
+            if ( inoutbFirstVariantButton && document.getParsed().getElement( elementIndex ).findAttribute( DataInheritance::kBaseAttribute ) >= 0 )
+            {
+                EditorSelfTestMarks::note( "catalog.children.open.variant" );
+                inoutbFirstVariantButton = false;
+            }
         }
 
         for ( size_t columnIndex = 0; columnIndex < group._listColumn.size(); ++columnIndex )
@@ -203,25 +221,7 @@ namespace sw::editor
             ImGui::TextDisabled( "-" );
         else
             ImGui::Text( "%d", static_cast<int32>( element._listChild.size() ) );
-        const bool bListedRow = document.canCreateVariant( elementIndex );
-        const bool bHovered   = bListedRow == false && element._listChild.empty() == false && ImGui::IsItemHovered();
-        if ( bListedRow )
-        {
-            EditorChrome::sameLineIfFits( EditorChrome::measureSmallButton( SW_LOCKEY( "EditorCatalog", "Children" ) ) );
-            if ( ImGui::SmallButton( SW_LOCKEY( "EditorCatalog", "Children" ) ) )
-            {
-                _childOwner      = elementIndex;
-                _bOpenChildPopup = SW_TRUE;
-            }
-            if ( rowPosition == 0 && bFirstGroup )
-                EditorSelfTestMarks::note( "catalog.children.open" );
-            // 시나리오가 "물려받는 첫 행" 을 고를 수 있게 한다.
-            if ( inoutbFirstVariantButton && element.findAttribute( DataInheritance::kBaseAttribute ) >= 0 )
-            {
-                EditorSelfTestMarks::note( "catalog.children.open.variant" );
-                inoutbFirstVariantButton = false;
-            }
-        }
+        const bool bHovered = document.canCreateVariant( elementIndex ) == false && element._listChild.empty() == false && ImGui::IsItemHovered();
         if ( element._listChild.empty() == false )
         {
             CatalogCurveModel::collectCurves( document.getParsed(), elementIndex, _listProbeCurve );

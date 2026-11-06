@@ -95,6 +95,8 @@ namespace sw
         static SharedAssetHandle<AssetType> request( string_view path );
         /** @brief 경로의 에셋을 나눠 받습니다. `request` 와 같은 로드 작업을 기다립니다(새 로드는 이 자리에서 읽는다). 읽을 수 없으면 nullptr 입니다. 워커에서 불러도 됩니다. */
         static shared_ptr<const AssetType> acquire( string_view path );
+        /** @brief 누가 쥐고 있는 그 경로의 에셋입니다. 아무도 쥐지 않았으면 읽지 않고 nullptr 입니다(감시 · 진단이 쥔 쪽이 보는 값을 볼 때). */
+        static shared_ptr<const AssetType> findHeld( string_view path );
         /**
          * @brief 사용 중이면 다시 읽고 다시 읽은 횟수를 올립니다(틱 밖, 게임 스레드). 읽지 못하면 옛 내용 그대로이고 false 입니다.
          * @details 제자리로 바꾸는지 표에서 떼어 내는지는 종류의 `kReloadMode` 가 정합니다.

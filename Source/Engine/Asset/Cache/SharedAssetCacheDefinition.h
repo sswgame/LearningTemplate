@@ -48,6 +48,12 @@ namespace sw
     }
 
     template <typename AssetType>
+    shared_ptr<const AssetType> SharedAssetCache<AssetType>::findHeld( string_view path )
+    {
+        return getTable().findLive( path );
+    }
+
+    template <typename AssetType>
     SharedAssetHandle<AssetType> SharedAssetCache<AssetType>::requestWith( string_view path, AssetLoadStart start )
     {
         bool                                            bStartLoad = false;

@@ -87,6 +87,8 @@ SW_TEST_CASE( SharedAssetCacheTest, ModuleCacheSharesAndReloadReachesHolders )
         SW_REQUIRE_TRUE( held != nullptr );
         SW_EXPECT_TRUE( held.get() == again.get() );
         SW_EXPECT_TRUE( pCache->isCached( id ) );
+        SW_EXPECT_TRUE( Util::Cache::findHeld( id ).get() == held.get() ); // 쥔 것을 읽지 않고 돌려준다
+        SW_EXPECT_NULL( Util::Cache::findHeld( test::ScopedScratchDomain::makeID( "nobody.txt" ).str() ).get() );
 
         // 파일을 고치고 핫 리로드가 부르는 길(레지스트리의 리로드 함수)로 다시 읽는다.
         SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "table.txt" ), "second" ) );

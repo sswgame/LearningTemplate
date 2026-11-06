@@ -15,6 +15,7 @@
 		<EditorPanelText _title="Clip Preview" _label="Clip Preview" />
 		<EditorPanelText _title="Command Palette" _label="Command Palette" />
 		<EditorPanelText _title="Content Browser" _label="Content Browser" />
+		<EditorPanelText _title="Data Layers" _label="Data Layers" />
 		<EditorPanelText _title="Data Table Editor" _label="Data Table Editor" />
 		<EditorPanelText _title="Dialogue Graph" _label="Dialogue Graph" />
 		<EditorPanelText _title="GM Tool" _label="GM Tool" />
@@ -29,6 +30,7 @@
 		<EditorPanelText _title="Keyboard Shortcuts" _label="Keyboard Shortcuts" />
 		<EditorPanelText _title="Map Check" _label="Map Check" />
 		<EditorPanelText _title="Material" _label="Material" />
+		<EditorPanelText _title="Material Graph" _label="Material Graph" />
 		<EditorPanelText _title="Mesh Modifiers" _label="Mesh Modifiers" />
 		<EditorPanelText _title="Mesh Preview" _label="Mesh Preview" />
 		<EditorPanelText _title="Modules" _label="Modules" />
