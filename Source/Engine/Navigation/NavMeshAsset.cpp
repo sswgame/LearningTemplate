@@ -28,7 +28,7 @@ namespace sw
             /** @brief 타일 베이크 한 덩어리입니다. 워커는 자기 구간의 슬롯만 씁니다. */
             struct BakeJob
             {
-                const INavMesh*                _pNavMesh{ nullptr };
+                const INavMeshTileStore*       _pNavMesh{ nullptr };
                 const NavMeshGeometry*         _pGeometry{ nullptr };
                 const vector<NavConvexVolume>* _pExtraVolume{ nullptr };
                 NavTileData*                   _pTile{ nullptr };
@@ -188,7 +188,7 @@ namespace sw
 
 namespace sw
 {
-    bool NavMeshAsset::bakeAllTiles( INavMesh& navMesh, NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume, NavMeshBakeStats* pOutStats )
+    bool NavMeshAsset::bakeAllTiles( INavMeshTileStore& navMesh, NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume, NavMeshBakeStats* pOutStats )
     {
         SW_MEMORY_SCOPE( Navigation );
         const Stopwatch    stopwatch;
@@ -237,7 +237,7 @@ namespace sw
         return failedCount == 0;
     }
 
-    bool NavMeshAsset::installTiles( INavMesh& navMesh, const vector<NavTileData>& listTile )
+    bool NavMeshAsset::installTiles( INavMeshTileStore& navMesh, const vector<NavTileData>& listTile )
     {
         bool bAll = true;
         for ( const NavTileData& tile : listTile )

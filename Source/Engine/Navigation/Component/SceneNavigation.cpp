@@ -432,7 +432,7 @@ namespace sw
         return pRuntime != nullptr ? pRuntime : createRuntime( agentType, arrival );
     }
 
-    INavMesh* SceneNavigation::ensureNavMesh( const hashed_string& agentType )
+    const INavMeshTileStore* SceneNavigation::ensureNavMesh( const hashed_string& agentType )
     {
         // 도구 · 테스트 · 쿠킹이 "지금" 마련하는 길이다 — 결과를 그 자리에서 쓰므로 메시를 그 자리에서 읽는다(갱신은 `Defer` 로 기다리지 않는다).
         NavMeshRuntime* pRuntime = findOrCreateRuntime( agentType, NavMeshArrival::Wait );
@@ -477,10 +477,10 @@ namespace sw
 
     bool SceneNavigation::makeCookedEntry( const hashed_string& agentType, NavMeshAssetEntry& outEntry )
     {
-        outEntry                            = NavMeshAssetEntry{};
-        const INavMesh* pNavMesh            = ensureNavMesh( agentType );
-        NavMeshRuntime* pRuntime            = findRuntime( agentType );
-        const bool      bRuntimeUnavailable = pNavMesh == nullptr || pRuntime == nullptr || pRuntime->_pGeometry == nullptr;
+        outEntry                                     = NavMeshAssetEntry{};
+        const INavMeshTileStore* pNavMesh            = ensureNavMesh( agentType );
+        NavMeshRuntime*          pRuntime            = findRuntime( agentType );
+        const bool               bRuntimeUnavailable = pNavMesh == nullptr || pRuntime == nullptr || pRuntime->_pGeometry == nullptr;
         if ( bRuntimeUnavailable )
             return false;
         outEntry._agentType    = pRuntime->_agentType;
@@ -491,7 +491,7 @@ namespace sw
         return true;
     }
 
-    const INavMesh* SceneNavigation::findNavMesh( const hashed_string& agentType ) const
+    const INavMeshTileStore* SceneNavigation::findNavMesh( const hashed_string& agentType ) const
     {
         const NavMeshRuntime* pRuntime = findRuntime( agentType );
         return pRuntime != nullptr ? pRuntime->_pNavMesh.get() : nullptr;

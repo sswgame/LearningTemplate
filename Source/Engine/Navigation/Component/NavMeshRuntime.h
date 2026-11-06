@@ -36,7 +36,7 @@ namespace sw
     /** @brief 타일 하나를 워커에서 다시 베이크하는 일입니다. 입력은 공유 사본이라 그 사이 게임 스레드가 새 입력을 만들어도 이 일은 옛 것을 끝까지 읽는다. */
     struct NavTileBakeJob
     {
-        const INavMesh*                           _pNavMesh{ nullptr };
+        const INavMeshTileStore*                  _pNavMesh{ nullptr }; ///< 베이크 워커는 타일 쪽만 본다 — 교체는 const 가 아니라 부를 수 없다
         shared_ptr<const NavMeshGeometry>         _pGeometry;
         shared_ptr<const vector<NavConvexVolume>> _pVolume;
         NavTileData                               _result;

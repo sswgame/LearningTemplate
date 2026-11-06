@@ -20,7 +20,7 @@
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
-#include "Engine/Navigation/INavMesh.h"
+#include "Engine/Navigation/INavMeshTileStore.h"
 
 namespace sw
 {
@@ -52,10 +52,10 @@ namespace sw
          * @brief 타일 격자의 모든 타일을 워커로 나눠 베이크하고(`engine::runParallel`) 끼웁니다. @p geometry 의 색인은 여기서 짓습니다.
          * @return 실패한 타일이 하나라도 있으면 false 입니다(나머지 타일은 끼운다).
          */
-        static bool bakeAllTiles( INavMesh& navMesh, NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume = nullptr,
+        static bool bakeAllTiles( INavMeshTileStore& navMesh, NavMeshGeometry& geometry, const vector<NavConvexVolume>* pExtraVolume = nullptr,
                                   NavMeshBakeStats* pOutStats = nullptr );
         /** @brief 쿠킹본의 항목을 끼웁니다(격자는 먼저 `initialize` 해 둔다). 하나라도 거절되면 false 입니다. */
-        static bool installTiles( INavMesh& navMesh, const vector<NavTileData>& listTile );
+        static bool installTiles( INavMeshTileStore& navMesh, const vector<NavTileData>& listTile );
         /** @brief 베이크 경계입니다. 입력 경계를 그대로 씁니다(비었으면 원점의 작은 상자입니다). */
         static AABB computeBakeBounds( const NavMeshGeometry& geometry );
 

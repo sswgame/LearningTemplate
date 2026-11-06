@@ -46,7 +46,7 @@ namespace sw
     class GameObject;
     class GameObjectManager;
     class INavCrowd;
-    class INavMesh;
+    class INavMeshTileStore;
     class IPhysicsDebugRenderer;
     class NavMeshAgentComponent;
     class NavMeshGeometry;
@@ -157,7 +157,7 @@ namespace sw
          * @brief 에이전트 종류의 내비메시를 지금 마련합니다(쿠킹본 또는 베이크). 게임 스레드에서만 부릅니다. 모르는 종류 · 기하 없음이면 nullptr 입니다.
          * @details 갱신이 플레이 시작에 부르는 것과 같습니다 — 테스트 · 도구가 갱신을 기다리지 않을 때 씁니다.
          */
-        INavMesh* ensureNavMesh( const hashed_string& agentType );
+        const INavMeshTileStore* ensureNavMesh( const hashed_string& agentType );
         /**
          * @brief 마련한 내비메시를 모두 버리고, 표면이 맡은 에이전트 종류(이미 마련했던 종류 포함)를 지금 다시 베이크합니다. 쿠킹본은 쓰지 않습니다. 게임 스레드에서만 부릅니다.
          * @details 편집기의 베이크 버튼(`navigation.bake`)이 레벨을 고친 뒤 부르는 함수입니다 — 플레이 전에도 됩니다. 군중에 있던 에이전트는 다음 갱신에 다시 들어갑니다.
@@ -168,7 +168,7 @@ namespace sw
         /** @brief 지금 마련한 에이전트 종류를 @p outListAgentType 에 채웁니다(편집기 보기 목록). */
         void collectBakedAgentTypes( vector<hashed_string>& outListAgentType ) const;
         /** @brief 이미 마련한 내비메시입니다. 없으면 nullptr 입니다. */
-        const INavMesh* findNavMesh( const hashed_string& agentType ) const;
+        const INavMeshTileStore* findNavMesh( const hashed_string& agentType ) const;
         /** @brief 이미 마련한 군중입니다. 없으면 nullptr 입니다. */
         INavCrowd* findCrowd( const hashed_string& agentType ) const;
         /** @brief 마지막 전체 베이크(또는 쿠킹본 읽기)의 숫자입니다. */
