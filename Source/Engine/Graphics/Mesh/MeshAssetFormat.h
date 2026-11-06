@@ -18,20 +18,20 @@ namespace sw
 {
     /**
      * @struct MeshAssetData
-     * @brief `.mesh` 하나의 내용입니다. 고유 정점과 인덱스(삼각형마다 셋), 스킨드 메시면 정점별 스킨 가중치와 스켈레톤 본 수를 담습니다.
+     * @brief `.mesh` 하나의 내용입니다. 고유 정점과 인덱스(삼각형마다 셋), 스킨드 메시면 정점별 스킨 가중치와 역 바인드를 담습니다.
      */
     struct MeshAssetData
     {
         vector<RHIVertex>       _listVertex;
-        vector<uint32>          _listIndex;          ///< 삼각형마다 정점 번호 셋(`Mesh::getIndices`). 비면 쓰기 · 읽기가 거절합니다
-        vector<MeshSkinVertex>  _listSkinVertex;     ///< 비었거나 `_listVertex` 와 같은 길이입니다.
-        vector<MeshMorphTarget> _listMorphTarget;    ///< 모프 타깃(블렌드 셰이프). 없으면 비어 있습니다
-        vector<MeshSection>     _listSection;        ///< 구간(머티리얼 구간 · 시점 가시성). 없으면 비어 있습니다(`SECT` 덩어리)
-        vector<MeshLODLevel>    _listLOD;            ///< LOD 1 이상(낮은 상세 단계). 없으면 비어 있습니다(`LODS` 덩어리)
-        uint32                  _skinBoneCount{ 0 }; ///< 0 이면 스킨이 없습니다.
+        vector<uint32>          _listIndex;       ///< 삼각형마다 정점 번호 셋(`Mesh::getIndices`). 비면 쓰기 · 읽기가 거절합니다
+        vector<MeshSkinVertex>  _listSkinVertex;  ///< 비었거나 `_listVertex` 와 같은 길이입니다.
+        vector<MeshMorphTarget> _listMorphTarget; ///< 모프 타깃(블렌드 셰이프). 없으면 비어 있습니다
+        vector<MeshSection>     _listSection;     ///< 구간(머티리얼 구간 · 시점 가시성). 없으면 비어 있습니다(`SECT` 덩어리)
+        vector<MeshLODLevel>    _listLOD;         ///< LOD 1 이상(낮은 상세 단계). 없으면 비어 있습니다(`LODS` 덩어리)
+        MeshSkinBinding         _skinBinding;     ///< 본마다 역 바인드와 본 배치 지문입니다. 비면 스킨이 없습니다.
 
         /** @brief 스킨이 있으면 true 입니다. */
-        bool hasSkin() const { return _skinBoneCount > 0 && _listSkinVertex.size() == _listVertex.size(); }
+        bool hasSkin() const { return _skinBinding.getBoneCount() > 0 && _listSkinVertex.size() == _listVertex.size(); }
     };
 } // namespace sw
 
@@ -46,6 +46,7 @@ namespace sw
      *          그 뒤에 정점마다 32 바이트가 옵니다: 위치 float32 3개(12), 노멀 `OctahedralNormal`(4), 탄젠트 `OctahedralNormal`(4 — xyz 는 쓰기가 `Mesh::computeTangents` 로 구한다),
      *          UV `unorm16x2`(4), 색 `unorm8x4`(4 — 0..1 밖은 잘린다), 플래그 uint32(4 — 비트 0 이 켜지면 바이탄젠트 부호가 -1, 나머지 비트는 0)입니다.
      *          법선 · 탄젠트는 풀면 단위 길이이고 오차가 1e-4 라디안 아래라 위치와 달리 비트까지 같게 돌아오지 않습니다. 스킨 본 수가 0 이 아니면 정점마다 본 번호 4개(uint16)와 가중치 4개(float32)가 옵니다. 본 번호는 스켈레톤 본 순서이고 본 수보다 작습니다.
+     *          이어서 본 배치 지문(uint64, 0 이면 배치를 따지지 않음)과 본마다 역 바인드(float32 16 개, 행 우선)가 옵니다 — 역 바인드는 스켈레톤이 아니라 메시의 값입니다(`MeshSkinBinding`).
      *          그 뒤에 인덱스 수만큼의 uint32 가 옵니다(번호는 정점 수보다 작다).
      *          그 뒤에 선택 청크가 0개 이상 옵니다. 청크는 이름(4바이트), 길이(uint32), 내용으로 이루어집니다. 지금 아는 청크는 `MRPH`(모프 타깃), `SECT`(구간 —
      *          구간 수, 구간마다 이름 길이와 이름, 첫 인덱스 · 인덱스 수 · 시점 가시성의 uint32), `LODS`(낮은 상세 단계 — 단계 수, 단계마다 화면 크기 임계값 float32 ·
@@ -59,13 +60,15 @@ namespace sw
     struct SW_API MeshAssetFormat
     {
         /** @brief 지금 형식의 버전입니다. 레이아웃을 바꾸면 올리고 모델 원본을 다시 임포트합니다. */
-        static constexpr uint32 kVersion = 5;
+        static constexpr uint32 kVersion = 6; // 6: 역 바인드와 본 배치 지문을 스켈레톤에서 메시로 옮겼다
         /** @brief 헤더의 바이트 수입니다(고정 필드 28 + UV 경계 float32 4 개). */
         static constexpr uint32 kHeaderSize = 44;
         /** @brief 파일의 정점 하나의 바이트 수입니다(압축 배치 — 메모리의 `RHIVertex` 는 64 바이트 float32 16 개이고 읽을 때 풉니다). */
         static constexpr uint32 kVertexSize = 32;
         /** @brief 스킨 정점 하나의 바이트 수입니다(uint16 4 개 + float32 4 개). */
         static constexpr uint32 kSkinVertexSize = 24;
+        /** @brief 역 바인드 하나의 바이트 수입니다(float32 16 개). */
+        static constexpr uint32 kInverseBindSize = 64;
         /** @brief 메시 에셋 확장자입니다. */
         static constexpr string_view kExtension = ".mesh";
         /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */

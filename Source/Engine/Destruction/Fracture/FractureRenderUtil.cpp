@@ -19,7 +19,7 @@ namespace sw
             const float3& centroid = asset._graph._listNode[piece]._centroid;
             BoneTransform reference;
             reference._translation = centroid;
-            (void)skeleton->addBone( hashed_string( name.c_str() ), -1, reference, float4x4::makeTranslation( -centroid ) );
+            (void)skeleton->addBone( hashed_string( name.c_str() ), -1, reference );
         }
         return skeleton;
     }
@@ -48,7 +48,14 @@ namespace sw
             return nullptr;
         shared_ptr<Mesh> mesh = Mesh::create();
         mesh->setVertices( std::move( listVertex ) );
-        mesh->setSkin( std::move( listSkin ), asset.getPieceCount() );
+        // 조각 뼈의 레퍼런스가 조각 중심이므로 역 바인드는 중심을 원점으로 옮긴다.
+        MeshSkinBinding skinBinding{};
+        skinBinding._listInverseBind.reserve( asset.getPieceCount() );
+        for ( uint32 piece = 0; piece < asset.getPieceCount(); ++piece )
+        {
+            skinBinding._listInverseBind.push_back( float4x4::makeTranslation( -asset._graph._listNode[piece]._centroid ) );
+        }
+        mesh->setSkin( std::move( listSkin ), std::move( skinBinding ) );
         return mesh;
     }
 

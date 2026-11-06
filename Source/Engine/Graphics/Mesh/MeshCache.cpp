@@ -102,8 +102,8 @@ namespace sw
             shared_ptr<Mesh> loaded = Mesh::create();
             // 읽기가 인덱스 범위를 이미 봤다 — 실패는 깨진 파일 하나뿐이고 아래 판정이 함께 진다.
             bLoaded = loaded->setGeometryWithTangents( std::move( data._listVertex ), std::move( data._listIndex ) );
-            if ( data._skinBoneCount > 0 )
-                loaded->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
+            if ( data._skinBinding.getBoneCount() > 0 )
+                loaded->setSkin( std::move( data._listSkinVertex ), std::move( data._skinBinding ) );
             if ( data._listMorphTarget.empty() == false )
                 loaded->setMorphTargets( std::move( data._listMorphTarget ) );
             // 구간 · LOD 가 정점과 맞지 않으면 파일이 깨진 것이다 — 구간 · LOD 없는 메시로 두지 않고 읽기 실패로 알린다.
@@ -259,7 +259,7 @@ namespace sw
         if ( pDevice != nullptr )
             pDevice->waitIdle( RHIWaitIdleReason::HotReload );
         const bool bGeometry = live->setGeometryWithTangents( std::move( data._listVertex ), std::move( data._listIndex ) );
-        live->setSkin( std::move( data._listSkinVertex ), data._skinBoneCount );
+        live->setSkin( std::move( data._listSkinVertex ), std::move( data._skinBinding ) );
         live->setMorphTargets( std::move( data._listMorphTarget ) );
         return bGeometry && live->setSections( std::move( data._listSection ) ) && live->setLODs( std::move( data._listLOD ) );
     }

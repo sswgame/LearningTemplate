@@ -53,10 +53,10 @@ namespace sw
                                          MeshVertexAnimation& outAnimation )
     {
         outAnimation           = MeshVertexAnimation{};
-        const bool bCannotBake = skinMesh.hasSkin() == false || skinMesh.getSkinBoneCount() != skeleton.getBoneCount() || framesPerSecond <= 0.0f;
+        const bool bCannotBake = skinMesh.hasSkin() == false || skeleton.canDrawSkinBinding( skinMesh.getSkinBinding() ) == false || framesPerSecond <= 0.0f;
         if ( bCannotBake )
         {
-            SW_LOG_WARNING_ID( "MeshVertexAnimationBaker.VertexAnimationBakeSkipped", "Vertex animation bake skipped: the mesh has no skin or its bone count (%#) differs from the skeleton (%#)", skinMesh.getSkinBoneCount(),
+            SW_LOG_WARNING_ID( "MeshVertexAnimationBaker.VertexAnimationBakeSkipped", "Vertex animation bake skipped: the mesh has no skin or does not fit the skeleton (mesh bones %#, skeleton bones %#)", skinMesh.getSkinBoneCount(),
                                skeleton.getBoneCount() );
             return false;
         }
@@ -89,7 +89,7 @@ namespace sw
             if ( clip.samplePose( time, listTrackToBone, pose, scratchTrackPose, bAnchorRootMotion ) == false )
                 return false;
             pose.computeModelSpace( skeleton.getParentIndices(), listModel );
-            Pose::computeSkinPalette( skeleton, listModel, listPalette );
+            Pose::computeSkinPalette( skinMesh.getSkinBinding()._listInverseBind, listModel, listPalette );
             skinVertices( skinMesh, listPalette, listPosition, listNormal );
             listAllPosition.insert( listAllPosition.end(), listPosition.begin(), listPosition.end() );
             listAllNormal.insert( listAllNormal.end(), listNormal.begin(), listNormal.end() );

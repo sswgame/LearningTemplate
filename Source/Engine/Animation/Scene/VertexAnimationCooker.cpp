@@ -127,7 +127,7 @@ namespace sw
         shared_ptr<Mesh> mesh = Mesh::create();
         if ( mesh->setGeometry( std::move( meshData._listVertex ), std::move( meshData._listIndex ) ) == false )
             return false; // 읽기가 범위를 봤다 — 여기서 지면 메시가 오류를 남겼다
-        mesh->setSkin( std::move( meshData._listSkinVertex ), meshData._skinBoneCount );
+        mesh->setSkin( std::move( meshData._listSkinVertex ), std::move( meshData._skinBinding ) );
 
         AnimationClip       clip;
         MeshVertexAnimation animation;

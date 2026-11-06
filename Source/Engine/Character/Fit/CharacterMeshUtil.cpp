@@ -225,7 +225,7 @@ namespace sw
                 return listMorphTarget;
             }
 
-            /** @brief 부품을 검사하고 스킨 유무 · 본 수가 같은지 봅니다 — 섞이면 한 메시로 스키닝할 수 없다. 아니면 까닭을 @p outReason 에 적고 false 입니다. */
+            /** @brief 부품을 검사하고 스킨 유무 · 본 배치 · 역 바인드가 같은지 봅니다 — 합친 메시는 팔레트가 한 벌이라 바인드가 다른 부품을 함께 그릴 수 없다. 아니면 까닭을 @p outReason 에 적고 false 입니다. */
             [[nodiscard]] static bool validateMergeParts( vector_reference<const MeshMergePart> listPart, string& outReason )
             {
                 for ( const MeshMergePart& part : listPart )
@@ -233,15 +233,14 @@ namespace sw
                     if ( checkMergePart( part, outReason ) == false )
                         return false;
                 }
-                const Mesh&  first         = *listPart[0]._pMesh;
-                const bool   bSkinned      = first.hasSkin();
-                const uint32 skinBoneCount = first.getSkinBoneCount();
+                const Mesh& first    = *listPart[0]._pMesh;
+                const bool  bSkinned = first.hasSkin();
                 for ( const MeshMergePart& part : listPart )
                 {
-                    const bool bMixedSkin = part._pMesh->hasSkin() != bSkinned || ( bSkinned && part._pMesh->getSkinBoneCount() != skinBoneCount );
+                    const bool bMixedSkin = part._pMesh->hasSkin() != bSkinned || ( bSkinned && part._pMesh->getSkinBinding().matches( first.getSkinBinding() ) == false );
                     if ( bMixedSkin )
                     {
-                        outReason = string( "merge part '" ) + part._name.c_str() + "' differs from the first part in skin or bone count - parts merge within one skeleton only";
+                        outReason = string( "merge part '" ) + part._name.c_str() + "' differs from the first part in skin, bone layout or inverse bind - parts merge within one skeleton and one bind pose only";
                         return false;
                     }
                 }
@@ -481,7 +480,7 @@ namespace sw
         // 위치가 바뀌었으므로 탄젠트를 다시 구한다. 번호는 남은 정점 안이다(위에서 만들었다).
         (void)baked->setGeometry( std::move( listBaked ), std::move( listBakedIndex ) );
         if ( source.hasSkin() )
-            baked->setSkin( std::move( listBakedSkin ), source.getSkinBoneCount() );
+            baked->setSkin( std::move( listBakedSkin ), source.getSkinBinding() );
         baked->setMorphTargets( std::move( listMorphTarget ) );
         if ( baked->setSections( std::move( listSection ) ) == false )
             return nullptr; // setSections 가 까닭을 남겼다
@@ -554,7 +553,7 @@ namespace sw
             }
             listTarget.push_back( std::move( target ) );
         }
-        inoutGarment.setSkin( std::move( listSkin ), body.getSkinBoneCount() );
+        inoutGarment.setSkin( std::move( listSkin ), body.getSkinBinding() );
         inoutGarment.setMorphTargets( std::move( listTarget ) );
         return unboundCount;
     }
@@ -566,13 +565,12 @@ namespace sw
         if ( listPart.empty() )
             return Internal::failMerge( pOutError, "nothing to merge" );
 
-        // 부품을 검사하고 스킨 유무 · 본 수가 같은지 본다 — 섞이면 한 메시로 스키닝할 수 없다.
+        // 부품을 검사하고 스킨 유무 · 본 배치 · 역 바인드가 같은지 본다 — 섞이면 한 메시로 스키닝할 수 없다.
         string reason;
         if ( Internal::validateMergeParts( listPart, reason ) == false )
             return Internal::failMerge( pOutError, reason );
-        const Mesh&  first         = *listPart[0]._pMesh;
-        const bool   bSkinned      = first.hasSkin();
-        const uint32 skinBoneCount = first.getSkinBoneCount();
+        const Mesh& first    = *listPart[0]._pMesh;
+        const bool  bSkinned = first.hasSkin();
 
         // 그룹(구간)은 처음 나온 순서이고, 같은 그룹의 조각은 입력 순서로 이어 붙는다.
         vector<Internal::MergePiece> listPiece;
@@ -624,7 +622,7 @@ namespace sw
         else
             (void)merged->setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) );
         if ( bSkinned )
-            merged->setSkin( std::move( listSkin ), skinBoneCount );
+            merged->setSkin( std::move( listSkin ), first.getSkinBinding() );
         merged->setMorphTargets( std::move( listTarget ) );
         if ( merged->setSections( std::move( listSection ) ) == false )
             return Internal::failMerge( pOutError, "the merged sections were refused (see the log above)" );

@@ -618,7 +618,6 @@ namespace sw::editor
                     outData._listSkinVertex.push_back( makeSkinVertex( *arrCorner[corner] ) );
             }
         }
-        outData._skinBoneCount = skinBoneCount;
 
         // 모프 타깃 — 출력 정점마다 그 원본 정점의 차이 중 움직이는 것만 싣는다. 얼굴 타깃은 메시의 작은 일부만 옮긴다.
         constexpr float32 kMinimumDelta = 1e-7f;

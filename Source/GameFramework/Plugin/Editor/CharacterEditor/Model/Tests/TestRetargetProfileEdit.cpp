@@ -24,9 +24,8 @@ namespace
             int32 parent       = -1;
             for ( const utf8* pName : { "root", "hips", "thigh", "shin" } )
             {
-                parent = skeleton.addBone( hashed_string( pName ), parent, local, float4x4::Identity );
+                parent = skeleton.addBone( hashed_string( pName ), parent, local );
             }
-            skeleton.computeInverseBindFromReference();
             return skeleton;
         }
 

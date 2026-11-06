@@ -3,16 +3,18 @@
 #include "Engine/Animation/Skeletal/Skeleton.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Graphics/Mesh/Mesh.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
 {
-    int32 Skeleton::addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose, const float4x4& inverseBind )
+    int32 Skeleton::addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose )
     {
         // 부모가 자식보다 뒤에 있으면 모델 공간을 한 번 훑어서 구할 수 없다. 읽을 때 걸러 낸다.
         const int32 boneCount = static_cast<int32>( _listBone.size() );
@@ -26,22 +28,37 @@ namespace sw
         bone._name          = name;
         bone._parentIndex   = parentIndex;
         bone._referencePose = referencePose;
-        bone._inverseBind   = inverseBind;
         _listBone.push_back( bone );
         _listParentIndex.push_back( parentIndex );
+        const string_view nameText = name.c_str();
+        const uint64      nameHash = HashUtil::appendBytes64( _listHierarchyHash.empty() ? HashUtil::kFNVOffset64 : _listHierarchyHash.back(), nameText.data(), nameText.size() );
+        _listHierarchyHash.push_back( HashUtil::appendBytes64( nameHash, &parentIndex, sizeof( parentIndex ) ) );
         return boneCount;
     }
 
-    void Skeleton::computeInverseBindFromReference()
+    void Skeleton::computeReferenceInverseBinds( vector<float4x4>& outListInverseBind ) const
     {
         Pose referencePose;
         referencePose.setToReference( *this );
-        vector<float4x4> listModel;
-        referencePose.computeModelSpace( _listParentIndex, listModel );
-        for ( size_t boneIndex = 0; boneIndex < _listBone.size(); ++boneIndex )
+        referencePose.computeModelSpace( _listParentIndex, outListInverseBind );
+        for ( float4x4& model : outListInverseBind )
         {
-            _listBone[boneIndex]._inverseBind = listModel[boneIndex].invert();
+            model = model.invert();
         }
+    }
+
+    uint64 Skeleton::getHierarchyHash( uint32 boneCount ) const
+    {
+        const bool bInRange = 0 < boneCount && boneCount <= _listHierarchyHash.size();
+        return bInRange ? _listHierarchyHash[boneCount - 1] : 0u;
+    }
+
+    bool Skeleton::canDrawSkinBinding( const MeshSkinBinding& skinBinding ) const
+    {
+        const uint32 boneCount = skinBinding.getBoneCount();
+        if ( boneCount == 0 || boneCount > getBoneCount() )
+            return false;
+        return skinBinding._layoutHash == MeshSkinBinding::kAnyLayout || skinBinding._layoutHash == getHierarchyHash( boneCount );
     }
 
     int32 Skeleton::findBoneIndex( const hashed_string& name ) const
@@ -58,6 +75,7 @@ namespace sw
     {
         _listBone.clear();
         _listParentIndex.clear();
+        _listHierarchyHash.clear();
         _listAttachment.clear();
     }
 
@@ -99,7 +117,7 @@ namespace sw
         clear();
         for ( const SkeletonBone& bone : listLoadedBone )
         {
-            if ( addBone( bone._name, bone._parentIndex, bone._referencePose, bone._inverseBind ) < 0 )
+            if ( addBone( bone._name, bone._parentIndex, bone._referencePose ) < 0 )
             {
                 SW_LOG_ERROR_ID( "Skeleton.SkeletonBoneMustName", "Skeleton '%#': bone '%#' must name an earlier bone as its parent", sourceLabel, bone._name.c_str() );
                 return false;

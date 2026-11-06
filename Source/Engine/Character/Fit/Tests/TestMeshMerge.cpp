@@ -45,7 +45,7 @@ namespace
             }
             shared_ptr<Mesh> mesh = Mesh::create();
             SW_EXPECT_TRUE( mesh->setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) ) );
-            mesh->setSkin( std::move( listSkin ), 4u );
+            mesh->setSkin( std::move( listSkin ), MeshSkinBinding::makeIdentity( 4u ) );
             if ( bSections )
                 SW_EXPECT_TRUE( mesh->setSections( std::move( listSection ) ) );
             return mesh;

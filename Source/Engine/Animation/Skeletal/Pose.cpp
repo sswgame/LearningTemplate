@@ -202,13 +202,13 @@ namespace sw
         }
     }
 
-    void Pose::computeSkinPalette( const Skeleton& skeleton, const vector<float4x4>& listModel, vector<float4x4>& outListPalette )
+    void Pose::computeSkinPalette( const vector<float4x4>& listInverseBind, const vector<float4x4>& listModel, vector<float4x4>& outListPalette )
     {
-        const uint32 boneCount = MathUtil::min( skeleton.getBoneCount(), static_cast<uint32>( listModel.size() ) );
+        const uint32 boneCount = MathUtil::min( static_cast<uint32>( listInverseBind.size() ), static_cast<uint32>( listModel.size() ) );
         outListPalette.resize( boneCount );
         for ( uint32 boneIndex = 0; boneIndex < boneCount; ++boneIndex )
         {
-            outListPalette[boneIndex] = skeleton.getBone( boneIndex )._inverseBind * listModel[boneIndex];
+            outListPalette[boneIndex] = listInverseBind[boneIndex] * listModel[boneIndex];
         }
     }
 } // namespace sw

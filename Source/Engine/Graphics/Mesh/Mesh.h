@@ -8,6 +8,7 @@
 #include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
@@ -31,6 +32,31 @@ namespace sw
     {
         uint16  _arrJoint[4]{ 0, 0, 0, 0 };
         float32 _arrWeight[4]{ 1.0f, 0.0f, 0.0f, 0.0f };
+    };
+
+    /**
+     * @struct MeshSkinBinding
+     * @brief 메시가 스켈레톤에 묶인 방식입니다 — 본마다 역 바인드(스킨 팔레트 = 역 바인드 * 모델 공간)와, 메시가 저작된 본 배치의 지문입니다.
+     * @details 역 바인드는 메시의 값이다(언리얼 Skeletal Mesh 의 Ref Skeleton · 유니티 `Mesh.bindposes`). 그래서 스켈레톤 한 벌을 비율이 다른 메시가 나눠 쓰고,
+     *          메시 한 벌을 비율이 다른 스켈레톤 변형에 그릴 수 있다. 본 수는 이 목록의 길이이고, 스켈레톤보다 짧으면 앞쪽 본만 쓴다(변형이 뒤에 붙인 본).
+     */
+    struct SW_API MeshSkinBinding
+    {
+        /** @brief 본 배치를 따지지 않는 메시입니다(강체 사본 · 파괴 조각처럼 코드가 지은 것) — 본 수만 맞으면 어느 스켈레톤에도 걸린다. */
+        static constexpr uint64 kAnyLayout = 0;
+        /** @brief 두 메시의 역 바인드를 같다고 볼 허용 오차입니다(임포트가 스킨끼리 견주는 값과 같다). */
+        static constexpr float32 kInverseBindTolerance = 1e-3f;
+
+        vector<float4x4> _listInverseBind;
+        /** @brief 메시가 저작된 스켈레톤의 앞 `getBoneCount` 개 본 배치 지문입니다(`Skeleton::getHierarchyHash`). */
+        uint64 _layoutHash{ kAnyLayout };
+
+        /** @brief 본 수입니다. 0 이면 스킨이 없습니다. */
+        uint32 getBoneCount() const { return static_cast<uint32>( _listInverseBind.size() ); }
+        /** @brief 단위 역 바인드 @p boneCount 개짜리 묶음입니다(정점이 이미 각 본의 공간에 있는 메시). */
+        static MeshSkinBinding makeIdentity( uint32 boneCount ) { return MeshSkinBinding{ vector<float4x4>( boneCount, float4x4::Identity ), kAnyLayout }; }
+        /** @brief 한 팔레트로 함께 그릴 수 있으면 true 입니다 — 본 수와 역 바인드가 허용 오차 안이고 본 배치가 같습니다(`kAnyLayout` 은 어느 배치와도 맞습니다). */
+        bool matches( const MeshSkinBinding& other ) const;
     };
 } // namespace sw
 
@@ -287,18 +313,20 @@ namespace sw
         uint64 getGPUDeformProgramGeneration() const { return _deformProgramGeneration.load( std::memory_order_acquire ); }
 
         /**
-         * @brief 스킨(정점마다의 본 영향)을 설정합니다. 길이는 정점 수와 같아야 하고, 아니면 스킨을 지웁니다. 내용 번호가 바뀝니다.
+         * @brief 스킨(정점마다의 본 영향과 역 바인드)을 설정합니다. 길이는 정점 수와 같아야 하고 역 바인드가 있어야 하며, 아니면 스킨을 지웁니다. 내용 번호가 바뀝니다.
          * @details 스킨이 있는 메시는 GPU 스키닝 풀(모프 풀의 스킨 구간)에 들어가 정점 셰이더가 변형된 정점을 읽는다. 팔레트(본 행렬)는
          *          메시가 아니라 그것을 그리는 컴포넌트가 프레임마다 낸다(`SkeletalMeshComponent`). 그래서 포즈가 다른 캐릭터는 메시 객체를 따로 둔다.
-         * @param boneCount 메시가 따르는 스켈레톤의 본 수(팔레트 길이)입니다.
+         * @param skinBinding 본마다 역 바인드(길이가 팔레트 길이)와 본 배치 지문입니다.
          */
-        void setSkin( vector<MeshSkinVertex> listSkinVertex, uint32 boneCount );
+        void setSkin( vector<MeshSkinVertex> listSkinVertex, MeshSkinBinding skinBinding );
         /** @brief 정점마다의 본 영향입니다. 스킨이 없으면 비어 있습니다. */
         const vector<MeshSkinVertex>& getSkinVertices() const { return _listSkinVertex; }
         /** @brief 스킨이 있으면 true 입니다. */
-        bool hasSkin() const { return _skinBoneCount > 0 && _listSkinVertex.size() == _listVertex.size(); }
-        /** @brief 스켈레톤 본 수(팔레트 길이)입니다. 스킨이 없으면 0 입니다. */
-        uint32 getSkinBoneCount() const { return _skinBoneCount; }
+        bool hasSkin() const { return getSkinBoneCount() > 0 && _listSkinVertex.size() == _listVertex.size(); }
+        /** @brief 메시가 쓰는 본 수(팔레트 길이)입니다. 스킨이 없으면 0 입니다. */
+        uint32 getSkinBoneCount() const { return _skinBinding.getBoneCount(); }
+        /** @brief 역 바인드와 본 배치 지문입니다. 스킨이 없으면 비어 있습니다. */
+        const MeshSkinBinding& getSkinBinding() const { return _skinBinding; }
         /**
          * @brief 모프 타깃(블렌드 셰이프)을 설정합니다. 정점 번호가 범위 밖인 차이는 버립니다. 내용 번호가 바뀝니다.
          * @details 타깃은 GPU 스키닝 컴퓨트가 스키닝 앞에 가중치만큼 더한다(모프 풀의 원본 데이터이며 사본은 공유한다). 가중치는 메시가 아니라 그리는 유닛이 낸다
@@ -412,8 +440,8 @@ namespace sw
         vector<uint32> _listIndex;
         /// @brief setSkin 을 참고하세요. 비어 있거나 `_listVertex` 와 길이가 같습니다.
         vector<MeshSkinVertex> _listSkinVertex;
-        /// @brief 스켈레톤 본 수입니다. 0이면 스킨이 없습니다.
-        uint32 _skinBoneCount{ 0 };
+        /// @brief setSkin 을 참고하세요. 비어 있으면 스킨이 없습니다.
+        MeshSkinBinding _skinBinding;
         /// @brief setMorphTargets 를 참고하세요.
         vector<MeshMorphTarget> _listMorphTarget;
         /// @brief setSections 를 참고하세요.

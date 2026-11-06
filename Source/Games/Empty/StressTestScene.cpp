@@ -111,7 +111,11 @@ namespace sw
                 }
                 shared_ptr<Mesh> copy = Mesh::create();
                 (void)copy->setGeometryWithTangents( vector<RHIVertex>( listVertex ), vector<uint32>( source.getIndices() ) ); // 원본에서 이미 검사한 정점 · 인덱스다
-                copy->setSkin( std::move( listSkin ), boneCount );
+                // 정점이 스켈레톤 레퍼런스 포즈 자리에 있다 — 그 포즈가 이 메시의 바인드다.
+                MeshSkinBinding skinBinding{};
+                skeleton.computeReferenceInverseBinds( skinBinding._listInverseBind );
+                skinBinding._layoutHash = skeleton.getHierarchyHash( boneCount );
+                copy->setSkin( std::move( listSkin ), std::move( skinBinding ) );
                 return copy;
             }
 
@@ -1799,7 +1803,7 @@ namespace sw
     shared_ptr<const Skeleton> StressTestScene::createSingleBoneSkeleton()
     {
         shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
-        (void)skeleton->addBone( hashed_string( "root" ), -1, BoneTransform{}, float4x4::Identity );
+        (void)skeleton->addBone( hashed_string( "root" ), -1, BoneTransform{} );
         return skeleton;
     }
 

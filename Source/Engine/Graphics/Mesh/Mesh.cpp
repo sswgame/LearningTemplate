@@ -138,7 +138,7 @@ namespace sw
         shared_ptr<Mesh> rigid = create();
         (void)rigid->setGeometryWithTangents( vector<RHIVertex>( source._listVertex ), vector<uint32>( source._listIndex ) );
         // 기본 영향이 본 0 에 가중치 1 이다(`MeshSkinVertex`).
-        rigid->setSkin( vector<MeshSkinVertex>( source._listVertex.size() ), 1u );
+        rigid->setSkin( vector<MeshSkinVertex>( source._listVertex.size() ), MeshSkinBinding::makeIdentity( 1u ) );
         rigid->setMorphTargets( source._listMorphTarget );
         (void)rigid->setSections( source._listSection ); // 원본이 이미 검사를 지났다
         // 단계도 따라온다(그릴 흐름 번호를 단계 안 번호로 되돌려 다시 건다) — 스킨은 본 0 가중치 1.
@@ -314,7 +314,7 @@ namespace sw
             {
                 for ( const uint16 joint : level._listSkinVertex[skinIndex]._arrJoint )
                 {
-                    bSkinMatches = bSkinMatches && joint < _skinBoneCount;
+                    bSkinMatches = bSkinMatches && joint < getSkinBoneCount();
                 }
             }
             // 구간 있는 메시의 단계는 구간마다 범위가 하나씩(LOD 0 구간 순서) 이 단계 인덱스 안의 온전한 삼각형이다.
@@ -462,11 +462,27 @@ namespace sw
         }
     }
 
-    void Mesh::setSkin( vector<MeshSkinVertex> listSkinVertex, uint32 boneCount )
+    bool MeshSkinBinding::matches( const MeshSkinBinding& other ) const
     {
-        const bool bMatches = boneCount > 0 && listSkinVertex.size() == _listVertex.size();
+        const bool bSameLayout = _layoutHash == other._layoutHash || _layoutHash == kAnyLayout || other._layoutHash == kAnyLayout;
+        if ( bSameLayout == false || _listInverseBind.size() != other._listInverseBind.size() )
+            return false;
+        for ( size_t boneIndex = 0; boneIndex < _listInverseBind.size(); ++boneIndex )
+        {
+            for ( uint32 element = 0; element < 16; ++element )
+            {
+                if ( MathUtil::abs( ( &_listInverseBind[boneIndex]._11 )[element] - ( &other._listInverseBind[boneIndex]._11 )[element] ) > kInverseBindTolerance )
+                    return false;
+            }
+        }
+        return true;
+    }
+
+    void Mesh::setSkin( vector<MeshSkinVertex> listSkinVertex, MeshSkinBinding skinBinding )
+    {
+        const bool bMatches = skinBinding.getBoneCount() > 0 && listSkinVertex.size() == _listVertex.size();
         _listSkinVertex     = bMatches ? std::move( listSkinVertex ) : vector<MeshSkinVertex>{};
-        _skinBoneCount      = bMatches ? boneCount : 0u;
+        _skinBinding        = bMatches ? std::move( skinBinding ) : MeshSkinBinding{};
         // 낮은 단계는 옛 스킨(뼈 번호 · 있고 없음)에 맞춘 것이다 — 스킨을 바꾸면 뗀다(읽기는 스킨 뒤에 `setLODs` 로 다시 건다).
         clearLODs();
         _contentID = allocateContentID();

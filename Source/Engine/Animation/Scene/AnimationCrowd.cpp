@@ -120,7 +120,13 @@ namespace sw
             _nextClip->makeTrackToBoneMap( *_skeleton, _listNextTrackToBone );
         _localPose.setToReference( *_skeleton );
         _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
-        Pose::computeSkinPalette( *_skeleton, _listModelSpace, _listSkinPalette );
+        refreshSkinPalette();
+    }
+
+    void AnimationCrowdBucket::refreshSkinPalette()
+    {
+        if ( _mesh != nullptr )
+            Pose::computeSkinPalette( _mesh->getSkinBinding()._listInverseBind, _listModelSpace, _listSkinPalette );
     }
 
     float32 AnimationCrowdBucket::computeTime( float64 clock ) const
@@ -153,7 +159,7 @@ namespace sw
             Pose::blend( _localPose, _nextPose, _blendAlpha, _localPose );
         }
         _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
-        Pose::computeSkinPalette( *_skeleton, _listModelSpace, _listSkinPalette );
+        refreshSkinPalette();
         ++_evaluationCount;
     }
 

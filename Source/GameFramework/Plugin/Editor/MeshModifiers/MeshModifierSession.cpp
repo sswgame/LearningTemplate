@@ -676,7 +676,7 @@ namespace sw::editor
         baked._listVertex     = MeshModifierSessionInternal::makeVertices( _sourceData._listVertex, mesh );
         baked._listIndex      = _sourceData._listIndex;
         baked._listSkinVertex = _sourceData._listSkinVertex;
-        baked._skinBoneCount  = _sourceData._skinBoneCount;
+        baked._skinBinding    = _sourceData._skinBinding;
         if ( _sourceData._listMorphTarget.empty() == false )
             SW_LOG_WARNING_ID( "MeshModifierSession.MeshMorphTargetsThey", "Mesh '%#' has %# morph targets - they are dropped from the baked mesh", _meshPath.c_str(), _sourceData._listMorphTarget.size() );
 

@@ -1,6 +1,6 @@
 /**
  * @file Skeleton.h
- * @brief 스켈레톤 에셋(`.skeleton.xml`)입니다. 본 이름, 부모, 레퍼런스 포즈, 역 바인드와, 임포트가 본에 붙어 있던 메시를 기록한 읽기 전용 테이블을 담습니다.
+ * @brief 스켈레톤 에셋(`.skeleton.xml`)입니다. 본 이름, 부모, 레퍼런스 포즈와, 임포트가 본에 붙어 있던 메시를 기록한 읽기 전용 테이블을 담습니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -18,6 +18,8 @@
 
 namespace sw
 {
+    struct MeshSkinBinding;
+
     /**
      * @struct SkeletonBone
      * @brief 본 하나입니다. 부모는 항상 자기보다 앞에 있습니다(루트는 -1). 모든 칸을 파일에 반드시 적습니다(`PROPERTY( Required )`).
@@ -34,9 +36,6 @@ namespace sw
         /** @brief 부모 기준 레퍼런스(바인드) 로컬 변환입니다. */
         PROPERTY( Required, Tooltip = "Reference (bind) local transform from the parent" )
         BoneTransform _referencePose{};
-        /** @brief 모델 공간 바인드 행렬의 역입니다(행 우선 16 개). 스킨 팔레트 = 역 바인드 * 모델 공간. */
-        PROPERTY( Required, Tooltip = "Inverse of the model space bind matrix (16 numbers, row major)" )
-        float4x4 _inverseBind{ float4x4::Identity };
     };
 } // namespace sw
 
@@ -71,8 +70,8 @@ namespace sw
      * @class Skeleton
      * @brief 본 배열입니다(부모가 자식보다 앞에 옵니다). 런타임 포즈 계산(`Pose`)과 스킨 팔레트가 이것을 읽습니다.
      * @details 파일은 리플렉션 구조체로 읽고 쓴다(`ConfigManager::readConfigXMLDocument`). 키는 PROPERTY 이름(`_listBone`, `_listAttachment`)이 기준이고
-     *          모두 필수다(`PROPERTY( Required )`) — 빠진 키 · 모르는 키 · 읽지 못한 값은 오류다. 벡터 · 쿼터니언 · 행렬은 쉼표로 이은 숫자 글이다.
-     *          `_parentIndex` 는 본 배열의 인덱스(루트 -1)이고 자기보다 앞이어야 한다. 행렬은 행 우선 16 개다. 읽은 뒤 부모 순서와 부착 본 이름을 따로 본다.
+     *          모두 필수다(`PROPERTY( Required )`) — 빠진 키 · 모르는 키 · 읽지 못한 값은 오류다. 벡터 · 쿼터니언은 쉼표로 이은 숫자 글이다.
+     *          `_parentIndex` 는 본 배열의 인덱스(루트 -1)이고 자기보다 앞이어야 한다. 역 바인드는 스켈레톤이 아니라 메시의 값이다(`MeshSkinBinding`). 읽은 뒤 부모 순서와 부착 본 이름을 따로 본다.
      */
     REFLECT()
     class SW_API Skeleton
@@ -95,9 +94,16 @@ namespace sw
          * @brief 본 하나를 끝에 붙이고 그 인덱스를 반환합니다.
          * @param parentIndex 부모 본 인덱스. **이미 추가된 본만 가리킬 수 있습니다**(루트는 -1). 아니면 아무것도 추가하지 않고 -1 입니다.
          */
-        int32 addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose, const float4x4& inverseBind );
-        /** @brief 레퍼런스 포즈로 모든 본의 역 바인드를 다시 구합니다(손으로 만든 스켈레톤과 테스트용). */
-        void computeInverseBindFromReference();
+        int32 addBone( const hashed_string& name, int32 parentIndex, const BoneTransform& referencePose );
+        /** @brief 레퍼런스 포즈를 바인드로 삼은 메시의 역 바인드를 본마다 구합니다(코드가 지은 메시와 테스트용 — 임포트한 메시는 원본의 값을 싣는다). */
+        void computeReferenceInverseBinds( vector<float4x4>& outListInverseBind ) const;
+        /**
+         * @brief 앞 @p boneCount 개 본의 배치(이름 · 부모 번호) 지문입니다. 프로세스와 무관하게 같은 값이라 메시 파일에 실립니다(`MeshSkinBinding::_layoutHash`). 범위 밖이면 0 입니다.
+         * @details 기준 포즈는 섞지 않는다 — 비율만 다른 스켈레톤은 같은 메시 · 클립을 쓴다. 뒤에 본을 더해도 앞의 지문은 그대로라 변형이 부모의 메시를 받는다.
+         */
+        uint64 getHierarchyHash( uint32 boneCount ) const;
+        /** @brief 이 스켈레톤으로 @p skinBinding 의 메시를 그릴 수 있으면 true 입니다 — 메시의 본이 모두 있고 앞쪽 본 배치가 같습니다. */
+        [[nodiscard]] bool canDrawSkinBinding( const MeshSkinBinding& skinBinding ) const;
         /** @brief 이름으로 본 인덱스를 찾습니다. 없으면 -1 입니다. */
         int32 findBoneIndex( const hashed_string& name ) const;
         /** @brief 본 수입니다. */
@@ -130,6 +136,8 @@ namespace sw
         vector<SkeletonBone> _listBone;
         /** @brief 본마다 부모 인덱스입니다. `_listBone` 에서 다시 만들므로 파일에 적지 않습니다. */
         vector<int32> _listParentIndex;
+        /** @brief n 번째 칸이 앞 n + 1 개 본의 배치 지문입니다(`getHierarchyHash`). `addBone` 이 채웁니다. */
+        vector<uint64> _listHierarchyHash;
         PROPERTY( Required, Tooltip = "Meshes the import found under bones (read only, the base for socket files)" )
         vector<SkeletonAttachment> _listAttachment;
     };

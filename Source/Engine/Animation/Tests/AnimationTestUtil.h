@@ -68,7 +68,7 @@ namespace sw::test
         return transform;
     }
 
-    /** @brief 사슬 스켈레톤(root → 1 → 2 …)입니다. 본마다 Y 로 1 m 위, 역 바인드는 레퍼런스에서 구합니다. */
+    /** @brief 사슬 스켈레톤(root → 1 → 2 …)입니다. 본마다 Y 로 1 m 위입니다. */
     inline sw::Skeleton makeChainSkeleton( uint32 boneCount )
     {
         sw::Skeleton skeleton;
@@ -76,9 +76,8 @@ namespace sw::test
         {
             const sw::string name = sw::string( "bone" ) + sw::to_string( boneIndex ).c_str();
             const sw::float3 offset{ 0.0f, boneIndex == 0 ? 0.0f : 1.0f, 0.0f };
-            (void)skeleton.addBone( sw::hashed_string( name ), static_cast<int32>( boneIndex ) - 1, makeBoneTransform( offset ), sw::float4x4::Identity );
+            (void)skeleton.addBone( sw::hashed_string( name ), static_cast<int32>( boneIndex ) - 1, makeBoneTransform( offset ) );
         }
-        skeleton.computeInverseBindFromReference();
         return skeleton;
     }
 

@@ -321,7 +321,7 @@ namespace sw
         Internal::splitByTriangle( *mesh, result, listKeptVertex, listKeptSkin, listPieceVertex, listPieceSkin );
         shared_ptr<Mesh> kept = Mesh::create();
         kept->setVertices( std::move( listKeptVertex ) );
-        kept->setSkin( std::move( listKeptSkin ), mesh->getSkinBoneCount() );
+        kept->setSkin( std::move( listKeptSkin ), mesh->getSkinBinding() );
         pUnit->setMesh( std::move( kept ) );
 
         // 3) 떨어진 조각: 현재 포즈로 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질로 강체를 만든다.

@@ -180,6 +180,10 @@ namespace sw
     private:
         friend class AnimationCrowd;
 
+        /** @brief 묶음이 그리는 메시의 역 바인드로 팔레트를 구합니다. */
+        void refreshSkinPalette();
+
+    private:
         AnimationCrowdBucketKey         _key;
         shared_ptr<const Skeleton>      _skeleton;
         shared_ptr<const AnimationClip> _clip;

@@ -100,7 +100,7 @@ namespace sw
         const Pose& getLocalPose() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getLocalPose() : _localPose; }
         /** @brief 모델 공간 본 행렬입니다(단계가 끝날 때마다 다시 구합니다). 묶음과 나누는 중이면 묶음의 것입니다. */
         const vector<float4x4>& getModelSpaceTransforms() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getModelSpaceTransforms() : _listModelSpace; }
-        /** @brief 스킨 팔레트(역 바인드 × 모델 공간)입니다. 렌더러가 스냅샷으로 옮깁니다. 묶음과 나누는 중이면 묶음의 것입니다. */
+        /** @brief 스킨 팔레트(메시의 역 바인드 × 모델 공간)입니다. 렌더러가 스냅샷으로 옮깁니다. 묶음과 나누는 중이면 묶음의 것입니다. */
         const vector<float4x4>& getSkinPalette() const { return _pCrowdBucket != nullptr ? _pCrowdBucket->getSkinPalette() : _listSkinPalette; }
         /** @brief 이름이 일치하는 본의 모델 공간 행렬을 반환합니다. 없으면 false 입니다. */
         [[nodiscard]] bool findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const;
@@ -239,6 +239,10 @@ namespace sw
         void resolveSkinInstanceMesh();
         /** @brief 스켈레톤이 바뀌었으면 포즈, 행렬, 리더 테이블을 맞춥니다. */
         void resetPoseBuffers();
+        /** @brief 그리는 메시의 역 바인드로 팔레트를 구합니다. 스킨 없는 메시는 그릴 팔레트가 없어 그대로 둡니다. */
+        void refreshSkinPalette();
+        /** @brief 그리는 스킨 메시나 스켈레톤이 바뀌었으면(비동기 로드 · 핫 리로드 · 교체) 둘이 맞는지 보고 포즈를 다시 만들게 합니다 — 팔레트가 메시의 역 바인드를 쓰기 때문입니다. */
+        void refreshSkinBinding();
         /** @brief 리더의 로컬 포즈를 본 이름 기준으로 옮깁니다. */
         void copyLeaderPose( const SkeletalMeshComponent& leader );
         /** @brief 단계 하나에 등록된 작업을 모두 부릅니다. */
@@ -293,6 +297,8 @@ namespace sw
         vector<int32>                                   _listLeaderBone;         ///< 내 본에서 리더 본으로 가는 인덱스다(-1 이면 없음)
         TComponentHandle<SkeletalMeshComponent>         _leader;
         const Skeleton*                                 _pLeaderSkeletonForMap; ///< `_listLeaderBone` 을 만든 리더 스켈레톤이다(동일성만 확인한다)
+        uint64                                          _skinBindingContentID;  ///< `refreshSkinBinding` 이 마지막으로 본 스킨 메시의 내용 번호
+        const Skeleton*                                 _pSkinBindingSkeleton;  ///< `refreshSkinBinding` 이 마지막으로 본 스켈레톤이다(동일성만 확인한다)
         AnimationSystem*                                _pAnimationSystem;
         AnimationFrameContext                           _frameContext;
         uint32                                          _poseEvaluationCount;

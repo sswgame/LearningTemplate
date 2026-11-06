@@ -28,7 +28,7 @@ namespace sw
             static shared_ptr<const Skeleton> createImplicitSkeleton()
             {
                 shared_ptr<Skeleton> skeleton = make_shared<Skeleton>();
-                (void)skeleton->addBone( hashed_string( "root" ), -1, BoneTransform{}, float4x4::Identity );
+                (void)skeleton->addBone( hashed_string( "root" ), -1, BoneTransform{} );
                 return skeleton;
             }
 
@@ -112,6 +112,8 @@ namespace sw
         , _listLeaderBone{}
         , _leader{}
         , _pLeaderSkeletonForMap{ nullptr }
+        , _skinBindingContentID{ 0 }
+        , _pSkinBindingSkeleton{ nullptr }
         , _pAnimationSystem{ nullptr }
         , _frameContext{}
         , _poseEvaluationCount{ 0 }
@@ -234,7 +236,7 @@ namespace sw
     void SkeletalMeshComponent::applyExternalPose()
     {
         _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
-        Pose::computeSkinPalette( *_skeleton, _listModelSpace, _listSkinPalette );
+        refreshSkinPalette();
         ++_poseEvaluationCount;
         _bPoseDirty = SW_FALSE;
     }
@@ -393,17 +395,36 @@ namespace sw
     {
         _localPose.setToReference( *_skeleton );
         _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
-        Pose::computeSkinPalette( *_skeleton, _listModelSpace, _listSkinPalette );
+        refreshSkinPalette();
         _pLeaderSkeletonForMap = nullptr;
         _bPoseDirty            = SW_TRUE;
         _bInterpolationReady   = SW_FALSE;
         _pBoneLODMaskSkeleton  = nullptr;
         refreshBoneLODMasks();
-        const shared_ptr<Mesh>& mesh               = getMesh();
-        const bool              bBoneCountMismatch = mesh != nullptr && mesh->hasSkin() && mesh->getSkinBoneCount() != _skeleton->getBoneCount();
-        if ( bBoneCountMismatch )
-            SW_LOG_ERROR_ID( "SkeletalMeshComponent.SkinnedMeshExpectsBones", "Skinned mesh '%#' expects %# bones but skeleton '%#' has %#", getMeshID().c_str(), mesh->getSkinBoneCount(), _skeletonPath.c_str(),
-                             _skeleton->getBoneCount() );
+    }
+
+    void SkeletalMeshComponent::refreshSkinPalette()
+    {
+        const shared_ptr<Mesh>& mesh = getMesh();
+        if ( mesh != nullptr && mesh->hasSkin() )
+            Pose::computeSkinPalette( mesh->getSkinBinding()._listInverseBind, _listModelSpace, _listSkinPalette );
+    }
+
+    void SkeletalMeshComponent::refreshSkinBinding()
+    {
+        const shared_ptr<Mesh>& mesh = getMesh();
+        if ( mesh == nullptr || mesh->hasSkin() == false )
+            return; // 군중 VAT 메시처럼 스킨이 없으면 팔레트를 쓰지 않는다 — 스킨 원본으로 돌아오면 지난 값 그대로다
+        const bool bSameBinding = _skinBindingContentID == mesh->getContentID() && _pSkinBindingSkeleton == _skeleton.get();
+        if ( bSameBinding )
+            return;
+        _skinBindingContentID = mesh->getContentID();
+        _pSkinBindingSkeleton = _skeleton.get();
+        _bPoseDirty           = SW_TRUE;
+        // 암묵 스켈레톤은 외형을 입기 전의 자리다 — 본이 하나뿐이라 비교할 것이 없다.
+        if ( hasDataSkeleton() && _skeleton->canDrawSkinBinding( mesh->getSkinBinding() ) == false )
+            SW_LOG_ERROR_ID( "SkeletalMeshComponent.SkinnedMeshExpectsBones", "Skinned mesh '%#' (%# bones) does not fit skeleton '%#' (%# bones): a bone is missing or the bone layout differs - re-import the mesh against this skeleton",
+                             getMeshID().c_str(), mesh->getSkinBoneCount(), _skeletonPath.c_str(), _skeleton->getBoneCount() );
     }
 
     bool SkeletalMeshComponent::findBoneModelTransform( const hashed_string& boneName, float4x4& outTransform ) const
@@ -711,6 +732,7 @@ namespace sw
         // 스켈레톤이 제자리에서 다시 읽혔으면(에셋 핫 리로드) 본 수가 달라질 수 있다 — 포즈 버퍼를 다시 맞춘다.
         if ( _localPose.getBoneCount() != _skeleton->getBoneCount() )
             resetPoseBuffers();
+        refreshSkinBinding();
         // 그리는 메시의 모프 타깃 수에 가중치 칸을 맞춘다(메시가 바뀌었을 수 있다 — 핫 리로드 · 군중 묶음 · 사본).
         const uint32 morphTargetCount = getMorphTargetCount();
         if ( _listMorphWeight.size() != morphTargetCount )
@@ -862,7 +884,7 @@ namespace sw
                 if ( bPoseNeeded == false && _bInterpolateFrame == SW_FALSE )
                     break;
                 applySkippedFrameInterpolation( bPoseNeeded );
-                Pose::computeSkinPalette( *_skeleton, _listModelSpace, _listSkinPalette );
+                refreshSkinPalette();
                 if ( bPoseNeeded )
                 {
                     ++_poseEvaluationCount;
@@ -883,7 +905,7 @@ namespace sw
             return false;
         _localPose = pose;
         _localPose.computeModelSpace( _skeleton->getParentIndices(), _listModelSpace );
-        Pose::computeSkinPalette( *_skeleton, _listModelSpace, _listSkinPalette );
+        refreshSkinPalette();
         return true;
     }
 

@@ -98,8 +98,11 @@ namespace sw
          * @param listParent 본마다 부모 인덱스입니다(루트는 -1). 길이는 본 수입니다.
          */
         void computeModelSpace( const vector<int32>& listParent, vector<float4x4>& outListModel ) const;
-        /** @brief 스킨 팔레트를 구합니다. 스킨 팔레트 = 역 바인드 * 모델 공간(행 벡터 규약이므로 정점에 역 바인드가 먼저 적용됩니다)입니다. */
-        static void computeSkinPalette( const Skeleton& skeleton, const vector<float4x4>& listModel, vector<float4x4>& outListPalette );
+        /**
+         * @brief 스킨 팔레트를 구합니다. 스킨 팔레트 = 역 바인드 * 모델 공간(행 벡터 규약이므로 정점에 역 바인드가 먼저 적용됩니다)입니다.
+         * @param listInverseBind 메시의 역 바인드입니다(`MeshSkinBinding`). 메시가 스켈레톤보다 본을 적게 쓰면 앞쪽 본만 팔레트에 듭니다.
+         */
+        static void computeSkinPalette( const vector<float4x4>& listInverseBind, const vector<float4x4>& listModel, vector<float4x4>& outListPalette );
 
     private:
         vector<float3>     _listTranslation;

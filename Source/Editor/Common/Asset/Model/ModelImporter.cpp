@@ -70,16 +70,18 @@ namespace sw::editor
 
             /**
              * @brief 모든 스킨의 관절(노드가 같으면 한 본)로 스켈레톤을 만듭니다. 부모가 앞에 오도록 깊이 우선 순서로 정렬하고, 관절 위의 비관절 조상의
-             *        변환은 루트 본에 합칩니다. 역 바인드는 그 관절을 처음 가진 스킨의 것입니다. 스킨끼리 다르면 경고합니다.
+             *        변환은 루트 본에 합칩니다. 역 바인드(메시의 값)는 그 관절을 처음 가진 스킨의 것입니다. 스킨끼리 다르면 경고합니다.
              * @param outMapJointBone 관절 노드에서 본 번호로의 대응입니다.
              * @param outListRootParent 본마다 루트에 합친 행렬(엔진 공간)입니다. 루트가 아니면 단위 행렬이며, 클립 샘플에도 같은 행렬을 곱합니다.
+             * @param outListBoneInverseBind 본 순서의 역 바인드입니다.
              */
             static bool buildSkeleton( const cgltf_data& data, Skeleton& outSkeleton, unordered_map<const cgltf_node*, int32>& outMapJointBone,
-                                       vector<float4x4>& outListRootParent, string_view sourcePath )
+                                       vector<float4x4>& outListRootParent, vector<float4x4>& outListBoneInverseBind, string_view sourcePath )
             {
                 outSkeleton.clear();
                 outMapJointBone.clear();
                 outListRootParent.clear();
+                outListBoneInverseBind.clear();
                 unordered_map<const cgltf_node*, uint32> mapJointSlot;
                 vector<const cgltf_node*>                listJoint;
                 vector<float4x4>                         listInverseBind;
@@ -147,9 +149,10 @@ namespace sw::editor
                             rootParent = ModelImportUtil::convertMatrixToEngineSpace( arrParentWorld );
                             local      = BoneTransform::makeFromMatrix( local.toMatrix() * rootParent );
                         }
-                        const int32 boneIndex = outSkeleton.addBone( hashed_string( ModelImportUtil::makeNodeName( data, *pNode ) ), parentBone, local, listInverseBind[itSlot->second] );
+                        const int32 boneIndex = outSkeleton.addBone( hashed_string( ModelImportUtil::makeNodeName( data, *pNode ) ), parentBone, local );
                         if ( boneIndex < 0 )
                             return false;
+                        outListBoneInverseBind.push_back( listInverseBind[itSlot->second] );
                         outMapJointBone.emplace( pNode, boneIndex );
                         outListRootParent.push_back( rootParent );
                     }
@@ -233,7 +236,8 @@ namespace sw::editor
             {
                 unordered_map<const cgltf_node*, int32> mapJointBone;
                 vector<float4x4>                        listRootParent;
-                if ( buildSkeleton( data, outResult._skeleton, mapJointBone, listRootParent, sourcePath ) == false )
+                vector<float4x4>                        listBoneInverseBind;
+                if ( buildSkeleton( data, outResult._skeleton, mapJointBone, listRootParent, listBoneInverseBind, sourcePath ) == false )
                     return false;
                 const uint32 boneCount = outResult._skeleton.getBoneCount();
 
@@ -320,7 +324,9 @@ namespace sw::editor
                     SW_LOG_ERROR_ID( "ModelImporter.GlTFMaterialSectionsImport", "glTF '%#' has material sections - import rule '%#' asks for mesh LODs, which only meshes without sections take", sourcePath, rule._name.c_str() );
                     return false;
                 }
-                outResult._bSkinned = SW_TRUE;
+                outResult._mesh._skinBinding._listInverseBind = std::move( listBoneInverseBind );
+                outResult._mesh._skinBinding._layoutHash      = outResult._skeleton.getHierarchyHash( boneCount );
+                outResult._bSkinned                           = SW_TRUE;
                 return readClips( data, mapJointBone, listRootParent, rule, sourcePath, outResult );
             }
 
@@ -781,7 +787,7 @@ namespace sw::editor
         if ( garment->setGeometryWithTangents( vector<RHIVertex>( inoutMesh._listVertex ), vector<uint32>( inoutMesh._listIndex ) ) == false )
             return false; // 메시가 까닭을 남겼다(임포트가 만든 번호라 생기지 않아야 한다)
         if ( inoutMesh._listSkinVertex.empty() == false )
-            garment->setSkin( inoutMesh._listSkinVertex, body->getSkinBoneCount() );
+            garment->setSkin( inoutMesh._listSkinVertex, body->getSkinBinding() );
         garment->setMorphTargets( inoutMesh._listMorphTarget );
         const uint32 unboundCount = CharacterMeshUtil::transferBodySurface( *body, *garment, rule._bodySurfaceDistance );
         if ( unboundCount > 0 )
@@ -791,6 +797,7 @@ namespace sw::editor
             return false;
         }
         inoutMesh._listSkinVertex  = garment->getSkinVertices();
+        inoutMesh._skinBinding     = garment->getSkinBinding(); // 가중치의 번호가 몸의 본이므로 바인드도 몸의 것이다
         inoutMesh._listMorphTarget = garment->getMorphTargets();
         SW_LOG_INFO_ID( "ModelImporter.TransferredSkinMorphTargets", "Transferred skin and %# morph targets of '%#' onto %#", static_cast<uint32>( inoutMesh._listMorphTarget.size() ), rule._bodySurface.c_str(), sourcePath );
         return true;

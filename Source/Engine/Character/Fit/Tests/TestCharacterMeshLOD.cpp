@@ -60,7 +60,7 @@ namespace
             shared_ptr<Mesh> mesh = Mesh::create();
             SW_EXPECT_TRUE( mesh->setGeometryWithTangents( std::move( listVertex ), std::move( listIndex ) ) );
             if ( bSkin )
-                mesh->setSkin( std::move( listSkin ), 2u );
+                mesh->setSkin( std::move( listSkin ), MeshSkinBinding::makeIdentity( 2u ) );
             SW_EXPECT_TRUE( mesh->setSections( std::move( listSection ) ) );
             return mesh;
         }

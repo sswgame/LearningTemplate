@@ -379,6 +379,39 @@ namespace sw
                 } );
             }
 
+            /** @brief 본 배치 지문과 역 바인드를 씁니다. */
+            static void appendSkinBinding( vector<uint8>& outBytes, const MeshSkinBinding& skinBinding )
+            {
+                LittleEndianUtil::appendUint64( outBytes, skinBinding._layoutHash );
+                for ( const float4x4& inverseBind : skinBinding._listInverseBind )
+                {
+                    for ( uint32 element = 0; element < 16; ++element )
+                    {
+                        LittleEndianUtil::appendFloat32( outBytes, ( &inverseBind._11 )[element] );
+                    }
+                }
+            }
+
+            /** @brief 본 배치 지문과 역 바인드 @p boneCount 개를 읽습니다. 유한하지 않은 값이 있으면 false 입니다. */
+            [[nodiscard]] static bool readSkinBinding( ByteReader& reader, uint32 boneCount, MeshSkinBinding& outSkinBinding )
+            {
+                outSkinBinding._layoutHash = reader.readUint64();
+                return reader.readList( outSkinBinding._listInverseBind, boneCount, MeshAssetFormat::kInverseBindSize, [&]( float4x4& inverseBind ) -> bool
+                {
+                    for ( uint32 element = 0; element < 16; ++element )
+                    {
+                        const float32 value = reader.readFloat32();
+                        if ( MathUtil::isFinite( value ) == false )
+                        {
+                            SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetInvalidInverseBind", "Mesh asset has an inverse bind matrix that is not finite - re-import the model" );
+                            return false;
+                        }
+                        ( &inverseBind._11 )[element] = value;
+                    }
+                    return true;
+                } );
+            }
+
             /** @brief 스킨 정점 @p vertexCount 개를 읽습니다. 뼈 번호가 뼈 수를 넘으면 false 입니다. */
             [[nodiscard]] static bool readSkinVertices( ByteReader& reader, uint32 vertexCount, uint32 skinBoneCount, vector<MeshSkinVertex>& outListSkin )
             {
@@ -460,7 +493,7 @@ namespace sw
                     }
                     if ( bLODSkin )
                     {
-                        if ( readLODSkinChunk( chunk, ioData._skinBoneCount, ioData._listLOD ) == false )
+                        if ( readLODSkinChunk( chunk, ioData._skinBinding.getBoneCount(), ioData._listLOD ) == false )
                         {
                             SW_LOG_WARNING_ID( "MeshAssetFormat.MeshAssetMalformedLOD2", "Mesh asset has a malformed LOD skin chunk (it must follow the LOD chunk and match its levels)" );
                             return false;
@@ -498,8 +531,8 @@ namespace sw
     void MeshAssetFormat::makeBytes( const MeshAssetData& data, vector<uint8>& outBytes )
     {
         const bool   bSkin         = data.hasSkin();
-        const uint32 skinBoneCount = bSkin ? data._skinBoneCount : 0u;
-        const size_t skinByteCount = bSkin ? data._listSkinVertex.size() * kSkinVertexSize : 0u;
+        const uint32 skinBoneCount = bSkin ? data._skinBinding.getBoneCount() : 0u;
+        const size_t skinByteCount = bSkin ? data._listSkinVertex.size() * kSkinVertexSize + sizeof( uint64 ) + skinBoneCount * kInverseBindSize : 0u;
         outBytes.clear();
         outBytes.reserve( kHeaderSize + data._listVertex.size() * kVertexSize + skinByteCount + data._listIndex.size() * sizeof( uint32 ) );
         for ( const uint8 magic : MeshAssetFormatInternal::kArrMagic )
@@ -530,6 +563,7 @@ namespace sw
                     LittleEndianUtil::appendFloat32( outBytes, weight );
                 }
             }
+            MeshAssetFormatInternal::appendSkinBinding( outBytes, data._skinBinding );
         }
         MeshAssetFormatInternal::appendIndices( outBytes, data._listIndex );
         // 선택 덩어리 — 모프 타깃(있을 때). 길이는 내용을 다 쓴 뒤 채운다.
@@ -602,7 +636,7 @@ namespace sw
 
         const bool bWholeTriangles = vertexCount > 0 && indexCount > 0 && indexCount % 3 == 0;
         // 정점 수 × 크기를 64 비트로 셈한다 — 깨진 머리의 큰 정점 수가 32 비트로 넘쳐 작은 파일과 "맞아" 보이지 않게 한다.
-        const uint64 skinSize     = skinBoneCount > 0 ? static_cast<uint64>( vertexCount ) * kSkinVertexSize : 0u;
+        const uint64 skinSize     = skinBoneCount > 0 ? static_cast<uint64>( vertexCount ) * kSkinVertexSize + sizeof( uint64 ) + static_cast<uint64>( skinBoneCount ) * kInverseBindSize : 0u;
         const uint64 indexSize    = static_cast<uint64>( indexCount ) * sizeof( uint32 );
         const uint64 expectedSize = static_cast<uint64>( kHeaderSize ) + static_cast<uint64>( vertexCount ) * kVertexSize + skinSize + indexSize;
         // 정점 · 스킨 · 인덱스 뒤의 남은 바이트는 선택 덩어리다(아래에서 하나씩 읽는다). 모자라면 깨진 파일이다.
@@ -630,8 +664,7 @@ namespace sw
         bool bRead = Internal::readVertices( reader, vertexCount, uvBounds, outData._listVertex );
         if ( bRead && skinBoneCount > 0 )
         {
-            bRead                  = Internal::readSkinVertices( reader, vertexCount, skinBoneCount, outData._listSkinVertex );
-            outData._skinBoneCount = skinBoneCount;
+            bRead = Internal::readSkinVertices( reader, vertexCount, skinBoneCount, outData._listSkinVertex ) && Internal::readSkinBinding( reader, skinBoneCount, outData._skinBinding );
         }
         if ( bRead && Internal::readIndices( reader, indexCount, vertexCount, outData._listIndex ) == false )
         {

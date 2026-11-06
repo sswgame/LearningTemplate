@@ -76,7 +76,7 @@ namespace
             {
                 BoneTransform transform{};
                 transform._translation = offset;
-                (void)_skeleton.addBone( hashed_string( pName ), parent, transform, float4x4::Identity );
+                (void)_skeleton.addBone( hashed_string( pName ), parent, transform );
             };
             add( "root", -1, float3{} );
             add( "pelvis", kRoot, float3{ 0.0f, 1.0f, 0.0f } );
@@ -93,7 +93,6 @@ namespace
             add( "goal", kRoot, float3{} );
             add( "pole", kRoot, float3{} );
             add( "anchor", kRoot, float3{} );
-            _skeleton.computeInverseBindFromReference();
             _pose.setToReference( _skeleton );
             refreshModel();
         }

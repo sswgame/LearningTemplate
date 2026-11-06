@@ -114,7 +114,7 @@ namespace sw::editor
                 data._listSkinVertex  = mesh.getSkinVertices();
                 data._listMorphTarget = mesh.getMorphTargets();
                 data._listSection     = mesh.getSections();
-                data._skinBoneCount   = mesh.getSkinBoneCount();
+                data._skinBinding     = mesh.getSkinBinding();
                 return data;
             }
 
