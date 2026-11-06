@@ -3,12 +3,14 @@
 #include "GameFramework/Runtime/World/Query/GameFlags.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Math/MathUtil.h"
 
 #include "Engine/Serialization/Format/Archive.h"
 
 #include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 
 #include <algorithm>
+#include <limits>
 
 namespace sw
 {
@@ -249,7 +251,9 @@ namespace sw
 
     int32 GameFlags::addFlag( const hashed_string& name, int32 delta )
     {
-        const int32 value = getFlag( name ) + delta;
+        // int32 넘침은 정의되지 않은 동작이라 범위에서 멈춘다(데이터가 정한 값 · 저장본의 값이 더해진다).
+        const int64 sum   = static_cast<int64>( getFlag( name ) ) + delta;
+        const int32 value = static_cast<int32>( MathUtil::clamp( sum, static_cast<int64>( std::numeric_limits<int32>::min() ), static_cast<int64>( std::numeric_limits<int32>::max() ) ) );
         setFlag( name, value );
         return value;
     }
