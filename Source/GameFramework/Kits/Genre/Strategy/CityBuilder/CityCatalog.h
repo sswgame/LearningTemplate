@@ -68,7 +68,7 @@ namespace sw
         return static_cast<uint8>( 1u << static_cast<uint32>( service ) );
     }
 
-    /** @brief 물자 하나입니다. */
+    /** @brief 물자 하나입니다. 집이 먹는 물자는 집 단계의 `goods` 가 이름으로 적는다 — 식량 깃발(`food`)은 읽고 아무도 쓰지 않아 지웠다. */
     REFLECT()
     struct CityGoodDef
     {
@@ -80,8 +80,6 @@ namespace sw
         string _name{};
         PROPERTY( Min = 0 )
         int32 _price{ 10 }; ///< 무역과 표시에 쓰는 가격
-        PROPERTY()
-        bool _bFood{ false };
     };
 } // namespace sw
 

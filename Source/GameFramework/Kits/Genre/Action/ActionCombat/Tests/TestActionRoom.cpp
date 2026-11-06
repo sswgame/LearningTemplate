@@ -673,3 +673,15 @@ SW_TEST_CASE( MonsterCatalogTest, ReadingNothingFails )
     SW_EXPECT_FALSE( catalog.loadFromXMLText( R"(<MonsterCatalog/>)", "empty" ) );
     SW_EXPECT_TRUE( catalog.findMonster( sw::hashed_string( "one" ) ) != nullptr );
 }
+
+/** @brief [MonsterCatalogTest] 결함: 순찰 · 감지 · 공격 거리를 읽고 액션 룸이 버렸다. 칸을 지웠으므로 적으면 그 몬스터를 넣지 않는다 - 적은 값이 말없이 버려지지 않는다 */
+SW_TEST_CASE( MonsterCatalogTest, UnusedAIFieldIsRejected )
+{
+    SW_EXPECT_LOG( "XMLFields.UnknownField" );
+    SW_EXPECT_LOG( "MonsterCatalog.ElementNotLoadedListed" );
+
+    sw::MonsterCatalog catalog;
+    SW_REQUIRE_TRUE( catalog.loadFromXMLText( R"(<MonsterCatalog><Monster id="a" name="a"><AI patrolRange="4"/></Monster><Monster id="b" name="b"><AI coolTime="1"/></Monster></MonsterCatalog>)", "dropped" ) );
+    SW_EXPECT_TRUE( catalog.findMonster( sw::hashed_string( "a" ) ) == nullptr );
+    SW_EXPECT_TRUE( catalog.findMonster( sw::hashed_string( "b" ) ) != nullptr );
+}

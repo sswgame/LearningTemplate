@@ -6,7 +6,7 @@
  *     <MonsterCatalog>
  *       <Monster id="boss" name="Boss" archetype="RangedShooter">
  *         <Stats hp="220" maxHP="220" atk="12" def="16" speed="0.9" radius="0.7" invincibility="0"/>
- *         <AI patrolRange="4" detectRange="8" attackRange="1" coolTime="1.6" firstDelay="1.2" projectilePrefab=""/>
+ *         <AI coolTime="1.6" firstDelay="1.2"/>
  *         <Shot angle="0" speed="4.5" life="2.5" radius="0.22" damage="10"/>
  *         <Shot angle="1.5708" speed="3.2" life="1.8" radius="0.22" damage="10"/>
  *         <Prefab path=""/>
@@ -99,24 +99,19 @@ namespace sw
 
 namespace sw
 {
-    /** @brief 몬스터 한 종의 AI 수치입니다(`<AI>`). 거리는 m, 시간은 s 입니다. */
+    /**
+     * @brief 몬스터 한 종의 사격 시간 수치입니다(`<AI>`). 시간은 s 입니다.
+     * @details 순찰 · 감지 · 공격 거리와 탄 프리팹 칸은 읽기만 하고 액션 룸이 쓰지 않아 지웠다(적은 데이터도 없었다). 액션 룸의 적은 언제나 플레이어를 쫓는다 — 거리 판정이 생기면 그때 칸을 둔다.
+     */
     REFLECT()
     struct MonsterAIDef
     {
         REFLECT_BODY();
 
-        PROPERTY( Min = 0.0 )
-        float32 _patrolRange{ 4.0f }; ///< 순찰 반경(m)
-        PROPERTY( Min = 0.0 )
-        float32 _detectRange{ 8.0f }; ///< 감지 거리(m)
-        PROPERTY( Min = 0.0 )
-        float32 _attackRange{ 1.0f }; ///< 공격 거리(m)
         PROPERTY( Name = "coolTime", Min = 0.0 )
         float32 _attackCoolTime{ 1.5f }; ///< 공격 간격(s). `<Shot>` 이 있는 종은 0 보다 커야 한다
         PROPERTY( Name = "firstDelay", Min = 0.0 )
         float32 _firstAttackDelay{ 0.0f }; ///< 나타나서 첫 공격까지의 시간(s)
-        PROPERTY()
-        string _projectilePrefab{};
     };
 } // namespace sw
 

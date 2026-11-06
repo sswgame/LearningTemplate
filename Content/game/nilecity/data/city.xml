@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- NileCity 의 도시 데이터(파라오 장르, GF_CityBuilder 의 CityCatalog 형식).
-     Good: 물자(food = 식량). Building: kind = House · Service · Producer · Storage · Market · Decoration.
+     Good: 물자. 집이 먹는 물자는 HouseLevel 의 goods 가 이름으로 적는다. Building: kind = House · Service · Producer · Storage · Market · Decoration.
        service + delivery(Walker = 도로를 도는 일꾼 · Radius = 반경 안 집에 늘) · range(걸음 수 · 반경 칸) · walkerInterval(초).
        Producer: goods 첫 칸을 productionTime 초마다 amount 만큼(일꾼이 다 찼을 때). terrain="Floodplain" 이면 해마다의 범람이 양을 정한다.
        Storage · Market: goods 는 받는 · 파는 물자, capacity 는 상한. desirability(음수 = 싫은 이웃) · desirabilityRadius.
      HouseLevel: 적은 순서가 단계(0 = 처음 짓는 오두막). services · goods 를 받고 매력도가 desirability 이상이 이어지면 오른다.
      세금(tax)은 세리가 다녀간 집만 사람마다 달마다 낸다. -->
 <CityCatalog roadCost="2">
-  <Good id="grain" name="Grain" price="8" food="true"/>
-  <Good id="figs" name="Figs" price="10" food="true"/>
+  <Good id="grain" name="Grain" price="8"/>
+  <Good id="figs" name="Figs" price="10"/>
   <Good id="pottery" name="Pottery" price="20"/>
   <Good id="beer" name="Beer" price="24"/>
 
