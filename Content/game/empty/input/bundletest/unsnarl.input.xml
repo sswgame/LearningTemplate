@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<InputMap>
+	<override name="Use" trigger="Pressed">
+		<bind source="Key" code="G"/>
+	</override>
+</InputMap>

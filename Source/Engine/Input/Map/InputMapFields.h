@@ -25,7 +25,7 @@ namespace sw
         Mouse,   ///< 마우스 버튼
     };
 
-    /** @brief `<InputMap>` 루트입니다. 더하는 파일(`appendFromAsset`)은 이 칸을 적지 않는다. */
+    /** @brief `<InputMap>` 루트입니다. 더하는 파일(`appendFromAsset` · 묶음의 뒤 파일)은 `virtualCursor` 말고는 이 칸을 적지 않는다(`InputMap::loadBundle`). */
     REFLECT()
     struct SW_API InputMapRootFields
     {
@@ -63,7 +63,17 @@ namespace sw
         bool _bAlwaysOn{ false };
     };
 
-    /** @brief `<action>` 입니다. 바인딩이 자기 `layer` · `trigger` 를 적지 않으면 이 값을 쓴다. */
+    /** @brief 묶음의 차이 파일이 앞 파일의 액션을 지우는 `<remove>` 입니다. 바꾸기는 `<override>` 이고 칸은 `<action>` 과 같다(`InputMapActionFields`). */
+    REFLECT()
+    struct SW_API InputMapRemoveFields
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required )
+        hashed_string _name{};
+    };
+
+    /** @brief `<action>` · `<override>` 입니다. 바인딩이 자기 `layer` · `trigger` 를 적지 않으면 이 값을 쓴다. `<override>` 가 `layer` 를 적지 않으면 덮는 액션의 레이어다. */
     REFLECT()
     struct SW_API InputMapActionFields
     {

@@ -766,7 +766,7 @@ namespace sw
             if ( otherIndex == settingIndex || other._type != UserSettingType::KeyBinding )
                 continue;
             InputSlot otherSlot;
-            if ( findBindingContext( otherIndex ) != context || findEffectiveSlot( otherIndex, otherSlot ) == false )
+            if ( isSameBindingContext( settingIndex, otherIndex ) == false || findEffectiveSlot( otherIndex, otherSlot ) == false )
                 continue;
             if ( otherSlot == slot )
             {
@@ -1054,6 +1054,21 @@ namespace sw
             return {};
         const hashed_string layer = pInputMap->findBindingLayer( def._action, def._bindIndex );
         return layer.empty() ? pInputMap->getDefaultLayerName() : layer;
+    }
+
+    bool UserSettingsManager::isSameBindingContext( uint32 settingIndexA, uint32 settingIndexB ) const
+    {
+        const hashed_string contextA = findBindingContext( settingIndexA );
+        const hashed_string contextB = findBindingContext( settingIndexB );
+        if ( contextA == contextB )
+            return true;
+        const UserSettingDef& defA = _schema.getSettings()[settingIndexA];
+        const UserSettingDef& defB = _schema.getSettings()[settingIndexB];
+        if ( defA._context.empty() == false || defB._context.empty() == false )
+            return false; // 스키마가 문맥을 적었으면 그 이름이 전부다
+        // 묶음의 레이어는 파일의 겹침을 나눌 뿐 게임에서 함께 켜져 있다 — 다른 레이어여도 한 번 눌러 둘 다 돈다.
+        const InputMap* pInputMap = _engineHandlers.findBindingInputMap( defA._action );
+        return pInputMap != nullptr && pInputMap == _engineHandlers.findBindingInputMap( defB._action ) && pInputMap->canLayersFireTogether( contextA, contextB );
     }
 
     void UserSettingsManager::broadcast( const hashed_string& settingID, UserSettingEventKind kind )

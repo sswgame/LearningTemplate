@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<InputMap>
+	<action name="Game.Accept" layer="Gameplay" trigger="Pressed">
+		<bind source="Gamepad" code="A"/>
+	</action>
+</InputMap>

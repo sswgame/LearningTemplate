@@ -36,6 +36,7 @@
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCookStamp.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCooker.h"
+#include "Engine/Input/Map/InputMapBundle.h"
 #include "Engine/Localization/EngineDefaultAssetsSubsystem.h"
 #include "Engine/Localization/LocalizationDocuments.h"
 #include "Engine/Module/ModuleLoadStageSubsystem.h"
@@ -450,6 +451,13 @@ namespace sw
                 AnimationCrowdSettings crowdSettings{};
                 const bool             bCrowdSettingsLoaded = crowdSettings.loadFromAsset( AssetID{ engine::getSubsystem<EngineDefaultAssets>()._animationCrowdSettings.get() } );
                 const CookStore        cookStore            = CookStore::makeLocal();
+                // 입력 맵 묶음은 게임 시작의 검사와 같은 길로 먼저 본다 — 겹친 묶음은 배포본이 뜨지 않으므로 구울 까닭이 없다. 쿠킹 세션 밖이다(출력의 입력이 아니다).
+                if ( InputMapBundle::checkPack( engine::getSubsystem<GameConfig>()._packRoot.get() ) == false )
+                {
+                    SW_LOG_ERROR_ID( "Headless.InputMapBundleRejected", "Cooking stopped: the input map bundle of the active game pack was rejected (listed above)" );
+                    inoutState._bFailed = SW_TRUE;
+                    return true;
+                }
                 // 셰이더 굽기 · 판정은 세션 밖에서(`cookShadersForPack` 설명). 씬 단계보다 먼저 하므로 깨진 셰이더로 씬을 굽는 시간을 쓰지 않는다.
                 if ( bCookPacks || bCookAll )
                 {

@@ -7,8 +7,11 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
+
+#include "Engine/Input/Map/InputBinding.h"
 
 namespace sw
 {
@@ -31,5 +34,10 @@ namespace sw
          * @return 형식이 담지 못하는 바인딩이 있으면 오류를 남기고 false 입니다(빼고 쓰면 다시 읽을 때 조용히 사라진다).
          */
         [[nodiscard]] static bool writeAction( const XMLNode& parent, const InputMap& map, const hashed_string& action );
+        /**
+         * @brief 액션 하나를 @p pElementName(`action` · `override`) 원소로 씁니다. 맵에 지금 없는 액션(뒤 파일이 덮거나 지운 정의)도 원래 파일에 남도록 값으로 받습니다.
+         * @return 형식이 담지 못하는 바인딩이 있으면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool writeActionElement( const XMLNode& parent, const utf8* pElementName, const hashed_string& action, InputActionValueType valueType, const vector<ActionBinding>& listBinding );
     };
 } // namespace sw

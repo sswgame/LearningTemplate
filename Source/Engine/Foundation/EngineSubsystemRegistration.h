@@ -113,6 +113,7 @@ namespace sw
     X( AssetDataKindRegistry, Services, false )          \
     X( TickBatchRegistry, Services, false )              \
     X( DevCommandRegistry, Services, false )             \
+    X( InputMapExtensionRegistry, Services, false )      \
     X( DebugHUDRegistry, Services, false )               \
     X( ContentHashCache, Services, false )               \
     X( GameTimeScale, Services, false )                  \

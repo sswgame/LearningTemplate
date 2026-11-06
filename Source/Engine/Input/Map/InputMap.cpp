@@ -213,8 +213,10 @@ namespace sw
         , _listActionName{}
         , _listLayerName{}
         , _listLayerStack{}
+        , _listSource{}
         , _actionBuffer{}
         , _nextGeneration{ 1 }
+        , _currentSourceIndex{ 0 }
         , _defaultLayerName{ InputMapDefaults::kDefaultLayerName }
         , _accessibility{}
         , _triggerRules{}
@@ -237,6 +239,8 @@ namespace sw
         _listActionName.clear();
         _listLayerName.clear();
         _listLayerStack.clear();
+        _listSource.clear();
+        _currentSourceIndex = 0;
         _actionBuffer.clear();
         _defaultLayerName                     = hashed_string( InputMapDefaults::kDefaultLayerName );
         _triggerRules._doubleClickTime        = InputMapDefaults::kDoubleClickTime;
@@ -838,7 +842,7 @@ namespace sw
             const ActionEntry& entry = _listActionEntry[actIndex];
             for ( const ActionBinding& binding : entry._listBinding )
             {
-                if ( binding._layer != targetLayer )
+                if ( canLayersFireTogether( binding._layer, targetLayer ) == false )
                     continue;
 
                 // 슬롯 수는 테이블에서 가져온다. switch 의 `default:` 로 두면 새 종류를 추가했을 때 충돌 검사가 그 바인딩을
@@ -937,6 +941,23 @@ namespace sw
     bool InputMap::isLayerEnabled( const hashed_string& layer ) const
     {
         return isLayerActiveInternal( layer );
+    }
+
+    bool InputMap::canLayersFireTogether( const hashed_string& layerA, const hashed_string& layerB ) const
+    {
+        return layerA == layerB || ( isLayerActiveInternal( layerA ) && isLayerActiveInternal( layerB ) );
+    }
+
+    uint32 InputMap::getActionSourceIndex( const hashed_string& action ) const
+    {
+        const ActionEntry* pEntry = findAction( action );
+        return pEntry != nullptr ? pEntry->_sourceIndex : 0;
+    }
+
+    bool InputMap::isActionOverride( const hashed_string& action ) const
+    {
+        const ActionEntry* pEntry = findAction( action );
+        return pEntry != nullptr && pEntry->_bOverride == SW_TRUE;
     }
 
     int32 InputMap::getLayerPriority( const hashed_string& layer ) const
@@ -1038,9 +1059,13 @@ namespace sw
         if ( it == _mapAction.end() )
             return false;
         ActionEntry& entry = _listActionEntry[it->second];
+        // 덮은 액션을 지우면 앞 파일의 정의가 다시 읽힌다 — 저장이 덮던 파일에 지우기로 남긴다. 앞 파일에는 원래 정의가 남아 있다(`_listShadowed`).
+        if ( entry._bOverride == SW_TRUE && entry._sourceIndex < _listSource.size() )
+            _listSource[entry._sourceIndex]._listRemove.push_back( action );
         entry._listBinding.clear();
         entry._listBindingState.clear();
         entry._listDefaultBinding.clear();
+        entry._bOverride  = SW_FALSE;
         entry._generation = ++_nextGeneration;
         _mapAction.erase( it );
         (void)VectorUtil::removeFirst( _listActionName, action ); // 목록 순서가 저장 순서라 순서를 지키며 지운다
@@ -1218,6 +1243,7 @@ namespace sw
         def._bEnabled    = enabled ? SW_TRUE : SW_FALSE;
         def._bBlockLower = blockLower ? SW_TRUE : SW_FALSE;
         def._bAlwaysOn   = alwaysOn ? SW_TRUE : SW_FALSE;
+        def._sourceIndex = _currentSourceIndex;
 
         _listLayerName.push_back( def._name );
         const uint32 index = static_cast<uint32>( _listLayerEntry.size() );
@@ -1238,6 +1264,7 @@ namespace sw
             entry._valueType   = valueType;
             entry._handleIndex = index;
             entry._generation  = ++_nextGeneration;
+            entry._sourceIndex = _currentSourceIndex;
             _listActionEntry.push_back( std::move( entry ) );
             _mapAction.emplace( action, index );
             return _listActionEntry[index];
@@ -1836,15 +1863,40 @@ namespace sw
     bool InputMap::loadFromAsset( const AssetID& assetID )
     {
         const string_view relativePath = assetID.view();
-        return loadDefinition( AssetID{ relativePath }, false );
+        return loadDefinition( AssetID{ relativePath }, false, true );
     }
 
     bool InputMap::appendFromAsset( const AssetID& assetID )
     {
-        return loadDefinition( assetID, true );
+        return loadDefinition( assetID, true, true );
     }
 
-    bool InputMap::loadDefinition( const AssetID& assetID, bool bAppend )
+    bool InputMap::loadBundle( const vector<AssetID>& listAsset )
+    {
+        if ( listAsset.empty() )
+        {
+            SW_LOG_ERROR_ID( "InputMap.BundleEmpty", "InputMap: a bundle needs at least its base map" );
+            clear();
+            return false;
+        }
+        bool bValid = true;
+        for ( size_t index = 0; index < listAsset.size() && bValid; ++index )
+        {
+            bValid = loadDefinition( listAsset[index], index > 0, false );
+        }
+        // 뒤 파일의 `virtualCursor` 는 앞 파일의 바인딩과도 겹칠 수 있고, 앞 파일끼리의 겹침은 뒤 파일이 풀 수 있다 — 검사는 다 읽은 맵에 한 번 한다.
+        const string_view sourceName = listAsset.back().view();
+        if ( bValid )
+            bValid = countVirtualCursorConflicts( sourceName ) == 0 && countAllSameLayerInputConflicts( sourceName ) == 0;
+        if ( bValid == false )
+        {
+            SW_LOG_ERROR_ID( "InputMap.BundleRejected", "InputMap: the bundle ending in %# was rejected (listed above) - no actions are bound", sourceName );
+            clear();
+        }
+        return bValid;
+    }
+
+    bool InputMap::loadDefinition( const AssetID& assetID, bool bAppend, bool bCheckConflicts )
     {
         const string_view relativePath = assetID.view();
         XMLDocument       doc;
@@ -1864,13 +1916,19 @@ namespace sw
 
         // 읽기 단계: 맵 전체 값 → 레이어 → 액션 → 충돌 검사. 단계가 실패하면 거기서 끝낸다.
         // 더하는 파일은 맵 전체 값을 정하지 않는다 — 두 파일이 각자 정하면 어느 값이 이기는지가 읽는 순서에 달린다.
-        if ( bAppend && root.getFirstAttribute().isValid() )
+        // `virtualCursor` 만 받는다. 시간 값과 달리 게임마다 다른 기능이고, 기본 맵을 둘로 두면 시간 값이 두 벌이 된다. 두 번 적으면 `readMapSettings` 가 거절한다.
+        for ( XMLAttribute attribute = root.getFirstAttribute(); bAppend && attribute.isValid(); attribute = attribute.getNext() )
         {
+            if ( string_view{ attribute.getName() } == "virtualCursor" )
+                continue;
             SW_LOG_ERROR_ID( "InputMap.InputMapAppendedAnotherMap", "InputMap %# is appended to another map but sets map-wide attributes - only the base map sets them", absPath );
             return false;
         }
         if ( readMapSettings( root, absPath, bAppend ) == false )
             return false;
+        // 맵을 비운(`readMapSettings`) 뒤에 올린다 — 이 파일의 레이어 · 액션이 이 번호를 받는다.
+        _listSource.emplace_back( relativePath, bAppend == false, root.hasAttribute( "virtualCursor" ) );
+        _currentSourceIndex = static_cast<uint32>( _listSource.size() - 1 );
 
         bool bValid = true;
         readLayerDefinitions( root, absPath, bAppend, bValid );
@@ -1882,6 +1940,8 @@ namespace sw
             SW_LOG_ERROR_ID( "InputMap.InputMapInvalidAttributeValues", "InputMap %# has invalid attribute values (listed above)", absPath );
             return false;
         }
+        if ( bCheckConflicts == false )
+            return true;
         // 가상 커서가 마우스로 바꾸는 스틱 · 버튼을 액션에 따로 묶으면 한 입력이 두 입력이 된다 — 읽기를 실패로 돌려 데이터를 고치게 한다.
         if ( countVirtualCursorConflicts( absPath ) > 0 )
             return false;
@@ -1895,14 +1955,24 @@ namespace sw
 
     bool InputMap::readMapSettings( const XMLNode& root, string_view absPath, bool bAppend )
     {
-        static constexpr const utf8* kArrRootChild[] = { "layers", "layer", "action" };
+        static constexpr const utf8* kArrRootChild[] = { "layers", "layer", "action", "override", "remove" };
         InputMapRootFields           fields;
         const bool                   bFields   = XMLFields::readFields( root, fields, absPath );
         const bool                   bChildren = XMLNameCheck::reportUnknownChildren( root, kArrRootChild, absPath );
         if ( bFields == false || bChildren == false )
             return false;
         if ( bAppend )
+        {
+            if ( fields._virtualCursor == InputMapVirtualCursor::Off )
+                return true;
+            if ( _virtualCursorStick != InputMapVirtualCursor::Off )
+            {
+                SW_LOG_ERROR_ID( "InputMap.VirtualCursorSetTwice", "InputMap %# sets virtualCursor but an earlier map of the bundle already did", absPath );
+                return false;
+            }
+            _virtualCursorStick = fields._virtualCursor;
             return true;
+        }
         clear();
         const bool bTimingRefused = setDoubleClickTime( fields._doubleClickTime ) == false || setDoubleClickMaxDistance( fields._doubleClickMaxDistance ) == false ||
                                     setHoldThreshold( fields._holdThreshold ) == false || setDragThreshold( fields._dragThreshold ) == false;
@@ -1992,6 +2062,116 @@ namespace sw
         {
             loadAction( actionNode, _defaultLayerName );
         }
+
+        // 차이는 앞 파일이 있어야 뜻이 있다. 기본 맵에 적은 것은 틀린 파일이다.
+        if ( bAppend == false && ( root.findChild( "override" ).isValid() || root.findChild( "remove" ).isValid() ) )
+        {
+            SW_LOG_ERROR_ID( "InputMap.DiffInBaseMap", "InputMap %# is a base map but has <override> or <remove> - only a later map of a bundle can", absPath );
+            inoutbValid = false;
+            return;
+        }
+        for ( XMLNode node = root.findChild( "override" ); node.isValid(); node = node.findNextSibling( "override" ) )
+        {
+            readOverride( node, absPath, outListLoadedAction, inoutbValid );
+        }
+        for ( XMLNode node = root.findChild( "remove" ); node.isValid(); node = node.findNextSibling( "remove" ) )
+        {
+            readRemove( node, absPath, inoutbValid );
+        }
+    }
+
+    InputMap::ActionEntry* InputMap::findDiffTarget( const XMLNode& node, const hashed_string& action, string_view absPath )
+    {
+        ActionEntry* pEntry = findAction( action );
+        if ( pEntry == nullptr )
+        {
+            SW_LOG_ERROR_ID( "InputMap.DiffUnknownAction", "InputMap %#: <%#> names action '%#' that no earlier map of the bundle defines", absPath, node.getName(), action.c_str() );
+            return nullptr;
+        }
+        if ( pEntry->_bOverride == SW_TRUE )
+        {
+            SW_LOG_ERROR_ID( "InputMap.DiffTwice", "InputMap %#: <%#> names action '%#' that %# already overrode - one diff per action, or the winner depends on the load order", absPath, node.getName(),
+                             action.c_str(), _listSource[pEntry->_sourceIndex]._assetPath.c_str() );
+            return nullptr;
+        }
+        if ( pEntry->_sourceIndex == _currentSourceIndex )
+        {
+            SW_LOG_ERROR_ID( "InputMap.DiffSameFile", "InputMap %#: <%#> names action '%#' that the same file defines - edit the definition instead", absPath, node.getName(), action.c_str() );
+            return nullptr;
+        }
+        return pEntry;
+    }
+
+    void InputMap::shadowActionDefinition( const ActionEntry& entry, const hashed_string& action )
+    {
+        SourceActionSnapshot snapshot;
+        snapshot._action      = action;
+        snapshot._valueType   = entry._valueType;
+        snapshot._listBinding = entry._listBinding;
+        _listSource[entry._sourceIndex]._listShadowed.push_back( std::move( snapshot ) );
+    }
+
+    void InputMap::readOverride( const XMLNode& node, string_view absPath, vector<hashed_string>& outListLoadedAction, bool& inoutbValid )
+    {
+        const hashed_string action( node.getAttributeText( "name" ) );
+        ActionEntry* const  pEntry = findDiffTarget( node, action, absPath );
+        if ( pEntry == nullptr )
+        {
+            inoutbValid = false;
+            return;
+        }
+        shadowActionDefinition( *pEntry, action );
+        // `layer` 를 적지 않은 덮기는 덮는 액션의 레이어에 남는다 — 차이는 키만 적으면 된다.
+        const hashed_string inheritedLayer = pEntry->_listBinding.empty() ? _defaultLayerName : pEntry->_listBinding.front()._layer;
+        pEntry->_listBinding.clear();
+        pEntry->_listDefaultBinding.clear();
+        pEntry->_listBindingState.clear();
+        pEntry->_sourceIndex = _currentSourceIndex;
+        pEntry->_bOverride   = SW_TRUE;
+        outListLoadedAction.push_back( action );
+        InputMapXML::readAction( *this, node, inheritedLayer, absPath, inoutbValid );
+    }
+
+    void InputMap::readRemove( const XMLNode& node, string_view absPath, bool& inoutbValid )
+    {
+        InputMapRemoveFields fields;
+        const bool           bFields   = XMLFields::readFields( node, fields, absPath );
+        const bool           bChildren = XMLNameCheck::reportUnknownChildren( node, nullptr, 0, absPath );
+        if ( bFields == false || bChildren == false )
+        {
+            inoutbValid = false;
+            return;
+        }
+        ActionEntry* const pEntry = findDiffTarget( node, fields._name, absPath );
+        if ( pEntry == nullptr )
+        {
+            inoutbValid = false;
+            return;
+        }
+        shadowActionDefinition( *pEntry, fields._name );
+        (void)removeAction( fields._name ); // 바로 위에서 찾았다
+        _listSource[_currentSourceIndex]._listRemove.push_back( fields._name );
+    }
+
+    uint32 InputMap::countAllSameLayerInputConflicts( string_view sourceName ) const
+    {
+        uint32                conflictCount = 0;
+        vector<hashed_string> listVisited;
+        for ( const hashed_string& action : _listActionName )
+        {
+            const uint32 bindCount = getBindingCount( action );
+            for ( uint32 bindIndex = 0; bindIndex < bindCount; ++bindIndex )
+            {
+                hashed_string other{};
+                if ( findSameLayerInputConflict( action, bindIndex, other ) == false || VectorUtil::contains( listVisited, other ) )
+                    continue; // 짝의 앞쪽에서 이미 알렸다
+                SW_LOG_ERROR_ID( "InputMap.InputMapActionUsesSame", "InputMap %#: action '%#' uses the same input as '%#' in layer '%#' - one press would fire both", sourceName, action.c_str(), other.c_str(),
+                                 findBindingLayer( action, bindIndex ).c_str() );
+                ++conflictCount;
+            }
+            listVisited.push_back( action );
+        }
+        return conflictCount;
     }
 
     uint32 InputMap::countSameLayerInputConflicts( string_view sourceName, const hashed_string& action ) const
@@ -2091,16 +2271,7 @@ namespace sw
         const XMLNode layersNode = root.appendChild( "layers" );
         for ( const hashed_string& layerName : _listLayerName )
         {
-            const LayerDefinition* pLayer = findLayer( layerName );
-            if ( pLayer == nullptr )
-                continue;
-            InputMapLayerFields layerFields;
-            layerFields._name        = layerName;
-            layerFields._priority    = pLayer->_priority;
-            layerFields._bEnabled    = pLayer->_bEnabled != SW_FALSE;
-            layerFields._bBlockLower = pLayer->_bBlockLower != SW_FALSE;
-            layerFields._bAlwaysOn   = pLayer->_bAlwaysOn != SW_FALSE;
-            XMLFields::writeFields( layersNode.appendChild( "layer" ), layerFields );
+            writeLayerDefinition( layersNode, layerName );
         }
 
         // 액션은 등록 순서대로 쓴다. 그래야 다시 읽은 맵의 액션 순서가 같다.
@@ -2110,6 +2281,105 @@ namespace sw
             bAllWritten = InputMapXML::writeAction( root, *this, actionName ) && bAllWritten;
         }
         if ( bAllWritten == false )
+            return false;
+        if ( doc.saveFile( absPath.str() ) == false )
+        {
+            SW_LOG_ERROR_ID( "InputMap.CouldNotWriteInputMap", "Could not write InputMap %#", absPath.str() );
+            return false;
+        }
+        return true;
+    }
+
+    void InputMap::writeLayerDefinition( const XMLNode& layersNode, const hashed_string& layerName ) const
+    {
+        const LayerDefinition* pLayer = findLayer( layerName );
+        if ( pLayer == nullptr )
+            return;
+        InputMapLayerFields layerFields;
+        layerFields._name        = layerName;
+        layerFields._priority    = pLayer->_priority;
+        layerFields._bEnabled    = pLayer->_bEnabled != SW_FALSE;
+        layerFields._bBlockLower = pLayer->_bBlockLower != SW_FALSE;
+        layerFields._bAlwaysOn   = pLayer->_bAlwaysOn != SW_FALSE;
+        XMLFields::writeFields( layersNode.appendChild( "layer" ), layerFields );
+    }
+
+    bool InputMap::fillSourceDocument( uint32 sourceIndex, XMLDocument& outDoc ) const
+    {
+        const SourceRecord& source = _listSource[sourceIndex];
+        const XMLNode       root   = outDoc.appendRoot( "InputMap" );
+        if ( source._bBase == SW_TRUE )
+        {
+            InputMapRootFields rootFields;
+            rootFields._defaultLayer           = _defaultLayerName;
+            rootFields._doubleClickTime        = _triggerRules._doubleClickTime;
+            rootFields._doubleClickMaxDistance = _triggerRules._doubleClickMaxDistance;
+            rootFields._holdThreshold          = _triggerRules._holdThreshold;
+            rootFields._dragThreshold          = _triggerRules._dragThreshold;
+            rootFields._virtualCursor          = source._bVirtualCursor == SW_TRUE ? _virtualCursorStick : InputMapVirtualCursor::Off;
+            XMLFields::writeFields( root, rootFields );
+        }
+        else if ( source._bVirtualCursor == SW_TRUE )
+        {
+            root.appendAttribute( "virtualCursor", getEnumName( _virtualCursorStick ) );
+        }
+
+        vector<hashed_string> listOwnLayer;
+        for ( const hashed_string& layerName : _listLayerName )
+        {
+            const LayerDefinition* pLayer = findLayer( layerName );
+            if ( pLayer != nullptr && pLayer->_sourceIndex == sourceIndex )
+                listOwnLayer.push_back( layerName );
+        }
+        if ( listOwnLayer.empty() == false )
+        {
+            const XMLNode layersNode = root.appendChild( "layers" );
+            for ( const hashed_string& layerName : listOwnLayer )
+            {
+                writeLayerDefinition( layersNode, layerName );
+            }
+        }
+
+        // 원래 차례대로 — 자기 정의(지금 맵에 있는 것, 뒤 파일이 덮거나 지운 것), 덮기, 지우기.
+        bool bAllWritten = true;
+        for ( const hashed_string& actionName : _listActionName )
+        {
+            const ActionEntry* pEntry = findAction( actionName );
+            if ( pEntry != nullptr && pEntry->_sourceIndex == sourceIndex && pEntry->_bOverride == SW_FALSE )
+                bAllWritten = InputMapXML::writeActionElement( root, "action", actionName, pEntry->_valueType, pEntry->_listBinding ) && bAllWritten;
+        }
+        for ( const SourceActionSnapshot& snapshot : source._listShadowed )
+        {
+            bAllWritten = InputMapXML::writeActionElement( root, "action", snapshot._action, snapshot._valueType, snapshot._listBinding ) && bAllWritten;
+        }
+        for ( const hashed_string& actionName : _listActionName )
+        {
+            const ActionEntry* pEntry = findAction( actionName );
+            if ( pEntry != nullptr && pEntry->_sourceIndex == sourceIndex && pEntry->_bOverride == SW_TRUE )
+                bAllWritten = InputMapXML::writeActionElement( root, "override", actionName, pEntry->_valueType, pEntry->_listBinding ) && bAllWritten;
+        }
+        for ( const hashed_string& actionName : source._listRemove )
+        {
+            InputMapRemoveFields removeFields;
+            removeFields._name = actionName;
+            XMLFields::writeFields( root.appendChild( "remove" ), removeFields );
+        }
+        return bAllWritten;
+    }
+
+    bool InputMap::writeSourceText( uint32 sourceIndex, string& outText ) const
+    {
+        XMLDocument doc;
+        if ( fillSourceDocument( sourceIndex, doc ) == false )
+            return false;
+        outText = doc.saveToString();
+        return true;
+    }
+
+    bool InputMap::saveSourceToAsset( uint32 sourceIndex, const AbsolutePath& absPath ) const
+    {
+        XMLDocument doc;
+        if ( fillSourceDocument( sourceIndex, doc ) == false )
             return false;
         if ( doc.saveFile( absPath.str() ) == false )
         {

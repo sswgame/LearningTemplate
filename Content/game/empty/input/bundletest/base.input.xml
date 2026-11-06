@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<InputMap defaultLayer="Gameplay" holdThreshold="0.5">
+	<layers>
+		<layer name="Gameplay" enabled="1" blockLower="0"/>
+	</layers>
+</InputMap>

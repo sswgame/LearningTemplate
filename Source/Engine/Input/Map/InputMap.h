@@ -80,6 +80,7 @@ namespace sw
     struct InputPressInstant;
 
     class InputManager;
+    class XMLDocument;
     class XMLNode;
 } // namespace sw
 
@@ -134,6 +135,31 @@ namespace sw
          * @return 모두 더했으면 true 입니다.
          */
         [[nodiscard]] bool appendFromAsset( const AssetID& assetID );
+        /**
+         * @brief 맵 묶음을 차례로 읽습니다. 첫 파일이 기본 맵(`loadFromAsset`)이고 나머지는 레이어로 쌓입니다.
+         * @details 뒤 파일은 차이를 적는다 — `<action>` 은 새 액션, `<override name>` 은 앞 파일 액션의 바인딩을 통째로 바꾸고(바인딩이 없으면 그 액션은 눌리지 않는다),
+         *          `<remove name>` 은 그 액션을 지운다. 한 액션은 묶음에서 한 번만 덮거나 지울 수 있다 — 여러 파일이 덮으면 이기는 쪽이 읽는 순서에 달린다.
+         *          맵 전체 값은 기본 맵의 것이고, 예외는 `virtualCursor` 하나다(기능이라 그것을 쓰는 게임의 묶음에 파일로 얹힌다 · 묶음에서 한 번만 적는다).
+         *          겹침 · 가상 커서 검사는 다 읽은 맵에 한 번 한다 — 앞 파일끼리의 겹침을 뒤 파일이 풀 수 있으므로 파일마다 보면 거짓 오류가 난다.
+         *          언리얼 Enhanced Input 의 매핑 컨텍스트 쌓기 · 유니티 Action Asset 의 맵 켜기 · Godot 의 프로젝트 입력 맵과 비교한 까닭은 `docs/InputMapBundle.md`.
+         * @return 모두 읽었고 겹침이 없으면 true 입니다. 실패하면 맵을 비운다(일부만 든 맵으로 게임을 띄우지 않는다).
+         */
+        [[nodiscard]] bool loadBundle( const vector<AssetID>& listAsset );
+        /** @brief 읽은 파일 수입니다(`loadFromAsset` 은 1, `loadBundle` 은 묶음 길이, 파일에서 읽지 않은 맵은 0). */
+        uint32 getSourceCount() const { return static_cast<uint32>( _listSource.size() ); }
+        /** @brief 읽은 파일 @p sourceIndex 의 리소스 id 입니다. */
+        const string& getSourceAssetPath( uint32 sourceIndex ) const { return _listSource[sourceIndex]._assetPath; }
+        /** @brief 액션을 마지막으로 정한 파일 번호입니다(패널이 보이고 저장이 돌려보낸다). 없는 액션이면 0 입니다. */
+        uint32 getActionSourceIndex( const hashed_string& action ) const;
+        /** @brief 액션이 앞 파일의 것을 `<override>` 로 덮은 것이면 true 입니다. */
+        bool isActionOverride( const hashed_string& action ) const;
+        /**
+         * @brief 읽은 파일 @p sourceIndex 의 몫을 그 파일 형식의 글로 만듭니다 — 그 파일이 정한 맵 전체 값 · 레이어 · 액션 · 덮기 · 지우기와, 뒤 파일이 덮거나 지운 그 파일의 원래 정의입니다.
+         * @return 형식이 담지 못하는 바인딩이 있으면 false 입니다.
+         */
+        [[nodiscard]] bool writeSourceText( uint32 sourceIndex, string& outText ) const;
+        /** @brief `writeSourceText` 의 글을 @p absPath 에 씁니다. 묶음을 고친 패널이 파일마다 원래 자리로 돌려보낼 때 씁니다. */
+        [[nodiscard]] bool saveSourceToAsset( uint32 sourceIndex, const AbsolutePath& absPath ) const;
         /**
          * @brief 레이어, 액션, 현재 바인딩을 `loadFromAsset` 가 읽는 `<InputMap>` 정의로 씁니다(에디터 InputMap 패널의 저장).
          * @param absPath 쓸 디스크 경로입니다(리소스 id 는 부르는 쪽이 `AssetPaths::toDiskPath` 로 푼다).
@@ -287,7 +313,7 @@ namespace sw
         [[nodiscard]] bool findDefaultRebindSlot( const hashed_string& action, uint32 bindIndex, InputSlot& outSlot ) const;
         /** @brief 바인딩 @p bindIndex 가 속한 레이어 이름을 반환합니다. 없으면 빈 이름입니다. */
         hashed_string findBindingLayer( const hashed_string& action, uint32 bindIndex ) const;
-        /** @brief 같은 레이어 안에서 다른 액션이 이미 그 슬롯을 점유하고 있는지 검사합니다. */
+        /** @brief @p layer 와 함께 발화할 수 있는 레이어(`canLayersFireTogether`)에서 다른 액션이 이미 그 슬롯을 점유하고 있는지 검사합니다. */
         bool hasBindingConflict( const InputSlot& slot, const hashed_string& layer, string& outConflictingAction ) const;
         /** @brief 지정 액션의 바인딩을 처음 등록한 기본 바인딩으로 되돌립니다. */
         bool resetActionToDefault( const hashed_string& action );
@@ -341,8 +367,13 @@ namespace sw
         // ------------------------------------------------------------------------------
         ActionHandle getActionHandle( const hashed_string& action ) const;
 
-        bool                         hasLayer( const hashed_string& layer ) const;
-        bool                         isLayerEnabled( const hashed_string& layer ) const;
+        bool hasLayer( const hashed_string& layer ) const;
+        bool isLayerEnabled( const hashed_string& layer ) const;
+        /**
+         * @brief 두 레이어의 바인딩이 한 번의 누름에 함께 발화할 수 있으면 true 입니다 — 같은 레이어이거나, 둘 다 지금 켜져 있습니다.
+         * @details 묶음의 레이어는 파일의 겹침을 나누려고 있어서 게임에서는 함께 켜져 있다. 그래서 플레이어 재배치의 겹침은 같은 레이어만 보면 놓친다(Interact 를 W 로 옮기면 이동과 함께 돈다).
+         */
+        bool                         canLayersFireTogether( const hashed_string& layerA, const hashed_string& layerB ) const;
         int32                        getLayerPriority( const hashed_string& layer ) const;
         const vector<hashed_string>& getLayerNames() const { return _listLayerName; }
         const hashed_string&         getDefaultLayerName() const { return _defaultLayerName; }
@@ -425,6 +456,8 @@ namespace sw
             ActionPhase                            _currentPhase{ ActionPhase::None };
             uint32                                 _handleIndex{ ActionHandle::kInvalidIndex };
             uint32                                 _generation{ 1 };
+            uint32                                 _sourceIndex{ 0 }; ///< 이 액션을 정한 묶음 파일 번호(`_listSource`)
+            uint8                                  _bOverride    : 1; ///< 앞 파일의 액션을 `<override>` 로 덮은 것이다
             uint8                                  _bDown        : 1;
             uint8                                  _bPressed     : 1;
             uint8                                  _bReleased    : 1;
@@ -444,11 +477,42 @@ namespace sw
                 , _currentPhase{ ActionPhase::None }
                 , _handleIndex{ ActionHandle::kInvalidIndex }
                 , _generation{ 1 }
+                , _sourceIndex{ 0 }
+                , _bOverride{ SW_FALSE }
                 , _bDown{ SW_FALSE }
                 , _bPressed{ SW_FALSE }
                 , _bReleased{ SW_FALSE }
                 , _bTriggered{ SW_FALSE }
                 , _bToggleState{ SW_FALSE } {}
+        };
+
+        /** @brief 뒤 파일이 덮거나 지운 정의입니다. 맵에서는 사라지지만 파일에는 남아야 하므로 정의한 파일의 기록이 든다. */
+        struct SourceActionSnapshot
+        {
+            hashed_string         _action{};
+            InputActionValueType  _valueType{ InputActionValueType::Boolean };
+            vector<ActionBinding> _listBinding{};
+        };
+
+        /** @brief 묶음이 읽은 파일 하나의 기록입니다. 패널 저장이 파일마다 원래 몫을 돌려보내는 데 쓴다. */
+        struct SourceRecord
+        {
+            string                       _assetPath;
+            vector<SourceActionSnapshot> _listShadowed;       ///< 이 파일이 정의했는데 뒤 파일이 덮거나 지운 액션
+            vector<hashed_string>        _listRemove;         ///< 이 파일의 `<remove>`
+            uint8                        _bBase          : 1; ///< 기본 맵이다 — 맵 전체 값을 쓴다
+            uint8                        _bVirtualCursor : 1; ///< `virtualCursor` 를 이 파일이 적었다
+            [[maybe_unused]] uint8       _reserved       : 6;
+
+            SourceRecord( string_view assetPath, bool bBase, bool bVirtualCursor )
+                : _assetPath{ assetPath }
+                , _listShadowed{}
+                , _listRemove{}
+                , _bBase{ bBase ? SW_TRUE : SW_FALSE }
+                , _bVirtualCursor{ bVirtualCursor ? SW_TRUE : SW_FALSE }
+                , _reserved{ 0 }
+            {
+            }
         };
 
         const ActionEntry* getActionFromHandle( ActionHandle handle ) const;
@@ -464,9 +528,9 @@ namespace sw
         bool areShortcutModifiersExact( const ActionBinding& binding, SlotRead read ) const;
         /**
          * @brief `loadFromAsset` 와 `appendFromAsset` 가 함께 쓰는 본문입니다. @p bAppend 면 맵을 비우지 않고, 맵 전체 값을 받지 않고, 이미 있는 이름을 오류로 봅니다.
-         * @details 두 입구가 각자 읽으면 레이어 · 액션 읽기 규칙이 둘로 갈라진다.
+         * @details 두 입구가 각자 읽으면 레이어 · 액션 읽기 규칙이 둘로 갈라진다. @p bCheckConflicts 가 거짓이면 겹침 · 가상 커서 검사를 부른 쪽이 다 읽은 뒤에 한다(`loadBundle`).
          */
-        [[nodiscard]] bool loadDefinition( const AssetID& assetID, bool bAppend );
+        [[nodiscard]] bool loadDefinition( const AssetID& assetID, bool bAppend, bool bCheckConflicts );
         /** @brief `loadDefinition` 의 맵 전체 값 단계입니다. 시간 문턱 · 가상 커서 · 기본 레이어를 읽고, 더하지 않을 때만 맵을 비우고 적용합니다. 깨졌거나 거절되면 false 입니다. */
         [[nodiscard]] bool readMapSettings( const XMLNode& root, string_view absPath, bool bAppend );
         /** @brief `loadDefinition` 의 레이어 단계입니다. `<layers>` 블록의 레이어를 등록하고 기본 레이어를 보장합니다. 깨진 값은 @p inoutbValid 를 내립니다. */
@@ -480,6 +544,20 @@ namespace sw
         void readActionDefinitions( const XMLNode& root, string_view absPath, bool bAppend, vector<hashed_string>& outListLoadedAction, bool& inoutbValid );
         /** @brief 액션 @p action 의 바인딩 중 같은 레이어에서 같은 발화 규칙 · 같은 입력을 다른 액션이 이미 쓰는 것을 알리고 그 수를 반환합니다(`appendFromAsset`). */
         [[nodiscard]] uint32 countSameLayerInputConflicts( string_view sourceName, const hashed_string& action ) const;
+        /** @brief 맵 전체의 같은 레이어 겹침을 짝마다 한 번 알리고 그 수를 반환합니다(`loadBundle`). */
+        [[nodiscard]] uint32 countAllSameLayerInputConflicts( string_view sourceName ) const;
+        /** @brief 차이 원소(`<override>` · `<remove>`)가 가리키는 액션을 찾습니다. 앞 파일에 없거나 이미 덮였거나 이 파일의 것이면 알리고 nullptr 입니다. */
+        [[nodiscard]] ActionEntry* findDiffTarget( const XMLNode& node, const hashed_string& action, string_view absPath );
+        /** @brief 지금 정의를 정의한 파일의 기록에 남깁니다(뒤 파일이 덮거나 지우기 직전). */
+        void shadowActionDefinition( const ActionEntry& entry, const hashed_string& action );
+        /** @brief `<override>` 하나를 읽습니다 — 앞 파일 액션의 바인딩을 이 원소의 것으로 바꿉니다. */
+        void readOverride( const XMLNode& node, string_view absPath, vector<hashed_string>& outListLoadedAction, bool& inoutbValid );
+        /** @brief `<remove>` 하나를 읽습니다 — 앞 파일의 액션을 지웁니다. */
+        void readRemove( const XMLNode& node, string_view absPath, bool& inoutbValid );
+        /** @brief 레이어 하나를 `<layer>` 원소로 씁니다. */
+        void writeLayerDefinition( const XMLNode& layersNode, const hashed_string& layerName ) const;
+        /** @brief `saveSourceToAsset` · `writeSourceText` 의 본문입니다. */
+        [[nodiscard]] bool fillSourceDocument( uint32 sourceIndex, XMLDocument& outDoc ) const;
 
         /** @brief 한 프레임 동안 액션 하나의 바인딩들을 합산한 값입니다. */
         struct ActionFrameAccum
@@ -585,8 +663,10 @@ namespace sw
         vector<hashed_string>                _listActionName;
         vector<hashed_string>                _listLayerName;
         vector<hashed_string>                _listLayerStack;
+        vector<SourceRecord>                 _listSource; /**< 읽은 파일(묶음 순서). 맵을 비우면 함께 비운다. */
         InputActionBuffer                    _actionBuffer;
         uint32                               _nextGeneration;
+        uint32                               _currentSourceIndex; /**< 새로 만드는 액션 · 레이어가 속할 파일입니다. 읽기가 끝나면 마지막 파일 — 패널이 새로 만든 것은 묶음의 차이 파일로 간다. */
         hashed_string                        _defaultLayerName;
         InputAccessibilitySettings           _accessibility;
         InputTriggerRules                    _triggerRules; ///< 시간 · 거리 문턱과 바인딩 상태 진행(홀드 · 탭 · 연타 · 끌기 · 반복)

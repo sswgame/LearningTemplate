@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<InputMap>
+	<action name="Game.Fire" layer="Gameplay" trigger="Pressed">
+		<bind source="Key" code="E"/>
+	</action>
+</InputMap>

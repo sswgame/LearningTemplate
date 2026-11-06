@@ -215,6 +215,7 @@ namespace sw
     {
         hashed_string          _name;
         int32                  _priority;
+        uint32                 _sourceIndex; /**< 이 레이어를 정의한 묶음 파일의 번호입니다(`InputMap::getSourceAssetPath`). 패널 저장이 원래 파일로 돌려보낸다. */
         uint8                  _bEnabled    : 1;
         uint8                  _bBlockLower : 1; /**< 켜져 있으면 우선순위가 낮거나 스택 아래에 있는 레이어를 비활성화합니다. */
         uint8                  _bAlwaysOn   : 1; /**< 스택이나 enableOnlyLayer 에 영향받지 않고 항상 활성입니다. */
@@ -223,6 +224,7 @@ namespace sw
         LayerDefinition()
             : _name{}
             , _priority{ 0 }
+            , _sourceIndex{ 0 }
             , _bEnabled{ SW_TRUE }
             , _bBlockLower{ SW_FALSE }
             , _bAlwaysOn{ SW_FALSE }

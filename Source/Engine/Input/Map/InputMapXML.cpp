@@ -400,18 +400,26 @@ namespace sw
 
     bool InputMapXML::writeAction( const XMLNode& parent, const InputMap& map, const hashed_string& action )
     {
+        const InputMap::ActionEntry* pEntry = map.findAction( action );
+        if ( pEntry == nullptr )
+        {
+            SW_LOG_ERROR_ID( "InputMapXML.ActionMissing", "Action '%#' is not in the map - not saved", action.c_str() );
+            return false;
+        }
+        return writeActionElement( parent, "action", action, pEntry->_valueType, pEntry->_listBinding );
+    }
+
+    bool InputMapXML::writeActionElement( const XMLNode& parent, const utf8* pElementName, const hashed_string& action, InputActionValueType valueType, const vector<ActionBinding>& listBinding )
+    {
         InputMapActionFields fields;
         fields._name             = action;
-        const XMLNode actionNode = parent.appendChild( "action" );
+        const XMLNode actionNode = parent.appendChild( pElementName );
         XMLFields::writeFields( actionNode, fields );
-        const InputMap::ActionEntry* pEntry = map.findAction( action );
-        if ( pEntry != nullptr )
-            actionNode.appendAttribute( "valueType", getEnumName( pEntry->_valueType ) );
-        bool         bAllWritten = true;
-        const uint32 bindCount   = map.getBindingCount( action );
-        for ( uint32 bindIndex = 0; bindIndex < bindCount; ++bindIndex )
+        actionNode.appendAttribute( "valueType", getEnumName( valueType ) );
+        bool bAllWritten = true;
+        for ( const ActionBinding& binding : listBinding )
         {
-            bAllWritten = InputMapXMLInternal::writeBinding( actionNode, action, *map.getBinding( action, bindIndex ) ) && bAllWritten; // 개수 안의 인덱스라 늘 있다
+            bAllWritten = InputMapXMLInternal::writeBinding( actionNode, action, binding ) && bAllWritten;
         }
         return bAllWritten;
     }

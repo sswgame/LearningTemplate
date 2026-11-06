@@ -346,8 +346,10 @@ namespace sw
         void                 applyScalabilityPreset( const ScalabilityGroupDef& group, const hashed_string& presetName, bool bCommitted );
         [[nodiscard]] bool   findEffectiveSlot( uint32 settingIndex, InputSlot& outSlot ) const;
         hashed_string        findBindingContext( uint32 settingIndex ) const;
-        void                 broadcast( const hashed_string& settingID, UserSettingEventKind kind );
-        [[nodiscard]] bool   saveIfPathSet();
+        /** @brief 두 키 바인딩 설정이 한 번의 누름에 함께 발화할 수 있으면(같은 문맥이거나 함께 켜진 레이어) true 입니다. 재배치 겹침이 이것으로 본다. */
+        [[nodiscard]] bool isSameBindingContext( uint32 settingIndexA, uint32 settingIndexB ) const;
+        void               broadcast( const hashed_string& settingID, UserSettingEventKind kind );
+        [[nodiscard]] bool saveIfPathSet();
 
     private:
         UserSettingsSchema                      _schema;

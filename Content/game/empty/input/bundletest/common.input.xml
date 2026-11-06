@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<InputMap>
+	<layers>
+		<layer name="Common" enabled="1" blockLower="0"/>
+	</layers>
+	<action name="Move" layer="Common">
+		<vector2d up="W" down="S" left="A" right="D"/>
+	</action>
+	<action name="Use" layer="Common" trigger="Pressed">
+		<bind source="Key" code="E"/>
+	</action>
+	<action name="Menu" layer="Common" trigger="Pressed">
+		<bind source="Key" code="M"/>
+	</action>
+</InputMap>
