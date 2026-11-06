@@ -89,7 +89,14 @@ namespace sw
             outError = "the PPM header is broken (needs width height 255)";
             return false;
         }
-        ++cursor; // 헤더 끝의 공백 하나
+        // 헤더 끝의 공백 하나 — 공백이 아니면(`255X`) 그 바이트를 화소로 읽어야 할지 알 수 없다.
+        const uint8 terminator = pData[cursor];
+        if ( terminator != ' ' && terminator != '\t' && terminator != '\r' && terminator != '\n' )
+        {
+            outError = "the PPM header is broken (needs width height 255)";
+            return false;
+        }
+        ++cursor;
         const uint64 pixelBytes = static_cast<uint64>( width ) * height * 3u;
         if ( size - cursor < pixelBytes )
         {

@@ -27,6 +27,22 @@ namespace sw
                     *pOutError = pMessage;
             }
 
+            /** @brief 한 변 텍셀 수와 단계 수가 범위 안인지 봅니다. 텍셀을 잡기 전에 부릅니다 — 범위 밖 값이 큰 할당을 일으키지 않게. */
+            [[nodiscard]] static bool isSizeInRange( uint32 resolution, uint32 levelCount, string* pOutError )
+            {
+                if ( resolution < ReflectionProbeAsset::kMinResolution || ReflectionProbeAsset::kMaxResolution < resolution )
+                {
+                    setError( pOutError, "reflection probe resolution is out of range" );
+                    return false;
+                }
+                if ( levelCount < ReflectionProbeAsset::kMinLevelCount || ReflectionProbeAsset::kMaxLevelCount < levelCount )
+                {
+                    setError( pOutError, "reflection probe level count is out of range" );
+                    return false;
+                }
+                return true;
+            }
+
             /** @brief 0 을 양수로 치는 부호입니다(HLSL `sign` 은 0 에서 0 이라 셰이더도 같은 식을 쓴다). */
             static float32 signNotZero( float32 value ) { return value >= 0.0f ? 1.0f : -1.0f; }
 
@@ -126,19 +142,9 @@ namespace sw
 
     bool ReflectionProbeAsset::isValid( string* pOutError ) const
     {
-        using Internal                = ReflectionProbeAssetInternal;
-        const bool bResolutionInRange = kMinResolution <= _resolution && _resolution <= kMaxResolution;
-        const bool bLevelInRange      = kMinLevelCount <= _levelCount && _levelCount <= kMaxLevelCount;
-        if ( bResolutionInRange == false )
-        {
-            Internal::setError( pOutError, "reflection probe resolution is out of range" );
+        using Internal = ReflectionProbeAssetInternal;
+        if ( Internal::isSizeInRange( _resolution, _levelCount, pOutError ) == false )
             return false;
-        }
-        if ( bLevelInRange == false )
-        {
-            Internal::setError( pOutError, "reflection probe level count is out of range" );
-            return false;
-        }
         if ( _listTexel.size() != static_cast<size_t>( _resolution ) * _resolution * _levelCount )
         {
             Internal::setError( pOutError, "reflection probe texels do not match its size" );
@@ -298,15 +304,12 @@ namespace sw
                 return false;
             }
         }
+        if ( Internal::isSizeInRange( resolution, levelCount, pOutError ) == false )
+            return false;
         outData._capturePosition = capturePosition;
         outData._resolution      = resolution;
         outData._levelCount      = levelCount;
         outData._listTexel.assign( static_cast<size_t>( resolution ) * resolution * levelCount, float3{} );
-        if ( outData.isValid( pOutError ) == false )
-        {
-            outData.clear();
-            return false;
-        }
 
         // 단계 0 — 텍셀 중심의 방향으로 면을 읽는다.
         const float32 texelSize = 1.0f / static_cast<float32>( resolution );

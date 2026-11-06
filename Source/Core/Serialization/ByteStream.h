@@ -176,12 +176,13 @@ namespace sw
             const uint32 size = readUint32();
             if ( hasOverflowed() )
                 return false;
-            outBytes.resize( size );
-            if ( readBytes( outBytes.data(), size ) == false )
-            {
-                outBytes.clear();
+            if ( size == 0 )
+                return true;
+            // 남은 바이트로 먼저 본다 — 깨진 길이 하나가 4 GB 할당을 일으키지 않게 한다.
+            const uint8* pBytes = consume( size );
+            if ( pBytes == nullptr )
                 return false;
-            }
+            outBytes.assign( pBytes, pBytes + size );
             return true;
         }
         /** @brief `writePod` 가 쓴 값을 읽습니다. 모자라면 false 이고 @p outValue 는 그대로입니다. */

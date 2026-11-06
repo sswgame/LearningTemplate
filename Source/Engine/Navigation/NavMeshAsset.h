@@ -72,7 +72,7 @@ namespace sw
 
         NavMeshAsset();
 
-        /** @brief 씬 경로(`.scene.xml`, `.scene.bin`, `.scene`)에 해당하는 쿠킹본 경로(`<씬 이름>.navmesh`)를 반환합니다. 씬 경로가 아니면 빈 문자열입니다. */
+        /** @brief 씬 경로(`.scene.xml`, `.scene.bin`)에 해당하는 쿠킹본 경로(`<씬 이름>.navmesh`)를 반환합니다. 씬 경로가 아니면 빈 문자열입니다. */
         static string makeCookedPath( string_view scenePath );
 
         /** @brief 바이트로 씁니다. */
