@@ -55,6 +55,9 @@ namespace sw
         int32 _count{ 1 };
         PROPERTY()
         bool _bOptional{ false }; ///< 끝내지 않아도 단계가 넘어간다. 보너스 보상이나 다른 결말의 조건에 쓴다
+
+        /** @brief 일어난 일(@p kind, @p target)이 이 목표에 세이는가입니다. */
+        bool matches( const hashed_string& kind, const hashed_string& target ) const { return _kind == kind && _target == target; }
     };
 } // namespace sw
 

@@ -61,10 +61,7 @@ namespace sw
         for ( size_t index = 0; index < pStage->_listObjective.size(); ++index )
         {
             const QuestObjective& objective = pStage->_listObjective[index];
-            if ( objective._kind != kind || objective._target != target )
-                continue;
-            const int32 counted = index < pProgress->_listCount.size() ? pProgress->_listCount[index] : 0;
-            if ( counted < objective._count )
+            if ( objective.matches( kind, target ) && pProgress->_listCount[index] < objective._count )
                 return true;
         }
         return false;
@@ -156,6 +153,28 @@ namespace sw
             enterStage( progress, quest, pStage->_nextStage, depth + 1 );
     }
 
+    void QuestLog::reconcileWithDefinition( QuestProgress& inoutProgress, const QuestDef& quest )
+    {
+        const QuestStage* pStage = quest.findStage( inoutProgress._stageID );
+        if ( pStage == nullptr )
+        {
+            inoutProgress._listCount.clear();
+            inoutProgress._bAwaitingChoice = SW_FALSE;
+            if ( inoutProgress._status != QuestStatus::Active )
+                return;
+            SW_LOG_WARNING_ID( "QuestLog.QuestLogSavedStageNot", "QuestLog: quest '%#' was saved in stage '%#' which no longer exists - failed", quest._id.c_str(), inoutProgress._stageID.c_str() );
+            inoutProgress._status = QuestStatus::Failed;
+            return;
+        }
+        inoutProgress._listCount.resize( pStage->_listObjective.size(), 0 );
+        for ( size_t index = 0; index < inoutProgress._listCount.size(); ++index )
+        {
+            inoutProgress._listCount[index] = MathUtil::clamp( inoutProgress._listCount[index], 0, pStage->_listObjective[index]._count );
+        }
+        if ( pStage->_listBranch.empty() )
+            inoutProgress._bAwaitingChoice = SW_FALSE;
+    }
+
     void QuestLog::tryAdvance( QuestProgress& progress )
     {
         const QuestDef*   pQuest = _pCatalog->find( progress._questID );
@@ -194,7 +213,7 @@ namespace sw
             for ( size_t index = 0; index < pStage->_listObjective.size(); ++index )
             {
                 const QuestObjective& objective = pStage->_listObjective[index];
-                if ( objective._kind != kind || ( objective._target.empty() == false && objective._target != target ) )
+                if ( objective.matches( kind, target ) == false )
                     continue;
                 const int32 before = progress._listCount[index];
                 const int32 after  = MathUtil::clamp( bAbsolute ? value : before + value, 0, objective._count );
@@ -352,16 +371,18 @@ namespace sw
             archive >> progress._completedCount;
             archive >> status;
             archive >> progress._bAwaitingChoice;
-            const bool bValid = archive.isOk() && status <= static_cast<uint8>( QuestStatus::Failed ) && progress._bAwaitingChoice <= SW_TRUE;
+            const bool bValid = archive.isOk() && status <= static_cast<uint8>( QuestStatus::Failed ) && progress._bAwaitingChoice <= SW_TRUE && progress._stageTime >= 0.0f && progress._completedCount >= 0;
             if ( bValid == false )
                 return false;
-            progress._status  = static_cast<QuestStatus>( status );
-            const bool bKnown = _pCatalog == nullptr || _pCatalog->find( progress._questID ) != nullptr;
-            if ( bKnown == false )
+            progress._status       = static_cast<QuestStatus>( status );
+            const QuestDef* pQuest = _pCatalog != nullptr ? _pCatalog->find( progress._questID ) : nullptr;
+            if ( _pCatalog != nullptr && pQuest == nullptr )
             {
                 SW_LOG_WARNING_ID( "QuestLog.QuestLogSavedQuestNot", "QuestLog: saved quest '%#' is not in the catalog - dropped", progress._questID.c_str() );
                 continue;
             }
+            if ( pQuest != nullptr )
+                reconcileWithDefinition( progress, *pQuest );
             listProgress.push_back( std::move( progress ) );
         }
         _listProgress = std::move( listProgress );

@@ -75,9 +75,18 @@ namespace sw
                 bValid = readQuestReward( stageNode, sourceName, stage._reward ) && bValid;
                 quest._listStage.push_back( stage );
             }
-            // 다음 단계와 분기가 가리키는 단계가 있는지 확인한다.
-            for ( const QuestStage& stage : quest._listStage )
+            // 다음 단계와 분기가 가리키는 단계가 있는지, 끝나지 못하는 단계가 없는지 확인한다.
+            for ( size_t stageIndex = 0; stageIndex < quest._listStage.size(); ++stageIndex )
             {
+                const QuestStage& stage = quest._listStage[stageIndex];
+                if ( quest.findStage( stage._id ) != &stage )
+                {
+                    SW_LOG_ERROR_ID( "QuestCatalog.QuestDuplicateStage", "%#: quest '%#' has a duplicate stage '%#'", sourceName, pID, stage._id.c_str() ); // 찾기는 앞의 것만 돌려주어 뒤의 것에는 닿지 못한다
+                    bValid = false;
+                }
+                const bool bDeadEnd = stage._bComplete == false && stage._bFail == false && stage._nextStage.empty() && stage._listBranch.empty();
+                if ( bDeadEnd )
+                    SW_LOG_WARNING_ID( "QuestCatalog.QuestStageDeadEnd", "%#: quest '%#' stage '%#' has no next stage and is neither complete nor fail - the quest stays active forever", sourceName, pID, stage._id.c_str() );
                 if ( stage._nextStage.empty() == false && quest.findStage( stage._nextStage ) == nullptr )
                     SW_LOG_WARNING_ID( "QuestCatalog.QuestStageGoesUnknown", "%#: quest '%#' stage '%#' goes to unknown '%#'", sourceName, pID, stage._id.c_str(), stage._nextStage.c_str() );
                 for ( const QuestBranch& branch : stage._listBranch )

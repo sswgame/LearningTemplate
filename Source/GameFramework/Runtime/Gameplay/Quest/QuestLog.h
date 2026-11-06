@@ -130,13 +130,16 @@ namespace sw
         void writeState( Archive& outArchive ) const;
         /**
          * @brief `writeState` 가 쓴 바이트로 모두 복원합니다. 알림은 없습니다. 데이터가 깨졌으면 false 를 반환하고 상태는 바뀌지 않습니다.
-         * @details 카탈로그(`initialize`)에 없는 퀘스트는 경고를 남기고 버린다. 데이터에서 지운 퀘스트 하나가 일지 전체를 막지 않게 하기 위해서이다.
+         * @details 저장 뒤 데이터가 바뀌어도 일지는 열린다: 목표 수와 개수를 지금 단계에 맞추고, 지워진 단계의 진행 중 퀘스트는 실패로 둔다(다시 받을 수 있다).
+         *          카탈로그(`initialize`)에 없는 퀘스트는 경고를 남기고 버린다. 데이터에서 지운 퀘스트 하나가 일지 전체를 막지 않게 하기 위해서이다.
          */
         [[nodiscard]] bool readState( Archive& archive );
 
     private:
         QuestProgress* findProgressMutable( const hashed_string& questID );
         void           enterStage( QuestProgress& progress, const QuestDef& quest, const hashed_string& stageID, int32 depth );
+        /** @brief 읽은 진행을 지금 데이터의 단계에 맞춥니다. 목표 표를 그 개수만큼 인덱스로 읽는 코드가 믿는 조건입니다. */
+        static void reconcileWithDefinition( QuestProgress& inoutProgress, const QuestDef& quest );
         /** @brief 지금 단계의 필수 목표를 다 했으면 다음 단계로 넘깁니다. */
         void  tryAdvance( QuestProgress& progress );
         int32 applyNotify( const hashed_string& kind, const hashed_string& target, int32 value, bool bAbsolute );
