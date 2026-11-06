@@ -131,6 +131,15 @@ namespace sw::editor
         AssetSourceImporterFunc _pfnImportSource{ nullptr };                       ///< 캐시가 다시 읽기 전에 실행하는 임포터. nullptr 이면 바로 캐시가 다시 읽는다
         AssetImportThread       _importThread{ AssetImportThread::Editor };        ///< 임포터가 도는 스레드. 임포터가 있을 때만 뜻이 있다
         AssetReferenceUse       _referenceUse{ AssetReferenceUse::ResolvedAtUse }; ///< 참조 대상이 바뀌었을 때 이 종류도 다시 읽는지(`AssetReloadCascade`). 캐시가 있는 종류에서만 뜻이 있다
+
+        /**
+         * @brief 공유 캐시 종류 @p def 의 캐시가 다시 읽는 길입니다. 캐시의 종류 이름은 정의의 이름이라(`SW_SHARED_ASSET_CACHE`) 에디터가 이름을 따로 적지 않는다 —
+         *        예전에는 `"Rig"` 처럼 손으로 적은 이름이 종류 이름(`RigAsset`)과 갈라졌다.
+         */
+        static AssetReloadRoute sharedCache( const AssetTypeDef& def, AssetReferenceUse referenceUse = AssetReferenceUse::ResolvedAtUse )
+        {
+            return AssetReloadRoute{ def._name.data(), nullptr, AssetImportThread::Editor, referenceUse };
+        }
     };
 } // namespace sw::editor
 

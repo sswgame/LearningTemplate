@@ -7,10 +7,19 @@
 #include "Engine/Module/ModuleSubsystemRegistrar.h"
 
 /**
- * @brief 모듈(GameFramework · 키트 · 게임)의 종류 @p AssetType 을 그 모듈에서 인스턴스화하고(@p ExportMacro 로 내보낸다) 모듈 서브시스템으로 등록합니다(인스턴스화하는 .cpp, `namespace sw` 안, 특수화 뒤).
+ * @brief 모듈(GameFramework · 키트 · 게임)의 종류 @p AssetType 의 정의를 적고(@p ... 는 `AssetTypeDef` 값), 그 모듈에서 인스턴스화해(@p ExportMacro 로 내보낸다 — 게임처럼 내보내지 않으면 빈 칸)
+ *        모듈 서브시스템으로 등록하며, 같은 정의로 종류를 등록합니다(`SW_ASSET_TYPE`). 인스턴스화하는 .cpp, `namespace sw` 안에 둔다.
  * @param id 정적 이름 · 서브시스템 이름을 만드는 식별자입니다.
+ * @code
+ *     SW_MODULE_SHARED_ASSET_CACHE( Crops, CropCatalog, SW_KIT_API, AssetTypeDef::makeDataFile( CropCatalog::kDataKind, AssetPathRule{ "game/", {}, "/data/crops.xml" }, AssetTypeLoader::of<CropCatalog>() ) );
+ * @endcode
  */
-#define SW_MODULE_SHARED_ASSET_CACHE( id, AssetType, ExportMacro )                                 \
+#define SW_MODULE_SHARED_ASSET_CACHE( id, AssetType, ExportMacro, ... )                            \
+    template <>                                                                                    \
+    struct SharedAssetCacheTraits<AssetType>                                                       \
+    {                                                                                              \
+        static constexpr AssetTypeDef kType = __VA_ARGS__;                                         \
+    };                                                                                             \
     template class ExportMacro           SharedAssetCache<AssetType>;                              \
     class SharedAssetCacheSubsystem_##id final : public ::sw::SharedAssetCacheSubsystem<AssetType> \
     {                                                                                              \
@@ -21,4 +30,5 @@
             return kSubsystemName;                                                                 \
         }                                                                                          \
     };                                                                                             \
-    SW_MODULE_SUBSYSTEM( Engine, SharedAssetCacheSubsystem_##id, SharedAssetCacheSubsystem_##id )
+    SW_MODULE_SUBSYSTEM( Engine, SharedAssetCacheSubsystem_##id, SharedAssetCacheSubsystem_##id ); \
+    SW_ASSET_TYPE( id, SharedAssetCacheTraits<AssetType>::kType )

@@ -10,32 +10,17 @@
 
 namespace sw
 {
-    template <>
-    struct SharedAssetCacheTraits<SpriteClipAsset>
+    namespace
     {
-        static constexpr const utf8*           kKindName   = "SpriteClip";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, SpriteClipAsset& outClip ) { return outClip.loadFromFile( assetID ); }
-    };
+        struct SpriteClipCacheInternal
+        {
+            [[nodiscard]] static bool load( const AssetID& assetID, SpriteClipAsset& outClip ) { return outClip.loadFromFile( assetID ); }
+        };
+    } // namespace
 } // namespace sw
 
 namespace sw
 {
-    template <>
-    struct SharedAssetCacheTraits<SpriteLibrary>
-    {
-        static constexpr const utf8*           kKindName   = "SpriteLibrary";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, SpriteLibrary& outLibrary ) { return outLibrary.loadFromAsset( assetID ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    SW_SHARED_ASSET_CACHE( SpriteClipAsset );
-    SW_SHARED_ASSET_CACHE( SpriteLibrary );
+    SW_SHARED_ASSET_CACHE( SpriteClipAsset, SpriteClipAsset, SpriteClipAsset::kAssetType.withLoader( AssetTypeLoader::with<SpriteClipAsset, &SpriteClipCacheInternal::load>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( SpriteLibrary, SpriteLibrary, SpriteLibrary::kAssetType.withLoader( AssetTypeLoader::of<SpriteLibrary>( MemoryTag::Animation ) ) );
 } // namespace sw

@@ -64,23 +64,23 @@ namespace sw::editor
         const EditorAssetMatchRule kArrAnimationGraphRule[] = { EditorAssetMatchRule::engineType( AnimationGraphAsset::kAssetType ) };
         const EditorAssetMatchRule kArrDialogueGraphRule[]  = { EditorAssetMatchRule::engineType( DialogueGraphAsset::kAssetType ) };
         const EditorAssetMatchRule kArrSpriteClipRule[]     = {
-            EditorAssetMatchRule::engineType( SpriteClipAsset::kAssetType, { "SpriteClip" } ),
+            EditorAssetMatchRule::engineType( SpriteClipAsset::kAssetType, AssetReloadRoute::sharedCache( SpriteClipAsset::kAssetType ) ),
             EditorAssetMatchRule::suffixes( EditorAssetMatchMode::Extension, BuiltinAssetTypesInternal::kArrSpriteImageExt, SW_COUNT_OF( BuiltinAssetTypesInternal::kArrSpriteImageExt ),
                                                 EditorAssetMatchPriority::Fallback ),
         };
         const EditorAssetMatchRule kArrTileMapRule[]       = { EditorAssetMatchRule::engineType( TileMapXMLData::kAssetType ) };
         const EditorAssetMatchRule kArrSequenceRule[]      = { EditorAssetMatchRule::engineType( SequenceAsset::kAssetType ) };
-        const EditorAssetMatchRule kArrSkeletonRule[]      = { EditorAssetMatchRule::engineType( Skeleton::kAssetType, { "Skeleton", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
-        const EditorAssetMatchRule kArrAnimationClipRule[] = { EditorAssetMatchRule::engineType( AnimationClip::kAssetType, { "AnimationClip" } ) };
+        const EditorAssetMatchRule kArrSkeletonRule[]      = { EditorAssetMatchRule::engineType( Skeleton::kAssetType, AssetReloadRoute::sharedCache( Skeleton::kAssetType, AssetReferenceUse::InlinedAtLoad ) ) };
+        const EditorAssetMatchRule kArrAnimationClipRule[] = { EditorAssetMatchRule::engineType( AnimationClip::kAssetType, AssetReloadRoute::sharedCache( AnimationClip::kAssetType ) ) };
         // 바탕(`_base`)을 읽을 때 펼치므로 바탕이 바뀌면 자식도 다시 읽는다.
-        const EditorAssetMatchRule kArrAnimationSetRule[]  = { EditorAssetMatchRule::engineType( AnimationSet::kAssetType, { "AnimationSet", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
-        const EditorAssetMatchRule kArrRigRule[]           = { EditorAssetMatchRule::engineType( RigAsset::kAssetType, { "Rig", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
-        const EditorAssetMatchRule kArrSpriteLibraryRule[] = { EditorAssetMatchRule::engineType( SpriteLibrary::kAssetType, { "SpriteLibrary", nullptr, AssetImportThread::Editor, AssetReferenceUse::InlinedAtLoad } ) };
+        const EditorAssetMatchRule kArrAnimationSetRule[]  = { EditorAssetMatchRule::engineType( AnimationSet::kAssetType, AssetReloadRoute::sharedCache( AnimationSet::kAssetType, AssetReferenceUse::InlinedAtLoad ) ) };
+        const EditorAssetMatchRule kArrRigRule[]           = { EditorAssetMatchRule::engineType( RigAsset::kAssetType, AssetReloadRoute::sharedCache( RigAsset::kAssetType, AssetReferenceUse::InlinedAtLoad ) ) };
+        const EditorAssetMatchRule kArrSpriteLibraryRule[] = { EditorAssetMatchRule::engineType( SpriteLibrary::kAssetType, AssetReloadRoute::sharedCache( SpriteLibrary::kAssetType, AssetReferenceUse::InlinedAtLoad ) ) };
 
         const EditorAssetMatchRule kArrHeightfieldRule[] = { BuiltinAssetTypesInternal::makeRawHeightfieldRule(), EditorAssetMatchRule::engineType( HeightfieldAsset::kAssetType ) };
         /** @brief 지형이 읽을 때만 읽는다 — 엔진 캐시가 없어 핫 리로드 대상이 아니다(`TerrainComponent::reloadTerrain`). 지형 브러시가 칠해 저장한다. */
         const EditorAssetMatchRule kArrLayerWeightsRule[] = { EditorAssetMatchRule::engineType( LayerWeightsAsset::kAssetType ) };
-        const EditorAssetMatchRule kArrFractureRule[]     = { EditorAssetMatchRule::engineType( FractureAsset::kAssetType, { "Fracture" } ) };
+        const EditorAssetMatchRule kArrFractureRule[]     = { EditorAssetMatchRule::engineType( FractureAsset::kAssetType, AssetReloadRoute::sharedCache( FractureAsset::kAssetType ) ) };
         /** @brief UI 문서다. 그 문서로 연 화면을 다시 만든다(`UISystem`). */
         const EditorAssetMatchRule kArrUIDocumentRule[] = { EditorAssetMatchRule::engineType( UIDocumentAsset::kAssetType, { AssetReloadRoute::kAnyCacheHoldingPath } ) };
 

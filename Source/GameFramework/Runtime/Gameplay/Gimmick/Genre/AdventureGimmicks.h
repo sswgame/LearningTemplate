@@ -105,6 +105,6 @@ namespace sw
 
         ElementGrid                        _grid;
         shared_ptr<const ElementRuleTable> _pTable;               ///< `_grid` 가 가리키는 공유 테이블(쥔 동안 산다)
-        uint32                             _seenTableReloadCount; ///< 테이블을 찾았을 때의 `ElementRuleTable::getReloadCount` 값. 달라지면 다시 만든다
+        uint32                             _seenTableReloadCount; ///< 테이블을 찾았을 때의 `SharedAssetCache<ElementRuleTable>::getReloadCount` 값. 달라지면 다시 만든다
     };
 } // namespace sw

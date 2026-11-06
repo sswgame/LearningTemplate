@@ -370,8 +370,3 @@ namespace sw
         return readFromBytes( bytes.data(), bytes.size(), path );
     }
 } // namespace sw
-
-namespace sw
-{
-    SW_ASSET_TYPE( AnimationClip, AnimationClip::kAssetType );
-} // namespace sw

@@ -281,6 +281,4 @@ namespace sw
         return bValid;
     }
 
-    /** @brief 몸 모양 묶음 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_ASSET_TYPE( BodyShape, AssetTypeDef::makeDataFile( "bodyshape", AssetPathRule{ {}, {}, ".bodyshape.xml" }, AssetTypeLoader::of<BodyShapeSet>() ) );
 } // namespace sw

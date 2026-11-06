@@ -20,19 +20,19 @@ namespace
     struct SharedAssetCacheTestAsset
     {
         string _text;
+
+        [[nodiscard]] static bool load( const AssetID& assetID, SharedAssetCacheTestAsset& outAsset ) { return AssetIO::readTextAsset( assetID, outAsset._text ); }
     };
 } // namespace
 
 namespace sw
 {
+    /** 캐시 등록 줄과 같은 모양이다 — 정의 한 벌이 이름 · 로더 · 다시 읽기 방식을 든다(종류 등록과 모듈 서브시스템 등록은 테스트 이미지에서 하지 않는다). */
     template <>
     struct SharedAssetCacheTraits<SharedAssetCacheTestAsset>
     {
-        static constexpr const utf8*           kKindName   = "SharedAssetCacheTestAsset";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Game;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::Detach;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, SharedAssetCacheTestAsset& outAsset ) { return AssetIO::readTextAsset( assetID, outAsset._text ); }
+        static constexpr AssetTypeDef kType =
+            AssetTypeDef::makeCacheOnly( "SharedAssetCacheTestAsset", AssetTypeLoader::with<SharedAssetCacheTestAsset, &SharedAssetCacheTestAsset::load>( MemoryTag::Game, SharedAssetReloadMode::Detach ) );
     };
 
     template class SharedAssetCache<SharedAssetCacheTestAsset>;

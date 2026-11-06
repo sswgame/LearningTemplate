@@ -25,18 +25,9 @@ namespace sw
 
     } // namespace
 
-    template <>
-    struct SharedAssetCacheTraits<ElementRuleTable>
-    {
-        static constexpr const utf8* kKindName  = "ElementRuleTable";
-        static constexpr MemoryTag   kMemoryTag = MemoryTag::Game;
-        /** @brief 격자가 옛 테이블을 가리키므로 제자리에서 바꾸지 않는다. */
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::Detach;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, ElementRuleTable& outTable ) { return outTable.loadFromAsset( assetID ); }
-    };
-
-    SW_MODULE_SHARED_ASSET_CACHE( ElementRuleTable, ElementRuleTable, SW_GF_API );
+    /** 격자가 옛 테이블을 가리키므로 제자리에서 바꾸지 않고 떼어 낸다. 스키마 테스트와 카탈로그 편집기도 이 정의로 파일을 읽는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( ElementRules, ElementRuleTable, SW_GF_API,
+                                  AssetTypeDef::makeDataFile( "elementrules", AssetPathRule{ {}, {}, ".elements.xml" }, AssetTypeLoader::of<ElementRuleTable>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
 } // namespace sw
 
 namespace sw
@@ -368,20 +359,4 @@ namespace sw
         }
         return bValid;
     }
-
-    shared_ptr<const ElementRuleTable> ElementRuleTable::acquire( const AssetID& assetID )
-    {
-        return SharedAssetCache<ElementRuleTable>::acquire( assetID.view() );
-    }
-
-    uint32 ElementRuleTable::getReloadCount()
-    {
-        return SharedAssetCache<ElementRuleTable>::getReloadCount();
-    }
-} // namespace sw
-
-namespace sw
-{
-    /** @brief `ElementRuleTable` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_ASSET_TYPE( ElementRules, AssetTypeDef::makeDataFile( "elementrules", AssetPathRule{ {}, {}, ".elements.xml" }, AssetTypeLoader::of<ElementRuleTable>() ) );
 } // namespace sw

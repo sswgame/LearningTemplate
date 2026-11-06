@@ -289,8 +289,3 @@ namespace sw
         return true;
     }
 } // namespace sw
-
-namespace sw
-{
-    SW_ASSET_TYPE( SpriteClipAsset, SpriteClipAsset::kAssetType );
-} // namespace sw

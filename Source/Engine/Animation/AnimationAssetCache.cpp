@@ -13,74 +13,9 @@
 
 namespace sw
 {
-    template <>
-    struct SharedAssetCacheTraits<Skeleton>
-    {
-        static constexpr const utf8*           kKindName   = "Skeleton";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, Skeleton& outSkeleton ) { return outSkeleton.loadFromAsset( assetID ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <>
-    struct SharedAssetCacheTraits<AnimationClip>
-    {
-        static constexpr const utf8*           kKindName   = "AnimationClip";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, AnimationClip& outClip ) { return outClip.loadFromAsset( assetID ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <>
-    struct SharedAssetCacheTraits<AnimationSet>
-    {
-        static constexpr const utf8*           kKindName   = "AnimationSet";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, AnimationSet& outSet ) { return outSet.loadFromAsset( assetID ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <>
-    struct SharedAssetCacheTraits<SkeletonBoneLOD>
-    {
-        static constexpr const utf8*           kKindName   = "SkeletonBoneLOD";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, SkeletonBoneLOD& outBoneLOD ) { return outBoneLOD.loadFromAsset( assetID ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <>
-    struct SharedAssetCacheTraits<RigAsset>
-    {
-        static constexpr const utf8*           kKindName   = "Rig";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, RigAsset& outRig ) { return outRig.loadFromAsset( assetID ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    SW_SHARED_ASSET_CACHE( Skeleton );
-    SW_SHARED_ASSET_CACHE( AnimationClip );
-    SW_SHARED_ASSET_CACHE( AnimationSet );
-    SW_SHARED_ASSET_CACHE( SkeletonBoneLOD );
-    SW_SHARED_ASSET_CACHE( RigAsset );
+    SW_SHARED_ASSET_CACHE( Skeleton, Skeleton, Skeleton::kAssetType.withLoader( AssetTypeLoader::of<Skeleton>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( AnimationClip, AnimationClip, AnimationClip::kAssetType.withLoader( AssetTypeLoader::of<AnimationClip>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( AnimationSet, AnimationSet, AnimationSet::kAssetType.withLoader( AssetTypeLoader::of<AnimationSet>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( SkeletonBoneLOD, SkeletonBoneLOD, SkeletonBoneLOD::kAssetType.withLoader( AssetTypeLoader::of<SkeletonBoneLOD>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( RigAsset, RigAsset, RigAsset::kAssetType.withLoader( AssetTypeLoader::of<RigAsset>( MemoryTag::Animation ) ) );
 } // namespace sw

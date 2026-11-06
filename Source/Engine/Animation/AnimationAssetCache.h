@@ -27,7 +27,7 @@ namespace sw
     /** @brief 스켈레톤 옆의 본 LOD 테이블을 나눠 줍니다("SkeletonBoneLOD"). 유닛은 `SkeletonBoneLOD::getRevision` 으로 다시 읽힌 것을 알아챕니다. */
     extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<SkeletonBoneLOD>;
     /**
-     * @brief 후처리 리그를 나눠 줍니다("Rig"). 다시 읽으면 내용 번호(`RigAsset::getContentID`)가 바뀌므로, 쓰는 `PoseModifierComponent` 가 다음 프레임에
+     * @brief 후처리 리그를 나눠 줍니다("RigAsset"). 다시 읽으면 내용 번호(`RigAsset::getContentID`)가 바뀌므로, 쓰는 `PoseModifierComponent` 가 다음 프레임에
      *        다시 바인딩합니다.
      */
     extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<RigAsset>;

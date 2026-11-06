@@ -180,5 +180,4 @@ namespace sw
         return true;
     }
 
-    SW_ASSET_TYPE( AnimationSet, AnimationSet::kAssetType );
 } // namespace sw

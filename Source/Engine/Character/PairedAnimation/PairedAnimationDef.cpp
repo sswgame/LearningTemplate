@@ -399,8 +399,3 @@ namespace sw
         { return lhs._time < rhs._time; } );
     }
 } // namespace sw
-
-namespace sw
-{
-    SW_ASSET_TYPE( PairedAnimationDef, PairedAnimationDef::kAssetType );
-} // namespace sw

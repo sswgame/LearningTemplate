@@ -325,8 +325,3 @@ namespace sw
         return path;
     }
 } // namespace sw
-
-namespace sw
-{
-    SW_ASSET_TYPE( FractureAsset, FractureAsset::kAssetType );
-} // namespace sw

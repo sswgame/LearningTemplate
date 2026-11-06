@@ -321,6 +321,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ASSET_TYPE( SkeletonBoneLOD, SkeletonBoneLOD::kAssetType );
     SW_DATA_INHERITANCE_SCHEMA( SkeletonBoneLOD, &SkeletonBoneLOD::makeInheritanceSchema );
 } // namespace sw

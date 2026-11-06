@@ -9,8 +9,9 @@
  *          `extern template class <그 이미지의 _EXTERN_TEMPLATE 매크로> SharedAssetCache<에셋>;` 만 둡니다 — 한 종류의 표는 한 이미지에만 있습니다.
  *          옛 객체를 살려 두는 동작은 `SharedAssetReloadMode::Detach` 와 쥔 쪽의 `shared_ptr` 가 맡습니다(세대 수로 옛 표를 들고 있지 않는다). 별칭(`using SkeletonCache = …`)은 두지 않고 쓰는 쪽이 `SharedAssetCache<Skeleton>` 으로 부릅니다(이름이 둘이면 찾기가 갈라집니다).
  *
- *          종류마다 다른 것(종류 이름 · 읽는 함수 · 메모리 태그 · 다시 읽기 방식)은 `SharedAssetCacheTraits<에셋>` 특수화 하나에 모읍니다. 특수화는 인스턴스화하는
- *          .cpp 에만 있고, 값이 빠지면 인스턴스화가 컴파일 오류로 멈춥니다. 인스턴스화와 등록은 `SW_SHARED_ASSET_CACHE( 에셋 )` 한 줄입니다.
+ *          종류마다 다른 것(종류 이름 · 읽는 함수 · 메모리 태그 · 다시 읽기 방식)은 그 종류의 정의(`AssetTypeDef` — 이름과 `AssetTypeLoader`) 한 벌에만 적습니다.
+ *          인스턴스화 · 캐시 등록 · 종류 등록은 `SW_SHARED_ASSET_CACHE( id, 에셋, 정의 )`(Engine) 또는 `SW_MODULE_SHARED_ASSET_CACHE( id, 에셋, 내보내기, 정의 )`(모듈) 한 줄이고,
+ *          그 줄이 `SW_ASSET_TYPE` 를 대신합니다 — 캐시의 종류 이름이 곧 정의의 이름이라 둘이 갈라질 수 없습니다. 로더가 빠지면 인스턴스화가 컴파일 오류로 멈춥니다.
  *
  *          이 템플릿으로 합치지 않은 캐시와 그 이유입니다(모양이 "경로 → 공유 `const` 에셋, 디바이스 없음, 자체 상태 없음" 이 아닙니다).
  *          - `MeshCache`: 쓰는 쪽이 고치는 `shared_ptr<Mesh>`(const 아님)를 `WeakInternTable` 에 두고, `reloadShared( path, pDevice )` 가 정점을 바꾸기 전에
@@ -39,7 +40,7 @@
 
 namespace sw
 {
-    /** @brief 에셋 종류마다 다른 값입니다. 인스턴스화하는 .cpp 가 특수화합니다(`SharedAssetCacheDefinition.h` 참고). */
+    /** @brief 에셋 종류의 정의(`static constexpr AssetTypeDef kType`)입니다. 인스턴스화하는 .cpp 의 캐시 등록 줄이 특수화합니다(`SharedAssetCacheDefinition.h` 참고). */
     template <typename AssetType>
     struct SharedAssetCacheTraits;
 

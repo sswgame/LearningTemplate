@@ -427,6 +427,5 @@ namespace sw
 
 namespace sw
 {
-    SW_ASSET_TYPE( Skeleton, Skeleton::kAssetType );
     SW_DATA_INHERITANCE_MERGE( SkeletonVariant, &Skeleton::mergeVariantText );
 } // namespace sw

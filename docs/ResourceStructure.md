@@ -36,11 +36,11 @@
 |---|---|
 | 이름 · 접미사 · 판 · 쿠킹 접미사 · 제외 묶음 | `AssetTypeDef` |
 | 경로 규칙(`/data/items.xml` 처럼 접미사로 가를 수 없는 파일) | `AssetDataKind` |
-| 로더 · 다시 읽기 방식 · 메모리 태그 | `SharedAssetCacheTraits` |
+| 로더 · 다시 읽기 방식 · 메모리 태그 | 예전 `SharedAssetCacheTraits`(지금은 `AssetTypeLoader`) |
 
 - 검증 로더는 따로 두지 않는다. 스키마 테스트도 진짜 로더를 부른다.
 - 등록은 `SW_ASSET_TYPE( id, 정의.withPathRule( … ).withLoader( AssetTypeLoader::of<T>( 태그, 방식 ) ) )` 한 줄이다. 헤더의 `kAssetType` 은 쿠킹이 쓰는 사실만 들고, 로더는 표의 사본에만 있다(로더 함수가 기능 .cpp 에 있다).
-- 공유 캐시의 종류 이름은 이 정의의 이름이다. 이름이 둘이면(`Rig` · `RigAsset`) 찾기가 갈라진다.
+- 공유 캐시가 있는 종류는 `SW_SHARED_ASSET_CACHE( id, T, 정의 )`(Engine) · `SW_MODULE_SHARED_ASSET_CACHE( id, T, 내보내기, 정의 )`(모듈) 한 줄이 같은 정의로 종류 등록 · 캐시 인스턴스화 · 레지스트리 등록을 함께 한다. 캐시는 정의의 이름 · 로더 · 다시 읽기 방식만 읽고 따로 적는 특성 표가 없다 — 이름이 둘이던 짝(`Rig`/`RigAsset`, `SpriteClip`/`SpriteClipAsset`, `Fracture`/`FractureAsset`, `BodyShapeSet`/`bodyshape`, `InteractionCatalog`/`interactions`, `ElementRuleTable`/`elementrules`)은 정의의 이름 하나가 되었고 에디터 리로드 길도 `AssetReloadRoute::sharedCache( 정의 )` 로 이름을 정의에서 꺼낸다.
 - 제약: 팩 쿠킹은 게임 모듈을 올리기 전에 돈다(`HeadlessSubsystem::runCookTask`). 쿠킹이 알아야 하는 합성 규칙은 정적 등록이 아니라 데이터(`Config/Dev/`)에 둔다. 이 까닭은 `DataCatalogInheritance.json` 과 같다.
 
 ### 2. 합성 읽기 `ResourceComposer`

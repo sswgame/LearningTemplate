@@ -80,22 +80,13 @@ namespace sw
 
     } // namespace
 
-    template <>
-    struct SharedAssetCacheTraits<InteractionCatalog>
-    {
-        static constexpr const utf8* kKindName  = "InteractionCatalog";
-        static constexpr MemoryTag   kMemoryTag = MemoryTag::Game;
-        /** @brief 진행 중인 세션이 옛 정의를 읽으므로 제자리에서 바꾸지 않는다. */
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::Detach;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, InteractionCatalog& outCatalog ) { return outCatalog.loadFromAsset( assetID ); }
-    };
-
-    SW_MODULE_SHARED_ASSET_CACHE( InteractionCatalog, InteractionCatalog, SW_GF_API );
+    /** 진행 중인 세션이 옛 정의를 읽으므로 제자리에서 바꾸지 않고 떼어 낸다. 스키마 테스트와 카탈로그 편집기도 이 정의로 파일을 읽는다. */
+    SW_MODULE_SHARED_ASSET_CACHE( Interactions, InteractionCatalog, SW_GF_API,
+                                  AssetTypeDef::makeDataFile( "interactions", AssetPathRule{ {}, {}, ".interactions.xml" }, AssetTypeLoader::of<InteractionCatalog>( MemoryTag::Game, SharedAssetReloadMode::Detach ) ) );
 
     namespace
     {
-        /** @brief 공유 캐시를 읽는 감시 값입니다 - 캐시 특성 특수화 뒤에 둬야 그 전에 인스턴스화되지 않는다. */
+        /** @brief 공유 캐시를 읽는 감시 값입니다 - 캐시 등록 줄(특성 특수화) 뒤에 둬야 그 전에 인스턴스화되지 않는다. */
         struct InteractionCatalogWatch
         {
             /** @brief 감시 값 `Interaction.MaxDistance` - 누가 쥔 공유 표(target = 리소스 id)에서 상호작용(key = id)의 사거리입니다. 다시 읽기가 값까지 닿는지 시나리오가 봅니다(`editor/catalogcascade`). */
@@ -229,10 +220,4 @@ namespace sw
         return bValid;
     }
 
-} // namespace sw
-
-namespace sw
-{
-    /** @brief `InteractionCatalog` 의 데이터 파일 종류입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 어떤 파일을 어떻게 읽는지 압니다). */
-    SW_ASSET_TYPE( Interactions, AssetTypeDef::makeDataFile( "interactions", AssetPathRule{ {}, {}, ".interactions.xml" }, AssetTypeLoader::of<InteractionCatalog>() ) );
 } // namespace sw

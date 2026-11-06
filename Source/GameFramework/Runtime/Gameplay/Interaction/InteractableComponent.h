@@ -106,7 +106,7 @@ namespace sw
         InteractionDef                       _overrideDef;
         shared_ptr<const InteractionCatalog> _pCatalog; ///< `_pDef` 가 든 공유 테이블(쥔 동안 산다)
         const InteractionDef*                _pDef;
-        uint32                               _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `InteractionCatalog::getReloadCount` 값. 달라지면 다시 찾는다
+        uint32                               _seenCatalogReloadCount; ///< 정의를 찾았을 때의 `SharedAssetCache<InteractionCatalog>::getReloadCount` 값. 달라지면 다시 찾는다
         uint32                               _appliedHighlight;       ///< 메시에 마지막으로 옮긴 강조(`GPUInstanceHighlight::pack`)
         atomic<uint32>                       _completedCount;         ///< 끝난 횟수. 같은 오브젝트의 기믹 센서가 읽어 간다
         atomic<uint8>                        _bHighlightRequested;

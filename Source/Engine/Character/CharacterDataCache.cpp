@@ -36,118 +36,34 @@ namespace sw
                 static const bool      s_bLoaded = loadDefaultKinds( s_kinds );
                 return s_bLoaded ? &s_kinds : nullptr;
             }
+
+            [[nodiscard]] static bool loadSocketSet( const AssetID& assetID, SocketSet& outSocketSet )
+            {
+                const SocketKindTable* pKinds = findDefaultKinds();
+                return pKinds != nullptr && outSocketSet.loadFromAsset( assetID, *pKinds );
+            }
+            [[nodiscard]] static bool loadNotifyTable( const AssetID& assetID, AnimationNotifyTable& outTable ) { return outTable.loadFromAsset( assetID, sw::engine::getSubsystem<AnimationNotifyHandlerRegistry>() ); }
+            /** @brief 엔진 기본 연산(`FitSolver` 가 등록하는 넷)으로 연산 이름 · 인자를 대조합니다. 사용자 연산을 쓰는 표는 자기 풀이기로 직접 읽습니다. */
+            [[nodiscard]] static bool loadFitTables( const AssetID& assetID, FitTables& outTables )
+            {
+                const FitSolver solver;
+                return outTables.loadFromAsset( assetID, solver.getOperatorRegistry() );
+            }
         };
     } // namespace
 } // namespace sw
 
 namespace sw
 {
-    template <>
-    struct SharedAssetCacheTraits<SocketSet>
-    {
-        static constexpr const utf8*           kKindName   = "SocketSet";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, SocketSet& outSocketSet )
-        {
-            const SocketKindTable* pKinds = CharacterDataCacheInternal::findDefaultKinds();
-            return pKinds != nullptr && outSocketSet.loadFromAsset( assetID, *pKinds );
-        }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <>
-    struct SharedAssetCacheTraits<AnimationNotifyTable>
-    {
-        static constexpr const utf8*           kKindName   = "AnimationNotifyTable";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, AnimationNotifyTable& outTable ) { return outTable.loadFromAsset( assetID, sw::engine::getSubsystem<AnimationNotifyHandlerRegistry>() ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <>
-    struct SharedAssetCacheTraits<PairedAnimationDef>
-    {
-        static constexpr const utf8* kKindName  = "PairedAnimationDef";
-        static constexpr MemoryTag   kMemoryTag = MemoryTag::Animation;
-        /** @brief 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않는다. */
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::Detach;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, PairedAnimationDef& outDef ) { return outDef.loadFromAsset( assetID ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <>
-    struct SharedAssetCacheTraits<PhysicsAsset>
-    {
-        static constexpr const utf8*           kKindName   = "PhysicsAsset";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Physics;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, PhysicsAsset& outAsset ) { return outAsset.loadFromAsset( assetID ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <>
-    struct SharedAssetCacheTraits<FitTables>
-    {
-        static constexpr const utf8*           kKindName   = "FitTables";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        /** @brief 엔진 기본 연산(`FitSolver` 가 등록하는 넷)으로 연산 이름 · 인자를 대조합니다. 사용자 연산을 쓰는 표는 자기 풀이기로 직접 읽습니다. */
-        [[nodiscard]] static bool load( const AssetID& assetID, FitTables& outTables )
-        {
-            const FitSolver solver;
-            return outTables.loadFromAsset( assetID, solver.getOperatorRegistry() );
-        }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <>
-    struct SharedAssetCacheTraits<FitPartDef>
-    {
-        static constexpr const utf8*           kKindName   = "FitPartDef";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, FitPartDef& outData ) { return outData.loadFromAsset( assetID ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    template <>
-    struct SharedAssetCacheTraits<BodyShapeSet>
-    {
-        static constexpr const utf8*           kKindName   = "BodyShapeSet";
-        static constexpr MemoryTag             kMemoryTag  = MemoryTag::Animation;
-        static constexpr SharedAssetReloadMode kReloadMode = SharedAssetReloadMode::InPlace;
-
-        [[nodiscard]] static bool load( const AssetID& assetID, BodyShapeSet& outShapes ) { return outShapes.loadFromAsset( assetID ); }
-    };
-} // namespace sw
-
-namespace sw
-{
-    SW_SHARED_ASSET_CACHE( SocketSet );
-    SW_SHARED_ASSET_CACHE( BodyShapeSet );
-    SW_SHARED_ASSET_CACHE( AnimationNotifyTable );
-    SW_SHARED_ASSET_CACHE( PairedAnimationDef );
-    SW_SHARED_ASSET_CACHE( PhysicsAsset );
-    SW_SHARED_ASSET_CACHE( FitTables );
-    SW_SHARED_ASSET_CACHE( FitPartDef );
+    SW_SHARED_ASSET_CACHE( SocketSet, SocketSet, AssetTypeDef::makeCacheOnly( "SocketSet", AssetTypeLoader::with<SocketSet, &CharacterDataCacheInternal::loadSocketSet>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( BodyShapeSet, BodyShapeSet,
+                           AssetTypeDef::makeDataFile( "bodyshape", AssetPathRule{ {}, {}, ".bodyshape.xml" }, AssetTypeLoader::of<BodyShapeSet>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( AnimationNotifyTable, AnimationNotifyTable,
+                           AssetTypeDef::makeCacheOnly( "AnimationNotifyTable", AssetTypeLoader::with<AnimationNotifyTable, &CharacterDataCacheInternal::loadNotifyTable>( MemoryTag::Animation ) ) );
+    /** 돌고 있는 세션이 옛 에셋의 역할 인덱스를 읽으므로 제자리에서 바꾸지 않고 떼어 낸다. */
+    SW_SHARED_ASSET_CACHE( PairedAnimationDef, PairedAnimationDef,
+                           PairedAnimationDef::kAssetType.withLoader( AssetTypeLoader::of<PairedAnimationDef>( MemoryTag::Animation, SharedAssetReloadMode::Detach ) ) );
+    SW_SHARED_ASSET_CACHE( PhysicsAsset, PhysicsAsset, AssetTypeDef::makeCacheOnly( "PhysicsAsset", AssetTypeLoader::of<PhysicsAsset>( MemoryTag::Physics ) ) );
+    SW_SHARED_ASSET_CACHE( FitTables, FitTables, AssetTypeDef::makeCacheOnly( "FitTables", AssetTypeLoader::with<FitTables, &CharacterDataCacheInternal::loadFitTables>( MemoryTag::Animation ) ) );
+    SW_SHARED_ASSET_CACHE( FitPartDef, FitPartDef, AssetTypeDef::makeCacheOnly( "FitPartDef", AssetTypeLoader::of<FitPartDef>( MemoryTag::Animation ) ) );
 } // namespace sw
