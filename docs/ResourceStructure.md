@@ -233,6 +233,41 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 
 언리얼 Lyra 의 무기 조각 · 유니티 ScriptableObject 탄 정의와 같은 방향이다(기억에 의존한 비교).
 
+### 7. 무기와 발사체 조합
+
+지금은 탄속 · 낙차 · 피해가 `WeaponDef` 안에 있어 "소총 + 폭발탄" 하나에 무기 정의 하나가 든다. 발사체 구조체도 키트마다 따로다(`Ballistics::Projectile`, `ProjectileComponent`, `MechProjectile`, `KartProjectile`, `ActionProjectile`, `ArenaProjectileComponent`). 정의를 나눠 무기 N 종과 발사체 M 종이 파일 N + M 개로 조합되게 한다.
+
+| 정의 | 가지는 것 |
+|---|---|
+| `WeaponDef`(쏘는 법) | 연사 · 탄창 · 재장전 · 퍼짐 · 반동 · 알 수 · 총구 효과, 받는 탄의 태그 조건, 기본 탄, 탄 값에 곱하는 배율 |
+| `ProjectileDef`(날아가는 것) | 운동(광선 · 탄도 · 유도), 탄속 · 중력 · 저항 · 수명, 관통 · 튕김 · 폭발, 궤적 · 충돌 효과, 태그, 맞을 때의 동작 목록(`ActionRegistry` + `ConditionExpr`) |
+| 부착물 · 버프 | 수정자 목록(칸, 더하기 · 곱하기). 합치는 순서는 탄 → 무기 → 수정자로 한 벌이다 |
+
+- 호환은 조합 표가 아니라 태그 조건이다(`accepts="Ammo.Rifle"`). 표로 적으면 M × N 이 그대로 돌아온다.
+- 조합 결과(`ResolvedShot`)는 장전 · 부착물이 바뀔 때 한 번 계산해 든다. 쏠 때마다 계산하지 않는다.
+- 충돌 효과는 탄과 표면의 조합이라 발사체가 직접 들지 않고 표면 표에서 찾는다(언리얼 Physical Material 과 같은 자리).
+- 런타임은 발사체 시뮬레이션 하나로 모은다. 탄을 게임 오브젝트로 만들지 않아 탄 수가 많아도 비용이 오르지 않고, 롤백 · 복제가 같은 결과를 내도록 결정적으로 돈다. 키트별 구조체는 옮기기 전에 복제 · 롤백 규칙을 읽어, 옮길 수 없으면 까닭을 적는다.
+- 세이브의 탄 id 는 지금 `_ammoID` 를 그대로 잇는다.
+
+언리얼 Lyra 의 무기 조각 · 유니티 ScriptableObject 탄 정의와 같은 방향이다(기억에 의존한 비교).
+
+**구현** (`GameFramework/Runtime/Character/Combat/Projectile/`)
+
+| 자리 | 형식 |
+|---|---|
+| 탄 정의 | `ProjectileDef` · `ProjectileCatalog`(`data/projectiles.xml`, 종류 `projectiles`). 항목 `_base` · `<OnHit when call>`(조건 · 동작 어휘, 맞은 쪽 문맥) |
+| 맞음 표 | 같은 파일의 `<Impact id surface when color size>`. 위에서 처음 맞는 줄이 이긴다(`ProjectileCatalog::findImpact`) |
+| 무기 | `WeaponDef::_projectileID`(`projectile`, 필수) · `_accepts`(탄 태그 식, 그냥 이름은 `tag`) · `<Modifier field op value>` |
+| 수정자 | `ShotModifierDef`(`ShotField` 열두 칸, `Add` · `Multiply`). 음수가 되는 칸은 0 에서 멈춘다 |
+| 조합 | `ResolvedShot::resolve( 탄, 무기 수정자, 부착물 )`. `WeaponState::equip` · `loadProjectile` 이 받음을 보고 한 번 계산한다. 감쇠 · 머리 배율도 여기다(`DamageMath` 에는 방어만 남았다) |
+| 시뮬레이션 | `ProjectileSimulation` · `ProjectileState` · `IProjectileWorld`. 수명 → 유도 → 저항 → 중력 → 평면 제약 → 사거리로 자른 선분 → 맞음(관통 · 튕김) → 사거리 끝 |
+
+- **키트는 데이터와 반응만 갖는다.** 기체 대전 · 카트 · 액션 플랫포머 · 액션 룸이 `IProjectileWorld` 로 맞을 대상(적 조종사 구 · 차의 수평 거리 · 벽 칸 · 없음)을 답하고, 사건(`ProjectileEvent`)을 받아 다운치 · 아이템 효과 · 폭발 범위를 준다. 반응 수치는 탄에 베끼지 않고 가리킨다(기체 대전은 `_payload` = 기체 번호 × 256 + 슬롯, 카트는 `_defID` = 아이템 id).
+- **2D 는 평면 제약 3D 다.** 언리얼 ProjectileMovement 의 평면 제약과 같은 길이다. 유니티 · Godot 는 2D 물리를 따로 두지만, 그러면 관통 · 튕김 · 유도 · 반사를 차원마다 두 벌 쓴다. 액션 플랫포머 · 액션 룸은 (x, y, 0) 에 법선 Z, 카트는 법선 Y 로 돌고 높이는 키트가 트랙을 따라 맞춘다.
+- **결정성:** `ProjectileDef.cpp` · `ProjectileSimulation.cpp` 는 `sw_markDeterministicSources` 에 있고 삼각함수는 `DeterministicMathUtil` 이다. 중력은 쓰는 쪽이 값으로 넘겨 물리 설정을 읽지 않는다. 상태 바이트는 한 벌(`ProjectileSimulation::writeState`)이고 쓰는 쪽은 자기 번호의 범위만 본다. 걸음 안에서 세계를 바꾸지 않고(사건은 걸음 뒤에 반응), 그래서 같은 걸음에 둘이 한 대상을 맞히면 둘 다 소비된다(예전 기체 대전은 앞 탄이 격추하면 뒤 탄이 지나갔다).
+- **옮기지 않은 것:** `ArenaProjectileComponent`(AbilityArena 게임)는 탄이 어빌리티 이펙트 스펙을 실어 나르는 오브젝트다. 어빌리티 이펙트는 복제 · 예측 규칙 때문에 어휘에도 합치지 않은 자리라(5 절) 그 키트의 복제 규칙과 함께 옮긴다. 몬스터 사격(`MonsterShotDef`) · 기체 특수기 · 카트 아이템은 탄 수치를 자기 표에 두고 공통 시뮬레이션만 쓴다 — 탄 표(`ProjectileCatalog`)를 가리키게 바꾸면 그 키트의 게임이 카탈로그를 서비스로 걸어야 하는데 아직 그 게임이 없다.
+- 확인: 단위 테스트 `ProjectileTest`(조합 · 받음 · 순서 · 맞음 표 · 맞음 동작 · 관통 · 튕김 · 유도 · 사거리 · 수명 · 상태 왕복), 시나리오 `game.shooter3d.projectilecombo`(같은 소총에 소이탄을 넣으면 피해 감시값과 탄도선 그림이 바뀐다).
+
 ## 순서
 
 | 단계 | 내용 | 끝났다고 보는 조건 |
