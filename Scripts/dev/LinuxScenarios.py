@@ -11,6 +11,7 @@ Windows 의 하드웨어 GPU 테스트와 함께 돌려도 된다. 체인은 저
   culprit 단계 [체인]    체인에서만 지는 단계의 앞 단계를 이분 탐색한다(체인 기본값 editor, 먼저 chain 을 돌려 로그가 있어야 한다)
   report [체인]          마지막 체인 로그에서 진 단계와 까닭을 다시 낸다
   goldens                클론의 .linux 골든을 본 저장소로 복사하고 한 색인 사진을 알린다
+  stop                   돌고 있는 실행을 끝낸다(체인 · 게임 · Xvfb). 게임 프로세스는 이름이 GameThread 로 바뀌어 있다
   all [--record]         build → 모든 체인(병렬) · Release 단위 · 서버 빌드 · 단위. 끝 줄 LINUX_OK=<sha> 가 나와야 그 커밋을 push 한다
 """
 import concurrent.futures
@@ -20,6 +21,7 @@ import os
 import pathlib
 import re
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -326,6 +328,36 @@ def verify_all(arguments):
     return 0
 
 
+def find_run_processes():
+    """이 도구가 띄운 프로세스의 pid 입니다. 명령줄을 직접 읽는다 - `pkill -f` 는 그 문구를 품은 자기 셸까지 끝낸다."""
+    own = os.getpid()
+    found = []
+    for name in os.listdir('/proc'):
+        if not name.isdigit() or int(name) == own:
+            continue
+        try:
+            command = pathlib.Path(f'/proc/{name}/cmdline').read_bytes().replace(b'\0', b' ').decode(errors='replace')
+        except OSError:
+            continue
+        if 'LinuxScenarios.py' in command or 'Xvfb.p' in command or f'{RELEASE}/Bin/' in command or re.match(r'\./(App|Server) ', command):
+            found.append(int(name))
+    return found
+
+
+def stop():
+    """돌고 있는 실행을 끝낸다. SIGTERM 을 받은 실행은 Xvfb 를 닫지 못하므로 함께 끝낸다."""
+    for sig in (signal.SIGTERM, signal.SIGKILL):
+        for pid in find_run_processes():
+            try:
+                os.kill(pid, sig)
+            except OSError:
+                pass  # 그 사이 끝났다
+        time.sleep(2)
+    left = find_run_processes()
+    print('남은 프로세스:', left if left else '없음')
+    return 1 if left else 0
+
+
 def main(argv):
     if os.name == 'nt':
         return run_in_wsl(argv)
@@ -345,6 +377,8 @@ def main(argv):
         return report(arguments[0] if arguments else 'editor')
     if command == 'goldens':
         return goldens()
+    if command == 'stop':
+        return stop()
     if command == 'all':
         return verify_all(arguments)
     print(__doc__)
