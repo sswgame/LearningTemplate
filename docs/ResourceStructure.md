@@ -212,6 +212,8 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 
 - **애니메이션 셋:** `base` 를 공통 `_base` 로 옮겼다. `set`(줄 하나를 다른 셋에서 빌림)은 여러 파일을 섞는 믹스인이라 `_listRenderPassRef` 와 같은 까닭으로 남긴다. 셋을 바꾸면 상태 · 위상과 코드 레이어가 새 셋의 같은 이름 클립으로 잇는다.
 - **그래프:** 상태는 이름(자식이 더한 상태의 id 가 부모와 겹치면 오류로 드러난다), 전이는 id, 레이어 · 마스크는 이름이 열쇠다. 연결 레이어는 `<layer slot>` 을 `SkeletalAnimatorComponent::_listLinkedLayer` 의 그래프로 채운다. 채운 그래프의 클립 이름과 파라미터는 애니메이터의 것을 함께 쓰고, 레이어 안의 레이어는 없다(한 단계).
+- **노드 · 레이어 LOD:** 등급은 한 축이다(`AnimationLODState::_lodGrade` = `animationlod.xml` 의 주기 단계 + 예산이 주기를 두 배로 늘린 횟수). 그래프 `<layer>` · 블렌드 스페이스 `<node>` 와 리그 노드(IK · 룩앳 · 스프링 본)가 `max_lod` 칸으로 그 등급에서 꺼지고, `_nodeFadeSeconds` 동안 가중치를 옮겨 튀지 않는다(`AnimationLODFade`, 언리얼 LOD Threshold 는 끊는다). 칸이라 먼 NPC 변형은 `<layer name="Aim" max_lod="1"/>` 만 적는다. 본 LOD 와는 따로 돈다 — 리그 노드가 쓰는 본은 본 LOD(`SkeletonBoneLOD`)의 핵심 본(`SkeletalMeshComponent::requireBones`)이라 빠지지 않고, 레이어가 빠진 본을 써도 그 본은 그리는 메시가 쓰지 않는다.
+- **2 차 물리 LOD:** 흔들림 본 · 망토 · 머리 가닥은 리그 `SpringChain` 이라 위 `max_lod` 로 끈다(다 꺼지면 상태를 버리고, 켜지면 애니메이션 포즈에서 섞여 들어온다). 물리 천(`ClothComponent`, Jolt 소프트 바디)은 아직 LOD 가 없다 — 확장 지점은 천이 조상 스켈레탈 메시의 등급을 읽고(`findBoneWorld` 가 이미 그 메시를 찾는다) 등급마다 반복 수를 낮추거나(`IPhysicsSoftBodyScene` 에 반복 수 · 잠재우기 함수를 더한다) 끄는 것이다. 다시 켤 때 고정점이 옮겨 가 튀므로 스킨 구속으로 한 프레임 붙인 뒤 풀어야 한다.
 - **스프라이트 라이브러리:** 아틀라스는 파일에 하나다. 라벨마다 텍스처가 다르면 프레임을 넘길 때 머티리얼 인스턴스가 바뀌어 배치가 깨진다.
 - **소켓 · 알림 표:** 원소 종류가 섞이고 열쇠 칸이 달라 `DataCatalogInheritance.json` 규칙 한 줄이다. 리그 · 리타겟은 `SW_DATA_INHERITANCE_SCHEMA`, 물리 에셋은 `PROPERTY( InheritKey )` 다.
 - **뺀 것:** 물리 셰이프(이름이 없다) · 충돌 쌍(열쇠가 뼈 둘이다), 리그 · 리타겟 안의 뼈 목록(순서가 뜻이다)은 통째로 바뀐다. 입력 레이어는 이번에 하지 않았다.
