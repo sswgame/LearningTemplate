@@ -1,0 +1,14 @@
+<DialogueGraphAsset>
+	<_listNode>
+		<DialogueAssetNode _id="1" _type="Start" _position="40,40" />
+		<DialogueAssetNode _id="2" _type="Branch" _condition="flag(alarm) &amp;&amp; visits &gt;= 1" _position="240,40" />
+		<DialogueAssetNode _id="3" _type="Action" _actionCommand="flag.set(reported)" _position="440,40" />
+		<DialogueAssetNode _id="4" _type="End" _position="640,40" />
+	</_listNode>
+	<_listLink>
+		<DialogueAssetLink _id="1" _fromPin="102" _toPin="201" />
+		<DialogueAssetLink _id="2" _fromPin="203" _toPin="301" />
+		<DialogueAssetLink _id="3" _fromPin="204" _toPin="401" />
+		<DialogueAssetLink _id="4" _fromPin="302" _toPin="401" />
+	</_listLink>
+</DialogueGraphAsset>

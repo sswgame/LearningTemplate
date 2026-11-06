@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 공통 어휘 시나리오의 스케줄 — 경보가 켜진 날(`flags="alarm"`, 행동 트리가 켠다)에만 문으로 가고, 도착해 일을 시작하면 `flag.add(visits)` 를 부른다. -->
+<Schedules>
+  <Calendar days="Mon,Tue,Wed,Thu,Fri,Sat,Sun"/>
+  <Place id="post" position="0 0 0"/>
+  <Place id="gate" position="2 0 0"/>
+  <NPC id="guard" home="post" speed="60">
+    <Routine id="patrol" flags="alarm">
+      <Block start="8:00" end="10:00" activity="GoTo" place="gate" onStart="flag.add(visits)"/>
+    </Routine>
+  </NPC>
+</Schedules>

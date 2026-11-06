@@ -14,7 +14,7 @@
 | 합성 | 파일 `_base`(`DataInheritance`), 항목 `_base`(`DataCatalogInheritance`), 프리팹 덮어쓰기, 스켈레톤 변형이 있고, 읽는 곳은 `XMLDocument::parseData` · `ReflectedXMLFile::parseDesc` · `Material` · `Skeleton` · `PrefabAsset` 로 나뉜다 | 조건별 값과 덮어쓰기 층을 넣을 자리가 형식마다 생긴다 |
 | 공유 | `SharedAssetCache<T>` 와 `GameDataCache<T>` 가 따로 있고, 카탈로그 다수는 쓰는 쪽이 멤버 · 지역 변수로 사본을 읽는다 | 행동 트리 · 스케줄 · 퀘스트 등이 공유되지 않고 다시 읽기도 닿지 않는다 |
 | 참조 | `string` 경로 칸과 이름 목록 `Config/Dev/AssetReferenceFields.json` | 칸이 어느 종류를 가리키는지 형식이 모른다. 이름 표는 사람이 맞춘다 |
-| 행동 | `BehaviorTaskRegistry`, `ScheduleActivityRegistry`, `ScheduleCondition`, `EquipCondition`, `AppearanceRuleCondition`, `GameFlags` 식, 대화 `_condition` · `_actionCommand` 가 각자 어휘를 가진다 | 같은 동작과 조건을 데이터마다 다시 만든다. 행동 트리 노드 칸은 고정 칸(`_value`, `_seconds`, `_count`, `_key`)이다 |
+| 행동 | 조건은 `ConditionExpr`, 동작은 `ActionRegistry` 하나다(단계 6). `ScheduleActivityRegistry`(가는 곳의 규칙)는 어휘가 아니라 활동 종류라 남는다 | — |
 
 ## 목표 구조
 
@@ -133,20 +133,24 @@ shared_ptr<const BehaviorTreeAsset> tree = _tree.acquire();  // 또는 request()
 
 **실행기는 합치지 않는다.** 행동 트리(틱 반응), 스케줄(게임 시간표), 대화(사람의 선택 대기), 어빌리티(수명 · 복제), 기믹 회로(고정 스텝 상태)는 모델이 다르다. 언리얼도 Behavior Tree · StateTree · GAS 를 나누고 Gameplay Tag 로 어휘를 공유한다.
 
-**조건 `ConditionExpr`**
+**조건 `ConditionExpr`** (`Engine/Vocabulary/ConditionExpr.h`)
 
 - 문법은 `GameFlags` 식을 넓힌다: `flag && !other`, `tag(Quest.Done)`, `weather(rain, storm)`, `affinity >= 4`.
 - 이름은 `SW_CONDITION( 이름, 칸 스키마, 함수 )` 로 등록한다.
 - **읽을 때 컴파일한다.** 후위 배열과 함수 포인터로 바꿔, 매 틱 글을 해석하지 않는다. 모르는 이름은 로드 오류다.
 - 스케줄의 `weathers="rain"` 같은 속성은 같은 식으로 컴파일하는 줄임말로 남겨 데이터를 옮기지 않는다.
 - 결정성: 확률 조건은 문맥의 씨앗을 쓴다. 지금 스케줄의 "날과 키의 해시" 규칙을 문맥이 제공한다.
-- `ResourceContext` 의 `_when` 도 같은 문법이므로 파서는 Engine 에 둔다.
+- `ResourceContext` 의 `_when` 도 같은 문법이므로 파서는 Engine 에 둔다. 그냥 이름을 넘길 조건(`pBareCondition`)을 고를 수 있어 `_when` 은 문맥 태그 조건을 넘기면 된다.
+- 세계는 형식 있는 칸의 문맥(`GameplayContext`)으로 넘긴다. 칸 형식은 그 값을 가진 층이 정한다(`GameFlagsSlot` · `BlackboardSlot` · `ScheduleConditionSlot`). 없는 칸은 "모름" 이라 거짓이다. 언리얼 `FGameplayEffectContext` 와 같은 자리다.
+- 값이 없음은 NaN 이다. 없는 블랙보드 키는 어떤 비교에도 거짓이다(`hasBlackboard` 로 묻는다). 예전 블랙보드 조건의 규칙을 식이 그대로 갖는다.
+- 등록된 이름: `flag` · `tag` · `chance` · `bodyShape` · `bodyType`(GameFramework), `weekday` · `season` · `weather` · `phase` · `dayOfSeason` · `week` · `date` · `affinity`(스케줄 문맥), `blackboard` · `hasBlackboard`(행동 트리), `setComplete` · `setPieces` · `equippedTag`(장착), `targetTag` · `anyTag` · `occupied`(외형).
+- 장착 · 외형 조건의 종류 칸(`_kind` · `_setID` · `_tag`)은 남는다. 식은 함수 포인터라 무엇을 묻는지 답하지 못하는데, 조건 순환 검사와 "같은 질문을 뒤집은 규칙" 검사는 그 답이 필요하다.
 
 합치는 곳: `ScheduleCondition`, `EquipCondition`, `AppearanceRuleCondition`, 대화 `_condition`, `BehaviorBlackboardCondition`, `IShopConditionEvaluator`.
 
 합치지 않는 곳: `AnimationConditionOp`(매 프레임 캐릭터마다 도는 값 비교), `UserSettingConditionOperator`(게임 문맥이 없는 설정 화면).
 
-**동작 `ActionRegistry`**
+**동작 `ActionRegistry`** (`Engine/Vocabulary/ActionRegistry.h`)
 
 ```cpp
 REFLECT()
@@ -157,6 +161,9 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 - 칸을 리플렉션 구조체로 받아, 고정 칸이 사라지고 에디터가 목록과 칸을 자동으로 보인다.
 - 함수는 `Succeeded` · `Failed` · `Running` 을 돌려준다. 즉시 끝나는 동작도 같은 형식이다.
 - 읽을 때 칸까지 해석해 함수 포인터와 값을 들고 있는다. 매번 글을 읽지 않는다.
+- 글 형식은 `flag.set(hasKey, 1)` · `flag.set(flag=hasKey, value=1)` 이고, 행동 트리는 칸을 노드 속성으로 적는다(`<Action task="flag.set" flag="alarm"/>`). 그래서 칸 이름은 노드 속성(`id` · `name` · `task`)과 겹치지 않게 짓는다.
+- 등록된 이름: `flag.set` · `flag.add` · `event`(GameFramework), `blackboard.set` · `blackboard.clear`(행동 트리), `rts.*`(RTS 키트). 대화 `_actionCommand`, 스케줄 칸의 `onStart` · `onEnd`, 퀘스트 `<Reward><Action call="…"/>` 가 같은 이름을 부른다. 시나리오: `game/empty/automation/vocabulary`.
+- 코드로 짓는 트리(`BehaviorTree::addAction( …, BehaviorTaskFunction )`)는 이름 없이 함수를 받는 길로 남긴다(언리얼 C++ `UBTTask`). 데이터 트리만 이름이 필요하다.
 
 합치는 곳: `BehaviorTaskRegistry`, 대화 `_actionCommand`, 스케줄 활동의 시작 · 끝 동작, 퀘스트 보상.
 
@@ -168,8 +175,13 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 |---|---|---|
 | 행동 트리 | 노드 `id` 를 `InheritKey` 로 두어 `_base` 트리에서 가지만 교체, `<SubTree tree="…"/>` 는 읽을 때 펼침(순환 오류) | 언리얼 Run Behavior |
 | 행동 트리 슬롯 | `<SubTree slot="combat"/>` 를 쓰는 쪽의 표가 채움 | 언리얼 Run Behavior Dynamic |
-| 스케줄 | `<Archetype>` 을 항목 `_base` 로 옮기고 전용 코드를 지움(루틴 합치기 의미는 옮길 때 확인) | — |
-| 퀘스트 · 루트 · 스폰 · 상점 | `DataCatalogInheritance.json` 에 줄 추가 | — |
+| 스케줄 | `<Archetype>` 은 남긴다. 아래 까닭 | — |
+| 퀘스트 · 루트 · 스폰 · 상점 | `DataCatalogInheritance.json` 에 줄 추가(퀘스트 · 스폰은 있었고 루트 · 상점을 더함) | — |
+
+행동 트리 변형은 구현했다. 노드 `id` 가 열쇠이고(`BehaviorTreeSchema` — 쿠커가 루트 이름으로 찾도록 Engine 에 둔다), 노드의 자식이 곧 같은 규칙의 목록이다(`DataInheritanceSchema::_bSelfNested`). 부모에 없는 가지는 안쪽에 열쇠를 적지 않아도 된다. `<SubTree tree>` 는 읽을 때 펼치고 순환은 오류다. `<SubTree slot>` 은 러너마다 `setSlotTree` 로 채운다.
+
+**`<Archetype>` 을 항목 `_base` 로 옮기지 않은 까닭.** 루틴 합치기는 "NPC 자기 루틴 다음에 아키타입 사슬의 루틴, 같은 id 는 가까운 쪽이 통째로 이긴다" 이다. 항목 합치기로 옮기면 셋이 달라진다. (1) `_base` 는 같은 종류의 항목만 가리키는데 아키타입은 NPC 가 아니다 — NPC 로 만들면 그 NPC 가 세계에 선다. (2) 행사의 `archetypes="villager"` 는 사슬 소속을 묻는데, 펼친 글에는 `_base` 가 남지 않아 물을 곳이 없다. (3) 같은 id 의 루틴은 통째로 바뀌지 않고 속성이 합쳐져(자식이 `days` 를 지우려면 `_op="Replace"`) 데이터의 뜻이 바뀌고, 순서가 "부모 먼저" 가 되어 우선순위가 같은 칸의 순서가 뒤집힌다. 추상 항목(만들지 않는 항목)과 펼친 뒤의 소속 표가 생기면 옮긴다.
+
 
 ### 6. 종류별 변형
 
@@ -217,7 +229,7 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | 3 | `AssetRef<T>` 와 생성 목록, `string` 칸 전환 | 잘못된 종류 연결이 로드 오류, 손 표가 줄어듦 |
 | 4 | 카탈로그 공유 전환 | 공개 `loadFromAsset` 제거가 컴파일됨 |
 | 5 | 조건 · 층, 경로 교체, 합성 해시 대조 | 조건 · 층마다 값과 그림이 바뀌는 시나리오 |
-| 6 | `ConditionExpr` · `ActionRegistry`, 행동 트리 하위 트리, 스케줄 공통 상속 | 같은 이름의 조건 · 동작을 행동 트리 · 스케줄 · 대화가 함께 쓰는 시나리오 |
+| 6 | `ConditionExpr` · `ActionRegistry`, 행동 트리 하위 트리(구현 — 시나리오 `game/empty/automation/vocabulary`. `<Archetype>` 은 위 까닭으로 남김) | 같은 이름의 조건 · 동작을 행동 트리 · 스케줄 · 대화가 함께 쓰는 시나리오 |
 | 7 | 종류별 변형(위 표) | 표 한 줄마다 효과를 확인하는 시나리오 |
 
 1 · 2 는 한 에이전트가 차례로 한다. 공통 파일이 겹친다. 3 · 4 와 6 · 7 은 범위가 나뉘므로 병렬로 할 수 있다. 작업자는 코드 → 린트 → 커밋만 하고 통합이 검증한다.
@@ -246,7 +258,6 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 
 구현 전에 코드를 읽어 정한다. 사용자 결정이 필요한 항목은 없다.
 
-- `<Archetype>` 의 루틴 합치기가 항목 합치기 규칙으로 옮겨지는지.
 - `MaterialInstance` 가 인스턴스 값을 어디까지 다루는지.
 - 메시 런타임 조립(언리얼 Mutable)은 `BodyShape` · 메시 병합 코드를 조사한 뒤 넣을지 정한다. 이 설계에 포함하지 않았다.
 - `XMLCatalog` 계열 중 멤버 · 지역 변수 패턴에 잡히지 않은 약 20 종의 사용 방식.
