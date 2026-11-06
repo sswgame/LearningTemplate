@@ -41,6 +41,9 @@ namespace sw
     class SW_API FramePSOManager
     {
     public:
+        /** @brief 패스의 깊이 · 블렌드 · 컬을 @p desc 에 정합니다. 파이프라인 패스(@p pPassDesc)는 XML 값 그대로이고, 내부 슬롯(nullptr)은 표의 값입니다. 프리멀티플라이는 언제나 표입니다. */
+        static void applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassType passType, const RenderGraphPassDesc* pPassDesc );
+
         /**
          * @brief 렌더러의 디바이스 변수 · 파이프라인 에셋 · GPUScene 을 읽는 관리자를 만듭니다. 셋은 이 관리자보다 오래 산다(렌더러의 멤버).
          * @details 디바이스는 렌더러의 `_pDevice` **변수**를 참조한다(`FrameCapture` 와 같다) — 렌더러가 디바이스를 바꿀 때 따로 알릴 일이 없다.

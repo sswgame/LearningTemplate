@@ -117,31 +117,28 @@ namespace sw
             return false;
         }
 
-        /** @brief 패스의 깊이 · 블렌드 상태를 표에서 정합니다. 패스 실행 코드 · 셰이더의 출력 규약과 맞물린 사실이라 데이터로 바꿀 수 없다. */
-        void applyPassDepthAndBlend( RHIPipelineStateDesc& desc, const RenderPassTypeInfo& info )
+        /** @brief 파이프라인에 없는 내부 슬롯(`pPassDesc` 없음)의 깊이 · 블렌드 · 컬을 표에서 정합니다. 파이프라인 패스는 XML 값이 그대로 들어간다(`applyPassRenderState`). */
+        void applyInternalPassRenderState( RHIPipelineStateDesc& desc, const RenderPassTypeInfo& info, RenderPassType passType )
         {
-            desc._bEnableDepthTest    = info.hasFlag( RenderPassTraitFlag::kDepthTest ) ? 1 : 0;
-            desc._bEnableDepthWrite   = info.hasFlag( RenderPassTraitFlag::kDepthWrite ) ? 1 : 0;
-            desc._bEnableBlend        = info.hasFlag( RenderPassTraitFlag::kBlend ) ? 1 : 0;
-            desc._bPremultipliedAlpha = info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) ? SW_TRUE : SW_FALSE;
+            desc._bEnableDepthTest  = info.hasFlag( RenderPassTraitFlag::kDepthTest ) ? 1 : 0;
+            desc._bEnableDepthWrite = ( info.hasFlag( RenderPassTraitFlag::kDepthTest ) && info.hasFlag( RenderPassTraitFlag::kDepthWrite ) ) ? 1 : 0;
+            desc._bEnableBlend      = info.hasFlag( RenderPassTraitFlag::kBlend ) ? 1 : 0;
+            // 풀스크린 삼각형의 와인딩에는 앞뒤 의미가 없다. 컬링하면 화면이 빈다.
+            if ( FrameRendererUtil::drawsSceneMeshes( passType ) == false )
+                desc._cullMode = RHICullMode::None;
+            else
+                desc._cullMode = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? RHICullMode::Front : RHICullMode::Back;
+        }
+
+        /** @brief 깊이 테스트에 맞춰 깊이 형식을 정하고, 표의 프리멀티플라이를 적용합니다(곧은 알파로 섞으면 알파가 두 번 곱해진다 — 셰이더의 출력 규약이라 표가 정한다). */
+        void finishPassRenderState( RHIPipelineStateDesc& desc, const RenderPassTypeInfo& info )
+        {
+            desc._bPremultipliedAlpha = ( desc._bEnableBlend != 0 && info.hasFlag( RenderPassTraitFlag::kPremultipliedAlpha ) ) ? SW_TRUE : SW_FALSE;
 
             // 뎁스를 쓰지 않는 패스(풀스크린)는 렌더 패스에 DSV 를 붙이지 않는데, desc 의 기본값이 D24 라서
             // PSO 는 "뎁스 있음" 으로 만들어졌다. DX12 는 null DSV 를 PSO 뎁스 포맷이 UNKNOWN 일 때만
             // 허용하므로 그런 패스의 드로우마다 검증 오류가 났다.
             desc._depthStencilFormat = ( desc._bEnableDepthTest != 0 ) ? constant::render::kDepthStencilFormat : RHIFormat::Unknown;
-        }
-
-        /**
-         * @brief 패스의 컬 모드를 **패스가 무엇을 그리는가**로 정합니다.
-         * @details 풀스크린 패스는 SV_VertexID 로 삼각형 하나를 만들어 화면을 덮는다. 그 삼각형의 와인딩은 셰이더가 정한 것이라 컬링을 걸면 화면이 통째로 빌 수 있다.
-         *          인버티드 헐(inverted hull) 외곽선은 앞면을 컬링한다(표의 kCullFront).
-         */
-        void applyPassCullMode( RHIPipelineStateDesc& desc, const RenderPassTypeInfo& info, RenderPassType passType )
-        {
-            if ( FrameRendererUtil::drawsSceneMeshes( passType ) == false )
-                desc._cullMode = RHICullMode::None;
-            else
-                desc._cullMode = info.hasFlag( RenderPassTraitFlag::kCullFront ) ? RHICullMode::Front : RHICullMode::Back;
         }
 
         /** @brief 셋업의 셰이더 미리 데우기 잡입니다(`FramePSOManager::warmShaders`). 워커는 요청 배열을 읽기만 하고, 캐시는 자기 잠금으로 같은 요청을 한 번만 컴파일한다. */
@@ -239,6 +236,24 @@ namespace sw
             return device.getResourceFactory()->createPipelineState( desc );
         }
     } // namespace
+
+    void FramePSOManager::applyPassRenderState( RHIPipelineStateDesc& desc, RenderPassType passType, const RenderGraphPassDesc* pPassDesc )
+    {
+        const RenderPassTypeInfo& info = getRenderPassTypeInfo( passType );
+        if ( pPassDesc != nullptr )
+        {
+            desc._bEnableDepthTest  = pPassDesc->_bEnableDepthTest ? 1 : 0;
+            desc._bEnableDepthWrite = pPassDesc->_bEnableDepthWrite ? 1 : 0;
+            desc._bEnableBlend      = pPassDesc->_bEnableBlend ? 1 : 0;
+            desc._cullMode          = pPassDesc->_cullMode == "None" ? RHICullMode::None : pPassDesc->_cullMode == "Front" ? RHICullMode::Front
+                                                                                                                           : RHICullMode::Back; // 표기는 읽을 때 검사했다
+        }
+        else
+        {
+            applyInternalPassRenderState( desc, info, passType );
+        }
+        finishPassRenderState( desc, info );
+    }
 
     FramePSOManager::FramePSOManager( IRHIDevice* const& pDevice, const RenderPipelineAsset& pipeline, const GPUScene& gpuScene )
         : _pDevice{ pDevice }
@@ -638,7 +653,7 @@ namespace sw
 
     bool FramePSOManager::makePassPSODesc( RenderPassType passType, const RenderGraphPassDesc* pPassDesc, const RHIFormat* pRTVFormatOverride, RHIPipelineStateDesc& outDesc ) const
     {
-        // 렌더 상태는 패스 종류 표(RenderPassTypeInfo)가 정하고, 파이프라인 XML 은 셰이더 · 퍼뮤테이션 · 타깃을 고른다.
+        // 파이프라인 패스는 XML 의 값(셰이더 · 진입점 · 렌더 상태 · 퍼뮤테이션 · 타깃)이 그대로 들어간다. 표는 XML 이 비운 셰이더의 기본값, 패스 define, XML 에 없는 내부 슬롯의 값이다.
         // 셰이더와 define 은 쿠커와 **같은 함수**(selectRenderPassShader)로 정한다. 어긋나면 Shipping 에서 매니페스트 미스가 난다.
         const RenderPassTypeInfo&       info   = getRenderPassTypeInfo( passType );
         const RenderPassShaderSelection shader = selectRenderPassShader( passType, pPassDesc, engine::getSubsystem<EngineDefaultAssets>() );
@@ -647,10 +662,9 @@ namespace sw
         desc                       = RHIPipelineStateDesc{};
         desc._vertexShaderPath     = shader._shaderPath;
         desc._pixelShaderPath      = desc._vertexShaderPath;
-        desc._vertexEntryPoint     = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
-        desc._pixelEntryPoint      = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
-        applyPassDepthAndBlend( desc, info );
-        applyPassCullMode( desc, info, passType );
+        desc._vertexEntryPoint     = string( resolveEntryPoint( pPassDesc != nullptr ? string_view( pPassDesc->_vertexEntryPoint ) : string_view{}, ShaderStage::Vertex ) );
+        desc._pixelEntryPoint      = string( resolveEntryPoint( pPassDesc != nullptr ? string_view( pPassDesc->_pixelEntryPoint ) : string_view{}, ShaderStage::Pixel ) );
+        applyPassRenderState( desc, passType, pPassDesc );
         desc._listShaderDefine = shader._listDefine;
         // 내부 슬롯은 대신 그리는 파이프라인 패스의 출력 선언으로 포맷을 정한다(`_targetSourceType`).
         const RenderGraphPassDesc* pTargetDesc =

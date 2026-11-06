@@ -1,6 +1,6 @@
 /**
  * @file RenderGraphPassDesc.h
- * @brief 파이프라인 XML 의 패스 종류 · 첨부 · 패스 노드 서술을 정의합니다.
+ * @brief 파이프라인 XML 과 렌더 패스 XML 이 함께 쓰는 패스 종류 · 첨부 · 패스 노드 서술을 정의합니다.
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -217,8 +217,8 @@ namespace sw
 
     /**
      * @brief 렌더 파이프라인 그래프 안의 패스 노드 하나입니다.
-     * @details 그래프 연결(입력과 출력)과 패스가 고르는 값(셰이더, 퍼뮤테이션, 품질)만 담는다. 깊이 · 블렌드 · 컬은 패스 종류의 사실이라 표(`RenderPassTypeInfo`)가 정하고 여기 칸이 없다 —
-     *          칸을 두면 XML 이 표와 어긋나도 알 수 없다(디퍼드 반투명의 `_bEnableBlend="false"` 가 머티리얼 블렌드를 조용히 껐다). 언리얼 · 유니티도 패스 코드가 렌더 상태를 정한다.
+     * @details 그래프 연결(입력과 출력)과 PSO 설정(셰이더, 진입점, 깊이 · 블렌드 · 컬, 퍼뮤테이션)을 담는다. **여기 적힌 값이 곧 실행되는 값이다**(`FramePSOManager::applyPassRenderState`) —
+     *          코드를 고치지 않고 데이터로 패스를 바꾼다. 패스 실행이 받아 줄 수 없는 조합(깊이를 붙이지 않는 패스의 깊이 테스트 등)은 무시하지 않고 읽기 오류다(`RenderPipelineAsset::validate`).
      */
     REFLECT()
     struct RenderGraphPassDesc
@@ -291,9 +291,20 @@ namespace sw
         PROPERTY( SkipIfEmpty )
         string _shaderPath;
 
+        /** @brief 정점 셰이더 진입점입니다. 비면 스테이지 기본값을 씁니다(`resolveEntryPoint`, getShaderStageInfo 테이블). */
+        PROPERTY( SkipIfEmpty )
+        string _vertexEntryPoint;
+
+        /** @brief 픽셀 셰이더 진입점입니다. 비면 스테이지 기본값입니다. */
+        PROPERTY( SkipIfEmpty )
+        string _pixelEntryPoint;
+
         /** @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. */
         PROPERTY( SkipIfEmpty )
         vector<string> _listPermutation;
+
+        PROPERTY()
+        string _cullMode = "Back"; ///< None, Front, Back 중 하나. 풀스크린 패스는 None 이어야 한다(삼각형 와인딩에 앞뒤 의미가 없다 — 검증)
 
         /**
          * @brief `_type` 을 해석한 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
@@ -302,6 +313,15 @@ namespace sw
          *          표기가 갈려 어긋난다).
          */
         RenderPassType _resolvedType{ RenderPassType::Invalid };
+
+        PROPERTY()
+        bool _bEnableDepthTest{ true }; ///< 깊이 테스트. 켜면 `_depthAttachment` 가 있어야 하고, 깊이를 붙이는 패스 종류여야 한다(검증)
+
+        PROPERTY()
+        bool _bEnableDepthWrite{ true }; ///< 깊이 쓰기. 켜면 깊이 테스트도 켜져 있어야 한다(검증)
+
+        PROPERTY()
+        bool _bEnableBlend{ false }; ///< 블렌드. 곧은 알파인지 프리멀티플라이인지는 셰이더의 출력 규약이라 표(`kPremultipliedAlpha`)가 정한다
 
         /**
          * @brief 이 패스가 도는 최소 후처리 품질(`gv_postQuality`, 사용자 설정 graphics.postQuality 의 선택지 순번 0 낮음 ~ 3 최고)입니다. 0 이면 늘 돕니다.

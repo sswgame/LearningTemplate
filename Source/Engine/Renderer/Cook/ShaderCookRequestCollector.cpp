@@ -159,18 +159,18 @@ namespace sw
                 }
             }
 
-            /** @brief 파이프라인 패스 하나의 스테이지 요청(VS · PS)을 더합니다. 진입점은 스테이지 기본값이다(런타임 `makePassPSODesc` 와 같다). */
+            /** @brief 파이프라인 패스 하나의 스테이지 요청(VS · PS)을 더합니다. 진입점은 런타임 `makePassPSODesc` 와 같게 XML 값(비면 스테이지 기본값)이다. */
             static void appendPipelinePassStages( vector<ShaderCookRequest>& outListRequest, const RenderGraphPassDesc& pass, const RenderPipelineAsset& pipeline,
                                                   const string& shaderPath, const vector<string>& listPassDefine )
             {
-                const string vsEntry = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
+                const string vsEntry = string( resolveEntryPoint( pass._vertexEntryPoint, ShaderStage::Vertex ) );
                 appendRequestUnique( outListRequest, shaderPath, vsEntry, ShaderStage::Vertex, listPassDefine );
 
                 // 픽셀 셰이더. 컬러 출력이 없는 패스(그림자 · 뎁스 프리패스)엔 없다. 런타임과 같은 판정
                 // (`hasPixelStage`, 출력 선언의 RT 수)을 써야 둘이 어긋나지 않는다.
                 if ( FrameRendererUtil::hasPixelStage( pass, pipeline.getDesc()._listAttachment ) )
                 {
-                    const string psEntry = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+                    const string psEntry = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
                     appendRequestUnique( outListRequest, shaderPath, psEntry, ShaderStage::Pixel, listPassDefine );
                 }
             }
@@ -208,8 +208,8 @@ namespace sw
                         {
                             MeshPassInfo passInfo;
                             passInfo._shaderPath          = passShader._shaderPath;
-                            passInfo._vertexEntryPoint    = string( resolveEntryPoint( string_view{}, ShaderStage::Vertex ) );
-                            passInfo._pixelEntryPoint     = string( resolveEntryPoint( string_view{}, ShaderStage::Pixel ) );
+                            passInfo._vertexEntryPoint    = string( resolveEntryPoint( pass._vertexEntryPoint, ShaderStage::Vertex ) );
+                            passInfo._pixelEntryPoint     = string( resolveEntryPoint( pass._pixelEntryPoint, ShaderStage::Pixel ) );
                             passInfo._listPermutation     = passShader._listDefine;
                             passInfo._passType            = pass._resolvedType;
                             passInfo._bUsesMaterialShader = FrameRendererUtil::usesMaterialShader( pass._resolvedType );

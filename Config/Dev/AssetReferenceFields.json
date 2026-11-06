@@ -21,7 +21,7 @@
         "fitTables", "_flatRidePrefab", "_foliageMaterial", "_fontCatalog", "_fracturePath", "from", "_glassMaterial", "_graphPath", "_groundPrefab",
         "_gruntAIPrefab", "_gruntPrefab", "_guestPrefab", "_heightfieldPath", "_imagePath", "inputMap", "_interiorMaterialPath", "items", "_knightClips",
         "_knightMaterial", "_knightMesh", "_knightSkeleton", "_layerWeightsPath", "_layoutPath", "_lipSyncSettings", "_listDefaultGrowingModel",
-        "_listExtensionShader", "_listGrowingModel", "_listStyleSheet", "loadingScreen", "_loadingTexture", "_localizationProject",
+        "_listExtensionShader", "_listGrowingModel", "_listRenderPassRef", "_listStyleSheet", "loadingScreen", "_loadingTexture", "_localizationProject",
         "localizationProject", "_mappingPath", "_material", "material", "_materialPath", "_mesh", "mesh", "_meshID", "_meshLODSettings", "_meshPath",
         "_missingMaterial", "_missingTexture", "_modelBuildingPrefab", "_navMeshSettings", "_netEmulationPresets", "normalAtlas", "_normalMapName",
         "_notifyTablePath", "_pacingProfile", "_pairedAnimationPath", "parent", "_parkDataPath", "_path", "path", "_pathPrefab", "_pbrMaterialTemplate",

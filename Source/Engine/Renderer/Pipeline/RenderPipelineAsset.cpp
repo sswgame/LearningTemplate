@@ -9,6 +9,7 @@
 #include "Engine/Asset/AssetManager.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 #include "Engine/Serialization/Format/ReflectedXMLFile.h"
@@ -35,6 +36,8 @@ namespace sw
 
     bool RenderPipelineAsset::finishLoad( string_view sourcePath )
     {
+        if ( mergeRenderPassAttachments( sourcePath ) == false )
+            return false;
         // 검증 오류가 하나라도 있으면 로드 실패다. 선언하지 않은 첨부 · 모르는 패스 타입이 렌더러까지 가면 렌더러가 코드의 이름 · 포맷으로 짐작해야 한다.
         const uint32 issueCount = validate( sourcePath );
         if ( issueCount > 0 )
@@ -42,7 +45,32 @@ namespace sw
             SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineIssueNotLoaded", "'%#' has %# pipeline issue(s) - not loaded", sourcePath, issueCount );
             return false;
         }
-        SW_LOG_INFO_ID( "RenderPipelineAsset.LoadedAttachmentsPasses", "Loaded '%#' (attachments=%#, passes=%#)", _desc._name, _desc._listAttachment.size(), _desc._listPass.size() );
+        SW_LOG_INFO_ID( "RenderPipelineAsset.LoadedModelAttachmentsPasses", "Loaded '%#' (model=%#, attachments=%#, passes=%#)", _desc._name, _desc._shadingModel, _desc._listAttachment.size(),
+                        _desc._listPass.size() );
+        return true;
+    }
+
+    bool RenderPipelineAsset::mergeRenderPassAttachments( string_view sourcePath )
+    {
+        vector<RenderPassAttachment> listMerged;
+        for ( const string& passRef : _desc._listRenderPassRef )
+        {
+            RenderPassAsset renderPass;
+            if ( renderPass.loadFromXMLFile( AssetID{ passRef } ) == false )
+            {
+                SW_LOG_ERROR_ID( "RenderPipelineAsset.RenderPassRefNotLoaded", "[%#] render pass '%#' could not be loaded", sourcePath, passRef );
+                return false;
+            }
+            for ( const RenderPassAttachment& attachment : renderPass.getDesc()._listAttachment )
+            {
+                listMerged.push_back( attachment );
+            }
+        }
+        for ( RenderPassAttachment& attachment : _desc._listAttachment )
+        {
+            listMerged.push_back( std::move( attachment ) );
+        }
+        _desc._listAttachment = std::move( listMerged );
         return true;
     }
 
@@ -112,6 +140,78 @@ namespace sw
                                          sourcePath, attachment._name, attachment._role );
                         ++issueCount;
                     }
+                }
+                return issueCount;
+            }
+
+            /** @brief 셰이딩 방식이 아는 글이고 패스 구성과 맞는가. 이름만 Deferred 인 파이프라인을 막는다. */
+            static uint32 checkShadingModel( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                const auto hasPassType = [&desc]( string_view type )
+                {
+                    for ( const RenderGraphPassDesc& pass : desc._listPass )
+                    {
+                        if ( pass._type == type )
+                            return true;
+                    }
+                    return false;
+                };
+                const bool bForward  = desc._shadingModel == "Forward";
+                const bool bDeferred = desc._shadingModel == "Deferred";
+                if ( bForward == false && bDeferred == false && desc._shadingModel != "Custom" )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.ShadingModelUnknown", "[%#] _shadingModel '%#' - must be Forward, Deferred or Custom", sourcePath, desc._shadingModel );
+                    return 1;
+                }
+                const bool bHasGBuffer = hasPassType( "GBuffer" );
+                if ( ( bForward && bHasGBuffer ) || ( bDeferred && ( bHasGBuffer == false || hasPassType( "Lighting" ) == false ) ) )
+                {
+                    SW_LOG_ERROR_ID( "RenderPipelineAsset.ShadingModelPassMismatch", "[%#] _shadingModel '%#' does not match its passes - Deferred needs GBuffer and Lighting passes, Forward has no GBuffer pass", sourcePath,
+                                     desc._shadingModel );
+                    return 1;
+                }
+                return 0;
+            }
+
+            /**
+             * @brief 패스의 렌더 상태 조합을 실행이 받아 줄 수 있는가. XML 값이 곧 PSO 값이라, 실행과 어긋나면 무시하지 않고 오류다.
+             * @details 깊이 테스트는 그 패스 실행이 깊이를 붙일 때만 켤 수 있고(표의 kDepthTest), 깊이를 시험하지 않으면 붙이지 않는다 — 어긋나면 PSO 와 렌더 패스의 깊이 형식이 달라 백엔드 검증 오류가 난다.
+             *          풀스크린 삼각형에는 앞뒤 의미가 없어 컬링이 화면을 비운다. 반투명 패스의 블렌드를 끄는 것은 고를 수 있지만 대개 실수라 경고한다.
+             */
+            static uint32 checkPassRenderState( const RenderPipelineDesc& desc, string_view sourcePath )
+            {
+                uint32 issueCount{ 0 };
+                for ( const RenderGraphPassDesc& pass : desc._listPass )
+                {
+                    const RenderPassTypeInfo& info   = getRenderPassTypeInfo( pass._resolvedType );
+                    const bool                bDepth = pass._depthAttachment.empty() == false;
+                    if ( pass._cullMode != "None" && pass._cullMode != "Front" && pass._cullMode != "Back" )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassCullModeUnknown", "[%#] pass '%#': _cullMode '%#' - must be None, Front or Back", sourcePath, pass._name, pass._cullMode );
+                        ++issueCount;
+                    }
+                    else if ( info.hasFlag( RenderPassTraitFlag::kDrawsSceneMeshes ) == false && pass._cullMode != "None" )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassFullscreenCull", "[%#] pass '%#' draws a fullscreen triangle - _cullMode must be None, not '%#'", sourcePath, pass._name, pass._cullMode );
+                        ++issueCount;
+                    }
+                    if ( pass._bEnableDepthTest && ( bDepth == false || info.hasFlag( RenderPassTraitFlag::kDepthTest ) == false ) )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthTestNoDepth", "[%#] pass '%#': _bEnableDepthTest needs a _depthAttachment and a pass type that binds depth (%#)", sourcePath, pass._name, pass._type );
+                        ++issueCount;
+                    }
+                    if ( pass._bEnableDepthTest == false && bDepth )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthWithoutTest", "[%#] pass '%#' binds _depthAttachment '%#' without _bEnableDepthTest - remove the attachment or turn the test on", sourcePath, pass._name, pass._depthAttachment );
+                        ++issueCount;
+                    }
+                    if ( pass._bEnableDepthWrite && pass._bEnableDepthTest == false )
+                    {
+                        SW_LOG_ERROR_ID( "RenderPipelineAsset.PassDepthWriteNoTest", "[%#] pass '%#': _bEnableDepthWrite needs _bEnableDepthTest", sourcePath, pass._name );
+                        ++issueCount;
+                    }
+                    if ( pass._bEnableBlend == false && info.hasFlag( RenderPassTraitFlag::kBlend ) )
+                        SW_LOG_WARNING_ID( "RenderPipelineAsset.PassBlendOff", "[%#] pass '%#': blending is off on a %# pass - its colors overwrite the scene", sourcePath, pass._name, pass._type );
                 }
                 return issueCount;
             }
@@ -611,8 +711,10 @@ namespace sw
         using Internal = RenderPipelineValidationInternal;
         // 순서가 있다 — 패스 해석(2)이 채운 `_resolved*` 를 뒤 규칙들이 읽는다.
         uint32 issueCount = Internal::checkAttachments( _desc, sourcePath );
+        issueCount += Internal::checkShadingModel( _desc, sourcePath );
         issueCount += Internal::checkPassNamesUnique( _desc, sourcePath );
         issueCount += Internal::resolveAndCheckPassAttachments( _desc, sourcePath );
+        issueCount += Internal::checkPassRenderState( _desc, sourcePath );
         issueCount += Internal::checkModuleShaderList( _desc, sourcePath );
         issueCount += Internal::checkColorOutputLimit( _desc, sourcePath );
         issueCount += Internal::checkOutputDivisors( _desc, sourcePath );
@@ -626,15 +728,6 @@ namespace sw
             SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineValidationFoundIssues", "[%#] Pipeline validation found %# issues - the render result may be wrong or the GPU may die",
                              sourcePath, issueCount );
         return issueCount;
-    }
-
-    bool RenderPipelineAsset::saveToXMLFile( const AbsolutePath& absPath ) const
-    {
-        if ( ReflectedXMLFile::saveDesc( absPath, _desc ) == false )
-            return false;
-
-        SW_LOG_INFO_ID( "RenderPipelineAsset.Saved", "Saved '%#' -> %#", _desc._name, absPath.str() );
-        return true;
     }
 
 } // namespace sw

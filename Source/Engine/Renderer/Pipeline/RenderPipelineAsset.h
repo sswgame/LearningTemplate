@@ -1,11 +1,14 @@
 /**
  * @file RenderPipelineAsset.h
  * @brief 프레임 렌더 파이프라인 디스크립터(패스 그래프 + 임시 어태치먼트)입니다.
+ *
+ * RenderPassAsset 와의 차이:
+ * - RenderPass = 여러 파이프라인이 함께 쓰는 첨부 묶음(이름, 포맷, 클리어)
+ * - Pipeline   = 프레임 그래프 + 패스별 PSO(셰이더, 진입점, 블렌드 · 깊이 · 컬, 퍼뮤테이션)
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
-#include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/Foundation.h"
@@ -23,6 +26,10 @@ namespace sw
         PROPERTY()
         string _name = "ForwardPipeline";
 
+        /** @brief 셰이딩 방식입니다. Forward / Deferred / Custom. 패스 구성과 맞아야 합니다(Deferred 는 GBuffer · Lighting 패스가 있고, Forward 는 GBuffer 패스가 없다 — 검증). */
+        PROPERTY()
+        string _shadingModel = "Forward";
+
         /** @brief 그래프가 쓰는 임시 어태치먼트와 논리 어태치먼트입니다. */
         PROPERTY()
         vector<RenderPassAttachment> _listAttachment;
@@ -30,6 +37,14 @@ namespace sw
         /** @brief 그래프 노드(이름, 타입, 입력, 출력)입니다. */
         PROPERTY()
         vector<RenderGraphPassDesc> _listPass;
+
+        /**
+         * @brief 첨부를 가져올 RenderPass XML 경로입니다(선택, 예: engine/renderpass/defaultrenderpass.xml).
+         * @details 읽을 때 적은 순서대로 그 파일의 첨부를 `_listAttachment` 앞에 합친다(`RenderPipelineAsset::mergeRenderPassAttachments`) — 렌더러는 합친 목록만 본다.
+         *          읽지 못하면 로드 실패이고, 이름이 겹치면 검증 오류다.
+         */
+        PROPERTY( SkipIfEmpty )
+        vector<string> _listRenderPassRef;
 
         /**
          * @brief 모듈 확장이 패스 프로그램(`ExtensionProgramDesc::_shaderPath`)으로 쓸 수 있는 셰이더 경로입니다(ExtensionRenderPass).
@@ -67,16 +82,13 @@ namespace sw
          * @details 소스 트리를 디스크로 훑은 쿠커 · 테스트용입니다 — 리소스 루트 안 절대 경로를 `loadFromXMLFile` 에 넣으면 팩 전용 구성이 거절합니다.
          */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
-        /** @brief 파이프라인 XML 을 저장합니다. */
-        [[nodiscard]] bool saveToXMLFile( const AbsolutePath& absPath ) const;
-
         /** @brief 파이프라인 디스크립터를 반환합니다. */
         const RenderPipelineDesc& getDesc() const { return _desc; }
         RenderPipelineDesc&       getDesc() { return _desc; }
 
         /**
          * @brief 로드한 파이프라인이 스스로 모순이 없는지 검사하고 문제 수를 반환합니다.
-         * @details 패스 타입 표기 해석(`_resolvedType` 도 여기서 채웁니다), 입출력이 선언된 첨부를
+         * @details 셰이딩 방식과 패스 구성, 패스의 렌더 상태 조합, 패스 타입 표기 해석(`_resolvedType` 도 여기서 채웁니다), 입출력이 선언된 첨부를
          *          가리키는지, 첨부 포맷 표기가 RHIFormat 으로 읽히는지, 뎁스 첨부가 실재하는 뎁스 포맷인지,
          *          컬러 출력 개수가 한계 안인지, 지오메트리 패스에 컬러 출력이 있는지, 풀스크린 패스의 입력이 타입의 계약(`RenderPassInputSignature`)과
          *          맞는지를 봅니다. 여기서 못 잡은 불일치는 런타임에 조용히 어긋나거나 GPU 를 죽입니다.
@@ -88,7 +100,9 @@ namespace sw
         const vector<RenderGraphPassDesc>& getGraphPass() const { return _desc._listPass; }
 
     private:
-        /** @brief 읽기 입구 둘(리소스 id · 디스크 파일)이 같이 쓰는 끝 처리입니다(검사 · 로그). 검사 문제가 있으면 false 입니다. */
+        /** @brief `_listRenderPassRef` 의 첨부를 `_listAttachment` 앞에 합칩니다. 렌더 패스 파일을 읽지 못하면 오류를 남기고 false 입니다. */
+        [[nodiscard]] bool mergeRenderPassAttachments( string_view sourcePath );
+        /** @brief 읽기 입구 둘(리소스 id · 디스크 파일)이 같이 쓰는 끝 처리입니다(첨부 합치기 · 검사 · 로그). 문제가 있으면 false 입니다. */
         [[nodiscard]] bool finishLoad( string_view sourcePath );
 
     private:
