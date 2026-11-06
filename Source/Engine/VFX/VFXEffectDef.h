@@ -224,6 +224,24 @@ namespace sw
 namespace sw
 {
     /**
+     * @brief 효과의 사용자 파라미터 하나입니다(언리얼 Niagara User Parameters). 이름과 기본값을 효과가 적고, 컴포넌트가 값을 덮습니다.
+     * @details 값은 float4 하나이고 방출기가 이름으로 묶는다(`VFXEmitterDef::_tintParameter` · `_sizeParameter`). 효과를 다시 읽지 않고 값만 바뀌므로 재생 중에 바꿔도 입자가 끊기지 않는다.
+     */
+    REFLECT()
+    struct SW_API VFXUserParameterDef
+    {
+        REFLECT_BODY();
+
+        PROPERTY( InheritKey, Meta = "NotLocalizable", Tooltip = "Parameter name the emitters bind to and the component overrides" )
+        string _name{};
+        PROPERTY( Tooltip = "Value; emitters read the channels their binding needs (tint uses all four, size uses x)" )
+        float4 _value{ 1.0f, 1.0f, 1.0f, 1.0f };
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct VFXEmitterDef
      * @brief 방출기 하나입니다. 생성률과 버스트로 입자를 만들고, 수명 · 초기 속도 범위 · 중력으로 움직이며, 크기와 색은 수명 커브를 따릅니다.
      * @details 풀 크기(`_maxParticles`)는 데이터가 정합니다 — 풀은 고정 크기이고, 차면 새 입자를 만들지 않습니다(`VFXCPUSimulation`).
@@ -233,7 +251,7 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( Meta = "NotLocalizable", Tooltip = "Emitter name, unique inside the effect" )
+        PROPERTY( InheritKey, Meta = "NotLocalizable", Tooltip = "Emitter name, unique inside the effect; a _base variant matches emitters by it" )
         string _name{};
         PROPERTY( Tooltip = "Shape each particle draws as" )
         VFXRenderMode _renderMode{ VFXRenderMode::Billboard };
@@ -276,6 +294,11 @@ namespace sw
         PROPERTY( Tooltip = "Point lights carried by the particles" )
         VFXLightDef _light{};
 
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "User parameter that multiplies the particle colour (all four channels); empty multiplies nothing" )
+        string _tintParameter{};
+        PROPERTY( Meta = "NotLocalizable", Tooltip = "User parameter whose x multiplies the particle size; empty multiplies nothing" )
+        string _sizeParameter{};
+
         /** @brief 커브를 시각 순으로 정렬하고 자동 접선을 다시 셉니다. 파일을 읽은 뒤 `validate` 전에 부릅니다. */
         void sortCurves();
         /**
@@ -304,6 +327,7 @@ namespace sw
      * @struct VFXEffectDef
      * @brief `*.vfx.xml` 하나입니다. 방출기 목록을 갖습니다.
      * @details 읽다가 틀리면 빈 효과가 남습니다(반쯤 찬 효과를 남기지 않는다).
+     *          변형은 루트의 `_base="<부모 효과>"` 로 적고 다른 칸만 쓴다. 방출기는 이름으로 합친다(언리얼 Niagara 부모 이미터 — 합치기는 `DataInheritance`, 규칙은 `InheritKey` 한 줄이다).
      * @code
      *     <VFXEffectDef>
      *       <_listEmitter>
@@ -332,12 +356,16 @@ namespace sw
 
         PROPERTY( Tooltip = "Emitters; each one is a separate transparent sort candidate" )
         vector<VFXEmitterDef> _listEmitter{};
+        PROPERTY( Tooltip = "User parameters the emitters bind by name and the component overrides at run time" )
+        vector<VFXUserParameterDef> _listUserParameter{};
 
         /** @brief 리소스 상대 경로의 효과를 읽습니다. 모르는 이름 · 범위 밖 값 · 필수 칸 누락이면 오류를 남기고 false 이며 효과가 빕니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 디스크 파일의 효과를 읽습니다(도구 · 테스트용, `ReflectedXMLFile::loadDescFromDiskFile`). 실패하면 효과가 빕니다. */
         [[nodiscard]] bool loadFromDiskFile( string_view diskPath );
-        /** @brief 방출기가 하나 이상이고 이름이 겹치지 않으며 방출기마다 `VFXEmitterDef::validate` 를 통과하면 true 입니다. */
+        /** @brief 사용자 파라미터입니다. 없으면 nullptr 입니다. */
+        [[nodiscard]] const VFXUserParameterDef* findUserParameter( string_view name ) const;
+        /** @brief 방출기가 하나 이상이고 이름이 겹치지 않으며 방출기마다 `VFXEmitterDef::validate` 를 통과하고, 사용자 파라미터 이름이 겹치지 않고 방출기의 묶음이 있는 이름이면 true 입니다. */
         [[nodiscard]] bool validate( string_view sourceLabel ) const;
 
     private:

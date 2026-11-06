@@ -89,6 +89,8 @@ namespace sw
                 {"_colorOverLife",      &everyTarget, false},
                 {    "_collision", &collisionTargets, false},
                 {        "_light",     &lightTargets, false},
+                {"_tintParameter",      &everyTarget, false},
+                {"_sizeParameter",      &everyTarget, false},
             };
         };
     } // namespace
@@ -292,8 +294,44 @@ namespace sw
                     bValid = false;
                 }
             }
+            // 묶음이 없는 이름을 가리키면 조용히 1 배로 그리지 않고 로드를 멈춘다 — 변형이 부모의 파라미터를 지워도 여기서 드러난다.
+            const VFXEmitterDef& emitter = _listEmitter[emitterIndex];
+            if ( emitter._tintParameter.empty() == false && findUserParameter( emitter._tintParameter ) == nullptr )
+            {
+                SW_LOG_ERROR_ID( "VFXEffectDef.VFXEmitterUnknownUserParameter", "VFX '%#': emitter '%#' binds unknown user parameter '%#'", sourceLabel, emitter._name, emitter._tintParameter );
+                bValid = false;
+            }
+            if ( emitter._sizeParameter.empty() == false && findUserParameter( emitter._sizeParameter ) == nullptr )
+            {
+                SW_LOG_ERROR_ID( "VFXEffectDef.VFXEmitterUnknownUserParameter", "VFX '%#': emitter '%#' binds unknown user parameter '%#'", sourceLabel, emitter._name, emitter._sizeParameter );
+                bValid = false;
+            }
+        }
+        for ( size_t parameterIndex = 0; parameterIndex < _listUserParameter.size(); ++parameterIndex )
+        {
+            const string& name      = _listUserParameter[parameterIndex]._name;
+            bool          bRepeated = name.empty();
+            for ( size_t otherIndex = 0; otherIndex < parameterIndex; ++otherIndex )
+            {
+                bRepeated = bRepeated || _listUserParameter[otherIndex]._name == name;
+            }
+            if ( bRepeated )
+            {
+                SW_LOG_ERROR_ID( "VFXEffectDef.VFXUserParameterName", "VFX '%#': user parameter %# has an empty or repeated name '%#'", sourceLabel, parameterIndex, name );
+                bValid = false;
+            }
         }
         return bValid;
+    }
+
+    const VFXUserParameterDef* VFXEffectDef::findUserParameter( string_view name ) const
+    {
+        for ( const VFXUserParameterDef& parameter : _listUserParameter )
+        {
+            if ( string_view( parameter._name ) == name )
+                return &parameter;
+        }
+        return nullptr;
     }
 } // namespace sw
 

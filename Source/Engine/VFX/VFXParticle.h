@@ -32,6 +32,20 @@ namespace sw
 namespace sw
 {
     /**
+     * @struct VFXEmitterUserValues
+     * @brief 사용자 파라미터(`VFXUserParameterDef`)를 방출기의 묶음으로 푼 값입니다. 커브가 낸 색 · 크기에 곱합니다. CPU · GPU 시뮬레이션이 같은 식을 씁니다.
+     * @details 시뮬레이션 상태가 아니라 렌더 출력에 곱하므로 값을 바꿔도 일정과 난수가 그대로다. 재생 중에 바꾸면 살아 있는 입자까지 바로 따른다.
+     */
+    struct VFXEmitterUserValues
+    {
+        float4  _tint{ 1.0f, 1.0f, 1.0f, 1.0f }; ///< 입자 색에 곱한다
+        float32 _sizeScale{ 1.0f };              ///< 입자 크기에 곱한다
+    };
+} // namespace sw
+
+namespace sw
+{
+    /**
      * @struct VFXGPUEmitterRequest
      * @brief GPU 시뮬레이션 방출기 하나가 렌더 스레드에 싣는 요청입니다(`VFXGPUEmitter::makeRequest` → `GPUParticleBatch` → `VFXGPUSimulation`).
      * @details 입자는 싣지 않는다 — 렌더 스레드가 같은 시계(`VFXEmitterClock`)로 일정을 다시 만들어 `_stepCount` 까지 돌린다. 단계 수가 누적값이라
@@ -44,5 +58,6 @@ namespace sw
         uint64                          _seed{ 0 };          ///< 방출기 씨앗(`VFXCPUSimulation` 과 같은 값)
         uint64                          _stepCount{ 0 };     ///< 이 재생에서 지금까지 돈 고정 단계 수(누적)
         float32                         _spawnScale{ 0.0f }; ///< 게임 스레드 시계의 생성 배율(`VFXEmitterClock::getSpawnScale`) — 렌더 스레드 시계가 같은 일정을 얻는다
+        VFXEmitterUserValues            _userValues{};       ///< 이번 프레임의 사용자 값(렌더 출력에 곱한다)
     };
 } // namespace sw

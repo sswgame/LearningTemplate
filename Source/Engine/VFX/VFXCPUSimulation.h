@@ -70,6 +70,8 @@ namespace sw
         void update( float32 deltaSeconds, const IVFXCollisionScene* pCollision );
         /** @brief 단계 하나: 생성, 적분(충돌), 수명 제거. @p stepSeconds 는 0 보다 커야 합니다. */
         void step( float32 stepSeconds, const IVFXCollisionScene* pCollision );
+        /** @brief 사용자 값을 정합니다. 다음 `writeParticles` 부터 색 · 크기에 곱합니다(시뮬레이션 상태는 그대로다). */
+        void setUserValues( const VFXEmitterUserValues& values ) { _userValues = values; }
         /** @brief 입자를 모두 지우고 방출기 시간을 0 으로 되돌려 처음부터 다시 방출합니다(같은 씨앗이라 같은 입자가 나옵니다). */
         void restart();
 
@@ -107,9 +109,10 @@ namespace sw
         [[nodiscard]] bool resolveCollision( Particle& particle, const float3& from, const IVFXCollisionScene& collision ) const;
 
     private:
-        VFXEmitterClock  _clock;
-        uint64           _seed;
-        vector<Particle> _listParticle;
-        uint8            _bWarnedPoolFull : 1;
+        VFXEmitterClock      _clock;
+        uint64               _seed;
+        vector<Particle>     _listParticle;
+        VFXEmitterUserValues _userValues;
+        uint8                _bWarnedPoolFull : 1;
     };
 } // namespace sw

@@ -70,7 +70,7 @@ namespace sw
         void onTick( float32 deltaTime ) override;
         /** @brief 읽어 들인 `_effectPath` 로 효과를 다시 만듭니다. */
         void onPostLoad() override;
-        /** @brief `_effectPath` · `_seed` 가 바뀌면 효과를 다시 만듭니다. */
+        /** @brief `_effectPath` · `_seed` 가 바뀌면 효과를 다시 만들고, `_listUserParameter` 가 바뀌면 값만 다시 풉니다. */
         void onPropertyChanged( hashed_string propertyName ) override;
 
         /** @brief 처음부터 다시 재생합니다(입자를 지우고 방출기 시간을 0 으로). 효과가 없으면 재생하지 않습니다. */
@@ -88,6 +88,11 @@ namespace sw
         void setSeed( uint32 seed );
         /** @brief 방출기 씨앗의 바탕입니다. */
         uint32 getSeed() const { return _seed; }
+        /**
+         * @brief 사용자 파라미터(`VFXUserParameterDef`)의 값을 덮습니다. 재생은 끊기지 않고 살아 있는 입자까지 따릅니다(언리얼 `UNiagaraComponent::SetVariable` 자리).
+         * @return 효과에 없는 이름이면 오류를 남기고 false 이고 값을 남기지 않습니다.
+         */
+        bool setUserParameter( string_view name, const float4& value );
         /** @brief 재생 중이면 true 입니다. */
         bool isPlaying() const { return _bPlaying; }
 
@@ -121,6 +126,9 @@ namespace sw
     private:
         /** @brief 방출기 하나의 시뮬레이션입니다. 대상(`VFXSimulationTarget`)마다 하나뿐이다 — 둘을 함께 들 수 없다. */
         using EmitterSimulation = std::variant<VFXCPUSimulation, VFXGPUEmitter>;
+
+        /** @brief 덮은 값(`_listUserParameter`)과 효과의 기본값으로 방출기마다 사용자 값을 풀어 시뮬레이션에 넘깁니다. 효과에 없는 덮기는 오류를 남기고 무시합니다. */
+        void applyUserParameters();
 
         /** @brief 메시 방출기 하나의 인스턴스 배치와 그 머티리얼입니다. 메시 방출기가 아니면 둘 다 비어 있습니다. */
         struct MeshEmitter
@@ -158,11 +166,14 @@ namespace sw
         PROPERTY( Category = "VFX", DisplayName = "Effect", Tooltip = "Particle effect (.vfx.xml)" )
         AssetRef<VFXEffectDef>                        _effectPath;
         vector<EmitterSimulation>                     _listSimulation;
-        vector<shared_ptr<const vector<GPUParticle>>> _listPublished;      ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
-        vector<VFXGPUEmitterRequest>                  _listGPURequest;     ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
-        vector<MeshEmitter>                           _listMeshEmitter;    ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
-        vector<MeshHandle>                            _listMeshLoad;       ///< 방출기마다 메시 로드(`_listSimulation` 과 길이가 같다, 메시 방출기가 아니거나 내장 도형이면 빈 핸들)
-        PrimitiveRegistry*                            _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
+        vector<shared_ptr<const vector<GPUParticle>>> _listPublished;       ///< CPU 방출기마다 마지막 틱의 입자(GPU 방출기는 늘 nullptr)
+        vector<VFXGPUEmitterRequest>                  _listGPURequest;      ///< GPU 방출기마다 이번 요청(재생 중이 아니거나 CPU 방출기면 `_pDef` 가 nullptr)
+        vector<MeshEmitter>                           _listMeshEmitter;     ///< 방출기마다 하나(`_listSimulation` 과 길이가 같다)
+        vector<MeshHandle>                            _listMeshLoad;        ///< 방출기마다 메시 로드(`_listSimulation` 과 길이가 같다, 메시 방출기가 아니거나 내장 도형이면 빈 핸들)
+        vector<VFXUserParameterDef>                   _listEffectParameter; ///< 효과가 선언한 사용자 파라미터와 기본값(효과를 읽을 때 옮겨 둔다)
+        PROPERTY( Category = "VFX", DisplayName = "User Parameters", Tooltip = "Overrides of the effect's user parameters by name" )
+        vector<VFXUserParameterDef> _listUserParameter;
+        PrimitiveRegistry*          _pPrimitiveRegistry; ///< 등록된 씬의 프리미티브 레지스트리(빌림). 등록 전이면 nullptr
         PROPERTY( Category = "VFX", DisplayName = "Seed", Tooltip = "Random seed of the emitters; the same seed replays the same particles" )
         uint32 _seed;
         PROPERTY( Category = "Playback", DisplayName = "Play On Begin", Tooltip = "Start playing when gameplay begins" )

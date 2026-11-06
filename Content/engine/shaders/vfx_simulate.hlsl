@@ -347,6 +347,9 @@ void writeRenderOutput( uint firstIndex, uint stride, uint poolSize, uint aliveC
     const uint4 lightRow       = loadParamRow( SW_VFX_PARAM_ROW_LIGHT );
     const uint  lightCount     = lightRow.y;
     const uint  outputCount    = max( aliveCount, lightCount );
+    // 사용자 파라미터 — 커브가 낸 색 · 크기에 곱한다(VFXCPUSimulation::writeParticles 와 같은 식). 시뮬레이션 상태에는 들어가지 않는다.
+    const float4 userTint      = asfloat( loadParamRow( SW_VFX_PARAM_ROW_USER_TINT ) );
+    const float  userSizeScale = asfloat( loadParamRow( SW_VFX_PARAM_ROW_USER_SIZE ).x );
     for ( uint outputIndex = firstIndex; outputIndex < outputCount; outputIndex += stride )
     {
         const bool  bAlive = outputIndex < aliveCount;
@@ -358,11 +361,12 @@ void writeRenderOutput( uint firstIndex, uint stride, uint poolSize, uint aliveC
         {
             const VFXParticleState particle  = g_VFXStateRW[currentBase + outputIndex];
             const float            lifeRatio = particle._positionAge.w / particle._velocityLifetime.w;
-            output._positionSize             = float4( particle._positionAge.xyz, evaluateCurve( curveSizeRed.x, curveSizeRed.y, lifeRatio ) );
+            output._positionSize             = float4( particle._positionAge.xyz, evaluateCurve( curveSizeRed.x, curveSizeRed.y, lifeRatio ) * userSizeScale );
             output._color                    = float4( evaluateCurve( curveSizeRed.z, curveSizeRed.w, lifeRatio ), evaluateCurve( curveGreenBlue.x, curveGreenBlue.y, lifeRatio ),
-                                                       evaluateCurve( curveGreenBlue.z, curveGreenBlue.w, lifeRatio ), evaluateCurve( curveAlpha.x, curveAlpha.y, lifeRatio ) );
-            output._rotationLife             = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
-            g_VFXParticlesRW[outputIndex]    = output;
+                                                       evaluateCurve( curveGreenBlue.z, curveGreenBlue.w, lifeRatio ), evaluateCurve( curveAlpha.x, curveAlpha.y, lifeRatio ) ) *
+                            userTint;
+            output._rotationLife          = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
+            g_VFXParticlesRW[outputIndex] = output;
         }
         if ( outputIndex < lightCount )
         {

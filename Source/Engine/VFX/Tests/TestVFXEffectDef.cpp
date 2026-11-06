@@ -6,6 +6,8 @@
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Reflection/ReflectionTypes.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
+#include "Engine/VFX/VFXCPUSimulation.h"
 #include "Engine/VFX/VFXEffectDef.h"
 
 using namespace sw;
@@ -102,7 +104,96 @@ namespace
         [[nodiscard]] static bool writeScratchFile( const string& path, string_view text ) { return FileUtil::writeFile( path, reinterpret_cast<const uint8*>( text.data() ), text.size() ); }
     };
     using Util = VFXEffectDefTestUtil;
+
+    /** @brief 부모 효과 글을 한 벌 돌려주는 곳입니다(`DataInheritance::flatten` 의 입력). */
+    class VFXParentSource final : public IDataInheritanceSource
+    {
+    public:
+        explicit VFXParentSource( string_view text )
+            : _text{ text }
+        {
+        }
+        [[nodiscard]] bool readText( string_view /*assetID*/, string& outText ) override
+        {
+            outText = _text;
+            return true;
+        }
+
+    private:
+        string _text;
+    };
 } // namespace
+
+/** @brief [VFXEffectDefTest] 변형은 방출기를 이름으로 합친다 — 적은 칸만 바뀌고 물려받은 칸(커브)은 그대로이며, 새 이름은 끝에 더해지고 _op="Remove" 는 지운다 */
+SW_TEST_CASE( VFXEffectDefTest, VariantMergesEmittersByName )
+{
+    string parent = "<VFXEffectDef><_listEmitter>";
+    for ( const utf8* pName : { "Sparks", "Smoke" } )
+    {
+        string       one   = Util::makeEffectXml( string( "_name=\"" ) + pName + "\" _texturePath=\"game/vfx/spark.png\" _maxParticles=\"64\" _duration=\"1\" _spawnRate=\"40\" _lifetimeMin=\"0.4\" _lifetimeMax=\"0.8\"" );
+        const size_t first = one.find( "<VFXEmitterDef " );
+        const size_t last  = one.find( "</VFXEmitterDef>" ) + string_view( "</VFXEmitterDef>" ).size();
+        parent += one.substr( first, last - first );
+    }
+    parent += "</_listEmitter></VFXEffectDef>";
+
+    VFXParentSource source{ parent };
+    const string    child = "<VFXEffectDef _base=\"parent.vfx.xml\"><_listEmitter><VFXEmitterDef _name=\"Sparks\" _maxParticles=\"8\" _spawnRate=\"4\" /><VFXEmitterDef _name=\"Smoke\" _op=\"Remove\" /></_listEmitter></VFXEffectDef>";
+    string          flat;
+    SW_REQUIRE_TRUE( DataInheritance::flatten( child, "child.vfx.xml", DataInheritanceSchema::makeFromType( *VFXEffectDef::StaticType() ), source, flat ) );
+    const string path = test::makeScratchPath( "variant.vfx.xml" );
+    SW_REQUIRE_TRUE( Util::writeScratchFile( path, flat ) );
+
+    VFXEffectDef effect;
+    SW_REQUIRE_TRUE( effect.loadFromDiskFile( path ) );
+    SW_REQUIRE_EQUAL( 1u, static_cast<uint32>( effect._listEmitter.size() ) );
+    SW_EXPECT_EQUAL( 8u, effect._listEmitter[0]._maxParticles );
+    SW_EXPECT_NEAR( 0.8f, effect._listEmitter[0]._lifetimeMax, 0.0001f );
+    SW_EXPECT_EQUAL( 2u, static_cast<uint32>( effect._listEmitter[0]._sizeOverLife._listKey.size() ) );
+}
+
+/** @brief [VFXEffectDefTest] 묶음이 없는 사용자 파라미터를 가리키거나 파라미터 이름이 겹치면 로드를 멈춘다 */
+SW_TEST_CASE( VFXEffectDefTest, UserParameterNamesAreChecked )
+{
+    SW_EXPECT_LOG( "VFXEffectDef.VFXEmitterUnknownUserParameter" );
+    SW_EXPECT_LOG( "VFXEffectDef.VFXUserParameterName" );
+    VFXEffectDef effect;
+    effect._listEmitter.push_back( Util::makeEmitter() );
+    effect._listEmitter[0]._tintParameter = "Tint";
+    SW_EXPECT_FALSE( effect.validate( "test" ) );
+
+    VFXUserParameterDef tint;
+    tint._name = "Tint";
+    effect._listUserParameter.push_back( tint );
+    SW_EXPECT_TRUE( effect.validate( "test" ) );
+    SW_REQUIRE_NOT_NULL( effect.findUserParameter( "Tint" ) );
+
+    effect._listUserParameter.push_back( tint );
+    SW_EXPECT_FALSE( effect.validate( "test" ) );
+}
+
+/** @brief [VFXEffectDefTest] 사용자 값은 낸 입자의 색 · 크기에 곱하고 시뮬레이션 상태는 건드리지 않는다 */
+SW_TEST_CASE( VFXEffectDefTest, UserValuesMultiplyTheOutput )
+{
+    shared_ptr<const VFXEmitterDef> pDef = make_shared<const VFXEmitterDef>( Util::makeEmitter() );
+    VFXCPUSimulation                simulation{ pDef, 7u, 1.0f };
+    simulation.step( 0.2f, nullptr );
+    SW_REQUIRE_TRUE( simulation.getAliveCount() > 0u );
+    vector<GPUParticle> listPlain;
+    simulation.writeParticles( listPlain );
+
+    VFXEmitterUserValues values{};
+    values._tint      = float4{ 0.5f, 0.25f, 2.0f, 1.0f };
+    values._sizeScale = 3.0f;
+    simulation.setUserValues( values );
+    vector<GPUParticle> listScaled;
+    simulation.writeParticles( listScaled );
+    SW_REQUIRE_EQUAL( static_cast<uint32>( listPlain.size() ), static_cast<uint32>( listScaled.size() ) );
+    SW_EXPECT_NEAR( listPlain[0]._positionSize._w * 3.0f, listScaled[0]._positionSize._w, 0.0001f );
+    SW_EXPECT_NEAR( listPlain[0]._positionSize._x, listScaled[0]._positionSize._x, 0.0f );
+    SW_EXPECT_NEAR( listPlain[0]._color._x * 0.5f, listScaled[0]._color._x, 0.0001f );
+    SW_EXPECT_NEAR( listPlain[0]._color._z * 2.0f, listScaled[0]._color._z, 0.0001f );
+}
 
 /** @brief [VFXEffectDefTest] 방출기의 모든 리플렉션 칸이 모듈 표에 줄을 가진다 — 칸을 더하고 대상을 선언하지 않는 길을 막는다 */
 SW_TEST_CASE( VFXEffectDefTest, EveryEmitterFieldDeclaresItsTargets )

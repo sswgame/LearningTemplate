@@ -39,7 +39,9 @@
 #define SW_VFX_PARAM_ROW_DEPTH_VIEW_PROJ         20u // 히스토리 시점의 뷰-투영 행 넷(20..23)
 #define SW_VFX_PARAM_ROW_DEPTH_INVERSE_VIEW_PROJ 24u // 그 역 행 넷(24..27)
 #define SW_VFX_PARAM_ROW_LIGHT                   28u // 파티클 라이트 (라이트 버퍼 안의 첫 슬롯 번호, 슬롯 수 — 0 이면 빛 없음, 월드 반경 실수, 세기 실수)
-#define SW_VFX_PARAM_ROW_FIRST_STEP              29u // 단계마다 한 행 (만들 입자 수, 첫 입자 번호 lo, hi, 0) — 커브 키는 그 뒤
+#define SW_VFX_PARAM_ROW_USER_TINT               29u // 사용자 파라미터 색 곱 RGBA 실수(VFXEmitterUserValues::_tint)
+#define SW_VFX_PARAM_ROW_USER_SIZE               30u // 사용자 파라미터 크기 곱 실수, 0, 0, 0
+#define SW_VFX_PARAM_ROW_FIRST_STEP              31u // 단계마다 한 행 (만들 입자 수, 첫 입자 번호 lo, hi, 0) — 커브 키는 그 뒤
 // 커브 키 하나의 행 수 — (시각, 값, 들어오는 접선, 나가는 접선), (상수면 1, 직선이면 1, 0, 0). 둘 다 0 이면 에르미트다(FloatCurve 와 같은 식).
 #define SW_VFX_PARAM_ROWS_PER_KEY 2u
 

@@ -359,7 +359,7 @@ namespace sw
     {
         using Internal         = VFXGPUSimulationInternal;
         const uint32 paramRow  = static_cast<uint32>( _listParamWord.size() / Internal::kWordsPerRow );
-        const uint32 stepCount = appendParams( state, request._seed, request._stepCount, world, bRibbon, lightRange );
+        const uint32 stepCount = appendParams( state, request, world, bRibbon, lightRange );
         // 밀린 단계가 없고 이미 한 번 돌았으면 렌더 입력과 인자가 그대로다 — 디스패치하지 않는다(매개변수 구간은 버린다).
         // 파티클 라이트가 있으면 그래도 돈다: 라이트는 월드 좌표로 쓰이고 구간의 위치(CPU 라이트 수)도 프레임마다 바뀌어 매 프레임 다시 써야 한다.
         const bool bLights   = lightRange._count > 0;
@@ -378,15 +378,15 @@ namespace sw
         state._bNeedsReset  = SW_FALSE;
     }
 
-    uint32 VFXGPUSimulation::appendParams( EmitterState& state, uint64 seed, uint64 targetStepCount, const float4x4& world, bool bRibbon, const VFXGPULightRange& lightRange )
+    uint32 VFXGPUSimulation::appendParams( EmitterState& state, const VFXGPUEmitterRequest& request, const float4x4& world, bool bRibbon, const VFXGPULightRange& lightRange )
     {
         using Internal                             = VFXGPUSimulationInternal;
         const VFXEmitterDef&        def            = state._clock.getDef();
         const VFXDepthHistoryInput& depth          = _frameInput._depth;
         const size_t                first          = _listParamWord.size();
-        const uint64                behind         = targetStepCount > state._doneStepCount ? targetStepCount - state._doneStepCount : 0u;
+        const uint64                behind         = request._stepCount > state._doneStepCount ? request._stepCount - state._doneStepCount : 0u;
         const uint32                steps          = behind < SW_VFX_MAX_STEPS_PER_DISPATCH ? static_cast<uint32>( behind ) : SW_VFX_MAX_STEPS_PER_DISPATCH;
-        const uint64                baseSeed       = HashUtil::mix64( seed );
+        const uint64                baseSeed       = HashUtil::mix64( request._seed );
         const uint32                collisionFlags = Internal::computeCollisionFlags( def._collision );
         const bool                  bDepthReady    = collisionFlags != 0u && depth._texture != 0 && depth._uav != kInvalidDescriptorIndex;
         const uint32                flags          = ( state._bNeedsReset ? SW_VFX_FLAG_RESET : 0u ) | ( bRibbon ? SW_VFX_FLAG_RIBBON : 0u ) | collisionFlags |
@@ -428,7 +428,11 @@ namespace sw
         {
             Internal::appendRow( _listParamWord, 0u, 0u, 0u, 0u );
         }
-        static_assert( SW_VFX_PARAM_ROW_FIRST_STEP == 29u && SW_VFX_PARAM_ROW_LIGHT == 28u, "the header rows above must match vfx_simulate.hlsli" );
+        // 사용자 값 — 렌더 출력에 곱한다(`VFXCPUSimulation::writeParticles` 와 같은 식).
+        const VFXEmitterUserValues& userValues = request._userValues;
+        Internal::appendRow( _listParamWord, BitUtil::floatToBits( userValues._tint._x ), BitUtil::floatToBits( userValues._tint._y ), BitUtil::floatToBits( userValues._tint._z ), BitUtil::floatToBits( userValues._tint._w ) );
+        Internal::appendRow( _listParamWord, BitUtil::floatToBits( userValues._sizeScale ), 0u, 0u, 0u );
+        static_assert( SW_VFX_PARAM_ROW_FIRST_STEP == 31u && SW_VFX_PARAM_ROW_USER_SIZE == 30u && SW_VFX_PARAM_ROW_USER_TINT == 29u && SW_VFX_PARAM_ROW_LIGHT == 28u, "the header rows above must match vfx_simulate.hlsli" );
 
         // 일정 — 게임 스레드와 같은 시계를 같은 단계 수만큼 돌린다.
         for ( uint32 stepIndex = 0; stepIndex < steps; ++stepIndex )

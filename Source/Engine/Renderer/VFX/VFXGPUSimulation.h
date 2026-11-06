@@ -189,7 +189,7 @@ namespace sw
         /** @brief @p state 의 시뮬레이션 디스패치를 붙입니다(밀린 단계가 없고 이미 돌았으면 매개변수를 버리고 붙이지 않는다). */
         void appendSimulation( EmitterState& state, const VFXGPUEmitterRequest& request, const float4x4& world, bool bRibbon, const VFXGPULightRange& lightRange );
         /** @brief @p state 의 이번 프레임 매개변수 구간을 `_listParamWord` 끝에 붙이고 디스패치할 단계 수를 돌려줍니다. */
-        uint32 appendParams( EmitterState& state, uint64 seed, uint64 targetStepCount, const float4x4& world, bool bRibbon, const VFXGPULightRange& lightRange );
+        uint32 appendParams( EmitterState& state, const VFXGPUEmitterRequest& request, const float4x4& world, bool bRibbon, const VFXGPULightRange& lightRange );
         /** @brief 메시 방출기 @p emitter 의 인스턴스 쓰기 구간을 붙입니다. */
         void appendMeshInstance( const EmitterState& state, const GPUVFXMeshEmitter& emitter );
 

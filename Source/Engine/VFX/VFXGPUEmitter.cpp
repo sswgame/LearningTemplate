@@ -21,6 +21,7 @@ namespace sw
 {
     VFXGPUEmitter::VFXGPUEmitter( shared_ptr<const VFXEmitterDef> pDef, uint64 seed, float32 spawnScale )
         : _clock{ std::move( pDef ), spawnScale }
+        , _userValues{}
         , _seed{ seed }
         , _runID{ allocateRunID() }
         , _stepCount{ 0 }
@@ -69,6 +70,7 @@ namespace sw
         request._seed       = _seed;
         request._stepCount  = _stepCount;
         request._spawnScale = _clock.getSpawnScale();
+        request._userValues = _userValues;
         return request;
     }
 } // namespace sw

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 표본 변형 — sparks 를 부모로 두고 불꽃 방출기에 사용자 파라미터 둘을 묶는다. 연기 방출기와 커브는 물려받는다(언리얼 Niagara 부모 이미터 · User Parameters). 시나리오 game/empty/automation/vfxvariant 가 읽는다. -->
+<VFXEffectDef _base="engine/vfx/sparks.vfx.xml">
+	<_listEmitter>
+		<VFXEmitterDef _name="Sparks" _tintParameter="Tint" _sizeParameter="SizeScale" />
+	</_listEmitter>
+	<_listUserParameter>
+		<VFXUserParameterDef _name="Tint" _value="1, 1, 1, 1" />
+		<VFXUserParameterDef _name="SizeScale" _value="1, 1, 1, 1" />
+	</_listUserParameter>
+</VFXEffectDef>

@@ -2,6 +2,7 @@
 
 #include "Engine/VFX/VFXComponent.h"
 
+#include "Core/Container/VectorUtil.h"
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 #include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
@@ -138,6 +139,8 @@ namespace sw
         , _listPublished{}
         , _listMeshEmitter{}
         , _listMeshLoad{}
+        , _listEffectParameter{}
+        , _listUserParameter{}
         , _pPrimitiveRegistry{ nullptr }
         , _seed{ 0 }
         , _bPlayOnBegin{ true }
@@ -229,8 +232,11 @@ namespace sw
         SceneComponent::onPropertyChanged( propertyName );
         static const hashed_string s_effectPathName( "_effectPath" );
         static const hashed_string s_seedName( "_seed" );
+        static const hashed_string s_userParameterName( "_listUserParameter" );
         if ( propertyName == s_effectPathName || propertyName == s_seedName )
             loadEffect();
+        else if ( propertyName == s_userParameterName )
+            applyUserParameters();
     }
 
     void VFXComponent::play()
@@ -269,6 +275,55 @@ namespace sw
     {
         _seed = seed;
         loadEffect();
+    }
+
+    bool VFXComponent::setUserParameter( string_view name, const float4& value )
+    {
+        const string nameText{ name };
+        if ( VectorUtil::findBy<&VFXUserParameterDef::_name>( _listEffectParameter, nameText ) == nullptr )
+        {
+            SW_LOG_ERROR_ID( "VFXComponent.UnknownUserParameter", "VFX '%#': no user parameter '%#'", _effectPath, nameText );
+            return false;
+        }
+        VFXUserParameterDef* pEntry = VectorUtil::findBy<&VFXUserParameterDef::_name>( _listUserParameter, nameText );
+        if ( pEntry == nullptr )
+        {
+            pEntry        = &_listUserParameter.emplace_back();
+            pEntry->_name = nameText;
+        }
+        pEntry->_value = value;
+        applyUserParameters();
+        return true;
+    }
+
+    void VFXComponent::applyUserParameters()
+    {
+        vector<VFXUserParameterDef> listValue = _listEffectParameter;
+        for ( const VFXUserParameterDef& entry : _listUserParameter )
+        {
+            VFXUserParameterDef* pValue = VectorUtil::findBy<&VFXUserParameterDef::_name>( listValue, entry._name );
+            if ( pValue != nullptr )
+                pValue->_value = entry._value;
+            else if ( _listSimulation.empty() == false ) // 효과를 읽지 못했으면 효과 데이터가 이미 오류를 남겼다
+                SW_LOG_ERROR_ID( "VFXComponent.UnknownUserParameter", "VFX '%#': no user parameter '%#'", _effectPath, entry._name );
+        }
+        for ( EmitterSimulation& simulation : _listSimulation )
+        {
+            VFXCPUSimulation*    pCPUSimulation = std::get_if<VFXCPUSimulation>( &simulation );
+            VFXGPUEmitter*       pGPUEmitter    = std::get_if<VFXGPUEmitter>( &simulation );
+            const VFXEmitterDef& def            = pCPUSimulation != nullptr ? pCPUSimulation->getDef() : pGPUEmitter->getDef();
+            VFXEmitterUserValues values{};
+            // 묶음이 가리키는 이름은 효과 검증(`VFXEffectDef::validate`)이 보장한다.
+            if ( def._tintParameter.empty() == false )
+                values._tint = VectorUtil::findBy<&VFXUserParameterDef::_name>( listValue, def._tintParameter )->_value;
+            if ( def._sizeParameter.empty() == false )
+                values._sizeScale = VectorUtil::findBy<&VFXUserParameterDef::_name>( listValue, def._sizeParameter )->_value._x;
+            if ( pCPUSimulation != nullptr )
+                pCPUSimulation->setUserValues( values );
+            else
+                pGPUEmitter->setUserValues( values );
+        }
+        publishParticles();
     }
 
     const VFXEmitterDef& VFXComponent::getEmitterDef( uint32 emitterIndex ) const
@@ -361,12 +416,14 @@ namespace sw
         _listSimulation.clear();
         _listPublished.clear();
         _listGPURequest.clear();
+        _listEffectParameter.clear();
         _bPlaying = SW_FALSE;
         if ( _effectPath.empty() )
             return;
         VFXEffectDef effect;
         if ( effect.loadFromAsset( AssetID{ _effectPath } ) == false )
             return; // 효과 데이터가 무엇이 틀렸는지 오류를 남겼다 — 방출기 없이 아무것도 그리지 않는다
+        _listEffectParameter = std::move( effect._listUserParameter );
         _listSimulation.reserve( effect._listEmitter.size() );
         // 이펙트 품질(사용자 설정 graphics.effectsQuality → 선택지의 targetValue)은 효과를 읽을 때 정한다 — 바꾸면 다음에 읽는 효과부터 따른다.
         const float32 spawnScale = MathUtil::max( 0.0f, static_cast<float32>( gv_effectsSpawnScale ) );
@@ -381,6 +438,7 @@ namespace sw
         }
         _listPublished.resize( _listSimulation.size() );
         _listGPURequest.resize( _listSimulation.size() );
+        applyUserParameters();
         rebuildMeshEmitters();
     }
 

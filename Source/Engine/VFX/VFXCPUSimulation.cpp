@@ -41,6 +41,7 @@ namespace sw
         : _clock{ std::move( pDef ), spawnScale }
         , _seed{ seed }
         , _listParticle{}
+        , _userValues{}
         , _bWarnedPoolFull{ SW_FALSE }
     {
         SW_ASSERT( getDef()._maxParticles >= 1 );
@@ -162,9 +163,9 @@ namespace sw
             // 수명이 다한 입자는 `integrateStep` 이 지우므로 비율은 늘 0..1 이고, 데이터 검증이 커브 키를 보장한다.
             const float32 lifeRatio = particle._age / particle._lifetime;
             GPUParticle   output{};
-            output._positionSize = float4( particle._position, *def._sizeOverLife.evaluate( lifeRatio ) );
-            output._color        = float4( *def._colorOverLife._red.evaluate( lifeRatio ), *def._colorOverLife._green.evaluate( lifeRatio ),
-                                           *def._colorOverLife._blue.evaluate( lifeRatio ), *def._colorOverLife._alpha.evaluate( lifeRatio ) );
+            output._positionSize = float4( particle._position, *def._sizeOverLife.evaluate( lifeRatio ) * _userValues._sizeScale );
+            output._color        = float4( *def._colorOverLife._red.evaluate( lifeRatio ) * _userValues._tint._x, *def._colorOverLife._green.evaluate( lifeRatio ) * _userValues._tint._y,
+                                           *def._colorOverLife._blue.evaluate( lifeRatio ) * _userValues._tint._z, *def._colorOverLife._alpha.evaluate( lifeRatio ) * _userValues._tint._w );
             output._rotationLife = float4( 0.0f, lifeRatio, 0.0f, 0.0f );
             outListParticle.push_back( output );
         }
