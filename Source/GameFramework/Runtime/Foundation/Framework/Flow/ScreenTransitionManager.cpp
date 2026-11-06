@@ -22,10 +22,10 @@ namespace sw
 
     void ScreenFade::beginFadeOut( float32 duration )
     {
+        // 지금 어둡기에서 잇는다 - 까만 화면에서 새 전환을 걸어도(전환 액션이 또 전환을 건다) 밝아졌다 어두워지지 않는다.
         _phase     = FadePhase::FadingOut;
         _duration  = MathUtil::max( duration, 0.001f );
-        _elapsed   = 0.0f;
-        _alpha     = 0.0f;
+        _elapsed   = _alpha * _duration;
         _bFinished = SW_FALSE;
     }
 
@@ -81,7 +81,6 @@ namespace sw
 
     ScreenTransitionManager::ScreenTransitionManager()
         : _fade{}
-        , _callbacks{}
         , _pendingAction{}
         , _pendingFadeInDuration{ 0.35f }
         , _phase{ Phase::None }
@@ -94,13 +93,6 @@ namespace sw
         _pendingAction         = std::move( onExecute );
         _pendingFadeInDuration = fadeInDuration;
         _phase                 = Phase::FadeOut;
-
-        if ( _callbacks.onTransitionStarted.isBound() == true )
-            _callbacks.onTransitionStarted();
-
-        if ( _callbacks.setPlayerInputEnabled.isBound() == true )
-            _callbacks.setPlayerInputEnabled( false );
-
         _fade.beginFadeOut( fadeOutDuration );
         SW_LOG_INFO_ID( "ScreenTransition.BeginScreenTransitionFadeOutDuration", "Begin ScreenTransition (FadeOut duration=%#s)", fadeOutDuration );
     }
@@ -140,13 +132,7 @@ namespace sw
             if ( _fade.getPhase() == FadePhase::Idle )
             {
                 _phase = Phase::None;
-                SW_LOG_INFO_ID( "ScreenTransition.ScreenTransitionTransitionCompleteRestoring", "ScreenTransition: Transition complete, restoring player input." );
-
-                if ( _callbacks.setPlayerInputEnabled.isBound() == true )
-                    _callbacks.setPlayerInputEnabled( true );
-
-                if ( _callbacks.onTransitionFinished.isBound() == true )
-                    _callbacks.onTransitionFinished();
+                SW_LOG_INFO_ID( "ScreenTransition.ScreenTransitionTransitionCompleteRestoring", "ScreenTransition: Transition complete." );
             }
         }
     }

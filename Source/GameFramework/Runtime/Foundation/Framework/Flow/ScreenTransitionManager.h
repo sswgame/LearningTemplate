@@ -60,21 +60,7 @@ namespace sw
 namespace sw
 {
     // ------------------------------------------------------------------------------
-    // 2) TransitionCallbacks: 전환 시 입력 잠금/복원 및 커스텀 훅 콜백
-    // ------------------------------------------------------------------------------
-    /** @brief 씬 · 화면 전환 때 부르는 콜백 모음입니다. */
-    struct TransitionCallbacks
-    {
-        Delegate<void( bool bEnable )> setPlayerInputEnabled; ///< 전환 중 입력 잠금 · 복원
-        Delegate<void()>               onTransitionStarted;   ///< 전환 시작 훅
-        Delegate<void()>               onTransitionFinished;  ///< 전환 완료 훅
-    };
-} // namespace sw
-
-namespace sw
-{
-    // ------------------------------------------------------------------------------
-    // 3) ScreenTransitionManager: 페이드 효과와 결합된 범용 화면 전환 관리자
+    // 2) ScreenTransitionManager: 페이드 효과와 결합된 범용 화면 전환 관리자
     // ------------------------------------------------------------------------------
     /** @brief 화면 페이드와 연동해 씬 전환 시퀀스(FadeOut → Execute → FadeIn)를 한곳에서 관리합니다. */
     class SW_GF_API ScreenTransitionManager final : public GameInstanceSubsystem
@@ -114,12 +100,8 @@ namespace sw
         /** @brief 페이드 서비스를 반환합니다. */
         const ScreenFade& fade() const { return _fade; }
 
-        /** @brief 전환 콜백들을 설정합니다. */
-        void setCallbacks( TransitionCallbacks callbacks ) { _callbacks = std::move( callbacks ); }
-
     private:
         ScreenFade             _fade;
-        TransitionCallbacks    _callbacks;
         Delegate<void()>       _pendingAction;
         float32                _pendingFadeInDuration;
         Phase                  _phase;
