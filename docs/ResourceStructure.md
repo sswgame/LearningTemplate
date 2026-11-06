@@ -1,0 +1,229 @@
+# 리소스 공통 구조 설계
+
+> 질문: 모든 리소스를 최소 파일로 공유하고 여러 변형을 만들려면 구조를 어떻게 바꾸는가?
+> 독자: 이 구조를 구현하거나 새 리소스 형식을 더하는 세션(에이전트와 사람).
+> 결론: 리소스 종류 정의 · 합성 읽기 · 공유 캐시 · 타입 있는 참조를 한 벌로 만들고, 변형은 부모 → 조건 → 덮어쓰기 층의 합성 한 길로 처리한다. 행동 데이터는 실행기를 합치지 않고 조건 · 동작 어휘만 공유한다. 기준은 지금 닮은 파일 수가 아니라 앞으로의 기능이다.
+
+엔진 비교는 기억에 의존한 설명이다. 구현 전에 그 기능의 문서를 다시 확인한다.
+
+## 지금 구조와 문제
+
+| 층 | 지금 | 문제 |
+|---|---|---|
+| 종류 정의 | `SW_ASSET_TYPE`(접미사 · 판 · 쿠킹), `SW_RESOURCE_DATA_KIND`(경로 규칙 · 검증 로더)가 따로 있다 | 같은 종류를 두 표에 적는다. `AssetDataKind::loadCatalog` 는 읽고 버리는 검증 전용이다 |
+| 합성 | 파일 `_base`(`DataInheritance`), 항목 `_base`(`DataCatalogInheritance`), 프리팹 덮어쓰기, 스켈레톤 변형이 있고, 읽는 곳은 `XMLDocument::parseData` · `ReflectedXMLFile::parseDesc` · `Material` · `Skeleton` · `PrefabAsset` 로 나뉜다 | 조건별 값과 덮어쓰기 층을 넣을 자리가 형식마다 생긴다 |
+| 공유 | `SharedAssetCache<T>` 와 `GameDataCache<T>` 가 따로 있고, 카탈로그 다수는 쓰는 쪽이 멤버 · 지역 변수로 사본을 읽는다 | 행동 트리 · 스케줄 · 퀘스트 등이 공유되지 않고 다시 읽기도 닿지 않는다 |
+| 참조 | `string` 경로 칸과 이름 목록 `Config/Dev/AssetReferenceFields.json` | 칸이 어느 종류를 가리키는지 형식이 모른다. 이름 표는 사람이 맞춘다 |
+| 행동 | `BehaviorTaskRegistry`, `ScheduleActivityRegistry`, `ScheduleCondition`, `EquipCondition`, `AppearanceRuleCondition`, `GameFlags` 식, 대화 `_condition` · `_actionCommand` 가 각자 어휘를 가진다 | 같은 동작과 조건을 데이터마다 다시 만든다. 행동 트리 노드 칸은 고정 칸(`_value`, `_seconds`, `_count`, `_key`)이다 |
+
+## 목표 구조
+
+```
+리소스 파일
+  └─ 합성 읽기: 부모(_base) → 조건(_when) → 덮어쓰기 층 → 펼친 글
+       └─ 종류 정의(ResourceType)의 로더: 글 → const T
+            └─ 공유 캐시: 경로 하나에 객체 하나, 다시 읽기, 로드 상태
+                 └─ 타입 있는 참조 AssetRef<T> 가 꺼낸다 → 실행 상태는 쓰는 쪽이 따로 가진다
+```
+
+새 형식은 종류 정의 한 줄로 합성 · 공유 · 다시 읽기 · 쿠킹 · 참조 색인 · 에디터 선택기를 얻는다.
+
+### 1. 종류 정의 `ResourceType`
+
+`AssetTypeDef` 를 확장해 `AssetDataKind` 를 흡수한다. 등록 줄은 `SW_ASSET_TYPE` 하나다.
+
+| 칸 | 출처 |
+|---|---|
+| 이름 · 접미사 · 판 · 쿠킹 접미사 · 제외 묶음 | `AssetTypeDef` |
+| 경로 규칙(`/data/items.xml` 처럼 접미사로 가를 수 없는 파일) | `AssetDataKind` |
+| 로더 · 다시 읽기 방식 · 메모리 태그 | `SharedAssetCacheTraits` |
+
+- 검증 로더는 따로 두지 않는다. 스키마 테스트도 진짜 로더를 부른다.
+- 제약: 팩 쿠킹은 게임 모듈을 올리기 전에 돈다(`HeadlessSubsystem::runCookTask`). 쿠킹이 알아야 하는 합성 규칙은 정적 등록이 아니라 데이터(`Config/Dev/`)에 둔다. 이 까닭은 `DataCatalogInheritance.json` 과 같다.
+
+### 2. 합성 읽기 `ResourceComposer`
+
+**한 길이다.** `parseData` · `parseDesc` · 머티리얼 · 스켈레톤의 펼치기를 `ResourceComposer::compose( text, id, context )` 하나로 모은다. 규칙 출처(리플렉션 · `SW_DATA_INHERITANCE_SCHEMA` · 카탈로그 표)는 지금처럼 루트 이름으로 찾는다.
+
+```
+1. 부모: 파일 _base, 항목 _base            (구현됨)
+2. 조건: 플랫폼 · 품질 · 언어 · 지역 · 기능 태그  (신규)
+3. 층: DLC · 모드 · 라이브 운영 · 계절          (신규)
+```
+
+세 단계 모두 `DataInheritance` 의 합치기 규칙(열쇠 · `_op` · `_before` · `_after`)을 그대로 쓴다. 차이 하나를 얹는 일이므로 합치기 코드는 새로 없다.
+
+**프리팹:** `PrefabOverrides` 는 열쇠 모양이 달라 유지한다(`DataInheritance.md`). 대신 문서 머리의 조건 · 층 단계는 같은 길을 지난다.
+
+**스켈레톤:** `SkeletonVariant` 의 자체 사슬과 깊이 검사를 지우고 `_base` 로 옮긴다. "부모 본 번호를 바꾸지 않는다" 는 합친 뒤의 검증으로 남긴다.
+
+#### 조건별 값
+
+언리얼 Device Profile · 플랫폼별 값, Godot 기능 태그, 유니티 플랫폼별 임포트 설정에 해당한다. 형식은 둘이다.
+
+글 형식은 그 자리에 차이를 적는다.
+
+```xml
+<VFXEffectDef _name="Sparks" _maxParticles="4096">
+	<_when test="mobile || quality.low" _maxParticles="512" />
+</VFXEffectDef>
+```
+
+- 항목 · 구조체 칸 어디에나 적을 수 있고, 위에서 아래로 얹는다.
+- 식은 [조건 어휘](#5-행동-어휘)와 같은 문법의 컴파일된 식이다. 값은 태그 집합 `ResourceContext` 에서 온다.
+
+바이너리(텍스처 · 오디오 · 메시)는 안을 고칠 수 없어 경로를 바꾼다. Godot 의 언어별 리소스 교체와 같다.
+
+```xml
+<ResourceRemap>
+	<Remap id="common/ui/logo.dds" when="locale.ko" to="common/ui/logo_ko.dds" />
+</ResourceRemap>
+```
+
+**축마다 정해지는 때가 다르다.**
+
+| 축 | 정해지는 때 | 쿠킹본 |
+|---|---|---|
+| 플랫폼 · 빌드 대상 | 쿠킹 | 펼쳐서 없어진다. 런타임 비용이 없다 |
+| 품질 · 언어 · 지역 · 기능 태그 | 로드 | `_when` 이 남는다. 값이 바뀌면 그 축을 쓰는 리소스를 다시 읽는다(`reloadShared`) |
+
+**한계:** 캐시 열쇠는 경로뿐이므로 한 프로세스의 문맥은 하나다. 서버가 플레이어마다 다른 지역 값을 고르려면 문맥이 아니라 데이터의 키로 나눈다.
+
+**네트워크:** 게임플레이 값이 클라이언트마다 달라지면 판정이 어긋난다. 합성 결과의 해시를 접속 때 대조해 서버와 다르면 거절한다. 품질 축이 시뮬레이션 값을 건드리는지는 이 대조가 드러낸다.
+
+#### 덮어쓰기 층
+
+언리얼 Composite Data Table 과 팩 우선순위에 해당한다. 층은 순서 있는 목록(`engine → common → game → dlc → mod`)이고, 층 안의 `<같은 리소스 id>` 파일은 원본을 암묵적 부모로 가진 차이다.
+
+- 게임 쿠킹은 자기 층까지 펼친다. DLC · 모드 층은 팩을 올릴 때 합성한다. 그래서 합성 코드는 배포 구성에도 남는다.
+- 항목 id 를 바꾸지 않으므로 세이브는 그대로다.
+- 신뢰 경계: 층 파일은 외부 입력이다. 합성 뒤에 그 형식의 검증을 다시 돌리고, 온라인 게임은 위 해시 대조로 거른다.
+
+### 3. 공유 캐시
+
+`SharedAssetCache<T>` 하나로 합치고 `GameDataCache` 를 지운다. 옛 객체를 살려 두는 동작은 `SharedAssetReloadMode::Detach` 와 `shared_ptr` 가 대신한다.
+
+- **모듈 캐시:** 키트 · 게임 종류의 표를 그 모듈이 인스턴스화하고 모듈 수명으로 등록한다. 핫 리로드의 내림은 `ModuleObjectRegistrar` 와 같은 길이다.
+- **사본을 못 만들게 한다:** `XMLCatalog::loadFromAsset` 을 공개 API 에서 내리고 `TCatalog::acquire( id )` 로 바꾼다. 로더만 friend 다. 테스트는 `loadFromXMLText` 를 쓴다.
+- **정의와 실행 상태:** 공유 객체는 `const` 다. 실행 상태가 섞인 카탈로그는 컴파일 오류로 드러나고, `BehaviorTree` · `BehaviorTreeRunner` 처럼 나눈다.
+
+`MeshCache` · `TextureCache` · `MaterialCache` · `PrefabCache` 는 GPU 수명이나 쓰는 쪽의 수정이 있어 합치지 않는다(`SharedAssetCache.h` 머리말). `AssetHandle` · 로드 상태 · 종류 정의는 공유한다.
+
+### 4. 타입 있는 참조 `AssetRef<T>`
+
+언리얼 `TSoftObjectPtr<T>`, 유니티 `AssetReferenceT<T>` 에 해당한다. 경로와 대상 종류를 품은 값이고 스스로 읽지 않는다.
+
+```cpp
+PROPERTY()
+AssetRef<BehaviorTreeAsset> _tree;
+
+shared_ptr<const BehaviorTreeAsset> tree = _tree.acquire();  // 또는 request() 로 비동기
+```
+
+- 읽기: 접미사가 대상 종류와 다르면 오류다. 잘못 연결한 참조가 로드 때 잡힌다.
+- 파생: 의존성 수집 · 미리 읽기(`PreloadSet`) · 쿠킹 입력 · 참조 색인 · 에디터 선택기 필터가 모두 이 칸을 본다.
+- 이름 표를 없앤다: 리플렉션 파서가 참조 칸 목록을 생성물로 내보내고, `AssetReferenceFields.json` 은 손으로 읽는 XML 칸이 남은 동안만 유지한다. 손으로 읽는 칸은 `XMLFields` 쪽 선언으로 옮겨 표를 지우는 것이 끝이다.
+
+### 5. 행동 어휘
+
+**실행기는 합치지 않는다.** 행동 트리(틱 반응), 스케줄(게임 시간표), 대화(사람의 선택 대기), 어빌리티(수명 · 복제), 기믹 회로(고정 스텝 상태)는 모델이 다르다. 언리얼도 Behavior Tree · StateTree · GAS 를 나누고 Gameplay Tag 로 어휘를 공유한다.
+
+**조건 `ConditionExpr`**
+
+- 문법은 `GameFlags` 식을 넓힌다: `flag && !other`, `tag(Quest.Done)`, `weather(rain, storm)`, `affinity >= 4`.
+- 이름은 `SW_CONDITION( 이름, 칸 스키마, 함수 )` 로 등록한다.
+- **읽을 때 컴파일한다.** 후위 배열과 함수 포인터로 바꿔, 매 틱 글을 해석하지 않는다. 모르는 이름은 로드 오류다.
+- 스케줄의 `weathers="rain"` 같은 속성은 같은 식으로 컴파일하는 줄임말로 남겨 데이터를 옮기지 않는다.
+- 결정성: 확률 조건은 문맥의 씨앗을 쓴다. 지금 스케줄의 "날과 키의 해시" 규칙을 문맥이 제공한다.
+- `ResourceContext` 의 `_when` 도 같은 문법이므로 파서는 Engine 에 둔다.
+
+합치는 곳: `ScheduleCondition`, `EquipCondition`, `AppearanceRuleCondition`, 대화 `_condition`, `BehaviorBlackboardCondition`, `IShopConditionEvaluator`.
+
+합치지 않는 곳: `AnimationConditionOp`(매 프레임 캐릭터마다 도는 값 비교), `UserSettingConditionOperator`(게임 문맥이 없는 설정 화면).
+
+**동작 `ActionRegistry`**
+
+```cpp
+REFLECT()
+struct OpenShopParams { REFLECT_BODY(); PROPERTY() AssetRef<ShopCatalog> _shop; };
+SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
+```
+
+- 칸을 리플렉션 구조체로 받아, 고정 칸이 사라지고 에디터가 목록과 칸을 자동으로 보인다.
+- 함수는 `Succeeded` · `Failed` · `Running` 을 돌려준다. 즉시 끝나는 동작도 같은 형식이다.
+- 읽을 때 칸까지 해석해 함수 포인터와 값을 들고 있는다. 매번 글을 읽지 않는다.
+
+합치는 곳: `BehaviorTaskRegistry`, 대화 `_actionCommand`, 스케줄 활동의 시작 · 끝 동작, 퀘스트 보상.
+
+합치지 않는 곳: 어빌리티 이펙트(복제 · 예측 규칙이 있다), 기믹 회로 노드(스텝 상태 슬롯이 저장 대상이다. 회로의 출력이 동작을 부를 수는 있다), `EditorCommandRegistry` · `DevCommandRegistry`(게임플레이가 아니다).
+
+**행동 리소스 변형**
+
+| 대상 | 변형 | 엔진 |
+|---|---|---|
+| 행동 트리 | 노드 `id` 를 `InheritKey` 로 두어 `_base` 트리에서 가지만 교체, `<SubTree tree="…"/>` 는 읽을 때 펼침(순환 오류) | 언리얼 Run Behavior |
+| 행동 트리 슬롯 | `<SubTree slot="combat"/>` 를 쓰는 쪽의 표가 채움 | 언리얼 Run Behavior Dynamic |
+| 스케줄 | `<Archetype>` 을 항목 `_base` 로 옮기고 전용 코드를 지움(루틴 합치기 의미는 옮길 때 확인) | — |
+| 퀘스트 · 루트 · 스폰 · 상점 | `DataCatalogInheritance.json` 에 줄 추가 | — |
+
+### 6. 종류별 변형
+
+앞 층 위에 얹는다. 합치기 코드는 쓰지 않고 `PROPERTY( InheritKey )` 나 규칙 한 줄을 더하는 것이 기본이다.
+
+| 축 | 항목 | 엔진 |
+|---|---|---|
+| 교체표 | 애니메이션 셋을 `_base` · 열쇠 목록으로 두고, 그래프는 슬롯 이름만 쓴다 | 유니티 Animator Override Controller |
+| 교체표 | 애니메이션 그래프의 상태를 열쇠로 두고, 연결 레이어 슬롯을 둔다 | 언리얼 Linked Anim Layers |
+| 교체표 | 스프라이트 라이브러리: 분류 · 라벨 → 프레임. 클립은 라벨만 쓴다 | 유니티 Sprite Library |
+| 파라미터 | 머티리얼 파라미터 묶음: 파일 하나의 값을 머티리얼 여럿이 읽는다 | 언리얼 Material Parameter Collection |
+| 파라미터 | 머티리얼 층: 머티리얼 그래프 뒤에 한다 | 언리얼 Material Layers |
+| 파라미터 | VFX 이미터 `_base` 와 사용자 파라미터, 오디오 이벤트 `_base` | 언리얼 Niagara 부모 이미터 · MetaSound Preset |
+| 인스턴스 값 | 파일 없이 인스턴스마다 float4 몇 개. 배치를 깨지 않는다(`MaterialInstance` 와의 관계는 구현 때 확인) | 언리얼 Custom Primitive Data · 유니티 MaterialPropertyBlock |
+| 조립 | 씬 인스턴스: 씬을 다른 씬에 넣고 덮어쓴다 | 언리얼 Level Instance · Godot 씬 상속 |
+| 조립 | 데이터 레이어: 씬 객체의 레이어를 문맥 태그로 켠다(계절 · 이벤트) | 언리얼 Data Layers |
+| UI | 스타일 시트 · 테마 토큰 `_base`, 위젯 형식 변형 | Godot Theme Type Variation · 유니티 USS |
+| 기타 | 리그 · 리타겟 · 물리 · 소켓 · 입력 레이어에 `InheritKey` | — |
+
+## 순서
+
+| 단계 | 내용 | 끝났다고 보는 조건 |
+|---|---|---|
+| 0 | 작업자 병합, Windows 검증, 전체 재임포트 | 통합 빌드와 테스트 통과 |
+| 1 | 종류 정의 통합, `ResourceComposer` 로 읽는 길 통합(동작 변화 없음) | 기존 시나리오 그대로 통과, 읽는 길 한 곳 |
+| 2 | 공유 캐시 통합, `GameDataCache` 삭제, `acquire` 도입 | 같은 경로가 같은 객체라는 테스트, 다시 읽기가 쓰는 쪽에 닿는 시나리오 |
+| 3 | `AssetRef<T>` 와 생성 목록, `string` 칸 전환 | 잘못된 종류 연결이 로드 오류, 손 표가 줄어듦 |
+| 4 | 카탈로그 공유 전환 | 공개 `loadFromAsset` 제거가 컴파일됨 |
+| 5 | 조건 · 층, 경로 교체, 합성 해시 대조 | 조건 · 층마다 값과 그림이 바뀌는 시나리오 |
+| 6 | `ConditionExpr` · `ActionRegistry`, 행동 트리 하위 트리, 스케줄 공통 상속 | 같은 이름의 조건 · 동작을 행동 트리 · 스케줄 · 대화가 함께 쓰는 시나리오 |
+| 7 | 종류별 변형(위 표) | 표 한 줄마다 효과를 확인하는 시나리오 |
+
+1 · 2 는 한 에이전트가 차례로 한다. 공통 파일이 겹친다. 3 · 4 와 6 · 7 은 범위가 나뉘므로 병렬로 할 수 있다. 작업자는 코드 → 린트 → 커밋만 하고 통합이 검증한다.
+
+칸을 더하면 실행이 그 칸을 읽고, 시나리오가 그 효과를 확인한다. 읽히지 않는 칸은 넣지 않는다.
+
+## 새 형식 체크리스트
+
+1. `SW_ASSET_TYPE` 한 줄(로더 · 다시 읽기 방식 포함).
+2. 목록 원소의 이름 칸에 `PROPERTY( InheritKey )`, 또는 카탈로그 규칙 한 줄.
+3. 다른 리소스를 가리키는 칸은 `AssetRef<T>`.
+4. 쓰는 쪽은 `acquire` · `request` 로 받고, 실행 상태는 자기 쪽에 둔다.
+5. 조건과 동작은 등록된 어휘를 쓴다. 새 이름이 필요하면 어휘에 더한다.
+
+## 위험
+
+| 위험 | 대응 |
+|---|---|
+| 공유 전환에서 사본을 고쳐 쓰던 코드가 대량으로 드러난다 | `const` 컴파일 오류로 빠짐없이 찾는다. 분량이 크므로 단계 4 를 범위별로 나눈다 |
+| 조건 어휘 비용 | 읽을 때 컴파일하고, 매 틱 조건은 측정으로 확인한다 |
+| 로드 축 `_when` 이 많아지면 품질 변경 때 다시 읽기가 몰린다 | 축별로 쓰는 리소스를 기록해 그것만 다시 읽는다 |
+| 코드 기본값 변경이 적지 않은 칸의 값을 바꾼다 | 이미 있는 규칙(`DataInheritance.md`)을 따른다 |
+| 합성 코드가 배포 구성에 남는다 | DLC · 모드 층이 없는 게임은 쿠킹본에 합성할 것이 없어 글 검색 한 번으로 지나간다 |
+
+## 정하지 않은 것
+
+구현 전에 코드를 읽어 정한다. 사용자 결정이 필요한 항목은 없다.
+
+- `<Archetype>` 의 루틴 합치기가 항목 합치기 규칙으로 옮겨지는지.
+- `MaterialInstance` 가 인스턴스 값을 어디까지 다루는지.
+- 메시 런타임 조립(언리얼 Mutable)은 `BodyShape` · 메시 병합 코드를 조사한 뒤 넣을지 정한다. 이 설계에 포함하지 않았다.
+- `XMLCatalog` 계열 중 멤버 · 지역 변수 패턴에 잡히지 않은 약 20 종의 사용 방식.
