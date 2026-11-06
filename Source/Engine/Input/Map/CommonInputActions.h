@@ -1,6 +1,6 @@
 /**
  * @file CommonInputActions.h
- * @brief 여러 게임이 같은 뜻으로 쓰는 공용 입력 액션 이름의 표입니다. 정의(키)는 `Content/common/input/*.input.xml` 이 갖습니다.
+ * @brief 여러 게임이 같은 뜻으로 쓰는 공용 입력 액션 이름의 표입니다. 정의(키)는 `Content/common/input/` 의 입력 맵 파일이 갖습니다.
  * @details 코드가 공용 이름을 적어야 할 때(프로퍼티의 초기값, 씬 데이터로 받지 않는 디렉터) 글자를 흩지 않고 여기서 읽습니다. 씬 · 프리팹 · 시나리오는 데이터에 이름을 그대로 적습니다.
  *          표와 파일이 맞는지는 테스트(`InputMapBundleTest`)가 봅니다. 이름 규칙(공용은 접두어 없음, 한 게임 것은 접두어)은 `docs/InputMapBundle.md`.
  *          상용 엔진: 언리얼의 Native Gameplay Tag(`InputTag_Move`) 표, Godot 의 기본 액션 이름(`ui_accept`)과 같은 자리입니다.
