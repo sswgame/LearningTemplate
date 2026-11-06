@@ -18,6 +18,19 @@ namespace sw
             static constexpr size_t kMaxOrderIDSize         = 20;
             static constexpr size_t kMaxNotifiedRefundCount = 100000; ///< 겹친 조회에서 같은 주문을 두 번 알리지 않으려고 기억하는 상한
 
+            /** @brief 비어 있지 않고 모두 십진 숫자면 true 입니다. 부호 · 공백을 받아 주는 `StringUtil::parseInt64` 앞에서 거른다. */
+            static bool isAllDigits( string_view text )
+            {
+                if ( text.empty() )
+                    return false;
+                for ( const utf8 character : text )
+                {
+                    if ( character < '0' || character > '9' )
+                        return false;
+                }
+                return true;
+            }
+
             /** @brief 1970-01-01 부터 (년, 월, 일) 까지의 날 수입니다(그레고리력). */
             static int64 daysFromCivil( int64 year, int64 month, int64 day )
             {
@@ -93,14 +106,7 @@ namespace sw
 
     bool SteamReceiptValidator::isOrderID( string_view text )
     {
-        if ( text.empty() || text.size() > SteamReceiptValidatorInternal::kMaxOrderIDSize )
-            return false;
-        for ( const utf8 character : text )
-        {
-            if ( character < '0' || character > '9' )
-                return false;
-        }
-        return true;
+        return text.size() <= SteamReceiptValidatorInternal::kMaxOrderIDSize && SteamReceiptValidatorInternal::isAllDigits( text );
     }
 
     ReceiptStatus SteamReceiptValidator::mapOrderStatus( string_view status )
@@ -133,14 +139,21 @@ namespace sw
         const size_t arrSize[6]{ 4, 2, 2, 2, 2, 2 };
         for ( int32 index = 0; index < 6; ++index )
         {
-            if ( StringUtil::parseInt64( text.substr( arrStart[index], arrSize[index] ), arrField[index] ) == false )
+            const string_view field = text.substr( arrStart[index], arrSize[index] );
+            if ( Internal::isAllDigits( field ) == false || StringUtil::parseInt64( field, arrField[index] ) == false )
                 return false;
         }
         const bool bRangeOk = arrField[1] >= 1 && arrField[1] <= 12 && arrField[2] >= 1 && arrField[2] <= 31 && arrField[3] <= 23 && arrField[4] <= 59 && arrField[5] <= 60;
         if ( bRangeOk == false )
             return false;
-        const int64 days = Internal::daysFromCivil( arrField[0], arrField[1], arrField[2] );
-        outUnixMs        = ( days * constant::time::kSecondsPerDay + arrField[3] * 3600 + arrField[4] * 60 + arrField[5] ) * constant::time::kMillisecondsPerSecond;
+        const int64 days      = Internal::daysFromCivil( arrField[0], arrField[1], arrField[2] );
+        int64       echoYear  = 0;
+        int64       echoMonth = 0;
+        int64       echoDay   = 0;
+        Internal::civilFromDays( days, echoYear, echoMonth, echoDay );
+        if ( echoMonth != arrField[1] || echoDay != arrField[2] )
+            return false; // 그 달에 없는 날(02-31)이 다음 달로 넘어가 다른 시각이 되지 않게 한다
+        outUnixMs = ( days * constant::time::kSecondsPerDay + arrField[3] * 3600 + arrField[4] * 60 + arrField[5] ) * constant::time::kMillisecondsPerSecond;
         return true;
     }
 
@@ -209,11 +222,17 @@ namespace sw
                 SW_LOG_ERROR_ID( "SteamReceiptValidator.SteamRejectedPublisherKey", "Steam rejected the publisher key (status %#) - check the key environment variable", response._statusCode );
             return;
         }
-        JSONDocument document;
-        if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
+        if ( response.isSuccess() == false )
         {
             result._status      = ReceiptStatus::Invalid; // 주문이 없으면(4xx) 스팀이 에러로 답한다
             result._failureText = formatToString( "steam does not know this order (status %#)", response._statusCode );
+            return;
+        }
+        JSONDocument document;
+        if ( document.tryParse( response.getBodyText() ) == false )
+        {
+            result._status      = ReceiptStatus::Retry; // 2xx 인데 읽을 수 없다 — 주문이 없다는 답이 아니다(프록시 · 잘린 몸). Invalid 면 결제한 사람의 영수증을 버린다
+            result._failureText = "steam answered a body that is not JSON";
             return;
         }
         const JSONValue root = document.getRoot();
@@ -237,6 +256,11 @@ namespace sw
         {
             result._status      = ReceiptStatus::Invalid; // 상품이 없는 주문은 지급할 것이 없다
             result._failureText = "steam order has no item";
+        }
+        if ( result._status == ReceiptStatus::Valid && Internal::readText( root, "response.params.orderid" ) != pending._orderID )
+        {
+            result._status      = ReceiptStatus::Invalid; // 묻지 않은 주문의 답으로 지급하지 않는다
+            result._failureText = "steam answered for another order";
         }
     }
 
@@ -266,7 +290,8 @@ namespace sw
             {
                 _reportRequestID = 0;
                 JSONDocument document;
-                if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false )
+                // 결과가 OK 가 아닌 200 도 실패다 — 성공으로 치면 읽지 못한 구간을 지나쳐 그 환불을 영영 놓친다.
+                if ( response.isSuccess() == false || document.tryParse( response.getBodyText() ) == false || Internal::readText( document.getRoot(), "response.result" ) != "OK" )
                 {
                     SW_LOG_WARNING_ID( "SteamReceiptValidator.SteamRefundReportFailed", "Steam refund report failed (status %#) - the next poll reads from the last successful one", response._statusCode );
                     continue; // 지난 성공 시각을 그대로 둔다 — 다음 조회가 이번 구간까지 다시 읽는다
@@ -281,7 +306,7 @@ namespace sw
                     if ( isRefundStatus( Internal::readText( order, "status" ) ) == false )
                         continue;
                     const string orderID = Internal::readText( order, "orderid" );
-                    if ( orderID.empty() || _uniqueSetNotifiedRefund.count( orderID ) != 0 )
+                    if ( isOrderID( orderID ) == false || _uniqueSetNotifiedRefund.count( orderID ) != 0 ) // 지급 때의 거래 id 는 늘 주문 번호다 — 다른 모양은 깨진 줄이다
                         continue;
                     if ( _uniqueSetNotifiedRefund.size() >= Internal::kMaxNotifiedRefundCount )
                         _uniqueSetNotifiedRefund.clear(); // 상한 — 겹친 알림은 서비스가 거래 id 로 한 번만 처리한다

@@ -4,10 +4,10 @@
  * @details - 영수증은 주문 번호(십진 숫자 글)입니다. 게임 서버가 스팀 결제를 열고(InitTxn) 승인을 마친(FinalizeTxn) 주문을 이 서버가 `ISteamMicroTxn/QueryTxn` 으로 확인합니다.
  *            키(퍼블리셔 웹 API 키)는 설정 파일에 쓰지 않고 환경 변수에서 읽습니다(`ReceiptProviderSet`).
  *          - 상태 대응: `Succeeded` Valid, `Refunded` · `PartialRefund` · `Chargedback` · `RefundedSuspected` · `PartialRefundSuspected` · `RefundedFraudulent` Refunded,
- *            `Init` · `Approved`(아직 마무리되지 않음) Retry, `Failed` 와 그 밖의 값 · 결과가 `OK` 가 아님 Invalid. 연결 실패 · 시한 · 5xx · 429 · 401 · 403(키 문제) 은 Retry 다.
+ *            `Init` · `Approved`(아직 마무리되지 않음) Retry, `Failed` 와 그 밖의 값 · 결과가 `OK` 가 아님 · 답의 `orderid` 가 물은 주문이 아님 Invalid. 연결 실패 · 시한 · 5xx · 429 · 401 · 403(키 문제) · JSON 이 아닌 2xx 는 Retry 다.
  *            거래 id 는 주문 번호이고 상품 id 는 첫 항목의 `itemid`(십진 글)이다 — 상점 카탈로그의 상품 id 를 그 값으로 적는다.
  *          - 환불은 `ISteamMicroTxn/GetReport` 를 주기적으로 조회해(`_reportPollIntervalMs`) 환불 상태가 된 주문을 알린다. 한 번에 1000 건까지 읽고, 지난 조회 시각에서
- *            `_reportLookbackMs` 만큼 겹쳐 읽는다(겹친 주문은 한 번만 알린다). 재시작 뒤 겹친 알림은 서비스의 환불 회수가 거래 id 로 한 번만 처리한다.
+ *            `_reportLookbackMs` 만큼 겹쳐 읽는다(겹친 주문은 한 번만 알린다). 결과가 `OK` 인 답만 지난 조회 시각을 옮긴다. 재시작 뒤 겹친 알림은 서비스의 환불 회수가 거래 id 로 한 번만 처리한다.
  *          - 샌드박스 인터페이스(`ISteamMicroTxnSandbox`)를 쓰는 설정이면 결과가 샌드박스 결제로 표시된다 — 서비스가 스테이징 서버가 아니면 거절한다.
  *          시계를 읽지 않는다 — HTTP 시한 · 조회 주기 · 보고서 구간을 모두 서버 루프가 넘긴 `now`(유닉스 밀리초)로 잰다. 서비스 스레드 하나에서 쓴다.
  */
