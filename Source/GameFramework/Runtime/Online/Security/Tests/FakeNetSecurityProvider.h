@@ -3,23 +3,103 @@
  * @brief 온라인 키트 테스트가 함께 쓰는 가짜 보안 제공자입니다. 키가 없어도 서명 · 사슬 확인 규칙을 가짜 답으로 볼 수 있게 합니다(`OnlineHostTestUtil.h` 와 같은 자리).
  */
 #pragma once
+#include "Core/Hash/HashUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/Network/Security/INetSecurityProvider.h"
 
 namespace sw::test
 {
-    /** @brief 서명 쪽만 답하는 가짜 제공자입니다. 사슬 확인은 `_bChainOk`, 서명 만들기는 `_bSignOk` 를 따르고 서명 확인은 늘 맞다. 나머지 연산은 쓰이지 않는다. */
+    /**
+     * @brief 키 · nonce · AAD · 암호문을 FNV-1a 로 섞은 값을 태그로 쓰는 가짜 AEAD 입니다. 평문은 키 첫 바이트와 XOR 합니다.
+     * @details 암호가 아니다 — 봉인 형식 · 문맥(AAD) · 변조 거절 규칙을 키 없이 보는 용도이다. 키나 AAD 나 nonce 나 암호문이 하나라도 다르면 열리지 않는다.
+     */
+    class FakeAead final : public INetAead
+    {
+    public:
+        explicit FakeAead( const uint8* pKey ) { Memory::copy( _arrKey, pKey, sizeof( _arrKey ) ); }
+
+        [[nodiscard]] bool seal( const uint8* pNonce, const uint8* pAad, int32 aadSize, const uint8* pPlain, int32 plainSize, uint8* pOut ) override
+        {
+            for ( int32 index = 0; index < plainSize; ++index )
+            {
+                pOut[index] = static_cast<uint8>( pPlain[index] ^ _arrKey[0] );
+            }
+            computeTag( pNonce, pAad, aadSize, pOut, plainSize, pOut + plainSize );
+            return true;
+        }
+
+        [[nodiscard]] bool open( const uint8* pNonce, const uint8* pAad, int32 aadSize, const uint8* pCipher, int32 cipherSize, uint8* pOut ) override
+        {
+            const int32 plainSize = cipherSize - NetSecurityConstant::kAeadTagSize;
+            if ( plainSize < 0 )
+                return false;
+            uint8 arrTag[NetSecurityConstant::kAeadTagSize];
+            computeTag( pNonce, pAad, aadSize, pCipher, plainSize, arrTag );
+            for ( int32 index = 0; index < NetSecurityConstant::kAeadTagSize; ++index )
+            {
+                if ( arrTag[index] != pCipher[plainSize + index] )
+                    return false;
+            }
+            for ( int32 index = 0; index < plainSize; ++index )
+            {
+                pOut[index] = static_cast<uint8>( pCipher[index] ^ _arrKey[0] );
+            }
+            return true;
+        }
+
+    private:
+        static void mix( uint64& inoutHash, const uint8* pData, int32 size )
+        {
+            for ( int32 index = 0; index < size; ++index )
+            {
+                inoutHash = HashUtil::fnvStep64( inoutHash, pData[index] );
+            }
+        }
+
+        void computeTag( const uint8* pNonce, const uint8* pAad, int32 aadSize, const uint8* pCipher, int32 cipherSize, uint8* pOutTag ) const
+        {
+            uint64 hash = HashUtil::kFNVOffset64;
+            mix( hash, _arrKey, static_cast<int32>( sizeof( _arrKey ) ) );
+            mix( hash, pNonce, NetSecurityConstant::kAeadNonceSize );
+            mix( hash, pAad, aadSize );
+            mix( hash, pCipher, cipherSize );
+            for ( int32 index = 0; index < NetSecurityConstant::kAeadTagSize; ++index )
+            {
+                hash           = HashUtil::fnvStep64( hash, static_cast<uint64>( index ) );
+                pOutTag[index] = static_cast<uint8>( hash >> 56 );
+            }
+        }
+
+    private:
+        uint8 _arrKey[NetSecurityConstant::kAeadKeySize]{};
+    };
+} // namespace sw::test
+
+namespace sw::test
+{
+    /**
+     * @brief 서명 쪽을 답하는 가짜 제공자입니다. 사슬 확인은 `_bChainOk`, 서명 만들기는 `_bSignOk` 를 따르고 서명 확인은 늘 맞다.
+     * @details 난수(`_bRandomOk`, 셈 값으로 채운다)와 AEAD(`_bAeadOk`, `FakeAead`)는 켠 테스트만 쓴다 — 기본은 실패라 쓰지 않는 테스트의 길이 바뀌지 않는다. 나머지 연산은 쓰이지 않는다.
+     */
     class FakeNetSecurityProvider final : public INetSecurityProvider
     {
     public:
         uint8 _bChainOk{ SW_TRUE };
         uint8 _bSignOk{ SW_TRUE };
+        uint8 _bRandomOk{ SW_FALSE };
+        uint8 _bAeadOk{ SW_FALSE };
+        uint8 _nextRandomByte{ 1 }; ///< 난수 대신 채우는 셈 값이다. 부를 때마다 이어지므로 nonce 가 겹치지 않는다
 
         const utf8* getName() const override { return "FakeNetSecurity"; }
         bool        fillRandomBytes( uint8* pOut, int32 size ) override
         {
-            (void)pOut;
-            (void)size;
-            return false;
+            if ( _bRandomOk == SW_FALSE )
+                return false;
+            for ( int32 index = 0; index < size; ++index )
+            {
+                pOut[index] = _nextRandomByte++;
+            }
+            return true;
         }
         bool makeX25519KeyPair( NetX25519KeyPair& outKeyPair ) override
         {
@@ -59,8 +139,9 @@ namespace sw::test
         unique_ptr<INetAead> createAead( NetAeadAlgorithm algorithm, const uint8* pKey ) override
         {
             (void)algorithm;
-            (void)pKey;
-            return nullptr;
+            if ( _bAeadOk == SW_FALSE )
+                return nullptr;
+            return make_unique<FakeAead>( pKey );
         }
         unique_ptr<ITLSContext> createTLSContext( const TLSContextConfig& settings, string& outError ) override
         {
