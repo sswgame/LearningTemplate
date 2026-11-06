@@ -133,7 +133,9 @@ namespace sw
         const auto iter = _mapCommandToHandler.find( command );
         if ( iter == _mapCommandToHandler.end() || iter->second._handler.isBound() == false )
             return false;
-        iter->second._handler( command, source );
+        // 처리 함수가 이 표를 고쳐도(명령 안에서 등록 · 해제) 돌고 있는 함수가 사라지지 않게 사본을 부른다(UIGlobalCommandRegistry 와 같다).
+        const UICommandDelegate handler = iter->second._handler;
+        handler( command, source );
         return true;
     }
 
