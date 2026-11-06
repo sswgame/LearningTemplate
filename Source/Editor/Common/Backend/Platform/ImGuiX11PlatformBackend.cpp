@@ -6,6 +6,7 @@
     #include "Core/Foundation/X11Headers.h"
     #include "Core/Container/StringUtil.h"
     #include "Core/Container/string.h"
+    #include "Core/Container/vector.h"
     #include "Core/Time/GameTimer.h"
 
     #include "Editor/Common/Backend/ImGuiKeyForward.h"
@@ -13,6 +14,7 @@
     #include "Engine/Input/Map/InputKeyTable.h"
     #include "Engine/Window/IWindow.h"
     #include "Engine/Window/NativeWindowEvent.h"
+    #include "Engine/Window/WindowMonitor.h"
 
     #include <imgui.h>
 
@@ -35,6 +37,7 @@ namespace sw::editor
             , _clipboardText{}
             , _lastPointer{}
             , _lastPointerMask{ 0 }
+            , _monitorGeneration{ 0 }
             , _arrCursor{}
             , _lastCursor{ ImGuiMouseCursor_COUNT }
             , _bPointerRead{ SW_FALSE }
@@ -97,7 +100,7 @@ namespace sw::editor
             // 모니터를 하나도 못 읽으면 가짜 모니터로 계속하지 않고 초기화 실패로 멈춘다(호출 쪽이 실패를 처리한다)
             if ( updateMonitors() == false )
             {
-                SW_LOG_ERROR_ID( "ImGuiX11.ImGuiX11PlatformBackend2", "The ImGui X11 platform backend found no usable monitor (ScreenCount or the screen size is zero)" );
+                SW_LOG_ERROR_ID( "ImGuiX11.ImGuiX11PlatformBackend2", "The ImGui X11 platform backend found no usable monitor (no RandR monitor and the X screen size is zero)" );
                 return false; // 정리는 호출 쪽(ImGuiEditor)이 shutdownPlatformBackend 로 한다
             }
             return true;
@@ -132,6 +135,10 @@ namespace sw::editor
 
             // 창이 ConfigureNotify 로 아는 크기다(Wayland 와 같다) - 스왑체인도 이 값으로 바뀌고, 서버에 묻는 XGetWindowAttributes 는 프레임마다 왕복이다.
             io.DisplaySize = ImVec2( static_cast<float32>( _pWindow->getWidth() ), static_cast<float32>( _pWindow->getHeight() ) );
+
+            // 모니터가 바뀌면(연결 · 해상도 · 패널) 다시 읽는다. 다 빠져 비면 ImGui 는 뷰포트 자리를 정할 곳이 없다 - 다음 변화까지 전의 목록을 쓰지 않고 그대로 알린다.
+            if ( _monitorGeneration != _pWindow->getMonitorGeneration() && updateMonitors() == false )
+                SW_LOG_WARNING_ID( "ImGuiX11.NoMonitorAfterChange", "The X11 window reports no monitor after a display change" );
 
             _timer.updateTimer();
             io.DeltaTime = _timer.getDeltaTime();
@@ -672,29 +679,27 @@ namespace sw::editor
             return focused == pData->_windowHandle;
         }
 
-        /** @brief 모니터 목록을 다시 읽습니다. 하나도 못 읽으면 false 입니다. */
+        /** @brief 모니터 목록을 창에서 다시 읽습니다(주 모니터가 0 번 - ImGui 의 약속이다). 하나도 못 읽으면 false 입니다. */
         [[nodiscard]] bool updateMonitors()
         {
             ImGuiPlatformIO& platformIO = ImGui::GetPlatformIO();
             platformIO.Monitors.resize( 0 );
-            if ( _pDisplay == nullptr )
-                return false;
+            _monitorGeneration = _pWindow->getMonitorGeneration();
 
-            const int32 screenCount = ScreenCount( _pDisplay );
-            for ( int32 screen = 0; screen < screenCount; ++screen )
+            vector<WindowMonitor> listMonitor;
+            if ( _pWindow->tryGetMonitors( listMonitor ) == false )
+                return false;
+            for ( const WindowMonitor& source : listMonitor )
             {
                 ImGuiPlatformMonitor monitor{};
-                monitor.MainPos  = ImVec2( 0.0f, 0.0f );
-                monitor.MainSize = ImVec2( static_cast<float32>( DisplayWidth( _pDisplay, screen ) ), static_cast<float32>( DisplayHeight( _pDisplay, screen ) ) );
-                monitor.WorkPos  = monitor.MainPos;
-                monitor.WorkSize = monitor.MainSize;
-                // 물리 크기로 잰 밀도(DisplayWidthMM)는 배율이 아니다 - 모니터 값대로 1.04 · 1.13 이 나와 ImGui 가 글자와 테마를 그만큼 키웠다. Xft.dpi 는 데스크톱에 하나라 `Platform_GetWindowDpiScale` 은 두지 않는다.
-                monitor.DpiScale = getDPIScale();
-
-                monitor.PlatformHandle = reinterpret_cast<void*>( static_cast<uintptr_t>( screen ) );
+                monitor.MainPos  = ImVec2( static_cast<float32>( source._area._position._x ), static_cast<float32>( source._area._position._y ) );
+                monitor.MainSize = ImVec2( static_cast<float32>( source._area._size._x ), static_cast<float32>( source._area._size._y ) );
+                monitor.WorkPos  = ImVec2( static_cast<float32>( source._workArea._position._x ), static_cast<float32>( source._workArea._position._y ) );
+                monitor.WorkSize = ImVec2( static_cast<float32>( source._workArea._size._x ), static_cast<float32>( source._workArea._size._y ) );
+                // Xft.dpi 는 데스크톱에 하나라 `Platform_GetWindowDpiScale` 은 두지 않는다 - 물리 크기로 재지 않는 까닭은 `X11Window::getContentScale` 참고.
+                monitor.DpiScale = source._contentScale;
                 platformIO.Monitors.push_back( monitor );
             }
-
             return platformIO.Monitors.empty() == false;
         }
 
@@ -707,6 +712,7 @@ namespace sw::editor
         string           _clipboardText;                     ///< `Platform_GetClipboardTextFn` 이 돌려주는 글(다음 호출까지 살아 있어야 한다)
         int2             _lastPointer;                       ///< 마지막으로 ImGui 에 알린 실제 포인터 위치
         uint32           _lastPointerMask;                   ///< 마지막으로 ImGui 에 알린 실제 버튼 상태
+        uint32           _monitorGeneration;                 ///< `platformIO.Monitors` 를 읽은 때의 `IWindow::getMonitorGeneration`
         uint64           _arrCursor[ImGuiMouseCursor_COUNT]; ///< 모양마다 만든 X 커서(0 이면 아직 없음). 이 연결의 자원이라 `shutdown` 이 놓는다
         ImGuiMouseCursor _lastCursor;                        ///< 창에 건 커서. 처음에는 `ImGuiMouseCursor_COUNT` 라 첫 프레임에 건다
         uint8            _bPointerRead : 1;                  ///< 포인터를 한 번이라도 읽었는지

@@ -6,11 +6,14 @@
 #include "Core/Container/formatString.h"
 
 #include "Engine/Audio/IAudioService.h"
+#include "Engine/Foundation/EngineServices.h"
 #include "Engine/Input/IInputDevice.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Localization/LocalizationManager.h"
-#include "Engine/UserSettings/HardwareDetection.h"
 #include "Engine/UserSettings/UserSettingsSchema.h"
+#include "Engine/Window/IWindow.h"
+#include "Engine/Window/MainWindowSubsystem.h"
+#include "Engine/Window/WindowMonitor.h"
 
 namespace sw
 {
@@ -38,6 +41,7 @@ namespace sw
         , _listBindingInputMap{}
         , _displayRequest{}
         , _listDisplayResolution{}
+        , _resolutionGeneration{ 0 }
         , _bDisplayDirty{ SW_FALSE }
         , _bResolutionProbed{ SW_FALSE }
         , _listRegistration{}
@@ -354,11 +358,24 @@ namespace sw
     void UserSettingsEngineHandlers::collectResolutions( vector<UserSettingOption>& outListOption )
     {
         outListOption.clear();
-        // 모니터 모드 열거는 수백 줄을 훑는다 — 메뉴가 그릴 때마다 부르므로 처음 한 번만 읽는다.
-        if ( _bResolutionProbed == false )
+        // 창이 없는 호스트(서버 · 테스트)는 물을 곳이 없다 - 빈 목록이면 스키마의 고정 선택지가 쓰인다(`UserSettingsManager::collectOptionsOf`).
+        const MainWindowSubsystem* const pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+        const IWindow* const             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+        if ( pWindow == nullptr )
+            return;
+        // 모니터 모드 열거는 수백 줄을 훑는다 — 메뉴가 그릴 때마다 부르므로 모니터가 바뀔 때만 다시 읽는다.
+        if ( _bResolutionProbed == false || _resolutionGeneration != pWindow->getMonitorGeneration() )
         {
-            HardwareDetection::probeDisplayResolutions( _listDisplayResolution );
-            _bResolutionProbed = SW_TRUE;
+            vector<WindowMonitor> listMonitor;
+            _listDisplayResolution.clear();
+            if ( pWindow->tryGetMonitors( listMonitor ) )
+            {
+                const WindowMonitor* const pPrimary = WindowMonitor::findPrimary( listMonitor );
+                if ( pPrimary != nullptr )
+                    _listDisplayResolution = pPrimary->_listResolution;
+            }
+            _resolutionGeneration = pWindow->getMonitorGeneration();
+            _bResolutionProbed    = SW_TRUE;
         }
         for ( const int2& resolution : _listDisplayResolution )
         {

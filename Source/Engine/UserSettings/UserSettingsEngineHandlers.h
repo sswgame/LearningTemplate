@@ -127,7 +127,8 @@ namespace sw
         UserSettingsTargets    _targets;
         vector<InputMap*>      _listBindingInputMap; ///< 게임 맵 말고 키 바인딩 설정이 고칠 수 있는 맵(런타임 UI 맵 등)
         DisplaySettingsRequest _displayRequest;
-        vector<int2>           _listDisplayResolution; ///< 모니터 모드의 해상도(`collectResolutions` 가 처음 한 번 읽는다)
+        vector<int2>           _listDisplayResolution; ///< 주 모니터의 해상도(`collectResolutions` 가 모니터가 바뀔 때만 읽는다)
+        uint32                 _resolutionGeneration;  ///< `_listDisplayResolution` 을 읽은 때의 `IWindow::getMonitorGeneration`
         uint8                  _bDisplayDirty     : 1;
         uint8                  _bResolutionProbed : 1;
         vector<Subscription>   _listRegistration; ///< 레지스트리에 올린 핸들러 · 공급자의 구독(`initialize` ~ `shutdown`)

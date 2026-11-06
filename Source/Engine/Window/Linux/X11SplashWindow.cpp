@@ -4,6 +4,9 @@
 
 #include "Core/Container/StringUtil.h"
 
+#include "Engine/Window/Linux/X11Monitors.h"
+#include "Engine/Window/WindowMonitor.h"
+
 #if defined( SW_PLATFORM_LINUX ) && defined( SW_WITH_CLIENT_CODE )
     #include "Core/Foundation/PlatformOSHeaders.h"
     #include "Core/Foundation/X11Headers.h"
@@ -47,12 +50,21 @@ namespace sw
             return false;
         }
 
-        const int32 screen  = DefaultScreen( pDisplay );
-        Window      root    = RootWindow( pDisplay, screen );
-        const int32 screenW = DisplayWidth( pDisplay, screen );
-        const int32 screenH = DisplayHeight( pDisplay, screen );
-        const int32 posX    = ( screenW - static_cast<int32>( _width ) ) / 2;
-        const int32 posY    = ( screenH - static_cast<int32>( _height ) ) / 2;
+        const int32 screen = DefaultScreen( pDisplay );
+        Window      root   = RootWindow( pDisplay, screen );
+        // 주 모니터의 가운데다 - X screen 은 모니터를 모두 이은 크기라 그 가운데는 모니터 경계에 걸린다.
+        X11Monitors monitors;
+        monitors.initialize( pDisplay );
+        vector<WindowMonitor> listMonitor;
+        monitors.read( 1.0f, listMonitor );
+        monitors.shutdown();
+        const WindowMonitor* const pPrimary = WindowMonitor::findPrimary( listMonitor );
+        const WindowMonitorRect    area     = pPrimary != nullptr ? pPrimary->_area : WindowMonitorRect{
+                                                                                   int2{ 0, 0 },
+                                                                                   int2{ DisplayWidth( pDisplay, screen ), DisplayHeight( pDisplay, screen ) }
+        };
+        const int32                posX     = area._position._x + ( area._size._x - static_cast<int32>( _width ) ) / 2;
+        const int32                posY     = area._position._y + ( area._size._y - static_cast<int32>( _height ) ) / 2;
 
         // **`override_redirect` 를 쓰지 않는다.** 그 플래그는 "창 관리자는 이 창에 손대지 말라" 는
         // 뜻이고, 메뉴나 툴팁처럼 **이미 떠 있는 창에 딸린 것**을 위한 것이다. 스플래시는 그 앱의

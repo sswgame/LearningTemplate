@@ -194,6 +194,7 @@ namespace sw
     X11Window::X11Window()
         : _clipboardText{}
         , _listClipboardIncr{}
+        , _monitors{}
         , _pX11Display{ nullptr }
         , _x11Window{ 0 }
         , _x11WmDelete{ 0 }
@@ -253,6 +254,9 @@ namespace sw
         _x11Window    = win;
         _x11WmDelete  = wmDeleteMessage;
         _bShouldClose = SW_FALSE;
+        _monitors.initialize( pDisplay );
+        _monitors.selectChangeEvents();
+        notifyMonitorsChanged();  // 다시 만든 창은 새 연결이다 - 값을 든 쪽이 다시 읽는다
         applyMinimumClientSize(); // 다시 만든 창(recreate)도 같은 하한을 가진다
         applyTitle();
 
@@ -271,6 +275,7 @@ namespace sw
                 XDestroyWindow( pDisplay, _x11Window );
                 _x11Window = 0;
             }
+            _monitors.shutdown();
             XCloseDisplay( pDisplay );
             _pX11Display = nullptr;
         }
@@ -533,6 +538,15 @@ namespace sw
         return dpi / kReferenceDPI;
     }
 
+    bool X11Window::tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const
+    {
+        outListMonitor.clear();
+        if ( _pX11Display == nullptr )
+            return false;
+        _monitors.read( getContentScale(), outListMonitor );
+        return true;
+    }
+
     bool X11Window::processMessages()
     {
         if ( _pX11Display == nullptr )
@@ -544,6 +558,15 @@ namespace sw
         {
             XEvent event;
             XNextEvent( pDisplay, &event );
+
+            // 뿌리 창의 모니터 소식은 창 이벤트가 아니다 - 처리기(ImGui · 입력 관리자)에 넘기지 않는다.
+            bool bMonitorsChanged = false;
+            if ( _monitors.consumeEvent( &event, bMonitorsChanged ) )
+            {
+                if ( bMonitorsChanged )
+                    notifyMonitorsChanged();
+                continue;
+            }
 
             // 최소화 · 포커스는 외부 처리기(ImGui)가 이벤트를 먹기 전에 적는다. 최소화(iconify)는 창 관리자가 창을 내리는(unmap) 것으로 온다.
             // 포커스의 Grab · Ungrab 은 키보드를 잠깐 쥔 것이라(메뉴 · 드래그) 포커스 변화로 보지 않는다.

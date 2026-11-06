@@ -4,10 +4,8 @@
  */
 #pragma once
 #include "Core/Container/string.h"
-#include "Core/Container/vector.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
-#include "Core/Math/VectorMath.h"
 
 namespace sw
 {
@@ -32,11 +30,5 @@ namespace sw
     {
         /** @brief 코어 수와 메모리를 읽습니다. 읽지 못한 필드는 0 입니다. 수 마이크로초가 걸립니다. */
         static HardwareDetectionResult probe();
-
-        /**
-         * @brief 기본 모니터가 내는 해상도 목록을 @p outListResolution 에 채웁니다(작은 것부터, 중복 없음). 읽지 못하면 비워 둡니다.
-         * @details 옵션 메뉴의 해상도 선택지가 쓴다. Windows 는 `EnumDisplaySettings` 로 읽고, Linux 는 아직 읽지 않아 스키마의 고정 목록이 쓰인다.
-         */
-        static void probeDisplayResolutions( vector<int2>& outListResolution );
     };
 } // namespace sw

@@ -4,7 +4,6 @@
 
 #include "Core/Concurrency/thread.h"
 #include "Core/Container/StringUtil.h"
-#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/Foundation/PlatformOSHeaders.h"
@@ -14,24 +13,12 @@
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
 
-#include <algorithm>
-
 namespace sw
 {
     namespace
     {
         struct HardwareDetectionInternal
         {
-#if defined( SW_PLATFORM_WINDOWS )
-            /** @brief 해상도 목록에 넣는 가장 작은 변(픽셀)입니다. 옛 모드(640x480 등)는 옵션 메뉴에 필요 없다. 모드를 나열하는 플랫폼만 쓴다. */
-            static constexpr int32 kMinResolutionSide = 640;
-#endif
-
-            static bool isResolutionBefore( const int2& left, const int2& right )
-            {
-                return left._x != right._x ? left._x < right._x : left._y < right._y;
-            }
-
 #if defined( SW_PLATFORM_WINDOWS )
             using PfnCreateDXGIFactory1 = HRESULT( WINAPI* )( REFIID, void** );
 
@@ -116,30 +103,5 @@ namespace sw
         if ( gv_emulatedGPUMemoryMb > 0 )
             result._gpuMemoryMb = result._gpuMemoryMb > 0 ? MathUtil::min( result._gpuMemoryMb, static_cast<uint32>( gv_emulatedGPUMemoryMb ) ) : static_cast<uint32>( gv_emulatedGPUMemoryMb );
         return result;
-    }
-
-    void HardwareDetection::probeDisplayResolutions( vector<int2>& outListResolution )
-    {
-        outListResolution.clear();
-#if defined( SW_PLATFORM_WINDOWS )
-        DEVMODEW mode{};
-        mode.dmSize = sizeof( mode );
-        for ( DWORD modeIndex = 0; EnumDisplaySettingsW( nullptr, modeIndex, &mode ) != FALSE; ++modeIndex )
-        {
-            if ( mode.dmBitsPerPel < 32 )
-                continue;
-            const int2 resolution{ static_cast<int32>( mode.dmPelsWidth ), static_cast<int32>( mode.dmPelsHeight ) };
-            if ( resolution._x < HardwareDetectionInternal::kMinResolutionSide || resolution._y < HardwareDetectionInternal::kMinResolutionSide )
-                continue;
-            bool bKnown = false;
-            for ( const int2& known : outListResolution )
-            {
-                bKnown = bKnown || ( known._x == resolution._x && known._y == resolution._y );
-            }
-            if ( bKnown == false )
-                outListResolution.push_back( resolution );
-        }
-        VectorUtil::sort( outListResolution, &HardwareDetectionInternal::isResolutionBefore );
-#endif
     }
 } // namespace sw

@@ -24,6 +24,12 @@ if(NOT SW_TARGET_TYPE STREQUAL "Server")
 	target_link_libraries(sw_platform_linux INTERFACE ${X11_LIBRARIES})
 	target_include_directories(sw_platform_linux INTERFACE ${X11_INCLUDE_DIR})
 
+	# RandR(모니터 목록)은 헤더만 빌드에 쓰고 라이브러리는 실행 때 올린다(`X11Monitors`) - X 없이 도는 기계에서도 게임이 동적 링커 단계에서 서지 않게 한다(GLFW · SDL 과 같다). 패키지: libxrandr-dev(apt 로 깐다).
+	if(NOT X11_Xrandr_INCLUDE_PATH)
+		message(FATAL_ERROR "X11/extensions/Xrandr.h not found (package libxrandr-dev) - the X11 window reads monitors through RandR")
+	endif()
+	target_include_directories(sw_platform_linux INTERFACE ${X11_Xrandr_INCLUDE_PATH})
+
 	find_path(SW_XCB_INCLUDE_DIR NAMES xcb/xcb.h REQUIRED)
 	find_library(SW_XCB_LIBRARY NAMES xcb REQUIRED)
 	find_library(SW_X11_XCB_LIBRARY NAMES X11-xcb REQUIRED)

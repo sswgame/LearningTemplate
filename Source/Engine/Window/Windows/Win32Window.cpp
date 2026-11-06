@@ -2,9 +2,71 @@
 
 #include "Engine/Window/Windows/Win32Window.h"
 
+#include "Core/Foundation/PlatformOSHeaders.h"
+#include "Core/Module/ModuleLibraryUtil.h"
+
 #include "Engine/Window/NativeWindowEvent.h"
+#include "Engine/Window/WindowMonitor.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
+namespace sw
+{
+    namespace
+    {
+        struct Win32WindowInternal
+        {
+            using PfnGetDpiForMonitor = HRESULT( WINAPI* )( HMONITOR, int32, UINT*, UINT* );
+
+            /** @brief Shcore.dll 의 `GetDpiForMonitor` 입니다. Engine 은 Shcore 를 링크하지 않는다(imgui_impl_win32 도 올려 쓴다). 프로세스 끝까지 둔다. */
+            static PfnGetDpiForMonitor findGetDpiForMonitor()
+            {
+                void* const pModule = ModuleLibraryUtil::loadSystemLibrary( "Shcore.dll" );
+                return pModule != nullptr ? reinterpret_cast<PfnGetDpiForMonitor>( ModuleLibraryUtil::getDynamicSymbol( pModule, "GetDpiForMonitor" ) ) : nullptr;
+            }
+
+            static WindowMonitorRect toRect( const RECT& rect )
+            {
+                return WindowMonitorRect{
+                    int2{             rect.left,               rect.top},
+                    int2{rect.right - rect.left, rect.bottom - rect.top}
+                };
+            }
+
+            static BOOL CALLBACK onEnumMonitor( HMONITOR hMonitor, HDC /*hdc*/, LPRECT /*pClip*/, LPARAM userData )
+            {
+                static const PfnGetDpiForMonitor s_pfnGetDpiForMonitor = findGetDpiForMonitor();
+
+                MONITORINFOEXW info{};
+                info.cbSize = sizeof( info );
+                if ( GetMonitorInfoW( hMonitor, &info ) == FALSE )
+                    return TRUE; // 그 사이 빠진 모니터다 - 나머지를 읽는다
+
+                WindowMonitor monitor;
+                monitor._name                    = StringUtil::utf16ToUTF8( info.szDevice );
+                monitor._area                    = toRect( info.rcMonitor );
+                monitor._workArea                = toRect( info.rcWork );
+                monitor._bPrimary                = ( info.dwFlags & MONITORINFOF_PRIMARY ) != 0;
+                UINT            dpiX             = 0;
+                UINT            dpiY             = 0;
+                constexpr int32 kMdtEffectiveDpi = 0; // MDT_EFFECTIVE_DPI(shellscalingapi.h 를 끌어오지 않는다)
+                if ( s_pfnGetDpiForMonitor != nullptr && SUCCEEDED( s_pfnGetDpiForMonitor( hMonitor, kMdtEffectiveDpi, &dpiX, &dpiY ) ) && dpiX > 0 )
+                    monitor._contentScale = static_cast<float32>( dpiX ) / IWindow::kReferenceDPI;
+
+                DEVMODEW mode{};
+                mode.dmSize = sizeof( mode );
+                for ( DWORD modeIndex = 0; EnumDisplaySettingsW( info.szDevice, modeIndex, &mode ) != FALSE; ++modeIndex )
+                {
+                    if ( mode.dmBitsPerPel >= 32 )
+                        monitor._listResolution.push_back( int2{ static_cast<int32>( mode.dmPelsWidth ), static_cast<int32>( mode.dmPelsHeight ) } );
+                }
+                monitor.normalizeResolutions();
+                reinterpret_cast<vector<WindowMonitor>*>( userData )->push_back( std::move( monitor ) );
+                return TRUE;
+            }
+        };
+    } // namespace
+} // namespace sw
+
 namespace sw
 {
     Win32Window::Win32Window()
@@ -121,6 +183,17 @@ namespace sw
             return 1.0f;
         const UINT dpi = GetDpiForWindow( _hWnd );
         return dpi > 0 ? static_cast<float32>( dpi ) / kReferenceDPI : 1.0f;
+    }
+
+    bool Win32Window::tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const
+    {
+        outListMonitor.clear();
+        if ( _hWnd == nullptr )
+            return false;
+        if ( EnumDisplayMonitors( nullptr, nullptr, &Win32WindowInternal::onEnumMonitor, reinterpret_cast<LPARAM>( &outListMonitor ) ) == FALSE )
+            SW_LOG_WARNING_ID( "Win32Window.EnumDisplayMonitorsFailed", "EnumDisplayMonitors failed (error %#) - the monitor list is incomplete", GetLastError() );
+        WindowMonitor::orderPrimaryFirst( outListMonitor );
+        return true;
     }
 
     bool Win32Window::setMinimized( bool bMinimized )
@@ -261,6 +334,8 @@ namespace sw
         }
         else if ( msg == WM_ACTIVATEAPP )
             setFocusState( wParam != FALSE );
+        else if ( msg == WM_DISPLAYCHANGE || msg == WM_DPICHANGED || ( msg == WM_SETTINGCHANGE && wParam == SPI_SETWORKAREA ) )
+            notifyMonitorsChanged();
     }
 
     void Win32Window::onSizeMessage( WPARAM wParam, LPARAM lParam )

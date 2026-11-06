@@ -4,6 +4,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Delegate/DelegateSlot.h"
 
 #include "Engine/EngineMinimal.h"
@@ -13,6 +14,7 @@
 namespace sw
 {
     struct NativeWindowEvent;
+    struct WindowMonitor;
 
     class CommandLineManager;
 
@@ -199,6 +201,15 @@ namespace sw
 
         /** @brief 배율 1 에 해당하는 DPI 입니다(Windows 와 X11 의 기준). */
         static constexpr float32 kReferenceDPI = 96.0f;
+
+        /**
+         * @brief 창 시스템의 모니터를 @p outListMonitor 에 담습니다(주 모니터가 0 번). OS 에 묻는 일이라 프레임마다 부르지 않는다 - `getMonitorGeneration` 이 바뀔 때 다시 읽는다.
+         * @details Win32 는 `EnumDisplayMonitors`, X11 은 RandR(없으면 X screen 하나 - `X11Monitors.h`), Wayland 는 `wl_output` 이다.
+         * @return 창이 없어 물을 곳이 없으면 false 입니다. true 인데 목록이 비면 그 창 시스템에 지금 출력이 없는 것이다(모니터 없는 Wayland 컴포지터는 정상이다). 받는 쪽은 값을 지어내지 않는다.
+         */
+        [[nodiscard]] virtual bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const;
+        /** @brief 모니터 값이 바뀔 때마다(모니터 연결 · 해상도 · 작업 영역 · 배율) 올라가는 수입니다. 값을 들고 있는 쪽은 이것이 달라질 때 `tryGetMonitors` 를 다시 부릅니다. */
+        [[nodiscard]] uint32 getMonitorGeneration() const { return _monitorGeneration; }
 
         // ---- 창이 스스로 하는 포인터 동작(리눅스 입력 관리자가 읽는다) ----
         // 입력 관리자는 창 종류가 아니라 이 질의로 가른다. 커서 모양 · 숨기기는 두 창 모두 스스로 한다(커서는 창의 Display 리소스라 창이 소유하고 창과 함께 내린다).
@@ -437,6 +448,8 @@ namespace sw
         void setMinimizedState( bool bMinimized ) { _bMinimized = bMinimized ? SW_TRUE : SW_FALSE; }
         /** @brief 플랫폼 메시지 처리가 포커스 이벤트를 받으면 부릅니다(`hasFocus`). */
         void setFocusState( bool bFocused ) { _bFocused = bFocused ? SW_TRUE : SW_FALSE; }
+        /** @brief 플랫폼 메시지 처리가 모니터 변화를 받으면 부릅니다(`getMonitorGeneration`). */
+        void notifyMonitorsChanged() { ++_monitorGeneration; }
 
     protected:
         /**
@@ -467,8 +480,9 @@ namespace sw
         /** @brief 다시 만들 때 놓을 위치입니다. 플랫폼 생성자가 자기 "알아서" 값으로 채웁니다. */
         int32  _restoreX;
         int32  _restoreY;
-        uint32 _minClientWidth;  /**< 사용자가 줄일 수 있는 가장 작은 클라이언트 가로(물리 픽셀)입니다. 0 이면 제한이 없습니다. */
-        uint32 _minClientHeight; /**< 위와 같습니다(세로). */
+        uint32 _minClientWidth;    /**< 사용자가 줄일 수 있는 가장 작은 클라이언트 가로(물리 픽셀)입니다. 0 이면 제한이 없습니다. */
+        uint32 _minClientHeight;   /**< 위와 같습니다(세로). */
+        uint32 _monitorGeneration; /**< `getMonitorGeneration` 의 값입니다. */
 
     private:
     };

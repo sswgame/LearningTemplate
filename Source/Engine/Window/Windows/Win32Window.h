@@ -70,6 +70,8 @@ namespace sw
 
         /** @brief `GetDpiForWindow` / 96 입니다(프로세스가 PerMonitorV2 이며 `WindowsProcess.manifest` 에서 정합니다). 창이 없으면 1 입니다. */
         float32 getContentScale() const override;
+        /** @brief `EnumDisplayMonitors` · `GetMonitorInfoW` · `GetDpiForMonitor` · `EnumDisplaySettingsW` 로 읽습니다. */
+        [[nodiscard]] bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const override;
 
     protected:
         /** @brief 네이티브 창 핸들(HWND)을 반환합니다. 바깥은 `IWindow::tryGetWin32Handle` 로만 읽는다(기반의 보호 구역을 다시 열지 않는다). */

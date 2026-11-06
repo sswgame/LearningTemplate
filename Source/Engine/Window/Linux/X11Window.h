@@ -8,6 +8,7 @@
 #include "Core/Time/MonotonicClock.h"
 
 #include "Engine/Window/IWindow.h"
+#include "Engine/Window/Linux/X11Monitors.h"
 
 namespace sw
 {
@@ -74,9 +75,14 @@ namespace sw
         /**
          * @brief 데스크톱이 알리는 `Xft.dpi` 리소스 / 96 입니다(GNOME · KDE · xrdb). 없으면 1.
          * @details XWayland 에서도 같은 길이다(컴포지터가 배율을 이 리소스에 적는다). 리소스는 연결을 연 때의 값(`XResourceManagerString` 은 `XOpenDisplay` 가 읽어 둔 것)이라
-         *          실행 중 배율을 바꾸면 따라가지 않는다 — 서버에 묻는 길은 왕복이고 `Engine::updateRuntimeUI` 가 프레임마다 부르므로 그대로 둔다. Xrandr 의 물리 크기 DPI 는 배율이 아니라 화면 밀도라 쓰지 않는다.
+         *          실행 중 배율을 바꾸면 따라가지 않는다 — 서버에 묻는 길은 왕복이고 `Engine::updateRuntimeUI` 가 프레임마다 부르므로 그대로 둔다.
+         *          **모니터마다 다른 배율은 두지 않는다.** RandR 의 물리 크기(mm)로 재면 EDID 가 없거나 틀린 모니터(프로젝터 · KVM · Xvfb 의 1.04)에서 글자가 튀고, 데스크톱의 나머지 프로그램과도 어긋난다.
+         *          GTK(`Gdk/WindowScalingFactor`) · GLFW(`glfwGetMonitorContentScale`)도 X11 에서는 모든 모니터에 같은 값을 준다. Qt 는 물리 DPI 를 옵션(`QT_USE_PHYSICAL_DPI`)으로만 쓴다(기억에 의존한 비교다).
+         *          X 서버에 모니터별 배율을 알리는 표준이 없어서이고, 실제로 모니터별 배율이 있는 곳은 Wayland 다(`wl_output.scale`).
          */
         float32 getContentScale() const override;
+        /** @brief RandR 의 모니터와 `_NET_WORKAREA` 를 읽습니다(`X11Monitors`). 창이 없으면 false 입니다. */
+        [[nodiscard]] bool tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const override;
 
         /** @brief EWMH `_NET_WM_STATE_FULLSCREEN` 을 켜고 끄고, 창 모드면 `XResizeWindow` 로 크기를 바꿉니다. 크기 통보는 다음 ConfigureNotify 입니다. */
         bool               setDisplayMode( WindowDisplayMode mode, uint32 width, uint32 height ) override;
@@ -161,6 +167,7 @@ namespace sw
 
         string                           _clipboardText;     ///< CLIPBOARD 주인일 때 내주는 글(UTF-8). 주인인지는 서버에 묻는다(`XGetSelectionOwner`) — 따로 표시하지 않는다
         vector<X11ClipboardIncrTransfer> _listClipboardIncr; ///< 큰 글을 조각으로 보내는 중인 건
+        X11Monitors                      _monitors;          ///< 이 연결의 모니터 질의
         [[maybe_unused]] void*           _pX11Display;
         [[maybe_unused]] uint64          _x11Window;
         [[maybe_unused]] uint64          _x11WmDelete;

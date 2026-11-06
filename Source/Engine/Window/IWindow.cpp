@@ -7,6 +7,7 @@
 #include "Engine/Window/Linux/LinuxWindowBackend.h"
 #include "Engine/Window/Linux/Wayland/WaylandWindow.h"
 #include "Engine/Window/Linux/X11Window.h"
+#include "Engine/Window/WindowMonitor.h"
 #include "Engine/Window/Windows/Win32Window.h"
 
 #include <cstdlib>
@@ -34,7 +35,14 @@ namespace sw
         , _restoreY{ 0 }
         , _minClientWidth{ 0 }
         , _minClientHeight{ 0 }
+        , _monitorGeneration{ 0 }
     {
+    }
+
+    bool IWindow::tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const
+    {
+        outListMonitor.clear();
+        return false;
     }
 
     void IWindow::setMinimumClientSize( uint32 width, uint32 height )
