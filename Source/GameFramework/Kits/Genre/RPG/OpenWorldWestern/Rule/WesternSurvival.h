@@ -55,10 +55,10 @@ namespace sw
 
         /** @brief 음식을 먹습니다. 모르는 음식이면 false 를 반환합니다. */
         bool eat( const hashed_string& foodID );
-        /** @brief 입은 옷을 통째로 바꿉니다(모르는 옷은 보온이 0입니다). */
-        void    setClothing( const vector<hashed_string>& listClothing );
-        float32 computeWarmth() const;
-        float32 computeFeltTemperature( float32 airTemperature ) const { return airTemperature + computeWarmth(); }
+        /** @brief 입은 옷을 통째로 바꿉니다. 모르는 옷이 있으면 바꾸지 않고 false 를 반환합니다. */
+        [[nodiscard]] bool setClothing( const vector<hashed_string>& listClothing );
+        float32            computeWarmth() const;
+        float32            computeFeltTemperature( float32 airTemperature ) const { return airTemperature + computeWarmth(); }
 
         /** @brief 데드아이를 켭니다. 이미 켰거나 게이지가 최소량보다 적으면 false 를 반환합니다. */
         [[nodiscard]] bool activateDeadEye();

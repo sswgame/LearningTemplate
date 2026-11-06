@@ -223,7 +223,7 @@ namespace sw
         ScavengerCrewMember& member = _listCrew[static_cast<size_t>( player )];
         ScavengerScrap       scrap;
         if ( member._carry.tryRemove( uid, scrap ) == false )
-            return ScavengerActionResult::InvalidPlayer;
+            return ScavengerActionResult::InvalidItem;
         if ( member._areaID == hashed_string( kShipAreaID ) )
         {
             if ( scrap.isBody() )

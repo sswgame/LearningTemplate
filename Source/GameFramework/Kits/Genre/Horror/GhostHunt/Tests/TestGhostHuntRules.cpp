@@ -229,7 +229,8 @@ namespace
                 written << searched;
             }
             StateArchiveUtil::writeName( written, currentRoom );
-            written << static_cast<uint32>( 5 );
+            written << static_cast<uint32>( 5 ); // 씨앗
+            written << static_cast<uint32>( 0 ); // 맡아 둔 열쇠
             Archive reading( written.getData(), written.getSize() );
             return _mansion.readState( reading );
         }
@@ -853,9 +854,9 @@ SW_TEST_CASE_F( GhostHuntRulesTest, PartialCatchKeepsRoomDark )
 }
 
 /**
- * @brief [GhostHuntRulesTest] 가방이 가득 차면 불은 켜지되 열쇠와 그 이벤트는 없다(헤더에 적힌 동작 — 보고의 판단 항목이다)
+ * @brief [GhostHuntRulesTest] 가방이 가득 차도 열쇠를 잃지 않는다 - 맡아 두었다가 자리가 나면 방을 옮길 때 준다. 저장해도 남는다(헤더에 적힌 동작 — 보고의 판단 항목이다)
  */
-SW_TEST_CASE_F( GhostHuntRulesTest, FullBagLosesTheKey )
+SW_TEST_CASE_F( GhostHuntRulesTest, FullBagKeepsTheKeyForLater )
 {
     SW_REQUIRE_TRUE( _bag.initialize( nullptr, 0 ) );
     SW_REQUIRE_TRUE( _mansion.enterRoom( "foyer" ) == 1 );
@@ -863,6 +864,25 @@ SW_TEST_CASE_F( GhostHuntRulesTest, FullBagLosesTheKey )
     _mansion.update( 0.01f );
     SW_EXPECT_TRUE( _mansion.isRoomLit( "foyer" ) );
     SW_EXPECT_EQUAL( 0, countEvents( GhostMansionEventType::KeyAwarded ) );
+    SW_EXPECT_EQUAL( 0, _bag.getItemCount( "parlorKey" ) );
+
+    SW_REQUIRE_TRUE( _bag.initialize( nullptr, 4 ) ); // 자리가 났다
+    (void)_mansion.enterRoom( "foyer" );
+    SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::KeyAwarded ) );
+    SW_EXPECT_EQUAL( 1, _bag.getItemCount( "parlorKey" ) );
+
+    (void)_mansion.enterRoom( "foyer" ); // 한 번만 준다
+    SW_EXPECT_EQUAL( 1, _bag.getItemCount( "parlorKey" ) );
+}
+
+/**
+ * @brief [GhostHuntRulesTest] 지금 있는 방의 가구만 뒤질 수 있다
+ */
+SW_TEST_CASE_F( GhostHuntRulesTest, SearchNeedsToBeInTheRoom )
+{
+    sw::ItemStackList loot;
+    SW_REQUIRE_TRUE( _mansion.enterRoom( "foyer" ) >= 0 );
+    SW_EXPECT_TRUE( _mansion.searchFurniture( "desk", sw::GhostSearchMode::Vacuum, loot ) == sw::GhostSearchResult::WrongRoom );
 }
 
 /**
@@ -890,6 +910,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, DoorsUseKeysAndFlags )
  */
 SW_TEST_CASE_F( GhostHuntRulesTest, FurnitureSearchRules )
 {
+    SW_REQUIRE_TRUE( _mansion.enterRoom( "foyer" ) >= 0 );
     ItemStackList loot;
     SW_EXPECT_TRUE( _mansion.searchFurniture( "nothing", GhostSearchMode::Vacuum, loot ) == GhostSearchResult::UnknownFurniture );
     SW_EXPECT_TRUE( _mansion.searchFurniture( "dresser", GhostSearchMode::Vacuum, loot ) == GhostSearchResult::WrongMode );
@@ -948,6 +969,7 @@ SW_TEST_CASE_F( GhostHuntRulesTest, BooEscapesToNeighbourRoom )
     SW_EXPECT_TRUE( pBoo->_furniture == hashed_string( "curtain" ) ); // 서랍장에는 booA 가 있다
     SW_EXPECT_EQUAL( 1, countEvents( GhostMansionEventType::BooEscaped ) );
 
+    SW_REQUIRE_TRUE( _mansion.enterRoom( "foyer" ) >= 0 );
     ItemStackList loot;
     SW_EXPECT_TRUE( _mansion.searchFurniture( "curtain", GhostSearchMode::Vacuum, loot ) == GhostSearchResult::BooFound );
 }

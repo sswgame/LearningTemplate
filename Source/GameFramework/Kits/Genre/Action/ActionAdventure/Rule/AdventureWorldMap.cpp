@@ -2,10 +2,12 @@
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureWorldMap.h"
 
+#include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/Utility/StateArchiveUtil.h"
 #include "GameFramework/Runtime/World/Land/AreaGraph.h"
 
 namespace sw
@@ -74,6 +76,46 @@ namespace sw
         _listCompleted.assign( _catalog.getCount(), SW_FALSE );
         _orbCount             = 0;
         _completedShrineCount = 0;
+    }
+
+    void AdventureWorldMap::writeState( Archive& outArchive ) const
+    {
+        outArchive << _orbCount;
+        outArchive << static_cast<uint32>( _listActivated.size() );
+        for ( size_t index = 0; index < _listActivated.size(); ++index )
+        {
+            outArchive << _listActivated[index];
+            outArchive << _listCompleted[index];
+        }
+    }
+
+    bool AdventureWorldMap::readState( Archive& archive )
+    {
+        int32  orbCount = 0;
+        uint32 count    = 0;
+        archive >> orbCount;
+        if ( archive.isError() || orbCount < 0 || StateArchiveUtil::readCount( archive, 2, count ) == false || count != _listActivated.size() )
+            return false;
+        vector<uint8> listActivated( count, SW_FALSE );
+        vector<uint8> listCompleted( count, SW_FALSE );
+        int32         completedCount = 0;
+        for ( uint32 index = 0; index < count; ++index )
+        {
+            archive >> listActivated[index];
+            archive >> listCompleted[index];
+            // 마친 사당은 찾은 것이고, 사당만 마칠 수 있다
+            const bool bShrine = _catalog.getAt( index )._kind == AdventureLandmarkKind::Shrine;
+            const bool bValid  = archive.isError() == false && listActivated[index] <= SW_TRUE && listCompleted[index] <= SW_TRUE &&
+                                ( listCompleted[index] == SW_FALSE || ( bShrine && listActivated[index] == SW_TRUE ) );
+            if ( bValid == false )
+                return false;
+            completedCount += listCompleted[index];
+        }
+        _listActivated        = std::move( listActivated );
+        _listCompleted        = std::move( listCompleted );
+        _orbCount             = orbCount;
+        _completedShrineCount = completedCount;
+        return true;
     }
 
     int32 AdventureWorldMap::activateTower( const hashed_string& towerID, AreaGraph& areaGraph )

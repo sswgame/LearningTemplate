@@ -51,6 +51,7 @@ namespace sw
         Found = 0, ///< 전리품을 굴렸다(빈 결과일 수도 있다. "없음" 가중치)
         AlreadySearched,
         WrongMode, ///< 그 방법으로는 뒤질 수 없는 가구이다
+        WrongRoom, ///< 지금 있는 방의 가구가 아니다
         BooFound,  ///< 부가 튀어나왔다(전리품은 다음에 나온다)
         UnknownFurniture
     };
@@ -159,6 +160,8 @@ namespace sw
         /** @brief 싸움의 이벤트를 꺼내 게임에 넘길 목록에 붙이고, 잡은 유령의 동전과 불 켜기를 처리합니다. */
         void collectEncounterEvents();
         void lightRoom( const hashed_string& roomID );
+        /** @brief 맡아 둔 열쇠를 가방에 자리가 나는 만큼 줍니다. */
+        void grantPendingKeys();
         void moveBooAway( size_t booIndex );
         void revealBoo( size_t booIndex );
         void pushEvent( GhostMansionEventType type, const hashed_string& id, const hashed_string& room = hashed_string{}, int32 count = 0 );
@@ -166,8 +169,9 @@ namespace sw
     private:
         GhostEncounter                 _encounter;
         GameRandom                     _random;
-        vector<HidingGhostRuntime>     _listBoo;      ///< 카탈로그의 부 순서를 따른다
-        vector<uint8>                  _listSearched; ///< 카탈로그의 가구 순서를 따른다
+        vector<HidingGhostRuntime>     _listBoo;            ///< 카탈로그의 부 순서를 따른다
+        vector<uint8>                  _listSearched;       ///< 카탈로그의 가구 순서를 따른다
+        vector<hashed_string>          _listPendingKeyRoom; ///< 가방이 차서 아직 주지 못한 열쇠의 방이다
         EventBuffer<GhostMansionEvent> _eventBuffer;
         vector<GhostEvent>             _listGhostEvent; ///< 게임에 넘길 싸움 이벤트이다
         hashed_string                  _currentRoom;

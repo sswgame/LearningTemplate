@@ -836,7 +836,9 @@ SW_TEST_CASE_F( WesternSurvivalTest, TemperatureDrainsTheRightCore )
     SW_EXPECT_NEAR( 83.0f, _survival.getCore( sw::WesternCore::Health ), kWesternTolerance );
     SW_EXPECT_NEAR( 78.0f, _survival.getCore( sw::WesternCore::Stamina ), kWesternTolerance );
 
-    _survival.setClothing( { "coat", "nothing" } );
+    SW_EXPECT_FALSE( _survival.setClothing( { "coat", "nothing" } ) );
+    SW_EXPECT_NEAR( 0.0f, _survival.computeWarmth(), kWesternTolerance ); // 바뀌지 않았다
+    SW_REQUIRE_TRUE( _survival.setClothing( { "coat" } ) );
     SW_EXPECT_NEAR( 15.0f, _survival.computeWarmth(), kWesternTolerance );
     SW_EXPECT_NEAR( 5.0f, _survival.computeFeltTemperature( -10.0f ), kWesternTolerance );
     _survival.update( 0.0f, 2.0f, -10.0f ); // 옷 덕분에 춥지 않다

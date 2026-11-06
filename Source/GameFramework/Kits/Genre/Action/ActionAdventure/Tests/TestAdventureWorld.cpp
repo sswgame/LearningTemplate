@@ -2,6 +2,8 @@
 
 #include "Core/Testing/TestFramework.h"
 
+#include "Engine/Serialization/Format/Archive.h"
+
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureVitals.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureWeaponWear.h"
 #include "GameFramework/Kits/Genre/Action/ActionAdventure/Rule/AdventureWorldMap.h"
@@ -266,4 +268,38 @@ SW_TEST_CASE( AdventureWeaponWearTest, ThrowWearsMoreAndOutOfRangeIsSafe )
     result = wear.strike( inventory, 0, 10.0f ); // 내구도보다 크게 닳아도 부서짐 한 번이다
     SW_EXPECT_TRUE( result._bBroke == SW_TRUE );
     SW_EXPECT_NEAR( 30.0f, result._damage, kWearTolerance );
+}
+
+/**
+ * @brief [AdventureWorldMapTest] 진행 저장: 탑 · 사당 · 증표가 왕복한다. 잘린 바이트는 받지 않고 그대로 둔다
+ */
+SW_TEST_CASE( AdventureWorldMapTest, StateRoundTripsAndRefusesBrokenBytes )
+{
+    sw::AdventureWorldMap world;
+    SW_REQUIRE_TRUE( world.loadFromXMLText( kWorldXML, "AdventureWorldMapTest" ) );
+    sw::AreaGraph graph;
+    SW_REQUIRE_TRUE( AdventureWorldTestUtil::addArea( graph, "a", "Plateau" ) );
+    SW_EXPECT_TRUE( world.activateTower( kTower, graph ) >= 0 );
+    SW_EXPECT_TRUE( world.completeShrine( kShrineA ) );
+
+    sw::Archive writer;
+    world.writeState( writer );
+    const sw::vector<uint8> listSaved( writer.getData(), writer.getData() + writer.getSize() );
+
+    sw::AdventureWorldMap restored;
+    SW_REQUIRE_TRUE( restored.loadFromXMLText( kWorldXML, "AdventureWorldMapTest" ) );
+    sw::Archive reader( listSaved.data(), listSaved.size() );
+    SW_REQUIRE_TRUE( restored.readState( reader ) );
+    SW_EXPECT_TRUE( restored.canWarpTo( kTower ) );
+    SW_EXPECT_TRUE( restored.isCompleted( kShrineA ) );
+    SW_EXPECT_EQUAL( 1, restored.getOrbCount() );
+    SW_EXPECT_EQUAL( 1, restored.getCompletedShrineCount() );
+    SW_EXPECT_FALSE( restored.completeShrine( kShrineA ) ); // 다시 받지 못한다
+
+    sw::AdventureWorldMap fresh;
+    SW_REQUIRE_TRUE( fresh.loadFromXMLText( kWorldXML, "AdventureWorldMapTest" ) );
+    sw::Archive truncated( listSaved.data(), listSaved.size() - 1 );
+    SW_EXPECT_FALSE( fresh.readState( truncated ) );
+    SW_EXPECT_EQUAL( 0, fresh.getOrbCount() );
+    SW_EXPECT_FALSE( fresh.canWarpTo( kTower ) );
 }

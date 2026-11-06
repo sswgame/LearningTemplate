@@ -137,9 +137,15 @@ namespace sw
         return true;
     }
 
-    void WesternSurvival::setClothing( const vector<hashed_string>& listClothing )
+    bool WesternSurvival::setClothing( const vector<hashed_string>& listClothing )
     {
+        for ( const hashed_string& clothingID : listClothing )
+        {
+            if ( _pCatalog == nullptr || _pCatalog->findClothing( clothingID ) == nullptr )
+                return false;
+        }
         _listClothing = listClothing;
+        return true;
     }
 
     float32 WesternSurvival::computeWarmth() const

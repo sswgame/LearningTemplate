@@ -23,6 +23,7 @@ namespace sw
         , _random{}
         , _listBoo{}
         , _listSearched{}
+        , _listPendingKeyRoom{}
         , _eventBuffer{}
         , _listGhostEvent{}
         , _currentRoom{}
@@ -53,6 +54,7 @@ namespace sw
         _currentRoom = hashed_string{};
         _listBoo.clear();
         _listSearched.clear();
+        _listPendingKeyRoom.clear();
         for ( const HidingGhostDef& boo : pCatalog->getBoos() )
         {
             HidingGhostRuntime runtime;
@@ -69,6 +71,7 @@ namespace sw
     {
         if ( _pCatalog == nullptr )
             return -1;
+        grantPendingKeys(); // 방을 옮기는 사이 가방을 비웠을 수 있다
         const GhostRoomDef* pRoom    = _pCatalog->findRoom( roomID );
         const bool          bOnGraph = _pAreaGraph != nullptr && _pAreaGraph->findArea( roomID ) != nullptr;
         if ( pRoom == nullptr && bOnGraph == false )
@@ -163,6 +166,8 @@ namespace sw
         const uint8              bAllowed  = mode == GhostSearchMode::Vacuum ? furniture._bVacuum : furniture._bShake;
         if ( bAllowed == SW_FALSE )
             return GhostSearchResult::WrongMode;
+        if ( furniture._room != _currentRoom )
+            return GhostSearchResult::WrongRoom;
         for ( size_t booIndex = 0; booIndex < _listBoo.size(); ++booIndex )
         {
             const HidingGhostRuntime& boo = _listBoo[booIndex];
@@ -270,10 +275,25 @@ namespace sw
         pushEvent( GhostMansionEventType::RoomLit, roomID, roomID );
         if ( pRoom->_keyReward.empty() )
             return;
-        // 가방이 없거나 가득 차면 열쇠를 받지 못한다(이벤트도 없다). 슬롯 수는 게임이 정한다.
-        if ( _pInventory == nullptr || _pInventory->addItem( pRoom->_keyReward, 1 ) == 0 )
-            return;
-        pushEvent( GhostMansionEventType::KeyAwarded, pRoom->_keyReward, roomID );
+        _listPendingKeyRoom.push_back( roomID );
+        grantPendingKeys();
+    }
+
+    void GhostMansion::grantPendingKeys()
+    {
+        // 열쇠를 잃으면 그 문을 영영 열 수 없어 진행이 막힌다 - 가방이 차면 맡아 두었다가 자리가 나면 준다.
+        for ( size_t index = 0; _pInventory != nullptr && index < _listPendingKeyRoom.size(); )
+        {
+            const hashed_string roomID = _listPendingKeyRoom[index];
+            const GhostRoomDef* pRoom  = _pCatalog->findRoom( roomID );
+            if ( pRoom == nullptr || _pInventory->addItem( pRoom->_keyReward, 1 ) == 0 )
+            {
+                ++index;
+                continue;
+            }
+            _listPendingKeyRoom.erase( _listPendingKeyRoom.begin() + static_cast<ptrdiff_t>( index ) );
+            pushEvent( GhostMansionEventType::KeyAwarded, pRoom->_keyReward, roomID );
+        }
     }
 
     void GhostMansion::revealBoo( size_t booIndex )
@@ -362,6 +382,11 @@ namespace sw
         }
         StateArchiveUtil::writeName( outArchive, _currentRoom );
         outArchive << _seed;
+        outArchive << static_cast<uint32>( _listPendingKeyRoom.size() );
+        for ( const hashed_string& roomID : _listPendingKeyRoom )
+        {
+            StateArchiveUtil::writeName( outArchive, roomID );
+        }
     }
 
     bool GhostMansion::readState( Archive& archive )
@@ -406,8 +431,15 @@ namespace sw
         if ( StateArchiveUtil::readName( archive, restored._currentRoom ) == false || isKnownRoom( restored._currentRoom ) == false )
             return false;
         archive >> restored._seed;
-        if ( archive.isError() )
+        uint32 pendingCount = 0;
+        if ( archive.isError() || StateArchiveUtil::readCount( archive, 4, pendingCount ) == false )
             return false;
+        restored._listPendingKeyRoom.assign( pendingCount, hashed_string{} );
+        for ( hashed_string& roomID : restored._listPendingKeyRoom )
+        {
+            if ( StateArchiveUtil::readName( archive, roomID ) == false || _pCatalog->findRoom( roomID ) == nullptr )
+                return false;
+        }
         restored._eventBuffer.clear();
         restored._listGhostEvent.clear();
         *this = std::move( restored );

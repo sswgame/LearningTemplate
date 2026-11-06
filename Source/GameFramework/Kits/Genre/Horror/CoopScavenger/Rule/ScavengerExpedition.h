@@ -54,6 +54,7 @@ namespace sw
         InvalidPlayer, ///< 없는 사람이거나 죽은 사람이다
         Blocked,       ///< 이어지지 않았거나 문이 잠겼다
         NotCompany,    ///< 회사 위성에서만 팔 수 있다
+        InvalidItem,   ///< 그 사람이 들고 있지 않은 물건이다
         NotOnShip      ///< 우주선 안에서만 할 수 있다
     };
 
