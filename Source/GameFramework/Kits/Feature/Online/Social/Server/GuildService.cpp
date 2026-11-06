@@ -487,7 +487,7 @@ namespace sw
                     {
                         if ( selfMember._role < GuildRole::Officer )
                             return fail( SocialResult::NotAllowed );
-                        if ( _request._text.size() > static_cast<size_t>( GuildLimit::kMaxNoticeSize ) )
+                        if ( GuildService::isValidNotice( _request._text ) == false )
                             return fail( SocialResult::Invalid );
                         info._notice = _request._text;
                         transaction.put( Internal::getGuildTable(), guildKey, Internal::encodeGuild( info ), guildRecord._version );
@@ -684,6 +684,8 @@ namespace sw
                 }
                 if ( selfMember._role != GuildRole::Master )
                     return fail( SocialResult::NotAllowed );
+                if ( _request._role >= GuildRole::Count ) // 와이어에서 온 값이다. 그대로 쓰면 그 멤버 레코드를 다시 읽지 못한다
+                    return fail( SocialResult::Invalid );
                 transaction.put( Internal::getMemberTable(), targetMemberKey, Internal::encodeMember( _request._role, targetMember._joinedMs ), targetMemberRecord._version );
                 if ( _request._role == GuildRole::Master ) // 길드장을 넘기면 나는 임원이 된다
                 {
@@ -841,6 +843,20 @@ namespace sw
             const bool   bBad      = codepoint == GuildServiceInternal::kReplacementChar || codepoint < GuildServiceInternal::kFirstPrintable ||
                               codepoint == GuildServiceInternal::kDeleteChar;
             if ( bBad )
+                return false;
+        }
+        return true;
+    }
+
+    bool GuildService::isValidNotice( string_view notice )
+    {
+        if ( notice.size() > static_cast<size_t>( GuildLimit::kMaxNoticeSize ) )
+            return false;
+        size_t offset = 0;
+        while ( offset < notice.size() )
+        {
+            const uint32 codepoint = StringUtil::decodeUTF8( notice, offset );
+            if ( codepoint == GuildServiceInternal::kReplacementChar || codepoint == 0 )
                 return false;
         }
         return true;
