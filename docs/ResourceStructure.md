@@ -196,8 +196,9 @@ SW_GAME_ACTION( OpenShop, "shop.open", OpenShopParams, &openShop );
 | 파라미터 | 머티리얼 층: 머티리얼 그래프 뒤에 한다 | 언리얼 Material Layers |
 | 파라미터 | VFX 이미터 `_base` 와 사용자 파라미터, 오디오 이벤트 `_base` | 언리얼 Niagara 부모 이미터 · MetaSound Preset |
 | 인스턴스 값 | 파일 없이 인스턴스마다 float4 몇 개. 배치를 깨지 않는다(`MaterialInstance` 와의 관계는 구현 때 확인) | 언리얼 Custom Primitive Data · 유니티 MaterialPropertyBlock |
-| 조립 | 씬 인스턴스: 씬을 다른 씬에 넣고 덮어쓴다 | 언리얼 Level Instance · Godot 씬 상속 |
-| 조립 | 데이터 레이어: 씬 객체의 레이어를 문맥 태그로 켠다(계절 · 이벤트) | 언리얼 Data Layers |
+| 조립 | 씬 인스턴스(`<entity scene="…">` + `<Part path>`): 씬을 다른 씬에 넣고 덮어쓴다. 읽을 때 평평한 엔티티로 펼치고 쿠킹본도 펼친 것을 담는다 | 언리얼 Level Instance · Godot 씬 상속 |
+| 조립 | 씬 상속(루트 `_base`): 엔티티 id 가 열쇠인 차이만 적는다. 씬 템플릿 자리를 겸한다 | Godot 씬 상속 |
+| 조립 | 데이터 레이어(`layers="Winter,Night"`): 켜진 이름 집합의 객체만 올린다(계절 · 이벤트). 단계 5 의 문맥 태그가 이 이름을 켠다 | 언리얼 Data Layers |
 | UI | 스타일 시트 · 테마 토큰 `_base`, 위젯 형식 변형 | Godot Theme Type Variation · 유니티 USS |
 | 기타 | 리그 · 리타겟 · 물리 · 소켓 · 입력 레이어에 `InheritKey` | — |
 

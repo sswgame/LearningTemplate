@@ -492,8 +492,25 @@ namespace sw
         if ( pScene->serializeToDocument( doc ) == false )
             return false;
         doc._sourcePath = sourceID.empty() ? pScene->getSourcePath() : sourceID;
-        if ( doc.saveXML( absPath ) == false )
-            return false;
+        if ( doc._baseScenePath.empty() )
+        {
+            if ( doc.saveXML( absPath ) == false )
+                return false;
+        }
+        else
+        {
+            // 씬 상속: 부모를 같은 길로 지어 다시 쓴 것과의 차이만 적는다 — 손으로 쓴 부모 글과 비교하면 값이 같아도 모두 다르게 나온다.
+            SceneDocument parentSource{};
+            SceneDocument parent{};
+            Scene         parentScene{ "SceneSave.Base", pScene->getEngineServices() };
+            parentScene.setBuildAllDataLayers();
+            const bool bParentMade = parentSource.loadXML( AssetID{ doc._baseScenePath } ) && parentScene.instantiate( parentSource ) && parentScene.serializeToDocument( parent );
+            if ( bParentMade == false || doc.saveXMLDelta( absPath, parent ) == false )
+            {
+                SW_LOG_ERROR_ID( "SceneManager.SceneBaseNotSaved", "Scene '%#' could not be saved as a difference from '%#' - nothing is written", doc._name, doc._baseScenePath );
+                return false;
+            }
+        }
         if ( sourceID.empty() == false )
             pScene->setSourcePath( sourceID );
         return true;

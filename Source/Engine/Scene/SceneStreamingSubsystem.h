@@ -13,6 +13,10 @@
  *    늘 올라 있는 엔티티만 가리키므로(쿠커가 검사했다) 셀 하나를 따로 지어도 참조가 끊기지 않는다.
  * 셀의 오브젝트는 셀마다 id 목록으로 묶어 함께 내린다(`Scene::unloadCell`). 이 단계에서 만든 오브젝트는 다음 프레임의 병합 단계에서 틱에 든다.
  *
+ * [데이터 레이어]
+ * 한 좌표에 레이어 집합마다 셀 조각이 하나씩 있다(`SceneDocument::StreamingCell::_listDataLayer`, 언리얼 World Partition 의 런타임 셀과 같다). 조각은 범위 안이고 레이어가 모두 켜졌을 때 오른다.
+ * 쿠커가 집합이 작은 조각을 앞에 두므로 같은 거리에서는 레이어 없는 조각이 먼저 올라, 레이어 조각이 그쪽을 파일 id 로 가리켜도 끊기지 않는다.
+ *
  * [원점]
  * 클라이언트는 활성 게임 카메라 자리다(`Scene::update` 가 프레임마다 `setCameraSource` 로 넣는다). 서버처럼 원점이 여럿이면(접속자마다) 게임 코드가
  * `setExternalSources` 로 프레임마다 넣는다 — 한 번 넣으면 카메라 자리는 쓰지 않는다(`clearExternalSources` 로 되돌린다). 원점이 없으면 아무 셀도 원하지 않는다.
@@ -98,6 +102,7 @@ namespace sw
         {
             StreamingCellCoord                     _cell{};
             vector<SceneDocument::SceneObjectNode> _listNode;
+            vector<string>                         _listDataLayer;       ///< 이 조각의 데이터 레이어. 모두 켜졌을 때 오른다
             vector<uint64>                         _listObjectID;        ///< 지은 오브젝트(엔티티마다 하나, 부품 제외). 내릴 때 자식까지 지운다
             bool                                   _bLoaded{ SW_FALSE }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             bool                                   _bFailed{ SW_FALSE }; ///< 짓다 실패했다 — 다시 시도하지 않는다(프레임마다 같은 오류를 내지 않게) NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
@@ -113,18 +118,20 @@ namespace sw
         void loadCell( CellSlot& slot );
         /** @brief 셀의 오브젝트를 내립니다. */
         void unloadCell( CellSlot& slot );
+        /** @brief 조각의 데이터 레이어가 모두 켜져 있으면 true 입니다. */
+        bool areSlotLayersActive( const CellSlot& slot ) const;
 
     private:
-        Scene*                        _pScene; ///< 셀을 받은 씬(빌림). nullptr 이면 스트리밍하지 않는다
-        SceneSettings                 _settings;
-        StreamingCellGrid             _grid;
-        vector<CellSlot>              _listCell;
-        unordered_map<uint64, uint32> _mapCellIndex;         ///< `makeCellKey` → `_listCell` 인덱스
-        vector<float3>                _listExternalSource;   ///< `setExternalSources`
-        float3                        _cameraSource;         ///< `setCameraSource`
-        uint8                         _bCameraSourceSet : 1; ///< 카메라 원점을 한 번이라도 받았다
-        uint8                         _bExternalSources : 1; ///< 바깥 원점을 쓴다
-        vector<StreamingCellCoord>    _listScratchCell;      ///< 갱신 중 범위 안 셀(프레임마다 다시 쓴다)
-        vector<uint32>                _listScratchLoad;      ///< 갱신 중 올릴 셀 인덱스
+        Scene*                                _pScene; ///< 셀을 받은 씬(빌림). nullptr 이면 스트리밍하지 않는다
+        SceneSettings                         _settings;
+        StreamingCellGrid                     _grid;
+        vector<CellSlot>                      _listCell;
+        unordered_map<uint64, vector<uint32>> _mapCellIndex;         ///< `makeCellKey` → 그 좌표의 조각들(`_listCell` 인덱스, 문서 순서)
+        vector<float3>                        _listExternalSource;   ///< `setExternalSources`
+        float3                                _cameraSource;         ///< `setCameraSource`
+        uint8                                 _bCameraSourceSet : 1; ///< 카메라 원점을 한 번이라도 받았다
+        uint8                                 _bExternalSources : 1; ///< 바깥 원점을 쓴다
+        vector<StreamingCellCoord>            _listScratchCell;      ///< 갱신 중 범위 안 셀(프레임마다 다시 쓴다)
+        vector<uint32>                        _listScratchLoad;      ///< 갱신 중 올릴 셀 인덱스
     };
 } // namespace sw

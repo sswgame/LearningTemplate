@@ -78,6 +78,8 @@ namespace sw::editor
         bool isMultiEditMixed( const PropertyInfo& prop );
         /** @brief 프리팹 인스턴스일 때 적용, 되돌리기, 연결 해제 버튼을 그립니다. */
         void drawPrefabLinkSection( GameObject* pObj, const AssetID& assetID );
+        /** @brief 씬 인스턴스의 앵커 · 멤버 표시와 차이 저장 단추, 씬이 선언한 데이터 레이어의 소속을 그립니다. 해당 없으면 아무것도 그리지 않습니다. */
+        void drawSceneAssemblySection( GameObject* pObj );
         /** @brief 선택한 오브젝트의 컴포넌트 카드 목록을 그립니다. */
         void drawComponentList( GameObject* pObj, EditorWorkspace& workspace );
         /** @brief 직전 카드 헤더에 컴포넌트 맥락 메뉴(`scene.component.*` 명령 — 계층 창의 컴포넌트 행과 같은 메뉴)를 엽니다. */

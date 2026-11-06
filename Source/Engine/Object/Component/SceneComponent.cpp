@@ -615,11 +615,20 @@ namespace sw
             _attachComponent = hashed_string( parentKey.c_str() );
             return;
         }
-        if ( options._bOmitExternalParent )
+        if ( options._bOmitExternalParent || ( options._omitAttachToObjectID != 0 && pParentOwner->getObjectID() == options._omitAttachToObjectID ) )
             return;
 
         // 부모 id 를 저장할 id 로 옮긴다 — 핸들 PROPERTY 와 같은 규칙 하나(`ObjectSaveOptions::getSavedObjectID`).
-        _attachOwner     = pParentOwner->getName();
+        _attachOwner = pParentOwner->getName();
+        if ( options._attachOwnerNamePrefix.empty() == false )
+        {
+            const string_view ownerName = _attachOwner.view();
+            if ( ownerName.substr( 0, options._attachOwnerNamePrefix.size() ) == options._attachOwnerNamePrefix )
+            {
+                const string_view inner = ownerName.substr( options._attachOwnerNamePrefix.size() );
+                _attachOwner            = hashed_string( inner.data(), static_cast<uint32>( inner.size() ) );
+            }
+        }
         _attachOwnerID   = options.getSavedObjectID( pParentOwner->getObjectID() );
         _attachComponent = hashed_string( parentKey.c_str() );
     }

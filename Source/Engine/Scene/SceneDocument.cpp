@@ -3,6 +3,8 @@
 #include "Engine/Scene/SceneDocument.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
+#include "Core/Container/unordered_set.h"
 #include "Core/File/FileUtil.h"
 #include "Core/String/FourCcUtil.h"
 
@@ -15,6 +17,7 @@
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Format/BinarySerializer.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
 
@@ -31,15 +34,99 @@ namespace sw
             static constexpr const utf8* kDefaultEntity = "Entity";
             static constexpr uint32      kBinMagic      = FourCcUtil::make( "SCN1" );
             // 배치: 이름 · 월드 설정(리플렉션 바이너리) · 기본 엔티티 목록 · 셀 목록(셀 좌표 x · z, 그 셀의 엔티티 목록).
-            // 엔티티 하나: 이름 · 프리팹 경로 · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`). 프리팹은 경로 하나로 가리킨다(판 5 에서 GUID 칸을 지웠다).
+            // 엔티티 하나: 이름 · 프리팹 경로 · XML 상태 · 바이너리 상태 · 파일 id · 덮어쓴 것(`_prefabOverrideXML`) · id 범위 · 앵커 파일 id · 레이어 목록 · 인스턴스 덮어쓰기 목록.
+            // 프리팹은 경로 하나로 가리킨다(판 5 에서 GUID 칸을 지웠다). 판 6 에서 조립 칸을 더했다. 셀에는 레이어 목록이 붙는다.
             // 쿠킹본은 쿠커가 매번 다시 쿠킹하는 산출물이라 이 판만 읽는다 — 배치를 바꾸면 판을 올린다.
-            static constexpr uint32 kBinVersion = 5;
-            // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯과 파일 id(8바이트)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
-            static constexpr uint32 kMinBytesPerEntity = 5u * sizeof( uint32 ) + sizeof( uint64 );
+            static constexpr uint32 kBinVersion = 6;
+            // 엔티티 하나는 길이 앞머리(4바이트)를 쓰는 필드 다섯, 목록 수 둘, 파일 id · id 범위 · 앵커 id(8바이트씩)다 — 파일이 말한 개수를 그대로 잡지 않는 데 쓴다.
+            static constexpr uint32 kMinBytesPerEntity = 7u * sizeof( uint32 ) + 3u * sizeof( uint64 );
             /** @brief 지운 칸입니다. 프리팹은 경로로만 가리킨다 — 이 속성이 남은 씬은 오류로 읽지 않는다(옛 GUID 를 말없이 버리면 그 엔티티가 무엇을 가리켰는지 모른다). */
             static constexpr const utf8* kRemovedPrefabGUID = "prefabGUID";
-            // 셀 하나는 좌표 둘과 엔티티 수다.
-            static constexpr uint32 kMinBytesPerCell = 2u * sizeof( int32 ) + sizeof( uint32 );
+            // 셀 하나는 좌표 둘과 레이어 수 · 엔티티 수다.
+            static constexpr uint32 kMinBytesPerCell = 2u * sizeof( int32 ) + 2u * sizeof( uint32 );
+            /** @brief 인스턴스 멤버의 이름에서 앵커 이름과 내부 이름을 가르는 글자입니다. 네트워크 씬 번호가 이름의 해시라(`NetObjectTable`) 멤버 이름은 인스턴스마다 달라야 한다. */
+            static constexpr const utf8* kInstanceNameSeparator = "/";
+
+            /** @brief 씬 파일의 상속 규칙입니다. 엔티티는 파일 id 가 열쇠이고, `<GameObject>` · `<PrefabOverrides>` 는 자식이 적으면 통째로 바뀐다(컴포넌트 목록의 열쇠가 칸 값이 아니다 — `DataInheritance.md`). */
+            static DataInheritanceSchema makeInheritanceSchema()
+            {
+                DataInheritanceSchema schema{ kRoot };
+                schema._listKeptAttribute.emplace_back( "formatVersion" );
+                DataInheritanceSchema settings = DataInheritanceSchema::makeFromType( *SceneSettings::StaticType() );
+                settings._name                 = SceneSettings::kElementName;
+                schema._listField.push_back( std::move( settings ) );
+                DataInheritanceSchema entities{ kEntities };
+                entities._keyAttribute = "id";
+                schema._listField.push_back( std::move( entities ) );
+                return schema;
+            }
+
+            /** @brief 글 목록을 씁니다(수, 글마다). */
+            static void writeTextList( Archive& arch, const vector<string>& listText )
+            {
+                arch << static_cast<uint32>( listText.size() );
+                for ( const string& text : listText )
+                {
+                    arch << text;
+                }
+            }
+
+            /** @brief `writeTextList` 의 짝입니다. 파일이 말한 개수가 남은 바이트에 들어가지 않으면 false 입니다. */
+            [[nodiscard]] static bool readTextList( Archive& arch, vector<string>& outListText )
+            {
+                uint32 count{ 0 };
+                if ( arch.readCount( sizeof( uint32 ), count ) == false )
+                    return false;
+                outListText.resize( count );
+                for ( string& text : outListText )
+                {
+                    arch >> text;
+                }
+                return arch.isError() == false;
+            }
+
+            /** @brief 레이어 칸(`Winter,Night`)을 정렬한 이름 목록으로 읽습니다. */
+            static void parseDataLayers( string_view text, vector<string>& outListLayer )
+            {
+                outListLayer.clear();
+                StringSplitOptions options{};
+                options._bTrim      = true;
+                options._bDropEmpty = true;
+                for ( const string_view name : StringUtil::split( text, ",", options ) )
+                {
+                    outListLayer.emplace_back( name );
+                }
+                VectorUtil::sortUnique( outListLayer );
+            }
+
+            /** @brief 레이어 이름 목록을 칸 글로 씁니다. */
+            static string joinDataLayers( const vector<string>& listLayer )
+            {
+                string text;
+                for ( const string& name : listLayer )
+                {
+                    if ( text.empty() == false )
+                        text += ',';
+                    text += name;
+                }
+                return text;
+            }
+
+            /** @brief 엔티티가 쓰는 레이어를 씬이 모두 선언했는지 봅니다 — 이름을 잘못 적으면 그 엔티티가 영영 오르지 않는다. 없으면 오류를 남기고 false 입니다. */
+            [[nodiscard]] static bool checkDataLayersDeclared( const SceneDocument& doc, string_view absPath )
+            {
+                for ( const SceneDocument::SceneObjectNode& node : doc._listSceneObjectNode )
+                {
+                    for ( const string& layer : node._listDataLayer )
+                    {
+                        if ( doc._sceneSettings.findDataLayer( layer ) != nullptr )
+                            continue;
+                        SW_LOG_ERROR_ID( "SceneDocument.DataLayerNotDeclared", "Entity '%#' is on data layer '%#' that <%#> does not declare in %# - the scene is not loaded", node._name, layer, SceneSettings::kElementName, absPath );
+                        return false;
+                    }
+                }
+                return true;
+            }
 
             /** @brief 엔티티 목록을 씁니다(수, 엔티티마다 필드). */
             static void writeEntities( Archive& arch, const vector<SceneDocument::SceneObjectNode>& listNode )
@@ -53,6 +140,10 @@ namespace sw
                     arch << entity._embeddedStateBytes;
                     arch << entity._fileID;
                     arch << entity._prefabOverrideXML;
+                    arch << entity._idScope;
+                    arch << entity._instanceAnchorFileID;
+                    writeTextList( arch, entity._listDataLayer );
+                    writeTextList( arch, entity._listInstanceOverrideXML );
                 }
             }
 
@@ -74,9 +165,10 @@ namespace sw
                 for ( uint32 entityIndex = 0; entityIndex < entityCount; ++entityIndex )
                 {
                     SceneDocument::SceneObjectNode node{};
-                    arch >> node._name >> node._prefab >> node._embeddedXML >> node._embeddedStateBytes >> node._fileID >> node._prefabOverrideXML;
+                    arch >> node._name >> node._prefab >> node._embeddedXML >> node._embeddedStateBytes >> node._fileID >> node._prefabOverrideXML >> node._idScope >> node._instanceAnchorFileID;
+                    const bool bListsRead = readTextList( arch, node._listDataLayer ) && readTextList( arch, node._listInstanceOverrideXML );
                     // 잘린 파일에서 남은 횟수를 마저 도는 것은 빈 노드를 쌓는 일일 뿐이다.
-                    if ( arch.isError() )
+                    if ( bListsRead == false || arch.isError() )
                     {
                         SW_LOG_ERROR_ID( "SceneDocument.BinarySceneStreamCorrupted", "Binary scene stream corrupted in %#", absPath );
                         return false;
@@ -128,9 +220,11 @@ namespace sw
                     SW_LOG_ERROR_ID( "SceneDocument.EntityNoValidId", "Entity '%#' is not readable in %# - the scene is not loaded", fields._name, absPath );
                     return false;
                 }
-                outNode._fileID = fields._id;
-                outNode._name   = std::move( fields._name );
-                outNode._prefab = std::move( fields._prefab );
+                outNode._fileID        = fields._id;
+                outNode._name          = std::move( fields._name );
+                outNode._prefab        = std::move( fields._prefab );
+                outNode._sceneInstance = std::move( fields._scene );
+                parseDataLayers( fields._layers, outNode._listDataLayer );
 
                 const XMLNode overrideNode = sceneObjectNode.findChild( PrefabOverrides::kRootName );
                 if ( overrideNode.isValid() )
@@ -144,6 +238,18 @@ namespace sw
 
                 if ( outNode._name.empty() )
                     outNode._name = kDefaultEntity;
+                if ( outNode._sceneInstance.empty() == false && ( outNode._prefab.empty() == false || outNode._embeddedXML.empty() ) )
+                {
+                    SW_LOG_ERROR_ID( "SceneDocument.InstanceAnchorShape", "Scene instance '%#' in %# must hold a <%#> with its transform and no prefab - the scene is not loaded", outNode._name, absPath, kGameObject );
+                    return false;
+                }
+                // 상태가 실린 엔티티의 덮어쓰기는 씬 상속의 자식이 적은 차이다 — 인스턴스 멤버와 같이 상태 위에 얹는다.
+                const bool bStateDelta = outNode._sceneInstance.empty() && outNode._prefab.empty() && outNode._embeddedXML.empty() == false && outNode._prefabOverrideXML.empty() == false;
+                if ( bStateDelta )
+                {
+                    outNode._listInstanceOverrideXML.push_back( std::move( outNode._prefabOverrideXML ) );
+                    outNode._prefabOverrideXML.clear();
+                }
                 return true;
             }
         };
@@ -153,8 +259,15 @@ namespace sw
 namespace sw
 {
     SW_ASSET_TYPE( Scene, SceneDocument::kAssetType );
+    SW_DATA_INHERITANCE_SCHEMA( Scene, &SceneDocumentInternal::makeInheritanceSchema );
 
     bool SceneDocument::loadXML( const AssetID& assetID )
+    {
+        vector<string> listChain;
+        return loadXMLChained( assetID, listChain );
+    }
+
+    bool SceneDocument::loadXMLChained( const AssetID& assetID, vector<string>& inoutListChain )
     {
         *this       = {};
         _sourcePath = assetID.str();
@@ -162,7 +275,7 @@ namespace sw
         XMLDocument    doc;
         string         absPath;
         const bool     bRead = doc.loadResource( assetID, &absPath );
-        return readXMLSource( doc, bRead, absPath, loadScope );
+        return readXMLSource( doc, bRead, absPath, loadScope, inoutListChain );
     }
 
     bool SceneDocument::loadXMLFromDiskFile( string_view diskPath )
@@ -173,10 +286,11 @@ namespace sw
         AssetLoadScope loadScope( "Scene", diskPath );
         XMLDocument    doc;
         const bool     bRead = doc.loadFile( diskPath );
-        return readXMLSource( doc, bRead, string( diskPath ), loadScope );
+        vector<string> listChain;
+        return readXMLSource( doc, bRead, string( diskPath ), loadScope, listChain );
     }
 
-    bool SceneDocument::readXMLSource( XMLDocument& doc, const bool bRead, const string& absPath, AssetLoadScope& loadScope )
+    bool SceneDocument::readXMLSource( XMLDocument& doc, const bool bRead, const string& absPath, AssetLoadScope& loadScope, vector<string>& inoutListChain )
     {
         if ( bRead == false )
         {
@@ -194,6 +308,22 @@ namespace sw
         {
             SW_LOG_ERROR_ID( "SceneDocument.MissingRootScene", "Missing root <Scene>: %#", absPath );
             return false;
+        }
+
+        // 씬 상속: 부모 위에 차이를 얹어 한 벌로 펼친 뒤 읽는다(Godot 씬 상속 · 유니티 Prefab Variant 와 같은 모델). 부모는 `AssetIO` 로 읽으므로 쿠킹 입력이 된다.
+        // 카탈로그 표에 없는 루트라 `parseData` 는 이 칸을 그대로 둔다("자기 입구가 펼친다").
+        const string basePath{ root.getAttributeText( DataInheritance::kBaseAttribute ) };
+        if ( basePath.empty() == false )
+        {
+            string flatText;
+            if ( DataInheritance::flattenFromResources( root.toString(), absPath, SceneDocumentInternal::makeInheritanceSchema(), flatText ) == false || doc.parse( flatText ) == false )
+            {
+                SW_LOG_ERROR_ID( "SceneDocument.BaseSceneNotFlattened", "Scene '%#' could not be merged onto its base '%#' - the scene is not loaded", absPath, basePath );
+                *this = {};
+                return false;
+            }
+            root           = doc.getRoot( SceneDocumentInternal::kRoot );
+            _baseScenePath = basePath;
         }
 
         if ( AssetXMLFormat::isCurrentXMLVersion( kAssetType, root ) == false )
@@ -233,6 +363,12 @@ namespace sw
             }
         }
 
+        if ( expandSceneInstances( absPath, inoutListChain ) == false || SceneDocumentInternal::checkDataLayersDeclared( *this, absPath ) == false )
+        {
+            *this = {};
+            return false;
+        }
+
         _bValid = true;
         loadScope.setSucceeded();
         SW_LOG_INFO_ID( "SceneDocument.LoadedEntities", "Loaded '%#' (%# entities) from %#",
@@ -240,7 +376,188 @@ namespace sw
         return true;
     }
 
+    uint64 SceneDocument::computeInstanceIDScope( const uint64 anchorFileID )
+    {
+        // 값을 고루 퍼뜨리는 고정 섞기(splitmix64) — 작은 파일 id 와 겹치지 않게 넓은 값을 만든다. 저장본의 id 가 이 값에 달려 있으므로 바꾸면 안 된다.
+        uint64 mixed = anchorFileID + 0x9E3779B97F4A7C15ull;
+        mixed        = ( mixed ^ ( mixed >> 30 ) ) * 0xBF58476D1CE4E5B9ull;
+        mixed        = ( mixed ^ ( mixed >> 27 ) ) * 0x94D049BB133111EBull;
+        mixed        = mixed ^ ( mixed >> 31 );
+        return mixed != 0 ? mixed : 1;
+    }
+
+    bool SceneDocument::splitInstancePartPath( string_view partPath, uint64& outAnchorFileID, string_view& outRelativePath )
+    {
+        const size_t separator = partPath.find( '/' );
+        if ( separator == string_view::npos )
+            return false;
+        outAnchorFileID = 0;
+        for ( const char digit : partPath.substr( 0, separator ) )
+        {
+            if ( digit < '0' || digit > '9' )
+                return false;
+            outAnchorFileID = outAnchorFileID * 10u + static_cast<uint64>( digit - '0' );
+        }
+        outRelativePath = partPath.substr( separator + 1 );
+        return outAnchorFileID != 0 && outRelativePath.empty() == false;
+    }
+
+    bool SceneDocument::expandSceneInstances( string_view absPath, vector<string>& inoutListChain )
+    {
+        bool bHasAnchor = false;
+        for ( const SceneObjectNode& node : _listSceneObjectNode )
+        {
+            bHasAnchor = bHasAnchor || node._sceneInstance.empty() == false;
+        }
+        if ( bHasAnchor == false )
+            return true;
+
+        // 자기 포함은 사슬로 잡는다. 디스크 입구로 연 맨 위 씬은 경로 모양이 달라 한 겹 더 돈 뒤에 잡힌다.
+        inoutListChain.push_back( FileUtil::normalizePath( _sourcePath ) );
+        if ( inoutListChain.size() > DataInheritance::getMaxDepth() )
+        {
+            SW_LOG_ERROR_ID( "SceneDocument.InstanceTooDeep", "Scene instances in %# nest deeper than %# levels - the scene is not loaded", absPath, DataInheritance::getMaxDepth() );
+            return false;
+        }
+
+        vector<SceneObjectNode> listExpanded;
+        listExpanded.reserve( _listSceneObjectNode.size() );
+        vector<PrefabPartOverride> listPart;
+        for ( const SceneObjectNode& anchor : _listSceneObjectNode )
+        {
+            listExpanded.push_back( anchor );
+            if ( anchor._sceneInstance.empty() )
+                continue;
+
+            const string instancePath = FileUtil::normalizePath( anchor._sceneInstance );
+            for ( const string& chainPath : inoutListChain )
+            {
+                if ( chainPath != instancePath )
+                    continue;
+                SW_LOG_ERROR_ID( "SceneDocument.InstanceCycle", "Scene instance '%#' in %# includes '%#', which already includes this scene - the scene is not loaded", anchor._name, absPath, anchor._sceneInstance );
+                return false;
+            }
+            SceneDocument inner{};
+            if ( inner.loadXMLChained( AssetID{ anchor._sceneInstance }, inoutListChain ) == false )
+            {
+                SW_LOG_ERROR_ID( "SceneDocument.InstanceNotLoaded", "Scene instance '%#' in %# could not load '%#' - the scene is not loaded", anchor._name, absPath, anchor._sceneInstance );
+                return false;
+            }
+            if ( PrefabOverrides::collectPartOverrides( anchor._prefabOverrideXML, listPart ) == false )
+                return false;
+
+            // 레이어 이름은 전역 집합이다. 같은 이름을 바깥이 선언했으면 바깥의 처음 상태가 이긴다.
+            for ( const SceneDataLayerDef& layer : inner._sceneSettings._listDataLayer )
+            {
+                if ( _sceneSettings.findDataLayer( layer._name ) == nullptr )
+                    _sceneSettings._listDataLayer.push_back( layer );
+            }
+
+            const uint64  scope = computeInstanceIDScope( anchor._fileID );
+            vector<uint8> listPartUsed( listPart.size(), SW_FALSE );
+            for ( SceneObjectNode& member : inner._listSceneObjectNode )
+            {
+                // 내부 문서의 평평한 id · 범위에 이 앵커의 범위를 XOR 한다 — 글 상태의 내부 id 가 그대로 이 문서의 평평한 id 로 옮겨 간다.
+                const string partPath        = member._instancePartPath.empty() ? sw::to_string( member._fileID ) : member._instancePartPath;
+                member._instanceAnchorFileID = member._instanceAnchorFileID == 0 ? anchor._fileID : ( member._instanceAnchorFileID ^ scope );
+                member._fileID ^= scope;
+                member._idScope ^= scope;
+                member._name             = anchor._name + SceneDocumentInternal::kInstanceNameSeparator + member._name;
+                member._instancePartPath = sw::to_string( anchor._fileID ) + "/" + partPath;
+                member._instanceTopOverrideXML.clear();
+                for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
+                {
+                    if ( listPart[partIndex]._partPath != partPath )
+                        continue;
+                    listPartUsed[partIndex]        = SW_TRUE;
+                    member._instanceTopOverrideXML = listPart[partIndex]._overrideXML;
+                    member._listInstanceOverrideXML.push_back( listPart[partIndex]._overrideXML );
+                }
+                member._listDataLayer.insert( member._listDataLayer.end(), anchor._listDataLayer.begin(), anchor._listDataLayer.end() );
+                VectorUtil::sortUnique( member._listDataLayer );
+                listExpanded.push_back( std::move( member ) );
+            }
+            // 프리팹에서 사라진 대상의 덮어쓴 값과 같다 — 내부 씬을 고쳤다고 바깥 씬이 읽히지 않으면 안 된다. 경고하고 다음 저장에서 빠진다.
+            for ( size_t partIndex = 0; partIndex < listPart.size(); ++partIndex )
+            {
+                if ( listPartUsed[partIndex] == SW_FALSE )
+                    SW_LOG_WARNING_ID( "SceneDocument.InstancePartGone", "Scene instance '%#' overrides entity '%#' that '%#' no longer has - the override is dropped", anchor._name, listPart[partIndex]._partPath, anchor._sceneInstance );
+            }
+        }
+        inoutListChain.pop_back();
+
+        unordered_set<uint64> uniqueFileID;
+        uniqueFileID.reserve( listExpanded.size() );
+        for ( const SceneObjectNode& node : listExpanded )
+        {
+            if ( node._fileID == 0 || uniqueFileID.insert( node._fileID ).second == false )
+            {
+                SW_LOG_ERROR_ID( "SceneDocument.InstanceIDCollision", "Entity '%#' in %# has the file id %#, which is zero or already taken - the scene is not loaded", node._name, absPath, node._fileID );
+                return false;
+            }
+        }
+        _listSceneObjectNode = std::move( listExpanded );
+        return true;
+    }
+
+    void SceneDocument::stripAuthoringInstanceData()
+    {
+        const auto stripNodes = []( vector<SceneObjectNode>& listNode )
+        {
+            for ( SceneObjectNode& node : listNode )
+            {
+                if ( node._sceneInstance.empty() == false )
+                    node._prefabOverrideXML.clear();
+                node._sceneInstance.clear();
+                node._instancePartPath.clear();
+                node._instanceTopOverrideXML.clear();
+            }
+        };
+        stripNodes( _listSceneObjectNode );
+        for ( StreamingCell& cell : _listStreamingCell )
+        {
+            stripNodes( cell._listSceneObjectNode );
+        }
+        _baseScenePath.clear();
+    }
+
     bool SceneDocument::saveXML( const AbsolutePath& absPath ) const
+    {
+        XMLDocument xmlDoc;
+        if ( buildXML( xmlDoc ) == false )
+            return false;
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveFile( absPath.str() ) == false )
+        {
+            SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
+            return false;
+        }
+        SW_LOG_INFO_ID( "SceneDocument.SavedEntities", "Saved '%#' (%# entities) -> %#",
+                        _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath.str() );
+        return true;
+    }
+
+    bool SceneDocument::saveXMLDelta( const AbsolutePath& absPath, const SceneDocument& parent ) const
+    {
+        XMLDocument fullDoc;
+        XMLDocument parentDoc;
+        if ( _baseScenePath.empty() || buildXML( fullDoc ) == false || parent.buildXML( parentDoc ) == false )
+            return false;
+        string deltaText;
+        if ( DataInheritance::makeDelta( fullDoc.getRoot().toString(), parentDoc.getRoot().toString(), SceneDocumentInternal::makeInheritanceSchema(), _baseScenePath, deltaText ) == false )
+        {
+            SW_LOG_ERROR_ID( "SceneDocument.DeltaNotMade", "Scene '%#' could not be written as a difference from '%#' - it is not saved", _name, _baseScenePath );
+            return false;
+        }
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeTextFile( absPath.str(), deltaText ) == false )
+        {
+            SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
+            return false;
+        }
+        SW_LOG_INFO_ID( "SceneDocument.SavedDelta", "Saved '%#' as a difference from '%#' -> %#", _name, _baseScenePath, absPath.str() );
+        return true;
+    }
+
+    bool SceneDocument::buildXML( XMLDocument& xmlDoc ) const
     {
         // 셀로 나눈 문서는 쿠킹본이다. XML 에는 셀이 없으므로 쓰면 셀의 엔티티가 사라진다.
         if ( _listStreamingCell.empty() == false )
@@ -253,8 +570,7 @@ namespace sw
         if ( _sceneSettings.validate( _name ) == false )
             return false;
 
-        XMLDocument xmlDoc;
-        XMLNode     root = xmlDoc.appendRoot( SceneDocumentInternal::kRoot );
+        XMLNode root = xmlDoc.appendRoot( SceneDocumentInternal::kRoot );
         root.appendAttribute( "formatVersion", static_cast<uint32>( kAssetType._formatVersion ) );
         XMLFields::writeFields( root, SceneRootFields{ _name } );
         {
@@ -277,8 +593,14 @@ namespace sw
                 SW_LOG_ERROR_ID( "SceneDocument.EntityNoIdScene", "Entity '%#' has no id - scene '%#' is not saved", entity._name, _name );
                 return false;
             }
+            // 펼친 멤버는 파일의 엔티티가 아니다 — 앵커가 다시 펼친다. 펼친 문서를 그대로 쓰면 평평한 id 의 사본이 파일에 굳는다(`Scene::serializeToDocument` 는 앵커로 되돌려 쓴다).
+            if ( entity._instanceAnchorFileID != 0 )
+            {
+                SW_LOG_ERROR_ID( "SceneDocument.ExpandedMemberNotSaved", "Entity '%#' is an expanded scene instance member - scene '%#' is not saved", entity._name, _name );
+                return false;
+            }
             XMLNode sceneObjectNode = entities.appendChild( SceneDocumentInternal::kEntity );
-            XMLFields::writeFields( sceneObjectNode, SceneEntityFields{ entity._fileID, entity._name, entity._prefab } );
+            XMLFields::writeFields( sceneObjectNode, SceneEntityFields{ entity._fileID, entity._name, entity._prefab, entity._sceneInstance, SceneDocumentInternal::joinDataLayers( entity._listDataLayer ) } );
             if ( entity._prefabOverrideXML.empty() == false )
             {
                 XMLDocument overrideDoc;
@@ -299,13 +621,6 @@ namespace sw
             }
         }
 
-        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || xmlDoc.saveFile( absPath.str() ) == false )
-        {
-            SW_LOG_ERROR_ID( "SceneDocument.FailedWrite", "Failed to write: %#", absPath.str() );
-            return false;
-        }
-        SW_LOG_INFO_ID( "SceneDocument.SavedEntities", "Saved '%#' (%# entities) -> %#",
-                        _name, static_cast<uint32>( _listSceneObjectNode.size() ), absPath.str() );
         return true;
     }
 
@@ -376,6 +691,12 @@ namespace sw
         for ( StreamingCell& cell : _listStreamingCell )
         {
             arch >> cell._cell._x >> cell._cell._z;
+            if ( SceneDocumentInternal::readTextList( arch, cell._listDataLayer ) == false )
+            {
+                SW_LOG_ERROR_ID( "SceneDocument.BinarySceneStreamCorrupted", "Binary scene stream corrupted in %#", absPath );
+                *this = {};
+                return false;
+            }
             if ( SceneDocumentInternal::readEntities( arch, cell._listSceneObjectNode, absPath ) == false )
             {
                 *this = {};
@@ -422,6 +743,7 @@ namespace sw
         for ( const StreamingCell& cell : _listStreamingCell )
         {
             arch << cell._cell._x << cell._cell._z;
+            SceneDocumentInternal::writeTextList( arch, cell._listDataLayer );
             SceneDocumentInternal::writeEntities( arch, cell._listSceneObjectNode );
         }
 

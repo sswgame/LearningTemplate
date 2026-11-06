@@ -204,6 +204,7 @@ namespace sw::editor
         const string_view pfbPath = ws.findPrefabPath( pObj );
         if ( pfbPath.empty() == false )
             drawPrefabLinkSection( pObj, AssetID{ pfbPath } );
+        drawSceneAssemblySection( pObj );
 
         _propertyGrid.drawSearchBarWithOptions( SW_LOCKEY( "EditorInspector", "SearchTooltip" ) );
         ImGui::Spacing();
@@ -372,6 +373,66 @@ namespace sw::editor
                 SW_LOG_WARNING_ID( "InspectorPanel.CouldNotAddComponent", "Could not add the component to '%#'", pObj->getName().c_str() );
             ImGui::EndPopup();
         }
+    }
+
+    void InspectorPanel::drawSceneAssemblySection( GameObject* pObj )
+    {
+        Scene* pScene = editor::getActiveScene();
+        if ( pScene == nullptr )
+            return;
+        const uint64                     objectID         = pObj->getObjectID();
+        const string_view                instancePath     = pScene->getSceneInstancePath( objectID );
+        const uint64                     anchorObjectID   = pScene->findInstanceAnchorObjectID( objectID );
+        const bool                       bInstanceRelated = instancePath.empty() == false || anchorObjectID != 0;
+        const vector<SceneDataLayerDef>& listLayer        = pScene->getSceneSettings()._listDataLayer;
+        if ( bInstanceRelated == false && listLayer.empty() )
+            return;
+
+        if ( bInstanceRelated )
+        {
+            EditorWidgets::drawChip( SW_LOCKEY( "EdWidget", "SceneInstance" ), SW_THEMECOLOR( "Base", "Accent" ) );
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "SceneInstance" ) );
+            ImGui::SameLine();
+            const GameObject* pAnchor = anchorObjectID != 0 && pObj->getManager() != nullptr ? pObj->getManager()->findGameObjectByID( anchorObjectID ) : nullptr;
+            if ( pAnchor != nullptr )
+                ImGui::TextDisabled( "%s", pAnchor->getName().c_str() );
+            else
+                ImGui::TextDisabled( "%.*s", static_cast<int32>( instancePath.size() ), instancePath.data() );
+            // 인스턴스의 차이는 앵커의 `<Part>` 로 저장된다 — 내부 씬 파일은 그대로다.
+            if ( ImGui::Button( SW_LOCKEY( "EdText", "ApplyInstanceOverrides" ) ) )
+                (void)editor::getSubsystem<SceneManager>().saveActiveScene(); // 실패는 저장이 알린다
+            EditorWidgets::drawTooltip( SW_LOCKEY( "EditorInspector", "ApplyInstanceOverrides" ) );
+        }
+
+        // 멤버의 레이어는 내부 씬의 엔티티와 앵커가 정한다 — 여기서 고치지 않는다.
+        if ( listLayer.empty() == false && anchorObjectID == 0 )
+        {
+            const vector<string>* pEntityLayer = pScene->findEntityDataLayers( objectID );
+            vector<string>        listEntityLayer;
+            if ( pEntityLayer != nullptr )
+                listEntityLayer = *pEntityLayer;
+            ImGui::TextDisabled( "%s", SW_LOCKEY( "EdText", "DataLayers" ) );
+            for ( const SceneDataLayerDef& layer : listLayer )
+            {
+                ImGui::PushID( layer._name.c_str() );
+                vector<string> listOtherLayer;
+                for ( const string& entityLayer : listEntityLayer )
+                {
+                    if ( entityLayer != layer._name )
+                        listOtherLayer.push_back( entityLayer );
+                }
+                bool bOnLayer = listOtherLayer.size() != listEntityLayer.size();
+                if ( ImGui::Checkbox( layer._name.c_str(), &bOnLayer ) )
+                {
+                    if ( bOnLayer )
+                        listOtherLayer.push_back( layer._name );
+                    listEntityLayer = listOtherLayer;
+                    (void)pScene->setEntityDataLayers( objectID, listEntityLayer ); // 멤버는 위에서 걸렀다
+                }
+                ImGui::PopID();
+            }
+        }
+        ImGui::Separator();
     }
 
     void InspectorPanel::drawPrefabLinkSection( GameObject* pObj, const AssetID& assetID )

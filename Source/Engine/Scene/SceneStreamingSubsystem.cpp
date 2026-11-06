@@ -8,6 +8,7 @@
 
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Scene/Scene.h"
+#include "Engine/Scene/SceneDataLayerSubsystem.h"
 
 namespace sw
 {
@@ -44,8 +45,13 @@ namespace sw
         _mapCellIndex.reserve( listCell.size() );
         for ( const SceneDocument::StreamingCell& cell : listCell )
         {
-            const bool bInserted = _mapCellIndex.emplace( makeCellKey( cell._cell ), static_cast<uint32>( _listCell.size() ) ).second;
-            if ( bInserted == false )
+            vector<uint32>& listSlotIndex = _mapCellIndex[makeCellKey( cell._cell )];
+            bool            bRepeated     = false;
+            for ( const uint32 slotIndex : listSlotIndex )
+            {
+                bRepeated = bRepeated || _listCell[slotIndex]._listDataLayer == cell._listDataLayer;
+            }
+            if ( bRepeated )
             {
                 SW_LOG_ERROR_ID( "SceneStreaming.SceneListsCellTwice", "Scene '%#' lists cell (%#, %#) twice - its cells are not loaded", scene.getName(), cell._cell._x, cell._cell._z );
                 _listCell.clear();
@@ -53,8 +59,10 @@ namespace sw
                 return false;
             }
             CellSlot slot{};
-            slot._cell     = cell._cell;
-            slot._listNode = cell._listSceneObjectNode;
+            slot._cell          = cell._cell;
+            slot._listNode      = cell._listSceneObjectNode;
+            slot._listDataLayer = cell._listDataLayer;
+            listSlotIndex.push_back( static_cast<uint32>( _listCell.size() ) );
             _listCell.push_back( std::move( slot ) );
         }
         _settings = settings;
@@ -117,8 +125,16 @@ namespace sw
 
     bool SceneStreamingSubsystem::isCellLoaded( const StreamingCellCoord& cell ) const
     {
+        // 좌표의 조각 가운데 하나라도 올라 있으면 올라 있다.
         const auto indexIt = _mapCellIndex.find( makeCellKey( cell ) );
-        return indexIt != _mapCellIndex.end() && _listCell[indexIt->second]._bLoaded;
+        if ( indexIt == _mapCellIndex.end() )
+            return false;
+        for ( const uint32 slotIndex : indexIt->second )
+        {
+            if ( _listCell[slotIndex]._bLoaded )
+                return true;
+        }
+        return false;
     }
 
     void SceneStreamingSubsystem::update( float32 deltaTime )
@@ -132,7 +148,7 @@ namespace sw
         const float32 unloadRadiusSquared = unloadRadius * unloadRadius;
         for ( CellSlot& slot : _listCell )
         {
-            if ( slot._bLoaded && computeNearestSourceDistanceSquared( slot._cell ) > unloadRadiusSquared )
+            if ( slot._bLoaded && ( computeNearestSourceDistanceSquared( slot._cell ) > unloadRadiusSquared || areSlotLayersActive( slot ) == false ) )
                 unloadCell( slot );
         }
 
@@ -146,11 +162,14 @@ namespace sw
                 const auto indexIt = _mapCellIndex.find( makeCellKey( cell ) );
                 if ( indexIt == _mapCellIndex.end() )
                     continue; // 엔티티가 없는 셀이다
-                const CellSlot& slot     = _listCell[indexIt->second];
-                const bool      bSettled = slot._bLoaded || slot._bFailed; // 이미 올라 있거나 짓지 못한 셀이다
-                if ( bSettled )
-                    continue;
-                _listScratchLoad.push_back( indexIt->second ); // 원점 반경이 겹치면 같은 셀이 여럿 들어온다 — 아래에서 한 번에 거른다
+                for ( const uint32 slotIndex : indexIt->second )
+                {
+                    const CellSlot& slot     = _listCell[slotIndex];
+                    const bool      bSettled = slot._bLoaded || slot._bFailed || areSlotLayersActive( slot ) == false; // 이미 올라 있거나 짓지 못한 셀이거나 레이어가 꺼졌다
+                    if ( bSettled )
+                        continue;
+                    _listScratchLoad.push_back( slotIndex ); // 원점 반경이 겹치면 같은 셀이 여럿 들어온다 — 아래에서 한 번에 거른다
+                }
             }
         }
         VectorUtil::sortUnique( _listScratchLoad ); // 모양이 `contains` + `push_back` 이면 셀 수의 제곱이 든다
@@ -193,6 +212,11 @@ namespace sw
             nearest = MathUtil::min( nearest, _grid.computeCellDistanceSquared( cell, source ) );
         }
         return nearest;
+    }
+
+    bool SceneStreamingSubsystem::areSlotLayersActive( const CellSlot& slot ) const
+    {
+        return slot._listDataLayer.empty() || _pScene->getObjectManager()->getSubsystem<SceneDataLayerSubsystem>().areLayersActive( slot._listDataLayer );
     }
 
     void SceneStreamingSubsystem::loadCell( CellSlot& slot )

@@ -14,6 +14,7 @@
 
 #include "Engine/Object/GameObject/Serialization/ObjectStateSerializer.h"
 #include "Engine/Object/Prefab/PrefabInstanceRegistry.h"
+#include "Engine/Scene/Scene.h"
 
 namespace sw
 {
@@ -64,6 +65,8 @@ namespace sw::editor
         };
 
         vector<ObjectSnapshot> _listSnapshot;
+        /** @brief 오브젝트 상태에 없는 씬 조립 기록(인스턴스 · 데이터 레이어 · 상속)입니다. 씬을 다시 만들어도 저장에서 풀리지 않게 함께 되돌립니다. */
+        Scene::AssemblySnapshot _sceneAssembly;
         /** @brief Keep Simulation Changes 로 저장한 오브젝트의 플레이 중 상태입니다. Stop 이 씬을 되돌린 뒤 편집 씬에 적용합니다(`keepObjectState`). */
         vector<ObjectSnapshot> _listKept;
         /**

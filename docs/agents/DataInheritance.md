@@ -166,6 +166,40 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 
 읽으면 `getStateData` 와 중첩 인스턴스가 부모를 합친 값이다. 스폰 · 씬 복원 · 쿠킹은 변형인지 모른다. 쿠킹본(`.prefab.bin`)에는 합친 값만 있다. `<Part path="0">` 로 물려받은 중첩 부품을 덮어쓰고 `<PrefabInstance>` 로 부품을 더한다. 물려받은 부품을 지울 수는 없다(유니티와 같다). 에디터의 Apply 는 변형을 변형으로 저장한다.
 
+## 씬 조립
+
+씬은 프리팹과 같은 모델을 쓰고, 런타임은 펼친 엔티티 목록 하나만 본다. 구현: `SceneDocument::expandSceneInstances` · `Scene::instantiateNodes` · `SceneDataLayerSubsystem`.
+
+```xml
+<Scene formatVersion="2" name="Town">
+	<SceneSettings …>
+		<_listDataLayer><SceneDataLayerDef _name="Winter" _bInitiallyActive="false" /></_listDataLayer>
+	</SceneSettings>
+	<entities>
+		<entity id="5" name="House" scene="game/x/maps/house.scene.xml">
+			<PrefabOverrides><Part path="1"><PrefabOverrides>…</PrefabOverrides></Part></PrefabOverrides>
+			<GameObject …>…앵커의 자리…</GameObject>
+		</entity>
+		<entity id="6" name="Snow" layers="Winter">…</entity>
+	</entities>
+</Scene>
+```
+
+| 적는 것 | 뜻 | 오류 |
+|---|---|---|
+| 엔티티 `scene="<씬>"` | 앵커다. 그 씬의 엔티티가 앵커 아래에 펼쳐진다 | 없는 씬, 자기 포함, 상태 없는 앵커, 프리팹과 함께 적음 |
+| 앵커의 `<Part path="내부 id">` | 멤버를 덮어쓴다. 중첩은 `7/3`. 프리팹의 `<Part>` 와 같은 형식이다 | 없는 대상은 경고하고 버린다(내부 씬을 고쳤다고 바깥이 안 읽히면 안 된다) |
+| 루트 `_base="<씬>"` | 씬 상속. 엔티티 id 가 열쇠이고 `_op` · `_before` · `_after` 는 위 표와 같다. 상태가 실린 엔티티에 `<PrefabOverrides>` 를 적으면 부모 상태 위에 얹는다 | 파일 상속과 같다 |
+| 엔티티 `layers="A,B"` | 모두 켜졌을 때 오른다. 인스턴스 멤버는 앵커의 레이어를 더해 가진다 | 선언하지 않은 이름 |
+
+- **id:** 멤버의 파일 id 는 내부 id ^ `computeInstanceIDScope( 앵커 id )` 다. 글 상태의 참조도 같은 XOR 로 옮긴다(`ObjectLoadContext::_savedIDScope`). 쿠킹된 바이너리 상태는 이미 평평한 id 다. 앵커 id 와 내부 id 에서만 정해지므로 내부 씬을 고쳐도 `SceneObjectReference` 가 끊기지 않는다.
+- **이름:** 멤버 이름은 `앵커/내부`다. 네트워크 씬 번호가 이름의 해시라(`NetObjectTable`) 인스턴스마다 달라야 한다. 그래서 내부 씬의 코드가 이름으로 찾는 일은 멤버에서 맞지 않는다.
+- **쿠킹:** 펼친 목록을 그대로 굽고 저작 칸을 비운다(`stripAuthoringInstanceData`). 내부 씬을 `AssetIO` 로 읽으므로 내부 씬이 바뀌면 바깥 씬의 쿠킹 키가 바뀐다. 끈 레이어까지 모두 지어 굽는다. 대상의 레이어가 가리키는 쪽의 레이어에 들어 있지 않으면 쿠킹 실패다(`SceneCooker.DataLayerCrossReference`). 셀은 좌표 + 레이어 집합이 하나다.
+- **저장:** 멤버는 엔티티로 적지 않고, 내부 씬을 임시로 지어 쓴 상태와의 차이를 앵커의 `<Part>` 로 적는다. 상속 씬은 부모를 지어 쓴 글과의 차이로 적는다(`saveXMLDelta`). 끈 레이어의 엔티티는 읽은 그대로 다시 적는다.
+- **지우기:** 멤버는 지울 수 없다. 프리팹 부품과 같다 — 지워도 다음 로드에 돌아온다.
+- **켜고 끄기:** `SceneDataLayerSubsystem::setLayerActive`, 개발 명령 `scene.layer <이름> on|off`, 에디터 Data Layers 창. 편집 중에 끄면 내리지 않고 숨기기만 한다. 시나리오: `game/empty/automation/datalayer`.
+- **판:** 없어도 되는 칸이라 씬 형식 판은 2 그대로이고 이미 있는 씬은 그대로 읽힌다. 쿠킹본(SCN1)만 판 6 으로 올랐다(다시 굽는다).
+
 ## 기본값을 쓰지 않는 저장
 
 저장은 부모(없으면 형식 기본값)와 같은 칸을 쓰지 않는다. 프리팹은 뺀 글을 다시 읽어 값이 같을 때만 쓰고, 다르면 모든 칸을 쓰며 경고한다(`PrefabAsset.DefaultOmitMismatch`).

@@ -984,6 +984,7 @@
 		<entry key="EdText.ApplyAllOverridesToTemplate"
 		       text="덮어쓴 값을 모두 원본에 적용"
 		       sourceHash="0ac9a68b36d0ec2c" />
+		<entry key="EdText.ApplyInstanceOverrides" text="덮어쓴 것을 씬에 저장" sourceHash="0f8bf553b15517ca" />
 		<entry key="EdText.ApplySize" text="크기 적용" sourceHash="dff204c036ea5130" />
 		<entry key="EdText.ApplyToOuterPrefab" text="바깥 프리팹에 적용" sourceHash="b8461f190701f9e7" />
 		<entry key="EdText.ApplyToPrefab" text="프리팹에 적용" sourceHash="fce34cf9d99f3b12" />
@@ -1012,6 +1013,7 @@
 		<entry key="EdText.CreateAction" text="액션 만들기" sourceHash="3000fa4bc98cb4dd" />
 		<entry key="EdText.CreateLayer" text="레이어 만들기" sourceHash="3d55a87e1548c268" />
 		<entry key="EdText.Curves" text="커브" sourceHash="1ed69c4ea2882825" />
+		<entry key="EdText.DataLayers" text="데이터 레이어" sourceHash="b47513221d8a31b9" />
 		<entry key="EdText.DataLayers" text="데이터 레이어" sourceHash="b47513221d8a31b9" />
 		<entry key="EdText.Del" text="삭제" sourceHash="e0a34419921b022a" />
 		<entry key="EdText.DeletePreset" text="프리셋 삭제" sourceHash="63a54251e7d0bd8d" />
@@ -1406,6 +1408,7 @@
 		<entry key="EdWidget.Resolution" text="해상도" sourceHash="f74160a9dc86ab8f" />
 		<entry key="EdWidget.RestartRequired" text="다시 시작 필요" sourceHash="3847bf768d4cbfad" />
 		<entry key="EdWidget.RightStick" text="오른쪽 스틱" sourceHash="2b11d6ec339b6ad9" />
+		<entry key="EdWidget.SceneInstance" text="씬 인스턴스" sourceHash="14c03ba06f91f6b6" />
 		<entry key="EdWidget.Shader" text="셰이더" sourceHash="31243d825582cde8" />
 		<entry key="EdWidget.Simulating" text="시뮬레이트 중" sourceHash="7ee10555e35ef898" />
 		<entry key="EdWidget.Sources" text="소스" sourceHash="91e3a47599412f51" />
@@ -1771,6 +1774,10 @@
 		<entry key="EditorContentBrowser.TypeFilter"
 		       text="특정 에셋 종류(텍스처, 씬, 프리팹, 사운드 등)별로 필터링합니다"
 		       sourceHash="1f723e598e12d46b" />
+		<entry key="EditorDataLayers.InitialTip" text="씬을 열 때 이 레이어를 켭니다. 씬과 함께 저장됩니다." sourceHash="51027ab35111ae58" />
+		<entry key="EditorDataLayers.NoActiveScene" text="활성 씬이 없습니다." sourceHash="554770b7cdf6d60a" />
+		<entry key="EditorDataLayers.NoLayers" text="활성 씬에 선언한 데이터 레이어가 없습니다. 월드 설정에서 더합니다." sourceHash="60b6836b67a68f37" />
+		<entry key="EditorDataLayers.ShownTip" text="이 레이어의 오브젝트를 보이거나 감춥니다. 편집 중에는 숨기기만 하고, 플레이 중에는 내립니다." sourceHash="45cac62deda41660" />
 		<entry key="EditorDataTable.AddKeyTip"
 		       text="왼쪽에 입력한 키로 문자열을 추가합니다. 테이블에 이미 있는 키는 무시합니다."
 		       sourceHash="e4ce1f6fbf06f1a3" />
@@ -2071,6 +2078,7 @@
 		<entry key="EditorInputMap.UnsavedChanges" text="* 저장하지 않은 변경" sourceHash="973e262de06494ae" />
 		<entry key="EditorInputMap.WaitingForInput" text="입력을 기다리는 중..." sourceHash="fbd1ecd3af100cc7" />
 		<entry key="EditorInspector.AddToFavorites" text="즐겨찾기에 추가" sourceHash="7b1bc15f29f533d4" />
+		<entry key="EditorInspector.ApplyInstanceOverrides" text="씬을 저장합니다. 인스턴스 멤버의 변경은 앵커에 차이로 적히고, 넣은 씬 파일은 그대로입니다" sourceHash="278f05d97077dbac" />
 		<entry key="EditorInspector.ApplyToPrefab"
 		       text="현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다"
 		       sourceHash="eea047cb60eefcdf" />
@@ -2115,6 +2123,7 @@
 		<entry key="EditorInspector.RevertToPrefab"
 		       text="프리팹 원본 파일의 내용으로 현재 오브젝트를 되돌립니다"
 		       sourceHash="964d25ac99ae2eeb" />
+		<entry key="EditorInspector.SceneInstance" text="다른 씬을 이 씬에 넣은 인스턴스의 일부입니다" sourceHash="87b11d52ec8cebbb" />
 		<entry key="EditorInspector.SearchAssetsHint" text="에셋 검색..." sourceHash="58e84ac00a3e31c8" />
 		<entry key="EditorInspector.SearchPropertiesHint" text="프로퍼티 검색..." sourceHash="fecffdbfe63170f0" />
 		<entry key="EditorInspector.SearchTooltip"

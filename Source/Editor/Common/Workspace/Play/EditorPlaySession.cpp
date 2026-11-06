@@ -51,6 +51,7 @@ namespace sw::editor
                 data._sceneGeneration = editor::getSubsystem<SceneManager>().getSceneGeneration();
                 data._sceneName       = pScene->getName();
                 data._sceneSourcePath = pScene->getSourcePath();
+                data._sceneAssembly   = pScene->captureAssembly();
 
                 GameObjectManager*  pObjects = pScene->getObjectManager();
                 vector<GameObject*> listAllObject;
@@ -182,6 +183,8 @@ namespace sw::editor
                 // 2. 기존 오브젝트의 상태를 복구하고 삭제된 오브젝트를 다시 만든다. 계층은 모두 읽은 뒤 한꺼번에 연결한다(아래 3).
                 ObjectStateBatch batch( ObjectIDSpace::Live );
                 restoreSnapshotObjects( data, pScene, *pObjects, batch );
+                if ( pScene != nullptr )
+                    pScene->restoreAssembly( std::move( data._sceneAssembly ) );
 
                 // 3. 계층을 다시 연결한다. 모두 읽은 뒤에 부모의 원래 id 로 연결해야 한다. 읽으면서 바로 연결하면, 플레이 중에 부모도 지워졌고 자식이
                 // 스냅샷에서 먼저 나올 때 부모가 아직 없어 루트로 남는다. 이름으로 찾으면 플레이 중에 이름을 바꾼 오브젝트(A 가 B 의

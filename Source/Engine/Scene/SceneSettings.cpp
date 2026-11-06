@@ -6,12 +6,33 @@
 
 namespace sw
 {
+    const SceneDataLayerDef* SceneSettings::findDataLayer( string_view name ) const
+    {
+        for ( const SceneDataLayerDef& layer : _listDataLayer )
+        {
+            if ( layer._name == name )
+                return &layer;
+        }
+        return nullptr;
+    }
+
     bool SceneSettings::validate( string_view sceneName ) const
     {
+        bool bValid = true;
+        for ( size_t layerIndex = 0; layerIndex < _listDataLayer.size(); ++layerIndex )
+        {
+            const string& name = _listDataLayer[layerIndex]._name;
+            // 쉼표는 엔티티의 `layers` 칸을 가른다 — 이름에 들면 읽을 때 다른 레이어가 된다.
+            const bool bBadName = name.empty() || name.find( ',' ) != string::npos;
+            if ( bBadName || findDataLayer( name ) != &_listDataLayer[layerIndex] )
+            {
+                SW_LOG_ERROR_ID( "SceneSettings.DataLayerNameInvalid", "Scene '%#' declares data layer '%#' with an empty, comma-separated or repeated name", sceneName, name );
+                bValid = false;
+            }
+        }
         if ( _bStreaming == false )
-            return true;
+            return bValid;
 
-        bool              bValid = true;
         StreamingCellGrid grid;
         if ( StreamingCellGrid::tryCreate( _cellGrid, grid ) == false )
         {

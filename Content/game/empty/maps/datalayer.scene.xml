@@ -1,0 +1,62 @@
+<Scene formatVersion="2" name="DataLayerShowcase">
+	<!-- 시나리오 automation/datalayer 의 무대 — 내부 씬을 앵커로 두 번 넣고(오른쪽은 Box 의 머티리얼을 덮어쓴다), Snow 는 Winter 레이어에 있어 처음에는 오르지 않는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+		<_listDataLayer>
+			<SceneDataLayerDef _name="Winter" _bInitiallyActive="false" />
+		</_listDataLayer>
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,6,-9" _localRotation="0.55,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="16,1,16" _attachOwner="None" _attachComponent="None" _meshID="Plane" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="12" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="HouseLeft" scene="game/empty/maps/datalayer_house.scene.xml">
+			<GameObject _schemaVersion="0" _name="HouseLeft" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-3,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="HouseRight" scene="game/empty/maps/datalayer_house.scene.xml">
+			<PrefabOverrides>
+				<Part path="1">
+					<PrefabOverrides>
+						<Override key="MeshComponent#0">
+							<MeshComponent _materialPath="game/empty/materials/renderstate/plain_red.material" />
+						</Override>
+					</PrefabOverrides>
+				</Part>
+			</PrefabOverrides>
+			<GameObject _schemaVersion="0" _name="HouseRight" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="3,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Snow" layers="Winter">
+			<GameObject _schemaVersion="0" _name="Snow" _bActive="true">
+				<_listComponent>
+					<MeshComponent _localPosition="0,1.25,0" _localRotation="0,0,0" _localScale="2.5,2.5,2.5" _attachOwner="None" _attachComponent="None" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="2.2" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

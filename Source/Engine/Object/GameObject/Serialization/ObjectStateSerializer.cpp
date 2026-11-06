@@ -497,7 +497,7 @@ namespace sw
             const uint64 savedID = ObjectStateSerializerInternal::resolveSavedID( context );
             if ( context._pBatch != nullptr )
             {
-                context._pBatch->addLoadedState( pGameObject, savedID, savedName, context.getPurpose(), context._bExternalParentAllowed );
+                context._pBatch->addLoadedState( pGameObject, savedID, savedName, context.getPurpose(), context._bExternalParentAllowed, context._savedIDScope );
             }
             else
             {
@@ -706,23 +706,23 @@ namespace sw
 
     void ObjectStateBatch::add( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed )
     {
-        addEntry( pObject, savedID, savedName, bExternalParentAllowed, std::nullopt );
+        addEntry( pObject, savedID, savedName, bExternalParentAllowed, std::nullopt, 0 );
     }
 
-    void ObjectStateBatch::addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed )
+    void ObjectStateBatch::addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed, uint64 savedIDScope )
     {
-        addEntry( pObject, savedID, savedName, bExternalParentAllowed, purpose );
+        addEntry( pObject, savedID, savedName, bExternalParentAllowed, purpose, savedIDScope );
     }
 
     void ObjectStateBatch::addEntry( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed,
-                                     std::optional<SerializePurpose> loadedPurpose )
+                                     std::optional<SerializePurpose> loadedPurpose, uint64 savedIDScope )
     {
         if ( pObject == nullptr )
             return;
         SW_ASSERT( _bFinished == false );
 
         const uint32 entryIndex = static_cast<uint32>( _listEntry.size() );
-        _listEntry.push_back( Entry{ pObject, savedID, savedName, bExternalParentAllowed, loadedPurpose } );
+        _listEntry.push_back( Entry{ pObject, savedID, savedName, bExternalParentAllowed, loadedPurpose, savedIDScope } );
         // 같은 id 나 이름이 둘이면 먼저 기록된 것을 쓴다(문서에 이름이 겹친 엔티티가 있을 수 있다).
         if ( savedID != 0 )
             _mapSavedIDToObject.emplace( savedID, pObject );
@@ -801,8 +801,8 @@ namespace sw
         auto                    filter  = [&context]( const TypeInfo& owner, const PropertyInfo& prop )
         { return SerializerUtil::shouldSerializeProperty( owner, prop, context ); };
         const TypeRegistry& registry = context.getTypeRegistry();
-        auto                remap    = [this]( const GameObjectHandle& savedHandle, const PropertyInfo& )
-        { return resolveObjectReference( savedHandle ); };
+        auto                remap    = [this, &entry]( const GameObjectHandle& savedHandle, const PropertyInfo& )
+        { return resolveObjectReference( savedHandle, entry._savedIDScope ); };
         ReflectedValueWalk<GameObjectHandle, decltype( filter ), decltype( remap )> objectWalk( registry, ObjectStateSerializerInternal::getObjectHandleTypeName(), filter, remap );
 
         // 컴포넌트 핸들은 오브젝트 핸들과 같은 깊이를 같은 방식으로 내려가되, 잎이 든 필드의 대상 타입을 확인한다.
@@ -829,7 +829,7 @@ namespace sw
         Component* pTarget = nullptr;
         if ( ObjectStateSerializerInternal::isComponentKeyHash( savedHandle.componentID() ) )
         {
-            GameObject* pTargetObject = savedHandle.objectID() == 0 ? entry._pObject : findBySavedID( savedHandle.objectID() );
+            GameObject* pTargetObject = savedHandle.objectID() == 0 ? entry._pObject : findBySavedID( savedHandle.objectID() ^ entry._savedIDScope );
             if ( pTargetObject == nullptr )
                 return ComponentHandle{}; // 파일 밖(또는 이 배치에 없는) 오브젝트다. 약한 참조라서 사라진 대상은 정상 값이다
             pTarget = ObjectStateSerializerInternal::findComponentByKeyHash( pTargetObject, savedHandle.componentID() );
@@ -872,11 +872,11 @@ namespace sw
         return pTarget->getHandle();
     }
 
-    GameObjectHandle ObjectStateBatch::resolveObjectReference( GameObjectHandle savedHandle ) const
+    GameObjectHandle ObjectStateBatch::resolveObjectReference( GameObjectHandle savedHandle, uint64 savedIDScope ) const
     {
         if ( savedHandle.isValid() == false )
             return GameObjectHandle{};
-        const GameObject* pReferent = findBySavedID( savedHandle.objectID() );
+        const GameObject* pReferent = findBySavedID( savedHandle.objectID() ^ savedIDScope );
         if ( pReferent != nullptr )
             return pReferent->getHandle();
         // 같은 실행의 상태면 배치 밖의 런타임 id 그대로다. 그 오브젝트가 살아 있으면 그것이고, 사라졌으면 id 가 다시 쓰이지 않으므로 아무것도 아니다.
@@ -937,6 +937,8 @@ namespace sw
             if ( reference._componentKey.empty() )
                 continue; // 루트
             reference._idSpace = _idSpace;
+            if ( reference._ownerID != 0 )
+                reference._ownerID ^= entry._savedIDScope; // 내부 씬의 파일 id → 이 배치의 평평한 id
 
             GameObject* pOwner    = findAttachOwner( entry, reference._ownerName, reference._ownerID );
             const bool  bExternal = pOwner != pObject;

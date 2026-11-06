@@ -3068,6 +3068,11 @@
 				<item>Source/Editor/Panels/Scene/PrefabPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdText.ApplyInstanceOverrides" source="Save Overrides to Scene">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdText.ApplySize" source="Apply Size">
 			<origins>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
@@ -3184,6 +3189,11 @@
 		<entry key="EdText.DataLayers" source="Data Layers">
 			<origins>
 				<item>Source/Editor/Panels/TileMap/TileMapPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EdText.DataLayers" source="Data Layers">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>
 		</entry>
 		<entry key="EdText.Del" source="Del">
@@ -4665,6 +4675,11 @@
 				<item>Source/Editor/Panels/InputMap/InputMapPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EdWidget.SceneInstance" source="Scene Instance">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EdWidget.Shader" source="Shader">
 			<origins>
 				<item>Source/Editor/Panels/Material/MaterialPanel.cpp</item>
@@ -5603,6 +5618,26 @@
 				<item>Source/Editor/Panels/ContentBrowser/ContentBrowserPanel.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorDataLayers.InitialTip" source="Turn this layer on when the scene opens. Saved with the scene.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/DataLayersPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataLayers.NoActiveScene" source="No active scene.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/DataLayersPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataLayers.NoLayers" source="The active scene declares no data layers. Add them to its World Settings.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/DataLayersPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorDataLayers.ShownTip" source="Show or hide the objects of this layer. While editing, off only hides them; during play it unloads them.">
+			<origins>
+				<item>Source/Editor/Panels/Scene/DataLayersPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorDataTable.AddKeyTip"
 		       source="Add a string with the key typed on the left. Keys already in the table are ignored.">
 			<origins>
@@ -6224,6 +6259,11 @@
 				<item>Source/Editor/Panels/Inspector/EditorPropertyGrid.cpp</item>
 			</origins>
 		</entry>
+		<entry key="EditorInspector.ApplyInstanceOverrides" source="Save the scene: changes to instance members are written to the anchor as differences; the included scene file stays as it is">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
 		<entry key="EditorInspector.ApplyToPrefab" source="Save this object's changes to the source prefab file">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
@@ -6332,6 +6372,11 @@
 			</origins>
 		</entry>
 		<entry key="EditorInspector.RevertToPrefab" source="Revert this object to the contents of the source prefab file">
+			<origins>
+				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
+			</origins>
+		</entry>
+		<entry key="EditorInspector.SceneInstance" source="This object is part of another scene placed in this one">
 			<origins>
 				<item>Source/Editor/Panels/Inspector/InspectorPanel.cpp</item>
 			</origins>

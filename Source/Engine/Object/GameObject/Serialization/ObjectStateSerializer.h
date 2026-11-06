@@ -68,6 +68,13 @@ namespace sw
          * @details 참조는 모두 `getSavedObjectID` 를 거치므로 여기서 모으면 부착 · 핸들 PROPERTY 를 타입마다 따로 훑지 않아도 된다.
          */
         vector<uint64>* _pOutListReferencedID{ nullptr };
+        /**
+         * @brief 0 이 아니면 이 런타임 id 의 오브젝트로의 부착을 적지 않습니다. 씬 인스턴스 앵커가 그 멤버 루트에 쓴다 — 앵커에 붙는 것은 인스턴스가 정하는 자리라 내부 씬의 상태에 없고, 덮어쓴 것으로 적으면 안 된다.
+         * @details `_bOmitExternalParent` 와 달리 다른 부착과 핸들은 그대로 적는다.
+         */
+        uint64 _omitAttachToObjectID{ 0 };
+        /** @brief 비어 있지 않으면 부착이 적는 부모 이름에서 이 앞머리를 뗍니다. 인스턴스 멤버의 이름은 앵커 이름이 붙은 것이라(`HouseLeft/Box`) 내부 씬의 상태(`Box`)와 비교하려면 떼어야 한다. */
+        string_view _attachOwnerNamePrefix{};
         /** @brief 목적 @p purpose 로 저장합니다. 참조는 런타임 id 그대로 적습니다(아래 필드로 바꾼다). */
         explicit ObjectSaveOptions( SerializePurpose purpose )
             : _bOmitExternalParent{ SW_FALSE }, _purpose{ purpose }
@@ -112,6 +119,11 @@ namespace sw
         ObjectStateBatch* _pBatch{ nullptr };
         /** @brief 이 상태가 저장될 때 이 오브젝트의 id 입니다. 같은 배치의 다른 상태가 이 값으로 이 오브젝트를 가리킵니다. 0 이면 `_pIdentity` 의 것을 씁니다. */
         uint64 _savedID{ 0 };
+        /**
+         * @brief 상태 안의 참조 id 를 배치의 id 로 옮길 때 XOR 하는 값입니다. 0 이면 그대로입니다. 씬 인스턴스의 글 상태가 씁니다(`SceneObjectNode::_idScope`).
+         * @details 상태는 내부 씬의 파일 id 로 적혀 있고 배치는 인스턴스마다 겹치지 않는 평평한 id 를 쓴다. XOR 라서 범위 밖(바깥 씬)의 대상도 같은 식으로 왕복한다(유니티 스트립 오브젝트의 fileID 도 XOR 이다 — 기억에 의존).
+         */
+        uint64 _savedIDScope{ 0 };
         /** @brief false 이면 다른 오브젝트로의 부착을 읽지 않습니다. 프리팹은 루트에 부모가 없으므로 false 입니다. 오브젝트 안의 부착은 그대로 연결합니다. */
         bool _bExternalParentAllowed{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
         /**
@@ -128,6 +140,7 @@ namespace sw
             : _pIdentity{ pIdentity }
             , _pBatch{ pBatch }
             , _savedID{ savedID }
+            , _savedIDScope{ 0 }
             , _bRestorePreviousOnFailure{ SW_TRUE }
             , _purpose{ purpose }
         {
@@ -218,7 +231,7 @@ namespace sw
          * @brief 상태를 읽은 오브젝트 하나를 기록합니다. `add` 와 같지만 `finish` 가 이 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 로더가 부릅니다.
          * @details `onPostLoad` 는 부착과 핸들 PROPERTY 가 해석된 **뒤에** 온다. 읽는 시점에 부르면 다른 오브젝트를 가리키는 필드가 아직 저장된 id 다.
          */
-        void addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed = true );
+        void addLoadedState( GameObject* pObject, uint64 savedID, hashed_string savedName, SerializePurpose purpose, bool bExternalParentAllowed = true, uint64 savedIDScope = 0 );
 
         /**
          * @brief 기록한 오브젝트들의 부착과 핸들 PROPERTY 를 연결하고, 상태를 읽은 오브젝트의 컴포넌트에 `onPostLoad` 를 부릅니다. 모두 읽은 뒤 한 번 부릅니다.
@@ -244,10 +257,11 @@ namespace sw
             hashed_string                   _savedName{};
             bool                            _bExternalParentAllowed{ true }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
             std::optional<SerializePurpose> _loadedPurpose{};                ///< 상태를 읽었으면 그 읽기의 목적이다. `finish` 가 `onPostLoad` 를 부르고 이 목적이 다룬 필드의 핸들을 옮긴다
+            uint64                          _savedIDScope{ 0 };              ///< 상태 안의 참조 id 에 XOR 해 이 배치의 id 로 옮긴다(`ObjectLoadContext::_savedIDScope`)
         };
 
         /** @brief `add` 와 `addLoadedState` 의 본체입니다. */
-        void addEntry( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed, std::optional<SerializePurpose> loadedPurpose );
+        void addEntry( GameObject* pObject, uint64 savedID, hashed_string savedName, bool bExternalParentAllowed, std::optional<SerializePurpose> loadedPurpose, uint64 savedIDScope );
 
         /** @brief 항목 하나의 씬 컴포넌트마다 부모를 찾아 붙이고, 못 찾으면 참조를 남깁니다. */
         void resolveEntry( const Entry& entry ) const;
@@ -260,7 +274,7 @@ namespace sw
          */
         [[nodiscard]] bool resolveObjectReferences( const Entry& entry ) const;
         /** @brief 저장된 핸들 하나가 이 실행에서 가리키는 오브젝트를 반환합니다(클래스 설명의 규칙). */
-        GameObjectHandle resolveObjectReference( GameObjectHandle savedHandle ) const;
+        GameObjectHandle resolveObjectReference( GameObjectHandle savedHandle, uint64 savedIDScope ) const;
         /**
          * @brief 저장된 컴포넌트 핸들 하나가 이 실행에서 가리키는 컴포넌트의 핸들을 반환합니다(클래스 설명의 규칙).
          * @param leafProperty 이 핸들이 든 필드다. 대상 타입(`_handleTargetTypeName`)이 여기 있다.

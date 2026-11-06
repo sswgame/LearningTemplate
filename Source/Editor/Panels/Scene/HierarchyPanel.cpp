@@ -489,7 +489,10 @@ namespace sw::editor
                 if ( pRevealTarget != nullptr && HierarchyCommands::isAncestorOf( pObj, pRevealTarget ) )
                     ImGui::SetNextItemOpen( true );
                 // 프리팹 인스턴스는 이름을 파랗게 표시한다(유니티 Hierarchy).
-                const bool bPrefabInstance = editorContext.getSubsystem<EditorWorkspace>().findPrefabPath( pObj ).empty() == false;
+                // 씬 인스턴스의 앵커와 멤버도 같다 — 저장이 차이로 쓰는 오브젝트다.
+                const Scene* pRowScene       = editor::getActiveScene();
+                const bool   bSceneInstance  = pRowScene != nullptr && ( pRowScene->getSceneInstancePath( objectID ).empty() == false || pRowScene->isSceneInstanceMember( objectID ) );
+                const bool   bPrefabInstance = bSceneInstance || editorContext.getSubsystem<EditorWorkspace>().findPrefabPath( pObj ).empty() == false;
                 if ( bPrefabInstance )
                     ImGui::PushStyleColor( ImGuiCol_Text, EditorColorUtil::toImVec4( HierarchyPanelInternal::kPrefabInstanceText ) );
                 // SpanAvailWidth 를 쓰면 선택 배경과 클릭 영역이 앞의 가시성 토글 오른쪽부터 시작한다. SpanFullWidth 는 창 왼쪽부터 칠해서 토글을 덮는다.

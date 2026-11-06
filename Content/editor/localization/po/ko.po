@@ -3051,6 +3051,11 @@ msgctxt "EdText.ApplyAllOverridesToTemplate"
 msgid "Apply All Overrides to Template"
 msgstr "덮어쓴 값을 모두 원본에 적용"
 
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdText.ApplyInstanceOverrides"
+msgid "Save Overrides to Scene"
+msgstr "덮어쓴 것을 씬에 저장"
+
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
 msgctxt "EdText.ApplySize"
 msgid "Apply Size"
@@ -3164,6 +3169,11 @@ msgid "Curves"
 msgstr "커브"
 
 #: Source/Editor/Panels/TileMap/TileMapPanel.cpp
+msgctxt "EdText.DataLayers"
+msgid "Data Layers"
+msgstr "데이터 레이어"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EdText.DataLayers"
 msgid "Data Layers"
 msgstr "데이터 레이어"
@@ -4604,6 +4614,11 @@ msgctxt "EdWidget.RightStick"
 msgid "Right Stick"
 msgstr "오른쪽 스틱"
 
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EdWidget.SceneInstance"
+msgid "Scene Instance"
+msgstr "씬 인스턴스"
+
 #: Source/Editor/Panels/Material/MaterialPanel.cpp
 msgctxt "EdWidget.Shader"
 msgid "Shader"
@@ -5500,6 +5515,26 @@ msgctxt "EditorContentBrowser.TypeFilter"
 msgid "Filter by asset type (texture, scene, prefab, sound, ...)"
 msgstr "특정 에셋 종류(텍스처, 씬, 프리팹, 사운드 등)별로 필터링합니다"
 
+#: Source/Editor/Panels/Scene/DataLayersPanel.cpp
+msgctxt "EditorDataLayers.InitialTip"
+msgid "Turn this layer on when the scene opens. Saved with the scene."
+msgstr "씬을 열 때 이 레이어를 켭니다. 씬과 함께 저장됩니다."
+
+#: Source/Editor/Panels/Scene/DataLayersPanel.cpp
+msgctxt "EditorDataLayers.NoActiveScene"
+msgid "No active scene."
+msgstr "활성 씬이 없습니다."
+
+#: Source/Editor/Panels/Scene/DataLayersPanel.cpp
+msgctxt "EditorDataLayers.NoLayers"
+msgid "The active scene declares no data layers. Add them to its World Settings."
+msgstr "활성 씬에 선언한 데이터 레이어가 없습니다. 월드 설정에서 더합니다."
+
+#: Source/Editor/Panels/Scene/DataLayersPanel.cpp
+msgctxt "EditorDataLayers.ShownTip"
+msgid "Show or hide the objects of this layer. While editing, off only hides them; during play it unloads them."
+msgstr "이 레이어의 오브젝트를 보이거나 감춥니다. 편집 중에는 숨기기만 하고, 플레이 중에는 내립니다."
+
 #: Source/Editor/Panels/DataTable/DataTablePanel.cpp
 msgctxt "EditorDataTable.AddKeyTip"
 msgid "Add a string with the key typed on the left. Keys already in the table are ignored."
@@ -6071,6 +6106,11 @@ msgid "Add to Favorites"
 msgstr "즐겨찾기에 추가"
 
 #: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EditorInspector.ApplyInstanceOverrides"
+msgid "Save the scene: changes to instance members are written to the anchor as differences; the included scene file stays as it is"
+msgstr "씬을 저장합니다. 인스턴스 멤버의 변경은 앵커에 차이로 적히고, 넣은 씬 파일은 그대로입니다"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
 msgctxt "EditorInspector.ApplyToPrefab"
 msgid "Save this object's changes to the source prefab file"
 msgstr "현재 오브젝트의 변경사항을 프리팹 원본 파일에 저장합니다"
@@ -6181,6 +6221,11 @@ msgstr "기본값으로 되돌립니다"
 msgctxt "EditorInspector.RevertToPrefab"
 msgid "Revert this object to the contents of the source prefab file"
 msgstr "프리팹 원본 파일의 내용으로 현재 오브젝트를 되돌립니다"
+
+#: Source/Editor/Panels/Inspector/InspectorPanel.cpp
+msgctxt "EditorInspector.SceneInstance"
+msgid "This object is part of another scene placed in this one"
+msgstr "다른 씬을 이 씬에 넣은 인스턴스의 일부입니다"
 
 #: Source/Editor/Panels/Inspector/InspectorPropertyManager.cpp
 msgctxt "EditorInspector.SearchAssetsHint"

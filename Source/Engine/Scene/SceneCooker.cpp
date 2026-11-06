@@ -232,12 +232,79 @@ namespace sw
                 }
             }
 
-            /** @brief 기본 목록에 늘 올라 있는 엔티티를 남기고 나머지를 셀로 옮깁니다. 셀은 z, x 오름차순, 셀 안의 엔티티는 문서 순서다(결정적). */
+            /** @brief @p layerSet 이 @p targetLayers 를 모두 품으면 true 입니다(둘 다 정렬돼 있다). */
+            static bool containsLayers( const vector<string>& layerSet, const vector<string>& targetLayers )
+            {
+                for ( const string& layer : targetLayers )
+                {
+                    bool bFound = false;
+                    for ( const string& owned : layerSet )
+                    {
+                        bFound = bFound || owned == layer;
+                    }
+                    if ( bFound == false )
+                        return false;
+                }
+                return true;
+            }
+
+            /**
+             * @brief 데이터 레이어를 넘는 참조를 찾습니다. 대상의 레이어가 가리키는 쪽의 레이어에 모두 들어 있어야 한다 — 그래야 가리키는 쪽이 오를 때 대상이 늘 올라 있다. 셀을 넘는 참조와 같은 규칙이다.
+             * @return 위반이 있으면 엔티티마다 오류를 남기고 false 입니다. 레이어를 쓰지 않는 씬은 짓지 않고 true 입니다.
+             */
+            [[nodiscard]] static bool checkDataLayerReferences( const SceneEngineServices& services, const SceneDocument& doc, string_view scenePath )
+            {
+                bool                                                         bHasLayered = false;
+                unordered_map<uint64, const SceneDocument::SceneObjectNode*> mapNodeByFileID;
+                for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
+                {
+                    bHasLayered = bHasLayered || entity._listDataLayer.empty() == false;
+                    mapNodeByFileID.emplace( entity._fileID, &entity );
+                }
+                if ( bHasLayered == false )
+                    return true;
+
+                Scene placement{ "SceneCooker.DataLayers", services };
+                placement.setBuildAllDataLayers();
+                if ( placement.instantiate( doc ) == false )
+                    return false;
+                unordered_map<uint64, GameObject*> mapObjectByFileID;
+                makeObjectByFileID( placement, mapObjectByFileID );
+                ObjectSavedIDMap mapSavedID;
+                placement.collectSavedIDMap( mapSavedID );
+
+                bool           bValid = true;
+                vector<uint64> listReferencedID;
+                for ( const SceneDocument::SceneObjectNode& entity : doc._listSceneObjectNode )
+                {
+                    const auto objectIt = mapObjectByFileID.find( entity._fileID );
+                    if ( objectIt == mapObjectByFileID.end() )
+                        continue;
+                    listReferencedID.clear();
+                    ObjectSaveOptions options{ SerializePurpose::Authoring };
+                    options._pSavedIDMap          = &mapSavedID;
+                    options._pOutListReferencedID = &listReferencedID;
+                    vector<uint8> stateBytes;
+                    (void)ObjectStateSerializer::saveToBinaryBuffer( objectIt->second, stateBytes, options ); // 참조만 모은다 — 바이트는 버린다
+                    for ( const uint64 referencedObjectID : listReferencedID )
+                    {
+                        const auto targetIDIt = mapSavedID.find( referencedObjectID );
+                        const auto targetIt   = targetIDIt != mapSavedID.end() ? mapNodeByFileID.find( targetIDIt->second ) : mapNodeByFileID.end();
+                        if ( targetIt == mapNodeByFileID.end() || containsLayers( entity._listDataLayer, targetIt->second->_listDataLayer ) )
+                            continue;
+                        SW_LOG_ERROR_ID( "SceneCooker.DataLayerCrossReference", "Scene cook: '%#' - entity '%#' refers to '%#' on a data layer it is not on; put the referrer on that layer too or move the target", scenePath, entity._name, targetIt->second->_name );
+                        bValid = false;
+                    }
+                }
+                return bValid;
+            }
+
+            /** @brief 기본 목록에 늘 올라 있는 엔티티를 남기고 나머지를 셀로 옮깁니다. 셀은 z, x, 레이어 수, 레이어 이름 오름차순, 셀 안의 엔티티는 문서 순서다(결정적). 좌표 + 레이어 집합이 셀 하나다. */
             static void splitIntoCells( SceneDocument& inoutDoc, const vector<StreamingCellObjectRecord>& listRecord )
             {
                 vector<SceneDocument::SceneObjectNode> listBase;
                 vector<SceneDocument::StreamingCell>   listCell;
-                unordered_map<int64, size_t>           mapCellIndex;
+                unordered_map<string, size_t>          mapCellIndex;
                 for ( size_t entityIndex = 0; entityIndex < inoutDoc._listSceneObjectNode.size(); ++entityIndex )
                 {
                     SceneDocument::SceneObjectNode&  entity = inoutDoc._listSceneObjectNode[entityIndex];
@@ -248,14 +315,18 @@ namespace sw
                         continue;
                     }
                     // 셀 키 → 목록 인덱스 — 엔티티마다 셀 목록을 훑지 않는다(엔티티 수 × 셀 수).
-                    const int64 cellKey   = ( static_cast<int64>( record._cell._z ) << 32 ) | static_cast<int64>( static_cast<uint32>( record._cell._x ) );
-                    const auto  found     = mapCellIndex.find( cellKey );
-                    size_t      cellIndex = 0;
+                    string cellKey = sw::to_string( static_cast<int64>( record._cell._z ) ) + "," + sw::to_string( static_cast<int64>( record._cell._x ) );
+                    for ( const string& layer : entity._listDataLayer )
+                    {
+                        cellKey.append( "|" ).append( layer );
+                    }
+                    const auto found     = mapCellIndex.find( cellKey );
+                    size_t     cellIndex = 0;
                     if ( found == mapCellIndex.end() )
                     {
                         cellIndex = listCell.size();
                         mapCellIndex.emplace( cellKey, cellIndex );
-                        listCell.push_back( SceneDocument::StreamingCell{ record._cell, {} } );
+                        listCell.push_back( SceneDocument::StreamingCell{ record._cell, {}, entity._listDataLayer } );
                     }
                     else
                     {
@@ -264,7 +335,13 @@ namespace sw
                     listCell[cellIndex]._listSceneObjectNode.push_back( std::move( entity ) );
                 }
                 VectorUtil::sort( listCell, []( const SceneDocument::StreamingCell& lhs, const SceneDocument::StreamingCell& rhs )
-                { return lhs._cell._z != rhs._cell._z ? lhs._cell._z < rhs._cell._z : lhs._cell._x < rhs._cell._x; } );
+                {
+                    if ( lhs._cell._z != rhs._cell._z )
+                        return lhs._cell._z < rhs._cell._z;
+                    if ( lhs._cell._x != rhs._cell._x )
+                        return lhs._cell._x < rhs._cell._x;
+                    return lhs._listDataLayer.size() != rhs._listDataLayer.size() ? lhs._listDataLayer.size() < rhs._listDataLayer.size() : lhs._listDataLayer < rhs._listDataLayer;
+                } );
                 inoutDoc._listSceneObjectNode = std::move( listBase );
                 inoutDoc._listStreamingCell   = std::move( listCell );
             }
@@ -284,7 +361,8 @@ namespace sw
                     return false;
                 }
 
-                Scene      placement{ "SceneCooker.Placement", services };
+                Scene placement{ "SceneCooker.Placement", services };
+                placement.setBuildAllDataLayers();
                 const bool bBuilt = placement.instantiate( inoutDoc );
                 if ( bBuilt == false || placement.getUnresolvedEntityCount() > 0 )
                 {
@@ -360,9 +438,14 @@ namespace sw
                     SW_LOG_WARNING_ID( "SceneCooker.SceneEntitiesCouldNot", "Scene '%#': %# of %# entities could not be cooked to binary state - they keep XML.", scenePath, statefulCount - cookedCount,
                                        statefulCount );
                 }
+                // 레이어를 넘는 참조도 쿠킹 실패다 — 레이어를 끈 채 오른 쪽의 참조가 조용히 끊긴다.
+                if ( checkDataLayerReferences( services, doc, scenePath ) == false )
+                    return CookStep::Failed;
                 // 스트리밍하는 씬은 엔티티를 셀로 나눈다. 셀을 넘는 참조가 있으면 쿠킹 실패다 — 런타임에 조용히 끊기는 참조를 싣지 않는다.
                 if ( SceneCooker::splitStreamingCells( services, doc, scenePath ) == false )
                     return CookStep::Failed;
+                // 쿠킹본은 펼친 결과만 싣는다 — 런타임의 짓는 길이 하나다.
+                doc.stripAuthoringInstanceData();
                 const std::optional<AbsolutePath> outputFile = FileUtil::requireAbsolutePath( outputPath );
                 if ( outputFile.has_value() == false || doc.saveBinary( *outputFile ) == false )
                 {
@@ -387,6 +470,7 @@ namespace sw
                     return CookStep::Failed;
                 }
                 Scene source{ "ScenePreload.Source", services };
+                source.setBuildAllDataLayers(); // 끈 레이어의 에셋도 쿠킹본이 켜면 쓴다
                 if ( source.instantiate( doc ) == false )
                 {
                     SW_LOG_ERROR_ID( "SceneCooker.ScenePreloadCookCould", "Scene preload cook could not build '%#'.", scenePath );
@@ -431,6 +515,7 @@ namespace sw
 
         // 쿠킹 전용 씬이다. 실제 씬 매니저의 것을 쓰면 쿠킹하는 동안 만든 임시 오브젝트가 실제 씬에 남는다.
         Scene source{ "SceneCooker.Source", services };
+        source.setBuildAllDataLayers(); // 끈 레이어의 엔티티도 굽는다
         if ( source.instantiate( inoutDoc ) == false )
             return 0;
         const uint32 missingComponentCount = SceneCookerInternal::reportMissingComponents( source );
@@ -464,6 +549,7 @@ namespace sw
         // **쿠킹된 것을 다시 지어 본다.** 모르는 컴포넌트 타입 · 값이 바뀌는 필드 · 부모를 잃는 부착이 있으면 그 엔티티의 상태가 어긋나고, 그
         // 엔티티는 XML 로 남는다. 쿠킹이 조용히 무언가를 떨어뜨리지 않는다.
         Scene verify{ "SceneCooker.Verify", services };
+        verify.setBuildAllDataLayers();
         if ( verify.instantiate( cooked ) == false )
             return 0;
         unordered_map<uint64, GameObject*> mapVerifyByFileID;
@@ -493,8 +579,9 @@ namespace sw
             }
 
             entity._embeddedStateBytes = cookedState._embeddedStateBytes;
-            // 둘 다 실으면 파일만 커진다. 바이너리가 기준이 된 순간 XML 은 뺀다.
+            // 둘 다 실으면 파일만 커진다. 바이너리가 기준이 된 순간 XML 은 뺀다. 인스턴스 덮어쓰기도 이미 얹힌 값이다.
             entity._embeddedXML.clear();
+            entity._listInstanceOverrideXML.clear();
             ++cookedCount;
         }
 
