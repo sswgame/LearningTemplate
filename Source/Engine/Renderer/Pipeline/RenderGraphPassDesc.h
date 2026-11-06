@@ -1,14 +1,12 @@
 /**
- * @file RenderPassAsset.h
- * @brief 렌더 패스 XML 에셋(어태치먼트 템플릿)과 파이프라인 패스 서술 타입을 정의합니다.
+ * @file RenderGraphPassDesc.h
+ * @brief 파이프라인 XML 의 패스 종류 · 첨부 · 패스 노드 서술을 정의합니다.
  */
 #pragma once
 #include "Core/Container/string.h"
 #include "Core/Container/vector.h"
 #include "Core/Math/VectorMath.h"
-#include "Core/Path/AbsolutePath.h"
 
-#include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -219,8 +217,8 @@ namespace sw
 
     /**
      * @brief 렌더 파이프라인 그래프 안의 패스 노드 하나입니다.
-     * @details 그래프 연결(입력과 출력)과 선택적인 PSO 설정(셰이더, 엔트리, 상태, 퍼뮤테이션)을 담는다.
-     *          RenderPass XML 은 어태치먼트만 다루고, 이 필드들은 파이프라인의 패스에 둔다.
+     * @details 그래프 연결(입력과 출력)과 패스가 고르는 값(셰이더, 퍼뮤테이션, 품질)만 담는다. 깊이 · 블렌드 · 컬은 패스 종류의 사실이라 표(`RenderPassTypeInfo`)가 정하고 여기 칸이 없다 —
+     *          칸을 두면 XML 이 표와 어긋나도 알 수 없다(디퍼드 반투명의 `_bEnableBlend="false"` 가 머티리얼 블렌드를 조용히 껐다). 언리얼 · 유니티도 패스 코드가 렌더 상태를 정한다.
      */
     REFLECT()
     struct RenderGraphPassDesc
@@ -232,10 +230,10 @@ namespace sw
         PROPERTY()
         string _type = "Opaque";
 
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         vector<string> _listInput;
 
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         vector<string> _listOutput;
 
         /**
@@ -293,38 +291,9 @@ namespace sw
         PROPERTY( SkipIfEmpty )
         string _shaderPath;
 
-        /** @brief 정점 셰이더 진입점입니다. 비면 스테이지 기본값을 씁니다(`resolveEntryPoint`, getShaderStageInfo 테이블). */
-        PROPERTY( SkipIfEmpty )
-        string _vertexEntryPoint;
-
-        /** @brief 픽셀 셰이더 진입점입니다. 비면 스테이지 기본값입니다. */
-        PROPERTY( SkipIfEmpty )
-        string _pixelEntryPoint;
-
-        PROPERTY( SkipIfEmpty )
-        string _computeEntryPoint;
-
-        PROPERTY( SkipIfEmpty )
-        string _geometryEntryPoint;
-
-        PROPERTY( SkipIfEmpty )
-        string _hullEntryPoint;
-
-        PROPERTY( SkipIfEmpty )
-        string _domainEntryPoint;
-
-        PROPERTY( SkipIfEmpty )
-        string _meshEntryPoint;
-
-        PROPERTY( SkipIfEmpty )
-        string _amplificationEntryPoint;
-
         /** @brief 셰이더 매크로(퍼뮤테이션)입니다. "NAME" 또는 "NAME=VALUE" 형태로 적습니다. */
-        PROPERTY()
+        PROPERTY( SkipIfEmpty )
         vector<string> _listPermutation;
-
-        PROPERTY()
-        string _cullMode = "Back"; ///< None, Front, Back 중 하나
 
         /**
          * @brief `_type` 을 해석한 값입니다. XML 로드 시 RenderPipelineAsset 가 채웁니다.
@@ -334,15 +303,6 @@ namespace sw
          */
         RenderPassType _resolvedType{ RenderPassType::Invalid };
 
-        PROPERTY()
-        bool _bEnableDepthTest{ true };
-
-        PROPERTY()
-        bool _bEnableDepthWrite{ true };
-
-        PROPERTY()
-        bool _bEnableBlend{ false };
-
         /**
          * @brief 이 패스가 도는 최소 후처리 품질(`gv_postQuality`, 사용자 설정 graphics.postQuality 의 선택지 순번 0 낮음 ~ 3 최고)입니다. 0 이면 늘 돕니다.
          * @details 품질이 이보다 낮으면 후처리를 끈 뷰와 같이 건너뛴다(원본을 넘기거나 기본 클리어 — SSAO 는 가림 없음). 그래서 건너뛸 수 있는 타입
@@ -350,53 +310,5 @@ namespace sw
          */
         PROPERTY()
         int32 _minPostQuality{ 0 };
-    };
-} // namespace sw
-
-namespace sw
-{
-    /**
-     * @brief RHI 렌더 패스 템플릿의 어태치먼트 묶음 서술입니다.
-     * 프레임 구성(패스 그래프)은 RenderPipelineDesc 가 담당합니다(RenderPipelineAsset.h).
-     */
-    REFLECT()
-    struct RenderPassDesc
-    {
-        REFLECT_BODY();
-        PROPERTY()
-        string _name = "DefaultMainPass";
-
-        PROPERTY()
-        vector<RenderPassAttachment> _listAttachment;
-    };
-} // namespace sw
-
-namespace sw
-{
-    /// @brief RenderPass XML 에셋(어태치먼트 템플릿)입니다.
-    class SW_API RenderPassAsset
-    {
-    public:
-        /** @brief 빈 렌더 패스 서술을 만듭니다. */
-        RenderPassAsset() = default;
-        /** @brief 가상 소멸자입니다. */
-        virtual ~RenderPassAsset() = default;
-
-        /** @brief 복사를 금지합니다. */
-        RenderPassAsset( const RenderPassAsset& ) = delete;
-        /** @brief 대입을 금지합니다. */
-        RenderPassAsset& operator=( const RenderPassAsset& ) = delete;
-
-        /** @brief XML 파일에서 렌더 패스 디스크립터를 로드합니다. */
-        [[nodiscard]] bool loadFromXMLFile( const AssetID& assetID );
-
-        /** @brief 렌더 패스 디스크립터를 XML 파일로 저장합니다. */
-        [[nodiscard]] bool saveToXMLFile( const AbsolutePath& absPath ) const;
-
-        const RenderPassDesc& getDesc() const { return _desc; }
-        RenderPassDesc&       getDesc() { return _desc; }
-
-    private:
-        RenderPassDesc _desc;
     };
 } // namespace sw

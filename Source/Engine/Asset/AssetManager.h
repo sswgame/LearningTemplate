@@ -8,7 +8,6 @@
  *   제외(수명이 다름):
  *   - AssetPaths: Content/ 경로 해석만 합니다(소유권 없음)
  *   - ShaderCache: 셰이더 컴파일 결과 캐시(RHI)
- *   - RenderPipelineAssetCache: FrameRenderer 가 소유
  *   - ConfigManager: Config/ 호스트 JSON(Content/ 아님)
  *   - StringTable, SceneManager
  *   - 파일 감시와 에셋 핫 리로드: **개발 기능이라 에디터가 소유**합니다(Editor/Common/Workspace).

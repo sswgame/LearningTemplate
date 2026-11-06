@@ -1,10 +1,6 @@
 /**
  * @file RenderPipelineAsset.h
  * @brief 프레임 렌더 파이프라인 디스크립터(패스 그래프 + 임시 어태치먼트)입니다.
- *
- * RenderPassAsset 와의 차이:
- * - RenderPass = 어태치먼트 묶음 + RHI 바인드 타깃(포맷, 클리어)
- * - Pipeline   = 프레임 그래프 + 패스별 PSO(셰이더, 엔트리, 블렌드 · 깊이, 퍼뮤테이션)
  */
 #pragma once
 #include "Core/Container/string.h"
@@ -15,7 +11,7 @@
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Reflection/Reflection.h"
 #include "Engine/Reflection/ReflectionMacros.h"
-#include "Engine/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 
 namespace sw
 {
@@ -27,10 +23,6 @@ namespace sw
         PROPERTY()
         string _name = "ForwardPipeline";
 
-        /** @brief 선택 힌트입니다. Forward / Deferred / Custom */
-        PROPERTY()
-        string _shadingModel = "Forward";
-
         /** @brief 그래프가 쓰는 임시 어태치먼트와 논리 어태치먼트입니다. */
         PROPERTY()
         vector<RenderPassAttachment> _listAttachment;
@@ -38,13 +30,6 @@ namespace sw
         /** @brief 그래프 노드(이름, 타입, 입력, 출력)입니다. */
         PROPERTY()
         vector<RenderGraphPassDesc> _listPass;
-
-        /**
-         * @brief RHI 템플릿으로 쓰는 RenderPass XML 경로입니다(선택).
-         * (예: engine/renderpass/defaultrenderpass.xml)
-         */
-        PROPERTY()
-        vector<string> _listRenderPassRef;
 
         /**
          * @brief 모듈 확장이 패스 프로그램(`ExtensionProgramDesc::_shaderPath`)으로 쓸 수 있는 셰이더 경로입니다(ExtensionRenderPass).

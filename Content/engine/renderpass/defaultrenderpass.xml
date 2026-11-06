@@ -1,6 +1,0 @@
-<RenderPassDesc _name="DefaultMainPass">
-	<_listAttachment>
-		<RenderPassAttachment _name="MainColorBuffer" _format="R8G8B8A8_UNORM" _clearColor="0.1,0.2,0.3,1" _bClear="true" />
-		<RenderPassAttachment _name="MainDepthBuffer" _format="D24_UNORM_S8_UINT" _clearColor="1,0,0,0" _bClear="true" />
-	</_listAttachment>
-</RenderPassDesc>

@@ -10,7 +10,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/Resource/FrameResourceRegistry.h"
 #include "Engine/Renderer/Frame/Resource/PassConstantValues.h"
-#include "Engine/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 
 namespace sw
 {

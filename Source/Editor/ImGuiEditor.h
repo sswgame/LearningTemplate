@@ -92,8 +92,6 @@ namespace sw::editor
         /** @brief 렌더러 백엔드(플랫폼 백엔드 뒤). 단계 `RendererBackend`. */
         SubsystemInitResult initializeRendererBackend();
         void                shutdownRendererBackend();
-        /** @brief 기본 렌더 패스 · 포워드 파이프라인을 워커에서 읽고 기다립니다. 단계 `Splash`(종료할 것이 없다). */
-        SubsystemInitResult loadSplashAssets();
         /** @brief 에디터 컨텍스트, 테마, 기본 패널, 단축키, Undo 편집 리스너, UI 배율, 시작 씬. 단계 `EditorContext`. */
         SubsystemInitResult initializeEditorContext();
         void                shutdownEditorContext();
@@ -107,7 +105,6 @@ namespace sw::editor
         class ImGuiContextSubsystem;
         class PlatformBackendSubsystem;
         class RendererBackendSubsystem;
-        class SplashSubsystem;
         class WindowCloseQuerySubsystem;
         // ------------------------------------------------------------------------------
         // 3) ImGui 프레임과 백엔드 렌더

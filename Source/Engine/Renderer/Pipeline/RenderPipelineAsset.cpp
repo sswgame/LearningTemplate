@@ -42,8 +42,7 @@ namespace sw
             SW_LOG_ERROR_ID( "RenderPipelineAsset.PipelineIssueNotLoaded", "'%#' has %# pipeline issue(s) - not loaded", sourcePath, issueCount );
             return false;
         }
-        SW_LOG_INFO_ID( "RenderPipelineAsset.LoadedModelAttachmentsPasses", "Loaded '%#' (model=%#, attachments=%#, passes=%#)",
-                        _desc._name, _desc._shadingModel, _desc._listAttachment.size(), _desc._listPass.size() );
+        SW_LOG_INFO_ID( "RenderPipelineAsset.LoadedAttachmentsPasses", "Loaded '%#' (attachments=%#, passes=%#)", _desc._name, _desc._listAttachment.size(), _desc._listPass.size() );
         return true;
     }
 

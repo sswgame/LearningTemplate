@@ -68,7 +68,6 @@ namespace sw
     class MaterialCache;
     class MaterialInstance;
     class RenderTargetRegistry;
-    class RenderPipelineAssetCache;
     class Scene;
     class ShaderBindingLayout;
     class TaskArgs;
@@ -400,12 +399,6 @@ namespace sw
 
     private:
         IRHIDevice* _pDevice;
-        /**
-         * @brief 렌더 패스와 파이프라인 에셋 캐시입니다. `initialize` 뒤에만 있고 `shutdown` 이 비웁니다.
-         * @details 언리얼의 RHI 가 렌더 패스 *에셋*을 모르듯, 소유는 렌더러가 한다. 디바이스 추상(RHI)이 이것을
-         *          가지면 RHI 가 Renderer 를 include 하게 된다.
-         */
-        unique_ptr<RenderPipelineAssetCache> _renderPipelineAssetCache;
         /** @brief 셋업이 채우고 패스 기록이 읽는 프레임 데이터(GPUScene · 그래프 · 뷰 · 라이트 · 그림자 · 하늘 · 패스 상수 링 · 캔버스 · 입자)입니다. 협력 객체가 참조하므로 그들보다 앞에 선언한다. */
         FrameRenderState    _state;
         RenderPipelineAsset _pipelineResource;

@@ -12,7 +12,7 @@
 
 namespace sw
 {
-    enum class RenderPassType : uint32; // 정의는 RenderPassAsset.h — 패스 종류를 값으로만 받으므로 에셋 헤더(파이프라인 XML 구조)를 끌지 않는다
+    enum class RenderPassType : uint32; // 정의는 RenderGraphPassDesc.h — 패스 종류를 값으로만 받으므로 에셋 헤더(파이프라인 XML 구조)를 끌지 않는다
 } // namespace sw
 
 namespace sw

@@ -39,7 +39,6 @@
 #include "Engine/Renderer/Frame/View/RenderViewCollector.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
-#include "Engine/Renderer/Pipeline/RenderPipelineAssetCache.h"
 #include "Engine/Renderer/VFX/VFXGPUSimulation.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/UserSettings/UserSettingsVariables.h"
@@ -139,16 +138,6 @@ namespace sw
         // 패스별 GPU 시간을 보고할 프로파일러다 — 호스트가 건 렌더러 하나만 계측한다(타임스탬프 슬롯 · `GPU.<패스>` 구간이 하나다).
         _state._gpuPassTimeline.bindProfiler( _host._pProfiler );
 
-        _renderPipelineAssetCache = make_unique<RenderPipelineAssetCache>();
-        if ( _renderPipelineAssetCache->initialize() == false )
-        {
-            _renderPipelineAssetCache.reset();
-            _status        = FrameRendererStatus::Failed;
-            _statusMessage = "RenderPipelineAssetCache initialize failed";
-            SW_LOG_ERROR_ID( "FrameRenderer.Initialize", "initialize: %#", _statusMessage );
-            return false;
-        }
-
         if ( FramePrepass::isMeshMorphDiagValid() == false )
         {
             _status        = FrameRendererStatus::Failed;
@@ -172,11 +161,6 @@ namespace sw
         }
         if ( gv_viewMode != RenderViewMode::Lit )
             setViewMode( gv_viewMode );
-
-        const EngineDefaultAssets& engineDefaultAssets = engine::getSubsystem<EngineDefaultAssets>();
-        RenderPipelineAssetCache&  rpm                 = *_renderPipelineAssetCache;
-        if ( rpm.findRenderPass( hashed_string( FrameRendererUtil::kDefaultMainPassName ) ) == nullptr )
-            rpm.loadRenderPass( engineDefaultAssets._defaultRenderPass.get() );
 
         _argumentPipelinePath = pipelineXMLPath;
         return selectPipeline();
@@ -245,12 +229,6 @@ namespace sw
         _state._graph.clear();
         // 패스 실행의 그래프 실행 상태(이름별 리소스 상태)와 프레임 리스트도 이 디바이스의 것이다.
         _passExecutor.forgetDevice();
-        // 패스와 파이프라인 에셋은 위의 패스 자원과 그래프를 해제한 **뒤에** 비운다. 그쪽이 이 캐시의 포인터를 가지고 있다.
-        if ( _renderPipelineAssetCache != nullptr )
-        {
-            _renderPipelineAssetCache->shutdown();
-            _renderPipelineAssetCache.reset();
-        }
         _state._frameContext._pCmd = nullptr;
         _pDevice                   = nullptr;
         // 다음 디바이스(백엔드 교체)는 새 GPU 컨텍스트를 연다. 같은 주소에 새 디바이스가 생겨도 옛 시계 기준을 쓰지 않도록 버린다.
@@ -275,17 +253,6 @@ namespace sw
         {
             _statusMessage = string( "failed to load pipeline XML: " ) + string( pipelineXMLPath );
             return false;
-        }
-
-        if ( _renderPipelineAssetCache != nullptr )
-        {
-            RenderPipelineAssetCache& rpm = *_renderPipelineAssetCache;
-            rpm.loadPipeline( pipelineXMLPath );
-            for ( const string& passRef : _pipelineResource.getDesc()._listRenderPassRef )
-            {
-                if ( passRef.empty() == false )
-                    rpm.loadRenderPass( passRef );
-            }
         }
 
         const vector<RenderGraphPassDesc>& listPass = _pipelineResource.getGraphPass();

@@ -146,9 +146,6 @@ namespace sw
         PROPERTY( Required )
         DataPath _defaultDeferredPipeline; ///< 디퍼드 렌더 파이프라인
         PROPERTY( Required )
-        DataPath _defaultRenderPass; ///< 기본 렌더 패스 바인드 틀
-
-        PROPERTY( Required )
         DataPath _shaderShadowDepth; ///< 그림자 깊이 패스
         PROPERTY( Required )
         DataPath _shaderForwardLit; ///< 포워드 조명

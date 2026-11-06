@@ -15,7 +15,7 @@
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
-#include "Engine/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Pipeline/RenderPassInputSignature.h"
 
 namespace sw

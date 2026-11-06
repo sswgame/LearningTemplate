@@ -67,7 +67,6 @@
 #include "Engine/Profiling/SubsystemTimingReport.h"
 #include "Engine/Renderer/Capture/CaptureReadiness.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
-#include "Engine/Renderer/Pipeline/RenderPassAsset.h"
 #include "Engine/Renderer/Pipeline/RenderPipelineAsset.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
@@ -201,52 +200,6 @@ namespace sw::editor
             static void* allocateForImGui( size_t size, void* /*pUserData*/ ) { return Memory::allocate( size ); }
             /** @brief `allocateForImGui` 로 할당한 메모리를 해제합니다. */
             static void freeForImGui( void* pPtr, void* /*pUserData*/ ) { Memory::free( pPtr ); }
-
-            /**
-             * @brief 스플래시 로드 작업 둘의 결과입니다. 작업마다 제 칸만 쓰고, 기동 스레드는 단계(`waitStage`)가 끝난 뒤에 읽는다.
-             * @details 두 파일은 엔진 필수 데이터다. 읽지 못해도 경고만 남기고 기동하면 렌더 경로가 틀린 채로 돈다 — 결과를 기동 단계가 받아 멈춘다.
-             */
-            struct SplashLoadResult
-            {
-                bool _bRenderPassLoaded{ false };      ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-                bool _bForwardPipelineLoaded{ false }; ///< NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
-            };
-
-            static void loadSplashDefaultRenderPass( const TaskArgs& args )
-            {
-                shared_ptr<RenderPassAsset>  pPass   = args.get<shared_ptr<RenderPassAsset>>( 0 );
-                shared_ptr<SplashLoadResult> pResult = args.get<shared_ptr<SplashLoadResult>>( 1 );
-                // 워커 스레드에서 도는 작업이라 `editor::` 서비스 조회(에디터 스레드 전용)를 하지 않는다. 호출 스레드가 찾은 서비스를 인자로 받는다.
-                // 없으면 결과가 false 로 남아 기동이 멈춘다.
-                const EngineDefaultAssets* pEngineDefaultAssets = args.get<const EngineDefaultAssets*>( 2 );
-                const bool                 bNotReady            = pPass == nullptr || pResult == nullptr || pEngineDefaultAssets == nullptr;
-                if ( bNotReady )
-                {
-                    SW_LOG_ERROR_ID( "ImGuiEditor.SplashDefaultRenderPassNotLoaded", "Splash: DefaultRenderPass is not loaded - an argument or the EngineDefaultAssets service is missing" );
-                    return;
-                }
-                SW_LOG_TRACE_ID( "ImGuiEditor.SplashReadingDefaultRenderPassXml", "Splash: reading DefaultRenderPass.xml" );
-                pResult->_bRenderPassLoaded = pPass->loadFromXMLFile( AssetID{ pEngineDefaultAssets->_defaultRenderPass.get() } );
-                if ( pResult->_bRenderPassLoaded == false )
-                    SW_LOG_ERROR_ID( "ImGuiEditor.SplashCouldNotRead", "Splash: could not read %#", pEngineDefaultAssets->_defaultRenderPass.c_str() );
-            }
-
-            static void loadSplashForwardPipeline( const TaskArgs& args )
-            {
-                shared_ptr<RenderPipelineAsset> pPipeline            = args.get<shared_ptr<RenderPipelineAsset>>( 0 );
-                shared_ptr<SplashLoadResult>    pResult              = args.get<shared_ptr<SplashLoadResult>>( 1 );
-                const EngineDefaultAssets*      pEngineDefaultAssets = args.get<const EngineDefaultAssets*>( 2 ); // 워커라 조회하지 않고 인자로 받는다
-                const bool                      bNotReady            = pPipeline == nullptr || pResult == nullptr || pEngineDefaultAssets == nullptr;
-                if ( bNotReady )
-                {
-                    SW_LOG_ERROR_ID( "ImGuiEditor.SplashForwardPipelineNotLoaded", "Splash: ForwardPipeline is not loaded - an argument or the EngineDefaultAssets service is missing" );
-                    return;
-                }
-                SW_LOG_TRACE_ID( "ImGuiEditor.SplashReadingForwardPipelineXml", "Splash: reading ForwardPipeline.xml" );
-                pResult->_bForwardPipelineLoaded = pPipeline->loadFromXMLFile( AssetID{ pEngineDefaultAssets->_defaultForwardPipeline.get() } );
-                if ( pResult->_bForwardPipelineLoaded == false )
-                    SW_LOG_ERROR_ID( "ImGuiEditor.SplashCouldNotRead", "Splash: could not read %#", pEngineDefaultAssets->_defaultForwardPipeline.c_str() );
-            }
 
             /** @brief 맡김 칸(`IModuleStateStore`)에 둘 세션 상태의 키와 형식 판입니다. */
             static constexpr string_view kSessionStoreKey = "editor.session";
@@ -421,27 +374,6 @@ namespace sw::editor
         ImGuiEditor& _editor;
     };
 
-    /** @brief 에디터 기동 단계 `Splash` 입니다(`ImGuiEditor::loadSplashAssets`). */
-    class ImGuiEditor::SplashSubsystem final : public ISubsystem
-    {
-    public:
-        static constexpr const utf8* kSubsystemName = "Splash";
-
-        explicit SplashSubsystem( ImGuiEditor& editor )
-            : _editor{ editor }
-        {
-        }
-
-        SubsystemInitResult        initializeSubsystem() override { return _editor.loadSplashAssets(); }
-        void                       shutdownSubsystem() override {}
-        const utf8*                getSubsystemName() const override { return kSubsystemName; }
-        SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
-        static constexpr MemoryTag kSubsystemMemoryTag = MemoryTag::Editor;
-
-    private:
-        ImGuiEditor& _editor;
-    };
-
     /** @brief 에디터 기동 단계 `EditorContext` 입니다(`ImGuiEditor::initializeEditorContext`). */
     class ImGuiEditor::EditorContextSubsystem final : public ISubsystem
     {
@@ -458,7 +390,7 @@ namespace sw::editor
         const utf8*             getSubsystemName() const override { return kSubsystemName; }
         span<const utf8* const> getSubsystemDependencies() const override
         {
-            static constexpr const utf8* kArrDependency[] = { EditorDataSubsystem::kSubsystemName, ImGuiContextSubsystem::kSubsystemName, PlatformBackendSubsystem::kSubsystemName, RendererBackendSubsystem::kSubsystemName, SplashSubsystem::kSubsystemName };
+            static constexpr const utf8* kArrDependency[] = { EditorDataSubsystem::kSubsystemName, ImGuiContextSubsystem::kSubsystemName, PlatformBackendSubsystem::kSubsystemName, RendererBackendSubsystem::kSubsystemName };
             return kArrDependency;
         }
         SubsystemHostMask          getSubsystemHost() const override { return EngineSubsystemHost::kClient; }
@@ -569,7 +501,6 @@ namespace sw::editor
         _startup.add( make_unique<ImGuiContextSubsystem>( *this ) );
         _startup.add( make_unique<PlatformBackendSubsystem>( *this ) );
         _startup.add( make_unique<RendererBackendSubsystem>( *this ) );
-        _startup.add( make_unique<SplashSubsystem>( *this ) );
         _startup.add( make_unique<EditorContextSubsystem>( *this ) );
         _startup.add( make_unique<WindowCloseQuerySubsystem>( *this ) );
         SubsystemTimingReport::enableTiming( _startup ); // 종료 요약 줄(`ImGuiEditor.ShutdownMs`) — 백엔드 교체 · 리로드의 에디터 몫
@@ -718,53 +649,6 @@ namespace sw::editor
             return;
         _renderer->shutdown();
         _renderer.reset();
-    }
-
-    SubsystemInitResult ImGuiEditor::loadSplashAssets()
-    {
-        SW_LOG_TRACE_ID( "ImGuiEditor.SplashLoadingDefaultRenderPassForwardPipeline", "Splash: loading DefaultRenderPass / ForwardPipeline..." );
-
-        const shared_ptr<RenderPassAsset>     defaultPass     = sw::make_shared<RenderPassAsset>();
-        const shared_ptr<RenderPipelineAsset> forwardPipeline = sw::make_shared<RenderPipelineAsset>();
-
-        TaskManager* pTaskManager = editor::findSubsystem<TaskManager>();
-        if ( pTaskManager == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ImGuiEditor.TaskManagerServiceNotBound", "TaskManager service is not bound — cannot load splash resources" );
-            return SubsystemInitResult::Failed;
-        }
-
-        const shared_ptr<ImGuiEditorInternal::SplashLoadResult> pResult = sw::make_shared<ImGuiEditorInternal::SplashLoadResult>();
-
-        // 서비스 조회는 에디터 스레드(이 스레드)에서 하고 워커에는 인자로 넘긴다. 없으면 워커를 띄우지 않고 멈춘다.
-        const EngineDefaultAssets* pEngineDefaultAssets = editor::findSubsystem<const EngineDefaultAssets>();
-        if ( pEngineDefaultAssets == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ImGuiEditor.EngineDefaultAssetsServiceNotBound", "EngineDefaultAssets service is not bound - cannot load splash resources" );
-            return SubsystemInitResult::Failed;
-        }
-
-        TaskHandle hDefault = pTaskManager->emplaceTask(
-            "EditorSplash_DefaultRenderPass",
-            SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashDefaultRenderPass ),
-            MakeTaskArgs( defaultPass, pResult, pEngineDefaultAssets ) );
-
-        TaskHandle hForward = pTaskManager->emplaceTask(
-            "EditorSplash_ForwardPipeline",
-            SW_DELEGATE_FUNCTION( TaskArgsDelegate, ImGuiEditorInternal::loadSplashForwardPipeline ),
-            MakeTaskArgs( forwardPipeline, pResult, pEngineDefaultAssets ) );
-
-        TaskStageHandle stage = pTaskManager->createStage( "EditorSplashLoad" );
-        stage.addTask( hDefault ).addTask( hForward );
-
-        hDefault.submit();
-        hForward.submit();
-
-        pTaskManager->waitStage( stage );
-        // 두 파일은 엔진 필수 데이터다 — 하나라도 못 읽었으면(이유는 작업이 남겼다) 기동을 멈춘다.
-        if ( pResult->_bRenderPassLoaded == false || pResult->_bForwardPipelineLoaded == false )
-            return SubsystemInitResult::Failed;
-        return SubsystemInitResult::Succeeded;
     }
 
     SubsystemInitResult ImGuiEditor::initializeEditorContext()

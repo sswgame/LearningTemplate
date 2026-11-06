@@ -54,7 +54,6 @@
                      _pbrMaterialTemplate="engine/materials/pbrmaterial.material"
                      _defaultForwardPipeline="engine/pipeline/forwardpipeline.xml"
                      _defaultDeferredPipeline="engine/pipeline/deferredpipeline.xml"
-                     _defaultRenderPass="engine/renderpass/defaultrenderpass.xml"
                      _shaderShadowDepth="engine/shaders/shadow_depth.hlsl"
                      _shaderForwardLit="engine/shaders/forward_lit.hlsl"
                      _shaderGBuffer="engine/shaders/gbuffer.hlsl"

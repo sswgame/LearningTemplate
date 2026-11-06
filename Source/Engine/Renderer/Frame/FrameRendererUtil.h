@@ -16,7 +16,7 @@
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Reflection/TypeRegistry.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
-#include "Engine/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Pipeline/RenderPassTypeInfo.h"
 
 namespace sw
@@ -63,7 +63,6 @@ namespace sw
             return passCount > kGPUTimedPassCapacity ? static_cast<uint32>( passCount - kGPUTimedPassCapacity ) : 0u;
         }
         static_assert( kGPUTimestampSlotFrameBegin < constant::render::kMaxGPUTimestampSlot, "타임스탬프 예약 칸이 백엔드 칸 수를 넘는다" );
-        static constexpr auto kDefaultMainPassName = "DefaultMainPass";
         // 첨부의 클리어 색은 파이프라인 XML 의 선언이 기준이다 — 이름으로 짐작해 첨부를 만들 때 쓰던 색(SceneColor · 깊이 · 블룸)은 지웠다.
         static constexpr float4 kBlackClear = { 0.0f, 0.0f, 0.0f, 1.0f };
 

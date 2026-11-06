@@ -19,7 +19,7 @@
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Renderer/Frame/Resource/RenderPSOCache.h"
 #include "Engine/Renderer/Frame/View/RenderView.h"
-#include "Engine/Renderer/Pipeline/RenderPassAsset.h"
+#include "Engine/Renderer/Pipeline/RenderGraphPassDesc.h"
 #include "Engine/Renderer/Scene/GPUSceneSnapshot.h"
 
 namespace sw

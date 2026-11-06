@@ -1,9 +1,9 @@
 /**
  * @file ReflectedXMLFile.h
- * @brief 리플렉션 desc 하나를 XML 파일로 읽고(리소스 id) 씁니다(디스크 경로 - `AssetPaths::toDiskPath` 로 푼 것). 렌더 패스 · 파이프라인 리소스가 씁니다.
+ * @brief 리플렉션 desc 하나를 XML 파일로 읽고(리소스 id) 씁니다(디스크 경로 - `AssetPaths::toDiskPath` 로 푼 것). 파이프라인 · 네트워크 흉내 프리셋 리소스가 씁니다.
  *
  * [왜 있는가]
- * 렌더 리소스 둘(`RenderPassAsset` · `RenderPipelineAsset`)이 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로 오간다" 는
+ * 리소스 둘(`RenderPipelineAsset` · `NetEmulationPresetTable`)이 "리플렉션 desc 하나를 리소스 상대 경로의 XML 로 오간다" 는
  * **같은 일**을 합니다: `findType<Desc>()` · 널 검사 · 경로 해석 · `XMLSerializer` 호출 · 실패 로그. 둘이 따로 들면 한쪽만 고쳐
  * 다른 쪽이 조용히 다르게 동작합니다.
  *
@@ -29,7 +29,7 @@ namespace sw
     {
         /**
          * @brief 리플렉션 desc 를 XML 에서 읽습니다.
-         * @param assetID 리소스 id (`engine/renderpass/defaultrenderpass.xml` 등).
+         * @param assetID 리소스 id (`engine/pipeline/forwardpipeline.xml` 등).
          * @param outDesc 읽어 채울 desc. **실패해도 부르는 쪽이 이미 비워 둔 상태를 그대로 둡니다.**
          * @return 성공 여부. TypeInfo 가 없거나(리플렉션 생성 누락) 파일을 못 읽으면 false.
          * @details 실패 로그는 이 함수가 남깁니다. 부르는 쪽마다 다른 문장을 적으면 무엇이 실패했는지
