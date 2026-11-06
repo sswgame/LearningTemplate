@@ -500,8 +500,7 @@ namespace sw::editor
             if ( _wmDelete == 0 )
                 _wmDelete = XInternAtom( _pDisplay, "WM_DELETE_WINDOW", 0 );
             XSetWMProtocols( _pDisplay, pData->_windowHandle, &_wmDelete, 1 );
-            XMapWindow( _pDisplay, pData->_windowHandle );
-            XFlush( _pDisplay );
+            XFlush( _pDisplay ); // 띄우는 것은 `showWindow` 다(ImGui 의 Platform_ShowWindow) - 메인 창이 숨은 무인 실행에서는 불리지 않는다(`ImGuiEditorInternal::showPlatformWindow`)
 
             pViewport->PlatformHandle    = _pDisplay;
             pViewport->PlatformHandleRaw = reinterpret_cast<void*>( static_cast<uintptr_t>( pData->_windowHandle ) );
@@ -541,7 +540,10 @@ namespace sw::editor
             ViewportData* pData            = static_cast<ViewportData*>( pViewport->PlatformUserData );
             const bool    bWindowAvailable = pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0;
             if ( bWindowAvailable )
+            {
                 XMapRaised( _pDisplay, pData->_windowHandle );
+                XFlush( _pDisplay );
+            }
         }
 
         void setWindowPos( ImGuiViewport* pViewport, ImVec2 pos )
@@ -602,7 +604,11 @@ namespace sw::editor
         {
             ViewportData* pData            = static_cast<ViewportData*>( pViewport->PlatformUserData );
             const bool    bWindowAvailable = pData != nullptr && _pDisplay != nullptr && pData->_windowHandle != 0;
-            if ( bWindowAvailable )
+            if ( bWindowAvailable == false )
+                return;
+            // 보이지 않는 창(아직 창 관리자가 매핑하지 않았거나 띄우지 않은 창)에 걸면 BadMatch 로 프로세스가 끝난다(`X11Window::requestInputFocus` 와 같다).
+            XWindowAttributes attributes{};
+            if ( XGetWindowAttributes( _pDisplay, pData->_windowHandle, &attributes ) != 0 && attributes.map_state == IsViewable )
                 XSetInputFocus( _pDisplay, pData->_windowHandle, RevertToParent, CurrentTime );
         }
 
