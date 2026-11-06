@@ -3,6 +3,7 @@
  * @brief 미저장 확인과 플레이 중 편집 허용 여부를 판단합니다. UI 없이 테스트할 수 있습니다.
  */
 #pragma once
+#include "Core/Container/string.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MathUtil.h"
 
@@ -35,6 +36,14 @@ namespace sw::editor
     public:
         /** @brief 저장하지 않은 변경이 있으면 확인이 필요합니다. */
         static bool needsUnsavedPrompt( bool bDirty ) { return bDirty == true; }
+        /**
+         * @brief 문서 편집의 합치기 키입니다. @p coalesceKey 가 비면 비고(합치지 않는다), 아니면 패널 · 문서 · 로드 회차로 가릅니다.
+         * @details 편집 종류만으로 합치면 문서를 바꾼 뒤의 편집이 앞 문서의 되돌리기 항목으로 들어가 되돌릴 수 없다.
+         */
+        static string makeDocumentCoalesceKey( string_view coalesceKey, uintptr_t panelID, string_view documentPath, uint32 loadEpoch )
+        {
+            return coalesceKey.empty() ? string{} : formatToString( "%#|%#|%#|%#", coalesceKey, static_cast<uint64>( panelID ), documentPath, loadEpoch );
+        }
         /** @brief 씬이나 도구 문서가 dirty 이면 종료 확인이 필요합니다. */
         static bool needsQuitPrompt( bool bSceneDirty, uint32 dirtyDocumentCount )
         {

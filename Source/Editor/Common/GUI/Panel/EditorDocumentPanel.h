@@ -164,6 +164,7 @@ namespace sw::editor
         vector<string>                          _listRecentPath;
         vector<string>                          _listOpenCandidate; ///< 열기 팝업을 열 때 모은 이 종류의 에셋(리소스 id)
         fixed_string<constant::buffer::kMax128> _openFilter;
+        uint32                                  _documentLoadEpoch; ///< 문서를 읽은 횟수이다. 합치기 키를 가른다
         uint8                                   _bLoaded        : 1;
         uint8                                   _bConfirmSwitch : 1;
         uint8                                   _bLoadFailed    : 1;

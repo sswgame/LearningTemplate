@@ -175,6 +175,7 @@ namespace sw::editor
         , _listRecentPath{}
         , _listOpenCandidate{}
         , _openFilter{}
+        , _documentLoadEpoch{ 0 }
         , _bLoaded{ SW_FALSE }
         , _bConfirmSwitch{ SW_FALSE }
         , _bLoadFailed{ SW_FALSE }
@@ -244,6 +245,7 @@ namespace sw::editor
     {
         _bLoaded     = SW_TRUE;
         _bLoadFailed = SW_FALSE;
+        ++_documentLoadEpoch; // 다시 읽은 뒤의 편집을 읽기 전 되돌리기 항목에 합치지 않는다
         clearDocumentDirty();
         syncDocumentUndoBaseline();
     }
@@ -321,7 +323,7 @@ namespace sw::editor
             EditorDocumentPanel* pPanel = *pTarget;
             return pPanel != nullptr ? pPanel->captureDocumentText() : string{};
         } ),
-            coalesceKey );
+            EditorSessionPolicy::makeDocumentCoalesceKey( coalesceKey, reinterpret_cast<uintptr_t>( pTarget.get() ), documentPath, _documentLoadEpoch ) );
         _documentUndoBaseline = after;
         markDocumentDirty();
     }
