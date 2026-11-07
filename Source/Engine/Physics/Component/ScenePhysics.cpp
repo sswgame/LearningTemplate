@@ -76,6 +76,9 @@ namespace sw
         , _listBodyOwner2D{}
         , _listFrameEvent3D{}
         , _listFrameEvent2D{}
+        , _listDispatchEvent3D{}
+        , _listDispatchEvent2D{}
+        , _listDispatchSwept{}
         , _stepCount{ 0 }
         , _debrisBodyCount{ 0 }
         , _fixedStepOverride{ 0.0f }
@@ -410,9 +413,13 @@ namespace sw
         if ( bNoEvent )
             return;
         // 처리가 바디를 만들거나 지워도(다음 프레임의 이벤트가 된다) 이 프레임의 목록은 그대로 돈다 — 베껴 둔다.
-        const vector<PhysicsContactEvent3D> listEvent3D = _listFrameEvent3D;
-        const vector<PhysicsContactEvent2D> listEvent2D = _listFrameEvent2D;
-        const vector<SweptOverlap2D>        listSwept   = _listSweptOverlap2D;
+        // 멤버에 베껴 용량을 재사용한다(접촉이 있는 프레임마다 지난다). 이 함수는 `step` 끝에서만 불려 다시 들어오지 않는다.
+        _listDispatchEvent3D                             = _listFrameEvent3D;
+        _listDispatchEvent2D                             = _listFrameEvent2D;
+        _listDispatchSwept                               = _listSweptOverlap2D;
+        const vector<PhysicsContactEvent3D>& listEvent3D = _listDispatchEvent3D;
+        const vector<PhysicsContactEvent2D>& listEvent2D = _listDispatchEvent2D;
+        const vector<SweptOverlap2D>&        listSwept   = _listDispatchSwept;
         for ( const PhysicsContactEvent3D& event : listEvent3D )
         {
             const bool bTriggerA = event._bTriggerA == SW_TRUE;

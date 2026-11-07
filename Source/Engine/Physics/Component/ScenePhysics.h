@@ -203,6 +203,9 @@ namespace sw
         vector<RigidBody2DComponent*>   _listBodyOwner2D;     ///< 2D 바디 핸들의 칸 번호 → 주인 강체
         vector<PhysicsContactEvent3D>   _listFrameEvent3D;
         vector<PhysicsContactEvent2D>   _listFrameEvent2D;
+        vector<PhysicsContactEvent3D>   _listDispatchEvent3D; ///< `dispatchEvents` 가 처리하는 동안의 사본(재사용)
+        vector<PhysicsContactEvent2D>   _listDispatchEvent2D; ///< 위와 같다
+        vector<SweptOverlap2D>          _listDispatchSwept;   ///< 위와 같다
         uint64                          _stepCount;
         uint32                          _debrisBodyCount;
         float32                         _fixedStepOverride; ///< 0 이면 엔진 설정의 고정 스텝(`setFixedStepOverride`)
