@@ -1,0 +1,92 @@
+<Scene formatVersion="2" name="GrabCarry">
+	<!-- 집기 · 눌림판 무게 · 씬 너머 남기기 시나리오(automation/grabcarry)의 무대.
+	     Hand(GrabberComponent)가 상자(Crate)를 집어 눌림판(Plate — 트리거 강체 + GimmickSensorComponent) 위로 옮겨 놓는다. 상자의 강체 질량은 5 kg 이지만
+	     GimmickWeightComponent 가 눌림판이 재는 무게를 40 kg 으로 덮는다(무거운 짐을 가볍게 보이는 상자에 싣는 퍼즐 자리). Keeper 는 PersistAcrossScenesComponent 로 씬을 바꿔도 남는다. -->
+	<SceneSettings _bStreaming="false" _unloadMargin="0" _maxCellLoadsPerFrame="0">
+		<_cellGrid _cellSize="0" _loadingRadius="0" />
+	</SceneSettings>
+	<entities>
+		<entity id="1" name="GameCamera">
+			<GameObject _schemaVersion="0" _name="GameCamera" _bActive="true">
+				<_listComponent>
+					<CameraComponent _localPosition="0,4,-8" _localRotation="0.4,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _fovY="0.7" _nearZ="0.1" _farZ="100" _orthoHeight="10" _priority="0" _role="Game" _bOrthographic="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="2" name="Sun">
+			<GameObject _schemaVersion="0" _name="Sun" _bActive="true">
+				<_listComponent>
+					<DirectionalLightComponent _localPosition="0,0,0" _localRotation="0.9,0.4,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _color="1,1,1" _intensity="1.2" _ambient="0.5" _shadowExtent="8" _shadowDistance="20" _bCastShadow="false" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="3" name="Ground">
+			<GameObject _schemaVersion="0" _name="Ground" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="0,-0.5,0" _localRotation="0,0,0" _localScale="30,1,30" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.5,0.5,0.5" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_dark.material" _boundsRadius="25" _blendMode="Opaque" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="4" name="Plate">
+			<GameObject _schemaVersion="0" _name="Plate" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="2,0.2,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Static" _layer="Default" _material="None" _mass="0" _bTrigger="true">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.6,0.2,0.6" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,-0.15,0" _localRotation="0,0,0" _localScale="1.2,0.1,1.2" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="engine/materials/prototypegrid_orange.material" _boundsRadius="0.9" _blendMode="Opaque" />
+					<GimmickSensorComponent _defaultWeight="1" _bCountTriggers="false">
+						<_requiredTags>
+							<_listTag />
+						</_requiredTags>
+						<_listOccupant />
+					</GimmickSensorComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="5" name="Crate">
+			<GameObject _schemaVersion="0" _name="Crate" _bActive="true">
+				<_listComponent>
+					<RigidBodyComponent _localPosition="-2,0.25,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" _bodyType="Dynamic" _layer="Default" _material="None" _mass="5">
+						<_listShape>
+							<PhysicsShapeDesc3D _type="Box" _halfExtents="0.25,0.25,0.25" _radius="0.5" _halfHeight="0.5" _localPosition="0,0,0" _localRotation="0,0,0" _material="None">
+								<_listPoint />
+								<_listIndex />
+							</PhysicsShapeDesc3D>
+						</_listShape>
+					</RigidBodyComponent>
+					<MeshComponent _localPosition="0,0,0" _localRotation="0,0,0" _localScale="0.5,0.5,0.5" _attachOwner="None" _attachComponent="RigidBodyComponent#0" _meshID="Cube" _materialPath="game/empty/materials/renderstate/plain_red.material" _boundsRadius="0.45" _blendMode="Opaque" />
+					<GimmickWeightComponent _weight="40" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="6" name="Hand">
+			<GameObject _schemaVersion="0" _name="Hand" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="-2,1.5,0" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<GrabberComponent _holdOffset="0,0,0" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+		<entity id="7" name="Keeper">
+			<GameObject _schemaVersion="0" _name="Keeper" _bActive="true">
+				<_listComponent>
+					<SceneComponent _localPosition="0,0,3" _localRotation="0,0,0" _localScale="1,1,1" _attachOwner="None" _attachComponent="None" />
+					<PersistAcrossScenesComponent _bPersistent="true" />
+				</_listComponent>
+			</GameObject>
+		</entity>
+	</entities>
+</Scene>

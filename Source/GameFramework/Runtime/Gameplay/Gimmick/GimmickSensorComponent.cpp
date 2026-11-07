@@ -2,6 +2,7 @@
 
 #include "GameFramework/Runtime/Gameplay/Gimmick/GimmickSensorComponent.h"
 
+#include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Physics/Component/RigidBody2DComponent.h"
@@ -157,4 +158,30 @@ namespace sw
         }
         return _pendingUse.exchange( 0.0f ) + static_cast<float32>( newCompleted );
     }
+} // namespace sw
+
+namespace sw
+{
+    namespace
+    {
+        struct GimmickSensorWatchesInternal
+        {
+            /** @brief 감시 값 `Gimmick.OccupantWeight` 입니다. 대상 센서에 겹친 것들의 무게 합(kg — `GimmickWeightComponent`, 강체 질량, 기본 무게 순)입니다. 눌림판이 읽는 값과 같다. */
+            [[nodiscard]] static bool readOccupantWeight( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const GameObject*             pTarget = query.findTargetObject();
+                const GimmickSensorComponent* pSensor = pTarget != nullptr ? pTarget->getComponent<GimmickSensorComponent>() : nullptr;
+                if ( pSensor == nullptr )
+                {
+                    outValue.setText( pTarget == nullptr ? query.getTargetProblem() : query.describeMissing( "gimmick sensor" ) );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( pSensor->computeOccupantWeight() ) );
+                return true;
+            }
+        };
+    } // namespace
+
+    SW_AUTOMATION_QUERY_WATCH( gimmickOccupantWeight, "Gimmick.OccupantWeight", "Weight of what overlaps the target's gimmick sensor (kg, the pressure plate's reading)",
+                               &GimmickSensorWatchesInternal::readOccupantWeight, true, false );
 } // namespace sw
