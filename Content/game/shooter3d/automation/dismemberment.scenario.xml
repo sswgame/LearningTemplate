@@ -4,7 +4,7 @@
   맞음은 게임의 총알 길과 같이 치명 표시 없이 보낸다(개발 명령 combat.hit). 쓰러짐은 적의 체력(ShooterEnemyComponent)이 정하고 치명 신호를 같은 오브젝트에 다시 보낸다
   (HealthSourceComponent::deliverFatalHit) — 래그돌이 넘어가고 절단이 맞은 영역을 떼어 낸다.
   ① 쓰러뜨리지 못한 맞음은 자르지 않는다. ② 왼팔 뼈의 치명 맞음 → 영역 하나가 잘리고 SkeletonMinion_Arm_L 조각이 생겨 바닥까지 떨어진다. 영역에 피가 오른다.
-  ③ 시체가 걷히면(시체 시간 3 초) 조각도 함께 사라진다 — 웨이브 동안 조각이 쌓이지 않는다. 값으로 판정한다(골든 없음).
+  ②-1 몸 메시의 LOD 단계 수가 자르기 전과 같다(낮은 단계마다 같은 영역을 잘랐다). ③ 시체가 걷히면(시체 시간 3 초) 조각도 함께 사라진다 — 웨이브 동안 조각이 쌓이지 않는다. 값으로 판정한다(골든 없음).
   자동 플레이는 끈다(플레이어가 해골을 먼저 쓰러뜨리면 ①이 흔들린다). 감독은 시작 예산 4 · 분당 16 으로 다섯째 적을 몇 초 안에 세운다.
   실행: App -scenario=game/shooter3d/automation/dismemberment.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
 -->
@@ -14,6 +14,7 @@
 	<WaitUntil watch="Assets.Pending" equals="0" timeoutWallSeconds="60"/>
 	<Wait frames="10"/>
 	<Expect watch="Dismemberment.SeveredCount" target="SkeletonMinion" equals="0"/>
+	<Remember watch="Dismemberment.MeshLODCount" target="SkeletonMinion" as="bodyLODs"/>
 	<Wait frames="1"/>
 
 	<DevCommand line="combat.hit SkeletonMinion upperarm.l 1"/>
@@ -27,6 +28,8 @@
 	<Expect watch="Object.Exists" target="SkeletonMinion_Arm_L" equals="1"/>
 	<Expect watch="Dismemberment.RegionBlood" target="SkeletonMinion" key="Arm_L" atLeast="0.99"/>
 	<Expect watch="Dismemberment.RegionBlood" target="SkeletonMinion" key="Head" atMost="0.01"/>
+	<!-- 낮은 상세 단계도 같이 잘린다 — 단계 수가 그대로면 LOD 가 바뀌는 순간 팔이 되살아나지 않는다 -->
+	<Expect watch="Dismemberment.MeshLODCount" target="SkeletonMinion" sameAs="bodyLODs"/>
 	<WaitUntil watch="Object.Y" target="SkeletonMinion_Arm_L" atMost="0.5" timeoutSeconds="5"/>
 
 	<WaitUntil watch="Object.Exists" target="SkeletonMinion_Arm_L" equals="0" timeoutSeconds="8"/>

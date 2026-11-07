@@ -138,6 +138,65 @@ namespace sw
             }
 
             /**
+             * @brief 원본 메시의 낮은 상세 단계(LOD 1 이상) @p lodIndex 를 단독 메시로 꺼냅니다(정점 · 인덱스 · 스킨). 같은 자르기를 그 단계에도 하려는 것이다.
+             * @details 단계 정점은 LOD 0 뒤에 이어진 그릴 흐름이고 인덱스 값도 그 흐름 번호라, 단계 시작을 빼 단계 안 번호로 돌린다(`MeshLOD`).
+             */
+            static shared_ptr<Mesh> extractLODLevel( const Mesh& mesh, size_t lodIndex )
+            {
+                const MeshLOD&                lod        = mesh.getLODs()[lodIndex];
+                const uint32                  vertexBase = static_cast<uint32>( mesh.getVertices().size() );
+                const uint32                  indexBase  = mesh.getIndexCount();
+                const vector<RHIVertex>&      listVertex = mesh.getLODVertices();
+                const vector<MeshSkinVertex>& listSkin   = mesh.getLODSkinVertices();
+                const vector<uint32>&         listIndex  = mesh.getLODIndices();
+                const uint32                  firstLocal = lod._firstVertex - vertexBase;
+                vector<RHIVertex>             listLevelVertex( listVertex.begin() + firstLocal, listVertex.begin() + firstLocal + lod._vertexCount );
+                vector<MeshSkinVertex>        listLevelSkin( listSkin.begin() + firstLocal, listSkin.begin() + firstLocal + lod._vertexCount );
+                vector<uint32>                listLevelIndex;
+                listLevelIndex.reserve( lod._indexCount );
+                for ( uint32 index = 0; index < lod._indexCount; ++index )
+                {
+                    listLevelIndex.push_back( listIndex[lod._firstIndex - indexBase + index] - lod._firstVertex );
+                }
+                shared_ptr<Mesh> level = Mesh::create();
+                if ( level->setGeometryWithTangents( std::move( listLevelVertex ), std::move( listLevelIndex ) ) == false )
+                    return nullptr;
+                level->setSkin( std::move( listLevelSkin ), mesh.getSkinBinding() );
+                return level;
+            }
+
+            /**
+             * @brief 원본의 낮은 단계마다 같은 영역을 잘라 남은 몸의 단계로 만듭니다. LOD 가 바뀌는 순간 잘린 팔이 되살아나지 않게 한다(언리얼 스켈레탈 메시의 LOD 마다 같은 섹션 숨김).
+             * @details 한 단계라도 자르지 못하면(그 단계 형상에서 영역을 못 찾음) 거기서 멈춘다 — 그 아래 단계를 두면 잘린 모습이 다시 붙어 보이므로, 대신 위 단계를 더 멀리까지 그린다.
+             */
+            static vector<MeshLODLevel> severLODLevels( const Mesh& mesh, const Skeleton& skeleton, const FitTables& regionTable, int32 regionIndex )
+            {
+                vector<MeshLODLevel> listLevel;
+                for ( size_t lodIndex = 0; lodIndex < mesh.getLODs().size(); ++lodIndex )
+                {
+                    const shared_ptr<Mesh> source = extractLODLevel( mesh, lodIndex );
+                    DismembermentResult    result;
+                    if ( source == nullptr || computeSeveredTriangles( *source, skeleton, regionTable, regionIndex, result ) == false )
+                        break;
+                    vector<RHIVertex>      listKeptVertex;
+                    vector<MeshSkinVertex> listKeptSkin;
+                    vector<RHIVertex>      listPieceVertex;
+                    vector<MeshSkinVertex> listPieceSkin;
+                    splitByTriangle( *source, result, listKeptVertex, listKeptSkin, listPieceVertex, listPieceSkin );
+                    // 탄젠트 · 인덱스는 LOD 0 과 같은 길(`setVertices`)로 만든다 — 캡 정점은 탄젠트가 없다.
+                    shared_ptr<Mesh> kept = Mesh::create();
+                    kept->setVertices( std::move( listKeptVertex ) );
+                    MeshLODLevel level;
+                    level._listVertex     = kept->getVertices();
+                    level._listIndex      = kept->getIndices();
+                    level._listSkinVertex = std::move( listKeptSkin );
+                    level._screenSize     = mesh.getLODs()[lodIndex]._screenSize;
+                    listLevel.push_back( std::move( level ) );
+                }
+                return listLevel;
+            }
+
+            /**
              * @brief 조각 정점을 현재 포즈로 스키닝해 월드로 옮기고, 무게중심 기준 좌표로 바꿉니다. 무게중심을 돌려줍니다.
              * @details 볼록 껍질 점은 고르게 솎아 `kMaxHullPoint` 개 안팎으로 @p outHull 에 담는다.
              */
@@ -194,6 +253,21 @@ namespace sw
                 return true;
             }
 
+            /** @brief 감시 값 `Dismemberment.MeshLODCount` 입니다. 대상 몸 메시(같은 오브젝트의 SkeletalMeshComponent)의 LOD 단계 수(LOD 0 포함)입니다 — 자른 뒤에도 원본과 같아야 한다. */
+            [[nodiscard]] static bool readMeshLODCount( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
+            {
+                const DismembermentComponent* pFound = findTarget( query, outValue );
+                const SkeletalMeshComponent*  pUnit  = pFound != nullptr ? pFound->getOwner()->getComponent<SkeletalMeshComponent>() : nullptr;
+                if ( pUnit == nullptr || pUnit->getMesh() == nullptr )
+                {
+                    if ( pFound != nullptr )
+                        outValue.setText( "no skinned body mesh yet" );
+                    return false;
+                }
+                outValue.setNumber( static_cast<float64>( pUnit->getMesh()->getLODCount() ) );
+                return true;
+            }
+
             /** @brief 감시 값 `Dismemberment.RegionBlood` 입니다. 영역 `key` 의 표면 상태에 오른 피 채널 값입니다. 표에 없는 영역이면 값이 없습니다. */
             [[nodiscard]] static bool readRegionBlood( const AutomationWatchQuery& query, AutomationWatchValue& outValue )
             {
@@ -213,6 +287,8 @@ namespace sw
     } // namespace
 
     SW_AUTOMATION_QUERY_WATCH( dismembermentSeveredCount, "Dismemberment.SeveredCount", "Body regions severed from the target", &DismembermentComponentInternal::readSeveredCount, true, false );
+    SW_AUTOMATION_QUERY_WATCH( dismembermentMeshLODCount, "Dismemberment.MeshLODCount", "LOD levels of the target's body mesh (LOD 0 included); a cut keeps the count", &DismembermentComponentInternal::readMeshLODCount, true,
+                               false );
     SW_AUTOMATION_QUERY_WATCH( dismembermentRegionBlood, "Dismemberment.RegionBlood", "Blood channel of the target's body region named key", &DismembermentComponentInternal::readRegionBlood, true, true );
 } // namespace sw
 
@@ -384,6 +460,9 @@ namespace sw
         shared_ptr<Mesh> kept = Mesh::create();
         kept->setVertices( std::move( listKeptVertex ) );
         kept->setSkin( std::move( listKeptSkin ), mesh->getSkinBinding() );
+        // 낮은 단계도 같이 자른다(스킨을 먼저 둔 뒤 — `setSkin` 은 LOD 를 뗀다). 받지 못하면 setLODs 가 오류를 남기고 LOD 0 만 남는다.
+        if ( mesh->getLODs().empty() == false )
+            (void)kept->setLODs( Internal::severLODLevels( *mesh, pUnit->getSkeleton(), *_pRegionTable, regionIndex ) );
         pUnit->setMesh( std::move( kept ) );
 
         // 3) 떨어진 조각: 현재 포즈로 스키닝해 정적 메시로 만들고, 그 정점의 볼록 껍질로 강체를 만든다.
