@@ -1008,7 +1008,7 @@ namespace sw::editor
             pLabelName = method._metadata->_displayName.c_str();
 
         const uint32 paramCount = method.getParameterCount();
-        // 네트워크 메타데이터(Server · Client · Multicast)는 선언 기록일 뿐 RPC 로 보내지 않는다 — 여기서 부르면 이 프로세스에서 바로 돈다.
+        // 네트워크 함수(Server · Client · Multicast)를 여기서 부르면 RPC 경로(`RemoteCall`)를 지나지 않고 이 프로세스에서 바로 돈다 — 툴팁이 그렇게 알린다.
         const bool bNetRole = method._metadata->_netRole != FunctionNetRole::Local;
 
         if ( method._metadata->_bCallInEditor != SW_FALSE && paramCount == 0 )
