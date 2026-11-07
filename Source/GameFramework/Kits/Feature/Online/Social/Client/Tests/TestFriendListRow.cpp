@@ -5,7 +5,7 @@
 
 #include "Engine/UI/Widgets/TextWidget.h"
 
-#include "GameFramework/Kits/Feature/Online/Social/Runtime/FriendListScreen.h"
+#include "GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.h"
 
 using namespace sw;
 

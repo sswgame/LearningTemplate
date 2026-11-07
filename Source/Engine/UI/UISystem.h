@@ -19,6 +19,7 @@
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/EngineSubsystemHost.h"
 #include "Engine/Graphics/Canvas/CanvasDrawList.h"
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/UI/Document/UIBindingDef.h"
 #include "Engine/UI/Input/UIActionGlyphSource.h"
 #include "Engine/UI/Input/UIInputRouter.h"
@@ -81,7 +82,7 @@ namespace sw
      *          알림 `UINotificationService` · 자막 `UISubtitleService` · 툴팁 `UITooltipService` · 접근성 `UIAccessibilityService` ·
      *          위젯 컴포넌트(화면 마커 · World 위젯) `UIWidgetComponentService` · 오프스크린 화면 `UIOffscreenScreens`.
      */
-    class SW_API UISystem final : public ISubsystem
+    class SW_API UISystem final : public ISubsystem, public IInputCaptureQuery
     {
     public:
         UISystem();
@@ -234,6 +235,10 @@ namespace sw
         // --- 게임 쪽이 묻는 것 -----------------------------------------------------------
         /** @brief 모달이나 로딩 화면이 떠 있어 게임 입력을 막아야 하면 true 입니다(플레이어 컨트롤러가 의도를 0 으로 둡니다). */
         bool isGameInputBlocked() const;
+        // IInputCaptureQuery — 게임 코드가 UI 를 모르고 묻는 창구다. 서지 않았으면 모두 false 다(전용 서버).
+        [[nodiscard]] bool isGameInputCaptured() const override;
+        [[nodiscard]] bool isActionCaptured( const InputMap& inputMap, const hashed_string& action ) const override;
+        [[nodiscard]] bool isCursorCaptured() const override;
         /** @brief Loading 레이어 화면(로딩 화면)이 떠 있으면 true 입니다(닫는 중인 화면은 제외). 자동화의 "씬 플레이 중" 판정은 이 값이 false 가 된 뒤에 합니다. */
         bool isLoadingScreenShown() const;
         /**

@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Client_Chat",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "채팅 키트(클라이언트) — 채팅 화면(UI). 모델 · 프로토콜은 GF_Chat",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Chat"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

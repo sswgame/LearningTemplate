@@ -9,8 +9,10 @@
 #include "Engine/Automation/Watch/AutomationWatch.h"
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
+#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
@@ -18,8 +20,6 @@
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/UI/Input/UIInputMapView.h"
-#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -590,7 +590,7 @@ namespace sw
     void ParkGameModeComponent::updateInput( const InputManager& input )
     {
         // 키는 입력 맵(`data/park.input.xml` 과 공통 묶음)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
-        const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
+        const GameInputView inputMap( input.getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
         if ( inputMap.wasActionTriggered( hashed_string( "Park.NextRide" ) ) && _listPlacement.empty() == false )
         {
             _selectedPlacement = ( _selectedPlacement + 1 ) % static_cast<int32>( _listPlacement.size() );

@@ -8,14 +8,13 @@
 #include "Core/Math/MathUtil.h"
 #include "Core/String/FourCcUtil.h"
 
+#include "Engine/Localization/IPlayerNoticeSink.h"
 #include "Engine/Localization/LocText.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
 #include "Engine/Serialization/Serializer/SerializerUtil.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
-#include "Engine/UI/Screen/UINotificationService.h"
-#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
 #include "GameFramework/Runtime/Foundation/Framework/Save/GameLocalStore.h"
@@ -412,12 +411,11 @@ namespace sw
         _intervalTimer = 0.0f;
         SW_LOG_INFO_ID( "Autosave.Autosaved", "Autosaved (%#%#%#) to %#", getEnumName( info._trigger ), info._label.empty() ? "" : " ", info._label.c_str(), info._slotName.c_str() );
         // 플레이어에게 알린다(UI 가 없는 서버 · 테스트는 건너뛴다) — 같은 알림이 떠 있으면 센다.
-        if ( game::findSubsystem<UISystem>() != nullptr )
+        if ( IPlayerNoticeSink* const pNotices = game::findSubsystem<IPlayerNoticeSink>() )
         {
-            UINotificationDef notice{};
-            notice._text            = SW_LOCTEXT( "Notification", "GameSaved", "Game saved" );
-            notice._durationSeconds = 3.0f;
-            game::getSubsystem<UINotificationService>().post( notice );
+            string text;
+            text = SW_LOCTEXT( "Notification", "GameSaved", "Game saved" );
+            pNotices->postNotice( text, 3.0f );
         }
     }
 

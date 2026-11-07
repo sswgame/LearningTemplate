@@ -1,6 +1,6 @@
 /**
  * @file GameFrameworkExports.h
- * @brief GameFramework DLL(`SW_GF_API`)과 키트 모듈(`SW_KIT_API` · `SW_KIT_SERVER_API`)의 내보내기 매크로입니다.
+ * @brief GameFramework DLL(`SW_GF_API`)과 키트 모듈(`SW_KIT_API` · `SW_KIT_SERVER_API` · `SW_KIT_CLIENT_API`)의 내보내기 매크로입니다.
  * @details 정의는 이 층이 가진다 — 계약 층(ModuleAPI)은 위층 이름을 모른다(예전 `ModuleAPI/Export/GameFrameworkAPI.h`, StructureRefactor 8 절 18).
  */
 #pragma once
@@ -35,6 +35,13 @@
         #define SW_KIT_API
         #define SW_KIT_API_EXTERN_TEMPLATE
     #endif
+    #if defined( SW_KIT_CLIENT_EXPORTS )
+        #define SW_KIT_CLIENT_API __declspec( dllexport )
+    #elif defined( SW_KIT_IMPORTS )
+        #define SW_KIT_CLIENT_API __declspec( dllimport )
+    #else
+        #define SW_KIT_CLIENT_API
+    #endif
     #if defined( SW_KIT_SERVER_EXPORTS )
         #define SW_KIT_SERVER_API __declspec( dllexport )
         #define SW_KIT_SERVER_API_EXTERN_TEMPLATE
@@ -48,6 +55,7 @@
 #else
     #define SW_KIT_API                        __attribute__( ( visibility( "default" ) ) )
     #define SW_KIT_API_EXTERN_TEMPLATE        __attribute__( ( visibility( "default" ) ) )
+    #define SW_KIT_CLIENT_API                 __attribute__( ( visibility( "default" ) ) )
     #define SW_KIT_SERVER_API                 __attribute__( ( visibility( "default" ) ) )
     #define SW_KIT_SERVER_API_EXTERN_TEMPLATE __attribute__( ( visibility( "default" ) ) )
 #endif

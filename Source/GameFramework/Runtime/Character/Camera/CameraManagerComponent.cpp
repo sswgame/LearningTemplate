@@ -7,14 +7,14 @@
 #include "Engine/Animation/Scene/AnimationLOD.h"
 #include "Engine/Animation/Scene/AnimationSystem.h"
 #include "Engine/Automation/Watch/AutomationWatch.h"
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
 #include "Engine/Rendering/MeshLODSystem.h"
-#include "Engine/UI/Input/UIInputMapView.h"
-#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
 #include "GameFramework/Runtime/Character/Camera/CameraUserSettings.h"
@@ -116,7 +116,7 @@ namespace sw
     {
         Component::onTick( deltaTime );
         const InputManager* pInput = _cycleAction.empty() == false ? game::findSubsystem<InputManager>() : nullptr;
-        if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).wasActionTriggered( _cycleAction ) )
+        if ( pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).wasActionTriggered( _cycleAction ) )
             (void)cycleViewTarget( _cycleRole );
         updateCamera( deltaTime );
     }

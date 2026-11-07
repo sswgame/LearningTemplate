@@ -8,8 +8,10 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Config/GameTimeScale.h"
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
+#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/Component/SceneComponent.h"
@@ -17,8 +19,6 @@
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/UI/Input/UIInputMapView.h"
-#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraCollisionProbe.h"
 #include "GameFramework/Runtime/Character/Camera/CameraPose.h"
@@ -408,7 +408,7 @@ namespace sw
         const InputManager* pInput = _bReadInput ? game::findSubsystem<InputManager>() : nullptr;
         if ( pInput == nullptr )
             return;
-        const UIInputMapView inputMap( pInput->getInputMap(), game::findSubsystem<UISystem>() ); // 메뉴가 먹은 입력과 모달 아래의 입력은 카메라가 보지 않는다
+        const GameInputView inputMap( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ); // 메뉴가 먹은 입력과 모달 아래의 입력은 카메라가 보지 않는다
         if ( _cycleAction.empty() == false && inputMap.wasActionTriggered( _cycleAction ) )
         {
             [[maybe_unused]] const hashed_string nextID = activateNextPreset(); // 로그는 Shipping 에서 빠진다
@@ -466,10 +466,10 @@ namespace sw
         if ( bNoInput || game::findSubsystem<InputManager>() == nullptr )
             return;
         _photoInputMap->update( unscaledDeltaTime );
-        const UIInputMapView inputMap( *_photoInputMap, game::findSubsystem<UISystem>() ); // 메뉴가 먹은 입력과 모달 아래의 입력은 보지 않는다
-        const hashed_string  zoomAction( Internal::kPhotoZoomAction );
-        const hashed_string  exposureAction( Internal::kPhotoExposureAction );
-        PhotoModeInput       input;
+        const GameInputView inputMap( *_photoInputMap, game::findSubsystem<IInputCaptureQuery>() ); // 메뉴가 먹은 입력과 모달 아래의 입력은 보지 않는다
+        const hashed_string zoomAction( Internal::kPhotoZoomAction );
+        const hashed_string exposureAction( Internal::kPhotoExposureAction );
+        PhotoModeInput      input;
         input._move = inputMap.getVector2D( hashed_string( Internal::kPhotoMoveAction ) );
         input._rise = inputMap.getAxis1D( hashed_string( Internal::kPhotoRiseAction ) );
         input._look = inputMap.getVector2D( hashed_string( Internal::kPhotoLookAction ) );

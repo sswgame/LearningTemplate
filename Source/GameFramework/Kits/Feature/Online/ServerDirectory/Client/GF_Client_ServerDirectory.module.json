@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Client_ServerDirectory",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "서버 고르기 키트(클라이언트) — 서버 고르기 화면(UI). 모델 · 프로토콜은 GF_ServerDirectory",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_ServerDirectory"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

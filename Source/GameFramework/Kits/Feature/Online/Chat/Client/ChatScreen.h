@@ -25,7 +25,7 @@ namespace sw
      * @brief 한 채널의 채팅 화면입니다.
      */
     REFLECT( Abstract )
-    class SW_KIT_API ChatScreen : public UIScreen
+    class SW_KIT_CLIENT_API ChatScreen : public UIScreen
     {
     public:
         REFLECT_BODY();

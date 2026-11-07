@@ -2,15 +2,15 @@
 
 #include "Games/MeadowVillage/MeadowTownGameModeComponent.h"
 
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/Component/SceneComponent.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/UI/Input/UIInputMapView.h"
-#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Kits/Genre/Simulation/CreatureLife/CreatureLifeCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -142,7 +142,7 @@ namespace sw
 
         // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 대화는 하루 한 번(키트가 막는다).
         const InputManager* pInput = game::findSubsystem<InputManager>();
-        if ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
+        if ( pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).wasActionTriggered( hashed_string( MeadowVillageData::kTalkAction ) ) )
         {
             const CreatureInteractResult result = _town.talkTo( sprout );
             SW_LOG_INFO_ID( "MeadowTown.TalkSproutFriendship", "[Meadow] talk to sprout: %# (friendship %#)", getEnumName( result ), _town.getFriendship( sprout ) );

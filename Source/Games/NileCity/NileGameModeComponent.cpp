@@ -12,16 +12,16 @@
 #include "Engine/Config/GameAutoplay.h"
 #include "Engine/Graphics/Material/MaterialInstance.h"
 #include "Engine/Graphics/Mesh/MeshCache.h"
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/CommonInputActions.h"
+#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Reflection/EnumName.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/UI/Input/UIInputMapView.h"
-#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -742,11 +742,11 @@ namespace sw
         // 카메라 이동과 확대는 리그(PostUpdate)가 읽는다. 여기서는 도구, 속도, 건설을 처리한다.
         (void)deltaTime;
         // 키는 입력 맵(`data/nile.input.xml` 과 공통 묶음)이 정한다. 일시정지 메뉴 같은 UI 가 먹은 입력은 보이지 않는다.
-        const UIInputMapView inputMap( input.getInputMap(), game::findSubsystem<UISystem>() );
-        const int32          toolCount = static_cast<int32>( _listTool.size() );
-        const bool           bNextTool = inputMap.wasActionTriggered( hashed_string( "Nile.NextTool" ) );
-        const bool           bPrevTool = inputMap.wasActionTriggered( hashed_string( "Nile.PrevTool" ) );
-        const bool           bRoadTool = inputMap.wasActionTriggered( hashed_string( "Nile.RoadTool" ) );
+        const GameInputView inputMap( input.getInputMap(), game::findSubsystem<IInputCaptureQuery>() );
+        const int32         toolCount = static_cast<int32>( _listTool.size() );
+        const bool          bNextTool = inputMap.wasActionTriggered( hashed_string( "Nile.NextTool" ) );
+        const bool          bPrevTool = inputMap.wasActionTriggered( hashed_string( "Nile.PrevTool" ) );
+        const bool          bRoadTool = inputMap.wasActionTriggered( hashed_string( "Nile.RoadTool" ) );
         if ( bNextTool )
             _selectedTool = ( _selectedTool + 1 ) % toolCount;
         if ( bPrevTool )

@@ -5,14 +5,14 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Config/GameAutoplay.h"
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/UI/Input/UIInputMapView.h"
-#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Kits/Genre/Simulation/Farming/CropCatalog.h"
 #include "GameFramework/Runtime/Foundation/Framework/GameService.h"
@@ -129,7 +129,7 @@ namespace sw
         const InputManager* pInput = game::findSubsystem<InputManager>();
         const bool          bFastForward =
             isAutoPlayOn() ||
-            ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() ).isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) ) );
+            ( pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() ).isActionDown( hashed_string( MeadowVillageData::kFastForwardAction ) ) );
         if ( pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false )
             return;
         for ( const WorldClockEvent& clockEvent : pState->getClockEvents() )

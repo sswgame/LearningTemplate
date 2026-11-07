@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Chat/Runtime/ChatScreen.h"
+#include "GameFramework/Kits/Feature/Online/Chat/Client/ChatScreen.h"
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Log/Logger.h"

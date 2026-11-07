@@ -13,6 +13,7 @@
 #include "Core/Subsystem/ServiceSlot.h"
 
 #include "Engine/Foundation/EngineSubsystemHost.h"
+#include "Engine/Localization/IPlayerNoticeSink.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/Screen/UIScreenTypes.h"
 #include "Engine/UI/WidgetTree/WidgetTypes.h"
@@ -60,7 +61,7 @@ namespace sw
      *          **들어오기 · 나가기.** 항목 위젯은 불투명도 0 으로 붙고 `kFadeSeconds` 동안 1 로 올라온다. 시간이 다 되면 보이는 목록(자리 계산, `getVisibleCount`)에서는 바로 빠지고
      *          위젯은 같은 시간 동안 0 으로 사라진 뒤 지운다(화면은 사라지는 항목까지 없어져야 닫는다). 움직임 줄이기(`gv_uiReduceMotion`)이면 페이드 없이 바로 붙고 바로 지운다.
      */
-    class SW_API UINotificationService final : public ISubsystem
+    class SW_API UINotificationService final : public ISubsystem, public IPlayerNoticeSink
     {
     public:
         // 화면 · 항목 문서는 엔진 기본 에셋 표가 기준이다(`UISystem::getEngineDocuments` 의 `_notifications` · `_notificationEntry`).
@@ -81,6 +82,8 @@ namespace sw
 
         /** @brief 알림을 올립니다(보일 자리가 있으면 다음 `update` 에 보이고, 없으면 기다립니다). */
         void post( const UINotificationDef& desc );
+        /** @brief 기본 모양(`Info`)의 알림을 올립니다(`IPlayerNoticeSink`). */
+        void postNotice( const string& text, float32 durationSeconds ) override;
         /** @brief 보이는 알림의 시간을 재고, 끝난 것을 내리고, 기다리는 것을 올립니다(UI 갱신의 화면 틱 뒤 칸이 부른다). */
         void update( float32 deltaSeconds );
         /** @brief 모두 버리고 화면을 닫습니다. */

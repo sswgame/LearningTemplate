@@ -18,17 +18,17 @@ namespace sw
 {
     struct ControlIntent;
 
+    class IInputCaptureQuery;
     class InputManager;
     class PawnComponent;
-    class UISystem;
 
     /** @brief 조종 시스템이 조종자에게 넘기는 이번 틱의 문맥입니다. */
     struct ControlFrameContext
     {
-        InputManager*   _pInput{ nullptr };    ///< 플레이어 조종자가 읽는 입력. 서버와 헤드리스에서는 없을 수 있다
-        const UISystem* _pUISystem{ nullptr }; ///< 런타임 UI. 플레이어 조종자가 UI 가 소비한 입력, 게임 입력 막기, 커서를 본다. 서버에서는 없을 수 있다
-        float32         _deltaTime{ 0.0f };
-        uint32          _tick{ 0 }; ///< 조종 시스템이 센 틱(기록 · 네트워크 창의 틱 번호)
+        InputManager*             _pInput{ nullptr };        ///< 플레이어 조종자가 읽는 입력. 서버와 헤드리스에서는 없을 수 있다
+        const IInputCaptureQuery* _pInputCapture{ nullptr }; ///< 입력을 먼저 가져간 쪽(런타임 UI). 플레이어 조종자가 소비한 입력, 게임 입력 막기, 커서를 본다. 없을 수 있다
+        float32                   _deltaTime{ 0.0f };
+        uint32                    _tick{ 0 }; ///< 조종 시스템이 센 틱(기록 · 네트워크 창의 틱 번호)
     };
 } // namespace sw
 

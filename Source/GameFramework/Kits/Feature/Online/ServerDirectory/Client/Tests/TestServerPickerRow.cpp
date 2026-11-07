@@ -6,7 +6,7 @@
 #include "Engine/UI/Widgets/ButtonWidget.h"
 #include "Engine/UI/Widgets/TextWidget.h"
 
-#include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerPickerScreen.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.h"
 
 using namespace sw;
 

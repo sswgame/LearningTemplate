@@ -5,12 +5,12 @@
 #include "Core/Math/MathUtil.h"
 
 #include "Engine/Asset/AssetManager.h"
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
 #include "Engine/Object/Prefab/PrefabAsset.h"
-#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
@@ -62,7 +62,7 @@ namespace sw
         , _listAutoPossessPawn{}
         , _listQueuedPossess{}
         , _pInputOverride{ nullptr }
-        , _pUISystemOverride{ nullptr }
+        , _pInputCaptureOverride{ nullptr }
         , _tick{ 0 }
         , _bRecording{ SW_FALSE }
         , _reserved{ 0 }
@@ -131,10 +131,9 @@ namespace sw
         return _pInputOverride != nullptr ? _pInputOverride : game::findSubsystem<InputManager>();
     }
 
-    const UISystem* ControlSystem::findUISystem() const
+    const IInputCaptureQuery* ControlSystem::findInputCapture() const
     {
-        const UISystem* pUISystem = _pUISystemOverride != nullptr ? _pUISystemOverride : game::findSubsystem<UISystem>();
-        return pUISystem != nullptr && pUISystem->isInitialized() ? pUISystem : nullptr;
+        return _pInputCaptureOverride != nullptr ? _pInputCaptureOverride : game::findSubsystem<IInputCaptureQuery>();
     }
 
     void ControlSystem::setRecording( bool bRecording, int32 capacityTicks )
@@ -167,10 +166,10 @@ namespace sw
         autoPossess( manager );
 
         ControlFrameContext context{};
-        context._pInput    = findInputManager();
-        context._pUISystem = findUISystem();
-        context._deltaTime = deltaTime;
-        context._tick      = _tick;
+        context._pInput        = findInputManager();
+        context._pInputCapture = findInputCapture();
+        context._deltaTime     = deltaTime;
+        context._tick          = _tick;
 
         // 레지스트리의 창은 등록 · 해제가 일어나면 버려야 한다 — 조종자가 판단 중에 오브젝트를 만들 수 있으므로 자리 번호로 돌며 매번 크기를 다시 본다.
         const ComponentRegistry::View<PawnComponent> pawnView = manager.getComponentRegistry().getAll<PawnComponent>();

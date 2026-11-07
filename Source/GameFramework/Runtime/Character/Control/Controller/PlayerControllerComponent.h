@@ -19,7 +19,7 @@
 namespace sw
 {
     class InputMap;
-    class UISystem;
+    class IInputCaptureQuery;
 } // namespace sw
 
 namespace sw
@@ -40,7 +40,7 @@ namespace sw
      *          이 모두를 조종 시스템 단계(게임 스레드)에서 바꾼다.
      *
      *          **UI 와의 경계는 이 조종자 한 곳이다.**
-     *          런타임 UI 가 먹은 입력(`UISystem::isActionConsumed`, 메뉴에서 누른 패드 A, 위젯이 받은 클릭)은 뗄 때까지 의도에 넣지 않는다.
+     *          런타임 UI 가 먹은 입력(`IInputCaptureQuery::isActionCaptured`, 메뉴에서 누른 패드 A, 위젯이 받은 클릭)은 뗄 때까지 의도에 넣지 않는다.
      *          모달이나 로딩 화면이 떠 있으면(`isGameInputBlocked`) 의도가 0 이다. 조종 회전은 남는다.
      *          활성 화면이 커서를 바라면(`wantsCursor`) 마우스 잠금을 쉬고 시선을 쌓지 않는다. 화면이 닫히면 요청해 둔 잠금으로 돌아간다.
      */
@@ -73,9 +73,9 @@ namespace sw
 
     private:
         /** @brief 행동 @p action 이 눌려 있고 UI 가 먹은 입력이 아니면 true 입니다. */
-        static bool isActionDownForGame( const InputMap& inputMap, const UISystem* pUISystem, const hashed_string& action );
+        static bool isActionDownForGame( const InputMap& inputMap, const IInputCaptureQuery* pCapture, const hashed_string& action );
         /** @brief 행동 @p action 이 이번 틱 발동했고 UI 가 먹은 입력이 아니면 true 입니다. */
-        static bool wasActionTriggeredForGame( const InputMap& inputMap, const UISystem* pUISystem, const hashed_string& action );
+        static bool wasActionTriggeredForGame( const InputMap& inputMap, const IInputCaptureQuery* pCapture, const hashed_string& action );
         /** @brief 폰 스키마의 이름 중 입력 맵에 없는 것을 경고합니다. 폰마다 한 번만 경고합니다. */
         void warnMissingActions( const PawnComponent& pawn, const InputManager& input );
         /** @brief "game" 채널에 빙의 이벤트를 냅니다. */

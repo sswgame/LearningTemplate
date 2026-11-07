@@ -4,12 +4,12 @@
 
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/ComponentRegistry.h"
-#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraManagerComponent.h"
 #include "GameFramework/Runtime/Character/Control/ControlEvents.h"
@@ -62,15 +62,15 @@ namespace sw
         outIntent = ControlIntent{};
         if ( context._pInput == nullptr )
             return;
-        InputManager&   input    = *context._pInput;
-        const InputMap& inputMap = input.getInputMap();
-        const UISystem* pUI      = context._pUISystem;
+        InputManager&             input    = *context._pInput;
+        const InputMap&           inputMap = input.getInputMap();
+        const IInputCaptureQuery* pCapture = context._pInputCapture;
         // UI 가 커서를 바라면(메뉴가 열렸다) 잠금을 쉰다 — 닫히면 요청해 둔 잠금으로 돌아간다.
-        const bool bUIWantsCursor = pUI != nullptr && pUI->wantsCursor();
+        const bool bUIWantsCursor = pCapture != nullptr && pCapture->isCursorCaptured();
         bool       bLook          = bUIWantsCursor == false;
         if ( pawn.wantsMouseLock() )
         {
-            if ( _mouseLockAction.empty() == false && wasActionTriggeredForGame( inputMap, pUI, _mouseLockAction ) )
+            if ( _mouseLockAction.empty() == false && wasActionTriggeredForGame( inputMap, pCapture, _mouseLockAction ) )
             {
                 _bMouseLockRequested = _bMouseLockRequested == SW_TRUE ? SW_FALSE : SW_TRUE;
                 SW_LOG_INFO_ID( "PlayerControllerComponent.PlayerMouseLock", "Player %# mouse lock %# (%#)", _playerIndex, _bMouseLockRequested == SW_TRUE ? "engaged" : "released", _mouseLockAction.c_str() );
@@ -80,11 +80,11 @@ namespace sw
             bLook = bLook && _bMouseLockRequested == SW_TRUE && ( input.isMouseLockActive() || input.isOSInputSuppressed() );
         }
         // 모달 · 로딩 화면이 떠 있으면 게임 입력이 없다 — 의도는 0, 조종 회전은 그대로.
-        if ( pUI != nullptr && pUI->isGameInputBlocked() )
+        if ( pCapture != nullptr && pCapture->isGameInputCaptured() )
             return;
-        if ( pawn.getMoveAction().empty() == false && ( pUI == nullptr || pUI->getInputRouter().isActionConsumed( inputMap, pawn.getMoveAction() ) == false ) )
+        if ( pawn.getMoveAction().empty() == false && ( pCapture == nullptr || pCapture->isActionCaptured( inputMap, pawn.getMoveAction() ) == false ) )
             outIntent._move = inputMap.getVector2D( pawn.getMoveAction() );
-        if ( pawn.getUpAction().empty() == false && ( pUI == nullptr || pUI->getInputRouter().isActionConsumed( inputMap, pawn.getUpAction() ) == false ) )
+        if ( pawn.getUpAction().empty() == false && ( pCapture == nullptr || pCapture->isActionCaptured( inputMap, pawn.getUpAction() ) == false ) )
             outIntent._moveUp = inputMap.getAxis1D( pawn.getUpAction() );
         // 서브틱 입력: 프레임 시작의 조종 회전과 프레임 전체의 시선 값을 보관한다. 발동 버튼이 눌린 순간의 회전은 이 둘로 만든다.
         const float32 startYaw   = getControlYaw();
@@ -98,7 +98,7 @@ namespace sw
             setControlRotation( yaw, pitch );
         }
         const hashed_string& triggerLookButton = pawn.getTriggerLookButton();
-        if ( triggerLookButton.empty() == false && wasActionTriggeredForGame( inputMap, pUI, triggerLookButton ) )
+        if ( triggerLookButton.empty() == false && wasActionTriggeredForGame( inputMap, pCapture, triggerLookButton ) )
         {
             // 누름이 이벤트로 온 바인딩만 순간을 안다(축 임계 · 길게 누름은 없다) — 없으면 프레임 끝의 조종 회전이다.
             float32           triggerYaw   = getControlYaw();
@@ -117,25 +117,25 @@ namespace sw
         for ( size_t buttonIndex = 0; buttonIndex < buttonCount; ++buttonIndex )
         {
             const hashed_string& name = listButton[buttonIndex];
-            outIntent.setButton( static_cast<int32>( buttonIndex ), isActionDownForGame( inputMap, pUI, name ), wasActionTriggeredForGame( inputMap, pUI, name ) );
+            outIntent.setButton( static_cast<int32>( buttonIndex ), isActionDownForGame( inputMap, pCapture, name ), wasActionTriggeredForGame( inputMap, pCapture, name ) );
         }
         const vector<hashed_string>& listAnalog  = pawn.getAnalogNames();
         const size_t                 analogCount = MathUtil::min( listAnalog.size(), static_cast<size_t>( ControlIntent::kAnalogCount ) );
         for ( size_t analogIndex = 0; analogIndex < analogCount; ++analogIndex )
         {
             const hashed_string& name         = listAnalog[analogIndex];
-            outIntent._arrAnalog[analogIndex] = pUI != nullptr && pUI->getInputRouter().isActionConsumed( inputMap, name ) ? 0.0f : inputMap.getAxis1D( name );
+            outIntent._arrAnalog[analogIndex] = pCapture != nullptr && pCapture->isActionCaptured( inputMap, name ) ? 0.0f : inputMap.getAxis1D( name );
         }
     }
 
-    bool PlayerControllerComponent::isActionDownForGame( const InputMap& inputMap, const UISystem* pUISystem, const hashed_string& action )
+    bool PlayerControllerComponent::isActionDownForGame( const InputMap& inputMap, const IInputCaptureQuery* pCapture, const hashed_string& action )
     {
-        return inputMap.isActionDown( action ) && ( pUISystem == nullptr || pUISystem->getInputRouter().isActionConsumed( inputMap, action ) == false );
+        return inputMap.isActionDown( action ) && ( pCapture == nullptr || pCapture->isActionCaptured( inputMap, action ) == false );
     }
 
-    bool PlayerControllerComponent::wasActionTriggeredForGame( const InputMap& inputMap, const UISystem* pUISystem, const hashed_string& action )
+    bool PlayerControllerComponent::wasActionTriggeredForGame( const InputMap& inputMap, const IInputCaptureQuery* pCapture, const hashed_string& action )
     {
-        return inputMap.wasActionTriggered( action ) && ( pUISystem == nullptr || pUISystem->getInputRouter().isActionConsumed( inputMap, action ) == false );
+        return inputMap.wasActionTriggered( action ) && ( pCapture == nullptr || pCapture->isActionCaptured( inputMap, action ) == false );
     }
 
     void PlayerControllerComponent::onPossessed( PawnComponent& pawn )

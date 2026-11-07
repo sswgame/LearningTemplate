@@ -655,6 +655,21 @@ namespace sw
         return findScreen( _activeScreen );
     }
 
+    bool UISystem::isGameInputCaptured() const
+    {
+        return isInitialized() && isGameInputBlocked();
+    }
+
+    bool UISystem::isActionCaptured( const InputMap& inputMap, const hashed_string& action ) const
+    {
+        return isInitialized() && getInputRouter().isActionConsumed( inputMap, action );
+    }
+
+    bool UISystem::isCursorCaptured() const
+    {
+        return isInitialized() && wantsCursor();
+    }
+
     bool UISystem::isGameInputBlocked() const
     {
         for ( const unique_ptr<UIScreen>& screen : _listScreen )
@@ -1042,6 +1057,10 @@ namespace sw
     // 화면 스택 — 위의 UI 서비스가 이것에 의존하고 UI 갱신의 칸(`onUpdateBeforeScreens` · `onUpdateAfterScreens` …)에 건다.
     SW_ENGINE_SERVICE_SUBSYSTEM( UISystem, GameVisible, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
     {
-        build._pStartupParts->_pUISystem = &scope.emplaceSubsystem<UISystem>();
+        UISystem& uiSystem               = scope.emplaceSubsystem<UISystem>();
+        build._pStartupParts->_pUISystem = &uiSystem;
+        const bool bExposed              = scope.expose<IInputCaptureQuery>( uiSystem );
+        SW_ASSERT( bExposed );
+        (void)bExposed;
     } );
 } // namespace sw

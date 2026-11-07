@@ -1,0 +1,26 @@
+{
+    "_name": "GF_Client_Social",
+    "_version": "1.0.0",
+    "_kind": "Kit",
+    "_description": "친구 목록 키트(클라이언트) — 친구 목록 화면(UI). 모델 · 프로토콜은 GF_Social",
+    "_listDependency": [
+        {
+            "_name": "GameFramework"
+        },
+        {
+            "_name": "GF_Social"
+        }
+    ],
+    "_listPlatform": [
+        "Windows",
+        "Linux"
+    ],
+    "_listConfiguration": [
+        "Dev",
+        "Shipping"
+    ],
+    "_listTarget": [
+        "Client"
+    ],
+    "_bEnabledByDefault": true
+}

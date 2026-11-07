@@ -26,7 +26,7 @@ namespace sw
      * @brief 서버 목록 화면입니다.
      */
     REFLECT( Abstract )
-    class SW_KIT_API ServerPickerScreen : public UIScreen
+    class SW_KIT_CLIENT_API ServerPickerScreen : public UIScreen
     {
     public:
         REFLECT_BODY();

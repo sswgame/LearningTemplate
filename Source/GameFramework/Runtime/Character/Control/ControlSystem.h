@@ -19,10 +19,10 @@ namespace sw
 {
     class ControllerComponent;
     class GameObjectManager;
+    class IInputCaptureQuery;
     class InputManager;
     class PawnComponent;
     class PlayerControllerComponent;
-    class UISystem;
 
     /**
      * @class ControlSystem
@@ -73,10 +73,10 @@ namespace sw
         void setInputManager( InputManager* pInput ) { _pInputOverride = pInput; }
         /** @brief 플레이어 조종자가 읽을 입력을 반환합니다. 서버나 헤드리스에서는 없을 수 있습니다. */
         InputManager* findInputManager() const;
-        /** @brief 플레이어 조종자가 볼 UI 를 바꿉니다. 테스트가 씁니다. nullptr 이면 게임 서비스의 UI 시스템을 씁니다. */
-        void setUISystem( const UISystem* pUISystem ) { _pUISystemOverride = pUISystem; }
-        /** @brief 플레이어 조종자가 볼 UI 를 반환합니다. 시작하지 않았으면(서버, 테스트 하네스) nullptr 입니다. */
-        const UISystem* findUISystem() const;
+        /** @brief 플레이어 조종자가 볼 입력 포획 질의를 바꿉니다. 테스트가 씁니다. nullptr 이면 게임 서비스의 질의를 씁니다. */
+        void setInputCapture( const IInputCaptureQuery* pCapture ) { _pInputCaptureOverride = pCapture; }
+        /** @brief 플레이어 조종자가 볼 입력 포획 질의를 반환합니다. 없을 수 있습니다(테스트 하네스). */
+        const IInputCaptureQuery* findInputCapture() const;
         /** @brief 지금까지 돈 틱 수입니다. 기록과 네트워크 창의 틱 번호로 씁니다. */
         uint32 getTick() const { return _tick; }
         /** @brief 틱 번호를 정합니다. 되감기(`ControlSceneRewindWorld`)가 키 스냅샷으로 되돌린 뒤 키를 찍은 틱으로 맞출 때만 씁니다. */
@@ -116,7 +116,7 @@ namespace sw
         vector<TComponentHandle<PawnComponent>> _listAutoPossessPawn; ///< 이번 프레임에 자동 빙의할 폰(레지스트리를 도는 동안 오브젝트를 만들지 않게 모은다)
         vector<QueuedPossess>                   _listQueuedPossess;
         InputManager*                           _pInputOverride;
-        const UISystem*                         _pUISystemOverride;
+        const IInputCaptureQuery*               _pInputCaptureOverride;
         uint32                                  _tick;
         uint8                                   _bRecording : 1;
         [[maybe_unused]] uint8                  _reserved   : 7;

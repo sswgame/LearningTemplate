@@ -5,14 +5,14 @@
 #include "Core/GlobalVariable/GlobalVariableManager.h"
 
 #include "Engine/Config/GameAutoplay.h"
+#include "Engine/Input/IInputCaptureQuery.h"
 #include "Engine/Input/InputManager.h"
+#include "Engine/Input/Map/GameInputView.h"
 #include "Engine/Input/Map/InputMap.h"
 #include "Engine/Object/GameObject/GameObject.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Rendering/MeshComponent.h"
 #include "Engine/Serialization/Format/Archive.h"
-#include "Engine/UI/Input/UIInputMapView.h"
-#include "Engine/UI/UISystem.h"
 
 #include "GameFramework/Kits/Genre/Strategy/CityBuilder/CityCatalog.h"
 #include "GameFramework/Kits/Genre/Strategy/RealTimeStrategy/RTSWorld.h"
@@ -156,7 +156,7 @@ namespace sw
             layOutTown();
         // 키는 입력 맵(`data/gamesettings.xml` 의 입력 맵 묶음)이 정한다. 시계를 미는 것은 이 디렉터 하나다.
         const InputManager* pInput       = game::findSubsystem<InputManager>();
-        const bool          bFastForward = isAutoPlayOn() || ( pInput != nullptr && UIInputMapView( pInput->getInputMap(), game::findSubsystem<UISystem>() )
+        const bool          bFastForward = isAutoPlayOn() || ( pInput != nullptr && GameInputView( pInput->getInputMap(), game::findSubsystem<IInputCaptureQuery>() )
                                                                                .isActionDown( hashed_string( FrontierTownData::kFastForwardAction ) ) );
         if ( pState->getClock().setTimeScale( bFastForward ? _fastTimeScale : 1.0f ) == false )
             return;

@@ -47,11 +47,13 @@ function(sw_configureKitModuleCompile TARGET_NAME LIB_TYPE LOG_TAG MODULE_NAME D
 	set(listPCHDefinition "")
 	if(LIB_TYPE STREQUAL "SHARED")
 		# 키트 TU 는 `SW_GF_EXPORTS` 를 주지 않는다 — 주면 include 한 Base 선언까지 dllexport 로 풀린다(C-3).
-		# 서버 키트(`GF_Server_<X>`)는 `SW_KIT_SERVER_EXPORTS`, 그 밖은 `SW_KIT_EXPORTS` 만 내보낸다 — 서버 키트가 include 한 런타임 키트 헤더(`SW_KIT_API`)는
+		# 서버 키트(`GF_Server_<X>`)는 `SW_KIT_SERVER_EXPORTS`, 클라이언트 키트(`GF_Client_<X>`)는 `SW_KIT_CLIENT_EXPORTS`, 그 밖은 `SW_KIT_EXPORTS` 만 내보낸다 — 서버 · 클라이언트 키트가 include 한 런타임 키트 헤더(`SW_KIT_API`)는
 		# dllimport 로 남아 런타임 키트 클래스를 다시 내보내지 않는다. `SW_KIT_IMPORTS` 는 모든 키트 TU 가 가진다(자기 내보내기 매크로가 먼저 읽힌다) —
 		# 키트 PCH 하나를 나눠 쓰려면 명령줄 정의가 같아야 한다.
 		if(TARGET_NAME MATCHES "^GF_Server_")
 			list(APPEND listTargetDefsOption KIT_SERVER_EXPORTS)
+		elseif(TARGET_NAME MATCHES "^GF_Client_")
+			list(APPEND listTargetDefsOption KIT_CLIENT_EXPORTS)
 		else()
 			list(APPEND listTargetDefsOption KIT_EXPORTS)
 		endif()

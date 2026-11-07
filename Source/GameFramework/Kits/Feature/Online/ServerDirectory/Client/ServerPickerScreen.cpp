@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/ServerDirectory/Runtime/ServerPickerScreen.h"
+#include "GameFramework/Kits/Feature/Online/ServerDirectory/Client/ServerPickerScreen.h"
 
 #include "Core/Foundation/Constants.h"
 #include "Core/Log/Logger.h"

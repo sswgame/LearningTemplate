@@ -91,6 +91,14 @@ namespace sw
         return kArrDependency;
     }
 
+    void UINotificationService::postNotice( const string& text, const float32 durationSeconds )
+    {
+        UINotificationDef notice{};
+        notice._text            = text;
+        notice._durationSeconds = durationSeconds;
+        post( notice );
+    }
+
     void UINotificationService::post( const UINotificationDef& desc )
     {
         if ( desc._text.empty() )
@@ -309,5 +317,11 @@ namespace sw
 
 namespace sw
 {
-    SW_ENGINE_SERVICE_SUBSYSTEM( UINotificationService, GameVisible, Startup, (), SW_ENGINE_DEFAULT_FACTORY( UINotificationService ) );
+    SW_ENGINE_SERVICE_SUBSYSTEM( UINotificationService, GameVisible, Startup, (), []( SubsystemScope& scope, engine::EngineSubsystemBuild& build )
+    {
+        (void)build;
+        const bool bExposed = scope.expose<IPlayerNoticeSink>( scope.emplaceSubsystem<UINotificationService>() );
+        SW_ASSERT( bExposed );
+        (void)bExposed;
+    } );
 } // namespace sw

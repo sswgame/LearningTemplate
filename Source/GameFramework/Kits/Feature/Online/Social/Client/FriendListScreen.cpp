@@ -1,6 +1,6 @@
 #include "pch.h"
 
-#include "GameFramework/Kits/Feature/Online/Social/Runtime/FriendListScreen.h"
+#include "GameFramework/Kits/Feature/Online/Social/Client/FriendListScreen.h"
 
 #include "Core/Log/Logger.h"
 #include "Core/String/StringBuilder.h"

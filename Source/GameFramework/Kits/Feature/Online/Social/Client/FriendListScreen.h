@@ -25,7 +25,7 @@ namespace sw
      * @brief 친구 목록 화면입니다.
      */
     REFLECT( Abstract )
-    class SW_KIT_API FriendListScreen : public UIScreen
+    class SW_KIT_CLIENT_API FriendListScreen : public UIScreen
     {
     public:
         REFLECT_BODY();
