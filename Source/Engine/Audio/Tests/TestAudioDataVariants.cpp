@@ -145,3 +145,45 @@ SW_TEST_CASE( AudioDataVariantTest, DeltaRoundTrips )
     SW_EXPECT_NEAR( 7.0f, pStep->_pitchMax, 0.0f );
     SW_EXPECT_EQUAL( 2u, static_cast<uint32>( reloaded._listEvent.size() ) );
 }
+
+/** @brief [AudioDataVariantTest] 프리셋은 부모 이벤트와의 차이로 저장된다 — 저장 → 다시 읽기가 같은 값이고, 부모와 같은 칸은 적지 않아 부모를 고치면 따라간다 */
+SW_TEST_CASE( AudioDataVariantTest, PresetSavesOnlyItsDifference )
+{
+    AudioEventLibrary library;
+    SW_REQUIRE_TRUE( library.loadFromXMLText( R"(<AudioEventLibrary><_listEvent>
+        <AudioEventDesc _name="Heavy" _parentEvent="Step" _pitchMax="1" />
+        <AudioEventDesc _name="Step" _bus="sfx" _pitchMax="2" _priority="40"><_listClip><AudioClipEntry _path="a.ogg" /></_listClip></AudioEventDesc>
+    </_listEvent></AudioEventLibrary>)" ) );
+    AudioEventDesc* pHeavy = library.findEvent( hashed_string( "Heavy" ) );
+    SW_REQUIRE_NOT_NULL( pHeavy );
+    SW_EXPECT_TRUE( pHeavy->_parentEvent == hashed_string( "Step" ) ); // 읽기가 부모 표시를 남긴다
+    pHeavy->_pitchMax = 3.0f;
+
+    const string saved = library.saveToXMLText();
+    SW_REQUIRE_FALSE( saved.empty() );
+    SW_EXPECT_TRUE( saved.find( "_parentEvent=\"Step\"" ) != string::npos );
+    SW_EXPECT_EQUAL( saved.find( "_priority=\"40\"" ), saved.rfind( "_priority=\"40\"" ) ); // 부모의 것 한 번 — 프리셋은 물려받은 칸을 적지 않는다
+    SW_EXPECT_EQUAL( saved.find( "a.ogg" ), saved.rfind( "a.ogg" ) );
+
+    AudioEventLibrary reloaded;
+    SW_REQUIRE_TRUE( reloaded.loadFromXMLText( saved ) );
+    const AudioEventDesc* pReloaded = reloaded.findEvent( hashed_string( "Heavy" ) );
+    SW_REQUIRE_NOT_NULL( pReloaded );
+    SW_EXPECT_NEAR( 3.0f, pReloaded->_pitchMax, 0.0f );
+    SW_EXPECT_EQUAL( 40, pReloaded->_priority );
+    SW_EXPECT_TRUE( pReloaded->_bus == hashed_string( "sfx" ) );
+    SW_EXPECT_EQUAL( 1u, static_cast<uint32>( pReloaded->_listClip.size() ) );
+    SW_EXPECT_TRUE( reloaded.saveToXMLText() == saved );
+}
+
+/** @brief [AudioDataVariantTest] 프리셋 부모가 라이브러리에 없으면 검사가 거르고, 저장 글은 비어 쓰지 않는다 */
+SW_TEST_CASE( AudioDataVariantTest, PresetWithMissingParentIsNotSaved )
+{
+    SW_EXPECT_LOG( "AudioEventLibrary.EventPresetParentInvalid" );
+    SW_EXPECT_LOG( "AudioEventLibrary.PresetParentMissing" );
+    AudioEventLibrary library;
+    SW_REQUIRE_TRUE( library.loadFromXMLText( Util::kLibrary ) );
+    library.findEvent( hashed_string( "Fire" ) )->_parentEvent = hashed_string( "Missing" );
+    SW_EXPECT_FALSE( library.validate( "edited" ) );
+    SW_EXPECT_TRUE( library.saveToXMLText().empty() );
+}

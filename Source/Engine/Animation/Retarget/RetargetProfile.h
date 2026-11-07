@@ -8,6 +8,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
@@ -160,7 +161,16 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 같은 형식의 XML 로 씁니다(`loadFromXMLText` 이 그대로 다시 읽는다 — 에디터 리타깃 창이 저장한다). 기본값인 선택 키는 쓰지 않습니다. */
         string toXML() const;
-        void   clear();
+        /**
+         * @brief @p absPath 에 씁니다. 부모(`_base`)를 가리키던 글에서 읽었으면 부모와의 차이로 씁니다(`DataInheritance::makeDelta`) — 에디터 리타깃 창이 저장한다.
+         * @details 차이를 다시 읽어 같은 프로필이 나올 때만 씁니다. 기본값인 선택 키는 적지 않으므로, 부모가 적은 값을 자식이 기본값으로 되돌린 편집은 차이로 적을 수 없어 쓰지 않고 오류다(부모를 끊지 않는다).
+         */
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
+        /** @brief 읽은 글이 가리킨 부모의 리소스 id 입니다. 부모 없이 읽었거나 비웠으면 비어 있습니다. */
+        const string& getBaseID() const { return _baseID; }
+        /** @brief 부모를 정합니다. 저장이 그 부모와의 차이로 씁니다(되돌리기가 펼친 글로 복원한 프로필에 문서의 부모를 다시 단다). */
+        void setBaseID( string_view baseID ) { _baseID = string{ baseID }; }
+        void clear();
 
         const string&                getSourceSkeletonPath() const { return _sourceSkeletonPath; }
         const string&                getTargetSkeletonPath() const { return _targetSkeletonPath; }
@@ -209,6 +219,7 @@ namespace sw
         vector<RetargetPoseBone> _listTargetPose;
         string                   _sourceSkeletonPath;
         string                   _targetSkeletonPath;
+        string                   _baseID; ///< 읽은 글의 `_base`. `saveToFile` 이 부모와의 차이로 쓴다
         hashed_string            _sourceRoot;
         hashed_string            _targetRoot;
         hashed_string            _sourcePelvis;

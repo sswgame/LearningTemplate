@@ -4,15 +4,19 @@
 
 #include "Core/Container/StringUtil.h"
 #include "Core/Container/VectorUtil.h"
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Character/CharacterDataReader.h"
 #include "Engine/Character/Fit/CharacterGeometry.h"
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Reflection/TypeRegistry.h"
+#include "Engine/Serialization/Inherit/DataCatalogInheritance.h"
+#include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 namespace sw
@@ -130,6 +134,7 @@ namespace sw
     bool SocketSet::loadFromXMLText( string_view xmlText, string_view sourceName, const SocketKindTable& kinds, const CharacterBoneArray* pBones )
     {
         clear();
+        _baseID = DataInheritance::findBasePath( xmlText ); // 저장이 부모와의 차이로 쓰려고 든다(읽기는 펼친 한 벌이다)
         CharacterDataReader reader( sourceName );
         XMLDocument         document;
         XMLNode             root;
@@ -146,20 +151,51 @@ namespace sw
 
     bool SocketSet::loadFromAsset( const AssetID& assetID, const SocketKindTable& kinds, const CharacterBoneArray* pBones )
     {
-        const string_view path = assetID.view();
-        clear();
-        CharacterDataReader reader( path );
-        XMLDocument         document;
-        XMLNode             root;
-        if ( reader.loadRoot( document, assetID, "SocketSet", root ) )
-            readRoot( root, kinds, reader );
-        if ( pBones != nullptr )
+        // 글을 먼저 읽는다 — 부모(`_base`)는 펼치기 전의 글에만 있다.
+        string text;
+        if ( AssetIO::readTextAsset( assetID, text ) == false )
         {
-            CharacterIssueList boneIssues;
-            if ( validateBones( *pBones, &boneIssues ) == false )
-                reader.addIssues( boneIssues );
+            clear();
+            CharacterDataReader reader( assetID.view() );
+            reader.addError( "Character.FileUnreadable", "cannot read" );
+            return reader.finish();
         }
-        return reader.finish();
+        return loadFromXMLText( text, assetID.view(), kinds, pBones );
+    }
+
+    bool SocketSet::saveToFile( const AbsolutePath& absPath, const SocketKindTable& kinds ) const
+    {
+        const string fullText = saveToXMLText();
+        string       text     = fullText;
+        if ( _baseID.empty() == false )
+        {
+            SocketSet             parent;
+            DataInheritanceSchema schema{ "SocketSet" };
+            bool                  bListed = false;
+            if ( parent.loadFromAsset( AssetID{ _baseID }, kinds ) == false )
+            {
+                DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
+                return false;
+            }
+            if ( DataCatalogInheritance::loadSchema( "SocketSet", schema, bListed ) == false || bListed == false ||
+                 DataCatalogInheritance::makeFileDelta( fullText, parent.saveToXMLText(), schema, _baseID, text ) == false )
+            {
+                SW_LOG_ERROR_ID( "SocketSet.DeltaNotMade", "Socket set '%#': the difference from base '%#' could not be made (rule <SocketSet> in %#)", absPath.str(), _baseID, DataCatalogInheritance::kConfigPath );
+                return false;
+            }
+            SocketSet reread;
+            if ( reread.loadFromXMLText( text, absPath.str(), kinds ) == false || reread.saveToXMLText() != fullText )
+            {
+                SW_LOG_ERROR_ID( "SocketSet.DeltaMismatch", "Socket set '%#': the difference from base '%#' does not read back the same - not saved (a field the base writes cannot be removed by a variant)", absPath.str(), _baseID );
+                return false;
+            }
+        }
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeTextFile( absPath.str(), text ) == false )
+        {
+            SW_LOG_ERROR_ID( "SocketSet.WriteFailed", "Socket set could not be written: %#", absPath.str() );
+            return false;
+        }
+        return true;
     }
 
     void SocketSet::readRoot( const XMLNode& root, const SocketKindTable& kinds, CharacterDataReader& reader )
@@ -318,6 +354,7 @@ namespace sw
     {
         _listSocket.clear();
         _listVirtualBone.clear();
+        _baseID.clear();
     }
 
     void SocketSet::applyOverride( const SocketSet& upper )

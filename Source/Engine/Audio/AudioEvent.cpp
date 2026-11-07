@@ -28,14 +28,19 @@ namespace sw
             static constexpr const utf8* kEventListElement     = "_listEvent";
             static constexpr const utf8* kEventNameAttribute   = "_name";
 
-            /** @brief 이벤트 원소를 문서 하나로 씁니다. 부모 표시는 `_base` 로 옮깁니다(파일 상속의 합치기가 목록 원소의 `_base` 를 지우므로 데이터에는 다른 이름으로 적는다). */
-            [[nodiscard]] static string makeEventDocument( const XMLNode& event )
+            /**
+             * @brief 이벤트 원소를 문서 하나로 씁니다. 부모 표시는 `_base` 로 옮깁니다(파일 상속의 합치기가 목록 원소의 `_base` 를 지우므로 데이터에는 다른 이름으로 적는다).
+             * @param bKeepParent false 면 부모 표시를 뺍니다 — 차이를 만들 때 두 이벤트의 칸 값만 맞댄다.
+             */
+            [[nodiscard]] static string makeEventDocument( const XMLNode& event, bool bKeepParent = true )
             {
                 XMLDocument   doc;
                 const XMLNode out = doc.appendRoot( event.getName() );
                 for ( XMLAttribute attribute = event.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
                 {
                     const bool bParent = StringUtil::equals( attribute.getName(), kParentEventAttribute );
+                    if ( bParent && ( bKeepParent == false || StringUtil::isNullOrEmpty( attribute.getValue() ) ) )
+                        continue; // 빈 부모는 부모가 없는 것이다(직렬화기가 빈 칸도 쓴다)
                     out.setAttribute( bParent ? DataInheritance::kBaseAttribute : attribute.getName(), string_view( attribute.getValue() ) );
                 }
                 for ( XMLNode child = event.findChild(); child.isValid(); child = child.findNextSibling() )
@@ -120,7 +125,75 @@ namespace sw
                         XMLDocument mergedDoc;
                         if ( DataInheritance::flatten( makeEventDocument( event ), entryName, schema, source, mergedText ) == false || mergedDoc.parse( mergedText, entryName ) == false )
                             return false;
+                        // 합치기가 지운 부모 표시를 다시 단다 — 읽은 이벤트가 부모를 알아야 저장이 차이로 쓴다(`writePresetDeltas`).
+                        mergedDoc.getRoot().setAttribute( kParentEventAttribute, event.getAttributeText( kParentEventAttribute ) );
                         (void)outList.appendClone( mergedDoc.getRoot() );
+                    }
+                }
+                outText = outDoc.saveToString();
+                return true;
+            }
+
+            /**
+             * @brief `flattenPresets` 의 반대입니다. 펼친 라이브러리 글에서 `_parentEvent` 가 있는 이벤트를 그 부모 이벤트(펼친 값)와 다른 칸만 남긴 원소로 바꿉니다.
+             * @return 부모 이벤트가 글에 없으면 오류를 남기고 false 입니다.
+             */
+            [[nodiscard]] static bool writePresetDeltas( string_view fullText, string& outText )
+            {
+                XMLDocument doc;
+                if ( doc.parse( fullText, "audio event library" ) == false )
+                    return false;
+                const XMLNode               root      = doc.getRoot();
+                const XMLNode               eventList = root.findChild( kEventListElement );
+                const DataInheritanceSchema schema    = DataInheritanceSchema::makeFromType( *AudioEventDesc::StaticType() );
+                XMLDocument                 outDoc;
+                const XMLNode               outRoot = outDoc.appendRoot( root.getName() );
+                for ( XMLAttribute attribute = root.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                {
+                    outRoot.setAttribute( attribute.getName(), string_view( attribute.getValue() ) );
+                }
+                for ( XMLNode child = root.findChild(); child.isValid(); child = child.findNextSibling() )
+                {
+                    if ( StringUtil::equals( child.getName(), kEventListElement ) == false )
+                    {
+                        (void)outRoot.appendClone( child );
+                        continue;
+                    }
+                    const XMLNode outList = outRoot.appendChild( kEventListElement );
+                    for ( XMLNode event = child.findChild(); event.isValid(); event = event.findNextSibling() )
+                    {
+                        const string_view parentName = event.getAttributeText( kParentEventAttribute );
+                        if ( parentName.empty() )
+                        {
+                            (void)outList.appendClone( event );
+                            continue;
+                        }
+                        XMLNode parent = eventList.findChild();
+                        while ( parent.isValid() && parent.getAttributeText( kEventNameAttribute ) != parentName )
+                        {
+                            parent = parent.findNextSibling();
+                        }
+                        string      deltaText;
+                        XMLDocument deltaDoc;
+                        if ( parent.isValid() == false )
+                        {
+                            SW_LOG_ERROR_ID( "AudioEventLibrary.PresetParentMissing", "Audio event '%#': preset parent '%#' is not in the library", event.getAttributeText( kEventNameAttribute ), parentName );
+                            return false;
+                        }
+                        if ( DataInheritance::makeDelta( makeEventDocument( event, false ), makeEventDocument( parent, false ), schema, parentName, deltaText ) == false || deltaDoc.parse( deltaText, parentName ) == false )
+                            return false;
+                        const XMLNode deltaRoot = deltaDoc.getRoot();
+                        const XMLNode outEvent  = outList.appendChild( event.getName() );
+                        for ( XMLAttribute attribute = deltaRoot.getFirstAttribute(); attribute.isValid(); attribute = attribute.getNext() )
+                        {
+                            const bool bBase = StringUtil::equals( attribute.getName(), DataInheritance::kBaseAttribute );
+                            outEvent.setAttribute( bBase ? kParentEventAttribute : attribute.getName(), string_view( attribute.getValue() ) );
+                        }
+                        outEvent.setAttribute( kEventNameAttribute, event.getAttributeText( kEventNameAttribute ) ); // 이름은 열쇠다 — 부모와 같아도(그럴 수 없지만) 늘 적는다
+                        for ( XMLNode element = deltaRoot.findChild(); element.isValid(); element = element.findNextSibling() )
+                        {
+                            (void)outEvent.appendClone( element );
+                        }
                     }
                 }
                 outText = outDoc.saveToString();
@@ -206,6 +279,22 @@ namespace sw
                     bValid = false;
                 }
             }
+            if ( event._parentEvent.empty() == false )
+            {
+                // 프리셋 사슬은 라이브러리 안에서 끝나야 한다 — 저장이 부모 이벤트와의 차이로 쓰고 읽기가 같은 사슬로 펼친다.
+                const AudioEventDesc* pParent    = findEvent( event._parentEvent );
+                size_t                chainCount = 0;
+                while ( pParent != nullptr && pParent != &event && pParent->_parentEvent.empty() == false && chainCount <= _listEvent.size() )
+                {
+                    pParent = findEvent( pParent->_parentEvent );
+                    ++chainCount;
+                }
+                if ( pParent == nullptr || pParent == &event || chainCount > _listEvent.size() )
+                {
+                    SW_LOG_ERROR_ID( "AudioEventLibrary.EventPresetParentInvalid", "%#: event '%#' has preset parent '%#' that is missing or loops back", sourceName, pName, event._parentEvent.c_str() );
+                    bValid = false;
+                }
+            }
             if ( event._listClip.empty() )
             {
                 SW_LOG_ERROR_ID( "AudioEventLibrary.EventNoClips", "%#: event '%#' has no clips", sourceName, pName );
@@ -260,7 +349,15 @@ namespace sw
 
     string AudioEventLibrary::saveToXMLText() const
     {
-        return XMLSerializer::serialize( this, *StaticType() );
+        const string fullText = XMLSerializer::serialize( this, *StaticType() );
+        const bool   bPreset  = VectorUtil::containsIf( _listEvent, []( const AudioEventDesc& event )
+           { return event._parentEvent.empty() == false; } );
+        if ( bPreset == false )
+            return fullText;
+        string presetText;
+        if ( AudioEventLibraryInternal::writePresetDeltas( fullText, presetText ) == false )
+            return {}; // 부모 이벤트가 없는 라이브러리다 — 무엇이 없는지는 위가 알렸다
+        return presetText;
     }
 
     bool AudioEventLibrary::saveToAsset( const AbsolutePath& absPath ) const
@@ -273,6 +370,8 @@ namespace sw
         // 변형은 변형으로 저장한다 — 부모와 다른 칸만 쓴다(`ReflectedXMLFile::saveDescAsChild` 와 같은 규칙).
         string existingText;
         string saveText = saveToXMLText();
+        if ( saveText.empty() )
+            return false; // 프리셋 차이를 쓰지 못했다(`saveToXMLText` 가 알렸다)
         if ( FileUtil::readOptionalTextFile( absPath.str(), existingText ) == OptionalFileRead::Read )
         {
             const string      baseID = DataInheritance::findBasePath( existingText );

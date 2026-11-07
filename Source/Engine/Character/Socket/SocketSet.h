@@ -22,6 +22,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/MatrixMath.h"
 #include "Core/Math/VectorMath.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Character/CharacterIssue.h"
@@ -197,8 +198,16 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName, const SocketKindTable& kinds, const CharacterBoneArray* pBones = nullptr );
         /** @brief 리소스 파일에서 읽습니다. */
         [[nodiscard]] bool loadFromAsset( const AssetID& assetID, const SocketKindTable& kinds, const CharacterBoneArray* pBones = nullptr );
-        /** @brief XML 텍스트로 씁니다(적은 필드만 씁니다). */
+        /** @brief XML 텍스트로 씁니다(적은 필드만 씁니다). 부모(`_base`)를 펼친 한 벌이며 부모를 적지 않습니다 — 파일 저장은 `saveToFile` 입니다. */
         string saveToXMLText() const;
+        /**
+         * @brief @p absPath 에 씁니다. 부모(`_base`)를 가리키던 파일에서 읽었으면 부모와의 차이로 씁니다(`DataCatalogInheritance::makeFileDelta`, 규칙은 카탈로그 표).
+         * @details 차이를 다시 읽어 같은 한 벌이 나올 때만 씁니다 — 부모가 적은 칸을 자식이 지운 것처럼 차이로 적을 수 없는 편집은 쓰지 않고 오류다(부모를 끊지 않는다).
+         *          부모는 @p kinds 로 읽습니다. 언리얼 데이터 에셋 상속 · 유니티 프리팹 변형이 덮어쓴 값만 저장하는 것과 같은 자리다.
+         */
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath, const SocketKindTable& kinds ) const;
+        /** @brief 읽은 파일이 가리킨 부모의 리소스 id 입니다. 부모 없이 읽었으면 비어 있습니다. */
+        const string& getBaseID() const { return _baseID; }
 
         /** @brief 항목을 더합니다. 같은 이름이 있으면 바꿉니다. */
         void addSocket( const SocketDef& socket );
@@ -246,5 +255,6 @@ namespace sw
     private:
         vector<SocketDef>      _listSocket;
         vector<VirtualBoneDef> _listVirtualBone;
+        string                 _baseID; ///< 읽은 파일의 `_base`. `saveToFile` 이 차이로 쓴다
     };
 } // namespace sw

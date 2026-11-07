@@ -3,6 +3,7 @@
 #include "Engine/Physics/Asset/PhysicsAsset.h"
 
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Serialization/Format/ReflectedXMLFile.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 #include "Engine/Serialization/Inherit/DataInheritance.h"
 #include "Engine/Serialization/Inherit/ResourceComposer.h"
@@ -33,7 +34,18 @@ namespace sw
             SW_LOG_ERROR_ID( "PhysicsAsset.PhysicsAssetCouldNot", "%#: physics asset could not be read or holds unknown keys / values", sourceName );
             return false;
         }
+        _baseID = DataInheritance::findBasePath( xmlText ); // 저장이 부모와의 차이로 쓰려고 든다(읽은 칸은 펼친 한 벌이다)
         return validate( sourceName );
+    }
+
+    bool PhysicsAsset::saveToFile( const AbsolutePath& absPath ) const
+    {
+        if ( validate( absPath.str() ) == false )
+        {
+            SW_LOG_ERROR_ID( "PhysicsAsset.NotSaved", "%#: physics asset not saved - it does not pass validation", absPath.str() );
+            return false;
+        }
+        return _baseID.empty() ? ReflectedXMLFile::saveDesc( absPath, *this ) : ReflectedXMLFile::saveDescAsChild( absPath, *this, AssetID{ _baseID } );
     }
 
     bool PhysicsAsset::validate( string_view sourceName ) const

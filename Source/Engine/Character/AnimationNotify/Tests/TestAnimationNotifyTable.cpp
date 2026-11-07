@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Character/AnimationNotify/AnimationNotifyTable.h"
@@ -104,4 +105,45 @@ SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetMergesByName )
     SW_EXPECT_TRUE( pEyes->_parent == hashed_string( "head_b" ) );
     SW_EXPECT_NEAR( 1.0f, pEyes->_translation._y, 1e-6f ); // 물려받음
     SW_EXPECT_TRUE( sockets.findSocket( hashed_string( "Chest" ) ) == nullptr );
+}
+
+/**
+ * @brief [AnimationNotifyTableTest] 소켓 세트 변형 저장 — 부모(`_base`)를 가리키던 세트는 부모와의 차이로 쓴다(물려받은 칸 · 지운 소켓). 저장 → 다시 읽기가 같은 세트다
+ */
+SW_TEST_CASE( AnimationNotifyTableTest, ChildSocketSetSavesOnlyItsDifference )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.sockets.xml" ), R"(<SocketSet>
+        <Socket name="Eyes" parent="head" translation="0 1 0" kind="Attach"/>
+        <Socket name="Chest" parent="spine" kind="Attach"/>
+    </SocketSet>)" ) );
+    const string    baseID = test::ScopedScratchDomain::makeID( "base.sockets.xml" ).str();
+    SocketKindTable kinds;
+    kinds.addKind( hashed_string( "Attach" ) );
+    SocketSet sockets;
+    SW_REQUIRE_TRUE( sockets.loadFromXMLText( "<SocketSet _base=\"" + baseID + "\"><Socket name=\"Eyes\" parent=\"head_b\"/><Socket name=\"Chest\" _op=\"Remove\"/></SocketSet>", "child", kinds ) );
+    SW_EXPECT_EQUAL( baseID, sockets.getBaseID() );
+    SocketDef eyes    = *sockets.findSocket( hashed_string( "Eyes" ) );
+    eyes._translation = float3{ 0.0f, 2.0f, 0.0f };
+    sockets.addSocket( eyes );
+
+    const std::optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.sockets.xml" ) );
+    SW_REQUIRE_TRUE( childPath.has_value() );
+    SW_REQUIRE_TRUE( sockets.saveToFile( *childPath, kinds ) );
+    string saved;
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( childPath->str(), saved ) );
+    SW_EXPECT_TRUE( saved.find( baseID ) != string::npos );
+    SW_EXPECT_TRUE( saved.find( "Remove" ) != string::npos ); // 부모의 Chest 를 지운 것도 차이다
+    SW_EXPECT_TRUE( saved.find( "Attach" ) == string::npos ); // 물려받은 종류는 적지 않는다
+
+    SocketSet reloaded;
+    SW_REQUIRE_TRUE( reloaded.loadFromAsset( test::ScopedScratchDomain::makeID( "child.sockets.xml" ), kinds ) );
+    const SocketDef* pEyes = reloaded.findSocket( hashed_string( "Eyes" ) );
+    SW_REQUIRE_TRUE( pEyes != nullptr );
+    SW_EXPECT_TRUE( pEyes->_parent == hashed_string( "head_b" ) );
+    SW_EXPECT_TRUE( pEyes->_kind == hashed_string( "Attach" ) );
+    SW_EXPECT_NEAR( 2.0f, pEyes->_translation._y, 1e-6f );
+    SW_EXPECT_TRUE( reloaded.findSocket( hashed_string( "Chest" ) ) == nullptr );
+    SW_EXPECT_EQUAL( baseID, reloaded.getBaseID() );
+    SW_EXPECT_EQUAL( sockets.saveToXMLText(), reloaded.saveToXMLText() );
 }

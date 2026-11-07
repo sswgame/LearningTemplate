@@ -389,6 +389,30 @@ namespace sw
         return true;
     }
 
+    bool DataCatalogInheritance::makeFileDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, string& outText )
+    {
+        using Internal = DataCatalogInheritanceInternal;
+        XMLDocument fullDoc;
+        XMLDocument parentDoc;
+        if ( fullDoc.parse( fullText, "delta" ) == false || parentDoc.parse( parentFullText, baseID ) == false )
+        {
+            SW_LOG_ERROR_ID( "DataCatalogInheritance.DeltaNotXML", "A catalog delta of base '%#' could not be made - one side is not XML", baseID );
+            return false;
+        }
+        string wrappedFull;
+        string wrappedParent;
+        if ( Internal::wrapToText( fullDoc.getRoot(), schema, true, "delta", wrappedFull ) == false || Internal::wrapToText( parentDoc.getRoot(), schema, true, baseID, wrappedParent ) == false )
+            return false;
+        string      wrappedDelta;
+        XMLDocument deltaDoc;
+        if ( DataInheritance::makeDelta( wrappedFull, wrappedParent, schema, baseID, wrappedDelta ) == false || deltaDoc.parse( wrappedDelta, baseID ) == false )
+            return false;
+        XMLDocument outDoc;
+        Internal::unwrapElement( deltaDoc.getRoot(), schema, outDoc.appendRoot( deltaDoc.getRoot().getName() ) );
+        outText = outDoc.saveToString();
+        return true;
+    }
+
     bool DataCatalogInheritance::flattenIfListed( string_view text, string_view sourceName, IDataInheritanceSource& source, bool& outbFlattened, string& outText )
     {
         outbFlattened = false;

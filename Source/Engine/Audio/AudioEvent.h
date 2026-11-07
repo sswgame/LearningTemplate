@@ -130,7 +130,7 @@ namespace sw
      *     <AudioEventDesc _name="FootstepHeavy" _parentEvent="Footstep" _volumeDbMin="0" _pitchMin="-4" _pitchMax="-2" />
      * @endcode
      * @details `_parentEvent` 는 같은 라이브러리(파일 상속을 합친 결과)의 다른 이벤트를 부모로 삼아 다른 칸만 적는 프리셋이다(언리얼 MetaSound Preset 자리). 클립 목록은 적으면 통째로 바뀐다.
-     *          칸이 아니라 읽기 앞 단계가 지우는 표시다(`AudioEventLibrary::loadFromXMLText`) — 합치기는 `DataInheritance` 하나이고, 순환 · 없는 부모는 같은 오류다.
+     *          읽기는 부모를 펼친 한 벌을 채우고 `_parentEvent` 를 그대로 둔다. 쓰기(`AudioEventLibrary::saveToXMLText`)는 부모와 다른 칸만 다시 적는다 — 합치기와 차이는 `DataInheritance` 하나이고, 순환 · 없는 부모는 같은 오류다.
      */
     REFLECT()
     struct SW_API AudioEventDesc
@@ -139,6 +139,8 @@ namespace sw
 
         PROPERTY( InheritKey, Tooltip = "Event name game code posts" )
         hashed_string _name{};
+        PROPERTY( Tooltip = "Preset parent: another event of this library; only the fields that differ from it are saved" )
+        hashed_string _parentEvent{};
         PROPERTY( Tooltip = "Bus the voices go to" )
         hashed_string _bus{};
         PROPERTY( Tooltip = "Attenuation preset; empty plays 2D (no spatialization)" )
@@ -215,13 +217,16 @@ namespace sw
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName = "<text>" );
         /** @brief 파일 안에서만 정해지는 규칙(이름, 클립, 범위, 파라미터 이름, 곡선 순서)을 검사합니다. */
         [[nodiscard]] bool validate( string_view sourceName ) const;
-        /** @brief 라이브러리를 읽기와 같은 XML 형식으로 씁니다(`loadFromXMLText` 가 다시 읽는다). */
+        /**
+         * @brief 라이브러리를 읽기와 같은 XML 형식으로 씁니다(`loadFromXMLText` 가 다시 읽는다). `_parentEvent` 를 가진 이벤트는 그 부모와 다른 칸만 씁니다.
+         * @return 프리셋 부모가 없거나 도는 라이브러리(`validate` 가 거르는 꼴)는 오류를 남기고 빈 글입니다.
+         */
         string saveToXMLText() const;
         /**
          * @brief 검사(`validate`)를 통과한 라이브러리를 리소스 경로의 파일에 씁니다. 에디터의 오디오 이벤트 창이 고친 데이터를 저장하는 길입니다.
          * @details 검사를 통과하지 못하면 쓰지 않는다 — 읽을 수 없는 파일을 남기지 않는다. 저장한 파일은 에셋 핫 리로드가 엔진에 다시 올린다.
          *          지금 파일이 `_base` 를 적었으면 부모와 다른 칸만 쓴다 — 변형을 모든 칸을 적은 파일로 끊지 않는다. 부모를 읽지 못하면 쓰지 않는다.
-         *          shortcut: 이벤트의 `_parentEvent` 는 펼친 칸으로 쓰여 저장 뒤 끊긴다. 에디터가 프리셋을 고치게 되면 이벤트 차이 저장을 더한다.
+         *          이벤트 프리셋(`_parentEvent`)도 부모 이벤트와의 차이로 쓴다(`saveToXMLText`).
          * @return 검사 실패나 쓰기 실패면 오류를 남기고 false 입니다.
          */
         [[nodiscard]] bool saveToAsset( const AbsolutePath& absPath ) const;

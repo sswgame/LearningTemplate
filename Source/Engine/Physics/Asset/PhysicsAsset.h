@@ -26,6 +26,7 @@
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/Math.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
@@ -131,8 +132,14 @@ namespace sw
         PROPERTY( Tooltip = "Bone pairs that never collide" )
         vector<PhysicsAssetPairDef> _listDisabledPair;
         PROPERTY( Tooltip = "Bodies connected by a joint collide with each other" )
-        bool _bCollideJointedBodies{ false };
+        bool   _bCollideJointedBodies{ false };
+        string _baseID{}; ///< 읽은 글의 `_base`(PROPERTY 가 아니다 — 파일 칸이 아니라 읽기 앞 단계가 지우는 표시다). `saveToFile` 이 부모와의 차이로 쓴다
 
+        /**
+         * @brief 검사한 뒤 @p absPath 에 씁니다. 부모(`_base`)를 가리키던 글에서 읽었으면 부모와 다른 칸만 쓰고(`ReflectedXMLFile::saveDescAsChild`), 아니면 형식 기본값과 다른 칸만 씁니다.
+         * @return 검사에 걸리거나 부모를 읽지 못하면 쓰지 않고 false 입니다 — 모든 칸을 적어 부모를 끊지 않습니다.
+         */
+        [[nodiscard]] bool saveToFile( const AbsolutePath& absPath ) const;
         /** @brief XML 문자열을 읽고 검사합니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
         /** @brief 에셋 자체의 규칙을 검사합니다(뼈 이름이 겹치지 않고, 바디마다 셰이프가 있고, 쌍의 뼈가 에셋에 있다). */

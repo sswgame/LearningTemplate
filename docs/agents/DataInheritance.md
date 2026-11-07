@@ -95,7 +95,8 @@ if ( ResourceComposer::compose( text, sourceName, ResourceContext::forSchema( &M
 그 밖에 형식마다 해야 할 일은 둘이다.
 
 - `Config/Dev/AssetReferenceFields.json` 에는 `_base` 가 이미 있어 참조 색인 · 린트가 따라간다. 핫 리로드가 있는 종류면 표의 칸을 `AssetReferenceUse::InlinedAtLoad` 로 둔다 — 부모가 바뀌면 `AssetReloadCascade` 가 자식을 의존 순서로 다시 읽는다. 따라가는 것은 `_base` 칸뿐이고(`EditorAssetReference::_bInlined`) 같은 파일의 다른 경로 칸은 연쇄하지 않는다.
-- 저장이 있으면 `ReflectedXMLFile::saveDescAsChild`(부모와 다른 칸만) · `saveDesc`(형식 기본값과 다른 칸만)를 쓴다. 손 형식은 `DataInheritance::makeDelta` 다. 두 글은 같은 직렬화기가 쓴 것이어야 한다.
+- 저장이 있으면 `ReflectedXMLFile::saveDescAsChild`(부모와 다른 칸만) · `saveDesc`(형식 기본값과 다른 칸만)를 쓴다. 손 형식은 `DataInheritance::makeDelta`, 카탈로그 형식은 `DataCatalogInheritance::makeFileDelta` 다. 두 글은 같은 직렬화기가 쓴 것이어야 한다.
+  읽은 형식이 부모 id 를 들고(읽을 때 `DataInheritance::findBasePath`) 저장이 그 부모와의 차이로 쓴다 — 에디터가 펼친 한 벌을 쓰면 `_base` 가 끊긴다. 손 형식은 차이를 다시 읽어 같은 값이 나올 때만 쓴다(부모가 적은 칸을 자식이 지운 편집은 차이로 적을 수 없어 오류다). 본보기: `SocketSet::saveToFile` · `RetargetProfile::saveToFile` · `PhysicsAsset::saveToFile` · `AnimationGraphAsset::saveToFile`, 이벤트 프리셋은 `AudioEventLibrary::saveToXMLText`.
 
 ## 쿠킹과 런타임
 

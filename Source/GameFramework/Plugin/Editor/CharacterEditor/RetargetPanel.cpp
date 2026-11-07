@@ -3,7 +3,6 @@
 #include "GameFramework/Plugin/Editor/CharacterEditor/RetargetPanel.h"
 
 #include "Core/Container/StringUtil.h"
-#include "Core/File/FileUtil.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/Math/MatrixMath.h"
 
@@ -191,10 +190,10 @@ namespace sw::editor
             _status = "Not saved: " + _inspectionError;
             return false;
         }
-        const std::optional<AbsolutePath> writePath = getDocumentDiskPath(); // 읽은 그 자리
-        if ( writePath.has_value() == false || FileUtil::writeTextFile( writePath->str(), _profile.toXML() ) == false )
+        const std::optional<AbsolutePath> writePath = getDocumentDiskPath();                // 읽은 그 자리
+        if ( writePath.has_value() == false || _profile.saveToFile( *writePath ) == false ) // 변형(`_base`)은 부모와의 차이로 쓴다
         {
-            _status = writePath.has_value() == false ? string( "No write path for this asset" ) : string( "The profile could not be written" );
+            _status = writePath.has_value() == false ? string( "No write path for this asset" ) : string( "The profile could not be written (see the log)" );
             return false;
         }
         SW_LOG_INFO_ID( "RetargetPanel.RetargetProfileSaved", "Retarget profile saved to %#", writePath->c_str() );
@@ -249,6 +248,7 @@ namespace sw::editor
             _status = "This undo step could not be read - see the log";
             return;
         }
+        restored.setBaseID( _profile.getBaseID() ); // 되돌리기 글은 펼친 한 벌이다 — 문서의 부모는 그대로 둬야 저장이 차이로 쓴다
         _profile = std::move( restored );
         syncFromProfile();
     }

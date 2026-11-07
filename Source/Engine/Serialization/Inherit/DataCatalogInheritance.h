@@ -54,6 +54,13 @@ namespace sw
         [[nodiscard]] static bool flattenIfListed( string_view text, string_view sourceName, IDataInheritanceSource& source, bool& outbFlattened, string& outText );
 
         /**
+         * @brief 펼친 카탈로그 @p fullText 를 부모 @p parentFullText 와의 차이(루트 `_base` = @p baseID)로 씁니다. 파일 상속의 저장 쪽입니다(`DataInheritance::makeDelta` 의 카탈로그 판).
+         * @details 두 글을 `flatten` 과 같은 래퍼 꼴로 묶어 차이를 만든 뒤 다시 풉니다. 부모에 있고 자식에 없는 항목은 `_op="Remove"` 줄이 됩니다. 두 글은 같은 직렬화기가 쓴 것이어야 합니다.
+         * @return 어느 글이 XML 이 아니거나 규칙에 맞지 않으면 오류를 남기고 false 입니다.
+         */
+        [[nodiscard]] static bool makeFileDelta( string_view fullText, string_view parentFullText, const DataInheritanceSchema& schema, string_view baseID, string& outText );
+
+        /**
          * @brief 표의 `listDocument` 에서 문서 형식 @p rootName 의 규칙을 찾습니다. 게임 · 키트 형식은 쿠킹이 코드를 보지 못해 여기 적습니다(`ResourceComposer`).
          * @param outbListed 표에 있으면 true 입니다. `listField` 가 @p outSchema 가 됩니다(리플렉션 형식의 표 줄은 `TestDataCatalogInheritance` 가 코드와 대조합니다).
          * @return 표가 깨졌으면 오류를 남기고 false 입니다.

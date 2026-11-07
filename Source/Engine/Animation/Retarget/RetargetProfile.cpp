@@ -2,6 +2,7 @@
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
 
+#include "Core/File/FileUtil.h"
 #include "Core/Log/Logger.h"
 
 #include "Engine/Animation/Rig/RigNode.h"
@@ -69,6 +70,7 @@ namespace sw
         , _listTargetPose{}
         , _sourceSkeletonPath{}
         , _targetSkeletonPath{}
+        , _baseID{}
         , _sourceRoot{}
         , _targetRoot{}
         , _sourcePelvis{}
@@ -86,6 +88,7 @@ namespace sw
         _listTargetPose.clear();
         _sourceSkeletonPath.clear();
         _targetSkeletonPath.clear();
+        _baseID.clear();
         _sourceRoot          = hashed_string{};
         _targetRoot          = hashed_string{};
         _sourcePelvis        = hashed_string{};
@@ -120,9 +123,41 @@ namespace sw
             return false;
         }
         if ( parseRoot( root, sourceLabel ) )
+        {
+            _baseID = DataInheritance::findBasePath( xml ); // 저장이 부모와의 차이로 쓰려고 든다(읽은 값은 펼친 한 벌이다)
             return true;
+        }
         clear();
         return false;
+    }
+
+    bool RetargetProfile::saveToFile( const AbsolutePath& absPath ) const
+    {
+        const string fullText = toXML();
+        string       text     = fullText;
+        if ( _baseID.empty() == false )
+        {
+            RetargetProfile parent;
+            if ( parent.loadFromAsset( AssetID{ _baseID } ) == false )
+            {
+                DataInheritance::reportBaseNotFound( _baseID, absPath.str() );
+                return false;
+            }
+            if ( DataInheritance::makeDelta( fullText, parent.toXML(), RetargetProfileInternal::makeInheritanceSchema(), _baseID, text ) == false )
+                return false;
+            RetargetProfile reread;
+            if ( reread.loadFromXMLText( text, absPath.str() ) == false || reread.toXML() != fullText )
+            {
+                SW_LOG_ERROR_ID( "RetargetProfile.DeltaMismatch", "Retarget profile '%#': the difference from base '%#' does not read back the same - not saved (a value the base writes cannot be reset to the default by a variant)", absPath.str(), _baseID );
+                return false;
+            }
+        }
+        if ( FileUtil::ensureParentDirectoryExists( absPath.str() ) == false || FileUtil::writeTextFile( absPath.str(), text ) == false )
+        {
+            SW_LOG_ERROR_ID( "RetargetProfile.WriteFailed", "Retarget profile could not be written: %#", absPath.str() );
+            return false;
+        }
+        return true;
     }
 
     bool RetargetProfile::loadFromAsset( const AssetID& assetID )

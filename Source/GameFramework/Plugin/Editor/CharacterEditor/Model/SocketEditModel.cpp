@@ -73,13 +73,10 @@ namespace sw::editor
 
     bool SocketEditModel::saveToFile( const AbsolutePath& absPath )
     {
-        const string text = _sockets.saveToXMLText();
-        if ( FileUtil::writeTextFile( absPath.str(), text ) == false )
-        {
-            SW_LOG_ERROR_ID( "SocketEditModel.SocketFileCouldNot2", "Socket file could not be written: %#", string( absPath.str() ).c_str() );
+        // 부모(`_base`)를 가리키던 파일은 부모와의 차이로 쓴다 — 실패 이유는 `SocketSet::saveToFile` 이 알린다.
+        if ( _sockets.saveToFile( absPath, _kinds ) == false )
             return false;
-        }
-        _savedText = text;
+        _savedText = _sockets.saveToXMLText(); // 더러움은 펼친 한 벌로 비교한다
         return true;
     }
 

@@ -2,6 +2,7 @@
 #include "pch.h"
 
 #include "Core/File/FileUtil.h"
+#include "Core/Path/AbsolutePath.h"
 #include "Core/Testing/TestFramework.h"
 
 #include "Engine/Animation/Retarget/RetargetProfile.h"
@@ -180,4 +181,38 @@ SW_TEST_CASE( RigAssetTest, RetargetChildMergesByKeys )
     SW_EXPECT_TRUE( written.find( "LeftArm" ) != string::npos );
     SW_EXPECT_TRUE( written.find( "<item>e</item>" ) != string::npos );
     SW_EXPECT_TRUE( written.find( "<item>d</item>" ) == string::npos ); // 뼈 목록은 통째로 바뀐다
+}
+
+/**
+ * @brief [RigAssetTest] 리타겟 변형 저장 — 부모(`_base`)를 가리키던 프로필은 부모와의 차이로 쓰고(물려받은 사슬 · 짝은 적지 않는다), 저장 → 다시 읽기가 같은 프로필이다
+ */
+SW_TEST_CASE( RigAssetTest, RetargetChildSavesOnlyItsDifference )
+{
+    const test::ScopedScratchDomain domain;
+    SW_REQUIRE_TRUE( FileUtil::writeTextFile( domain.makeDiskPath( "base.retarget.xml" ), R"(<RetargetProfile>
+        <root source="root" target="root" /><pelvis source="pelvis" target="hips" />
+        <chains>
+            <item name="LeftArm"><source><item>a</item></source><target><item>b</item></target></item>
+            <item name="RightArm"><source><item>c</item></source><target><item>d</item></target></item>
+        </chains>
+    </RetargetProfile>)" ) );
+    const string    baseID = test::ScopedScratchDomain::makeID( "base.retarget.xml" ).str();
+    RetargetProfile profile;
+    SW_REQUIRE_TRUE( profile.loadFromXMLText( "<RetargetProfile _base=\"" + baseID + "\"><pelvis target=\"pelvis_b\" /></RetargetProfile>", "child.retarget.xml" ) );
+    SW_EXPECT_EQUAL( baseID, profile.getBaseID() );
+    profile.addBonePair( RetargetBonePair{ hashed_string( "head" ), hashed_string( "head_b" ) } );
+
+    const std::optional<AbsolutePath> childPath = AbsolutePath::tryMake( domain.makeDiskPath( "child.retarget.xml" ) );
+    SW_REQUIRE_TRUE( childPath.has_value() );
+    SW_REQUIRE_TRUE( profile.saveToFile( *childPath ) );
+    string saved;
+    SW_REQUIRE_TRUE( FileUtil::readTextFile( childPath->str(), saved ) );
+    SW_EXPECT_TRUE( saved.find( baseID ) != string::npos );
+    SW_EXPECT_TRUE( saved.find( "head_b" ) != string::npos );
+    SW_EXPECT_TRUE( saved.find( "LeftArm" ) == string::npos ); // 물려받은 사슬은 적지 않는다
+
+    RetargetProfile reloaded;
+    SW_REQUIRE_TRUE( reloaded.loadFromAsset( test::ScopedScratchDomain::makeID( "child.retarget.xml" ) ) );
+    SW_EXPECT_EQUAL( profile.toXML(), reloaded.toXML() );
+    SW_EXPECT_EQUAL( baseID, reloaded.getBaseID() );
 }
