@@ -38,6 +38,7 @@ namespace sw
             return false;
         }
         _path = string( trimmed );
+        _key  = trimmed.empty() ? hashed_string{} : hashed_string( _path.c_str() );
         return true;
     }
 

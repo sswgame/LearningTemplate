@@ -74,6 +74,48 @@ namespace sw
                 {        UIActionName::kTextCut,                        nullptr},
                 {      UIActionName::kTextPaste,                        nullptr},
             };
+
+            /**
+             * @struct ActionKeys
+             * @brief 프레임마다 묻는 액션 이름을 한 번만 intern 한 표입니다(`getActionKeys`). 예전에는 처리할 때마다 글에서 hashed_string 을 만들었다(프레임당 열 번 넘게).
+             */
+            struct ActionKeys
+            {
+                hashed_string _pause;
+                hashed_string _back;
+                hashed_string _stick;
+                hashed_string _scroll;
+                hashed_string _arrNavigation[std::size( kArrNavigationAction )]; ///< `kArrNavigationAction` 과 같은 순서
+                hashed_string _arrText[std::size( kArrTextAction )];             ///< `kArrTextAction` 과 같은 순서
+                hashed_string _arrTextShadow[std::size( kArrTextAction )];       ///< 가리는 액션(없으면 빈 열쇠)
+            };
+
+            /** @brief 표를 만듭니다(`getActionKeys` 의 첫 부름에서 한 번). */
+            static ActionKeys makeActionKeys()
+            {
+                ActionKeys keys{};
+                keys._pause  = hashed_string( UIActionName::kPause );
+                keys._back   = hashed_string( UIActionName::kBack );
+                keys._stick  = hashed_string( UIActionName::kNavigateStick );
+                keys._scroll = hashed_string( UIActionName::kScroll );
+                for ( size_t index = 0; index < std::size( kArrNavigationAction ); ++index )
+                {
+                    keys._arrNavigation[index] = hashed_string( kArrNavigationAction[index]._pAction );
+                }
+                for ( size_t index = 0; index < std::size( kArrTextAction ); ++index )
+                {
+                    keys._arrText[index]       = hashed_string( kArrTextAction[index]._pAction );
+                    keys._arrTextShadow[index] = kArrTextAction[index]._pShadowedBy != nullptr ? hashed_string( kArrTextAction[index]._pShadowedBy ) : hashed_string{};
+                }
+                return keys;
+            }
+
+            /** @brief 액션 이름 열쇠 표입니다. 함수 안 정적 값이라 처음 부를 때 한 번 만든다(스레드 안전). */
+            static const ActionKeys& getActionKeys()
+            {
+                static const ActionKeys s_keys = makeActionKeys();
+                return s_keys;
+            }
         };
     } // namespace
 } // namespace sw
@@ -330,7 +372,7 @@ namespace sw
         const bool bPauseNotPollable = _uiInputMap == nullptr || bHasPauseMenu == false || _pInput->getKeyboardFocus() == InputKeyboardFocus::DevConsole;
         if ( bPauseNotPollable )
             return false;
-        const hashed_string pauseAction( UIActionName::kPause );
+        const hashed_string& pauseAction = UIInputRouterInternal::getActionKeys()._pause;
         if ( _uiInputMap->wasActionTriggered( pauseAction ) == false || _consumption.isActionConsumed( *_uiInputMap, *_pInput, pauseAction ) )
             return false;
         // 열지 못해도 소비한다. 일시정지를 누른 Esc 가 게임의 마우스 잠금 토글로 새지 않게 하기 위해서다(오류는 문서 생성 단계가 남긴다).
@@ -350,13 +392,15 @@ namespace sw
         const InputKeyboardFocus keyboardFocus = _pInput->getKeyboardFocus();
         if ( keyboardFocus == InputKeyboardFocus::DevConsole )
             return;
-        const bool      bTextFocus = keyboardFocus == InputKeyboardFocus::UI;
-        const InputMap& uiMap      = *_uiInputMap;
+        const bool                               bTextFocus = keyboardFocus == InputKeyboardFocus::UI;
+        const InputMap&                          uiMap      = *_uiInputMap;
+        const UIInputRouterInternal::ActionKeys& keys       = UIInputRouterInternal::getActionKeys();
 
-        for ( const UIInputRouterInternal::NavigationAction& entry : UIInputRouterInternal::kArrNavigationAction )
+        for ( size_t index = 0; index < std::size( UIInputRouterInternal::kArrNavigationAction ); ++index )
         {
-            const hashed_string action( entry._pAction );
-            const bool          bTab = entry._direction == UINavigationDirection::Next || entry._direction == UINavigationDirection::Previous;
+            const UIInputRouterInternal::NavigationAction& entry  = UIInputRouterInternal::kArrNavigationAction[index];
+            const hashed_string&                           action = keys._arrNavigation[index];
+            const bool                                     bTab   = entry._direction == UINavigationDirection::Next || entry._direction == UINavigationDirection::Previous;
             if ( ( bTextFocus && bTab == false ) || uiMap.wasActionTriggered( action ) == false )
                 continue;
             if ( handleNavigation( *pActive, action, entry._direction ) )
@@ -384,19 +428,20 @@ namespace sw
         // 텍스트 입력 위젯: 지우기와 커서 이동 · 선택 · 복사 붙여넣기는 위젯이 키보드 포커스를 가진 동안만 처리한다(그 밖에서 이 키들은 UI 의 것이 아니다).
         if ( bTextFocus )
         {
-            for ( const UIInputRouterInternal::TextAction& entry : UIInputRouterInternal::kArrTextAction )
+            for ( size_t index = 0; index < std::size( UIInputRouterInternal::kArrTextAction ); ++index )
             {
-                const hashed_string action( entry._pAction );
+                const hashed_string& action = keys._arrText[index];
                 if ( uiMap.wasActionTriggered( action ) == false )
                     continue;
-                if ( entry._pShadowedBy != nullptr && uiMap.wasActionTriggered( hashed_string( entry._pShadowedBy ) ) )
+                const hashed_string& shadowedBy = keys._arrTextShadow[index];
+                if ( shadowedBy.empty() == false && uiMap.wasActionTriggered( shadowedBy ) )
                     continue;
                 if ( routeAction( *pActive, action, float2{} ) )
                     consumeAction( uiMap, action );
             }
         }
 
-        const hashed_string backAction( UIActionName::kBack );
+        const hashed_string& backAction = keys._back;
         if ( uiMap.wasActionTriggered( backAction ) )
         {
             // 위젯이 먼저 처리하고(펼친 목록을 접는 콤보 상자), 아무도 소비하지 않으면 화면이 처리한다(기본은 닫기).
@@ -422,10 +467,10 @@ namespace sw
 
     void UIInputRouter::processStickNavigation( UIScreen& screen, float32 deltaSeconds )
     {
-        const hashed_string stickAction( UIActionName::kNavigateStick );
-        const float2        value = _uiInputMap->getVector2D( stickAction );
-        const float32       absX  = MathUtil::abs( value._x );
-        const float32       absY  = MathUtil::abs( value._y );
+        const hashed_string& stickAction = UIInputRouterInternal::getActionKeys()._stick;
+        const float2         value       = _uiInputMap->getVector2D( stickAction );
+        const float32        absX        = MathUtil::abs( value._x );
+        const float32        absY        = MathUtil::abs( value._y );
         if ( MathUtil::max( absX, absY ) < UIInputRouterInternal::kStickNavigateMagnitude )
         {
             _bStickHeld = SW_FALSE;
@@ -458,8 +503,8 @@ namespace sw
 
     void UIInputRouter::processScroll( UIScreen& screen )
     {
-        const hashed_string scrollAction( UIActionName::kScroll );
-        const float2        value = _uiInputMap->getVector2D( scrollAction );
+        const hashed_string& scrollAction = UIInputRouterInternal::getActionKeys()._scroll;
+        const float2         value        = _uiInputMap->getVector2D( scrollAction );
         if ( value._x == 0.0f && value._y == 0.0f )
             return;
         // 포커스가 이 화면에 있으면 포커스 경로(목록 안의 버튼, 그 목록)로, 없으면 포인터가 올라간 경로로 보낸다.

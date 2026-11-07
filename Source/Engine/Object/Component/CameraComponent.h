@@ -56,7 +56,7 @@ namespace sw
         PROPERTY( Tooltip = "Screen rectangle (x, y, width, height as 0..1 of the output, top-left origin) for MainView / ScreenRect" )
         float4 _screenRect{ 0.0f, 0.0f, 1.0f, 1.0f };
         PROPERTY( Tooltip = "Render texture path (rendertarget/<name>) for RenderTexture" )
-        string _renderTexture{};
+        hashed_string _renderTexture{}; ///< 뷰 수집이 프레임마다 읽는다 — 글로 두면 렌더 텍스처 카메라마다 프레임마다 intern 했다
         PROPERTY( Min = 1, Max = 8192, Tooltip = "Render texture width", Meta = "Units=px" )
         uint32 _renderTextureWidth{ 256 };
         PROPERTY( Min = 1, Max = 8192, Tooltip = "Render texture height", Meta = "Units=px" )

@@ -65,7 +65,7 @@ namespace sw
          * @details 빛 색에 텍스처 rgb 를 곱한다. 한 프레임에 쓰는 쿠키는 `shaderslot::kLight2DCookieCellCount` 개까지다 — 넘는 쿠키는 오류를 남기고 쿠키 없이 그린다.
          */
         void          setCookieTexturePath( string_view path ) { _cookieTexturePath = path; }
-        hashed_string getCookieTexturePath() const override { return _cookieTexturePath.empty() ? hashed_string{} : hashed_string( _cookieTexturePath.c_str() ); }
+        hashed_string getCookieTexturePath() const override { return _cookieTexturePath.key(); } // 열쇠는 넣을 때 만든다 — 빛마다 프레임마다 intern 하지 않는다
 
     protected:
         void writeGPULightKindFields( GPULight& outLight ) const override;

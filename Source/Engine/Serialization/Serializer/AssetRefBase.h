@@ -10,6 +10,7 @@
 #include "Core/Container/string.h"
 #include "Core/Foundation/Macros.h"
 #include "Core/Foundation/Types.h"
+#include "Core/String/hashed_string.h"
 
 #include "Engine/Content/AssetID.h"
 #include "Engine/Content/AssetTypeRegistry.h"
@@ -34,6 +35,11 @@ namespace sw
         [[nodiscard]] const string& path() const { return _path; }
         /** @brief 경로 글(끝에 0)입니다. */
         [[nodiscard]] const utf8* c_str() const { return _path.c_str(); }
+        /**
+         * @brief 경로의 intern 열쇠입니다(빈 참조면 빈 열쇠). 넣을 때(`assign`) 한 번 만들어 둔다 — 프레임마다 경로를 쓰는 곳(빛 쿠키 · 이미지 위젯)이
+         *        글에서 다시 intern 하지 않게 한다(FNV · 샤드 잠금). 표시 철자는 경로 그대로다.
+         */
+        [[nodiscard]] const hashed_string& key() const { return _key; }
         /** @brief 리소스 입구(`AssetIO`)에 넘길 id 입니다. */
         [[nodiscard]] AssetID id() const { return AssetID{ _path }; }
         /** @brief 경로를 받는 함수(`string_view`)에 그대로 넘깁니다. 이 값은 이미 경로라 짐작하는 변환이 아니다. */
@@ -52,7 +58,11 @@ namespace sw
          */
         [[nodiscard]] bool assign( string_view path );
         /** @brief 참조를 비웁니다. */
-        void clear() { _path.clear(); }
+        void clear()
+        {
+            _path.clear();
+            _key = hashed_string{};
+        }
 
         /**
          * @brief @p path 가 종류 @p type 의 에셋이면 true 입니다 — 내장 이름(철자 그대로), 접미사(대소문자 무시), 접미사가 없는 카탈로그는 경로 규칙(`AssetPathRule`) 순으로 본다.
@@ -68,12 +78,14 @@ namespace sw
     protected:
         explicit AssetRefBase( const AssetTypeDef& targetType )
             : _path{}
+            , _key{}
             , _pTargetType{ &targetType }
         {
         }
 
     private:
         string              _path;
+        hashed_string       _key;         ///< `_path` 의 intern 열쇠(`key`). `_path` 를 바꾸는 곳(`assign` · `clear`)이 함께 바꾼다
         const AssetTypeDef* _pTargetType; ///< `T::kAssetType` 의 주소다. 이 값을 가진 코드의 이미지에 있으므로 값보다 오래 산다
     };
 } // namespace sw

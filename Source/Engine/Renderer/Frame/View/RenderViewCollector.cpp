@@ -193,7 +193,7 @@ namespace sw
                 if ( RenderViewCollectorInternal::hasUnitResolutionScale( *pCamera, "render texture" ) == false )
                     continue;
                 request._outputKind            = RenderViewOutputKind::RenderTexture;
-                request._renderTexture         = hashed_string( string_view{ output._renderTexture } );
+                request._renderTexture         = output._renderTexture;
                 request._outputWidth           = MathUtil::max( 1u, output._renderTextureWidth );
                 request._outputHeight          = MathUtil::max( 1u, output._renderTextureHeight );
                 request._settings._screenRect  = float4{ 0.0f, 0.0f, 1.0f, 1.0f };

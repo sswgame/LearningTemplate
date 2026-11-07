@@ -83,7 +83,7 @@ namespace sw
             return;
         CanvasBrush brush = _brush.makeCanvasBrush( _image );
         if ( bImagePath )
-            brush._imagePath = hashed_string( _imagePath.c_str() );
+            brush._imagePath = _imagePath.key(); // 칠할 때마다 intern 하지 않는다
         if ( _bMirrorInRTL && isRightToLeft() )
         {
             const float32 u0 = brush._uvRect._x;

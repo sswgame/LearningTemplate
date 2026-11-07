@@ -1356,7 +1356,7 @@ namespace sw
             texture.appendFormat( "rendertarget/bench_view%#", viewIndex );
             CameraRenderOutput output;
             output._target              = CameraOutputTarget::RenderTexture;
-            output._renderTexture       = string( texture.c_str() );
+            output._renderTexture       = hashed_string( texture.c_str() );
             output._renderTextureWidth  = _settings._viewTextureSize;
             output._renderTextureHeight = _settings._viewTextureSize;
             pCamera->setRole( CameraRole::Capture );
