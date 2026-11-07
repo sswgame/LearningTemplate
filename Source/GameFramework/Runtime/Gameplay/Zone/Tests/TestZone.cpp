@@ -70,9 +70,21 @@ namespace
             module._condition = pCondition;
             for ( const auto& param : listParam )
             {
-                module._listParam.push_back( ZoneParamDef{ hashed_string( param.first ), string( param.second ) } );
+                ZoneParamDef def;
+                def._name  = hashed_string( param.first );
+                def._value = param.second;
+                module._listParam.push_back( def );
             }
             return module;
+        }
+
+        static ZoneCaseDef makeCase( const utf8* pName, const utf8* pCondition, const utf8* pDo )
+        {
+            ZoneCaseDef caseDef;
+            caseDef._name      = hashed_string( pName );
+            caseDef._condition = pCondition;
+            caseDef._do        = pDo;
+            return caseDef;
         }
 
         /** @brief 대상을 한 프레임 안에 두고(위치 값 @p depth01) 처리합니다. */
@@ -182,8 +194,8 @@ SW_TEST_CASE( ZoneTest, FirstMatchingCaseAndExpressionValues )
                                                                         {    "on",                        "Enter"},
                                                                         {"damage", "20 * (1 - target.FireResist)"}
     } );
-    burn._listCase.push_back( ZoneCaseDef{ hashed_string( "immune" ), "tag(State.Fireproof)", "", ZoneOverrideOp::Merge } );
-    burn._listCase.push_back( ZoneCaseDef{ hashed_string( "burn" ), "", "ability.applyEffect(effect=GE_Test_Burn, setByCaller=Data.Damage, value=damage)", ZoneOverrideOp::Merge } );
+    burn._listCase.push_back( ZoneFixture::makeCase( "immune", "tag(State.Fireproof)", "" ) );
+    burn._listCase.push_back( ZoneFixture::makeCase( "burn", "", "ability.applyEffect(effect=GE_Test_Burn, setByCaller=Data.Damage, value=damage)" ) );
     profile._listModule.push_back( burn );
     ZoneCompiledProfile compiled;
     SW_REQUIRE_TRUE( compiled.compile( profile, "test", &fixture._catalog ) );
