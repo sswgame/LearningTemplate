@@ -15,6 +15,7 @@
 #include "Core/String/hashed_string.h"
 
 #include "Engine/Animation/Facial/FacialLiveSource.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -28,6 +29,9 @@ namespace sw
     struct SW_API LiveLinkFaceLayout
     {
         REFLECT_BODY();
+
+        /** @brief 이 데이터 종류입니다(표에 올리지 않는다 — 카탈로그 편집기의 표가 아니다). 접미사가 없어 타입 있는 참조는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "LiveLinkFaceLayout", AssetPathRule{ {}, {}, "/livelinkface.xml" }, {} );
 
         PROPERTY( Min = 0, Max = 255, Tooltip = "Packet version byte this layout reads (other versions are rejected)" )
         int32 _packetVersion{ 0 };
@@ -83,8 +87,15 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, Tooltip = "Packet layout this mapping reads (LiveLinkFaceLayout, e.g. engine/animation/livelinkface.xml) - required" )
-        string _layoutPath;
+        /** @brief 이 에셋 종류의 접미사입니다(종류 표 `AssetTypeRegistry`). */
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            { ".livelinkface.xml", AssetSuffixRole::Plain },
+        };
+        /** @brief 이 에셋 종류입니다(등록은 `LiveLinkFace.cpp` 의 `SW_ASSET_TYPE`). */
+        static constexpr AssetTypeDef kAssetType{ "LiveLinkFaceMapping", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+
+        PROPERTY( Tooltip = "Packet layout this mapping reads (LiveLinkFaceLayout, e.g. engine/animation/livelinkface.xml) - required" )
+        AssetRef<LiveLinkFaceLayout> _layoutPath;
         PROPERTY( Tooltip = "Expressions and the packet channels that drive them" )
         vector<LiveLinkFaceExpression> _listExpression;
 

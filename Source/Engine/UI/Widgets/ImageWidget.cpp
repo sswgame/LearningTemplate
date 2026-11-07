@@ -37,7 +37,7 @@ namespace sw
     {
         if ( _imagePath == imagePath )
             return;
-        _imagePath = string( imagePath );
+        _imagePath = imagePath;
         invalidate( WidgetDirty::kPaint );
     }
 
@@ -83,7 +83,7 @@ namespace sw
             return;
         CanvasBrush brush = _brush.makeCanvasBrush( _image );
         if ( bImagePath )
-            brush._imagePath = hashed_string( _imagePath );
+            brush._imagePath = hashed_string( _imagePath.c_str() );
         if ( _bMirrorInRTL && isRightToLeft() )
         {
             const float32 u0 = brush._uvRect._x;

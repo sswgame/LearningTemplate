@@ -406,9 +406,9 @@ namespace sw
                 continue; // 비워 둔 슬롯이다
             unique_ptr<LinkedLayerGraph> linked = sw::make_unique<LinkedLayerGraph>( *this );
             linked->_slot                       = hashed_string( binding._slot );
-            linked->_graphPath                  = binding._graphPath;
+            linked->_graphPath                  = binding._graphPath.path();
             // 못 읽으면 빈 그래프로 남고 `rebuildLinkedGraphs` 가 그래프를 쓰지 않게 한다.
-            if ( linked->_graph.loadFromFile( AssetID{ binding._graphPath } ) == false )
+            if ( linked->_graph.loadFromFile( binding._graphPath.id() ) == false )
                 SW_LOG_ERROR_ID( "SkeletalAnimator.LinkedLayerGraphCouldNot", "Linked layer graph '%#' for slot '%#' could not be loaded", binding._graphPath.c_str(), binding._slot.c_str() );
             _listLinkedGraph.push_back( std::move( linked ) );
         }
@@ -698,7 +698,7 @@ namespace sw
             pBinding        = &_listLinkedLayer.emplace_back();
             pBinding->_slot = string{ slot };
         }
-        pBinding->_graphPath = string{ graphPath };
+        pBinding->_graphPath = graphPath;
         refreshLinkedLayers();
     }
 

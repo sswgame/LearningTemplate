@@ -152,7 +152,9 @@ shared_ptr<const BehaviorTreeAsset> tree = _tree.acquire();  // 또는 request()
 - `T` 는 칸이 만들어지는 곳에서 완전해야 한다(`unique_ptr<T>` 소멸자와 같은 규칙). 생성자를 .cpp 에 둔 컴포넌트는 헤더에 앞선 선언만 둔다. `acquire` · `request` 가 멤버 템플릿인 까닭도 같다 — 칸 선언이 `AssetRefCache<T>` 를 인스턴스화하면 뒤에 오는 캐시 헤더의 특수화가 컴파일 오류다.
 - 생성 목록: 파서가 대상마다 `AssetReferenceFields.list` 를 쓰고 빌드가 저장소의 표 `Config/Dev/AssetReferenceFields.generated.json` 으로 모은다(주인별, 이 구성이 짓는 주인의 줄만 갈아 끼운다). 커밋 전 린트와 `move-asset` 이 빌드 없이 돌기 때문에 표를 저장소에 둔다. 낡음은 `--check-asset-refs` 가 잡는다.
 - 종류를 가르는 셋: 접미사(`.sockets.xml`), 카탈로그의 경로 규칙(`/data/crops.xml` — 헤더의 `kAssetType = AssetTypeDef::makeDataFile( … )` 에 두고 등록 줄은 로더만 더한다), 내장 이름(`withBuiltinNames` — 메시의 `Cube` 처럼 파일이 없는 에셋). 셋 다 없는 종류(`makeCacheOnly` — 지금은 캐시 테스트의 형식뿐이다)는 경로로 가를 수 없어 `AssetRef<T>` 가 컴파일에서 막는다(`AssetTypeDef::canTellPath`) — 접미사나 규칙을 먼저 준다. 내장 이름은 철자 그대로만 맞고 모르는 이름은 폴백 없이 오류다. 머티리얼 칸의 `None` 은 내장 이름이 아니라 `hashed_string` 이 빈 이름을 쓴 철자였다 — 데이터를 빈 글로 옮겼고 이제 로드 오류다.
-- 전환하지 않는 칸: 종류가 여럿이거나(오디오 이벤트 · 음악 층의 클립 · 그래프), 종류 객체가 없는 데이터 파일(라이브 링크 배치 표, 나일 자동 계획), 편집 사본이 치는 중인 글을 들거나(`SequenceTrackItem::_prefab`), 인턴 열쇠로 쓰는(`hashed_string`) 칸. 이런 칸은 `PROPERTY( AssetPath )` 로 두면 생성 목록에 든다. 손 표에 남은 것은 손으로 읽는 XML 의 속성 이름뿐이다(머티리얼 · 타일셋 · 타일맵 · 리타겟 · 현지화 프로젝트 · 게임 설정 · 캐릭터 편집기 · 시나리오) — 그 읽기를 리플렉션 형식으로 옮기면 줄이 빠진다.
+- 칸이 만들어지는 곳에서 `T` 가 완전해야 하므로, 대상 헤더를 읽을 수 없는 구조체(`SpriteClipAsset` · `SpriteLibrary` · `BehaviorSubTreeFields`)는 생성자를 .cpp 로 옮기고 헤더는 앞선 선언만 둔다. 재생 입구처럼 종류 둘을 받는 칸은 표에 올리지 않는 검사용 종류(`AudioPlayableAsset`)를 대상으로 삼는다.
+- 생성 목록은 칸마다 C++ 이름과 XML 속성 이름(`XMLFields::getAttributeName` — `_shaderPath` → `shaderPath`, `Name = "mesh"` 는 그대로)을 함께 낸다. 그래서 속성으로 읽는 문서의 경로 칸도 손 표 없이 참조 검사 · 옮기기가 안다. 손 표 `listField` 에는 리플렉션 테스트 형식의 두 칸(`_albedo` · `_texture`)만 남았다.
+- 전환하지 않는 칸은 `PROPERTY( AssetPath )` 로 두면 생성 목록에 든다: 인턴 열쇠(`hashed_string`)로 쓰는 칸(외형 데이터 · 오디오 이벤트 · 음악 층), 종류가 여럿인 칸(머티리얼 그래프 노드 에셋, 셰이더 소스), 종류 정의가 없는 파일(글꼴, 나일 자동 계획), 편집 사본이 치는 중인 글(`SequenceTrackItem::_prefab`).
 
 ### 5. 행동 어휘
 

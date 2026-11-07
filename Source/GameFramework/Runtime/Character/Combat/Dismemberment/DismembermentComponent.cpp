@@ -210,7 +210,7 @@ namespace sw
 
     void DismembermentComponent::setRegionTablePath( string_view path )
     {
-        _regionTablePath = string{ path };
+        _regionTablePath = path;
         loadRegionTable();
     }
 
@@ -221,7 +221,7 @@ namespace sw
         if ( _regionTablePath.empty() )
             return;
         // 영역 표는 외형과 같은 공유 캐시의 한 벌이다(엔진 기본 연산으로 읽는다 — `FitSolver` 의 것과 같다).
-        _pRegionTable = SharedAssetCache<FitTables>::acquire( _regionTablePath );
+        _pRegionTable = SharedAssetCache<FitTables>::acquire( _regionTablePath.path() );
         if ( _pRegionTable == nullptr )
         {
             SW_LOG_ERROR_ID( "Dismemberment.RegionTableCouldNot", "'%#': region table '%#' could not be loaded", getOwner() != nullptr ? getOwner()->getName().c_str() : "(no owner)", _regionTablePath.c_str() );

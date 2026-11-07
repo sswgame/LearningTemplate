@@ -48,7 +48,7 @@ SW_TEST_CASE( SpriteLibraryTest, ChildChangesOnlyWhatItNames )
                                                               "<SpriteLibraryCategory _name=\"Head\"><_listLabel><SpriteLibraryLabel _name=\"Hat\" /></_listLabel></SpriteLibraryCategory></_listCategory></SpriteLibrary>";
     SpriteLibrary library;
     SW_REQUIRE_TRUE( library.loadFromXMLText( text, "<test>" ) );
-    SW_EXPECT_EQUAL( string( "engine/textures/test/quadrants.dds" ), library._atlasPath ); // 물려받음
+    SW_EXPECT_EQUAL( string( "engine/textures/test/quadrants.dds" ), library._atlasPath.path() ); // 물려받음
     const SpriteLibraryLabel* pIdle = library.findLabel( "Body", "Idle" );
     SW_REQUIRE_TRUE( pIdle != nullptr );
     SW_EXPECT_NEAR( 0.5f, pIdle->_uvRect._y, 1e-6f );

@@ -9,6 +9,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 #include "Engine/UI/WidgetTree/Widget.h"
 #include "Engine/UI/Widgets/UIBrush.h"
@@ -42,7 +43,7 @@ namespace sw
         const shared_ptr<const Texture2D>& getImage() const { return _image; }
         /** @brief 이미지 경로(DDS 리소스 경로)를 바꿉니다. 텍스처 객체(`setImage`)가 있으면 그것이 우선합니다. kPaint 입니다. */
         void          setImagePath( string_view imagePath );
-        const string& getImagePath() const { return _imagePath; }
+        const string& getImagePath() const { return _imagePath.path(); }
         /** @brief 브러시를 바꿉니다. kPaint 만 합니다. */
         void           setBrush( const UIBrush& brush );
         const UIBrush& getBrush() const { return _brush; }
@@ -60,8 +61,8 @@ namespace sw
 
     private:
         shared_ptr<const Texture2D> _image; ///< 칠할 이미지입니다(패킷이 수명을 가지며, 그리기 목록의 텍스처 참조입니다).
-        PROPERTY( DisplayName = "Image", AssetPath, AssetType = "Texture", Tooltip = "Texture path; the canvas renderer resolves it on the render thread" )
-        string _imagePath;
+        PROPERTY( DisplayName = "Image", Tooltip = "Texture path; the canvas renderer resolves it on the render thread" )
+        AssetRef<Texture2D> _imagePath;
         PROPERTY( DisplayName = "Brush" )
         UIBrush _brush;
         PROPERTY( DisplayName = "Image Size", Tooltip = "Desired size; 0 uses the texture size", Meta = "Units=ui" )

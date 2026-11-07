@@ -8,6 +8,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 
 namespace sw
 {
@@ -187,7 +188,7 @@ namespace sw
             *this = LiveLinkFaceMapping{};
             return false;
         }
-        if ( outLayout.loadFromAsset( AssetID{ _layoutPath } ) == false )
+        if ( outLayout.loadFromAsset( _layoutPath.id() ) == false )
         {
             *this = LiveLinkFaceMapping{};
             return false; // 읽기가 까닭을 알렸다
@@ -350,4 +351,7 @@ namespace sw
         }
         return false;
     }
+
+    /** @brief 연결 표 파일 종류입니다(읽기가 패킷 배치 표를 함께 받아 표의 로더를 두지 않는다). */
+    SW_ASSET_TYPE( LiveLinkFaceMapping, LiveLinkFaceMapping::kAssetType );
 } // namespace sw

@@ -9,6 +9,7 @@
 #include "Core/String/hashed_string.h"
 #include "Core/Time/FixedStepTimer.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Object/Component/TagSystem.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -17,6 +18,8 @@
 
 namespace sw
 {
+    struct AudioPlayableAsset;
+
     class GameObjectManager;
 
     /**
@@ -39,8 +42,8 @@ namespace sw
     private:
         PROPERTY( Category = "Scare", DisplayName = "Cue", Tooltip = "Cue name for the sequencer / camera / audio listeners" )
         hashed_string _cue;
-        PROPERTY( Category = "Scare", DisplayName = "Sound", AssetPath, AssetType = "Audio" )
-        string _sound;
+        PROPERTY( Category = "Scare", DisplayName = "Sound" )
+        AssetRef<AudioPlayableAsset> _sound;
         PROPERTY( Category = "Scare", DisplayName = "Required Tags" )
         TagContainer _requiredTags;
         PROPERTY( Category = "Scare", DisplayName = "Once" )

@@ -435,7 +435,7 @@ namespace sw
                 if ( _match.isCliff( x, y ) == false )
                     continue;
                 const uint32    hash   = XorShift32::next( XorShift32::next( static_cast<uint32>( y * size + x ) + 1u ) );
-                const string&   prefab = _listCliffPrefab[hash % static_cast<uint32>( _listCliffPrefab.size() )];
+                const string&   prefab = _listCliffPrefab[hash % static_cast<uint32>( _listCliffPrefab.size() )].path();
                 GameObject*     pCliff = spawnPrefab( manager, prefab, "SkirmishCliff" );
                 SceneComponent* pRoot  = pCliff != nullptr ? pCliff->getComponent<SceneComponent>() : nullptr;
                 if ( pRoot == nullptr )

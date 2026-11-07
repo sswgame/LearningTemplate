@@ -19,6 +19,7 @@
 #include "Core/Memory/Memory.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Character/Fit/FitTables.h"
 #include "Engine/Character/Fit/SurfaceState.h"
 #include "Engine/Object/Component/Component.h"
@@ -82,8 +83,8 @@ namespace sw
         /** @brief 영역 표의 영역들입니다. 표를 받지 못했으면 빈 목록입니다. */
         const vector<BodyRegionDef>& getRegions() const;
 
-        PROPERTY( Category = "Dismemberment", DisplayName = "Region Table", AssetPath, Tooltip = "Body regions (*.fit.xml <Region> rows, bone weights)" )
-        string _regionTablePath;
+        PROPERTY( Category = "Dismemberment", DisplayName = "Region Table", Tooltip = "Body regions (*.fit.xml <Region> rows, bone weights)" )
+        AssetRef<FitTables> _regionTablePath;
         PROPERTY( Category = "Dismemberment", DisplayName = "Severable Regions", Tooltip = "Regions a fatal hit may cut off" )
         vector<hashed_string> _listSeverableRegion;
         PROPERTY( Category = "Dismemberment", DisplayName = "Piece Layer", Tooltip = "Collision layer of the severed piece", Validate = validatePieceLayer )

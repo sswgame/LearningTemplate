@@ -13,12 +13,15 @@
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class Texture2D;
+
     /** @brief 라벨 하나입니다. 아틀라스 안의 프레임과 9-슬라이스 테두리를 담습니다(뜻은 `SpriteClipFrame` 의 같은 칸과 같다). */
     REFLECT()
     struct SW_API SpriteLibraryLabel
@@ -70,6 +73,8 @@ namespace sw
         /** @brief 이 에셋 종류입니다(등록은 `SpriteLibrary.cpp` 의 `SW_ASSET_TYPE`). */
         static constexpr AssetTypeDef kAssetType{ "SpriteLibrary", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
+        /** @brief 빈 라이브러리입니다. .cpp 에 두어 헤더가 `Texture2D` 를 앞선 선언으로만 안다. */
+        SpriteLibrary();
         /** @brief XML 본문을 읽습니다(`_base` 를 펼칩니다). 모르는 칸 · 겹친 이름 · 음수 테두리 · 아틀라스 크기 없는 테두리는 오류이고 내용은 비어 있습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xml, string_view sourceLabel );
         /** @brief 분류 · 라벨의 프레임입니다. 없으면 nullptr 입니다. */
@@ -77,8 +82,8 @@ namespace sw
         /** @brief 내용을 비웁니다. */
         void clear();
 
-        PROPERTY( AssetPath, AssetType = "Texture", Tooltip = "Atlas texture every label's frame is cut from" )
-        string _atlasPath;
+        PROPERTY( Tooltip = "Atlas texture every label's frame is cut from" )
+        AssetRef<Texture2D> _atlasPath;
         PROPERTY( Tooltip = "Atlas size in pixels (width, height); needed only by pixel borders, 0 is unknown" )
         float2 _atlasPixelSize{ 0.0f, 0.0f };
         PROPERTY( Tooltip = "Categories of labels" )

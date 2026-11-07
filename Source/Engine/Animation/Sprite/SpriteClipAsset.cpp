@@ -8,6 +8,7 @@
 
 #include "Engine/Config/ConfigManager.h"
 #include "Engine/Content/AssetIO.h"
+#include "Engine/Graphics/Texture/Texture2D.h"
 #include "Engine/Serialization/Format/XMLSerializer.h"
 
 namespace sw
@@ -86,6 +87,8 @@ namespace sw
         clear();
         return false;
     }
+
+    SpriteClipAsset::SpriteClipAsset() = default;
 
     void SpriteClipAsset::clear()
     {

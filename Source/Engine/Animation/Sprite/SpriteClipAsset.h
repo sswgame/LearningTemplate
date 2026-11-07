@@ -12,12 +12,15 @@
 #include "Core/Path/AbsolutePath.h"
 
 #include "Engine/Animation/AnimationPlayback.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
 {
+    class Texture2D;
+
     /**
      * @struct SpriteClipFrame
      * @brief 클립의 프레임 하나입니다. 아틀라스 안의 UV 사각형과 보여 줄 시간을 담습니다.
@@ -139,7 +142,7 @@ namespace sw
         static constexpr AssetTypeDef kAssetType{ "SpriteClipAsset", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
 
         /** @brief 빈 클립을 만듭니다. */
-        SpriteClipAsset() = default;
+        SpriteClipAsset();
 
         /** @brief 리소스 id 의 클립을 읽습니다. OS 경로는 받지 않습니다(`loadFromDiskFile`). 읽지 못하면 false 를 반환하고 내용은 비어 있습니다. */
         [[nodiscard]] bool loadFromFile( const AssetID& assetID );
@@ -189,7 +192,7 @@ namespace sw
         uint32 rebuildFrameBorders();
 
         PROPERTY( Tooltip = "Atlas texture path" )
-        string _atlasPath;
+        AssetRef<Texture2D> _atlasPath;
         /** @brief 아틀라스의 픽셀 크기(폭, 높이)입니다. 픽셀 테두리를 비율로 바꿀 때 쓴다. 0 이면 모른다. */
         PROPERTY( Tooltip = "Atlas size in pixels (width, height); needed only by pixel borders, 0 is unknown" )
         float2 _atlasPixelSize{ 0.0f, 0.0f };

@@ -14,6 +14,7 @@
 #include "Core/Memory/Memory.h"
 
 #include "Engine/Animation/Facial/LiveLinkFace.h"
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Object/Component/Component.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -39,7 +40,7 @@ namespace sw
         /** @brief 쌓인 패킷을 읽어 마지막 것을 표정 값으로 옮깁니다. */
         void onTick( float32 deltaTime ) override;
 
-        void setMappingPath( string_view path ) { _mappingPath = string{ path }; }
+        void setMappingPath( string_view path ) { _mappingPath = path; }
         /** @brief 받을 포트입니다(0 이면 운영체제가 고른다 — 테스트). 시작 전에 정합니다. */
         void setPort( int32 port ) { _port = port; }
         /** @brief 이 기계(127.0.0.1)에서 온 패킷만 받습니다(같은 PC 의 송신기 · 테스트). 시작 전에 정합니다. */
@@ -51,8 +52,8 @@ namespace sw
         const LiveLinkFaceSource& getSource() const { return _source; }
 
     private:
-        PROPERTY( Category = "Live Link Face", DisplayName = "Mapping", AssetPath, Tooltip = "Channel to expression mapping of this head (*.livelinkface.xml)" )
-        string _mappingPath;
+        PROPERTY( Category = "Live Link Face", DisplayName = "Mapping", Tooltip = "Channel to expression mapping of this head (*.livelinkface.xml)" )
+        AssetRef<LiveLinkFaceMapping> _mappingPath;
         PROPERTY( Category = "Live Link Face", DisplayName = "Port", Min = 0, Max = 65535, Tooltip = "UDP port the Live Link Face app sends to (0 lets the OS pick)" )
         int32 _port;
 

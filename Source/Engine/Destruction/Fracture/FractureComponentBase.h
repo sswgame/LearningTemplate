@@ -200,7 +200,7 @@ namespace sw
         void setAuthority( bool bAuthority ) { _bAuthority = bAuthority; }
         bool hasAuthority() const { return _bAuthority; }
         void setAnchorMode( FractureAnchorMode mode ) { _anchorMode = mode; }
-        void setProfilePath( string_view path ) { _profilePath = string{ path }; }
+        void setProfilePath( string_view path ) { _profilePath = path; }
         void setInteriorMaterialPath( string_view path ) { _interiorMaterialPath = path; }
 
         // --- 네트워크(GF_NetClientServer 의 DestructionReplication 이 쓴다) ----------------------------------------------------------
@@ -327,8 +327,8 @@ namespace sw
         void validateDebrisLayer( ValidationContext& context ) const;
 
     private:
-        PROPERTY( Category = "Fracture", DisplayName = "Profile", AssetPath, Tooltip = "Destruction profile (*.destruction.xml); empty uses the engine default" )
-        string _profilePath;
+        PROPERTY( Category = "Fracture", DisplayName = "Profile", Tooltip = "Destruction profile (*.destruction.xml); empty uses the engine default" )
+        AssetRef<DestructionProfile> _profilePath;
         PROPERTY( Category = "Fracture", DisplayName = "Interior Material", Tooltip = "Material of the cut faces; empty uses the outer one" )
         AssetRef<Material> _interiorMaterialPath;
         PROPERTY( Category = "Fracture", DisplayName = "Static Layer", Tooltip = "Physics layer of pieces still attached to the anchors", Validate = validateStaticLayer )

@@ -144,9 +144,9 @@ namespace sw
         AssetRef<SkirmishUnitModelCatalog> _unitModelPath;
         PROPERTY( Category = "Data", DisplayName = "Commander Tree", Tooltip = "Behavior tree (.bt.xml) of the computer opponent; its task names are the rts.* tasks of the RTS kit" )
         AssetRef<BehaviorTreeAsset> _commanderTreePath;
-        PROPERTY( Category = "Prefabs", DisplayName = "Cliff Prefabs", AssetPath, AssetType = "Prefab",
+        PROPERTY( Category = "Prefabs", DisplayName = "Cliff Prefabs",
                   Tooltip = "One is placed on every cliff tile, picked and turned by the tile position (rocks); at least one" )
-        vector<string> _listCliffPrefab;
+        vector<AssetRef<PrefabAsset>> _listCliffPrefab;
         PROPERTY( Category = "Prefabs" )
         AssetRef<PrefabAsset> _unitPrefab;
         PROPERTY( Category = "Scene", DisplayName = "Camera Rig", Tooltip = "Object with the CameraDirectorComponent the mouse is picked through" )

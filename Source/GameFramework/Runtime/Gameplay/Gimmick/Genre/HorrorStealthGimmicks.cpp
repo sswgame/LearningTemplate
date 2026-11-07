@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Audio/AudioClip.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
 #include "Engine/Object/Component/3D/DirectionalLightComponent.h"
 #include "Engine/Object/Component/3D/PointLightComponent.h"
@@ -75,7 +76,7 @@ namespace sw
             event._position = pOwner->getPrimarySceneComponent()->getWorldPosition();
         GameEventUtil::send( event );
         if ( _sound.empty() == false )
-            (void)GameSound::play( AssetID{ _sound } );
+            (void)GameSound::play( _sound.id() );
     }
 
     void ScareTriggerComponent::onTick( float32 deltaTime )

@@ -189,6 +189,5 @@ namespace sw
     }
 
     /** @brief 파괴 프로파일 데이터 파일 종류와 그 공유 캐시입니다(스키마 테스트와 카탈로그 편집기가 이 줄로 파일을 읽는다). */
-    SW_SHARED_ASSET_CACHE( Destruction, DestructionProfile,
-                           AssetTypeDef::makeDataFile( "destruction", AssetPathRule{ {}, {}, ".destruction.xml" }, AssetTypeLoader::of<DestructionProfile>( MemoryTag::Physics ) ) );
+    SW_SHARED_ASSET_CACHE( Destruction, DestructionProfile, DestructionProfile::kAssetType.withLoader( AssetTypeLoader::of<DestructionProfile>( MemoryTag::Physics ) ) );
 } // namespace sw

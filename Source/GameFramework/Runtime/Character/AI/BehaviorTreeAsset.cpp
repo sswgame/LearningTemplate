@@ -245,7 +245,7 @@ namespace sw
                     return false;
                 }
                 if ( pFields->_tree.empty() == false )
-                    return expandSubTree( pFields->_tree, parent, depth );
+                    return expandSubTree( pFields->_tree.path(), parent, depth );
             }
             const int32 index = addNode( data, node, parent, bValid );
             if ( BehaviorTreeNames::isLeaf( type ) )
@@ -453,6 +453,8 @@ namespace sw
 
 namespace sw
 {
+    BehaviorSubTreeFields::BehaviorSubTreeFields() = default;
+
     /** 쓰는 쪽은 공유 캐시의 한 벌을 받는다(`SharedAssetCache<BehaviorTreeAsset>::acquire`). 경로 규칙 없이 접미사로 가르는 종류라 카탈로그 편집기에는 나오지 않는다. */
     SW_MODULE_SHARED_ASSET_CACHE( BehaviorTreeAsset, BehaviorTreeAsset, SW_GF_API, BehaviorTreeAsset::kAssetType.withLoader( AssetTypeLoader::of<BehaviorTreeAsset>( MemoryTag::Game ) ) );
 } // namespace sw

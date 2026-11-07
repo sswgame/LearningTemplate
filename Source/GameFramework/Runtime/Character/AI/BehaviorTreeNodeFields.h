@@ -11,6 +11,7 @@
 #include "Core/Foundation/Types.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/AssetRef.h"
 #include "Engine/Gameplay/InstancedStruct.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -19,6 +20,8 @@
 
 namespace sw
 {
+    class BehaviorTreeAsset;
+
     /** @brief `Selector` 의 칸입니다. */
     REFLECT()
     struct SW_GF_API BehaviorSelectorFields
@@ -99,8 +102,11 @@ namespace sw
     {
         REFLECT_BODY();
 
-        PROPERTY( AssetPath, Tooltip = "Tree file expanded here when the tree is read" )
-        string _tree{};
+        /** @brief .cpp 에 두어 이 헤더가 `BehaviorTreeAsset` 을 앞선 선언으로만 안다(그 헤더가 이 칸들을 쓴다). */
+        BehaviorSubTreeFields();
+
+        PROPERTY( Tooltip = "Tree file expanded here when the tree is read" )
+        AssetRef<BehaviorTreeAsset> _tree{};
         PROPERTY( Tooltip = "Slot name the user of the tree fills (BehaviorTreeRunner::setSlotTree)" )
         string _slot{};
     };

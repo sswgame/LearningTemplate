@@ -168,3 +168,23 @@ namespace sw
         bool _bSubmittedDecode                                                       SW_GUARDED_BY( _mutex ); /**< 워커 디코드를 띄운 적이 있으면 true - 소멸자가 에셋 로드 단계를 기다린다(`AssetManager::waitLoadTasks`). */
     };
 } // namespace sw
+
+namespace sw
+{
+    /**
+     * @struct AudioPlayableAsset
+     * @brief 재생 입구(`GameSound::play`)가 받는 것을 가리키는 참조의 대상입니다 — 소리 파일이나 소리 그래프.
+     * @details 표에 올리지 않고(접미사의 주인은 `AudioClipData` · `AudioGraphDef` 다) 타입 있는 참조의 검사에만 쓴다. 언리얼 `USoundBase` 칸이 파동과 큐를 함께 받는 자리다(기억에 의존).
+     */
+    struct AudioPlayableAsset
+    {
+        static constexpr AssetSuffix kArrAssetSuffix[] = {
+            {           ".ogg", AssetSuffixRole::Plain},
+            {           ".wav", AssetSuffixRole::Plain},
+            {           ".mp3", AssetSuffixRole::Plain},
+            {          ".flac", AssetSuffixRole::Plain},
+            {".audiograph.xml", AssetSuffixRole::Plain},
+        };
+        static constexpr AssetTypeDef kAssetType{ "AudioPlayable", kArrAssetSuffix, static_cast<uint32>( std::size( kArrAssetSuffix ) ), {}, 0, {} };
+    };
+} // namespace sw

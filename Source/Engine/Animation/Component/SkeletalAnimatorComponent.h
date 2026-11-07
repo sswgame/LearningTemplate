@@ -167,8 +167,8 @@ namespace sw
 
         PROPERTY( InheritKey, Tooltip = "Layer slot the animation graph declares" )
         string _slot;
-        PROPERTY( AssetPath, AssetType = "AnimationGraph", Tooltip = "Graph whose pose fills the slot; its clip names come from this animator's set" )
-        string _graphPath;
+        PROPERTY( Tooltip = "Graph whose pose fills the slot; its clip names come from this animator's set" )
+        AssetRef<AnimationGraphAsset> _graphPath;
     };
 } // namespace sw
 

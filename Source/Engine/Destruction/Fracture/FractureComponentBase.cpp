@@ -881,7 +881,7 @@ namespace sw
             return false;
         // 프로필은 공유 캐시의 한 벌이다 — 같은 프로필을 쓰는 파괴 오브젝트가 파일을 다시 읽지 않는다. 구조 상태는 시작할 때의 값을 들고(결정적 재생 · 네트워크 해시),
         // 다시 읽은 횟수가 바뀌면 온전한 동안 상태를 다시 시작한다(`isProfileStale`). 읽지 못하면 코드 값으로 대신하지 않고 쪼개지 않는다.
-        const string profilePath = _profilePath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._defaultDestructionProfile.get() : _profilePath;
+        const string profilePath = _profilePath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._defaultDestructionProfile.get() : _profilePath.path();
         _pProfile                = SharedAssetCache<DestructionProfile>::acquire( profilePath );
         if ( _pProfile == nullptr )
         {

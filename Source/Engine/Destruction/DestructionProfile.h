@@ -21,6 +21,7 @@
 
 #include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
 namespace sw
@@ -101,6 +102,8 @@ namespace sw
     struct SW_API DestructionProfile
     {
         friend struct AssetTypeLoader;
+        /** @brief 이 데이터 종류입니다(등록은 `DestructionProfile.cpp` 의 줄이 로더를 더한다). 접미사가 없어 타입 있는 참조 `AssetRef<DestructionProfile>` 는 경로 규칙으로 가른다. */
+        static constexpr AssetTypeDef kAssetType = AssetTypeDef::makeDataFile( "destruction", AssetPathRule{ {}, {}, ".destruction.xml" }, {} );
 
         vector<float32> _listStrainThreshold; ///< 깊이별 변형 임계값이다. 이만큼 쌓이면 묶음은 자식으로 갈라지고 잎은 떨어져 나간다. 더 깊으면 마지막 값을 쓴다.
         hashed_string   _physicsMaterial;     ///< 조각 바디의 물리 재질 이름이다.
