@@ -46,9 +46,12 @@ namespace sw
         InputReplay( InputReplay&& ) noexcept            = default;
         InputReplay& operator=( InputReplay&& ) noexcept = default;
 
-        /** @brief 입력 녹화를 시작합니다. 있던 프레임은 지우며, 프레임은 `recordFrame` 을 부른 순서입니다. */
-        void startRecording( string_view replayName = {} );
-        /** @brief 이번 프레임에 장치에 적용된 원시 이벤트를 녹화합니다(`InputManager::beginFrame` 뒤에 `getLastFrameEvents` 를 넘깁니다). */
+        /**
+         * @brief 입력 녹화를 시작합니다. 있던 프레임은 지우며, 프레임은 `recordFrame` 을 부른 순서입니다.
+         * @param maxFrameCount 0 이 아니면 그 프레임 수를 채운 순간 녹화를 스스로 마칩니다(고정 용량 — 버그 리포트 입력 기록이 메모리를 끝없이 쓰지 않게).
+         */
+        void startRecording( string_view replayName = {}, uint32 maxFrameCount = 0 );
+        /** @brief 이번 프레임에 장치에 적용된 원시 이벤트를 녹화합니다(`InputManager::beginFrame` 뒤에 `getLastFrameEvents` 를 넘깁니다). 상한에 닿으면 녹화를 마칩니다. */
         void recordFrame( float32 deltaTime, const vector<RawInputEvent>& listEvent );
         /** @brief 입력 녹화를 마칩니다. */
         void stopRecording();
@@ -83,6 +86,7 @@ namespace sw
         vector<InputReplayFrame> _listFrame;
         string                   _replayName;
         uint32                   _startFrameIndex;
+        uint32                   _maxFrameCount; ///< 0 이면 상한 없음(`startRecording`)
         uint8                    _bRecording : 1;
         [[maybe_unused]] uint8   _reserved   : 7;
     };

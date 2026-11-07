@@ -88,6 +88,7 @@ namespace sw
         , _pfnNowMicroseconds{ &MonotonicClock::nowMicroseconds }
         , _frameEndMicroseconds{ 0 }
         , _pVirtualInput{ nullptr }
+        , _sessionRecording{}
         , _virtualFrameIndex{ 0 }
         , _beginFrameCount{ 0 }
         , _activeGlyphStyle{ InputGlyphStyle::KeyboardMouse }
@@ -477,10 +478,26 @@ namespace sw
         if ( _virtualCursor.didEmitLastFrame() )
             setActiveGlyphStyle( InputGlyphStyle::GamepadXbox );
 
+        // 세션 입력 기록(버그 리포트) — 꺼져 있으면 비트 하나 검사뿐이다.
+        if ( _sessionRecording.isRecording() )
+            _sessionRecording.recordFrame( deltaSeconds, _listPolledEvent );
+
         // 5) 통합 InputMap 을 이번 프레임 입력으로 갱신한다(게임플레이가 읽는 맵). 갱신은 맵의 주인이 한다.
         //    엔진 루프, 리플레이 재동기화, 테스트가 같은 경로를 탄다.
         if ( _pInputMap != nullptr )
             _pInputMap->update( deltaSeconds );
+
+        // 세션 기록 재생(`bugreport.replay`)은 끝 프레임을 맵까지 흘린 뒤 뗀다(떼면 장치 상태를 지운다). 다른 원천(시나리오)은 붙인 쪽이 뗀다.
+        if ( _pVirtualInput == &_sessionRecording && _sessionRecording.isFinished( _virtualFrameIndex ) )
+            detachVirtualInput();
+    }
+
+    bool InputManager::playSessionRecording( string_view filePath )
+    {
+        if ( _sessionRecording.loadFromFile( filePath ) == false )
+            return false;
+        attachVirtualInput( &_sessionRecording, VirtualInputMode::Exclusive );
+        return true;
     }
 
     void InputManager::syncVirtualCursorToMap()

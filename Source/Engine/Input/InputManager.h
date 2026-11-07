@@ -23,6 +23,7 @@
 #include "Engine/Input/KeyCodeUtil.h"
 #include "Engine/Input/RawInputEvent.h"
 #include "Engine/Input/Virtual/IVirtualInputSource.h"
+#include "Engine/Input/Virtual/InputReplay.h"
 #include "Engine/Input/Virtual/VirtualCursor.h"
 #include "Engine/Window/CursorShape.h"
 
@@ -334,6 +335,20 @@ namespace sw
         const vector<RawInputEvent>& getLastFrameEvents() const { return _listPolledEvent; }
         /** @brief 지금까지 `beginFrame` 을 부른 횟수입니다(프레임마다 한 번 읽는 쪽이 같은 프레임을 두 번 읽지 않게). */
         uint32 getBeginFrameCount() const { return _beginFrameCount; }
+        /**
+         * @brief 세션 입력 기록(버그 리포트가 담는 것)을 시작합니다. 있던 기록은 지웁니다. `beginFrame` 이 적용한 이벤트를 프레임마다 담고 @p maxFrameCount 를 채우면 스스로 멈춥니다.
+         * @details 언리얼 `DemoRec` 처럼 늘 도는 녹화가 아니라 사람이 켜고 끄는 고정 용량 기록이다(꺼져 있을 때 비용은 비트 하나 검사). 개발 명령 `bugreport.input.start` 가 부른다.
+         */
+        void startSessionRecording( uint32 maxFrameCount ) { _sessionRecording.startRecording( "BugReportSession", maxFrameCount ); }
+        /** @brief 세션 입력 기록을 멈춥니다. 담은 프레임은 다음 시작까지 남습니다(버그 리포트가 읽는다). */
+        void stopSessionRecording() { _sessionRecording.stopRecording(); }
+        /**
+         * @brief @p filePath(.swreplay)를 세션 입력 기록으로 읽어 배타 가상 입력으로 붙입니다. 끝 프레임을 낸 다음 `beginFrame` 이 스스로 뗍니다.
+         * @return 읽지 못하면 false 이고 붙이지 않습니다(있던 기록은 그대로).
+         */
+        [[nodiscard]] bool playSessionRecording( string_view filePath );
+        /** @brief 세션 입력 기록입니다(읽기 전용). */
+        const InputReplay& getSessionRecording() const { return _sessionRecording; }
 
         // ------------------------------------------------------------------------------
         // 8) 플랫폼 네이티브 이벤트 처리와 접근성 제어
@@ -462,6 +477,7 @@ namespace sw
         int64                                     _frameEndMicroseconds;    /**< 이번 `beginFrame` 의 시각입니다(폴링한 누름의 순간). */
         IVirtualInputSource*                      _pVirtualInput;           /**< 붙인 가상 입력 원천입니다(빌림). nullptr 이면 OS 입력만 받습니다. */
         VirtualCursor                             _virtualCursor;           /**< 패드 스틱으로 마우스 커서를 움직이는 가상 커서입니다. */
+        InputReplay                               _sessionRecording;        /**< 버그 리포트용 세션 입력 기록입니다(`startSessionRecording`, 고정 용량). */
         InputViewRect                             _gameView;                ///< 게임 화면의 창 안 사각형(`setGameViewRect`)
         uint32                                    _virtualFrameIndex;       /**< 붙인 뒤 `beginFrame` 횟수이며, 원천에 넘기는 프레임 번호입니다. */
         uint32                                    _beginFrameCount;         /**< `beginFrame` 을 부른 횟수입니다. */

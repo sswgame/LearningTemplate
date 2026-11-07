@@ -4,11 +4,13 @@
 
 #include "Core/CommandLine/CommandLineManager.h"
 #include "Core/Container/StringUtil.h"
+#include "Core/Container/VectorUtil.h"
 #include "Core/Container/formatString.h"
 #include "Core/File/FileUtil.h"
 #include "Core/File/ProcessRoots.h"
 #include "Core/Foundation/BuildInfo.h"
 #include "Core/Foundation/Constants.h"
+#include "Core/Hash/HashUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
 #include "Core/String/StringBuilder.h"
@@ -16,8 +18,11 @@
 
 #include "Engine/Config/PackEngineSettings.h"
 #include "Engine/Console/DevCommandRegistry.h"
+#include "Engine/Content/AssetIO.h"
 #include "Engine/Foundation/EngineServices.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Input/InputManager.h"
+#include "Engine/Input/Virtual/InputReplay.h"
 #include "Engine/Object/Component/CameraComponent.h"
 #include "Engine/Object/GameObject/GameObjectManager.h"
 #include "Engine/Object/GameObject/Registry/CameraRegistry.h"
@@ -27,6 +32,8 @@
 #include "Engine/Renderer/RenderThread.h"
 #include "Engine/Scene/Scene.h"
 #include "Engine/Scene/SceneManager.h"
+
+#include "sw/config/ConfigConstants.h"
 
 #include <cstdio>
 
@@ -41,13 +48,48 @@ namespace sw
             /** @brief 같은 초에 만든 폴더에 붙이는 번호의 상한입니다. */
             static constexpr uint32 kMaxSameSecondSuffix = 1000;
 
-            static constexpr const utf8* kKeyNote     = "note";
-            static constexpr const utf8* kKeyScene    = "scene";
-            static constexpr const utf8* kKeyRHI      = "rhi";
-            static constexpr const utf8* kKeyBuild    = "build";
-            static constexpr const utf8* kKeyGame     = "game";
-            static constexpr const utf8* kKeyPosition = "camera_position";
-            static constexpr const utf8* kKeyRotation = "camera_rotation";
+            static constexpr const utf8* kKeyNote         = "note";
+            static constexpr const utf8* kKeyScene        = "scene";
+            static constexpr const utf8* kKeyRHI          = "rhi";
+            static constexpr const utf8* kKeyBuild        = "build";
+            static constexpr const utf8* kKeyGame         = "game";
+            static constexpr const utf8* kKeyPosition     = "camera_position";
+            static constexpr const utf8* kKeyRotation     = "camera_rotation";
+            static constexpr const utf8* kKeyPlatform     = "platform";
+            static constexpr const utf8* kKeyTarget       = "target";
+            static constexpr const utf8* kKeySceneHash    = "scene_hash";
+            static constexpr const utf8* kKeyConfigHash   = "config_hash";
+            static constexpr const utf8* kKeyInputFrames  = "input_frames";
+            static constexpr const utf8* kKeyInputSeconds = "input_seconds";
+
+            /** @brief 값 하나를 소수 세 자리(C 로캘)로 씁니다. */
+            static string formatFloat( float32 value )
+            {
+                fixed_string<constant::buffer::kMax32> text;
+                formatstring( text.data(), text.capacity(), "%#", Fmt( value, Format().precision( 3 ) ) );
+                return string( text.view() );
+            }
+
+            /** @brief 씬 원본 바이트의 해시입니다. 원본 경로는 리소스 id 이거나 절대 경로다(`Scene::getSourcePath`). 못 읽으면 빈 값. */
+            static string computeSceneHash( const string& scenePath )
+            {
+                if ( scenePath.empty() )
+                    return string{};
+                vector<uint8> bytes;
+                const bool    bRead = FileUtil::isAbsolutePath( scenePath ) ? AssetIO::readBinaryFile( scenePath, bytes ) : AssetIO::readBinaryAsset( AssetID( scenePath ), bytes );
+                if ( bRead == false )
+                    return string{};
+                return BugReport::formatHash( HashUtil::appendBytes64( HashUtil::kFNVOffset64, bytes.data(), bytes.size() ) );
+            }
+
+            /** @brief 호스트 설정 폴더의 해시입니다. 못 읽으면 빈 값. */
+            static string computeConfigHash()
+            {
+                uint64 hash = 0;
+                if ( BugReport::computeFolderHash( FileUtil::joinPath( ProcessRoots::get()._project.str(), config::kDirConfig ), hash ) == false )
+                    return string{};
+                return BugReport::formatHash( hash );
+            }
 
             /** @brief 값 셋을 공백으로 나눈 글로 씁니다. 소수 다섯 자리(C 로캘)입니다. */
             static string formatFloat3( const float3& value )
@@ -112,6 +154,66 @@ namespace sw
                 return true;
             }
 
+            /** @brief `bugreport.input.start <프레임 수>` — 세션 입력 기록을 시작한다. 프레임 수는 1 ~ `kMaxInputFrameCount`(필수, 기본값을 두지 않는다). */
+            static bool runInputStart( const vector<string>& listArgument, string& outReply )
+            {
+                int32      frameCount = 0;
+                const bool bValid     = listArgument.size() == 1 && StringUtil::parseInt( listArgument[0], frameCount ) && frameCount > 0 &&
+                                    static_cast<uint32>( frameCount ) <= BugReport::kMaxInputFrameCount;
+                if ( bValid == false )
+                {
+                    outReply = "bugreport.input.start <frames 1.." + std::to_string( BugReport::kMaxInputFrameCount ) + ">";
+                    return false;
+                }
+                if ( engine::areEngineServicesBound() == false )
+                {
+                    outReply = "bugreport.input.start: engine services are not bound";
+                    return false;
+                }
+                engine::getSubsystem<InputManager>().startSessionRecording( static_cast<uint32>( frameCount ) );
+                outReply = "bugreport.input.start -> recording up to " + std::to_string( frameCount ) + " frames";
+                return true;
+            }
+
+            /** @brief `bugreport.input.stop` — 세션 입력 기록을 멈춘다. 담은 프레임은 다음 bugreport 가 담는다. */
+            static bool runInputStop( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.empty() == false || engine::areEngineServicesBound() == false )
+                    return false;
+                InputManager& input = engine::getSubsystem<InputManager>();
+                input.stopSessionRecording();
+                outReply = "bugreport.input.stop -> " + std::to_string( input.getSessionRecording().getFrameCount() ) + " frames";
+                return true;
+            }
+
+            /**
+             * @brief `bugreport.replay [폴더]` — goto 로 씬 · 카메라를 맞춘 뒤 그 폴더의 input.swreplay 를 배타 가상 입력으로 붙인다.
+             * @details 환경이 다르면(빌드 · 플랫폼 · 타깃 · RHI · 씬 · 설정 해시) 다른 칸을 경고로 남기고 재생한다 — 같은 빌드 · 콘텐츠에서만 같은 결과를 기대한다.
+             */
+            static bool runReplay( const vector<string>& listArgument, string& outReply )
+            {
+                if ( listArgument.size() > 1 || engine::areEngineServicesBound() == false )
+                    return false;
+                const string folder = listArgument.empty() ? BugReport::findLatestDirectory( BugReportInternal::makeDefaultRoot() ) : listArgument[0];
+                if ( BugReport::goTo( engine::getSubsystem<SceneManager>(), folder, outReply ) == false )
+                    return false;
+                BugReport recorded;
+                if ( BugReport::readInfo( folder, recorded ) == false )
+                    return false;
+                const BugReportInputs current = BugReport::makeInputs( string_view{} );
+                for ( const string& line : BugReport::findEnvironmentMismatches( recorded, current._report ) )
+                    SW_LOG_WARNING_ID( "BugReport.ReplayEnvironmentDiffers", "bugreport.replay: environment differs - %#", line );
+                InputManager& input = engine::getSubsystem<InputManager>();
+                if ( input.playSessionRecording( FileUtil::joinPath( folder, BugReport::kInputFileName ) ) == false )
+                {
+                    outReply = "bugreport.replay: no input recording in '" + folder + "'";
+                    return false;
+                }
+                SW_LOG_INFO_ID( "BugReport.ReplayStarted", "bugreport.replay: playing %# input frames from %#", input.getSessionRecording().getFrameCount(), folder );
+                outReply = "bugreport.replay -> " + folder;
+                return true;
+            }
+
             /** @brief `bugreport.goto [폴더]` — 폴더를 주지 않으면 가장 최근 BugReport 폴더다. */
             static bool runBugReportGoto( const vector<string>& listArgument, string& outReply )
             {
@@ -140,6 +242,12 @@ namespace sw
         text += string( BugReportInternal::kKeyGame ) + " = " + _game + "\n";
         text += string( BugReportInternal::kKeyPosition ) + " = " + BugReportInternal::formatFloat3( _cameraPosition ) + "\n";
         text += string( BugReportInternal::kKeyRotation ) + " = " + BugReportInternal::formatFloat3( _cameraRotationDegrees ) + "\n";
+        text += string( BugReportInternal::kKeyPlatform ) + " = " + _platform + "\n";
+        text += string( BugReportInternal::kKeyTarget ) + " = " + _target + "\n";
+        text += string( BugReportInternal::kKeySceneHash ) + " = " + _sceneHash + "\n";
+        text += string( BugReportInternal::kKeyConfigHash ) + " = " + _configHash + "\n";
+        text += string( BugReportInternal::kKeyInputFrames ) + " = " + std::to_string( _inputFrameCount ) + "\n";
+        text += string( BugReportInternal::kKeyInputSeconds ) + " = " + BugReportInternal::formatFloat( _inputSeconds ) + "\n";
         return FileUtil::writeTextFile( FileUtil::joinPath( directory, kInfoFileName ), text );
     }
 
@@ -167,6 +275,22 @@ namespace sw
                 outReport._buildConfiguration = string( value );
             else if ( key == BugReportInternal::kKeyGame )
                 outReport._game = string( value );
+            else if ( key == BugReportInternal::kKeyPlatform )
+                outReport._platform = string( value );
+            else if ( key == BugReportInternal::kKeyTarget )
+                outReport._target = string( value );
+            else if ( key == BugReportInternal::kKeySceneHash )
+                outReport._sceneHash = string( value );
+            else if ( key == BugReportInternal::kKeyConfigHash )
+                outReport._configHash = string( value );
+            else if ( key == BugReportInternal::kKeyInputFrames )
+            {
+                int32 frameCount = 0;
+                if ( StringUtil::parseInt( value, frameCount ) && frameCount >= 0 )
+                    outReport._inputFrameCount = static_cast<uint32>( frameCount );
+            }
+            else if ( key == BugReportInternal::kKeyInputSeconds )
+                (void)StringUtil::parseExactFloats( value, " ", &outReport._inputSeconds, 1 ); // 틀리면 0 — 표시용 길이다
             else if ( key == BugReportInternal::kKeyPosition || key == BugReportInternal::kKeyRotation )
             {
                 // 틀린 값이면 0 자리 — 폴더의 나머지는 그래도 읽되, 카메라가 원점으로 보이는 이유를 남긴다.
@@ -233,11 +357,60 @@ namespace sw
         return "";
     }
 
+    string BugReport::formatHash( uint64 hash )
+    {
+        StringBuilder<constant::buffer::kMax32> text;
+        text.appendFormat( "%016llx", static_cast<unsigned long long>( hash ) );
+        return string( text.c_str() );
+    }
+
+    bool BugReport::computeFolderHash( string_view directory, uint64& outHash )
+    {
+        vector<string> listFile;
+        if ( FileUtil::collectFiles( directory, {}, listFile, true ) == false )
+            return false;
+        VectorUtil::sort( listFile );
+        uint64        hash = HashUtil::kFNVOffset64;
+        vector<uint8> bytes;
+        for ( const string& filePath : listFile )
+        {
+            // 상대 경로를 같이 접는다 — 같은 바이트의 파일이 이름만 바뀌어도 다른 설정이다.
+            const string_view relative = string_view( filePath ).substr( MathUtil::min( filePath.size(), directory.size() ) );
+            hash                       = HashUtil::appendBytes64( hash, relative.data(), relative.size() );
+            if ( FileUtil::readFile( filePath, bytes ) == false )
+                return false;
+            hash = HashUtil::appendBytes64( hash, bytes.data(), bytes.size() );
+        }
+        outHash = hash;
+        return true;
+    }
+
+    vector<string> BugReport::findEnvironmentMismatches( const BugReport& recorded, const BugReport& current )
+    {
+        vector<string> listLine;
+        const auto     compare = [&]( const utf8* pKey, const string& recordedValue, const string& currentValue )
+        {
+            if ( recordedValue.empty() || currentValue.empty() || recordedValue == currentValue )
+                return;
+            listLine.push_back( string( pKey ) + ": " + recordedValue + " -> " + currentValue );
+        };
+        compare( BugReportInternal::kKeyBuild, recorded._buildConfiguration, current._buildConfiguration );
+        compare( BugReportInternal::kKeyPlatform, recorded._platform, current._platform );
+        compare( BugReportInternal::kKeyTarget, recorded._target, current._target );
+        compare( BugReportInternal::kKeyRHI, recorded._rhiBackend, current._rhiBackend );
+        compare( BugReportInternal::kKeySceneHash, recorded._sceneHash, current._sceneHash );
+        compare( BugReportInternal::kKeyConfigHash, recorded._configHash, current._configHash );
+        return listLine;
+    }
+
     BugReportInputs BugReport::makeInputs( string_view note )
     {
         BugReportInputs inputs;
         inputs._report._note               = string( note );
         inputs._report._buildConfiguration = build::kConfigName;
+        inputs._report._platform           = build::kPlatformName;
+        inputs._report._target             = build::kTargetName;
+        inputs._report._configHash         = BugReportInternal::computeConfigHash();
         inputs._root                       = BugReportInternal::makeDefaultRoot();
         inputs._localTime                  = ScreenshotLocalTime::getLocalTimeNow();
         inputs._bRequestScreenshot         = true;
@@ -258,6 +431,7 @@ namespace sw
         {
             inputs._pSceneManager          = &sceneManager;
             inputs._report._scenePath      = pScene->getSourcePath();
+            inputs._report._sceneHash      = BugReportInternal::computeSceneHash( pScene->getSourcePath() );
             const CameraComponent* pCamera = BugReportInternal::findViewCamera( *pScene );
             if ( pCamera != nullptr )
             {
@@ -265,7 +439,14 @@ namespace sw
                 inputs._report._cameraRotationDegrees = computeRotationDegrees( pCamera->getCameraForward() );
             }
         }
-        inputs._pFrameProfiler = &engine::getSubsystem<FrameProfiler>();
+        inputs._pFrameProfiler       = &engine::getSubsystem<FrameProfiler>();
+        const InputReplay& recording = engine::getSubsystem<InputManager>().getSessionRecording();
+        if ( recording.getFrameCount() > 0 )
+        {
+            inputs._pInputRecording         = &recording;
+            inputs._report._inputFrameCount = recording.getFrameCount();
+            inputs._report._inputSeconds    = recording.getTotalDuration();
+        }
         (void)engine::getSubsystem<CommandLineManager>().getArgument( CommandLineArgument::ENABLE_EDITOR, inputs._bEditor ); // 없으면 false 그대로
         return inputs;
     }
@@ -302,6 +483,14 @@ namespace sw
                 SW_LOG_INFO_ID( "BugReport.BugreportTimelineTraceSaved", "bugreport: timeline trace saved (%#)", traceReply );
         }
 #endif
+        if ( inputs._pInputRecording != nullptr && inputs._pInputRecording->getFrameCount() > 0 )
+        {
+            const std::optional<AbsolutePath> inputPath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory, kInputFileName ) );
+            if ( inputPath.has_value() == false || inputs._pInputRecording->saveToFile( *inputPath ) == false )
+                SW_LOG_WARNING_ID( "BugReport.BugreportInputCould", "bugreport: the input recording could not be saved" );
+            else
+                SW_LOG_INFO_ID( "BugReport.InputSaved", "bugreport: input recording saved (%# frames, %# s)", report._inputFrameCount, BugReportInternal::formatFloat( report._inputSeconds ) );
+        }
         if ( inputs._pSceneManager != nullptr )
         {
             const std::optional<AbsolutePath> scenePath = FileUtil::requireAbsolutePath( FileUtil::joinPath( directory, kSceneFileName ) );
@@ -362,6 +551,14 @@ namespace sw
 
     SW_DEV_COMMAND( BugReport, "bugreport", "bugreport [note...]", "Collect a bug report (info, screenshot, log, scene copy, repro) under Saved/BugReports/<time>",
                     &BugReportDevCommandsInternal::runBugReport );
+    SW_DEV_COMMAND( BugReportInputStart, "bugreport.input.start", "bugreport.input.start <frames>",
+                    "Start the session input recording that the next bugreport saves (fixed capacity; stops itself at <frames>)",
+                    &BugReportDevCommandsInternal::runInputStart );
+    SW_DEV_COMMAND( BugReportInputStop, "bugreport.input.stop", "bugreport.input.stop", "Stop the session input recording (the frames stay for the next bugreport)",
+                    &BugReportDevCommandsInternal::runInputStop );
+    SW_DEV_COMMAND( BugReportReplay, "bugreport.replay", "bugreport.replay [folder]",
+                    "bugreport.goto, then play the folder's input.swreplay as exclusive virtual input (warns when the environment differs)",
+                    &BugReportDevCommandsInternal::runReplay );
     SW_DEV_COMMAND( BugReportGoto, "bugreport.goto", "bugreport.goto [folder]", "Open the scene of a BugReport folder (default: the latest) and move the view camera there",
                     &BugReportDevCommandsInternal::runBugReportGoto );
 } // namespace sw

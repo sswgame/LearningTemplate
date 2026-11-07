@@ -47,16 +47,18 @@ namespace sw
         : _listFrame{}
         , _replayName{}
         , _startFrameIndex{ 0 }
+        , _maxFrameCount{ 0 }
         , _bRecording{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
 
-    void InputReplay::startRecording( string_view replayName )
+    void InputReplay::startRecording( string_view replayName, uint32 maxFrameCount )
     {
         _listFrame.clear();
         _replayName      = replayName.empty() ? "NewReplay" : string( replayName );
         _startFrameIndex = 0;
+        _maxFrameCount   = maxFrameCount;
         _bRecording      = SW_TRUE;
         SW_LOG_INFO_ID( "InputReplay.StartedRecordingInputReplay", "Started recording input replay: %#", _replayName.c_str() );
     }
@@ -75,6 +77,8 @@ namespace sw
             event._bSynthetic = SW_FALSE;
         }
         _listFrame.push_back( std::move( frame ) );
+        if ( _maxFrameCount != 0 && _listFrame.size() >= _maxFrameCount )
+            stopRecording();
     }
 
     void InputReplay::stopRecording()
@@ -203,6 +207,7 @@ namespace sw
         _listFrame.clear();
         _replayName.clear();
         _startFrameIndex = 0;
+        _maxFrameCount   = 0;
         _bRecording      = SW_FALSE;
     }
 

@@ -6,6 +6,7 @@
  */
 #pragma once
 #include "Core/Container/string.h"
+#include "Core/Container/vector.h"
 #include "Core/Foundation/Types.h"
 #include "Core/Math/VectorMath.h"
 
@@ -17,6 +18,7 @@ namespace sw
     struct BugReportInputs;
 
     class FrameProfiler;
+    class InputReplay;
     class SceneManager;
 
     /**
@@ -38,16 +40,26 @@ namespace sw
         static constexpr const utf8* kSceneFileName = "scene.scene.xml";
         /** @brief 재현 명령 파일 이름입니다. */
         static constexpr const utf8* kReproFileName = "repro.txt";
-        /** @brief 타임라인 기록이 켜져 있었으면 최근 프레임의 Chrome Trace Event 파일입니다(Dev 만). */
+        /** @brief trace 파일 이름입니다(타임라인 기록이 켜져 있었으면 최근 프레임의 Chrome Trace Event, Dev 만). */
         static constexpr const utf8* kTraceFileName = "trace.trace.json";
+        /** @brief 세션 입력 기록 파일 이름입니다(`bugreport.input.start` 로 기록한 프레임이 있을 때만). `bugreport.replay` 가 다시 붙인다. */
+        static constexpr const utf8* kInputFileName = "input.swreplay";
+        /** @brief 세션 입력 기록의 프레임 상한입니다(60 fps 로 10 분 — 고정 용량, 넘으면 기록이 스스로 멈춘다). */
+        static constexpr uint32 kMaxInputFrameCount = 36000;
 
-        string _note;
-        string _scenePath;          ///< 활성 씬의 원본 경로(사본이 아니라 원래 씬)
-        string _rhiBackend;         ///< 디바이스 이름(`IRHIDevice::getBackendName`)
-        string _buildConfiguration; ///< `sw::build::kConfigName`
-        string _game;               ///< 팩 설정의 창 제목(`PackEngineSettings::_windowTitle`)
-        float3 _cameraPosition{};
-        float3 _cameraRotationDegrees{}; ///< pitch, yaw, roll(도). 시선은 `(sin yaw cos pitch, -sin pitch, cos yaw cos pitch)` 이며 뷰포트 카메라와 같은 규칙입니다
+        string  _note;
+        string  _scenePath;          ///< 활성 씬의 원본 경로(사본이 아니라 원래 씬)
+        string  _rhiBackend;         ///< 디바이스 이름(`IRHIDevice::getBackendName`)
+        string  _buildConfiguration; ///< `sw::build::kConfigName`
+        string  _game;               ///< 팩 설정의 창 제목(`PackEngineSettings::_windowTitle`)
+        string  _platform;           ///< `sw::build::kPlatformName`
+        string  _target;             ///< `sw::build::kTargetName`(App · Server …)
+        string  _sceneHash;          ///< 씬 원본 파일 바이트의 FNV-1a 64(16 진). 원본을 읽지 못하면 빈 값 — 재생 전에 "같은 씬인가" 를 대조한다
+        string  _configHash;         ///< 호스트 설정 폴더(`config::kDirConfig`) 파일 전부(상대 경로 + 바이트)의 FNV-1a 64. 비면 읽지 못한 것
+        float3  _cameraPosition{};
+        float3  _cameraRotationDegrees{}; ///< pitch, yaw, roll(도). 시선은 `(sin yaw cos pitch, -sin pitch, cos yaw cos pitch)` 이며 뷰포트 카메라와 같은 규칙입니다
+        uint32  _inputFrameCount{ 0 };    ///< 담은 세션 입력 기록의 프레임 수(0 이면 기록 없음)
+        float32 _inputSeconds{ 0.0f };    ///< 담은 세션 입력 기록의 길이(초)
 
         /** @brief `<directory>/info.txt` 를 씁니다. */
         [[nodiscard]] bool writeInfo( string_view directory ) const;
@@ -66,12 +78,20 @@ namespace sw
         static float3 computeForward( const float3& rotationDegrees );
         /** @brief 디바이스 이름(`Direct3D 12` …)에 맞는 App 명령줄 백엔드 플래그(`dx12` …)입니다. 모르면 빈 문자열입니다. */
         static const utf8* findBackendFlag( string_view backendName );
+        /** @brief 바이트의 FNV-1a 64 를 16 자리 16 진 글로 씁니다(재현 환경 해시의 한 모양). */
+        static string formatHash( uint64 hash );
+        /**
+         * @brief @p directory 아래 파일 전부(하위 폴더 포함)를 상대 경로 순으로 정렬해 "상대 경로 + 바이트" 를 FNV-1a 64 로 접습니다.
+         * @details 순서를 정렬로 고정해 파일 시스템의 열거 순서가 해시를 바꾸지 않는다. 한 파일이라도 못 읽으면 false(부분 해시를 같은 설정으로 믿지 않는다).
+         */
+        [[nodiscard]] static bool computeFolderHash( string_view directory, uint64& outHash );
 
         /**
          * @brief 지금 엔진 상태에서 bugreport 입력을 모읍니다. 전역 엔진 서비스를 읽는 곳은 이 함수 하나입니다.
          * @details 카메라는 보이는 시점입니다. 뷰포트 카메라(`CameraRole::Viewport`)가 있으면 그것, 없으면 활성 게임 카메라를 씁니다.
          *          로거를 여기서 비웁니다(비동기라 비우지 않으면 bugreport 직전 줄이 사본에 없습니다).
-         *          입력 녹화는 담지 않습니다(전역 녹화기가 없습니다. Input Map 패널의 녹화는 그 패널의 것입니다).
+         *          입력은 `InputManager` 의 세션 입력 기록(`bugreport.input.start` · `stop`)이 프레임을 가졌을 때만 담습니다 — 늘 도는 녹화가 아닙니다.
+         *          재현 환경(플랫폼 · 타깃 · 씬 원본 해시 · 설정 폴더 해시)을 같이 적어, 재생 전에 같은 빌드 · 콘텐츠인지 대조할 수 있게 합니다.
          */
         [[nodiscard]] static BugReportInputs makeInputs( string_view note );
         /**
@@ -86,6 +106,11 @@ namespace sw
          * @details 뷰포트 카메라를 옮기면 그 뷰포트를 그리는 도구가 옮긴 위치를 이어받습니다.
          */
         [[nodiscard]] static bool goTo( SceneManager& sceneManager, string_view directory, string& outReply );
+        /**
+         * @brief @p directory 의 재현 환경을 지금 값(@p current)과 대조해 다른 칸을 `칸: 기록 -> 지금` 줄로 돌려줍니다. 같으면 빈 목록입니다.
+         * @details 빈 칸(기록하지 못한 값)은 대조하지 않는다. 입력 재생(`bugreport.replay`)은 다른 칸이 있으면 경고를 남기고 재생한다 — 결정론 재생을 약속하지 않는다.
+         */
+        static vector<string> findEnvironmentMismatches( const BugReport& recorded, const BugReport& current );
     };
 } // namespace sw
 
@@ -103,6 +128,7 @@ namespace sw
         string               _logFilePath;                 ///< log.txt 로 복사할 이 프로세스의 로그 파일(`ILogSink::getLogFilePath`). 비면 건너뛴다
         SceneManager*        _pSceneManager{ nullptr };    ///< 활성 씬 사본을 저장할 씬 관리자. 활성 씬이 없으면 null
         const FrameProfiler* _pFrameProfiler{ nullptr };   ///< 최근 프레임 trace 를 담을 프로파일러. null 이면 건너뛴다
+        const InputReplay*   _pInputRecording{ nullptr };  ///< 세션 입력 기록(`InputManager::getSessionRecording`). null 이거나 프레임이 없으면 input.swreplay 를 건너뛴다
         bool                 _bEditor{ false };            ///< 재현 명령에 `-EnableEditor` 를 붙인다 NOLINT(sw-bool-flag): 참조(`bool&`)로 넘긴다
         bool                 _bRequestScreenshot{ false }; ///< 다음 프레임 스크린샷을 렌더 스레드에 요청한다 NOLINT(sw-bool-flag): 집합체다(중괄호 · 지정 초기화로 만든다) — C++17 비트필드는 기본값을 둘 수 없어 `T x;` 가 값을 남기지 않는다
     };

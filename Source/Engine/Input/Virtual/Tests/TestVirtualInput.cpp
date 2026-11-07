@@ -146,6 +146,27 @@ SW_TEST_CASE( InputReplayTest, RecordsAndEmits )
     SW_EXPECT_EQUAL( uint32( 0 ), replay.getFrameCount() );
 }
 
+/** @brief [InputReplayTest] 상한을 준 녹화는 그 프레임 수를 채운 순간 스스로 멈춘다(버그 리포트 세션 기록의 고정 용량). 다시 시작하면 상한도 새로 정한다 */
+SW_TEST_CASE( InputReplayTest, FrameLimitStopsRecording )
+{
+    InputReplay replay;
+    replay.startRecording( "capped", 2 );
+    replay.recordFrame( 0.1f, {} );
+    SW_EXPECT_TRUE( replay.isRecording() );
+    replay.recordFrame( 0.1f, {} );
+    SW_EXPECT_FALSE( replay.isRecording() );
+    replay.recordFrame( 0.1f, {} ); // 상한 뒤다
+    SW_EXPECT_EQUAL( uint32( 2 ), replay.getFrameCount() );
+
+    replay.startRecording( "unlimited" );
+    for ( uint32 frame = 0; frame < 5; ++frame )
+    {
+        replay.recordFrame( 0.1f, {} );
+    }
+    SW_EXPECT_TRUE( replay.isRecording() );
+    SW_EXPECT_EQUAL( uint32( 5 ), replay.getFrameCount() );
+}
+
 /** @brief [InputReplayTest] 파일: 이름 · 시간 · 이벤트가 되돌아온다 */
 SW_TEST_CASE( InputReplayTest, FileRoundTrips )
 {
