@@ -8,6 +8,7 @@
  */
 #pragma once
 #include "Core/Foundation/Types.h"
+#include "Core/Network/Message/NetRequest.h"
 
 #include <type_traits>
 #include <utility>
@@ -221,6 +222,32 @@ namespace sw
     template <typename TReply>
     struct OnlineReplyHasResult<TReply, std::void_t<decltype( std::declval<const TReply&>()._result )>> : std::true_type
     {
+    };
+
+    /** @brief 메서드 하나의 끝난 호출입니다. @p TReply 는 메서드 서술자의 응답 타입입니다. 원격 클라이언트(`OnlineProtocolClient`)와 같은 프로세스의 호출(`EconomyService::submitCall`)이 같은 모양으로 받습니다. */
+    template <typename TReply>
+    struct OnlineResult
+    {
+        TReply            _reply{};          ///< `_errorCode` 가 `kOk` 일 때만 서버가 보낸 값이다
+        NetIdempotencyKey _idempotencyKey{}; ///< 재시도할 때 그대로 다시 넘기는 키이다. 키 없이 보낸 요청이면 비어 있다
+        uint64            _requestID{ 0 };   ///< `call` 이 반환한 번호이다
+        uint16            _method{ 0 };      ///< 서술자의 번호(`kID`)이다. 메서드를 실행 때 고르는 도구(GM)가 응답을 가른다
+        uint16            _errorCode{ OnlineError::kOk };
+
+        /** @brief 공통 오류 없이 답을 받았고 키트 결과(`_result` 가 있는 응답)가 `Ok` 이면 true 입니다. */
+        [[nodiscard]] bool isOk() const
+        {
+            if ( _errorCode != OnlineError::kOk )
+                return false;
+            if constexpr ( OnlineReplyHasResult<TReply>::value )
+                return _reply._result == decltype( _reply._result )::Ok;
+            else
+                return true;
+        }
+        /** @brief 같은 멱등 키로 다시 시도할 결과인지입니다. 범주에서 나오므로 키트마다 판정하지 않습니다. */
+        [[nodiscard]] bool isRetryable() const { return OnlineError::isRetryable( _errorCode ); }
+        /** @brief 클라이언트를 업데이트해야 하는 결과인지입니다. 다시 시도해도 소용이 없습니다. */
+        [[nodiscard]] bool isUpdateRequired() const { return _errorCode == OnlineError::kVersionMismatch || _errorCode == OnlineError::kUpdateRequired; }
     };
 
     /** @brief 키트 프로토콜에 공통 범주 표 `kArrCommonResult` 가 있는지입니다. 표는 키트 결과와 공통 범주(`OnlineError`)의 짝이고, 지표 · 보존 · 클라이언트 결과가 모두 여기서 나옵니다. */

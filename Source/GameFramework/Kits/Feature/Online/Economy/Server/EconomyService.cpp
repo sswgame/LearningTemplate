@@ -62,6 +62,7 @@ namespace sw
                 , _withdraw{}
                 , _accountID{ kInvalidAccountID }
                 , _reply{}
+                , _outcome{ EconomyOutcome::fail( OnlineError::kInvalidRequest ) }
                 , _settings{ settings }
                 , _pService{ pService }
                 , _callID{ callID }
@@ -75,35 +76,32 @@ namespace sw
                 {
                     case EconomyServiceInternal::kWalletIndex:
                     {
-                        // 결과는 finish 가 _reply._result 에 담는다 — complete 가 그대로 돌려준다
-                        (void)EconomyStoreLogic::readWallet( connection, _accountID, _reply );
+                        _outcome = EconomyStoreLogic::readWallet( connection, _accountID, _reply );
                         break;
                     }
                     case EconomyServiceInternal::kHistoryIndex:
                     {
-                        // 결과는 finish 가 _reply._result 에 담는다 — complete 가 그대로 돌려준다
-                        (void)EconomyStoreLogic::readHistory( connection, _accountID, _history, _reply );
+                        _outcome = EconomyStoreLogic::readHistory( connection, _accountID, _history, _reply );
                         break;
                     }
                     case EconomyServiceInternal::kPurchaseIndex:
                     {
-                        (void)EconomyStoreLogic::purchase( connection, *_settings._pCurrencyCatalog, *_settings._pOfferCatalog, _purchase, _reply );
+                        _outcome = EconomyStoreLogic::purchase( connection, *_settings._pCurrencyCatalog, *_settings._pOfferCatalog, _purchase, _reply );
                         break;
                     }
                     case EconomyServiceInternal::kRedeemIndex:
                     {
-                        (void)EconomyStoreLogic::redeemReceipt( connection, *_settings._pCurrencyCatalog, *_settings._pOfferCatalog, _redeem, _reply );
+                        _outcome = EconomyStoreLogic::redeemReceipt( connection, *_settings._pCurrencyCatalog, *_settings._pOfferCatalog, _redeem, _reply );
                         break;
                     }
                     case EconomyServiceInternal::kWithdrawIndex:
                     {
-                        // 결과는 finish 가 _reply._result 에 담는다 — complete 가 그대로 돌려준다
-                        (void)EconomyStoreLogic::withdrawPurchase( connection, *_settings._pCurrencyCatalog, _withdraw, _reply );
+                        _outcome = EconomyStoreLogic::withdrawPurchase( connection, *_settings._pCurrencyCatalog, _withdraw, _reply );
                         break;
                     }
                     default:
                     {
-                        _reply._result = EconomyResult::InvalidRequest;
+                        _outcome = EconomyOutcome::fail( OnlineError::kInvalidRequest );
                         break;
                     }
                 }
@@ -111,13 +109,14 @@ namespace sw
 
             void complete() override
             {
-                if ( _methodIndex == EconomyServiceInternal::kRedeemIndex && _reply._result == EconomyResult::Ok )
+                if ( _methodIndex == EconomyServiceInternal::kRedeemIndex && _outcome == EconomyResult::Ok )
                     _pService->confirmDelivery( _redeem._receipt ); // 지급이 커밋된 뒤다
-                _pService->completeCall( _callID, _reply );
+                _pService->completeCall( _callID, _outcome, _reply );
             }
 
         private:
             EconomyReply         _reply;
+            EconomyOutcome       _outcome; ///< 저장 로직의 결과이다. 공통 범주면 `_reply` 는 뜻이 없다
             EconomyServiceConfig _settings;
             EconomyService*      _pService;
             uint64               _callID;
@@ -152,7 +151,7 @@ namespace sw
                 , _pService{ pService }
                 , _pCurrencies{ pCurrencies }
                 , _nowMs{ nowMs }
-                , _result{ EconomyResult::Unavailable }
+                , _result{ EconomyOutcome::fail( OnlineError::kUnavailable ) }
             {
             }
 
@@ -165,7 +164,7 @@ namespace sw
             EconomyService*              _pService;
             const CurrencyCatalog*       _pCurrencies;
             UnixMilliseconds             _nowMs;
-            EconomyResult                _result;
+            EconomyOutcome               _result;
         };
 
         /** @brief 저장소에 남은 환불 조회 기준 시각을 스토어마다 읽습니다. */
@@ -562,17 +561,16 @@ namespace sw
     {
         const int32 methodIndex = EconomyMethod::toIndex( call._method );
 
-        EconomyReply refused;
-        refused._result = EconomyResult::Ok;
+        EconomyOutcome refused{ EconomyResult::Ok };
         if ( methodIndex < 0 || _pStore == nullptr )
-            refused._result = EconomyResult::InvalidRequest;
+            refused = EconomyOutcome::fail( OnlineError::kInvalidRequest );
         else if ( call._accountID == kInvalidAccountID )
-            refused._result = EconomyResult::NotSignedIn; // 호스트가 이미 막지만 submitCall 경로도 같은 규칙을 따른다
+            refused = EconomyOutcome::fail( OnlineError::kUnauthenticated ); // 호스트가 이미 막지만 submitCall 경로도 같은 규칙을 따른다
         else if ( call._method == EconomyMethod::Purchase::kID && call._idempotencyKey.isValid() == false )
-            refused._result = EconomyResult::InvalidRequest; // 상태를 바꾸는 요청에는 멱등 키가 필수이다
-        if ( refused._result != EconomyResult::Ok )
+            refused = EconomyOutcome::fail( OnlineError::kInvalidRequest ); // 상태를 바꾸는 요청에는 멱등 키가 필수이다
+        if ( refused != EconomyResult::Ok )
         {
-            completeCall( callID, refused );
+            completeCall( callID, refused, EconomyReply{} );
             return;
         }
         if ( call._method == EconomyMethod::RedeemReceipt::kID )
@@ -582,8 +580,9 @@ namespace sw
                                     : 0;
             if ( ticket == 0 )
             {
-                refused._result = EconomyResult::ReceiptInvalid;
-                completeCall( callID, refused );
+                EconomyReply invalid;
+                invalid._result = EconomyResult::ReceiptInvalid;
+                completeCall( callID, EconomyOutcome{ EconomyResult::ReceiptInvalid }, invalid );
                 return;
             }
             _mapTicketToCall[ticket] = EconomyReceiptCall{ callID, call._accountID }; // 지급 작업은 검증 결과가 오면 맡긴다(pollReceipts)
@@ -737,7 +736,7 @@ namespace sw
         }
     }
 
-    void EconomyService::completeRefund( const ReceiptRefundNotification& notice, EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
+    void EconomyService::completeRefund( const ReceiptRefundNotification& notice, EconomyOutcome result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion )
     {
         --_pendingRefundCount;
         for ( const EconomyBalanceChange& change : listChange )
@@ -747,7 +746,8 @@ namespace sw
         const bool bFailed = result != EconomyResult::Ok && result != EconomyResult::AlreadyRefunded;
         if ( bFailed && completion.isCancelled() == false ) // 종료 때문에 취소된 회수는 오류가 아니다(다음 기동의 겹친 조회가 다시 읽는다)
         {
-            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceStoreRefundCould", "EconomyService: a store refund could not be revoked (%#) - the next overlapping poll reports it again", static_cast<int32>( result ) );
+            SW_LOG_ERROR_ID( "EconomyService.EconomyServiceStoreRefundCould", "EconomyService: a store refund could not be revoked (result %#, error %#) - the next overlapping poll reports it again",
+                             static_cast<int32>( result._result ), static_cast<int32>( result._errorCode ) );
             // 제공자의 겹침 거름이 이 거래를 기억하면 겹친 조회가 다시 알리지 않아 회수할 기회가 없어진다.
             if ( _settings._pReceiptRegistry != nullptr )
                 _settings._pReceiptRegistry->removeRefund( notice );
@@ -762,11 +762,17 @@ namespace sw
             pCounter->add();
     }
 
-    void EconomyService::completeCall( uint64 callID, const EconomyReply& reply )
+    void EconomyService::completeCall( uint64 callID, const EconomyOutcome& outcome, const EconomyReply& reply )
     {
         if ( LocalCallTable::isLocal( callID ) )
-            (void)_localCalls.finish( callID, reply );
-        else if ( OnlineProtocolService::completeCall( callID, reply ) == false ) // 공통 범주 · 다시 시도할 결과의 보존은 기반이 표로 정한다
+        {
+            OnlineResult<EconomyReply> local; // 원격 클라이언트가 받는 것과 같은 모양이다 — 공통 범주는 `_errorCode`
+            local._errorCode = outcome._errorCode;
+            if ( outcome.isFailed() == false )
+                local._reply = reply;
+            (void)_localCalls.finish( callID, local );
+        }
+        else if ( finishCall( callID, outcome, reply ) == false ) // 공통 범주는 기억하지 않는다. 스토어 대기는 `EconomyReply::isRetryable` 이 정한다
             _calls.warnUnknownCall( callID );
     }
 } // namespace sw

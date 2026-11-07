@@ -224,7 +224,7 @@ SW_TEST_CASE( EconomyClientTest, IdempotencyKeyIsKeptForRetries )
     SW_EXPECT_FALSE( rig._service._listKey[1] == first );
 }
 
-/** @brief [EconomyClientTest] 연결 전 요청은 보내지 않고 요청 함수 안에서 Unavailable 로 끝난다 */
+/** @brief [EconomyClientTest] 연결 전 요청은 보내지 않고 요청 함수 안에서 공통 범주 `kUnavailable` 로 끝난다 */
 SW_TEST_CASE( EconomyClientTest, RequestBeforeInitializeFailsAtOnce )
 {
     EconomyClient        client;
@@ -232,7 +232,7 @@ SW_TEST_CASE( EconomyClientTest, RequestBeforeInitializeFailsAtOnce )
     const uint64         requestID = client.call<EconomyMethod::GetWallet>( recorder.makeDelegate() );
     SW_REQUIRE_EQUAL( size_t( 1 ), recorder._listReply.size() );
     SW_EXPECT_EQUAL( requestID, recorder._listReply[0]._requestID );
-    SW_EXPECT_TRUE( recorder._listReply[0]._reply._result == EconomyResult::Unavailable );
+    SW_EXPECT_EQUAL( OnlineError::kUnavailable, recorder._listReply[0]._errorCode );
 }
 
 /** @brief [EconomyClientTest] 잔액 변경 알림은 캐시를 덮고, 다른 알림은 무시한다. 캐시는 지갑으로 비친다 */

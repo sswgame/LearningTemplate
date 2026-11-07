@@ -49,8 +49,6 @@ namespace sw
     enum class EconomyResult : uint8
     {
         Ok = 0,
-        NotSignedIn,
-        InvalidRequest,
         UnknownOffer,
         NotOnSale,      ///< 판매 기간이 아니다
         NotPurchasable, ///< 결제 상품이라 화폐로 살 수 없다
@@ -62,9 +60,6 @@ namespace sw
         ReceiptRefunded,   ///< 환불되었거나 취소된 거래이다
         ReceiptPending,    ///< 스토어에 닿지 못했다. 같은 영수증으로 다시 시도한다
         AlreadyRedeemed,   ///< 다른 계정이 이미 받은 영수증이다
-        Busy,              ///< 버전 충돌이 상한 횟수를 넘었다. 같은 멱등 키로 다시 시도한다
-        Unavailable,       ///< 저장소나 전송을 쓸 수 없다. 적용됐는지 알 수 없으므로 같은 멱등 키로 다시 시도한다
-        UpdateRequired,    ///< 온라인 스키마 해시가 다르다(`kVersionMismatch`). 클라이언트만 만들고 서버는 보내지 않는다. 다시 접속하지 않으므로 재시도하지 않는다
         AlreadyRefunded,   ///< 이미 환불되었거나 청약철회한 거래이다
         WithdrawalExpired, ///< 청약철회 기한(구매 뒤 7일)이 지났다
         NotPurchaser,      ///< 다른 계정이 받은 거래이거나 받은 적이 없는 거래이다. 영수증의 구매자가 이 계정이 아닐 때도 쓴다
@@ -72,6 +67,13 @@ namespace sw
         BuyerTokenMissing, ///< 스토어 답에 구매 때 찍은 계정 토큰이 없다 — 클라이언트의 구매 요청이 `ReceiptBuyerToken` 을 싣지 않았다(`StorePurchaseFlow`)
         Count
     };
+
+    /**
+     * @brief 경제 결과입니다. 업무 결과(`EconomyResult`) 또는 공통 범주(`OnlineError`)입니다.
+     * @details 규칙 밖 값 · 다른 구매에 쓴 멱등 키는 `kInvalidRequest`, 버전 충돌이 상한을 넘으면 `kBusy`, 저장소 · 전송 장애는 `kUnavailable`(적용됐는지 모르므로 같은 키로 다시 한다),
+     *          로그인 없음은 `kUnauthenticated` 이다. 서버 로직과 같은 프로세스의 호출(`EconomyService::submitCall`)이 이 형식을 쓴다.
+     */
+    using EconomyOutcome = OnlineOutcome<EconomyResult>;
 } // namespace sw
 
 namespace sw
@@ -170,8 +172,11 @@ namespace sw
         PROPERTY( Min = 0, Max = 1 )
         uint8 _bReplayed{ SW_FALSE }; ///< 같은 멱등 키나 같은 영수증의 지난 결과이다
 
-        /** @brief 같은 멱등 키로 다시 시도할 결과(스토어 대기 · 충돌 · 일시 장애)인지입니다. 충돌 · 일시 장애는 공통 범주로 오고(`kArrCommonResult`), 스토어 대기는 이 판정으로 서버가 기억하지 않는다. 클라이언트 흐름은 거래를 마치지 않는다. */
-        [[nodiscard]] bool isRetryable() const { return _result == EconomyResult::ReceiptPending || _result == EconomyResult::Busy || _result == EconomyResult::Unavailable; }
+        /**
+         * @brief 같은 멱등 키로 다시 시도할 업무 결과(스토어 대기)인지입니다. 서버는 이 답을 기억하지 않고(`OnlineServiceHost::respondReply`) 클라이언트 흐름은 거래를 마치지 않는다.
+         * @details 충돌 · 일시 장애는 공통 범주(`kBusy` · `kUnavailable`)로 오고 보존은 그 범주가 정한다 — 이 판정은 공통 범주가 아닌 재시도 결과만 본다.
+         */
+        [[nodiscard]] bool isRetryable() const { return _result == EconomyResult::ReceiptPending; }
     };
 } // namespace sw
 
@@ -214,17 +219,6 @@ namespace sw
         using Table        = OnlineProtocolTable<EconomyMethod, OnlineMethodList<EconomyMethod::GetWallet, EconomyMethod::GetHistory, EconomyMethod::Purchase, EconomyMethod::RedeemReceipt, EconomyMethod::WithdrawPurchase>, OnlinePushList<EconomyMethod::BalanceChanged>>;
         using MessageTypes = Table::MessageTypes;
         using ResultName   = EconomyResult;
-
-        /** @brief 공통 범주 표입니다. 로직이 낸 값이 표에 있으면 서버는 공통 오류로 답하고(지표 · 보존이 여기서 나온다), 클라이언트는 공통 오류를 이 값으로 채웁니다. 세 번째 칸은 클라이언트 쪽만 쓰는 줄입니다. */
-        static constexpr OnlineErrorResult<EconomyResult> kArrCommonResult[] = {
-            { OnlineError::kInvalidRequest, EconomyResult::InvalidRequest },
-            { OnlineError::kUnavailable, EconomyResult::Unavailable },
-            { OnlineError::kBusy, EconomyResult::Busy },
-            { OnlineError::kConflict, EconomyResult::Busy, true },
-            { OnlineError::kUnauthenticated, EconomyResult::NotSignedIn },
-            { OnlineError::kVersionMismatch, EconomyResult::UpdateRequired },
-            { OnlineError::kUpdateRequired, EconomyResult::UpdateRequired },
-        };
 
         static const OnlineProtocolEntry kOnlineEntry; ///< 온라인 스키마 해시에 섞이는 이 키트의 등록 항목. 정의가 `.cpp` 에 있어 모듈이 오를 때 등록된다
         static constexpr int32           kMaxOfferIDSize        = 64;

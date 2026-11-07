@@ -125,7 +125,7 @@ namespace sw
     class SW_KIT_SERVER_API EconomyService final : public OnlineProtocolService<EconomyService, EconomyProtocol>
     {
     public:
-        using LocalCallTable = OnlineLocalCallTable<EconomyReply>;
+        using LocalCallTable = OnlineLocalCallTable<OnlineResult<EconomyReply>>; ///< 같은 프로세스의 호출도 원격과 같은 모양(공통 범주는 `_errorCode`)으로 받는다
         using ReplyDelegate  = LocalCallTable::ReplyDelegate;
 
         static constexpr const utf8* kFeatureFlag = "feature.shop_enabled";
@@ -170,9 +170,9 @@ namespace sw
         bool wasLastAuditBalanced() const { return _bLastAuditBalanced == SW_TRUE; }
 
         /** @brief 작업(work)의 `complete` 가 호출합니다. 응답과 지표를 처리합니다. */
-        void completeCall( uint64 callID, const EconomyReply& reply );
+        void completeCall( uint64 callID, const EconomyOutcome& outcome, const EconomyReply& reply );
         /** @brief 환불 회수 작업의 `complete` 가 호출합니다. 지표와 로그를 남기고 회수로 바뀐 잔액을 계정에 알립니다. 회수를 끝내지 못했으면 제공자가 그 환불을 잊어 겹친 조회가 다시 알립니다. */
-        void  completeRefund( const ReceiptRefundNotification& notice, EconomyResult result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
+        void  completeRefund( const ReceiptRefundNotification& notice, EconomyOutcome result, const vector<EconomyBalanceChange>& listChange, ServiceStoreCompletion completion );
         int32 getPendingCallCount() const { return _calls.getCount() + _localCalls.getCount(); }
         /** @brief 기준 시각 읽기 작업의 `complete` 가 호출합니다. 읽었으면 제공자에 넘기고, 못 읽었으면 다시 읽게 합니다. */
         void completeRefundCursorRead( const vector<EconomyRefundCursor>& listCursor, ServiceStoreResult result, ServiceStoreCompletion completion );
