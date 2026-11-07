@@ -14,6 +14,7 @@
 
 #include "Engine/Config/EngineDefaultAssets.h"
 #include "Engine/Graphics/RHI/Backend/FrameResourceRing.h"
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandContext.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHICommandList.h"
 #include "Engine/Graphics/RHI/Vulkan/VulkanRHIResourceFactory.h"
@@ -31,54 +32,41 @@ namespace sw
     /** @brief Vulkan 백엔드 조각들이 함께 쓰는 순수 변환과 조회 도우미입니다. */
     struct VulkanRHIUtil
     {
+        /** @brief RHIFormat 하나의 Vulkan 값입니다. `Unknown` 은 첨부 없음이라 Vulkan 에 대응 값이 없다. */
+        struct TextureFormatRow
+        {
+            RHIFormat _format;
+            VkFormat  _vkFormat;
+        };
+
+        static constexpr TextureFormatRow kArrTextureFormatRow[] = {
+            {    RHIFormat::R8G8B8A8_UNORM,            VK_FORMAT_R8G8B8A8_UNORM},
+            {    RHIFormat::B8G8R8A8_UNORM,            VK_FORMAT_B8G8R8A8_UNORM},
+            {RHIFormat::R16G16B16A16_FLOAT,       VK_FORMAT_R16G16B16A16_SFLOAT},
+            { RHIFormat::D24_UNORM_S8_UINT,         VK_FORMAT_D24_UNORM_S8_UINT},
+            {   RHIFormat::R32G32B32_FLOAT,          VK_FORMAT_R32G32B32_SFLOAT},
+            {      RHIFormat::R32G32_FLOAT,             VK_FORMAT_R32G32_SFLOAT},
+            {         RHIFormat::R32_FLOAT,                VK_FORMAT_R32_SFLOAT},
+            {           RHIFormat::Unknown,                 VK_FORMAT_UNDEFINED},
+            {         RHIFormat::BC1_UNORM,      VK_FORMAT_BC1_RGBA_UNORM_BLOCK},
+            {         RHIFormat::BC2_UNORM,           VK_FORMAT_BC2_UNORM_BLOCK},
+            {         RHIFormat::BC3_UNORM,           VK_FORMAT_BC3_UNORM_BLOCK},
+            {         RHIFormat::BC4_UNORM,           VK_FORMAT_BC4_UNORM_BLOCK},
+            {         RHIFormat::BC5_UNORM,           VK_FORMAT_BC5_UNORM_BLOCK},
+            {         RHIFormat::BC7_UNORM,           VK_FORMAT_BC7_UNORM_BLOCK},
+            {         RHIFormat::BC6H_UF16,         VK_FORMAT_BC6H_UFLOAT_BLOCK},
+            {          RHIFormat::R8_UNORM,                  VK_FORMAT_R8_UNORM},
+            {      RHIFormat::R16G16_SNORM,              VK_FORMAT_R16G16_SNORM},
+            {    RHIFormat::ASTC_4x4_UNORM,      VK_FORMAT_ASTC_4x4_UNORM_BLOCK},
+            {  RHIFormat::ETC2_RGBA8_UNORM, VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK},
+            {     RHIFormat::EAC_R11_UNORM,       VK_FORMAT_EAC_R11_UNORM_BLOCK},
+            {    RHIFormat::EAC_RG11_UNORM,    VK_FORMAT_EAC_R11G11_UNORM_BLOCK},
+        };
+
         static inline VkFormat toVulkanTextureFormat( RHIFormat format )
         {
-            switch ( format )
-            {
-                case RHIFormat::R8G8B8A8_UNORM:
-                    return VK_FORMAT_R8G8B8A8_UNORM;
-                case RHIFormat::B8G8R8A8_UNORM:
-                    return VK_FORMAT_B8G8R8A8_UNORM;
-                case RHIFormat::R16G16B16A16_FLOAT:
-                    return VK_FORMAT_R16G16B16A16_SFLOAT;
-                case RHIFormat::D24_UNORM_S8_UINT:
-                    return VK_FORMAT_D24_UNORM_S8_UINT;
-                case RHIFormat::R32G32B32_FLOAT:
-                    return VK_FORMAT_R32G32B32_SFLOAT;
-                case RHIFormat::R32G32_FLOAT:
-                    return VK_FORMAT_R32G32_SFLOAT;
-                case RHIFormat::R32_FLOAT:
-                    return VK_FORMAT_R32_SFLOAT;
-                case RHIFormat::BC1_UNORM:
-                    return VK_FORMAT_BC1_RGBA_UNORM_BLOCK;
-                case RHIFormat::BC2_UNORM:
-                    return VK_FORMAT_BC2_UNORM_BLOCK;
-                case RHIFormat::BC3_UNORM:
-                    return VK_FORMAT_BC3_UNORM_BLOCK;
-                case RHIFormat::BC4_UNORM:
-                    return VK_FORMAT_BC4_UNORM_BLOCK;
-                case RHIFormat::BC5_UNORM:
-                    return VK_FORMAT_BC5_UNORM_BLOCK;
-                case RHIFormat::BC7_UNORM:
-                    return VK_FORMAT_BC7_UNORM_BLOCK;
-                case RHIFormat::BC6H_UF16:
-                    return VK_FORMAT_BC6H_UFLOAT_BLOCK;
-                case RHIFormat::R8_UNORM:
-                    return VK_FORMAT_R8_UNORM;
-                case RHIFormat::R16G16_SNORM:
-                    return VK_FORMAT_R16G16_SNORM;
-                case RHIFormat::ASTC_4x4_UNORM:
-                    return VK_FORMAT_ASTC_4x4_UNORM_BLOCK;
-                case RHIFormat::ETC2_RGBA8_UNORM:
-                    return VK_FORMAT_ETC2_R8G8B8A8_UNORM_BLOCK;
-                case RHIFormat::EAC_R11_UNORM:
-                    return VK_FORMAT_EAC_R11_UNORM_BLOCK;
-                case RHIFormat::EAC_RG11_UNORM:
-                    return VK_FORMAT_EAC_R11G11_UNORM_BLOCK;
-                case RHIFormat::Unknown: ///< 첨부 없음. Vulkan 에는 대응 값이 없다.
-                    break;
-            }
-            return VK_FORMAT_UNDEFINED;
+            const size_t index = static_cast<size_t>( format );
+            return index < kRHIFormatCount ? kArrTextureFormatRow[index]._vkFormat : VK_FORMAT_UNDEFINED;
         }
 
         /** @brief 블렌드 계수를 Vulkan 값으로 바꿉니다. */
@@ -215,6 +203,7 @@ namespace sw
             { return StringUtil::equals( ext.extensionName, pName ); } );
         }
     };
+    static_assert( isRHIFormatTableInOrder( VulkanRHIUtil::kArrTextureFormatRow ), "kArrTextureFormatRow needs one row per RHIFormat, in enumerator order" );
     /** @brief 확장 함수 포인터를 조회해 디버그 메신저를 만듭니다(없으면 EXTENSION_NOT_PRESENT). */
     inline VkResult CreateDebugUtilsMessengerEXT(
         VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,

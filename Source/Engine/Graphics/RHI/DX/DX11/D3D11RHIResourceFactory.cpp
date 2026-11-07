@@ -10,6 +10,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIBufferSizeUtil.h"
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/DX/DX11/D3D11RHIDevice.h"
+#include "Engine/Graphics/RHI/DX/RHIDxRenderState.h"
 #include "Engine/Graphics/RHI/DX/RHIDxgiFormat.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
@@ -18,106 +19,6 @@
 #if defined( SW_PLATFORM_WINDOWS )
 namespace sw
 {
-    namespace
-    {
-        /** @brief 렌더 상태 값을 D3D11 값으로 옮깁니다. */
-        struct D3D11RenderStateInternal
-        {
-            static D3D11_BLEND toBlend( RHIBlendFactor factor )
-            {
-                switch ( factor )
-                {
-                    case RHIBlendFactor::Zero:
-                        return D3D11_BLEND_ZERO;
-                    case RHIBlendFactor::One:
-                        return D3D11_BLEND_ONE;
-                    case RHIBlendFactor::SrcColor:
-                        return D3D11_BLEND_SRC_COLOR;
-                    case RHIBlendFactor::InvSrcColor:
-                        return D3D11_BLEND_INV_SRC_COLOR;
-                    case RHIBlendFactor::SrcAlpha:
-                        return D3D11_BLEND_SRC_ALPHA;
-                    case RHIBlendFactor::InvSrcAlpha:
-                        return D3D11_BLEND_INV_SRC_ALPHA;
-                    case RHIBlendFactor::DstColor:
-                        return D3D11_BLEND_DEST_COLOR;
-                    case RHIBlendFactor::InvDstColor:
-                        return D3D11_BLEND_INV_DEST_COLOR;
-                    case RHIBlendFactor::DstAlpha:
-                        return D3D11_BLEND_DEST_ALPHA;
-                    case RHIBlendFactor::InvDstAlpha:
-                        return D3D11_BLEND_INV_DEST_ALPHA;
-                    case RHIBlendFactor::SrcAlphaSaturate:
-                        return D3D11_BLEND_SRC_ALPHA_SAT;
-                }
-                return D3D11_BLEND_ONE;
-            }
-            static D3D11_BLEND_OP toBlendOp( RHIBlendOp op )
-            {
-                switch ( op )
-                {
-                    case RHIBlendOp::Add:
-                        return D3D11_BLEND_OP_ADD;
-                    case RHIBlendOp::Subtract:
-                        return D3D11_BLEND_OP_SUBTRACT;
-                    case RHIBlendOp::ReverseSubtract:
-                        return D3D11_BLEND_OP_REV_SUBTRACT;
-                    case RHIBlendOp::Min:
-                        return D3D11_BLEND_OP_MIN;
-                    case RHIBlendOp::Max:
-                        return D3D11_BLEND_OP_MAX;
-                }
-                return D3D11_BLEND_OP_ADD;
-            }
-            static D3D11_COMPARISON_FUNC toCompare( RHICompareFunc func )
-            {
-                switch ( func )
-                {
-                    case RHICompareFunc::Never:
-                        return D3D11_COMPARISON_NEVER;
-                    case RHICompareFunc::Less:
-                        return D3D11_COMPARISON_LESS;
-                    case RHICompareFunc::Equal:
-                        return D3D11_COMPARISON_EQUAL;
-                    case RHICompareFunc::LessEqual:
-                        return D3D11_COMPARISON_LESS_EQUAL;
-                    case RHICompareFunc::Greater:
-                        return D3D11_COMPARISON_GREATER;
-                    case RHICompareFunc::NotEqual:
-                        return D3D11_COMPARISON_NOT_EQUAL;
-                    case RHICompareFunc::GreaterEqual:
-                        return D3D11_COMPARISON_GREATER_EQUAL;
-                    case RHICompareFunc::Always:
-                        return D3D11_COMPARISON_ALWAYS;
-                }
-                return D3D11_COMPARISON_LESS_EQUAL;
-            }
-            static D3D11_STENCIL_OP toStencilOp( RHIStencilOp op )
-            {
-                switch ( op )
-                {
-                    case RHIStencilOp::Keep:
-                        return D3D11_STENCIL_OP_KEEP;
-                    case RHIStencilOp::Zero:
-                        return D3D11_STENCIL_OP_ZERO;
-                    case RHIStencilOp::Replace:
-                        return D3D11_STENCIL_OP_REPLACE;
-                    case RHIStencilOp::IncrementClamp:
-                        return D3D11_STENCIL_OP_INCR_SAT;
-                    case RHIStencilOp::DecrementClamp:
-                        return D3D11_STENCIL_OP_DECR_SAT;
-                    case RHIStencilOp::Invert:
-                        return D3D11_STENCIL_OP_INVERT;
-                    case RHIStencilOp::IncrementWrap:
-                        return D3D11_STENCIL_OP_INCR;
-                    case RHIStencilOp::DecrementWrap:
-                        return D3D11_STENCIL_OP_DECR;
-                }
-                return D3D11_STENCIL_OP_KEEP;
-            }
-        };
-    } // namespace
-
     RHIBufferHandle D3D11RHIResourceFactory::createConstantBuffer( uint32 size )
     {
         const bool bInvalidConstantBufferRequest = _pDevice == nullptr || _pDevice->_device == nullptr || size == 0;
@@ -1095,28 +996,28 @@ namespace sw
                 D3D11_RENDER_TARGET_BLEND_DESC& target = blendDesc.RenderTarget[targetIndex];
                 target.RenderTargetWriteMask           = static_cast<UINT8>( source._colorWriteMask ); // 비트가 같다(RHIColorWriteMask)
                 target.BlendEnable                     = source._bEnableBlend != SW_FALSE ? TRUE : FALSE;
-                target.SrcBlend                        = D3D11RenderStateInternal::toBlend( source._srcColor );
-                target.DestBlend                       = D3D11RenderStateInternal::toBlend( source._dstColor );
-                target.BlendOp                         = D3D11RenderStateInternal::toBlendOp( source._colorOp );
-                target.SrcBlendAlpha                   = D3D11RenderStateInternal::toBlend( source._srcAlpha );
-                target.DestBlendAlpha                  = D3D11RenderStateInternal::toBlend( source._dstAlpha );
-                target.BlendOpAlpha                    = D3D11RenderStateInternal::toBlendOp( source._alphaOp );
+                target.SrcBlend                        = RHIDxRenderState::toBlend<D3D11_BLEND>( source._srcColor );
+                target.DestBlend                       = RHIDxRenderState::toBlend<D3D11_BLEND>( source._dstColor );
+                target.BlendOp                         = RHIDxRenderState::toBlendOp<D3D11_BLEND_OP>( source._colorOp );
+                target.SrcBlendAlpha                   = RHIDxRenderState::toBlend<D3D11_BLEND>( source._srcAlpha );
+                target.DestBlendAlpha                  = RHIDxRenderState::toBlend<D3D11_BLEND>( source._dstAlpha );
+                target.BlendOpAlpha                    = RHIDxRenderState::toBlendOp<D3D11_BLEND_OP>( source._alphaOp );
             }
             D3D11_DEPTH_STENCIL_DESC dsDesc{};
             dsDesc.DepthEnable                  = ( renderState._bEnableDepthTest != SW_FALSE ) ? TRUE : FALSE;
             dsDesc.DepthWriteMask               = ( renderState._bEnableDepthWrite != SW_FALSE ) ? D3D11_DEPTH_WRITE_MASK_ALL : D3D11_DEPTH_WRITE_MASK_ZERO;
-            dsDesc.DepthFunc                    = D3D11RenderStateInternal::toCompare( renderState._depthCompare );
+            dsDesc.DepthFunc                    = RHIDxRenderState::toCompare<D3D11_COMPARISON_FUNC>( renderState._depthCompare );
             dsDesc.StencilEnable                = renderState._bEnableStencil != SW_FALSE ? TRUE : FALSE;
             dsDesc.StencilReadMask              = renderState._stencilReadMask;
             dsDesc.StencilWriteMask             = renderState._stencilWriteMask;
-            dsDesc.FrontFace.StencilFailOp      = D3D11RenderStateInternal::toStencilOp( renderState._stencilFrontFail );
-            dsDesc.FrontFace.StencilDepthFailOp = D3D11RenderStateInternal::toStencilOp( renderState._stencilFrontDepthFail );
-            dsDesc.FrontFace.StencilPassOp      = D3D11RenderStateInternal::toStencilOp( renderState._stencilFrontPass );
-            dsDesc.FrontFace.StencilFunc        = D3D11RenderStateInternal::toCompare( renderState._stencilFrontCompare );
-            dsDesc.BackFace.StencilFailOp       = D3D11RenderStateInternal::toStencilOp( renderState._stencilBackFail );
-            dsDesc.BackFace.StencilDepthFailOp  = D3D11RenderStateInternal::toStencilOp( renderState._stencilBackDepthFail );
-            dsDesc.BackFace.StencilPassOp       = D3D11RenderStateInternal::toStencilOp( renderState._stencilBackPass );
-            dsDesc.BackFace.StencilFunc         = D3D11RenderStateInternal::toCompare( renderState._stencilBackCompare );
+            dsDesc.FrontFace.StencilFailOp      = RHIDxRenderState::toStencilOp<D3D11_STENCIL_OP>( renderState._stencilFrontFail );
+            dsDesc.FrontFace.StencilDepthFailOp = RHIDxRenderState::toStencilOp<D3D11_STENCIL_OP>( renderState._stencilFrontDepthFail );
+            dsDesc.FrontFace.StencilPassOp      = RHIDxRenderState::toStencilOp<D3D11_STENCIL_OP>( renderState._stencilFrontPass );
+            dsDesc.FrontFace.StencilFunc        = RHIDxRenderState::toCompare<D3D11_COMPARISON_FUNC>( renderState._stencilFrontCompare );
+            dsDesc.BackFace.StencilFailOp       = RHIDxRenderState::toStencilOp<D3D11_STENCIL_OP>( renderState._stencilBackFail );
+            dsDesc.BackFace.StencilDepthFailOp  = RHIDxRenderState::toStencilOp<D3D11_STENCIL_OP>( renderState._stencilBackDepthFail );
+            dsDesc.BackFace.StencilPassOp       = RHIDxRenderState::toStencilOp<D3D11_STENCIL_OP>( renderState._stencilBackPass );
+            dsDesc.BackFace.StencilFunc         = RHIDxRenderState::toCompare<D3D11_COMPARISON_FUNC>( renderState._stencilBackCompare );
             pso._stencilRef                     = renderState._stencilRef;
             const bool bStateFailed             = isHrSuccess( _pDevice->_device->CreateBlendState( &blendDesc, pso._blendState.GetAddressOf() ), "CreateBlendState" ) == false ||
                                       isHrSuccess( _pDevice->_device->CreateDepthStencilState( &dsDesc, pso._depthStencilState.GetAddressOf() ), "CreateDepthStencilState" ) == false;

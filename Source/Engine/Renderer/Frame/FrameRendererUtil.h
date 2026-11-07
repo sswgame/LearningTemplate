@@ -12,6 +12,7 @@
 #include "Core/Math/NormalizedInt.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIRenderState.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 #include "Engine/Graphics/Shader/Binding/ShaderBindingSlots.h"
@@ -193,7 +194,7 @@ namespace sw
             uint32  _transparentTailBase{ 0 }; ///< 순번 테이블의 0번이 가리키는 인스턴스 번호
         };
 
-        static bool isDepthFormat( RHIFormat format ) { return format == RHIFormat::D24_UNORM_S8_UINT; }
+        static bool isDepthFormat( RHIFormat format ) { return isRHIFormatDepth( format ); }
         /** @brief 첨부 @p attachmentName 을 컴퓨트 패스가 읽거나 쓰면 true 입니다 — RW 텍스처로 묶을 수 있게 만들어야 합니다. */
         static bool isComputeOutputOrInput( const vector<RenderGraphPassDesc>& listPass, string_view attachmentName )
         {

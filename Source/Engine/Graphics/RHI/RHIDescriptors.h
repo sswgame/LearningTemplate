@@ -12,6 +12,7 @@
 #include "Engine/Foundation/EngineDefines.h"
 #include "Engine/Foundation/Foundation.h"
 #include "Engine/Graphics/RHI/RHIEnums.h"
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHIHandles.h"
 #include "Engine/Graphics/RHI/RHIRenderState.h"
 #include "Engine/Reflection/ReflectionMacros.h"
@@ -776,104 +777,6 @@ namespace sw
 
 namespace sw
 {
-    /**
-     * @struct RHIFormatBlockInfo
-     * @brief 포맷의 저장 단위입니다. 비압축은 1x1 블록에 픽셀 바이트이고, BC 는 4x4 블록에 8바이트 또는 16바이트입니다.
-     */
-    struct RHIFormatBlockInfo
-    {
-        uint32 _blockWidth{ 1 };
-        uint32 _blockHeight{ 1 };
-        uint32 _blockBytes{ 0 }; ///< 0이면 업로드와 읽기 대상이 아니다(깊이, Unknown).
-    };
-} // namespace sw
-
-namespace sw
-{
-    /** @brief 포맷의 블록 정보를 반환합니다. 네 백엔드가 밉 크기와 행 바이트를 같은 규칙으로 계산하게 하는 유일한 원본입니다. */
-    inline constexpr RHIFormatBlockInfo getRHIFormatBlockInfo( RHIFormat format )
-    {
-        switch ( format )
-        {
-            case RHIFormat::R8G8B8A8_UNORM:
-            case RHIFormat::B8G8R8A8_UNORM:
-            case RHIFormat::R32_FLOAT:
-            case RHIFormat::R16G16_SNORM:
-                return RHIFormatBlockInfo{ 1, 1, 4 };
-            case RHIFormat::R16G16B16A16_FLOAT:
-            case RHIFormat::R32G32_FLOAT:
-                return RHIFormatBlockInfo{ 1, 1, 8 };
-            case RHIFormat::R32G32B32_FLOAT:
-                return RHIFormatBlockInfo{ 1, 1, 12 };
-            case RHIFormat::R8_UNORM:
-                return RHIFormatBlockInfo{ 1, 1, 1 };
-            case RHIFormat::BC1_UNORM:
-            case RHIFormat::BC4_UNORM:
-            case RHIFormat::EAC_R11_UNORM:
-                return RHIFormatBlockInfo{ 4, 4, 8 };
-            case RHIFormat::BC2_UNORM:
-            case RHIFormat::BC3_UNORM:
-            case RHIFormat::BC5_UNORM:
-            case RHIFormat::BC7_UNORM:
-            case RHIFormat::BC6H_UF16:
-            case RHIFormat::ASTC_4x4_UNORM:
-            case RHIFormat::ETC2_RGBA8_UNORM:
-            case RHIFormat::EAC_RG11_UNORM:
-                return RHIFormatBlockInfo{ 4, 4, 16 };
-            case RHIFormat::D24_UNORM_S8_UINT:
-            case RHIFormat::Unknown:
-                return RHIFormatBlockInfo{ 1, 1, 0 };
-        }
-    }
-
-    /** @brief 블록 압축 포맷인지 확인합니다. */
-    inline constexpr bool isRHIFormatBlockCompressed( RHIFormat format )
-    {
-        return getRHIFormatBlockInfo( format )._blockWidth > 1;
-    }
-
-    /**
-     * @brief 렌더 타깃(컬러 첨부) 또는 깊이 첨부로 만들 수 있는 포맷인지 확인합니다. 네 백엔드가 모두 보장하는 포맷만 true 입니다.
-     * @details 블록 압축과 Unknown 은 첨부가 될 수 없다. R32G32B32_FLOAT 는 D3D11, D3D12, Vulkan 모두 렌더 타깃 지원이 선택 사항이라 뺀다.
-     *          포맷을 추가하면 -Wswitch-enum 이 이 함수를 알려 주도록 열거자를 모두 적는다.
-     */
-    inline constexpr bool isRHIFormatRenderable( RHIFormat format )
-    {
-        switch ( format )
-        {
-            case RHIFormat::R8G8B8A8_UNORM:
-            case RHIFormat::B8G8R8A8_UNORM:
-            case RHIFormat::R16G16B16A16_FLOAT:
-            case RHIFormat::D24_UNORM_S8_UINT:
-            case RHIFormat::R32G32_FLOAT:
-            case RHIFormat::R32_FLOAT:
-            case RHIFormat::R8_UNORM:
-            case RHIFormat::R16G16_SNORM:
-                return true;
-            case RHIFormat::R32G32B32_FLOAT:
-            case RHIFormat::Unknown:
-            case RHIFormat::BC1_UNORM:
-            case RHIFormat::BC2_UNORM:
-            case RHIFormat::BC3_UNORM:
-            case RHIFormat::BC4_UNORM:
-            case RHIFormat::BC5_UNORM:
-            case RHIFormat::BC7_UNORM:
-            case RHIFormat::BC6H_UF16:
-            case RHIFormat::ASTC_4x4_UNORM:
-            case RHIFormat::ETC2_RGBA8_UNORM:
-            case RHIFormat::EAC_R11_UNORM:
-            case RHIFormat::EAC_RG11_UNORM:
-                return false;
-        }
-    }
-
-    /** @brief 비압축 컬러 포맷의 픽셀당 바이트를 반환합니다. 압축, 깊이, Unknown 은 0 입니다. */
-    inline constexpr uint32 getRHIFormatBytesPerPixel( RHIFormat format )
-    {
-        const RHIFormatBlockInfo info = getRHIFormatBlockInfo( format );
-        return info._blockWidth == 1 ? info._blockBytes : 0;
-    }
-
     /**
      * @brief 텍스처 밉 하나의 크기와 행 바이트를 계산합니다. 업로드(빈틈없는 행)와 읽기(readback)가 같은 배치를 씁니다.
      * @details BC 는 행 하나가 블록 한 줄(ceil(w/4) 블록)이고, 밉 크기가 4 미만이어도 블록 하나를 차지한다.

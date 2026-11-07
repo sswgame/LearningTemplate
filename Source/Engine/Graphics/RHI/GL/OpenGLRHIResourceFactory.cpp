@@ -12,6 +12,7 @@
 #include "Engine/Graphics/RHI/Backend/RHIShaderRequest.h"
 #include "Engine/Graphics/RHI/Diagnostics/RHIMemoryTracker.h"
 #include "Engine/Graphics/RHI/GL/OpenGLRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCache.h"
 #include "Engine/Graphics/Shader/Compile/ShaderCompiler.h"
 
@@ -30,7 +31,7 @@ namespace sw
         /**
          * @brief RHIFormat 하나의 GL 세 값(internalFormat · (pixel) format · type)입니다.
          * @details 세 값을 한 줄에 두어 포맷을 더할 때 한 자리만 고치게 합니다. 압축 포맷은 internal 만 있습니다(glCompressedTexImage
-         *          경로라 format · type 은 쓰지 않습니다). 표에 없는 포맷(`Unknown` = 첨부 없음)은 셋 다 0 입니다.
+         *          경로라 format · type 은 쓰지 않습니다). `Unknown`(첨부 없음)은 셋 다 0 입니다.
          */
         struct OpenGLFormatRow
         {
@@ -41,17 +42,6 @@ namespace sw
         };
 
         constexpr OpenGLFormatRow arrFormatRow[] = {
-            {         RHIFormat::BC1_UNORM,                      kGlCompressedRGBAS3tcDxt1,                0,                    0},
-            {         RHIFormat::BC2_UNORM,                      kGlCompressedRGBAS3tcDxt3,                0,                    0},
-            {         RHIFormat::BC3_UNORM,                      kGlCompressedRGBAS3tcDxt5,                0,                    0},
-            {         RHIFormat::BC4_UNORM,                        GL_COMPRESSED_RED_RGTC1,                0,                    0},
-            {         RHIFormat::BC5_UNORM,                           kGlCompressedRgRgtc2,                0,                    0},
-            {         RHIFormat::BC7_UNORM,                  GL_COMPRESSED_RGBA_BPTC_UNORM,                0,                    0},
-            {         RHIFormat::BC6H_UF16,          GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT,                0,                    0},
-            {    RHIFormat::ASTC_4x4_UNORM,  OpenGLRHIDeviceFormat::kCompressedRGBAASTC4x4,                0,                    0},
-            {  RHIFormat::ETC2_RGBA8_UNORM, OpenGLRHIDeviceFormat::kCompressedRGBA8ETC2EAC,                0,                    0},
-            {     RHIFormat::EAC_R11_UNORM,       OpenGLRHIDeviceFormat::kCompressedR11EAC,                0,                    0},
-            {    RHIFormat::EAC_RG11_UNORM,      OpenGLRHIDeviceFormat::kCompressedRG11EAC,                0,                    0},
             {    RHIFormat::R8G8B8A8_UNORM,                                       GL_RGBA8,          GL_RGBA,     GL_UNSIGNED_BYTE},
             {    RHIFormat::B8G8R8A8_UNORM,                                       GL_RGBA8,          GL_BGRA,     GL_UNSIGNED_BYTE},
             // **half 는 GL_HALF_FLOAT 다.** GL_FLOAT 로 두면 GL 이 픽셀당 16 바이트를 읽고 쓰는데 엔진이 잡아 둔 버퍼는
@@ -62,36 +52,43 @@ namespace sw
             {   RHIFormat::R32G32B32_FLOAT,                                      GL_RGB32F,           GL_RGB,             GL_FLOAT},
             {      RHIFormat::R32G32_FLOAT,                                       GL_RG32F,            GL_RG,             GL_FLOAT},
             {         RHIFormat::R32_FLOAT,                                        GL_R32F,           GL_RED,             GL_FLOAT},
+            {           RHIFormat::Unknown,                                              0,                0,                    0},
+            {         RHIFormat::BC1_UNORM,                      kGlCompressedRGBAS3tcDxt1,                0,                    0},
+            {         RHIFormat::BC2_UNORM,                      kGlCompressedRGBAS3tcDxt3,                0,                    0},
+            {         RHIFormat::BC3_UNORM,                      kGlCompressedRGBAS3tcDxt5,                0,                    0},
+            {         RHIFormat::BC4_UNORM,                        GL_COMPRESSED_RED_RGTC1,                0,                    0},
+            {         RHIFormat::BC5_UNORM,                           kGlCompressedRgRgtc2,                0,                    0},
+            {         RHIFormat::BC7_UNORM,                  GL_COMPRESSED_RGBA_BPTC_UNORM,                0,                    0},
+            {         RHIFormat::BC6H_UF16,          GL_COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT,                0,                    0},
             {          RHIFormat::R8_UNORM,                                          GL_R8,           GL_RED,     GL_UNSIGNED_BYTE},
             {      RHIFormat::R16G16_SNORM,                                  GL_RG16_SNORM,            GL_RG,             GL_SHORT},
+            {    RHIFormat::ASTC_4x4_UNORM,  OpenGLRHIDeviceFormat::kCompressedRGBAASTC4x4,                0,                    0},
+            {  RHIFormat::ETC2_RGBA8_UNORM, OpenGLRHIDeviceFormat::kCompressedRGBA8ETC2EAC,                0,                    0},
+            {     RHIFormat::EAC_R11_UNORM,       OpenGLRHIDeviceFormat::kCompressedR11EAC,                0,                    0},
+            {    RHIFormat::EAC_RG11_UNORM,      OpenGLRHIDeviceFormat::kCompressedRG11EAC,                0,                    0},
         };
+        static_assert( isRHIFormatTableInOrder( arrFormatRow ), "arrFormatRow needs one row per RHIFormat, in enumerator order" );
 
-        const OpenGLFormatRow* findFormatRow( RHIFormat format )
+        /** @brief 표에 없는 포맷(범위 밖)은 셋 다 0 인 `Unknown` 행입니다. */
+        const OpenGLFormatRow& findFormatRow( RHIFormat format )
         {
-            for ( const OpenGLFormatRow& row : arrFormatRow )
-            {
-                if ( row._format == format )
-                    return &row;
-            }
-            return nullptr;
+            const size_t index = static_cast<size_t>( format );
+            return index < kRHIFormatCount ? arrFormatRow[index] : arrFormatRow[static_cast<size_t>( RHIFormat::Unknown )];
         }
 
         GLenum toGlInternalFormat( RHIFormat format )
         {
-            const OpenGLFormatRow* pRow = findFormatRow( format );
-            return pRow != nullptr ? pRow->_internalFormat : 0;
+            return findFormatRow( format )._internalFormat;
         }
 
         GLenum toGlFormat( RHIFormat format )
         {
-            const OpenGLFormatRow* pRow = findFormatRow( format );
-            return pRow != nullptr ? pRow->_pixelFormat : 0;
+            return findFormatRow( format )._pixelFormat;
         }
 
         GLenum toGlType( RHIFormat format )
         {
-            const OpenGLFormatRow* pRow = findFormatRow( format );
-            return pRow != nullptr ? pRow->_pixelType : 0;
+            return findFormatRow( format )._pixelType;
         }
 
         /// @brief `GL_UNPACK_ALIGNMENT` · `GL_PACK_ALIGNMENT` 의 GL 기본값입니다. 가드 밖에서는 늘 이 값이다.
@@ -180,7 +177,7 @@ namespace sw
             return _bTextureASTC != SW_FALSE;
         if ( format == RHIFormat::ETC2_RGBA8_UNORM || format == RHIFormat::EAC_R11_UNORM || format == RHIFormat::EAC_RG11_UNORM )
             return _bTextureETC2 != SW_FALSE;
-        return findFormatRow( format ) != nullptr;
+        return findFormatRow( format )._internalFormat != 0;
     }
 
     RHIBufferHandle OpenGLRHIResourceFactory::createConstantBuffer( uint32 size )

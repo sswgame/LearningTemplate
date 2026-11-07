@@ -7,6 +7,8 @@
 #include "Core/Math/OctahedralNormal.h"
 #include "Core/Memory/Memory.h"
 
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
+
 namespace sw::editor
 {
     namespace
@@ -58,34 +60,8 @@ namespace sw::editor
 
     bool RenderTargetViewSettings::isDecodableFormat( RHIFormat format, bool bDepth )
     {
-        if ( bDepth )
-            return true;
-        switch ( format )
-        {
-            case RHIFormat::R8G8B8A8_UNORM:
-            case RHIFormat::B8G8R8A8_UNORM:
-            case RHIFormat::R16G16B16A16_FLOAT:
-            case RHIFormat::R32G32B32_FLOAT:
-            case RHIFormat::R32G32_FLOAT:
-            case RHIFormat::R32_FLOAT:
-            case RHIFormat::R8_UNORM:
-            case RHIFormat::R16G16_SNORM:
-                return true;
-            case RHIFormat::D24_UNORM_S8_UINT: // 깊이는 bDepth 로 온다 — 깊이 배치가 아닌 D24 바이트는 풀지 않는다
-            case RHIFormat::Unknown:
-            case RHIFormat::BC1_UNORM:
-            case RHIFormat::BC2_UNORM:
-            case RHIFormat::BC3_UNORM:
-            case RHIFormat::BC4_UNORM:
-            case RHIFormat::BC5_UNORM:
-            case RHIFormat::BC7_UNORM:
-            case RHIFormat::BC6H_UF16:
-            case RHIFormat::ASTC_4x4_UNORM:
-            case RHIFormat::ETC2_RGBA8_UNORM:
-            case RHIFormat::EAC_R11_UNORM:
-            case RHIFormat::EAC_RG11_UNORM:
-                return false;
-        }
+        // 깊이는 bDepth 로 온다 — 깊이 배치가 아닌 D24 바이트는 풀지 않는다(표의 바이트가 0 이다). 압축 · Unknown 도 0 이다.
+        return bDepth || getRHIFormatBytesPerPixel( format ) != 0;
     }
 
     uint32 RenderTargetViewSettings::getChannelCount( RHIFormat format, bool bDepth )

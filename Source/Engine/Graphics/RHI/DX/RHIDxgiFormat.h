@@ -6,56 +6,51 @@
 #include "Core/Foundation/Types.h"
 
 #include "Engine/Foundation/EnginePlatformHeaders.h"
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
 #include "Engine/Graphics/RHI/RHITypes.h"
 
 #if defined( SW_PLATFORM_WINDOWS )
 
 namespace sw
 {
-    /** @brief RHIFormat 을 DXGI_FORMAT 으로 변환합니다. 지원하지 않는 포맷이면 assert 뒤 DXGI_FORMAT_UNKNOWN 을 반환합니다. */
+    /** @brief RHIFormat 하나의 DXGI 값입니다. D3D 에 없는 형식(ASTC · ETC2 · EAC)과 `Unknown` 은 DXGI_FORMAT_UNKNOWN 이다 — `supportsTextureFormat` 이 거짓이라 쿠킹 변형을 고르지 않는다. */
+    struct RHIDxgiFormatRow
+    {
+        RHIFormat   _format;
+        DXGI_FORMAT _dxgiFormat;
+    };
+
+    inline constexpr RHIDxgiFormatRow kArrRHIDxgiFormatRow[] = {
+        {    RHIFormat::R8G8B8A8_UNORM,     DXGI_FORMAT_R8G8B8A8_UNORM},
+        {    RHIFormat::B8G8R8A8_UNORM,     DXGI_FORMAT_B8G8R8A8_UNORM},
+        {RHIFormat::R16G16B16A16_FLOAT, DXGI_FORMAT_R16G16B16A16_FLOAT},
+        { RHIFormat::D24_UNORM_S8_UINT,  DXGI_FORMAT_D24_UNORM_S8_UINT},
+        {   RHIFormat::R32G32B32_FLOAT,    DXGI_FORMAT_R32G32B32_FLOAT},
+        {      RHIFormat::R32G32_FLOAT,       DXGI_FORMAT_R32G32_FLOAT},
+        {         RHIFormat::R32_FLOAT,          DXGI_FORMAT_R32_FLOAT},
+        {           RHIFormat::Unknown,            DXGI_FORMAT_UNKNOWN},
+        {         RHIFormat::BC1_UNORM,          DXGI_FORMAT_BC1_UNORM},
+        {         RHIFormat::BC2_UNORM,          DXGI_FORMAT_BC2_UNORM},
+        {         RHIFormat::BC3_UNORM,          DXGI_FORMAT_BC3_UNORM},
+        {         RHIFormat::BC4_UNORM,          DXGI_FORMAT_BC4_UNORM},
+        {         RHIFormat::BC5_UNORM,          DXGI_FORMAT_BC5_UNORM},
+        {         RHIFormat::BC7_UNORM,          DXGI_FORMAT_BC7_UNORM},
+        {         RHIFormat::BC6H_UF16,          DXGI_FORMAT_BC6H_UF16},
+        {          RHIFormat::R8_UNORM,           DXGI_FORMAT_R8_UNORM},
+        {      RHIFormat::R16G16_SNORM,       DXGI_FORMAT_R16G16_SNORM},
+        {    RHIFormat::ASTC_4x4_UNORM,            DXGI_FORMAT_UNKNOWN},
+        {  RHIFormat::ETC2_RGBA8_UNORM,            DXGI_FORMAT_UNKNOWN},
+        {     RHIFormat::EAC_R11_UNORM,            DXGI_FORMAT_UNKNOWN},
+        {    RHIFormat::EAC_RG11_UNORM,            DXGI_FORMAT_UNKNOWN},
+    };
+    static_assert( isRHIFormatTableInOrder( kArrRHIDxgiFormatRow ), "kArrRHIDxgiFormatRow needs one row per RHIFormat, in enumerator order" );
+
+    /** @brief RHIFormat 을 DXGI_FORMAT 으로 변환합니다. 범위 밖 값이면 assert 뒤 DXGI_FORMAT_UNKNOWN 을 반환합니다. */
     inline DXGI_FORMAT toDxgiFormat( RHIFormat format )
     {
-        switch ( format )
-        {
-            case RHIFormat::R8G8B8A8_UNORM:
-                return DXGI_FORMAT_R8G8B8A8_UNORM;
-            case RHIFormat::B8G8R8A8_UNORM:
-                return DXGI_FORMAT_B8G8R8A8_UNORM;
-            case RHIFormat::R16G16B16A16_FLOAT:
-                return DXGI_FORMAT_R16G16B16A16_FLOAT;
-            case RHIFormat::D24_UNORM_S8_UINT:
-                return DXGI_FORMAT_D24_UNORM_S8_UINT;
-            case RHIFormat::R32G32B32_FLOAT:
-                return DXGI_FORMAT_R32G32B32_FLOAT;
-            case RHIFormat::R32G32_FLOAT:
-                return DXGI_FORMAT_R32G32_FLOAT;
-            case RHIFormat::R32_FLOAT:
-                return DXGI_FORMAT_R32_FLOAT;
-            case RHIFormat::Unknown:
-            case RHIFormat::ASTC_4x4_UNORM: // D3D 에 없다 — `supportsTextureFormat` 이 거짓이라 쿠킹 변형을 고르지 않는다
-            case RHIFormat::ETC2_RGBA8_UNORM:
-            case RHIFormat::EAC_R11_UNORM:
-            case RHIFormat::EAC_RG11_UNORM:
-                return DXGI_FORMAT_UNKNOWN;
-            case RHIFormat::BC1_UNORM:
-                return DXGI_FORMAT_BC1_UNORM;
-            case RHIFormat::BC2_UNORM:
-                return DXGI_FORMAT_BC2_UNORM;
-            case RHIFormat::BC3_UNORM:
-                return DXGI_FORMAT_BC3_UNORM;
-            case RHIFormat::BC4_UNORM:
-                return DXGI_FORMAT_BC4_UNORM;
-            case RHIFormat::BC5_UNORM:
-                return DXGI_FORMAT_BC5_UNORM;
-            case RHIFormat::BC7_UNORM:
-                return DXGI_FORMAT_BC7_UNORM;
-            case RHIFormat::BC6H_UF16:
-                return DXGI_FORMAT_BC6H_UF16;
-            case RHIFormat::R8_UNORM:
-                return DXGI_FORMAT_R8_UNORM;
-            case RHIFormat::R16G16_SNORM:
-                return DXGI_FORMAT_R16G16_SNORM;
-        }
+        const size_t index = static_cast<size_t>( format );
+        if ( index < kRHIFormatCount )
+            return kArrRHIDxgiFormatRow[index]._dxgiFormat;
         SW_LOG_ASSERT( false, "Unsupported RHIFormat: %#", static_cast<uint32>( format ) );
         return DXGI_FORMAT_UNKNOWN;
     }
@@ -112,49 +107,16 @@ namespace sw
 
     /**
      * @brief DXGI_FORMAT 을 RHIFormat 으로 되돌립니다. 대응이 없으면(typeless 등) Unknown 입니다.
-     * @details DXGI_FORMAT 은 값이 110 개가 넘는 **플랫폼 enum** 이고 이 엔진이 다루는 것은 그중 일부입니다. 대응이 없는 값은 `default:` 가
-     *          Unknown 으로 돌립니다(새 DXGI 포맷도 Unknown 이 맞는 답입니다). 반대 방향인 toDxgiFormat 은 `default:` 없이 모든
-     *          RHIFormat 을 다룹니다. RHIFormat 은 **우리 enum** 이라 늘면 `-Werror=switch` 가 빌드를 실패시킵니다.
+     * @details 같은 표를 거꾸로 훑습니다. 텍스처 업로드 · 되읽기 때만 불러 표 스물몇 줄이면 충분합니다. DXGI_FORMAT_UNKNOWN 은 표에서 `Unknown` 행이 먼저 나온다.
      */
     inline RHIFormat fromDxgiFormat( DXGI_FORMAT format )
     {
-        switch ( format )
+        for ( const RHIDxgiFormatRow& row : kArrRHIDxgiFormatRow )
         {
-            case DXGI_FORMAT_R8G8B8A8_UNORM:
-                return RHIFormat::R8G8B8A8_UNORM;
-            case DXGI_FORMAT_B8G8R8A8_UNORM:
-                return RHIFormat::B8G8R8A8_UNORM;
-            case DXGI_FORMAT_R16G16B16A16_FLOAT:
-                return RHIFormat::R16G16B16A16_FLOAT;
-            case DXGI_FORMAT_D24_UNORM_S8_UINT:
-                return RHIFormat::D24_UNORM_S8_UINT;
-            case DXGI_FORMAT_R32G32B32_FLOAT:
-                return RHIFormat::R32G32B32_FLOAT;
-            case DXGI_FORMAT_R32G32_FLOAT:
-                return RHIFormat::R32G32_FLOAT;
-            case DXGI_FORMAT_R32_FLOAT:
-                return RHIFormat::R32_FLOAT;
-            case DXGI_FORMAT_BC1_UNORM:
-                return RHIFormat::BC1_UNORM;
-            case DXGI_FORMAT_BC2_UNORM:
-                return RHIFormat::BC2_UNORM;
-            case DXGI_FORMAT_BC3_UNORM:
-                return RHIFormat::BC3_UNORM;
-            case DXGI_FORMAT_BC4_UNORM:
-                return RHIFormat::BC4_UNORM;
-            case DXGI_FORMAT_BC5_UNORM:
-                return RHIFormat::BC5_UNORM;
-            case DXGI_FORMAT_BC7_UNORM:
-                return RHIFormat::BC7_UNORM;
-            case DXGI_FORMAT_BC6H_UF16:
-                return RHIFormat::BC6H_UF16;
-            case DXGI_FORMAT_R8_UNORM:
-                return RHIFormat::R8_UNORM;
-            case DXGI_FORMAT_R16G16_SNORM:
-                return RHIFormat::R16G16_SNORM;
-            default:
-                return RHIFormat::Unknown;
+            if ( row._dxgiFormat == format )
+                return row._format;
         }
+        return RHIFormat::Unknown;
     }
 } // namespace sw
 

@@ -9,6 +9,7 @@
 
 #include "Engine/Graphics/RHI/IRHICommandList.h"
 #include "Engine/Graphics/RHI/IRHIDevice.h"
+#include "Engine/Graphics/RHI/RHIFormatInfo.h"
 
 namespace sw
 {
@@ -56,16 +57,7 @@ namespace sw
 
     bool GPUNanCheck::isScannableFormat( RHIFormat format )
     {
-        switch ( format )
-        {
-            case RHIFormat::R16G16B16A16_FLOAT:
-            case RHIFormat::R32G32B32_FLOAT:
-            case RHIFormat::R32G32_FLOAT:
-            case RHIFormat::R32_FLOAT:
-                return true;
-            default:
-                return false;
-        }
+        return isRHIFormatFloatTexel( format );
     }
 
     bool GPUNanCheck::initialize( IRHIDevice* pDevice )
