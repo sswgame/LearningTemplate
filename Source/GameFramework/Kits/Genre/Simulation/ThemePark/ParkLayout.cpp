@@ -3,11 +3,14 @@
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/ParkLayout.h"
 
 #include "Core/Container/StringUtil.h"
+#include "Core/Log/Logger.h"
 
+#include "Engine/Foundation/AssetTypeRegistry.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 
 #include "GameFramework/Kits/Genre/Simulation/ThemePark/CoasterTrack.h"
 #include "GameFramework/Runtime/Foundation/GameData/GameDataXML.h"
+#include "GameFramework/Runtime/Foundation/GameData/GamePackDataUtil.h"
 
 namespace sw
 {
@@ -16,12 +19,36 @@ namespace sw
         , _gatePosition{}
         , _entryFee{ 0 }
         , _startingCash{ 0 }
+        , _pCoasterLayouts{}
     {
     }
 
-    bool ParkLayout::loadFromAsset( const AssetID& assetID, const CoasterLayoutCatalog& layouts )
+    bool ParkLayout::loadFromAsset( const AssetID& assetID )
     {
-        return GameDataXML::loadFromFile( *this, &ParkLayout::loadRoot, layouts, assetID, "ParkLayout" );
+        _pCoasterLayouts.reset();
+        const string&       layoutPath  = assetID.str();
+        const AssetTypeDef* pLayoutKind = AssetTypeRegistry::findType( kDataKind );
+        if ( pLayoutKind == nullptr || pLayoutKind->_pathRule._suffix.empty() || layoutPath.size() < pLayoutKind->_pathRule._suffix.size() )
+        {
+            SW_LOG_ERROR_ID( "ParkLayout.LayoutPathNotKind", "%#: the park layout path does not end with the '%#' kind suffix", layoutPath.c_str(), kDataKind );
+            return false;
+        }
+        const string_view packRoot = string_view( layoutPath ).substr( 0, layoutPath.size() - pLayoutKind->_pathRule._suffix.size() );
+        string            coasterPath;
+        string            error;
+        if ( GamePackDataUtil::tryMakeKindPath( packRoot, CoasterLayoutCatalog::kDataKind, coasterPath, error ) == false )
+        {
+            SW_LOG_ERROR_ID( "ParkLayout.CoasterLayoutsNoPath", "%#: the coaster layouts have no path - %#", layoutPath.c_str(), error.c_str() );
+            return false;
+        }
+        // 코스터 레이아웃은 공유 캐시의 한 벌이다 — 배치를 쓰는 쪽과 같은 객체를 읽고 배치가 쥔다.
+        shared_ptr<const CoasterLayoutCatalog> pLayouts = SharedAssetCache<CoasterLayoutCatalog>::acquire( coasterPath );
+        if ( pLayouts == nullptr )
+            return false;
+        if ( GameDataXML::loadFromFile( *this, &ParkLayout::loadRoot, *pLayouts, assetID, "ParkLayout" ) == false )
+            return false;
+        _pCoasterLayouts = std::move( pLayouts );
+        return true;
     }
 
     bool ParkLayout::loadFromXMLText( string_view xmlText, const CoasterLayoutCatalog& layouts, string_view sourceName )

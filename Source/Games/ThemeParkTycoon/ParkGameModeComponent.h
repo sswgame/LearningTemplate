@@ -117,8 +117,6 @@ namespace sw
         int32 findSelectedRideIndex() const;
 
     private:
-        PROPERTY( Category = "Data", DisplayName = "Coaster Layouts", AssetPath, Tooltip = "Coaster layout XML" )
-        string _coasterDataPath;
         PROPERTY( Category = "Data", DisplayName = "Park Layout", AssetPath, Tooltip = "Gate, cash and ride placement XML" )
         string _parkDataPath;
         PROPERTY( Category = "Prefabs" )

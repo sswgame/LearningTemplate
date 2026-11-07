@@ -83,8 +83,7 @@ namespace sw
 namespace sw
 {
     ParkGameModeComponent::ParkGameModeComponent()
-        : _coasterDataPath{}
-        , _parkDataPath{}
+        : _parkDataPath{}
         , _guestPrefab{}
         , _carFrontPrefab{}
         , _carPrefab{}
@@ -193,21 +192,18 @@ namespace sw
     // ------------------------------------------------------------------------------
     bool ParkGameModeComponent::startGame()
     {
-        ParkLayout layout;
-        _pLayoutCatalog = SharedAssetCache<CoasterLayoutCatalog>::acquire( _coasterDataPath );
-        if ( _pLayoutCatalog == nullptr )
-        {
-            SW_LOG_ERROR_ID( "ParkGameMode.CoasterCatalogCouldNot", "[Park] the coaster catalog '%#' could not be loaded - the park cannot open", _coasterDataPath.c_str() );
-            return false;
-        }
-        if ( layout.loadFromAsset( AssetID{ _parkDataPath }, *_pLayoutCatalog ) == false )
+        // 배치는 공유 캐시의 한 벌이다. 코스터 레이아웃은 배치가 같은 팩에서 받아 쥔 그 한 벌을 쓴다 — 게임 모드가 코스터 경로를 따로 적지 않는다(기준 하나).
+        const shared_ptr<const ParkLayout> pLayout = SharedAssetCache<ParkLayout>::acquire( _parkDataPath );
+        if ( pLayout == nullptr )
         {
             SW_LOG_ERROR_ID( "ParkGameMode.ParkLayoutCouldNot", "[Park] the park layout '%#' could not be loaded - the park cannot open", _parkDataPath.c_str() );
             return false;
         }
-        _settings._gatePosition = layout.getGatePosition();
-        _settings._entryFee     = layout.getEntryFee();
-        _startingCash           = layout.getStartingCash();
+        const ParkLayout& layout = *pLayout;
+        _pLayoutCatalog          = layout.getCoasterLayouts();
+        _settings._gatePosition  = layout.getGatePosition();
+        _settings._entryFee      = layout.getEntryFee();
+        _startingCash            = layout.getStartingCash();
         // 씬에 놓인 정문이 있으면 그 위치가 정문이다. 에디터에서 옮기면 손님 경로가 따라온다.
         GameObjectManager*    pManager   = getObjectManager();
         const GameObject*     pGate      = pManager != nullptr ? pManager->resolveGameObject( _gate ) : nullptr;

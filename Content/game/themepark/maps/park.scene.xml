@@ -420,7 +420,6 @@
 				<_listComponent>
 					<ParkGameModeComponent _componentName="ParkGameModeComponent"
 					                       _bActive="true"
-					                       _coasterDataPath="game/themepark/data/coasters.xml"
 					                       _parkDataPath="game/themepark/data/rides.xml"
 					                       _guestPrefab="game/themepark/prefabs/guest.prefab.xml"
 					                       _carFrontPrefab="game/themepark/prefabs/coastercarfront.prefab.xml"
