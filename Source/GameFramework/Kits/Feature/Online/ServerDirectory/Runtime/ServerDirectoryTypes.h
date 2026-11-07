@@ -16,22 +16,27 @@
 
 #include "GameFramework/Runtime/Online/Directory/ServerRecord.h"
 #include "GameFramework/Runtime/Online/Identity/AccountDirectory.h"
+#include "GameFramework/Runtime/Online/Service/OnlineProtocol.h"
 #include "GameFramework/Runtime/Online/Store/ServiceRecordUnknownFields.h"
 
 namespace sw
 {
-    /** @brief 서버 디렉터리 결과입니다. 배정 응답 본문과 변경 완료에 씁니다. */
+    /**
+     * @brief 서버 디렉터리 업무 결과입니다. 배정 응답 본문과 변경 완료에 씁니다.
+     * @details 공통 범주(규칙 밖 값 · 일시 장애)와 키트 오류(모르는 종류 `ServerDirectoryError::kUnknownKind`)는 여기 두지 않는다 — 로직은 `ServerDirectoryOutcome::fail` 로 낸다.
+     */
     ENUM( Count = Count )
     enum class ServerDirectoryResult : uint8
     {
         Ok = 0,
         NoServer,    ///< 받을 서버가 없다. 모두 가득 찼거나 닫혔거나 하트비트가 오래됐다
         Maintenance, ///< 점검 중이다. 끝 시각과 안내 문구 키를 함께 준다
-        Invalid,     ///< 모르는 종류이거나 규칙에 맞지 않는 값이다
-        Unavailable, ///< 변경할 때 저장소를 쓸 수 없다. 다시 하면 된다
         NotFound,    ///< 변경할 때 없는 공지나 점검이다
         Count
     };
+
+    /** @brief 서버 로직의 결과입니다. 업무 결과(`ServerDirectoryResult`) 또는 공통 범주 · 키트 오류(`OnlineError` · `ServerDirectoryError`)입니다. */
+    using ServerDirectoryOutcome = OnlineOutcome<ServerDirectoryResult>;
 
     /** @brief 상한 값들입니다. */
     struct ServerDirectoryLimit

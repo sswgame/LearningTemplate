@@ -149,7 +149,7 @@ namespace sw
         NetIdempotencyKey       _auditUnique;
         ServerDirectoryService* _pService;
         uint64                  _requestTag;
-        ServerDirectoryResult   _result;
+        ServerDirectoryOutcome  _result;
 
         ServerDirectoryWriteJob()
             : _auditEntry{}
@@ -159,7 +159,7 @@ namespace sw
             , _auditUnique{ NetIdempotencyKey::makeRandom() }
             , _pService{ nullptr }
             , _requestTag{ 0 }
-            , _result{ ServerDirectoryResult::Unavailable }
+            , _result{ ServerDirectoryOutcome::fail( OnlineError::kUnavailable ) }
         {
         }
 
@@ -181,7 +181,7 @@ namespace sw
                 transaction.put( _table, _key, _bytes, current._version );
             ServiceAuditLog::stageEntry( transaction, _auditEntry, _auditUnique._high, _auditUnique._low );
             const ServiceStoreResult commitResult = connection.commit( transaction );
-            _result                               = commitResult == ServiceStoreResult::Ok ? ServerDirectoryResult::Ok : ServerDirectoryResult::Unavailable; // Conflict 도 "다시 하라" 는 뜻으로 Unavailable 로 처리한다
+            _result                               = commitResult == ServiceStoreResult::Ok ? ServerDirectoryResult::Ok : ServerDirectoryOutcome::fail( OnlineError::kUnavailable ); // Conflict 도 "다시 하라" 는 뜻으로 Unavailable 로 처리한다
         }
 
         void complete() override { _pService->applyWrite( _requestTag, _result ); }
@@ -347,16 +347,20 @@ namespace sw
         return false;
     }
 
-    ServerAssignment ServerDirectoryService::assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs )
+    ServerDirectoryOutcome ServerDirectoryService::assignServer( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs, ServerAssignment& outAssignment )
+    {
+        outAssignment = ServerAssignment{};
+        if ( findReader( request._kind ) == nullptr || ServerRecord::isValidName( request._region ) == false )
+            return ServerDirectoryOutcome::fail( ServerDirectoryError::kUnknownKind );
+        outAssignment = pickAssignment( accountID, request, nowMs );
+        return outAssignment._result;
+    }
+
+    ServerAssignment ServerDirectoryService::pickAssignment( AccountID accountID, const ServerAssignmentRequest& request, UnixMilliseconds nowMs )
     {
         ServerAssignment      assignment;
         ServerRegistryReader* pReader = findReader( request._kind );
-        if ( pReader == nullptr || ServerRecord::isValidName( request._region ) == false )
-        {
-            assignment._result = ServerDirectoryResult::Invalid;
-            return assignment;
-        }
-        MaintenanceWindow window;
+        MaintenanceWindow     window;
         if ( isBlockedByMaintenance( request._kind, accountID, nowMs, &window ) )
         {
             assignment._result           = ServerDirectoryResult::Maintenance;
@@ -391,11 +395,11 @@ namespace sw
         return assignment;
     }
 
-    ServerDirectoryResult ServerDirectoryService::listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const
+    ServerDirectoryOutcome ServerDirectoryService::listServers( string_view kind, UnixMilliseconds nowMs, vector<ServerListEntry>& outListEntry ) const
     {
         const ServerRegistryReader* pReader = findReader( kind );
         if ( pReader == nullptr )
-            return ServerDirectoryResult::Invalid;
+            return ServerDirectoryOutcome::fail( ServerDirectoryError::kUnknownKind );
         for ( const ServerStatus& status : pReader->getSnapshot() )
         {
             const bool bStale      = nowMs.count() - status._heartbeatMs > _settings._staleMs;
@@ -430,13 +434,13 @@ namespace sw
         using Internal = ServerDirectoryServiceInternal;
         if ( Internal::isValidWindow( window ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
         if ( ServerDirectoryProtocol::encodeMaintenance( window, work->_bytes ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
         work->_table               = Internal::getMaintenanceTable();
@@ -455,7 +459,7 @@ namespace sw
         using Internal = ServerDirectoryServiceInternal;
         if ( scope != MaintenanceWindow::kScopeAll && ServerRecord::isValidName( scope ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
@@ -475,13 +479,13 @@ namespace sw
         using Internal = ServerDirectoryServiceInternal;
         if ( Internal::isValidNotice( notice ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } );
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } );
             return;
         }
         unique_ptr<ServerDirectoryWriteJob> work = make_unique<ServerDirectoryWriteJob>();
         if ( ServerDirectoryProtocol::encodeNotice( notice, work->_bytes ) == false )
         {
-            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryResult::Invalid } ); // 쓰기가 오류 로그를 남겼다
+            _completionBuffer.push( ServerDirectoryCompletion{ requestTag, ServerDirectoryOutcome::fail( OnlineError::kInvalidRequest ) } ); // 쓰기가 오류 로그를 남겼다
             return;
         }
         work->_table               = Internal::getNoticeTable();
@@ -541,7 +545,7 @@ namespace sw
             ServerDirectoryControlResult result = ServerDirectoryControlResult::Unavailable;
             if ( completion._result == ServerDirectoryResult::Ok )
                 result = ServerDirectoryControlResult::Ok;
-            else if ( completion._result == ServerDirectoryResult::Invalid )
+            else if ( completion._result.hasError( OnlineError::kInvalidRequest ) )
                 result = ServerDirectoryControlResult::Invalid;
             else if ( completion._result == ServerDirectoryResult::NotFound )
                 result = ServerDirectoryControlResult::NotFound;
@@ -556,7 +560,7 @@ namespace sw
         _dependencies._pStore->submit( std::move( work ) );
     }
 
-    void ServerDirectoryService::applyWrite( uint64 requestTag, ServerDirectoryResult result )
+    void ServerDirectoryService::applyWrite( uint64 requestTag, ServerDirectoryOutcome result )
     {
         --_pendingCount;
         _completionBuffer.push( ServerDirectoryCompletion{ requestTag, result } );

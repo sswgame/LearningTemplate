@@ -141,7 +141,17 @@ namespace
             }
         }
 
-        ServerDirectoryResult finishOne()
+        /** @brief 지금 시각으로 배정합니다. @p pOutAssignment 가 있으면 배정을 받습니다. */
+        ServerDirectoryOutcome assign( AccountID accountID, const ServerAssignmentRequest& request, ServerAssignment* pOutAssignment = nullptr )
+        {
+            ServerAssignment             assignment;
+            const ServerDirectoryOutcome outcome = _service.assignServer( accountID, request, UnixMilliseconds{ kNowMs }, assignment );
+            if ( pOutAssignment != nullptr )
+                *pOutAssignment = assignment;
+            return outcome;
+        }
+
+        ServerDirectoryOutcome finishOne()
         {
             pump();
             vector<ServerDirectoryCompletion> listCompletion;
@@ -150,13 +160,13 @@ namespace
             return listCompletion.empty() ? ServerDirectoryResult::Count : listCompletion.back()._result;
         }
 
-        ServerDirectoryResult setMaintenance( const MaintenanceWindow& window )
+        ServerDirectoryOutcome setMaintenance( const MaintenanceWindow& window )
         {
             _service.setMaintenance( window, 7, "memo", UnixMilliseconds{ kNowMs }, 1 );
             return finishOne();
         }
 
-        ServerDirectoryResult postNotice( const ServiceAnnouncement& notice )
+        ServerDirectoryOutcome postNotice( const ServiceAnnouncement& notice )
         {
             _service.postNotice( notice, 7, UnixMilliseconds{ kNowMs }, 1 );
             return finishOne();
@@ -179,12 +189,13 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AssignPicksRegisteredServer )
 {
     DirectoryServiceFixture rig;
     const UnixMilliseconds  nowMs{ kNowMs };
-    SW_EXPECT_TRUE( rig._service.assignServer( kPlayer, makeAssignment(), nowMs )._result == ServerDirectoryResult::NoServer );
-    SW_EXPECT_TRUE( rig._service.assignServer( kPlayer, makeAssignment( "unknown" ), nowMs )._result == ServerDirectoryResult::Invalid );
-    SW_EXPECT_TRUE( rig._service.assignServer( kPlayer, makeAssignment( "game", "KR!" ), nowMs )._result == ServerDirectoryResult::Invalid );
+    SW_EXPECT_TRUE( rig.assign( kPlayer, makeAssignment() ) == ServerDirectoryResult::NoServer );
+    SW_EXPECT_TRUE( rig.assign( kPlayer, makeAssignment( "unknown" ) ).hasError( ServerDirectoryError::kUnknownKind ) );
+    SW_EXPECT_TRUE( rig.assign( kPlayer, makeAssignment( "game", "KR!" ) ).hasError( ServerDirectoryError::kUnknownKind ) );
 
     rig.startServer();
-    const ServerAssignment assignment = rig._service.assignServer( kPlayer, makeAssignment(), nowMs );
+    ServerAssignment assignment;
+    SW_EXPECT_FALSE( rig.assign( kPlayer, makeAssignment(), &assignment ).isFailed() );
     SW_EXPECT_TRUE( assignment._result == ServerDirectoryResult::Ok );
     SW_EXPECT_EQUAL( kServerID, assignment._serverID );
     SW_EXPECT_EQUAL( string( "10.0.0.1" ), assignment._address );
@@ -198,7 +209,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, ListServersSkipsStale )
     rig.startServer( ServerState::Open, 25 );
 
     vector<ServerListEntry> listEntry;
-    SW_EXPECT_TRUE( rig._service.listServers( "unknown", UnixMilliseconds{ kNowMs }, listEntry ) == ServerDirectoryResult::Invalid );
+    SW_EXPECT_TRUE( rig._service.listServers( "unknown", UnixMilliseconds{ kNowMs }, listEntry ).hasError( ServerDirectoryError::kUnknownKind ) );
     SW_EXPECT_TRUE( rig._service.listServers( "game", UnixMilliseconds{ kNowMs }, listEntry ) == ServerDirectoryResult::Ok );
     SW_REQUIRE_EQUAL( size_t( 1 ), listEntry.size() );
     SW_EXPECT_EQUAL( uint8( 25 ), listEntry[0]._fillPercent );
@@ -217,10 +228,11 @@ SW_TEST_CASE( ServerDirectoryServiceTest, MaintenanceBlocksAssignment )
     const UnixMilliseconds nowMs{ kNowMs };
 
     SW_REQUIRE_TRUE( rig.setMaintenance( makeWindow() ) == ServerDirectoryResult::Ok );
-    SW_EXPECT_TRUE( rig._service.assignServer( kPlayer, makeAssignment(), nowMs )._result == ServerDirectoryResult::Ok ); // 아직 다시 읽기 전이다
+    SW_EXPECT_TRUE( rig.assign( kPlayer, makeAssignment() ) == ServerDirectoryResult::Ok ); // 아직 다시 읽기 전이다
     rig.tick( kNowMs );
 
-    const ServerAssignment blocked = rig._service.assignServer( kPlayer, makeAssignment(), nowMs );
+    ServerAssignment blocked;
+    SW_EXPECT_FALSE( rig.assign( kPlayer, makeAssignment(), &blocked ).isFailed() );
     SW_EXPECT_TRUE( blocked._result == ServerDirectoryResult::Maintenance );
     SW_EXPECT_EQUAL( kNowMs + 1000, blocked._maintenanceEndMs );
     SW_EXPECT_EQUAL( string( "maint.key" ), blocked._messageKey );
@@ -243,15 +255,15 @@ SW_TEST_CASE( ServerDirectoryServiceTest, AllowedAccountPassesMaintenance )
     DirectoryServiceFixture rig;
     rig.startServer( ServerState::Maintenance );
     const UnixMilliseconds nowMs{ kNowMs };
-    SW_EXPECT_TRUE( rig._service.assignServer( kTester, makeAssignment(), nowMs )._result == ServerDirectoryResult::NoServer ); // 점검이 걸리지 않았으면 점검 서버는 후보가 아니다
+    SW_EXPECT_TRUE( rig.assign( kTester, makeAssignment() ) == ServerDirectoryResult::NoServer ); // 점검이 걸리지 않았으면 점검 서버는 후보가 아니다
 
     MaintenanceWindow window = makeWindow( MaintenanceWindow::kScopeAll );
     window._listAllowedAccount.push_back( kTester );
     SW_REQUIRE_TRUE( rig.setMaintenance( window ) == ServerDirectoryResult::Ok );
     rig.tick( kNowMs );
 
-    SW_EXPECT_TRUE( rig._service.assignServer( kTester, makeAssignment(), nowMs )._result == ServerDirectoryResult::Ok );
-    SW_EXPECT_TRUE( rig._service.assignServer( kPlayer, makeAssignment(), nowMs )._result == ServerDirectoryResult::Maintenance );
+    SW_EXPECT_TRUE( rig.assign( kTester, makeAssignment() ) == ServerDirectoryResult::Ok );
+    SW_EXPECT_TRUE( rig.assign( kPlayer, makeAssignment() ) == ServerDirectoryResult::Maintenance );
 }
 
 /** @brief [ServerDirectoryServiceTest] 변경 규칙: 틀린 범위 · 뒤집힌 기간 · 빈 공지 · id 0 · 너무 큰 값은 Invalid 이고 저장소가 그대로다 */
@@ -260,19 +272,19 @@ SW_TEST_CASE( ServerDirectoryServiceTest, InvalidChangesTouchNothing )
     DirectoryServiceFixture rig;
     const uint64            hashBefore = rig._database.computeContentHash();
 
-    SW_EXPECT_TRUE( rig.setMaintenance( makeWindow( "Bad.Scope" ) ) == ServerDirectoryResult::Invalid );
-    SW_EXPECT_TRUE( rig.setMaintenance( makeWindow( "game", 10, 10 ) ) == ServerDirectoryResult::Invalid );
+    SW_EXPECT_TRUE( rig.setMaintenance( makeWindow( "Bad.Scope" ) ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.setMaintenance( makeWindow( "game", 10, 10 ) ).hasError( OnlineError::kInvalidRequest ) );
     MaintenanceWindow tooMany = makeWindow();
     tooMany._listAllowedAccount.assign( static_cast<size_t>( ServerDirectoryLimit::kMaxAllowedAccountCount ) + 1, kPlayer );
-    SW_EXPECT_TRUE( rig.setMaintenance( tooMany ) == ServerDirectoryResult::Invalid );
+    SW_EXPECT_TRUE( rig.setMaintenance( tooMany ).hasError( OnlineError::kInvalidRequest ) );
     rig._service.clearMaintenance( "Bad.Scope", 7, "memo", UnixMilliseconds{ kNowMs }, 1 );
-    SW_EXPECT_TRUE( rig.finishOne() == ServerDirectoryResult::Invalid );
+    SW_EXPECT_TRUE( rig.finishOne().hasError( OnlineError::kInvalidRequest ) );
 
-    SW_EXPECT_TRUE( rig.postNotice( makeNotice( 0 ) ) == ServerDirectoryResult::Invalid );
+    SW_EXPECT_TRUE( rig.postNotice( makeNotice( 0 ) ).hasError( OnlineError::kInvalidRequest ) );
     ServiceAnnouncement emptyText = makeNotice();
     emptyText._text.clear();
-    SW_EXPECT_TRUE( rig.postNotice( emptyText ) == ServerDirectoryResult::Invalid );
-    SW_EXPECT_TRUE( rig.postNotice( makeNotice( 1, 10, 5 ) ) == ServerDirectoryResult::Invalid );
+    SW_EXPECT_TRUE( rig.postNotice( emptyText ).hasError( OnlineError::kInvalidRequest ) );
+    SW_EXPECT_TRUE( rig.postNotice( makeNotice( 1, 10, 5 ) ).hasError( OnlineError::kInvalidRequest ) );
 
     SW_EXPECT_EQUAL( hashBefore, rig._database.computeContentHash() );
 }
@@ -306,7 +318,7 @@ SW_TEST_CASE( ServerDirectoryServiceTest, StoreFailuresKeepPreviousState )
     SW_REQUIRE_TRUE( rig._service.isBlockedByMaintenance( "game", kPlayer, nowMs ) );
 
     rig._database.armFault( ServiceStoreFault::RejectCommit );
-    SW_EXPECT_TRUE( rig.setMaintenance( makeWindow( "chat" ) ) == ServerDirectoryResult::Unavailable );
+    SW_EXPECT_TRUE( rig.setMaintenance( makeWindow( "chat" ) ).hasError( OnlineError::kUnavailable ) );
     rig.tick( kNowMs );
     SW_EXPECT_FALSE( rig._service.isBlockedByMaintenance( "chat", kPlayer, nowMs ) );
 

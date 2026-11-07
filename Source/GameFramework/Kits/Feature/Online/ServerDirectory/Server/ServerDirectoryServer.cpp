@@ -49,24 +49,14 @@ namespace sw
 
     void ServerDirectoryServer::handleCall( OnlineServerCall<ServerDirectoryMethod::AssignServer> call, const OnlineCallContext& context, const ServerAssignmentRequest& request )
     {
-        const ServerAssignment assignment = _pService->assignServer( context._accountID, request, context._nowMs );
-        if ( assignment._result == ServerDirectoryResult::Invalid )
-        {
-            (void)fail( call, ServerDirectoryError::kUnknownKind );
-            return;
-        }
-        (void)respond( call, assignment );
+        ServerAssignment assignment;
+        (void)finish( call, _pService->assignServer( context._accountID, request, context._nowMs, assignment ), assignment );
     }
 
     void ServerDirectoryServer::handleCall( OnlineServerCall<ServerDirectoryMethod::ListServers> call, const OnlineCallContext& context, const ServerListRequest& request )
     {
         ServerListReply listReply;
-        if ( _pService->listServers( request._kind, context._nowMs, listReply._listEntry ) != ServerDirectoryResult::Ok )
-        {
-            (void)fail( call, ServerDirectoryError::kUnknownKind );
-            return;
-        }
-        (void)respond( call, listReply );
+        (void)finish( call, _pService->listServers( request._kind, context._nowMs, listReply._listEntry ), listReply );
     }
 
     void ServerDirectoryServer::onServiceTick( OnlineServiceHost& host, UnixMilliseconds nowMs )
