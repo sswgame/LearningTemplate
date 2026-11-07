@@ -44,6 +44,8 @@ namespace sw
     /**
      * @class OnlineServerCallTable
      * @brief 응답을 기다리는 호출(토큰, 받은 시각, 메서드 번호)의 표입니다. 응답 타입을 모르며, 타입 있는 앞은 `OnlineProtocolService` 입니다.
+     * @details 호출 번호로 색인합니다(같은 프로세스 표 `OnlineLocalCallTable` 과 같은 모양). 완료는 `isOpen` + `take` 로 두 번 찾으므로 선형 표면 대기 수 P 에 O(P) 둘이다.
+     *          측정: `OnlineServerCallTableTest.CompletionCostByPending` · 지표 `service_store_pending_peak`.
      */
     class OnlineServerCallTable final : public ServiceServerCallTableBase
     {
@@ -59,7 +61,7 @@ namespace sw
         uint64 open( OnlineServiceHost& host, const NetRequestToken& token, int32 methodIndex )
         {
             const uint64 callID = allocateCallID();
-            _listCall.push_back( Call{ token, &host, callID, nowNanoseconds(), methodIndex } );
+            _mapCall.emplace( callID, Call{ token, &host, callID, nowNanoseconds(), methodIndex } );
             return callID;
         }
 
@@ -109,25 +111,17 @@ namespace sw
         /** @brief 종료 때 남은 호출을 응답 없이 버립니다. 남은 것이 있으면 오류(`ServiceServerCallTable.AbandonedCalls`)를 남깁니다. */
         void abandonAll()
         {
-            if ( _listCall.empty() )
+            if ( _mapCall.empty() )
                 return;
-            reportAbandoned( _listCall.size() );
-            _listCall.clear();
+            reportAbandoned( _mapCall.size() );
+            _mapCall.clear();
         }
 
         /** @brief 종료 때 남은 호출을 응답 없이 조용히 버립니다. 닫히는 연결의 답은 호스트도 버리는 조립이 씁니다. */
-        void clear() { _listCall.clear(); }
+        void clear() { _mapCall.clear(); }
 
         /** @brief @p callID 가 아직 응답을 기다리면 true 입니다. 로그를 남기지 않습니다. */
-        [[nodiscard]] bool isOpen( uint64 callID ) const
-        {
-            for ( const Call& call : _listCall )
-            {
-                if ( call._callID == callID )
-                    return true;
-            }
-            return false;
-        }
+        [[nodiscard]] bool isOpen( uint64 callID ) const { return _mapCall.find( callID ) != _mapCall.end(); }
 
         /** @brief 아직 응답을 기다리는 @p callID 의 메서드 번호(0부터, 열거자 순서)입니다. 없으면 -1 이고 로그를 남기지 않습니다. */
         [[nodiscard]] int32 findMethodIndex( uint64 callID ) const
@@ -141,10 +135,10 @@ namespace sw
         }
 
         /** @brief 기다리는 호출 수를 지표 `service_store_pending` 에 씁니다. 서비스가 틱마다 부릅니다. */
-        void publishPendingCount() { _metrics.setPendingStoreWorkCount( static_cast<int32>( _listCall.size() ) ); }
+        void publishPendingCount() { _metrics.setPendingStoreWorkCount( static_cast<int32>( _mapCall.size() ) ); }
 
-        int32 getCount() const { return static_cast<int32>( _listCall.size() ); }
-        bool  isEmpty() const { return _listCall.empty(); }
+        int32 getCount() const { return static_cast<int32>( _mapCall.size() ); }
+        bool  isEmpty() const { return _mapCall.empty(); }
 
     private:
         struct Call
@@ -158,20 +152,19 @@ namespace sw
 
         [[nodiscard]] bool take( uint64 callID, Call& outCall )
         {
-            for ( size_t callIndex = 0; callIndex < _listCall.size(); ++callIndex )
+            const auto callIt = _mapCall.find( callID );
+            if ( callIt == _mapCall.end() )
             {
-                if ( _listCall[callIndex]._callID != callID )
-                    continue;
-                outCall = _listCall[callIndex];
-                _listCall.erase( _listCall.begin() + static_cast<ptrdiff_t>( callIndex ) );
-                return true;
+                warnUnknownCall( callID );
+                return false;
             }
-            warnUnknownCall( callID );
-            return false;
+            outCall = callIt->second;
+            _mapCall.erase( callIt );
+            return true;
         }
 
     private:
-        vector<Call> _listCall{};
+        unordered_map<uint64, Call> _mapCall{};
     };
 } // namespace sw
 
