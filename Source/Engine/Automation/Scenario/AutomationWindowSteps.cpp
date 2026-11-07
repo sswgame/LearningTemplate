@@ -59,6 +59,29 @@ namespace sw
                 return false;
             }
 
+            static bool validateAppSuspend( const AutomationStep& step, string& outError )
+            {
+                AutomationAppSuspendParams params;
+                if ( step.readFields( params, outError ) == false )
+                    return false;
+                if ( params._ticks > 0 )
+                    return true;
+                outError = step.describe() + ": ticks must be above 0";
+                return false;
+            }
+
+            /** @brief 앱 멈춤을 흉내 냅니다. 메인 루프가 `ticks` 틱 동안 프레임을 돌지 않고 돌아온다(플랫폼 수명 이벤트와 같은 길). */
+            static bool runAppSuspend( AutomationStepContext& runner, const AutomationStep& step )
+            {
+                MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                if ( pWindow == nullptr )
+                    runner.recordFailure( step, "there is no window to suspend" );
+                else
+                    pWindow->simulateAppInterruption( step.readValidatedFields<AutomationAppSuspendParams>()._ticks );
+                return true;
+            }
+
             /** @brief 자기 창에 포커스 이벤트를 보냅니다. 창 시스템이 보낼 길이 없으면(Wayland) 시나리오를 건너뜀으로 끝냅니다. */
             static bool runFocusMessage( AutomationStepContext& runner, const AutomationStep& step, bool bFocused )
             {
@@ -348,6 +371,7 @@ namespace sw
 #endif
     }
 
+    SW_AUTOMATION_STEP( windowAppSuspend, "SimulateAppSuspend", &AutomationWindowStepsInternal::runAppSuspend, &AutomationWindowStepsInternal::validateAppSuspend, false );
     SW_AUTOMATION_STEP( windowMessage, "PostWindowMessage", &AutomationWindowStepsInternal::runMessage, &AutomationWindowStepsInternal::validateMessage, false );
     SW_AUTOMATION_STEP_DESKTOP( windowCursorClip, "ExpectCursorClip", &AutomationWindowStepsInternal::runClip, &AutomationWindowStepsInternal::validateClip, false );
     SW_AUTOMATION_STEP_DESKTOP( windowCapture, "CaptureWindow", &AutomationWindowStepsInternal::runCapture, &AutomationWindowStepsInternal::validateCapture, false );

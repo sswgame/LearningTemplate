@@ -53,6 +53,7 @@ namespace sw
         , _pUISystem{ nullptr }
         , _pFontService{ nullptr }
         , _mainWindowResizeSubscription{}
+        , _mainWindowLifecycleSubscription{}
     {
     }
 
@@ -73,11 +74,15 @@ namespace sw
         // 스왑체인은 주 창 크기를 따른다 — RHI 가 섰으면 주 창도 있다(RHI 가 만들어 넘긴 창이거나 호스트가 먼저 넘긴 창).
         const MainWindowSubsystem* const pMainWindow = _pRHI != nullptr ? engine::findSubsystem<MainWindowSubsystem>() : nullptr;
         if ( pMainWindow != nullptr && pMainWindow->getWindow() != nullptr )
-            _mainWindowResizeSubscription = pMainWindow->getWindow()->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &EngineRenderDriver::onMainWindowResize, this ) );
+        {
+            _mainWindowResizeSubscription    = pMainWindow->getWindow()->bindResizeCallback( SW_DELEGATE_METHOD( WindowResizeDelegate, &EngineRenderDriver::onMainWindowResize, this ) );
+            _mainWindowLifecycleSubscription = pMainWindow->getWindow()->bindLifecycleCallback( SW_DELEGATE_METHOD( WindowLifecycleDelegate, &EngineRenderDriver::onMainWindowLifecycle, this ) );
+        }
     }
 
     void EngineRenderDriver::onShutdownBegin()
     {
+        _mainWindowLifecycleSubscription.reset();
         _mainWindowResizeSubscription.reset(); // 창(MainWindow 단계가 파괴)과 RHI 보다 먼저 놓는다
     }
 
@@ -159,6 +164,12 @@ namespace sw
         if ( pScene != nullptr )
             pScene->pickActiveGameCamera();
         return bRestarted;
+    }
+
+    void EngineRenderDriver::onMainWindowLifecycle( const WindowLifecycleEvent event )
+    {
+        if ( event == WindowLifecycleEvent::SurfaceLost || event == WindowLifecycleEvent::AppSuspended )
+            flushSubmittedPackets();
     }
 
     void EngineRenderDriver::onMainWindowResize( const uint32 width, const uint32 height )

@@ -15,6 +15,8 @@
 
 namespace sw
 {
+    enum class WindowLifecycleEvent : uint8;
+
     class FontService;
     class FrameRenderer;
     class FrameRendererSubsystem;
@@ -69,6 +71,11 @@ namespace sw
          * @details 창 · RHI · 렌더 스레드를 모두 가진 쪽의 일이다(언리얼 `FSceneViewport::ResizeFrame` · Godot RenderingServer 와 같은 자리). 호스트는 모른다.
          */
         void onMainWindowResize( uint32 width, uint32 height );
+        /**
+         * @brief 주 창의 수명 이벤트입니다 — 표면이 사라지기 전에 렌더 스레드가 받은 패킷을 끝내게 합니다(창 스레드).
+         * @details shortcut: 스왑체인을 놓고 다시 만드는 일 · 오디오 멈춤은 빠져 있다. 표면이 실제로 사라지는 플랫폼(Android Vulkan)의 백엔드를 붙일 때 더한다.
+         */
+        void onMainWindowLifecycle( WindowLifecycleEvent event );
 
     private:
         SubsystemScope&         _startupScope;
@@ -83,5 +90,6 @@ namespace sw
         UISystem*               _pUISystem;                    ///< 캔버스를 패킷에 싣는다
         FontService*            _pFontService;                 ///< 캔버스가 글리프 캐시를 싣는다
         Subscription            _mainWindowResizeSubscription; ///< 주 창 크기 칸의 구독입니다(RHI 가 선 클라이언트만). `onShutdownBegin` 이 창보다 먼저 놓는다
+        Subscription            _mainWindowLifecycleSubscription;
     };
 } // namespace sw

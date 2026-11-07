@@ -76,6 +76,20 @@ namespace sw
                 return true;
             }
 
+            /** @brief 표면이 없거나 앱이 멈춘 동안 메시지를 보는 주기입니다(잠들어도 수명 이벤트를 곧 받는다). */
+            static constexpr int64 kPausedTickNanoseconds = 10 * 1000 * 1000;
+
+            /** @brief 감시 값 `Window.RenderPausedTicks` — 표면을 잃거나 앱이 멈춰 프레임을 돌지 않은 메인 루프 틱의 누적입니다. 주 창이 없으면(헤드리스) 값이 없습니다. */
+            [[nodiscard]] static bool readWindowRenderPausedTicks( const GameObjectManager* /*pManager*/, float64& outValue )
+            {
+                const MainWindowSubsystem* pWindowHost = engine::findSubsystem<MainWindowSubsystem>();
+                const IWindow*             pWindow     = pWindowHost != nullptr ? pWindowHost->getWindow() : nullptr;
+                if ( pWindow == nullptr )
+                    return false;
+                outValue = static_cast<float64>( pWindow->getRenderPausedTickCount() );
+                return true;
+            }
+
             /** @brief 감시 값 `Window.Minimized` — 주 창이 최소화돼 있으면 1 입니다(플랫폼 통보 기준). 주 창이 없으면(헤드리스) 값이 없습니다. */
             [[nodiscard]] static bool readWindowMinimized( const GameObjectManager* /*pManager*/, float64& outValue )
             {
@@ -99,6 +113,7 @@ namespace sw
     SW_AUTOMATION_WATCH( engineFramePacingState, "Engine.FramePacingState",
                          "App loop pacing this frame: 0 Foreground, 1 Background (gv_backgroundFrameRate), 2 Minimized, 3 Automation, 4 Server, 5 FullSpeed (gv_framePacing), 6 EditorIdle",
                          &AppInternal::readFramePacingState );
+    SW_AUTOMATION_WATCH( windowRenderPausedTicks, "Window.RenderPausedTicks", "Main loop ticks that ran no frame because the surface was lost or the app was suspended", &AppInternal::readWindowRenderPausedTicks );
     SW_AUTOMATION_WATCH( windowMinimized, "Window.Minimized", "1 while the main window is minimized (as the platform reported it)", &AppInternal::readWindowMinimized );
 } // namespace sw
 
@@ -115,9 +130,11 @@ namespace sw
         , _sceneViewCameraProvider{}
         , _configReloadedSubscription{}
         , _windowMessageSubscription{}
+        , _pFramePacer{ nullptr }
         , _initializeStartMicro{ 0 }
         , _bEnableEditor{ SW_FALSE }
         , _bQuitAfterInitialize{ SW_FALSE }
+        , _bRenderPaused{ SW_FALSE }
         , _reserved{ 0 }
     {
     }
@@ -537,12 +554,12 @@ namespace sw
         return true;
     }
 
-    void App::run()
+    bool App::beginMainLoop()
     {
         // 루프는 창이 있어야 돈다. 헤드리스 부팅(예: --cook-shaders)은 창을 만들지 않으므로 여기서 끝난다. 모드 플래그가 아니라
         // 실제 선행 조건으로 적는다.
         if ( _pWindow == nullptr || _bQuitAfterInitialize == SW_TRUE )
-            return;
+            return false;
 
         logMainLoopStart();
         _fixedTimestep.start();
@@ -552,14 +569,36 @@ namespace sw
         if ( pWindowHost == nullptr )
         {
             SW_LOG_ERROR_ID( "App.EngineScopeNoMainWindow2", "The engine scope has no MainWindow subsystem - the main loop cannot pace frames" );
-            return;
+            return false;
         }
-        FramePacer& framePacer = pWindowHost->getFramePacer();
-        while ( _pWindow->processMessages() )
+        _pFramePacer = &pWindowHost->getFramePacer();
+        return true;
+    }
+
+    bool App::tickMainLoop()
+    {
+        if ( _pWindow->processMessages() == false )
+            return false;
+        _pWindow->advanceLifecycleTick();
+        // 표면이 없거나 앱이 멈췄으면 프레임을 돌지 않는다 — 프로세스는 살아 있고 게임 시간은 멈춘다(Android onPause · 언리얼 `FAppEventManager` 가 넣는 자리). 메시지만 처리하며 기다린다.
+        if ( _pWindow->isRenderPaused() )
         {
-            if ( runFrame( framePacer ) == false )
-                break;
+            _bRenderPaused = SW_TRUE;
+            MonotonicClock::sleepUntilNanoseconds( MonotonicClock::nowNanoseconds() + AppInternal::kPausedTickNanoseconds );
+            return true;
         }
+        // 멈춘 동안 흐른 실제 시간을 한 프레임의 델타로 받지 않는다.
+        if ( _bRenderPaused == SW_TRUE )
+        {
+            _bRenderPaused = SW_FALSE;
+            _fixedTimestep.start();
+        }
+        return runFrame( *_pFramePacer );
+    }
+
+    void App::endMainLoop()
+    {
+        _pFramePacer = nullptr;
         // 창이 닫혀 끝났으면 자동화 시나리오가 그 결과를 종료 코드로 정한다(시나리오가 이미 끝냈으면 아무 일도 없다).
         _launch.getEngine().onWindowClosed();
     }

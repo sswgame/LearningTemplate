@@ -19,6 +19,19 @@ namespace sw
 
     class CommandLineManager;
 
+    /**
+     * @brief 표면 · 앱 수명 이벤트입니다. 데스크톱은 오지 않고, 모바일 · 웹의 플랫폼 창이 냅니다(`IWindow::notifyLifecycleEvent`).
+     * @details Android 는 `onPause` 에서 프로세스가 산 채 표면이 사라지고 브라우저도 탭을 숨기면 프레임이 멈춘다. 언리얼 `FAppEventManager`(기억) 자리다.
+     */
+    enum class WindowLifecycleEvent : uint8
+    {
+        SurfaceLost = 0, ///< 네이티브 표면이 사라진다. 이 통보가 돌아오면 더는 그 표면에 그리면 안 된다
+        SurfaceRestored, ///< 네이티브 표면이 다시 생겼다
+        AppSuspended,    ///< 앱이 배경으로 갔다
+        AppResumed,      ///< 앱이 앞으로 왔다
+    };
+
+    SW_DECLARE_DELEGATE( void, WindowLifecycleDelegate, WindowLifecycleEvent event );
     SW_DECLARE_DELEGATE( bool, WindowMessageHandlerDelegate, const NativeWindowEvent& event );
     SW_DECLARE_DELEGATE( void, WindowResizeDelegate, uint32 width, uint32 height );
     SW_DECLARE_DELEGATE( bool, WindowCloseQueryDelegate, void );
@@ -140,6 +153,22 @@ namespace sw
          * @details Wayland 는 클라이언트에 최소화를 알리지 않는다(xdg-shell 판 1) — 그 창에서는 늘 false 다.
          */
         [[nodiscard]] bool isMinimized() const { return _bMinimized == SW_TRUE; }
+        /** @brief 표면이 없거나 앱이 멈춰 프레임을 돌면 안 되는 때입니다. 최소화와 다르다 — 최소화는 프레임을 돌되 늦춘다(`FramePacer`). */
+        [[nodiscard]] bool isRenderPaused() const { return _bSurfaceLost == SW_TRUE || _bAppSuspended == SW_TRUE; }
+        /** @brief `isRenderPaused` 인 채 지난 메인 루프 틱의 누적입니다(`advanceLifecycleTick`). */
+        [[nodiscard]] uint32 getRenderPausedTickCount() const { return _renderPausedTickCount; }
+        /**
+         * @brief 플랫폼 창이 수명 이벤트를 받으면 부릅니다. 상태가 실제로 바뀔 때만 구독자에게 알립니다(같은 이벤트가 겹쳐 와도 한 번).
+         * @details 창 스레드(메인 스레드)에서 부른다. `SurfaceLost` 는 구독자가 돌아온 뒤에 표면이 사라진다.
+         */
+        void notifyLifecycleEvent( WindowLifecycleEvent event );
+        /** @brief 메인 루프가 틱마다 한 번 부릅니다. 멈춘 틱을 세고, 흉내 낸 멈춤(`simulateAppInterruption`)의 끝을 냅니다. */
+        void advanceLifecycleTick();
+        /**
+         * @brief 표면을 잃고 앱이 멈췄다가 @p tickCount 틱 뒤 돌아오는 순서를 흉내 냅니다. 플랫폼 이벤트가 없는 데스크톱에서 멈춤 경로를 시나리오로 태우는 입구입니다(`SimulateAppSuspend`).
+         * @details 멈춘 동안에는 시나리오 단계도 돌지 않으므로 끝나는 틱을 미리 받는다.
+         */
+        void simulateAppInterruption( uint32 tickCount );
         /**
          * @brief 이 프로세스가 입력 포커스를 가졌는지입니다(Win32 `WM_ACTIVATEAPP`, X11 `FocusIn` · `FocusOut`, Wayland 키보드 enter · leave).
          * @details 처음에는 false 다 — 활성화 통보가 와야 true 가 된다. Win32 는 창 하나가 아니라 앱 단위로 본다(에디터의 떠 있는 ImGui 창으로 옮겨도 배경이 아니다).
@@ -398,6 +427,8 @@ namespace sw
 
         /** @brief 창 크기가 바뀔 때 부를 콜백을 겁니다. */
         [[nodiscard]] Subscription bindResizeCallback( WindowResizeDelegate callback ) { return _onResize.bind( std::move( callback ) ); }
+        /** @brief 수명 이벤트 처리기를 겁니다(`notifyLifecycleEvent`). 엔진이 주 창에 건다. */
+        [[nodiscard]] Subscription bindLifecycleCallback( WindowLifecycleDelegate callback ) { return _onLifecycle.bind( std::move( callback ) ); }
 
         /** @brief 닫기 전에 불리는 처리기를 겁니다. false 를 반환하면 닫기를 보류합니다. */
         [[nodiscard]] Subscription bindCloseQueryHandler( WindowCloseQueryDelegate handler ) { return _closeQuery.bind( std::move( handler ) ); }
@@ -478,6 +509,7 @@ namespace sw
         DelegateSlot<WindowMessageHandlerDelegate>     _customHandler;
         DelegateSlot<WindowAccessibilityQueryDelegate> _accessibilityQuery;
         DelegateSlot<WindowResizeDelegate>             _onResize;
+        DelegateSlot<WindowLifecycleDelegate>          _onLifecycle;
         DelegateSlot<WindowCloseQueryDelegate>         _closeQuery;
         uint32                                         _width;
         uint32                                         _height;
@@ -492,7 +524,9 @@ namespace sw
         uint8                  _bVisibleRequested : 1; /**< 마지막 showWindow() 의 인자. 화면 상태가 아니라 **의도**. */
         uint8                  _bMinimized        : 1; /**< 창 이벤트가 알린 최소화 상태(`isMinimized`). */
         uint8                  _bFocused          : 1; /**< 창 이벤트가 알린 포커스 상태(`hasFocus`). */
-        [[maybe_unused]] uint8 _reserved          : 3;
+        uint8                  _bSurfaceLost      : 1; /**< 표면을 잃은 상태(`isRenderPaused`). */
+        uint8                  _bAppSuspended     : 1; /**< 앱이 멈춘 상태(`isRenderPaused`). */
+        [[maybe_unused]] uint8 _reserved          : 1;
         WindowDisplayMode      _displayMode;         /**< 마지막 `setDisplayMode` 가 고른 방식. */
         uint8                  _textInputClientMask; /**< 입력기를 원하는 쪽(`WindowTextInputClient` 비트). */
         uint8                  _arrReserved[5];
@@ -500,9 +534,11 @@ namespace sw
         /** @brief 다시 만들 때 놓을 위치입니다. 플랫폼 생성자가 자기 "알아서" 값으로 채웁니다. */
         int32  _restoreX;
         int32  _restoreY;
-        uint32 _minClientWidth;    /**< 사용자가 줄일 수 있는 가장 작은 클라이언트 가로(물리 픽셀)입니다. 0 이면 제한이 없습니다. */
-        uint32 _minClientHeight;   /**< 위와 같습니다(세로). */
-        uint32 _monitorGeneration; /**< `getMonitorGeneration` 의 값입니다. */
+        uint32 _minClientWidth;             /**< 사용자가 줄일 수 있는 가장 작은 클라이언트 가로(물리 픽셀)입니다. 0 이면 제한이 없습니다. */
+        uint32 _minClientHeight;            /**< 위와 같습니다(세로). */
+        uint32 _monitorGeneration;          /**< `getMonitorGeneration` 의 값입니다. */
+        uint32 _renderPausedTickCount;      /**< `getRenderPausedTickCount` 의 값입니다. */
+        uint32 _simulatedInterruptionTicks; /**< 흉내 낸 멈춤의 남은 틱입니다(`simulateAppInterruption`). 0 이면 흉내 내지 않습니다. */
 
     private:
     };

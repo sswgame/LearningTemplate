@@ -53,8 +53,15 @@ namespace sw
         [[nodiscard]] bool initialize( int32 argc, utf8* pArgv[] );
         /** @brief 모든 자원을 해제합니다. */
         void shutdown();
-        /** @brief 메인 루프입니다(할 일은 최소한만 합니다). */
-        void run();
+        /**
+         * @brief 메인 루프에 들어갈 준비를 합니다. 루프는 플랫폼 진입점이 돌린다(데스크톱은 `main` 의 `while`, 웹 · 모바일은 프레임 콜백).
+         * @return 돌 루프가 있으면 true 입니다. 헤드리스 부팅 · 한 번 하고 끝나는 작업은 false 이고 그때는 `tickMainLoop` · `endMainLoop` 를 부르지 않습니다.
+         */
+        [[nodiscard]] bool beginMainLoop();
+        /** @brief 창 메시지를 처리하고 한 프레임을 돕니다. 막지 않습니다. @return 루프를 끝낼 때면 false 입니다. */
+        [[nodiscard]] bool tickMainLoop();
+        /** @brief 루프가 끝났습니다. */
+        void endMainLoop();
         /** @brief `initialize` 가 false 를 돌려준 뒤의 프로세스 종료 코드입니다. 이 기계 · 빌드가 그 RHI 백엔드를 못 돌리면 `kRHIUnusableHereExitCode`, 그 밖은 -1 입니다. */
         int32 getInitFailureExitCode() const;
         /** @brief 루프가 끝난 뒤 돌려줄 종료 코드입니다(`Engine::requestQuit`. 요청이 없었으면 0). */
@@ -149,10 +156,13 @@ namespace sw
         Subscription _configReloadedSubscription;
         /** @brief 주 창의 메시지 처리기 칸 구독입니다(`bindHostCallbacks`). 창이 엔진 종료 때 파괴되면 무효가 된다. 크기 칸은 엔진이 쥔다(스왑체인). */
         Subscription _windowMessageSubscription;
+        /// @brief 메인 루프가 쓰는 페이서입니다(`beginMainLoop` 이 주 창 서비스에서 받는다). 루프 밖이면 nullptr 입니다.
+        FramePacer* _pFramePacer;
         /// @brief `initialize` 가 시작된 시각(마이크로초, `MonotonicClock`)입니다. 메인 루프에 들어갈 때 로그에 시작 시간을 찍습니다.
         int64                  _initializeStartMicro;
         uint8                  _bEnableEditor        : 1;
         uint8                  _bQuitAfterInitialize : 1; ///< 한 번 하고 끝나는 작업(`--render-portraits`)을 마쳤다. 루프에 들어가지 않는다.
-        [[maybe_unused]] uint8 _reserved             : 5;
+        uint8                  _bRenderPaused        : 1; ///< 지난 틱에 표면이 없거나 앱이 멈춰 프레임을 돌지 않았다. 다시 돌 때 시계를 새로 잡는다
+        [[maybe_unused]] uint8 _reserved             : 4;
     };
 } // namespace sw

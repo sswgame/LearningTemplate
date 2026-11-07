@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  엔진 시나리오 — 앱 멈춤: 표면을 잃고 앱이 멈췄다가(Android onPause 의 순서) 돌아온다. 데스크톱에는 이 이벤트가 없어 SimulateAppSuspend 로 같은 길을 태운다.
+  멈춘 동안 메인 루프가 프레임을 돌지 않았음을 Window.RenderPausedTicks 값으로 보고, 돌아온 뒤 프레임이 이어지는지(Wait 가 끝나는지) 본다.
+  실행: App -scenario=engine/automation/appsuspend.scenario.xml -unattended
+-->
+<Scenario name="engine.appsuspend" fixedDelta="0.0166667" timeoutFrames="600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Wait frames="10"/>
+	<Expect watch="Window.RenderPausedTicks" equals="0"/>
+	<SimulateAppSuspend ticks="5"/>
+	<Wait frames="10"/>
+	<Expect watch="Window.RenderPausedTicks" equals="5"/>
+	<ExpectLog id="App.QuitRequested" count="0"/>
+	<Pass/>
+</Scenario>

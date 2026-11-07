@@ -21,6 +21,7 @@ namespace sw
         , _customHandler{}
         , _accessibilityQuery{}
         , _onResize{}
+        , _onLifecycle{}
         , _closeQuery{}
         , _width{ 1280 }
         , _height{ 720 }
@@ -29,6 +30,8 @@ namespace sw
         , _bVisibleRequested{ SW_FALSE }
         , _bMinimized{ SW_FALSE }
         , _bFocused{ SW_FALSE }
+        , _bSurfaceLost{ SW_FALSE }
+        , _bAppSuspended{ SW_FALSE }
         , _reserved{ 0 }
         , _displayMode{ WindowDisplayMode::Windowed }
         , _textInputClientMask{ 0 }
@@ -39,7 +42,54 @@ namespace sw
         , _minClientWidth{ 0 }
         , _minClientHeight{ 0 }
         , _monitorGeneration{ 0 }
+        , _renderPausedTickCount{ 0 }
+        , _simulatedInterruptionTicks{ 0 }
     {
+    }
+
+    void IWindow::notifyLifecycleEvent( const WindowLifecycleEvent event )
+    {
+        const bool bWasLost      = _bSurfaceLost == SW_TRUE;
+        const bool bWasSuspended = _bAppSuspended == SW_TRUE;
+        switch ( event )
+        {
+            case WindowLifecycleEvent::SurfaceLost:
+                _bSurfaceLost = SW_TRUE;
+                break;
+            case WindowLifecycleEvent::SurfaceRestored:
+                _bSurfaceLost = SW_FALSE;
+                break;
+            case WindowLifecycleEvent::AppSuspended:
+                _bAppSuspended = SW_TRUE;
+                break;
+            case WindowLifecycleEvent::AppResumed:
+                _bAppSuspended = SW_FALSE;
+                break;
+        }
+        const bool bChanged = bWasLost != ( _bSurfaceLost == SW_TRUE ) || bWasSuspended != ( _bAppSuspended == SW_TRUE );
+        if ( bChanged && _onLifecycle.isBound() )
+            _onLifecycle.get()( event );
+    }
+
+    void IWindow::advanceLifecycleTick()
+    {
+        if ( isRenderPaused() )
+            ++_renderPausedTickCount;
+        if ( _simulatedInterruptionTicks == 0 )
+            return;
+        --_simulatedInterruptionTicks;
+        if ( _simulatedInterruptionTicks == 0 )
+        {
+            notifyLifecycleEvent( WindowLifecycleEvent::SurfaceRestored );
+            notifyLifecycleEvent( WindowLifecycleEvent::AppResumed );
+        }
+    }
+
+    void IWindow::simulateAppInterruption( const uint32 tickCount )
+    {
+        _simulatedInterruptionTicks = tickCount;
+        notifyLifecycleEvent( WindowLifecycleEvent::AppSuspended );
+        notifyLifecycleEvent( WindowLifecycleEvent::SurfaceLost );
     }
 
     bool IWindow::tryGetMonitors( vector<WindowMonitor>& outListMonitor ) const

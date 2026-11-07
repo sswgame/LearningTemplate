@@ -43,6 +43,16 @@ namespace sw
         AutomationWindowMessage _message{ AutomationWindowMessage::ActivateInactive };
     };
 
+    /** @brief `SimulateAppSuspend` 의 인자입니다. */
+    REFLECT()
+    struct SW_API AutomationAppSuspendParams
+    {
+        REFLECT_BODY();
+
+        PROPERTY( Required, Tooltip = "Main loop ticks the app stays suspended; the scenario does not run during them" )
+        uint32 _ticks{ 0 };
+    };
+
     /** @brief `ExpectCursorClip` 의 인자입니다. */
     REFLECT()
     struct SW_API AutomationCursorClipParams

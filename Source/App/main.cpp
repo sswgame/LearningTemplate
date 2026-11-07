@@ -23,7 +23,18 @@ int32 main( int32 argc, utf8* pArgv[] )
         return exitCode;
     }
 
-    app.run();
+    // 루프를 누가 돌리는지는 플랫폼의 일이다. 데스크톱은 프로세스가 돌리고, 웹(`emscripten_set_main_loop`) · Android(`android_main` 의 ALooper)는 그쪽 진입점이 같은 세 함수를 부른다(언리얼 `FEngineLoop::Tick` 과 같다, 기억).
+    if ( app.beginMainLoop() )
+    {
+#if defined( SW_PLATFORM_WINDOWS ) || defined( SW_PLATFORM_LINUX )
+        while ( app.tickMainLoop() )
+        {
+        }
+#else
+    #error "Unsupported platform"
+#endif
+        app.endMainLoop();
+    }
     // 종료 코드는 내리기 전에 읽는다(시나리오 결과 — `Engine::requestQuit`).
     const int32 exitCode = app.getExitCode();
     app.shutdown();
