@@ -5,6 +5,7 @@
 #include "Core/Container/VectorUtil.h"
 #include "Core/Log/Logger.h"
 #include "Core/Math/MathUtil.h"
+#include "Core/Memory/Memory.h"
 #include "Core/String/StringBuilder.h"
 
 #include "Editor/Common/Commands/Asset/EditorToolAssetCommands.h"
@@ -14,6 +15,7 @@
 
 #include "Engine/Localization/LocText.h"
 #include "Engine/Localization/TextFormatter.h"
+#include "Engine/TileMap/TileSetAsset.h"
 
 namespace sw::editor
 {
@@ -375,8 +377,8 @@ namespace sw::editor
         const string path = _tileSetBuffer.c_str();
         if ( path == _map._tileSetPath )
             return false;
-        TileSetAsset probe;
-        if ( path.empty() == false && probe.loadFromAsset( AssetID{ path } ) == false )
+        // 런타임과 같은 공유 캐시의 한 벌로 읽어 본다(쥐지 않는다).
+        if ( path.empty() == false && SharedAssetCache<TileSetAsset>::acquire( path ) == nullptr )
         {
             _status = SW_LOCKEYFORMAT( "EditorTileMap", "TileSetReadFailed", TextArgumentList().addText( "path", path ) );
             return false;
@@ -505,7 +507,13 @@ namespace sw::editor
         _tileSetBuffer = _map._tileSetPath.c_str();
         _tileSet       = TileSetAsset{};
         _brushIndex    = 0;
-        if ( _map._tileSetPath.empty() == false && _tileSet.loadFromAsset( AssetID{ _map._tileSetPath } ) == false )
+        if ( _map._tileSetPath.empty() )
+            return;
+        // 팔레트는 런타임과 같은 공유 캐시의 한 벌을 사본으로 받는다.
+        const shared_ptr<const TileSetAsset> pTileSet = SharedAssetCache<TileSetAsset>::acquire( _map._tileSetPath );
+        if ( pTileSet != nullptr )
+            _tileSet = *pTileSet;
+        else
             _status = SW_LOCKEYFORMAT( "EditorTileMap", "TileSetReadFailed", TextArgumentList().addText( "path", _map._tileSetPath ) );
     }
 

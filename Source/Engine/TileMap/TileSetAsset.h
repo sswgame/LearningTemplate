@@ -10,6 +10,7 @@
 #include "Core/Math/VectorMath.h"
 #include "Core/String/hashed_string.h"
 
+#include "Engine/Asset/Cache/SharedAssetCache.h"
 #include "Engine/Content/AssetID.h"
 #include "Engine/Reflection/ReflectionMacros.h"
 
@@ -143,6 +144,8 @@ namespace sw
      */
     class SW_API TileSetAsset
     {
+        friend struct AssetTypeLoader;
+
     public:
         /** @brief 이웃 여덟 셀의 (dx, dy) 입니다. y 는 아래로 자랍니다(맵의 행 순서). 규칙의 `_arrNeighbor` 순서입니다. */
         static constexpr int32 kNeighborOffset[8][2] = {
@@ -156,8 +159,6 @@ namespace sw
             { 1,  1},
         };
 
-        /** @brief 리소스 경로의 타일셋을 읽습니다. 실패하면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. */
-        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief XML 본문을 읽습니다. */
         [[nodiscard]] bool loadFromXMLText( string_view xmlText, string_view sourceName );
 
@@ -185,6 +186,8 @@ namespace sw
         const TileVisual* resolveVisual( const vector<uint16>& listBrushIndex, int32 width, int32 height, int32 x, int32 y ) const;
 
     private:
+        /** @brief 리소스 경로의 타일셋을 읽습니다. 실패하면 오류를 남기고 false 이며 내용은 바뀌지 않습니다. 종류의 로더(공유 캐시)만 부른다 — 쓰는 쪽은 `SharedAssetCache<TileSetAsset>::acquire` 로 한 벌을 쥔다. */
+        [[nodiscard]] bool loadFromAsset( const AssetID& assetID );
         /** @brief 노드의 `cell` 또는 `frames` 와 `fps` 를 읽습니다. 둘 다 없으면 @p bRequired 일 때 오류입니다. */
         [[nodiscard]] bool parseVisual( const XMLNode& node, string_view sourceName, bool bRequired, TileVisual& outVisual ) const;
         /** @brief `<Tile>` 또는 `<RuleTile>` 하나를 읽습니다(이름이 겹치는지 이 타일셋의 지금 브러시와 견준다). 잘못되었으면 오류를 남기고 false 입니다. */
@@ -198,4 +201,11 @@ namespace sw
         int32             _columnCount{ 1 };
         int32             _rowCount{ 1 };
     };
+
+    /**
+     * @brief 타일셋을 경로마다 한 벌 나눠 줍니다("TileSetAsset", 인스턴스화는 `TileSetAsset.cpp`).
+     * @details 다시 읽기는 떼어 낸다(`Detach`) — 쥔 쪽은 칸마다 브러시 번호를 지어 두므로 브러시 목록이 제자리에서 바뀌면 번호가 어긋난다.
+     *          쥔 쪽(`TileMapRendererComponent`)은 다시 읽은 횟수가 바뀌면 새 객체를 받아 번호 · 배치를 다시 짓는다(유니티 Tile Palette · Godot TileSet 리소스 한 벌, 기억에 의존).
+     */
+    extern template class SW_API_EXTERN_TEMPLATE SharedAssetCache<TileSetAsset>;
 } // namespace sw

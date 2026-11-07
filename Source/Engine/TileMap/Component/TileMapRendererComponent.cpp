@@ -29,7 +29,7 @@ namespace sw
         , _colliderLayer{ 0 }
         , _bGenerateColliders{ true }
         , _map{}
-        , _tileSet{}
+        , _pTileSet{}
         , _chunkGrid{}
         , _listBrushIndex{}
         , _listAnimatedFlag{}
@@ -41,6 +41,7 @@ namespace sw
         , _lastOwnerWorld{ float4x4::Identity }
         , _pLastOwnerRoot{ nullptr }
         , _lastOwnerVersion{ 0 }
+        , _seenTileSetReloadCount{ 0 }
         , _elapsedSeconds{ 0.0f }
         , _bLoaded{ SW_FALSE }
         , _bChunkBuildQueued{ SW_FALSE }
@@ -86,6 +87,19 @@ namespace sw
 
     void TileMapRendererComponent::onTick( float32 deltaTime )
     {
+        // 타일셋을 다시 읽었으면(핫 리로드 — 떼어 낸 새 객체) 칠한 맵은 그대로 두고 새 타일셋으로 번호 · 배치를 다시 짓는다.
+        if ( _pTileSet != nullptr && _seenTileSetReloadCount != SharedAssetCache<TileSetAsset>::getReloadCount() )
+        {
+            _seenTileSetReloadCount                  = SharedAssetCache<TileSetAsset>::getReloadCount();
+            shared_ptr<const TileSetAsset> pReloaded = SharedAssetCache<TileSetAsset>::acquire( _map._tileSetPath );
+            if ( pReloaded != nullptr && pReloaded != _pTileSet )
+            {
+                const TileMapXMLData map = _map;
+                setTileMapData( map, std::move( pReloaded ) );
+                if ( _bLoaded == SW_TRUE )
+                    (void)rebuild();
+            }
+        }
         if ( _listChunkBatch.empty() )
             return;
         _elapsedSeconds += deltaTime;
@@ -123,18 +137,29 @@ namespace sw
             SW_LOG_ERROR_ID( "TileMapRenderer.TileMapNoTile", "Tile map '%#' has no tile layer (<tileLayer tileSet=...>)", _tileMapPath.c_str() );
             return false;
         }
-        TileSetAsset tileSet;
-        if ( tileSet.loadFromAsset( AssetID{ map._tileSetPath } ) == false )
+        // 타일셋은 공유 캐시의 한 벌이다 — 같은 타일셋을 쓰는 맵이 파일을 다시 읽지 않는다.
+        _seenTileSetReloadCount                 = SharedAssetCache<TileSetAsset>::getReloadCount();
+        shared_ptr<const TileSetAsset> pTileSet = SharedAssetCache<TileSetAsset>::acquire( map._tileSetPath );
+        if ( pTileSet == nullptr )
             return false;
-        setTileMapData( map, tileSet );
+        setTileMapData( map, std::move( pTileSet ) );
         return _bLoaded == SW_TRUE;
     }
 
-    void TileMapRendererComponent::setTileMapData( const TileMapXMLData& map, const TileSetAsset& tileSet )
+    const TileSetAsset& TileMapRendererComponent::getTileSet() const
     {
-        _map               = map;
-        _tileSet           = tileSet;
-        _bLoaded           = SW_FALSE;
+        // 읽기 전의 상태는 빈 타일셋으로 읽는다 — 값을 지어내는 대체가 아니라 "그릴 브러시 없음" 이다.
+        static const TileSetAsset s_noTileSet{};
+        return _pTileSet != nullptr ? *_pTileSet : s_noTileSet;
+    }
+
+    void TileMapRendererComponent::setTileMapData( const TileMapXMLData& map, shared_ptr<const TileSetAsset> pTileSet )
+    {
+        _map      = map;
+        _pTileSet = std::move( pTileSet );
+        _bLoaded  = SW_FALSE;
+        if ( _pTileSet == nullptr )
+            return;
         const size_t count = static_cast<size_t>( _map._width ) * static_cast<size_t>( _map._height );
         if ( count == 0 || count > kMaxCellCount )
         {
@@ -142,7 +167,7 @@ namespace sw
             return;
         }
         // 팔레트의 이름은 타일셋에 있어야 한다 — 모르는 이름은 데이터 오류다(그 칸은 비운다).
-        if ( _map.mapTileCells( _tileSet, _listBrushIndex ) == false )
+        if ( _map.mapTileCells( getTileSet(), _listBrushIndex ) == false )
             SW_LOG_ERROR_ID( "TileMapRenderer.TileMapPaintsBrush", "Tile map '%#' paints a brush that tile set '%#' does not have - those cells are empty", _map._name, _map._tileSetPath );
         _chunkGrid = TileChunkGrid::make( _map._width, _map._height, kChunkSize );
         _listAnimatedFlag.assign( count, 0 );
@@ -246,7 +271,7 @@ namespace sw
         batch->setOwnerComponent( this );
         // 칸이 비면 엔진 기본 타일맵 머티리얼(픽셀 아트 스프라이트)이다(값의 기준은 엔진 기본 에셋 표).
         const string& materialPath = _materialPath.empty() ? engine::getSubsystem<EngineDefaultAssets>()._tileMapMaterial.get() : _materialPath;
-        if ( batch->initialize( *pManager, _tileSet.getAtlasPath(), count, materialPath, _tileSet.getNormalAtlasPath() ) == false )
+        if ( batch->initialize( *pManager, getTileSet().getAtlasPath(), count, materialPath, getTileSet().getNormalAtlasPath() ) == false )
             return false;
         pBatch = std::move( batch );
         return true;
@@ -305,7 +330,7 @@ namespace sw
         uint16 value = 0;
         if ( brushName.empty() == false )
         {
-            const int32 brush = _tileSet.findBrush( hashed_string( brushName ) );
+            const int32 brush = getTileSet().findBrush( hashed_string( brushName ) );
             if ( brush < 0 )
             {
                 SW_LOG_ERROR_ID( "TileMapRenderer.TileSetNoBrush", "Tile set '%#' has no brush '%#'", _map._tileSetPath, brushName );
@@ -336,13 +361,13 @@ namespace sw
 
     int32 TileMapRendererComponent::getDisplayedCell( int32 x, int32 y ) const
     {
-        const TileVisual* pVisual = _tileSet.resolveVisual( _listBrushIndex, _map._width, _map._height, x, y );
+        const TileVisual* pVisual = getTileSet().resolveVisual( _listBrushIndex, _map._width, _map._height, x, y );
         return ( pVisual != nullptr ) ? pVisual->computeCellAt( _elapsedSeconds ) : -1;
     }
 
     float3 TileMapRendererComponent::computeCellCenter( int32 x, int32 y ) const
     {
-        const float32 size = _tileSet.getTileSize();
+        const float32 size = getTileSet().getTileSize();
         const float3  local{ ( static_cast<float32>( x ) + 0.5f ) * size, -( static_cast<float32>( y ) + 0.5f ) * size, 0.0f };
         return float3::transform( local, getOwnerWorld() );
     }
@@ -351,7 +376,7 @@ namespace sw
     {
         outListSegment.clear();
         outListOutward.clear();
-        const float32  size  = _tileSet.getTileSize();
+        const float32  size  = getTileSet().getTileSize();
         const float4x4 world = getOwnerWorld();
         for ( const TileEdge& edge : _listOutlineEdge )
         {
@@ -366,7 +391,7 @@ namespace sw
     void TileMapRendererComponent::computeNavCosts( vector<uint8>& outListCost ) const
     {
         constexpr uint8 kEmptyCost = 10;
-        TileGridUtil::makeNavCosts( _tileSet, _listBrushIndex, kEmptyCost, outListCost );
+        TileGridUtil::makeNavCosts( getTileSet(), _listBrushIndex, kEmptyCost, outListCost );
     }
 
     void TileMapRendererComponent::setSorting( const hashed_string& layerName, int32 orderInLayer )
@@ -385,7 +410,7 @@ namespace sw
         const int32                      chunkIndex = _chunkGrid.computeChunkIndex( x, y );
         unique_ptr<SpriteInstanceBatch>& pBatch     = _listChunkBatch[static_cast<size_t>( chunkIndex )];
         const uint32                     entry      = _chunkGrid.computeEntryIndex( x, y );
-        const TileVisual*                pVisual    = _tileSet.resolveVisual( _listBrushIndex, _map._width, _map._height, x, y );
+        const TileVisual*                pVisual    = getTileSet().resolveVisual( _listBrushIndex, _map._width, _map._height, x, y );
         const bool                       bVisible   = pVisual != nullptr && pVisual->_listFrameCell.empty() == false;
         if ( bVisible == false )
         {
@@ -436,17 +461,17 @@ namespace sw
             _listAnimatedFlag[cellIndex] = 1;
             _listAnimatedCell.push_back( static_cast<uint32>( cellIndex ) );
         }
-        const float32  size = _tileSet.getTileSize();
+        const float32  size = getTileSet().getTileSize();
         const float3   local{ ( static_cast<float32>( x ) + 0.5f ) * size, -( static_cast<float32>( y ) + 0.5f ) * size, 0.0f };
         const float4x4 world = SpriteInstanceBatch::makeQuadWorld( local, size, size ) * _lastOwnerWorld;
-        const float4   uv    = _tileSet.computeCellUvRect( pVisual->computeCellAt( _elapsedSeconds ) );
+        const float4   uv    = getTileSet().computeCellUvRect( pVisual->computeCellAt( _elapsedSeconds ) );
         pBatch->setEntry( entry, world, uv, float4{ 1.0f, 1.0f, 1.0f, 1.0f } );
     }
 
     void TileMapRendererComponent::refreshCollision()
     {
         vector<uint8> listSolid;
-        TileGridUtil::makeSolidMask( _tileSet, _listBrushIndex, listSolid );
+        TileGridUtil::makeSolidMask( getTileSet(), _listBrushIndex, listSolid );
         TileGridUtil::mergeSolidRectangles( listSolid, _map._width, _map._height, _listSolidRect );
         TileGridUtil::traceSolidOutline( listSolid, _map._width, _map._height, _listOutlineEdge );
 
@@ -459,7 +484,7 @@ namespace sw
         IPhysicsScene2D* pScene = pManager->getSubsystem<sw::ScenePhysics>().getScene2D();
         if ( pScene == nullptr )
             return;
-        const float32  size  = _tileSet.getTileSize();
+        const float32  size  = getTileSet().getTileSize();
         const float4x4 world = getOwnerWorld();
         for ( const TileRect& rect : _listSolidRect )
         {

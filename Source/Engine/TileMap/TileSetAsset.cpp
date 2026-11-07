@@ -5,6 +5,7 @@
 #include "Core/Container/StringUtil.h"
 #include "Core/Math/MathUtil.h"
 
+#include "Engine/Asset/Cache/SharedAssetCacheDefinition.h"
 #include "Engine/Content/AssetIO.h"
 #include "Engine/Serialization/XML/XMLDocument.h"
 #include "Engine/Serialization/XML/XMLFields.h"
@@ -293,4 +294,10 @@ namespace sw
         }
         return &brush._defaultVisual;
     }
+} // namespace sw
+
+namespace sw
+{
+    /** 파일 규칙 없이 공유 캐시로만 찾는 종류다. 칸마다 지은 브러시 번호를 지키려 다시 읽기는 떼어 낸다(`Detach`). */
+    SW_SHARED_ASSET_CACHE( TileSetAsset, TileSetAsset, AssetTypeDef::makeCacheOnly( "TileSetAsset", AssetTypeLoader::of<TileSetAsset>( MemoryTag::Asset, SharedAssetReloadMode::Detach ) ) );
 } // namespace sw

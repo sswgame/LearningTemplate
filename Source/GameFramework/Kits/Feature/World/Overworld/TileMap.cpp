@@ -3,6 +3,7 @@
 #include "GameFramework/Kits/Feature/World/Overworld/TileMap.h"
 
 #include "Core/Container/VectorUtil.h"
+#include "Core/Memory/Memory.h"
 
 #include "Engine/TileMap/TileGridUtil.h"
 #include "Engine/TileMap/TileSetAsset.h"
@@ -31,10 +32,11 @@ namespace sw
             rebuildWarpIndex();
             return true;
         }
-        TileSetAsset tileSet;
-        if ( tileSet.loadFromAsset( AssetID{ xmlData._tileSetPath } ) == false )
+        // 타일셋은 그리는 쪽(`TileMapRendererComponent`)과 같은 공유 캐시의 한 벌이다. 충돌 칸만 만들고 쥐지 않는다.
+        const shared_ptr<const TileSetAsset> pTileSet = SharedAssetCache<TileSetAsset>::acquire( xmlData._tileSetPath );
+        if ( pTileSet == nullptr )
             return false;
-        return assign( xmlData, tileSet );
+        return assign( xmlData, *pTileSet );
     }
 
     bool TileMap::assign( const TileMapXMLData& data, const TileSetAsset& tileSet )
