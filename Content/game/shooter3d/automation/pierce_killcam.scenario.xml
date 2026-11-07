@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Shooter3D 관통 킬캠(S5) — 자동 플레이가 관통탄(piercing_round, 관통 2 · 피해 60)으로 적을 쓰러뜨리면 사격이 판정한 명중을 아레나의 Killcam 이 기록한다(다시 판정하지 않는다).
+  ① 쓰러뜨린 발이 기록된다(Killcam.ShotCount ≥ 1). ② killcam.play 가 마지막 쓰러뜨린 발을 재생한다 — 화면이 Killcam 카메라로 바뀌고 탄을 따라가다(Phase 0) 명중에서 멈춘다(Phase 1).
+  ③ 연출 길이(최대 4 초)가 지나면 게임 카메라로 돌아간다(Killcam.Playing 0). 앞 적 뒤에 다른 적이 줄 서 있으면 명중이 둘 이상이다(Killcam.LastHitCount — 자동 플레이의 각도라 보장하지 않아 1 이상만 본다;
+  관통 다중 명중의 순서 · 시간표는 단위 테스트 KillcamTest 가 본다). 사진 둘(따라가기 · 클로즈업)은 서로만 견준다(골든 없음).
+  실행: App -scenario=game/shooter3d/automation/pierce_killcam.scenario.xml -unattended (체인: ctest -R Scenario.shooter3d)
+-->
+<Scenario name="game.shooter3d.pierce_killcam" fixedDelta="0.0166667" timeoutFrames="3600" startAfter="ScenePlaying" startTimeoutFrames="900" input="exclusive">
+	<Variable name="gv_shooterAutoPlay" value="1"/>
+	<Wait frames="10"/>
+	<DevCommand line="cheat.shooter.projectile piercing_round"/>
+	<Wait frames="1"/>
+	<Expect watch="Shooter3D.ShotDamage" equals="60"/>
+	<Expect watch="Killcam.ShotCount" equals="0"/>
+	<WaitUntil watch="Killcam.ShotCount" atLeast="1" timeoutSeconds="30"/>
+	<Expect watch="Killcam.LastHitCount" atLeast="1"/>
+	<Variable name="gv_shooterAutoPlay" value="0"/>
+	<Wait frames="2"/>
+	<DevCommand line="killcam.play"/>
+	<WaitUntil watch="Killcam.Playing" equals="1" timeoutFrames="10"/>
+	<WaitUntil watch="Camera.FrameObject" is="Killcam" timeoutFrames="10"/>
+	<Expect watch="Killcam.Phase" equals="0"/>
+	<Screenshot file="pierce_killcam_follow.ppm" waitForSettle="false"/>
+	<WaitUntil watch="Killcam.Phase" equals="1" timeoutSeconds="4"/>
+	<Wait frames="6"/>
+	<Screenshot file="pierce_killcam_hold.ppm" waitForSettle="false"/>
+	<WaitUntil watch="Killcam.Playing" equals="0" timeoutSeconds="5"/>
+	<Wait frames="2"/>
+	<ExpectImagesDiffer first="pierce_killcam_follow.ppm" second="pierce_killcam_hold.ppm" minDiffering="0.05"/>
+	<Pass/>
+</Scenario>

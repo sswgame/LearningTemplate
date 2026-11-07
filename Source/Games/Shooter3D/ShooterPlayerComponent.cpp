@@ -25,6 +25,7 @@
 #include "Engine/Telemetry/TelemetryService.h"
 
 #include "GameFramework/Runtime/Character/Camera/CameraDirectorComponent.h"
+#include "GameFramework/Runtime/Character/Combat/Killcam/KillcamComponent.h"
 #include "GameFramework/Runtime/Character/Combat/Projectile/ProjectileDef.h"
 #include "GameFramework/Runtime/Character/Control/Controller/AIControllerComponent.h"
 #include "GameFramework/Runtime/Character/Control/Controller/PlayerControllerComponent.h"
@@ -695,6 +696,7 @@ namespace sw
             pending._coverDistance = traceCover( gameMode, ray );
             pending._range         = loaded._range;
             pending._damage        = loaded._damage;
+            pending._pierceCount   = loaded._pierceCount;
             pending._volley        = _shotCount;
             pending._bHasMuzzle    = bHasMuzzle;
             _listPendingShot.push_back( pending );
@@ -735,6 +737,7 @@ namespace sw
         ShooterNetPawnComponent* pNetPawn   = pOwner != nullptr ? pOwner->getComponent<ShooterNetPawnComponent>() : nullptr;
         const bool               bRewound   = pNetPawn != nullptr && pNetPawn->isServer();
         const bool               bPredicted = pNetPawn != nullptr && pNetPawn->isClient();
+        KillcamComponent*        pKillcam   = KillcamComponent::findInScene( manager ); // 씬에 킬캠이 없으면 기록하지 않는다
         size_t                   shotHead   = 0;
         while ( shotHead < _listPendingShot.size() )
         {
@@ -744,38 +747,76 @@ namespace sw
             bool         bHitCover = false;
             for ( ; shotHead < _listPendingShot.size() && _listPendingShot[shotHead]._volley == volley; ++shotHead )
             {
-                const PendingShot&     shot        = _listPendingShot[shotHead];
-                const ProjectileDef*   pProjectile = pProjectiles != nullptr ? pProjectiles->find( shot._projectileID ) : nullptr;
-                float32                distance    = shot._coverDistance;
-                bool                   bHitBody    = false;
-                CharacterRayHit        rayHit;
-                const bool             bRayHit = bHasMask && ( bRewound ? pNetPawn->raycastRewound( manager, shot._ray, shot._coverDistance, hitboxMask, ownerID, rayHit )
-                                                                        : CharacterRayHit::raycast3D( manager, shot._ray._origin, shot._ray._direction, shot._coverDistance, hitboxMask, ownerID, rayHit ) );
-                ShooterEnemyComponent* pEnemy  = bRayHit && rayHit._pObject != nullptr ? rayHit._pObject->getComponent<ShooterEnemyComponent>() : nullptr;
-                if ( pEnemy != nullptr && bPredicted )
+                const PendingShot&   shot        = _listPendingShot[shotHead];
+                const ProjectileDef* pProjectile = pProjectiles != nullptr ? pProjectiles->find( shot._projectileID ) : nullptr;
+                float32              distance    = shot._coverDistance;
+                bool                 bHitBody    = false;
+                // 관통: 맞은 적 바로 뒤에서 남은 선분을 다시 묻는다(언리얼 SweepMulti 처럼 한 발의 명중을 차례로 모은다). 관통 수가 다하면 그 몸에서 멈추고,
+                // 더 맞을 적이 없으면 상자 · 바닥 · 사거리까지 간다. 명중은 킬캠 기록(판정 결과)으로도 남는다 — 연출은 다시 판정하지 않는다.
+                KillcamShot record;
+                record.begin( shot._ray._origin, shot._ray._direction, static_cast<float64>( _shotCount ) );
+                Ray     segment     = shot._ray;
+                float32 travelled   = 0.0f;
+                uint64  ignoreID    = ownerID;
+                int32   piercesLeft = shot._pierceCount;
+                bool    bPierced    = false;
+                for ( ;; )
                 {
-                    distance = rayHit._distance;
-                    bHitBody = true;
-                }
-                else if ( pEnemy != nullptr )
-                {
-                    // 쓰러진 적(래그돌)도 맞고 밀린다 — 맞음 수 · 맞음 표시는 산 적만 센다.
-                    const bool    bAlive = pEnemy->isAlive();
-                    const HitInfo hit    = CharacterRayHit::makeHitInfo( rayHit, pOwner, shot._ray._direction, shot._damage, _shotImpulse );
-                    CharacterRayHit::deliverHit( *rayHit._pObject, hit );
-                    distance = rayHit._distance;
-                    bHitBody = true;
-                    bAnyHit  = bAnyHit || bAlive;
-                    // 탄의 맞음 동작은 맞은 적의 태그 문맥으로 부른다(상태 이상 · 표시 같은 탄 고유 반응).
-                    const GameObject* pEnemyObject = pEnemy->getOwner();
-                    if ( pProjectile != nullptr && pEnemyObject != nullptr && pProjectile->_listHitAction.empty() == false )
+                    CharacterRayHit rayHit;
+                    const float32   maxDistance = shot._coverDistance - travelled;
+                    const bool      bRayHit     = bHasMask && maxDistance > 0.0f &&
+                                         ( bRewound ? pNetPawn->raycastRewound( manager, segment, maxDistance, hitboxMask, ignoreID, rayHit )
+                                                    : CharacterRayHit::raycast3D( manager, segment._origin, segment._direction, maxDistance, hitboxMask, ignoreID, rayHit ) );
+                    ShooterEnemyComponent* pEnemy = bRayHit && rayHit._pObject != nullptr ? rayHit._pObject->getComponent<ShooterEnemyComponent>() : nullptr;
+                    if ( pEnemy == nullptr )
                     {
-                        ActionContext context;
-                        context._world.set<SubjectTagsSlot>( &pEnemyObject->getTags() );
-                        context._pOwner = this;
-                        ProjectileDef::runHitActions( pProjectile->_listHitAction, context );
+                        if ( bPierced )
+                        {
+                            // 꿰뚫은 뒤 더 맞을 적이 없다 — 탄은 막는 것까지 간다.
+                            distance = shot._coverDistance;
+                            bHitBody = false;
+                        }
+                        break;
                     }
+                    const float32 hitDistance = travelled + rayHit._distance;
+                    distance                  = hitDistance;
+                    bHitBody                  = true;
+                    KillcamHit killcamHit;
+                    killcamHit._position = rayHit._point;
+                    killcamHit._target   = rayHit._pObject->getHandle();
+                    killcamHit._distance = hitDistance;
+                    if ( bPredicted == false )
+                    {
+                        // 쓰러진 적(래그돌)도 맞고 밀린다 — 맞음 수 · 맞음 표시는 산 적만 센다.
+                        const bool    bAlive = pEnemy->isAlive();
+                        const HitInfo hit    = CharacterRayHit::makeHitInfo( rayHit, pOwner, shot._ray._direction, shot._damage, _shotImpulse );
+                        CharacterRayHit::deliverHit( *rayHit._pObject, hit );
+                        bAnyHit             = bAnyHit || bAlive;
+                        killcamHit._zone    = hit._zone;
+                        killcamHit._bKilled = bAlive && pEnemy->isDead() ? SW_TRUE : SW_FALSE;
+                        // 탄의 맞음 동작은 맞은 적의 태그 문맥으로 부른다(상태 이상 · 표시 같은 탄 고유 반응).
+                        const GameObject* pEnemyObject = pEnemy->getOwner();
+                        if ( pProjectile != nullptr && pEnemyObject != nullptr && pProjectile->_listHitAction.empty() == false )
+                        {
+                            ActionContext context;
+                            context._world.set<SubjectTagsSlot>( &pEnemyObject->getTags() );
+                            context._pOwner = this;
+                            ProjectileDef::runHitActions( pProjectile->_listHitAction, context );
+                        }
+                    }
+                    (void)record.addHit( killcamHit ); // 상한(`KillcamShot::kMaxHits`)을 넘는 명중은 연출에 싣지 않는다
+                    if ( piercesLeft <= 0 )
+                        break;
+                    --piercesLeft;
+                    bPierced                      = true;
+                    constexpr float32 kPierceStep = 0.01f; // 맞은 면 바로 뒤에서 다시 묻는다(같은 몸은 ignoreID 로 건너뛴다)
+                    segment._origin               = rayHit._point + shot._ray._direction * kPierceStep;
+                    travelled                     = hitDistance + kPierceStep;
+                    ignoreID                      = rayHit._pObject->getObjectID();
                 }
+                record.finish( shot._ray._origin + shot._ray._direction * distance );
+                if ( pKillcam != nullptr && record.getHits().empty() == false )
+                    pKillcam->recordShot( record );
                 const float3 end = shot._ray._origin + shot._ray._direction * distance;
                 // 탄도선은 총구에서 맞은 위치까지 이은 선이다. 색 · 두께는 탄의 궤적이다. 1인칭이면 시점 총의 총구라 총 앞에서 시작해 화면에 보인다.
                 if ( shot._bHasMuzzle )

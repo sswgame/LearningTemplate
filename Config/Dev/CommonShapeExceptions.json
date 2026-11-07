@@ -11,7 +11,8 @@
         "Source/GameFramework/Runtime/Gameplay/Appearance/CharacterAppearanceComponent.cpp": "두 캐시 횟수의 합을 굽기 키에 넣는다(computeFitReloadStamp) — 낡음 판정만이 아니다"
     },
     "firstComponent": {
-        "Source/Engine/Automation/Watch/AutomationComponentWatch.h": "기반 자신이다"
+        "Source/Engine/Automation/Watch/AutomationComponentWatch.h": "기반 자신이다",
+        "Source/GameFramework/Runtime/Character/Combat/Killcam/KillcamComponent.cpp": "쏘는 쪽이 기록을 넣을 킬캠을 찾는다 - 고칠 수 있는 컴포넌트가 필요하고(findFirst 는 const · 단언 전용) 사격이 있는 프레임에만 돈다"
     },
     "oneLineValidator": {
         "Source/Engine/Automation/Scenario/AutomationScenario.h": "기반 자신이다(AutomationStep::validateFields)"

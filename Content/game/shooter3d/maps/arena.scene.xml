@@ -1682,5 +1682,29 @@
 				</_listComponent>
 			</GameObject>
 		</entity>
+		<entity id="100" name="Killcam">
+			<GameObject _schemaVersion="0" _name="Killcam" _bActive="true">
+				<_listComponent>
+					<CameraComponent _componentName="CameraComponent"
+					                 _bActive="true"
+					                 _localPosition="0,2,-10"
+					                 _localRotation="0,0,0"
+					                 _localScale="1,1,1"
+					                 _attachOwner="None"
+					                 _attachOwnerID="0"
+					                 _attachComponent="None"
+					                 _fovY="0.9"
+					                 _nearZ="0.05"
+					                 _farZ="120"
+					                 _orthoHeight="10"
+					                 _priority="0"
+					                 _role="Custom"
+					                 _bOrthographic="false" />
+					<KillcamComponent _componentName="KillcamComponent" _bActive="true" _shotCapacity="8">
+						<_settings _bulletSpeed="12" _followDistance="1.2" _followHeight="0.25" _hitHoldSeconds="0.6" _closeUpDistance="2" _maxSeconds="4" />
+					</KillcamComponent>
+				</_listComponent>
+			</GameObject>
+		</entity>
 	</entities>
 </Scene>

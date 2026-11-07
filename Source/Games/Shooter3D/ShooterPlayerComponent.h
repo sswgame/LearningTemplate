@@ -166,6 +166,7 @@ namespace sw
             float32       _coverDistance{ 0.0f }; ///< 막는 상자 · 바닥 · 사거리 중 가까운 것(m)
             float32       _range{ 0.0f };         ///< 탄 사거리(m) — 이보다 짧으면 무언가에 닿았다
             float32       _damage{ 0.0f };
+            int32         _pierceCount{ 0 }; ///< 탄이 더 꿰뚫는 적 수(`ResolvedShot::_pierceCount`)
             uint32        _volley{ 0 };
             bool          _bHasMuzzle{ false }; ///< 총구를 찾았다. 아니면 판정만 하고 탄도선을 내지 않는다(대신 쓸 자리는 없다)
         };

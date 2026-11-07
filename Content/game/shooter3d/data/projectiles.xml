@@ -9,6 +9,8 @@
   <Projectile id="buckshot" _base="rifle_round" tags="Ammo.Shell" damage="9" range="28"/>
   <Projectile id="pistol_round" _base="rifle_round" tags="Ammo.Pistol" damage="22" range="60"/>
   <Projectile id="incendiary_round" _base="rifle_round" tags="Ammo.Rifle,Ammo.Incendiary" damage="11" tracerColor="8,1.2,0.15,1" tracerWidth="0.08"/>
+  <!-- 관통탄: 한 발이 앞의 적을 꿰뚫고 뒤의 적까지 둘을 더 맞힌다(광선이라 맞은 몸 뒤에서 남은 선분을 다시 묻는다). 킬캠 시나리오(game.shooter3d.pierce_killcam)가 치트로 넣는다. -->
+  <Projectile id="piercing_round" _base="rifle_round" damage="60" pierceCount="2" tracerColor="1.2,2.4,3,1" tracerWidth="0.04"/>
 
   <Impact id="body_incendiary" surface="Body" when="Ammo.Incendiary" color="4,0.8,0.1,1" size="0.32"/>
   <Impact id="body" surface="Body" color="1,0.45,0.2,1" size="0.18"/>
