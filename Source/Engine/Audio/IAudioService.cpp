@@ -102,6 +102,7 @@ namespace sw
     IAudioService::IAudioService()
         : _pEngine{ make_unique<AudioEngine>() }
         , _soundPlayer{ *this }
+        , _engineAudioDriver{ *this }
         , _listBusVolume{}
         , _listOfflineBlock{}
         , _listDumpSample{}
@@ -607,8 +608,8 @@ namespace sw
     {
         SW_MEMORY_SCOPE( Audio );
         IAudioService& audio                = scope.addSubsystem( build._pStartupSetup->_bDedicatedServer ? IAudioService::createNull() : IAudioService::create() );
-        build._pStartupParts->_pAudioDriver = &audio;
-        const bool bExposed                 = scope.expose<IEngineAudioDriver>( audio ) && scope.exposeMember<ISoundPlayer>( audio, audio.getSoundPlayer() );
+        build._pStartupParts->_pAudioDriver = &audio.getEngineAudioDriver();
+        const bool bExposed                 = scope.exposeMember<IEngineAudioDriver>( audio, audio.getEngineAudioDriver() ) && scope.exposeMember<ISoundPlayer>( audio, audio.getSoundPlayer() );
         SW_ASSERT( bExposed );
         (void)bExposed;
     } );

@@ -149,7 +149,7 @@ namespace sw
         return RemoteCallInternal::findFunction( type, validatorName );
     }
 
-    bool RemoteCallTargets::checkContract( const TypeInfo& type, FunctionNetRole role )
+    bool RemoteCallTargets::validateRemoteCallContract( const TypeInfo& type, FunctionNetRole role )
     {
         bool            bValid = true;
         const TypeInfo* arrChain[constant::reflection::kMaxParentChainDepth];
@@ -210,7 +210,7 @@ namespace sw
                              type._name.c_str() );
             return false;
         }
-        if ( RemoteCallTargets::checkContract( type, FunctionNetRole::Server ) == false )
+        if ( RemoteCallTargets::validateRemoteCallContract( type, FunctionNetRole::Server ) == false )
             return false;
         _targets._mapTarget[targetID] = RemoteCallTargets::Target{ &type, pInstance, ownerConnectionID };
         return true;
@@ -229,7 +229,7 @@ namespace sw
                              type._name.c_str() );
             return false;
         }
-        if ( RemoteCallTargets::checkContract( type, FunctionNetRole::Server ) == false )
+        if ( RemoteCallTargets::validateRemoteCallContract( type, FunctionNetRole::Server ) == false )
             return false;
         _mapSession[connectionID] = RemoteCallTargets::Target{ &type, pInstance, connectionID };
         return true;
@@ -313,7 +313,7 @@ namespace sw
         }
         if ( pFunction->_metadata->_bValidate != SW_FALSE )
         {
-            // 짝은 등록이 확인했다(`checkContract`) — 여기서 없으면 등록 뒤 모듈이 바뀐 것이라 부르지 않는다.
+            // 짝은 등록이 확인했다(`validateRemoteCallContract`) — 여기서 없으면 등록 뒤 모듈이 바뀐 것이라 부르지 않는다.
             const FunctionInfo* pValidator = RemoteCallTargets::findValidator( *pTarget->_pType, *pFunction );
             ReflectedValue      validatorResult;
             const bool          bCalled = pValidator != nullptr && ReflectionInvoke::callWithText( *pValidator, pTarget->_pInstance, _listReceivedScratch, &validatorResult ) == ReflectCallResult::Ok;
@@ -396,7 +396,7 @@ namespace sw
             SW_LOG_ERROR_ID( "RemoteCall.ClientTargetRefused", "Remote call target %# (%#) was not registered - the instance is null or the id is already taken", targetID, type._name.c_str() );
             return false;
         }
-        if ( RemoteCallTargets::checkContract( type, FunctionNetRole::Client ) == false )
+        if ( RemoteCallTargets::validateRemoteCallContract( type, FunctionNetRole::Client ) == false )
             return false;
         _targets._mapTarget[targetID] = RemoteCallTargets::Target{ &type, pInstance, 0 };
         return true;

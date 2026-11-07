@@ -27,7 +27,7 @@ namespace sw
         hashed_string _id{};
         float2        _position{ 0.0f, 0.0f };
 
-        bool isPresent() const { return _id.empty() == false; }
+        bool isSet() const { return _id.empty() == false; }
     };
 
     /** @brief 지역 하나입니다(`<Region>`). */

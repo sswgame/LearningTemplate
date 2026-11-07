@@ -214,7 +214,7 @@ namespace sw
         void update();
 
         /** @brief 세션 대상의 `Server` 함수를 부릅니다. 보내지 못하면 0 입니다(`RemoteCallClient::callServer`). */
-        uint32 callAgent( string_view functionName, const vector<ReflectedValue>& listArg );
+        uint32 callServerFunction( string_view functionName, const vector<ReflectedValue>& listArg );
 
         bool                   isActive() const { return _bActive != SW_FALSE; }
         const ValeAvatarAgent& getAgent() const { return _agent; }

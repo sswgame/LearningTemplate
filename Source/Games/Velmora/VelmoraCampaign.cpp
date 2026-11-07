@@ -67,7 +67,7 @@ namespace sw
     bool VelmoraCampaign::lightBeacon( const VelmoraRegionDef& region, QuestLog& quests, GameFlags& flags ) const
     {
         using Internal = VelmoraCampaignInternal;
-        if ( region._beacon.isPresent() == false || isBeaconLit( region, flags ) )
+        if ( region._beacon.isSet() == false || isBeaconLit( region, flags ) )
             return false;
         flags.setFlag( Internal::makeFlag( Internal::kBeaconPrefix, region ) );
         static const hashed_string s_light( Internal::kEventLight );
@@ -77,7 +77,7 @@ namespace sw
 
     bool VelmoraCampaign::restAtCamp( const VelmoraRegionDef& region )
     {
-        if ( region._camp.isPresent() == false )
+        if ( region._camp.isSet() == false )
             return false;
         if ( _vitals.revive() == false )
             return false;

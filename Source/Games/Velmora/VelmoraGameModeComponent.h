@@ -88,7 +88,7 @@ namespace sw
         SessionStateComponent*      findState() const;
         const VelmoraRegionCatalog* findRegions() const;
         /** @brief 지역 표의 전투 종이 모두 몬스터 표에 있는지 봅니다. 없는 종마다 오류를 남기고 false 입니다. */
-        [[nodiscard]] bool checkRegionMonsters( const VelmoraRegionCatalog& regions ) const;
+        [[nodiscard]] bool validateRegionMonsters( const VelmoraRegionCatalog& regions ) const;
         /** @brief 이번 프레임의 걷기를 적용합니다. 지역 밖(전투 중이면 그 지역 밖)으로는 가지 않는다. */
         void movePlayer( const float2& move, float32 deltaTime, const VelmoraRegionCatalog& regions );
         /** @brief 지금 자리의 지역이 바뀌었으면 진입을 처리합니다. */
@@ -96,11 +96,11 @@ namespace sw
         /** @brief @p region 의 전투를 엽니다(홀이 있으면 홀, 없으면 보스 대기). */
         void beginEncounter( const VelmoraRegionDef& region );
         /** @brief 곁의 봉화를 켜거나 야영지에서 쉽니다. */
-        void useSite( const VelmoraRegionDef& region, SessionStateComponent& state );
+        void interactWithSite( const VelmoraRegionDef& region, SessionStateComponent& state );
         /** @brief 전투 한 프레임을 돌리고 결과(피해 · 클리어)를 적용합니다. */
         void updateEncounter( float32 deltaTime, const VelmoraRegionCatalog& regions, SessionStateComponent& state );
         /** @brief 쓰러졌습니다. 룸을 비우고 일어설 지역의 자리에서 일어섭니다. */
-        void fall( const VelmoraRegionCatalog& regions );
+        void handlePlayerDowned( const VelmoraRegionCatalog& regions );
         /** @brief 불러온 판이 지금 표에 없는 지역을 가리키면 일어설 자리로 옮기고 전투를 닫습니다. */
         void reconcileWithRegions( const VelmoraRegionCatalog& regions );
         void drawWorld( const VelmoraRegionCatalog& regions, const SessionStateComponent& state ) const;

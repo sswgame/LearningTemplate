@@ -52,7 +52,7 @@ namespace sw
 
     bool ValeAvatarAgent::validateInviteToParty( uint32 avatarID ) const
     {
-        return ValeWorld::isAvatarIDShape( avatarID ) && avatarID != _avatarID;
+        return ValeWorld::isValidAvatarID( avatarID ) && avatarID != _avatarID;
     }
 
     void ValeAvatarAgent::acceptPartyInvite( uint32 leaderAvatarID )
@@ -193,7 +193,7 @@ namespace sw
         }
         for ( const auto& entry : _mapAgent )
         {
-            if ( _world.consumeChanged( entry.second->_avatarID ) )
+            if ( _world.consumeDirtyFlag( entry.second->_avatarID ) )
                 sendProgress( *entry.second );
         }
         _autosaveTimer -= deltaSeconds;
@@ -249,7 +249,7 @@ namespace sw
     {
         ++_stats._actionCount;
         (void)_remoteCalls.callSession( agent._connectionID, "receiveActionResult", { ReflectedValue::make( result ) } );
-        if ( _world.consumeChanged( agent._avatarID ) )
+        if ( _world.consumeDirtyFlag( agent._avatarID ) )
             sendProgress( agent );
     }
 
@@ -309,7 +309,7 @@ namespace sw
         SW_LOG_INFO_ID( "LanternVale.Admitted", "[LanternVale] account %# entered the vale as avatar %# on connection %# (level %#, %#)", load._accountID, pAgent->_avatarID, connectionID,
                         profile._level, load._bFound != SW_FALSE ? "stored progress" : "new account" );
         sendProgress( *pAgent );
-        (void)_world.consumeChanged( pAgent->_avatarID );
+        (void)_world.consumeDirtyFlag( pAgent->_avatarID );
         _mapAgent[connectionID] = std::move( pAgent );
     }
 
@@ -447,7 +447,7 @@ namespace sw
         _view.pollEvents( listEvent ); // 보이는 목록은 `getView` 가 읽는다 — 알림은 쌓이지 않게 비운다
     }
 
-    uint32 ValeClientLink::callAgent( string_view functionName, const vector<ReflectedValue>& listArg )
+    uint32 ValeClientLink::callServerFunction( string_view functionName, const vector<ReflectedValue>& listArg )
     {
         if ( _bActive == SW_FALSE )
             return 0;

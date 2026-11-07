@@ -306,7 +306,7 @@ namespace sw
         return iter != _mapParty.end() ? static_cast<int32>( iter->second._listMember.size() ) : 1;
     }
 
-    bool ValeWorld::consumeChanged( uint32 avatarID )
+    bool ValeWorld::consumeDirtyFlag( uint32 avatarID )
     {
         ValeAvatar* pAvatar = findAvatarMutable( avatarID );
         if ( pAvatar == nullptr || pAvatar->_bChanged == SW_FALSE )

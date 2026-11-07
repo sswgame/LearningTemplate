@@ -97,7 +97,7 @@ namespace sw
         return game::findSubsystem<const VelmoraRegionCatalog>();
     }
 
-    bool VelmoraGameModeComponent::checkRegionMonsters( const VelmoraRegionCatalog& regions ) const
+    bool VelmoraGameModeComponent::validateRegionMonsters( const VelmoraRegionCatalog& regions ) const
     {
         const MonsterCatalog* const pMonsters = game::findSubsystem<const MonsterCatalog>();
         if ( pMonsters == nullptr )
@@ -138,7 +138,7 @@ namespace sw
             SW_LOG_ERROR_ID( "Velmora.NoStartRegion", "Velmora: start region '%#' is not in the region catalog - the valley does not open", _startRegion.c_str() );
             return false;
         }
-        if ( checkRegionMonsters( *pRegions ) == false )
+        if ( validateRegionMonsters( *pRegions ) == false )
             return false;
         SessionStateSettings settings;
         settings._pQuestCatalog = pQuests;
@@ -218,14 +218,14 @@ namespace sw
         _pendingBoss = region._id;
     }
 
-    void VelmoraGameModeComponent::useSite( const VelmoraRegionDef& region, SessionStateComponent& state )
+    void VelmoraGameModeComponent::interactWithSite( const VelmoraRegionDef& region, SessionStateComponent& state )
     {
         const float32 radiusSquared = _useRadius * _useRadius;
         const auto    isNear        = [this, radiusSquared]( const VelmoraSiteDef& site )
         {
             const float32 dx = site._position._x - _playerPosition._x;
             const float32 dz = site._position._y - _playerPosition._y;
-            return site.isPresent() && dx * dx + dz * dz <= radiusSquared;
+            return site.isSet() && dx * dx + dz * dz <= radiusSquared;
         };
         if ( isNear( region._beacon ) )
         {
@@ -271,7 +271,7 @@ namespace sw
         // 적의 닿은 피해(`MonsterStatsDef::_atk`)는 4분의 1 하트 단위다.
         if ( result._damageToPlayer > 0 && _campaign.takeDamage( result._damageToPlayer ) )
         {
-            fall( regions );
+            handlePlayerDowned( regions );
             return;
         }
         if ( result._bClearedThisFrame == SW_FALSE )
@@ -290,7 +290,7 @@ namespace sw
         SW_LOG_INFO_ID( "Velmora.RegionCleared", "[Velmora] '%#' cleared%#", pArena->_name, result._bBossDefeated == SW_TRUE ? " - the boss fell" : "" );
     }
 
-    void VelmoraGameModeComponent::fall( const VelmoraRegionCatalog& regions )
+    void VelmoraGameModeComponent::handlePlayerDowned( const VelmoraRegionCatalog& regions )
     {
         _room.onPlayerDefeated();
         _bossDelay.clear();
@@ -306,7 +306,7 @@ namespace sw
         if ( pRespawn != nullptr )
             _playerPosition = pRespawn->_respawn;
         _currentRegion = hashed_string{}; // 일어선 자리의 진입을 다음 틱이 다시 처리한다
-        if ( _campaign.rise() == false )
+        if ( _campaign.respawn() == false )
             SW_LOG_ERROR_ID( "Velmora.CannotRise", "Velmora: the player could not rise - the vitals settings were refused" );
         SW_LOG_INFO_ID( "Velmora.Fell", "[Velmora] the player fell and rises in '%#'", _campaign.getRespawnRegion().c_str() );
     }
@@ -345,7 +345,7 @@ namespace sw
         if ( _phase == VelmoraPhase::Explore && wasActionTriggered( s_useAction ) )
         {
             if ( const VelmoraRegionDef* const pRegion = pRegions->find( _currentRegion ) )
-                useSite( *pRegion, *pState );
+                interactWithSite( *pRegion, *pState );
         }
         if ( _phase != VelmoraPhase::Explore )
             updateEncounter( deltaTime, *pRegions, *pState );
@@ -384,13 +384,13 @@ namespace sw
             pDraw->drawLine( corner10, corner11, border );
             pDraw->drawLine( corner11, corner01, border );
             pDraw->drawLine( corner01, corner00, border );
-            if ( region._beacon.isPresent() )
+            if ( region._beacon.isSet() )
             {
                 const bool   bLit  = VelmoraCampaign::isBeaconLit( region, state.getFlags() );
                 const float4 color = bLit ? float4( 1.0f, 0.62f, 0.18f, 1.0f ) : float4( 0.35f, 0.35f, 0.4f, 1.0f );
                 pDraw->drawBox( float3( region._beacon._position._x, 1.0f, region._beacon._position._y ), float3( 0.3f, 1.0f, 0.3f ), color );
             }
-            if ( region._camp.isPresent() )
+            if ( region._camp.isSet() )
                 pDraw->drawSphere( float3( region._camp._position._x, 0.2f, region._camp._position._y ), 0.4f, float4( 0.95f, 0.4f, 0.1f, 1.0f ) );
         }
         if ( _phase == VelmoraPhase::Hall || _phase == VelmoraPhase::Boss )

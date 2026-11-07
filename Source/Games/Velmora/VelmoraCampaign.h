@@ -59,7 +59,7 @@ namespace sw
         /** @brief 4분의 1 하트 단위 피해입니다. 이번에 쓰러졌으면 true 입니다. */
         [[nodiscard]] bool takeDamage( int32 quarters ) { return _vitals.applyDamage( quarters ); }
         /** @brief 쓰러진 뒤 일어섭니다(체력을 채운다). 일어설 자리는 `getRespawnRegion` 지역의 일어설 자리다. */
-        [[nodiscard]] bool rise() { return _vitals.revive(); }
+        [[nodiscard]] bool respawn() { return _vitals.revive(); }
         /** @brief 쌓인 체력 알림을 @p outListEvent 뒤에 붙이고 비웁니다(프레임마다 — 부르지 않으면 끝없이 쌓인다). */
         void pollHealthEvents( vector<HealthEvent>& outListEvent ) { _vitals.pollHealthEvents( outListEvent ); }
         /**

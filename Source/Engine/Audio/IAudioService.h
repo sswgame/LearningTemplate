@@ -58,7 +58,7 @@ namespace sw
      * @details 오디오 밖(엔진 루프 · 애니메이션 · 시퀀서 · 게임 코드)은 이 클래스를 모르고 창구로 부른다 — 프레임은 `IEngineAudioDriver`, 소리는 `ISoundPlayer`(멤버 `AudioSoundPlayer`),
      *          볼륨 · 음소거 · 스피커 모드는 사용자 설정 핸들러(`AudioUserSettingsHandlers`). 전용 서버는 오디오 폴더를 짓지 않아 칸이 모두 빈다.
      */
-    class SW_API IAudioService : public ISubsystem, public IEngineAudioDriver
+    class SW_API IAudioService : public ISubsystem
     {
     public:
         /** @brief 엔진의 기본 믹서 그래프 경로입니다. 없거나 틀리면 `initialize` 가 실패합니다(코드 그래프로 대신하지 않습니다). */
@@ -120,7 +120,7 @@ namespace sw
         [[nodiscard]] static bool resolveLayout( AudioSpeakerMode mode, const AudioOutputDevice& device, AudioChannelLayout& outLayout );
 
         /** @brief 프레임마다 부릅니다(`IEngineAudioDriver`). 장치가 없으면 흐른 시간만큼 엔진을 렌더해 재생을 진행합니다. */
-        void update( float32 deltaSeconds ) override;
+        void update( float32 deltaSeconds );
 
         /**
          * @brief 클립 하나를 비동기로 재생합니다. 디코드는 워커에서 합니다.
@@ -174,6 +174,8 @@ namespace sw
         const AudioEngine& getEngine() const { return *_pEngine; }
         /** @brief 소리 창구입니다(기동 단계가 `ISoundPlayer` 칸으로 건다). */
         AudioSoundPlayer& getSoundPlayer() { return _soundPlayer; }
+        /** @brief 엔진 루프의 프레임 창구입니다(기동 단계가 `IEngineAudioDriver` 칸으로 건다 — 서비스가 그 인터페이스를 함께 상속하지 않는다). */
+        IEngineAudioDriver& getEngineAudioDriver() { return _engineAudioDriver; }
 
         /** @brief `auto` · `stereo` · `surround51` · `surround71` · `headphones` 를 읽습니다(사용자 설정 `audio.speakerMode` 의 값). */
         [[nodiscard]] static bool tryParseSpeakerMode( string_view text, AudioSpeakerMode& outMode );
@@ -238,24 +240,41 @@ namespace sw
         [[nodiscard]] bool findLoadedGraphPath( string_view assetPath, hashed_string& outGraphPath ) const;
 
     private:
-        unique_ptr<AudioEngine> _pEngine;          /**< 오디오 엔진입니다. */
-        AudioSoundPlayer        _soundPlayer;      /**< 소리 창구입니다(`ISoundPlayer`). */
-        vector<AudioBusVolume>  _listBusVolume;    /**< 세 기본 버스 밖의 버스 볼륨입니다. */
-        vector<float32>         _listOfflineBlock; /**< 장치가 없을 때 렌더하는 버퍼입니다. */
-        vector<float32>         _listDumpSample;   /**< 덤프할 오프라인 렌더(채널 교차)입니다. `gv_audioDumpPath` 가 있을 때만 쌓습니다. */
-        string                  _musicPath;        /**< 마지막으로 요청된 배경음악 경로입니다. */
-        string                  _mixerPath;        /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
-        AudioPlayingID          _musicPlayingID;   /**< 배경음악 재생 id 입니다. */
-        float64                 _offlineFrameDebt; /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
-        AudioOutputDevice       _device;           /**< 열린 장치의 형식입니다(장치가 없으면 채널 수 0). */
-        float32                 _masterVolume;     /**< 마스터 볼륨 [0,1] 입니다. */
-        float32                 _musicVolume;      /**< 배경음악 볼륨 [0,1] 입니다. */
-        float32                 _sfxVolume;        /**< 효과음 볼륨 [0,1] 입니다. */
-        AudioSpeakerMode        _speakerMode;      /**< 사용자가 고른 스피커 모드입니다. */
-        uint8                   _bMuted       : 1; /**< 음소거 상태입니다. */
-        uint8                   _bDeviceOpen  : 1; /**< 장치를 열었는지입니다. */
-        uint8                   _bOutputOpen  : 1; /**< 장치가 엔진을 당기고 있는지입니다. */
-        uint8                   _bInitialized : 1; /**< initialize 가 끝났는지입니다. */
+        /** @class EngineAudioDriver @brief `IEngineAudioDriver` 를 서비스의 `update` 로 넘깁니다(수명은 서비스와 같다). */
+        class EngineAudioDriver final : public IEngineAudioDriver
+        {
+        public:
+            explicit EngineAudioDriver( IAudioService& owner )
+                : _owner{ owner }
+            {
+            }
+
+            void update( float32 unscaledDeltaSeconds ) override { _owner.update( unscaledDeltaSeconds ); }
+
+        private:
+            IAudioService& _owner;
+        };
+
+    private:
+        unique_ptr<AudioEngine> _pEngine;           /**< 오디오 엔진입니다. */
+        AudioSoundPlayer        _soundPlayer;       /**< 소리 창구입니다(`ISoundPlayer`). */
+        EngineAudioDriver       _engineAudioDriver; /**< 프레임 창구입니다(`IEngineAudioDriver`). */
+        vector<AudioBusVolume>  _listBusVolume;     /**< 세 기본 버스 밖의 버스 볼륨입니다. */
+        vector<float32>         _listOfflineBlock;  /**< 장치가 없을 때 렌더하는 버퍼입니다. */
+        vector<float32>         _listDumpSample;    /**< 덤프할 오프라인 렌더(채널 교차)입니다. `gv_audioDumpPath` 가 있을 때만 쌓습니다. */
+        string                  _musicPath;         /**< 마지막으로 요청된 배경음악 경로입니다. */
+        string                  _mixerPath;         /**< 마지막으로 읽은 믹서 그래프 경로입니다. */
+        AudioPlayingID          _musicPlayingID;    /**< 배경음악 재생 id 입니다. */
+        float64                 _offlineFrameDebt;  /**< 장치가 없을 때 아직 렌더하지 않은 프레임(소수)입니다. */
+        AudioOutputDevice       _device;            /**< 열린 장치의 형식입니다(장치가 없으면 채널 수 0). */
+        float32                 _masterVolume;      /**< 마스터 볼륨 [0,1] 입니다. */
+        float32                 _musicVolume;       /**< 배경음악 볼륨 [0,1] 입니다. */
+        float32                 _sfxVolume;         /**< 효과음 볼륨 [0,1] 입니다. */
+        AudioSpeakerMode        _speakerMode;       /**< 사용자가 고른 스피커 모드입니다. */
+        uint8                   _bMuted       : 1;  /**< 음소거 상태입니다. */
+        uint8                   _bDeviceOpen  : 1;  /**< 장치를 열었는지입니다. */
+        uint8                   _bOutputOpen  : 1;  /**< 장치가 엔진을 당기고 있는지입니다. */
+        uint8                   _bInitialized : 1;  /**< initialize 가 끝났는지입니다. */
     };
 
     SW_SERVICE_SLOT( IAudioService, Optional );

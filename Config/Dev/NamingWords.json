@@ -81,7 +81,13 @@
         "ArcadeVehicleEvent": "KinematicVehicleEvent",
         "KartOffroadZoneDef": "KartSurfaceZoneDef(속도 배율 · 구름 저항 · 그립을 함께 가진 표면 구간)",
         "_listOffroadZone": "_listSurfaceZone",
-        "sampleSpeedScale": "sampleSurface(VehicleSurface — 속도 배율 · 구름 저항 · 그립 배율)"
+        "sampleSpeedScale": "sampleSurface(VehicleSurface — 속도 배율 · 구름 저항 · 그립 배율)",
+        "consumeChanged": "consumeDirtyFlag (2026-11-08 새 이름 검토)",
+        "isAvatarIDShape": "isValidAvatarID (2026-11-08 새 이름 검토)",
+        "callAgent": "callServerFunction (2026-11-08 새 이름 검토)",
+        "checkRegionMonsters": "validateRegionMonsters (2026-11-08 새 이름 검토)",
+        "checkContract": "RemoteCall::validateRemoteCallContract (2026-11-08 새 이름 검토)",
+        "useSite": "interactWithSite (2026-11-08 새 이름 검토)"
     },
     "_keep": {
         "MailboxOutcome": "우편 업무 값과 전송 공통 범주를 두 층으로 가른 온라인 키트의 업무 층",
@@ -564,6 +570,7 @@
         "instantiate",
         "integer",
         "integrate",
+        "interact",
         "intern",
         "interpolate",
         "interrupt",
@@ -895,6 +902,7 @@
         "resize",
         "resolve",
         "resource",
+        "respawn",
         "respond",
         "rest",
         "restart",

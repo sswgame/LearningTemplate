@@ -143,7 +143,7 @@ namespace
         {
             for ( int32 strike = 0; strike < 3; ++strike )
             {
-                SW_EXPECT_NOT_EQUAL( 0u, _arrClient[clientIndex].callAgent( "attackCreature", { ReflectedValue::make( creatureID ) } ) );
+                SW_EXPECT_NOT_EQUAL( 0u, _arrClient[clientIndex].callServerFunction( "attackCreature", { ReflectedValue::make( creatureID ) } ) );
                 run( server, 0.6f );
             }
         }
@@ -172,8 +172,8 @@ SW_TEST_CASE( ValeNetLinkTest, ServerAuthorityLoopReachesTheClient )
     SW_EXPECT_TRUE( rig._arrClient[0].getView().findEntity( kNearCreatureID ) == nullptr ); // 쓰러진 짐승은 복제에서 빠진다
 
     // 재사용 대기 중의 공격은 서버가 결과로 거절한다(끊지 않는다).
-    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callAgent( "attackCreature", { ReflectedValue::make( kSideCreatureID ) } ) );
-    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callAgent( "attackCreature", { ReflectedValue::make( kSideCreatureID ) } ) );
+    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callServerFunction( "attackCreature", { ReflectedValue::make( kSideCreatureID ) } ) );
+    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callServerFunction( "attackCreature", { ReflectedValue::make( kSideCreatureID ) } ) );
     rig.run( rig._server, 0.2f );
     SW_EXPECT_TRUE( agent._lastResult == ValeActionResult::CoolingDown );
     SW_EXPECT_EQUAL( 1, rig._server.getOnlineCount() );
@@ -189,10 +189,10 @@ SW_TEST_CASE( ValeNetLinkTest, PartyIsServerAuthoritative )
     const ValeAvatarAgent& member = rig._arrClient[1].getAgent();
     SW_REQUIRE_TRUE( leader._avatarID != 0u && member._avatarID != 0u );
 
-    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callAgent( "inviteToParty", { ReflectedValue::make( member._avatarID ) } ) );
+    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callServerFunction( "inviteToParty", { ReflectedValue::make( member._avatarID ) } ) );
     rig.run( rig._server, 0.2f );
     SW_EXPECT_EQUAL( leader._avatarID, member._pendingInviteFromID );
-    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[1].callAgent( "acceptPartyInvite", { ReflectedValue::make( leader._avatarID ) } ) );
+    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[1].callServerFunction( "acceptPartyInvite", { ReflectedValue::make( leader._avatarID ) } ) );
     rig.run( rig._server, 0.2f );
     SW_EXPECT_EQUAL( 2, leader._shownPartySize );
     SW_EXPECT_EQUAL( 2, member._shownPartySize );
@@ -203,7 +203,7 @@ SW_TEST_CASE( ValeNetLinkTest, PartyIsServerAuthoritative )
     SW_EXPECT_EQUAL( 5, leader._shownCoins );
     SW_EXPECT_EQUAL( 0, member._shownCoins );
 
-    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[1].callAgent( "leaveParty", {} ) );
+    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[1].callServerFunction( "leaveParty", {} ) );
     rig.run( rig._server, 0.2f );
     SW_EXPECT_EQUAL( 1, leader._shownPartySize );
     SW_EXPECT_EQUAL( 1, member._shownPartySize );
@@ -217,7 +217,7 @@ SW_TEST_CASE( ValeNetLinkTest, ForgedTargetsAreDisconnected )
     rig.run( rig._server, 0.5f );
     SW_REQUIRE_TRUE( rig._arrClient[0].getAgent()._avatarID != 0u );
     SW_EXPECT_LOG( "RemoteCall.ValidationFailed" );
-    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callAgent( "attackCreature", { ReflectedValue::make( uint32{ 7 } ) } ) );
+    SW_EXPECT_NOT_EQUAL( 0u, rig._arrClient[0].callServerFunction( "attackCreature", { ReflectedValue::make( uint32{ 7 } ) } ) );
     for ( int32 step = 0; step < 8; ++step )
     {
         rig._cluster.step();

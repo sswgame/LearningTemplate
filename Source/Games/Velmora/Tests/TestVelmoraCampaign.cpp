@@ -143,7 +143,7 @@ SW_TEST_CASE( VelmoraCampaignTest, CampFallAndStateRoundTrip )
 
     SW_EXPECT_TRUE( campaign.takeDamage( fullQuarters ) );
     SW_EXPECT_TRUE( campaign.getVitals().isDead() );
-    SW_REQUIRE_TRUE( campaign.rise() );
+    SW_REQUIRE_TRUE( campaign.respawn() );
     SW_EXPECT_EQUAL( fullQuarters, campaign.getVitals().computeHealthQuarters() );
     SW_EXPECT_FALSE( campaign.takeDamage( 3 ) );
 

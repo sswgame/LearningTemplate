@@ -75,7 +75,7 @@ namespace sw
                 ValeWorldComponent* const pVale = findVale( outReply );
                 if ( pVale == nullptr )
                     return true;
-                const uint32 sequence = pVale->getClient().callAgent( pFunctionName, { ReflectedValue::make( targetID ) } );
+                const uint32 sequence = pVale->getClient().callServerFunction( pFunctionName, { ReflectedValue::make( targetID ) } );
                 outReply              = formatToString( "vale: %# %# sent (call %#)", pFunctionName, targetID, sequence );
                 return true;
             }
@@ -94,7 +94,7 @@ namespace sw
                 ValeWorldComponent* const pVale = findVale( outReply );
                 if ( pVale == nullptr )
                     return true;
-                const uint32 sequence = pVale->getClient().callAgent( "moveTo", { ReflectedValue::make( x ), ReflectedValue::make( z ) } );
+                const uint32 sequence = pVale->getClient().callServerFunction( "moveTo", { ReflectedValue::make( x ), ReflectedValue::make( z ) } );
                 outReply              = formatToString( "vale: moveTo %# %# sent (call %#)", x, z, sequence );
                 return true;
             }
@@ -106,7 +106,7 @@ namespace sw
                 ValeWorldComponent* const pVale = findVale( outReply );
                 if ( pVale == nullptr )
                     return true;
-                outReply = formatToString( "vale: leaveParty sent (call %#)", pVale->getClient().callAgent( "leaveParty", {} ) );
+                outReply = formatToString( "vale: leaveParty sent (call %#)", pVale->getClient().callServerFunction( "leaveParty", {} ) );
                 return true;
             }
 

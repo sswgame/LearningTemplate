@@ -149,7 +149,7 @@ namespace sw
         uint32      _partyID{ 0 };      ///< 0 이면 파티가 없다
         uint32      _inviteFromID{ 0 }; ///< 받은 초대를 보낸 아바타. 0 이면 없다
         float32     _attackCooldown{ 0.0f };
-        uint8       _bChanged{ SW_FALSE }; ///< 알릴 진행 · 파티가 바뀌었다(`ValeWorld::consumeChanged`)
+        uint8       _bChanged{ SW_FALSE }; ///< 알릴 진행 · 파티가 바뀌었다(`ValeWorld::consumeDirtyFlag`)
     };
 
     /** @brief 놓인 것 하나의 지금 상태입니다. */
@@ -209,7 +209,7 @@ namespace sw
         /** @brief 점이 골짜기 경계 안인지 봅니다. 무한대 · NaN 은 밖입니다. */
         bool isInsideVale( float32 x, float32 z ) const;
         /** @brief 아바타 id 꼴인지 봅니다(1 이상, 놓인 것 id 아래). */
-        static bool isAvatarIDShape( uint32 avatarID ) { return avatarID != 0 && avatarID < kPlacementIDBase; }
+        static bool isValidAvatarID( uint32 avatarID ) { return avatarID != 0 && avatarID < kPlacementIDBase; }
 
         const ValeAvatar*         findAvatar( uint32 avatarID ) const;
         const ValeAvatar*         findAvatarByAccount( uint64 accountID ) const;
@@ -217,7 +217,7 @@ namespace sw
         /** @brief 아바타가 든 파티의 인원입니다. 파티가 없으면 1 입니다. 아바타가 없으면 0 입니다. */
         int32 getPartySize( uint32 avatarID ) const;
         /** @brief 진행 · 파티가 바뀌었으면 true 를 돌려주고 표시를 지웁니다(서버 링크가 알릴 때 부른다). */
-        bool consumeChanged( uint32 avatarID );
+        bool consumeDirtyFlag( uint32 avatarID );
 
         const ValeRules&                  getRules() const { return _rules; }
         const vector<ValePlacementState>& getPlacements() const { return _listPlacement; }

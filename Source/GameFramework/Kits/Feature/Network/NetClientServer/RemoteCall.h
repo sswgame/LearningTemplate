@@ -113,7 +113,7 @@ namespace sw
          * @brief @p type 의 함수 가운데 @p role 의 원격 함수가 원격 호출 계약을 지키는지 봅니다 — 인자는 글 · 수 · bool · 열거형, `Validate` 면 짝 `validate<이름>` 이 bool 을 돌려주고 인자 타입이 같다.
          * @details 어긴 함수마다 오류를 남기고 false 를 반환합니다. 등록이 부른다 — 실행 중에 부를 수 없는 함수를 발견하는 일이 없게.
          */
-        static bool checkContract( const TypeInfo& type, FunctionNetRole role );
+        static bool validateRemoteCallContract( const TypeInfo& type, FunctionNetRole role );
         /** @brief @p function 의 검증 짝(`validate<이름>`)을 @p type 의 계층에서 찾습니다. 없으면 nullptr 입니다. */
         static const FunctionInfo* findValidator( const TypeInfo& type, const FunctionInfo& function );
     };
@@ -140,7 +140,7 @@ namespace sw
         void initialize( INetPeers* pPeers ) { _pPeers = pPeers; }
         /**
          * @brief 대상을 등록합니다. 연결 @p ownerConnectionID 만 이 대상의 `Server` 함수를 부를 수 있습니다.
-         * @return 타입이 원격 호출 계약을 어기거나(`RemoteCallTargets::checkContract`), 인스턴스가 없거나, id 가 0(세션)이거나 이미 있으면 오류를 남기고 false 입니다
+         * @return 타입이 원격 호출 계약을 어기거나(`RemoteCallTargets::validateRemoteCallContract`), 인스턴스가 없거나, id 가 0(세션)이거나 이미 있으면 오류를 남기고 false 입니다
          */
         [[nodiscard]] bool registerTarget( uint32 targetID, const TypeInfo& type, void* pInstance, int32 ownerConnectionID );
         void               unregisterTarget( uint32 targetID );

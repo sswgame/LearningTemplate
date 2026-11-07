@@ -39,7 +39,7 @@ namespace sw
             /** @brief `<Camp id at/>` · `<Beacon id at/>` 를 읽습니다. 한 지역에 하나씩입니다. */
             [[nodiscard]] static bool readSite( const XMLNode& node, string_view where, VelmoraSiteDef& outSite )
             {
-                if ( outSite.isPresent() )
+                if ( outSite.isSet() )
                 {
                     SW_LOG_ERROR_ID( "Velmora.RegionSiteRepeated", "%#: <%#> is written twice - a region has one", where, node.getName() );
                     return false;
